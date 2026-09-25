@@ -1,0 +1,7 @@
+CompileFlags:
+  Remove:
+    - -G*
+    - -m*
+    - -fno-toplevel-reorder
+  Add:
+    - -D_EE

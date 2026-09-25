@@ -1,0 +1,314 @@
+# wLaunchELF_R3Z - PS2BUILD project definition.
+#
+# Build:   ps2build build
+# Output:  build/bin/wLaunchELF.elf         (stripped)
+#          build/bin/wLaunchELF-packed.elf  (ps2pack compressed, the release ELF)
+#
+# This mirrors the legacy Makefile's default profile:
+#   MMCE=1 MX4SIO=1 SIO2MAN=1 EXFAT=1 UDPFS=1 ETH=0 DVRP=1 XFROM=1
+#   TMANIP=1 IOP_RESET=1 DS34=0 LCDVD=LATEST CUSTOM_COLORS
+#
+# IOP drivers that the SDK suite already packages are embedded straight from
+# PS2BUILD packages (embed_irx). Modules that are wLaunchELF-specific, or that
+# the suite does not package (xparam, ata_bd), are built here as iop targets.
+# Plain binary payloads (exploit slices, prebuilt UDPFS modules) are embedded
+# by src/embed_blobs.S. All modules keep the legacy lazy-loading behaviour:
+# embedding only places them in the ELF, init.c still decides when to load.
+
+project: wLaunchELF
+
+targets:
+  # ------------------------------------------------------------------ IOP --
+  - name: dev9_poweroff
+    type: iop
+    sources: [iop/dev9_poweroff/main.c]
+    include_dirs: [iop/dev9_poweroff]
+    imports_lst: iop/dev9_poweroff/imports.lst
+    cflags: [-Wall]
+    headers: [dev9, ioman, sysclib]
+
+  - name: allowdvdv
+    type: iop
+    sources: [iop/AllowDVDV/AllowDVDV.c]
+    include_dirs: [iop/AllowDVDV]
+    imports_lst: iop/AllowDVDV/imports.lst
+    cflags: [-Wall]
+    headers: [sysclib, ioman, secrman, cdvd]
+
+  - name: hdl_info
+    type: iop
+    sources:
+      - iop/hdl_info/main.c
+      - iop/hdl_info/hdd.c
+      - iop/hdl_info/apa.c
+      - iop/hdl_info/hdl.c
+    include_dirs: [iop/hdl_info, iop/include_compat]
+    imports_lst: iop/hdl_info/imports.lst
+    exports_tab: iop/hdl_info/exports.tab
+    headers: [atad, cdvd, dev9, iomanx, sifcmd, stdio, sysclib, sysmem, threadman, intrman]
+
+  - name: ps2hdd_osd
+    type: iop
+    sources:
+      - iop/ps2hdd_osd/hdd_fio.c
+      - iop/ps2hdd_osd/hdd_blkio.c
+      - iop/ps2hdd_osd/hdd.c
+      - iop/ps2hdd_osd/password.c
+      - iop/ps2hdd_osd/misc.c
+      - iop/ps2hdd_osd/cache.c
+      - iop/ps2hdd_osd/apa.c
+      - iop/ps2hdd_osd/journal.c
+      - iop/ps2hdd_osd/free.c
+    include_dirs: [iop/ps2hdd_osd]
+    imports_lst: iop/ps2hdd_osd/imports.lst
+    defines:
+      - APA_OSD_VER
+      - APA_USE_DEV9
+      - APA_USE_ATAD
+      - IOMANX_OLD_NAME_COMPATIBILITY=0
+      - IOMANX_OLD_NAME_ADDDELDRV=0
+    cflags: [-Wall]
+    headers: [atad, bdm, cdvd, dev9, intrman, iomanx, stdio, sysclib, sysmem, threadman]
+
+  - name: vmcman
+    type: iop
+    sources:
+      - iop/vmcman/src/main.c
+      - iop/vmcman/src/mcdev.c
+      - iop/vmcman/src/mciomanx_backing.c
+      - iop/vmcman/src/mcsio2.c
+      - iop/vmcman/src/ps2mc_fio.c
+      - iop/vmcman/src/ps1mc_fio.c
+    include_dirs: [iop/vmcman/include, iop/vmcman/src]
+    imports_lst: iop/vmcman/src/imports.lst
+    exports_tab: iop/vmcman/src/exports.tab
+    defines:
+      - BUILDING_XMCMAN
+      - SIO2MAN_V2
+      - BUILDING_VMCMAN
+      - IOMANX_OLD_NAME_COMPATIBILITY=0
+      - IOMANX_OLD_NAME_ADDDELDRV=0
+    headers: [cdvd, sior, secrman, sio2man, intrman, ioman, iomanx, loadcore, modload, stdio, sysclib, threadman, timrman]
+
+  - name: mmceman
+    type: iop
+    sources:
+      - iop/mmceman/src/ioplib.c
+      - iop/mmceman/src/sio2man_hook.c
+      - iop/mmceman/src/mmce_sio2.c
+      - iop/mmceman/src/mmce_cmds.c
+      - iop/mmceman/src/mmce_fs.c
+      - iop/mmceman/src/mmceman.c
+    include_dirs: [iop/mmceman/include]
+    imports_lst: iop/mmceman/src/imports.lst
+    defines:
+      - IOMANX_OLD_NAME_COMPATIBILITY=0
+      - IOMANX_OLD_NAME_ADDDELDRV=0
+    cflags: [-Wall]
+    headers: [sio2man, dmacman, intrman, iomanx, loadcore, stdio, sysclib, threadman]
+
+  # ps2sdk iop/deckard/xparam (not packaged by the SDK suite), homebrew DB.
+  - name: xparam
+    type: iop
+    sources:
+      - iop/xparam/src/xparam.c
+      - iop/xparam/src/database_merged.c
+    include_dirs: [iop/xparam/include, iop/xparam/src]
+    imports_lst: iop/xparam/src/imports.lst
+    headers: [sysclib, loadcore]
+
+  # ps2sdk atad built with ATA_ENABLE_BDM=1 (== upstream ata_bd.irx), which
+  # the SDK suite does not package.
+  - name: ata_bd
+    type: iop
+    sources: [iop/ata_bd/src/ps2atad.c]
+    include_dirs: [iop/ata_bd/include, iop/ata_bd/src]
+    imports_lst: iop/ata_bd/src/imports.lst
+    exports_tab: iop/ata_bd/src/exports.tab
+    defines:
+      - ATA_GAMESTAR_WORKAROUND=1
+      - ATA_ENABLE_BDM=1
+      - ATA_USE_DEV9=1
+    headers: [dev9, bdm, loadcore, stdio, sysclib, threadman]
+
+  # ------------------------------------------------------------------- EE --
+  # libiopreboot (SifIopRebootBuffer) is not shipped by the SDK suite.
+  - name: iopreboot
+    type: ee_lib
+    sources: [ee_libs/iopreboot/SifIopRebootBuffer.c, ee_libs/iopreboot/patch_romdrv_set_rom1_info.c]
+    defines:
+      - F__iopcontrol_special_internals
+      - F_SifIopRebootBufferEncrypted
+      - F_SifIopRebootBuffer
+    headers: [kernel, patches]
+
+  # ps2sdk ee/rpc/hdd (AFL-2.0). The SDK suite ships it as world package
+  # "hdd", but the core IOP driver package of the same name shadows it in
+  # libs: resolution, so the library is built from source here.
+  - name: hdd_ee
+    type: ee_lib
+    sources: [ee_libs/hdd/libhdd.c]
+    include_dirs: [ee_libs/hdd/include]
+    headers: [kernel, filexio, poweroff]
+
+  # Embedded ELF loader: linked into the 0x84000..0xa0000 low-memory window,
+  # built compact with newlib-nano exactly like loader/Makefile.
+  - name: loader
+    type: ee
+    sources: [loader/loader.c]
+    linkfile: loader/linkfile
+    opt: -Os
+    cflags: [-fdata-sections, -ffunction-sections]
+    ldflags:
+      - "-Wl,-zmax-page-size=128"
+      - "-Wl,--gc-sections"
+      - "-nodefaultlibs"
+      - "-Wl,--start-group"
+      - "-lc_nano"
+      - "-lm_nano"
+      - "-lgcc"
+      - "-lkernel"
+      - "-lcglue"
+      - "-lpthread"
+      - "-lpthreadglue"
+      - "-Wl,--end-group"
+    libs: [filexio]
+
+  - name: wLaunchELF
+    type: ee
+    pack: true
+    sources:
+      - src/main.c
+      - src/main_actions.c
+      - src/main_boot.c
+      - src/main_modules.c
+      - src/main_menu.c
+      - src/main_title.c
+      - src/main_info_screens.c
+      - src/main_console_info.c
+      - src/main_gameid.c
+      - src/main_gameid_table.c
+      - src/main_history.c
+      - src/init.c
+      - src/main_startup.c
+      - src/main_fileops.c
+      - src/main_exploit_installer.c
+      - src/kelf_signer.c
+      - src/config.c
+      - src/config_screen.c
+      - src/config_startup.c
+      - src/config_network.c
+      - src/config_advanced.c
+      - src/gui.c
+      - src/gui_colors.c
+      - src/virtual_keyboard.c
+      - src/elf.c
+      - src/draw.c
+      - src/draw_gs.c
+      - src/draw_text.c
+      - src/filer.c
+      - src/filer_device.c
+      - src/filer_mount.c
+      - src/filer_fileops.c
+      - src/filer_actions.c
+      - src/filer_browser.c
+      - src/filer_copy.c
+      - src/gui_sort.c
+      - src/gui_texteditor.c
+      - src/gui_hdd0_format.c
+      - src/psu_functions.c
+      - src/hdd.c
+      - src/hdd_header_injector.c
+      - src/hdl_rpc.c
+      - src/editor.c
+      - src/editor_menu.c
+      - src/editor_input.c
+      - src/editor_rules.c
+      - src/editor_file.c
+      - src/timer.c
+      - src/icon.c
+      - src/lang.c
+      - src/popstarter.c
+      - src/popstarter_path.c
+      - src/popstarter_vcd.c
+      - src/popstarter_gameid.c
+      - src/popstarter_elf.c
+      - src/font_uLE.c
+      - src/makeicon.c
+      - src/chkesr.c
+      - src/pad.c
+      - src/dash_main.c
+      - src/dash_gfx.c
+      - src/dash_font.c
+      - src/dash_font_data.c
+      - src/dash_icons.c
+      - src/dash_png.c
+      - src/dash_art.c
+      - src/dash_bg.c
+      - src/dash_store.c
+      - src/dash_lib.c
+      - src/dash_devices.c
+      - src/dash_ui.c
+      - src/dash_home.c
+      - src/dash_apps.c
+      - src/dash_files.c
+      - src/dash_tools.c
+      - src/dash_settings.c
+      - src/dash_theme.c
+      - src/embed_blobs.S
+    include_dirs: [include, ., ee_libs/hdd/include]
+    defines:
+      - WLE_PS2BUILD
+      - NEWLIB_PORT_AWARE
+      - LIBCDVD_LATEST
+      - XFROM
+      - DVRP
+      - MMCE
+      - MX4SIO
+      - HOMEBREW_SIO2MAN
+      - UDPFS
+      - TMANIP
+      - EXFAT
+      - CUSTOM_COLORS
+    cflags:
+      - -mgpopt
+      - -G0
+      - "-Wa,-I."
+      - "-Wa,-I.."
+    ldflags:
+      - "-Wl,--no-warn-mismatch"
+    headers: [sior]
+    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, mc, kbd, m, cdvd, filexio, patches, poweroff, debug, secr, pad]
+    embed_irx:
+      - loader:loader_elf
+      - poweroff
+      - iomanx
+      - filexio
+      - dev9:ps2dev9
+      - dev9_poweroff
+      - ps2hdd_osd:ps2hdd
+      - fs:ps2fs
+      - usbd
+      - mcman
+      - mcserv
+      - cdfs:cdvd
+      - xparam
+      - vmcman
+      - kbd:ps2kbd
+      - hdl_info
+      - allowdvdv
+      - secrsif
+      - xfromman
+      - xfromserv
+      - extflash
+      - atad:ps2atad
+      - pvrdrv:dvrdrv
+      - dvrfile
+      - mmceman
+      - mx4sio_bd
+      - sio2man
+      - padman
+      - bdm
+      - bdmfs_fatfs
+      - usbmass_bd
+      - ata_bd

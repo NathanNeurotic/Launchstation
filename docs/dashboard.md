@@ -1,0 +1,154 @@
+# wLaunchELF dashboard
+
+The dashboard is the default shell of this build. It sits on top of the
+classic wLaunchELF code: every launch, tool and file operation still goes
+through `ExecuteMainAction()`, `getFilePath()` and the classic screens.
+
+## Sections
+
+| Section  | What it does |
+|----------|--------------|
+| HOME     | Hero panel for the focused item, a *Continue* row (pinned, recent, favorite apps), quick-access chips (library, File Browser, start disc, devices, tools, settings and every launch key from LAUNCHELF.CNF) and live device status. |
+| APPS     | ELF library in **Grid**, **List** or **Carousel** view (SELECT switches, saved). Filters: all, favorites, memory cards, USB, HDD, other. |
+| FILES    | Entry points into the full FileBrowser: device list, last folder, MISC commands, each detected device and your PathPad bookmarks. |
+| DEVICES  | Cards for memory cards (type, free space), USB, MMCE, MX4SIO, HDD, exFAT HDD, disc, UDPFS, PSX flash/DVR HDD and mounted VMCs. |
+| TOOLS    | HDD Manager, Text Editor, start disc, POPStarter, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, classic configuration, classic launch-key menu, reboot IOP, power off. |
+| SETTINGS | Display, Dashboard, Controls, Devices, Network, Advanced. Classic options edit the same `SETTING` fields and are written to LAUNCHELF.CNF only when you choose *Save wLaunchELF settings* (classic save-location prompt). |
+
+## Controls
+
+Confirm/cancel follow the existing `GUI_Swap_Keys` setting (Settings >
+Controls > Confirm button), exactly like the classic screens.
+
+| Button | Action |
+|--------|--------|
+| D-pad / left stick | Navigate |
+| Confirm (Circle or Cross) | Start / open / select |
+| Cancel | Back / close |
+| Triangle | Options for the focused item |
+| Square | Add to / remove from Favorites |
+| L1 / R1 | Previous / next section |
+| L2 / R2 | Page jump |
+| START | Dashboard menu (home, refresh library, File Browser, classic menu, settings, reboot IOP, power off) |
+| SELECT | Switch application view (APPS) |
+
+Boot behaviour of the classic menu is preserved: `Init_Delay` is honoured,
+a launch key held when the delay ends starts its application, and a
+configured `LK_auto` path starts after the classic timeout unless a button
+is pressed (a countdown banner is shown).
+
+The classic launch-key menu is still available (Tools > Classic launch-key
+menu, or START menu). It has a *DASH: Return to dashboard* entry, and
+`MISC/Dashboard` can be assigned to a launch key.
+
+## Application discovery
+
+Only the configured folders are listed (Settings > Dashboard > Application
+folders). Defaults: `mc:/APPS/`, `mc:/BOOT/`, `mass:/APPS/`, `mass:/BOOT/`.
+Each folder is searched one sub-folder deep (`APPS/<folder>/*.ELF`).
+
+* At startup only memory cards and devices whose driver is already running
+  are refreshed (Settings > Dashboard > Refresh at startup). Nothing else is
+  initialised for the dashboard.
+* *Refresh library* (APPS > Triangle, START menu or Settings) scans every
+  folder and loads drivers as needed, with a progress overlay.
+* Results are cached in `DASHLIB.CNF` and shown instantly next boot.
+  Apps that disappeared (device removed) stay usable as shortcuts and fail
+  with a friendly message instead of a crash.
+
+## Metadata (optional)
+
+Plain `key = value` text; every key is optional; `#` starts a comment.
+
+* `<dir>/<ELFNAME>.cfg` (e.g. `OPNPS2LD.cfg` next to `OPNPS2LD.ELF`)
+* `<dir>/title.cfg` in OPL application format (`title=`, `boot=`); applied
+  only when `boot=` matches the ELF
+
+```
+title = Open PS2 Loader
+description = Game loader for USB, HDD, SMB and MX4SIO.
+author = ifcaro & contributors
+version = 1.2.0
+category = Loader
+cover = cover.png          # relative to the ELF folder, or a full path
+arg = -some-option         # one argument per line, repeatable
+pinned = 1                 # show on HOME
+```
+
+Arguments: a classic `<ELFNAME>.arg` sidecar always wins; metadata `arg`
+lines are used only when no `.arg` exists. *Start with arguments...* uses
+the Text Editor's "Launch with args" flow. APPS > Triangle > *Edit metadata*
+creates a starter file and opens it in the Text Editor.
+
+## Artwork (optional)
+
+First match wins; nothing is required.
+
+1. `cover =` from the metadata
+2. `<dir>/<ELFNAME>.ELF_COV.png` (OPL naming, e.g. `OPNPS2LD.ELF_COV.png`)
+3. `<dir>/<ELFNAME>_COV.png`, `<dir>/<ELFNAME>.png`
+4. `<dir>/cover.png`, `<dir>/icon.png` (only for per-app folders)
+5. `<dir>/<ELFNAME>_ICO.png`
+6. `<device>/ART/<ELFNAME>.ELF_COV.png`, `<device>/ART/<ELFNAME>_COV.png`
+   (OPL ART folder; `hdd0:/+OPL/ART/` on the internal HDD)
+7. `<dashboard folder>/ART/` with the same names
+8. generated tile (colour from the path, monogram, device badge)
+
+Any PNG size up to 2048x2048 / 1.5 MB is accepted and box-filtered down to
+at most 128x128 while decoding. Artwork on a device whose driver is not
+running is looked up later, when that device is opened.
+
+## Files written by the dashboard
+
+Next to LAUNCHELF.CNF when it was loaded from a writable device, otherwise
+in `mc0:/SYS-CONF/`: `DASHBOARD.CNF` (settings, scan folders),
+`DASHAPPS.CNF` (favorites, pins, recents), `DASHLIB.CNF` (library cache).
+LAUNCHELF.CNF itself is never modified behind your back.
+
+## Optional theme
+
+`<dashboard folder>/THEME/background.png`, `stars1.png`, `stars2.png` are
+used when present (backdrop plus two additive star layers). Build them from
+a PSBBN texture pack you own with:
+
+```
+python scripts/prepare_psbbn_theme.py PSBBN-Texture-PNGs.zip
+```
+
+No third-party artwork is embedded in the ELF.
+
+## Typography
+
+Dashboard text uses Roboto Regular (Copyright 2015 Google Inc., Apache
+License 2.0, see `docs/licenses/Roboto-COPYRIGHT.txt`). It is rendered on the
+host by `scripts/gen_dash_font.py` (4x supersampled) into three PSMT8 alpha
+atlases (14, 20 and 32 px em; 35 + 57 + 123 KB) committed as
+`src/dash_font_data.c`; the PS2 needs no font engine. Sizes run from 12 px
+captions to 28 px titles. The classic screens keep wLaunchELF's 8x16 bitmap
+font (and any custom `.fnt`), because their layouts depend on fixed 8 px
+columns. Regenerate with another TTF/OTF:
+
+```
+python scripts/gen_dash_font.py path/to/Font.ttf
+```
+
+## Memory and VRAM budget
+
+* Framebuffer: unchanged (single buffered, CT32, as the classic UI).
+* Dashboard font atlases ~215 KB, classic-font atlas 512x340 PSMT8 (~170 KB,
+  classic screens only), icon atlas 512x408 PSMT8 (~204 KB),
+  five tiny CT32 helper textures. All textures are owned by gsKit's texture
+  manager (inline uploads, LRU eviction) above the framebuffer.
+* Artwork: at most 40 thumbnails (<= 64 KB each) in EE RAM; one probe or
+  one decode per frame, only after the pad has been idle ~110 ms (focused
+  item) or ~260 ms (neighbours). Slots drawn in the current or previous
+  frame are never evicted.
+* Library: 512 entries x ~850 bytes. Scans temporarily allocate one
+  FileBrowser listing buffer (~800 KB) and free it afterwards.
+
+## Developer aid
+
+Defining `DASH_AUTOTEST` (add it to the `wLaunchELF` target's `defines` in
+ps2.yaml) replays the timed button script in `include/dash_autotest.h` and
+seeds a sample library, so every screen can be exercised in an emulator.
+Never ship such a build.

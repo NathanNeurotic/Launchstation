@@ -1,0 +1,592 @@
+//--------------------------------------------------------------
+//File name:   dash_internal.h
+//Shared declarations between the dashboard modules (dash_*.c).
+//
+//Coordinate system: every dashboard drawing call uses a virtual 640x448
+//canvas. dash_gfx.c maps the Y axis to the real framebuffer height, so PAL
+//(640x512) keeps the same proportions as NTSC/480p without separate layouts.
+//--------------------------------------------------------------
+#ifndef DASH_INTERNAL_H
+#define DASH_INTERNAL_H
+
+#include "launchelf.h"
+#include "main_actions.h"
+#include "dash.h"
+
+#define DASH_VW 640
+#define DASH_VH 448
+
+/* Conservative CRT safe area (virtual coordinates). */
+#define DASH_SAFE_L 40
+#define DASH_SAFE_R 600
+#define DASH_SAFE_T 26
+#define DASH_SAFE_B 424
+
+/* Bounded storage sizes. Paths longer than DASH_PATH_MAX are skipped by the
+ * library (the FileBrowser still handles them). */
+#define DASH_PATH_MAX 256
+#define DASH_TITLE_MAX 64
+#define DASH_DESC_MAX 160
+#define DASH_SHORT_MAX 40
+
+#define DASH_MAX_APPS 512
+#define DASH_MAX_SCAN 12
+#define DASH_MAX_FAV 48
+#define DASH_MAX_RECENT 16
+
+//--------------------------------------------------------------
+// Colors
+//--------------------------------------------------------------
+typedef struct
+{
+	u8 r, g, b, a; /* a: 0..255 (converted to the GS 0..128 range on draw) */
+} DashColor;
+
+static inline DashColor DC(int r, int g, int b, int a)
+{
+	DashColor c;
+	c.r = (u8)r;
+	c.g = (u8)g;
+	c.b = (u8)b;
+	c.a = (u8)a;
+	return c;
+}
+
+static inline DashColor dashColorA(DashColor c, float mul)
+{
+	int a = (int)(c.a * mul);
+	if (a < 0)
+		a = 0;
+	if (a > 255)
+		a = 255;
+	c.a = (u8)a;
+	return c;
+}
+
+DashColor dashColorLerp(DashColor a, DashColor b, float t);
+DashColor dashColorHue(int hue, int sat, int val, int alpha); /* hue 0..359 */
+
+/* Palette (dash_gfx.c) */
+extern const DashColor DASH_C_TEXT;
+extern const DashColor DASH_C_TEXT2;
+extern const DashColor DASH_C_TEXT3;
+extern const DashColor DASH_C_ACCENT;
+extern const DashColor DASH_C_ACCENT2;
+extern const DashColor DASH_C_WARM;
+extern const DashColor DASH_C_DANGER;
+extern const DashColor DASH_C_OK;
+extern const DashColor DASH_C_PANEL;
+extern const DashColor DASH_C_PANEL_HI;
+extern const DashColor DASH_C_SHADOW;
+
+//--------------------------------------------------------------
+// Math / animation helpers
+//--------------------------------------------------------------
+static inline float dashClampf(float v, float lo, float hi)
+{
+	return (v < lo) ? lo : ((v > hi) ? hi : v);
+}
+static inline float dashLerpf(float a, float b, float t)
+{
+	return a + (b - a) * t;
+}
+float dashApproach(float cur, float target, float speed, float dt); /* exp smoothing */
+float dashEaseOutCubic(float t);
+float dashSinf(float x);
+float dashCosf(float x);
+
+//--------------------------------------------------------------
+// Renderer (dash_gfx.c)
+//--------------------------------------------------------------
+enum DashBlend {
+	DASH_BLEND_NORMAL = 0,
+	DASH_BLEND_ADD
+};
+
+void dashGfxInit(void);
+void dashGfxShutdown(void);
+int dashGfxCheckScreenChange(void); /* re-inits VRAM state after a mode switch */
+void dashGfxBeginFrame(void);
+void dashGfxPresent(void);
+void dashGfxRestoreLegacyState(void);
+float dashGfxScaleY(void);
+
+void dashGfxPushAlpha(float mul);
+void dashGfxPopAlpha(void);
+void dashGfxPushOffset(float dx, float dy);
+void dashGfxPopOffset(void);
+void dashGfxBlend(int mode);
+void dashGfxScissor(float x, float y, float w, float h);
+void dashGfxScissorReset(void);
+
+int dashTexBind(GSTEXTURE *tex);
+void dashTexInvalidate(GSTEXTURE *tex);
+void dashTexRelease(GSTEXTURE *tex);
+
+void dashRect(float x, float y, float w, float h, DashColor c);
+void dashRectGradV(float x, float y, float w, float h, DashColor top, DashColor bottom);
+void dashRectGradH(float x, float y, float w, float h, DashColor left, DashColor right);
+void dashRectGrad4(float x, float y, float w, float h, DashColor tl, DashColor tr, DashColor bl, DashColor br);
+void dashTri(float x1, float y1, float x2, float y2, float x3, float y3, DashColor c1, DashColor c2, DashColor c3);
+void dashPanel(float x, float y, float w, float h, float r, DashColor fill);
+void dashPanelGradV(float x, float y, float w, float h, float r, DashColor top, DashColor bottom);
+void dashPanelBorder(float x, float y, float w, float h, float r, DashColor c);
+void dashGlow(float cx, float cy, float rx, float ry, DashColor c);
+void dashGlowRect(float x, float y, float w, float h, float spread, DashColor c);
+void dashShadow(float x, float y, float w, float h, float spread, float alpha);
+void dashSparkle(float cx, float cy, float size, DashColor c);
+void dashTexDraw(GSTEXTURE *tex, float x, float y, float w, float h, DashColor tint);
+void dashTexDrawUV(GSTEXTURE *tex, float x, float y, float w, float h,
+                   float u1, float v1, float u2, float v2, DashColor tint);
+void dashTexDrawFit(GSTEXTURE *tex, float x, float y, float w, float h, DashColor tint);
+
+/* Batched textured sprites (used by text and icons). */
+void dashSpriteBatchBegin(GSTEXTURE *tex, DashColor c);
+void dashSpriteBatchAdd(float x1, float y1, float u1, float v1, float x2, float y2, float u2, float v2);
+void dashSpriteBatchEnd(void);
+
+//--------------------------------------------------------------
+// Font (dash_font.c)
+//--------------------------------------------------------------
+/* Type scale: size in px = value * 20 (Roboto, see dash_font.c) */
+#define DASH_FS_CAPTION 0.60f /* 12 px */
+#define DASH_FS_SMALL 0.66f   /* 13 px */
+#define DASH_FS_BODY 0.76f    /* 15 px */
+#define DASH_FS_LABEL 0.86f   /* 17 px */
+#define DASH_FS_TITLE 1.10f   /* 22 px */
+#define DASH_FS_HERO 1.40f    /* 28 px */
+
+void dashFontInit(void);
+void dashFontRebuild(void);
+void dashFontShutdown(void);
+float dashTextWidth(const char *s, float scale);
+float dashTextWidthN(const char *s, int n, float scale);
+float dashTextLineH(float scale);
+float dashText(float x, float y, const char *s, float scale, DashColor c);
+float dashTextS(float x, float y, const char *s, float scale, DashColor c); /* with drop shadow */
+void dashTextCenter(float cx, float y, const char *s, float scale, DashColor c);
+void dashTextRight(float rx, float y, const char *s, float scale, DashColor c);
+float dashTextFit(float x, float y, float maxw, const char *s, float scale, DashColor c);
+int dashTextWrap(float x, float y, float w, int max_lines, const char *s, float scale, DashColor c, float line_h);
+/* Legacy 8px monospace glyph (for the themed classic screens). */
+void dashFontLegacyChar(unsigned int c, int x, int y, u64 gs_color);
+GSTEXTURE *dashFontTexture(void);
+
+//--------------------------------------------------------------
+// Icons (dash_icons.c)
+//--------------------------------------------------------------
+enum DashIcon {
+	DI_HOME = 0,
+	DI_APPS,
+	DI_FOLDER,
+	DI_DEVICES,
+	DI_TOOLS,
+	DI_SETTINGS,
+	DI_MC,
+	DI_USB,
+	DI_HDD,
+	DI_DISC,
+	DI_NETWORK,
+	DI_STAR,
+	DI_CLOCK,
+	DI_APP,
+	DI_PLAY,
+	DI_INFO,
+	DI_WARNING,
+	DI_POWER,
+	DI_TEXT,
+	DI_EDIT,
+	DI_REFRESH,
+	DI_PIN,
+	DI_PLUS,
+	DI_CHECK,
+	DI_CLOSE,
+	DI_SDCARD,
+	DI_CHIP,
+	DI_VIEW_GRID,
+	DI_VIEW_LIST,
+	DI_VIEW_CAROUSEL,
+	DI_FILE,
+	DI_BACK,
+	DI_BTN_CROSS,
+	DI_BTN_CIRCLE,
+	DI_BTN_SQUARE,
+	DI_BTN_TRIANGLE,
+	DI_KEY,
+	DI_GAMEPAD,
+	DI_COUNT
+};
+
+void dashIconsInit(void);
+void dashIconsShutdown(void);
+void dashIcon(int id, float x, float y, float size, DashColor c);
+GSTEXTURE *dashIconsTexture(void);
+
+//--------------------------------------------------------------
+// PNG decoding (dash_png.c)
+//--------------------------------------------------------------
+#define DASH_PNG_MAX_FILE (1536 * 1024)
+/* Decodes a PNG file into a newly memalign'd CT32 buffer (GS alpha range),
+ * box-downscaled to fit max_w x max_h. Returns 0 on success. */
+int dashPngLoadFile(const char *path, int max_w, int max_h, u32 **out, int *out_w, int *out_h);
+int dashPngDecode(const u8 *data, int size, int max_w, int max_h, u32 **out, int *out_w, int *out_h);
+
+//--------------------------------------------------------------
+// Settings / persistence (dash_store.c)
+//--------------------------------------------------------------
+enum DashSection {
+	DASH_SEC_HOME = 0,
+	DASH_SEC_APPS,
+	DASH_SEC_FILES,
+	DASH_SEC_DEVICES,
+	DASH_SEC_TOOLS,
+	DASH_SEC_SETTINGS,
+	DASH_SEC_COUNT
+};
+
+enum DashView {
+	DASH_VIEW_GRID = 0,
+	DASH_VIEW_LIST,
+	DASH_VIEW_CAROUSEL,
+	DASH_VIEW_COUNT
+};
+
+enum DashFx {
+	DASH_FX_OFF = 0,
+	DASH_FX_SUBTLE,
+	DASH_FX_FULL,
+	DASH_FX_COUNT
+};
+
+enum DashAnim {
+	DASH_ANIM_OFF = 0,
+	DASH_ANIM_REDUCED,
+	DASH_ANIM_FULL,
+	DASH_ANIM_COUNT
+};
+
+typedef struct
+{
+	int enabled;
+	int start_section;
+	int view;
+	int effects;
+	int anim;
+	int autoscan;
+	int artwork;
+	int recent_count;
+	int legacy_theme;
+	int intro_done;
+	int nscan;
+	char scan[DASH_MAX_SCAN][DASH_PATH_MAX];
+} DashSettings;
+
+extern DashSettings dashCfg;
+
+/* Favorites / recents / pins are stored as raw executable paths. */
+typedef struct
+{
+	int nfav;
+	char fav[DASH_MAX_FAV][DASH_PATH_MAX];
+	int npin;
+	char pin[DASH_MAX_FAV][DASH_PATH_MAX];
+	int nrecent;
+	char recent[DASH_MAX_RECENT][DASH_PATH_MAX];
+} DashUserLists;
+
+extern DashUserLists dashLists;
+
+void dashStoreInit(void);
+int dashStoreLoaded(void);
+void dashStoreDefaults(void);
+int dashStoreSaveSettings(void);
+int dashStoreSaveLists(void);
+const char *dashStoreDir(void);
+int dashStoreBuildPath(char *out, int out_size, const char *file);
+int dashStoreIsFavorite(const char *path);
+int dashStoreIsPinned(const char *path);
+int dashStoreToggleFavorite(const char *path);
+int dashStoreTogglePinned(const char *path);
+void dashStoreRemoveEverywhere(const char *path);
+void dashStorePushRecent(const char *path);
+void dashStoreClearRecent(void);
+
+/* Tiny lenient "key = value" line reader shared by the dash modules.
+ * Unlike get_CNF_string it skips malformed lines instead of stopping. */
+typedef int (*DashKvCallback)(const char *key, char *value, void *user);
+int dashKvParse(char *text, DashKvCallback cb, void *user);
+char *dashLoadTextFile(const char *path, int max_size, int *out_len);
+int dashWriteFile(const char *path, const void *data, int size);
+void dashStrCopy(char *dst, const char *src, int dst_size);
+char *dashTrim(char *s);
+
+//--------------------------------------------------------------
+// ELF library (dash_lib.c)
+//--------------------------------------------------------------
+enum DashAppFlags {
+	DASH_APP_HAS_META = 1 << 0,
+	DASH_APP_HAS_ARGS = 1 << 1,
+	DASH_APP_MISSING = 1 << 2,
+	DASH_APP_META_PIN = 1 << 3,
+	DASH_APP_TRANSIENT = 1 << 4, /* recent/fav entry not found in library */
+	DASH_APP_ART_DEFERRED = 1 << 5 /* art lookup waits for the device driver */
+};
+
+enum DashArtState {
+	DASH_ART_UNKNOWN = 0,
+	DASH_ART_FOUND,
+	DASH_ART_NONE
+};
+
+typedef struct
+{
+	char path[DASH_PATH_MAX];
+	char title[DASH_TITLE_MAX];
+	char desc[DASH_DESC_MAX];
+	char author[DASH_SHORT_MAX];
+	char version[24];
+	char category[24];
+	char art[DASH_PATH_MAX];
+	u8 art_state;
+	u8 flags;
+	u16 hue;
+} DashApp;
+
+extern DashApp *dashApps;
+extern int dashAppCount;
+
+typedef void (*DashProgressFn)(const char *status, int done, int total);
+
+void dashLibInit(void);
+void dashLibShutdown(void);
+int dashLibLoadCache(void);
+int dashLibSaveCache(void);
+int dashLibScan(int interactive, DashProgressFn progress);
+DashApp *dashLibFind(const char *path);
+int dashLibIndexOf(const DashApp *app);
+/* Resolves a path from favorites/recents to a library entry, or fills a
+ * transient entry when the app is not (or no longer) in the library. */
+DashApp *dashLibResolve(const char *path, DashApp *transient);
+void dashLibMakeTransient(DashApp *app, const char *path);
+int dashLibLoadArgs(const DashApp *app, char *buf, int buf_size);
+void dashLibDeviceLabel(const char *path, char *out, int out_size);
+int dashLibDeviceIcon(const char *path);
+void dashLibPrettyName(const char *path, char *out, int out_size);
+int dashLibRemove(int index);
+void dashLibRefreshApp(DashApp *app);
+void dashHomeRebuild(void);
+int dashLibMetadataPath(const DashApp *app, char *out, int out_size);
+
+//--------------------------------------------------------------
+// Artwork cache (dash_art.c)
+//--------------------------------------------------------------
+void dashArtInit(void);
+void dashArtShutdown(void);
+void dashArtBeginFrame(void);
+/* Returns a ready texture for the app or NULL (fallback tile is drawn by the
+ * caller). prio: 0 = focused item, larger = farther from focus. */
+GSTEXTURE *dashArtGet(DashApp *app, int prio);
+/* Performs at most one probe/decode step; returns non-zero if it did IO. */
+int dashArtStep(int input_idle_ms);
+void dashArtForget(const DashApp *app);
+int dashArtTakeDirty(void);
+void dashArtFlushAll(void);
+void dashArtInvalidateVram(void);
+/* Themed PNG loaded from the dashboard THEME folder (NULL if absent). */
+GSTEXTURE *dashThemeTexture(const char *name, int max_w, int max_h);
+void dashThemeTexturesFree(void);
+
+/* Procedural fallback tile for an app without artwork. */
+void dashDrawAppTile(const DashApp *app, float x, float y, float w, float h, float focus);
+/* Artwork or fallback, fitted into a rounded card. */
+void dashDrawAppArt(DashApp *app, float x, float y, float w, float h, float focus, int prio);
+
+//--------------------------------------------------------------
+// Background (dash_bg.c)
+//--------------------------------------------------------------
+void dashBgInit(void);
+void dashBgUpdate(float dt);
+void dashBgDraw(void);
+void dashBgDrawStatic(void); /* no animation (legacy screens / FX off) */
+void dashBgFlash(float amount);
+
+//--------------------------------------------------------------
+// Devices (dash_devices.c)
+//--------------------------------------------------------------
+enum DashDevState {
+	DASH_DEV_READY = 0,
+	DASH_DEV_PROBE,  /* driver not loaded yet: press to detect */
+	DASH_DEV_ABSENT,
+	DASH_DEV_BUSY
+};
+
+typedef struct
+{
+	int icon;
+	int state;
+	char name[32];
+	char mount[24];
+	char browse[24];
+	char status[48];
+	char detail[48];
+	float fill; /* 0..1 used space, <0 unknown */
+} DashDevice;
+
+#define DASH_MAX_DEVICES 20
+void dashDevicesInit(void);
+void dashDevicesPoll(void);
+int dashDevicesList(DashDevice *out, int max);
+int dashDevicesProbe(const DashDevice *dev);
+const char *dashDiscStatus(void);
+int dashMcPresent(int port);
+
+//--------------------------------------------------------------
+// Input
+//--------------------------------------------------------------
+enum {
+	DASH_IN_UP = 1 << 0,
+	DASH_IN_DOWN = 1 << 1,
+	DASH_IN_LEFT = 1 << 2,
+	DASH_IN_RIGHT = 1 << 3,
+	DASH_IN_OK = 1 << 4,
+	DASH_IN_BACK = 1 << 5,
+	DASH_IN_MENU = 1 << 6,   /* Triangle */
+	DASH_IN_FAV = 1 << 7,    /* Square */
+	DASH_IN_L1 = 1 << 8,
+	DASH_IN_R1 = 1 << 9,
+	DASH_IN_L2 = 1 << 10,
+	DASH_IN_R2 = 1 << 11,
+	DASH_IN_START = 1 << 12,
+	DASH_IN_SELECT = 1 << 13,
+	DASH_IN_L3 = 1 << 14,
+	DASH_IN_R3 = 1 << 15
+};
+
+typedef struct
+{
+	u32 pressed; /* includes auto-repeat */
+	u32 raw_new;
+	int any;
+} DashInput;
+
+void dashInputPoll(DashInput *in);
+void dashInputFlush(void);
+u64 dashInputIdleMs(void);
+
+//--------------------------------------------------------------
+// Widgets / overlays (dash_ui.c)
+//--------------------------------------------------------------
+typedef struct
+{
+	int button; /* DI_BTN_* icon, or -1 for text-only key labels */
+	const char *key; /* "L1", "START"... used when button < 0 */
+	const char *label;
+} DashHint;
+
+enum DashToastKind {
+	DASH_TOAST_INFO = 0,
+	DASH_TOAST_OK,
+	DASH_TOAST_WARN,
+	DASH_TOAST_ERROR
+};
+
+void dashUiInit(void);
+void dashUiUpdate(float dt);
+int dashOkIcon(void);
+int dashBackIcon(void);
+void dashDrawHints(const DashHint *hints, int n);
+void dashDrawHeader(int section, float section_anim);
+void dashDrawClock(void);
+void dashDrawSectionTitle(float x, float y, const char *title, const char *subtitle);
+void dashDrawEmptyState(float cx, float cy, int icon, const char *title, const char *body);
+void dashDrawScrollbar(float x, float y, float h, int first, int visible, int total);
+void dashDrawFocusFrame(float x, float y, float w, float h, float r, float strength);
+void dashDrawSpinner(float cx, float cy, float r, DashColor c);
+void dashToast(int kind, const char *msg);
+void dashDrawToasts(void);
+
+/* Blocking modal dialogs. They keep rendering the current dashboard scene
+ * underneath through dashRenderScene(). */
+typedef struct
+{
+	int icon;
+	const char *label;
+	const char *detail;
+	int disabled;
+} DashMenuItem;
+
+int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *items, int n, int initial);
+int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger);
+void dashModalMessage(int icon, const char *title, const char *body, const char *detail);
+int dashModalChoice(const char *title, const char *const *options, int n, int current);
+
+/* Synchronous work feedback: draws a full frame immediately. */
+void dashLoadingBegin(const char *title);
+void dashLoadingStatus(const char *status, int done, int total);
+void dashLoadingEnd(void);
+int dashLoadingActive(void);
+
+//--------------------------------------------------------------
+// Sections (dash_home.c, dash_apps.c, dash_files.c, dash_tools.c,
+// dash_settings.c) and shell (dash_main.c)
+//--------------------------------------------------------------
+typedef struct
+{
+	void (*enter)(void);
+	void (*input)(const DashInput *in);
+	void (*update)(float dt);
+	void (*draw)(void);
+	void (*hints)(void);
+} DashScreen;
+
+extern const DashScreen dashHomeScreen;
+extern const DashScreen dashAppsScreen;
+extern const DashScreen dashFilesScreen;
+extern const DashScreen dashDevicesScreen;
+extern const DashScreen dashToolsScreen;
+extern const DashScreen dashSettingsScreen;
+
+const char *dashSectionName(int section);
+int dashSectionIcon(int section);
+void dashSwitchSection(int section);
+int dashCurrentSection(void);
+void dashRenderScene(void);
+float dashTime(void);
+float dashAnimSpeed(void);
+
+/* Actions dispatched by the screens. All of them run through the proven
+ * ExecuteMainAction() path. */
+void dashLaunchApp(DashApp *app, int with_args_prompt);
+void dashRunMisc(const char *misc_path);
+void dashOpenBrowser(const char *start_dir);
+void dashOpenTextEditor(const char *file);
+void dashAppActions(DashApp *app);
+void dashRequestExitToClassic(void);
+void dashRescanLibrary(int interactive);
+const MainExecuteContext *dashExecContext(void);
+const char *dashOkLabelKey(void);
+
+/* Home/Apps shared helpers. */
+int dashAppsVisibleCount(void);
+void dashAppsRebuildView(void);
+void dashAppsFocusPath(const char *path);
+
+/* Legacy integration hooks (draw.c). */
+extern void (*drawMsgOverride)(const char *msg);
+extern int gsScreenGeneration;
+
+/* filer.c accessors used by the device model. */
+int getDir(const char *path, FILEINFO *info);
+int filerRootMcPresent(int port, int *type, int *free_kb);
+int filerUsbDriveMask(void);
+int filerUsbDriversLoaded(void);
+int filerShowHddUnit(int unit);
+int filerShowAtaUnit(int unit);
+void filerRootMcPollIdle(void);
+int pollRootMemoryCardDevices(void);
+extern int uLE_cdmode;
+
+/* main_title.c accessor for split clock text. */
+void menuTitleGetClockText(char *time_out, int time_size, char *date_out, int date_size);
+
+#endif

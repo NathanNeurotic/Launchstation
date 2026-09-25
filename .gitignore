@@ -1,0 +1,31 @@
+*.a
+*.elf
+*.ELF
+*.erl
+*.exe
+*.o
+*.swp
+*.tmp
+*.irx
+
+asm/*
+obj/*
+build/stale-code-report.txt
+
+githash.h
+!iop/__precompiled/*
+iop/vmc_fs.irx
+iso/
+*.iso
+*.zip
+thirdparty/
+
+# User-provided MagicGate keys
+KEYS.DAT
+keys.dat
+PS2KEYS.dat
+PS2KEYS.DAT
+ps2keys.dat
+
+# PS2BUILD output
+build/

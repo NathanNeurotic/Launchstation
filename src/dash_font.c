@@ -1,0 +1,528 @@
+//--------------------------------------------------------------
+//File name:   dash_font.c
+//Dashboard text: a smoothed, proportional rendition of the active
+//wLaunchELF 8x16 font.
+//
+//At init (and whenever the classic font changes) every glyph of the active
+//FontBuffer (so user .fnt fonts and accented Latin-1 glyphs keep working)
+//plus the special uLE glyphs is upscaled 2x with Scale2x/EPX, softened with
+//a 3x3 kernel and stored in a single 512x340 PSMT8 texture whose CLUT is a
+//white alpha ramp. Text is tinted through vertex colour and drawn with one
+//batched sprite list per string. VRAM cost: ~170KB + 1KB CLUT.
+//--------------------------------------------------------------
+#include "dash_internal.h"
+#include "dash_font_data.h"
+
+#define FONT_CELL_W 16
+#define FONT_CELL_H 32
+#define FONT_SLOT_W 18
+#define FONT_SLOT_H 34
+#define FONT_COLS 28
+#define FONT_FIRST 0x20
+#define FONT_LAST 0x123
+#define FONT_GLYPHS (FONT_LAST - FONT_FIRST + 1)
+#define FONT_TEX_W 512
+#define FONT_TEX_H 340
+
+typedef struct
+{
+	s8 xoff;  /* first ink column in texture pixels */
+	u8 width; /* ink width in texture pixels */
+	u8 adv;   /* advance in texture pixels */
+} GlyphMetric;
+
+static GSTEXTURE font_tex;
+static u32 font_clut[256] __attribute__((aligned(64)));
+static GlyphMetric metrics[FONT_GLYPHS];
+static int font_ready;
+static u32 font_hash;
+
+static inline int clutSwizzle(int i)
+{
+	return (i & 0xE7) | ((i & 0x08) << 1) | ((i & 0x10) >> 1);
+}
+
+static const u8 *glyphBits(unsigned int c)
+{
+	if (c > 0xFF)
+		return &font_uLE[c * 16];
+	return &FontBuffer[c * 16];
+}
+
+static u32 hashFont(void)
+{
+	u32 h = 2166136261u;
+	int i;
+
+	for (i = 0; i < 256 * 16; i++)
+		h = (h ^ FontBuffer[i]) * 16777619u;
+	return h;
+}
+
+static void buildGlyph(unsigned int c, u8 *dst_base)
+{
+	const u8 *bits = glyphBits(c);
+	u8 src[16][8];
+	u8 up[FONT_CELL_H + 2][FONT_CELL_W + 2];
+	int x, y, gi = c - FONT_FIRST;
+	int minc = 8, maxc = -1;
+
+	memset(up, 0, sizeof(up));
+	for (y = 0; y < 16; y++)
+		for (x = 0; x < 8; x++) {
+			src[y][x] = (bits[y] >> (7 - x)) & 1;
+			if (src[y][x]) {
+				if (x < minc)
+					minc = x;
+				if (x > maxc)
+					maxc = x;
+			}
+		}
+
+	/* Scale2x (EPX) */
+	for (y = 0; y < 16; y++) {
+		for (x = 0; x < 8; x++) {
+			int P = src[y][x];
+			int A = (y > 0) ? src[y - 1][x] : 0;
+			int B = (x < 7) ? src[y][x + 1] : 0;
+			int C = (x > 0) ? src[y][x - 1] : 0;
+			int D = (y < 15) ? src[y + 1][x] : 0;
+			int E0 = (C == A && C != D && A != B) ? A : P;
+			int E1 = (A == B && A != C && B != D) ? B : P;
+			int E2 = (D == C && D != B && C != A) ? C : P;
+			int E3 = (B == D && B != A && D != C) ? D : P;
+
+			up[1 + y * 2][1 + x * 2] = E0;
+			up[1 + y * 2][2 + x * 2] = E1;
+			up[2 + y * 2][1 + x * 2] = E2;
+			up[2 + y * 2][2 + x * 2] = E3;
+		}
+	}
+
+	/* Soften with a 3x3 kernel, then reshape the ramp so strokes stay solid. */
+	{
+		int col = gi % FONT_COLS, row = gi / FONT_COLS;
+		u8 *slot = dst_base + (row * FONT_SLOT_H) * FONT_TEX_W + col * FONT_SLOT_W;
+
+		for (y = 0; y < FONT_SLOT_H; y++) {
+			for (x = 0; x < FONT_SLOT_W; x++) {
+				int sum = 0;
+				float a;
+				int ux, uy, k;
+
+				/* slot pixel (x,y) corresponds to up[y][x] (1px border). */
+				for (k = 0; k < 9; k++) {
+					static const u8 w[9] = {1, 2, 1, 2, 4, 2, 1, 2, 1};
+					ux = x + (k % 3) - 1;
+					uy = y + (k / 3) - 1;
+					if (ux >= 0 && uy >= 0 && ux < FONT_CELL_W + 2 && uy < FONT_CELL_H + 2)
+						sum += up[uy][ux] * w[k];
+				}
+				a = (sum / 16.0f - 0.10f) * 1.38f;
+				a = dashClampf(a, 0.0f, 1.0f);
+				slot[y * FONT_TEX_W + x] = (u8)(a * 255.0f + 0.5f);
+			}
+		}
+	}
+
+	if (maxc < 0) {
+		metrics[gi].xoff = 0;
+		metrics[gi].width = 0;
+		metrics[gi].adv = 8;
+	} else {
+		metrics[gi].xoff = (u8)(minc * 2);
+		metrics[gi].width = (u8)((maxc - minc + 1) * 2);
+		metrics[gi].adv = (u8)(metrics[gi].width + 3);
+	}
+}
+
+void dashFontRebuild(void)
+{
+	u8 *mem;
+	unsigned int c;
+	int i, digit_adv = 0;
+
+	mem = (u8 *)font_tex.Mem;
+	if (mem == NULL) {
+		mem = (u8 *)memalign(128, FONT_TEX_W * FONT_TEX_H);
+		if (mem == NULL)
+			return;
+	}
+	memset(mem, 0, FONT_TEX_W * FONT_TEX_H);
+	for (c = FONT_FIRST; c <= FONT_LAST; c++)
+		buildGlyph(c, mem);
+
+	/* Tabular digits keep the clock and counters from jittering. */
+	for (c = '0'; c <= '9'; c++)
+		if (metrics[c - FONT_FIRST].adv > digit_adv)
+			digit_adv = metrics[c - FONT_FIRST].adv;
+	for (c = '0'; c <= '9'; c++) {
+		GlyphMetric *m = &metrics[c - FONT_FIRST];
+		int tab_w = digit_adv - 3;
+		int shift = (tab_w - m->width) / 2;
+
+		m->xoff = (s8)(m->xoff - shift);
+		m->width = (u8)tab_w;
+		m->adv = (u8)digit_adv;
+	}
+
+	for (i = 0; i < 256; i++) {
+		int a = (i * 128 + 127) / 255;
+		font_clut[clutSwizzle(i)] = 0x00808080 | ((u32)a << 24);
+	}
+
+	if (font_tex.Mem == NULL) {
+		memset(&font_tex, 0, sizeof(font_tex));
+		font_tex.Width = FONT_TEX_W;
+		font_tex.Height = FONT_TEX_H;
+		font_tex.PSM = GS_PSM_T8;
+		font_tex.ClutPSM = GS_PSM_CT32;
+		font_tex.ClutStorageMode = GS_CLUT_STORAGE_CSM1;
+		font_tex.Clut = font_clut;
+		font_tex.Mem = (u32 *)mem;
+		font_tex.Filter = GS_FILTER_LINEAR;
+		font_tex.Delayed = 1;
+		gsKit_setup_tbw(&font_tex);
+	} else
+		dashTexInvalidate(&font_tex);
+	SyncDCache(mem, mem + FONT_TEX_W * FONT_TEX_H);
+	SyncDCache(font_clut, (u8 *)font_clut + sizeof(font_clut));
+	font_hash = hashFont();
+	font_ready = 1;
+}
+
+void dashFontInit(void)
+{
+	if (!font_ready || font_hash != hashFont())
+		dashFontRebuild();
+}
+
+void dashFontShutdown(void)
+{
+	dashTexRelease(&font_tex);
+}
+
+static void facesInit(void);
+
+GSTEXTURE *dashFontTexture(void)
+{
+	return font_ready ? &font_tex : NULL;
+}
+
+//--------------------------------------------------------------
+// Layout
+//--------------------------------------------------------------
+/* Decodes the next glyph; handles the uLE "\xFF<n>" two-cell sequences.
+ * Returns the number of glyph indexes written (0..2) and advances *s. */
+static int nextGlyphs(const unsigned char **s, unsigned int out[2])
+{
+	unsigned int c = **s;
+
+	if (c == 0)
+		return 0;
+	(*s)++;
+	if (c == 0xFF) {
+		unsigned int c2 = **s;
+		if (c2 == 0)
+			return 0;
+		(*s)++;
+		if (c2 < '0' || c2 > '=')
+			return 0;
+		c = (c2 - '0') * 2 + 0x100;
+		out[0] = c;
+		out[1] = c + 1;
+		return 2;
+	}
+	if (c < FONT_FIRST)
+		c = ' ';
+	out[0] = c;
+	return 1;
+}
+
+/* Dashboard text size: `scale` * DASH_FONT_UNIT virtual pixels (em). */
+#define DASH_FONT_UNIT 20.0f
+
+static GSTEXTURE face_tex[DASH_FONT_FACES];
+static int faces_ready;
+
+static void facesInit(void)
+{
+	int i;
+
+	if (faces_ready)
+		return;
+	for (i = 0; i < DASH_FONT_FACES; i++) {
+		const DashFaceData *f = &dash_font_faces[i];
+		GSTEXTURE *t = &face_tex[i];
+
+		memset(t, 0, sizeof(*t));
+		t->Width = f->tex_w;
+		t->Height = f->tex_h;
+		t->PSM = GS_PSM_T8;
+		t->ClutPSM = GS_PSM_CT32;
+		t->ClutStorageMode = GS_CLUT_STORAGE_CSM1;
+		t->Clut = font_clut;
+		/* read-only, 128-byte aligned .rodata: DMA'd straight from the ELF */
+		t->Mem = (u32 *)f->pixels;
+		t->Filter = GS_FILTER_LINEAR;
+		t->Delayed = 1;
+		gsKit_setup_tbw(t);
+	}
+	faces_ready = 1;
+}
+
+typedef struct
+{
+	const DashFaceData *f;
+	GSTEXTURE *tex;
+	float s;      /* face pixels -> virtual pixels */
+	float px;     /* requested em size */
+	float yshift; /* line top -> baseline alignment used by the layouts */
+} FaceSel;
+
+static void pickFace(float scale, FaceSel *sel)
+{
+	float px = scale * DASH_FONT_UNIT;
+	int i = (px <= 15.5f) ? 0 : (px <= 23.0f) ? 1 : 2;
+
+	sel->f = &dash_font_faces[i];
+	sel->tex = &face_tex[i];
+	sel->px = px;
+	sel->s = px / (float)sel->f->em;
+	/* Keep the layouts' vertical reference: centre of the x-height sits at
+	 * y + 16 * scale, like the centre of the classic glyph cell did. */
+	sel->yshift = 16.0f * scale - (sel->f->ascent16 - sel->f->xheight16 * 0.5f) / 16.0f * sel->s;
+}
+
+/* Advance of one decoded glyph in virtual pixels. Codes >= 0x100 are the
+ * classic pad button glyphs, taken from the bitmap atlas. */
+static float glyphAdv(const FaceSel *sel, unsigned int c)
+{
+	if (c >= 0x100)
+		return sel->px * 0.62f;
+	if (c < DASH_FONT_FIRST || c > DASH_FONT_LAST)
+		c = '?';
+	return sel->f->glyphs[c - DASH_FONT_FIRST].adv16 / 16.0f * sel->s;
+}
+
+float dashTextWidthN(const char *str, int n, float scale)
+{
+	const unsigned char *s = (const unsigned char *)str;
+	const unsigned char *end;
+	unsigned int g[2];
+	float w = 0.0f;
+	int k, cnt;
+	FaceSel sel;
+
+	if (str == NULL)
+		return 0.0f;
+	pickFace(scale, &sel);
+	end = (n >= 0) ? s + n : NULL;
+	while (*s && (end == NULL || s < end)) {
+		cnt = nextGlyphs(&s, g);
+		for (k = 0; k < cnt; k++)
+			w += glyphAdv(&sel, g[k]);
+	}
+	return w;
+}
+
+float dashTextWidth(const char *s, float scale)
+{
+	return dashTextWidthN(s, -1, scale);
+}
+
+float dashTextLineH(float scale)
+{
+	return scale * DASH_FONT_UNIT * 1.3f;
+}
+
+static float drawRun(float x, float y, const unsigned char *s, const unsigned char *end, float scale, DashColor c)
+{
+	unsigned int g[2];
+	int k, cnt;
+	FaceSel sel;
+	float top;
+
+	if (c.a == 0)
+		return x + dashTextWidthN((const char *)s, end ? (int)(end - s) : -1, scale);
+	facesInit();
+	pickFace(scale, &sel);
+	top = y + sel.yshift;
+
+	dashSpriteBatchBegin(sel.tex, c);
+	while (*s && (end == NULL || s < end)) {
+		cnt = nextGlyphs(&s, g);
+		for (k = 0; k < cnt; k++) {
+			unsigned int gc = g[k];
+
+			if (gc >= 0x100) {
+				/* classic pad glyph (two 8px halves) from the bitmap atlas */
+				if (font_ready) {
+					int gi = gc - FONT_FIRST;
+					float u0 = (float)((gi % FONT_COLS) * FONT_SLOT_W);
+					float v0 = (float)((gi / FONT_COLS) * FONT_SLOT_H);
+					float h = sel.px * 1.25f, w = h * FONT_SLOT_W / FONT_SLOT_H;
+					dashSpriteBatchEnd();
+					dashSpriteBatchBegin(&font_tex, c);
+					dashSpriteBatchAdd(x, y + 16.0f * scale - h * 0.5f, u0, v0, x + w, y + 16.0f * scale + h * 0.5f,
+					                   u0 + FONT_SLOT_W, v0 + FONT_SLOT_H);
+					dashSpriteBatchEnd();
+					dashSpriteBatchBegin(sel.tex, c);
+				}
+			} else {
+				const DashGlyphData *gd;
+				if (gc < DASH_FONT_FIRST || gc > DASH_FONT_LAST)
+					gc = '?';
+				gd = &sel.f->glyphs[gc - DASH_FONT_FIRST];
+				if (gd->w > 0) {
+					float gx = x + gd->xoff * sel.s;
+					float gy = top + gd->yoff * sel.s;
+					dashSpriteBatchAdd(gx, gy, gd->x, gd->y,
+					                   gx + gd->w * sel.s, gy + gd->h * sel.s,
+					                   gd->x + gd->w, gd->y + gd->h);
+				}
+			}
+			x += glyphAdv(&sel, gc);
+		}
+	}
+	dashSpriteBatchEnd();
+	return x;
+}
+
+float dashText(float x, float y, const char *s, float scale, DashColor c)
+{
+	if (s == NULL)
+		return x;
+	return drawRun(x, y, (const unsigned char *)s, NULL, scale, c);
+}
+
+float dashTextS(float x, float y, const char *s, float scale, DashColor c)
+{
+	DashColor sh = DC(0, 0, 8, (int)(c.a * 0.35f));
+
+	if (s == NULL)
+		return x;
+	drawRun(x + 0.8f, y + 1.2f, (const unsigned char *)s, NULL, scale, sh);
+	return drawRun(x, y, (const unsigned char *)s, NULL, scale, c);
+}
+
+void dashTextCenter(float cx, float y, const char *s, float scale, DashColor c)
+{
+	dashTextS(cx - dashTextWidth(s, scale) * 0.5f, y, s, scale, c);
+}
+
+void dashTextRight(float rx, float y, const char *s, float scale, DashColor c)
+{
+	dashTextS(rx - dashTextWidth(s, scale), y, s, scale, c);
+}
+
+float dashTextFit(float x, float y, float maxw, const char *str, float scale, DashColor c)
+{
+	char buf[160];
+	int len, cut;
+	float ell;
+
+	if (str == NULL)
+		return x;
+	if (dashTextWidth(str, scale) <= maxw)
+		return dashTextS(x, y, str, scale, c);
+
+	ell = dashTextWidth("...", scale);
+	dashStrCopy(buf, str, sizeof(buf));
+	len = strlen(buf);
+	for (cut = len; cut > 0; cut--) {
+		/* do not split a \xFF sequence */
+		if (cut >= 1 && (unsigned char)buf[cut - 1] == 0xFF)
+			continue;
+		if (dashTextWidthN(buf, cut, scale) + ell <= maxw)
+			break;
+	}
+	buf[cut] = '\0';
+	while (cut > 0 && buf[cut - 1] == ' ')
+		buf[--cut] = '\0';
+	if (cut + 4 < (int)sizeof(buf))
+		strcat(buf, "...");
+	return dashTextS(x, y, buf, scale, c);
+}
+
+int dashTextWrap(float x, float y, float w, int max_lines, const char *str, float scale, DashColor c, float line_h)
+{
+	const char *p = str;
+	int lines = 0;
+
+	if (str == NULL)
+		return 0;
+	while (*p && lines < max_lines) {
+		const char *line_start = p;
+		const char *last_break = NULL;
+		const char *q = p;
+		int n;
+
+		while (*q && *q != '\n') {
+			if (*q == ' ')
+				last_break = q;
+			if (dashTextWidthN(line_start, (int)(q - line_start) + 1, scale) > w) {
+				if (last_break != NULL && last_break > line_start)
+					q = last_break;
+				break;
+			}
+			q++;
+		}
+		n = (int)(q - line_start);
+		if (n <= 0 && *q && *q != '\n')
+			n = 1, q = line_start + 1;
+		if (lines == max_lines - 1 && *q != '\0') {
+			/* last permitted line: ellipsize the remaining text */
+			dashTextFit(x, y + lines * line_h, w, line_start, scale, c);
+		} else {
+			char buf[256];
+			int copy = (n < (int)sizeof(buf) - 1) ? n : (int)sizeof(buf) - 1;
+
+			memcpy(buf, line_start, copy);
+			buf[copy] = '\0';
+			dashTextS(x, y + lines * line_h, buf, scale, c);
+		}
+		lines++;
+		p = q;
+		while (*p == ' ' || *p == '\n')
+			p++;
+	}
+	return lines;
+}
+
+//--------------------------------------------------------------
+// Themed classic screens: one 8x16 glyph at framebuffer coordinates.
+//--------------------------------------------------------------
+void dashFontLegacyChar(unsigned int c, int x, int y, u64 gs_color)
+{
+	int gi;
+	float u0, v0;
+	u64 col;
+	float x1, y1, x2, y2;
+
+	if (!font_ready)
+		return;
+	if (c >= FONT_COUNT)
+		c = '_';
+	if (c < FONT_FIRST)
+		return;
+	if (c == ' ')
+		return;
+	gi = c - FONT_FIRST;
+	u0 = (float)((gi % FONT_COLS) * FONT_SLOT_W);
+	v0 = (float)((gi / FONT_COLS) * FONT_SLOT_H);
+	/* classic colours carry no alpha: force opaque */
+	col = (gs_color & 0x00FFFFFFULL) | (0x80ULL << 24);
+	/* Legacy drawChar paints rows y-1 .. y+14 */
+	x1 = (float)x - 0.5f;
+	y1 = (float)y - 1.5f;
+	x2 = x1 + FONT_SLOT_W * 0.5f;
+	y2 = y1 + FONT_SLOT_H * 0.5f;
+	if (!dashTexBind(&font_tex))
+		return;
+	gsKit_prim_sprite_texture(gsGlobal, &font_tex, x1, y1, u0, v0, x2, y2,
+	                          u0 + FONT_SLOT_W, v0 + FONT_SLOT_H, 0, col);
+}
+//--------------------------------------------------------------
+//End of file: dash_font.c
+//--------------------------------------------------------------
