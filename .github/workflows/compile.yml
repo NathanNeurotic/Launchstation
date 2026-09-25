@@ -111,6 +111,7 @@ jobs:
         name: "WLE-${{ matrix.variant_name }}"
         path: |
             WLE-${{ matrix.variant_name }}.ELF
+        retention-days: 1
 
 ####################################################### 
   release:
