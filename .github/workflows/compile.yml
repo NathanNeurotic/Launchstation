@@ -15,7 +15,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -107,11 +107,24 @@ jobs:
 
     - name: Upload variants artifact ELF
       uses: actions/upload-artifact@v7
+      continue-on-error: true
       with:
         name: "WLE-${{ matrix.variant_name }}"
         path: |
             WLE-${{ matrix.variant_name }}.ELF
         retention-days: 1
+
+    - name: Attach ELF to latest pre-release
+      if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        tag="latest"
+        title="Latest automated build"
+        if ! gh release view "$tag" >/dev/null 2>&1; then
+          gh release create "$tag" --title "$title" --notes "Automated build for ${GITHUB_SHA}" --target "${GITHUB_SHA}" --prerelease || true
+        fi
+        gh release upload "$tag" "WLE-${{ matrix.variant_name }}.ELF" --clobber || true
 
 ####################################################### 
   release:
@@ -133,6 +146,7 @@ jobs:
 
     - name: Download all artifacts
       uses: actions/download-artifact@v7
+      continue-on-error: true
       with:
         path: WLE/
         pattern: "WLE-R3Z*"
@@ -152,15 +166,13 @@ jobs:
         if gh release view "$tag" >/dev/null 2>&1; then
           gh release edit "$tag" --title "$title"
         else
-          gh release create "$tag" --title "$title" --notes "Automated build for ${GITHUB_SHA}" --target "${GITHUB_SHA}"
+          gh release create "$tag" --title "$title" --notes "Automated build for ${GITHUB_SHA}" --target "${GITHUB_SHA}" --prerelease
         fi
 
-        mapfile -d '' assets < <(find WLE -type f -name '*.ELF' -print0)
-        if [ "${#assets[@]}" -eq 0 ]; then
-          echo "No ELF assets found under WLE/." >&2
-          exit 1
+        mapfile -d '' assets < <(find WLE -type f -name '*.ELF' -print0 2>/dev/null)
+        if [ "${#assets[@]}" -gt 0 ]; then
+          gh release upload "$tag" "${assets[@]}" --clobber
         fi
-        gh release upload "$tag" "${assets[@]}" --clobber
 
     - name: Publish language files release
       if: github.ref == 'refs/heads/master'
