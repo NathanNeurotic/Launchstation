@@ -274,9 +274,9 @@ static void drawHero(void)
 		         a->author[0] ? "   " : "", a->author);
 		dashIcon(dashLibDeviceIcon(a->path), tx, y + 48, 13, DASH_C_ACCENT);
 		{
-			float mx = dashTextFit(tx + 19, y + 44, tw - 40, meta, DASH_FS_SMALL, DASH_C_TEXT2);
+			float mx = dashTextFit(tx + 19, y + 48, tw - 40, meta, DASH_FS_SMALL, DASH_C_TEXT2);
 			if (dashStoreIsFavorite(a->path))
-				dashIcon(DI_STAR, mx + 10, y + 47, 13, DASH_C_WARM);
+				dashIcon(DI_STAR, mx + 10, y + 48, 13, DASH_C_WARM);
 		}
 		if (a->desc[0])
 			dashTextWrap(tx, y + 70, tw, 2, a->desc, DASH_FS_SMALL, DASH_C_TEXT3, 19);
@@ -362,7 +362,7 @@ static void homeDraw(void)
 			if (foc)
 				dashPanelBorder(x, cy, w, 32, 16, DC(180, 230, 255, 170));
 			dashIcon(chips[i].icon, x + 12, cy + 8, 16, foc ? DASH_C_TEXT : DASH_C_TEXT2);
-			dashTextFit(x + 34, cy + 5, w - 44, chips[i].label, DASH_FS_SMALL, foc ? DASH_C_TEXT : DASH_C_TEXT2);
+			dashTextFit(x + 34, cy + 9.5f, w - 44, chips[i].label, DASH_FS_SMALL, foc ? DASH_C_TEXT : DASH_C_TEXT2);
 			x += w + 8;
 		}
 		dashGfxScissorReset();

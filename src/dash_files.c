@@ -463,7 +463,7 @@ static void devDraw(void)
 		const char *tip = (d->state == DASH_DEV_PROBE) ? "Not checked yet: opening it will load its driver."
 		                                               : (d->state == DASH_DEV_ABSENT) ? d->status : "Ready to browse.";
 		dashPanel(48, 368, 400, 26, 13, DC(10, 12, 24, 170));
-		dashTextFit(60, 369, 380, tip, DASH_FS_SMALL, DASH_C_TEXT2);
+		dashTextFit(60, 374.5f, 380, tip, DASH_FS_SMALL, DASH_C_TEXT2);
 	}
 }
 

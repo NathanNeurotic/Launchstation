@@ -161,7 +161,7 @@ static void toolsDraw(void)
 			continue;
 		}
 		dashIcon(tools[i].icon, lx + 10, y + 5, 16, i == tsel ? DASH_C_TEXT : DASH_C_TEXT2);
-		dashTextFit(lx + 34, y + 3, lw - 44, tools[i].name, DASH_FS_SMALL, i == tsel ? DASH_C_TEXT : DASH_C_TEXT2);
+		dashTextFit(lx + 34, y + 6.5f, lw - 44, tools[i].name, DASH_FS_SMALL, i == tsel ? DASH_C_TEXT : DASH_C_TEXT2);
 		if (tools[i].confirm == 2 || tools[i].note)
 			dashGlow(lx + lw - 14, y + 13, 4, 4, tools[i].confirm == 2 ? DASH_C_DANGER : DASH_C_WARM);
 	}

@@ -124,16 +124,20 @@ static float drawButton(float x, float y, int icon, const char *key)
 	const float d = 22.0f;
 
 	if (icon >= 0) {
-		dashPanel(x, y, d, d, d * 0.5f, DC(10, 12, 22, 220));
-		dashPanelBorder(x, y, d, d, d * 0.5f, DC(255, 255, 255, 40));
+		dashPanelGradV(x, y, d, d, d * 0.5f, DC(28, 34, 52, 230), DC(12, 14, 24, 230));
+		dashPanelBorder(x, y, d, d, d * 0.5f, DC(255, 255, 255, 60));
 		dashIcon(icon, x + 4.5f, y + 4.5f, d - 9.0f, buttonColor(icon));
 		return d;
 	} else {
 		float tw = dashTextWidth(key, DASH_FS_CAPTION);
-		float w = tw + 14.0f;
-		dashPanel(x, y, w, d, 7.0f, DC(10, 12, 22, 220));
-		dashPanelBorder(x, y, w, d, 7.0f, DC(255, 255, 255, 40));
-		dashText(x + 7.0f, y + 2.5f, key, DASH_FS_CAPTION, DASH_C_TEXT);
+		float w = tw + 16.0f;
+		if (w < 26.0f)
+			w = 26.0f;
+		/* Crisp, console-grade pill badge for START / SELECT / L1 / R1 */
+		dashPanelGradV(x, y, w, d, 4.5f, DC(34, 42, 64, 240), DC(16, 20, 32, 240));
+		dashPanelBorder(x, y, w, d, 4.5f, DC(255, 255, 255, 75));
+		dashRect(x + 2.0f, y + 1.0f, w - 4.0f, 1.0f, DC(255, 255, 255, 45));
+		dashTextS(x + (w - tw) * 0.5f, y + 5.0f, key, DASH_FS_CAPTION, DASH_C_TEXT);
 		return w;
 	}
 }
@@ -145,7 +149,9 @@ void dashDrawHints(const DashHint *hints, int n)
 	int i;
 
 	for (i = 0; i < n; i++) {
-		float bw = (hints[i].button >= 0) ? 22.0f : dashTextWidth(hints[i].key, DASH_FS_CAPTION) + 14.0f;
+		float bw = (hints[i].button >= 0) ? 22.0f : dashTextWidth(hints[i].key, DASH_FS_CAPTION) + 16.0f;
+		if (hints[i].button < 0 && bw < 26.0f)
+			bw = 26.0f;
 		total += bw + 6.0f + dashTextWidth(hints[i].label, DASH_FS_SMALL) + 18.0f;
 	}
 	x = DASH_SAFE_R - total + 12.0f;
@@ -154,7 +160,7 @@ void dashDrawHints(const DashHint *hints, int n)
 	dashRectGradH(x - 40, y - 6, DASH_SAFE_R - x + 60, 34, DC(4, 6, 14, 0), DC(4, 6, 14, 150));
 	for (i = 0; i < n; i++) {
 		x += drawButton(x, y, hints[i].button, hints[i].key) + 6.0f;
-		x = dashTextS(x, y + 1.5f, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT2) + 18.0f;
+		x = dashTextS(x, y + 4.5f, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT2) + 18.0f;
 	}
 }
 
@@ -343,7 +349,7 @@ void dashDrawToasts(void)
 		dashPanel(x, y, w, 32, 12, DC(22, 27, 48, 235));
 		dashRect(x + 3, y + 7, 3, 18, ic);
 		dashIcon(icon, x + 14, y + 7, 18, ic);
-		dashText(x + 40, y + 5, t->msg, DASH_FS_SMALL, DASH_C_TEXT);
+		dashText(x + 40, y + 9.5f, t->msg, DASH_FS_SMALL, DASH_C_TEXT);
 		dashGfxPopAlpha();
 		y -= 38.0f;
 	}
@@ -369,10 +375,10 @@ static void modalPanel(float x, float y, float w, float h, float k)
 static void modalHintRow(float x, float y, int ok_icon, const char *ok, int back_icon, const char *back)
 {
 	x += drawButton(x, y, ok_icon, NULL) + 6.0f;
-	x = dashText(x, y + 1.5f, ok, DASH_FS_SMALL, DASH_C_TEXT2) + 18.0f;
+	x = dashTextS(x, y + 4.5f, ok, DASH_FS_SMALL, DASH_C_TEXT2) + 18.0f;
 	if (back != NULL) {
 		x += drawButton(x, y, back_icon, NULL) + 6.0f;
-		dashText(x, y + 1.5f, back, DASH_FS_SMALL, DASH_C_TEXT2);
+		dashTextS(x, y + 4.5f, back, DASH_FS_SMALL, DASH_C_TEXT2);
 	}
 }
 
@@ -558,10 +564,10 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 			dashPanel(fx, by, bw, 34, 12, (sel == 0 && icon == DI_WARNING && cancel_label) ? DC(200, 70, 90, 170) : DC(70, 130, 220, 170));
 			dashPanelBorder(fx, by, bw, 34, 12, DC(190, 230, 255, 140));
 			dashIcon(dashOkIcon(), bx0 + 12, by + 8, 18, sel == 0 ? DASH_C_TEXT : DASH_C_TEXT3);
-			dashTextCenter(bx0 + bw * 0.5f + 10, by + 6, ok_label, DASH_FS_BODY * 0.9f, sel == 0 ? DASH_C_TEXT : DASH_C_TEXT2);
+			dashTextCenter(bx0 + bw * 0.5f + 10, by + 10.0f, ok_label, DASH_FS_BODY * 0.9f, sel == 0 ? DASH_C_TEXT : DASH_C_TEXT2);
 			if (cancel_label != NULL) {
 				dashIcon(dashBackIcon(), bx1 + 12, by + 8, 18, sel == 1 ? DASH_C_TEXT : DASH_C_TEXT3);
-				dashTextCenter(bx1 + bw * 0.5f + 10, by + 6, cancel_label, DASH_FS_BODY * 0.9f, sel == 1 ? DASH_C_TEXT : DASH_C_TEXT2);
+				dashTextCenter(bx1 + bw * 0.5f + 10, by + 10.0f, cancel_label, DASH_FS_BODY * 0.9f, sel == 1 ? DASH_C_TEXT : DASH_C_TEXT2);
 			}
 		}
 		dashGfxPopOffset();

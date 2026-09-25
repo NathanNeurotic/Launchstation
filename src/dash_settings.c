@@ -599,7 +599,7 @@ static void settingsDraw(void)
 	for (i = 0; i < NCATS; i++) {
 		DashColor col = (i == cat) ? DASH_C_TEXT : DASH_C_TEXT2;
 		dashIcon(cats[i].icon, cx + 10, cy + i * crow + 8, 16, col);
-		dashText(cx + 34, cy + i * crow + 5, cats[i].name, DASH_FS_SMALL, col);
+		dashText(cx + 34, cy + i * crow + 9.5f, cats[i].name, DASH_FS_SMALL, col);
 	}
 
 	/* items */
@@ -617,11 +617,11 @@ static void settingsDraw(void)
 		if (it->type == ST_INFO) {
 			char buf[64];
 			snprintf(buf, sizeof(buf), "%s / %s", ip, netmask);
-			dashText(ix + 12, y + 4, it->label, DASH_FS_SMALL, DASH_C_TEXT3);
-			dashTextRight(ix + iw - 12, y + 4, buf, DASH_FS_SMALL, DASH_C_TEXT2);
+			dashText(ix + 12, y + 6.5f, it->label, DASH_FS_SMALL, DASH_C_TEXT3);
+			dashTextRight(ix + iw - 12, y + 6.5f, buf, DASH_FS_SMALL, DASH_C_TEXT2);
 			continue;
 		}
-		dashTextFit(ix + 12, y + 4, iw * 0.58f, it->label, DASH_FS_SMALL, col);
+		dashTextFit(ix + 12, y + 6.5f, iw * 0.58f, it->label, DASH_FS_SMALL, col);
 		if (it->type == ST_CHOICE) {
 			const char *const *names;
 			const char *single;
@@ -633,7 +633,7 @@ static void settingsDraw(void)
 					dashIcon(DI_BACK, vx - 22, y + 7, 12, DASH_C_ACCENT);
 					dashIcon(DI_PLAY, ix + iw - 16, y + 8, 10, DASH_C_ACCENT);
 				}
-				dashText(vx, y + 4, names[cur], DASH_FS_SMALL, (n == 2 && names == onoff && cur == 1) ? DASH_C_OK : DASH_C_ACCENT);
+				dashText(vx, y + 6.5f, names[cur], DASH_FS_SMALL, (n == 2 && names == onoff && cur == 1) ? DASH_C_OK : DASH_C_ACCENT);
 			}
 		} else
 			dashIcon(DI_PLAY, ix + iw - 22, y + 8, 12, DASH_C_TEXT3);
