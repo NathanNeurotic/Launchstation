@@ -248,12 +248,11 @@ static void filesDraw(void)
 	if (ftop < 0)
 		ftop = 0;
 
-	dashPanel(lx - 6, ly - 6, lw + 12, rows * row_h + 12, 14, DC(12, 15, 30, 150));
+	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, rows * row_h + 12, 14);
 	dashGfxScissor(lx - 6, ly - 4, lw + 12, rows * row_h + 8);
 	{
 		float fy = ly + (fsel_anim - ftop) * row_h;
-		dashPanel(lx, fy, lw, row_h - 3, 9, DC(60, 120, 210, 170));
-		dashPanelBorder(lx, fy, lw, row_h - 3, 9, DC(170, 225, 255, 130));
+		dashDrawSelection(lx, fy, lw, row_h - 3, 9, 1.0f);
 	}
 	for (i = ftop; i < nfentries && i < ftop + rows; i++) {
 		FileEntry *f = &fentries[i];
@@ -263,8 +262,8 @@ static void filesDraw(void)
 			dashText(lx + 8, y + 7, f->label, DASH_FS_CAPTION, DASH_C_ACCENT);
 			continue;
 		}
-		dashIcon(f->icon, lx + 10, y + 5, 16, i == fsel ? DASH_C_TEXT : DASH_C_TEXT2);
-		dashTextFit(lx + 34, y + 3, lw - 50, f->label, DASH_FS_SMALL, i == fsel ? DASH_C_TEXT : DASH_C_TEXT2);
+		dashIcon(f->icon, lx + 10, y + 5, 16, dashItemColor(i == fsel));
+		dashTextFit(lx + 34, y + 3, lw - 50, f->label, DASH_FS_SMALL, dashItemColor(i == fsel));
 		if (f->kind == FE_DEVICE && f->index < nfdevs) {
 			int st = fdevs[f->index].state;
 			DashColor dot = (st == DASH_DEV_READY) ? DASH_C_OK : (st == DASH_DEV_ABSENT) ? DASH_C_TEXT3 : DASH_C_WARM;
@@ -277,9 +276,10 @@ static void filesDraw(void)
 	/* detail panel */
 	{
 		float dx = 372, dy = 98, dw = 228, dh = 292;
-		dashPanel(dx, dy, dw, dh, 16, DC(14, 18, 36, 180));
+		dashDrawCard(dx, dy, dw, dh, 16);
 		dashGfxBlend(DASH_BLEND_ADD);
-		dashGlow(dx + dw * 0.5f, dy + 70, 80, 60, DC(80, 150, 255, 60));
+		if (dashTheme.glow)
+			dashGlow(dx + dw * 0.5f, dy + 70, 80, 60, dashColorA(DASH_C_ACCENT, 0.24f));
 		dashGfxBlend(DASH_BLEND_NORMAL);
 		dashIcon(e->icon >= 0 ? e->icon : DI_FOLDER, dx + dw * 0.5f - 32, dy + 38, 64, DASH_C_TEXT);
 		dashTextCenter(dx + dw * 0.5f, dy + 118, e->label, DASH_FS_LABEL, DASH_C_TEXT);
@@ -432,8 +432,11 @@ static void devDraw(void)
 		float y = 108 + (i / DEV_COLS) * DEV_PY - dcam;
 		float f = dashClampf(1.0f - fabsf(i - dsel_anim), 0.0f, 1.0f);
 		int dim = (d->state == DASH_DEV_ABSENT);
-		DashColor top = dim ? DC(24, 28, 42, 200) : DC(34 + (int)(30 * f), 44 + (int)(40 * f), 78 + (int)(60 * f), 225);
-		DashColor bot = dim ? DC(14, 16, 26, 200) : DC(16, 20, 38, 225);
+		DashColor pc = DASH_C_PANEL_HI;
+		DashColor top = dim ? dashColorScale(pc, 0.8f) : dashColorMix(pc, DASH_C_SELECT, 0.25f + 0.45f * f);
+		DashColor bot = dim ? dashColorScale(pc, 0.55f) : dashColorScale(pc, 0.7f);
+		top.a = dim ? 200 : 225;
+		bot.a = top.a;
 		DashColor stc = (d->state == DASH_DEV_READY) ? DASH_C_OK : (d->state == DASH_DEV_ABSENT) ? DASH_C_TEXT3 : DASH_C_WARM;
 
 		if (y < 60 || y > 400)
@@ -462,7 +465,7 @@ static void devDraw(void)
 		DashDevice *d = &devs[dsel];
 		const char *tip = (d->state == DASH_DEV_PROBE) ? "Not checked yet: opening it will load its driver."
 		                                               : (d->state == DASH_DEV_ABSENT) ? d->status : "Ready to browse.";
-		dashPanel(48, 368, 400, 26, 13, DC(10, 12, 24, 170));
+		dashDrawCard(48, 368, 400, 26, 13);
 		dashTextFit(60, 374.5f, 380, tip, DASH_FS_SMALL, DASH_C_TEXT2);
 	}
 }

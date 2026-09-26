@@ -510,8 +510,12 @@ static void bootDraw(void)
 	w = dashTextWidth(msg, DASH_FS_BODY) + 230.0f;
 	x = (DASH_VW - w) * 0.5f;
 	dashShadow(x, y, w, 40, 14, 0.7f);
-	dashPanel(x, y, w, 40, 14, DC(40, 60, 110, 230));
-	dashPanelBorder(x, y, w, 40, 14, DC(160, 220, 255, 120));
+	{
+		DashColor c = dashColorMix(DASH_C_PANEL_HI, DASH_C_SELECT, 0.6f);
+		c.a = 235;
+		dashPanel(x, y, w, 40, 14, c);
+		dashPanelBorder(x, y, w, 40, 14, DASH_C_SELEDGE);
+	}
 	dashIcon(DI_CLOCK, x + 14, y + 10, 20, DASH_C_ACCENT);
 	dashText(x + 44, y + 8, msg, DASH_FS_BODY, DASH_C_TEXT);
 	dashTextRight(x + w - 16, y + 11, "Press any button to stay", DASH_FS_SMALL, DASH_C_TEXT2);

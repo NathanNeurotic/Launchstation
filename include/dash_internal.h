@@ -679,6 +679,13 @@ void dashDrawSectionTitle(float x, float y, const char *title, const char *subti
 void dashDrawEmptyState(float cx, float cy, int icon, const char *title, const char *body);
 void dashDrawScrollbar(float x, float y, float h, int first, int visible, int total);
 void dashDrawFocusFrame(float x, float y, float w, float h, float r, float strength);
+/* Themed building blocks: every list, card and selection goes through
+ * these so the theme's panel, border and highlight style apply everywhere. */
+void dashDrawPanelBox(float x, float y, float w, float h, float r);
+void dashDrawCard(float x, float y, float w, float h, float r);
+void dashDrawSelection(float x, float y, float w, float h, float r, float strength);
+void dashAccentGlow(float cx, float cy, float rx, float ry, float strength);
+DashColor dashItemColor(int selected); /* text colour of a list row */
 void dashDrawSpinner(float cx, float cy, float r, DashColor c);
 void dashToast(int kind, const char *msg);
 void dashDrawToasts(void);

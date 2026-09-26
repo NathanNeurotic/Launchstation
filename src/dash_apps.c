@@ -401,8 +401,8 @@ static void drawTitleBar(void)
 		float x = 526 + v * 26;
 		int on = (v == dashCfg.view);
 		if (on)
-			dashPanel(x - 4, 70, 26, 26, 8, DC(60, 120, 210, 170));
-		dashIcon(DI_VIEW_GRID + v, x, 74, 18, on ? DASH_C_TEXT : DASH_C_TEXT3);
+			dashDrawSelection(x - 4, 70, 26, 26, 8, 1.0f);
+		dashIcon(DI_VIEW_GRID + v, x, 74, 18, on ? DASH_C_SELTEXT : DASH_C_TEXT3);
 	}
 	(void)a;
 }
@@ -477,13 +477,12 @@ static void drawList(void)
 	if (top < 0)
 		top = 0;
 
-	dashPanel(lx - 6, ly - 6, lw + 12, LIST_ROWS * LIST_ROW_H + 12, 14, DC(12, 15, 30, 150));
+	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, LIST_ROWS * LIST_ROW_H + 12, 14);
 	{
 		float fy = ly + (sel_anim - top) * LIST_ROW_H;
 		if (fy >= ly - LIST_ROW_H && fy < ly + LIST_ROWS * LIST_ROW_H) {
 			dashGfxScissor(lx - 6, ly - 4, lw + 12, LIST_ROWS * LIST_ROW_H + 8);
-			dashPanel(lx, fy, lw, LIST_ROW_H - 3, 9, DC(60, 120, 210, 170));
-			dashPanelBorder(lx, fy, lw, LIST_ROW_H - 3, 9, DC(170, 225, 255, 130));
+			dashDrawSelection(lx, fy, lw, LIST_ROW_H - 3, 9, 1.0f);
 			dashGfxScissorReset();
 		}
 	}
@@ -497,7 +496,7 @@ static void drawList(void)
 			dashTexDrawFit(t, lx + 6, y + 2, 24, 24, DC(255, 255, 255, 255));
 		else
 			dashIcon(dashLibDeviceIcon(e->path), lx + 9, y + 5, 18, dashColorHue(e->hue, 120, 230, 255));
-		dashTextFit(lx + 38, y + 3, lw - 64, e->title, DASH_FS_SMALL, on ? DASH_C_TEXT : DASH_C_TEXT2);
+		dashTextFit(lx + 38, y + 3, lw - 64, e->title, DASH_FS_SMALL, dashItemColor(on));
 		if (dashStoreIsFavorite(e->path))
 			dashIcon(DI_STAR, lx + lw - 22, y + 6, 14, DASH_C_WARM);
 	}
@@ -508,7 +507,7 @@ static void drawList(void)
 		float dx = 362, dy = 98, dw = 238;
 		char dev[48];
 
-		dashPanel(dx, dy, dw, 290, 16, DC(14, 18, 36, 180));
+		dashDrawCard(dx, dy, dw, 290, 16);
 		dashDrawAppArt(a, dx + (dw - 132) * 0.5f, dy + 14, 132, 132, 1.0f, 0);
 		dashTextFit(dx + 14, dy + 156, dw - 28, a->title, DASH_FS_LABEL, DASH_C_TEXT);
 		dashLibDeviceLabel(a->path, dev, sizeof(dev));
@@ -534,7 +533,8 @@ static void drawCarousel(void)
 
 	/* floor glow under the focused item */
 	dashGfxBlend(DASH_BLEND_ADD);
-	dashGlow(cx, cy + 100, 170, 26, DC(80, 150, 255, 60));
+	if (dashTheme.glow)
+		dashGlow(cx, cy + 100, 170, 26, dashColorA(DASH_C_ACCENT, 0.24f));
 	dashGfxBlend(DASH_BLEND_NORMAL);
 
 	/* draw back to front: farthest items first */

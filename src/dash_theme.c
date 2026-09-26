@@ -27,6 +27,7 @@ int DashThemeLegacyEnabled(void)
 
 void DashThemeSetLegacyEnabled(int enabled)
 {
+	dashThemeInit();
 	theme_on = enabled ? 1 : 0;
 }
 
@@ -35,32 +36,29 @@ static inline u64 rgbaq(int r, int g, int b, int a)
 	return GS_SETREG_RGBAQ(r, g, b, a, 0x00);
 }
 
+/* Background of the classic screens: a pure function of Y (so partial
+ * redraws stay seamless) derived from the active theme's background
+ * colours, plus the user's classic background colour as a tint so the
+ * classic colour skins still matter. */
 static void gradColor(float t, int *r, int *g, int *b)
 {
-	/* base tint from the user's background colour so skins still matter */
 	u64 bg = setting->color[COLOR_BACKGR];
 	int br = (int)(bg & 0xFF), bgc = (int)((bg >> 8) & 0xFF), bb = (int)((bg >> 16) & 0xFF);
-	int tr, tg, tb;
+	DashColor top = dashColorScale(dashTheme.bg1, 0.42f * dashTheme.bg_bright / 100.0f);
+	DashColor bot = dashColorScale(dashTheme.bg2, dashTheme.bg_bright / 100.0f);
+	DashColor c;
 
 	if (t < 0.0f)
 		t = 0.0f;
 	if (t > 1.0f)
 		t = 1.0f;
-	/* top (16,20,44) -> middle (12,15,32) -> bottom (4,5,11) */
-	if (t < 0.5f) {
-		float k = t * 2.0f;
-		tr = (int)(16 + (12 - 16) * k);
-		tg = (int)(20 + (15 - 20) * k);
-		tb = (int)(44 + (32 - 44) * k);
-	} else {
-		float k = (t - 0.5f) * 2.0f;
-		tr = (int)(12 + (4 - 12) * k);
-		tg = (int)(15 + (5 - 15) * k);
-		tb = (int)(32 + (11 - 32) * k);
-	}
-	*r = (tr + br) > 255 ? 255 : tr + br;
-	*g = (tg + bgc) > 255 ? 255 : tg + bgc;
-	*b = (tb + bb) > 255 ? 255 : tb + bb;
+	/* single-colour themes keep a hint of depth */
+	if (dashTheme.bg == DASH_BG_SOLID)
+		top = dashColorLighten(dashTheme.bg1, 0.03f), bot = dashTheme.bg1;
+	c = dashColorLerp(top, bot, t * t);
+	*r = (c.r + br) > 255 ? 255 : c.r + br;
+	*g = (c.g + bgc) > 255 ? 255 : c.g + bgc;
+	*b = (c.b + bb) > 255 ? 255 : c.b + bb;
 }
 
 void DashThemeBackgroundRect(int x1, int y1, int x2, int y2)
@@ -80,10 +78,12 @@ void DashThemeBackgroundRect(int x1, int y1, int x2, int y2)
 
 void DashThemePopupRect(int x1, int y1, int x2, int y2)
 {
+	DashColor top = dashColorLighten(dashTheme.panel, 0.16f), bot = dashColorLighten(dashTheme.panel, 0.07f);
+
 	gsGlobal->PrimAlphaEnable = GS_SETTING_OFF;
 	gsKit_prim_quad_gouraud_3d(gsGlobal, x1, y1, 0, x2, y1, 0, x1, y2, 0, x2, y2, 0,
-	                           rgbaq(34, 40, 70, 0x80), rgbaq(34, 40, 70, 0x80),
-	                           rgbaq(20, 24, 42, 0x80), rgbaq(20, 24, 42, 0x80));
+	                           rgbaq(top.r, top.g, top.b, 0x80), rgbaq(top.r, top.g, top.b, 0x80),
+	                           rgbaq(bot.r, bot.g, bot.b, 0x80), rgbaq(bot.r, bot.g, bot.b, 0x80));
 }
 
 void DashThemeFrame(int x1, int y1, int x2, int y2, u64 color)
@@ -92,9 +92,9 @@ void DashThemeFrame(int x1, int y1, int x2, int y2, u64 color)
 	int r = (int)(color & 0xFF), g = (int)((color >> 8) & 0xFF), b = (int)((color >> 16) & 0xFF);
 	u64 c;
 
-	r = (r + 110) / 2 + 20;
-	g = (g + 190) / 2 + 20;
-	b = (b + 255) / 2 + 10;
+	r = (r + dashTheme.accent.r) / 2 + 20;
+	g = (g + dashTheme.accent.g) / 2 + 20;
+	b = (b + dashTheme.accent.b) / 2 + 10;
 	if (r > 255)
 		r = 255;
 	if (g > 255)
@@ -126,11 +126,14 @@ void DashThemeSelectionBar(int x1, int y1, int x2, int y2)
 {
 	if (!DashThemeLegacyEnabled())
 		return;
+	DashColor sc = dashColorLighten(dashTheme.select, 0.12f), sb = dashTheme.select;
+	DashColor ac = dashTheme.accent;
+
 	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
 	gsKit_prim_quad_gouraud_3d(gsGlobal, x1, y1, 0, x2, y1, 0, x1, y2, 0, x2, y2, 0,
-	                           rgbaq(70, 130, 220, 0x50), rgbaq(70, 130, 220, 0x18),
-	                           rgbaq(50, 100, 190, 0x50), rgbaq(50, 100, 190, 0x18));
-	gsKit_prim_sprite(gsGlobal, x1, y1, x1 + 3, y2, 0, rgbaq(160, 225, 255, 0x70));
+	                           rgbaq(sc.r, sc.g, sc.b, 0x50), rgbaq(sc.r, sc.g, sc.b, 0x18),
+	                           rgbaq(sb.r, sb.g, sb.b, 0x50), rgbaq(sb.r, sb.g, sb.b, 0x18));
+	gsKit_prim_sprite(gsGlobal, x1, y1, x1 + 3, y2, 0, rgbaq(ac.r, ac.g, ac.b, 0x70));
 	gsGlobal->PrimAlphaEnable = GS_SETTING_OFF;
 }
 //--------------------------------------------------------------

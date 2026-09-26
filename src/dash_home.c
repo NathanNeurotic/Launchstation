@@ -282,10 +282,12 @@ static void drawHero(void)
 			dashTextWrap(tx, y + 70, tw, 2, a->desc, DASH_FS_SMALL, DASH_C_TEXT3, 19);
 	} else if (row == 1 && nchips > 0) {
 		const Chip *c = &chips[col[1]];
-		dashPanelGradV(x, y, art, art, 16, DC(40, 60, 110, 200), DC(16, 22, 44, 200));
-		dashGfxBlend(DASH_BLEND_ADD);
-		dashGlow(x + art * 0.5f, y + art * 0.5f, 64, 64, DC(80, 160, 255, 60));
-		dashGfxBlend(DASH_BLEND_NORMAL);
+		DashColor top = dashColorMix(DASH_C_PANEL_HI, DASH_C_SELECT, 0.5f), bot = dashColorScale(DASH_C_PANEL_HI, 0.7f);
+		top.a = bot.a = 210;
+		dashPanelGradV(x, y, art, art, 16, top, bot);
+		if (DASH_C_BORDER.a)
+			dashPanelBorder(x, y, art, art, 16, DASH_C_BORDER);
+		dashAccentGlow(x + art * 0.5f, y + art * 0.5f, 64, 64, 1.0f);
 		dashIcon(c->icon, x + 34, y + 34, art - 68, DASH_C_TEXT);
 		dashTextFit(tx, y + 6, tw, c->label, dashTextWidth(c->label, DASH_FS_HERO) > tw ? DASH_FS_TITLE : DASH_FS_HERO, DASH_C_TEXT);
 		dashTextWrap(tx, y + 48, tw, 2, c->desc, DASH_FS_SMALL, DASH_C_TEXT3, 19);
@@ -301,8 +303,10 @@ static void homeDraw(void)
 
 	/* Continue row */
 	dashText(48, y0 - 26, "Continue", DASH_FS_SMALL, row == 0 ? DASH_C_TEXT : DASH_C_TEXT3);
+	if (row == 0)
+		dashRect(48, y0 - 8, 24, 2, DASH_C_ACCENT);
 	if (nhome == 0) {
-		dashPanel(48, y0, 552, 90, 14, DC(14, 18, 34, 140));
+		dashDrawPanelBox(48, y0, 552, 90, 14);
 		dashIcon(DI_CLOCK, 70, y0 + 25, 40, DASH_C_TEXT3);
 		dashText(126, y0 + 20, "Nothing here yet", DASH_FS_BODY, DASH_C_TEXT2);
 		dashText(126, y0 + 48, "Started, pinned and favorite apps will appear here.", DASH_FS_SMALL, DASH_C_TEXT3);
@@ -336,6 +340,8 @@ static void homeDraw(void)
 		float target;
 
 		dashText(48, cy - 24, "Quick access", DASH_FS_SMALL, row == 1 ? DASH_C_TEXT : DASH_C_TEXT3);
+		if (row == 1)
+			dashRect(48, cy - 6, 24, 2, DASH_C_ACCENT);
 		/* measure focus position for horizontal scrolling */
 		for (i = 0; i < nchips; i++) {
 			float w = dashTextWidth(chips[i].label, DASH_FS_SMALL) + 46;
@@ -358,11 +364,12 @@ static void homeDraw(void)
 			int foc = (row == 1 && i == col[1]);
 			if (w > 170)
 				w = 170;
-			dashPanel(x, cy, w, 32, 16, foc ? DC(60, 120, 210, 210) : DC(255, 255, 255, 14));
+			if (DASH_C_PANEL.a || dashTheme.highlight != DASH_HL_TEXT)
+				dashPanel(x, cy, w, 32, 16, dashColorA(DASH_C_TEXT, 0.055f));
 			if (foc)
-				dashPanelBorder(x, cy, w, 32, 16, DC(180, 230, 255, 170));
-			dashIcon(chips[i].icon, x + 12, cy + 8, 16, foc ? DASH_C_TEXT : DASH_C_TEXT2);
-			dashTextFit(x + 34, cy + 9.5f, w - 44, chips[i].label, DASH_FS_SMALL, foc ? DASH_C_TEXT : DASH_C_TEXT2);
+				dashDrawSelection(x, cy, w, 32, 16, 1.0f);
+			dashIcon(chips[i].icon, x + 12, cy + 8, 16, dashItemColor(foc));
+			dashTextFit(x + 34, cy + 9.5f, w - 44, chips[i].label, DASH_FS_SMALL, dashItemColor(foc));
 			x += w + 8;
 		}
 		dashGfxScissorReset();

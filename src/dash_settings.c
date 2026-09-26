@@ -593,26 +593,23 @@ static void settingsDraw(void)
 		dashGlow(48 + dashTextWidth("Settings", DASH_FS_TITLE) + 8, 82, 4, 4, DASH_C_WARM);
 
 	/* categories */
-	dashPanel(cx - 6, cy - 6, cw + 12, NCATS * crow + 12, 14, DC(12, 15, 30, 150));
-	dashPanel(cx, cy + cat_anim * crow, cw, crow - 4, 10,
-	          focus_col == 0 ? DC(60, 120, 210, 190) : DC(60, 120, 210, 80));
+	dashDrawPanelBox(cx - 6, cy - 6, cw + 12, NCATS * crow + 12, 14);
+	dashDrawSelection(cx, cy + cat_anim * crow, cw, crow - 4, 10, focus_col == 0 ? 1.0f : 0.45f);
 	for (i = 0; i < NCATS; i++) {
-		DashColor col = (i == cat) ? DASH_C_TEXT : DASH_C_TEXT2;
+		DashColor col = (i == cat) ? (focus_col == 0 ? DASH_C_SELTEXT : DASH_C_TEXT) : DASH_C_TEXT2;
 		dashIcon(cats[i].icon, cx + 10, cy + i * crow + 8, 16, col);
 		dashText(cx + 34, cy + i * crow + 9.5f, cats[i].name, DASH_FS_SMALL, col);
 	}
 
 	/* items */
-	dashPanel(ix - 6, iy - 6, iw + 12, 282, 14, DC(12, 15, 30, 150));
-	if (focus_col == 1) {
-		dashPanel(ix, iy + item_anim * irow, iw, irow - 3, 9, DC(60, 120, 210, 170));
-		dashPanelBorder(ix, iy + item_anim * irow, iw, irow - 3, 9, DC(170, 225, 255, 130));
-	}
+	dashDrawPanelBox(ix - 6, iy - 6, iw + 12, 282, 14);
+	if (focus_col == 1)
+		dashDrawSelection(ix, iy + item_anim * irow, iw, irow - 3, 9, 1.0f);
 	for (i = 0; i < c->n; i++) {
 		const SetItem *it = &c->items[i];
 		float y = iy + i * irow;
 		int on = (focus_col == 1 && i == item);
-		DashColor col = on ? DASH_C_TEXT : DASH_C_TEXT2;
+		DashColor col = dashItemColor(on);
 
 		if (it->type == ST_INFO) {
 			char buf[64];
