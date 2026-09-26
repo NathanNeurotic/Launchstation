@@ -10,6 +10,11 @@ recents. Every classic feature is still reachable, and the classic
 launch-key menu is one option away. See [docs/dashboard.md](docs/dashboard.md)
 for controls, metadata, artwork naming and the files it writes.
 
+The dashboard is fully themeable from the controller: 19 built-in
+PS2-inspired themes, custom RGB colours, backgrounds, wallpapers, fonts,
+icons and clock, plus shareable theme folders. See
+[docs/themes.md](docs/themes.md).
+
 ## Building (PS2BUILD)
 
 ```
