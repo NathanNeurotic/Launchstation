@@ -43,6 +43,11 @@ static int matchFilter(const DashApp *a)
 {
 	int icon;
 
+	/* Cached applications remain in DASHLIB.CNF, but are only visible while
+	 * the storage that owns their path is currently mounted/ready. */
+	if (!dashDevicePathReady(a->path))
+		return 0;
+
 	switch (filter) {
 		case FILTER_FAV:
 			return dashStoreIsFavorite(a->path) || dashStoreIsPinned(a->path);
@@ -273,6 +278,8 @@ static void appsMenu(void)
 			int f = dashModalChoice("Show applications", filter_names, FILTER_COUNT, filter);
 			if (f >= 0) {
 				filter = f;
+				dashCfg.app_filter = f;
+				dashStoreSaveSettings();
 				dashAppsRebuildView();
 			}
 			break;
@@ -286,12 +293,17 @@ static void appsMenu(void)
 //--------------------------------------------------------------
 static void appsEnter(void)
 {
+	filter = dashCfg.app_filter;
+	if (filter < 0 || filter >= FILTER_COUNT)
+		filter = FILTER_ALL;
 	dashAppsRebuildView();
 	sel_anim = (float)sel;
 }
 
 static void move(int delta)
 {
+	int old = sel;
+
 	if (norder <= 0)
 		return;
 	sel += delta;
@@ -299,6 +311,8 @@ static void move(int delta)
 		sel = 0;
 	if (sel >= norder)
 		sel = norder - 1;
+	if (sel != old)
+		dashUiFocusPoke();
 }
 
 static void appsInput(const DashInput *in)
@@ -312,6 +326,8 @@ static void appsInput(const DashInput *in)
 			appsMenu();
 		else if ((in->pressed & DASH_IN_SELECT) && filter != FILTER_ALL) {
 			filter = FILTER_ALL;
+			dashCfg.app_filter = FILTER_ALL;
+			dashStoreSaveSettings();
 			dashAppsRebuildView();
 		}
 		return;
@@ -392,6 +408,8 @@ static void drawTitleBar(void)
 	DashApp *a = selApp();
 	int v;
 
+	dashThemeSetFocusApp(a);
+
 	if (filter != FILTER_ALL)
 		snprintf(sub, sizeof(sub), "%d shown - %s", norder, filter_names[filter]);
 	else
@@ -401,8 +419,8 @@ static void drawTitleBar(void)
 		float x = 526 + v * 26;
 		int on = (v == dashCfg.view);
 		if (on)
-			dashPanel(x - 4, 70, 26, 26, 8, DC(60, 120, 210, 170));
-		dashIcon(DI_VIEW_GRID + v, x, 74, 18, on ? DASH_C_TEXT : DASH_C_TEXT3);
+			dashDrawSelection(x - 4, 70, 26, 26, 8, 1.0f);
+		dashIcon(DI_VIEW_GRID + v, x, 74, 18, on ? DASH_C_SELTEXT : DASH_C_TEXT3);
 	}
 	(void)a;
 }
@@ -477,13 +495,12 @@ static void drawList(void)
 	if (top < 0)
 		top = 0;
 
-	dashPanel(lx - 6, ly - 6, lw + 12, LIST_ROWS * LIST_ROW_H + 12, 14, DC(12, 15, 30, 150));
+	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, LIST_ROWS * LIST_ROW_H + 12, 14);
 	{
 		float fy = ly + (sel_anim - top) * LIST_ROW_H;
 		if (fy >= ly - LIST_ROW_H && fy < ly + LIST_ROWS * LIST_ROW_H) {
 			dashGfxScissor(lx - 6, ly - 4, lw + 12, LIST_ROWS * LIST_ROW_H + 8);
-			dashPanel(lx, fy, lw, LIST_ROW_H - 3, 9, DC(60, 120, 210, 170));
-			dashPanelBorder(lx, fy, lw, LIST_ROW_H - 3, 9, DC(170, 225, 255, 130));
+			dashDrawSelection(lx, fy, lw, LIST_ROW_H - 3, 9, 1.0f);
 			dashGfxScissorReset();
 		}
 	}
@@ -496,8 +513,9 @@ static void drawList(void)
 		if (t != NULL)
 			dashTexDrawFit(t, lx + 6, y + 2, 24, 24, DC(255, 255, 255, 255));
 		else
-			dashIcon(dashLibDeviceIcon(e->path), lx + 9, y + 5, 18, dashColorHue(e->hue, 120, 230, 255));
-		dashTextFit(lx + 38, y + 3, lw - 64, e->title, DASH_FS_SMALL, on ? DASH_C_TEXT : DASH_C_TEXT2);
+			dashIcon(dashTheme.app_icon_style == DASH_APPICON_SYSTEM ? DI_EXEC : dashLibDeviceIcon(e->path), lx + 9, y + 5, 18,
+			         dashTheme.app_icon_style == DASH_APPICON_MONOGRAM ? dashColorHue(e->hue, 120, 230, 255) : dashItemColor(on));
+		dashTextFit(lx + 38, y + 3, lw - 64, e->title, DASH_FS_SMALL, dashItemColor(on));
 		if (dashStoreIsFavorite(e->path))
 			dashIcon(DI_STAR, lx + lw - 22, y + 6, 14, DASH_C_WARM);
 	}
@@ -508,7 +526,7 @@ static void drawList(void)
 		float dx = 362, dy = 98, dw = 238;
 		char dev[48];
 
-		dashPanel(dx, dy, dw, 290, 16, DC(14, 18, 36, 180));
+		dashDrawCard(dx, dy, dw, 290, 16);
 		dashDrawAppArt(a, dx + (dw - 132) * 0.5f, dy + 14, 132, 132, 1.0f, 0);
 		dashTextFit(dx + 14, dy + 156, dw - 28, a->title, DASH_FS_LABEL, DASH_C_TEXT);
 		dashLibDeviceLabel(a->path, dev, sizeof(dev));
@@ -534,7 +552,8 @@ static void drawCarousel(void)
 
 	/* floor glow under the focused item */
 	dashGfxBlend(DASH_BLEND_ADD);
-	dashGlow(cx, cy + 100, 170, 26, DC(80, 150, 255, 60));
+	if (dashTheme.glow)
+		dashGlow(cx, cy + 100, 170, 26, dashColorA(DASH_C_ACCENT, 0.24f));
 	dashGfxBlend(DASH_BLEND_NORMAL);
 
 	/* draw back to front: farthest items first */
@@ -559,7 +578,12 @@ static void drawCarousel(void)
 				dashGfxPushAlpha(alpha);
 				dashDrawAppArt(&dashApps[order[idx]], cx + xo - s * 0.5f, cy - s * 0.5f + ad * 6.0f, s, s, f, (int)(ad + 0.5f));
 				if (ad > 0.05f)
-					dashRect(cx + xo - s * 0.5f, cy - s * 0.5f + ad * 6.0f, s, s, DC(4, 6, 16, (int)(dashClampf(ad * 60.0f, 0, 110))));
+				{
+					/* recede into the background colour */
+					DashColor sh = dashColorScale(dashTheme.bg2, 0.6f);
+					sh.a = (u8)dashClampf(ad * 60.0f, 0, 110);
+					dashRect(cx + xo - s * 0.5f, cy - s * 0.5f + ad * 6.0f, s, s, sh);
+				}
 				dashGfxPopAlpha();
 			}
 		}

@@ -8,6 +8,7 @@
 //confirms, Circle cancels), exactly like the classic screens.
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "dash_sound.h"
 
 extern u32 paddata;
 
@@ -103,6 +104,9 @@ const char *dashOkLabelKey(void)
 //--------------------------------------------------------------
 // Buttons / hints
 //--------------------------------------------------------------
+static float footerClockWidth(char *t, int tsize, char *d, int dsize);
+static void drawFooterClock(float y, const char *t, const char *d);
+
 static DashColor buttonColor(int icon)
 {
 	switch (icon) {
@@ -119,24 +123,54 @@ static DashColor buttonColor(int icon)
 	}
 }
 
+static int keyIcon(const char *key)
+{
+	static const struct
+	{
+		const char *key;
+		int icon;
+	} map[] = {
+	    {"L1", DI_BTN_L1}, {"L2", DI_BTN_L2}, {"L3", DI_BTN_L3},
+	    {"R1", DI_BTN_R1}, {"R2", DI_BTN_R2}, {"R3", DI_BTN_R3},
+	    {"START", DI_BTN_START}, {"SELECT", DI_BTN_SELECT},
+	};
+	int i;
+
+	if (!dashIconsPadPng() || key == NULL)
+		return -1;
+	for (i = 0; i < (int)(sizeof(map) / sizeof(map[0])); i++)
+		if (!strcmp(key, map[i].key))
+			return map[i].icon;
+	return -1;
+}
+
 static float drawButton(float x, float y, int icon, const char *key)
 {
 	const float d = 22.0f;
 
 	if (icon >= 0) {
-		dashPanelGradV(x, y, d, d, d * 0.5f, DC(28, 34, 52, 230), DC(12, 14, 24, 230));
-		dashPanelBorder(x, y, d, d, d * 0.5f, DC(255, 255, 255, 60));
-		dashIcon(icon, x + 4.5f, y + 4.5f, d - 9.0f, buttonColor(icon));
+		dashIcon(icon, x, y, d, buttonColor(icon));
 		return d;
-	} else {
-		float tw = dashTextWidth(key, DASH_FS_CAPTION);
-		float w = tw + 16.0f;
-		if (w < 26.0f)
-			w = 26.0f;
-		/* Crisp, console-grade pill badge for START / SELECT / L1 / R1 */
-		dashPanelGradV(x, y, w, d, 4.5f, DC(34, 42, 64, 240), DC(16, 20, 32, 240));
-		dashPanelBorder(x, y, w, d, 4.5f, DC(255, 255, 255, 75));
-		dashRect(x + 2.0f, y + 1.0f, w - 4.0f, 1.0f, DC(255, 255, 255, 45));
+	}
+	{
+		int ki = keyIcon(key);
+		float tw;
+		int keep;
+		float w;
+		if (ki >= 0) {
+			dashIcon(ki, x, y, d, DC(255, 255, 255, 255));
+			return d;
+		}
+		tw = dashTextWidth(key, DASH_FS_CAPTION);
+		w = tw + 14.0f;
+		if (w < d)
+			w = d;
+		/* OSDSYS squircle badge for L1/R1/START/SELECT-style labels */
+		keep = dashTheme.corner;
+		dashTheme.corner = DASH_CORNER_SOFT;
+		dashPanelGradV(x, y, w, d, 6.0f, DC(30, 36, 54, 235), DC(13, 16, 26, 235));
+		dashPanelBorder(x, y, w, d, 6.0f, DC(255, 255, 255, 60));
+		dashTheme.corner = keep;
 		dashTextS(x + (w - tw) * 0.5f, y + 5.0f, key, DASH_FS_CAPTION, DASH_C_TEXT);
 		return w;
 	}
@@ -157,7 +191,19 @@ void dashDrawHints(const DashHint *hints, int n)
 	x = DASH_SAFE_R - total + 12.0f;
 	if (x < DASH_SAFE_L)
 		x = DASH_SAFE_L;
-	dashRectGradH(x - 40, y - 6, DASH_SAFE_R - x + 60, 34, DC(4, 6, 14, 0), DC(4, 6, 14, 150));
+	x += 14.0f * (1.0f - dashEaseOutCubic(dashSectionAnim()));
+	{
+		char ct[24], cd[24];
+		float cw = footerClockWidth(ct, sizeof(ct), cd, sizeof(cd));
+		/* only when it does not collide with the hints */
+		if (cw > 0.0f && DASH_SAFE_L + cw + 24.0f < x)
+			drawFooterClock(y, ct, cd);
+	}
+	{
+		DashColor sh = dashColorScale(dashTheme.bg2, 0.6f);
+		sh.a = 0;
+		dashRectGradH(x - 40, y - 6, DASH_SAFE_R - x + 60, 34, sh, DC(sh.r, sh.g, sh.b, 150));
+	}
 	for (i = 0; i < n; i++) {
 		x += drawButton(x, y, hints[i].button, hints[i].key) + 6.0f;
 		x = dashTextS(x, y + 4.5f, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT2) + 18.0f;
@@ -169,16 +215,86 @@ void dashDrawHints(const DashHint *hints, int n)
 //--------------------------------------------------------------
 static float tab_anim_x = -1.0f;
 
+/* Clock text per the theme: 12/24 h and date order follow the console's
+ * own settings unless the theme overrides them. */
+static int clockText(char *t, int tsize, char *d, int dsize)
+{
+	int y, mo, dd, h, mi, s, use12, dfmt;
+	int valid = menuTitleGetClockFields(&y, &mo, &dd, &h, &mi, &s, &use12, &dfmt);
+
+	if (dashTheme.clock_hours == DASH_HOURS_24)
+		use12 = 0;
+	else if (dashTheme.clock_hours == DASH_HOURS_12)
+		use12 = 1;
+	switch (dashTheme.clock_date) {
+		case DASH_DATE_YMD:
+			dfmt = 0;
+			break;
+		case DASH_DATE_MDY:
+			dfmt = 1;
+			break;
+		case DASH_DATE_DMY:
+			dfmt = 2;
+			break;
+	}
+	if (!valid) {
+		dashStrCopy(t, dashTheme.clock_seconds ? "--:--:--" : "--:--", tsize);
+		dashStrCopy(d, "", dsize);
+		return 0;
+	}
+	menuTitleFormatClockTime(t, tsize, h, mi, s, use12);
+	/* "HH:MM:SS[ PM]" -> "HH:MM[ PM]" */
+	if (!dashTheme.clock_seconds && strlen(t) >= 8 && t[2] == ':' && t[5] == ':')
+		memmove(t + 5, t + 8, strlen(t + 8) + 1);
+	if (dashTheme.clock_date == DASH_DATE_OFF)
+		d[0] = '\0';
+	else
+		menuTitleFormatClockDate(d, dsize, y, mo, dd, dfmt);
+	return 1;
+}
+
 void dashDrawClock(void)
 {
 	char t[24], d[24];
 
-	menuTitleGetClockText(t, sizeof(t), d, sizeof(d));
-	/* "HH:MM:SS" or "HH:MM:SS PM" -> drop the seconds */
-	if (strlen(t) >= 8 && t[2] == ':' && t[5] == ':')
-		memmove(t + 5, t + 8, strlen(t + 8) + 1);
-	dashTextRight(DASH_SAFE_R, 22, t, DASH_FS_LABEL, DASH_C_TEXT);
-	dashTextRight(DASH_SAFE_R, 46, d, DASH_FS_CAPTION, DASH_C_TEXT3);
+	if (dashTheme.clock == DASH_CLOCK_OFF || dashTheme.clock_pos != DASH_CLOCKPOS_HEADER)
+		return;
+	clockText(t, sizeof(t), d, sizeof(d));
+	if (dashTheme.clock == DASH_CLOCK_SYSTEM) {
+		/* OSDSYS: light grey, even weight, no emphasis */
+		dashTextRight(DASH_SAFE_R, 24, t, DASH_FS_BODY, DASH_C_TEXT);
+		if (d[0])
+			dashTextRight(DASH_SAFE_R, 45, d, DASH_FS_CAPTION, DASH_C_TEXT2);
+	} else {
+		dashTextRight(DASH_SAFE_R, 22, t, DASH_FS_LABEL, DASH_C_TEXT);
+		if (d[0])
+			dashTextRight(DASH_SAFE_R, 46, d, DASH_FS_CAPTION, DASH_C_TEXT3);
+	}
+}
+
+/* Footer clock: left end of the hint row. Returns the width used (0 when
+ * the clock is not in the footer). */
+static float footerClockWidth(char *t, int tsize, char *d, int dsize)
+{
+	if (dashTheme.clock == DASH_CLOCK_OFF || dashTheme.clock_pos != DASH_CLOCKPOS_FOOTER)
+		return 0.0f;
+	clockText(t, tsize, d, dsize);
+	return dashTextWidth(t, DASH_FS_BODY) + (d[0] ? 14.0f + dashTextWidth(d, DASH_FS_SMALL) : 0.0f);
+}
+
+static void drawFooterClock(float y, const char *t, const char *d)
+{
+	float x = DASH_SAFE_L;
+
+	if (dashTheme.clock == DASH_CLOCK_SYSTEM && d[0]) {
+		/* OSDSYS order: date, then time */
+		x = dashTextS(x, y + 4.5f, d, DASH_FS_SMALL, DASH_C_TEXT2) + 14.0f;
+		dashTextS(x, y + 3.5f, t, DASH_FS_BODY, DASH_C_TEXT);
+	} else {
+		x = dashTextS(x, y + 3.5f, t, DASH_FS_BODY, DASH_C_TEXT) + 14.0f;
+		if (d[0])
+			dashTextS(x, y + 4.5f, d, DASH_FS_SMALL, DASH_C_TEXT3);
+	}
 }
 
 void dashDrawHeader(int section, float section_anim)
@@ -190,32 +306,44 @@ void dashDrawHeader(int section, float section_anim)
 	(void)section_anim;
 	if (tab_anim_x < 0.0f)
 		tab_anim_x = target_x;
-	tab_anim_x = dashApproach(tab_anim_x, target_x, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
+	{
+		float dx = target_x - tab_anim_x;
+
+		tab_anim_x = dashApproach(tab_anim_x, target_x, 14.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		tab_anim_x += dx * 0.04f * dashClampf(fabsf(dx) / tab_w, 0.0f, 1.0f) * dashSinf(dashTime() * 16.0f);
+	}
 
 	/* brand */
-	dashGlow(51, 36, 22, 18, DC(120, 200, 255, 70));
+	dashAccentGlow(51, 36, 22, 18, 1.2f);
 	dashIcon(DI_APP, 38, 23, 26, DASH_C_ACCENT);
 
 	/* tab strip */
-	dashPanel(tab_x0 - 30, tab_y - 2, tab_w * DASH_SEC_COUNT + 60, 44, 14, DC(12, 15, 30, 150));
-	dashPanelBorder(tab_x0 - 30, tab_y - 2, tab_w * DASH_SEC_COUNT + 60, 44, 14, DC(255, 255, 255, 18));
-	dashGfxBlend(DASH_BLEND_ADD);
-	dashGlow(tab_anim_x + tab_w * 0.5f, tab_y + 20, tab_w * 0.75f, 26, DC(90, 170, 255, 70));
-	dashGfxBlend(DASH_BLEND_NORMAL);
-	dashPanel(tab_anim_x + 3, tab_y + 1, tab_w - 6, 38, 11, DC(60, 110, 190, 110));
-	dashRect(tab_anim_x + 16, tab_y + 38, tab_w - 32, 3, DASH_C_ACCENT);
+	dashDrawPanelBox(tab_x0 - 40, tab_y - 2, tab_w * DASH_SEC_COUNT + 80, 44, 14);
+	if (!DASH_C_BORDER.a && dashTheme.glow)
+		dashPanelBorder(tab_x0 - 40, tab_y - 2, tab_w * DASH_SEC_COUNT + 80, 44, 14, DC(255, 255, 255, 18));
+	dashAccentGlow(tab_anim_x + tab_w * 0.5f, tab_y + 20, tab_w * 0.75f, 26, 1.2f);
+	if (dashTheme.highlight != DASH_HL_TEXT)
+		dashPanel(tab_anim_x + 3, tab_y + 1, tab_w - 6, 38, 11, dashColorA(DASH_C_SELECT, 0.65f));
+	dashRect(tab_anim_x + 16, tab_y + 38, tab_w - 32, dashTheme.highlight == DASH_HL_TEXT ? 2 : 3, DASH_C_ACCENT);
 
 	for (i = 0; i < DASH_SEC_COUNT; i++) {
 		float cx = tab_x0 + i * tab_w + tab_w * 0.5f;
 		float dist = fabsf((tab_anim_x - (tab_x0 + i * tab_w)) / tab_w);
 		float k = dashClampf(1.0f - dist, 0.0f, 1.0f);
-		DashColor c = dashColorLerp(DASH_C_TEXT3, DASH_C_TEXT, k);
+		DashColor c = dashColorLerp(DASH_C_TEXT3, DASH_C_SELTEXT, k);
 		dashIcon(dashSectionIcon(i), cx - 8, tab_y + 3, 16, c);
 		dashTextCenter(cx, tab_y + 20, dashSectionName(i), DASH_FS_CAPTION * 0.92f, c);
 	}
 	/* L1/R1 key pills at the strip ends */
-	drawButton(tab_x0 - 26, tab_y + 9, -1, "L1");
-	drawButton(tab_x0 + tab_w * DASH_SEC_COUNT + 2, tab_y + 9, -1, "R1");
+	{
+		/* measured, so they stay inside the strip at any text size / font */
+		float strip_l = tab_x0 - 40, strip_r = tab_x0 + tab_w * DASH_SEC_COUNT + 40;
+		float rw = dashTextWidth("R1", DASH_FS_CAPTION) + 16.0f;
+		if (rw < 26.0f)
+			rw = 26.0f;
+		drawButton(strip_l + 4, tab_y + 9, -1, "L1");
+		drawButton(strip_r - 4 - rw, tab_y + 9, -1, "R1");
+	}
 
 	dashDrawClock();
 }
@@ -229,10 +357,8 @@ void dashDrawSectionTitle(float x, float y, const char *title, const char *subti
 
 void dashDrawEmptyState(float cx, float cy, int icon, const char *title, const char *body)
 {
-	dashGfxBlend(DASH_BLEND_ADD);
-	dashGlow(cx, cy - 34, 70, 60, DC(80, 150, 255, 50));
-	dashGfxBlend(DASH_BLEND_NORMAL);
-	dashIcon(icon, cx - 26, cy - 60, 52, DC(170, 200, 255, 170));
+	dashAccentGlow(cx, cy - 34, 70, 60, 0.85f);
+	dashIcon(icon, cx - 26, cy - 60, 52, dashColorA(DASH_C_TEXT2, 0.8f));
 	dashTextCenter(cx, cy + 4, title, DASH_FS_LABEL, DASH_C_TEXT);
 	if (body != NULL) {
 		float w = 400.0f;
@@ -247,24 +373,98 @@ void dashDrawScrollbar(float x, float y, float h, int first, int visible, int to
 
 	if (total <= visible || total <= 0)
 		return;
-	dashPanel(x, y, 5, h, 2.5f, DC(255, 255, 255, 26));
+	dashPanel(x, y, 5, h, 2.5f, dashColorA(DASH_C_TEXT3, 0.22f));
 	th = h * visible / (float)total;
 	if (th < 18)
 		th = 18;
 	ty = y + (h - th) * first / (float)(total - visible);
-	dashPanel(x, ty, 5, th, 2.5f, DC(150, 205, 255, 190));
+	dashPanel(x, ty, 5, th, 2.5f, dashColorA(DASH_C_ACCENT, 0.75f));
 }
 
 void dashDrawFocusFrame(float x, float y, float w, float h, float r, float strength)
 {
 	float pulse = 0.82f + 0.18f * dashSinf(dashTime() * 4.2f);
+	DashColor edge = dashColorLighten(DASH_C_ACCENT, 0.45f);
 
 	if (strength <= 0.01f)
 		return;
+	if (dashTheme.glow) {
+		DashColor g = DASH_C_ACCENT;
+		g.a = (u8)(120 * strength * pulse);
+		dashGfxBlend(DASH_BLEND_ADD);
+		dashGlowRect(x, y, w, h, 16.0f, g);
+		dashGfxBlend(DASH_BLEND_NORMAL);
+	}
+	edge.a = (u8)(230 * strength);
+	dashPanelBorder(x - 2, y - 2, w + 4, h + 4, r + 2, edge);
+	if (!dashTheme.glow) {
+		/* no glow: a second, fainter outline keeps focus obvious on a CRT */
+		edge.a = (u8)(70 * strength * pulse);
+		dashPanelBorder(x - 4, y - 4, w + 8, h + 8, r + 4, edge);
+	}
+}
+
+void dashDrawPanelBox(float x, float y, float w, float h, float r)
+{
+	if (DASH_C_PANEL.a)
+		dashPanel(x, y, w, h, r, DASH_C_PANEL);
+	if (DASH_C_BORDER.a)
+		dashPanelBorder(x, y, w, h, r, DASH_C_BORDER);
+}
+
+void dashDrawCard(float x, float y, float w, float h, float r)
+{
+	DashColor c = DASH_C_PANEL;
+
+	/* cards sit on top of the background without a list panel, so they
+	 * get a little more body than list panels */
+	if (c.a) {
+		c.a = (u8)((c.a + 30 > 230) ? 230 : c.a + 30);
+		dashPanel(x, y, w, h, r, c);
+	}
+	if (DASH_C_BORDER.a)
+		dashPanelBorder(x, y, w, h, r, DASH_C_BORDER);
+}
+
+void dashDrawSelection(float x, float y, float w, float h, float r, float strength)
+{
+	DashColor fill = dashColorA(DASH_C_SELECT, strength);
+	DashColor edge = dashColorA(DASH_C_SELEDGE, strength);
+
+	switch (dashTheme.highlight) {
+		case DASH_HL_BAR:
+			fill.a = (u8)(fill.a * 0.55f);
+			dashPanel(x, y, w, h, r, fill);
+			dashRect(x, y + 3, 3, h - 6, dashColorA(DASH_C_ACCENT, strength));
+			break;
+		case DASH_HL_OUTLINE:
+			dashPanelBorder(x, y, w, h, r, dashColorA(DASH_C_ACCENT, strength * 0.9f));
+			break;
+		case DASH_HL_TEXT:
+			/* OSDSYS: the selection is only a colour swap of the text */
+			break;
+		default:
+			dashPanel(x, y, w, h, r, fill);
+			dashPanelBorder(x, y, w, h, r, edge);
+			break;
+	}
+}
+
+void dashAccentGlow(float cx, float cy, float rx, float ry, float strength)
+{
+	DashColor c = DASH_C_ACCENT;
+
+	if (!dashTheme.glow)
+		return;
+	c.a = (u8)dashClampf(60.0f * strength, 0.0f, 255.0f);
 	dashGfxBlend(DASH_BLEND_ADD);
-	dashGlowRect(x, y, w, h, 16.0f, DC(70, 160, 255, (int)(120 * strength * pulse)));
+	dashGlow(cx, cy, rx, ry, c);
 	dashGfxBlend(DASH_BLEND_NORMAL);
-	dashPanelBorder(x - 2, y - 2, w + 4, h + 4, r + 2, DC(160, 225, 255, (int)(230 * strength)));
+}
+
+DashColor dashItemColor(int selected)
+{
+	return selected ? DASH_C_SELTEXT : DASH_C_TEXT2;
 }
 
 void dashDrawSpinner(float cx, float cy, float r, DashColor c)
@@ -292,6 +492,19 @@ typedef struct
 
 static Toast toasts[TOAST_MAX];
 static int ntoasts;
+static float focus_pop = 1.0f;
+
+void dashUiFocusPoke(void)
+{
+	if (dashCfg.anim != DASH_ANIM_OFF)
+		focus_pop = 0.0f;
+}
+
+float dashUiFocusPop(void)
+{
+	float k = dashEaseOutCubic(dashClampf(focus_pop, 0.0f, 1.0f));
+	return 0.9f + 0.1f * k;
+}
 
 void dashUiInit(void)
 {
@@ -309,12 +522,16 @@ void dashToast(int kind, const char *msg)
 	toasts[ntoasts].t = 0.0f;
 	dashStrCopy(toasts[ntoasts].msg, msg, sizeof(toasts[ntoasts].msg));
 	ntoasts++;
+	dashSoundPlay(DASH_SND_MESSAGE);
 }
 
 void dashUiUpdate(float dt)
 {
 	int i;
 
+	focus_pop += dt * 6.0f;
+	if (focus_pop > 1.0f)
+		focus_pop = 1.0f;
 	for (i = 0; i < ntoasts; i++)
 		toasts[i].t += dt;
 	while (ntoasts > 0 && toasts[0].t > 3.6f) {
@@ -346,7 +563,9 @@ void dashDrawToasts(void)
 			icon = DI_WARNING, ic = DASH_C_DANGER;
 		dashGfxPushAlpha(a);
 		dashShadow(x, y, w, 32, 10, 0.6f);
-		dashPanel(x, y, w, 32, 12, DC(22, 27, 48, 235));
+		dashPanel(x, y, w, 32, 12, DC(DASH_C_PANEL_HI.r, DASH_C_PANEL_HI.g, DASH_C_PANEL_HI.b, 235));
+		if (DASH_C_BORDER.a)
+			dashPanelBorder(x, y, w, 32, 12, DASH_C_BORDER);
 		dashRect(x + 3, y + 7, 3, 18, ic);
 		dashIcon(icon, x + 14, y + 7, 18, ic);
 		dashText(x + 40, y + 9.5f, t->msg, DASH_FS_SMALL, DASH_C_TEXT);
@@ -360,16 +579,24 @@ void dashDrawToasts(void)
 //--------------------------------------------------------------
 static void modalBackdrop(float k)
 {
-	dashRect(0, 0, DASH_VW, DASH_VH, DC(2, 3, 10, (int)(150 * k)));
+	DashColor c = dashColorScale(dashTheme.bg2, 0.4f);
+	c.a = (u8)(150 * k);
+	dashRect(0, 0, DASH_VW, DASH_VH, c);
 }
 
 static void modalPanel(float x, float y, float w, float h, float k)
 {
+	/* modal surface: the panel colour lifted and made nearly opaque, so
+	 * dialogs stay readable over any background */
+	DashColor top = dashColorLighten(DASH_C_PANEL, 0.14f), bot = dashColorLighten(DASH_C_PANEL, 0.06f);
+	DashColor edge = dashColorA(DASH_C_ACCENT, 0.24f);
+
+	top.a = bot.a = 245;
 	dashShadow(x, y, w, h, 26, 0.9f * k);
-	dashPanelGradV(x, y, w, h, 18, DC(34, 40, 70, 245), DC(18, 21, 38, 245));
-	dashPanelBorder(x, y, w, h, 18, DC(150, 200, 255, 60));
-	dashRectGradH(x + 20, y + 1.5f, w - 40, 2, DC(160, 220, 255, 0), DC(160, 220, 255, 0));
-	dashRectGrad4(x + 18, y + 2, w - 36, 2, DC(160, 220, 255, 0), DC(160, 220, 255, 0), DC(160, 220, 255, 90), DC(160, 220, 255, 90));
+	dashPanelGradV(x, y, w, h, 18, top, bot);
+	dashPanelBorder(x, y, w, h, 18, edge);
+	edge.a = (u8)(dashTheme.glow ? 90 : 60);
+	dashRect(x + 18, y + 2, w - 36, 1.5f, edge);
 }
 
 static void modalHintRow(float x, float y, int ok_icon, const char *ok, int back_icon, const char *back)
@@ -382,9 +609,19 @@ static void modalHintRow(float x, float y, int ok_icon, const char *ok, int back
 	}
 }
 
+/* Optional live preview for the next dashModalMenu(): called whenever the
+ * highlighted row changes, with a light backdrop so the effect is visible. */
+static void (*modal_preview)(int index);
+
+void dashModalSetPreview(void (*fn)(int index))
+{
+	modal_preview = fn;
+}
+
 int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *items, int n, int initial)
 {
-	int sel = initial, top = 0, i;
+	int sel = initial, top = 0, i, previewed = -1;
+	void (*preview)(int) = modal_preview;
 	const int max_rows = 8;
 	float sel_anim, open = 0.0f;
 	float w = 400.0f, row_h = 34.0f;
@@ -401,6 +638,9 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 		sel++;
 	sel_anim = (float)sel;
 	y = (DASH_VH - h) * 0.5f;
+	modal_preview = NULL;
+	if (preview != NULL)
+		x = DASH_SAFE_R - w; /* keep the left half of the screen visible */
 	dashInputFlush();
 
 	while (1) {
@@ -410,6 +650,8 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			do
 				s = (s > 0) ? s - 1 : n - 1;
 			while (items[s].disabled && s != sel);
+			if (s != sel)
+				dashSoundPlay(DASH_SND_CURSOR);
 			sel = s;
 		}
 		if (in.pressed & DASH_IN_DOWN) {
@@ -417,17 +659,27 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			do
 				s = (s < n - 1) ? s + 1 : 0;
 			while (items[s].disabled && s != sel);
+			if (s != sel)
+				dashSoundPlay(DASH_SND_CURSOR);
 			sel = s;
 		}
-		if (in.pressed & DASH_IN_L2)
+		if (in.pressed & DASH_IN_L2) {
+			if (sel != 0)
+				dashSoundPlay(DASH_SND_CURSOR);
 			sel = 0;
-		if (in.pressed & DASH_IN_R2)
+		}
+		if (in.pressed & DASH_IN_R2) {
+			if (sel != n - 1)
+				dashSoundPlay(DASH_SND_CURSOR);
 			sel = n - 1;
+		}
 		if ((in.pressed & DASH_IN_OK) && !items[sel].disabled) {
+			dashSoundPlay(DASH_SND_CONFIRM);
 			dashInputFlush();
 			return sel;
 		}
 		if (in.pressed & (DASH_IN_BACK | DASH_IN_MENU)) {
+			dashSoundPlay(DASH_SND_CANCEL);
 			dashInputFlush();
 			return -1;
 		}
@@ -435,15 +687,25 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			top = sel;
 		if (sel >= top + rows)
 			top = sel - rows + 1;
+		if (preview != NULL) {
+			if (sel != previewed) {
+				preview(sel);
+				previewed = sel;
+			}
+			dashBgUpdate(1.0f / 60.0f);
+		}
 
 		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), 1.0f / 60.0f);
-		open = dashApproach(open, 1.0f, 14.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		{
+			float oe = dashEaseOutCubic(open);
 
-		dashRenderScene();
-		modalBackdrop(open);
-		dashGfxPushAlpha(open);
-		dashGfxPushOffset(0, 16.0f * (1.0f - open));
-		modalPanel(x, y, w, h, open);
+			dashRenderScene();
+			modalBackdrop(oe * (preview != NULL ? 0.25f : 1.0f));
+			dashGfxPushAlpha(oe);
+			dashGfxPushOffset(0, 18.0f * (1.0f - oe));
+			modalPanel(x, y, w, h, oe);
+		}
 		dashTextS(x + 24, y + 18, title, DASH_FS_LABEL, DASH_C_TEXT);
 		{
 			float ly = y + 54;
@@ -454,12 +716,11 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			dashGfxScissor(x + 8, ly - 2, w - 16, rows * row_h + 4);
 			{
 				float fy = ly + (sel_anim - top) * row_h;
-				dashPanel(x + 14, fy, w - 28, row_h - 4, 10, DC(70, 130, 220, 150));
-				dashPanelBorder(x + 14, fy, w - 28, row_h - 4, 10, DC(170, 225, 255, 120));
+				dashDrawSelection(x + 14, fy, w - 28, row_h - 4, 10, 1.0f);
 			}
 			for (i = top; i < n && i < top + rows; i++) {
 				float ry = ly + (i - top) * row_h;
-				DashColor c = items[i].disabled ? DASH_C_TEXT3 : (i == sel ? DASH_C_TEXT : DASH_C_TEXT2);
+				DashColor c = items[i].disabled ? DASH_C_TEXT3 : dashItemColor(i == sel);
 				float tx = x + 28;
 				if (items[i].icon >= 0) {
 					dashIcon(items[i].icon, x + 26, ry + 6, 18, c);
@@ -481,11 +742,11 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 
 int dashModalChoice(const char *title, const char *const *options, int n, int current)
 {
-	DashMenuItem items[16];
+	DashMenuItem items[24];
 	int i;
 
-	if (n > 16)
-		n = 16;
+	if (n > 24)
+		n = 24;
 	for (i = 0; i < n; i++) {
 		items[i].icon = (i == current) ? DI_CHECK : -1;
 		items[i].label = options[i];
@@ -522,27 +783,36 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 
 	while (1) {
 		dashInputPoll(&in);
-		if (cancel_label != NULL && (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT)))
+		if (cancel_label != NULL && (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
 			sel ^= 1;
+			dashSoundPlay(DASH_SND_CURSOR);
+		}
 		if (in.pressed & DASH_IN_OK) {
+			dashSoundPlay(DASH_SND_CONFIRM);
 			dashInputFlush();
 			return (cancel_label == NULL) ? 1 : (sel == 0);
 		}
 		if (in.pressed & DASH_IN_BACK) {
+			dashSoundPlay(DASH_SND_CANCEL);
 			dashInputFlush();
 			return (cancel_label == NULL) ? 1 : 0;
 		}
-		open = dashApproach(open, 1.0f, 14.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
 		sel_anim = dashApproach(sel_anim, (float)sel, 20.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		{
+			float oe = dashEaseOutCubic(open);
 
-		dashRenderScene();
-		modalBackdrop(open);
-		dashGfxPushAlpha(open);
-		dashGfxPushOffset(0, 16.0f * (1.0f - open));
-		modalPanel(x, y, w, h, open);
-		dashGfxBlend(DASH_BLEND_ADD);
-		dashGlow(x + 44, y + 42, 34, 34, dashColorA(icon_col, 0.35f));
-		dashGfxBlend(DASH_BLEND_NORMAL);
+			dashRenderScene();
+			modalBackdrop(oe);
+			dashGfxPushAlpha(oe);
+			dashGfxPushOffset(0, 18.0f * (1.0f - oe));
+			modalPanel(x, y, w, h, oe);
+		}
+		if (dashTheme.glow) {
+			dashGfxBlend(DASH_BLEND_ADD);
+			dashGlow(x + 44, y + 42, 34, 34, dashColorA(icon_col, 0.35f));
+			dashGfxBlend(DASH_BLEND_NORMAL);
+		}
 		dashIcon(icon, x + 26, y + 24, 36, icon_col);
 		dashTextS(x + 76, y + 28, title, DASH_FS_LABEL, DASH_C_TEXT);
 		if (body)
@@ -561,13 +831,21 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 			dashPanel(bx0, by, bw, 34, 12, DC(255, 255, 255, 18));
 			if (cancel_label != NULL)
 				dashPanel(bx1, by, bw, 34, 12, DC(255, 255, 255, 18));
-			dashPanel(fx, by, bw, 34, 12, (sel == 0 && icon == DI_WARNING && cancel_label) ? DC(200, 70, 90, 170) : DC(70, 130, 220, 170));
-			dashPanelBorder(fx, by, bw, 34, 12, DC(190, 230, 255, 140));
+			if (sel == 0 && icon == DI_WARNING && cancel_label) {
+				DashColor dz = dashColorScale(DASH_C_DANGER, 0.78f);
+				dz.a = 170;
+				dashPanel(fx, by, bw, 34, 12, dz);
+				dashPanelBorder(fx, by, bw, 34, 12, DASH_C_SELEDGE);
+			} else if (dashTheme.highlight == DASH_HL_TEXT) {
+				/* buttons need a visible focus even in text-only themes */
+				dashPanelBorder(fx, by, bw, 34, 12, dashColorA(DASH_C_ACCENT, 0.8f));
+			} else
+				dashDrawSelection(fx, by, bw, 34, 12, 1.0f);
 			dashIcon(dashOkIcon(), bx0 + 12, by + 8, 18, sel == 0 ? DASH_C_TEXT : DASH_C_TEXT3);
-			dashTextCenter(bx0 + bw * 0.5f + 10, by + 10.0f, ok_label, DASH_FS_BODY * 0.9f, sel == 0 ? DASH_C_TEXT : DASH_C_TEXT2);
+			dashTextCenter(bx0 + bw * 0.5f + 10, by + 10.0f, ok_label, DASH_FS_BODY * 0.9f, dashItemColor(sel == 0));
 			if (cancel_label != NULL) {
 				dashIcon(dashBackIcon(), bx1 + 12, by + 8, 18, sel == 1 ? DASH_C_TEXT : DASH_C_TEXT3);
-				dashTextCenter(bx1 + bw * 0.5f + 10, by + 10.0f, cancel_label, DASH_FS_BODY * 0.9f, sel == 1 ? DASH_C_TEXT : DASH_C_TEXT2);
+				dashTextCenter(bx1 + bw * 0.5f + 10, by + 10.0f, cancel_label, DASH_FS_BODY * 0.9f, dashItemColor(sel == 1));
 			}
 		}
 		dashGfxPopOffset();
@@ -620,7 +898,7 @@ static void loadingDraw(void)
 	dashTextFit(x + 84, y + 58, w - 110, loading_status, DASH_FS_SMALL, DASH_C_TEXT2);
 	if (loading_total > 0) {
 		float p = dashClampf(loading_done / (float)loading_total, 0.0f, 1.0f);
-		dashPanel(x + 30, y + h - 26, w - 60, 8, 4, DC(255, 255, 255, 30));
+		dashPanel(x + 30, y + h - 26, w - 60, 8, 4, dashColorA(DASH_C_TEXT3, 0.3f));
 		dashPanel(x + 30, y + h - 26, (w - 60) * p + 8, 8, 4, DASH_C_ACCENT);
 	}
 	dashGfxPopAlpha();

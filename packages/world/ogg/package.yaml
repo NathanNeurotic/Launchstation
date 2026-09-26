@@ -1,0 +1,17 @@
+name: ogg
+origin: port:libogg
+tier: world
+license: BSD-3-Clause
+
+# world: a real, untouched upstream CMake build (this repo's own
+# CMakeLists.txt) against ps2dev.cmake - the real bitstream container
+# format libvorbis (world/vorbis) sits on top of. Not part of
+# ps2sdk/sdk-core at all - a third-party codec dependency,
+# definitionally world/ports territory. Directory (and package name)
+# is "ogg", matching the real archive here (libogg.a) and real
+# upstream's own universal -logg link convention.
+artifacts:
+  - kind: library
+    target: [ee]
+    include_dirs: [include]
+    lib: lib/libogg.a

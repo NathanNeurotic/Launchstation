@@ -616,6 +616,31 @@ void menuTitleFormat(char *out, size_t out_size)
 // menuTitleGetClockText gives the dashboard the current time and date
 // strings separately (same formatting rules as the classic title bar).
 //---------------------------------------------------------------------------
+/* Raw local date/time fields for the dashboard clock and the clock-ring
+ * background. Returns 0 when the RTC has not produced a valid time. */
+int menuTitleGetClockFields(int *year, int *month, int *day, int *hour, int *minute, int *second,
+                            int *use_12h, int *date_format)
+{
+	menuTitleUpdateAsync(!title_clock.initialized);
+	if (year)
+		*year = title_clock.year;
+	if (month)
+		*month = title_clock.month;
+	if (day)
+		*day = title_clock.day;
+	if (hour)
+		*hour = title_clock.hour;
+	if (minute)
+		*minute = title_clock.minute;
+	if (second)
+		*second = title_clock.second;
+	if (use_12h)
+		*use_12h = title_clock.use_12h;
+	if (date_format)
+		*date_format = title_clock.date_format;
+	return title_clock.valid;
+}
+
 void menuTitleGetClockText(char *time_out, int time_size, char *date_out, int date_size)
 {
 	menuTitleUpdateAsync(!title_clock.initialized);

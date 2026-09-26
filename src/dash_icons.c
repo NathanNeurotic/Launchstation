@@ -1,9 +1,11 @@
 //--------------------------------------------------------------
 //File name:   dash_icons.c
 //Dashboard icon set, rasterized once from signed distance functions into
-//one 512x408 PSMT8 alpha atlas (64x64 icons, tinted by vertex colour).
+//one 512x544 PSMT8 alpha atlas (64x64 icons, tinted by vertex colour).
 //No image files are needed and every icon stays anti-aliased at the sizes
-//used by the dashboard (16..96 px).
+//used by the dashboard (16..96 px). The pad-button tiles (cross..R3) are
+//the original OSDSYS-style PNGs, decoded once into a CT32 texture; the
+//SDF versions of the glyphs stay as the fallback when a PNG is missing.
 //--------------------------------------------------------------
 #include "dash_internal.h"
 
@@ -11,11 +13,139 @@
 #define ICON_SLOT 68
 #define ICON_COLS 7
 #define ICON_TEX_W 512
-#define ICON_TEX_H 408
+#define ICON_TEX_H 544
 
 static GSTEXTURE icon_tex;
 static u32 icon_clut[256] __attribute__((aligned(64)));
 static int icons_ready;
+
+/* Embedded OSDSYS-style pad-button PNG tiles (DI_BTN_CROSS .. DI_BTN_R3,
+ * 16 contiguous ids), decoded once into a CT32 grid texture. */
+#define PAD_TILE 32
+#define PAD_COLS 4
+#define PAD_ROWS 4
+#define PAD_TEX_W (PAD_COLS * PAD_TILE)
+#define PAD_TEX_H (PAD_ROWS * PAD_TILE)
+#define PAD_PNG_COUNT (PAD_ROWS * PAD_COLS)
+
+static GSTEXTURE pad_tex;
+static int pad_png_ready;
+
+extern u8 icon_cross_png[];
+extern int size_icon_cross_png;
+extern u8 icon_circle_png[];
+extern int size_icon_circle_png;
+extern u8 icon_square_png[];
+extern int size_icon_square_png;
+extern u8 icon_triangle_png[];
+extern int size_icon_triangle_png;
+extern u8 icon_up_png[];
+extern int size_icon_up_png;
+extern u8 icon_down_png[];
+extern int size_icon_down_png;
+extern u8 icon_left_png[];
+extern int size_icon_left_png;
+extern u8 icon_right_png[];
+extern int size_icon_right_png;
+extern u8 icon_select_png[];
+extern int size_icon_select_png;
+extern u8 icon_start_png[];
+extern int size_icon_start_png;
+extern u8 icon_l1_png[];
+extern int size_icon_l1_png;
+extern u8 icon_l2_png[];
+extern int size_icon_l2_png;
+extern u8 icon_l3_png[];
+extern int size_icon_l3_png;
+extern u8 icon_r1_png[];
+extern int size_icon_r1_png;
+extern u8 icon_r2_png[];
+extern int size_icon_r2_png;
+extern u8 icon_r3_png[];
+extern int size_icon_r3_png;
+
+static const void *pad_blob(int i)
+{
+	switch (i) {
+		case 0: return icon_cross_png;
+		case 1: return icon_circle_png;
+		case 2: return icon_square_png;
+		case 3: return icon_triangle_png;
+		case 4: return icon_up_png;
+		case 5: return icon_down_png;
+		case 6: return icon_left_png;
+		case 7: return icon_right_png;
+		case 8: return icon_select_png;
+		case 9: return icon_start_png;
+		case 10: return icon_l1_png;
+		case 11: return icon_l2_png;
+		case 12: return icon_l3_png;
+		case 13: return icon_r1_png;
+		case 14: return icon_r2_png;
+		default: return icon_r3_png;
+	}
+}
+
+static int pad_blob_size(int i)
+{
+	switch (i) {
+		case 0: return size_icon_cross_png;
+		case 1: return size_icon_circle_png;
+		case 2: return size_icon_square_png;
+		case 3: return size_icon_triangle_png;
+		case 4: return size_icon_up_png;
+		case 5: return size_icon_down_png;
+		case 6: return size_icon_left_png;
+		case 7: return size_icon_right_png;
+		case 8: return size_icon_select_png;
+		case 9: return size_icon_start_png;
+		case 10: return size_icon_l1_png;
+		case 11: return size_icon_l2_png;
+		case 12: return size_icon_l3_png;
+		case 13: return size_icon_r1_png;
+		case 14: return size_icon_r2_png;
+		default: return size_icon_r3_png;
+	}
+}
+
+int dashIconsPadPng(void)
+{
+	return pad_png_ready;
+}
+
+static void initPadTiles(void)
+{
+	u32 *mem;
+	u32 *pix;
+	int i, w, h, y;
+
+	mem = (u32 *)memalign(128, PAD_TEX_W * PAD_TEX_H * 4);
+	if (mem == NULL)
+		return;
+	memset(mem, 0, PAD_TEX_W * PAD_TEX_H * 4);
+	for (i = 0; i < PAD_PNG_COUNT; i++) {
+		if (dashPngDecode((const u8 *)pad_blob(i), pad_blob_size(i), PAD_TILE, PAD_TILE, &pix, &w, &h) != 0)
+			continue; /* tile stays transparent; SDF fallback still draws */
+		if (w > PAD_TILE)
+			w = PAD_TILE;
+		if (h > PAD_TILE)
+			h = PAD_TILE;
+		for (y = 0; y < h; y++)
+			memcpy(&mem[(i / PAD_COLS * PAD_TILE + y) * PAD_TEX_W + (i % PAD_COLS) * PAD_TILE],
+			       &pix[y * w], w * 4);
+		free(pix);
+	}
+	memset(&pad_tex, 0, sizeof(pad_tex));
+	pad_tex.Width = PAD_TEX_W;
+	pad_tex.Height = PAD_TEX_H;
+	pad_tex.PSM = GS_PSM_CT32;
+	pad_tex.Mem = mem;
+	pad_tex.Filter = GS_FILTER_LINEAR;
+	pad_tex.Delayed = 1;
+	gsKit_setup_tbw(&pad_tex);
+	SyncDCache(mem, (u8 *)mem + PAD_TEX_W * PAD_TEX_H * 4);
+	pad_png_ready = 1;
+}
 
 typedef struct
 {
@@ -342,6 +472,9 @@ static float iconSdf(int id, V2 p)
 			d = U(d, sdSeg(p, -0.6f, 0.0f, -0.12f, -0.48f, 0.09f));
 			d = U(d, sdSeg(p, -0.6f, 0.0f, -0.12f, 0.48f, 0.09f));
 			break;
+		case DI_PAD_BADGE:
+			d = sdBox(p, 0.0f, 0.0f, 0.92f, 0.92f, 0.20f);
+			break;
 		case DI_BTN_CROSS:
 			d = sdSeg(p, -0.5f, -0.5f, 0.5f, 0.5f, 0.11f);
 			d = U(d, sdSeg(p, -0.5f, 0.5f, 0.5f, -0.5f, 0.11f));
@@ -354,6 +487,28 @@ static float iconSdf(int id, V2 p)
 			break;
 		case DI_BTN_TRIANGLE:
 			d = fabsf(sdTriP(p, -0.66f, 0.46f, 0.0f, -0.68f, 0.66f, 0.46f) + 0.03f) - 0.1f;
+			break;
+		case DI_BTN_UP:
+			d = U(sdSeg(p, -0.5f, -0.22f, 0.0f, 0.34f, 0.12f),
+			    sdSeg(p, 0.0f, 0.34f, 0.5f, -0.22f, 0.12f));
+			break;
+		case DI_BTN_DOWN:
+			d = U(sdSeg(p, -0.5f, 0.22f, 0.0f, -0.34f, 0.12f),
+			    sdSeg(p, 0.0f, -0.34f, 0.5f, 0.22f, 0.12f));
+			break;
+		case DI_BTN_LEFT:
+			d = U(sdSeg(p, 0.22f, -0.5f, -0.34f, 0.0f, 0.12f),
+			    sdSeg(p, -0.34f, 0.0f, 0.22f, 0.5f, 0.12f));
+			break;
+		case DI_BTN_RIGHT:
+			d = U(sdSeg(p, -0.22f, -0.5f, 0.34f, 0.0f, 0.12f),
+			    sdSeg(p, 0.34f, 0.0f, -0.22f, 0.5f, 0.12f));
+			break;
+		case DI_BTN_START:
+			d = sdTriP(p, -0.36f, -0.44f, -0.36f, 0.44f, 0.44f, 0.0f);
+			break;
+		case DI_BTN_SELECT:
+			d = sdBoxOutline(p, 0.0f, 0.0f, 0.58f, 0.38f, 0.17f, 0.1f);
 			break;
 		case DI_KEY:
 			d = sdRing(p, -0.4f, 0.0f, 0.3f, T);
@@ -369,6 +524,34 @@ static float iconSdf(int id, V2 p)
 			d = S(d, sdSeg(p, -0.46f, -0.22f, -0.46f, 0.1f, 0.055f));
 			d = S(d, sdCircle(p, 0.36f, -0.12f, 0.07f));
 			d = S(d, sdCircle(p, 0.56f, 0.02f, 0.07f));
+			break;
+		case DI_EXEC:
+			/* an application window with a disc emblem: the PS2 program
+			 * tile used when an application has no artwork */
+			d = sdBoxOutline(p, 0.0f, 0.02f, 0.8f, 0.72f, 0.1f, T);
+			d = U(d, sdBox(p, 0.0f, -0.55f, 0.8f, 0.19f, 0.08f));
+			d = S(d, sdCircle(p, -0.56f, -0.55f, 0.06f));
+			d = U(d, sdRing(p, 0.0f, 0.2f, 0.3f, T * 0.9f));
+			d = U(d, sdCircle(p, 0.0f, 0.2f, 0.08f));
+			break;
+		case DI_PALETTE:
+			/* three overlapping swatches */
+			d = sdBox(p, -0.34f, -0.3f, 0.3f, 0.3f, 0.05f);
+			d = U(d, fabsf(sdBox(p, 0.06f, 0.02f, 0.3f, 0.3f, 0.05f)) - T);
+			d = U(d, fabsf(sdBox(p, 0.44f, 0.38f, 0.3f, 0.3f, 0.05f)) - T);
+			break;
+		case DI_RECENT:
+			d = sdRing(p, 0.0f, 0.0f, 0.7f, T);
+			d = S(d, sdBox(p, -0.62f, -0.5f, 0.2f, 0.26f, 0.0f));
+			d = U(d, sdTriP(p, -0.9f, -0.34f, -0.36f, -0.34f, -0.63f, -0.02f));
+			d = U(d, sdSeg(p, 0.0f, 0.0f, 0.0f, -0.4f, 0.07f));
+			d = U(d, sdSeg(p, 0.0f, 0.0f, 0.3f, 0.2f, 0.07f));
+			break;
+		case DI_IMAGE:
+			d = sdBoxOutline(p, 0.0f, 0.0f, 0.82f, 0.62f, 0.08f, T);
+			d = U(d, sdCircle(p, 0.36f, -0.24f, 0.13f));
+			d = U(d, fmaxf2(sdTriP(p, -0.66f, 0.46f, -0.18f, -0.12f, 0.3f, 0.46f), sdBox(p, 0.0f, 0.0f, 0.74f, 0.54f, 0.0f)));
+			d = U(d, fmaxf2(sdTriP(p, 0.0f, 0.46f, 0.36f, 0.1f, 0.72f, 0.46f), sdBox(p, 0.0f, 0.0f, 0.74f, 0.54f, 0.0f)));
 			break;
 		default:
 			d = sdCircle(p, 0.0f, 0.0f, 0.5f);
@@ -408,6 +591,8 @@ void dashIconsInit(void)
 				d = iconSdf(id, p);
 				/* one pixel == 2/64 normalized units */
 				a = dashClampf(0.5f - d * (ICON_SIZE * 0.5f), 0.0f, 1.0f);
+				if (id == DI_PAD_BADGE)
+					a *= 0.86f + 0.14f * (1.0f - p.y) * 0.5f; /* soft top light */
 				mem[(sy + y) * ICON_TEX_W + sx + x] = (u8)(a * 255.0f + 0.5f);
 			}
 		}
@@ -432,11 +617,13 @@ void dashIconsInit(void)
 	SyncDCache(mem, mem + ICON_TEX_W * ICON_TEX_H);
 	SyncDCache(icon_clut, (u8 *)icon_clut + sizeof(icon_clut));
 	icons_ready = 1;
+	initPadTiles();
 }
 
 void dashIconsShutdown(void)
 {
 	dashTexRelease(&icon_tex);
+	dashTexRelease(&pad_tex);
 }
 
 GSTEXTURE *dashIconsTexture(void)
@@ -450,11 +637,78 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 
 	if (!icons_ready || id < 0 || id >= DI_COUNT || size <= 0.0f || c.a == 0)
 		return;
+	if (id >= DI_BTN_CROSS && id <= DI_BTN_R3 && pad_png_ready) {
+		/* real OSDSYS pad tile: baked colours, drawn untinted */
+		int idx = id - DI_BTN_CROSS;
+		float pu0 = (float)((idx % PAD_COLS) * PAD_TILE);
+		float pv0 = (float)((idx / PAD_COLS) * PAD_TILE);
+		float ppad = size * 2.0f / PAD_TILE;
+
+		dashSpriteBatchBegin(&pad_tex, DC(255, 255, 255, 255));
+		dashSpriteBatchAdd(x - ppad, y - ppad, pu0, pv0, x + size + ppad, y + size + ppad, pu0 + PAD_TILE, pv0 + PAD_TILE);
+		dashSpriteBatchEnd();
+		return;
+	}
+	if (id < DI_PAD_BADGE || id > DI_BTN_R3)
+		c = dashIconTint(c);
+	u0 = (float)((id % ICON_COLS) * ICON_SLOT);
+	v0 = (float)((id / ICON_COLS) * ICON_SLOT);
+	pad = size * 2.0f / ICON_SIZE;
+	if (id > DI_PAD_BADGE && id <= DI_BTN_SELECT) {
+		/* SDF fallback: fixed dark badge, then the coloured glyph at 56% */
+		float bu0 = (float)((DI_PAD_BADGE % ICON_COLS) * ICON_SLOT);
+		float bv0 = (float)((DI_PAD_BADGE / ICON_COLS) * ICON_SLOT);
+		float g = size * 0.56f, go = (size - g) * 0.5f;
+
+		dashSpriteBatchBegin(&icon_tex, DC(16, 18, 30, 232));
+		dashSpriteBatchAdd(x - pad, y - pad, bu0, bv0, x + size + pad, y + size + pad, bu0 + ICON_SLOT, bv0 + ICON_SLOT);
+		dashSpriteBatchEnd();
+		dashSpriteBatchBegin(&icon_tex, c);
+		dashSpriteBatchAdd(x + go, y + go, u0, v0, x + go + g, y + go + g, u0 + ICON_SLOT, v0 + ICON_SLOT);
+		dashSpriteBatchEnd();
+		return;
+	}
+	dashSpriteBatchBegin(&icon_tex, c);
+	dashSpriteBatchAdd(x - pad, y - pad, u0, v0, x + size + pad, y + size + pad, u0 + ICON_SLOT, v0 + ICON_SLOT);
+	dashSpriteBatchEnd();
+}
+/* Theme icon tint: TEXT keeps the caller's colour, ACCENT leans it towards
+ * the accent colour (keeping its brightness), MONO removes the colour. */
+DashColor dashIconTint(DashColor c)
+{
+	int l = (c.r * 77 + c.g * 150 + c.b * 29) >> 8;
+
+	switch (dashTheme.icon_tint) {
+		case DASH_ICONS_ACCENT: {
+			DashColor a = DASH_C_ACCENT;
+			int la = (a.r * 77 + a.g * 150 + a.b * 29) >> 8;
+			float k = (la > 0) ? l / (float)la : 1.0f;
+			DashColor r = dashColorScale(a, k > 1.3f ? 1.3f : k);
+			r.a = c.a;
+			return dashColorMix(c, r, 0.7f);
+		}
+		case DASH_ICONS_MONO:
+			return DC(l, l, l, c.a);
+		default:
+			return c;
+	}
+}
+
+/* Many copies of one icon in a single sprite batch (background motifs). */
+void dashIconMany(int id, const float *xy, int n, float size, DashColor c)
+{
+	float u0, v0, pad;
+	int i;
+
+	if (!icons_ready || id < 0 || id >= DI_COUNT || size <= 0.0f || c.a == 0 || n <= 0)
+		return;
 	u0 = (float)((id % ICON_COLS) * ICON_SLOT);
 	v0 = (float)((id / ICON_COLS) * ICON_SLOT);
 	pad = size * 2.0f / ICON_SIZE;
 	dashSpriteBatchBegin(&icon_tex, c);
-	dashSpriteBatchAdd(x - pad, y - pad, u0, v0, x + size + pad, y + size + pad, u0 + ICON_SLOT, v0 + ICON_SLOT);
+	for (i = 0; i < n; i++)
+		dashSpriteBatchAdd(xy[i * 2] - pad, xy[i * 2 + 1] - pad, u0, v0,
+		                   xy[i * 2] + size + pad, xy[i * 2 + 1] + size + pad, u0 + ICON_SLOT, v0 + ICON_SLOT);
 	dashSpriteBatchEnd();
 }
 //--------------------------------------------------------------

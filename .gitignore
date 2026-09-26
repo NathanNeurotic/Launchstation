@@ -14,6 +14,8 @@ build/stale-code-report.txt
 
 githash.h
 !iop/__precompiled/*
+!packages/world/*/lib/*.a
+!packages/world/*/bin/*.irx
 iop/vmc_fs.irx
 iso/
 *.iso

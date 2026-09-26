@@ -20,14 +20,41 @@ jobs:
           fetch-depth: 0
 
       - name: Install ps2build SDK
+        shell: bash
         run: |
-          curl -sSfL https://git.techwritescode.dev/ps2/install/raw/branch/master/install.sh | sh
+          set -euo pipefail
+          installer="$(mktemp)"
+          trap 'rm -f "$installer"' EXIT
+
+          # git.techwritescode.dev occasionally returns transient 5xx errors.
+          # Retry the download before failing the job, and never let a failed
+          # curl be hidden by the pipe into sh.
+          curl -sSfL \
+            --retry 8 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --connect-timeout 20 \
+            https://git.techwritescode.dev/ps2/install/raw/branch/master/install.sh \
+            -o "$installer"
+
+          sh "$installer"
+          # The installer places the ps2build executable directly in this
+          # directory and adds this directory (not a bin/ subdirectory) to PATH.
           echo "$HOME/.local/share/ps2build" >> "$GITHUB_PATH"
-          echo "$HOME/.local/share/ps2build/bin" >> "$GITHUB_PATH"
 
       - name: Verify ps2build
+        shell: bash
         run: |
+          set -euo pipefail
+          command -v ps2build
           ps2build --version
+
+      - name: Install in-repo custom packages
+        run: |
+          dest="$HOME/.local/share/ps2build/packages/world"
+          mkdir -p "$dest"
+          cp -r packages/world/. "$dest/"
+          ls "$dest"
 
       - name: Build wLaunchELF with ps2build
         run: |
@@ -48,6 +75,9 @@ jobs:
           fi
           ls -lh artifacts/
 
+      - name: Show artifact hashes
+        run: sha256sum artifacts/*
+
       - name: Upload ELF artifacts
         uses: actions/upload-artifact@v4
         continue-on-error: true
@@ -67,6 +97,27 @@ jobs:
             gh release create "$tag" --title "$title" --notes "Automated build for ${GITHUB_SHA} using ps2build" --target "${GITHUB_SHA}" --prerelease || true
           fi
           gh release upload "$tag" artifacts/* --clobber || true
+
+      - name: Publish branch preview pre-release
+        # Non-master pushes (feature branches) get their own rolling
+        # prerelease, published by CI from the artifact it just built.
+        if: github.event_name != 'pull_request' && github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          branch="${GITHUB_REF_NAME}"
+          short="${branch#nathan/}"
+          short="${short#feature/}"
+          tag="preview-$(echo "$short" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]\+/-/g')"
+          title="Preview build: ${short}"
+          notes="Automated preview of ${branch} (${GITHUB_SHA}). Packed ELF (BOOT.ELF / wLaunchELF_R3Z.ELF) is the one to test; see the CI run for sha256 hashes."
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" artifacts/* --clobber
+            gh release edit "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}"
+          else
+            gh release create "$tag" artifacts/BOOT.ELF artifacts/wLaunchELF_R3Z.ELF artifacts/wLaunchELF_R3Z-unpacked.ELF \
+              --title "$title" --notes "$notes" --target "${GITHUB_SHA}" --prerelease
+          fi
 
       - name: Publish language files release
         if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')

@@ -1,19 +1,22 @@
 //--------------------------------------------------------------
 //File name:   dash_bg.c
-//Animated dashboard atmosphere.
+//Dashboard background renderer.
 //
-//Layers (back to front), all cheap GS primitives:
-//  * deep indigo gradient with a very slow colour drift
-//  * optional user backdrop (THEME/background.png) and star layers
-//    (THEME/stars1.png, THEME/stars2.png) scrolled with texture wrap
-//  * procedural parallax star field with twinkle
-//  * large soft orbs drifting on Lissajous paths (additive)
-//  * translucent rotating crystal towers, a nod to the OSDSYS towers
-//    (additive gouraud prisms, fogged towards the floor)
-//  * rising sparkles and an occasional horizontal light streak
-//  * floor fog and top/bottom vignette to keep text readable
-//Effects level FULL draws everything, SUBTLE drops the towers/streaks and
-//halves the particles, OFF draws only the static gradient.
+//dashBgDraw() draws, back to front:
+//  1. the theme's background scene (dashTheme.bg): a solid colour, a
+//     gradient, a wallpaper PNG or one of the procedural scenes in
+//     dash_bg_ps2.c / dash_bg_geo.c, or the original "Crystal" atmosphere
+//     kept below
+//  2. the background brightness overlay
+//  3. the app-aware wallpaper: artwork of the focused application,
+//     cover-fitted, cross-faded on focus changes and dimmed
+//  4. the optional CRT scanline overlay
+//  5. the launch flash
+//
+//Every scene is built from cheap GS primitives. The background clock stops
+//when animations or background effects are off, so each scene doubles as
+//its own static variant; SUBTLE effects run at a slower pace with fewer
+//elements.
 //--------------------------------------------------------------
 #include "dash_internal.h"
 
@@ -47,12 +50,37 @@ static float streak_t = -1.0f, streak_y, streak_next = 6.0f;
 static u32 rng = 0x2545F491u;
 static int bg_ready;
 
+/* app-aware wallpaper cross-fade */
+static DashApp *wall_cur, *wall_prev;
+static float wall_mix = 1.0f, wall_vis;
+
 static float frand(void)
 {
 	rng ^= rng << 13;
 	rng ^= rng >> 17;
 	rng ^= rng << 5;
 	return (rng & 0xFFFFFF) / (float)0x1000000;
+}
+
+float dashBgHash(int a, int b)
+{
+	u32 h = (u32)a * 374761393u + (u32)b * 668265263u;
+
+	h = (h ^ (h >> 13)) * 1274126177u;
+	h ^= h >> 16;
+	return (h & 0xFFFF) / 65535.0f;
+}
+
+void dashBgVignette(float strength)
+{
+	DashColor e = dashColorScale(dashTheme.bg2, 0.5f);
+	DashColor z = e;
+
+	e.a = (u8)dashClampf(170.0f * strength, 0.0f, 255.0f);
+	z.a = 0;
+	dashRectGradV(0, DASH_VH - 110, DASH_VW, 110, z, e);
+	e.a = (u8)dashClampf(120.0f * strength, 0.0f, 255.0f);
+	dashRectGradV(0, 0, DASH_VW, 70, e, z);
 }
 
 static void spawnSpark(Spark *s, int initial)
@@ -104,14 +132,35 @@ void dashBgFlash(float amount)
 		flash = amount;
 }
 
+static int bgAnimated(void)
+{
+	return dashCfg.anim != DASH_ANIM_OFF && dashCfg.effects != DASH_FX_OFF;
+}
+
 void dashBgUpdate(float dt)
 {
 	int i;
-	float speed = (dashCfg.anim == DASH_ANIM_OFF) ? 0.0f : 1.0f;
+	int animated = bgAnimated();
+	/* SUBTLE effects: same scene, slower */
+	float speed = !animated ? 0.0f : (dashCfg.effects == DASH_FX_SUBTLE ? 0.5f : 1.0f);
 
 	bg_time += dt * speed;
 	flash = dashApproach(flash, 0.0f, 3.0f, dt);
-	if (dashCfg.effects == DASH_FX_OFF || speed == 0.0f)
+
+	/* app-aware wallpaper focus tracking (the sections publish their
+	 * focused app while drawing) */
+	{
+		DashApp *f = (dashTheme.wallpaper == DASH_WALL_FOCUS) ? (DashApp *)dashThemeFocusApp() : NULL;
+		if (f != wall_cur) {
+			wall_prev = wall_cur;
+			wall_cur = f;
+			wall_mix = 0.0f;
+		}
+		wall_mix = dashApproach(wall_mix, 1.0f, 5.0f * dashAnimSpeed(), dt);
+		dashThemeSetFocusApp(NULL);
+	}
+
+	if (dashTheme.bg != DASH_BG_CRYSTAL || !animated)
 		return;
 
 	for (i = 0; i < BG_STARS; i++) {
@@ -148,13 +197,19 @@ void dashBgUpdate(float dt)
 	}
 }
 
-static void drawBase(void)
+//--------------------------------------------------------------
+// Crystal: the original dashboard atmosphere (drifting orbs, stars,
+// translucent crystal towers, sparkles, light streak). Colours follow
+// bg1 (upper gradient) and bg2 (floor).
+//--------------------------------------------------------------
+static void crystalBase(void)
 {
 	float d = dashSinf(bg_time * 0.045f) * 0.5f + 0.5f;
-	DashColor top = DC(9 + (int)(4 * d), 12, 30 + (int)(8 * d), 255);
-	DashColor mid = DC(18 + (int)(10 * d), 22 + (int)(6 * (1 - d)), 50 + (int)(8 * d), 255);
-	DashColor low = DC(8, 10, 24, 255);
-	DashColor bot = DC(3, 4, 9, 255);
+	DashColor b1 = dashTheme.bg1, b2 = dashTheme.bg2;
+	DashColor top = DC(b1.r / 2 + (int)(4 * d), b1.g / 2, b1.b / 2 + (int)(8 * d), 255);
+	DashColor mid = DC(b1.r + (int)(10 * d), b1.g + (int)(6 * (1 - d)), b1.b + (int)(8 * d), 255);
+	DashColor low = dashColorLerp(b1, b2, 0.55f);
+	DashColor bot = b2;
 
 	dashRectGradV(0, 0, DASH_VW, 200, top, mid);
 	dashRectGradV(0, 200, DASH_VW, 130, mid, low);
@@ -252,19 +307,11 @@ static void drawTower(const Tower *t, float strength)
 	dashGlow(t->x, tip_y + t->radius, t->radius * 2.6f, t->radius * 2.6f, DC(170, 220, 255, (int)(60 * strength)));
 }
 
-void dashBgDrawStatic(void)
-{
-	drawBase();
-	dashThemeTexture("background.png", 256, 256) ? drawThemeLayers() : (void)0;
-	dashRectGradV(0, DASH_VH - 90, DASH_VW, 90, DC(0, 0, 0, 0), DC(0, 0, 6, 150));
-}
-
-void dashBgDraw(void)
+static void sceneCrystal(int fx)
 {
 	int i;
-	int fx = dashCfg.effects;
 
-	drawBase();
+	crystalBase();
 	drawThemeLayers();
 	if (fx == DASH_FX_OFF) {
 		dashRectGradV(0, DASH_VH - 90, DASH_VW, 90, DC(0, 0, 0, 0), DC(0, 0, 6, 150));
@@ -280,7 +327,6 @@ void dashBgDraw(void)
 
 		for (i = 0; i < BG_TOWERS; i++)
 			drawTower(&towers[i], strength);
-		/* horizontal light streak */
 		if (streak_t >= 0.0f) {
 			float p = streak_t / 2.6f;
 			float sx = -200.0f + p * (DASH_VW + 400.0f);
@@ -300,9 +346,182 @@ void dashBgDraw(void)
 	/* floor fog and vignette */
 	dashRectGradV(0, DASH_VH - 110, DASH_VW, 110, DC(2, 3, 8, 0), DC(2, 3, 8, 170));
 	dashRectGradV(0, 0, DASH_VW, 70, DC(0, 0, 4, 120), DC(0, 0, 4, 0));
+}
 
-	if (flash > 0.01f)
-		dashRect(0, 0, DASH_VW, DASH_VH, DC(200, 225, 255, (int)(90 * flash)));
+//--------------------------------------------------------------
+// Image / artwork layers
+//--------------------------------------------------------------
+/* Draw a texture so it covers the whole screen, preserving its aspect
+ * ratio (the 640x448 canvas is shown as 4:3) and cropping the excess. */
+static void drawCover(GSTEXTURE *tex, DashColor tint)
+{
+	float tw = (float)tex->Width, th = (float)tex->Height;
+	float screen_aspect = 4.0f / 3.0f, tex_aspect;
+	float u0 = 0, v0 = 0, u1 = tw, v1 = th;
+
+	if (tw < 1 || th < 1)
+		return;
+	tex_aspect = tw / th;
+	if (tex_aspect > screen_aspect) {
+		float cw = th * screen_aspect;
+		u0 = (tw - cw) * 0.5f;
+		u1 = u0 + cw;
+	} else {
+		float ch = tw / screen_aspect;
+		v0 = (th - ch) * 0.5f;
+		v1 = v0 + ch;
+	}
+	dashTexDrawUV(tex, 0, 0, DASH_VW, DASH_VH, u0, v0, u1, v1, tint);
+}
+
+static void sceneImage(float t, int fx)
+{
+	GSTEXTURE *tex = dashThemeTextureFile(dashTheme.image, 320, 256);
+
+	if (tex == NULL) {
+		dashBgSceneGradient(t, fx);
+		return;
+	}
+	dashRect(0, 0, DASH_VW, DASH_VH, dashTheme.bg2);
+	drawCover(tex, DC(255, 255, 255, 255));
+}
+
+static void drawAppWallpaper(void)
+{
+	GSTEXTURE *cur = NULL, *prev = NULL;
+	float vis_target;
+
+	if (dashTheme.wallpaper != DASH_WALL_FOCUS)
+		return;
+	/* the artwork cache keeps textures drawn in the current or previous
+	 * frame, so requesting them here keeps them resident */
+	if (wall_cur != NULL)
+		cur = dashArtGet(wall_cur, 0);
+	if (wall_prev != NULL && wall_mix < 1.0f)
+		prev = dashArtGet(wall_prev, 1);
+	vis_target = (cur != NULL) ? 1.0f : 0.0f;
+	wall_vis = dashApproach(wall_vis, vis_target, 4.0f * dashAnimSpeed(), 1.0f / 60.0f);
+	if (wall_vis < 0.01f && prev == NULL)
+		return;
+	/* the artwork is laid over the scene at 60 % (a softer, more muted
+	 * picture than the cover itself), then dimmed towards a near-black
+	 * version of the background colour so every text colour stays
+	 * readable over bright covers */
+	if (prev != NULL)
+		drawCover(prev, DC(255, 255, 255, (int)(153 * (1.0f - wall_mix) * wall_vis)));
+	if (cur != NULL)
+		drawCover(cur, DC(255, 255, 255, (int)(153 * wall_mix * wall_vis)));
+	{
+		DashColor d = dashColorScale(dashTheme.bg2, 0.3f);
+		d.a = (u8)(dashTheme.wall_dim * 2.55f * wall_vis);
+		dashRect(0, 0, DASH_VW, DASH_VH, d);
+	}
+}
+
+static void drawScanlines(void)
+{
+	float y;
+	float step = 2.0f / dashGfxScaleY(); /* every second framebuffer line */
+
+	if (step < 1.5f)
+		step = 1.5f;
+	for (y = 0; y < DASH_VH; y += step * 1.0f)
+		dashRect(0, y, DASH_VW, step * 0.5f, DC(0, 0, 0, 60));
+}
+
+//--------------------------------------------------------------
+// Entry points
+//--------------------------------------------------------------
+static void drawScene(int fx)
+{
+	float t = bg_time;
+
+	switch (dashTheme.bg) {
+		case DASH_BG_SOLID:
+			dashRect(0, 0, DASH_VW, DASH_VH, dashTheme.bg1);
+			break;
+		case DASH_BG_GRADIENT:
+			dashBgSceneGradient(t, fx);
+			break;
+		case DASH_BG_TUNNEL:
+			dashBgSceneTunnel(t, fx);
+			break;
+		case DASH_BG_MIST:
+			dashBgSceneMist(t, fx);
+			break;
+		case DASH_BG_TOWERS:
+			dashBgSceneTowers(t, fx);
+			break;
+		case DASH_BG_DISC:
+			dashBgSceneDisc(t, fx);
+			break;
+		case DASH_BG_ORBIT:
+			dashBgSceneOrbit(t, fx);
+			break;
+		case DASH_BG_CLOCKRING:
+			dashBgSceneClockRing(t, fx);
+			break;
+		case DASH_BG_GRID:
+			dashBgSceneGrid(t, fx);
+			break;
+		case DASH_BG_LINES:
+			dashBgSceneLines(t, fx);
+			break;
+		case DASH_BG_CUBES:
+			dashBgSceneCubes(t, fx);
+			break;
+		case DASH_BG_STREAM:
+			dashBgSceneStream(t, fx);
+			break;
+		case DASH_BG_TILES:
+			dashBgSceneTiles(t, fx);
+			break;
+		case DASH_BG_BRUSHED:
+			dashBgSceneBrushed(t, fx);
+			break;
+		case DASH_BG_WAVE:
+			dashBgSceneWave(t, fx);
+			break;
+		case DASH_BG_CRYSTAL:
+			sceneCrystal(fx);
+			break;
+		case DASH_BG_STREAKS:
+			dashBgSceneStreaks(t, fx);
+			break;
+		case DASH_BG_CLOUDS:
+			dashBgSceneClouds(t, fx);
+			break;
+		case DASH_BG_IMAGE:
+			sceneImage(t, fx);
+			break;
+		default:
+			dashRect(0, 0, DASH_VW, DASH_VH, DC(0, 0, 0, 255));
+			break;
+	}
+	dashGfxBlend(DASH_BLEND_NORMAL);
+	dashGfxScissorReset();
+
+	if (dashTheme.bg_bright < 100)
+		dashRect(0, 0, DASH_VW, DASH_VH, DC(0, 0, 0, (int)((100 - dashTheme.bg_bright) * 2.55f)));
+}
+
+void dashBgDrawStatic(void)
+{
+	/* used before the main loop runs (first library scan) */
+	drawScene(DASH_FX_OFF);
+}
+
+void dashBgDraw(void)
+{
+	drawScene(dashCfg.effects);
+	drawAppWallpaper();
+	if (dashTheme.scanlines)
+		drawScanlines();
+	if (flash > 0.01f) {
+		DashColor f = dashColorLighten(dashTheme.accent, 0.6f);
+		f.a = (u8)(90 * flash);
+		dashRect(0, 0, DASH_VW, DASH_VH, f);
+	}
 }
 //--------------------------------------------------------------
 //End of file: dash_bg.c

@@ -430,32 +430,37 @@ int dashArtTakeDirty(void)
 #define THEME_SLOTS 8
 typedef struct
 {
-	char name[32];
+	char path[DASH_PATH_MAX];
 	GSTEXTURE tex;
 	u8 state; /* 0 unknown, 1 loaded, 2 missing */
 } ThemeSlot;
 
 static ThemeSlot theme_slots[THEME_SLOTS];
 
-GSTEXTURE *dashThemeTexture(const char *name, int max_w, int max_h)
+/* Theme PNGs (wallpaper, default app icon, THEME/ layers), cached by full
+ * path. A file on a device whose driver is not running is not looked at
+ * (and not remembered as missing), so a theme never loads a driver. A
+ * missing or broken file is remembered and the caller falls back. */
+GSTEXTURE *dashThemeTextureFile(const char *path, int max_w, int max_h)
 {
 	int i, free_i = -1;
-	char path[MAX_PATH];
 	u32 *pixels;
 	int w, h;
 
+	if (path == NULL || path[0] == '\0' || strlen(path) >= DASH_PATH_MAX)
+		return NULL;
 	for (i = 0; i < THEME_SLOTS; i++) {
-		if (theme_slots[i].state && !strcmp(theme_slots[i].name, name))
+		if (theme_slots[i].state && !strcmp(theme_slots[i].path, path))
 			return (theme_slots[i].state == 1) ? &theme_slots[i].tex : NULL;
 		if (!theme_slots[i].state && free_i < 0)
 			free_i = i;
 	}
-	if (free_i < 0 || dashStoreDir()[0] == '\0')
+	if (free_i < 0 || !isPathDeviceStackLoaded(path))
 		return NULL;
 
-	dashStrCopy(theme_slots[free_i].name, name, sizeof(theme_slots[free_i].name));
+	dashStrCopy(theme_slots[free_i].path, path, sizeof(theme_slots[free_i].path));
 	theme_slots[free_i].state = 2;
-	snprintf(path, sizeof(path), "%sTHEME/%s", dashStoreDir(), name);
+	filerRootMcPollIdle();
 	if (dashPngLoadFile(path, max_w, max_h, &pixels, &w, &h) != 0)
 		return NULL;
 	memset(&theme_slots[free_i].tex, 0, sizeof(GSTEXTURE));
@@ -468,6 +473,17 @@ GSTEXTURE *dashThemeTexture(const char *name, int max_w, int max_h)
 	gsKit_setup_tbw(&theme_slots[free_i].tex);
 	theme_slots[free_i].state = 1;
 	return &theme_slots[free_i].tex;
+}
+
+GSTEXTURE *dashThemeTexture(const char *name, int max_w, int max_h)
+{
+	char path[MAX_PATH];
+
+	if (dashStoreDir()[0] == '\0')
+		return NULL;
+	if (snprintf(path, sizeof(path), "%sTHEME/%s", dashStoreDir(), name) >= DASH_PATH_MAX)
+		return NULL;
+	return dashThemeTextureFile(path, max_w, max_h);
 }
 
 void dashThemeTexturesFree(void)
@@ -508,7 +524,53 @@ static void monogram(const char *title, char *out)
 	out[n] = '\0';
 }
 
+/* Tile used for applications without artwork. The default is a real
+ * application icon on a panel in the theme's colours (optionally a PNG from
+ * the theme), with the device as a small badge; the old initials tile and
+ * a device-icon tile remain selectable (Settings > Theme > Icons). */
+static void monogramTile(const DashApp *app, float x, float y, float w, float h, float focus);
+
 void dashDrawAppTile(const DashApp *app, float x, float y, float w, float h, float focus)
+{
+	float r = w * 0.10f;
+	float isz = w * 0.18f;
+	DashColor top, bot, glyph;
+	int style = dashTheme.app_icon_style;
+	GSTEXTURE *custom = NULL;
+
+	if (style == DASH_APPICON_MONOGRAM) {
+		monogramTile(app, x, y, w, h, focus);
+		return;
+	}
+	if (r < 6.0f)
+		r = 6.0f;
+	/* lifted panel colour with a hint of the selection colour when focused */
+	top = dashColorLighten(DASH_C_PANEL_HI, 0.10f + 0.06f * focus);
+	top = dashColorMix(top, DASH_C_SELECT, 0.22f + 0.30f * focus);
+	bot = dashColorScale(DASH_C_PANEL_HI, 0.55f);
+	top.a = bot.a = 255;
+	dashPanelGradV(x, y, w, h, r, top, bot);
+	/* a thin top edge catches the light, like a moulded plastic tile */
+	dashRect(x + r, y + 1, w - 2 * r, 1.0f, dashColorA(DASH_C_TEXT, 0.16f + 0.1f * focus));
+	if (DASH_C_BORDER.a)
+		dashPanelBorder(x, y, w, h, r, DASH_C_BORDER);
+
+	glyph = dashColorLerp(DASH_C_TEXT2, DASH_C_TEXT, 0.4f + 0.6f * focus);
+	if (style == DASH_APPICON_SYSTEM && dashTheme.app_icon[0])
+		custom = dashThemeTextureFile(dashTheme.app_icon, 128, 128);
+	if (custom != NULL)
+		dashTexDrawFit(custom, x + w * 0.16f, y + h * 0.16f, w * 0.68f, h * 0.68f, DC(255, 255, 255, 255));
+	else if (style == DASH_APPICON_DEVICE)
+		dashIcon(dashLibDeviceIcon(app->path), x + w * 0.25f, y + h * 0.22f, w * 0.5f, glyph);
+	else
+		dashIcon(DI_EXEC, x + w * 0.24f, y + h * 0.2f, w * 0.52f, glyph);
+	/* device badge, bottom right */
+	if (style != DASH_APPICON_DEVICE)
+		dashIcon(dashLibDeviceIcon(app->path), x + w - isz - w * 0.08f, y + h - isz - h * 0.08f, isz,
+		         dashColorA(DASH_C_ACCENT, 0.55f + 0.25f * focus));
+}
+
+static void monogramTile(const DashApp *app, float x, float y, float w, float h, float focus)
 {
 	DashColor top = dashColorHue(app->hue, 150, 96 + (int)(40 * focus), 255);
 	DashColor bottom = dashColorHue(app->hue + 28, 190, 34 + (int)(20 * focus), 255);
@@ -535,19 +597,32 @@ void dashDrawAppArt(DashApp *app, float x, float y, float w, float h, float focu
 	GSTEXTURE *tex = dashArtGet(app, prio);
 	float r = w * 0.10f;
 
+	if (focus > 0.5f) {
+		float k = dashUiFocusPop();
+		x -= w * (k - 1.0f) * 0.5f;
+		y -= h * (k - 1.0f) * 0.5f;
+		w *= k;
+		h *= k;
+	}
+
 	if (r < 6.0f)
 		r = 6.0f;
 	dashShadow(x, y, w, h, 10.0f + 10.0f * focus, 0.6f + 0.3f * focus);
 	if (tex != NULL) {
-		DashColor frame_top = DC(58 + (int)(40 * focus), 66 + (int)(40 * focus), 96 + (int)(50 * focus), 255);
+		/* frame in the theme's panel colours, lit by the selection colour */
+		DashColor frame_top = dashColorMix(dashColorLighten(DASH_C_PANEL_HI, 0.18f), DASH_C_SELECT, 0.2f + 0.4f * focus);
+		DashColor frame_bot = dashColorScale(DASH_C_PANEL_HI, 0.6f);
+		DashColor well = dashColorScale(dashTheme.bg2, 0.5f);
 		float inset = w * 0.05f;
 
-		dashPanelGradV(x, y, w, h, r, frame_top, DC(18, 22, 36, 255));
-		dashRect(x + inset, y + inset, w - inset * 2, h - inset * 2, DC(6, 8, 14, 255));
+		frame_top.a = frame_bot.a = well.a = 255;
+		dashPanelGradV(x, y, w, h, r, frame_top, frame_bot);
+		dashRect(x + inset, y + inset, w - inset * 2, h - inset * 2, well);
 		dashTexDrawFit(tex, x + inset, y + inset, w - inset * 2, h - inset * 2, DC(255, 255, 255, 255));
-		/* glassy highlight */
-		dashRectGrad4(x + inset, y + inset, w - inset * 2, (h - inset * 2) * 0.4f,
-		              DC(255, 255, 255, 34), DC(255, 255, 255, 12), DC(255, 255, 255, 0), DC(255, 255, 255, 0));
+		if (dashTheme.glow)
+			/* glassy highlight (Crystal look) */
+			dashRectGrad4(x + inset, y + inset, w - inset * 2, (h - inset * 2) * 0.4f,
+			              DC(255, 255, 255, 34), DC(255, 255, 255, 12), DC(255, 255, 255, 0), DC(255, 255, 255, 0));
 	} else
 		dashDrawAppTile(app, x, y, w, h, focus);
 	if (app->flags & DASH_APP_MISSING)

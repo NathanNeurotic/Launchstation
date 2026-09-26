@@ -8,6 +8,7 @@
 //sidecars, device loading, KELF/HDD/PSX handling, cleanup before exec).
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "dash_sound.h"
 #include "init.h"
 
 extern void (*mainActionLaunchHook)(const char *path);
@@ -66,6 +67,11 @@ float dashAnimSpeed(void)
 	return 1.0f;
 }
 
+float dashSectionAnim(void)
+{
+	return section_anim;
+}
+
 const MainExecuteContext *dashExecContext(void)
 {
 	return &exec_ctx;
@@ -99,6 +105,7 @@ void dashSwitchSection(int s)
 	prev_section = section;
 	section = s;
 	section_anim = 0.0f;
+	dashSoundPlay(DASH_SND_TRANSITION);
 	if (screens[section]->enter)
 		screens[section]->enter();
 }
@@ -130,6 +137,7 @@ static void enterLegacy(void)
 	/* fade to black, then hand the screen to a classic wLaunchELF screen */
 	int i;
 
+	dashThemeSavePending(1 << 30); /* never lose theme edits */
 	for (i = 0; i < 8; i++) {
 		dashRenderScene();
 		dashRect(0, 0, DASH_VW, DASH_VH, DC(0, 0, 0, (i + 1) * 32 > 255 ? 255 : (i + 1) * 32));
@@ -150,6 +158,11 @@ static void leaveLegacy(void)
 	fade_in = 0.0f;
 	dashInputFlush();
 	last_frame_ms = Timer();
+	dashSoundShutdown(); /* drop stale state after IOP resets ran legacy paths */
+	dashSoundInit();
+	dashBgmStart();
+	dashDevicesAutoProbe();
+	dashDevicesResetBaseline(); /* whatever is attached now stays silent */
 }
 
 static void showActionMessage(void)
@@ -289,6 +302,7 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	}
 
 	snprintf(title, sizeof(title), "Starting %s", copy.title);
+	dashThemeSavePending(1 << 30);
 	filerRootMcPollIdle();
 	if (dashArtTakeDirty())
 		dashLibSaveCache();
@@ -510,8 +524,12 @@ static void bootDraw(void)
 	w = dashTextWidth(msg, DASH_FS_BODY) + 230.0f;
 	x = (DASH_VW - w) * 0.5f;
 	dashShadow(x, y, w, 40, 14, 0.7f);
-	dashPanel(x, y, w, 40, 14, DC(40, 60, 110, 230));
-	dashPanelBorder(x, y, w, 40, 14, DC(160, 220, 255, 120));
+	{
+		DashColor c = dashColorMix(DASH_C_PANEL_HI, DASH_C_SELECT, 0.6f);
+		c.a = 235;
+		dashPanel(x, y, w, 40, 14, c);
+		dashPanelBorder(x, y, w, 40, 14, DASH_C_SELEDGE);
+	}
 	dashIcon(DI_CLOCK, x + 14, y + 10, 20, DASH_C_ACCENT);
 	dashText(x + 44, y + 8, msg, DASH_FS_BODY, DASH_C_TEXT);
 	dashTextRight(x + w - 16, y + 11, "Press any button to stay", DASH_FS_SMALL, DASH_C_TEXT2);
@@ -562,10 +580,13 @@ static void firstInit(void)
 	dashIconsInit();
 	if (dashLibLoadCache() < 0 || (dashCfg.autoscan && dashAppCount >= 0)) {
 		/* First run (no cache) or auto-scan enabled: look at locations whose
-		 * drivers are already running (memory cards, boot device). */
+		 * drivers are already running, starting the auto-start devices first
+		 * so they contribute applications too. */
 		dashGfxBeginFrame();
 		dashBgDrawStatic();
 		dashGfxPresent();
+		dashLoadingBegin("Starting devices");
+		dashDevicesAutoProbe();
 		dashRescanLibrary(0);
 	}
 #ifdef DASH_AUTOTEST
@@ -612,6 +633,10 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	}
 	DashThemeSetLegacyEnabled(dashCfg.legacy_theme);
 	mainActionLaunchHook = dashLaunchHook;
+	dashSoundInit();
+	dashBgmStart();
+	if (from_boot)
+		dashSoundPlay(DASH_SND_BOOT);
 
 	section_anim = 1.0f;
 	fade_in = 0.0f;
@@ -642,6 +667,12 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			if (boot_phase == 1)
 				memset(&in, 0, sizeof(in));
 		}
+		/* Main dashboard screens do not run through the modal helpers, so give
+		 * their ordinary navigation/activation inputs the same UI feedback. */
+		if (in.pressed & (DASH_IN_UP | DASH_IN_DOWN | DASH_IN_LEFT | DASH_IN_RIGHT))
+			dashSoundPlay(DASH_SND_CURSOR);
+		if (in.pressed & DASH_IN_OK)
+			dashSoundPlay(DASH_SND_CONFIRM);
 		if (in.pressed & DASH_IN_L1)
 			dashSwitchSection(section - 1);
 		else if (in.pressed & DASH_IN_R1)
@@ -664,6 +695,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		if ((frame_counter % 30) == 0)
 			uLE_cdStop();
 		dashDevicesPoll();
+		dashThemeSavePending((int)dashInputIdleMs());
 		if (!boot_phase)
 			dashArtStep((int)dashInputIdleMs());
 		if (dashInputIdleMs() > 6000 && dashArtTakeDirty()) {
@@ -671,6 +703,20 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			dashLibSaveCache();
 		}
 
+#ifdef DASH_THEME_TOUR
+		/* development only: show every preset for five seconds */
+		{
+			static u64 tour_next;
+			static int tour_idx = -1;
+			if (now >= tour_next) {
+				tour_idx = (tour_idx + 1) % dashThemePresetCount();
+				dashThemeSetPreset(tour_idx);
+				dashToast(DASH_TOAST_INFO, dashThemePresetInfo(tour_idx)->name);
+				tour_next = now + 5000;
+			}
+			dashCfg.intro_done = 1;
+		}
+#endif
 		dashRenderScene();
 		dashGfxPresent();
 

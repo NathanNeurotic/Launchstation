@@ -13,7 +13,7 @@ through `ExecuteMainAction()`, `getFilePath()` and the classic screens.
 | FILES    | Entry points into the full FileBrowser: device list, last folder, MISC commands, each detected device and your PathPad bookmarks. |
 | DEVICES  | Cards for memory cards (type, free space), USB, MMCE, MX4SIO, HDD, exFAT HDD, disc, UDPFS, PSX flash/DVR HDD and mounted VMCs. |
 | TOOLS    | HDD Manager, Text Editor, start disc, POPStarter, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, classic configuration, classic launch-key menu, reboot IOP, power off. |
-| SETTINGS | Display, Dashboard, Controls, Devices, Network, Advanced. Classic options edit the same `SETTING` fields and are written to LAUNCHELF.CNF only when you choose *Save wLaunchELF settings* (classic save-location prompt). |
+| SETTINGS | Display, Theme, Dashboard, Controls, Devices, Network, Advanced. Classic options edit the same `SETTING` fields and are written to LAUNCHELF.CNF only when you choose *Save wLaunchELF settings* (classic save-location prompt). |
 
 ## Controls
 
@@ -36,6 +36,15 @@ Boot behaviour of the classic menu is preserved: `Init_Delay` is honoured,
 a launch key held when the delay ends starts its application, and a
 configured `LK_auto` path starts after the classic timeout unless a button
 is pressed (a countdown banner is shown).
+
+## Themes
+
+Settings > Theme chooses among 19 built-in themes (OSD Classic, PS2
+Towers, Disc Error Red, System Clock and more) and opens the theme editor,
+where the background, every colour, selection style, corners, font, text
+size, icons, clock and app-artwork wallpaper can be changed with the
+controller. Themes can be saved to and loaded from
+`THEMES/<name>/theme.cfg` folders. See **[themes.md](themes.md)**.
 
 The classic launch-key menu is still available (Tools > Classic launch-key
 menu, or START menu). It has a *DASH: Return to dashboard* entry, and
@@ -92,7 +101,9 @@ First match wins; nothing is required.
 6. `<device>/ART/<ELFNAME>.ELF_COV.png`, `<device>/ART/<ELFNAME>_COV.png`
    (OPL ART folder; `hdd0:/+OPL/ART/` on the internal HDD)
 7. `<dashboard folder>/ART/` with the same names
-8. generated tile (colour from the path, monogram, device badge)
+8. the theme's default application icon (a PS2-style program tile with a
+   device badge; a theme may use its own PNG, or the device icon or the
+   old initials tile instead, see [themes.md](themes.md#icons))
 
 Any PNG size up to 2048x2048 / 1.5 MB is accepted and box-filtered down to
 at most 128x128 while decoding. Artwork on a device whose driver is not
@@ -103,13 +114,49 @@ running is looked up later, when that device is opened.
 Next to LAUNCHELF.CNF when it was loaded from a writable device, otherwise
 in `mc0:/SYS-CONF/`: `DASHBOARD.CNF` (settings, scan folders),
 `DASHAPPS.CNF` (favorites, pins, recents), `DASHLIB.CNF` (library cache).
-LAUNCHELF.CNF itself is never modified behind your back.
+The active theme is part of DASHBOARD.CNF (`Theme_*` keys); saved themes
+go to `THEMES/<name>/theme.cfg`, only when you choose
+*Save theme to folder* — in the ELF's own folder when writable, else the
+dashboard folder (see [themes.md](themes.md#theme-folders-user-created-themes)).
+LAUNCHELF.CNF itself is never modified behind your
+back.
 
-## Optional theme
+## Interface sounds
 
-`<dashboard folder>/THEME/background.png`, `stars1.png`, `stars2.png` are
-used when present (backdrop plus two additive star layers). Build them from
-a PSBBN texture pack you own with:
+The dashboard plays short sound effects through the ps2sdk `audsrv`
+audio server: cursor moves, confirm/cancel in dialogs, section switches,
+toasts, the startup boot sound, and device connect/disconnect. They are
+Sony ADP samples embedded in the ELF (no files needed at runtime).
+
+Settings > Dashboard has *Interface sounds* (the UI effects) and
+*Background music* (the music track), each with its own volume
+(`Dash_Sound` / `Dash_SoundVolume` / `Dash_BGM` / `Dash_BGMVolume` in
+DASHBOARD.CNF, all on at 80% by default). *Interface sounds* off silences
+the whole audio driver, music included. When the audio driver cannot
+start, everything stays silent — the dashboard works normally without
+sound (a toast says why).
+
+## Devices and the applications filter
+
+Settings > Devices has an *Auto-start* switch per device family (USB
+storage, internal HDD, exFAT HDD, MMCE SD, MX4SIO, UDPFS network): ON
+loads that device's drivers when the dashboard starts, so the device is
+ready immediately and its applications are found by the startup scan
+(`Dash_DevAuto` bitmask, all off by default). OFF never loads the driver
+by itself — the DEVICES screen can still start it manually, and drivers
+already loaded stay loaded until the next IOP reboot. The device the ELF
+booted from is always on (its driver is already running) and cannot be
+switched off.
+
+On APPS, the *Show* choice (Triangle menu) filters the list — All,
+**Favorites**, Memory Cards, USB, HDD, Other devices — and the choice is
+remembered across restarts (`Dash_AppFilter`).
+
+## Optional PSBBN layers (Crystal background)
+
+With the *Crystal* background, `<dashboard folder>/THEME/background.png`,
+`stars1.png`, `stars2.png` are used when present (backdrop plus two
+additive star layers). Build them from a PSBBN texture pack you own with:
 
 ```
 python scripts/prepare_psbbn_theme.py PSBBN-Texture-PNGs.zip
@@ -126,7 +173,9 @@ atlases (14, 20 and 32 px em; 35 + 57 + 123 KB) committed as
 `src/dash_font_data.c`; the PS2 needs no font engine. Sizes run from 12 px
 captions to 28 px titles. The classic screens keep wLaunchELF's 8x16 bitmap
 font (and any custom `.fnt`), because their layouts depend on fixed 8 px
-columns. Regenerate with another TTF/OTF:
+columns. Themes can switch the dashboard to that bitmap font as well
+(*System* font, see [themes.md](themes.md#fonts)), scale text from 90 to
+115 % and draw it bold. Regenerate the Roboto atlases with another TTF/OTF:
 
 ```
 python scripts/gen_dash_font.py path/to/Font.ttf
@@ -145,10 +194,16 @@ python scripts/gen_dash_font.py path/to/Font.ttf
   frame are never evicted.
 * Library: 512 entries x ~850 bytes. Scans temporarily allocate one
   FileBrowser listing buffer (~800 KB) and free it afterwards.
+* Themes: the theme itself is ~700 bytes. Theme images (wallpaper <= 320 KB,
+  default app icon <= 64 KB, PSBBN layers) share 8 slots and are loaded
+  once on first use. The Brushed background builds one 32 KB texture on
+  first use; every other background is pure geometry. Listing theme
+  folders temporarily allocates one FileBrowser listing buffer.
 
 ## Developer aid
 
 Defining `DASH_AUTOTEST` (add it to the `wLaunchELF` target's `defines` in
 ps2.yaml) replays the timed button script in `include/dash_autotest.h` and
 seeds a sample library, so every screen can be exercised in an emulator.
-Never ship such a build.
+`DASH_THEME_TOUR` shows every theme preset for five seconds. Never ship
+such builds.

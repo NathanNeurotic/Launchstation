@@ -146,12 +146,11 @@ static void toolsDraw(void)
 	if (ttop < 0)
 		ttop = 0;
 
-	dashPanel(lx - 6, ly - 6, lw + 12, rows * row_h + 12, 14, DC(12, 15, 30, 150));
+	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, rows * row_h + 12, 14);
 	dashGfxScissor(lx - 6, ly - 4, lw + 12, rows * row_h + 8);
 	{
 		float fy = ly + (tsel_anim - ttop) * row_h;
-		dashPanel(lx, fy, lw, row_h - 3, 9, DC(60, 120, 210, 170));
-		dashPanelBorder(lx, fy, lw, row_h - 3, 9, DC(170, 225, 255, 130));
+		dashDrawSelection(lx, fy, lw, row_h - 3, 9, 1.0f);
 	}
 	for (i = ttop; i < NTOOLS && i < ttop + rows; i++) {
 		float y = ly + (i - ttop) * row_h;
@@ -160,8 +159,8 @@ static void toolsDraw(void)
 			dashText(lx + 8, y + 7, tools[i].name, DASH_FS_CAPTION, DASH_C_ACCENT);
 			continue;
 		}
-		dashIcon(tools[i].icon, lx + 10, y + 5, 16, i == tsel ? DASH_C_TEXT : DASH_C_TEXT2);
-		dashTextFit(lx + 34, y + 6.5f, lw - 44, tools[i].name, DASH_FS_SMALL, i == tsel ? DASH_C_TEXT : DASH_C_TEXT2);
+		dashIcon(tools[i].icon, lx + 10, y + 5, 16, dashItemColor(i == tsel));
+		dashTextFit(lx + 34, y + 6.5f, lw - 44, tools[i].name, DASH_FS_SMALL, dashItemColor(i == tsel));
 		if (tools[i].confirm == 2 || tools[i].note)
 			dashGlow(lx + lw - 14, y + 13, 4, 4, tools[i].confirm == 2 ? DASH_C_DANGER : DASH_C_WARM);
 	}
@@ -171,15 +170,16 @@ static void toolsDraw(void)
 	{
 		float dx = 372, dy = 98, dw = 228, dh = 292;
 
-		dashPanel(dx, dy, dw, dh, 16, DC(14, 18, 36, 180));
-		dashGfxBlend(DASH_BLEND_ADD);
-		dashGlow(dx + dw * 0.5f, dy + 66, 80, 60, DC(80, 150, 255, 60));
-		dashGfxBlend(DASH_BLEND_NORMAL);
+		dashDrawCard(dx, dy, dw, dh, 16);
+		dashAccentGlow(dx + dw * 0.5f, dy + 66, 80, 60, 1.0f);
 		dashIcon(t->icon, dx + dw * 0.5f - 30, dy + 34, 60, DASH_C_TEXT);
 		dashTextCenter(dx + dw * 0.5f, dy + 108, t->name, DASH_FS_BODY, DASH_C_TEXT);
 		dashTextWrap(dx + 16, dy + 142, dw - 32, 4, t->desc, DASH_FS_CAPTION, DASH_C_TEXT2, 19);
 		if (t->note) {
-			dashPanel(dx + 12, dy + dh - 64, dw - 24, 52, 10, DC(60, 40, 20, 120));
+			DashColor wb = dashColorScale(DASH_C_WARM, 0.24f);
+			wb.a = 130;
+			dashPanel(dx + 12, dy + dh - 64, dw - 24, 52, 10, wb);
+			dashRect(dx + 12, dy + dh - 64, 3, 52, dashColorA(DASH_C_WARM, 0.8f));
 			dashIcon(DI_WARNING, dx + 20, dy + dh - 54, 16, DASH_C_WARM);
 			dashTextWrap(dx + 42, dy + dh - 58, dw - 62, 2, t->note, DASH_FS_CAPTION * 0.95f, DASH_C_WARM, 18);
 		}

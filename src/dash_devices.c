@@ -10,6 +10,7 @@
 //from the classic uLE_cdStop() tracking.
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "dash_sound.h"
 #include "init.h"
 
 extern int cdmode;
@@ -18,18 +19,130 @@ extern int vmcMounted[2];
 /* remembered results of explicit probes that failed */
 static u8 probe_failed_hdd, probe_failed_ata, probe_failed_mx4sio, probe_failed_mmce, probe_failed_udpfs;
 
+/* Device-presence snapshot for connect/disconnect sounds.
+ *
+ * Mount discovery is asynchronous: MC/USB state can continue changing for a
+ * short time after the dashboard starts. A single silent first poll is not
+ * enough because a boot-mounted device that appears on the second/third poll
+ * would look exactly like a real hotplug. Keep hotplug sounds disarmed until
+ * the snapshot has stayed unchanged for a settling period; all boot-time
+ * mount transitions are folded into the baseline silently. */
+#define DEV_HOTPLUG_SETTLE_MS 2000
+static u32 dev_snapshot = 0xFFFFFFFFu;
+static u64 dev_snapshot_changed_ms;
+static int dev_hotplug_armed;
+
 void dashDevicesInit(void)
 {
+	dev_snapshot = 0xFFFFFFFFu;
+	dev_snapshot_changed_ms = Timer();
+	dev_hotplug_armed = 0;
+}
+
+/* Re-arm the silent baseline (used when the dash (re)starts, so devices that
+ * are already attached - the boot device, memory cards - never play
+ * connect sounds; only later hot-plug/unplug events do). */
+void dashDevicesResetBaseline(void)
+{
+	dev_snapshot = 0xFFFFFFFFu;
+	dev_snapshot_changed_ms = Timer();
+	dev_hotplug_armed = 0;
 }
 
 void dashDevicesPoll(void)
 {
+	u32 now = 0;
+	int i, view_changed = 0;
+
 	pollRootMemoryCardDevices();
+	for (i = 0; i < 2; i++)
+		if (filerRootMcPresent(i, NULL, NULL) > 0)
+			now |= 1u << i;
+	if (filerUsbDriversLoaded()) {
+		int m = filerUsbDriveMask();
+		for (i = 0; i < 10; i++)
+			if (m & (1 << i))
+				now |= 1u << (2 + i);
+	}
+	if (!dev_hotplug_armed) {
+		u64 ms = Timer();
+
+		/* Boot mounts and post-IOP-reset rediscovery are baseline changes, not
+		 * user hotplugs. Any change restarts the quiet settling timer. */
+		if (dev_snapshot == 0xFFFFFFFFu || now != dev_snapshot) {
+			/* The first poll also refreshes the cache-backed UI: USB/MC mount
+			 * state may finish populating just after DASHLIB.CNF was loaded. */
+			view_changed = 1;
+			dev_snapshot = now;
+			dev_snapshot_changed_ms = ms;
+		} else if (ms - dev_snapshot_changed_ms >= DEV_HOTPLUG_SETTLE_MS) {
+			/* From this point onward, changes are genuine runtime hotplug events. */
+			dev_hotplug_armed = 1;
+		}
+	} else if (now != dev_snapshot) {
+		if (now & ~dev_snapshot)
+			dashSoundPlay(DASH_SND_CONNECT);
+		if (dev_snapshot & ~now)
+			dashSoundPlay(DASH_SND_DISCONNECT);
+		dev_snapshot = now;
+		view_changed = 1;
+	}
+	if (view_changed)
+		dashAppsRebuildView();
 }
 
 int dashMcPresent(int port)
 {
 	return filerRootMcPresent(port, NULL, NULL) != 0;
+}
+
+/* True only when the storage backing an application path is currently
+ * usable. The library cache deliberately survives device disconnects, so UI
+ * code must use this before exposing a cached application. This check never
+ * loads a driver: an inactive device stays inactive and its apps stay hidden. */
+int dashDevicePathReady(const char *path)
+{
+	int mask;
+
+	if (path == NULL || path[0] == '\0')
+		return 0;
+
+	/* Memory-card services are always loaded, so test actual card presence. */
+	if (!strncmp(path, "mc0:", 4))
+		return filerRootMcPresent(0, NULL, NULL) > 0;
+	if (!strncmp(path, "mc1:", 4))
+		return filerRootMcPresent(1, NULL, NULL) > 0;
+	if (!strncmp(path, "mc:", 3))
+		return filerRootMcPresent(0, NULL, NULL) > 0 ||
+		       filerRootMcPresent(1, NULL, NULL) > 0;
+
+	/* USB's driver can remain resident with no drive inserted, so require a
+	 * mounted unit as well. "mass:" is the legacy alias for USB storage. */
+	if (!strncmp(path, "mass", 4) || !strncmp(path, "usb", 3)) {
+		if (!isUsbMassStackLoaded())
+			return 0;
+		mask = filerUsbDriveMask();
+		if (!strncmp(path, "usb", 3) && path[3] >= '0' && path[3] <= '9' && path[4] == ':')
+			return (mask & (1 << (path[3] - '0'))) != 0;
+		return mask != 0;
+	}
+
+	/* A VMC path is valid only while that image is actually mounted. */
+	if (!strncmp(path, "vmc0:", 5))
+		return vmcMounted[0] != 0;
+	if (!strncmp(path, "vmc1:", 5))
+		return vmcMounted[1] != 0;
+
+	/* Do not show disc-backed cached entries when the tray is empty. */
+	if (!strncmp(path, "cdfs:", 5) || !strncmp(path, "cdrom", 5))
+		return cdmode > 0 && uLE_cdmode != SCECdNODISC;
+
+	/* ROM is intrinsic storage. All other supported dashboard storage families
+	 * (HDD, ATA/exFAT, MMCE, MX4SIO, UDPFS) are ready only when their existing
+	 * IOP stack is active. isPathDeviceStackLoaded() has no side effects. */
+	if (!strncmp(path, "rom", 3))
+		return 1;
+	return isPathDeviceStackLoaded(path);
 }
 
 const char *dashDiscStatus(void)
@@ -200,9 +313,8 @@ int dashDevicesList(DashDevice *out, int max)
 	return n;
 }
 
-int dashDevicesProbe(const DashDevice *dev)
+static int probeMount(const char *m)
 {
-	const char *m = dev->mount;
 	int ok = 1;
 
 	filerRootMcPollIdle();
@@ -260,6 +372,64 @@ int dashDevicesProbe(const DashDevice *dev)
 		ok = loadDVRPHddModules();
 #endif
 	return ok;
+}
+
+int dashDevicesProbe(const DashDevice *dev)
+{
+	int ok = probeMount(dev->mount);
+
+	/* A newly activated device may already have applications in DASHLIB.CNF.
+	 * Reveal them immediately without forcing a rescan. */
+	if (ok)
+		dashAppsRebuildView();
+	return ok;
+}
+
+/* Load the drivers for every device family marked auto-start that is not
+ * already running. Never unloads anything: "off" only means "not at
+ * startup" — the DEVICES screen can still start a device by hand. */
+void dashDevicesAutoProbe(void)
+{
+	if ((dashCfg.dev_auto & DASH_DEVA_USB) && !isUsbMassStackLoaded())
+		probeMount("usb:");
+	if ((dashCfg.dev_auto & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
+		probeMount("hdd0:");
+#ifdef EXFAT
+	if ((dashCfg.dev_auto & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
+		probeMount("ata0:");
+#endif
+#ifdef MMCE
+	if ((dashCfg.dev_auto & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))
+		probeMount("mmce0:");
+#endif
+#ifdef MX4SIO
+	if ((dashCfg.dev_auto & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
+		probeMount("mx4sio:");
+#endif
+#ifdef UDPFS
+	if ((dashCfg.dev_auto & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
+		probeMount("udpfs:");
+#endif
+}
+
+/* The DASH_DEVA_* bit of the device the ELF was launched from, 0 when it
+ * has no toggle (memory cards, host) or cannot be determined. The boot
+ * device is always available: its driver is already running. */
+int dashBootDeviceBit(void)
+{
+	const char *p = LaunchElfDir;
+
+	if (!strncmp(p, "mass", 4) || !strncmp(p, "usb", 3))
+		return DASH_DEVA_USB;
+	if (!strncmp(p, "hdd", 3))
+		return DASH_DEVA_HDD;
+	if (!strncmp(p, "ata", 3))
+		return DASH_DEVA_ATA;
+	if (!strncmp(p, "mmce", 4))
+		return DASH_DEVA_MMCE;
+	if (!strncmp(p, "mx4sio", 6))
+		return DASH_DEVA_MX4SIO;
+	return 0;
 }
 //--------------------------------------------------------------
 //End of file: dash_devices.c

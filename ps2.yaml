@@ -245,6 +245,8 @@ targets:
       - src/dash_png.c
       - src/dash_art.c
       - src/dash_bg.c
+      - src/dash_bg_ps2.c
+      - src/dash_bg_geo.c
       - src/dash_store.c
       - src/dash_lib.c
       - src/dash_devices.c
@@ -255,6 +257,8 @@ targets:
       - src/dash_tools.c
       - src/dash_settings.c
       - src/dash_theme.c
+      - src/dash_themes.c
+      - src/dash_sound.c
       - src/embed_blobs.S
     include_dirs: [include, ., ee_libs/hdd/include]
     defines:
@@ -277,8 +281,8 @@ targets:
       - "-Wa,-I.."
     ldflags:
       - "-Wl,--no-warn-mismatch"
-    headers: [sior]
-    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, mc, kbd, m, cdvd, filexio, patches, poweroff, debug, secr, pad]
+    headers: [sior, audsrv]
+    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, mc, kbd, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv]
     embed_irx:
       - loader:loader_elf
       - poweroff
@@ -312,3 +316,5 @@ targets:
       - bdmfs_fatfs
       - usbmass_bd
       - ata_bd
+      - libsd
+      - audsrv
