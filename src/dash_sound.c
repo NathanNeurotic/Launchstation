@@ -102,11 +102,13 @@ int dashSoundInit(void)
 	failed = 0;
 	for (i = 0; i < DASH_SND_COUNT; i++) {
 		samples[i].buffer = NULL;
-		if (dashCfg.sound && audsrv_load_adpcm(&samples[i], blob_data(i), blob_size(i)) != 0) {
+		if (audsrv_load_adpcm(&samples[i], blob_data(i), blob_size(i)) != 0) {
 			samples[i].buffer = NULL; /* sample stays silent */
 			failed++;
 		}
 	}
+	/* Keep SFX preloaded even when their toggle is off so they can be enabled
+	 * later without reinitializing audsrv (BGM may already own the service). */
 	if (dashCfg.sound && failed == DASH_SND_COUNT) {
 		dashToast(DASH_TOAST_WARN, "Sound unavailable: no samples loaded");
 		return 0;
