@@ -43,6 +43,11 @@ static int matchFilter(const DashApp *a)
 {
 	int icon;
 
+	/* Cached applications remain in DASHLIB.CNF, but are only visible while
+	 * the storage that owns their path is currently mounted/ready. */
+	if (!dashDevicePathReady(a->path))
+		return 0;
+
 	switch (filter) {
 		case FILTER_FAV:
 			return dashStoreIsFavorite(a->path) || dashStoreIsPinned(a->path);
