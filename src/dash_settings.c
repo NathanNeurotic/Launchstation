@@ -713,10 +713,14 @@ static void colorEditor(const char *title, int id)
 		u8 *ch = NULL;
 
 		dashInputPoll(&in);
-		if (in.pressed & DASH_IN_UP)
+		if (in.pressed & DASH_IN_UP) {
 			row = (row + nrows - 1) % nrows;
-		if (in.pressed & DASH_IN_DOWN)
+			dashSoundPlay(DASH_SND_CURSOR);
+		}
+		if (in.pressed & DASH_IN_DOWN) {
 			row = (row + 1) % nrows;
+			dashSoundPlay(DASH_SND_CURSOR);
+		}
 		if (in.pressed & DASH_IN_LEFT)
 			step = -1;
 		if (in.pressed & DASH_IN_RIGHT)
@@ -743,12 +747,14 @@ static void colorEditor(const char *title, int id)
 			dashThemeMarkDirty();
 			if (before.r != c->r || before.g != c->g || before.b != c->b || before.a != c->a)
 				dashToast(DASH_TOAST_INFO, "Adjusted to stay readable");
+			dashSoundPlay(DASH_SND_CONFIRM);
 			dashInputFlush();
 			return;
 		}
 		if (in.pressed & DASH_IN_BACK) {
 			*c = orig;
 			dashThemeApply();
+			dashSoundPlay(DASH_SND_CANCEL);
 			dashInputFlush();
 			return;
 		}
@@ -857,6 +863,7 @@ static void setChoice(int id, int v)
 			break;
 		case S_SVOL:
 			dashCfg.sound_vol = v * 10;
+			dashSoundApplyVolume();
 			break;
 		case S_BGM:
 			dashCfg.bgm = v;

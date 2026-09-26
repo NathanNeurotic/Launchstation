@@ -108,6 +108,18 @@ int dashSoundInit(void)
 		dashToast(DASH_TOAST_WARN, "Sound unavailable: no samples loaded");
 		return 0;
 	}
+	if (failed > 0) {
+		char msg[64];
+
+		snprintf(msg, sizeof(msg), "%d sound effect%s unavailable", failed, failed == 1 ? "" : "s");
+		dashToast(DASH_TOAST_WARN, msg);
+	}
+	/* channel map and volumes follow Open-PS2-Loader: boot..disconnect on
+	 * voices 0..7, cursor rotating over 8..13; set once, here */
+	for (i = 0; i < 8; i++)
+		audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound_vol, 0);
+	for (i = 8; i < 14; i++)
+		audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound_vol, 0);
 	sound_ready = 1;
 	return 1;
 }
@@ -122,28 +134,40 @@ void dashSoundShutdown(void)
 	sound_ready = 0;
 }
 
+/* voice map: boot..disconnect on 0..7, cursor rotates over 8..13 (OPL-style) */
+#define SND_CURSOR_CH_BASE 8
+#define SND_CURSOR_CH_COUNT 6
+
+void dashSoundApplyVolume(void)
+{
+	int i;
+
+	if (!sound_ready)
+		return;
+	for (i = 0; i < 8 + SND_CURSOR_CH_COUNT; i++)
+		audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound_vol, 0);
+}
+
 void dashSoundPlay(int id)
 {
-	static int rr;
-	static u64 last_cursor_ms;
+	static int cursorSlot;
+	static u64 lastCursorMs;
 	int ch;
 
 	if (!sound_ready || !dashCfg.sound || id < 0 || id >= DASH_SND_COUNT)
 		return;
 	if (samples[id].buffer == NULL)
 		return;
-	/* cursor ping-pongs 0/1 so rapid ticks overlap; everything else lets
-	 * the driver pick a free voice so the boot jingle cannot starve beeps */
 	if (id == DASH_SND_CURSOR) {
 		u64 now = Timer() / 1000;
 
-		if (now - last_cursor_ms < 45)
-			return;
-		last_cursor_ms = now;
-		ch = rr++ & 1;
-		audsrv_adpcm_set_volume_and_pan(ch, dashCfg.sound_vol, 0);
+		if (now - lastCursorMs < 45)
+			return; /* OPL: no machine-gun ticks on autorepeat */
+		lastCursorMs = now;
+		ch = SND_CURSOR_CH_BASE + cursorSlot;
+		cursorSlot = (cursorSlot + 1) % SND_CURSOR_CH_COUNT;
 	} else {
-		ch = -1;
+		ch = id; /* any fixed voice < 8; cursor occupies 8..13 */
 	}
 	audsrv_ch_play_adpcm(ch, &samples[id]);
 }
@@ -410,15 +434,19 @@ void dashBgmStart(void)
 	sema.attr = 0;
 	sema.option = 0;
 	bgmInSema = CreateSema(&sema);
-	if (bgmInSema < 0)
+	if (bgmInSema < 0) {
+		dashToast(DASH_TOAST_WARN, "BGM skipped: no semaphores");
 		goto fail;
+	}
 	sema.max_count = BGM_RING_BUFFER_COUNT;
 	sema.init_count = 0;
 	sema.attr = 0;
 	sema.option = 0;
 	bgmOutSema = CreateSema(&sema);
-	if (bgmOutSema < 0)
+	if (bgmOutSema < 0) {
+		dashToast(DASH_TOAST_WARN, "BGM skipped: no semaphores");
 		goto fail;
+	}
 	thread.stack_size = BGM_THREAD_STACK_SIZE;
 	thread.gp_reg = &_gp;
 	thread.attr = 0;
@@ -427,14 +455,18 @@ void dashBgmStart(void)
 	thread.stack = bgmPlayStack;
 	thread.initial_priority = 0x1E;
 	bgmPlayThreadID = CreateThread(&thread);
-	if (bgmPlayThreadID < 0)
+	if (bgmPlayThreadID < 0) {
+		dashToast(DASH_TOAST_WARN, "BGM skipped: playback thread failed");
 		goto fail;
+	}
 	thread.func = &bgmIoThread;
 	thread.stack = bgmIoStack;
 	thread.initial_priority = 0x1F;
 	bgmIoThreadID = CreateThread(&thread);
-	if (bgmIoThreadID < 0)
+	if (bgmIoThreadID < 0) {
+		dashToast(DASH_TOAST_WARN, "BGM skipped: decode thread failed");
 		goto fail;
+	}
 
 	fmt.freq = vi->rate;
 	fmt.bits = 16;

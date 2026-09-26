@@ -21,6 +21,7 @@ enum DashSound {
 int dashSoundInit(void);
 void dashSoundShutdown(void);
 void dashSoundPlay(int id);
+void dashSoundApplyVolume(void);
 void dashBgmStart(void);
 void dashBgmStop(void);
 void dashBgmSetVolume(void); /* apply dashCfg.bgm_vol to the music bus */
