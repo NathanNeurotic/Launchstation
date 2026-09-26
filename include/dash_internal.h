@@ -703,6 +703,8 @@ enum DashToastKind {
 
 void dashUiInit(void);
 void dashUiUpdate(float dt);
+void dashUiFocusPoke(void); /* call when the selection moves */
+float dashUiFocusPop(void); /* 0.9 -> 1.0 scale spring, 1.0 when animations are off */
 int dashOkIcon(void);
 int dashBackIcon(void);
 void dashDrawHints(const DashHint *hints, int n);
@@ -772,6 +774,7 @@ int dashCurrentSection(void);
 void dashRenderScene(void);
 float dashTime(void);
 float dashAnimSpeed(void);
+float dashSectionAnim(void); /* 0..1 section-transition clock */
 
 /* Actions dispatched by the screens. All of them run through the proven
  * ExecuteMainAction() path. */

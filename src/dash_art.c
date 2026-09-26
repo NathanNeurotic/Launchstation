@@ -597,6 +597,14 @@ void dashDrawAppArt(DashApp *app, float x, float y, float w, float h, float focu
 	GSTEXTURE *tex = dashArtGet(app, prio);
 	float r = w * 0.10f;
 
+	if (focus > 0.5f) {
+		float k = dashUiFocusPop();
+		x -= w * (k - 1.0f) * 0.5f;
+		y -= h * (k - 1.0f) * 0.5f;
+		w *= k;
+		h *= k;
+	}
+
 	if (r < 6.0f)
 		r = 6.0f;
 	dashShadow(x, y, w, h, 10.0f + 10.0f * focus, 0.6f + 0.3f * focus);

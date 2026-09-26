@@ -66,6 +66,11 @@ float dashAnimSpeed(void)
 	return 1.0f;
 }
 
+float dashSectionAnim(void)
+{
+	return section_anim;
+}
+
 const MainExecuteContext *dashExecContext(void)
 {
 	return &exec_ctx;

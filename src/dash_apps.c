@@ -292,6 +292,8 @@ static void appsEnter(void)
 
 static void move(int delta)
 {
+	int old = sel;
+
 	if (norder <= 0)
 		return;
 	sel += delta;
@@ -299,6 +301,8 @@ static void move(int delta)
 		sel = 0;
 	if (sel >= norder)
 		sel = norder - 1;
+	if (sel != old)
+		dashUiFocusPoke();
 }
 
 static void appsInput(const DashInput *in)

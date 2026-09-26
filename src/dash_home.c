@@ -191,20 +191,32 @@ static void homeInput(const DashInput *in)
 	int n = (row == 0) ? nhome : nchips;
 
 	if (in->pressed & DASH_IN_UP) {
-		if (row == 1 && nhome > 0)
+		if (row == 1 && nhome > 0) {
 			row = 0;
+			dashUiFocusPoke();
+		}
 	} else if (in->pressed & DASH_IN_DOWN) {
-		if (row == 0)
+		if (row == 0) {
 			row = 1;
+			dashUiFocusPoke();
+		}
 	} else if (in->pressed & DASH_IN_LEFT) {
-		if (col[row] > 0)
+		if (col[row] > 0) {
 			col[row]--;
+			dashUiFocusPoke();
+		}
 	} else if (in->pressed & DASH_IN_RIGHT) {
-		if (col[row] < n - 1)
+		if (col[row] < n - 1) {
 			col[row]++;
+			dashUiFocusPoke();
+		}
 	} else if (in->pressed & DASH_IN_L2) {
+		if (col[row] != 0)
+			dashUiFocusPoke();
 		col[row] = 0;
 	} else if (in->pressed & DASH_IN_R2) {
+		if (col[row] != (n > 0 ? n - 1 : 0))
+			dashUiFocusPoke();
 		col[row] = n > 0 ? n - 1 : 0;
 	} else if (in->pressed & DASH_IN_OK) {
 		if (row == 0 && nhome > 0) {

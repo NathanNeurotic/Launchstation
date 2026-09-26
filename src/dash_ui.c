@@ -162,6 +162,7 @@ void dashDrawHints(const DashHint *hints, int n)
 	x = DASH_SAFE_R - total + 12.0f;
 	if (x < DASH_SAFE_L)
 		x = DASH_SAFE_L;
+	x += 14.0f * (1.0f - dashEaseOutCubic(dashSectionAnim()));
 	{
 		char ct[24], cd[24];
 		float cw = footerClockWidth(ct, sizeof(ct), cd, sizeof(cd));
@@ -276,7 +277,12 @@ void dashDrawHeader(int section, float section_anim)
 	(void)section_anim;
 	if (tab_anim_x < 0.0f)
 		tab_anim_x = target_x;
-	tab_anim_x = dashApproach(tab_anim_x, target_x, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
+	{
+		float dx = target_x - tab_anim_x;
+
+		tab_anim_x = dashApproach(tab_anim_x, target_x, 14.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		tab_anim_x += dx * 0.04f * dashClampf(fabsf(dx) / tab_w, 0.0f, 1.0f) * dashSinf(dashTime() * 16.0f);
+	}
 
 	/* brand */
 	dashAccentGlow(51, 36, 22, 18, 1.2f);
@@ -457,6 +463,19 @@ typedef struct
 
 static Toast toasts[TOAST_MAX];
 static int ntoasts;
+static float focus_pop = 1.0f;
+
+void dashUiFocusPoke(void)
+{
+	if (dashCfg.anim != DASH_ANIM_OFF)
+		focus_pop = 0.0f;
+}
+
+float dashUiFocusPop(void)
+{
+	float k = dashEaseOutCubic(dashClampf(focus_pop, 0.0f, 1.0f));
+	return 0.9f + 0.1f * k;
+}
 
 void dashUiInit(void)
 {
@@ -480,6 +499,9 @@ void dashUiUpdate(float dt)
 {
 	int i;
 
+	focus_pop += dt * 6.0f;
+	if (focus_pop > 1.0f)
+		focus_pop = 1.0f;
 	for (i = 0; i < ntoasts; i++)
 		toasts[i].t += dt;
 	while (ntoasts > 0 && toasts[0].t > 3.6f) {
@@ -632,13 +654,16 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 		}
 
 		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), 1.0f / 60.0f);
-		open = dashApproach(open, 1.0f, 14.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		{
+			float oe = dashEaseOutCubic(open);
 
-		dashRenderScene();
-		modalBackdrop(open * (preview != NULL ? 0.25f : 1.0f));
-		dashGfxPushAlpha(open);
-		dashGfxPushOffset(0, 16.0f * (1.0f - open));
-		modalPanel(x, y, w, h, open);
+			dashRenderScene();
+			modalBackdrop(oe * (preview != NULL ? 0.25f : 1.0f));
+			dashGfxPushAlpha(oe);
+			dashGfxPushOffset(0, 18.0f * (1.0f - oe));
+			modalPanel(x, y, w, h, oe);
+		}
 		dashTextS(x + 24, y + 18, title, DASH_FS_LABEL, DASH_C_TEXT);
 		{
 			float ly = y + 54;
@@ -726,14 +751,17 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 			dashInputFlush();
 			return (cancel_label == NULL) ? 1 : 0;
 		}
-		open = dashApproach(open, 1.0f, 14.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
 		sel_anim = dashApproach(sel_anim, (float)sel, 20.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		{
+			float oe = dashEaseOutCubic(open);
 
-		dashRenderScene();
-		modalBackdrop(open);
-		dashGfxPushAlpha(open);
-		dashGfxPushOffset(0, 16.0f * (1.0f - open));
-		modalPanel(x, y, w, h, open);
+			dashRenderScene();
+			modalBackdrop(oe);
+			dashGfxPushAlpha(oe);
+			dashGfxPushOffset(0, 18.0f * (1.0f - oe));
+			modalPanel(x, y, w, h, oe);
+		}
 		if (dashTheme.glow) {
 			dashGfxBlend(DASH_BLEND_ADD);
 			dashGlow(x + 44, y + 42, 34, 34, dashColorA(icon_col, 0.35f));
