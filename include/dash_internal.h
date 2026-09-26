@@ -675,6 +675,7 @@ int dashDevicesList(DashDevice *out, int max);
 int dashDevicesProbe(const DashDevice *dev);
 const char *dashDiscStatus(void);
 int dashMcPresent(int port);
+int dashDevicePathReady(const char *path);
 
 //--------------------------------------------------------------
 // Input
