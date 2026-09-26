@@ -38,16 +38,16 @@ jobs:
             -o "$installer"
 
           sh "$installer"
+          # The installer places the ps2build executable directly in this
+          # directory and adds this directory (not a bin/ subdirectory) to PATH.
           echo "$HOME/.local/share/ps2build" >> "$GITHUB_PATH"
-          echo "$HOME/.local/share/ps2build/bin" >> "$GITHUB_PATH"
 
       - name: Verify ps2build
         shell: bash
         run: |
           set -euo pipefail
-          PS2BUILD="$HOME/.local/share/ps2build/bin/ps2build"
-          test -x "$PS2BUILD"
-          "$PS2BUILD" --version
+          command -v ps2build
+          ps2build --version
 
       - name: Install in-repo custom packages
         run: |
