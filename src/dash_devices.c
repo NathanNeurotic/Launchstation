@@ -19,13 +19,24 @@ extern int vmcMounted[2];
 /* remembered results of explicit probes that failed */
 static u8 probe_failed_hdd, probe_failed_ata, probe_failed_mx4sio, probe_failed_mmce, probe_failed_udpfs;
 
-/* device-presence snapshot for connect/disconnect sounds; the all-ones
- * value marks "not baselined yet" so boot does not play a burst of sounds */
+/* Device-presence snapshot for connect/disconnect sounds.
+ *
+ * Mount discovery is asynchronous: MC/USB state can continue changing for a
+ * short time after the dashboard starts. A single silent first poll is not
+ * enough because a boot-mounted device that appears on the second/third poll
+ * would look exactly like a real hotplug. Keep hotplug sounds disarmed until
+ * the snapshot has stayed unchanged for a settling period; all boot-time
+ * mount transitions are folded into the baseline silently. */
+#define DEV_HOTPLUG_SETTLE_MS 2000
 static u32 dev_snapshot = 0xFFFFFFFFu;
+static u64 dev_snapshot_changed_ms;
+static int dev_hotplug_armed;
 
 void dashDevicesInit(void)
 {
-	dev_snapshot = 0xFFFFFFFFu; /* first poll after startup baselines silently */
+	dev_snapshot = 0xFFFFFFFFu;
+	dev_snapshot_changed_ms = Timer();
+	dev_hotplug_armed = 0;
 }
 
 /* Re-arm the silent baseline (used when the dash (re)starts, so devices that
@@ -34,6 +45,8 @@ void dashDevicesInit(void)
 void dashDevicesResetBaseline(void)
 {
 	dev_snapshot = 0xFFFFFFFFu;
+	dev_snapshot_changed_ms = Timer();
+	dev_hotplug_armed = 0;
 }
 
 void dashDevicesPoll(void)
@@ -51,9 +64,19 @@ void dashDevicesPoll(void)
 			if (m & (1 << i))
 				now |= 1u << (2 + i);
 	}
-	if (dev_snapshot == 0xFFFFFFFFu)
-		dev_snapshot = now;
-	else if (now != dev_snapshot) {
+	if (!dev_hotplug_armed) {
+		u64 ms = Timer();
+
+		/* Boot mounts and post-IOP-reset rediscovery are baseline changes, not
+		 * user hotplugs. Any change restarts the quiet settling timer. */
+		if (dev_snapshot == 0xFFFFFFFFu || now != dev_snapshot) {
+			dev_snapshot = now;
+			dev_snapshot_changed_ms = ms;
+		} else if (ms - dev_snapshot_changed_ms >= DEV_HOTPLUG_SETTLE_MS) {
+			/* From this point onward, changes are genuine runtime hotplug events. */
+			dev_hotplug_armed = 1;
+		}
+	} else if (now != dev_snapshot) {
 		if (now & ~dev_snapshot)
 			dashSoundPlay(DASH_SND_CONNECT);
 		if (dev_snapshot & ~now)
