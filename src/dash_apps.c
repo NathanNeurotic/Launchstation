@@ -392,6 +392,8 @@ static void drawTitleBar(void)
 	DashApp *a = selApp();
 	int v;
 
+	dashThemeSetFocusApp(a);
+
 	if (filter != FILTER_ALL)
 		snprintf(sub, sizeof(sub), "%d shown - %s", norder, filter_names[filter]);
 	else

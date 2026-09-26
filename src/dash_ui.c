@@ -103,6 +103,9 @@ const char *dashOkLabelKey(void)
 //--------------------------------------------------------------
 // Buttons / hints
 //--------------------------------------------------------------
+static float footerClockWidth(char *t, int tsize, char *d, int dsize);
+static void drawFooterClock(float y, const char *t, const char *d);
+
 static DashColor buttonColor(int icon)
 {
 	switch (icon) {
@@ -162,6 +165,13 @@ void dashDrawHints(const DashHint *hints, int n)
 	if (x < DASH_SAFE_L)
 		x = DASH_SAFE_L;
 	{
+		char ct[24], cd[24];
+		float cw = footerClockWidth(ct, sizeof(ct), cd, sizeof(cd));
+		/* only when it does not collide with the hints */
+		if (cw > 0.0f && DASH_SAFE_L + cw + 24.0f < x)
+			drawFooterClock(y, ct, cd);
+	}
+	{
 		DashColor sh = dashColorScale(dashTheme.bg2, 0.6f);
 		sh.a = 0;
 		dashRectGradH(x - 40, y - 6, DASH_SAFE_R - x + 60, 34, sh, DC(sh.r, sh.g, sh.b, 150));
@@ -177,16 +187,86 @@ void dashDrawHints(const DashHint *hints, int n)
 //--------------------------------------------------------------
 static float tab_anim_x = -1.0f;
 
+/* Clock text per the theme: 12/24 h and date order follow the console's
+ * own settings unless the theme overrides them. */
+static int clockText(char *t, int tsize, char *d, int dsize)
+{
+	int y, mo, dd, h, mi, s, use12, dfmt;
+	int valid = menuTitleGetClockFields(&y, &mo, &dd, &h, &mi, &s, &use12, &dfmt);
+
+	if (dashTheme.clock_hours == DASH_HOURS_24)
+		use12 = 0;
+	else if (dashTheme.clock_hours == DASH_HOURS_12)
+		use12 = 1;
+	switch (dashTheme.clock_date) {
+		case DASH_DATE_YMD:
+			dfmt = 0;
+			break;
+		case DASH_DATE_MDY:
+			dfmt = 1;
+			break;
+		case DASH_DATE_DMY:
+			dfmt = 2;
+			break;
+	}
+	if (!valid) {
+		dashStrCopy(t, dashTheme.clock_seconds ? "--:--:--" : "--:--", tsize);
+		dashStrCopy(d, "", dsize);
+		return 0;
+	}
+	menuTitleFormatClockTime(t, tsize, h, mi, s, use12);
+	/* "HH:MM:SS[ PM]" -> "HH:MM[ PM]" */
+	if (!dashTheme.clock_seconds && strlen(t) >= 8 && t[2] == ':' && t[5] == ':')
+		memmove(t + 5, t + 8, strlen(t + 8) + 1);
+	if (dashTheme.clock_date == DASH_DATE_OFF)
+		d[0] = '\0';
+	else
+		menuTitleFormatClockDate(d, dsize, y, mo, dd, dfmt);
+	return 1;
+}
+
 void dashDrawClock(void)
 {
 	char t[24], d[24];
 
-	menuTitleGetClockText(t, sizeof(t), d, sizeof(d));
-	/* "HH:MM:SS" or "HH:MM:SS PM" -> drop the seconds */
-	if (strlen(t) >= 8 && t[2] == ':' && t[5] == ':')
-		memmove(t + 5, t + 8, strlen(t + 8) + 1);
-	dashTextRight(DASH_SAFE_R, 22, t, DASH_FS_LABEL, DASH_C_TEXT);
-	dashTextRight(DASH_SAFE_R, 46, d, DASH_FS_CAPTION, DASH_C_TEXT3);
+	if (dashTheme.clock == DASH_CLOCK_OFF || dashTheme.clock_pos != DASH_CLOCKPOS_HEADER)
+		return;
+	clockText(t, sizeof(t), d, sizeof(d));
+	if (dashTheme.clock == DASH_CLOCK_SYSTEM) {
+		/* OSDSYS: light grey, even weight, no emphasis */
+		dashTextRight(DASH_SAFE_R, 24, t, DASH_FS_BODY, DASH_C_TEXT);
+		if (d[0])
+			dashTextRight(DASH_SAFE_R, 45, d, DASH_FS_CAPTION, DASH_C_TEXT2);
+	} else {
+		dashTextRight(DASH_SAFE_R, 22, t, DASH_FS_LABEL, DASH_C_TEXT);
+		if (d[0])
+			dashTextRight(DASH_SAFE_R, 46, d, DASH_FS_CAPTION, DASH_C_TEXT3);
+	}
+}
+
+/* Footer clock: left end of the hint row. Returns the width used (0 when
+ * the clock is not in the footer). */
+static float footerClockWidth(char *t, int tsize, char *d, int dsize)
+{
+	if (dashTheme.clock == DASH_CLOCK_OFF || dashTheme.clock_pos != DASH_CLOCKPOS_FOOTER)
+		return 0.0f;
+	clockText(t, tsize, d, dsize);
+	return dashTextWidth(t, DASH_FS_BODY) + (d[0] ? 14.0f + dashTextWidth(d, DASH_FS_SMALL) : 0.0f);
+}
+
+static void drawFooterClock(float y, const char *t, const char *d)
+{
+	float x = DASH_SAFE_L;
+
+	if (dashTheme.clock == DASH_CLOCK_SYSTEM && d[0]) {
+		/* OSDSYS order: date, then time */
+		x = dashTextS(x, y + 4.5f, d, DASH_FS_SMALL, DASH_C_TEXT2) + 14.0f;
+		dashTextS(x, y + 3.5f, t, DASH_FS_BODY, DASH_C_TEXT);
+	} else {
+		x = dashTextS(x, y + 3.5f, t, DASH_FS_BODY, DASH_C_TEXT) + 14.0f;
+		if (d[0])
+			dashTextS(x, y + 4.5f, d, DASH_FS_SMALL, DASH_C_TEXT3);
+	}
 }
 
 void dashDrawHeader(int section, float section_anim)

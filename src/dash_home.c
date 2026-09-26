@@ -260,6 +260,8 @@ static void drawBadge(float x, float y, int badge)
 static void drawHero(void)
 {
 	DashApp *a = focusedApp();
+
+	dashThemeSetFocusApp(a);
 	const float x = 48, y = 78, art = 120;
 	const float tx = 190, tw = 400;
 

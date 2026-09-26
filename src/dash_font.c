@@ -278,16 +278,38 @@ typedef struct
 	float s;      /* face pixels -> virtual pixels */
 	float px;     /* requested em size */
 	float yshift; /* line top -> baseline alignment used by the layouts */
+	int classic;  /* theme font "System": the smoothed wLaunchELF bitmap font */
 } FaceSel;
+
+/* Theme typography: size scale (90..115 %) and face. */
+static float fontScale(void)
+{
+	int fs = dashTheme.font_scale;
+
+	return (fs >= 90 && fs <= 115) ? fs / 100.0f : 1.0f;
+}
+
+/* The bitmap font's 16-row cell is drawn 1.1 em tall; the centre of its
+ * x-height (row ~9.5) lands on the layouts' reference line. */
+#define CLASSIC_CELL_EM 1.1f
+#define CLASSIC_XMID_ROW 9.5f
 
 static void pickFace(float scale, FaceSel *sel)
 {
-	float px = scale * DASH_FONT_UNIT;
+	float px = scale * DASH_FONT_UNIT * fontScale();
 	int i = (px <= 15.5f) ? 0 : (px <= 23.0f) ? 1 : 2;
 
 	sel->f = &dash_font_faces[i];
 	sel->tex = &face_tex[i];
 	sel->px = px;
+	sel->classic = (dashTheme.font == DASH_FONT_SYSTEM && font_ready);
+	if (sel->classic) {
+		float cell = px * CLASSIC_CELL_EM;
+		sel->tex = &font_tex;
+		sel->s = cell / FONT_CELL_H;
+		sel->yshift = 16.0f * scale - cell * (CLASSIC_XMID_ROW / 16.0f);
+		return;
+	}
 	sel->s = px / (float)sel->f->em;
 	/* Keep the layouts' vertical reference: centre of the x-height sits at
 	 * y + 16 * scale, like the centre of the classic glyph cell did. */
@@ -300,6 +322,11 @@ static float glyphAdv(const FaceSel *sel, unsigned int c)
 {
 	if (c >= 0x100)
 		return sel->px * 0.62f;
+	if (sel->classic) {
+		if (c < FONT_FIRST)
+			c = ' ';
+		return metrics[c - FONT_FIRST].adv * sel->s;
+	}
 	if (c < DASH_FONT_FIRST || c > DASH_FONT_LAST)
 		c = '?';
 	return sel->f->glyphs[c - DASH_FONT_FIRST].adv16 / 16.0f * sel->s;
@@ -333,7 +360,7 @@ float dashTextWidth(const char *s, float scale)
 
 float dashTextLineH(float scale)
 {
-	return scale * DASH_FONT_UNIT * 1.3f;
+	return scale * DASH_FONT_UNIT * 1.3f * fontScale();
 }
 
 static float drawRun(float x, float y, const unsigned char *s, const unsigned char *end, float scale, DashColor c)
@@ -341,13 +368,15 @@ static float drawRun(float x, float y, const unsigned char *s, const unsigned ch
 	unsigned int g[2];
 	int k, cnt;
 	FaceSel sel;
-	float top;
+	float top, bold_dx;
 
 	if (c.a == 0)
 		return x + dashTextWidthN((const char *)s, end ? (int)(end - s) : -1, scale);
 	facesInit();
 	pickFace(scale, &sel);
 	top = y + sel.yshift;
+	/* bold: every glyph twice, the second copy nudged right */
+	bold_dx = dashTheme.bold ? (sel.px < 16.0f ? 0.5f : 0.7f) : 0.0f;
 
 	dashSpriteBatchBegin(sel.tex, c);
 	while (*s && (end == NULL || s < end)) {
@@ -362,12 +391,33 @@ static float drawRun(float x, float y, const unsigned char *s, const unsigned ch
 					float u0 = (float)((gi % FONT_COLS) * FONT_SLOT_W);
 					float v0 = (float)((gi / FONT_COLS) * FONT_SLOT_H);
 					float h = sel.px * 1.25f, w = h * FONT_SLOT_W / FONT_SLOT_H;
-					dashSpriteBatchEnd();
-					dashSpriteBatchBegin(&font_tex, c);
+					if (!sel.classic) {
+						dashSpriteBatchEnd();
+						dashSpriteBatchBegin(&font_tex, c);
+					}
 					dashSpriteBatchAdd(x, y + 16.0f * scale - h * 0.5f, u0, v0, x + w, y + 16.0f * scale + h * 0.5f,
 					                   u0 + FONT_SLOT_W, v0 + FONT_SLOT_H);
-					dashSpriteBatchEnd();
-					dashSpriteBatchBegin(sel.tex, c);
+					if (!sel.classic) {
+						dashSpriteBatchEnd();
+						dashSpriteBatchBegin(sel.tex, c);
+					}
+				}
+			} else if (sel.classic) {
+				const GlyphMetric *m;
+				if (gc < FONT_FIRST)
+					gc = ' ';
+				m = &metrics[gc - FONT_FIRST];
+				if (m->width > 0) {
+					int gi = gc - FONT_FIRST;
+					float u0 = (float)((gi % FONT_COLS) * FONT_SLOT_W);
+					float v0 = (float)((gi / FONT_COLS) * FONT_SLOT_H);
+					/* slot pixel 1 + xoff is the first ink column */
+					float gx = x - m->xoff * sel.s;
+					float gy = top - sel.s;
+					float k;
+					for (k = 0.0f; k <= bold_dx; k += (bold_dx > 0.0f ? bold_dx : 1.0f))
+						dashSpriteBatchAdd(gx + k, gy, u0, v0, gx + k + FONT_SLOT_W * sel.s, gy + FONT_SLOT_H * sel.s,
+						                   u0 + FONT_SLOT_W, v0 + FONT_SLOT_H);
 				}
 			} else {
 				const DashGlyphData *gd;
@@ -377,9 +427,11 @@ static float drawRun(float x, float y, const unsigned char *s, const unsigned ch
 				if (gd->w > 0) {
 					float gx = x + gd->xoff * sel.s;
 					float gy = top + gd->yoff * sel.s;
-					dashSpriteBatchAdd(gx, gy, gd->x, gd->y,
-					                   gx + gd->w * sel.s, gy + gd->h * sel.s,
-					                   gd->x + gd->w, gd->y + gd->h);
+					float k;
+					for (k = 0.0f; k <= bold_dx; k += (bold_dx > 0.0f ? bold_dx : 1.0f))
+						dashSpriteBatchAdd(gx + k, gy, gd->x, gd->y,
+						                   gx + k + gd->w * sel.s, gy + gd->h * sel.s,
+						                   gd->x + gd->w, gd->y + gd->h);
 				}
 			}
 			x += glyphAdv(&sel, gc);
@@ -402,6 +454,8 @@ float dashTextS(float x, float y, const char *s, float scale, DashColor c)
 
 	if (s == NULL)
 		return x;
+	if (!dashTheme.text_shadow)
+		return drawRun(x, y, (const unsigned char *)s, NULL, scale, c);
 	drawRun(x + 0.8f, y + 1.2f, (const unsigned char *)s, NULL, scale, sh);
 	return drawRun(x, y, (const unsigned char *)s, NULL, scale, c);
 }
