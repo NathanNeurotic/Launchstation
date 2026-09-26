@@ -34,6 +34,7 @@ screens* is on (Settings > Display).
 | CRT | Gradient + scanlines | Understated scanlines over the background only |
 | PSX | Ribbons | Charcoal with silver ribbons |
 | Crystal | Crystal | The previous dashboard look (crystal towers, stars, glow, initials tiles) |
+| Light Show | Light streaks | Light pillars sweeping across an indigo night |
 
 Every background is drawn procedurally from a few GS primitives. None of
 them uses or needs Sony BIOS data. The PS2-inspired scenes were designed
@@ -161,6 +162,16 @@ The easiest start is *Save theme to folder...*, which writes a complete
 `theme.cfg` for the current theme; copy that folder to a PC, edit it, copy
 it back.
 
+Theme folders are looked up in two places, in this order:
+
+1. `THEMES/` in the ELF's own folder (the folder wLaunchELF was launched
+   from), so themes on a USB stick, memory card or HDD partition work
+   wherever the ELF goes, with no device handling.
+2. `THEMES/` in the dashboard folder described above.
+
+Both are only read from devices whose driver is already running. *Save
+theme to folder...* writes to the first of these that is writable.
+
 Theme folders are only read when you choose *Load theme from folder...*,
 never at startup, and their device must already be available (loading a
 theme never starts a device driver). The loaded theme is copied into
@@ -199,7 +210,7 @@ clock_position = header
 |-----|--------|
 | `name`, `author` | text (up to 31 characters) |
 | `preset` | a built-in preset id (see below); applied where it appears, so put it first |
-| `background` | `solid`, `gradient`, `tunnel`, `mist`, `towers`, `disc`, `orbit`, `clockring`, `grid`, `lines`, `cubes`, `stream`, `tiles`, `brushed`, `wave`, `crystal`, `image` |
+| `background` | `solid`, `gradient`, `tunnel`, `mist`, `towers`, `disc`, `orbit`, `clockring`, `grid`, `lines`, `cubes`, `stream`, `tiles`, `brushed`, `wave`, `crystal`, `streaks`, `clouds`, `image` |
 | `image` | wallpaper PNG for `background = image` |
 | `background_color`, `background_color2` | colour |
 | `brightness` | 10-100 (%) |
@@ -232,7 +243,7 @@ to the theme folder. Full paths (`mass:/THEMES/pic.png`) work too.
 
 Preset ids: `osd`, `black`, `towers`, `discred`, `mist`, `midnight`,
 `minimal`, `clockring`, `mcgrid`, `bootlines`, `cubes`, `stream`, `mcblue`,
-`brushed`, `biosblue`, `mono`, `crt`, `psx`, `crystal`.
+`brushed`, `biosblue`, `mono`, `crt`, `psx`, `crystal`, `lightshow`.
 
 A complete example is in [theme-example/theme.cfg](theme-example/theme.cfg).
 

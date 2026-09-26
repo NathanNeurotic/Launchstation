@@ -115,9 +115,23 @@ Next to LAUNCHELF.CNF when it was loaded from a writable device, otherwise
 in `mc0:/SYS-CONF/`: `DASHBOARD.CNF` (settings, scan folders),
 `DASHAPPS.CNF` (favorites, pins, recents), `DASHLIB.CNF` (library cache).
 The active theme is part of DASHBOARD.CNF (`Theme_*` keys); saved themes
-go to `THEMES/<name>/theme.cfg` in the same folder, only when you choose
-*Save theme to folder*. LAUNCHELF.CNF itself is never modified behind your
+go to `THEMES/<name>/theme.cfg`, only when you choose
+*Save theme to folder* — in the ELF's own folder when writable, else the
+dashboard folder (see [themes.md](themes.md#theme-folders-user-created-themes)).
+LAUNCHELF.CNF itself is never modified behind your
 back.
+
+## Interface sounds
+
+The dashboard plays short sound effects through the ps2sdk `audsrv`
+audio server: cursor moves, confirm/cancel in dialogs, section switches,
+toasts, the startup boot sound, and device connect/disconnect. They are
+Sony ADP samples embedded in the ELF (no files needed at runtime).
+
+Settings > Dashboard > *Interface sounds* turns them on or off and sets
+the volume (`Dash_Sound` / `Dash_SoundVolume` in DASHBOARD.CNF, on and
+80% by default). When the audio driver cannot start, everything stays
+silent — the dashboard works normally without sound.
 
 ## Optional PSBBN layers (Crystal background)
 
