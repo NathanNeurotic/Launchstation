@@ -51,7 +51,7 @@ static void *blob_data(int id)
 		case DASH_SND_CANCEL: return sfx_cancel_adp;
 		case DASH_SND_TRANSITION: return sfx_transition_adp;
 		case DASH_SND_MESSAGE: return sfx_message_adp;
-		case DASH_SND_BOOT: return sfx_boot_adp;
+		case DASH_SND_BOOT: return sfx_confirm_adp;
 		case DASH_SND_CONNECT: return sfx_connect_adp;
 		default: return sfx_disconnect_adp;
 	}
@@ -65,7 +65,7 @@ static int blob_size(int id)
 		case DASH_SND_CANCEL: return size_sfx_cancel_adp;
 		case DASH_SND_TRANSITION: return size_sfx_transition_adp;
 		case DASH_SND_MESSAGE: return size_sfx_message_adp;
-		case DASH_SND_BOOT: return size_sfx_boot_adp;
+		case DASH_SND_BOOT: return size_sfx_confirm_adp;
 		case DASH_SND_CONNECT: return size_sfx_connect_adp;
 		default: return size_sfx_disconnect_adp;
 	}
