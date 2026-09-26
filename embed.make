@@ -620,12 +620,12 @@ $(EE_ASM_DIR)sfx_connect_adp.s: res/sfx/bd_connect.adp | $(EE_ASM_DIR)
 $(EE_ASM_DIR)sfx_disconnect_adp.s: res/sfx/bd_disconnect.adp | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ sfx_disconnect_adp
 
-AUDSRV_SOURCE := $(PS2DEV)/packages/world/audsrv/bin/audsrv.irx
+AUDSRV_SOURCE := iop/__precompiled/audsrv.irx
 ifneq ($(wildcard $(PS2SDK)/iop/irx/audsrv.irx),)
   AUDSRV_SOURCE := $(PS2SDK)/iop/irx/audsrv.irx
 endif
 ifeq ($(wildcard $(AUDSRV_SOURCE)),)
-  $(error Missing audsrv.irx. Update the ps2dev packages)
+  $(error Missing audsrv.irx. Restore iop/__precompiled/audsrv.irx or update the ps2dev packages)
 endif
 
 $(EE_ASM_DIR)audsrv_irx.s: $(AUDSRV_SOURCE) | $(EE_ASM_DIR)
