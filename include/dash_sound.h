@@ -22,6 +22,6 @@ int dashSoundInit(void);
 void dashSoundShutdown(void);
 void dashSoundPlay(int id);
 void dashBgmStart(void);
-void dashBgmPump(void);
+void dashBgmStop(void);
 
 #endif

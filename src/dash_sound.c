@@ -140,9 +140,18 @@ void dashSoundPlay(int id)
 	}
 	/* cursor ping-pongs 0/1 so rapid ticks overlap; everything else lets
 	 * the driver pick a free voice so the boot jingle cannot starve beeps */
-	ch = (id == DASH_SND_CURSOR) ? (rr++ & 1) : -1;
-	if (ch >= 0)
+	if (id == DASH_SND_CURSOR) {
+		static u64 last_cursor_ms;
+		u64 now = Timer() / 1000;
+
+		if (now - last_cursor_ms < 45)
+			return;
+		last_cursor_ms = now;
+		ch = rr++ & 1;
 		audsrv_adpcm_set_volume_and_pan(ch, dashCfg.sound_vol, 0);
+	} else {
+		ch = -1;
+	}
 	audsrv_ch_play_adpcm(ch, &samples[id]);
 }
 
@@ -150,9 +159,15 @@ void dashSoundPlay(int id)
 // Background music
 //
 // Default source is the embedded bgm.ogg; a bgm.ogg next to the ELF
-// (sidecar) overrides it, OPL-style. Decoded with libvorbis in the
-// main loop (dashBgmPump feeds audsrv a chunk per frame, no thread).
+// (sidecar) overrides it, OPL-style. Architecture follows
+// Open-PS2-Loader's sound.c: a decode thread fills a deep ring buffer
+// from libvorbis and a playback thread feeds audsrv, so menu IO and
+// modal loops never stall the music.
 //--------------------------------------------------------------
+#define BGM_RING_BUFFER_COUNT 192 /* 768 KB, ~4.3 s of 44.1 kHz stereo */
+#define BGM_RING_BUFFER_SIZE 4096
+#define BGM_THREAD_STACK_SIZE 0x1000
+
 typedef struct
 {
 	const u8 *data;
@@ -164,7 +179,17 @@ static OggVorbis_File bgm_vf;
 static BgmMem bgm_mem;
 static u8 *bgm_filebuf; /* sidecar copy, NULL when using the embedded blob */
 static int bgm_opened;
-static int bgm_active;
+
+static int bgmPlayThreadID = -1, bgmIoThreadID = -1;
+static int bgmInSema = -1, bgmOutSema = -1;
+static volatile u8 bgmTerminate, bgmPlaying;
+static volatile u8 bgmRdPtr, bgmWrPtr;
+static char bgmRing[BGM_RING_BUFFER_COUNT][BGM_RING_BUFFER_SIZE];
+static volatile u8 bgmPlayRunning, bgmIoRunning;
+static u8 bgmPlayStack[BGM_THREAD_STACK_SIZE] __attribute__((aligned(16)));
+static u8 bgmIoStack[BGM_THREAD_STACK_SIZE] __attribute__((aligned(16)));
+
+extern void *_gp;
 
 static size_t bgm_mem_read(void *ptr, size_t size, size_t nmemb, void *ds)
 {
@@ -207,13 +232,106 @@ static long bgm_mem_tell(void *ds)
 	return ((BgmMem *)ds)->pos;
 }
 
+static void bgmIoThread(void *arg)
+{
+	int decodeTotal, bitStream;
+
+	(void)arg;
+	bgmIoRunning = 1;
+	do {
+		WaitSema(bgmInSema);
+		if (bgmTerminate || !dashCfg.sound)
+			break;
+
+		decodeTotal = BGM_RING_BUFFER_SIZE;
+		{
+			int bufferPtr = 0;
+			do {
+				int ret = ov_read(&bgm_vf, bgmRing[bgmWrPtr] + bufferPtr, decodeTotal, 0, 2, 1, &bitStream);
+
+				if (ret > 0) {
+					bufferPtr += ret;
+					decodeTotal -= ret;
+				} else if (ret == OV_HOLE) {
+					/* recoverable Vorbis discontinuity: keep decoding */
+					continue;
+				} else if (ret < 0) {
+					bgmTerminate = 1;
+					break;
+				} else {
+					/* end of stream: loop the track */
+					if (ov_pcm_seek(&bgm_vf, 0) != 0) {
+						bgmTerminate = 1;
+						break;
+					}
+				}
+			} while (decodeTotal > 0);
+		}
+		if (bgmTerminate)
+			break;
+
+		bgmWrPtr = (bgmWrPtr + 1) % BGM_RING_BUFFER_COUNT;
+		SignalSema(bgmOutSema);
+	} while (!bgmTerminate && dashCfg.sound);
+
+	bgmIoRunning = 0;
+	bgmTerminate = 1;
+	SignalSema(bgmOutSema);
+}
+
+static void bgmPlayThread(void *arg)
+{
+	(void)arg;
+	bgmPlayRunning = 1;
+	while (!bgmTerminate) {
+		WaitSema(bgmOutSema);
+		if (bgmTerminate)
+			break;
+		audsrv_wait_audio(BGM_RING_BUFFER_SIZE);
+		audsrv_play_audio(bgmRing[bgmRdPtr], BGM_RING_BUFFER_SIZE);
+		bgmRdPtr = (bgmRdPtr + 1) % BGM_RING_BUFFER_COUNT;
+		SignalSema(bgmInSema);
+	}
+	audsrv_stop_audio();
+	bgmRdPtr = 0;
+	bgmWrPtr = 0;
+	bgmPlayRunning = 0;
+	bgmPlaying = 0;
+}
+
 static void bgmClose(void)
 {
+	u64 deadline;
+
+	if (bgmPlayRunning || bgmIoRunning) {
+		bgmTerminate = 1;
+		SignalSema(bgmInSema);
+		SignalSema(bgmOutSema);
+		deadline = Timer() + 1000; /* 1 s grace, then abandon the threads */
+		while ((bgmPlayRunning || bgmIoRunning) && Timer() < deadline)
+			;
+	}
+	if (bgmInSema >= 0) {
+		DeleteSema(bgmInSema);
+		bgmInSema = -1;
+	}
+	if (bgmOutSema >= 0) {
+		DeleteSema(bgmOutSema);
+		bgmOutSema = -1;
+	}
+	if (bgmPlayThreadID >= 0) {
+		DeleteThread(bgmPlayThreadID);
+		bgmPlayThreadID = -1;
+	}
+	if (bgmIoThreadID >= 0) {
+		DeleteThread(bgmIoThreadID);
+		bgmIoThreadID = -1;
+	}
 	if (bgm_opened) {
 		ov_clear(&bgm_vf);
 		bgm_opened = 0;
 	}
-	bgm_active = 0;
+	bgmPlaying = 0;
 	if (bgm_filebuf != NULL) {
 		free(bgm_filebuf);
 		bgm_filebuf = NULL;
@@ -229,9 +347,11 @@ void dashBgmStart(void)
 	vorbis_info *vi;
 	struct audsrv_fmt_t fmt;
 	ov_callbacks cb;
+	ee_thread_t thread;
+	ee_sema_t sema;
 	FILE *f;
 
-	if (bgm_active || !sound_ready || !dashCfg.sound)
+	if (bgmPlaying || !sound_ready || !dashCfg.sound)
 		return;
 	bgmClose();
 	data = bgm_ogg;
@@ -274,6 +394,44 @@ void dashBgmStart(void)
 		dashToast(DASH_TOAST_WARN, "BGM skipped: needs 1 or 2 channels");
 		goto fail;
 	}
+
+	/* threads + semaphores (RiptOPL pattern: decode at base priority, playback one step above) */
+	bgmTerminate = 0;
+	bgmRdPtr = 0;
+	bgmWrPtr = 0;
+	bgmInSema = bgmOutSema = -1;
+	bgmPlayThreadID = bgmIoThreadID = -1;
+	sema.max_count = BGM_RING_BUFFER_COUNT;
+	sema.init_count = BGM_RING_BUFFER_COUNT;
+	sema.attr = 0;
+	sema.option = 0;
+	bgmInSema = CreateSema(&sema);
+	if (bgmInSema < 0)
+		goto fail;
+	sema.max_count = BGM_RING_BUFFER_COUNT;
+	sema.init_count = 0;
+	sema.attr = 0;
+	sema.option = 0;
+	bgmOutSema = CreateSema(&sema);
+	if (bgmOutSema < 0)
+		goto fail;
+	thread.stack_size = BGM_THREAD_STACK_SIZE;
+	thread.gp_reg = &_gp;
+	thread.attr = 0;
+	thread.option = 0;
+	thread.func = &bgmPlayThread;
+	thread.stack = bgmPlayStack;
+	thread.initial_priority = 0x1E;
+	bgmPlayThreadID = CreateThread(&thread);
+	if (bgmPlayThreadID < 0)
+		goto fail;
+	thread.func = &bgmIoThread;
+	thread.stack = bgmIoStack;
+	thread.initial_priority = 0x1F;
+	bgmIoThreadID = CreateThread(&thread);
+	if (bgmIoThreadID < 0)
+		goto fail;
+
 	fmt.freq = vi->rate;
 	fmt.bits = 16;
 	fmt.channels = vi->channels;
@@ -281,35 +439,10 @@ void dashBgmStart(void)
 		dashToast(DASH_TOAST_WARN, "BGM skipped: use 44100 or 48000 Hz");
 		goto fail;
 	}
-	bgm_active = 1;
+	bgmPlaying = 1;
+	StartThread(bgmIoThreadID, NULL);
+	StartThread(bgmPlayThreadID, NULL);
 	return;
 fail:
 	bgmClose();
-}
-
-void dashBgmPump(void)
-{
-	char pcm[2048];
-	int n, sec = 0, fed = 0;
-
-	if (!bgm_active || !sound_ready || !dashCfg.sound)
-		return;
-	/* audsrv's ring buffer is only ~10-20 KB; feed a little each frame
-	 * (at most 2 chunks) so we never block and never outrun the buffer */
-	while (fed < 2 && audsrv_available() >= (int)sizeof(pcm)) {
-		n = ov_read(&bgm_vf, pcm, sizeof(pcm), 0, 2, 1, &sec);
-		if (n <= 0) {
-			if (ov_pcm_seek(&bgm_vf, 0) != 0) {
-				bgm_active = 0;
-				return;
-			}
-			n = ov_read(&bgm_vf, pcm, sizeof(pcm), 0, 2, 1, &sec);
-			if (n <= 0) {
-				bgm_active = 0;
-				return;
-			}
-		}
-		audsrv_play_audio(pcm, n);
-		fed++;
-	}
 }

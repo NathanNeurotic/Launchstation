@@ -541,7 +541,6 @@ void dashRenderScene(void)
 {
 	float e;
 
-	dashBgmPump();
 	dashArtBeginFrame();
 	dashGfxBeginFrame();
 	dashBgDraw();
