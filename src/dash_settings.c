@@ -414,19 +414,19 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			*cur = setting->reboot_iop_elf_load ? 1 : 0;
 			return 2;
 		case S_DEVA_USB:
-			*cur = (dashCfg.dev_auto & DASH_DEVA_USB) ? 1 : 0;
+			*cur = (dashCfg.dev_auto & DASH_DEVA_USB) || dashBootDeviceBit() == DASH_DEVA_USB ? 1 : 0;
 			return 2;
 		case S_DEVA_HDD:
-			*cur = (dashCfg.dev_auto & DASH_DEVA_HDD) ? 1 : 0;
+			*cur = (dashCfg.dev_auto & DASH_DEVA_HDD) || dashBootDeviceBit() == DASH_DEVA_HDD ? 1 : 0;
 			return 2;
 		case S_DEVA_ATA:
-			*cur = (dashCfg.dev_auto & DASH_DEVA_ATA) ? 1 : 0;
+			*cur = (dashCfg.dev_auto & DASH_DEVA_ATA) || dashBootDeviceBit() == DASH_DEVA_ATA ? 1 : 0;
 			return 2;
 		case S_DEVA_MMCE:
-			*cur = (dashCfg.dev_auto & DASH_DEVA_MMCE) ? 1 : 0;
+			*cur = (dashCfg.dev_auto & DASH_DEVA_MMCE) || dashBootDeviceBit() == DASH_DEVA_MMCE ? 1 : 0;
 			return 2;
 		case S_DEVA_MX4SIO:
-			*cur = (dashCfg.dev_auto & DASH_DEVA_MX4SIO) ? 1 : 0;
+			*cur = (dashCfg.dev_auto & DASH_DEVA_MX4SIO) || dashBootDeviceBit() == DASH_DEVA_MX4SIO ? 1 : 0;
 			return 2;
 		case S_DEVA_UDPFS:
 			*cur = (dashCfg.dev_auto & DASH_DEVA_UDPFS) ? 1 : 0;
@@ -859,7 +859,8 @@ static void setChoice(int id, int v)
 			                (id == S_DEVA_ATA) ? DASH_DEVA_ATA :
 			                (id == S_DEVA_MMCE) ? DASH_DEVA_MMCE :
 			                (id == S_DEVA_MX4SIO) ? DASH_DEVA_MX4SIO : DASH_DEVA_UDPFS;
-			if (v)
+			/* the boot device is always started: its driver is already running */
+			if (v || dashBootDeviceBit() == bit)
 				dashCfg.dev_auto |= bit;
 			else
 				dashCfg.dev_auto &= ~bit;

@@ -318,6 +318,26 @@ void dashDevicesAutoProbe(void)
 		probeMount("udpfs:");
 #endif
 }
+
+/* The DASH_DEVA_* bit of the device the ELF was launched from, 0 when it
+ * has no toggle (memory cards, host) or cannot be determined. The boot
+ * device is always available: its driver is already running. */
+int dashBootDeviceBit(void)
+{
+	const char *p = LaunchElfDir;
+
+	if (!strncmp(p, "mass", 4) || !strncmp(p, "usb", 3))
+		return DASH_DEVA_USB;
+	if (!strncmp(p, "hdd", 3))
+		return DASH_DEVA_HDD;
+	if (!strncmp(p, "ata", 3))
+		return DASH_DEVA_ATA;
+	if (!strncmp(p, "mmce", 4))
+		return DASH_DEVA_MMCE;
+	if (!strncmp(p, "mx4sio", 6))
+		return DASH_DEVA_MX4SIO;
+	return 0;
+}
 //--------------------------------------------------------------
 //End of file: dash_devices.c
 //--------------------------------------------------------------

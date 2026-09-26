@@ -230,7 +230,7 @@ void dashStoreDefaults(void)
 	dashCfg.sound = 1;
 	dashCfg.sound_vol = 80;
 	dashCfg.app_filter = 0;
-	dashCfg.dev_auto = DASH_DEVA_ALL;
+	dashCfg.dev_auto = 0; /* devices start manually; only the boot device is always on */
 	for (i = 0; i < (int)(sizeof(default_scan) / sizeof(default_scan[0])); i++)
 		dashStrCopy(dashCfg.scan[dashCfg.nscan++], default_scan[i], DASH_PATH_MAX);
 }
@@ -278,7 +278,7 @@ static int settingsKv(const char *key, char *value, void *user)
 	else if (!stricmp(key, "Dash_AppFilter"))
 		dashCfg.app_filter = clampInt(value, 0, 5, 0);
 	else if (!stricmp(key, "Dash_DevAuto"))
-		dashCfg.dev_auto = clampInt(value, 0, DASH_DEVA_ALL, DASH_DEVA_ALL);
+		dashCfg.dev_auto = clampInt(value, 0, DASH_DEVA_ALL, 0);
 	else if (dashThemeStoreKey(key, value))
 		;
 	else if (!stricmp(key, "Dash_Scan")) {

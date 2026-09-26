@@ -139,9 +139,11 @@ Settings > Devices has an *Auto-start* switch per device family (USB
 storage, internal HDD, exFAT HDD, MMCE SD, MX4SIO, UDPFS network): ON
 loads that device's drivers when the dashboard starts, so the device is
 ready immediately and its applications are found by the startup scan
-(`Dash_DevAuto` bitmask, all on by default). OFF never loads the driver
+(`Dash_DevAuto` bitmask, all off by default). OFF never loads the driver
 by itself — the DEVICES screen can still start it manually, and drivers
-already loaded stay loaded until the next IOP reboot.
+already loaded stay loaded until the next IOP reboot. The device the ELF
+booted from is always on (its driver is already running) and cannot be
+switched off.
 
 On APPS, the *Show* choice (Triangle menu) filters the list — All,
 **Favorites**, Memory Cards, USB, HDD, Other devices — and the choice is
