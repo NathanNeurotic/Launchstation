@@ -258,8 +258,9 @@ targets:
       - src/dash_settings.c
       - src/dash_theme.c
       - src/dash_themes.c
+      - src/dash_sound.c
       - src/embed_blobs.S
-    include_dirs: [include, ., ee_libs/hdd/include]
+    include_dirs: [include, ., ee_libs/hdd/include, ee_libs/audsrv/include]
     defines:
       - WLE_PS2BUILD
       - NEWLIB_PORT_AWARE
@@ -280,6 +281,8 @@ targets:
       - "-Wa,-I.."
     ldflags:
       - "-Wl,--no-warn-mismatch"
+      - "-L../ee_libs/audsrv/lib"
+      - "-laudsrv"
     headers: [sior]
     libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, mc, kbd, m, cdvd, filexio, patches, poweroff, debug, secr, pad]
     embed_irx:

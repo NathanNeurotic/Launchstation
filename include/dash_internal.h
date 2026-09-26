@@ -487,6 +487,8 @@ typedef struct
 	int recent_count;
 	int legacy_theme;
 	int intro_done;
+	int sound;
+	int sound_vol;
 	int nscan;
 	char scan[DASH_MAX_SCAN][DASH_PATH_MAX];
 } DashSettings;

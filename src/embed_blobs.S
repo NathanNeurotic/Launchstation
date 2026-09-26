@@ -69,3 +69,20 @@ EMBED_FILE(exploit_ioprp_img, "exploits/IOPRP_LTS.IMG")
 EMBED_FILE(udpfs_smap_irx, "iop/__precompiled/udpfs_smap.irx")
 EMBED_FILE(udpfs_ministack_irx, "iop/__precompiled/udpfs_ministack.irx")
 EMBED_FILE(udpfs_ioman_irx, "iop/__precompiled/udpfs_ioman.irx")
+
+/* Dashboard UI sounds (Sony ADP, played via audsrv). */
+EMBED_FILE(sfx_cursor_adp, "res/sfx/cursor.adp")
+EMBED_FILE(sfx_confirm_adp, "res/sfx/confirm.adp")
+EMBED_FILE(sfx_cancel_adp, "res/sfx/cancel.adp")
+EMBED_FILE(sfx_transition_adp, "res/sfx/transition.adp")
+EMBED_FILE(sfx_message_adp, "res/sfx/message.adp")
+EMBED_FILE(sfx_boot_adp, "res/sfx/boot.adp")
+EMBED_FILE(sfx_connect_adp, "res/sfx/bd_connect.adp")
+EMBED_FILE(sfx_disconnect_adp, "res/sfx/bd_disconnect.adp")
+
+/* audsrv audio server IRX. ps2build's embed_irx only resolves core-tier
+ * SDK packages in this version, and the legacy Makefile looks in PS2SDK
+ * layouts that lack it, so the module is vendored next to the other
+ * precompiled drivers and pulled in here (same symbols as embed.make's
+ * bin2s rule: audsrv_irx / size_audsrv_irx). */
+EMBED_FILE(audsrv_irx, "iop/__precompiled/audsrv.irx")

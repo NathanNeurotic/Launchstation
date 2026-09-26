@@ -14,6 +14,7 @@
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "config_private.h"
+#include "dash_sound.h"
 
 void dashLegacyBegin(void);
 void dashLegacyEnd(void);
@@ -34,6 +35,8 @@ enum SetId {
 	S_LEGACY_THEME,
 	/* dashboard */
 	S_ENABLED,
+	S_SOUND,
+	S_SVOL,
 	S_START,
 	S_VIEW,
 	S_ARTWORK,
@@ -142,6 +145,8 @@ static const SetItem display_items[] = {
 
 static const SetItem dash_items[] = {
     {ST_CHOICE, S_ENABLED, "Start in the dashboard", "Off: boot into the classic launch-key menu instead."},
+    {ST_CHOICE, S_SOUND, "Interface sounds", "Cursor moves, confirmations and other dashboard sound effects."},
+    {ST_CHOICE, S_SVOL, "Sound volume", NULL},
     {ST_CHOICE, S_START, "Start screen", "Section shown when the dashboard opens."},
     {ST_CHOICE, S_VIEW, "Application view", "Grid, list or carousel (SELECT also switches it in APPS)."},
     {ST_CHOICE, S_ARTWORK, "Artwork", "Load cover art (OPL ART folder, <ELF>_COV.png, cover.png...)."},
@@ -347,6 +352,12 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_ENABLED:
 			*cur = dashCfg.enabled;
 			return 2;
+		case S_SOUND:
+			*cur = dashCfg.sound;
+			return 2;
+		case S_SVOL:
+			*names = pct_names, *cur = dashCfg.sound_vol / 10;
+			return 11;
 		case S_START: {
 			static const char *secs[DASH_SEC_COUNT];
 			int i;
@@ -798,6 +809,14 @@ static void setChoice(int id, int v)
 			break;
 		case S_ENABLED:
 			dashCfg.enabled = v;
+			break;
+		case S_SOUND:
+			dashCfg.sound = v;
+			if (v)
+				dashSoundInit();
+			break;
+		case S_SVOL:
+			dashCfg.sound_vol = v * 10;
 			break;
 		case S_START:
 			dashCfg.start_section = v;

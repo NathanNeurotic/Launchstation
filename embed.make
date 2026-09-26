@@ -596,6 +596,41 @@ $(EE_ASM_DIR)ioptrap_irx.s: $(PS2SDK)/iop/irx/ioptrap.irx | $(EE_ASM_DIR)
 $(EE_ASM_DIR)poweroff_irx.s: $(PS2SDK)/iop/irx/poweroff.irx | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ poweroff_irx
 
+$(EE_ASM_DIR)sfx_cursor_adp.s: res/sfx/cursor.adp | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ sfx_cursor_adp
+
+$(EE_ASM_DIR)sfx_confirm_adp.s: res/sfx/confirm.adp | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ sfx_confirm_adp
+
+$(EE_ASM_DIR)sfx_cancel_adp.s: res/sfx/cancel.adp | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ sfx_cancel_adp
+
+$(EE_ASM_DIR)sfx_transition_adp.s: res/sfx/transition.adp | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ sfx_transition_adp
+
+$(EE_ASM_DIR)sfx_message_adp.s: res/sfx/message.adp | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ sfx_message_adp
+
+$(EE_ASM_DIR)sfx_boot_adp.s: res/sfx/boot.adp | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ sfx_boot_adp
+
+$(EE_ASM_DIR)sfx_connect_adp.s: res/sfx/bd_connect.adp | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ sfx_connect_adp
+
+$(EE_ASM_DIR)sfx_disconnect_adp.s: res/sfx/bd_disconnect.adp | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ sfx_disconnect_adp
+
+AUDSRV_SOURCE := iop/__precompiled/audsrv.irx
+ifneq ($(wildcard $(PS2SDK)/iop/irx/audsrv.irx),)
+  AUDSRV_SOURCE := $(PS2SDK)/iop/irx/audsrv.irx
+endif
+ifneq ($(wildcard $(AUDSRV_SOURCE)),)
+  $(error Missing audsrv.irx. Restore iop/__precompiled/audsrv.irx or update the ps2dev packages)
+endif
+
+$(EE_ASM_DIR)audsrv_irx.s: $(AUDSRV_SOURCE) | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ audsrv_irx
+
 $(EE_ASM_DIR)iomanx_irx.s: $(IOMANX_SOURCE) | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ iomanx_irx
 
