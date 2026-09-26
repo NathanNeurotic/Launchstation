@@ -48,6 +48,9 @@ jobs:
           fi
           ls -lh artifacts/
 
+      - name: Show artifact hashes
+        run: sha256sum artifacts/*
+
       - name: Upload ELF artifacts
         uses: actions/upload-artifact@v4
         continue-on-error: true
