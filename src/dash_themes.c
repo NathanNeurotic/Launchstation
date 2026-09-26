@@ -161,6 +161,7 @@ enum {
 	P_CRT,
 	P_PSX,
 	P_CRYSTAL,
+	P_LIGHTSHOW,
 	P_COUNT
 };
 
@@ -183,7 +184,8 @@ static const DashThemePresetInfo presets[P_COUNT] = {
     {"mono", "Monochrome", "Black, white and grey. Colour only marks the selection."},
     {"crt", "CRT", "Dark gradient with an understated scanline overlay."},
     {"psx", "PSX", "Charcoal and silver ribbons."},
-    {"crystal", "Crystal", "The previous dashboard look: towers, stars and glow."}};
+    {"crystal", "Crystal", "The previous dashboard look: towers, stars and glow."},
+    {"lightshow", "Light Show", "Light pillars sweeping across an indigo night."}};
 
 static void base(DashTheme *t)
 {
@@ -437,6 +439,14 @@ void dashThemeLoadPreset(int i, DashTheme *t)
 			t->app_icon_style = DASH_APPICON_MONOGRAM;
 			t->clock = DASH_CLOCK_STANDARD;
 			t->clock_seconds = 0;
+			break;
+		case P_LIGHTSHOW:
+			t->bg = DASH_BG_STREAKS;
+			t->bg1 = DC(96, 140, 255, 255);  /* streak colour */
+			t->bg2 = DC(4, 4, 14, 255);      /* night base */
+			t->select = DC(40, 80, 170, 160);
+			t->sel_text = t->text;
+			t->highlight = DASH_HL_BAR;
 			break;
 	}
 }
