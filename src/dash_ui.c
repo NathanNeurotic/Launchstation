@@ -127,23 +127,21 @@ static float drawButton(float x, float y, int icon, const char *key)
 	const float d = 22.0f;
 
 	if (icon >= 0) {
-		/* pad buttons stay round in every theme */
-		int keep = dashTheme.corner;
-		dashTheme.corner = DASH_CORNER_ROUND;
-		dashPanelGradV(x, y, d, d, d * 0.5f, DC(28, 34, 52, 230), DC(12, 14, 24, 230));
-		dashPanelBorder(x, y, d, d, d * 0.5f, DC(255, 255, 255, 60));
-		dashTheme.corner = keep;
-		dashIcon(icon, x + 4.5f, y + 4.5f, d - 9.0f, buttonColor(icon));
+		dashIcon(icon, x, y, d, buttonColor(icon));
 		return d;
-	} else {
+	}
+	{
 		float tw = dashTextWidth(key, DASH_FS_CAPTION);
-		float w = tw + 16.0f;
-		if (w < 26.0f)
-			w = 26.0f;
-		/* Crisp, console-grade pill badge for START / SELECT / L1 / R1 */
-		dashPanelGradV(x, y, w, d, 4.5f, DC(34, 42, 64, 240), DC(16, 20, 32, 240));
-		dashPanelBorder(x, y, w, d, 4.5f, DC(255, 255, 255, 75));
-		dashRect(x + 2.0f, y + 1.0f, w - 4.0f, 1.0f, DC(255, 255, 255, 45));
+		float w = tw + 14.0f;
+		int keep;
+		if (w < d)
+			w = d;
+		/* OSDSYS squircle badge for L1/R1/START/SELECT-style labels */
+		keep = dashTheme.corner;
+		dashTheme.corner = DASH_CORNER_SOFT;
+		dashPanelGradV(x, y, w, d, 6.0f, DC(30, 36, 54, 235), DC(13, 16, 26, 235));
+		dashPanelBorder(x, y, w, d, 6.0f, DC(255, 255, 255, 60));
+		dashTheme.corner = keep;
 		dashTextS(x + (w - tw) * 0.5f, y + 5.0f, key, DASH_FS_CAPTION, DASH_C_TEXT);
 		return w;
 	}
