@@ -285,9 +285,9 @@ void dashDrawHeader(int section, float section_anim)
 	dashIcon(DI_APP, 38, 23, 26, DASH_C_ACCENT);
 
 	/* tab strip */
-	dashDrawPanelBox(tab_x0 - 30, tab_y - 2, tab_w * DASH_SEC_COUNT + 60, 44, 14);
+	dashDrawPanelBox(tab_x0 - 40, tab_y - 2, tab_w * DASH_SEC_COUNT + 80, 44, 14);
 	if (!DASH_C_BORDER.a && dashTheme.glow)
-		dashPanelBorder(tab_x0 - 30, tab_y - 2, tab_w * DASH_SEC_COUNT + 60, 44, 14, DC(255, 255, 255, 18));
+		dashPanelBorder(tab_x0 - 40, tab_y - 2, tab_w * DASH_SEC_COUNT + 80, 44, 14, DC(255, 255, 255, 18));
 	dashAccentGlow(tab_anim_x + tab_w * 0.5f, tab_y + 20, tab_w * 0.75f, 26, 1.2f);
 	if (dashTheme.highlight != DASH_HL_TEXT)
 		dashPanel(tab_anim_x + 3, tab_y + 1, tab_w - 6, 38, 11, dashColorA(DASH_C_SELECT, 0.65f));
@@ -302,8 +302,15 @@ void dashDrawHeader(int section, float section_anim)
 		dashTextCenter(cx, tab_y + 20, dashSectionName(i), DASH_FS_CAPTION * 0.92f, c);
 	}
 	/* L1/R1 key pills at the strip ends */
-	drawButton(tab_x0 - 26, tab_y + 9, -1, "L1");
-	drawButton(tab_x0 + tab_w * DASH_SEC_COUNT + 2, tab_y + 9, -1, "R1");
+	{
+		/* measured, so they stay inside the strip at any text size / font */
+		float strip_l = tab_x0 - 40, strip_r = tab_x0 + tab_w * DASH_SEC_COUNT + 40;
+		float rw = dashTextWidth("R1", DASH_FS_CAPTION) + 16.0f;
+		if (rw < 26.0f)
+			rw = 26.0f;
+		drawButton(strip_l + 4, tab_y + 9, -1, "L1");
+		drawButton(strip_r - 4 - rw, tab_y + 9, -1, "R1");
+	}
 
 	dashDrawClock();
 }
