@@ -670,11 +670,11 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 
 int dashModalChoice(const char *title, const char *const *options, int n, int current)
 {
-	DashMenuItem items[16];
+	DashMenuItem items[24];
 	int i;
 
-	if (n > 16)
-		n = 16;
+	if (n > 24)
+		n = 24;
 	for (i = 0; i < n; i++) {
 		items[i].icon = (i == current) ? DI_CHECK : -1;
 		items[i].label = options[i];

@@ -267,6 +267,7 @@ void dashThemeSetFocusApp(void *app);
 void *dashThemeFocusApp(void);
 /* derived shape helpers */
 float dashThemeRadius(float r);
+void dashThemeBaseColors(const DashTheme *t, DashColor *top, DashColor *bottom);
 DashColor dashColorMix(DashColor a, DashColor b, float t); /* keeps a's alpha */
 DashColor dashColorLighten(DashColor c, float t);
 DashColor dashColorScale(DashColor c, float k);

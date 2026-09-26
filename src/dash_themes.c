@@ -71,6 +71,29 @@ static int luma(DashColor c)
 	return (c.r * 77 + c.g * 150 + c.b * 29) >> 8;
 }
 
+/* What the screen behind the menus mostly looks like, top and bottom. For
+ * scenes, bg1 is only a tint (tower walls, clock rods, lights...) and bg2
+ * is the base that fills most of the screen. */
+void dashThemeBaseColors(const DashTheme *t, DashColor *top, DashColor *bottom)
+{
+	switch (t->bg) {
+		case DASH_BG_SOLID:
+			*top = *bottom = t->bg1;
+			break;
+		case DASH_BG_GRADIENT:
+		case DASH_BG_CRYSTAL:
+		case DASH_BG_IMAGE:
+			*top = t->bg1;
+			*bottom = t->bg2;
+			break;
+		default:
+			*top = dashColorLerp(t->bg2, t->bg1, 0.18f);
+			*bottom = t->bg2;
+			break;
+	}
+	top->a = bottom->a = 255;
+}
+
 float dashThemeRadius(float r)
 {
 	switch (dashTheme.corner) {
@@ -512,8 +535,12 @@ void dashThemeValidate(DashTheme *t)
 		strcpy(t->name, "Custom");
 
 	/* Contrast guard: judge against the panel when panels are mostly
-	 * opaque, otherwise against the background's darker/brighter mean. */
-	ref = dashColorLerp(t->bg1, t->bg2, 0.5f);
+	 * opaque, otherwise against the average of the visible background. */
+	{
+		DashColor top, bot;
+		dashThemeBaseColors(t, &top, &bot);
+		ref = dashColorLerp(top, bot, 0.5f);
+	}
 	ref = dashColorScale(ref, t->bg_bright / 100.0f);
 	if (t->panel.a > 150)
 		ref = dashColorLerp(ref, t->panel, t->panel.a / 255.0f);

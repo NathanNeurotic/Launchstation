@@ -44,17 +44,22 @@ static void gradColor(float t, int *r, int *g, int *b)
 {
 	u64 bg = setting->color[COLOR_BACKGR];
 	int br = (int)(bg & 0xFF), bgc = (int)((bg >> 8) & 0xFF), bb = (int)((bg >> 16) & 0xFF);
-	DashColor top = dashColorScale(dashTheme.bg1, 0.42f * dashTheme.bg_bright / 100.0f);
-	DashColor bot = dashColorScale(dashTheme.bg2, dashTheme.bg_bright / 100.0f);
-	DashColor c;
+	DashColor top, bot, c;
+	float k = dashTheme.bg_bright / 100.0f;
 
 	if (t < 0.0f)
 		t = 0.0f;
 	if (t > 1.0f)
 		t = 1.0f;
-	/* single-colour themes keep a hint of depth */
+	dashThemeBaseColors(&dashTheme, &top, &bot);
 	if (dashTheme.bg == DASH_BG_SOLID)
-		top = dashColorLighten(dashTheme.bg1, 0.03f), bot = dashTheme.bg1;
+		/* single-colour themes keep a hint of depth */
+		top = dashColorLighten(top, 0.03f);
+	else
+		/* the upper colour only as a glow, like the dashboard's scenes */
+		top = dashColorLerp(bot, top, 0.6f);
+	top = dashColorScale(top, k);
+	bot = dashColorScale(bot, k);
 	c = dashColorLerp(top, bot, t * t);
 	*r = (c.r + br) > 255 ? 255 : c.r + br;
 	*g = (c.g + bgc) > 255 ? 255 : c.g + bgc;
