@@ -635,9 +635,9 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	mainActionLaunchHook = dashLaunchHook;
 	dashSoundInit();
 	dashBgmStart();
-	if (from_boot)
-		dashSoundPlay(DASH_SND_BOOT);
 
+	/* Startup is intentionally silent apart from BGM. Device connect/disconnect
+	 * sounds are reserved for genuine hotplug events after boot has settled. */
 	section_anim = 1.0f;
 	fade_in = 0.0f;
 	if (screens[section]->enter)
