@@ -62,6 +62,11 @@ static void homeAdd(const char *path, int badge)
 {
 	if (nhome >= HOME_MAX_APPS || path[0] == '\0' || homeHas(path))
 		return;
+	/* Pins, recents and favorites can outlive the device they came from.
+	 * Keep the shortcut stored, but do not expose it until that device is
+	 * actually mounted again. */
+	if (!dashDevicePathReady(path))
+		return;
 	home_apps[nhome] = dashLibResolve(path, &home_tmp[nhome]);
 	home_badge[nhome] = (u8)badge;
 	nhome++;
