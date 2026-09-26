@@ -938,40 +938,65 @@ int dashThemeStoreWrite(char *buf, int cap)
 //--------------------------------------------------------------
 // Theme folders
 //--------------------------------------------------------------
-static int themesRoot(char *out, int size)
+static int isWritablePath(const char *path)
 {
-	const char *dir = dashStoreDir();
+	return (!strncmp(path, "mc", 2) || !strncmp(path, "mass", 4) || !strncmp(path, "usb", 3) ||
+	        !strncmp(path, "hdd", 3) || !strncmp(path, "mmce", 4) || !strncmp(path, "mx4sio", 6) ||
+	        !strncmp(path, "ata", 3));
+}
 
-	if (dir == NULL || dir[0] == '\0')
-		return -1;
-	if (snprintf(out, size, "%sTHEMES/", dir) >= size)
-		return -1;
-	/* never load a driver just to look at themes */
-	return isPathDeviceStackLoaded(out) ? 0 : -1;
+/* Ordered candidate roots for theme folders: the ELF's own folder first
+ * (so themes ride along with the ELF on any device), then the dashboard
+ * folder. A root is only offered when its device stack is already loaded;
+ * looking at themes never starts a driver. */
+static int themeRoots(char roots[2][MAX_PATH])
+{
+	int n = 0;
+	const char *store = dashStoreDir();
+
+	if (LaunchElfDir[0] && isWritablePath(LaunchElfDir) && isPathDeviceStackLoaded(LaunchElfDir))
+		dashStrCopy(roots[n++], LaunchElfDir, MAX_PATH);
+	if (store != NULL && store[0]) {
+		char root[MAX_PATH];
+
+		if (snprintf(root, sizeof(root), "%sTHEMES/", store) < (int)sizeof(root) &&
+		    (n == 0 || strcmp(roots[0], root) != 0))
+			dashStrCopy(roots[n++], root, MAX_PATH);
+	}
+	return n;
 }
 
 int dashThemeFolderList(char names[][DASH_THEME_NAME_MAX], int max)
 {
-	char root[MAX_PATH];
+	char roots[2][MAX_PATH];
 	FILEINFO *files;
-	int n, i, count = 0;
+	int nr, ri, n, i, count = 0;
 
-	if (themesRoot(root, sizeof(root)) < 0)
+	nr = themeRoots(roots);
+	if (nr <= 0)
 		return 0;
 	files = (FILEINFO *)malloc(sizeof(FILEINFO) * MAX_ENTRY);
 	if (files == NULL)
 		return 0;
-	filerRootMcPollIdle();
-	n = getDir(root, files);
-	for (i = 0; i < n && i < MAX_ENTRY - 2 && count < max; i++) {
-		FILEINFO *f = &files[i];
-		if (f->name[0] == '\0' || f->name[0] == '.')
-			continue;
-		if (!(f->stats.AttrFile & sceMcFileAttrSubdir))
-			continue;
-		if (strlen(f->name) >= DASH_THEME_NAME_MAX)
-			continue;
-		dashStrCopy(names[count++], f->name, DASH_THEME_NAME_MAX);
+	for (ri = 0; ri < nr; ri++) {
+		filerRootMcPollIdle();
+		n = getDir(roots[ri], files);
+		for (i = 0; i < n && i < MAX_ENTRY - 2 && count < max; i++) {
+			FILEINFO *f = &files[i];
+			int j, dup = 0;
+
+			if (f->name[0] == '\0' || f->name[0] == '.')
+				continue;
+			if (!(f->stats.AttrFile & sceMcFileAttrSubdir))
+				continue;
+			if (strlen(f->name) >= DASH_THEME_NAME_MAX)
+				continue;
+			for (j = 0; j < count; j++)
+				if (!stricmp(names[j], f->name))
+					dup = 1;
+			if (!dup)
+				dashStrCopy(names[count++], f->name, DASH_THEME_NAME_MAX);
+		}
 	}
 	free(files);
 	return count;
@@ -1006,61 +1031,60 @@ static int folderKv(const char *key, char *value, void *user)
 
 int dashThemeFolderLoad(const char *folder)
 {
-	char root[MAX_PATH], dir[MAX_PATH], path[MAX_PATH];
+	char roots[2][MAX_PATH], dir[MAX_PATH], path[MAX_PATH];
 	char *text;
-	int len;
+	int nr, ri, len;
 	DashTheme t;
 	FolderCtx ctx;
 
-	if (themesRoot(root, sizeof(root)) < 0)
-		return -1;
-	if (snprintf(dir, sizeof(dir), "%s%s/", root, folder) >= DASH_PATH_MAX - 32)
-		return -1;
-	if (snprintf(path, sizeof(path), "%stheme.cfg", dir) >= (int)sizeof(path))
-		return -1;
-	filerRootMcPollIdle();
-	text = dashLoadTextFile(path, 16 * 1024, &len);
-	if (text == NULL)
-		return -1;
-	/* start from the default so a sparse theme.cfg still makes sense */
-	dashThemeLoadPreset(P_OSD, &t);
-	t.name[0] = '\0';
-	ctx.t = &t;
-	ctx.folder_path = dir;
-	dashKvParse(text, folderKv, &ctx);
-	free(text);
-	if (t.name[0] == '\0')
-		dashStrCopy(t.name, folder, sizeof(t.name));
-	resolveInFolder(t.image, sizeof(t.image), dir);
-	resolveInFolder(t.app_icon, sizeof(t.app_icon), dir);
-	/* an image background without an image falls back to the gradient */
-	if (t.bg == DASH_BG_IMAGE && t.image[0] == '\0')
-		t.bg = DASH_BG_GRADIENT;
-	dashTheme = t;
-	dashThemeCommit();
-	return 0;
+	nr = themeRoots(roots);
+	for (ri = 0; ri < nr; ri++) {
+		if (snprintf(dir, sizeof(dir), "%s%s/", roots[ri], folder) >= DASH_PATH_MAX - 32)
+			continue;
+		if (snprintf(path, sizeof(path), "%stheme.cfg", dir) >= (int)sizeof(path))
+			continue;
+		filerRootMcPollIdle();
+		text = dashLoadTextFile(path, 16 * 1024, &len);
+		if (text == NULL)
+			continue; /* not in this root: try the next */
+		/* start from the default so a sparse theme.cfg still makes sense */
+		dashThemeLoadPreset(P_OSD, &t);
+		t.name[0] = '\0';
+		ctx.t = &t;
+		ctx.folder_path = dir;
+		dashKvParse(text, folderKv, &ctx);
+		free(text);
+		if (t.name[0] == '\0')
+			dashStrCopy(t.name, folder, sizeof(t.name));
+		resolveInFolder(t.image, sizeof(t.image), dir);
+		resolveInFolder(t.app_icon, sizeof(t.app_icon), dir);
+		/* an image background without an image falls back to the gradient */
+		if (t.bg == DASH_BG_IMAGE && t.image[0] == '\0')
+			t.bg = DASH_BG_GRADIENT;
+		dashTheme = t;
+		dashThemeCommit();
+		return 0;
+	}
+	return -1;
 }
 
 int dashThemeFolderExport(const char *folder)
 {
-	char root[MAX_PATH], dir[MAX_PATH], fixed[MAX_PATH], path[MAX_PATH];
+	char roots[2][MAX_PATH], dir[MAX_PATH], fixed[MAX_PATH], path[MAX_PATH];
 	char *buf;
-	int len, ret;
+	int nr, len, ret;
 	const int cap = 8192;
 
-	if (themesRoot(root, sizeof(root)) < 0) {
-		/* THEMES/ may not exist yet: check the dashboard folder instead */
-		if (dashStoreDir()[0] == '\0' || !isPathDeviceStackLoaded(dashStoreDir()))
-			return -1;
-		snprintf(root, sizeof(root), "%sTHEMES/", dashStoreDir());
-	}
+	nr = themeRoots(roots);
+	if (nr <= 0)
+		return -1;
 	filerRootMcPollIdle();
-	/* create THEMES/ and THEMES/<folder>/ (errors = already there) */
-	dashStrCopy(dir, root, sizeof(dir));
+	/* create THEMES/ and THEMES/<folder>/ under the first root (errors = already there) */
+	dashStrCopy(dir, roots[0], sizeof(dir));
 	dir[strlen(dir) - 1] = '\0';
 	if (genFixPath(dir, fixed) >= 0)
 		genMkdir(fixed, fileMode);
-	if (snprintf(dir, sizeof(dir), "%s%s", root, folder) >= DASH_PATH_MAX - 32)
+	if (snprintf(dir, sizeof(dir), "%s%s", roots[0], folder) >= DASH_PATH_MAX - 32)
 		return -1;
 	if (genFixPath(dir, fixed) >= 0)
 		genMkdir(fixed, fileMode);
