@@ -460,6 +460,73 @@ void dashBgSceneClockRing(float t, int fx)
 	dashGfxBlend(DASH_BLEND_NORMAL);
 	dashBgVignette(0.9f);
 }
+
+//--------------------------------------------------------------
+// Light streaks (the opening's light pillars)
+//--------------------------------------------------------------
+static void streak(float x, float yc, float len, float w, float tilt, DashColor c)
+{
+	float dx = dashSinf(tilt) * len * 0.5f, dy = dashCosf(tilt) * len * 0.5f;
+	float px = dashCosf(tilt) * w * 0.5f, py = -dashSinf(tilt) * w * 0.5f;
+
+	dashQuadG(x - dx - px, yc - dy - py, x - dx + px, yc - dy + py,
+	          x + dx - px, yc + dy - py, x + dx + px, yc + dy + py, c, c, c, c);
+}
+
+void dashBgSceneStreaks(float t, int fx)
+{
+	DashColor base = dashTheme.bg2, glow = dashTheme.bg1;
+	int i, n = (fx == DASH_FX_SUBTLE) ? 7 : 12;
+
+	dashRectGradV(0, 0, DASH_VW, DASH_VH, dashColorLighten(base, 0.06f), base);
+	dashGfxBlend(DASH_BLEND_ADD);
+	for (i = 0; i < n; i++) {
+		float sp = 26.0f + (i % 4) * 14.0f;              /* px/s horizontal drift */
+		float x = fmodf(t * sp + i * 173.0f, (float)(DASH_VW + 240)) - 120.0f;
+		float w = 3.0f + (i % 3) * 2.5f;
+		float len = 190.0f + 60.0f * dashBgHash(i, 7);
+		float yc = DASH_VH * 0.5f + (dashBgHash(i, 3) - 0.5f) * DASH_VH * 0.3f;
+		float tilt = 0.22f;
+		DashColor c = colA(glow, 24 + (i % 3) * 10);
+
+		streak(x, yc, len, w, tilt, c);
+		streak(x, yc, len, w * 0.45f, tilt, colA(dashColorLighten(glow, 0.5f), c.a + 14));
+	}
+	dashGfxBlend(DASH_BLEND_NORMAL);
+	dashBgVignette(0.75f);
+}
+
+//--------------------------------------------------------------
+// Drift clouds (the illegal-disc cloud field, theme-tinted)
+//--------------------------------------------------------------
+void dashBgSceneClouds(float t, int fx)
+{
+	int i, n = (fx == DASH_FX_SUBTLE) ? 5 : 9;
+
+	dashRectGradV(0, 0, DASH_VW, DASH_VH, dashColorLighten(dashTheme.bg2, 0.03f), dashTheme.bg2);
+	for (i = 0; i < n; i++) {
+		float depth = (i % 3) / 2.0f;                    /* 0 near .. 1 far */
+		float sp = 6.0f + 26.0f * depth;                 /* px/s */
+		float dir = (i & 1) ? 1.0f : -1.0f;
+		float span = (float)(DASH_VW + 360);
+		float x = fmodf(dir * t * sp + i * 211.0f, span);
+
+		if (dir < 0.0f)
+			x = span - x;
+		x -= 180.0f;
+		{
+			float y = DASH_VH * 0.2f + depth * DASH_VH * 0.6f + dashSinf(t * 0.05f + i * 1.7f) * 14.0f;
+			float rx = 150.0f + 90.0f * depth + 30.0f * dashBgHash(i, 11);
+			float ry = 44.0f + 26.0f * depth;
+			DashColor c = dashColorLerp(dashTheme.bg1, DC(255, 255, 255, 255), 0.25f + 0.2f * depth);
+
+			dashGfxBlend(DASH_BLEND_ADD);
+			dashGlow(x, y, rx, ry, colA(c, (int)(20 + 26 * (1.0f - depth))));
+			dashGfxBlend(DASH_BLEND_NORMAL);
+		}
+	}
+	dashBgVignette(0.8f);
+}
 //--------------------------------------------------------------
 //End of file: dash_bg_ps2.c
 //--------------------------------------------------------------

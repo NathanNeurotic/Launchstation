@@ -485,6 +485,12 @@ static void drawScene(int fx)
 		case DASH_BG_CRYSTAL:
 			sceneCrystal(fx);
 			break;
+		case DASH_BG_STREAKS:
+			dashBgSceneStreaks(t, fx);
+			break;
+		case DASH_BG_CLOUDS:
+			dashBgSceneClouds(t, fx);
+			break;
 		case DASH_BG_IMAGE:
 			sceneImage(t, fx);
 			break;

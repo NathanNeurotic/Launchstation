@@ -110,6 +110,8 @@ enum DashBgKind {
 	DASH_BG_BRUSHED,   /* brushed console finish */
 	DASH_BG_WAVE,      /* PSX-style ribbons */
 	DASH_BG_CRYSTAL,   /* the previous dashboard atmosphere */
+	DASH_BG_STREAKS,   /* light pillars sweeping across the screen */
+	DASH_BG_CLOUDS,    /* layered drifting fog */
 	DASH_BG_IMAGE,     /* wallpaper PNG from the theme */
 	DASH_BG_COUNT
 };
@@ -829,6 +831,8 @@ void dashBgSceneStream(float t, int fx);
 void dashBgSceneTiles(float t, int fx);
 void dashBgSceneBrushed(float t, int fx);
 void dashBgSceneWave(float t, int fx);
+void dashBgSceneStreaks(float t, int fx);
+void dashBgSceneClouds(float t, int fx);
 /* shared helpers */
 float dashBgHash(int a, int b); /* stable 0..1 */
 void dashBgVignette(float strength);

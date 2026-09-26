@@ -111,11 +111,12 @@ float dashThemeRadius(float r)
 //--------------------------------------------------------------
 static const char *const bg_ids[DASH_BG_COUNT] = {
     "solid", "gradient", "tunnel", "mist", "towers", "disc", "orbit", "clockring", "grid",
-    "lines", "cubes", "stream", "tiles", "brushed", "wave", "crystal", "image"};
+    "lines", "cubes", "stream", "tiles", "brushed", "wave", "crystal", "streaks", "clouds", "image"};
 static const char *const bg_names[DASH_BG_COUNT] = {
     "Solid colour", "Gradient", "System tunnel", "Blue mist", "PS2 towers", "Disc error red",
     "Orbit lights", "Clock ring", "Memory card grid", "Boot lines", "Wireframe cubes",
-    "Data stream", "Memory card tiles", "Brushed console", "Ribbons", "Crystal", "Wallpaper image"};
+    "Data stream", "Memory card tiles", "Brushed console", "Ribbons", "Crystal",
+    "Light streaks", "Drift clouds", "Wallpaper image"};
 static const char *const hl_ids[DASH_HL_COUNT] = {"fill", "bar", "outline", "text"};
 static const char *const corner_ids[DASH_CORNER_COUNT] = {"square", "soft", "round"};
 static const char *const font_ids[DASH_FONT_COUNT] = {"roboto", "system"};
