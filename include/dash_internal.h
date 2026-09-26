@@ -489,9 +489,20 @@ typedef struct
 	int intro_done;
 	int sound;
 	int sound_vol;
+	int app_filter;
+	int dev_auto; /* DASH_DEVA_* bitmask: drivers to load at startup */
 	int nscan;
 	char scan[DASH_MAX_SCAN][DASH_PATH_MAX];
 } DashSettings;
+
+/* per-device "auto-start at dashboard startup" bits (dev_auto) */
+#define DASH_DEVA_USB    (1 << 0)
+#define DASH_DEVA_HDD    (1 << 1)
+#define DASH_DEVA_ATA    (1 << 2) /* exFAT */
+#define DASH_DEVA_MMCE   (1 << 3)
+#define DASH_DEVA_MX4SIO (1 << 4)
+#define DASH_DEVA_UDPFS  (1 << 5)
+#define DASH_DEVA_ALL    0x3F
 
 extern DashSettings dashCfg;
 
@@ -648,6 +659,7 @@ typedef struct
 #define DASH_MAX_DEVICES 20
 void dashDevicesInit(void);
 void dashDevicesPoll(void);
+void dashDevicesAutoProbe(void);
 int dashDevicesList(DashDevice *out, int max);
 int dashDevicesProbe(const DashDevice *dev);
 const char *dashDiscStatus(void);

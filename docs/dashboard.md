@@ -131,7 +131,21 @@ Sony ADP samples embedded in the ELF (no files needed at runtime).
 Settings > Dashboard > *Interface sounds* turns them on or off and sets
 the volume (`Dash_Sound` / `Dash_SoundVolume` in DASHBOARD.CNF, on and
 80% by default). When the audio driver cannot start, everything stays
-silent — the dashboard works normally without sound.
+silent — the dashboard works normally without sound (a toast says why).
+
+## Devices and the applications filter
+
+Settings > Devices has an *Auto-start* switch per device family (USB
+storage, internal HDD, exFAT HDD, MMCE SD, MX4SIO, UDPFS network): ON
+loads that device's drivers when the dashboard starts, so the device is
+ready immediately and its applications are found by the startup scan
+(`Dash_DevAuto` bitmask, all on by default). OFF never loads the driver
+by itself — the DEVICES screen can still start it manually, and drivers
+already loaded stay loaded until the next IOP reboot.
+
+On APPS, the *Show* choice (Triangle menu) filters the list — All,
+**Favorites**, Memory Cards, USB, HDD, Other devices — and the choice is
+remembered across restarts (`Dash_AppFilter`).
 
 ## Optional PSBBN layers (Crystal background)
 

@@ -229,6 +229,8 @@ void dashStoreDefaults(void)
 	dashCfg.intro_done = 0;
 	dashCfg.sound = 1;
 	dashCfg.sound_vol = 80;
+	dashCfg.app_filter = 0;
+	dashCfg.dev_auto = DASH_DEVA_ALL;
 	for (i = 0; i < (int)(sizeof(default_scan) / sizeof(default_scan[0])); i++)
 		dashStrCopy(dashCfg.scan[dashCfg.nscan++], default_scan[i], DASH_PATH_MAX);
 }
@@ -273,6 +275,10 @@ static int settingsKv(const char *key, char *value, void *user)
 		dashCfg.sound = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_SoundVolume"))
 		dashCfg.sound_vol = clampInt(value, 0, 100, 80);
+	else if (!stricmp(key, "Dash_AppFilter"))
+		dashCfg.app_filter = clampInt(value, 0, 5, 0);
+	else if (!stricmp(key, "Dash_DevAuto"))
+		dashCfg.dev_auto = clampInt(value, 0, DASH_DEVA_ALL, DASH_DEVA_ALL);
 	else if (dashThemeStoreKey(key, value))
 		;
 	else if (!stricmp(key, "Dash_Scan")) {
@@ -372,10 +378,13 @@ int dashStoreSaveSettings(void)
 	                "Dash_LegacyTheme = %d\r\n"
 	                "Dash_IntroDone = %d\r\n"
 	                "Dash_Sound = %d\r\n"
-	                "Dash_SoundVolume = %d\r\n",
+	                "Dash_SoundVolume = %d\r\n"
+	                "Dash_AppFilter = %d\r\n"
+	                "Dash_DevAuto = %d\r\n",
 	                dashCfg.enabled, dashCfg.start_section, dashCfg.view, dashCfg.effects,
 	                dashCfg.anim, dashCfg.autoscan, dashCfg.artwork, dashCfg.recent_count,
-	                dashCfg.legacy_theme, dashCfg.intro_done, dashCfg.sound, dashCfg.sound_vol);
+	                dashCfg.legacy_theme, dashCfg.intro_done, dashCfg.sound, dashCfg.sound_vol,
+	                dashCfg.app_filter, dashCfg.dev_auto);
 	for (i = 0; i < dashCfg.nscan && len < cap - DASH_PATH_MAX - 16; i++)
 		len += snprintf(buf + len, cap - len, "Dash_Scan = %s\r\n", dashCfg.scan[i]);
 	/* theme: preset name, plus a full snapshot once customised */

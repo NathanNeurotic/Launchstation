@@ -61,24 +61,38 @@ static int blob_size(int id)
 
 int dashSoundInit(void)
 {
-	int i, r;
+	int i, r, failed;
 
 	if (sound_ready)
 		return 1;
 	if (!dashCfg.sound)
 		return 0;
-	if (SifExecModuleBuffer(audsrv_irx, size_audsrv_irx, 0, NULL, &r) < 0)
-		return 0;
-	if (audsrv_init() != 0)
-		return 0;
-	if (audsrv_adpcm_init() != 0) {
-		audsrv_quit();
+	if (SifExecModuleBuffer(audsrv_irx, size_audsrv_irx, 0, NULL, &r) < 0 || r < 0) {
+		dashToast(DASH_TOAST_WARN, "Sound unavailable: audsrv would not start");
 		return 0;
 	}
+	if (audsrv_init() != 0) {
+		dashToast(DASH_TOAST_WARN, "Sound unavailable: audsrv init failed");
+		return 0;
+	}
+	/* the driver does not set a usable master volume by itself */
+	audsrv_set_volume(dashCfg.sound_vol);
+	if (audsrv_adpcm_init() != 0) {
+		audsrv_quit();
+		dashToast(DASH_TOAST_WARN, "Sound unavailable: adpcm init failed");
+		return 0;
+	}
+	failed = 0;
 	for (i = 0; i < DASH_SND_COUNT; i++) {
 		samples[i].buffer = NULL;
-		if (audsrv_load_adpcm(&samples[i], blob_data(i), blob_size(i)) != 0)
+		if (audsrv_load_adpcm(&samples[i], blob_data(i), blob_size(i)) != 0) {
 			samples[i].buffer = NULL; /* sample stays silent */
+			failed++;
+		}
+	}
+	if (failed == DASH_SND_COUNT) {
+		dashToast(DASH_TOAST_WARN, "Sound unavailable: no samples loaded");
+		return 0;
 	}
 	sound_ready = 1;
 	return 1;
@@ -95,14 +109,21 @@ void dashSoundShutdown(void)
 void dashSoundPlay(int id)
 {
 	static int rr;
+	static int last_vol = -1;
 	int ch;
 
 	if (!sound_ready || !dashCfg.sound || id < 0 || id >= DASH_SND_COUNT)
 		return;
 	if (samples[id].buffer == NULL)
 		return;
-	ch = (id == DASH_SND_CURSOR) ? (rr++ & 1) : 2;
-	/* audsrv volume is a percentage 0..100 */
-	audsrv_adpcm_set_volume_and_pan(ch, dashCfg.sound_vol, 0);
+	if (dashCfg.sound_vol != last_vol) {
+		audsrv_set_volume(dashCfg.sound_vol);
+		last_vol = dashCfg.sound_vol;
+	}
+	/* cursor ping-pongs 0/1 so rapid ticks overlap; everything else lets
+	 * the driver pick a free voice so the boot jingle cannot starve beeps */
+	ch = (id == DASH_SND_CURSOR) ? (rr++ & 1) : -1;
+	if (ch >= 0)
+		audsrv_adpcm_set_volume_and_pan(ch, dashCfg.sound_vol, 0);
 	audsrv_ch_play_adpcm(ch, &samples[id]);
 }

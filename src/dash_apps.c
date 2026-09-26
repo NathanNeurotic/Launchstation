@@ -273,6 +273,8 @@ static void appsMenu(void)
 			int f = dashModalChoice("Show applications", filter_names, FILTER_COUNT, filter);
 			if (f >= 0) {
 				filter = f;
+				dashCfg.app_filter = f;
+				dashStoreSaveSettings();
 				dashAppsRebuildView();
 			}
 			break;
@@ -286,6 +288,9 @@ static void appsMenu(void)
 //--------------------------------------------------------------
 static void appsEnter(void)
 {
+	filter = dashCfg.app_filter;
+	if (filter < 0 || filter >= FILTER_COUNT)
+		filter = FILTER_ALL;
 	dashAppsRebuildView();
 	sel_anim = (float)sel;
 }
@@ -316,6 +321,8 @@ static void appsInput(const DashInput *in)
 			appsMenu();
 		else if ((in->pressed & DASH_IN_SELECT) && filter != FILTER_ALL) {
 			filter = FILTER_ALL;
+			dashCfg.app_filter = FILTER_ALL;
+			dashStoreSaveSettings();
 			dashAppsRebuildView();
 		}
 		return;

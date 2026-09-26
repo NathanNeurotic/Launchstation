@@ -226,9 +226,8 @@ int dashDevicesList(DashDevice *out, int max)
 	return n;
 }
 
-int dashDevicesProbe(const DashDevice *dev)
+static int probeMount(const char *m)
 {
-	const char *m = dev->mount;
 	int ok = 1;
 
 	filerRootMcPollIdle();
@@ -286,6 +285,38 @@ int dashDevicesProbe(const DashDevice *dev)
 		ok = loadDVRPHddModules();
 #endif
 	return ok;
+}
+
+int dashDevicesProbe(const DashDevice *dev)
+{
+	return probeMount(dev->mount);
+}
+
+/* Load the drivers for every device family marked auto-start that is not
+ * already running. Never unloads anything: "off" only means "not at
+ * startup" — the DEVICES screen can still start a device by hand. */
+void dashDevicesAutoProbe(void)
+{
+	if ((dashCfg.dev_auto & DASH_DEVA_USB) && !isUsbMassStackLoaded())
+		probeMount("usb:");
+	if ((dashCfg.dev_auto & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
+		probeMount("hdd0:");
+#ifdef EXFAT
+	if ((dashCfg.dev_auto & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
+		probeMount("ata0:");
+#endif
+#ifdef MMCE
+	if ((dashCfg.dev_auto & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))
+		probeMount("mmce0:");
+#endif
+#ifdef MX4SIO
+	if ((dashCfg.dev_auto & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
+		probeMount("mx4sio:");
+#endif
+#ifdef UDPFS
+	if ((dashCfg.dev_auto & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
+		probeMount("udpfs:");
+#endif
 }
 //--------------------------------------------------------------
 //End of file: dash_devices.c

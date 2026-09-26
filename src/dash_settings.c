@@ -55,6 +55,12 @@ enum SetId {
 	S_HIDE_HDD,
 	S_HIDE_MC,
 	S_REBOOT_ELF,
+	S_DEVA_USB,
+	S_DEVA_HDD,
+	S_DEVA_ATA,
+	S_DEVA_MMCE,
+	S_DEVA_MX4SIO,
+	S_DEVA_UDPFS,
 	/* network */
 	S_NET_INFO,
 	S_NET_CLASSIC,
@@ -169,6 +175,12 @@ static const SetItem device_items[] = {
     {ST_CHOICE, S_HIDE_HDD, "Internal HDD / ATA units", "Which HDD and exFAT units appear in the File Browser."},
     {ST_CHOICE, S_HIDE_MC, "Hide empty memory card slots", "Also hides unused MMCE entries in the File Browser."},
     {ST_CHOICE, S_REBOOT_ELF, "Reboot IOP when launching ELFs", "Recommended: gives launched programs a clean IOP."},
+    {ST_CHOICE, S_DEVA_USB, "Auto-start USB storage", "Load the USB drivers when the dashboard starts. Off: load manually from DEVICES."},
+    {ST_CHOICE, S_DEVA_HDD, "Auto-start internal HDD", "Load the HDD drivers when the dashboard starts."},
+    {ST_CHOICE, S_DEVA_ATA, "Auto-start exFAT HDD", "Load the exFAT/ATA drivers when the dashboard starts."},
+    {ST_CHOICE, S_DEVA_MMCE, "Auto-start MMCE SD card", "Load the MMCE drivers when the dashboard starts."},
+    {ST_CHOICE, S_DEVA_MX4SIO, "Auto-start MX4SIO", "Load the MX4SIO drivers when the dashboard starts."},
+    {ST_CHOICE, S_DEVA_UDPFS, "Auto-start network (UDPFS)", "Start the UDPFS network client when the dashboard starts."},
 };
 
 static const SetItem net_items[] = {
@@ -400,6 +412,24 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return 2;
 		case S_REBOOT_ELF:
 			*cur = setting->reboot_iop_elf_load ? 1 : 0;
+			return 2;
+		case S_DEVA_USB:
+			*cur = (dashCfg.dev_auto & DASH_DEVA_USB) ? 1 : 0;
+			return 2;
+		case S_DEVA_HDD:
+			*cur = (dashCfg.dev_auto & DASH_DEVA_HDD) ? 1 : 0;
+			return 2;
+		case S_DEVA_ATA:
+			*cur = (dashCfg.dev_auto & DASH_DEVA_ATA) ? 1 : 0;
+			return 2;
+		case S_DEVA_MMCE:
+			*cur = (dashCfg.dev_auto & DASH_DEVA_MMCE) ? 1 : 0;
+			return 2;
+		case S_DEVA_MX4SIO:
+			*cur = (dashCfg.dev_auto & DASH_DEVA_MX4SIO) ? 1 : 0;
+			return 2;
+		case S_DEVA_UDPFS:
+			*cur = (dashCfg.dev_auto & DASH_DEVA_UDPFS) ? 1 : 0;
 			return 2;
 #ifdef ETH
 		case S_HOSTWRITE:
@@ -818,6 +848,25 @@ static void setChoice(int id, int v)
 		case S_SVOL:
 			dashCfg.sound_vol = v * 10;
 			break;
+		case S_DEVA_USB:
+		case S_DEVA_HDD:
+		case S_DEVA_ATA:
+		case S_DEVA_MMCE:
+		case S_DEVA_MX4SIO:
+		case S_DEVA_UDPFS: {
+			const int bit = (id == S_DEVA_USB) ? DASH_DEVA_USB :
+			                (id == S_DEVA_HDD) ? DASH_DEVA_HDD :
+			                (id == S_DEVA_ATA) ? DASH_DEVA_ATA :
+			                (id == S_DEVA_MMCE) ? DASH_DEVA_MMCE :
+			                (id == S_DEVA_MX4SIO) ? DASH_DEVA_MX4SIO : DASH_DEVA_UDPFS;
+			if (v)
+				dashCfg.dev_auto |= bit;
+			else
+				dashCfg.dev_auto &= ~bit;
+			if (v)
+				dashDevicesAutoProbe(); /* start it right away if it is off */
+			break;
+		}
 		case S_START:
 			dashCfg.start_section = v;
 			break;

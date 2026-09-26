@@ -159,6 +159,7 @@ static void leaveLegacy(void)
 	dashInputFlush();
 	last_frame_ms = Timer();
 	dashSoundInit(); /* re-start after IOP resets ran legacy paths */
+	dashDevicesAutoProbe();
 }
 
 static void showActionMessage(void)
@@ -576,10 +577,13 @@ static void firstInit(void)
 	dashIconsInit();
 	if (dashLibLoadCache() < 0 || (dashCfg.autoscan && dashAppCount >= 0)) {
 		/* First run (no cache) or auto-scan enabled: look at locations whose
-		 * drivers are already running (memory cards, boot device). */
+		 * drivers are already running, starting the auto-start devices first
+		 * so they contribute applications too. */
 		dashGfxBeginFrame();
 		dashBgDrawStatic();
 		dashGfxPresent();
+		dashLoadingBegin("Starting devices");
+		dashDevicesAutoProbe();
 		dashRescanLibrary(0);
 	}
 #ifdef DASH_AUTOTEST
