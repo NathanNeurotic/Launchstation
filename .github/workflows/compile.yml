@@ -71,6 +71,27 @@ jobs:
           fi
           gh release upload "$tag" artifacts/* --clobber || true
 
+      - name: Publish branch preview pre-release
+        # Non-master pushes (feature branches) get their own rolling
+        # prerelease, published by CI from the artifact it just built.
+        if: github.event_name != 'pull_request' && github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          branch="${GITHUB_REF_NAME}"
+          short="${branch#nathan/}"
+          short="${short#feature/}"
+          tag="preview-$(echo "$short" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]\+/-/g')"
+          title="Preview build: ${short}"
+          notes="Automated preview of ${branch} (${GITHUB_SHA}). Packed ELF (BOOT.ELF / wLaunchELF_R3Z.ELF) is the one to test; see the CI run for sha256 hashes."
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" artifacts/* --clobber
+            gh release edit "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}"
+          else
+            gh release create "$tag" artifacts/BOOT.ELF artifacts/wLaunchELF_R3Z.ELF artifacts/wLaunchELF_R3Z-unpacked.ELF \
+              --title "$title" --notes "$notes" --target "${GITHUB_SHA}" --prerelease
+          fi
+
       - name: Publish language files release
         if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
         env:
