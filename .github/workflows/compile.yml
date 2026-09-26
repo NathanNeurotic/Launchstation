@@ -20,14 +20,34 @@ jobs:
           fetch-depth: 0
 
       - name: Install ps2build SDK
+        shell: bash
         run: |
-          curl -sSfL https://git.techwritescode.dev/ps2/install/raw/branch/master/install.sh | sh
+          set -euo pipefail
+          installer="$(mktemp)"
+          trap 'rm -f "$installer"' EXIT
+
+          # git.techwritescode.dev occasionally returns transient 5xx errors.
+          # Retry the download before failing the job, and never let a failed
+          # curl be hidden by the pipe into sh.
+          curl -sSfL \
+            --retry 8 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --connect-timeout 20 \
+            https://git.techwritescode.dev/ps2/install/raw/branch/master/install.sh \
+            -o "$installer"
+
+          sh "$installer"
           echo "$HOME/.local/share/ps2build" >> "$GITHUB_PATH"
           echo "$HOME/.local/share/ps2build/bin" >> "$GITHUB_PATH"
 
       - name: Verify ps2build
+        shell: bash
         run: |
-          ps2build --version
+          set -euo pipefail
+          PS2BUILD="$HOME/.local/share/ps2build/bin/ps2build"
+          test -x "$PS2BUILD"
+          "$PS2BUILD" --version
 
       - name: Install in-repo custom packages
         run: |
