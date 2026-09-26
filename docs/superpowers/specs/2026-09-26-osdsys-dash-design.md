@@ -97,14 +97,18 @@ not modified.
 
 All gated by `dashCfg.anim` (off = instant, reduced = shorter/simpler):
 
-- **Focus pop** — on selection change, the focused icon/card scale
-  springs from ~0.92 to 1.0 over ~180 ms (`dashApproach`/`dashEaseOutCubic`).
-- **Modal & toast entrances** — fade + 4% scale-in instead of hard appear.
-- **Hint bar** — soft 12 px slide-in when the section changes.
+- **Focus pop** — on selection change, the focused card/artwork springs
+  ~8% larger and settles over ~180 ms, via a shared helper applied where
+  artwork cards draw.
+- **Modal & toast entrances** — the existing fade+slide is kept but eased
+  (snappier open); the dashboard's gfx stack has no scale transform, so no
+  geometric scale is added.
+- **Hint bar** — soft slide-in tied to the section-transition clock.
 - **Header tab indicator** — springier chase to the active tab (small
-  overshoot), replacing the linear `tab_anim_x` chase.
-- **Section transition** — existing eased slide kept; content rows get a
-  staggered 20 ms fade-in offset by row index (skipped when reduced).
+  overshoot), replacing the plain exponential `tab_anim_x` chase.
+- **Section transition** — existing eased slide kept with a slightly
+  longer travel; no per-row stagger (the gfx stack draws each screen as
+  one layer).
 
 ## Workstream 3 — SFX subsystem
 
