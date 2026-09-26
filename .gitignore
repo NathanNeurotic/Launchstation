@@ -14,7 +14,6 @@ build/stale-code-report.txt
 
 githash.h
 !iop/__precompiled/*
-!ee_libs/audsrv/lib/*.a
 iop/vmc_fs.irx
 iso/
 *.iso

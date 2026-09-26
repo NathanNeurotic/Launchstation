@@ -79,10 +79,3 @@ EMBED_FILE(sfx_message_adp, "res/sfx/message.adp")
 EMBED_FILE(sfx_boot_adp, "res/sfx/boot.adp")
 EMBED_FILE(sfx_connect_adp, "res/sfx/bd_connect.adp")
 EMBED_FILE(sfx_disconnect_adp, "res/sfx/bd_disconnect.adp")
-
-/* audsrv audio server IRX. ps2build's embed_irx only resolves core-tier
- * SDK packages in this version, and the legacy Makefile looks in PS2SDK
- * layouts that lack it, so the module is vendored next to the other
- * precompiled drivers and pulled in here (same symbols as embed.make's
- * bin2s rule: audsrv_irx / size_audsrv_irx). */
-EMBED_FILE(audsrv_irx, "iop/__precompiled/audsrv.irx")
