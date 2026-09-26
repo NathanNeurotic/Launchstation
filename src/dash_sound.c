@@ -11,6 +11,8 @@
 
 extern u8 audsrv_irx[];
 extern int size_audsrv_irx;
+extern u8 libsd_irx[];
+extern int size_libsd_irx;
 extern u8 sfx_cursor_adp[];
 extern int size_sfx_cursor_adp;
 extern u8 sfx_confirm_adp[];
@@ -67,6 +69,11 @@ int dashSoundInit(void)
 		return 1;
 	if (!dashCfg.sound)
 		return 0;
+	/* audsrv imports sceSd* from the libsd module: it must be resident first */
+	if (SifExecModuleBuffer(libsd_irx, size_libsd_irx, 0, NULL, &r) < 0 || r < 0) {
+		dashToast(DASH_TOAST_WARN, "Sound unavailable: libsd would not start");
+		return 0;
+	}
 	if (SifExecModuleBuffer(audsrv_irx, size_audsrv_irx, 0, NULL, &r) < 0 || r < 0) {
 		dashToast(DASH_TOAST_WARN, "Sound unavailable: audsrv would not start");
 		return 0;

@@ -318,3 +318,4 @@ targets:
       - bdmfs_fatfs
       - usbmass_bd
       - ata_bd
+      - libsd

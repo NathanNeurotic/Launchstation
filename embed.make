@@ -631,6 +631,17 @@ endif
 $(EE_ASM_DIR)audsrv_irx.s: $(AUDSRV_SOURCE) | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ audsrv_irx
 
+LIBSD_SOURCE := $(PS2DEV)/packages/core/libsd/bin/libsd.irx
+ifneq ($(wildcard $(PS2SDK)/iop/irx/libsd.irx),)
+  LIBSD_SOURCE := $(PS2SDK)/iop/irx/libsd.irx
+endif
+ifeq ($(wildcard $(LIBSD_SOURCE)),)
+  $(error Missing libsd.irx. Update the ps2dev packages)
+endif
+
+$(EE_ASM_DIR)libsd_irx.s: $(LIBSD_SOURCE) | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ libsd_irx
+
 $(EE_ASM_DIR)iomanx_irx.s: $(IOMANX_SOURCE) | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ iomanx_irx
 
