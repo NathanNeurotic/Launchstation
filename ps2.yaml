@@ -281,9 +281,8 @@ targets:
       - "-Wa,-I.."
     ldflags:
       - "-Wl,--no-warn-mismatch"
-      - "-lvorbisfile" # ps2build v2026.09.24.1 links only the first artifact of a package; the -L comes from the vorbis package
-    headers: [sior, audsrv, vorbis, ogg]
-    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, mc, kbd, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv, vorbis, ogg]
+    headers: [sior, audsrv]
+    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, mc, kbd, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv]
     embed_irx:
       - loader:loader_elf
       - poweroff

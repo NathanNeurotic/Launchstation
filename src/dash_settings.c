@@ -154,9 +154,9 @@ static const SetItem display_items[] = {
 static const SetItem dash_items[] = {
     {ST_CHOICE, S_ENABLED, "Start in the dashboard", "Off: boot into the classic launch-key menu instead."},
     {ST_CHOICE, S_SOUND, "Interface sounds", "Cursor moves, confirmations and other dashboard sound effects."},
-    {ST_CHOICE, S_SVOL, "Sound volume", NULL},
-    {ST_CHOICE, S_BGM, "Background music", "Music under the dashboard. A bgm.ogg next to the ELF overrides the built-in track."},
-    {ST_CHOICE, S_BGMVOL, "Music volume", NULL},
+    {ST_CHOICE, S_SVOL, "Interface sound volume", "Volume for dashboard cursor, confirm and notification effects only."},
+    {ST_CHOICE, S_BGM, "Background music", "Hardware-looped dashboard music, independent from interface sounds."},
+    {ST_CHOICE, S_BGMVOL, "Music volume", "Volume for background music only."},
     {ST_CHOICE, S_START, "Start screen", "Section shown when the dashboard opens."},
     {ST_CHOICE, S_VIEW, "Application view", "Grid, list or carousel (SELECT also switches it in APPS)."},
     {ST_CHOICE, S_ARTWORK, "Artwork", "Load cover art (OPL ART folder, <ELF>_COV.png, cover.png...)."},
