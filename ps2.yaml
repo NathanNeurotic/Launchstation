@@ -255,6 +255,7 @@ targets:
       - src/dash_tools.c
       - src/dash_settings.c
       - src/dash_theme.c
+      - src/dash_themes.c
       - src/embed_blobs.S
     include_dirs: [include, ., ee_libs/hdd/include]
     defines:

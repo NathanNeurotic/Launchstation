@@ -267,6 +267,8 @@ static int settingsKv(const char *key, char *value, void *user)
 		dashCfg.legacy_theme = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_IntroDone"))
 		dashCfg.intro_done = clampInt(value, 0, 1, 0);
+	else if (dashThemeStoreKey(key, value))
+		;
 	else if (!stricmp(key, "Dash_Scan")) {
 		if (!*scan_reset) {
 			dashCfg.nscan = 0;
@@ -306,6 +308,7 @@ void dashStoreInit(void)
 	dashStoreDefaults();
 	memset(&dashLists, 0, sizeof(dashLists));
 	store_dir[0] = '\0';
+	dashThemeStoreBegin();
 
 	n = candidateDirs(dirs);
 	for (i = 0; i < n; i++) {
@@ -322,6 +325,7 @@ void dashStoreInit(void)
 	}
 	if (store_dir[0] == '\0')
 		dashStrCopy(store_dir, dirs[0], sizeof(store_dir));
+	dashThemeStoreEnd();
 
 	if (dashStoreBuildPath(path, sizeof(path), "DASHAPPS.CNF") == 0) {
 		text = dashLoadTextFile(path, 64 * 1024, &len);
@@ -342,7 +346,7 @@ int dashStoreSaveSettings(void)
 	char path[MAX_PATH];
 	char *buf;
 	int len = 0, i, ret;
-	const int cap = 2048 + DASH_MAX_SCAN * (DASH_PATH_MAX + 16);
+	const int cap = 2048 + DASH_MAX_SCAN * (DASH_PATH_MAX + 16) + 4096;
 
 	if (dashStoreBuildPath(path, sizeof(path), "DASHBOARD.CNF") < 0)
 		return -1;
@@ -366,6 +370,8 @@ int dashStoreSaveSettings(void)
 	                dashCfg.legacy_theme, dashCfg.intro_done);
 	for (i = 0; i < dashCfg.nscan && len < cap - DASH_PATH_MAX - 16; i++)
 		len += snprintf(buf + len, cap - len, "Dash_Scan = %s\r\n", dashCfg.scan[i]);
+	/* theme: preset name, plus a full snapshot once customised */
+	len += dashThemeStoreWrite(buf + len, cap - len);
 	ret = dashWriteFile(path, buf, len);
 	free(buf);
 	if (ret == 0)

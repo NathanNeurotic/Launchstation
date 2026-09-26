@@ -12,17 +12,22 @@
 #include "dash_internal.h"
 #include <gsInline.h>
 
-const DashColor DASH_C_TEXT = {0xF2, 0xF4, 0xFA, 0xFF};
-const DashColor DASH_C_TEXT2 = {0xAE, 0xB6, 0xCC, 0xFF};
-const DashColor DASH_C_TEXT3 = {0x70, 0x7A, 0x96, 0xFF};
-const DashColor DASH_C_ACCENT = {0x7F, 0xD8, 0xFF, 0xFF};
-const DashColor DASH_C_ACCENT2 = {0x9C, 0x8C, 0xFF, 0xFF};
-const DashColor DASH_C_WARM = {0xFF, 0xBE, 0x5C, 0xFF};
-const DashColor DASH_C_DANGER = {0xFF, 0x62, 0x70, 0xFF};
-const DashColor DASH_C_OK = {0x4E, 0xE0, 0xA8, 0xFF};
-const DashColor DASH_C_PANEL = {0x16, 0x1B, 0x2E, 0xB8};
-const DashColor DASH_C_PANEL_HI = {0x24, 0x2C, 0x48, 0xD8};
-const DashColor DASH_C_SHADOW = {0x00, 0x00, 0x04, 0xA0};
+/* Built-in fallback palette; dashThemeApply() overwrites it. */
+DashColor DASH_C_TEXT = {0xF2, 0xF4, 0xFA, 0xFF};
+DashColor DASH_C_TEXT2 = {0xAE, 0xB6, 0xCC, 0xFF};
+DashColor DASH_C_TEXT3 = {0x70, 0x7A, 0x96, 0xFF};
+DashColor DASH_C_ACCENT = {0x7F, 0xD8, 0xFF, 0xFF};
+DashColor DASH_C_ACCENT2 = {0x9C, 0x8C, 0xFF, 0xFF};
+DashColor DASH_C_WARM = {0xFF, 0xBE, 0x5C, 0xFF};
+DashColor DASH_C_DANGER = {0xFF, 0x62, 0x70, 0xFF};
+DashColor DASH_C_OK = {0x4E, 0xE0, 0xA8, 0xFF};
+DashColor DASH_C_PANEL = {0x0C, 0x0F, 0x1E, 0x96};
+DashColor DASH_C_PANEL_HI = {0x24, 0x2C, 0x48, 0xD8};
+DashColor DASH_C_SHADOW = {0x00, 0x00, 0x04, 0xA0};
+DashColor DASH_C_SELECT = {0x3C, 0x78, 0xD2, 0xAA};
+DashColor DASH_C_SELEDGE = {0xAA, 0xE1, 0xFF, 0x82};
+DashColor DASH_C_SELTEXT = {0xF2, 0xF4, 0xFA, 0xFF};
+DashColor DASH_C_BORDER = {0xFF, 0xFF, 0xFF, 0x00};
 
 #define DASH_ALPHA_STACK 12
 #define DASH_OFFSET_STACK 8
@@ -571,6 +576,7 @@ void dashPanelGradV(float x, float y, float w, float h, float r, DashColor top, 
 
 	if (w <= 0.0f || h <= 0.0f || g_alpha <= 0.0f)
 		return;
+	r = dashThemeRadius(r);
 	if (r > w * 0.5f)
 		r = w * 0.5f;
 	if (r > h * 0.5f)
@@ -600,12 +606,21 @@ void dashPanelBorder(float x, float y, float w, float h, float r, DashColor c)
 
 	if (w <= 0.0f || h <= 0.0f || c.a == 0 || g_alpha <= 0.0f)
 		return;
+	r = dashThemeRadius(r);
 	if (r > w * 0.5f)
 		r = w * 0.5f;
 	if (r > h * 0.5f)
 		r = h * 0.5f;
-	if (r < 2.0f)
-		r = 2.0f;
+	if (r < 2.0f) {
+		/* square corners: four plain edges */
+		float t = 1.5f;
+		dashSpriteBatchEnd();
+		dashRect(x, y, w, t, c);
+		dashRect(x, y + h - t, w, t, c);
+		dashRect(x, y + t, t, h - 2 * t, c);
+		dashRect(x + w - t, y + t, t, h - 2 * t, c);
+		return;
+	}
 	dashSpriteBatchEnd();
 	/* Ring texture band covers the outer 3.5/32 of the corner radius. */
 	t = r * 3.5f / 32.0f;

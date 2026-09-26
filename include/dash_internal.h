@@ -66,18 +66,196 @@ static inline DashColor dashColorA(DashColor c, float mul)
 DashColor dashColorLerp(DashColor a, DashColor b, float t);
 DashColor dashColorHue(int hue, int sat, int val, int alpha); /* hue 0..359 */
 
-/* Palette (dash_gfx.c) */
-extern const DashColor DASH_C_TEXT;
-extern const DashColor DASH_C_TEXT2;
-extern const DashColor DASH_C_TEXT3;
-extern const DashColor DASH_C_ACCENT;
-extern const DashColor DASH_C_ACCENT2;
-extern const DashColor DASH_C_WARM;
-extern const DashColor DASH_C_DANGER;
-extern const DashColor DASH_C_OK;
-extern const DashColor DASH_C_PANEL;
-extern const DashColor DASH_C_PANEL_HI;
-extern const DashColor DASH_C_SHADOW;
+/* Palette (dash_gfx.c). Filled from the active theme by dashThemeApply();
+ * the initial values are the built-in fallback theme. */
+extern DashColor DASH_C_TEXT;
+extern DashColor DASH_C_TEXT2;
+extern DashColor DASH_C_TEXT3;
+extern DashColor DASH_C_ACCENT;
+extern DashColor DASH_C_ACCENT2;
+extern DashColor DASH_C_WARM;
+extern DashColor DASH_C_DANGER;
+extern DashColor DASH_C_OK;
+extern DashColor DASH_C_PANEL;
+extern DashColor DASH_C_PANEL_HI;
+extern DashColor DASH_C_SHADOW;
+extern DashColor DASH_C_SELECT;    /* selection fill */
+extern DashColor DASH_C_SELEDGE;   /* selection outline */
+extern DashColor DASH_C_SELTEXT;   /* text of the selected row */
+extern DashColor DASH_C_BORDER;    /* panel borders (alpha 0 = none) */
+
+//--------------------------------------------------------------
+// Theme engine (dash_themes.c)
+//
+// One DashTheme holds every visual value the dashboard uses. Built-in
+// presets fill it, the user edits it in SETTINGS > Theme, and it is saved
+// as Theme_* keys in DASHBOARD.CNF. Theme folders
+// (<dashboard dir>/THEMES/<name>/theme.cfg) use the same keys without the
+// prefix. Every value is validated/clamped; unknown keys are ignored.
+//--------------------------------------------------------------
+enum DashBgKind {
+	DASH_BG_SOLID = 0,
+	DASH_BG_GRADIENT,
+	DASH_BG_TUNNEL,    /* OSDSYS menu backdrop: indigo tunnel */
+	DASH_BG_MIST,      /* drifting translucent blue forms */
+	DASH_BG_TOWERS,    /* opening tower field */
+	DASH_BG_DISC,      /* red disc-error atmosphere */
+	DASH_BG_ORBIT,     /* near black, ring of eight lights */
+	DASH_BG_CLOCKRING, /* System Configuration twelve-rod clock */
+	DASH_BG_GRID,      /* memory card grid */
+	DASH_BG_LINES,     /* boot lines */
+	DASH_BG_CUBES,     /* wireframe cubes */
+	DASH_BG_STREAM,    /* data stream */
+	DASH_BG_TILES,     /* memory card blue tiles */
+	DASH_BG_BRUSHED,   /* brushed console finish */
+	DASH_BG_WAVE,      /* PSX-style ribbons */
+	DASH_BG_CRYSTAL,   /* the previous dashboard atmosphere */
+	DASH_BG_IMAGE,     /* wallpaper PNG from the theme */
+	DASH_BG_COUNT
+};
+
+enum DashHighlight {
+	DASH_HL_FILL = 0, /* solid selection bar with outline */
+	DASH_HL_BAR,      /* accent edge bar and a faint fill */
+	DASH_HL_OUTLINE,  /* outline only */
+	DASH_HL_TEXT,     /* colour change only (OSDSYS style) */
+	DASH_HL_COUNT
+};
+
+enum DashCorner {
+	DASH_CORNER_SQUARE = 0,
+	DASH_CORNER_SOFT,
+	DASH_CORNER_ROUND,
+	DASH_CORNER_COUNT
+};
+
+enum DashFontFace {
+	DASH_FONT_ROBOTO = 0, /* smooth proportional (bundled) */
+	DASH_FONT_SYSTEM,     /* wLaunchELF bitmap font / user .fnt (localized glyphs) */
+	DASH_FONT_COUNT
+};
+
+enum DashIconTint {
+	DASH_ICONS_TEXT = 0, /* icons follow the text colours */
+	DASH_ICONS_ACCENT,   /* icons lean towards the accent colour */
+	DASH_ICONS_MONO,     /* greyscale */
+	DASH_ICONS_COUNT
+};
+
+enum DashAppIcon {
+	DASH_APPICON_SYSTEM = 0, /* default application icon */
+	DASH_APPICON_DEVICE,     /* icon of the device the app lives on */
+	DASH_APPICON_MONOGRAM,   /* initials on a coloured tile (old style) */
+	DASH_APPICON_COUNT
+};
+
+enum DashClockMode {
+	DASH_CLOCK_OFF = 0,
+	DASH_CLOCK_STANDARD, /* time over date */
+	DASH_CLOCK_SYSTEM,   /* OSDSYS style: date and time on one line */
+	DASH_CLOCK_COUNT
+};
+
+enum DashClockPos {
+	DASH_CLOCKPOS_HEADER = 0,
+	DASH_CLOCKPOS_FOOTER,
+	DASH_CLOCKPOS_COUNT
+};
+
+enum DashClockHours {
+	DASH_HOURS_SYSTEM = 0, /* console setting */
+	DASH_HOURS_24,
+	DASH_HOURS_12,
+	DASH_HOURS_COUNT
+};
+
+enum DashClockDate {
+	DASH_DATE_SYSTEM = 0,
+	DASH_DATE_YMD,
+	DASH_DATE_MDY,
+	DASH_DATE_DMY,
+	DASH_DATE_OFF,
+	DASH_DATE_COUNT
+};
+
+enum DashWallMode {
+	DASH_WALL_OFF = 0,
+	DASH_WALL_FOCUS, /* artwork of the focused application */
+	DASH_WALL_COUNT
+};
+
+#define DASH_THEME_NAME_MAX 32
+
+typedef struct
+{
+	char name[DASH_THEME_NAME_MAX];
+	char author[DASH_THEME_NAME_MAX];
+	char image[DASH_PATH_MAX];    /* wallpaper PNG (DASH_BG_IMAGE) */
+	char app_icon[DASH_PATH_MAX]; /* optional PNG default application icon */
+	/* background */
+	u8 bg;
+	u8 bg_bright; /* 10..100 % */
+	u8 scanlines; /* CRT line overlay */
+	DashColor bg1, bg2;
+	/* colours */
+	DashColor text, text2, text3, sel_text;
+	DashColor accent, accent2, select, warn, danger, ok;
+	DashColor panel, border;
+	/* shapes */
+	u8 corner, highlight, glow;
+	/* typography */
+	u8 font, font_scale, bold, text_shadow; /* font_scale: 90..115 % */
+	/* icons */
+	u8 icon_tint, app_icon_style;
+	/* clock */
+	u8 clock, clock_pos, clock_hours, clock_seconds, clock_date;
+	/* app-aware wallpaper */
+	u8 wallpaper, wall_dim; /* wall_dim: 0..90 % */
+} DashTheme;
+
+typedef struct
+{
+	const char *id;   /* key used in configuration files */
+	const char *name; /* shown in SETTINGS */
+	const char *desc;
+} DashThemePresetInfo;
+
+extern DashTheme dashTheme;
+
+void dashThemeInit(void);
+int dashThemePresetCount(void);
+const DashThemePresetInfo *dashThemePresetInfo(int i);
+int dashThemePresetIndex(void); /* active preset, -1 = customised */
+int dashThemeFindPreset(const char *id);
+void dashThemeLoadPreset(int i, DashTheme *out);
+void dashThemeSetPreset(int i);  /* load + apply, marks as not customised */
+void dashThemeCommit(void);      /* validate + apply after an edit */
+void dashThemeMarkCustom(void);
+int dashThemeIsCustom(void);
+void dashThemeApply(void);       /* push dashTheme into palette/renderer */
+void dashThemeValidate(DashTheme *t);
+/* key/value interface shared by DASHBOARD.CNF (Theme_ prefix) and theme.cfg */
+int dashThemeParseKey(DashTheme *t, const char *key, char *value);
+int dashThemeSerialize(const DashTheme *t, char *buf, int cap, const char *prefix);
+/* DASHBOARD.CNF hooks (dash_store.c) */
+void dashThemeStoreBegin(void);
+int dashThemeStoreKey(const char *key, char *value);
+void dashThemeStoreEnd(void);
+int dashThemeStoreWrite(char *buf, int cap);
+/* theme folders */
+int dashThemeFolderList(char names[][DASH_THEME_NAME_MAX], int max);
+int dashThemeFolderLoad(const char *folder);
+int dashThemeFolderExport(const char *folder);
+const char *dashThemeBgName(int kind);
+const char *dashThemeBgId(int kind);
+/* focused application for the app-aware wallpaper (set while drawing) */
+void dashThemeSetFocusApp(void *app);
+void *dashThemeFocusApp(void);
+/* derived shape helpers */
+float dashThemeRadius(float r);
+DashColor dashColorMix(DashColor a, DashColor b, float t); /* keeps a's alpha */
+DashColor dashColorLighten(DashColor c, float t);
+DashColor dashColorScale(DashColor c, float k);
 
 //--------------------------------------------------------------
 // Math / animation helpers
