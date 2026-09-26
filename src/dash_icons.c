@@ -457,6 +457,23 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 	dashSpriteBatchAdd(x - pad, y - pad, u0, v0, x + size + pad, y + size + pad, u0 + ICON_SLOT, v0 + ICON_SLOT);
 	dashSpriteBatchEnd();
 }
+/* Many copies of one icon in a single sprite batch (background motifs). */
+void dashIconMany(int id, const float *xy, int n, float size, DashColor c)
+{
+	float u0, v0, pad;
+	int i;
+
+	if (!icons_ready || id < 0 || id >= DI_COUNT || size <= 0.0f || c.a == 0 || n <= 0)
+		return;
+	u0 = (float)((id % ICON_COLS) * ICON_SLOT);
+	v0 = (float)((id / ICON_COLS) * ICON_SLOT);
+	pad = size * 2.0f / ICON_SIZE;
+	dashSpriteBatchBegin(&icon_tex, c);
+	for (i = 0; i < n; i++)
+		dashSpriteBatchAdd(xy[i * 2] - pad, xy[i * 2 + 1] - pad, u0, v0,
+		                   xy[i * 2] + size + pad, xy[i * 2 + 1] + size + pad, u0 + ICON_SLOT, v0 + ICON_SLOT);
+	dashSpriteBatchEnd();
+}
 //--------------------------------------------------------------
 //End of file: dash_icons.c
 //--------------------------------------------------------------

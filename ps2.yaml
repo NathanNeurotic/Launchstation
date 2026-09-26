@@ -245,6 +245,8 @@ targets:
       - src/dash_png.c
       - src/dash_art.c
       - src/dash_bg.c
+      - src/dash_bg_ps2.c
+      - src/dash_bg_geo.c
       - src/dash_store.c
       - src/dash_lib.c
       - src/dash_devices.c

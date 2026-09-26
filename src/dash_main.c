@@ -675,6 +675,20 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			dashLibSaveCache();
 		}
 
+#ifdef DASH_THEME_TOUR
+		/* development only: show every preset for five seconds */
+		{
+			static u64 tour_next;
+			static int tour_idx = -1;
+			if (now >= tour_next) {
+				tour_idx = (tour_idx + 1) % dashThemePresetCount();
+				dashThemeSetPreset(tour_idx);
+				dashToast(DASH_TOAST_INFO, dashThemePresetInfo(tour_idx)->name);
+				tour_next = now + 5000;
+			}
+			dashCfg.intro_done = 1;
+		}
+#endif
 		dashRenderScene();
 		dashGfxPresent();
 

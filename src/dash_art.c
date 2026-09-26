@@ -430,32 +430,37 @@ int dashArtTakeDirty(void)
 #define THEME_SLOTS 8
 typedef struct
 {
-	char name[32];
+	char path[DASH_PATH_MAX];
 	GSTEXTURE tex;
 	u8 state; /* 0 unknown, 1 loaded, 2 missing */
 } ThemeSlot;
 
 static ThemeSlot theme_slots[THEME_SLOTS];
 
-GSTEXTURE *dashThemeTexture(const char *name, int max_w, int max_h)
+/* Theme PNGs (wallpaper, default app icon, THEME/ layers), cached by full
+ * path. A file on a device whose driver is not running is not looked at
+ * (and not remembered as missing), so a theme never loads a driver. A
+ * missing or broken file is remembered and the caller falls back. */
+GSTEXTURE *dashThemeTextureFile(const char *path, int max_w, int max_h)
 {
 	int i, free_i = -1;
-	char path[MAX_PATH];
 	u32 *pixels;
 	int w, h;
 
+	if (path == NULL || path[0] == '\0' || strlen(path) >= DASH_PATH_MAX)
+		return NULL;
 	for (i = 0; i < THEME_SLOTS; i++) {
-		if (theme_slots[i].state && !strcmp(theme_slots[i].name, name))
+		if (theme_slots[i].state && !strcmp(theme_slots[i].path, path))
 			return (theme_slots[i].state == 1) ? &theme_slots[i].tex : NULL;
 		if (!theme_slots[i].state && free_i < 0)
 			free_i = i;
 	}
-	if (free_i < 0 || dashStoreDir()[0] == '\0')
+	if (free_i < 0 || !isPathDeviceStackLoaded(path))
 		return NULL;
 
-	dashStrCopy(theme_slots[free_i].name, name, sizeof(theme_slots[free_i].name));
+	dashStrCopy(theme_slots[free_i].path, path, sizeof(theme_slots[free_i].path));
 	theme_slots[free_i].state = 2;
-	snprintf(path, sizeof(path), "%sTHEME/%s", dashStoreDir(), name);
+	filerRootMcPollIdle();
 	if (dashPngLoadFile(path, max_w, max_h, &pixels, &w, &h) != 0)
 		return NULL;
 	memset(&theme_slots[free_i].tex, 0, sizeof(GSTEXTURE));
@@ -468,6 +473,17 @@ GSTEXTURE *dashThemeTexture(const char *name, int max_w, int max_h)
 	gsKit_setup_tbw(&theme_slots[free_i].tex);
 	theme_slots[free_i].state = 1;
 	return &theme_slots[free_i].tex;
+}
+
+GSTEXTURE *dashThemeTexture(const char *name, int max_w, int max_h)
+{
+	char path[MAX_PATH];
+
+	if (dashStoreDir()[0] == '\0')
+		return NULL;
+	if (snprintf(path, sizeof(path), "%sTHEME/%s", dashStoreDir(), name) >= DASH_PATH_MAX)
+		return NULL;
+	return dashThemeTextureFile(path, max_w, max_h);
 }
 
 void dashThemeTexturesFree(void)

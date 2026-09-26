@@ -305,6 +305,9 @@ void dashRect(float x, float y, float w, float h, DashColor c);
 void dashRectGradV(float x, float y, float w, float h, DashColor top, DashColor bottom);
 void dashRectGradH(float x, float y, float w, float h, DashColor left, DashColor right);
 void dashRectGrad4(float x, float y, float w, float h, DashColor tl, DashColor tr, DashColor bl, DashColor br);
+void dashQuadG(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4,
+               DashColor c1, DashColor c2, DashColor c3, DashColor c4);
+void dashLine(float x1, float y1, float x2, float y2, float w, DashColor c);
 void dashTri(float x1, float y1, float x2, float y2, float x3, float y3, DashColor c1, DashColor c2, DashColor c3);
 void dashPanel(float x, float y, float w, float h, float r, DashColor fill);
 void dashPanelGradV(float x, float y, float w, float h, float r, DashColor top, DashColor bottom);
@@ -572,6 +575,7 @@ void dashArtFlushAll(void);
 void dashArtInvalidateVram(void);
 /* Themed PNG loaded from the dashboard THEME folder (NULL if absent). */
 GSTEXTURE *dashThemeTexture(const char *name, int max_w, int max_h);
+GSTEXTURE *dashThemeTextureFile(const char *path, int max_w, int max_h);
 void dashThemeTexturesFree(void);
 
 /* Procedural fallback tile for an app without artwork. */
@@ -773,5 +777,33 @@ extern int uLE_cdmode;
 
 /* main_title.c accessor for split clock text. */
 void menuTitleGetClockText(char *time_out, int time_size, char *date_out, int date_size);
+int menuTitleGetClockFields(int *year, int *month, int *day, int *hour, int *minute, int *second,
+                            int *use_12h, int *date_format);
+void menuTitleFormatClockTime(char *dst, size_t dst_size, int hour, int minute, int second, int use_12h);
+void menuTitleFormatClockDate(char *dst, size_t dst_size, int year, int month, int day, int date_format);
+
+//--------------------------------------------------------------
+// Background scenes (dash_bg_ps2.c, dash_bg_geo.c). `t` is the background
+// clock (frozen when animation or effects are off), `fx` the effects level.
+// Colours come from dashTheme.bg1 / bg2.
+//--------------------------------------------------------------
+void dashBgSceneTunnel(float t, int fx);
+void dashBgSceneMist(float t, int fx);
+void dashBgSceneTowers(float t, int fx);
+void dashBgSceneDisc(float t, int fx);
+void dashBgSceneOrbit(float t, int fx);
+void dashBgSceneClockRing(float t, int fx);
+void dashBgSceneGradient(float t, int fx);
+void dashBgSceneGrid(float t, int fx);
+void dashBgSceneLines(float t, int fx);
+void dashBgSceneCubes(float t, int fx);
+void dashBgSceneStream(float t, int fx);
+void dashBgSceneTiles(float t, int fx);
+void dashBgSceneBrushed(float t, int fx);
+void dashBgSceneWave(float t, int fx);
+/* shared helpers */
+float dashBgHash(int a, int b); /* stable 0..1 */
+void dashBgVignette(float strength);
+void dashIconMany(int id, const float *xy, int n, float size, DashColor c);
 
 #endif

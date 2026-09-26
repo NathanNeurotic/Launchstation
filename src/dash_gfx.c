@@ -516,6 +516,32 @@ void dashTri(float x1, float y1, float x2, float y2, float x3, float y3, DashCol
 	                               gsColor(c1), gsColor(c2), gsColor(c3));
 }
 
+/* Arbitrary quad, vertices in strip order: p1-p2 one edge, p3-p4 the
+ * opposite edge (p1 next to p3). Used by the procedural backgrounds. */
+void dashQuadG(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4,
+               DashColor c1, DashColor c2, DashColor c3, DashColor c4)
+{
+	if (g_alpha <= 0.0f || (c1.a == 0 && c2.a == 0 && c3.a == 0 && c4.a == 0))
+		return;
+	dashSpriteBatchEnd();
+	gsKit_prim_quad_gouraud_3d(gsGlobal, SX(x1), SY(y1), 0, SX(x2), SY(y2), 0, SX(x3), SY(y3), 0, SX(x4), SY(y4), 0,
+	                           gsColor(c1), gsColor(c2), gsColor(c3), gsColor(c4));
+}
+
+/* Line of width w as a quad (1px GS lines flicker on interlaced output). */
+void dashLine(float x1, float y1, float x2, float y2, float w, DashColor c)
+{
+	float dx = x2 - x1, dy = y2 - y1;
+	float len = sqrtf(dx * dx + dy * dy);
+	float nx, ny;
+
+	if (len < 0.01f || c.a == 0 || g_alpha <= 0.0f)
+		return;
+	nx = -dy / len * w * 0.5f;
+	ny = dx / len * w * 0.5f;
+	dashQuadG(x1 + nx, y1 + ny, x2 + nx, y2 + ny, x1 - nx, y1 - ny, x2 - nx, y2 - ny, c, c, c, c);
+}
+
 static void texQuad(GSTEXTURE *tex, float x1, float y1, float x2, float y2,
                     float u1, float v1, float u2, float v2, u64 color)
 {
