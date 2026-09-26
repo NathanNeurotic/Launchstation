@@ -620,6 +620,39 @@ $(EE_ASM_DIR)sfx_connect_adp.s: res/sfx/bd_connect.adp | $(EE_ASM_DIR)
 $(EE_ASM_DIR)sfx_disconnect_adp.s: res/sfx/bd_disconnect.adp | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ sfx_disconnect_adp
 
+$(EE_ASM_DIR)icon_cross_png.s: res/icons/cross.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_cross_png
+$(EE_ASM_DIR)icon_circle_png.s: res/icons/circle.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_circle_png
+$(EE_ASM_DIR)icon_square_png.s: res/icons/square.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_square_png
+$(EE_ASM_DIR)icon_triangle_png.s: res/icons/triangle.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_triangle_png
+$(EE_ASM_DIR)icon_up_png.s: res/icons/up.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_up_png
+$(EE_ASM_DIR)icon_down_png.s: res/icons/down.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_down_png
+$(EE_ASM_DIR)icon_left_png.s: res/icons/left.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_left_png
+$(EE_ASM_DIR)icon_right_png.s: res/icons/right.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_right_png
+$(EE_ASM_DIR)icon_select_png.s: res/icons/select.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_select_png
+$(EE_ASM_DIR)icon_start_png.s: res/icons/start.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_start_png
+$(EE_ASM_DIR)icon_l1_png.s: res/icons/L1.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_l1_png
+$(EE_ASM_DIR)icon_l2_png.s: res/icons/L2.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_l2_png
+$(EE_ASM_DIR)icon_l3_png.s: res/icons/L3.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_l3_png
+$(EE_ASM_DIR)icon_r1_png.s: res/icons/R1.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_r1_png
+$(EE_ASM_DIR)icon_r2_png.s: res/icons/R2.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_r2_png
+$(EE_ASM_DIR)icon_r3_png.s: res/icons/R3.png | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ icon_r3_png
+
 AUDSRV_SOURCE := iop/__precompiled/audsrv.irx
 ifneq ($(wildcard $(PS2SDK)/iop/irx/audsrv.irx),)
   AUDSRV_SOURCE := $(PS2SDK)/iop/irx/audsrv.irx

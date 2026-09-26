@@ -123,6 +123,27 @@ static DashColor buttonColor(int icon)
 	}
 }
 
+static int keyIcon(const char *key)
+{
+	static const struct
+	{
+		const char *key;
+		int icon;
+	} map[] = {
+	    {"L1", DI_BTN_L1}, {"L2", DI_BTN_L2}, {"L3", DI_BTN_L3},
+	    {"R1", DI_BTN_R1}, {"R2", DI_BTN_R2}, {"R3", DI_BTN_R3},
+	    {"START", DI_BTN_START}, {"SELECT", DI_BTN_SELECT},
+	};
+	int i;
+
+	if (!dashIconsPadPng() || key == NULL)
+		return -1;
+	for (i = 0; i < (int)(sizeof(map) / sizeof(map[0])); i++)
+		if (!strcmp(key, map[i].key))
+			return map[i].icon;
+	return -1;
+}
+
 static float drawButton(float x, float y, int icon, const char *key)
 {
 	const float d = 22.0f;
@@ -132,9 +153,16 @@ static float drawButton(float x, float y, int icon, const char *key)
 		return d;
 	}
 	{
-		float tw = dashTextWidth(key, DASH_FS_CAPTION);
-		float w = tw + 14.0f;
+		int ki = keyIcon(key);
+		float tw;
 		int keep;
+		float w;
+		if (ki >= 0) {
+			dashIcon(ki, x, y, d, DC(255, 255, 255, 255));
+			return d;
+		}
+		tw = dashTextWidth(key, DASH_FS_CAPTION);
+		w = tw + 14.0f;
 		if (w < d)
 			w = d;
 		/* OSDSYS squircle badge for L1/R1/START/SELECT-style labels */

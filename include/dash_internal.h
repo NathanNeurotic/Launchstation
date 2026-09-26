@@ -417,18 +417,25 @@ enum DashIcon {
 	DI_BTN_RIGHT,
 	DI_BTN_START,
 	DI_BTN_SELECT,
+	DI_BTN_L1,
+	DI_BTN_L2,
+	DI_BTN_L3,
+	DI_BTN_R1,
+	DI_BTN_R2,
+	DI_BTN_R3,
 	DI_KEY,
 	DI_GAMEPAD,
 	DI_EXEC,    /* default application icon */
 	DI_PALETTE, /* theme settings */
 	DI_RECENT,  /* recently used */
 	DI_IMAGE,   /* wallpaper / picture */
-	DI_COUNT    /* the atlas holds 49 icons (7 x 7) */
+	DI_COUNT    /* the SDF atlas holds 55 icons (7 x 8); pad tiles are PNGs */
 };
 
 void dashIconsInit(void);
 void dashIconsShutdown(void);
 void dashIcon(int id, float x, float y, float size, DashColor c);
+int dashIconsPadPng(void); /* non-zero when the embedded pad-button PNG tiles decoded */
 DashColor dashIconTint(DashColor c);
 GSTEXTURE *dashIconsTexture(void);
 
