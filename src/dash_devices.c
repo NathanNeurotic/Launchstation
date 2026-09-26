@@ -90,6 +90,55 @@ int dashMcPresent(int port)
 	return filerRootMcPresent(port, NULL, NULL) != 0;
 }
 
+/* True only when the storage backing an application path is currently
+ * usable. The library cache deliberately survives device disconnects, so UI
+ * code must use this before exposing a cached application. This check never
+ * loads a driver: an inactive device stays inactive and its apps stay hidden. */
+int dashDevicePathReady(const char *path)
+{
+	int mask;
+
+	if (path == NULL || path[0] == '\0')
+		return 0;
+
+	/* Memory-card services are always loaded, so test actual card presence. */
+	if (!strncmp(path, "mc0:", 4))
+		return filerRootMcPresent(0, NULL, NULL) > 0;
+	if (!strncmp(path, "mc1:", 4))
+		return filerRootMcPresent(1, NULL, NULL) > 0;
+	if (!strncmp(path, "mc:", 3))
+		return filerRootMcPresent(0, NULL, NULL) > 0 ||
+		       filerRootMcPresent(1, NULL, NULL) > 0;
+
+	/* USB's driver can remain resident with no drive inserted, so require a
+	 * mounted unit as well. "mass:" is the legacy alias for USB storage. */
+	if (!strncmp(path, "mass", 4) || !strncmp(path, "usb", 3)) {
+		if (!isUsbMassStackLoaded())
+			return 0;
+		mask = filerUsbDriveMask();
+		if (!strncmp(path, "usb", 3) && path[3] >= '0' && path[3] <= '9' && path[4] == ':')
+			return (mask & (1 << (path[3] - '0'))) != 0;
+		return mask != 0;
+	}
+
+	/* A VMC path is valid only while that image is actually mounted. */
+	if (!strncmp(path, "vmc0:", 5))
+		return vmcMounted[0] != 0;
+	if (!strncmp(path, "vmc1:", 5))
+		return vmcMounted[1] != 0;
+
+	/* Do not show disc-backed cached entries when the tray is empty. */
+	if (!strncmp(path, "cdfs:", 5) || !strncmp(path, "cdrom", 5))
+		return cdmode > 0 && uLE_cdmode != SCECdNODISC;
+
+	/* ROM is intrinsic storage. All other supported dashboard storage families
+	 * (HDD, ATA/exFAT, MMCE, MX4SIO, UDPFS) are ready only when their existing
+	 * IOP stack is active. isPathDeviceStackLoaded() has no side effects. */
+	if (!strncmp(path, "rom", 3))
+		return 1;
+	return isPathDeviceStackLoaded(path);
+}
+
 const char *dashDiscStatus(void)
 {
 	switch (uLE_cdmode) {
@@ -321,7 +370,13 @@ static int probeMount(const char *m)
 
 int dashDevicesProbe(const DashDevice *dev)
 {
-	return probeMount(dev->mount);
+	int ok = probeMount(dev->mount);
+
+	/* A newly activated device may already have applications in DASHLIB.CNF.
+	 * Reveal them immediately without forcing a rescan. */
+	if (ok)
+		dashAppsRebuildView();
+	return ok;
 }
 
 /* Load the drivers for every device family marked auto-start that is not
