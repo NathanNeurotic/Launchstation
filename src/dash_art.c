@@ -601,15 +601,20 @@ void dashDrawAppArt(DashApp *app, float x, float y, float w, float h, float focu
 		r = 6.0f;
 	dashShadow(x, y, w, h, 10.0f + 10.0f * focus, 0.6f + 0.3f * focus);
 	if (tex != NULL) {
-		DashColor frame_top = DC(58 + (int)(40 * focus), 66 + (int)(40 * focus), 96 + (int)(50 * focus), 255);
+		/* frame in the theme's panel colours, lit by the selection colour */
+		DashColor frame_top = dashColorMix(dashColorLighten(DASH_C_PANEL_HI, 0.18f), DASH_C_SELECT, 0.2f + 0.4f * focus);
+		DashColor frame_bot = dashColorScale(DASH_C_PANEL_HI, 0.6f);
+		DashColor well = dashColorScale(dashTheme.bg2, 0.5f);
 		float inset = w * 0.05f;
 
-		dashPanelGradV(x, y, w, h, r, frame_top, DC(18, 22, 36, 255));
-		dashRect(x + inset, y + inset, w - inset * 2, h - inset * 2, DC(6, 8, 14, 255));
+		frame_top.a = frame_bot.a = well.a = 255;
+		dashPanelGradV(x, y, w, h, r, frame_top, frame_bot);
+		dashRect(x + inset, y + inset, w - inset * 2, h - inset * 2, well);
 		dashTexDrawFit(tex, x + inset, y + inset, w - inset * 2, h - inset * 2, DC(255, 255, 255, 255));
-		/* glassy highlight */
-		dashRectGrad4(x + inset, y + inset, w - inset * 2, (h - inset * 2) * 0.4f,
-		              DC(255, 255, 255, 34), DC(255, 255, 255, 12), DC(255, 255, 255, 0), DC(255, 255, 255, 0));
+		if (dashTheme.glow)
+			/* glassy highlight (Crystal look) */
+			dashRectGrad4(x + inset, y + inset, w - inset * 2, (h - inset * 2) * 0.4f,
+			              DC(255, 255, 255, 34), DC(255, 255, 255, 12), DC(255, 255, 255, 0), DC(255, 255, 255, 0));
 	} else
 		dashDrawAppTile(app, x, y, w, h, focus);
 	if (app->flags & DASH_APP_MISSING)

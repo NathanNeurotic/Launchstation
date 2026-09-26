@@ -278,8 +278,7 @@ static void filesDraw(void)
 		float dx = 372, dy = 98, dw = 228, dh = 292;
 		dashDrawCard(dx, dy, dw, dh, 16);
 		dashGfxBlend(DASH_BLEND_ADD);
-		if (dashTheme.glow)
-			dashGlow(dx + dw * 0.5f, dy + 70, 80, 60, dashColorA(DASH_C_ACCENT, 0.24f));
+		dashAccentGlow(dx + dw * 0.5f, dy + 70, 80, 60, 1.0f);
 		dashGfxBlend(DASH_BLEND_NORMAL);
 		dashIcon(e->icon >= 0 ? e->icon : DI_FOLDER, dx + dw * 0.5f - 32, dy + 38, 64, DASH_C_TEXT);
 		dashTextCenter(dx + dw * 0.5f, dy + 118, e->label, DASH_FS_LABEL, DASH_C_TEXT);

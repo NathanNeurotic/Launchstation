@@ -78,7 +78,9 @@ void DashThemeBackgroundRect(int x1, int y1, int x2, int y2)
 
 void DashThemePopupRect(int x1, int y1, int x2, int y2)
 {
-	DashColor top = dashColorLighten(dashTheme.panel, 0.16f), bot = dashColorLighten(dashTheme.panel, 0.07f);
+	/* the theme's panel, tinted a little towards the selection colour */
+	DashColor tint = dashColorMix(dashTheme.panel, dashTheme.select, 0.3f);
+	DashColor top = dashColorLighten(tint, 0.14f), bot = dashColorLighten(tint, 0.06f);
 
 	gsGlobal->PrimAlphaEnable = GS_SETTING_OFF;
 	gsKit_prim_quad_gouraud_3d(gsGlobal, x1, y1, 0, x2, y1, 0, x1, y2, 0, x2, y2, 0,

@@ -562,7 +562,12 @@ static void drawCarousel(void)
 				dashGfxPushAlpha(alpha);
 				dashDrawAppArt(&dashApps[order[idx]], cx + xo - s * 0.5f, cy - s * 0.5f + ad * 6.0f, s, s, f, (int)(ad + 0.5f));
 				if (ad > 0.05f)
-					dashRect(cx + xo - s * 0.5f, cy - s * 0.5f + ad * 6.0f, s, s, DC(4, 6, 16, (int)(dashClampf(ad * 60.0f, 0, 110))));
+				{
+					/* recede into the background colour */
+					DashColor sh = dashColorScale(dashTheme.bg2, 0.6f);
+					sh.a = (u8)dashClampf(ad * 60.0f, 0, 110);
+					dashRect(cx + xo - s * 0.5f, cy - s * 0.5f + ad * 6.0f, s, s, sh);
+				}
 				dashGfxPopAlpha();
 			}
 		}

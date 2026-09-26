@@ -171,15 +171,15 @@ static void toolsDraw(void)
 		float dx = 372, dy = 98, dw = 228, dh = 292;
 
 		dashDrawCard(dx, dy, dw, dh, 16);
-		dashGfxBlend(DASH_BLEND_ADD);
-		if (dashTheme.glow)
-			dashGlow(dx + dw * 0.5f, dy + 66, 80, 60, dashColorA(DASH_C_ACCENT, 0.24f));
-		dashGfxBlend(DASH_BLEND_NORMAL);
+		dashAccentGlow(dx + dw * 0.5f, dy + 66, 80, 60, 1.0f);
 		dashIcon(t->icon, dx + dw * 0.5f - 30, dy + 34, 60, DASH_C_TEXT);
 		dashTextCenter(dx + dw * 0.5f, dy + 108, t->name, DASH_FS_BODY, DASH_C_TEXT);
 		dashTextWrap(dx + 16, dy + 142, dw - 32, 4, t->desc, DASH_FS_CAPTION, DASH_C_TEXT2, 19);
 		if (t->note) {
-			dashPanel(dx + 12, dy + dh - 64, dw - 24, 52, 10, DC(60, 40, 20, 120));
+			DashColor wb = dashColorScale(DASH_C_WARM, 0.24f);
+			wb.a = 130;
+			dashPanel(dx + 12, dy + dh - 64, dw - 24, 52, 10, wb);
+			dashRect(dx + 12, dy + dh - 64, 3, 52, dashColorA(DASH_C_WARM, 0.8f));
 			dashIcon(DI_WARNING, dx + 20, dy + dh - 54, 16, DASH_C_WARM);
 			dashTextWrap(dx + 42, dy + dh - 58, dw - 62, 2, t->note, DASH_FS_CAPTION * 0.95f, DASH_C_WARM, 18);
 		}
