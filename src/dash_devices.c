@@ -70,8 +70,9 @@ void dashDevicesPoll(void)
 		/* Boot mounts and post-IOP-reset rediscovery are baseline changes, not
 		 * user hotplugs. Any change restarts the quiet settling timer. */
 		if (dev_snapshot == 0xFFFFFFFFu || now != dev_snapshot) {
-			if (dev_snapshot != 0xFFFFFFFFu)
-				view_changed = 1;
+			/* The first poll also refreshes the cache-backed UI: USB/MC mount
+			 * state may finish populating just after DASHLIB.CNF was loaded. */
+			view_changed = 1;
 			dev_snapshot = now;
 			dev_snapshot_changed_ms = ms;
 		} else if (ms - dev_snapshot_changed_ms >= DEV_HOTPLUG_SETTLE_MS) {
