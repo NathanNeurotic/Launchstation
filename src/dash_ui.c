@@ -552,9 +552,19 @@ static void modalHintRow(float x, float y, int ok_icon, const char *ok, int back
 	}
 }
 
+/* Optional live preview for the next dashModalMenu(): called whenever the
+ * highlighted row changes, with a light backdrop so the effect is visible. */
+static void (*modal_preview)(int index);
+
+void dashModalSetPreview(void (*fn)(int index))
+{
+	modal_preview = fn;
+}
+
 int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *items, int n, int initial)
 {
-	int sel = initial, top = 0, i;
+	int sel = initial, top = 0, i, previewed = -1;
+	void (*preview)(int) = modal_preview;
 	const int max_rows = 8;
 	float sel_anim, open = 0.0f;
 	float w = 400.0f, row_h = 34.0f;
@@ -571,6 +581,9 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 		sel++;
 	sel_anim = (float)sel;
 	y = (DASH_VH - h) * 0.5f;
+	modal_preview = NULL;
+	if (preview != NULL)
+		x = DASH_SAFE_R - w; /* keep the left half of the screen visible */
 	dashInputFlush();
 
 	while (1) {
@@ -605,12 +618,19 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			top = sel;
 		if (sel >= top + rows)
 			top = sel - rows + 1;
+		if (preview != NULL) {
+			if (sel != previewed) {
+				preview(sel);
+				previewed = sel;
+			}
+			dashBgUpdate(1.0f / 60.0f);
+		}
 
 		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), 1.0f / 60.0f);
 		open = dashApproach(open, 1.0f, 14.0f * dashAnimSpeed(), 1.0f / 60.0f);
 
 		dashRenderScene();
-		modalBackdrop(open);
+		modalBackdrop(open * (preview != NULL ? 0.25f : 1.0f));
 		dashGfxPushAlpha(open);
 		dashGfxPushOffset(0, 16.0f * (1.0f - open));
 		modalPanel(x, y, w, h, open);

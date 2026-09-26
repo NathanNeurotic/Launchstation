@@ -130,6 +130,7 @@ static void enterLegacy(void)
 	/* fade to black, then hand the screen to a classic wLaunchELF screen */
 	int i;
 
+	dashThemeSavePending(1 << 30); /* never lose theme edits */
 	for (i = 0; i < 8; i++) {
 		dashRenderScene();
 		dashRect(0, 0, DASH_VW, DASH_VH, DC(0, 0, 0, (i + 1) * 32 > 255 ? 255 : (i + 1) * 32));
@@ -289,6 +290,7 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	}
 
 	snprintf(title, sizeof(title), "Starting %s", copy.title);
+	dashThemeSavePending(1 << 30);
 	filerRootMcPollIdle();
 	if (dashArtTakeDirty())
 		dashLibSaveCache();
@@ -668,6 +670,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		if ((frame_counter % 30) == 0)
 			uLE_cdStop();
 		dashDevicesPoll();
+		dashThemeSavePending((int)dashInputIdleMs());
 		if (!boot_phase)
 			dashArtStep((int)dashInputIdleMs());
 		if (dashInputIdleMs() > 6000 && dashArtTakeDirty()) {

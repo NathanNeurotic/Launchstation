@@ -1043,6 +1043,102 @@ int dashThemeFolderExport(const char *folder)
 }
 
 //--------------------------------------------------------------
+// Editing support (SETTINGS > Theme)
+//--------------------------------------------------------------
+static int theme_dirty;
+
+int dashThemeBasePreset(void)
+{
+	return theme_preset;
+}
+
+void dashThemeRestore(const DashTheme *t, int preset, int custom)
+{
+	dashTheme = *t;
+	theme_preset = (preset >= 0 && preset < P_COUNT) ? preset : P_OSD;
+	theme_custom = custom ? 1 : 0;
+	dashThemeValidate(&dashTheme);
+	dashThemeApply();
+}
+
+/* Put one settings group back to the base preset's values. */
+void dashThemeResetGroup(int group)
+{
+	DashTheme p, *t = &dashTheme;
+
+	dashThemeLoadPreset(theme_preset, &p);
+	switch (group) {
+		case DASH_TG_BACKGROUND:
+			t->bg = p.bg;
+			t->bg1 = p.bg1;
+			t->bg2 = p.bg2;
+			t->bg_bright = p.bg_bright;
+			t->scanlines = p.scanlines;
+			dashStrCopy(t->image, p.image, sizeof(t->image));
+			break;
+		case DASH_TG_COLORS:
+			t->text = p.text;
+			t->text2 = p.text2;
+			t->text3 = p.text3;
+			t->sel_text = p.sel_text;
+			t->accent = p.accent;
+			t->accent2 = p.accent2;
+			t->select = p.select;
+			t->warn = p.warn;
+			t->danger = p.danger;
+			t->ok = p.ok;
+			t->panel = p.panel;
+			t->border = p.border;
+			break;
+		case DASH_TG_STYLE:
+			t->corner = p.corner;
+			t->highlight = p.highlight;
+			t->glow = p.glow;
+			t->panel.a = p.panel.a;
+			break;
+		case DASH_TG_TYPE:
+			t->font = p.font;
+			t->font_scale = p.font_scale;
+			t->bold = p.bold;
+			t->text_shadow = p.text_shadow;
+			break;
+		case DASH_TG_ICONS:
+			t->icon_tint = p.icon_tint;
+			t->app_icon_style = p.app_icon_style;
+			dashStrCopy(t->app_icon, p.app_icon, sizeof(t->app_icon));
+			break;
+		case DASH_TG_CLOCK:
+			t->clock = p.clock;
+			t->clock_pos = p.clock_pos;
+			t->clock_hours = p.clock_hours;
+			t->clock_seconds = p.clock_seconds;
+			t->clock_date = p.clock_date;
+			break;
+		case DASH_TG_WALLPAPER:
+			t->wallpaper = p.wallpaper;
+			t->wall_dim = p.wall_dim;
+			break;
+	}
+	dashThemeCommit();
+}
+
+/* Theme edits are saved once the pad has been idle for a moment, so
+ * adjusting a colour does not write the memory card on every step. */
+void dashThemeMarkDirty(void)
+{
+	theme_dirty = 1;
+}
+
+void dashThemeSavePending(int idle_ms)
+{
+	if (!theme_dirty || idle_ms < 1200)
+		return;
+	theme_dirty = 0;
+	filerRootMcPollIdle();
+	dashStoreSaveSettings();
+}
+
+//--------------------------------------------------------------
 // App-aware wallpaper focus
 //--------------------------------------------------------------
 void dashThemeSetFocusApp(void *app)

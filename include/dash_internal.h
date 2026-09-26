@@ -249,6 +249,20 @@ int dashThemeFolderExport(const char *folder);
 const char *dashThemeBgName(int kind);
 const char *dashThemeBgId(int kind);
 /* focused application for the app-aware wallpaper (set while drawing) */
+enum DashThemeGroup {
+	DASH_TG_BACKGROUND = 0,
+	DASH_TG_COLORS,
+	DASH_TG_STYLE,
+	DASH_TG_TYPE,
+	DASH_TG_ICONS,
+	DASH_TG_CLOCK,
+	DASH_TG_WALLPAPER
+};
+int dashThemeBasePreset(void);
+void dashThemeRestore(const DashTheme *t, int preset, int custom);
+void dashThemeResetGroup(int group);
+void dashThemeMarkDirty(void);
+void dashThemeSavePending(int idle_ms); /* saves after ~1.2 s of pad idle */
 void dashThemeSetFocusApp(void *app);
 void *dashThemeFocusApp(void);
 /* derived shape helpers */
@@ -710,6 +724,7 @@ typedef struct
 } DashMenuItem;
 
 int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *items, int n, int initial);
+void dashModalSetPreview(void (*fn)(int index)); /* applies to the next dashModalMenu() */
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger);
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail);
 int dashModalChoice(const char *title, const char *const *options, int n, int current);
