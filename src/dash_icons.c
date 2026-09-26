@@ -370,6 +370,34 @@ static float iconSdf(int id, V2 p)
 			d = S(d, sdCircle(p, 0.36f, -0.12f, 0.07f));
 			d = S(d, sdCircle(p, 0.56f, 0.02f, 0.07f));
 			break;
+		case DI_EXEC:
+			/* an application window with a disc emblem: the PS2 program
+			 * tile used when an application has no artwork */
+			d = sdBoxOutline(p, 0.0f, 0.02f, 0.8f, 0.72f, 0.1f, T);
+			d = U(d, sdBox(p, 0.0f, -0.55f, 0.8f, 0.19f, 0.08f));
+			d = S(d, sdCircle(p, -0.56f, -0.55f, 0.06f));
+			d = U(d, sdRing(p, 0.0f, 0.2f, 0.3f, T * 0.9f));
+			d = U(d, sdCircle(p, 0.0f, 0.2f, 0.08f));
+			break;
+		case DI_PALETTE:
+			/* three overlapping swatches */
+			d = sdBox(p, -0.34f, -0.3f, 0.3f, 0.3f, 0.05f);
+			d = U(d, fabsf(sdBox(p, 0.06f, 0.02f, 0.3f, 0.3f, 0.05f)) - T);
+			d = U(d, fabsf(sdBox(p, 0.44f, 0.38f, 0.3f, 0.3f, 0.05f)) - T);
+			break;
+		case DI_RECENT:
+			d = sdRing(p, 0.0f, 0.0f, 0.7f, T);
+			d = S(d, sdBox(p, -0.62f, -0.5f, 0.2f, 0.26f, 0.0f));
+			d = U(d, sdTriP(p, -0.9f, -0.34f, -0.36f, -0.34f, -0.63f, -0.02f));
+			d = U(d, sdSeg(p, 0.0f, 0.0f, 0.0f, -0.4f, 0.07f));
+			d = U(d, sdSeg(p, 0.0f, 0.0f, 0.3f, 0.2f, 0.07f));
+			break;
+		case DI_IMAGE:
+			d = sdBoxOutline(p, 0.0f, 0.0f, 0.82f, 0.62f, 0.08f, T);
+			d = U(d, sdCircle(p, 0.36f, -0.24f, 0.13f));
+			d = U(d, fmaxf2(sdTriP(p, -0.66f, 0.46f, -0.18f, -0.12f, 0.3f, 0.46f), sdBox(p, 0.0f, 0.0f, 0.74f, 0.54f, 0.0f)));
+			d = U(d, fmaxf2(sdTriP(p, 0.0f, 0.46f, 0.36f, 0.1f, 0.72f, 0.46f), sdBox(p, 0.0f, 0.0f, 0.74f, 0.54f, 0.0f)));
+			break;
 		default:
 			d = sdCircle(p, 0.0f, 0.0f, 0.5f);
 			break;
@@ -450,6 +478,8 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 
 	if (!icons_ready || id < 0 || id >= DI_COUNT || size <= 0.0f || c.a == 0)
 		return;
+	if (id < DI_BTN_CROSS || id > DI_BTN_TRIANGLE)
+		c = dashIconTint(c);
 	u0 = (float)((id % ICON_COLS) * ICON_SLOT);
 	v0 = (float)((id / ICON_COLS) * ICON_SLOT);
 	pad = size * 2.0f / ICON_SIZE;
@@ -457,6 +487,28 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 	dashSpriteBatchAdd(x - pad, y - pad, u0, v0, x + size + pad, y + size + pad, u0 + ICON_SLOT, v0 + ICON_SLOT);
 	dashSpriteBatchEnd();
 }
+/* Theme icon tint: TEXT keeps the caller's colour, ACCENT leans it towards
+ * the accent colour (keeping its brightness), MONO removes the colour. */
+DashColor dashIconTint(DashColor c)
+{
+	int l = (c.r * 77 + c.g * 150 + c.b * 29) >> 8;
+
+	switch (dashTheme.icon_tint) {
+		case DASH_ICONS_ACCENT: {
+			DashColor a = DASH_C_ACCENT;
+			int la = (a.r * 77 + a.g * 150 + a.b * 29) >> 8;
+			float k = (la > 0) ? l / (float)la : 1.0f;
+			DashColor r = dashColorScale(a, k > 1.3f ? 1.3f : k);
+			r.a = c.a;
+			return dashColorMix(c, r, 0.7f);
+		}
+		case DASH_ICONS_MONO:
+			return DC(l, l, l, c.a);
+		default:
+			return c;
+	}
+}
+
 /* Many copies of one icon in a single sprite batch (background motifs). */
 void dashIconMany(int id, const float *xy, int n, float size, DashColor c)
 {

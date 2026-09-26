@@ -395,12 +395,17 @@ enum DashIcon {
 	DI_BTN_TRIANGLE,
 	DI_KEY,
 	DI_GAMEPAD,
-	DI_COUNT
+	DI_EXEC,    /* default application icon */
+	DI_PALETTE, /* theme settings */
+	DI_RECENT,  /* recently used */
+	DI_IMAGE,   /* wallpaper / picture */
+	DI_COUNT    /* the atlas holds 42 icons (7 x 6) */
 };
 
 void dashIconsInit(void);
 void dashIconsShutdown(void);
 void dashIcon(int id, float x, float y, float size, DashColor c);
+DashColor dashIconTint(DashColor c);
 GSTEXTURE *dashIconsTexture(void);
 
 //--------------------------------------------------------------

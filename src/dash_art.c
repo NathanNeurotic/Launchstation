@@ -524,7 +524,53 @@ static void monogram(const char *title, char *out)
 	out[n] = '\0';
 }
 
+/* Tile used for applications without artwork. The default is a real
+ * application icon on a panel in the theme's colours (optionally a PNG from
+ * the theme), with the device as a small badge; the old initials tile and
+ * a device-icon tile remain selectable (Settings > Theme > Icons). */
+static void monogramTile(const DashApp *app, float x, float y, float w, float h, float focus);
+
 void dashDrawAppTile(const DashApp *app, float x, float y, float w, float h, float focus)
+{
+	float r = w * 0.10f;
+	float isz = w * 0.18f;
+	DashColor top, bot, glyph;
+	int style = dashTheme.app_icon_style;
+	GSTEXTURE *custom = NULL;
+
+	if (style == DASH_APPICON_MONOGRAM) {
+		monogramTile(app, x, y, w, h, focus);
+		return;
+	}
+	if (r < 6.0f)
+		r = 6.0f;
+	/* lifted panel colour with a hint of the selection colour when focused */
+	top = dashColorLighten(DASH_C_PANEL_HI, 0.10f + 0.06f * focus);
+	top = dashColorMix(top, DASH_C_SELECT, 0.22f + 0.30f * focus);
+	bot = dashColorScale(DASH_C_PANEL_HI, 0.55f);
+	top.a = bot.a = 255;
+	dashPanelGradV(x, y, w, h, r, top, bot);
+	/* a thin top edge catches the light, like a moulded plastic tile */
+	dashRect(x + r, y + 1, w - 2 * r, 1.0f, dashColorA(DASH_C_TEXT, 0.16f + 0.1f * focus));
+	if (DASH_C_BORDER.a)
+		dashPanelBorder(x, y, w, h, r, DASH_C_BORDER);
+
+	glyph = dashColorLerp(DASH_C_TEXT2, DASH_C_TEXT, 0.4f + 0.6f * focus);
+	if (style == DASH_APPICON_SYSTEM && dashTheme.app_icon[0])
+		custom = dashThemeTextureFile(dashTheme.app_icon, 128, 128);
+	if (custom != NULL)
+		dashTexDrawFit(custom, x + w * 0.16f, y + h * 0.16f, w * 0.68f, h * 0.68f, DC(255, 255, 255, 255));
+	else if (style == DASH_APPICON_DEVICE)
+		dashIcon(dashLibDeviceIcon(app->path), x + w * 0.25f, y + h * 0.22f, w * 0.5f, glyph);
+	else
+		dashIcon(DI_EXEC, x + w * 0.24f, y + h * 0.2f, w * 0.52f, glyph);
+	/* device badge, bottom right */
+	if (style != DASH_APPICON_DEVICE)
+		dashIcon(dashLibDeviceIcon(app->path), x + w - isz - w * 0.08f, y + h - isz - h * 0.08f, isz,
+		         dashColorA(DASH_C_ACCENT, 0.55f + 0.25f * focus));
+}
+
+static void monogramTile(const DashApp *app, float x, float y, float w, float h, float focus)
 {
 	DashColor top = dashColorHue(app->hue, 150, 96 + (int)(40 * focus), 255);
 	DashColor bottom = dashColorHue(app->hue + 28, 190, 34 + (int)(20 * focus), 255);
