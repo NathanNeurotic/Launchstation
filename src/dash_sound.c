@@ -169,7 +169,7 @@ void dashSoundPlay(int id)
 	if (samples[id].buffer == NULL)
 		return;
 	if (id == DASH_SND_CURSOR) {
-		u64 now = Timer() / 1000;
+		u64 now = Timer();
 
 		if (now - lastCursorMs < 45)
 			return; /* OPL: no machine-gun ticks on autorepeat */
