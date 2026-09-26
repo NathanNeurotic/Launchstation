@@ -662,13 +662,17 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			dashArtInvalidateVram();
 
 		dashInputPoll(&in);
-		if (in.pressed & (DASH_IN_UP | DASH_IN_DOWN | DASH_IN_LEFT | DASH_IN_RIGHT))
-			dashSoundPlay(DASH_SND_CURSOR);
 		if (boot_phase) {
 			bootUpdate(&in);
 			if (boot_phase == 1)
 				memset(&in, 0, sizeof(in));
 		}
+		/* Main dashboard screens do not run through the modal helpers, so give
+		 * their ordinary navigation/activation inputs the same UI feedback. */
+		if (in.pressed & (DASH_IN_UP | DASH_IN_DOWN | DASH_IN_LEFT | DASH_IN_RIGHT))
+			dashSoundPlay(DASH_SND_CURSOR);
+		if (in.pressed & DASH_IN_OK)
+			dashSoundPlay(DASH_SND_CONFIRM);
 		if (in.pressed & DASH_IN_L1)
 			dashSwitchSection(section - 1);
 		else if (in.pressed & DASH_IN_R1)
