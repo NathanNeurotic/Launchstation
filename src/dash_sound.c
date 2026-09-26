@@ -337,6 +337,11 @@ void dashBgmSetVolume(void)
 		audsrv_set_volume(dashCfg.bgm_vol);
 }
 
+void dashBgmStop(void)
+{
+	bgmClose();
+}
+
 void dashBgmStart(void)
 {
 	char path[MAX_PATH];
