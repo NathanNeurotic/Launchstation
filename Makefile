@@ -43,13 +43,18 @@ EE_OBJS = main.o main_actions.o main_boot.o main_modules.o main_menu.o main_titl
 	secrsif_irx.o exploit_ioprp_img.o \
 	audsrv_irx.o libsd_irx.o \
 	sfx_cursor_adp.o sfx_confirm_adp.o sfx_cancel_adp.o sfx_transition_adp.o sfx_message_adp.o sfx_boot_adp.o sfx_connect_adp.o sfx_disconnect_adp.o \
-	icon_cross_png.o icon_circle_png.o icon_square_png.o icon_triangle_png.o icon_up_png.o icon_down_png.o icon_left_png.o icon_right_png.o icon_select_png.o icon_start_png.o icon_l1_png.o icon_l2_png.o icon_l3_png.o icon_r1_png.o icon_r2_png.o icon_r3_png.o
+	icon_cross_png.o icon_circle_png.o icon_square_png.o icon_triangle_png.o icon_up_png.o icon_down_png.o icon_left_png.o icon_right_png.o icon_select_png.o icon_start_png.o icon_l1_png.o icon_l2_png.o icon_l3_png.o icon_r1_png.o icon_r2_png.o icon_r3_png.o \
+	bgm_ogg.o
 
 EE_INCS := -I$(PS2DEV)/gsKit/include -I$(PS2SDK)/ports/include -Iinclude
-EE_INCS += -Iee_libs/audsrv/include
+EE_INCS += -Ipackages/world/audsrv/include
+EE_INCS += -Ipackages/world/vorbis/include
+EE_INCS += -Ipackages/world/ogg/include
 
 EE_LDFLAGS := -L$(PS2DEV)/gsKit/lib -L$(PS2SDK)/ports/lib -Liop/oldlibs/libcdvd/lib -s -Wl,--no-warn-mismatch
-EE_LDFLAGS += -Lee_libs/audsrv/lib
+EE_LDFLAGS += -Lpackages/world/audsrv/lib
+EE_LDFLAGS += -Lpackages/world/vorbis/lib
+EE_LDFLAGS += -Lpackages/world/ogg/lib
 EE_MATH_LIB := -lm
 ifneq ($(wildcard $(PS2SDK)/ee/lib/libmf.a),)
 EE_MATH_LIB := -lmf
@@ -57,7 +62,7 @@ endif
 
 # Newer PS2SDK libpatches can have backward intra-archive references.
 EE_LIBS = -Wl,--start-group -lgskit -ldmakit -lpng -lz -lmc -lhdd -lkbd $(EE_MATH_LIB) \
-			-lcdvd -lc -lfileXio -lpatches -lpoweroff -ldebug -laudsrv
+			-lcdvd -lc -lfileXio -lpatches -lpoweroff -ldebug -laudsrv -lvorbisfile -lvorbis -logg
 EE_CFLAGS := -mgpopt -G10240 -G0 -DNEWLIB_PORT_AWARE -D_EE
 
 ifneq ($(DEBUG), 0)

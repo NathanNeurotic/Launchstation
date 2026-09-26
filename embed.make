@@ -653,12 +653,15 @@ $(EE_ASM_DIR)icon_r2_png.s: res/icons/R2.png | $(EE_ASM_DIR)
 $(EE_ASM_DIR)icon_r3_png.s: res/icons/R3.png | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ icon_r3_png
 
-AUDSRV_SOURCE := iop/__precompiled/audsrv.irx
+$(EE_ASM_DIR)bgm_ogg.s: res/bgm.ogg | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ bgm_ogg
+
+AUDSRV_SOURCE := packages/world/audsrv/bin/audsrv.irx
 ifneq ($(wildcard $(PS2SDK)/iop/irx/audsrv.irx),)
   AUDSRV_SOURCE := $(PS2SDK)/iop/irx/audsrv.irx
 endif
 ifeq ($(wildcard $(AUDSRV_SOURCE)),)
-  $(error Missing audsrv.irx. Restore iop/__precompiled/audsrv.irx or update the ps2dev packages)
+  $(error Missing audsrv.irx. Install the in-repo package: cp -r packages/world/audsrv "\$$PS2DEV/packages/world/")
 endif
 
 $(EE_ASM_DIR)audsrv_irx.s: $(AUDSRV_SOURCE) | $(EE_ASM_DIR)

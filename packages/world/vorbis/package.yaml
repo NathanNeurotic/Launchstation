@@ -1,0 +1,27 @@
+name: vorbis
+origin: port:libvorbis
+tier: world
+license: BSD-3-Clause
+
+# world: real, untouched upstream CMake build (this repo's own
+# CMakeLists.txt) against ps2dev.cmake, matching this repo's own real
+# CMake targets - "vorbis" (core codec) and "vorbisfile" (the
+# high-level file-decoding API real consumers like Open-PS2-Loader
+# actually use) are two separate real archives from one real upstream
+# source tree, same "one package, two artifacts" pattern as core/
+# audsrv/netman/cdvd. vorbisenc (the encoder) is real too but not
+# built here - nothing in this tree needs to encode Vorbis, only
+# decode it.
+#
+# Depends on world/ogg (the real bitstream container format) - both
+# real archive names ("vorbis"/"vorbisfile") match real upstream's own
+# universal -lvorbis/-lvorbisfile link convention.
+artifacts:
+  - kind: library
+    target: [ee]
+    include_dirs: [include]
+    headers: [ogg]
+    lib: lib/libvorbis.a
+  - kind: library
+    target: [ee]
+    lib: lib/libvorbisfile.a

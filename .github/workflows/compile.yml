@@ -29,6 +29,13 @@ jobs:
         run: |
           ps2build --version
 
+      - name: Install in-repo custom packages
+        run: |
+          dest="$HOME/.local/share/ps2build/packages/world"
+          mkdir -p "$dest"
+          cp -r packages/world/. "$dest/"
+          ls "$dest"
+
       - name: Build wLaunchELF with ps2build
         run: |
           ps2build build

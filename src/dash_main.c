@@ -158,7 +158,9 @@ static void leaveLegacy(void)
 	fade_in = 0.0f;
 	dashInputFlush();
 	last_frame_ms = Timer();
-	dashSoundInit(); /* re-start after IOP resets ran legacy paths */
+	dashSoundShutdown(); /* drop stale state after IOP resets ran legacy paths */
+	dashSoundInit();
+	dashBgmStart();
 	dashDevicesAutoProbe();
 }
 
@@ -539,6 +541,7 @@ void dashRenderScene(void)
 {
 	float e;
 
+	dashBgmPump();
 	dashArtBeginFrame();
 	dashGfxBeginFrame();
 	dashBgDraw();
@@ -631,6 +634,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	DashThemeSetLegacyEnabled(dashCfg.legacy_theme);
 	mainActionLaunchHook = dashLaunchHook;
 	dashSoundInit();
+	dashBgmStart();
 	if (from_boot)
 		dashSoundPlay(DASH_SND_BOOT);
 

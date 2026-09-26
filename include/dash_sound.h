@@ -21,5 +21,7 @@ enum DashSound {
 int dashSoundInit(void);
 void dashSoundShutdown(void);
 void dashSoundPlay(int id);
+void dashBgmStart(void);
+void dashBgmPump(void);
 
 #endif

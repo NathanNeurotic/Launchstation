@@ -8,6 +8,11 @@
 #include "dash_internal.h"
 #include "dash_sound.h"
 #include <audsrv.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#include <vorbis/vorbisfile.h>
+#pragma GCC diagnostic pop
+#include <iopcontrol.h>
 
 extern u8 audsrv_irx[];
 extern int size_audsrv_irx;
@@ -29,9 +34,13 @@ extern u8 sfx_connect_adp[];
 extern int size_sfx_connect_adp;
 extern u8 sfx_disconnect_adp[];
 extern int size_sfx_disconnect_adp;
+extern u8 bgm_ogg[];
+extern int size_bgm_ogg;
 
 static audsrv_adpcm_t samples[DASH_SND_COUNT];
 static int sound_ready;
+
+static void bgmClose(void);
 
 static void *blob_data(int id)
 {
@@ -109,7 +118,9 @@ void dashSoundShutdown(void)
 {
 	if (!sound_ready)
 		return;
-	audsrv_quit();
+	bgmClose();
+	if (!HasIopRebootedSinceLastCall())
+		audsrv_quit();
 	sound_ready = 0;
 }
 
@@ -133,4 +144,163 @@ void dashSoundPlay(int id)
 	if (ch >= 0)
 		audsrv_adpcm_set_volume_and_pan(ch, dashCfg.sound_vol, 0);
 	audsrv_ch_play_adpcm(ch, &samples[id]);
+}
+
+//--------------------------------------------------------------
+// Background music
+//
+// Default source is the embedded bgm.ogg; a bgm.ogg next to the ELF
+// (sidecar) overrides it, OPL-style. Decoded with libvorbis in the
+// main loop (dashBgmPump feeds audsrv a chunk per frame, no thread).
+//--------------------------------------------------------------
+typedef struct
+{
+	const u8 *data;
+	long size;
+	long pos;
+} BgmMem;
+
+static OggVorbis_File bgm_vf;
+static BgmMem bgm_mem;
+static u8 *bgm_filebuf; /* sidecar copy, NULL when using the embedded blob */
+static int bgm_opened;
+static int bgm_active;
+
+static size_t bgm_mem_read(void *ptr, size_t size, size_t nmemb, void *ds)
+{
+	BgmMem *m = (BgmMem *)ds;
+	long avail = m->size - m->pos;
+	long want = (long)(size * nmemb);
+	long n = want < avail ? want : avail;
+
+	if (n <= 0)
+		return 0;
+	memcpy(ptr, m->data + m->pos, n);
+	m->pos += n;
+	return (size_t)(n / size);
+}
+
+static int bgm_mem_seek(void *ds, ogg_int64_t offset, int whence)
+{
+	BgmMem *m = (BgmMem *)ds;
+	long p;
+
+	switch (whence) {
+		case SEEK_SET:
+			p = (long)offset;
+			break;
+		case SEEK_CUR:
+			p = m->pos + (long)offset;
+			break;
+		default:
+			p = m->size + (long)offset;
+			break;
+	}
+	if (p < 0 || p > m->size)
+		return -1;
+	m->pos = p;
+	return 0;
+}
+
+static long bgm_mem_tell(void *ds)
+{
+	return ((BgmMem *)ds)->pos;
+}
+
+static void bgmClose(void)
+{
+	if (bgm_opened) {
+		ov_clear(&bgm_vf);
+		bgm_opened = 0;
+	}
+	bgm_active = 0;
+	if (bgm_filebuf != NULL) {
+		free(bgm_filebuf);
+		bgm_filebuf = NULL;
+	}
+}
+
+void dashBgmStart(void)
+{
+	char path[MAX_PATH];
+	const u8 *data;
+	long len;
+	int size;
+	vorbis_info *vi;
+	struct audsrv_fmt_t fmt;
+	ov_callbacks cb;
+	FILE *f;
+
+	if (bgm_active || !sound_ready || !dashCfg.sound)
+		return;
+	bgmClose();
+	data = bgm_ogg;
+	size = size_bgm_ogg;
+	/* sidecar: <ELF folder>/bgm.ogg wins over the embedded track */
+	if (LaunchElfDir[0] && snprintf(path, sizeof(path), "%sbgm.ogg", LaunchElfDir) < (int)sizeof(path)) {
+		f = fopen(path, "rb");
+		if (f != NULL) {
+			fseek(f, 0, SEEK_END);
+			len = ftell(f);
+			fseek(f, 0, SEEK_SET);
+			if (len > 0 && len < 8 * 1024 * 1024) {
+				u8 *buf = (u8 *)malloc(len);
+
+				if (buf != NULL && fread(buf, 1, len, f) == (size_t)len) {
+					bgm_filebuf = buf;
+					data = buf;
+					size = (int)len;
+				} else {
+					free(buf);
+				}
+			}
+			fclose(f);
+		}
+	}
+	bgm_mem.data = data;
+	bgm_mem.size = size;
+	bgm_mem.pos = 0;
+	cb.read_func = bgm_mem_read;
+	cb.seek_func = bgm_mem_seek;
+	cb.close_func = NULL;
+	cb.tell_func = bgm_mem_tell;
+	if (ov_open_callbacks(&bgm_mem, &bgm_vf, NULL, 0, cb) < 0)
+		goto fail;
+	bgm_opened = 1;
+	vi = ov_info(&bgm_vf, -1);
+	if (vi == NULL || (vi->channels != 1 && vi->channels != 2))
+		goto fail;
+	fmt.freq = vi->rate;
+	fmt.bits = 16;
+	fmt.channels = vi->channels;
+	if (audsrv_set_format(&fmt) != 0)
+		goto fail;
+	bgm_active = 1;
+	return;
+fail:
+	bgmClose();
+}
+
+void dashBgmPump(void)
+{
+	char pcm[8192];
+	int n, sec = 0;
+
+	if (!bgm_active || !sound_ready || !dashCfg.sound)
+		return;
+	if (audsrv_available() < (int)sizeof(pcm))
+		return;
+	n = ov_read(&bgm_vf, pcm, sizeof(pcm), 0, 2, 1, &sec);
+	if (n <= 0) {
+		if (ov_pcm_seek(&bgm_vf, 0) != 0) {
+			bgm_active = 0;
+			return;
+		}
+		n = ov_read(&bgm_vf, pcm, sizeof(pcm), 0, 2, 1, &sec);
+		if (n <= 0) {
+			bgm_active = 0;
+			return;
+		}
+	}
+	audsrv_play_audio(pcm, n);
 }
