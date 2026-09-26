@@ -264,17 +264,23 @@ void dashBgmStart(void)
 	cb.seek_func = bgm_mem_seek;
 	cb.close_func = NULL;
 	cb.tell_func = bgm_mem_tell;
-	if (ov_open_callbacks(&bgm_mem, &bgm_vf, NULL, 0, cb) < 0)
+	if (ov_open_callbacks(&bgm_mem, &bgm_vf, NULL, 0, cb) < 0) {
+		dashToast(DASH_TOAST_WARN, "BGM skipped: not a playable Ogg Vorbis file");
 		goto fail;
+	}
 	bgm_opened = 1;
 	vi = ov_info(&bgm_vf, -1);
-	if (vi == NULL || (vi->channels != 1 && vi->channels != 2))
+	if (vi == NULL || (vi->channels != 1 && vi->channels != 2)) {
+		dashToast(DASH_TOAST_WARN, "BGM skipped: needs 1 or 2 channels");
 		goto fail;
+	}
 	fmt.freq = vi->rate;
 	fmt.bits = 16;
 	fmt.channels = vi->channels;
-	if (audsrv_set_format(&fmt) != 0)
+	if (audsrv_set_format(&fmt) != 0) {
+		dashToast(DASH_TOAST_WARN, "BGM skipped: use 44100 or 48000 Hz");
 		goto fail;
+	}
 	bgm_active = 1;
 	return;
 fail:
@@ -283,24 +289,27 @@ fail:
 
 void dashBgmPump(void)
 {
-	char pcm[8192];
-	int n, sec = 0;
+	char pcm[2048];
+	int n, sec = 0, fed = 0;
 
 	if (!bgm_active || !sound_ready || !dashCfg.sound)
 		return;
-	if (audsrv_available() < (int)sizeof(pcm))
-		return;
-	n = ov_read(&bgm_vf, pcm, sizeof(pcm), 0, 2, 1, &sec);
-	if (n <= 0) {
-		if (ov_pcm_seek(&bgm_vf, 0) != 0) {
-			bgm_active = 0;
-			return;
-		}
+	/* audsrv's ring buffer is only ~10-20 KB; feed a little each frame
+	 * (at most 2 chunks) so we never block and never outrun the buffer */
+	while (fed < 2 && audsrv_available() >= (int)sizeof(pcm)) {
 		n = ov_read(&bgm_vf, pcm, sizeof(pcm), 0, 2, 1, &sec);
 		if (n <= 0) {
-			bgm_active = 0;
-			return;
+			if (ov_pcm_seek(&bgm_vf, 0) != 0) {
+				bgm_active = 0;
+				return;
+			}
+			n = ov_read(&bgm_vf, pcm, sizeof(pcm), 0, 2, 1, &sec);
+			if (n <= 0) {
+				bgm_active = 0;
+				return;
+			}
 		}
+		audsrv_play_audio(pcm, n);
+		fed++;
 	}
-	audsrv_play_audio(pcm, n);
 }
