@@ -10,6 +10,7 @@
 //from the classic uLE_cdStop() tracking.
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "dash_sound.h"
 #include "init.h"
 
 extern int cdmode;
@@ -18,13 +19,38 @@ extern int vmcMounted[2];
 /* remembered results of explicit probes that failed */
 static u8 probe_failed_hdd, probe_failed_ata, probe_failed_mx4sio, probe_failed_mmce, probe_failed_udpfs;
 
+/* device-presence snapshot for connect/disconnect sounds; the all-ones
+ * value marks "not baselined yet" so boot does not play a burst of sounds */
+static u32 dev_snapshot = 0xFFFFFFFFu;
+
 void dashDevicesInit(void)
 {
 }
 
 void dashDevicesPoll(void)
 {
+	u32 now = 0;
+	int i;
+
 	pollRootMemoryCardDevices();
+	for (i = 0; i < 2; i++)
+		if (filerRootMcPresent(i, NULL, NULL) > 0)
+			now |= 1u << i;
+	if (filerUsbDriversLoaded()) {
+		int m = filerUsbDriveMask();
+		for (i = 0; i < 10; i++)
+			if (m & (1 << i))
+				now |= 1u << (2 + i);
+	}
+	if (dev_snapshot == 0xFFFFFFFFu)
+		dev_snapshot = now;
+	else if (now != dev_snapshot) {
+		if (now & ~dev_snapshot)
+			dashSoundPlay(DASH_SND_CONNECT);
+		if (dev_snapshot & ~now)
+			dashSoundPlay(DASH_SND_DISCONNECT);
+		dev_snapshot = now;
+	}
 }
 
 int dashMcPresent(int port)

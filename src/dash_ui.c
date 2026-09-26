@@ -8,6 +8,7 @@
 //confirms, Circle cancels), exactly like the classic screens.
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "dash_sound.h"
 
 extern u32 paddata;
 
@@ -493,6 +494,7 @@ void dashToast(int kind, const char *msg)
 	toasts[ntoasts].t = 0.0f;
 	dashStrCopy(toasts[ntoasts].msg, msg, sizeof(toasts[ntoasts].msg));
 	ntoasts++;
+	dashSoundPlay(DASH_SND_MESSAGE);
 }
 
 void dashUiUpdate(float dt)
@@ -620,6 +622,8 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			do
 				s = (s > 0) ? s - 1 : n - 1;
 			while (items[s].disabled && s != sel);
+			if (s != sel)
+				dashSoundPlay(DASH_SND_CURSOR);
 			sel = s;
 		}
 		if (in.pressed & DASH_IN_DOWN) {
@@ -627,17 +631,27 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			do
 				s = (s < n - 1) ? s + 1 : 0;
 			while (items[s].disabled && s != sel);
+			if (s != sel)
+				dashSoundPlay(DASH_SND_CURSOR);
 			sel = s;
 		}
-		if (in.pressed & DASH_IN_L2)
+		if (in.pressed & DASH_IN_L2) {
+			if (sel != 0)
+				dashSoundPlay(DASH_SND_CURSOR);
 			sel = 0;
-		if (in.pressed & DASH_IN_R2)
+		}
+		if (in.pressed & DASH_IN_R2) {
+			if (sel != n - 1)
+				dashSoundPlay(DASH_SND_CURSOR);
 			sel = n - 1;
+		}
 		if ((in.pressed & DASH_IN_OK) && !items[sel].disabled) {
+			dashSoundPlay(DASH_SND_CONFIRM);
 			dashInputFlush();
 			return sel;
 		}
 		if (in.pressed & (DASH_IN_BACK | DASH_IN_MENU)) {
+			dashSoundPlay(DASH_SND_CANCEL);
 			dashInputFlush();
 			return -1;
 		}
@@ -741,13 +755,17 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 
 	while (1) {
 		dashInputPoll(&in);
-		if (cancel_label != NULL && (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT)))
+		if (cancel_label != NULL && (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
 			sel ^= 1;
+			dashSoundPlay(DASH_SND_CURSOR);
+		}
 		if (in.pressed & DASH_IN_OK) {
+			dashSoundPlay(DASH_SND_CONFIRM);
 			dashInputFlush();
 			return (cancel_label == NULL) ? 1 : (sel == 0);
 		}
 		if (in.pressed & DASH_IN_BACK) {
+			dashSoundPlay(DASH_SND_CANCEL);
 			dashInputFlush();
 			return (cancel_label == NULL) ? 1 : 0;
 		}

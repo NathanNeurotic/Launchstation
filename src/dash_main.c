@@ -8,6 +8,7 @@
 //sidecars, device loading, KELF/HDD/PSX handling, cleanup before exec).
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "dash_sound.h"
 #include "init.h"
 
 extern void (*mainActionLaunchHook)(const char *path);
@@ -104,6 +105,7 @@ void dashSwitchSection(int s)
 	prev_section = section;
 	section = s;
 	section_anim = 0.0f;
+	dashSoundPlay(DASH_SND_TRANSITION);
 	if (screens[section]->enter)
 		screens[section]->enter();
 }
@@ -156,6 +158,7 @@ static void leaveLegacy(void)
 	fade_in = 0.0f;
 	dashInputFlush();
 	last_frame_ms = Timer();
+	dashSoundInit(); /* re-start after IOP resets ran legacy paths */
 }
 
 static void showActionMessage(void)
@@ -623,6 +626,9 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	}
 	DashThemeSetLegacyEnabled(dashCfg.legacy_theme);
 	mainActionLaunchHook = dashLaunchHook;
+	dashSoundInit();
+	if (from_boot)
+		dashSoundPlay(DASH_SND_BOOT);
 
 	section_anim = 1.0f;
 	fade_in = 0.0f;
@@ -648,6 +654,8 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			dashArtInvalidateVram();
 
 		dashInputPoll(&in);
+		if (in.pressed & (DASH_IN_UP | DASH_IN_DOWN | DASH_IN_LEFT | DASH_IN_RIGHT))
+			dashSoundPlay(DASH_SND_CURSOR);
 		if (boot_phase) {
 			bootUpdate(&in);
 			if (boot_phase == 1)
