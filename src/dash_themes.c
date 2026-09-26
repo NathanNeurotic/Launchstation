@@ -954,12 +954,16 @@ static int themeRoots(char roots[2][MAX_PATH])
 	int n = 0;
 	const char *store = dashStoreDir();
 
-	if (LaunchElfDir[0] && isWritablePath(LaunchElfDir) && isPathDeviceStackLoaded(LaunchElfDir))
-		dashStrCopy(roots[n++], LaunchElfDir, MAX_PATH);
+	if (LaunchElfDir[0] && isWritablePath(LaunchElfDir) && isPathDeviceStackLoaded(LaunchElfDir)) {
+		/* themes ride along with the ELF, in <ELF folder>/THEMES/ */
+		if (snprintf(roots[0], MAX_PATH, "%sTHEMES/", LaunchElfDir) < MAX_PATH)
+			n++;
+	}
 	if (store != NULL && store[0]) {
 		char root[MAX_PATH];
 
 		if (snprintf(root, sizeof(root), "%sTHEMES/", store) < (int)sizeof(root) &&
+		    isPathDeviceStackLoaded(root) &&
 		    (n == 0 || strcmp(roots[0], root) != 0))
 			dashStrCopy(roots[n++], root, MAX_PATH);
 	}

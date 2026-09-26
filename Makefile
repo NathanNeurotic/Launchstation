@@ -46,9 +46,9 @@ EE_OBJS = main.o main_actions.o main_boot.o main_modules.o main_menu.o main_titl
 
 EE_INCS := -I$(PS2DEV)/gsKit/include -I$(PS2SDK)/ports/include -Iinclude
 EE_INCS += -Iee_libs/audsrv/include
-EE_LDFLAGS += -Lee_libs/audsrv/lib
 
 EE_LDFLAGS := -L$(PS2DEV)/gsKit/lib -L$(PS2SDK)/ports/lib -Liop/oldlibs/libcdvd/lib -s -Wl,--no-warn-mismatch
+EE_LDFLAGS += -Lee_libs/audsrv/lib
 EE_MATH_LIB := -lm
 ifneq ($(wildcard $(PS2SDK)/ee/lib/libmf.a),)
 EE_MATH_LIB := -lmf

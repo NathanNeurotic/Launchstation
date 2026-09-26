@@ -102,6 +102,7 @@ void dashSoundPlay(int id)
 	if (samples[id].buffer == NULL)
 		return;
 	ch = (id == DASH_SND_CURSOR) ? (rr++ & 1) : 2;
-	audsrv_adpcm_set_volume_and_pan(ch, dashCfg.sound_vol * 0x3FFF / 100, 0);
+	/* audsrv volume is a percentage 0..100 */
+	audsrv_adpcm_set_volume_and_pan(ch, dashCfg.sound_vol, 0);
 	audsrv_ch_play_adpcm(ch, &samples[id]);
 }

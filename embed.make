@@ -624,7 +624,7 @@ AUDSRV_SOURCE := iop/__precompiled/audsrv.irx
 ifneq ($(wildcard $(PS2SDK)/iop/irx/audsrv.irx),)
   AUDSRV_SOURCE := $(PS2SDK)/iop/irx/audsrv.irx
 endif
-ifneq ($(wildcard $(AUDSRV_SOURCE)),)
+ifeq ($(wildcard $(AUDSRV_SOURCE)),)
   $(error Missing audsrv.irx. Restore iop/__precompiled/audsrv.irx or update the ps2dev packages)
 endif
 
