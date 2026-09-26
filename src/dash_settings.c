@@ -37,6 +37,8 @@ enum SetId {
 	S_ENABLED,
 	S_SOUND,
 	S_SVOL,
+	S_BGM,
+	S_BGMVOL,
 	S_START,
 	S_VIEW,
 	S_ARTWORK,
@@ -153,6 +155,8 @@ static const SetItem dash_items[] = {
     {ST_CHOICE, S_ENABLED, "Start in the dashboard", "Off: boot into the classic launch-key menu instead."},
     {ST_CHOICE, S_SOUND, "Interface sounds", "Cursor moves, confirmations and other dashboard sound effects."},
     {ST_CHOICE, S_SVOL, "Sound volume", NULL},
+    {ST_CHOICE, S_BGM, "Background music", "Music under the dashboard. A bgm.ogg next to the ELF overrides the built-in track."},
+    {ST_CHOICE, S_BGMVOL, "Music volume", NULL},
     {ST_CHOICE, S_START, "Start screen", "Section shown when the dashboard opens."},
     {ST_CHOICE, S_VIEW, "Application view", "Grid, list or carousel (SELECT also switches it in APPS)."},
     {ST_CHOICE, S_ARTWORK, "Artwork", "Load cover art (OPL ART folder, <ELF>_COV.png, cover.png...)."},
@@ -369,6 +373,12 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return 2;
 		case S_SVOL:
 			*names = pct_names, *cur = dashCfg.sound_vol / 10;
+			return 11;
+		case S_BGM:
+			*cur = dashCfg.bgm;
+			return 2;
+		case S_BGMVOL:
+			*names = pct_names, *cur = dashCfg.bgm_vol / 10;
 			return 11;
 		case S_START: {
 			static const char *secs[DASH_SEC_COUNT];
@@ -847,6 +857,17 @@ static void setChoice(int id, int v)
 			break;
 		case S_SVOL:
 			dashCfg.sound_vol = v * 10;
+			break;
+		case S_BGM:
+			dashCfg.bgm = v;
+			if (v)
+				dashBgmStart();
+			else
+				dashBgmStop();
+			break;
+		case S_BGMVOL:
+			dashCfg.bgm_vol = v * 10;
+			dashBgmSetVolume();
 			break;
 		case S_DEVA_USB:
 		case S_DEVA_HDD:

@@ -91,8 +91,6 @@ int dashSoundInit(void)
 		dashToast(DASH_TOAST_WARN, "Sound unavailable: audsrv init failed");
 		return 0;
 	}
-	/* the driver does not set a usable master volume by itself */
-	audsrv_set_volume(dashCfg.sound_vol);
 	if (audsrv_adpcm_init() != 0) {
 		audsrv_quit();
 		dashToast(DASH_TOAST_WARN, "Sound unavailable: adpcm init failed");
@@ -127,21 +125,16 @@ void dashSoundShutdown(void)
 void dashSoundPlay(int id)
 {
 	static int rr;
-	static int last_vol = -1;
+	static u64 last_cursor_ms;
 	int ch;
 
 	if (!sound_ready || !dashCfg.sound || id < 0 || id >= DASH_SND_COUNT)
 		return;
 	if (samples[id].buffer == NULL)
 		return;
-	if (dashCfg.sound_vol != last_vol) {
-		audsrv_set_volume(dashCfg.sound_vol);
-		last_vol = dashCfg.sound_vol;
-	}
 	/* cursor ping-pongs 0/1 so rapid ticks overlap; everything else lets
 	 * the driver pick a free voice so the boot jingle cannot starve beeps */
 	if (id == DASH_SND_CURSOR) {
-		static u64 last_cursor_ms;
 		u64 now = Timer() / 1000;
 
 		if (now - last_cursor_ms < 45)
@@ -338,6 +331,12 @@ static void bgmClose(void)
 	}
 }
 
+void dashBgmSetVolume(void)
+{
+	if (sound_ready)
+		audsrv_set_volume(dashCfg.bgm_vol);
+}
+
 void dashBgmStart(void)
 {
 	char path[MAX_PATH];
@@ -351,7 +350,7 @@ void dashBgmStart(void)
 	ee_sema_t sema;
 	FILE *f;
 
-	if (bgmPlaying || !sound_ready || !dashCfg.sound)
+	if (bgmPlaying || !sound_ready || !dashCfg.sound || !dashCfg.bgm)
 		return;
 	bgmClose();
 	data = bgm_ogg;
@@ -439,6 +438,7 @@ void dashBgmStart(void)
 		dashToast(DASH_TOAST_WARN, "BGM skipped: use 44100 or 48000 Hz");
 		goto fail;
 	}
+	audsrv_set_volume(dashCfg.bgm_vol);
 	bgmPlaying = 1;
 	StartThread(bgmIoThreadID, NULL);
 	StartThread(bgmPlayThreadID, NULL);

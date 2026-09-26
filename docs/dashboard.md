@@ -128,10 +128,13 @@ audio server: cursor moves, confirm/cancel in dialogs, section switches,
 toasts, the startup boot sound, and device connect/disconnect. They are
 Sony ADP samples embedded in the ELF (no files needed at runtime).
 
-Settings > Dashboard > *Interface sounds* turns them on or off and sets
-the volume (`Dash_Sound` / `Dash_SoundVolume` in DASHBOARD.CNF, on and
-80% by default). When the audio driver cannot start, everything stays
-silent — the dashboard works normally without sound (a toast says why).
+Settings > Dashboard has *Interface sounds* (the UI effects) and
+*Background music* (the music track), each with its own volume
+(`Dash_Sound` / `Dash_SoundVolume` / `Dash_BGM` / `Dash_BGMVolume` in
+DASHBOARD.CNF, all on at 80% by default). *Interface sounds* off silences
+the whole audio driver, music included. When the audio driver cannot
+start, everything stays silent — the dashboard works normally without
+sound (a toast says why).
 
 ## Devices and the applications filter
 

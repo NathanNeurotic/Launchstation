@@ -496,6 +496,8 @@ typedef struct
 	int intro_done;
 	int sound;
 	int sound_vol;
+	int bgm;
+	int bgm_vol;
 	int app_filter;
 	int dev_auto; /* DASH_DEVA_* bitmask: drivers to load at startup */
 	int nscan;

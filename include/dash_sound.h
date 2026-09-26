@@ -23,5 +23,6 @@ void dashSoundShutdown(void);
 void dashSoundPlay(int id);
 void dashBgmStart(void);
 void dashBgmStop(void);
+void dashBgmSetVolume(void); /* apply dashCfg.bgm_vol to the music bus */
 
 #endif
