@@ -404,17 +404,24 @@ enum DashIcon {
 	DI_VIEW_CAROUSEL,
 	DI_FILE,
 	DI_BACK,
+	DI_PAD_BADGE,   /* shared dark rounded-square tile drawn behind pad glyphs */
 	DI_BTN_CROSS,
 	DI_BTN_CIRCLE,
 	DI_BTN_SQUARE,
 	DI_BTN_TRIANGLE,
+	DI_BTN_UP,
+	DI_BTN_DOWN,
+	DI_BTN_LEFT,
+	DI_BTN_RIGHT,
+	DI_BTN_START,
+	DI_BTN_SELECT,
 	DI_KEY,
 	DI_GAMEPAD,
 	DI_EXEC,    /* default application icon */
 	DI_PALETTE, /* theme settings */
 	DI_RECENT,  /* recently used */
 	DI_IMAGE,   /* wallpaper / picture */
-	DI_COUNT    /* the atlas holds 42 icons (7 x 6) */
+	DI_COUNT    /* the atlas holds 49 icons (7 x 7) */
 };
 
 void dashIconsInit(void);

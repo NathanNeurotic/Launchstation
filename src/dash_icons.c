@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 //File name:   dash_icons.c
 //Dashboard icon set, rasterized once from signed distance functions into
-//one 512x408 PSMT8 alpha atlas (64x64 icons, tinted by vertex colour).
+//one 512x476 PSMT8 alpha atlas (64x64 icons, tinted by vertex colour).
 //No image files are needed and every icon stays anti-aliased at the sizes
 //used by the dashboard (16..96 px).
 //--------------------------------------------------------------
@@ -11,7 +11,7 @@
 #define ICON_SLOT 68
 #define ICON_COLS 7
 #define ICON_TEX_W 512
-#define ICON_TEX_H 408
+#define ICON_TEX_H 476
 
 static GSTEXTURE icon_tex;
 static u32 icon_clut[256] __attribute__((aligned(64)));
@@ -342,6 +342,9 @@ static float iconSdf(int id, V2 p)
 			d = U(d, sdSeg(p, -0.6f, 0.0f, -0.12f, -0.48f, 0.09f));
 			d = U(d, sdSeg(p, -0.6f, 0.0f, -0.12f, 0.48f, 0.09f));
 			break;
+		case DI_PAD_BADGE:
+			d = sdBox(p, 0.0f, 0.0f, 0.92f, 0.92f, 0.20f);
+			break;
 		case DI_BTN_CROSS:
 			d = sdSeg(p, -0.5f, -0.5f, 0.5f, 0.5f, 0.11f);
 			d = U(d, sdSeg(p, -0.5f, 0.5f, 0.5f, -0.5f, 0.11f));
@@ -354,6 +357,28 @@ static float iconSdf(int id, V2 p)
 			break;
 		case DI_BTN_TRIANGLE:
 			d = fabsf(sdTriP(p, -0.66f, 0.46f, 0.0f, -0.68f, 0.66f, 0.46f) + 0.03f) - 0.1f;
+			break;
+		case DI_BTN_UP:
+			d = U(sdSeg(p, -0.5f, -0.22f, 0.0f, 0.34f, 0.12f),
+			    sdSeg(p, 0.0f, 0.34f, 0.5f, -0.22f, 0.12f));
+			break;
+		case DI_BTN_DOWN:
+			d = U(sdSeg(p, -0.5f, 0.22f, 0.0f, -0.34f, 0.12f),
+			    sdSeg(p, 0.0f, -0.34f, 0.5f, 0.22f, 0.12f));
+			break;
+		case DI_BTN_LEFT:
+			d = U(sdSeg(p, 0.22f, -0.5f, -0.34f, 0.0f, 0.12f),
+			    sdSeg(p, -0.34f, 0.0f, 0.22f, 0.5f, 0.12f));
+			break;
+		case DI_BTN_RIGHT:
+			d = U(sdSeg(p, -0.22f, -0.5f, 0.34f, 0.0f, 0.12f),
+			    sdSeg(p, 0.34f, 0.0f, -0.22f, 0.5f, 0.12f));
+			break;
+		case DI_BTN_START:
+			d = sdTriP(p, -0.36f, -0.44f, -0.36f, 0.44f, 0.44f, 0.0f);
+			break;
+		case DI_BTN_SELECT:
+			d = sdBoxOutline(p, 0.0f, 0.0f, 0.58f, 0.38f, 0.17f, 0.1f);
 			break;
 		case DI_KEY:
 			d = sdRing(p, -0.4f, 0.0f, 0.3f, T);
@@ -436,6 +461,8 @@ void dashIconsInit(void)
 				d = iconSdf(id, p);
 				/* one pixel == 2/64 normalized units */
 				a = dashClampf(0.5f - d * (ICON_SIZE * 0.5f), 0.0f, 1.0f);
+				if (id == DI_PAD_BADGE)
+					a *= 0.86f + 0.14f * (1.0f - p.y) * 0.5f; /* soft top light */
 				mem[(sy + y) * ICON_TEX_W + sx + x] = (u8)(a * 255.0f + 0.5f);
 			}
 		}
@@ -478,11 +505,25 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 
 	if (!icons_ready || id < 0 || id >= DI_COUNT || size <= 0.0f || c.a == 0)
 		return;
-	if (id < DI_BTN_CROSS || id > DI_BTN_TRIANGLE)
+	if (id < DI_PAD_BADGE || id > DI_BTN_SELECT)
 		c = dashIconTint(c);
 	u0 = (float)((id % ICON_COLS) * ICON_SLOT);
 	v0 = (float)((id / ICON_COLS) * ICON_SLOT);
 	pad = size * 2.0f / ICON_SIZE;
+	if (id > DI_PAD_BADGE && id <= DI_BTN_SELECT) {
+		/* OSDSYS pad tile: fixed dark badge, then the coloured glyph at 56% */
+		float bu0 = (float)((DI_PAD_BADGE % ICON_COLS) * ICON_SLOT);
+		float bv0 = (float)((DI_PAD_BADGE / ICON_COLS) * ICON_SLOT);
+		float g = size * 0.56f, go = (size - g) * 0.5f;
+
+		dashSpriteBatchBegin(&icon_tex, DC(16, 18, 30, 232));
+		dashSpriteBatchAdd(x - pad, y - pad, bu0, bv0, x + size + pad, y + size + pad, bu0 + ICON_SLOT, bv0 + ICON_SLOT);
+		dashSpriteBatchEnd();
+		dashSpriteBatchBegin(&icon_tex, c);
+		dashSpriteBatchAdd(x + go, y + go, u0, v0, x + go + g, y + go + g, u0 + ICON_SLOT, v0 + ICON_SLOT);
+		dashSpriteBatchEnd();
+		return;
+	}
 	dashSpriteBatchBegin(&icon_tex, c);
 	dashSpriteBatchAdd(x - pad, y - pad, u0, v0, x + size + pad, y + size + pad, u0 + ICON_SLOT, v0 + ICON_SLOT);
 	dashSpriteBatchEnd();
