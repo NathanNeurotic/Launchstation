@@ -669,6 +669,7 @@ typedef struct
 void dashDevicesInit(void);
 void dashDevicesPoll(void);
 void dashDevicesAutoProbe(void);
+void dashDevicesResetBaseline(void);
 int dashBootDeviceBit(void);
 int dashDevicesList(DashDevice *out, int max);
 int dashDevicesProbe(const DashDevice *dev);

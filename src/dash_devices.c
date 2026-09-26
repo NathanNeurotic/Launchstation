@@ -25,6 +25,15 @@ static u32 dev_snapshot = 0xFFFFFFFFu;
 
 void dashDevicesInit(void)
 {
+	dev_snapshot = 0xFFFFFFFFu; /* first poll after startup baselines silently */
+}
+
+/* Re-arm the silent baseline (used when the dash (re)starts, so devices that
+ * are already attached - the boot device, memory cards - never play
+ * connect sounds; only later hot-plug/unplug events do). */
+void dashDevicesResetBaseline(void)
+{
+	dev_snapshot = 0xFFFFFFFFu;
 }
 
 void dashDevicesPoll(void)

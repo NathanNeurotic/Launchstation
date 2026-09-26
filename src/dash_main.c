@@ -162,6 +162,7 @@ static void leaveLegacy(void)
 	dashSoundInit();
 	dashBgmStart();
 	dashDevicesAutoProbe();
+	dashDevicesResetBaseline(); /* whatever is attached now stays silent */
 }
 
 static void showActionMessage(void)
