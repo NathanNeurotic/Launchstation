@@ -52,7 +52,7 @@ void dashDevicesResetBaseline(void)
 void dashDevicesPoll(void)
 {
 	u32 now = 0;
-	int i;
+	int i, view_changed = 0;
 
 	pollRootMemoryCardDevices();
 	for (i = 0; i < 2; i++)
@@ -70,6 +70,8 @@ void dashDevicesPoll(void)
 		/* Boot mounts and post-IOP-reset rediscovery are baseline changes, not
 		 * user hotplugs. Any change restarts the quiet settling timer. */
 		if (dev_snapshot == 0xFFFFFFFFu || now != dev_snapshot) {
+			if (dev_snapshot != 0xFFFFFFFFu)
+				view_changed = 1;
 			dev_snapshot = now;
 			dev_snapshot_changed_ms = ms;
 		} else if (ms - dev_snapshot_changed_ms >= DEV_HOTPLUG_SETTLE_MS) {
@@ -82,7 +84,10 @@ void dashDevicesPoll(void)
 		if (dev_snapshot & ~now)
 			dashSoundPlay(DASH_SND_DISCONNECT);
 		dev_snapshot = now;
+		view_changed = 1;
 	}
+	if (view_changed)
+		dashAppsRebuildView();
 }
 
 int dashMcPresent(int port)
