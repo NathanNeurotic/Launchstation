@@ -403,13 +403,16 @@ static void drawAppWallpaper(void)
 	wall_vis = dashApproach(wall_vis, vis_target, 4.0f * dashAnimSpeed(), 1.0f / 60.0f);
 	if (wall_vis < 0.01f && prev == NULL)
 		return;
+	/* the artwork is laid over the scene at 60 % (a softer, more muted
+	 * picture than the cover itself), then dimmed towards a near-black
+	 * version of the background colour so every text colour stays
+	 * readable over bright covers */
 	if (prev != NULL)
-		drawCover(prev, DC(255, 255, 255, (int)(255 * (1.0f - wall_mix) * wall_vis)));
+		drawCover(prev, DC(255, 255, 255, (int)(153 * (1.0f - wall_mix) * wall_vis)));
 	if (cur != NULL)
-		drawCover(cur, DC(255, 255, 255, (int)(255 * wall_mix * wall_vis)));
-	/* keep text readable: darken towards the background colour */
+		drawCover(cur, DC(255, 255, 255, (int)(153 * wall_mix * wall_vis)));
 	{
-		DashColor d = dashColorScale(dashTheme.bg2, 0.5f);
+		DashColor d = dashColorScale(dashTheme.bg2, 0.3f);
 		d.a = (u8)(dashTheme.wall_dim * 2.55f * wall_vis);
 		dashRect(0, 0, DASH_VW, DASH_VH, d);
 	}
