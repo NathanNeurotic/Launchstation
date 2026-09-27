@@ -166,13 +166,17 @@ static void editMetadata(DashApp *a)
 		                   a->path, a->title);
 		if (!dashModalConfirm("Create metadata file?", "A small text file describing this application will be created next to it. You can then edit it in the Text Editor.", "Create", 0))
 			return;
+		/* the UI thread writes directly: background work must finish first */
+		if (!dashWorkerAwaitAll("Finishing up"))
+			return;
 		filerRootMcPollIdle();
 		if (dashWriteFile(meta, text, len) != 0) {
 			dashModalMessage(DI_WARNING, "Could not create file", "The device may be read-only or full.", meta);
 			return;
 		}
 	}
-	dashOpenTextEditor(meta);
+	if (!dashOpenTextEditor(meta))
+		return;
 	/* re-read this application's metadata after editing */
 	if (dashLibIndexOf(a) >= 0)
 		dashLibRefreshApp(a);

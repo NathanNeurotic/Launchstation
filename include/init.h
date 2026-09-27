@@ -6,6 +6,10 @@ void closeKeyboardIfOpened(void);
 
 void Reset(void);
 unsigned int getIopResetGeneration(void);
+/* Called with 0 right before an IOP reboot and 1 once the core stack, pads
+ * and keyboard are back (nested calls are possible). The dashboard uses it
+ * to park its UI thread while a background job reboots the IOP. */
+extern void (*iopResetNotify)(int phase);
 void loadUsbModules(void);
 int ensureUsbKeyboardReady(void);
 #ifdef DS34

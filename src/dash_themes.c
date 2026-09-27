@@ -1033,6 +1033,84 @@ static int folderKv(const char *key, char *value, void *user)
 	return 0;
 }
 
+/* Reads THEMES/<folder>/theme.cfg into `out` without applying it (safe on
+ * the background worker). 0 = read. */
+int dashThemeFolderRead(const char *folder, DashTheme *out)
+{
+	char roots[2][MAX_PATH], dir[MAX_PATH], path[MAX_PATH];
+	char *text;
+	int nr, ri, len;
+	FolderCtx ctx;
+
+	nr = themeRoots(roots);
+	for (ri = 0; ri < nr; ri++) {
+		if (snprintf(dir, sizeof(dir), "%s%s/", roots[ri], folder) >= DASH_PATH_MAX - 32)
+			continue;
+		if (snprintf(path, sizeof(path), "%stheme.cfg", dir) >= (int)sizeof(path))
+			continue;
+		text = dashLoadTextFile(path, 16 * 1024, &len);
+		if (text == NULL)
+			continue; /* not in this root: try the next */
+		/* start from the default so a sparse theme.cfg still makes sense */
+		dashThemeLoadPreset(P_OSD, out);
+		out->name[0] = '\0';
+		ctx.t = out;
+		ctx.folder_path = dir;
+		dashKvParse(text, folderKv, &ctx);
+		free(text);
+		if (out->name[0] == '\0')
+			dashStrCopy(out->name, folder, sizeof(out->name));
+		resolveInFolder(out->image, sizeof(out->image), dir);
+		resolveInFolder(out->app_icon, sizeof(out->app_icon), dir);
+		/* an image background without an image falls back to the gradient */
+		if (out->bg == DASH_BG_IMAGE && out->image[0] == '\0')
+			out->bg = DASH_BG_GRADIENT;
+		return 0;
+	}
+	return -1;
+}
+
+/* theme.cfg text for the current theme (UI thread); malloc'd */
+char *dashThemeFolderText(int *out_len)
+{
+	const int cap = 8192;
+	char *buf = (char *)malloc(cap);
+	int len;
+
+	if (buf == NULL)
+		return NULL;
+	len = snprintf(buf, cap,
+	               "# wLaunchELF dashboard theme\r\n"
+	               "# Colours: #RRGGBB or #RRGGBBAA (AA = opacity). Image paths are relative\r\n"
+	               "# to this folder unless they contain a device (mc0:/...).\r\n");
+	len += dashThemeSerialize(&dashTheme, buf + len, cap - len, "");
+	*out_len = len;
+	return buf;
+}
+
+/* Writes THEMES/<folder>/theme.cfg (safe on the background worker). */
+int dashThemeFolderWrite(const char *folder, const char *text, int len)
+{
+	char roots[2][MAX_PATH], dir[MAX_PATH], fixed[MAX_PATH], path[MAX_PATH];
+	int nr;
+
+	nr = themeRoots(roots);
+	if (nr <= 0)
+		return -1;
+	/* create THEMES/ and THEMES/<folder>/ under the first root (errors = already there) */
+	dashStrCopy(dir, roots[0], sizeof(dir));
+	dir[strlen(dir) - 1] = '\0';
+	if (genFixPath(dir, fixed) >= 0)
+		genMkdir(fixed, fileMode);
+	if (snprintf(dir, sizeof(dir), "%s%s", roots[0], folder) >= DASH_PATH_MAX - 32)
+		return -1;
+	if (genFixPath(dir, fixed) >= 0)
+		genMkdir(fixed, fileMode);
+	if (snprintf(path, sizeof(path), "%s/theme.cfg", dir) >= (int)sizeof(path))
+		return -1;
+	return dashWriteFile(path, text, len);
+}
+
 int dashThemeFolderLoad(const char *folder)
 {
 	char roots[2][MAX_PATH], dir[MAX_PATH], path[MAX_PATH];
@@ -1200,8 +1278,7 @@ void dashThemeSavePending(int idle_ms)
 	if (!theme_dirty || idle_ms < 1200)
 		return;
 	theme_dirty = 0;
-	filerRootMcPollIdle();
-	dashStoreSaveSettings();
+	dashStoreSaveTheme(); /* written by the background worker */
 }
 
 //--------------------------------------------------------------

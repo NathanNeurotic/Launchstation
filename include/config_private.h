@@ -64,6 +64,10 @@ enum CONFIG_SAVE_TARGET {
 void configBuildSaveTargets(char *save_override_path, size_t save_override_path_size, char *save_cwd_path, size_t save_cwd_path_size, char *save_sysconf_path, size_t save_sysconf_path_size, const char *filename, const char *loaded_path, int *has_override_path);
 void configRefreshSaveTargetForWrite(enum CONFIG_SAVE_TARGET save_target, char *target_path, size_t target_path_size, const char *filename, const char *loaded_path);
 int configSaveTargetPrompt(const char *save_override_path, const char *save_cwd_path, const char *save_sysconf_path, const char *loaded_path, int has_override_path);
+int configDefaultSaveTargetPath(const char *filename, const char *loaded_path, char *out, size_t out_size);
+/* Writes ip/netmask/gw as the first line of `target_path` (IPCONFIG.DAT),
+ * keeping any further lines. `msg` receives the classic status text. */
+void configSaveNetworkToPath(char *msg, const char *target_path);
 
 int CheckMC(void);
 

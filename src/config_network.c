@@ -86,6 +86,11 @@ static void saveNetworkSettings(char *Message, const char *target_path)
 		free(ipconfigfile);
 }
 
+void configSaveNetworkToPath(char *msg, const char *target_path)
+{
+	saveNetworkSettings(msg, target_path);
+}
+
 static void applyNetworkSettings(const data_ip_struct *ipdata)
 {
 	snprintf(ip, sizeof(ip), "%i.%i.%i.%i", ipdata->ip[0], ipdata->ip[1], ipdata->ip[2], ipdata->ip[3]);

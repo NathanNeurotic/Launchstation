@@ -25,5 +25,8 @@ void dashSoundApplyVolume(void);
 void dashBgmStart(void);
 void dashBgmStop(void);
 void dashBgmSetVolume(void); /* apply dashCfg.bgm_vol to the music bus */
+/* Main loop: (re)starts sound once it is wanted but not running, e.g. after
+ * a background job rebooted the IOP. Tries once per IOP session. */
+void dashSoundMaintain(void);
 
 #endif

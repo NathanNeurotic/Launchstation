@@ -1185,6 +1185,30 @@ static int configSelectInitialSaveTarget(const enum CONFIG_SAVE_TARGET *targets,
 	return 0;
 }
 
+/* The location the save prompt would preselect for `filename` (normally
+ * where it was loaded from), resolved for writing. Used by the dashboard,
+ * which saves without asking. Reads the memory cards. Returns the target
+ * (CONFIG_SAVE_TARGET_CANCEL when nothing is writable). */
+int configDefaultSaveTargetPath(const char *filename, const char *loaded_path, char *out, size_t out_size)
+{
+	char o[MAX_PATH], c[MAX_PATH], s[MAX_PATH];
+	enum CONFIG_SAVE_TARGET targets[4];
+	int n = 0, has_override = 0, sel;
+
+	configBuildSaveTargets(o, sizeof(o), c, sizeof(c), s, sizeof(s), filename, loaded_path, &has_override);
+	if (has_override)
+		targets[n++] = CONFIG_SAVE_TARGET_OVERRIDE;
+	targets[n++] = CONFIG_SAVE_TARGET_CWD;
+	targets[n++] = CONFIG_SAVE_TARGET_SYSCONF;
+	targets[n++] = CONFIG_SAVE_TARGET_CANCEL;
+	sel = configSelectInitialSaveTarget(targets, n, o, c, s, loaded_path, has_override);
+	if (sel < 0 || sel >= n || targets[sel] == CONFIG_SAVE_TARGET_CANCEL)
+		return CONFIG_SAVE_TARGET_CANCEL;
+	snprintf(out, out_size, "%s", configGetSaveTargetPath(targets[sel], o, c, s));
+	configRefreshSaveTargetForWrite(targets[sel], out, out_size, filename, loaded_path);
+	return targets[sel];
+}
+
 int configSaveTargetPrompt(const char *save_override_path, const char *save_cwd_path, const char *save_sysconf_path, const char *loaded_path, int has_override_path)
 {
 	enum CONFIG_SAVE_TARGET targets[4];

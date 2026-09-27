@@ -17,35 +17,97 @@ extern char LastDir[MAX_NAME];
 //--------------------------------------------------------------
 // Shared: open a device, probing its driver first when needed
 //--------------------------------------------------------------
+static void deviceNotFound(const DashDevice *d)
+{
+	char body[160];
+
+	if (d->icon == DI_USB)
+		snprintf(body, sizeof(body), "No USB storage device was found. Connect a USB drive and try again.");
+	else if (d->icon == DI_NETWORK)
+		snprintf(body, sizeof(body), "The network share could not be reached. Check the cable, IP settings and that the UDPFS server is running.");
+	else
+		snprintf(body, sizeof(body), "%s is not available on this console, or it is not connected.", d->name);
+	dashModalMessage(DI_WARNING, "Device not found", body, d->mount);
+}
+
+/* A device the user asked to open whose driver is starting in the
+ * background. The UI stays usable; when the driver is up the device opens,
+ * provided the user is still on the section they opened it from. */
+static struct
+{
+	int active;
+	int done;
+	int ok;
+	int section;
+	int browse; /* 1: open it when ready, 0: just report */
+	DashDevice dev;
+} pend;
+
+static void pendProbeDone(const char *mount, int ok, void *user)
+{
+	(void)mount;
+	(void)user;
+	pend.done = 1;
+	pend.ok = ok;
+}
+
+void dashFilesPoll(void)
+{
+	char msg[80];
+
+	if (!pend.active || !pend.done)
+		return;
+	pend.active = 0;
+	if (dashCurrentSection() != pend.section) {
+		snprintf(msg, sizeof(msg), pend.ok ? "%s is ready" : "%s was not found", pend.dev.name);
+		dashToast(pend.ok ? DASH_TOAST_OK : DASH_TOAST_WARN, msg);
+		return;
+	}
+	if (!pend.ok) {
+		deviceNotFound(&pend.dev);
+		return;
+	}
+	if (pend.browse)
+		dashOpenBrowser(pend.dev.browse);
+	else {
+		snprintf(msg, sizeof(msg), "%s is ready", pend.dev.name);
+		dashToast(DASH_TOAST_OK, msg);
+	}
+}
+
+static void startDevice(const DashDevice *d, int browse)
+{
+	if (pend.active) {
+		dashToast(DASH_TOAST_INFO, "Another device is still starting");
+		return;
+	}
+	memset(&pend, 0, sizeof(pend));
+	pend.active = 1;
+	pend.section = dashCurrentSection();
+	pend.browse = browse;
+	pend.dev = *d;
+	if (dashDevicesProbeAsync(d, pendProbeDone, NULL) < 0) {
+		pend.active = 0;
+		dashToast(DASH_TOAST_ERROR, "Could not start the device (out of memory)");
+	}
+}
+
 static void openDevice(const DashDevice *d)
 {
-	char title[64];
-
 	if (d->state == DASH_DEV_ABSENT && d->icon == DI_MC) {
 		dashModalMessage(DI_MC, d->name, "Insert a memory card into this slot to browse it.", NULL);
 		return;
 	}
-	if (d->state == DASH_DEV_PROBE || d->state == DASH_DEV_ABSENT) {
-		int ok;
-		snprintf(title, sizeof(title), "Detecting %s", d->name);
-		dashLoadingBegin(title);
-		dashLoadingStatus("Starting device drivers...", 0, 0);
-		ok = dashDevicesProbe(d);
-		dashLoadingEnd();
-		if (!ok) {
-			char body[160];
-			if (d->icon == DI_USB)
-				snprintf(body, sizeof(body), "No USB storage device was found. Connect a USB drive and try again.");
-			else if (d->icon == DI_NETWORK)
-				snprintf(body, sizeof(body), "The network share could not be reached. Check the cable, IP settings and that the UDPFS server is running.");
-			else
-				snprintf(body, sizeof(body), "%s is not available on this console, or it is not connected.", d->name);
-			dashModalMessage(DI_WARNING, "Device not found", body, d->mount);
-			return;
-		}
+	if (d->state == DASH_DEV_BUSY && dashDevicesProbing(d->mount)) {
+		dashToast(DASH_TOAST_INFO, "Still starting, one moment...");
+		return;
 	}
 	if (d->icon == DI_DISC && d->state != DASH_DEV_READY) {
 		dashModalMessage(DI_DISC, "No disc", "Insert a disc to browse it.", NULL);
+		return;
+	}
+	if (d->state == DASH_DEV_PROBE || d->state == DASH_DEV_ABSENT) {
+		startDevice(d, 1);
 		return;
 	}
 	dashOpenBrowser(d->browse);
@@ -371,14 +433,9 @@ static void devInput(const DashInput *in)
 				case 0:
 					openDevice(d);
 					break;
-				case 1: {
-					int ok;
-					dashLoadingBegin("Detecting device");
-					ok = dashDevicesProbe(d);
-					dashLoadingEnd();
-					dashToast(ok ? DASH_TOAST_OK : DASH_TOAST_WARN, ok ? "Device ready" : "Device not found");
+				case 1:
+					startDevice(d, 0);
 					break;
-				}
 				case 2:
 					dashRunMisc(setting->Misc_HddManager);
 					break;

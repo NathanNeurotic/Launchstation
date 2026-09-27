@@ -38,6 +38,19 @@ static audsrv_adpcm_t bgm_sample;
 static int sound_ready;
 static int bgm_loaded;
 static int bgm_channel = -1;
+static int sound_reboot_count; /* IOP reboot count when audsrv was started */
+static int sound_retry;
+static int sound_tried_reboot = -1; /* IOP session of the last automatic attempt */
+
+extern int _iop_reboot_count;
+
+/* audsrv lives on the IOP: after any IOP reboot the server and the uploaded
+ * samples are gone, and calling into the stale RPC client hangs. Every
+ * entry point checks this first. */
+static int soundAlive(void)
+{
+	return sound_ready && _iop_reboot_count == sound_reboot_count;
+}
 
 /* Voices 0..13 belong to interface SFX (see below). Keep the looping music
  * on a voice they never touch so menu changes cannot replace it. */
@@ -75,8 +88,16 @@ int dashSoundInit(void)
 {
 	int i, r, failed;
 
-	if (sound_ready)
+	if (sound_ready && soundAlive())
 		return 1;
+	if (sound_ready)
+		dashSoundShutdown(); /* stale after an IOP reboot: forget it */
+	/* the UI thread must not load modules while a background job may */
+	if (dashWorkerIoBusy() || dashIopParked()) {
+		sound_retry = 1; /* dashSoundMaintain() tries again */
+		return 0;
+	}
+	sound_tried_reboot = _iop_reboot_count;
 	/* BGM and interface SFX are separate buses; initialize audsrv when
 	 * either one is enabled. */
 	if (!dashCfg.sound && !dashCfg.bgm)
@@ -127,17 +148,35 @@ int dashSoundInit(void)
 		for (i = 8; i < 14; i++)
 			audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound_vol, 0);
 	}
+	sound_reboot_count = _iop_reboot_count;
 	sound_ready = 1;
 	return 1;
+}
+
+void dashSoundMaintain(void)
+{
+	if (!dashCfg.sound && !dashCfg.bgm)
+		return;
+	if (soundAlive() || dashWorkerIoBusy() || dashIopParked())
+		return;
+	/* one automatic attempt per IOP session (a broken driver would
+	 * otherwise be retried every frame), plus retries that were deferred */
+	if (sound_tried_reboot == _iop_reboot_count && !sound_retry)
+		return;
+	sound_tried_reboot = _iop_reboot_count;
+	sound_retry = 0;
+	if (dashSoundInit())
+		dashBgmStart();
 }
 
 void dashSoundShutdown(void)
 {
 	if (!sound_ready)
 		return;
-	dashBgmStop();
-	if (!HasIopRebootedSinceLastCall())
+	if (soundAlive()) {
+		dashBgmStop();
 		audsrv_quit();
+	}
 	sound_ready = 0;
 	bgm_loaded = 0;
 	bgm_channel = -1;
@@ -152,7 +191,7 @@ void dashSoundApplyVolume(void)
 {
 	int i;
 
-	if (!sound_ready)
+	if (!soundAlive())
 		return;
 	for (i = 0; i < 8 + SND_CURSOR_CH_COUNT; i++)
 		audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound_vol, 0);
@@ -164,8 +203,10 @@ void dashSoundPlay(int id)
 	static u64 lastCursorMs;
 	int ch;
 
-	if (!sound_ready || !dashCfg.sound || id < 0 || id >= DASH_SND_COUNT)
+	if (!soundAlive() || !dashCfg.sound || id < 0 || id >= DASH_SND_COUNT)
 		return;
+	if (dashIopParked())
+		return; /* a background job is rebooting the IOP */
 	if (samples[id].buffer == NULL)
 		return;
 	if (id == DASH_SND_CURSOR) {
@@ -192,7 +233,7 @@ void dashSoundPlay(int id)
 
 void dashBgmSetVolume(void)
 {
-	if (!sound_ready || bgm_channel < 0)
+	if (!soundAlive() || bgm_channel < 0 || dashIopParked())
 		return;
 	audsrv_adpcm_set_volume_and_pan(bgm_channel, dashCfg.bgm ? dashCfg.bgm_vol : 0, 0);
 }
@@ -201,7 +242,7 @@ void dashBgmStop(void)
 {
 	/* audsrv has no per-channel stop API. Keep the looping voice alive but
 	 * muted so re-enabling BGM is instant and does not allocate another voice. */
-	if (sound_ready && bgm_channel >= 0)
+	if (soundAlive() && bgm_channel >= 0 && !dashIopParked())
 		audsrv_adpcm_set_volume_and_pan(bgm_channel, 0, 0);
 }
 
@@ -209,9 +250,9 @@ void dashBgmStart(void)
 {
 	int ch;
 
-	if (!dashCfg.bgm)
+	if (!dashCfg.bgm || dashIopParked())
 		return;
-	if (!sound_ready && !dashSoundInit())
+	if (!soundAlive() && !dashSoundInit())
 		return;
 
 	/* Already running: section/menu changes only preserve/restore volume. */

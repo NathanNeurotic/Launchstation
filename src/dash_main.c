@@ -24,6 +24,7 @@ static int section_dir = 1;
 static float anim_time;
 static float fade_in;
 static int exit_to_classic;
+static int autoprobe_pending;
 static u64 last_frame_ms;
 static int frame_counter;
 
@@ -101,6 +102,8 @@ void dashSwitchSection(int s)
 		s = 0;
 	if (s == section)
 		return;
+	if (!dashConfirmLeave())
+		return;
 	section_dir = (s > section) ? 1 : -1;
 	prev_section = section;
 	section = s;
@@ -108,6 +111,13 @@ void dashSwitchSection(int s)
 	dashSoundPlay(DASH_SND_TRANSITION);
 	if (screens[section]->enter)
 		screens[section]->enter();
+}
+
+int dashConfirmLeave(void)
+{
+	if (screens[section]->leave == NULL)
+		return 1;
+	return screens[section]->leave();
 }
 
 void dashRequestExitToClassic(void)
@@ -132,12 +142,22 @@ static void dashLaunchHook(const char *path)
 		dashStorePushRecent(path);
 }
 
-static void enterLegacy(void)
+/* Everything the background worker is doing (saves, scans, driver starts)
+ * finishes before classic code gets the screen: it is not thread-safe and
+ * may reboot the IOP. Returns 0 when the user backed out of the wait. */
+static int settleBackgroundWork(const char *title)
+{
+	dashThemeSavePending(1 << 30); /* never lose theme edits */
+	return dashStoreFlushWait(title);
+}
+
+static int enterLegacy(void)
 {
 	/* fade to black, then hand the screen to a classic wLaunchELF screen */
 	int i;
 
-	dashThemeSavePending(1 << 30); /* never lose theme edits */
+	if (!settleBackgroundWork("Finishing up"))
+		return 0;
 	for (i = 0; i < 8; i++) {
 		dashRenderScene();
 		dashRect(0, 0, DASH_VW, DASH_VH, DC(0, 0, 0, (i + 1) * 32 > 255 ? 255 : (i + 1) * 32));
@@ -147,6 +167,7 @@ static void enterLegacy(void)
 	dashGfxRestoreLegacyState();
 	clrScr(setting->color[COLOR_BACKGR]);
 	drawScr();
+	return 1;
 }
 
 static void leaveLegacy(void)
@@ -161,7 +182,9 @@ static void leaveLegacy(void)
 	dashSoundShutdown(); /* drop stale state after IOP resets ran legacy paths */
 	dashSoundInit();
 	dashBgmStart();
-	dashDevicesAutoProbe();
+	/* Restart auto-start devices (an IOP reset may have dropped them) from
+	 * the main loop: callers still read files right after returning here. */
+	autoprobe_pending = 1;
 	dashDevicesResetBaseline(); /* whatever is attached now stays silent */
 }
 
@@ -183,8 +206,9 @@ void dashRunMisc(const char *misc_path)
 		return;
 	dashStrCopy(path, misc_path, sizeof(path));
 	exec_ctx.main_msg[0] = '\0';
+	if (!enterLegacy())
+		return;
 	filerRootMcPollIdle();
-	enterLegacy();
 	ExecuteMainAction(path, &exec_ctx);
 	leaveLegacy();
 	showActionMessage();
@@ -193,19 +217,21 @@ void dashRunMisc(const char *misc_path)
 void dashOpenBrowser(const char *start_dir)
 {
 	exec_ctx.main_msg[0] = '\0';
+	if (!enterLegacy())
+		return;
 	filerRootMcPollIdle();
-	enterLegacy();
 	ExecuteBrowserFrom(start_dir, &exec_ctx);
 	leaveLegacy();
 	showActionMessage();
 }
 
-void dashOpenTextEditor(const char *file)
+int dashOpenTextEditor(const char *file)
 {
 	char path[MAX_PATH];
 
+	if (!enterLegacy())
+		return 0;
 	filerRootMcPollIdle();
-	enterLegacy();
 	if (file != NULL) {
 		dashStrCopy(path, file, sizeof(path));
 		TextEditor(path);
@@ -213,6 +239,7 @@ void dashOpenTextEditor(const char *file)
 		TextEditor(NULL);
 	LaunchArgsClear();
 	leaveLegacy();
+	return 1;
 }
 
 //--------------------------------------------------------------
@@ -279,18 +306,23 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 		int r;
 
 		snprintf(argp, sizeof(argp), "%.*s.arg", base, path);
+		if (!settleBackgroundWork("Finishing up"))
+			return;
 		dashModalMessage(DI_EDIT, "Launch with arguments",
 		                 "Write one argument per line in the Text Editor, then choose the editor's "
 		                 "\"Launch with args\" command to start the application with them.",
 		                 argSidecarExists(path) ? argp : NULL);
+		if (!enterLegacy())
+			return;
 		filerRootMcPollIdle();
-		enterLegacy();
 		r = argSidecarExists(path) ? TextEditor(argp) : TextEditor(NULL);
 		leaveLegacy();
 		if (r != TEXTEDITOR_RESULT_LAUNCH_ARGS) {
 			LaunchArgsClear();
 			return;
 		}
+	} else if (!settleBackgroundWork("Finishing up")) {
+		return; /* the user backed out while saves/driver work finished */
 	} else if ((copy.flags & DASH_APP_HAS_ARGS) && !argSidecarExists(path)) {
 		char args[1024];
 		int n = dashLibLoadArgs(&copy, args, sizeof(args));
@@ -302,11 +334,16 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	}
 
 	snprintf(title, sizeof(title), "Starting %s", copy.title);
-	dashThemeSavePending(1 << 30);
-	filerRootMcPollIdle();
 	if (dashArtTakeDirty())
 		dashLibSaveCache();
 	dashStorePushRecent(copy.path);
+	/* the recent list, cache and anything the worker picked up meanwhile
+	 * (e.g. drivers restarted after the Text Editor) are written first */
+	if (!settleBackgroundWork(title)) {
+		LaunchArgsClear();
+		return;
+	}
+	filerRootMcPollIdle();
 	dashBgFlash(0.8f);
 	dashLoadingBegin(title);
 	dashLoadingStatus(copy.path, 0, 0);
@@ -327,29 +364,39 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 //--------------------------------------------------------------
 // Library refresh
 //--------------------------------------------------------------
-static void scanProgress(const char *status, int done, int total)
-{
-	char s[160];
-
-	snprintf(s, sizeof(s), "Looking in %s", status);
-	dashLoadingStatus(s, done, total);
-}
+/* The scan runs in the background (activity indicator); the library is
+ * swapped in by applyScanResult() from the main loop. */
+static int scan_count_before = -1;
 
 void dashRescanLibrary(int interactive)
 {
-	int before = dashAppCount, n;
+	if (dashLibScanRunning() && !interactive)
+		return;
+	if (interactive && !dashLibScanRunning())
+		scan_count_before = dashAppCount;
+	if (dashLibScanStart(interactive) < 0)
+		dashToast(DASH_TOAST_ERROR, "Application scan failed (out of memory)");
+	else if (interactive)
+		dashToast(DASH_TOAST_INFO, "Looking for applications...");
+}
+
+static void applyScanResult(void)
+{
+	int interactive = 0, n;
 	char msg[64];
 
-	filerRootMcPollIdle();
-	dashLoadingBegin(interactive ? "Refreshing applications" : "Looking for applications");
-	n = dashLibScan(interactive, scanProgress);
-	dashLoadingEnd();
+	n = dashLibApplyScan(&interactive);
+	if (n == -2)
+		return;
 	dashAppsRebuildView();
+	dashHomeRebuild();
 	if (n < 0)
-		dashToast(DASH_TOAST_ERROR, "Application scan failed (out of memory)");
+		dashToast(DASH_TOAST_ERROR, "Application scan failed");
 	else if (interactive) {
+		int before = scan_count_before;
 		snprintf(msg, sizeof(msg), "%d application%s found", n, n == 1 ? "" : "s");
-		dashToast(n > before ? DASH_TOAST_OK : DASH_TOAST_INFO, msg);
+		dashToast(before >= 0 && n > before ? DASH_TOAST_OK : DASH_TOAST_INFO, msg);
+		scan_count_before = -1;
 	}
 }
 
@@ -368,6 +415,9 @@ static void globalMenu(void)
 	    {DI_POWER, "Power off", NULL, 0}};
 	int r = dashModalMenu("Dashboard", NULL, items, sizeof(items) / sizeof(items[0]), 0);
 
+	/* everything except "Settings" and a refresh leaves the current section */
+	if (r >= 0 && r != 1 && r != 4 && !dashConfirmLeave())
+		return;
 	switch (r) {
 		case 0:
 			dashSwitchSection(DASH_SEC_HOME);
@@ -559,6 +609,7 @@ void dashRenderScene(void)
 		screens[section]->hints();
 	bootDraw();
 	dashDrawToasts();
+	dashDrawActivity();
 
 	if (fade_in < 1.0f)
 		dashRect(0, 0, DASH_VW, DASH_VH, DC(0, 0, 0, (int)(255 * (1.0f - fade_in))));
@@ -578,17 +629,16 @@ static void firstInit(void)
 	dashGfxInit();
 	dashFontInit();
 	dashIconsInit();
+	dashWorkerInit();
 	if (dashLibLoadCache() < 0 || (dashCfg.autoscan && dashAppCount >= 0)) {
 		/* First run (no cache) or auto-scan enabled: look at locations whose
 		 * drivers are already running, starting the auto-start devices first
-		 * so they contribute applications too. */
-		dashGfxBeginFrame();
-		dashBgDrawStatic();
-		dashGfxPresent();
-		dashLoadingBegin("Starting devices");
-		dashDevicesAutoProbe();
+		 * so they contribute applications too. Both run in the background:
+		 * the cached library is usable meanwhile. */
+		dashDevicesAutoProbeAsync();
 		dashRescanLibrary(0);
-	}
+	} else
+		dashDevicesAutoProbeAsync();
 #ifdef DASH_AUTOTEST
 	/* development-only sample library (see include/dash_autotest.h) */
 	{
@@ -681,6 +731,10 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			globalMenu();
 		else if (in.any && screens[section]->input)
 			screens[section]->input(&in);
+		/* leaving for the classic menu waits for background work; backing
+		 * out of that wait keeps the dashboard */
+		if (exit_to_classic && !settleBackgroundWork("Finishing up"))
+			exit_to_classic = 0;
 		if (exit_to_classic)
 			break;
 
@@ -691,17 +745,28 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		section_anim = dashApproach(section_anim, 1.0f, 9.0f * dashAnimSpeed(), dt);
 		fade_in = dashApproach(fade_in, 1.0f, 5.0f * dashAnimSpeed(), dt);
 
-		/* background housekeeping, never while the pad is active */
-		if ((frame_counter % 30) == 0)
-			uLE_cdStop();
-		dashDevicesPoll();
+		/* results of background work that change what screens point at */
+		applyScanResult();
+		dashFilesPoll();
+		if (autoprobe_pending) {
+			autoprobe_pending = 0;
+			dashDevicesAutoProbeAsync();
+		}
+
+		/* Housekeeping. The UI thread does no IO of its own while the
+		 * background worker does (libmc and the IOP are not shared). */
+		if (!dashWorkerIoBusy() && !dashIopParked()) {
+			if ((frame_counter % 30) == 0)
+				uLE_cdStop();
+			dashDevicesPoll();
+		}
+		dashSoundMaintain();
 		dashThemeSavePending((int)dashInputIdleMs());
 		if (!boot_phase)
 			dashArtStep((int)dashInputIdleMs());
-		if (dashInputIdleMs() > 6000 && dashArtTakeDirty()) {
-			filerRootMcPollIdle();
+		if (dashInputIdleMs() > 6000 && dashArtTakeDirty())
 			dashLibSaveCache();
-		}
+		dashStoreFlush(0);
 
 #ifdef DASH_THEME_TOUR
 		/* development only: show every preset for five seconds */
@@ -743,11 +808,15 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 //--------------------------------------------------------------
 
 /* Exported wrappers so other dashboard modules can hand the screen to a
- * classic wLaunchELF screen and take it back cleanly. */
-void dashLegacyBegin(void)
+ * classic wLaunchELF screen and take it back cleanly. dashLegacyBegin()
+ * returns 0 (and nothing was handed over) when the user backed out while
+ * background work finished. */
+int dashLegacyBegin(void)
 {
+	if (!enterLegacy())
+		return 0;
 	filerRootMcPollIdle();
-	enterLegacy();
+	return 1;
 }
 
 void dashLegacyEnd(void)

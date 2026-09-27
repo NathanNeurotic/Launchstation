@@ -20,13 +20,27 @@ static u32 held_prev;
 //--------------------------------------------------------------
 void dashInputPoll(DashInput *in)
 {
+	dashInputPollEx(in, 1);
+}
+
+/* usb_kb_as_pad = 0 leaves the USB keyboard to the caller (text entry). */
+void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
+{
 	u32 np;
 	u32 ok_btn = swapKeys ? PAD_CROSS : PAD_CIRCLE;
 	u32 back_btn = swapKeys ? PAD_CIRCLE : PAD_CROSS;
 
 	memset(in, 0, sizeof(*in));
+	dashWorkerParkPoint();
+	if (dashIopParked())
+		return; /* the IOP (and padman with it) is being rebooted */
 	waitAnyPadReady();
-	if (!readpad())
+	/* the USB keyboard driver is on the IOP: leave it alone while the
+	 * background worker talks to the IOP */
+	if (usb_kb_as_pad && !dashWorkerIoBusy()) {
+		if (!readpad())
+			return;
+	} else if (!readpad_no_KB())
 		return;
 	np = new_pad;
 	in->raw_new = np;
@@ -470,7 +484,8 @@ DashColor dashItemColor(int selected)
 void dashDrawSpinner(float cx, float cy, float r, DashColor c)
 {
 	int i;
-	float t = dashTime() * 7.0f;
+	/* wall clock, so it keeps turning in blocking waits and modal loops */
+	float t = (float)(Timer() % 100000u) / 1000.0f * 7.0f;
 
 	for (i = 0; i < 10; i++) {
 		float a = i * 0.6283f;
@@ -601,12 +616,35 @@ static void modalPanel(float x, float y, float w, float h, float k)
 
 static void modalHintRow(float x, float y, int ok_icon, const char *ok, int back_icon, const char *back)
 {
-	x += drawButton(x, y, ok_icon, NULL) + 6.0f;
-	x = dashTextS(x, y + 4.5f, ok, DASH_FS_SMALL, DASH_C_TEXT2) + 18.0f;
+	if (ok != NULL) {
+		x += drawButton(x, y, ok_icon, NULL) + 6.0f;
+		x = dashTextS(x, y + 4.5f, ok, DASH_FS_SMALL, DASH_C_TEXT2) + 18.0f;
+	}
 	if (back != NULL) {
 		x += drawButton(x, y, back_icon, NULL) + 6.0f;
 		dashTextS(x, y + 4.5f, back, DASH_FS_SMALL, DASH_C_TEXT2);
 	}
+}
+
+/* Shared with the other dashboard dialogs (dash_widgets.c). */
+void dashModalBackdrop(float k)
+{
+	modalBackdrop(k);
+}
+
+void dashModalPanel(float x, float y, float w, float h, float k)
+{
+	modalPanel(x, y, w, h, k);
+}
+
+void dashModalHintRow(float x, float y, int ok_icon, const char *ok, int back_icon, const char *back)
+{
+	modalHintRow(x, y, ok_icon, ok, back_icon, back);
+}
+
+float dashDrawButton(float x, float y, int icon, const char *key)
+{
+	return drawButton(x, y, icon, key);
 }
 
 /* Optional live preview for the next dashModalMenu(): called whenever the
@@ -875,6 +913,7 @@ static char loading_status[128];
 static int loading_done, loading_total;
 static u64 loading_last_draw;
 static float loading_open;
+static int loading_cancel;
 
 int dashLoadingActive(void)
 {
@@ -883,8 +922,9 @@ int dashLoadingActive(void)
 
 static void loadingDraw(void)
 {
-	float w = 420.0f, h = 128.0f;
+	float w = 420.0f, h = loading_cancel ? 150.0f : 128.0f;
 	float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
+	float bar_y = y + 102.0f;
 
 	loading_open = dashApproach(loading_open, 1.0f, 12.0f, 1.0f / 30.0f);
 	dashRenderScene();
@@ -898,9 +938,11 @@ static void loadingDraw(void)
 	dashTextFit(x + 84, y + 58, w - 110, loading_status, DASH_FS_SMALL, DASH_C_TEXT2);
 	if (loading_total > 0) {
 		float p = dashClampf(loading_done / (float)loading_total, 0.0f, 1.0f);
-		dashPanel(x + 30, y + h - 26, w - 60, 8, 4, dashColorA(DASH_C_TEXT3, 0.3f));
-		dashPanel(x + 30, y + h - 26, (w - 60) * p + 8, 8, 4, DASH_C_ACCENT);
+		dashPanel(x + 30, bar_y, w - 60, 8, 4, dashColorA(DASH_C_TEXT3, 0.3f));
+		dashPanel(x + 30, bar_y, (w - 60) * p + 8, 8, 4, DASH_C_ACCENT);
 	}
+	if (loading_cancel)
+		modalHintRow(x + 24, y + h - 34, -1, NULL, dashBackIcon(), "Continue in background");
 	dashGfxPopAlpha();
 	dashGfxPresent();
 	loading_last_draw = Timer();
@@ -910,14 +952,25 @@ void dashLoadingBegin(const char *title)
 {
 	loading_active = 1;
 	loading_open = 0.3f;
+	loading_cancel = 0;
 	dashStrCopy(loading_title, title, sizeof(loading_title));
 	loading_status[0] = '\0';
 	loading_done = loading_total = 0;
 	loadingDraw();
 }
 
+void dashLoadingSetCancel(int cancelable)
+{
+	loading_cancel = cancelable;
+}
+
 void dashLoadingStatus(const char *status, int done, int total)
 {
+	if (dashWorkerOnThread()) {
+		/* driver loads started by a background job report here */
+		dashWorkerStatus(status, done, total);
+		return;
+	}
 	if (status != NULL)
 		dashStrCopy(loading_status, status, sizeof(loading_status));
 	loading_done = done;
@@ -935,9 +988,19 @@ void dashLoadingStatus(const char *status, int done, int total)
 		loadingDraw();
 }
 
+void dashLoadingFrame(const char *status, int done, int total)
+{
+	if (status != NULL)
+		dashStrCopy(loading_status, status, sizeof(loading_status));
+	loading_done = done;
+	loading_total = total;
+	loadingDraw();
+}
+
 void dashLoadingEnd(void)
 {
 	loading_active = 0;
+	loading_cancel = 0;
 	dashInputFlush();
 }
 //--------------------------------------------------------------
