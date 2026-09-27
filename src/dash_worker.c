@@ -23,6 +23,7 @@
 #include "dash_internal.h"
 #include "init.h"
 #include <kernel.h>
+#include <delaythread.h>
 
 #define WORKER_STACK_SIZE (128 * 1024)
 #define JOB_QUEUE 32
@@ -229,8 +230,17 @@ int dashWorkerSubmit(const char *label, int flags, DashJobFn run, DashJobFn done
 {
 	DashJob *j;
 
-	if (!worker_ok || q_count >= JOB_QUEUE) {
-		/* no thread (or a flooded queue): do the work right here */
+	/* A flooded queue waits for room. It never runs the job here: that
+	 * would overlap the worker's IO. No drawing: this may be called while
+	 * a frame is being built. */
+	while (worker_ok && q_count >= JOB_QUEUE) {
+		dashWorkerParkPoint(); /* a job rebooting the IOP waits for this */
+		dashWorkerPump();
+		if (q_count >= JOB_QUEUE)
+			DelayThread(1000);
+	}
+	if (!worker_ok) {
+		/* no thread: do the work right here */
 		int id = next_id++;
 		if (run != NULL)
 			run(arg);
