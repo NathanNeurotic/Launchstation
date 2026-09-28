@@ -372,48 +372,14 @@ static int classifyPsuAction(const char *destPath)
 	return PSU_ACTION_NONE;
 }
 
-static int menu(const char *path, FILEINFO *file)
+/* Which file operations are allowed on `file` in `path` (read-only
+ * devices, partition and device lists, the clipboard...). Shared by the
+ * classic menu and the dashboard File Browser. */
+void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char enable[NUM_MENU])
 {
-	u64 color;
-	char enable[NUM_MENU], tmp[80];
-	const char *psu_action_label;
-	int x, y, i, sel;
-	int event, post_event = 0;
 	int menu_disabled = 0;
 	int write_disabled = 0;
-	int psu_action;
-
-	psu_action = classifyPsuAction(path);
-	if (psu_action == PSU_ACTION_EXTRACT)
-		psu_action_label = LNG(Extract_PSU);
-	else if (psu_action == PSU_ACTION_CREATE)
-		psu_action_label = LNG(Create_PSU);
-	else
-		psu_action_label = LNG(psuAction);
-
-	int menu_len = strlen(LNG(Copy)) > strlen(LNG(Cut)) ?
-	                   strlen(LNG(Copy)) :
-	                   strlen(LNG(Cut));
-	menu_len = strlen(LNG(Paste)) > menu_len ? strlen(LNG(Paste)) : menu_len;
-	menu_len = strlen(LNG(Delete)) > menu_len ? strlen(LNG(Delete)) : menu_len;
-	menu_len = strlen(LNG(Rename)) > menu_len ? strlen(LNG(Rename)) : menu_len;
-	menu_len = strlen(LNG(New_Dir)) > menu_len ? strlen(LNG(New_Dir)) : menu_len;
-	menu_len = strlen(LNG(Get_Size)) > menu_len ? strlen(LNG(Get_Size)) : menu_len;
-	menu_len = strlen(LNG(TextEditor)) > menu_len ? strlen(LNG(TextEditor)) : menu_len;
-	menu_len = strlen(LNG(Launch_With_Args)) > menu_len ? strlen(LNG(Launch_With_Args)) : menu_len;
-	menu_len = strlen(psu_action_label) > menu_len ? strlen(psu_action_label) : menu_len;
-	menu_len = strlen(LNG(time_manip)) > menu_len ? strlen(LNG(time_manip)) : menu_len;
-	menu_len = strlen(LNG(Set_Custom_Date)) > menu_len ? strlen(LNG(Set_Custom_Date)) : menu_len;
-	menu_len = strlen(LNG(title_cfg)) > menu_len ? strlen(LNG(title_cfg)) : menu_len;
-	menu_len = (strlen(LNG(Mount)) + 6) > menu_len ? (strlen(LNG(Mount)) + 6) : menu_len;
-	
-
-	int menu_ch_w = menu_len + 1;                                 //Total characters in longest menu string
-	int menu_ch_h = NUM_MENU;                                     //Total number of menu lines
-	int mSprite_Y1 = 64;                                          //Top edge of sprite
-	int mSprite_X2 = SCREEN_WIDTH - 35;                           //Right edge of sprite
-	int mSprite_X1 = mSprite_X2 - (menu_ch_w + 3) * FONT_WIDTH;   //Left edge of sprite
-	int mSprite_Y2 = mSprite_Y1 + (menu_ch_h + 1) * FONT_HEIGHT;  //Bottom edge of sprite
+	int psu_action = classifyPsuAction(path);
 
 	memset(enable, TRUE, NUM_MENU);  //Assume that all menu items are legal by default
 
@@ -473,7 +439,7 @@ static int menu(const char *path, FILEINFO *file)
 		enable[TITLE_CFG] = FALSE;
 	}
 
-	if (nmarks == 0) {
+	if (nmarked == 0) {
 		if (!strcmp(file->name, "..")) {
 			enable[COPY] = FALSE;
 			enable[CUT] = FALSE;
@@ -500,6 +466,50 @@ static int menu(const char *path, FILEINFO *file)
 		//Something in clipboard
 		enable[PSUPASTE] = (enable[PSUPASTE] && (psu_action != PSU_ACTION_NONE));
 	}
+}
+
+static int menu(const char *path, FILEINFO *file)
+{
+	u64 color;
+	char enable[NUM_MENU], tmp[80];
+	const char *psu_action_label;
+	int x, y, i, sel;
+	int event, post_event = 0;
+	int psu_action;
+
+	psu_action = classifyPsuAction(path);
+	if (psu_action == PSU_ACTION_EXTRACT)
+		psu_action_label = LNG(Extract_PSU);
+	else if (psu_action == PSU_ACTION_CREATE)
+		psu_action_label = LNG(Create_PSU);
+	else
+		psu_action_label = LNG(psuAction);
+
+	int menu_len = strlen(LNG(Copy)) > strlen(LNG(Cut)) ?
+	                   strlen(LNG(Copy)) :
+	                   strlen(LNG(Cut));
+	menu_len = strlen(LNG(Paste)) > menu_len ? strlen(LNG(Paste)) : menu_len;
+	menu_len = strlen(LNG(Delete)) > menu_len ? strlen(LNG(Delete)) : menu_len;
+	menu_len = strlen(LNG(Rename)) > menu_len ? strlen(LNG(Rename)) : menu_len;
+	menu_len = strlen(LNG(New_Dir)) > menu_len ? strlen(LNG(New_Dir)) : menu_len;
+	menu_len = strlen(LNG(Get_Size)) > menu_len ? strlen(LNG(Get_Size)) : menu_len;
+	menu_len = strlen(LNG(TextEditor)) > menu_len ? strlen(LNG(TextEditor)) : menu_len;
+	menu_len = strlen(LNG(Launch_With_Args)) > menu_len ? strlen(LNG(Launch_With_Args)) : menu_len;
+	menu_len = strlen(psu_action_label) > menu_len ? strlen(psu_action_label) : menu_len;
+	menu_len = strlen(LNG(time_manip)) > menu_len ? strlen(LNG(time_manip)) : menu_len;
+	menu_len = strlen(LNG(Set_Custom_Date)) > menu_len ? strlen(LNG(Set_Custom_Date)) : menu_len;
+	menu_len = strlen(LNG(title_cfg)) > menu_len ? strlen(LNG(title_cfg)) : menu_len;
+	menu_len = (strlen(LNG(Mount)) + 6) > menu_len ? (strlen(LNG(Mount)) + 6) : menu_len;
+	
+
+	int menu_ch_w = menu_len + 1;                                 //Total characters in longest menu string
+	int menu_ch_h = NUM_MENU;                                     //Total number of menu lines
+	int mSprite_Y1 = 64;                                          //Top edge of sprite
+	int mSprite_X2 = SCREEN_WIDTH - 35;                           //Right edge of sprite
+	int mSprite_X1 = mSprite_X2 - (menu_ch_w + 3) * FONT_WIDTH;   //Left edge of sprite
+	int mSprite_Y2 = mSprite_Y1 + (menu_ch_h + 1) * FONT_HEIGHT;  //Bottom edge of sprite
+
+	filerMenuEnables(path, file, nmarks, enable);
 
 	for (sel = 0; sel < NUM_MENU; sel++)  //loop to preselect the first enabled menu entry
 		if (enable[sel] == TRUE)
@@ -2208,11 +2218,126 @@ static void submenu_func_psuPaste(char *mess, char *path)
  * clipPath/clipFiles/nclipFiles/browser_cut are shared with this browser). */
 void filerPasteInto(char *mess, char *path)
 {
-	PasteMode = PM_NORMAL; /* the classic Square-held rename mode needs the old pad state */
+	filerPasteModeInto(mess, path, 0);
+}
+
+/* rename = ask for a new name for each item (the classic Square+paste) */
+void filerPasteModeInto(char *mess, char *path, int rename)
+{
+	PasteMode = rename ? PM_RENAME : PM_NORMAL;
 	subfunc_Paste(mess, path);
 }
 
 void filerPsuPasteInto(char *mess, char *path)
 {
 	submenu_func_psuPaste(mess, path);
+}
+
+/* PSU paste for `path`: the label of what it would do (create a PSU on a
+ * normal device, extract one onto a memory card), NULL when not possible */
+const char *filerPsuPasteLabel(const char *path)
+{
+	int psu_action = classifyPsuAction(path);
+
+	if (psu_action == PSU_ACTION_EXTRACT)
+		return LNG(Extract_PSU);
+	if (psu_action == PSU_ACTION_CREATE)
+		return LNG(Create_PSU);
+	return NULL;
+}
+
+/* Mounts the VMC image `file` in `path` as vmc<slot>: (same steps as the
+ * classic menu). 0 = mounted; otherwise `msg` says why not. */
+int filerMountVmc(const char *path, const FILEINFO *file, int slot, char *msg, int msg_size)
+{
+	char dev[8], dir[MAX_PATH], image[MAX_PATH];
+	int j, x;
+
+	if (slot < 0 || slot > 1 || path == NULL || file == NULL)
+		return -1;
+	sprintf(dev, "vmc%d:", slot);
+	if (vmcMounted[slot]) {
+		if ((j = vmc_PartyIndex[slot]) >= 0) {
+			vmc_PartyIndex[slot] = -1;
+			if (j != vmc_PartyIndex[1 ^ slot])
+				Party_vmcIndex[j] = -1;
+		}
+		fileXioUmount(dev);
+		vmcMounted[slot] = 0;
+	}
+	/* genFixPath may reset the IOP while lazy-loading storage stacks */
+	j = genFixPath(path, dir);
+	if (j < 0) {
+		snprintf(msg, msg_size, "The folder could not be prepared (%d).", j);
+		return j;
+	}
+	strcpy(image, dir);
+#if defined(ETH) || defined(UDPFS)
+	if (!strncmp(path, "host:", 5) || !strncmp(path, "udpfs:", 6))
+		makeHostPath(image, dir);
+#endif
+	if (strlen(image) + strlen(file->name) >= sizeof(image)) {
+		snprintf(msg, msg_size, "The path is too long.");
+		return -1;
+	}
+	strcat(image, file->name);
+	if (!load_vmcman()) {
+		snprintf(msg, msg_size, "The VMC driver could not be loaded (%d).", get_vmcman_last_error());
+		return -1;
+	}
+	x = fileXioMount(dev, image, FIO_MT_RDWR);
+	if (x < 0) {
+		snprintf(msg, msg_size, "This file could not be mounted as a memory card image (%d).", x);
+		return x;
+	}
+	if ((j >= 0) && (j < MOUNT_LIMIT)) {
+		vmc_PartyIndex[slot] = j;
+		Party_vmcIndex[j] = slot;
+	}
+	vmcMounted[slot] = 1;
+	return 0;
+}
+
+/* Writes icon.sys (with `title`) and icon.icn (showing `text`) in `path`,
+ * asking before replacing existing ones. 1 = created, 0 = cancelled, <0 error */
+int filerCreateFolderIcon(const char *path, const char *title, const char *text, char *msg, int msg_size)
+{
+	char name[40], file[MAX_PATH], q[MAX_PATH];
+	int fd;
+
+	if (genFixPath(path, file) < 0) {
+		snprintf(msg, msg_size, "Path conversion failed: %s", path);
+		return -1;
+	}
+	strcat(file, "icon.sys");
+	if ((fd = genOpen(file, FIO_O_RDONLY)) >= 0) {
+		genClose(fd);
+		snprintf(q, sizeof(q), "\"icon.sys\" %s.\n%s ?", LNG(file_alredy_exists), LNG(Do_you_wish_to_overwrite_it));
+		if (ynDialog(q) < 0)
+			return 0;
+		genRemove(file);
+	}
+	snprintf(name, sizeof(name), "%s", title);
+	if (make_iconsys(name, "icon.icn", file) < 0) {
+		snprintf(msg, msg_size, "icon.sys could not be written.");
+		return -1;
+	}
+	if (genFixPath(path, file) < 0) {
+		snprintf(msg, msg_size, "Path conversion failed: %s", path);
+		return -1;
+	}
+	strcat(file, "icon.icn");
+	if ((fd = genOpen(file, FIO_O_RDONLY)) >= 0) {
+		genClose(fd);
+		snprintf(q, sizeof(q), "\"icon.icn\" %s.\n%s ?", LNG(file_alredy_exists), LNG(Do_you_wish_to_overwrite_it));
+		if (ynDialog(q) < 0)
+			return 0;
+		genRemove(file);
+	}
+	snprintf(name, sizeof(name), "%s", text);
+	if (make_icon(name, file) < 0) {
+		snprintf(msg, msg_size, "icon.icn could not be written.");
+		return -1;
+	}
+	return 1;
 }

@@ -2,10 +2,10 @@
 //File name:   dash_files.c
 //FILES and DEVICES sections.
 //
-//FILES is the doorway into the complete wLaunchELF FileBrowser (copy,
+//FILES is the doorway into the File Browser (dash_browser.c: copy,
 //paste, PSU, rename, timestamps, VMC mounting, launch with args...): it
 //offers the device root, the last folder, every detected device and the
-//user's PathPad bookmarks, then hands over to getFilePath().
+//user's PathPad bookmarks.
 //DEVICES shows what wLaunchELF actually knows about each device. Drivers
 //that are not running are only loaded when the user asks for it.
 //--------------------------------------------------------------

@@ -12,7 +12,6 @@
 #include "init.h"
 
 extern void (*mainActionLaunchHook)(const char *path);
-void ExecuteBrowserFrom(const char *start_dir, const MainExecuteContext *ctx);
 
 static MainExecuteContext exec_ctx;
 static int dash_active;
@@ -145,41 +144,19 @@ static int settleBackgroundWork(const char *title)
 	return dashStoreFlushWait(title);
 }
 
-static int enterLegacy(void)
+/* After a command that may have rebooted the IOP (network, reboot IOP, a
+ * launch that failed): sound and the auto-started devices come back. */
+static void afterMiscCommand(void)
 {
-	/* fade to black, then hand the screen to a classic wLaunchELF screen */
-	int i;
-
-	if (!settleBackgroundWork("Finishing up"))
-		return 0;
-	for (i = 0; i < 8; i++) {
-		dashRenderScene();
-		dashRect(0, 0, DASH_VW, DASH_VH, DC(0, 0, 0, (i + 1) * 32 > 255 ? 255 : (i + 1) * 32));
-		dashGfxPresent();
-	}
-	drawMsgOverride = NULL;
-	dashClassicUiInstall(0);
-	dashGfxRestoreLegacyState();
-	clrScr(setting->color[COLOR_BACKGR]);
-	drawScr();
-	return 1;
-}
-
-static void leaveLegacy(void)
-{
-	dashGfxCheckScreenChange();
-	dashFontInit();
 	drawMsgOverride = dashMsgHook;
 	dashClassicUiInstall(1);
-	DashThemeSetLegacyEnabled(dashCfg.legacy_theme);
-	fade_in = 0.0f;
 	dashInputFlush();
 	last_frame_ms = Timer();
-	dashSoundShutdown(); /* drop stale state after IOP resets ran legacy paths */
+	dashSoundShutdown(); /* drop stale state after IOP resets */
 	dashSoundInit();
 	dashBgmStart();
 	/* Restart auto-start devices (an IOP reset may have dropped them) from
-	 * the main loop: callers still read files right after returning here. */
+	 * the main loop. */
 	autoprobe_pending = 1;
 	dashDevicesResetBaseline(); /* whatever is attached now stays silent */
 }
@@ -232,8 +209,7 @@ static void runMiscCommand(const char *misc_path)
 	/* back here: the command finished, or leaving failed */
 	if (leaves)
 		dashGfxCheckScreenChange();
-	drawMsgOverride = dashMsgHook;
-	dashClassicUiInstall(1);
+	afterMiscCommand();
 	dashLoadingEnd();
 	showActionMessage();
 }
@@ -289,17 +265,6 @@ void dashOpenBrowser(const char *start_dir)
 	dashFileBrowser(start_dir);
 }
 
-/* the classic File Browser, for the tools that are not native yet */
-void dashOpenBrowserClassic(const char *start_dir)
-{
-	exec_ctx.main_msg[0] = '\0';
-	if (!enterLegacy())
-		return;
-	filerRootMcPollIdle();
-	ExecuteBrowserFrom(start_dir, &exec_ctx);
-	leaveLegacy();
-	showActionMessage();
-}
 
 int dashOpenTextEditor(const char *file)
 {
@@ -892,30 +857,8 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			last_frame_ms = Timer();
 		}
 	}
-
-	mainActionLaunchHook = NULL;
-	drawMsgOverride = NULL;
-	dashClassicUiInstall(0);
-	enterLegacy();
-	dash_active = 0;
 }
 //--------------------------------------------------------------
 //End of file: dash_main.c
 //--------------------------------------------------------------
 
-/* Exported wrappers so other dashboard modules can hand the screen to a
- * classic wLaunchELF screen and take it back cleanly. dashLegacyBegin()
- * returns 0 (and nothing was handed over) when the user backed out while
- * background work finished. */
-int dashLegacyBegin(void)
-{
-	if (!enterLegacy())
-		return 0;
-	filerRootMcPollIdle();
-	return 1;
-}
-
-void dashLegacyEnd(void)
-{
-	leaveLegacy();
-}

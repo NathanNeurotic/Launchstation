@@ -913,7 +913,6 @@ void dashShowFontViewer(void);
 void dashShowTextLines(int icon, const char *title, const char *subtitle, const char *const *lines, int n);
 void dashExploitInstaller(void); /* dash_exploit.c */
 void dashOpenBrowser(const char *start_dir);        /* native File Browser */
-void dashOpenBrowserClassic(const char *start_dir); /* classic one (VMC, timestamps...) */
 void dashFileBrowser(const char *start_dir);        /* dash_browser.c */
 /* classic dialogs (ynDialog/nonDialog/keyboard) as dashboard dialogs */
 void dashClassicUiInstall(int on);

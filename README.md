@@ -6,9 +6,10 @@ wLaunchELF, formerly known as uLaunchELF, also known as wLE or uLE (abbreviated)
 
 This build starts in a controller-first dashboard (HOME, APPS, FILES,
 DEVICES, TOOLS, SETTINGS) with an ELF library, artwork, favorites and
-recents. Settings, the File Browser, the HDD Manager, the Text Editor and
-the information screens are native dashboard screens, file access runs in the background so navigation never
-freezes, and the classic launch-key menu is one option away. See
+recents. It is the only interface: Settings, the File Browser, the HDD
+Manager, the Text Editor, the exploit installer and the information screens
+are all dashboard screens, and file access runs in the background so
+navigation never freezes. See
 [docs/dashboard.md](docs/dashboard.md) for controls, metadata, artwork
 naming and the files it writes.
 

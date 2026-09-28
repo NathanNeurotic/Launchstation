@@ -540,7 +540,11 @@ int ynDialog(const char *message);
 void nonDialog(char *message);
 int keyboard(char *out, int max);
 void filerPasteInto(char *mess, char *path);
+void filerPasteModeInto(char *mess, char *path, int rename);
 void filerPsuPasteInto(char *mess, char *path);
+const char *filerPsuPasteLabel(const char *path);
+int filerMountVmc(const char *path, const FILEINFO *file, int slot, char *msg, int msg_size);
+int filerCreateFolderIcon(const char *path, const char *title, const char *text, char *msg, int msg_size);
 /* dashboard replacements for the three dialogs above (NULL = classic) */
 extern int (*ynDialogOverride)(const char *message);
 extern void (*nonDialogOverride)(const char *message);

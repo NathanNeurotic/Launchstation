@@ -6,13 +6,12 @@
 //
 //* Folders are read by the background worker; the list stays usable and
 //  a spinner shows while a slow device answers.
-//* File operations reuse the proven classic code (copy/paste, PSU,
-//  delete, rename, new folder, size, title.cfg). While the dashboard owns
-//  the screen their questions and progress use dashboard dialogs
-//  (dashClassicUiInstall), so nothing drops to the classic pop-ups.
-//* Tools without a native version yet (VMC mounting, timestamps, icon
-//  creation) are one entry away: "More tools..." opens the classic File
-//  Browser in the same folder.
+//* File operations reuse the proven classic code: copy/paste (also with
+//  new names), PSU, delete, rename, new folder, size, title.cfg, VMC
+//  mounting, folder icons and folder dates. Their questions and progress
+//  use dashboard dialogs (dashClassicUiInstall, filerTimestampUi), so
+//  nothing drops to a classic screen. Which operations are offered
+//  follows the classic rules (filerMenuEnables).
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "dash_sound.h"
@@ -154,7 +153,23 @@ static void openDir(const char *dir, const char *select)
 		dashStrCopy(fb.want_sel, select, sizeof(fb.want_sel));
 	dashStrCopy(fb.dir, dir, sizeof(fb.dir));
 	if (dir[0] == '\0') {
-		fb.ndevs = dashDevicesList(fb.devs, DASH_MAX_DEVICES - 1);
+		fb.ndevs = dashDevicesList(fb.devs, DASH_MAX_DEVICES - 3);
+		/* memory card images mounted from the menu */
+		{
+			int v;
+			for (v = 0; v < 2; v++) {
+				DashDevice *d;
+				if (!vmcMounted[v])
+					continue;
+				d = &fb.devs[fb.ndevs++];
+				memset(d, 0, sizeof(*d));
+				d->icon = DI_MC;
+				d->state = DASH_DEV_READY;
+				snprintf(d->name, sizeof(d->name), "Memory card image %d", v);
+				snprintf(d->browse, sizeof(d->browse), "vmc%d:/", v);
+				dashStrCopy(d->status, "VMC", sizeof(d->status));
+			}
+		}
 		/* the built-in commands, like the classic device list */
 		if (setting->Misc[0]) {
 			DashDevice *d = &fb.devs[fb.ndevs++];
@@ -392,8 +407,16 @@ static void opCopy(int cut)
 	}
 }
 
-static void opPaste(int psu)
+enum {
+	PASTE_NORMAL = 0,
+	PASTE_RENAME, /* asks for a new name for each item */
+	PASTE_PSU
+};
+
+static void opPaste(int mode)
 {
+	int psu = (mode == PASTE_PSU);
+
 	if (nclipFiles <= 0) {
 		dashToast(DASH_TOAST_INFO, "The clipboard is empty");
 		return;
@@ -407,7 +430,7 @@ static void opPaste(int psu)
 	if (psu)
 		filerPsuPasteInto(fb.msg, fb.dir);
 	else
-		filerPasteInto(fb.msg, fb.dir);
+		filerPasteModeInto(fb.msg, fb.dir, mode == PASTE_RENAME);
 	opDone();
 	if (fb.msg[0]) /* the classic paste only leaves a message when it failed */
 		dashModalMessage(DI_WARNING, psu ? "PSU failed" : "Paste failed", "Not everything could be pasted. The destination may be full or read-only.", fb.msg);
@@ -546,43 +569,266 @@ static void opTitleCfg(void)
 	refresh();
 }
 
-static void opClassic(void)
+/* the image extensions offered for "Mount as vmc0:/vmc1:" */
+static int isVmcImage(const char *name)
 {
-	char dir[MAX_PATH];
+	return genCmpFileExt(name, "BIN") || genCmpFileExt(name, "VMC") || genCmpFileExt(name, "MC2") ||
+	       genCmpFileExt(name, "PS2");
+}
 
-	dashStrCopy(dir, fb.dir, sizeof(dir));
-	dashOpenBrowserClassic(dir);
+static void opMountVmc(int slot)
+{
+	char dev[8];
+
+	if (fb.sel >= fb.n || !prepareOp())
+		return;
+	fb.msg[0] = '\0';
+	dashLoadingBegin("Mounting");
+	if (filerMountVmc(fb.dir, &fb.files[fb.sel], slot, fb.msg, sizeof(fb.msg)) < 0) {
+		opDone();
+		dashModalMessage(DI_WARNING, "Not mounted", fb.msg, fb.files[fb.sel].name);
+		return;
+	}
+	opDone();
+	snprintf(dev, sizeof(dev), "vmc%d:/", slot);
+	dashToast(DASH_TOAST_OK, "Mounted: the image is open as a memory card");
+	openDir(dev, NULL);
+}
+
+static void opNewIcon(void)
+{
+	char title[40], text[40];
+	int r;
+
+	if (filerConfirmExploitModify(fb.dir, NULL) <= 0)
+		return;
+	dashStrCopy(title, LNG(Icon_Title), sizeof(title));
+	if (!dashModalKeyboard("Icon title (shown in the browser)", title, 32) || title[0] == '\0')
+		return;
+	dashStrCopy(text, LNG(IconText), sizeof(text));
+	if (!dashModalKeyboard("Icon text (drawn on the icon)", text, 32))
+		return;
+	if (!prepareOp())
+		return;
+	fb.msg[0] = '\0';
+	dashLoadingBegin("Creating the icon");
+	r = filerCreateFolderIcon(fb.dir, title, text, fb.msg, sizeof(fb.msg));
+	opDone();
+	if (r < 0)
+		dashModalMessage(DI_WARNING, "Icon not created", fb.msg, fb.dir);
+	else if (r > 0)
+		dashToast(DASH_TOAST_OK, "icon.sys and icon.icn created");
+	refresh();
+}
+
+//--------------------------------------------------------------
+// Folder dates (memory card roots and hdd0:/__common)
+//--------------------------------------------------------------
+static int tsChoose(const char *title, const char **labels, int count)
+{
+	static const char *const details[] = {"edit dates yourself", "oldest first by name", "newest first by name", "SAS layout"};
+	DashMenuItem items[8];
+	int i;
+
+	if (count > 8)
+		count = 8;
+	for (i = 0; i < count; i++) {
+		items[i].icon = DI_CLOCK;
+		items[i].label = labels[i];
+		items[i].detail = i < 4 ? details[i] : NULL;
+		items[i].disabled = 0;
+	}
+	return dashModalMenu(title, fb.dir, items, count, 0);
+}
+
+static void tsProgress(int done, int total, const char *folder)
+{
+	if (!dashLoadingActive())
+		dashLoadingBegin("Updating folder dates");
+	dashLoadingStatus(folder ? folder : "", done, total);
+}
+
+#define TS_ROWS 9
+#define TS_ROW_H 22.0f
+
+/* native date editor: the folders newest first, the edited one moving as
+ * its date changes */
+static int tsEdit(FilerDateEditor *e)
+{
+	const float w = 580.0f, h = 372.0f;
+	const float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
+	const float list_y = y + 70.0f;
+	int nfields = filerDateEditorFieldCount(), top = 0, idx, i;
+	float open = 0.0f;
+	DashInput in;
+
+	dashInputFlush();
+	while (1) {
+		dashInputPoll(&in);
+		if (in.pressed & DASH_IN_BACK) {
+			dashSoundPlay(DASH_SND_CANCEL);
+			dashInputFlush();
+			return 0;
+		}
+		if (in.pressed & (DASH_IN_OK | DASH_IN_START)) {
+			dashSoundPlay(DASH_SND_CONFIRM);
+			dashInputFlush();
+			return 1;
+		}
+		if (in.pressed & DASH_IN_LEFT)
+			e->position = (e->position + nfields - 1) % nfields;
+		if (in.pressed & DASH_IN_RIGHT)
+			e->position = (e->position + 1) % nfields;
+		if (in.pressed & DASH_IN_UP)
+			filerDateEditorAdjust(e, 1);
+		if (in.pressed & DASH_IN_DOWN)
+			filerDateEditorAdjust(e, -1);
+		if (in.pressed & DASH_IN_L1)
+			filerDateEditorSelect(e, -1);
+		if (in.pressed & DASH_IN_R1)
+			filerDateEditorSelect(e, 1);
+		if (in.pressed & DASH_IN_L2)
+			filerDateEditorMoveNextTo(e, 1);
+		if (in.pressed & DASH_IN_R2)
+			filerDateEditorMoveNextTo(e, 0);
+		if (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT | DASH_IN_UP | DASH_IN_DOWN | DASH_IN_L1 | DASH_IN_R1 | DASH_IN_L2 | DASH_IN_R2))
+			dashSoundPlay(DASH_SND_CURSOR);
+
+		idx = filerDateEditorSync(e);
+		if (idx < 0)
+			idx = 0;
+		if (idx < top)
+			top = idx;
+		if (idx >= top + TS_ROWS)
+			top = idx - TS_ROWS + 1;
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		{
+			float oe = dashEaseOutCubic(open), fx, fy;
+			char text[32], date[40];
+			const char *name = "", *sep = "";
+
+			dashRenderScene();
+			dashModalBackdrop(oe);
+			dashGfxPushAlpha(oe);
+			dashModalPanel(x, y, w, h, oe);
+			dashIcon(DI_CLOCK, x + 24, y + 18, 24, DASH_C_ACCENT);
+			dashTextS(x + 58, y + 20, "Folder dates", DASH_FS_LABEL, DASH_C_TEXT);
+			dashTextFit(x + 58, y + 46, w - 82, fb.dir, DASH_FS_CAPTION, DASH_C_TEXT3);
+			for (i = top; i < e->count && i < top + TS_ROWS; i++) {
+				float ry = list_y + (i - top) * TS_ROW_H;
+				int changed = memcmp(&e->folders[i].stats._Modify, &e->original[i], sizeof(sceMcStDateTime)) != 0;
+				DashColor col = (i == idx) ? DASH_C_TEXT : changed ? DASH_C_ACCENT : DASH_C_TEXT2;
+
+				if (i == idx)
+					dashDrawSelection(x + 16, ry - 1, w - 32, TS_ROW_H - 2, 6, 1.0f);
+				dashIcon(DI_FOLDER, x + 24, ry + 3, 14, col);
+				dashTextFit(x + 46, ry + 2, w - 290, e->folders[i].name, DASH_FS_SMALL, col);
+				filerDateEditorFormat(&e->folders[i].stats._Modify, date, sizeof(date));
+				dashTextRight(x + w - 28, ry + 3, date, DASH_FS_SMALL, col);
+			}
+			dashDrawScrollbar(x + w - 16, list_y, TS_ROWS * TS_ROW_H, top, TS_ROWS, e->count);
+
+			/* the edited date, one box per field */
+			fy = list_y + TS_ROWS * TS_ROW_H + 12.0f;
+			fx = x + 28.0f;
+			for (i = 0; i < nfields; i++) {
+				float bw;
+				filerDateEditorField(e->timestamp, i, text, sizeof(text), &name, &sep);
+				bw = dashTextWidth(text, DASH_FS_LABEL) + 14.0f;
+				if (i == e->position)
+					dashDrawSelection(fx - 2, fy - 3, bw, 28, 6, 1.0f);
+				dashText(fx + 5, fy, text, DASH_FS_LABEL, i == e->position ? DASH_C_TEXT : DASH_C_TEXT2);
+				fx += bw;
+				if (sep[0]) {
+					dashText(fx, fy, sep, DASH_FS_LABEL, DASH_C_TEXT3);
+					fx += dashTextWidth(sep, DASH_FS_LABEL) + 2.0f;
+				}
+			}
+			filerDateEditorField(e->timestamp, e->position, text, sizeof(text), &name, &sep);
+			dashText(fx + 16, fy + 5, name, DASH_FS_SMALL, DASH_C_ACCENT);
+			dashGfxPopAlpha();
+		}
+		{
+			DashHint hn[6];
+			hn[0].button = DI_BTN_LEFT, hn[0].key = NULL, hn[0].label = "Field";
+			hn[1].button = DI_BTN_UP, hn[1].key = NULL, hn[1].label = "Change";
+			hn[2].button = DI_BTN_R1, hn[2].key = NULL, hn[2].label = "Folder";
+			hn[3].button = DI_BTN_R2, hn[3].key = NULL, hn[3].label = "Next to";
+			hn[4].button = dashOkIcon(), hn[4].key = NULL, hn[4].label = "Apply";
+			hn[5].button = dashBackIcon(), hn[5].key = NULL, hn[5].label = "Cancel";
+			dashDrawHints(hn, 6);
+		}
+		dashGfxPresent();
+	}
+}
+
+static const FilerTimestampUi dash_timestamp_ui = {tsChoose, tsProgress, tsEdit};
+
+/* custom = 0: the *Tuna date (2099) on this memory card folder;
+ * custom = 1: set or organise the dates of every folder here */
+static void opTimestamps(int custom)
+{
+	FILEINFO *f = fb.sel < fb.n ? &fb.files[fb.sel] : NULL;
+	int r = 0;
+
+	if (!prepareOp())
+		return;
+	fb.msg[0] = '\0';
+	filerTimestampUi = &dash_timestamp_ui;
+	if (custom)
+		r = time_manip_organize(fb.dir, f, fb.msg);
+	else if (f != NULL)
+		time_manip(fb.dir, f, fb.msg);
+	filerTimestampUi = NULL;
+	opDone();
+	if (fb.msg[0])
+		dashToast(r < 0 || strstr(fb.msg, "error") || strstr(fb.msg, "failed") ? DASH_TOAST_WARN : DASH_TOAST_OK, fb.msg);
 	refresh();
 }
 
 static void actionsMenu(void)
 {
 	FILEINFO *f = (fb.dir[0] && !isMisc(fb.dir) && fb.sel < fb.n) ? &fb.files[fb.sel] : NULL;
-	char path[MAX_PATH];
+	FILEINFO none;
+	char path[MAX_PATH], en[NUM_MENU];
+	const char *psu_label;
 	int in_folder = fb.dir[0] && !isMisc(fb.dir);
 	int is_elf = 0, has_target = (fb.nmarked > 0 || f != NULL);
-	DashMenuItem items[16];
-	int ids[16], n = 0, r;
+	DashMenuItem items[28];
+	int ids[28], n = 0, r;
 	char marked[24];
 	enum {
 		F_OPEN,
 		F_COPY,
 		F_CUT,
 		F_PASTE,
+		F_PASTE_RENAME,
 		F_PSU,
 		F_DELETE,
 		F_RENAME,
 		F_NEWDIR,
+		F_NEWICON,
 		F_SIZE,
 		F_EDIT,
 		F_ARGS,
 		F_TITLECFG,
+		F_VMC0,
+		F_VMC1,
+		F_TUNA,
+		F_DATES,
 		F_SELALL,
 		F_CLEARSEL,
-		F_REFRESH,
-		F_CLASSIC
+		F_REFRESH
 	};
 
+	/* the same rules as the classic menu: read-only devices, partition
+	 * lists, the clipboard, protected system folders */
+	memset(&none, 0, sizeof(none));
+	strcpy(none.name, "..");
+	memset(en, 0, sizeof(en));
+	if (in_folder)
+		filerMenuEnables(fb.dir, f != NULL ? f : &none, fb.nmarked, en);
+	psu_label = in_folder ? filerPsuPasteLabel(fb.dir) : NULL;
 	if (f != NULL && !isDir(f) && fullPath(f, path, sizeof(path)))
 		is_elf = genCmpFileExt(path, "ELF");
 	snprintf(marked, sizeof(marked), "%d selected", fb.nmarked);
@@ -591,30 +837,42 @@ static void actionsMenu(void)
 	if (f != NULL)
 		ADD(isDir(f) ? DI_FOLDER : DI_PLAY, isDir(f) ? "Open" : "Open / start", NULL, 0, F_OPEN);
 	if (in_folder) {
-		ADD(DI_FILE, "Copy", fb.nmarked ? marked : NULL, !has_target, F_COPY);
-		ADD(DI_CLOSE, "Cut", fb.nmarked ? marked : NULL, !has_target, F_CUT);
-		ADD(DI_PLUS, "Paste here", nclipFiles > 0 ? (browser_cut ? "move" : "copy") : NULL, nclipFiles <= 0, F_PASTE);
-		ADD(DI_MC, "Paste as PSU (save / restore)", NULL, nclipFiles <= 0, F_PSU);
-		ADD(DI_WARNING, "Delete...", fb.nmarked ? marked : NULL, !has_target, F_DELETE);
-		ADD(DI_EDIT, "Rename...", NULL, f == NULL, F_RENAME);
-		ADD(DI_FOLDER, "New folder...", NULL, 0, F_NEWDIR);
-		ADD(DI_INFO, "Size", NULL, !has_target, F_SIZE);
-		if (f != NULL && !isDir(f))
+		ADD(DI_FILE, "Copy", fb.nmarked ? marked : NULL, !has_target || !en[COPY], F_COPY);
+		ADD(DI_CLOSE, "Cut", fb.nmarked ? marked : NULL, !has_target || !en[CUT], F_CUT);
+		ADD(DI_PLUS, "Paste here", nclipFiles > 0 ? (browser_cut ? "move" : "copy") : NULL, !en[PASTE], F_PASTE);
+		if (en[PASTE])
+			ADD(DI_EDIT, "Paste with new names...", NULL, 0, F_PASTE_RENAME);
+		if (psu_label != NULL && en[PSUPASTE])
+			ADD(DI_MC, psu_label, NULL, 0, F_PSU);
+		ADD(DI_WARNING, "Delete...", fb.nmarked ? marked : NULL, !has_target || !en[DELETE], F_DELETE);
+		ADD(DI_EDIT, "Rename...", NULL, f == NULL || !en[RENAME], F_RENAME);
+		ADD(DI_FOLDER, "New folder...", NULL, !en[NEWDIR], F_NEWDIR);
+		if (en[NEWICON])
+			ADD(DI_IMAGE, "Create folder icon...", "icon.sys", 0, F_NEWICON);
+		ADD(DI_INFO, "Size", NULL, !has_target || !en[GETSIZE], F_SIZE);
+		if (f != NULL && !isDir(f) && en[OPEN_TEXTEDITOR])
 			ADD(DI_TEXT, "Open in Text Editor", NULL, 0, F_EDIT);
 		if (is_elf) {
 			ADD(DI_EDIT, "Start with arguments...", NULL, 0, F_ARGS);
-			ADD(DI_SETTINGS, "Create title.cfg", NULL, 0, F_TITLECFG);
+			if (en[TITLE_CFG])
+				ADD(DI_SETTINGS, "Create title.cfg", NULL, 0, F_TITLECFG);
 		}
+		if (f != NULL && !isDir(f) && isVmcImage(f->name) && en[MOUNTVMC0]) {
+			ADD(DI_MC, "Mount as vmc0:", vmcMounted[0] ? "replaces the mounted one" : NULL, 0, F_VMC0);
+			ADD(DI_MC, "Mount as vmc1:", vmcMounted[1] ? "replaces the mounted one" : NULL, !en[MOUNTVMC1], F_VMC1);
+		}
+		if (f != NULL && en[TIMEMANIP])
+			ADD(DI_CLOCK, LNG(time_manip), "2099-12-31", 0, F_TUNA);
+		if (en[TIMEMANIP_CUSTOM])
+			ADD(DI_CLOCK, "Folder dates...", "order the saves", 0, F_DATES);
 		ADD(DI_CHECK, "Select all", NULL, fb.n == 0, F_SELALL);
 		if (fb.nmarked)
 			ADD(DI_BACK, "Clear selection", NULL, 0, F_CLEARSEL);
 	}
 	ADD(DI_REFRESH, "Refresh", NULL, 0, F_REFRESH);
-	if (in_folder)
-		ADD(DI_TOOLS, "More tools...", "classic", 0, F_CLASSIC);
 #undef ADD
 	r = dashModalMenu("File Browser", fb.dir[0] ? fb.dir : "Devices", items, n, 0);
-	if (r < 0)
+	if (r < 0 || items[r].disabled)
 		return;
 	switch (ids[r]) {
 		case F_OPEN:
@@ -627,10 +885,13 @@ static void actionsMenu(void)
 			opCopy(1);
 			break;
 		case F_PASTE:
-			opPaste(0);
+			opPaste(PASTE_NORMAL);
+			break;
+		case F_PASTE_RENAME:
+			opPaste(PASTE_RENAME);
 			break;
 		case F_PSU:
-			opPaste(1);
+			opPaste(PASTE_PSU);
 			break;
 		case F_DELETE:
 			opDelete();
@@ -640,6 +901,9 @@ static void actionsMenu(void)
 			break;
 		case F_NEWDIR:
 			opNewFolder();
+			break;
+		case F_NEWICON:
+			opNewIcon();
 			break;
 		case F_SIZE:
 			opSize();
@@ -657,6 +921,18 @@ static void actionsMenu(void)
 		case F_TITLECFG:
 			opTitleCfg();
 			break;
+		case F_VMC0:
+			opMountVmc(0);
+			break;
+		case F_VMC1:
+			opMountVmc(1);
+			break;
+		case F_TUNA:
+			opTimestamps(0);
+			break;
+		case F_DATES:
+			opTimestamps(1);
+			break;
 		case F_SELALL:
 			memset(fb.mark, 1, fb.n);
 			fb.nmarked = fb.n;
@@ -667,9 +943,6 @@ static void actionsMenu(void)
 			break;
 		case F_REFRESH:
 			refresh();
-			break;
-		case F_CLASSIC:
-			opClassic();
 			break;
 	}
 }

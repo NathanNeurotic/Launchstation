@@ -1,18 +1,26 @@
 # wLaunchELF dashboard
 
-The dashboard is the default shell of this build. It sits on top of the
-classic wLaunchELF code: every launch still goes through
-`ExecuteMainAction()`. Settings, the File Browser, the Text Editor, the
-HDD Manager, the memory card exploit installer, the information screens
-and the file/folder picker are native dashboard screens. Only the File
-Browser's VMC / timestamp / icon tools (File Browser > Triangle > *More
-tools...*) and the PSX DVR HDD Manager still open classic screens (drawn
-in the dashboard style when *Modern style for classic screens* is on).
+The dashboard is the only shell of this build; the classic launch-key
+menu and the classic screens are gone. Underneath it still uses the proven
+wLaunchELF code: every launch goes through `ExecuteMainAction()`, and file
+operations, the HDD tools and the exploit installer run the same logic as
+before. Settings, the File Browser, the Text Editor, the HDD Manager (PSX
+included), the memory card exploit installer, the information screens and
+the file/folder picker are all dashboard screens, and the questions those
+tools ask (yes/no, names, progress) are dashboard dialogs. Commands with no
+screen of their own (start disc, OSDSYS, PS2 browser, network, power off,
+reboot IOP) run behind the loading overlay.
 
 File Browser: Confirm opens a folder, starts an ELF/KELF/VCD or opens a
 text file in the Text Editor; Square selects; Triangle has copy, cut,
-paste, PSU paste, delete, rename, new folder, size, start with arguments
-and title.cfg. Their questions and progress use dashboard dialogs.
+paste (also with new names), PSU create/extract, delete, rename, new
+folder, folder icon (icon.sys), size, start with arguments, title.cfg,
+mount as vmc0:/vmc1: (for .bin/.vmc/.mc2/.ps2 images; mounted images
+appear in the device list), the memory card *Tuna date and *Folder
+dates* (memory card roots and `hdd0:/__common`: edit dates by hand or
+order the saves A-Z, Z-A or the SAS way). The offered operations follow
+the classic rules (nothing that writes on a disc or read-only host, no
+file operations in the partition list).
 
 The cursor never waits for the memory card or a slow device: file reads
 and writes (artwork, saves, library scans, folder listings) run on a
@@ -28,13 +36,13 @@ foreground behind a short loading overlay.
 | APPS     | ELF library in **Grid**, **List** or **Carousel** view (SELECT switches, saved). Filters: all, favorites, memory cards, USB, HDD, other. |
 | FILES    | Entry points into the full FileBrowser: device list, last folder, MISC commands, each detected device and your PathPad bookmarks. |
 | DEVICES  | Cards for memory cards (type, free space), USB, MMCE, MX4SIO, HDD, exFAT HDD, disc, UDPFS, PSX flash/DVR HDD and mounted VMCs. |
-| TOOLS    | HDD Manager, Text Editor, start disc, POPStarter, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, classic launch-key menu, reboot IOP, power off. |
+| TOOLS    | HDD Manager, Text Editor, start disc, POPStarter, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, reboot IOP, power off. |
 | SETTINGS | Display, Theme, Dashboard, Launch keys, Controls, Startup, Devices, Network, Advanced: every dashboard and wLaunchELF option, edited in place (no classic configuration screens). Changes apply at once; when you leave SETTINGS with unsaved changes you are asked to *Save*, *Discard* or *Keep editing*. LAUNCHELF.CNF is saved where it was loaded from (*Save wLaunchELF settings to...* chooses another place), IPCONFIG.DAT likewise. |
 
 ## Controls
 
 Confirm/cancel follow the existing `GUI_Swap_Keys` setting (Settings >
-Controls > Confirm button), exactly like the classic screens.
+Controls > Confirm button), as wLaunchELF always has.
 
 | Button | Action |
 |--------|--------|
@@ -45,10 +53,10 @@ Controls > Confirm button), exactly like the classic screens.
 | Square | Add to / remove from Favorites |
 | L1 / R1 | Previous / next section |
 | L2 / R2 | Page jump |
-| START | Dashboard menu (home, refresh library, File Browser, classic menu, settings, reboot IOP, power off) |
+| START | Dashboard menu (home, refresh library, File Browser, settings, reboot IOP, power off) |
 | SELECT | Switch application view (APPS) |
 
-Boot behaviour of the classic menu is preserved: `Init_Delay` is honoured,
+wLaunchELF's boot behaviour is kept: `Init_Delay` is honoured,
 a launch key held when the delay ends starts its application, and a
 configured `LK_auto` path starts after the classic timeout unless a button
 is pressed (a countdown banner is shown).
@@ -61,10 +69,6 @@ where the background, every colour, selection style, corners, font, text
 size, icons, clock and app-artwork wallpaper can be changed with the
 controller. Themes can be saved to and loaded from
 `THEMES/<name>/theme.cfg` folders. See **[themes.md](themes.md)**.
-
-The classic launch-key menu is still available (Tools > Classic launch-key
-menu, or START menu). It has a *DASH: Return to dashboard* entry, and
-`MISC/Dashboard` can be assigned to a launch key.
 
 ## Application discovery
 
@@ -188,9 +192,7 @@ License 2.0, see `docs/licenses/Roboto-COPYRIGHT.txt`). It is rendered on the
 host by `scripts/gen_dash_font.py` (4x supersampled) into three PSMT8 alpha
 atlases (14, 20 and 32 px em; 35 + 57 + 123 KB) committed as
 `src/dash_font_data.c`; the PS2 needs no font engine. Sizes run from 12 px
-captions to 28 px titles. The classic screens keep wLaunchELF's 8x16 bitmap
-font (and any custom `.fnt`), because their layouts depend on fixed 8 px
-columns. Themes can switch the dashboard to that bitmap font as well
+captions to 28 px titles. Themes can switch the dashboard to that bitmap font as well
 (*System* font, see [themes.md](themes.md#fonts)), scale text from 90 to
 115 % and draw it bold. Regenerate the Roboto atlases with another TTF/OTF:
 
@@ -201,8 +203,8 @@ python scripts/gen_dash_font.py path/to/Font.ttf
 ## Memory and VRAM budget
 
 * Framebuffer: unchanged (single buffered, CT32, as the classic UI).
-* Dashboard font atlases ~215 KB, classic-font atlas 512x340 PSMT8 (~170 KB,
-  classic screens only), icon atlas 512x408 PSMT8 (~204 KB),
+* Dashboard font atlases ~215 KB, bitmap-font atlas 512x340 PSMT8 (~170 KB,
+  only with the *System* font), icon atlas 512x408 PSMT8 (~204 KB),
   five tiny CT32 helper textures. All textures are owned by gsKit's texture
   manager (inline uploads, LRU eviction) above the framebuffer.
 * Artwork: at most 40 thumbnails (<= 64 KB each) in EE RAM; one probe or
