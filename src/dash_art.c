@@ -458,7 +458,11 @@ int dashArtStep(int input_idle_ms)
 	j->copy = *best->app;
 	j->result = ART_R_NONE;
 	art_job = j;
-	dashWorkerSubmit("Loading artwork", DASH_JOB_ART, artRun, artDone, j);
+	if (dashWorkerSubmit("Loading artwork", DASH_JOB_ART | DASH_JOB_VISIBLE, artRun, artDone, j) < 0) {
+		art_job = NULL;
+		free(j);
+		return 0;
+	}
 	return 1;
 }
 
@@ -568,7 +572,10 @@ GSTEXTURE *dashThemeTextureFile(const char *path, int max_w, int max_h)
 	dashStrCopy(j->path, path, sizeof(j->path));
 	j->max_w = max_w;
 	j->max_h = max_h;
-	dashWorkerSubmit("Loading theme image", DASH_JOB_THEME | DASH_JOB_VISIBLE, themeTexRun, themeTexDone, j);
+	if (dashWorkerSubmit("Loading theme image", DASH_JOB_THEME | DASH_JOB_VISIBLE, themeTexRun, themeTexDone, j) < 0) {
+		theme_slots[free_i].state = TS_EMPTY;
+		free(j);
+	}
 	return NULL;
 }
 

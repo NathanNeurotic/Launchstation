@@ -850,8 +850,12 @@ int dashLibScanStart(int interactive)
 	memcpy(j->sc.old, dashApps, sizeof(DashApp) * dashAppCount);
 	j->sc.nold = dashAppCount;
 	scan_job = j;
-	dashWorkerSubmit(interactive ? "Refreshing applications" : "Looking for applications",
-	                 DASH_JOB_SCAN | DASH_JOB_VISIBLE, scanRun, scanDone, j);
+	if (dashWorkerSubmit(interactive ? "Refreshing applications" : "Looking for applications",
+	                     DASH_JOB_SCAN | DASH_JOB_VISIBLE, scanRun, scanDone, j) < 0) {
+		scan_job = NULL;
+		scanFree(j);
+		return -1;
+	}
 	return 0;
 }
 

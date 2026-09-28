@@ -509,7 +509,12 @@ static void submitSave(int kind)
 	}
 	save_dirty[kind] = 0;
 	save_inflight[kind] = 1;
-	dashWorkerSubmit(labels[kind], DASH_JOB_SAVE | DASH_JOB_VISIBLE, saveRun, saveDone, j);
+	if (dashWorkerSubmit(labels[kind], DASH_JOB_SAVE | DASH_JOB_VISIBLE, saveRun, saveDone, j) < 0) {
+		save_dirty[kind] = 1;
+		save_inflight[kind] = 0;
+		free(j->buf);
+		free(j);
+	}
 }
 
 void dashStoreFlush(int force)

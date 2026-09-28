@@ -552,7 +552,12 @@ static void pickOpen(const char *dir)
 	j->n = 0;
 	dashStrCopy(j->path, dir, sizeof(j->path));
 	pk.loading = 1;
-	dashWorkerSubmit("Reading folder", DASH_JOB_VISIBLE, pickListRun, pickListDone, j);
+	if (dashWorkerSubmit("Reading folder", DASH_JOB_VISIBLE, pickListRun, pickListDone, j) < 0) {
+		free(j->files);
+		free(j);
+		pk.loading = 0;
+		dashToast(DASH_TOAST_WARN, "Folder could not be queued; reopen it to retry");
+	}
 }
 
 /* MISC commands (launch-key targets), in the classic MISC folder order */

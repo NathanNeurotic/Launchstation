@@ -79,6 +79,9 @@ static void workerMain(void *unused)
 	(void)unused;
 	while (1) {
 		WaitSema(sem_go);
+		/* The UI marks this job running before waking us, preventing new
+		 * status polls. Drain the previous libmc request off the UI thread. */
+		filerRootMcPollIdle();
 		if (cur.run != NULL)
 			cur.run(cur.arg);
 		cur_state = CUR_FINISHED;
@@ -209,8 +212,6 @@ static void dispatch(void)
 	cur = queue[q_head];
 	q_head = (q_head + 1) % JOB_QUEUE;
 	q_count--;
-	/* never overlap the worker's IO with a pending asynchronous MC poll */
-	filerRootMcPollIdle();
 	dashWorkerStatus(cur.label, 0, 0);
 	cur_state = CUR_RUNNING;
 	SignalSema(sem_go);
@@ -230,25 +231,10 @@ int dashWorkerSubmit(const char *label, int flags, DashJobFn run, DashJobFn done
 {
 	DashJob *j;
 
-	/* A flooded queue waits for room. It never runs the job here: that
-	 * would overlap the worker's IO. No drawing: this may be called while
-	 * a frame is being built. */
-	while (worker_ok && q_count >= JOB_QUEUE) {
-		dashWorkerParkPoint(); /* a job rebooting the IOP waits for this */
-		dashWorkerPump();
-		if (q_count >= JOB_QUEUE)
-			DelayThread(1000);
-	}
-	if (!worker_ok) {
-		/* no thread: do the work right here */
-		int id = next_id++;
-		if (run != NULL)
-			run(arg);
-		completed_id = id;
-		if (done != NULL)
-			done(arg);
-		return id;
-	}
+	/* Submission is nonblocking, including during drawing. Rejection
+	 * transfers no ownership and invokes neither callback. */
+	if (!worker_ok || q_count >= JOB_QUEUE)
+		return -1;
 	j = &queue[(q_head + q_count) % JOB_QUEUE];
 	j->run = run;
 	j->done = done;
@@ -294,7 +280,7 @@ int dashWorkerQueued(int flags_mask)
 
 int dashWorkerDone(int id)
 {
-	return completed_id >= id;
+	return id > 0 && completed_id >= id;
 }
 
 int dashWorkerLastId(void)
@@ -312,6 +298,9 @@ int dashWorkerAwait(int id, const char *title, int cancelable)
 {
 	u64 start = Timer();
 	int shown = 0, ok = 1;
+
+	if (id <= 0)
+		return 0;
 
 	while (!dashWorkerDone(id)) {
 		DashInput in;

@@ -475,7 +475,11 @@ int dashDevicesProbeAsync(const DashDevice *dev, DashProbeDone cb, void *user)
 	j->user = user;
 	dashStrCopy(probing[i], dev->mount, sizeof(probing[i]));
 	snprintf(label, sizeof(label), "Starting %s", dev->name);
-	dashWorkerSubmit(label, DASH_JOB_DEVICE | DASH_JOB_VISIBLE, probeRun, probeDone, j);
+	if (dashWorkerSubmit(label, DASH_JOB_DEVICE | DASH_JOB_VISIBLE, probeRun, probeDone, j) < 0) {
+		probing[i][0] = '\0';
+		free(j);
+		return -1;
+	}
 	return 0;
 }
 
@@ -497,7 +501,10 @@ void dashDevicesAutoProbeAsync(void)
 	if (auto_running)
 		return;
 	auto_running = 1;
-	dashWorkerSubmit("Starting devices", DASH_JOB_DEVICE | DASH_JOB_VISIBLE, autoRun, autoDone, NULL);
+	if (dashWorkerSubmit("Starting devices", DASH_JOB_DEVICE | DASH_JOB_VISIBLE, autoRun, autoDone, NULL) < 0) {
+		auto_running = 0;
+		dashToast(DASH_TOAST_WARN, "Device startup could not be queued; retry from Devices");
+	}
 }
 
 /* Load the drivers for every device family marked auto-start that is not

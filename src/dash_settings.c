@@ -1422,13 +1422,13 @@ static void cfgSaveDone(void *arg)
 	free(j);
 }
 
-static void cfgSave(int kind, int target, const char *path)
+static int cfgSave(int kind, int target, const char *path)
 {
 	CfgSaveJob *j = (CfgSaveJob *)malloc(sizeof(CfgSaveJob));
 
 	if (j == NULL) {
 		dashToast(DASH_TOAST_ERROR, "Settings could not be saved (out of memory)");
-		return;
+		return 0;
 	}
 	memset(j, 0, sizeof(*j));
 	j->kind = kind;
@@ -1439,8 +1439,13 @@ static void cfgSave(int kind, int target, const char *path)
 		dashStrCopy(j->file, dashExecContext()->cnf_path, sizeof(j->file));
 	if (path != NULL)
 		dashStrCopy(j->path, path, sizeof(j->path));
-	dashWorkerSubmit(kind == CFG_SAVE_NET ? "Saving network settings" : "Saving wLaunchELF settings",
-	                 DASH_JOB_SAVE | DASH_JOB_VISIBLE, cfgSaveRun, cfgSaveDone, j);
+	if (dashWorkerSubmit(kind == CFG_SAVE_NET ? "Saving network settings" : "Saving wLaunchELF settings",
+	                     DASH_JOB_SAVE | DASH_JOB_VISIBLE, cfgSaveRun, cfgSaveDone, j) < 0) {
+		free(j);
+		dashToast(DASH_TOAST_ERROR, "Save could not be queued; changes are still unsaved");
+		return 0;
+	}
+	return 1;
 }
 
 static int anyDirty(void)
@@ -1469,13 +1474,16 @@ static void sessionBegin(void)
 /* Writes everything that changed, in the background. */
 static void settingsCommit(void)
 {
+	int cnf_failed = 0, net_failed = 0;
 	if (dash_dirty)
 		dashStoreSaveSettings();
 	if (classic_dirty)
-		cfgSave(CFG_SAVE_CNF, -2, NULL);
+		cnf_failed = !cfgSave(CFG_SAVE_CNF, -2, NULL);
 	if (net_dirty)
-		cfgSave(CFG_SAVE_NET, -2, NULL);
+		net_failed = !cfgSave(CFG_SAVE_NET, -2, NULL);
 	sessionSnapshot();
+	classic_dirty = cnf_failed;
+	net_dirty = net_failed;
 }
 
 /* Puts back what was there when SETTINGS was opened. */
@@ -1557,6 +1565,8 @@ static int settingsLeave(void)
 	r = dashModalMenu("Save your changes?", what, items, 3, 0);
 	if (r == 0) {
 		settingsCommit();
+		if (anyDirty())
+			return 0;
 		session = 0;
 		return 1;
 	}
@@ -1605,6 +1615,11 @@ static void saveClassicAs(void)
 		return;
 	memset(j, 0, sizeof(*j));
 	id = dashWorkerSubmit("Checking memory cards", DASH_JOB_VISIBLE, targetsRun, targetsDone, j);
+	if (id < 0) {
+		free(j);
+		dashToast(DASH_TOAST_WARN, "Save locations could not be queued; try again");
+		return;
+	}
 	if (!dashWorkerAwait(id, "Checking memory cards", 1)) {
 		j->abandoned = 1;
 		return;
@@ -1618,8 +1633,7 @@ static void saveClassicAs(void)
 	items[n].icon = DI_MC, items[n].label = j->s, items[n].detail = "memory card", items[n].disabled = 0;
 	targets[n] = CONFIG_SAVE_TARGET_SYSCONF, paths[n++] = j->s;
 	r = dashModalMenu("Save wLaunchELF settings to", LoadedConfigPath[0] ? LoadedConfigPath : "not loaded from a file yet", items, n, 0);
-	if (r >= 0) {
-		cfgSave(CFG_SAVE_CNF, targets[r], paths[r]);
+	if (r >= 0 && cfgSave(CFG_SAVE_CNF, targets[r], paths[r])) {
 		/* the wLaunchELF part of the session is saved now */
 		snap_classic = *setting;
 		classic_dirty = 0;
@@ -1806,6 +1820,13 @@ static void themeIoDone(void *arg)
 static int themeIo(ThemeIoJob *j, const char *title)
 {
 	int id = dashWorkerSubmit(title, DASH_JOB_THEME | DASH_JOB_VISIBLE, themeIoRun, themeIoDone, j);
+
+	if (id < 0) {
+		free(j->text);
+		free(j);
+		dashToast(DASH_TOAST_WARN, "Theme operation could not be queued; try again");
+		return 0;
+	}
 
 	if (dashWorkerAwait(id, title, 1))
 		return 1;
