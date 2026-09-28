@@ -569,18 +569,26 @@ int dashLibLoadCache(void)
 	return dashAppCount;
 }
 
+/* The cache is written by the background worker (dash_store.c). */
 int dashLibSaveCache(void)
 {
-	char path[MAX_PATH];
-	char *buf;
-	int cap, len = 0, i, ret;
-
-	if (!lib_ready || dashStoreBuildPath(path, sizeof(path), "DASHLIB.CNF") < 0)
+	if (!lib_ready)
 		return -1;
+	dashStoreSaveCache();
+	return 0;
+}
+
+char *dashLibBuildCache(int *out_len)
+{
+	char *buf;
+	int cap, len = 0, i;
+
+	if (!lib_ready)
+		return NULL;
 	cap = 128 + dashAppCount * (int)(sizeof(DashApp) + 32);
 	buf = (char *)malloc(cap);
 	if (buf == NULL)
-		return -1;
+		return NULL;
 	len += snprintf(buf + len, cap - len, "# wLaunchELF dashboard application cache (safe to delete)\r\n");
 	for (i = 0; i < dashAppCount; i++) {
 		DashApp *a = &dashApps[i];
@@ -591,12 +599,13 @@ int dashLibSaveCache(void)
 		                a->flags & (DASH_APP_HAS_META | DASH_APP_HAS_ARGS | DASH_APP_META_PIN),
 		                (a->art_state == DASH_ART_FOUND || a->art_state == DASH_ART_NONE) ? a->art_state : 0,
 		                a->art, a->desc);
-		if (len >= cap - 1)
+		if (len >= cap - 1) {
+			len = cap - 1;
 			break;
+		}
 	}
-	ret = dashWriteFile(path, buf, len);
-	free(buf);
-	return ret;
+	*out_len = len;
+	return buf;
 }
 
 //--------------------------------------------------------------
@@ -609,7 +618,6 @@ typedef struct
 	DashApp *fresh;
 	int nfresh;
 	FILEINFO *files;
-	DashProgressFn progress;
 	int dirs_done;
 	int dirs_total;
 } ScanCtx;
@@ -660,10 +668,8 @@ static void scanDir(ScanCtx *sc, const char *dir, int depth)
 	int nsub = 0, n, i;
 	char status[DASH_PATH_MAX + 32];
 
-	if (sc->progress) {
-		snprintf(status, sizeof(status), "%s", dir);
-		sc->progress(status, sc->dirs_done, sc->dirs_total);
-	}
+	snprintf(status, sizeof(status), "%s", dir);
+	dashWorkerStatus(status, sc->dirs_done, sc->dirs_total);
 	n = getDir(dir, sc->files);
 	for (i = 0; i < n && i < MAX_ENTRY - 2; i++) {
 		FILEINFO *f = &sc->files[i];
@@ -713,88 +719,171 @@ static int dirPrefixMatch(const char *path, char dirs[][DASH_PATH_MAX], int ndir
 	return 0;
 }
 
-int dashLibScan(int interactive, DashProgressFn progress)
+/* A scan runs on the background worker against a snapshot of the library.
+ * Its result waits in `scan_result` until the main loop applies it with
+ * dashLibApplyScan(), so screens and dialogs never see the array change
+ * under a DashApp pointer they hold. */
+typedef struct
 {
 	char dirs[DASH_MAX_SCAN * 2][DASH_PATH_MAX];
-	int ndirs = 0, i;
+	int ndirs;
+	int interactive;
 	ScanCtx sc;
+	int ok;
+} ScanJob;
+
+static ScanJob *scan_job;    /* queued or running */
+static ScanJob *scan_result; /* finished, not applied yet */
+static int scan_again;       /* an interactive scan was requested meanwhile */
+
+static void scanRun(void *arg)
+{
+	ScanJob *j = (ScanJob *)arg;
+	ScanCtx *sc = &j->sc;
+	char scanned[DASH_MAX_SCAN * 2][DASH_PATH_MAX];
+	int nscanned = 0, i;
+
+	sc->dirs_total = j->ndirs;
+	for (i = 0; i < j->ndirs; i++) {
+		sc->dirs_done = i;
+		if (!j->interactive && !cheapToScan(j->dirs[i]))
+			continue;
+		if (!strncmp(j->dirs[i], "mc", 2) && !dashMcPresent(j->dirs[i][2] - '0'))
+			continue;
+		scanDir(sc, j->dirs[i], 0);
+		dashStrCopy(scanned[nscanned++], j->dirs[i], DASH_PATH_MAX);
+	}
+
+	/* Keep cached entries that live on locations we did not look at
+	 * (e.g. USB not yet initialised during a boot-time scan). */
+	for (i = 0; i < sc->nold && sc->nfresh < DASH_MAX_APPS; i++) {
+		DashApp *o = &sc->old[i];
+		int k, dup = 0;
+
+		if (o->flags & DASH_APP_TRANSIENT)
+			continue;
+		if (dirPrefixMatch(o->path, scanned, nscanned))
+			continue;
+		for (k = 0; k < sc->nfresh; k++)
+			if (!stricmp(sc->fresh[k].path, o->path))
+				dup = 1;
+		if (!dup)
+			sc->fresh[sc->nfresh++] = *o;
+	}
+	qsort(sc->fresh, sc->nfresh, sizeof(DashApp), titleCmp);
+	j->ok = 1;
+}
+
+static void scanFree(ScanJob *j)
+{
+	if (j == NULL)
+		return;
+	free(j->sc.old);
+	free(j->sc.fresh);
+	free(j->sc.files);
+	free(j);
+}
+
+static void scanDone(void *arg)
+{
+	ScanJob *j = (ScanJob *)arg;
+
+	scan_job = NULL;
+	/* the fresh list is applied by the main loop; the big buffers go now */
+	free(j->sc.files);
+	j->sc.files = NULL;
+	free(j->sc.old);
+	j->sc.old = NULL;
+	scanFree(scan_result); /* an older unapplied result is superseded */
+	scan_result = j;
+}
+
+int dashLibScanRunning(void)
+{
+	return scan_job != NULL;
+}
+
+int dashLibScanStart(int interactive)
+{
+	ScanJob *j;
+	int i;
 
 	if (!lib_ready)
 		return -1;
-
+	if (scan_job != NULL) {
+		/* one scan at a time; an explicit refresh during a boot scan runs
+		 * right after it (the boot scan skips devices that are not started) */
+		if (interactive && !scan_job->interactive)
+			scan_again = 1;
+		return 0;
+	}
+	j = (ScanJob *)malloc(sizeof(ScanJob));
+	if (j == NULL)
+		return -1;
+	memset(j, 0, sizeof(*j));
+	j->interactive = interactive;
 	for (i = 0; i < dashCfg.nscan; i++) {
-		const char *s = dashCfg.scan[i];
 		char d[DASH_PATH_MAX];
 		int len;
 
-		dashStrCopy(d, s, sizeof(d));
+		dashStrCopy(d, dashCfg.scan[i], sizeof(d));
 		len = strlen(d);
 		if (len == 0 || len >= DASH_PATH_MAX - 2)
 			continue;
 		if (d[len - 1] != '/' && d[len - 1] != ':')
 			strcat(d, "/");
 		if (!strncmp(d, "mc:", 3)) {
-			snprintf(dirs[ndirs++], DASH_PATH_MAX, "mc0:%.*s", DASH_PATH_MAX - 8, d + 3);
-			snprintf(dirs[ndirs++], DASH_PATH_MAX, "mc1:%.*s", DASH_PATH_MAX - 8, d + 3);
+			snprintf(j->dirs[j->ndirs++], DASH_PATH_MAX, "mc0:%.*s", DASH_PATH_MAX - 8, d + 3);
+			snprintf(j->dirs[j->ndirs++], DASH_PATH_MAX, "mc1:%.*s", DASH_PATH_MAX - 8, d + 3);
 		} else
-			dashStrCopy(dirs[ndirs++], d, DASH_PATH_MAX);
+			dashStrCopy(j->dirs[j->ndirs++], d, DASH_PATH_MAX);
 	}
 
-	memset(&sc, 0, sizeof(sc));
-	sc.progress = progress;
-	sc.old = dashApps;
-	sc.nold = dashAppCount;
-	sc.fresh = (DashApp *)malloc(sizeof(DashApp) * DASH_MAX_APPS);
-	sc.files = (FILEINFO *)malloc(sizeof(FILEINFO) * MAX_ENTRY);
-	if (sc.fresh == NULL || sc.files == NULL) {
-		free(sc.fresh);
-		free(sc.files);
+	j->sc.fresh = (DashApp *)malloc(sizeof(DashApp) * DASH_MAX_APPS);
+	j->sc.files = (FILEINFO *)malloc(sizeof(FILEINFO) * MAX_ENTRY);
+	j->sc.old = (DashApp *)malloc(sizeof(DashApp) * (dashAppCount > 0 ? dashAppCount : 1));
+	if (j->sc.fresh == NULL || j->sc.files == NULL || j->sc.old == NULL) {
+		scanFree(j);
 		return -1;
 	}
-	sc.dirs_total = ndirs;
-
-	{
-		char scanned[DASH_MAX_SCAN * 2][DASH_PATH_MAX];
-		int nscanned = 0;
-
-		for (i = 0; i < ndirs; i++) {
-			sc.dirs_done = i;
-			if (!interactive && !cheapToScan(dirs[i]))
-				continue;
-			if (!strncmp(dirs[i], "mc", 2) && !dashMcPresent(dirs[i][2] - '0'))
-				continue;
-			scanDir(&sc, dirs[i], 0);
-			dashStrCopy(scanned[nscanned++], dirs[i], DASH_PATH_MAX);
-		}
-
-		/* Keep cached entries that live on locations we did not look at
-		 * (e.g. USB not yet initialised during a boot-time scan). */
-		for (i = 0; i < sc.nold && sc.nfresh < DASH_MAX_APPS; i++) {
-			DashApp *o = &sc.old[i];
-			int j, dup = 0;
-
-			if (o->flags & DASH_APP_TRANSIENT)
-				continue;
-			if (dirPrefixMatch(o->path, scanned, nscanned))
-				continue;
-			for (j = 0; j < sc.nfresh; j++)
-				if (!stricmp(sc.fresh[j].path, o->path))
-					dup = 1;
-			if (!dup)
-				sc.fresh[sc.nfresh++] = *o;
-		}
+	/* snapshot: the worker never reads the live library */
+	memcpy(j->sc.old, dashApps, sizeof(DashApp) * dashAppCount);
+	j->sc.nold = dashAppCount;
+	scan_job = j;
+	if (dashWorkerSubmit(interactive ? "Refreshing applications" : "Looking for applications",
+	                     DASH_JOB_SCAN | DASH_JOB_VISIBLE, scanRun, scanDone, j) < 0) {
+		scan_job = NULL;
+		scanFree(j);
+		return -1;
 	}
+	return 0;
+}
 
-	free(sc.files);
+int dashLibApplyScan(int *interactive)
+{
+	ScanJob *j = scan_result;
+	int n;
+
+	if (j == NULL)
+		return -2;
+	scan_result = NULL;
+	if (interactive != NULL)
+		*interactive = j->interactive;
+	if (scan_again) {
+		scan_again = 0;
+		dashLibScanStart(1);
+	}
+	if (!j->ok) {
+		scanFree(j);
+		return -1;
+	}
 	dashArtFlushAll();
-	memcpy(dashApps, sc.fresh, sizeof(DashApp) * sc.nfresh);
-	dashAppCount = sc.nfresh;
-	free(sc.fresh);
-	qsort(dashApps, dashAppCount, sizeof(DashApp), titleCmp);
-	if (progress)
-		progress("Saving library", ndirs, ndirs);
+	memcpy(dashApps, j->sc.fresh, sizeof(DashApp) * j->sc.nfresh);
+	dashAppCount = j->sc.nfresh;
+	n = dashAppCount;
+	scanFree(j);
 	dashLibSaveCache();
-	return dashAppCount;
+	return n;
 }
 //--------------------------------------------------------------
 //End of file: dash_lib.c

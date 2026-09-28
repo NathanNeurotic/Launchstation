@@ -19,6 +19,7 @@ DashUserLists dashLists;
 static char store_dir[MAX_PATH];
 static int store_loaded;
 static int store_initialized;
+static DashSettings persisted; /* last committed settings (see Saving) */
 
 static const char *const default_scan[] = {
     "mc:/APPS/",
@@ -344,6 +345,7 @@ void dashStoreInit(void)
 	if (store_dir[0] == '\0')
 		dashStrCopy(store_dir, dirs[0], sizeof(store_dir));
 	dashThemeStoreEnd();
+	persisted = dashCfg;
 
 	if (dashStoreBuildPath(path, sizeof(path), "DASHAPPS.CNF") == 0) {
 		text = dashLoadTextFile(path, 64 * 1024, &len);
@@ -359,18 +361,48 @@ int dashStoreLoaded(void)
 	return store_loaded;
 }
 
-int dashStoreSaveSettings(void)
+//--------------------------------------------------------------
+// Saving. Nothing is written from the UI thread: a save only marks the
+// file dirty. dashStoreFlush() (main loop, and before any hand-off) turns
+// dirty files into background jobs once the pad has been idle for a
+// moment, so a burst of changes becomes one memory card write and the
+// cursor never waits for the card.
+//
+// DASHBOARD.CNF is written from `persisted`, the last committed settings,
+// not from dashCfg: SETTINGS edits dashCfg live and commits (or discards)
+// the edits when the user leaves the section. Theme edits are always
+// written (they are part of the same file).
+//--------------------------------------------------------------
+enum {
+	SAVE_SETTINGS = 0,
+	SAVE_LISTS,
+	SAVE_CACHE,
+	SAVE_KINDS
+};
+
+typedef struct
 {
+	int kind;
 	char path[MAX_PATH];
 	char *buf;
-	int len = 0, i, ret;
-	const int cap = 2048 + DASH_MAX_SCAN * (DASH_PATH_MAX + 16) + 4096;
+	int len;
+	int ret;
+} SaveJob;
 
-	if (dashStoreBuildPath(path, sizeof(path), "DASHBOARD.CNF") < 0)
-		return -1;
+static int save_dirty[SAVE_KINDS];
+static int save_inflight[SAVE_KINDS];
+static int save_error_shown[SAVE_KINDS];
+
+static char *buildSettings(int *out_len)
+{
+	char *buf;
+	int len = 0, i;
+	const int cap = 2048 + DASH_MAX_SCAN * (DASH_PATH_MAX + 16) + 4096;
+	const DashSettings *c = &persisted;
+
 	buf = (char *)malloc(cap);
 	if (buf == NULL)
-		return -1;
+		return NULL;
 	len += snprintf(buf + len, cap - len,
 	                "# wLaunchELF dashboard settings (LAUNCHELF.CNF is not modified)\r\n"
 	                "Dash_Enabled = %d\r\n"
@@ -389,33 +421,27 @@ int dashStoreSaveSettings(void)
 	                "Dash_BGMVolume = %d\r\n"
 	                "Dash_AppFilter = %d\r\n"
 	                "Dash_DevAuto = %d\r\n",
-	                dashCfg.enabled, dashCfg.start_section, dashCfg.view, dashCfg.effects,
-	                dashCfg.anim, dashCfg.autoscan, dashCfg.artwork, dashCfg.recent_count,
-	                dashCfg.legacy_theme, dashCfg.intro_done, dashCfg.sound, dashCfg.sound_vol,
-	                dashCfg.bgm, dashCfg.bgm_vol, dashCfg.app_filter, dashCfg.dev_auto);
-	for (i = 0; i < dashCfg.nscan && len < cap - DASH_PATH_MAX - 16; i++)
-		len += snprintf(buf + len, cap - len, "Dash_Scan = %s\r\n", dashCfg.scan[i]);
+	                c->enabled, c->start_section, c->view, c->effects,
+	                c->anim, c->autoscan, c->artwork, c->recent_count,
+	                c->legacy_theme, c->intro_done, c->sound, c->sound_vol,
+	                c->bgm, c->bgm_vol, c->app_filter, c->dev_auto);
+	for (i = 0; i < c->nscan && len < cap - DASH_PATH_MAX - 16; i++)
+		len += snprintf(buf + len, cap - len, "Dash_Scan = %s\r\n", c->scan[i]);
 	/* theme: preset name, plus a full snapshot once customised */
 	len += dashThemeStoreWrite(buf + len, cap - len);
-	ret = dashWriteFile(path, buf, len);
-	free(buf);
-	if (ret == 0)
-		store_loaded = 1;
-	return ret;
+	*out_len = len;
+	return buf;
 }
 
-int dashStoreSaveLists(void)
+static char *buildLists(int *out_len)
 {
-	char path[MAX_PATH];
 	char *buf;
-	int len = 0, i, ret;
+	int len = 0, i;
 	const int cap = 256 + (DASH_MAX_FAV * 2 + DASH_MAX_RECENT) * (DASH_PATH_MAX + 16);
 
-	if (dashStoreBuildPath(path, sizeof(path), "DASHAPPS.CNF") < 0)
-		return -1;
 	buf = (char *)malloc(cap);
 	if (buf == NULL)
-		return -1;
+		return NULL;
 	len += snprintf(buf + len, cap - len, "# wLaunchELF dashboard: favorites, pinned and recent apps\r\n");
 	for (i = 0; i < dashLists.npin; i++)
 		len += snprintf(buf + len, cap - len, "Pinned = %s\r\n", dashLists.pin[i]);
@@ -423,9 +449,124 @@ int dashStoreSaveLists(void)
 		len += snprintf(buf + len, cap - len, "Favorite = %s\r\n", dashLists.fav[i]);
 	for (i = 0; i < dashLists.nrecent; i++)
 		len += snprintf(buf + len, cap - len, "Recent = %s\r\n", dashLists.recent[i]);
-	ret = dashWriteFile(path, buf, len);
-	free(buf);
-	return ret;
+	*out_len = len;
+	return buf;
+}
+
+static void saveRun(void *arg)
+{
+	SaveJob *j = (SaveJob *)arg;
+
+	j->ret = dashWriteFile(j->path, j->buf, j->len);
+}
+
+static void saveDone(void *arg)
+{
+	static const char *const what[SAVE_KINDS] = {"Dashboard settings", "Favorites", "Application list"};
+	SaveJob *j = (SaveJob *)arg;
+
+	save_inflight[j->kind] = 0;
+	if (j->ret == 0) {
+		save_error_shown[j->kind] = 0;
+		if (j->kind == SAVE_SETTINGS)
+			store_loaded = 1;
+	} else if (!save_error_shown[j->kind]) {
+		char msg[96];
+		/* once per failure streak; the next change retries */
+		save_error_shown[j->kind] = 1;
+		snprintf(msg, sizeof(msg), "%s could not be saved to %s", what[j->kind], store_dir);
+		dashToast(DASH_TOAST_ERROR, msg);
+	}
+	free(j->buf);
+	free(j);
+}
+
+static void submitSave(int kind)
+{
+	static const char *const files[SAVE_KINDS] = {"DASHBOARD.CNF", "DASHAPPS.CNF", "DASHLIB.CNF"};
+	static const char *const labels[SAVE_KINDS] = {"Saving settings", "Saving favorites", "Updating library"};
+	SaveJob *j;
+
+	j = (SaveJob *)malloc(sizeof(SaveJob));
+	if (j == NULL)
+		return;
+	memset(j, 0, sizeof(*j));
+	j->kind = kind;
+	if (dashStoreBuildPath(j->path, sizeof(j->path), files[kind]) < 0) {
+		free(j);
+		save_dirty[kind] = 0;
+		return;
+	}
+	if (kind == SAVE_SETTINGS)
+		j->buf = buildSettings(&j->len);
+	else if (kind == SAVE_LISTS)
+		j->buf = buildLists(&j->len);
+	else
+		j->buf = dashLibBuildCache(&j->len);
+	if (j->buf == NULL) {
+		free(j);
+		return;
+	}
+	save_dirty[kind] = 0;
+	save_inflight[kind] = 1;
+	if (dashWorkerSubmit(labels[kind], DASH_JOB_SAVE | DASH_JOB_VISIBLE, saveRun, saveDone, j) < 0) {
+		save_dirty[kind] = 1;
+		save_inflight[kind] = 0;
+		free(j->buf);
+		free(j);
+	}
+}
+
+void dashStoreFlush(int force)
+{
+	int k;
+
+	if (!force && dashInputIdleMs() < 700)
+		return;
+	for (k = 0; k < SAVE_KINDS; k++)
+		if (save_dirty[k] && !save_inflight[k])
+			submitSave(k);
+}
+
+int dashStoreFlushWait(const char *title)
+{
+	dashStoreFlush(1);
+	if (!dashWorkerAwaitAll(title))
+		return 0;
+	/* changes that arrived while an earlier save of the same file ran */
+	if (save_dirty[SAVE_SETTINGS] || save_dirty[SAVE_LISTS] || save_dirty[SAVE_CACHE]) {
+		dashStoreFlush(1);
+		return dashWorkerAwaitAll(title);
+	}
+	return 1;
+}
+
+int dashStoreSaveSettings(void)
+{
+	persisted = dashCfg;
+	save_dirty[SAVE_SETTINGS] = 1;
+	return 0;
+}
+
+void dashStoreSaveTheme(void)
+{
+	save_dirty[SAVE_SETTINGS] = 1;
+}
+
+const DashSettings *dashStorePersisted(void)
+{
+	return &persisted;
+}
+
+int dashStoreSaveLists(void)
+{
+	save_dirty[SAVE_LISTS] = 1;
+	return 0;
+}
+
+void dashStoreSaveCache(void)
+{
+	save_dirty[SAVE_CACHE] = 1;
 }
 
 //--------------------------------------------------------------

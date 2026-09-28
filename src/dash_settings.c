@@ -1,11 +1,13 @@
 //--------------------------------------------------------------
 //File name:   dash_settings.c
-//SETTINGS: dashboard options plus the existing wLaunchELF settings,
-//grouped into Display / Dashboard / Controls / Devices / Network /
-//Advanced. Classic settings edit the same SETTING fields as the classic
-//configuration screen and are written to LAUNCHELF.CNF only when the user
-//saves (with the classic save-location prompt). Every classic sub-screen
-//remains one press away, so no option is lost.
+//SETTINGS: dashboard options plus every wLaunchELF setting, grouped into
+//Display / Theme / Dashboard / Launch keys / Controls / Startup / Devices /
+//Network / Advanced. wLaunchELF settings edit the same SETTING fields as
+//the classic configuration screens, which are no longer needed.
+//
+//Changes apply at once but are only written when the user leaves SETTINGS
+//and chooses Save (or "Save all settings now"); Discard restores what was
+//there when SETTINGS was opened. Writes run on the background worker.
 //
 //Theme: preset choice with live preview, and a theme editor that swaps
 //the category column for the theme groups (Background, Colours, Style,
@@ -16,23 +18,30 @@
 #include "config_private.h"
 #include "dash_sound.h"
 
-void dashLegacyBegin(void);
-void dashLegacyEnd(void);
-
 enum SetType {
 	ST_CHOICE = 0,
 	ST_ACTION,
 	ST_INFO,
-	ST_COLOR
+	ST_COLOR,
+	ST_NUMBER, /* left/right steps a number (screen offsets, delays) */
+	ST_PATH,   /* a file or folder chosen with the picker; Triangle clears */
+	ST_IP,     /* IPv4 address */
+	ST_LKEY    /* launch key: choose target, Square title, Triangle clear */
 };
 
 enum SetId {
 	/* display */
 	S_TVMODE = 0,
-	S_SCREEN_CLASSIC,
+	S_SCREEN_X,
+	S_SCREEN_Y,
 	S_EFFECTS,
 	S_ANIM,
 	S_LEGACY_THEME,
+	S_MENU_FRAME,
+	S_POPUP_OPAQUE,
+	S_C_COL0, /* classic screen colours, COLOR_BACKGR..COLOR_GRAPH4 */
+	S_C_COL7 = S_C_COL0 + 7,
+	S_SCREEN_RESET,
 	/* dashboard */
 	S_ENABLED,
 	S_SOUND,
@@ -52,7 +61,22 @@ enum SetId {
 	S_CONFIRM,
 	S_VKEY,
 	S_USBKBD,
+	S_USBKBD_FILE,
+	S_KBDMAP_FILE,
 	S_LAUNCHKEYS,
+	/* launch keys: S_LK_0 + SETTING_LK_AUTO..SETTING_LK_START */
+	S_LK_0,
+	S_LK_LAST = S_LK_0 + SETTING_LK_START,
+	S_PATHPAD_LOCK,
+	/* startup */
+	S_INIT_DELAY,
+	S_TIMEOUT,
+	S_CNF_PATH,
+	S_LANG_FILE,
+	S_FONT_FILE,
+	S_ESR_PATH,
+	S_OSDSYS_PATH,
+	S_POPS_PATH,
 	/* devices */
 	S_HIDE_HDD,
 	S_HIDE_MC,
@@ -64,11 +88,10 @@ enum SetId {
 	S_DEVA_MX4SIO,
 	S_DEVA_UDPFS,
 	/* network */
-	S_NET_INFO,
-	S_NET_CLASSIC,
-#ifdef ETH
+	S_NET_IP,
+	S_NET_NM,
+	S_NET_GW,
 	S_HOSTWRITE,
-#endif
 	/* advanced */
 	S_LANGUAGE,
 	S_GAMEID,
@@ -79,10 +102,9 @@ enum SetId {
 	S_FB_ICONS,
 	S_SHOW_TITLES,
 	S_HIDE_PATHS,
-	S_STARTUP_CLASSIC,
-	S_ADVANCED_CLASSIC,
-	S_CONFIG_CLASSIC,
 	S_SAVE_CLASSIC,
+	S_SAVE_AS,
+	S_REVERT,
 	/* theme */
 	S_T_PRESET,
 	S_T_CUSTOMIZE,
@@ -145,10 +167,22 @@ typedef struct
 
 static const SetItem display_items[] = {
     {ST_CHOICE, S_TVMODE, "Video mode", "Auto follows the console region. Changing it applies immediately."},
-    {ST_ACTION, S_SCREEN_CLASSIC, "Screen position and colors...", "Classic screen settings: overscan offsets, interlace and colour skins."},
+    {ST_NUMBER, S_SCREEN_X, "Screen position X", "Moves the picture left or right to fit your TV (overscan)."},
+    {ST_NUMBER, S_SCREEN_Y, "Screen position Y", "Moves the picture up or down to fit your TV."},
     {ST_CHOICE, S_EFFECTS, "Background effects", "Crystal towers, stars and light effects behind the dashboard."},
     {ST_CHOICE, S_ANIM, "Animations", "Reduce or turn off motion."},
-    {ST_CHOICE, S_LEGACY_THEME, "Modern style for classic screens", "Draw the File Browser and classic tools with the dashboard look."},
+    {ST_CHOICE, S_LEGACY_THEME, "Modern style for classic screens", "Draw the classic tools (File Browser, Text Editor...) with the dashboard look."},
+    {ST_CHOICE, S_MENU_FRAME, "Classic screens: menu frame", "Frame around the classic menus."},
+    {ST_CHOICE, S_POPUP_OPAQUE, "Classic screens: opaque pop-ups", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_BACKGR, "Classic colour: background", "Colours of the classic tools when the modern style is off."},
+    {ST_COLOR, S_C_COL0 + COLOR_FRAME, "Classic colour: frames", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_SELECT, "Classic colour: selection", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_TEXT, "Classic colour: text", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_GRAPH1, "Classic colour: folders", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_GRAPH2, "Classic colour: ELF files", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_GRAPH3, "Classic colour: other files", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_GRAPH4, "Classic colour: text editor", NULL},
+    {ST_ACTION, S_SCREEN_RESET, "Reset screen settings", "Video mode Auto, a centred picture and the default classic colours."},
 };
 
 static const SetItem dash_items[] = {
@@ -172,7 +206,38 @@ static const SetItem control_items[] = {
     {ST_CHOICE, S_CONFIRM, "Confirm button", "Which button confirms. The other one cancels (all screens)."},
     {ST_CHOICE, S_VKEY, "On-screen keyboard layout", NULL},
     {ST_CHOICE, S_USBKBD, "USB keyboard", "Use a USB keyboard as a controller and for typing."},
-    {ST_ACTION, S_LAUNCHKEYS, "Launch keys...", "Classic per-button launch paths (also shown on HOME)."},
+    {ST_PATH, S_USBKBD_FILE, "USB keyboard driver", "Optional USBKBD.IRX to use instead of the built-in driver."},
+    {ST_PATH, S_KBDMAP_FILE, "Keyboard map", "Optional .KBD key map for non-US USB keyboards."},
+    {ST_ACTION, S_LAUNCHKEYS, "Launch keys...", "Per-button launch paths (also shown on HOME)."},
+};
+
+static const SetItem lkey_items[] = {
+    {ST_LKEY, S_LK_0 + SETTING_LK_AUTO, "Automatic start", "Starts after the timeout (Startup) unless a button is pressed."},
+    {ST_LKEY, S_LK_0 + SETTING_LK_CIRCLE, "Circle", "Hold at startup to start it; also a HOME shortcut."},
+    {ST_LKEY, S_LK_0 + SETTING_LK_CROSS, "Cross", NULL},
+    {ST_LKEY, S_LK_0 + SETTING_LK_SQUARE, "Square", NULL},
+    {ST_LKEY, S_LK_0 + SETTING_LK_TRIANGLE, "Triangle", NULL},
+    {ST_LKEY, S_LK_0 + SETTING_LK_L1, "L1", NULL},
+    {ST_LKEY, S_LK_0 + SETTING_LK_R1, "R1", NULL},
+    {ST_LKEY, S_LK_0 + SETTING_LK_L2, "L2", NULL},
+    {ST_LKEY, S_LK_0 + SETTING_LK_R2, "R2", NULL},
+    {ST_LKEY, S_LK_0 + SETTING_LK_L3, "L3", NULL},
+    {ST_LKEY, S_LK_0 + SETTING_LK_R3, "R3", NULL},
+    {ST_LKEY, S_LK_0 + SETTING_LK_START, "START", NULL},
+    {ST_CHOICE, S_SHOW_TITLES, "Classic menu: show launch titles", NULL},
+    {ST_CHOICE, S_HIDE_PATHS, "Classic menu: hide full paths", NULL},
+    {ST_CHOICE, S_PATHPAD_LOCK, "Lock launch keys", "Prevents changing launch keys and PathPad bookmarks."},
+};
+
+static const SetItem startup_items[] = {
+    {ST_NUMBER, S_INIT_DELAY, "Startup delay", "Seconds to wait at startup, so a held button can pick its launch key."},
+    {ST_NUMBER, S_TIMEOUT, "Automatic start timeout", "Seconds before the automatic start runs. Any button cancels it."},
+    {ST_PATH, S_CNF_PATH, "Configuration folder", "Load and save LAUNCHELF.CNF in this folder instead of the default places."},
+    {ST_PATH, S_LANG_FILE, "Language file", "External .LNG translation for the classic tools."},
+    {ST_PATH, S_FONT_FILE, "Font file", "External .FNT font (classic tools and the System font theme option)."},
+    {ST_PATH, S_ESR_PATH, "ESR loader", "ESR ELF used to start ESR-patched discs."},
+    {ST_PATH, S_OSDSYS_PATH, "OSDSYS program", "Started by the OSDSYS command. Empty: the console's own."},
+    {ST_PATH, S_POPS_PATH, "POPStarter", "POPStarter ELF used to start PS1 VCD images."},
 };
 
 static const SetItem device_items[] = {
@@ -188,10 +253,11 @@ static const SetItem device_items[] = {
 };
 
 static const SetItem net_items[] = {
-    {ST_INFO, S_NET_INFO, "IP configuration", NULL},
-    {ST_ACTION, S_NET_CLASSIC, "Network settings...", "IP address, netmask and gateway (IPCONFIG.DAT)."},
-#ifdef ETH
-    {ST_CHOICE, S_HOSTWRITE, "Allow writing to host:", NULL},
+    {ST_IP, S_NET_IP, "IP address", "The console's address for FTP, PS2Link and UDPFS (IPCONFIG.DAT)."},
+    {ST_IP, S_NET_NM, "Netmask", "Usually 255.255.255.0."},
+    {ST_IP, S_NET_GW, "Gateway", "Usually your router's address."},
+#if defined(ETH) || defined(UDPFS)
+    {ST_CHOICE, S_HOSTWRITE, "Allow writing over the network", "Lets host: / udpfs: be written to, not only read."},
 #endif
 };
 
@@ -203,12 +269,9 @@ static const SetItem adv_items[] = {
     {ST_CHOICE, S_PSU_DATE, "PSU: add date to names", NULL},
     {ST_CHOICE, S_PSU_NOOVER, "PSU: never overwrite existing files", NULL},
     {ST_CHOICE, S_FB_ICONS, "File Browser icons", NULL},
-    {ST_CHOICE, S_SHOW_TITLES, "Classic menu: show launch titles", NULL},
-    {ST_CHOICE, S_HIDE_PATHS, "Classic menu: hide full paths", NULL},
-    {ST_ACTION, S_STARTUP_CLASSIC, "Startup settings...", "USB drivers, delays, timeout, CNF path, fonts, POPStarter ELF..."},
-    {ST_ACTION, S_ADVANCED_CLASSIC, "Advanced settings...", "Classic advanced settings screen."},
-    {ST_ACTION, S_CONFIG_CLASSIC, "Complete classic configuration...", "Every wLaunchELF option, including skins and launch keys."},
-    {ST_ACTION, S_SAVE_CLASSIC, "Save wLaunchELF settings", "Write LAUNCHELF.CNF (you choose where)."},
+    {ST_ACTION, S_SAVE_CLASSIC, "Save all settings now", "Otherwise you are asked when you leave SETTINGS."},
+    {ST_ACTION, S_SAVE_AS, "Save wLaunchELF settings to...", "Choose where LAUNCHELF.CNF is written."},
+    {ST_ACTION, S_REVERT, "Discard unsaved changes", "Back to the settings as they were when you opened SETTINGS."},
 };
 
 static const SetItem theme_items[] = {
@@ -225,12 +288,15 @@ static const SetCat main_cats[] = {
     {"Display", DI_SETTINGS, display_items, NITEMS(display_items)},
     {"Theme", DI_PALETTE, theme_items, NITEMS(theme_items)},
     {"Dashboard", DI_HOME, dash_items, NITEMS(dash_items)},
+    {"Launch keys", DI_KEY, lkey_items, NITEMS(lkey_items)},
     {"Controls", DI_GAMEPAD, control_items, NITEMS(control_items)},
+    {"Startup", DI_CLOCK, startup_items, NITEMS(startup_items)},
     {"Devices", DI_DEVICES, device_items, NITEMS(device_items)},
     {"Network", DI_NETWORK, net_items, NITEMS(net_items)},
     {"Advanced", DI_TOOLS, adv_items, NITEMS(adv_items)},
 };
 #define MAIN_THEME_CAT 1
+#define MAIN_LKEY_CAT 3
 
 /* Theme editor groups (order = enum DashThemeGroup, then Manage). */
 static const SetItem tbg_items[] = {
@@ -318,7 +384,15 @@ static int theme_mode;
 static int cat, item, focus_col; /* focus_col 0: categories, 1: items */
 static int item_top;
 static float cat_anim, item_anim, col_anim;
-static int classic_dirty;
+
+/* Unsaved-changes session: opened when SETTINGS is entered, closed when
+ * the user leaves it (Save / Discard). The snapshots are what Discard
+ * restores. */
+static int session;
+static int dash_dirty, classic_dirty, net_dirty;
+static DashSettings snap_dash;
+static SETTING snap_classic;
+static char snap_ip[16], snap_nm[16], snap_gw[16];
 
 static const char *const onoff[] = {"Off", "On"};
 static const char *const tv_names[] = {"Auto", "NTSC", "PAL", "VGA", "480p"};
@@ -441,11 +515,20 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_DEVA_UDPFS:
 			*cur = (dashCfg.dev_auto & DASH_DEVA_UDPFS) ? 1 : 0;
 			return 2;
-#ifdef ETH
+#if defined(ETH) || defined(UDPFS)
 		case S_HOSTWRITE:
 			*cur = setting->HOSTwrite ? 1 : 0;
 			return 2;
 #endif
+		case S_MENU_FRAME:
+			*cur = setting->Menu_Frame ? 1 : 0;
+			return 2;
+		case S_POPUP_OPAQUE:
+			*cur = setting->Popup_Opaque ? 1 : 0;
+			return 2;
+		case S_PATHPAD_LOCK:
+			*cur = setting->PathPad_Lock ? 1 : 0;
+			return 2;
 		case S_LANGUAGE: {
 			static const char *langs[BUILTIN_LANGUAGE_COUNT];
 			int i;
@@ -645,9 +728,35 @@ static int setThemeChoice(int id, int v)
 //--------------------------------------------------------------
 // Colour editor
 //--------------------------------------------------------------
+/* Classic screen colours are GS RGBA values in SETTING; the editor works
+ * on a DashColor copy that is written back after every change. */
+static DashColor classic_col[COLOR_COUNT];
+
+static int isClassicColor(int id)
+{
+	return id >= S_C_COL0 && id <= S_C_COL7;
+}
+
+static void classicColorStore(int id)
+{
+	DashColor c = classic_col[id - S_C_COL0];
+
+	setting->color[id - S_C_COL0] = GS_SETREG_RGBA(c.r, c.g, c.b, 0);
+	classic_dirty = 1;
+}
+
 static DashColor *colorField(int id, int *alpha)
 {
 	*alpha = 0;
+	if (isClassicColor(id)) {
+		u64 v = setting->color[id - S_C_COL0];
+		DashColor *c = &classic_col[id - S_C_COL0];
+		c->r = v & 0xFF;
+		c->g = (v >> 8) & 0xFF;
+		c->b = (v >> 16) & 0xFF;
+		c->a = 255;
+		return c;
+	}
 	switch (id) {
 		case S_T_BG1:
 			return &dashTheme.bg1;
@@ -688,7 +797,7 @@ static const DashColor swatches[] = {
 
 static void colorEditor(const char *title, int id)
 {
-	int alpha, row = 0, sw = 0, nrows, i;
+	int alpha, row = 0, sw = 0, nrows, i, classic;
 	DashColor *c = colorField(id, &alpha);
 	DashColor orig, before;
 	float open = 0.0f;
@@ -699,6 +808,7 @@ static void colorEditor(const char *title, int id)
 
 	if (c == NULL)
 		return;
+	classic = isClassicColor(id);
 	orig = *c;
 	nrows = (alpha ? 4 : 3) + 1; /* channels + swatch row */
 	h = 94.0f + nrows * 34.0f + 40.0f;
@@ -739,21 +849,28 @@ static void colorEditor(const char *title, int id)
 				v = *ch + step;
 				*ch = (u8)((v < 0) ? 0 : (v > 255) ? 255 : v);
 			}
-			dashThemeApply(); /* live, validated on confirm */
+			if (!classic)
+				dashThemeApply(); /* live, validated on confirm */
 		}
 		if (in.pressed & DASH_IN_OK) {
-			before = *c;
-			dashThemeCommit();
-			dashThemeMarkDirty();
-			if (before.r != c->r || before.g != c->g || before.b != c->b || before.a != c->a)
-				dashToast(DASH_TOAST_INFO, "Adjusted to stay readable");
+			if (classic) {
+				if (c->r != orig.r || c->g != orig.g || c->b != orig.b)
+					classicColorStore(id);
+			} else {
+				before = *c;
+				dashThemeCommit();
+				dashThemeMarkDirty();
+				if (before.r != c->r || before.g != c->g || before.b != c->b || before.a != c->a)
+					dashToast(DASH_TOAST_INFO, "Adjusted to stay readable");
+			}
 			dashSoundPlay(DASH_SND_CONFIRM);
 			dashInputFlush();
 			return;
 		}
 		if (in.pressed & DASH_IN_BACK) {
 			*c = orig;
-			dashThemeApply();
+			if (!classic)
+				dashThemeApply();
 			dashSoundPlay(DASH_SND_CANCEL);
 			dashInputFlush();
 			return;
@@ -893,7 +1010,7 @@ static void setChoice(int id, int v)
 			else
 				dashCfg.dev_auto &= ~bit;
 			if (v)
-				dashDevicesAutoProbe(); /* start it right away if it is off */
+				dashDevicesAutoProbeAsync(); /* start it right away if it is off */
 			break;
 		}
 		case S_START:
@@ -937,11 +1054,20 @@ static void setChoice(int id, int v)
 				case S_REBOOT_ELF:
 					setting->reboot_iop_elf_load = v;
 					break;
-#ifdef ETH
+#if defined(ETH) || defined(UDPFS)
 				case S_HOSTWRITE:
 					setting->HOSTwrite = v;
 					break;
 #endif
+				case S_MENU_FRAME:
+					setting->Menu_Frame = v;
+					break;
+				case S_POPUP_OPAQUE:
+					setting->Popup_Opaque = v;
+					break;
+				case S_PATHPAD_LOCK:
+					setting->PathPad_Lock = v;
+					break;
 				case S_LANGUAGE:
 					Set_Language(v);
 					Load_External_Language();
@@ -957,9 +1083,13 @@ static void setChoice(int id, int v)
 					break;
 				case S_PSU_DATE:
 					setting->PSU_DateNames = v;
+					if (!v)
+						setting->PSU_NoOverwrite = 0; /* needs dated names */
 					break;
 				case S_PSU_NOOVER:
 					setting->PSU_NoOverwrite = v;
+					if (v)
+						setting->PSU_DateNames = 1;
 					break;
 				case S_FB_ICONS:
 					setting->FB_NoIcons = !v;
@@ -974,43 +1104,546 @@ static void setChoice(int id, int v)
 			break;
 	}
 	if (dash_changed)
+		dash_dirty = 1;
+}
+
+//--------------------------------------------------------------
+// Numbers, paths, IP addresses and launch keys
+//--------------------------------------------------------------
+static int numberInfo(int id, int *val, int *lo, int *hi, char *text, int text_size)
+{
+	switch (id) {
+		case S_SCREEN_X:
+			*val = setting->screen_x, *lo = -gsGlobal->StartX, *hi = gsGlobal->StartX;
+			snprintf(text, text_size, "%+d", *val);
+			return 1;
+		case S_SCREEN_Y:
+			*val = setting->screen_y, *lo = -gsGlobal->StartY, *hi = gsGlobal->StartY;
+			snprintf(text, text_size, "%+d", *val);
+			return 1;
+		case S_INIT_DELAY:
+			*val = setting->Init_Delay, *lo = 0, *hi = 60;
+			if (*val)
+				snprintf(text, text_size, "%d s", *val);
+			else
+				snprintf(text, text_size, "Off");
+			return 1;
+		case S_TIMEOUT:
+			*val = setting->timeout, *lo = 0, *hi = 99;
+			snprintf(text, text_size, "%d s", *val);
+			return 1;
+	}
+	return 0;
+}
+
+static void setNumber(int id, int v)
+{
+	switch (id) {
+		case S_SCREEN_X:
+			setting->screen_x = v;
+			updateScreenMode();
+			break;
+		case S_SCREEN_Y:
+			setting->screen_y = v;
+			updateScreenMode();
+			break;
+		case S_INIT_DELAY:
+			setting->Init_Delay = v;
+			break;
+		case S_TIMEOUT:
+			setting->timeout = v;
+			break;
+	}
+	classic_dirty = 1;
+}
+
+typedef struct
+{
+	char *field;
+	int size;
+	int mode;        /* DASH_PICK_* */
+	const char *ext; /* file filter, NULL = any */
+	int mc_alias;    /* store mc0:/mc1: as mc: like the classic screens */
+} PathSpec;
+
+static int pathInfo(int id, PathSpec *p)
+{
+	memset(p, 0, sizeof(*p));
+	p->mode = DASH_PICK_FILE;
+	switch (id) {
+		case S_USBKBD_FILE:
+			p->field = setting->usbkbd_file, p->size = sizeof(setting->usbkbd_file), p->ext = "IRX";
+			return 1;
+		case S_KBDMAP_FILE:
+			p->field = setting->kbdmap_file, p->size = sizeof(setting->kbdmap_file), p->ext = "KBD";
+			return 1;
+		case S_CNF_PATH:
+			p->field = setting->CNF_Path, p->size = sizeof(setting->CNF_Path), p->mode = DASH_PICK_FOLDER;
+			return 1;
+		case S_LANG_FILE:
+			p->field = setting->lang_file, p->size = sizeof(setting->lang_file), p->ext = "LNG";
+			return 1;
+		case S_FONT_FILE:
+			p->field = setting->font_file, p->size = sizeof(setting->font_file), p->ext = "FNT";
+			return 1;
+		case S_ESR_PATH:
+			p->field = setting->LK_Path[SETTING_LK_ESR], p->size = MAX_PATH, p->ext = "ELF", p->mc_alias = 1;
+			return 1;
+		case S_OSDSYS_PATH:
+			p->field = setting->LK_Path[SETTING_LK_OSDSYS], p->size = MAX_PATH, p->mc_alias = 1;
+			return 1;
+		case S_POPS_PATH:
+			p->field = setting->popstarter_file, p->size = sizeof(setting->popstarter_file), p->ext = "ELF", p->mc_alias = 1;
+			return 1;
+	}
+	return 0;
+}
+
+static const char *pathLeaf(const char *path, char *buf, int size)
+{
+	const char *p;
+	int len = strlen(path);
+
+	if (len == 0)
+		return "Not set";
+	if (path[len - 1] == '/') {
+		/* a folder: show it whole, it is short enough to be useful */
+		return path;
+	}
+	p = strrchr(path, '/');
+	if (p == NULL)
+		p = strchr(path, ':');
+	dashStrCopy(buf, p ? p + 1 : path, size);
+	return buf;
+}
+
+static void mcAlias(char *path, int size)
+{
+	char tmp[MAX_PATH];
+
+	if (!strncmp(path, "mc0", 3) || !strncmp(path, "mc1", 3)) {
+		snprintf(tmp, sizeof(tmp), "mc%s", path + 3);
+		dashStrCopy(path, tmp, size);
+	}
+}
+
+/* Applies a changed path setting (fonts and languages are loaded now). */
+static void pathApplied(int id)
+{
+	classic_dirty = 1;
+	if (id == S_LANG_FILE || id == S_FONT_FILE) {
+		/* these read files on the UI thread */
+		if (!dashWorkerAwaitAll("Finishing up"))
+			return;
+		if (id == S_LANG_FILE)
+			Load_External_Language();
+		else if (setting->font_file[0] && loadFont(setting->font_file) == 0) {
+			setting->font_file[0] = '\0';
+			dashModalMessage(DI_WARNING, "Font not loaded", "The file is not a wLaunchELF font. The built-in font stays in use.", NULL);
+		} else if (!setting->font_file[0])
+			loadFont("");
+	}
+	if (id == S_ESR_PATH)
+		setting->LK_Flag[SETTING_LK_ESR] = setting->LK_Path[SETTING_LK_ESR][0] ? 1 : 0;
+	if (id == S_OSDSYS_PATH)
+		setting->LK_Flag[SETTING_LK_OSDSYS] = setting->LK_Path[SETTING_LK_OSDSYS][0] ? 1 : 0;
+}
+
+static void startDirOf(const char *path, char *out, int size)
+{
+	char *slash;
+
+	dashStrCopy(out, path, size);
+	if (!strncmp(out, "mc:", 3)) {
+		/* the picker needs a real slot */
+		char tmp[MAX_PATH];
+		snprintf(tmp, sizeof(tmp), "mc0:%s", out + 3);
+		dashStrCopy(out, tmp, size);
+	}
+	slash = strrchr(out, '/');
+	if (slash != NULL)
+		slash[1] = '\0';
+	else
+		out[0] = '\0';
+}
+
+static void editPath(const SetItem *it)
+{
+	PathSpec ps;
+	char out[MAX_PATH], start[MAX_PATH], title[64];
+
+	if (!pathInfo(it->id, &ps))
+		return;
+	startDirOf(ps.field, start, sizeof(start));
+	snprintf(title, sizeof(title), "%s", it->label);
+	out[0] = '\0';
+	if (!dashPickPath(title, start, ps.mode, ps.ext, out, sizeof(out)))
+		return;
+	if ((int)strlen(out) >= ps.size) {
+		dashModalMessage(DI_WARNING, "Path too long", "Choose a location with a shorter path.", out);
+		return;
+	}
+	if (ps.mc_alias)
+		mcAlias(out, sizeof(out));
+	dashStrCopy(ps.field, out, ps.size);
+	pathApplied(it->id);
+}
+
+static void clearPath(const SetItem *it)
+{
+	PathSpec ps;
+
+	if (!pathInfo(it->id, &ps) || ps.field[0] == '\0')
+		return;
+	ps.field[0] = '\0';
+	pathApplied(it->id);
+	dashToast(DASH_TOAST_INFO, "Cleared");
+}
+
+static char *ipField(int id)
+{
+	return (id == S_NET_IP) ? ip : (id == S_NET_NM) ? netmask : gw;
+}
+
+static void editIp(const SetItem *it)
+{
+	char buf[16];
+
+	dashStrCopy(buf, ipField(it->id), sizeof(buf));
+	if (!dashModalIp(it->label, it->help, buf, sizeof(buf)) || !strcmp(buf, ipField(it->id)))
+		return;
+	dashStrCopy(ipField(it->id), buf, 16);
+	updateIpConfigRuntimeState();
+	net_dirty = 1;
+}
+
+static const char *lkeyValue(int lk, char *buf, int size)
+{
+	if (!setting->LK_Path[lk][0])
+		return "Not set";
+	if (setting->LK_Title[lk][0])
+		return setting->LK_Title[lk];
+	return pathLeaf(setting->LK_Path[lk], buf, size);
+}
+
+static int lkeyLocked(void)
+{
+	if (!setting->PathPad_Lock)
+		return 0;
+	dashToast(DASH_TOAST_WARN, "Launch keys are locked (Launch keys > Lock launch keys)");
+	return 1;
+}
+
+static void editLaunchKey(const SetItem *it, int what)
+{
+	int lk = it->id - S_LK_0;
+	char out[MAX_PATH], start[MAX_PATH], title[MAX_ELF_TITLE];
+
+	if (lkeyLocked())
+		return;
+	if (what == 0) {
+		snprintf(title, sizeof(title), "Launch key: %s", it->label);
+		startDirOf(setting->LK_Path[lk], start, sizeof(start));
+		out[0] = '\0';
+		if (!dashPickPath(title, start, DASH_PICK_LAUNCH, "ELF", out, sizeof(out)))
+			return;
+		mcAlias(out, sizeof(out));
+		dashStrCopy(setting->LK_Path[lk], out, MAX_PATH);
+		classic_dirty = 1;
+	} else if (what == 1) {
+		if (!setting->LK_Path[lk][0]) {
+			dashToast(DASH_TOAST_INFO, "Choose what this key starts first");
+			return;
+		}
+		dashStrCopy(title, setting->LK_Title[lk], sizeof(title));
+		if (dashModalKeyboard("Title shown for this key", title, MAX_ELF_TITLE - 1)) {
+			dashStrCopy(setting->LK_Title[lk], title, MAX_ELF_TITLE);
+			classic_dirty = 1;
+		}
+	} else if (setting->LK_Path[lk][0]) {
+		setting->LK_Path[lk][0] = '\0';
+		setting->LK_Title[lk][0] = '\0';
+		classic_dirty = 1;
+		dashToast(DASH_TOAST_INFO, "Launch key cleared");
+	}
+	dashHomeRebuild();
+}
+
+//--------------------------------------------------------------
+// Saving (background) and the unsaved-changes session
+//--------------------------------------------------------------
+enum {
+	CFG_SAVE_CNF = 0,
+	CFG_SAVE_NET
+};
+
+typedef struct
+{
+	int kind;
+	int target;          /* CONFIG_SAVE_TARGET_* chosen by the user, or -2 = default */
+	char file[64];       /* LAUNCHELF.CNF / IPCONFIG.DAT */
+	char path[MAX_PATH]; /* where it was written */
+	char msg[MAX_PATH];
+} CfgSaveJob;
+
+static void cfgSaveRun(void *arg)
+{
+	CfgSaveJob *j = (CfgSaveJob *)arg;
+	const char *loaded = (j->kind == CFG_SAVE_NET) ? LoadedIPConfigPath : LoadedConfigPath;
+
+	if (j->target == -2) {
+		if (configDefaultSaveTargetPath(j->file, loaded, j->path, sizeof(j->path)) == CONFIG_SAVE_TARGET_CANCEL) {
+			snprintf(j->msg, sizeof(j->msg), "No writable location for %s", j->file);
+			return;
+		}
+	} else
+		configRefreshSaveTargetForWrite(j->target, j->path, sizeof(j->path), j->file, loaded);
+	if (j->kind == CFG_SAVE_NET)
+		configSaveNetworkToPath(j->msg, j->path);
+	else
+		saveConfigToPath(j->msg, j->file, j->path);
+}
+
+static void cfgSaveDone(void *arg)
+{
+	CfgSaveJob *j = (CfgSaveJob *)arg;
+	int ok;
+
+	if (j->kind == CFG_SAVE_NET)
+		ok = j->path[0] && strncmp(j->msg, LNG(Saved_Failed), strlen(LNG(Saved_Failed)));
+	else
+		ok = strstr(j->msg, LNG(Saved_Config)) != NULL;
+	if (ok) {
+		char msg[96];
+		snprintf(msg, sizeof(msg), "Saved %s", j->path);
+		dashToast(DASH_TOAST_OK, msg);
+	} else
+		dashToast(DASH_TOAST_ERROR, j->msg[0] ? j->msg : "Settings could not be saved");
+	free(j);
+}
+
+static int cfgSave(int kind, int target, const char *path)
+{
+	CfgSaveJob *j = (CfgSaveJob *)malloc(sizeof(CfgSaveJob));
+
+	if (j == NULL) {
+		dashToast(DASH_TOAST_ERROR, "Settings could not be saved (out of memory)");
+		return 0;
+	}
+	memset(j, 0, sizeof(*j));
+	j->kind = kind;
+	j->target = target;
+	if (kind == CFG_SAVE_NET)
+		dashStrCopy(j->file, "IPCONFIG.DAT", sizeof(j->file));
+	else
+		dashStrCopy(j->file, dashExecContext()->cnf_path, sizeof(j->file));
+	if (path != NULL)
+		dashStrCopy(j->path, path, sizeof(j->path));
+	if (dashWorkerSubmit(kind == CFG_SAVE_NET ? "Saving network settings" : "Saving wLaunchELF settings",
+	                     DASH_JOB_SAVE | DASH_JOB_VISIBLE, cfgSaveRun, cfgSaveDone, j) < 0) {
+		free(j);
+		dashToast(DASH_TOAST_ERROR, "Save could not be queued; changes are still unsaved");
+		return 0;
+	}
+	return 1;
+}
+
+static int anyDirty(void)
+{
+	return dash_dirty || classic_dirty || net_dirty;
+}
+
+static void sessionSnapshot(void)
+{
+	snap_dash = dashCfg;
+	snap_classic = *setting;
+	dashStrCopy(snap_ip, ip, sizeof(snap_ip));
+	dashStrCopy(snap_nm, netmask, sizeof(snap_nm));
+	dashStrCopy(snap_gw, gw, sizeof(snap_gw));
+	dash_dirty = classic_dirty = net_dirty = 0;
+}
+
+static void sessionBegin(void)
+{
+	if (session)
+		return;
+	session = 1;
+	sessionSnapshot();
+}
+
+/* Writes everything that changed, in the background. */
+static void settingsCommit(void)
+{
+	int cnf_failed = 0, net_failed = 0;
+	if (dash_dirty)
 		dashStoreSaveSettings();
+	if (classic_dirty)
+		cnf_failed = !cfgSave(CFG_SAVE_CNF, -2, NULL);
+	if (net_dirty)
+		net_failed = !cfgSave(CFG_SAVE_NET, -2, NULL);
+	sessionSnapshot();
+	classic_dirty = cnf_failed;
+	net_dirty = net_failed;
+}
+
+/* Puts back what was there when SETTINGS was opened. */
+static void settingsRevert(void)
+{
+	if (classic_dirty) {
+		int screen = setting->TV_mode != snap_classic.TV_mode || setting->screen_x != snap_classic.screen_x ||
+		             setting->screen_y != snap_classic.screen_y;
+		int lang = setting->language != snap_classic.language || strcmp(setting->lang_file, snap_classic.lang_file);
+		int font = strcmp(setting->font_file, snap_classic.font_file);
+
+		*setting = snap_classic;
+		swapKeys = setting->swapKeys;
+		if (screen)
+			updateScreenMode();
+		if ((lang || font) && dashWorkerAwaitAll("Finishing up")) {
+			if (lang) {
+				Set_Language(setting->language);
+				Load_External_Language();
+			}
+			if (font)
+				loadFont(setting->font_file);
+		}
+	}
+	if (dash_dirty) {
+		int recent = dashCfg.recent_count != snap_dash.recent_count;
+		int art = dashCfg.artwork != snap_dash.artwork;
+
+		dashCfg = snap_dash;
+		DashThemeSetLegacyEnabled(dashCfg.legacy_theme);
+		if (dashCfg.sound || dashCfg.bgm)
+			dashSoundInit();
+		dashSoundApplyVolume();
+		if (dashCfg.bgm)
+			dashBgmStart();
+		else
+			dashBgmStop();
+		dashBgmSetVolume();
+		if (art && !dashCfg.artwork)
+			dashArtFlushAll();
+		if (recent)
+			dashHomeRebuild();
+		dashAppsRebuildView();
+	}
+	if (net_dirty) {
+		dashStrCopy(ip, snap_ip, 16);
+		dashStrCopy(netmask, snap_nm, 16);
+		dashStrCopy(gw, snap_gw, 16);
+		updateIpConfigRuntimeState();
+	}
+	dash_dirty = classic_dirty = net_dirty = 0;
+	dashHomeRebuild();
+}
+
+/* Called before the dashboard leaves SETTINGS. 0 = stay. */
+static int settingsLeave(void)
+{
+	char what[96];
+	int n = 0, r;
+	DashMenuItem items[] = {
+	    {DI_CHECK, "Save changes", NULL, 0},
+	    {DI_CLOSE, "Discard changes", NULL, 0},
+	    {DI_BACK, "Keep editing", NULL, 0}};
+
+	if (!session)
+		return 1;
+	if (!anyDirty()) {
+		session = 0;
+		return 1;
+	}
+	what[0] = '\0';
+	if (dash_dirty)
+		n += snprintf(what + n, sizeof(what) - n, "Dashboard");
+	if (classic_dirty)
+		n += snprintf(what + n, sizeof(what) - n, "%swLaunchELF", n ? ", " : "");
+	if (net_dirty)
+		n += snprintf(what + n, sizeof(what) - n, "%snetwork", n ? ", " : "");
+	snprintf(what + n, sizeof(what) - n, " settings changed");
+	r = dashModalMenu("Save your changes?", what, items, 3, 0);
+	if (r == 0) {
+		settingsCommit();
+		if (anyDirty())
+			return 0;
+		session = 0;
+		return 1;
+	}
+	if (r == 1) {
+		settingsRevert();
+		dashToast(DASH_TOAST_INFO, "Changes discarded");
+		session = 0;
+		return 1;
+	}
+	return 0;
+}
+
+/* "Save wLaunchELF settings to...": the classic save-location choice. */
+typedef struct
+{
+	char o[MAX_PATH], c[MAX_PATH], s[MAX_PATH];
+	int has;
+	int finished, abandoned;
+} TargetsJob;
+
+static void targetsRun(void *arg)
+{
+	TargetsJob *j = (TargetsJob *)arg;
+
+	configBuildSaveTargets(j->o, sizeof(j->o), j->c, sizeof(j->c), j->s, sizeof(j->s),
+	                       dashExecContext()->cnf_path, LoadedConfigPath, &j->has);
+}
+
+static void targetsDone(void *arg)
+{
+	TargetsJob *j = (TargetsJob *)arg;
+
+	j->finished = 1;
+	if (j->abandoned)
+		free(j);
+}
+
+static void saveClassicAs(void)
+{
+	TargetsJob *j = (TargetsJob *)malloc(sizeof(TargetsJob));
+	DashMenuItem items[3];
+	int targets[3], n = 0, r, id;
+	const char *paths[3];
+
+	if (j == NULL)
+		return;
+	memset(j, 0, sizeof(*j));
+	id = dashWorkerSubmit("Checking memory cards", DASH_JOB_VISIBLE, targetsRun, targetsDone, j);
+	if (id < 0) {
+		free(j);
+		dashToast(DASH_TOAST_WARN, "Save locations could not be queued; try again");
+		return;
+	}
+	if (!dashWorkerAwait(id, "Checking memory cards", 1)) {
+		j->abandoned = 1;
+		return;
+	}
+	if (j->has) {
+		items[n].icon = DI_FOLDER, items[n].label = j->o, items[n].detail = "configured folder", items[n].disabled = 0;
+		targets[n] = CONFIG_SAVE_TARGET_OVERRIDE, paths[n++] = j->o;
+	}
+	items[n].icon = DI_APP, items[n].label = j->c, items[n].detail = "next to the ELF", items[n].disabled = 0;
+	targets[n] = CONFIG_SAVE_TARGET_CWD, paths[n++] = j->c;
+	items[n].icon = DI_MC, items[n].label = j->s, items[n].detail = "memory card", items[n].disabled = 0;
+	targets[n] = CONFIG_SAVE_TARGET_SYSCONF, paths[n++] = j->s;
+	r = dashModalMenu("Save wLaunchELF settings to", LoadedConfigPath[0] ? LoadedConfigPath : "not loaded from a file yet", items, n, 0);
+	if (r >= 0 && cfgSave(CFG_SAVE_CNF, targets[r], paths[r])) {
+		/* the wLaunchELF part of the session is saved now */
+		snap_classic = *setting;
+		classic_dirty = 0;
+	}
+	free(j);
 }
 
 //--------------------------------------------------------------
 // Actions
 //--------------------------------------------------------------
-static void saveClassic(void)
-{
-	char o[MAX_PATH], c[MAX_PATH], s[MAX_PATH];
-	char *path;
-	int has, t;
-	const MainExecuteContext *ctx = dashExecContext();
-
-	configBuildSaveTargets(o, sizeof(o), c, sizeof(c), s, sizeof(s), ctx->cnf_path, LoadedConfigPath, &has);
-	dashLegacyBegin();
-	t = configSaveTargetPrompt(o, c, s, LoadedConfigPath, has);
-	if (t != CONFIG_SAVE_TARGET_CANCEL) {
-		path = (t == CONFIG_SAVE_TARGET_OVERRIDE) ? o : (t == CONFIG_SAVE_TARGET_CWD) ? c : s;
-		configRefreshSaveTargetForWrite(t, path, MAX_PATH, ctx->cnf_path, LoadedConfigPath);
-		saveConfigToPath(ctx->main_msg, ctx->cnf_path, path);
-		classic_dirty = 0;
-	}
-	dashLegacyEnd();
-	if (ctx->main_msg[0]) {
-		dashToast(strstr(ctx->main_msg, LNG(Saved_Config)) ? DASH_TOAST_OK : DASH_TOAST_ERROR, ctx->main_msg);
-		ctx->main_msg[0] = '\0';
-	}
-}
-
-static void runClassicScreen(void (*fn)(void))
-{
-	dashLegacyBegin();
-	fn();
-	dashLegacyEnd();
-	classic_dirty = 1;
-}
-
 static void editScanPaths(void)
 {
 	while (1) {
@@ -1036,22 +1669,18 @@ static void editScanPaths(void)
 				for (i = r; i < dashCfg.nscan - 1; i++)
 					memcpy(dashCfg.scan[i], dashCfg.scan[i + 1], DASH_PATH_MAX);
 				dashCfg.nscan--;
-				dashStoreSaveSettings();
+				dash_dirty = 1;
 			}
 		} else if (r == dashCfg.nscan) {
 			char out[MAX_PATH];
 			out[0] = '\0';
-			dashModalMessage(DI_FOLDER, "Choose a folder",
-			                 "Browse to the folder that contains your applications, then press START to choose it.", NULL);
-			dashLegacyBegin();
-			getFilePath(out, DIR_CNF);
-			dashLegacyEnd();
-			if (out[0] && strlen(out) < DASH_PATH_MAX - 2) {
+			if (dashPickPath("Add an application folder", "", DASH_PICK_FOLDER, NULL, out, sizeof(out)) &&
+			    out[0] && strlen(out) < DASH_PATH_MAX - 2) {
 				int len = strlen(out);
 				if (out[len - 1] != '/')
 					strcat(out, "/");
 				dashStrCopy(dashCfg.scan[dashCfg.nscan++], out, DASH_PATH_MAX);
-				dashStoreSaveSettings();
+				dash_dirty = 1;
 				if (dashModalConfirm("Folder added", "Search this folder for applications now?", "Search", 0))
 					dashRescanLibrary(1);
 			}
@@ -1064,9 +1693,30 @@ static void editScanPaths(void)
 			dashCfg = saved;
 			dashCfg.enabled = keep_enabled;
 			dashCfg.view = keep_view;
-			dashStoreSaveSettings();
+			dash_dirty = 1;
 		}
 	}
+}
+
+static void resetScreen(void)
+{
+	if (!dashModalConfirm("Reset screen settings", "Video mode Auto, a centred picture and the default classic colours?", "Reset", 0))
+		return;
+	setting->color[COLOR_BACKGR] = DEF_COLOR1;
+	setting->color[COLOR_FRAME] = DEF_COLOR2;
+	setting->color[COLOR_SELECT] = DEF_COLOR3;
+	setting->color[COLOR_TEXT] = DEF_COLOR4;
+	setting->color[COLOR_GRAPH1] = DEF_COLOR5;
+	setting->color[COLOR_GRAPH2] = DEF_COLOR6;
+	setting->color[COLOR_GRAPH3] = DEF_COLOR7;
+	setting->color[COLOR_GRAPH4] = DEF_COLOR8;
+	setting->TV_mode = TV_mode_AUTO;
+	setting->screen_x = 0;
+	setting->screen_y = 0;
+	setting->Menu_Frame = DEF_MENU_FRAME;
+	setting->Popup_Opaque = DEF_POPUP_OPAQUE;
+	updateScreenMode();
+	classic_dirty = 1;
 }
 
 //--------------------------------------------------------------
@@ -1108,27 +1758,85 @@ static void choosePreset(void)
 
 static int pickPng(char *out, int size, const char *what)
 {
-	char path[MAX_PATH];
-	char body[160];
+	char path[MAX_PATH], start[MAX_PATH], title[64];
 
-	snprintf(body, sizeof(body), "Browse to a PNG file for the %s and select it.", what);
-	dashModalMessage(DI_IMAGE, "Choose an image", body, NULL);
+	snprintf(title, sizeof(title), "Choose the %s", what);
+	startDirOf(out[0] ? out : dashStoreDir(), start, sizeof(start));
 	path[0] = '\0';
-	dashLegacyBegin();
-	getFilePath(path, TEXT_CNF);
-	dashLegacyEnd();
-	if (path[0] == '\0')
+	if (!dashPickPath(title, start, DASH_PICK_FILE, "PNG", path, sizeof(path)))
 		return 0;
-	if (!genCmpFileExt(path, "PNG") || strlen(path) >= (size_t)size || strlen(path) >= DASH_PATH_MAX) {
-		dashModalMessage(DI_WARNING, "Not a PNG image", "Only PNG images can be used.", path);
+	if (strlen(path) >= (size_t)size || strlen(path) >= DASH_PATH_MAX) {
+		dashModalMessage(DI_WARNING, "Path too long", "Choose an image with a shorter path.", path);
 		return 0;
 	}
 	dashStrCopy(out, path, size);
 	return 1;
 }
 
+/* Theme folder IO runs on the background worker; the UI waits with a
+ * cancellable overlay and applies the result. */
+enum {
+	TIO_LIST = 0,
+	TIO_READ,
+	TIO_WRITE
+};
+
+typedef struct
+{
+	int op;
+	char folder[DASH_THEME_NAME_MAX];
+	char names[24][DASH_THEME_NAME_MAX];
+	int n;
+	DashTheme t;
+	char *text;
+	int len;
+	int ret;
+	int abandoned;
+} ThemeIoJob;
+
+static void themeIoRun(void *arg)
+{
+	ThemeIoJob *j = (ThemeIoJob *)arg;
+
+	if (j->op == TIO_LIST)
+		j->n = dashThemeFolderList(j->names, 24);
+	else if (j->op == TIO_READ)
+		j->ret = dashThemeFolderRead(j->folder, &j->t);
+	else
+		j->ret = dashThemeFolderWrite(j->folder, j->text, j->len);
+}
+
+static void themeIoDone(void *arg)
+{
+	ThemeIoJob *j = (ThemeIoJob *)arg;
+
+	if (j->abandoned) {
+		free(j->text);
+		free(j);
+	}
+}
+
+/* 1 = finished (caller owns j), 0 = user backed out (job frees itself) */
+static int themeIo(ThemeIoJob *j, const char *title)
+{
+	int id = dashWorkerSubmit(title, DASH_JOB_THEME | DASH_JOB_VISIBLE, themeIoRun, themeIoDone, j);
+
+	if (id < 0) {
+		free(j->text);
+		free(j);
+		dashToast(DASH_TOAST_WARN, "Theme operation could not be queued; try again");
+		return 0;
+	}
+
+	if (dashWorkerAwait(id, title, 1))
+		return 1;
+	j->abandoned = 1;
+	return 0;
+}
+
 static void themeSave(void)
 {
+	ThemeIoJob *j;
 	char name[DASH_THEME_NAME_MAX], body[200];
 	int i;
 
@@ -1144,42 +1852,70 @@ static void themeSave(void)
 	         dashStoreDir(), name);
 	if (!dashModalConfirm("Save theme", body, "Save", 0))
 		return;
-	if (dashThemeFolderExport(name) == 0)
+	j = (ThemeIoJob *)malloc(sizeof(ThemeIoJob));
+	if (j == NULL)
+		return;
+	memset(j, 0, sizeof(*j));
+	j->op = TIO_WRITE;
+	dashStrCopy(j->folder, name, sizeof(j->folder));
+	j->text = dashThemeFolderText(&j->len);
+	if (j->text == NULL) {
+		free(j);
+		return;
+	}
+	if (!themeIo(j, "Saving theme"))
+		return;
+	if (j->ret == 0)
 		dashToast(DASH_TOAST_OK, "Theme saved");
 	else
 		dashModalMessage(DI_WARNING, "Theme not saved", "The theme folder could not be written. Check that the device is writable.", NULL);
+	free(j->text);
+	free(j);
 }
 
 static void themeLoad(void)
 {
-	static char names[24][DASH_THEME_NAME_MAX];
+	ThemeIoJob *j = (ThemeIoJob *)malloc(sizeof(ThemeIoJob));
 	DashMenuItem items[24];
-	int n, i, r;
+	int i, r;
 	char body[200];
 
-	dashLoadingBegin("Looking for themes");
-	n = dashThemeFolderList(names, 24);
-	dashLoadingEnd();
-	if (n <= 0) {
+	if (j == NULL)
+		return;
+	memset(j, 0, sizeof(*j));
+	j->op = TIO_LIST;
+	if (!themeIo(j, "Looking for themes"))
+		return;
+	if (j->n <= 0) {
 		snprintf(body, sizeof(body), "Put each theme in its own folder with a theme.cfg inside %sTHEMES/. "
 		                             "\"Save theme to folder\" creates one you can copy and edit.", dashStoreDir());
 		dashModalMessage(DI_FOLDER, "No themes found", body, NULL);
+		free(j);
 		return;
 	}
-	for (i = 0; i < n; i++) {
+	for (i = 0; i < j->n; i++) {
 		items[i].icon = DI_PALETTE;
-		items[i].label = names[i];
+		items[i].label = j->names[i];
 		items[i].detail = NULL;
 		items[i].disabled = 0;
 	}
-	r = dashModalMenu("Load theme", "THEMES folder", items, n, 0);
-	if (r < 0)
+	r = dashModalMenu("Load theme", "THEMES folder", items, j->n, 0);
+	if (r < 0) {
+		free(j);
 		return;
-	if (dashThemeFolderLoad(names[r]) == 0) {
+	}
+	j->op = TIO_READ;
+	dashStrCopy(j->folder, j->names[r], sizeof(j->folder));
+	if (!themeIo(j, "Loading theme"))
+		return;
+	if (j->ret == 0) {
+		dashTheme = j->t;
+		dashThemeCommit();
 		dashThemeMarkDirty();
 		dashToast(DASH_TOAST_OK, "Theme loaded");
 	} else
-		dashModalMessage(DI_WARNING, "Theme not loaded", "theme.cfg is missing or could not be read.", names[r]);
+		dashModalMessage(DI_WARNING, "Theme not loaded", "theme.cfg is missing or could not be read.", j->folder);
+	free(j);
 }
 
 static void runThemeAction(int id)
@@ -1223,7 +1959,7 @@ static void runThemeAction(int id)
 			}
 			break;
 		case S_T_IMAGE:
-			if (pickPng(dashTheme.image, sizeof(dashTheme.image), "background")) {
+			if (pickPng(dashTheme.image, sizeof(dashTheme.image), "wallpaper image")) {
 				dashTheme.bg = DASH_BG_IMAGE;
 				themeChanged();
 			}
@@ -1237,12 +1973,10 @@ static void runThemeAction(int id)
 		case S_T_RENAME: {
 			char name[DASH_THEME_NAME_MAX];
 			dashStrCopy(name, dashTheme.name, sizeof(name));
-			dashLegacyBegin();
-			if (keyboard(name, DASH_THEME_NAME_MAX - 1) > 0) {
+			if (dashModalKeyboard("Theme name", name, DASH_THEME_NAME_MAX - 1) && name[0]) {
 				dashStrCopy(dashTheme.name, name, sizeof(dashTheme.name));
 				themeChanged();
 			}
-			dashLegacyEnd();
 			break;
 		}
 	}
@@ -1255,8 +1989,8 @@ static void runAction(int id)
 		return;
 	}
 	switch (id) {
-		case S_SCREEN_CLASSIC:
-			runClassicScreen(Config_Screen);
+		case S_SCREEN_RESET:
+			resetScreen();
 			break;
 		case S_SCANPATHS:
 			editScanPaths();
@@ -1273,26 +2007,28 @@ static void runAction(int id)
 			break;
 		case S_INTRO:
 			dashCfg.intro_done = 0;
-			dashStoreSaveSettings();
+			dash_dirty = 1;
 			dashToast(DASH_TOAST_INFO, "The welcome message will be shown next time");
 			break;
 		case S_LAUNCHKEYS:
-		case S_CONFIG_CLASSIC:
-			dashRunMisc(setting->Misc_Configure);
-			classic_dirty = 0; /* the classic configuration saves or cancels itself */
-			dashHomeRebuild();
-			break;
-		case S_NET_CLASSIC:
-			runClassicScreen(Config_Network);
-			break;
-		case S_STARTUP_CLASSIC:
-			runClassicScreen(Config_Startup);
-			break;
-		case S_ADVANCED_CLASSIC:
-			runClassicScreen(Config_Advanced);
+			cat = MAIN_LKEY_CAT, item = 0, item_top = 0, focus_col = 1;
 			break;
 		case S_SAVE_CLASSIC:
-			saveClassic();
+			if (!anyDirty())
+				dashToast(DASH_TOAST_INFO, "Nothing to save");
+			else
+				settingsCommit();
+			break;
+		case S_SAVE_AS:
+			saveClassicAs();
+			break;
+		case S_REVERT:
+			if (!anyDirty())
+				dashToast(DASH_TOAST_INFO, "No unsaved changes");
+			else if (dashModalConfirm("Discard unsaved changes", "Put every setting back the way it was when you opened SETTINGS?", "Discard", 1)) {
+				settingsRevert();
+				dashToast(DASH_TOAST_INFO, "Changes discarded");
+			}
 			break;
 	}
 }
@@ -1305,6 +2041,7 @@ static const SetItem *curItem(void)
 
 static void settingsEnter(void)
 {
+	sessionBegin();
 	if (item >= cats[cat].n)
 		item = 0;
 }
@@ -1338,12 +2075,36 @@ static void settingsInput(const DashInput *in)
 	} else if (in->pressed & DASH_IN_DOWN) {
 		if (item < cats[cat].n - 1)
 			item++;
+	} else if (in->pressed & DASH_IN_L2) {
+		item = 0;
+	} else if (in->pressed & DASH_IN_R2) {
+		item = cats[cat].n - 1;
 	} else if (in->pressed & DASH_IN_BACK) {
 		focus_col = 0;
 	} else if (it->type == ST_COLOR && (in->pressed & DASH_IN_OK)) {
 		colorEditor(it->label, it->id);
 	} else if (it->id == S_T_PRESET && (in->pressed & DASH_IN_OK)) {
 		choosePreset();
+	} else if (it->type == ST_NUMBER && (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
+		int v, lo, hi;
+		char text[24];
+		if (numberInfo(it->id, &v, &lo, &hi, text, sizeof(text))) {
+			v += (in->pressed & DASH_IN_LEFT) ? -1 : 1;
+			if (v >= lo && v <= hi)
+				setNumber(it->id, v);
+		}
+	} else if (it->type == ST_PATH && (in->pressed & DASH_IN_OK)) {
+		editPath(it);
+	} else if (it->type == ST_PATH && (in->pressed & DASH_IN_MENU)) {
+		clearPath(it);
+	} else if (it->type == ST_IP && (in->pressed & DASH_IN_OK)) {
+		editIp(it);
+	} else if (it->type == ST_LKEY && (in->pressed & DASH_IN_OK)) {
+		editLaunchKey(it, 0);
+	} else if (it->type == ST_LKEY && (in->pressed & DASH_IN_FAV)) {
+		editLaunchKey(it, 1);
+	} else if (it->type == ST_LKEY && (in->pressed & DASH_IN_MENU)) {
+		editLaunchKey(it, 2);
 	} else if (it->type == ST_CHOICE && (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT | DASH_IN_OK))) {
 		const char *const *names;
 		const char *single;
@@ -1381,7 +2142,7 @@ static void settingsUpdate(float dt)
 static void settingsDraw(void)
 {
 	int i;
-	const float cx = 48, cy = 104, crow = theme_mode ? 31.0f : 36.0f, cw = 150;
+	const float cx = 48, cy = 104, crow = (NCATS > 7) ? 31.0f : 36.0f, cw = 150;
 	const float ix = 216, iy = 104, irow = 30, iw = 384;
 	const SetCat *c = &cats[cat];
 
@@ -1390,8 +2151,8 @@ static void settingsDraw(void)
 		snprintf(sub, sizeof(sub), "%s%s", dashTheme.name, dashThemeIsCustom() ? " (edited)" : "");
 		dashDrawSectionTitle(48, 68, "Theme", sub);
 	} else {
-		dashDrawSectionTitle(48, 68, "Settings", classic_dirty ? "unsaved wLaunchELF changes" : NULL);
-		if (classic_dirty)
+		dashDrawSectionTitle(48, 68, "Settings", anyDirty() ? "unsaved changes" : NULL);
+		if (anyDirty())
 			dashRect(48 + dashTextWidth("Settings", DASH_FS_TITLE) + 6, 80, 5, 5, DASH_C_WARM);
 	}
 
@@ -1452,6 +2213,38 @@ static void settingsDraw(void)
 				}
 				dashText(vx, y + 6.5f, names[cur], DASH_FS_SMALL, (n == 2 && names == onoff && cur == 1) ? DASH_C_OK : DASH_C_ACCENT);
 			}
+		} else if (it->type == ST_NUMBER || it->type == ST_PATH || it->type == ST_IP || it->type == ST_LKEY) {
+			char text[MAX_PATH], leaf[MAX_PATH];
+			const char *v = text;
+			int lo, hi, num, set = 1;
+			PathSpec ps;
+
+			text[0] = '\0';
+			if (it->type == ST_NUMBER)
+				numberInfo(it->id, &num, &lo, &hi, text, sizeof(text));
+			else if (it->type == ST_PATH) {
+				pathInfo(it->id, &ps);
+				v = pathLeaf(ps.field, leaf, sizeof(leaf));
+				set = ps.field[0] != '\0';
+			} else if (it->type == ST_IP)
+				v = ipField(it->id);
+			else {
+				v = lkeyValue(it->id - S_LK_0, leaf, sizeof(leaf));
+				set = setting->LK_Path[it->id - S_LK_0][0] != '\0';
+			}
+			{
+				float maxw = iw * 0.40f;
+				float vw = dashTextWidth(v, DASH_FS_SMALL);
+				float vx;
+				if (vw > maxw)
+					vw = maxw;
+				vx = ix + iw - 20 - vw;
+				if (on && it->type == ST_NUMBER) {
+					dashIcon(DI_BACK, vx - 22, y + 7, 12, DASH_C_ACCENT);
+					dashIcon(DI_PLAY, ix + iw - 16, y + 8, 10, DASH_C_ACCENT);
+				}
+				dashTextFit(vx, y + 6.5f, maxw, v, DASH_FS_SMALL, set ? DASH_C_ACCENT : DASH_C_TEXT3);
+			}
 		} else
 			dashIcon(DI_PLAY, ix + iw - 22, y + 8, 12, DASH_C_TEXT3);
 	}
@@ -1469,7 +2262,7 @@ static void settingsDraw(void)
 
 static void settingsHints(void)
 {
-	DashHint h[4];
+	DashHint h[6];
 	int n = 0;
 
 	if (focus_col == 0) {
@@ -1478,15 +2271,23 @@ static void settingsHints(void)
 			h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = "Done", n++;
 	} else {
 		const SetItem *it = curItem();
-		h[n].button = dashOkIcon(), h[n].key = NULL,
-		h[n].label = (it->type == ST_ACTION) ? "Open" : (it->type == ST_COLOR) ? "Edit" : "Change", n++;
+		if (it->type == ST_NUMBER)
+			h[n].button = DI_BTN_LEFT, h[n].key = NULL, h[n].label = "Change", n++;
+		else
+			h[n].button = dashOkIcon(), h[n].key = NULL,
+			h[n].label = (it->type == ST_ACTION) ? "Open" : (it->type == ST_COLOR || it->type == ST_IP) ? "Edit" :
+			             (it->type == ST_PATH || it->type == ST_LKEY) ? "Choose" : "Change", n++;
+		if (it->type == ST_LKEY)
+			h[n].button = DI_BTN_SQUARE, h[n].key = NULL, h[n].label = "Title", n++;
+		if (it->type == ST_PATH || it->type == ST_LKEY)
+			h[n].button = DI_BTN_TRIANGLE, h[n].key = NULL, h[n].label = "Clear", n++;
 		h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = theme_mode ? "Groups" : "Categories", n++;
 	}
 	h[n].button = -1, h[n].key = "START", h[n].label = "Menu", n++;
 	dashDrawHints(h, n);
 }
 
-const DashScreen dashSettingsScreen = {settingsEnter, settingsInput, settingsUpdate, settingsDraw, settingsHints};
+const DashScreen dashSettingsScreen = {settingsEnter, settingsInput, settingsUpdate, settingsDraw, settingsHints, settingsLeave};
 //--------------------------------------------------------------
 //End of file: dash_settings.c
 //--------------------------------------------------------------

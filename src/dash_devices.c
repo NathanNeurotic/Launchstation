@@ -310,6 +310,12 @@ int dashDevicesList(DashDevice *out, int max)
 			add(out, &n, max, DI_MC, DASH_DEV_READY, name, mount, browse, "Mounted image");
 		}
 	}
+	for (i = 0; i < n; i++) {
+		if (out[i].state != DASH_DEV_READY && dashDevicesProbing(out[i].mount)) {
+			out[i].state = DASH_DEV_BUSY;
+			dashStrCopy(out[i].status, "Starting...", sizeof(out[i].status));
+		}
+	}
 	return n;
 }
 
@@ -374,15 +380,131 @@ static int probeMount(const char *m)
 	return ok;
 }
 
-int dashDevicesProbe(const DashDevice *dev)
-{
-	int ok = probeMount(dev->mount);
+//--------------------------------------------------------------
+// Starting drivers in the background. The DEVICES/FILES cards show the
+// device as "Starting..." meanwhile; the callback runs on the UI thread.
+//--------------------------------------------------------------
+#define MAX_PROBES 4
 
+typedef struct
+{
+	char mount[24];
+	int ok;
+	DashProbeDone cb;
+	void *user;
+} ProbeJob;
+
+static char probing[MAX_PROBES][24];
+static int auto_running;
+
+static int probingIndex(const char *mount)
+{
+	int i;
+
+	for (i = 0; i < MAX_PROBES; i++)
+		if (probing[i][0] && !strcmp(probing[i], mount))
+			return i;
+	return -1;
+}
+
+static int autoBitFor(const char *m)
+{
+	if (!strncmp(m, "usb", 3) || !strncmp(m, "mass", 4))
+		return DASH_DEVA_USB;
+	if (!strncmp(m, "hdd", 3))
+		return DASH_DEVA_HDD;
+	if (!strncmp(m, "ata", 3))
+		return DASH_DEVA_ATA;
+	if (!strncmp(m, "mmce", 4))
+		return DASH_DEVA_MMCE;
+	if (!strncmp(m, "mx4sio", 6))
+		return DASH_DEVA_MX4SIO;
+	if (!strncmp(m, "udpfs", 5))
+		return DASH_DEVA_UDPFS;
+	return 0;
+}
+
+int dashDevicesProbing(const char *mount)
+{
+	if (probingIndex(mount) >= 0)
+		return 1;
+	return auto_running && (dashCfg.dev_auto & autoBitFor(mount)) && !isPathDeviceStackLoaded(mount);
+}
+
+static void probeRun(void *arg)
+{
+	ProbeJob *j = (ProbeJob *)arg;
+
+	j->ok = probeMount(j->mount);
+}
+
+static void probeDone(void *arg)
+{
+	ProbeJob *j = (ProbeJob *)arg;
+	int i = probingIndex(j->mount);
+
+	if (i >= 0)
+		probing[i][0] = '\0';
 	/* A newly activated device may already have applications in DASHLIB.CNF.
 	 * Reveal them immediately without forcing a rescan. */
-	if (ok)
+	if (j->ok)
 		dashAppsRebuildView();
-	return ok;
+	if (j->cb != NULL)
+		j->cb(j->mount, j->ok, j->user);
+	free(j);
+}
+
+int dashDevicesProbeAsync(const DashDevice *dev, DashProbeDone cb, void *user)
+{
+	ProbeJob *j;
+	char label[48];
+	int i;
+
+	if (probingIndex(dev->mount) >= 0)
+		return 0;
+	for (i = 0; i < MAX_PROBES && probing[i][0]; i++)
+		;
+	if (i == MAX_PROBES)
+		return -1;
+	j = (ProbeJob *)malloc(sizeof(ProbeJob));
+	if (j == NULL)
+		return -1;
+	memset(j, 0, sizeof(*j));
+	dashStrCopy(j->mount, dev->mount, sizeof(j->mount));
+	j->cb = cb;
+	j->user = user;
+	dashStrCopy(probing[i], dev->mount, sizeof(probing[i]));
+	snprintf(label, sizeof(label), "Starting %s", dev->name);
+	if (dashWorkerSubmit(label, DASH_JOB_DEVICE | DASH_JOB_VISIBLE, probeRun, probeDone, j) < 0) {
+		probing[i][0] = '\0';
+		free(j);
+		return -1;
+	}
+	return 0;
+}
+
+static void autoRun(void *arg)
+{
+	(void)arg;
+	dashDevicesAutoProbe();
+}
+
+static void autoDone(void *arg)
+{
+	(void)arg;
+	auto_running = 0;
+	dashAppsRebuildView();
+}
+
+void dashDevicesAutoProbeAsync(void)
+{
+	if (auto_running)
+		return;
+	auto_running = 1;
+	if (dashWorkerSubmit("Starting devices", DASH_JOB_DEVICE | DASH_JOB_VISIBLE, autoRun, autoDone, NULL) < 0) {
+		auto_running = 0;
+		dashToast(DASH_TOAST_WARN, "Device startup could not be queued; retry from Devices");
+	}
 }
 
 /* Load the drivers for every device family marked auto-start that is not

@@ -1437,6 +1437,8 @@ static void stopDs34Input(void)
 
 static void resetRuntimeDeviceState(int show_status)
 {
+	if (iopResetNotify != NULL)
+		iopResetNotify(0);
 #ifdef DS34
 	stopDs34Input();
 #endif
@@ -1450,6 +1452,8 @@ static void resetRuntimeDeviceState(int show_status)
 	setupPad();
 	DPRINTF("Starting keyboard\n");
 	startKbd();
+	if (iopResetNotify != NULL)
+		iopResetNotify(1);
 }
 
 void rebootIopAndReloadCoreStack(void)
@@ -1961,8 +1965,12 @@ static void clearIopModuleState(void)
 //---------------------------------------------------------------------------
 // reboot IOP (original source by Hermes in BOOT.c - cogswaploader)
 // dlanor: but changed now, as the original was badly bugged
+void (*iopResetNotify)(int phase) = NULL;
+
 void Reset()
 {
+	if (iopResetNotify != NULL)
+		iopResetNotify(0);
 #ifndef NO_IOP_RESET
 	resetUsbHostControllerBeforeIopReset();
 	SifInitRpc(0);
@@ -1993,6 +2001,8 @@ int i, d;
 	iop_reset_generation++;
 	DPRINTF("RESET FINISHED\n");
 	//	setupPad();
+	if (iopResetNotify != NULL)
+		iopResetNotify(1);
 }
 //------------------------------
 //endfunc Reset

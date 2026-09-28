@@ -49,8 +49,6 @@ static ArtWant wants[ART_WANTS];
 static int nwants;
 static u32 art_frame;
 
-static char probe_key[DASH_PATH_MAX];
-static int probe_idx;
 static int art_dirty;
 
 //--------------------------------------------------------------
@@ -82,8 +80,6 @@ void dashArtFlushAll(void)
 	for (i = 0; i < ART_SLOTS; i++)
 		slotFree(&slots[i]);
 	nwants = 0;
-	probe_key[0] = '\0';
-	probe_idx = 0;
 }
 
 void dashArtInvalidateVram(void)
@@ -294,32 +290,6 @@ static ArtSlot *allocSlot(void)
 	return best;
 }
 
-static int decodeInto(DashApp *app)
-{
-	ArtSlot *s;
-	u32 *pixels = NULL;
-	int w, h;
-
-	if (dashPngLoadFile(app->art, ART_MAX_DIM, ART_MAX_DIM, &pixels, &w, &h) != 0)
-		return -1;
-	s = allocSlot();
-	if (s == NULL) {
-		free(pixels);
-		return 1; /* cache full of visible items: try again later */
-	}
-	s->used = 1;
-	dashStrCopy(s->key, app->path, sizeof(s->key));
-	s->tex.Width = w;
-	s->tex.Height = h;
-	s->tex.PSM = GS_PSM_CT32;
-	s->tex.Mem = pixels;
-	s->tex.Filter = GS_FILTER_LINEAR;
-	s->tex.Delayed = 1;
-	gsKit_setup_tbw(&s->tex);
-	s->last_frame = art_frame;
-	return 0;
-}
-
 /* Artwork must never be the reason a device driver gets loaded (or an IOP
  * driver stack gets switched). Paths on devices whose stack is not running
  * are skipped until the user opens that device. */
@@ -344,13 +314,128 @@ static int wantUsable(const DashApp *app)
 	return 0;
 }
 
+//--------------------------------------------------------------
+// Background loading. The UI thread picks the most wanted application;
+// the worker probes the candidate paths and decodes the PNG; the result
+// is applied on the UI thread (the app is matched again by path, since
+// the library may have been rebuilt in the meantime).
+//--------------------------------------------------------------
+enum {
+	ART_R_DECODED = 0, /* art[] + pixels */
+	ART_R_NONE,        /* no usable artwork anywhere */
+	ART_R_DEFERRED     /* the app's own device is not running yet */
+};
+
+typedef struct
+{
+	DashApp *app;
+	DashApp copy;
+	int result;
+	char art[DASH_PATH_MAX];
+	u32 *pixels;
+	int w, h;
+} ArtJob;
+
+static ArtJob *art_job; /* at most one in flight */
+
+static int tryDecode(ArtJob *j, const char *path)
+{
+	if (dashPngLoadFile(path, ART_MAX_DIM, ART_MAX_DIM, &j->pixels, &j->w, &j->h) != 0) {
+		j->pixels = NULL;
+		return 0;
+	}
+	dashStrCopy(j->art, path, sizeof(j->art));
+	j->result = ART_R_DECODED;
+	return 1;
+}
+
+static void artRun(void *arg)
+{
+	ArtJob *j = (ArtJob *)arg;
+	const char *known = (j->copy.art_state == DASH_ART_FOUND) ? j->copy.art : NULL;
+	int idx;
+
+	dashWorkerStatus(j->copy.title, 0, 0);
+	/* a previously found file first; if it became unreadable, probe the rest */
+	if (known != NULL && known[0] && tryDecode(j, known))
+		return;
+	for (idx = (known != NULL) ? 1 : 0;; idx++) {
+		char cand[MAX_PATH];
+
+		if (!buildCandidate(&j->copy, idx, cand, sizeof(cand))) {
+			/* only the dashboard ART folder could be checked; try the app's
+			 * own device once its driver is running */
+			j->result = appDeviceReady(&j->copy) ? ART_R_NONE : ART_R_DEFERRED;
+			return;
+		}
+		if (!cand[0] || strlen(cand) >= DASH_PATH_MAX || !artPathAllowed(cand))
+			continue;
+		if (known != NULL && !stricmp(cand, known))
+			continue; /* already failed to decode */
+		if (fileExists(cand) && tryDecode(j, cand))
+			return;
+	}
+}
+
+static void artDone(void *arg)
+{
+	ArtJob *j = (ArtJob *)arg;
+	DashApp *app = j->app;
+
+	art_job = NULL;
+	/* the entry may have been replaced by a rescan: match by path */
+	if (app == NULL || stricmp(app->path, j->copy.path) || !dashCfg.artwork) {
+		free(j->pixels);
+		free(j);
+		return;
+	}
+	if (j->result == ART_R_DECODED) {
+		ArtSlot *s;
+		if (app->art_state != DASH_ART_FOUND || stricmp(app->art, j->art)) {
+			dashStrCopy(app->art, j->art, sizeof(app->art));
+			app->art_state = DASH_ART_FOUND;
+			art_dirty = 1;
+		}
+		s = findSlot(app->path);
+		if (s == NULL)
+			s = allocSlot();
+		if (s == NULL) {
+			free(j->pixels); /* cache full of visible items: try again later */
+		} else {
+			if (s->used)
+				slotFree(s);
+			s->used = 1;
+			dashStrCopy(s->key, app->path, sizeof(s->key));
+			s->tex.Width = j->w;
+			s->tex.Height = j->h;
+			s->tex.PSM = GS_PSM_CT32;
+			s->tex.Mem = j->pixels;
+			s->tex.Filter = GS_FILTER_LINEAR;
+			s->tex.Delayed = 1;
+			gsKit_setup_tbw(&s->tex);
+			s->last_frame = art_frame;
+		}
+	} else if (j->result == ART_R_DEFERRED) {
+		app->flags |= DASH_APP_ART_DEFERRED;
+	} else {
+		if (app->art_state != DASH_ART_NONE)
+			art_dirty = 1;
+		app->art_state = DASH_ART_NONE;
+		app->art[0] = '\0';
+	}
+	free(j);
+}
+
 int dashArtStep(int input_idle_ms)
 {
 	ArtWant *best = NULL;
-	DashApp *app;
-	int i, tries;
+	ArtJob *j;
+	int i;
 
-	if (!dashCfg.artwork || nwants == 0)
+	if (!dashCfg.artwork || nwants == 0 || art_job != NULL)
+		return 0;
+	/* artwork never delays saves, scans or device work */
+	if (dashWorkerBusy())
 		return 0;
 	for (i = 0; i < nwants; i++) {
 		if (!wantUsable(wants[i].app))
@@ -365,53 +450,18 @@ int dashArtStep(int input_idle_ms)
 	if (input_idle_ms < (best->prio == 0 ? 110 : 260))
 		return 0;
 
-	app = best->app;
-	/* never overlap file IO with a pending asynchronous MC status poll */
-	filerRootMcPollIdle();
-	if (app->art_state == DASH_ART_FOUND) {
-		int r = decodeInto(app);
-		if (r < 0) {
-			/* unreadable or corrupt: fall back to probing the rest */
-			app->art_state = DASH_ART_UNKNOWN;
-			app->art[0] = '\0';
-			dashStrCopy(probe_key, app->path, sizeof(probe_key));
-			probe_idx = 1;
-			art_dirty = 1;
-		}
-		return 1;
-	}
-
-	/* DASH_ART_UNKNOWN: test up to two candidate paths this frame */
-	if (stricmp(probe_key, app->path)) {
-		dashStrCopy(probe_key, app->path, sizeof(probe_key));
-		probe_idx = 0;
-	}
-	for (tries = 0; tries < 2; tries++) {
-		char cand[MAX_PATH];
-
-		if (!buildCandidate(app, probe_idx, cand, sizeof(cand))) {
-			probe_key[0] = '\0';
-			if (!appDeviceReady(app)) {
-				/* only the dashboard ART folder could be checked; try the
-				 * app's own device once its driver is running */
-				app->flags |= DASH_APP_ART_DEFERRED;
-				return 1;
-			}
-			app->art_state = DASH_ART_NONE;
-			app->art[0] = '\0';
-			art_dirty = 1;
-			return 1;
-		}
-		probe_idx++;
-		if (!artPathAllowed(cand))
-			continue;
-		if (cand[0] && strlen(cand) < DASH_PATH_MAX && fileExists(cand)) {
-			dashStrCopy(app->art, cand, sizeof(app->art));
-			app->art_state = DASH_ART_FOUND;
-			probe_key[0] = '\0';
-			art_dirty = 1;
-			return 1;
-		}
+	j = (ArtJob *)malloc(sizeof(ArtJob));
+	if (j == NULL)
+		return 0;
+	memset(j, 0, sizeof(*j));
+	j->app = best->app;
+	j->copy = *best->app;
+	j->result = ART_R_NONE;
+	art_job = j;
+	if (dashWorkerSubmit("Loading artwork", DASH_JOB_ART | DASH_JOB_VISIBLE, artRun, artDone, j) < 0) {
+		art_job = NULL;
+		free(j);
+		return 0;
 	}
 	return 1;
 }
@@ -428,51 +478,105 @@ int dashArtTakeDirty(void)
 // Theme textures: optional PNGs in <dashboard dir>/THEME/
 //--------------------------------------------------------------
 #define THEME_SLOTS 8
+enum {
+	TS_EMPTY = 0,
+	TS_LOADED,
+	TS_MISSING,
+	TS_LOADING
+};
+
 typedef struct
 {
 	char path[DASH_PATH_MAX];
 	GSTEXTURE tex;
-	u8 state; /* 0 unknown, 1 loaded, 2 missing */
+	u8 state;
+	u16 gen; /* bumped when the slot is freed, so a stale load is dropped */
 } ThemeSlot;
+
+typedef struct
+{
+	int slot;
+	u16 gen;
+	char path[DASH_PATH_MAX];
+	int max_w, max_h;
+	u32 *pixels;
+	int w, h, ok;
+} ThemeTexJob;
 
 static ThemeSlot theme_slots[THEME_SLOTS];
 
+static void themeTexRun(void *arg)
+{
+	ThemeTexJob *j = (ThemeTexJob *)arg;
+
+	j->ok = (dashPngLoadFile(j->path, j->max_w, j->max_h, &j->pixels, &j->w, &j->h) == 0);
+}
+
+static void themeTexDone(void *arg)
+{
+	ThemeTexJob *j = (ThemeTexJob *)arg;
+	ThemeSlot *s = &theme_slots[j->slot];
+
+	if (s->gen != j->gen || s->state != TS_LOADING || strcmp(s->path, j->path)) {
+		if (j->ok)
+			free(j->pixels);
+		free(j);
+		return;
+	}
+	if (!j->ok) {
+		s->state = TS_MISSING;
+		free(j);
+		return;
+	}
+	memset(&s->tex, 0, sizeof(GSTEXTURE));
+	s->tex.Width = j->w;
+	s->tex.Height = j->h;
+	s->tex.PSM = GS_PSM_CT32;
+	s->tex.Mem = j->pixels;
+	s->tex.Filter = GS_FILTER_LINEAR;
+	s->tex.Delayed = 1;
+	gsKit_setup_tbw(&s->tex);
+	s->state = TS_LOADED;
+	free(j);
+}
+
 /* Theme PNGs (wallpaper, default app icon, THEME/ layers), cached by full
- * path. A file on a device whose driver is not running is not looked at
- * (and not remembered as missing), so a theme never loads a driver. A
- * missing or broken file is remembered and the caller falls back. */
+ * path and decoded in the background: NULL is returned (and the caller
+ * falls back) until the image is ready. A file on a device whose driver is
+ * not running is not looked at (and not remembered as missing), so a
+ * theme never loads a driver. A missing or broken file is remembered. */
 GSTEXTURE *dashThemeTextureFile(const char *path, int max_w, int max_h)
 {
 	int i, free_i = -1;
-	u32 *pixels;
-	int w, h;
+	ThemeTexJob *j;
 
 	if (path == NULL || path[0] == '\0' || strlen(path) >= DASH_PATH_MAX)
 		return NULL;
 	for (i = 0; i < THEME_SLOTS; i++) {
-		if (theme_slots[i].state && !strcmp(theme_slots[i].path, path))
-			return (theme_slots[i].state == 1) ? &theme_slots[i].tex : NULL;
-		if (!theme_slots[i].state && free_i < 0)
+		if (theme_slots[i].state != TS_EMPTY && !strcmp(theme_slots[i].path, path))
+			return (theme_slots[i].state == TS_LOADED) ? &theme_slots[i].tex : NULL;
+		if (theme_slots[i].state == TS_EMPTY && free_i < 0)
 			free_i = i;
 	}
 	if (free_i < 0 || !isPathDeviceStackLoaded(path))
 		return NULL;
 
-	dashStrCopy(theme_slots[free_i].path, path, sizeof(theme_slots[free_i].path));
-	theme_slots[free_i].state = 2;
-	filerRootMcPollIdle();
-	if (dashPngLoadFile(path, max_w, max_h, &pixels, &w, &h) != 0)
+	j = (ThemeTexJob *)malloc(sizeof(ThemeTexJob));
+	if (j == NULL)
 		return NULL;
-	memset(&theme_slots[free_i].tex, 0, sizeof(GSTEXTURE));
-	theme_slots[free_i].tex.Width = w;
-	theme_slots[free_i].tex.Height = h;
-	theme_slots[free_i].tex.PSM = GS_PSM_CT32;
-	theme_slots[free_i].tex.Mem = pixels;
-	theme_slots[free_i].tex.Filter = GS_FILTER_LINEAR;
-	theme_slots[free_i].tex.Delayed = 1;
-	gsKit_setup_tbw(&theme_slots[free_i].tex);
-	theme_slots[free_i].state = 1;
-	return &theme_slots[free_i].tex;
+	memset(j, 0, sizeof(*j));
+	dashStrCopy(theme_slots[free_i].path, path, sizeof(theme_slots[free_i].path));
+	theme_slots[free_i].state = TS_LOADING;
+	j->slot = free_i;
+	j->gen = theme_slots[free_i].gen;
+	dashStrCopy(j->path, path, sizeof(j->path));
+	j->max_w = max_w;
+	j->max_h = max_h;
+	if (dashWorkerSubmit("Loading theme image", DASH_JOB_THEME | DASH_JOB_VISIBLE, themeTexRun, themeTexDone, j) < 0) {
+		theme_slots[free_i].state = TS_EMPTY;
+		free(j);
+	}
+	return NULL;
 }
 
 GSTEXTURE *dashThemeTexture(const char *name, int max_w, int max_h)
@@ -491,11 +595,13 @@ void dashThemeTexturesFree(void)
 	int i;
 
 	for (i = 0; i < THEME_SLOTS; i++) {
-		if (theme_slots[i].state == 1) {
+		u16 gen = theme_slots[i].gen;
+		if (theme_slots[i].state == TS_LOADED) {
 			dashTexRelease(&theme_slots[i].tex);
 			free(theme_slots[i].tex.Mem);
 		}
 		memset(&theme_slots[i], 0, sizeof(ThemeSlot));
+		theme_slots[i].gen = gen + 1;
 	}
 }
 

@@ -248,6 +248,11 @@ int dashThemeStoreWrite(char *buf, int cap);
 int dashThemeFolderList(char names[][DASH_THEME_NAME_MAX], int max);
 int dashThemeFolderLoad(const char *folder);
 int dashThemeFolderExport(const char *folder);
+/* split versions for the background worker: read/write do the IO, the
+ * caller applies (dashTheme = t; dashThemeCommit()) on the UI thread */
+int dashThemeFolderRead(const char *folder, DashTheme *out);
+char *dashThemeFolderText(int *out_len);
+int dashThemeFolderWrite(const char *folder, const char *text, int len);
 const char *dashThemeBgName(int kind);
 const char *dashThemeBgId(int kind);
 /* focused application for the app-aware wallpaper (set while drawing) */
@@ -531,8 +536,16 @@ extern DashUserLists dashLists;
 void dashStoreInit(void);
 int dashStoreLoaded(void);
 void dashStoreDefaults(void);
-int dashStoreSaveSettings(void);
+/* Saves are deferred: these only mark files dirty. dashStoreFlush() hands
+ * dirty files to the background worker (after ~0.7 s of pad idle unless
+ * forced); dashStoreFlushWait() also waits for the writes (0 = cancelled). */
+int dashStoreSaveSettings(void);    /* commits dashCfg and schedules DASHBOARD.CNF */
+void dashStoreSaveTheme(void);      /* DASHBOARD.CNF with the committed settings */
+const DashSettings *dashStorePersisted(void);
 int dashStoreSaveLists(void);
+void dashStoreSaveCache(void);
+void dashStoreFlush(int force);
+int dashStoreFlushWait(const char *title);
 const char *dashStoreDir(void);
 int dashStoreBuildPath(char *out, int out_size, const char *file);
 int dashStoreIsFavorite(const char *path);
@@ -592,8 +605,15 @@ typedef void (*DashProgressFn)(const char *status, int done, int total);
 void dashLibInit(void);
 void dashLibShutdown(void);
 int dashLibLoadCache(void);
-int dashLibSaveCache(void);
-int dashLibScan(int interactive, DashProgressFn progress);
+int dashLibSaveCache(void);                /* schedules DASHLIB.CNF */
+char *dashLibBuildCache(int *out_len);     /* malloc'd DASHLIB.CNF text */
+/* Background scan: dashLibScanStart() queues it (0, or -1 when out of
+ * memory); the main loop calls dashLibApplyScan() each frame, which returns
+ * the new application count once a scan finished (-2: nothing to apply,
+ * -1: the scan failed). */
+int dashLibScanStart(int interactive);
+int dashLibScanRunning(void);
+int dashLibApplyScan(int *interactive);
 DashApp *dashLibFind(const char *path);
 int dashLibIndexOf(const DashApp *app);
 /* Resolves a path from favorites/recents to a library entry, or fills a
@@ -672,7 +692,12 @@ void dashDevicesAutoProbe(void);
 void dashDevicesResetBaseline(void);
 int dashBootDeviceBit(void);
 int dashDevicesList(DashDevice *out, int max);
-int dashDevicesProbe(const DashDevice *dev);
+/* Starts a device's drivers in the background; `cb` runs on the UI thread
+ * when done (ok = device usable). 0 = started or already starting. */
+typedef void (*DashProbeDone)(const char *mount, int ok, void *user);
+int dashDevicesProbeAsync(const DashDevice *dev, DashProbeDone cb, void *user);
+int dashDevicesProbing(const char *mount);
+void dashDevicesAutoProbeAsync(void);
 const char *dashDiscStatus(void);
 int dashMcPresent(int port);
 int dashDevicePathReady(const char *path);
@@ -707,6 +732,7 @@ typedef struct
 } DashInput;
 
 void dashInputPoll(DashInput *in);
+void dashInputPollEx(DashInput *in, int usb_kb_as_pad);
 void dashInputFlush(void);
 u64 dashInputIdleMs(void);
 
@@ -762,6 +788,27 @@ typedef struct
 } DashMenuItem;
 
 int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *items, int n, int initial);
+/* dialog building blocks for custom modals */
+void dashModalBackdrop(float k);
+void dashModalPanel(float x, float y, float w, float h, float k);
+void dashModalHintRow(float x, float y, int ok_icon, const char *ok, int back_icon, const char *back);
+float dashDrawButton(float x, float y, int icon, const char *key);
+
+/* Native text entry (dash_widgets.c): the user's virtual keyboard layout,
+ * USB keyboard typing. Edits `buf` in place; 1 = accepted, 0 = cancelled. */
+int dashModalKeyboard(const char *title, char *buf, int max_len);
+/* IPv4 editor for "a.b.c.d" strings; 1 = changed/accepted, 0 = cancelled. */
+int dashModalIp(const char *title, const char *help, char *ip_str, int size);
+
+/* Native file / folder picker (dash_widgets.c). Folders are read in the
+ * background. `ext` filters files (e.g. "PNG", NULL = all). Returns 1 with
+ * the chosen path in `out` (folders end in '/'), 0 when cancelled. */
+enum {
+	DASH_PICK_FILE = 0,
+	DASH_PICK_FOLDER,
+	DASH_PICK_LAUNCH /* ELF files plus the built-in MISC commands */
+};
+int dashPickPath(const char *title, const char *start_dir, int mode, const char *ext, char *out, int out_size);
 void dashModalSetPreview(void (*fn)(int index)); /* applies to the next dashModalMenu() */
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger);
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail);
@@ -770,8 +817,45 @@ int dashModalChoice(const char *title, const char *const *options, int n, int cu
 /* Synchronous work feedback: draws a full frame immediately. */
 void dashLoadingBegin(const char *title);
 void dashLoadingStatus(const char *status, int done, int total);
+void dashLoadingFrame(const char *status, int done, int total); /* always draws */
+void dashLoadingSetCancel(int cancelable); /* shows "Back: keep working in background" */
 void dashLoadingEnd(void);
 int dashLoadingActive(void);
+
+//--------------------------------------------------------------
+// Background worker (dash_worker.c). One job at a time runs on a
+// lower-priority EE thread; `done` runs later on the UI thread.
+//--------------------------------------------------------------
+typedef void (*DashJobFn)(void *arg);
+
+enum DashJobFlags {
+	DASH_JOB_VISIBLE = 1 << 0, /* show the activity indicator while it runs */
+	DASH_JOB_ART = 1 << 1,
+	DASH_JOB_SCAN = 1 << 2,
+	DASH_JOB_SAVE = 1 << 3,
+	DASH_JOB_DEVICE = 1 << 4,
+	DASH_JOB_THEME = 1 << 5
+};
+
+void dashWorkerInit(void);
+/* Positive job ID on acceptance; -1 leaves arg owned by the caller.
+ * Never waits or invokes callbacks inline, even if the worker is unavailable. */
+int dashWorkerSubmit(const char *label, int flags, DashJobFn run, DashJobFn done, void *arg);
+void dashWorkerPump(void);
+int dashWorkerBusy(void);     /* a job is queued, running or waiting for its completion */
+int dashWorkerIoBusy(void);   /* the worker is doing IO right now: the UI thread must not */
+int dashWorkerQueued(int flags_mask);
+int dashWorkerDone(int id);
+int dashWorkerLastId(void);
+int dashWorkerAwait(int id, const char *title, int cancelable); /* 0 = cancelled */
+int dashWorkerAwaitAll(const char *title);                       /* 0 = cancelled */
+int dashWorkerOnThread(void);
+void dashWorkerStatus(const char *text, int done, int total);   /* worker side */
+void dashDrawActivity(void);
+/* A background job rebooting the IOP parks the UI thread at its next
+ * dashWorkerParkPoint(): no pad reads, no sound, until the IOP is back. */
+void dashWorkerParkPoint(void);
+int dashIopParked(void);
 
 //--------------------------------------------------------------
 // Sections (dash_home.c, dash_apps.c, dash_files.c, dash_tools.c,
@@ -784,6 +868,7 @@ typedef struct
 	void (*update)(float dt);
 	void (*draw)(void);
 	void (*hints)(void);
+	int (*leave)(void); /* optional: 0 keeps the user on this section */
 } DashScreen;
 
 extern const DashScreen dashHomeScreen;
@@ -796,6 +881,7 @@ extern const DashScreen dashSettingsScreen;
 const char *dashSectionName(int section);
 int dashSectionIcon(int section);
 void dashSwitchSection(int section);
+int dashConfirmLeave(void); /* asks the current section; 0 = stay */
 int dashCurrentSection(void);
 void dashRenderScene(void);
 float dashTime(void);
@@ -807,12 +893,15 @@ float dashSectionAnim(void); /* 0..1 section-transition clock */
 void dashLaunchApp(DashApp *app, int with_args_prompt);
 void dashRunMisc(const char *misc_path);
 void dashOpenBrowser(const char *start_dir);
-void dashOpenTextEditor(const char *file);
+int dashOpenTextEditor(const char *file); /* 0 = the user backed out before it opened */
 void dashAppActions(DashApp *app);
 void dashRequestExitToClassic(void);
 void dashRescanLibrary(int interactive);
 const MainExecuteContext *dashExecContext(void);
 const char *dashOkLabelKey(void);
+
+/* Main loop: finishes a device the user opened while its driver started. */
+void dashFilesPoll(void);
 
 /* Home/Apps shared helpers. */
 int dashAppsVisibleCount(void);

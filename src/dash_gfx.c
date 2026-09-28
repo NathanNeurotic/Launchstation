@@ -11,6 +11,7 @@
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include <gsInline.h>
+#include <delaythread.h>
 
 /* Built-in fallback palette; dashThemeApply() overwrites it. */
 DashColor DASH_C_TEXT = {0xF2, 0xF4, 0xFA, 0xFF};
@@ -372,12 +373,31 @@ void dashGfxBeginFrame(void)
 	dashGfxScissorReset();
 }
 
+/* gsKit_sync_flip() spins on the GS CSR until vblank, which would starve the
+ * lower-priority background worker. While the worker has a job, wait in
+ * short sleeps instead so it gets the time the UI spends waiting. */
+static void waitVsyncSharing(void)
+{
+	*GS_CSR = *GS_CSR & 8;
+	while (!(*GS_CSR & 8)) {
+		if (dashWorkerIoBusy())
+			DelayThread(250);
+	}
+}
+
 void dashGfxPresent(void)
 {
 	dashSpriteBatchEnd();
-	gsKit_sync_flip(gsGlobal);
+	dashWorkerParkPoint();
+	if (gsGlobal->DoubleBuffering == GS_SETTING_OFF && !gsGlobal->FirstFrame && dashWorkerIoBusy()) {
+		waitVsyncSharing();
+		gsKit_setactive(gsGlobal);
+	} else
+		gsKit_sync_flip(gsGlobal);
 	gsKit_queue_exec(gsGlobal);
 	gsKit_TexManager_nextFrame(gsGlobal);
+	/* completions are applied between frames, never mid-draw */
+	dashWorkerPump();
 }
 
 void dashGfxRestoreLegacyState(void)

@@ -259,6 +259,8 @@ targets:
       - src/dash_theme.c
       - src/dash_themes.c
       - src/dash_sound.c
+      - src/dash_worker.c
+      - src/dash_widgets.c
       - src/embed_blobs.S
     include_dirs: [include, ., ee_libs/hdd/include]
     defines:
