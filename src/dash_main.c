@@ -374,6 +374,13 @@ void dashRescanLibrary(int interactive)
 		return;
 	if (interactive && !dashLibScanRunning())
 		scan_count_before = dashAppCount;
+	if (interactive) {
+		/* a full refresh looks everywhere: start the drivers it needs here,
+		 * the background scan only reads devices that are running */
+		int i;
+		for (i = 0; i < dashCfg.nscan; i++)
+			dashDevicesStartForPath(dashCfg.scan[i]);
+	}
 	if (dashLibScanStart(interactive) < 0)
 		dashToast(DASH_TOAST_ERROR, "Application scan failed (out of memory)");
 	else if (interactive)
@@ -633,12 +640,12 @@ static void firstInit(void)
 	if (dashLibLoadCache() < 0 || (dashCfg.autoscan && dashAppCount >= 0)) {
 		/* First run (no cache) or auto-scan enabled: look at locations whose
 		 * drivers are already running, starting the auto-start devices first
-		 * so they contribute applications too. Both run in the background:
-		 * the cached library is usable meanwhile. */
-		dashDevicesAutoProbeAsync();
+		 * so they contribute applications too. Drivers load here, on the UI
+		 * thread; the scan itself runs in the background. */
+		dashDevicesAutoStart();
 		dashRescanLibrary(0);
 	} else
-		dashDevicesAutoProbeAsync();
+		dashDevicesAutoStart();
 #ifdef DASH_AUTOTEST
 	/* development-only sample library (see include/dash_autotest.h) */
 	{
@@ -750,7 +757,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		dashFilesPoll();
 		if (autoprobe_pending) {
 			autoprobe_pending = 0;
-			dashDevicesAutoProbeAsync();
+			dashDevicesAutoStart();
 		}
 
 		/* Housekeeping. The UI thread does no IO of its own while the

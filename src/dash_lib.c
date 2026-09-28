@@ -746,7 +746,9 @@ static void scanRun(void *arg)
 	sc->dirs_total = j->ndirs;
 	for (i = 0; i < j->ndirs; i++) {
 		sc->dirs_done = i;
-		if (!j->interactive && !cheapToScan(j->dirs[i]))
+		/* never start a driver here: IOP modules are loaded on the UI thread
+		 * (dashRescanLibrary does it first for a full refresh) */
+		if (!cheapToScan(j->dirs[i]))
 			continue;
 		if (!strncmp(j->dirs[i], "mc", 2) && !dashMcPresent(j->dirs[i][2] - '0'))
 			continue;

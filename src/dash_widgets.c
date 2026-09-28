@@ -539,6 +539,15 @@ static void pickOpen(const char *dir)
 		pk.loading = 0;
 		return;
 	}
+	/* reading a disc needs the CDVD driver: IOP modules are only ever
+	 * loaded on the UI thread, never by the background worker */
+	if (!strncmp(dir, "cdfs", 4) && !isPathDeviceStackLoaded(dir)) {
+		if (!dashWorkerAwaitAll("Finishing up")) {
+			pk.loading = 0;
+			return;
+		}
+		loadCdModules();
+	}
 	j = (PickListJob *)malloc(sizeof(PickListJob));
 	if (j != NULL)
 		j->files = (FILEINFO *)malloc(sizeof(FILEINFO) * MAX_ENTRY);
@@ -711,7 +720,7 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 						pk.starting = 1;
 						pk.start_done = 0;
 						dashStrCopy(pk.start_dir, d->browse, sizeof(pk.start_dir));
-						if (dashDevicesProbeAsync(d, pickStartDone, NULL) < 0)
+						if (dashDevicesStart(d, pickStartDone, NULL) < 0)
 							pk.starting = 0;
 					}
 				}
