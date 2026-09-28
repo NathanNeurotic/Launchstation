@@ -1435,8 +1435,17 @@ static void stopDs34Input(void)
 }
 #endif
 
+int (*iopResetBlocked)(void) = NULL;
+
 static void resetRuntimeDeviceState(int show_status)
 {
+	/* A stack switch that needs an IOP reboot is refused where it is not
+	 * safe (the dashboard's background worker): the device access that
+	 * wanted it fails instead of hanging the console. */
+	if (iopResetBlocked != NULL && iopResetBlocked()) {
+		DPRINTF("IOP reset refused on this thread\n");
+		return;
+	}
 	if (iopResetNotify != NULL)
 		iopResetNotify(0);
 #ifdef DS34
