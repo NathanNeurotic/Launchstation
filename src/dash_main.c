@@ -221,6 +221,10 @@ void dashRunMisc(const char *misc_path)
 		dashOpenTextEditor(NULL);
 		return;
 	}
+	if (!stricmp(misc_path, setting->Misc_Exploit_Installer)) {
+		dashExploitInstaller();
+		return;
+	}
 	if (!stricmp(misc_path, setting->Misc_About_uLE)) {
 		dashShowAbout();
 		return;

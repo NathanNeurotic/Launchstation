@@ -3,11 +3,11 @@
 The dashboard is the default shell of this build. It sits on top of the
 classic wLaunchELF code: every launch still goes through
 `ExecuteMainAction()`. Settings, the File Browser, the Text Editor, the
-HDD Manager, the information screens and the file/folder picker are
-native dashboard screens. The exploit installer, and the File Browser's
-VMC / timestamp / icon tools (File Browser > Triangle > *More tools...*),
-still open classic screens (drawn in the dashboard style when *Modern
-style for classic screens* is on).
+HDD Manager, the memory card exploit installer, the information screens
+and the file/folder picker are native dashboard screens. Only the File
+Browser's VMC / timestamp / icon tools (File Browser > Triangle > *More
+tools...*) and the PSX DVR HDD Manager still open classic screens (drawn
+in the dashboard style when *Modern style for classic screens* is on).
 
 File Browser: Confirm opens a folder, starts an ELF/KELF/VCD or opens a
 text file in the Text Editor; Square selects; Triangle has copy, cut,
