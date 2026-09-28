@@ -242,59 +242,34 @@ void dashShowBuildInfo(void)
 }
 
 //--------------------------------------------------------------
-// System information. The console model comes from the CDVD
-// processor, so it is read by the background worker.
+// System information. The console model and DVD version come from the
+// CDVD processor and may load IOP modules (CDVD, rom0:ADDDRV), which is
+// only done on the UI thread: never on the background worker.
 //--------------------------------------------------------------
 typedef struct
 {
-	char *romver;
 	char model[CONSOLE_MODEL_NAME_MAX_LEN + 1];
 	char dvd[64];
 	unsigned short rom_version;
-} SysInfoJob;
-
-static void sysInfoRun(void *arg)
-{
-	SysInfoJob *j = (SysInfoJob *)arg;
-
-	if (j->romver[0] == '\0')
-		uLE_InitializeRegion();
-	GetConsoleModelName(j->romver, j->model, sizeof(j->model));
-	GetConsoleDvdVersion(j->dvd, sizeof(j->dvd));
-	j->rom_version = getROMVersion();
-}
-
-static int sysinfo_busy; /* a read (maybe from a cancelled wait) is running */
-
-static void sysInfoDone(void *arg)
-{
-	(void)arg; /* static storage, see dashShowSystemInfo */
-	sysinfo_busy = 0;
-}
+} SysInfo;
 
 void dashShowSystemInfo(void)
 {
 	static Sheet s;
-	static SysInfoJob job; /* static: a cancelled wait may still be running */
+	static SysInfo job;
 	const MainExecuteContext *ctx = dashExecContext();
-	int id, i;
+	int i;
 
-	if (dashWorkerQueued(DASH_JOB_VISIBLE) && !dashWorkerAwaitAll("Finishing up"))
+	if (!dashWorkerAwaitAll("Finishing up"))
 		return;
-	if (sysinfo_busy) {
-		dashToast(DASH_TOAST_INFO, "Still reading console information...");
-		return;
-	}
 	memset(&job, 0, sizeof(job));
-	job.romver = ctx->romver_data;
-	id = dashWorkerSubmit("Reading console information", DASH_JOB_VISIBLE, sysInfoRun, sysInfoDone, &job);
-	if (id < 0) {
-		dashToast(DASH_TOAST_WARN, "Busy, try again in a moment");
-		return;
-	}
-	sysinfo_busy = 1;
-	if (!dashWorkerAwait(id, "Reading console information", 1))
-		return;
+	dashLoadingBegin("Reading console information");
+	if (ctx->romver_data[0] == '\0')
+		uLE_InitializeRegion();
+	GetConsoleModelName(ctx->romver_data, job.model, sizeof(job.model));
+	GetConsoleDvdVersion(job.dvd, sizeof(job.dvd));
+	job.rom_version = getROMVersion();
+	dashLoadingEnd();
 
 	s.n = 0;
 	sheetAdd(&s, SL_HEAD, "Console");
