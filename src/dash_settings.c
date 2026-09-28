@@ -1010,7 +1010,7 @@ static void setChoice(int id, int v)
 			else
 				dashCfg.dev_auto &= ~bit;
 			if (v)
-				dashDevicesAutoProbeAsync(); /* start it right away if it is off */
+				dashDevicesAutoStart(); /* start it right away if it is off */
 			break;
 		}
 		case S_START:

@@ -86,7 +86,7 @@ static void startDevice(const DashDevice *d, int browse)
 	pend.section = dashCurrentSection();
 	pend.browse = browse;
 	pend.dev = *d;
-	if (dashDevicesProbeAsync(d, pendProbeDone, NULL) < 0) {
+	if (dashDevicesStart(d, pendProbeDone, NULL) < 0) {
 		pend.active = 0;
 		dashToast(DASH_TOAST_ERROR, "Could not start the device (out of memory)");
 	}
@@ -96,10 +96,6 @@ static void openDevice(const DashDevice *d)
 {
 	if (d->state == DASH_DEV_ABSENT && d->icon == DI_MC) {
 		dashModalMessage(DI_MC, d->name, "Insert a memory card into this slot to browse it.", NULL);
-		return;
-	}
-	if (d->state == DASH_DEV_BUSY && dashDevicesProbing(d->mount)) {
-		dashToast(DASH_TOAST_INFO, "Still starting, one moment...");
 		return;
 	}
 	if (d->icon == DI_DISC && d->state != DASH_DEV_READY) {

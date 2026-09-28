@@ -692,12 +692,12 @@ void dashDevicesAutoProbe(void);
 void dashDevicesResetBaseline(void);
 int dashBootDeviceBit(void);
 int dashDevicesList(DashDevice *out, int max);
-/* Starts a device's drivers in the background; `cb` runs on the UI thread
- * when done (ok = device usable). 0 = started or already starting. */
+/* Starts a device's drivers (UI thread, loading overlay); `cb` is called
+ * with ok = device usable. -1 = the user backed out of the wait. */
 typedef void (*DashProbeDone)(const char *mount, int ok, void *user);
-int dashDevicesProbeAsync(const DashDevice *dev, DashProbeDone cb, void *user);
-int dashDevicesProbing(const char *mount);
-void dashDevicesAutoProbeAsync(void);
+int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user);
+void dashDevicesAutoStart(void);                 /* auto-start devices that are off */
+void dashDevicesStartForPath(const char *path);  /* driver for a path's device */
 const char *dashDiscStatus(void);
 int dashMcPresent(int port);
 int dashDevicePathReady(const char *path);

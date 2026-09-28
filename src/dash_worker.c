@@ -132,6 +132,7 @@ void dashWorkerInit(void)
 		return;
 	}
 	iopResetNotify = iopResetHook;
+	iopResetBlocked = dashWorkerOnThread; /* the worker only does file IO */
 	worker_ok = 1;
 }
 

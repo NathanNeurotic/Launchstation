@@ -10,6 +10,9 @@ unsigned int getIopResetGeneration(void);
  * and keyboard are back (nested calls are possible). The dashboard uses it
  * to park its UI thread while a background job reboots the IOP. */
 extern void (*iopResetNotify)(int phase);
+/* When set and returning non-zero, implicit IOP reboots (driver stack
+ * switches) are skipped; the dashboard refuses them on its IO worker. */
+extern int (*iopResetBlocked)(void);
 void loadUsbModules(void);
 int ensureUsbKeyboardReady(void);
 #ifdef DS34

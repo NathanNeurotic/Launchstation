@@ -310,12 +310,6 @@ int dashDevicesList(DashDevice *out, int max)
 			add(out, &n, max, DI_MC, DASH_DEV_READY, name, mount, browse, "Mounted image");
 		}
 	}
-	for (i = 0; i < n; i++) {
-		if (out[i].state != DASH_DEV_READY && dashDevicesProbing(out[i].mount)) {
-			out[i].state = DASH_DEV_BUSY;
-			dashStrCopy(out[i].status, "Starting...", sizeof(out[i].status));
-		}
-	}
 	return n;
 }
 
@@ -381,130 +375,102 @@ static int probeMount(const char *m)
 }
 
 //--------------------------------------------------------------
-// Starting drivers in the background. The DEVICES/FILES cards show the
-// device as "Starting..." meanwhile; the callback runs on the UI thread.
+// Starting drivers. This runs on the UI thread behind a loading overlay:
+// loading IOP modules from the background worker hung on real hardware
+// (the worker only does file IO, like OPL's IO thread). Whatever the
+// worker is doing finishes first, so the two never overlap.
 //--------------------------------------------------------------
-#define MAX_PROBES 4
-
-typedef struct
+static int autoStartNeeded(void)
 {
-	char mount[24];
+	return ((dashCfg.dev_auto & DASH_DEVA_USB) && !isUsbMassStackLoaded()) ||
+	       ((dashCfg.dev_auto & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
+#ifdef EXFAT
+	       || ((dashCfg.dev_auto & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
+#endif
+#ifdef MMCE
+	       || ((dashCfg.dev_auto & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))
+#endif
+#ifdef MX4SIO
+	       || ((dashCfg.dev_auto & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
+#endif
+#ifdef UDPFS
+	       || ((dashCfg.dev_auto & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
+#endif
+	    ;
+}
+
+/* -1: the user backed out while background work finished */
+static int startSync(const char *mount, const char *title)
+{
 	int ok;
-	DashProbeDone cb;
-	void *user;
-} ProbeJob;
 
-static char probing[MAX_PROBES][24];
-static int auto_running;
-
-static int probingIndex(const char *mount)
-{
-	int i;
-
-	for (i = 0; i < MAX_PROBES; i++)
-		if (probing[i][0] && !strcmp(probing[i], mount))
-			return i;
-	return -1;
+	if (!dashWorkerAwaitAll("Finishing up"))
+		return -1;
+	dashLoadingBegin(title);
+	dashLoadingStatus("Starting device drivers...", 0, 0);
+	ok = probeMount(mount);
+	dashLoadingEnd();
+	return ok;
 }
 
-static int autoBitFor(const char *m)
+int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user)
 {
-	if (!strncmp(m, "usb", 3) || !strncmp(m, "mass", 4))
-		return DASH_DEVA_USB;
-	if (!strncmp(m, "hdd", 3))
-		return DASH_DEVA_HDD;
-	if (!strncmp(m, "ata", 3))
-		return DASH_DEVA_ATA;
-	if (!strncmp(m, "mmce", 4))
-		return DASH_DEVA_MMCE;
-	if (!strncmp(m, "mx4sio", 6))
-		return DASH_DEVA_MX4SIO;
-	if (!strncmp(m, "udpfs", 5))
-		return DASH_DEVA_UDPFS;
-	return 0;
-}
+	char title[64];
+	int ok;
 
-int dashDevicesProbing(const char *mount)
-{
-	if (probingIndex(mount) >= 0)
-		return 1;
-	return auto_running && (dashCfg.dev_auto & autoBitFor(mount)) && !isPathDeviceStackLoaded(mount);
-}
-
-static void probeRun(void *arg)
-{
-	ProbeJob *j = (ProbeJob *)arg;
-
-	j->ok = probeMount(j->mount);
-}
-
-static void probeDone(void *arg)
-{
-	ProbeJob *j = (ProbeJob *)arg;
-	int i = probingIndex(j->mount);
-
-	if (i >= 0)
-		probing[i][0] = '\0';
+	snprintf(title, sizeof(title), "Starting %s", dev->name);
+	ok = startSync(dev->mount, title);
+	if (ok < 0)
+		return -1;
 	/* A newly activated device may already have applications in DASHLIB.CNF.
 	 * Reveal them immediately without forcing a rescan. */
-	if (j->ok)
+	if (ok)
 		dashAppsRebuildView();
-	if (j->cb != NULL)
-		j->cb(j->mount, j->ok, j->user);
-	free(j);
-}
-
-int dashDevicesProbeAsync(const DashDevice *dev, DashProbeDone cb, void *user)
-{
-	ProbeJob *j;
-	char label[48];
-	int i;
-
-	if (probingIndex(dev->mount) >= 0)
-		return 0;
-	for (i = 0; i < MAX_PROBES && probing[i][0]; i++)
-		;
-	if (i == MAX_PROBES)
-		return -1;
-	j = (ProbeJob *)malloc(sizeof(ProbeJob));
-	if (j == NULL)
-		return -1;
-	memset(j, 0, sizeof(*j));
-	dashStrCopy(j->mount, dev->mount, sizeof(j->mount));
-	j->cb = cb;
-	j->user = user;
-	dashStrCopy(probing[i], dev->mount, sizeof(probing[i]));
-	snprintf(label, sizeof(label), "Starting %s", dev->name);
-	if (dashWorkerSubmit(label, DASH_JOB_DEVICE | DASH_JOB_VISIBLE, probeRun, probeDone, j) < 0) {
-		probing[i][0] = '\0';
-		free(j);
-		return -1;
-	}
+	if (cb != NULL)
+		cb(dev->mount, ok, user);
 	return 0;
 }
 
-static void autoRun(void *arg)
+void dashDevicesAutoStart(void)
 {
-	(void)arg;
+	if (!autoStartNeeded() || !dashWorkerAwaitAll("Finishing up"))
+		return;
+	dashLoadingBegin("Starting devices");
 	dashDevicesAutoProbe();
-}
-
-static void autoDone(void *arg)
-{
-	(void)arg;
-	auto_running = 0;
+	dashLoadingEnd();
 	dashAppsRebuildView();
 }
 
-void dashDevicesAutoProbeAsync(void)
+/* Starts the driver for the device a path lives on, if it is not running
+ * (used before a full library refresh, which only reads running devices). */
+void dashDevicesStartForPath(const char *path)
 {
-	if (auto_running)
+	const char *mount = NULL;
+
+	if (path == NULL || !strncmp(path, "mc", 2) || isPathDeviceStackLoaded(path))
 		return;
-	auto_running = 1;
-	if (dashWorkerSubmit("Starting devices", DASH_JOB_DEVICE | DASH_JOB_VISIBLE, autoRun, autoDone, NULL) < 0) {
-		auto_running = 0;
-		dashToast(DASH_TOAST_WARN, "Device startup could not be queued; retry from Devices");
-	}
+	if (!strncmp(path, "mass", 4) || !strncmp(path, "usb", 3))
+		mount = "usb:";
+	else if (!strncmp(path, "hdd", 3))
+		mount = "hdd0:";
+#ifdef EXFAT
+	else if (!strncmp(path, "ata", 3))
+		mount = "ata0:";
+#endif
+#ifdef MMCE
+	else if (!strncmp(path, "mmce", 4))
+		mount = "mmce0:";
+#endif
+#ifdef MX4SIO
+	else if (!strncmp(path, "mx4sio", 6))
+		mount = "mx4sio:";
+#endif
+#ifdef UDPFS
+	else if (!strncmp(path, "udpfs", 5))
+		mount = "udpfs:";
+#endif
+	if (mount != NULL)
+		startSync(mount, "Starting devices");
 }
 
 /* Load the drivers for every device family marked auto-start that is not
