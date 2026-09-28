@@ -539,6 +539,12 @@ char *makeHostPath(char *dp, char *sp);
 int ynDialog(const char *message);
 void nonDialog(char *message);
 int keyboard(char *out, int max);
+void filerPasteInto(char *mess, char *path);
+void filerPsuPasteInto(char *mess, char *path);
+/* dashboard replacements for the three dialogs above (NULL = classic) */
+extern int (*ynDialogOverride)(const char *message);
+extern void (*nonDialogOverride)(const char *message);
+extern int (*keyboardOverride)(char *out, int max);
 void genLimObjName(char *uLE_path, int reserve);
 int genFixPath(const char *inp_path, char *gen_path);
 /* mode must use fileXio-compatible flags (FIO_O_*). */

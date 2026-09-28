@@ -1,5 +1,12 @@
 #include "launchelf.h"
 
+/* Set by the dashboard while it owns the screen, so classic operations it
+ * calls (copy, delete, PSU, VMC...) ask and report with dashboard dialogs.
+ * NULL: the classic dialogs below. */
+int (*ynDialogOverride)(const char *message) = NULL;
+void (*nonDialogOverride)(const char *message) = NULL;
+int (*keyboardOverride)(char *out, int max) = NULL;
+
 int ynDialog(const char *message)
 {
 	char msg[512];
@@ -8,6 +15,8 @@ int ynDialog(const char *message)
 	int i, x, len, ret;
 	int event, post_event = 0;
 
+	if (ynDialogOverride != NULL)
+		return ynDialogOverride(message);
 	strcpy(msg, message);
 
 	for (i = 0, n = 1; msg[i] != 0; i++) {
@@ -88,6 +97,10 @@ void nonDialog(char *message)
 	int a = 6, b = 4, c = 2, n, tw;
 	int i, len, ret;
 
+	if (nonDialogOverride != NULL) {
+		nonDialogOverride(message);
+		return;
+	}
 	if (message == NULL) {
 		drawSprite(setting->color[COLOR_BACKGR],
 		           dx, dy,
@@ -147,6 +160,8 @@ int keyboard(char *out, int max)
 	char KeyPress, key_char;
 	const char *key_label;
 
+	if (keyboardOverride != NULL)
+		return keyboardOverride(out, max);
 	p = strrchr(out, '.');
 	if (p == NULL)
 		cur = strlen(out);

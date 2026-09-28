@@ -579,6 +579,40 @@ void setPartyList(void)
 {
 	setPartyListForDevice("hdd0:");
 }
+
+/* Does reading `path` still need drivers or the HDD partition list? Both
+ * must be set up on the UI thread (filerPrepareDirRead) before getDir()
+ * runs on the dashboard's background worker. */
+int filerDirReadNeedsPrep(const char *path)
+{
+	char dev[6];
+	int unit;
+
+	if (path == NULL || path[0] == '\0' || !strncmp(path, "mc", 2) || !strncmp(path, "vmc", 3))
+		return FALSE;
+	if (!isPathDeviceStackLoaded(path))
+		return TRUE;
+	if (!strncmp(path, "hdd", 3) && getHddDeviceFromPath(path, dev) >= 0 &&
+	    (unit = getHddUnitFromDevice(dev)) >= 0 && hddNparties[unit] == 0)
+		return TRUE;
+	return FALSE;
+}
+
+/* UI thread only, with the background worker idle. FALSE = device unusable. */
+int filerPrepareDirRead(const char *path)
+{
+	char dev[6];
+	int unit;
+
+	if (!filerDirReadNeedsPrep(path))
+		return TRUE;
+	if (!ensurePathDeviceStackReady(path))
+		return FALSE;
+	if (!strncmp(path, "hdd", 3) && getHddDeviceFromPath(path, dev) >= 0 &&
+	    (unit = getHddUnitFromDevice(dev)) >= 0 && hddNparties[unit] == 0)
+		setPartyListForDevice(dev);
+	return TRUE;
+}
 #ifdef DVRP
 void setDVRPPartyList(void)
 {
@@ -866,7 +900,10 @@ int readHDD(const char *path, FILEINFO *info, int max)
 		return 0;
 
 	if (hddNparties[hdd_unit] == 0) {
-		loadHddModules();
+		/* the dashboard reads folders on a background thread, which must
+		 * never load IOP modules; it prepares them first (filerPrepareDirRead) */
+		if (iopResetBlocked == NULL || !iopResetBlocked())
+			loadHddModules();
 		setPartyListForDevice(hdd_device);
 	}
 

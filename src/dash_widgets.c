@@ -298,6 +298,90 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 }
 
 //--------------------------------------------------------------
+// Classic dialog replacements. While the dashboard owns the screen, the
+// classic operations it calls (copy, delete, PSU, VMC mount...) ask their
+// questions and report progress through these instead of drawing the
+// classic pop-ups (see ynDialogOverride in gui.c).
+//--------------------------------------------------------------
+static int classic_progress;
+
+/* the classic texts pad with blank lines; drop them */
+static void classicClean(const char *in, char *out, int size, int one_line)
+{
+	int o = 0, pending_break = 0;
+
+	while (*in == '\n' || *in == ' ')
+		in++;
+	for (; *in && o < size - 3; in++) {
+		if (*in == '\n') {
+			pending_break = 1;
+			continue;
+		}
+		if (pending_break && o > 0) {
+			if (one_line) {
+				out[o++] = ' ';
+				out[o++] = ' ';
+			} else
+				out[o++] = '\n';
+		}
+		pending_break = 0;
+		out[o++] = *in;
+	}
+	out[o] = '\0';
+}
+
+static int classicYesNo(const char *message)
+{
+	char body[512];
+
+	classicClean(message ? message : "", body, sizeof(body), 0);
+	return dashModalConfirm("Please confirm", body, "Yes", 0) ? 1 : -1;
+}
+
+static void classicProgress(const char *message)
+{
+	char line[160];
+
+	if (message == NULL) {
+		if (classic_progress) {
+			classic_progress = 0;
+			dashLoadingEnd();
+		}
+		return;
+	}
+	classicClean(message, line, sizeof(line), 1);
+	if (!dashLoadingActive()) {
+		dashLoadingBegin("Working");
+		classic_progress = 1;
+	}
+	dashLoadingStatus(line, 0, 0);
+}
+
+static int classicKeyboard(char *out, int max)
+{
+	if (!dashModalKeyboard("Enter a name", out, max))
+		return -1;
+	return (int)strlen(out);
+}
+
+void dashClassicUiInstall(int on)
+{
+	ynDialogOverride = on ? classicYesNo : NULL;
+	nonDialogOverride = on ? classicProgress : NULL;
+	keyboardOverride = on ? classicKeyboard : NULL;
+	if (!on && classic_progress) {
+		classic_progress = 0;
+		dashLoadingEnd();
+	}
+}
+
+/* ends a progress overlay a classic operation left open */
+void dashClassicUiDone(void)
+{
+	classicProgress(NULL);
+}
+
+//--------------------------------------------------------------
 // IPv4 address editor: four octets, D-pad to pick and change them.
 //--------------------------------------------------------------
 static void ipParse(const char *s, int oct[4])
@@ -539,14 +623,16 @@ static void pickOpen(const char *dir)
 		pk.loading = 0;
 		return;
 	}
-	/* reading a disc needs the CDVD driver: IOP modules are only ever
+	/* drivers / the HDD partition list for this folder: IOP modules are only ever
 	 * loaded on the UI thread, never by the background worker */
-	if (!strncmp(dir, "cdfs", 4) && !isPathDeviceStackLoaded(dir)) {
+	if (filerDirReadNeedsPrep(dir)) {
 		if (!dashWorkerAwaitAll("Finishing up")) {
 			pk.loading = 0;
 			return;
 		}
-		loadCdModules();
+		dashLoadingBegin("Starting device");
+		filerPrepareDirRead(dir);
+		dashLoadingEnd();
 	}
 	j = (PickListJob *)malloc(sizeof(PickListJob));
 	if (j != NULL)

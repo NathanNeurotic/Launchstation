@@ -910,7 +910,12 @@ void dashShowAbout(void);
 void dashShowBuildInfo(void);
 void dashShowSystemInfo(void);
 void dashShowFontViewer(void);
-void dashOpenBrowser(const char *start_dir);
+void dashOpenBrowser(const char *start_dir);        /* native File Browser */
+void dashOpenBrowserClassic(const char *start_dir); /* classic one (VMC, timestamps...) */
+void dashFileBrowser(const char *start_dir);        /* dash_browser.c */
+/* classic dialogs (ynDialog/nonDialog/keyboard) as dashboard dialogs */
+void dashClassicUiInstall(int on);
+void dashClassicUiDone(void);
 int dashOpenTextEditor(const char *file); /* 0 = the user backed out before it opened */
 void dashAppActions(DashApp *app);
 void dashRequestExitToClassic(void);
@@ -938,6 +943,8 @@ int filerUsbDriversLoaded(void);
 int filerShowHddUnit(int unit);
 int filerShowAtaUnit(int unit);
 void filerRootMcPollIdle(void);
+int filerDirReadNeedsPrep(const char *path);
+int filerPrepareDirRead(const char *path); /* UI thread, worker idle */
 int pollRootMemoryCardDevices(void);
 extern int uLE_cdmode;
 

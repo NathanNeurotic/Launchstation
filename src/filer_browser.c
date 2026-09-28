@@ -2203,3 +2203,16 @@ static void submenu_func_psuPaste(char *mess, char *path)
 //--------------------------------------------------------------
 //End of file: filer_browser.c
 //--------------------------------------------------------------
+
+/* Paste entry points for the dashboard File Browser (the clipboard globals
+ * clipPath/clipFiles/nclipFiles/browser_cut are shared with this browser). */
+void filerPasteInto(char *mess, char *path)
+{
+	PasteMode = PM_NORMAL; /* the classic Square-held rename mode needs the old pad state */
+	subfunc_Paste(mess, path);
+}
+
+void filerPsuPasteInto(char *mess, char *path)
+{
+	submenu_func_psuPaste(mess, path);
+}

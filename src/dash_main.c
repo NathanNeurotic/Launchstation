@@ -164,6 +164,7 @@ static int enterLegacy(void)
 		dashGfxPresent();
 	}
 	drawMsgOverride = NULL;
+	dashClassicUiInstall(0);
 	dashGfxRestoreLegacyState();
 	clrScr(setting->color[COLOR_BACKGR]);
 	drawScr();
@@ -175,6 +176,7 @@ static void leaveLegacy(void)
 	dashGfxCheckScreenChange();
 	dashFontInit();
 	drawMsgOverride = dashMsgHook;
+	dashClassicUiInstall(1);
 	DashThemeSetLegacyEnabled(dashCfg.legacy_theme);
 	fade_in = 0.0f;
 	dashInputFlush();
@@ -246,6 +248,12 @@ void dashRunMisc(const char *misc_path)
 }
 
 void dashOpenBrowser(const char *start_dir)
+{
+	dashFileBrowser(start_dir);
+}
+
+/* the classic File Browser, for the tools that are not native yet */
+void dashOpenBrowserClassic(const char *start_dir)
 {
 	exec_ctx.main_msg[0] = '\0';
 	if (!enterLegacy())
@@ -388,12 +396,14 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	exec_ctx.main_msg[0] = '\0';
 	mainActionLaunchHook = NULL; /* already recorded */
 	dashGfxRestoreLegacyState();
+	dashClassicUiInstall(0); /* launch-time prompts stay classic */
 	ExecuteMainAction(path, &exec_ctx);
 	/* Only reached when the launch failed. */
 	mainActionLaunchHook = dashLaunchHook;
 	LaunchArgsClear();
 	dashGfxCheckScreenChange();
 	drawMsgOverride = dashMsgHook;
+	dashClassicUiInstall(1);
 	dashLoadingEnd();
 	friendlyLaunchError(&copy, exec_ctx.main_msg);
 	exec_ctx.main_msg[0] = '\0';
@@ -733,6 +743,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 
 	dashGfxCheckScreenChange();
 	drawMsgOverride = dashMsgHook;
+	dashClassicUiInstall(1);
 	if (!dash_inited)
 		firstInit();
 	else {
@@ -858,6 +869,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 
 	mainActionLaunchHook = NULL;
 	drawMsgOverride = NULL;
+	dashClassicUiInstall(0);
 	enterLegacy();
 	dash_active = 0;
 }
