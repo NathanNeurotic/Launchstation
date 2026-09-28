@@ -204,7 +204,11 @@ void dashRunMisc(const char *misc_path)
 
 	if (misc_path == NULL || misc_path[0] == '\0')
 		return;
-	/* screens that have a native dashboard version */
+	/* screens and tools that have a native dashboard version */
+	if (!stricmp(misc_path, setting->Misc_TextEditor)) {
+		dashOpenTextEditor(NULL);
+		return;
+	}
 	if (!stricmp(misc_path, setting->Misc_About_uLE)) {
 		dashShowAbout();
 		return;
@@ -244,18 +248,27 @@ void dashOpenBrowser(const char *start_dir)
 
 int dashOpenTextEditor(const char *file)
 {
-	char path[MAX_PATH];
+	if (dashTextEditor(file) == TEXTEDITOR_RESULT_LAUNCH_ARGS) {
+		/* like the classic File Browser: the arguments wait for an ELF */
+		char elf[MAX_PATH], dir[MAX_PATH];
+		const char *slash;
+		DashApp tmp;
 
-	if (!enterLegacy())
-		return 0;
-	filerRootMcPollIdle();
-	if (file != NULL) {
-		dashStrCopy(path, file, sizeof(path));
-		TextEditor(path);
-	} else
-		TextEditor(NULL);
-	LaunchArgsClear();
-	leaveLegacy();
+		dir[0] = '\0';
+		if (file != NULL) {
+			dashStrCopy(dir, file, sizeof(dir));
+			slash = strrchr(dir, '/');
+			if (slash != NULL)
+				dir[slash - dir + 1] = '\0';
+			else
+				dir[0] = '\0';
+		}
+		elf[0] = '\0';
+		if (dashPickPath("Start which application with these arguments?", dir, DASH_PICK_FILE, "ELF", elf, sizeof(elf))) {
+			dashLaunchApp(dashLibResolve(elf, &tmp), DASH_LAUNCH_PENDING_ARGS);
+		}
+		LaunchArgsClear();
+	}
 	return 1;
 }
 
@@ -313,9 +326,10 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 		return;
 	memcpy(&copy, app, sizeof(copy));
 	dashStrCopy(path, copy.path, sizeof(path));
-	LaunchArgsClear();
+	if (with_args_prompt != DASH_LAUNCH_PENDING_ARGS)
+		LaunchArgsClear();
 
-	if (with_args_prompt) {
+	if (with_args_prompt == 1) {
 		char argp[MAX_PATH];
 		const char *slash = strrchr(path, '/');
 		const char *dot = strrchr(slash ? slash : path, '.');
@@ -323,21 +337,18 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 		int r;
 
 		snprintf(argp, sizeof(argp), "%.*s.arg", base, path);
-		if (!settleBackgroundWork("Finishing up"))
-			return;
 		dashModalMessage(DI_EDIT, "Launch with arguments",
-		                 "Write one argument per line in the Text Editor, then choose the editor's "
-		                 "\"Launch with args\" command to start the application with them.",
-		                 argSidecarExists(path) ? argp : NULL);
-		if (!enterLegacy())
-			return;
-		filerRootMcPollIdle();
-		r = argSidecarExists(path) ? TextEditor(argp) : TextEditor(NULL);
-		leaveLegacy();
+		                 "Write one argument per line, then choose \"Launch with these arguments\" "
+		                 "in the Text Editor menu (START). Save keeps them next to the application.",
+		                 argp);
+		/* the sidecar is opened, or started as a new document with its name */
+		r = dashTextEditorEx(argp, 1);
 		if (r != TEXTEDITOR_RESULT_LAUNCH_ARGS) {
 			LaunchArgsClear();
 			return;
 		}
+	} else if (with_args_prompt == DASH_LAUNCH_PENDING_ARGS) {
+		/* arguments already loaded (Text Editor "Launch with these arguments") */
 	} else if (!settleBackgroundWork("Finishing up")) {
 		return; /* the user backed out while saves/driver work finished */
 	} else if ((copy.flags & DASH_APP_HAS_ARGS) && !argSidecarExists(path)) {
@@ -605,10 +616,23 @@ static void bootDraw(void)
 //--------------------------------------------------------------
 // Rendering
 //--------------------------------------------------------------
+/* A full-screen tool (the Text Editor) draws its own scene underneath the
+ * dialogs it opens. */
+static void (*scene_override)(void);
+
+void dashSetSceneOverride(void (*fn)(void))
+{
+	scene_override = fn;
+}
+
 void dashRenderScene(void)
 {
 	float e;
 
+	if (scene_override != NULL) {
+		scene_override();
+		return;
+	}
 	dashArtBeginFrame();
 	dashGfxBeginFrame();
 	dashBgDraw();

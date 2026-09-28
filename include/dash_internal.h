@@ -884,12 +884,21 @@ void dashSwitchSection(int section);
 int dashConfirmLeave(void); /* asks the current section; 0 = stay */
 int dashCurrentSection(void);
 void dashRenderScene(void);
+void dashSetSceneOverride(void (*fn)(void)); /* NULL restores the dashboard scene */
+/* Native Text Editor (dash_editor.c); returns TEXTEDITOR_RESULT_*.
+ * dashTextEditorEx(path, 1) starts a new document named `path` when the
+ * file does not exist yet (e.g. an application's .arg sidecar). */
+int dashTextEditor(const char *path);
+int dashTextEditorEx(const char *path, int create_if_missing);
 float dashTime(void);
 float dashAnimSpeed(void);
 float dashSectionAnim(void); /* 0..1 section-transition clock */
 
 /* Actions dispatched by the screens. All of them run through the proven
  * ExecuteMainAction() path. */
+/* with_args_prompt: 0 = start, 1 = edit arguments first,
+ * DASH_LAUNCH_PENDING_ARGS = start with the arguments already loaded */
+#define DASH_LAUNCH_PENDING_ARGS 2
 void dashLaunchApp(DashApp *app, int with_args_prompt);
 void dashRunMisc(const char *misc_path);
 /* Native information screens (dash_info.c) */
