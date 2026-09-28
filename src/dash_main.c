@@ -23,7 +23,6 @@ static float section_anim = 1.0f;
 static int section_dir = 1;
 static float anim_time;
 static float fade_in;
-static int exit_to_classic;
 static int autoprobe_pending;
 static u64 last_frame_ms;
 static int frame_counter;
@@ -120,11 +119,6 @@ int dashConfirmLeave(void)
 	return screens[section]->leave();
 }
 
-void dashRequestExitToClassic(void)
-{
-	exit_to_classic = 1;
-}
-
 //--------------------------------------------------------------
 // Legacy message hook: driver loads and other drawMsg() calls made while
 // the dashboard owns the screen are shown in the loading overlay.
@@ -200,10 +194,52 @@ static void showActionMessage(void)
 	}
 }
 
-void dashRunMisc(const char *misc_path)
+/* The MISC commands without a screen of their own (start disc, OSDSYS, PS2
+ * browser, network, power off, reboot IOP...) run behind the loading
+ * overlay; the ones that leave wLaunchELF hand the screen to the loader. */
+static void runMiscCommand(const char *misc_path)
 {
 	char path[MAX_PATH];
+	const char *title = "Working";
+	int leaves = 0;
 
+	if (!stricmp(misc_path, setting->Misc_PS2Disc))
+		title = "Starting the disc", leaves = 1;
+	else if (!stricmp(misc_path, setting->Misc_OSDSYS))
+		title = "Starting OSDSYS", leaves = 1;
+	else if (!stricmp(misc_path, setting->Misc_PS2Browser))
+		title = "Opening the PS2 browser", leaves = 1;
+	else if (!stricmp(misc_path, setting->Misc_PS2PowerOff))
+		title = "Powering off", leaves = 1;
+	else if (!stricmp(misc_path, setting->Misc_PS2Net))
+		title = "Starting the network";
+	else if (!stricmp(misc_path, setting->Misc_Reboot_IOP))
+		title = "Rebooting the IOP";
+	else if (!stricmp(misc_path, setting->Misc_Configure) || !stricmp(misc_path, setting->Misc_Exploit_Installer))
+		return; /* handled natively by dashRunMisc() */
+
+	dashStrCopy(path, misc_path, sizeof(path));
+	/* saves, scans and driver work finish first: the command may reboot
+	 * the IOP or leave wLaunchELF */
+	if (!settleBackgroundWork(title))
+		return;
+	filerRootMcPollIdle();
+	dashLoadingBegin(title);
+	exec_ctx.main_msg[0] = '\0';
+	if (leaves)
+		dashGfxRestoreLegacyState();
+	ExecuteMainAction(path, &exec_ctx);
+	/* back here: the command finished, or leaving failed */
+	if (leaves)
+		dashGfxCheckScreenChange();
+	drawMsgOverride = dashMsgHook;
+	dashClassicUiInstall(1);
+	dashLoadingEnd();
+	showActionMessage();
+}
+
+void dashRunMisc(const char *misc_path)
+{
 	if (misc_path == NULL || misc_path[0] == '\0')
 		return;
 	/* screens and tools that have a native dashboard version */
@@ -212,9 +248,13 @@ void dashRunMisc(const char *misc_path)
 		dashSwitchSection(DASH_SEC_SETTINGS);
 		return;
 	}
-	if (!stricmp(misc_path, setting->Misc_HddManager) && !console_is_PSX) {
-		/* the PSX DVR HDD keeps the classic HDD Manager for now */
+	if (!stricmp(misc_path, setting->Misc_HddManager)) {
+		/* PSX too: like the classic one it manages hdd0: (no formatting) */
 		dashHddManager();
+		return;
+	}
+	if (!stricmp(misc_path, setting->Misc_FileBrowser)) {
+		dashOpenBrowser("");
 		return;
 	}
 	if (!stricmp(misc_path, setting->Misc_TextEditor)) {
@@ -241,14 +281,7 @@ void dashRunMisc(const char *misc_path)
 		dashShowFontViewer();
 		return;
 	}
-	dashStrCopy(path, misc_path, sizeof(path));
-	exec_ctx.main_msg[0] = '\0';
-	if (!enterLegacy())
-		return;
-	filerRootMcPollIdle();
-	ExecuteMainAction(path, &exec_ctx);
-	leaveLegacy();
-	showActionMessage();
+	runMiscCommand(misc_path);
 }
 
 void dashOpenBrowser(const char *start_dir)
@@ -468,14 +501,13 @@ static void globalMenu(void)
 	    {DI_HOME, "Home", NULL, 0},
 	    {DI_REFRESH, "Refresh application library", NULL, 0},
 	    {DI_FOLDER, "File Browser", NULL, 0},
-	    {DI_KEY, "Classic launch-key menu", NULL, 0},
 	    {DI_SETTINGS, "Settings", NULL, 0},
 	    {DI_REFRESH, "Reboot IOP (reset drivers)", NULL, 0},
 	    {DI_POWER, "Power off", NULL, 0}};
 	int r = dashModalMenu("Dashboard", NULL, items, sizeof(items) / sizeof(items[0]), 0);
 
 	/* everything except "Settings" and a refresh leaves the current section */
-	if (r >= 0 && r != 1 && r != 4 && !dashConfirmLeave())
+	if (r >= 0 && r != 1 && r != 3 && !dashConfirmLeave())
 		return;
 	switch (r) {
 		case 0:
@@ -488,16 +520,13 @@ static void globalMenu(void)
 			dashOpenBrowser("");
 			break;
 		case 3:
-			dashRequestExitToClassic();
-			break;
-		case 4:
 			dashSwitchSection(DASH_SEC_SETTINGS);
 			break;
-		case 5:
+		case 4:
 			if (dashModalConfirm("Reboot IOP", "All loaded device drivers will be restarted. Devices will be detected again when used.", "Reboot", 0))
 				dashRunMisc(setting->Misc_Reboot_IOP);
 			break;
-		case 6:
+		case 5:
 			if (dashModalConfirm("Power off", "Turn off the PlayStation 2 now?", "Power off", 1))
 				dashRunMisc(setting->Misc_PS2PowerOff);
 			break;
@@ -743,7 +772,6 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		return;
 	dash_active = 1;
 	exec_ctx = *ctx;
-	exit_to_classic = 0;
 
 	dashGfxCheckScreenChange();
 	drawMsgOverride = dashMsgHook;
@@ -754,7 +782,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		dashGfxInit();
 		dashFontInit();
 	}
-	DashThemeSetLegacyEnabled(dashCfg.legacy_theme);
+	DashThemeSetLegacyEnabled(1);
 	mainActionLaunchHook = dashLaunchHook;
 	dashSoundInit();
 	dashBgmStart();
@@ -770,7 +798,8 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	last_frame_ms = Timer();
 	if (from_boot)
 		bootBegin();
-	while (!exit_to_classic) {
+	/* the dashboard is the only shell: it never returns */
+	while (1) {
 		u64 now = Timer();
 		float dt = (now - last_frame_ms) / 1000.0f;
 		last_frame_ms = now;
@@ -804,13 +833,6 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			globalMenu();
 		else if (in.any && screens[section]->input)
 			screens[section]->input(&in);
-		/* leaving for the classic menu waits for background work; backing
-		 * out of that wait keeps the dashboard */
-		if (exit_to_classic && !settleBackgroundWork("Finishing up"))
-			exit_to_classic = 0;
-		if (exit_to_classic)
-			break;
-
 		dashBgUpdate(dt);
 		dashUiUpdate(dt);
 		if (screens[section]->update)

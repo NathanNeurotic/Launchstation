@@ -171,22 +171,10 @@ static const SetItem display_items[] = {
     {ST_NUMBER, S_SCREEN_Y, "Screen position Y", "Moves the picture up or down to fit your TV."},
     {ST_CHOICE, S_EFFECTS, "Background effects", "Crystal towers, stars and light effects behind the dashboard."},
     {ST_CHOICE, S_ANIM, "Animations", "Reduce or turn off motion."},
-    {ST_CHOICE, S_LEGACY_THEME, "Modern style for classic screens", "Draw the classic tools (File Browser, Text Editor...) with the dashboard look."},
-    {ST_CHOICE, S_MENU_FRAME, "Classic screens: menu frame", "Frame around the classic menus."},
-    {ST_CHOICE, S_POPUP_OPAQUE, "Classic screens: opaque pop-ups", NULL},
-    {ST_COLOR, S_C_COL0 + COLOR_BACKGR, "Classic colour: background", "Colours of the classic tools when the modern style is off."},
-    {ST_COLOR, S_C_COL0 + COLOR_FRAME, "Classic colour: frames", NULL},
-    {ST_COLOR, S_C_COL0 + COLOR_SELECT, "Classic colour: selection", NULL},
-    {ST_COLOR, S_C_COL0 + COLOR_TEXT, "Classic colour: text", NULL},
-    {ST_COLOR, S_C_COL0 + COLOR_GRAPH1, "Classic colour: folders", NULL},
-    {ST_COLOR, S_C_COL0 + COLOR_GRAPH2, "Classic colour: ELF files", NULL},
-    {ST_COLOR, S_C_COL0 + COLOR_GRAPH3, "Classic colour: other files", NULL},
-    {ST_COLOR, S_C_COL0 + COLOR_GRAPH4, "Classic colour: text editor", NULL},
-    {ST_ACTION, S_SCREEN_RESET, "Reset screen settings", "Video mode Auto, a centred picture and the default classic colours."},
+    {ST_ACTION, S_SCREEN_RESET, "Reset screen settings", "Video mode Auto and a centred picture."},
 };
 
 static const SetItem dash_items[] = {
-    {ST_CHOICE, S_ENABLED, "Start in the dashboard", "Off: boot into the classic launch-key menu instead."},
     {ST_CHOICE, S_SOUND, "Interface sounds", "Cursor moves, confirmations and other dashboard sound effects."},
     {ST_CHOICE, S_SVOL, "Interface sound volume", "Volume for dashboard cursor, confirm and notification effects only."},
     {ST_CHOICE, S_BGM, "Background music", "Hardware-looped dashboard music, independent from interface sounds."},
@@ -224,8 +212,6 @@ static const SetItem lkey_items[] = {
     {ST_LKEY, S_LK_0 + SETTING_LK_L3, "L3", NULL},
     {ST_LKEY, S_LK_0 + SETTING_LK_R3, "R3", NULL},
     {ST_LKEY, S_LK_0 + SETTING_LK_START, "START", NULL},
-    {ST_CHOICE, S_SHOW_TITLES, "Classic menu: show launch titles", NULL},
-    {ST_CHOICE, S_HIDE_PATHS, "Classic menu: hide full paths", NULL},
     {ST_CHOICE, S_PATHPAD_LOCK, "Lock launch keys", "Prevents changing launch keys and PathPad bookmarks."},
 };
 
@@ -233,8 +219,8 @@ static const SetItem startup_items[] = {
     {ST_NUMBER, S_INIT_DELAY, "Startup delay", "Seconds to wait at startup, so a held button can pick its launch key."},
     {ST_NUMBER, S_TIMEOUT, "Automatic start timeout", "Seconds before the automatic start runs. Any button cancels it."},
     {ST_PATH, S_CNF_PATH, "Configuration folder", "Load and save LAUNCHELF.CNF in this folder instead of the default places."},
-    {ST_PATH, S_LANG_FILE, "Language file", "External .LNG translation for the classic tools."},
-    {ST_PATH, S_FONT_FILE, "Font file", "External .FNT font (classic tools and the System font theme option)."},
+    {ST_PATH, S_LANG_FILE, "Language file", "External .LNG translation for the messages of the file operations and tools."},
+    {ST_PATH, S_FONT_FILE, "Font file", "External .FNT font, used by the System font theme option."},
     {ST_PATH, S_ESR_PATH, "ESR loader", "ESR ELF used to start ESR-patched discs."},
     {ST_PATH, S_OSDSYS_PATH, "OSDSYS program", "Started by the OSDSYS command. Empty: the console's own."},
     {ST_PATH, S_POPS_PATH, "POPStarter", "POPStarter ELF used to start PS1 VCD images."},
@@ -262,13 +248,12 @@ static const SetItem net_items[] = {
 };
 
 static const SetItem adv_items[] = {
-    {ST_CHOICE, S_LANGUAGE, "Language", "Language of the classic screens."},
+    {ST_CHOICE, S_LANGUAGE, "Language", "Language of the messages from file operations and tools."},
     {ST_CHOICE, S_GAMEID, "RetroGem game ID", "Show the game ID for OSD/HDMI adapters when launching."},
     {ST_CHOICE, S_GAMEID_DISC, "Game ID for discs", NULL},
     {ST_CHOICE, S_PSU_HUGE, "PSU: add game ID and title to names", NULL},
     {ST_CHOICE, S_PSU_DATE, "PSU: add date to names", NULL},
     {ST_CHOICE, S_PSU_NOOVER, "PSU: never overwrite existing files", NULL},
-    {ST_CHOICE, S_FB_ICONS, "File Browser icons", NULL},
     {ST_ACTION, S_SAVE_CLASSIC, "Save all settings now", "Otherwise you are asked when you leave SETTINGS."},
     {ST_ACTION, S_SAVE_AS, "Save wLaunchELF settings to...", "Choose where LAUNCHELF.CNF is written."},
     {ST_ACTION, S_REVERT, "Discard unsaved changes", "Back to the settings as they were when you opened SETTINGS."},
@@ -1518,7 +1503,7 @@ static void settingsRevert(void)
 		int art = dashCfg.artwork != snap_dash.artwork;
 
 		dashCfg = snap_dash;
-		DashThemeSetLegacyEnabled(dashCfg.legacy_theme);
+		DashThemeSetLegacyEnabled(1);
 		if (dashCfg.sound || dashCfg.bgm)
 			dashSoundInit();
 		dashSoundApplyVolume();
@@ -1705,7 +1690,7 @@ static void editScanPaths(void)
 
 static void resetScreen(void)
 {
-	if (!dashModalConfirm("Reset screen settings", "Video mode Auto, a centred picture and the default classic colours?", "Reset", 0))
+	if (!dashModalConfirm("Reset screen settings", "Video mode Auto and a centred picture?", "Reset", 0))
 		return;
 	setting->color[COLOR_BACKGR] = DEF_COLOR1;
 	setting->color[COLOR_FRAME] = DEF_COLOR2;

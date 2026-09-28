@@ -255,7 +255,7 @@ static int settingsKv(const char *key, char *value, void *user)
 	int *scan_reset = (int *)user;
 
 	if (!stricmp(key, "Dash_Enabled"))
-		dashCfg.enabled = clampInt(value, 0, 1, 1);
+		dashCfg.enabled = 1; /* the dashboard is the only shell now */
 	else if (!stricmp(key, "Dash_StartSection"))
 		dashCfg.start_section = clampInt(value, 0, DASH_SEC_COUNT - 1, DASH_SEC_HOME);
 	else if (!stricmp(key, "Dash_View"))
@@ -271,7 +271,7 @@ static int settingsKv(const char *key, char *value, void *user)
 	else if (!stricmp(key, "Dash_RecentCount"))
 		dashCfg.recent_count = clampInt(value, 0, DASH_MAX_RECENT, 8);
 	else if (!stricmp(key, "Dash_LegacyTheme"))
-		dashCfg.legacy_theme = clampInt(value, 0, 1, 1);
+		dashCfg.legacy_theme = 1; /* no unstyled classic look any more */
 	else if (!stricmp(key, "Dash_IntroDone"))
 		dashCfg.intro_done = clampInt(value, 0, 1, 0);
 	else if (!stricmp(key, "Dash_Sound"))
