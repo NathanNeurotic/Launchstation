@@ -2,10 +2,11 @@
 
 The dashboard is the default shell of this build. It sits on top of the
 classic wLaunchELF code: every launch still goes through
-`ExecuteMainAction()`. Settings, the Text Editor, the information screens
-and the file/folder picker are native dashboard screens; the File Browser,
-HDD Manager and exploit installer still open their classic screens (drawn
-in the dashboard style when *Modern style for classic screens* is on).
+`ExecuteMainAction()`. Settings, the Text Editor, the HDD Manager, the
+information screens and the file/folder picker are native dashboard
+screens; the File Browser and the exploit installer still open their
+classic screens (drawn in the dashboard style when *Modern style for
+classic screens* is on).
 
 The cursor never waits for the memory card or a slow device: file reads
 and writes (artwork, saves, library scans, folder listings) run on a

@@ -210,6 +210,11 @@ void dashRunMisc(const char *misc_path)
 		dashSwitchSection(DASH_SEC_SETTINGS);
 		return;
 	}
+	if (!stricmp(misc_path, setting->Misc_HddManager) && !console_is_PSX) {
+		/* the PSX DVR HDD keeps the classic HDD Manager for now */
+		dashHddManager();
+		return;
+	}
 	if (!stricmp(misc_path, setting->Misc_TextEditor)) {
 		dashOpenTextEditor(NULL);
 		return;

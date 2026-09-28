@@ -903,6 +903,8 @@ float dashSectionAnim(void); /* 0..1 section-transition clock */
 #define DASH_LAUNCH_PENDING_ARGS 2
 void dashLaunchApp(DashApp *app, int with_args_prompt);
 void dashRunMisc(const char *misc_path);
+/* Native HDD Manager (dash_hdd.c) */
+void dashHddManager(void);
 /* Native information screens (dash_info.c) */
 void dashShowAbout(void);
 void dashShowBuildInfo(void);

@@ -819,6 +819,9 @@ int HddPartitionHeaderSystemCnfExists(const char *partition_name)
 	return (ret < 0) ? ret : 1;
 }
 
+/* The editor used for SYSTEM.CNF; the dashboard points it at its own. */
+int (*hddHeaderTextEditor)(char *path) = TextEditor;
+
 int EditHddPartitionHeaderSystemCnf(const char *partition_name)
 {
 	HddHeaderAttributeAreaHeader header;
@@ -849,7 +852,7 @@ int EditHddPartitionHeaderSystemCnf(const char *partition_name)
 		return ret;
 	}
 
-	TextEditor(temp_path);
+	hddHeaderTextEditor(temp_path);
 
 	ret = hddHeaderReadTempFile(temp_path, edited, sizeof(edited), &edited_size);
 	hddHeaderRemoveTempFile(temp_path);

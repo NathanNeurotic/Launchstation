@@ -568,6 +568,8 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 /* hdd.c */
 void DebugDisp(char *Message);
 void hddManager(void);
+const char *hddStatusShortText(int status);
+const char *hddStatusInfoText(int status);
 
 /* editor.c */
 enum {
