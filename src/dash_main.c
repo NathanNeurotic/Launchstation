@@ -205,6 +205,11 @@ void dashRunMisc(const char *misc_path)
 	if (misc_path == NULL || misc_path[0] == '\0')
 		return;
 	/* screens and tools that have a native dashboard version */
+	if (!stricmp(misc_path, setting->Misc_Configure)) {
+		/* every classic configuration option lives in SETTINGS now */
+		dashSwitchSection(DASH_SEC_SETTINGS);
+		return;
+	}
 	if (!stricmp(misc_path, setting->Misc_TextEditor)) {
 		dashOpenTextEditor(NULL);
 		return;

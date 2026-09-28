@@ -1,8 +1,17 @@
 # wLaunchELF dashboard
 
 The dashboard is the default shell of this build. It sits on top of the
-classic wLaunchELF code: every launch, tool and file operation still goes
-through `ExecuteMainAction()`, `getFilePath()` and the classic screens.
+classic wLaunchELF code: every launch still goes through
+`ExecuteMainAction()`. Settings, the Text Editor, the information screens
+and the file/folder picker are native dashboard screens; the File Browser,
+HDD Manager and exploit installer still open their classic screens (drawn
+in the dashboard style when *Modern style for classic screens* is on).
+
+The cursor never waits for the memory card or a slow device: file reads
+and writes (artwork, saves, library scans, folder listings) run on a
+background thread, and a small indicator above the button hints shows
+what is being worked on. Starting a device's drivers happens in the
+foreground behind a short loading overlay.
 
 ## Sections
 
@@ -12,8 +21,8 @@ through `ExecuteMainAction()`, `getFilePath()` and the classic screens.
 | APPS     | ELF library in **Grid**, **List** or **Carousel** view (SELECT switches, saved). Filters: all, favorites, memory cards, USB, HDD, other. |
 | FILES    | Entry points into the full FileBrowser: device list, last folder, MISC commands, each detected device and your PathPad bookmarks. |
 | DEVICES  | Cards for memory cards (type, free space), USB, MMCE, MX4SIO, HDD, exFAT HDD, disc, UDPFS, PSX flash/DVR HDD and mounted VMCs. |
-| TOOLS    | HDD Manager, Text Editor, start disc, POPStarter, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, classic configuration, classic launch-key menu, reboot IOP, power off. |
-| SETTINGS | Display, Theme, Dashboard, Controls, Devices, Network, Advanced. Classic options edit the same `SETTING` fields and are written to LAUNCHELF.CNF only when you choose *Save wLaunchELF settings* (classic save-location prompt). |
+| TOOLS    | HDD Manager, Text Editor, start disc, POPStarter, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, classic launch-key menu, reboot IOP, power off. |
+| SETTINGS | Display, Theme, Dashboard, Launch keys, Controls, Startup, Devices, Network, Advanced: every dashboard and wLaunchELF option, edited in place (no classic configuration screens). Changes apply at once; when you leave SETTINGS with unsaved changes you are asked to *Save*, *Discard* or *Keep editing*. LAUNCHELF.CNF is saved where it was loaded from (*Save wLaunchELF settings to...* chooses another place), IPCONFIG.DAT likewise. |
 
 ## Controls
 
@@ -60,7 +69,8 @@ Each folder is searched one sub-folder deep (`APPS/<folder>/*.ELF`).
   are refreshed (Settings > Dashboard > Refresh at startup). Nothing else is
   initialised for the dashboard.
 * *Refresh library* (APPS > Triangle, START menu or Settings) scans every
-  folder and loads drivers as needed, with a progress overlay.
+  folder, starting the drivers it needs first; the search itself runs in
+  the background while you keep using the dashboard.
 * Results are cached in `DASHLIB.CNF` and shown instantly next boot.
   Apps that disappeared (device removed) stay usable as shortcuts and fail
   with a friendly message instead of a crash.

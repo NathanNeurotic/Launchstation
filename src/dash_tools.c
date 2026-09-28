@@ -1,9 +1,9 @@
 //--------------------------------------------------------------
 //File name:   dash_tools.c
-//TOOLS: every classic wLaunchELF function with a friendly name and a
-//short description. Each entry dispatches the existing MISC command path
-//through ExecuteMainAction(), so the classic screens (and their own
-//confirmations and safety warnings) run unchanged.
+//TOOLS: every wLaunchELF function with a friendly name and a short
+//description. Each entry dispatches the MISC command path through
+//dashRunMisc(): tools with a native dashboard version open that, the rest
+//still run the classic screen through ExecuteMainAction().
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include <stddef.h>
@@ -51,7 +51,6 @@ static const Tool tools[] = {
     {TA_MISC, DI_TEXT, "Font viewer", "Show every glyph of the active font.", NULL, 0, MISC(Misc_ShowFont), NULL},
     {TA_MISC, DI_INFO, "About wLaunchELF", "Credits and version.", NULL, 0, MISC(Misc_About_uLE), NULL},
     {TA_HEADER, -1, "CLASSIC", NULL, NULL, 0, 0, NULL},
-    {TA_MISC, DI_SETTINGS, "Classic configuration", "The full wLaunchELF configuration: launch keys, skins, screen, startup, network and advanced settings.", "Saved to LAUNCHELF.CNF as usual.", 0, MISC(Misc_Configure), NULL},
     {TA_CLASSIC, DI_KEY, "Classic launch-key menu", "Leave the dashboard and use the traditional button-per-application menu.", "Choose \"Dashboard\" in that menu (or MISC/Dashboard) to come back.", 0, 0, NULL},
     {TA_HEADER, -1, "POWER", NULL, NULL, 0, 0, NULL},
     {TA_MISC, DI_REFRESH, "Reboot IOP", "Restart the I/O processor and all device drivers. Devices are detected again when used.", NULL, 1, MISC(Misc_Reboot_IOP), NULL},
