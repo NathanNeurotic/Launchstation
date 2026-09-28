@@ -137,6 +137,15 @@ enum DashFontFace {
 	DASH_FONT_COUNT
 };
 
+enum DashTileStyle {
+	DASH_TILE_MEMORY_CARD = 0,
+	DASH_TILE_ROUNDED,
+	DASH_TILE_CHAMFERED,
+	DASH_TILE_FLOATING,
+	DASH_TILE_CRYSTAL,
+	DASH_TILE_COUNT
+};
+
 enum DashIconTint {
 	DASH_ICONS_TEXT = 0, /* icons follow the text colours */
 	DASH_ICONS_ACCENT,   /* icons lean towards the accent colour */
@@ -204,7 +213,7 @@ typedef struct
 	DashColor accent, accent2, select, warn, danger, ok;
 	DashColor panel, border;
 	/* shapes */
-	u8 corner, highlight, glow;
+	u8 corner, highlight, glow, tile_style;
 	/* typography */
 	u8 font, font_scale, bold, text_shadow; /* font_scale: 90..115 % */
 	/* icons */
@@ -331,6 +340,8 @@ void dashQuadG(float x1, float y1, float x2, float y2, float x3, float y3, float
                DashColor c1, DashColor c2, DashColor c3, DashColor c4);
 void dashLine(float x1, float y1, float x2, float y2, float w, DashColor c);
 void dashTri(float x1, float y1, float x2, float y2, float x3, float y3, DashColor c1, DashColor c2, DashColor c3);
+void dashRoundedGradV(float x, float y, float w, float h, float r, DashColor top, DashColor bottom);
+void dashRoundedBorder(float x, float y, float w, float h, float r, DashColor c);
 void dashPanel(float x, float y, float w, float h, float r, DashColor fill);
 void dashPanelGradV(float x, float y, float w, float h, float r, DashColor top, DashColor bottom);
 void dashPanelBorder(float x, float y, float w, float h, float r, DashColor c);
@@ -653,6 +664,7 @@ void dashThemeTexturesFree(void);
 
 /* Procedural fallback tile for an app without artwork. */
 void dashDrawAppTile(const DashApp *app, float x, float y, float w, float h, float focus);
+void dashDrawTileFocus(float x, float y, float w, float h, float r, float strength);
 /* Artwork or fallback, fitted into a rounded card. */
 void dashDrawAppArt(DashApp *app, float x, float y, float w, float h, float focus, int prio);
 

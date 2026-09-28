@@ -128,6 +128,7 @@ enum SetId {
 	S_T_WARN,
 	S_T_HL,
 	S_T_CORNER,
+	S_T_TILE,
 	S_T_GLOW,
 	S_T_PANEL_A,
 	S_T_FONT,
@@ -309,6 +310,7 @@ static const SetItem tcol_items[] = {
 };
 static const SetItem tstyle_items[] = {
     {ST_CHOICE, S_T_HL, "Selection style", "Text colour is how the PS2 system menus mark the selection."},
+    {ST_CHOICE, S_T_TILE, "Tile style", "Application tiles: memory card, rounded, chamfered, floating object or crystal slab."},
     {ST_CHOICE, S_T_CORNER, "Corners", NULL},
     {ST_CHOICE, S_T_GLOW, "Glow", "Soft light behind focused items."},
     {ST_CHOICE, S_T_PANEL_A, "Panel opacity", NULL},
@@ -388,6 +390,7 @@ static const char *const recent_names[] = {"0", "4", "8", "12", "16"};
 static const char *const hide_names[] = {"Show all", "Hide HDD1", "Hide HDD0+1", "Hide ATA1", "Hide ATA0+1", "Hide HDD1+ATA1", "Hide all"};
 static const char *const confirm_names[] = {"Circle", "Cross"};
 static const char *const hl_names[] = {"Solid bar", "Accent bar", "Outline", "Text colour"};
+static const char *const tile_names[] = {"Memory card", "Rounded", "Chamfered", "Floating object", "Crystal slab"};
 static const char *const corner_names[] = {"Square", "Soft", "Round"};
 static const char *const font_names[] = {"Roboto", "System"};
 static const char *const fscale_names[] = {"90%", "95%", "100%", "105%", "110%", "115%"};
@@ -580,6 +583,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_T_HL:
 			*names = hl_names, *cur = dashTheme.highlight;
 			return DASH_HL_COUNT;
+		case S_T_TILE:
+			*names = tile_names, *cur = dashTheme.tile_style;
+			return DASH_TILE_COUNT;
 		case S_T_CORNER:
 			*names = corner_names, *cur = dashTheme.corner;
 			return DASH_CORNER_COUNT;
@@ -654,6 +660,9 @@ static int setThemeChoice(int id, int v)
 			break;
 		case S_T_HL:
 			t->highlight = (u8)v;
+			break;
+		case S_T_TILE:
+			t->tile_style = (u8)v;
 			break;
 		case S_T_CORNER:
 			t->corner = (u8)v;
