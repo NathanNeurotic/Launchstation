@@ -177,8 +177,9 @@ static void editMetadata(DashApp *a)
 	}
 	if (!dashOpenTextEditor(meta))
 		return;
-	/* re-read this application's metadata after editing */
-	if (dashLibIndexOf(a) >= 0)
+	/* re-read this application's metadata after editing (the UI thread
+	 * reads it, so a save still running in the background finishes first) */
+	if (dashLibIndexOf(a) >= 0 && dashWorkerAwaitAll("Finishing up"))
 		dashLibRefreshApp(a);
 }
 
