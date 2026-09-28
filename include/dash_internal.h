@@ -540,7 +540,9 @@ void dashStoreDefaults(void);
  * dirty files to the background worker (after ~0.7 s of pad idle unless
  * forced); dashStoreFlushWait() also waits for the writes (0 = cancelled). */
 int dashStoreSaveSettings(void);    /* commits dashCfg and schedules DASHBOARD.CNF */
-void dashStoreSaveTheme(void);      /* DASHBOARD.CNF with the committed settings */
+void dashStoreSaveTheme(void);
+int dashStoreSettingsPending(void); /* DASHBOARD.CNF write queued or running */
+int dashStoreSettingsFailed(void);  /* last DASHBOARD.CNF write failed */      /* DASHBOARD.CNF with the committed settings */
 const DashSettings *dashStorePersisted(void);
 int dashStoreSaveLists(void);
 void dashStoreSaveCache(void);

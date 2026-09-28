@@ -1379,78 +1379,84 @@ enum {
 
 typedef struct
 {
-	int kind;
-	int target;          /* CONFIG_SAVE_TARGET_* chosen by the user, or -2 = default */
-	char file[64];       /* LAUNCHELF.CNF / IPCONFIG.DAT */
-	char path[MAX_PATH]; /* where it was written */
-	char msg[MAX_PATH];
+	int kind, target, len, ret;
+	char file[64], path[MAX_PATH], loaded[MAX_PATH], override_dir[MAX_PATH];
+	char *text;
 } CfgSaveJob;
+
+/* Pending is distinct from saved. Failures survive leaving/re-entering
+ * Settings and are retried only on an explicit Save. */
+static int cfg_pending[2], cfg_failed[2];
 
 static void cfgSaveRun(void *arg)
 {
 	CfgSaveJob *j = (CfgSaveJob *)arg;
-	const char *loaded = (j->kind == CFG_SAVE_NET) ? LoadedIPConfigPath : LoadedConfigPath;
-
 	if (j->target == -2) {
-		if (configDefaultSaveTargetPath(j->file, loaded, j->path, sizeof(j->path)) == CONFIG_SAVE_TARGET_CANCEL) {
-			snprintf(j->msg, sizeof(j->msg), "No writable location for %s", j->file);
+		if (configSnapshotSaveTargetPath(j->file, j->loaded, j->override_dir,
+		                               j->path, sizeof(j->path)) == CONFIG_SAVE_TARGET_CANCEL)
 			return;
-		}
 	} else
-		configRefreshSaveTargetForWrite(j->target, j->path, sizeof(j->path), j->file, loaded);
-	if (j->kind == CFG_SAVE_NET)
-		configSaveNetworkToPath(j->msg, j->path);
-	else
-		saveConfigToPath(j->msg, j->file, j->path);
+		configRefreshSaveTargetForWrite(j->target, j->path, sizeof(j->path), j->file, j->loaded);
+	j->ret = j->kind == CFG_SAVE_NET ? configWriteNetworkSnapshot(j->path, j->text)
+	                                  : dashWriteFile(j->path, j->text, j->len);
 }
 
 static void cfgSaveDone(void *arg)
 {
 	CfgSaveJob *j = (CfgSaveJob *)arg;
-	int ok;
+	char msg[96];
 
-	if (j->kind == CFG_SAVE_NET)
-		ok = j->path[0] && strncmp(j->msg, LNG(Saved_Failed), strlen(LNG(Saved_Failed)));
-	else
-		ok = strstr(j->msg, LNG(Saved_Config)) != NULL;
-	if (ok) {
-		char msg[96];
-		snprintf(msg, sizeof(msg), "Saved %s", j->path);
+	cfg_pending[j->kind]--;
+	cfg_failed[j->kind] = j->ret != 0;
+	if (j->ret == 0) {
+		dashStrCopy(j->kind == CFG_SAVE_NET ? LoadedIPConfigPath : LoadedConfigPath, j->path, MAX_PATH);
+		snprintf(msg, sizeof(msg), "Saved %.88s", j->path);
 		dashToast(DASH_TOAST_OK, msg);
-	} else
-		dashToast(DASH_TOAST_ERROR, j->msg[0] ? j->msg : "Settings could not be saved");
+	} else {
+		snprintf(msg, sizeof(msg), "Could not save %s; retry in Settings", j->file);
+		dashToast(DASH_TOAST_ERROR, msg);
+	}
+	free(j->text);
 	free(j);
 }
 
 static int cfgSave(int kind, int target, const char *path)
 {
-	CfgSaveJob *j = (CfgSaveJob *)malloc(sizeof(CfgSaveJob));
-
-	if (j == NULL) {
-		dashToast(DASH_TOAST_ERROR, "Settings could not be saved (out of memory)");
-		return 0;
-	}
-	memset(j, 0, sizeof(*j));
+	CfgSaveJob *j = calloc(1, sizeof(CfgSaveJob));
+	if (j == NULL)
+		goto failed;
 	j->kind = kind;
 	j->target = target;
-	if (kind == CFG_SAVE_NET)
-		dashStrCopy(j->file, "IPCONFIG.DAT", sizeof(j->file));
-	else
-		dashStrCopy(j->file, dashExecContext()->cnf_path, sizeof(j->file));
+	j->ret = -1;
+	dashStrCopy(j->file, kind == CFG_SAVE_NET ? "IPCONFIG.DAT" : dashExecContext()->cnf_path, sizeof(j->file));
+	dashStrCopy(j->loaded, kind == CFG_SAVE_NET ? LoadedIPConfigPath : LoadedConfigPath, sizeof(j->loaded));
+	dashStrCopy(j->override_dir, setting->CNF_Path, sizeof(j->override_dir));
 	if (path != NULL)
 		dashStrCopy(j->path, path, sizeof(j->path));
-	if (dashWorkerSubmit(kind == CFG_SAVE_NET ? "Saving network settings" : "Saving wLaunchELF settings",
-	                     DASH_JOB_SAVE | DASH_JOB_VISIBLE, cfgSaveRun, cfgSaveDone, j) < 0) {
+	if (kind == CFG_SAVE_NET) {
+		j->text = malloc(50);
+		if (j->text != NULL)
+			j->len = snprintf(j->text, 50, "%s %s %s\n\r", ip, netmask, gw);
+	} else
+		j->text = configBuildSaveText(&j->len);
+	if (j->text == NULL || dashWorkerSubmit(kind == CFG_SAVE_NET ? "Saving network settings" : "Saving wLaunchELF settings",
+	                                      DASH_JOB_SAVE | DASH_JOB_VISIBLE, cfgSaveRun, cfgSaveDone, j) < 0) {
+		free(j->text);
 		free(j);
-		dashToast(DASH_TOAST_ERROR, "Save could not be queued; changes are still unsaved");
-		return 0;
+		goto failed;
 	}
+	cfg_pending[kind]++;
+	cfg_failed[kind] = 0;
 	return 1;
+failed:
+	cfg_failed[kind] = 1;
+	dashToast(DASH_TOAST_ERROR, "Save could not be queued; changes are still unsaved");
+	return 0;
 }
 
 static int anyDirty(void)
 {
-	return dash_dirty || classic_dirty || net_dirty;
+	return dash_dirty || classic_dirty || net_dirty || cfg_failed[0] || cfg_failed[1] || dashStoreSettingsFailed();
 }
 
 static void sessionSnapshot(void)
@@ -1475,15 +1481,14 @@ static void sessionBegin(void)
 static void settingsCommit(void)
 {
 	int cnf_failed = 0, net_failed = 0;
-	if (dash_dirty)
+	if (dash_dirty || dashStoreSettingsFailed())
 		dashStoreSaveSettings();
-	if (classic_dirty)
+	if (classic_dirty || cfg_failed[CFG_SAVE_CNF])
 		cnf_failed = !cfgSave(CFG_SAVE_CNF, -2, NULL);
-	if (net_dirty)
+	if (net_dirty || cfg_failed[CFG_SAVE_NET])
 		net_failed = !cfgSave(CFG_SAVE_NET, -2, NULL);
-	sessionSnapshot();
-	classic_dirty = cnf_failed;
-	net_dirty = net_failed;
+	if (!cnf_failed && !net_failed)
+		sessionSnapshot();
 }
 
 /* Puts back what was there when SETTINGS was opened. */
@@ -2151,7 +2156,8 @@ static void settingsDraw(void)
 		snprintf(sub, sizeof(sub), "%s%s", dashTheme.name, dashThemeIsCustom() ? " (edited)" : "");
 		dashDrawSectionTitle(48, 68, "Theme", sub);
 	} else {
-		dashDrawSectionTitle(48, 68, "Settings", anyDirty() ? "unsaved changes" : NULL);
+		dashDrawSectionTitle(48, 68, "Settings", anyDirty() ? "unsaved changes" :
+		    (cfg_pending[0] || cfg_pending[1] || dashStoreSettingsPending()) ? "saving changes..." : NULL);
 		if (anyDirty())
 			dashRect(48 + dashTextWidth("Settings", DASH_FS_TITLE) + 6, 80, 5, 5, DASH_C_WARM);
 	}

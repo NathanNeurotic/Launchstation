@@ -392,6 +392,7 @@ typedef struct
 static int save_dirty[SAVE_KINDS];
 static int save_inflight[SAVE_KINDS];
 static int save_error_shown[SAVE_KINDS];
+static int save_failed[SAVE_KINDS]; /* the last write of that file failed */
 
 static char *buildSettings(int *out_len)
 {
@@ -466,6 +467,7 @@ static void saveDone(void *arg)
 	SaveJob *j = (SaveJob *)arg;
 
 	save_inflight[j->kind] = 0;
+	save_failed[j->kind] = (j->ret != 0);
 	if (j->ret == 0) {
 		save_error_shown[j->kind] = 0;
 		if (j->kind == SAVE_SETTINGS)
@@ -556,6 +558,18 @@ void dashStoreSaveTheme(void)
 const DashSettings *dashStorePersisted(void)
 {
 	return &persisted;
+}
+
+/* DASHBOARD.CNF: a write is queued or running */
+int dashStoreSettingsPending(void)
+{
+	return save_dirty[SAVE_SETTINGS] || save_inflight[SAVE_SETTINGS];
+}
+
+/* DASHBOARD.CNF: the last write failed and nothing newer is on its way */
+int dashStoreSettingsFailed(void)
+{
+	return save_failed[SAVE_SETTINGS] && !dashStoreSettingsPending();
 }
 
 int dashStoreSaveLists(void)

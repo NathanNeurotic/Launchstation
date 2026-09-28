@@ -7,83 +7,63 @@
 //---------------------------------------------------------------------------
 // Network settings GUI by Slam-Tilt
 //---------------------------------------------------------------------------
+/* Write an immutable first line while preserving the existing tail.
+ * A failed read must not turn a settings update into a truncated file. */
+int configWriteNetworkSnapshot(const char *target_path, const char *firstline)
+{
+	char path[MAX_PATH];
+	char *old = NULL;
+	int fd, size = 0, skip = 0, ret = -1, close_ret;
+	int first_size = strlen(firstline);
+	if (target_path == NULL || !target_path[0] || genFixPath(target_path, path) < 0)
+		return -1;
+	fd = genOpen(path, FIO_O_RDONLY);
+	if (fd >= 0) {
+		size = genLseek(fd, 0, SEEK_END);
+		if (size < 0 || size > 1024 * 1024) {
+			genClose(fd);
+			return -1;
+		}
+		if (size > 0) {
+			old = memalign(64, size);
+			if (old == NULL || genLseek(fd, 0, SEEK_SET) < 0 || genRead(fd, old, size) != size) {
+				genClose(fd);
+				free(old);
+				return -1;
+			}
+			while (skip < size && old[skip] != '\r' && old[skip] != '\n')
+				skip++;
+			while (skip < size && (old[skip] == '\r' || old[skip] == '\n'))
+				skip++;
+		}
+		if (genClose(fd) < 0) {
+			free(old);
+			return -1;
+		}
+	}
+	configEnsureSysconfDir(target_path);
+	fd = genOpen(path, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT);
+	if (fd >= 0) {
+		if (genWrite(fd, (void *)firstline, first_size) == first_size &&
+		    (skip == size || genWrite(fd, old + skip, size - skip) == size - skip))
+			ret = 0;
+		close_ret = genClose(fd);
+		if (close_ret < 0)
+			ret = -1;
+	}
+	free(old);
+	return ret;
+}
+
 static void saveNetworkSettings(char *Message, const char *target_path)
 {
 	char firstline[50];
-	int out_fd, in_fd;
-	int ret = 0, i = 0;
-	int size, sizeleft = 0;
-	char *ipconfigfile = 0;
-	char path[MAX_PATH];
-
-	// Default message, will get updated if save is sucessfull
-	sprintf(Message, "%s", LNG(Saved_Failed));
-
-	sprintf(firstline, "%s %s %s\n\r", ip, netmask, gw);
-
-	if (target_path == NULL || target_path[0] == '\0')
-		return;
-
-
-
-	// Preserve any existing data beyond the first line of the selected target.
-
-	if (genFixPath(target_path, path) >= 0)
-		in_fd = genOpen(path, FIO_O_RDONLY);
-	else
-		in_fd = -1;
-
-	if (in_fd >= 0) {
-
-		size = genLseek(in_fd, 0, SEEK_END);
-		DPRINTF("%s: size of existing file is %ibytes\n\r", __func__, size);
-
-		if (size > 0 && (ipconfigfile = (char *)memalign(64, size)) != NULL) {
-			int read_size;
-
-			genLseek(in_fd, 0, SEEK_SET);
-			read_size = genRead(in_fd, ipconfigfile, size);
-			if (read_size > 0) {
-				size = read_size;
-				for (i = 0; i < size && ipconfigfile[i] != '\r' && ipconfigfile[i] != '\n'; i++)
-					;
-				while (i < size && (ipconfigfile[i] == '\r' || ipconfigfile[i] == '\n'))
-					i++;
-				sizeleft = size - i;
-			}
-		}
-
-		genClose(in_fd);
-	}
-
-	// Writing the data out
-
-	configEnsureSysconfDir(target_path);
-	if (genFixPath(target_path, path) < 0) {
-		if (ipconfigfile != NULL)
-			free(ipconfigfile);
-		return;
-	}
-	out_fd = genOpen(path, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT);
-	if (out_fd >= 0) {
-		mcSync(0, NULL, &ret);
-		genWrite(out_fd, firstline, strlen(firstline));
-		mcSync(0, NULL, &ret);
-
-		// If we have any extra data, spit that out too.
-		if (sizeleft > 0) {
-			mcSync(0, NULL, &ret);
-			genWrite(out_fd, &ipconfigfile[i], sizeleft);
-			mcSync(0, NULL, &ret);
-		}
-
+	snprintf(firstline, sizeof(firstline), "%s %s %s\n\r", ip, netmask, gw);
+	if (configWriteNetworkSnapshot(target_path, firstline) == 0) {
 		snprintf(Message, MAX_PATH, "%s %.*s", LNG(Saved), MAX_PATH - 4, target_path);
 		snprintf(LoadedIPConfigPath, sizeof(LoadedIPConfigPath), "%s", target_path);
-
-		genClose(out_fd);
-	}
-	if (ipconfigfile != NULL)
-		free(ipconfigfile);
+	} else
+		snprintf(Message, MAX_PATH, "%s", LNG(Saved_Failed));
 }
 
 void configSaveNetworkToPath(char *msg, const char *target_path)
