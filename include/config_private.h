@@ -65,6 +65,10 @@ void configBuildSaveTargets(char *save_override_path, size_t save_override_path_
 void configRefreshSaveTargetForWrite(enum CONFIG_SAVE_TARGET save_target, char *target_path, size_t target_path_size, const char *filename, const char *loaded_path);
 int configSaveTargetPrompt(const char *save_override_path, const char *save_cwd_path, const char *save_sysconf_path, const char *loaded_path, int has_override_path);
 int configDefaultSaveTargetPath(const char *filename, const char *loaded_path, char *out, size_t out_size);
+int configSnapshotSaveTargetPath(const char *filename, const char *loaded_path, const char *override_dir, char *out, size_t out_size);
+/* Caller owns the serialized buffer; capture before handing work to a thread. */
+char *configBuildSaveText(int *out_size);
+int configWriteNetworkSnapshot(const char *target_path, const char *firstline);
 /* Writes ip/netmask/gw as the first line of `target_path` (IPCONFIG.DAT),
  * keeping any further lines. `msg` receives the classic status text. */
 void configSaveNetworkToPath(char *msg, const char *target_path);

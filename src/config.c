@@ -315,16 +315,16 @@ static void configBuildSysconfPathForLoaded(char *dst, size_t dst_size, const ch
 	snprintf(dst, dst_size, "mc%d:/SYS-CONF/%s", configGetPreferredSysconfPort(filename, loaded_path), (filename != NULL) ? filename : "");
 }
 
-void configBuildSaveTargets(char *save_override_path, size_t save_override_path_size, char *save_cwd_path, size_t save_cwd_path_size, char *save_sysconf_path, size_t save_sysconf_path_size, const char *filename, const char *loaded_path, int *has_override_path)
+static void configBuildSaveTargetsFrom(char *save_override_path, size_t save_override_path_size, char *save_cwd_path, size_t save_cwd_path_size, char *save_sysconf_path, size_t save_sysconf_path_size, const char *filename, const char *loaded_path, int *has_override_path, const char *override_dir)
 {
 	int use_override;
 
-	use_override = (setting->CNF_Path[0] != '\0');
+	use_override = (override_dir[0] != '\0');
 	if (has_override_path != NULL)
 		*has_override_path = use_override;
 
 	if (use_override) {
-		configAppendPathFile(save_override_path, save_override_path_size, setting->CNF_Path, filename);
+		configAppendPathFile(save_override_path, save_override_path_size, override_dir, filename);
 		configResolveMcAliasPath(save_override_path, save_override_path_size);
 	} else if (save_override_path != NULL && save_override_path_size > 0) {
 		save_override_path[0] = '\0';
@@ -333,6 +333,12 @@ void configBuildSaveTargets(char *save_override_path, size_t save_override_path_
 	configAppendPathFile(save_cwd_path, save_cwd_path_size, LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir, filename);
 	configResolveMcAliasPath(save_cwd_path, save_cwd_path_size);
 	configBuildSysconfPathForLoaded(save_sysconf_path, save_sysconf_path_size, filename, loaded_path);
+}
+void configBuildSaveTargets(char *save_override_path, size_t save_override_path_size, char *save_cwd_path, size_t save_cwd_path_size, char *save_sysconf_path, size_t save_sysconf_path_size, const char *filename, const char *loaded_path, int *has_override_path)
+{
+	configBuildSaveTargetsFrom(save_override_path, save_override_path_size, save_cwd_path,
+	                          save_cwd_path_size, save_sysconf_path, save_sysconf_path_size,
+	                          filename, loaded_path, has_override_path, setting->CNF_Path);
 }
 
 void configRefreshSaveTargetForWrite(enum CONFIG_SAVE_TARGET save_target, char *target_path, size_t target_path_size, const char *filename, const char *loaded_path)
@@ -457,12 +463,15 @@ char *preloadCNF(char *path)
 //endfunc preloadCNF
 // Save LAUNCHELF.CNF
 //---------------------------------------------------------------------------
-void saveConfigToPath(char *mainMsg, char *CNF, const char *target_path)
+/* Capture on the UI thread before queuing a save. No device access. */
+char *configBuildSaveText(int *out_size)
 {
-	int i, ret, fd;
-	char c[MAX_PATH], tmp[26 * MAX_PATH + 30 * MAX_PATH];
-	char cnf_path[MAX_PATH];
-	size_t CNF_size, CNF_step;
+	int i, CNF_size, CNF_step;
+	/* Values are bounded by their source arrays; reserve extra space for
+	 * key names, numeric fields and line endings. */
+	char *tmp = malloc(sizeof(SETTING) + sizeof(PathPad) + 8192);
+	if (tmp == NULL)
+		return NULL;
 
 	sprintf(tmp, "CNF_version = 3\r\n%n", &CNF_size);  //Start CNF with version header
 
@@ -610,6 +619,20 @@ void saveConfigToPath(char *mainMsg, char *CNF, const char *target_path)
 		}  //ends if
 	}      //ends for
 
+	*out_size = CNF_size;
+	return tmp;
+}
+
+void saveConfigToPath(char *mainMsg, char *CNF, const char *target_path)
+{
+	int ret, fd, CNF_size;
+	char c[MAX_PATH], cnf_path[MAX_PATH];
+	char *tmp = configBuildSaveText(&CNF_size);
+	if (tmp == NULL) {
+		snprintf(mainMsg, MAX_PATH, "%s %s", LNG(Failed_To_Save), CNF);
+		return;
+	}
+
 	if (target_path != NULL && target_path[0] != '\0') {
 		snprintf(c, sizeof(c), "%s", target_path);
 	} else {
@@ -639,6 +662,7 @@ void saveConfigToPath(char *mainMsg, char *CNF, const char *target_path)
 	if ((ret < 0) || ((fd = genOpen(cnf_path, FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC)) < 0)) {
 		if (target_path != NULL && target_path[0] != '\0') {
 			sprintf(mainMsg, "%s %s", LNG(Failed_To_Save), CNF);
+			free(tmp);
 			return;
 		}
 		sprintf(c, "mc%d:/SYS-CONF", getLaunchMcPort());
@@ -653,16 +677,18 @@ void saveConfigToPath(char *mainMsg, char *CNF, const char *target_path)
 		ret = genFixPath(c, cnf_path);
 		if ((fd = genOpen(cnf_path, FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC)) < 0) {
 			sprintf(mainMsg, "%s %s", LNG(Failed_To_Save), CNF);
+			free(tmp);
 			return;
 		}
 	}
-	ret = genWrite(fd, &tmp, CNF_size);
+	ret = genWrite(fd, tmp, CNF_size);
 	if (ret == CNF_size) {
 		snprintf(LoadedConfigPath, sizeof(LoadedConfigPath), "%s", c);
 		sprintf(mainMsg, "%s (%s)", LNG(Saved_Config), c);
 	} else
 		sprintf(mainMsg, "%s (%s)", LNG(Failed_writing), CNF);
 	genClose(fd);
+	free(tmp);
 }
 void saveConfig(char *mainMsg, char *CNF)
 {
@@ -1191,11 +1217,16 @@ static int configSelectInitialSaveTarget(const enum CONFIG_SAVE_TARGET *targets,
  * (CONFIG_SAVE_TARGET_CANCEL when nothing is writable). */
 int configDefaultSaveTargetPath(const char *filename, const char *loaded_path, char *out, size_t out_size)
 {
+	return configSnapshotSaveTargetPath(filename, loaded_path, setting->CNF_Path, out, out_size);
+}
+
+int configSnapshotSaveTargetPath(const char *filename, const char *loaded_path, const char *override_dir, char *out, size_t out_size)
+{
 	char o[MAX_PATH], c[MAX_PATH], s[MAX_PATH];
 	enum CONFIG_SAVE_TARGET targets[4];
 	int n = 0, has_override = 0, sel;
 
-	configBuildSaveTargets(o, sizeof(o), c, sizeof(c), s, sizeof(s), filename, loaded_path, &has_override);
+	configBuildSaveTargetsFrom(o, sizeof(o), c, sizeof(c), s, sizeof(s), filename, loaded_path, &has_override, override_dir);
 	if (has_override)
 		targets[n++] = CONFIG_SAVE_TARGET_OVERRIDE;
 	targets[n++] = CONFIG_SAVE_TARGET_CWD;
