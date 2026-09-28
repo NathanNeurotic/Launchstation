@@ -204,6 +204,23 @@ void dashRunMisc(const char *misc_path)
 
 	if (misc_path == NULL || misc_path[0] == '\0')
 		return;
+	/* screens that have a native dashboard version */
+	if (!stricmp(misc_path, setting->Misc_About_uLE)) {
+		dashShowAbout();
+		return;
+	}
+	if (!stricmp(misc_path, setting->Misc_Show_Build_Info)) {
+		dashShowBuildInfo();
+		return;
+	}
+	if (!stricmp(misc_path, setting->Misc_Debug_Info)) {
+		dashShowSystemInfo();
+		return;
+	}
+	if (!stricmp(misc_path, setting->Misc_ShowFont)) {
+		dashShowFontViewer();
+		return;
+	}
 	dashStrCopy(path, misc_path, sizeof(path));
 	exec_ctx.main_msg[0] = '\0';
 	if (!enterLegacy())

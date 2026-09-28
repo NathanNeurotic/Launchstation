@@ -892,6 +892,11 @@ float dashSectionAnim(void); /* 0..1 section-transition clock */
  * ExecuteMainAction() path. */
 void dashLaunchApp(DashApp *app, int with_args_prompt);
 void dashRunMisc(const char *misc_path);
+/* Native information screens (dash_info.c) */
+void dashShowAbout(void);
+void dashShowBuildInfo(void);
+void dashShowSystemInfo(void);
+void dashShowFontViewer(void);
 void dashOpenBrowser(const char *start_dir);
 int dashOpenTextEditor(const char *file); /* 0 = the user backed out before it opened */
 void dashAppActions(DashApp *app);
