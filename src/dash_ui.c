@@ -158,6 +158,17 @@ static int keyIcon(const char *key)
 	return -1;
 }
 
+/* the width drawButton() will use, without drawing */
+static float buttonWidth(int icon, const char *key)
+{
+	float w;
+
+	if (icon >= 0 || keyIcon(key) >= 0)
+		return 22.0f;
+	w = dashTextWidth(key, DASH_FS_CAPTION) + 14.0f;
+	return w < 22.0f ? 22.0f : w;
+}
+
 static float drawButton(float x, float y, int icon, const char *key)
 {
 	const float d = 22.0f;
@@ -348,15 +359,15 @@ void dashDrawHeader(int section, float section_anim)
 		dashIcon(dashSectionIcon(i), cx - 8, tab_y + 3, 16, c);
 		dashTextCenter(cx, tab_y + 20, dashSectionName(i), DASH_FS_CAPTION * 0.92f, c);
 	}
-	/* L1/R1 key pills at the strip ends */
+	/* L1/R1 key pills, each centred in its 40 px end of the strip using
+	 * the width actually drawn (pad glyph or text pill), so both ends
+	 * match at any text size / font */
 	{
-		/* measured, so they stay inside the strip at any text size / font */
 		float strip_l = tab_x0 - 40, strip_r = tab_x0 + tab_w * DASH_SEC_COUNT + 40;
-		float rw = dashTextWidth("R1", DASH_FS_CAPTION) + 16.0f;
-		if (rw < 26.0f)
-			rw = 26.0f;
-		drawButton(strip_l + 4, tab_y + 9, -1, "L1");
-		drawButton(strip_r - 4 - rw, tab_y + 9, -1, "R1");
+		float lw = buttonWidth(-1, "L1"), rw = buttonWidth(-1, "R1");
+
+		drawButton(strip_l + (40.0f - lw) * 0.5f, tab_y + 9, -1, "L1");
+		drawButton(strip_r - 40.0f + (40.0f - rw) * 0.5f, tab_y + 9, -1, "R1");
 	}
 
 	dashDrawClock();
