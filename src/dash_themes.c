@@ -118,6 +118,7 @@ static const char *const bg_names[DASH_BG_COUNT] = {
     "Data stream", "Memory card tiles", "Brushed console", "Ribbons", "Crystal",
     "Light streaks", "Drift clouds", "Wallpaper image"};
 static const char *const hl_ids[DASH_HL_COUNT] = {"fill", "bar", "outline", "text"};
+static const char *const tile_ids[DASH_TILE_COUNT] = {"memory_card", "rounded", "chamfered", "floating", "crystal"};
 static const char *const corner_ids[DASH_CORNER_COUNT] = {"square", "soft", "round"};
 static const char *const font_ids[DASH_FONT_COUNT] = {"roboto", "system"};
 static const char *const tint_ids[DASH_ICONS_COUNT] = {"text", "accent", "mono"};
@@ -208,6 +209,7 @@ static void base(DashTheme *t)
 	t->panel = DC(6, 6, 16, 150);
 	t->border = DC(255, 255, 255, 16);
 	t->corner = DASH_CORNER_SOFT;
+	t->tile_style = DASH_TILE_MEMORY_CARD;
 	t->highlight = DASH_HL_BAR;
 	t->glow = 0;
 	t->font = DASH_FONT_ROBOTO;
@@ -514,6 +516,8 @@ void dashThemeValidate(DashTheme *t)
 	t->bg_bright = clampU8(t->bg_bright, 10, 100);
 	t->scanlines = t->scanlines ? 1 : 0;
 	t->bg1.a = t->bg2.a = 255;
+	if (t->tile_style >= DASH_TILE_COUNT)
+		t->tile_style = DASH_TILE_MEMORY_CARD;
 	if (t->corner >= DASH_CORNER_COUNT)
 		t->corner = DASH_CORNER_SOFT;
 	if (t->highlight >= DASH_HL_COUNT)
@@ -780,6 +784,7 @@ static const ThemeKey keys[] = {
     {"success", K_COLOR, OFS(ok), NULL, 0, 0},
     {"panel", K_COLOR, OFS(panel), NULL, 0, 0},
     {"border", K_COLOR, OFS(border), NULL, 0, 0},
+    {"tile_style", K_ENUM, OFS(tile_style), tile_ids, DASH_TILE_COUNT, 0},
     {"corners", K_ENUM, OFS(corner), corner_ids, DASH_CORNER_COUNT, 0},
     {"highlight", K_ENUM, OFS(highlight), hl_ids, DASH_HL_COUNT, 0},
     {"glow", K_BOOL, OFS(glow), NULL, 0, 0},
@@ -1236,6 +1241,7 @@ void dashThemeResetGroup(int group)
 			break;
 		case DASH_TG_STYLE:
 			t->corner = p.corner;
+			t->tile_style = p.tile_style;
 			t->highlight = p.highlight;
 			t->glow = p.glow;
 			t->panel.a = p.panel.a;

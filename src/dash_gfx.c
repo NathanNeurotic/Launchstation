@@ -618,11 +618,15 @@ static void panelCorners(GSTEXTURE *tex, float x, float y, float w, float h, flo
 
 void dashPanelGradV(float x, float y, float w, float h, float r, DashColor top, DashColor bottom)
 {
+	dashRoundedGradV(x, y, w, h, dashThemeRadius(r), top, bottom);
+}
+
+void dashRoundedGradV(float x, float y, float w, float h, float r, DashColor top, DashColor bottom)
+{
 	DashColor mid_top, mid_bottom;
 
 	if (w <= 0.0f || h <= 0.0f || g_alpha <= 0.0f)
 		return;
-	r = dashThemeRadius(r);
 	if (r > w * 0.5f)
 		r = w * 0.5f;
 	if (r > h * 0.5f)
@@ -648,11 +652,15 @@ void dashPanel(float x, float y, float w, float h, float r, DashColor fill)
 
 void dashPanelBorder(float x, float y, float w, float h, float r, DashColor c)
 {
+	dashRoundedBorder(x, y, w, h, dashThemeRadius(r), c);
+}
+
+void dashRoundedBorder(float x, float y, float w, float h, float r, DashColor c)
+{
 	float t;
 
 	if (w <= 0.0f || h <= 0.0f || c.a == 0 || g_alpha <= 0.0f)
 		return;
-	r = dashThemeRadius(r);
 	if (r > w * 0.5f)
 		r = w * 0.5f;
 	if (r > h * 0.5f)

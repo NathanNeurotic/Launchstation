@@ -630,109 +630,164 @@ static void monogram(const char *title, char *out)
 	out[n] = '\0';
 }
 
-/* Tile used for applications without artwork. The default is a real
- * application icon on a panel in the theme's colours (optionally a PNG from
- * the theme), with the device as a small badge; the old initials tile and
- * a device-icon tile remain selectable (Settings > Theme > Icons). */
-static void monogramTile(const DashApp *app, float x, float y, float w, float h, float focus);
+/* Convex silhouettes, in tile-local coordinates. Fills and focus outlines
+ * use the same vertices; artwork stays inside a rectangular label well. */
+static int tileVertices(float w, float h, float *vx, float *vy)
+{
+	static const float card[][2] = {{.14f, .02f}, {.70f, .02f}, {.86f, .18f}, {.86f, .98f}, {.14f, .98f}};
+	static const float chamfer[][2] = {{.16f, .02f}, {.84f, .02f}, {.98f, .16f}, {.98f, .84f}, {.84f, .98f}, {.16f, .98f}, {.02f, .84f}, {.02f, .16f}};
+	static const float crystal[][2] = {{.02f, .18f}, {.18f, .02f}, {.98f, .02f}, {.98f, .82f}, {.82f, .98f}, {.02f, .98f}};
+	const float(*v)[2] = dashTheme.tile_style == DASH_TILE_MEMORY_CARD ? card : dashTheme.tile_style == DASH_TILE_CRYSTAL ? crystal :
+                                                                                                                            chamfer;
+	int i, n = dashTheme.tile_style == DASH_TILE_MEMORY_CARD ? 5 : dashTheme.tile_style == DASH_TILE_CRYSTAL ? 6 :
+                                                                                                               8;
+	for (i = 0; i < n; i++) {
+		vx[i] = v[i][0] * w;
+		vy[i] = v[i][1] * h;
+	}
+	return n;
+}
+
+static void tilePolygon(float x, float y, float w, float h, DashColor top, DashColor bot, int outline)
+{
+	float vx[8], vy[8];
+	int i, n = tileVertices(w, h, vx, vy);
+	DashColor mid = dashColorLerp(top, bot, .5f);
+	for (i = 0; i < n; i++) {
+		int j = (i + 1) % n;
+		if (outline)
+			dashLine(x + vx[i], y + vy[i], x + vx[j], y + vy[j], 1.5f, top);
+		else
+			dashTri(x + w * .5f, y + h * .5f, x + vx[i], y + vy[i], x + vx[j], y + vy[j], mid,
+			        dashColorLerp(top, bot, vy[i] / h), dashColorLerp(top, bot, vy[j] / h));
+	}
+}
+
+void dashDrawTileFocus(float x, float y, float w, float h, float r, float strength)
+{
+	DashColor edge = dashColorA(dashColorLighten(DASH_C_ACCENT, .45f), strength);
+	if (strength <= .01f)
+		return;
+	if (dashTheme.tile_style == DASH_TILE_FLOATING) {
+		/* A solid pedestal remains visible even with theme glow disabled. */
+		dashLine(x + w * .20f, y + h * .92f, x + w * .80f, y + h * .92f, 2.0f, edge);
+	} else if (dashTheme.tile_style == DASH_TILE_ROUNDED)
+		dashRoundedBorder(x - 2, y - 2, w + 4, h + 4, r + 2, edge);
+	else
+		tilePolygon(x - 2, y - 2, w + 4, h + 4, edge, edge, 1);
+}
+
+static void tileBody(float x, float y, float w, float h, float focus, DashColor top, DashColor bot)
+{
+	int style = dashTheme.tile_style;
+	DashColor edge = dashColorA(DASH_C_ACCENT, .35f + .35f * focus);
+	if (style == DASH_TILE_FLOATING) {
+		if (dashTheme.glow)
+			dashGlow(x + w * .5f, y + h * .88f, w * .45f, h * .10f, edge);
+		return;
+	}
+	if (style == DASH_TILE_ROUNDED) {
+		dashRoundedGradV(x, y, w, h, w * .10f, top, bot);
+		if (DASH_C_BORDER.a)
+			dashRoundedBorder(x, y, w, h, w * .10f, DASH_C_BORDER);
+		return;
+	}
+	tilePolygon(x, y, w, h, top, bot, 0);
+	if (style == DASH_TILE_MEMORY_CARD) {
+		int i;
+		for (i = 0; i < 3; i++)
+			dashRect(x + w * .22f, y + h * (.09f + i * .045f), w * .35f, h * .014f, edge);
+		/* Recessed label strip, kept clear of the artwork above it. */
+		dashRect(x + w * .21f, y + h * .79f, w * .58f, h * .12f, dashColorA(DASH_C_ACCENT, .18f));
+	} else if (style == DASH_TILE_CRYSTAL) {
+		DashColor light = dashColorLighten(top, .25f), side = dashColorScale(bot, .65f);
+		dashQuadG(x + w * .02f, y + h * .18f, x + w * .82f, y + h * .18f,
+		          x + w * .18f, y + h * .02f, x + w * .98f, y + h * .02f, light, light, top, top);
+		dashQuadG(x + w * .82f, y + h * .18f, x + w * .98f, y + h * .02f,
+		          x + w * .82f, y + h * .98f, x + w * .98f, y + h * .82f, side, bot, side, bot);
+	}
+	tilePolygon(x, y, w, h, edge, edge, 1);
+}
+
+/* Both real artwork and fallback icons share the same shell and content well. */
+static void appTile(const DashApp *app, GSTEXTURE *tex, float x, float y, float w, float h, float focus)
+{
+	int style = dashTheme.tile_style, icon = dashTheme.app_icon_style;
+	float ax = .12f, ay = .12f, aw = .76f, ah = .66f;
+	float badge_x = .77f, badge_y = .79f, badge_size = .15f;
+	DashColor top = dashColorMix(dashColorLighten(DASH_C_PANEL_HI, .16f), DASH_C_SELECT, .22f + .30f * focus);
+	DashColor bot = dashColorScale(DASH_C_PANEL_HI, .55f);
+	DashColor glyph = dashColorLerp(DASH_C_TEXT2, DASH_C_TEXT, .4f + .6f * focus);
+	GSTEXTURE *custom = NULL;
+	if (icon == DASH_APPICON_MONOGRAM && tex == NULL) {
+		top = dashColorHue(app->hue, 150, 96 + (int)(40 * focus), 255);
+		bot = dashColorHue(app->hue + 28, 190, 34 + (int)(20 * focus), 255);
+	}
+	top.a = bot.a = 255;
+	if (style == DASH_TILE_MEMORY_CARD) {
+		ax = .22f;
+		ay = .28f;
+		aw = .56f;
+		ah = .46f;
+		badge_x = .64f;
+		badge_y = .80f;
+		badge_size = .10f;
+	} else if (style == DASH_TILE_CRYSTAL) {
+		ax = .10f;
+		ay = .26f;
+		aw = .64f;
+		ah = .53f;
+		badge_x = .62f;
+		badge_y = .82f;
+		badge_size = .12f;
+	} else if (style == DASH_TILE_FLOATING) {
+		ay = .16f - .06f * focus;
+		if (dashCfg.anim != DASH_ANIM_OFF && dashCfg.anim != DASH_ANIM_REDUCED)
+			ay += .015f * focus * dashSinf(dashTime() * 2.0f);
+		badge_y = .73f;
+	}
+	tileBody(x, y, w, h, focus, top, bot);
+	if (tex != NULL)
+		dashTexDrawFit(tex, x + w * ax, y + h * ay, w * aw, h * ah, DC(255, 255, 255, 255));
+	else {
+		if (icon == DASH_APPICON_SYSTEM && dashTheme.app_icon[0])
+			custom = dashThemeTextureFile(dashTheme.app_icon, 128, 128);
+		if (custom != NULL)
+			dashTexDrawFit(custom, x + w * ax, y + h * ay, w * aw, h * ah, DC(255, 255, 255, 255));
+		else if (icon == DASH_APPICON_MONOGRAM) {
+			char mono[4];
+			float ms = w * aw / 36.0f;
+			monogram(app->title, mono);
+			dashTextCenter(x + w * (ax + aw * .5f), y + h * (ay + ah * .5f) - dashTextLineH(ms) * .5f, mono, ms, glyph);
+		} else {
+			float sz = fminf(w * aw, h * ah) * .82f;
+			dashIcon(icon == DASH_APPICON_DEVICE ? dashLibDeviceIcon(app->path) : DI_EXEC,
+			         x + w * (ax + aw * .5f) - sz * .5f, y + h * (ay + ah * .5f) - sz * .5f, sz, glyph);
+		}
+	}
+	if (tex != NULL || icon != DASH_APPICON_DEVICE)
+		dashIcon(dashLibDeviceIcon(app->path), x + w * badge_x, y + h * badge_y, w * badge_size, dashColorA(DASH_C_ACCENT, .65f + .25f * focus));
+}
 
 void dashDrawAppTile(const DashApp *app, float x, float y, float w, float h, float focus)
 {
-	float r = w * 0.10f;
-	float isz = w * 0.18f;
-	DashColor top, bot, glyph;
-	int style = dashTheme.app_icon_style;
-	GSTEXTURE *custom = NULL;
-
-	if (style == DASH_APPICON_MONOGRAM) {
-		monogramTile(app, x, y, w, h, focus);
-		return;
-	}
-	if (r < 6.0f)
-		r = 6.0f;
-	/* lifted panel colour with a hint of the selection colour when focused */
-	top = dashColorLighten(DASH_C_PANEL_HI, 0.10f + 0.06f * focus);
-	top = dashColorMix(top, DASH_C_SELECT, 0.22f + 0.30f * focus);
-	bot = dashColorScale(DASH_C_PANEL_HI, 0.55f);
-	top.a = bot.a = 255;
-	dashPanelGradV(x, y, w, h, r, top, bot);
-	/* a thin top edge catches the light, like a moulded plastic tile */
-	dashRect(x + r, y + 1, w - 2 * r, 1.0f, dashColorA(DASH_C_TEXT, 0.16f + 0.1f * focus));
-	if (DASH_C_BORDER.a)
-		dashPanelBorder(x, y, w, h, r, DASH_C_BORDER);
-
-	glyph = dashColorLerp(DASH_C_TEXT2, DASH_C_TEXT, 0.4f + 0.6f * focus);
-	if (style == DASH_APPICON_SYSTEM && dashTheme.app_icon[0])
-		custom = dashThemeTextureFile(dashTheme.app_icon, 128, 128);
-	if (custom != NULL)
-		dashTexDrawFit(custom, x + w * 0.16f, y + h * 0.16f, w * 0.68f, h * 0.68f, DC(255, 255, 255, 255));
-	else if (style == DASH_APPICON_DEVICE)
-		dashIcon(dashLibDeviceIcon(app->path), x + w * 0.25f, y + h * 0.22f, w * 0.5f, glyph);
-	else
-		dashIcon(DI_EXEC, x + w * 0.24f, y + h * 0.2f, w * 0.52f, glyph);
-	/* device badge, bottom right */
-	if (style != DASH_APPICON_DEVICE)
-		dashIcon(dashLibDeviceIcon(app->path), x + w - isz - w * 0.08f, y + h - isz - h * 0.08f, isz,
-		         dashColorA(DASH_C_ACCENT, 0.55f + 0.25f * focus));
-}
-
-static void monogramTile(const DashApp *app, float x, float y, float w, float h, float focus)
-{
-	DashColor top = dashColorHue(app->hue, 150, 96 + (int)(40 * focus), 255);
-	DashColor bottom = dashColorHue(app->hue + 28, 190, 34 + (int)(20 * focus), 255);
-	float r = w * 0.10f;
-	char mono[4];
-	float ms = w / 46.0f;
-	float isz = w * 0.18f;
-
-	if (r < 6.0f)
-		r = 6.0f;
-	dashPanelGradV(x, y, w, h, r, top, bottom);
-	/* diagonal sheen */
-	dashRectGrad4(x + r * 0.5f, y + 2, w - r, h * 0.45f,
-	              DC(255, 255, 255, 44), DC(255, 255, 255, 10), DC(255, 255, 255, 8), DC(255, 255, 255, 0));
-	/* crystal motif */
-	dashGlow(x + w * 0.78f, y + h * 0.22f, w * 0.34f, h * 0.34f, dashColorHue(app->hue + 180, 60, 255, 50));
-	monogram(app->title, mono);
-	dashTextCenter(x + w * 0.5f, y + h * 0.5f - dashTextLineH(ms) * 0.62f, mono, ms, DC(255, 255, 255, 235));
-	dashIcon(dashLibDeviceIcon(app->path), x + w - isz - w * 0.08f, y + h - isz - h * 0.08f, isz, DC(255, 255, 255, 80));
+	appTile(app, NULL, x, y, w, h, focus);
 }
 
 void dashDrawAppArt(DashApp *app, float x, float y, float w, float h, float focus, int prio)
 {
 	GSTEXTURE *tex = dashArtGet(app, prio);
-	float r = w * 0.10f;
-
-	if (focus > 0.5f) {
+	if (focus > .5f) {
 		float k = dashUiFocusPop();
-		x -= w * (k - 1.0f) * 0.5f;
-		y -= h * (k - 1.0f) * 0.5f;
+		x -= w * (k - 1.0f) * .5f;
+		y -= h * (k - 1.0f) * .5f;
 		w *= k;
 		h *= k;
 	}
-
-	if (r < 6.0f)
-		r = 6.0f;
-	dashShadow(x, y, w, h, 10.0f + 10.0f * focus, 0.6f + 0.3f * focus);
-	if (tex != NULL) {
-		/* frame in the theme's panel colours, lit by the selection colour */
-		DashColor frame_top = dashColorMix(dashColorLighten(DASH_C_PANEL_HI, 0.18f), DASH_C_SELECT, 0.2f + 0.4f * focus);
-		DashColor frame_bot = dashColorScale(DASH_C_PANEL_HI, 0.6f);
-		DashColor well = dashColorScale(dashTheme.bg2, 0.5f);
-		float inset = w * 0.05f;
-
-		frame_top.a = frame_bot.a = well.a = 255;
-		dashPanelGradV(x, y, w, h, r, frame_top, frame_bot);
-		dashRect(x + inset, y + inset, w - inset * 2, h - inset * 2, well);
-		dashTexDrawFit(tex, x + inset, y + inset, w - inset * 2, h - inset * 2, DC(255, 255, 255, 255));
-		if (dashTheme.glow)
-			/* glassy highlight (Crystal look) */
-			dashRectGrad4(x + inset, y + inset, w - inset * 2, (h - inset * 2) * 0.4f,
-			              DC(255, 255, 255, 34), DC(255, 255, 255, 12), DC(255, 255, 255, 0), DC(255, 255, 255, 0));
-	} else
-		dashDrawAppTile(app, x, y, w, h, focus);
-	if (app->flags & DASH_APP_MISSING)
-		dashRect(x, y, w, h, DC(0, 0, 0, 120));
+	/* Dim the actual silhouette/content, avoiding a rectangular missing-app overlay. */
+	dashGfxPushAlpha(app->flags & DASH_APP_MISSING ? .5f : 1.0f);
+	appTile(app, tex, x, y, w, h, focus);
+	dashGfxPopAlpha();
 }
 //--------------------------------------------------------------
 //End of file: dash_art.c
