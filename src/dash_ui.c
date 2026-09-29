@@ -187,9 +187,7 @@ static float drawButton(float x, float y, int icon, const char *key)
 			return d;
 		}
 		tw = dashTextWidth(key, DASH_FS_CAPTION);
-		w = tw + 14.0f;
-		if (w < d)
-			w = d;
+		w = buttonWidth(icon, key); /* one sizing rule for layout and drawing */
 		/* OSDSYS squircle badge for L1/R1/START/SELECT-style labels */
 		keep = dashTheme.corner;
 		dashTheme.corner = DASH_CORNER_SOFT;

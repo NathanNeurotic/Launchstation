@@ -511,6 +511,7 @@ static void osdOrbs(const OrbStyle *st, float t, int fx)
 {
 	static OrbMat mats[ORB_SAMPLES + 1];
 	OrbPt pts[ORB_SAMPLES + 1], head[ORB_N];
+	float head_phi[ORB_N];
 	OsdTime ot;
 	float r, base, hour_frac;
 	DashColor glow_c = dashColorScale(st->c, 0.8f), core_c = dashColorLighten(st->c, 0.35f);
@@ -519,8 +520,11 @@ static void osdOrbs(const OrbStyle *st, float t, int fx)
 	float span = (fx == DASH_FX_SUBTLE) ? ORB_SPAN * 0.6f : ORB_SPAN;
 	int k, i, j;
 
-	if (fx == DASH_FX_OFF)
-		n = ORB_SAMPLES / 3; /* a still frame still shows short tracks */
+	if (fx == DASH_FX_OFF) {
+		/* a still frame still shows short tracks */
+		n = ORB_SAMPLES / 3;
+		span = ORB_SPAN * 0.4f;
+	}
 	osdTime(fx, &ot);
 	hour_frac = (ot.minute + ot.second / 60.0f) / 60.0f;
 	r = st->rmin + (st->rmax - st->rmin) * hour_frac;
@@ -558,16 +562,21 @@ static void osdOrbs(const OrbStyle *st, float t, int fx)
 			}
 		}
 		head[k] = pts[0];
+		head_phi[k] = fmodf(phi, TAU_F);
 	}
 
-	/* orbs that meet merge into one bigger, brighter orb */
+	/* orbs that meet merge into one bigger, brighter orb. They share one
+	 * circle, so meeting means equal phase; screen distance would also
+	 * bloom a front and a back orb that merely cross in the projection. */
 	for (k = 0; k < ORB_N; k++) {
 		int together = 1;
 		float grow, share, sz = head[k].s * (0.7f + 0.4f * head[k].d);
 
 		for (j = 0; j < ORB_N; j++) {
-			float dx = head[j].x - head[k].x, dy = head[j].y - head[k].y;
-			if (j != k && dx * dx + dy * dy < 81.0f)
+			float dp = fabsf(head_phi[j] - head_phi[k]);
+			if (dp > PI_F)
+				dp = TAU_F - dp;
+			if (j != k && dp < 0.1f)
 				together++;
 		}
 		grow = sqrtf((float)together);
