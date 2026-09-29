@@ -17,10 +17,8 @@ screens* is on (Settings > Display).
 |-------|------------|------|
 | **OSD Classic** (default) | System tunnel | Indigo tunnel like the PS2 system menu backdrop, OSDSYS highlight blue, accent-bar selection |
 | Classic Black | Solid colour | Plain black; the lightest background. Change its colour to get any solid colour |
-| PS2 Towers | PS2 towers | The opening's tower field seen from above, blue fog pool, three small drifting lights |
-| Disc Error Red | Disc error red | Dark red clouds streaming past, a pulsing flare, a slowly turning glass cube |
-| PS2 Blue Mist | Blue mist | Dark navy with slow translucent blue forms |
-| Midnight Gradient | Gradient | Blue to black |
+| PS2 Towers | PS2 towers | Faster drifting/rotating tower field seen from above, blue fog pool, three moving lights |
+| PS2 Blue Mist | Blue mist | Midnight blue-to-black gradient with moving translucent blue mist |
 | OSD Minimal | Orbit lights | Near black, the main menu's ring of eight lights; no panels, selection by text colour only |
 | System Clock | Clock ring | System Configuration's twelve-rod clock: the ring turns with the seconds, the current hour's rod is lit and fills with the minutes |
 | Memory Card Grid | Memory card grid | Sparse block grid in thin lines |
@@ -34,7 +32,7 @@ screens* is on (Settings > Display).
 | CRT | Gradient + scanlines | Understated scanlines over the background only |
 | PSX | Ribbons | Charcoal with silver ribbons |
 | Crystal | Crystal | The previous dashboard look (crystal towers, stars, glow, initials tiles) |
-| Light Show | Light streaks | Light pillars sweeping across an indigo night |
+| Disc Error Red | Disc error red | Dark red clouds streaming past, a pulsing flare and rotating glass cubes |
 
 Every background is drawn procedurally from a few GS primitives. None of
 them uses or needs Sony BIOS data. The PS2-inspired scenes were designed
@@ -52,8 +50,10 @@ the colour-swap selection.
   cursor; confirm keeps it, cancel restores your previous theme (even an
   edited one).
 * **Customize theme...** opens the theme editor.
-* **Background motion**: Full / Subtle / Off. Off shows a still frame of
-  the same background, so every background has a static variant.
+* **Background motion**: 0-200% in 10% steps. 0% freezes the scene, 100%
+  is the normal speed, and 200% doubles it.
+* **Menu animation**: 0-200% in 10% steps. 0% makes transitions instant;
+  larger values keep transitions moving for longer.
 * **Load theme from folder...**, **Save theme to folder...**,
   **Restore default theme**.
 
@@ -63,7 +63,7 @@ puts that group back to the values of the preset the theme started from.
 
 | Group | Options |
 |-------|---------|
-| Background | Background type, Colour, Second colour, Brightness (10-100 %), Motion, Animations, CRT scanlines, Wallpaper image... |
+| Background | Background type, Colour, Second colour, Brightness (10-200 %), Background motion, Menu animation, CRT scanlines, Wallpaper image... |
 | Colours | Text, Secondary text, Muted text, Selected text, Accent, Selection (with opacity), Panels (with opacity), Borders (with opacity), Warnings |
 | Style | Tile style (memory card, rounded, chamfered, floating object, crystal slab), Selection style (solid bar, accent bar, outline, text colour), Corners (square, soft, round), Glow, Panel opacity |
 | Text | Font (Roboto, System), Text size (90-115 %), Bold, Text shadow |
@@ -139,8 +139,9 @@ Old configurations and theme folders without `tile_style` also use Memory card.
 
 Tile style applies to Home and Apps artwork, including fallback icons and
 initials. Panels, dialogs and list rows keep their separate Corners setting.
-As with other theme edits, changes preview immediately and autosave after a
-short idle delay; the general Settings Discard action does not undo them.
+As with other theme edits, changes preview immediately. They participate in
+the normal Settings Save / Discard / Keep editing flow, so Discard restores
+the theme snapshot from when Settings was opened.
 Reset style restores Memory card. Exported themes include `tile_style` and
 customized dashboard configurations store it as `Theme_tile_style`.
 
@@ -236,7 +237,7 @@ clock_position = header
 | `background` | `solid`, `gradient`, `tunnel`, `mist`, `towers`, `disc`, `orbit`, `clockring`, `grid`, `lines`, `cubes`, `stream`, `tiles`, `brushed`, `wave`, `crystal`, `streaks`, `clouds`, `image` |
 | `image` | wallpaper PNG for `background = image` |
 | `background_color`, `background_color2` | colour |
-| `brightness` | 10-100 (%) |
+| `brightness` | 10-200 (%) |
 | `scanlines` | 0 / 1 |
 | `text`, `text_secondary`, `text_muted`, `text_selected` | colour |
 | `accent`, `accent2`, `warning`, `error`, `success` | colour |
@@ -265,9 +266,11 @@ also accept their number.
 Image paths without a device (`background.png`, `img/app.png`) are relative
 to the theme folder. Full paths (`mass:/THEMES/pic.png`) work too.
 
-Preset ids: `osd`, `black`, `towers`, `discred`, `mist`, `midnight`,
-`minimal`, `clockring`, `mcgrid`, `bootlines`, `cubes`, `stream`, `mcblue`,
-`brushed`, `biosblue`, `mono`, `crt`, `psx`, `crystal`, `lightshow`.
+Preset ids: `osd`, `black`, `towers`, `mist`, `minimal`, `clockring`,
+`mcgrid`, `bootlines`, `cubes`, `stream`, `mcblue`, `brushed`, `biosblue`,
+`mono`, `crt`, `psx`, `crystal`, `discred`. Older saved `midnight`
+selections resolve to Blue Mist; older `lightshow` selections resolve to OSD Classic.
+Light Streaks remains available as a custom background type.
 
 A complete example is in [theme-example/theme.cfg](theme-example/theme.cfg).
 
@@ -309,10 +312,12 @@ The optional PSBBN layers in `<dashboard folder>/THEME/` (`background.png`,
 
 ## Restoring defaults
 
-* *Settings > Theme > Restore default theme*: back to OSD Classic.
+* *Square* in the theme editor resets only the highlighted setting.
+* *Reset ...* at the end of each editor group resets only that group.
 * *Theme editor > Manage > Reset entire theme*: back to the preset the
   current theme started from.
-* *Reset ...* at the end of each editor group: only that group.
+* *Settings > Theme > Restore default theme*: back to OSD Classic.
+* *Settings > Display > Reset display & theme defaults*: restores both groups together.
 * Deleting the `Theme_*` lines from DASHBOARD.CNF (or the file) also
   restores the default.
 
@@ -322,8 +327,9 @@ Every background is budgeted for full frame rate on a real PS2 while the
 dashboard stays responsive; they are all a few hundred flat or gouraud
 primitives at most (PS2 Towers is the heaviest, about 500 quads).
 
-* *Motion: Off* stops the background clock: same picture, no animation.
-* *Motion: Subtle* runs slower with fewer elements.
+* *Background motion: 0%* freezes the scene; nonzero values keep real-time
+  clock motion fluid. 100% is normal speed and 200% doubles scene motion.
+* Lower percentages use the lighter scene detail where appropriate.
 * *Solid colour* costs nothing and is the safe fallback.
 * The app artwork background reuses the artwork cache; it never loads a
   file itself.

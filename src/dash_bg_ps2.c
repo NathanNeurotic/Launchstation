@@ -47,12 +47,12 @@ static DashColor colA(DashColor c, int a)
 void dashBgSceneTunnel(float t, int fx)
 {
 	DashColor wall = dashTheme.bg1, far_c = dashTheme.bg2;
-	float travel = t * 0.035f; /* rings per second */
+	float travel = t * 0.095f; /* rings per second */
 	float s = travel - (float)(int)travel;
 	int base_ring = (int)travel;
-	float roll = t * 0.018f;
-	float cx = 320.0f + dashSinf(t * 0.021f) * 18.0f;
-	float cy = 214.0f + dashCosf(t * 0.017f) * 10.0f;
+	float roll = t * 0.052f;
+	float cx = 320.0f + dashSinf(t * 0.070f) * 22.0f;
+	float cy = 214.0f + dashCosf(t * 0.058f) * 14.0f;
 	float px[TUN_RINGS + 1][TUN_SEGS + 1], py[TUN_RINGS + 1][TUN_SEGS + 1];
 	float bright[TUN_RINGS + 1];
 	int k, j;
@@ -97,20 +97,21 @@ void dashBgSceneTunnel(float t, int fx)
 void dashBgSceneMist(float t, int fx)
 {
 	DashColor b = dashTheme.bg2, m = dashTheme.bg1;
-	int i, n = (fx == DASH_FX_SUBTLE) ? 4 : 6;
+	int i, n = (fx == DASH_FX_SUBTLE) ? 4 : 7;
 
-	dashRectGradV(0, 0, DASH_VW, DASH_VH, dashColorLighten(b, 0.04f), b);
+	/* Midnight's blue-to-black base, with the Blue Mist motion layered over it. */
+	dashRectGradV(0, 0, DASH_VW, DASH_VH, dashColorLerp(b, m, 0.34f), b);
 	dashGfxBlend(DASH_BLEND_ADD);
 	for (i = 0; i < n; i++) {
-		float sp = 0.013f + i * 0.004f;
-		float x = 320.0f + dashSinf(t * sp + i * 1.9f) * (260.0f - i * 18.0f);
-		float y = 200.0f + dashCosf(t * sp * 0.8f + i * 2.7f) * (120.0f + i * 12.0f);
-		float rx = 250.0f + 60.0f * dashSinf(t * 0.02f + i);
-		float ry = 110.0f + 30.0f * dashCosf(t * 0.025f + i * 1.3f);
-		dashGlow(x, y, rx, ry, colA(m, 30 + (i & 1) * 8));
+		float sp = 0.075f + i * 0.013f;
+		float x = 320.0f + dashSinf(t * sp + i * 1.9f) * (275.0f - i * 14.0f);
+		float y = 205.0f + dashCosf(t * sp * 0.74f + i * 2.7f) * (118.0f + i * 9.0f);
+		float rx = 220.0f + 70.0f * dashSinf(t * 0.10f + i);
+		float ry = 92.0f + 34.0f * dashCosf(t * 0.12f + i * 1.3f);
+		dashGlow(x, y, rx, ry, colA(dashColorLighten(m, 0.14f), 25 + (i & 1) * 10));
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
-	dashBgVignette(0.7f);
+	dashBgVignette(0.72f);
 }
 
 //--------------------------------------------------------------
@@ -202,11 +203,11 @@ void dashBgSceneTowers(float t, int fx)
 	int n;
 
 	towersInit();
-	cam.ca = dashCosf(0.12f * dashSinf(t * 0.045f) + t * 0.004f);
-	cam.sa = dashSinf(0.12f * dashSinf(t * 0.045f) + t * 0.004f);
-	cam.cx = 320.0f + dashSinf(t * 0.03f) * 14.0f;
-	cam.cy = 224.0f + dashCosf(t * 0.026f) * 10.0f;
-	cam.cam_h = 150.0f + 7.0f * dashSinf(t * 0.07f);
+	cam.ca = dashCosf(0.22f * dashSinf(t * 0.14f) + t * 0.024f);
+	cam.sa = dashSinf(0.22f * dashSinf(t * 0.14f) + t * 0.024f);
+	cam.cx = 320.0f + dashSinf(t * 0.11f) * 24.0f;
+	cam.cy = 224.0f + dashCosf(t * 0.085f) * 17.0f;
+	cam.cam_h = 150.0f + 15.0f * dashSinf(t * 0.19f);
 	cam.f = 300.0f;
 
 	dashRect(0, 0, DASH_VW, DASH_VH, black);
@@ -266,7 +267,7 @@ void dashBgSceneTowers(float t, int fx)
 		static const u8 lc[3][3] = {{255, 60, 60}, {70, 255, 110}, {170, 90, 255}};
 		int i;
 		for (i = 0; i < 3; i++) {
-			float a = t * (0.07f + i * 0.023f) + i * 2.1f;
+			float a = t * (0.16f + i * 0.041f) + i * 2.1f;
 			float lx = cam.cx + dashCosf(a) * (120.0f + i * 50.0f);
 			float ly = cam.cy + dashSinf(a * 1.3f) * (70.0f + i * 30.0f);
 			dashGlow(lx, ly, 3.0f, 3.0f, DC(lc[i][0], lc[i][1], lc[i][2], 220));
@@ -347,7 +348,7 @@ void dashBgSceneDisc(float t, int fx)
 	DashColor red = dashTheme.bg1, base_c = dashTheme.bg2;
 	float cx = 320.0f, cy = 206.0f;
 	int i, n = (fx == DASH_FX_FULL) ? DISC_CLOUDS : DISC_CLOUDS / 2;
-	float pulse = 0.85f + 0.15f * dashSinf(t * 0.9f);
+	float pulse = 0.82f + 0.18f * dashSinf(t * 1.35f);
 
 	dashRect(0, 0, DASH_VW, DASH_VH, base_c);
 	/* the dim red body of the cloud bank */
@@ -356,7 +357,7 @@ void dashBgSceneDisc(float t, int fx)
 	dashGfxBlend(DASH_BLEND_ADD);
 	/* cloud blobs streaming towards the camera */
 	for (i = 0; i < n; i++) {
-		float life = t * (0.022f + (i % 5) * 0.004f) + dashBgHash(i, 3);
+		float life = t * (0.050f + (i % 5) * 0.008f) + dashBgHash(i, 3);
 		float z = 1.0f - (life - (float)(int)life); /* 1 far .. 0 near */
 		float ang = dashBgHash(i, 11) * TAU_F + t * 0.01f * ((i & 1) ? 1 : -1);
 		float rad = 30.0f + dashBgHash(i, 17) * 120.0f;
@@ -378,7 +379,7 @@ void dashBgSceneDisc(float t, int fx)
 
 	/* glass cubes: one large, one small and far */
 	glassCube(cx + 110 + dashSinf(t * 0.05f) * 10.0f, cy - 70 + dashCosf(t * 0.04f) * 8.0f, 58.0f,
-	          0.4f + t * 0.11f, 0.7f + t * 0.07f, red, 1.0f);
+	          0.4f + t * 0.20f, 0.7f + t * 0.13f, red, 1.0f);
 	if (fx != DASH_FX_OFF)
 		glassCube(cx - 30 + dashSinf(t * 0.03f + 1.0f) * 16.0f, cy + 70, 14.0f, 1.1f + t * 0.17f, t * 0.13f, red, 0.8f);
 
@@ -394,27 +395,38 @@ void dashBgSceneDisc(float t, int fx)
 void dashBgSceneOrbit(float t, int fx)
 {
 	DashColor lc = dashTheme.bg1;
-	float cx = 508.0f, cy = 244.0f, r = 58.0f;
-	float spin = t * 0.28f;
+	float cx = 508.0f, cy = 244.0f;
 	int i, k;
 
 	dashRect(0, 0, DASH_VW, DASH_VH, dashTheme.bg2);
-	/* faint ring */
-	for (i = 0; i < 32; i++) {
-		float a0 = i * (TAU_F / 32), a1 = (i + 1) * (TAU_F / 32);
-		dashLine(cx + dashCosf(a0) * r, cy + dashSinf(a0) * r, cx + dashCosf(a1) * r, cy + dashSinf(a1) * r, 1.2f, colA(lc, 26));
+	/* A faint changing path field instead of one rigid ring. */
+	for (i = 0; i < 40; i++) {
+		float a0 = i * (TAU_F / 40), a1 = (i + 1) * (TAU_F / 40);
+		float r0 = 57.0f + 5.0f * dashSinf(a0 * 3.0f + t * 0.18f);
+		float r1 = 57.0f + 5.0f * dashSinf(a1 * 3.0f + t * 0.18f);
+		dashLine(cx + dashCosf(a0) * r0, cy + dashSinf(a0) * r0 * 0.78f,
+		         cx + dashCosf(a1) * r1, cy + dashSinf(a1) * r1 * 0.78f, 1.0f, colA(lc, 20));
 	}
 	dashGfxBlend(DASH_BLEND_ADD);
 	for (i = 0; i < 8; i++) {
-		float a = spin + i * (TAU_F / 8);
-		/* short trail behind each light */
-		if (fx != DASH_FX_OFF)
-			for (k = 3; k >= 1; k--) {
-				float ta = a - k * 0.06f;
-				dashGlow(cx + dashCosf(ta) * r, cy + dashSinf(ta) * r, 5.0f, 5.0f, colA(lc, 40 - k * 10));
-			}
-		dashGlow(cx + dashCosf(a) * r, cy + dashSinf(a) * r, 12.0f, 12.0f, colA(lc, 60));
-		dashGlow(cx + dashCosf(a) * r, cy + dashSinf(a) * r, 3.5f, 3.5f, colA(dashColorLighten(lc, 0.7f), 210));
+		float speed = 0.20f + dashBgHash(i, 1) * 0.22f;
+		float phase = i * (TAU_F / 8) + dashBgHash(i, 2) * 0.55f;
+		float rx = 48.0f + dashBgHash(i, 3) * 25.0f;
+		float ry = 31.0f + dashBgHash(i, 4) * 21.0f;
+		float a = t * speed + phase;
+		float depth = 0.5f + 0.5f * dashSinf(a + i * 0.71f);
+		float size = 2.6f + depth * 2.8f;
+		int alpha = 125 + (int)(depth * 100.0f);
+		int trails = (fx == DASH_FX_SUBTLE) ? 5 : 10;
+
+		for (k = trails; k >= 1; k--) {
+			float ta = a - k * 0.055f;
+			float fade = (trails - k + 1) / (float)(trails + 1);
+			dashGlow(cx + dashCosf(ta) * rx, cy + dashSinf(ta) * ry,
+			         size * (0.55f + fade * 0.35f), size * (0.55f + fade * 0.35f), colA(lc, (int)(42 * fade)));
+		}
+		dashGlow(cx + dashCosf(a) * rx, cy + dashSinf(a) * ry, size * 3.2f, size * 3.2f, colA(lc, 44 + (int)(depth * 34.0f)));
+		dashGlow(cx + dashCosf(a) * rx, cy + dashSinf(a) * ry, size, size, colA(dashColorLighten(lc, 0.72f), alpha));
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
 }
@@ -427,12 +439,31 @@ void dashBgSceneClockRing(float t, int fx)
 	DashColor rod = dashTheme.bg1, b = dashTheme.bg2;
 	float cx = 430.0f, cy = 226.0f;
 	int hour = 0, minute = 0, second = 0, i;
-	float spin, fill;
+	static int clock_ready, held_hour, held_minute, rtc_second;
+	static float held_second, last_anim_t;
+	float now = dashTime(), spin, fill;
 
 	menuTitleGetClockFields(NULL, NULL, NULL, &hour, &minute, &second, NULL, NULL);
-	/* the ring turns once a minute; frozen scenes still show the time */
-	spin = -(second / 60.0f) * TAU_F;
-	fill = minute / 60.0f;
+	if (!clock_ready) {
+		held_hour = hour;
+		held_minute = minute;
+		rtc_second = second;
+		held_second = (float)second;
+		last_anim_t = now;
+		clock_ready = 1;
+	}
+	if (fx != DASH_FX_OFF) {
+		/* Re-anchor on each RTC tick, then interpolate within the second. */
+		if (hour != held_hour || minute != held_minute || second != rtc_second) {
+			held_hour = hour;
+			held_minute = minute;
+			rtc_second = second;
+			last_anim_t = now;
+		}
+		held_second = rtc_second + dashClampf(now - last_anim_t, 0.0f, 0.999f);
+	}
+	spin = -(held_second / 60.0f) * TAU_F;
+	fill = (held_minute + held_second / 60.0f) / 60.0f;
 	(void)t;
 
 	dashRectGradV(0, 0, DASH_VW, DASH_VH, dashColorLighten(b, 0.05f), dashColorScale(b, 0.55f));
@@ -443,14 +474,12 @@ void dashBgSceneClockRing(float t, int fx)
 		float ca = dashCosf(a), sa = dashSinf(a);
 		float r0 = 70.0f, r1 = 190.0f, w = 7.0f;
 		float nx = -sa * w, ny = ca * w;
-		int lit = (i == hour % 12);
+		int lit = (i == held_hour % 12);
 		DashColor ci = colA(rod, lit ? 110 : 34), co = colA(rod, 0);
 
-		/* a translucent glass rod, brightest near the hub */
 		dashQuadG(cx + ca * r0 + nx, cy + sa * r0 * 0.9f + ny, cx + ca * r0 - nx, cy + sa * r0 * 0.9f - ny,
 		          cx + ca * r1 + nx, cy + sa * r1 * 0.9f + ny, cx + ca * r1 - nx, cy + sa * r1 * 0.9f - ny, ci, ci, co, co);
 		if (lit && fx != DASH_FX_OFF) {
-			/* minute progress along the current hour's rod */
 			float rf = r0 + (r1 - r0) * fill;
 			DashColor cb = colA(dashColorLighten(rod, 0.4f), 150);
 			dashQuadG(cx + ca * r0 + nx * 0.5f, cy + sa * r0 * 0.9f + ny * 0.5f, cx + ca * r0 - nx * 0.5f, cy + sa * r0 * 0.9f - ny * 0.5f,

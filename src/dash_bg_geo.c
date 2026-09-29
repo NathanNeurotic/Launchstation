@@ -26,12 +26,17 @@ static float fracf(float v)
 void dashBgSceneGradient(float t, int fx)
 {
 	DashColor top = dashTheme.bg1, bot = dashTheme.bg2;
-	DashColor mid = dashColorLerp(top, bot, 0.55f);
+	float wave = (fx == DASH_FX_OFF) ? 0.0f : (0.5f + 0.5f * dashSinf(t * 0.34f));
+	DashColor mid = dashColorLerp(top, bot, 0.48f + wave * 0.12f);
 
-	(void)t;
-	(void)fx;
-	dashRectGradV(0, 0, DASH_VW, 190, top, mid);
+	dashRectGradV(0, 0, DASH_VW, 190, dashColorLighten(top, wave * 0.035f), mid);
 	dashRectGradV(0, 190, DASH_VW, DASH_VH - 190, mid, bot);
+	if (fx != DASH_FX_OFF) {
+		float x = 80.0f + fracf(t * 0.035f) * (DASH_VW - 160.0f);
+		dashGfxBlend(DASH_BLEND_ADD);
+		dashGlow(x, 170.0f + dashSinf(t * 0.21f) * 60.0f, 190, 125, colA(top, fx == DASH_FX_SUBTLE ? 10 : 17));
+		dashGfxBlend(DASH_BLEND_NORMAL);
+	}
 }
 
 //--------------------------------------------------------------
@@ -98,7 +103,7 @@ void dashBgSceneLines(float t, int fx)
 	dashRectGradV(0, 0, DASH_VW, DASH_VH, dashColorLighten(dashTheme.bg2, 0.025f), dashTheme.bg2);
 	for (i = 0; i < 5; i++) {
 		float len = 180.0f + dashBgHash(i, 4) * 170.0f;
-		float sp = 9.0f + dashBgHash(i, 9) * 12.0f;
+		float sp = 18.0f + dashBgHash(i, 9) * 22.0f;
 		float y = fracf((t * sp + dashBgHash(i, 2) * 900.0f) / (DASH_VH + len)) * (DASH_VH + len) - len;
 		trace(vx[i], y, 2.0f, len, 1, c, 100);
 		if (fx == DASH_FX_FULL) {
@@ -109,7 +114,7 @@ void dashBgSceneLines(float t, int fx)
 	}
 	for (i = 0; i < 3; i++) {
 		float len = 220.0f + dashBgHash(i, 14) * 200.0f;
-		float sp = 7.0f + dashBgHash(i, 19) * 8.0f;
+		float sp = 14.0f + dashBgHash(i, 19) * 15.0f;
 		float x = fracf((t * sp + dashBgHash(i, 12) * 900.0f) / (DASH_VW + len)) * (DASH_VW + len) - len;
 		trace(x, hy[i], len, 2.0f, 0, c, 76);
 	}
@@ -133,30 +138,34 @@ void dashBgSceneCubes(float t, int fx)
 	dashGfxBlend(DASH_BLEND_ADD);
 	dashGlow(320, 224, 320, 220, colA(dashColorScale(c, 0.25f), 60));
 	for (n = 0; n < CUBES; n++) {
-		/* each cube travels towards the camera and respawns far away */
-		float period = 60.0f + dashBgHash(n, 1) * 30.0f;
-		float life = fracf(t / period + dashBgHash(n, 2));
-		float z = 900.0f - life * 820.0f;
-		float wx = (dashBgHash(n, 3) - 0.5f) * 900.0f, wy = (dashBgHash(n, 4) - 0.5f) * 560.0f;
-		float size = 26.0f + dashBgHash(n, 5) * 22.0f;
-		float ax = t * (0.05f + dashBgHash(n, 6) * 0.08f) + n, ay = t * (0.04f + dashBgHash(n, 7) * 0.07f);
-		float fade = dashClampf(life * 5.0f, 0.0f, 1.0f) * dashClampf((1.0f - life) * 6.0f, 0.0f, 1.0f);
+		/* Staggered homes keep the cubes apart. Each cube only drifts inside
+		 * its own small volume and rotates independently on all three axes. */
+		float home_x = ((n % 4) - 1.5f) * 150.0f + ((n & 4) ? 34.0f : -22.0f);
+		float home_y = ((n / 4) ? 105.0f : -105.0f) + ((n & 1) ? 18.0f : -18.0f);
+		float wx = home_x + dashSinf(t * (0.19f + dashBgHash(n, 1) * 0.12f) + n) * (16.0f + dashBgHash(n, 2) * 18.0f);
+		float wy = home_y + dashCosf(t * (0.15f + dashBgHash(n, 3) * 0.11f) + n * 1.7f) * (12.0f + dashBgHash(n, 4) * 15.0f);
+		float z = 470.0f + (n & 1) * 130.0f + dashSinf(t * (0.11f + dashBgHash(n, 5) * 0.08f) + n) * 45.0f;
+		float size = 20.0f + dashBgHash(n, 6) * 18.0f;
+		float ax = t * (0.18f + dashBgHash(n, 7) * 0.24f) + n * 0.7f;
+		float ay = t * (0.14f + dashBgHash(n, 8) * 0.21f) + n * 1.1f;
+		float az = t * (0.12f + dashBgHash(n, 9) * 0.19f) + n * 1.5f;
 		float px[8], py[8];
-		int alpha = (int)(70 * fade * (0.35f + 0.65f * (1.0f - z / 900.0f)));
+		int alpha = 42 + (int)((650.0f - z) * 0.08f);
 
 		if (fx == DASH_FX_SUBTLE && (n & 1))
 			continue;
 		for (i = 0; i < 8; i++) {
 			float x = v[i][0], y = v[i][1], zz = v[i][2], q;
-			float cx_ = dashCosf(ax), sx_ = dashSinf(ax), cy_ = dashCosf(ay), sy_ = dashSinf(ay);
-			float y2 = y * cx_ - zz * sx_, z2 = y * sx_ + zz * cx_;
-			float x3 = x * cy_ + z2 * sy_, z3 = -x * sy_ + z2 * cy_;
-			float depth = z + z3 * size;
-			if (depth < 40.0f)
-				depth = 40.0f;
-			q = 380.0f / depth;
+			float cx = dashCosf(ax), sx = dashSinf(ax), cy = dashCosf(ay), sy = dashSinf(ay), cz = dashCosf(az), sz = dashSinf(az);
+			float y1 = y * cx - zz * sx, z1 = y * sx + zz * cx;
+			float x2 = x * cy + z1 * sy, z2 = -x * sy + z1 * cy;
+			float x3 = x2 * cz - y1 * sz, y3 = x2 * sz + y1 * cz;
+			float depth = z + z2 * size;
+			if (depth < 80.0f)
+				depth = 80.0f;
+			q = 360.0f / depth;
 			px[i] = 320.0f + (wx + x3 * size) * q;
-			py[i] = 224.0f + (wy + y2 * size) * q;
+			py[i] = 224.0f + (wy + y3 * size) * q;
 		}
 		for (i = 0; i < 12; i++)
 			dashLine(px[e[i][0]], py[e[i][0]], px[e[i][1]], py[e[i][1]], 1.3f, colA(c, alpha));
@@ -176,7 +185,7 @@ void dashBgSceneStream(float t, int fx)
 	dashRectGradV(0, 0, DASH_VW, DASH_VH, dashTheme.bg2, dashColorScale(dashTheme.bg2, 0.7f));
 	for (i = 0; i < cols; i++) {
 		float x = 14.0f + i * (612.0f / cols) + dashBgHash(i, 1) * 8.0f;
-		float sp = 12.0f + dashBgHash(i, 2) * 34.0f;
+		float sp = 22.0f + dashBgHash(i, 2) * 48.0f;
 		/* the column's faint rail */
 		dashRect(x, 0, 1, DASH_VH, colA(c, 7));
 		for (k = 0; k < 3; k++) {
@@ -196,7 +205,7 @@ void dashBgSceneTiles(float t, int fx)
 {
 	DashColor c = dashTheme.bg1;
 	float xy[2 * 13 * 10];
-	float ox = fracf(t * 3.0f / 64.0f) * 64.0f, oy = fracf(t * 1.5f / 64.0f) * 64.0f;
+	float ox = fracf(t * 6.0f / 64.0f) * 64.0f, oy = fracf(t * 3.2f / 64.0f) * 64.0f;
 	int i, j, n = 0;
 
 	(void)fx;
@@ -252,7 +261,7 @@ static void buildBrush(void)
 void dashBgSceneBrushed(float t, int fx)
 {
 	DashColor c = dashTheme.bg1;
-	float sheen = fracf(t * 0.01f);
+	float sheen = fracf(t * 0.035f);
 
 	(void)fx;
 	dashRectGradV(0, 0, DASH_VW, DASH_VH, dashColorLighten(dashTheme.bg2, 0.04f), dashTheme.bg2);
@@ -288,7 +297,7 @@ void dashBgSceneWave(float t, int fx)
 	dashGfxBlend(DASH_BLEND_ADD);
 	for (r = 0; r < nr; r++) {
 		float y0 = 250.0f + r * 26.0f, amp = 34.0f - r * 8.0f;
-		float k = 0.0085f + r * 0.0021f, w = 0.16f + r * 0.05f, ph = r * 1.7f;
+		float k = 0.0085f + r * 0.0021f, w = 0.30f + r * 0.075f, ph = r * 1.7f;
 		float th0 = 22.0f + r * 10.0f;
 		int alpha = 30 - r * 6;
 		float px = 0, py = 0, pt = 0;

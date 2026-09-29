@@ -42,6 +42,7 @@ enum SetId {
 	S_C_COL0, /* classic screen colours, COLOR_BACKGR..COLOR_GRAPH4 */
 	S_C_COL7 = S_C_COL0 + 7,
 	S_SCREEN_RESET,
+	S_DISPLAY_THEME_RESET,
 	/* dashboard */
 	S_ENABLED,
 	S_SOUND,
@@ -170,9 +171,10 @@ static const SetItem display_items[] = {
     {ST_CHOICE, S_TVMODE, "Video mode", "Auto follows the console region. Changing it applies immediately."},
     {ST_NUMBER, S_SCREEN_X, "Screen position X", "Moves the picture left or right to fit your TV (overscan)."},
     {ST_NUMBER, S_SCREEN_Y, "Screen position Y", "Moves the picture up or down to fit your TV."},
-    {ST_CHOICE, S_EFFECTS, "Background effects", "Crystal towers, stars and light effects behind the dashboard."},
-    {ST_CHOICE, S_ANIM, "Animations", "Reduce or turn off motion."},
+    {ST_CHOICE, S_EFFECTS, "Background motion", "0% freezes backgrounds; 100% is normal; 200% doubles their motion."},
+    {ST_CHOICE, S_ANIM, "Menu animation", "0% makes transitions instant; higher values increase movement and transition duration."},
     {ST_ACTION, S_SCREEN_RESET, "Reset screen settings", "Video mode Auto and a centred picture."},
+    {ST_ACTION, S_DISPLAY_THEME_RESET, "Reset display & theme defaults", "Restore screen, motion, animation and the OSD Classic theme together."},
 };
 
 static const SetItem dash_items[] = {
@@ -263,7 +265,8 @@ static const SetItem adv_items[] = {
 static const SetItem theme_items[] = {
     {ST_CHOICE, S_T_PRESET, "Theme", NULL},
     {ST_ACTION, S_T_CUSTOMIZE, "Customize theme...", "Background, colours, style, text, icons, clock and wallpaper. Changes apply immediately."},
-    {ST_CHOICE, S_EFFECTS, "Background motion", "Off shows a still frame of the same background."},
+    {ST_CHOICE, S_EFFECTS, "Background motion", "0% freezes backgrounds; 100% is normal; 200% doubles their motion."},
+    {ST_CHOICE, S_ANIM, "Menu animation", "0% makes transitions instant; higher values increase movement and transition duration."},
     {ST_ACTION, S_T_LOAD, "Load theme from folder...", "Themes are folders in THEMES/ next to DASHBOARD.CNF, each with a theme.cfg."},
     {ST_ACTION, S_T_SAVE, "Save theme to folder...", "Writes THEMES/<name>/theme.cfg so it can be edited on a PC or shared."},
     {ST_ACTION, S_T_DEFAULT, "Restore default theme", "OSD Classic with its original settings."},
@@ -290,8 +293,8 @@ static const SetItem tbg_items[] = {
     {ST_COLOR, S_T_BG1, "Colour", "Main colour of the background (the solid colour, gradient top or scene tint)."},
     {ST_COLOR, S_T_BG2, "Second colour", "Base or gradient bottom colour."},
     {ST_CHOICE, S_T_BRIGHT, "Brightness", "Darken the background behind the menus."},
-    {ST_CHOICE, S_EFFECTS, "Motion", "Off shows a still frame. Subtle moves slower with fewer elements."},
-    {ST_CHOICE, S_ANIM, "Animations", "Reduce or turn off motion in the menus."},
+    {ST_CHOICE, S_EFFECTS, "Background motion", "0% freezes backgrounds; 100% is normal; 200% doubles their motion."},
+    {ST_CHOICE, S_ANIM, "Menu animation", "0% makes transitions instant; higher values increase movement and transition duration."},
     {ST_CHOICE, S_T_SCAN, "CRT scanlines", "An understated line pattern over the background only."},
     {ST_ACTION, S_T_IMAGE, "Wallpaper image...", "Choose a PNG (up to 1.5 MB). It is scaled to at most 320x256 and cover-fitted."},
     {ST_ACTION, S_T_RESETCAT, "Reset background", "Back to the values of the theme's preset."},
@@ -378,13 +381,13 @@ static float cat_anim, item_anim, col_anim;
 static int session;
 static int dash_dirty, classic_dirty, net_dirty;
 static DashSettings snap_dash;
+static DashTheme snap_theme;
+static int snap_theme_preset, snap_theme_custom;
 static SETTING snap_classic;
 static char snap_ip[16], snap_nm[16], snap_gw[16];
 
 static const char *const onoff[] = {"Off", "On"};
 static const char *const tv_names[] = {"Auto", "NTSC", "PAL", "VGA", "480p"};
-static const char *const fx_names[] = {"Off", "Subtle", "Full"};
-static const char *const anim_names[] = {"Off", "Reduced", "Full"};
 static const char *const view_names[] = {"Grid", "List", "Carousel"};
 static const char *const recent_names[] = {"0", "4", "8", "12", "16"};
 static const char *const hide_names[] = {"Show all", "Hide HDD1", "Hide HDD0+1", "Hide ATA1", "Hide ATA0+1", "Hide HDD1+ATA1", "Hide all"};
@@ -401,12 +404,13 @@ static const char *const clockpos_names[] = {"Header", "Footer"};
 static const char *const hours_names[] = {"System", "24-hour", "12-hour"};
 static const char *const date_names[] = {"System", "YYYY/MM/DD", "MM/DD/YYYY", "DD/MM/YYYY", "Off"};
 static const char *const wall_names[] = {"Off", "Focused app"};
-static const char *const pct_names[] = {"0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"};
+static const char *const pct_names[] = {"0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%",
+                                        "110%", "120%", "130%", "140%", "150%", "160%", "170%", "180%", "190%", "200%"};
 
 static void themeChanged(void)
 {
 	dashThemeCommit();
-	dashThemeMarkDirty();
+	dash_dirty = 1;
 }
 
 /* Returns number of options and the current index for a CHOICE item. */
@@ -419,11 +423,11 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			*names = tv_names, *cur = setting->TV_mode;
 			return TV_mode_COUNT;
 		case S_EFFECTS:
-			*names = fx_names, *cur = dashCfg.effects;
-			return DASH_FX_COUNT;
+			*names = pct_names, *cur = (dashCfg.effects + 5) / 10;
+			return 21;
 		case S_ANIM:
-			*names = anim_names, *cur = dashCfg.anim;
-			return DASH_ANIM_COUNT;
+			*names = pct_names, *cur = (dashCfg.anim + 5) / 10;
+			return 21;
 		case S_LEGACY_THEME:
 			*cur = dashCfg.legacy_theme;
 			return 2;
@@ -574,9 +578,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return DASH_BG_COUNT;
 		}
 		case S_T_BRIGHT:
-			/* 10%..100% */
+			/* 10%..200% */
 			*names = pct_names + 1, *cur = (dashTheme.bg_bright + 5) / 10 - 1;
-			return 10;
+			return 20;
 		case S_T_SCAN:
 			*cur = dashTheme.scanlines;
 			return 2;
@@ -647,7 +651,7 @@ static int setThemeChoice(int id, int v)
 	switch (id) {
 		case S_T_PRESET:
 			dashThemeSetPreset(v);
-			dashThemeMarkDirty();
+			dash_dirty = 1;
 			return 1;
 		case S_T_BG:
 			t->bg = (u8)v;
@@ -853,7 +857,7 @@ static void colorEditor(const char *title, int id)
 			} else {
 				before = *c;
 				dashThemeCommit();
-				dashThemeMarkDirty();
+				dash_dirty = 1;
 				if (before.r != c->r || before.g != c->g || before.b != c->b || before.a != c->a)
 					dashToast(DASH_TOAST_INFO, "Adjusted to stay readable");
 			}
@@ -955,10 +959,10 @@ static void setChoice(int id, int v)
 			classic_dirty = 1, dash_changed = 0;
 			break;
 		case S_EFFECTS:
-			dashCfg.effects = v;
+			dashCfg.effects = v * 10;
 			break;
 		case S_ANIM:
-			dashCfg.anim = v;
+			dashCfg.anim = v * 10;
 			break;
 		case S_LEGACY_THEME:
 			dashCfg.legacy_theme = v;
@@ -1464,6 +1468,9 @@ static int anyDirty(void)
 static void sessionSnapshot(void)
 {
 	snap_dash = dashCfg;
+	snap_theme = dashTheme;
+	snap_theme_preset = dashThemeBasePreset();
+	snap_theme_custom = dashThemeIsCustom();
 	snap_classic = *setting;
 	dashStrCopy(snap_ip, ip, sizeof(snap_ip));
 	dashStrCopy(snap_nm, netmask, sizeof(snap_nm));
@@ -1520,6 +1527,7 @@ static void settingsRevert(void)
 		int art = dashCfg.artwork != snap_dash.artwork;
 
 		dashCfg = snap_dash;
+		dashThemeRestore(&snap_theme, snap_theme_preset, snap_theme_custom);
 		DashThemeSetLegacyEnabled(1);
 		if (dashCfg.sound || dashCfg.bgm)
 			dashSoundInit();
@@ -1726,6 +1734,32 @@ static void resetScreen(void)
 	classic_dirty = 1;
 }
 
+static void resetDisplayThemeDefaults(void)
+{
+	if (!dashModalConfirm("Reset display & theme defaults", "Restore the screen, motion, animation and OSD Classic theme defaults?", "Reset", 0))
+		return;
+	setting->color[COLOR_BACKGR] = DEF_COLOR1;
+	setting->color[COLOR_FRAME] = DEF_COLOR2;
+	setting->color[COLOR_SELECT] = DEF_COLOR3;
+	setting->color[COLOR_TEXT] = DEF_COLOR4;
+	setting->color[COLOR_GRAPH1] = DEF_COLOR5;
+	setting->color[COLOR_GRAPH2] = DEF_COLOR6;
+	setting->color[COLOR_GRAPH3] = DEF_COLOR7;
+	setting->color[COLOR_GRAPH4] = DEF_COLOR8;
+	setting->TV_mode = TV_mode_AUTO;
+	setting->screen_x = 0;
+	setting->screen_y = 0;
+	setting->Menu_Frame = DEF_MENU_FRAME;
+	setting->Popup_Opaque = DEF_POPUP_OPAQUE;
+	updateScreenMode();
+	dashCfg.effects = 100;
+	dashCfg.anim = 100;
+	dashThemeSetPreset(0);
+	classic_dirty = 1;
+	dash_dirty = 1;
+	dashToast(DASH_TOAST_OK, "Display and theme defaults restored");
+}
+
 //--------------------------------------------------------------
 // Theme actions
 //--------------------------------------------------------------
@@ -1760,7 +1794,7 @@ static void choosePreset(void)
 		return;
 	}
 	dashThemeSetPreset(r);
-	dashThemeMarkDirty();
+	dash_dirty = 1;
 }
 
 static int pickPng(char *out, int size, const char *what)
@@ -1918,11 +1952,86 @@ static void themeLoad(void)
 	if (j->ret == 0) {
 		dashTheme = j->t;
 		dashThemeCommit();
-		dashThemeMarkDirty();
+		dash_dirty = 1;
 		dashToast(DASH_TOAST_OK, "Theme loaded");
 	} else
 		dashModalMessage(DI_WARNING, "Theme not loaded", "theme.cfg is missing or could not be read.", j->folder);
 	free(j);
+}
+
+static int themeSettingResettable(int id)
+{
+	return id == S_EFFECTS || id == S_ANIM || id == S_ARTWORK ||
+	       (id >= S_T_BG && id <= S_T_WALLDIM);
+}
+
+static int resetThemeSetting(int id)
+{
+	DashTheme p;
+	DashTheme *t = &dashTheme;
+
+	if (!themeSettingResettable(id))
+		return 0;
+	if (id == S_EFFECTS) {
+		dashCfg.effects = 100;
+		dash_dirty = 1;
+		return 1;
+	}
+	if (id == S_ANIM) {
+		dashCfg.anim = 100;
+		dash_dirty = 1;
+		return 1;
+	}
+	if (id == S_ARTWORK) {
+		dashCfg.artwork = 1;
+		dash_dirty = 1;
+		return 1;
+	}
+	dashThemeLoadPreset(dashThemeBasePreset(), &p);
+	switch (id) {
+		case S_T_BG: t->bg = p.bg; break;
+		case S_T_BG1: t->bg1 = p.bg1; break;
+		case S_T_BG2: t->bg2 = p.bg2; break;
+		case S_T_BRIGHT: t->bg_bright = p.bg_bright; break;
+		case S_T_SCAN: t->scanlines = p.scanlines; break;
+		case S_T_IMAGE:
+			dashStrCopy(t->image, p.image, sizeof(t->image));
+			if (t->bg == DASH_BG_IMAGE)
+				t->bg = p.bg;
+			break;
+		case S_T_TEXT: t->text = p.text; break;
+		case S_T_TEXT2: t->text2 = p.text2; break;
+		case S_T_TEXT3: t->text3 = p.text3; break;
+		case S_T_SELTEXT: t->sel_text = p.sel_text; break;
+		case S_T_ACCENT: t->accent = p.accent; break;
+		case S_T_SELECT: t->select = p.select; break;
+		case S_T_PANEL: t->panel = p.panel; break;
+		case S_T_BORDER: t->border = p.border; break;
+		case S_T_WARN: t->warn = p.warn; break;
+		case S_T_HL: t->highlight = p.highlight; break;
+		case S_T_CORNER: t->corner = p.corner; break;
+		case S_T_TILE: t->tile_style = p.tile_style; break;
+		case S_T_GLOW: t->glow = p.glow; break;
+		case S_T_PANEL_A: t->panel.a = p.panel.a; break;
+		case S_T_FONT: t->font = p.font; break;
+		case S_T_FSCALE: t->font_scale = p.font_scale; break;
+		case S_T_BOLD: t->bold = p.bold; break;
+		case S_T_SHADOW: t->text_shadow = p.text_shadow; break;
+		case S_T_ICONTINT: t->icon_tint = p.icon_tint; break;
+		case S_T_APPICON: t->app_icon_style = p.app_icon_style; break;
+		case S_T_APPICON_IMG: dashStrCopy(t->app_icon, p.app_icon, sizeof(t->app_icon)); break;
+		case S_T_CLOCK: t->clock = p.clock; break;
+		case S_T_CLOCKPOS: t->clock_pos = p.clock_pos; break;
+		case S_T_HOURS: t->clock_hours = p.clock_hours; break;
+		case S_T_SECONDS: t->clock_seconds = p.clock_seconds; break;
+		case S_T_DATE: t->clock_date = p.clock_date; break;
+		case S_T_WALL: t->wallpaper = p.wallpaper; break;
+		case S_T_WALLDIM: t->wall_dim = p.wall_dim; break;
+		default: return 0;
+	}
+	dashThemeCommit();
+	dash_dirty = 1;
+	return 1;
 }
 
 static void runThemeAction(int id)
@@ -1944,7 +2053,9 @@ static void runThemeAction(int id)
 		case S_T_DEFAULT:
 			if (dashModalConfirm("Restore default theme", "Replace the current theme with OSD Classic? Saved theme folders are not affected.", "Restore", 0)) {
 				dashThemeSetPreset(0);
-				dashThemeMarkDirty();
+				dashCfg.effects = 100;
+				dashCfg.anim = 100;
+				dash_dirty = 1;
 				dashToast(DASH_TOAST_OK, "Default theme restored");
 			}
 			break;
@@ -1954,14 +2065,21 @@ static void runThemeAction(int id)
 			snprintf(body, sizeof(body), "Undo every change and return to \"%s\"?", dashThemePresetInfo(p)->name);
 			if (dashModalConfirm("Reset entire theme", body, "Reset", 0)) {
 				dashThemeSetPreset(p);
-				dashThemeMarkDirty();
+				dashCfg.effects = 100;
+				dashCfg.anim = 100;
+				dash_dirty = 1;
 			}
 			break;
 		}
 		case S_T_RESETCAT:
 			if (cat >= 0 && cat <= DASH_TG_WALLPAPER) {
 				dashThemeResetGroup(cat);
-				dashThemeMarkDirty();
+				if (cat == DASH_TG_BACKGROUND) {
+					dashCfg.effects = 100;
+					dashCfg.anim = 100;
+				} else if (cat == DASH_TG_WALLPAPER)
+					dashCfg.artwork = 1;
+				dash_dirty = 1;
 				dashToast(DASH_TOAST_OK, "Reset to the preset's values");
 			}
 			break;
@@ -1998,6 +2116,9 @@ static void runAction(int id)
 	switch (id) {
 		case S_SCREEN_RESET:
 			resetScreen();
+			break;
+		case S_DISPLAY_THEME_RESET:
+			resetDisplayThemeDefaults();
 			break;
 		case S_SCANPATHS:
 			editScanPaths();
@@ -2088,6 +2209,9 @@ static void settingsInput(const DashInput *in)
 		item = cats[cat].n - 1;
 	} else if (in->pressed & DASH_IN_BACK) {
 		focus_col = 0;
+	} else if (theme_mode && (in->pressed & DASH_IN_FAV) && themeSettingResettable(it->id)) {
+		if (resetThemeSetting(it->id))
+			dashToast(DASH_TOAST_OK, "Setting reset to preset default");
 	} else if (it->type == ST_COLOR && (in->pressed & DASH_IN_OK)) {
 		colorEditor(it->label, it->id);
 	} else if (it->id == S_T_PRESET && (in->pressed & DASH_IN_OK)) {
@@ -2285,7 +2409,9 @@ static void settingsHints(void)
 			h[n].button = dashOkIcon(), h[n].key = NULL,
 			h[n].label = (it->type == ST_ACTION) ? "Open" : (it->type == ST_COLOR || it->type == ST_IP) ? "Edit" :
 			             (it->type == ST_PATH || it->type == ST_LKEY) ? "Choose" : "Change", n++;
-		if (it->type == ST_LKEY)
+		if (theme_mode && themeSettingResettable(it->id))
+			h[n].button = DI_BTN_SQUARE, h[n].key = NULL, h[n].label = "Reset", n++;
+		else if (it->type == ST_LKEY)
 			h[n].button = DI_BTN_SQUARE, h[n].key = NULL, h[n].label = "Title", n++;
 		if (it->type == ST_PATH || it->type == ST_LKEY)
 			h[n].button = DI_BTN_TRIANGLE, h[n].key = NULL, h[n].label = "Clear", n++;

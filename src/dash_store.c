@@ -221,8 +221,8 @@ void dashStoreDefaults(void)
 	dashCfg.enabled = 1;
 	dashCfg.start_section = DASH_SEC_HOME;
 	dashCfg.view = DASH_VIEW_GRID;
-	dashCfg.effects = DASH_FX_FULL;
-	dashCfg.anim = DASH_ANIM_FULL;
+	dashCfg.effects = 100;
+	dashCfg.anim = 100;
 	dashCfg.autoscan = 1;
 	dashCfg.artwork = 1;
 	dashCfg.recent_count = 8;
@@ -250,6 +250,26 @@ static int clampInt(const char *v, int lo, int hi, int def)
 	return x;
 }
 
+/* Dash_Effects / Dash_Animations used to be enum values 0/1/2.
+ * Keep those files compatible while storing the new 0..200 percentages. */
+static int percentSetting(const char *v, int def)
+{
+	int x;
+
+	if (v == NULL || v[0] == '\0')
+		return def;
+	x = atoi(v);
+	if (x == 0)
+		return 0;
+	if (x == 1)
+		return 50;
+	if (x == 2)
+		return 100;
+	if (x < 0 || x > 200)
+		return def;
+	return x;
+}
+
 static int settingsKv(const char *key, char *value, void *user)
 {
 	int *scan_reset = (int *)user;
@@ -261,9 +281,9 @@ static int settingsKv(const char *key, char *value, void *user)
 	else if (!stricmp(key, "Dash_View"))
 		dashCfg.view = clampInt(value, 0, DASH_VIEW_COUNT - 1, DASH_VIEW_GRID);
 	else if (!stricmp(key, "Dash_Effects"))
-		dashCfg.effects = clampInt(value, 0, DASH_FX_COUNT - 1, DASH_FX_FULL);
+		dashCfg.effects = percentSetting(value, 100);
 	else if (!stricmp(key, "Dash_Animations"))
-		dashCfg.anim = clampInt(value, 0, DASH_ANIM_COUNT - 1, DASH_ANIM_FULL);
+		dashCfg.anim = percentSetting(value, 100);
 	else if (!stricmp(key, "Dash_AutoScan"))
 		dashCfg.autoscan = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_Artwork"))

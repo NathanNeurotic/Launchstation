@@ -59,11 +59,11 @@ float dashTime(void)
 
 float dashAnimSpeed(void)
 {
-	if (dashCfg.anim == DASH_ANIM_OFF)
+	/* Existing callers multiply their approach speed by this value.
+	 * 0% is instant, 100% is normal, and 200% doubles transition duration. */
+	if (dashCfg.anim <= 0)
 		return 1000.0f;
-	if (dashCfg.anim == DASH_ANIM_REDUCED)
-		return 2.0f;
-	return 1.0f;
+	return 100.0f / (float)dashCfg.anim;
 }
 
 float dashSectionAnim(void)

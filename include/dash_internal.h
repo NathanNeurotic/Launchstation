@@ -205,7 +205,7 @@ typedef struct
 	char app_icon[DASH_PATH_MAX]; /* optional PNG default application icon */
 	/* background */
 	u8 bg;
-	u8 bg_bright; /* 10..100 % */
+	u8 bg_bright; /* 10..200 % */
 	u8 scanlines; /* CRT line overlay */
 	DashColor bg1, bg2;
 	/* colours */
@@ -503,8 +503,8 @@ typedef struct
 	int enabled;
 	int start_section;
 	int view;
-	int effects;
-	int anim;
+	int effects; /* background motion, 0..200 % */
+	int anim;    /* menu animation, 0..200 % */
 	int autoscan;
 	int artwork;
 	int recent_count;
