@@ -1459,18 +1459,35 @@ failed:
 	return 0;
 }
 
+/* "Changed" means different from when SETTINGS was opened (or last
+ * saved), not "touched": picking the same value again, or changing
+ * something and changing it back, leaves nothing to save. The dirty flags
+ * set by the editors only say where to look. */
+static void refreshDirty(void)
+{
+	if (!session)
+		return;
+	dash_dirty = memcmp(&dashCfg, &snap_dash, sizeof(snap_dash)) != 0 ||
+	             memcmp(&dashTheme, &snap_theme, sizeof(snap_theme)) != 0 ||
+	             dashThemeBasePreset() != snap_theme_preset || dashThemeIsCustom() != snap_theme_custom;
+	classic_dirty = memcmp(setting, &snap_classic, sizeof(snap_classic)) != 0;
+	net_dirty = strcmp(ip, snap_ip) || strcmp(netmask, snap_nm) || strcmp(gw, snap_gw);
+}
+
 static int anyDirty(void)
 {
+	refreshDirty();
 	return dash_dirty || classic_dirty || net_dirty || cfg_failed[0] || cfg_failed[1] || dashStoreSettingsFailed();
 }
 
 static void sessionSnapshot(void)
 {
-	snap_dash = dashCfg;
-	snap_theme = dashTheme;
+	/* byte copies, so the comparison in refreshDirty() never sees padding */
+	memcpy(&snap_dash, &dashCfg, sizeof(snap_dash));
+	memcpy(&snap_theme, &dashTheme, sizeof(snap_theme));
 	snap_theme_preset = dashThemeBasePreset();
 	snap_theme_custom = dashThemeIsCustom();
-	snap_classic = *setting;
+	memcpy(&snap_classic, setting, sizeof(snap_classic));
 	dashStrCopy(snap_ip, ip, sizeof(snap_ip));
 	dashStrCopy(snap_nm, netmask, sizeof(snap_nm));
 	dashStrCopy(snap_gw, gw, sizeof(snap_gw));
@@ -1489,6 +1506,8 @@ static void sessionBegin(void)
 static void settingsCommit(void)
 {
 	int cnf_failed = 0, net_failed = 0;
+
+	refreshDirty();
 	if (dash_dirty || dashStoreSettingsFailed())
 		dashStoreSaveSettings();
 	if (classic_dirty || cfg_failed[CFG_SAVE_CNF])
@@ -1502,13 +1521,14 @@ static void settingsCommit(void)
 /* Puts back what was there when SETTINGS was opened. */
 static void settingsRevert(void)
 {
+	refreshDirty();
 	if (classic_dirty) {
 		int screen = setting->TV_mode != snap_classic.TV_mode || setting->screen_x != snap_classic.screen_x ||
 		             setting->screen_y != snap_classic.screen_y;
 		int lang = setting->language != snap_classic.language || strcmp(setting->lang_file, snap_classic.lang_file);
 		int font = strcmp(setting->font_file, snap_classic.font_file);
 
-		*setting = snap_classic;
+		memcpy(setting, &snap_classic, sizeof(snap_classic));
 		swapKeys = setting->swapKeys;
 		if (screen)
 			updateScreenMode();
@@ -1649,7 +1669,7 @@ static void saveClassicAs(void)
 	r = dashModalMenu("Save wLaunchELF settings to", LoadedConfigPath[0] ? LoadedConfigPath : "not loaded from a file yet", items, n, 0);
 	if (r >= 0 && cfgSave(CFG_SAVE_CNF, targets[r], paths[r])) {
 		/* the wLaunchELF part of the session is saved now */
-		snap_classic = *setting;
+		memcpy(&snap_classic, setting, sizeof(snap_classic));
 		classic_dirty = 0;
 	}
 	free(j);
