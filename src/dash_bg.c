@@ -14,8 +14,8 @@
 //  5. the launch flash
 //
 //Every scene is built from cheap GS primitives. The background clock stops
-//when animations or background effects are off, so each scene doubles as
-//its own static variant; SUBTLE effects run at a slower pace with fewer
+//when background motion is 0%, so each scene doubles as
+//its own static variant; values below 50% use fewer
 //elements.
 //--------------------------------------------------------------
 #include "dash_internal.h"
@@ -132,19 +132,22 @@ void dashBgFlash(float amount)
 		flash = amount;
 }
 
-static int bgAnimated(void)
+static int bgEffects(void)
 {
-	return dashCfg.anim != DASH_ANIM_OFF && dashCfg.effects != DASH_FX_OFF;
+	if (dashCfg.effects == 0)
+		return DASH_FX_OFF;
+	return dashCfg.effects < 50 ? DASH_FX_SUBTLE : DASH_FX_FULL;
 }
 
 void dashBgUpdate(float dt)
 {
 	int i;
-	int animated = bgAnimated();
-	/* SUBTLE effects: same scene, slower */
-	float speed = !animated ? 0.0f : (dashCfg.effects == DASH_FX_SUBTLE ? 0.5f : 1.0f);
+	int fx = bgEffects();
+	int animated = fx != DASH_FX_OFF;
+	/* A continuous speed control, independent of menu transitions. */
+	float speed = dashCfg.effects / 100.0f;
 
-	bg_time += dt * speed;
+	bg_time += dt * speed * 2.5f;
 	flash = dashApproach(flash, 0.0f, 3.0f, dt);
 
 	/* app-aware wallpaper focus tracking (the sections publish their
@@ -163,6 +166,7 @@ void dashBgUpdate(float dt)
 	if (dashTheme.bg != DASH_BG_CRYSTAL || !animated)
 		return;
 
+	dt *= speed * 2.5f;
 	for (i = 0; i < BG_STARS; i++) {
 		stars[i].x -= stars[i].speed * dt;
 		if (stars[i].x < -4.0f) {
@@ -181,7 +185,7 @@ void dashBgUpdate(float dt)
 	for (i = 0; i < BG_TOWERS; i++)
 		towers[i].rot += towers[i].rot_speed * dt;
 
-	if (dashCfg.effects == DASH_FX_FULL) {
+	if (fx == DASH_FX_FULL) {
 		if (streak_t < 0.0f) {
 			streak_next -= dt;
 			if (streak_next <= 0.0f) {
@@ -223,7 +227,7 @@ static void drawThemeLayers(void)
 
 	if (bg != NULL)
 		dashTexDraw(bg, 0, 0, DASH_VW, DASH_VH, DC(255, 255, 255, 255));
-	if (dashCfg.effects == DASH_FX_OFF)
+	if (bgEffects() == DASH_FX_OFF)
 		return;
 	s1 = dashThemeTexture("stars1.png", 256, 128);
 	s2 = dashThemeTexture("stars2.png", 256, 128);
@@ -436,9 +440,16 @@ static void drawScene(int fx)
 {
 	float t = bg_time;
 
+	dashGfxColorGain(dashTheme.bg_bright > 100 ? dashTheme.bg_bright / 100.0f : 1.0f);
 	switch (dashTheme.bg) {
 		case DASH_BG_SOLID:
 			dashRect(0, 0, DASH_VW, DASH_VH, dashTheme.bg1);
+			/* Low-contrast moving light also brings the black/mono presets alive. */
+			if (fx != DASH_FX_OFF) {
+				DashColor light = dashColorLighten(dashTheme.bg1, 0.16f);
+				light.a = 100;
+				dashGlow(320 + 230 * dashSinf(t * 0.18f), 224 + 110 * dashCosf(t * 0.23f), 230, 150, light);
+			}
 			break;
 		case DASH_BG_GRADIENT:
 			dashBgSceneGradient(t, fx);
@@ -500,6 +511,7 @@ static void drawScene(int fx)
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
 	dashGfxScissorReset();
+	dashGfxColorGain(1.0f);
 
 	if (dashTheme.bg_bright < 100)
 		dashRect(0, 0, DASH_VW, DASH_VH, DC(0, 0, 0, (int)((100 - dashTheme.bg_bright) * 2.55f)));
@@ -513,7 +525,7 @@ void dashBgDrawStatic(void)
 
 void dashBgDraw(void)
 {
-	drawScene(dashCfg.effects);
+	drawScene(bgEffects());
 	drawAppWallpaper();
 	if (dashTheme.scanlines)
 		drawScanlines();

@@ -221,8 +221,8 @@ void dashStoreDefaults(void)
 	dashCfg.enabled = 1;
 	dashCfg.start_section = DASH_SEC_HOME;
 	dashCfg.view = DASH_VIEW_GRID;
-	dashCfg.effects = DASH_FX_FULL;
-	dashCfg.anim = DASH_ANIM_FULL;
+	dashCfg.effects = 100;
+	dashCfg.anim = 100;
 	dashCfg.autoscan = 1;
 	dashCfg.artwork = 1;
 	dashCfg.recent_count = 8;
@@ -261,9 +261,13 @@ static int settingsKv(const char *key, char *value, void *user)
 	else if (!stricmp(key, "Dash_View"))
 		dashCfg.view = clampInt(value, 0, DASH_VIEW_COUNT - 1, DASH_VIEW_GRID);
 	else if (!stricmp(key, "Dash_Effects"))
-		dashCfg.effects = clampInt(value, 0, DASH_FX_COUNT - 1, DASH_FX_FULL);
+		dashCfg.effects = clampInt(value, 0, DASH_FX_COUNT - 1, DASH_FX_FULL) * 50;
+	else if (!stricmp(key, "Dash_MotionPercent"))
+		dashCfg.effects = clampInt(value, 0, 200, 100);
+	else if (!stricmp(key, "Dash_AnimationPercent"))
+		dashCfg.anim = clampInt(value, 0, 200, 100);
 	else if (!stricmp(key, "Dash_Animations"))
-		dashCfg.anim = clampInt(value, 0, DASH_ANIM_COUNT - 1, DASH_ANIM_FULL);
+		dashCfg.anim = clampInt(value, 0, DASH_ANIM_COUNT - 1, DASH_ANIM_FULL) * 50;
 	else if (!stricmp(key, "Dash_AutoScan"))
 		dashCfg.autoscan = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_Artwork"))
@@ -409,8 +413,8 @@ static char *buildSettings(int *out_len)
 	                "Dash_Enabled = %d\r\n"
 	                "Dash_StartSection = %d\r\n"
 	                "Dash_View = %d\r\n"
-	                "Dash_Effects = %d\r\n"
-	                "Dash_Animations = %d\r\n"
+	                "Dash_MotionPercent = %d\r\n"
+	                "Dash_AnimationPercent = %d\r\n"
 	                "Dash_AutoScan = %d\r\n"
 	                "Dash_Artwork = %d\r\n"
 	                "Dash_RecentCount = %d\r\n"

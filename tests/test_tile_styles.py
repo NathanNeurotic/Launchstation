@@ -33,6 +33,7 @@ stub = r"""
 #include <math.h>
 typedef unsigned char u8;
 #define DASH_PATH_MAX 1024
+#define SETTING_LK_START 11
 #define stricmp strcasecmp
 static float dashClampf(float v,float lo,float hi) { return v<lo?lo:v>hi?hi:v; }
 static void dashStrCopy(char *d,const char *s,int n) { snprintf(d,n,"%s",s); }
@@ -50,6 +51,10 @@ stub += theme[theme.index("static int hexNibble"):theme.index("// Theme folders\
 stub += function(theme, "void dashThemeResetGroup(")
 stub += function(theme, "void dashThemeRestore(")
 stub += function(art, "static int tileVertices(")
+settings = (root / "src/dash_settings.c").read_text()
+ids = settings.index("enum SetId")
+stub += settings[ids:settings.index("};", ids) + 2]
+stub += function(settings, "static int resetThemeValue(")
 checks = r"""
 static void reload(char *buf, int store) {
     char *line = strtok(buf, "\r\n");
@@ -68,6 +73,7 @@ int main(void) {
     for (int p = 0; p < dashThemePresetCount(); p++) {
         dashThemeLoadPreset(p, &dashTheme);
         assert(dashTheme.tile_style == DASH_TILE_MEMORY_CARD);
+        assert(dashTheme.bold == 1);
     }
     /* Old custom config, with no tile key, gets the new default. */
     dashThemeStoreBegin();
@@ -104,9 +110,40 @@ int main(void) {
             }
         }
     }
+    assert(dashThemeFindPreset("lightshow") == dashThemeFindPreset("osd"));
+    assert(dashThemeFindPreset("midnight") == dashThemeFindPreset("mist"));
+    assert(dashThemeFindPreset("Midnight Gradient") == dashThemeFindPreset("mist"));
+    assert(!strcmp(dashThemePresetInfo(dashThemePresetCount()-1)->id, "discred"));
+    for (int bright=10; bright<=200; bright+=10) {
+        dashTheme.bg_bright = bright;
+        dashThemeValidate(&dashTheme);
+        assert(dashTheme.bg_bright == bright);
+        dashThemeSerialize(&dashTheme, buf, sizeof(buf), "");
+        dashThemeLoadPreset(0, &dashTheme); reload(buf, 0);
+        assert(dashTheme.bg_bright == bright);
+    }
+    DashTheme preset, expected;
+    dashThemeLoadPreset(0, &preset);
+    dashTheme = preset;
+    dashTheme.bg_bright = 180; dashTheme.bold = 0; dashTheme.panel.a = 12;
+    strcpy(dashTheme.image, "mass:/custom.png");
+    expected = dashTheme; expected.bg_bright = preset.bg_bright;
+    assert(resetThemeValue(S_T_BRIGHT, &dashTheme, &preset));
+    assert(!memcmp(&dashTheme, &expected, sizeof(expected)));
+    expected.panel.a = preset.panel.a;
+    assert(resetThemeValue(S_T_PANEL_A, &dashTheme, &preset));
+    assert(!memcmp(&dashTheme, &expected, sizeof(expected)));
+    expected.bold = preset.bold;
+    assert(resetThemeValue(S_T_BOLD, &dashTheme, &preset));
+    assert(!memcmp(&dashTheme, &expected, sizeof(expected)));
+    assert(resetThemeValue(S_T_IMAGE, &dashTheme, &preset));
+    assert(!strcmp(dashTheme.image, preset.image));
+    assert(!resetThemeValue(S_T_SAVE, NULL, NULL));
+    dashTheme.bg_bright = 255; dashThemeValidate(&dashTheme);
+    assert(dashTheme.bg_bright == 200);
     dashTheme.tile_style = 255; dashThemeValidate(&dashTheme);
     assert(dashTheme.tile_style == DASH_TILE_MEMORY_CARD);
-    puts("PASS: all preset defaults, old config, every style round-trip, invalid values, reset/restore, convex silhouettes");
+    puts("PASS: all preset defaults, old config, every style round-trip, invalid values, reset/restore, convex silhouettes, brightness, bold text, individual resets");
 }
 """
 compiler = shutil.which("gcc") or shutil.which("clang")

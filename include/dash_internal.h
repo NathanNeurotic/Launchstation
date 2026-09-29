@@ -205,7 +205,7 @@ typedef struct
 	char app_icon[DASH_PATH_MAX]; /* optional PNG default application icon */
 	/* background */
 	u8 bg;
-	u8 bg_bright; /* 10..100 % */
+	u8 bg_bright; /* 10..200 % */
 	u8 scanlines; /* CRT line overlay */
 	DashColor bg1, bg2;
 	/* colours */
@@ -503,8 +503,8 @@ typedef struct
 	int enabled;
 	int start_section;
 	int view;
-	int effects;
-	int anim;
+	int effects; /* background motion, 0..200 percent */
+	int anim;    /* menu animation amount, 0..200 percent */
 	int autoscan;
 	int artwork;
 	int recent_count;
@@ -993,5 +993,8 @@ void dashBgSceneClouds(float t, int fx);
 float dashBgHash(int a, int b); /* stable 0..1 */
 void dashBgVignette(float strength);
 void dashIconMany(int id, const float *xy, int n, float size, DashColor c);
+
+/* Background-only colour gain; reset before drawing the interface. */
+void dashGfxColorGain(float gain);
 
 #endif

@@ -16,16 +16,14 @@ screens* is on (Settings > Display).
 | Theme | Background | Look |
 |-------|------------|------|
 | **OSD Classic** (default) | System tunnel | Indigo tunnel like the PS2 system menu backdrop, OSDSYS highlight blue, accent-bar selection |
-| Classic Black | Solid colour | Plain black; the lightest background. Change its colour to get any solid colour |
+| Classic Black | Solid colour | Black with drifting charcoal light; still when motion is off |
 | PS2 Towers | PS2 towers | The opening's tower field seen from above, blue fog pool, three small drifting lights |
-| Disc Error Red | Disc error red | Dark red clouds streaming past, a pulsing flare, a slowly turning glass cube |
-| PS2 Blue Mist | Blue mist | Dark navy with slow translucent blue forms |
-| Midnight Gradient | Gradient | Blue to black |
+| PS2 Blue Mist | Blue mist | Midnight blue-to-black gradient with flowing blue mist |
 | OSD Minimal | Orbit lights | Near black, the main menu's ring of eight lights; no panels, selection by text colour only |
 | System Clock | Clock ring | System Configuration's twelve-rod clock: the ring turns with the seconds, the current hour's rod is lit and fills with the minutes |
 | Memory Card Grid | Memory card grid | Sparse block grid in thin lines |
 | Boot Lines | Boot lines | Soft light traces |
-| Wireframe Cubes | Wireframe cubes | A few blue wireframe cubes drifting in depth |
+| Wireframe Cubes | Wireframe cubes | Staggered blue cubes with individual three-axis rotations and bounded drift |
 | Data Stream | Data stream | Abstract device activity in thin columns |
 | Memory Card Blue | Memory card tiles | Muted blue-grey with a tiled memory card motif |
 | Brushed Console | Brushed console | Charcoal with a fine matte finish |
@@ -34,7 +32,36 @@ screens* is on (Settings > Display).
 | CRT | Gradient + scanlines | Understated scanlines over the background only |
 | PSX | Ribbons | Charcoal with silver ribbons |
 | Crystal | Crystal | The previous dashboard look (crystal towers, stars, glow, initials tiles) |
-| Light Show | Light streaks | Light pillars sweeping across an indigo night |
+| Disc Error Red | Disc error red | Dark red clouds streaming past, a pulsing flare, independently turning glass cubes |
+
+The retired `midnight` / `Midnight Gradient` preset names load PS2 Blue Mist.
+Light Show has been removed from the preset picker; saved `lightshow` names
+load OSD Classic. Light Streaks remains available as a custom background.
+Custom theme snapshots retain their saved values.
+
+Background motion is adjustable from **0% to 200%** in 10% steps: 0% is
+still, 100% is normal speed, and 200% doubles the speed. Below 50%, scenes
+also use fewer secondary effects. Menu animation has its own **0%-200%**
+control: 0% is instant; higher values increase movement and transition duration.
+Old Off/Reduced (or Subtle)/Full settings migrate to 0%/50%/100%.
+The clock ring retains real-time smooth rotation at any nonzero background
+motion setting; 0% fixes its orientation while hour/minute information updates.
+
+Background brightness runs from **10% to 200%**. Above 100%, background
+colour channels are boosted with saturation; interface colours are unchanged.
+All built-in presets share CRT's bold text treatment. Existing custom snapshots
+keep their saved typography.
+
+**Reset display & theme defaults**, available in both Display and Theme,
+restores Auto video mode, centred screen position, classic display colours,
+100% motion/menu animation, and the complete OSD Classic theme at 100%
+brightness. Changes use the normal Save / Discard / Keep editing flow.
+
+Press **Square / Reset** on an individual theme setting to restore only that
+value from the selected preset. Group reset actions restore Background, Colours,
+Style, Text, Icons, Clock, or Wallpaper. **Reset entire theme** restores the
+selected preset; **Restore default theme** switches to OSD Classic. Display
+rows also support Square for video mode, X/Y position, and motion controls.
 
 Every background is drawn procedurally from a few GS primitives. None of
 them uses or needs Sony BIOS data. The PS2-inspired scenes were designed
@@ -63,7 +90,7 @@ puts that group back to the values of the preset the theme started from.
 
 | Group | Options |
 |-------|---------|
-| Background | Background type, Colour, Second colour, Brightness (10-100 %), Motion, Animations, CRT scanlines, Wallpaper image... |
+| Background | Background type, Colour, Second colour, Brightness (10-200 %), Background motion (0-200%), Menu animation (0-200%), CRT scanlines, Wallpaper image... |
 | Colours | Text, Secondary text, Muted text, Selected text, Accent, Selection (with opacity), Panels (with opacity), Borders (with opacity), Warnings |
 | Style | Tile style (memory card, rounded, chamfered, floating object, crystal slab), Selection style (solid bar, accent bar, outline, text colour), Corners (square, soft, round), Glow, Panel opacity |
 | Text | Font (Roboto, System), Text size (90-115 %), Bold, Text shadow |
@@ -139,8 +166,8 @@ Old configurations and theme folders without `tile_style` also use Memory card.
 
 Tile style applies to Home and Apps artwork, including fallback icons and
 initials. Panels, dialogs and list rows keep their separate Corners setting.
-As with other theme edits, changes preview immediately and autosave after a
-short idle delay; the general Settings Discard action does not undo them.
+As with other theme edits, changes preview immediately. Save keeps them;
+Discard restores the theme from when Settings was opened.
 Reset style restores Memory card. Exported themes include `tile_style` and
 customized dashboard configurations store it as `Theme_tile_style`.
 
@@ -236,7 +263,7 @@ clock_position = header
 | `background` | `solid`, `gradient`, `tunnel`, `mist`, `towers`, `disc`, `orbit`, `clockring`, `grid`, `lines`, `cubes`, `stream`, `tiles`, `brushed`, `wave`, `crystal`, `streaks`, `clouds`, `image` |
 | `image` | wallpaper PNG for `background = image` |
 | `background_color`, `background_color2` | colour |
-| `brightness` | 10-100 (%) |
+| `brightness` | 10-200 (%) |
 | `scanlines` | 0 / 1 |
 | `text`, `text_secondary`, `text_muted`, `text_selected` | colour |
 | `accent`, `accent2`, `warning`, `error`, `success` | colour |
@@ -267,7 +294,8 @@ to the theme folder. Full paths (`mass:/THEMES/pic.png`) work too.
 
 Preset ids: `osd`, `black`, `towers`, `discred`, `mist`, `midnight`,
 `minimal`, `clockring`, `mcgrid`, `bootlines`, `cubes`, `stream`, `mcblue`,
-`brushed`, `biosblue`, `mono`, `crt`, `psx`, `crystal`, `lightshow`.
+`brushed`, `biosblue`, `mono`, `crt`, `psx`, `crystal`.
+Legacy names `midnight` and `lightshow` remain readable aliases.
 
 A complete example is in [theme-example/theme.cfg](theme-example/theme.cfg).
 

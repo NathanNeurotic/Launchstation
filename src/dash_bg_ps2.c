@@ -99,14 +99,15 @@ void dashBgSceneMist(float t, int fx)
 	DashColor b = dashTheme.bg2, m = dashTheme.bg1;
 	int i, n = (fx == DASH_FX_SUBTLE) ? 4 : 6;
 
-	dashRectGradV(0, 0, DASH_VW, DASH_VH, dashColorLighten(b, 0.04f), b);
+	dashRectGradV(0, 0, DASH_VW, DASH_VH, m, b);
+	m = dashColorLighten(m, 0.22f);
 	dashGfxBlend(DASH_BLEND_ADD);
 	for (i = 0; i < n; i++) {
-		float sp = 0.013f + i * 0.004f;
+		float sp = 0.065f + i * 0.019f;
 		float x = 320.0f + dashSinf(t * sp + i * 1.9f) * (260.0f - i * 18.0f);
 		float y = 200.0f + dashCosf(t * sp * 0.8f + i * 2.7f) * (120.0f + i * 12.0f);
-		float rx = 250.0f + 60.0f * dashSinf(t * 0.02f + i);
-		float ry = 110.0f + 30.0f * dashCosf(t * 0.025f + i * 1.3f);
+		float rx = 250.0f + 60.0f * dashSinf(t * 0.12f + i);
+		float ry = 110.0f + 30.0f * dashCosf(t * 0.15f + i * 1.3f);
 		dashGlow(x, y, rx, ry, colA(m, 30 + (i & 1) * 8));
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
@@ -202,11 +203,11 @@ void dashBgSceneTowers(float t, int fx)
 	int n;
 
 	towersInit();
-	cam.ca = dashCosf(0.12f * dashSinf(t * 0.045f) + t * 0.004f);
-	cam.sa = dashSinf(0.12f * dashSinf(t * 0.045f) + t * 0.004f);
-	cam.cx = 320.0f + dashSinf(t * 0.03f) * 14.0f;
-	cam.cy = 224.0f + dashCosf(t * 0.026f) * 10.0f;
-	cam.cam_h = 150.0f + 7.0f * dashSinf(t * 0.07f);
+	cam.ca = dashCosf(0.16f * dashSinf(t * 0.16f) + t * 0.045f);
+	cam.sa = dashSinf(0.16f * dashSinf(t * 0.16f) + t * 0.045f);
+	cam.cx = 320.0f + dashSinf(t * 0.14f) * 24.0f;
+	cam.cy = 224.0f + dashCosf(t * 0.12f) * 18.0f;
+	cam.cam_h = 150.0f + 10.0f * dashSinf(t * 0.20f);
 	cam.f = 300.0f;
 
 	dashRect(0, 0, DASH_VW, DASH_VH, black);
@@ -391,30 +392,42 @@ void dashBgSceneDisc(float t, int fx)
 //--------------------------------------------------------------
 // Orbit (OSD Minimal)
 //--------------------------------------------------------------
+/* Evaluate the same moving orbit for the light and every historical trail
+ * sample. Changing tilt and radius produce depth, bunching and spreading. */
+static void orbitPoint(float t, int i, float *x, float *y, float *depth)
+{
+	float phase = i * (TAU_F / 8);
+	float a = t * 0.65f + phase + 0.32f * dashSinf(t * 0.27f + phase);
+	float radius = 62.0f + 14.0f * dashSinf(t * 0.31f + phase * 2);
+	float tilt = t * 0.12f + 0.6f * dashSinf(t * 0.19f);
+	float u = dashCosf(a) * radius;
+	float v = dashSinf(a) * radius * (0.45f + 0.25f * dashSinf(t * 0.21f));
+
+	*x = 508.0f + u * dashCosf(tilt) - v * dashSinf(tilt);
+	*y = 244.0f + u * dashSinf(tilt) + v * dashCosf(tilt);
+	*depth = 0.5f + 0.5f * dashSinf(a);
+}
+
 void dashBgSceneOrbit(float t, int fx)
 {
 	DashColor lc = dashTheme.bg1;
-	float cx = 508.0f, cy = 244.0f, r = 58.0f;
-	float spin = t * 0.28f;
-	int i, k;
+	int i, k, trails = fx == DASH_FX_FULL ? 10 : 5;
 
 	dashRect(0, 0, DASH_VW, DASH_VH, dashTheme.bg2);
-	/* faint ring */
-	for (i = 0; i < 32; i++) {
-		float a0 = i * (TAU_F / 32), a1 = (i + 1) * (TAU_F / 32);
-		dashLine(cx + dashCosf(a0) * r, cy + dashSinf(a0) * r, cx + dashCosf(a1) * r, cy + dashSinf(a1) * r, 1.2f, colA(lc, 26));
-	}
 	dashGfxBlend(DASH_BLEND_ADD);
 	for (i = 0; i < 8; i++) {
-		float a = spin + i * (TAU_F / 8);
-		/* short trail behind each light */
+		float x, y, depth, size;
 		if (fx != DASH_FX_OFF)
-			for (k = 3; k >= 1; k--) {
-				float ta = a - k * 0.06f;
-				dashGlow(cx + dashCosf(ta) * r, cy + dashSinf(ta) * r, 5.0f, 5.0f, colA(lc, 40 - k * 10));
+			for (k = trails; k >= 1; k--) {
+				float fade = 1.0f - k / (float)(trails + 1);
+				orbitPoint(t - k * 0.065f, i, &x, &y, &depth);
+				size = (2.0f + depth * 2.5f) * fade;
+				dashGlow(x, y, size * 2, size * 2, colA(lc, (int)(90 * fade * fade)));
 			}
-		dashGlow(cx + dashCosf(a) * r, cy + dashSinf(a) * r, 12.0f, 12.0f, colA(lc, 60));
-		dashGlow(cx + dashCosf(a) * r, cy + dashSinf(a) * r, 3.5f, 3.5f, colA(dashColorLighten(lc, 0.7f), 210));
+		orbitPoint(t, i, &x, &y, &depth);
+		size = 2.5f + depth * 2.5f;
+		dashGlow(x, y, size * 3.5f, size * 3.5f, colA(lc, 70 + (int)(depth * 45)));
+		dashGlow(x, y, size, size, colA(dashColorLighten(lc, 0.8f), 220));
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
 }
@@ -422,17 +435,49 @@ void dashBgSceneOrbit(float t, int fx)
 //--------------------------------------------------------------
 // Clock ring (System Configuration)
 //--------------------------------------------------------------
+/* Follow whole-second RTC observations with a continuous local phase.
+ * New observations correct drift gradually instead of resetting the hand. */
+static float clockPhase(int second, u64 now)
+{
+	static int ready, observed;
+	static u64 last, anchor;
+	static float phase;
+	float dt, target, error;
+
+	if (!ready || now < last || now - last > 2000) {
+		ready = 1;
+		observed = second;
+		last = anchor = now;
+		phase = (float)second;
+	}
+	dt = (now - last) * 0.001f;
+	last = now;
+	if (second != observed) {
+		observed = second;
+		anchor = now;
+	}
+	target = observed + (now - anchor) * 0.001f;
+	phase += dt;
+	error = fmodf(target - phase + 90.0f, 60.0f) - 30.0f;
+	phase += error * dashClampf(dt * 2.0f, 0.0f, 1.0f);
+	phase = fmodf(phase + 60.0f, 60.0f);
+	return phase;
+}
+
 void dashBgSceneClockRing(float t, int fx)
 {
 	DashColor rod = dashTheme.bg1, b = dashTheme.bg2;
 	float cx = 430.0f, cy = 226.0f;
 	int hour = 0, minute = 0, second = 0, i;
-	float spin, fill;
+	float spin, fill, seconds;
 
 	menuTitleGetClockFields(NULL, NULL, NULL, &hour, &minute, &second, NULL, NULL);
-	/* the ring turns once a minute; frozen scenes still show the time */
-	spin = -(second / 60.0f) * TAU_F;
-	fill = minute / 60.0f;
+	/* Real elapsed time keeps the clock independent of background speed. */
+	seconds = clockPhase(second, Timer());
+	if (fx == DASH_FX_OFF)
+		seconds = (float)second;
+	spin = fx == DASH_FX_OFF ? 0.0f : -(seconds / 60.0f) * TAU_F;
+	fill = (minute + seconds / 60.0f) / 60.0f;
 	(void)t;
 
 	dashRectGradV(0, 0, DASH_VW, DASH_VH, dashColorLighten(b, 0.05f), dashColorScale(b, 0.55f));

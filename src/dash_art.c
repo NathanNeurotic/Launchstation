@@ -742,8 +742,8 @@ static void appTile(const DashApp *app, GSTEXTURE *tex, float x, float y, float 
 		badge_size = .12f;
 	} else if (style == DASH_TILE_FLOATING) {
 		ay = .16f - .06f * focus;
-		if (dashCfg.anim != DASH_ANIM_OFF && dashCfg.anim != DASH_ANIM_REDUCED)
-			ay += .015f * focus * dashSinf(dashTime() * 2.0f);
+		if (dashCfg.anim > 0)
+			ay += .015f * (dashCfg.anim / 100.0f) * focus * dashSinf(dashTime() * 2.0f);
 		badge_y = .73f;
 	}
 	tileBody(x, y, w, h, focus, top, bot);

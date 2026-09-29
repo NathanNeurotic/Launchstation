@@ -59,11 +59,9 @@ float dashTime(void)
 
 float dashAnimSpeed(void)
 {
-	if (dashCfg.anim == DASH_ANIM_OFF)
+	if (dashCfg.anim == 0)
 		return 1000.0f;
-	if (dashCfg.anim == DASH_ANIM_REDUCED)
-		return 2.0f;
-	return 1.0f;
+	return 100.0f / dashCfg.anim;
 }
 
 float dashSectionAnim(void)
@@ -773,7 +771,7 @@ void dashRenderScene(void)
 
 	e = dashEaseOutCubic(section_anim);
 	dashGfxPushAlpha(e);
-	dashGfxPushOffset(28.0f * (1.0f - e) * section_dir, 0);
+	dashGfxPushOffset(28.0f * (dashCfg.anim / 100.0f) * (1.0f - e) * section_dir, 0);
 	screens[section]->draw();
 	dashGfxPopOffset();
 	dashGfxPopAlpha();

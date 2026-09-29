@@ -1,8 +1,7 @@
 //--------------------------------------------------------------
 //File name:   dash_bg_geo.c
-//Quiet geometric background scenes. All of them are a handful of flat
-//or gouraud primitives (or one small procedural texture), keep most of
-//the screen empty and move slowly, if at all. Colours: dashTheme.bg1 is
+//Animated geometric background scenes made from flat or gouraud
+//primitives (or one small procedural texture). Colours: dashTheme.bg1 is
 //the drawing colour, dashTheme.bg2 the base.
 //--------------------------------------------------------------
 #include "dash_internal.h"
@@ -21,17 +20,19 @@ static float fracf(float v)
 }
 
 //--------------------------------------------------------------
-// Gradient (Midnight, BIOS Blue, CRT)
+// Gradient (BIOS Blue, CRT)
 //--------------------------------------------------------------
 void dashBgSceneGradient(float t, int fx)
 {
 	DashColor top = dashTheme.bg1, bot = dashTheme.bg2;
 	DashColor mid = dashColorLerp(top, bot, 0.55f);
 
-	(void)t;
+	float split = 210.0f + 65.0f * dashSinf(t * 0.18f);
+
 	(void)fx;
-	dashRectGradV(0, 0, DASH_VW, 190, top, mid);
-	dashRectGradV(0, 190, DASH_VW, DASH_VH - 190, mid, bot);
+	dashRectGradV(0, 0, DASH_VW, split, top, mid);
+	dashRectGradV(0, split, DASH_VW, DASH_VH - split, mid, bot);
+	dashGlow(320 + 210 * dashSinf(t * 0.14f), 200 + 100 * dashCosf(t * 0.19f), 260, 150, colA(top, 90));
 }
 
 //--------------------------------------------------------------
@@ -57,7 +58,7 @@ void dashBgSceneGrid(float t, int fx)
 		float ph = fracf(t / 3.5f);
 		int bi = (int)(dashBgHash(step, 1) * 20), bj = 3 + (int)(dashBgHash(step, 2) * 9);
 		float a = dashSinf(ph * 3.14159f);
-		dashRect(bi * cell + 1, bj * cell + 1, cell - 1, cell - 1, colA(ln, (int)(34 * a)));
+		dashRect(bi * cell + 1, bj * cell + 1, cell - 1, cell - 1, colA(ln, (int)(80 * a)));
 	}
 	for (i = 1; i < 20; i++)
 		dashRect(i * cell, 0, 1, DASH_VH, colA(ln, (i % 4) ? 9 : 20));
@@ -133,16 +134,19 @@ void dashBgSceneCubes(float t, int fx)
 	dashGfxBlend(DASH_BLEND_ADD);
 	dashGlow(320, 224, 320, 220, colA(dashColorScale(c, 0.25f), 60));
 	for (n = 0; n < CUBES; n++) {
-		/* each cube travels towards the camera and respawns far away */
-		float period = 60.0f + dashBgHash(n, 1) * 30.0f;
-		float life = fracf(t / period + dashBgHash(n, 2));
-		float z = 900.0f - life * 820.0f;
-		float wx = (dashBgHash(n, 3) - 0.5f) * 900.0f, wy = (dashBgHash(n, 4) - 0.5f) * 560.0f;
-		float size = 26.0f + dashBgHash(n, 5) * 22.0f;
-		float ax = t * (0.05f + dashBgHash(n, 6) * 0.08f) + n, ay = t * (0.04f + dashBgHash(n, 7) * 0.07f);
-		float fade = dashClampf(life * 5.0f, 0.0f, 1.0f) * dashClampf((1.0f - life) * 6.0f, 0.0f, 1.0f);
+		/* Separate home regions prevent cubes travelling through one another.
+		 * Staggered centres and independent three-axis turns avoid a tiled look.
+		 * Max projected radius is < 62; drift is bounded to 10 pixels in X. */
+		static const float home_x[CUBES] = {76, 232, 398, 560, 94, 250, 416, 570};
+		static const float home_y[CUBES] = {104, 132, 94, 118, 328, 304, 340, 316};
+		float cx = home_x[n] + 10.0f * dashSinf(t * (0.17f + n * 0.013f) + n * 1.7f);
+		float cy = home_y[n] + 22.0f * dashCosf(t * (0.13f + n * 0.009f) + n * 2.3f);
+		float size = 18.0f + dashBgHash(n, 5) * 8.0f + 4.0f * dashSinf(t * 0.17f + n);
+		float ax = t * (0.13f + dashBgHash(n, 6) * 0.12f) + n;
+		float ay = t * (0.11f + dashBgHash(n, 7) * 0.10f) * ((n & 1) ? -1 : 1);
+		float az = t * (0.07f + dashBgHash(n, 8) * 0.09f) + n * 0.7f;
 		float px[8], py[8];
-		int alpha = (int)(70 * fade * (0.35f + 0.65f * (1.0f - z / 900.0f)));
+		int alpha = 95 + (int)(25 * dashSinf(t * 0.3f + n));
 
 		if (fx == DASH_FX_SUBTLE && (n & 1))
 			continue;
@@ -151,12 +155,9 @@ void dashBgSceneCubes(float t, int fx)
 			float cx_ = dashCosf(ax), sx_ = dashSinf(ax), cy_ = dashCosf(ay), sy_ = dashSinf(ay);
 			float y2 = y * cx_ - zz * sx_, z2 = y * sx_ + zz * cx_;
 			float x3 = x * cy_ + z2 * sy_, z3 = -x * sy_ + z2 * cy_;
-			float depth = z + z3 * size;
-			if (depth < 40.0f)
-				depth = 40.0f;
-			q = 380.0f / depth;
-			px[i] = 320.0f + (wx + x3 * size) * q;
-			py[i] = 224.0f + (wy + y2 * size) * q;
+			q = 4.0f / (4.0f + z3 * 0.35f);
+			px[i] = cx + (x3 * dashCosf(az) - y2 * dashSinf(az)) * size * q;
+			py[i] = cy + (x3 * dashSinf(az) + y2 * dashCosf(az)) * size * q;
 		}
 		for (i = 0; i < 12; i++)
 			dashLine(px[e[i][0]], py[e[i][0]], px[e[i][1]], py[e[i][1]], 1.3f, colA(c, alpha));
@@ -252,7 +253,7 @@ static void buildBrush(void)
 void dashBgSceneBrushed(float t, int fx)
 {
 	DashColor c = dashTheme.bg1;
-	float sheen = fracf(t * 0.01f);
+	float sheen = fracf(t * 0.035f);
 
 	(void)fx;
 	dashRectGradV(0, 0, DASH_VW, DASH_VH, dashColorLighten(dashTheme.bg2, 0.04f), dashTheme.bg2);
@@ -267,7 +268,7 @@ void dashBgSceneBrushed(float t, int fx)
 	/* a soft light band slowly crossing the surface */
 	{
 		float x = -300.0f + sheen * (DASH_VW + 600.0f);
-		DashColor z = colA(DC(255, 255, 255, 255), 0), m = colA(DC(255, 255, 255, 255), 9);
+		DashColor z = colA(DC(255, 255, 255, 255), 0), m = colA(DC(255, 255, 255, 255), 24);
 		dashQuadG(x, 0, x + 150, 0, x - 120, DASH_VH, x + 30, DASH_VH, z, m, z, m);
 		dashQuadG(x + 150, 0, x + 300, 0, x + 30, DASH_VH, x + 180, DASH_VH, m, z, m, z);
 	}

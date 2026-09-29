@@ -324,7 +324,8 @@ void dashDrawHeader(int section, float section_anim)
 		float dx = target_x - tab_anim_x;
 
 		tab_anim_x = dashApproach(tab_anim_x, target_x, 14.0f * dashAnimSpeed(), 1.0f / 60.0f);
-		tab_anim_x += dx * 0.04f * dashClampf(fabsf(dx) / tab_w, 0.0f, 1.0f) * dashSinf(dashTime() * 16.0f);
+		if (dashCfg.anim > 0)
+			tab_anim_x += dx * 0.04f * (dashCfg.anim / 100.0f) * dashClampf(fabsf(dx) / tab_w, 0.0f, 1.0f) * dashSinf(dashTime() * 16.0f);
 	}
 
 	/* brand */
@@ -350,11 +351,9 @@ void dashDrawHeader(int section, float section_anim)
 	}
 	/* L1/R1 key pills at the strip ends */
 	{
-		/* measured, so they stay inside the strip at any text size / font */
+		/* Controller glyphs are 22 pixels wide on both sides. */
 		float strip_l = tab_x0 - 40, strip_r = tab_x0 + tab_w * DASH_SEC_COUNT + 40;
-		float rw = dashTextWidth("R1", DASH_FS_CAPTION) + 16.0f;
-		if (rw < 26.0f)
-			rw = 26.0f;
+		const float rw = 22.0f;
 		drawButton(strip_l + 4, tab_y + 9, -1, "L1");
 		drawButton(strip_r - 4 - rw, tab_y + 9, -1, "R1");
 	}
@@ -397,7 +396,7 @@ void dashDrawScrollbar(float x, float y, float h, int first, int visible, int to
 
 void dashDrawFocusFrame(float x, float y, float w, float h, float r, float strength)
 {
-	float pulse = 0.82f + 0.18f * dashSinf(dashTime() * 4.2f);
+	float pulse = 1.0f - (dashCfg.anim / 200.0f) * 0.18f * (1.0f - dashSinf(dashTime() * 4.2f));
 	DashColor edge = dashColorLighten(DASH_C_ACCENT, 0.45f);
 
 	if (strength <= 0.01f)
@@ -511,7 +510,7 @@ static float focus_pop = 1.0f;
 
 void dashUiFocusPoke(void)
 {
-	if (dashCfg.anim != DASH_ANIM_OFF)
+	if (dashCfg.anim > 0)
 		focus_pop = 0.0f;
 }
 

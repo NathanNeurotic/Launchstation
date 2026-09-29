@@ -141,6 +141,14 @@ DashColor dashColorHue(int hue, int sat, int val, int alpha)
 	return DC(r, g, b, alpha);
 }
 
+static float color_gain = 1.0f;
+
+void dashGfxColorGain(float gain)
+{
+	dashSpriteBatchEnd();
+	color_gain = gain;
+}
+
 static inline u64 gsColor(DashColor c)
 {
 	int a = (int)(c.a * g_alpha);
@@ -151,6 +159,9 @@ static inline u64 gsColor(DashColor c)
 		a = 0x80;
 	if (a < 0)
 		a = 0;
+	c.r = (u8)dashClampf(c.r * color_gain, 0, 255);
+	c.g = (u8)dashClampf(c.g * color_gain, 0, 255);
+	c.b = (u8)dashClampf(c.b * color_gain, 0, 255);
 	return GS_SETREG_RGBAQ(c.r, c.g, c.b, a, 0x00);
 }
 
