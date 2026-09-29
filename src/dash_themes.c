@@ -165,12 +165,12 @@ enum {
 };
 
 static const DashThemePresetInfo presets[P_COUNT] = {
-    {"osd", "OSD Classic", "Indigo system tunnel and the OSDSYS highlight blue. The default."},
+    {"osd", "OSD Classic", "The system tunnel with the main menu's clock orbs, OSDSYS blue. The default."},
     {"black", "Classic Black", "Plain black. The lightest background, adjustable to any colour."},
     {"towers", "PS2 Towers", "The opening tower field, seen from above in fog."},
     {"mist", "PS2 Blue Mist", "Midnight blue-to-black gradient with moving blue mist."},
-    {"minimal", "OSD Minimal", "Near black, changing orbital lights with long fading trails."},
-    {"clockring", "System Clock", "The System Configuration clock ring with fluid real-time motion."},
+    {"minimal", "OSD Minimal", "The main menu's seven clock orbs and their light trails on near black."},
+    {"clockring", "System Clock", "The System Configuration clock: turning rods, the orbs flying inside."},
     {"mcgrid", "Memory Card Grid", "Sparse block grid in thin lines."},
     {"bootlines", "Boot Lines", "Soft light traces crossing a dark screen."},
     {"cubes", "Wireframe Cubes", "Independently rotating blue wireframe cubes drifting in their own spaces."},
