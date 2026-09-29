@@ -24,6 +24,8 @@ typedef struct {void *func, *stack, *gp_reg; int stack_size, initial_priority;} 
 typedef struct {int current_priority;} ee_thread_status_t;
 void *_gp;
 void (*iopResetNotify)(int);
+int (*iopResetBlocked)(void);
+int dashWorkerOnThread(void);
 static int drained, signaled;
 static int CreateSema(void *p) {(void)p; return 1;}
 static int CreateThread(void *p) {(void)p; return 2;}
