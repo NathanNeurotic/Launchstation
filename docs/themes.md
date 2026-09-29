@@ -15,12 +15,12 @@ screens* is on (Settings > Display).
 
 | Theme | Background | Look |
 |-------|------------|------|
-| **OSD Classic** (default) | System tunnel | Indigo tunnel like the PS2 system menu backdrop, OSDSYS highlight blue, accent-bar selection |
+| **OSD Classic** (default) | System tunnel | Indigo tunnel like the PS2 system menu backdrop with the main menu's clock orbs, OSDSYS highlight blue, accent-bar selection |
 | Classic Black | Solid colour | Plain black; the lightest background. Change its colour to get any solid colour |
 | PS2 Towers | PS2 towers | Faster drifting/rotating tower field seen from above, blue fog pool, three moving lights |
 | PS2 Blue Mist | Blue mist | Midnight blue-to-black gradient with moving translucent blue mist |
-| OSD Minimal | Orbit lights | Near black, the main menu's ring of eight lights; no panels, selection by text colour only |
-| System Clock | Clock ring | System Configuration's twelve-rod clock: the ring turns with the seconds, the current hour's rod is lit and fills with the minutes |
+| OSD Minimal | Orbit lights | The main menu's seven clock orbs on near black; no panels, selection by text colour only |
+| System Clock | Clock ring | System Configuration's twelve-rod clock: the ring turns with the seconds, the current hour's rod is lit and fills with the minutes, the orbs fly inside |
 | Memory Card Grid | Memory card grid | Sparse block grid in thin lines |
 | Boot Lines | Boot lines | Soft light traces |
 | Wireframe Cubes | Wireframe cubes | A few blue wireframe cubes drifting in depth |
@@ -33,6 +33,18 @@ screens* is on (Settings > Display).
 | PSX | Ribbons | Charcoal with silver ribbons |
 | Crystal | Crystal | The previous dashboard look (crystal towers, stars, glow, initials tiles) |
 | Disc Error Red | Disc error red | Dark red clouds streaming past, a pulsing flare and rotating glass cubes |
+
+### The OSD orbs
+
+OSD Classic, OSD Minimal and System Clock draw the PS2 main menu's orbs as
+the clock they are (Sony's patent US 6,693,606 calls them light spots moving
+around a sphere). Seven orbs, one per weekday, ride one circle whose plane
+slowly tumbles; their light trails show where the circle has been, so the
+sphere appears. They follow the console clock: all seven meet in one bright
+orb at :00, split into two groups at :30, three at :20 and :40, four at :15
+and :45, five at :12, :24, :36 and :48, and six at :10 and :50. The sphere is
+small at the top of the hour and grows as the hour goes by. At 0% background
+motion the orbs hold still; below 50% the trails are shorter.
 
 Every background is drawn procedurally from a few GS primitives. None of
 them uses or needs Sony BIOS data. The PS2-inspired scenes were designed

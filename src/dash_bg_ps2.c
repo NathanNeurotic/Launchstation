@@ -22,10 +22,25 @@
 //  Disc       The illegal-disc screen: dark maroon, red cloud blobs
 //             streaming past the camera (additive, low peak alpha), a
 //             pulsing red flare and one slowly turning glass cube.
-//  Orbit      Near black with the main menu's ring of eight lights.
+//  Orbit      The main menu's orbs on near black (see "OSD orbs" below).
 //  ClockRing  System Configuration's twelve-rod clock: the ring turns with
 //             the seconds, the rod of the current hour is lit and fills
-//             with the minutes.
+//             with the minutes; the orbs fly inside it.
+//
+//  OSD orbs   The main menu / System Configuration "light spots" (Sony
+//             patent US 6,693,606: light spots moving around a single
+//             simulative sphere, their tracks drawn by after-image
+//             processing so the sphere emerges, the sphere shrinking in a
+//             constant period). Seven orbs ride ONE circle through the
+//             sphere, orb k at phase k * 2pi * s/60 of the real-time clock,
+//             which gives the known groupings: all seven meet at :00, two
+//             groups at :30, three at :20/:40, four at :15/:45, five at
+//             :12/:24/:36/:48, six at :10/:50. The circle's plane tumbles
+//             and each trail sample uses the plane of its own moment, so
+//             the trails of past orientations paint the globe. The sphere
+//             is small at the top of the hour and grows through it. Better
+//             than the original: smooth sub-second motion, two-layer glow
+//             trails with depth fade, and merged orbs bloom into one.
 //--------------------------------------------------------------
 #include "dash_internal.h"
 
@@ -37,6 +52,16 @@ static DashColor colA(DashColor c, int a)
 	c.a = (u8)((a < 0) ? 0 : (a > 255) ? 255 : a);
 	return c;
 }
+
+/* OSD orbs (defined below, also drawn by the tunnel and the clock ring) */
+typedef struct
+{
+	float cx, cy;     /* sphere centre on screen */
+	float rmin, rmax; /* sphere radius at the top / end of the hour */
+	DashColor c;      /* orb blue */
+} OrbStyle;
+static void osdOrbs(const OrbStyle *st, float t, int fx);
+static OrbStyle menuOrbStyle(DashColor c);
 
 //--------------------------------------------------------------
 // Tunnel (OSD Classic)
@@ -57,7 +82,6 @@ void dashBgSceneTunnel(float t, int fx)
 	float bright[TUN_RINGS + 1];
 	int k, j;
 
-	(void)fx;
 	dashRect(0, 0, DASH_VW, DASH_VH, far_c);
 	/* ring k sits at depth 38 * 1.32^(k - s); screen radius = 230*110/z */
 	for (k = 0; k <= TUN_RINGS; k++) {
@@ -88,6 +112,11 @@ void dashBgSceneTunnel(float t, int fx)
 	}
 	/* the black far end, softened */
 	dashGlow(cx, cy, 170, 130, colA(far_c, 200));
+	/* the main menu's orbs over its backdrop */
+	{
+		OrbStyle st = menuOrbStyle(DC(80, 160, 255, 255));
+		osdOrbs(&st, t, fx);
+	}
 	dashBgVignette(0.8f);
 }
 
@@ -390,45 +419,191 @@ void dashBgSceneDisc(float t, int fx)
 }
 
 //--------------------------------------------------------------
-// Orbit (OSD Minimal)
+// OSD orbs (main menu, System Configuration)
+//--------------------------------------------------------------
+typedef struct
+{
+	int hour, minute;
+	float second; /* 0..60, smooth between the RTC's once-a-second ticks */
+} OsdTime;
+
+/* The console clock, interpolated within the second; held at 0% motion. */
+static void osdTime(int fx, OsdTime *o)
+{
+	static int ready, held_hour, held_minute, rtc_second;
+	static float held_second, tick_t;
+	float now = dashTime();
+	int hour = 0, minute = 0, second = 0;
+
+	menuTitleGetClockFields(NULL, NULL, NULL, &hour, &minute, &second, NULL, NULL);
+	if (!ready) {
+		held_hour = hour;
+		held_minute = minute;
+		rtc_second = second;
+		held_second = (float)second;
+		tick_t = now;
+		ready = 1;
+	}
+	if (fx != DASH_FX_OFF) {
+		/* re-anchor on each RTC tick, then run on within the second */
+		if (hour != held_hour || minute != held_minute || second != rtc_second) {
+			held_hour = hour;
+			held_minute = minute;
+			rtc_second = second;
+			tick_t = now;
+		}
+		held_second = rtc_second + dashClampf(now - tick_t, 0.0f, 0.999f);
+	}
+	o->hour = held_hour;
+	o->minute = held_minute;
+	o->second = held_second;
+}
+
+#define ORB_N 7
+#define ORB_SAMPLES 48 /* trail samples (fewer below 50% motion) */
+#define ORB_SPAN 6.5f  /* seconds of after-image */
+#define ORB_BASE 20.0f /* the whole group circles once per 20 s */
+#define ORB_CAM 420.0f /* perspective distance */
+
+typedef struct
+{
+	float m[9];
+} OrbMat;
+
+/* orientation of the orbs' circle at scene time t: a slow tumble */
+static void orbPlane(float t, OrbMat *o)
+{
+	float yaw = 0.9f + t * 0.33f;
+	float pitch = 0.62f + 0.55f * dashSinf(t * 0.19f);
+	float roll = 0.3f + 0.35f * dashSinf(t * 0.13f + 1.3f);
+	float cy = dashCosf(yaw), sy = dashSinf(yaw), cp = dashCosf(pitch), sp = dashSinf(pitch);
+	float cr = dashCosf(roll), sr = dashSinf(roll);
+
+	/* Rz(roll) * Rx(pitch) * Ry(yaw); only columns 0 and 2 are used */
+	o->m[0] = cr * cy - sr * sp * sy;
+	o->m[2] = cr * sy + sr * sp * cy;
+	o->m[3] = sr * cy + cr * sp * sy;
+	o->m[5] = sr * sy - cr * sp * cy;
+	o->m[6] = -cp * sy;
+	o->m[8] = cp * cy;
+}
+
+typedef struct
+{
+	float x, y, s, d; /* screen position, perspective scale, depth 0 back..1 front */
+} OrbPt;
+
+static void orbProject(const OrbStyle *st, const OrbMat *o, float phi, float r, OrbPt *p)
+{
+	float ca = dashCosf(phi), sa = dashSinf(phi);
+	float x = r * (o->m[0] * ca + o->m[2] * sa);
+	float y = r * (o->m[3] * ca + o->m[5] * sa);
+	float z = r * (o->m[6] * ca + o->m[8] * sa);
+	float k = ORB_CAM / (ORB_CAM - z);
+
+	p->x = st->cx + x * k;
+	p->y = st->cy - y * k;
+	p->s = k;
+	p->d = (z / r + 1.0f) * 0.5f;
+}
+
+static void osdOrbs(const OrbStyle *st, float t, int fx)
+{
+	static OrbMat mats[ORB_SAMPLES + 1];
+	OrbPt pts[ORB_SAMPLES + 1], head[ORB_N];
+	OsdTime ot;
+	float r, base, hour_frac;
+	DashColor glow_c = dashColorScale(st->c, 0.8f), core_c = dashColorLighten(st->c, 0.35f);
+	DashColor halo_c = dashColorLighten(st->c, 0.62f);
+	int n = (fx == DASH_FX_SUBTLE) ? ORB_SAMPLES / 2 : ORB_SAMPLES;
+	float span = (fx == DASH_FX_SUBTLE) ? ORB_SPAN * 0.6f : ORB_SPAN;
+	int k, i, j;
+
+	if (fx == DASH_FX_OFF)
+		n = ORB_SAMPLES / 3; /* a still frame still shows short tracks */
+	osdTime(fx, &ot);
+	hour_frac = (ot.minute + ot.second / 60.0f) / 60.0f;
+	r = st->rmin + (st->rmax - st->rmin) * hour_frac;
+	/* continuous across minutes and hours: 3600 is a multiple of ORB_BASE */
+	base = TAU_F * fmodf(ot.minute * 60.0f + ot.second, ORB_BASE) / ORB_BASE;
+
+	/* faint haze around the sphere */
+	dashGfxBlend(DASH_BLEND_ADD);
+	dashGlow(st->cx, st->cy, r * 2.4f, r * 2.4f, colA(dashColorScale(st->c, 0.5f), 40));
+
+	/* the circle's plane at each trail moment, shared by all orbs */
+	for (i = 0; i <= n; i++)
+		orbPlane(t - span * i / n, &mats[i]);
+
+	for (k = 0; k < ORB_N; k++) {
+		/* orb k gains k turns a minute on the group: the groupings */
+		float w = TAU_F / ORB_BASE + k * (TAU_F / 60.0f);
+		float phi = base + k * TAU_F * (ot.second / 60.0f);
+
+		for (i = 0; i <= n; i++)
+			orbProject(st, &mats[i], phi - w * span * i / n, r, &pts[i]);
+		/* after-image: a wide soft glow, then a thin bright core */
+		for (j = 0; j < 2; j++) {
+			float width = j ? 1.8f : 11.0f;
+			float amax = j ? 178.0f : 22.0f;
+			DashColor c = j ? core_c : glow_c;
+
+			for (i = 1; i <= n; i++) {
+				float fade = 1.0f - (float)i / n;
+				float a = amax * fade * (0.3f + 0.7f * pts[i].d);
+				if (a < 1.0f)
+					continue;
+				dashLine(pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y,
+				         width * (0.35f + 0.65f * fade) * pts[i].s, colA(c, (int)a));
+			}
+		}
+		head[k] = pts[0];
+	}
+
+	/* orbs that meet merge into one bigger, brighter orb */
+	for (k = 0; k < ORB_N; k++) {
+		int together = 1;
+		float grow, share, sz = head[k].s * (0.7f + 0.4f * head[k].d);
+
+		for (j = 0; j < ORB_N; j++) {
+			float dx = head[j].x - head[k].x, dy = head[j].y - head[k].y;
+			if (j != k && dx * dx + dy * dy < 81.0f)
+				together++;
+		}
+		grow = sqrtf((float)together);
+		share = dashClampf(1.6f / together, 0.0f, 1.0f);
+		dashGlow(head[k].x, head[k].y, 30.0f * sz * grow, 30.0f * sz * grow,
+		         colA(glow_c, (int)((56.0f + 46.0f * head[k].d) * share)));
+		dashGlow(head[k].x, head[k].y, 11.0f * sz * grow, 11.0f * sz * grow,
+		         colA(halo_c, (int)((153.0f + 77.0f * head[k].d) * share)));
+		dashGlow(head[k].x, head[k].y, 5.2f * sz * grow, 5.2f * sz * grow, DC(255, 255, 255, 255));
+	}
+	dashGfxBlend(DASH_BLEND_NORMAL);
+}
+
+/* where the real main menu has them: left of centre, beside the menu */
+static OrbStyle menuOrbStyle(DashColor c)
+{
+	OrbStyle st;
+
+	st.cx = 236.0f;
+	st.cy = 214.0f;
+	st.rmin = 44.0f;
+	st.rmax = 84.0f;
+	st.c = c;
+	return st;
+}
+
+//--------------------------------------------------------------
+// Orbit (OSD Minimal): the main menu's orbs on near black
 //--------------------------------------------------------------
 void dashBgSceneOrbit(float t, int fx)
 {
-	DashColor lc = dashTheme.bg1;
-	float cx = 508.0f, cy = 244.0f;
-	int i, k;
+	OrbStyle st = menuOrbStyle(dashTheme.bg1);
 
 	dashRect(0, 0, DASH_VW, DASH_VH, dashTheme.bg2);
-	/* A faint changing path field instead of one rigid ring. */
-	for (i = 0; i < 40; i++) {
-		float a0 = i * (TAU_F / 40), a1 = (i + 1) * (TAU_F / 40);
-		float r0 = 57.0f + 5.0f * dashSinf(a0 * 3.0f + t * 0.18f);
-		float r1 = 57.0f + 5.0f * dashSinf(a1 * 3.0f + t * 0.18f);
-		dashLine(cx + dashCosf(a0) * r0, cy + dashSinf(a0) * r0 * 0.78f,
-		         cx + dashCosf(a1) * r1, cy + dashSinf(a1) * r1 * 0.78f, 1.0f, colA(lc, 20));
-	}
-	dashGfxBlend(DASH_BLEND_ADD);
-	for (i = 0; i < 8; i++) {
-		float speed = 0.20f + dashBgHash(i, 1) * 0.22f;
-		float phase = i * (TAU_F / 8) + dashBgHash(i, 2) * 0.55f;
-		float rx = 48.0f + dashBgHash(i, 3) * 25.0f;
-		float ry = 31.0f + dashBgHash(i, 4) * 21.0f;
-		float a = t * speed + phase;
-		float depth = 0.5f + 0.5f * dashSinf(a + i * 0.71f);
-		float size = 2.6f + depth * 2.8f;
-		int alpha = 125 + (int)(depth * 100.0f);
-		int trails = (fx == DASH_FX_SUBTLE) ? 5 : 10;
-
-		for (k = trails; k >= 1; k--) {
-			float ta = a - k * 0.055f;
-			float fade = (trails - k + 1) / (float)(trails + 1);
-			dashGlow(cx + dashCosf(ta) * rx, cy + dashSinf(ta) * ry,
-			         size * (0.55f + fade * 0.35f), size * (0.55f + fade * 0.35f), colA(lc, (int)(42 * fade)));
-		}
-		dashGlow(cx + dashCosf(a) * rx, cy + dashSinf(a) * ry, size * 3.2f, size * 3.2f, colA(lc, 44 + (int)(depth * 34.0f)));
-		dashGlow(cx + dashCosf(a) * rx, cy + dashSinf(a) * ry, size, size, colA(dashColorLighten(lc, 0.72f), alpha));
-	}
-	dashGfxBlend(DASH_BLEND_NORMAL);
+	osdOrbs(&st, t, fx);
+	dashBgVignette(0.9f);
 }
 
 //--------------------------------------------------------------
@@ -438,33 +613,15 @@ void dashBgSceneClockRing(float t, int fx)
 {
 	DashColor rod = dashTheme.bg1, b = dashTheme.bg2;
 	float cx = 430.0f, cy = 226.0f;
-	int hour = 0, minute = 0, second = 0, i;
-	static int clock_ready, held_hour, held_minute, rtc_second;
-	static float held_second, last_anim_t;
-	float now = dashTime(), spin, fill;
+	float spin, fill;
+	int i, held_hour;
+	OsdTime ot;
+	OrbStyle st;
 
-	menuTitleGetClockFields(NULL, NULL, NULL, &hour, &minute, &second, NULL, NULL);
-	if (!clock_ready) {
-		held_hour = hour;
-		held_minute = minute;
-		rtc_second = second;
-		held_second = (float)second;
-		last_anim_t = now;
-		clock_ready = 1;
-	}
-	if (fx != DASH_FX_OFF) {
-		/* Re-anchor on each RTC tick, then interpolate within the second. */
-		if (hour != held_hour || minute != held_minute || second != rtc_second) {
-			held_hour = hour;
-			held_minute = minute;
-			rtc_second = second;
-			last_anim_t = now;
-		}
-		held_second = rtc_second + dashClampf(now - last_anim_t, 0.0f, 0.999f);
-	}
-	spin = -(held_second / 60.0f) * TAU_F;
-	fill = (held_minute + held_second / 60.0f) / 60.0f;
-	(void)t;
+	osdTime(fx, &ot);
+	held_hour = ot.hour;
+	spin = -(ot.second / 60.0f) * TAU_F;
+	fill = (ot.minute + ot.second / 60.0f) / 60.0f;
 
 	dashRectGradV(0, 0, DASH_VW, DASH_VH, dashColorLighten(b, 0.05f), dashColorScale(b, 0.55f));
 	dashGfxBlend(DASH_BLEND_ADD);
@@ -487,6 +644,13 @@ void dashBgSceneClockRing(float t, int fx)
 		}
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
+	/* the orbs fly inside the rods, as in System Configuration */
+	st.cx = cx;
+	st.cy = cy;
+	st.rmin = 22.0f;
+	st.rmax = 52.0f;
+	st.c = DC(80, 160, 255, 255);
+	osdOrbs(&st, t, fx);
 	dashBgVignette(0.9f);
 }
 
