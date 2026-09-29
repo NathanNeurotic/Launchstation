@@ -473,7 +473,7 @@ static void drawGrid(void)
 		(void)fr;
 		(void)fx;
 		(void)fy;
-		dashDrawFocusFrame(x + GRID_CARD * 0.5f - w * 0.5f, y + GRID_CARD * 0.5f - w * 0.5f, w, w, w * 0.1f, 1.0f);
+		dashDrawTileFocus(x + GRID_CARD * 0.5f - w * 0.5f, y + GRID_CARD * 0.5f - w * 0.5f, w, w, w * 0.1f, 1.0f);
 	}
 	dashGfxScissorReset();
 	dashDrawScrollbar(DASH_SAFE_R + 4, 104, 284, (int)(grid_cam / GRID_PITCH_Y), 3, (norder + GRID_COLS - 1) / GRID_COLS);
@@ -594,7 +594,7 @@ static void drawCarousel(void)
 		}
 	}
 	if (a != NULL) {
-		dashDrawFocusFrame(cx - 86, cy - 86, 172, 172, 17, 1.0f);
+		dashDrawTileFocus(cx - 86, cy - 86, 172, 172, 17, 1.0f);
 		dashTextCenter(cx, 306, a->title, DASH_FS_TITLE, DASH_C_TEXT);
 		if (a->desc[0])
 			dashTextCenter(cx, 342, a->desc, DASH_FS_SMALL, DASH_C_TEXT2);

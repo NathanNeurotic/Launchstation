@@ -87,6 +87,7 @@ int getDir(const char *path, FILEINFO *info);
 int pollRootMemoryCardDevices(void);
 void discardNextMx4sioRootListing(const char *path);
 int ensurePathDeviceStackReady(const char *path);
+void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char enable[NUM_MENU]);
 int prepareTransferDeviceStacks(const char *src_path, const char *dst_path);
 int copy(char *outPath, const char *inPath, FILEINFO file, int recurses);
 

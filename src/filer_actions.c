@@ -871,6 +871,23 @@ static int editCustomFolderTimestamp(const FILEINFO *file, FILEINFO *folders, sc
 	if (updateCustomDateEditorFolders(folders, original_timestamps, folder_count, selected_name, timestamp) < 0)
 		return 0;
 
+	if (filerTimestampUi != NULL && filerTimestampUi->edit != NULL) {
+		FilerDateEditor e;
+		int r;
+
+		e.folders = folders;
+		e.original = original_timestamps;
+		e.count = folder_count;
+		e.timestamp = timestamp;
+		e.reserve_tuna = reserve_tuna_date;
+		e.position = 0;
+		snprintf(e.selected, sizeof(e.selected), "%s", selected_name);
+		r = filerTimestampUi->edit(&e);
+		if (r)
+			updateCustomDateEditorFolders(folders, original_timestamps, folder_count, e.selected, timestamp);
+		return r;
+	}
+
 	while (1) {
 		waitPadReady(0, 0);
 		if (readpad()) {
@@ -963,6 +980,88 @@ static int editCustomFolderTimestamp(const FILEINFO *file, FILEINFO *folders, sc
 	}
 }
 
+//--------------------------------------------------------------
+// Replacement screens for the timestamp tools (the dashboard sets
+// filerTimestampUi). The date editor model below is what the classic
+// editor uses, exposed for a native editor.
+//--------------------------------------------------------------
+const FilerTimestampUi *filerTimestampUi = NULL;
+
+int filerDateEditorSync(FilerDateEditor *e)
+{
+	return updateCustomDateEditorFolders(e->folders, e->original, e->count, e->selected, e->timestamp);
+}
+
+int filerDateEditorSelect(FilerDateEditor *e, int direction)
+{
+	return selectCustomDateEditorFolder(e->folders, e->original, e->count, e->selected, sizeof(e->selected), e->timestamp, direction);
+}
+
+int filerDateEditorMoveNextTo(FilerDateEditor *e, int newer)
+{
+	return moveCustomDateEditorNextToFolder(e->folders, e->original, e->count, e->selected, e->timestamp, newer, e->reserve_tuna);
+}
+
+void filerDateEditorAdjust(FilerDateEditor *e, int delta)
+{
+	int date_format;
+
+	menuTitleGetClockFormat(NULL, &date_format);
+	adjustCustomDateField(e->timestamp, getCustomDateFieldForDisplayPosition(e->position, date_format), delta, e->reserve_tuna);
+}
+
+int filerDateEditorFieldCount(void)
+{
+	return CUSTOM_DATE_FIELD_COUNT;
+}
+
+/* the field at display `position` of `ts` (local time): its digits, its
+ * name and the separator drawn after it */
+void filerDateEditorField(const sceMcStDateTime *ts, int position, char *text, int size, const char **name, const char **sep)
+{
+	sceMcStDateTime local = *ts;
+	int date_format, field;
+
+	convertCustomTimestampToLocalTime(&local);
+	menuTitleGetClockFormat(NULL, &date_format);
+	field = getCustomDateFieldForDisplayPosition(position, date_format);
+	switch (field) {
+		case CUSTOM_DATE_HOUR:
+			snprintf(text, size, "%02d", local.Hour);
+			*name = "Hour";
+			break;
+		case CUSTOM_DATE_MINUTE:
+			snprintf(text, size, "%02d", local.Min);
+			*name = "Minute";
+			break;
+		case CUSTOM_DATE_SECOND:
+			snprintf(text, size, "%02d", local.Sec);
+			*name = "Second";
+			break;
+		case CUSTOM_DATE_YEAR:
+			snprintf(text, size, "%04d", local.Year);
+			*name = "Year";
+			break;
+		case CUSTOM_DATE_MONTH:
+			snprintf(text, size, "%02d", local.Month);
+			*name = "Month";
+			break;
+		default:
+			snprintf(text, size, "%02d", local.Day);
+			*name = "Day";
+			break;
+	}
+	*sep = (position < 2) ? ":" : (position == 2) ? "   " : (position < 5) ? "/" : "";
+}
+
+void filerDateEditorFormat(const sceMcStDateTime *ts, char *out, int size)
+{
+	int use_12h, date_format;
+
+	menuTitleGetClockFormat(&use_12h, &date_format);
+	formatCustomDateEditorTimestamp(out, size, ts, use_12h, date_format);
+}
+
 static int setMemoryCardFolderTimestamp(const char *path, const FILEINFO *file, const sceMcStDateTime *timestamp, char *message)
 {
 	static sceMcTblGetDir mc_dir __attribute__((aligned(64)));
@@ -1047,6 +1146,10 @@ static void drawTimestampProgress(int completed, int total, const char *folder_n
 	int fill_w;
 	int percent_value;
 
+	if (filerTimestampUi != NULL && filerTimestampUi->progress != NULL) {
+		filerTimestampUi->progress(completed, total, folder_name);
+		return;
+	}
 	if (total <= 0)
 		total = 1;
 	if (completed > total)
@@ -1217,6 +1320,8 @@ static int selectTimestampOrganizationMode(void)
 	int x;
 	int y;
 
+	if (filerTimestampUi != NULL && filerTimestampUi->choose != NULL)
+		return filerTimestampUi->choose(LNG(Set_Custom_Date), items, TIMESTAMP_ORGANIZE_COUNT);
 	label_width = strlen(LNG(Set_Custom_Date));
 	for (i = 0; i < TIMESTAMP_ORGANIZE_COUNT; i++) {
 		if ((int)strlen(items[i]) > label_width)

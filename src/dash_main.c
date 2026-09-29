@@ -12,7 +12,6 @@
 #include "init.h"
 
 extern void (*mainActionLaunchHook)(const char *path);
-void ExecuteBrowserFrom(const char *start_dir, const MainExecuteContext *ctx);
 
 static MainExecuteContext exec_ctx;
 static int dash_active;
@@ -23,7 +22,6 @@ static float section_anim = 1.0f;
 static int section_dir = 1;
 static float anim_time;
 static float fade_in;
-static int exit_to_classic;
 static int autoprobe_pending;
 static u64 last_frame_ms;
 static int frame_counter;
@@ -120,11 +118,6 @@ int dashConfirmLeave(void)
 	return screens[section]->leave();
 }
 
-void dashRequestExitToClassic(void)
-{
-	exit_to_classic = 1;
-}
-
 //--------------------------------------------------------------
 // Legacy message hook: driver loads and other drawMsg() calls made while
 // the dashboard owns the screen are shown in the loading overlay.
@@ -151,39 +144,19 @@ static int settleBackgroundWork(const char *title)
 	return dashStoreFlushWait(title);
 }
 
-static int enterLegacy(void)
+/* After a command that may have rebooted the IOP (network, reboot IOP, a
+ * launch that failed): sound and the auto-started devices come back. */
+static void afterMiscCommand(void)
 {
-	/* fade to black, then hand the screen to a classic wLaunchELF screen */
-	int i;
-
-	if (!settleBackgroundWork("Finishing up"))
-		return 0;
-	for (i = 0; i < 8; i++) {
-		dashRenderScene();
-		dashRect(0, 0, DASH_VW, DASH_VH, DC(0, 0, 0, (i + 1) * 32 > 255 ? 255 : (i + 1) * 32));
-		dashGfxPresent();
-	}
-	drawMsgOverride = NULL;
-	dashGfxRestoreLegacyState();
-	clrScr(setting->color[COLOR_BACKGR]);
-	drawScr();
-	return 1;
-}
-
-static void leaveLegacy(void)
-{
-	dashGfxCheckScreenChange();
-	dashFontInit();
 	drawMsgOverride = dashMsgHook;
-	DashThemeSetLegacyEnabled(dashCfg.legacy_theme);
-	fade_in = 0.0f;
+	dashClassicUiInstall(1);
 	dashInputFlush();
 	last_frame_ms = Timer();
-	dashSoundShutdown(); /* drop stale state after IOP resets ran legacy paths */
+	dashSoundShutdown(); /* drop stale state after IOP resets */
 	dashSoundInit();
 	dashBgmStart();
 	/* Restart auto-start devices (an IOP reset may have dropped them) from
-	 * the main loop: callers still read files right after returning here. */
+	 * the main loop. */
 	autoprobe_pending = 1;
 	dashDevicesResetBaseline(); /* whatever is attached now stays silent */
 }
@@ -198,15 +171,74 @@ static void showActionMessage(void)
 	}
 }
 
-void dashRunMisc(const char *misc_path)
+/* The MISC commands without a screen of their own (start disc, OSDSYS, PS2
+ * browser, network, power off, reboot IOP...) run behind the loading
+ * overlay; the ones that leave wLaunchELF hand the screen to the loader. */
+static void runMiscCommand(const char *misc_path)
 {
 	char path[MAX_PATH];
+	const char *title = "Working";
+	int leaves = 0;
 
+	if (!stricmp(misc_path, setting->Misc_PS2Disc))
+		title = "Starting the disc", leaves = 1;
+	else if (!stricmp(misc_path, setting->Misc_OSDSYS))
+		title = "Starting OSDSYS", leaves = 1;
+	else if (!stricmp(misc_path, setting->Misc_PS2Browser))
+		title = "Opening the PS2 browser", leaves = 1;
+	else if (!stricmp(misc_path, setting->Misc_PS2PowerOff))
+		title = "Powering off", leaves = 1;
+	else if (!stricmp(misc_path, setting->Misc_PS2Net))
+		title = "Starting the network";
+	else if (!stricmp(misc_path, setting->Misc_Reboot_IOP))
+		title = "Rebooting the IOP";
+	else if (!stricmp(misc_path, setting->Misc_Configure) || !stricmp(misc_path, setting->Misc_Exploit_Installer))
+		return; /* handled natively by dashRunMisc() */
+
+	dashStrCopy(path, misc_path, sizeof(path));
+	/* saves, scans and driver work finish first: the command may reboot
+	 * the IOP or leave wLaunchELF */
+	if (!settleBackgroundWork(title))
+		return;
+	filerRootMcPollIdle();
+	dashLoadingBegin(title);
+	exec_ctx.main_msg[0] = '\0';
+	if (leaves)
+		dashGfxRestoreLegacyState();
+	ExecuteMainAction(path, &exec_ctx);
+	/* back here: the command finished, or leaving failed */
+	if (leaves)
+		dashGfxCheckScreenChange();
+	afterMiscCommand();
+	dashLoadingEnd();
+	showActionMessage();
+}
+
+void dashRunMisc(const char *misc_path)
+{
 	if (misc_path == NULL || misc_path[0] == '\0')
 		return;
 	/* screens and tools that have a native dashboard version */
+	if (!stricmp(misc_path, setting->Misc_Configure)) {
+		/* every classic configuration option lives in SETTINGS now */
+		dashSwitchSection(DASH_SEC_SETTINGS);
+		return;
+	}
+	if (!stricmp(misc_path, setting->Misc_HddManager)) {
+		/* PSX too: like the classic one it manages hdd0: (no formatting) */
+		dashHddManager();
+		return;
+	}
+	if (!stricmp(misc_path, setting->Misc_FileBrowser)) {
+		dashOpenBrowser("");
+		return;
+	}
 	if (!stricmp(misc_path, setting->Misc_TextEditor)) {
 		dashOpenTextEditor(NULL);
+		return;
+	}
+	if (!stricmp(misc_path, setting->Misc_Exploit_Installer)) {
+		dashExploitInstaller();
 		return;
 	}
 	if (!stricmp(misc_path, setting->Misc_About_uLE)) {
@@ -225,26 +257,14 @@ void dashRunMisc(const char *misc_path)
 		dashShowFontViewer();
 		return;
 	}
-	dashStrCopy(path, misc_path, sizeof(path));
-	exec_ctx.main_msg[0] = '\0';
-	if (!enterLegacy())
-		return;
-	filerRootMcPollIdle();
-	ExecuteMainAction(path, &exec_ctx);
-	leaveLegacy();
-	showActionMessage();
+	runMiscCommand(misc_path);
 }
 
 void dashOpenBrowser(const char *start_dir)
 {
-	exec_ctx.main_msg[0] = '\0';
-	if (!enterLegacy())
-		return;
-	filerRootMcPollIdle();
-	ExecuteBrowserFrom(start_dir, &exec_ctx);
-	leaveLegacy();
-	showActionMessage();
+	dashFileBrowser(start_dir);
 }
+
 
 int dashOpenTextEditor(const char *file)
 {
@@ -378,12 +398,14 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	exec_ctx.main_msg[0] = '\0';
 	mainActionLaunchHook = NULL; /* already recorded */
 	dashGfxRestoreLegacyState();
+	dashClassicUiInstall(0); /* launch-time prompts stay classic */
 	ExecuteMainAction(path, &exec_ctx);
 	/* Only reached when the launch failed. */
 	mainActionLaunchHook = dashLaunchHook;
 	LaunchArgsClear();
 	dashGfxCheckScreenChange();
 	drawMsgOverride = dashMsgHook;
+	dashClassicUiInstall(1);
 	dashLoadingEnd();
 	friendlyLaunchError(&copy, exec_ctx.main_msg);
 	exec_ctx.main_msg[0] = '\0';
@@ -444,14 +466,13 @@ static void globalMenu(void)
 	    {DI_HOME, "Home", NULL, 0},
 	    {DI_REFRESH, "Refresh application library", NULL, 0},
 	    {DI_FOLDER, "File Browser", NULL, 0},
-	    {DI_KEY, "Classic launch-key menu", NULL, 0},
 	    {DI_SETTINGS, "Settings", NULL, 0},
 	    {DI_REFRESH, "Reboot IOP (reset drivers)", NULL, 0},
 	    {DI_POWER, "Power off", NULL, 0}};
 	int r = dashModalMenu("Dashboard", NULL, items, sizeof(items) / sizeof(items[0]), 0);
 
 	/* everything except "Settings" and a refresh leaves the current section */
-	if (r >= 0 && r != 1 && r != 4 && !dashConfirmLeave())
+	if (r >= 0 && r != 1 && r != 3 && !dashConfirmLeave())
 		return;
 	switch (r) {
 		case 0:
@@ -464,16 +485,13 @@ static void globalMenu(void)
 			dashOpenBrowser("");
 			break;
 		case 3:
-			dashRequestExitToClassic();
-			break;
-		case 4:
 			dashSwitchSection(DASH_SEC_SETTINGS);
 			break;
-		case 5:
+		case 4:
 			if (dashModalConfirm("Reboot IOP", "All loaded device drivers will be restarted. Devices will be detected again when used.", "Reboot", 0))
 				dashRunMisc(setting->Misc_Reboot_IOP);
 			break;
-		case 6:
+		case 5:
 			if (dashModalConfirm("Power off", "Turn off the PlayStation 2 now?", "Power off", 1))
 				dashRunMisc(setting->Misc_PS2PowerOff);
 			break;
@@ -485,40 +503,46 @@ static void globalMenu(void)
 //--------------------------------------------------------------
 extern u32 paddata;
 
+/* launch-key buttons, in the classic menu's order */
+static const struct
+{
+	u32 mask;
+	int lk;
+	int icon;
+} lk_map[] = {
+    {PAD_CIRCLE, SETTING_LK_CIRCLE, DI_BTN_CIRCLE},
+    {PAD_CROSS, SETTING_LK_CROSS, DI_BTN_CROSS},
+    {PAD_SQUARE, SETTING_LK_SQUARE, DI_BTN_SQUARE},
+    {PAD_TRIANGLE, SETTING_LK_TRIANGLE, DI_BTN_TRIANGLE},
+    {PAD_L1, SETTING_LK_L1, DI_BTN_L1},
+    {PAD_R1, SETTING_LK_R1, DI_BTN_R1},
+    {PAD_L2, SETTING_LK_L2, DI_BTN_L2},
+    {PAD_R2, SETTING_LK_R2, DI_BTN_R2},
+    {PAD_L3, SETTING_LK_L3, DI_BTN_L3},
+    {PAD_R3, SETTING_LK_R3, DI_BTN_R3},
+    {PAD_START, SETTING_LK_START, DI_BTN_START},
+    {PAD_SELECT, SETTING_LK_SELECT, DI_BTN_SELECT},
+    {PAD_LEFT, SETTING_LK_LEFT, DI_BTN_LEFT},
+    {PAD_RIGHT, SETTING_LK_RIGHT, DI_BTN_RIGHT}};
+#define LK_MAP_N ((int)(sizeof(lk_map) / sizeof(lk_map[0])))
+
+/* a launch key is usable: a path is set (LEFT/RIGHT only when enabled) */
+static int lkUsable(int lk)
+{
+	if ((lk == SETTING_LK_LEFT || lk == SETTING_LK_RIGHT) && !setting->LK_Flag[lk])
+		return 0;
+	return setting->LK_Path[lk][0] != '\0';
+}
+
 static int bootHeldLaunchKey(void)
 {
-	static const struct
-	{
-		u32 mask;
-		int lk;
-	} map[] = {
-	    {PAD_CIRCLE, SETTING_LK_CIRCLE},
-	    {PAD_CROSS, SETTING_LK_CROSS},
-	    {PAD_SQUARE, SETTING_LK_SQUARE},
-	    {PAD_TRIANGLE, SETTING_LK_TRIANGLE},
-	    {PAD_L1, SETTING_LK_L1},
-	    {PAD_R1, SETTING_LK_R1},
-	    {PAD_L2, SETTING_LK_L2},
-	    {PAD_R2, SETTING_LK_R2},
-	    {PAD_L3, SETTING_LK_L3},
-	    {PAD_R3, SETTING_LK_R3},
-	    {PAD_START, SETTING_LK_START},
-	    {PAD_SELECT, SETTING_LK_SELECT},
-	    {PAD_LEFT, SETTING_LK_LEFT},
-	    {PAD_RIGHT, SETTING_LK_RIGHT}};
-	unsigned int i;
+	int i;
 
 	waitAnyPadReady();
 	readpad_no_KB();
-	for (i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
-		int lk = map[i].lk;
-		if (!(paddata & map[i].mask))
-			continue;
-		if ((lk == SETTING_LK_LEFT || lk == SETTING_LK_RIGHT) && !setting->LK_Flag[lk])
-			continue;
-		if (setting->LK_Path[lk][0])
-			return lk;
-	}
+	for (i = 0; i < LK_MAP_N; i++)
+		if ((paddata & lk_map[i].mask) && lkUsable(lk_map[i].lk))
+			return lk_map[i].lk;
 	return -1;
 }
 
@@ -535,6 +559,107 @@ static void runLaunchKey(int lk)
 		dashLaunchApp(a, 0);
 	} else
 		dashRunMisc(setting->LK_Path[lk]);
+}
+
+//--------------------------------------------------------------
+// Quick launch: the classic menu's "press a button to start its
+// application". Hold SELECT: the launch keys appear, and a button starts
+// its application. A short SELECT tap keeps its normal meaning.
+//--------------------------------------------------------------
+static int ql_down, ql_used;
+static u64 ql_since;
+
+static void quickLaunchInput(DashInput *in)
+{
+	int i;
+
+	if (in->raw_new & PAD_SELECT) {
+		ql_down = 1;
+		ql_used = 0;
+		ql_since = Timer();
+		in->pressed &= ~DASH_IN_SELECT;
+	}
+	if (!ql_down)
+		return;
+	if (paddata & PAD_SELECT) {
+		u32 other = in->raw_new & ~PAD_SELECT;
+		/* while SELECT is held the buttons are launch keys, not navigation */
+		in->pressed = 0;
+		in->any = 0;
+		if (!other)
+			return;
+		ql_used = 1;
+		for (i = 0; i < LK_MAP_N; i++) {
+			if (lk_map[i].mask == PAD_SELECT || !(other & lk_map[i].mask))
+				continue;
+			if (lkUsable(lk_map[i].lk)) {
+				ql_down = 0;
+				dashSoundPlay(DASH_SND_CONFIRM);
+				runLaunchKey(lk_map[i].lk);
+				dashInputFlush();
+				return;
+			}
+		}
+		dashToast(DASH_TOAST_INFO, "No application on that button (Settings > Launch keys)");
+		return;
+	}
+	/* released: a short tap without another button is a normal SELECT */
+	ql_down = 0;
+	if (!ql_used && Timer() - ql_since < 500) {
+		in->pressed |= DASH_IN_SELECT;
+		in->any = 1;
+	}
+}
+
+static void lkLabel(int lk, char *out, int size)
+{
+	const char *p = setting->LK_Path[lk], *s;
+
+	if (setting->LK_Title[lk][0]) {
+		dashStrCopy(out, setting->LK_Title[lk], size);
+		return;
+	}
+	s = strrchr(p, '/');
+	if (s == NULL)
+		s = strrchr(p, ':');
+	dashStrCopy(out, s != NULL ? s + 1 : p, size);
+}
+
+static void quickLaunchDraw(void)
+{
+	int i, n = 0, col;
+	float w = 520.0f, h, x, y, row_h = 28.0f, k;
+	char label[64];
+
+	if (!ql_down || !(paddata & PAD_SELECT) || Timer() - ql_since < 250)
+		return;
+	for (i = 0; i < LK_MAP_N; i++)
+		if (lk_map[i].mask != PAD_SELECT && lkUsable(lk_map[i].lk))
+			n++;
+	h = 70.0f + (n > 0 ? ((n + 1) / 2) * row_h : row_h) + 12.0f;
+	x = (DASH_VW - w) * 0.5f;
+	y = (DASH_VH - h) * 0.5f;
+	k = dashClampf((Timer() - ql_since - 250) / 120.0f, 0.0f, 1.0f);
+	dashModalBackdrop(k * 0.8f);
+	dashGfxPushAlpha(k);
+	dashModalPanel(x, y, w, h, k);
+	dashIcon(DI_KEY, x + 24, y + 18, 24, DASH_C_ACCENT);
+	dashTextS(x + 58, y + 20, "Launch keys", DASH_FS_LABEL, DASH_C_TEXT);
+	dashText(x + 58, y + 44, "Keep SELECT held and press a button", DASH_FS_CAPTION, DASH_C_TEXT3);
+	if (n == 0)
+		dashText(x + 28, y + 72, "No launch keys yet: set them in Settings > Launch keys.", DASH_FS_SMALL, DASH_C_TEXT2);
+	for (i = 0, col = 0; i < LK_MAP_N; i++) {
+		float bx, by;
+		if (lk_map[i].mask == PAD_SELECT || !lkUsable(lk_map[i].lk))
+			continue;
+		bx = x + 24 + (col % 2) * (w - 48) * 0.5f;
+		by = y + 70 + (col / 2) * row_h;
+		bx += dashDrawButton(bx, by, lk_map[i].icon, NULL) + 8;
+		lkLabel(lk_map[i].lk, label, sizeof(label));
+		dashTextFit(bx, by + 4, (w - 48) * 0.5f - 44, label, DASH_FS_SMALL, DASH_C_TEXT);
+		col++;
+	}
+	dashGfxPopAlpha();
 }
 
 static void bootBegin(void)
@@ -719,17 +844,17 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		return;
 	dash_active = 1;
 	exec_ctx = *ctx;
-	exit_to_classic = 0;
 
 	dashGfxCheckScreenChange();
 	drawMsgOverride = dashMsgHook;
+	dashClassicUiInstall(1);
 	if (!dash_inited)
 		firstInit();
 	else {
 		dashGfxInit();
 		dashFontInit();
 	}
-	DashThemeSetLegacyEnabled(dashCfg.legacy_theme);
+	DashThemeSetLegacyEnabled(1);
 	mainActionLaunchHook = dashLaunchHook;
 	dashSoundInit();
 	dashBgmStart();
@@ -745,7 +870,8 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	last_frame_ms = Timer();
 	if (from_boot)
 		bootBegin();
-	while (!exit_to_classic) {
+	/* the dashboard is the only shell: it never returns */
+	while (1) {
 		u64 now = Timer();
 		float dt = (now - last_frame_ms) / 1000.0f;
 		last_frame_ms = now;
@@ -765,6 +891,8 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			if (boot_phase == 1)
 				memset(&in, 0, sizeof(in));
 		}
+		if (!boot_phase)
+			quickLaunchInput(&in);
 		/* Main dashboard screens do not run through the modal helpers, so give
 		 * their ordinary navigation/activation inputs the same UI feedback. */
 		if (in.pressed & (DASH_IN_UP | DASH_IN_DOWN | DASH_IN_LEFT | DASH_IN_RIGHT))
@@ -779,13 +907,6 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			globalMenu();
 		else if (in.any && screens[section]->input)
 			screens[section]->input(&in);
-		/* leaving for the classic menu waits for background work; backing
-		 * out of that wait keeps the dashboard */
-		if (exit_to_classic && !settleBackgroundWork("Finishing up"))
-			exit_to_classic = 0;
-		if (exit_to_classic)
-			break;
-
 		dashBgUpdate(dt);
 		dashUiUpdate(dt);
 		if (screens[section]->update)
@@ -831,6 +952,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		}
 #endif
 		dashRenderScene();
+		quickLaunchDraw();
 		dashGfxPresent();
 
 		/* first run: short introduction once the dashboard has faded in */
@@ -845,29 +967,8 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			last_frame_ms = Timer();
 		}
 	}
-
-	mainActionLaunchHook = NULL;
-	drawMsgOverride = NULL;
-	enterLegacy();
-	dash_active = 0;
 }
 //--------------------------------------------------------------
 //End of file: dash_main.c
 //--------------------------------------------------------------
 
-/* Exported wrappers so other dashboard modules can hand the screen to a
- * classic wLaunchELF screen and take it back cleanly. dashLegacyBegin()
- * returns 0 (and nothing was handed over) when the user backed out while
- * background work finished. */
-int dashLegacyBegin(void)
-{
-	if (!enterLegacy())
-		return 0;
-	filerRootMcPollIdle();
-	return 1;
-}
-
-void dashLegacyEnd(void)
-{
-	leaveLegacy();
-}

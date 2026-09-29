@@ -539,6 +539,18 @@ char *makeHostPath(char *dp, char *sp);
 int ynDialog(const char *message);
 void nonDialog(char *message);
 int keyboard(char *out, int max);
+void filerPasteInto(char *mess, char *path);
+void filerPasteModeInto(char *mess, char *path, int rename);
+void filerPsuPasteInto(char *mess, char *path);
+const char *filerPsuPasteLabel(const char *path);
+int filerMountVmc(const char *path, const FILEINFO *file, int slot, char *msg, int msg_size);
+int filerCreateFolderIcon(const char *path, const char *title, const char *text, char *msg, int msg_size);
+int filerFreeSpace(const char *path, u64 *out);
+void filerLaunchElfFolder(char *out, int size);
+/* dashboard replacements for the three dialogs above (NULL = classic) */
+extern int (*ynDialogOverride)(const char *message);
+extern void (*nonDialogOverride)(const char *message);
+extern int (*keyboardOverride)(char *out, int max);
 void genLimObjName(char *uLE_path, int reserve);
 int genFixPath(const char *inp_path, char *gen_path);
 /* mode must use fileXio-compatible flags (FIO_O_*). */
@@ -568,6 +580,8 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 /* hdd.c */
 void DebugDisp(char *Message);
 void hddManager(void);
+const char *hddStatusShortText(int status);
+const char *hddStatusInfoText(int status);
 
 /* editor.c */
 enum {

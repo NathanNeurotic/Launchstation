@@ -1,9 +1,9 @@
 //--------------------------------------------------------------
 //File name:   dash_tools.c
-//TOOLS: every classic wLaunchELF function with a friendly name and a
-//short description. Each entry dispatches the existing MISC command path
-//through ExecuteMainAction(), so the classic screens (and their own
-//confirmations and safety warnings) run unchanged.
+//TOOLS: every wLaunchELF function with a friendly name and a short
+//description. Each entry dispatches the MISC command path through
+//dashRunMisc(), which opens the native dashboard version of each tool or
+//runs the command (disc, OSDSYS, network...) behind the loading overlay.
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include <stddef.h>
@@ -13,7 +13,6 @@ enum ToolAction {
 	TA_MISC,
 	TA_BROWSER,
 	TA_BROWSER_AT,
-	TA_CLASSIC,
 	TA_EDITOR
 };
 
@@ -33,7 +32,7 @@ typedef struct
 
 static const Tool tools[] = {
     {TA_HEADER, -1, "ESSENTIALS", NULL, NULL, 0, 0, NULL},
-    {TA_BROWSER, DI_FOLDER, "File Browser", "Browse every device, copy, move, rename, delete, create folders, build and extract PSU saves, mount VMC images and launch anything.", "Press R1 inside the browser for file operations.", 0, 0, NULL},
+    {TA_BROWSER, DI_FOLDER, "File Browser", "Browse every device, copy, move, rename, delete, create folders, build and extract PSU saves, mount VMC images and launch anything.", "Press Triangle inside the browser for file operations; Square selects.", 0, 0, NULL},
     {TA_EDITOR, DI_TEXT, "Text Editor", "Edit CNF, CFG, TXT, INI and argument files. Also used to launch an ELF with custom arguments.", NULL, 0, 0, NULL},
     {TA_MISC, DI_DISC, "Start disc", "Boot the disc in the drive: PS2 and PS1 games, DVD Video (with the console's player) and ESR discs.", NULL, 0, MISC(Misc_PS2Disc), NULL},
     {TA_BROWSER_AT, DI_DISC, "PS1 games (POPStarter)", "Open the File Browser; select a .VCD image to start it through POPStarter.", "Configure the POPStarter ELF under Settings > Advanced.", 0, 0, ""},
@@ -50,9 +49,6 @@ static const Tool tools[] = {
     {TA_MISC, DI_CHIP, "Build information", "Features and drivers included in this build of wLaunchELF.", NULL, 0, MISC(Misc_Show_Build_Info), NULL},
     {TA_MISC, DI_TEXT, "Font viewer", "Show every glyph of the active font.", NULL, 0, MISC(Misc_ShowFont), NULL},
     {TA_MISC, DI_INFO, "About wLaunchELF", "Credits and version.", NULL, 0, MISC(Misc_About_uLE), NULL},
-    {TA_HEADER, -1, "CLASSIC", NULL, NULL, 0, 0, NULL},
-    {TA_MISC, DI_SETTINGS, "Classic configuration", "The full wLaunchELF configuration: launch keys, skins, screen, startup, network and advanced settings.", "Saved to LAUNCHELF.CNF as usual.", 0, MISC(Misc_Configure), NULL},
-    {TA_CLASSIC, DI_KEY, "Classic launch-key menu", "Leave the dashboard and use the traditional button-per-application menu.", "Choose \"Dashboard\" in that menu (or MISC/Dashboard) to come back.", 0, 0, NULL},
     {TA_HEADER, -1, "POWER", NULL, NULL, 0, 0, NULL},
     {TA_MISC, DI_REFRESH, "Reboot IOP", "Restart the I/O processor and all device drivers. Devices are detected again when used.", NULL, 1, MISC(Misc_Reboot_IOP), NULL},
     {TA_MISC, DI_POWER, "Power off", "Turn the console off.", NULL, 2, MISC(Misc_PS2PowerOff), NULL},
@@ -101,9 +97,6 @@ static void runTool(const Tool *t)
 			break;
 		case TA_EDITOR:
 			dashOpenTextEditor(NULL);
-			break;
-		case TA_CLASSIC:
-			dashRequestExitToClassic();
 			break;
 	}
 }

@@ -343,7 +343,7 @@ static void homeDraw(void)
 			dashGfxPushAlpha(row == 0 ? 1.0f : 0.72f);
 			dashDrawAppArt(home_apps[i], cx - w * 0.5f, cy - w * 0.5f, w, w, f, abs(i - col[0]) + 1);
 			if (f > 0.02f)
-				dashDrawFocusFrame(cx - w * 0.5f, cy - w * 0.5f, w, w, w * 0.1f, f);
+				dashDrawTileFocus(cx - w * 0.5f, cy - w * 0.5f, w, w, w * 0.1f, f);
 			drawBadge(cx + w * 0.5f - 16, cy - w * 0.5f - 4, home_badge[i]);
 			dashGfxPopAlpha();
 		}

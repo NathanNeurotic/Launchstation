@@ -1,8 +1,50 @@
 # wLaunchELF dashboard
 
-The dashboard is the default shell of this build. It sits on top of the
-classic wLaunchELF code: every launch, tool and file operation still goes
-through `ExecuteMainAction()`, `getFilePath()` and the classic screens.
+The dashboard is the only shell of this build; the classic launch-key
+menu and the classic screens are gone. Underneath it still uses the proven
+wLaunchELF code: every launch goes through `ExecuteMainAction()`, and file
+operations, the HDD tools and the exploit installer run the same logic as
+before. Settings, the File Browser, the Text Editor, the HDD Manager (PSX
+included), the memory card exploit installer, the information screens and
+the file/folder picker are all dashboard screens, and the questions those
+tools ask (yes/no, names, progress) are dashboard dialogs. Commands with no
+screen of their own (start disc, OSDSYS, PS2 browser, network, power off,
+reboot IOP) run behind the loading overlay.
+
+File Browser: Confirm opens a folder, starts an ELF/KELF/VCD or opens a
+text file in the Text Editor; Square selects; Triangle has copy, cut,
+paste (also with new names), PSU create/extract, delete, rename, new
+folder, folder icon (icon.sys), size, start with arguments, title.cfg,
+mount as vmc0:/vmc1: (for .bin/.vmc/.mc2/.ps2 images; mounted images
+appear in the device list), the memory card *Tuna date and *Folder
+dates* (memory card roots and `hdd0:/__common`: edit dates by hand or
+order the saves A-Z, Z-A or the SAS way). The offered operations follow
+the classic rules (nothing that writes on a disc or read-only host, no
+file operations in the partition list).
+
+Also in the File Browser menu, as in the classic browser:
+
+* *Show*: file names, names and details (size and date), or game titles
+  and details (the title of each save or PSU file).
+* *Sort by*: name, game title, date, or as stored. Folders come first,
+  then ELF files.
+* *Bookmarks...*: the PathPad. Jump to a bookmarked folder, bookmark the
+  current one or remove one (saved in LAUNCHELF.CNF; *Lock launch keys*
+  in Settings locks them).
+* *Go to wLaunchELF's folder*, *Invert selection*.
+* *Use as launch arguments* on a text file: its lines become the
+  arguments of the application you start next from the browser.
+* The header shows the free space of memory cards and HDD partitions.
+
+In file pickers (Settings, launch keys) R3 chooses the highlighted file as
+a `uLE:/` path, relative to wLaunchELF's own folder, like the classic R3;
+elsewhere R3 opens that folder.
+
+The cursor never waits for the memory card or a slow device: file reads
+and writes (artwork, saves, library scans, folder listings) run on a
+background thread, and a small indicator above the button hints shows
+what is being worked on. Starting a device's drivers happens in the
+foreground behind a short loading overlay.
 
 ## Sections
 
@@ -12,13 +54,13 @@ through `ExecuteMainAction()`, `getFilePath()` and the classic screens.
 | APPS     | ELF library in **Grid**, **List** or **Carousel** view (SELECT switches, saved). Filters: all, favorites, memory cards, USB, HDD, other. |
 | FILES    | Entry points into the full FileBrowser: device list, last folder, MISC commands, each detected device and your PathPad bookmarks. |
 | DEVICES  | Cards for memory cards (type, free space), USB, MMCE, MX4SIO, HDD, exFAT HDD, disc, UDPFS, PSX flash/DVR HDD and mounted VMCs. |
-| TOOLS    | HDD Manager, Text Editor, start disc, POPStarter, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, classic configuration, classic launch-key menu, reboot IOP, power off. |
-| SETTINGS | Display, Theme, Dashboard, Controls, Devices, Network, Advanced. Classic options edit the same `SETTING` fields and are written to LAUNCHELF.CNF only when you choose *Save wLaunchELF settings* (classic save-location prompt). |
+| TOOLS    | HDD Manager, Text Editor, start disc, POPStarter, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, reboot IOP, power off. |
+| SETTINGS | Display, Theme, Dashboard, Launch keys, Controls, Startup, Devices, Network, Advanced: every dashboard and wLaunchELF option, edited in place (no classic configuration screens). Changes apply at once; when you leave SETTINGS with unsaved changes you are asked to *Save*, *Discard* or *Keep editing*. LAUNCHELF.CNF is saved where it was loaded from (*Save wLaunchELF settings to...* chooses another place), IPCONFIG.DAT likewise. |
 
 ## Controls
 
 Confirm/cancel follow the existing `GUI_Swap_Keys` setting (Settings >
-Controls > Confirm button), exactly like the classic screens.
+Controls > Confirm button), as wLaunchELF always has.
 
 | Button | Action |
 |--------|--------|
@@ -29,10 +71,10 @@ Controls > Confirm button), exactly like the classic screens.
 | Square | Add to / remove from Favorites |
 | L1 / R1 | Previous / next section |
 | L2 / R2 | Page jump |
-| START | Dashboard menu (home, refresh library, File Browser, classic menu, settings, reboot IOP, power off) |
-| SELECT | Switch application view (APPS) |
+| START | Dashboard menu (home, refresh library, File Browser, settings, reboot IOP, power off) |
+| SELECT | Tap: switch application view (APPS). Hold: your launch keys appear; press a button to start its application |
 
-Boot behaviour of the classic menu is preserved: `Init_Delay` is honoured,
+wLaunchELF's boot behaviour is kept: `Init_Delay` is honoured,
 a launch key held when the delay ends starts its application, and a
 configured `LK_auto` path starts after the classic timeout unless a button
 is pressed (a countdown banner is shown).
@@ -46,10 +88,6 @@ size, icons, clock and app-artwork wallpaper can be changed with the
 controller. Themes can be saved to and loaded from
 `THEMES/<name>/theme.cfg` folders. See **[themes.md](themes.md)**.
 
-The classic launch-key menu is still available (Tools > Classic launch-key
-menu, or START menu). It has a *DASH: Return to dashboard* entry, and
-`MISC/Dashboard` can be assigned to a launch key.
-
 ## Application discovery
 
 Only the configured folders are listed (Settings > Dashboard > Application
@@ -60,7 +98,8 @@ Each folder is searched one sub-folder deep (`APPS/<folder>/*.ELF`).
   are refreshed (Settings > Dashboard > Refresh at startup). Nothing else is
   initialised for the dashboard.
 * *Refresh library* (APPS > Triangle, START menu or Settings) scans every
-  folder and loads drivers as needed, with a progress overlay.
+  folder, starting the drivers it needs first; the search itself runs in
+  the background while you keep using the dashboard.
 * Results are cached in `DASHLIB.CNF` and shown instantly next boot.
   Apps that disappeared (device removed) stay usable as shortcuts and fail
   with a friendly message instead of a crash.
@@ -171,9 +210,7 @@ License 2.0, see `docs/licenses/Roboto-COPYRIGHT.txt`). It is rendered on the
 host by `scripts/gen_dash_font.py` (4x supersampled) into three PSMT8 alpha
 atlases (14, 20 and 32 px em; 35 + 57 + 123 KB) committed as
 `src/dash_font_data.c`; the PS2 needs no font engine. Sizes run from 12 px
-captions to 28 px titles. The classic screens keep wLaunchELF's 8x16 bitmap
-font (and any custom `.fnt`), because their layouts depend on fixed 8 px
-columns. Themes can switch the dashboard to that bitmap font as well
+captions to 28 px titles. Themes can switch the dashboard to that bitmap font as well
 (*System* font, see [themes.md](themes.md#fonts)), scale text from 90 to
 115 % and draw it bold. Regenerate the Roboto atlases with another TTF/OTF:
 
@@ -184,8 +221,8 @@ python scripts/gen_dash_font.py path/to/Font.ttf
 ## Memory and VRAM budget
 
 * Framebuffer: unchanged (single buffered, CT32, as the classic UI).
-* Dashboard font atlases ~215 KB, classic-font atlas 512x340 PSMT8 (~170 KB,
-  classic screens only), icon atlas 512x408 PSMT8 (~204 KB),
+* Dashboard font atlases ~215 KB, bitmap-font atlas 512x340 PSMT8 (~170 KB,
+  only with the *System* font), icon atlas 512x408 PSMT8 (~204 KB),
   five tiny CT32 helper textures. All textures are owned by gsKit's texture
   manager (inline uploads, LRU eviction) above the framebuffer.
 * Artwork: at most 40 thumbnails (<= 64 KB each) in EE RAM; one probe or

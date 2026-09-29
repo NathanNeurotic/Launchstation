@@ -65,7 +65,7 @@ puts that group back to the values of the preset the theme started from.
 |-------|---------|
 | Background | Background type, Colour, Second colour, Brightness (10-100 %), Motion, Animations, CRT scanlines, Wallpaper image... |
 | Colours | Text, Secondary text, Muted text, Selected text, Accent, Selection (with opacity), Panels (with opacity), Borders (with opacity), Warnings |
-| Style | Selection style (solid bar, accent bar, outline, text colour), Corners (square, soft, round), Glow, Panel opacity |
+| Style | Tile style (memory card, rounded, chamfered, floating object, crystal slab), Selection style (solid bar, accent bar, outline, text colour), Corners (square, soft, round), Glow, Panel opacity |
 | Text | Font (Roboto, System), Text size (90-115 %), Bold, Text shadow |
 | Icons | Icon colour (text colours, accent, monochrome), Default app icon (application, device, initials), Custom app icon image... |
 | Clock | Clock (off, standard, system), Position (header, footer), Hours (system, 24-hour, 12-hour), Seconds, Date (system, YYYY/MM/DD, MM/DD/YYYY, DD/MM/YYYY, off) |
@@ -120,6 +120,29 @@ when this happened.
 Arbitrary TTF files are not loaded on the console: a font engine and its
 glyph cache would cost too much memory and time. To use another typeface
 for *Roboto*, regenerate the atlas on a PC with `scripts/gen_dash_font.py`.
+
+## Application tile styles
+
+Choose **Settings > Theme > Customize theme... > Style > Tile style**.
+Memory card is the default for every built-in preset, including OSD Classic.
+Old configurations and theme folders without `tile_style` also use Memory card.
+
+* **Memory card**: a narrow PS2 card silhouette with a cut corner, grip ridges
+  and a recessed device label strip. Artwork fits inside the card face.
+* **Rounded**: the rounded rectangular tile, independent of panel corners.
+* **Chamfered**: an eight-sided tile with clipped corners.
+* **Floating object**: artwork or the fallback icon floats above a pool of
+  light, with a solid focus marker. The selected icon rises and gently bobs;
+  bobbing stops with reduced/off animations. This is a 2D treatment, not a
+  rotating 3D save icon.
+* **Crystal slab**: a faceted block with lit top and shaded side faces.
+
+Tile style applies to Home and Apps artwork, including fallback icons and
+initials. Panels, dialogs and list rows keep their separate Corners setting.
+As with other theme edits, changes preview immediately and autosave after a
+short idle delay; the general Settings Discard action does not undo them.
+Reset style restores Memory card. Exported themes include `tile_style` and
+customized dashboard configurations store it as `Theme_tile_style`.
 
 ## Icons
 
@@ -219,6 +242,7 @@ clock_position = header
 | `accent`, `accent2`, `warning`, `error`, `success` | colour |
 | `selection`, `panel`, `border` | colour with opacity (`#RRGGBBAA`) |
 | `highlight` | `fill`, `bar`, `outline`, `text` |
+| `tile_style` | `memory_card` (default), `rounded`, `chamfered`, `floating`, `crystal` |
 | `corners` | `square`, `soft`, `round` |
 | `glow`, `bold`, `text_shadow` | 0 / 1 |
 | `font` | `roboto`, `system` |

@@ -148,9 +148,8 @@ int main(int argc, char *argv[])
 	RunPath[0] = 0;  //Nothing to run yet
 	cdmode = -1;     //flag unchecked cdmode state
 
-	//The dashboard is the default shell. It returns only when the user asks
-	//for the classic launch-key menu (which can re-enter it via MISC/Dashboard).
-	if (DashIsEnabled()) {
+	//The dashboard is the only shell; DashRun() does not return.
+	{
 		MainExecuteContext dash_ctx;
 
 		dash_ctx.boot_argc = boot_argc;

@@ -124,6 +124,22 @@ static void sheetShow(int icon, const char *title, const char *subtitle, const S
 	dashInputFlush();
 }
 
+/* plain lines in a text sheet (empty lines become gaps) */
+void dashShowTextLines(int icon, const char *title, const char *subtitle, const char *const *lines, int n)
+{
+	static Sheet s;
+	int i;
+
+	s.n = 0;
+	for (i = 0; i < n; i++) {
+		if (lines[i] == NULL || lines[i][0] == '\0')
+			sheetAdd(&s, SL_GAP, NULL);
+		else
+			sheetAdd(&s, SL_TEXT, "%s", lines[i]);
+	}
+	sheetShow(icon, title, subtitle, &s);
+}
+
 //--------------------------------------------------------------
 // About
 //--------------------------------------------------------------

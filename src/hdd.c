@@ -237,6 +237,19 @@ static const char *GetHddStatusShortText(int status)
 	return (info != NULL) ? info->ShortText : "UNKNOWN";
 }
 
+/* HDIOC_STATUS descriptions for the dashboard's HDD Manager. */
+const char *hddStatusShortText(int status)
+{
+	return GetHddStatusShortText(status);
+}
+
+const char *hddStatusInfoText(int status)
+{
+	const HDDSTATUSINFO *info = GetHddStatusInfo(status);
+
+	return (info != NULL) ? info->InfoText : "No specific HDD status description is available for this code.";
+}
+
 void DebugDisp(char *Message);
 
 static void ShowHddStatusInfo(void)
