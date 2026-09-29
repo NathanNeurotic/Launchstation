@@ -134,17 +134,17 @@ void dashBgFlash(float amount)
 
 static int bgAnimated(void)
 {
-	return dashCfg.anim != DASH_ANIM_OFF && dashCfg.effects != DASH_FX_OFF;
+	return dashCfg.effects > 0;
 }
 
 void dashBgUpdate(float dt)
 {
 	int i;
 	int animated = bgAnimated();
-	/* SUBTLE effects: same scene, slower */
-	float speed = !animated ? 0.0f : (dashCfg.effects == DASH_FX_SUBTLE ? 0.5f : 1.0f);
+	float motion = animated ? dashCfg.effects / 100.0f : 0.0f;
+	float scene_dt = dt * motion;
 
-	bg_time += dt * speed;
+	bg_time += scene_dt;
 	flash = dashApproach(flash, 0.0f, 3.0f, dt);
 
 	/* app-aware wallpaper focus tracking (the sections publish their
@@ -164,34 +164,34 @@ void dashBgUpdate(float dt)
 		return;
 
 	for (i = 0; i < BG_STARS; i++) {
-		stars[i].x -= stars[i].speed * dt;
+		stars[i].x -= stars[i].speed * scene_dt;
 		if (stars[i].x < -4.0f) {
 			stars[i].x = DASH_VW + 4.0f;
 			stars[i].y = frand() * DASH_VH;
 		}
 	}
 	for (i = 0; i < BG_SPARKS; i++) {
-		Spark *s = &sparks[i];
-		s->life += dt;
-		s->y -= s->vy * dt;
-		s->x += dashSinf(bg_time * 0.7f + i) * 3.0f * dt;
-		if (s->life >= s->max_life || s->y < 40.0f)
-			spawnSpark(s, 0);
+		Spark *sp = &sparks[i];
+		sp->life += scene_dt;
+		sp->y -= sp->vy * scene_dt;
+		sp->x += dashSinf(bg_time * 0.7f + i) * 3.0f * scene_dt;
+		if (sp->life >= sp->max_life || sp->y < 40.0f)
+			spawnSpark(sp, 0);
 	}
 	for (i = 0; i < BG_TOWERS; i++)
-		towers[i].rot += towers[i].rot_speed * dt;
+		towers[i].rot += towers[i].rot_speed * scene_dt;
 
-	if (dashCfg.effects == DASH_FX_FULL) {
+	if (dashCfg.effects >= 100) {
 		if (streak_t < 0.0f) {
-			streak_next -= dt;
+			streak_next -= scene_dt;
 			if (streak_next <= 0.0f) {
 				streak_t = 0.0f;
 				streak_y = 90.0f + frand() * 260.0f;
-				streak_next = 9.0f + frand() * 9.0f;
+				streak_next = 7.0f + frand() * 7.0f;
 			}
 		} else {
-			streak_t += dt;
-			if (streak_t > 2.6f)
+			streak_t += scene_dt;
+			if (streak_t > 2.2f)
 				streak_t = -1.0f;
 		}
 	}
@@ -435,10 +435,25 @@ static void drawScanlines(void)
 static void drawScene(int fx)
 {
 	float t = bg_time;
+	DashColor saved_bg1 = dashTheme.bg1, saved_bg2 = dashTheme.bg2;
+
+	/* Brightness above 100% boosts only the background colours. Interface
+	 * colours are drawn after this function and are deliberately untouched. */
+	if (dashTheme.bg_bright > 100) {
+		float k = dashTheme.bg_bright / 100.0f;
+		dashTheme.bg1 = dashColorScale(dashTheme.bg1, k);
+		dashTheme.bg2 = dashColorScale(dashTheme.bg2, k);
+	}
 
 	switch (dashTheme.bg) {
 		case DASH_BG_SOLID:
 			dashRect(0, 0, DASH_VW, DASH_VH, dashTheme.bg1);
+			if (fx != DASH_FX_OFF) {
+				float x = -180.0f + fmodf(t * 54.0f, DASH_VW + 360.0f);
+				dashGfxBlend(DASH_BLEND_ADD);
+				dashGlow(x, DASH_VH * 0.46f, 190, 300, dashColorA(dashColorScale(dashTheme.accent, 0.35f), 18.0f / 255.0f));
+				dashGfxBlend(DASH_BLEND_NORMAL);
+			}
 			break;
 		case DASH_BG_GRADIENT:
 			dashBgSceneGradient(t, fx);
@@ -498,6 +513,8 @@ static void drawScene(int fx)
 			dashRect(0, 0, DASH_VW, DASH_VH, DC(0, 0, 0, 255));
 			break;
 	}
+	dashTheme.bg1 = saved_bg1;
+	dashTheme.bg2 = saved_bg2;
 	dashGfxBlend(DASH_BLEND_NORMAL);
 	dashGfxScissorReset();
 
@@ -513,7 +530,9 @@ void dashBgDrawStatic(void)
 
 void dashBgDraw(void)
 {
-	drawScene(dashCfg.effects);
+	int fx = dashCfg.effects <= 0 ? DASH_FX_OFF : (dashCfg.effects < 100 ? DASH_FX_SUBTLE : DASH_FX_FULL);
+
+	drawScene(fx);
 	drawAppWallpaper();
 	if (dashTheme.scanlines)
 		drawScanlines();

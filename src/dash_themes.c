@@ -146,9 +146,7 @@ enum {
 	P_OSD = 0,
 	P_BLACK,
 	P_TOWERS,
-	P_DISC,
 	P_MIST,
-	P_MIDNIGHT,
 	P_MINIMAL,
 	P_CLOCKRING,
 	P_MCGRID,
@@ -162,7 +160,7 @@ enum {
 	P_CRT,
 	P_PSX,
 	P_CRYSTAL,
-	P_LIGHTSHOW,
+	P_DISC,
 	P_COUNT
 };
 
@@ -170,14 +168,12 @@ static const DashThemePresetInfo presets[P_COUNT] = {
     {"osd", "OSD Classic", "Indigo system tunnel and the OSDSYS highlight blue. The default."},
     {"black", "Classic Black", "Plain black. The lightest background, adjustable to any colour."},
     {"towers", "PS2 Towers", "The opening tower field, seen from above in fog."},
-    {"discred", "Disc Error Red", "Deep red clouds and a slow glass cube."},
-    {"mist", "PS2 Blue Mist", "Dark navy with slow translucent blue forms."},
-    {"midnight", "Midnight Gradient", "A quiet blue-to-black gradient."},
-    {"minimal", "OSD Minimal", "Near black, a ring of eight lights, text-only selection."},
-    {"clockring", "System Clock", "The System Configuration clock ring: hours, minutes and seconds."},
+    {"mist", "PS2 Blue Mist", "Midnight blue-to-black gradient with moving blue mist."},
+    {"minimal", "OSD Minimal", "Near black, changing orbital lights with long fading trails."},
+    {"clockring", "System Clock", "The System Configuration clock ring with fluid real-time motion."},
     {"mcgrid", "Memory Card Grid", "Sparse block grid in thin lines."},
     {"bootlines", "Boot Lines", "Soft light traces crossing a dark screen."},
-    {"cubes", "Wireframe Cubes", "A few blue wireframe cubes drifting in depth."},
+    {"cubes", "Wireframe Cubes", "Independently rotating blue wireframe cubes drifting in their own spaces."},
     {"stream", "Data Stream", "Abstract device activity in thin columns."},
     {"mcblue", "Memory Card Blue", "Muted memory card blue with a tiled motif."},
     {"brushed", "Brushed Console", "Charcoal with a fine matte finish."},
@@ -186,7 +182,7 @@ static const DashThemePresetInfo presets[P_COUNT] = {
     {"crt", "CRT", "Dark gradient with an understated scanline overlay."},
     {"psx", "PSX", "Charcoal and silver ribbons."},
     {"crystal", "Crystal", "The previous dashboard look: towers, stars and glow."},
-    {"lightshow", "Light Show", "Light pillars sweeping across an indigo night."}};
+    {"discred", "Disc Error Red", "Deep red clouds and rotating glass cubes."}};
 
 static void base(DashTheme *t)
 {
@@ -214,7 +210,7 @@ static void base(DashTheme *t)
 	t->glow = 0;
 	t->font = DASH_FONT_ROBOTO;
 	t->font_scale = 100;
-	t->bold = 0;
+	t->bold = 1;
 	t->text_shadow = 1;
 	t->icon_tint = DASH_ICONS_TEXT;
 	t->app_icon_style = DASH_APPICON_SYSTEM;
@@ -272,16 +268,8 @@ void dashThemeLoadPreset(int i, DashTheme *t)
 		case P_MIST:
 			t->bg = DASH_BG_MIST;
 			t->bg1 = DC(40, 96, 200, 255);
-			t->bg2 = DC(3, 6, 18, 255);
-			t->select = DC(34, 84, 164, 170);
-			t->sel_text = t->text;
-			t->highlight = DASH_HL_FILL;
-			break;
-		case P_MIDNIGHT:
-			t->bg = DASH_BG_GRADIENT;
-			t->bg1 = DC(18, 30, 68, 255);
 			t->bg2 = DC(0, 0, 4, 255);
-			t->select = DC(40, 88, 168, 170);
+			t->select = DC(34, 84, 164, 170);
 			t->sel_text = t->text;
 			t->highlight = DASH_HL_FILL;
 			break;
@@ -442,14 +430,6 @@ void dashThemeLoadPreset(int i, DashTheme *t)
 			t->clock = DASH_CLOCK_STANDARD;
 			t->clock_seconds = 0;
 			break;
-		case P_LIGHTSHOW:
-			t->bg = DASH_BG_STREAKS;
-			t->bg1 = DC(96, 140, 255, 255);  /* streak colour */
-			t->bg2 = DC(4, 4, 14, 255);      /* night base */
-			t->select = DC(40, 80, 170, 160);
-			t->sel_text = t->text;
-			t->highlight = DASH_HL_BAR;
-			break;
 	}
 }
 
@@ -469,6 +449,11 @@ int dashThemeFindPreset(const char *id)
 
 	if (id == NULL)
 		return -1;
+	/* Compatibility aliases for presets removed from the picker. */
+	if (!stricmp(id, "midnight") || !stricmp(id, "Midnight Gradient"))
+		return P_MIST;
+	if (!stricmp(id, "lightshow") || !stricmp(id, "Light Show"))
+		return P_OSD;
 	for (i = 0; i < P_COUNT; i++)
 		if (!stricmp(presets[i].id, id) || !stricmp(presets[i].name, id))
 			return i;
@@ -513,7 +498,7 @@ void dashThemeValidate(DashTheme *t)
 
 	if (t->bg >= DASH_BG_COUNT)
 		t->bg = DASH_BG_SOLID;
-	t->bg_bright = clampU8(t->bg_bright, 10, 100);
+	t->bg_bright = clampU8(t->bg_bright, 10, 200);
 	t->scanlines = t->scanlines ? 1 : 0;
 	t->bg1.a = t->bg2.a = 255;
 	if (t->tile_style >= DASH_TILE_COUNT)

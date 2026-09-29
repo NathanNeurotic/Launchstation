@@ -511,7 +511,7 @@ static float focus_pop = 1.0f;
 
 void dashUiFocusPoke(void)
 {
-	if (dashCfg.anim != DASH_ANIM_OFF)
+	if (dashCfg.anim > 0)
 		focus_pop = 0.0f;
 }
 
