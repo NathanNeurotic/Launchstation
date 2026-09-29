@@ -22,6 +22,24 @@ order the saves A-Z, Z-A or the SAS way). The offered operations follow
 the classic rules (nothing that writes on a disc or read-only host, no
 file operations in the partition list).
 
+Also in the File Browser menu, as in the classic browser:
+
+* *Show*: file names, names and details (size and date), or game titles
+  and details (the title of each save or PSU file).
+* *Sort by*: name, game title, date, or as stored. Folders come first,
+  then ELF files.
+* *Bookmarks...*: the PathPad. Jump to a bookmarked folder, bookmark the
+  current one or remove one (saved in LAUNCHELF.CNF; *Lock launch keys*
+  in Settings locks them).
+* *Go to wLaunchELF's folder*, *Invert selection*.
+* *Use as launch arguments* on a text file: its lines become the
+  arguments of the application you start next from the browser.
+* The header shows the free space of memory cards and HDD partitions.
+
+In file pickers (Settings, launch keys) R3 chooses the highlighted file as
+a `uLE:/` path, relative to wLaunchELF's own folder, like the classic R3;
+elsewhere R3 opens that folder.
+
 The cursor never waits for the memory card or a slow device: file reads
 and writes (artwork, saves, library scans, folder listings) run on a
 background thread, and a small indicator above the button hints shows
@@ -54,7 +72,7 @@ Controls > Confirm button), as wLaunchELF always has.
 | L1 / R1 | Previous / next section |
 | L2 / R2 | Page jump |
 | START | Dashboard menu (home, refresh library, File Browser, settings, reboot IOP, power off) |
-| SELECT | Switch application view (APPS) |
+| SELECT | Tap: switch application view (APPS). Hold: your launch keys appear; press a button to start its application |
 
 wLaunchELF's boot behaviour is kept: `Init_Delay` is honoured,
 a launch key held when the delay ends starts its application, and a

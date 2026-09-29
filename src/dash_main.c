@@ -503,40 +503,46 @@ static void globalMenu(void)
 //--------------------------------------------------------------
 extern u32 paddata;
 
+/* launch-key buttons, in the classic menu's order */
+static const struct
+{
+	u32 mask;
+	int lk;
+	int icon;
+} lk_map[] = {
+    {PAD_CIRCLE, SETTING_LK_CIRCLE, DI_BTN_CIRCLE},
+    {PAD_CROSS, SETTING_LK_CROSS, DI_BTN_CROSS},
+    {PAD_SQUARE, SETTING_LK_SQUARE, DI_BTN_SQUARE},
+    {PAD_TRIANGLE, SETTING_LK_TRIANGLE, DI_BTN_TRIANGLE},
+    {PAD_L1, SETTING_LK_L1, DI_BTN_L1},
+    {PAD_R1, SETTING_LK_R1, DI_BTN_R1},
+    {PAD_L2, SETTING_LK_L2, DI_BTN_L2},
+    {PAD_R2, SETTING_LK_R2, DI_BTN_R2},
+    {PAD_L3, SETTING_LK_L3, DI_BTN_L3},
+    {PAD_R3, SETTING_LK_R3, DI_BTN_R3},
+    {PAD_START, SETTING_LK_START, DI_BTN_START},
+    {PAD_SELECT, SETTING_LK_SELECT, DI_BTN_SELECT},
+    {PAD_LEFT, SETTING_LK_LEFT, DI_BTN_LEFT},
+    {PAD_RIGHT, SETTING_LK_RIGHT, DI_BTN_RIGHT}};
+#define LK_MAP_N ((int)(sizeof(lk_map) / sizeof(lk_map[0])))
+
+/* a launch key is usable: a path is set (LEFT/RIGHT only when enabled) */
+static int lkUsable(int lk)
+{
+	if ((lk == SETTING_LK_LEFT || lk == SETTING_LK_RIGHT) && !setting->LK_Flag[lk])
+		return 0;
+	return setting->LK_Path[lk][0] != '\0';
+}
+
 static int bootHeldLaunchKey(void)
 {
-	static const struct
-	{
-		u32 mask;
-		int lk;
-	} map[] = {
-	    {PAD_CIRCLE, SETTING_LK_CIRCLE},
-	    {PAD_CROSS, SETTING_LK_CROSS},
-	    {PAD_SQUARE, SETTING_LK_SQUARE},
-	    {PAD_TRIANGLE, SETTING_LK_TRIANGLE},
-	    {PAD_L1, SETTING_LK_L1},
-	    {PAD_R1, SETTING_LK_R1},
-	    {PAD_L2, SETTING_LK_L2},
-	    {PAD_R2, SETTING_LK_R2},
-	    {PAD_L3, SETTING_LK_L3},
-	    {PAD_R3, SETTING_LK_R3},
-	    {PAD_START, SETTING_LK_START},
-	    {PAD_SELECT, SETTING_LK_SELECT},
-	    {PAD_LEFT, SETTING_LK_LEFT},
-	    {PAD_RIGHT, SETTING_LK_RIGHT}};
-	unsigned int i;
+	int i;
 
 	waitAnyPadReady();
 	readpad_no_KB();
-	for (i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
-		int lk = map[i].lk;
-		if (!(paddata & map[i].mask))
-			continue;
-		if ((lk == SETTING_LK_LEFT || lk == SETTING_LK_RIGHT) && !setting->LK_Flag[lk])
-			continue;
-		if (setting->LK_Path[lk][0])
-			return lk;
-	}
+	for (i = 0; i < LK_MAP_N; i++)
+		if ((paddata & lk_map[i].mask) && lkUsable(lk_map[i].lk))
+			return lk_map[i].lk;
 	return -1;
 }
 
@@ -553,6 +559,107 @@ static void runLaunchKey(int lk)
 		dashLaunchApp(a, 0);
 	} else
 		dashRunMisc(setting->LK_Path[lk]);
+}
+
+//--------------------------------------------------------------
+// Quick launch: the classic menu's "press a button to start its
+// application". Hold SELECT: the launch keys appear, and a button starts
+// its application. A short SELECT tap keeps its normal meaning.
+//--------------------------------------------------------------
+static int ql_down, ql_used;
+static u64 ql_since;
+
+static void quickLaunchInput(DashInput *in)
+{
+	int i;
+
+	if (in->raw_new & PAD_SELECT) {
+		ql_down = 1;
+		ql_used = 0;
+		ql_since = Timer();
+		in->pressed &= ~DASH_IN_SELECT;
+	}
+	if (!ql_down)
+		return;
+	if (paddata & PAD_SELECT) {
+		u32 other = in->raw_new & ~PAD_SELECT;
+		/* while SELECT is held the buttons are launch keys, not navigation */
+		in->pressed = 0;
+		in->any = 0;
+		if (!other)
+			return;
+		ql_used = 1;
+		for (i = 0; i < LK_MAP_N; i++) {
+			if (lk_map[i].mask == PAD_SELECT || !(other & lk_map[i].mask))
+				continue;
+			if (lkUsable(lk_map[i].lk)) {
+				ql_down = 0;
+				dashSoundPlay(DASH_SND_CONFIRM);
+				runLaunchKey(lk_map[i].lk);
+				dashInputFlush();
+				return;
+			}
+		}
+		dashToast(DASH_TOAST_INFO, "No application on that button (Settings > Launch keys)");
+		return;
+	}
+	/* released: a short tap without another button is a normal SELECT */
+	ql_down = 0;
+	if (!ql_used && Timer() - ql_since < 500) {
+		in->pressed |= DASH_IN_SELECT;
+		in->any = 1;
+	}
+}
+
+static void lkLabel(int lk, char *out, int size)
+{
+	const char *p = setting->LK_Path[lk], *s;
+
+	if (setting->LK_Title[lk][0]) {
+		dashStrCopy(out, setting->LK_Title[lk], size);
+		return;
+	}
+	s = strrchr(p, '/');
+	if (s == NULL)
+		s = strrchr(p, ':');
+	dashStrCopy(out, s != NULL ? s + 1 : p, size);
+}
+
+static void quickLaunchDraw(void)
+{
+	int i, n = 0, col;
+	float w = 520.0f, h, x, y, row_h = 28.0f, k;
+	char label[64];
+
+	if (!ql_down || !(paddata & PAD_SELECT) || Timer() - ql_since < 250)
+		return;
+	for (i = 0; i < LK_MAP_N; i++)
+		if (lk_map[i].mask != PAD_SELECT && lkUsable(lk_map[i].lk))
+			n++;
+	h = 70.0f + (n > 0 ? ((n + 1) / 2) * row_h : row_h) + 12.0f;
+	x = (DASH_VW - w) * 0.5f;
+	y = (DASH_VH - h) * 0.5f;
+	k = dashClampf((Timer() - ql_since - 250) / 120.0f, 0.0f, 1.0f);
+	dashModalBackdrop(k * 0.8f);
+	dashGfxPushAlpha(k);
+	dashModalPanel(x, y, w, h, k);
+	dashIcon(DI_KEY, x + 24, y + 18, 24, DASH_C_ACCENT);
+	dashTextS(x + 58, y + 20, "Launch keys", DASH_FS_LABEL, DASH_C_TEXT);
+	dashText(x + 58, y + 44, "Keep SELECT held and press a button", DASH_FS_CAPTION, DASH_C_TEXT3);
+	if (n == 0)
+		dashText(x + 28, y + 72, "No launch keys yet: set them in Settings > Launch keys.", DASH_FS_SMALL, DASH_C_TEXT2);
+	for (i = 0, col = 0; i < LK_MAP_N; i++) {
+		float bx, by;
+		if (lk_map[i].mask == PAD_SELECT || !lkUsable(lk_map[i].lk))
+			continue;
+		bx = x + 24 + (col % 2) * (w - 48) * 0.5f;
+		by = y + 70 + (col / 2) * row_h;
+		bx += dashDrawButton(bx, by, lk_map[i].icon, NULL) + 8;
+		lkLabel(lk_map[i].lk, label, sizeof(label));
+		dashTextFit(bx, by + 4, (w - 48) * 0.5f - 44, label, DASH_FS_SMALL, DASH_C_TEXT);
+		col++;
+	}
+	dashGfxPopAlpha();
 }
 
 static void bootBegin(void)
@@ -784,6 +891,8 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			if (boot_phase == 1)
 				memset(&in, 0, sizeof(in));
 		}
+		if (!boot_phase)
+			quickLaunchInput(&in);
 		/* Main dashboard screens do not run through the modal helpers, so give
 		 * their ordinary navigation/activation inputs the same UI feedback. */
 		if (in.pressed & (DASH_IN_UP | DASH_IN_DOWN | DASH_IN_LEFT | DASH_IN_RIGHT))
@@ -843,6 +952,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		}
 #endif
 		dashRenderScene();
+		quickLaunchDraw();
 		dashGfxPresent();
 
 		/* first run: short introduction once the dashboard has faded in */
