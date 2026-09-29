@@ -1414,6 +1414,14 @@ static void cfgSaveDone(void *arg)
 	free(j);
 }
 
+static int cfgSave(int kind, int target, const char *path);
+
+/* LAUNCHELF.CNF now, where it was loaded from (File Browser bookmarks) */
+int dashSettingsSaveCnf(void)
+{
+	return cfgSave(CFG_SAVE_CNF, -2, NULL);
+}
+
 static int cfgSave(int kind, int target, const char *path)
 {
 	CfgSaveJob *j = calloc(1, sizeof(CfgSaveJob));
