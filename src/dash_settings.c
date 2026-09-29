@@ -385,6 +385,9 @@ static DashTheme snap_theme;
 static int snap_theme_preset, snap_theme_custom;
 static SETTING snap_classic;
 static char snap_ip[16], snap_nm[16], snap_gw[16];
+/* what saving would have written when the snapshot was taken */
+static char *snap_dash_text, *snap_cnf_text;
+static u64 dirty_checked_ms;
 
 static const char *const onoff[] = {"Off", "On"};
 static const char *const tv_names[] = {"Auto", "NTSC", "PAL", "VGA", "480p"};
@@ -1460,25 +1463,75 @@ failed:
 	return 0;
 }
 
-/* "Changed" means different from when SETTINGS was opened (or last
- * saved), not "touched": picking the same value again, or changing
- * something and changing it back, leaves nothing to save. The dirty flags
- * set by the editors only say where to look. */
-static void refreshDirty(void)
+static char *dashSaveText(void)
 {
-	if (!session)
+	int len;
+	return dashStoreSettingsText(&dashCfg, &len);
+}
+
+static char *cnfSaveText(void)
+{
+	int len;
+	return configBuildSaveText(&len);
+}
+
+/* frees `now`; unknown (no memory) counts as changed */
+static int textChanged(const char *snap, char *now)
+{
+	int changed = (snap == NULL || now == NULL) ? 1 : strcmp(snap, now) != 0;
+	free(now);
+	return changed;
+}
+
+/* "Changed" means saving would write something different from when
+ * SETTINGS was opened (or last saved), not "touched": picking the same
+ * value again, or changing something and changing it back, leaves
+ * nothing to save. A byte comparison with the snapshot rules out the
+ * common unchanged case cheaply; when bytes differ (a string edited and
+ * put back can leave old characters after its end) the text that would
+ * be saved decides. `force` = 0 re-checks at most every 250 ms. */
+static void refreshDirty(int force)
+{
+	u64 now = Timer();
+
+	if (!session || (!force && now - dirty_checked_ms < 250))
 		return;
+	dirty_checked_ms = now;
 	dash_dirty = memcmp(&dashCfg, &snap_dash, sizeof(snap_dash)) != 0 ||
 	             memcmp(&dashTheme, &snap_theme, sizeof(snap_theme)) != 0 ||
 	             dashThemeBasePreset() != snap_theme_preset || dashThemeIsCustom() != snap_theme_custom;
+	if (dash_dirty)
+		dash_dirty = textChanged(snap_dash_text, dashSaveText());
 	classic_dirty = memcmp(setting, &snap_classic, sizeof(snap_classic)) != 0;
+	if (classic_dirty)
+		classic_dirty = textChanged(snap_cnf_text, cnfSaveText());
 	net_dirty = strcmp(ip, snap_ip) || strcmp(netmask, snap_nm) || strcmp(gw, snap_gw);
+}
+
+static int dirtyOrFailed(void)
+{
+	return dash_dirty || classic_dirty || net_dirty || cfg_failed[0] || cfg_failed[1] || dashStoreSettingsFailed();
 }
 
 static int anyDirty(void)
 {
-	refreshDirty();
-	return dash_dirty || classic_dirty || net_dirty || cfg_failed[0] || cfg_failed[1] || dashStoreSettingsFailed();
+	refreshDirty(1);
+	return dirtyOrFailed();
+}
+
+/* for the per-frame "unsaved changes" line */
+static int anyDirtyCached(void)
+{
+	refreshDirty(0);
+	return dirtyOrFailed();
+}
+
+static void snapshotTexts(void)
+{
+	free(snap_dash_text);
+	free(snap_cnf_text);
+	snap_dash_text = dashSaveText();
+	snap_cnf_text = cnfSaveText();
 }
 
 static void sessionSnapshot(void)
@@ -1489,6 +1542,7 @@ static void sessionSnapshot(void)
 	snap_theme_preset = dashThemeBasePreset();
 	snap_theme_custom = dashThemeIsCustom();
 	memcpy(&snap_classic, setting, sizeof(snap_classic));
+	snapshotTexts();
 	dashStrCopy(snap_ip, ip, sizeof(snap_ip));
 	dashStrCopy(snap_nm, netmask, sizeof(snap_nm));
 	dashStrCopy(snap_gw, gw, sizeof(snap_gw));
@@ -1508,7 +1562,7 @@ static void settingsCommit(void)
 {
 	int cnf_failed = 0, net_failed = 0;
 
-	refreshDirty();
+	refreshDirty(1);
 	if (dash_dirty || dashStoreSettingsFailed())
 		dashStoreSaveSettings();
 	if (classic_dirty || cfg_failed[CFG_SAVE_CNF])
@@ -1522,7 +1576,7 @@ static void settingsCommit(void)
 /* Puts back what was there when SETTINGS was opened. */
 static void settingsRevert(void)
 {
-	refreshDirty();
+	refreshDirty(1);
 	if (classic_dirty) {
 		int screen = setting->TV_mode != snap_classic.TV_mode || setting->screen_x != snap_classic.screen_x ||
 		             setting->screen_y != snap_classic.screen_y;
@@ -1671,6 +1725,8 @@ static void saveClassicAs(void)
 	if (r >= 0 && cfgSave(CFG_SAVE_CNF, targets[r], paths[r])) {
 		/* the wLaunchELF part of the session is saved now */
 		memcpy(&snap_classic, setting, sizeof(snap_classic));
+		free(snap_cnf_text);
+		snap_cnf_text = cnfSaveText();
 		classic_dirty = 0;
 	}
 	free(j);
@@ -2302,9 +2358,9 @@ static void settingsDraw(void)
 		snprintf(sub, sizeof(sub), "%s%s", dashTheme.name, dashThemeIsCustom() ? " (edited)" : "");
 		dashDrawSectionTitle(48, 68, "Theme", sub);
 	} else {
-		dashDrawSectionTitle(48, 68, "Settings", anyDirty() ? "unsaved changes" :
+		dashDrawSectionTitle(48, 68, "Settings", anyDirtyCached() ? "unsaved changes" :
 		    (cfg_pending[0] || cfg_pending[1] || dashStoreSettingsPending()) ? "saving changes..." : NULL);
-		if (anyDirty())
+		if (anyDirtyCached())
 			dashRect(48 + dashTextWidth("Settings", DASH_FS_TITLE) + 6, 80, 5, 5, DASH_C_WARM);
 	}
 
