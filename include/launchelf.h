@@ -545,6 +545,8 @@ void filerPsuPasteInto(char *mess, char *path);
 const char *filerPsuPasteLabel(const char *path);
 int filerMountVmc(const char *path, const FILEINFO *file, int slot, char *msg, int msg_size);
 int filerCreateFolderIcon(const char *path, const char *title, const char *text, char *msg, int msg_size);
+int filerFreeSpace(const char *path, u64 *out);
+void filerLaunchElfFolder(char *out, int size);
 /* dashboard replacements for the three dialogs above (NULL = classic) */
 extern int (*ynDialogOverride)(const char *message);
 extern void (*nonDialogOverride)(const char *message);

@@ -926,6 +926,7 @@ void dashShowTextLines(int icon, const char *title, const char *subtitle, const 
 void dashExploitInstaller(void); /* dash_exploit.c */
 void dashOpenBrowser(const char *start_dir);        /* native File Browser */
 void dashFileBrowser(const char *start_dir);        /* dash_browser.c */
+int dashSettingsSaveCnf(void);                      /* LAUNCHELF.CNF now */
 /* classic dialogs (ynDialog/nonDialog/keyboard) as dashboard dialogs */
 void dashClassicUiInstall(int on);
 void dashClassicUiDone(void);

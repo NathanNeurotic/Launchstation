@@ -17,6 +17,8 @@
 #include "dash_sound.h"
 #include "filer_shared.h"
 #include "filer_actions.h"
+#include "filer_copy.h"
+#include "gui_sort.h"
 #include "init.h"
 
 int IsTextEditorFileType(const char *path);
@@ -41,7 +43,15 @@ static struct
 	DashDevice devs[DASH_MAX_DEVICES];
 	int ndevs;
 	char msg[MAX_PATH]; /* result text from classic operations */
+	u64 free_bytes;     /* free space of this folder's device */
+	int free_valid;
+	int args_loaded;    /* launch arguments loaded here, not started yet */
 } fb;
+
+/* View and sort choices last the session, like the classic browser's
+ * L1 pop-up (they are the classic file_show / file_sort values). */
+static int fb_show = 1; /* 0 names, 1 names + details, 2 game titles + details */
+static int fb_sort = 1; /* 0 as stored, 1 name, 2 game title, 3 date */
 
 //--------------------------------------------------------------
 // Listing
@@ -53,6 +63,9 @@ typedef struct
 	FILEINFO *files;
 	int n;
 	int abandoned;
+	int titles; /* read the game titles (saves, PSU files) */
+	u64 free_bytes;
+	int free_valid;
 } FbListJob;
 
 static int isDir(const FILEINFO *f)
@@ -60,21 +73,30 @@ static int isDir(const FILEINFO *f)
 	return (f->stats.AttrFile & sceMcFileAttrSubdir) != 0;
 }
 
-static int fbCmp(const void *a, const void *b)
+/* partition lists keep the drive's order, as in the classic browser */
+static int isPartitionList(const char *dir)
 {
-	const FILEINFO *x = (const FILEINFO *)a, *y = (const FILEINFO *)b;
-
-	if (isDir(x) != isDir(y))
-		return isDir(y) - isDir(x);
-	return stricmp(x->name, y->name);
+	return (!strncmp(dir, "hdd", 3) && dir[3] >= '0' && dir[3] <= '9' && !strcmp(dir + 4, ":/")) ||
+	       !strcmp(dir, "dvr_hdd0:/");
 }
 
 static void listRun(void *arg)
 {
 	FbListJob *j = (FbListJob *)arg;
+	int i;
 
 	dashWorkerStatus(j->path, 0, 0);
 	j->n = getDir(j->path, j->files);
+	/* right after the read: for the HDD this asks the partition just mounted */
+	j->free_valid = j->n >= 0 ? filerFreeSpace(j->path, &j->free_bytes) : 0;
+	for (i = 0; i < j->n; i++) {
+		j->files[i].title[0] = '\0';
+		if (j->titles && !isPartitionList(j->path)) {
+			dashWorkerStatus(j->files[i].name, i, j->n);
+			if (filerGetGameTitle(j->path, &j->files[i], j->files[i].title) < 0)
+				j->files[i].title[0] = '\0';
+		}
+	}
 }
 
 static void selectName(const char *name)
@@ -101,7 +123,13 @@ static void listDone(void *arg)
 			fb.files[o++] = *f;
 		}
 		fb.n = o;
-		qsort(fb.files, fb.n, sizeof(FILEINFO), fbCmp);
+		/* the classic order: folders, then ELF files, then the rest */
+		file_show = fb_show;
+		file_sort = fb_sort;
+		if (fb_sort && fb.n > 1 && !isPartitionList(j->path))
+			sort(fb.files, 0, fb.n - 1);
+		fb.free_valid = j->free_valid;
+		fb.free_bytes = j->free_bytes;
 		memset(fb.mark, 0, MAX_ENTRY);
 		fb.nmarked = 0;
 		fb.loading = 0;
@@ -146,6 +174,7 @@ static void openDir(const char *dir, const char *select)
 	fb.gen++;
 	fb.n = 0;
 	fb.nmarked = 0;
+	fb.free_valid = 0;
 	fb.sel = fb.top = 0;
 	fb.sel_anim = 0.0f;
 	fb.want_sel[0] = '\0';
@@ -220,6 +249,8 @@ static void openDir(const char *dir, const char *select)
 	j->gen = fb.gen;
 	j->n = 0;
 	j->abandoned = 0;
+	j->titles = (fb_show == 2 || fb_sort == 2);
+	j->free_valid = 0;
 	dashStrCopy(j->path, dir, sizeof(j->path));
 	fb.loading = 1;
 	if (dashWorkerSubmit("Reading folder", DASH_JOB_VISIBLE, listRun, listDone, j) < 0) {
@@ -282,7 +313,11 @@ static void launchPath(const char *path, int with_args)
 {
 	DashApp tmp;
 
+	/* arguments loaded with "Use as launch arguments" go with this start */
+	if (!with_args && LaunchArgsPending())
+		with_args = DASH_LAUNCH_PENDING_ARGS;
 	dashLaunchApp(dashLibResolve(path, &tmp), with_args);
+	fb.args_loaded = LaunchArgsPending(); /* only still set when the start failed */
 }
 
 static void activate(void)
@@ -786,6 +821,133 @@ static void opTimestamps(int custom)
 	refresh();
 }
 
+/* The classic "launch with arguments": the text file's lines become the
+ * arguments of the next application started from here. */
+static void opUseArgs(const FILEINFO *f)
+{
+	char path[MAX_PATH];
+
+	if (f == NULL || !fullPath(f, path, sizeof(path)))
+		return;
+	fb.msg[0] = '\0';
+	if (LaunchArgsLoadFromFile(path, fb.msg, sizeof(fb.msg)) > 0) {
+		fb.args_loaded = 1;
+		dashToast(DASH_TOAST_OK, "Arguments loaded: now choose the application to start");
+	} else
+		dashModalMessage(DI_WARNING, "No arguments loaded", fb.msg[0] ? fb.msg : "The file has no usable arguments.", f->name);
+}
+
+#define PATHPAD_SLOTS 30
+
+/* the bookmarked folders; returns how many, with their slots in idx */
+static int bookmarkItems(DashMenuItem *items, int *idx, int first)
+{
+	int n = first, i;
+
+	for (i = 0; i < PATHPAD_SLOTS; i++) {
+		if (!PathPad[i][0])
+			continue;
+		items[n].icon = DI_STAR;
+		items[n].label = PathPad[i];
+		items[n].detail = NULL;
+		items[n].disabled = 0;
+		idx[n++] = i;
+	}
+	return n - first;
+}
+
+static void addBookmark(void)
+{
+	DashMenuItem items[PATHPAD_SLOTS];
+	int idx[PATHPAD_SLOTS], i, slot = -1, n, r;
+
+	for (i = 0; i < PATHPAD_SLOTS; i++) {
+		if (!strcmp(PathPad[i], fb.dir)) {
+			dashToast(DASH_TOAST_INFO, "This folder is already bookmarked");
+			return;
+		}
+		if (slot < 0 && !PathPad[i][0])
+			slot = i;
+	}
+	if (slot < 0) {
+		/* all 30 slots used: replace one */
+		n = bookmarkItems(items, idx, 0);
+		r = dashModalMenu("Replace which bookmark?", fb.dir, items, n, 0);
+		if (r < 0)
+			return;
+		slot = idx[r];
+	}
+	dashStrCopy(PathPad[slot], fb.dir, MAX_PATH);
+	if (dashSettingsSaveCnf())
+		dashToast(DASH_TOAST_OK, "Folder bookmarked");
+}
+
+static void removeBookmark(void)
+{
+	DashMenuItem items[PATHPAD_SLOTS];
+	int idx[PATHPAD_SLOTS], n, r;
+
+	n = bookmarkItems(items, idx, 0);
+	r = dashModalMenu("Remove which bookmark?", NULL, items, n, 0);
+	if (r < 0)
+		return;
+	PathPad[idx[r]][0] = '\0';
+	if (dashSettingsSaveCnf())
+		dashToast(DASH_TOAST_OK, "Bookmark removed");
+}
+
+/* the PathPad bookmarks: jump to one, bookmark this folder, remove one */
+static void opBookmark(void)
+{
+	DashMenuItem items[PATHPAD_SLOTS + 2];
+	int idx[PATHPAD_SLOTS + 2], n = 0, count, r;
+	int can_edit = !setting->PathPad_Lock;
+	int in_folder = fb.dir[0] && !isMisc(fb.dir);
+
+	if (can_edit && in_folder) {
+		items[n].icon = DI_PLUS, items[n].label = "Bookmark this folder", items[n].detail = NULL, items[n].disabled = 0;
+		idx[n++] = -1;
+	}
+	count = bookmarkItems(items, idx, n + (can_edit ? 1 : 0));
+	if (can_edit && count > 0) {
+		items[n].icon = DI_CLOSE, items[n].label = "Remove a bookmark...", items[n].detail = NULL, items[n].disabled = 0;
+		idx[n++] = -2;
+	}
+	n += count;
+	if (n == 0) {
+		dashModalMessage(DI_STAR, "No bookmarks", setting->PathPad_Lock ? "Bookmarks are locked (Settings > Launch keys)." : "Open a folder, then choose Bookmark this folder.", NULL);
+		return;
+	}
+	r = dashModalMenu("Bookmarks", setting->PathPad_Lock ? "locked" : NULL, items, n, 0);
+	if (r < 0)
+		return;
+	if (idx[r] == -1) {
+		addBookmark();
+		return;
+	}
+	if (idx[r] == -2) {
+		removeBookmark();
+		return;
+	}
+	r = idx[r];
+	if (strchr(PathPad[r], ':') == NULL) {
+		dashToast(DASH_TOAST_WARN, "This bookmark is not a folder path");
+		return;
+	}
+	{
+		char dir[MAX_PATH];
+		int len;
+
+		dashStrCopy(dir, PathPad[r], sizeof(dir) - 1);
+		len = strlen(dir);
+		if (len > 0 && dir[len - 1] != '/' && dir[len - 1] != ':')
+			strcat(dir, "/");
+		else if (len > 0 && dir[len - 1] == ':')
+			strcat(dir, "/");
+		openDir(dir, NULL);
+	}
+}
+
 static void actionsMenu(void)
 {
 	FILEINFO *f = (fb.dir[0] && !isMisc(fb.dir) && fb.sel < fb.n) ? &fb.files[fb.sel] : NULL;
@@ -817,9 +979,18 @@ static void actionsMenu(void)
 		F_TUNA,
 		F_DATES,
 		F_SELALL,
+		F_INVERT,
 		F_CLEARSEL,
+		F_USE_ARGS,
+		F_CLEAR_ARGS,
+		F_VIEW,
+		F_SORT,
+		F_BOOKMARK,
+		F_HOME,
 		F_REFRESH
 	};
+	static const char *const show_names[] = {"File names", "Names and details", "Game titles and details"};
+	static const char *const sort_names[] = {"As stored", "Name", "Game title", "Date"};
 
 	/* the same rules as the classic menu: read-only devices, partition
 	 * lists, the clipboard, protected system folders */
@@ -865,10 +1036,19 @@ static void actionsMenu(void)
 			ADD(DI_CLOCK, LNG(time_manip), "2099-12-31", 0, F_TUNA);
 		if (en[TIMEMANIP_CUSTOM])
 			ADD(DI_CLOCK, "Folder dates...", "order the saves", 0, F_DATES);
+		if (f != NULL && !isDir(f) && en[LAUNCH_ELF_ARGS] && !is_elf)
+			ADD(DI_EDIT, "Use as launch arguments", "then choose the application", 0, F_USE_ARGS);
 		ADD(DI_CHECK, "Select all", NULL, fb.n == 0, F_SELALL);
+		ADD(DI_CHECK, "Invert selection", NULL, fb.n == 0, F_INVERT);
 		if (fb.nmarked)
 			ADD(DI_BACK, "Clear selection", NULL, 0, F_CLEARSEL);
+		ADD(DI_VIEW_LIST, "Show", show_names[fb_show], 0, F_VIEW);
+		ADD(DI_VIEW_GRID, "Sort by", sort_names[fb_sort], 0, F_SORT);
 	}
+	if (LaunchArgsPending())
+		ADD(DI_CLOSE, "Clear launch arguments", NULL, 0, F_CLEAR_ARGS);
+	ADD(DI_STAR, "Bookmarks...", "PathPad", 0, F_BOOKMARK);
+	ADD(DI_HOME, "Go to wLaunchELF's folder", NULL, 0, F_HOME);
 	ADD(DI_REFRESH, "Refresh", NULL, 0, F_REFRESH);
 #undef ADD
 	r = dashModalMenu("File Browser", fb.dir[0] ? fb.dir : "Devices", items, n, 0);
@@ -937,10 +1117,47 @@ static void actionsMenu(void)
 			memset(fb.mark, 1, fb.n);
 			fb.nmarked = fb.n;
 			break;
+		case F_INVERT:
+			for (r = 0; r < fb.n; r++)
+				fb.mark[r] = !fb.mark[r];
+			fb.nmarked = fb.n - fb.nmarked;
+			break;
 		case F_CLEARSEL:
 			memset(fb.mark, 0, MAX_ENTRY);
 			fb.nmarked = 0;
 			break;
+		case F_USE_ARGS:
+			opUseArgs(f);
+			break;
+		case F_CLEAR_ARGS:
+			LaunchArgsClear();
+			fb.args_loaded = 0;
+			dashToast(DASH_TOAST_INFO, "Launch arguments cleared");
+			break;
+		case F_VIEW:
+			r = dashModalChoice("Show", show_names, 3, fb_show);
+			if (r >= 0 && r != fb_show) {
+				fb_show = r;
+				refresh();
+			}
+			break;
+		case F_SORT:
+			r = dashModalChoice("Sort by", sort_names, 4, fb_sort);
+			if (r >= 0 && r != fb_sort) {
+				fb_sort = r;
+				refresh();
+			}
+			break;
+		case F_BOOKMARK:
+			opBookmark();
+			break;
+		case F_HOME: {
+			char dir[MAX_PATH];
+			filerLaunchElfFolder(dir, sizeof(dir));
+			if (dir[0] && strchr(dir, ':') != NULL)
+				openDir(dir, NULL);
+			break;
+		}
 		case F_REFRESH:
 			refresh();
 			break;
@@ -963,6 +1180,18 @@ static int fileIcon(const FILEINFO *f)
 	if (IsTextEditorFileType(f->name))
 		return DI_TEXT;
 	return DI_FILE;
+}
+
+static void fmtBytes(char *out, int size, u64 b)
+{
+	if (b >= (u64)1024 * 1024 * 1024)
+		snprintf(out, size, "%.1f GB", (double)b / (1024.0 * 1024.0 * 1024.0));
+	else if (b >= 1024 * 1024)
+		snprintf(out, size, "%.1f MB", (double)b / (1024.0 * 1024.0));
+	else if (b >= 1024)
+		snprintf(out, size, "%u KB", (unsigned)(b / 1024));
+	else
+		snprintf(out, size, "%u B", (unsigned)b);
 }
 
 static void fmtSize(char *out, int size, const FILEINFO *f)
@@ -992,11 +1221,23 @@ static void browserScene(void)
 	dashTextS(FB_X + 32, 20, "File Browser", DASH_FS_TITLE, DASH_C_TEXT);
 	dashTextFit(FB_X, 58, FB_W - 150, fb.dir[0] ? fb.dir : "Choose a device", DASH_FS_SMALL, DASH_C_TEXT2);
 	if (fb.dir[0]) {
+		char space[24];
+
+		space[0] = '\0';
+		if (fb.free_valid)
+			fmtBytes(space, sizeof(space), fb.free_bytes);
 		if (fb.nmarked)
 			snprintf(info, sizeof(info), "%d of %d selected", fb.nmarked, fb.n);
+		else if (space[0])
+			snprintf(info, sizeof(info), "%d item%s   %s free", fb.n, fb.n == 1 ? "" : "s", space);
 		else
 			snprintf(info, sizeof(info), "%d item%s", fb.n, fb.n == 1 ? "" : "s");
 		dashTextRight(FB_X + FB_W, 60, info, DASH_FS_CAPTION, DASH_C_TEXT3);
+	}
+	if (LaunchArgsPending()) {
+		snprintf(info, sizeof(info), "%d launch argument%s loaded: choose the application", LaunchArgsGetCount(),
+		         LaunchArgsGetCount() == 1 ? "" : "s");
+		dashTextRight(FB_X + FB_W, 42, info, DASH_FS_CAPTION, DASH_C_ACCENT);
 	}
 	if (nclipFiles > 0) {
 		snprintf(info, sizeof(info), "Clipboard: %d to %s", nclipFiles, browser_cut ? "move" : "copy");
@@ -1020,15 +1261,28 @@ static void browserScene(void)
 			dashTextRight(FB_X + FB_W - 12, y + 5, d->status, DASH_FS_CAPTION, DASH_C_TEXT3);
 		} else {
 			FILEINFO *f = &fb.files[i];
-			char sz[24];
+			char sz[24], label[MAX_NAME + 8];
+			int details = fb_show > 0 && !isMisc(fb.dir);
 			if (fb.mark[i])
 				dashIcon(DI_CHECK, FB_X + 8, y + 4, 16, DASH_C_OK);
 			else
 				dashIcon(isMisc(fb.dir) ? DI_TOOLS : fileIcon(f), FB_X + 8, y + 4, 16, col);
-			dashTextFit(FB_X + 34, y + 3, FB_W - 150, f->name, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
-			fmtSize(sz, sizeof(sz), f);
-			if (sz[0])
-				dashTextRight(FB_X + FB_W - 12, y + 5, sz, DASH_FS_CAPTION, DASH_C_TEXT3);
+			/* save titles are Shift-JIS; the dashboard font shows their ASCII */
+			if (fb_show == 2 && f->title[0])
+				transcpy_sjis(label, f->title);
+			else
+				dashStrCopy(label, f->name, sizeof(label));
+			dashTextFit(FB_X + 34, y + 3, details ? FB_W - 250 : FB_W - 60, label, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
+			if (details) {
+				fmtSize(sz, sizeof(sz), f);
+				if (sz[0])
+					dashTextRight(FB_X + FB_W - 142, y + 5, sz, DASH_FS_CAPTION, DASH_C_TEXT3);
+				if (time_valid && f->stats._Modify.Year) {
+					char date[40];
+					filerDateEditorFormat(&f->stats._Modify, date, sizeof(date));
+					dashTextRight(FB_X + FB_W - 12, y + 5, date, DASH_FS_CAPTION, DASH_C_TEXT3);
+				}
+			}
 		}
 	}
 	dashGfxScissorReset();
@@ -1140,6 +1394,8 @@ void dashFileBrowser(const char *start_dir)
 		dashGfxPresent();
 	}
 	fb.gen++; /* a listing still in flight is dropped */
+	if (fb.args_loaded && LaunchArgsPending())
+		LaunchArgsClear(); /* loaded here but no application was started */
 	dashSetSceneOverride(NULL);
 	free(fb.files);
 	free(fb.mark);

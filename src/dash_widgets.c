@@ -788,6 +788,25 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 				sel = 0;
 			}
 		}
+		/* R3, as in the classic browser: a file is chosen relative to
+		 * wLaunchELF's own folder ("uLE:/NAME", follows wLaunchELF when it
+		 * moves); elsewhere it jumps to that folder */
+		if ((in.pressed & DASH_IN_R3) && !pk.starting) {
+			int ent = (pk.dir[0] && !pk.loading) ? sel - first_entry : -1;
+			if (mode != DASH_PICK_FOLDER && ent >= 0 && ent < pk.n && !pk.entries[ent].dir && !pickIsMisc(pk.dir)) {
+				dashSoundPlay(DASH_SND_CONFIRM);
+				snprintf(out, out_size, "uLE:/%s", pk.entries[ent].name);
+				result = 1;
+				break;
+			} else {
+				char dir[MAX_PATH];
+				filerLaunchElfFolder(dir, sizeof(dir));
+				if (dir[0] && strchr(dir, ':') != NULL) {
+					pickOpen(dir);
+					sel = 0;
+				}
+			}
+		}
 		if ((in.pressed & DASH_IN_START) && mode == DASH_PICK_FOLDER && pk.dir[0]) {
 			dashStrCopy(out, pk.dir, out_size);
 			result = 1;
@@ -909,6 +928,9 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 				if (mode == DASH_PICK_FOLDER && pk.dir[0]) {
 					hx += dashDrawButton(hx, hy, -1, "START") + 4;
 					hx = dashTextS(hx, hy + 4.5f, "Use this folder", DASH_FS_SMALL, DASH_C_TEXT2) + 14;
+				} else if (mode != DASH_PICK_FOLDER) {
+					hx += dashDrawButton(hx, hy, DI_BTN_R3, NULL) + 4;
+					hx = dashTextS(hx, hy + 4.5f, "uLE:/ path", DASH_FS_SMALL, DASH_C_TEXT2) + 14;
 				}
 				hx += dashDrawButton(hx, hy, DI_BTN_TRIANGLE, NULL) + 4;
 				dashTextS(hx, hy + 4.5f, "Cancel", DASH_FS_SMALL, DASH_C_TEXT2);

@@ -2341,3 +2341,70 @@ int filerCreateFolderIcon(const char *path, const char *title, const char *text,
 	}
 	return 1;
 }
+
+/* Free space of the device holding `path`, as the classic browser header
+ * shows it (memory cards, xfrom, HDD partitions). Call right after reading
+ * the folder: for the HDD it asks the partition that read mounted.
+ * 1 = *out is valid. */
+int filerFreeSpace(const char *path, u64 *out)
+{
+	int type = 0, free_units = 0, ret;
+
+	if (!strncmp(path, "mc", 2) && (path[2] == '0' || path[2] == '1')) {
+		mcGetInfo(path[2] - '0', 0, &type, &free_units, NULL);
+		mcSync(0, NULL, &ret);
+		if (ret < -1)
+			return 0;
+		*out = (u64)free_units * ((type == 1) ? 8192 : 1024);
+		return 1;
+	}
+#ifdef XFROM
+	if (!strncmp(path, "xfrom", 5)) {
+		xfromGetInfo(0, 0, &type, &free_units, NULL);
+		xfromSync(0, NULL, &ret);
+		*out = (u64)free_units * ((type == 1) ? 8192 : 1024);
+		return 1;
+	}
+#endif
+	if (!strncmp(path, "hdd", 3) && !isHddRootPath(path)) {
+		char pfs[6] = "pfs0:";
+		s64 zone_free, zone_size;
+
+		pfs[3] += latestMount;
+		zone_free = fileXioDevctl(pfs, PFSCTL_GET_ZONE_FREE, NULL, 0, NULL, 0);
+		zone_size = fileXioDevctl(pfs, PFSCTL_GET_ZONE_SIZE, NULL, 0, NULL, 0);
+		if (zone_free < 0 || zone_size <= 0)
+			return 0;
+		*out = (u64)zone_free * (u64)zone_size;
+		return 1;
+	}
+#ifdef DVRP
+	if (!strncmp(path, "dvr_hdd", 7) && strcmp(path, "dvr_hdd0:/")) {
+		char pfs[10] = "dvr_pfs0:";
+		s64 zone_free, zone_size;
+
+		pfs[7] += latestDVRPMount;
+		zone_free = fileXioDevctl(pfs, PFSCTL_GET_ZONE_FREE, NULL, 0, NULL, 0);
+		zone_size = fileXioDevctl(pfs, PFSCTL_GET_ZONE_SIZE, NULL, 0, NULL, 0);
+		if (zone_free < 0 || zone_size <= 0)
+			return 0;
+		*out = (u64)zone_free * (u64)zone_size;
+		return 1;
+	}
+#endif
+	return 0;
+}
+
+/* wLaunchELF's own folder as a browsable path ("mass:x/" -> "mass:/x/") */
+void filerLaunchElfFolder(char *out, int size)
+{
+	char *p;
+
+	snprintf(out, size, "%s", LaunchElfDir);
+	if ((p = strchr(out, ':')) != NULL && p[1] != '/' && (int)strlen(out) + 1 < size) {
+		memmove(p + 2, p + 1, strlen(p + 1) + 1);
+		p[1] = '/';
+	}
+	if (out[0] && out[strlen(out) - 1] != '/' && (int)strlen(out) + 1 < size)
+		strcat(out, "/");
+}
