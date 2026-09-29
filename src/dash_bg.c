@@ -451,7 +451,7 @@ static void drawScene(int fx)
 			if (fx != DASH_FX_OFF) {
 				float x = -180.0f + fmodf(t * 54.0f, DASH_VW + 360.0f);
 				dashGfxBlend(DASH_BLEND_ADD);
-				dashGlow(x, DASH_VH * 0.46f, 190, 300, colA(dashColorScale(dashTheme.accent, 0.35f), 18));
+				dashGlow(x, DASH_VH * 0.46f, 190, 300, dashColorA(dashColorScale(dashTheme.accent, 0.35f), 18.0f / 255.0f));
 				dashGfxBlend(DASH_BLEND_NORMAL);
 			}
 			break;
