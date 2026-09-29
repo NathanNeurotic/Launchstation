@@ -555,6 +555,7 @@ void dashStoreSaveTheme(void);
 int dashStoreSettingsPending(void); /* DASHBOARD.CNF write queued or running */
 int dashStoreSettingsFailed(void);  /* last DASHBOARD.CNF write failed */      /* DASHBOARD.CNF with the committed settings */
 const DashSettings *dashStorePersisted(void);
+char *dashStoreSettingsText(const DashSettings *c, int *out_len); /* malloc'd DASHBOARD.CNF text */
 int dashStoreSaveLists(void);
 void dashStoreSaveCache(void);
 void dashStoreFlush(int force);

@@ -398,12 +398,12 @@ static int save_inflight[SAVE_KINDS];
 static int save_error_shown[SAVE_KINDS];
 static int save_failed[SAVE_KINDS]; /* the last write of that file failed */
 
-static char *buildSettings(int *out_len)
+/* DASHBOARD.CNF text for `c` and the current theme */
+char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 {
 	char *buf;
 	int len = 0, i;
 	const int cap = 2048 + DASH_MAX_SCAN * (DASH_PATH_MAX + 16) + 4096;
-	const DashSettings *c = &persisted;
 
 	buf = (char *)malloc(cap);
 	if (buf == NULL)
@@ -436,6 +436,11 @@ static char *buildSettings(int *out_len)
 	len += dashThemeStoreWrite(buf + len, cap - len);
 	*out_len = len;
 	return buf;
+}
+
+static char *buildSettings(int *out_len)
+{
+	return dashStoreSettingsText(&persisted, out_len);
 }
 
 static char *buildLists(int *out_len)
