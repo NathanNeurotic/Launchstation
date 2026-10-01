@@ -19,6 +19,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Test Settings sessions, navigation and theme compatibility
+        run: |
+          python3 tests/test_settings_save_prompt.py
+          python3 tests/test_settings_navigation.py
+          python3 tests/test_theme_motion.py
+          python3 tests/test_tile_styles.py
+          python3 tests/test_worker_queue.py
+
       - name: Install ps2build SDK
         shell: bash
         run: |
@@ -59,6 +67,13 @@ jobs:
       - name: Build wLaunchELF with ps2build
         run: |
           ps2build build
+
+      - name: Check embedded loader low-memory layout
+        run: |
+          sh scripts/check_loader_layout.sh \
+            build/obj/loader/loader.unstripped.elf \
+            "$HOME/.local/share/ps2build/toolchain/ee/bin/mips64r5900el-ps2-elf-nm" \
+            0x84000 auto auto 0xa0000
 
       - name: Prepare ELF artifacts
         run: |

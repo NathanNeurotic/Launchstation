@@ -1,18 +1,14 @@
 //--------------------------------------------------------------
 //File name:   dash_settings.c
-//SETTINGS: dashboard options plus every wLaunchELF setting, grouped into
-//Display / Theme / Dashboard / Launch keys / Controls / Startup / Devices /
-//Network / Advanced. wLaunchELF settings edit the same SETTING fields as
-//the classic configuration screens, which are no longer needed.
+//SETTINGS: task-oriented pages over the existing configuration fields.
+//Each option has one home; Back returns to the previous page and Triangle
+//opens the session's Save / Discard menu from every page.
 //
 //Changes apply at once but are only written when the user leaves SETTINGS
-//and chooses Save (or "Save all settings now"); Discard restores what was
+//and chooses Save; Discard restores what was
 //there when SETTINGS was opened. Writes run on the background worker.
 //
-//Theme: preset choice with live preview, and a theme editor that swaps
-//the category column for the theme groups (Background, Colours, Style,
-//Text, Icons, Clock, Wallpaper, Manage). Every change applies at once;
-//theme edits are written to DASHBOARD.CNF after a short idle delay.
+//Theme previews and edits share the same Save / Discard session.
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "config_private.h"
@@ -24,9 +20,10 @@ enum SetType {
 	ST_INFO,
 	ST_COLOR,
 	ST_NUMBER, /* left/right steps a number (screen offsets, delays) */
-	ST_PATH,   /* a file or folder chosen with the picker; Triangle clears */
+	ST_PATH,   /* a file/folder dialog with Choose and Clear */
 	ST_IP,     /* IPv4 address */
-	ST_LKEY    /* launch key: choose target, Square title, Triangle clear */
+	ST_LKEY,   /* launch key: target/title/clear dialog, Square title */
+	ST_PAGE    /* opens a child page; id is a SetPageId, not a SetId */
 };
 
 enum SetId {
@@ -163,47 +160,94 @@ typedef struct
 {
 	const char *name;
 	int icon;
+	const char *help;
 	const SetItem *items;
 	int n;
-} SetCat;
+} SetPage;
+
+enum SetPageId {
+	P_ROOT, P_APPEARANCE, P_SCREEN, P_THEME,
+	P_APPS, P_LIBRARY, P_SOUND, P_INPUT, P_KEYBOARD,
+	P_LAUNCH, P_BOOT, P_LKEY, P_LOADERS, P_GAMEID,
+	P_DEVICES, P_AUTOSTART, P_NETWORK, P_SYSTEM, P_LANGUAGE, P_PSU,
+	/* Keep these in DashThemeGroup order for group resets. */
+	P_THEME_BG, P_THEME_COLORS, P_THEME_STYLE, P_THEME_TEXT,
+	P_THEME_ICONS, P_THEME_CLOCK, P_THEME_WALL, P_THEME_MANAGE,
+	P_COUNT
+};
+
+static const SetItem root_items[] = {
+    {ST_PAGE, P_APPEARANCE, "Appearance", "Theme, text, clock, animation and screen calibration."},
+    {ST_PAGE, P_APPS, "Home & applications", "Start screen, application view, artwork and library folders."},
+    {ST_PAGE, P_SOUND, "Sound", "Interface effects, background music and their volumes."},
+    {ST_PAGE, P_INPUT, "Input", "Confirm button, on-screen keyboard and USB keyboard."},
+    {ST_PAGE, P_LAUNCH, "Launching", "Automatic start, button shortcuts, loaders and compatibility."},
+    {ST_PAGE, P_DEVICES, "Storage & devices", "Device visibility and which devices start automatically."},
+    {ST_PAGE, P_NETWORK, "Network", "Console address and network write access."},
+    {ST_PAGE, P_SYSTEM, "System", "Language, save-file options and configuration locations."},
+};
+
+static const SetItem appearance_items[] = {
+    {ST_CHOICE, S_T_PRESET, "Theme preset", "Confirm opens a live preview. Cancel restores the previous theme."},
+    {ST_PAGE, P_THEME, "Customize theme", "Background, colours, tiles, text, icons, clock and artwork background."},
+    {ST_PAGE, P_SCREEN, "Screen calibration", "Video mode and picture position for your TV."},
+    {ST_CHOICE, S_EFFECTS, "Background motion", "0% freezes backgrounds; 100% is normal; 200% doubles their motion."},
+    {ST_CHOICE, S_ANIM, "Menu animation", "0% makes transitions instant; higher values increase movement and transition duration."},
+    {ST_PAGE, P_THEME_MANAGE, "Theme files & resets", "Import, export, rename or reset your theme."},
+    {ST_ACTION, S_DISPLAY_THEME_RESET, "Reset appearance", "Restore screen calibration, motion, animation and the OSD Classic theme."},
+};
 
 static const SetItem display_items[] = {
     {ST_CHOICE, S_TVMODE, "Video mode", "Auto follows the console region. Changing it applies immediately."},
     {ST_NUMBER, S_SCREEN_X, "Screen position X", "Moves the picture left or right to fit your TV (overscan)."},
     {ST_NUMBER, S_SCREEN_Y, "Screen position Y", "Moves the picture up or down to fit your TV."},
-    {ST_CHOICE, S_EFFECTS, "Background motion", "0% freezes backgrounds; 100% is normal; 200% doubles their motion."},
-    {ST_CHOICE, S_ANIM, "Menu animation", "0% makes transitions instant; higher values increase movement and transition duration."},
     {ST_ACTION, S_SCREEN_RESET, "Reset screen settings", "Video mode Auto and a centred picture."},
-    {ST_ACTION, S_DISPLAY_THEME_RESET, "Reset display & theme defaults", "Restore screen, motion, animation and the OSD Classic theme together."},
 };
 
 static const SetItem dash_items[] = {
+    {ST_CHOICE, S_START, "Start screen", "Section shown when the dashboard opens."},
+    {ST_CHOICE, S_VIEW, "Application view", "Grid, list or carousel (SELECT also switches it in APPS)."},
+    {ST_CHOICE, S_ARTWORK, "Application artwork", "Load cover art for tiles and artwork backgrounds."},
+    {ST_CHOICE, S_RECENT, "Recent applications", "How many recently started applications HOME shows."},
+    {ST_PAGE, P_LIBRARY, "Application library", "Search folders, startup refresh and a full library refresh."},
+    {ST_ACTION, S_CLEAR_RECENT, "Clear recent applications", "Clears history immediately; applications and favourites are kept. Discard does not restore history."},
+};
+
+static const SetItem library_items[] = {
+    {ST_ACTION, S_SCANPATHS, "Application folders...", "Folders searched for .ELF files (one sub-folder level deep)."},
+    {ST_CHOICE, S_AUTOSCAN, "Refresh at startup", "Check memory cards and already running devices for applications at startup."},
+    {ST_ACTION, S_RESCAN, "Refresh library now", "Search every application folder, loading drivers as needed. Updates the library immediately."},
+};
+
+static const SetItem sound_items[] = {
     {ST_CHOICE, S_SOUND, "Interface sounds", "Cursor moves, confirmations and other dashboard sound effects."},
     {ST_CHOICE, S_SVOL, "Interface sound volume", "Volume for dashboard cursor, confirm and notification effects only."},
     {ST_CHOICE, S_BGM, "Background music", "Hardware-looped dashboard music, independent from interface sounds."},
     {ST_CHOICE, S_BGMVOL, "Music volume", "Volume for background music only."},
-    {ST_CHOICE, S_START, "Start screen", "Section shown when the dashboard opens."},
-    {ST_CHOICE, S_VIEW, "Application view", "Grid, list or carousel (SELECT also switches it in APPS)."},
-    {ST_CHOICE, S_ARTWORK, "Artwork", "Load cover art (OPL ART folder, <ELF>_COV.png, cover.png...)."},
-    {ST_CHOICE, S_RECENT, "Recent applications", "How many recently started applications HOME shows."},
-    {ST_CHOICE, S_AUTOSCAN, "Refresh at startup", "Check memory cards and already running devices for applications at startup."},
-    {ST_ACTION, S_SCANPATHS, "Application folders...", "Folders searched for .ELF files (one sub-folder level deep)."},
-    {ST_ACTION, S_RESCAN, "Refresh library now", "Search every application folder, loading drivers as needed."},
-    {ST_ACTION, S_CLEAR_RECENT, "Clear recent applications", NULL},
-    {ST_ACTION, S_INTRO, "Show the welcome message", NULL},
 };
 
 static const SetItem control_items[] = {
     {ST_CHOICE, S_CONFIRM, "Confirm button", "Which button confirms. The other one cancels (all screens)."},
     {ST_CHOICE, S_VKEY, "On-screen keyboard layout", NULL},
+    {ST_PAGE, P_KEYBOARD, "USB keyboard", "Enable a USB keyboard, choose its driver and set its key map."},
+};
+
+static const SetItem keyboard_items[] = {
     {ST_CHOICE, S_USBKBD, "USB keyboard", "Use a USB keyboard as a controller and for typing."},
     {ST_PATH, S_USBKBD_FILE, "USB keyboard driver", "Optional USBKBD.IRX to use instead of the built-in driver."},
     {ST_PATH, S_KBDMAP_FILE, "Keyboard map", "Optional .KBD key map for non-US USB keyboards."},
-    {ST_ACTION, S_LAUNCHKEYS, "Launch keys...", "Per-button launch paths (also shown on HOME)."},
+};
+
+static const SetItem launch_items[] = {
+    {ST_PAGE, P_BOOT, "Automatic start & boot", "Choose what starts automatically and how long startup waits."},
+    {ST_PAGE, P_LKEY, "Launch keys", "Applications or commands assigned to controller buttons."},
+    {ST_CHOICE, S_PATHPAD_LOCK, "Lock shortcuts & bookmarks", "Prevents editing launch keys and File Browser bookmarks."},
+    {ST_PAGE, P_LOADERS, "Disc & PS1 loaders", "ESR, OSDSYS and POPStarter program paths."},
+    {ST_CHOICE, S_REBOOT_ELF, "Reset IOP before launch", "Recommended: gives launched ELFs a clean IOP."},
+    {ST_PAGE, P_GAMEID, "Game ID output", "Game IDs for RetroGem and compatible OSD/HDMI adapters."},
 };
 
 static const SetItem lkey_items[] = {
-    {ST_LKEY, S_LK_0 + SETTING_LK_AUTO, "Automatic start", "Starts after the timeout (Startup) unless a button is pressed."},
     {ST_LKEY, S_LK_0 + SETTING_LK_CIRCLE, "Circle", "Hold at startup to start it; also a HOME shortcut."},
     {ST_LKEY, S_LK_0 + SETTING_LK_CROSS, "Cross", NULL},
     {ST_LKEY, S_LK_0 + SETTING_LK_SQUARE, "Square", NULL},
@@ -215,15 +259,15 @@ static const SetItem lkey_items[] = {
     {ST_LKEY, S_LK_0 + SETTING_LK_L3, "L3", NULL},
     {ST_LKEY, S_LK_0 + SETTING_LK_R3, "R3", NULL},
     {ST_LKEY, S_LK_0 + SETTING_LK_START, "START", NULL},
-    {ST_CHOICE, S_PATHPAD_LOCK, "Lock launch keys", "Prevents changing launch keys and PathPad bookmarks."},
 };
 
 static const SetItem startup_items[] = {
+    {ST_LKEY, S_LK_0 + SETTING_LK_AUTO, "Automatic start target", "Application or command started after the timeout. Clear the target to disable automatic start."},
     {ST_NUMBER, S_INIT_DELAY, "Startup delay", "Seconds to wait at startup, so a held button can pick its launch key."},
     {ST_NUMBER, S_TIMEOUT, "Automatic start timeout", "Seconds before the automatic start runs. Any button cancels it."},
-    {ST_PATH, S_CNF_PATH, "Configuration folder", "Load and save LAUNCHELF.CNF in this folder instead of the default places."},
-    {ST_PATH, S_LANG_FILE, "Language file", "External .LNG translation for the messages of the file operations and tools."},
-    {ST_PATH, S_FONT_FILE, "Font file", "External .FNT font, used by the System font theme option."},
+};
+
+static const SetItem loader_items[] = {
     {ST_PATH, S_ESR_PATH, "ESR loader", "ESR ELF used to start ESR-patched discs."},
     {ST_PATH, S_OSDSYS_PATH, "OSDSYS program", "Started by the OSDSYS command. Empty: the console's own."},
     {ST_PATH, S_POPS_PATH, "POPStarter", "POPStarter ELF used to start PS1 VCD images."},
@@ -232,7 +276,10 @@ static const SetItem startup_items[] = {
 static const SetItem device_items[] = {
     {ST_CHOICE, S_HIDE_HDD, "Internal HDD / ATA units", "Which HDD and exFAT units appear in the File Browser."},
     {ST_CHOICE, S_HIDE_MC, "Hide empty memory card slots", "Also hides unused MMCE entries in the File Browser."},
-    {ST_CHOICE, S_REBOOT_ELF, "Reboot IOP when launching ELFs", "Recommended: gives launched programs a clean IOP."},
+    {ST_PAGE, P_AUTOSTART, "Start devices automatically", "The boot device always stays enabled. Starting other drivers takes effect immediately."},
+};
+
+static const SetItem autostart_items[] = {
     {ST_CHOICE, S_DEVA_USB, "Auto-start USB storage", "Load the USB drivers when the dashboard starts. Off: load manually from DEVICES."},
     {ST_CHOICE, S_DEVA_HDD, "Auto-start internal HDD", "Load the HDD drivers when the dashboard starts."},
     {ST_CHOICE, S_DEVA_ATA, "Auto-start exFAT HDD", "Load the exFAT/ATA drivers when the dashboard starts."},
@@ -250,42 +297,40 @@ static const SetItem net_items[] = {
 #endif
 };
 
-static const SetItem adv_items[] = {
+static const SetItem language_items[] = {
     {ST_CHOICE, S_LANGUAGE, "Language", "Language of the messages from file operations and tools."},
-    {ST_CHOICE, S_GAMEID, "RetroGem game ID", "Show the game ID for OSD/HDMI adapters when launching."},
-    {ST_CHOICE, S_GAMEID_DISC, "Game ID for discs", NULL},
-    {ST_CHOICE, S_PSU_HUGE, "PSU: add game ID and title to names", NULL},
-    {ST_CHOICE, S_PSU_DATE, "PSU: add date to names", NULL},
-    {ST_CHOICE, S_PSU_NOOVER, "PSU: never overwrite existing files", NULL},
-    {ST_ACTION, S_SAVE_CLASSIC, "Save all settings now", "Otherwise you are asked when you leave SETTINGS."},
-    {ST_ACTION, S_SAVE_AS, "Save wLaunchELF settings to...", "Choose where LAUNCHELF.CNF is written."},
-    {ST_ACTION, S_REVERT, "Discard unsaved changes", "Back to the settings as they were when you opened SETTINGS."},
+    {ST_PATH, S_LANG_FILE, "Language file", "External .LNG translation for the messages of the file operations and tools."},
 };
 
-static const SetItem theme_items[] = {
-    {ST_CHOICE, S_T_PRESET, "Theme", NULL},
-    {ST_ACTION, S_T_CUSTOMIZE, "Customize theme...", "Background, colours, style, text, icons, clock and wallpaper. Changes apply immediately."},
-    {ST_CHOICE, S_EFFECTS, "Background motion", "0% freezes backgrounds; 100% is normal; 200% doubles their motion."},
-    {ST_CHOICE, S_ANIM, "Menu animation", "0% makes transitions instant; higher values increase movement and transition duration."},
-    {ST_ACTION, S_T_LOAD, "Load theme from folder...", "Themes are folders in THEMES/ next to DASHBOARD.CNF, each with a theme.cfg."},
-    {ST_ACTION, S_T_SAVE, "Save theme to folder...", "Writes THEMES/<name>/theme.cfg so it can be edited on a PC or shared."},
-    {ST_ACTION, S_T_DEFAULT, "Restore default theme", "OSD Classic with its original settings."},
+static const SetItem gameid_items[] = {
+    {ST_CHOICE, S_GAMEID, "RetroGem game ID", "Show the game ID for OSD/HDMI adapters when launching."},
+    {ST_CHOICE, S_GAMEID_DISC, "Game ID for discs", NULL},
+};
+
+static const SetItem psu_items[] = {
+    {ST_CHOICE, S_PSU_HUGE, "PSU: add game ID and title to names", NULL},
+    {ST_CHOICE, S_PSU_DATE, "PSU: add date to names", NULL},
+    {ST_CHOICE, S_PSU_NOOVER, "PSU: never overwrite existing files", "Enabling this also enables dated names. Turning dated names off disables this option."},
+};
+
+static const SetItem system_items[] = {
+    {ST_PAGE, P_LANGUAGE, "Language", "Built-in language and external translations for file operations and tools."},
+    {ST_PAGE, P_PSU, "Memory card backup files", "PSU naming and overwrite rules used by File Browser operations."},
+    {ST_PATH, S_CNF_PATH, "Configuration folder", "Load and save LAUNCHELF.CNF in this folder instead of the default places."},
+    {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
+    {ST_ACTION, S_INTRO, "Show welcome message again", "Show the introduction the next time the dashboard checks for it."},
 };
 
 #define NITEMS(a) ((int)(sizeof(a) / sizeof(a[0])))
-static const SetCat main_cats[] = {
-    {"Display", DI_SETTINGS, display_items, NITEMS(display_items)},
-    {"Theme", DI_PALETTE, theme_items, NITEMS(theme_items)},
-    {"Dashboard", DI_HOME, dash_items, NITEMS(dash_items)},
-    {"Launch keys", DI_KEY, lkey_items, NITEMS(lkey_items)},
-    {"Controls", DI_GAMEPAD, control_items, NITEMS(control_items)},
-    {"Startup", DI_CLOCK, startup_items, NITEMS(startup_items)},
-    {"Devices", DI_DEVICES, device_items, NITEMS(device_items)},
-    {"Network", DI_NETWORK, net_items, NITEMS(net_items)},
-    {"Advanced", DI_TOOLS, adv_items, NITEMS(adv_items)},
+static const SetItem theme_items[] = {
+    {ST_PAGE, P_THEME_BG, "Background", "Scene, colours, brightness, scanlines and wallpaper image."},
+    {ST_PAGE, P_THEME_COLORS, "Interface colours", "Text, selection, accent, panels and borders."},
+    {ST_PAGE, P_THEME_STYLE, "Tiles & menus", "Application tile shape, selection style, corners and glow."},
+    {ST_PAGE, P_THEME_TEXT, "Text", "Font, size, weight and shadow."},
+    {ST_PAGE, P_THEME_ICONS, "Icons", "Icon colours and artwork-free application icons."},
+    {ST_PAGE, P_THEME_CLOCK, "Clock", "Position, time format, seconds and date."},
+    {ST_PAGE, P_THEME_WALL, "Artwork background", "Use the focused application's cover behind Home and Apps."},
 };
-#define MAIN_THEME_CAT 1
-#define MAIN_LKEY_CAT 3
 
 /* Theme editor groups (order = enum DashThemeGroup, then Manage). */
 static const SetItem tbg_items[] = {
@@ -293,8 +338,6 @@ static const SetItem tbg_items[] = {
     {ST_COLOR, S_T_BG1, "Colour", "Main colour of the background (the solid colour, gradient top or scene tint)."},
     {ST_COLOR, S_T_BG2, "Second colour", "Base or gradient bottom colour."},
     {ST_CHOICE, S_T_BRIGHT, "Brightness", "Darken the background behind the menus."},
-    {ST_CHOICE, S_EFFECTS, "Background motion", "0% freezes backgrounds; 100% is normal; 200% doubles their motion."},
-    {ST_CHOICE, S_ANIM, "Menu animation", "0% makes transitions instant; higher values increase movement and transition duration."},
     {ST_CHOICE, S_T_SCAN, "CRT scanlines", "An understated line pattern over the background only."},
     {ST_ACTION, S_T_IMAGE, "Wallpaper image...", "Choose a PNG (up to 1.5 MB). It is scaled to at most 320x256 and cover-fitted."},
     {ST_ACTION, S_T_RESETCAT, "Reset background", "Back to the values of the theme's preset."},
@@ -316,11 +359,11 @@ static const SetItem tstyle_items[] = {
     {ST_CHOICE, S_T_TILE, "Tile style", "Application tiles: memory card, rounded, chamfered, floating object or crystal slab."},
     {ST_CHOICE, S_T_CORNER, "Corners", NULL},
     {ST_CHOICE, S_T_GLOW, "Glow", "Soft light behind focused items."},
-    {ST_CHOICE, S_T_PANEL_A, "Panel opacity", NULL},
     {ST_ACTION, S_T_RESETCAT, "Reset style", "Back to the values of the theme's preset."},
 };
 static const SetItem ttype_items[] = {
     {ST_CHOICE, S_T_FONT, "Font", "System uses the wLaunchELF font (or your .fnt) and its accented characters."},
+    {ST_PATH, S_FONT_FILE, "System font file", "External .FNT font used when Font is set to System."},
     {ST_CHOICE, S_T_FSCALE, "Text size", "Larger sizes can shorten long names."},
     {ST_CHOICE, S_T_BOLD, "Bold", "Heavier strokes; easier to read on a CRT."},
     {ST_CHOICE, S_T_SHADOW, "Text shadow", NULL},
@@ -343,37 +386,79 @@ static const SetItem tclock_items[] = {
 static const SetItem twall_items[] = {
     {ST_CHOICE, S_T_WALL, "App artwork background", "Shows the focused application's artwork behind HOME and APPS."},
     {ST_CHOICE, S_T_WALLDIM, "Artwork dimming", "Higher values keep the menus easier to read."},
-    {ST_CHOICE, S_ARTWORK, "Load artwork", "Cover art for applications (needed by the artwork background)."},
     {ST_ACTION, S_T_RESETCAT, "Reset wallpaper", "Back to the values of the theme's preset."},
 };
 static const SetItem tmanage_items[] = {
     {ST_ACTION, S_T_RENAME, "Theme name...", NULL},
-    {ST_ACTION, S_T_SAVE, "Save theme to folder...", "Writes THEMES/<name>/theme.cfg so it can be edited on a PC or shared."},
+    {ST_ACTION, S_T_SAVE, "Export theme to folder...", "Writes the current preview to a shareable theme folder immediately. This does not save the Settings session."},
     {ST_ACTION, S_T_LOAD, "Load theme from folder...", "Themes are folders in THEMES/ next to DASHBOARD.CNF, each with a theme.cfg."},
     {ST_ACTION, S_T_RESTORE_PRESET, "Reset entire theme", "Undo every change and go back to the preset this theme started from."},
     {ST_ACTION, S_T_DEFAULT, "Restore default theme", "OSD Classic with its original settings."},
 };
 
-static const SetCat theme_cats[] = {
-    {"Background", DI_IMAGE, tbg_items, NITEMS(tbg_items)},
-    {"Colours", DI_PALETTE, tcol_items, NITEMS(tcol_items)},
-    {"Style", DI_VIEW_GRID, tstyle_items, NITEMS(tstyle_items)},
-    {"Text", DI_TEXT, ttype_items, NITEMS(ttype_items)},
-    {"Icons", DI_APPS, ticon_items, NITEMS(ticon_items)},
-    {"Clock", DI_CLOCK, tclock_items, NITEMS(tclock_items)},
-    {"Wallpaper", DI_IMAGE, twall_items, NITEMS(twall_items)},
-    {"Manage", DI_SETTINGS, tmanage_items, NITEMS(tmanage_items)},
+#define PAGE(name, icon, help, items) {name, icon, help, items, NITEMS(items)}
+static const SetPage pages[P_COUNT] = {
+    [P_ROOT] = PAGE("Settings", DI_SETTINGS, "Choose what you want to configure.", root_items),
+    [P_APPEARANCE] = PAGE("Appearance", DI_PALETTE, "Preview changes here; save or discard them together.", appearance_items),
+    [P_SCREEN] = PAGE("Screen calibration", DI_SETTINGS, "Fit the picture to your TV. Changes apply immediately.", display_items),
+    [P_THEME] = PAGE("Customize theme", DI_PALETTE, "Choose which part of your theme to edit.", theme_items),
+    [P_APPS] = PAGE("Home & applications", DI_HOME, "How applications are presented and discovered.", dash_items),
+    [P_LIBRARY] = PAGE("Application library", DI_APPS, "Folders and refresh behavior for the ELF library.", library_items),
+    [P_SOUND] = PAGE("Sound", DI_PLAY, "Music and interface sounds have separate volume controls.", sound_items),
+    [P_INPUT] = PAGE("Input", DI_GAMEPAD, "Controller confirmation and keyboard input.", control_items),
+    [P_KEYBOARD] = PAGE("USB keyboard", DI_KEY, "USB keyboard support and optional driver/key map.", keyboard_items),
+    [P_LAUNCH] = PAGE("Launching", DI_PLAY, "Boot actions, button shortcuts and application handoff.", launch_items),
+    [P_BOOT] = PAGE("Automatic start & boot", DI_CLOCK, "Any button cancels the automatic start countdown.", startup_items),
+    [P_LKEY] = PAGE("Launch keys", DI_KEY, "Hold a button at boot, or hold SELECT and press it in the dashboard.", lkey_items),
+    [P_LOADERS] = PAGE("Disc & PS1 loaders", DI_DISC, "Programs used by disc, OSDSYS and PS1 launch commands.", loader_items),
+    [P_GAMEID] = PAGE("Game ID output", DI_APP, "Identification for compatible OSD/HDMI adapters.", gameid_items),
+    [P_DEVICES] = PAGE("Storage & devices", DI_DEVICES, "Visible devices and driver startup preferences.", device_items),
+    [P_AUTOSTART] = PAGE("Start devices automatically", DI_DEVICES, "Drivers start immediately when enabled. Discard restores preferences, not driver state.", autostart_items),
+    [P_NETWORK] = PAGE("Network", DI_NETWORK, "Console address for FTP, PS2Link and UDPFS.", net_items),
+    [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules and settings locations.", system_items),
+    [P_LANGUAGE] = PAGE("Language", DI_TEXT, "These translations apply to file operations and tools.", language_items),
+    [P_PSU] = PAGE("Memory card backup files", DI_MC, "Naming and overwrite behavior when creating PSU backups.", psu_items),
+    [P_THEME_BG] = PAGE("Background", DI_IMAGE, "Scene, brightness and static wallpaper.", tbg_items),
+    [P_THEME_COLORS] = PAGE("Interface colours", DI_PALETTE, "Colours and opacity for text, focus and panels.", tcol_items),
+    [P_THEME_STYLE] = PAGE("Tiles & menus", DI_VIEW_GRID, "Tile silhouettes and menu selection styling.", tstyle_items),
+    [P_THEME_TEXT] = PAGE("Text", DI_TEXT, "Font and readability. System can use your external font file.", ttype_items),
+    [P_THEME_ICONS] = PAGE("Icons", DI_APPS, "Fallback icons for applications without artwork.", ticon_items),
+    [P_THEME_CLOCK] = PAGE("Clock", DI_CLOCK, "Clock placement and date/time format.", tclock_items),
+    [P_THEME_WALL] = PAGE("Artwork background", DI_IMAGE, "Requires Application artwork in Home & applications.", twall_items),
+    [P_THEME_MANAGE] = PAGE("Theme files & resets", DI_FOLDER, "Export writes a theme file immediately. Resets stay in this Settings session.", tmanage_items),
 };
 
-static const SetCat *cats = main_cats;
-static int ncats = NITEMS(main_cats);
-static int theme_mode;
-#define NCATS ncats
+/* Root -> category -> subpage -> theme group is the deepest path. */
+#define PAGE_DEPTH 4
 #define ITEM_ROWS 8
-
-static int cat, item, focus_col; /* focus_col 0: categories, 1: items */
+static int page, item;
 static int item_top;
-static float cat_anim, item_anim, col_anim;
+static float item_anim;
+static struct { int page, item, top; } page_stack[PAGE_DEPTH];
+static int page_depth;
+
+static void openPage(int next)
+{
+	if (next < 0 || next >= P_COUNT || page_depth >= PAGE_DEPTH)
+		return;
+	page_stack[page_depth].page = page;
+	page_stack[page_depth].item = item;
+	page_stack[page_depth++].top = item_top;
+	page = next;
+	item = item_top = 0;
+	item_anim = 0.0f;
+}
+
+static void backPage(void)
+{
+	if (!page_depth)
+		return;
+	page_depth--;
+	page = page_stack[page_depth].page;
+	item = page_stack[page_depth].item;
+	item_top = page_stack[page_depth].top;
+	item_anim = (float)item;
+}
 
 /* Unsaved-changes session: opened when SETTINGS is entered, closed when
  * the user leaves it (Save / Discard). The snapshots are what Discard
@@ -646,7 +731,7 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 	return 0;
 }
 
-/* Theme choices: applied at once, saved after a short idle delay. */
+/* Theme choices preview at once and share the Settings save session. */
 static int setThemeChoice(int id, int v)
 {
 	DashTheme *t = &dashTheme;
@@ -1331,7 +1416,7 @@ static int lkeyLocked(void)
 {
 	if (!setting->PathPad_Lock)
 		return 0;
-	dashToast(DASH_TOAST_WARN, "Launch keys are locked (Launch keys > Lock launch keys)");
+	dashToast(DASH_TOAST_WARN, "Unlock shortcuts in Settings > Launching");
 	return 1;
 }
 
@@ -1388,6 +1473,11 @@ typedef struct
 /* Pending is distinct from saved. Failures survive leaving/re-entering
  * Settings and are retried only on an explicit Save. */
 static int cfg_pending[2], cfg_failed[2];
+/* Only saves requested in this visit can make its changes unsaved again.
+ * An older bookmark/automatic save failure is still visible/retryable, but
+ * is not evidence that the user edited Settings. */
+enum { SESSION_SAVE_CNF = 1, SESSION_SAVE_NET = 2, SESSION_SAVE_DASH = 4 };
+static int session_saves;
 
 static void cfgSaveRun(void *arg)
 {
@@ -1508,9 +1598,17 @@ static void refreshDirty(int force)
 	net_dirty = strcmp(ip, snap_ip) || strcmp(netmask, snap_nm) || strcmp(gw, snap_gw);
 }
 
+static int failedSaves(void)
+{
+	return cfg_failed[CFG_SAVE_CNF] || cfg_failed[CFG_SAVE_NET] || dashStoreSettingsFailed();
+}
+
 static int dirtyOrFailed(void)
 {
-	return dash_dirty || classic_dirty || net_dirty || cfg_failed[0] || cfg_failed[1] || dashStoreSettingsFailed();
+	return dash_dirty || classic_dirty || net_dirty ||
+	       ((session_saves & SESSION_SAVE_CNF) && cfg_failed[CFG_SAVE_CNF]) ||
+	       ((session_saves & SESSION_SAVE_NET) && cfg_failed[CFG_SAVE_NET]) ||
+	       ((session_saves & SESSION_SAVE_DASH) && dashStoreSettingsFailed());
 }
 
 static int anyDirty(void)
@@ -1554,6 +1652,7 @@ static void sessionBegin(void)
 	if (session)
 		return;
 	session = 1;
+	session_saves = 0;
 	sessionSnapshot();
 }
 
@@ -1563,12 +1662,18 @@ static void settingsCommit(void)
 	int cnf_failed = 0, net_failed = 0;
 
 	refreshDirty(1);
-	if (dash_dirty || dashStoreSettingsFailed())
+	if (dash_dirty || dashStoreSettingsFailed()) {
+		session_saves |= SESSION_SAVE_DASH;
 		dashStoreSaveSettings();
-	if (classic_dirty || cfg_failed[CFG_SAVE_CNF])
+	}
+	if (classic_dirty || cfg_failed[CFG_SAVE_CNF]) {
+		session_saves |= SESSION_SAVE_CNF;
 		cnf_failed = !cfgSave(CFG_SAVE_CNF, -2, NULL);
-	if (net_dirty || cfg_failed[CFG_SAVE_NET])
+	}
+	if (net_dirty || cfg_failed[CFG_SAVE_NET]) {
+		session_saves |= SESSION_SAVE_NET;
 		net_failed = !cfgSave(CFG_SAVE_NET, -2, NULL);
+	}
 	if (!cnf_failed && !net_failed)
 		sessionSnapshot();
 }
@@ -1624,6 +1729,7 @@ static void settingsRevert(void)
 		updateIpConfigRuntimeState();
 	}
 	dash_dirty = classic_dirty = net_dirty = 0;
+	session_saves = 0;
 	dashHomeRebuild();
 }
 
@@ -1644,11 +1750,11 @@ static int settingsLeave(void)
 		return 1;
 	}
 	what[0] = '\0';
-	if (dash_dirty)
+	if (dash_dirty || ((session_saves & SESSION_SAVE_DASH) && dashStoreSettingsFailed()))
 		n += snprintf(what + n, sizeof(what) - n, "Dashboard");
-	if (classic_dirty)
+	if (classic_dirty || ((session_saves & SESSION_SAVE_CNF) && cfg_failed[CFG_SAVE_CNF]))
 		n += snprintf(what + n, sizeof(what) - n, "%swLaunchELF", n ? ", " : "");
-	if (net_dirty)
+	if (net_dirty || ((session_saves & SESSION_SAVE_NET) && cfg_failed[CFG_SAVE_NET]))
 		n += snprintf(what + n, sizeof(what) - n, "%snetwork", n ? ", " : "");
 	snprintf(what + n, sizeof(what) - n, " settings changed");
 	r = dashModalMenu("Save your changes?", what, items, 3, 0);
@@ -2005,7 +2111,7 @@ static void themeLoad(void)
 		return;
 	if (j->n <= 0) {
 		snprintf(body, sizeof(body), "Put each theme in its own folder with a theme.cfg inside %sTHEMES/. "
-		                             "\"Save theme to folder\" creates one you can copy and edit.", dashStoreDir());
+		                             "\"Export theme to folder\" creates one you can copy and edit.", dashStoreDir());
 		dashModalMessage(DI_FOLDER, "No themes found", body, NULL);
 		free(j);
 		return;
@@ -2114,11 +2220,7 @@ static void runThemeAction(int id)
 {
 	switch (id) {
 		case S_T_CUSTOMIZE:
-			theme_mode = 1;
-			cats = theme_cats;
-			ncats = NITEMS(theme_cats);
-			cat = 0, item = 0, item_top = 0, focus_col = 0;
-			cat_anim = item_anim = 0.0f;
+			openPage(P_THEME);
 			break;
 		case S_T_LOAD:
 			themeLoad();
@@ -2148,13 +2250,8 @@ static void runThemeAction(int id)
 			break;
 		}
 		case S_T_RESETCAT:
-			if (cat >= 0 && cat <= DASH_TG_WALLPAPER) {
-				dashThemeResetGroup(cat);
-				if (cat == DASH_TG_BACKGROUND) {
-					dashCfg.effects = 100;
-					dashCfg.anim = 100;
-				} else if (cat == DASH_TG_WALLPAPER)
-					dashCfg.artwork = 1;
+			if (page >= P_THEME_BG && page <= P_THEME_WALL) {
+				dashThemeResetGroup(page - P_THEME_BG);
 				dash_dirty = 1;
 				dashToast(DASH_TOAST_OK, "Reset to the preset's values");
 			}
@@ -2215,10 +2312,10 @@ static void runAction(int id)
 			dashToast(DASH_TOAST_INFO, "The welcome message will be shown next time");
 			break;
 		case S_LAUNCHKEYS:
-			cat = MAIN_LKEY_CAT, item = 0, item_top = 0, focus_col = 1;
+			openPage(P_LKEY);
 			break;
 		case S_SAVE_CLASSIC:
-			if (!anyDirty())
+			if (!anyDirty() && !failedSaves())
 				dashToast(DASH_TOAST_INFO, "Nothing to save");
 			else
 				settingsCommit();
@@ -2229,7 +2326,7 @@ static void runAction(int id)
 		case S_REVERT:
 			if (!anyDirty())
 				dashToast(DASH_TOAST_INFO, "No unsaved changes");
-			else if (dashModalConfirm("Discard unsaved changes", "Put every setting back the way it was when you opened SETTINGS?", "Discard", 1)) {
+			else if (dashModalConfirm("Discard unsaved changes", "Undo edits since opening Settings or last choosing Save?", "Discard", 1)) {
 				settingsRevert();
 				dashToast(DASH_TOAST_INFO, "Changes discarded");
 			}
@@ -2240,36 +2337,114 @@ static void runAction(int id)
 //--------------------------------------------------------------
 static const SetItem *curItem(void)
 {
-	return &cats[cat].items[item];
+	return &pages[page].items[item];
 }
 
 static void settingsEnter(void)
 {
+	/* A new Settings visit starts at its overview; modal dialogs keep the
+	 * current page and the same session. */
+	if (!session) {
+		page = P_ROOT;
+		page_depth = item = item_top = 0;
+		item_anim = 0.0f;
+	}
 	sessionBegin();
-	if (item >= cats[cat].n)
-		item = 0;
+}
+
+static int itemDisabled(const SetItem *it)
+{
+	if (it->type == ST_PAGE)
+		return 0;
+	switch (it->id) {
+		case S_SVOL: return !dashCfg.sound;
+		case S_BGMVOL: return !dashCfg.bgm;
+		case S_USBKBD_FILE:
+		case S_KBDMAP_FILE: return !setting->usbkbd_used;
+		case S_FONT_FILE: return dashTheme.font != DASH_FONT_SYSTEM;
+		case S_T_WALL: return !dashCfg.artwork;
+		case S_T_WALLDIM: return !dashCfg.artwork || !dashTheme.wallpaper;
+		case S_T_CLOCKPOS:
+		case S_T_HOURS:
+		case S_T_SECONDS:
+		case S_T_DATE: return !dashTheme.clock;
+		case S_TIMEOUT: return !setting->LK_Path[SETTING_LK_AUTO][0];
+		default: return 0;
+	}
+}
+
+static const char *disabledHelp(const SetItem *it)
+{
+	switch (it->id) {
+		case S_SVOL: return "Enable Interface sounds to adjust their volume.";
+		case S_BGMVOL: return "Enable Background music to adjust its volume.";
+		case S_USBKBD_FILE:
+		case S_KBDMAP_FILE: return "Enable USB keyboard to configure its driver and key map.";
+		case S_FONT_FILE: return "Choose the System font above to use an external font file.";
+		case S_T_WALL: return "Enable Application artwork in Settings > Home & applications first.";
+		case S_T_WALLDIM: return "Enable Application artwork and choose a focused-app background first.";
+		case S_T_CLOCKPOS:
+		case S_T_HOURS:
+		case S_T_SECONDS:
+		case S_T_DATE: return "Enable the clock to configure its placement and format.";
+		case S_TIMEOUT: return "Choose an automatic start target before setting its timeout.";
+		default: return it->help;
+	}
+}
+
+static void settingsMenu(void)
+{
+	int changed = anyDirty();
+	int failed = failedSaves();
+	DashMenuItem menu[] = {
+	    {DI_CHECK, !changed && failed ? "Retry failed saves" : "Save changes", "Apply to the settings files", !(changed || failed)},
+	    {DI_CLOSE, "Discard changes", "Undo edits since opening Settings or choosing Save", !changed},
+	    {DI_BACK, "Keep editing", NULL, 0}};
+	int r = dashModalMenu("Settings changes", changed ? "Changes preview immediately" : failed ? "An earlier save failed; retry is optional" : "No unsaved changes", menu, NITEMS(menu), (changed || failed) ? 0 : 2);
+	if (r == 0)
+		runAction(S_SAVE_CLASSIC);
+	else if (r == 1)
+		runAction(S_REVERT);
+}
+
+static void editPathMenu(const SetItem *it)
+{
+	PathSpec ps;
+	int r;
+	DashMenuItem menu[] = {
+	    {DI_FOLDER, "Choose a location...", NULL, 0},
+	    {DI_CLOSE, "Clear location", "Use the default behavior", 0}};
+	if (!pathInfo(it->id, &ps))
+		return;
+	menu[1].disabled = !ps.field[0];
+	r = dashModalMenu(it->label, ps.field[0] ? ps.field : "Default", menu, NITEMS(menu), 0);
+	if (r == 0)
+		editPath(it);
+	else if (r == 1)
+		clearPath(it);
+}
+
+static void editLaunchMenu(const SetItem *it)
+{
+	int lk = it->id - S_LK_0, r;
+	DashMenuItem menu[] = {
+	    {DI_FOLDER, "Choose target...", "An application or a built-in command", 0},
+	    {DI_TEXT, "Edit title...", NULL, 0},
+	    {DI_CLOSE, "Clear target", NULL, 0}};
+	if (lkeyLocked())
+		return;
+	menu[2].disabled = !setting->LK_Path[lk][0];
+	r = dashModalMenu(it->label, setting->LK_Path[lk][0] ? setting->LK_Path[lk] : "Not set", menu, NITEMS(menu), 0);
+	if (r >= 0)
+		editLaunchKey(it, r);
 }
 
 static void settingsInput(const DashInput *in)
 {
 	const SetItem *it;
 
-	if (focus_col == 0) {
-		if ((in->pressed & DASH_IN_UP) && cat > 0)
-			cat--, item = 0, item_top = 0;
-		if ((in->pressed & DASH_IN_DOWN) && cat < NCATS - 1)
-			cat++, item = 0, item_top = 0;
-		if (in->pressed & (DASH_IN_RIGHT | DASH_IN_OK))
-			focus_col = 1;
-		if ((in->pressed & DASH_IN_BACK) && theme_mode) {
-			/* leave the theme editor, back to SETTINGS > Theme */
-			theme_mode = 0;
-			cats = main_cats;
-			ncats = NITEMS(main_cats);
-			cat = MAIN_THEME_CAT, item = 1, item_top = 0, focus_col = 1;
-			cat_anim = (float)cat;
-			item_anim = (float)item;
-		}
+	if (in->pressed & DASH_IN_MENU) {
+		settingsMenu();
 		return;
 	}
 	it = curItem();
@@ -2277,20 +2452,30 @@ static void settingsInput(const DashInput *in)
 		if (item > 0)
 			item--;
 	} else if (in->pressed & DASH_IN_DOWN) {
-		if (item < cats[cat].n - 1)
+		if (item < pages[page].n - 1)
 			item++;
 	} else if (in->pressed & DASH_IN_L2) {
 		item = 0;
 	} else if (in->pressed & DASH_IN_R2) {
-		item = cats[cat].n - 1;
+		item = pages[page].n - 1;
 	} else if (in->pressed & DASH_IN_BACK) {
-		focus_col = 0;
-	} else if (theme_mode && (in->pressed & DASH_IN_FAV) && themeSettingResettable(it->id)) {
+		if (page_depth)
+			backPage();
+		else
+			dashSwitchSection(DASH_SEC_HOME);
+	} else if (it->type != ST_PAGE && themeSettingResettable(it->id) && (in->pressed & DASH_IN_FAV)) {
 		if (resetThemeSetting(it->id))
 			dashToast(DASH_TOAST_OK, "Setting reset to preset default");
+	} else if ((in->pressed & DASH_IN_LEFT) && it->type != ST_CHOICE && it->type != ST_NUMBER) {
+		backPage();
+	} else if (itemDisabled(it)) {
+		if (in->pressed & (DASH_IN_OK | DASH_IN_LEFT | DASH_IN_RIGHT | DASH_IN_FAV))
+			dashToast(DASH_TOAST_INFO, disabledHelp(it));
+	} else if (it->type == ST_PAGE && (in->pressed & (DASH_IN_OK | DASH_IN_RIGHT))) {
+		openPage(it->id);
 	} else if (it->type == ST_COLOR && (in->pressed & DASH_IN_OK)) {
 		colorEditor(it->label, it->id);
-	} else if (it->id == S_T_PRESET && (in->pressed & DASH_IN_OK)) {
+	} else if (it->type == ST_CHOICE && it->id == S_T_PRESET && (in->pressed & DASH_IN_OK)) {
 		choosePreset();
 	} else if (it->type == ST_NUMBER && (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
 		int v, lo, hi;
@@ -2301,17 +2486,13 @@ static void settingsInput(const DashInput *in)
 				setNumber(it->id, v);
 		}
 	} else if (it->type == ST_PATH && (in->pressed & DASH_IN_OK)) {
-		editPath(it);
-	} else if (it->type == ST_PATH && (in->pressed & DASH_IN_MENU)) {
-		clearPath(it);
+		editPathMenu(it);
 	} else if (it->type == ST_IP && (in->pressed & DASH_IN_OK)) {
 		editIp(it);
 	} else if (it->type == ST_LKEY && (in->pressed & DASH_IN_OK)) {
-		editLaunchKey(it, 0);
+		editLaunchMenu(it);
 	} else if (it->type == ST_LKEY && (in->pressed & DASH_IN_FAV)) {
 		editLaunchKey(it, 1);
-	} else if (it->type == ST_LKEY && (in->pressed & DASH_IN_MENU)) {
-		editLaunchKey(it, 2);
 	} else if (it->type == ST_CHOICE && (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT | DASH_IN_OK))) {
 		const char *const *names;
 		const char *single;
@@ -2330,8 +2511,6 @@ static void settingsInput(const DashInput *in)
 				cur = (cur + 1) % n;
 			setChoice(it->id, cur);
 		}
-	} else if (in->pressed & DASH_IN_LEFT) {
-		focus_col = 0;
 	} else if (it->type == ST_ACTION && (in->pressed & DASH_IN_OK)) {
 		runAction(it->id);
 	}
@@ -2341,28 +2520,28 @@ static void settingsUpdate(float dt)
 {
 	float sp = dashAnimSpeed();
 
-	cat_anim = dashApproach(cat_anim, (float)cat, 16.0f * sp, dt);
 	item_anim = dashApproach(item_anim, (float)item, 16.0f * sp, dt);
-	col_anim = dashApproach(col_anim, (float)focus_col, 12.0f * sp, dt);
 }
 
 static void settingsDraw(void)
 {
 	int i;
-	const float cx = 48, cy = 104, crow = (NCATS > 7) ? 31.0f : 36.0f, cw = 150;
-	const float ix = 216, iy = 104, irow = 30, iw = 384;
-	const SetCat *c = &cats[cat];
+	const float ix = 48, iy = 128, irow = 27, iw = 544;
+	const SetPage *c = &pages[page];
+	char trail[192];
 
-	if (theme_mode) {
-		char sub[DASH_THEME_NAME_MAX + 16];
-		snprintf(sub, sizeof(sub), "%s%s", dashTheme.name, dashThemeIsCustom() ? " (edited)" : "");
-		dashDrawSectionTitle(48, 68, "Theme", sub);
-	} else {
-		dashDrawSectionTitle(48, 68, "Settings", anyDirtyCached() ? "unsaved changes" :
-		    (cfg_pending[0] || cfg_pending[1] || dashStoreSettingsPending()) ? "saving changes..." : NULL);
-		if (anyDirtyCached())
-			dashRect(48 + dashTextWidth("Settings", DASH_FS_TITLE) + 6, 80, 5, 5, DASH_C_WARM);
+	trail[0] = '\0';
+	for (i = 0; i < page_depth; i++) {
+		int len = strlen(trail);
+		snprintf(trail + len, sizeof(trail) - len, "%s%s", i ? " > " : "", pages[page_stack[i].page].name);
 	}
+	if (page_depth)
+		dashTextFit(ix, 51, iw - 126, trail, DASH_FS_CAPTION, DASH_C_TEXT3);
+	dashDrawSectionTitle(ix, 68, c->name, NULL);
+	dashTextFit(ix, 103, iw, c->help, DASH_FS_CAPTION, DASH_C_TEXT3);
+	dashTextRight(ix + iw, 51, anyDirtyCached() ? "unsaved changes" :
+	    (cfg_pending[0] || cfg_pending[1] || dashStoreSettingsPending()) ? "saving..." : failedSaves() ? "save failed" : "no changes",
+	    DASH_FS_CAPTION, (anyDirtyCached() || failedSaves()) ? DASH_C_WARM : DASH_C_TEXT3);
 
 	/* keep the focused row inside the visible window */
 	if (item < item_top)
@@ -2370,24 +2549,14 @@ static void settingsDraw(void)
 	if (item >= item_top + ITEM_ROWS)
 		item_top = item - ITEM_ROWS + 1;
 
-	/* categories */
-	dashDrawPanelBox(cx - 6, cy - 6, cw + 12, NCATS * crow + 12, 14);
-	dashDrawSelection(cx, cy + cat_anim * crow, cw, crow - 4, 10, focus_col == 0 ? 1.0f : 0.45f);
-	for (i = 0; i < NCATS; i++) {
-		DashColor col = (i == cat) ? (focus_col == 0 ? DASH_C_SELTEXT : DASH_C_TEXT) : DASH_C_TEXT2;
-		dashIcon(cats[i].icon, cx + 10, cy + i * crow + 8, 16, col);
-		dashText(cx + 34, cy + i * crow + 9.5f, cats[i].name, DASH_FS_SMALL, col);
-	}
-
 	/* items */
 	dashDrawPanelBox(ix - 6, iy - 6, iw + 12, ITEM_ROWS * irow + 12, 14);
-	if (focus_col == 1)
-		dashDrawSelection(ix, iy + (item_anim - item_top) * irow, iw, irow - 3, 9, 1.0f);
+	dashDrawSelection(ix, iy + dashClampf(item_anim - item_top, 0, ITEM_ROWS - 1) * irow, iw, irow - 3, 9, 1.0f);
 	for (i = item_top; i < c->n && i < item_top + ITEM_ROWS; i++) {
 		const SetItem *it = &c->items[i];
 		float y = iy + (i - item_top) * irow;
-		int on = (focus_col == 1 && i == item);
-		DashColor col = dashItemColor(on);
+		int on = i == item, disabled = itemDisabled(it);
+		DashColor col = disabled ? DASH_C_TEXT3 : dashItemColor(on);
 
 		if (it->type == ST_INFO) {
 			char buf[64];
@@ -2396,7 +2565,14 @@ static void settingsDraw(void)
 			dashTextRight(ix + iw - 12, y + 6.5f, buf, DASH_FS_SMALL, DASH_C_TEXT2);
 			continue;
 		}
-		dashTextFit(ix + 12, y + 6.5f, iw * 0.58f, it->label, DASH_FS_SMALL, col);
+		if (it->type == ST_PAGE) {
+			dashIcon(pages[it->id].icon, ix + 12, y + 6, 16, col);
+			dashTextFit(ix + 38, y + 6.5f, iw - 70, it->label, DASH_FS_SMALL, col);
+			dashIcon(DI_PLAY, ix + iw - 22, y + 8, 12, DASH_C_TEXT3);
+			continue;
+		}
+		dashTextFit(ix + 12, y + 6.5f, it->type == ST_ACTION ? iw - 44 : iw * 0.56f - 24,
+		            it->label, DASH_FS_SMALL, col);
 		if (it->type == ST_COLOR) {
 			int alpha;
 			DashColor *cv = colorField(it->id, &alpha);
@@ -2415,11 +2591,11 @@ static void settingsDraw(void)
 			if (n > 0 && cur >= 0 && cur < n) {
 				float vw = dashTextWidth(names[cur], DASH_FS_SMALL);
 				float vx = ix + iw - 20 - vw;
-				if (on) {
+				if (on && !disabled) {
 					dashIcon(DI_BACK, vx - 22, y + 7, 12, DASH_C_ACCENT);
 					dashIcon(DI_PLAY, ix + iw - 16, y + 8, 10, DASH_C_ACCENT);
 				}
-				dashText(vx, y + 6.5f, names[cur], DASH_FS_SMALL, (n == 2 && names == onoff && cur == 1) ? DASH_C_OK : DASH_C_ACCENT);
+				dashText(vx, y + 6.5f, names[cur], DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : (n == 2 && names == onoff && cur == 1) ? DASH_C_OK : DASH_C_ACCENT);
 			}
 		} else if (it->type == ST_NUMBER || it->type == ST_PATH || it->type == ST_IP || it->type == ST_LKEY) {
 			char text[MAX_PATH], leaf[MAX_PATH];
@@ -2447,11 +2623,11 @@ static void settingsDraw(void)
 				if (vw > maxw)
 					vw = maxw;
 				vx = ix + iw - 20 - vw;
-				if (on && it->type == ST_NUMBER) {
+				if (on && !disabled && it->type == ST_NUMBER) {
 					dashIcon(DI_BACK, vx - 22, y + 7, 12, DASH_C_ACCENT);
 					dashIcon(DI_PLAY, ix + iw - 16, y + 8, 10, DASH_C_ACCENT);
 				}
-				dashTextFit(vx, y + 6.5f, maxw, v, DASH_FS_SMALL, set ? DASH_C_ACCENT : DASH_C_TEXT3);
+				dashTextFit(vx, y + 6.5f, maxw, v, DASH_FS_SMALL, set && !disabled ? DASH_C_ACCENT : DASH_C_TEXT3);
 			}
 		} else
 			dashIcon(DI_PLAY, ix + iw - 22, y + 8, 12, DASH_C_TEXT3);
@@ -2460,10 +2636,10 @@ static void settingsDraw(void)
 	/* help line */
 	{
 		const SetItem *it = curItem();
-		const char *help = it->help;
-		if (it->id == S_T_PRESET)
+		const char *help = itemDisabled(it) ? disabledHelp(it) : it->help;
+		if (it->type == ST_CHOICE && it->id == S_T_PRESET)
 			help = dashThemePresetInfo(dashThemeBasePreset())->desc;
-		if (focus_col == 1 && help)
+		if (help)
 			dashTextWrap(ix, iy + ITEM_ROWS * irow + 12, iw, 2, help, DASH_FS_CAPTION, DASH_C_TEXT3, 17);
 	}
 }
@@ -2473,26 +2649,21 @@ static void settingsHints(void)
 	DashHint h[6];
 	int n = 0;
 
-	if (focus_col == 0) {
-		h[n].button = dashOkIcon(), h[n].key = NULL, h[n].label = "Select", n++;
-		if (theme_mode)
-			h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = "Done", n++;
-	} else {
+	{
 		const SetItem *it = curItem();
 		if (it->type == ST_NUMBER)
 			h[n].button = DI_BTN_LEFT, h[n].key = NULL, h[n].label = "Change", n++;
 		else
 			h[n].button = dashOkIcon(), h[n].key = NULL,
-			h[n].label = (it->type == ST_ACTION) ? "Open" : (it->type == ST_COLOR || it->type == ST_IP) ? "Edit" :
+			h[n].label = (it->type == ST_ACTION || it->type == ST_PAGE) ? "Open" : (it->type == ST_COLOR || it->type == ST_IP) ? "Edit" :
 			             (it->type == ST_PATH || it->type == ST_LKEY) ? "Choose" : "Change", n++;
-		if (theme_mode && themeSettingResettable(it->id))
+		if (it->type != ST_PAGE && themeSettingResettable(it->id))
 			h[n].button = DI_BTN_SQUARE, h[n].key = NULL, h[n].label = "Reset", n++;
 		else if (it->type == ST_LKEY)
 			h[n].button = DI_BTN_SQUARE, h[n].key = NULL, h[n].label = "Title", n++;
-		if (it->type == ST_PATH || it->type == ST_LKEY)
-			h[n].button = DI_BTN_TRIANGLE, h[n].key = NULL, h[n].label = "Clear", n++;
-		h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = theme_mode ? "Groups" : "Categories", n++;
+		h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = page_depth ? "Back" : "Home", n++;
 	}
+	h[n].button = DI_BTN_TRIANGLE, h[n].key = NULL, h[n].label = "Changes", n++;
 	h[n].button = -1, h[n].key = "START", h[n].label = "Menu", n++;
 	dashDrawHints(h, n);
 }

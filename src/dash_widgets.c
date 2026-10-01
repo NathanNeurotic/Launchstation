@@ -2,7 +2,7 @@
 //File name:   dash_widgets.c
 //Native dashboard dialogs that replace the classic wLaunchELF prompts:
 //* dashModalKeyboard(): text entry with the user's virtual keyboard
-//  layout (Settings > Controls) and USB keyboard typing.
+//  layout (Settings > Input) and USB keyboard typing.
 //* dashPickPath(): a file or folder picker. Folders are read by the
 //  background worker, so the picker never freezes on a slow device, and
 //  the user can always back out.

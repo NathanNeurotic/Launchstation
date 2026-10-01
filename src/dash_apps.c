@@ -617,7 +617,7 @@ static void appsDraw(void)
 	if (norder == 0) {
 		if (dashAppCount == 0)
 			dashDrawEmptyState(320, 238, DI_APPS, "No applications found",
-			                   "Add an application folder in Settings > Dashboard, or browse to an ELF in Files. "
+				                   "Add a folder in Settings > Home & applications > Application library, or browse to an ELF in Files. "
 			                   "Press the confirm button to scan now.");
 		else
 			dashDrawEmptyState(320, 238, DI_STAR, filter == FILTER_FAV ? "No favorites yet" : "Nothing to show",

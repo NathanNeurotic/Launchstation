@@ -915,7 +915,7 @@ static void opBookmark(void)
 	}
 	n += count;
 	if (n == 0) {
-		dashModalMessage(DI_STAR, "No bookmarks", setting->PathPad_Lock ? "Bookmarks are locked (Settings > Launch keys)." : "Open a folder, then choose Bookmark this folder.", NULL);
+		dashModalMessage(DI_STAR, "No bookmarks", setting->PathPad_Lock ? "Bookmarks are locked (Settings > Launching)." : "Open a folder, then choose Bookmark this folder.", NULL);
 		return;
 	}
 	r = dashModalMenu("Bookmarks", setting->PathPad_Lock ? "locked" : NULL, items, n, 0);

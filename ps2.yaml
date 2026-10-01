@@ -164,6 +164,8 @@ targets:
       - "-Wl,--gc-sections"
       - "-nodefaultlibs"
       - "-Wl,--start-group"
+      # Startup now references kernel's _InitSys; scan it inside the group.
+      - "-lstartup"
       - "-lc_nano"
       - "-lm_nano"
       - "-lgcc"

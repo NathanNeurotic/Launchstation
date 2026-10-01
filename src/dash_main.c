@@ -600,7 +600,7 @@ static void quickLaunchInput(DashInput *in)
 				return;
 			}
 		}
-		dashToast(DASH_TOAST_INFO, "No application on that button (Settings > Launch keys)");
+		dashToast(DASH_TOAST_INFO, "No application on that button (Settings > Launching > Launch keys)");
 		return;
 	}
 	/* released: a short tap without another button is a normal SELECT */
@@ -647,7 +647,7 @@ static void quickLaunchDraw(void)
 	dashTextS(x + 58, y + 20, "Launch keys", DASH_FS_LABEL, DASH_C_TEXT);
 	dashText(x + 58, y + 44, "Keep SELECT held and press a button", DASH_FS_CAPTION, DASH_C_TEXT3);
 	if (n == 0)
-		dashText(x + 28, y + 72, "No launch keys yet: set them in Settings > Launch keys.", DASH_FS_SMALL, DASH_C_TEXT2);
+		dashText(x + 28, y + 72, "Set launch keys in Settings > Launching > Launch keys.", DASH_FS_SMALL, DASH_C_TEXT2);
 	for (i = 0, col = 0; i < LK_MAP_N; i++) {
 		float bx, by;
 		if (lk_map[i].mask == PAD_SELECT || !lkUsable(lk_map[i].lk))

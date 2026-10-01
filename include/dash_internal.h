@@ -88,7 +88,7 @@ extern DashColor DASH_C_BORDER;    /* panel borders (alpha 0 = none) */
 // Theme engine (dash_themes.c)
 //
 // One DashTheme holds every visual value the dashboard uses. Built-in
-// presets fill it, the user edits it in SETTINGS > Theme, and it is saved
+// presets fill it, the user edits it in Settings > Appearance, and it is saved
 // as Theme_* keys in DASHBOARD.CNF. Theme folders
 // (<dashboard dir>/THEMES/<name>/theme.cfg) use the same keys without the
 // prefix. Every value is validated/clamped; unknown keys are ignored.

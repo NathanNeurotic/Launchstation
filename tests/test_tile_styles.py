@@ -91,8 +91,10 @@ int main(void) {
         dashThemeParseKey(&dashTheme, "tile_style", "invalid");
         dashThemeParseKey(&dashTheme, "tile_style", "255");
         assert(dashTheme.tile_style == style);
+        dashTheme.panel.a = 73;
         dashThemeResetGroup(DASH_TG_STYLE);
         assert(dashTheme.tile_style == DASH_TILE_MEMORY_CARD);
+        assert(dashTheme.panel.a == 73); /* Opacity belongs to Colours. */
         dashThemeRestore(&saved, 0, 1);
         assert(dashTheme.tile_style == style);
         if (style == DASH_TILE_MEMORY_CARD || style == DASH_TILE_CHAMFERED || style == DASH_TILE_CRYSTAL) {
