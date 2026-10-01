@@ -100,6 +100,14 @@ does not unload drivers that have already started.
 
 ## Controls
 
+Animated backgrounds continue behind menus, theme previews, dialogs and
+native full-screen tools. These frames share the dashboard's measured visual
+clock; motion and menu easing do not assume 60 frames per second. Opening a
+menu does not run dashboard input, device polling or library scans behind it.
+Background motion at 0% still intentionally freezes the scene. Long blocking
+operations retain the existing 100 ms visual-step limit rather than jumping
+the animation forward on return.
+
 Confirm/cancel follow the existing `GUI_Swap_Keys` setting (Settings >
 Input > Confirm button), as wLaunchELF always has.
 

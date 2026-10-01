@@ -375,7 +375,7 @@ static void homeDraw(void)
 		target = focus_x + focus_w - (DASH_SAFE_R - 48);
 		if (target < 0)
 			target = 0;
-		chip_cam = dashApproach(chip_cam, target, 10.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		chip_cam = dashApproach(chip_cam, target, 10.0f * dashAnimSpeed(), dashFrameDelta());
 		dashGfxScissor(DASH_SAFE_L - 6, cy - 6, DASH_SAFE_R - DASH_SAFE_L + 12, 44);
 		x = 48 - chip_cam;
 		for (i = 0; i < nchips; i++) {

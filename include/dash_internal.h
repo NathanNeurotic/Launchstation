@@ -906,6 +906,9 @@ void dashSetSceneOverride(void (*fn)(void)); /* NULL restores the dashboard scen
 int dashTextEditor(const char *path);
 int dashTextEditorEx(const char *path, int create_if_missing);
 float dashTime(void);
+/* Visual-only tick, once before each dashboard/modal frame. No input or IO. */
+float dashVisualUpdate(void);
+float dashFrameDelta(void); /* measured delta of that tick, for draw-time easing */
 float dashAnimSpeed(void);
 float dashSectionAnim(void); /* 0..1 section-transition clock */
 

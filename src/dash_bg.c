@@ -400,7 +400,7 @@ static void drawAppWallpaper(void)
 	if (wall_prev != NULL && wall_mix < 1.0f)
 		prev = dashArtGet(wall_prev, 1);
 	vis_target = (cur != NULL) ? 1.0f : 0.0f;
-	wall_vis = dashApproach(wall_vis, vis_target, 4.0f * dashAnimSpeed(), 1.0f / 60.0f);
+	wall_vis = dashApproach(wall_vis, vis_target, 4.0f * dashAnimSpeed(), dashFrameDelta());
 	if (wall_vis < 0.01f && prev == NULL)
 		return;
 	/* the artwork is laid over the scene at 60 % (a softer, more muted

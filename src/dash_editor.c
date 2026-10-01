@@ -1239,6 +1239,7 @@ int dashTextEditorEx(const char *path, int create_if_missing)
 		d = &docs[active];
 		rows = visibleRows();
 		scrollToCursor(d, rows, cols);
+		dashVisualUpdate();
 		dashRenderScene();
 		dashGfxPresent();
 	}

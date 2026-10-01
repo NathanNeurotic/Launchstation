@@ -1,0 +1,203 @@
+"""Execute production visual timing and modal loops with mocked time/drawing.
+
+Host evidence only, not EE/GS performance. Optional git ref runs the same
+modal assertions against an older revision to prove the freeze regression.
+"""
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+root = Path(__file__).resolve().parents[1]
+
+
+def read(path):
+    if len(sys.argv) > 1:
+        return subprocess.check_output(["git", "show", f"{sys.argv[1]}:{path}"],
+                                       cwd=root, text=True)
+    return (root / path).read_text()
+
+
+def function(source, signature):
+    start = source.index(signature)
+    end = source.index("{", start) + 1
+    depth = 1
+    while depth:
+        depth += (source[end] == "{") - (source[end] == "}")
+        end += 1
+    return source[start:end] + "\n"
+
+
+shell = read("src/dash_main.c")
+ui = read("src/dash_ui.c")
+gfx = read("src/dash_gfx.c")
+header = read("include/dash_internal.h")
+orbs = read("src/dash_bg_ps2.c")
+menu = function(ui, "int dashModalMenu(")
+buttons = function(ui, "static int modalButtons(")
+symbols = sorted(set(re.findall(r"\b(?:DI_|DASH_FS_|DASH_SND_|DASH_HL_)\w+",
+                               menu + buttons)))
+colors = sorted(set(re.findall(r"\bDASH_C_\w+", menu + buttons)))
+code = r"""
+#include <assert.h>
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+typedef uint64_t u64;
+typedef struct { int r,g,b,a; } DashColor;
+typedef struct { int icon; const char *label,*detail; int disabled; } DashMenuItem;
+typedef struct { int pressed; } DashInput;
+static struct { int anim,effects; } dashCfg={100,100};
+static struct { int glow,highlight; } dashTheme;
+static float anim_time,frame_dt,section_anim=1,fade_in=1,bg_time,ui_time;
+static u64 last_frame_ms,now_ms;
+static int bg_calls,ui_calls,renders,depth,nested,frames[2],step_ms[3]={16,20,33};
+static int preview_calls;
+static u64 Timer(void) { return now_ms; }
+static void dashBgUpdate(float dt) { bg_calls++; bg_time+=dt*dashCfg.effects/100.0f; }
+static void dashUiUpdate(float dt) { ui_calls++; ui_time+=dt; }
+static void dashRenderScene(void) { renders++; }
+static void dashGfxPresent(void) {}
+static void dashInputFlush(void) {}
+static void dashSoundPlay(int s) { (void)s; }
+static float dashClampf(float x,float lo,float hi) { return x<lo?lo:x>hi?hi:x; }
+static float dashLerpf(float a,float b,float t) { return a+(b-a)*t; }
+static float dashEaseOutCubic(float x) { return 1-(1-x)*(1-x)*(1-x); }
+static DashColor dashItemColor(int on) { return (DashColor){on,0,0,255}; }
+static DashColor dashColorScale(DashColor c,float f) { (void)f; return c; }
+static DashColor dashColorA(DashColor c,float f) { (void)f; return c; }
+static int dashOkIcon(void) { return 0; }
+static int dashBackIcon(void) { return 0; }
+static float dashTextWidth(const char *s,float f) { return strlen(s)*f; }
+static void (*modal_preview)(int);
+static void preview(int i) { (void)i; preview_calls++; }
+#define DASH_VH 448
+#define DASH_VW 640
+#define DASH_SAFE_R 592
+#define DASH_BLEND_ADD 1
+#define DASH_BLEND_NORMAL 0
+"""
+code += "enum { " + ",".join(symbols) + " };\n"
+input_start = header.rfind("enum {", 0, header.index("DASH_IN_UP"))
+code += header[input_start:header.index("};", input_start) + 2] + "\n"
+for color in colors:
+    code += f"#define {color} ((DashColor){{255,255,255,255}})\n"
+for draw in ("modalBackdrop", "dashGfxPushAlpha", "dashGfxPushOffset", "modalPanel",
+             "dashTextS", "dashTextFit", "dashGfxScissor", "dashDrawSelection",
+             "dashIcon", "dashTextRight", "dashGfxScissorReset", "dashDrawScrollbar",
+             "modalHintRow", "dashGfxPopOffset", "dashGfxPopAlpha", "dashGfxBlend",
+             "dashGlow", "dashTextWrap", "dashPanel", "dashPanelBorder", "dashTextCenter"):
+    code += f"#define {draw}(...) ((void)0)\n"
+code += function(gfx, "float dashApproach(")
+code += function(shell, "float dashTime(")
+code += function(shell, "float dashAnimSpeed(")
+if "float dashVisualUpdate(" in shell:
+    code += function(shell, "float dashFrameDelta(")
+    code += function(shell, "float dashVisualUpdate(")
+else:
+    code += "static float dashFrameDelta(void) { return 0; }\n"
+    code += "static float dashVisualUpdate(void) { return 0; }\n"
+code += r"""
+#define DASH_FX_OFF 0
+#define DASH_FX_FULL 2
+typedef struct { int hour,minute; float second; } OsdTime;
+static int menuTitleGetClockFields(int *y,int *mo,int *d,int *h,int *mi,int *s,int *u,int *f) {
+    (void)y;(void)mo;(void)d;(void)u;(void)f;
+    *h=12; *mi=0; *s=(now_ms/1000)%60; return 1;
+}
+"""
+code += function(orbs, "static void osdTime(")
+code += r"""
+static int modalButtons(const char *,const char *,const char *,int,DashColor,
+                        const char *,const char *,int);
+static void dashInputPoll(DashInput *in) {
+    int f=++frames[depth];
+    now_ms+=step_ms[(f-1)%3];
+    in->pressed=f==4?DASH_IN_BACK:0;
+    if(nested && depth==0 && f==2) {
+        depth=1;
+        assert(!modalButtons("nested","confirm",NULL,0,(DashColor){0},"OK","Cancel",0));
+        depth=0;
+    }
+}
+"""
+code += menu + buttons
+code += r"""
+static void reset(void) {
+    anim_time=bg_time=ui_time=0; bg_calls=ui_calls=renders=preview_calls=0;
+    section_anim=fade_in=0;
+    now_ms=last_frame_ms=1000; frame_dt=0;
+    depth=nested=0; memset(frames,0,sizeof(frames)); modal_preview=NULL;
+    dashCfg.anim=100; dashCfg.effects=100;
+}
+static void check(void) {
+    assert(renders>0 && bg_calls==renders && ui_calls==renders);
+    assert(anim_time>0 && fabsf(anim_time-ui_time)<0.00001f);
+    assert(fabsf(anim_time-(last_frame_ms-1000)/1000.0f)<0.00001f);
+    assert(section_anim>0 && fade_in>0);
+}
+int main(void) {
+    DashMenuItem items[]={{0,"one",NULL,0},{0,"two",NULL,0}};
+    for(int ms=16;ms<=33;ms+=(ms==16?4:13)) {
+        reset(); step_ms[0]=step_ms[1]=step_ms[2]=ms;
+        assert(dashModalMenu("ordinary",NULL,items,2,0)==-1);
+        check(); assert(renders==3 && fabsf(anim_time-ms*3/1000.0f)<0.00001f);
+        assert(fabsf(bg_time-anim_time)<0.00001f);
+    }
+    reset(); step_ms[0]=16;step_ms[1]=20;step_ms[2]=33;
+    modal_preview=preview;
+    assert(dashModalMenu("preview",NULL,items,2,0)==-1);
+    check(); assert(preview_calls==1 && bg_calls==3);
+    assert(fabsf(anim_time-0.069f)<0.00001f);
+    /* Smooth RTC interpolation consumes this same advancing dashTime(). */
+    assert(dashTime()>0 && dashFrameDelta()==0.033f);
+    OsdTime ot; osdTime(DASH_FX_FULL,&ot); float second=ot.second;
+    now_ms+=20; float rtc_dt=dashVisualUpdate(); osdTime(DASH_FX_FULL,&ot);
+    assert(fabsf(ot.second-second-rtc_dt)<0.00001f);
+    reset(); nested=1;
+    assert(dashModalMenu("parent",NULL,items,2,0)==-1);
+    check(); assert(renders==6 && fabsf(anim_time-bg_time)<0.00001f);
+    /* Returning to the main loop counts only time since the last modal tick. */
+    float before=anim_time; u64 anchor=last_frame_ms;
+    now_ms+=20; float dt=dashVisualUpdate();
+    assert(fabsf(dt-(now_ms-anchor)/1000.0f)<0.00001f);
+    assert(fabsf(anim_time-before-dt)<0.00001f);
+    reset(); dashCfg.effects=0; dashCfg.anim=0;
+    assert(dashModalMenu("motion off",NULL,items,2,0)==-1);
+    check(); assert(bg_time==0 && section_anim==1 && fade_in==1);
+    reset(); now_ms+=2000;
+    assert(dashVisualUpdate()==0.1f); /* retain the long-stall clamp */
+    now_ms=last_frame_ms-1;
+    assert(dashVisualUpdate()==0); /* timer reset cannot unsigned-underflow */
+    puts("PASS: ordinary/preview/nested menus, measured timing, RTC interpolation, no double ticks, motion off and stalls");
+}
+"""
+compiler = shutil.which("gcc") or shutil.which("clang")
+if not compiler:
+    raise SystemExit("Host gcc or clang required")
+with tempfile.TemporaryDirectory(prefix="wle-modal-animation-") as tmp:
+    harness = Path(tmp) / "modal.c"
+    exe = Path(tmp) / "modal.exe"
+    harness.write_text(code)
+    subprocess.run([compiler, "-std=gnu11", str(harness), "-lm", "-o", str(exe)], check=True)
+    subprocess.run([str(exe)], check=True)
+
+# Every scene-owning frame loop must tick, including full-screen tools and
+# both worker-wait paths (the loading path ticks inside loadingDraw).
+if len(sys.argv) == 1:
+    for name in ("dash_ui", "dash_widgets", "dash_settings", "dash_browser",
+                 "dash_hdd", "dash_info", "dash_editor", "dash_worker"):
+        text = read(f"src/{name}.c")
+        assert text.count("dashVisualUpdate()") == text.count("dashRenderScene()"), name
+        assert "1.0f / 60.0f" not in text and "1.0f / 30.0f" not in text, name
+    run = function(shell, "void DashRun(")
+    assert run.count("dashVisualUpdate()") == 1
+    assert "anim_time +=" not in run and "dashBgUpdate(" not in run and "dashUiUpdate(" not in run
+    tick = function(shell, "float dashVisualUpdate(")
+    calls = set(re.findall(r"\b(\w+)\s*\(", tick[tick.index("{"):])) - {"if"}
+    assert calls <= {"Timer", "dashBgUpdate", "dashUiUpdate", "dashApproach", "dashAnimSpeed"}, calls
+    assert "dashVisualUpdate" not in function(shell, "void dashRenderScene(")
+    print("PASS: every scene loop ticks once; visual helper excludes input, device polling and IO")

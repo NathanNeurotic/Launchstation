@@ -327,6 +327,7 @@ int dashWorkerAwait(int id, const char *title, int cancelable)
 			dashLoadingFrame(s, done, total);
 		} else {
 			/* let the worker run while we wait */
+			dashVisualUpdate();
 			dashRenderScene();
 			dashGfxPresent();
 		}
@@ -374,7 +375,7 @@ void dashDrawActivity(void)
 	}
 	/* stay up for at least half a second so short saves are still seen */
 	target = (active || now - act_visible_since < 500) ? 1.0f : 0.0f;
-	act_alpha = dashApproach(act_alpha, target, 10.0f, 1.0f / 60.0f);
+	act_alpha = dashApproach(act_alpha, target, 10.0f, dashFrameDelta());
 	if (act_alpha < 0.02f) {
 		act_alpha = 0.0f;
 		return;

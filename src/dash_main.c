@@ -24,6 +24,7 @@ static float anim_time;
 static float fade_in;
 static int autoprobe_pending;
 static u64 last_frame_ms;
+static float frame_dt;
 static int frame_counter;
 
 /* boot-time launch key emulation */
@@ -55,6 +56,31 @@ int dashCurrentSection(void)
 float dashTime(void)
 {
 	return anim_time;
+}
+
+float dashFrameDelta(void)
+{
+	return frame_dt;
+}
+
+/* Main, modal and tool loops share the same clock. Nested dialogs consume
+ * elapsed time here, so returning to their caller never counts it twice.
+ * Keep this visual-only: no section input/update, device polling or IO. */
+float dashVisualUpdate(void)
+{
+	u64 now = Timer();
+	float dt = now >= last_frame_ms ? (now - last_frame_ms) / 1000.0f : 0.0f;
+
+	last_frame_ms = now;
+	if (dt > 0.1f)
+		dt = 0.1f; /* do not jump after a blocking legacy operation */
+	frame_dt = dt;
+	anim_time += dt;
+	dashBgUpdate(dt);
+	dashUiUpdate(dt);
+	section_anim = dashApproach(section_anim, 1.0f, 9.0f * dashAnimSpeed(), dt);
+	fade_in = dashApproach(fade_in, 1.0f, 5.0f * dashAnimSpeed(), dt);
+	return dt;
 }
 
 float dashAnimSpeed(void)
@@ -872,14 +898,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		bootBegin();
 	/* the dashboard is the only shell: it never returns */
 	while (1) {
-		u64 now = Timer();
-		float dt = (now - last_frame_ms) / 1000.0f;
-		last_frame_ms = now;
-		if (dt > 0.1f)
-			dt = 0.1f;
-		if (dt < 0.0f)
-			dt = 0.0f;
-		anim_time += dt;
+		float dt = dashVisualUpdate();
 		frame_counter++;
 
 		if (dashGfxCheckScreenChange())
@@ -907,12 +926,8 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			globalMenu();
 		else if (in.any && screens[section]->input)
 			screens[section]->input(&in);
-		dashBgUpdate(dt);
-		dashUiUpdate(dt);
 		if (screens[section]->update)
 			screens[section]->update(dt);
-		section_anim = dashApproach(section_anim, 1.0f, 9.0f * dashAnimSpeed(), dt);
-		fade_in = dashApproach(fade_in, 1.0f, 5.0f * dashAnimSpeed(), dt);
 
 		/* results of background work that change what screens point at */
 		applyScanResult();
@@ -942,6 +957,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		{
 			static u64 tour_next;
 			static int tour_idx = -1;
+			u64 now = Timer();
 			if (now >= tour_next) {
 				tour_idx = (tour_idx + 1) % dashThemePresetCount();
 				dashThemeSetPreset(tour_idx);

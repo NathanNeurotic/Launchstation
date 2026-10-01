@@ -736,7 +736,7 @@ static int tsEdit(FilerDateEditor *e)
 			top = idx;
 		if (idx >= top + TS_ROWS)
 			top = idx - TS_ROWS + 1;
-		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dashVisualUpdate());
 		{
 			float oe = dashEaseOutCubic(open), fx, fy;
 			char text[32], date[40];
@@ -1389,7 +1389,7 @@ void dashFileBrowser(const char *start_dir)
 			fb.top = fb.sel;
 		if (fb.sel >= fb.top + FB_ROWS)
 			fb.top = fb.sel - FB_ROWS + 1;
-		fb.sel_anim = dashApproach(fb.sel_anim, (float)fb.sel, 22.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		fb.sel_anim = dashApproach(fb.sel_anim, (float)fb.sel, 22.0f * dashAnimSpeed(), dashVisualUpdate());
 		dashRenderScene();
 		dashGfxPresent();
 	}

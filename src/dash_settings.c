@@ -961,7 +961,7 @@ static void colorEditor(const char *title, int id)
 			dashInputFlush();
 			return;
 		}
-		open = dashApproach(open, 1.0f, 14.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		open = dashApproach(open, 1.0f, 14.0f * dashAnimSpeed(), dashVisualUpdate());
 
 		dashRenderScene();
 		dashGfxPushAlpha(open);

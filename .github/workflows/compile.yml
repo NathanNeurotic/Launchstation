@@ -23,6 +23,7 @@ jobs:
         run: |
           python3 tests/test_settings_save_prompt.py
           python3 tests/test_settings_navigation.py
+          python3 tests/test_modal_animation.py
           python3 tests/test_theme_motion.py
           python3 tests/test_tile_styles.py
           python3 tests/test_worker_queue.py
