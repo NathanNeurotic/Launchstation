@@ -332,7 +332,7 @@ void dashDrawHeader(int section, float section_anim)
 	{
 		float dx = target_x - tab_anim_x;
 
-		tab_anim_x = dashApproach(tab_anim_x, target_x, 14.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		tab_anim_x = dashApproach(tab_anim_x, target_x, 14.0f * dashAnimSpeed(), dashFrameDelta());
 		tab_anim_x += dx * 0.04f * dashClampf(fabsf(dx) / tab_w, 0.0f, 1.0f) * dashSinf(dashTime() * 16.0f);
 	}
 
@@ -739,11 +739,11 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 				preview(sel);
 				previewed = sel;
 			}
-			dashBgUpdate(1.0f / 60.0f);
 		}
 
-		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), 1.0f / 60.0f);
-		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		float dt = dashVisualUpdate();
+		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), dt);
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
 		{
 			float oe = dashEaseOutCubic(open);
 
@@ -844,8 +844,9 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 			dashInputFlush();
 			return (cancel_label == NULL) ? 1 : 0;
 		}
-		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
-		sel_anim = dashApproach(sel_anim, (float)sel, 20.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		float dt = dashVisualUpdate();
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
+		sel_anim = dashApproach(sel_anim, (float)sel, 20.0f * dashAnimSpeed(), dt);
 		{
 			float oe = dashEaseOutCubic(open);
 
@@ -935,7 +936,7 @@ static void loadingDraw(void)
 	float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
 	float bar_y = y + 102.0f;
 
-	loading_open = dashApproach(loading_open, 1.0f, 12.0f, 1.0f / 30.0f);
+	loading_open = dashApproach(loading_open, 1.0f, 12.0f, dashVisualUpdate());
 	dashRenderScene();
 	modalBackdrop(loading_open);
 	dashGfxPushAlpha(loading_open);

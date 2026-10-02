@@ -7,9 +7,8 @@ preset, change any value with the controller, save the result as a theme
 folder, and load theme folders that you or others made on a PC. Nothing
 needs recompiling.
 
-The classic screens (File Browser, HDD Manager, Text Editor, classic
-configuration) follow the theme too when *Modern style for classic
-screens* is on (Settings > Display).
+The native File Browser, HDD Manager, Text Editor and dialogs follow the
+same active theme.
 
 ## Built-in themes
 
@@ -55,34 +54,43 @@ the colour-swap selection.
 
 ## Settings
 
-**Settings > Theme**
+**Settings > Appearance**
 
-* **Theme**: Left/Right switches presets immediately. Press the confirm
+* **Theme preset**: Left/Right switches presets immediately. Press the confirm
   button to open the list: each preset is previewed as you move the
   cursor; confirm keeps it, cancel restores your previous theme (even an
   edited one).
-* **Customize theme...** opens the theme editor.
+* **Customize theme** opens the theme's customization groups.
+* **Screen calibration** contains video mode, X/Y position and screen reset.
 * **Background motion**: 0-200% in 10% steps. 0% freezes the scene, 100%
   is the normal speed, and 200% doubles it.
 * **Menu animation**: 0-200% in 10% steps. 0% makes transitions instant;
   larger values keep transitions moving for longer.
-* **Load theme from folder...**, **Save theme to folder...**,
-  **Restore default theme**.
+* **Theme files & resets** contains import, export, theme name, reset to the
+  current preset and restore OSD Classic.
+* **Reset appearance** restores screen calibration, motion, animation and
+  OSD Classic together.
 
-**Theme editor.** The left column shows the groups; BACK returns to Settings.
-Every change applies immediately. Each group ends with *Reset ...*, which
+**Theme editor.** Choose a group to open its page; Back returns to the group
+list with its previous selection. Every change previews immediately and
+participates in the Settings Save/Discard session. Each group ends with *Reset ...*, which
 puts that group back to the values of the preset the theme started from.
 
 | Group | Options |
 |-------|---------|
-| Background | Background type, Colour, Second colour, Brightness (10-200 %), Background motion, Menu animation, CRT scanlines, Wallpaper image... |
-| Colours | Text, Secondary text, Muted text, Selected text, Accent, Selection (with opacity), Panels (with opacity), Borders (with opacity), Warnings |
-| Style | Tile style (memory card, rounded, chamfered, floating object, crystal slab), Selection style (solid bar, accent bar, outline, text colour), Corners (square, soft, round), Glow, Panel opacity |
-| Text | Font (Roboto, System), Text size (90-115 %), Bold, Text shadow |
+| Background | Background type, Colour, Second colour, Brightness (10-200 %), CRT scanlines, Wallpaper image... |
+| Interface colours | Text, Secondary text, Muted text, Selected text, Accent, Selection (with opacity), Panels (with opacity), Borders (with opacity), Warnings |
+| Tiles & menus | Tile style (memory card, rounded, chamfered, floating object, crystal slab), Selection style (solid bar, accent bar, outline, text colour), Corners (square, soft, round), Glow |
+| Text | Font (Roboto, System), external System font file, Text size (90-115 %), Bold, Text shadow |
 | Icons | Icon colour (text colours, accent, monochrome), Default app icon (application, device, initials), Custom app icon image... |
 | Clock | Clock (off, standard, system), Position (header, footer), Hours (system, 24-hour, 12-hour), Seconds, Date (system, YYYY/MM/DD, MM/DD/YYYY, DD/MM/YYYY, off) |
-| Wallpaper | App artwork background (off, focused app), Artwork dimming, Load artwork |
-| Manage | Theme name..., Save theme to folder..., Load theme from folder..., Reset entire theme, Restore default theme |
+| Artwork background | App artwork background (off, focused app), Artwork dimming. Enable artwork loading under Settings > Home & applications. |
+
+Motion and animation belong to Appearance. Panel opacity is edited with the
+Panels colour under Interface colours. Group resets only reset that group's
+controls; resetting Tiles & menus does not change panel opacity. Clock
+format controls are unavailable while the clock is off; artwork-background
+controls explain their artwork-loading dependency when unavailable.
 
 ### Colour editor
 
@@ -125,7 +133,7 @@ when this happened.
 * **Roboto** (default): the bundled smooth proportional font, in three
   pre-rasterised sizes (see [dashboard.md](dashboard.md#typography)).
 * **System**: wLaunchELF's own 8x16 font, smoothed. It follows a custom
-  `.fnt` chosen in the classic startup settings and draws the Latin-1
+  `.fnt` chosen under Appearance > Customize theme > Text and draws the Latin-1
   characters used by the language files, and at the dashboard's body size
   it maps almost 1:1 to screen pixels, which is crisp on a CRT.
 
@@ -135,7 +143,7 @@ for *Roboto*, regenerate the atlas on a PC with `scripts/gen_dash_font.py`.
 
 ## Application tile styles
 
-Choose **Settings > Theme > Customize theme... > Style > Tile style**.
+Choose **Settings > Appearance > Customize theme > Tiles & menus > Tile style**.
 Memory card is the default for every built-in preset, including OSD Classic.
 Old configurations and theme folders without `tile_style` also use Memory card.
 
@@ -194,7 +202,7 @@ order) are used.
 
 `<dashboard folder>` is where DASHBOARD.CNF lives: next to LAUNCHELF.CNF
 when it was loaded from a writable device, otherwise `mc0:/SYS-CONF/`.
-The easiest start is *Save theme to folder...*, which writes a complete
+The easiest start is *Export theme to folder...*, which writes a complete
 `theme.cfg` for the current theme; copy that folder to a PC, edit it, copy
 it back.
 
@@ -326,10 +334,10 @@ The optional PSBBN layers in `<dashboard folder>/THEME/` (`background.png`,
 
 * *Square* in the theme editor resets only the highlighted setting.
 * *Reset ...* at the end of each editor group resets only that group.
-* *Theme editor > Manage > Reset entire theme*: back to the preset the
+* *Appearance > Theme files & resets > Reset entire theme*: back to the preset the
   current theme started from.
-* *Settings > Theme > Restore default theme*: back to OSD Classic.
-* *Settings > Display > Reset display & theme defaults*: restores both groups together.
+* *Appearance > Theme files & resets > Restore default theme*: back to OSD Classic.
+* *Appearance > Reset appearance*: restores screen calibration and theme together.
 * Deleting the `Theme_*` lines from DASHBOARD.CNF (or the file) also
   restores the default.
 

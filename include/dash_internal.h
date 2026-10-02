@@ -88,7 +88,7 @@ extern DashColor DASH_C_BORDER;    /* panel borders (alpha 0 = none) */
 // Theme engine (dash_themes.c)
 //
 // One DashTheme holds every visual value the dashboard uses. Built-in
-// presets fill it, the user edits it in SETTINGS > Theme, and it is saved
+// presets fill it, the user edits it in Settings > Appearance, and it is saved
 // as Theme_* keys in DASHBOARD.CNF. Theme folders
 // (<dashboard dir>/THEMES/<name>/theme.cfg) use the same keys without the
 // prefix. Every value is validated/clamped; unknown keys are ignored.
@@ -906,6 +906,9 @@ void dashSetSceneOverride(void (*fn)(void)); /* NULL restores the dashboard scen
 int dashTextEditor(const char *path);
 int dashTextEditorEx(const char *path, int create_if_missing);
 float dashTime(void);
+/* Visual-only tick, once before each dashboard/modal frame. No input or IO. */
+float dashVisualUpdate(void);
+float dashFrameDelta(void); /* measured delta of that tick, for draw-time easing */
 float dashAnimSpeed(void);
 float dashSectionAnim(void); /* 0..1 section-transition clock */
 

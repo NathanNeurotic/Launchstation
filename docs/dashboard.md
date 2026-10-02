@@ -29,8 +29,8 @@ Also in the File Browser menu, as in the classic browser:
 * *Sort by*: name, game title, date, or as stored. Folders come first,
   then ELF files.
 * *Bookmarks...*: the PathPad. Jump to a bookmarked folder, bookmark the
-  current one or remove one (saved in LAUNCHELF.CNF; *Lock launch keys*
-  in Settings locks them).
+  current one or remove one (saved in LAUNCHELF.CNF; *Lock shortcuts & bookmarks*
+  under Settings > Launching locks them).
 * *Go to wLaunchELF's folder*, *Invert selection*.
 * *Use as launch arguments* on a text file: its lines become the
   arguments of the application you start next from the browser.
@@ -55,12 +55,61 @@ foreground behind a short loading overlay.
 | FILES    | Entry points into the full FileBrowser: device list, last folder, MISC commands, each detected device and your PathPad bookmarks. |
 | DEVICES  | Cards for memory cards (type, free space), USB, MMCE, MX4SIO, HDD, exFAT HDD, disc, UDPFS, PSX flash/DVR HDD and mounted VMCs. |
 | TOOLS    | HDD Manager, Text Editor, start disc, POPStarter, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, reboot IOP, power off. |
-| SETTINGS | Display, Theme, Dashboard, Launch keys, Controls, Startup, Devices, Network, Advanced: every dashboard and wLaunchELF option, edited in place (no classic configuration screens). Changes apply at once; when you leave SETTINGS with unsaved changes you are asked to *Save*, *Discard* or *Keep editing*. LAUNCHELF.CNF is saved where it was loaded from (*Save wLaunchELF settings to...* chooses another place), IPCONFIG.DAT likewise. |
+| SETTINGS | Eight groups: Appearance, Home & applications, Sound, Input, Launching, Storage & devices, Network, System. Each opens a focused page with breadcrumbs and contextual help. Triangle opens *Save changes / Discard changes / Keep editing* from any page. Leaving with changes offers the same decision. Existing configuration files and keys are retained. |
+
+## Settings navigation
+
+Settings opens at the overview. Confirm or Right opens a group; Back returns
+to the previous page with its selection and scroll position intact. Back at
+the overview returns Home through the normal save decision. Left also goes
+back on rows that do not use Left/Right to change a value. L2/R2 jump to the
+first/last row. The breadcrumb shows where the page lives.
+
+| Group | Contents |
+|-------|----------|
+| Appearance | Theme preset, customization groups, screen calibration, motion, animation, theme files and resets. Panel opacity belongs to Interface colours > Panels. |
+| Home & applications | Start screen, view, artwork, recent count/history and Application library (folders and refresh). |
+| Sound | Interface effects, music and their separate volumes. |
+| Input | Confirm button, on-screen keyboard and USB keyboard (driver and map). |
+| Launching | Automatic start & boot, Launch keys, shortcut/bookmark lock, disc/PS1 loaders, IOP reset and game IDs. |
+| Storage & devices | Browser visibility and device auto-start preferences. |
+| Network | IP address, netmask, gateway and network write access. |
+| System | Language, memory card backup-file rules, configuration folder, alternate launch/tool settings save location and welcome message. |
+
+Unavailable dependent options remain visible with help explaining what to
+enable first. Path rows open a Choose/Clear dialog. Launch-key rows open
+Choose target/Edit title/Clear target; Square edits a title directly.
+Square resets individual appearance options to their preset defaults.
+
+Previewed changes share the existing Save/Discard session, including themes
+and network addresses. Unchanged sessions and changes returned to their
+original values do not prompt. Triangle's Changes menu is global to Settings;
+it is not buried in a configuration group. LAUNCHELF.CNF and IPCONFIG.DAT keep
+their existing save targets; System's alternate save action writes only
+LAUNCHELF.CNF. Theme export writes a separate theme folder immediately.
+
+An earlier failed automatic/bookmark save is reported separately as *save
+failed*, with an explicit *Retry failed saves* action. It does not turn an
+untouched visit into changes or force a leave prompt. Failed saves requested
+during the current visit still keep that visit unsaved until retried or
+discarded; Discard does not claim the failed write succeeded.
+
+Clearing history and refreshing the library are immediate maintenance actions;
+Discard does not undo them. Discard restores device startup preferences but
+does not unload drivers that have already started.
 
 ## Controls
 
+Animated backgrounds continue behind menus, theme previews, dialogs and
+native full-screen tools. These frames share the dashboard's measured visual
+clock; motion and menu easing do not assume 60 frames per second. Opening a
+menu does not run dashboard input, device polling or library scans behind it.
+Background motion at 0% still intentionally freezes the scene. Long blocking
+operations retain the existing 100 ms visual-step limit rather than jumping
+the animation forward on return.
+
 Confirm/cancel follow the existing `GUI_Swap_Keys` setting (Settings >
-Controls > Confirm button), as wLaunchELF always has.
+Input > Confirm button), as wLaunchELF always has.
 
 | Button | Action |
 |--------|--------|
@@ -81,7 +130,7 @@ is pressed (a countdown banner is shown).
 
 ## Themes
 
-Settings > Theme chooses among 19 built-in themes (OSD Classic, PS2
+Settings > Appearance chooses among 19 built-in themes (OSD Classic, PS2
 Towers, Disc Error Red, System Clock and more) and opens the theme editor,
 where the background, every colour, selection style, corners, font, text
 size, icons, clock and app-artwork wallpaper can be changed with the
@@ -90,12 +139,14 @@ controller. Themes can be saved to and loaded from
 
 ## Application discovery
 
-Only the configured folders are listed (Settings > Dashboard > Application
-folders). Defaults: `mc:/APPS/`, `mc:/BOOT/`, `mass:/APPS/`, `mass:/BOOT/`.
+Only the configured folders are listed (Settings > Home & applications >
+Application library > Application folders). Defaults: `mc:/APPS/`,
+`mc:/BOOT/`, `mass:/APPS/`, `mass:/BOOT/`.
 Each folder is searched one sub-folder deep (`APPS/<folder>/*.ELF`).
 
 * At startup only memory cards and devices whose driver is already running
-  are refreshed (Settings > Dashboard > Refresh at startup). Nothing else is
+  are refreshed (Settings > Home & applications > Application library >
+  Refresh at startup). Nothing else is
   initialised for the dashboard.
 * *Refresh library* (APPS > Triangle, START menu or Settings) scans every
   folder, starting the drivers it needs first; the search itself runs in
@@ -155,7 +206,7 @@ in `mc0:/SYS-CONF/`: `DASHBOARD.CNF` (settings, scan folders),
 `DASHAPPS.CNF` (favorites, pins, recents), `DASHLIB.CNF` (library cache).
 The active theme is part of DASHBOARD.CNF (`Theme_*` keys); saved themes
 go to `THEMES/<name>/theme.cfg`, only when you choose
-*Save theme to folder* — in the ELF's own folder when writable, else the
+*Export theme to folder* — in the ELF's own folder when writable, else the
 dashboard folder (see [themes.md](themes.md#theme-folders-user-created-themes)).
 LAUNCHELF.CNF itself is never modified behind your
 back.
@@ -167,17 +218,18 @@ audio server: cursor moves, confirm/cancel in dialogs, section switches,
 toasts, the startup boot sound, and device connect/disconnect. They are
 Sony ADP samples embedded in the ELF (no files needed at runtime).
 
-Settings > Dashboard has *Interface sounds* (the UI effects) and
+Settings > Sound has *Interface sounds* (the UI effects) and
 *Background music* (the music track), each with its own volume
 (`Dash_Sound` / `Dash_SoundVolume` / `Dash_BGM` / `Dash_BGMVolume` in
-DASHBOARD.CNF, all on at 80% by default). *Interface sounds* off silences
-the whole audio driver, music included. When the audio driver cannot
+DASHBOARD.CNF, all on at 80% by default). The two switches are independent;
+turning off interface effects keeps enabled music playing. When the audio driver cannot
 start, everything stays silent — the dashboard works normally without
 sound (a toast says why).
 
 ## Devices and the applications filter
 
-Settings > Devices has an *Auto-start* switch per device family (USB
+Settings > Storage & devices > Start devices automatically has an *Auto-start*
+switch per device family (USB
 storage, internal HDD, exFAT HDD, MMCE SD, MX4SIO, UDPFS network): ON
 loads that device's drivers when the dashboard starts, so the device is
 ready immediately and its applications are found by the startup scan

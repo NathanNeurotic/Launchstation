@@ -1177,7 +1177,7 @@ int dashThemeFolderExport(const char *folder)
 }
 
 //--------------------------------------------------------------
-// Editing support (SETTINGS > Theme)
+// Editing support (Settings > Appearance)
 //--------------------------------------------------------------
 static int theme_dirty;
 
@@ -1229,7 +1229,6 @@ void dashThemeResetGroup(int group)
 			t->tile_style = p.tile_style;
 			t->highlight = p.highlight;
 			t->glow = p.glow;
-			t->panel.a = p.panel.a;
 			break;
 		case DASH_TG_TYPE:
 			t->font = p.font;

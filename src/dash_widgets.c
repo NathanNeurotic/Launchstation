@@ -2,7 +2,7 @@
 //File name:   dash_widgets.c
 //Native dashboard dialogs that replace the classic wLaunchELF prompts:
 //* dashModalKeyboard(): text entry with the user's virtual keyboard
-//  layout (Settings > Controls) and USB keyboard typing.
+//  layout (Settings > Input) and USB keyboard typing.
 //* dashPickPath(): a file or folder picker. Folders are read by the
 //  background worker, so the picker never freezes on a slow device, and
 //  the user can always back out.
@@ -191,7 +191,7 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 			}
 		}
 
-		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dashVisualUpdate());
 		{
 			float oe = dashEaseOutCubic(open);
 			float fx = x + 30, fy = y + 56, fw = w - 60;
@@ -448,8 +448,9 @@ int dashModalIp(const char *title, const char *help, char *ip_str, int size)
 			memcpy(oct, orig, sizeof(oct));
 			break;
 		}
-		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
-		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		float dt = dashVisualUpdate();
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
+		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), dt);
 		{
 			float oe = dashEaseOutCubic(open);
 			const float bw = 70.0f, bgap = 20.0f;
@@ -860,8 +861,9 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 			top = sel;
 		if (sel >= top + rows)
 			top = sel - rows + 1;
-		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), 1.0f / 60.0f);
-		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		float dt = dashVisualUpdate();
+		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), dt);
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
 		{
 			float oe = dashEaseOutCubic(open);
 			float lx = x + 18, ly = y + 78, lw = w - 36;

@@ -78,8 +78,9 @@ static void sheetShow(int icon, const char *title, const char *subtitle, const S
 		if (in.pressed & DASH_IN_L2)
 			scroll_target -= body_h;
 		scroll_target = dashClampf(scroll_target, 0.0f, max_scroll);
-		scroll = dashApproach(scroll, scroll_target, 18.0f * dashAnimSpeed(), 1.0f / 60.0f);
-		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		float dt = dashVisualUpdate();
+		scroll = dashApproach(scroll, scroll_target, 18.0f * dashAnimSpeed(), dt);
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
 		{
 			float oe = dashEaseOutCubic(open), ly = body_y - scroll;
 
@@ -339,7 +340,7 @@ void dashShowFontViewer(void)
 		dashInputPoll(&in);
 		if (in.pressed & (DASH_IN_OK | DASH_IN_BACK | DASH_IN_MENU))
 			break;
-		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dashVisualUpdate());
 		dashRenderScene();
 		dashModalBackdrop(dashEaseOutCubic(open));
 		dashModalPanel(x, y, w, h, 1.0f);

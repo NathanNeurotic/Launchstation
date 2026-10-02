@@ -489,7 +489,7 @@ static int pickSize(const char *title, int min_mb, int max_mb, int start_mb)
 			dashInputFlush();
 			return -1;
 		}
-		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dashVisualUpdate());
 		{
 			char num[32], lo[24], hi[24];
 			float bx = x + 30, bw = w - 60, by = y + 116;
@@ -1200,7 +1200,7 @@ void dashHddManager(void)
 			loadPfsInfo(sel);
 			loadGameInfo(&hm.parts[sel]);
 		}
-		sel_anim = dashApproach(sel_anim, (float)sel, 20.0f * dashAnimSpeed(), 1.0f / 60.0f);
+		sel_anim = dashApproach(sel_anim, (float)sel, 20.0f * dashAnimSpeed(), dashVisualUpdate());
 		dashRenderScene();
 		dashGfxPresent();
 	}
