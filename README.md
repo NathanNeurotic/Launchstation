@@ -29,6 +29,13 @@ Outputs `build/bin/wLaunchELF-packed.elf` (release, ps2pack compressed) and
 profile (MMCE, MX4SIO, EXFAT, UDPFS, DVRP, XFROM, IOP reset; DS34 and ETH
 off). The legacy Makefile is kept for the other feature profiles.
 
+Background music is **optional**, not embedded in either ELF. Release/CI
+downloads include `BGM.ADP`: put it in the same folder as the ELF if you
+want music, or leave it out for a standalone ELF. For local builds, copy
+`res/music.sad` unchanged to that folder under the name `BGM.ADP`.
+Interface sound effects remain embedded. See
+[background music](docs/dashboard.md#optional-background-music).
+
 ## Supported devices:
 | Device | Description | Visibility |
 |---|---|---|

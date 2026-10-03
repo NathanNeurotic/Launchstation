@@ -104,9 +104,10 @@ code += r"""
 #define DASH_FX_OFF 0
 #define DASH_FX_FULL 2
 typedef struct { int hour,minute; float second; } OsdTime;
+static int clock_stuck, clock_valid=1;
 static int menuTitleGetClockFields(int *y,int *mo,int *d,int *h,int *mi,int *s,int *u,int *f) {
     (void)y;(void)mo;(void)d;(void)u;(void)f;
-    *h=12; *mi=0; *s=(now_ms/1000)%60; return 1;
+    *h=12; *mi=0; *s=clock_stuck?0:(now_ms/1000)%60; return clock_valid;
 }
 """
 code += function(orbs, "static void osdTime(")
@@ -157,6 +158,17 @@ int main(void) {
     OsdTime ot; osdTime(DASH_FX_FULL,&ot); float second=ot.second;
     now_ms+=20; float rtc_dt=dashVisualUpdate(); osdTime(DASH_FX_FULL,&ot);
     assert(fabsf(ot.second-second-rtc_dt)<0.00001f);
+    /* A stalled/dead RTC must not cap orb phase at a fraction of a second. */
+    clock_stuck=1; osdTime(DASH_FX_FULL,&ot);
+    anim_time+=61.25f; osdTime(DASH_FX_FULL,&ot);
+    assert(ot.hour==12 && ot.minute==1 && fabsf(ot.second-1.25f)<0.0001f);
+    OsdTime frozen=ot;
+    anim_time+=5; osdTime(DASH_FX_OFF,&ot);
+    assert(ot.hour==frozen.hour && ot.minute==frozen.minute && ot.second==frozen.second);
+    clock_valid=0; anim_time+=1; osdTime(DASH_FX_FULL,&ot);
+    assert(ot.minute==1 && fabsf(ot.second-7.25f)<0.0001f);
+    clock_valid=1; clock_stuck=0; now_ms=10500; osdTime(DASH_FX_FULL,&ot);
+    assert(ot.hour==12 && ot.minute==0 && ot.second==10);
     reset(); nested=1;
     assert(dashModalMenu("parent",NULL,items,2,0)==-1);
     check(); assert(renders==6 && fabsf(anim_time-bg_time)<0.00001f);

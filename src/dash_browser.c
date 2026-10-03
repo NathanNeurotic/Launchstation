@@ -1186,12 +1186,8 @@ static void fmtBytes(char *out, int size, u64 b)
 {
 	if (b >= (u64)1024 * 1024 * 1024)
 		snprintf(out, size, "%.1f GB", (double)b / (1024.0 * 1024.0 * 1024.0));
-	else if (b >= 1024 * 1024)
-		snprintf(out, size, "%.1f MB", (double)b / (1024.0 * 1024.0));
-	else if (b >= 1024)
-		snprintf(out, size, "%u KB", (unsigned)(b / 1024));
 	else
-		snprintf(out, size, "%u B", (unsigned)b);
+		snprintf(out, size, "%.2f MB", (double)b / (1024.0 * 1024.0));
 }
 
 static void fmtSize(char *out, int size, const FILEINFO *f)

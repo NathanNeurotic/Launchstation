@@ -7,6 +7,7 @@
 #include "launchelf.h"
 #include "dash_internal.h"
 #include "dash_sound.h"
+#include "init.h"
 #include <audsrv.h>
 #include <iopcontrol.h>
 
@@ -30,13 +31,13 @@ extern u8 sfx_connect_adp[];
 extern int size_sfx_connect_adp;
 extern u8 sfx_disconnect_adp[];
 extern int size_sfx_disconnect_adp;
-extern u8 music_adpcm[];
-extern int size_music_adpcm;
 
 static audsrv_adpcm_t samples[DASH_SND_COUNT];
 static audsrv_adpcm_t bgm_sample;
 static int sound_ready;
 static int bgm_loaded;
+static int bgm_tried;
+static void *bgm_data; /* audsrv uses this buffer address as the sample ID */
 static int bgm_channel = -1;
 static int sound_reboot_count; /* IOP reboot count when audsrv was started */
 static int sound_retry;
@@ -157,8 +158,15 @@ void dashSoundMaintain(void)
 {
 	if (!dashCfg.sound && !dashCfg.bgm)
 		return;
-	if (soundAlive() || dashWorkerIoBusy() || dashIopParked())
+	if (dashWorkerIoBusy() || dashIopParked())
 		return;
+	if (soundAlive()) {
+		/* A sidecar read deferred by IO/driver startup is tried when idle.
+		 * Missing/invalid files are attempted once, not on every frame. */
+		if (dashCfg.bgm && bgm_channel < 0 && !bgm_tried)
+			dashBgmStart();
+		return;
+	}
 	/* one automatic attempt per IOP session (a broken driver would
 	 * otherwise be retried every frame), plus retries that were deferred */
 	if (sound_tried_reboot == _iop_reboot_count && !sound_retry)
@@ -171,16 +179,17 @@ void dashSoundMaintain(void)
 
 void dashSoundShutdown(void)
 {
-	if (!sound_ready)
-		return;
 	if (soundAlive()) {
 		dashBgmStop();
 		audsrv_quit();
 	}
 	sound_ready = 0;
 	bgm_loaded = 0;
+	bgm_tried = 0;
 	bgm_channel = -1;
 	bgm_sample.buffer = NULL;
+	free(bgm_data);
+	bgm_data = NULL;
 }
 
 /* voice map: boot..disconnect on 0..7, cursor rotates over 8..13 (OPL-style) */
@@ -226,10 +235,64 @@ void dashSoundPlay(int id)
 //--------------------------------------------------------------
 // Background music
 //
-// Uses the proven ps2-dashboard path: a looping adpenc-produced PS-ADPCM
+// Optional BGM.ADP beside the boot ELF: an adpenc-produced mono PS-ADPCM
 // track is uploaded once to SPU2 RAM, then the SPU2 loops it in hardware.
 // Voice 23 is reserved exclusively for BGM; interface sounds use 0..13.
 //--------------------------------------------------------------
+
+#define BGM_MAX_BYTES (1024 * 1024)
+
+static int loadBgmSidecar(void)
+{
+	char path[MAX_PATH], fixed[MAX_PATH];
+	const char *dir = LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir;
+	int fd, size, got, n, closed;
+	u8 *data;
+
+	n = snprintf(path, sizeof(path), "%s%sBGM.ADP", dir,
+	             dir[0] && dir[strlen(dir) - 1] != '/' && dir[strlen(dir) - 1] != '\\' && dir[strlen(dir) - 1] != ':' ? "/" : "");
+	if (n < 0 || n >= sizeof(path))
+		return 0;
+	filerRootMcPollIdle();
+	if (genFixPath(path, fixed) < 0)
+		return 0;
+	fd = genOpen(fixed, FIO_O_RDONLY);
+	if (fd < 0)
+		return 0; /* entirely optional, including on read-only boot devices */
+	size = genLseek(fd, 0, SEEK_END);
+	if (size < 32 || size > BGM_MAX_BYTES || (size & 15) || genLseek(fd, 0, SEEK_SET) < 0) {
+		genClose(fd);
+		return 0;
+	}
+	data = memalign(64, size + 64); /* padded for audsrv's DMA transfer */
+	if (data == NULL) {
+		genClose(fd);
+		return 0;
+	}
+	memset(data, 0, size + 64);
+	for (got = 0; got < size; got += n) {
+		n = genRead(fd, data + got, size - got);
+		if (n <= 0) break;
+	}
+	closed = genClose(fd);
+	/* audsrv reads a 16-byte APCM header before transferring 16-byte ADPCM
+	 * blocks. Only mono tracks with a valid SPU2 pitch fit our one voice. */
+	if (got != size || closed < 0 || memcmp(data, "APCM", 4) || data[4] != 1 ||
+	    data[5] != 1 || data[6] > 1 || data[7] != 0 ||
+	    *(u32 *)(data + 8) == 0 || *(u32 *)(data + 8) > 0x3fff) {
+		free(data);
+		return 0;
+	}
+	bgm_sample.buffer = NULL;
+	if (audsrv_load_adpcm(&bgm_sample, data, size) != 0) {
+		free(data);
+		bgm_sample.buffer = NULL;
+		return 0;
+	}
+	bgm_data = data;
+	bgm_loaded = 1;
+	return 1;
+}
 
 void dashBgmSetVolume(void)
 {
@@ -240,6 +303,7 @@ void dashBgmSetVolume(void)
 
 void dashBgmStop(void)
 {
+	bgm_tried = 0; /* an explicit off/on can discover a newly added sidecar */
 	/* audsrv has no per-channel stop API. Keep the looping voice alive but
 	 * muted so re-enabling BGM is instant and does not allocate another voice. */
 	if (soundAlive() && bgm_channel >= 0 && !dashIopParked())
@@ -250,7 +314,7 @@ void dashBgmStart(void)
 {
 	int ch;
 
-	if (!dashCfg.bgm || dashIopParked())
+	if (!dashCfg.bgm || dashIopParked() || dashWorkerIoBusy())
 		return;
 	if (!soundAlive() && !dashSoundInit())
 		return;
@@ -262,12 +326,14 @@ void dashBgmStart(void)
 	}
 
 	if (!bgm_loaded) {
-		bgm_sample.buffer = NULL;
-		if (audsrv_load_adpcm(&bgm_sample, music_adpcm, size_music_adpcm) != 0) {
-			dashToast(DASH_TOAST_WARN, "Music unavailable: ADPCM upload failed");
+		const char *dir = LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir;
+		/* Use only an already active boot stack. Reading music must not start
+		 * storage drivers or reset the IOP merely to look for an optional file. */
+		if (bgm_tried || !isPathDeviceStackLoaded(dir))
 			return;
-		}
-		bgm_loaded = 1;
+		bgm_tried = 1;
+		if (!loadBgmSidecar())
+			return;
 	}
 
 	ch = audsrv_ch_play_adpcm(DASH_BGM_CHANNEL, &bgm_sample);

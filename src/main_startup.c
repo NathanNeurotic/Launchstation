@@ -512,6 +512,15 @@ enum BOOT_DEVICE prepareBootDeviceAndPath(const char *arg0, char *boot_path, siz
 			boot = BOOT_DEVICE_ATA;
 		} else if (!strncmp(LaunchElfDir, "cd", 2)) {
 			boot = BOOT_DEVICE_CDVD;
+			/* Keep the actual read-only boot folder for optional sidecars.
+			 * Configuration still uses the writable SYS-CONF fallback below. */
+			p = strchr(LaunchElfDir, ':');
+			if (p != NULL) {
+				snprintf(LaunchElfBootDir, sizeof(LaunchElfBootDir), "cdfs:%s%s",
+				         p[1] == '/' ? "" : "/", p + 1);
+				p = strrchr(LaunchElfBootDir, '/');
+				if (p != NULL) p[1] = '\0';
+			}
 			snprintf(LaunchElfDir, sizeof(LaunchElfDir), "%s", "mc0:/SYS-CONF/");  //Default to mc0 as a writable location.
 		} else if (isBootHddPath(LaunchElfDir) && boot_path != NULL && boot_path_len > 0) {
 			//Booting from the HDD requires special handling for HDD-based paths.
@@ -554,7 +563,8 @@ enum BOOT_DEVICE prepareBootDeviceAndPath(const char *arg0, char *boot_path, siz
 	if (p != NULL)
 		*(p + 1) = 0;
 	//The above cuts away the ELF filename from LaunchElfDir, leaving a pure path
-	snprintf(LaunchElfBootDir, sizeof(LaunchElfBootDir), "%s", LaunchElfDir);
+	if (!LaunchElfBootDir[0])
+		snprintf(LaunchElfBootDir, sizeof(LaunchElfBootDir), "%s", LaunchElfDir);
 
 	LastDir[0] = 0;
 

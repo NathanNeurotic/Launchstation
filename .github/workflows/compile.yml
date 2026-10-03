@@ -27,6 +27,8 @@ jobs:
           python3 tests/test_theme_motion.py
           python3 tests/test_tile_styles.py
           python3 tests/test_worker_queue.py
+          python3 tests/test_device_input.py
+          python3 tests/test_bgm_sidecar.py
 
       - name: Install ps2build SDK
         shell: bash
@@ -86,6 +88,7 @@ jobs:
           mkdir -p artifacts
           cp build/bin/wLaunchELF-packed.elf artifacts/BOOT.ELF
           cp build/bin/wLaunchELF-packed.elf artifacts/wLaunchELF_R3Z.ELF
+          cp res/music.sad artifacts/BGM.ADP
           if [ -f "build/bin/wLaunchELF.elf" ]; then
             cp build/bin/wLaunchELF.elf artifacts/wLaunchELF_R3Z-unpacked.ELF
           fi
@@ -109,10 +112,12 @@ jobs:
         run: |
           tag="latest"
           title="Latest automated build"
+          notes="Automated build for ${GITHUB_SHA} using ps2build. BOOT.ELF and wLaunchELF_R3Z.ELF are identical packed builds; wLaunchELF_R3Z-unpacked.ELF is the uncompressed build. BGM.ADP is optional background music: put it beside the ELF, or omit it. See the CI run for sha256 hashes."
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --title "$title" --notes "Automated build for ${GITHUB_SHA} using ps2build" --target "${GITHUB_SHA}" --prerelease || true
+            gh release create "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}" --prerelease || true
           fi
-          gh release upload "$tag" artifacts/* --clobber || true
+          gh release upload "$tag" artifacts/* --clobber
+          gh release edit "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}"
 
       - name: Publish branch preview pre-release
         # Non-master pushes (feature branches) get their own rolling
@@ -126,12 +131,12 @@ jobs:
           short="${short#feature/}"
           tag="preview-$(echo "$short" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]\+/-/g')"
           title="Preview build: ${short}"
-          notes="Automated preview of ${branch} (${GITHUB_SHA}). Packed ELF (BOOT.ELF / wLaunchELF_R3Z.ELF) is the one to test; see the CI run for sha256 hashes."
+          notes="Automated preview of ${branch} (${GITHUB_SHA}). Packed ELF (BOOT.ELF / wLaunchELF_R3Z.ELF) is the one to test. BGM.ADP is optional background music: put it beside the ELF, or omit it. See the CI run for sha256 hashes."
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" artifacts/* --clobber
             gh release edit "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}"
           else
-            gh release create "$tag" artifacts/BOOT.ELF artifacts/wLaunchELF_R3Z.ELF artifacts/wLaunchELF_R3Z-unpacked.ELF \
+            gh release create "$tag" artifacts/BOOT.ELF artifacts/wLaunchELF_R3Z.ELF artifacts/wLaunchELF_R3Z-unpacked.ELF artifacts/BGM.ADP \
               --title "$title" --notes "$notes" --target "${GITHUB_SHA}" --prerelease
           fi
 

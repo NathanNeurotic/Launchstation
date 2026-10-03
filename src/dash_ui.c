@@ -27,6 +27,7 @@ void dashInputPoll(DashInput *in)
 void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 {
 	u32 np;
+	int ret;
 	u32 ok_btn = swapKeys ? PAD_CROSS : PAD_CIRCLE;
 	u32 back_btn = swapKeys ? PAD_CIRCLE : PAD_CROSS;
 
@@ -37,12 +38,16 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	waitAnyPadReady();
 	/* the USB keyboard driver is on the IOP: leave it alone while the
 	 * background worker talks to the IOP */
-	if (usb_kb_as_pad && !dashWorkerIoBusy()) {
-		if (!readpad())
-			return;
-	} else if (!readpad_no_KB())
-		return;
-	np = new_pad;
+	ret = usb_kb_as_pad && !dashWorkerIoBusy() ? readpad() : readpad_no_KB();
+	/* Only navigation repeats. A held action must not reopen/close a menu,
+	 * launch again or toggle a setting after its first press. */
+	np = ret ? new_pad & ((PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT |
+	                      PAD_L3_H0 | PAD_L3_H1 | PAD_L3_V0 | PAD_L3_V1 |
+	                      PAD_L2 | PAD_R2) | ~(paddata & held_prev)) : 0;
+	if (paddata != held_prev)
+		last_input_ms = Timer();
+	held_prev = paddata;
+	/* Keyboard/autotest events have no paddata held bits and pass through. */
 	in->raw_new = np;
 	if (np & (PAD_UP | PAD_L3_V0))
 		in->pressed |= DASH_IN_UP;
@@ -77,9 +82,8 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	if (np & PAD_R3)
 		in->pressed |= DASH_IN_R3;
 	in->any = (in->pressed != 0);
-	if (in->any || paddata != held_prev)
+	if (in->any)
 		last_input_ms = Timer();
-	held_prev = paddata;
 }
 
 void dashInputFlush(void)
@@ -91,6 +95,7 @@ void dashInputFlush(void)
 		waitAnyPadReady();
 		readpad_noRepeat();
 	}
+	held_prev = paddata;
 	last_input_ms = Timer();
 }
 
@@ -835,7 +840,7 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 			dashSoundPlay(DASH_SND_CURSOR);
 		}
 		if (in.pressed & DASH_IN_OK) {
-			dashSoundPlay(DASH_SND_CONFIRM);
+			dashSoundPlay(cancel_label == NULL || sel == 0 ? DASH_SND_CONFIRM : DASH_SND_CANCEL);
 			dashInputFlush();
 			return (cancel_label == NULL) ? 1 : (sel == 0);
 		}

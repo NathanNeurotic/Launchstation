@@ -653,9 +653,6 @@ $(EE_ASM_DIR)icon_r2_png.s: res/icons/R2.png | $(EE_ASM_DIR)
 $(EE_ASM_DIR)icon_r3_png.s: res/icons/R3.png | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ icon_r3_png
 
-$(EE_ASM_DIR)music_adpcm.s: res/music.sad | $(EE_ASM_DIR)
-	$(BIN2S) $< $@ music_adpcm
-
 AUDSRV_SOURCE := packages/world/audsrv/bin/audsrv.irx
 ifneq ($(wildcard $(PS2SDK)/iop/irx/audsrv.irx),)
   AUDSRV_SOURCE := $(PS2SDK)/iop/irx/audsrv.irx

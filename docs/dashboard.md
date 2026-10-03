@@ -108,6 +108,12 @@ Background motion at 0% still intentionally freezes the scene. Long blocking
 operations retain the existing 100 ms visual-step limit rather than jumping
 the animation forward on return.
 
+OSD orb/clock-background phase is RTC-anchored but continues on the shared
+visual clock if RTC fields stop changing or become invalid. That keeps
+these effects moving with a dead/stalled console clock; it does not invent
+an accurate date/time or replace the footer clock. A valid RTC tick
+re-anchors the effect. Motion at 0% still holds the scene.
+
 Confirm/cancel follow the existing `GUI_Swap_Keys` setting (Settings >
 Input > Confirm button), as wLaunchELF always has.
 
@@ -226,7 +232,49 @@ turning off interface effects keeps enabled music playing. When the audio driver
 start, everything stays silent — the dashboard works normally without
 sound (a toast says why).
 
+## Optional background music
+
+Music is no longer embedded in the ELF. Put the optional release asset
+`BGM.ADP` beside the ELF, for example:
+
+```text
+usb0:/BOOT/BOOT.ELF
+usb0:/BOOT/BGM.ADP
+```
+
+Local builders can copy `res/music.sad` unchanged as `BGM.ADP`. It is a
+mono PS-ADPCM file with the `APCM` header produced by ps2sdk's `adpenc`,
+not an Ogg/WAV/MP3 file renamed to `.ADP`. Custom tracks must be at most
+1 MiB, have a 16-byte header and complete 16-byte ADPCM blocks, and use
+mono format/version 1 with a valid SPU2 pitch. Use loop-enabled encoding
+for continuous music.
+
+The file is read from the actual boot folder, not the folder of an imported
+LAUNCHELF.CNF. If no boot folder is known, the existing wLaunchELF folder
+is the fallback. Disc boots preserve the disc folder for sidecar reads
+while keeping the writable memory-card configuration fallback.
+
+Missing, malformed or unreadable music leaves the dashboard and embedded
+interface effects usable. A missing/invalid sidecar is tried only once per
+audio session; turn Background music off and on to retry after adding it.
+The loader waits until worker IO is idle and the boot device's drivers are
+already active. It never starts a storage stack just to look for music.
+IOP resets discard the uploaded track; it reloads when audio and the boot
+storage stack become available again. The original track is 284,656 bytes;
+omitting it saves that much storage in addition to the smaller packed ELF.
+
 ## Devices and the applications filter
+
+Driver residency alone does not mean that storage is attached. Optional
+HDD/ATA, MMCE (each slot separately), MX4SIO and UDPFS cards are dimmed and
+marked *Not checked yet* until a root check succeeds. Failed explicit
+checks remain dimmed and hide that storage's cached applications. Checks
+are user/auto-start initiated; there are no blocking root probes during
+drawing. Results expire on IOP reset, but are not continuous hotplug
+monitoring for these optional families: select *Check again* after changing
+the attached device/server. USB and memory cards retain their existing
+live discovery. Storage free-space labels use MB/GB; file sizes still use
+B/KB where appropriate.
 
 Settings > Storage & devices > Start devices automatically has an *Auto-start*
 switch per device family (USB

@@ -10,7 +10,8 @@ u32 paddata, paddata_t[2];
 u32 old_pad = 0, old_pad_t[2] = {0, 0};
 u32 new_pad, new_pad_t[2];
 u32 joy_value = 0;
-static int test_joy = 0;
+static u64 rpt_time[2];
+static int rpt_count[2];
 
 void clearPadPressState(void)
 {
@@ -21,6 +22,8 @@ void clearPadPressState(void)
 	new_pad = 0;
 	paddata = 0;
 	joy_value = 0;
+	memset(rpt_time, 0, sizeof(rpt_time));
+	memset(rpt_count, 0, sizeof(rpt_count));
 }
 
 //---------------------------------------------------------------------------
@@ -29,21 +32,31 @@ void clearPadPressState(void)
 //---------------------------------------------------------------------------
 int readpad_noKBnoRepeat(void)
 {
-	int port, state, ret[2];
+	int port, state, ret[2] = {0, 0};
 
 	for (port = 0; port < 2; port++) {
+		new_pad_t[port] = 0;
+		paddata_t[port] = 0;
 		if ((state = padGetState(port, 0)) == PAD_STATE_STABLE || (state == PAD_STATE_FINDCTP1)) {
 			//Deal with cases where pad state is valid for padRead
 			ret[port] = padRead(port, 0, &buttons_t[port]);
 			if (ret[port] != 0) {
 				paddata_t[port] = 0xffff ^ buttons_t[port].btns;
 				new_pad_t[port] = paddata_t[port] & ~old_pad_t[port];
+				if (paddata_t[port] != old_pad_t[port]) {
+					rpt_time[port] = Timer() + 400;
+					rpt_count[port] = 0;
+				}
 				old_pad_t[port] = paddata_t[port];
 			}
 		} else {
 			//Deal with cases where pad state is not valid for padRead
 			new_pad_t[port] = 0;
 		}                                   //ends 'if' testing for state valid for padRead
+		if (!ret[port]) {
+			rpt_time[port] = Timer() + 400;
+			rpt_count[port] = 0;
+		}
 	}                                       //ends for
 	new_pad = new_pad_t[0] | new_pad_t[1];  //This has only new button bits
 	paddata = paddata_t[0] | paddata_t[1];  //This has all pressed button bits
@@ -57,41 +70,43 @@ int readpad_noKBnoRepeat(void)
 //---------------------------------------------------------------------------
 int readpad_no_KB(void)
 {
-	static u64 rpt_time[2] = {0, 0};
-	static int rpt_count[2];
-	int port, state, ret[2];
+	int port, state, ret[2] = {0, 0};
 
 	for (port = 0; port < 2; port++) {
+		new_pad_t[port] = 0;
+		paddata_t[port] = 0;
 		if ((state = padGetState(port, 0)) == PAD_STATE_STABLE || (state == PAD_STATE_FINDCTP1)) {
 			//Deal with cases where pad state is valid for padRead
 			ret[port] = padRead(port, 0, &buttons_t[port]);
 			if (ret[port] != 0) {
 				paddata_t[port] = 0xffff ^ buttons_t[port].btns;
-				if ((padtype_t[port] == 2) && (1 & (test_joy++))) {  //DualShock && time for joy scan
+				/* Keep one stable held mask: alternating stick scans used to
+				 * replace the physical buttons and retrigger them every other frame. */
+				if (padtype_t[port] == 2) {
 					joy_value = 0;
 					if (buttons_t[port].rjoy_h >= 0xbf) {
-						paddata_t[port] = PAD_R3_H1;
+						paddata_t[port] |= PAD_R3_H1;
 						joy_value = buttons_t[port].rjoy_h - 0xbf;
 					} else if (buttons_t[port].rjoy_h <= 0x40) {
-						paddata_t[port] = PAD_R3_H0;
+						paddata_t[port] |= PAD_R3_H0;
 						joy_value = -(buttons_t[port].rjoy_h - 0x40);
 					} else if (buttons_t[port].rjoy_v <= 0x40) {
-						paddata_t[port] = PAD_R3_V0;
+						paddata_t[port] |= PAD_R3_V0;
 						joy_value = -(buttons_t[port].rjoy_v - 0x40);
 					} else if (buttons_t[port].rjoy_v >= 0xbf) {
-						paddata_t[port] = PAD_R3_V1;
+						paddata_t[port] |= PAD_R3_V1;
 						joy_value = buttons_t[port].rjoy_v - 0xbf;
 					} else if (buttons_t[port].ljoy_h >= 0xbf) {
-						paddata_t[port] = PAD_L3_H1;
+						paddata_t[port] |= PAD_L3_H1;
 						joy_value = buttons_t[port].ljoy_h - 0xbf;
 					} else if (buttons_t[port].ljoy_h <= 0x40) {
-						paddata_t[port] = PAD_L3_H0;
+						paddata_t[port] |= PAD_L3_H0;
 						joy_value = -(buttons_t[port].ljoy_h - 0x40);
 					} else if (buttons_t[port].ljoy_v <= 0x40) {
-						paddata_t[port] = PAD_L3_V0;
+						paddata_t[port] |= PAD_L3_V0;
 						joy_value = -(buttons_t[port].ljoy_v - 0x40);
 					} else if (buttons_t[port].ljoy_v >= 0xbf) {
-						paddata_t[port] = PAD_L3_V1;
+						paddata_t[port] |= PAD_L3_V1;
 						joy_value = buttons_t[port].ljoy_v - 0xbf;
 					}
 				}
@@ -117,6 +132,10 @@ int readpad_no_KB(void)
 			new_pad_t[port] = 0;
 			//old_pad_t[port]=0; //Clearing this could cause hasty repeats
 		}  //ends 'if' testing for state valid for padRead
+		if (!ret[port]) {
+			rpt_time[port] = Timer() + 400;
+			rpt_count[port] = 0;
+		}
 	}      //ends for
 	new_pad = new_pad_t[0] | new_pad_t[1];
 	paddata = paddata_t[0] | paddata_t[1];  //This has all pressed button bits

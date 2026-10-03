@@ -483,9 +483,9 @@ static void devDraw(void)
 		float x = 48 + (i % DEV_COLS) * DEV_PX;
 		float y = 108 + (i / DEV_COLS) * DEV_PY - dcam;
 		float f = dashClampf(1.0f - fabsf(i - dsel_anim), 0.0f, 1.0f);
-		int dim = (d->state == DASH_DEV_ABSENT);
+		int dim = (d->state != DASH_DEV_READY);
 		DashColor pc = DASH_C_PANEL_HI;
-		DashColor top = dim ? dashColorScale(pc, 0.8f) : dashColorMix(pc, DASH_C_SELECT, 0.25f + 0.45f * f);
+		DashColor top = dim ? dashColorScale(pc, 0.8f) : dashColorMix(pc, DASH_C_SELECT, 0.7f * f);
 		DashColor bot = dim ? dashColorScale(pc, 0.55f) : dashColorScale(pc, 0.7f);
 		top.a = dim ? 200 : 225;
 		bot.a = top.a;
