@@ -98,5 +98,4 @@ EMBED_FILE(icon_r1_png, "res/icons/R1.png")
 EMBED_FILE(icon_r2_png, "res/icons/R2.png")
 EMBED_FILE(icon_r3_png, "res/icons/R3.png")
 
-/* Default background music. adpenc-produced looping PS-ADPCM (.sad). */
-EMBED_FILE(music_adpcm, "res/music.sad")
+/* Background music is an optional BGM.ADP beside the ELF, not embedded. */

@@ -2028,8 +2028,20 @@ int isPathDeviceStackLoaded(const char *path)
 		return 1; /* mcman/mcserv are part of the core stack */
 	if (!strncmp(path, "mass", 4) || !strncmp(path, "usb", 3))
 		return have_usbd && have_usb_mass;
-	if (!strncmp(path, "hdd", 3))
+	if (!strncmp(path, "hdd", 3) || !strncmp(path, "pfs", 3))
 		return have_HDD_modules && (block_storage_stack_mode & BLOCK_STACK_HDD);
+#ifdef ETH
+	if (!strncmp(path, "host:", 5))
+		return have_ps2host && have_ps2ip && have_ps2smap && ps2dev9_loaded;
+#endif
+#ifdef XFROM
+	if (!strncmp(path, "xfrom", 5))
+		return have_Flash_modules;
+#endif
+#ifdef DVRP
+	if (!strncmp(path, "dvr_hdd", 7) || !strncmp(path, "dvr_pfs", 7))
+		return have_DVRP_HDD_modules;
+#endif
 #ifdef EXFAT
 	if (!strncmp(path, "ata", 3))
 		return have_ata_bd && have_bdmfs && (block_storage_stack_mode & BLOCK_STACK_ATA);
@@ -2046,7 +2058,7 @@ int isPathDeviceStackLoaded(const char *path)
 	if (!strncmp(path, "udpfs", 5))
 		return have_udpfs_ioman;
 #endif
-	if (!strncmp(path, "cdfs", 4))
+	if (!strncmp(path, "cdfs", 4) || !strncmp(path, "cdrom", 5))
 		return have_cdvd;
 	return 0;
 }

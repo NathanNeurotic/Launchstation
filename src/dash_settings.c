@@ -2459,9 +2459,10 @@ static void settingsInput(const DashInput *in)
 	} else if (in->pressed & DASH_IN_R2) {
 		item = pages[page].n - 1;
 	} else if (in->pressed & DASH_IN_BACK) {
-		if (page_depth)
+		if (page_depth) {
+			dashSoundPlay(DASH_SND_CANCEL);
 			backPage();
-		else
+		} else
 			dashSwitchSection(DASH_SEC_HOME);
 	} else if (it->type != ST_PAGE && themeSettingResettable(it->id) && (in->pressed & DASH_IN_FAV)) {
 		if (resetThemeSetting(it->id))

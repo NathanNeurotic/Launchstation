@@ -12,12 +12,56 @@
 #include "dash_internal.h"
 #include "dash_sound.h"
 #include "init.h"
+#include <delaythread.h>
 
 extern int cdmode;
 extern int vmcMounted[2];
 
-/* remembered results of explicit probes that failed */
-static u8 probe_failed_hdd, probe_failed_ata, probe_failed_mx4sio, probe_failed_mmce, probe_failed_udpfs;
+/* Driver residency does not establish that a card, disk or server exists.
+ * Cache explicit root checks; never do blocking device IO from drawing. */
+enum { PROBE_HDD, PROBE_ATA, PROBE_MX4SIO, PROBE_MMCE0, PROBE_MMCE1, PROBE_UDPFS };
+static u32 probe_checked, probe_present;
+static int probe_reboot_count = -1;
+extern int _iop_reboot_count;
+
+static int probeIndex(const char *mount)
+{
+	if (!strncmp(mount, "hdd0:", 5)) return PROBE_HDD;
+	if (!strncmp(mount, "ata0:", 5)) return PROBE_ATA;
+	if (!strncmp(mount, "mx4sio", 6)) return PROBE_MX4SIO;
+	if (!strncmp(mount, "mmce", 4)) return mount[4] == '1' ? PROBE_MMCE1 : PROBE_MMCE0;
+	if (!strncmp(mount, "udpfs:", 6)) return PROBE_UDPFS;
+	return -1;
+}
+
+static void syncProbeSession(void)
+{
+	if (probe_reboot_count != _iop_reboot_count) {
+		probe_checked = probe_present = 0;
+		probe_reboot_count = _iop_reboot_count;
+	}
+}
+
+static void recordProbe(const char *mount, int ok)
+{
+	int i = probeIndex(mount);
+	syncProbeSession();
+	if (i < 0) return;
+	probe_checked |= 1u << i;
+	if (ok) probe_present |= 1u << i;
+	else probe_present &= ~(1u << i);
+}
+
+static int storageState(const char *mount)
+{
+	int i = probeIndex(mount);
+	syncProbeSession();
+	if (i >= 0 && (probe_checked & (1u << i))) {
+		if (!(probe_present & (1u << i))) return DASH_DEV_ABSENT;
+		if (isPathDeviceStackLoaded(mount)) return DASH_DEV_READY;
+	}
+	return DASH_DEV_PROBE;
+}
 
 /* Device-presence snapshot for connect/disconnect sounds.
  *
@@ -37,6 +81,11 @@ void dashDevicesInit(void)
 	dev_snapshot = 0xFFFFFFFFu;
 	dev_snapshot_changed_ms = Timer();
 	dev_hotplug_armed = 0;
+	syncProbeSession();
+	/* The executing ELF is evidence for its own boot storage, even before a
+	 * manual check. Use the boot directory, not a SYS-CONF fallback directory. */
+	if (LaunchElfBootDir[0] && isPathDeviceStackLoaded(LaunchElfBootDir))
+		recordProbe(LaunchElfBootDir, 1);
 }
 
 /* Re-arm the silent baseline (used when the dash (re)starts, so devices that
@@ -93,7 +142,7 @@ void dashDevicesPoll(void)
 
 int dashMcPresent(int port)
 {
-	return filerRootMcPresent(port, NULL, NULL) != 0;
+	return filerRootMcPresent(port, NULL, NULL) > 0;
 }
 
 /* True only when the storage backing an application path is currently
@@ -142,6 +191,9 @@ int dashDevicePathReady(const char *path)
 	 * IOP stack is active. isPathDeviceStackLoaded() has no side effects. */
 	if (!strncmp(path, "rom", 3))
 		return 1;
+	/* A failed explicit check must also hide cached apps from that storage. */
+	if (storageState(path) == DASH_DEV_ABSENT)
+		return 0;
 	return isPathDeviceStackLoaded(path);
 }
 
@@ -197,6 +249,15 @@ static DashDevice *add(DashDevice *out, int *n, int max, int icon, int state,
 	return d;
 }
 
+static void addStorage(DashDevice *out, int *n, int max, int icon,
+                       const char *name, const char *mount, const char *browse,
+                       const char *ready, const char *absent)
+{
+	int state = storageState(mount);
+	add(out, n, max, icon, state, name, mount, browse,
+	    state == DASH_DEV_READY ? ready : state == DASH_DEV_ABSENT ? absent : "Not checked yet");
+}
+
 int dashDevicesList(DashDevice *out, int max)
 {
 	int n = 0, port, i;
@@ -219,12 +280,10 @@ int dashDevicesList(DashDevice *out, int max)
 			        type == 1 ? "PS1 memory card" : "PS2 memory card");
 			if (d != NULL && free_kb >= 0) {
 				if (type == 2 && free_kb <= 8 * 1024) {
-					snprintf(d->detail, sizeof(d->detail), "%d KB free of 8 MB", free_kb);
+					snprintf(d->detail, sizeof(d->detail), "%.2f MB free of 8 MB", free_kb / 1024.0f);
 					d->fill = 1.0f - free_kb / 8192.0f;
-				} else if (free_kb >= 1024)
-					snprintf(d->detail, sizeof(d->detail), "%.1f MB free", free_kb / 1024.0f);
-				else
-					snprintf(d->detail, sizeof(d->detail), "%d KB free", free_kb);
+				} else
+					snprintf(d->detail, sizeof(d->detail), "%.2f MB free", free_kb / 1024.0f);
 			}
 		}
 	}
@@ -246,35 +305,19 @@ int dashDevicesList(DashDevice *out, int max)
 		add(out, &n, max, DI_USB, DASH_DEV_PROBE, "USB Storage", "usb:", "usb:/", "Not checked yet");
 
 #ifdef MMCE
-	if (isPathDeviceStackLoaded("mmce0:")) {
-		add(out, &n, max, DI_SDCARD, DASH_DEV_READY, "MMCE Slot 1", "mmce0:", "mmce0:/", "SD2PSX / MemCard PRO2");
-		add(out, &n, max, DI_SDCARD, DASH_DEV_READY, "MMCE Slot 2", "mmce1:", "mmce1:/", "SD2PSX / MemCard PRO2");
-	} else
-		add(out, &n, max, DI_SDCARD, probe_failed_mmce ? DASH_DEV_ABSENT : DASH_DEV_PROBE, "MMCE SD Card", "mmce:", "mmce0:/",
-		    probe_failed_mmce ? "Driver could not start" : "Not checked yet");
+	addStorage(out, &n, max, DI_SDCARD, "MMCE Slot 1", "mmce0:", "mmce0:/", "SD2PSX / MemCard PRO2", "No MMCE storage found");
+	addStorage(out, &n, max, DI_SDCARD, "MMCE Slot 2", "mmce1:", "mmce1:/", "SD2PSX / MemCard PRO2", "No MMCE storage found");
 #endif
 #ifdef MX4SIO
-	if (isPathDeviceStackLoaded("mx4sio:"))
-		add(out, &n, max, DI_SDCARD, DASH_DEV_READY, "MX4SIO SD Card", "mx4sio:", "mx4sio:/", "Ready (slot 2)");
-	else
-		add(out, &n, max, DI_SDCARD, probe_failed_mx4sio ? DASH_DEV_ABSENT : DASH_DEV_PROBE, "MX4SIO SD Card", "mx4sio:", "mx4sio:/",
-		    probe_failed_mx4sio ? "No MX4SIO adapter found" : "Not checked yet");
+	addStorage(out, &n, max, DI_SDCARD, "MX4SIO SD Card", "mx4sio:", "mx4sio:/", "Ready (slot 2)", "No MX4SIO storage found");
 #endif
 
 	if (filerShowHddUnit(0) && !console_is_PSX) {
-		if (isPathDeviceStackLoaded("hdd0:"))
-			add(out, &n, max, DI_HDD, DASH_DEV_READY, "Internal HDD", "hdd0:", "hdd0:/", "APA partitions");
-		else
-			add(out, &n, max, DI_HDD, probe_failed_hdd ? DASH_DEV_ABSENT : DASH_DEV_PROBE, "Internal HDD", "hdd0:", "hdd0:/",
-			    probe_failed_hdd ? "No HDD detected" : "Not checked yet");
+		addStorage(out, &n, max, DI_HDD, "Internal HDD", "hdd0:", "hdd0:/", "APA partitions", "No browsable APA storage found");
 	}
 #ifdef EXFAT
 	if (filerShowAtaUnit(0) && !console_is_PSX) {
-		if (isPathDeviceStackLoaded("ata0:"))
-			add(out, &n, max, DI_HDD, DASH_DEV_READY, "exFAT HDD", "ata0:", "ata0:/", "Ready");
-		else
-			add(out, &n, max, DI_HDD, probe_failed_ata ? DASH_DEV_ABSENT : DASH_DEV_PROBE, "exFAT HDD", "ata0:", "ata0:/",
-			    probe_failed_ata ? "No exFAT drive found" : "Not checked yet");
+		addStorage(out, &n, max, DI_HDD, "exFAT HDD", "ata0:", "ata0:/", "Ready", "No exFAT storage found");
 	}
 #endif
 
@@ -284,11 +327,7 @@ int dashDevicesList(DashDevice *out, int max)
 	}
 
 #ifdef UDPFS
-	if (isPathDeviceStackLoaded("udpfs:"))
-		add(out, &n, max, DI_NETWORK, DASH_DEV_READY, "Network (UDPFS)", "udpfs:", "udpfs:/", netConfig[0] ? netConfig : "Connected");
-	else
-		add(out, &n, max, DI_NETWORK, probe_failed_udpfs ? DASH_DEV_ABSENT : DASH_DEV_PROBE, "Network (UDPFS)", "udpfs:", "udpfs:/",
-		    probe_failed_udpfs ? "UDPFS server not found" : "Not connected");
+	addStorage(out, &n, max, DI_NETWORK, "Network (UDPFS)", "udpfs:", "udpfs:/", netConfig[0] ? netConfig : "Connected", "UDPFS server not found");
 #endif
 #ifdef ETH
 	add(out, &n, max, DI_NETWORK, DASH_DEV_PROBE, "Network Host", "host:", "host:/", "PS2Link host");
@@ -313,6 +352,23 @@ int dashDevicesList(DashDevice *out, int max)
 	return n;
 }
 
+static int probeRoot(const char *path, int wait_ms)
+{
+	u64 deadline = Timer() + wait_ms;
+	while (1) {
+		int dd = fileXioDopen(path);
+		if (dd >= 0) {
+			fileXioDclose(dd);
+			return 1;
+		}
+		if (Timer() >= deadline)
+			return 0;
+		/* BDM mounts can arrive after the driver returns. Yield during the
+		 * existing first-open settling window instead of reporting absence. */
+		DelayThread(100000);
+	}
+}
+
 static int probeMount(const char *m)
 {
 	int ok = 1;
@@ -323,44 +379,30 @@ static int probeMount(const char *m)
 		ok = (prepareUsbRootBrowse() >= 0);
 	} else if (!strncmp(m, "hdd", 3)) {
 		ok = loadHddModules();
-		probe_failed_hdd = !ok;
+		if (ok) ok = probeRoot("hdd0:", 0);
 	}
 #ifdef EXFAT
 	else if (!strncmp(m, "ata", 3)) {
 		ok = loadAtaModules();
-		if (ok) {
-			int dd = fileXioDopen("ata0:/");
-			if (dd >= 0)
-				fileXioDclose(dd);
-			else
-				ok = 0;
-		}
-		probe_failed_ata = !ok;
+		if (ok) ok = probeRoot("ata0:/", 2000);
 	}
 #endif
 #ifdef MMCE
 	else if (!strncmp(m, "mmce", 4)) {
 		ok = loadMmceModules();
-		probe_failed_mmce = !ok;
+		if (ok) ok = probeRoot(m[4] == '1' ? "mmce1:/" : "mmce0:/", 0);
 	}
 #endif
 #ifdef MX4SIO
 	else if (!strncmp(m, "mx4sio", 6)) {
 		ok = loadMx4sioModules();
-		if (ok) {
-			int dd = fileXioDopen("mx4sio:/");
-			if (dd >= 0)
-				fileXioDclose(dd);
-			else
-				ok = 0;
-		}
-		probe_failed_mx4sio = !ok;
+		if (ok) ok = probeRoot("mx4sio:/", 2000);
 	}
 #endif
 #ifdef UDPFS
 	else if (!strncmp(m, "udpfs", 5)) {
 		ok = load_udpfs();
-		probe_failed_udpfs = !ok;
+		if (ok) ok = probeRoot("udpfs:/", 0);
 	}
 #endif
 #ifdef XFROM
@@ -371,6 +413,7 @@ static int probeMount(const char *m)
 	else if (!strncmp(m, "dvr_hdd", 7))
 		ok = loadDVRPHddModules();
 #endif
+	recordProbe(m, ok);
 	return ok;
 }
 
@@ -424,8 +467,7 @@ int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user)
 		return -1;
 	/* A newly activated device may already have applications in DASHLIB.CNF.
 	 * Reveal them immediately without forcing a rescan. */
-	if (ok)
-		dashAppsRebuildView();
+	dashAppsRebuildView(); /* failed checks must also hide stale cached apps */
 	if (cb != NULL)
 		cb(dev->mount, ok, user);
 	return 0;
@@ -505,7 +547,7 @@ void dashDevicesAutoProbe(void)
  * device is always available: its driver is already running. */
 int dashBootDeviceBit(void)
 {
-	const char *p = LaunchElfDir;
+	const char *p = LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir;
 
 	if (!strncmp(p, "mass", 4) || !strncmp(p, "usb", 3))
 		return DASH_DEVA_USB;

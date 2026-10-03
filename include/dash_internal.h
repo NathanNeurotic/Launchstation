@@ -683,7 +683,7 @@ void dashBgFlash(float amount);
 //--------------------------------------------------------------
 enum DashDevState {
 	DASH_DEV_READY = 0,
-	DASH_DEV_PROBE,  /* driver not loaded yet: press to detect */
+	DASH_DEV_PROBE,  /* storage not checked yet: press to detect */
 	DASH_DEV_ABSENT,
 	DASH_DEV_BUSY
 };
@@ -700,7 +700,7 @@ typedef struct
 	float fill; /* 0..1 used space, <0 unknown */
 } DashDevice;
 
-#define DASH_MAX_DEVICES 20
+#define DASH_MAX_DEVICES 24
 void dashDevicesInit(void);
 void dashDevicesPoll(void);
 void dashDevicesAutoProbe(void);

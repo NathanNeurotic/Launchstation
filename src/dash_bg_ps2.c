@@ -427,32 +427,44 @@ typedef struct
 	float second; /* 0..60, smooth between the RTC's once-a-second ticks */
 } OsdTime;
 
-/* The console clock, interpolated within the second; held at 0% motion. */
+/* RTC-anchored visual time. A stalled/invalid RTC must not freeze the orbs;
+ * continue on the dashboard's visual clock, still held at 0% motion. This
+ * does not synthesize a persistent wall-clock date for the footer. */
 static void osdTime(int fx, OsdTime *o)
 {
-	static int ready, held_hour, held_minute, rtc_second;
+	static int ready, held_hour, held_minute, rtc_hour, rtc_minute, rtc_second, rtc_valid;
 	static float held_second, tick_t;
 	float now = dashTime();
-	int hour = 0, minute = 0, second = 0;
+	int hour = 0, minute = 0, second = 0, valid;
 
-	menuTitleGetClockFields(NULL, NULL, NULL, &hour, &minute, &second, NULL, NULL);
+	valid = menuTitleGetClockFields(NULL, NULL, NULL, &hour, &minute, &second, NULL, NULL);
 	if (!ready) {
-		held_hour = hour;
-		held_minute = minute;
-		rtc_second = second;
-		held_second = (float)second;
+		rtc_hour = held_hour = valid ? hour : 0;
+		rtc_minute = held_minute = valid ? minute : 0;
+		rtc_second = valid ? second : 0;
+		held_second = (float)rtc_second;
+		rtc_valid = valid;
 		tick_t = now;
 		ready = 1;
 	}
 	if (fx != DASH_FX_OFF) {
-		/* re-anchor on each RTC tick, then run on within the second */
-		if (hour != held_hour || minute != held_minute || second != rtc_second) {
-			held_hour = hour;
-			held_minute = minute;
+		float seconds;
+		int minutes;
+		/* Re-anchor only on a valid RTC tick or recovery, not on computed
+		 * minute rollover. Otherwise frozen RTC fields would reset the phase. */
+		if (valid && (!rtc_valid || hour != rtc_hour || minute != rtc_minute || second != rtc_second)) {
+			rtc_hour = hour;
+			rtc_minute = minute;
 			rtc_second = second;
 			tick_t = now;
 		}
-		held_second = rtc_second + dashClampf(now - tick_t, 0.0f, 0.999f);
+		rtc_valid = valid;
+		seconds = rtc_second + (now > tick_t ? now - tick_t : 0.0f);
+		minutes = (int)(seconds / 60.0f);
+		held_second = seconds - minutes * 60.0f;
+		minutes += rtc_hour * 60 + rtc_minute;
+		held_hour = (minutes / 60) % 24;
+		held_minute = minutes % 60;
 	}
 	o->hour = held_hour;
 	o->minute = held_minute;
