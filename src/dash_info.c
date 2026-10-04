@@ -154,7 +154,7 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_HEAD, "This build");
 	sheetAdd(&s, SL_TEXT, "Mod by R3Z3N & Codex 5.3 LLM");
 	sheetAdd(&s, SL_TEXT, "DS3/DS4 support by Alex Parrado");
-	sheetAdd(&s, SL_TEXT, "No thanks to: TnA Plastic of PS2 Scene and PSX-Place");
+	sheetAdd(&s, SL_TEXT, "Thanks to TnA for all his insight and support");
 	sheetAdd(&s, SL_HEAD, "wLaunchELF");
 	sheetAdd(&s, SL_TEXT, "Project maintainers: sp193 & AKuHAK");
 	sheetAdd(&s, SL_HEAD, "uLaunchELF");
