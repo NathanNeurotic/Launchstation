@@ -67,7 +67,7 @@ void Show_About_uLE(void)
 			PrintPos(02, hpos, TextRow, COLOR_TEXT);
 			PrintPos(03, hpos, "Mod by: R3Z3N & Codex 5.3 LLM", COLOR_TEXT);
 			PrintPos(-1, hpos, "DS3/DS4 support by Alex Parrado", COLOR_TEXT);
-			PrintPos(-1, hpos, "No thanks to: TnA Plastic of PS2 Scene and PSX-Place", COLOR_TEXT);
+			PrintPos(-1, hpos, "Thanks to TnA for all his insight and support", COLOR_TEXT);
 			PrintPos(-1, hpos, "Project maintainers:  sp193 & AKuHAK", COLOR_TEXT);
 			PrintPos(-1, hpos, "  ", COLOR_TEXT);
 			PrintPos(-1, hpos, "uLaunchELF Project maintainers:", COLOR_TEXT);
