@@ -67,9 +67,24 @@ void dashFilesPoll(void)
 		deviceNotFound(&pend.dev);
 		return;
 	}
-	if (pend.browse)
-		dashOpenBrowser(pend.dev.browse);
-	else {
+	if (pend.browse) {
+		const char *path = pend.dev.browse;
+		char usb_path[8];
+
+		/* The probe already resolved USB units; avoid another forced scan. */
+		if (!strcmp(path, "usb:/")) {
+			int mask = filerUsbDriveMask();
+			int unit;
+			for (unit = 0; unit < 10; unit++)
+				if (mask & (1 << unit))
+					break;
+			if (unit < 10) {
+				snprintf(usb_path, sizeof(usb_path), "usb%d:/", unit);
+				path = usb_path;
+			}
+		}
+		dashOpenBrowser(path);
+	} else {
 		snprintf(msg, sizeof(msg), "%s is ready", pend.dev.name);
 		dashToast(DASH_TOAST_OK, msg);
 	}
