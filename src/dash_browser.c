@@ -36,8 +36,8 @@ static struct
 	u8 *mark;
 	int n, nmarked;
 	int loading;
-	int quiet_input;  /* classic USB parity: do not poll PAD while USB fileXio runs */
-	int input_rearm;  /* swallow presses accumulated while a USB listing was blocking */
+	int usb_input_jobs; /* outstanding USB/mass list jobs that must not overlap PAD */
+	int input_rearm;    /* swallow presses accumulated while USB fileXio was active */
 	int gen;
 	int sel, top;
 	float sel_anim;
@@ -141,12 +141,15 @@ static void listDone(void *arg)
 		memset(fb.mark, 0, MAX_ENTRY);
 		fb.nmarked = 0;
 		fb.loading = 0;
-		if (j->quiet_input)
-			fb.input_rearm = 1;
 		fb.sel = 0;
 		if (fb.want_sel[0])
 			selectName(fb.want_sel);
 		fb.want_sel[0] = '\0';
+	}
+	if (j->quiet_input && fb.usb_input_jobs > 0) {
+		fb.usb_input_jobs--;
+		if (fb.usb_input_jobs == 0)
+			fb.input_rearm = 1;
 	}
 	free(j->files);
 	free(j);
@@ -208,7 +211,6 @@ static void openDir(const char *dir, const char *select)
 	fb.n = 0;
 	fb.nmarked = 0;
 	fb.free_valid = 0;
-	fb.quiet_input = 0;
 	fb.input_rearm = 0;
 	fb.sel = fb.top = 0;
 	fb.sel_anim = 0.0f;
@@ -288,13 +290,14 @@ static void openDir(const char *dir, const char *select)
 	j->quiet_input = isUsbBrowsePath(dir);
 	j->free_valid = 0;
 	dashStrCopy(j->path, dir, sizeof(j->path));
-	fb.quiet_input = j->quiet_input;
 	fb.loading = 1;
 	if (dashWorkerSubmit("Reading folder", DASH_JOB_VISIBLE, listRun, listDone, j) < 0) {
 		free(j->files);
 		free(j);
 		fb.loading = 0;
 		dashToast(DASH_TOAST_WARN, "Busy, try again in a moment");
+	} else if (j->quiet_input) {
+		fb.usb_input_jobs++;
 	}
 }
 
@@ -1394,7 +1397,7 @@ void dashFileBrowser(const char *start_dir)
 			dashInputFlush();
 			fb.input_rearm = 0;
 		}
-		if (fb.loading && fb.quiet_input && dashWorkerIoBusy())
+		if (fb.usb_input_jobs > 0 && dashWorkerIoBusy())
 			memset(&in, 0, sizeof(in));
 		else
 			dashInputPoll(&in);
