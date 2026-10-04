@@ -2449,14 +2449,22 @@ static void settingsInput(const DashInput *in)
 	}
 	it = curItem();
 	if (in->pressed & DASH_IN_UP) {
-		if (item > 0)
+		if (item > 0) {
 			item--;
+			dashUiFocusPoke();
+		}
 	} else if (in->pressed & DASH_IN_DOWN) {
-		if (item < pages[page].n - 1)
+		if (item < pages[page].n - 1) {
 			item++;
+			dashUiFocusPoke();
+		}
 	} else if (in->pressed & DASH_IN_L2) {
+		if (item != 0)
+			dashUiFocusPoke();
 		item = 0;
 	} else if (in->pressed & DASH_IN_R2) {
+		if (item != pages[page].n - 1)
+			dashUiFocusPoke();
 		item = pages[page].n - 1;
 	} else if (in->pressed & DASH_IN_BACK) {
 		if (page_depth) {
@@ -2590,13 +2598,20 @@ static void settingsDraw(void)
 			const char *single;
 			int cur, n = choiceInfo(it->id, &cur, &names, &single);
 			if (n > 0 && cur >= 0 && cur < n) {
+				float maxw = iw * 0.40f;
 				float vw = dashTextWidth(names[cur], DASH_FS_SMALL);
-				float vx = ix + iw - 20 - vw;
+				float vx;
+				if (vw > maxw)
+					vw = maxw;
+				vx = ix + iw - 20 - vw;
 				if (on && !disabled) {
 					dashIcon(DI_BACK, vx - 22, y + 7, 12, DASH_C_ACCENT);
 					dashIcon(DI_PLAY, ix + iw - 16, y + 8, 10, DASH_C_ACCENT);
 				}
-				dashText(vx, y + 6.5f, names[cur], DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : (n == 2 && names == onoff && cur == 1) ? DASH_C_OK : DASH_C_ACCENT);
+				if (on)
+					dashTextScroll(vx, y + 6.5f, maxw, names[cur], DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : (n == 2 && names == onoff && cur == 1) ? DASH_C_OK : DASH_C_ACCENT);
+				else
+					dashTextFit(vx, y + 6.5f, maxw, names[cur], DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : DASH_C_ACCENT);
 			}
 		} else if (it->type == ST_NUMBER || it->type == ST_PATH || it->type == ST_IP || it->type == ST_LKEY) {
 			char text[MAX_PATH], leaf[MAX_PATH];
@@ -2628,7 +2643,10 @@ static void settingsDraw(void)
 					dashIcon(DI_BACK, vx - 22, y + 7, 12, DASH_C_ACCENT);
 					dashIcon(DI_PLAY, ix + iw - 16, y + 8, 10, DASH_C_ACCENT);
 				}
-				dashTextFit(vx, y + 6.5f, maxw, v, DASH_FS_SMALL, set && !disabled ? DASH_C_ACCENT : DASH_C_TEXT3);
+				if (on)
+					dashTextScroll(vx, y + 6.5f, maxw, v, DASH_FS_SMALL, set && !disabled ? DASH_C_ACCENT : DASH_C_TEXT3);
+				else
+					dashTextFit(vx, y + 6.5f, maxw, v, DASH_FS_SMALL, set && !disabled ? DASH_C_ACCENT : DASH_C_TEXT3);
 			}
 		} else
 			dashIcon(DI_PLAY, ix + iw - 22, y + 8, 12, DASH_C_TEXT3);

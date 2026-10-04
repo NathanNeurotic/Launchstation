@@ -28,6 +28,7 @@ jobs:
           python3 tests/test_tile_styles.py
           python3 tests/test_worker_queue.py
           python3 tests/test_device_input.py
+          python3 tests/test_home_focus.py
           python3 tests/test_bgm_sidecar.py
 
       - name: Install ps2build SDK
@@ -58,14 +59,18 @@ jobs:
         run: |
           set -euo pipefail
           command -v ps2build
-          ps2build --version
+          ps2build update
+          ps2build version
 
-      - name: Install in-repo custom packages
+      - name: Provide audsrv if absent from ps2build
+        shell: bash
         run: |
-          dest="$HOME/.local/share/ps2build/packages/world"
-          mkdir -p "$dest"
-          cp -r packages/world/. "$dest/"
-          ls "$dest"
+          set -euo pipefail
+          dest="$HOME/.local/share/ps2build/packages/world/audsrv"
+          if [ ! -f "$dest/package.yaml" ]; then
+            mkdir -p "$dest"
+            cp -r packages/world/audsrv/. "$dest/"
+          fi
 
       - name: Build wLaunchELF with ps2build
         run: |

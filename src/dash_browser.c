@@ -1250,7 +1250,7 @@ static void browserScene(void)
 	dashBgDraw();
 	dashIcon(DI_FOLDER, FB_X, 20, 24, DASH_C_ACCENT);
 	dashTextS(FB_X + 32, 20, "File Browser", DASH_FS_TITLE, DASH_C_TEXT);
-	dashTextFit(FB_X, 58, FB_W - 150, fb.dir[0] ? fb.dir : "Choose a device", DASH_FS_SMALL, DASH_C_TEXT2);
+	dashTextScroll(FB_X, 58, FB_W - 150, fb.dir[0] ? fb.dir : "Choose a device", DASH_FS_SMALL, DASH_C_TEXT2);
 	if (fb.dir[0]) {
 		char space[24];
 

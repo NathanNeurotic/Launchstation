@@ -3,8 +3,7 @@
 //HOME: the landing page.
 //  * hero panel describing the focused item
 //  * "Continue" carousel: pinned apps, then recent, then favorites
-//  * quick access chips: library, files, disc, devices, tools, settings
-//    and every launch key configured in LAUNCHELF.CNF
+//  * direct launch chips: disc and configured launch keys
 //  * compact live device status
 //--------------------------------------------------------------
 #include "dash_internal.h"
@@ -13,12 +12,7 @@
 #define HOME_MAX_CHIPS 24
 
 enum ChipKind {
-	CHIP_APPS = 0,
-	CHIP_FILES,
-	CHIP_DISC,
-	CHIP_DEVICES,
-	CHIP_TOOLS,
-	CHIP_SETTINGS,
+	CHIP_DISC = 0,
 	CHIP_LAUNCHKEY
 };
 
@@ -89,6 +83,12 @@ static void addChip(int kind, int lk, int icon, const char *label, const char *d
 static void homeRebuild(void)
 {
 	int i;
+	char keep[DASH_PATH_MAX];
+	int old_col = col[0];
+
+	keep[0] = '\0';
+	if (nhome > 0 && col[0] >= 0 && col[0] < nhome)
+		dashStrCopy(keep, home_apps[col[0]]->path, sizeof(keep));
 
 	nhome = 0;
 	for (i = 0; i < dashLists.npin; i++)
@@ -105,12 +105,7 @@ static void homeRebuild(void)
 		homeAdd(dashApps[i].path, 0);
 
 	nchips = 0;
-	addChip(CHIP_APPS, -1, DI_APPS, "All applications", "Browse every application found on your storage devices.");
-	addChip(CHIP_FILES, -1, DI_FOLDER, "File Browser", "Copy, move, rename and launch anything with the full wLaunchELF file manager.");
 	addChip(CHIP_DISC, -1, DI_DISC, "Start disc", "Boot the disc in the drive (PS2, PS1, DVD Video or ESR).");
-	addChip(CHIP_DEVICES, -1, DI_DEVICES, "Devices", "Memory cards, USB, HDD, SD adapters, network and disc.");
-	addChip(CHIP_TOOLS, -1, DI_TOOLS, "Tools", "HDD Manager, Text Editor, exploit installer, system info and more.");
-	addChip(CHIP_SETTINGS, -1, DI_SETTINGS, "Settings", "Display, dashboard, controls, network and advanced options.");
 	for (i = 1; i < SETTING_LK_BTN_COUNT; i++) {
 		const char *p = setting->LK_Path[i];
 		char name[DASH_TITLE_MAX], label[48], desc[96];
@@ -130,8 +125,21 @@ static void homeRebuild(void)
 		addChip(CHIP_LAUNCHKEY, i, DI_KEY, label, desc);
 	}
 
+	for (i = 0; i < nhome && keep[0]; i++)
+		if (!stricmp(home_apps[i]->path, keep)) {
+			col[0] = i;
+			break;
+		}
 	if (col[0] >= nhome)
 		col[0] = nhome > 0 ? nhome - 1 : 0;
+	if (col[0] != old_col) {
+		float target = (col[0] - 2) * 104.0f;
+		float maxcam = (nhome - 5) * 104.0f;
+		col_anim[0] = (float)col[0];
+		cam[0] = target > maxcam ? maxcam : target;
+		if (cam[0] < 0)
+			cam[0] = 0;
+	}
 	if (col[1] >= nchips)
 		col[1] = nchips - 1;
 	if (nhome == 0)
@@ -158,23 +166,8 @@ static DashApp *focusedApp(void)
 static void activateChip(const Chip *c)
 {
 	switch (c->kind) {
-		case CHIP_APPS:
-			dashSwitchSection(DASH_SEC_APPS);
-			break;
-		case CHIP_FILES:
-			dashSwitchSection(DASH_SEC_FILES);
-			break;
 		case CHIP_DISC:
 			dashRunMisc(setting->Misc_PS2Disc);
-			break;
-		case CHIP_DEVICES:
-			dashSwitchSection(DASH_SEC_DEVICES);
-			break;
-		case CHIP_TOOLS:
-			dashSwitchSection(DASH_SEC_TOOLS);
-			break;
-		case CHIP_SETTINGS:
-			dashSwitchSection(DASH_SEC_SETTINGS);
 			break;
 		case CHIP_LAUNCHKEY: {
 			const char *p = setting->LK_Path[c->lk];
@@ -233,8 +226,12 @@ static void homeInput(const DashInput *in)
 		DashApp *a = focusedApp();
 		if (a != NULL) {
 			int r = dashStoreToggleFavorite(a->path);
-			dashToast(r > 0 ? DASH_TOAST_OK : DASH_TOAST_INFO, r > 0 ? "Added to Favorites" : "Removed from Favorites");
-			homeRebuild();
+			if (r < 0)
+				dashToast(DASH_TOAST_INFO, "Favorites full");
+			else {
+				dashToast(r > 0 ? DASH_TOAST_OK : DASH_TOAST_INFO, r > 0 ? "Added to Favorites" : "Removed from Favorites");
+				homeRebuild();
+			}
 		}
 	} else if (in->pressed & DASH_IN_MENU) {
 		DashApp *a = focusedApp();
@@ -287,15 +284,17 @@ static void drawHero(void)
 		float title_fs = dashTextWidth(a->title, DASH_FS_HERO) > tw ? DASH_FS_TITLE : DASH_FS_HERO;
 
 		dashDrawAppArt(a, x, y, art, art, 1.0f, 0);
-		dashTextFit(tx, y + 6, tw, a->title, title_fs, DASH_C_TEXT);
+		dashTextScroll(tx, y + 6, tw, a->title, title_fs, DASH_C_TEXT);
 		dashLibDeviceLabel(a->path, dev, sizeof(dev));
 		snprintf(meta, sizeof(meta), "%s%s%s%s%s", dev, a->version[0] ? "   " : "", a->version,
 		         a->author[0] ? "   " : "", a->author);
 		dashIcon(dashLibDeviceIcon(a->path), tx, y + 48, 13, DASH_C_ACCENT);
 		{
-			float mx = dashTextFit(tx + 19, y + 48, tw - 40, meta, DASH_FS_SMALL, DASH_C_TEXT2);
-			if (dashStoreIsFavorite(a->path))
-				dashIcon(DI_STAR, mx + 10, y + 48, 13, DASH_C_WARM);
+			int favorite = dashStoreIsFavorite(a->path);
+			float meta_w = tw - 40 - (favorite ? 24.0f : 0.0f);
+			dashTextScroll(tx + 19, y + 48, meta_w, meta, DASH_FS_SMALL, DASH_C_TEXT2);
+			if (favorite)
+				dashIcon(DI_STAR, tx + tw - 16, y + 48, 13, DASH_C_WARM);
 		}
 		if (a->desc[0])
 			dashTextWrap(tx, y + 70, tw, 2, a->desc, DASH_FS_SMALL, DASH_C_TEXT3, 19);
@@ -308,7 +307,7 @@ static void drawHero(void)
 			dashPanelBorder(x, y, art, art, 16, DASH_C_BORDER);
 		dashAccentGlow(x + art * 0.5f, y + art * 0.5f, 64, 64, 1.0f);
 		dashIcon(c->icon, x + 34, y + 34, art - 68, DASH_C_TEXT);
-		dashTextFit(tx, y + 6, tw, c->label, dashTextWidth(c->label, DASH_FS_HERO) > tw ? DASH_FS_TITLE : DASH_FS_HERO, DASH_C_TEXT);
+		dashTextScroll(tx, y + 6, tw, c->label, dashTextWidth(c->label, DASH_FS_HERO) > tw ? DASH_FS_TITLE : DASH_FS_HERO, DASH_C_TEXT);
 		dashTextWrap(tx, y + 48, tw, 2, c->desc, DASH_FS_SMALL, DASH_C_TEXT3, 19);
 	}
 }
@@ -350,15 +349,16 @@ static void homeDraw(void)
 		dashGfxScissorReset();
 	}
 
-	/* Quick access chips */
+	/* Direct launch actions that are not duplicate section tabs. */
 	{
 		float cy = 358;
 		float x = 48;
 		float focus_x = 0, focus_w = 0;
+		float label_x = 0, label_w = 0;
 		static float chip_cam;
 		float target;
 
-		dashText(48, cy - 24, "Quick access", DASH_FS_SMALL, row == 1 ? DASH_C_TEXT : DASH_C_TEXT3);
+		dashText(48, cy - 24, "Quick launch", DASH_FS_SMALL, row == 1 ? DASH_C_TEXT : DASH_C_TEXT3);
 		if (row == 1)
 			dashRect(48, cy - 6, 24, 2, DASH_C_ACCENT);
 		/* measure focus position for horizontal scrolling */
@@ -388,10 +388,23 @@ static void homeDraw(void)
 			if (foc)
 				dashDrawSelection(x, cy, w, 32, 16, 1.0f);
 			dashIcon(chips[i].icon, x + 12, cy + 8, 16, dashItemColor(foc));
-			dashTextFit(x + 34, cy + 9.5f, w - 44, chips[i].label, DASH_FS_SMALL, dashItemColor(foc));
+			if (foc) {
+				label_x = x + 34;
+				label_w = w - 44;
+			} else
+				dashTextFit(x + 34, cy + 9.5f, w - 44, chips[i].label, DASH_FS_SMALL, dashItemColor(0));
 			x += w + 8;
 		}
 		dashGfxScissorReset();
+		if (row == 1 && label_w > 0) {
+			if (label_x < DASH_SAFE_L - 6) {
+				label_w -= DASH_SAFE_L - 6 - label_x;
+				label_x = DASH_SAFE_L - 6;
+			}
+			if (label_x + label_w > DASH_SAFE_R + 6)
+				label_w = DASH_SAFE_R + 6 - label_x;
+			dashTextScroll(label_x, cy + 9.5f, label_w, chips[col[1]].label, DASH_FS_SMALL, dashItemColor(1));
+		}
 	}
 }
 

@@ -50,7 +50,7 @@ foreground behind a short loading overlay.
 
 | Section  | What it does |
 |----------|--------------|
-| HOME     | Hero panel for the focused item, a *Continue* row (pinned, recent, favorite apps), quick-access chips (library, File Browser, start disc, devices, tools, settings and every launch key from LAUNCHELF.CNF) and live device status. |
+| HOME     | Hero panel for the focused item, a *Continue* row (pinned, recent, favorite apps), and quick-launch chips for starting a disc or a configured launch key. Section tabs at the top provide Apps, Files, Devices, Tools and Settings. Long focused labels scroll inside their available space. |
 | APPS     | ELF library in **Grid**, **List** or **Carousel** view (SELECT switches, saved). Filters: all, favorites, memory cards, USB, HDD, other. |
 | FILES    | Entry points into the full FileBrowser: device list, last folder, MISC commands, each detected device and your PathPad bookmarks. |
 | DEVICES  | Cards for memory cards (type, free space), USB, MMCE, MX4SIO, HDD, exFAT HDD, disc, UDPFS, PSX flash/DVR HDD and mounted VMCs. |
