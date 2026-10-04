@@ -170,6 +170,29 @@ static void listMisc(void)
 static void openDir(const char *dir, const char *select)
 {
 	FbListJob *j;
+	char usb_dir[8] = "usb0:/";
+
+	/* Match the classic browser: the unnumbered USB root is a request to
+	 * discover a drive, not an alias for unit 0. Do this before submitting
+	 * the folder read so driver loads and discovery stay on the UI thread. */
+	if (!strcmp(dir, "usb:") || !strcmp(dir, "usb:/") ||
+	    !strcmp(dir, "mass:") || !strcmp(dir, "mass:/")) {
+		int unit;
+
+		if (!dashWorkerAwaitAll("Finishing up"))
+			return;
+		dashLoadingBegin("Finding USB storage");
+		unit = prepareUsbRootBrowse();
+		dashLoadingEnd();
+		if (unit < 0) {
+			dashToast(DASH_TOAST_WARN, "No USB storage device was found");
+			if (fb.dir[0] == '\0')
+				openDir("", NULL);
+			return;
+		}
+		usb_dir[3] = '0' + unit; /* prepareUsbRootBrowse returns units 0 or 1 */
+		dir = usb_dir;
+	}
 
 	fb.gen++;
 	fb.n = 0;
@@ -341,12 +364,24 @@ static void activate(void)
 		/* openDir("") rebuilds fb.devs, so keep a copy of the target */
 		dashStrCopy(path, d->browse, sizeof(path));
 		if (d->state == DASH_DEV_PROBE || d->state == DASH_DEV_ABSENT) {
+			int mask, unit;
+
 			if (dashDevicesStart(d, NULL, NULL) < 0)
 				return;
 			if (!dashDevicePathReady(path)) {
 				openDir("", path); /* the list shows the new state */
 				dashToast(DASH_TOAST_WARN, "Device not found");
 				return;
+			}
+			/* The USB probe has already discovered the units. Open its first
+			 * available unit directly instead of rescanning the generic root. */
+			if (!strcmp(path, "usb:/")) {
+				mask = filerUsbDriveMask();
+				for (unit = 0; unit < 10; unit++)
+					if (mask & (1 << unit))
+						break;
+				if (unit < 10)
+					snprintf(path, sizeof(path), "usb%d:/", unit);
 			}
 		}
 		openDir(path, NULL);
