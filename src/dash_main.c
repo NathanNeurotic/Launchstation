@@ -132,6 +132,7 @@ void dashSwitchSection(int s)
 	prev_section = section;
 	section = s;
 	section_anim = 0.0f;
+	dashUiFocusPoke();
 	dashSoundPlay(DASH_SND_TRANSITION);
 	if (screens[section]->enter)
 		screens[section]->enter();

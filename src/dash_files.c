@@ -232,6 +232,7 @@ static void fMove(int d)
 			return;
 	} while (fentries[s].kind == FE_HEADER);
 	fsel = s;
+	dashUiFocusPoke();
 }
 
 static void filesActivate(void)
@@ -354,13 +355,13 @@ static void filesDraw(void)
 		dashAccentGlow(dx + dw * 0.5f, dy + 70, 80, 60, 1.0f);
 		dashGfxBlend(DASH_BLEND_NORMAL);
 		dashIcon(e->icon >= 0 ? e->icon : DI_FOLDER, dx + dw * 0.5f - 32, dy + 38, 64, DASH_C_TEXT);
-		dashTextCenter(dx + dw * 0.5f, dy + 118, e->label, DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextScrollCenter(dx + dw * 0.5f, dy + 118, dw - 32, e->label, DASH_FS_LABEL, DASH_C_TEXT);
 		if (e->kind == FE_DEVICE && e->index < nfdevs) {
 			DashDevice *d = &fdevs[e->index];
-			dashTextCenter(dx + dw * 0.5f, dy + 150, d->status, DASH_FS_SMALL, d->state == DASH_DEV_READY ? DASH_C_OK : DASH_C_TEXT2);
+			dashTextScrollCenter(dx + dw * 0.5f, dy + 150, dw - 32, d->status, DASH_FS_SMALL, d->state == DASH_DEV_READY ? DASH_C_OK : DASH_C_TEXT2);
 			if (d->detail[0])
-				dashTextCenter(dx + dw * 0.5f, dy + 174, d->detail, DASH_FS_CAPTION, DASH_C_TEXT3);
-			dashTextCenter(dx + dw * 0.5f, dy + 200, d->mount, DASH_FS_CAPTION, DASH_C_TEXT3);
+				dashTextScrollCenter(dx + dw * 0.5f, dy + 174, dw - 32, d->detail, DASH_FS_CAPTION, DASH_C_TEXT3);
+			dashTextScrollCenter(dx + dw * 0.5f, dy + 200, dw - 32, d->mount, DASH_FS_CAPTION, DASH_C_TEXT3);
 			if (d->state == DASH_DEV_PROBE)
 				dashTextWrap(dx + 16, dy + 228, dw - 32, 3, "Its driver is loaded only when you open it, to keep startup fast.", DASH_FS_CAPTION, DASH_C_TEXT3, 18);
 		} else

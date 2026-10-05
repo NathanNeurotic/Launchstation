@@ -381,6 +381,8 @@ float dashTextS(float x, float y, const char *s, float scale, DashColor c); /* w
 void dashTextCenter(float cx, float y, const char *s, float scale, DashColor c);
 void dashTextRight(float rx, float y, const char *s, float scale, DashColor c);
 float dashTextFit(float x, float y, float maxw, const char *s, float scale, DashColor c);
+void dashTextScroll(float x, float y, float maxw, const char *s, float scale, DashColor c);
+void dashTextScrollCenter(float cx, float y, float maxw, const char *s, float scale, DashColor c);
 int dashTextWrap(float x, float y, float w, int max_lines, const char *s, float scale, DashColor c, float line_h);
 /* Legacy 8px monospace glyph (for the themed classic screens). */
 void dashFontLegacyChar(unsigned int c, int x, int y, u64 gs_color);
@@ -909,6 +911,7 @@ float dashTime(void);
 /* Visual-only tick, once before each dashboard/modal frame. No input or IO. */
 float dashVisualUpdate(void);
 float dashFrameDelta(void); /* measured delta of that tick, for draw-time easing */
+float dashUiFocusAge(void); /* seconds since the focused item changed */
 float dashAnimSpeed(void);
 float dashSectionAnim(void); /* 0..1 section-transition clock */
 

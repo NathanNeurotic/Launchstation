@@ -522,11 +522,18 @@ typedef struct
 static Toast toasts[TOAST_MAX];
 static int ntoasts;
 static float focus_pop = 1.0f;
+static float focus_since;
 
 void dashUiFocusPoke(void)
 {
+	focus_since = dashTime();
 	if (dashCfg.anim > 0)
 		focus_pop = 0.0f;
+}
+
+float dashUiFocusAge(void)
+{
+	return dashTime() - focus_since;
 }
 
 float dashUiFocusPop(void)
@@ -538,6 +545,7 @@ float dashUiFocusPop(void)
 void dashUiInit(void)
 {
 	ntoasts = 0;
+	focus_since = dashTime();
 	last_input_ms = Timer();
 }
 

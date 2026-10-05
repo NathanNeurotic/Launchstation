@@ -39,6 +39,7 @@ code += r"""
 enum { DASH_TOAST_INFO, DASH_TOAST_OK, DASH_SEC_HOME };
 enum { DASH_SND_CANCEL };
 static void dashSoundPlay(int s) { assert(s == DASH_SND_CANCEL); }
+static void dashUiFocusPoke(void) {}
 static struct { int sound, bgm, artwork; } dashCfg;
 static struct { int font, wallpaper, clock; } dashTheme;
 static struct { int usbkbd_used; char LK_Path[SETTING_LK_COUNT][MAX_PATH]; } config;
