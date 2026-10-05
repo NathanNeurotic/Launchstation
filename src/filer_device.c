@@ -2,6 +2,7 @@
 //File name:   filer_device.c
 //--------------------------------------------------------------
 #include "filer_internal.h"
+#include "init.h"
 
 enum {
 	TRANSFER_STORAGE_DEFAULT = 0,
