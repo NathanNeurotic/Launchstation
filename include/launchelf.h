@@ -335,6 +335,7 @@ typedef struct
 } data_ip_struct;
 
 extern char LaunchElfDir[MAX_PATH], LaunchElfBootDir[MAX_PATH], LastDir[MAX_NAME];
+const char *wleBootElfPath(void);
 extern char LoadedConfigPath[MAX_PATH], LoadedIPConfigPath[MAX_PATH];
 
 #ifndef IPCONF_MAX_LEN
@@ -549,6 +550,7 @@ void filerPasteModeInto(char *mess, char *path, int rename);
 void filerPsuPasteInto(char *mess, char *path);
 const char *filerPsuPasteLabel(const char *path);
 int filerMountVmc(const char *path, const FILEINFO *file, int slot, char *msg, int msg_size);
+int filerUnmountVmc(int slot);
 int filerCreateFolderIcon(const char *path, const char *title, const char *text, char *msg, int msg_size);
 int filerFreeSpace(const char *path, u64 *out);
 void filerLaunchElfFolder(char *out, int size);
