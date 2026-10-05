@@ -8,6 +8,7 @@
 #include "main_menu.h"
 #include "main_modules.h"
 #include "main_startup.h"
+#include "mmce_igr.h"
 #include "dash.h"
 
 //#define DEBUG
@@ -135,6 +136,14 @@ int main(int argc, char *argv[])
 
 	captureBootArguments(argc, argv, &boot_argc, boot_argv, 8);
 	boot = performEarlyBootInitialization((argc > 0) ? argv[0] : NULL, boot_path, sizeof(boot_path), mainMsg, CNF, sizeof(CNF), &CNF_error);
+
+	if (mmceIgrRequested(argc, argv)) {
+		MmceIgrResult igr_result;
+		mmceIgrRunAutoBackup(&igr_result);
+		/* MMCE is an exclusive SIO2 storage mode. Restore the device wLE
+		 * actually booted from before normal dashboard/runtime startup. */
+		bringUpBootDeviceStack(boot);
+	}
 
 	MainMenuState_Init(&menu_state);
 	initializeRuntimeInputModules(boot);
