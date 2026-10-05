@@ -499,6 +499,36 @@ float dashTextFit(float x, float y, float maxw, const char *str, float scale, Da
 	return dashTextS(x, y, buf, scale, c);
 }
 
+void dashTextScroll(float x, float y, float maxw, const char *str, float scale, DashColor c)
+{
+	float width, travel, phase, duration, offset;
+
+	if (str == NULL || maxw <= 0.0f)
+		return;
+	width = dashTextWidth(str, scale);
+	if (width <= maxw) {
+		dashTextS(x, y, str, scale, c);
+		return;
+	}
+	travel = width - maxw;
+	duration = travel / 30.0f;
+	phase = fmodf(dashUiFocusAge(), duration + 2.0f);
+	offset = phase <= 1.0f ? 0.0f : (phase >= duration + 1.0f ? travel : (phase - 1.0f) * 30.0f);
+	dashGfxScissor(x, y - 2.0f, maxw, dashTextLineH(scale) + 4.0f);
+	dashTextS(x - offset, y, str, scale, c);
+	dashGfxScissorReset();
+}
+
+void dashTextScrollCenter(float cx, float y, float maxw, const char *str, float scale, DashColor c)
+{
+	if (str == NULL || maxw <= 0.0f)
+		return;
+	if (dashTextWidth(str, scale) <= maxw)
+		dashTextCenter(cx, y, str, scale, c);
+	else
+		dashTextScroll(cx - maxw * 0.5f, y, maxw, str, scale, c);
+}
+
 int dashTextWrap(float x, float y, float w, int max_lines, const char *str, float scale, DashColor c, float line_h)
 {
 	const char *p = str;

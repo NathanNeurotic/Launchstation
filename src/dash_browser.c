@@ -36,6 +36,8 @@ static struct
 	u8 *mark;
 	int n, nmarked;
 	int loading;
+	int usb_input_jobs; /* outstanding USB/mass list jobs that must not overlap PAD */
+	int input_rearm;    /* swallow presses accumulated while USB fileXio was active */
 	int gen;
 	int sel, top;
 	float sel_anim;
@@ -64,6 +66,7 @@ typedef struct
 	int n;
 	int abandoned;
 	int titles; /* read the game titles (saves, PSU files) */
+	int quiet_input;
 	u64 free_bytes;
 	int free_valid;
 } FbListJob;
@@ -78,6 +81,11 @@ static int isPartitionList(const char *dir)
 {
 	return (!strncmp(dir, "hdd", 3) && dir[3] >= '0' && dir[3] <= '9' && !strcmp(dir + 4, ":/")) ||
 	       !strcmp(dir, "dvr_hdd0:/");
+}
+
+static int isUsbBrowsePath(const char *dir)
+{
+	return dir != NULL && (!strncmp(dir, "usb", 3) || !strncmp(dir, "mass", 4));
 }
 
 static void listRun(void *arg)
@@ -137,6 +145,11 @@ static void listDone(void *arg)
 		if (fb.want_sel[0])
 			selectName(fb.want_sel);
 		fb.want_sel[0] = '\0';
+	}
+	if (j->quiet_input && fb.usb_input_jobs > 0) {
+		fb.usb_input_jobs--;
+		if (fb.usb_input_jobs == 0)
+			fb.input_rearm = 1;
 	}
 	free(j->files);
 	free(j);
@@ -198,6 +211,7 @@ static void openDir(const char *dir, const char *select)
 	fb.n = 0;
 	fb.nmarked = 0;
 	fb.free_valid = 0;
+	fb.input_rearm = 0;
 	fb.sel = fb.top = 0;
 	fb.sel_anim = 0.0f;
 	fb.want_sel[0] = '\0';
@@ -273,6 +287,7 @@ static void openDir(const char *dir, const char *select)
 	j->n = 0;
 	j->abandoned = 0;
 	j->titles = (fb_show == 2 || fb_sort == 2);
+	j->quiet_input = isUsbBrowsePath(dir);
 	j->free_valid = 0;
 	dashStrCopy(j->path, dir, sizeof(j->path));
 	fb.loading = 1;
@@ -281,6 +296,8 @@ static void openDir(const char *dir, const char *select)
 		free(j);
 		fb.loading = 0;
 		dashToast(DASH_TOAST_WARN, "Busy, try again in a moment");
+	} else if (j->quiet_input) {
+		fb.usb_input_jobs++;
 	}
 }
 
@@ -1250,7 +1267,7 @@ static void browserScene(void)
 	dashBgDraw();
 	dashIcon(DI_FOLDER, FB_X, 20, 24, DASH_C_ACCENT);
 	dashTextS(FB_X + 32, 20, "File Browser", DASH_FS_TITLE, DASH_C_TEXT);
-	dashTextFit(FB_X, 58, FB_W - 150, fb.dir[0] ? fb.dir : "Choose a device", DASH_FS_SMALL, DASH_C_TEXT2);
+	dashTextScroll(FB_X, 58, FB_W - 150, fb.dir[0] ? fb.dir : "Choose a device", DASH_FS_SMALL, DASH_C_TEXT2);
 	if (fb.dir[0]) {
 		char space[24];
 
@@ -1371,7 +1388,19 @@ void dashFileBrowser(const char *start_dir)
 	while (running) {
 		int total, prev;
 
-		dashInputPoll(&in);
+		/* The classic wLaunchELF browser serializes USB directory I/O and PAD
+		 * polling. Keep the dashboard animated, but preserve that ordering for
+		 * USB: fileXio runs on the worker while input stays untouched. Once the
+		 * listing completion is applied, re-anchor the pad state before accepting
+		 * a new action so the confirm press that opened USB cannot leak through. */
+		if (fb.input_rearm && !dashWorkerIoBusy()) {
+			dashInputFlush();
+			fb.input_rearm = 0;
+		}
+		if (fb.usb_input_jobs > 0 && dashWorkerIoBusy())
+			memset(&in, 0, sizeof(in));
+		else
+			dashInputPoll(&in);
 		total = fb.dir[0] ? fb.n : fb.ndevs;
 		prev = fb.sel;
 		if (!fb.loading) {

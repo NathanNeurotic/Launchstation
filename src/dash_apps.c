@@ -484,7 +484,7 @@ static void drawGrid(void)
 		float maxw = 200.0f;
 		float x = 514.0f - (tw < maxw ? tw : maxw);
 		dashIcon(dashLibDeviceIcon(a->path), x - 22, 76, 16, DASH_C_ACCENT);
-		dashTextFit(x, 73, maxw, a->title, DASH_FS_SMALL, DASH_C_TEXT);
+		dashTextScroll(x, 73, maxw, a->title, DASH_FS_SMALL, DASH_C_TEXT);
 	}
 }
 
@@ -533,7 +533,7 @@ static void drawList(void)
 
 		dashDrawCard(dx, dy, dw, 290, 16);
 		dashDrawAppArt(a, dx + (dw - 132) * 0.5f, dy + 14, 132, 132, 1.0f, 0);
-		dashTextFit(dx + 14, dy + 156, dw - 28, a->title, DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextScroll(dx + 14, dy + 156, dw - 28, a->title, DASH_FS_LABEL, DASH_C_TEXT);
 		dashLibDeviceLabel(a->path, dev, sizeof(dev));
 		dashIcon(dashLibDeviceIcon(a->path), dx + 14, dy + 186, 14, DASH_C_ACCENT);
 		dashTextFit(dx + 34, dy + 184, dw - 48, dev, DASH_FS_CAPTION, DASH_C_ACCENT);
@@ -545,7 +545,7 @@ static void drawList(void)
 			if (line[0])
 				dashTextFit(dx + 14, dy + 206, dw - 28, line, DASH_FS_CAPTION, DASH_C_TEXT2);
 		}
-		dashTextFit(dx + 14, dy + 264, dw - 28, a->path, DASH_FS_CAPTION * 0.9f, DASH_C_TEXT3);
+		dashTextScroll(dx + 14, dy + 264, dw - 28, a->path, DASH_FS_CAPTION * 0.9f, DASH_C_TEXT3);
 	}
 }
 
@@ -595,9 +595,9 @@ static void drawCarousel(void)
 	}
 	if (a != NULL) {
 		dashDrawTileFocus(cx - 86, cy - 86, 172, 172, 17, 1.0f);
-		dashTextCenter(cx, 306, a->title, DASH_FS_TITLE, DASH_C_TEXT);
+		dashTextScrollCenter(cx, 306, 500, a->title, DASH_FS_TITLE, DASH_C_TEXT);
 		if (a->desc[0])
-			dashTextCenter(cx, 342, a->desc, DASH_FS_SMALL, DASH_C_TEXT2);
+			dashTextScrollCenter(cx, 342, 500, a->desc, DASH_FS_SMALL, DASH_C_TEXT2);
 		else {
 			char dev[48];
 			dashLibDeviceLabel(a->path, dev, sizeof(dev));
