@@ -18,6 +18,7 @@
 #include "filer_shared.h"
 #include "filer_actions.h"
 #include "filer_copy.h"
+#include "mc_card_export.h"
 #include "gui_sort.h"
 #include "init.h"
 
@@ -682,6 +683,81 @@ static void opMountVmc(int slot)
 	openDir(dev, NULL);
 }
 
+static void cardExportProgress(int phase, u64 done, u64 total)
+{
+	int scaled = total ? (int)((done * 1000) / total) : 0;
+	dashLoadingStatus(phase == MC_CARD_EXPORT_VERIFY ? "Verifying exported card" : "Converting memory card", scaled, 1000);
+}
+
+static void opConvertCard(int to_pcsx2)
+{
+	FILEINFO *f;
+	char source[MAX_PATH], folder[MAX_PATH], dest[MAX_PATH], name[MAX_NAME], *dot;
+	const char *want_ext = to_pcsx2 ? "MCD" : "PS2";
+	const char *new_ext = to_pcsx2 ? ".ps2" : ".mcd";
+	int r, prep;
+
+	if (fb.sel >= fb.n)
+		return;
+	f = &fb.files[fb.sel];
+	if (isDir(f) || !genCmpFileExt(f->name, want_ext) || !fullPath(f, source, sizeof(source)))
+		return;
+
+	dashStrCopy(folder, fb.dir, sizeof(folder));
+	if (!dashPickPath(to_pcsx2 ? "Export PCSX2 memory card to" : "Convert PCSX2 card to .mcd in",
+	                  folder, DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
+		return;
+
+	dashStrCopy(name, f->name, sizeof(name));
+	dot = strrchr(name, '.');
+	if (dot == NULL)
+		return;
+	strcpy(dot, new_ext);
+	if (snprintf(dest, sizeof(dest), "%s%s", folder, name) >= (int)sizeof(dest)) {
+		dashToast(DASH_TOAST_WARN, "Destination path is too long");
+		return;
+	}
+	if (wleExists(dest) && !dashModalConfirm("Replace existing card image?", dest, "Replace", 1))
+		return;
+	if (!prepareOp())
+		return;
+
+	prep = prepareTransferDeviceStacks(source, dest);
+	if (prep != TRANSFER_STACK_READY) {
+		dashModalMessage(DI_WARNING, "Cannot convert there",
+		                 prep == TRANSFER_STACK_INCOMPATIBLE ?
+		                     "The source and destination require device stacks that cannot stay active together." :
+		                     "The source or destination device could not be started.",
+		                 dest);
+		return;
+	}
+
+	dashLoadingBegin(to_pcsx2 ? "Exporting PCSX2 memory card" : "Creating no-ECC memory card");
+	r = to_pcsx2 ? mcCardExportPcsx2(source, dest, cardExportProgress) :
+	               mcCardImportPcsx2(source, dest, cardExportProgress);
+	dashLoadingEnd();
+
+	if (r == MC_CARD_EXPORT_OK) {
+		dashToast(DASH_TOAST_OK, to_pcsx2 ?
+		          "PCSX2 .ps2 export written and verified" :
+		          "No-ECC .mcd image written and verified");
+		refresh();
+	} else if (r == MC_CARD_EXPORT_FORMAT) {
+		dashModalMessage(DI_WARNING, "Not converted",
+		                 to_pcsx2 ?
+		                     "This is not a valid no-ECC PS2 memory-card image." :
+		                     "This is not a valid PCSX2 528-byte/page memory-card image.",
+		                 source);
+	} else if (r == MC_CARD_EXPORT_VERIFY_FAILED) {
+		dashModalMessage(DI_WARNING, "Verification failed",
+		                 "The converted file did not match the source data and was removed.", dest);
+	} else {
+		dashModalMessage(DI_WARNING, "Conversion failed",
+		                 "The source could not be read or the destination could not be written. Any incomplete output was removed.",
+		                 dest);
+	}
+}
+
 static void opNewIcon(void)
 {
 	char title[40], text[40];
@@ -1008,8 +1084,8 @@ static void actionsMenu(void)
 	const char *psu_label;
 	int in_folder = fb.dir[0] && !isMisc(fb.dir);
 	int is_elf = 0, has_target = (fb.nmarked > 0 || f != NULL);
-	DashMenuItem items[28];
-	int ids[28], n = 0, r;
+	DashMenuItem items[32];
+	int ids[32], n = 0, r;
 	char marked[24];
 	enum {
 		F_OPEN,
@@ -1028,6 +1104,8 @@ static void actionsMenu(void)
 		F_TITLECFG,
 		F_VMC0,
 		F_VMC1,
+		F_EXPORT_PS2,
+		F_IMPORT_MCD,
 		F_TUNA,
 		F_DATES,
 		F_SELALL,
@@ -1084,6 +1162,10 @@ static void actionsMenu(void)
 			ADD(DI_MC, "Mount as vmc0:", vmcMounted[0] ? "replaces the mounted one" : NULL, 0, F_VMC0);
 			ADD(DI_MC, "Mount as vmc1:", vmcMounted[1] ? "replaces the mounted one" : NULL, !en[MOUNTVMC1], F_VMC1);
 		}
+		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "MCD"))
+			ADD(DI_MC, "Export as PCSX2 .ps2...", "adds ECC and verifies the copy", 0, F_EXPORT_PS2);
+		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "PS2"))
+			ADD(DI_MC, "Convert to no-ECC .mcd...", "strips PCSX2 spare bytes and verifies", 0, F_IMPORT_MCD);
 		if (f != NULL && en[TIMEMANIP])
 			ADD(DI_CLOCK, LNG(time_manip), "2099-12-31", 0, F_TUNA);
 		if (en[TIMEMANIP_CUSTOM])
@@ -1158,6 +1240,12 @@ static void actionsMenu(void)
 			break;
 		case F_VMC1:
 			opMountVmc(1);
+			break;
+		case F_EXPORT_PS2:
+			opConvertCard(1);
+			break;
+		case F_IMPORT_MCD:
+			opConvertCard(0);
 			break;
 		case F_TUNA:
 			opTimestamps(0);
