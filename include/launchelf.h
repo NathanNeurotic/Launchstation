@@ -307,6 +307,7 @@ typedef struct
 	int screen_y;
 	int swapKeys;
 	int HOSTwrite;
+	int legacy_net_drivers;
 	int app_gameid;
 	int cdrom_disable_gameid;
 	int TV_mode;

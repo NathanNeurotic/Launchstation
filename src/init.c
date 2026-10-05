@@ -10,6 +10,8 @@
 //IRX for togleable features
 #ifdef ETH
 IMPORT_BIN2C(ps2ip_irx);
+IMPORT_BIN2C(ps2dev9_v10_irx);
+IMPORT_BIN2C(ps2ip_v10_irx);
 IMPORT_BIN2C(ps2smap_irx);
 IMPORT_BIN2C(ps2host_irx);
 IMPORT_BIN2C(ps2netfs_irx);
@@ -208,6 +210,12 @@ static int network_stack_mode = NETWORK_STACK_NONE;
 
 //State of whether DEV9 was successfully loaded or not.
 static u8 ps2dev9_loaded = 0;
+enum {
+	DEV9_VARIANT_NONE = 0,
+	DEV9_VARIANT_CURRENT,
+	DEV9_VARIANT_PS2SDK_V10
+};
+static u8 ps2dev9_variant = DEV9_VARIANT_NONE;
 
 /* Globals owned by main.c but needed by init flow. */
 extern u8 console_is_PSX;
@@ -357,12 +365,31 @@ static void resetUsbHostControllerBeforeIopReset(void)
 static void load_ps2dev9(void)
 {
 	int ID, rcode;
+	int desired_variant = DEV9_VARIANT_CURRENT;
+	const void *module = ps2dev9_irx;
+	int module_size = size_ps2dev9_irx;
+
+#ifdef ETH
+	if (setting != NULL && setting->legacy_net_drivers) {
+		desired_variant = DEV9_VARIANT_PS2SDK_V10;
+		module = ps2dev9_v10_irx;
+		module_size = size_ps2dev9_v10_irx;
+	}
+#endif
+
+	/* DEV9 is shared by Ethernet and ATA/HDD. Switching driver families
+	 * requires a clean IOP instead of stacking a second DEV9. */
+	if (ps2dev9_loaded && ps2dev9_variant != desired_variant)
+		resetRuntimeDeviceState(TRUE);
 
 	if (!have_ps2dev9) {
-		ID = SifExecModuleBuffer(ps2dev9_irx, size_ps2dev9_irx, 0, NULL, &rcode);
-		DPRINTF(" [DEV9]: ID=%d, ret=%d\n", ID, rcode);
-		ps2dev9_loaded = (ID >= 0 && rcode == 0);  //DEV9.IRX must have successfully loaded and returned RESIDENT END.
-		have_ps2dev9 = 1;
+		ID = SifExecModuleBuffer(module, module_size, 0, NULL, &rcode);
+		DPRINTF(" [DEV9%s]: ID=%d, ret=%d\n",
+		        desired_variant == DEV9_VARIANT_PS2SDK_V10 ? " v1.0" : "",
+		        ID, rcode);
+		ps2dev9_loaded = (ID >= 0 && rcode == 0);
+		have_ps2dev9 = ps2dev9_loaded;
+		ps2dev9_variant = ps2dev9_loaded ? desired_variant : DEV9_VARIANT_NONE;
 	}
 }
 //------------------------------
@@ -448,8 +475,16 @@ static void load_ps2ip(void)
 	}
 
 	if (!have_ps2ip) {
-		ID = SifExecModuleBuffer(ps2ip_irx, size_ps2ip_irx, 0, NULL, &ret);
-		DPRINTF(" [PS2IP]: ID=%d, ret=%d\n", ID, ret);
+		const void *ip_module = ps2ip_irx;
+		int ip_module_size = size_ps2ip_irx;
+		if (ps2dev9_variant == DEV9_VARIANT_PS2SDK_V10) {
+			ip_module = ps2ip_v10_irx;
+			ip_module_size = size_ps2ip_v10_irx;
+		}
+		ID = SifExecModuleBuffer(ip_module, ip_module_size, 0, NULL, &ret);
+		DPRINTF(" [PS2IP%s]: ID=%d, ret=%d\n",
+		        ps2dev9_variant == DEV9_VARIANT_PS2SDK_V10 ? " v1.0" : "",
+		        ID, ret);
 		have_ps2ip = (ID >= 0 && ret >= 0);
 		if (!have_ps2ip)
 			return;
@@ -1957,6 +1992,7 @@ static void clearIopModuleState(void)
 #endif
 	resetDriverStackLoadTracking();
 	ps2dev9_loaded = 0;
+	ps2dev9_variant = DEV9_VARIANT_NONE;
 	done_setupPowerOff = 0;
 	ps2kbd_opened = 0;
 #ifdef XFROM

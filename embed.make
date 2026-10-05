@@ -714,6 +714,9 @@ $(EE_OBJS_DIR)vmcman_irx.o: $(EE_ASM_DIR)vmcman_irx.c | $(EE_OBJS_DIR)
 $(EE_ASM_DIR)ps2dev9_irx.s: $(PS2SDK)/iop/irx/ps2dev9.irx | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ ps2dev9_irx
 
+$(EE_ASM_DIR)ps2dev9_v10_irx.s: iop/__v10/ps2dev9.irx | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ ps2dev9_v10_irx
+
 LOCAL_DEV9_POWEROFF_IRX := iop/dev9_poweroff/dev9_poweroff.irx
 DEV9_POWEROFF_DEPS := $(wildcard iop/dev9_poweroff/*.[ch]) iop/dev9_poweroff/imports.lst iop/dev9_poweroff/Makefile
 
@@ -726,6 +729,9 @@ $(EE_ASM_DIR)dev9_poweroff_irx.s: $(LOCAL_DEV9_POWEROFF_IRX) | $(EE_ASM_DIR)
 ifeq ($(ETH),1)
 $(EE_ASM_DIR)ps2ip_irx.s: $(PS2SDK)/iop/irx/ps2ip.irx | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ ps2ip_irx
+
+$(EE_ASM_DIR)ps2ip_v10_irx.s: iop/__v10/ps2ip.irx | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ ps2ip_v10_irx
 
 $(EE_ASM_DIR)udptty.s: $(PS2SDK)/iop/irx/udptty.irx | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ udptty_irx

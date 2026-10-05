@@ -534,6 +534,7 @@ char *configBuildSaveText(int *out_size)
 	        "Menu_Hide_Paths = %d\r\n"
 	        "GUI_Swap_Keys = %d\r\n"
 	        "NET_HOSTwrite = %d\r\n"
+	        "NET_LegacyDrivers = %d\r\n"
 	        "APP_GameID = %d\r\n"
 	        "CDROM_Disable_GameID = %d\r\n"
 	        "Init_Delay = %d\r\n"
@@ -560,6 +561,7 @@ char *configBuildSaveText(int *out_size)
 	        setting->Hide_Paths,       //Menu_Hide_Paths
 	        setting->swapKeys,         //GUI_Swap_Keys
 	        setting->HOSTwrite,        //NET_HOST_write
+	        setting->legacy_net_drivers, //NET_LegacyDrivers
 	        setting->app_gameid,       //app_gameid
 	        setting->cdrom_disable_gameid, //cdrom_disable_gameid
 	        setting->Init_Delay,       //Init_Delay
@@ -753,6 +755,7 @@ void initConfig(void)
 	setting->Menu_Frame = DEF_MENU_FRAME;
 	setting->swapKeys = DEF_SWAPKEYS;
 	setting->HOSTwrite = DEF_HOSTWRITE;
+	setting->legacy_net_drivers = DEF_LEGACY_NET_DRIVERS;
 	setting->app_gameid = DEF_APP_GAMEID;
 	setting->cdrom_disable_gameid = DEF_CDROM_DISABLE_GAMEID;
 	setting->TV_mode = TV_mode_AUTO;
@@ -908,6 +911,8 @@ int loadConfig(char *mainMsg, char *CNF)
 				setting->swapKeys = atoi(value);
 		else if (!strcmp(name, "NET_HOSTwrite"))
 			setting->HOSTwrite = atoi(value);
+		else if (!strcmp(name, "NET_LegacyDrivers"))
+			setting->legacy_net_drivers = (atoi(value) != 0);
 		else if (!strcmp(name, "APP_GameID") || !strcmp(name, "app_gameid") || !strcmp(name, "Enable_GameID"))
 			setting->app_gameid = atoi(value);
 		else if (!strcmp(name, "CDROM_Disable_GameID") || !strcmp(name, "cdrom_disable_gameid") || !strcmp(name, "Disable_Disc_GameID"))
