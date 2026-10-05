@@ -234,6 +234,8 @@ void dashStoreDefaults(void)
 	dashCfg.bgm_vol = 80;
 	dashCfg.app_filter = 0;
 	dashCfg.dev_auto = 0; /* devices start manually; only the boot device is always on */
+	dashCfg.mmce_backup_keep = 10;
+	dashCfg.mmce_backup_format = 0; /* native .mcd */
 	for (i = 0; i < (int)(sizeof(default_scan) / sizeof(default_scan[0])); i++)
 		dashStrCopy(dashCfg.scan[dashCfg.nscan++], default_scan[i], DASH_PATH_MAX);
 }
@@ -306,6 +308,10 @@ static int settingsKv(const char *key, char *value, void *user)
 		dashCfg.app_filter = clampInt(value, 0, 5, 0);
 	else if (!stricmp(key, "Dash_DevAuto"))
 		dashCfg.dev_auto = clampInt(value, 0, DASH_DEVA_ALL, 0);
+	else if (!stricmp(key, "Dash_MMCEBackupKeep"))
+		dashCfg.mmce_backup_keep = clampInt(value, 0, 99, 10);
+	else if (!stricmp(key, "Dash_MMCEBackupFormat"))
+		dashCfg.mmce_backup_format = clampInt(value, 0, 1, 0);
 	else if (dashThemeStoreKey(key, value))
 		;
 	else if (!stricmp(key, "Dash_Scan")) {
@@ -441,11 +447,14 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                "Dash_BGM = %d\r\n"
 	                "Dash_BGMVolume = %d\r\n"
 	                "Dash_AppFilter = %d\r\n"
-	                "Dash_DevAuto = %d\r\n",
+	                "Dash_DevAuto = %d\r\n"
+	                "Dash_MMCEBackupKeep = %d\r\n"
+	                "Dash_MMCEBackupFormat = %d\r\n",
 	                c->enabled, c->start_section, c->view, c->effects,
 	                c->anim, c->autoscan, c->artwork, c->recent_count,
 	                c->legacy_theme, c->intro_done, c->sound, c->sound_vol,
-	                c->bgm, c->bgm_vol, c->app_filter, c->dev_auto);
+	                c->bgm, c->bgm_vol, c->app_filter, c->dev_auto,
+	                c->mmce_backup_keep, c->mmce_backup_format);
 	for (i = 0; i < c->nscan && len < cap - DASH_PATH_MAX - 16; i++)
 		len += snprintf(buf + len, cap - len, "Dash_Scan = %s\r\n", c->scan[i]);
 	/* theme: preset name, plus a full snapshot once customised */
