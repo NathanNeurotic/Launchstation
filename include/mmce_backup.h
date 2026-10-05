@@ -31,6 +31,16 @@ int mmceExportActivePcsx2ToFolder(int unit, const char *folder,
                                   McCardExportProgress progress,
                                   char *out_path, size_t out_path_size);
 
+/* Keep verified history for an explicitly addressed no-ECC card image.
+ * prefix must be a filename-safe card identity (normally the .mcd basename). */
+int mmceBackupCardFileHistory(const char *source, const char *folder,
+                              const char *prefix, int keep,
+                              McCardExportProgress progress,
+                              char *out_path, size_t out_path_size);
+
+/* Ensure every directory component in a device path exists. */
+int mmceEnsureDirectoryTree(const char *path);
+
 /* Create and return wLaunchELF's local automatic-backup directory on the
  * selected MMCE microSD. */
 int mmceEnsureAutoBackupFolder(int unit, char *out, size_t out_size);
