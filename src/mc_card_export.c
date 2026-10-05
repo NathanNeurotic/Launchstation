@@ -139,27 +139,20 @@ static u32 read_le32(const u8 *p)
 	return (u32)p[0] | ((u32)p[1] << 8) | ((u32)p[2] << 16) | ((u32)p[3] << 24);
 }
 
-static int source_info(const char *path, u64 *size)
+static int source_info_fd(int fd, u64 *size)
 {
 	static const char magic[] = "Sony PS2 Memory Card Format ";
 	u8 header[64];
 	u16 page_size, pages_per_cluster;
 	u32 clusters_per_card;
 	u64 expected;
-	int fd;
 	s64 end;
 
-	fd = genOpen(path, FIO_O_RDONLY);
-	if (fd < 0)
-		return MC_CARD_EXPORT_OPEN;
-	if (genRead(fd, header, sizeof(header)) != (int)sizeof(header) ||
-	    memcmp(header, magic, sizeof(magic) - 1) != 0) {
-		genClose(fd);
+	if (genLseek(fd, 0, SEEK_SET) != 0 ||
+	    genRead(fd, header, sizeof(header)) != (int)sizeof(header) ||
+	    memcmp(header, magic, sizeof(magic) - 1) != 0)
 		return MC_CARD_EXPORT_FORMAT;
-	}
 	end = genLseek(fd, 0, SEEK_END);
-	if (genClose(fd) < 0)
-		return MC_CARD_EXPORT_IO;
 
 	/* MCMAN superblock geometry (AFL-2.0 mcman-internal.h):
 	 * magic[28], version[12], pagesize, pages_per_cluster, blocksize,
@@ -176,6 +169,93 @@ static int source_info(const char *path, u64 *size)
 
 	*size = expected;
 	return MC_CARD_EXPORT_OK;
+}
+
+static int source_info(const char *path, u64 *size)
+{
+	int fd, ret;
+
+	fd = genOpen(path, FIO_O_RDONLY);
+	if (fd < 0)
+		return MC_CARD_EXPORT_OPEN;
+	ret = source_info_fd(fd, size);
+	if (genClose(fd) < 0 && ret == MC_CARD_EXPORT_OK)
+		ret = MC_CARD_EXPORT_IO;
+	return ret;
+}
+
+static int read_exact_fd(int fd, u64 pos, u8 *buf, int size)
+{
+	int total = 0;
+
+	if (genLseek(fd, (s64)pos, SEEK_SET) != (s64)pos)
+		return -1;
+	while (total < size) {
+		int r = genRead(fd, buf + total, size - total);
+		if (r <= 0)
+			return -1;
+		total += r;
+	}
+	return 0;
+}
+
+int mcCardBackupActiveMmce(const char *source, const char *dest, McCardExportProgress progress)
+{
+	u64 src_size = 0, pos = 0;
+	int src_fd = -1, ret, chunk;
+	char remove_path[MAX_PATH];
+
+	if (source == NULL || dest == NULL || source[0] == '\0' || dest[0] == '\0')
+		return MC_CARD_EXPORT_FORMAT;
+	if (!strcmp(source, dest))
+		return MC_CARD_EXPORT_SAME_PATH;
+
+	/* The synthetic source owns no firmware filesystem descriptor itself.
+	 * Keeping it open prevents repeated RESET/probe cycles while destination
+	 * files are opened and closed normally. */
+	src_fd = genOpen(source, FIO_O_RDONLY);
+	if (src_fd < 0)
+		return MC_CARD_EXPORT_OPEN;
+	ret = source_info_fd(src_fd, &src_size);
+	if (ret != MC_CARD_EXPORT_OK)
+		goto close_source;
+
+	while (pos < src_size) {
+		chunk = (src_size - pos > MC_EXPORT_IN) ? MC_EXPORT_IN : (int)(src_size - pos);
+		if (read_exact_fd(src_fd, pos, export_in, chunk) < 0 ||
+		    write_exact_at(dest, pos, export_in, chunk, pos == 0) < 0) {
+			ret = MC_CARD_EXPORT_IO;
+			goto remove_bad;
+		}
+		pos += chunk;
+		if (progress)
+			progress(MC_CARD_EXPORT_WRITE, pos, src_size);
+	}
+
+	pos = 0;
+	while (pos < src_size) {
+		chunk = (src_size - pos > MC_EXPORT_IN) ? MC_EXPORT_IN : (int)(src_size - pos);
+		if (read_exact_fd(src_fd, pos, export_in, chunk) < 0 ||
+		    read_exact_at(dest, pos, verify_out, chunk) < 0 ||
+		    memcmp(export_in, verify_out, chunk) != 0) {
+			ret = MC_CARD_EXPORT_VERIFY_FAILED;
+			goto remove_bad;
+		}
+		pos += chunk;
+		if (progress)
+			progress(MC_CARD_EXPORT_VERIFY, pos, src_size);
+	}
+
+	ret = MC_CARD_EXPORT_OK;
+	goto close_source;
+
+remove_bad:
+	snprintf(remove_path, sizeof(remove_path), "%s", dest);
+	genRemove(remove_path);
+close_source:
+	if (src_fd >= 0 && genClose(src_fd) < 0 && ret == MC_CARD_EXPORT_OK)
+		ret = MC_CARD_EXPORT_IO;
+	return ret;
 }
 
 int mcCardBackupNoEcc(const char *source, const char *dest, McCardExportProgress progress)
