@@ -19,6 +19,7 @@
 #include "filer_actions.h"
 #include "filer_copy.h"
 #include "mc_card_export.h"
+#include "mmce_backup.h"
 #include "main_title.h"
 #include "gui_sort.h"
 #include "init.h"
@@ -911,6 +912,75 @@ static int mmceUnitFromPath(const char *path)
 	return path[4] - '0';
 }
 
+static void mmceTreeBackupProgress(const char *source, int done, int total)
+{
+	char line[112];
+	const char *name = source != NULL ? strrchr(source, '/') : NULL;
+
+	if (name != NULL)
+		name++;
+	else if (source != NULL)
+		name = source;
+	else
+		name = "card";
+
+	snprintf(line, sizeof(line), "MMCE cards %d/%d: %s", done, total, name);
+	dashLoadingStatus(line, done, total > 0 ? total : 1);
+}
+
+static void opBackupAllMmceCards(void)
+{
+	MmceBackupStats stats;
+	char source[MAX_PATH], folder[MAX_PATH], msg[192];
+	int unit = mmceUnitFromPath(fb.dir);
+	int r, prep;
+
+	if (unit < 0)
+		return;
+
+	snprintf(source, sizeof(source), "mmce%d:/MemoryCards", unit);
+	dashStrCopy(folder, fb.dir, sizeof(folder));
+	if (!dashPickPath("Back up all MMCE cards to", folder, DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
+		return;
+	if (!prepareOp())
+		return;
+
+	prep = prepareTransferDeviceStacks(source, folder);
+	if (prep != TRANSFER_STACK_READY) {
+		dashModalMessage(DI_WARNING, "Cannot back up there",
+		                 prep == TRANSFER_STACK_INCOMPATIBLE ?
+		                     "The MMCE source and destination require device stacks that cannot stay active together." :
+		                     "The MMCE source or destination device could not be started.",
+		                 folder);
+		return;
+	}
+
+	dashLoadingBegin("Backing up all MMCE cards");
+	r = mmceBackupAllCards(unit, folder, &stats, mmceTreeBackupProgress);
+	dashLoadingEnd();
+
+	if (r < 0) {
+		dashModalMessage(DI_WARNING, "MMCE card backup failed",
+		                 "The MemoryCards tree could not be read or the selected destination is not safe for this backup.",
+		                 folder);
+		return;
+	}
+
+	if (stats.candidates == 0) {
+		dashToast(DASH_TOAST_INFO, "No .mcd card images found under MemoryCards");
+		return;
+	}
+
+	snprintf(msg, sizeof(msg), "%d changed backed up, %d unchanged, %d failed (%d card images found).",
+	         stats.backed_up, stats.unchanged, stats.failed, stats.candidates);
+	if (stats.failed)
+		dashModalMessage(DI_WARNING, "MMCE backup completed with errors", msg,
+		                 "Verified successful backups were kept; failed card images were not.");
+	else
+		dashToast(DASH_TOAST_OK, msg);
+	refresh();
+}
+
 static void opBackupActiveMmce(void)
 {
 	char source[MAX_PATH], folder[MAX_PATH], dest[MAX_PATH], name[40];
@@ -1491,8 +1561,8 @@ static void actionsMenu(void)
 	const char *psu_label;
 	int in_folder = fb.dir[0] && !isMisc(fb.dir);
 	int is_elf = 0, has_target = (fb.nmarked > 0 || f != NULL);
-	DashMenuItem items[40];
-	int ids[40], n = 0, r;
+	DashMenuItem items[44];
+	int ids[44], n = 0, r;
 	char marked[24];
 	enum {
 		F_OPEN,
@@ -1511,6 +1581,7 @@ static void actionsMenu(void)
 		F_TITLECFG,
 		F_VMC0,
 		F_VMC1,
+		F_BACKUP_ALL_MMCE,
 		F_BACKUP_ACTIVE_MMCE,
 		F_EXPORT_ACTIVE_MMCE_PS2,
 		F_BACKUP_MCD,
@@ -1573,6 +1644,7 @@ static void actionsMenu(void)
 			ADD(DI_MC, "Mount as vmc1:", vmcMounted[1] ? "replaces the mounted one" : NULL, !en[MOUNTVMC1], F_VMC1);
 		}
 		if (mmceUnitFromPath(fb.dir) >= 0) {
+			ADD(DI_MC, "Back up all MMCE cards...", "normal, named, GameID and BootCard images", 0, F_BACKUP_ALL_MMCE);
 			ADD(DI_MC, "Back up active MMCE card...", "reads the exact firmware-selected backing image", 0, F_BACKUP_ACTIVE_MMCE);
 			ADD(DI_MC, "Export active MMCE card as PCSX2 .ps2...", "adds ECC/spare bytes and verifies", 0, F_EXPORT_ACTIVE_MMCE_PS2);
 		}
@@ -1656,6 +1728,9 @@ static void actionsMenu(void)
 			break;
 		case F_VMC1:
 			opMountVmc(1);
+			break;
+		case F_BACKUP_ALL_MMCE:
+			opBackupAllMmceCards();
 			break;
 		case F_BACKUP_ACTIVE_MMCE:
 			opBackupActiveMmce();
