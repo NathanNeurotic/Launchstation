@@ -396,7 +396,9 @@ static int install_helper_on_any_mc(const u8 *helper, int helper_size,
 static int is_bdm_relaunch_path(const char *boot)
 {
     return boot != NULL &&
-           (!strncmp(boot, "mx4sio", 6) || !strncmp(boot, "ilink", 5));
+           (!strncmp(boot, "mx4sio", 6) ||
+            !strncmp(boot, "ilink", 5) ||
+            !strncmp(boot, "ata", 3));
 }
 
 
@@ -475,7 +477,7 @@ int wleIgrConfigure(const char *backup_root, WleIgrInstallStats *stats,
         free(helper);
         if (slot < 0) {
             snprintf(result, result_size,
-                     "MX4SIO/iLink IGR needs a writable physical memory card in either slot for OPL's Exit-to helper.");
+                     "MX4SIO/iLink/ATA IGR needs a writable physical memory card in either slot for OPL's Exit-to helper.");
             return -2;
         }
         stats->boot_images = 1;
