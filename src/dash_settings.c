@@ -84,6 +84,7 @@ enum SetId {
 	S_DEVA_ATA,
 	S_DEVA_MMCE,
 	S_DEVA_MX4SIO,
+	S_DEVA_ILINK,
 	S_DEVA_UDPFS,
 	/* network */
 	S_NET_IP,
@@ -286,6 +287,9 @@ static const SetItem autostart_items[] = {
     {ST_CHOICE, S_DEVA_ATA, "Auto-start exFAT HDD", "Load the exFAT/ATA drivers when the dashboard starts."},
     {ST_CHOICE, S_DEVA_MMCE, "Auto-start MMCE SD card", "Load the MMCE drivers when the dashboard starts."},
     {ST_CHOICE, S_DEVA_MX4SIO, "Auto-start MX4SIO", "Load the MX4SIO drivers when the dashboard starts."},
+#ifdef ILINK
+    {ST_CHOICE, S_DEVA_ILINK, "Auto-start iLink / FireWire", "Load the IEEE1394 storage drivers when the dashboard starts. Leave off unless this console has a physical i.Link port."},
+#endif
     {ST_CHOICE, S_DEVA_UDPFS, "Auto-start network (UDPFS)", "Start the UDPFS network client when the dashboard starts."},
 };
 
@@ -596,6 +600,11 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_DEVA_MX4SIO:
 			*cur = (dashCfg.dev_auto & DASH_DEVA_MX4SIO) || dashBootDeviceBit() == DASH_DEVA_MX4SIO ? 1 : 0;
 			return 2;
+#ifdef ILINK
+		case S_DEVA_ILINK:
+			*cur = (dashCfg.dev_auto & DASH_DEVA_ILINK) || dashBootDeviceBit() == DASH_DEVA_ILINK ? 1 : 0;
+			return 2;
+#endif
 		case S_DEVA_UDPFS:
 			*cur = (dashCfg.dev_auto & DASH_DEVA_UDPFS) ? 1 : 0;
 			return 2;
@@ -1093,12 +1102,16 @@ static void setChoice(int id, int v)
 		case S_DEVA_ATA:
 		case S_DEVA_MMCE:
 		case S_DEVA_MX4SIO:
+#ifdef ILINK
+		case S_DEVA_ILINK:
+#endif
 		case S_DEVA_UDPFS: {
 			const int bit = (id == S_DEVA_USB) ? DASH_DEVA_USB :
 			                (id == S_DEVA_HDD) ? DASH_DEVA_HDD :
 			                (id == S_DEVA_ATA) ? DASH_DEVA_ATA :
 			                (id == S_DEVA_MMCE) ? DASH_DEVA_MMCE :
-			                (id == S_DEVA_MX4SIO) ? DASH_DEVA_MX4SIO : DASH_DEVA_UDPFS;
+			                (id == S_DEVA_MX4SIO) ? DASH_DEVA_MX4SIO :
+			                (id == S_DEVA_ILINK) ? DASH_DEVA_ILINK : DASH_DEVA_UDPFS;
 			/* the boot device is always started: its driver is already running */
 			if (v || dashBootDeviceBit() == bit)
 				dashCfg.dev_auto |= bit;

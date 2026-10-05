@@ -19,7 +19,7 @@ extern int vmcMounted[2];
 
 /* Driver residency does not establish that a card, disk or server exists.
  * Cache explicit root checks; never do blocking device IO from drawing. */
-enum { PROBE_HDD, PROBE_ATA, PROBE_MX4SIO, PROBE_MMCE0, PROBE_MMCE1, PROBE_UDPFS };
+enum { PROBE_HDD, PROBE_ATA, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1, PROBE_UDPFS };
 static u32 probe_checked, probe_present;
 static int probe_reboot_count = -1;
 extern int _iop_reboot_count;
@@ -29,6 +29,7 @@ static int probeIndex(const char *mount)
 	if (!strncmp(mount, "hdd0:", 5)) return PROBE_HDD;
 	if (!strncmp(mount, "ata0:", 5)) return PROBE_ATA;
 	if (!strncmp(mount, "mx4sio", 6)) return PROBE_MX4SIO;
+	if (!strncmp(mount, "ilink", 5)) return PROBE_ILINK;
 	if (!strncmp(mount, "mmce", 4)) return mount[4] == '1' ? PROBE_MMCE1 : PROBE_MMCE0;
 	if (!strncmp(mount, "udpfs:", 6)) return PROBE_UDPFS;
 	return -1;
@@ -311,6 +312,9 @@ int dashDevicesList(DashDevice *out, int max)
 #ifdef MX4SIO
 	addStorage(out, &n, max, DI_SDCARD, "MX4SIO SD Card", "mx4sio:", "mx4sio:/", "Ready (slot 2)", "No MX4SIO storage found");
 #endif
+#ifdef ILINK
+	addStorage(out, &n, max, DI_HDD, "iLink / FireWire", "ilink:", "ilink:/", "IEEE1394 storage ready", "No iLink storage found");
+#endif
 
 	if (filerShowHddUnit(0) && !console_is_PSX) {
 		addStorage(out, &n, max, DI_HDD, "Internal HDD", "hdd0:", "hdd0:/", "APA partitions", "No browsable APA storage found");
@@ -399,6 +403,12 @@ static int probeMount(const char *m)
 		if (ok) ok = probeRoot("mx4sio:/", 2000);
 	}
 #endif
+#ifdef ILINK
+	else if (!strncmp(m, "ilink", 5)) {
+		ok = loadIlinkModules();
+		if (ok) ok = probeRoot("ilink:/", 3000);
+	}
+#endif
 #ifdef UDPFS
 	else if (!strncmp(m, "udpfs", 5)) {
 		ok = load_udpfs();
@@ -435,6 +445,9 @@ static int autoStartNeeded(void)
 #endif
 #ifdef MX4SIO
 	       || ((dashCfg.dev_auto & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
+#endif
+#ifdef ILINK
+	       || ((dashCfg.dev_auto & DASH_DEVA_ILINK) && !isPathDeviceStackLoaded("ilink:"))
 #endif
 #ifdef UDPFS
 	       || ((dashCfg.dev_auto & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
@@ -507,6 +520,10 @@ void dashDevicesStartForPath(const char *path)
 	else if (!strncmp(path, "mx4sio", 6))
 		mount = "mx4sio:";
 #endif
+#ifdef ILINK
+	else if (!strncmp(path, "ilink", 5))
+		mount = "ilink:";
+#endif
 #ifdef UDPFS
 	else if (!strncmp(path, "udpfs", 5))
 		mount = "udpfs:";
@@ -536,6 +553,10 @@ void dashDevicesAutoProbe(void)
 	if ((dashCfg.dev_auto & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
 		probeMount("mx4sio:");
 #endif
+#ifdef ILINK
+	if ((dashCfg.dev_auto & DASH_DEVA_ILINK) && !isPathDeviceStackLoaded("ilink:"))
+		probeMount("ilink:");
+#endif
 #ifdef UDPFS
 	if ((dashCfg.dev_auto & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
 		probeMount("udpfs:");
@@ -559,6 +580,8 @@ int dashBootDeviceBit(void)
 		return DASH_DEVA_MMCE;
 	if (!strncmp(p, "mx4sio", 6))
 		return DASH_DEVA_MX4SIO;
+	if (!strncmp(p, "ilink", 5))
+		return DASH_DEVA_ILINK;
 	return 0;
 }
 //--------------------------------------------------------------
