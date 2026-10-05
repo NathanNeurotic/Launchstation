@@ -38,9 +38,10 @@ code = "#include <stdint.h>\ntypedef uint32_t u32;\n" + code
 code += r"""
 enum { DASH_TOAST_INFO, DASH_TOAST_OK, DASH_SEC_HOME };
 enum { DASH_SND_CANCEL };
+enum { DASH_IGR_AFTER_DASHBOARD, DASH_IGR_AFTER_OSDSYS, DASH_IGR_AFTER_APP };
 static void dashSoundPlay(int s) { assert(s == DASH_SND_CANCEL); }
 static void dashUiFocusPoke(void) {}
-static struct { int sound, bgm, artwork; } dashCfg;
+static struct { int sound, bgm, artwork, igr_after; } dashCfg;
 static struct { int font, wallpaper, clock; } dashTheme;
 static struct { int usbkbd_used; char LK_Path[SETTING_LK_COUNT][MAX_PATH]; } config;
 static __typeof__(config) *setting = &config;
@@ -99,7 +100,7 @@ S_CONFIRM S_VKEY S_USBKBD S_USBKBD_FILE S_KBDMAP_FILE S_PATHPAD_LOCK
 S_INIT_DELAY S_TIMEOUT S_CNF_PATH S_LANG_FILE S_FONT_FILE S_ESR_PATH
 S_OSDSYS_PATH S_POPS_PATH S_HIDE_HDD S_HIDE_MC S_REBOOT_ELF S_DEVA_USB
 S_DEVA_HDD S_DEVA_ATA S_DEVA_MMCE S_DEVA_MX4SIO S_DEVA_ILINK S_DEVA_UDPFS
-S_MMCE_BACKUP_KEEP S_MMCE_BACKUP_FORMAT S_NET_IP
+S_MMCE_BACKUP_KEEP S_MMCE_BACKUP_FORMAT S_IGR_AUTO_BACKUP S_IGR_AFTER S_IGR_AFTER_APP S_NET_IP
 S_NET_NM S_NET_GW S_HOSTWRITE S_NET_LEGACY S_LANGUAGE S_GAMEID S_GAMEID_DISC
 S_PSU_HUGE S_PSU_DATE S_PSU_NOOVER S_SAVE_AS S_T_PRESET S_T_LOAD S_T_SAVE
 S_T_DEFAULT S_T_BG S_T_BG1 S_T_BG2 S_T_BRIGHT S_T_SCAN S_T_IMAGE

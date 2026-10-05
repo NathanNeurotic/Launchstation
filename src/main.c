@@ -10,6 +10,7 @@
 #include "main_startup.h"
 #include "dash.h"
 #include "dash_internal.h"
+#include "filer_shared.h"
 #include "mmce_backup.h"
 
 //#define DEBUG
@@ -127,50 +128,83 @@ static int wleIgrRequested(int argc, char *argv[], const char **backup_root)
 	return 0;
 }
 
-static void runWleIgrBackup(int argc, char *argv[])
+static int runWleIgrBackup(int argc, char *argv[])
 {
-#ifdef MMCE
 	const char *backup_root = NULL;
-	MmceBackupStats total = {0}, one;
-	int unit, available = 0;
 
 	if (!wleIgrRequested(argc, argv, &backup_root))
-		return;
-	if (backup_root == NULL || backup_root[0] == '\0') {
-		snprintf(mainMsg, sizeof(mainMsg), "IGR: no MMCE backup destination configured");
-		return;
-	}
-	if (!loadMmceModules()) {
-		snprintf(mainMsg, sizeof(mainMsg), "IGR: MMCE driver unavailable; backup skipped");
-		return;
-	}
+		return 0;
 
-	/* OPL may have switched a slot to BootCard before Exit-to. Full-tree
-	 * backup deliberately does not depend on which card is active: every
-	 * valid .mcd under MemoryCards is considered, including named/GameID
-	 * cards that cannot be reconstructed from GET_CARD after IGR. */
-	for (unit = 0; unit < 2; unit++) {
-		MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format};
-		memset(&one, 0, sizeof(one));
-		if (mmceBackupAllCards(unit, backup_root, &options, &one, NULL) < 0)
-			continue;
-		available++;
-		total.candidates += one.candidates;
-		total.backed_up += one.backed_up;
-		total.unchanged += one.unchanged;
-		total.failed += one.failed;
+#ifdef MMCE
+	if (!dashCfg.igr_auto_backup) {
+		snprintf(mainMsg, sizeof(mainMsg), "IGR: automatic MMCE backup disabled");
+		return 1;
 	}
+	{
+		MmceBackupStats total = {0}, one;
+		int unit, available = 0;
 
-	if (!available)
-		snprintf(mainMsg, sizeof(mainMsg), "IGR: no MMCE MemoryCards tree found");
-	else
-		snprintf(mainMsg, sizeof(mainMsg),
-		         "IGR MMCE backup: %d changed, %d unchanged, %d failed (%d cards)",
-		         total.backed_up, total.unchanged, total.failed, total.candidates);
+		if (backup_root == NULL || backup_root[0] == '\0') {
+			snprintf(mainMsg, sizeof(mainMsg), "IGR: no MMCE backup destination configured");
+			return 1;
+		}
+		if (!loadMmceModules()) {
+			snprintf(mainMsg, sizeof(mainMsg), "IGR: MMCE driver unavailable; backup skipped");
+			return 1;
+		}
+
+		/* OPL may have switched a slot to BootCard before Exit-to. Full-tree
+		 * backup deliberately does not depend on which card is active: every
+		 * valid .mcd under MemoryCards is considered, including named/GameID
+		 * cards that cannot be reconstructed from GET_CARD after IGR. */
+		for (unit = 0; unit < 2; unit++) {
+			MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format};
+			memset(&one, 0, sizeof(one));
+			if (mmceBackupAllCards(unit, backup_root, &options, &one, NULL) < 0)
+				continue;
+			available++;
+			total.candidates += one.candidates;
+			total.backed_up += one.backed_up;
+			total.unchanged += one.unchanged;
+			total.failed += one.failed;
+		}
+
+		if (!available)
+			snprintf(mainMsg, sizeof(mainMsg), "IGR: no MMCE MemoryCards tree found");
+		else
+			snprintf(mainMsg, sizeof(mainMsg),
+			         "IGR MMCE backup: %d changed, %d unchanged, %d failed (%d cards)",
+			         total.backed_up, total.unchanged, total.failed, total.candidates);
+	}
 #else
-	(void)argc;
-	(void)argv;
+	snprintf(mainMsg, sizeof(mainMsg), "IGR: this build has no MMCE support; backup skipped");
+	(void)backup_root;
 #endif
+	return 1;
+}
+
+static void runWleIgrAfter(int requested)
+{
+	if (!requested)
+		return;
+
+	if (dashCfg.igr_after == DASH_IGR_AFTER_OSDSYS) {
+		Execute(setting->Misc_OSDSYS);
+		return; /* only reached if OSDSYS launch failed */
+	}
+
+	if (dashCfg.igr_after == DASH_IGR_AFTER_APP) {
+		if (dashCfg.igr_after_path[0] == '\0') {
+			snprintf(mainMsg, sizeof(mainMsg), "IGR: no after-IGR application selected");
+			return;
+		}
+		if (!ensurePathDeviceStackReady(dashCfg.igr_after_path)) {
+			snprintf(mainMsg, sizeof(mainMsg), "IGR: could not start device for %.180s", dashCfg.igr_after_path);
+			return;
+		}
+		Execute(dashCfg.igr_after_path);
+		/* Launch failures return here; normal ELF handoff never does. */
+	}
 }
 //---------------------------------------------------------------------------
 //executable code
@@ -201,6 +235,7 @@ static void Execute(char *pathin)
 int main(int argc, char *argv[])
 {
 	int event, post_event = 0;
+	int igr_requested;
 	char RunPath[MAX_PATH];
 	int nElfs = 0;
 	enum BOOT_DEVICE boot;
@@ -217,7 +252,8 @@ int main(int argc, char *argv[])
 
 	/* IGR backup runs after normal device/config initialization so the exact
 	 * same lazy device handling and verified backup code is used as the UI. */
-	runWleIgrBackup(argc, argv);
+	igr_requested = runWleIgrBackup(argc, argv);
+	runWleIgrAfter(igr_requested);
 
 	//Here nearly everything is ready for the main menu event loop
 	//But before we start that, we need to validate CNF_Path

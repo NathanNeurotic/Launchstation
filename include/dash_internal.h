@@ -500,6 +500,13 @@ enum DashAnim {
 	DASH_ANIM_COUNT
 };
 
+enum DashIgrAfter {
+	DASH_IGR_AFTER_DASHBOARD = 0,
+	DASH_IGR_AFTER_OSDSYS,
+	DASH_IGR_AFTER_APP,
+	DASH_IGR_AFTER_COUNT
+};
+
 typedef struct
 {
 	int enabled;
@@ -520,6 +527,9 @@ typedef struct
 	int dev_auto; /* DASH_DEVA_* bitmask: drivers to load at startup */
 	int mmce_backup_keep;   /* 0 = all, otherwise 1..99 */
 	int mmce_backup_format; /* MMCE_BACKUP_FORMAT_* */
+	int igr_auto_backup;    /* run MMCE backup when entered through WLE-IGR */
+	int igr_after;          /* DashIgrAfter */
+	char igr_after_path[DASH_PATH_MAX];
 	int nscan;
 	char scan[DASH_MAX_SCAN][DASH_PATH_MAX];
 } DashSettings;

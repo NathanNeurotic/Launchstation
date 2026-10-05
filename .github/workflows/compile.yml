@@ -39,6 +39,7 @@ jobs:
           python3 tests/test_mmce_backup.py
           python3 tests/test_opl_title_cfg.py
           python3 tests/test_wle_igr.py
+          python3 tests/test_igr_return_policy.py
           python3 tests/test_mmce_protocol.py
 
       - name: Install ps2build SDK
