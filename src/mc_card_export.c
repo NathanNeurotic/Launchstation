@@ -178,6 +178,59 @@ static int source_info(const char *path, u64 *size)
 	return MC_CARD_EXPORT_OK;
 }
 
+int mcCardBackupNoEcc(const char *source, const char *dest, McCardExportProgress progress)
+{
+	u64 src_size = 0, pos = 0;
+	int ret, chunk;
+	char remove_path[MAX_PATH];
+
+	if (source == NULL || dest == NULL || source[0] == '\0' || dest[0] == '\0')
+		return MC_CARD_EXPORT_FORMAT;
+	if (!strcmp(source, dest))
+		return MC_CARD_EXPORT_SAME_PATH;
+
+	ret = source_info(source, &src_size);
+	if (ret != MC_CARD_EXPORT_OK)
+		return ret;
+
+	/* Keep the MMCE-safe access rule used by the conversion paths: source
+	 * and destination are deliberately opened, used and closed separately. */
+	while (pos < src_size) {
+		chunk = (src_size - pos > MC_EXPORT_IN) ? MC_EXPORT_IN : (int)(src_size - pos);
+		if (read_exact_at(source, pos, export_in, chunk) < 0 ||
+		    write_exact_at(dest, pos, export_in, chunk, pos == 0) < 0)
+			goto io_fail;
+		pos += chunk;
+		if (progress)
+			progress(MC_CARD_EXPORT_WRITE, pos, src_size);
+	}
+
+	/* Read both completed files back independently and compare every byte. */
+	pos = 0;
+	while (pos < src_size) {
+		chunk = (src_size - pos > MC_EXPORT_IN) ? MC_EXPORT_IN : (int)(src_size - pos);
+		if (read_exact_at(source, pos, export_in, chunk) < 0 ||
+		    read_exact_at(dest, pos, verify_out, chunk) < 0 ||
+		    memcmp(export_in, verify_out, chunk) != 0)
+			goto verify_fail;
+		pos += chunk;
+		if (progress)
+			progress(MC_CARD_EXPORT_VERIFY, pos, src_size);
+	}
+
+	return MC_CARD_EXPORT_OK;
+
+io_fail:
+	ret = MC_CARD_EXPORT_IO;
+	goto remove_bad;
+verify_fail:
+	ret = MC_CARD_EXPORT_VERIFY_FAILED;
+remove_bad:
+	snprintf(remove_path, sizeof(remove_path), "%s", dest);
+	genRemove(remove_path);
+	return ret;
+}
+
 static int convert_block(const u8 *in, int in_size, u8 *out)
 {
 	int at, made = 0;
