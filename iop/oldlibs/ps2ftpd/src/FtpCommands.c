@@ -256,7 +256,7 @@ void FtpClient_OnCmdStru(FtpClient *pClient, const char *pStructure)
 
 void FtpClient_OnCmdRetr(FtpClient *pClient, const char *pFile)
 {
-	int iMarker = pClient->m_iRestartMarker;
+	s64 iMarker = pClient->m_iRestartMarker;
 	pClient->m_iRestartMarker = 0;
 
 	if (FileSystem_OpenFile(&pClient->m_kContext, pFile, FM_READ, iMarker) < 0) {
@@ -271,7 +271,7 @@ void FtpClient_OnCmdRetr(FtpClient *pClient, const char *pFile)
 
 void FtpClient_OnCmdStor(FtpClient *pClient, const char *pFile)
 {
-	int iMarker = pClient->m_iRestartMarker;
+	s64 iMarker = pClient->m_iRestartMarker;
 	pClient->m_iRestartMarker = 0;
 
 	if (FileSystem_OpenFile(&pClient->m_kContext, pFile, FM_WRITE, iMarker) < 0) {
@@ -298,7 +298,7 @@ void FtpClient_OnCmdAppe(FtpClient *pClient, const char *pFile)
 	FtpClient_HandleDataConnect(pClient);
 }
 
-void FtpClient_OnCmdRest(FtpClient *pClient, int iMarker)
+void FtpClient_OnCmdRest(FtpClient *pClient, s64 iMarker)
 {
 	if (iMarker < 0) {
 		pClient->m_iRestartMarker = 0;
@@ -357,7 +357,7 @@ void FtpClient_OnCmdRmd(FtpClient *pClient, const char *pDir)
 
 void FtpClient_OnCmdRnfr(FtpClient *pClient, const char *name)
 {
-	int iMarker = pClient->m_iRestartMarker;
+	s64 iMarker = pClient->m_iRestartMarker;
 	pClient->m_iRestartMarker = 0;
 
 	// check if file/dir exists that is to be renamed

@@ -41,6 +41,7 @@ typedef struct FSContext
 #ifndef LINUX
 	FSType m_eType;
 	iop_file_t m_kFile;
+	int m_iOpen;  // m_kFile holds a file/dir that was really opened, so it may be closed
 #else
 	int m_iFile;
 	DIR *m_pDir;
@@ -92,7 +93,7 @@ void FileSystem_Create(FSContext *pContext);
 void FileSystem_Destroy(FSContext *pContext);
 
 //! Open file for readin or writing
-int FileSystem_OpenFile(FSContext *pContext, const char *pFile, FileMode eMode, int iContinue);
+int FileSystem_OpenFile(FSContext *pContext, const char *pFile, FileMode eMode, s64 iContinue);
 
 //! Open directory for listing
 int FileSystem_OpenDir(FSContext *pContext, const char *pDir);

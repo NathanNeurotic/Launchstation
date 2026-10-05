@@ -43,6 +43,16 @@ extern char *itoa(char *in, int val);
 
 #define DEVINFOARRAY(d, ofs) ((iop_device_t **)((d)->text_start + (d)->text_size + (d)->data_size + (ofs)))
 
+// iomanX exports its device table (import #3), so the .bss offset above is no longer needed. Some iomanX
+// builds register as "IO/File_Manager", so the table is used whichever name the module was found under.
+// Both iomanX builds shipped with wLaunchELF keep FS_IOMANX_DEVICES entries.
+static iop_device_t **FileSystem_GetDeviceArray(ModuleInfo_t *pkModule, int offset)
+{
+	(void)pkModule;
+	(void)offset;
+	return (iop_device_t **)GetDeviceList();
+}
+
 #define DEVICE_UNITS 10
 
 // buffer used for concating filenames internally
@@ -55,6 +65,7 @@ void FileSystem_Create(FSContext *pContext)
 #ifndef LINUX
 	pContext->m_eType = FS_INVALID;
 	memset(&(pContext->m_kFile), 0, sizeof(pContext->m_kFile));
+	pContext->m_iOpen = 0;
 #else
 	pContext->m_iFile = -1;
 	pContext->m_pDir = NULL;
@@ -66,7 +77,7 @@ void FileSystem_Destroy(FSContext *pContext)
 	FileSystem_Close(pContext);
 }
 
-int FileSystem_OpenFile(FSContext *pContext, const char *pFile, FileMode eMode, int iContinue)
+int FileSystem_OpenFile(FSContext *pContext, const char *pFile, FileMode eMode, s64 iContinue)
 {
 	int flags;
 	int fileMode = 0;
@@ -102,11 +113,11 @@ int FileSystem_OpenFile(FSContext *pContext, const char *pFile, FileMode eMode, 
 				if (flags & O_WRONLY) {
 					pContext->m_kFile.mode = O_WRONLY;
 					if (pContext->m_kFile.device->ops->open(&(pContext->m_kFile), pFile, pContext->m_kFile.mode, 0) >= 0)
-						iOpened = 1;
+						iOpened = pContext->m_iOpen = 1;
 				} else {
 					pContext->m_kFile.mode = O_RDONLY;
 					if (pContext->m_kFile.device->ops->open(&(pContext->m_kFile), pFile, pContext->m_kFile.mode, 0) >= 0)
-						iOpened = 1;
+						iOpened = pContext->m_iOpen = 1;
 				}
 
 				// seek to position if we successfully opened the file
@@ -115,13 +126,18 @@ int FileSystem_OpenFile(FSContext *pContext, const char *pFile, FileMode eMode, 
 					if (iContinue < 0) {
 						if (pContext->m_kFile.device->ops->lseek(&(pContext->m_kFile), 0, SEEK_END) >= 0)
 							return 0;
-					} else {
-						if (pContext->m_kFile.device->ops->lseek(&(pContext->m_kFile), iContinue, SEEK_SET) >= 0)
+					} else if ((pContext->m_kFile.device->type & IOP_DT_FSEXT) && pContext->m_kFile.device->ops->lseek64) {
+						// extended devices (ata, usb, mmce...) seek past 2 GB
+						if (pContext->m_kFile.device->ops->lseek64(&(pContext->m_kFile), iContinue, SEEK_SET) >= 0)
+							return 0;
+					} else if (iContinue <= 0x7FFFFFFF) {
+						if (pContext->m_kFile.device->ops->lseek(&(pContext->m_kFile), (int)iContinue, SEEK_SET) >= 0)
 							return 0;
 					}
 
 					// could not seek, close file and open normally
 					pContext->m_kFile.device->ops->close(&(pContext->m_kFile));
+					pContext->m_iOpen = 0;
 				}
 			}
 
@@ -131,8 +147,10 @@ int FileSystem_OpenFile(FSContext *pContext, const char *pFile, FileMode eMode, 
 			if (!strcmp(pContext->m_kFile.device->name, "pfs"))
 				fileMode = 511;
 
-			if (pContext->m_kFile.device->ops->open(&(pContext->m_kFile), pFile, flags, fileMode) >= 0)
+			if (pContext->m_kFile.device->ops->open(&(pContext->m_kFile), pFile, flags, fileMode) >= 0) {
+				pContext->m_iOpen = 1;
 				return 0;
+			}
 
 		} break;
 
@@ -172,8 +190,10 @@ int FileSystem_OpenDir(FSContext *pContext, const char *pDir)
 			// attempt to open device directory
 
 			pContext->m_kFile.mode = O_DIROPEN;
-			if (pContext->m_kFile.device->ops->dopen(&(pContext->m_kFile), pDir) >= 0)
+			if (pContext->m_kFile.device->ops->dopen(&(pContext->m_kFile), pDir) >= 0) {
+				pContext->m_iOpen = 1;
 				return 0;
+			}
 		} break;
 
 		// either device-list or unit-list (depending on if pContext->m_kFile.device was set)
@@ -206,7 +226,22 @@ int FileSystem_ReadFile(FSContext *pContext, char *pBuffer, int iSize)
 
 			// read data from I/O device
 
-			return pContext->m_kFile.device->ops->read(&(pContext->m_kFile), pBuffer, iSize);
+			{
+				int iRead = pContext->m_kFile.device->ops->read(&(pContext->m_kFile), pBuffer, iSize);
+
+				// mmce answers a read that starts at end of file with an error instead of 0 bytes
+				if ((iRead < 0) && !strcmp(pContext->m_kFile.device->name, "mmce")) {
+					int iPos = pContext->m_kFile.device->ops->lseek(&(pContext->m_kFile), 0, SEEK_CUR);
+					int iEnd = pContext->m_kFile.device->ops->lseek(&(pContext->m_kFile), 0, SEEK_END);
+
+					if ((iPos >= 0) && (iPos == iEnd))
+						return 0;
+					if (iPos >= 0)
+						pContext->m_kFile.device->ops->lseek(&(pContext->m_kFile), iPos, SEEK_SET);
+				}
+
+				return iRead;
+			}
 		} break;
 
 		default:
@@ -449,6 +484,31 @@ int FileSystem_ReadDir(FSContext *pContext, FSFileInfo *pInfo)
 						return 0;
 					}
 
+					// mmce answers getstat through the card, which cannot stat its root, and the BDM
+					// prefixes (usb, ata, mx4sio) are per-partition units: probe all of them with dopen
+					if (!strcmp(pContext->m_kFile.device->name, "mmce") ||
+					    !strcmp(pContext->m_kFile.device->name, "usb") ||
+					    !strcmp(pContext->m_kFile.device->name, "ata") ||
+					    !strcmp(pContext->m_kFile.device->name, "mx4sio")) {
+						iop_file_t kProbe = pContext->m_kFile;
+
+						pContext->m_kFile.unit++;
+						if (unit > 1 && !strcmp(pContext->m_kFile.device->name, "mmce")) {
+							pContext->m_kFile.unit = DEVICE_UNITS;  // only mmce0 and mmce1 exist
+							continue;
+						}
+
+						kProbe.privdata = NULL;
+						if (kProbe.device->ops->dopen(&kProbe, "/") < 0)
+							continue;
+						kProbe.device->ops->dclose(&kProbe);
+
+						itoa(pInfo->m_Name, unit);
+						pInfo->m_iSize = 0;
+						pInfo->m_eType = FT_DIRECTORY;
+						return 0;
+					}
+
 					// get status from root directory of device
 					ret = pContext->m_kFile.device->ops->getstat(&(pContext->m_kFile), "/", &stat);
 
@@ -511,7 +571,8 @@ int FileSystem_ReadDir(FSContext *pContext, FSFileInfo *pInfo)
 
 				// scan filesystem devices
 
-				ppkDevices = DEVINFOARRAY(pkModule, dev_offset);
+				ppkDevices = FileSystem_GetDeviceArray(pkModule, dev_offset);
+				num_devices = FS_IOMANX_DEVICES;
 				while (pContext->m_kFile.unit < num_devices) {
 					int unit = pContext->m_kFile.unit;
 					pContext->m_kFile.unit++;
@@ -522,6 +583,10 @@ int FileSystem_ReadDir(FSContext *pContext, FSFileInfo *pInfo)
 					if (strcmp(ppkDevices[unit]->name, "hdd") &&
 					    strcmp(ppkDevices[unit]->name, "mass") &&
 					    strcmp(ppkDevices[unit]->name, "mc") &&
+					    strcmp(ppkDevices[unit]->name, "mmce") &&
+					    strcmp(ppkDevices[unit]->name, "usb") &&
+					    strcmp(ppkDevices[unit]->name, "ata") &&
+					    strcmp(ppkDevices[unit]->name, "mx4sio") &&
 					    strcmp(ppkDevices[unit]->name, "pfs"))
 						continue;
 
@@ -671,7 +736,9 @@ void FileSystem_Close(FSContext *pContext)
 #else
 	switch (pContext->m_eType) {
 		case FS_IODEVICE: {
-			if (!pContext->m_kFile.device)
+			// ClassifyPath fills in the device without opening anything (DELE, RNFR/RNTO, MKD, RMD):
+			// closing that would hand drivers such as mmceman an unopened file (NULL privdata)
+			if (!pContext->m_kFile.device || !pContext->m_iOpen)
 				break;
 
 			if (pContext->m_kFile.mode & O_DIROPEN)
@@ -686,6 +753,7 @@ void FileSystem_Close(FSContext *pContext)
 
 	pContext->m_eType = FS_INVALID;
 	memset(&(pContext->m_kFile), 0, sizeof(pContext->m_kFile));
+	pContext->m_iOpen = 0;
 #endif
 }
 
@@ -933,7 +1001,8 @@ iop_device_t *FileSystem_ScanDevice(const char *pDevice, int iNumDevices, const 
 		return NULL;  // unknown device, we cannot determine the offset here...
 
 	// get device info array
-	ppkDevices = DEVINFOARRAY(pkModule, offset);
+	ppkDevices = FileSystem_GetDeviceArray(pkModule, offset);
+	iNumDevices = FS_IOMANX_DEVICES;
 
 	// scan array
 	for (i = 0; i < iNumDevices; i++) {

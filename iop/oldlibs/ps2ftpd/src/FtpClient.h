@@ -121,7 +121,7 @@ typedef struct FtpClient
 	DataAction m_eDataAction;
 	ConnState m_eConnState;
 	int m_uiDataOffset;
-	int m_iRestartMarker;  // TODO: 64-bit support?
+	s64 m_iRestartMarker;  // 64-bit: files on ata/usb/mmce can be bigger than 2 GB
 
 	FtpClientContainer m_kContainer;
 
@@ -160,7 +160,7 @@ void FtpClient_OnCmdSite(FtpClient *pClient, const char *pCmd);
 void FtpClient_OnCmdMode(FtpClient *pClient, const char *pMode);
 void FtpClient_OnCmdStru(FtpClient *pClient, const char *pStructure);
 void FtpClient_OnCmdAppe(FtpClient *pClient, const char *pFile);
-void FtpClient_OnCmdRest(FtpClient *pClient, int iMarker);
+void FtpClient_OnCmdRest(FtpClient *pClient, s64 iMarker);
 void FtpClient_OnCmdSize(FtpClient *pClient, const char *pFile);
 void FtpClient_OnCmdFeat(FtpClient *pClient);
 
