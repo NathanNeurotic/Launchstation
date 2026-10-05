@@ -98,9 +98,17 @@ static int mmce_fs_discover_active_fd(iomanX_iop_file_t *file, int *active_fd, s
     s64 found_pos = -1, pos, end;
 
     /* MMCE RESET deliberately closes every firmware filesystem descriptor
-     * except cardman_fd. Never do that underneath another local MMCE handle. */
+     * except cardman_fd. Never do that underneath another local MMCE handle,
+     * or while firmware reports a card switch/create operation in progress. */
     if (mmce_fs_has_open_handles())
         return -EBUSY;
+    {
+        int status = mmce_cmd_get_status();
+        if (status < 0)
+            return -EIO;
+        if (status & 1)
+            return -EBUSY;
+    }
     if (mmce_cmd_reset() != 0)
         return -EIO;
 
