@@ -751,25 +751,31 @@ static int joinBackupPath(char *out, size_t out_size, const char *folder, const 
 	return snprintf(out, out_size, "%s%s", folder, name) < (int)out_size;
 }
 
-static int activeHistoryName(int unit, const char *folder, char *name, size_t name_size)
+static int activeStampedName(int unit, const char *folder, const char *ext,
+                             char *name, size_t name_size)
 {
 	char stamp[32], candidate[MAX_PATH];
 	int suffix;
 
-	if (!activeBackupStamp(stamp, sizeof(stamp)))
+	if (!activeBackupStamp(stamp, sizeof(stamp)) || ext == NULL || ext[0] == '\0')
 		return 0;
 
 	for (suffix = 0; suffix < 100; suffix++) {
 		if (suffix == 0)
-			snprintf(name, name_size, "MMCE%d-ActiveCard-%s.mcd", unit, stamp);
+			snprintf(name, name_size, "MMCE%d-ActiveCard-%s.%s", unit, stamp, ext);
 		else
-			snprintf(name, name_size, "MMCE%d-ActiveCard-%s-%02d.mcd", unit, stamp, suffix);
+			snprintf(name, name_size, "MMCE%d-ActiveCard-%s-%02d.%s", unit, stamp, suffix, ext);
 		if (!joinBackupPath(candidate, sizeof(candidate), folder, name))
 			return 0;
 		if (!wleExists(candidate))
 			return 1;
 	}
 	return 0;
+}
+
+static int activeHistoryName(int unit, const char *folder, char *name, size_t name_size)
+{
+	return activeStampedName(unit, folder, "mcd", name, name_size);
 }
 
 static int activeHistoryScan(const char *folder, int unit, char *oldest, size_t oldest_size)
@@ -971,6 +977,59 @@ static void opBackupActiveMmce(void)
 	} else {
 		dashModalMessage(DI_WARNING, "Active-card backup failed",
 		                 "The exact active backing image could not be read, or the destination could not be written. Any incomplete backup was removed.",
+		                 dest);
+	}
+}
+
+static void opExportActiveMmcePcsx2(void)
+{
+	char source[MAX_PATH], folder[MAX_PATH], dest[MAX_PATH], name[48];
+	int unit = mmceUnitFromPath(fb.dir);
+	int r, prep;
+
+	if (unit < 0)
+		return;
+
+	snprintf(source, sizeof(source), "mmce%d:/__active_card__.mcd", unit);
+	dashStrCopy(folder, fb.dir, sizeof(folder));
+	if (!dashPickPath("Export active MMCE card as PCSX2 .ps2 to",
+	                  folder, DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
+		return;
+
+	if (!activeStampedName(unit, folder, "ps2", name, sizeof(name)) ||
+	    !joinBackupPath(dest, sizeof(dest), folder, name)) {
+		dashToast(DASH_TOAST_WARN, "Could not create a unique PCSX2 export name");
+		return;
+	}
+	if (!prepareOp())
+		return;
+
+	prep = prepareTransferDeviceStacks(source, dest);
+	if (prep != TRANSFER_STACK_READY) {
+		dashModalMessage(DI_WARNING, "Cannot export there",
+		                 prep == TRANSFER_STACK_INCOMPATIBLE ?
+		                     "The source and destination require device stacks that cannot stay active together." :
+		                     "The source or destination device could not be started.",
+		                 dest);
+		return;
+	}
+
+	dashLoadingBegin("Exporting active MMCE card to PCSX2");
+	r = mcCardExportActiveMmcePcsx2(source, dest, cardExportProgress);
+	dashLoadingEnd();
+
+	if (r == MC_CARD_EXPORT_OK) {
+		dashToast(DASH_TOAST_OK, "Active MMCE card exported to verified PCSX2 .ps2");
+		refresh();
+	} else if (r == MC_CARD_EXPORT_FORMAT) {
+		dashModalMessage(DI_WARNING, "Not exported",
+		                 "The active MMCE backing file is not a valid PS2 memory-card image.", source);
+	} else if (r == MC_CARD_EXPORT_VERIFY_FAILED) {
+		dashModalMessage(DI_WARNING, "Verification failed",
+		                 "The PCSX2 export did not match the active card conversion and was removed.", dest);
+	} else {
+		dashModalMessage(DI_WARNING, "Active-card export failed",
+		                 "The active card could not be read or the PCSX2 image could not be written. Any incomplete export was removed.",
 		                 dest);
 	}
 }
@@ -1453,6 +1512,7 @@ static void actionsMenu(void)
 		F_VMC0,
 		F_VMC1,
 		F_BACKUP_ACTIVE_MMCE,
+		F_EXPORT_ACTIVE_MMCE_PS2,
 		F_BACKUP_MCD,
 		F_EXPORT_PS2,
 		F_IMPORT_MCD,
@@ -1512,8 +1572,10 @@ static void actionsMenu(void)
 			ADD(DI_MC, "Mount as vmc0:", vmcMounted[0] ? "replaces the mounted one" : NULL, 0, F_VMC0);
 			ADD(DI_MC, "Mount as vmc1:", vmcMounted[1] ? "replaces the mounted one" : NULL, !en[MOUNTVMC1], F_VMC1);
 		}
-		if (mmceUnitFromPath(fb.dir) >= 0)
+		if (mmceUnitFromPath(fb.dir) >= 0) {
 			ADD(DI_MC, "Back up active MMCE card...", "reads the exact firmware-selected backing image", 0, F_BACKUP_ACTIVE_MMCE);
+			ADD(DI_MC, "Export active MMCE card as PCSX2 .ps2...", "adds ECC/spare bytes and verifies", 0, F_EXPORT_ACTIVE_MMCE_PS2);
+		}
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "MCD")) {
 			ADD(DI_MC, "Back up .mcd...", "verified byte-for-byte copy", 0, F_BACKUP_MCD);
 			ADD(DI_MC, "Export as PCSX2 .ps2...", "adds ECC and verifies the copy", 0, F_EXPORT_PS2);
@@ -1597,6 +1659,9 @@ static void actionsMenu(void)
 			break;
 		case F_BACKUP_ACTIVE_MMCE:
 			opBackupActiveMmce();
+			break;
+		case F_EXPORT_ACTIVE_MMCE_PS2:
+			opExportActiveMmcePcsx2();
 			break;
 		case F_BACKUP_MCD:
 			opBackupCard();
