@@ -86,6 +86,8 @@ enum SetId {
 	S_DEVA_MX4SIO,
 	S_DEVA_ILINK,
 	S_DEVA_UDPFS,
+	S_MMCE_BACKUP_KEEP,
+	S_MMCE_BACKUP_FORMAT,
 	/* network */
 	S_NET_IP,
 	S_NET_NM,
@@ -171,7 +173,7 @@ enum SetPageId {
 	P_ROOT, P_APPEARANCE, P_SCREEN, P_THEME,
 	P_APPS, P_LIBRARY, P_SOUND, P_INPUT, P_KEYBOARD,
 	P_LAUNCH, P_BOOT, P_LKEY, P_LOADERS, P_GAMEID,
-	P_DEVICES, P_AUTOSTART, P_NETWORK, P_SYSTEM, P_LANGUAGE, P_PSU,
+	P_DEVICES, P_AUTOSTART, P_MMCE_BACKUP, P_NETWORK, P_SYSTEM, P_LANGUAGE, P_PSU,
 	/* Keep these in DashThemeGroup order for group resets. */
 	P_THEME_BG, P_THEME_COLORS, P_THEME_STYLE, P_THEME_TEXT,
 	P_THEME_ICONS, P_THEME_CLOCK, P_THEME_WALL, P_THEME_MANAGE,
@@ -276,6 +278,7 @@ static const SetItem loader_items[] = {
 };
 
 static const SetItem device_items[] = {
+    {ST_PAGE, P_MMCE_BACKUP, "MMCE backups", "Versioned backup history, output format and automatic IGR backup preferences."},
     {ST_CHOICE, S_HIDE_HDD, "Internal HDD / ATA units", "Which HDD and exFAT units appear in the File Browser."},
     {ST_CHOICE, S_HIDE_MC, "Hide empty memory card slots", "Also hides unused MMCE entries in the File Browser."},
     {ST_PAGE, P_AUTOSTART, "Start devices automatically", "The boot device always stays enabled. Starting other drivers takes effect immediately."},
@@ -291,6 +294,11 @@ static const SetItem autostart_items[] = {
     {ST_CHOICE, S_DEVA_ILINK, "Auto-start iLink / FireWire", "Load the IEEE1394 storage drivers when the dashboard starts. Leave off unless this console has a physical i.Link port."},
 #endif
     {ST_CHOICE, S_DEVA_UDPFS, "Auto-start network (UDPFS)", "Start the UDPFS network client when the dashboard starts."},
+};
+
+static const SetItem mmce_backup_items[] = {
+    {ST_NUMBER, S_MMCE_BACKUP_KEEP, "Backups per card", "0 keeps every verified version. Otherwise keep the newest 1-99 versions per card."},
+    {ST_CHOICE, S_MMCE_BACKUP_FORMAT, "Backup format", "Native .mcd avoids writes when unchanged. PCSX2 .ps2 adds ECC/spare bytes and verifies the converted image."},
 };
 
 static const SetItem net_items[] = {
@@ -422,6 +430,7 @@ static const SetPage pages[P_COUNT] = {
     [P_GAMEID] = PAGE("Game ID output", DI_APP, "Identification for compatible OSD/HDMI adapters.", gameid_items),
     [P_DEVICES] = PAGE("Storage & devices", DI_DEVICES, "Visible devices and driver startup preferences.", device_items),
     [P_AUTOSTART] = PAGE("Start devices automatically", DI_DEVICES, "Drivers start immediately when enabled. Discard restores preferences, not driver state.", autostart_items),
+    [P_MMCE_BACKUP] = PAGE("MMCE backups", DI_MC, "Verified local history for every sd2psX card image.", mmce_backup_items),
     [P_NETWORK] = PAGE("Network", DI_NETWORK, "Console address for FTP, PS2Link and UDPFS.", net_items),
     [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules and settings locations.", system_items),
     [P_LANGUAGE] = PAGE("Language", DI_TEXT, "These translations apply to file operations and tools.", language_items),
@@ -486,6 +495,7 @@ static const char *const onoff[] = {"Off", "On"};
 static const char *const tv_names[] = {"Auto", "NTSC", "PAL", "VGA", "480p"};
 static const char *const view_names[] = {"Grid", "List", "Carousel"};
 static const char *const recent_names[] = {"0", "4", "8", "12", "16"};
+static const char *const mmce_backup_format_names[] = {"Native .mcd", "PCSX2 .ps2"};
 static const char *const hide_names[] = {"Show all", "Hide HDD1", "Hide HDD0+1", "Hide ATA1", "Hide ATA0+1", "Hide HDD1+ATA1", "Hide all"};
 static const char *const confirm_names[] = {"Circle", "Cross"};
 static const char *const hl_names[] = {"Solid bar", "Accent bar", "Outline", "Text colour"};
@@ -607,6 +617,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 #endif
 		case S_DEVA_UDPFS:
 			*cur = (dashCfg.dev_auto & DASH_DEVA_UDPFS) ? 1 : 0;
+			return 2;
+		case S_MMCE_BACKUP_FORMAT:
+			*names = mmce_backup_format_names, *cur = dashCfg.mmce_backup_format;
 			return 2;
 #if defined(ETH) || defined(UDPFS)
 		case S_HOSTWRITE:
@@ -1139,6 +1152,9 @@ static void setChoice(int id, int v)
 		case S_AUTOSCAN:
 			dashCfg.autoscan = v;
 			break;
+		case S_MMCE_BACKUP_FORMAT:
+			dashCfg.mmce_backup_format = v;
+			break;
 		default:
 			dash_changed = 0;
 			classic_dirty = 1;
@@ -1245,6 +1261,13 @@ static int numberInfo(int id, int *val, int *lo, int *hi, char *text, int text_s
 			*val = setting->timeout, *lo = 0, *hi = 99;
 			snprintf(text, text_size, "%d s", *val);
 			return 1;
+		case S_MMCE_BACKUP_KEEP:
+			*val = dashCfg.mmce_backup_keep, *lo = 0, *hi = 99;
+			if (*val == 0)
+				snprintf(text, text_size, "All");
+			else
+				snprintf(text, text_size, "%d", *val);
+			return 1;
 	}
 	return 0;
 }
@@ -1266,6 +1289,10 @@ static void setNumber(int id, int v)
 		case S_TIMEOUT:
 			setting->timeout = v;
 			break;
+		case S_MMCE_BACKUP_KEEP:
+			dashCfg.mmce_backup_keep = v;
+			dash_dirty = 1;
+			return;
 	}
 	classic_dirty = 1;
 }
