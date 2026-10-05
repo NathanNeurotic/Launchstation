@@ -433,24 +433,43 @@ static int probeMount(const char *m)
 // (the worker only does file IO, like OPL's IO thread). Whatever the
 // worker is doing finishes first, so the two never overlap.
 //--------------------------------------------------------------
+static int safeAutoStartMask(void)
+{
+	int mask = dashCfg.dev_auto;
+
+	/* Defense in depth: these two are mutually exclusive even if some
+	 * caller bypassed settings validation or an old/corrupt config survived.
+	 * Never let the automatic startup walker switch between them mid-pass. */
+	if ((mask & (DASH_DEVA_MMCE | DASH_DEVA_MX4SIO)) ==
+	    (DASH_DEVA_MMCE | DASH_DEVA_MX4SIO)) {
+		if (dashBootDeviceBit() == DASH_DEVA_MX4SIO)
+			mask &= ~DASH_DEVA_MMCE;
+		else
+			mask &= ~DASH_DEVA_MX4SIO;
+	}
+	return mask;
+}
+
 static int autoStartNeeded(void)
 {
-	return ((dashCfg.dev_auto & DASH_DEVA_USB) && !isUsbMassStackLoaded()) ||
-	       ((dashCfg.dev_auto & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
+	const int mask = safeAutoStartMask();
+
+	return ((mask & DASH_DEVA_USB) && !isUsbMassStackLoaded()) ||
+	       ((mask & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
 #ifdef EXFAT
-	       || ((dashCfg.dev_auto & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
+	       || ((mask & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
 #endif
 #ifdef MMCE
-	       || ((dashCfg.dev_auto & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))
+	       || ((mask & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))
 #endif
 #ifdef MX4SIO
-	       || ((dashCfg.dev_auto & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
+	       || ((mask & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
 #endif
 #ifdef ILINK
-	       || ((dashCfg.dev_auto & DASH_DEVA_ILINK) && !isPathDeviceStackLoaded("ilink:"))
+	       || ((mask & DASH_DEVA_ILINK) && !isPathDeviceStackLoaded("ilink:"))
 #endif
 #ifdef UDPFS
-	       || ((dashCfg.dev_auto & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
+	       || ((mask & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
 #endif
 	    ;
 }
@@ -537,28 +556,30 @@ void dashDevicesStartForPath(const char *path)
  * startup" — the DEVICES screen can still start a device by hand. */
 void dashDevicesAutoProbe(void)
 {
-	if ((dashCfg.dev_auto & DASH_DEVA_USB) && !isUsbMassStackLoaded())
+	const int mask = safeAutoStartMask();
+
+	if ((mask & DASH_DEVA_USB) && !isUsbMassStackLoaded())
 		probeMount("usb:");
-	if ((dashCfg.dev_auto & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
+	if ((mask & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
 		probeMount("hdd0:");
 #ifdef EXFAT
-	if ((dashCfg.dev_auto & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
+	if ((mask & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
 		probeMount("ata0:");
 #endif
 #ifdef MMCE
-	if ((dashCfg.dev_auto & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))
+	if ((mask & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))
 		probeMount("mmce0:");
 #endif
 #ifdef MX4SIO
-	if ((dashCfg.dev_auto & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
+	if ((mask & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
 		probeMount("mx4sio:");
 #endif
 #ifdef ILINK
-	if ((dashCfg.dev_auto & DASH_DEVA_ILINK) && !isPathDeviceStackLoaded("ilink:"))
+	if ((mask & DASH_DEVA_ILINK) && !isPathDeviceStackLoaded("ilink:"))
 		probeMount("ilink:");
 #endif
 #ifdef UDPFS
-	if ((dashCfg.dev_auto & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
+	if ((mask & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
 		probeMount("udpfs:");
 #endif
 }

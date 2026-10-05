@@ -911,6 +911,9 @@ static void firstInit(void)
 	dashFontInit();
 	dashIconsInit();
 	dashWorkerInit();
+	if (boot_safe_mode)
+		dashToast(DASH_TOAST_WARN,
+		          "Safe mode: DASHBOARD.CNF skipped for this boot; saved settings were not changed");
 	if (dashLibLoadCache() < 0 || (dashCfg.autoscan && dashAppCount >= 0)) {
 		/* First run (no cache) or auto-scan enabled: look at locations whose
 		 * drivers are already running, starting the auto-start devices first

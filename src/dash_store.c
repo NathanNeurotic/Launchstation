@@ -373,15 +373,30 @@ void dashStoreInit(void)
 		text = dashLoadTextFile(path, 64 * 1024, &len);
 		if (text != NULL) {
 			dashStrCopy(store_dir, dirs[i], sizeof(store_dir));
-			dashKvParse(text, settingsKv, &scan_reset);
+			if (!boot_safe_mode) {
+				dashKvParse(text, settingsKv, &scan_reset);
+				store_loaded = 1;
+			}
 			free(text);
-			store_loaded = 1;
 			break;
 		}
 	}
 	if (store_dir[0] == '\0')
 		dashStrCopy(store_dir, dirs[0], sizeof(store_dir));
 	dashThemeStoreEnd();
+
+	/* MMCE and MX4SIO are alternate SIO2 storage stacks. Older settings
+	 * could enable both, which made automatic startup load one and then
+	 * reboot the IOP while switching to the other. Normalize that invalid
+	 * combination before anything starts: the boot device wins; otherwise
+	 * prefer MMCE and leave MX4SIO available for explicit/manual startup. */
+	if ((dashCfg.dev_auto & (DASH_DEVA_MMCE | DASH_DEVA_MX4SIO)) ==
+	    (DASH_DEVA_MMCE | DASH_DEVA_MX4SIO)) {
+		if (dashBootDeviceBit() == DASH_DEVA_MX4SIO)
+			dashCfg.dev_auto &= ~DASH_DEVA_MMCE;
+		else
+			dashCfg.dev_auto &= ~DASH_DEVA_MX4SIO;
+	}
 	persisted = dashCfg;
 
 	if (dashStoreBuildPath(path, sizeof(path), "DASHAPPS.CNF") == 0) {
