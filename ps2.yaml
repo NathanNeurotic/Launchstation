@@ -252,6 +252,7 @@ targets:
       - src/gui_hdd0_format.c
       - src/psu_functions.c
       - src/mc_card_export.c
+      - src/mmce_backup.c
       - src/hdd.c
       - src/hdd_header_injector.c
       - src/hdl_rpc.c
