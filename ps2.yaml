@@ -5,7 +5,7 @@
 #          build/bin/wLaunchELF-packed.elf  (ps2pack compressed, the release ELF)
 #
 # This mirrors the legacy Makefile's default profile:
-#   MMCE=1 MX4SIO=1 SIO2MAN=1 EXFAT=1 UDPFS=1 ETH=0 DVRP=1 XFROM=1
+#   MMCE=1 MX4SIO=1 SIO2MAN=1 EXFAT=1 UDPFS=1 ETH=1 DVRP=1 XFROM=1
 #   TMANIP=1 IOP_RESET=1 DS34=0 LCDVD=LATEST CUSTOM_COLORS
 #
 # IOP drivers that the SDK suite already packages are embedded straight from
@@ -107,9 +107,9 @@ targets:
     cflags: [-Wall]
     headers: [sio2man, dmacman, intrman, iomanx, loadcore, stdio, sysclib, threadman]
 
-  # Legacy ps2ftpd is retained as the on-demand FTP service. Build it in the
-  # default CI graph even while ETH remains an optional runtime feature, so
-  # device-discovery and large-file fixes cannot bit-rot unnoticed.
+  # Legacy ps2ftpd is retained as the on-demand FTP service. It is compiled
+  # into the default build, but init.c does not load the network stack until
+  # the user starts Network/FTP.
   - name: ps2ftpd
     type: iop
     sources:
@@ -123,6 +123,19 @@ targets:
     imports_lst: iop/oldlibs/ps2ftpd/src/imports.lst
     cflags: [-Wall, -fno-builtin]
     headers: [cdvd, iomanx, iopmgr, ps2ip-nm, sifcmd, sifman, stdio, sysclib, threadman]
+
+  # PS2Link-compatible host: filesystem server used by the legacy Network
+  # command. Like FTP itself, it is embedded but never loaded at boot.
+  - name: ps2host
+    type: iop
+    sources:
+      - iop/ps2host/net_fsys.c
+      - iop/ps2host/net_fio.c
+      - iop/ps2host/ps2host.c
+    include_dirs: [iop/ps2host]
+    imports_lst: iop/ps2host/imports.lst
+    cflags: [-Wall]
+    headers: [intrman, ioman, loadcore, ps2ip-nm, sifcmd, stdio, sysclib, threadman]
 
   # ps2sdk iop/deckard/xparam (not packaged by the SDK suite), homebrew DB.
   - name: xparam
@@ -296,6 +309,7 @@ targets:
       - MMCE
       - MX4SIO
       - HOMEBREW_SIO2MAN
+      - ETH
       - UDPFS
       - TMANIP
       - EXFAT
@@ -315,6 +329,11 @@ targets:
       - iomanx
       - filexio
       - dev9:ps2dev9
+      - ps2ip-nm:ps2ip
+      - smap-ps2ip:ps2smap
+      - ps2host
+      - netfs:ps2netfs
+      - ps2ftpd
       - dev9_poweroff
       - ps2hdd_osd:ps2hdd
       - fs:ps2fs
