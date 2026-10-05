@@ -40,6 +40,26 @@ static int join_path(char *out, size_t out_size, const char *a, const char *b)
     return snprintf(out, out_size, "%s%s", a, b) < (int)out_size;
 }
 
+static int prefix_case_equal(const char *text, const char *prefix)
+{
+    int i;
+
+    if (text == NULL || prefix == NULL)
+        return 0;
+    for (i = 0; prefix[i]; i++) {
+        int a = text[i], b = prefix[i];
+        if (a == 0)
+            return 0;
+        if (a >= 'a' && a <= 'z')
+            a -= 'a' - 'A';
+        if (b >= 'a' && b <= 'z')
+            b -= 'a' - 'A';
+        if (a != b)
+            return 0;
+    }
+    return 1;
+}
+
 static int is_bootcard_image(const char *parent, const char *name)
 {
     const char *leaf;
@@ -50,7 +70,7 @@ static int is_bootcard_image(const char *parent, const char *name)
     leaf = leaf != NULL ? leaf + 1 : parent;
     if (stricmp(leaf, "BOOT"))
         return 0;
-    return !strnicmp(name, "BootCard", 8);
+    return prefix_case_equal(name, "BootCard");
 }
 
 static void collect_boot_images(const char *dir, int depth)
