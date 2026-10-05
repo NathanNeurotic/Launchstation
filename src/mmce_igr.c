@@ -5,6 +5,8 @@
 #include "mmce_igr.h"
 #include "wle_igr_config.h"
 
+extern int fileMode;
+
 #define WLE_IGR_HELPER_NAME "WLE-IGR.ELF"
 #define WLE_IGR_MAX_BOOT_IMAGES 32
 #define WLE_IGR_SCAN_DEPTH 10
