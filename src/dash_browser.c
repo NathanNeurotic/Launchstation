@@ -893,7 +893,7 @@ static int activeHistoryPrune(const char *folder, int unit, int keep)
 		count = activeHistoryScan(folder, unit, oldest, sizeof(oldest));
 		if (count < 0)
 			return -1;
-		if (count <= keep)
+		if (keep == 0 || count <= keep)
 			return 0;
 		if (oldest[0] == '\0' || !joinBackupPath(path, sizeof(path), folder, oldest))
 			return -1;
