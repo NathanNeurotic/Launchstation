@@ -20,6 +20,7 @@ static int isSlashRootedBootPathDevice(const char *path);
 static int isDevicePathTerminator(char c);
 static int isBootUsbMassPath(const char *path);
 static int isBootAtaPath(const char *path);
+static int isBootIlinkPath(const char *path);
 static int isBootHddPath(const char *path);
 static int isBootXfromPath(const char *path);
 static void initializeBootExecPath(void);
@@ -346,7 +347,7 @@ static int isSlashRootedBootPathDevice(const char *path)
 	if (isBootHddPath(path))
 		return 0;
 
-	if (isBootUsbMassPath(path) || isBootAtaPath(path) || isBootXfromPath(path))
+	if (isBootUsbMassPath(path) || isBootAtaPath(path) || isBootIlinkPath(path) || isBootXfromPath(path))
 		return 1;
 	if (!strncmp(path, "mc", 2) && path[2] >= '0' && path[2] <= '9' && path[3] == ':')
 		return 1;
@@ -396,6 +397,17 @@ static int isBootAtaPath(const char *path)
 }
 //------------------------------
 //endfunc isBootAtaPath
+//---------------------------------------------------------------------------
+static int isBootIlinkPath(const char *path)
+{
+	if (path == NULL || strncmp(path, "ilink", 5))
+		return 0;
+
+	return (isDevicePathTerminator(path[5]) ||
+	        (path[5] >= '0' && path[5] <= '9' && isDevicePathTerminator(path[6])));
+}
+//------------------------------
+//endfunc isBootIlinkPath
 //---------------------------------------------------------------------------
 static int isBootHddPath(const char *path)
 {
@@ -508,6 +520,10 @@ enum BOOT_DEVICE prepareBootDeviceAndPath(const char *arg0, char *boot_path, siz
 		} else if (!strncmp(LaunchElfDir, "mx4sio", 6)) {
 			boot = BOOT_DEVICE_MX4SIO;
 #endif
+#ifdef ILINK
+		} else if (isBootIlinkPath(LaunchElfDir)) {
+			boot = BOOT_DEVICE_ILINK;
+#endif
 		} else if (isBootAtaPath(LaunchElfDir)) {
 			boot = BOOT_DEVICE_ATA;
 		} else if (!strncmp(LaunchElfDir, "cd", 2)) {
@@ -593,6 +609,11 @@ void bringUpBootDeviceStack(enum BOOT_DEVICE boot_device)
 #ifdef MX4SIO
 		case BOOT_DEVICE_MX4SIO:
 			loadMx4sioModules();
+			break;
+#endif
+#ifdef ILINK
+		case BOOT_DEVICE_ILINK:
+			loadIlinkModules();
 			break;
 #endif
 		case BOOT_DEVICE_ATA:

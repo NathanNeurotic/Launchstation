@@ -253,6 +253,18 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 #else
 		goto ELFnotFound;
 #endif
+	} else if (!strncmp(path, "ilink", 5)) {
+#ifdef ILINK
+		if (!loadIlinkModules())
+			goto ELFnotFound;
+		if ((t = checkELFheader(path)) <= 0)
+			goto ELFnotFound;
+		party[0] = 0;
+		strcpy(fullpath, path);
+		goto ELFchecked;
+#else
+		goto ELFnotFound;
+#endif
 	} else if (!strncmp(path, "mmce", 4)) {
 #ifdef MMCE
 		loadMmceModules();
