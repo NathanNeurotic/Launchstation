@@ -709,7 +709,7 @@ static int activeBackupStamp(char *out, size_t out_size)
 	if (sceCdReadClock(&clock) == 0 || clock.stat != 0) {
 		/* A missing/invalid RTC should not prevent a backup. Timer() is only
 		 * a per-boot fallback; uniqueness is still enforced against the folder. */
-		snprintf(out, out_size, "SESSION-%010llu", (unsigned long long)(Timer() / 1000));
+		snprintf(out, out_size, "00000000-000000-S%010llu", (unsigned long long)(Timer() / 1000));
 		return 1;
 	}
 
