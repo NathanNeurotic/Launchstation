@@ -18,6 +18,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <fcntl.h>
+
+#ifndef FIO_MT_RDONLY
+#define FIO_MT_RDONLY 0x01
+#endif
 #include "wle_igr_config.h"
 
 extern u8 iomanx_irx[];
@@ -83,7 +88,7 @@ static int path_exists(const char *path)
 {
     int fd;
 
-    fd = fileXioOpen(path, FIO_O_RDONLY, 0);
+    fd = fileXioOpen(path, O_RDONLY, 0);
     if (fd < 0)
         return 0;
     fileXioClose(fd);
