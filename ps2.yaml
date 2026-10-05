@@ -255,6 +255,7 @@ targets:
       - src/mmce_backup.c
       - src/mmce_control.c
       - src/mmce_igr.c
+      - src/mmce_igr_scan.c
       - src/hdd.c
       - src/hdd_header_injector.c
       - src/hdl_rpc.c
