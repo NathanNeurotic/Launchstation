@@ -485,11 +485,12 @@ int FileSystem_ReadDir(FSContext *pContext, FSFileInfo *pInfo)
 					}
 
 					// mmce answers getstat through the card, which cannot stat its root, and the BDM
-					// prefixes (usb, ata, mx4sio) are per-partition units: probe all of them with dopen
+					// prefixes (usb, ata, mx4sio, ilink) are per-partition units: probe all of them with dopen
 					if (!strcmp(pContext->m_kFile.device->name, "mmce") ||
 					    !strcmp(pContext->m_kFile.device->name, "usb") ||
 					    !strcmp(pContext->m_kFile.device->name, "ata") ||
-					    !strcmp(pContext->m_kFile.device->name, "mx4sio")) {
+					    !strcmp(pContext->m_kFile.device->name, "mx4sio") ||
+					    !strcmp(pContext->m_kFile.device->name, "ilink")) {
 						iop_file_t kProbe = pContext->m_kFile;
 
 						pContext->m_kFile.unit++;
@@ -587,6 +588,7 @@ int FileSystem_ReadDir(FSContext *pContext, FSFileInfo *pInfo)
 					    strcmp(ppkDevices[unit]->name, "usb") &&
 					    strcmp(ppkDevices[unit]->name, "ata") &&
 					    strcmp(ppkDevices[unit]->name, "mx4sio") &&
+					    strcmp(ppkDevices[unit]->name, "ilink") &&
 					    strcmp(ppkDevices[unit]->name, "pfs"))
 						continue;
 

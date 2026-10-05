@@ -72,6 +72,10 @@ int ensurePathDeviceStackReady(const char *path)
 	if (!strncmp(path, "mx4sio", 6))
 		return loadMx4sioModules();
 #endif
+#ifdef ILINK
+	if (!strncmp(path, "ilink", 5))
+		return loadIlinkModules();
+#endif
 #ifdef EXFAT
 	if (!strncmp(path, "ata", 3)) {
 		return loadAtaModules();

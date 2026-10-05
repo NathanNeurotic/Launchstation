@@ -1796,6 +1796,12 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 		}
 #endif
+#ifdef ILINK
+		if (allow_usb_devices) {
+			strcpy(files[nfiles].name, "ilink:");
+			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
+		}
+#endif
 
 		if (shouldShowHddDevice(0)) {
 			strcpy(files[nfiles].name, "hdd0:");
