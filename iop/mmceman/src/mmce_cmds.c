@@ -256,6 +256,33 @@ int mmce_cmd_set_gameid(void *ptr)
     return 0;
 }
 
+int mmce_cmd_unmount_bootcard(void)
+{
+    int res;
+    u8 wrbuf[0x3];
+    u8 rdbuf[0x2];
+
+    wrbuf[0x0] = MMCE_ID;
+    wrbuf[0x1] = MMCE_CMD_UNMOUNT_BOOTCARD;
+    wrbuf[0x2] = MMCE_RESERVED;
+
+    mmce_sio2_lock();
+    res = mmce_sio2_tx_rx_pio(sizeof(wrbuf), sizeof(rdbuf), wrbuf, rdbuf, &timeout_1s);
+    mmce_sio2_unlock();
+
+    if (res == -1) {
+        DPRINTF("%s ERROR: Timedout waiting for /ACK\n", __func__);
+        return -1;
+    }
+    if (rdbuf[0x1] != MMCE_REPLY_CONST) {
+        DPRINTF("%s ERROR: Invalid response from card. Got 0x%x, Expected 0x%x\n",
+                __func__, rdbuf[0x1], MMCE_REPLY_CONST);
+        return -1;
+    }
+
+    return 0;
+}
+
 int mmce_cmd_reset(void)
 {
     int res;
