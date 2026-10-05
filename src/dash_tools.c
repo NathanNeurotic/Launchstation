@@ -43,7 +43,7 @@ static const Tool tools[] = {
     {TA_MISC, DI_APP, "PS2 system browser", "Leave wLaunchELF and open the console's own Browser.", NULL, 1, MISC(Misc_PS2Browser), NULL},
     {TA_MISC, DI_APP, "OSDSYS", "Start the console's OSD (or the OSDSYS path configured in wLaunchELF).", NULL, 1, MISC(Misc_OSDSYS), NULL},
 #ifdef ETH
-    {TA_MISC, DI_NETWORK, "FTP / Network", "Start FTP and PS2Link host access on demand using the configured IP settings.", "Network drivers stay unloaded until you start this tool.", 0, MISC(Misc_PS2Net), NULL},
+    {TA_MISC, DI_NETWORK, "FTP / Remote access", "Start FTP and PS2Link on demand, plus the HDD command inbox used by MrRexD's PC tools.", "Network and HDD drivers stay unloaded until you start this tool.", 0, MISC(Misc_PS2Net), NULL},
 #endif
     {TA_MISC, DI_INFO, "System information", "Console model, ROM version, boot path, loaded configuration and debug details.", NULL, 0, MISC(Misc_Debug_Info), NULL},
     {TA_MISC, DI_CHIP, "Build information", "Features and drivers included in this build of wLaunchELF.", NULL, 0, MISC(Misc_Show_Build_Info), NULL},
