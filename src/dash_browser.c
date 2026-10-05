@@ -19,6 +19,7 @@
 #include "filer_actions.h"
 #include "filer_copy.h"
 #include "mc_card_export.h"
+#include "main_title.h"
 #include "gui_sort.h"
 #include "init.h"
 
@@ -689,6 +690,134 @@ static void cardExportProgress(int phase, u64 done, u64 total)
 	dashLoadingStatus(phase == MC_CARD_EXPORT_VERIFY ? "Verifying memory card image" : "Writing memory card image", scaled, 1000);
 }
 
+#define MMCE_BACKUP_HISTORY_KEEP 10
+
+static int dashBcdToInt(u8 value)
+{
+	return ((value >> 4) * 10) + (value & 0x0F);
+}
+
+static int activeBackupStamp(char *out, size_t out_size)
+{
+	sceCdCLOCK clock;
+	int year, month, day, hour, minute, second;
+
+	if (out == NULL || out_size == 0)
+		return 0;
+
+	memset(&clock, 0, sizeof(clock));
+	if (sceCdReadClock(&clock) == 0 || clock.stat != 0) {
+		/* A missing/invalid RTC should not prevent a backup. Timer() is only
+		 * a per-boot fallback; uniqueness is still enforced against the folder. */
+		snprintf(out, out_size, "00000000-000000-S%010llu", (unsigned long long)(Timer() / 1000));
+		return 1;
+	}
+
+	year = 2000 + dashBcdToInt(clock.year);
+	month = dashBcdToInt(clock.month & 0x7F);
+	day = dashBcdToInt(clock.day);
+	hour = dashBcdToInt(clock.hour);
+	minute = dashBcdToInt(clock.minute);
+	second = dashBcdToInt(clock.second);
+	menuTitleConvertTimestampToLocalTime(&year, &month, &day, &hour, &minute, &second);
+	snprintf(out, out_size, "%04d%02d%02d-%02d%02d%02d",
+	         year, month, day, hour, minute, second);
+	return 1;
+}
+
+static int activeHistoryMatch(int unit, const char *name)
+{
+	char prefix[32];
+	const char *dot;
+
+	if (name == NULL)
+		return 0;
+	snprintf(prefix, sizeof(prefix), "MMCE%d-ActiveCard-", unit);
+	if (strncmp(name, prefix, strlen(prefix)) != 0)
+		return 0;
+	dot = strrchr(name, '.');
+	return dot != NULL && !stricmp(dot, ".mcd");
+}
+
+static int joinBackupPath(char *out, size_t out_size, const char *folder, const char *name)
+{
+	int len;
+
+	if (out == NULL || out_size == 0 || folder == NULL || name == NULL)
+		return 0;
+	len = strlen(folder);
+	if (len > 0 && folder[len - 1] != '/' && folder[len - 1] != ':')
+		return snprintf(out, out_size, "%s/%s", folder, name) < (int)out_size;
+	return snprintf(out, out_size, "%s%s", folder, name) < (int)out_size;
+}
+
+static int activeHistoryName(int unit, const char *folder, char *name, size_t name_size)
+{
+	char stamp[32], candidate[MAX_PATH];
+	int suffix;
+
+	if (!activeBackupStamp(stamp, sizeof(stamp)))
+		return 0;
+
+	for (suffix = 0; suffix < 100; suffix++) {
+		if (suffix == 0)
+			snprintf(name, name_size, "MMCE%d-ActiveCard-%s.mcd", unit, stamp);
+		else
+			snprintf(name, name_size, "MMCE%d-ActiveCard-%s-%02d.mcd", unit, stamp, suffix);
+		if (!joinBackupPath(candidate, sizeof(candidate), folder, name))
+			return 0;
+		if (!wleExists(candidate))
+			return 1;
+	}
+	return 0;
+}
+
+static int activeHistoryScan(const char *folder, int unit, char *oldest, size_t oldest_size)
+{
+	iox_dirent_t ent;
+	char path[MAX_PATH];
+	int fd, count = 0;
+
+	if (oldest != NULL && oldest_size > 0)
+		oldest[0] = '\0';
+	dashStrCopy(path, folder, sizeof(path));
+	fd = genDopen(path);
+	if (fd < 0)
+		return -1;
+
+	memset(&ent, 0, sizeof(ent));
+	while (fileXioDread(fd, &ent) > 0) {
+		if (!activeHistoryMatch(unit, ent.name))
+			continue;
+		count++;
+		if (oldest != NULL && oldest_size > 0 &&
+		    (oldest[0] == '\0' || strcmp(ent.name, oldest) < 0))
+			dashStrCopy(oldest, ent.name, oldest_size);
+		memset(&ent, 0, sizeof(ent));
+	}
+	genDclose(fd);
+	return count;
+}
+
+static int activeHistoryPrune(const char *folder, int unit, int keep)
+{
+	char oldest[MAX_NAME], path[MAX_PATH];
+	int count, guard = 0;
+
+	while (guard++ < 256) {
+		count = activeHistoryScan(folder, unit, oldest, sizeof(oldest));
+		if (count < 0)
+			return -1;
+		if (count <= keep)
+			return 0;
+		if (oldest[0] == '\0' || !joinBackupPath(path, sizeof(path), folder, oldest))
+			return -1;
+		if (genRemove(path) < 0)
+			return -1;
+	}
+	return -1;
+}
+
 static int mmceUnitFromPath(const char *path)
 {
 	if (path == NULL || strncmp(path, "mmce", 4) != 0 ||
@@ -711,13 +840,11 @@ static void opBackupActiveMmce(void)
 	if (!dashPickPath("Back up active MMCE card to", folder, DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
 		return;
 
-	snprintf(name, sizeof(name), "MMCE%d-ActiveCard.mcd", unit);
-	if (snprintf(dest, sizeof(dest), "%s%s", folder, name) >= (int)sizeof(dest)) {
-		dashToast(DASH_TOAST_WARN, "Destination path is too long");
+	if (!activeHistoryName(unit, folder, name, sizeof(name)) ||
+	    !joinBackupPath(dest, sizeof(dest), folder, name)) {
+		dashToast(DASH_TOAST_WARN, "Could not create a unique backup history name");
 		return;
 	}
-	if (wleExists(dest) && !dashModalConfirm("Replace existing active-card backup?", dest, "Replace", 1))
-		return;
 	if (!prepareOp())
 		return;
 
@@ -736,7 +863,10 @@ static void opBackupActiveMmce(void)
 	dashLoadingEnd();
 
 	if (r == MC_CARD_EXPORT_OK) {
-		dashToast(DASH_TOAST_OK, "Active MMCE card backed up and verified");
+		if (activeHistoryPrune(folder, unit, MMCE_BACKUP_HISTORY_KEEP) < 0)
+			dashToast(DASH_TOAST_WARN, "Backup verified, but old history could not be pruned");
+		else
+			dashToast(DASH_TOAST_OK, "Active MMCE card backed up; newest 10 kept");
 		refresh();
 	} else if (r == MC_CARD_EXPORT_FORMAT) {
 		dashModalMessage(DI_WARNING, "Not backed up",
