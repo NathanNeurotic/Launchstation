@@ -30,7 +30,7 @@ else
   EE_BIN_PKD = BOOT.ELF
 endif
 EE_OBJS = main.o main_actions.o main_boot.o main_modules.o main_menu.o main_title.o main_info_screens.o main_console_info.o main_gameid.o main_gameid_table.o main_history.o remote_control.o pc_game_receiver.o init.o main_startup.o main_fileops.o main_exploit_installer.o kelf_signer.o config.o config_screen.o config_startup.o config_network.o config_advanced.o gui.o gui_colors.o virtual_keyboard.o elf.o draw.o draw_gs.o draw_text.o loader_elf.o filer.o filer_device.o filer_mount.o filer_fileops.o filer_actions.o filer_browser.o filer_copy.o \
-	gui_sort.o gui_texteditor.o gui_hdd0_format.o psu_functions.o mc_card_export.o mmce_backup.o \
+	gui_sort.o gui_texteditor.o gui_hdd0_format.o psu_functions.o mc_card_export.o mmce_backup.o mmce_control.o \
 	poweroff_irx.o iomanx_irx.o filexio_irx.o ps2dev9_irx.o dev9_poweroff_irx.o \
 	ps2hdd_irx.o ps2fs_irx.o usbd_irx.o mcman_irx.o mcserv_irx.o \
 	cdvd_irx.o xparam_irx.o vmcman_irx.o ps2kbd_irx.o \
@@ -46,7 +46,7 @@ EE_OBJS = main.o main_actions.o main_boot.o main_modules.o main_menu.o main_titl
 	sfx_cursor_adp.o sfx_confirm_adp.o sfx_cancel_adp.o sfx_transition_adp.o sfx_message_adp.o sfx_boot_adp.o sfx_connect_adp.o sfx_disconnect_adp.o \
 	icon_cross_png.o icon_circle_png.o icon_square_png.o icon_triangle_png.o icon_up_png.o icon_down_png.o icon_left_png.o icon_right_png.o icon_select_png.o icon_start_png.o icon_l1_png.o icon_l2_png.o icon_l3_png.o icon_r1_png.o icon_r2_png.o icon_r3_png.o
 
-EE_INCS := -I$(PS2DEV)/gsKit/include -I$(PS2SDK)/ports/include -Iinclude
+EE_INCS := -I$(PS2DEV)/gsKit/include -I$(PS2SDK)/ports/include -Iinclude -Iiop/mmceman/include
 EE_INCS += -Ipackages/world/audsrv/include
 
 EE_LDFLAGS := -L$(PS2DEV)/gsKit/lib -L$(PS2SDK)/ports/lib -Liop/oldlibs/libcdvd/lib -s -Wl,--no-warn-mismatch
