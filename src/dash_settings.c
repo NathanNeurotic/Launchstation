@@ -1145,7 +1145,7 @@ static void setChoice(int id, int v)
 			 * from; otherwise enabling one disables the other's auto-start. */
 			if (v && ((bit == DASH_DEVA_MMCE && boot_bit == DASH_DEVA_MX4SIO) ||
 			          (bit == DASH_DEVA_MX4SIO && boot_bit == DASH_DEVA_MMCE))) {
-				dashToast(DASH_TOAST_WARNING,
+				dashToast(DASH_TOAST_WARN,
 				          "MMCE and MX4SIO cannot auto-start together while booted from this device");
 				break;
 			}
