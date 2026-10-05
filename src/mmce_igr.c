@@ -235,15 +235,71 @@ static int install_into_boot_image(const char *image, const u8 *helper, int help
     return 0;
 }
 
-static int direct_opl_path(const char *path)
+static int is_mc_path(const char *path)
+{
+    return path != NULL &&
+           ((!strncmp(path, "mc0:", 4)) || (!strncmp(path, "mc1:", 4)));
+}
+
+static int is_usb_path(const char *path)
 {
     if (path == NULL)
         return 0;
-    return !strncmp(path, "mc0:", 4) || !strncmp(path, "mc1:", 4) ||
-           !strncmp(path, "mass:", 5) ||
+    return !strncmp(path, "mass:", 5) ||
            (!strncmp(path, "mass", 4) && path[4] >= '0' && path[4] <= '9' && path[5] == ':') ||
            !strncmp(path, "usb:", 4) ||
            (!strncmp(path, "usb", 3) && path[3] >= '0' && path[3] <= '9' && path[4] == ':');
+}
+
+static int parent_dir(const char *path, char *out, size_t out_size)
+{
+    const char *slash, *colon;
+    size_t n;
+
+    if (path == NULL || out == NULL || out_size == 0)
+        return 0;
+    slash = strrchr(path, '/');
+    if (slash != NULL)
+        n = slash - path + 1;
+    else {
+        colon = strrchr(path, ':');
+        if (colon == NULL)
+            return 0;
+        n = colon - path + 1;
+    }
+    if (n >= out_size)
+        return 0;
+    memcpy(out, path, n);
+    out[n] = '\0';
+    return 1;
+}
+
+static int install_direct_helper(const char *boot, const u8 *helper, int helper_size,
+                                 char *target, size_t target_size)
+{
+    char dir[MAX_PATH];
+
+    if (is_mc_path(boot)) {
+        snprintf(dir, sizeof(dir), "%c%c%c%c/BOOT",
+                 boot[0], boot[1], boot[2], boot[3]);
+        if (genMkdir(dir, fileMode) < 0) {
+            char probe[MAX_PATH];
+            int d;
+            snprintf(probe, sizeof(probe), "%s", dir);
+            d = genDopen(probe);
+            if (d < 0)
+                return -1;
+            genDclose(d);
+        }
+        return snprintf(target, target_size, "%s/%s", dir, WLE_IGR_HELPER_NAME) < (int)target_size &&
+               write_verified(target, helper, helper_size) == 0 ? 0 : -1;
+    }
+
+    if (is_usb_path(boot) && parent_dir(boot, dir, sizeof(dir)))
+        return snprintf(target, target_size, "%s%s", dir, WLE_IGR_HELPER_NAME) < (int)target_size &&
+               write_verified(target, helper, helper_size) == 0 ? 0 : -1;
+
+    return -1;
 }
 
 int wleIgrConfigure(const char *backup_root, WleIgrInstallStats *stats,
@@ -261,23 +317,35 @@ int wleIgrConfigure(const char *backup_root, WleIgrInstallStats *stats,
     memset(stats, 0, sizeof(*stats));
     result[0] = '\0';
 
-    if (direct_opl_path(boot)) {
-        snprintf(result, result_size,
-                 "No helper needed. Set OPL Exit to: %s", boot);
-        return 0;
-    }
-
-    if (boot == NULL ||
-        (strncmp(boot, "mmce0:", 6) && strncmp(boot, "mmce1:", 6))) {
-        snprintf(result, result_size,
-                 "This boot device needs an IGR loader module that is not installed yet.");
-        return -3;
-    }
+    if (boot == NULL || boot[0] == '\0')
+        return -1;
 
     portable_mmce_path(boot, app, sizeof(app));
     helper = patched_helper(app, backup_root, &helper_size);
     if (helper == NULL)
         return -1;
+
+    if (is_mc_path(boot) || is_usb_path(boot)) {
+        char target[MAX_PATH];
+        int r = install_direct_helper(boot, helper, helper_size, target, sizeof(target));
+        free(helper);
+        if (r < 0) {
+            snprintf(result, result_size, "The verified IGR helper could not be installed.");
+            return -1;
+        }
+        stats->boot_images = 1;
+        stats->installed = 1;
+        snprintf(result, result_size,
+                 "Installed and verified the IGR helper. Set OPL Exit to: %s", target);
+        return 0;
+    }
+
+    if (strncmp(boot, "mmce0:", 6) && strncmp(boot, "mmce1:", 6)) {
+        free(helper);
+        snprintf(result, result_size,
+                 "This boot device still needs a trampoline storage driver before OPL IGR can relaunch it.");
+        return -3;
+    }
 
     boot_image_count = 0;
     if (!loadMmceModules()) {
