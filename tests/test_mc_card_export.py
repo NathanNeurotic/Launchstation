@@ -29,6 +29,15 @@ def function(signature, text):
         end += 1
     return text[start:end] + "\n"
 
+active_export = function("int mcCardExportActiveMmcePcsx2(", src)
+assert active_export.count("genOpen(source, FIO_O_RDONLY)") == 1, "active export must discover/open the synthetic source once"
+assert "source_info_fd(src_fd" in active_export, "active export must validate the already-open active source"
+assert active_export.count("read_exact_fd(src_fd") >= 2, "write and verify passes must read through the stable active handle"
+assert "convert_block(export_in" in active_export, "active export must use the existing PCSX2 page converter"
+assert "read_exact_at(dest" in active_export and "memcmp(export_out, verify_out" in active_export, \
+    "active export must verify the completed PCSX2 image against regenerated output"
+assert "genRemove(remove_path)" in active_export, "failed active exports must remove partial output"
+
 page = bytes((i & 0xFF) for i in range(512))
 
 def ecc128(data):
@@ -84,4 +93,4 @@ with tempfile.TemporaryDirectory(prefix="wle-card-export-") as tmp:
 
 assert got == expected, f"ECC mismatch: {got.hex()} != {expected.hex()}"
 assert got[-4:] == b"\0\0\0\0"
-print("PASS: PCSX2 528-byte page conversion matches AFL MCMAN ECC")
+print("PASS: PCSX2 page conversion matches AFL MCMAN ECC; active-MMCE export keeps one stable source handle and verifies output")
