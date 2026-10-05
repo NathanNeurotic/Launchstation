@@ -6,6 +6,7 @@
 //runs the command (disc, OSDSYS, network...) behind the loading overlay.
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "mmce_igr.h"
 #include <stddef.h>
 
 enum ToolAction {
@@ -13,7 +14,8 @@ enum ToolAction {
 	TA_MISC,
 	TA_BROWSER,
 	TA_BROWSER_AT,
-	TA_EDITOR
+	TA_EDITOR,
+	TA_IGR_SETUP
 };
 
 typedef struct
@@ -39,6 +41,7 @@ static const Tool tools[] = {
     {TA_HEADER, -1, "STORAGE", NULL, NULL, 0, 0, NULL},
     {TA_MISC, DI_HDD, "HDD Manager", "Create, remove, rename and expand APA partitions, view HDL game information and format the internal HDD.", "Partition changes and formatting are permanent.", 0, MISC(Misc_HddManager), NULL},
     {TA_MISC, DI_MC, "Memory card exploit installer", "Install a memory card system-update exploit for this console, another model or region, or PSX/DESR.", "Writes system folders to the memory card. Follow the on-screen checks carefully.", 1, MISC(Misc_Exploit_Installer), NULL},
+    {TA_IGR_SETUP, DI_MC, "OPL IGR automatic MMCE backup", "Set up verified automatic backup of every MMCE card image when OPL exits a game through IGR.", "Installs or updates WLE-IGR.ELF on the required boot medium and tells you the exact OPL Exit-to path.", 0, 0, NULL},
     {TA_HEADER, -1, "SYSTEM", NULL, NULL, 0, 0, NULL},
     {TA_MISC, DI_APP, "PS2 system browser", "Leave wLaunchELF and open the console's own Browser.", NULL, 1, MISC(Misc_PS2Browser), NULL},
     {TA_MISC, DI_APP, "OSDSYS", "Start the console's OSD (or the OSDSYS path configured in wLaunchELF).", NULL, 1, MISC(Misc_OSDSYS), NULL},
@@ -77,6 +80,34 @@ static void toolsEnter(void)
 		tMove(1);
 }
 
+static void setupIgrBackup(void)
+{
+	WleIgrInstallStats stats;
+	char folder[MAX_PATH], result[384];
+	const char *start = LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir;
+	int r;
+
+	snprintf(folder, sizeof(folder), "%s", start != NULL ? start : "");
+	if (!dashPickPath("Automatic MMCE backup destination", folder,
+	                  DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
+		return;
+
+	if (!dashModalConfirm("Install OPL IGR backup helper?",
+	                      "wLaunchELF will install or update a verified WLE-IGR.ELF where OPL can launch it. MMCE-hosted setups update every discovered BootCard image.",
+	                      "Install", 0))
+		return;
+
+	dashLoadingBegin("Configuring OPL IGR automatic backup");
+	r = wleIgrConfigure(folder, &stats, result, sizeof(result));
+	dashLoadingEnd();
+
+	if (r == 0)
+		dashModalMessage(DI_CHECK, "OPL IGR automatic backup ready", result,
+		                 "After setting OPL Exit-to to the shown helper, IGR will back up changed MMCE card images and then open wLaunchELF.");
+	else
+		dashModalMessage(DI_WARNING, "OPL IGR setup incomplete", result[0] ? result : "Setup failed.", NULL);
+}
+
 static void runTool(const Tool *t)
 {
 	if (t->confirm) {
@@ -97,6 +128,9 @@ static void runTool(const Tool *t)
 			break;
 		case TA_EDITOR:
 			dashOpenTextEditor(NULL);
+			break;
+		case TA_IGR_SETUP:
+			setupIgrBackup();
 			break;
 	}
 }
