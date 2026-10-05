@@ -29,9 +29,13 @@ void initializeRuntimeInputModules(enum BOOT_DEVICE boot_device)
 	DPRINTF("setup pad\n");
 	setupPad();  //Comment out this line when using early setupPad above
 	waitAnyPadReady();
-	if (readpad_no_KB() && (new_pad & PAD_SELECT))
+	if (readpad_no_KB() && (new_pad & PAD_SELECT)) {
+		/* Recovery boot: keep legacy "show all devices" behavior, but also
+		 * ignore DASHBOARD.CNF for this session. That file owns device
+		 * auto-start, so a bad saved stack combination can never trap boot. */
 		boot_show_all_devices = 1;
-	else {
+		boot_safe_mode = 1;
+	} else {
 		/* Keep non-Select boot-held launch keys visible to the main menu. */
 		clearPadPressState();
 	}
