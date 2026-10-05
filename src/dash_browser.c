@@ -689,6 +689,68 @@ static void cardExportProgress(int phase, u64 done, u64 total)
 	dashLoadingStatus(phase == MC_CARD_EXPORT_VERIFY ? "Verifying memory card image" : "Writing memory card image", scaled, 1000);
 }
 
+static int mmceUnitFromPath(const char *path)
+{
+	if (path == NULL || strncmp(path, "mmce", 4) != 0 ||
+	    path[4] < '0' || path[4] > '1' || path[5] != ':')
+		return -1;
+	return path[4] - '0';
+}
+
+static void opBackupActiveMmce(void)
+{
+	char source[MAX_PATH], folder[MAX_PATH], dest[MAX_PATH], name[40];
+	int unit = mmceUnitFromPath(fb.dir);
+	int r, prep;
+
+	if (unit < 0)
+		return;
+
+	snprintf(source, sizeof(source), "mmce%d:/__active_card__.mcd", unit);
+	dashStrCopy(folder, fb.dir, sizeof(folder));
+	if (!dashPickPath("Back up active MMCE card to", folder, DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
+		return;
+
+	snprintf(name, sizeof(name), "MMCE%d-ActiveCard.mcd", unit);
+	if (snprintf(dest, sizeof(dest), "%s%s", folder, name) >= (int)sizeof(dest)) {
+		dashToast(DASH_TOAST_WARN, "Destination path is too long");
+		return;
+	}
+	if (wleExists(dest) && !dashModalConfirm("Replace existing active-card backup?", dest, "Replace", 1))
+		return;
+	if (!prepareOp())
+		return;
+
+	prep = prepareTransferDeviceStacks(source, dest);
+	if (prep != TRANSFER_STACK_READY) {
+		dashModalMessage(DI_WARNING, "Cannot back up there",
+		                 prep == TRANSFER_STACK_INCOMPATIBLE ?
+		                     "The source and destination require device stacks that cannot stay active together." :
+		                     "The source or destination device could not be started.",
+		                 dest);
+		return;
+	}
+
+	dashLoadingBegin("Backing up active MMCE card");
+	r = mcCardBackupNoEcc(source, dest, cardExportProgress);
+	dashLoadingEnd();
+
+	if (r == MC_CARD_EXPORT_OK) {
+		dashToast(DASH_TOAST_OK, "Active MMCE card backed up and verified");
+		refresh();
+	} else if (r == MC_CARD_EXPORT_FORMAT) {
+		dashModalMessage(DI_WARNING, "Not backed up",
+		                 "The active MMCE backing file is not a valid PS2 memory-card image.", source);
+	} else if (r == MC_CARD_EXPORT_VERIFY_FAILED) {
+		dashModalMessage(DI_WARNING, "Verification failed",
+		                 "The backup did not match the active card and was removed.", dest);
+	} else {
+		dashModalMessage(DI_WARNING, "Active-card backup failed",
+		                 "The exact active backing image could not be read, or the destination could not be written. Any incomplete backup was removed.",
+		                 dest);
+	}
+}
+
 static void opBackupCard(void)
 {
 	FILEINFO *f;
@@ -1146,8 +1208,8 @@ static void actionsMenu(void)
 	const char *psu_label;
 	int in_folder = fb.dir[0] && !isMisc(fb.dir);
 	int is_elf = 0, has_target = (fb.nmarked > 0 || f != NULL);
-	DashMenuItem items[36];
-	int ids[36], n = 0, r;
+	DashMenuItem items[40];
+	int ids[40], n = 0, r;
 	char marked[24];
 	enum {
 		F_OPEN,
@@ -1166,6 +1228,7 @@ static void actionsMenu(void)
 		F_TITLECFG,
 		F_VMC0,
 		F_VMC1,
+		F_BACKUP_ACTIVE_MMCE,
 		F_BACKUP_MCD,
 		F_EXPORT_PS2,
 		F_IMPORT_MCD,
@@ -1225,6 +1288,8 @@ static void actionsMenu(void)
 			ADD(DI_MC, "Mount as vmc0:", vmcMounted[0] ? "replaces the mounted one" : NULL, 0, F_VMC0);
 			ADD(DI_MC, "Mount as vmc1:", vmcMounted[1] ? "replaces the mounted one" : NULL, !en[MOUNTVMC1], F_VMC1);
 		}
+		if (mmceUnitFromPath(fb.dir) >= 0)
+			ADD(DI_MC, "Back up active MMCE card...", "reads the exact firmware-selected backing image", 0, F_BACKUP_ACTIVE_MMCE);
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "MCD")) {
 			ADD(DI_MC, "Back up .mcd...", "verified byte-for-byte copy", 0, F_BACKUP_MCD);
 			ADD(DI_MC, "Export as PCSX2 .ps2...", "adds ECC and verifies the copy", 0, F_EXPORT_PS2);
@@ -1305,6 +1370,9 @@ static void actionsMenu(void)
 			break;
 		case F_VMC1:
 			opMountVmc(1);
+			break;
+		case F_BACKUP_ACTIVE_MMCE:
+			opBackupActiveMmce();
 			break;
 		case F_BACKUP_MCD:
 			opBackupCard();
