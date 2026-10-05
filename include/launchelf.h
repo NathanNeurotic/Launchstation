@@ -348,6 +348,7 @@ extern int swapKeys;
 extern int cdmode;      //Last detected disc type
 extern u8 console_is_PSX;
 extern u8 boot_show_all_devices;
+extern u8 boot_safe_mode;
 extern char if_conf[IPCONF_MAX_LEN];
 extern int if_conf_len;
 extern char ip[16];
