@@ -389,8 +389,12 @@ int mmceBackupAllCards(int unit, const char *dest_root, MmceBackupStats *stats,
     if (!dir_exists(source_root))
         return -1;
 
-    if (!strncmp(dest_root, source_root, strlen(source_root)))
-        return -1;
+    {
+        size_t source_len = strlen(source_root);
+        if (!strncmp(dest_root, source_root, source_len) &&
+            (dest_root[source_len] == '\0' || dest_root[source_len] == '/'))
+            return -1;
+    }
 
     if (!join_path(history_root, sizeof(history_root), dest_root, "WLE-MMCE-Backups"))
         return -1;
