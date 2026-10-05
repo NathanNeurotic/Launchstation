@@ -231,6 +231,8 @@ targets:
       - IEEE1394_bd_mini:IEEE1394_bd
       - dev9:ps2dev9
       - ata_bd
+      - ps2hdd_osd:ps2hdd
+      - fs:ps2fs
 
   - name: wLaunchELF
     type: ee
