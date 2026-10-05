@@ -2304,6 +2304,27 @@ int filerMountVmc(const char *path, const FILEINFO *file, int slot, char *msg, i
 	return 0;
 }
 
+int filerUnmountVmc(int slot)
+{
+	char dev[8];
+	int j;
+
+	if (slot < 0 || slot > 1)
+		return -1;
+	if (!vmcMounted[slot])
+		return 0;
+
+	snprintf(dev, sizeof(dev), "vmc%d:", slot);
+	if ((j = vmc_PartyIndex[slot]) >= 0) {
+		vmc_PartyIndex[slot] = -1;
+		if (j != vmc_PartyIndex[1 ^ slot])
+			Party_vmcIndex[j] = -1;
+	}
+	fileXioUmount(dev);
+	vmcMounted[slot] = 0;
+	return 0;
+}
+
 /* Writes icon.sys (with `title`) and icon.icn (showing `text`) in `path`,
  * asking before replacing existing ones. 1 = created, 0 = cancelled, <0 error */
 int filerCreateFolderIcon(const char *path, const char *title, const char *text, char *msg, int msg_size)
