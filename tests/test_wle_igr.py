@@ -28,7 +28,7 @@ assert "install_helper_on_any_mc" in setup
 assert '"mx4sio"' in setup and '"ilink"' in setup and '"ata"' in setup
 assert "strnicmp" not in setup
 
-igr_start = main.index("static void runWleIgrBackup(")
+igr_start = main.index("static int runWleIgrBackup(")
 igr_end = main.index("//---------------------------------------------------------------------------", igr_start)
 igr = main[igr_start:igr_end]
 assert "for (unit = 0; unit < 2; unit++)" in igr
