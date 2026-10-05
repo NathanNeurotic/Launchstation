@@ -149,8 +149,9 @@ static void runWleIgrBackup(int argc, char *argv[])
 	 * valid .mcd under MemoryCards is considered, including named/GameID
 	 * cards that cannot be reconstructed from GET_CARD after IGR. */
 	for (unit = 0; unit < 2; unit++) {
+		MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format};
 		memset(&one, 0, sizeof(one));
-		if (mmceBackupAllCards(unit, backup_root, &one, NULL) < 0)
+		if (mmceBackupAllCards(unit, backup_root, &options, &one, NULL) < 0)
 			continue;
 		available++;
 		total.candidates += one.candidates;
