@@ -799,6 +799,85 @@ static int activeHistoryScan(const char *folder, int unit, char *oldest, size_t 
 	return count;
 }
 
+static int activeHistoryNewestOther(const char *folder, int unit, const char *exclude,
+                                    char *newest, size_t newest_size)
+{
+	iox_dirent_t ent;
+	char path[MAX_PATH];
+	int fd;
+
+	if (newest == NULL || newest_size == 0)
+		return -1;
+	newest[0] = '\0';
+	dashStrCopy(path, folder, sizeof(path));
+	fd = genDopen(path);
+	if (fd < 0)
+		return -1;
+
+	memset(&ent, 0, sizeof(ent));
+	while (fileXioDread(fd, &ent) > 0) {
+		if (!activeHistoryMatch(unit, ent.name) ||
+		    (exclude != NULL && !strcmp(ent.name, exclude))) {
+			memset(&ent, 0, sizeof(ent));
+			continue;
+		}
+		if (newest[0] == '\0' || strcmp(ent.name, newest) > 0)
+			dashStrCopy(newest, ent.name, newest_size);
+		memset(&ent, 0, sizeof(ent));
+	}
+	genDclose(fd);
+	return newest[0] != '\0' ? 1 : 0;
+}
+
+static int activeHistoryFilesEqual(const char *a, const char *b)
+{
+	static u8 buf_a[16384] __attribute__((aligned(64)));
+	static u8 buf_b[16384] __attribute__((aligned(64)));
+	int fa = -1, fbk = -1, result = -1;
+	s64 size_a, size_b;
+
+	fa = genOpen(a, FIO_O_RDONLY);
+	if (fa < 0)
+		goto done;
+	fbk = genOpen(b, FIO_O_RDONLY);
+	if (fbk < 0)
+		goto done;
+
+	size_a = genLseek(fa, 0, SEEK_END);
+	size_b = genLseek(fbk, 0, SEEK_END);
+	if (size_a < 0 || size_b < 0)
+		goto done;
+	if (size_a != size_b) {
+		result = 0;
+		goto done;
+	}
+	if (genLseek(fa, 0, SEEK_SET) != 0 || genLseek(fbk, 0, SEEK_SET) != 0)
+		goto done;
+
+	result = 1;
+	while (size_a > 0) {
+		int want = size_a > (s64)sizeof(buf_a) ? (int)sizeof(buf_a) : (int)size_a;
+		int ra = genRead(fa, buf_a, want);
+		int rb = genRead(fbk, buf_b, want);
+		if (ra != want || rb != want) {
+			result = -1;
+			break;
+		}
+		if (memcmp(buf_a, buf_b, want) != 0) {
+			result = 0;
+			break;
+		}
+		size_a -= want;
+	}
+
+done:
+	if (fbk >= 0)
+		genClose(fbk);
+	if (fa >= 0)
+		genClose(fa);
+	return result;
+}
+
 static int activeHistoryPrune(const char *folder, int unit, int keep)
 {
 	char oldest[MAX_NAME], path[MAX_PATH];
@@ -863,10 +942,25 @@ static void opBackupActiveMmce(void)
 	dashLoadingEnd();
 
 	if (r == MC_CARD_EXPORT_OK) {
-		if (activeHistoryPrune(folder, unit, MMCE_BACKUP_HISTORY_KEEP) < 0)
+		char previous_name[MAX_NAME], previous_path[MAX_PATH];
+		int newest = activeHistoryNewestOther(folder, unit, name, previous_name, sizeof(previous_name));
+		int same = -1;
+
+		if (newest > 0 && joinBackupPath(previous_path, sizeof(previous_path), folder, previous_name))
+			same = activeHistoryFilesEqual(dest, previous_path);
+
+		if (same == 1) {
+			if (genRemove(dest) < 0)
+				dashToast(DASH_TOAST_WARN, "Card is unchanged, but the duplicate backup could not be removed");
+			else if (activeHistoryPrune(folder, unit, MMCE_BACKUP_HISTORY_KEEP) < 0)
+				dashToast(DASH_TOAST_WARN, "Card unchanged; duplicate removed, but old history could not be pruned");
+			else
+				dashToast(DASH_TOAST_INFO, "Active MMCE card unchanged; no duplicate history saved");
+		} else if (activeHistoryPrune(folder, unit, MMCE_BACKUP_HISTORY_KEEP) < 0) {
 			dashToast(DASH_TOAST_WARN, "Backup verified, but old history could not be pruned");
-		else
-			dashToast(DASH_TOAST_OK, "Active MMCE card backed up; newest 10 kept");
+		} else {
+			dashToast(DASH_TOAST_OK, "Active MMCE card changed; verified backup added to history");
+		}
 		refresh();
 	} else if (r == MC_CARD_EXPORT_FORMAT) {
 		dashModalMessage(DI_WARNING, "Not backed up",
