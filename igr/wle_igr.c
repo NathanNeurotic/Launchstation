@@ -11,6 +11,7 @@
 #include <loadfile.h>
 #include <iopcontrol.h>
 #include <iopheap.h>
+#define NEWLIB_PORT_AWARE
 #include <fileXio_rpc.h>
 #include <sbv_patches.h>
 #include <tamtypes.h>
