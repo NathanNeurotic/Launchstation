@@ -314,6 +314,14 @@ int wleIgrConfigure(const char *backup_root, WleIgrInstallStats *stats,
     if (stats == NULL || result == NULL || result_size == 0 ||
         backup_root == NULL || backup_root[0] == '\0')
         return -1;
+    if ((!strncmp(backup_root, "mmce0:/MemoryCards", 20) &&
+         (backup_root[20] == '\0' || backup_root[20] == '/')) ||
+        (!strncmp(backup_root, "mmce1:/MemoryCards", 20) &&
+         (backup_root[20] == '\0' || backup_root[20] == '/'))) {
+        snprintf(result, result_size,
+                 "Choose a backup destination outside the MMCE MemoryCards tree.");
+        return -4;
+    }
     memset(stats, 0, sizeof(*stats));
     result[0] = '\0';
 
