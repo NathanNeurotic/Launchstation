@@ -7,6 +7,7 @@
 #include "mmce_backup.h"
 #include "mmce_control.h"
 #include "mmce_igr.h"
+#include "mmce_igr_scan.h"
 
 int mmceIgrRequested(int argc, char *argv[])
 {
@@ -41,22 +42,42 @@ int mmceIgrRunAutoBackup(MmceIgrResult *result)
 			continue;
 
 		local.slots_present++;
-		restore = mmceControlRestoreFromBootCard(unit);
-		if (restore < 0) {
-			/* Older/unsupported firmware or a failed switch: never guess at
-			 * the card after IGR. The changed-card fallback layer can still
-			 * cover independently addressable images. */
-			local.warnings++;
-			continue;
-		}
-		if (restore > 0)
-			local.bootcards_restored++;
 
 		if (mmceEnsureAutoBackupFolder(unit, folder, sizeof(folder)) < 0) {
 			local.failures++;
 			continue;
 		}
 
+		restore = mmceControlRestoreFromBootCard(unit);
+		if (restore > 0) {
+			MmceIgrScanResult scan;
+			local.bootcards_restored++;
+			/* OPL switched through BootCard. The restored active card covers
+			 * GameID/default behavior; the changed-card scan also catches the
+			 * previously selected named/manual card. First scan backs up all
+			 * discovered images to establish a safe complete baseline. */
+			if (mmceIgrScanChangedCards(unit, folder, &scan) < 0)
+				local.warnings++;
+			local.backups_created += scan.backups_created;
+			local.backups_unchanged += scan.backups_unchanged;
+			local.warnings += scan.warnings;
+			local.failures += scan.failures;
+		} else if (restore < 0) {
+			MmceIgrScanResult scan;
+			/* Do not back up the active image here: older/failed firmware may
+			 * still be presenting BootCard. Scan independent card files instead. */
+			local.warnings++;
+			if (mmceIgrScanChangedCards(unit, folder, &scan) < 0)
+				local.warnings++;
+			local.backups_created += scan.backups_created;
+			local.backups_unchanged += scan.backups_unchanged;
+			local.warnings += scan.warnings;
+			local.failures += scan.failures;
+			continue;
+		}
+
+		/* No BootCard switch, or a successful unmount: the hidden synthetic
+		 * source is the exact card firmware is currently presenting. */
 		saved[0] = '\0';
 		r = mmceBackupActiveHistory(unit, folder,
 		                            MMCE_BACKUP_HISTORY_KEEP_DEFAULT,
