@@ -209,6 +209,7 @@ targets:
   - name: wle_igr
     type: ee
     sources: [igr/wle_igr.c]
+    include_dirs: [include]
     opt: -Os
     cflags: [-fdata-sections, -ffunction-sections]
     ldflags:
