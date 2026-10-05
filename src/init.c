@@ -1351,6 +1351,7 @@ void loadDs34InputModules(void)
 void loadUsbModules(void)
 {
 	int ret, ID __attribute__((unused));
+	int had_usb_mass = have_usb_mass;
 
 	if (!have_usbd || !have_usb_mass)
 		showLoadingModulesMsg("usb");
@@ -1413,6 +1414,24 @@ void loadUsbModules(void)
 #ifdef DS34
 	loadDs34Modules();
 #endif
+
+	/*
+	 * Keep USB demand-driven, but repair the wired PAD session after the
+	 * first runtime USB-mass activation. Real hardware shows that introducing
+	 * the USB/BDM stack after libpad has opened its ports invalidates that
+	 * live session. Re-opening the ports here gives lazy USB the same final
+	 * ordering as stock wLaunchELF/OPL without paying the USB startup cost
+	 * on every boot.
+	 *
+	 * padPortOpen() in current PS2SDK explicitly refreshes an already-open
+	 * slot, so setupPad() is sufficient; no IOP reset or permanent USB boot
+	 * initialization is required.
+	 */
+	if (!had_usb_mass && have_usb_mass && !is_early_init) {
+		DPRINTF(" [USB]: refreshing wired PAD ports after lazy USB activation\n");
+		setupPad();
+		clearPadPressState();
+	}
 }
 //------------------------------
 //endfunc loadUsbModules
