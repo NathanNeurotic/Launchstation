@@ -126,7 +126,6 @@ static void run_wle(const char *path)
     FlushCache(2);
     fileXioExit();
     SifLoadFileExit();
-    SifExitIopHeap();
     SifExitRpc();
     ExecPS2((void *)elf.epc, (void *)elf.gp, argc, argv);
 }
