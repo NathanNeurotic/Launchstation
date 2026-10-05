@@ -90,6 +90,7 @@ enum SetId {
 	S_NET_NM,
 	S_NET_GW,
 	S_HOSTWRITE,
+	S_NET_LEGACY,
 	/* advanced */
 	S_LANGUAGE,
 	S_GAMEID,
@@ -294,6 +295,9 @@ static const SetItem net_items[] = {
     {ST_IP, S_NET_GW, "Gateway", "Usually your router's address."},
 #if defined(ETH) || defined(UDPFS)
     {ST_CHOICE, S_HOSTWRITE, "Allow writing over the network", "Lets host: / udpfs: be written to, not only read."},
+#endif
+#ifdef ETH
+    {ST_CHOICE, S_NET_LEGACY, "Legacy Ethernet drivers", "Use MrRexD's ps2sdk v1.0 DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up. Takes effect the next time Ethernet/FTP is started."},
 #endif
 };
 
@@ -598,6 +602,11 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 #if defined(ETH) || defined(UDPFS)
 		case S_HOSTWRITE:
 			*cur = setting->HOSTwrite ? 1 : 0;
+			return 2;
+#endif
+#ifdef ETH
+		case S_NET_LEGACY:
+			*cur = setting->legacy_net_drivers ? 1 : 0;
 			return 2;
 #endif
 		case S_MENU_FRAME:
@@ -1143,6 +1152,11 @@ static void setChoice(int id, int v)
 #if defined(ETH) || defined(UDPFS)
 				case S_HOSTWRITE:
 					setting->HOSTwrite = v;
+					break;
+#endif
+#ifdef ETH
+				case S_NET_LEGACY:
+					setting->legacy_net_drivers = v;
 					break;
 #endif
 				case S_MENU_FRAME:
