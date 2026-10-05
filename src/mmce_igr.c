@@ -255,6 +255,35 @@ static int install_into_boot_image(const char *image, const u8 *helper, int help
     return 0;
 }
 
+static int remove_from_boot_image(const char *image)
+{
+    FILEINFO file;
+    char dir[MAX_PATH], target[MAX_PATH], msg[128];
+    int slot, r;
+
+    if (!split_image_path(image, dir, sizeof(dir), &file))
+        return -1;
+
+    slot = !vmcMounted[0] ? 0 : (!vmcMounted[1] ? 1 : -1);
+    if (slot < 0)
+        return -2;
+    if (filerMountVmc(dir, &file, slot, msg, sizeof(msg)) < 0)
+        return -1;
+
+    snprintf(target, sizeof(target), "vmc%d:/BOOT/%s", slot, WLE_IGR_HELPER_NAME);
+    if (!wleExists(target)) {
+        filerUnmountVmc(slot);
+        return 0;
+    }
+
+    r = genRemove(target);
+    if (r >= 0 && wleExists(target))
+        r = -1;
+    filerUnmountVmc(slot);
+    return r < 0 ? -1 : 1;
+}
+
+
 static int is_mc_path(const char *path)
 {
     return path != NULL &&
@@ -321,6 +350,20 @@ static int install_direct_helper(const char *boot, const u8 *helper, int helper_
 
     return -1;
 }
+
+
+static int direct_helper_target(const char *boot, char *target, size_t target_size)
+{
+    char dir[MAX_PATH];
+
+    if (is_mc_path(boot))
+        return snprintf(target, target_size, "%c%c%c%c/BOOT/%s",
+                        boot[0], boot[1], boot[2], boot[3], WLE_IGR_HELPER_NAME) < (int)target_size;
+    if (is_usb_path(boot) && parent_dir(boot, dir, sizeof(dir)))
+        return snprintf(target, target_size, "%s%s", dir, WLE_IGR_HELPER_NAME) < (int)target_size;
+    return 0;
+}
+
 
 int wleIgrConfigure(const char *backup_root, WleIgrInstallStats *stats,
                     char *result, size_t result_size)
@@ -413,3 +456,69 @@ int wleIgrConfigure(const char *backup_root, WleIgrInstallStats *stats,
              WLE_IGR_HELPER_NAME, WLE_IGR_HELPER_NAME);
     return 0;
 }
+
+int wleIgrRemove(WleIgrInstallStats *stats, char *result, size_t result_size)
+{
+    const char *boot = wleBootElfPath();
+    char target[MAX_PATH], root[MAX_PATH];
+    int unit, i;
+
+    if (stats == NULL || result == NULL || result_size == 0 || boot == NULL)
+        return -1;
+    memset(stats, 0, sizeof(*stats));
+    result[0] = '\0';
+
+    if (is_mc_path(boot) || is_usb_path(boot)) {
+        if (!direct_helper_target(boot, target, sizeof(target))) {
+            snprintf(result, result_size, "Could not resolve the installed helper path.");
+            return -1;
+        }
+        stats->boot_images = 1;
+        if (!wleExists(target)) {
+            snprintf(result, result_size, "No WLE-IGR helper is installed at %s", target);
+            return 0;
+        }
+        if (genRemove(target) < 0 || wleExists(target)) {
+            stats->failed = 1;
+            snprintf(result, result_size, "The IGR helper could not be removed from %s", target);
+            return -1;
+        }
+        stats->removed = 1;
+        snprintf(result, result_size, "Removed WLE-IGR helper from %s", target);
+        return 0;
+    }
+
+    if (strncmp(boot, "mmce0:", 6) && strncmp(boot, "mmce1:", 6)) {
+        snprintf(result, result_size, "This boot device does not use a managed WLE-IGR helper yet.");
+        return -3;
+    }
+
+    if (!loadMmceModules())
+        return -1;
+    boot_image_count = 0;
+    for (unit = 0; unit < 2; unit++) {
+        snprintf(root, sizeof(root), "mmce%d:/MemoryCards", unit);
+        collect_boot_images(root, 0);
+    }
+    stats->boot_images = boot_image_count;
+
+    for (i = 0; i < boot_image_count; i++) {
+        int r = remove_from_boot_image(boot_images[i].path);
+        if (r > 0)
+            stats->removed++;
+        else if (r < 0)
+            stats->failed++;
+    }
+
+    if (stats->failed) {
+        snprintf(result, result_size,
+                 "Removed helper from %d/%d BootCard images; %d failed.",
+                 stats->removed, stats->boot_images, stats->failed);
+        return -1;
+    }
+    snprintf(result, result_size,
+             "Removed WLE-IGR helper from %d BootCard image%s.",
+             stats->removed, stats->removed == 1 ? "" : "s");
+    return 0;
+}
+
