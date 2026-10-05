@@ -20,6 +20,8 @@ enum mmce_cmds {
     MMCE_CMD_SET_CARD_CHANNEL,
     MMCE_SETTINGS_ACK_WAIT_CYCLES,
     MMCE_SETTINGS_SET_ALARMS,
+    /* Sparse firmware command outside the 0x01..0x0c block. */
+    MMCE_CMD_UNMOUNT_BOOTCARD = 0x30,
 };
 
 enum mmce_cmds_fs {
@@ -57,5 +59,6 @@ int mmce_cmd_get_gameid(void *ptr);
 int mmce_cmd_set_gameid(void *ptr);
 int mmce_cmd_reset(void);
 int mmce_cmd_set_card_channel(u8 type, u16 card, u16 chan);
+int mmce_cmd_unmount_bootcard(void);
 
 #endif
