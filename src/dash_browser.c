@@ -19,7 +19,7 @@
 #include "filer_actions.h"
 #include "filer_copy.h"
 #include "mc_card_export.h"
-#include "main_title.h"
+#include "mmce_backup.h"
 #include "gui_sort.h"
 #include "init.h"
 
@@ -690,347 +690,100 @@ static void cardExportProgress(int phase, u64 done, u64 total)
 	dashLoadingStatus(phase == MC_CARD_EXPORT_VERIFY ? "Verifying memory card image" : "Writing memory card image", scaled, 1000);
 }
 
-#define MMCE_BACKUP_HISTORY_KEEP 10
-
-static int dashBcdToInt(u8 value)
-{
-	return ((value >> 4) * 10) + (value & 0x0F);
-}
-
-static int activeBackupStamp(char *out, size_t out_size)
-{
-	sceCdCLOCK clock;
-	int year, month, day, hour, minute, second;
-
-	if (out == NULL || out_size == 0)
-		return 0;
-
-	memset(&clock, 0, sizeof(clock));
-	if (sceCdReadClock(&clock) == 0 || clock.stat != 0) {
-		/* A missing/invalid RTC should not prevent a backup. Timer() is only
-		 * a per-boot fallback; uniqueness is still enforced against the folder. */
-		snprintf(out, out_size, "00000000-000000-S%010llu", (unsigned long long)(Timer() / 1000));
-		return 1;
-	}
-
-	year = 2000 + dashBcdToInt(clock.year);
-	month = dashBcdToInt(clock.month & 0x7F);
-	day = dashBcdToInt(clock.day);
-	hour = dashBcdToInt(clock.hour);
-	minute = dashBcdToInt(clock.minute);
-	second = dashBcdToInt(clock.second);
-	menuTitleConvertTimestampToLocalTime(&year, &month, &day, &hour, &minute, &second);
-	snprintf(out, out_size, "%04d%02d%02d-%02d%02d%02d",
-	         year, month, day, hour, minute, second);
-	return 1;
-}
-
-static int activeHistoryMatch(int unit, const char *name)
-{
-	char prefix[32];
-	const char *dot;
-
-	if (name == NULL)
-		return 0;
-	snprintf(prefix, sizeof(prefix), "MMCE%d-ActiveCard-", unit);
-	if (strncmp(name, prefix, strlen(prefix)) != 0)
-		return 0;
-	dot = strrchr(name, '.');
-	return dot != NULL && !stricmp(dot, ".mcd");
-}
-
-static int joinBackupPath(char *out, size_t out_size, const char *folder, const char *name)
-{
-	int len;
-
-	if (out == NULL || out_size == 0 || folder == NULL || name == NULL)
-		return 0;
-	len = strlen(folder);
-	if (len > 0 && folder[len - 1] != '/' && folder[len - 1] != ':')
-		return snprintf(out, out_size, "%s/%s", folder, name) < (int)out_size;
-	return snprintf(out, out_size, "%s%s", folder, name) < (int)out_size;
-}
-
-static int activeStampedName(int unit, const char *folder, const char *ext,
-                             char *name, size_t name_size)
-{
-	char stamp[32], candidate[MAX_PATH];
-	int suffix;
-
-	if (!activeBackupStamp(stamp, sizeof(stamp)) || ext == NULL || ext[0] == '\0')
-		return 0;
-
-	for (suffix = 0; suffix < 100; suffix++) {
-		if (suffix == 0)
-			snprintf(name, name_size, "MMCE%d-ActiveCard-%s.%s", unit, stamp, ext);
-		else
-			snprintf(name, name_size, "MMCE%d-ActiveCard-%s-%02d.%s", unit, stamp, suffix, ext);
-		if (!joinBackupPath(candidate, sizeof(candidate), folder, name))
-			return 0;
-		if (!wleExists(candidate))
-			return 1;
-	}
-	return 0;
-}
-
-static int activeHistoryName(int unit, const char *folder, char *name, size_t name_size)
-{
-	return activeStampedName(unit, folder, "mcd", name, name_size);
-}
-
-static int activeHistoryScan(const char *folder, int unit, char *oldest, size_t oldest_size)
-{
-	iox_dirent_t ent;
-	char path[MAX_PATH];
-	int fd, count = 0;
-
-	if (oldest != NULL && oldest_size > 0)
-		oldest[0] = '\0';
-	dashStrCopy(path, folder, sizeof(path));
-	fd = genDopen(path);
-	if (fd < 0)
-		return -1;
-
-	memset(&ent, 0, sizeof(ent));
-	while (fileXioDread(fd, &ent) > 0) {
-		if (!activeHistoryMatch(unit, ent.name))
-			continue;
-		count++;
-		if (oldest != NULL && oldest_size > 0 &&
-		    (oldest[0] == '\0' || strcmp(ent.name, oldest) < 0))
-			dashStrCopy(oldest, ent.name, oldest_size);
-		memset(&ent, 0, sizeof(ent));
-	}
-	genDclose(fd);
-	return count;
-}
-
-static int activeHistoryNewestOther(const char *folder, int unit, const char *exclude,
-                                    char *newest, size_t newest_size)
-{
-	iox_dirent_t ent;
-	char path[MAX_PATH];
-	int fd;
-
-	if (newest == NULL || newest_size == 0)
-		return -1;
-	newest[0] = '\0';
-	dashStrCopy(path, folder, sizeof(path));
-	fd = genDopen(path);
-	if (fd < 0)
-		return -1;
-
-	memset(&ent, 0, sizeof(ent));
-	while (fileXioDread(fd, &ent) > 0) {
-		if (!activeHistoryMatch(unit, ent.name) ||
-		    (exclude != NULL && !strcmp(ent.name, exclude))) {
-			memset(&ent, 0, sizeof(ent));
-			continue;
-		}
-		if (newest[0] == '\0' || strcmp(ent.name, newest) > 0)
-			dashStrCopy(newest, ent.name, newest_size);
-		memset(&ent, 0, sizeof(ent));
-	}
-	genDclose(fd);
-	return newest[0] != '\0' ? 1 : 0;
-}
-
-static int activeHistoryFilesEqual(const char *a, const char *b)
-{
-	static u8 buf_a[16384] __attribute__((aligned(64)));
-	static u8 buf_b[16384] __attribute__((aligned(64)));
-	int fa = -1, fbk = -1, result = -1;
-	s64 size_a, size_b;
-
-	fa = genOpen(a, FIO_O_RDONLY);
-	if (fa < 0)
-		goto done;
-	fbk = genOpen(b, FIO_O_RDONLY);
-	if (fbk < 0)
-		goto done;
-
-	size_a = genLseek(fa, 0, SEEK_END);
-	size_b = genLseek(fbk, 0, SEEK_END);
-	if (size_a < 0 || size_b < 0)
-		goto done;
-	if (size_a != size_b) {
-		result = 0;
-		goto done;
-	}
-	if (genLseek(fa, 0, SEEK_SET) != 0 || genLseek(fbk, 0, SEEK_SET) != 0)
-		goto done;
-
-	result = 1;
-	while (size_a > 0) {
-		int want = size_a > (s64)sizeof(buf_a) ? (int)sizeof(buf_a) : (int)size_a;
-		int ra = genRead(fa, buf_a, want);
-		int rb = genRead(fbk, buf_b, want);
-		if (ra != want || rb != want) {
-			result = -1;
-			break;
-		}
-		if (memcmp(buf_a, buf_b, want) != 0) {
-			result = 0;
-			break;
-		}
-		size_a -= want;
-	}
-
-done:
-	if (fbk >= 0)
-		genClose(fbk);
-	if (fa >= 0)
-		genClose(fa);
-	return result;
-}
-
-static int activeHistoryPrune(const char *folder, int unit, int keep)
-{
-	char oldest[MAX_NAME], path[MAX_PATH];
-	int count, guard = 0;
-
-	while (guard++ < 256) {
-		count = activeHistoryScan(folder, unit, oldest, sizeof(oldest));
-		if (count < 0)
-			return -1;
-		if (count <= keep)
-			return 0;
-		if (oldest[0] == '\0' || !joinBackupPath(path, sizeof(path), folder, oldest))
-			return -1;
-		if (genRemove(path) < 0)
-			return -1;
-	}
-	return -1;
-}
-
-static int mmceUnitFromPath(const char *path)
-{
-	if (path == NULL || strncmp(path, "mmce", 4) != 0 ||
-	    path[4] < '0' || path[4] > '1' || path[5] != ':')
-		return -1;
-	return path[4] - '0';
-}
-
 static void opBackupActiveMmce(void)
 {
-	char source[MAX_PATH], folder[MAX_PATH], dest[MAX_PATH], name[40];
+	char folder[MAX_PATH], dest[MAX_PATH];
 	int unit = mmceUnitFromPath(fb.dir);
-	int r, prep;
+	int r;
 
 	if (unit < 0)
 		return;
 
-	snprintf(source, sizeof(source), "mmce%d:/__active_card__.mcd", unit);
-	dashStrCopy(folder, fb.dir, sizeof(folder));
+	snprintf(folder, sizeof(folder), "%s", fb.dir);
 	if (!dashPickPath("Back up active MMCE card to", folder, DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
 		return;
-
-	if (!activeHistoryName(unit, folder, name, sizeof(name)) ||
-	    !joinBackupPath(dest, sizeof(dest), folder, name)) {
-		dashToast(DASH_TOAST_WARN, "Could not create a unique backup history name");
-		return;
-	}
 	if (!prepareOp())
 		return;
 
-	prep = prepareTransferDeviceStacks(source, dest);
-	if (prep != TRANSFER_STACK_READY) {
-		dashModalMessage(DI_WARNING, "Cannot back up there",
-		                 prep == TRANSFER_STACK_INCOMPATIBLE ?
-		                     "The source and destination require device stacks that cannot stay active together." :
-		                     "The source or destination device could not be started.",
-		                 dest);
-		return;
-	}
-
 	dashLoadingBegin("Backing up active MMCE card");
-	r = mcCardBackupActiveMmce(source, dest, cardExportProgress);
+	r = mmceBackupActiveHistory(unit, folder, MMCE_BACKUP_HISTORY_KEEP_DEFAULT,
+	                            cardExportProgress, dest, sizeof(dest));
 	dashLoadingEnd();
 
-	if (r == MC_CARD_EXPORT_OK) {
-		char previous_name[MAX_NAME], previous_path[MAX_PATH];
-		int newest = activeHistoryNewestOther(folder, unit, name, previous_name, sizeof(previous_name));
-		int same = -1;
-
-		if (newest > 0 && joinBackupPath(previous_path, sizeof(previous_path), folder, previous_name))
-			same = activeHistoryFilesEqual(dest, previous_path);
-
-		if (same == 1) {
-			if (genRemove(dest) < 0)
-				dashToast(DASH_TOAST_WARN, "Card is unchanged, but the duplicate backup could not be removed");
-			else if (activeHistoryPrune(folder, unit, MMCE_BACKUP_HISTORY_KEEP) < 0)
-				dashToast(DASH_TOAST_WARN, "Card unchanged; duplicate removed, but old history could not be pruned");
-			else
-				dashToast(DASH_TOAST_INFO, "Active MMCE card unchanged; no duplicate history saved");
-		} else if (activeHistoryPrune(folder, unit, MMCE_BACKUP_HISTORY_KEEP) < 0) {
-			dashToast(DASH_TOAST_WARN, "Backup verified, but old history could not be pruned");
-		} else {
-			dashToast(DASH_TOAST_OK, "Active MMCE card changed; verified backup added to history");
-		}
+	if (r == MMCE_BACKUP_HISTORY_CREATED) {
+		dashToast(DASH_TOAST_OK, "Active MMCE card changed; verified backup added to history");
 		refresh();
+	} else if (r == MMCE_BACKUP_HISTORY_UNCHANGED) {
+		dashToast(DASH_TOAST_INFO, "Active MMCE card unchanged; no duplicate history saved");
+		refresh();
+	} else if (r == MMCE_BACKUP_HISTORY_CREATED_PRUNE_WARN) {
+		dashToast(DASH_TOAST_WARN, "Backup verified, but old history could not be pruned");
+		refresh();
+	} else if (r == MMCE_BACKUP_HISTORY_DUPLICATE_REMOVE_WARN) {
+		dashToast(DASH_TOAST_WARN, "Card is unchanged, but the duplicate backup could not be removed");
+		refresh();
+	} else if (r == MMCE_BACKUP_ERR_STACK_INCOMPATIBLE) {
+		dashModalMessage(DI_WARNING, "Cannot back up there",
+		                 "The source and destination require device stacks that cannot stay active together.", folder);
+	} else if (r == MMCE_BACKUP_ERR_STACK) {
+		dashModalMessage(DI_WARNING, "Cannot back up there",
+		                 "The source or destination device could not be started.", folder);
+	} else if (r == MMCE_BACKUP_ERR_NAME) {
+		dashToast(DASH_TOAST_WARN, "Could not create a unique backup history name");
 	} else if (r == MC_CARD_EXPORT_FORMAT) {
 		dashModalMessage(DI_WARNING, "Not backed up",
-		                 "The active MMCE backing file is not a valid PS2 memory-card image.", source);
+		                 "The active MMCE backing file is not a valid PS2 memory-card image.", fb.dir);
 	} else if (r == MC_CARD_EXPORT_VERIFY_FAILED) {
 		dashModalMessage(DI_WARNING, "Verification failed",
 		                 "The backup did not match the active card and was removed.", dest);
 	} else {
 		dashModalMessage(DI_WARNING, "Active-card backup failed",
 		                 "The exact active backing image could not be read, or the destination could not be written. Any incomplete backup was removed.",
-		                 dest);
+		                 folder);
 	}
 }
 
 static void opExportActiveMmcePcsx2(void)
 {
-	char source[MAX_PATH], folder[MAX_PATH], dest[MAX_PATH], name[48];
+	char folder[MAX_PATH], dest[MAX_PATH];
 	int unit = mmceUnitFromPath(fb.dir);
-	int r, prep;
+	int r;
 
 	if (unit < 0)
 		return;
 
-	snprintf(source, sizeof(source), "mmce%d:/__active_card__.mcd", unit);
-	dashStrCopy(folder, fb.dir, sizeof(folder));
+	snprintf(folder, sizeof(folder), "%s", fb.dir);
 	if (!dashPickPath("Export active MMCE card as PCSX2 .ps2 to",
 	                  folder, DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
 		return;
-
-	if (!activeStampedName(unit, folder, "ps2", name, sizeof(name)) ||
-	    !joinBackupPath(dest, sizeof(dest), folder, name)) {
-		dashToast(DASH_TOAST_WARN, "Could not create a unique PCSX2 export name");
-		return;
-	}
 	if (!prepareOp())
 		return;
 
-	prep = prepareTransferDeviceStacks(source, dest);
-	if (prep != TRANSFER_STACK_READY) {
-		dashModalMessage(DI_WARNING, "Cannot export there",
-		                 prep == TRANSFER_STACK_INCOMPATIBLE ?
-		                     "The source and destination require device stacks that cannot stay active together." :
-		                     "The source or destination device could not be started.",
-		                 dest);
-		return;
-	}
-
 	dashLoadingBegin("Exporting active MMCE card to PCSX2");
-	r = mcCardExportActiveMmcePcsx2(source, dest, cardExportProgress);
+	r = mmceExportActivePcsx2ToFolder(unit, folder, cardExportProgress, dest, sizeof(dest));
 	dashLoadingEnd();
 
-	if (r == MC_CARD_EXPORT_OK) {
+	if (r == MMCE_BACKUP_HISTORY_CREATED) {
 		dashToast(DASH_TOAST_OK, "Active MMCE card exported to verified PCSX2 .ps2");
 		refresh();
+	} else if (r == MMCE_BACKUP_ERR_STACK_INCOMPATIBLE) {
+		dashModalMessage(DI_WARNING, "Cannot export there",
+		                 "The source and destination require device stacks that cannot stay active together.", folder);
+	} else if (r == MMCE_BACKUP_ERR_STACK) {
+		dashModalMessage(DI_WARNING, "Cannot export there",
+		                 "The source or destination device could not be started.", folder);
+	} else if (r == MMCE_BACKUP_ERR_NAME) {
+		dashToast(DASH_TOAST_WARN, "Could not create a unique PCSX2 export name");
 	} else if (r == MC_CARD_EXPORT_FORMAT) {
 		dashModalMessage(DI_WARNING, "Not exported",
-		                 "The active MMCE backing file is not a valid PS2 memory-card image.", source);
+		                 "The active MMCE backing file is not a valid PS2 memory-card image.", fb.dir);
 	} else if (r == MC_CARD_EXPORT_VERIFY_FAILED) {
 		dashModalMessage(DI_WARNING, "Verification failed",
 		                 "The PCSX2 export did not match the active card conversion and was removed.", dest);
 	} else {
 		dashModalMessage(DI_WARNING, "Active-card export failed",
 		                 "The active card could not be read or the PCSX2 image could not be written. Any incomplete export was removed.",
-		                 dest);
+		                 folder);
 	}
 }
 
