@@ -23,6 +23,10 @@ typedef void (*McCardExportProgress)(int phase, u64 done, u64 total);
  * byte-for-byte. Source and destination are never open at the same time. */
 int mcCardBackupNoEcc(const char *source, const char *dest, McCardExportProgress progress);
 
+/* Same verified native copy, but keeps the synthetic active-MMCE source open
+ * for the full operation so active-card discovery occurs only once. */
+int mcCardBackupActiveMmce(const char *source, const char *dest, McCardExportProgress progress);
+
 /* Convert a no-ECC .mcd image to PCSX2's 528-byte/page .ps2 format and
  * verify the completed output byte-for-byte. */
 int mcCardExportPcsx2(const char *source, const char *dest, McCardExportProgress progress);
