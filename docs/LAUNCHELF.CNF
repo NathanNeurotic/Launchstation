@@ -169,6 +169,12 @@ USBD_FILE =
 # ----------------------------------------------------------------------
 NET_HOSTwrite = 0
 # ----------------------------------------------------------------------
+# NET_LegacyDrivers selects the ps2sdk v1.0 DEV9/PS2IP pair preserved by
+# oMrRexD. Enable it only on consoles where newer Ethernet drivers load
+# but the SMAP link never comes up.
+# ----------------------------------------------------------------------
+NET_LegacyDrivers = 0
+# ----------------------------------------------------------------------
 # APP_GameID enables RetroGEM visual Game ID for ELF/app launches.
 # Set to non-zero to generate a short ID (up to 11 chars) from the
 # launched executable path and transmit it right before handoff.
