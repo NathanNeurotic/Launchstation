@@ -6,6 +6,7 @@
 typedef struct {
     int boot_images;
     int installed;
+    int removed;
     int failed;
 } WleIgrInstallStats;
 
@@ -14,5 +15,6 @@ typedef struct {
  * patched, verified helper into every discovered BootCard image. */
 int wleIgrConfigure(const char *backup_root, WleIgrInstallStats *stats,
                     char *result, size_t result_size);
+int wleIgrRemove(WleIgrInstallStats *stats, char *result, size_t result_size);
 
 #endif
