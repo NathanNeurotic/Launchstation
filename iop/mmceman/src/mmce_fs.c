@@ -1311,6 +1311,10 @@ int mmce_fs_devctl(iomanX_iop_file_t *fd, const char *name, int cmd, void *arg, 
             res = mmce_cmd_reset();
         break;
 
+        case MMCE_CMD_UNMOUNT_BOOTCARD:
+            res = mmce_cmd_unmount_bootcard();
+        break;
+
         case MMCE_CMD_SET_CARD_CHANNEL:
         {
             if (arg == NULL || arglen < 5) {

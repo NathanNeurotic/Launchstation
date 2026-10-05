@@ -32,6 +32,7 @@ jobs:
           python3 tests/test_home_focus.py
           python3 tests/test_bgm_sidecar.py
           python3 tests/test_mc_card_export.py
+          python3 tests/test_mmce_protocol.py
 
       - name: Install ps2build SDK
         shell: bash
