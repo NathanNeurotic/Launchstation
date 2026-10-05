@@ -8,7 +8,8 @@ enum {
 	MC_CARD_EXPORT_OPEN = -1,
 	MC_CARD_EXPORT_FORMAT = -2,
 	MC_CARD_EXPORT_IO = -3,
-	MC_CARD_EXPORT_VERIFY_FAILED = -4
+	MC_CARD_EXPORT_VERIFY_FAILED = -4,
+	MC_CARD_EXPORT_SAME_PATH = -5
 };
 
 enum {
@@ -17,6 +18,10 @@ enum {
 };
 
 typedef void (*McCardExportProgress)(int phase, u64 done, u64 total);
+
+/* Copy a valid no-ECC .mcd image and verify the completed destination
+ * byte-for-byte. Source and destination are never open at the same time. */
+int mcCardBackupNoEcc(const char *source, const char *dest, McCardExportProgress progress);
 
 /* Convert a no-ECC .mcd image to PCSX2's 528-byte/page .ps2 format and
  * verify the completed output byte-for-byte. */
