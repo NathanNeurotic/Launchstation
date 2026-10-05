@@ -1138,8 +1138,24 @@ static void setChoice(int id, int v)
 			                (id == S_DEVA_MMCE) ? DASH_DEVA_MMCE :
 			                (id == S_DEVA_MX4SIO) ? DASH_DEVA_MX4SIO :
 			                (id == S_DEVA_ILINK) ? DASH_DEVA_ILINK : DASH_DEVA_UDPFS;
+			const int boot_bit = dashBootDeviceBit();
+
+			/* MMCE and MX4SIO cannot coexist in one IOP storage stack. Never
+			 * switch away from either one when it is the device we booted
+			 * from; otherwise enabling one disables the other's auto-start. */
+			if (v && ((bit == DASH_DEVA_MMCE && boot_bit == DASH_DEVA_MX4SIO) ||
+			          (bit == DASH_DEVA_MX4SIO && boot_bit == DASH_DEVA_MMCE))) {
+				dashToast(DASH_TOAST_WARNING,
+				          "MMCE and MX4SIO cannot auto-start together while booted from this device");
+				break;
+			}
+			if (v && bit == DASH_DEVA_MMCE)
+				dashCfg.dev_auto &= ~DASH_DEVA_MX4SIO;
+			else if (v && bit == DASH_DEVA_MX4SIO)
+				dashCfg.dev_auto &= ~DASH_DEVA_MMCE;
+
 			/* the boot device is always started: its driver is already running */
-			if (v || dashBootDeviceBit() == bit)
+			if (v || boot_bit == bit)
 				dashCfg.dev_auto |= bit;
 			else
 				dashCfg.dev_auto &= ~bit;
