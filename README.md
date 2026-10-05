@@ -26,8 +26,10 @@ ps2build build
 
 Outputs `build/bin/wLaunchELF-packed.elf` (release, ps2pack compressed) and
 `build/bin/wLaunchELF.elf`. `ps2.yaml` reproduces the Makefile's default
-profile (MMCE, MX4SIO, EXFAT, UDPFS, DVRP, XFROM, IOP reset; DS34 and ETH
-off). The legacy Makefile is kept for the other feature profiles.
+profile (MMCE, MX4SIO, EXFAT, UDPFS, ETH, DVRP, XFROM, IOP reset; DS34
+off). Ethernet/FTP support is embedded but remains demand-driven: no network
+driver is started during normal boot. The legacy Makefile is kept for the
+other feature profiles.
 
 Background music is **optional**, not embedded in either ELF. Release/CI
 downloads include `BGM.ADP`: put it in the same folder as the ELF if you
@@ -74,6 +76,7 @@ Drivers load on demand for maximum compatibility and initial boot speed.
 - HDD Manager can inject APA partition headers
 - View/edit APA partiion header `system.cnf`
 - All drivers besides core lazy loading for faster boot and support of all devices.
+- FTP and PS2Link network services are included in the standard build and start only when requested from Tools > FTP / Network.
 - Create and Extract PSU options so user knows what will happen
 - Extra file extensions for Text Editor ShortCuts
 - Timestamp manipulation feature to fix the date of any memory card folder containing any icon-based exploit _(\*tuna)_
