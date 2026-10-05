@@ -70,6 +70,10 @@ EMBED_FILE(udpfs_smap_irx, "iop/__precompiled/udpfs_smap.irx")
 EMBED_FILE(udpfs_ministack_irx, "iop/__precompiled/udpfs_ministack.irx")
 EMBED_FILE(udpfs_ioman_irx, "iop/__precompiled/udpfs_ioman.irx")
 
+/* MrRexD network-compatibility fallback: ps2sdk v1.0 DEV9/PS2IP. */
+EMBED_FILE(ps2dev9_v10_irx, "iop/__v10/ps2dev9.irx")
+EMBED_FILE(ps2ip_v10_irx, "iop/__v10/ps2ip.irx")
+
 /* Dashboard UI sounds (Sony ADP, played via audsrv). */
 EMBED_FILE(sfx_cursor_adp, "res/sfx/cursor.adp")
 EMBED_FILE(sfx_confirm_adp, "res/sfx/confirm.adp")
