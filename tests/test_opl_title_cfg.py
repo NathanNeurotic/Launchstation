@@ -4,6 +4,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 src = (root / "src/dash_lib.c").read_text()
 
+# OPL distinguishes lowercase metadata keys from similarly named descriptive keys.
 assert 'm->opl_style && !strcmp(key, "boot")' in src
 assert 'm->opl_style && !strcmp(key, "title")' in src
 assert '!m->opl_style && (!stricmp(key, "title") || !stricmp(key, "name"))' in src
