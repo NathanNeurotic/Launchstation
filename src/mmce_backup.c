@@ -8,7 +8,6 @@
 
 extern int fileMode;
 
-#define MMCE_BACKUP_KEEP 10
 #define MMCE_BACKUP_DEPTH 12
 #define MMCE_BACKUP_IO 65536
 
@@ -95,12 +94,18 @@ static int ensure_dir_tree(const char *path)
     return 0;
 }
 
-static int history_name_match(const char *name)
+static const char *backup_ext(int format)
 {
-    return name != NULL && !strncmp(name, "WLE-", 4) && genCmpFileExt(name, "MCD");
+    return format == MMCE_BACKUP_FORMAT_PCSX2 ? "ps2" : "mcd";
 }
 
-static int newest_history(const char *dir, const char *exclude,
+static int history_name_match(const char *name, int format)
+{
+    return name != NULL && !strncmp(name, "WLE-", 4) &&
+           genCmpFileExt(name, backup_ext(format));
+}
+
+static int newest_history(const char *dir, int format, const char *exclude,
                           char *name, size_t name_size)
 {
     iox_dirent_t ent;
@@ -117,7 +122,7 @@ static int newest_history(const char *dir, const char *exclude,
 
     memset(&ent, 0, sizeof(ent));
     while (fileXioDread(fd, &ent) > 0) {
-        if (!history_name_match(ent.name) ||
+        if (!history_name_match(ent.name, format) ||
             (exclude != NULL && !strcmp(ent.name, exclude))) {
             memset(&ent, 0, sizeof(ent));
             continue;
@@ -187,7 +192,7 @@ static int files_equal_serial(const char *a, const char *b)
     return 1;
 }
 
-static int prune_history(const char *dir)
+static int prune_history(const char *dir, int keep, int format)
 {
     iox_dirent_t ent;
     char scan[MAX_PATH], oldest[MAX_NAME], remove_path[MAX_PATH];
@@ -203,7 +208,7 @@ static int prune_history(const char *dir)
 
         memset(&ent, 0, sizeof(ent));
         while (fileXioDread(fd, &ent) > 0) {
-            if (history_name_match(ent.name)) {
+            if (history_name_match(ent.name, format)) {
                 count++;
                 if (oldest[0] == '\0' || strcmp(ent.name, oldest) < 0)
                     snprintf(oldest, sizeof(oldest), "%s", ent.name);
@@ -212,7 +217,7 @@ static int prune_history(const char *dir)
         }
         genDclose(fd);
 
-        if (count <= MMCE_BACKUP_KEEP)
+        if (keep == 0 || count <= keep)
             return 0;
         if (oldest[0] == '\0' ||
             !join_path(remove_path, sizeof(remove_path), dir, oldest))
@@ -223,7 +228,8 @@ static int prune_history(const char *dir)
     return -1;
 }
 
-static int unique_history_path(const char *dir, char *name, size_t name_size,
+static int unique_history_path(const char *dir, int format,
+                               char *name, size_t name_size,
                                char *path, size_t path_size)
 {
     char stamp[32];
@@ -231,10 +237,11 @@ static int unique_history_path(const char *dir, char *name, size_t name_size,
 
     backup_stamp(stamp, sizeof(stamp));
     for (suffix = 0; suffix < 100; suffix++) {
+        const char *ext = backup_ext(format);
         if (suffix == 0)
-            snprintf(name, name_size, "WLE-%s.mcd", stamp);
+            snprintf(name, name_size, "WLE-%s.%s", stamp, ext);
         else
-            snprintf(name, name_size, "WLE-%s-%02d.mcd", stamp, suffix);
+            snprintf(name, name_size, "WLE-%s-%02d.%s", stamp, suffix, ext);
         if (!join_path(path, path_size, dir, name))
             return 0;
         if (!wleExists(path))
@@ -260,11 +267,13 @@ static int card_history_dir(const char *backup_root, const char *relative,
 }
 
 static int backup_one(const char *source, const char *relative,
-                      const char *backup_root, MmceBackupStats *stats)
+                      const char *backup_root, const MmceBackupOptions *options,
+                      MmceBackupStats *stats)
 {
     char dir[MAX_PATH], name[MAX_NAME], dest[MAX_PATH];
     char previous[MAX_NAME], previous_path[MAX_PATH];
     int r, newest, same = -1;
+    int format = options->format;
 
     if (!card_history_dir(backup_root, relative, dir, sizeof(dir)) ||
         ensure_dir_tree(dir) < 0) {
@@ -272,34 +281,50 @@ static int backup_one(const char *source, const char *relative,
         return -1;
     }
 
-    /* Compare the live card to the newest already-verified version before
-     * writing anything. This keeps IGR fast and avoids unnecessary flash
-     * writes when a card did not change during the game session. Reads are
-     * serialized, so source and history files are never held open together. */
-    newest = newest_history(dir, NULL, previous, sizeof(previous));
+    newest = newest_history(dir, format, NULL, previous, sizeof(previous));
     if (newest > 0 &&
-        join_path(previous_path, sizeof(previous_path), dir, previous))
+        join_path(previous_path, sizeof(previous_path), dir, previous) &&
+        format == MMCE_BACKUP_FORMAT_MCD)
         same = files_equal_serial(source, previous_path);
+
+    /* Native .mcd history can detect unchanged cards before any write. */
     if (same == 1) {
         stats->unchanged++;
         return 0;
     }
 
-    if (!unique_history_path(dir, name, sizeof(name), dest, sizeof(dest))) {
+    if (!unique_history_path(dir, format, name, sizeof(name), dest, sizeof(dest))) {
         stats->failed++;
         return -1;
     }
 
-    r = mcCardBackupNoEcc(source, dest, NULL);
+    if (format == MMCE_BACKUP_FORMAT_PCSX2)
+        r = mcCardExportPcsx2(source, dest, NULL);
+    else
+        r = mcCardBackupNoEcc(source, dest, NULL);
     if (r != MC_CARD_EXPORT_OK) {
         stats->failed++;
         return -1;
     }
+
+    /* PCSX2 history is a converted representation, so compare the verified
+     * converted file with the newest previous .ps2 after writing. */
+    if (format == MMCE_BACKUP_FORMAT_PCSX2 && newest > 0 &&
+        previous_path[0] != '\0') {
+        same = files_equal_serial(dest, previous_path);
+        if (same == 1) {
+            if (genRemove(dest) < 0) {
+                stats->failed++;
+                return -1;
+            }
+            stats->unchanged++;
+            return 0;
+        }
+    }
+
     stats->backed_up++;
 
-    /* Retention runs only after the new version passed source-vs-destination
-     * verification in mcCardBackupNoEcc(). */
-    if (prune_history(dir) < 0) {
+    if (prune_history(dir, options->keep, format) < 0) {
         stats->failed++;
         return -1;
     }
@@ -340,9 +365,9 @@ static int count_candidates(const char *dir, int depth)
 }
 
 static void process_tree(const char *dir, const char *source_root,
-                         const char *backup_root, int depth,
-                         MmceBackupStats *stats, MmceBackupProgress progress,
-                         int *done)
+                         const char *backup_root, const MmceBackupOptions *options,
+                         int depth, MmceBackupStats *stats,
+                         MmceBackupProgress progress, int *done)
 {
     iox_dirent_t ent;
     char scan[MAX_PATH], child[MAX_PATH];
@@ -368,7 +393,7 @@ static void process_tree(const char *dir, const char *source_root,
         }
 
         if (FIO_S_ISDIR(ent.stat.mode)) {
-            process_tree(child, source_root, backup_root, depth + 1,
+            process_tree(child, source_root, backup_root, options, depth + 1,
                          stats, progress, done);
         } else if (genCmpFileExt(ent.name, "MCD")) {
             (*done)++;
@@ -377,20 +402,25 @@ static void process_tree(const char *dir, const char *source_root,
             relative = child + strlen(source_root);
             while (*relative == '/')
                 relative++;
-            backup_one(child, relative, backup_root, stats);
+            backup_one(child, relative, backup_root, options, stats);
         }
         memset(&ent, 0, sizeof(ent));
     }
     genDclose(fd);
 }
 
-int mmceBackupAllCards(int unit, const char *dest_root, MmceBackupStats *stats,
-                       MmceBackupProgress progress)
+int mmceBackupAllCards(int unit, const char *dest_root, const MmceBackupOptions *options,
+                       MmceBackupStats *stats, MmceBackupProgress progress)
 {
+    static const MmceBackupOptions defaults = {10, MMCE_BACKUP_FORMAT_MCD};
     char source_root[MAX_PATH], history_root[MAX_PATH], tmp[MAX_PATH], unit_name[16];
     int done = 0;
 
-    if (stats == NULL || dest_root == NULL || unit < 0 || unit > 1)
+    if (options == NULL)
+        options = &defaults;
+    if (stats == NULL || dest_root == NULL || unit < 0 || unit > 1 ||
+        options->keep < 0 || options->keep > 99 ||
+        options->format < 0 || options->format >= MMCE_BACKUP_FORMAT_COUNT)
         return -1;
     memset(stats, 0, sizeof(*stats));
 
@@ -415,7 +445,7 @@ int mmceBackupAllCards(int unit, const char *dest_root, MmceBackupStats *stats,
         return -1;
 
     stats->candidates = count_candidates(source_root, 0);
-    process_tree(source_root, source_root, history_root, 0,
+    process_tree(source_root, source_root, history_root, options, 0,
                  stats, progress, &done);
     return 0;
 }
