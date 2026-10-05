@@ -221,6 +221,7 @@ targets:
       - src/main_gameid.c
       - src/main_gameid_table.c
       - src/main_history.c
+      - src/remote_control.c
       - src/init.c
       - src/main_startup.c
       - src/main_fileops.c
