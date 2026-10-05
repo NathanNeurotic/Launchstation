@@ -732,7 +732,7 @@ static void opBackupActiveMmce(void)
 	}
 
 	dashLoadingBegin("Backing up active MMCE card");
-	r = mcCardBackupNoEcc(source, dest, cardExportProgress);
+	r = mcCardBackupActiveMmce(source, dest, cardExportProgress);
 	dashLoadingEnd();
 
 	if (r == MC_CARD_EXPORT_OK) {
