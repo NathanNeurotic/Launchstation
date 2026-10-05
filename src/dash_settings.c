@@ -88,6 +88,9 @@ enum SetId {
 	S_DEVA_UDPFS,
 	S_MMCE_BACKUP_KEEP,
 	S_MMCE_BACKUP_FORMAT,
+	S_IGR_AUTO_BACKUP,
+	S_IGR_AFTER,
+	S_IGR_AFTER_APP,
 	/* network */
 	S_NET_IP,
 	S_NET_NM,
@@ -299,6 +302,9 @@ static const SetItem autostart_items[] = {
 static const SetItem mmce_backup_items[] = {
     {ST_NUMBER, S_MMCE_BACKUP_KEEP, "Backups per card", "0 keeps every verified version. Otherwise keep the newest 1-99 versions per card."},
     {ST_CHOICE, S_MMCE_BACKUP_FORMAT, "Backup format", "Native .mcd avoids writes when unchanged. PCSX2 .ps2 adds ECC/spare bytes and verifies the converted image."},
+    {ST_CHOICE, S_IGR_AUTO_BACKUP, "Automatic IGR backup", "When OPL returns through WLE-IGR, back up changed MMCE card images before continuing. Turning this off does not uninstall the helper."},
+    {ST_CHOICE, S_IGR_AFTER, "After IGR, open", "Choose where to go after the IGR backup step: wLaunchELF, the PS2 system menu, or a selected application."},
+    {ST_PATH, S_IGR_AFTER_APP, "IGR application", "Application started after IGR when 'After IGR, open' is set to Application."},
 };
 
 static const SetItem net_items[] = {
@@ -496,6 +502,7 @@ static const char *const tv_names[] = {"Auto", "NTSC", "PAL", "VGA", "480p"};
 static const char *const view_names[] = {"Grid", "List", "Carousel"};
 static const char *const recent_names[] = {"0", "4", "8", "12", "16"};
 static const char *const mmce_backup_format_names[] = {"Native .mcd", "PCSX2 .ps2"};
+static const char *const igr_after_names[] = {"Dashboard", "PS2 system menu", "Application"};
 static const char *const hide_names[] = {"Show all", "Hide HDD1", "Hide HDD0+1", "Hide ATA1", "Hide ATA0+1", "Hide HDD1+ATA1", "Hide all"};
 static const char *const confirm_names[] = {"Circle", "Cross"};
 static const char *const hl_names[] = {"Solid bar", "Accent bar", "Outline", "Text colour"};
@@ -621,6 +628,12 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_MMCE_BACKUP_FORMAT:
 			*names = mmce_backup_format_names, *cur = dashCfg.mmce_backup_format;
 			return 2;
+		case S_IGR_AUTO_BACKUP:
+			*cur = dashCfg.igr_auto_backup;
+			return 2;
+		case S_IGR_AFTER:
+			*names = igr_after_names, *cur = dashCfg.igr_after;
+			return DASH_IGR_AFTER_COUNT;
 #if defined(ETH) || defined(UDPFS)
 		case S_HOSTWRITE:
 			*cur = setting->HOSTwrite ? 1 : 0;
@@ -1155,6 +1168,12 @@ static void setChoice(int id, int v)
 		case S_MMCE_BACKUP_FORMAT:
 			dashCfg.mmce_backup_format = v;
 			break;
+		case S_IGR_AUTO_BACKUP:
+			dashCfg.igr_auto_backup = v;
+			break;
+		case S_IGR_AFTER:
+			dashCfg.igr_after = v;
+			break;
 		default:
 			dash_changed = 0;
 			classic_dirty = 1;
@@ -1335,6 +1354,9 @@ static int pathInfo(int id, PathSpec *p)
 		case S_POPS_PATH:
 			p->field = setting->popstarter_file, p->size = sizeof(setting->popstarter_file), p->ext = "ELF", p->mc_alias = 1;
 			return 1;
+		case S_IGR_AFTER_APP:
+			p->field = dashCfg.igr_after_path, p->size = sizeof(dashCfg.igr_after_path), p->ext = "ELF";
+			return 1;
 	}
 	return 0;
 }
@@ -1370,6 +1392,10 @@ static void mcAlias(char *path, int size)
 /* Applies a changed path setting (fonts and languages are loaded now). */
 static void pathApplied(int id)
 {
+	if (id == S_IGR_AFTER_APP) {
+		dash_dirty = 1;
+		return;
+	}
 	classic_dirty = 1;
 	if (id == S_LANG_FILE || id == S_FONT_FILE) {
 		/* these read files on the UI thread */
@@ -2423,6 +2449,7 @@ static int itemDisabled(const SetItem *it)
 		case S_T_SECONDS:
 		case S_T_DATE: return !dashTheme.clock;
 		case S_TIMEOUT: return !setting->LK_Path[SETTING_LK_AUTO][0];
+		case S_IGR_AFTER_APP: return dashCfg.igr_after != DASH_IGR_AFTER_APP;
 		default: return 0;
 	}
 }
@@ -2442,6 +2469,7 @@ static const char *disabledHelp(const SetItem *it)
 		case S_T_SECONDS:
 		case S_T_DATE: return "Enable the clock to configure its placement and format.";
 		case S_TIMEOUT: return "Choose an automatic start target before setting its timeout.";
+		case S_IGR_AFTER_APP: return "Set 'After IGR, open' to Application first.";
 		default: return it->help;
 	}
 }
@@ -2678,7 +2706,11 @@ static void settingsDraw(void)
 				numberInfo(it->id, &num, &lo, &hi, text, sizeof(text));
 			else if (it->type == ST_PATH) {
 				pathInfo(it->id, &ps);
-				v = pathLeaf(ps.field, leaf, sizeof(leaf));
+				if (it->id == S_IGR_AFTER_APP && ps.field[0]) {
+					DashApp *a = dashLibFind(ps.field);
+					v = a != NULL ? a->title : pathLeaf(ps.field, leaf, sizeof(leaf));
+				} else
+					v = pathLeaf(ps.field, leaf, sizeof(leaf));
 				set = ps.field[0] != '\0';
 			} else if (it->type == ST_IP)
 				v = ipField(it->id);
