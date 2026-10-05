@@ -691,7 +691,6 @@ static void cardExportProgress(int phase, u64 done, u64 total)
 	dashLoadingStatus(phase == MC_CARD_EXPORT_VERIFY ? "Verifying memory card image" : "Writing memory card image", scaled, 1000);
 }
 
-#define MMCE_BACKUP_HISTORY_KEEP 10
 
 static int dashBcdToInt(u8 value)
 {
@@ -956,7 +955,10 @@ static void opBackupAllMmceCards(void)
 	}
 
 	dashLoadingBegin("Backing up all MMCE cards");
-	r = mmceBackupAllCards(unit, folder, &stats, mmceTreeBackupProgress);
+	{
+		MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format};
+		r = mmceBackupAllCards(unit, folder, &options, &stats, mmceTreeBackupProgress);
+	}
 	dashLoadingEnd();
 
 	if (r < 0) {
@@ -1028,11 +1030,11 @@ static void opBackupActiveMmce(void)
 		if (same == 1) {
 			if (genRemove(dest) < 0)
 				dashToast(DASH_TOAST_WARN, "Card is unchanged, but the duplicate backup could not be removed");
-			else if (activeHistoryPrune(folder, unit, MMCE_BACKUP_HISTORY_KEEP) < 0)
+			else if (activeHistoryPrune(folder, unit, dashCfg.mmce_backup_keep) < 0)
 				dashToast(DASH_TOAST_WARN, "Card unchanged; duplicate removed, but old history could not be pruned");
 			else
 				dashToast(DASH_TOAST_INFO, "Active MMCE card unchanged; no duplicate history saved");
-		} else if (activeHistoryPrune(folder, unit, MMCE_BACKUP_HISTORY_KEEP) < 0) {
+		} else if (activeHistoryPrune(folder, unit, dashCfg.mmce_backup_keep) < 0) {
 			dashToast(DASH_TOAST_WARN, "Backup verified, but old history could not be pruned");
 		} else {
 			dashToast(DASH_TOAST_OK, "Active MMCE card changed; verified backup added to history");
