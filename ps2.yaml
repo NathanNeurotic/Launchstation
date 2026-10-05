@@ -219,7 +219,13 @@ targets:
       - iomanx
       - filexio
       - sio2man
+      - mcman
+      - mcserv
       - mmceman
+      - usbd
+      - bdm
+      - bdmfs_fatfs
+      - usbmass_bd
 
   - name: wLaunchELF
     type: ee
@@ -268,6 +274,7 @@ targets:
       - src/psu_functions.c
       - src/mc_card_export.c
       - src/mmce_backup.c
+      - src/mmce_igr.c
       - src/hdd.c
       - src/hdd_header_injector.c
       - src/hdl_rpc.c
