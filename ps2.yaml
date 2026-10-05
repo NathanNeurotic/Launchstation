@@ -206,6 +206,27 @@ targets:
       - "-Wl,--end-group"
     libs: [filexio]
 
+  - name: wle_igr
+    type: ee
+    sources: [igr/wle_igr.c]
+    include_dirs: [include]
+    opt: -Os
+    cflags: [-fdata-sections, -ffunction-sections]
+    ldflags:
+      - "-Wl,--gc-sections"
+    libs: [filexio, patches]
+    embed_irx:
+      - iomanx
+      - filexio
+      - sio2man
+      - mcman
+      - mcserv
+      - mmceman
+      - usbd
+      - bdm
+      - bdmfs_fatfs
+      - usbmass_bd
+
   - name: wLaunchELF
     type: ee
     pack: true
@@ -253,6 +274,7 @@ targets:
       - src/psu_functions.c
       - src/mc_card_export.c
       - src/mmce_backup.c
+      - src/mmce_igr.c
       - src/hdd.c
       - src/hdd_header_injector.c
       - src/hdl_rpc.c
@@ -330,6 +352,7 @@ targets:
     libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, mc, kbd, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv]
     embed_irx:
       - loader:loader_elf
+      - wle_igr:wle_igr_elf
       - poweroff
       - iomanx
       - filexio
