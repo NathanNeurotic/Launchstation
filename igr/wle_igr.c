@@ -17,6 +17,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "wle_igr_config.h"
 
 extern u8 iomanx_irx[];
 extern int size_iomanx_irx;
@@ -27,15 +28,7 @@ extern int size_sio2man_irx;
 extern u8 mmceman_irx[];
 extern int size_mmceman_irx;
 
-#define WLE_IGR_MAGIC "WLEIGR_CFG_V1"
-#define WLE_IGR_PATH 256
 #define WLE_IGR_TRIES 24
-
-typedef struct {
-    char magic[16];
-    char app[WLE_IGR_PATH];
-    char backup[WLE_IGR_PATH];
-} WleIgrEmbeddedConfig;
 
 /*
  * Deliberately non-const: the installer finds WLE_IGR_MAGIC inside the ELF
