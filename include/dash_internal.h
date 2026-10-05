@@ -518,6 +518,8 @@ typedef struct
 	int bgm_vol;
 	int app_filter;
 	int dev_auto; /* DASH_DEVA_* bitmask: drivers to load at startup */
+	int mmce_backup_keep;   /* 0 = all, otherwise 1..99 */
+	int mmce_backup_format; /* MMCE_BACKUP_FORMAT_* */
 	int nscan;
 	char scan[DASH_MAX_SCAN][DASH_PATH_MAX];
 } DashSettings;
