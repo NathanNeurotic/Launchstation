@@ -122,7 +122,7 @@ targets:
     include_dirs: [iop/oldlibs/ps2ftpd/src]
     imports_lst: iop/oldlibs/ps2ftpd/src/imports.lst
     cflags: [-Wall, -fno-builtin]
-    headers: [cdvd, iomanx, ps2ip, stdio, sysclib, threadman]
+    headers: [cdvd, iomanx, iopmgr, ps2ip, stdio, sysclib, threadman]
 
   # ps2sdk iop/deckard/xparam (not packaged by the SDK suite), homebrew DB.
   - name: xparam
