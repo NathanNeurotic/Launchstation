@@ -335,6 +335,7 @@ typedef struct
 } data_ip_struct;
 
 extern char LaunchElfDir[MAX_PATH], LaunchElfBootDir[MAX_PATH], LastDir[MAX_NAME];
+const char *wleBootElfPath(void);
 extern char LoadedConfigPath[MAX_PATH], LoadedIPConfigPath[MAX_PATH];
 
 #ifndef IPCONF_MAX_LEN
