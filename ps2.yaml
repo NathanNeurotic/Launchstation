@@ -226,6 +226,9 @@ targets:
       - bdm
       - bdmfs_fatfs
       - usbmass_bd
+      - mx4sio_bd
+      - iLinkman
+      - IEEE1394_bd_mini:IEEE1394_bd
 
   - name: wLaunchELF
     type: ee
