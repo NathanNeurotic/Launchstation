@@ -206,6 +206,7 @@ static void runMiscCommand(const char *misc_path)
 	char path[MAX_PATH];
 	const char *title = "Working";
 	int leaves = 0;
+	int network_command = 0;
 
 	if (!stricmp(misc_path, setting->Misc_PS2Disc))
 		title = "Starting the disc", leaves = 1;
@@ -216,7 +217,7 @@ static void runMiscCommand(const char *misc_path)
 	else if (!stricmp(misc_path, setting->Misc_PS2PowerOff))
 		title = "Powering off", leaves = 1;
 	else if (!stricmp(misc_path, setting->Misc_PS2Net))
-		title = "Starting the network";
+		title = "Starting FTP / remote access", network_command = 1;
 	else if (!stricmp(misc_path, setting->Misc_Reboot_IOP))
 		title = "Rebooting the IOP";
 	else if (!stricmp(misc_path, setting->Misc_Configure) || !stricmp(misc_path, setting->Misc_Exploit_Installer))
@@ -230,6 +231,19 @@ static void runMiscCommand(const char *misc_path)
 	filerRootMcPollIdle();
 	dashLoadingBegin(title);
 	exec_ctx.main_msg[0] = '\0';
+#ifdef ETH
+#ifdef EXFAT
+	/* MrRexD's PC command protocol uses ata0:/PS2-COMANDO.TXT. Keep the
+	 * device demand-driven: only bring ATA up when the user explicitly starts
+	 * FTP / remote access, and do it before the network so a storage-stack
+	 * reset cannot immediately tear FTP back down. FTP itself still starts
+	 * even when no internal exFAT HDD is present. */
+	if (network_command) {
+		dashLoadingStatus("Preparing HDD command inbox", 0, 0);
+		ensurePathDeviceStackReady("ata0:/");
+	}
+#endif
+#endif
 	if (leaves)
 		dashGfxRestoreLegacyState();
 	ExecuteMainAction(path, &exec_ctx);
@@ -482,6 +496,42 @@ static void applyScanResult(void)
 		dashToast(before >= 0 && n > before ? DASH_TOAST_OK : DASH_TOAST_INFO, msg);
 		scan_count_before = -1;
 	}
+}
+
+//--------------------------------------------------------------
+// MrRexD-compatible PC remote commands. The file protocol is polled only on
+// HOME after FTP has explicitly been started; no network or HDD work occurs
+// during ordinary dashboard boot.
+//--------------------------------------------------------------
+static void pollRemotePcCommand(void)
+{
+#ifdef ETH
+	char path[MAX_PATH], msg[128];
+	DashApp tmp;
+	int r;
+
+	if (section != DASH_SEC_HOME || boot_phase || dashWorkerIoBusy() || dashIopParked() || !isFtpNetworkReady())
+		return;
+
+	r = remoteCommandPoll(path, sizeof(path), msg, sizeof(msg));
+	if (r < 0) {
+		dashToast(DASH_TOAST_ERROR, msg[0] ? msg : "Invalid PC command");
+		return;
+	}
+	if (r == 0)
+		return;
+
+	if (!stricmp(path, setting->Misc_OSDSYS) || !stricmp(path, setting->Misc_PS2PowerOff)) {
+		dashRunMisc(path);
+		return;
+	}
+	if (strchr(path, ':') != NULL) {
+		dashToast(DASH_TOAST_INFO, "PC requested application launch");
+		dashLaunchApp(dashLibResolve(path, &tmp), 0);
+		return;
+	}
+	dashToast(DASH_TOAST_ERROR, "PC command path is not launchable");
+#endif
 }
 
 //--------------------------------------------------------------
@@ -933,6 +983,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		/* results of background work that change what screens point at */
 		applyScanResult();
 		dashFilesPoll();
+		pollRemotePcCommand();
 		if (autoprobe_pending) {
 			autoprobe_pending = 0;
 			dashDevicesAutoStart();
