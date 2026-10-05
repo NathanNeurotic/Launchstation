@@ -262,14 +262,19 @@ static int metaKv(const char *key, char *value, void *user)
 	MetaCtx *m = (MetaCtx *)user;
 	DashApp *a = m->app;
 
-	if (m->opl_style && !stricmp(key, "boot")) {
+	/* OPL title.cfg keys are case-sensitive: lowercase "title" and "boot".
+	 * Some packages also contain a separate "Title" description field; do
+	 * not let that replace the program name. Dedicated wLE sidecars remain
+	 * case-insensitive for backward compatibility. */
+	if (m->opl_style && !strcmp(key, "boot")) {
 		if (m->elf_name && value[0] && stricmp(value, m->elf_name))
 			m->boot_mismatch = 1;
 		return 0;
 	}
 	if (a != NULL) {
 		sanitizeField(value);
-		if (!stricmp(key, "title") || !stricmp(key, "name")) {
+		if ((m->opl_style && !strcmp(key, "title")) ||
+		    (!m->opl_style && (!stricmp(key, "title") || !stricmp(key, "name")))) {
 			if (value[0])
 				dashStrCopy(a->title, value, sizeof(a->title));
 		} else if (!stricmp(key, "description") || !stricmp(key, "desc"))
