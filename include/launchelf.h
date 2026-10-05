@@ -392,6 +392,8 @@ int IsSupportedFileType(char *path);
 void CleanUpForExec(void);
 /* remote_control.c: MrRexD-compatible PC command inbox. */
 int remoteCommandPoll(char *runpath, int runpath_size, char *message, int message_size);
+/* pc_game_receiver.c: MrRexD-compatible UDPFS ISO receiver. */
+int pcGameReceiverPoll(char *message, int message_size);
 #ifdef XFROM
 int loadFlashModules(void);
 #endif

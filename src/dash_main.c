@@ -500,6 +500,36 @@ static void applyScanResult(void)
 }
 
 //--------------------------------------------------------------
+// MrRexD-compatible PC game receiver. A complete PS2-RECEBER.TXT switches
+// FTP -> UDPFS, streams into the HDD staging directory, writes the result,
+// then restores FTP. Only HOME polls it, and only after remote access is on.
+//--------------------------------------------------------------
+static void pollPcGameReceiver(void)
+{
+#if defined(ETH) && defined(UDPFS) && defined(EXFAT)
+	char msg[MAX_PATH];
+	int r;
+
+	if (section != DASH_SEC_HOME || boot_phase || dashWorkerIoBusy() || dashIopParked() || !isFtpNetworkReady())
+		return;
+
+	r = pcGameReceiverPoll(msg, sizeof(msg));
+	if (r < 0) {
+		dashToast(DASH_TOAST_ERROR, msg[0] ? msg : "Invalid PC game-transfer request");
+		return;
+	}
+	if (r == 0)
+		return;
+
+	/* Switching between the ETH and UDPFS IOP stacks invalidates dashboard
+	 * audio/device state even though the receiver restores FTP before return. */
+	afterMiscCommand();
+	if (msg[0])
+		dashToast(DASH_TOAST_INFO, msg);
+#endif
+}
+
+//--------------------------------------------------------------
 // MrRexD-compatible PC remote commands. The file protocol is polled only on
 // HOME after FTP has explicitly been started; no network or HDD work occurs
 // during ordinary dashboard boot.
@@ -984,6 +1014,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		/* results of background work that change what screens point at */
 		applyScanResult();
 		dashFilesPoll();
+		pollPcGameReceiver();
 		pollRemotePcCommand();
 		if (autoprobe_pending) {
 			autoprobe_pending = 0;
