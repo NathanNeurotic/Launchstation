@@ -298,6 +298,152 @@ int mmceExportActivePcsx2ToFolder(int unit, const char *folder,
 	return r == MC_CARD_EXPORT_OK ? MMCE_BACKUP_HISTORY_CREATED : r;
 }
 
+static int namedHistoryMatch(const char *prefix, const char *name)
+{
+	size_t n;
+	const char *dot;
+
+	if (prefix == NULL || prefix[0] == '\0' || name == NULL)
+		return 0;
+	n = strlen(prefix);
+	if (strncmp(name, prefix, n) != 0 || name[n] != '-')
+		return 0;
+	dot = strrchr(name, '.');
+	return dot != NULL && !stricmp(dot, ".mcd");
+}
+
+static int namedStampedName(const char *prefix, const char *folder,
+                            char *name, size_t name_size)
+{
+	char stamp[32], candidate[MAX_PATH];
+	int suffix;
+
+	if (prefix == NULL || prefix[0] == '\0' || strchr(prefix, '/') != NULL ||
+	    strchr(prefix, ':') != NULL || !backupStamp(stamp, sizeof(stamp)))
+		return 0;
+
+	for (suffix = 0; suffix < 100; suffix++) {
+		if (suffix == 0)
+			snprintf(name, name_size, "%s-%s.mcd", prefix, stamp);
+		else
+			snprintf(name, name_size, "%s-%s-%02d.mcd", prefix, stamp, suffix);
+		if (!joinPath(candidate, sizeof(candidate), folder, name))
+			return 0;
+		if (!wleExists(candidate))
+			return 1;
+	}
+	return 0;
+}
+
+static int namedHistoryNewest(const char *folder, const char *prefix,
+                              const char *exclude, char *newest, size_t newest_size)
+{
+	iox_dirent_t ent;
+	char path[MAX_PATH];
+	int fd;
+
+	if (newest == NULL || newest_size == 0)
+		return -1;
+	newest[0] = '\0';
+	snprintf(path, sizeof(path), "%s", folder);
+	fd = genDopen(path);
+	if (fd < 0)
+		return -1;
+
+	memset(&ent, 0, sizeof(ent));
+	while (fileXioDread(fd, &ent) > 0) {
+		if (namedHistoryMatch(prefix, ent.name) &&
+		    (exclude == NULL || strcmp(ent.name, exclude) != 0) &&
+		    (newest[0] == '\0' || strcmp(ent.name, newest) > 0))
+			snprintf(newest, newest_size, "%s", ent.name);
+		memset(&ent, 0, sizeof(ent));
+	}
+	genDclose(fd);
+	return newest[0] != '\0' ? 1 : 0;
+}
+
+static int namedHistoryPrune(const char *folder, const char *prefix, int keep)
+{
+	iox_dirent_t ent;
+	char path[MAX_PATH], oldest[MAX_NAME];
+	int fd, count, guard = 0;
+
+	if (keep <= 0)
+		return 0;
+
+	while (guard++ < 256) {
+		count = 0;
+		oldest[0] = '\0';
+		snprintf(path, sizeof(path), "%s", folder);
+		fd = genDopen(path);
+		if (fd < 0)
+			return -1;
+		memset(&ent, 0, sizeof(ent));
+		while (fileXioDread(fd, &ent) > 0) {
+			if (namedHistoryMatch(prefix, ent.name)) {
+				count++;
+				if (oldest[0] == '\0' || strcmp(ent.name, oldest) < 0)
+					snprintf(oldest, sizeof(oldest), "%s", ent.name);
+			}
+			memset(&ent, 0, sizeof(ent));
+		}
+		genDclose(fd);
+		if (count <= keep)
+			return 0;
+		if (oldest[0] == '\0' || !joinPath(path, sizeof(path), folder, oldest))
+			return -1;
+		if (genRemove(path) < 0)
+			return -1;
+	}
+	return -1;
+}
+
+int mmceBackupCardFileHistory(const char *source, const char *folder,
+                              const char *prefix, int keep,
+                              McCardExportProgress progress,
+                              char *out_path, size_t out_path_size)
+{
+	char dest[MAX_PATH], name[MAX_NAME], previous[MAX_NAME], previous_path[MAX_PATH];
+	int prep, r, newest, same = -1;
+
+	if (source == NULL || source[0] == '\0' || folder == NULL || folder[0] == '\0')
+		return MMCE_BACKUP_ERR_NAME;
+	if (!namedStampedName(prefix, folder, name, sizeof(name)) ||
+	    !joinPath(dest, sizeof(dest), folder, name))
+		return MMCE_BACKUP_ERR_NAME;
+
+	prep = prepareTransferDeviceStacks(source, dest);
+	if (prep == TRANSFER_STACK_INCOMPATIBLE)
+		return MMCE_BACKUP_ERR_STACK_INCOMPATIBLE;
+	if (prep != TRANSFER_STACK_READY)
+		return MMCE_BACKUP_ERR_STACK;
+
+	r = mcCardBackupNoEcc(source, dest, progress);
+	if (r != MC_CARD_EXPORT_OK)
+		return r;
+
+	if (out_path != NULL && out_path_size > 0)
+		snprintf(out_path, out_path_size, "%s", dest);
+
+	newest = namedHistoryNewest(folder, prefix, name, previous, sizeof(previous));
+	if (newest > 0 && joinPath(previous_path, sizeof(previous_path), folder, previous))
+		same = filesEqual(dest, previous_path);
+
+	if (same == 1) {
+		if (genRemove(dest) < 0)
+			return MMCE_BACKUP_HISTORY_DUPLICATE_REMOVE_WARN;
+		if (out_path != NULL && out_path_size > 0)
+			out_path[0] = '\0';
+		if (namedHistoryPrune(folder, prefix, keep) < 0)
+			return MMCE_BACKUP_HISTORY_CREATED_PRUNE_WARN;
+		return MMCE_BACKUP_HISTORY_UNCHANGED;
+	}
+
+	if (namedHistoryPrune(folder, prefix, keep) < 0)
+		return MMCE_BACKUP_HISTORY_CREATED_PRUNE_WARN;
+	return MMCE_BACKUP_HISTORY_CREATED;
+}
+
 static int ensureDirectory(const char *path)
 {
 	iox_stat_t st;
@@ -305,6 +451,31 @@ static int ensureDirectory(const char *path)
 	if (genGetStat(path, &st) >= 0)
 		return FIO_S_ISDIR(st.mode) ? 0 : -1;
 	return genMkdir(path, fileMode) >= 0 ? 0 : -1;
+}
+
+int mmceEnsureDirectoryTree(const char *path)
+{
+	char work[MAX_PATH];
+	char *colon, *p;
+
+	if (path == NULL || path[0] == '\0' || strlen(path) >= sizeof(work))
+		return -1;
+	snprintf(work, sizeof(work), "%s", path);
+	colon = strchr(work, ':');
+	if (colon == NULL)
+		return -1;
+
+	for (p = colon + 1; *p != '\0'; p++) {
+		if (*p != '/')
+			continue;
+		if (p == colon + 1)
+			continue;
+		*p = '\0';
+		if (ensureDirectory(work) < 0)
+			return -1;
+		*p = '/';
+	}
+	return ensureDirectory(work);
 }
 
 int mmceEnsureAutoBackupFolder(int unit, char *out, size_t out_size)
@@ -320,7 +491,7 @@ int mmceEnsureAutoBackupFolder(int unit, char *out, size_t out_size)
 
 	if (ensurePathDeviceStackReady(root) < 0)
 		return -1;
-	if (ensureDirectory(app) < 0 || ensureDirectory(backups) < 0)
+	if (mmceEnsureDirectoryTree(app) < 0 || mmceEnsureDirectoryTree(backups) < 0)
 		return -1;
 
 	snprintf(out, out_size, "%s", backups);
