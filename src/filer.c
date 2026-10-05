@@ -759,6 +759,11 @@ int genFixPath(const char *inp_path, char *gen_path)
 		if ((part_ix >= 0) && pathSep && (pathSep - uLE_path < 10) && pathSep[-1] == ':')
 			strcpy(gen_path + (pathSep - uLE_path), pathSep + 1);
 #endif
+#ifdef ILINK
+	} else if (!strncmp(uLE_path, "ilink", 5)) {
+		if (!loadIlinkModules())
+			part_ix = -1;
+#endif
 #ifdef MMCE
 	} else if (!strncmp(uLE_path, "mmce", 4)) {
 		loadMmceModules();
@@ -1793,6 +1798,12 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 #ifdef MX4SIO
 		if (allow_usb_devices) {
 			strcpy(files[nfiles].name, "mx4sio:");
+			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
+		}
+#endif
+#ifdef ILINK
+		if (allow_usb_devices) {
+			strcpy(files[nfiles].name, "ilink:");
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 		}
 #endif

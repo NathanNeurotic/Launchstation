@@ -2,6 +2,7 @@
 //File name:   filer_device.c
 //--------------------------------------------------------------
 #include "filer_internal.h"
+#include "init.h"
 
 enum {
 	TRANSFER_STORAGE_DEFAULT = 0,
@@ -71,6 +72,10 @@ int ensurePathDeviceStackReady(const char *path)
 #ifdef MX4SIO
 	if (!strncmp(path, "mx4sio", 6))
 		return loadMx4sioModules();
+#endif
+#ifdef ILINK
+	if (!strncmp(path, "ilink", 5))
+		return loadIlinkModules();
 #endif
 #ifdef EXFAT
 	if (!strncmp(path, "ata", 3)) {

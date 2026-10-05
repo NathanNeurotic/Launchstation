@@ -222,6 +222,11 @@ void dashShowBuildInfo(void)
 #else
 	feature(&s, "MX4SIO", 0);
 #endif
+#ifdef ILINK
+	feature(&s, "iLink", 1);
+#else
+	feature(&s, "iLink", 0);
+#endif
 #ifdef MMCE
 	feature(&s, "MMCE", 1);
 #else

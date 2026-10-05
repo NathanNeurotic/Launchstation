@@ -370,6 +370,28 @@ $(MX4SIO_BD_AUTOGEN): | iop/__generated
 
 $(EE_ASM_DIR)mx4sio_bd.s: $(MX4SIO_BD_SOURCE) | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ mx4sio_bd_irx
+
+# iLink / IEEE1394 BDM transport. Prefer the mini block driver used by
+# RiptOPL; fall back to the full BDM variant when an older SDK lacks it.
+ILINKMAN_SOURCE := $(PS2SDK)/iop/irx/iLinkman.irx
+IEEE1394_BD_SOURCE := $(PS2SDK)/iop/irx/IEEE1394_bd_mini.irx
+ifeq ($(wildcard $(IEEE1394_BD_SOURCE)),)
+IEEE1394_BD_SOURCE := $(PS2SDK)/iop/irx/IEEE1394_bd.irx
+endif
+ifeq ($(ILINK),1)
+ifeq ($(wildcard $(ILINKMAN_SOURCE)),)
+$(error Missing iLinkman.irx. Update PS2SDK for iLink support)
+endif
+ifeq ($(wildcard $(IEEE1394_BD_SOURCE)),)
+$(error Missing IEEE1394_bd(_mini).irx. Update PS2SDK for iLink support)
+endif
+endif
+
+$(EE_ASM_DIR)iLinkman_irx.s: $(ILINKMAN_SOURCE) | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ iLinkman_irx
+
+$(EE_ASM_DIR)IEEE1394_bd_irx.s: $(IEEE1394_BD_SOURCE) | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ IEEE1394_bd_irx
 	
 $(EE_ASM_DIR)mmceman_irx.s: $(MMCEMAN_SOURCE) | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ mmceman_irx

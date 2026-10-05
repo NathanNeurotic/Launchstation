@@ -12,6 +12,7 @@ IOP_RESET ?= 1
 XFROM ?= 1
 UDPTTY ?= 0
 MX4SIO ?= 1
+ILINK ?= 1
 SIO2MAN ?= 1
 PPC_UART ?= 0
 SIO_DEBUG ?= 0
@@ -20,7 +21,7 @@ LCDVD ?= LATEST#or LEGACY
 # ----------------------------- #
 .SILENT:
 
-BIN_NAME = $(HAS_EXFAT)$(HAS_DS34)$(HAS_ETH)$(HAS_UDPFS)$(HAS_MX4SIO)$(HAS_MMCE)$(HAS_DVRP)$(HAS_XFROM)$(HAS_EESIO)$(HAS_UDPTTY)$(HAS_PPCTTY)$(HAS_IOP_RESET)
+BIN_NAME = $(HAS_EXFAT)$(HAS_DS34)$(HAS_ETH)$(HAS_UDPFS)$(HAS_MX4SIO)$(HAS_ILINK)$(HAS_MMCE)$(HAS_DVRP)$(HAS_XFROM)$(HAS_EESIO)$(HAS_UDPTTY)$(HAS_PPCTTY)$(HAS_IOP_RESET)
 ifeq ($(DEBUG), 0)
   EE_BIN = UNC-BOOT$(BIN_NAME).ELF
   EE_BIN_PKD = BOOT$(BIN_NAME).ELF
@@ -145,6 +146,16 @@ ifeq ($(MX4SIO),1)
         EE_CFLAGS += -DMX4SIO
         HAS_MX4SIO = -MX4SIO
         SIO2MAN = 1
+    endif
+endif
+
+ifeq ($(ILINK),1)
+    ifneq ($(EXFAT),1)
+        $(error iLink Requested on build without BDM)
+    else
+        EE_OBJS += iLinkman_irx.o IEEE1394_bd_irx.o
+        EE_CFLAGS += -DILINK
+        HAS_ILINK = -ILINK
     endif
 endif
 

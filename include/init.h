@@ -18,6 +18,9 @@ int ensureUsbKeyboardReady(void);
 #ifdef DS34
 void loadDs34InputModules(void);
 #endif
+#ifdef ILINK
+int loadIlinkModules(void);
+#endif
 void setupPowerOff(void);
 void closeAllAndPoweroff(void);
 void startKbd(void);

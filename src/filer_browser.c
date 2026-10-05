@@ -64,6 +64,12 @@ static const char *getRootDeviceLabel(const char *name)
 	if (!strcmp(name, "mx4sio:"))
 		return "mx4sio:/";
 #endif
+#ifdef ILINK
+	if (!strcmp(name, "ilink:"))
+		return "ilink:/";
+	if (!strcmp(name, "ilink0:"))
+		return "ilink0:/";
+#endif
 	if (!strcmp(name, "hdd0:"))
 		return "hdd0:/";
 	if (!strcmp(name, "hdd1:"))

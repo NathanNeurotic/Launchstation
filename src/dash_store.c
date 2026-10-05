@@ -165,7 +165,7 @@ static int isWritableDevice(const char *path)
 		return 0;
 	return (!strncmp(path, "mc", 2) || !strncmp(path, "mass", 4) || !strncmp(path, "usb", 3) ||
 	        !strncmp(path, "hdd", 3) || !strncmp(path, "mmce", 4) || !strncmp(path, "mx4sio", 6) ||
-	        !strncmp(path, "ata", 3));
+	        !strncmp(path, "ilink", 5) || !strncmp(path, "ata", 3));
 }
 
 static void dirOf(const char *path, char *out, int out_size)

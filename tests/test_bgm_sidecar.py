@@ -167,6 +167,7 @@ bootcode = r"""
 #define EXFAT 1
 #define MMCE 1
 #define MX4SIO 1
+#define ILINK 1
 #define UDPFS 1
 #define ETH 1
 #define XFROM 1
@@ -182,11 +183,12 @@ static int have_usbd, have_usb_mass, have_HDD_modules, block_storage_stack_mode;
 static int have_ps2host, have_ps2ip, have_ps2smap, ps2dev9_loaded;
 static int have_Flash_modules, have_DVRP_HDD_modules, have_ata_bd, have_bdmfs;
 static int have_mmce, have_mx4sio, storage_driver_stack_mode, have_udpfs_ioman, have_cdvd;
+static int have_ilinkman, have_ieee1394_bd, have_bdm;
 """
 bootcode += boot_header[boot_header.index("enum BOOT_DEVICE {"):boot_header.index("enum BOOT_DEVICE prepare")]
 signatures = ("static void normalizeBootPath(", "static int isSlashRootedBootPathDevice(",
               "static int isDevicePathTerminator(", "static int isBootUsbMassPath(",
-              "static int isBootAtaPath(", "static int isBootHddPath(",
+              "static int isBootAtaPath(", "static int isBootIlinkPath(", "static int isBootHddPath(",
               "static int isBootXfromPath(", "static void buildBootBlockPath(")
 # Start after the forward declarations, so extraction takes the definitions.
 definitions = startup[startup.index("static void normalizeBootPath(char *path)\n{"):]
@@ -206,12 +208,16 @@ int main(void) {
     assert(!strcmp(LaunchElfBootDir,"cdfs:/"));
     assert(prepareBootDeviceAndPath("usb0:/APPS/BOOT.ELF",path,sizeof(path))==BOOT_DEVICE_MASS);
     assert(!strcmp(LaunchElfBootDir,"usb0:/APPS/") && !strcmp(LaunchElfDir,LaunchElfBootDir));
+    assert(prepareBootDeviceAndPath("ilink0:/APPS/BOOT.ELF",path,sizeof(path))==BOOT_DEVICE_ILINK);
+    assert(!strcmp(LaunchElfBootDir,"ilink0:/APPS/") && !strcmp(LaunchElfDir,LaunchElfBootDir));
     assert(prepareBootDeviceAndPath("hdd0:__common:pfs:/BOOT/BOOT.ELF",path,sizeof(path))==BOOT_DEVICE_HDD);
     assert(!strcmp(LaunchElfBootDir,"hdd0:/__common/BOOT/"));
     assert(!isPathDeviceStackLoaded("cdfs:/") && !isPathDeviceStackLoaded("pfs0:/"));
     have_cdvd=1; assert(isPathDeviceStackLoaded("cdfs:/") && isPathDeviceStackLoaded("cdrom0:/"));
     have_HDD_modules=1; block_storage_stack_mode=BLOCK_STACK_HDD;
     assert(isPathDeviceStackLoaded("hdd0:/") && isPathDeviceStackLoaded("pfs0:/"));
+    have_bdm=have_bdmfs=have_ilinkman=have_ieee1394_bd=1;
+    assert(isPathDeviceStackLoaded("ilink0:/"));
     have_ps2host=have_ps2ip=have_ps2smap=ps2dev9_loaded=1;
     assert(isPathDeviceStackLoaded("host:/"));
     have_Flash_modules=have_DVRP_HDD_modules=1;

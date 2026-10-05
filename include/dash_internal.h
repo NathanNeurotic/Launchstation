@@ -529,7 +529,8 @@ typedef struct
 #define DASH_DEVA_MMCE   (1 << 3)
 #define DASH_DEVA_MX4SIO (1 << 4)
 #define DASH_DEVA_UDPFS  (1 << 5)
-#define DASH_DEVA_ALL    0x3F
+#define DASH_DEVA_ILINK  (1 << 6)
+#define DASH_DEVA_ALL    0x7F
 
 extern DashSettings dashCfg;
 

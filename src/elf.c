@@ -459,6 +459,10 @@ int checkELFheader(char *path)
 	if (!strncmp(fullpath, "mx4sio", 6) && !mx4sio_driver_running && !loadMx4sioModules())
 		goto error;
 #endif
+#ifdef ILINK
+	if (!strncmp(fullpath, "ilink", 5) && !loadIlinkModules())
+		goto error;
+#endif
 #ifdef EXFAT
 	if (!strncmp(fullpath, "ata", 3))
 		loadAtaModules();

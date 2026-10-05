@@ -192,6 +192,8 @@ void dashLibDeviceLabel(const char *path, char *out, int out_size)
 		snprintf(out, out_size, "MMCE Slot %c", (path[4] == '1') ? '2' : '1');
 	else if (!strncmp(path, "mx4sio", 6))
 		dashStrCopy(out, "MX4SIO SD Card", out_size);
+	else if (!strncmp(path, "ilink", 5))
+		dashStrCopy(out, "iLink / FireWire", out_size);
 	else if (!strncmp(path, "ata", 3))
 		dashStrCopy(out, "exFAT HDD", out_size);
 	else if (!strncmp(path, "cdfs", 4) || !strncmp(path, "cdrom", 5))
@@ -222,6 +224,8 @@ int dashLibDeviceIcon(const char *path)
 		return DI_HDD;
 	if (!strncmp(path, "mmce", 4) || !strncmp(path, "mx4sio", 6))
 		return DI_SDCARD;
+	if (!strncmp(path, "ilink", 5))
+		return DI_HDD;
 	if (!strncmp(path, "cdfs", 4) || !strncmp(path, "cdrom", 5))
 		return DI_DISC;
 	if (!strncmp(path, "udpfs", 5) || !strncmp(path, "host", 4))
