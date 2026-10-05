@@ -107,6 +107,23 @@ targets:
     cflags: [-Wall]
     headers: [sio2man, dmacman, intrman, iomanx, loadcore, stdio, sysclib, threadman]
 
+  # Legacy ps2ftpd is retained as the on-demand FTP service. Build it in the
+  # default CI graph even while ETH remains an optional runtime feature, so
+  # device-discovery and large-file fixes cannot bit-rot unnoticed.
+  - name: ps2ftpd
+    type: iop
+    sources:
+      - iop/oldlibs/ps2ftpd/src/main.c
+      - iop/oldlibs/ps2ftpd/src/FileSystem.c
+      - iop/oldlibs/ps2ftpd/src/FtpServer.c
+      - iop/oldlibs/ps2ftpd/src/FtpClient.c
+      - iop/oldlibs/ps2ftpd/src/FtpCommands.c
+      - iop/oldlibs/ps2ftpd/src/FtpMessages.c
+    include_dirs: [iop/oldlibs/ps2ftpd/src]
+    imports_lst: iop/oldlibs/ps2ftpd/src/imports.lst
+    cflags: [-Wall, -fno-builtin]
+    headers: [cdvd, iomanx, ps2ip, stdio, sysclib, threadman]
+
   # ps2sdk iop/deckard/xparam (not packaged by the SDK suite), homebrew DB.
   - name: xparam
     type: iop

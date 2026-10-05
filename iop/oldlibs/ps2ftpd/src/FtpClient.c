@@ -89,7 +89,7 @@ char *uitoa(char *in, u64 val)
 }
 
 // this shared buffer is used for everything the clients do
-static char buffer[8192];
+static char buffer[32768];  // fewer round trips per transfer on slow devices such as mmce
 #define BUFFER_OFFSET 4096  // use this if you need to use buffer & push it to FtpClient_Send()
 
 void FtpClient_Create(FtpClient *pClient, FtpServer *pServer, int iControlSocket)
@@ -382,8 +382,20 @@ void FtpClient_OnCommand(FtpClient *pClient, const char *pString)
 						c++;
 					}
 
-					if (!*c)
-						FtpClient_OnCmdRest(pClient, (!*c) ? strtol(marker, NULL, 10) : -1);
+					if (!*c) {
+						// 64-bit parse (strtol stops at 2 GB); absurd values are refused like bad ones
+						s64 iMarker = 0;
+
+						for (c = marker; *c; c++) {
+							if (iMarker > 0x0CCCCCCCCCCCCCCCLL) {
+								iMarker = -1;
+								break;
+							}
+							iMarker = iMarker * 10 + (*c - '0');
+						}
+						FtpClient_OnCmdRest(pClient, iMarker);
+					} else
+						FtpClient_OnCmdRest(pClient, -1);  // used to send no reply at all
 				} else
 					FtpClient_Send(pClient, 500, pClient->m_pMessages[FTPMSG_REQUIRES_PARAMETERS]);
 			} break;
@@ -809,6 +821,8 @@ void FtpClient_OnDataCleanup(FtpClient *pClient)
 
 	pClient->m_eConnState = CONNSTATE_IDLE;
 	pClient->m_eDataMode = DATAMODE_IDLE;
+	// a data connection accepted before its command arrives must not replay the previous transfer
+	pClient->m_eDataAction = DATAACTION_NONE;
 }
 
 void FtpClient_HandleDataConnect(FtpClient *pClient)
