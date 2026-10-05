@@ -253,6 +253,7 @@ targets:
       - src/psu_functions.c
       - src/mc_card_export.c
       - src/mmce_backup.c
+      - src/mmce_control.c
       - src/hdd.c
       - src/hdd_header_injector.c
       - src/hdl_rpc.c
@@ -303,7 +304,7 @@ targets:
       - src/dash_browser.c
       - src/dash_exploit.c
       - src/embed_blobs.S
-    include_dirs: [include, ., ee_libs/hdd/include]
+    include_dirs: [include, ., ee_libs/hdd/include, iop/mmceman/include]
     defines:
       - WLE_PS2BUILD
       - NEWLIB_PORT_AWARE
