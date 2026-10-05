@@ -25,8 +25,20 @@ extern u8 filexio_irx[];
 extern int size_filexio_irx;
 extern u8 sio2man_irx[];
 extern int size_sio2man_irx;
+extern u8 mcman_irx[];
+extern int size_mcman_irx;
+extern u8 mcserv_irx[];
+extern int size_mcserv_irx;
 extern u8 mmceman_irx[];
 extern int size_mmceman_irx;
+extern u8 usbd_irx[];
+extern int size_usbd_irx;
+extern u8 bdm_irx[];
+extern int size_bdm_irx;
+extern u8 bdmfs_fatfs_irx[];
+extern int size_bdmfs_fatfs_irx;
+extern u8 usbmass_bd_irx[];
+extern int size_usbmass_bd_irx;
 
 #define WLE_IGR_TRIES 24
 
@@ -78,16 +90,10 @@ static int resolve_app_path(const char *configured, char *out, size_t out_size)
             snprintf(out, out_size, "mmce1:%s", configured + 6);
             if (path_exists(out))
                 return 1;
-        } else if ((!strncmp(configured, "mmce0:", 6) ||
-                    !strncmp(configured, "mmce1:", 6)) &&
-                   strlen(configured) < out_size) {
+        } else if (strlen(configured) < out_size) {
             snprintf(out, out_size, "%s", configured);
             if (path_exists(out))
                 return 1;
-        } else {
-            /* The helper is only necessary for MMCE. MC/USB installations
-             * should point OPL directly at wLaunchELF itself. */
-            return 0;
         }
         usleep(250000);
     }
@@ -144,9 +150,21 @@ int main(int argc, char *argv[])
 
     if (start_module(iomanx_irx, size_iomanx_irx) < 0 ||
         start_module(filexio_irx, size_filexio_irx) < 0 ||
-        start_module(sio2man_irx, size_sio2man_irx) < 0 ||
-        start_module(mmceman_irx, size_mmceman_irx) < 0)
+        start_module(sio2man_irx, size_sio2man_irx) < 0)
         goto osd;
+
+    /* MC and MMCE share SIO2. USB/BDM is independent. Start all three
+     * families so the same helper can relaunch wLaunchELF from mc, mass/usb,
+     * or mmce without depending on whatever OPL left resident. */
+    start_module(mcman_irx, size_mcman_irx);
+    start_module(mcserv_irx, size_mcserv_irx);
+    start_module(mmceman_irx, size_mmceman_irx);
+
+    if (start_module(usbd_irx, size_usbd_irx) >= 0) {
+        start_module(bdm_irx, size_bdm_irx);
+        start_module(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx);
+        start_module(usbmass_bd_irx, size_usbmass_bd_irx);
+    }
 
     fileXioInit();
 
