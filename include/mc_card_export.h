@@ -27,6 +27,10 @@ int mcCardBackupNoEcc(const char *source, const char *dest, McCardExportProgress
  * for the full operation so active-card discovery occurs only once. */
 int mcCardBackupActiveMmce(const char *source, const char *dest, McCardExportProgress progress);
 
+/* Convert the synthetic active-MMCE source directly to PCSX2 format while
+ * keeping active-card discovery stable for the entire operation. */
+int mcCardExportActiveMmcePcsx2(const char *source, const char *dest, McCardExportProgress progress);
+
 /* Convert a no-ECC .mcd image to PCSX2's 528-byte/page .ps2 format and
  * verify the completed output byte-for-byte. */
 int mcCardExportPcsx2(const char *source, const char *dest, McCardExportProgress progress);
