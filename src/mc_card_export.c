@@ -324,6 +324,72 @@ static int convert_block(const u8 *in, int in_size, u8 *out)
 	return made;
 }
 
+int mcCardExportActiveMmcePcsx2(const char *source, const char *dest, McCardExportProgress progress)
+{
+	u64 src_size = 0, src_pos = 0, dst_pos = 0;
+	int src_fd = -1, ret, chunk, converted;
+	char remove_path[MAX_PATH];
+
+	if (source == NULL || dest == NULL || source[0] == '\0' || dest[0] == '\0')
+		return MC_CARD_EXPORT_FORMAT;
+	if (!strcmp(source, dest))
+		return MC_CARD_EXPORT_SAME_PATH;
+
+	src_fd = genOpen(source, FIO_O_RDONLY);
+	if (src_fd < 0)
+		return MC_CARD_EXPORT_OPEN;
+	ret = source_info_fd(src_fd, &src_size);
+	if (ret != MC_CARD_EXPORT_OK)
+		goto close_source;
+
+	while (src_pos < src_size) {
+		chunk = (src_size - src_pos > MC_EXPORT_IN) ? MC_EXPORT_IN : (int)(src_size - src_pos);
+		if (read_exact_fd(src_fd, src_pos, export_in, chunk) < 0) {
+			ret = MC_CARD_EXPORT_IO;
+			goto remove_bad;
+		}
+		converted = convert_block(export_in, chunk, export_out);
+		if (converted < 0 || write_exact_at(dest, dst_pos, export_out, converted, src_pos == 0) < 0) {
+			ret = MC_CARD_EXPORT_IO;
+			goto remove_bad;
+		}
+		src_pos += chunk;
+		dst_pos += converted;
+		if (progress)
+			progress(MC_CARD_EXPORT_WRITE, src_pos, src_size);
+	}
+
+	src_pos = dst_pos = 0;
+	while (src_pos < src_size) {
+		chunk = (src_size - src_pos > MC_EXPORT_IN) ? MC_EXPORT_IN : (int)(src_size - src_pos);
+		if (read_exact_fd(src_fd, src_pos, export_in, chunk) < 0) {
+			ret = MC_CARD_EXPORT_VERIFY_FAILED;
+			goto remove_bad;
+		}
+		converted = convert_block(export_in, chunk, export_out);
+		if (converted < 0 || read_exact_at(dest, dst_pos, verify_out, converted) < 0 ||
+		    memcmp(export_out, verify_out, converted) != 0) {
+			ret = MC_CARD_EXPORT_VERIFY_FAILED;
+			goto remove_bad;
+		}
+		src_pos += chunk;
+		dst_pos += converted;
+		if (progress)
+			progress(MC_CARD_EXPORT_VERIFY, src_pos, src_size);
+	}
+
+	ret = MC_CARD_EXPORT_OK;
+	goto close_source;
+
+remove_bad:
+	snprintf(remove_path, sizeof(remove_path), "%s", dest);
+	genRemove(remove_path);
+close_source:
+	if (src_fd >= 0 && genClose(src_fd) < 0 && ret == MC_CARD_EXPORT_OK)
+		ret = MC_CARD_EXPORT_IO;
+	return ret;
+}
+
 int mcCardExportPcsx2(const char *source, const char *dest, McCardExportProgress progress)
 {
 	u64 src_size = 0, src_pos = 0, dst_pos = 0;
