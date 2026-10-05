@@ -1881,6 +1881,13 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 		files[nfiles++].stats.AttrFile = sceMcFileAttrFile;
 		strcpy(files[nfiles].name, LNG(PS2Disc));
 		files[nfiles++].stats.AttrFile = sceMcFileAttrFile;
+#ifdef ETH
+		/* Keep the classic MISC pseudo-folder in parity with the dashboard
+		 * and MrRexD's FTP fork, so PS2Net/FTP can still be assigned to
+		 * launch keys through the legacy path picker. */
+		strcpy(files[nfiles].name, LNG(PS2Net));
+		files[nfiles++].stats.AttrFile = sceMcFileAttrFile;
+#endif
 		strcpy(files[nfiles].name, LNG(PS2PowerOff));
 		files[nfiles++].stats.AttrFile = sceMcFileAttrFile;
 		strcpy(files[nfiles].name, LNG(OSDSYS));
