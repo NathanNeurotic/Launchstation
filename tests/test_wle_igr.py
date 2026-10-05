@@ -13,6 +13,8 @@ assert '"-wle-igr-backup=%s"' in helper
 assert "ExecPS2" in helper
 assert "mmceman_irx" in helper
 assert "usbmass_bd_irx" in helper
+assert "mx4sio_bd_irx" in helper
+assert "iLinkman_irx" in helper and "IEEE1394_bd_irx" in helper
 assert "mcman_irx" in helper and "mcserv_irx" in helper
 
 assert "memcmp(cfg->magic, WLE_IGR_MAGIC" in setup
@@ -21,6 +23,8 @@ assert '"/BOOT/WLE-IGR.ELF"' not in setup, "helper target should be built from s
 assert "collect_boot_images" in setup
 assert "write_verified" in setup
 assert "wleIgrRemove" in setup
+assert "install_helper_on_any_mc" in setup
+assert '"mx4sio"' in setup and '"ilink"' in setup
 assert "strnicmp" not in setup
 
 igr_start = main.index("static void runWleIgrBackup(")
@@ -31,7 +35,8 @@ assert "mmceBackupAllCards(unit, backup_root" in igr
 assert "named/GameID" in igr
 
 assert "- name: wle_igr" in yaml
-for module in ("iomanx", "filexio", "sio2man", "mcman", "mcserv", "mmceman", "usbd", "bdm", "bdmfs_fatfs", "usbmass_bd"):
+for module in ("iomanx", "filexio", "sio2man", "mcman", "mcserv", "mmceman", "usbd", "bdm", "bdmfs_fatfs", "usbmass_bd", "mx4sio_bd", "iLinkman"):
     assert f"      - {module}" in yaml
+assert "IEEE1394_bd_mini:IEEE1394_bd" in yaml
 
-print("PASS: WLE IGR helper passes backup args, embeds MC/USB/MMCE stacks, and setup verifies install/remove paths")
+print("PASS: WLE IGR helper passes backup args, covers MC/USB/MMCE/MX4SIO/iLink relaunch stacks, and setup verifies install/remove paths")
