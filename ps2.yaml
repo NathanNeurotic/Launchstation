@@ -229,6 +229,8 @@ targets:
       - mx4sio_bd
       - iLinkman
       - IEEE1394_bd_mini:IEEE1394_bd
+      - dev9:ps2dev9
+      - ata_bd
 
   - name: wLaunchELF
     type: ee
