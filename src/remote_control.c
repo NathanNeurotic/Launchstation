@@ -79,7 +79,7 @@ int remoteCommandPoll(char *runpath, int runpath_size, char *message, int messag
 	fileXioRemove(REMOTE_COMMAND_FILE);
 
 	if (header == NULL || strcmp(header, "PS2-COMANDO 1") || command == NULL || command[0] == '\0') {
-		snprintf(message, message_size, "Invalid PC command request");
+		snprintf(message, message_size, "%s", LNG(PC_Cmd_Bad));
 		return -1;
 	}
 
@@ -96,7 +96,7 @@ int remoteCommandPoll(char *runpath, int runpath_size, char *message, int messag
 		return 1;
 	}
 
-	snprintf(message, message_size, "Unknown PC command: %.60s", command);
+	snprintf(message, message_size, LNG(PC_Cmd_Unknown), command);
 	return -1;
 #else
 	(void)runpath;

@@ -118,12 +118,11 @@ static void showProgress(const PcReceiveItem *item, int index, int count, u64 po
 	unsigned int kbs = ms ? (unsigned int)((pos / 1024) * 1000 / ms) : 0;
 	unsigned int left = kbs ? (unsigned int)(((item->size - pos) / 1024) / kbs) : 0;
 
-	snprintf(text, sizeof(text),
-	         "Receiving %d/%d: %.40s  %u%%  %u/%u MB  %u KB/s  ~%u min%s",
+	snprintf(text, sizeof(text), LNG(PC_Recv_Progress),
 	         index + 1, count, item->name,
 	         (unsigned int)(item->size ? pos * 100 / item->size : 0),
 	         (unsigned int)(pos >> 20), (unsigned int)(item->size >> 20),
-	         kbs, (left + 59) / 60, retries ? "  (resumed)" : "");
+	         kbs, (left + 59) / 60, retries ? LNG(PC_Recv_Resumed) : "");
 	drawMsg(text);
 }
 
@@ -140,7 +139,7 @@ static int copyWithResume(PcReceiveItem *item, const char *source, const char *d
 	/* Reserve the final size before streaming. This keeps cluster allocation
 	 * out of the middle of a network/HDD transfer. */
 	if (item->size > 0) {
-		drawMsg("Receiving games from PC: reserving HDD space...");
+		drawMsg(LNG(PC_Recv_Reserving));
 		if (fileXioLseek64(out, (s64)item->size - 1, SEEK_SET) == (s64)item->size - 1)
 			fileXioWrite(out, &zero, 1);
 		fileXioLseek64(out, 0, SEEK_SET);
@@ -168,7 +167,7 @@ static int copyWithResume(PcReceiveItem *item, const char *source, const char *d
 			}
 			{
 				char text[128];
-				snprintf(text, sizeof(text), "Connection lost at %u MB; reconnecting (%d/%d)...",
+				snprintf(text, sizeof(text), LNG(PC_Recv_Reconnecting),
 				         (unsigned int)(pos >> 20), retries, PC_RECV_RETRIES);
 				drawMsg(text);
 			}
@@ -196,7 +195,7 @@ static int copyWithResume(PcReceiveItem *item, const char *source, const char *d
 			last_draw = Timer();
 			showProgress(item, index, count, pos, started, retries);
 			if (readpad_noRepeat() && (new_pad & PAD_TRIANGLE) &&
-			    ynDialog("Cancel this game transfer?") > 0) {
+			    ynDialog(LNG(PC_Recv_Cancel)) > 0) {
 				fileXioClose(in);
 				fileXioClose(out);
 				item->written = pos;
@@ -231,7 +230,7 @@ static void receiveGames(int count, char *message, int message_size)
 		items[i].seconds = 0;
 	}
 
-	drawMsg("Receiving games from PC: switching network to UDPFS...");
+	drawMsg(LNG(PC_Recv_To_Udpfs));
 	if (prepareTransferDeviceStacks("udpfs:/", PC_RECV_STAGE) == TRANSFER_STACK_READY) {
 		for (i = 0; i < 5 && !server; i++) {
 			if ((dd = fileXioDopen("udpfs:/")) >= 0) {
@@ -254,7 +253,7 @@ static void receiveGames(int count, char *message, int message_size)
 				items[i].state = "JA_EXISTIA";
 				continue;
 			}
-			snprintf(text, sizeof(text), "Receiving %d/%d (%s): %.255s",
+			snprintf(text, sizeof(text), LNG(PC_Recv_Item),
 			         i + 1, count, items[i].folder, items[i].name);
 			drawMsg(text);
 
@@ -289,7 +288,7 @@ static void receiveGames(int count, char *message, int message_size)
 	/* The sender expects FTP to return so it can read PS2-RECEBER.RES.
 	 * Re-establish the explicit remote-access stack and only restore SIO2
 	 * storage that was active before the network switch. */
-	drawMsg("Receiving games from PC: restoring FTP...");
+	drawMsg(LNG(PC_Recv_Back_To_FTP));
 	loadNetModules();
 	loadAtaModules();
 #ifdef MMCE
@@ -302,9 +301,9 @@ static void receiveGames(int count, char *message, int message_size)
 #endif
 
 	if (!server)
-		snprintf(message, message_size, "PC UDPFS server was not found; no games received");
+		snprintf(message, message_size, "%s", LNG(PC_Recv_No_Server));
 	else
-		snprintf(message, message_size, "PC game transfer finished: %d of %d received", received, count);
+		snprintf(message, message_size, LNG(PC_Recv_Done), received, count);
 }
 
 int pcGameReceiverPoll(char *message, int message_size)
@@ -329,7 +328,7 @@ int pcGameReceiverPoll(char *message, int message_size)
 	/* A complete or malformed job is consumed once. */
 	fileXioRemove(PC_RECV_REQUEST);
 	if (r < 0) {
-		snprintf(message, message_size, "Invalid PC game-transfer request");
+		snprintf(message, message_size, "%s", LNG(PC_Recv_Bad_Job));
 		return -1;
 	}
 
