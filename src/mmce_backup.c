@@ -6,6 +6,8 @@
 #include "mc_card_export.h"
 #include "mmce_backup.h"
 
+extern int fileMode;
+
 #define MMCE_BACKUP_KEEP 10
 #define MMCE_BACKUP_DEPTH 12
 #define MMCE_BACKUP_IO 65536
