@@ -1857,6 +1857,11 @@ void loadNetModules(void)
 		have_NetModules = (have_ps2netfs && have_ps2ftpd);
 	}
 }
+
+int isFtpNetworkReady(void)
+{
+	return have_NetModules && have_ps2ftpd && have_ps2ip && have_ps2smap && ps2dev9_loaded;
+}
 #endif
 //------------------------------
 //endfunc loadNetModules
