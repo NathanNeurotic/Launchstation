@@ -49,6 +49,10 @@ extern u8 ps2dev9_irx[];
 extern int size_ps2dev9_irx;
 extern u8 ata_bd_irx[];
 extern int size_ata_bd_irx;
+extern u8 ps2hdd_irx[];
+extern int size_ps2hdd_irx;
+extern u8 ps2fs_irx[];
+extern int size_ps2fs_irx;
 
 #define WLE_IGR_TRIES 24
 
@@ -85,6 +89,52 @@ static int path_exists(const char *path)
     return 1;
 }
 
+static int hdd_target_path(const char *configured, char *out, size_t out_size)
+{
+    static char hddarg[] = "-o\0" "4\0" "-n\0" "20";
+    static char pfsarg[] = "-m\0" "4\0" "-o\0" "10\0" "-n\0" "40";
+    char party[96];
+    const char *sep;
+    size_t prefix_len, partition_len;
+    int result = 0;
+
+    if (configured == NULL ||
+        (strncmp(configured, "hdd0:", 5) && strncmp(configured, "hdd1:", 5)))
+        return 0;
+    sep = strstr(configured + 5, ":pfs:");
+    if (sep == NULL)
+        return 0;
+
+    prefix_len = 5;
+    partition_len = sep - (configured + prefix_len);
+    if (partition_len == 0 || prefix_len + partition_len >= sizeof(party))
+        return 0;
+
+    memcpy(party, configured, prefix_len + partition_len);
+    party[prefix_len + partition_len] = '\0';
+
+    if (start_module(ps2dev9_irx, size_ps2dev9_irx) < 0)
+        return 0;
+    start_module(bdm_irx, size_bdm_irx);
+    start_module(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx);
+    start_module(ata_bd_irx, size_ata_bd_irx);
+
+    if (SifExecModuleBuffer(ps2hdd_irx, size_ps2hdd_irx,
+                            sizeof(hddarg), hddarg, &result) < 0 || result < 0)
+        return 0;
+    result = 0;
+    if (SifExecModuleBuffer(ps2fs_irx, size_ps2fs_irx,
+                            sizeof(pfsarg), pfsarg, &result) < 0 || result < 0)
+        return 0;
+
+    fileXioInit();
+    fileXioUmount("pfs0:");
+    if (fileXioMount("pfs0:", party, FIO_MT_RDONLY) < 0)
+        return 0;
+
+    return snprintf(out, out_size, "pfs0:%s", sep + 5) < (int)out_size;
+}
+
 static int resolve_app_path(const char *configured, char *out, size_t out_size)
 {
     int attempt;
@@ -93,7 +143,10 @@ static int resolve_app_path(const char *configured, char *out, size_t out_size)
         return 0;
 
     for (attempt = 0; attempt < WLE_IGR_TRIES; attempt++) {
-        if (!strncmp(configured, "mmce?:", 6)) {
+        if (!strncmp(configured, "hdd0:", 5) || !strncmp(configured, "hdd1:", 5)) {
+            if (hdd_target_path(configured, out, out_size) && path_exists(out))
+                return 1;
+        } else if (!strncmp(configured, "mmce?:", 6)) {
             snprintf(out, out_size, "mmce0:%s", configured + 6);
             if (path_exists(out))
                 return 1;
