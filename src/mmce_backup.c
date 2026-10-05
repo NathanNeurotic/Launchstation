@@ -489,7 +489,7 @@ int mmceEnsureAutoBackupFolder(int unit, char *out, size_t out_size)
 	snprintf(app, sizeof(app), "mmce%d:/WLE", unit);
 	snprintf(backups, sizeof(backups), "mmce%d:/WLE/Backups", unit);
 
-	if (ensurePathDeviceStackReady(root) < 0)
+	if (!ensurePathDeviceStackReady(root))
 		return -1;
 	if (mmceEnsureDirectoryTree(app) < 0 || mmceEnsureDirectoryTree(backups) < 0)
 		return -1;
