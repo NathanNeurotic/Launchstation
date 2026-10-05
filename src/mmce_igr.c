@@ -353,6 +353,53 @@ static int install_direct_helper(const char *boot, const u8 *helper, int helper_
     return -1;
 }
 
+static int install_helper_on_mc_slot(int slot, const u8 *helper, int helper_size,
+                                     char *target, size_t target_size)
+{
+    char root[8], boot_dir[MAX_PATH], probe[MAX_PATH];
+    int d;
+
+    if (slot < 0 || slot > 1)
+        return -1;
+    snprintf(root, sizeof(root), "mc%d:", slot);
+    snprintf(probe, sizeof(probe), "%s", root);
+    d = genDopen(probe);
+    if (d < 0)
+        return -1;
+    genDclose(d);
+
+    snprintf(boot_dir, sizeof(boot_dir), "%s/BOOT", root);
+    if (genMkdir(boot_dir, fileMode) < 0) {
+        snprintf(probe, sizeof(probe), "%s", boot_dir);
+        d = genDopen(probe);
+        if (d < 0)
+            return -1;
+        genDclose(d);
+    }
+
+    if (snprintf(target, target_size, "%s/%s", boot_dir, WLE_IGR_HELPER_NAME) >= (int)target_size)
+        return -1;
+    return write_verified(target, helper, helper_size);
+}
+
+static int install_helper_on_any_mc(const u8 *helper, int helper_size,
+                                    char *target, size_t target_size)
+{
+    int slot;
+
+    for (slot = 0; slot < 2; slot++)
+        if (install_helper_on_mc_slot(slot, helper, helper_size, target, target_size) == 0)
+            return slot;
+    return -1;
+}
+
+static int is_bdm_relaunch_path(const char *boot)
+{
+    return boot != NULL &&
+           (!strncmp(boot, "mx4sio", 6) || !strncmp(boot, "ilink", 5));
+}
+
+
 
 static int direct_helper_target(const char *boot, char *target, size_t target_size)
 {
@@ -419,6 +466,23 @@ int wleIgrConfigure(const char *backup_root, WleIgrInstallStats *stats,
         stats->installed = 1;
         snprintf(result, result_size,
                  "Installed and verified the IGR helper. Set OPL Exit to: %s", target);
+        return 0;
+    }
+
+    if (is_bdm_relaunch_path(boot)) {
+        char target[MAX_PATH];
+        int slot = install_helper_on_any_mc(helper, helper_size, target, sizeof(target));
+        free(helper);
+        if (slot < 0) {
+            snprintf(result, result_size,
+                     "MX4SIO/iLink IGR needs a writable physical memory card in either slot for OPL's Exit-to helper.");
+            return -2;
+        }
+        stats->boot_images = 1;
+        stats->installed = 1;
+        snprintf(result, result_size,
+                 "Installed and verified the IGR trampoline on memory-card slot %d. Set OPL Exit to: %s",
+                 slot + 1, target);
         return 0;
     }
 
@@ -496,6 +560,30 @@ int wleIgrRemove(WleIgrInstallStats *stats, char *result, size_t result_size)
         }
         stats->removed = 1;
         snprintf(result, result_size, "Removed WLE-IGR helper from %s", target);
+        return 0;
+    }
+
+    if (is_bdm_relaunch_path(boot)) {
+        int slot;
+        stats->boot_images = 2;
+        for (slot = 0; slot < 2; slot++) {
+            snprintf(target, sizeof(target), "mc%d:/BOOT/%s", slot, WLE_IGR_HELPER_NAME);
+            if (!wleExists(target))
+                continue;
+            if (genRemove(target) < 0 || wleExists(target))
+                stats->failed++;
+            else
+                stats->removed++;
+        }
+        if (stats->failed) {
+            snprintf(result, result_size,
+                     "Removed %d helper copy/copies; %d memory-card removal failed.",
+                     stats->removed, stats->failed);
+            return -1;
+        }
+        snprintf(result, result_size,
+                 "Removed %d WLE-IGR helper copy/copies from physical memory cards.",
+                 stats->removed);
         return 0;
     }
 
