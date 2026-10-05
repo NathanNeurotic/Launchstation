@@ -1,0 +1,319 @@
+//--------------------------------------------------------------
+// wLaunchELF OPL IGR setup / BootCard helper installer.
+//--------------------------------------------------------------
+#include "launchelf.h"
+#include "mmce_igr.h"
+#include "wle_igr_config.h"
+
+#define WLE_IGR_HELPER_NAME "WLE-IGR.ELF"
+#define WLE_IGR_MAX_BOOT_IMAGES 32
+#define WLE_IGR_SCAN_DEPTH 10
+#define WLE_IGR_VERIFY_CHUNK 32768
+
+#ifdef WLE_PS2BUILD
+extern u8 wle_igr_elf_irx[];
+extern int size_wle_igr_elf_irx;
+#else
+extern u8 wle_igr_elf[];
+extern int size_wle_igr_elf;
+#define wle_igr_elf_irx wle_igr_elf
+#define size_wle_igr_elf_irx size_wle_igr_elf
+#endif
+
+typedef struct {
+    char path[MAX_PATH];
+} BootImage;
+
+static BootImage boot_images[WLE_IGR_MAX_BOOT_IMAGES];
+static int boot_image_count;
+static u8 verify_buf[WLE_IGR_VERIFY_CHUNK] __attribute__((aligned(64)));
+
+static int join_path(char *out, size_t out_size, const char *a, const char *b)
+{
+    size_t n;
+
+    if (out == NULL || out_size == 0 || a == NULL || b == NULL)
+        return 0;
+    n = strlen(a);
+    if (n > 0 && a[n - 1] != '/' && a[n - 1] != ':')
+        return snprintf(out, out_size, "%s/%s", a, b) < (int)out_size;
+    return snprintf(out, out_size, "%s%s", a, b) < (int)out_size;
+}
+
+static int is_bootcard_image(const char *parent, const char *name)
+{
+    const char *leaf;
+
+    if (parent == NULL || name == NULL || !genCmpFileExt(name, "MCD"))
+        return 0;
+    leaf = strrchr(parent, '/');
+    leaf = leaf != NULL ? leaf + 1 : parent;
+    if (stricmp(leaf, "BOOT"))
+        return 0;
+    return !strnicmp(name, "BootCard", 8);
+}
+
+static void collect_boot_images(const char *dir, int depth)
+{
+    iox_dirent_t ent;
+    char scan[MAX_PATH], child[MAX_PATH];
+    int fd;
+
+    if (depth > WLE_IGR_SCAN_DEPTH || boot_image_count >= WLE_IGR_MAX_BOOT_IMAGES)
+        return;
+    snprintf(scan, sizeof(scan), "%s", dir);
+    fd = genDopen(scan);
+    if (fd < 0)
+        return;
+
+    memset(&ent, 0, sizeof(ent));
+    while (fileXioDread(fd, &ent) > 0) {
+        if (!strcmp(ent.name, ".") || !strcmp(ent.name, "..")) {
+            memset(&ent, 0, sizeof(ent));
+            continue;
+        }
+        if (!join_path(child, sizeof(child), dir, ent.name)) {
+            memset(&ent, 0, sizeof(ent));
+            continue;
+        }
+
+        if (FIO_S_ISDIR(ent.stat.mode)) {
+            collect_boot_images(child, depth + 1);
+        } else if (is_bootcard_image(dir, ent.name) &&
+                   boot_image_count < WLE_IGR_MAX_BOOT_IMAGES) {
+            snprintf(boot_images[boot_image_count++].path,
+                     sizeof(boot_images[0].path), "%s", child);
+        }
+        memset(&ent, 0, sizeof(ent));
+    }
+    genDclose(fd);
+}
+
+static void portable_mmce_path(const char *in, char *out, size_t out_size)
+{
+    if (in != NULL &&
+        (!strncmp(in, "mmce0:", 6) || !strncmp(in, "mmce1:", 6)))
+        snprintf(out, out_size, "mmce?:%s", in + 6);
+    else
+        snprintf(out, out_size, "%s", in != NULL ? in : "");
+}
+
+static u8 *patched_helper(const char *app, const char *backup, int *size_out)
+{
+    u8 *copy;
+    int size = size_wle_igr_elf_irx;
+    int i;
+    size_t magic_len = strlen(WLE_IGR_MAGIC);
+
+    if (size <= (int)sizeof(WleIgrEmbeddedConfig) ||
+        app == NULL || backup == NULL ||
+        strlen(app) >= WLE_IGR_PATH || strlen(backup) >= WLE_IGR_PATH)
+        return NULL;
+
+    copy = memalign(64, size);
+    if (copy == NULL)
+        return NULL;
+    memcpy(copy, wle_igr_elf_irx, size);
+
+    for (i = 0; i <= size - (int)sizeof(WleIgrEmbeddedConfig); i++) {
+        WleIgrEmbeddedConfig *cfg = (WleIgrEmbeddedConfig *)(copy + i);
+        if (memcmp(cfg->magic, WLE_IGR_MAGIC, magic_len) != 0)
+            continue;
+        memset(cfg->app, 0, sizeof(cfg->app));
+        memset(cfg->backup, 0, sizeof(cfg->backup));
+        snprintf(cfg->app, sizeof(cfg->app), "%s", app);
+        snprintf(cfg->backup, sizeof(cfg->backup), "%s", backup);
+        *size_out = size;
+        return copy;
+    }
+
+    free(copy);
+    return NULL;
+}
+
+static int split_image_path(const char *full, char *dir, size_t dir_size,
+                            FILEINFO *file)
+{
+    const char *slash;
+    size_t n;
+
+    if (full == NULL || dir == NULL || file == NULL)
+        return 0;
+    slash = strrchr(full, '/');
+    if (slash == NULL)
+        return 0;
+    n = slash - full + 1;
+    if (n >= dir_size || strlen(slash + 1) >= sizeof(file->name))
+        return 0;
+
+    memcpy(dir, full, n);
+    dir[n] = '\0';
+    memset(file, 0, sizeof(*file));
+    snprintf(file->name, sizeof(file->name), "%s", slash + 1);
+    return 1;
+}
+
+static int write_verified(const char *path, const u8 *data, int size)
+{
+    int fd, done, r;
+    char remove_path[MAX_PATH];
+
+    fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
+    if (fd < 0)
+        return -1;
+    for (done = 0; done < size;) {
+        int want = size - done > 32768 ? 32768 : size - done;
+        r = genWrite(fd, (void *)(data + done), want);
+        if (r != want) {
+            genClose(fd);
+            snprintf(remove_path, sizeof(remove_path), "%s", path);
+            genRemove(remove_path);
+            return -1;
+        }
+        done += r;
+    }
+    if (genClose(fd) < 0)
+        return -1;
+
+    fd = genOpen(path, FIO_O_RDONLY);
+    if (fd < 0)
+        return -1;
+    for (done = 0; done < size;) {
+        int want = size - done > (int)sizeof(verify_buf) ? (int)sizeof(verify_buf) : size - done;
+        r = genRead(fd, verify_buf, want);
+        if (r != want || memcmp(verify_buf, data + done, want) != 0) {
+            genClose(fd);
+            snprintf(remove_path, sizeof(remove_path), "%s", path);
+            genRemove(remove_path);
+            return -1;
+        }
+        done += r;
+    }
+    r = genClose(fd);
+    if (r < 0)
+        return -1;
+    return 0;
+}
+
+static int install_into_boot_image(const char *image, const u8 *helper, int helper_size)
+{
+    FILEINFO file;
+    char dir[MAX_PATH], vmc_root[8], boot_dir[MAX_PATH], target[MAX_PATH], msg[128];
+    int slot;
+
+    if (!split_image_path(image, dir, sizeof(dir), &file))
+        return -1;
+
+    slot = !vmcMounted[0] ? 0 : (!vmcMounted[1] ? 1 : -1);
+    if (slot < 0)
+        return -2;
+
+    if (filerMountVmc(dir, &file, slot, msg, sizeof(msg)) < 0)
+        return -1;
+
+    snprintf(vmc_root, sizeof(vmc_root), "vmc%d:", slot);
+    snprintf(boot_dir, sizeof(boot_dir), "%s/BOOT", vmc_root);
+    if (genMkdir(boot_dir, fileMode) < 0) {
+        char probe[MAX_PATH];
+        int d;
+        snprintf(probe, sizeof(probe), "%s", boot_dir);
+        d = genDopen(probe);
+        if (d < 0) {
+            filerUnmountVmc(slot);
+            return -1;
+        }
+        genDclose(d);
+    }
+
+    snprintf(target, sizeof(target), "%s/%s", boot_dir, WLE_IGR_HELPER_NAME);
+    if (write_verified(target, helper, helper_size) < 0) {
+        filerUnmountVmc(slot);
+        return -1;
+    }
+
+    filerUnmountVmc(slot);
+    return 0;
+}
+
+static int direct_opl_path(const char *path)
+{
+    if (path == NULL)
+        return 0;
+    return !strncmp(path, "mc0:", 4) || !strncmp(path, "mc1:", 4) ||
+           !strncmp(path, "mass:", 5) ||
+           (!strncmp(path, "mass", 4) && path[4] >= '0' && path[4] <= '9' && path[5] == ':') ||
+           !strncmp(path, "usb:", 4) ||
+           (!strncmp(path, "usb", 3) && path[3] >= '0' && path[3] <= '9' && path[4] == ':');
+}
+
+int wleIgrConfigure(const char *backup_root, WleIgrInstallStats *stats,
+                    char *result, size_t result_size)
+{
+    const char *boot = wleBootElfPath();
+    char app[WLE_IGR_PATH], root[MAX_PATH];
+    u8 *helper;
+    int helper_size = 0;
+    int unit, i;
+
+    if (stats == NULL || result == NULL || result_size == 0 ||
+        backup_root == NULL || backup_root[0] == '\0')
+        return -1;
+    memset(stats, 0, sizeof(*stats));
+    result[0] = '\0';
+
+    if (direct_opl_path(boot)) {
+        snprintf(result, result_size,
+                 "No helper needed. Set OPL Exit to: %s", boot);
+        return 0;
+    }
+
+    if (boot == NULL ||
+        (strncmp(boot, "mmce0:", 6) && strncmp(boot, "mmce1:", 6))) {
+        snprintf(result, result_size,
+                 "This boot device needs an IGR loader module that is not installed yet.");
+        return -3;
+    }
+
+    portable_mmce_path(boot, app, sizeof(app));
+    helper = patched_helper(app, backup_root, &helper_size);
+    if (helper == NULL)
+        return -1;
+
+    boot_image_count = 0;
+    if (!loadMmceModules()) {
+        free(helper);
+        return -1;
+    }
+    for (unit = 0; unit < 2; unit++) {
+        snprintf(root, sizeof(root), "mmce%d:/MemoryCards", unit);
+        collect_boot_images(root, 0);
+    }
+
+    stats->boot_images = boot_image_count;
+    for (i = 0; i < boot_image_count; i++) {
+        int r = install_into_boot_image(boot_images[i].path, helper, helper_size);
+        if (r == 0)
+            stats->installed++;
+        else
+            stats->failed++;
+    }
+    free(helper);
+
+    if (stats->boot_images == 0) {
+        snprintf(result, result_size,
+                 "No BootCard .mcd images were found. Create/enable an MMCE BootCard first.");
+        return -2;
+    }
+    if (stats->failed) {
+        snprintf(result, result_size,
+                 "Installed verified helper into %d/%d BootCard images; %d failed.",
+                 stats->installed, stats->boot_images, stats->failed);
+        return -1;
+    }
+
+    snprintf(result, result_size,
+             "Installed verified helper into %d BootCard image%s. Set OPL Exit to mc0:/BOOT/%s for MMCE slot 1, or mc1:/BOOT/%s for slot 2.",
+             stats->installed, stats->installed == 1 ? "" : "s",
+             WLE_IGR_HELPER_NAME, WLE_IGR_HELPER_NAME);
+    return 0;
+}
