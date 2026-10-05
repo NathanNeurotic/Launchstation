@@ -3,6 +3,7 @@ name: Automated-Build
 on:
   workflow_dispatch:
   push:
+    branches: [master, main]
   pull_request:
     types: [opened, synchronize, reopened]
 
