@@ -9,6 +9,7 @@
 #include "main_modules.h"
 #include "main_startup.h"
 #include "dash.h"
+#include "dash_internal.h"
 #include "mmce_backup.h"
 
 //#define DEBUG
