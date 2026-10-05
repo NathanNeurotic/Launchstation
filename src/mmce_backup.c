@@ -267,8 +267,25 @@ static int backup_one(const char *source, const char *relative,
     int r, newest, same = -1;
 
     if (!card_history_dir(backup_root, relative, dir, sizeof(dir)) ||
-        ensure_dir_tree(dir) < 0 ||
-        !unique_history_path(dir, name, sizeof(name), dest, sizeof(dest))) {
+        ensure_dir_tree(dir) < 0) {
+        stats->failed++;
+        return -1;
+    }
+
+    /* Compare the live card to the newest already-verified version before
+     * writing anything. This keeps IGR fast and avoids unnecessary flash
+     * writes when a card did not change during the game session. Reads are
+     * serialized, so source and history files are never held open together. */
+    newest = newest_history(dir, NULL, previous, sizeof(previous));
+    if (newest > 0 &&
+        join_path(previous_path, sizeof(previous_path), dir, previous))
+        same = files_equal_serial(source, previous_path);
+    if (same == 1) {
+        stats->unchanged++;
+        return 0;
+    }
+
+    if (!unique_history_path(dir, name, sizeof(name), dest, sizeof(dest))) {
         stats->failed++;
         return -1;
     }
@@ -278,24 +295,14 @@ static int backup_one(const char *source, const char *relative,
         stats->failed++;
         return -1;
     }
+    stats->backed_up++;
 
-    newest = newest_history(dir, name, previous, sizeof(previous));
-    if (newest > 0 &&
-        join_path(previous_path, sizeof(previous_path), dir, previous))
-        same = files_equal_serial(dest, previous_path);
-
-    if (same == 1) {
-        if (genRemove(dest) < 0) {
-            stats->failed++;
-            return -1;
-        }
-        stats->unchanged++;
-    } else {
-        stats->backed_up++;
-    }
-
-    if (prune_history(dir) < 0)
+    /* Retention runs only after the new version passed source-vs-destination
+     * verification in mcCardBackupNoEcc(). */
+    if (prune_history(dir) < 0) {
+        stats->failed++;
         return -1;
+    }
     return 0;
 }
 
