@@ -82,10 +82,30 @@ static void toolsEnter(void)
 
 static void setupIgrBackup(void)
 {
+	static const char *const actions[] = {"Install / update", "Remove helper"};
 	WleIgrInstallStats stats;
 	char folder[MAX_PATH], result[384];
 	const char *start = LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir;
-	int r;
+	int action, r;
+
+	action = dashModalChoice("OPL IGR automatic MMCE backup", actions, 2, 0);
+	if (action < 0)
+		return;
+
+	if (action == 1) {
+		if (!dashModalConfirm("Remove OPL IGR backup helper?",
+		                      "Removes WLE-IGR.ELF from the locations managed by this wLaunchELF installation. Existing card backups are not deleted.",
+		                      "Remove", 1))
+			return;
+		dashLoadingBegin("Removing OPL IGR helper");
+		r = wleIgrRemove(&stats, result, sizeof(result));
+		dashLoadingEnd();
+		dashModalMessage(r == 0 ? DI_CHECK : DI_WARNING,
+		                 r == 0 ? "OPL IGR helper removed" : "OPL IGR removal incomplete",
+		                 result[0] ? result : "Removal failed.",
+		                 "Existing WLE-MMCE-Backups history is left untouched.");
+		return;
+	}
 
 	snprintf(folder, sizeof(folder), "%s", start != NULL ? start : "");
 	if (!dashPickPath("Automatic MMCE backup destination", folder,
