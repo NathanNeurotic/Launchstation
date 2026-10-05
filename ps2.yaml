@@ -206,6 +206,20 @@ targets:
       - "-Wl,--end-group"
     libs: [filexio]
 
+  - name: wle_igr
+    type: ee
+    sources: [igr/wle_igr.c]
+    opt: -Os
+    cflags: [-fdata-sections, -ffunction-sections]
+    ldflags:
+      - "-Wl,--gc-sections"
+    libs: [filexio, patches]
+    embed_irx:
+      - iomanx
+      - filexio
+      - sio2man
+      - mmceman
+
   - name: wLaunchELF
     type: ee
     pack: true
@@ -330,6 +344,7 @@ targets:
     libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, mc, kbd, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv]
     embed_irx:
       - loader:loader_elf
+      - wle_igr:wle_igr_elf
       - poweroff
       - iomanx
       - filexio
