@@ -281,10 +281,11 @@ static int backup_one(const char *source, const char *relative,
         return -1;
     }
 
+    previous_path[0] = '\0';
     newest = newest_history(dir, format, NULL, previous, sizeof(previous));
-    if (newest > 0 &&
-        join_path(previous_path, sizeof(previous_path), dir, previous) &&
-        format == MMCE_BACKUP_FORMAT_MCD)
+    if (newest > 0)
+        join_path(previous_path, sizeof(previous_path), dir, previous);
+    if (previous_path[0] != '\0' && format == MMCE_BACKUP_FORMAT_MCD)
         same = files_equal_serial(source, previous_path);
 
     /* Native .mcd history can detect unchanged cards before any write. */
