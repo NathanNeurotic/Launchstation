@@ -541,6 +541,11 @@ static struct
 	char start_dir[24];
 } pk;
 
+static int pickUsbPath(const char *dir)
+{
+	return dir != NULL && (!strncmp(dir, "usb", 3) || !strncmp(dir, "mass", 4));
+}
+
 static int pickCmp(const void *a, const void *b)
 {
 	const PickEntry *x = (const PickEntry *)a, *y = (const PickEntry *)b;
@@ -648,6 +653,22 @@ static void pickOpen(const char *dir)
 	j->n = 0;
 	dashStrCopy(j->path, dir, sizeof(j->path));
 	pk.loading = 1;
+	if (pickUsbPath(dir)) {
+		/* Keep USB fileXio on the same serialized UI path as the classic
+		 * browser. No worker job or PAD polling may overlap this directory read. */
+		if (!dashWorkerAwaitAll("Finishing up")) {
+			free(j->files);
+			free(j);
+			pk.loading = 0;
+			return;
+		}
+		dashLoadingBegin("Reading USB folder");
+		pickListRun(j);
+		dashLoadingEnd();
+		pickListDone(j);
+		dashInputFlush();
+		return;
+	}
 	if (dashWorkerSubmit("Reading folder", DASH_JOB_VISIBLE, pickListRun, pickListDone, j) < 0) {
 		free(j->files);
 		free(j);
