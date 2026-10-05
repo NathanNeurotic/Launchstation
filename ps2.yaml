@@ -310,6 +310,7 @@ targets:
       - DVRP
       - MMCE
       - MX4SIO
+      - ILINK
       - HOMEBREW_SIO2MAN
       - ETH
       - UDPFS
@@ -357,6 +358,8 @@ targets:
       - dvrfile
       - mmceman
       - mx4sio_bd
+      - iLinkman
+      - IEEE1394_bd_mini:IEEE1394_bd
       - sio2man
       - padman
       - bdm
