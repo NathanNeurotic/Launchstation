@@ -9,6 +9,7 @@
 #include "main_modules.h"
 #include "main_startup.h"
 #include "dash.h"
+#include "mmce_backup.h"
 
 //#define DEBUG
 #ifdef DEBUG
@@ -51,6 +52,11 @@ u8 boot_show_all_devices = 0;
 static int boot_argc;
 static char *boot_argv[8];
 static char boot_path[MAX_PATH];
+
+const char *wleBootElfPath(void)
+{
+	return boot_path;
+}
 
 //Variables for SYSTEM.CNF processing
 int BootDiscType = 0;
@@ -98,6 +104,72 @@ DiscType DiscTypes[] = {
 
 //Static function declarations
 static void Execute(char *pathin);
+
+static int wleIgrRequested(int argc, char *argv[], const char **backup_root)
+{
+	int i;
+	const char prefix[] = "-wle-igr-backup=";
+
+	if (backup_root != NULL)
+		*backup_root = NULL;
+	for (i = 1; i < argc; i++) {
+		if (argv[i] == NULL)
+			continue;
+		if (!strcmp(argv[i], "-wle-igr"))
+			continue;
+		if (!strncmp(argv[i], prefix, sizeof(prefix) - 1) && backup_root != NULL)
+			*backup_root = argv[i] + sizeof(prefix) - 1;
+	}
+	for (i = 1; i < argc; i++)
+		if (argv[i] != NULL && !strcmp(argv[i], "-wle-igr"))
+			return 1;
+	return 0;
+}
+
+static void runWleIgrBackup(int argc, char *argv[])
+{
+#ifdef MMCE
+	const char *backup_root = NULL;
+	MmceBackupStats total = {0}, one;
+	int unit, available = 0;
+
+	if (!wleIgrRequested(argc, argv, &backup_root))
+		return;
+	if (backup_root == NULL || backup_root[0] == '\0') {
+		snprintf(mainMsg, sizeof(mainMsg), "IGR: no MMCE backup destination configured");
+		return;
+	}
+	if (!loadMmceModules()) {
+		snprintf(mainMsg, sizeof(mainMsg), "IGR: MMCE driver unavailable; backup skipped");
+		return;
+	}
+
+	/* OPL may have switched a slot to BootCard before Exit-to. Full-tree
+	 * backup deliberately does not depend on which card is active: every
+	 * valid .mcd under MemoryCards is considered, including named/GameID
+	 * cards that cannot be reconstructed from GET_CARD after IGR. */
+	for (unit = 0; unit < 2; unit++) {
+		memset(&one, 0, sizeof(one));
+		if (mmceBackupAllCards(unit, backup_root, &one, NULL) < 0)
+			continue;
+		available++;
+		total.candidates += one.candidates;
+		total.backed_up += one.backed_up;
+		total.unchanged += one.unchanged;
+		total.failed += one.failed;
+	}
+
+	if (!available)
+		snprintf(mainMsg, sizeof(mainMsg), "IGR: no MMCE MemoryCards tree found");
+	else
+		snprintf(mainMsg, sizeof(mainMsg),
+		         "IGR MMCE backup: %d changed, %d unchanged, %d failed (%d cards)",
+		         total.backed_up, total.unchanged, total.failed, total.candidates);
+#else
+	(void)argc;
+	(void)argv;
+#endif
+}
 //---------------------------------------------------------------------------
 //executable code
 //---------------------------------------------------------------------------
@@ -140,6 +212,10 @@ int main(int argc, char *argv[])
 	initializeRuntimeInputModules(boot);
 	MainMenuState_BeginTimers(&menu_state);
 	initializeRuntimeDisplayModules(CNF_error, mainMsg);
+
+	/* IGR backup runs after normal device/config initialization so the exact
+	 * same lazy device handling and verified backup code is used as the UI. */
+	runWleIgrBackup(argc, argv);
 
 	//Here nearly everything is ready for the main menu event loop
 	//But before we start that, we need to validate CNF_Path
