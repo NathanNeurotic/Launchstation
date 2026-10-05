@@ -53,6 +53,11 @@ static int boot_argc;
 static char *boot_argv[8];
 static char boot_path[MAX_PATH];
 
+const char *wleBootElfPath(void)
+{
+	return boot_path;
+}
+
 //Variables for SYSTEM.CNF processing
 int BootDiscType = 0;
 char SystemCnf_BOOT[MAX_PATH];
