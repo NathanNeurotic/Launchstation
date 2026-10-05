@@ -36,8 +36,6 @@ static struct
 	u8 *mark;
 	int n, nmarked;
 	int loading;
-	int usb_input_jobs; /* outstanding USB/mass list jobs that must not overlap PAD */
-	int input_rearm;    /* swallow presses accumulated while USB fileXio was active */
 	int gen;
 	int sel, top;
 	float sel_anim;
@@ -66,7 +64,6 @@ typedef struct
 	int n;
 	int abandoned;
 	int titles; /* read the game titles (saves, PSU files) */
-	int quiet_input;
 	u64 free_bytes;
 	int free_valid;
 } FbListJob;
@@ -88,23 +85,29 @@ static int isUsbBrowsePath(const char *dir)
 	return dir != NULL && (!strncmp(dir, "usb", 3) || !strncmp(dir, "mass", 4));
 }
 
-static void listRun(void *arg)
+static void listRead(FbListJob *j, int on_worker)
 {
-	FbListJob *j = (FbListJob *)arg;
 	int i;
 
-	dashWorkerStatus(j->path, 0, 0);
+	if (on_worker)
+		dashWorkerStatus(j->path, 0, 0);
 	j->n = getDir(j->path, j->files);
 	/* right after the read: for the HDD this asks the partition just mounted */
 	j->free_valid = j->n >= 0 ? filerFreeSpace(j->path, &j->free_bytes) : 0;
 	for (i = 0; i < j->n; i++) {
 		j->files[i].title[0] = '\0';
 		if (j->titles && !isPartitionList(j->path)) {
-			dashWorkerStatus(j->files[i].name, i, j->n);
+			if (on_worker)
+				dashWorkerStatus(j->files[i].name, i, j->n);
 			if (filerGetGameTitle(j->path, &j->files[i], j->files[i].title) < 0)
 				j->files[i].title[0] = '\0';
 		}
 	}
+}
+
+static void listRun(void *arg)
+{
+	listRead((FbListJob *)arg, 1);
 }
 
 static void selectName(const char *name)
@@ -145,11 +148,6 @@ static void listDone(void *arg)
 		if (fb.want_sel[0])
 			selectName(fb.want_sel);
 		fb.want_sel[0] = '\0';
-	}
-	if (j->quiet_input && fb.usb_input_jobs > 0) {
-		fb.usb_input_jobs--;
-		if (fb.usb_input_jobs == 0)
-			fb.input_rearm = 1;
 	}
 	free(j->files);
 	free(j);
@@ -211,7 +209,6 @@ static void openDir(const char *dir, const char *select)
 	fb.n = 0;
 	fb.nmarked = 0;
 	fb.free_valid = 0;
-	fb.input_rearm = 0;
 	fb.sel = fb.top = 0;
 	fb.sel_anim = 0.0f;
 	fb.want_sel[0] = '\0';
@@ -287,17 +284,33 @@ static void openDir(const char *dir, const char *select)
 	j->n = 0;
 	j->abandoned = 0;
 	j->titles = (fb_show == 2 || fb_sort == 2);
-	j->quiet_input = isUsbBrowsePath(dir);
 	j->free_valid = 0;
 	dashStrCopy(j->path, dir, sizeof(j->path));
 	fb.loading = 1;
+	if (isUsbBrowsePath(dir)) {
+		/* Classic wLaunchELF performs USB enumeration and directory reads on
+		 * the same EE/UI thread as PAD handling. Do exactly that for USB.
+		 * Merely suppressing PAD polling while getDir() ran on the background
+		 * worker did not preserve controller input on real hardware. */
+		if (!dashWorkerAwaitAll("Finishing up")) {
+			free(j->files);
+			free(j);
+			fb.loading = 0;
+			return;
+		}
+		dashLoadingBegin("Reading USB folder");
+		dashLoadingStatus(j->path, 0, 0);
+		listRead(j, 0);
+		listDone(j);
+		dashLoadingEnd();
+		dashInputFlush();
+		return;
+	}
 	if (dashWorkerSubmit("Reading folder", DASH_JOB_VISIBLE, listRun, listDone, j) < 0) {
 		free(j->files);
 		free(j);
 		fb.loading = 0;
 		dashToast(DASH_TOAST_WARN, "Busy, try again in a moment");
-	} else if (j->quiet_input) {
-		fb.usb_input_jobs++;
 	}
 }
 
@@ -1388,19 +1401,7 @@ void dashFileBrowser(const char *start_dir)
 	while (running) {
 		int total, prev;
 
-		/* The classic wLaunchELF browser serializes USB directory I/O and PAD
-		 * polling. Keep the dashboard animated, but preserve that ordering for
-		 * USB: fileXio runs on the worker while input stays untouched. Once the
-		 * listing completion is applied, re-anchor the pad state before accepting
-		 * a new action so the confirm press that opened USB cannot leak through. */
-		if (fb.input_rearm && !dashWorkerIoBusy()) {
-			dashInputFlush();
-			fb.input_rearm = 0;
-		}
-		if (fb.usb_input_jobs > 0 && dashWorkerIoBusy())
-			memset(&in, 0, sizeof(in));
-		else
-			dashInputPoll(&in);
+		dashInputPoll(&in);
 		total = fb.dir[0] ? fb.n : fb.ndevs;
 		prev = fb.sel;
 		if (!fb.loading) {
