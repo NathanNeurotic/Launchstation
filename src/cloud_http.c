@@ -895,19 +895,32 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
     for (redirect = 0; redirect < 6; redirect++) {
         CloudTls tls;
         char host[256], path[2048], request[3072];
-        char raw[CLOUD_HTTP_HEADER_MAX + CLOUD_HTTP_IO + 1];
-        char *header_end, value[64], location[CLOUD_HTTP_LOCATION_MAX];
+        char *raw, *header_end, value[64], location[CLOUD_HTTP_LOCATION_MAX];
+        unsigned char *io_buf;
         int used = 0, header_len, body_len, status, chunked = 0;
         int content_length = -1, written = 0, complete = 0, r;
         mbedtls_sha256_context sha;
         CloudChunkDecoder decoder;
 
+        raw = malloc(CLOUD_HTTP_HEADER_MAX + CLOUD_HTTP_IO + 1);
+        io_buf = memalign(64, CLOUD_HTTP_IO);
+        if (raw == NULL || io_buf == NULL) {
+            free(raw);
+            free(io_buf);
+            set_error(error, error_size, "Out of memory preparing HTTPS download", 0);
+            return -1;
+        }
         if (split_https_url(current, host, sizeof(host), path, sizeof(path)) < 0) {
+            free(raw);
+            free(io_buf);
             set_error(error, error_size, "Invalid HTTPS download URL", 0);
             return -1;
         }
-        if (tls_open(&tls, host, ca_path, error, error_size) < 0)
+        if (tls_open(&tls, host, ca_path, error, error_size) < 0) {
+            free(raw);
+            free(io_buf);
             return -1;
+        }
 
         r = snprintf(request, sizeof(request),
                      "GET %s HTTP/1.1\r\n"
@@ -919,22 +932,28 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
         if (r <= 0 || r >= (int)sizeof(request) ||
             ssl_write_all(&tls, request, r, error, error_size) < 0) {
             tls_free(&tls);
+            free(raw);
+            free(io_buf);
             return -1;
         }
 
         header_end = NULL;
-        while (used < (int)sizeof(raw) - 1 && header_end == NULL) {
+        while (used < CLOUD_HTTP_HEADER_MAX + CLOUD_HTTP_IO && header_end == NULL) {
             r = mbedtls_ssl_read(&tls.ssl, (unsigned char *)raw + used,
-                                 sizeof(raw) - 1 - used);
+                                 CLOUD_HTTP_HEADER_MAX + CLOUD_HTTP_IO - used);
             if (r == MBEDTLS_ERR_SSL_WANT_READ || r == MBEDTLS_ERR_SSL_WANT_WRITE) {
                 if (wait_tls_io(&tls, r) == 0)
                     continue;
                 tls_free(&tls);
+                free(raw);
+                free(io_buf);
                 set_error(error, error_size, "HTTPS download timed out", 0);
                 return -1;
             }
             if (r <= 0) {
                 tls_free(&tls);
+                free(raw);
+                free(io_buf);
                 set_error(error, error_size, "Truncated HTTPS download headers", 0);
                 return -1;
             }
@@ -944,6 +963,8 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
         }
         if (header_end == NULL) {
             tls_free(&tls);
+            free(raw);
+            free(io_buf);
             set_error(error, error_size, "HTTPS download headers are too large", 0);
             return -1;
         }
@@ -953,6 +974,8 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
         *header_end = 0;
         if (sscanf(raw, "HTTP/%*d.%*d %d", &status) != 1) {
             tls_free(&tls);
+            free(raw);
+            free(io_buf);
             set_error(error, error_size, "Missing HTTPS download status", 0);
             return -1;
         }
@@ -962,6 +985,8 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
         if (status == 301 || status == 302 || status == 303 ||
             status == 307 || status == 308) {
             tls_free(&tls);
+            free(raw);
+            free(io_buf);
             if (location[0] == 0) {
                 set_error(error, error_size, "HTTPS redirect had no Location", 0);
                 return -1;
@@ -987,14 +1012,27 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
 
         if (status != 200) {
             tls_free(&tls);
-            snprintf(error, error_size, "HTTPS download returned HTTP %d", status);
+            free(raw);
+            free(io_buf);
+            if (error != NULL && error_size > 0)
+                snprintf(error, error_size, "HTTPS download returned HTTP %d", status);
             return -1;
         }
 
-        if (header_value(raw, "Content-Length", value, sizeof(value)))
+        if (header_value(raw, "Content-Length", value, sizeof(value))) {
             content_length = atoi(value);
+            if (content_length < 0) {
+                tls_free(&tls);
+                free(raw);
+                free(io_buf);
+                set_error(error, error_size, "Invalid HTTPS Content-Length", 0);
+                return -1;
+            }
+        }
         if (content_length > max_bytes) {
             tls_free(&tls);
+            free(raw);
+            free(io_buf);
             set_error(error, error_size, "HTTPS download exceeds the size limit", 0);
             return -1;
         }
@@ -1004,6 +1042,8 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
 
         if (genLseek(fd, 0, SEEK_SET) != 0) {
             tls_free(&tls);
+            free(raw);
+            free(io_buf);
             set_error(error, error_size, "Could not rewind update file", 0);
             return -1;
         }
@@ -1011,6 +1051,8 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
         if (mbedtls_sha256_starts(&sha, 0) != 0) {
             mbedtls_sha256_free(&sha);
             tls_free(&tls);
+            free(raw);
+            free(io_buf);
             set_error(error, error_size, "Could not start update checksum", 0);
             return -1;
         }
@@ -1033,6 +1075,8 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
             if (r < 0) {
                 mbedtls_sha256_free(&sha);
                 tls_free(&tls);
+                free(raw);
+                free(io_buf);
                 return -1;
             }
             if (chunked && r > 0)
@@ -1040,10 +1084,11 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
             if (!chunked && content_length >= 0 && written == content_length)
                 complete = 1;
         }
+        free(raw);
+        raw = NULL;
 
         while (!complete) {
-            unsigned char buf[CLOUD_HTTP_IO];
-            r = mbedtls_ssl_read(&tls.ssl, buf, sizeof(buf));
+            r = mbedtls_ssl_read(&tls.ssl, io_buf, CLOUD_HTTP_IO);
             if (r == MBEDTLS_ERR_SSL_WANT_READ || r == MBEDTLS_ERR_SSL_WANT_WRITE) {
                 if (wait_tls_io(&tls, r) == 0)
                     continue;
@@ -1056,12 +1101,14 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
                 if (chunked && decoder.state != 4) {
                     mbedtls_sha256_free(&sha);
                     tls_free(&tls);
+                    free(io_buf);
                     set_error(error, error_size, "Truncated chunked HTTPS download", 0);
                     return -1;
                 }
                 if (!chunked && content_length >= 0 && written != content_length) {
                     mbedtls_sha256_free(&sha);
                     tls_free(&tls);
+                    free(io_buf);
                     set_error(error, error_size, "Truncated HTTPS download", 0);
                     return -1;
                 }
@@ -1071,17 +1118,19 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
             if (r < 0) {
                 mbedtls_sha256_free(&sha);
                 tls_free(&tls);
+                free(io_buf);
                 set_error(error, error_size, "HTTPS download read failed", r);
                 return -1;
             }
 
             if (chunked) {
-                int cr = download_chunked_consume(&decoder, buf, r, fd,
+                int cr = download_chunked_consume(&decoder, io_buf, r, fd,
                                                   max_bytes, &written, &sha,
                                                   error, error_size);
                 if (cr < 0) {
                     mbedtls_sha256_free(&sha);
                     tls_free(&tls);
+                    free(io_buf);
                     return -1;
                 }
                 if (cr > 0)
@@ -1091,10 +1140,11 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
                 if (content_length >= 0 && written + take > content_length)
                     take = content_length - written;
                 if (take > 0 &&
-                    download_write(fd, buf, take, max_bytes, &written,
+                    download_write(fd, io_buf, take, max_bytes, &written,
                                    &sha, error, error_size) < 0) {
                     mbedtls_sha256_free(&sha);
                     tls_free(&tls);
+                    free(io_buf);
                     return -1;
                 }
                 if (content_length >= 0 && written == content_length)
@@ -1105,11 +1155,13 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
         if (mbedtls_sha256_finish(&sha, digest != NULL ? digest : (unsigned char [32]){0}) != 0) {
             mbedtls_sha256_free(&sha);
             tls_free(&tls);
+            free(io_buf);
             set_error(error, error_size, "Could not finish update checksum", 0);
             return -1;
         }
         mbedtls_sha256_free(&sha);
         tls_free(&tls);
+        free(io_buf);
         if (out_size)
             *out_size = written;
         return 0;
