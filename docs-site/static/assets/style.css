@@ -1841,7 +1841,7 @@ footer {
   .topbar-btn { padding: 0 8px; width: 32px; justify-content: center; }
 }
 
-/* wLaunchELF R3Z documentation extensions */
+/* r3LaunchELF_ATTDASH documentation extensions */
 .hero-wle{position:relative;overflow:hidden}
 .hero-wle .wle-mark{display:inline-grid;place-items:center;width:76px;height:76px;border:1px solid rgba(84,160,255,.5);border-radius:18px;background:linear-gradient(145deg,rgba(34,82,151,.34),rgba(8,18,38,.76));box-shadow:0 0 34px rgba(52,134,255,.22);font:800 26px/1 system-ui;letter-spacing:-.08em;color:#d7e8ff;margin-bottom:14px}
 .hero-wle .wle-mark span{transform:translateX(-2px)}
