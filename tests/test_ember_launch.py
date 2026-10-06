@@ -18,18 +18,26 @@ assert "LaunchPopstarterVcd(path" in actions
 assert "LaunchEmberGame(path" in actions
 assert "preferred PS1 core" not in tools.lower()
 
-# Ember accepts only the canonical save-safe layout and its native image forms.
-assert '"EMBER"' in ember
+# Ember and POPStarter coexist. The selected format determines the core.
 assert '"games"' in ember
 for ext in ('"CUE"', '"BIN"', '"EXE"'):
     assert ext in ember
 assert "image must be directly inside games/<Game>/" in ember
 assert "EMBER_NAME_MAX 180" in ember
+assert "preferred PS1 core" not in tools.lower()
 
-# Ember requires its own executable and user BIOS on the same game device.
+# Ember's umbrella is dynamic/configurable rather than hard-coded to /EMBER/.
+assert "setting->ember_dir" in ember
+assert "configuredEmberElf" in ember
+assert "ensureLocalEmber" in ember
+assert "copyElf(configured, ember_elf)" in ember
+assert "set an Ember directory in Settings" in ember
+
+# The target umbrella owns the BIOS and game/save tree.
 assert "ember.elf" in ember
 assert "bios.bin" in ember
 assert "EMBER_BIOS_SIZE (512 * 1024)" in ember
+assert "game's umbrella" in ember
 
 # Launch contract: real ember.elf path is target argv[0], bare game folder is argv[1],
 # and the IOP/device stack must stay alive.
@@ -49,5 +57,14 @@ for ext in ('"CUE"', '"BIN"'):
 
 assert "ember.o" in makefile
 assert "- src/ember.c" in yaml
+
+# Classic config persists the Ember directory and Settings exposes a folder picker.
+config = (root / "src/config.c").read_text(encoding="utf-8")
+settings = (root / "src/dash_settings.c").read_text(encoding="utf-8")
+assert "char ember_dir[MAX_PATH]" in header
+assert "EMBER_DIR = %s" in config
+assert 'strcmp(name, "EMBER_DIR")' in config
+assert "S_EMBER_DIR" in settings
+assert "DASH_PICK_FOLDER" in settings
 
 print("Ember + POPStarter parallel PS1 launch contract: OK")
