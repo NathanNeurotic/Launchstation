@@ -216,7 +216,7 @@ void dashDrawHints(const DashHint *hints, int n)
 		float bw = (hints[i].button >= 0) ? 22.0f : dashTextWidth(hints[i].key, DASH_FS_CAPTION) + 16.0f;
 		if (hints[i].button < 0 && bw < 26.0f)
 			bw = 26.0f;
-		total += bw + 6.0f + dashTextWidth(hints[i].label, DASH_FS_SMALL) + 18.0f;
+		total += bw + 6.0f + dashTextWidth(hints[i].label, DASH_FS_SMALL) + 24.0f;
 	}
 	x = DASH_SAFE_R - total + 12.0f;
 	if (x < DASH_SAFE_L)
@@ -235,8 +235,8 @@ void dashDrawHints(const DashHint *hints, int n)
 		dashRectGradH(x - 40, y - 6, DASH_SAFE_R - x + 60, 34, sh, DC(sh.r, sh.g, sh.b, 150));
 	}
 	for (i = 0; i < n; i++) {
-		x += drawButton(x, y, hints[i].button, hints[i].key) + 6.0f;
-		x = dashTextS(x, y + 4.5f, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT2) + 18.0f;
+		x += drawButton(x, y, hints[i].button, hints[i].key) + 8.0f;
+		x = dashTextS(x, y + 4.5f, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT2) + 24.0f;
 	}
 }
 
@@ -513,7 +513,7 @@ void dashDrawSpinner(float cx, float cy, float r, DashColor c)
 typedef struct
 {
 	int kind;
-	char msg[96];
+	char msg[160];
 	float t;
 } Toast;
 
@@ -578,15 +578,16 @@ void dashUiUpdate(float dt)
 void dashDrawToasts(void)
 {
 	int i;
-	float y = 358.0f;
+	float y = 354.0f;
 
 	for (i = ntoasts - 1; i >= 0; i--) {
 		Toast *t = &toasts[i];
 		float in = dashClampf(t->t / 0.25f, 0.0f, 1.0f);
 		float out = dashClampf((3.6f - t->t) / 0.4f, 0.0f, 1.0f);
 		float a = dashEaseOutCubic(in) * out;
-		float w = dashTextWidth(t->msg, DASH_FS_SMALL) + 58.0f;
-		float x = DASH_SAFE_L - 20.0f * (1.0f - dashEaseOutCubic(in));
+		float natural = dashTextWidth(t->msg, DASH_FS_SMALL) + 58.0f;
+		float w = dashClampf(natural, 190.0f, 318.0f);
+		float x = DASH_SAFE_R - w + 20.0f * (1.0f - dashEaseOutCubic(in));
 		int icon = DI_INFO;
 		DashColor ic = DASH_C_ACCENT;
 
@@ -603,9 +604,9 @@ void dashDrawToasts(void)
 			dashPanelBorder(x, y, w, 32, 12, DASH_C_BORDER);
 		dashRect(x + 3, y + 7, 3, 18, ic);
 		dashIcon(icon, x + 14, y + 7, 18, ic);
-		dashText(x + 40, y + 9.5f, t->msg, DASH_FS_SMALL, DASH_C_TEXT);
+		dashTextScrollTimed(x + 40, y + 9.5f, w - 52, t->msg, DASH_FS_SMALL, DASH_C_TEXT, t->t);
 		dashGfxPopAlpha();
-		y -= 38.0f;
+		y -= 40.0f;
 	}
 }
 
@@ -637,11 +638,11 @@ static void modalPanel(float x, float y, float w, float h, float k)
 static void modalHintRow(float x, float y, int ok_icon, const char *ok, int back_icon, const char *back)
 {
 	if (ok != NULL) {
-		x += drawButton(x, y, ok_icon, NULL) + 6.0f;
-		x = dashTextS(x, y + 4.5f, ok, DASH_FS_SMALL, DASH_C_TEXT2) + 18.0f;
+		x += drawButton(x, y, ok_icon, NULL) + 8.0f;
+		x = dashTextS(x, y + 4.5f, ok, DASH_FS_SMALL, DASH_C_TEXT2) + 24.0f;
 	}
 	if (back != NULL) {
-		x += drawButton(x, y, back_icon, NULL) + 6.0f;
+		x += drawButton(x, y, back_icon, NULL) + 8.0f;
 		dashTextS(x, y + 4.5f, back, DASH_FS_SMALL, DASH_C_TEXT2);
 	}
 }
@@ -682,7 +683,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 	void (*preview)(int) = modal_preview;
 	const int max_rows = 8;
 	float sel_anim, open = 0.0f;
-	float w = 400.0f, row_h = 34.0f;
+	float w = 400.0f, row_h = 38.0f;
 	int rows = (n < max_rows) ? n : max_rows;
 	float h = 76.0f + rows * row_h + 44.0f + (subtitle ? 18.0f : 0.0f);
 	float x = (DASH_VW - w) * 0.5f, y;
@@ -774,7 +775,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			dashGfxScissor(x + 8, ly - 2, w - 16, rows * row_h + 4);
 			{
 				float fy = ly + (sel_anim - top) * row_h;
-				dashDrawSelection(x + 14, fy, w - 28, row_h - 4, 10, 1.0f);
+				dashDrawSelection(x + 14, fy + 2, w - 28, row_h - 4, 10, 1.0f);
 			}
 			for (i = top; i < n && i < top + rows; i++) {
 				float ry = ly + (i - top) * row_h;
@@ -784,9 +785,9 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 					dashIcon(items[i].icon, x + 26, ry + 6, 18, c);
 					tx = x + 54;
 				}
-				dashTextFit(tx, ry + 4, w - (tx - x) - 30 - (items[i].detail ? 90 : 0), items[i].label, DASH_FS_BODY * 0.92f, c);
+				dashTextFit(tx, ry + 7, w - (tx - x) - 30 - (items[i].detail ? 90 : 0), items[i].label, DASH_FS_BODY * 0.92f, c);
 				if (items[i].detail)
-					dashTextRight(x + w - 28, ry + 6, items[i].detail, DASH_FS_SMALL, DASH_C_TEXT3);
+					dashTextRight(x + w - 28, ry + 8, items[i].detail, DASH_FS_SMALL, DASH_C_TEXT3);
 			}
 			dashGfxScissorReset();
 			dashDrawScrollbar(x + w - 12, ly, rows * row_h - 4, top, rows, n);

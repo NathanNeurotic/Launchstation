@@ -2669,7 +2669,7 @@ static void settingsUpdate(float dt)
 static void settingsDraw(void)
 {
 	int i;
-	const float ix = 48, iy = 128, irow = 27, iw = 544;
+	const float ix = 48, iy = 128, irow = 29, iw = 544;
 	const SetPage *c = &pages[page];
 	char trail[192];
 
@@ -2682,9 +2682,15 @@ static void settingsDraw(void)
 		dashTextFit(ix, 51, iw - 126, trail, DASH_FS_CAPTION, DASH_C_TEXT3);
 	dashDrawSectionTitle(ix, 68, c->name, NULL);
 	dashTextFit(ix, 103, iw, c->help, DASH_FS_CAPTION, DASH_C_TEXT3);
-	dashTextRight(ix + iw, 51, anyDirtyCached() ? "unsaved changes" :
-	    (cfg_pending[0] || cfg_pending[1] || dashStoreSettingsPending()) ? "saving..." : failedSaves() ? "save failed" : "no changes",
-	    DASH_FS_CAPTION, (anyDirtyCached() || failedSaves()) ? DASH_C_WARM : DASH_C_TEXT3);
+	{
+		int dirty = anyDirtyCached();
+		int pending = cfg_pending[0] || cfg_pending[1] || dashStoreSettingsPending();
+		int failed = failedSaves();
+		const char *state = dirty ? "unsaved changes" : pending ? "saving..." : failed ? "save failed" : "no changes";
+		DashColor state_col = (dirty || failed) ? DASH_C_WARM : pending ? DASH_C_ACCENT : DASH_C_TEXT3;
+		/* Dedicated status lane under the header clock/date: never inherits selection text. */
+		dashTextRight(ix + iw, 78, state, DASH_FS_CAPTION, state_col);
+	}
 
 	/* keep the focused row inside the visible window */
 	if (item < item_top)
@@ -2694,27 +2700,35 @@ static void settingsDraw(void)
 
 	/* items */
 	dashDrawPanelBox(ix - 6, iy - 6, iw + 12, ITEM_ROWS * irow + 12, 14);
-	dashDrawSelection(ix, iy + dashClampf(item_anim - item_top, 0, ITEM_ROWS - 1) * irow, iw, irow - 3, 9, 1.0f);
+	dashDrawSelection(ix, iy + dashClampf(item_anim - item_top, 0, ITEM_ROWS - 1) * irow + 2, iw, irow - 5, 9, 1.0f);
 	for (i = item_top; i < c->n && i < item_top + ITEM_ROWS; i++) {
 		const SetItem *it = &c->items[i];
 		float y = iy + (i - item_top) * irow;
 		int on = i == item, disabled = itemDisabled(it);
 		DashColor col = disabled ? DASH_C_TEXT3 : dashItemColor(on);
 
+		{
+			int row_icon = it->type == ST_PAGE ? pages[it->id].icon :
+			               it->type == ST_PATH ? DI_FOLDER :
+			               it->type == ST_IP ? DI_NETWORK :
+			               it->type == ST_LKEY ? DI_KEY :
+			               it->type == ST_ACTION ? DI_PLAY :
+			               it->type == ST_INFO ? DI_INFO : DI_SETTINGS;
+			dashIcon(row_icon, ix + 12, y + 7, 15, col);
+		}
 		if (it->type == ST_INFO) {
 			char buf[64];
 			snprintf(buf, sizeof(buf), "%s / %s", ip, netmask);
-			dashText(ix + 12, y + 6.5f, it->label, DASH_FS_SMALL, DASH_C_TEXT3);
-			dashTextRight(ix + iw - 12, y + 6.5f, buf, DASH_FS_SMALL, DASH_C_TEXT2);
+			dashText(ix + 38, y + 7.5f, it->label, DASH_FS_SMALL, DASH_C_TEXT3);
+			dashTextRight(ix + iw - 12, y + 7.5f, buf, DASH_FS_SMALL, DASH_C_TEXT2);
 			continue;
 		}
 		if (it->type == ST_PAGE) {
-			dashIcon(pages[it->id].icon, ix + 12, y + 6, 16, col);
-			dashTextFit(ix + 38, y + 6.5f, iw - 70, it->label, DASH_FS_SMALL, col);
-			dashIcon(DI_PLAY, ix + iw - 22, y + 8, 12, DASH_C_TEXT3);
+			dashTextFit(ix + 38, y + 7.5f, iw - 70, it->label, DASH_FS_SMALL, col);
+			dashIcon(DI_PLAY, ix + iw - 22, y + 9, 12, DASH_C_TEXT3);
 			continue;
 		}
-		dashTextFit(ix + 12, y + 6.5f, it->type == ST_ACTION ? iw - 44 : iw * 0.56f - 24,
+		dashTextFit(ix + 38, y + 7.5f, it->type == ST_ACTION ? iw - 70 : iw * 0.56f - 50,
 		            it->label, DASH_FS_SMALL, col);
 		if (it->type == ST_COLOR) {
 			int alpha;

@@ -382,6 +382,7 @@ void dashTextCenter(float cx, float y, const char *s, float scale, DashColor c);
 void dashTextRight(float rx, float y, const char *s, float scale, DashColor c);
 float dashTextFit(float x, float y, float maxw, const char *s, float scale, DashColor c);
 void dashTextScroll(float x, float y, float maxw, const char *s, float scale, DashColor c);
+void dashTextScrollTimed(float x, float y, float maxw, const char *s, float scale, DashColor c, float age);
 void dashTextScrollCenter(float cx, float y, float maxw, const char *s, float scale, DashColor c);
 int dashTextWrap(float x, float y, float w, int max_lines, const char *s, float scale, DashColor c, float line_h);
 /* Legacy 8px monospace glyph (for the themed classic screens). */
