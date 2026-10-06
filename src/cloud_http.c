@@ -660,7 +660,7 @@ static int request_open(CloudTls *tls, const char *method, const char *host,
     len = snprintf(request, cap,
                    "%s %s HTTP/1.1\r\n"
                    "Host: %s\r\n"
-                   "User-Agent: wLaunchELF-R3Z/Cloud\r\n"
+                   "User-Agent: r3LaunchELF_ATTDASH/Cloud\r\n"
                    "Accept: application/json\r\n"
                    "Connection: close\r\n"
                    "%s"
