@@ -267,8 +267,13 @@ static int ensureLocalEmber(const char *umbrella, char *ember_elf, size_t ember_
 		setEmberMessage(message, message_size, "Ember path is too long", umbrella);
 		return 0;
 	}
-	if (readableElf(ember_elf))
-		return 1;
+	if (readableFile(ember_elf)) {
+		if (readableElf(ember_elf))
+			return 1;
+		setEmberMessage(message, message_size,
+		                "The target umbrella already contains an invalid ember.elf", ember_elf);
+		return 0;
+	}
 
 	if (!configuredEmberElf(configured, sizeof(configured))) {
 		setEmberMessage(message, message_size,
@@ -305,8 +310,12 @@ int LaunchEmberGame(const char *path, char *message, size_t message_size)
 		setEmberMessage(message, message_size, "Ember game image could not be read", path);
 		return 0;
 	}
-	if (!appendFile(bios_path, sizeof(bios_path), umbrella, "bios.bin") ||
-	    !validBios(bios_path)) {
+	bios_path[0] = '\0';
+	if (!appendFile(bios_path, sizeof(bios_path), umbrella, "bios.bin")) {
+		setEmberMessage(message, message_size, "Ember BIOS path is too long", umbrella);
+		return 0;
+	}
+	if (!validBios(bios_path)) {
 		setEmberMessage(message, message_size,
 		                "Ember needs a user-supplied 512 KB bios.bin in this game's umbrella", bios_path);
 		return 0;
