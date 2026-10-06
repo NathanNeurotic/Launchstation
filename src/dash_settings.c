@@ -506,7 +506,7 @@ static void openPage(int next)
 	item = item_top = 0;
 	item_anim = 0.0f;
 	if (next == P_MMCE_BACKUP)
-		dashToolsRefreshMmceStatus();
+		dashToolsPrepareMmceStatus();
 }
 
 static void backPage(void)
