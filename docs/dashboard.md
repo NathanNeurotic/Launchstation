@@ -145,10 +145,12 @@ controller. Themes can be saved to and loaded from
 
 ## Application discovery
 
-Only the configured folders are listed (Settings > Home & applications >
-Application library > Application folders). Defaults: `mc:/APPS/`,
-`mc:/BOOT/`, `mass:/APPS/`, `mass:/BOOT/`.
-Each folder is searched one sub-folder deep (`APPS/<folder>/*.ELF`).
+Only the configured folders are scanned (Settings > Home & applications >
+Application library > Application folders). The defaults are `mc:/APPS/`,
+`mc:/BOOT/`, `mass:/APPS/`, and `mass:/BOOT/`; wLaunchELF does not
+silently scan every folder on every device. Each configured folder is searched
+one sub-folder deep (`APPS/<folder>/*.ELF`). The settings screen shows the
+active list and lets the user add or remove exact scan roots.
 
 * At startup only memory cards and devices whose driver is already running
   are refreshed (Settings > Home & applications > Application library >
@@ -344,3 +346,17 @@ ps2.yaml) replays the timed button script in `include/dash_autotest.h` and
 seeds a sample library, so every screen can be exercised in an emulator.
 `DASH_THEME_TOUR` shows every theme preset for five seconds. Never ship
 such builds.
+
+
+## File Browser metadata and sorting
+
+Detailed rows keep full date/time precision, including seconds. Size and
+date-time are laid out as independent columns so the timestamp does not have
+to be shortened to fit. The dashboard browser can sort by name, game title,
+size, date-time, or kind, in ascending or descending order; folders remain
+grouped first for predictable navigation.
+
+Demand-loaded storage such as the internal APA HDD and iLink/FireWire is
+selectable while its state is `Not checked`. Opening it runs the existing
+lazy loader/probe. Only a device that was explicitly checked and found absent
+is skipped by navigation.
