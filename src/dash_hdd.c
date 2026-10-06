@@ -671,7 +671,7 @@ static void actFormat(void)
 	HddJob *j;
 
 	if (console_is_PSX) {
-		dashModalMessage(DI_WARNING, "Not available", "The PSX internal HDD cannot be formatted from wLaunchELF.", NULL);
+		dashModalMessage(DI_WARNING, "Not available", "The PSX internal HDD cannot be formatted from r3LaunchELF_ATTDASH.", NULL);
 		return;
 	}
 	if (!dashModalConfirm("Format the HDD", "Every partition, game and file on the internal HDD will be erased.", "Continue", 1))
