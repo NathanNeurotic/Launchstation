@@ -6,7 +6,7 @@ wLaunchELF, formerly known as uLaunchELF, also known as wLE or uLE (abbreviated)
 
 The full wLaunchELF R3Z reference is published as a PS2-styled GitHub Pages site:
 
-- **Online:** https://nathanneurotic.github.io/wLaunchELF_R3Z_RIPTOATTDASH/
+- **Online:** https://nathanneurotic.github.io/r3LaunchELF_ATTDASH/
 - **Offline:** `wLaunchELF_R3Z-Documentation.zip` in the latest automated release
 - **Source:** `docs-site/` in this repository
 
