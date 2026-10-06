@@ -1,5 +1,5 @@
-name: Issue report
-description: Report an issue on wLaunchELF 4.43x_isr
+name: r3LaunchELF_ATTDASH issue report
+description: Report a problem with r3LaunchELF_ATTDASH
 title: "[ISSUE]: "
 labels: [bug]
 body:
@@ -17,7 +17,7 @@ body:
       label: Checks
       description: "Check before posting"
       options:
-        - label: I have checked existing [__Issue reports__](https://github.com/israpps/wLaunchELF_ISR/issues) for duplicates and found none
+        - label: I have checked existing [__Issue reports__](https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH/issues) for duplicates and found none
         - label: I downloaded wLaunchELF from this repository or the [official download link](https://israpps.github.io/20210113_wLaunchELF_isr/)
 
   - type: markdown
