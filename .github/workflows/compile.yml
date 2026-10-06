@@ -48,6 +48,7 @@ jobs:
           python3 tests/test_cloud_relay.py
           python3 tests/test_native_cloud.py
           python3 tests/test_mmce_protocol.py
+          python3 tests/test_sd2cloud_parity.py
 
       - name: Validate documentation site
         run: |
