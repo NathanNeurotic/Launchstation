@@ -13,7 +13,7 @@ yaml = (root / "ps2.yaml").read_text(encoding="utf-8")
 
 # POPStarter and Ember remain independent automatic PS1 routes.
 assert "IsPopstarterVcdPath(path)" in actions
-assert "IsEmberGamePath(path)" in actions
+assert 'genCmpFileExt(path, "CUE") || IsEmberGamePath(path)' in actions
 assert "LaunchPopstarterVcd(path" in actions
 assert "LaunchEmberGame(path" in actions
 assert "preferred PS1 core" not in tools.lower()
@@ -50,7 +50,9 @@ assert "WLE_PFS_WRITETHROUGH" in elf
 # Browser surfaces both cores independently.
 assert 'PS1 VCDs (POPStarter)' in tools
 assert 'PS1 images (Ember)' in tools
+assert 'genCmpFileExt(path, "CUE")' in fileops
 assert "IsEmberGamePath(path)" in fileops
+assert 'genCmpFileExt(path, "CUE")' in browser
 assert "IsEmberGamePath(path)" in browser
 for ext in ('"CUE"', '"BIN"'):
     assert ext in browser
