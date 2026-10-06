@@ -37,3 +37,6 @@ assert "src/self_update.c" in yaml
 assert "sha256sum r3LaunchELF_ATTDASH.ELF > r3LaunchELF_ATTDASH.ELF.sha256" in workflow
 
 print("PASS: native updater stages, verifies, backs up, rolls back, and publishes its checksum sidecar")
+
+update_ca = (root / "res/WLE-UPDATE-CA.PEM").read_text()
+assert update_ca.count("-----BEGIN CERTIFICATE-----") >= 2
