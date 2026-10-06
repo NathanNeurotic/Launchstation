@@ -456,6 +456,7 @@ void dashToolsCheckUpdates(void)
 }
 #endif
 
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 void dashToolsCloudBackup(void)
 {
 	static const char *const linked_actions[] = {"Sync now", "Relink Google Drive", "Disconnect Google Drive"};
