@@ -2,6 +2,9 @@
 #include "init.h"
 #include <unistd.h>
 #include <iopcontrol_special.h>
+#ifdef ETH
+#include <ps2ips.h>
+#endif
 
 #define IMPORT_BIN2C(_n) \
     extern u8 _n[];   \
@@ -1957,6 +1960,20 @@ void loadNetModules(void)
 int isFtpNetworkReady(void)
 {
 	return have_NetModules && have_ps2ftpd && have_ps2ip && have_ps2smap && ps2dev9_loaded;
+}
+
+/* Minimal demand-driven network path for SNTP/other dashboard clients.
+ * Unlike loadNetModules(), this does not start FTP/netfs services. */
+int ensureDashboardIpNetworkReady(void)
+{
+	ensureCoreIoStackReady();
+	showLoadingModulesMsg("dashboard network");
+	getIpConfig();
+	load_ps2ip();
+	if (!(have_ps2ip && have_ps2smap && ps2dev9_loaded))
+		return 0;
+	/* PS2SDK ps2ip_init() is idempotent and detects IOP reboots. */
+	return ps2ip_init() >= 0;
 }
 #endif
 //------------------------------

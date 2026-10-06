@@ -36,7 +36,7 @@ EE_OBJS = main.o main_actions.o main_boot.o main_modules.o main_menu.o main_titl
 	cdvd_irx.o xparam_irx.o vmcman_irx.o ps2kbd_irx.o \
 	hdd.o hdd_header_injector.o hdl_rpc.o hdl_info_irx.o editor.o editor_menu.o editor_input.o editor_rules.o editor_file.o timer.o icon.o lang.o popstarter.o popstarter_path.o popstarter_vcd.o popstarter_gameid.o popstarter_elf.o \
 	font_uLE.o makeicon.o chkesr.o allowdvdv_irx.o \
-	dash_main.o dash_gfx.o dash_font.o dash_font_data.o dash_icons.o dash_png.o dash_art.o dash_bg.o dash_bg_ps2.o dash_bg_geo.o dash_store.o dash_lib.o dash_devices.o dash_ui.o dash_home.o dash_apps.o dash_files.o dash_tools.o dash_settings.o dash_theme.o dash_themes.o dash_sound.o dash_worker.o dash_widgets.o dash_info.o dash_editor.o dash_hdd.o dash_browser.o dash_exploit.o \
+	dash_main.o dash_clock_sync.o dash_gfx.o dash_font.o dash_font_data.o dash_icons.o dash_png.o dash_art.o dash_bg.o dash_bg_ps2.o dash_bg_geo.o dash_store.o dash_lib.o dash_devices.o dash_ui.o dash_home.o dash_apps.o dash_files.o dash_tools.o dash_settings.o dash_theme.o dash_themes.o dash_sound.o dash_worker.o dash_widgets.o dash_info.o dash_editor.o dash_hdd.o dash_browser.o dash_exploit.o \
 	exploit_system_xlf_header.o exploit_xsystem_xlf_header.o exploit_dtl_system_xlf_header.o exploit_xlf_body.o \
 	exploit_osdsys_kernel.o exploit_osd110_kernel.o \
 	exploit_jpn_sys.o exploit_usa_sys.o exploit_eur_sys.o exploit_chn_sys.o \
@@ -189,6 +189,7 @@ endif
 ifeq ($(ETH),1)
     EE_OBJS += ps2smap_irx.o ps2ftpd_irx.o ps2host_irx.o ps2netfs_irx.o ps2ip_irx.o ps2dev9_v10_irx.o ps2ip_v10_irx.o
     EE_CFLAGS += -DETH
+    EE_LIBS += -lps2ips -lcglue
 ifeq ($(UDPFS),1)
     HAS_ETH = -ETH
 endif
