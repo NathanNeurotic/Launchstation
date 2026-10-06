@@ -41,6 +41,7 @@ enum { DASH_SND_CANCEL };
 enum { DASH_IGR_AFTER_DASHBOARD, DASH_IGR_AFTER_OSDSYS, DASH_IGR_AFTER_APP };
 static void dashSoundPlay(int s) { assert(s == DASH_SND_CANCEL); }
 static void dashUiFocusPoke(void) {}
+static void dashToolsRefreshMmceStatus(void) {}
 static struct { int sound, bgm, artwork, igr_after; } dashCfg;
 static struct { int font, wallpaper, clock; } dashTheme;
 static struct { int usbkbd_used; char LK_Path[SETTING_LK_COUNT][MAX_PATH]; } config;
