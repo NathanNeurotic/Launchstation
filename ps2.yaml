@@ -300,6 +300,7 @@ targets:
       - src/popstarter_vcd.c
       - src/popstarter_gameid.c
       - src/popstarter_elf.c
+      - src/ember.c
       - src/neutrino_iso.c
       - src/font_uLE.c
       - src/makeicon.c
