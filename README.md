@@ -75,6 +75,7 @@ Drivers load on demand for maximum compatibility and initial boot speed.
 - Launch PS1 VCDs through POPStarter with an optional custom POPStarter path and device-specific fallbacks.
 - Launch PS1 CUE/BIN/EXE images through Ember from any save-safe `<Ember directory>/games/<Game>/` umbrella. The umbrella name/location is configurable, and a configured Ember directory can supply `ember.elf` to a target device that lacks it. POPStarter remains the independent VCD path; format selects the core automatically.
 - Launch PS2 ISO images through Neutrino with an optional custom Neutrino path and game-device/memory-card fallbacks.
+- MMCE backup & sync page with Sync all cards, Off/Local/Local+Google automatic sync, IGR helper management, Google account controls and HTTPS update checks
 - Writes to history file for disc launches for mmce vmc change
 - Applies deckard disc patches
 - X/0 applied per region if no config file is found so O is only default for Japan
