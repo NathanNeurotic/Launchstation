@@ -299,6 +299,7 @@ typedef struct
 	char lang_file[MAX_PATH];
 	char font_file[MAX_PATH];
 	char popstarter_file[MAX_PATH];
+	char ember_dir[MAX_PATH];
 	char neutrino_file[MAX_PATH];
 	int Menu_Frame;
 	int timeout;

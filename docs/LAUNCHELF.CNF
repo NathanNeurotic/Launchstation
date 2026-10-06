@@ -323,6 +323,19 @@ FONT_FILE =
 # ----------------------------------------------------------------------
 POPSTARTER_ELF =
 # ----------------------------------------------------------------------
+# EMBER_DIR is optional. It points to an Ember umbrella directory containing
+# ember.elf. PS1 CUE/BIN/EXE files still launch from their OWN save-safe
+# <umbrella>/games/<Game>/ folder. If that target umbrella lacks ember.elf,
+# r3LaunchELF_ATTDASH copies ember.elf from EMBER_DIR into it once.
+# bios.bin is never copied automatically: the target umbrella must already
+# contain the user's own 512 KB bios.bin.
+#
+# File formats choose the PS1 core automatically:
+#   *.VCD            -> POPStarter
+#   *.CUE/*.BIN/*.EXE -> Ember
+# ----------------------------------------------------------------------
+EMBER_DIR =
+# ----------------------------------------------------------------------
 # NEUTRINO_ELF is optional. When a PS2 .ISO is opened, wLaunchELF looks
 # for a complete Neutrino install in this order:
 #   1) this explicit path,
