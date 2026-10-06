@@ -273,7 +273,7 @@ static int save_refresh_token(GoogleSession *s, const char *token,
     char *text, *saved;
     int len, saved_len;
 
-    len = (int)strlen(token) + 64;
+    len = (int)strlen(token) + 128;
     text = malloc(len);
     if (!text) {
         set_error(error, error_size, "Out of memory saving Google token");
@@ -295,7 +295,7 @@ static int save_refresh_token(GoogleSession *s, const char *token,
         dashKvParse(saved, token_kv, &verify);
         free(saved);
     }
-    if (strcmp(verify.refresh_token, token) != 0) {
+    if (!verify.token_stage_complete || strcmp(verify.refresh_token, token) != 0) {
         genRemove(s->token_stage_path);
         free(text);
         set_error(error, error_size, "Could not verify staged Google token");
