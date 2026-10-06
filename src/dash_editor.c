@@ -1012,7 +1012,7 @@ static void editorScene(void)
 		dashDrawHints(h, 6);
 	} else {
 		DashHint h[] = {{dashOkIcon(), NULL, "Type"}, {DI_BTN_SQUARE, NULL, d->mark >= 0 ? "End select" : "Select"},
-		                {-1, "L1/R1", "Line start/end"}, {-1, "L2/R2", "Page"}, {-1, "START", "Menu"}, {dashBackIcon(), NULL, "Exit"}};
+		                {-1, "L1/R1", "Line"}, {-1, "L2/R2", "Page"}, {-1, "START", "Menu"}, {dashBackIcon(), NULL, "Exit"}};
 		dashDrawHints(h, 6);
 	}
 	dashDrawToasts();
