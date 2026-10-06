@@ -106,6 +106,7 @@ def render(manifest, slug, meta, fragment):
   <p><b>wLaunchELF R3Z Documentation</b> — dashboard-focused wLaunchELF maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
   <p class="prov-inline">wLaunchELF descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
 </footer>
+<script src="data/search-index.js"></script>
 <script src="assets/app.js"></script>
 <script src="assets/orbs.js"></script>
 </body></html>
@@ -149,7 +150,7 @@ def validate_output(out: Path, manifest, slugs):
     missing = sorted(required - actual)
     if missing:
         errors.append("missing generated pages: " + ", ".join(missing))
-    for asset in ("assets/style.css", "assets/app.js", "assets/orbs.js", "data/search-index.json", ".nojekyll"):
+    for asset in ("assets/style.css", "assets/app.js", "assets/orbs.js", "data/search-index.json", "data/search-index.js", ".nojekyll"):
         if not (out / asset).exists():
             errors.append(f"missing output asset: {asset}")
     if errors:
@@ -188,7 +189,9 @@ def main():
         dst.write_text(render(manifest, slug, meta, fragment), encoding="utf-8")
         search.extend(section_index(fragment, slug, meta["title"], meta["section"].lower()))
 
-    (out / "data/search-index.json").write_text(json.dumps(search, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    compact_index = json.dumps(search, ensure_ascii=False, separators=(",", ":"))
+    (out / "data/search-index.json").write_text(compact_index, encoding="utf-8")
+    (out / "data/search-index.js").write_text("window.WLE_DOC_INDEX=" + compact_index + ";\n", encoding="utf-8")
     validate_output(out, manifest, pages.keys())
     if args.zip_path:
         make_zip(out, Path(args.zip_path).resolve())
