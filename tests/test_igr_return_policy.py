@@ -21,10 +21,11 @@ assert "dashCfg.igr_after = DASH_IGR_AFTER_DASHBOARD;" in store
 for key in ("Dash_IGRAutoBackup", "Dash_IGRAfter", "Dash_IGRAfterPath"):
     assert key in store
 
-for control in ("S_IGR_AUTO_BACKUP", "S_IGR_AFTER", "S_IGR_AFTER_APP"):
+for control in ("S_IGR_SYNC_MODE", "S_IGR_AUTO_BACKUP", "S_IGR_AFTER", "S_IGR_AFTER_APP"):
     assert control in settings
 assert '"After IGR, open"' in settings
-assert '"Automatic IGR backup"' in settings
+assert '"Automatic sync"' in settings
+assert '"Off", "Local backup", "Local + Google Drive"' in settings
 assert "dashLibFind(ps.field)" in settings, "selected app should display its library title"
 assert "dashTextFit" in settings, "long values must remain width-bounded"
 
@@ -45,4 +46,4 @@ route = main.index("runWleIgrAfter(igr_requested);", call)
 dash = main.index("DashRun(&dash_ctx, 1);", route)
 assert call < route < dash, "IGR backup and routing must complete before dashboard entry"
 
-print("PASS: IGR backup can be disabled independently and post-IGR routing is persisted, IGR-only, and device-aware")
+print("PASS: unified automatic sync preserves local IGR backup policy and post-IGR routing remains persisted, IGR-only, and device-aware")

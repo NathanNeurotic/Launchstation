@@ -48,6 +48,7 @@ jobs:
           python3 tests/test_cloud_relay.py
           python3 tests/test_native_cloud.py
           python3 tests/test_mmce_protocol.py
+          python3 tests/test_sd2cloud_parity.py
 
       - name: Validate documentation site
         run: |
@@ -136,6 +137,7 @@ jobs:
           cp build/bin/wLaunchELF-packed.elf artifacts/r3LaunchELF_ATTDASH.ELF
           cp res/music.sad artifacts/BGM.ADP
           cp res/WLE-CLOUD.CNF.example artifacts/WLE-CLOUD.CNF.example
+          cp res/WLE-UPDATE-CA.PEM artifacts/WLE-UPDATE-CA.PEM
           curl -fL --retry 6 --retry-all-errors https://pki.goog/roots.pem -o artifacts/WLE-CLOUD-CA.PEM
           ca_bytes="$(wc -c < artifacts/WLE-CLOUD-CA.PEM)"
           if [ "$ca_bytes" -gt 262144 ]; then

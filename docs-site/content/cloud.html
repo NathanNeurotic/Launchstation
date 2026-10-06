@@ -6,3 +6,6 @@
 <h2 id="tls">TLS and entropy</h2><p>Certificate and hostname verification are mandatory. The Mbed TLS CTR-DRBG does not rely on PS2SDK's random path alone: r3LaunchELF_ATTDASH conditions that material with full cycle-counter samples, RTC/runtime state, a local counter and DNS/TCP timing through SHA-256. This is defense-in-depth, not a claim that the PS2 has a certified hardware TRNG.</p>
 <h2 id="timeouts">Failure behavior</h2><p>TCP connect, TLS handshake, reads and writes use bounded no-progress timeouts. DNS lookup itself is synchronous in PS2IP, so bad-DNS behavior remains a real-hardware edge case.</p>
 <h2 id="automatic">Automatic IGR sync</h2><p><b>Google Drive after IGR</b> is off by default. It cannot be enabled until Drive is linked, and it runs only after the local MMCE backup succeeds.</p>
+
+<h2 id="settings-integration">Settings integration</h2><p>The MMCE backup &amp; sync page exposes Google account management directly beside backup policy. The same native OAuth/TLS client is used; this is not a second cloud implementation.</p>
+<h2 id="updates">Update checks</h2><p><b>Check for updates</b> compares the running commit with the repository's rolling <code>latest</code> release over HTTPS. It uses a dedicated <code>WLE-UPDATE-CA.PEM</code> trust root for GitHub and does not weaken or reuse Google-specific trust configuration.</p>

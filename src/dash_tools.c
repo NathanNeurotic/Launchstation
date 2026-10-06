@@ -7,7 +7,12 @@
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "mmce_igr.h"
+#include "mmce_backup.h"
 #include "cloud_google.h"
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+#include "cloud_http.h"
+#include "init.h"
+#endif
 #include <stddef.h>
 
 enum ToolAction {
@@ -87,7 +92,7 @@ static void toolsEnter(void)
 		tMove(1);
 }
 
-static void setupIgrBackup(void)
+void dashToolsIgrBackupSetup(void)
 {
 	static const char *const actions[] = {"Install / update", "Remove helper"};
 	WleIgrInstallStats stats;
@@ -240,7 +245,219 @@ static void cloudSyncNow(void)
 	}
 }
 
-static void cloudBackupTool(void)
+#endif
+
+static void mmceSyncProgress(const char *source, int done, int total)
+{
+	const char *leaf = source != NULL ? strrchr(source, '/') : NULL;
+	dashLoadingStatus(leaf != NULL ? leaf + 1 : (source != NULL ? source : "MMCE card"), done, total);
+}
+
+static int ensureMmceBackupRoot(char *out, size_t out_size)
+{
+	char start[MAX_PATH];
+
+	if (dashCfg.igr_backup_path[0] != '\0') {
+		dashStrCopy(out, dashCfg.igr_backup_path, out_size);
+		return 1;
+	}
+
+	dashStrCopy(start, LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir, sizeof(start));
+	out[0] = '\0';
+	if (!dashPickPath("MMCE backup destination", start, DASH_PICK_FOLDER, NULL, out, out_size))
+		return 0;
+	if (out[0] == '\0')
+		return 0;
+
+	dashStrCopy(dashCfg.igr_backup_path, out, sizeof(dashCfg.igr_backup_path));
+	dashStoreSaveSettings();
+	dashStoreFlush(1);
+	return 1;
+}
+
+void dashToolsSyncAllMmceCards(void)
+{
+	MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format};
+	MmceBackupStats total, one;
+	char root[MAX_PATH], summary[384];
+	int unit, any_unit = 0;
+
+	memset(&total, 0, sizeof(total));
+	if (!ensureMmceBackupRoot(root, sizeof(root)))
+		return;
+	if (!loadMmceModules()) {
+		dashModalMessage(DI_WARNING, "MMCE is unavailable",
+		                 "The MMCE driver could not be started.", NULL);
+		return;
+	}
+
+	dashLoadingBegin("Backing up all MMCE cards");
+	for (unit = 0; unit < 2; unit++) {
+		memset(&one, 0, sizeof(one));
+		if (mmceBackupAllCards(unit, root, &options, &one, mmceSyncProgress) < 0)
+			continue;
+		any_unit = 1;
+		total.candidates += one.candidates;
+		total.backed_up += one.backed_up;
+		total.unchanged += one.unchanged;
+		total.failed += one.failed;
+	}
+	dashLoadingEnd();
+
+	if (!any_unit) {
+		dashModalMessage(DI_WARNING, "No MMCE cards found",
+		                 "No readable MemoryCards tree was found on either MMCE unit.", NULL);
+		return;
+	}
+
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+	if (cloudGoogleIsLinked()) {
+		CloudGoogleSyncStats cloud;
+		char cloud_error[256];
+		int r;
+
+		if (!dashStoreFlushWait("Saving settings before cloud sync"))
+			return;
+		memset(&cloud, 0, sizeof(cloud));
+		cloud_error[0] = '\0';
+		dashLoadingBegin("Uploading MMCE backup history");
+		r = cloudGoogleSyncBackupRoot(root, &cloud, cloudProgress,
+		                              cloud_error, sizeof(cloud_error));
+		dashLoadingEnd();
+		if (r < 0) {
+			snprintf(summary, sizeof(summary),
+			         "Local: %d new, %d unchanged, %d failed.\nDrive upload failed: %s",
+			         total.backed_up, total.unchanged, total.failed,
+			         cloud_error[0] ? cloud_error : "unknown error");
+			dashModalMessage(DI_WARNING, "Card sync completed locally", summary,
+			                 "Your local backup history was kept.");
+			return;
+		}
+		snprintf(summary, sizeof(summary),
+		         "Local: %d new, %d unchanged, %d failed.\nDrive: %d uploaded, %d already present, %d failed.",
+		         total.backed_up, total.unchanged, total.failed,
+		         cloud.uploaded, cloud.skipped, cloud.failed);
+		dashModalMessage((total.failed || cloud.failed) ? DI_WARNING : DI_CHECK,
+		                 (total.failed || cloud.failed) ? "Sync all cards completed with errors" : "All cards synchronized",
+		                 summary,
+		                 "Only changed local cards create new history. Drive sync is copy-only.");
+		return;
+	}
+#endif
+
+	snprintf(summary, sizeof(summary),
+	         "%d new backup%s, %d unchanged, %d failed.",
+	         total.backed_up, total.backed_up == 1 ? "" : "s",
+	         total.unchanged, total.failed);
+	dashModalMessage(total.failed ? DI_WARNING : DI_CHECK,
+	                 total.failed ? "Local card backup completed with errors" : "All cards backed up locally",
+	                 summary,
+	                 "Link Google Drive to upload this history too.");
+}
+
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+static int releaseJsonString(const char *json, const char *key, char *out, int out_size)
+{
+	char needle[64];
+	const char *p, *end;
+	int n;
+
+	if (json == NULL || key == NULL || out == NULL || out_size <= 0)
+		return 0;
+	snprintf(needle, sizeof(needle), "\"%s\"", key);
+	p = strstr(json, needle);
+	if (p == NULL)
+		return 0;
+	p = strchr(p + strlen(needle), ':');
+	if (p == NULL)
+		return 0;
+	p++;
+	while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n')
+		p++;
+	if (*p != '\"')
+		return 0;
+	p++;
+	end = strchr(p, '\"');
+	if (end == NULL)
+		return 0;
+	n = (int)(end - p);
+	if (n <= 0 || n >= out_size)
+		return 0;
+	memcpy(out, p, n);
+	out[n] = '\0';
+	return 1;
+}
+
+void dashToolsCheckUpdates(void)
+{
+	CloudHttpResponse response;
+	char ca_path[MAX_PATH], error[192], latest[80], body[320];
+	const char headers[] =
+	    "User-Agent: r3LaunchELF_ATTDASH-PS2\r\n"
+	    "Accept: application/vnd.github+json\r\n";
+	int same = 0;
+
+	if (dashStoreBuildPath(ca_path, sizeof(ca_path), "WLE-UPDATE-CA.PEM") < 0 ||
+	    !wleExists(ca_path)) {
+		dashModalMessage(DI_WARNING, "Update check needs the CA bundle",
+		                 "WLE-UPDATE-CA.PEM was not found in the dashboard settings folder.",
+		                 "It is included in the automated release and is used only for the GitHub update check.");
+		return;
+	}
+	if (!ensureDashboardIpNetworkReady()) {
+		dashModalMessage(DI_WARNING, "Update check unavailable",
+		                 "The Ethernet stack could not be started.", NULL);
+		return;
+	}
+
+	memset(&response, 0, sizeof(response));
+	error[0] = latest[0] = '\0';
+	dashLoadingBegin("Checking for r3LaunchELF_ATTDASH updates");
+	if (cloudHttpRequest("GET", "api.github.com",
+	                     "/repos/NathanNeurotic/r3LaunchELF_ATTDASH/releases/tags/latest",
+	                     headers, NULL, 0, ca_path, &response,
+	                     error, sizeof(error)) < 0) {
+		dashLoadingEnd();
+		dashModalMessage(DI_WARNING, "Update check failed",
+		                 error[0] ? error : "GitHub could not be reached.", NULL);
+		return;
+	}
+	dashLoadingEnd();
+
+	if (response.status != 200 ||
+	    !releaseJsonString(response.body, "target_commitish", latest, sizeof(latest))) {
+		snprintf(body, sizeof(body), "GitHub returned HTTP %d or an unexpected release response.", response.status);
+		cloudHttpResponseFree(&response);
+		dashModalMessage(DI_WARNING, "Update check failed", body, NULL);
+		return;
+	}
+	cloudHttpResponseFree(&response);
+
+	if (strcmp(GIT_HASH, "local") != 0 && strlen(GIT_HASH) <= strlen(latest) &&
+	    !strncmp(latest, GIT_HASH, strlen(GIT_HASH)))
+		same = 1;
+
+	if (same) {
+		snprintf(body, sizeof(body), "This build (%s) matches the current latest release.", GIT_HASH);
+		dashModalMessage(DI_CHECK, "r3LaunchELF_ATTDASH is up to date", body, NULL);
+	} else {
+		snprintf(body, sizeof(body),
+		         "Current: %s\nLatest: %.16s\n\nDownload the latest release from:\ngithub.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases/latest",
+		         GIT_HASH, latest);
+		dashModalMessage(DI_INFO, "A newer automated build is available", body,
+		                 "This check does not replace the running ELF automatically.");
+	}
+}
+#else
+void dashToolsCheckUpdates(void)
+{
+	dashModalMessage(DI_INFO, "Update checking unavailable",
+	                 "This build does not include native HTTPS support.", NULL);
+}
+#endif
+
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+void dashToolsCloudBackup(void)
 {
 	static const char *const linked_actions[] = {"Sync now", "Relink Google Drive", "Disconnect Google Drive"};
 	static const char *const unlinked_actions[] = {"Link Google Drive"};
@@ -336,11 +553,11 @@ static void runTool(const Tool *t)
 			dashOpenTextEditor(NULL);
 			break;
 		case TA_IGR_SETUP:
-			setupIgrBackup();
+			dashToolsIgrBackupSetup();
 			break;
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 		case TA_CLOUD:
-			cloudBackupTool();
+			dashToolsCloudBackup();
 			break;
 #endif
 	}
