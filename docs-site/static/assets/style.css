@@ -223,7 +223,11 @@ img { max-width: 100%; border: 1px solid var(--line2); }
   color: var(--ps-text-blue);
   letter-spacing: 1.2px;
   white-space: nowrap;
-  text-transform: uppercase;
+  text-transform: none;
+  min-width: 0;
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 15px;
   text-shadow: 0 0 12px rgba(0, 160, 255, 0.45);
 }
@@ -1841,6 +1845,13 @@ footer {
   .topbar-btn { padding: 0 8px; width: 32px; justify-content: center; }
 }
 
+@media (max-width: 860px) {
+  .brand { font-size: 13px; letter-spacing: 0.7px; }
+}
+@media (max-width: 600px) {
+  .brand { font-size: 11px; letter-spacing: 0.35px; max-width: 190px; }
+  .psbtns { display: none; }
+}
 /* r3LaunchELF_ATTDASH documentation extensions */
 .hero-wle{position:relative;overflow:hidden}
 .hero-wle .wle-mark{display:inline-grid;place-items:center;width:76px;height:76px;border:1px solid rgba(84,160,255,.5);border-radius:18px;background:linear-gradient(145deg,rgba(34,82,151,.34),rgba(8,18,38,.76));box-shadow:0 0 34px rgba(52,134,255,.22);font:800 26px/1 system-ui;letter-spacing:-.08em;color:#d7e8ff;margin-bottom:14px}
