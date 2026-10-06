@@ -184,6 +184,12 @@ static int source_info(const char *path, u64 *size)
 	return ret;
 }
 
+int mcCardValidateNoEcc(const char *path)
+{
+	u64 size = 0;
+	return source_info(path, &size);
+}
+
 static int read_exact_fd(int fd, u64 pos, u8 *buf, int size)
 {
 	int total = 0;
@@ -482,6 +488,12 @@ static int pcsx2_source_info(const char *path, u64 *raw_size, u64 *encoded_size)
 	*raw_size = pages * MC_PAGE_DATA;
 	*encoded_size = expected;
 	return MC_CARD_EXPORT_OK;
+}
+
+int mcCardValidatePcsx2(const char *path)
+{
+	u64 raw_size = 0, encoded_size = 0;
+	return pcsx2_source_info(path, &raw_size, &encoded_size);
 }
 
 static int strip_pcsx2_block(const u8 *in, int in_size, u8 *out)

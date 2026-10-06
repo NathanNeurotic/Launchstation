@@ -7,6 +7,7 @@
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "mmce_igr.h"
+#include "cloud_google.h"
 #include <stddef.h>
 
 enum ToolAction {
@@ -15,7 +16,8 @@ enum ToolAction {
 	TA_BROWSER,
 	TA_BROWSER_AT,
 	TA_EDITOR,
-	TA_IGR_SETUP
+	TA_IGR_SETUP,
+	TA_CLOUD
 };
 
 typedef struct
@@ -47,6 +49,9 @@ static const Tool tools[] = {
     {TA_MISC, DI_APP, "OSDSYS", "Start the console's OSD (or the OSDSYS path configured in wLaunchELF).", NULL, 1, MISC(Misc_OSDSYS), NULL},
 #ifdef ETH
     {TA_MISC, DI_NETWORK, "FTP / Remote access", "Start FTP and PS2Link on demand, accept remote commands, and receive staged/resumable ISO transfers from MrRexD-compatible PC tools.", "Network and HDD drivers stay unloaded until you start this tool.", 0, MISC(Misc_PS2Net), NULL},
+#ifdef WLE_NATIVE_CLOUD
+    {TA_CLOUD, DI_NETWORK, "Google Drive backups", "Link Google Drive and upload missing WLE-MMCE-Backups versions directly from the PS2 over HTTPS.", "Cloud sync is copy-only. It never deletes local or Drive backup history.", 0, 0, NULL},
+#endif
 #endif
     {TA_MISC, DI_INFO, "System information", "Console model, ROM version, boot path, loaded configuration and debug details.", NULL, 0, MISC(Misc_Debug_Info), NULL},
     {TA_MISC, DI_CHIP, "Build information", "Features and drivers included in this build of wLaunchELF.", NULL, 0, MISC(Misc_Show_Build_Info), NULL},
@@ -121,12 +126,191 @@ static void setupIgrBackup(void)
 	r = wleIgrConfigure(folder, &stats, result, sizeof(result));
 	dashLoadingEnd();
 
-	if (r == 0)
+	if (r == 0) {
+		/* The helper already embeds this same destination. Persist it too so
+		 * manual/native cloud sync never has to scan every mounted device. */
+		dashStrCopy(dashCfg.igr_backup_path, folder, sizeof(dashCfg.igr_backup_path));
+		dashStoreSaveSettings();
+		dashStoreFlush(1);
 		dashModalMessage(DI_CHECK, "OPL IGR automatic backup ready", result,
 		                 "After setting OPL Exit-to to the shown helper, IGR will back up changed MMCE card images and then open wLaunchELF.");
-	else
+	} else
 		dashModalMessage(DI_WARNING, "OPL IGR setup incomplete", result[0] ? result : "Setup failed.", NULL);
 }
+
+
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+static void cloudProgress(const char *status, int done, int total)
+{
+	dashLoadingStatus(status != NULL ? status : "Google Drive", done, total);
+}
+
+static void cloudLink(void)
+{
+	CloudGoogleDeviceCode code;
+	char error[256], body[448], detail[256];
+	int r;
+
+	error[0] = '\0';
+	dashLoadingBegin("Starting Google Drive authorization");
+	r = cloudGoogleBeginLink(&code, error, sizeof(error));
+	dashLoadingEnd();
+	if (r < 0) {
+		dashModalMessage(DI_WARNING, "Google Drive link unavailable",
+		                 error[0] ? error : "Could not start Google authorization.",
+		                 "WLE-CLOUD.CNF and WLE-CLOUD-CA.PEM must be available in the dashboard settings folder.");
+		return;
+	}
+
+	snprintf(body, sizeof(body),
+	         "On a phone or computer, open:\n%s\n\nEnter this code: %s",
+	         code.verification_url, code.user_code);
+	snprintf(detail, sizeof(detail),
+	         "The token is stored only on this PS2. Scope: files created by wLaunchELF.");
+	dashModalMessage(DI_INFO, "Link Google Drive", body, detail);
+
+	for (;;) {
+		if (!dashModalConfirm("Check Google Drive authorization?",
+		                      "Finish the browser step first, then choose Check. Back keeps the account unlinked.",
+		                      "Check", 0))
+			return;
+		error[0] = '\0';
+		dashLoadingBegin("Checking Google authorization");
+		r = cloudGoogleFinishLink(&code, error, sizeof(error));
+		dashLoadingEnd();
+		if (r == 0) {
+			dashModalMessage(DI_CHECK, "Google Drive linked",
+			                 "Native PS2 cloud backup is ready.",
+			                 "Use this tool to sync now, or enable Google Drive after IGR under Settings > Storage & devices > MMCE backups.");
+			return;
+		}
+		if (r < 0) {
+			dashModalMessage(DI_WARNING, "Google Drive link failed",
+			                 error[0] ? error : "Google authorization failed.",
+			                 "Start Link Google Drive again if the device code expired.");
+			return;
+		}
+		dashModalMessage(DI_INFO, "Still waiting for Google",
+		                 error[0] ? error : "Authorization is not complete yet.",
+		                 "Complete the code entry in your browser, then check again.");
+	}
+}
+
+static void cloudSyncNow(void)
+{
+	CloudGoogleSyncStats stats;
+	char error[256], result[256];
+	int r;
+
+	if (dashCfg.igr_backup_path[0] == '\0') {
+		dashModalMessage(DI_WARNING, "No MMCE backup destination saved",
+		                 "Run Tools > OPL IGR automatic MMCE backup > Install / update once so wLaunchELF knows which local history to upload.",
+		                 "Existing backups are not moved or deleted.");
+		return;
+	}
+	if (!cloudGoogleIsLinked()) {
+		dashModalMessage(DI_INFO, "Google Drive is not linked",
+		                 "Use Google Drive backups > Link Google Drive first.", NULL);
+		return;
+	}
+	if (!dashStoreFlushWait("Saving settings before cloud sync"))
+		return;
+
+	error[0] = '\0';
+	memset(&stats, 0, sizeof(stats));
+	dashLoadingBegin("Syncing MMCE backups to Google Drive");
+	r = cloudGoogleSyncBackupRoot(dashCfg.igr_backup_path, &stats,
+	                              cloudProgress, error, sizeof(error));
+	dashLoadingEnd();
+
+	if (r == 0) {
+		snprintf(result, sizeof(result),
+		         "%d uploaded, %d already present, %d failed. %d new Drive folders.",
+		         stats.uploaded, stats.skipped, stats.failed, stats.folders_created);
+		dashModalMessage(stats.failed ? DI_WARNING : DI_CHECK,
+		                 stats.failed ? "Google Drive sync completed with errors" : "Google Drive sync complete",
+		                 result,
+		                 "Copy-only sync: existing Drive files and local history are never deleted.");
+	} else {
+		dashModalMessage(DI_WARNING, "Google Drive sync failed",
+		                 error[0] ? error : "The cloud upload did not complete.",
+		                 "Local WLE-MMCE-Backups history is unchanged.");
+	}
+}
+
+static void cloudBackupTool(void)
+{
+	static const char *const linked_actions[] = {"Sync now", "Relink Google Drive", "Disconnect Google Drive"};
+	static const char *const unlinked_actions[] = {"Link Google Drive"};
+	char error[192];
+	int linked, action;
+
+	error[0] = '\0';
+	if (!cloudGoogleConfigured(error, sizeof(error))) {
+		/* Configuration can be removed independently of the saved refresh token.
+		 * Never strand credentials just because the client ID or CA file is gone. */
+		if (cloudGoogleHasLocalToken()) {
+			static const char *const cleanup_actions[] = {"Clear saved Google token"};
+			action = dashModalChoice("Google Drive setup incomplete",
+			                         cleanup_actions, 1, 0);
+			if (action == 0 &&
+			    dashModalConfirm("Clear saved Google token?",
+			                     "Removes WLE-CLOUD.TOK from this PS2. Drive files are untouched.",
+			                     "Clear token", 1)) {
+				error[0] = '\0';
+				if (cloudGoogleDisconnect(error, sizeof(error)) == 0) {
+					dashCfg.igr_cloud_sync = 0;
+					dashStoreSaveSettings();
+					dashStoreFlush(1);
+					dashModalMessage(DI_CHECK, "Saved Google token removed",
+					                 "The local OAuth token was removed and automatic IGR cloud sync was turned off.",
+					                 "Restore WLE-CLOUD.CNF and WLE-CLOUD-CA.PEM before linking again.");
+				} else
+					dashModalMessage(DI_WARNING, "Could not remove saved Google token",
+					                 error[0] ? error : "Token removal failed.", NULL);
+			}
+			return;
+		}
+		dashModalMessage(DI_WARNING, "Native cloud setup is incomplete",
+		                 error[0] ? error : "Google Drive is not configured.",
+		                 "See docs/NATIVE_CLOUD.md. No Google credentials are built into the repository.");
+		return;
+	}
+
+	linked = cloudGoogleIsLinked();
+	action = dashModalChoice("Google Drive backups",
+	                         linked ? linked_actions : unlinked_actions,
+	                         linked ? 3 : 1, 0);
+	if (action < 0)
+		return;
+	if (!linked || action == 1) {
+		cloudLink();
+		return;
+	}
+	if (action == 0) {
+		cloudSyncNow();
+		return;
+	}
+	if (action == 2 &&
+	    dashModalConfirm("Disconnect Google Drive?",
+	                     "Deletes the saved refresh token from this PS2. Files already uploaded to Drive are untouched.",
+	                     "Disconnect", 1)) {
+		error[0] = '\0';
+		if (cloudGoogleDisconnect(error, sizeof(error)) == 0) {
+			/* A disconnected account cannot satisfy automatic IGR sync. Keep the
+			 * persisted setting consistent so later IGR returns do not repeatedly
+			 * attempt a guaranteed-to-fail cloud operation. */
+			dashCfg.igr_cloud_sync = 0;
+			dashStoreSaveSettings();
+			dashStoreFlush(1);
+			dashModalMessage(DI_CHECK, "Google Drive disconnected",
+			                 "The local OAuth token was removed and automatic IGR cloud sync was turned off.", NULL);
+		} else
+			dashModalMessage(DI_WARNING, "Could not disconnect Google Drive",
+			                 error[0] ? error : "Token removal failed.", NULL);
+	}
+}
+#endif
 
 static void runTool(const Tool *t)
 {
@@ -152,6 +336,11 @@ static void runTool(const Tool *t)
 		case TA_IGR_SETUP:
 			setupIgrBackup();
 			break;
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+		case TA_CLOUD:
+			cloudBackupTool();
+			break;
+#endif
 	}
 }
 

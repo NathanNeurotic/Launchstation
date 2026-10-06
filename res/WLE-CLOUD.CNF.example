@@ -1,0 +1,11 @@
+# wLaunchELF native Google Drive configuration
+#
+# Create an OAuth client of type "TVs and Limited Input devices" in a
+# Google Cloud project with the Google Drive API enabled.
+#
+# This file belongs beside DASHBOARD.CNF. Do not put refresh/access tokens
+# here; wLaunchELF stores the user's refresh token separately in WLE-CLOUD.TOK.
+Google_Client_ID =
+# Some Google client registrations provide a client secret. Leave blank when
+# the device client does not require one.
+Google_Client_Secret =

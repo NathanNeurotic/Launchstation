@@ -39,6 +39,11 @@ int mcCardExportPcsx2(const char *source, const char *dest, McCardExportProgress
  * the resulting no-ECC .mcd image. */
 int mcCardImportPcsx2(const char *source, const char *dest, McCardExportProgress progress);
 
+/* Validate an existing image's header/geometry and exact on-disk size.
+ * These checks reject interrupted/truncated final-named backup files. */
+int mcCardValidateNoEcc(const char *path);
+int mcCardValidatePcsx2(const char *path);
+
 /* Exposed for deterministic host tests. */
 void mcCardPcsx2Page(const u8 in[512], u8 out[528]);
 

@@ -12,6 +12,7 @@
 #include "dash_internal.h"
 #include "filer_shared.h"
 #include "mmce_backup.h"
+#include "cloud_google.h"
 
 //#define DEBUG
 #ifdef DEBUG
@@ -176,6 +177,30 @@ static int runWleIgrBackup(int argc, char *argv[])
 			snprintf(mainMsg, sizeof(mainMsg),
 			         "IGR MMCE backup: %d changed, %d unchanged, %d failed (%d cards)",
 			         total.backed_up, total.unchanged, total.failed, total.candidates);
+
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+		if (dashCfg.igr_cloud_sync) {
+			CloudGoogleSyncStats cloud;
+			char cloud_error[160];
+			int cloud_result, used;
+
+			memset(&cloud, 0, sizeof(cloud));
+			cloud_error[0] = '\0';
+			cloud_result = cloudGoogleSyncBackupRoot(backup_root, &cloud, NULL,
+			                                        cloud_error, sizeof(cloud_error));
+			used = strlen(mainMsg);
+			if (used < (int)sizeof(mainMsg) - 1) {
+				if (cloud_result == 0)
+					snprintf(mainMsg + used, sizeof(mainMsg) - used,
+					         " | Drive: %d uploaded, %d present, %d failed",
+					         cloud.uploaded, cloud.skipped, cloud.failed);
+				else
+					snprintf(mainMsg + used, sizeof(mainMsg) - used,
+					         " | Drive: %.96s",
+					         cloud_error[0] ? cloud_error : "sync failed");
+			}
+		}
+#endif
 	}
 #else
 	snprintf(mainMsg, sizeof(mainMsg), "IGR: this build has no MMCE support; backup skipped");

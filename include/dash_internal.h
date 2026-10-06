@@ -533,7 +533,9 @@ typedef struct
 	int mmce_backup_keep;   /* 0 = all, otherwise 1..99 */
 	int mmce_backup_format; /* MMCE_BACKUP_FORMAT_* */
 	int igr_auto_backup;    /* run MMCE backup when entered through WLE-IGR */
+	int igr_cloud_sync;     /* upload WLE-MMCE-Backups to Google Drive after IGR */
 	int igr_after;          /* DashIgrAfter */
+	char igr_backup_path[DASH_PATH_MAX]; /* local root selected by IGR setup */
 	char igr_after_path[DASH_PATH_MAX];
 	int nscan;
 	char scan[DASH_MAX_SCAN][DASH_PATH_MAX];

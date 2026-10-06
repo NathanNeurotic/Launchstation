@@ -13,6 +13,9 @@
 #include "dash_internal.h"
 #include "config_private.h"
 #include "dash_sound.h"
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+#include "cloud_google.h"
+#endif
 
 enum SetType {
 	ST_CHOICE = 0,
@@ -93,6 +96,7 @@ enum SetId {
 	S_MMCE_BACKUP_KEEP,
 	S_MMCE_BACKUP_FORMAT,
 	S_IGR_AUTO_BACKUP,
+	S_IGR_CLOUD_SYNC,
 	S_IGR_AFTER,
 	S_IGR_AFTER_APP,
 	/* network */
@@ -313,6 +317,9 @@ static const SetItem mmce_backup_items[] = {
     {ST_NUMBER, S_MMCE_BACKUP_KEEP, "Backups per card", "0 keeps every verified version. Otherwise keep the newest 1-99 versions per card."},
     {ST_CHOICE, S_MMCE_BACKUP_FORMAT, "Backup format", "Native .mcd avoids writes when unchanged. PCSX2 .ps2 adds ECC/spare bytes and verifies the converted image."},
     {ST_CHOICE, S_IGR_AUTO_BACKUP, "Automatic IGR backup", "When OPL returns through WLE-IGR, back up changed MMCE card images before continuing. Turning this off does not uninstall the helper."},
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+    {ST_CHOICE, S_IGR_CLOUD_SYNC, "Google Drive after IGR", "After the verified local backup, upload missing WLE-MMCE-Backups versions directly from the PS2. Link Google Drive from Tools first."},
+#endif
     {ST_CHOICE, S_IGR_AFTER, "After IGR, open", "Choose where to go after the IGR backup step: wLaunchELF, the PS2 system menu, or a selected application."},
     {ST_PATH, S_IGR_AFTER_APP, "IGR application", "Application started after IGR when 'After IGR, open' is set to Application."},
 };
@@ -656,6 +663,11 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_IGR_AUTO_BACKUP:
 			*cur = dashCfg.igr_auto_backup;
 			return 2;
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+		case S_IGR_CLOUD_SYNC:
+			*cur = dashCfg.igr_cloud_sync;
+			return 2;
+#endif
 		case S_IGR_AFTER:
 			*names = igr_after_names, *cur = dashCfg.igr_after;
 			return DASH_IGR_AFTER_COUNT;
@@ -1225,6 +1237,16 @@ static void setChoice(int id, int v)
 		case S_IGR_AUTO_BACKUP:
 			dashCfg.igr_auto_backup = v;
 			break;
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+		case S_IGR_CLOUD_SYNC:
+			if (v && !cloudGoogleIsLinked()) {
+				dashCfg.igr_cloud_sync = 0;
+				dashToast(DASH_TOAST_WARN, "Link Google Drive in Tools before enabling automatic sync");
+				break;
+			}
+			dashCfg.igr_cloud_sync = v;
+			break;
+#endif
 		case S_IGR_AFTER:
 			dashCfg.igr_after = v;
 			break;
