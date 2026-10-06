@@ -56,7 +56,17 @@ static struct
 /* View and sort choices last the session, like the classic browser's
  * L1 pop-up (they are the classic file_show / file_sort values). */
 static int fb_show = 1; /* 0 names, 1 names + details, 2 game titles + details */
-static int fb_sort = 1; /* 0 as stored, 1 name, 2 game title, 3 date */
+enum {
+	FB_SORT_STORED = 0,
+	FB_SORT_NAME,
+	FB_SORT_TITLE,
+	FB_SORT_SIZE,
+	FB_SORT_DATE,
+	FB_SORT_KIND,
+	FB_SORT_COUNT
+};
+static int fb_sort = FB_SORT_NAME;
+static int fb_sort_desc;
 
 //--------------------------------------------------------------
 // Listing
@@ -77,6 +87,83 @@ typedef struct
 static int isDir(const FILEINFO *f)
 {
 	return (f->stats.AttrFile & sceMcFileAttrSubdir) != 0;
+}
+
+static u64 fbFileBytes(const FILEINFO *f)
+{
+	return ((u64)f->stats.Reserve2 << 32) | f->stats.FileSizeByte;
+}
+
+static u64 fbFileTime(const FILEINFO *f)
+{
+	return ((u64)f->stats._Modify.Year << 40) |
+	       ((u64)f->stats._Modify.Month << 32) |
+	       ((u64)f->stats._Modify.Day << 24) |
+	       ((u64)f->stats._Modify.Hour << 16) |
+	       ((u64)f->stats._Modify.Min << 8) |
+	       (u64)f->stats._Modify.Sec;
+}
+
+static const char *fbFileKind(const FILEINFO *f)
+{
+	const char *dot;
+
+	if (isDir(f))
+		return "";
+	dot = strrchr(f->name, '.');
+	return (dot != NULL && dot[1] != '\0') ? dot + 1 : "";
+}
+
+/* Keep folders first for navigation. Descending reverses only the ordering
+ * inside the folder/file groups, never the groups themselves. */
+static int fbCompare(const FILEINFO *a, const FILEINFO *b)
+{
+	int ad = isDir(a), bd = isDir(b), r = 0;
+	u64 av, bv;
+	const char *as, *bs;
+
+	if (ad != bd)
+		return ad ? -1 : 1;
+	switch (fb_sort) {
+		case FB_SORT_TITLE:
+			as = a->title[0] ? (const char *)a->title : a->name;
+			bs = b->title[0] ? (const char *)b->title : b->name;
+			r = stricmp(as, bs);
+			break;
+		case FB_SORT_SIZE:
+			av = fbFileBytes(a), bv = fbFileBytes(b);
+			r = av < bv ? -1 : av > bv ? 1 : 0;
+			break;
+		case FB_SORT_DATE:
+			av = fbFileTime(a), bv = fbFileTime(b);
+			r = av < bv ? -1 : av > bv ? 1 : 0;
+			break;
+		case FB_SORT_KIND:
+			r = stricmp(fbFileKind(a), fbFileKind(b));
+			break;
+		case FB_SORT_NAME:
+		default:
+			r = stricmp(a->name, b->name);
+			break;
+	}
+	if (r == 0)
+		r = stricmp(a->name, b->name);
+	return fb_sort_desc ? -r : r;
+}
+
+static void fbSortFiles(FILEINFO *files, int n)
+{
+	int i;
+
+	for (i = 1; i < n; i++) {
+		FILEINFO key = files[i];
+		int j = i - 1;
+		while (j >= 0 && fbCompare(&key, &files[j]) < 0) {
+			files[j + 1] = files[j];
+			j--;
+		}
+		files[j + 1] = key;
+	}
 }
 
 /* partition lists keep the drive's order, as in the classic browser */
@@ -134,11 +221,12 @@ static void listDone(void *arg)
 			fb.files[o++] = *f;
 		}
 		fb.n = o;
-		/* the classic order: folders, then ELF files, then the rest */
 		file_show = fb_show;
-		file_sort = fb_sort;
-		if (fb_sort && fb.n > 1 && !isPartitionList(j->path))
-			sort(fb.files, 0, fb.n - 1);
+		/* Shared operations still inspect the legacy globals; native sorting is
+		 * broader and handled here. */
+		file_sort = (fb_sort == FB_SORT_TITLE) ? 2 : (fb_sort == FB_SORT_DATE) ? 3 : 1;
+		if (fb_sort != FB_SORT_STORED && fb.n > 1 && !isPartitionList(j->path))
+			fbSortFiles(fb.files, fb.n);
 		fb.free_valid = j->free_valid;
 		fb.free_bytes = j->free_bytes;
 		memset(fb.mark, 0, MAX_ENTRY);
@@ -289,7 +377,7 @@ static void openDir(const char *dir, const char *select)
 	j->gen = fb.gen;
 	j->n = 0;
 	j->abandoned = 0;
-	j->titles = (fb_show == 2 || fb_sort == 2);
+	j->titles = (fb_show == 2 || fb_sort == FB_SORT_TITLE);
 	j->quiet_input = isUsbBrowsePath(dir);
 	j->free_valid = 0;
 	dashStrCopy(j->path, dir, sizeof(j->path));
