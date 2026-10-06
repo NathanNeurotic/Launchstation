@@ -519,7 +519,8 @@ static void activate(void)
 	/* Executables and external-core game images use the shared launch path.
 	 * Ember is structure-aware so arbitrary .BIN/.EXE files do not get hijacked. */
 	if (genCmpFileExt(path, "ELF") || genCmpFileExt(path, "XLF") || genCmpFileExt(path, "KELF") ||
-	    genCmpFileExt(path, "VCD") || genCmpFileExt(path, "ISO") || IsEmberGamePath(path)) {
+	    genCmpFileExt(path, "VCD") || genCmpFileExt(path, "ISO") ||
+	    genCmpFileExt(path, "CUE") || IsEmberGamePath(path)) {
 		launchPath(path, 0);
 		return;
 	}
