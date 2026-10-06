@@ -23,6 +23,7 @@ code = r"""
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #define MAX_PATH 1024
 #define EMBER_NAME_MAX 180
 
