@@ -68,6 +68,9 @@ void Show_About_uLE(void)
 			PrintPos(03, hpos, "Maintained by: NathanNeurotic / Ripto", COLOR_TEXT);
 			PrintPos(-1, hpos, "Direct base: wLaunchELF_R3Z", COLOR_TEXT);
 			PrintPos(-1, hpos, "   by R3Z3N / Saildot4K", COLOR_TEXT);
+			PrintPos(-1, hpos, "Fork created by: johnson-cooper", COLOR_TEXT);
+			PrintPos(-1, hpos, "   github.com/johnson-cooper", COLOR_TEXT);
+			PrintPos(-1, hpos, "   handed to Ripto to maintain and improve", COLOR_TEXT);
 			PrintPos(-1, hpos, "DS3/DS4 support by Alex Parrado", COLOR_TEXT);
 			PrintPos(-1, hpos, "Thanks to TnA for all his insight and support", COLOR_TEXT);
 			PrintPos(-1, hpos, "Project maintainers:  sp193 & AKuHAK", COLOR_TEXT);
@@ -77,7 +80,7 @@ void Show_About_uLE(void)
 			PrintPos(-1, hpos, "  Ronald Andersson (aka: 'dlanor')", COLOR_TEXT);
 			PrintPos(-1, hpos, " ", COLOR_TEXT);
 			PrintPos(-1, hpos, "Other contributors:", COLOR_TEXT);
-			PrintPos(-1, hpos, "  techwritescode, johnson-cooper", COLOR_TEXT);
+			PrintPos(-1, hpos, "  techwritescode", COLOR_TEXT);
 			PrintPos(-1, hpos, "  Polo35, radad, Drakonite, sincro", COLOR_TEXT);
 			PrintPos(-1, hpos, "  kthu, Slam-Tilt, chip, pixel, Hermes, PCM720", COLOR_TEXT);
 			PrintPos(-1, hpos, "  and others in the PS2Dev community", COLOR_TEXT);
