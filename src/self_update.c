@@ -8,32 +8,48 @@
 #include "self_update.h"
 
 #include <malloc.h>
+#include <ctype.h>
 
 #define UPDATE_ELF_URL "https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases/download/latest/r3LaunchELF_ATTDASH.ELF"
 #define UPDATE_SHA_URL "https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases/download/latest/r3LaunchELF_ATTDASH.ELF.sha256"
 #define UPDATE_MAX_ELF (16 * 1024 * 1024)
 #define UPDATE_MAX_SHA 1024
 
+static int device_path(const char *path, const char *name, int allow_bare)
+{
+    const char *p;
+    size_t n;
+
+    if (path == NULL || name == NULL)
+        return 0;
+    n = strlen(name);
+    if (strncmp(path, name, n))
+        return 0;
+    p = path + n;
+    if (allow_bare && *p == ':')
+        return 1;
+    if (!isdigit((unsigned char)*p))
+        return 0;
+    while (isdigit((unsigned char)*p))
+        p++;
+    return *p == ':';
+}
+
 static int supported_boot_path(const char *path)
 {
-    static const char *const prefixes[] = {
-        "mc0:", "mc1:",
-        "mass:", "mass0:", "mass1:", "mass2:", "mass3:",
-        "usb:", "usb0:", "usb1:", "usb2:", "usb3:",
-        "mmce0:", "mmce1:",
-        "mx4sio0:", "mx4sio1:",
-        "ilink0:", "ilink1:",
-        "ata0:", "ata1:",
-        "hdd0:", "hdd1:"
-    };
-    int i;
-
     if (path == NULL || path[0] == '\0')
         return 0;
-    for (i = 0; i < (int)(sizeof(prefixes) / sizeof(prefixes[0])); i++)
-        if (!strncmp(path, prefixes[i], strlen(prefixes[i])))
-            return 1;
-    return 0;
+
+    /* Do not bake in mass0/mass1-style limits: BDM unit numbering depends on
+     * attach order and the number of live devices. */
+    return device_path(path, "mc", 0) ||
+           device_path(path, "mass", 1) ||
+           device_path(path, "usb", 1) ||
+           device_path(path, "mmce", 0) ||
+           device_path(path, "mx4sio", 0) ||
+           device_path(path, "ilink", 0) ||
+           device_path(path, "ata", 0) ||
+           device_path(path, "hdd", 0);
 }
 
 static int split_parent_leaf(const char *path, char *parent, int parent_size,
