@@ -26,15 +26,27 @@ static int fileExists(const char *path)
 	return 1;
 }
 
+static int neutrinoElfReadable(const char *path)
+{
+	unsigned char ident[4];
+	int fd, rd;
+
+	fd = openPathForRead(path, NULL, 0);
+	if (fd < 0)
+		return 0;
+	rd = genRead(fd, ident, sizeof(ident));
+	genClose(fd);
+	return rd == (int)sizeof(ident) && ident[0] == 0x7f &&
+	       ident[1] == 'E' && ident[2] == 'L' && ident[3] == 'F';
+}
+
 static int neutrinoInstallComplete(const char *elf_path)
 {
 	char base[MAX_PATH], check[MAX_PATH];
 	char *slash;
 	int len;
 
-	if (elf_path == NULL || elf_path[0] == '\0')
-		return 0;
-	if (checkELFheader((char *)elf_path) <= 0)
+	if (elf_path == NULL || elf_path[0] == '\0' || !neutrinoElfReadable(elf_path))
 		return 0;
 
 	snprintf(base, sizeof(base), "%s", elf_path);
