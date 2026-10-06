@@ -1094,6 +1094,7 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
                     continue;
                 mbedtls_sha256_free(&sha);
                 tls_free(&tls);
+                free(io_buf);
                 set_error(error, error_size, "HTTPS download timed out", 0);
                 return -1;
             }
