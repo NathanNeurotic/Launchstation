@@ -992,10 +992,17 @@ static void editorScene(void)
 	         d->eol == EOL_CRLF ? "CR/LF" : d->eol == EOL_LF ? "LF" : "CR", d->len,
 	         ndocs > 1 ? "" : "");
 	dashTextRight(ED_X + ED_W, 26, status, DASH_FS_CAPTION, DASH_C_TEXT3);
-	if (ndocs > 1) {
-		char docsn[24];
-		snprintf(docsn, sizeof(docsn), "document %d of %d", active + 1, ndocs);
-		dashTextFit(ED_X + 30, 42, 300, docsn, DASH_FS_CAPTION, DASH_C_TEXT3);
+	{
+		char sub[MAX_PATH + 32];
+		if (d->path[0] && ndocs > 1)
+			snprintf(sub, sizeof(sub), "%s  |  document %d of %d", d->path, active + 1, ndocs);
+		else if (d->path[0])
+			dashStrCopy(sub, d->path, sizeof(sub));
+		else if (ndocs > 1)
+			snprintf(sub, sizeof(sub), "New document  |  document %d of %d", active + 1, ndocs);
+		else
+			snprintf(sub, sizeof(sub), "New document");
+		dashTextScroll(ED_X + 30, 42, ED_W - 30, sub, DASH_FS_CAPTION, DASH_C_TEXT3);
 	}
 	drawText(d, rows, cols);
 	if (kb_shown) {
@@ -1005,8 +1012,8 @@ static void editorScene(void)
 		dashDrawHints(h, 6);
 	} else {
 		DashHint h[] = {{dashOkIcon(), NULL, "Type"}, {DI_BTN_SQUARE, NULL, d->mark >= 0 ? "End select" : "Select"},
-		                {-1, "L1/R1", "Line start/end"}, {-1, "START", "Menu"}, {dashBackIcon(), NULL, "Exit"}};
-		dashDrawHints(h, 5);
+		                {-1, "L1/R1", "Line start/end"}, {-1, "L2/R2", "Page"}, {-1, "START", "Menu"}, {dashBackIcon(), NULL, "Exit"}};
+		dashDrawHints(h, 6);
 	}
 	dashDrawToasts();
 	dashDrawActivity();
