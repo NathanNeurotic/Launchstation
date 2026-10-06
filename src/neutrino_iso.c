@@ -51,18 +51,16 @@ static int neutrinoInstallComplete(const char *elf_path)
 
 	snprintf(base, sizeof(base), "%s", elf_path);
 	slash = strrchr(base, '/');
-	if (slash == NULL) {
+	if (slash == NULL)
 		slash = strrchr(base, ':');
-		if (slash == NULL)
-			return 0;
-		slash[1] = '\0';
-	} else
-		slash[1] = '\0';
+	if (slash == NULL)
+		return 1; /* custom path with no derivable cwd: let Neutrino decide */
+	slash[1] = '\0';
 
 	len = snprintf(check, sizeof(check), "%sconfig/system.toml", base);
-	if (len <= 0 || len >= (int)sizeof(check) || !fileExists(check))
-		return 0;
-	len = snprintf(check, sizeof(check), "%smodules/ee_core.elf", base);
+	if (len > 0 && len < (int)sizeof(check) && fileExists(check))
+		return 1;
+	len = snprintf(check, sizeof(check), "%ssystem.toml", base);
 	return len > 0 && len < (int)sizeof(check) && fileExists(check);
 }
 
@@ -73,8 +71,27 @@ static int addCompleteCandidate(POPSTARTER_CANDIDATE_LIST *candidates, const cha
 	return addPopstarterCandidate(candidates, path);
 }
 
+static int findCompleteOnRoot(const char *root, char *out, size_t out_size)
+{
+	static const char *const forms[] = {
+	    "%s/NEUTRINO/neutrino.elf",
+	    "%s/neutrino/neutrino.elf",
+	    "%s/NEUTRINO/NEUTRINO.ELF",
+	    "%s/neutrino/NEUTRINO.ELF"};
+	int i;
+
+	for (i = 0; i < (int)(sizeof(forms) / sizeof(forms[0])); i++) {
+		if (snprintf(out, out_size, forms[i], root) >= (int)out_size)
+			continue;
+		if (neutrinoInstallComplete(out))
+			return 1;
+	}
+	return 0;
+}
+
 static int deviceRootCandidate(const char *iso_path, char *out, size_t out_size)
 {
+	char root[32];
 	const char *colon;
 	int root_len;
 
@@ -82,10 +99,10 @@ static int deviceRootCandidate(const char *iso_path, char *out, size_t out_size)
 	if (colon == NULL)
 		return 0;
 	root_len = (int)(colon - iso_path) + 1;
-	if (root_len <= 1 || root_len + 24 >= (int)out_size)
+	if (root_len <= 1 || root_len >= (int)sizeof(root))
 		return 0;
-	snprintf(out, out_size, "%.*s/neutrino/neutrino.elf", root_len, iso_path);
-	return 1;
+	snprintf(root, sizeof(root), "%.*s", root_len, iso_path);
+	return findCompleteOnRoot(root, out, out_size);
 }
 
 static const char *neutrinoBsdForPath(const char *path)
@@ -180,9 +197,11 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	if (setting != NULL && setting->neutrino_file[0] != '\0')
 		addCompleteCandidate(&candidates, setting->neutrino_file);
 	if (deviceRootCandidate(path, candidate, sizeof(candidate)))
-		addCompleteCandidate(&candidates, candidate);
-	addCompleteCandidate(&candidates, "mc0:/neutrino/neutrino.elf");
-	addCompleteCandidate(&candidates, "mc1:/neutrino/neutrino.elf");
+		addPopstarterCandidate(&candidates, candidate);
+	if (findCompleteOnRoot("mc0:", candidate, sizeof(candidate)))
+		addPopstarterCandidate(&candidates, candidate);
+	if (findCompleteOnRoot("mc1:", candidate, sizeof(candidate)))
+		addPopstarterCandidate(&candidates, candidate);
 
 	if (candidates.count == 0) {
 		setMessage(message, message_size, "Neutrino not found (set its path in Settings)", NULL);
