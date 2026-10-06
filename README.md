@@ -63,6 +63,7 @@ Drivers load on demand for maximum compatibility and initial boot speed.
 - [Bind any ELF to memory card](#Bind-ELF-to-Memory-Card-as-exploit-update), just provide PS2KEYS.dat (kelftool no longer needed on pc)
 - RetroGem Game ID for [PIXEL FX RetroGem](https://www.pixelfx.co/hdmi-retro-gem)
 - Launch PS1 VCDs with option for custom POPStarter path, falls back to defaults.
+- Launch PS2 ISO images through Neutrino with an optional custom Neutrino path and game-device/memory-card fallbacks.
 - Writes to history file for disc launches for mmce vmc change
 - Applies deckard disc patches
 - X/0 applied per region if no config file is found so O is only default for Japan
