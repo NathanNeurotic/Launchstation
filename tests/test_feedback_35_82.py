@@ -39,6 +39,8 @@ assert '"iLink / FireWire"' in devices
 # 81/82: path context/page movement are visible and end navigation remains.
 assert "M_GOTO_END" in editor
 assert '"L2/R2", "Page"' in editor
+assert '"L1/R1", "Line"' in editor
+assert '"Line start/end"' not in editor
 assert "dashTextScroll(ED_X + 30, 42" in editor
 
 print("Zack/FitthFox 35-82 accepted-delta contract: OK")
