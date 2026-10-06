@@ -25,6 +25,7 @@ assert "state != DASH_DEV_ABSENT" in files
 assert "USB / MASS" in devices
 assert "Not connected" in devices
 assert "out[i].state == DASH_DEV_READY" in devices
+assert "devs[idx].state == DASH_DEV_READY" in files
 
 assert "Panel transparency" in settings
 assert "Control icon backings" in settings

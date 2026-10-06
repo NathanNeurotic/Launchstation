@@ -396,7 +396,7 @@ static float dcam;
 
 static int devSelectable(int idx)
 {
-	return idx >= 0 && idx < ndevs && devs[idx].state != DASH_DEV_ABSENT;
+	return idx >= 0 && idx < ndevs && devs[idx].state == DASH_DEV_READY;
 }
 
 static void devSelectFirst(void)
