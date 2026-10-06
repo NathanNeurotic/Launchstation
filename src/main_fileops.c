@@ -75,7 +75,8 @@ int IsSupportedFileType(char *path)
 	if (strchr(path, ':') != NULL) {
 		if (genCmpFileExt(path, "ELF") || genCmpFileExt(path, "XLF") || genCmpFileExt(path, "KELF"))
 			return (checkELFheader(path) >= 0);
-		if (IsPopstarterVcdPath(path) || IsEmberGamePath(path) || IsNeutrinoIsoPath(path))
+		if (IsPopstarterVcdPath(path) || genCmpFileExt(path, "CUE") ||
+		    IsEmberGamePath(path) || IsNeutrinoIsoPath(path))
 			return 1;
 		if (IsTextEditorFileType(path))
 			return 1;
