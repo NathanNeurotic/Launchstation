@@ -57,6 +57,11 @@
           "book"
         ],
         [
+          "launch-arguments",
+          "Launch Arguments",
+          "start"
+        ],
+        [
           "controls",
           "Controls",
           "controls"
@@ -77,6 +82,11 @@
           "hdd"
         ],
         [
+          "hdd-manager",
+          "HDD Manager & APA Headers",
+          "hdd"
+        ],
+        [
           "ilink",
           "iLink / FireWire",
           "usb"
@@ -90,6 +100,11 @@
           "mmce",
           "MMCE",
           "mmce"
+        ],
+        [
+          "saves",
+          "Saves, PSU & Timestamps",
+          "vmc"
         ]
       ]
     },
@@ -125,6 +140,26 @@
           "igr",
           "IGR Return & Backup",
           "igr"
+        ]
+      ]
+    },
+    {
+      "name": "Utilities & Hardware",
+      "pages": [
+        [
+          "exploit-installer",
+          "MC Exploit Installer",
+          "install"
+        ],
+        [
+          "network-services",
+          "FTP, PS2Link & Remote",
+          "netboot"
+        ],
+        [
+          "special-hardware",
+          "PSX, Deckard & RetroGem",
+          "controls"
         ]
       ]
     },
