@@ -724,7 +724,7 @@ int PrepareMbrLaunchPayload(const char *path, char *mem_arg, size_t mem_arg_size
 // Modified version of loader from Independence
 //	(C) 2003 Marcus R. Brown <mrbrown@0xd6.org>
 //------------------------------
-static void RunLoaderElfInternal(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load, int preserve_devices)
+static void RunLoaderElfInternal(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load, int preserve_devices, const char *child_argv0_override)
 {
 	char *argv[ELFLOAD_MAX_ARGC], bootpath[256];
 	static char exec_target[MAX_PATH];
@@ -756,11 +756,14 @@ static void RunLoaderElfInternal(char *filename, char *party, const char *select
 #endif
 
 	if (isHddPartyPath(party) && (!strncmp(filename, "pfs0:", 5))) {
-		if (0 > fileXioMount("pfs0:", party, FIO_MT_RDONLY)) {
-			//Some error occurred, it could be due to something else having used pfs0
-			unmountParty(0);  //So we try unmounting pfs0, to try again
-			if (0 > fileXioMount("pfs0:", party, FIO_MT_RDONLY))
-				return;  //If it still fails, we have to give up...
+		{
+			int mount_flags = (child_argv0_override != NULL) ? (FIO_MT_RDWR | 0x02) : FIO_MT_RDONLY;
+			if (0 > fileXioMount("pfs0:", party, mount_flags)) {
+				//Some error occurred, it could be due to something else having used pfs0
+				unmountParty(0);  //So we try unmounting pfs0, to try again
+				if (0 > fileXioMount("pfs0:", party, mount_flags))
+					return;  //If it still fails, we have to give up...
+			}
 		}
 
 		//If a path to a file on PFS is specified, change it to the standard format.
@@ -803,6 +806,12 @@ static void RunLoaderElfInternal(char *filename, char *party, const char *select
 		argv[1] = (char *)((handoff_path != NULL) ? handoff_path : filename);
 	}
 
+	/* Ember needs target argv[0] to be the live path to ember.elf so ps2sdk
+	 * derives cwd from that path. Generic launches keep the legacy synthesized
+	 * handoff path above. */
+	if (child_argv0_override != NULL && child_argv0_override[0] != '\0')
+		argv[1] = (char *)child_argv0_override;
+
 	(void)exec_kind;
 	argc = ELFLOAD_BASE_ARGC - 1;
 	if (LaunchArgsPending())
@@ -819,7 +828,7 @@ static void RunLoaderElfInternal(char *filename, char *party, const char *select
 
 void RunLoaderElf(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load)
 {
-	RunLoaderElfInternal(filename, party, selected_path, exec_kind, reboot_iop_elf_load, 0);
+	RunLoaderElfInternal(filename, party, selected_path, exec_kind, reboot_iop_elf_load, 0, NULL);
 }
 
 /* External cores such as Neutrino need the currently mounted storage stack.
@@ -827,7 +836,12 @@ void RunLoaderElf(char *filename, char *party, const char *selected_path, int ex
  * and never powers down an HDD/DEV9 stack simply because the core lives there. */
 void RunLoaderElfKeepIOP(char *filename, char *party, const char *selected_path, int exec_kind)
 {
-	RunLoaderElfInternal(filename, party, selected_path, exec_kind, 0, 1);
+	RunLoaderElfInternal(filename, party, selected_path, exec_kind, 0, 1, NULL);
+}
+
+void RunLoaderElfKeepIOPWithArgv0(char *filename, char *party, const char *child_argv0, int exec_kind)
+{
+	RunLoaderElfInternal(filename, party, child_argv0, exec_kind, 0, 1, child_argv0);
 }
 //------------------------------
 //End of func: RunLoaderElf / RunLoaderElfKeepIOP
