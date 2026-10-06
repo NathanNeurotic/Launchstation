@@ -818,7 +818,6 @@ static void formatCustomDateEditorTimestamp(char *dst, size_t dst_size, const sc
 
 static void drawCustomDateEditorFolderRow(const FILEINFO *folder, int x, int y, int details_column, int use_12h, int date_format, int selected)
 {
-	char details_text[48];
 	char folder_name[MAX_NAME + 2];
 	char timestamp_text[32];
 	int color;
@@ -835,9 +834,9 @@ static void drawCustomDateEditorFolderRow(const FILEINFO *folder, int x, int y, 
 	}
 
 	formatCustomDateEditorTimestamp(timestamp_text, sizeof(timestamp_text), &folder->stats._Modify, use_12h, date_format);
-	snprintf(details_text, sizeof(details_text), "    - B %s", timestamp_text);
 	printXY(folder_name, x + 4, y, color, TRUE, name_limit);
-	printXY(details_text, x + 4 + details_column * FONT_WIDTH, y, color, TRUE, 0);
+	printXY("    - B", x + 4 + details_column * FONT_WIDTH, y, color, TRUE, 0);
+	printXY(timestamp_text, x + 4 + (details_column + 9) * FONT_WIDTH, y, color, TRUE, 0);
 	if (!setting->FB_NoIcons) {
 		drawChar(ICON_FOLDER, x - 3 - FONT_WIDTH, y, setting->color[COLOR_GRAPH1]);
 		drawChar(ICON_FOLDER + 1, x - 3, y, setting->color[COLOR_GRAPH1]);
@@ -930,7 +929,7 @@ static int editCustomFolderTimestamp(const FILEINFO *file, FILEINFO *folders, sc
 			snprintf(tooltip, sizeof(tooltip), "\xFF" "<\xFF" ":" ":%s \xFF" "1:%s \xFF" "0:%s L1:%s R1:%s START:%s \xFF" "3:%s",
 			         LNG(Select), LNG(Add), LNG(Subtract), LNG(Up), LNG(Down), LNG(Set), LNG(Return));
 			editing_index = updateCustomDateEditorFolders(folders, original_timestamps, folder_count, selected_name, timestamp);
-			details_column = use_12h ? 41 : 44;
+			details_column = use_12h ? 39 : 42;
 			list_end_y = Menu_end_y;
 			folder_rows = (list_end_y - Menu_start_y) / FONT_HEIGHT - 2;
 			if (folder_rows < 1)
