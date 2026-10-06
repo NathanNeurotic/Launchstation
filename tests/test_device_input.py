@@ -146,7 +146,7 @@ devcode += r"""
 typedef void (*DashProbeDone)(const char *,int,void *);
 static int _iop_reboot_count, cdmode, uLE_cdmode, vmcMounted[2], console_is_PSX;
 static char LaunchElfBootDir[256], LaunchElfDir[256], netConfig[32];
-static struct { int dev_auto; } dashCfg;
+static struct { int dev_auto; int show_unavailable_devices; } dashCfg = {0,1};
 static int mc_present[2], usb_mask, usb_loaded, resident, media, loads, opens, closes;
 static int failed_load, reset_on_load;
 static u64 delayed_ata;
