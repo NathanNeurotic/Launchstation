@@ -1752,7 +1752,7 @@ int getFilePath(char *out, int cnfmode)
 			if (file_show > 0)
 				menuTitleGetClockFormat(&use_12h, &date_format);
 			/* Keep the time/date edge immediately before the scrollbar in both clock formats. */
-			details_column = use_12h ? 41 : 44;
+			details_column = use_12h ? 39 : 42;
 
 			for (i = 0; i < rows; i++)  //Repeat loop for each browser text row
 			{
@@ -1815,6 +1815,7 @@ int getFilePath(char *out, int cnfmode)
 					u64 size = ((u64)files[top + i].stats.Reserve2 << 32) | files[top + i].stats.FileSizeByte;
 					int scale = 0;  //0==Bytes, 1==KBytes, 2==MBytes, 3==GB
 					char scale_s[6] = " KMGTP";
+					char size_text[16];
 					char timestamp_text[32];
 					PS2TIME timestamp = *(PS2TIME *)&files[top + i].stats._Modify;
 
@@ -1824,25 +1825,26 @@ int getFilePath(char *out, int cnfmode)
 						memset((void *)&timestamp, 0, sizeof(timestamp));
 
 					if (!size_valid || !(top + i))
-						strcpy(tmp, "----- B");
+						strcpy(size_text, "----- B");
 					else if ((files[top + i].stats.AttrFile & sceMcFileAttrSubdir) && size == 0)
-						strcpy(tmp, "    - B");
+						strcpy(size_text, "    - B");
 					else {
 						while (size > 99999) {
 							scale++;
 							size /= 1024;
 						}
-						sprintf(tmp, "%5llu%cB", (unsigned long long)size, scale_s[scale]);
+						sprintf(size_text, "%5llu%cB", (unsigned long long)size, scale_s[scale]);
 					}
 
 					if (!time_valid || !(top + i))
 						formatBrowserMissingTimestamp(timestamp_text, sizeof(timestamp_text), use_12h, date_format);
-					else {
+					else
 						formatBrowserTimestamp(timestamp_text, sizeof(timestamp_text), &timestamp, use_12h, date_format);
-					}
-					sprintf(tmp + strlen(tmp), " %s", timestamp_text);
 
-					printXY(tmp, x + 4 + details_column * FONT_WIDTH, y, color, TRUE, 0);
+					/* Preserve seconds. Shift the columns left and reserve a two-character
+					 * gutter rather than shortening the timestamp to make it fit. */
+					printXY(size_text, x + 4 + details_column * FONT_WIDTH, y, color, TRUE, 0);
+					printXY(timestamp_text, x + 4 + (details_column + 9) * FONT_WIDTH, y, color, TRUE, 0);
 				}
 				if (setting->FB_NoIcons) {  //if FileBrowser should not use icons
 					if (marks[top + i])
