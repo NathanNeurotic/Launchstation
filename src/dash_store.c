@@ -233,6 +233,10 @@ void dashStoreDefaults(void)
 	dashCfg.bgm = 1;
 	dashCfg.bgm_vol = 80;
 	dashCfg.app_filter = 0;
+	dashCfg.files_mode = 0;
+	dashCfg.home_shortcuts = 1;
+	dashCfg.icon_backing = 1;
+	dashCfg.show_unavailable_devices = 1;
 	dashCfg.dev_auto = 0; /* devices start manually; only the boot device is always on */
 	dashCfg.mmce_backup_keep = 10;
 	dashCfg.mmce_backup_format = 0; /* native .mcd */
@@ -309,6 +313,14 @@ static int settingsKv(const char *key, char *value, void *user)
 		dashCfg.bgm_vol = clampInt(value, 0, 100, 80);
 	else if (!stricmp(key, "Dash_AppFilter"))
 		dashCfg.app_filter = clampInt(value, 0, 5, 0);
+	else if (!stricmp(key, "Dash_FilesMode"))
+		dashCfg.files_mode = clampInt(value, 0, 1, 0);
+	else if (!stricmp(key, "Dash_HomeShortcuts"))
+		dashCfg.home_shortcuts = clampInt(value, 0, 1, 1);
+	else if (!stricmp(key, "Dash_IconBacking"))
+		dashCfg.icon_backing = clampInt(value, 0, 1, 1);
+	else if (!stricmp(key, "Dash_ShowUnavailableDevices"))
+		dashCfg.show_unavailable_devices = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_DevAuto"))
 		dashCfg.dev_auto = clampInt(value, 0, DASH_DEVA_ALL, 0);
 	else if (!stricmp(key, "Dash_MMCEBackupKeep"))
@@ -473,6 +485,10 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                "Dash_BGM = %d\r\n"
 	                "Dash_BGMVolume = %d\r\n"
 	                "Dash_AppFilter = %d\r\n"
+	                "Dash_FilesMode = %d\r\n"
+	                "Dash_HomeShortcuts = %d\r\n"
+	                "Dash_IconBacking = %d\r\n"
+	                "Dash_ShowUnavailableDevices = %d\r\n"
 	                "Dash_DevAuto = %d\r\n"
 	                "Dash_MMCEBackupKeep = %d\r\n"
 	                "Dash_MMCEBackupFormat = %d\r\n"
@@ -482,7 +498,8 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                c->enabled, c->start_section, c->view, c->effects,
 	                c->anim, c->autoscan, c->artwork, c->recent_count,
 	                c->legacy_theme, c->intro_done, c->sound, c->sound_vol,
-	                c->bgm, c->bgm_vol, c->app_filter, c->dev_auto,
+	                c->bgm, c->bgm_vol, c->app_filter, c->files_mode,
+	                c->home_shortcuts, c->icon_backing, c->show_unavailable_devices, c->dev_auto,
 	                c->mmce_backup_keep, c->mmce_backup_format,
 	                c->igr_auto_backup, c->igr_after, c->igr_after_path);
 	for (i = 0; i < c->nscan && len < cap - DASH_PATH_MAX - 16; i++)

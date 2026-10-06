@@ -520,7 +520,10 @@ static void drawList(void)
 		else
 			dashIcon(dashTheme.app_icon_style == DASH_APPICON_SYSTEM ? DI_EXEC : dashLibDeviceIcon(e->path), lx + 9, y + 5, 18,
 			         dashTheme.app_icon_style == DASH_APPICON_MONOGRAM ? dashColorHue(e->hue, 120, 230, 255) : dashItemColor(on));
-		dashTextFit(lx + 38, y + 3, lw - 64, e->title, DASH_FS_SMALL, dashItemColor(on));
+		if (on)
+			dashTextScroll(lx + 38, y + 3, lw - 64, e->title, DASH_FS_SMALL, dashItemColor(1));
+		else
+			dashTextFit(lx + 38, y + 3, lw - 64, e->title, DASH_FS_SMALL, dashItemColor(0));
 		if (dashStoreIsFavorite(e->path))
 			dashIcon(DI_STAR, lx + lw - 22, y + 6, 14, DASH_C_WARM);
 	}

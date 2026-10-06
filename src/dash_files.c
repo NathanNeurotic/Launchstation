@@ -174,15 +174,12 @@ static void filesRebuild(void)
 
 	nfentries = 0;
 	fAdd(FE_HEADER, -1, 0, "BROWSE", NULL);
-	fAdd(FE_ROOT, DI_FOLDER, 0, "All devices", "Open the File Browser at the device list");
+	fAdd(FE_ROOT, DI_FOLDER, 0, "File Browser", "Open the canonical wLaunchELF File Browser");
 	if (LastDir[0] && strchr(LastDir, ':') != NULL)
 		fAdd(FE_LAST, DI_CLOCK, 0, "Last folder", LastDir);
 	fAdd(FE_MISC, DI_TOOLS, 0, "MISC commands", "wLaunchELF built-in commands folder");
 
-	nfdevs = dashDevicesList(fdevs, DASH_MAX_DEVICES);
-	fAdd(FE_HEADER, -1, 0, "DEVICES", NULL);
-	for (i = 0; i < nfdevs; i++)
-		fAdd(FE_DEVICE, fdevs[i].icon, i, fdevs[i].name, fdevs[i].browse);
+	nfdevs = 0; /* Devices are the alternate mode of this same section. */
 
 	{
 		int have = 0;
@@ -371,15 +368,16 @@ static void filesDraw(void)
 
 static void filesHints(void)
 {
-	DashHint h[3];
+	DashHint h[4];
 
 	h[0].button = dashOkIcon(), h[0].key = NULL, h[0].label = "Open";
 	h[1].button = DI_BTN_TRIANGLE, h[1].key = NULL, h[1].label = "Options";
-	h[2].button = -1, h[2].key = "START", h[2].label = "Menu";
-	dashDrawHints(h, 3);
+	h[2].button = -1, h[2].key = "SELECT", h[2].label = "Devices";
+	h[3].button = -1, h[3].key = "START", h[3].label = "Menu";
+	dashDrawHints(h, 4);
 }
 
-const DashScreen dashFilesScreen = {filesEnter, filesInput, filesUpdate, filesDraw, filesHints};
+static const DashScreen dashFilesListScreen = {filesEnter, filesInput, filesUpdate, filesDraw, filesHints};
 
 //--------------------------------------------------------------
 // DEVICES
@@ -396,33 +394,60 @@ static float dcam;
 #define DEV_PX 184.0f
 #define DEV_PY 88.0f
 
+static int devSelectable(int idx)
+{
+	return idx >= 0 && idx < ndevs && devs[idx].state == DASH_DEV_READY;
+}
+
+static void devSelectFirst(void)
+{
+	int i;
+	for (i = 0; i < ndevs; i++)
+		if (devSelectable(i)) {
+			dsel = i;
+			return;
+		}
+	dsel = -1;
+}
+
 static void devRefresh(void)
 {
 	ndevs = dashDevicesList(devs, DASH_MAX_DEVICES);
-	if (dsel >= ndevs)
-		dsel = ndevs - 1;
+	if (!devSelectable(dsel))
+		devSelectFirst();
+}
+
+static void devMove(int delta)
+{
+	int s;
 	if (dsel < 0)
-		dsel = 0;
+		return;
+	for (s = dsel + delta; s >= 0 && s < ndevs; s += delta)
+		if (devSelectable(s)) {
+			dsel = s;
+			dashUiFocusPoke();
+			return;
+		}
 }
 
 static void devEnter(void)
 {
 	devRefresh();
-	dsel_anim = (float)dsel;
+	dsel_anim = (float)(dsel >= 0 ? dsel : 0);
 }
 
 static void devInput(const DashInput *in)
 {
-	if (ndevs <= 0)
+	if (ndevs <= 0 || dsel < 0)
 		return;
-	if ((in->pressed & DASH_IN_LEFT) && dsel > 0)
-		dsel--;
-	if ((in->pressed & DASH_IN_RIGHT) && dsel < ndevs - 1)
-		dsel++;
-	if ((in->pressed & DASH_IN_UP) && dsel >= DEV_COLS)
-		dsel -= DEV_COLS;
-	if ((in->pressed & DASH_IN_DOWN) && dsel + DEV_COLS < ndevs)
-		dsel += DEV_COLS;
+	if (in->pressed & DASH_IN_LEFT)
+		devMove(-1);
+	if (in->pressed & DASH_IN_RIGHT)
+		devMove(1);
+	if (in->pressed & DASH_IN_UP)
+		devMove(-DEV_COLS);
+	if (in->pressed & DASH_IN_DOWN)
+		devMove(DEV_COLS);
 	if (in->pressed & DASH_IN_OK) {
 		openDevice(&devs[dsel]);
 		devRefresh();
@@ -465,8 +490,9 @@ static void devUpdate(float dt)
 	static float t;
 	float target;
 
-	dsel_anim = dashApproach(dsel_anim, (float)dsel, 14.0f * dashAnimSpeed(), dt);
-	target = (dsel / DEV_COLS - 1) * DEV_PY;
+	if (dsel >= 0)
+		dsel_anim = dashApproach(dsel_anim, (float)dsel, 14.0f * dashAnimSpeed(), dt);
+	target = (((dsel >= 0 ? dsel : 0) / DEV_COLS) - 1) * DEV_PY;
 	if (target < 0)
 		target = 0;
 	if (target > ((ndevs - 1) / DEV_COLS - 2) * DEV_PY)
@@ -511,13 +537,19 @@ static void devDraw(void)
 			continue;
 		dashShadow(x, y, DEV_W, DEV_H, 10, 0.5f);
 		dashPanelGradV(x, y, DEV_W, DEV_H, 14, top, bot);
-		if (i == dsel)
-			dashDrawFocusFrame(x, y, DEV_W, DEV_H, 14, 1.0f);
+		if (i == dsel) {
+			dashDrawSelection(x - 2, y - 2, DEV_W + 4, DEV_H + 4, 16, 0.82f);
+			/* Always close the four card edges; this prevents broken corners on CRT/interlaced output. */
+			dashPanelBorder(x - 2, y - 2, DEV_W + 4, DEV_H + 4, 16, dashColorA(DASH_C_SELEDGE, 0.92f));
+		}
 		dashGfxBlend(DASH_BLEND_ADD);
 		dashGlow(x + 33, y + 29, 28, 28, dashColorA(stc, dim ? 0.1f : 0.25f));
 		dashGfxBlend(DASH_BLEND_NORMAL);
-		dashIcon(d->icon, x + 14, y + 10, 38, dim ? DASH_C_TEXT3 : DASH_C_TEXT);
-		dashTextFit(x + 64, y + 12, DEV_W - 72, d->name, DASH_FS_SMALL, dim ? DASH_C_TEXT3 : DASH_C_TEXT);
+		dashIcon(d->icon, x + 14, y + 10, 38, dim ? DASH_C_TEXT3 : (i == dsel ? DASH_C_SELTEXT : DASH_C_TEXT));
+		if (i == dsel)
+			dashTextScroll(x + 64, y + 12, DEV_W - 72, d->name, DASH_FS_SMALL, dim ? DASH_C_TEXT3 : DASH_C_SELTEXT);
+		else
+			dashTextFit(x + 64, y + 12, DEV_W - 72, d->name, DASH_FS_SMALL, dim ? DASH_C_TEXT3 : DASH_C_TEXT);
 		dashTextFit(x + 64, y + 34, DEV_W - 72, d->mount, DASH_FS_CAPTION, DASH_C_TEXT3);
 		dashGlow(x + 18, y + 67, 4, 4, stc);
 		dashTextFit(x + 28, y + 58, DEV_W - 36, d->detail[0] ? d->detail : d->status, DASH_FS_CAPTION,
@@ -529,9 +561,9 @@ static void devDraw(void)
 		}
 	}
 	dashGfxScissorReset();
-	if (ndevs > 0) {
+	if (ndevs > 0 && dsel >= 0) {
 		DashDevice *d = &devs[dsel];
-		const char *tip = (d->state == DASH_DEV_PROBE) ? "Not checked yet: opening it will load its driver."
+		const char *tip = (d->state == DASH_DEV_PROBE) ? "Not connected: opening it will load its driver."
 		                                               : (d->state == DASH_DEV_ABSENT) ? d->status : "Ready to browse.";
 		dashDrawCard(48, 368, 400, 26, 13);
 		dashTextFit(60, 374.5f, 380, tip, DASH_FS_SMALL, DASH_C_TEXT2);
@@ -540,15 +572,66 @@ static void devDraw(void)
 
 static void devHints(void)
 {
-	DashHint h[3];
+	DashHint h[4];
 
 	h[0].button = dashOkIcon(), h[0].key = NULL, h[0].label = "Browse";
 	h[1].button = DI_BTN_TRIANGLE, h[1].key = NULL, h[1].label = "Options";
-	h[2].button = -1, h[2].key = "START", h[2].label = "Menu";
-	dashDrawHints(h, 3);
+	h[2].button = -1, h[2].key = "SELECT", h[2].label = "Files";
+	h[3].button = -1, h[3].key = "START", h[3].label = "Menu";
+	dashDrawHints(h, 4);
 }
 
-const DashScreen dashDevicesScreen = {devEnter, devInput, devUpdate, devDraw, devHints};
+static const DashScreen dashDevicesGridScreen = {devEnter, devInput, devUpdate, devDraw, devHints};
+
+static void storageEnter(void)
+{
+	if (dashCfg.files_mode)
+		dashDevicesGridScreen.enter();
+	else
+		dashFilesListScreen.enter();
+}
+
+static void storageInput(const DashInput *in)
+{
+	if (in->pressed & DASH_IN_SELECT) {
+		dashCfg.files_mode = !dashCfg.files_mode;
+		dashStoreSaveSettings();
+		dashUiFocusPoke();
+		storageEnter();
+		return;
+	}
+	if (dashCfg.files_mode)
+		dashDevicesGridScreen.input(in);
+	else
+		dashFilesListScreen.input(in);
+}
+
+static void storageUpdate(float dt)
+{
+	if (dashCfg.files_mode)
+		dashDevicesGridScreen.update(dt);
+	else
+		dashFilesListScreen.update(dt);
+}
+
+static void storageDraw(void)
+{
+	if (dashCfg.files_mode)
+		dashDevicesGridScreen.draw();
+	else
+		dashFilesListScreen.draw();
+}
+
+static void storageHints(void)
+{
+	if (dashCfg.files_mode)
+		dashDevicesGridScreen.hints();
+	else
+		dashFilesListScreen.hints();
+}
+
+const DashScreen dashFilesScreen = {storageEnter, storageInput, storageUpdate, storageDraw, storageHints};
+const DashScreen dashDevicesScreen = {storageEnter, storageInput, storageUpdate, storageDraw, storageHints};
 //--------------------------------------------------------------
 //End of file: dash_files.c
 //--------------------------------------------------------------

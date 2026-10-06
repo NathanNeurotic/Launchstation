@@ -168,7 +168,8 @@ void dashBgSceneCubes(float t, int fx)
 			py[i] = 224.0f + (wy + y3 * size) * q;
 		}
 		for (i = 0; i < 12; i++)
-			dashLine(px[e[i][0]], py[e[i][0]], px[e[i][1]], py[e[i][1]], 1.3f, colA(c, alpha));
+			/* Slightly thicker than one interlaced scanline: steadier on CRT/480i. */
+			dashLine(px[e[i][0]], py[e[i][0]], px[e[i][1]], py[e[i][1]], 1.8f, colA(c, alpha));
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
 	dashBgVignette(0.7f);

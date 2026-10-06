@@ -303,6 +303,7 @@ targets:
       - src/chkesr.c
       - src/pad.c
       - src/dash_main.c
+      - src/dash_clock_sync.c
       - src/dash_gfx.c
       - src/dash_font.c
       - src/dash_font_data.c
@@ -356,7 +357,7 @@ targets:
     ldflags:
       - "-Wl,--no-warn-mismatch"
     headers: [sior, audsrv]
-    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, mc, kbd, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv]
+    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, mc, kbd, ps2ips, cglue, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv]
     embed_irx:
       - loader:loader_elf
       - wle_igr:wle_igr_elf

@@ -552,15 +552,20 @@ static void osdOrbs(const OrbStyle *st, float t, int fx)
 		orbPlane(t - span * i / n, &mats[i]);
 
 	for (k = 0; k < ORB_N; k++) {
-		/* orb k gains k turns a minute on the group: the groupings */
-		float w = TAU_F / ORB_BASE + k * (TAU_F / 60.0f);
-		float phi = base + k * TAU_F * (ot.second / 60.0f);
+		/* Alternate directions and vary speed/radius phase per orb. The hashes
+		 * are stable, so the motion is organic without visual jitter. */
+		float dir = (k & 1) ? -1.0f : 1.0f;
+		float rate = (TAU_F / ORB_BASE) * (0.70f + dashBgHash(k, 71) * 0.75f);
+		float wobble_rate = 0.08f + dashBgHash(k, 72) * 0.08f;
+		float wobble = 0.12f * dashSinf(t * wobble_rate + dashBgHash(k, 73) * TAU_F);
+		float w = dir * rate;
+		float phi = k * (TAU_F / ORB_N) + dir * base * (0.72f + dashBgHash(k, 74) * 0.42f) + wobble;
 
 		for (i = 0; i <= n; i++)
 			orbProject(st, &mats[i], phi - w * span * i / n, r, &pts[i]);
 		/* after-image: a wide soft glow, then a thin bright core */
 		for (j = 0; j < 2; j++) {
-			float width = j ? 1.8f : 11.0f;
+			float width = j ? 2.2f : 11.0f;
 			float amax = j ? 178.0f : 22.0f;
 			DashColor c = j ? core_c : glow_c;
 

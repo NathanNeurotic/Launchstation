@@ -47,7 +47,10 @@ enum SetId {
 	S_BGM,
 	S_BGMVOL,
 	S_START,
+	S_FILES_MODE,
 	S_VIEW,
+	S_HOME_SHORTCUTS,
+	S_ICON_BACKING,
 	S_ARTWORK,
 	S_RECENT,
 	S_AUTOSCAN,
@@ -78,6 +81,7 @@ enum SetId {
 	/* devices */
 	S_HIDE_HDD,
 	S_HIDE_MC,
+	S_SHOW_UNAVAILABLE,
 	S_REBOOT_ELF,
 	S_DEVA_USB,
 	S_DEVA_HDD,
@@ -97,6 +101,7 @@ enum SetId {
 	S_NET_GW,
 	S_HOSTWRITE,
 	S_NET_LEGACY,
+	S_CLOCK_SYNC,
 	/* advanced */
 	S_LANGUAGE,
 	S_GAMEID,
@@ -200,6 +205,8 @@ static const SetItem appearance_items[] = {
     {ST_PAGE, P_SCREEN, "Screen calibration", "Video mode and picture position for your TV."},
     {ST_CHOICE, S_EFFECTS, "Background motion", "0% freezes backgrounds; 100% is normal; 200% doubles their motion."},
     {ST_CHOICE, S_ANIM, "Menu animation", "0% makes transitions instant; higher values increase movement and transition duration."},
+    {ST_CHOICE, S_T_PANEL_A, "Panel transparency", "0% removes menu panels; 100% makes them fully opaque."},
+    {ST_CHOICE, S_ICON_BACKING, "Control icon backings", "Show or hide backing shapes behind text-style controls and quick actions."},
     {ST_PAGE, P_THEME_MANAGE, "Theme files & resets", "Import, export, rename or reset your theme."},
     {ST_ACTION, S_DISPLAY_THEME_RESET, "Reset appearance", "Restore screen calibration, motion, animation and the OSD Classic theme."},
 };
@@ -213,6 +220,8 @@ static const SetItem display_items[] = {
 
 static const SetItem dash_items[] = {
     {ST_CHOICE, S_START, "Start screen", "Section shown when the dashboard opens."},
+    {ST_CHOICE, S_FILES_MODE, "Files / Devices view", "Which view opens inside the combined Files section; SELECT also toggles it there."},
+    {ST_CHOICE, S_HOME_SHORTCUTS, "Home quick-launch shortcuts", "Show the disc and launch-key shortcut row on Home."},
     {ST_CHOICE, S_VIEW, "Application view", "Grid, list or carousel (SELECT also switches it in APPS)."},
     {ST_CHOICE, S_ARTWORK, "Application artwork", "Load cover art for tiles and artwork backgrounds."},
     {ST_CHOICE, S_RECENT, "Recent applications", "How many recently started applications HOME shows."},
@@ -284,6 +293,7 @@ static const SetItem device_items[] = {
     {ST_PAGE, P_MMCE_BACKUP, "MMCE backups", "Versioned backup history, output format and automatic IGR backup preferences."},
     {ST_CHOICE, S_HIDE_HDD, "Internal HDD / ATA units", "Which HDD and exFAT units appear in the File Browser."},
     {ST_CHOICE, S_HIDE_MC, "Hide empty memory card slots", "Also hides unused MMCE entries in the File Browser."},
+    {ST_CHOICE, S_SHOW_UNAVAILABLE, "Show unavailable devices", "On keeps disconnected/probe-only device families visible; Off shows only devices that are ready."},
     {ST_PAGE, P_AUTOSTART, "Start devices automatically", "The boot device always stays enabled. Starting other drivers takes effect immediately."},
 };
 
@@ -316,6 +326,7 @@ static const SetItem net_items[] = {
 #endif
 #ifdef ETH
     {ST_CHOICE, S_NET_LEGACY, "Legacy Ethernet drivers", "Use MrRexD's ps2sdk v1.0 DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up. Takes effect the next time Ethernet/FTP is started."},
+    {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query multiple Internet time sources, require agreement, then write and verify the PS2 hardware RTC."},
 #endif
 };
 
@@ -561,12 +572,23 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return 11;
 		case S_START: {
 			static const char *secs[DASH_SEC_COUNT];
-			int i;
-			for (i = 0; i < DASH_SEC_COUNT; i++)
-				secs[i] = dashSectionName(i);
-			*names = secs, *cur = dashCfg.start_section;
-			return DASH_SEC_COUNT;
+			int i, n = dashVisibleSectionCount();
+			for (i = 0; i < n; i++)
+				secs[i] = dashVisibleSectionName(i);
+			*names = secs, *cur = dashVisibleSectionIndex(dashCfg.start_section);
+			return n;
 		}
+		case S_FILES_MODE: {
+			static const char *const modes[] = {"Files", "Devices"};
+			*names = modes, *cur = dashCfg.files_mode;
+			return 2;
+		}
+		case S_HOME_SHORTCUTS:
+			*cur = dashCfg.home_shortcuts;
+			return 2;
+		case S_ICON_BACKING:
+			*cur = dashCfg.icon_backing;
+			return 2;
 		case S_VIEW:
 			*names = view_names, *cur = dashCfg.view;
 			return DASH_VIEW_COUNT;
@@ -598,6 +620,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return HIDE_HDD_COUNT;
 		case S_HIDE_MC:
 			*cur = setting->Hide_MCMMCE ? 1 : 0;
+			return 2;
+		case S_SHOW_UNAVAILABLE:
+			*cur = dashCfg.show_unavailable_devices;
 			return 2;
 		case S_REBOOT_ELF:
 			*cur = setting->reboot_iop_elf_load ? 1 : 0;
@@ -1164,7 +1189,20 @@ static void setChoice(int id, int v)
 			break;
 		}
 		case S_START:
-			dashCfg.start_section = v;
+			dashCfg.start_section = dashVisibleSectionAt(v);
+			break;
+		case S_FILES_MODE:
+			dashCfg.files_mode = v;
+			break;
+		case S_HOME_SHORTCUTS:
+			dashCfg.home_shortcuts = v;
+			dashHomeRebuild();
+			break;
+		case S_ICON_BACKING:
+			dashCfg.icon_backing = v;
+			break;
+		case S_SHOW_UNAVAILABLE:
+			dashCfg.show_unavailable_devices = v;
 			break;
 		case S_VIEW:
 			dashCfg.view = v;
@@ -2410,6 +2448,19 @@ static void runAction(int id)
 		case S_LAUNCHKEYS:
 			openPage(P_LKEY);
 			break;
+#ifdef ETH
+		case S_CLOCK_SYNC: {
+			char result[160];
+			int ok;
+			dashLoadingBegin("Synchronizing PS2 clock");
+			ok = dashClockSyncInternet(result, sizeof(result));
+			dashLoadingEnd();
+			dashModalMessage(ok ? DI_CHECK : DI_WARNING,
+			                 ok ? "PS2 clock synchronized" : "Clock synchronization failed",
+			                 result[0] ? result : (ok ? "The hardware clock was updated." : "No reliable Internet time was available."), NULL);
+			break;
+		}
+#endif
 		case S_SAVE_CLASSIC:
 			if (!anyDirty() && !failedSaves())
 				dashToast(DASH_TOAST_INFO, "Nothing to save");
@@ -2633,7 +2684,7 @@ static void settingsUpdate(float dt)
 static void settingsDraw(void)
 {
 	int i;
-	const float ix = 48, iy = 128, irow = 27, iw = 544;
+	const float ix = 48, iy = 128, irow = 29, iw = 544;
 	const SetPage *c = &pages[page];
 	char trail[192];
 
@@ -2646,9 +2697,15 @@ static void settingsDraw(void)
 		dashTextFit(ix, 51, iw - 126, trail, DASH_FS_CAPTION, DASH_C_TEXT3);
 	dashDrawSectionTitle(ix, 68, c->name, NULL);
 	dashTextFit(ix, 103, iw, c->help, DASH_FS_CAPTION, DASH_C_TEXT3);
-	dashTextRight(ix + iw, 51, anyDirtyCached() ? "unsaved changes" :
-	    (cfg_pending[0] || cfg_pending[1] || dashStoreSettingsPending()) ? "saving..." : failedSaves() ? "save failed" : "no changes",
-	    DASH_FS_CAPTION, (anyDirtyCached() || failedSaves()) ? DASH_C_WARM : DASH_C_TEXT3);
+	{
+		int dirty = anyDirtyCached();
+		int pending = cfg_pending[0] || cfg_pending[1] || dashStoreSettingsPending();
+		int failed = failedSaves();
+		const char *state = dirty ? "unsaved changes" : pending ? "saving..." : failed ? "save failed" : "no changes";
+		DashColor state_col = (dirty || failed) ? DASH_C_WARM : pending ? DASH_C_ACCENT : DASH_C_TEXT3;
+		/* Dedicated status lane under the header clock/date: never inherits selection text. */
+		dashTextRight(ix + iw, 78, state, DASH_FS_CAPTION, state_col);
+	}
 
 	/* keep the focused row inside the visible window */
 	if (item < item_top)
@@ -2658,27 +2715,35 @@ static void settingsDraw(void)
 
 	/* items */
 	dashDrawPanelBox(ix - 6, iy - 6, iw + 12, ITEM_ROWS * irow + 12, 14);
-	dashDrawSelection(ix, iy + dashClampf(item_anim - item_top, 0, ITEM_ROWS - 1) * irow, iw, irow - 3, 9, 1.0f);
+	dashDrawSelection(ix, iy + dashClampf(item_anim - item_top, 0, ITEM_ROWS - 1) * irow + 2, iw, irow - 5, 9, 1.0f);
 	for (i = item_top; i < c->n && i < item_top + ITEM_ROWS; i++) {
 		const SetItem *it = &c->items[i];
 		float y = iy + (i - item_top) * irow;
 		int on = i == item, disabled = itemDisabled(it);
 		DashColor col = disabled ? DASH_C_TEXT3 : dashItemColor(on);
 
+		{
+			int row_icon = it->type == ST_PAGE ? pages[it->id].icon :
+			               it->type == ST_PATH ? DI_FOLDER :
+			               it->type == ST_IP ? DI_NETWORK :
+			               it->type == ST_LKEY ? DI_KEY :
+			               it->type == ST_ACTION ? DI_PLAY :
+			               it->type == ST_INFO ? DI_INFO : DI_SETTINGS;
+			dashIcon(row_icon, ix + 12, y + 7, 15, col);
+		}
 		if (it->type == ST_INFO) {
 			char buf[64];
 			snprintf(buf, sizeof(buf), "%s / %s", ip, netmask);
-			dashText(ix + 12, y + 6.5f, it->label, DASH_FS_SMALL, DASH_C_TEXT3);
-			dashTextRight(ix + iw - 12, y + 6.5f, buf, DASH_FS_SMALL, DASH_C_TEXT2);
+			dashText(ix + 38, y + 7.5f, it->label, DASH_FS_SMALL, DASH_C_TEXT3);
+			dashTextRight(ix + iw - 12, y + 7.5f, buf, DASH_FS_SMALL, DASH_C_TEXT2);
 			continue;
 		}
 		if (it->type == ST_PAGE) {
-			dashIcon(pages[it->id].icon, ix + 12, y + 6, 16, col);
-			dashTextFit(ix + 38, y + 6.5f, iw - 70, it->label, DASH_FS_SMALL, col);
-			dashIcon(DI_PLAY, ix + iw - 22, y + 8, 12, DASH_C_TEXT3);
+			dashTextFit(ix + 38, y + 7.5f, iw - 70, it->label, DASH_FS_SMALL, col);
+			dashIcon(DI_PLAY, ix + iw - 22, y + 9, 12, DASH_C_TEXT3);
 			continue;
 		}
-		dashTextFit(ix + 12, y + 6.5f, it->type == ST_ACTION ? iw - 44 : iw * 0.56f - 24,
+		dashTextFit(ix + 38, y + 7.5f, it->type == ST_ACTION ? iw - 70 : iw * 0.56f - 50,
 		            it->label, DASH_FS_SMALL, col);
 		if (it->type == ST_COLOR) {
 			int alpha;

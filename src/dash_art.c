@@ -777,6 +777,12 @@ void dashDrawAppTile(const DashApp *app, float x, float y, float w, float h, flo
 void dashDrawAppArt(DashApp *app, float x, float y, float w, float h, float focus, int prio)
 {
 	GSTEXTURE *tex = dashArtGet(app, prio);
+	if (focus <= .01f) {
+		x = floorf(x + .5f);
+		y = floorf(y + .5f);
+		w = floorf(w + .5f);
+		h = floorf(h + .5f);
+	}
 	if (focus > .5f) {
 		float k = dashUiFocusPop();
 		x -= w * (k - 1.0f) * .5f;

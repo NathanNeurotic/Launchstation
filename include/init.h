@@ -36,6 +36,7 @@ int isUsbMassStackLoaded(void);
 #ifdef ETH
 void loadNetModules(void);
 int isFtpNetworkReady(void);
+int ensureDashboardIpNetworkReady(void);
 #endif
 #ifdef UDPFS
 int reloadUdpfsModules(void);

@@ -86,7 +86,7 @@ code += header[input_start:header.index("};", input_start) + 2] + "\n"
 for color in colors:
     code += f"#define {color} ((DashColor){{255,255,255,255}})\n"
 for draw in ("modalBackdrop", "dashGfxPushAlpha", "dashGfxPushOffset", "modalPanel",
-             "dashTextS", "dashTextFit", "dashGfxScissor", "dashDrawSelection",
+             "dashTextS", "dashTextFit", "dashTextScrollTimed", "dashGfxScissor", "dashDrawSelection",
              "dashIcon", "dashTextRight", "dashGfxScissorReset", "dashDrawScrollbar",
              "modalHintRow", "dashGfxPopOffset", "dashGfxPopAlpha", "dashGfxBlend",
              "dashGlow", "dashTextWrap", "dashPanel", "dashPanelBorder", "dashTextCenter"):

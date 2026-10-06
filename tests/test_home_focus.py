@@ -52,7 +52,7 @@ typedef struct { char path[DASH_PATH_MAX]; int flags; } DashApp;
 typedef struct { char pin[8][DASH_PATH_MAX], recent[8][DASH_PATH_MAX], fav[8][DASH_PATH_MAX]; int npin, nrecent, nfav; } Lists;
 typedef struct { char LK_Path[SETTING_LK_BTN_COUNT][DASH_PATH_MAX]; char LK_Title[SETTING_LK_BTN_COUNT][DASH_TITLE_MAX]; int LK_Flag[SETTING_LK_BTN_COUNT]; } Setting;
 static Lists dashLists;
-static struct { int recent_count; } dashCfg = {8};
+static struct { int recent_count; int home_shortcuts; } dashCfg = {8,1};
 static Setting setting_data;
 static Setting *setting = &setting_data;
 static DashApp dashApps[8], home_tmp[HOME_MAX_APPS], *home_apps[HOME_MAX_APPS];

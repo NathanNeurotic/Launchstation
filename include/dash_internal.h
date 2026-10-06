@@ -382,6 +382,7 @@ void dashTextCenter(float cx, float y, const char *s, float scale, DashColor c);
 void dashTextRight(float rx, float y, const char *s, float scale, DashColor c);
 float dashTextFit(float x, float y, float maxw, const char *s, float scale, DashColor c);
 void dashTextScroll(float x, float y, float maxw, const char *s, float scale, DashColor c);
+void dashTextScrollTimed(float x, float y, float maxw, const char *s, float scale, DashColor c, float age);
 void dashTextScrollCenter(float cx, float y, float maxw, const char *s, float scale, DashColor c);
 int dashTextWrap(float x, float y, float w, int max_lines, const char *s, float scale, DashColor c, float line_h);
 /* Legacy 8px monospace glyph (for the themed classic screens). */
@@ -524,6 +525,10 @@ typedef struct
 	int bgm;
 	int bgm_vol;
 	int app_filter;
+	int files_mode;              /* 0 = Files list, 1 = Devices cards */
+	int home_shortcuts;          /* HOME quick-launch row */
+	int icon_backing;            /* control/quick-action backing shapes */
+	int show_unavailable_devices;/* include disconnected/probe-only device cards */
 	int dev_auto; /* DASH_DEVA_* bitmask: drivers to load at startup */
 	int mmce_backup_keep;   /* 0 = all, otherwise 1..99 */
 	int mmce_backup_format; /* MMCE_BACKUP_FORMAT_* */
@@ -913,6 +918,11 @@ int dashSectionIcon(int section);
 void dashSwitchSection(int section);
 int dashConfirmLeave(void); /* asks the current section; 0 = stay */
 int dashCurrentSection(void);
+int dashVisibleSectionCount(void);
+int dashVisibleSectionAt(int index);
+int dashVisibleSectionIndex(int section);
+const char *dashVisibleSectionName(int index);
+int dashAdjacentSection(int section, int direction);
 void dashRenderScene(void);
 void dashSetSceneOverride(void (*fn)(void)); /* NULL restores the dashboard scene */
 /* Native Text Editor (dash_editor.c); returns TEXTEDITOR_RESULT_*.
@@ -953,6 +963,7 @@ void dashClassicUiDone(void);
 int dashOpenTextEditor(const char *file); /* 0 = the user backed out before it opened */
 void dashAppActions(DashApp *app);
 void dashRescanLibrary(int interactive);
+int dashClockSyncInternet(char *result, int result_size);
 const MainExecuteContext *dashExecContext(void);
 const char *dashOkLabelKey(void);
 

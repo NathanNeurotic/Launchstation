@@ -499,9 +499,10 @@ float dashTextFit(float x, float y, float maxw, const char *str, float scale, Da
 	return dashTextS(x, y, buf, scale, c);
 }
 
-void dashTextScroll(float x, float y, float maxw, const char *str, float scale, DashColor c)
+void dashTextScrollTimed(float x, float y, float maxw, const char *str, float scale, DashColor c, float age)
 {
-	float width, travel, phase, duration, offset;
+	float width, travel, move_time, cycle, phase, u, offset;
+	const float dwell = 0.85f, speed = 34.0f;
 
 	if (str == NULL || maxw <= 0.0f)
 		return;
@@ -511,12 +512,32 @@ void dashTextScroll(float x, float y, float maxw, const char *str, float scale, 
 		return;
 	}
 	travel = width - maxw;
-	duration = travel / 30.0f;
-	phase = fmodf(dashUiFocusAge(), duration + 2.0f);
-	offset = phase <= 1.0f ? 0.0f : (phase >= duration + 1.0f ? travel : (phase - 1.0f) * 30.0f);
+	move_time = travel / speed;
+	if (move_time < 0.35f)
+		move_time = 0.35f;
+	cycle = dwell * 2.0f + move_time * 2.0f;
+	phase = fmodf(age < 0.0f ? 0.0f : age, cycle);
+	if (phase < dwell)
+		offset = 0.0f;
+	else if (phase < dwell + move_time) {
+		u = (phase - dwell) / move_time;
+		u = u * u * (3.0f - 2.0f * u);
+		offset = travel * u;
+	} else if (phase < dwell * 2.0f + move_time)
+		offset = travel;
+	else {
+		u = (phase - (dwell * 2.0f + move_time)) / move_time;
+		u = u * u * (3.0f - 2.0f * u);
+		offset = travel * (1.0f - u);
+	}
 	dashGfxScissor(x, y - 2.0f, maxw, dashTextLineH(scale) + 4.0f);
 	dashTextS(x - offset, y, str, scale, c);
 	dashGfxScissorReset();
+}
+
+void dashTextScroll(float x, float y, float maxw, const char *str, float scale, DashColor c)
+{
+	dashTextScrollTimed(x, y, maxw, str, scale, c, dashUiFocusAge());
 }
 
 void dashTextScrollCenter(float cx, float y, float maxw, const char *str, float scale, DashColor c)
