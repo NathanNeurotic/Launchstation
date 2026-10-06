@@ -8,6 +8,12 @@
   var BASE = (document.body.getAttribute('data-base') || '');
 
   function load() {
+    if (Array.isArray(window.WLE_DOC_INDEX)) {
+      INDEX = window.WLE_DOC_INDEX;
+      ready = true;
+      if (q && q.value) run(q.value);
+      return;
+    }
     fetch(BASE + 'data/search-index.json')
       .then(function (r) { return r.json(); })
       .then(function (j) { INDEX = j; ready = true; if (q && q.value) run(q.value); })
