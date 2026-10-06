@@ -322,6 +322,20 @@ FONT_FILE =
 # This can be changed from the "Startup Settings" submenu.
 # ----------------------------------------------------------------------
 POPSTARTER_ELF =
+# ----------------------------------------------------------------------
+# NEUTRINO_ELF is optional. When a PS2 .ISO is opened, wLaunchELF looks
+# for a complete Neutrino install in this order:
+#   1) this explicit path,
+#   2) /neutrino/neutrino.elf on the ISO's device,
+#   3) mc0:/neutrino/neutrino.elf,
+#   4) mc1:/neutrino/neutrino.elf.
+# A complete install also needs config/system.toml and modules/ee_core.elf
+# beside neutrino.elf in the normal Neutrino directory structure.
+# Supported ISO source backends are USB/mass, MX4SIO, MMCE, iLink,
+# ATA/exFAT and UDPFS. The launcher preserves the live IOP/device stack,
+# passes -bsd, the full -dvd path, -qb, and an automatic -cwd.
+# ----------------------------------------------------------------------
+NEUTRINO_ELF =
 # From v3.92 Two options for PSU gamesave files are saved here.
 # Set PSU_HugeNames non-zero to make PSU names contain both original
 # gamesave folder names and the gamesave titles (from icon.sys).
