@@ -915,6 +915,14 @@ extern const DashScreen dashDevicesScreen;
 extern const DashScreen dashToolsScreen;
 extern const DashScreen dashSettingsScreen;
 
+/* MMCE/cloud actions shared by Tools and Settings. */
+void dashToolsIgrBackupSetup(void);
+void dashToolsSyncAllMmceCards(void);
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+void dashToolsCloudBackup(void);
+#endif
+void dashToolsCheckUpdates(void);
+
 const char *dashSectionName(int section);
 int dashSectionIcon(int section);
 void dashSwitchSection(int section);
