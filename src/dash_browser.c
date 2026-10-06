@@ -56,7 +56,17 @@ static struct
 /* View and sort choices last the session, like the classic browser's
  * L1 pop-up (they are the classic file_show / file_sort values). */
 static int fb_show = 1; /* 0 names, 1 names + details, 2 game titles + details */
-static int fb_sort = 1; /* 0 as stored, 1 name, 2 game title, 3 date */
+enum {
+	FB_SORT_STORED = 0,
+	FB_SORT_NAME,
+	FB_SORT_TITLE,
+	FB_SORT_SIZE,
+	FB_SORT_DATE,
+	FB_SORT_KIND,
+	FB_SORT_COUNT
+};
+static int fb_sort = FB_SORT_NAME;
+static int fb_sort_desc;
 
 //--------------------------------------------------------------
 // Listing
@@ -77,6 +87,83 @@ typedef struct
 static int isDir(const FILEINFO *f)
 {
 	return (f->stats.AttrFile & sceMcFileAttrSubdir) != 0;
+}
+
+static u64 fbFileBytes(const FILEINFO *f)
+{
+	return ((u64)f->stats.Reserve2 << 32) | f->stats.FileSizeByte;
+}
+
+static u64 fbFileTime(const FILEINFO *f)
+{
+	return ((u64)f->stats._Modify.Year << 40) |
+	       ((u64)f->stats._Modify.Month << 32) |
+	       ((u64)f->stats._Modify.Day << 24) |
+	       ((u64)f->stats._Modify.Hour << 16) |
+	       ((u64)f->stats._Modify.Min << 8) |
+	       (u64)f->stats._Modify.Sec;
+}
+
+static const char *fbFileKind(const FILEINFO *f)
+{
+	const char *dot;
+
+	if (isDir(f))
+		return "";
+	dot = strrchr(f->name, '.');
+	return (dot != NULL && dot[1] != '\0') ? dot + 1 : "";
+}
+
+/* Keep folders first for navigation. Descending reverses only the ordering
+ * inside the folder/file groups, never the groups themselves. */
+static int fbCompare(const FILEINFO *a, const FILEINFO *b)
+{
+	int ad = isDir(a), bd = isDir(b), r = 0;
+	u64 av, bv;
+	const char *as, *bs;
+
+	if (ad != bd)
+		return ad ? -1 : 1;
+	switch (fb_sort) {
+		case FB_SORT_TITLE:
+			as = a->title[0] ? (const char *)a->title : a->name;
+			bs = b->title[0] ? (const char *)b->title : b->name;
+			r = stricmp(as, bs);
+			break;
+		case FB_SORT_SIZE:
+			av = fbFileBytes(a), bv = fbFileBytes(b);
+			r = av < bv ? -1 : av > bv ? 1 : 0;
+			break;
+		case FB_SORT_DATE:
+			av = fbFileTime(a), bv = fbFileTime(b);
+			r = av < bv ? -1 : av > bv ? 1 : 0;
+			break;
+		case FB_SORT_KIND:
+			r = stricmp(fbFileKind(a), fbFileKind(b));
+			break;
+		case FB_SORT_NAME:
+		default:
+			r = stricmp(a->name, b->name);
+			break;
+	}
+	if (r == 0)
+		r = stricmp(a->name, b->name);
+	return fb_sort_desc ? -r : r;
+}
+
+static void fbSortFiles(FILEINFO *files, int n)
+{
+	int i;
+
+	for (i = 1; i < n; i++) {
+		FILEINFO key = files[i];
+		int j = i - 1;
+		while (j >= 0 && fbCompare(&key, &files[j]) < 0) {
+			files[j + 1] = files[j];
+			j--;
+		}
+		files[j + 1] = key;
+	}
 }
 
 /* partition lists keep the drive's order, as in the classic browser */
@@ -134,11 +221,12 @@ static void listDone(void *arg)
 			fb.files[o++] = *f;
 		}
 		fb.n = o;
-		/* the classic order: folders, then ELF files, then the rest */
 		file_show = fb_show;
-		file_sort = fb_sort;
-		if (fb_sort && fb.n > 1 && !isPartitionList(j->path))
-			sort(fb.files, 0, fb.n - 1);
+		/* Shared operations still inspect the legacy globals; native sorting is
+		 * broader and handled here. */
+		file_sort = (fb_sort == FB_SORT_TITLE) ? 2 : (fb_sort == FB_SORT_DATE) ? 3 : 1;
+		if (fb_sort != FB_SORT_STORED && fb.n > 1 && !isPartitionList(j->path))
+			fbSortFiles(fb.files, fb.n);
 		fb.free_valid = j->free_valid;
 		fb.free_bytes = j->free_bytes;
 		memset(fb.mark, 0, MAX_ENTRY);
@@ -289,7 +377,7 @@ static void openDir(const char *dir, const char *select)
 	j->gen = fb.gen;
 	j->n = 0;
 	j->abandoned = 0;
-	j->titles = (fb_show == 2 || fb_sort == 2);
+	j->titles = (fb_show == 2 || fb_sort == FB_SORT_TITLE);
 	j->quiet_input = isUsbBrowsePath(dir);
 	j->free_valid = 0;
 	dashStrCopy(j->path, dir, sizeof(j->path));
@@ -1565,7 +1653,7 @@ static void actionsMenu(void)
 	int is_elf = 0, has_target = (fb.nmarked > 0 || f != NULL);
 	DashMenuItem items[44];
 	int ids[44], n = 0, r;
-	char marked[24];
+	char marked[24], sort_detail[48];
 	enum {
 		F_OPEN,
 		F_COPY,
@@ -1603,7 +1691,8 @@ static void actionsMenu(void)
 		F_REFRESH
 	};
 	static const char *const show_names[] = {"File names", "Names and details", "Game titles and details"};
-	static const char *const sort_names[] = {"As stored", "Name", "Game title", "Date"};
+	static const char *const sort_names[FB_SORT_COUNT] = {"As stored", "Name", "Game title", "Size", "Date-Time", "Kind"};
+	static const char *const direction_names[] = {"Ascending", "Descending"};
 
 	/* the same rules as the classic menu: read-only devices, partition
 	 * lists, the clipboard, protected system folders */
@@ -1616,6 +1705,10 @@ static void actionsMenu(void)
 	if (f != NULL && !isDir(f) && fullPath(f, path, sizeof(path)))
 		is_elf = genCmpFileExt(path, "ELF");
 	snprintf(marked, sizeof(marked), "%d selected", fb.nmarked);
+	if (fb_sort == FB_SORT_STORED)
+		snprintf(sort_detail, sizeof(sort_detail), "%s", sort_names[fb_sort]);
+	else
+		snprintf(sort_detail, sizeof(sort_detail), "%s, %s", sort_names[fb_sort], direction_names[fb_sort_desc ? 1 : 0]);
 #define ADD(ic, lab, det, dis, id) \
 	(items[n].icon = (ic), items[n].label = (lab), items[n].detail = (det), items[n].disabled = (dis), ids[n++] = (id))
 	if (f != NULL)
@@ -1667,7 +1760,7 @@ static void actionsMenu(void)
 		if (fb.nmarked)
 			ADD(DI_BACK, "Clear selection", NULL, 0, F_CLEARSEL);
 		ADD(DI_VIEW_LIST, "Show", show_names[fb_show], 0, F_VIEW);
-		ADD(DI_VIEW_GRID, "Sort by", sort_names[fb_sort], 0, F_SORT);
+		ADD(DI_VIEW_GRID, "Sort by", sort_detail, 0, F_SORT);
 	}
 	if (LaunchArgsPending())
 		ADD(DI_CLOSE, "Clear launch arguments", NULL, 0, F_CLEAR_ARGS);
@@ -1783,13 +1876,24 @@ static void actionsMenu(void)
 				refresh();
 			}
 			break;
-		case F_SORT:
-			r = dashModalChoice("Sort by", sort_names, 4, fb_sort);
-			if (r >= 0 && r != fb_sort) {
-				fb_sort = r;
+		case F_SORT: {
+			int next_sort = dashModalChoice("Sort by", sort_names, FB_SORT_COUNT, fb_sort);
+			int next_desc = fb_sort_desc;
+			if (next_sort < 0)
+				break;
+			if (next_sort != FB_SORT_STORED) {
+				r = dashModalChoice("Sort direction", direction_names, 2, fb_sort_desc ? 1 : 0);
+				if (r < 0)
+					break;
+				next_desc = r != 0;
+			}
+			if (next_sort != fb_sort || next_desc != fb_sort_desc) {
+				fb_sort = next_sort;
+				fb_sort_desc = next_desc;
 				refresh();
 			}
 			break;
+		}
 		case F_BOOKMARK:
 			opBookmark();
 			break;
@@ -1902,8 +2006,28 @@ static void browserScene(void)
 			dashTextRight(FB_X + FB_W - 12, y + 5, d->status, DASH_FS_CAPTION, DASH_C_TEXT3);
 		} else {
 			FILEINFO *f = &fb.files[i];
-			char sz[24], label[MAX_NAME + 8];
+			char sz[24], date[40], label[MAX_NAME + 8];
 			int details = fb_show > 0 && !isMisc(fb.dir);
+			float label_w = FB_W - 60;
+			float meta_right = FB_X + FB_W - 12;
+			float meta_left = meta_right;
+			date[0] = '\0';
+			sz[0] = '\0';
+			if (details) {
+				fmtSize(sz, sizeof(sz), f);
+				if (time_valid && f->stats._Modify.Year)
+					filerDateEditorFormat(&f->stats._Modify, date, sizeof(date));
+				if (date[0])
+					meta_left -= dashTextWidth(date, DASH_FS_CAPTION);
+				if (sz[0]) {
+					if (date[0])
+						meta_left -= 16.0f; /* explicit size/date-time gap */
+					meta_left -= dashTextWidth(sz, DASH_FS_CAPTION);
+				}
+				label_w = meta_left - (FB_X + 34) - 14.0f;
+				if (label_w < 72.0f)
+					label_w = 72.0f;
+			}
 			if (fb.mark[i])
 				dashIcon(DI_CHECK, FB_X + 8, y + 4, 16, DASH_C_OK);
 			else
@@ -1914,17 +2038,15 @@ static void browserScene(void)
 			else
 				dashStrCopy(label, f->name, sizeof(label));
 			if (i == fb.sel)
-				dashTextScroll(FB_X + 34, y + 3, details ? FB_W - 250 : FB_W - 60, label, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
+				dashTextScroll(FB_X + 34, y + 3, label_w, label, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
 			else
-				dashTextFit(FB_X + 34, y + 3, details ? FB_W - 250 : FB_W - 60, label, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
+				dashTextFit(FB_X + 34, y + 3, label_w, label, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
 			if (details) {
-				fmtSize(sz, sizeof(sz), f);
-				if (sz[0])
-					dashTextRight(FB_X + FB_W - 142, y + 5, sz, DASH_FS_CAPTION, DASH_C_TEXT3);
-				if (time_valid && f->stats._Modify.Year) {
-					char date[40];
-					filerDateEditorFormat(&f->stats._Modify, date, sizeof(date));
-					dashTextRight(FB_X + FB_W - 12, y + 5, date, DASH_FS_CAPTION, DASH_C_TEXT3);
+				if (date[0])
+					dashTextRight(meta_right, y + 5, date, DASH_FS_CAPTION, DASH_C_TEXT3);
+				if (sz[0]) {
+					float size_right = date[0] ? meta_right - dashTextWidth(date, DASH_FS_CAPTION) - 16.0f : meta_right;
+					dashTextRight(size_right, y + 5, sz, DASH_FS_CAPTION, DASH_C_TEXT3);
 				}
 			}
 		}

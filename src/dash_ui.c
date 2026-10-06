@@ -338,11 +338,12 @@ void dashDrawHeader(int section, float section_anim)
 	(void)section_anim;
 	if (tab_anim_x < 0.0f)
 		tab_anim_x = target_x;
-	{
-		float dx = target_x - tab_anim_x;
-		tab_anim_x = dashApproach(tab_anim_x, target_x, 14.0f * dashAnimSpeed(), dashFrameDelta());
-		tab_anim_x += dx * 0.04f * dashClampf(fabsf(dx) / tab_w, 0.0f, 1.0f) * dashSinf(dashTime() * 16.0f);
-	}
+	/* Keep the header selector on one monotonic path. The previous 16 Hz
+	 * sinusoidal overshoot moved a thin highlight by sub-pixels every frame,
+	 * which reads as top-edge/video flicker on interlaced CRT output. */
+	tab_anim_x = dashApproach(tab_anim_x, target_x, 14.0f * dashAnimSpeed(), dashFrameDelta());
+	if (fabsf(target_x - tab_anim_x) < 0.25f)
+		tab_anim_x = target_x;
 
 	dashAccentGlow(51, 36, 22, 18, 1.2f);
 	dashIcon(DI_APP, 38, 23, 26, DASH_C_ACCENT);

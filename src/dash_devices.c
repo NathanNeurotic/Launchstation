@@ -317,7 +317,7 @@ int dashDevicesList(DashDevice *out, int max)
 #endif
 
 	if (filerShowHddUnit(0) && !console_is_PSX) {
-		addStorage(out, &n, max, DI_HDD, "Internal HDD", "hdd0:", "hdd0:/", "APA partitions", "No browsable APA storage found");
+		addStorage(out, &n, max, DI_HDD, "Internal HDD (APA)", "hdd0:", "hdd0:/", "APA partitions", "No browsable APA storage found");
 	}
 #ifdef EXFAT
 	if (filerShowAtaUnit(0) && !console_is_PSX) {
