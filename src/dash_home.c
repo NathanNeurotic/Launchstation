@@ -105,8 +105,9 @@ static void homeRebuild(void)
 		homeAdd(dashApps[i].path, 0);
 
 	nchips = 0;
-	addChip(CHIP_DISC, -1, DI_DISC, "Start disc", "Boot the disc in the drive (PS2, PS1, DVD Video or ESR).");
-	for (i = 1; i < SETTING_LK_BTN_COUNT; i++) {
+	if (dashCfg.home_shortcuts)
+		addChip(CHIP_DISC, -1, DI_DISC, "Start disc", "Boot the disc in the drive (PS2, PS1, DVD Video or ESR).");
+	for (i = 1; dashCfg.home_shortcuts && i < SETTING_LK_BTN_COUNT; i++) {
 		const char *p = setting->LK_Path[i];
 		char name[DASH_TITLE_MAX], label[48], desc[96];
 
@@ -143,16 +144,16 @@ static void homeRebuild(void)
 	if (col[1] >= nchips)
 		col[1] = nchips - 1;
 	if (nhome == 0)
-		row = 1;
+		row = nchips > 0 ? 1 : 0;
 	else if (row_forced)
 		row = 0;
-	row_forced = (nhome == 0);
+	row_forced = (nhome == 0 && nchips > 0);
 }
 
 static void homeEnter(void)
 {
 	homeRebuild();
-	if (nhome > 0)
+	if (nhome > 0 || nchips == 0)
 		row = 0;
 }
 
@@ -349,8 +350,8 @@ static void homeDraw(void)
 		dashGfxScissorReset();
 	}
 
-	/* Direct launch actions that are not duplicate section tabs. */
-	{
+	/* Direct launch actions are optional for browser-centric users. */
+	if (dashCfg.home_shortcuts && nchips > 0) {
 		float cy = 358;
 		float x = 48;
 		float focus_x = 0, focus_w = 0;
@@ -383,7 +384,7 @@ static void homeDraw(void)
 			int foc = (row == 1 && i == col[1]);
 			if (w > 170)
 				w = 170;
-			if (DASH_C_PANEL.a || dashTheme.highlight != DASH_HL_TEXT)
+			if (dashCfg.icon_backing && (DASH_C_PANEL.a || dashTheme.highlight != DASH_HL_TEXT))
 				dashPanel(x, cy, w, 32, 16, dashColorA(DASH_C_TEXT, 0.055f));
 			if (foc)
 				dashDrawSelection(x, cy, w, 32, 16, 1.0f);

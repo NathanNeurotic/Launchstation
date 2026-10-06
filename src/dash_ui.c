@@ -195,9 +195,11 @@ static float drawButton(float x, float y, int icon, const char *key)
 		w = buttonWidth(icon, key); /* one sizing rule for layout and drawing */
 		/* OSDSYS squircle badge for L1/R1/START/SELECT-style labels */
 		keep = dashTheme.corner;
-		dashTheme.corner = DASH_CORNER_SOFT;
-		dashPanelGradV(x, y, w, d, 6.0f, DC(30, 36, 54, 235), DC(13, 16, 26, 235));
-		dashPanelBorder(x, y, w, d, 6.0f, DC(255, 255, 255, 60));
+		if (dashCfg.icon_backing) {
+			dashTheme.corner = DASH_CORNER_SOFT;
+			dashPanelGradV(x, y, w, d, 6.0f, DC(30, 36, 54, 235), DC(13, 16, 26, 235));
+			dashPanelBorder(x, y, w, d, 6.0f, DC(255, 255, 255, 60));
+		}
 		dashTheme.corner = keep;
 		dashTextS(x + (w - tw) * 0.5f, y + 5.0f, key, DASH_FS_CAPTION, DASH_C_TEXT);
 		return w;
@@ -327,8 +329,10 @@ static void drawFooterClock(float y, const char *t, const char *d)
 
 void dashDrawHeader(int section, float section_anim)
 {
-	const float tab_w = 61.0f, tab_x0 = 110.0f, tab_y = 20.0f;
-	float target_x = tab_x0 + section * tab_w;
+	const float tab_w = 66.0f, tab_x0 = 108.0f, tab_y = 20.0f;
+	int vcount = dashVisibleSectionCount();
+	int vindex = dashVisibleSectionIndex(section);
+	float target_x = tab_x0 + vindex * tab_w;
 	int i;
 
 	(void)section_anim;
@@ -336,39 +340,33 @@ void dashDrawHeader(int section, float section_anim)
 		tab_anim_x = target_x;
 	{
 		float dx = target_x - tab_anim_x;
-
 		tab_anim_x = dashApproach(tab_anim_x, target_x, 14.0f * dashAnimSpeed(), dashFrameDelta());
 		tab_anim_x += dx * 0.04f * dashClampf(fabsf(dx) / tab_w, 0.0f, 1.0f) * dashSinf(dashTime() * 16.0f);
 	}
 
-	/* brand */
 	dashAccentGlow(51, 36, 22, 18, 1.2f);
 	dashIcon(DI_APP, 38, 23, 26, DASH_C_ACCENT);
 
-	/* tab strip */
-	dashDrawPanelBox(tab_x0 - 40, tab_y - 2, tab_w * DASH_SEC_COUNT + 80, 44, 14);
+	dashDrawPanelBox(tab_x0 - 40, tab_y - 2, tab_w * vcount + 80, 44, 14);
 	if (!DASH_C_BORDER.a && dashTheme.glow)
-		dashPanelBorder(tab_x0 - 40, tab_y - 2, tab_w * DASH_SEC_COUNT + 80, 44, 14, DC(255, 255, 255, 18));
+		dashPanelBorder(tab_x0 - 40, tab_y - 2, tab_w * vcount + 80, 44, 14, DC(255, 255, 255, 18));
 	dashAccentGlow(tab_anim_x + tab_w * 0.5f, tab_y + 20, tab_w * 0.75f, 26, 1.2f);
 	if (dashTheme.highlight != DASH_HL_TEXT)
 		dashPanel(tab_anim_x + 3, tab_y + 1, tab_w - 6, 38, 11, dashColorA(DASH_C_SELECT, 0.65f));
-	dashRect(tab_anim_x + 16, tab_y + 38, tab_w - 32, dashTheme.highlight == DASH_HL_TEXT ? 2 : 3, DASH_C_ACCENT);
+	dashRect(tab_anim_x + 17, tab_y + 38, tab_w - 34, dashTheme.highlight == DASH_HL_TEXT ? 2 : 3, DASH_C_ACCENT);
 
-	for (i = 0; i < DASH_SEC_COUNT; i++) {
+	for (i = 0; i < vcount; i++) {
+		int actual = dashVisibleSectionAt(i);
 		float cx = tab_x0 + i * tab_w + tab_w * 0.5f;
 		float dist = fabsf((tab_anim_x - (tab_x0 + i * tab_w)) / tab_w);
 		float k = dashClampf(1.0f - dist, 0.0f, 1.0f);
 		DashColor c = dashColorLerp(DASH_C_TEXT3, DASH_C_SELTEXT, k);
-		dashIcon(dashSectionIcon(i), cx - 8, tab_y + 3, 16, c);
-		dashTextCenter(cx, tab_y + 20, dashSectionName(i), DASH_FS_CAPTION * 0.92f, c);
+		dashIcon(dashSectionIcon(actual), cx - 8, tab_y + 3, 16, c);
+		dashTextCenter(cx, tab_y + 20, dashSectionName(actual), DASH_FS_CAPTION * 0.92f, c);
 	}
-	/* L1/R1 key pills, each centred in its 40 px end of the strip using
-	 * the width actually drawn (pad glyph or text pill), so both ends
-	 * match at any text size / font */
 	{
-		float strip_l = tab_x0 - 40, strip_r = tab_x0 + tab_w * DASH_SEC_COUNT + 40;
+		float strip_l = tab_x0 - 40, strip_r = tab_x0 + tab_w * vcount + 40;
 		float lw = buttonWidth(-1, "L1"), rw = buttonWidth(-1, "R1");
-
 		drawButton(strip_l + (40.0f - lw) * 0.5f, tab_y + 9, -1, "L1");
 		drawButton(strip_r - 40.0f + (40.0f - rw) * 0.5f, tab_y + 9, -1, "R1");
 	}

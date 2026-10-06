@@ -256,7 +256,7 @@ static void addStorage(DashDevice *out, int *n, int max, int icon,
 {
 	int state = storageState(mount);
 	add(out, n, max, icon, state, name, mount, browse,
-	    state == DASH_DEV_READY ? ready : state == DASH_DEV_ABSENT ? absent : "Not checked yet");
+	    state == DASH_DEV_READY ? ready : state == DASH_DEV_ABSENT ? absent : "Not connected");
 }
 
 int dashDevicesList(DashDevice *out, int max)
@@ -292,18 +292,18 @@ int dashDevicesList(DashDevice *out, int max)
 	if (isUsbMassStackLoaded()) {
 		int mask = filerUsbDriveMask();
 		if (mask == 0)
-			add(out, &n, max, DI_USB, DASH_DEV_ABSENT, "USB Storage", "usb:", "usb:/", "Connect a USB storage device");
+			add(out, &n, max, DI_USB, DASH_DEV_ABSENT, "USB / MASS", "usb:", "usb:/", "Connect a USB storage device");
 		for (i = 0; i < 10; i++) {
 			char name[32], mount[8], browse[8];
 			if (!(mask & (1 << i)))
 				continue;
-			snprintf(name, sizeof(name), "USB Storage %d", i + 1);
+			snprintf(name, sizeof(name), "USB / MASS %d", i + 1);
 			snprintf(mount, sizeof(mount), "usb%d:", i);
 			snprintf(browse, sizeof(browse), "usb%d:/", i);
 			add(out, &n, max, DI_USB, DASH_DEV_READY, name, mount, browse, "Ready");
 		}
 	} else
-		add(out, &n, max, DI_USB, DASH_DEV_PROBE, "USB Storage", "usb:", "usb:/", "Not checked yet");
+		add(out, &n, max, DI_USB, DASH_DEV_PROBE, "USB / MASS", "usb:", "usb:/", "Not connected");
 
 #ifdef MMCE
 	addStorage(out, &n, max, DI_SDCARD, "MMCE Slot 1", "mmce0:", "mmce0:/", "SD2PSX / MemCard PRO2", "No MMCE storage found");
@@ -352,6 +352,16 @@ int dashDevicesList(DashDevice *out, int max)
 			snprintf(browse, sizeof(browse), "vmc%d:/", i);
 			add(out, &n, max, DI_MC, DASH_DEV_READY, name, mount, browse, "Mounted image");
 		}
+	}
+	if (!dashCfg.show_unavailable_devices) {
+		int write = 0;
+		for (i = 0; i < n; i++)
+			if (out[i].state == DASH_DEV_READY) {
+				if (write != i)
+					out[write] = out[i];
+				write++;
+			}
+		n = write;
 	}
 	return n;
 }
