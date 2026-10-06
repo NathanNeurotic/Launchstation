@@ -819,7 +819,7 @@ static int modalButtons(const char *title, const char *body, const char *detail,
                         const char *ok_label, const char *cancel_label, int default_sel)
 {
 	int sel = default_sel;
-	float open = 0.0f, sel_anim = (float)default_sel;
+	float open = 0.0f, sel_anim = (float)default_sel, title_age = 0.0f;
 	float w = 440.0f, h;
 	float x = (DASH_VW - w) * 0.5f, y;
 	int body_lines;
@@ -857,6 +857,7 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 			return (cancel_label == NULL) ? 1 : 0;
 		}
 		float dt = dashVisualUpdate();
+		title_age += dt;
 		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
 		sel_anim = dashApproach(sel_anim, (float)sel, 20.0f * dashAnimSpeed(), dt);
 		{
@@ -874,12 +875,12 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 			dashGfxBlend(DASH_BLEND_NORMAL);
 		}
 		dashIcon(icon, x + 26, y + 24, 36, icon_col);
-		dashTextS(x + 76, y + 28, title, DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextScrollTimed(x + 76, y + 28, w - 106, title, DASH_FS_LABEL, DASH_C_TEXT, title_age);
 		if (body)
 			dashTextWrap(x + 30, y + 78, w - 60, 6, body, DASH_FS_BODY * 0.9f, DASH_C_TEXT2, 24);
 		if (detail) {
 			float dy = y + 84 + body_lines * 24.0f;
-			dashTextFit(x + 30, dy, w - 60, detail, DASH_FS_CAPTION, DASH_C_TEXT3);
+			dashTextScrollTimed(x + 30, dy, w - 60, detail, DASH_FS_CAPTION, DASH_C_TEXT3, title_age);
 		}
 		{
 			float by = y + h - 50;

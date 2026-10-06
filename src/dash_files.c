@@ -537,13 +537,19 @@ static void devDraw(void)
 			continue;
 		dashShadow(x, y, DEV_W, DEV_H, 10, 0.5f);
 		dashPanelGradV(x, y, DEV_W, DEV_H, 14, top, bot);
-		if (i == dsel)
-			dashDrawFocusFrame(x, y, DEV_W, DEV_H, 14, 1.0f);
+		if (i == dsel) {
+			dashDrawSelection(x - 2, y - 2, DEV_W + 4, DEV_H + 4, 16, 0.82f);
+			/* Always close the four card edges; this prevents broken corners on CRT/interlaced output. */
+			dashPanelBorder(x - 2, y - 2, DEV_W + 4, DEV_H + 4, 16, dashColorA(DASH_C_SELEDGE, 0.92f));
+		}
 		dashGfxBlend(DASH_BLEND_ADD);
 		dashGlow(x + 33, y + 29, 28, 28, dashColorA(stc, dim ? 0.1f : 0.25f));
 		dashGfxBlend(DASH_BLEND_NORMAL);
-		dashIcon(d->icon, x + 14, y + 10, 38, dim ? DASH_C_TEXT3 : DASH_C_TEXT);
-		dashTextFit(x + 64, y + 12, DEV_W - 72, d->name, DASH_FS_SMALL, dim ? DASH_C_TEXT3 : DASH_C_TEXT);
+		dashIcon(d->icon, x + 14, y + 10, 38, dim ? DASH_C_TEXT3 : (i == dsel ? DASH_C_SELTEXT : DASH_C_TEXT));
+		if (i == dsel)
+			dashTextScroll(x + 64, y + 12, DEV_W - 72, d->name, DASH_FS_SMALL, dim ? DASH_C_TEXT3 : DASH_C_SELTEXT);
+		else
+			dashTextFit(x + 64, y + 12, DEV_W - 72, d->name, DASH_FS_SMALL, dim ? DASH_C_TEXT3 : DASH_C_TEXT);
 		dashTextFit(x + 64, y + 34, DEV_W - 72, d->mount, DASH_FS_CAPTION, DASH_C_TEXT3);
 		dashGlow(x + 18, y + 67, 4, 4, stc);
 		dashTextFit(x + 28, y + 58, DEV_W - 36, d->detail[0] ? d->detail : d->status, DASH_FS_CAPTION,

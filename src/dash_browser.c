@@ -1895,7 +1895,10 @@ static void browserScene(void)
 			if (d->state != DASH_DEV_READY && i != fb.sel)
 				col = DASH_C_TEXT3;
 			dashIcon(d->icon, FB_X + 10, y + 4, 16, col);
-			dashTextFit(FB_X + 36, y + 3, FB_W - 220, d->name, DASH_FS_SMALL, col);
+			if (i == fb.sel)
+				dashTextScroll(FB_X + 36, y + 3, FB_W - 220, d->name, DASH_FS_SMALL, col);
+			else
+				dashTextFit(FB_X + 36, y + 3, FB_W - 220, d->name, DASH_FS_SMALL, col);
 			dashTextRight(FB_X + FB_W - 12, y + 5, d->status, DASH_FS_CAPTION, DASH_C_TEXT3);
 		} else {
 			FILEINFO *f = &fb.files[i];
@@ -1910,7 +1913,10 @@ static void browserScene(void)
 				transcpy_sjis(label, f->title);
 			else
 				dashStrCopy(label, f->name, sizeof(label));
-			dashTextFit(FB_X + 34, y + 3, details ? FB_W - 250 : FB_W - 60, label, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
+			if (i == fb.sel)
+				dashTextScroll(FB_X + 34, y + 3, details ? FB_W - 250 : FB_W - 60, label, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
+			else
+				dashTextFit(FB_X + 34, y + 3, details ? FB_W - 250 : FB_W - 60, label, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
 			if (details) {
 				fmtSize(sz, sizeof(sz), f);
 				if (sz[0])
