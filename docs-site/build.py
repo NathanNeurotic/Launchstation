@@ -131,6 +131,11 @@ def section_index(fragment, slug, page_title, category):
 
 def validate_output(out: Path, manifest, slugs):
     errors = []
+    style = (out / "assets/style.css").read_text(encoding="utf-8")
+    used_icons = {icon for section in manifest["sections"] for _, _, icon in section["pages"]}
+    for icon in sorted(used_icons):
+        if f".icon-{icon}" not in style:
+            errors.append(f"missing stylesheet icon class: icon-{icon}")
     html_files = list(out.glob("*.html"))
     targets = {p.name for p in html_files}
     for p in html_files:
