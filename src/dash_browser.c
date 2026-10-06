@@ -1653,7 +1653,7 @@ static void actionsMenu(void)
 	int is_elf = 0, has_target = (fb.nmarked > 0 || f != NULL);
 	DashMenuItem items[44];
 	int ids[44], n = 0, r;
-	char marked[24];
+	char marked[24], sort_detail[48];
 	enum {
 		F_OPEN,
 		F_COPY,
@@ -1691,7 +1691,8 @@ static void actionsMenu(void)
 		F_REFRESH
 	};
 	static const char *const show_names[] = {"File names", "Names and details", "Game titles and details"};
-	static const char *const sort_names[] = {"As stored", "Name", "Game title", "Date"};
+	static const char *const sort_names[FB_SORT_COUNT] = {"As stored", "Name", "Game title", "Size", "Date-Time", "Kind"};
+	static const char *const direction_names[] = {"Ascending", "Descending"};
 
 	/* the same rules as the classic menu: read-only devices, partition
 	 * lists, the clipboard, protected system folders */
@@ -1704,6 +1705,10 @@ static void actionsMenu(void)
 	if (f != NULL && !isDir(f) && fullPath(f, path, sizeof(path)))
 		is_elf = genCmpFileExt(path, "ELF");
 	snprintf(marked, sizeof(marked), "%d selected", fb.nmarked);
+	if (fb_sort == FB_SORT_STORED)
+		snprintf(sort_detail, sizeof(sort_detail), "%s", sort_names[fb_sort]);
+	else
+		snprintf(sort_detail, sizeof(sort_detail), "%s, %s", sort_names[fb_sort], direction_names[fb_sort_desc ? 1 : 0]);
 #define ADD(ic, lab, det, dis, id) \
 	(items[n].icon = (ic), items[n].label = (lab), items[n].detail = (det), items[n].disabled = (dis), ids[n++] = (id))
 	if (f != NULL)
@@ -1755,7 +1760,7 @@ static void actionsMenu(void)
 		if (fb.nmarked)
 			ADD(DI_BACK, "Clear selection", NULL, 0, F_CLEARSEL);
 		ADD(DI_VIEW_LIST, "Show", show_names[fb_show], 0, F_VIEW);
-		ADD(DI_VIEW_GRID, "Sort by", sort_names[fb_sort], 0, F_SORT);
+		ADD(DI_VIEW_GRID, "Sort by", sort_detail, 0, F_SORT);
 	}
 	if (LaunchArgsPending())
 		ADD(DI_CLOSE, "Clear launch arguments", NULL, 0, F_CLEAR_ARGS);
@@ -1871,13 +1876,24 @@ static void actionsMenu(void)
 				refresh();
 			}
 			break;
-		case F_SORT:
-			r = dashModalChoice("Sort by", sort_names, 4, fb_sort);
-			if (r >= 0 && r != fb_sort) {
-				fb_sort = r;
+		case F_SORT: {
+			int next_sort = dashModalChoice("Sort by", sort_names, FB_SORT_COUNT, fb_sort);
+			int next_desc = fb_sort_desc;
+			if (next_sort < 0)
+				break;
+			if (next_sort != FB_SORT_STORED) {
+				r = dashModalChoice("Sort direction", direction_names, 2, fb_sort_desc ? 1 : 0);
+				if (r < 0)
+					break;
+				next_desc = r != 0;
+			}
+			if (next_sort != fb_sort || next_desc != fb_sort_desc) {
+				fb_sort = next_sort;
+				fb_sort_desc = next_desc;
 				refresh();
 			}
 			break;
+		}
 		case F_BOOKMARK:
 			opBookmark();
 			break;
