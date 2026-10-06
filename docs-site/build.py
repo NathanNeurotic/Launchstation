@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the wLaunchELF R3Z static documentation site and optional offline ZIP."""
+"""Build the r3LaunchELF_ATTDASH static documentation site and optional offline ZIP."""
 from __future__ import annotations
 
 import argparse
@@ -103,7 +103,7 @@ def render(manifest, slug, meta, fragment):
   <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
 </div>
 <footer>
-  <p><b>wLaunchELF R3Z Documentation</b> — dashboard-focused wLaunchELF maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p><b>r3LaunchELF_ATTDASH Documentation</b> — dashboard-focused wLaunchELF maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
   <p class="prov-inline">wLaunchELF descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
 </footer>
 <script src="data/search-index.js"></script>
@@ -142,6 +142,8 @@ def validate_output(out: Path, manifest, slugs):
         text = p.read_text(encoding="utf-8")
         if "{{" in text or "}}" in text:
             errors.append(f"{p.name}: unresolved template token")
+        if p.name != "credits.html" and ("wLaunchELF R3Z" in text or "wLaunchELF_R3Z" in text):
+            errors.append(f"{p.name}: stale upstream branding outside credits")
         for href in re.findall(r'href="([^"]+)"', text):
             if href.startswith(("http://", "https://", "#", "mailto:")):
                 continue
@@ -166,7 +168,7 @@ def make_zip(out: Path, zip_path: Path):
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for p in sorted(out.rglob("*")):
             if p.is_file():
-                z.write(p, Path("wLaunchELF_R3Z-Documentation") / p.relative_to(out))
+                z.write(p, Path("r3LaunchELF_ATTDASH-Documentation") / p.relative_to(out))
 
 def main():
     ap = argparse.ArgumentParser()
