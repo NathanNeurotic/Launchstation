@@ -40,21 +40,34 @@ static int emberExt(const char *path)
 	return genCmpFileExt(path, "CUE") || genCmpFileExt(path, "BIN") || genCmpFileExt(path, "EXE");
 }
 
+static char pathSep(const char *path)
+{
+	const char *slash;
+	const char *backslash;
+
+	if (path == NULL)
+		return '/';
+	slash = strrchr(path, '/');
+	backslash = strrchr(path, '\\');
+	if (backslash != NULL && (slash == NULL || backslash > slash))
+		return '\\';
+	return '/';
+}
+
 static int appendFile(char *out, size_t out_size, const char *dir, const char *name)
 {
-	int len;
-	char sep = '/';
+	int len, n;
+	char sep;
 
 	if (out == NULL || out_size == 0 || dir == NULL || dir[0] == '\0' || name == NULL)
 		return 0;
 	len = (int)strlen(dir);
-	if (len > 0 && dir[len - 1] == '\\')
-		sep = '\\';
+	sep = pathSep(dir);
 	if (isSep(dir[len - 1]))
-		return snprintf(out, out_size, "%s%s", dir, name) > 0 &&
-		       strlen(out) < out_size;
-	return snprintf(out, out_size, "%s%c%s", dir, sep, name) > 0 &&
-	       strlen(out) < out_size;
+		n = snprintf(out, out_size, "%s%s", dir, name);
+	else
+		n = snprintf(out, out_size, "%s%c%s", dir, sep, name);
+	return n > 0 && (size_t)n < out_size;
 }
 
 /*
