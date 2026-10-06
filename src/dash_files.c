@@ -396,7 +396,11 @@ static float dcam;
 
 static int devSelectable(int idx)
 {
-	return idx >= 0 && idx < ndevs && devs[idx].state == DASH_DEV_READY;
+	/* PROBE means "not checked yet", not unavailable. Let the user select it
+	 * so OK can invoke the existing lazy loader. Explicitly absent devices
+	 * remain display-only and are skipped by navigation. */
+	return idx >= 0 && idx < ndevs &&
+	       (devs[idx].state == DASH_DEV_READY || devs[idx].state == DASH_DEV_PROBE);
 }
 
 static void devSelectFirst(void)
