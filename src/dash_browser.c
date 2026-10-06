@@ -516,9 +516,10 @@ static void activate(void)
 		refresh();
 		return;
 	}
-	/* ELF/KELF, POPStarter VCD and Neutrino ISO use the shared launch path. */
+	/* Executables and external-core game images use the shared launch path.
+	 * Ember is structure-aware so arbitrary .BIN/.EXE files do not get hijacked. */
 	if (genCmpFileExt(path, "ELF") || genCmpFileExt(path, "XLF") || genCmpFileExt(path, "KELF") ||
-	    genCmpFileExt(path, "VCD") || genCmpFileExt(path, "ISO")) {
+	    genCmpFileExt(path, "VCD") || genCmpFileExt(path, "ISO") || IsEmberGamePath(path)) {
 		launchPath(path, 0);
 		return;
 	}
@@ -1921,7 +1922,8 @@ static int fileIcon(const FILEINFO *f)
 		return DI_APP;
 	if (genCmpFileExt(f->name, "PNG") || genCmpFileExt(f->name, "JPG"))
 		return DI_IMAGE;
-	if (genCmpFileExt(f->name, "VCD") || genCmpFileExt(f->name, "ISO"))
+	if (genCmpFileExt(f->name, "VCD") || genCmpFileExt(f->name, "ISO") ||
+	    genCmpFileExt(f->name, "CUE") || genCmpFileExt(f->name, "BIN"))
 		return DI_DISC;
 	if (IsTextEditorFileType(f->name))
 		return DI_TEXT;

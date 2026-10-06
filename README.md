@@ -1,6 +1,6 @@
 # __r3LaunchELF_ATTDASH__
 
-**r3LaunchELF_ATTDASH** is a maintained PlayStation 2 file manager, executable launcher, dashboard and device toolkit built from **wLaunchELF_R3Z** and the wider wLaunchELF/uLaunchELF/LaunchELF lineage. It extends that base with the ATTDASH interface, modern storage/device workflows, Neutrino and POPStarter handoffs, MMCE backup/cloud features, networking tools and additional hardware support.
+**r3LaunchELF_ATTDASH** is a maintained PlayStation 2 file manager, executable launcher, dashboard and device toolkit built from **wLaunchELF_R3Z** and the wider wLaunchELF/uLaunchELF/LaunchELF lineage. It extends that base with the ATTDASH interface, modern storage/device workflows, Neutrino, POPStarter and Ember handoffs, MMCE backup/cloud features, networking tools and additional hardware support.
 
 ## Documentation
 
@@ -10,7 +10,7 @@ The full r3LaunchELF_ATTDASH reference is published as a PS2-styled GitHub Pages
 - **Offline:** `r3LaunchELF_ATTDASH-Documentation.zip` in the latest automated release
 - **Source:** `docs-site/` in this repository
 
-The site covers installation, dashboard controls, File Browser, Apps, Text Editor, storage/device support, APA/PFS, iLink, MMCE, networking, POPStarter VCD launching, Neutrino ISO launching, IGR/MMCE backups, native Google Drive sync, settings, configuration files, troubleshooting and developer notes.
+The site covers installation, dashboard controls, File Browser, Apps, Text Editor, storage/device support, APA/PFS, iLink, MMCE, networking, POPStarter VCD launching, Ember PS1 image launching, Neutrino ISO launching, IGR/MMCE backups, native Google Drive sync, settings, configuration files, troubleshooting and developer notes.
 
 ## Dashboard
 
@@ -72,7 +72,8 @@ Drivers load on demand for maximum compatibility and initial boot speed.
 - LoadBOOTer MC Exploit installer, supports Retail PS2/PSX and DEX(DTL-HXXXXX)
 - [Bind any ELF to memory card](#Bind-ELF-to-Memory-Card-as-exploit-update), just provide PS2KEYS.dat (kelftool no longer needed on pc)
 - RetroGem Game ID for [PIXEL FX RetroGem](https://www.pixelfx.co/hdmi-retro-gem)
-- Launch PS1 VCDs with option for custom POPStarter path, falls back to defaults.
+- Launch PS1 VCDs through POPStarter with an optional custom POPStarter path and device-specific fallbacks.
+- Launch PS1 CUE/BIN/EXE images through Ember when stored under the save-safe `EMBER/games/<Game>/` layout; Ember and POPStarter coexist and are selected automatically by format.
 - Launch PS2 ISO images through Neutrino with an optional custom Neutrino path and game-device/memory-card fallbacks.
 - Writes to history file for disc launches for mmce vmc change
 - Applies deckard disc patches
