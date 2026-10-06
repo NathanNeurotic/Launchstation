@@ -152,7 +152,10 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_MUTED, "commit %s", GIT_HASH);
 	sheetAdd(&s, SL_GAP, NULL);
 	sheetAdd(&s, SL_HEAD, "This build");
-	sheetAdd(&s, SL_TEXT, "Mod by R3Z3N & Codex 5.3 LLM");
+	sheetAdd(&s, SL_TEXT, "Maintained by NathanNeurotic / Ripto");
+	sheetAdd(&s, SL_HEAD, "Direct base: wLaunchELF_R3Z");
+	sheetAdd(&s, SL_TEXT, "R3Z3N / Saildot4K");
+	sheetAdd(&s, SL_TEXT, "github.com/saildot4k/wLaunchELF_R3Z");
 	sheetAdd(&s, SL_TEXT, "DS3/DS4 support by Alex Parrado");
 	sheetAdd(&s, SL_TEXT, "Thanks to TnA for all his insight and support");
 	sheetAdd(&s, SL_HEAD, "wLaunchELF");
@@ -167,7 +170,7 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_TEXT, "and others in the PS2Dev community");
 	sheetAdd(&s, SL_HEAD, "Releases");
 	sheetAdd(&s, SL_TEXT, "github.com/ps2homebrew/wLaunchELF/releases");
-	sheetAdd(&s, SL_TEXT, "github.com/NathanNeurotic/wLaunchELF_R3Z_RIPTOATTDASH/releases");
+	sheetAdd(&s, SL_TEXT, "github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases");
 	sheetAdd(&s, SL_GAP, NULL);
 	sheetAdd(&s, SL_MUTED, "Ancestral project: LaunchELF v3.41 by Mirakichi");
 	sheetAdd(&s, SL_MUTED, "Dashboard text: Roboto (Apache License 2.0)");
@@ -255,7 +258,7 @@ void dashShowBuildInfo(void)
 #endif
 #endif
 	sheetAdd(&s, SL_GAP, NULL);
-	sheetAdd(&s, SL_MUTED, "github.com/NathanNeurotic/wLaunchELF_R3Z_RIPTOATTDASH/releases");
+	sheetAdd(&s, SL_MUTED, "github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases");
 	{
 		char sub[64];
 		snprintf(sub, sizeof(sub), "wLaunchELF %s (%s)", ULE_VERSION, GIT_HASH);
