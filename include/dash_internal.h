@@ -920,6 +920,7 @@ void dashToolsIgrBackupSetup(void);
 void dashToolsSyncAllMmceCards(void);
 void dashToolsRefreshMmceStatus(void);
 const char *dashToolsMmceStatus(void);
+const char *dashToolsIgrStatus(void);
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 void dashToolsCloudBackup(void);
 const char *dashToolsGoogleStatus(void);

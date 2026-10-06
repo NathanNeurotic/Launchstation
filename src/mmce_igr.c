@@ -3,6 +3,7 @@
 //--------------------------------------------------------------
 #include "launchelf.h"
 #include "mmce_igr.h"
+#include "init.h"
 #include "wle_igr_config.h"
 
 extern int fileMode;
@@ -215,6 +216,72 @@ static int write_verified(const char *path, const u8 *data, int size)
     if (r < 0)
         return -1;
     return 0;
+}
+
+enum {
+    WLE_IGR_HELPER_ERROR = -1,
+    WLE_IGR_HELPER_MISSING = 0,
+    WLE_IGR_HELPER_CURRENT = 1,
+    WLE_IGR_HELPER_OUTDATED = 2
+};
+
+static int inspect_helper_path(const char *path, const u8 *helper, int helper_size)
+{
+    int fd, done = 0;
+    s64 size;
+
+    if (path == NULL || helper == NULL || helper_size <= 0)
+        return WLE_IGR_HELPER_ERROR;
+    if (!wleExists(path))
+        return WLE_IGR_HELPER_MISSING;
+
+    fd = genOpen(path, FIO_O_RDONLY);
+    if (fd < 0)
+        return WLE_IGR_HELPER_ERROR;
+    size = genLseek(fd, 0, SEEK_END);
+    if (size != helper_size || genLseek(fd, 0, SEEK_SET) != 0) {
+        genClose(fd);
+        return WLE_IGR_HELPER_OUTDATED;
+    }
+
+    while (done < helper_size) {
+        int want = helper_size - done > (int)sizeof(verify_buf)
+                       ? (int)sizeof(verify_buf)
+                       : helper_size - done;
+        int r = genRead(fd, verify_buf, want);
+        if (r != want) {
+            genClose(fd);
+            return WLE_IGR_HELPER_ERROR;
+        }
+        if (memcmp(verify_buf, helper + done, want) != 0) {
+            genClose(fd);
+            return WLE_IGR_HELPER_OUTDATED;
+        }
+        done += r;
+    }
+    if (genClose(fd) < 0)
+        return WLE_IGR_HELPER_ERROR;
+    return WLE_IGR_HELPER_CURRENT;
+}
+
+static int inspect_boot_image_helper(const char *image, const u8 *helper, int helper_size)
+{
+    FILEINFO file;
+    char dir[MAX_PATH], target[MAX_PATH], msg[128];
+    int slot, status;
+
+    if (!split_image_path(image, dir, sizeof(dir), &file))
+        return WLE_IGR_HELPER_ERROR;
+    slot = !vmcMounted[0] ? 0 : (!vmcMounted[1] ? 1 : -1);
+    if (slot < 0)
+        return WLE_IGR_HELPER_ERROR;
+    if (filerMountVmc(dir, &file, slot, msg, sizeof(msg)) < 0)
+        return WLE_IGR_HELPER_ERROR;
+
+    snprintf(target, sizeof(target), "vmc%d:/BOOT/%s", slot, WLE_IGR_HELPER_NAME);
+    status = inspect_helper_path(target, helper, helper_size);
+    filerUnmountVmc(slot);
+    return status;
 }
 
 static int install_into_boot_image(const char *image, const u8 *helper, int helper_size)
@@ -624,3 +691,114 @@ int wleIgrRemove(WleIgrInstallStats *stats, char *result, size_t result_size)
     return 0;
 }
 
+
+
+int wleIgrStatus(const char *backup_root, WleIgrStatusStats *stats)
+{
+    const char *boot = wleBootElfPath();
+    char app[WLE_IGR_PATH], target[MAX_PATH], root[MAX_PATH];
+    u8 *helper;
+    int helper_size = 0;
+    int status, unit, i;
+
+    if (stats == NULL)
+        return WLE_IGR_STATUS_UNKNOWN;
+    memset(stats, 0, sizeof(*stats));
+
+    /* The helper embeds both the application path and backup destination.
+     * Without the latter, this build cannot decide whether an installed
+     * helper is current without guessing. */
+    if (boot == NULL || boot[0] == '\0' ||
+        backup_root == NULL || backup_root[0] == '\0')
+        return WLE_IGR_STATUS_UNKNOWN;
+
+    portable_mmce_path(boot, app, sizeof(app));
+    helper = patched_helper(app, backup_root, &helper_size);
+    if (helper == NULL)
+        return WLE_IGR_STATUS_UNKNOWN;
+
+    if (is_mc_path(boot) || is_usb_path(boot)) {
+        if (!direct_helper_target(boot, target, sizeof(target))) {
+            free(helper);
+            return WLE_IGR_STATUS_UNKNOWN;
+        }
+        stats->copies = 1;
+        status = inspect_helper_path(target, helper, helper_size);
+        if (status == WLE_IGR_HELPER_CURRENT) stats->current++;
+        else if (status == WLE_IGR_HELPER_OUTDATED) stats->outdated++;
+        else if (status == WLE_IGR_HELPER_MISSING) stats->missing++;
+        else stats->failed++;
+        free(helper);
+
+        if (stats->current) return WLE_IGR_STATUS_CURRENT;
+        if (stats->outdated) return WLE_IGR_STATUS_OUTDATED;
+        if (stats->missing) return WLE_IGR_STATUS_NOT_INSTALLED;
+        return WLE_IGR_STATUS_UNKNOWN;
+    }
+
+    if (is_bdm_relaunch_path(boot)) {
+        /* Setup installs one trampoline on the first writable physical MC.
+         * A missing second slot is therefore normal, not "partial". */
+        for (i = 0; i < 2; i++) {
+            snprintf(target, sizeof(target), "mc%d:/BOOT/%s", i, WLE_IGR_HELPER_NAME);
+            status = inspect_helper_path(target, helper, helper_size);
+            stats->copies++;
+            if (status == WLE_IGR_HELPER_CURRENT) stats->current++;
+            else if (status == WLE_IGR_HELPER_OUTDATED) stats->outdated++;
+            else if (status == WLE_IGR_HELPER_MISSING) stats->missing++;
+            else stats->failed++;
+        }
+        free(helper);
+
+        if (stats->current && stats->outdated) return WLE_IGR_STATUS_PARTIAL;
+        if (stats->current) return WLE_IGR_STATUS_CURRENT;
+        if (stats->outdated) return WLE_IGR_STATUS_OUTDATED;
+        if (stats->failed && stats->missing < stats->copies) return WLE_IGR_STATUS_UNKNOWN;
+        return WLE_IGR_STATUS_NOT_INSTALLED;
+    }
+
+    if (strncmp(boot, "mmce0:", 6) && strncmp(boot, "mmce1:", 6)) {
+        free(helper);
+        return WLE_IGR_STATUS_UNKNOWN;
+    }
+
+    /* Read-only by design: never start MMCE merely to populate a Settings
+     * status row. If the stack is not already live, report Unknown. */
+    if (!isPathDeviceStackLoaded("mmce0:/") &&
+        !isPathDeviceStackLoaded("mmce1:/")) {
+        free(helper);
+        return WLE_IGR_STATUS_UNKNOWN;
+    }
+
+    boot_image_count = 0;
+    for (unit = 0; unit < 2; unit++) {
+        snprintf(root, sizeof(root), "mmce%d:/MemoryCards", unit);
+        collect_boot_images(root, 0);
+    }
+    if (boot_image_count == 0) {
+        free(helper);
+        return WLE_IGR_STATUS_NOT_INSTALLED;
+    }
+
+    stats->copies = boot_image_count;
+    for (i = 0; i < boot_image_count; i++) {
+        status = inspect_boot_image_helper(boot_images[i].path, helper, helper_size);
+        if (status == WLE_IGR_HELPER_CURRENT) stats->current++;
+        else if (status == WLE_IGR_HELPER_OUTDATED) stats->outdated++;
+        else if (status == WLE_IGR_HELPER_MISSING) stats->missing++;
+        else stats->failed++;
+    }
+    free(helper);
+
+    if (stats->failed)
+        return (stats->current || stats->outdated || stats->missing)
+                   ? WLE_IGR_STATUS_PARTIAL
+                   : WLE_IGR_STATUS_UNKNOWN;
+    if (stats->current == stats->copies)
+        return WLE_IGR_STATUS_CURRENT;
+    if (stats->outdated == stats->copies)
+        return WLE_IGR_STATUS_OUTDATED;
+    if (stats->missing == stats->copies)
+        return WLE_IGR_STATUS_NOT_INSTALLED;
+    return WLE_IGR_STATUS_PARTIAL;
+}

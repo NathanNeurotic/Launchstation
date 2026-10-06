@@ -28,6 +28,13 @@ assert "install_helper_on_any_mc" in setup
 assert '"mx4sio"' in setup and '"ilink"' in setup and '"ata"' in setup
 assert "strnicmp" not in setup
 
+assert "int wleIgrStatus(" in setup
+assert "inspect_helper_path" in setup
+assert "inspect_boot_image_helper" in setup
+assert "WLE_IGR_STATUS_CURRENT" in (root / "include/mmce_igr.h").read_text()
+assert "WLE_IGR_STATUS_OUTDATED" in (root / "include/mmce_igr.h").read_text()
+assert "isPathDeviceStackLoaded" in setup
+
 igr_start = main.index("static int runWleIgrBackup(")
 igr_end = main.index("//---------------------------------------------------------------------------", igr_start)
 igr = main[igr_start:igr_end]
@@ -41,4 +48,4 @@ for module in ("iomanx", "filexio", "sio2man", "mcman", "mcserv", "mmceman", "us
 assert "IEEE1394_bd_mini:IEEE1394_bd" in yaml
 assert "dev9:ps2dev9" in yaml
 
-print("PASS: WLE IGR helper passes backup args, covers MC/USB/MMCE/MX4SIO/iLink/ATA relaunch stacks, and setup verifies install/remove paths")
+print("PASS: WLE IGR helper passes backup args, covers MC/USB/MMCE/MX4SIO/iLink/ATA relaunch stacks, verifies install/remove paths, and reports current/outdated helper state")

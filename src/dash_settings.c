@@ -2790,7 +2790,7 @@ static const char *actionStatus(int id)
 		case S_MMCE_SYNC_ALL:
 			return dashToolsMmceStatus();
 		case S_IGR_HELPER:
-			return "Manage";
+			return dashToolsIgrStatus();
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 		case S_GOOGLE_ACCOUNT:
 			return dashToolsGoogleStatus();

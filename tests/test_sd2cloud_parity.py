@@ -22,6 +22,11 @@ assert "dashToolsCheckUpdates();" in settings
 assert "dashToolsRefreshMmceStatus();" in settings
 assert "dashToolsMmceStatus()" in settings
 assert "dashToolsGoogleStatus()" in settings
+assert "dashToolsIgrStatus()" in settings
+assert '"Current"' in tools
+assert '"Outdated"' in tools
+assert '"Not installed"' in tools
+assert '"Partial / mixed"' in tools
 assert '"All synced"' in tools
 assert '"%d pending"' in tools
 assert '"Checking..."' in tools
