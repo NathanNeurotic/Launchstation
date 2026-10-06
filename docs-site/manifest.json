@@ -1,0 +1,212 @@
+{
+  "site": {
+    "title": "wLaunchELF R3Z Docs",
+    "brand": "wLaunchELF R3Z",
+    "subtitle": "RIPTO ATTDASH",
+    "repo": "https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH",
+    "pages_url": "https://nathanneurotic.github.io/r3LaunchELF_ATTDASH/",
+    "latest": "https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases/tag/latest"
+  },
+  "sections": [
+    {
+      "name": "Start",
+      "pages": [
+        [
+          "index",
+          "Home",
+          "home"
+        ],
+        [
+          "getting-started",
+          "Getting Started",
+          "start"
+        ],
+        [
+          "install",
+          "Install & Update",
+          "install"
+        ],
+        [
+          "releases",
+          "Downloads & Releases",
+          "releases"
+        ]
+      ]
+    },
+    {
+      "name": "Interface",
+      "pages": [
+        [
+          "dashboard",
+          "Dashboard",
+          "home"
+        ],
+        [
+          "file-browser",
+          "File Browser",
+          "folder"
+        ],
+        [
+          "apps",
+          "Applications",
+          "apps"
+        ],
+        [
+          "text-editor",
+          "Text Editor",
+          "book"
+        ],
+        [
+          "launch-arguments",
+          "Launch Arguments",
+          "start"
+        ],
+        [
+          "controls",
+          "Controls",
+          "controls"
+        ]
+      ]
+    },
+    {
+      "name": "Storage & Devices",
+      "pages": [
+        [
+          "devices",
+          "Device Support",
+          "usb"
+        ],
+        [
+          "hdd",
+          "Internal HDD",
+          "hdd"
+        ],
+        [
+          "hdd-manager",
+          "HDD Manager & APA Headers",
+          "hdd"
+        ],
+        [
+          "ilink",
+          "iLink / FireWire",
+          "usb"
+        ],
+        [
+          "network",
+          "Network & PC",
+          "netboot"
+        ],
+        [
+          "mmce",
+          "MMCE",
+          "mmce"
+        ],
+        [
+          "saves",
+          "Saves, PSU & Timestamps",
+          "vmc"
+        ]
+      ]
+    },
+    {
+      "name": "Game Images",
+      "pages": [
+        [
+          "neutrino",
+          "PS2 ISO · Neutrino",
+          "neutrino"
+        ],
+        [
+          "popstarter",
+          "PS1 VCD · POPStarter",
+          "ps1"
+        ]
+      ]
+    },
+    {
+      "name": "Backups & Cloud",
+      "pages": [
+        [
+          "mmce-backup",
+          "MMCE Backups",
+          "vmc"
+        ],
+        [
+          "cloud",
+          "Google Drive Cloud",
+          "smb"
+        ],
+        [
+          "igr",
+          "IGR Return & Backup",
+          "igr"
+        ]
+      ]
+    },
+    {
+      "name": "Utilities & Hardware",
+      "pages": [
+        [
+          "exploit-installer",
+          "MC Exploit Installer",
+          "install"
+        ],
+        [
+          "network-services",
+          "FTP, PS2Link & Remote",
+          "netboot"
+        ],
+        [
+          "special-hardware",
+          "PSX, Deckard & RetroGem",
+          "controls"
+        ]
+      ]
+    },
+    {
+      "name": "Customize",
+      "pages": [
+        [
+          "settings",
+          "Settings Reference",
+          "settings"
+        ],
+        [
+          "configuration",
+          "Config Files & Paths",
+          "settings"
+        ],
+        [
+          "themes",
+          "Display, Themes & BGM",
+          "themes"
+        ]
+      ]
+    },
+    {
+      "name": "Reference",
+      "pages": [
+        [
+          "troubleshooting",
+          "Troubleshooting",
+          "troubleshoot"
+        ],
+        [
+          "faq",
+          "FAQ",
+          "book"
+        ],
+        [
+          "developers",
+          "Developer Notes",
+          "fork-gaps"
+        ],
+        [
+          "credits",
+          "Credits & Licenses",
+          "credits"
+        ]
+      ]
+    }
+  ]
+}

@@ -48,6 +48,12 @@ jobs:
           python3 tests/test_native_cloud.py
           python3 tests/test_mmce_protocol.py
 
+      - name: Validate documentation site
+        run: |
+          python3 docs-site/build.py --out build/docs-site
+          test -f build/docs-site/index.html
+          test -f build/docs-site/data/search-index.json
+
       - name: Install ps2build SDK
         shell: bash
         run: |
@@ -139,6 +145,14 @@ jobs:
             cp build/bin/wLaunchELF.elf artifacts/wLaunchELF_R3Z-unpacked.ELF
           fi
           ls -lh artifacts/
+
+      - name: Build offline documentation
+        run: |
+          python3 docs-site/build.py \
+            --out build/docs-site \
+            --zip artifacts/wLaunchELF_R3Z-Documentation.zip
+          unzip -t artifacts/wLaunchELF_R3Z-Documentation.zip
+          ls -lh artifacts/wLaunchELF_R3Z-Documentation.zip
 
       - name: Show artifact hashes
         run: sha256sum artifacts/*

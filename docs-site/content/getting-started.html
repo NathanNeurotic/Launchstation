@@ -1,0 +1,13 @@
+<h1>Getting Started</h1><p class="lead">From a fresh download to a working dashboard and first launch.</p>
+<h2 id="download">1. Download the current build</h2><p>Use the repository's <b>Latest automated build</b>. The packed executable is published as both <code>BOOT.ELF</code> and <code>wLaunchELF_R3Z.ELF</code>. Optional sidecars include <code>BGM.ADP</code>, <code>WLE-CLOUD.CNF.example</code> and <code>WLE-CLOUD-CA.PEM</code>.</p>
+<div class="callout warn"><div class="h">Keep related files together when practical</div>BGM and native Google Drive support use sidecar files. They are optional; basic dashboard and file-manager operation does not require them.</div>
+<h2 id="place">2. Put the ELF on a bootable device</h2><pre class="tree"><code>mc0:/
+└── BOOT/
+    ├── BOOT.ELF
+    └── BGM.ADP        optional</code></pre><p>You can also launch from USB/MASS, another homebrew launcher, or any supported filesystem that can read the ELF.</p>
+<h2 id="first-boot">3. First boot</h2><p>The dashboard opens with project defaults. Storage stacks are demand-loaded: a device card may say <b>Not checked</b> until you open it. That does not mean the device is absent.</p>
+<div class="kbdline"><span>Confirm Open</span><span>Back Return</span><span>L1/R1 Sections</span><span>SELECT Files/Devices view</span></div>
+<h2 id="device">4. Open your first device</h2><p>Go to <b>Files / Devices</b>. Select USB / MASS, MMCE, MX4SIO, iLink, Internal HDD (APA), ATA/exFAT or another available card. If its driver is not loaded, opening the card triggers the lazy loader and refreshes state.</p>
+<h2 id="app">5. Launch an ELF or index applications</h2><p>ELFs launch directly from File Browser. For the Apps section, configure <b>Settings → Home &amp; applications → Application folders</b>. Only listed roots are scanned; defaults include <code>mc:/APPS/</code>, <code>mc:/BOOT/</code>, <code>mass:/APPS/</code> and <code>mass:/BOOT/</code>, one subfolder deep.</p>
+<h2 id="games">6. Optional game-image launching</h2><ul><li><b>PS1:</b> select a <code>.VCD</code> for POPStarter.</li><li><b>PS2:</b> select a <code>.ISO</code> for Neutrino.</li></ul><p>Those are external cores; wLaunchELF resolves and hands off to them.</p>
+<h2 id="save">7. Save settings</h2><p>The dashboard tracks actual serialized differences. Unsaved state remains visibly accented. Leaving Settings or using its menu lets you save, discard or continue editing.</p>

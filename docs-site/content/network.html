@@ -1,0 +1,7 @@
+<h1>Network &amp; PC Integration</h1><p class="lead">Network features are demand-loaded where practical so normal file-manager startup does not pay for an unused network stack.</p>
+<h2 id="ftp">FTP</h2><p>The R3Z work includes an FTP workflow compatible with its modernized network stack. Start network services intentionally from Tools/settings rather than keeping them resident for every boot.</p>
+<h2 id="remote">MrRexD-compatible remote commands</h2><p>The project follows the existing R3Z PC-side command ecosystem instead of inventing an unnecessary second desktop protocol. Supported remote commands can request launch/transfer actions using the compatible client.</p>
+<h2 id="receiver">PC game receiver / UDPFS</h2><p>PC game receiver and UDPFS functionality provide network-backed workflows. UDPFS is also an accepted Neutrino ISO backend when the filesystem/server and IP configuration are valid.</p>
+<h2 id="ip">IP configuration</h2><p>Network settings use the classic IP, netmask and gateway configuration model. The dashboard tracks unsaved network state separately and can write an updated IPCONFIG-style snapshot.</p>
+<h2 id="failure">Failure isolation</h2><ol><li>Confirm physical link and adapter initialization.</li><li>Confirm IP/netmask/gateway.</li><li>Confirm service/filesystem discovery.</li><li>Only then debug FTP, UDPFS, cloud or another upper-layer feature.</li></ol>
+<p>Native cloud sockets have bounded connect/handshake/read/write waits. DNS resolution in PS2IP remains synchronous and is a separate hardware edge case.</p>
