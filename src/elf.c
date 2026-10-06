@@ -724,7 +724,7 @@ int PrepareMbrLaunchPayload(const char *path, char *mem_arg, size_t mem_arg_size
 // Modified version of loader from Independence
 //	(C) 2003 Marcus R. Brown <mrbrown@0xd6.org>
 //------------------------------
-void RunLoaderElf(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load)
+static void RunLoaderElfInternal(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load, int preserve_devices)
 {
 	char *argv[ELFLOAD_MAX_ARGC], bootpath[256];
 	static char exec_target[MAX_PATH];
@@ -741,7 +741,7 @@ void RunLoaderElf(char *filename, char *party, const char *selected_path, int ex
 	if (selected_path != NULL && selected_path[0] != '\0')
 		handoff_path = normalizeExecArg0Path(selected_path, exec_arg0, sizeof(exec_arg0));
 	snprintf(exec_target, sizeof(exec_target), "%s", filename);
-	cleanup_hdd_launch = isHddPartyPath(party);
+	cleanup_hdd_launch = !preserve_devices && isHddPartyPath(party);
 	if (exec_kind == 1 && handoff_path != NULL && !strncmp(handoff_path, "mass", 4))
 		snprintf(exec_target, sizeof(exec_target), "%s", handoff_path);
 	DPRINTF("RunLoaderElf: exec_kind=%d reboot_iop=%d target='%s' handoff='%s' party='%s'\n",
@@ -816,8 +816,21 @@ void RunLoaderElf(char *filename, char *party, const char *selected_path, int ex
 
 	RunEmbeddedLoader(argc, argv);
 }
+
+void RunLoaderElf(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load)
+{
+	RunLoaderElfInternal(filename, party, selected_path, exec_kind, reboot_iop_elf_load, 0);
+}
+
+/* External cores such as Neutrino need the currently mounted storage stack.
+ * This is the same loader path as RunLoaderElf, but it never resets the IOP
+ * and never powers down an HDD/DEV9 stack simply because the core lives there. */
+void RunLoaderElfKeepIOP(char *filename, char *party, const char *selected_path, int exec_kind)
+{
+	RunLoaderElfInternal(filename, party, selected_path, exec_kind, 0, 1);
+}
 //------------------------------
-//End of func:  void RunLoaderElf(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load)
+//End of func: RunLoaderElf / RunLoaderElfKeepIOP
 //--------------------------------------------------------------
 //End of file:  elf.c
 //--------------------------------------------------------------
