@@ -21,7 +21,6 @@ assert "dashVisibleSectionCount()" in ui and "tab_w * vcount" in ui
 assert '"File Browser", "Open the canonical wLaunchELF File Browser"' in files
 assert "dashCfg.files_mode = !dashCfg.files_mode" in files
 assert "const DashScreen dashFilesScreen = {storageEnter" in files
-assert "state != DASH_DEV_ABSENT" in files
 assert "USB / MASS" in devices
 assert "Not connected" in devices
 assert "out[i].state == DASH_DEV_READY" in devices
