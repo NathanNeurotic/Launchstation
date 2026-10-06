@@ -65,7 +65,9 @@ void Show_About_uLE(void)
 			PrintPos(01, hpos, TextRow, COLOR_SELECT);
 			sprintf(TextRow, " commit: %s", GIT_HASH);
 			PrintPos(02, hpos, TextRow, COLOR_TEXT);
-			PrintPos(03, hpos, "Mod by: R3Z3N & Codex 5.3 LLM", COLOR_TEXT);
+			PrintPos(03, hpos, "Maintained by: NathanNeurotic / Ripto", COLOR_TEXT);
+			PrintPos(-1, hpos, "Direct base: wLaunchELF_R3Z", COLOR_TEXT);
+			PrintPos(-1, hpos, "   by R3Z3N / Saildot4K", COLOR_TEXT);
 			PrintPos(-1, hpos, "DS3/DS4 support by Alex Parrado", COLOR_TEXT);
 			PrintPos(-1, hpos, "Thanks to TnA for all his insight and support", COLOR_TEXT);
 			PrintPos(-1, hpos, "Project maintainers:  sp193 & AKuHAK", COLOR_TEXT);
@@ -83,7 +85,7 @@ void Show_About_uLE(void)
 			PrintPos(-1, hpos, "Main release site:", COLOR_TEXT);
 			PrintPos(-1, hpos, "   github.com/ps2homebrew/wLaunchELF/releases", COLOR_TEXT);
 			PrintPos(-1, hpos, "Mod Release site:", COLOR_SELECT);
-			PrintPos(-1, hpos, "   github.com/NathanNeurotic/wLaunchELF_R3Z_RIPTOATTDASH/releases", COLOR_TEXT);
+			PrintPos(-1, hpos, "   github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases", COLOR_TEXT);
 			PrintPos(-1, hpos, "Ancestral project: LaunchELF v3.41 by Mirakichi", COLOR_TEXT);
 		}  //ends if(event||post_event)
 		drawScr();
@@ -195,7 +197,7 @@ void Show_build_info(void)
 			         , COLOR_TEXT);
 #endif
 			PrintPos(-1, hpos, "Mod Release site:", COLOR_TEXT);
-			PrintPos(-1, hpos, "   github.com/NathanNeurotic/wLaunchELF_R3Z_RIPTOATTDASH/releases", COLOR_TEXT);
+			PrintPos(-1, hpos, "   github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases", COLOR_TEXT);
 		}  //ends if(event||post_event)
 		drawScr();
 		post_event = event;
