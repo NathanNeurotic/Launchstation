@@ -1,0 +1,61 @@
+name: Publish Documentation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, main]
+    paths:
+      - 'docs-site/**'
+      - '.github/workflows/docs-pages.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: docs-pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Build and publish gh-pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build documentation
+        run: |
+          set -euo pipefail
+          python3 docs-site/build.py \
+            --out site \
+            --zip wLaunchELF_R3Z-Documentation.zip
+          mkdir -p site/downloads
+          cp wLaunchELF_R3Z-Documentation.zip site/downloads/
+          unzip -t site/downloads/wLaunchELF_R3Z-Documentation.zip
+
+      - name: Upload documentation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wLaunchELF_R3Z-Documentation
+          path: |
+            wLaunchELF_R3Z-Documentation.zip
+            site/
+          retention-days: 7
+
+      - name: Publish gh-pages branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          rm -rf .pages
+          mkdir .pages
+          cp -a site/. .pages/
+          cd .pages
+          git init
+          git checkout -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs: publish ${GITHUB_SHA}"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin gh-pages
