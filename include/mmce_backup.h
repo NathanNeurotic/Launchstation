@@ -19,9 +19,21 @@ typedef struct {
     int failed;
 } MmceBackupStats;
 
+typedef struct {
+    int candidates;
+    int pending;
+    int unchanged;
+    int failed;
+} MmceBackupScanStats;
+
 typedef void (*MmceBackupProgress)(const char *source, int done, int total);
 
 int mmceBackupAllCards(int unit, const char *dest_root, const MmceBackupOptions *options,
                        MmceBackupStats *stats, MmceBackupProgress progress);
+
+/* Read-only parity scan used by the Settings status row. It never creates,
+ * converts, prunes or removes backup files. */
+int mmceBackupScanCards(int unit, const char *dest_root, const MmceBackupOptions *options,
+                        MmceBackupScanStats *stats, MmceBackupProgress progress);
 
 #endif
