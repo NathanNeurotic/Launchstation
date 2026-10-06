@@ -81,7 +81,6 @@ enum SetId {
 	S_ESR_PATH,
 	S_OSDSYS_PATH,
 	S_POPS_PATH,
-	S_EMBER_DIR,
 	S_NEUTRINO_PATH,
 	/* devices */
 	S_HIDE_HDD,
@@ -97,10 +96,17 @@ enum SetId {
 	S_DEVA_UDPFS,
 	S_MMCE_BACKUP_KEEP,
 	S_MMCE_BACKUP_FORMAT,
+	S_MMCE_SYNC_ALL,
+	S_IGR_SYNC_MODE,
+	S_IGR_HELPER,
+	/* Legacy/internal split flags retained for persisted settings compatibility. */
 	S_IGR_AUTO_BACKUP,
 	S_IGR_CLOUD_SYNC,
 	S_IGR_AFTER,
 	S_IGR_AFTER_APP,
+	S_GOOGLE_ACCOUNT,
+	S_CHECK_UPDATES,
+	S_ABOUT_PROJECT,
 	/* network */
 	S_NET_IP,
 	S_NET_NM,
@@ -264,7 +270,7 @@ static const SetItem launch_items[] = {
     {ST_PAGE, P_BOOT, "Automatic start & boot", "Choose what starts automatically and how long startup waits."},
     {ST_PAGE, P_LKEY, "Launch keys", "Applications or commands assigned to controller buttons."},
     {ST_CHOICE, S_PATHPAD_LOCK, "Lock shortcuts & bookmarks", "Prevents editing launch keys and File Browser bookmarks."},
-    {ST_PAGE, P_LOADERS, "Disc & image loaders", "ESR, OSDSYS, POPStarter, Ember and Neutrino paths."},
+    {ST_PAGE, P_LOADERS, "Disc & image loaders", "ESR, OSDSYS, POPStarter and Neutrino program paths."},
     {ST_CHOICE, S_REBOOT_ELF, "Reset IOP before launch", "Recommended: gives launched ELFs a clean IOP."},
     {ST_PAGE, P_GAMEID, "Game ID output", "Game IDs for RetroGem and compatible OSD/HDMI adapters."},
 };
@@ -293,7 +299,6 @@ static const SetItem loader_items[] = {
     {ST_PATH, S_ESR_PATH, "ESR loader", "ESR ELF used to start ESR-patched discs."},
     {ST_PATH, S_OSDSYS_PATH, "OSDSYS program", "Started by the OSDSYS command. Empty: the console's own."},
     {ST_PATH, S_POPS_PATH, "POPStarter", "POPStarter ELF used to start PS1 VCD images."},
-    {ST_PATH, S_EMBER_DIR, "Ember directory", "Folder containing ember.elf, bios.bin and games/. CUE/BIN/EXE routes to Ember automatically; VCD still uses POPStarter."},
     {ST_PATH, S_NEUTRINO_PATH, "Neutrino", "Neutrino ELF used to start PS2 ISO images. Empty: game device, then mc0:/mc1:/neutrino/."},
 };
 
@@ -318,14 +323,19 @@ static const SetItem autostart_items[] = {
 };
 
 static const SetItem mmce_backup_items[] = {
+    {ST_ACTION, S_MMCE_SYNC_ALL, "Sync all cards", "Back up every changed MMCE card now. If Google Drive is linked, upload pending local history afterward."},
+    {ST_CHOICE, S_IGR_SYNC_MODE, "Automatic sync", "What happens after OPL returns through WLE-IGR: Off, verified local backup, or local backup plus Google Drive."},
+    {ST_ACTION, S_IGR_HELPER, "IGR helper", "Install, update or remove the verified WLE-IGR helper used by OPL Exit-to."},
+    {ST_CHOICE, S_IGR_AFTER, "After IGR, open", "Choose where to go after the IGR backup/sync step: r3LaunchELF_ATTDASH, the PS2 system menu, or a selected application."},
+    {ST_PATH, S_IGR_AFTER_APP, "IGR application", "Application started after IGR when 'After IGR, open' is set to Application."},
+    {ST_PAGE, P_LANGUAGE, "Language", "Language used by file operations and tools."},
     {ST_NUMBER, S_MMCE_BACKUP_KEEP, "Backups per card", "0 keeps every verified version. Otherwise keep the newest 1-99 versions per card."},
     {ST_CHOICE, S_MMCE_BACKUP_FORMAT, "Backup format", "Native .mcd avoids writes when unchanged. PCSX2 .ps2 adds ECC/spare bytes and verifies the converted image."},
-    {ST_CHOICE, S_IGR_AUTO_BACKUP, "Automatic IGR backup", "When OPL returns through WLE-IGR, back up changed MMCE card images before continuing. Turning this off does not uninstall the helper."},
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
-    {ST_CHOICE, S_IGR_CLOUD_SYNC, "Google Drive after IGR", "After the verified local backup, upload missing WLE-MMCE-Backups versions directly from the PS2. Link Google Drive from Tools first."},
+    {ST_ACTION, S_GOOGLE_ACCOUNT, "Google account", "Link, relink, sync or disconnect the native Google Drive backup account."},
+    {ST_ACTION, S_CHECK_UPDATES, "Check for updates", "Compare this build with the repository's rolling latest release over HTTPS."},
 #endif
-    {ST_CHOICE, S_IGR_AFTER, "After IGR, open", "Choose where to go after the IGR backup step: wLaunchELF, the PS2 system menu, or a selected application."},
-    {ST_PATH, S_IGR_AFTER_APP, "IGR application", "Application started after IGR when 'After IGR, open' is set to Application."},
+    {ST_ACTION, S_ABOUT_PROJECT, "About r3LaunchELF_ATTDASH", "Version, commit, project origin, upstream credits and contributors."},
 };
 
 static const SetItem net_items[] = {
@@ -458,7 +468,7 @@ static const SetPage pages[P_COUNT] = {
     [P_GAMEID] = PAGE("Game ID output", DI_APP, "Identification for compatible OSD/HDMI adapters.", gameid_items),
     [P_DEVICES] = PAGE("Storage & devices", DI_DEVICES, "Visible devices and driver startup preferences.", device_items),
     [P_AUTOSTART] = PAGE("Start devices automatically", DI_DEVICES, "Drivers start immediately when enabled. Discard restores preferences, not driver state.", autostart_items),
-    [P_MMCE_BACKUP] = PAGE("MMCE backups", DI_MC, "Verified local history for every sd2psX card image.", mmce_backup_items),
+    [P_MMCE_BACKUP] = PAGE("MMCE backup & sync", DI_MC, "Backup, cloud, IGR return and maintenance controls in one place.", mmce_backup_items),
     [P_NETWORK] = PAGE("Network", DI_NETWORK, "Console address for FTP, PS2Link and UDPFS.", net_items),
     [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules and settings locations.", system_items),
     [P_LANGUAGE] = PAGE("Language", DI_TEXT, "These translations apply to file operations and tools.", language_items),
@@ -524,6 +534,7 @@ static const char *const tv_names[] = {"Auto", "NTSC", "PAL", "VGA", "480p"};
 static const char *const view_names[] = {"Grid", "List", "Carousel"};
 static const char *const recent_names[] = {"0", "4", "8", "12", "16"};
 static const char *const mmce_backup_format_names[] = {"Native .mcd", "PCSX2 .ps2"};
+static const char *const igr_sync_names[] = {"Off", "Local backup", "Local + Google Drive"};
 static const char *const igr_after_names[] = {"Dashboard", "PS2 system menu", "Application"};
 static const char *const hide_names[] = {"Show all", "Hide HDD1", "Hide HDD0+1", "Hide ATA1", "Hide ATA0+1", "Hide HDD1+ATA1", "Hide all"};
 static const char *const confirm_names[] = {"Circle", "Cross"};
@@ -664,6 +675,16 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_MMCE_BACKUP_FORMAT:
 			*names = mmce_backup_format_names, *cur = dashCfg.mmce_backup_format;
 			return 2;
+		case S_IGR_SYNC_MODE:
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+			*names = igr_sync_names;
+			*cur = !dashCfg.igr_auto_backup ? 0 : (dashCfg.igr_cloud_sync ? 2 : 1);
+			return 3;
+#else
+			*names = igr_sync_names;
+			*cur = dashCfg.igr_auto_backup ? 1 : 0;
+			return 2;
+#endif
 		case S_IGR_AUTO_BACKUP:
 			*cur = dashCfg.igr_auto_backup;
 			return 2;
@@ -1238,6 +1259,27 @@ static void setChoice(int id, int v)
 		case S_MMCE_BACKUP_FORMAT:
 			dashCfg.mmce_backup_format = v;
 			break;
+		case S_IGR_SYNC_MODE:
+			if (v <= 0) {
+				dashCfg.igr_auto_backup = 0;
+				dashCfg.igr_cloud_sync = 0;
+			} else if (v == 1) {
+				dashCfg.igr_auto_backup = 1;
+				dashCfg.igr_cloud_sync = 0;
+			} else {
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+				if (!cloudGoogleIsLinked()) {
+					dashToast(DASH_TOAST_WARN, "Link Google Drive before enabling cloud automatic sync");
+					break;
+				}
+				dashCfg.igr_auto_backup = 1;
+				dashCfg.igr_cloud_sync = 1;
+#else
+				dashToast(DASH_TOAST_WARN, "This build does not include native Google Drive support");
+				break;
+#endif
+			}
+			break;
 		case S_IGR_AUTO_BACKUP:
 			dashCfg.igr_auto_backup = v;
 			break;
@@ -1433,9 +1475,6 @@ static int pathInfo(int id, PathSpec *p)
 			return 1;
 		case S_POPS_PATH:
 			p->field = setting->popstarter_file, p->size = sizeof(setting->popstarter_file), p->ext = "ELF", p->mc_alias = 1;
-			return 1;
-		case S_EMBER_DIR:
-			p->field = setting->ember_dir, p->size = sizeof(setting->ember_dir), p->mode = DASH_PICK_FOLDER;
 			return 1;
 		case S_NEUTRINO_PATH:
 			p->field = setting->neutrino_file, p->size = sizeof(setting->neutrino_file), p->ext = "ELF", p->mc_alias = 1;
@@ -2479,6 +2518,23 @@ static void runAction(int id)
 			break;
 		case S_LAUNCHKEYS:
 			openPage(P_LKEY);
+			break;
+		case S_MMCE_SYNC_ALL:
+			dashToolsSyncAllMmceCards();
+			break;
+		case S_IGR_HELPER:
+			dashToolsIgrBackupSetup();
+			break;
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+		case S_GOOGLE_ACCOUNT:
+			dashToolsCloudBackup();
+			break;
+		case S_CHECK_UPDATES:
+			dashToolsCheckUpdates();
+			break;
+#endif
+		case S_ABOUT_PROJECT:
+			dashShowAbout();
 			break;
 #ifdef ETH
 		case S_CLOCK_SYNC: {
