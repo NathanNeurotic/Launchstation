@@ -30,4 +30,17 @@ fn = src[src.index("int mmceBackupAllCards("):]
 assert "strlen(source_root)" in fn
 assert "dest_root[source_len]" in fn, "source-tree rejection must be path-boundary aware"
 
-print("PASS: MMCE tree backup supports configurable retention/format, preserves native no-write unchanged detection, and prunes only verified copies")
+header = (root / "include/mmce_backup.h").read_text()
+assert "MmceBackupScanStats" in header
+assert "mmceBackupScanCards" in header
+assert "files_equal_pcsx2_history" in src
+assert "mcCardPcsx2Page" in src, "pending scan must compare PCSX2 history without creating a converted file"
+scan_one = src[src.index("static int scan_one("):src.index("\nstatic int count_candidates(", src.index("static int scan_one("))]
+assert "mcCardExportPcsx2" not in scan_one
+assert "mcCardBackupNoEcc" not in scan_one
+assert "genRemove" not in scan_one
+assert "ensure_dir_tree" not in scan_one, "status scan must stay read-only"
+scan_api = src[src.index("int mmceBackupScanCards("):]
+assert "ensure_dir_tree" not in scan_api, "public pending scan must not create history directories"
+
+print("PASS: MMCE tree backup and read-only pending scan preserve write/verification safety")

@@ -247,6 +247,141 @@ static void cloudSyncNow(void)
 
 #endif
 
+typedef struct
+{
+	char root[MAX_PATH];
+	MmceBackupOptions options;
+	MmceBackupScanStats total;
+	int scan_mmce;
+	int any_unit;
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+	int google_linked;
+#endif
+} MmceStatusJob;
+
+static int mmce_status_job;
+static char mmce_status_text[48] = "Not checked";
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+static char google_status_text[24] = "Not checked";
+#endif
+
+static void mmceStatusRun(void *arg)
+{
+	MmceStatusJob *j = (MmceStatusJob *)arg;
+	int unit;
+
+	memset(&j->total, 0, sizeof(j->total));
+	if (j->scan_mmce) {
+		for (unit = 0; unit < 2; unit++) {
+			MmceBackupScanStats one;
+			memset(&one, 0, sizeof(one));
+			if (mmceBackupScanCards(unit, j->root, &j->options, &one, NULL) < 0)
+				continue;
+			j->any_unit = 1;
+			j->total.candidates += one.candidates;
+			j->total.pending += one.pending;
+			j->total.unchanged += one.unchanged;
+			j->total.failed += one.failed;
+		}
+	}
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+	j->google_linked = cloudGoogleIsLinked();
+#endif
+}
+
+void dashToolsRefreshMmceStatus(void);
+
+static void mmceStatusDone(void *arg)
+{
+	MmceStatusJob *j = (MmceStatusJob *)arg;
+	int stale = strcmp(j->root, dashCfg.igr_backup_path) != 0 ||
+	            j->options.format != dashCfg.mmce_backup_format;
+
+	if (j->root[0] == '\0')
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "Set destination");
+	else if (!j->scan_mmce)
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "Not checked");
+	else if (!j->any_unit)
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "No cards");
+	else if (j->total.failed && j->total.pending)
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "%d pending, %d errors",
+		         j->total.pending, j->total.failed);
+	else if (j->total.failed)
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "%d scan error%s",
+		         j->total.failed, j->total.failed == 1 ? "" : "s");
+	else if (j->total.pending)
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "%d pending", j->total.pending);
+	else
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "All synced");
+
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+	snprintf(google_status_text, sizeof(google_status_text),
+	         "%s", j->google_linked ? "Linked" : "Not linked");
+#endif
+
+	mmce_status_job = 0;
+	free(j);
+	if (stale)
+		dashToolsRefreshMmceStatus();
+}
+
+void dashToolsRefreshMmceStatus(void)
+{
+	MmceStatusJob *j;
+	int id;
+
+	if (mmce_status_job)
+		return;
+	j = (MmceStatusJob *)calloc(1, sizeof(*j));
+	if (j == NULL)
+		return;
+
+	dashStrCopy(j->root, dashCfg.igr_backup_path, sizeof(j->root));
+	j->options.keep = dashCfg.mmce_backup_keep;
+	j->options.format = dashCfg.mmce_backup_format;
+#ifdef MMCE
+	j->scan_mmce = j->root[0] != '\0' &&
+	               (isPathDeviceStackLoaded("mmce0:/") ||
+	                isPathDeviceStackLoaded("mmce1:/"));
+#else
+	j->scan_mmce = 0;
+#endif
+
+	if (j->root[0] == '\0')
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "Set destination");
+	else if (j->scan_mmce)
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "Checking...");
+	else
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "Not checked");
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+	snprintf(google_status_text, sizeof(google_status_text), "Checking...");
+#endif
+
+	id = dashWorkerSubmit("Checking MMCE backup status",
+	                      DASH_JOB_DEVICE | DASH_JOB_VISIBLE,
+	                      mmceStatusRun, mmceStatusDone, j);
+	if (id < 0) {
+		free(j);
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+		snprintf(google_status_text, sizeof(google_status_text), "Not checked");
+#endif
+		return;
+	}
+	mmce_status_job = id;
+}
+
+const char *dashToolsMmceStatus(void)
+{
+	return mmce_status_text;
+}
+
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+const char *dashToolsGoogleStatus(void)
+{
+	return google_status_text;
+}
+#endif
+
 static void mmceSyncProgress(const char *source, int done, int total)
 {
 	const char *leaf = source != NULL ? strrchr(source, '/') : NULL;
@@ -282,12 +417,17 @@ void dashToolsSyncAllMmceCards(void)
 	char root[MAX_PATH], summary[384];
 	int unit, any_unit = 0;
 
-	memset(&total, 0, sizeof(total));
-	if (!ensureMmceBackupRoot(root, sizeof(root)))
+	if (!dashWorkerAwaitAll("Finishing backup status check"))
 		return;
+	memset(&total, 0, sizeof(total));
+	if (!ensureMmceBackupRoot(root, sizeof(root))) {
+		dashToolsRefreshMmceStatus();
+		return;
+	}
 	if (!loadMmceModules()) {
 		dashModalMessage(DI_WARNING, "MMCE is unavailable",
 		                 "The MMCE driver could not be started.", NULL);
+		dashToolsRefreshMmceStatus();
 		return;
 	}
 
@@ -307,6 +447,7 @@ void dashToolsSyncAllMmceCards(void)
 	if (!any_unit) {
 		dashModalMessage(DI_WARNING, "No MMCE cards found",
 		                 "No readable MemoryCards tree was found on either MMCE unit.", NULL);
+		dashToolsRefreshMmceStatus();
 		return;
 	}
 
@@ -331,6 +472,7 @@ void dashToolsSyncAllMmceCards(void)
 			         cloud_error[0] ? cloud_error : "unknown error");
 			dashModalMessage(DI_WARNING, "Card sync completed locally", summary,
 			                 "Your local backup history was kept.");
+			dashToolsRefreshMmceStatus();
 			return;
 		}
 		snprintf(summary, sizeof(summary),
@@ -341,6 +483,7 @@ void dashToolsSyncAllMmceCards(void)
 		                 (total.failed || cloud.failed) ? "Sync all cards completed with errors" : "All cards synchronized",
 		                 summary,
 		                 "Only changed local cards create new history. Drive sync is copy-only.");
+		dashToolsRefreshMmceStatus();
 		return;
 	}
 #endif
@@ -353,6 +496,7 @@ void dashToolsSyncAllMmceCards(void)
 	                 total.failed ? "Local card backup completed with errors" : "All cards backed up locally",
 	                 summary,
 	                 "Link Google Drive to upload this history too.");
+	dashToolsRefreshMmceStatus();
 }
 
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)

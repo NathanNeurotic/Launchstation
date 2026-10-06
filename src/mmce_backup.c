@@ -10,6 +10,7 @@ extern int fileMode;
 
 #define MMCE_BACKUP_DEPTH 12
 #define MMCE_BACKUP_IO 65536
+#define MMCE_COMPARE_PAGES 64
 
 static u8 compare_a[MMCE_BACKUP_IO] __attribute__((aligned(64)));
 static u8 compare_b[MMCE_BACKUP_IO] __attribute__((aligned(64)));
@@ -192,6 +193,46 @@ static int files_equal_serial(const char *a, const char *b)
     return 1;
 }
 
+/* Compare a live/native 512-byte-page MMCE image with an existing PCSX2
+ * 528-byte-page history file without creating a temporary converted image. */
+static int files_equal_pcsx2_history(const char *source, const char *history)
+{
+    s64 raw_size, encoded_size, src_pos = 0, dst_pos = 0;
+
+    if (mcCardValidateNoEcc(source) != MC_CARD_EXPORT_OK ||
+        mcCardValidatePcsx2(history) != MC_CARD_EXPORT_OK)
+        return -1;
+
+    raw_size = file_size(source);
+    encoded_size = file_size(history);
+    if (raw_size <= 0 || encoded_size <= 0 || (raw_size % 512) != 0)
+        return -1;
+    if (encoded_size != (raw_size / 512) * 528)
+        return 0;
+
+    while (src_pos < raw_size) {
+        u8 page[528];
+        int pages = (int)((raw_size - src_pos) / 512);
+        int raw_bytes, encoded_bytes, p;
+
+        if (pages > MMCE_COMPARE_PAGES)
+            pages = MMCE_COMPARE_PAGES;
+        raw_bytes = pages * 512;
+        encoded_bytes = pages * 528;
+        if (read_chunk(source, src_pos, compare_a, raw_bytes) < 0 ||
+            read_chunk(history, dst_pos, compare_b, encoded_bytes) < 0)
+            return -1;
+        for (p = 0; p < pages; p++) {
+            mcCardPcsx2Page(compare_a + p * 512, page);
+            if (memcmp(page, compare_b + p * 528, 528) != 0)
+                return 0;
+        }
+        src_pos += raw_bytes;
+        dst_pos += encoded_bytes;
+    }
+    return 1;
+}
+
 static int prune_history(const char *dir, int keep, int format)
 {
     iox_dirent_t ent;
@@ -332,6 +373,48 @@ static int backup_one(const char *source, const char *relative,
     return 0;
 }
 
+
+static int scan_one(const char *source, const char *relative,
+                    const char *backup_root, const MmceBackupOptions *options,
+                    MmceBackupScanStats *stats)
+{
+    char dir[MAX_PATH], previous[MAX_NAME], previous_path[MAX_PATH];
+    int newest, same;
+
+    if (!card_history_dir(backup_root, relative, dir, sizeof(dir))) {
+        stats->failed++;
+        return -1;
+    }
+
+    /* No history folder means this card has never been backed up. */
+    if (!dir_exists(dir)) {
+        stats->pending++;
+        return 0;
+    }
+
+    newest = newest_history(dir, options->format, NULL, previous, sizeof(previous));
+    if (newest == 0) {
+        stats->pending++;
+        return 0;
+    }
+    if (newest < 0 ||
+        !join_path(previous_path, sizeof(previous_path), dir, previous)) {
+        stats->failed++;
+        return -1;
+    }
+
+    same = options->format == MMCE_BACKUP_FORMAT_PCSX2
+               ? files_equal_pcsx2_history(source, previous_path)
+               : files_equal_serial(source, previous_path);
+    if (same > 0)
+        stats->unchanged++;
+    else if (same == 0)
+        stats->pending++;
+    else
+        stats->failed++;
+    return same < 0 ? -1 : 0;
+}
+
 static int count_candidates(const char *dir, int depth)
 {
     iox_dirent_t ent;
@@ -448,5 +531,89 @@ int mmceBackupAllCards(int unit, const char *dest_root, const MmceBackupOptions 
     stats->candidates = count_candidates(source_root, 0);
     process_tree(source_root, source_root, history_root, options, 0,
                  stats, progress, &done);
+    return 0;
+}
+
+static void scan_tree(const char *dir, const char *source_root,
+                      const char *backup_root, const MmceBackupOptions *options,
+                      int depth, MmceBackupScanStats *stats,
+                      MmceBackupProgress progress, int *done)
+{
+    iox_dirent_t ent;
+    char scan[MAX_PATH], child[MAX_PATH];
+    const char *relative;
+    int fd;
+
+    if (depth > MMCE_BACKUP_DEPTH)
+        return;
+    snprintf(scan, sizeof(scan), "%s", dir);
+    fd = genDopen(scan);
+    if (fd < 0)
+        return;
+
+    memset(&ent, 0, sizeof(ent));
+    while (fileXioDread(fd, &ent) > 0) {
+        if (!strcmp(ent.name, ".") || !strcmp(ent.name, "..")) {
+            memset(&ent, 0, sizeof(ent));
+            continue;
+        }
+        if (!join_path(child, sizeof(child), dir, ent.name)) {
+            memset(&ent, 0, sizeof(ent));
+            continue;
+        }
+
+        if (FIO_S_ISDIR(ent.stat.mode)) {
+            scan_tree(child, source_root, backup_root, options, depth + 1,
+                      stats, progress, done);
+        } else if (genCmpFileExt(ent.name, "MCD")) {
+            (*done)++;
+            if (progress)
+                progress(child, *done, stats->candidates);
+            relative = child + strlen(source_root);
+            while (*relative == '/')
+                relative++;
+            scan_one(child, relative, backup_root, options, stats);
+        }
+        memset(&ent, 0, sizeof(ent));
+    }
+    genDclose(fd);
+}
+
+int mmceBackupScanCards(int unit, const char *dest_root, const MmceBackupOptions *options,
+                        MmceBackupScanStats *stats, MmceBackupProgress progress)
+{
+    static const MmceBackupOptions defaults = {10, MMCE_BACKUP_FORMAT_MCD};
+    char source_root[MAX_PATH], history_root[MAX_PATH], tmp[MAX_PATH], unit_name[16];
+    int done = 0;
+
+    if (options == NULL)
+        options = &defaults;
+    if (stats == NULL || dest_root == NULL || unit < 0 || unit > 1 ||
+        options->keep < 0 || options->keep > 99 ||
+        options->format < 0 || options->format >= MMCE_BACKUP_FORMAT_COUNT)
+        return -1;
+    memset(stats, 0, sizeof(*stats));
+
+    snprintf(source_root, sizeof(source_root), "mmce%d:/MemoryCards", unit);
+    if (!dir_exists(source_root))
+        return -1;
+
+    {
+        size_t source_len = strlen(source_root);
+        if (!strncmp(dest_root, source_root, source_len) &&
+            (dest_root[source_len] == '\0' || dest_root[source_len] == '/'))
+            return -1;
+    }
+
+    if (!join_path(history_root, sizeof(history_root), dest_root, "WLE-MMCE-Backups"))
+        return -1;
+    snprintf(unit_name, sizeof(unit_name), "mmce%d", unit);
+    snprintf(tmp, sizeof(tmp), "%s", history_root);
+    if (!join_path(history_root, sizeof(history_root), tmp, unit_name))
+        return -1;
+
+    stats->candidates = count_candidates(source_root, 0);
+    scan_tree(source_root, source_root, history_root, options, 0,
+              stats, progress, &done);
     return 0;
 }

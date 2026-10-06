@@ -915,11 +915,14 @@ extern const DashScreen dashDevicesScreen;
 extern const DashScreen dashToolsScreen;
 extern const DashScreen dashSettingsScreen;
 
-/* MMCE/cloud actions shared by Tools and Settings. */
+/* MMCE/cloud actions and cached Settings status shared by Tools/Settings. */
 void dashToolsIgrBackupSetup(void);
 void dashToolsSyncAllMmceCards(void);
+void dashToolsRefreshMmceStatus(void);
+const char *dashToolsMmceStatus(void);
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 void dashToolsCloudBackup(void);
+const char *dashToolsGoogleStatus(void);
 #endif
 void dashToolsCheckUpdates(void);
 

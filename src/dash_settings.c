@@ -505,6 +505,8 @@ static void openPage(int next)
 	page = next;
 	item = item_top = 0;
 	item_anim = 0.0f;
+	if (next == P_MMCE_BACKUP)
+		dashToolsRefreshMmceStatus();
 }
 
 static void backPage(void)
@@ -1261,6 +1263,7 @@ static void setChoice(int id, int v)
 			break;
 		case S_MMCE_BACKUP_FORMAT:
 			dashCfg.mmce_backup_format = v;
+			dashToolsRefreshMmceStatus();
 			break;
 		case S_IGR_SYNC_MODE:
 			if (v <= 0) {
@@ -2527,9 +2530,11 @@ static void runAction(int id)
 			break;
 		case S_MMCE_SYNC_ALL:
 			dashToolsSyncAllMmceCards();
+			dashToolsRefreshMmceStatus();
 			break;
 		case S_IGR_HELPER:
 			dashToolsIgrBackupSetup();
+			dashToolsRefreshMmceStatus();
 			break;
 		case S_MMCE_LANGUAGE:
 			openPage(P_LANGUAGE);
@@ -2537,6 +2542,7 @@ static void runAction(int id)
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 		case S_GOOGLE_ACCOUNT:
 			dashToolsCloudBackup();
+			dashToolsRefreshMmceStatus();
 			break;
 		case S_CHECK_UPDATES:
 			dashToolsCheckUpdates();
@@ -2778,6 +2784,24 @@ static void settingsUpdate(float dt)
 	item_anim = dashApproach(item_anim, (float)item, 16.0f * sp, dt);
 }
 
+static const char *actionStatus(int id)
+{
+	switch (id) {
+		case S_MMCE_SYNC_ALL:
+			return dashToolsMmceStatus();
+		case S_IGR_HELPER:
+			return "Manage";
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+		case S_GOOGLE_ACCOUNT:
+			return dashToolsGoogleStatus();
+		case S_CHECK_UPDATES:
+			return "Check now";
+#endif
+		default:
+			return NULL;
+	}
+}
+
 static void settingsDraw(void)
 {
 	int i;
@@ -2840,8 +2864,11 @@ static void settingsDraw(void)
 			dashIcon(DI_PLAY, ix + iw - 22, y + 9, 12, DASH_C_TEXT3);
 			continue;
 		}
-		dashTextFit(ix + 38, y + 7.5f, it->type == ST_ACTION ? iw - 70 : iw * 0.56f - 50,
-		            it->label, DASH_FS_SMALL, col);
+		{
+			const char *ast = it->type == ST_ACTION ? actionStatus(it->id) : NULL;
+			float label_w = it->type == ST_ACTION ? (ast ? iw * 0.58f : iw - 70) : iw * 0.56f - 50;
+			dashTextFit(ix + 38, y + 7.5f, label_w, it->label, DASH_FS_SMALL, col);
+		}
 		if (it->type == ST_COLOR) {
 			int alpha;
 			DashColor *cv = colorField(it->id, &alpha);
@@ -2912,8 +2939,13 @@ static void settingsDraw(void)
 				else
 					dashTextFit(vx, y + 6.5f, maxw, v, DASH_FS_SMALL, set && !disabled ? DASH_C_ACCENT : DASH_C_TEXT3);
 			}
-		} else
+		} else {
+			const char *ast = actionStatus(it->id);
+			if (ast != NULL && ast[0] != '\0')
+				dashTextRight(ix + iw - 32, y + 6.5f, ast, DASH_FS_SMALL,
+				              disabled ? DASH_C_TEXT3 : (on ? DASH_C_ACCENT : DASH_C_TEXT2));
 			dashIcon(DI_PLAY, ix + iw - 22, y + 8, 12, DASH_C_TEXT3);
+		}
 	}
 	dashDrawScrollbar(ix + iw + 10, iy, ITEM_ROWS * irow, item_top, ITEM_ROWS, c->n);
 	/* help line */
