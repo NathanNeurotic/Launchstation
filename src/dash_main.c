@@ -210,6 +210,25 @@ static int settleBackgroundWork(const char *title)
 	return dashStoreFlushWait(title);
 }
 
+int DashPrepareKeepIopHandoff(const char *title)
+{
+	if (!dash_active)
+		return 1;
+
+	/*
+	 * RiptOPL's Ember launch drains every background IO user before its
+	 * keep-IOP ExecPS2. Do the same here: a worker left inside fileXio RPC
+	 * would be destroyed with this EE process while Ember inherits the same
+	 * IOP-side RPC/device state. Also end audsrv cleanly rather than leaving
+	 * our dashboard audio client/server state behind for Ember to inherit.
+	 */
+	if (!settleBackgroundWork(title != NULL ? title : "Preparing application"))
+		return 0;
+	filerRootMcPollIdle();
+	dashSoundShutdown();
+	return 1;
+}
+
 /* After a command that may have rebooted the IOP (network, reboot IOP, a
  * launch that failed): sound and the auto-started devices come back. */
 static void afterMiscCommand(void)
