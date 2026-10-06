@@ -93,4 +93,82 @@ with tempfile.TemporaryDirectory(prefix="wle-card-export-") as tmp:
 
 assert got == expected, f"ECC mismatch: {got.hex()} != {expected.hex()}"
 assert got[-4:] == b"\0\0\0\0"
-print("PASS: PCSX2 page conversion matches AFL MCMAN ECC; active-MMCE export keeps one stable source handle and verifies output")
+
+# Exercise the public image validators against exact-size and truncated files.
+validator_c = r"""
+#include <fcntl.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+typedef unsigned char u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+typedef int64_t s64;
+#define FIO_O_RDONLY O_RDONLY
+#define MC_PAGE_DATA 512
+#define MC_PAGE_PCSX2 528
+enum {
+    MC_CARD_EXPORT_OK = 0,
+    MC_CARD_EXPORT_OPEN = -1,
+    MC_CARD_EXPORT_FORMAT = -2,
+    MC_CARD_EXPORT_IO = -3
+};
+static int genOpen(const char *p, int f) { return open(p, f); }
+static int genRead(int fd, void *p, int n) { return (int)read(fd, p, (size_t)n); }
+static s64 genLseek(int fd, s64 off, int whence) { return (s64)lseek(fd, (off_t)off, whence); }
+static int genClose(int fd) { return close(fd); }
+"""
+for sig in (
+    "static u16 read_le16(",
+    "static u32 read_le32(",
+    "static int source_info_fd(",
+    "static int source_info(",
+    "int mcCardValidateNoEcc(",
+    "static int pcsx2_source_info(",
+    "int mcCardValidatePcsx2(",
+):
+    validator_c += function(sig, src)
+
+validator_c += r"""
+int main(int argc, char **argv) {
+    if (argc != 3) return 9;
+    if (!strcmp(argv[1], "mcd"))
+        return mcCardValidateNoEcc(argv[2]) == MC_CARD_EXPORT_OK ? 0 : 1;
+    if (!strcmp(argv[1], "ps2"))
+        return mcCardValidatePcsx2(argv[2]) == MC_CARD_EXPORT_OK ? 0 : 1;
+    return 8;
+}
+"""
+
+with tempfile.TemporaryDirectory(prefix="wle-card-validate-") as tmp:
+    tmp = Path(tmp)
+    harness = tmp / "validate.c"
+    exe = tmp / "validate"
+    harness.write_text(validator_c)
+    subprocess.run([compiler, "-std=gnu11", "-Wall", "-Werror", str(harness), "-o", str(exe)], check=True)
+
+    raw_size = 512 * 2 * 4
+    encoded_size = 528 * 2 * 4
+    header = bytearray(64)
+    header[:28] = b"Sony PS2 Memory Card Format "
+    header[40:42] = (512).to_bytes(2, "little")
+    header[42:44] = (2).to_bytes(2, "little")
+    header[48:52] = (4).to_bytes(4, "little")
+
+    valid_mcd = tmp / "valid.mcd"
+    valid_mcd.write_bytes(bytes(header) + bytes(raw_size - len(header)))
+    trunc_mcd = tmp / "trunc.mcd"
+    trunc_mcd.write_bytes(valid_mcd.read_bytes()[:-512])
+
+    valid_ps2 = tmp / "valid.ps2"
+    valid_ps2.write_bytes(bytes(header) + bytes(encoded_size - len(header)))
+    trunc_ps2 = tmp / "trunc.ps2"
+    trunc_ps2.write_bytes(valid_ps2.read_bytes()[:-528])
+
+    subprocess.run([str(exe), "mcd", str(valid_mcd)], check=True)
+    subprocess.run([str(exe), "ps2", str(valid_ps2)], check=True)
+    assert subprocess.run([str(exe), "mcd", str(trunc_mcd)]).returncode != 0
+    assert subprocess.run([str(exe), "ps2", str(trunc_ps2)]).returncode != 0
+print("PASS: PCSX2 ECC and active export verified; image validators accept exact geometry and reject truncated backups")

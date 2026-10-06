@@ -241,7 +241,9 @@ void dashStoreDefaults(void)
 	dashCfg.mmce_backup_keep = 10;
 	dashCfg.mmce_backup_format = 0; /* native .mcd */
 	dashCfg.igr_auto_backup = 1;
+	dashCfg.igr_cloud_sync = 0;
 	dashCfg.igr_after = DASH_IGR_AFTER_DASHBOARD;
+	dashCfg.igr_backup_path[0] = '\0';
 	dashCfg.igr_after_path[0] = '\0';
 	for (i = 0; i < (int)(sizeof(default_scan) / sizeof(default_scan[0])); i++)
 		dashStrCopy(dashCfg.scan[dashCfg.nscan++], default_scan[i], DASH_PATH_MAX);
@@ -329,6 +331,12 @@ static int settingsKv(const char *key, char *value, void *user)
 		dashCfg.mmce_backup_format = clampInt(value, 0, 1, 0);
 	else if (!stricmp(key, "Dash_IGRAutoBackup"))
 		dashCfg.igr_auto_backup = clampInt(value, 0, 1, 1);
+	else if (!stricmp(key, "Dash_IGRCloudSync"))
+		dashCfg.igr_cloud_sync = clampInt(value, 0, 1, 0);
+	else if (!stricmp(key, "Dash_IGRBackupPath")) {
+		if (strlen(value) < sizeof(dashCfg.igr_backup_path))
+			dashStrCopy(dashCfg.igr_backup_path, value, sizeof(dashCfg.igr_backup_path));
+	}
 	else if (!stricmp(key, "Dash_IGRAfter"))
 		dashCfg.igr_after = clampInt(value, 0, DASH_IGR_AFTER_COUNT - 1, DASH_IGR_AFTER_DASHBOARD);
 	else if (!stricmp(key, "Dash_IGRAfterPath")) {
@@ -493,6 +501,8 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                "Dash_MMCEBackupKeep = %d\r\n"
 	                "Dash_MMCEBackupFormat = %d\r\n"
 	                "Dash_IGRAutoBackup = %d\r\n"
+	                "Dash_IGRCloudSync = %d\r\n"
+	                "Dash_IGRBackupPath = %s\r\n"
 	                "Dash_IGRAfter = %d\r\n"
 	                "Dash_IGRAfterPath = %s\r\n",
 	                c->enabled, c->start_section, c->view, c->effects,
@@ -501,7 +511,8 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                c->bgm, c->bgm_vol, c->app_filter, c->files_mode,
 	                c->home_shortcuts, c->icon_backing, c->show_unavailable_devices, c->dev_auto,
 	                c->mmce_backup_keep, c->mmce_backup_format,
-	                c->igr_auto_backup, c->igr_after, c->igr_after_path);
+	                c->igr_auto_backup, c->igr_cloud_sync, c->igr_backup_path,
+	                c->igr_after, c->igr_after_path);
 	for (i = 0; i < c->nscan && len < cap - DASH_PATH_MAX - 16; i++)
 		len += snprintf(buf + len, cap - len, "Dash_Scan = %s\r\n", c->scan[i]);
 	/* theme: preset name, plus a full snapshot once customised */

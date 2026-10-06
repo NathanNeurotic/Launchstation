@@ -251,6 +251,8 @@ targets:
       - src/main_history.c
       - src/remote_control.c
       - src/pc_game_receiver.c
+      - src/cloud_http.c
+      - src/cloud_google.c
       - src/init.c
       - src/main_startup.c
       - src/main_fileops.c
@@ -333,7 +335,7 @@ targets:
       - src/dash_browser.c
       - src/dash_exploit.c
       - src/embed_blobs.S
-    include_dirs: [include, ., ee_libs/hdd/include]
+    include_dirs: [include, ., ee_libs/hdd/include, .cloud-deps/include]
     defines:
       - WLE_PS2BUILD
       - NEWLIB_PORT_AWARE
@@ -345,6 +347,7 @@ targets:
       - ILINK
       - HOMEBREW_SIO2MAN
       - ETH
+      - WLE_NATIVE_CLOUD
       - UDPFS
       - TMANIP
       - EXFAT
@@ -356,8 +359,9 @@ targets:
       - "-Wa,-I.."
     ldflags:
       - "-Wl,--no-warn-mismatch"
+      - "-L../.cloud-deps/lib"
     headers: [sior, audsrv]
-    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, mc, kbd, ps2ips, cglue, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv]
+    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, mc, kbd, mbedtls, mbedx509, mbedcrypto, ps2ips, cglue, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv]
     embed_irx:
       - loader:loader_elf
       - wle_igr:wle_igr_elf
