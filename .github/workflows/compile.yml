@@ -29,6 +29,7 @@ jobs:
           python3 tests/test_settings_save_prompt.py
           python3 tests/test_settings_navigation.py
           python3 tests/test_zack_feedback.py
+          python3 tests/test_feedback_35_82.py
           python3 tests/test_modal_animation.py
           python3 tests/test_theme_motion.py
           python3 tests/test_tile_styles.py
