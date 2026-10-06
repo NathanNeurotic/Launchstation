@@ -19,7 +19,7 @@ assert "dashToolsSyncAllMmceCards();" in settings
 assert "dashToolsIgrBackupSetup();" in settings
 assert "dashToolsCloudBackup();" in settings
 assert "dashToolsCheckUpdates();" in settings
-assert "dashToolsRefreshMmceStatus();" in settings
+assert "dashToolsPrepareMmceStatus();" in settings
 assert "dashToolsMmceStatus()" in settings
 assert "dashToolsGoogleStatus()" in settings
 assert "dashToolsIgrStatus()" in settings
@@ -30,6 +30,10 @@ assert '"Partial / mixed"' in tools
 assert '"All synced"' in tools
 assert '"%d pending"' in tools
 assert '"Checking..."' in tools
+assert "void dashToolsPrepareMmceStatus(void)" in tools
+assert 'loadMmceModules()' in tools
+assert '"Starting MMCE..."' in tools
+assert '"MMCE could not be started"' in tools
 
 assert "void dashToolsSyncAllMmceCards(void)" in tools
 assert "mmceBackupAllCards" in tools
@@ -39,6 +43,7 @@ assert '"WLE-UPDATE-CA.PEM"' in tools
 assert "releaseJsonString" in tools
 
 assert "dashToolsSyncAllMmceCards" in header
+assert "dashToolsPrepareMmceStatus" in header
 assert "dashToolsCheckUpdates" in header
 assert "cp res/WLE-UPDATE-CA.PEM artifacts/WLE-UPDATE-CA.PEM" in workflow
 

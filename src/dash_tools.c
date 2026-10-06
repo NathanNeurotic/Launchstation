@@ -349,6 +349,38 @@ static void mmceStatusDone(void *arg)
 		dashToolsRefreshMmceStatus();
 }
 
+void dashToolsPrepareMmceStatus(void)
+{
+#ifdef MMCE
+	int loaded = isPathDeviceStackLoaded("mmce0:/") ||
+	             isPathDeviceStackLoaded("mmce1:/");
+
+	/* Entering the MMCE management page is an explicit request for live
+	 * status. Start the stack on demand here rather than leaving useful
+	 * fields at "Not checked" merely because MMCE auto-start is disabled. */
+	if (dashCfg.igr_backup_path[0] != '\0' && !loaded) {
+		if (mmce_status_job && !dashWorkerAwaitAll("Finishing previous MMCE status check"))
+			return;
+
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "Starting MMCE...");
+		snprintf(igr_status_text, sizeof(igr_status_text), "Starting MMCE...");
+		dashLoadingBegin("Starting MMCE for backup status");
+		loaded = loadMmceModules();
+		dashLoadingEnd();
+
+		if (!loaded) {
+			snprintf(mmce_status_text, sizeof(mmce_status_text), "Unavailable");
+			snprintf(igr_status_text, sizeof(igr_status_text), "Unavailable");
+			dashModalMessage(DI_WARNING, "MMCE could not be started",
+			                 "This page needs MMCE to inspect live cards and the installed IGR helper.",
+			                 "You can stay on the page and retry an MMCE action, or check the device/slot and driver settings.");
+			return;
+		}
+	}
+#endif
+	dashToolsRefreshMmceStatus();
+}
+
 void dashToolsRefreshMmceStatus(void)
 {
 	MmceStatusJob *j;

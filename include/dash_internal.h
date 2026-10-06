@@ -918,6 +918,7 @@ extern const DashScreen dashSettingsScreen;
 /* MMCE/cloud actions and cached Settings status shared by Tools/Settings. */
 void dashToolsIgrBackupSetup(void);
 void dashToolsSyncAllMmceCards(void);
+void dashToolsPrepareMmceStatus(void);
 void dashToolsRefreshMmceStatus(void);
 const char *dashToolsMmceStatus(void);
 const char *dashToolsIgrStatus(void);

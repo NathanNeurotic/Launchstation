@@ -29,7 +29,7 @@ declarations = settings[settings.index("enum SetType"):settings.index("/* Unsave
 icons = sorted(set(re.findall(r"\bDI_\w+", settings)))
 code = "#include <assert.h>\n#include <stdio.h>\n#include <string.h>\n"
 code += "#define ETH 1\n#define WLE_NATIVE_CLOUD 1\n#define UDPFS 1\n#define ILINK 1\n#define MAX_PATH 1024\n#define DASH_FONT_SYSTEM 1\n"
-code += "static void dashToolsRefreshMmceStatus(void);\n"
+code += "static void dashToolsPrepareMmceStatus(void);\n"
 code += "enum { " + ", ".join(icons) + " };\n"
 code += classic[classic.index("enum SETTING_LK {"):classic.index("};", classic.index("enum SETTING_LK {")) + 2]
 code += declarations
@@ -42,7 +42,7 @@ enum { DASH_SND_CANCEL };
 enum { DASH_IGR_AFTER_DASHBOARD, DASH_IGR_AFTER_OSDSYS, DASH_IGR_AFTER_APP };
 static void dashSoundPlay(int s) { assert(s == DASH_SND_CANCEL); }
 static void dashUiFocusPoke(void) {}
-static void dashToolsRefreshMmceStatus(void) {}
+static void dashToolsPrepareMmceStatus(void) {}
 static struct { int sound, bgm, artwork, igr_after; } dashCfg;
 static struct { int font, wallpaper, clock; } dashTheme;
 static struct { int usbkbd_used; char LK_Path[SETTING_LK_COUNT][MAX_PATH]; } config;
