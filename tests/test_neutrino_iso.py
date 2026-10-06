@@ -20,7 +20,7 @@ assert "setting->neutrino_file[0] = '\\0'" in config
 assert 'genCmpFileExt(path, "ISO")' in launcher
 assert '"CD001"' in launcher
 assert "config/system.toml" in launcher
-assert "modules/ee_core.elf" in launcher
+assert "system.toml" in launcher
 assert "neutrinoElfReadable" in launcher
 assert "openPathForRead(path" in launcher
 
@@ -28,11 +28,19 @@ assert "openPathForRead(path" in launcher
 order = [
     "setting->neutrino_file",
     "deviceRootCandidate(path",
-    '"mc0:/neutrino/neutrino.elf"',
-    '"mc1:/neutrino/neutrino.elf"',
+    'findCompleteOnRoot("mc0:"',
+    'findCompleteOnRoot("mc1:"',
 ]
 pos = [launcher.index(x) for x in order]
 assert pos == sorted(pos)
+
+for form in (
+    "%s/NEUTRINO/neutrino.elf",
+    "%s/neutrino/neutrino.elf",
+    "%s/NEUTRINO/NEUTRINO.ELF",
+    "%s/neutrino/NEUTRINO.ELF",
+):
+    assert form in launcher
 
 # Backends that Neutrino understands from File Browser paths.
 for token in ('return "usb"', 'return "mx4sio"', 'return "mmce"', 'return "ilink"', 'return "ata"', 'return "udpfs"'):
