@@ -55,8 +55,12 @@ whole-Drive access.
 Cloud sync uploads the existing versioned `WLE-MMCE-Backups` tree. Before an
 `.mcd` or `.ps2` file is uploaded, wLaunchELF validates its PS2 memory-card
 header/geometry and exact expected file size; interrupted or truncated
-final-named backups are rejected. Sync is copy-only: existing versions are
-skipped and cloud files are never automatically deleted. Automatic syncing after IGR is disabled by default and
+final-named backups are rejected. Sync is copy-only: cloud files are never automatically deleted. Each uploaded
+backup carries a private `wle_sha256` Drive `appProperties` value. A backup
+is skipped only when the same folder already contains an item with both the
+same filename and SHA-256; a same-name file with different content is preserved
+as a separate Drive item. Legacy uploads without this property may therefore be
+uploaded once more, after which subsequent syncs are content-aware. Automatic syncing after IGR is disabled by default and
 can be enabled under Settings > Storage & devices > MMCE backups after Google
 Drive is linked.
 
@@ -66,7 +70,9 @@ TLS certificate verification uses the PS2 system clock. Make sure the PS2 system
 
 TLS certificate verification is mandatory. Resumable upload session URLs are
 also restricted to Google's documented `https://www.googleapis.com/` origin
-before the OAuth bearer token is sent. The refresh token is stored only on the
+before the OAuth bearer token is sent. The upload path hashes an already-open
+backup and streams that same file handle to TLS, avoiding a filename re-open
+between content identity and upload. The refresh token is stored only on the
 user's configured wLaunchELF settings device in `WLE-CLOUD.TOK` (with
 `WLE-CLOUD.TOK.NEW` used only as a recoverable staging copy). Disconnect
 removes both local token copies. Never publish either token file.
