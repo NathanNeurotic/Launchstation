@@ -523,7 +523,7 @@ static void activate(void)
 		launchPath(path, 0);
 		return;
 	}
-	dashModalMessage(DI_FILE, f->name, "wLaunchELF cannot open this type of file. Use the menu to copy, move or rename it.", path);
+	dashModalMessage(DI_FILE, f->name, "r3LaunchELF_ATTDASH cannot open this type of file. Use the menu to copy, move or rename it.", path);
 }
 
 //--------------------------------------------------------------
