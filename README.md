@@ -1,13 +1,13 @@
-# __wLaunchELF_R3Z_RIPTOATTDASH__
+# __r3LaunchELF_ATTDASH__
 
 wLaunchELF, formerly known as uLaunchELF, also known as wLE or uLE (abbreviated), is an open source file manager and executable launcher for the Playstation 2 console based off of the original LaunchELF. It contains many different features, including a text editor, hard drive manager, as well as network support, and much more.
 
 ## Documentation
 
-The full wLaunchELF R3Z reference is published as a PS2-styled GitHub Pages site:
+The full r3LaunchELF_ATTDASH reference is published as a PS2-styled GitHub Pages site:
 
 - **Online:** https://nathanneurotic.github.io/r3LaunchELF_ATTDASH/
-- **Offline:** `wLaunchELF_R3Z-Documentation.zip` in the latest automated release
+- **Offline:** `r3LaunchELF_ATTDASH-Documentation.zip` in the latest automated release
 - **Source:** `docs-site/` in this repository
 
 The site covers installation, dashboard controls, File Browser, Apps, Text Editor, storage/device support, APA/PFS, iLink, MMCE, networking, POPStarter VCD launching, Neutrino ISO launching, IGR/MMCE backups, native Google Drive sync, settings, configuration files, troubleshooting and developer notes.
