@@ -132,7 +132,7 @@ jobs:
           fi
           mkdir -p artifacts
           cp build/bin/wLaunchELF-packed.elf artifacts/BOOT.ELF
-          cp build/bin/wLaunchELF-packed.elf artifacts/wLaunchELF_R3Z.ELF
+          cp build/bin/wLaunchELF-packed.elf artifacts/r3LaunchELF_ATTDASH.ELF
           cp res/music.sad artifacts/BGM.ADP
           cp res/WLE-CLOUD.CNF.example artifacts/WLE-CLOUD.CNF.example
           curl -fL --retry 6 --retry-all-errors https://pki.goog/roots.pem -o artifacts/WLE-CLOUD-CA.PEM
@@ -142,7 +142,7 @@ jobs:
             exit 1
           fi
           if [ -f "build/bin/wLaunchELF.elf" ]; then
-            cp build/bin/wLaunchELF.elf artifacts/wLaunchELF_R3Z-unpacked.ELF
+            cp build/bin/wLaunchELF.elf artifacts/r3LaunchELF_ATTDASH-unpacked.ELF
           fi
           ls -lh artifacts/
 
@@ -150,9 +150,9 @@ jobs:
         run: |
           python3 docs-site/build.py \
             --out build/docs-site \
-            --zip artifacts/wLaunchELF_R3Z-Documentation.zip
-          unzip -t artifacts/wLaunchELF_R3Z-Documentation.zip
-          ls -lh artifacts/wLaunchELF_R3Z-Documentation.zip
+            --zip artifacts/r3LaunchELF_ATTDASH-Documentation.zip
+          unzip -t artifacts/r3LaunchELF_ATTDASH-Documentation.zip
+          ls -lh artifacts/r3LaunchELF_ATTDASH-Documentation.zip
 
       - name: Show artifact hashes
         run: sha256sum artifacts/*
@@ -161,7 +161,7 @@ jobs:
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: wLaunchELF_R3Z
+          name: r3LaunchELF_ATTDASH
           path: artifacts/
           retention-days: 1
 
@@ -174,10 +174,13 @@ jobs:
         run: |
           tag="latest"
           title="Latest automated build"
-          notes="Automated build for ${GITHUB_SHA} using ps2build. BOOT.ELF and wLaunchELF_R3Z.ELF are identical packed builds; wLaunchELF_R3Z-unpacked.ELF is the uncompressed build. BGM.ADP is optional background music: put it beside the ELF, or omit it. See the CI run for sha256 hashes."
+          notes="Automated build for ${GITHUB_SHA} using ps2build. BOOT.ELF and r3LaunchELF_ATTDASH.ELF are identical packed builds; r3LaunchELF_ATTDASH-unpacked.ELF is the uncompressed build. BGM.ADP is optional background music: put it beside the ELF, or omit it. See the CI run for sha256 hashes."
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}" --prerelease || true
           fi
+          for stale in wLaunchELF_R3Z.ELF wLaunchELF_R3Z-unpacked.ELF wLaunchELF_R3Z-Documentation.zip; do
+            gh release delete-asset "$tag" "$stale" -y >/dev/null 2>&1 || true
+          done
           gh release upload "$tag" artifacts/* --clobber
           gh release edit "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}"
 
