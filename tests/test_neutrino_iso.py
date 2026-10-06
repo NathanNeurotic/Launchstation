@@ -19,8 +19,10 @@ assert "setting->neutrino_file[0] = '\\0'" in config
 
 assert 'genCmpFileExt(path, "ISO")' in launcher
 assert '"CD001"' in launcher
-assert '"config/system.toml"' in launcher
-assert '"modules/ee_core.elf"' in launcher
+assert "config/system.toml" in launcher
+assert "modules/ee_core.elf" in launcher
+assert "neutrinoElfReadable" in launcher
+assert "openPathForRead(path" in launcher
 
 # Deterministic loader discovery: explicit setting, game device, mc0, mc1.
 order = [
