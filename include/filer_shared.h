@@ -84,6 +84,7 @@ extern int udpfs_dir_open_failed;
 #endif
 
 int getDir(const char *path, FILEINFO *info);
+int filerPrepareDirRead(const char *path);
 int pollRootMemoryCardDevices(void);
 void discardNextMx4sioRootListing(const char *path);
 int ensurePathDeviceStackReady(const char *path);
