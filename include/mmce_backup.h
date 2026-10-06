@@ -31,6 +31,14 @@ typedef void (*MmceBackupProgress)(const char *source, int done, int total);
 int mmceBackupAllCards(int unit, const char *dest_root, const MmceBackupOptions *options,
                        MmceBackupStats *stats, MmceBackupProgress progress);
 
+/* Back up one exact card image into the same verified/versioned history used
+ * by full-tree backup. protect_history may name a history file that must not
+ * be pruned during this safety backup (used while restoring an older copy). */
+int mmceBackupCardPath(int unit, const char *source, const char *dest_root,
+                       const MmceBackupOptions *options,
+                       const char *protect_history,
+                       MmceBackupStats *stats);
+
 /* Read-only parity scan used by the Settings status row. It never creates,
  * converts, prunes or removes backup files. */
 int mmceBackupScanCards(int unit, const char *dest_root, const MmceBackupOptions *options,
