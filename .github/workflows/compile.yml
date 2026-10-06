@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build wLaunchELF (ps2build)
+    name: Build r3LaunchELF_ATTDASH (ps2build)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -110,7 +110,7 @@ jobs:
           ee_size="$HOME/.local/share/ps2build/toolchain/ee/bin/mips64r5900el-ps2-elf-size"
           echo "== Mbed TLS archives =="
           ls -lh .cloud-deps/lib/libmbedtls.a .cloud-deps/lib/libmbedx509.a .cloud-deps/lib/libmbedcrypto.a
-          echo "== wLaunchELF sections =="
+          echo "== r3LaunchELF_ATTDASH sections =="
           "$ee_size" build/bin/wLaunchELF.elf || true
           if [ -f build/bin/wLaunchELF-packed.elf ]; then
             ls -lh build/bin/wLaunchELF-packed.elf
