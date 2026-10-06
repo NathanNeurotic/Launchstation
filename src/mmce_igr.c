@@ -3,6 +3,7 @@
 //--------------------------------------------------------------
 #include "launchelf.h"
 #include "mmce_igr.h"
+#include "init.h"
 #include "wle_igr_config.h"
 
 extern int fileMode;
