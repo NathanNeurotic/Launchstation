@@ -344,7 +344,12 @@ int LaunchEmberGame(const char *path, char *message, size_t message_size)
 	                             message, message_size) <= 0)
 		return 0;
 
-	CleanUpForExec();
+	if (!CleanUpForEmberExec()) {
+		LaunchArgsClear();
+		setEmberMessage(message, message_size,
+		                "Ember launch cancelled while finishing background I/O", NULL);
+		return 0;
+	}
 	RunLoaderElfKeepIOPWithArgv0(fullpath, party, fullpath, exec_kind);
 	return 1;
 }

@@ -20,6 +20,10 @@ int DashIsEnabled(void);
 /* Non-zero while DashRun() is on the call stack (guards re-entry). */
 int DashIsActive(void);
 
+/* Finish dashboard-owned IO/audio before a child ELF that deliberately
+ * inherits the live IOP. Returns 0 if the user cancels the bounded wait. */
+int DashPrepareKeepIopHandoff(const char *title);
+
 /* Path of the MISC pseudo-command that opens the dashboard. */
 const char *DashMiscCommandName(void);
 

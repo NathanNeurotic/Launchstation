@@ -6,6 +6,7 @@ actions = (root / "src/main_actions.c").read_text(encoding="utf-8")
 fileops = (root / "src/main_fileops.c").read_text(encoding="utf-8")
 browser = (root / "src/dash_browser.c").read_text(encoding="utf-8")
 tools = (root / "src/dash_tools.c").read_text(encoding="utf-8")
+dash_main = (root / "src/dash_main.c").read_text(encoding="utf-8")
 elf = (root / "src/elf.c").read_text(encoding="utf-8")
 header = (root / "include/launchelf.h").read_text(encoding="utf-8")
 makefile = (root / "Makefile").read_text(encoding="utf-8")
@@ -42,8 +43,15 @@ assert "game's umbrella" in ember
 # Launch contract: real ember.elf path is target argv[0], bare game folder is argv[1],
 # and the IOP/device stack must stay alive.
 assert "LaunchArgsLoadFromBuffer" in ember
+assert "CleanUpForEmberExec()" in ember
 assert "RunLoaderElfKeepIOPWithArgv0" in ember
+assert "CleanUpForEmberExec" in header
 assert "RunLoaderElfKeepIOPWithArgv0" in header
+assert "DashPrepareKeepIopHandoff" in actions
+assert "padEnd()" in actions
+assert "DashPrepareKeepIopHandoff" in dash_main
+assert "dashSoundShutdown()" in dash_main
+assert "dashStoreFlushWait" in dash_main
 assert "child_argv0_override" in elf
 assert "WLE_PFS_WRITETHROUGH" in elf
 

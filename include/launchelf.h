@@ -395,6 +395,10 @@ int uLE_cdDiscValid(void);
 int uLE_cdStop(void);
 int IsSupportedFileType(char *path);
 void CleanUpForExec(void);
+/* Ember inherits the live IOP. This variant drains dashboard IO/audio and
+ * fully ends our libpad RPC client so Ember can open the still-resident pad
+ * server cleanly, without resetting the storage IOP. 0 = user cancelled. */
+int CleanUpForEmberExec(void);
 /* remote_control.c: MrRexD-compatible PC command inbox. */
 int remoteCommandPoll(char *runpath, int runpath_size, char *message, int message_size);
 /* pc_game_receiver.c: MrRexD-compatible UDPFS ISO receiver. */
