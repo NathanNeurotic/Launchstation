@@ -163,7 +163,11 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		LaunchPopstarterVcd(path, ctx->main_msg, MAX_PATH);
 		return;
 	}
-	if (IsEmberGamePath(path)) {
+	if (genCmpFileExt(path, "CUE") || IsEmberGamePath(path)) {
+		/* A .CUE selection is always intended for Ember.  BIN/EXE remain
+		 * structure-aware so unrelated binary/executable files are not
+		 * hijacked.  LaunchEmberGame performs the strict games/<Game>/
+		 * validation and returns a useful layout error if it is misplaced. */
 		LaunchArgsClear();
 		LaunchEmberGame(path, ctx->main_msg, MAX_PATH);
 		return;
