@@ -42,7 +42,7 @@ def page_map(manifest):
 
 def nav_html(manifest, active):
     rows = [
-        '<div class="sidebar-brand-sub">PLAYSTATION 2 // wLaunchELF R3Z</div>'
+        '<div class="sidebar-brand-sub">PLAYSTATION 2 // r3LaunchELF_ATTDASH</div>'
     ]
     for section in manifest["sections"]:
         rows.append(f'<h4>{html.escape(section["name"])}</h4>')
