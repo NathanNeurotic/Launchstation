@@ -252,6 +252,7 @@ targets:
       - src/remote_control.c
       - src/pc_game_receiver.c
       - src/cloud_http.c
+      - src/self_update.c
       - src/cloud_google.c
       - src/init.c
       - src/main_startup.c

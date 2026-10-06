@@ -336,7 +336,7 @@ static const SetItem mmce_backup_items[] = {
     {ST_CHOICE, S_MMCE_BACKUP_FORMAT, "Backup format", "Native .mcd avoids writes when unchanged. PCSX2 .ps2 adds ECC/spare bytes and verifies the converted image."},
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
     {ST_ACTION, S_GOOGLE_ACCOUNT, "Google account", "Link, relink, sync or disconnect the native Google Drive backup account."},
-    {ST_ACTION, S_CHECK_UPDATES, "Check for updates", "Compare this build with the repository's rolling latest release over HTTPS."},
+    {ST_ACTION, S_CHECK_UPDATES, "Check for updates", "Compare with the rolling latest release; a newer build can be downloaded, SHA-256 verified and installed in place."},
 #endif
     {ST_ACTION, S_ABOUT_PROJECT, "About r3LaunchELF_ATTDASH", "Version, commit, project origin, upstream credits and contributors."},
 };

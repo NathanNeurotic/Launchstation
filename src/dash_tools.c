@@ -10,6 +10,7 @@
 #include "mmce_backup.h"
 #include "mmce_igr.h"
 #include "cloud_google.h"
+#include "self_update.h"
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 #include "cloud_http.h"
 #include "init.h"
@@ -613,11 +614,27 @@ void dashToolsCheckUpdates(void)
 		snprintf(body, sizeof(body), "This build (%s) matches the current latest release.", GIT_HASH);
 		dashModalMessage(DI_CHECK, "r3LaunchELF_ATTDASH is up to date", body, NULL);
 	} else {
+		char install_result[384];
+		int installed;
+
 		snprintf(body, sizeof(body),
-		         "Current: %s\nLatest: %.16s\n\nDownload the latest release from:\ngithub.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases/latest",
+		         "Current: %s\nLatest: %.16s\n\nDownload, verify and install the latest packed ELF beside the running copy?",
 		         GIT_HASH, latest);
-		dashModalMessage(DI_INFO, "A newer automated build is available", body,
-		                 "This check does not replace the running ELF automatically.");
+		if (!dashModalConfirm("A newer r3LaunchELF_ATTDASH build is available",
+		                      body, "Install update", 0))
+			return;
+
+		install_result[0] = '\0';
+		dashLoadingBegin("Downloading and verifying r3LaunchELF_ATTDASH update");
+		installed = selfUpdateInstall(ca_path, install_result, sizeof(install_result));
+		dashLoadingEnd();
+		dashModalMessage(installed == 0 ? DI_CHECK : DI_WARNING,
+		                 installed == 0 ? "Update installed" : "Update was not installed",
+		                 install_result[0] ? install_result :
+		                     (installed == 0 ? "The update was installed." : "The update failed."),
+		                 installed == 0
+		                     ? "The current session keeps running the old code until you restart. The previous ELF remains beside it as .BAK."
+		                     : "The updater stages and verifies the complete download before changing the running ELF.");
 	}
 }
 #else

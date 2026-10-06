@@ -49,6 +49,7 @@ jobs:
           python3 tests/test_native_cloud.py
           python3 tests/test_mmce_protocol.py
           python3 tests/test_sd2cloud_parity.py
+          python3 tests/test_self_update.py
 
       - name: Validate documentation site
         run: |
@@ -135,6 +136,7 @@ jobs:
           mkdir -p artifacts
           cp build/bin/wLaunchELF-packed.elf artifacts/BOOT.ELF
           cp build/bin/wLaunchELF-packed.elf artifacts/r3LaunchELF_ATTDASH.ELF
+          (cd artifacts && sha256sum r3LaunchELF_ATTDASH.ELF > r3LaunchELF_ATTDASH.ELF.sha256)
           cp res/music.sad artifacts/BGM.ADP
           cp res/WLE-CLOUD.CNF.example artifacts/WLE-CLOUD.CNF.example
           cp res/WLE-UPDATE-CA.PEM artifacts/WLE-UPDATE-CA.PEM
@@ -177,7 +179,7 @@ jobs:
         run: |
           tag="latest"
           title="Latest automated build"
-          notes="Automated build for ${GITHUB_SHA} using ps2build. BOOT.ELF and r3LaunchELF_ATTDASH.ELF are identical packed builds; r3LaunchELF_ATTDASH-unpacked.ELF is the uncompressed build. BGM.ADP is optional background music: put it beside the ELF, or omit it. See the CI run for sha256 hashes."
+          notes="Automated build for ${GITHUB_SHA} using ps2build. BOOT.ELF and r3LaunchELF_ATTDASH.ELF are identical packed builds; r3LaunchELF_ATTDASH.ELF.sha256 is used by the native verified updater; r3LaunchELF_ATTDASH-unpacked.ELF is the uncompressed build. BGM.ADP is optional background music: put it beside the ELF, or omit it."
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}" --prerelease || true
           fi
