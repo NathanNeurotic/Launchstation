@@ -101,6 +101,7 @@ enum SetId {
 	S_NET_GW,
 	S_HOSTWRITE,
 	S_NET_LEGACY,
+	S_CLOCK_SYNC,
 	/* advanced */
 	S_LANGUAGE,
 	S_GAMEID,
@@ -325,6 +326,7 @@ static const SetItem net_items[] = {
 #endif
 #ifdef ETH
     {ST_CHOICE, S_NET_LEGACY, "Legacy Ethernet drivers", "Use MrRexD's ps2sdk v1.0 DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up. Takes effect the next time Ethernet/FTP is started."},
+    {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query multiple Internet time sources, require agreement, then write and verify the PS2 hardware RTC."},
 #endif
 };
 
@@ -2446,6 +2448,19 @@ static void runAction(int id)
 		case S_LAUNCHKEYS:
 			openPage(P_LKEY);
 			break;
+#ifdef ETH
+		case S_CLOCK_SYNC: {
+			char result[160];
+			int ok;
+			dashLoadingBegin("Synchronizing PS2 clock");
+			ok = dashClockSyncInternet(result, sizeof(result));
+			dashLoadingEnd();
+			dashModalMessage(ok ? DI_CHECK : DI_WARNING,
+			                 ok ? "PS2 clock synchronized" : "Clock synchronization failed",
+			                 result[0] ? result : (ok ? "The hardware clock was updated." : "No reliable Internet time was available."), NULL);
+			break;
+		}
+#endif
 		case S_SAVE_CLASSIC:
 			if (!anyDirty() && !failedSaves())
 				dashToast(DASH_TOAST_INFO, "Nothing to save");

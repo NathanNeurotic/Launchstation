@@ -33,3 +33,21 @@ assert "Show unavailable devices" in settings
 assert "dashCfg.icon_backing" in ui and "dashCfg.icon_backing" in home
 assert "dashCfg.home_shortcuts" in home
 print("zack structural feedback contract: OK")
+
+clock = (root / "src/dash_clock_sync.c").read_text()
+init = (root / "src/init.c").read_text()
+yaml = (root / "ps2.yaml").read_text()
+make = (root / "Makefile").read_text()
+
+assert "Sync PS2 clock from Internet" in settings
+assert "dashClockSyncInternet" in settings
+assert "time.google.com" in clock and "time.cloudflare.com" in clock and "pool.ntp.org" in clock
+assert "diff <= 10" in clock
+assert "sceCdWriteClock" in clock and "sceCdReadClock" in clock
+assert "9ULL * 3600ULL" in clock
+assert "toBcd" in clock
+assert "ensureDashboardIpNetworkReady" in init
+assert "src/dash_clock_sync.c" in yaml
+assert "ps2ips, cglue" in yaml
+assert "dash_clock_sync.o" in make
+print("clock sync contract: OK")
