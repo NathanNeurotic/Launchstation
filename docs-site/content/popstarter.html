@@ -1,0 +1,12 @@
+<h1>PS1 VCD Launching · POPStarter</h1><p class="lead">Open a POPStarter-compatible <code>.VCD</code> and wLaunchELF prepares the external POPStarter handoff.</p>
+<h2 id="setting">Preferred POPStarter</h2><p><b>Settings → Launching → Disc &amp; image loaders → POPStarter</b> selects the preferred executable. If it cannot be opened, device-specific fallback locations are tried.</p>
+<h2 id="fallbacks">Common fallback locations</h2><pre class="tree"><code>mass:/POPS/POPSTARTER.ELF
+mmce0:/POPS/POPSTARTER.ELF
+mmce1:/POPS/POPSTARTER.ELF
+mx4sio:/POPS/POPSTARTER.ELF
+ata0:/POPS/POPSTARTER.ELF
+hdd0:__common:pfs:/POPS/POPSTARTER.ELF
+hdd0:__system:pfs:/launcher/POPSTARTER.ELF</code></pre>
+<h2 id="arguments">Device-aware argument construction</h2><p>wLaunchELF does not simply launch POPStarter with the browser filename. FAT-style POPS folders, <code>__.POPS</code>, partition-style VCDs and HDD/PFS browser paths are normalized into the argument form POPStarter expects.</p>
+<h2 id="validation">Validation</h2><p>The VCD path is checked before launch, and the integration contains the existing VCD ISO/PVD and SYSTEM.CNF/GameID parsing helpers used by the POPStarter workflow.</p>
+<h2 id="external">External software</h2><p>POPStarter is maintained separately and is not distributed as part of wLaunchELF R3Z. Its own compatibility requirements still apply.</p>
