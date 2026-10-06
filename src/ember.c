@@ -151,7 +151,7 @@ static int readableFile(const char *path)
 static int validBios(const char *path)
 {
 	int fd;
-	off_t size;
+	int size;
 
 	fd = openPathForRead(path, NULL, 0);
 	if (fd < 0)
