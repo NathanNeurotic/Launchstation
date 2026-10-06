@@ -105,6 +105,7 @@ enum SetId {
 	S_IGR_CLOUD_SYNC,
 	S_IGR_AFTER,
 	S_IGR_AFTER_APP,
+	S_MMCE_LANGUAGE,
 	S_GOOGLE_ACCOUNT,
 	S_CHECK_UPDATES,
 	S_ABOUT_PROJECT,
@@ -330,7 +331,7 @@ static const SetItem mmce_backup_items[] = {
     {ST_ACTION, S_IGR_HELPER, "IGR helper", "Install, update or remove the verified WLE-IGR helper used by OPL Exit-to."},
     {ST_CHOICE, S_IGR_AFTER, "After IGR, open", "Choose where to go after the IGR backup/sync step: r3LaunchELF_ATTDASH, the PS2 system menu, or a selected application."},
     {ST_PATH, S_IGR_AFTER_APP, "IGR application", "Application started after IGR when 'After IGR, open' is set to Application."},
-    {ST_PAGE, P_LANGUAGE, "Language", "Language used by file operations and tools."},
+    {ST_ACTION, S_MMCE_LANGUAGE, "Language", "Open the existing language settings used by file operations and tools."},
     {ST_NUMBER, S_MMCE_BACKUP_KEEP, "Backups per card", "0 keeps every verified version. Otherwise keep the newest 1-99 versions per card."},
     {ST_CHOICE, S_MMCE_BACKUP_FORMAT, "Backup format", "Native .mcd avoids writes when unchanged. PCSX2 .ps2 adds ECC/spare bytes and verifies the converted image."},
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
@@ -2529,6 +2530,9 @@ static void runAction(int id)
 			break;
 		case S_IGR_HELPER:
 			dashToolsIgrBackupSetup();
+			break;
+		case S_MMCE_LANGUAGE:
+			openPage(P_LANGUAGE);
 			break;
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 		case S_GOOGLE_ACCOUNT:
