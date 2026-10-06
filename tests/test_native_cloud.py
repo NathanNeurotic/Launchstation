@@ -20,7 +20,7 @@ assert '"/token"' in google
 assert "uploadType=resumable" in google
 assert "trashed=false" in google
 assert "appProperties has { key='wle_sha256' and value='%s' }" in google
-assert '"appProperties":{\"wle_sha256\":\"%s\"}' in google
+assert '\\"appProperties\\":{\\"wle_sha256\\":\\"%s\\"}' in google
 assert "hash_open_backup" in google
 assert "mbedtls_sha256_update" in google
 assert "cloudHttpUploadFd" in google and "cloudHttpUploadFd" in http
