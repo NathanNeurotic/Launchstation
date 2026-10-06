@@ -13,6 +13,7 @@
 #include <strings.h>
 #include <sys/random.h>
 #include <ps2ips.h>
+#include <timer.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -20,6 +21,7 @@
 #include <mbedtls/entropy.h>
 #include <mbedtls/error.h>
 #include <mbedtls/platform_time.h>
+#include <mbedtls/sha256.h>
 #include <mbedtls/ssl.h>
 #include <mbedtls/x509_crt.h>
 
@@ -85,18 +87,69 @@ mbedtls_ms_time_t mbedtls_ms_time(void)
     return (mbedtls_ms_time_t)(((u64)ticks * 1000ULL) / (u64)CLOCKS_PER_SEC);
 }
 
+static u64 cloud_entropy_counter;
+static u32 cloud_entropy_network_ticks;
+
+typedef struct {
+    unsigned char sdk_random[32];
+    u32 cpu_ticks_sample[32];
+    clock_t clock_sample[8];
+    sceCdCLOCK rtc;
+    u64 timer_ms;
+    u64 counter;
+    u32 network_ticks;
+} CloudEntropyMaterial;
+
 int mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen)
 {
-    ssize_t got;
+    size_t produced = 0;
     (void)data;
+
     if (olen == NULL || output == NULL)
         return MBEDTLS_ERR_ENTROPY_SOURCE_FAILED;
-    got = getrandom(output, len, 0);
-    if (got < 0 || (size_t)got != len) {
-        *olen = got > 0 ? (size_t)got : 0;
-        return MBEDTLS_ERR_ENTROPY_SOURCE_FAILED;
+    *olen = 0;
+
+    /* PS2SDK's getrandom() ultimately depends on a weak _getentropy()
+     * implementation, so never present it to TLS as the sole source. Fold it
+     * together with full-width COP0 Count samples, RTC state, user/action
+     * timing carried by Timer(), a monotonic local counter, and DNS/TCP timing,
+     * then condition each block through SHA-256. This is defense-in-depth for
+     * hardware without a documented TRNG, not a claim that cpu_ticks is one. */
+    while (produced < len) {
+        CloudEntropyMaterial material;
+        unsigned char digest[32];
+        ssize_t got;
+        size_t take;
+        int i;
+
+        memset(&material, 0, sizeof(material));
+        got = getrandom(material.sdk_random, sizeof(material.sdk_random), 0);
+        if (got < 0)
+            memset(material.sdk_random, 0, sizeof(material.sdk_random));
+
+        for (i = 0; i < 32; i++) {
+            material.cpu_ticks_sample[i] = cpu_ticks();
+            if ((i & 3) == 0)
+                material.clock_sample[i >> 2] = clock();
+        }
+        memset(&material.rtc, 0, sizeof(material.rtc));
+        sceCdReadClock(&material.rtc);
+        material.timer_ms = Timer();
+        material.counter = ++cloud_entropy_counter;
+        material.network_ticks = cloud_entropy_network_ticks ^ cpu_ticks();
+
+        if (mbedtls_sha256((const unsigned char *)&material, sizeof(material),
+                           digest, 0) != 0)
+            return MBEDTLS_ERR_ENTROPY_SOURCE_FAILED;
+
+        take = len - produced;
+        if (take > sizeof(digest))
+            take = sizeof(digest);
+        memcpy(output + produced, digest, take);
+        produced += take;
     }
-    *olen = (size_t)got;
+
+    *olen = produced;
     return 0;
 }
 
@@ -274,6 +327,7 @@ static int tls_open(CloudTls *tls, const char *host, const char *ca_path,
     static const unsigned char personal[] = "wLaunchELF native cloud";
     unsigned char *ca_data = NULL;
     int ca_len = 0;
+    u32 network_start;
     int r;
 
     memset(tls, 0, sizeof(*tls));
@@ -297,15 +351,20 @@ static int tls_open(CloudTls *tls, const char *host, const char *ca_path,
         goto fail;
     }
 
+    /* Establish TCP first so DNS/connect timing contributes to the entropy
+     * conditioner. No TLS data or OAuth credential is sent before the DRBG is
+     * successfully seeded and the authenticated handshake completes. */
+    network_start = cpu_ticks();
+    r = ps2_tcp_connect(&tls->sock, host);
+    cloud_entropy_network_ticks ^= (cpu_ticks() - network_start) ^ cpu_ticks();
+    if (r != 0) {
+        set_error(error, error_size, "TCP connection", 0);
+        goto fail;
+    }
     r = mbedtls_ctr_drbg_seed(&tls->ctr, mbedtls_entropy_func, &tls->entropy,
                               personal, sizeof(personal) - 1);
     if (r != 0) {
         set_error(error, error_size, "TLS random generator", r);
-        goto fail;
-    }
-    r = ps2_tcp_connect(&tls->sock, host);
-    if (r != 0) {
-        set_error(error, error_size, "TCP connection", 0);
         goto fail;
     }
     r = mbedtls_ssl_config_defaults(&tls->conf, MBEDTLS_SSL_IS_CLIENT,

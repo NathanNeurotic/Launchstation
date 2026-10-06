@@ -16,8 +16,9 @@ Cloud networking is opt-in and demand-loaded. Normal wLaunchELF startup does
 not start Ethernet or TLS merely because cloud support exists.
 
 Native HTTPS sockets are nonblocking and use a 15-second no-progress timeout
-for TCP connect, TLS handshake, reads and writes. A dead network path therefore
-fails the cloud step instead of indefinitely blocking IGR/post-IGR routing.
+for TCP connect, TLS handshake, reads and writes. DNS lookup itself is the
+synchronous PS2IP resolver call and is not covered by that socket timeout; DNS
+failure behavior therefore remains part of the real-hardware validation matrix.
 
 ## Files
 
@@ -68,7 +69,13 @@ Drive is linked.
 
 TLS certificate verification uses the PS2 system clock. Make sure the PS2 system date and time are reasonably correct; an invalid clock can make otherwise valid Google certificates appear expired or not yet valid.
 
-TLS certificate verification is mandatory. Resumable upload session URLs are
+TLS certificate verification is mandatory. PS2SDK's current `getrandom()`
+path is not treated as sufficient by itself: wLaunchELF conditions its output
+together with full-width COP0 Count samples, the PS2 RTC, action/runtime timing,
+a local counter, and DNS/TCP timing through SHA-256 before Mbed TLS seeds its
+CTR-DRBG. The PS2 has no documented general-purpose hardware TRNG, so this is a
+defense-in-depth improvement rather than a claim of independently certified
+hardware entropy. Resumable upload session URLs are
 also restricted to Google's documented `https://www.googleapis.com/` origin
 before the OAuth bearer token is sent. The upload path hashes an already-open
 backup and streams that same file handle to TLS, avoiding a filename re-open

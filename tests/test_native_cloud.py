@@ -81,6 +81,14 @@ assert "unset MBEDTLS_NET_C" in build
 assert "MBEDTLS_NO_PLATFORM_ENTROPY" in build
 assert "MBEDTLS_ENTROPY_HARDWARE_ALT" in build
 assert "-ffunction-sections -fdata-sections" in build
+# Do not trust PS2SDK's weak getrandom seed alone: condition independent timing/state.
+assert "CloudEntropyMaterial" in http
+assert "cpu_ticks()" in http
+assert "sceCdReadClock" in http
+assert "cloud_entropy_network_ticks" in http
+assert "mbedtls_sha256(" in http
+assert http.index("ps2_tcp_connect(&tls->sock, host)") < http.index("mbedtls_ctr_drbg_seed")
+assert "never present it to TLS as the sole source" in http
 assert "ps2_tls_send" in http and "ps2_tls_recv" in http
 assert "ps2_tcp_connect" in http
 assert "ps2ips" in yaml
