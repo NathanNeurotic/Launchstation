@@ -49,6 +49,7 @@ jobs:
           python3 tests/test_native_cloud.py
           python3 tests/test_mmce_protocol.py
           python3 tests/test_sd2cloud_parity.py
+          python3 tests/test_self_update.py
 
       - name: Validate documentation site
         run: |
