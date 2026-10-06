@@ -2006,8 +2006,28 @@ static void browserScene(void)
 			dashTextRight(FB_X + FB_W - 12, y + 5, d->status, DASH_FS_CAPTION, DASH_C_TEXT3);
 		} else {
 			FILEINFO *f = &fb.files[i];
-			char sz[24], label[MAX_NAME + 8];
+			char sz[24], date[40], label[MAX_NAME + 8];
 			int details = fb_show > 0 && !isMisc(fb.dir);
+			float label_w = FB_W - 60;
+			float meta_right = FB_X + FB_W - 12;
+			float meta_left = meta_right;
+			date[0] = '\0';
+			sz[0] = '\0';
+			if (details) {
+				fmtSize(sz, sizeof(sz), f);
+				if (time_valid && f->stats._Modify.Year)
+					filerDateEditorFormat(&f->stats._Modify, date, sizeof(date));
+				if (date[0])
+					meta_left -= dashTextWidth(date, DASH_FS_CAPTION);
+				if (sz[0]) {
+					if (date[0])
+						meta_left -= 16.0f; /* explicit size/date-time gap */
+					meta_left -= dashTextWidth(sz, DASH_FS_CAPTION);
+				}
+				label_w = meta_left - (FB_X + 34) - 14.0f;
+				if (label_w < 72.0f)
+					label_w = 72.0f;
+			}
 			if (fb.mark[i])
 				dashIcon(DI_CHECK, FB_X + 8, y + 4, 16, DASH_C_OK);
 			else
@@ -2018,17 +2038,15 @@ static void browserScene(void)
 			else
 				dashStrCopy(label, f->name, sizeof(label));
 			if (i == fb.sel)
-				dashTextScroll(FB_X + 34, y + 3, details ? FB_W - 250 : FB_W - 60, label, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
+				dashTextScroll(FB_X + 34, y + 3, label_w, label, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
 			else
-				dashTextFit(FB_X + 34, y + 3, details ? FB_W - 250 : FB_W - 60, label, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
+				dashTextFit(FB_X + 34, y + 3, label_w, label, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
 			if (details) {
-				fmtSize(sz, sizeof(sz), f);
-				if (sz[0])
-					dashTextRight(FB_X + FB_W - 142, y + 5, sz, DASH_FS_CAPTION, DASH_C_TEXT3);
-				if (time_valid && f->stats._Modify.Year) {
-					char date[40];
-					filerDateEditorFormat(&f->stats._Modify, date, sizeof(date));
-					dashTextRight(FB_X + FB_W - 12, y + 5, date, DASH_FS_CAPTION, DASH_C_TEXT3);
+				if (date[0])
+					dashTextRight(meta_right, y + 5, date, DASH_FS_CAPTION, DASH_C_TEXT3);
+				if (sz[0]) {
+					float size_right = date[0] ? meta_right - dashTextWidth(date, DASH_FS_CAPTION) - 16.0f : meta_right;
+					dashTextRight(size_right, y + 5, sz, DASH_FS_CAPTION, DASH_C_TEXT3);
 				}
 			}
 		}
