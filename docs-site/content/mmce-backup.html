@@ -4,3 +4,7 @@
 <h2 id="verification">Verification matters</h2><p>A copy is not treated as a successful backup merely because file creation returned. The backup path verifies the output before reporting success or allowing the next automatic step.</p>
 <h2 id="igr">IGR integration</h2><p>When <b>Automatic IGR backup</b> is enabled, an OPL return through WLE-IGR can capture a changed card before continuing. This keeps the safety-critical local copy independent of network/cloud availability.</p>
 <h2 id="cloud">Cloud is additive</h2><p>Optional Google Drive synchronization is performed after the verified local backup. A cloud failure does not erase or invalidate the local history entry. See <a href="cloud.html">Native Google Drive Cloud Backup</a>.</p>
+
+<h2 id="sync-all">Sync all cards</h2><p><b>Sync all cards</b> scans both MMCE units, creates history only for changed cards, and summarizes new/unchanged/failed cards. If Google Drive is linked, pending local history is uploaded afterward.</p>
+<h2 id="automatic-sync">Automatic sync modes</h2><p>The single <b>Automatic sync</b> control replaces two separate toggles with three clear modes: <b>Off</b>, <b>Local backup</b>, and <b>Local + Google Drive</b>. Cloud mode requires a linked account.</p>
+<h2 id="helper-control">IGR helper control</h2><p>The MMCE backup page now exposes the existing verified WLE-IGR installer/update/remove flow directly, alongside the after-IGR destination.</p>
