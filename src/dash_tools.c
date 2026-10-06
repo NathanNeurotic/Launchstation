@@ -61,9 +61,9 @@ static const Tool tools[] = {
 #endif
 #endif
     {TA_MISC, DI_INFO, "System information", "Console model, ROM version, boot path, loaded configuration and debug details.", NULL, 0, MISC(Misc_Debug_Info), NULL},
-    {TA_MISC, DI_CHIP, "Build information", "Features and drivers included in this build of wLaunchELF.", NULL, 0, MISC(Misc_Show_Build_Info), NULL},
+    {TA_MISC, DI_CHIP, "Build information", "Features and drivers included in this build of r3LaunchELF_ATTDASH.", NULL, 0, MISC(Misc_Show_Build_Info), NULL},
     {TA_MISC, DI_TEXT, "Font viewer", "Show every glyph of the active font.", NULL, 0, MISC(Misc_ShowFont), NULL},
-    {TA_MISC, DI_INFO, "About wLaunchELF", "Credits and version.", NULL, 0, MISC(Misc_About_uLE), NULL},
+    {TA_MISC, DI_INFO, "About r3LaunchELF_ATTDASH", "Credits and version.", NULL, 0, MISC(Misc_About_uLE), NULL},
     {TA_HEADER, -1, "POWER", NULL, NULL, 0, 0, NULL},
     {TA_MISC, DI_REFRESH, "Reboot IOP", "Restart the I/O processor and all device drivers. Devices are detected again when used.", NULL, 1, MISC(Misc_Reboot_IOP), NULL},
     {TA_MISC, DI_POWER, "Power off", "Turn the console off.", NULL, 2, MISC(Misc_PS2PowerOff), NULL},
