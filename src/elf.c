@@ -10,6 +10,7 @@
 
 #define MAX_PATH 1025
 #define MBR_PAYLOAD_LOAD_ADDR 0x01000000
+#define WLE_PFS_WRITETHROUGH 0x02 /* libpfs: commit writes on close/write */
 
 #ifdef WLE_PS2BUILD
 /* PS2BUILD's embed_irx names every embedded target <symbol>_irx. */
@@ -757,7 +758,7 @@ static void RunLoaderElfInternal(char *filename, char *party, const char *select
 
 	if (isHddPartyPath(party) && (!strncmp(filename, "pfs0:", 5))) {
 		{
-			int mount_flags = (child_argv0_override != NULL) ? (FIO_MT_RDWR | 0x02) : FIO_MT_RDONLY;
+			int mount_flags = (child_argv0_override != NULL) ? (FIO_MT_RDWR | WLE_PFS_WRITETHROUGH) : FIO_MT_RDONLY;
 			if (0 > fileXioMount("pfs0:", party, mount_flags)) {
 				//Some error occurred, it could be due to something else having used pfs0
 				unmountParty(0);  //So we try unmounting pfs0, to try again
