@@ -1,4 +1,4 @@
-/* wLaunchELF R3Z Docs — self-contained search + nav. No dependencies. */
+/* r3LaunchELF_ATTDASH Docs — self-contained search + nav. No dependencies. */
 (function () {
   "use strict";
   var INDEX = [], ready = false;
