@@ -11,7 +11,7 @@ tools ask (yes/no, names, progress) are dashboard dialogs. Commands with no
 screen of their own (start disc, OSDSYS, PS2 browser, network, power off,
 reboot IOP) run behind the loading overlay.
 
-File Browser: Confirm opens a folder, starts an ELF/KELF/VCD or opens a
+File Browser: Confirm opens a folder, starts an ELF/KELF/VCD/ISO or opens a
 text file in the Text Editor; Square selects; Triangle has copy, cut,
 paste (also with new names), PSU create/extract, delete, rename, new
 folder, folder icon (icon.sys), size, start with arguments, title.cfg,
@@ -54,7 +54,7 @@ foreground behind a short loading overlay.
 | APPS     | ELF library in **Grid**, **List** or **Carousel** view (SELECT switches, saved). Filters: all, favorites, memory cards, USB, HDD, other. |
 | FILES    | Entry points into the full FileBrowser: device list, last folder, MISC commands, each detected device and your PathPad bookmarks. |
 | DEVICES  | Cards for memory cards (type, free space), USB, MMCE, MX4SIO, HDD, exFAT HDD, disc, UDPFS, PSX flash/DVR HDD and mounted VMCs. |
-| TOOLS    | HDD Manager, Text Editor, start disc, POPStarter, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, reboot IOP, power off. |
+| TOOLS    | HDD Manager, Text Editor, start disc, POPStarter VCD launching, Neutrino ISO launching, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, reboot IOP, power off. |
 | SETTINGS | Eight groups: Appearance, Home & applications, Sound, Input, Launching, Storage & devices, Network, System. Each opens a focused page with breadcrumbs and contextual help. Triangle opens *Save changes / Discard changes / Keep editing* from any page. Leaving with changes offers the same decision. Existing configuration files and keys are retained. |
 
 ## Settings navigation
