@@ -19,6 +19,12 @@ assert "dashToolsSyncAllMmceCards();" in settings
 assert "dashToolsIgrBackupSetup();" in settings
 assert "dashToolsCloudBackup();" in settings
 assert "dashToolsCheckUpdates();" in settings
+assert "dashToolsRefreshMmceStatus();" in settings
+assert "dashToolsMmceStatus()" in settings
+assert "dashToolsGoogleStatus()" in settings
+assert '"All synced"' in tools
+assert '"%d pending"' in tools
+assert '"Checking..."' in tools
 
 assert "void dashToolsSyncAllMmceCards(void)" in tools
 assert "mmceBackupAllCards" in tools
