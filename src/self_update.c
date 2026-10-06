@@ -81,7 +81,7 @@ static int find_file_info(const char *parent, const char *leaf, FILEINFO *out)
 
     if (parent == NULL || leaf == NULL || out == NULL)
         return 0;
-    if (filerPrepareDirRead(parent) < 0)
+    if (!filerPrepareDirRead(parent))
         return 0;
 
     files = memalign(64, sizeof(FILEINFO) * MAX_ENTRY);
