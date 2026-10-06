@@ -14,6 +14,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <mbedtls/sha256.h>
+
 #define CLOUD_CLIENT_MAX 384
 #define CLOUD_TOKEN_MAX 2048
 #define CLOUD_ID_MAX 192
@@ -513,22 +515,30 @@ static int drive_request(GoogleSession *s, const char *method, const char *path,
 }
 
 static int drive_find_child(GoogleSession *s, const char *parent, const char *name,
-                            int folder, char *id, int id_size,
+                            int folder, const char *sha256, char *id, int id_size,
                             char *error, int error_size)
 {
     char escaped_name[MAX_NAME * 2], escaped_parent[CLOUD_ID_MAX * 2];
-    char query[1024], encoded[3072], path[3584];
+    char query[1280], encoded[3840], path[4352];
     CloudHttpResponse response;
     int at;
 
     if (q_escape(name, escaped_name, sizeof(escaped_name)) < 0 ||
         q_escape(parent, escaped_parent, sizeof(escaped_parent)) < 0)
         return -1;
-    snprintf(query, sizeof(query),
-             "'%s' in parents and name='%s' and trashed=false%s",
-             escaped_parent, escaped_name,
-             folder ? " and mimeType='application/vnd.google-apps.folder'" :
-                      " and mimeType!='application/vnd.google-apps.folder'");
+    if (!folder && sha256 && sha256[0]) {
+        snprintf(query, sizeof(query),
+                 "'%s' in parents and name='%s' and trashed=false "
+                 "and mimeType!='application/vnd.google-apps.folder' "
+                 "and appProperties has { key='wle_sha256' and value='%s' }",
+                 escaped_parent, escaped_name, sha256);
+    } else {
+        snprintf(query, sizeof(query),
+                 "'%s' in parents and name='%s' and trashed=false%s",
+                 escaped_parent, escaped_name,
+                 folder ? " and mimeType='application/vnd.google-apps.folder'" :
+                          " and mimeType!='application/vnd.google-apps.folder'");
+    }
     at = append_url(encoded, sizeof(encoded), 0, query);
     if (at < 0)
         return -1;
@@ -578,7 +588,7 @@ static int drive_ensure_folder(GoogleSession *s, const char *parent, const char 
                                char *id, int id_size, CloudGoogleSyncStats *stats,
                                char *error, int error_size)
 {
-    int r = drive_find_child(s, parent, name, 1, id, id_size, error, error_size);
+    int r = drive_find_child(s, parent, name, 1, NULL, id, id_size, error, error_size);
     if (r != 0)
         return r < 0 ? -1 : 0;
     if (drive_create_folder(s, parent, name, id, id_size, error, error_size) < 0)
@@ -593,43 +603,108 @@ static int is_google_upload_location(const char *url)
     return url != NULL && !strncmp(url, prefix, sizeof(prefix) - 1);
 }
 
+static int hash_open_backup(int fd, int file_size, char out[65])
+{
+    mbedtls_sha256_context ctx;
+    unsigned char digest[32];
+    unsigned char *buf;
+    static const char hex[] = "0123456789abcdef";
+    int done = 0, i, ok = 0;
+
+    if (fd < 0 || file_size < 0 || genLseek(fd, 0, SEEK_SET) != 0)
+        return -1;
+    buf = memalign(64, 16 * 1024);
+    if (!buf)
+        return -1;
+
+    mbedtls_sha256_init(&ctx);
+    if (mbedtls_sha256_starts(&ctx, 0) != 0)
+        goto out;
+    while (done < file_size) {
+        int remaining = file_size - done;
+        int want = remaining > 16 * 1024 ? 16 * 1024 : remaining;
+        int got = genRead(fd, buf, want);
+        if (got <= 0 || mbedtls_sha256_update(&ctx, buf, (size_t)got) != 0)
+            goto out;
+        done += got;
+    }
+    if (mbedtls_sha256_finish(&ctx, digest) != 0)
+        goto out;
+    for (i = 0; i < 32; i++) {
+        out[i * 2] = hex[digest[i] >> 4];
+        out[i * 2 + 1] = hex[digest[i] & 15];
+    }
+    out[64] = 0;
+    ok = 1;
+out:
+    mbedtls_sha256_free(&ctx);
+    free(buf);
+    if (genLseek(fd, 0, SEEK_SET) != 0)
+        ok = 0;
+    return ok ? 0 : -1;
+}
+
 static int drive_upload_file(GoogleSession *s, const char *parent, const char *name,
                              const char *local_path, char *error, int error_size)
 {
-    char escaped[MAX_NAME * 2], escaped_parent[CLOUD_ID_MAX * 2], body[1024];
-    char headers[CLOUD_TOKEN_MAX + 512];
+    char escaped[MAX_NAME * 2], escaped_parent[CLOUD_ID_MAX * 2], body[1280];
+    char headers[CLOUD_TOKEN_MAX + 512], sha256[65], remote_id[CLOUD_ID_MAX];
     CloudHttpResponse response;
-    s64 size;
-    int fd, r;
+    s64 size64;
+    int size, fd, r;
 
     if (json_escape(name, escaped, sizeof(escaped)) < 0 ||
         json_escape(parent, escaped_parent, sizeof(escaped_parent)) < 0)
         return -1;
     fd = genOpen(local_path, FIO_O_RDONLY);
-    if (fd < 0)
+    if (fd < 0) {
+        set_error(error, error_size, "Could not open local backup for cloud sync");
         return -1;
-    size = genLseek(fd, 0, SEEK_END);
-    genClose(fd);
-    if (size < 0)
+    }
+    size64 = genLseek(fd, 0, SEEK_END);
+    if (size64 < 0 || size64 > 0x7fffffffLL) {
+        genClose(fd);
+        set_error(error, error_size, "Local backup is too large for cloud upload");
         return -1;
+    }
+    size = (int)size64;
+    if (hash_open_backup(fd, size, sha256) < 0) {
+        genClose(fd);
+        set_error(error, error_size, "Could not hash local backup");
+        return -1;
+    }
+
+    /* Remote identity is content-bound, not filename-only. A same-name file
+     * with different bytes is intentionally preserved as another Drive item. */
+    r = drive_find_child(s, parent, name, 0, sha256, remote_id,
+                         sizeof(remote_id), error, error_size);
+    if (r != 0) {
+        genClose(fd);
+        return r < 0 ? -1 : 1;
+    }
 
     snprintf(body, sizeof(body),
-             "{\"name\":\"%s\",\"parents\":[\"%s\"]}", escaped, escaped_parent);
+             "{\"name\":\"%s\",\"parents\":[\"%s\"],"
+             "\"appProperties\":{\"wle_sha256\":\"%s\"}}",
+             escaped, escaped_parent, sha256);
     snprintf(headers, sizeof(headers),
              "Authorization: Bearer %s\r\n"
              "Content-Type: application/json; charset=UTF-8\r\n"
              "X-Upload-Content-Type: application/octet-stream\r\n"
-             "X-Upload-Content-Length: %lld\r\n",
-             s->access_token, (long long)size);
+             "X-Upload-Content-Length: %d\r\n",
+             s->access_token, size);
 
     if (cloudHttpRequest("POST", "www.googleapis.com",
                          "/upload/drive/v3/files?uploadType=resumable&fields=id",
                          headers, body, (int)strlen(body), s->ca_path,
-                         &response, error, error_size) < 0)
+                         &response, error, error_size) < 0) {
+        genClose(fd);
         return -1;
+    }
     if ((response.status != 200 && response.status != 201) || response.location[0] == 0) {
         snprintf(error, error_size, "Drive resumable upload start returned HTTP %d", response.status);
         cloudHttpResponseFree(&response);
+        genClose(fd);
         return -1;
     }
     {
@@ -637,6 +712,7 @@ static int drive_upload_file(GoogleSession *s, const char *parent, const char *n
         strcopy(location, sizeof(location), response.location);
         cloudHttpResponseFree(&response);
         if (!is_google_upload_location(location)) {
+            genClose(fd);
             set_error(error, error_size,
                       "Drive returned an unexpected resumable-upload host");
             return -1;
@@ -644,9 +720,10 @@ static int drive_upload_file(GoogleSession *s, const char *parent, const char *n
         snprintf(headers, sizeof(headers),
                  "Authorization: Bearer %s\r\nContent-Type: application/octet-stream\r\n",
                  s->access_token);
-        r = cloudHttpUploadFile("PUT", location, headers, local_path, s->ca_path,
-                                &response, error, error_size);
+        r = cloudHttpUploadFd("PUT", location, headers, fd, size, s->ca_path,
+                              &response, error, error_size);
     }
+    genClose(fd);
     if (r < 0)
         return -1;
     if (response.status != 200 && response.status != 201) {
@@ -657,7 +734,6 @@ static int drive_upload_file(GoogleSession *s, const char *parent, const char *n
     cloudHttpResponseFree(&response);
     return 0;
 }
-
 static int is_backup_file(const char *name)
 {
     return name != NULL && !strncmp(name, "WLE-", 4) &&
@@ -729,8 +805,8 @@ static int sync_tree(GoogleSession *s, const char *local_dir, const char *remote
                 continue;
             }
 
-            r = drive_find_child(s, remote_parent, ent.name, 0, remote_id,
-                                 sizeof(remote_id), error, error_size);
+            r = drive_upload_file(s, remote_parent, ent.name, child,
+                                  error, error_size);
             if (r < 0) {
                 stats->failed++;
                 genDclose(fd);
@@ -738,12 +814,7 @@ static int sync_tree(GoogleSession *s, const char *local_dir, const char *remote
             }
             if (r > 0)
                 stats->skipped++;
-            else if (drive_upload_file(s, remote_parent, ent.name, child,
-                                       error, error_size) < 0) {
-                stats->failed++;
-                genDclose(fd);
-                return -1;
-            } else
+            else
                 stats->uploaded++;
         }
         memset(&ent, 0, sizeof(ent));
