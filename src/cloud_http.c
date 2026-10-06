@@ -664,58 +664,47 @@ static int split_https_url(const char *url, char *host, int host_size,
     return 0;
 }
 
-int cloudHttpUploadFile(const char *method, const char *url,
-                        const char *headers, const char *local_path,
-                        const char *ca_path, CloudHttpResponse *response,
-                        char *error, int error_size)
+int cloudHttpUploadFd(const char *method, const char *url,
+                      const char *headers, int fd, int file_size,
+                      const char *ca_path, CloudHttpResponse *response,
+                      char *error, int error_size)
 {
     CloudTls tls;
     char host[256], path[1024];
     unsigned char *buf;
-    s64 size, sent = 0;
-    int fd;
+    int sent = 0;
 
-    if (split_https_url(url, host, sizeof(host), path, sizeof(path)) < 0) {
-        set_error(error, error_size, "Invalid HTTPS upload URL", 0);
+    if (fd < 0 || file_size < 0 ||
+        split_https_url(url, host, sizeof(host), path, sizeof(path)) < 0) {
+        set_error(error, error_size, "Invalid HTTPS upload source", 0);
         return -1;
     }
-    fd = genOpen(local_path, FIO_O_RDONLY);
-    if (fd < 0) {
-        set_error(error, error_size, "Could not open local backup for upload", 0);
-        return -1;
-    }
-    size = genLseek(fd, 0, SEEK_END);
-    if (size < 0 || size > 0x7fffffffLL || genLseek(fd, 0, SEEK_SET) != 0) {
-        genClose(fd);
-        set_error(error, error_size, "Could not size local backup", 0);
+    if (genLseek(fd, 0, SEEK_SET) != 0) {
+        set_error(error, error_size, "Could not rewind local backup", 0);
         return -1;
     }
     memset(response, 0, sizeof(*response));
-    if (request_open(&tls, method, host, path, headers, (int)size, ca_path, error, error_size) < 0) {
-        genClose(fd);
+    if (request_open(&tls, method, host, path, headers, file_size, ca_path, error, error_size) < 0)
         return -1;
-    }
 
     buf = memalign(64, CLOUD_HTTP_IO);
     if (buf == NULL) {
-        genClose(fd);
         tls_free(&tls);
         set_error(error, error_size, "Out of memory streaming cloud upload", 0);
         return -1;
     }
-    while (sent < size) {
-        int want = (size - sent) > CLOUD_HTTP_IO ? CLOUD_HTTP_IO : (int)(size - sent);
+    while (sent < file_size) {
+        int remaining = file_size - sent;
+        int want = remaining > CLOUD_HTTP_IO ? CLOUD_HTTP_IO : remaining;
         int got = genRead(fd, buf, want);
         if (got <= 0 || ssl_write_all(&tls, buf, got, error, error_size) < 0) {
             free(buf);
-            genClose(fd);
             tls_free(&tls);
             return -1;
         }
         sent += got;
     }
     free(buf);
-    genClose(fd);
     if (read_response(&tls, response, error, error_size) < 0) {
         tls_free(&tls);
         return -1;
