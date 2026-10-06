@@ -133,7 +133,8 @@ assert "genRemove(stage_path)" in google
 # A damaged/missing client config must never strand a saved local OAuth token.
 assert "cloudGoogleHasLocalToken" in google
 assert "cloudGoogleHasLocalToken()" in tools
-cleanup = tools[tools.index("Configuration can be removed independently"):tools.index("linked = cloudGoogleIsLinked()")]
+cloud_backup = tools[tools.index("void dashToolsCloudBackup(void)"):]
+cleanup = cloud_backup[cloud_backup.index("Configuration can be removed independently"):cloud_backup.index("linked = cloudGoogleIsLinked()")]
 assert "Clear saved Google token" in cleanup
 assert "cloudGoogleDisconnect" in cleanup
 assert "dashCfg.igr_cloud_sync = 0;" in cleanup
