@@ -156,6 +156,11 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_HEAD, "Direct base: wLaunchELF_R3Z");
 	sheetAdd(&s, SL_TEXT, "R3Z3N / Saildot4K");
 	sheetAdd(&s, SL_TEXT, "github.com/saildot4k/wLaunchELF_R3Z");
+	sheetAdd(&s, SL_HEAD, "Fork creator");
+	sheetAdd(&s, SL_TEXT, "johnson-cooper");
+	sheetAdd(&s, SL_TEXT, "github.com/johnson-cooper");
+	sheetAdd(&s, SL_TEXT, "Created this fork and handed it to Ripto");
+	sheetAdd(&s, SL_TEXT, "to maintain and continue improving");
 	sheetAdd(&s, SL_TEXT, "DS3/DS4 support by Alex Parrado");
 	sheetAdd(&s, SL_TEXT, "Thanks to TnA for all his insight and support");
 	sheetAdd(&s, SL_HEAD, "wLaunchELF");
@@ -164,7 +169,7 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_TEXT, "Eric Price (aka 'E P')");
 	sheetAdd(&s, SL_TEXT, "Ronald Andersson (aka 'dlanor')");
 	sheetAdd(&s, SL_HEAD, "Other contributors");
-	sheetAdd(&s, SL_TEXT, "techwritescode, johnson-cooper");
+	sheetAdd(&s, SL_TEXT, "techwritescode");
 	sheetAdd(&s, SL_TEXT, "Polo35, radad, Drakonite, sincro");
 	sheetAdd(&s, SL_TEXT, "kthu, Slam-Tilt, chip, pixel, Hermes, PCM720");
 	sheetAdd(&s, SL_TEXT, "and others in the PS2Dev community");
