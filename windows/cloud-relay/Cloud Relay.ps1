@@ -96,7 +96,7 @@ $ps2Remote = ":ftp,host=$Ps2,user=anonymous,pass=$pw,disable_epsv=true,disable_m
 
 $probe = Rc-Capture @('lsf', $ps2Remote, '--max-depth', '1')
 if (-not $probe.Ok) {
-    Write-Error "The PS2 FTP server at $Ps2 did not answer. Start FTP / Remote access in wLaunchELF and leave the dashboard open."
+    Write-Error "The PS2 FTP server at $Ps2 did not answer. Start FTP / Remote access in r3LaunchELF_ATTDASH and leave the dashboard open."
     exit 3
 }
 

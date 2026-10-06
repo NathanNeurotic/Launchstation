@@ -1,6 +1,6 @@
 # Native Google Drive backup
 
-wLaunchELF_R3Z contains an original Google Drive client for uploading the
+r3LaunchELF_ATTDASH contains an original Google Drive client for uploading the
 versioned MMCE backup history directly from a PlayStation 2. It does not use
 SD2Cloud source code.
 

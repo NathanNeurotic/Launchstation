@@ -61,7 +61,7 @@ void Show_About_uLE(void)
 		//Display section
 		if (event || post_event) {  //NB: We need to update two frame buffers per event
 			clrScr(setting->color[COLOR_BACKGR]);
-			sprintf(TextRow, "About wLaunchELF %s  %s", ULE_VERSION, ULE_VERDATE);
+			sprintf(TextRow, "About r3LaunchELF_ATTDASH %s  %s", ULE_VERSION, ULE_VERDATE);
 			PrintPos(01, hpos, TextRow, COLOR_SELECT);
 			sprintf(TextRow, " commit: %s", GIT_HASH);
 			PrintPos(02, hpos, TextRow, COLOR_TEXT);

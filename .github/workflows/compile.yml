@@ -103,7 +103,7 @@ jobs:
           set -euo pipefail
           bash scripts/build_cloud_tls.sh
 
-      - name: Build wLaunchELF with ps2build
+      - name: Build r3LaunchELF_ATTDASH with ps2build
         run: |
           ps2build build
 
