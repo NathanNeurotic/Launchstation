@@ -16,7 +16,7 @@ void (*mainActionLaunchHook)(const char *path) = NULL;
 
 //CleanUpForExec releases uLE stuff preparatory to launching some other application
 //------------------------------
-void CleanUpForExec(void)
+static void cleanUpForExecInternal(int end_pad_rpc)
 {
 	clrScr(GS_SETREG_RGBA(0x00, 0x00, 0x00, 0));
 	drawScr();
@@ -25,9 +25,21 @@ void CleanUpForExec(void)
 	free(setting);
 	free(elisaFnt);
 	free(External_Lang_Buffer);
+
+	/*
+	 * Closing the ports releases our pad buffers. For ordinary legacy
+	 * launches preserve the historical wLaunchELF behaviour. Ember is
+	 * different: it deliberately inherits the live IOP and then opens pad
+	 * ports itself. RiptOPL's Ember deinit closes its ports AND calls
+	 * padEnd(), leaving PADMAN/freepad resident but releasing the old EE RPC
+	 * client. Without that final padEnd() Ember can inherit a stale libpad
+	 * session and come up with no controller.
+	 */
 	padPortClose(1, 0);
 	padPortClose(0, 0);
-	//    padEnd();  //Required when a newer libpad library is used.
+	if (end_pad_rpc)
+		padEnd();
+
 	closeKeyboardIfOpened();
 #ifdef DS34
 	WaitSema(semRunning);
@@ -38,8 +50,28 @@ void CleanUpForExec(void)
 	ds34bt_reset();
 #endif
 }
+
+void CleanUpForExec(void)
+{
+	cleanUpForExecInternal(0);
+}
+
+int CleanUpForEmberExec(void)
+{
+	/*
+	 * Ember performs no IOP reset. Any dashboard file IO/audio RPC still in
+	 * flight would survive on the IOP side after this EE process disappears.
+	 * Drain those users first, but do not unmount or unload the game/storage
+	 * stack: Ember must inherit it exactly as RiptOPL's keep-IOP path does.
+	 */
+	if (!DashPrepareKeepIopHandoff("Preparing Ember"))
+		return 0;
+
+	cleanUpForExecInternal(1);
+	return 1;
+}
 //------------------------------
-//endfunc CleanUpForExec
+//endfunc CleanUpForExec / CleanUpForEmberExec
 //---------------------------------------------------------------------------
 static int isHddLaunchPath(const char *path)
 {
