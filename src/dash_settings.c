@@ -234,7 +234,7 @@ static const SetItem dash_items[] = {
 };
 
 static const SetItem library_items[] = {
-    {ST_ACTION, S_SCANPATHS, "Application folders...", "Folders searched for .ELF files (one sub-folder level deep)."},
+    {ST_ACTION, S_SCANPATHS, "Application folders...", "Only these folders are scanned. Defaults: mc:/APPS, mc:/BOOT, mass:/APPS and mass:/BOOT; each includes one sub-folder level."},
     {ST_CHOICE, S_AUTOSCAN, "Refresh at startup", "Check memory cards and already running devices for applications at startup."},
     {ST_ACTION, S_RESCAN, "Refresh library now", "Search every application folder, loading drivers as needed. Updates the library immediately."},
 };
@@ -2006,13 +2006,13 @@ static void editScanPaths(void)
 		for (i = 0; i < dashCfg.nscan; i++) {
 			items[n].icon = dashLibDeviceIcon(dashCfg.scan[i]);
 			items[n].label = dashCfg.scan[i];
-			items[n].detail = NULL;
+			items[n].detail = "this folder + one subfolder";
 			items[n].disabled = 0;
 			n++;
 		}
-		items[n].icon = DI_PLUS, items[n].label = "Add folder...", items[n].detail = NULL, items[n].disabled = (dashCfg.nscan >= DASH_MAX_SCAN), n++;
-		items[n].icon = DI_REFRESH, items[n].label = "Restore defaults", items[n].detail = NULL, items[n].disabled = 0, n++;
-		r = dashModalMenu("Application folders", "Select a folder to remove it", items, n, 0);
+		items[n].icon = DI_PLUS, items[n].label = "Add folder...", items[n].detail = "choose the exact folder to scan", items[n].disabled = (dashCfg.nscan >= DASH_MAX_SCAN), n++;
+		items[n].icon = DI_REFRESH, items[n].label = "Restore defaults", items[n].detail = "mc:/APPS, mc:/BOOT, mass:/APPS, mass:/BOOT", items[n].disabled = 0, n++;
+		r = dashModalMenu("Application folders", "Only listed folders are scanned for .ELF files", items, n, 0);
 		if (r < 0)
 			break;
 		if (r < dashCfg.nscan) {
