@@ -329,8 +329,9 @@ POPSTARTER_ELF =
 #   2) /neutrino/neutrino.elf on the ISO's device,
 #   3) mc0:/neutrino/neutrino.elf,
 #   4) mc1:/neutrino/neutrino.elf.
-# A complete install also needs config/system.toml and modules/ee_core.elf
-# beside neutrino.elf in the normal Neutrino directory structure.
+# A complete install needs a valid neutrino.elf plus config/system.toml
+# (legacy system.toml beside the ELF is also accepted), matching RiptOPL's
+# current Neutrino install probing.
 # Supported ISO source backends are USB/mass, MX4SIO, MMCE, iLink,
 # ATA/exFAT and UDPFS. The launcher preserves the live IOP/device stack,
 # passes -bsd, the full -dvd path, -qb, and an automatic -cwd.
