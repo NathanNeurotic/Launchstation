@@ -342,8 +342,8 @@ MG_CHALLENGE_IV=11569b681f98ebe5c9fab2cf670ee97e380a94ee9d85e69d99aa32d6ab2471b7
 ## Credits & Acknowledgments
 
 - **[@techwritescode](https://github.com/techwritescode)**: Special thanks for their role and collaborative contributions in the development process. ([GitHub Sponsors](https://github.com/sponsors/techwritescode))
-- **[johnson-cooper](https://github.com/johnson-cooper)**: Special thanks for their role and collaborative contributions in the development process. ([Buy Me a Coffee](https://buymeacoffee.com/attackishere))
-- **NathanNeurotic (Ripto)**: Co-creator and maintainer. ([Ko-fi](https://ko-fi.com/NathanNeurotic))
 - **[wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z)** by **R3Z3N / Saildot4K**: direct upstream base and major foundation of this fork. ([Ko-fi](https://ko-fi.com/r3z3n))
+- **[johnson-cooper](https://github.com/johnson-cooper)**: created this fork and handed the project over to NathanNeurotic / Ripto to maintain and improve. ([Buy Me a Coffee](https://buymeacoffee.com/attackishere))
+- **NathanNeurotic (Ripto)**: current maintainer. ([Ko-fi](https://ko-fi.com/NathanNeurotic))
 - Original wLaunchELF / uLaunchELF / LaunchELF maintainers, contributors, and the PS2Dev community.
 
