@@ -415,6 +415,7 @@ int loadAtaModules(void);
 int checkELFheader(char *filename);
 void RunLoaderElf(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load);
 void RunLoaderElfKeepIOP(char *filename, char *party, const char *selected_path, int exec_kind);
+void RunLoaderElfKeepIOPWithArgv0(char *filename, char *party, const char *child_argv0, int exec_kind);
 void RunLoaderMemory(const char *arg0, const char *mem_arg, int reboot_iop);
 void LaunchArgsClear(void);
 int LaunchArgsPending(void);
@@ -430,6 +431,10 @@ int PrepareMbrLaunchPayload(const char *path, char *mem_arg, size_t mem_arg_size
 /* popstarter.c */
 int IsPopstarterVcdPath(const char *path);
 int LaunchPopstarterVcd(const char *path, char *message, size_t message_size);
+
+/* ember.c */
+int IsEmberGamePath(const char *path);
+int LaunchEmberGame(const char *path, char *message, size_t message_size);
 
 /* neutrino_iso.c */
 int IsNeutrinoIsoPath(const char *path);
