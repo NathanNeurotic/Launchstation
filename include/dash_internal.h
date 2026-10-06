@@ -524,6 +524,10 @@ typedef struct
 	int bgm;
 	int bgm_vol;
 	int app_filter;
+	int files_mode;              /* 0 = Files list, 1 = Devices cards */
+	int home_shortcuts;          /* HOME quick-launch row */
+	int icon_backing;            /* control/quick-action backing shapes */
+	int show_unavailable_devices;/* include disconnected/probe-only device cards */
 	int dev_auto; /* DASH_DEVA_* bitmask: drivers to load at startup */
 	int mmce_backup_keep;   /* 0 = all, otherwise 1..99 */
 	int mmce_backup_format; /* MMCE_BACKUP_FORMAT_* */
@@ -913,6 +917,11 @@ int dashSectionIcon(int section);
 void dashSwitchSection(int section);
 int dashConfirmLeave(void); /* asks the current section; 0 = stay */
 int dashCurrentSection(void);
+int dashVisibleSectionCount(void);
+int dashVisibleSectionAt(int index);
+int dashVisibleSectionIndex(int section);
+const char *dashVisibleSectionName(int index);
+int dashAdjacentSection(int section, int direction);
 void dashRenderScene(void);
 void dashSetSceneOverride(void (*fn)(void)); /* NULL restores the dashboard scene */
 /* Native Text Editor (dash_editor.c); returns TEXTEDITOR_RESULT_*.

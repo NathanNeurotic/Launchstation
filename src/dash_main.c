@@ -38,6 +38,8 @@ static const DashScreen *const screens[DASH_SEC_COUNT] = {
 
 static const char *const section_names[DASH_SEC_COUNT] = {"HOME", "APPS", "FILES", "DEVICES", "TOOLS", "SETTINGS"};
 static const int section_icons[DASH_SEC_COUNT] = {DI_HOME, DI_APPS, DI_FOLDER, DI_DEVICES, DI_TOOLS, DI_SETTINGS};
+static const int visible_sections[] = {DASH_SEC_HOME, DASH_SEC_APPS, DASH_SEC_FILES, DASH_SEC_TOOLS, DASH_SEC_SETTINGS};
+#define DASH_VISIBLE_SEC_COUNT ((int)(sizeof(visible_sections) / sizeof(visible_sections[0])))
 
 const char *dashSectionName(int s)
 {
@@ -52,6 +54,40 @@ int dashSectionIcon(int s)
 int dashCurrentSection(void)
 {
 	return section;
+}
+
+int dashVisibleSectionCount(void)
+{
+	return DASH_VISIBLE_SEC_COUNT;
+}
+
+int dashVisibleSectionAt(int index)
+{
+	if (index < 0) index = 0;
+	if (index >= DASH_VISIBLE_SEC_COUNT) index = DASH_VISIBLE_SEC_COUNT - 1;
+	return visible_sections[index];
+}
+
+int dashVisibleSectionIndex(int s)
+{
+	int i;
+	if (s == DASH_SEC_DEVICES) s = DASH_SEC_FILES;
+	for (i = 0; i < DASH_VISIBLE_SEC_COUNT; i++)
+		if (visible_sections[i] == s) return i;
+	return 0;
+}
+
+const char *dashVisibleSectionName(int index)
+{
+	return dashSectionName(dashVisibleSectionAt(index));
+}
+
+int dashAdjacentSection(int s, int direction)
+{
+	int i = dashVisibleSectionIndex(s) + direction;
+	if (i < 0) i = DASH_VISIBLE_SEC_COUNT - 1;
+	if (i >= DASH_VISIBLE_SEC_COUNT) i = 0;
+	return visible_sections[i];
 }
 
 float dashTime(void)
@@ -121,10 +157,12 @@ int DashIsEnabled(void)
 
 void dashSwitchSection(int s)
 {
-	if (s < 0)
-		s = DASH_SEC_COUNT - 1;
-	if (s >= DASH_SEC_COUNT)
-		s = 0;
+	if (s == DASH_SEC_DEVICES) {
+		dashCfg.files_mode = 1;
+		s = DASH_SEC_FILES;
+	}
+	if (s < 0 || s >= DASH_SEC_COUNT)
+		s = DASH_SEC_HOME;
 	if (s == section)
 		return;
 	if (!dashConfirmLeave())
@@ -944,6 +982,10 @@ static void firstInit(void)
 	}
 #endif
 	section = dashCfg.start_section;
+	if (section == DASH_SEC_DEVICES) {
+		dashCfg.files_mode = 1;
+		section = DASH_SEC_FILES;
+	}
 	dash_inited = 1;
 }
 
@@ -1004,9 +1046,9 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		if (in.pressed & DASH_IN_OK)
 			dashSoundPlay(DASH_SND_CONFIRM);
 		if (in.pressed & DASH_IN_L1)
-			dashSwitchSection(section - 1);
+			dashSwitchSection(dashAdjacentSection(section, -1));
 		else if (in.pressed & DASH_IN_R1)
-			dashSwitchSection(section + 1);
+			dashSwitchSection(dashAdjacentSection(section, 1));
 		else if (in.pressed & DASH_IN_START)
 			globalMenu();
 		else if (in.any && screens[section]->input)

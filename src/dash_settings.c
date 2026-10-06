@@ -47,7 +47,10 @@ enum SetId {
 	S_BGM,
 	S_BGMVOL,
 	S_START,
+	S_FILES_MODE,
 	S_VIEW,
+	S_HOME_SHORTCUTS,
+	S_ICON_BACKING,
 	S_ARTWORK,
 	S_RECENT,
 	S_AUTOSCAN,
@@ -78,6 +81,7 @@ enum SetId {
 	/* devices */
 	S_HIDE_HDD,
 	S_HIDE_MC,
+	S_SHOW_UNAVAILABLE,
 	S_REBOOT_ELF,
 	S_DEVA_USB,
 	S_DEVA_HDD,
@@ -200,6 +204,8 @@ static const SetItem appearance_items[] = {
     {ST_PAGE, P_SCREEN, "Screen calibration", "Video mode and picture position for your TV."},
     {ST_CHOICE, S_EFFECTS, "Background motion", "0% freezes backgrounds; 100% is normal; 200% doubles their motion."},
     {ST_CHOICE, S_ANIM, "Menu animation", "0% makes transitions instant; higher values increase movement and transition duration."},
+    {ST_CHOICE, S_T_PANEL_A, "Panel transparency", "0% removes menu panels; 100% makes them fully opaque."},
+    {ST_CHOICE, S_ICON_BACKING, "Control icon backings", "Show or hide backing shapes behind text-style controls and quick actions."},
     {ST_PAGE, P_THEME_MANAGE, "Theme files & resets", "Import, export, rename or reset your theme."},
     {ST_ACTION, S_DISPLAY_THEME_RESET, "Reset appearance", "Restore screen calibration, motion, animation and the OSD Classic theme."},
 };
@@ -213,6 +219,8 @@ static const SetItem display_items[] = {
 
 static const SetItem dash_items[] = {
     {ST_CHOICE, S_START, "Start screen", "Section shown when the dashboard opens."},
+    {ST_CHOICE, S_FILES_MODE, "Files / Devices view", "Which view opens inside the combined Files section; SELECT also toggles it there."},
+    {ST_CHOICE, S_HOME_SHORTCUTS, "Home quick-launch shortcuts", "Show the disc and launch-key shortcut row on Home."},
     {ST_CHOICE, S_VIEW, "Application view", "Grid, list or carousel (SELECT also switches it in APPS)."},
     {ST_CHOICE, S_ARTWORK, "Application artwork", "Load cover art for tiles and artwork backgrounds."},
     {ST_CHOICE, S_RECENT, "Recent applications", "How many recently started applications HOME shows."},
@@ -284,6 +292,7 @@ static const SetItem device_items[] = {
     {ST_PAGE, P_MMCE_BACKUP, "MMCE backups", "Versioned backup history, output format and automatic IGR backup preferences."},
     {ST_CHOICE, S_HIDE_HDD, "Internal HDD / ATA units", "Which HDD and exFAT units appear in the File Browser."},
     {ST_CHOICE, S_HIDE_MC, "Hide empty memory card slots", "Also hides unused MMCE entries in the File Browser."},
+    {ST_CHOICE, S_SHOW_UNAVAILABLE, "Show unavailable devices", "On keeps disconnected/probe-only device families visible; Off shows only devices that are ready."},
     {ST_PAGE, P_AUTOSTART, "Start devices automatically", "The boot device always stays enabled. Starting other drivers takes effect immediately."},
 };
 
@@ -561,12 +570,23 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return 11;
 		case S_START: {
 			static const char *secs[DASH_SEC_COUNT];
-			int i;
-			for (i = 0; i < DASH_SEC_COUNT; i++)
-				secs[i] = dashSectionName(i);
-			*names = secs, *cur = dashCfg.start_section;
-			return DASH_SEC_COUNT;
+			int i, n = dashVisibleSectionCount();
+			for (i = 0; i < n; i++)
+				secs[i] = dashVisibleSectionName(i);
+			*names = secs, *cur = dashVisibleSectionIndex(dashCfg.start_section);
+			return n;
 		}
+		case S_FILES_MODE: {
+			static const char *const modes[] = {"Files", "Devices"};
+			*names = modes, *cur = dashCfg.files_mode;
+			return 2;
+		}
+		case S_HOME_SHORTCUTS:
+			*cur = dashCfg.home_shortcuts;
+			return 2;
+		case S_ICON_BACKING:
+			*cur = dashCfg.icon_backing;
+			return 2;
 		case S_VIEW:
 			*names = view_names, *cur = dashCfg.view;
 			return DASH_VIEW_COUNT;
@@ -598,6 +618,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return HIDE_HDD_COUNT;
 		case S_HIDE_MC:
 			*cur = setting->Hide_MCMMCE ? 1 : 0;
+			return 2;
+		case S_SHOW_UNAVAILABLE:
+			*cur = dashCfg.show_unavailable_devices;
 			return 2;
 		case S_REBOOT_ELF:
 			*cur = setting->reboot_iop_elf_load ? 1 : 0;
@@ -1164,7 +1187,20 @@ static void setChoice(int id, int v)
 			break;
 		}
 		case S_START:
-			dashCfg.start_section = v;
+			dashCfg.start_section = dashVisibleSectionAt(v);
+			break;
+		case S_FILES_MODE:
+			dashCfg.files_mode = v;
+			break;
+		case S_HOME_SHORTCUTS:
+			dashCfg.home_shortcuts = v;
+			dashHomeRebuild();
+			break;
+		case S_ICON_BACKING:
+			dashCfg.icon_backing = v;
+			break;
+		case S_SHOW_UNAVAILABLE:
+			dashCfg.show_unavailable_devices = v;
 			break;
 		case S_VIEW:
 			dashCfg.view = v;
