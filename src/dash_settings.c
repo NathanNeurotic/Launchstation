@@ -81,6 +81,7 @@ enum SetId {
 	S_ESR_PATH,
 	S_OSDSYS_PATH,
 	S_POPS_PATH,
+	S_NEUTRINO_PATH,
 	/* devices */
 	S_HIDE_HDD,
 	S_HIDE_MC,
@@ -262,7 +263,7 @@ static const SetItem launch_items[] = {
     {ST_PAGE, P_BOOT, "Automatic start & boot", "Choose what starts automatically and how long startup waits."},
     {ST_PAGE, P_LKEY, "Launch keys", "Applications or commands assigned to controller buttons."},
     {ST_CHOICE, S_PATHPAD_LOCK, "Lock shortcuts & bookmarks", "Prevents editing launch keys and File Browser bookmarks."},
-    {ST_PAGE, P_LOADERS, "Disc & PS1 loaders", "ESR, OSDSYS and POPStarter program paths."},
+    {ST_PAGE, P_LOADERS, "Disc & image loaders", "ESR, OSDSYS, POPStarter and Neutrino program paths."},
     {ST_CHOICE, S_REBOOT_ELF, "Reset IOP before launch", "Recommended: gives launched ELFs a clean IOP."},
     {ST_PAGE, P_GAMEID, "Game ID output", "Game IDs for RetroGem and compatible OSD/HDMI adapters."},
 };
@@ -291,6 +292,7 @@ static const SetItem loader_items[] = {
     {ST_PATH, S_ESR_PATH, "ESR loader", "ESR ELF used to start ESR-patched discs."},
     {ST_PATH, S_OSDSYS_PATH, "OSDSYS program", "Started by the OSDSYS command. Empty: the console's own."},
     {ST_PATH, S_POPS_PATH, "POPStarter", "POPStarter ELF used to start PS1 VCD images."},
+    {ST_PATH, S_NEUTRINO_PATH, "Neutrino", "Neutrino ELF used to start PS2 ISO images. Empty: game device, then mc0:/mc1:/neutrino/."},
 };
 
 static const SetItem device_items[] = {
@@ -1429,6 +1431,9 @@ static int pathInfo(int id, PathSpec *p)
 			return 1;
 		case S_POPS_PATH:
 			p->field = setting->popstarter_file, p->size = sizeof(setting->popstarter_file), p->ext = "ELF", p->mc_alias = 1;
+			return 1;
+		case S_NEUTRINO_PATH:
+			p->field = setting->neutrino_file, p->size = sizeof(setting->neutrino_file), p->ext = "ELF", p->mc_alias = 1;
 			return 1;
 		case S_IGR_AFTER_APP:
 			p->field = dashCfg.igr_after_path, p->size = sizeof(dashCfg.igr_after_path), p->ext = "ELF";

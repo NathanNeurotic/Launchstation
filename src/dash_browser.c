@@ -516,9 +516,9 @@ static void activate(void)
 		refresh();
 		return;
 	}
-	/* ELF/KELF, POPStarter VCD...: the proven launch path */
+	/* ELF/KELF, POPStarter VCD and Neutrino ISO use the shared launch path. */
 	if (genCmpFileExt(path, "ELF") || genCmpFileExt(path, "XLF") || genCmpFileExt(path, "KELF") ||
-	    genCmpFileExt(path, "VCD")) {
+	    genCmpFileExt(path, "VCD") || genCmpFileExt(path, "ISO")) {
 		launchPath(path, 0);
 		return;
 	}

@@ -163,6 +163,11 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		LaunchPopstarterVcd(path, ctx->main_msg, MAX_PATH);
 		return;
 	}
+	if (IsNeutrinoIsoPath(path)) {
+		LaunchArgsClear();
+		LaunchNeutrinoIso(path, ctx->main_msg, MAX_PATH);
+		return;
+	}
 
 	if (!strncmp(path, "mc", 2)) {
 		party[0] = 0;
