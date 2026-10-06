@@ -1,0 +1,10 @@
+<h1>Install &amp; Update</h1><p class="lead">wLaunchELF R3Z is portable: the ELF can live on any filesystem that the launcher can read.</p>
+<h2 id="minimum">Minimum install</h2><pre class="tree"><code>BOOT.ELF</code></pre><p>That is sufficient for normal dashboard and file-management use.</p>
+<h2 id="recommended">Recommended install</h2><pre class="tree"><code>wLaunchELF_R3Z/
+├── BOOT.ELF
+├── BGM.ADP                  optional
+├── WLE-CLOUD.CNF            optional; create from example
+└── WLE-CLOUD-CA.PEM         optional; native cloud TLS</code></pre>
+<h2 id="config-discovery">Configuration discovery</h2><p>The project keeps classic <code>LAUNCHELF.CNF</code> compatibility and a dashboard settings store. A custom CNF path can be selected in Settings. Saving can target the configured folder, next to the ELF or a memory-card SYS-CONF location.</p>
+<h2 id="update">Updating safely</h2><ol><li>Download the newest packed ELF.</li><li>Back up the current ELF and configuration.</li><li>Replace the ELF first.</li><li>Replace sidecars when release notes say their format/content changed or when enabling a new feature.</li><li>Boot and review Settings before overwriting older configuration copies.</li></ol>
+<h2 id="portable">Portable sidecar strategy</h2><p>For a self-contained installation, keep BGM and cloud support files beside the program. For multi-console setups, use explicit save/loader paths so shared and per-console state are intentional rather than accidental.</p>

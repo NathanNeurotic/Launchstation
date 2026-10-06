@@ -1,0 +1,27 @@
+<div class="hero hero-wle">
+<div class="wle-mark"><span>R3Z</span></div>
+<h1>wLaunchELF R3Z <span class="g">Documentation</span></h1>
+<p class="lead">A dashboard-first wLaunchELF for real PlayStation 2 hardware: file management, applications, APA/PFS, MMCE, iLink, PC transfers, backups, cloud sync, POPStarter VCDs and Neutrino PS2 ISOs.</p>
+<div class="sys-strip"><div class="sys-strip-row"><span class="sys-pill">FILE MANAGER</span><span class="sys-pill">NEUTRINO ISO</span><span class="sys-pill">POPSTARTER VCD</span><span class="sys-pill">APA / PFS</span></div><div class="sys-strip-row"><span class="sys-pill">MMCE BACKUP</span><span class="sys-pill">GOOGLE DRIVE</span><span class="sys-pill">iLINK</span><span class="sys-pill">PC TRANSFER</span></div></div>
+<div class="btn-row"><a class="btn" href="getting-started.html">Start here</a><a class="btn ghost" href="releases.html">Download latest</a><a class="btn ghost download-docs" href="downloads/wLaunchELF_R3Z-Documentation.zip">Offline docs</a></div>
+</div>
+<div class="callout info"><div class="h">What this project is</div>wLaunchELF R3Z keeps the power-user roots of LaunchELF/uLaunchELF/wLaunchELF while adding a PS2-style dashboard, safer device handling, modern storage paths, searchable app discovery, richer file operations, MMCE workflows, PC interoperability and external game-core handoffs. The classic browser remains available; the dashboard is the primary interface.</div>
+<h2 id="first-steps">Recommended first steps</h2>
+<div class="grid">
+<a class="tile" href="getting-started.html"><span class="icon icon-start"></span><b>Getting Started</b><span>Install, first boot, first device, first app</span></a>
+<a class="tile" href="file-browser.html"><span class="icon icon-folder"></span><b>File Browser</b><span>Copy, move, rename, delete, sort, timestamps</span></a>
+<a class="tile" href="neutrino.html"><span class="icon icon-neutrino"></span><b>PS2 ISO · Neutrino</b><span>Launch .ISO images from supported devices</span></a>
+<a class="tile" href="popstarter.html"><span class="icon icon-ps1"></span><b>PS1 VCD · POPStarter</b><span>Launch POPStarter-compatible .VCD images</span></a>
+<a class="tile" href="mmce-backup.html"><span class="icon icon-vmc"></span><b>MMCE Backups</b><span>Versioned local backup and IGR integration</span></a>
+<a class="tile" href="cloud.html"><span class="icon icon-smb"></span><b>Google Drive</b><span>Optional native PS2 cloud backup</span></a>
+</div>
+<h2 id="design">Design goals</h2>
+<ul class="checklist"><li><b>Device-agnostic launching.</b> Work from the device the user actually browsed instead of assuming mass0 or mc0.</li><li><b>Demand-load expensive stacks.</b> Drivers and networking stay out of startup until needed.</li><li><b>Keep classic functionality.</b> Dashboard actions wrap proven wLaunchELF operations instead of discarding them.</li><li><b>Visible state.</b> Not checked, absent, busy, unsaved changes and background work are explicit.</li><li><b>Hardware-first validation.</b> CI catches structural/link/layout regressions; device behavior is still verified on consoles.</li></ul>
+<h2 id="feature-map">Feature map</h2>
+<table class="matrix" data-sortable><thead><tr><th>Area</th><th>Highlights</th></tr></thead><tbody>
+<tr><td>Dashboard</td><td>Home, Apps, Files/Devices, Tools, Settings; configurable startup section; optional Home shortcuts; themes, clock, BGM and animation.</td></tr>
+<tr><td>File management</td><td>Classic and dashboard browsers, copy/cut/paste, rename, delete, folders, PSU operations, VMC mounting, timestamp tools, sorting and metadata.</td></tr>
+<tr><td>Storage</td><td>Memory cards, USB/MASS, MMCE, MX4SIO, iLink, internal APA/PFS, ATA/exFAT and supported network storage.</td></tr>
+<tr><td>Game images</td><td>PS1 VCD via POPStarter; PS2 ISO via Neutrino with explicit/game-device/MC loader discovery.</td></tr>
+<tr><td>Backups</td><td>MMCE card export/history, skip-unchanged behavior, IGR-triggered backup, optional native Google Drive copy-only sync.</td></tr>
+</tbody></table>
