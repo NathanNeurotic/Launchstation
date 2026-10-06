@@ -8,6 +8,7 @@
 #include "dash_internal.h"
 #include "mmce_igr.h"
 #include "mmce_backup.h"
+#include "mmce_igr.h"
 #include "cloud_google.h"
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 #include "cloud_http.h"
@@ -252,6 +253,8 @@ typedef struct
 	char root[MAX_PATH];
 	MmceBackupOptions options;
 	MmceBackupScanStats total;
+	WleIgrStatusStats igr;
+	int igr_status;
 	int scan_mmce;
 	int any_unit;
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
@@ -261,6 +264,7 @@ typedef struct
 
 static int mmce_status_job;
 static char mmce_status_text[48] = "Not checked";
+static char igr_status_text[32] = "Not checked";
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 static char google_status_text[24] = "Not checked";
 #endif
@@ -284,6 +288,7 @@ static void mmceStatusRun(void *arg)
 			j->total.failed += one.failed;
 		}
 	}
+	j->igr_status = wleIgrStatus(j->root, &j->igr);
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 	j->google_linked = cloudGoogleIsLinked();
 #endif
@@ -314,6 +319,24 @@ static void mmceStatusDone(void *arg)
 	else
 		snprintf(mmce_status_text, sizeof(mmce_status_text), "All synced");
 
+	switch (j->igr_status) {
+		case WLE_IGR_STATUS_CURRENT:
+			snprintf(igr_status_text, sizeof(igr_status_text), "Current");
+			break;
+		case WLE_IGR_STATUS_OUTDATED:
+			snprintf(igr_status_text, sizeof(igr_status_text), "Outdated");
+			break;
+		case WLE_IGR_STATUS_NOT_INSTALLED:
+			snprintf(igr_status_text, sizeof(igr_status_text), "Not installed");
+			break;
+		case WLE_IGR_STATUS_PARTIAL:
+			snprintf(igr_status_text, sizeof(igr_status_text), "Partial / mixed");
+			break;
+		default:
+			snprintf(igr_status_text, sizeof(igr_status_text),
+			         "%s", j->root[0] ? "Not checked" : "Set destination");
+			break;
+	}
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 	snprintf(google_status_text, sizeof(google_status_text),
 	         "%s", j->google_linked ? "Linked" : "Not linked");
@@ -373,6 +396,11 @@ void dashToolsRefreshMmceStatus(void)
 const char *dashToolsMmceStatus(void)
 {
 	return mmce_status_text;
+}
+
+const char *dashToolsIgrStatus(void)
+{
+	return igr_status_text;
 }
 
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
