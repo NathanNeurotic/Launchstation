@@ -299,6 +299,7 @@ typedef struct
 	char lang_file[MAX_PATH];
 	char font_file[MAX_PATH];
 	char popstarter_file[MAX_PATH];
+	char neutrino_file[MAX_PATH];
 	int Menu_Frame;
 	int timeout;
 	int Hide_Paths;
@@ -413,6 +414,7 @@ int loadAtaModules(void);
 /* elf.c */
 int checkELFheader(char *filename);
 void RunLoaderElf(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load);
+void RunLoaderElfKeepIOP(char *filename, char *party, const char *selected_path, int exec_kind);
 void RunLoaderMemory(const char *arg0, const char *mem_arg, int reboot_iop);
 void LaunchArgsClear(void);
 int LaunchArgsPending(void);
@@ -428,6 +430,10 @@ int PrepareMbrLaunchPayload(const char *path, char *mem_arg, size_t mem_arg_size
 /* popstarter.c */
 int IsPopstarterVcdPath(const char *path);
 int LaunchPopstarterVcd(const char *path, char *message, size_t message_size);
+
+/* neutrino_iso.c */
+int IsNeutrinoIsoPath(const char *path);
+int LaunchNeutrinoIso(const char *path, char *message, size_t message_size);
 
 /* draw.c */
 #define FOLDER 0
