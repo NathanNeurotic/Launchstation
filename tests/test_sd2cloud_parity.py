@@ -1,0 +1,38 @@
+from pathlib import Path
+
+root = Path(__file__).resolve().parents[1]
+settings = (root/"src/dash_settings.c").read_text()
+tools = (root/"src/dash_tools.c").read_text()
+header = (root/"include/dash_internal.h").read_text()
+workflow = (root/".github/workflows/compile.yml").read_text()
+
+for label in (
+    '"Sync all cards"', '"Automatic sync"', '"IGR helper"',
+    '"After IGR, open"', '"Language"', '"Backups per card"',
+    '"Backup format"', '"Google account"', '"Check for updates"',
+    '"About r3LaunchELF_ATTDASH"'
+):
+    assert label in settings
+
+assert 'igr_sync_names[] = {"Off", "Local backup", "Local + Google Drive"}' in settings
+assert "dashToolsSyncAllMmceCards();" in settings
+assert "dashToolsIgrBackupSetup();" in settings
+assert "dashToolsCloudBackup();" in settings
+assert "dashToolsCheckUpdates();" in settings
+
+assert "void dashToolsSyncAllMmceCards(void)" in tools
+assert "mmceBackupAllCards" in tools
+assert "cloudGoogleSyncBackupRoot" in tools
+assert "/repos/NathanNeurotic/r3LaunchELF_ATTDASH/releases/tags/latest" in tools
+assert '"WLE-UPDATE-CA.PEM"' in tools
+assert "releaseJsonString" in tools
+
+assert "dashToolsSyncAllMmceCards" in header
+assert "dashToolsCheckUpdates" in header
+assert "cp res/WLE-UPDATE-CA.PEM artifacts/WLE-UPDATE-CA.PEM" in workflow
+
+pem = (root/"res/WLE-UPDATE-CA.PEM").read_text()
+assert "BEGIN CERTIFICATE" in pem
+assert "END CERTIFICATE" in pem
+
+print("SD2Cloud-visible settings parity contract: OK")
