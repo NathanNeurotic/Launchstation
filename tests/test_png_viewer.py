@@ -11,8 +11,9 @@ ps2yaml = (root / "ps2.yaml").read_text()
 widgets = (root / "src/dash_widgets.c").read_text()
 
 for ext in ("PNG", "JPG", "JPEG"):
-    assert f'genCmpFileExt(path, "{ext}")' in browser
+    assert f'genCmpFileExt(f->name, "{ext}")' in browser
 
+assert "isImageFile(f)" in browser
 assert "dashShowImageViewer(path, f->name, &iv)" in browser
 assert "nextImageIndex" in browser
 assert "revealSelection" in browser
