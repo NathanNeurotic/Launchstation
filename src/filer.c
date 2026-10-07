@@ -1750,6 +1750,24 @@ int getDir(const char *path, FILEINFO *info)
 		}
 	}
 #endif
+#ifdef ILINK
+	else if (!strncmp(path, "ilink", 5)) {
+		/*
+		 * The iLink stack mounts a normal BDM/FatFs filesystem, but this
+		 * dispatcher previously had no iLink case at all. The DEVICES
+		 * screen could successfully probe ilink:/ and then File Browser
+		 * immediately fell through to "return 0", making a mounted disk
+		 * look empty.
+		 *
+		 * Keep classic-browser demand loading, while the dashboard path
+		 * normally arrives here with the stack already prepared on the UI
+		 * thread by filerPrepareDirRead().
+		 */
+		if (!isPathDeviceStackLoaded(path) && !loadIlinkModules())
+			return 0;
+		n = readGENERICWithFirstOpenRetry(path, info, max, 3000);
+	}
+#endif
 	else if (!strncmp(path, "vmc", 3))
 		n = readVMC(path, info, max);
 	else
