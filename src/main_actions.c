@@ -29,11 +29,13 @@ static void cleanUpForExecInternal(int end_pad_rpc)
 	/*
 	 * Closing the ports releases our pad buffers. For ordinary legacy
 	 * launches preserve the historical wLaunchELF behaviour. Ember is
-	 * different: it deliberately inherits the live IOP and then opens pad
-	 * ports itself. RiptOPL's Ember deinit closes its ports AND calls
-	 * padEnd(), leaving PADMAN/freepad resident but releasing the old EE RPC
-	 * client. Without that final padEnd() Ember can inherit a stale libpad
-	 * session and come up with no controller.
+	 * different: it either inherits a tested device stack or, on USB,
+	 * immediately follows this cleanup with Ember's clean-IOP bootstrap.
+	 * padEnd() is still required to release this EE process's libpad RPC
+	 * client before either handoff. Hardware proved that padEnd() alone is
+	 * not sufficient on USB because the homebrew SIO2MAN/PADMAN IRX modules
+	 * themselves remain resident; the USB Ember path removes those with a
+	 * clean IOP reset in prepareEmberCleanUsbIop().
 	 */
 	padPortClose(1, 0);
 	padPortClose(0, 0);
