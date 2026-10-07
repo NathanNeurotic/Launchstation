@@ -33,11 +33,6 @@ int prepareExploitSignerIop(void);
 int isPathDeviceStackLoaded(const char *path);
 int isUsbMassStackLoaded(void);
 
-/* Ember cannot tolerate the launcher's homebrew SIO2MAN/PADMAN remaining
- * resident on the tested USB path. Reboot the IOP and rebuild only the USB
- * filesystem stack, deliberately leaving pad modules absent for Ember to
- * load from ROM itself. */
-int prepareEmberCleanUsbIop(const char *ember_path);
 
 #ifdef ETH
 void loadNetModules(void);
