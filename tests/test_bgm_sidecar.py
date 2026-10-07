@@ -46,7 +46,7 @@ static int bgm_loaded,bgm_tried,bgm_channel=-1,sound_ready=1;
 static void *bgm_data;
 static int _iop_reboot_count,sound_reboot_count,sound_tried_reboot=-1,sound_retry;
 static char LaunchElfBootDir[MAX_PATH]="usb0:/BOOT/",LaunchElfDir[MAX_PATH]="mc0:/SYS-CONF/";
-static int exists=1,loaded=1,busy,parked,opens,uploads,plays,volumes,quit_calls,allocs;
+static int exists=1,loaded=1,busy,parked,opens,uploads,plays,volumes,quit_calls,hard_stops,allocs;
 static int size=64,bytes=64,pos,close_error,upload_error;
 static u8 file[64];
 static char opened[MAX_PATH];
@@ -83,6 +83,8 @@ static int audsrv_ch_play_adpcm(int ch,audsrv_adpcm_t *s) {
 static void audsrv_adpcm_set_volume_and_pan(int ch,int v,int p) {
     assert(ch==23 && v>=0 && v<=100 && p==0); volumes++;
 }
+static int audsrv_adpcm_init(void) { hard_stops++; return 0; }
+static int audsrv_stop_audio(void) { hard_stops++; return 0; }
 static void audsrv_quit(void) { quit_calls++; }
 static void dashToast(int k,const char *s) { (void)k; (void)s; }
 static void dashBgmStart(void);
@@ -105,7 +107,7 @@ static void reset(void) {
     size=bytes=64; dashCfg.sound=dashCfg.bgm=1;
     memset(file,0,sizeof(file)); memcpy(file,"APCM",4);
     file[4]=file[5]=file[6]=1; file[8]=0xac; file[9]=3;
-    opens=uploads=plays=volumes=0;
+    opens=uploads=plays=volumes=hard_stops=0;
 }
 int main(void) {
     reset(); dashBgmStart();
@@ -146,6 +148,7 @@ int main(void) {
     assert(allocs==1 && opens==2 && uploads==2 && plays==2 && soundAlive());
     reset(); dashCfg.sound=0; dashBgmStart(); assert(plays==1);
     dashSoundShutdown(); assert(!allocs && !bgm_sample.buffer && !bgm_loaded);
+    assert(hard_stops==2 && quit_calls>0);
     puts("PASS: optional boot sidecar, once-only miss, toggle/reboot reload, IO deferral, invalid/short files, cleanup");
 }
 """
