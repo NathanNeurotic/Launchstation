@@ -26,7 +26,6 @@ static float fade_in;
 static int autoprobe_pending;
 static u64 last_frame_ms;
 static float frame_dt;
-static int frame_counter;
 
 /* boot-time launch key emulation */
 static int boot_phase;         /* 0 none, 1 init delay, 2 auto-launch countdown */
@@ -1046,6 +1045,9 @@ static void firstInit(void)
 void DashRun(const MainExecuteContext *ctx, int from_boot)
 {
 	DashInput in;
+	u64 next_device_poll;
+	u64 next_disc_poll;
+	u64 next_remote_poll;
 
 	if (dash_active || ctx == NULL)
 		return;
@@ -1075,12 +1077,15 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	dashAppsRebuildView();
 	dashInputFlush();
 	last_frame_ms = Timer();
+	next_device_poll = last_frame_ms;
+	next_disc_poll = last_frame_ms;
+	next_remote_poll = last_frame_ms;
 	if (from_boot)
 		bootBegin();
 	/* the dashboard is the only shell: it never returns */
 	while (1) {
 		float dt = dashVisualUpdate();
-		frame_counter++;
+		u64 now = Timer();
 
 		if (dashGfxCheckScreenChange())
 			dashArtInvalidateVram();
@@ -1113,19 +1118,36 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		/* results of background work that change what screens point at */
 		applyScanResult();
 		dashFilesPoll();
-		pollPcGameReceiver();
-		pollRemotePcCommand();
+		/*
+		 * Remote-control and receiver probes touch the network filesystem.
+		 * Polling them every rendered frame was needlessly hammering the IOP
+		 * once FTP/network access was enabled and showed up as animation/input
+		 * stutter. Half-second latency is still effectively immediate for a
+		 * file-based command inbox.
+		 */
+		if (now >= next_remote_poll) {
+			pollPcGameReceiver();
+			pollRemotePcCommand();
+			next_remote_poll = now + 500;
+		}
 		if (autoprobe_pending) {
 			autoprobe_pending = 0;
 			dashDevicesAutoStart();
 		}
 
-		/* Housekeeping. The UI thread does no IO of its own while the
-		 * background worker does (libmc and the IOP are not shared). */
+		/* Housekeeping is wall-clock throttled. The old per-frame device poll
+		 * and frame-count CD probe caused regular IOP RPC traffic even when
+		 * nothing changed. Keep hotplug responsive without spending render time
+		 * polling hardware tens of times per second. */
 		if (!dashWorkerIoBusy() && !dashIopParked()) {
-			if ((frame_counter % 30) == 0)
+			if (now >= next_disc_poll) {
 				uLE_cdStop();
-			dashDevicesPoll();
+				next_disc_poll = now + 1000;
+			}
+			if (now >= next_device_poll) {
+				dashDevicesPoll();
+				next_device_poll = now + 250;
+			}
 		}
 		dashSoundMaintain();
 		dashThemeSavePending((int)dashInputIdleMs());
