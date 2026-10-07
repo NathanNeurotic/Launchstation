@@ -19,7 +19,7 @@ def body(source: str, signature: str) -> str:
     return source[start:pos]
 
 get_dir = body(filer, "int getDir(")
-load_ilink = body(init, "int loadIlinkModules(")
+load_ilink = body(init, "int loadIlinkModules(void)\n{")
 
 # The device model and driver loader already knew about iLink.
 assert '"iLink / FireWire"' in devices
