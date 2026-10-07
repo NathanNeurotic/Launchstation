@@ -971,6 +971,7 @@ void dashShowBuildInfo(void);
 void dashShowSystemInfo(void);
 void dashShowFontViewer(void);
 void dashShowTextLines(int icon, const char *title, const char *subtitle, const char *const *lines, int n);
+void dashShowPngViewer(const char *path, const char *title);
 void dashExploitInstaller(void); /* dash_exploit.c */
 void dashOpenBrowser(const char *start_dir);        /* native File Browser */
 void dashFileBrowser(const char *start_dir);        /* dash_browser.c */
