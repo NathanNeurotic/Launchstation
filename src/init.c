@@ -1535,13 +1535,18 @@ int prepareEmberCleanUsbIop(const char *ember_path)
 
 #ifdef EXFAT
 	if (!emberStartIrx("BDM", bdm_irx, size_bdm_irx) ||
-	    !emberStartIrx("BDMFS_FATFS", bdmfs_fatfs_irx, size_bdmfs_fatfs_irx) ||
-	    !emberStartIrx("USBMASS_BD", usbmass_bd_irx, size_usbmass_bd_irx))
+	    !emberStartIrx("BDMFS_FATFS", bdmfs_fatfs_irx, size_bdmfs_fatfs_irx))
+		return 0;
+	/* Match the already hardware-used lazy USB bring-up timing: BDMFS needs
+	 * a short settle before the block driver registers its device. */
+	waitForUsbMassBdmfsSettle();
+	if (!emberStartIrx("USBMASS_BD", usbmass_bd_irx, size_usbmass_bd_irx))
 		return 0;
 #else
 	if (!emberStartIrx("USBMASS", usb_mass_irx, size_usb_mass_irx))
 		return 0;
 #endif
+	delay(3);
 
 	fileXioInit();
 
