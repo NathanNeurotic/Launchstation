@@ -1,4 +1,5 @@
 #include "popstarter_internal.h"
+#include "init.h"
 
 #define EMBER_NAME_MAX 180
 #define EMBER_BIOS_SIZE (512 * 1024)
@@ -352,11 +353,18 @@ int LaunchEmberGame(const char *path, char *message, size_t message_size)
 	}
 
 	/*
-	 * Ember explicitly requires the launcher's storage IOP to survive the
-	 * handoff. Do not reset or rebuild it here: USB/MMCE/HDD files are read
-	 * through the inherited drivers. CleanUpForEmberExec() has already drained
-	 * dashboard I/O/audio and ended this EE process's libpad RPC session.
+	 * USB needs one clean storage-stack rebuild because wLaunchELF normally has
+	 * PADMAN resident. Match launcHER: rebuild the storage IOP without PADMAN,
+	 * wait until this exact ember.elf is visible again, then perform a true
+	 * keep-IOP ExecPS2. There must be no reset after this point.
 	 */
+	if ((!strncmp(ember_elf, "usb", 3) || !strncmp(ember_elf, "mass", 4)) &&
+	    !prepareEmberUsbHandoffIop(ember_elf)) {
+		DPRINTF("[EMBER] USB handoff IOP did not become ready; returning to OSDSYS\n");
+		LaunchArgsClear();
+		ExecOSD(0, NULL);
+		return 0;
+	}
 
 	RunLoaderElfKeepIOPWithArgv0(fullpath, party, fullpath, exec_kind);
 	return 1;
