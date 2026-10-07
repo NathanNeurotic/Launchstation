@@ -211,7 +211,7 @@ jobs:
           3. Add **WLE-UPDATE-CA.PEM** to the dashboard settings folder if you use the built-in update checker.
           4. Download the WLE-CLOUD files only if you plan to use native Google Drive backup/sync.
           EOF
-)"
+          )"
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}" --prerelease || true
           fi
@@ -264,7 +264,7 @@ jobs:
 
           GitHub's **Source code (zip)** and **Source code (tar.gz)** entries are repository snapshots for developers and are not language packs or ready-to-run PS2 builds.
           EOF
-)"
+          )"
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release edit "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}"
           else
