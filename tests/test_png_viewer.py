@@ -17,7 +17,7 @@ assert "isImageFile(f)" in browser
 assert "dashShowImageViewer(path, f->name, &iv)" in browser
 assert "nextImageIndex" in browser
 assert "revealSelection" in browser
-assert "void dashShowImageViewer" in header
+assert "int dashShowImageViewer" in header
 assert "dashPngLoadFile" in viewer
 assert "dashJpegLoadFile" in viewer
 assert "dashJpegDecode" in header
