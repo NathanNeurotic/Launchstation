@@ -1,4 +1,5 @@
 #include "popstarter_internal.h"
+#include "init.h"
 
 #define EMBER_NAME_MAX 180
 #define EMBER_BIOS_SIZE (512 * 1024)
