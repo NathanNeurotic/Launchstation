@@ -479,14 +479,12 @@ static void devInput(const DashInput *in)
 	if (in->pressed & DASH_IN_MENU) {
 		DashDevice *d = &devs[dsel];
 		DashMenuItem items[4];
+		char display_mount[16];
 		int n = 0, r, ids[4];
 
-		{
-			char id[16];
-			const char *disp = deviceDisplayMount(d, id, sizeof(id));
-			/* dashModalMenu consumes the strings synchronously. */
-			items[n].icon = DI_FOLDER, items[n].label = "Browse", items[n].detail = disp, items[n].disabled = 0, ids[n++] = 0;
-		}
+		items[n].icon = DI_FOLDER, items[n].label = "Browse",
+		items[n].detail = deviceDisplayMount(d, display_mount, sizeof(display_mount)),
+		items[n].disabled = 0, ids[n++] = 0;
 		items[n].icon = DI_REFRESH, items[n].label = (d->state == DASH_DEV_READY) ? "Check again" : "Detect now", items[n].detail = NULL,
 		items[n].disabled = (d->icon == DI_MC || d->icon == DI_DISC), ids[n++] = 1;
 		if (d->icon == DI_HDD && !strncmp(d->mount, "hdd", 3))
