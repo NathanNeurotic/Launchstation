@@ -367,6 +367,148 @@ int cloudGoogleConfigured(char *error, int error_size)
     return load_session(&s, 0, error, error_size) == 0;
 }
 
+static int cloudConfigLineSafe(const char *value)
+{
+    const unsigned char *p = (const unsigned char *)(value ? value : "");
+
+    while (*p) {
+        if (*p == '\r' || *p == '\n' || *p < 0x20)
+            return 0;
+        p++;
+    }
+    return 1;
+}
+
+int cloudGoogleGetClientConfig(char *client_id, int client_id_size,
+                               char *client_secret, int client_secret_size,
+                               int *ca_present, char *error, int error_size)
+{
+    GoogleClient client;
+    char cnf_path[MAX_PATH], ca_path[MAX_PATH];
+    char *text;
+    int len;
+
+    memset(&client, 0, sizeof(client));
+    if (client_id && client_id_size > 0)
+        client_id[0] = '\0';
+    if (client_secret && client_secret_size > 0)
+        client_secret[0] = '\0';
+    if (ca_present)
+        *ca_present = 0;
+
+    dashStoreInit();
+    if (dashStoreBuildPath(cnf_path, sizeof(cnf_path), "WLE-CLOUD.CNF") < 0 ||
+        dashStoreBuildPath(ca_path, sizeof(ca_path), "WLE-CLOUD-CA.PEM") < 0) {
+        set_error(error, error_size, "Cloud settings folder is unavailable");
+        return -1;
+    }
+
+#ifdef WLE_GOOGLE_CLIENT_ID
+    strcopy(client.client_id, sizeof(client.client_id), WLE_GOOGLE_CLIENT_ID);
+#endif
+#ifdef WLE_GOOGLE_CLIENT_SECRET
+    strcopy(client.client_secret, sizeof(client.client_secret), WLE_GOOGLE_CLIENT_SECRET);
+#endif
+    text = dashLoadTextFile(cnf_path, 16 * 1024, &len);
+    if (text != NULL) {
+        dashKvParse(text, client_kv, &client);
+        free(text);
+    }
+
+    if (client_id && client_id_size > 0)
+        strcopy(client_id, client_id_size, client.client_id);
+    if (client_secret && client_secret_size > 0)
+        strcopy(client_secret, client_secret_size, client.client_secret);
+    if (ca_present)
+        *ca_present = wleExists(ca_path);
+    if (error && error_size > 0)
+        error[0] = '\0';
+    return 0;
+}
+
+int cloudGoogleSaveClientConfig(const char *client_id, const char *client_secret,
+                                char *error, int error_size)
+{
+    char path[MAX_PATH];
+    char text[1024];
+    int len;
+
+    if (client_id == NULL || client_id[0] == '\0') {
+        set_error(error, error_size, "Google OAuth client ID cannot be empty.");
+        return -1;
+    }
+    if (strlen(client_id) >= CLOUD_CLIENT_MAX ||
+        (client_secret != NULL && strlen(client_secret) >= CLOUD_CLIENT_MAX) ||
+        !cloudConfigLineSafe(client_id) || !cloudConfigLineSafe(client_secret)) {
+        set_error(error, error_size, "OAuth client values are too long or contain invalid control characters.");
+        return -1;
+    }
+    dashStoreInit();
+    if (dashStoreBuildPath(path, sizeof(path), "WLE-CLOUD.CNF") < 0) {
+        set_error(error, error_size, "Cloud settings folder is unavailable");
+        return -1;
+    }
+
+    len = snprintf(text, sizeof(text),
+                   "# r3LaunchELF_ATTDASH Google Drive OAuth configuration\r\n"
+                   "Google_Client_ID = %s\r\n"
+                   "Google_Client_Secret = %s\r\n",
+                   client_id, client_secret ? client_secret : "");
+    if (len <= 0 || len >= (int)sizeof(text) || dashWriteFile(path, text, len) != 0) {
+        set_error(error, error_size, "Could not save WLE-CLOUD.CNF.");
+        return -1;
+    }
+    if (error && error_size > 0)
+        error[0] = '\0';
+    return 0;
+}
+
+int cloudGoogleInstallCaBundle(const char *source_path, char *error, int error_size)
+{
+    char dest[MAX_PATH];
+    char *pem;
+    int len, r;
+
+    if (source_path == NULL || source_path[0] == '\0') {
+        set_error(error, error_size, "Choose a PEM certificate bundle first.");
+        return -1;
+    }
+    dashStoreInit();
+    if (dashStoreBuildPath(dest, sizeof(dest), "WLE-CLOUD-CA.PEM") < 0) {
+        set_error(error, error_size, "Cloud settings folder is unavailable");
+        return -1;
+    }
+    if (!stricmp(source_path, dest)) {
+        if (!wleExists(dest)) {
+            set_error(error, error_size, "The selected CA bundle does not exist.");
+            return -1;
+        }
+        return 0;
+    }
+
+    pem = dashLoadTextFile(source_path, 256 * 1024, &len);
+    if (pem == NULL || len <= 0) {
+        free(pem);
+        set_error(error, error_size, "Could not read the selected CA bundle.");
+        return -1;
+    }
+    if (strstr(pem, "-----BEGIN CERTIFICATE-----") == NULL ||
+        strstr(pem, "-----END CERTIFICATE-----") == NULL) {
+        free(pem);
+        set_error(error, error_size, "The selected file does not contain PEM certificates.");
+        return -1;
+    }
+    r = dashWriteFile(dest, pem, len);
+    free(pem);
+    if (r != 0) {
+        set_error(error, error_size, "Could not save WLE-CLOUD-CA.PEM.");
+        return -1;
+    }
+    if (error && error_size > 0)
+        error[0] = '\0';
+    return 0;
+}
+
 int cloudGoogleIsLinked(void)
 {
     GoogleSession s;
