@@ -466,6 +466,8 @@ GSTEXTURE *dashIconsTexture(void);
  * box-downscaled to fit max_w x max_h. Returns 0 on success. */
 int dashPngLoadFile(const char *path, int max_w, int max_h, u32 **out, int *out_w, int *out_h);
 int dashPngDecode(const u8 *data, int size, int max_w, int max_h, u32 **out, int *out_w, int *out_h);
+int dashJpegLoadFile(const char *path, int max_w, int max_h, u32 **out, int *out_w, int *out_h);
+int dashJpegDecode(const u8 *data, int size, int max_w, int max_h, u32 **out, int *out_w, int *out_h);
 
 //--------------------------------------------------------------
 // Settings / persistence (dash_store.c)
@@ -971,7 +973,7 @@ void dashShowBuildInfo(void);
 void dashShowSystemInfo(void);
 void dashShowFontViewer(void);
 void dashShowTextLines(int icon, const char *title, const char *subtitle, const char *const *lines, int n);
-void dashShowPngViewer(const char *path, const char *title);
+void dashShowImageViewer(const char *path, const char *title);
 void dashExploitInstaller(void); /* dash_exploit.c */
 void dashOpenBrowser(const char *start_dir);        /* native File Browser */
 void dashFileBrowser(const char *start_dir);        /* dash_browser.c */
