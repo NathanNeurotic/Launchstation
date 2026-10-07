@@ -8,6 +8,7 @@ jpeg = (root / "src/dash_jpeg.c").read_text()
 header = (root / "include/dash_internal.h").read_text()
 makefile = (root / "Makefile").read_text()
 ps2yaml = (root / "ps2.yaml").read_text()
+widgets = (root / "src/dash_widgets.c").read_text()
 
 for ext in ("PNG", "JPG", "JPEG"):
     assert f'genCmpFileExt(path, "{ext}")' in browser
@@ -31,5 +32,7 @@ assert "-ljpeg" in makefile
 assert "src/dash_image.c" in ps2yaml
 assert "src/dash_jpeg.c" in ps2yaml
 assert "jpeg" in ps2yaml
+assert 'genCmpFileExt(e->name, "JPG")' in widgets
+assert 'genCmpFileExt(e->name, "JPEG")' in widgets
 
 print("PASS: PNG/JPG/JPEG files use the bounded native dashboard image viewer")
