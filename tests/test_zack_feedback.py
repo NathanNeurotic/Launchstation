@@ -21,7 +21,8 @@ assert "dashVisibleSectionCount()" in ui and "tab_w * vcount" in ui
 assert '"File Browser", "Open the canonical wLaunchELF File Browser"' in files
 assert "dashCfg.files_mode = !dashCfg.files_mode" in files
 assert "const DashScreen dashFilesScreen = {storageEnter" in files
-assert "USB / MASS" in devices
+assert "MASS (USB)" in devices
+assert "mass0:/" in files
 assert "Not connected" in devices
 assert "out[i].state == DASH_DEV_READY" in devices
 assert "devs[idx].state == DASH_DEV_READY" in files
@@ -39,6 +40,8 @@ init = (root / "src/init.c").read_text()
 yaml = (root / "ps2.yaml").read_text()
 make = (root / "Makefile").read_text()
 
+assert "Set PS2 clock manually..." in settings
+assert "dashClockSetManual" in settings
 assert "Sync PS2 clock from Internet" in settings
 assert "dashClockSyncInternet" in settings
 assert "time.google.com" in clock and "time.cloudflare.com" in clock and "pool.ntp.org" in clock
