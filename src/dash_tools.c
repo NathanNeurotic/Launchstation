@@ -717,7 +717,7 @@ void dashToolsCheckUpdates(void)
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 static int cloudSetupGui(void)
 {
-	char client_id[384], client_secret[384], error[192], picked[MAX_PATH];
+	char client_id[384], client_secret[384], error[192], start[MAX_PATH], picked[MAX_PATH];
 	int ca_present, linked, r;
 
 	for (;;) {
@@ -802,8 +802,9 @@ static int cloudSetupGui(void)
 		}
 
 		if (ids[r] == 2) {
-			dashStrCopy(picked, LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir, sizeof(picked));
-			if (!dashPickPath("Choose Google CA PEM bundle", picked, DASH_PICK_FILE, "PEM",
+			dashStrCopy(start, LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir, sizeof(start));
+			picked[0] = '\0';
+			if (!dashPickPath("Choose Google CA PEM bundle", start, DASH_PICK_FILE, "PEM",
 			                  picked, sizeof(picked)))
 				continue;
 			error[0] = '\0';
