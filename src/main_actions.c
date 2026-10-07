@@ -27,15 +27,10 @@ static void cleanUpForExecInternal(int end_pad_rpc)
 	free(External_Lang_Buffer);
 
 	/*
-	 * Closing the ports releases our pad buffers. For ordinary legacy
-	 * launches preserve the historical wLaunchELF behaviour. Ember is
-	 * different: it either inherits a tested device stack or, on USB,
-	 * immediately follows this cleanup with Ember's clean-IOP bootstrap.
-	 * padEnd() is still required to release this EE process's libpad RPC
-	 * client before either handoff. Hardware proved that padEnd() alone is
-	 * not sufficient on USB because the homebrew SIO2MAN/PADMAN IRX modules
-	 * themselves remain resident; the USB Ember path removes those with a
-	 * clean IOP reset in prepareEmberCleanUsbIop().
+	 * Closing the ports releases our pad buffers. Ordinary launches retain the
+	 * historical wLaunchELF behavior. Ember also ends this EE libpad RPC client.
+	 * On USB, its launcher then rebuilds a launcHER-compatible storage IOP
+	 * without PADMAN and performs no further reset before ExecPS2.
 	 */
 	padPortClose(1, 0);
 	padPortClose(0, 0);
@@ -61,10 +56,9 @@ void CleanUpForExec(void)
 int CleanUpForEmberExec(void)
 {
 	/*
-	 * Ember performs no IOP reset. Any dashboard file IO/audio RPC still in
-	 * flight would survive on the IOP side after this EE process disappears.
-	 * Drain those users first, but do not unmount or unload the game/storage
-	 * stack: Ember must inherit it exactly as RiptOPL's keep-IOP path does.
+	 * Drain dashboard IO/audio before Ember's handoff. Non-USB targets inherit
+	 * the current storage IOP. USB may replace it immediately afterward with a
+	 * minimal launcHER-style storage IOP, so no EE RPC may remain in flight.
 	 */
 	if (!DashPrepareKeepIopHandoff("Preparing Ember"))
 		return 0;
