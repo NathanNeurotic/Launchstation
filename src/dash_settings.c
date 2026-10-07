@@ -361,8 +361,8 @@ static const SetItem language_items[] = {
 };
 
 static const SetItem gameid_items[] = {
-    {ST_CHOICE, S_GAMEID, "RetroGem game ID", "Show the game ID for OSD/HDMI adapters when launching."},
-    {ST_CHOICE, S_GAMEID_DISC, "Game ID for discs", NULL},
+    {ST_CHOICE, S_GAMEID, "Game ID launch signal for apps", "Show the brief RetroGem-compatible Game ID signal/bar when launching ELFs. Turn this off if your display adapter does not use it."},
+    {ST_CHOICE, S_GAMEID_DISC, "Game ID launch signal for discs", "Show the same brief Game ID signal when starting discs."},
 };
 
 static const SetItem psu_items[] = {
@@ -2835,7 +2835,7 @@ static const char *actionStatus(int id)
 static void settingsDraw(void)
 {
 	int i;
-	const float ix = 48, iy = 128, irow = 29, iw = 544;
+	const float ix = 48, iy = 136, irow = 29, iw = 544;
 	const SetPage *c = &pages[page];
 	char trail[192];
 
@@ -2847,7 +2847,7 @@ static void settingsDraw(void)
 	if (page_depth)
 		dashTextFit(ix, 51, iw - 126, trail, DASH_FS_CAPTION, DASH_C_TEXT3);
 	dashDrawSectionTitle(ix, 68, c->name, NULL);
-	dashTextFit(ix, 103, iw, c->help, DASH_FS_CAPTION, DASH_C_TEXT3);
+	dashTextFit(ix, 106, iw, c->help, DASH_FS_CAPTION, DASH_C_TEXT3);
 	{
 		int dirty = anyDirtyCached();
 		int pending = cfg_pending[0] || cfg_pending[1] || dashStoreSettingsPending();
