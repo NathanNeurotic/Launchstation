@@ -984,6 +984,8 @@ void dashClassicUiDone(void);
 int dashOpenTextEditor(const char *file); /* 0 = the user backed out before it opened */
 void dashAppActions(DashApp *app);
 void dashRescanLibrary(int interactive);
+int dashClockSetManual(int year, int month, int day, int hour, int minute, int second,
+                       char *result, int result_size);
 int dashClockSyncInternet(char *result, int result_size);
 const MainExecuteContext *dashExecContext(void);
 const char *dashOkLabelKey(void);
