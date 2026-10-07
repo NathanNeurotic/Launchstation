@@ -24,8 +24,9 @@ load_ilink = body(init, "int loadIlinkModules(void)\n{")
 # The device model and driver loader already knew about iLink.
 assert '"iLink / FireWire"' in devices
 assert 'probeRoot("ilink:/", 3000)' in devices
-assert '"ILINKMAN"' in load_ilink
-assert '"IEEE1394_BD"' in load_ilink
+assert "iLinkman_irx" in load_ilink
+assert "IEEE1394_bd_irx" in load_ilink
+assert "loadBdmCoreModules()" in load_ilink
 
 # Regression: a successful iLink mount must actually reach generic directory
 # enumeration instead of falling through getDir() as an unsupported path.
