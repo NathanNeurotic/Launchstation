@@ -1939,6 +1939,9 @@ void loadHdlInfoModule(void)
 void closeAllAndPoweroff(void)
 {
 	if (ps2dev9_loaded) {
+		int dev9_ret = -1;
+		int retry = 100;
+
 		/* Close all files */
 		fileXioDevctl("pfs:", PDIOC_CLOSEALL, NULL, 0, NULL, 0);
 #ifdef DVRP
@@ -1951,15 +1954,25 @@ void closeAllAndPoweroff(void)
 		 */
 		idleDev9StorageForPoweroff();
 
-		/* Switch off DEV9 */
-		while (fileXioDevctl("dev9x:", DDIOC_OFF, NULL, 0, NULL, 0) < 0) {
-		};
+		/*
+		 * Never spin forever waiting for dev9x. A network-only or otherwise
+		 * damaged DEV9 session can legitimately leave DDIOC_OFF returning an
+		 * error. Current RiptOPL uses the same bounded 100-attempt policy:
+		 * graceful DEV9 shutdown is best-effort, console poweroff is not.
+		 */
+		while (retry-- > 0) {
+			dev9_ret = fileXioDevctl("dev9x:", DDIOC_OFF, NULL, 0, NULL, 0);
+			if (dev9_ret >= 0)
+				break;
+		}
+		if (dev9_ret < 0)
+			DPRINTF(" [POWEROFF]: DEV9 did not acknowledge shutdown (ret=%d); continuing\n", dev9_ret);
 	}
 
 	// As required by some USB HDDs, issue the SCSI STOP UNIT command to avoid causing an emergency park.
 	stopUsbMassForPoweroff();
 
-	/* Power-off the PlayStation 2 console. */
+	/* Power-off the PlayStation 2 console even if optional device shutdown failed. */
 	poweroffShutdown();
 }
 //------------------------------
