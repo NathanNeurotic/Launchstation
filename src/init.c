@@ -1313,8 +1313,10 @@ static void waitForUsbMassBdmfsSettle(void)
 	u64 ready_time;
 
 	ready_time = Timer() + USB_MASS_BDMFS_SETTLE_MS;
-	while (Timer() < ready_time) {
-	}
+	/* Yield while BDMFS registers its device. The old one-second EE busy loop
+	 * starved useful work and could make USB bring-up less deterministic. */
+	while (Timer() < ready_time)
+		DelayThread(1000);
 }
 //------------------------------
 //endfunc waitForUsbMassBdmfsSettle
@@ -1359,6 +1361,34 @@ void loadDs34InputModules(void)
 //endfunc loadDs34InputModules
 //---------------------------------------------------------------------------
 #endif
+static int refreshPadSessionAfterUsb(void)
+{
+	int ok;
+
+	/* Lazy USB activation has produced real-hardware sessions where an
+	 * implicit padPortOpen refresh returns but wired input remains dead.
+	 * Tear down the EE libpad RPC client explicitly and rebind it against the
+	 * still-running PADMAN. One retry covers the short post-USB window without
+	 * resetting the IOP or disturbing the mounted storage stack. */
+	padPortClose(1, 0);
+	padPortClose(0, 0);
+	padEnd();
+	DelayThread(5000);
+	ok = setupPad();
+	if (!ok) {
+		padPortClose(1, 0);
+		padPortClose(0, 0);
+		padEnd();
+		DelayThread(20000);
+		ok = setupPad();
+	}
+	clearPadPressState();
+	return ok;
+}
+
+//------------------------------
+//endfunc refreshPadSessionAfterUsb
+//---------------------------------------------------------------------------
 void loadUsbModules(void)
 {
 	int ret, ID __attribute__((unused));
@@ -1428,20 +1458,12 @@ void loadUsbModules(void)
 
 	/*
 	 * Keep USB demand-driven, but repair the wired PAD session after the
-	 * first runtime USB-mass activation. Real hardware shows that introducing
-	 * the USB/BDM stack after libpad has opened its ports invalidates that
-	 * live session. Re-opening the ports here gives lazy USB the same final
-	 * ordering as stock wLaunchELF/OPL without paying the USB startup cost
-	 * on every boot.
-	 *
-	 * padPortOpen() in current PS2SDK explicitly refreshes an already-open
-	 * slot, so setupPad() is sufficient; no IOP reset or permanent USB boot
-	 * initialization is required.
+	 * first runtime USB-mass activation with a deterministic EE RPC rebind.
 	 */
 	if (!had_usb_mass && have_usb_mass && !is_early_init) {
-		DPRINTF(" [USB]: refreshing wired PAD ports after lazy USB activation\n");
-		setupPad();
-		clearPadPressState();
+		DPRINTF(" [USB]: rebinding PAD RPC after lazy USB activation\n");
+		if (!refreshPadSessionAfterUsb())
+			DPRINTF(" [USB]: PAD RPC rebind failed; input may require Reboot IOP\n");
 	}
 }
 //------------------------------

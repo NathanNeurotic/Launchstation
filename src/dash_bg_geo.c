@@ -138,25 +138,33 @@ void dashBgSceneCubes(float t, int fx)
 	dashGfxBlend(DASH_BLEND_ADD);
 	dashGlow(320, 224, 320, 220, colA(dashColorScale(c, 0.25f), 60));
 	for (n = 0; n < CUBES; n++) {
-		/* Staggered homes keep the cubes apart. Each cube only drifts inside
-		 * its own small volume and rotates independently on all three axes. */
-		float home_x = ((n % 4) - 1.5f) * 150.0f + ((n & 4) ? 34.0f : -22.0f);
-		float home_y = ((n / 4) ? 105.0f : -105.0f) + ((n & 1) ? 18.0f : -18.0f);
-		float wx = home_x + dashSinf(t * (0.19f + dashBgHash(n, 1) * 0.12f) + n) * (16.0f + dashBgHash(n, 2) * 18.0f);
-		float wy = home_y + dashCosf(t * (0.15f + dashBgHash(n, 3) * 0.11f) + n * 1.7f) * (12.0f + dashBgHash(n, 4) * 15.0f);
-		float z = 470.0f + (n & 1) * 130.0f + dashSinf(t * (0.11f + dashBgHash(n, 5) * 0.08f) + n) * 45.0f;
-		float size = 20.0f + dashBgHash(n, 6) * 18.0f;
-		float ax = t * (0.18f + dashBgHash(n, 7) * 0.24f) + n * 0.7f;
-		float ay = t * (0.14f + dashBgHash(n, 8) * 0.21f) + n * 1.1f;
-		float az = t * (0.12f + dashBgHash(n, 9) * 0.19f) + n * 1.5f;
+		float home_x, home_y, wx, wy, z, size, ax, ay, az;
+		float cx, sx, cy, sy, cz, sz;
 		float px[8], py[8];
-		int alpha = 42 + (int)((650.0f - z) * 0.08f);
+		int alpha;
 
-		if (fx == DASH_FX_SUBTLE && (n & 1))
+		if (fx != DASH_FX_FULL && (n & 1))
 			continue;
+		home_x = ((n % 4) - 1.5f) * 150.0f + ((n & 4) ? 34.0f : -22.0f);
+		home_y = ((n / 4) ? 105.0f : -105.0f) + ((n & 1) ? 18.0f : -18.0f);
+		wx = home_x + dashSinf(t * (0.19f + dashBgHash(n, 1) * 0.12f) + n) * (16.0f + dashBgHash(n, 2) * 18.0f);
+		wy = home_y + dashCosf(t * (0.15f + dashBgHash(n, 3) * 0.11f) + n * 1.7f) * (12.0f + dashBgHash(n, 4) * 15.0f);
+		z = 470.0f + (n & 1) * 130.0f + dashSinf(t * (0.11f + dashBgHash(n, 5) * 0.08f) + n) * 45.0f;
+		size = 20.0f + dashBgHash(n, 6) * 18.0f;
+		ax = t * (0.18f + dashBgHash(n, 7) * 0.24f) + n * 0.7f;
+		ay = t * (0.14f + dashBgHash(n, 8) * 0.21f) + n * 1.1f;
+		az = t * (0.12f + dashBgHash(n, 9) * 0.19f) + n * 1.5f;
+		alpha = 42 + (int)((650.0f - z) * 0.08f);
+
+		/* Rotation is constant for all eight vertices of this cube. */
+		cx = dashCosf(ax);
+		sx = dashSinf(ax);
+		cy = dashCosf(ay);
+		sy = dashSinf(ay);
+		cz = dashCosf(az);
+		sz = dashSinf(az);
 		for (i = 0; i < 8; i++) {
 			float x = v[i][0], y = v[i][1], zz = v[i][2], q;
-			float cx = dashCosf(ax), sx = dashSinf(ax), cy = dashCosf(ay), sy = dashSinf(ay), cz = dashCosf(az), sz = dashSinf(az);
 			float y1 = y * cx - zz * sx, z1 = y * sx + zz * cx;
 			float x2 = x * cy + z1 * sy, z2 = -x * sy + z1 * cy;
 			float x3 = x2 * cz - y1 * sz, y3 = x2 * sz + y1 * cz;
@@ -168,7 +176,6 @@ void dashBgSceneCubes(float t, int fx)
 			py[i] = 224.0f + (wy + y3 * size) * q;
 		}
 		for (i = 0; i < 12; i++)
-			/* Slightly thicker than one interlaced scanline: steadier on CRT/480i. */
 			dashLine(px[e[i][0]], py[e[i][0]], px[e[i][1]], py[e[i][1]], 1.8f, colA(c, alpha));
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);

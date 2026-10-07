@@ -72,33 +72,42 @@ static OrbStyle menuOrbStyle(DashColor c);
 void dashBgSceneTunnel(float t, int fx)
 {
 	DashColor wall = dashTheme.bg1, far_c = dashTheme.bg2;
-	float travel = t * 0.095f; /* rings per second */
+	float travel = t * 0.095f;
 	float s = travel - (float)(int)travel;
 	int base_ring = (int)travel;
 	float roll = t * 0.052f;
 	float cx = 320.0f + dashSinf(t * 0.070f) * 22.0f;
 	float cy = 214.0f + dashCosf(t * 0.058f) * 14.0f;
 	float px[TUN_RINGS + 1][TUN_SEGS + 1], py[TUN_RINGS + 1][TUN_SEGS + 1];
+	float ca[TUN_SEGS + 1], sa[TUN_SEGS + 1];
 	float bright[TUN_RINGS + 1];
+	float z;
+	int seg_step = (fx == DASH_FX_FULL) ? 1 : 2;
 	int k, j;
 
 	dashRect(0, 0, DASH_VW, DASH_VH, far_c);
-	/* ring k sits at depth 38 * 1.32^(k - s); screen radius = 230*110/z */
+	/* Angles are shared by every depth ring. Depth itself is geometric, so
+	 * one powf plus multiplication replaces repeated trig/powf inner work. */
+	for (j = 0; j <= TUN_SEGS; j += seg_step) {
+		float a = roll + j * (TAU_F / TUN_SEGS);
+		ca[j] = dashCosf(a);
+		sa[j] = dashSinf(a);
+	}
+	z = 38.0f * powf(1.32f, -s);
 	for (k = 0; k <= TUN_RINGS; k++) {
-		float z = 38.0f * powf(1.32f, (float)k - s);
-		float r = 230.0f * 110.0f / z;
+		float radius = 230.0f * 110.0f / z;
 		float fog = dashClampf(1.0f - (z - 38.0f) / 1100.0f, 0.0f, 1.0f);
 
 		bright[k] = fog * fog;
-		for (j = 0; j <= TUN_SEGS; j++) {
-			float a = roll + j * (TAU_F / TUN_SEGS);
-			px[k][j] = cx + dashCosf(a) * r * 1.18f;
-			py[k][j] = cy + dashSinf(a) * r;
+		for (j = 0; j <= TUN_SEGS; j += seg_step) {
+			px[k][j] = cx + ca[j] * radius * 1.18f;
+			py[k][j] = cy + sa[j] * radius;
 		}
+		z *= 1.32f;
 	}
 	for (k = TUN_RINGS - 1; k >= 0; k--) {
-		for (j = 0; j < TUN_SEGS; j++) {
-			/* the panel pattern travels with its ring */
+		for (j = 0; j < TUN_SEGS; j += seg_step) {
+			int j2 = j + seg_step;
 			float n = 0.5f + 0.5f * dashBgHash(k + base_ring, j);
 			float n2 = 0.5f + 0.5f * dashBgHash(k + base_ring + 1, j);
 			DashColor cn = colA(dashColorScale(wall, bright[k] * n), 255);
@@ -106,13 +115,12 @@ void dashBgSceneTunnel(float t, int fx)
 
 			cn = dashColorLerp(far_c, cn, bright[k]);
 			cf = dashColorLerp(far_c, cf, bright[k + 1]);
-			dashQuadG(px[k][j], py[k][j], px[k][j + 1], py[k][j + 1],
-			          px[k + 1][j], py[k + 1][j], px[k + 1][j + 1], py[k + 1][j + 1], cn, cn, cf, cf);
+			dashQuadG(px[k][j], py[k][j], px[k][j2], py[k][j2],
+			          px[k + 1][j], py[k + 1][j], px[k + 1][j2], py[k + 1][j2],
+			          cn, cn, cf, cf);
 		}
 	}
-	/* the black far end, softened */
 	dashGlow(cx, cy, 170, 130, colA(far_c, 200));
-	/* the main menu's orbs over its backdrop */
 	{
 		OrbStyle st = menuOrbStyle(DC(80, 160, 255, 255));
 		osdOrbs(&st, t, fx);
@@ -154,7 +162,7 @@ void dashBgSceneMist(float t, int fx)
 
 typedef struct
 {
-	float x, y, h;
+	float x, y, h, lum;
 } TowerCell;
 
 static TowerCell tw_cells[TW_N];
@@ -188,6 +196,7 @@ static void towersInit(void)
 			tw_cells[n].x = x;
 			tw_cells[n].y = y;
 			tw_cells[n].h = h;
+			tw_cells[n].lum = 0.18f + 0.82f * powf(h / 96.0f, 1.3f);
 			n++;
 		}
 	}
@@ -215,7 +224,7 @@ typedef struct
 	float ca, sa, cx, cy, cam_h, f;
 } TowerCam;
 
-static void twProject(const TowerCam *c, float x, float y, float h, float *sx, float *sy)
+static inline void twProject(const TowerCam *c, float x, float y, float h, float *sx, float *sy)
 {
 	float k = c->f / (c->cam_h - h);
 	float rx = x * c->ca - y * c->sa, ry = x * c->sa + y * c->ca;
@@ -229,11 +238,14 @@ void dashBgSceneTowers(float t, int fx)
 	DashColor wall = dashTheme.bg1, fog = dashTheme.bg2;
 	DashColor black = DC(0, 0, 0, 255);
 	TowerCam cam;
+	DashColor side_lo = colA(dashColorLerp(black, fog, 0.18f), 255);
+	float cam_angle;
 	int n;
 
 	towersInit();
-	cam.ca = dashCosf(0.22f * dashSinf(t * 0.14f) + t * 0.024f);
-	cam.sa = dashSinf(0.22f * dashSinf(t * 0.14f) + t * 0.024f);
+	cam_angle = 0.22f * dashSinf(t * 0.14f) + t * 0.024f;
+	cam.ca = dashCosf(cam_angle);
+	cam.sa = dashSinf(cam_angle);
 	cam.cx = 320.0f + dashSinf(t * 0.11f) * 24.0f;
 	cam.cy = 224.0f + dashCosf(t * 0.085f) * 17.0f;
 	cam.cam_h = 150.0f + 15.0f * dashSinf(t * 0.19f);
@@ -244,13 +256,22 @@ void dashBgSceneTowers(float t, int fx)
 	dashGlow(cam.cx, cam.cy, 300, 230, colA(dashColorScale(fog, 0.7f), 150));
 
 	for (n = 0; n < tw_count; n++) {
-		const TowerCell *c = &tw_cells[tw_order[n]];
-		float x0 = c->x - TW_HALF, x1 = c->x + TW_HALF, y0 = c->y - TW_HALF, y1 = c->y + TW_HALF;
+		const TowerCell *c;
+		float x0, x1, y0, y1;
 		float tx[4], ty[4], bx[4], by[4];
-		float lum = 0.18f + 0.82f * powf(c->h / 96.0f, 1.3f);
-		DashColor top = colA(dashColorScale(wall, lum * 0.62f), 255);
-		DashColor side_hi = colA(dashColorScale(wall, lum * 0.36f), 255);
-		DashColor side_lo = colA(dashColorLerp(black, fog, 0.18f), 255);
+		float lum;
+		DashColor top, side_hi;
+
+		if (fx != DASH_FX_FULL && (n & 1))
+			continue;
+		c = &tw_cells[tw_order[n]];
+		x0 = c->x - TW_HALF;
+		x1 = c->x + TW_HALF;
+		y0 = c->y - TW_HALF;
+		y1 = c->y + TW_HALF;
+		lum = c->lum;
+		top = colA(dashColorScale(wall, lum * 0.62f), 255);
+		side_hi = colA(dashColorScale(wall, lum * 0.36f), 255);
 		/* ground level: well below the camera's view of the floor */
 		const float gh = -40.0f;
 
@@ -319,18 +340,16 @@ typedef struct
 	float x, y, z;
 } V3;
 
-static void rotV(V3 *v, float ax, float ay)
+static void rotV(V3 *v, float cax, float sax, float cay, float say)
 {
-	float c = dashCosf(ax), s = dashSinf(ax), y, z, x;
+	float y = v->y * cax - v->z * sax;
+	float z = v->y * sax + v->z * cax;
+	float x;
 
-	y = v->y * c - v->z * s;
-	z = v->y * s + v->z * c;
 	v->y = y;
 	v->z = z;
-	c = dashCosf(ay);
-	s = dashSinf(ay);
-	x = v->x * c + v->z * s;
-	z = -v->x * s + v->z * c;
+	x = v->x * cay + v->z * say;
+	z = -v->x * say + v->z * cay;
 	v->x = x;
 	v->z = z;
 }
@@ -344,12 +363,14 @@ static void glassCube(float cx, float cy, float size, float ax, float ay, DashCo
 	static const u8 face[6][4] = {
 	    {0, 1, 2, 3}, {5, 4, 7, 6}, {4, 0, 6, 2}, {1, 5, 3, 7}, {4, 5, 0, 1}, {2, 3, 6, 7}};
 	float sx[8], sy[8], sz[8];
+	float cax = dashCosf(ax), sax = dashSinf(ax);
+	float cay = dashCosf(ay), say = dashSinf(ay);
 	int i;
 
 	for (i = 0; i < 8; i++) {
 		V3 v = {vert[i][0] * 1.0f, vert[i][1] * 1.0f, vert[i][2] * 1.0f};
 		float k;
-		rotV(&v, ax, ay);
+		rotV(&v, cax, sax, cay, say);
 		k = 4.0f / (4.0f + v.z * 0.35f);
 		sx[i] = cx + v.x * size * k;
 		sy[i] = cy + v.y * size * k;

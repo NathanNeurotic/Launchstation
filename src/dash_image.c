@@ -228,14 +228,17 @@ int dashShowImageViewer(const char *path, const char *title, DashImageViewerStat
 		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dashVisualUpdate());
 		oe = dashEaseOutCubic(open);
 
-		dashRenderScene();
 		if (state->fullscreen) {
+			/* Fullscreen is opaque. Do not spend a frame rendering the dashboard,
+			 * artwork and animated background only to cover all of it with black. */
+			dashGfxBeginFrame();
 			dashRect(0, 0, DASH_VW, DASH_VH, DC(0, 0, 0, 255));
 			ix = 0.0f;
 			iy = 0.0f;
 			vw = DASH_VW;
 			vh = DASH_VH;
 		} else {
+			dashRenderScene();
 			dashModalBackdrop(oe);
 			dashGfxPushAlpha(oe);
 			dashGfxPushOffset(0, 18.0f * (1.0f - oe));

@@ -57,6 +57,7 @@ jobs:
           python3 tests/test_sd2cloud_parity.py
           python3 tests/test_self_update.py
           python3 tests/test_png_viewer.py
+          python3 tests/test_runtime_performance.py
 
       - name: Validate documentation site
         run: |

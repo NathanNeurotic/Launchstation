@@ -26,7 +26,6 @@ static float fade_in;
 static int autoprobe_pending;
 static u64 last_frame_ms;
 static float frame_dt;
-static int frame_counter;
 
 /* boot-time launch key emulation */
 static int boot_phase;         /* 0 none, 1 init delay, 2 auto-launch countdown */
@@ -1046,6 +1045,7 @@ static void firstInit(void)
 void DashRun(const MainExecuteContext *ctx, int from_boot)
 {
 	DashInput in;
+	u64 next_device_poll_ms, next_disc_poll_ms, next_remote_poll_ms;
 
 	if (dash_active || ctx == NULL)
 		return;
@@ -1075,12 +1075,19 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	dashAppsRebuildView();
 	dashInputFlush();
 	last_frame_ms = Timer();
+	/* IOP-facing housekeeping is deliberately time-sliced. Rendering can run
+	 * at 50/60 Hz without hammering libmc, CDVD or remote-control RPCs every
+	 * frame. Stagger the disc poll from the faster device poll. */
+	next_device_poll_ms = last_frame_ms;
+	next_disc_poll_ms = last_frame_ms + 750;
+	next_remote_poll_ms = last_frame_ms;
 	if (from_boot)
 		bootBegin();
 	/* the dashboard is the only shell: it never returns */
 	while (1) {
 		float dt = dashVisualUpdate();
-		frame_counter++;
+		u64 now = Timer();
+		u64 idle_ms;
 
 		if (dashGfxCheckScreenChange())
 			dashArtInvalidateVram();
@@ -1110,28 +1117,38 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		if (screens[section]->update)
 			screens[section]->update(dt);
 
-		/* results of background work that change what screens point at */
+		/* Results of background work that change what screens point at. */
 		applyScanResult();
 		dashFilesPoll();
-		pollPcGameReceiver();
-		pollRemotePcCommand();
+		if (now >= next_remote_poll_ms) {
+			next_remote_poll_ms = now + 250;
+			pollPcGameReceiver();
+			pollRemotePcCommand();
+		}
 		if (autoprobe_pending) {
 			autoprobe_pending = 0;
 			dashDevicesAutoStart();
 		}
 
-		/* Housekeeping. The UI thread does no IO of its own while the
-		 * background worker does (libmc and the IOP are not shared). */
+		/* IOP-facing housekeeping is paced and never overlaps worker IO.
+		 * Memory-card polling already has a 500 ms hotplug cadence, so 8 Hz
+		 * avoids dozens of mcSync() calls per second. CDVD can block in
+		 * sceCdSync(), so it is checked only once per second. */
 		if (!dashWorkerIoBusy() && !dashIopParked()) {
-			if ((frame_counter % 30) == 0)
+			if (now >= next_disc_poll_ms) {
+				next_disc_poll_ms = now + 1000;
 				uLE_cdStop();
-			dashDevicesPoll();
+			} else if (now >= next_device_poll_ms) {
+				next_device_poll_ms = now + 125;
+				dashDevicesPoll();
+			}
 		}
+		idle_ms = dashInputIdleMs();
 		dashSoundMaintain();
-		dashThemeSavePending((int)dashInputIdleMs());
+		dashThemeSavePending((int)idle_ms);
 		if (!boot_phase)
-			dashArtStep((int)dashInputIdleMs());
-		if (dashInputIdleMs() > 6000 && dashArtTakeDirty())
+			dashArtStep((int)idle_ms);
+		if (idle_ms > 6000 && dashArtTakeDirty())
 			dashLibSaveCache();
 		dashStoreFlush(0);
 

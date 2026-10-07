@@ -418,15 +418,33 @@ static void drawAppWallpaper(void)
 	}
 }
 
+/* Scanlines used to submit hundreds of rectangles per frame. A tiny
+ * repeating texture produces the same alternating dark row in one draw. */
+static GSTEXTURE scanline_tex;
+static u32 scanline_pixels[4] __attribute__((aligned(128))) = {
+    0x1E000000, 0x1E000000,
+    0x00000000, 0x00000000};
+static int scanline_ready;
+
 static void drawScanlines(void)
 {
-	float y;
-	float step = 2.0f / dashGfxScaleY(); /* every second framebuffer line */
-
-	if (step < 1.5f)
-		step = 1.5f;
-	for (y = 0; y < DASH_VH; y += step * 1.0f)
-		dashRect(0, y, DASH_VW, step * 0.5f, DC(0, 0, 0, 60));
+	if (!scanline_ready) {
+		memset(&scanline_tex, 0, sizeof(scanline_tex));
+		scanline_tex.Width = 2;
+		scanline_tex.Height = 2;
+		scanline_tex.PSM = GS_PSM_CT32;
+		scanline_tex.Mem = scanline_pixels;
+		scanline_tex.Filter = GS_FILTER_NEAREST;
+		scanline_tex.Delayed = 1;
+		gsKit_setup_tbw(&scanline_tex);
+		SyncDCache(scanline_pixels, (u8 *)scanline_pixels + sizeof(scanline_pixels));
+		scanline_ready = 1;
+	}
+	gsKit_set_clamp(gsGlobal, GS_CMODE_REPEAT);
+	dashTexDrawUV(&scanline_tex, 0, 0, DASH_VW, DASH_VH,
+	              0, 0, 2.0f, DASH_VH * dashGfxScaleY(),
+	              DC(255, 255, 255, 255));
+	gsKit_set_clamp(gsGlobal, GS_CMODE_CLAMP);
 }
 
 //--------------------------------------------------------------
@@ -528,9 +546,46 @@ void dashBgDrawStatic(void)
 	drawScene(DASH_FX_OFF);
 }
 
+/* Full effects remain the preference, but sustained slow frames temporarily
+ * use the subtle path. The saved setting is never changed. Hysteresis keeps
+ * an occasional IO stall from causing quality flapping. */
+static int bg_perf_reduced;
+static int bg_slow_frames;
+static int bg_fast_frames;
+
+static int effectiveFx(void)
+{
+	int requested = dashCfg.effects <= 0 ? DASH_FX_OFF :
+	                (dashCfg.effects < 100 ? DASH_FX_SUBTLE : DASH_FX_FULL);
+	float dt;
+
+	if (requested != DASH_FX_FULL) {
+		bg_perf_reduced = bg_slow_frames = bg_fast_frames = 0;
+		return requested;
+	}
+	dt = dashFrameDelta();
+	if (dt > 0.024f) {
+		if (bg_slow_frames < 1000)
+			bg_slow_frames++;
+		bg_fast_frames = 0;
+		if (bg_slow_frames >= 6)
+			bg_perf_reduced = 1;
+	} else {
+		bg_slow_frames = 0;
+		if (bg_perf_reduced && dt > 0.0f && dt < 0.0215f) {
+			if (++bg_fast_frames >= 600) {
+				bg_perf_reduced = 0;
+				bg_fast_frames = 0;
+			}
+		} else
+			bg_fast_frames = 0;
+	}
+	return bg_perf_reduced ? DASH_FX_SUBTLE : DASH_FX_FULL;
+}
+
 void dashBgDraw(void)
 {
-	int fx = dashCfg.effects <= 0 ? DASH_FX_OFF : (dashCfg.effects < 100 ? DASH_FX_SUBTLE : DASH_FX_FULL);
+	int fx = effectiveFx();
 
 	drawScene(fx);
 	drawAppWallpaper();
