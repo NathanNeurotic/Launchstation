@@ -333,6 +333,7 @@ targets:
       - src/dash_worker.c
       - src/dash_widgets.c
       - src/dash_info.c
+      - src/dash_image.c
       - src/dash_editor.c
       - src/dash_hdd.c
       - src/dash_browser.c
