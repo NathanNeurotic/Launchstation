@@ -593,10 +593,45 @@ static int releaseJsonString(const char *json, const char *key, char *out, int o
 	return 1;
 }
 
+static int releaseAssetDigest(const char *json, const char *asset_name, char *out, int out_size)
+{
+	const char *p = json;
+	char name[96], digest[96];
+
+	if (json == NULL || asset_name == NULL || out == NULL || out_size < 72)
+		return 0;
+
+	while ((p = strstr(p, "\"name\"")) != NULL) {
+		const char *next_name;
+		const char *digest_key;
+
+		if (!releaseJsonString(p, "name", name, sizeof(name))) {
+			p += 6;
+			continue;
+		}
+		if (strcmp(name, asset_name)) {
+			p += 6;
+			continue;
+		}
+
+		next_name = strstr(p + 6, "\"name\"");
+		digest_key = strstr(p, "\"digest\"");
+		if (digest_key == NULL || (next_name != NULL && digest_key > next_name) ||
+		    !releaseJsonString(digest_key, "digest", digest, sizeof(digest)) ||
+		    strncmp(digest, "sha256:", 7) != 0 || strlen(digest) != 71)
+			return 0;
+
+		snprintf(out, out_size, "%s", digest);
+		return 1;
+	}
+
+	return 0;
+}
+
 void dashToolsCheckUpdates(void)
 {
 	CloudHttpResponse response;
-	char ca_path[MAX_PATH], error[192], latest[80], body[320];
+	char ca_path[MAX_PATH], error[192], latest[80], asset_digest[80], body[320];
 	const char headers[] =
 	    "User-Agent: r3LaunchELF_ATTDASH-PS2\r\n"
 	    "Accept: application/vnd.github+json\r\n";
@@ -616,7 +651,7 @@ void dashToolsCheckUpdates(void)
 	}
 
 	memset(&response, 0, sizeof(response));
-	error[0] = latest[0] = '\0';
+	error[0] = latest[0] = asset_digest[0] = '\0';
 	dashLoadingBegin("Checking for r3LaunchELF_ATTDASH updates");
 	if (cloudHttpRequest("GET", "api.github.com",
 	                     "/repos/NathanNeurotic/r3LaunchELF_ATTDASH/releases/tags/latest",
@@ -630,7 +665,9 @@ void dashToolsCheckUpdates(void)
 	dashLoadingEnd();
 
 	if (response.status != 200 ||
-	    !releaseJsonString(response.body, "target_commitish", latest, sizeof(latest))) {
+	    !releaseJsonString(response.body, "target_commitish", latest, sizeof(latest)) ||
+	    !releaseAssetDigest(response.body, "r3LaunchELF_ATTDASH.ELF",
+	                        asset_digest, sizeof(asset_digest))) {
 		snprintf(body, sizeof(body), "GitHub returned HTTP %d or an unexpected release response.", response.status);
 		cloudHttpResponseFree(&response);
 		dashModalMessage(DI_WARNING, "Update check failed", body, NULL);
@@ -658,7 +695,7 @@ void dashToolsCheckUpdates(void)
 
 		install_result[0] = '\0';
 		dashLoadingBegin("Downloading and verifying r3LaunchELF_ATTDASH update");
-		installed = selfUpdateInstall(ca_path, install_result, sizeof(install_result));
+		installed = selfUpdateInstall(ca_path, asset_digest, install_result, sizeof(install_result));
 		dashLoadingEnd();
 		dashModalMessage(installed == 0 ? DI_CHECK : DI_WARNING,
 		                 installed == 0 ? "Update installed" : "Update was not installed",
