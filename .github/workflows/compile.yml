@@ -197,7 +197,8 @@ jobs:
 
       - name: Publish latest automated pre-release
         # Releases are deliberate: ordinary pushes/PRs only keep the short-lived
-        # Actions artifact above. Run this workflow manually from master/main to publish.
+        # Actions artifact above. Manual runs or [publish latest] commits refresh the
+        # described individual assets plus the complete all-files package.
         if: (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[publish latest]'))) && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
