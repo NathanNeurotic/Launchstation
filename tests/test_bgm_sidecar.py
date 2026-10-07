@@ -44,13 +44,15 @@ static struct { int sound,bgm,bgm_vol; } dashCfg={1,1,80};
 static audsrv_adpcm_t bgm_sample;
 static int bgm_loaded,bgm_tried,bgm_channel=-1,sound_ready=1;
 static void *bgm_data;
-static int _iop_reboot_count,sound_reboot_count,sound_tried_reboot=-1,sound_retry;
+static unsigned int reset_generation,sound_reboot_generation,sound_tried_generation=(unsigned int)-1;
+static int sound_retry;
 static char LaunchElfBootDir[MAX_PATH]="usb0:/BOOT/",LaunchElfDir[MAX_PATH]="mc0:/SYS-CONF/";
 static int exists=1,loaded=1,busy,parked,opens,uploads,plays,volumes,quit_calls,hard_stops,allocs;
 static int size=64,bytes=64,pos,close_error,upload_error;
 static u8 file[64];
 static char opened[MAX_PATH];
-static int soundAlive(void) { return sound_ready && sound_reboot_count==_iop_reboot_count; }
+static unsigned int getIopResetGeneration(void) { return reset_generation; }
+static int soundAlive(void) { return sound_ready && sound_reboot_generation==reset_generation; }
 static int dashWorkerIoBusy(void) { return busy; }
 static int dashIopParked(void) { return parked; }
 static int isPathDeviceStackLoaded(const char *p) {
@@ -92,7 +94,7 @@ static void dashBgmStop(void);
 static void dashSoundShutdown(void);
 static int dashSoundInit(void) {
     if(!soundAlive())dashSoundShutdown(); sound_ready=1;
-    sound_reboot_count=_iop_reboot_count; return 1;
+    sound_reboot_generation=reset_generation; return 1;
 }
 """
 for signature in ("static int loadBgmSidecar(", "void dashBgmSetVolume(",
@@ -102,7 +104,7 @@ for signature in ("static int loadBgmSidecar(", "void dashBgmSetVolume(",
 code += r"""
 static void reset(void) {
     dashSoundShutdown(); assert(!allocs);
-    sound_ready=1; sound_reboot_count=_iop_reboot_count;
+    sound_ready=1; sound_reboot_generation=reset_generation;
     exists=loaded=1; busy=parked=close_error=upload_error=0;
     size=bytes=64; dashCfg.sound=dashCfg.bgm=1;
     memset(file,0,sizeof(file)); memcpy(file,"APCM",4);
@@ -144,7 +146,7 @@ int main(void) {
     }
     reset(); upload_error=1; dashBgmStart(); assert(uploads==1 && !plays && !allocs);
     /* Service reset frees the old EE buffer and reloads on the new IOP. */
-    reset(); dashBgmStart(); _iop_reboot_count++; dashSoundMaintain();
+    reset(); dashBgmStart(); reset_generation++; dashSoundMaintain();
     assert(allocs==1 && opens==2 && uploads==2 && plays==2 && soundAlive());
     reset(); dashCfg.sound=0; dashBgmStart(); assert(plays==1);
     dashSoundShutdown(); assert(!allocs && !bgm_sample.buffer && !bgm_loaded);
