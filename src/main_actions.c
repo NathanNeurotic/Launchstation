@@ -53,18 +53,24 @@ void CleanUpForExec(void)
 	cleanUpForExecInternal(0);
 }
 
-int CleanUpForEmberExec(void)
+int CleanUpForKeepIopExec(const char *title)
 {
 	/*
-	 * Drain dashboard IO/audio before Ember's handoff. Non-USB targets inherit
-	 * the current storage IOP. USB may replace it immediately afterward with a
-	 * minimal launcHER-style storage IOP, so no EE RPC may remain in flight.
+	 * Any ELF that inherits the current IOP also inherits every IOP-side RPC
+	 * server and device driver. Drain dashboard IO/audio first and release our
+	 * libpad client so the child can bind cleanly instead of inheriting stale
+	 * EE ownership.
 	 */
-	if (!DashPrepareKeepIopHandoff("Preparing Ember"))
+	if (!DashPrepareKeepIopHandoff(title != NULL ? title : "Preparing application"))
 		return 0;
 
 	cleanUpForExecInternal(1);
 	return 1;
+}
+
+int CleanUpForEmberExec(void)
+{
+	return CleanUpForKeepIopExec("Preparing Ember");
 }
 //------------------------------
 //endfunc CleanUpForExec / CleanUpForEmberExec
@@ -233,7 +239,10 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 			goto ELFnotFound;
 
 		x = setting->reboot_iop_elf_load;
-		CleanUpForExec();
+		if (x)
+			CleanUpForExec();
+		else if (!CleanUpForKeepIopExec("Preparing application"))
+			return;
 		LaunchArgsClear();
 		RunLoaderMemory("rom0:HDDBOOT", mbr_mem_arg, x);
 		return;
@@ -648,7 +657,10 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 			if (mainActionLaunchHook != NULL)
 				mainActionLaunchHook(path);
 			x = setting->reboot_iop_elf_load;
-			CleanUpForExec();
+			if (x)
+				CleanUpForExec();
+			else if (!CleanUpForKeepIopExec("Preparing application"))
+				return;
 			if (show_launch_gameid)
 				displayRetroGemGameID(launch_gameid, 2);
 			RunLoaderElf(fullpath, party, path, t, x);
