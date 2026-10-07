@@ -21,8 +21,7 @@ extern int vmcMounted[2];
  * Cache explicit root checks; never do blocking device IO from drawing. */
 enum { PROBE_HDD, PROBE_ATA, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1, PROBE_UDPFS };
 static u32 probe_checked, probe_present;
-static int probe_reboot_count = -1;
-extern int _iop_reboot_count;
+static unsigned int probe_reset_generation = (unsigned int)-1;
 
 static int probeIndex(const char *mount)
 {
@@ -37,9 +36,9 @@ static int probeIndex(const char *mount)
 
 static void syncProbeSession(void)
 {
-	if (probe_reboot_count != _iop_reboot_count) {
+	if (probe_reset_generation != getIopResetGeneration()) {
 		probe_checked = probe_present = 0;
-		probe_reboot_count = _iop_reboot_count;
+		probe_reset_generation = getIopResetGeneration();
 	}
 }
 
