@@ -144,7 +144,9 @@ devcode += r"""
 #define EXFAT 1
 #define UDPFS 1
 typedef void (*DashProbeDone)(const char *,int,void *);
-static int _iop_reboot_count, cdmode, uLE_cdmode, vmcMounted[2], console_is_PSX;
+static unsigned int reset_generation;
+static int cdmode, uLE_cdmode, vmcMounted[2], console_is_PSX;
+static unsigned int getIopResetGeneration(void) { return reset_generation; }
 static char LaunchElfBootDir[256], LaunchElfDir[256], netConfig[32];
 static struct { int dev_auto; int show_unavailable_devices; } dashCfg = {0,1};
 static int mc_present[2], usb_mask, usb_loaded, resident, media, loads, opens, closes;
@@ -165,7 +167,7 @@ static int isPathDeviceStackLoaded(const char *p) {
 }
 static int load(int s) {
     loads++;
-    if(reset_on_load) { _iop_reboot_count++; resident=0; reset_on_load=0; }
+    if(reset_on_load) { reset_generation++; resident=0; reset_on_load=0; }
     if(failed_load) return 0;
     resident|=s; return 1;
 }
@@ -230,7 +232,7 @@ int main(void) {
     media=63;
     for(int i=0;i<6;i++) { probe(mounts[i]); assert(result && state(mounts[i])==DASH_DEV_READY); }
     assert(closes>0); /* fd zero and empty roots are valid */
-    _iop_reboot_count++; resident=0;
+    reset_generation++; resident=0;
     for(int i=0;i<6;i++) assert(state(mounts[i])==DASH_DEV_PROBE);
     /* Observe a reboot performed by loading the target, before recording it. */
     reset_on_load=1; probe("mmce1:"); assert(result && state("mmce1:")==DASH_DEV_READY);
@@ -238,7 +240,7 @@ int main(void) {
     delayed_ata=now_ms+300; probe("ata0:"); assert(result && now_ms>=delayed_ata);
     failed_load=1; probe("udpfs:"); assert(!result && state("udpfs:")==DASH_DEV_ABSENT);
     failed_load=0;
-    _iop_reboot_count++; resident=S_MMCE0|S_MMCE1;
+    reset_generation++; resident=S_MMCE0|S_MMCE1;
     strcpy(LaunchElfBootDir,"mmce1:/BOOT/"); dashDevicesInit();
     assert(state("mmce1:")==DASH_DEV_READY && state("mmce0:")==DASH_DEV_PROBE);
     strcpy(LaunchElfBootDir,"usb0:/BOOT/"); strcpy(LaunchElfDir,"mc0:/SYS-CONF/");
