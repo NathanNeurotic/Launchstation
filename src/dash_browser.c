@@ -2098,7 +2098,7 @@ void dashFileBrowser(const char *start_dir)
 		return;
 	}
 	memset(fb.mark, 0, MAX_ENTRY);
-	dashSetSceneOverride(browserScene);
+	dashPushSceneOverride(browserScene);
 	/* a start folder on a device that is not running starts at the list */
 	if (start_dir != NULL && start_dir[0] && (isMisc(start_dir) || (strchr(start_dir, ':') && dashDevicePathReady(start_dir))))
 		openDir(start_dir, NULL);
@@ -2177,7 +2177,7 @@ void dashFileBrowser(const char *start_dir)
 	fb.gen++; /* a listing still in flight is dropped */
 	if (fb.args_loaded && LaunchArgsPending())
 		LaunchArgsClear(); /* loaded here but no application was started */
-	dashSetSceneOverride(NULL);
+	dashPopSceneOverride();
 	free(fb.files);
 	free(fb.mark);
 	fb.files = NULL;

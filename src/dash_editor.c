@@ -1082,7 +1082,7 @@ int dashTextEditorEx(const char *path, int create_if_missing)
 	kb_sel = getVirtualKeyboardLayoutNextKey(normalizeVirtualKeyboardLayout(setting->virtual_keyboard_layout),
 	                                         VKEY_LAYOUT_COLS + getVirtualKeyboardLayoutFirstColumn(normalizeVirtualKeyboardLayout(setting->virtual_keyboard_layout)), 0, 0);
 	dashFontInit(); /* the legacy glyph atlas draws the text */
-	dashSetSceneOverride(editorScene);
+	dashPushSceneOverride(editorScene);
 	create_missing = create_if_missing;
 	if (path != NULL && path[0])
 		docOpenPath(path);
@@ -1260,7 +1260,7 @@ done:
 		}
 	}
 	closeAll();
-	dashSetSceneOverride(NULL);
+	dashPopSceneOverride();
 	dashSoundPlay(DASH_SND_CANCEL);
 	dashInputFlush();
 	return result;

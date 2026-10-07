@@ -914,12 +914,31 @@ static void bootDraw(void)
 // Rendering
 //--------------------------------------------------------------
 /* A full-screen tool (the Text Editor) draws its own scene underneath the
- * dialogs it opens. */
+ * dialogs it opens. Tools nest (the File Browser opens the Text Editor), so
+ * leaving one must restore the scene of the tool that opened it rather than
+ * the dashboard: otherwise the browser keeps reading input underneath a
+ * dashboard scene and the console looks frozen. */
+#define SCENE_OVERRIDE_DEPTH 8
 static void (*scene_override)(void);
+static void (*scene_override_stack[SCENE_OVERRIDE_DEPTH])(void);
+static int scene_override_depth;
 
-void dashSetSceneOverride(void (*fn)(void))
+void dashPushSceneOverride(void (*fn)(void))
 {
+	if (scene_override_depth < SCENE_OVERRIDE_DEPTH)
+		scene_override_stack[scene_override_depth] = scene_override;
+	scene_override_depth++;
 	scene_override = fn;
+}
+
+void dashPopSceneOverride(void)
+{
+	if (scene_override_depth <= 0) {
+		scene_override = NULL;
+		return;
+	}
+	scene_override_depth--;
+	scene_override = (scene_override_depth < SCENE_OVERRIDE_DEPTH) ? scene_override_stack[scene_override_depth] : NULL;
 }
 
 void dashRenderScene(void)

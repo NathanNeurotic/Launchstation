@@ -34,6 +34,7 @@ jobs:
           python3 tests/test_ember_launch.py
           python3 tests/test_ember_paths.py
           python3 tests/test_ember_iop_handoff.py
+          python3 tests/test_scene_override_nesting.py
           python3 tests/test_modal_animation.py
           python3 tests/test_theme_motion.py
           python3 tests/test_tile_styles.py
