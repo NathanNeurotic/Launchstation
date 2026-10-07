@@ -902,7 +902,7 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 					label = "Up one level";
 				} else {
 					PickEntry *e = &pk.entries[i - first_entry];
-					icon = e->dir ? DI_FOLDER : pickIsMisc(pk.dir) ? DI_TOOLS : genCmpFileExt(e->name, "PNG") ? DI_IMAGE : genCmpFileExt(e->name, "ELF") ? DI_APP : DI_FILE;
+					icon = e->dir ? DI_FOLDER : pickIsMisc(pk.dir) ? DI_TOOLS : (genCmpFileExt(e->name, "PNG") || genCmpFileExt(e->name, "JPG") || genCmpFileExt(e->name, "JPEG")) ? DI_IMAGE : genCmpFileExt(e->name, "ELF") ? DI_APP : DI_FILE;
 					label = e->name;
 				}
 				dashIcon(icon, lx + 10, ry + 5, 16, c);
