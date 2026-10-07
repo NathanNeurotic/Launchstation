@@ -472,7 +472,7 @@ static void osdTime(int fx, OsdTime *o)
 }
 
 #define ORB_N 7
-#define ORB_SAMPLES 48 /* trail samples (fewer below 50% motion) */
+#define ORB_SAMPLES 32 /* visually continuous trails without spending 672 line draws/frame */
 #define ORB_SPAN 6.5f  /* seconds of after-image */
 #define ORB_BASE 20.0f /* the whole group circles once per 20 s */
 #define ORB_CAM 420.0f /* perspective distance */
