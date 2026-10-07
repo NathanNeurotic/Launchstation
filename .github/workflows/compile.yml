@@ -243,18 +243,18 @@ jobs:
           done
 
           gh release upload "$tag" \
-            "artifacts/BOOT.ELF#Main packed PS2 executable for normal installs and general use" \
-            "artifacts/r3LaunchELF_ATTDASH.ELF#Same packed executable as BOOT.ELF, using the project filename" \
-            "artifacts/r3LaunchELF_ATTDASH-Complete.zip#Complete release package containing all useful downloadable files" \
-            "artifacts/BGM.ADP#Optional dashboard background music; place beside the boot ELF" \
-            "artifacts/WLE-CLOUD.CNF.example#Google Drive OAuth configuration template; customize as WLE-CLOUD.CNF" \
-            "artifacts/WLE-CLOUD-CA.PEM#Google TLS trust roots required for native Google Drive backup and sync" \
-            "artifacts/WLE-UPDATE-CA.PEM#GitHub TLS trust roots used by the built-in update checker and updater" \
-            "artifacts/r3LaunchELF_ATTDASH-Documentation.zip#Offline HTML documentation, assets, and search index" \
+            "artifacts/BOOT.ELF#BOOT.ELF — Main packed PS2 executable" \
+            "artifacts/r3LaunchELF_ATTDASH.ELF#r3LaunchELF_ATTDASH.ELF — Same packed build as BOOT.ELF" \
+            "artifacts/r3LaunchELF_ATTDASH-Complete.zip#r3LaunchELF_ATTDASH-Complete.zip — Complete release package" \
+            "artifacts/BGM.ADP#BGM.ADP — Optional dashboard background music" \
+            "artifacts/WLE-CLOUD.CNF.example#WLE-CLOUD.CNF.example — Google Drive OAuth template" \
+            "artifacts/WLE-CLOUD-CA.PEM#WLE-CLOUD-CA.PEM — Google Drive TLS trust roots" \
+            "artifacts/WLE-UPDATE-CA.PEM#WLE-UPDATE-CA.PEM — GitHub update TLS trust roots" \
+            "artifacts/r3LaunchELF_ATTDASH-Documentation.zip#r3LaunchELF_ATTDASH-Documentation.zip — Offline documentation" \
             --clobber
           if [ -f "artifacts/r3LaunchELF_ATTDASH-unpacked.ELF" ]; then
             gh release upload "$tag" \
-              "artifacts/r3LaunchELF_ATTDASH-unpacked.ELF#Uncompressed development and debugging ELF; not the normal user build" \
+              "artifacts/r3LaunchELF_ATTDASH-unpacked.ELF#r3LaunchELF_ATTDASH-unpacked.ELF — Development/debug build" \
               --clobber
           fi
 
@@ -298,16 +298,16 @@ jobs:
           for asset in "${assets[@]}"; do
             file="$(basename "$asset")"
             case "$file" in
-              ENG.LNG) label="English UI translation for r3LaunchELF_ATTDASH" ;;
-              FRE.LNG) label="French UI translation for r3LaunchELF_ATTDASH" ;;
-              GER.LNG) label="German UI translation for r3LaunchELF_ATTDASH" ;;
-              HUN.LNG) label="Hungarian UI translation for r3LaunchELF_ATTDASH" ;;
-              ITA.LNG) label="Italian UI translation for r3LaunchELF_ATTDASH" ;;
-              POL.LNG) label="Polish UI translation for r3LaunchELF_ATTDASH" ;;
-              POR.LNG) label="Portuguese UI translation for r3LaunchELF_ATTDASH" ;;
-              PTBR.LNG) label="Brazilian Portuguese UI translation for r3LaunchELF_ATTDASH" ;;
-              SPA.LNG) label="Spanish UI translation for r3LaunchELF_ATTDASH" ;;
-              *) label="r3LaunchELF_ATTDASH UI translation file; place in the Lang directory" ;;
+              ENG.LNG) label="ENG.LNG — English UI translation" ;;
+              FRE.LNG) label="FRE.LNG — French UI translation" ;;
+              GER.LNG) label="GER.LNG — German UI translation" ;;
+              HUN.LNG) label="HUN.LNG — Hungarian UI translation" ;;
+              ITA.LNG) label="ITA.LNG — Italian UI translation" ;;
+              POL.LNG) label="POL.LNG — Polish UI translation" ;;
+              POR.LNG) label="POR.LNG — Portuguese UI translation" ;;
+              PTBR.LNG) label="PTBR.LNG — Brazilian Portuguese UI translation" ;;
+              SPA.LNG) label="SPA.LNG — Spanish UI translation" ;;
+              *) label="${file} — r3LaunchELF_ATTDASH UI translation" ;;
             esac
             gh release upload "$tag" "${asset}#${label}" --clobber
           done
