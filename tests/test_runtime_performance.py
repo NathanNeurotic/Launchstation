@@ -33,7 +33,8 @@ assert "if (state->fullscreen) {\n\t\t\t/* Fullscreen is opaque." in image
 assert "dashGfxBeginFrame();" in image
 assert "} else {\n\t\t\tdashRenderScene();" in image
 
-settle_start = init.index("static void waitForUsbMassBdmfsSettle(void)\n{")\nsettle = init[settle_start:init.index("static int pathUsesUsbMass", settle_start)]
+settle_start = init.index("static void waitForUsbMassBdmfsSettle(void)\n{")
+settle = init[settle_start:init.index("static int pathUsesUsbMass", settle_start)]
 assert "DelayThread(1000);" in settle
 assert "while (Timer() < ready_time) {" not in settle
 rebind = init[init.index("static int refreshPadSessionAfterUsb(void)"):init.index("void loadUsbModules(void)")]
