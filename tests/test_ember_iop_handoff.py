@@ -63,7 +63,7 @@ assert "DelayThread(100 * 1000)" in clean_usb
 
 # Ember, not the launcher, must load ROM SIO2MAN/PADMAN after this reset.
 # Strip comments so explanatory function names do not satisfy/fail the check.
-clean_usb_code = re.sub(r"/\\*.*?\\*/", "", clean_usb, flags=re.S)
+clean_usb_code = re.sub(r"/\*.*?\*/", "", clean_usb, flags=re.S)
 clean_usb_code = re.sub(r"//.*", "", clean_usb_code)
 for forbidden in (
     "sio2man_irx", "padman_irx", "ensureCoreIoStackReady",
