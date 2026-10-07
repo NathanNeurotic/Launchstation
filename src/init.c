@@ -1439,9 +1439,9 @@ void loadUsbModules(void)
 	 * initialization is required.
 	 */
 	if (!had_usb_mass && have_usb_mass && !is_early_init) {
-		DPRINTF(" [USB]: refreshing wired PAD ports after lazy USB activation\n");
-		setupPad();
-		clearPadPressState();
+		DPRINTF(" [USB]: rebinding PAD RPC/ports after lazy USB activation\n");
+		if (!reopenPadPorts())
+			DPRINTF(" [USB]: PAD rebind failed after lazy USB activation\n");
 	}
 }
 //------------------------------
