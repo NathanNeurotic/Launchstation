@@ -11,7 +11,7 @@ tools ask (yes/no, names, progress) are dashboard dialogs. Commands with no
 screen of their own (start disc, OSDSYS, PS2 browser, network, power off,
 reboot IOP) run behind the loading overlay.
 
-File Browser: Confirm opens a folder, starts an ELF/KELF/VCD/ISO or opens a
+File Browser: Confirm opens a folder, previews a PNG image, starts an ELF/KELF/VCD/ISO or opens a
 text file in the Text Editor; Square selects; Triangle has copy, cut,
 paste (also with new names), PSU create/extract, delete, rename, new
 folder, folder icon (icon.sys), size, start with arguments, title.cfg,
