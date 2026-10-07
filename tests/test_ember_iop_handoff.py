@@ -1,5 +1,6 @@
 """Guard Ember's hardware-proven clean USB IOP handoff."""
 from pathlib import Path
+import re
 
 root = Path(__file__).resolve().parents[1]
 ember = (root / "src/ember.c").read_text(encoding="utf-8")
@@ -61,11 +62,14 @@ assert "fileXioGetStat(probe" in clean_usb
 assert "DelayThread(100 * 1000)" in clean_usb
 
 # Ember, not the launcher, must load ROM SIO2MAN/PADMAN after this reset.
+# Strip comments so explanatory function names do not satisfy/fail the check.
+clean_usb_code = re.sub(r"/\\*.*?\\*/", "", clean_usb, flags=re.S)
+clean_usb_code = re.sub(r"//.*", "", clean_usb_code)
 for forbidden in (
     "sio2man_irx", "padman_irx", "ensureCoreIoStackReady",
     "loadBasicModules", "setupPad",
 ):
-    assert forbidden not in clean_usb
+    assert forbidden not in clean_usb_code
 
 # Other launch types keep their established cleanup behavior.
 generic = body(actions, "void CleanUpForExec(")
