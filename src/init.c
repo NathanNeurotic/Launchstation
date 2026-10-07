@@ -1477,9 +1477,17 @@ static int emberUsbProbePath(const char *path, char *out, size_t out_size)
 
 	if (*suffix == '\0')
 		suffix = "/";
-	if (*suffix == '/')
-		return snprintf(out, out_size, "usb%d:%s", unit, suffix) < (int)out_size;
-	return snprintf(out, out_size, "usb%d:/%s", unit, suffix) < (int)out_size;
+#ifdef EXFAT
+	return snprintf(out, out_size, "usb%d:%s%s", unit,
+	                *suffix == '/' ? "" : "/", suffix) < (int)out_size;
+#else
+	/* The classic USBMASS driver registers "mass", not the BDMFS "usbN". */
+	if (unit == 0)
+		return snprintf(out, out_size, "mass:%s%s",
+		                *suffix == '/' ? "" : "/", suffix) < (int)out_size;
+	return snprintf(out, out_size, "mass%d:%s%s", unit,
+	                *suffix == '/' ? "" : "/", suffix) < (int)out_size;
+#endif
 }
 
 static int emberStartIrx(const char *name, const void *module, int size)
@@ -1503,6 +1511,13 @@ int prepareEmberCleanUsbIop(const char *ember_path)
 		return 0;
 	}
 
+#ifdef NO_IOP_RESET
+	/* This build must never reset the IOP; keep the inherited stack. */
+	DPRINTF("[EMBER CLEAN] NO_IOP_RESET build; keeping IOP for %s\n", probe);
+	(void)stat;
+	(void)attempt;
+	return 1;
+#else
 	/*
 	 * Hardware result: keeping r3LaunchELF_ATTDASH's homebrew
 	 * SIO2MAN/PADMAN alive makes Ember report "pad init rc=-1".
@@ -1563,6 +1578,7 @@ int prepareEmberCleanUsbIop(const char *ember_path)
 
 	DPRINTF("[EMBER CLEAN] USB did not remount: %s\n", probe);
 	return 0;
+#endif
 }
 
 static void loadKbdModules(void)
