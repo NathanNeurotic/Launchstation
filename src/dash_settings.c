@@ -115,6 +115,7 @@ enum SetId {
 	S_NET_GW,
 	S_HOSTWRITE,
 	S_NET_LEGACY,
+	S_CLOCK_MANUAL,
 	S_CLOCK_SYNC,
 	/* advanced */
 	S_LANGUAGE,
@@ -373,6 +374,7 @@ static const SetItem psu_items[] = {
 static const SetItem system_items[] = {
     {ST_PAGE, P_LANGUAGE, "Language", "Built-in language and external translations for file operations and tools."},
     {ST_PAGE, P_PSU, "Memory card backup files", "PSU naming and overwrite rules used by File Browser operations."},
+    {ST_ACTION, S_CLOCK_MANUAL, "Set PS2 clock manually...", "Enter the local date and time as YYYY-MM-DD HH:MM:SS; the hardware RTC is written and verified."},
     {ST_PATH, S_CNF_PATH, "Configuration folder", "Load and save LAUNCHELF.CNF in this folder instead of the default places."},
     {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
     {ST_ACTION, S_INTRO, "Show welcome message again", "Show the introduction the next time the dashboard checks for it."},
@@ -2551,6 +2553,34 @@ static void runAction(int id)
 		case S_ABOUT_PROJECT:
 			dashShowAbout();
 			break;
+		case S_CLOCK_MANUAL: {
+			char input[24];
+			char result[160];
+			int year, month, day, hour, minute, second;
+			int use12, datefmt;
+			int ok;
+
+			if (menuTitleGetClockFields(&year, &month, &day, &hour, &minute, &second,
+			                            &use12, &datefmt))
+				snprintf(input, sizeof(input), "%04d-%02d-%02d %02d:%02d:%02d",
+				         year, month, day, hour, minute, second);
+			else
+				snprintf(input, sizeof(input), "2000-01-01 00:00:00");
+
+			if (!dashModalKeyboard("Set PS2 clock: YYYY-MM-DD HH:MM:SS", input, sizeof(input)))
+				break;
+			if (sscanf(input, "%d-%d-%d %d:%d:%d",
+			           &year, &month, &day, &hour, &minute, &second) != 6) {
+				dashModalMessage(DI_WARNING, "Invalid date / time",
+				                 "Use YYYY-MM-DD HH:MM:SS, for example 2026-10-07 15:30:00.", input);
+				break;
+			}
+			ok = dashClockSetManual(year, month, day, hour, minute, second, result, sizeof(result));
+			dashModalMessage(ok ? DI_CHECK : DI_WARNING,
+			                 ok ? "PS2 clock updated" : "Clock update failed",
+			                 result, input);
+			break;
+		}
 #ifdef ETH
 		case S_CLOCK_SYNC: {
 			char result[160];
