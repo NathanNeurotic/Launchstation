@@ -37,7 +37,8 @@ assert '"Install update"' in tools
 assert "SHA-256 verified and installed in place" in settings
 
 assert "src/self_update.c" in yaml
-assert "r3LaunchELF_ATTDASH.ELF.sha256" not in workflow
+assert "sha256sum r3LaunchELF_ATTDASH.ELF > r3LaunchELF_ATTDASH.ELF.sha256" not in workflow
+assert "artifacts/r3LaunchELF_ATTDASH.ELF.sha256#SHA-256" not in workflow
 assert "r3LaunchELF_ATTDASH-Complete.zip" in workflow
 
 print("PASS: native updater verifies GitHub release digests, stages safely, backs up, and rolls back")
