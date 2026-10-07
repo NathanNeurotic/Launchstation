@@ -1448,6 +1448,154 @@ void loadUsbModules(void)
 //endfunc loadUsbModules
 //---------------------------------------------------------------------------
 
+/*
+ * Ember USB handoff.
+ *
+ * This intentionally mirrors launcHER's proven USB initialization shape:
+ * reset the IOP once, then load the basic filesystem/SIO2 services followed
+ * by BDM and USB storage. PADMAN is deliberately NOT loaded. Ember loads and
+ * owns its pad stack after ExecPS2. Once this function succeeds there must be
+ * no second IOP reset before Ember starts, or its USB tree disappears.
+ */
+static int emberUsbProbePath(const char *path, char *out, size_t out_size)
+{
+	const char *suffix;
+	int unit = 0;
+
+	if (path == NULL || out == NULL || out_size == 0)
+		return 0;
+
+	if (!strncmp(path, "usb", 3)) {
+		if (path[3] == ':')
+			suffix = path + 4;
+		else if (path[3] >= '0' && path[3] <= '9' && path[4] == ':') {
+			unit = path[3] - '0';
+			suffix = path + 5;
+		} else
+			return 0;
+	} else if (!strncmp(path, "mass", 4)) {
+		if (path[4] == ':')
+			suffix = path + 5;
+		else if (path[4] >= '0' && path[4] <= '9' && path[5] == ':') {
+			unit = path[4] - '0';
+			suffix = path + 6;
+		} else
+			return 0;
+	} else
+		return 0;
+
+	if (*suffix == '\0')
+		suffix = "/";
+
+#ifdef EXFAT
+	return snprintf(out, out_size, "usb%d:%s%s", unit,
+	                *suffix == '/' ? "" : "/", suffix) < (int)out_size;
+#else
+	if (unit == 0)
+		return snprintf(out, out_size, "mass:%s%s",
+		                *suffix == '/' ? "" : "/", suffix) < (int)out_size;
+	return snprintf(out, out_size, "mass%d:%s%s", unit,
+	                *suffix == '/' ? "" : "/", suffix) < (int)out_size;
+#endif
+}
+
+static int emberStartIrx(const char *name, const void *module, int size)
+{
+	int id, ret = -1;
+
+	id = SifExecModuleBuffer(module, size, 0, NULL, &ret);
+	DPRINTF(" [EMBER USB %s]: id=%d ret=%d\n", name, id, ret);
+	return id >= 0 && ret >= 0;
+}
+
+static int emberStartSio2man(void)
+{
+#ifdef HOMEBREW_SIO2MAN
+	return emberStartIrx("SIO2MAN", sio2man_irx, size_sio2man_irx);
+#else
+	int id = SifLoadModule("rom0:SIO2MAN", 0, NULL);
+	DPRINTF(" [EMBER USB rom0:SIO2MAN]: id=%d\n", id);
+	return id >= 0;
+#endif
+}
+
+int prepareEmberUsbHandoffIop(const char *ember_path)
+{
+	char probe[MAX_PATH];
+	iox_stat_t stat;
+	int attempt;
+
+	if (!emberUsbProbePath(ember_path, probe, sizeof(probe))) {
+		DPRINTF("[EMBER USB] invalid USB path: %s\n",
+		        ember_path != NULL ? ember_path : "(null)");
+		return 0;
+	}
+
+#ifdef NO_IOP_RESET
+	/* Respect no-reset builds. They can only use the already-live stack. */
+	DPRINTF("[EMBER USB] NO_IOP_RESET: preserving current stack for %s\n", probe);
+	return 1;
+#else
+	DPRINTF("[EMBER USB] rebuilding launcHER-style storage IOP for %s\n", probe);
+
+	/* All EE RPC clients that used the old storage IOP are already drained by
+	 * CleanUpForEmberExec(). Drop the remaining file/load RPC bindings before
+	 * replacing their IOP servers. */
+	fileXioExit();
+	SifLoadFileExit();
+	resetUsbHostControllerBeforeIopReset();
+
+	SifInitRpc(0);
+	while (!SifIopReset("", 0)) {
+	}
+	while (!SifIopSync()) {
+	}
+
+	SifInitRpc(0);
+	SifLoadFileInit();
+	SifInitIopHeap();
+	initsbv_patches();
+
+	/* launcHER basic module order. Do not insert PADMAN here. */
+	if (!emberStartIrx("IOMANX", iomanx_irx, size_iomanx_irx) ||
+	    !emberStartIrx("FILEXIO", filexio_irx, size_filexio_irx) ||
+	    !emberStartSio2man() ||
+	    !emberStartIrx("MCMAN", mcman_irx, size_mcman_irx) ||
+	    !emberStartIrx("MCSERV", mcserv_irx, size_mcserv_irx))
+		return 0;
+
+#ifdef EXFAT
+	/* launcHER loads the generic BDM/FatFs layer before the USB transport. */
+	if (!emberStartIrx("BDM", bdm_irx, size_bdm_irx) ||
+	    !emberStartIrx("BDMFS_FATFS", bdmfs_fatfs_irx, size_bdmfs_fatfs_irx) ||
+	    !emberStartIrx("USBD", usbd_irx, size_usbd_irx) ||
+	    !emberStartIrx("USBMASS_BD", usbmass_bd_irx, size_usbmass_bd_irx))
+		return 0;
+#else
+	if (!emberStartIrx("USBD", usbd_irx, size_usbd_irx) ||
+	    !emberStartIrx("USBMASS", usb_mass_irx, size_usb_mass_irx))
+		return 0;
+#endif
+
+	fileXioInit();
+
+	/* Enumeration is asynchronous. Do not ExecPS2 until the exact ember.elf
+	 * path is readable again. Five seconds matches the existing hardware
+	 * recovery windows without an unbounded black-screen wait. */
+	for (attempt = 0; attempt < 50; attempt++) {
+		memset(&stat, 0, sizeof(stat));
+		if (fileXioGetStat(probe, &stat) >= 0) {
+			DPRINTF("[EMBER USB] storage ready after %d ms\n", attempt * 100);
+			return 1;
+		}
+		DelayThread(100 * 1000);
+	}
+
+	DPRINTF("[EMBER USB] ember.elf never remounted: %s\n", probe);
+	return 0;
+#endif
+}
+
 static void loadKbdModules(void)
 {
 	if (pathUsesUsbMass(setting->usbkbd_file))
