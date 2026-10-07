@@ -1447,6 +1447,119 @@ void loadUsbModules(void)
 //------------------------------
 //endfunc loadUsbModules
 //---------------------------------------------------------------------------
+
+static int emberUsbProbePath(const char *path, char *out, size_t out_size)
+{
+	const char *suffix;
+	int unit = 0;
+
+	if (path == NULL || out == NULL || out_size == 0)
+		return 0;
+
+	if (!strncmp(path, "usb", 3)) {
+		if (path[3] == ':')
+			suffix = path + 4;
+		else if (path[3] >= '0' && path[3] <= '9' && path[4] == ':') {
+			unit = path[3] - '0';
+			suffix = path + 5;
+		} else
+			return 0;
+	} else if (!strncmp(path, "mass", 4)) {
+		if (path[4] == ':')
+			suffix = path + 5;
+		else if (path[4] >= '0' && path[4] <= '9' && path[5] == ':') {
+			unit = path[4] - '0';
+			suffix = path + 6;
+		} else
+			return 0;
+	} else
+		return 0;
+
+	if (*suffix == '\0')
+		suffix = "/";
+	if (*suffix == '/')
+		return snprintf(out, out_size, "usb%d:%s", unit, suffix) < (int)out_size;
+	return snprintf(out, out_size, "usb%d:/%s", unit, suffix) < (int)out_size;
+}
+
+static int emberStartIrx(const char *name, const void *module, int size)
+{
+	int id, ret = -1;
+
+	id = SifExecModuleBuffer(module, size, 0, NULL, &ret);
+	DPRINTF(" [EMBER CLEAN %s]: id=%d ret=%d\n", name, id, ret);
+	return id >= 0 && ret >= 0;
+}
+
+int prepareEmberCleanUsbIop(const char *ember_path)
+{
+	char probe[MAX_PATH];
+	iox_stat_t stat;
+	int attempt;
+
+	if (!emberUsbProbePath(ember_path, probe, sizeof(probe))) {
+		DPRINTF("[EMBER CLEAN] not a USB path: %s\n",
+		        ember_path != NULL ? ember_path : "(null)");
+		return 0;
+	}
+
+	/*
+	 * Hardware result: keeping r3LaunchELF_ATTDASH's homebrew
+	 * SIO2MAN/PADMAN alive makes Ember report "pad init rc=-1".
+	 *
+	 * Do NOT call Reset() or ensureCoreIoStackReady() here: both would load
+	 * the same homebrew pad stack again. This is intentionally the minimal
+	 * USB environment Ember's own launcher provides. Ember then loads
+	 * rom0:SIO2MAN and rom0:PADMAN itself into a clean IOP.
+	 */
+	DPRINTF("[EMBER CLEAN] rebuilding USB IOP for %s\n", probe);
+	fileXioExit();
+	SifLoadFileExit();
+	resetUsbHostControllerBeforeIopReset();
+
+	SifInitRpc(0);
+	while (!SifIopReset("", 0)) {
+	}
+	while (!SifIopSync()) {
+	}
+
+	SifInitRpc(0);
+	SifLoadFileInit();
+	SifInitIopHeap();
+	initsbv_patches();
+
+	if (!emberStartIrx("IOMANX", iomanx_irx, size_iomanx_irx) ||
+	    !emberStartIrx("FILEXIO", filexio_irx, size_filexio_irx) ||
+	    !emberStartIrx("USBD", usbd_irx, size_usbd_irx))
+		return 0;
+
+#ifdef EXFAT
+	if (!emberStartIrx("BDM", bdm_irx, size_bdm_irx) ||
+	    !emberStartIrx("BDMFS_FATFS", bdmfs_fatfs_irx, size_bdmfs_fatfs_irx) ||
+	    !emberStartIrx("USBMASS_BD", usbmass_bd_irx, size_usbmass_bd_irx))
+		return 0;
+#else
+	if (!emberStartIrx("USBMASS", usb_mass_irx, size_usb_mass_irx))
+		return 0;
+#endif
+
+	fileXioInit();
+
+	/* USB enumeration is asynchronous. Do not hand Ember a clean but
+	 * not-yet-mounted IOP: wait up to five seconds for its own ELF path. */
+	for (attempt = 0; attempt < 50; attempt++) {
+		memset(&stat, 0, sizeof(stat));
+		if (fileXioGetStat(probe, &stat) >= 0) {
+			DPRINTF("[EMBER CLEAN] USB ready after %d ms\n", attempt * 100);
+			return 1;
+		}
+		DelayThread(100 * 1000);
+	}
+
+	DPRINTF("[EMBER CLEAN] USB did not remount: %s\n", probe);
+	return 0;
+}
+
 static void loadKbdModules(void)
 {
 	if (pathUsesUsbMass(setting->usbkbd_file))
