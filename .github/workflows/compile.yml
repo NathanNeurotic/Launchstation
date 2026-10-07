@@ -181,31 +181,110 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           tag="latest"
           title="Latest automated build"
-          notes="Automated build for ${GITHUB_SHA} using ps2build. BOOT.ELF and r3LaunchELF_ATTDASH.ELF are identical packed builds; r3LaunchELF_ATTDASH.ELF.sha256 is used by the native verified updater; r3LaunchELF_ATTDASH-unpacked.ELF is the uncompressed build. BGM.ADP is optional background music: put it beside the ELF, or omit it."
+          notes="$(cat <<EOF
+Automated build for ${GITHUB_SHA} using ps2build.
+
+## Which download do I need?
+
+For a normal PS2 install, download **BOOT.ELF**. **r3LaunchELF_ATTDASH.ELF** is the same packed executable with the project name instead. The remaining files are optional sidecars, verification/debugging files, or documentation.
+
+| File | What it is | What it does | What it is for |
+| --- | --- | --- | --- |
+| **BOOT.ELF** | The normal packed PS2 executable. | Runs r3LaunchELF_ATTDASH on the PlayStation 2. It is byte-identical to r3LaunchELF_ATTDASH.ELF. | Recommended for normal installs, boot managers, FMCB/FHDB setups, USB/MASS launches, and general testing. |
+| **r3LaunchELF_ATTDASH.ELF** | The same packed PS2 executable, kept under the project name. | Runs the exact same build as BOOT.ELF. | Use this when you want a descriptive filename instead of BOOT.ELF. You do not need both executables. |
+| **r3LaunchELF_ATTDASH-unpacked.ELF** | The uncompressed development/debug build. | Runs without the normal packing step and is much larger. | Developers and troubleshooting only. Normal users should use BOOT.ELF or r3LaunchELF_ATTDASH.ELF. |
+| **r3LaunchELF_ATTDASH.ELF.sha256** | A SHA-256 checksum sidecar for the named packed ELF. | Lets the native updater and users verify that r3LaunchELF_ATTDASH.ELF downloaded intact and matches the published build. | Verification and the built-in verified updater; it is not an executable. |
+| **BGM.ADP** | Optional PS2 ADPCM background music data. | Enables the dashboard background track when placed beside the boot ELF. Interface sound effects remain available without it. | Users who want dashboard background music. Omit it if you do not want the music. |
+| **WLE-CLOUD.CNF.example** | Example configuration for the native Google Drive client. | Provides the template used to create WLE-CLOUD.CNF with your Google OAuth client ID. | Only users enabling native Google Drive backup/sync. Copy/customize it as WLE-CLOUD.CNF in the dashboard settings folder beside DASHBOARD.CNF. |
+| **WLE-CLOUD-CA.PEM** | Google CA trust-root bundle for HTTPS/TLS. | Lets the native Google Drive client verify Google's TLS certificates securely. | Only users enabling native Google Drive backup/sync; keep it with WLE-CLOUD.CNF in the dashboard settings folder. |
+| **WLE-UPDATE-CA.PEM** | CA trust-root bundle for GitHub HTTPS. | Lets the built-in update checker securely contact GitHub and verify redirected release-asset downloads. | Users who want the dashboard's built-in Check for updates / verified update path; place it in the dashboard settings folder. |
+| **r3LaunchELF_ATTDASH-Documentation.zip** | An offline copy of the generated documentation website. | Contains the HTML documentation, assets, and search index for browsing without GitHub Pages. | PC/browser reference and offline documentation; it is not a PS2 executable. |
+| **Source code (zip)** / **Source code (tar.gz)** | GitHub-generated snapshots of this repository at the release commit. | Provide the source tree for building, auditing, or development. | Developers only. These archives are not ready-to-run PS2 builds. |
+
+### Minimal normal install
+
+1. Download **BOOT.ELF**.
+2. Optionally put **BGM.ADP** beside it for background music.
+3. Add **WLE-UPDATE-CA.PEM** to the dashboard settings folder if you use the built-in update checker.
+4. Download the WLE-CLOUD files only if you plan to use native Google Drive backup/sync.
+EOF
+)"
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}" --prerelease || true
           fi
           for stale in wLaunchELF_R3Z.ELF wLaunchELF_R3Z-unpacked.ELF wLaunchELF_R3Z-Documentation.zip; do
             gh release delete-asset "$tag" "$stale" -y >/dev/null 2>&1 || true
           done
-          gh release upload "$tag" artifacts/* --clobber
+
+          gh release upload "$tag" \
+            "artifacts/BOOT.ELF#Main packed PS2 executable for normal installs and general use" \
+            "artifacts/r3LaunchELF_ATTDASH.ELF#Same packed executable as BOOT.ELF, using the project filename" \
+            "artifacts/r3LaunchELF_ATTDASH.ELF.sha256#SHA-256 checksum for verification and the native verified updater" \
+            "artifacts/BGM.ADP#Optional dashboard background music; place beside the boot ELF" \
+            "artifacts/WLE-CLOUD.CNF.example#Google Drive OAuth configuration template; customize as WLE-CLOUD.CNF" \
+            "artifacts/WLE-CLOUD-CA.PEM#Google TLS trust roots required for native Google Drive backup and sync" \
+            "artifacts/WLE-UPDATE-CA.PEM#GitHub TLS trust roots used by the built-in update checker and updater" \
+            "artifacts/r3LaunchELF_ATTDASH-Documentation.zip#Offline HTML documentation, assets, and search index" \
+            --clobber
+          if [ -f "artifacts/r3LaunchELF_ATTDASH-unpacked.ELF" ]; then
+            gh release upload "$tag" \
+              "artifacts/r3LaunchELF_ATTDASH-unpacked.ELF#Uncompressed development and debugging ELF; not the normal user build" \
+              --clobber
+          fi
+
           gh release edit "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}"
 
       - name: Publish language files release
-        if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+        if: (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[publish latest]'))) && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           tag="language-files"
           title="Translations"
+          notes="$(cat <<EOF
+Automated language files for ${GITHUB_SHA}.
+
+Each **.LNG** download is a r3LaunchELF_ATTDASH user-interface translation file. These are data files, not PS2 executables. Download the language(s) you want and place them in the launcher's **Lang/** directory so r3LaunchELF_ATTDASH can offer that translation.
+
+| File | Language | What it is for |
+| --- | --- | --- |
+| **ENG.LNG** | English | English user-interface text. |
+| **FRE.LNG** | French | French user-interface text. |
+| **GER.LNG** | German | German user-interface text. |
+| **HUN.LNG** | Hungarian | Hungarian user-interface text. |
+| **ITA.LNG** | Italian | Italian user-interface text. |
+| **POL.LNG** | Polish | Polish user-interface text. |
+| **POR.LNG** | Portuguese | Portuguese user-interface text. |
+| **PTBR.LNG** | Brazilian Portuguese | Brazilian Portuguese user-interface text. |
+| **SPA.LNG** | Spanish | Spanish user-interface text. |
+
+GitHub's **Source code (zip)** and **Source code (tar.gz)** entries are repository snapshots for developers and are not language packs or ready-to-run PS2 builds.
+EOF
+)"
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release edit "$tag" --title "$title"
+            gh release edit "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}"
           else
-            gh release create "$tag" --title "$title" --notes "Automated language files for ${GITHUB_SHA}" --target "${GITHUB_SHA}"
+            gh release create "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}"
           fi
+
           mapfile -d '' assets < <(find Lang -type f -name '*.LNG' -print0)
-          if [ "${#assets[@]}" -gt 0 ]; then
-            gh release upload "$tag" "${assets[@]}" --clobber
-          fi
+          for asset in "${assets[@]}"; do
+            file="$(basename "$asset")"
+            case "$file" in
+              ENG.LNG) label="English UI translation for r3LaunchELF_ATTDASH" ;;
+              FRE.LNG) label="French UI translation for r3LaunchELF_ATTDASH" ;;
+              GER.LNG) label="German UI translation for r3LaunchELF_ATTDASH" ;;
+              HUN.LNG) label="Hungarian UI translation for r3LaunchELF_ATTDASH" ;;
+              ITA.LNG) label="Italian UI translation for r3LaunchELF_ATTDASH" ;;
+              POL.LNG) label="Polish UI translation for r3LaunchELF_ATTDASH" ;;
+              POR.LNG) label="Portuguese UI translation for r3LaunchELF_ATTDASH" ;;
+              PTBR.LNG) label="Brazilian Portuguese UI translation for r3LaunchELF_ATTDASH" ;;
+              SPA.LNG) label="Spanish UI translation for r3LaunchELF_ATTDASH" ;;
+              *) label="r3LaunchELF_ATTDASH UI translation file; place in the Lang directory" ;;
+            esac
+            gh release upload "$tag" "${asset}#${label}" --clobber
+          done
