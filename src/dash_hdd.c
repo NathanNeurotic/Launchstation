@@ -1156,9 +1156,9 @@ void dashHddManager(void)
 		dashModalMessage(DI_WARNING, "No HDD", "The internal HDD drivers could not be started. Is an HDD connected?", NULL);
 		return;
 	}
-	dashSetSceneOverride(hddScene);
+	dashPushSceneOverride(hddScene);
 	if (!scan()) {
-		dashSetSceneOverride(NULL);
+		dashPopSceneOverride();
 		return;
 	}
 	dashInputFlush();
@@ -1212,7 +1212,7 @@ void dashHddManager(void)
 	}
 	if (hm.changed)
 		invalidatePartitionCaches();
-	dashSetSceneOverride(NULL);
+	dashPopSceneOverride();
 	free(hm.parts);
 	memset(&hm, 0, sizeof(hm));
 	dashSoundPlay(DASH_SND_CANCEL);

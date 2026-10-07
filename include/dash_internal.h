@@ -939,7 +939,10 @@ int dashVisibleSectionIndex(int section);
 const char *dashVisibleSectionName(int index);
 int dashAdjacentSection(int section, int direction);
 void dashRenderScene(void);
-void dashSetSceneOverride(void (*fn)(void)); /* NULL restores the dashboard scene */
+/* Full-screen tools push their scene on entry and pop it on exit, which
+ * restores the scene of whatever opened them (dashboard or another tool). */
+void dashPushSceneOverride(void (*fn)(void));
+void dashPopSceneOverride(void);
 /* Native Text Editor (dash_editor.c); returns TEXTEDITOR_RESULT_*.
  * dashTextEditorEx(path, 1) starts a new document named `path` when the
  * file does not exist yet (e.g. an application's .arg sidecar). */
