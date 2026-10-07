@@ -334,6 +334,7 @@ targets:
       - src/dash_widgets.c
       - src/dash_info.c
       - src/dash_image.c
+      - src/dash_jpeg.c
       - src/dash_editor.c
       - src/dash_hdd.c
       - src/dash_browser.c
@@ -365,7 +366,7 @@ targets:
       - "-Wl,--no-warn-mismatch"
       - "-L../.cloud-deps/lib"
     headers: [sior, audsrv]
-    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, mc, kbd, mbedtls, mbedx509, mbedcrypto, ps2ips, cglue, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv]
+    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, jpeg, mc, kbd, mbedtls, mbedx509, mbedcrypto, ps2ips, cglue, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv]
     embed_irx:
       - loader:loader_elf
       - wle_igr:wle_igr_elf
