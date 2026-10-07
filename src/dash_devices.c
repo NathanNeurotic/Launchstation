@@ -23,6 +23,14 @@ enum { PROBE_HDD, PROBE_ATA, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1
 static u32 probe_checked, probe_present;
 static unsigned int probe_reset_generation = (unsigned int)-1;
 
+/* An absent drive is not proof that the USB IOP is poisoned. Remember
+ * consecutive explicit failures and only escalate to a reset after the
+ * stack itself fails, or after a second no-media/no-enumeration result. */
+static unsigned int usb_probe_generation = (unsigned int)-1;
+static int usb_probe_failures;
+#define DASH_USB_PROBE_ATTEMPTS 5
+#define DASH_USB_PROBE_DELAY_US 200000
+
 static int probeIndex(const char *mount)
 {
 	if (!strncmp(mount, "hdd0:", 5)) return PROBE_HDD;
@@ -382,30 +390,78 @@ static int probeRoot(const char *path, int wait_ms)
 	}
 }
 
+static void syncUsbProbeFailures(void)
+{
+	unsigned int gen = getIopResetGeneration();
+
+	if (usb_probe_generation != gen) {
+		usb_probe_generation = gen;
+		usb_probe_failures = 0;
+	}
+}
+
+static int probeUsbMediaAnimated(void)
+{
+	int attempt, mask;
+
+	for (attempt = 0; attempt < DASH_USB_PROBE_ATTEMPTS; attempt++) {
+		mask = filerUsbRefreshDriveMask();
+		if (mask)
+			return 1;
+		if (attempt == DASH_USB_PROBE_ATTEMPTS - 1)
+			break;
+
+		/* Keep the dashboard/background/spinner alive while USB enumeration
+		 * settles instead of burning a second in a tight discovery loop. */
+		if (dashLoadingActive())
+			dashLoadingFrame("Waiting for USB storage...", attempt + 1, DASH_USB_PROBE_ATTEMPTS);
+		DelayThread(DASH_USB_PROBE_DELAY_US);
+	}
+	return 0;
+}
+
 static int probeMount(const char *m)
 {
 	int ok = 1;
 
 	filerRootMcPollIdle();
 	if (!strncmp(m, "usb", 3)) {
+		int stack_ok;
+
+		syncUsbProbeFailures();
 		loadUsbModules();
-		ok = (prepareUsbRootBrowse() >= 0);
-		/*
-		 * A partially initialized USB/BDM session can leave USBD resident but
-		 * never enumerate mass storage until the IOP is rebooted. Hardware has
-		 * reproduced this intermittently. If a first-time lazy USB activation
-		 * fails, recover automatically with the same clean IOP rebuild the user
-		 * would otherwise have to trigger manually, then try exactly once more.
-		 *
-		 * Never do this when wLaunchELF itself booted from USB: a missing boot
-		 * drive in that case is a disconnect, not a poisoned lazy stack.
-		 */
-		if (!ok && dashBootDeviceBit() != DASH_DEVA_USB) {
-			DPRINTF(" [USB]: first probe failed; rebuilding IOP and retrying once\n");
+		stack_ok = isUsbMassStackLoaded();
+
+		/* A module-start failure is an actual broken USB stack, not merely an
+		 * unplugged drive. Recover that immediately when it is safe to do so. */
+		if (!stack_ok && dashBootDeviceBit() != DASH_DEVA_USB) {
+			DPRINTF(" [USB]: storage stack failed to start; rebuilding IOP once\n");
 			rebootIopAndReloadCoreStackSilent();
+			syncUsbProbeFailures();
 			loadUsbModules();
-			ok = (prepareUsbRootBrowse() >= 0);
-			DPRINTF(" [USB]: recovery probe %s\n", ok ? "succeeded" : "failed");
+			stack_ok = isUsbMassStackLoaded();
+		}
+
+		ok = stack_ok && probeUsbMediaAnimated();
+		if (ok) {
+			usb_probe_failures = 0;
+		} else {
+			usb_probe_failures++;
+			/*
+			 * Do not reboot the whole IOP merely because an empty USB port was
+			 * checked. Hardware has also shown a rarer state where the modules are
+			 * resident but enumeration stays wedged until reset; a second failed
+			 * activation is strong enough evidence to use the recovery path.
+			 */
+			if (stack_ok && usb_probe_failures >= 2 && dashBootDeviceBit() != DASH_DEVA_USB) {
+				DPRINTF(" [USB]: repeated enumeration failure; rebuilding IOP and retrying once\n");
+				rebootIopAndReloadCoreStackSilent();
+				syncUsbProbeFailures();
+				loadUsbModules();
+				ok = isUsbMassStackLoaded() && probeUsbMediaAnimated();
+				usb_probe_failures = ok ? 0 : 1;
+				DPRINTF(" [USB]: recovery probe %s\n", ok ? "succeeded" : "failed");
+			}
 		}
 	} else if (!strncmp(m, "hdd", 3)) {
 		ok = loadHddModules();
