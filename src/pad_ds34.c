@@ -484,5 +484,36 @@ int setupPad(void)
 	return 1;
 }
 //---------------------------------------------------------------------------
+// DS3/DS4 builds also have a pad polling thread. Stop it before tearing down
+// libpad, then let setupPad() rebuild the wired ports and polling state.
+//---------------------------------------------------------------------------
+int reopenPadPorts(void)
+{
+	int attempt;
+
+	for (attempt = 0; attempt < 2; attempt++) {
+		if (isRunning) {
+			WaitSema(semRunning);
+			isRunning = 0;
+			SignalSema(semRunning);
+			WaitSema(semFinish);
+			ds34usb_reset();
+			ds34bt_reset();
+		}
+		padPortClose(1, 0);
+		padPortClose(0, 0);
+		padEnd();
+		DelayThread((attempt ? 100 : 50) * 1000);
+		if (setupPad()) {
+			clearPadPressState();
+			return 1;
+		}
+	}
+
+	clearPadPressState();
+	return 0;
+}
+
+//---------------------------------------------------------------------------
 // End of file: pad_ds34.c
 //---------------------------------------------------------------------------
