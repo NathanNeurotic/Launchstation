@@ -384,8 +384,11 @@ static int probeRoot(const char *path, int wait_ms)
 		}
 		if (Timer() >= deadline)
 			return 0;
-		/* BDM mounts can arrive after the driver returns. Yield during the
-		 * existing first-open settling window instead of reporting absence. */
+		/* BDM mounts can arrive after the driver returns. Keep drawing the
+		 * loading scene at a modest rate while yielding to the IOP so device
+		 * startup never looks like a frozen dashboard. */
+		if (dashLoadingActive())
+			dashLoadingFrame("Waiting for storage...", 0, 0);
 		DelayThread(100000);
 	}
 }
