@@ -293,7 +293,7 @@ static void drawHero(void)
 		{
 			int favorite = dashStoreIsFavorite(a->path);
 			float meta_w = tw - 40 - (favorite ? 24.0f : 0.0f);
-			dashTextScroll(tx + 19, y + 48, meta_w, meta, DASH_FS_SMALL, DASH_C_TEXT2);
+			dashTextScroll(tx + 19, y + 45, meta_w, meta, DASH_FS_SMALL, DASH_C_TEXT2);
 			if (favorite)
 				dashIcon(DI_STAR, tx + tw - 16, y + 48, 13, DASH_C_WARM);
 		}
@@ -313,19 +313,25 @@ static void drawHero(void)
 	}
 }
 
+#define HOME_TILE 86.0f
+#define HOME_TILE_ZOOM 0.12f
+
 static void homeDraw(void)
 {
 	int i;
-	float y0 = 236, cw = 90;
+	/* Row geometry: the focused tile grows by HOME_TILE_ZOOM, so keep about
+	 * 8 px between its edges and the row labels/underlines above and below
+	 * (the 1.14x zoom of a 90 px tile used to touch both). */
+	float y0 = 236, cw = HOME_TILE;
 
 	drawHero();
 
 	/* Continue row */
-	dashText(48, y0 - 26, "Continue", DASH_FS_SMALL, row == 0 ? DASH_C_TEXT : DASH_C_TEXT3);
+	dashText(48, y0 - 33, "Continue", DASH_FS_SMALL, row == 0 ? DASH_C_TEXT : DASH_C_TEXT3);
 	if (row == 0)
-		dashRect(48, y0 - 8, 24, 2, DASH_C_ACCENT);
+		dashRect(48, y0 - 15, dashTextWidth("Continue", DASH_FS_SMALL), 2, DASH_C_ACCENT);
 	if (nhome == 0) {
-		dashDrawPanelBox(48, y0, 552, 90, 14);
+		dashDrawPanelBox(48, y0, 552, cw, 14);
 		dashIcon(DI_CLOCK, 70, y0 + 25, 40, DASH_C_TEXT3);
 		dashText(126, y0 + 20, "Nothing here yet", DASH_FS_BODY, DASH_C_TEXT2);
 		dashText(126, y0 + 48, "Started, pinned and favorite apps will appear here.", DASH_FS_SMALL, DASH_C_TEXT3);
@@ -334,7 +340,7 @@ static void homeDraw(void)
 		for (i = 0; i < nhome; i++) {
 			float x = 48 + i * 104 - cam[0];
 			float f = (row == 0) ? dashClampf(1.0f - fabsf(i - col_anim[0]), 0.0f, 1.0f) : 0.0f;
-			float s = 1.0f + 0.14f * f;
+			float s = 1.0f + HOME_TILE_ZOOM * f;
 			float w = cw * s;
 			float cx = x + cw * 0.5f, cy = y0 + cw * 0.5f;
 
@@ -352,7 +358,7 @@ static void homeDraw(void)
 
 	/* Direct launch actions are optional for browser-centric users. */
 	if (dashCfg.home_shortcuts && nchips > 0) {
-		float cy = 358;
+		float cy = 361;
 		float x = 48;
 		float focus_x = 0, focus_w = 0;
 		float label_x = 0, label_w = 0;
@@ -361,7 +367,7 @@ static void homeDraw(void)
 
 		dashText(48, cy - 24, "Quick launch", DASH_FS_SMALL, row == 1 ? DASH_C_TEXT : DASH_C_TEXT3);
 		if (row == 1)
-			dashRect(48, cy - 6, 24, 2, DASH_C_ACCENT);
+			dashRect(48, cy - 6, dashTextWidth("Quick launch", DASH_FS_SMALL), 2, DASH_C_ACCENT);
 		/* measure focus position for horizontal scrolling */
 		for (i = 0; i < nchips; i++) {
 			float w = dashTextWidth(chips[i].label, DASH_FS_SMALL) + 46;
@@ -393,7 +399,7 @@ static void homeDraw(void)
 				label_x = x + 34;
 				label_w = w - 44;
 			} else
-				dashTextFit(x + 34, cy + 9.5f, w - 44, chips[i].label, DASH_FS_SMALL, dashItemColor(0));
+				dashTextFit(x + 34, cy + 6.5f, w - 44, chips[i].label, DASH_FS_SMALL, dashItemColor(0));
 			x += w + 8;
 		}
 		dashGfxScissorReset();
@@ -404,7 +410,7 @@ static void homeDraw(void)
 			}
 			if (label_x + label_w > DASH_SAFE_R + 6)
 				label_w = DASH_SAFE_R + 6 - label_x;
-			dashTextScroll(label_x, cy + 9.5f, label_w, chips[col[1]].label, DASH_FS_SMALL, dashItemColor(1));
+			dashTextScroll(label_x, cy + 6.5f, label_w, chips[col[1]].label, DASH_FS_SMALL, dashItemColor(1));
 		}
 	}
 }

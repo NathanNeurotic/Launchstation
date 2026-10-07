@@ -201,7 +201,7 @@ static float drawButton(float x, float y, int icon, const char *key)
 			dashPanelBorder(x, y, w, d, 6.0f, DC(255, 255, 255, 60));
 		}
 		dashTheme.corner = keep;
-		dashTextS(x + (w - tw) * 0.5f, y + 5.0f, key, DASH_FS_CAPTION, DASH_C_TEXT);
+		dashTextS(x + (w - tw) * 0.5f, y + 2.5f, key, DASH_FS_CAPTION, DASH_C_TEXT); /* caps centred in the badge */
 		return w;
 	}
 }
@@ -212,12 +212,11 @@ void dashDrawHints(const DashHint *hints, int n)
 	float y = 400.0f;
 	int i;
 
-	for (i = 0; i < n; i++) {
-		float bw = (hints[i].button >= 0) ? 22.0f : dashTextWidth(hints[i].key, DASH_FS_CAPTION) + 16.0f;
-		if (hints[i].button < 0 && bw < 26.0f)
-			bw = 26.0f;
-		total += bw + 6.0f + dashTextWidth(hints[i].label, DASH_FS_SMALL) + 24.0f;
-	}
+	/* Measure exactly what the drawing loop below advances by, so every
+	 * screen's hint bar ends at the same right edge whatever its keys are
+	 * (START/SELECT may be pad icons or text badges). */
+	for (i = 0; i < n; i++)
+		total += buttonWidth(hints[i].button, hints[i].key) + 8.0f + dashTextWidth(hints[i].label, DASH_FS_SMALL) + 24.0f;
 	x = DASH_SAFE_R - total + 12.0f;
 	if (x < DASH_SAFE_L)
 		x = DASH_SAFE_L;
@@ -236,7 +235,9 @@ void dashDrawHints(const DashHint *hints, int n)
 	}
 	for (i = 0; i < n; i++) {
 		x += drawButton(x, y, hints[i].button, hints[i].key) + 8.0f;
-		x = dashTextS(x, y + 4.5f, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT2) + 24.0f;
+		/* x-height centre (y + 16 * scale) about 1 px under the 22 px button's
+		 * centre, so mixed-case labels read as centred on the button */
+		x = dashTextS(x, y + 1.5f, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT2) + 24.0f;
 	}
 }
 
