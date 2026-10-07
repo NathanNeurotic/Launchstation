@@ -39,9 +39,9 @@ static int bgm_loaded;
 static int bgm_tried;
 static void *bgm_data; /* audsrv uses this buffer address as the sample ID */
 static int bgm_channel = -1;
-static int sound_reboot_count; /* IOP reboot count when audsrv was started */
+static unsigned int sound_reboot_generation; /* reset epoch when audsrv was started */
+static unsigned int sound_tried_generation = (unsigned int)-1; /* last automatic attempt */
 static int sound_retry;
-static int sound_tried_reboot = -1; /* IOP session of the last automatic attempt */
 
 
 /* audsrv lives on the IOP: after any IOP reboot the server and the uploaded
