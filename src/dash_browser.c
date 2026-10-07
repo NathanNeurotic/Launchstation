@@ -511,6 +511,10 @@ static void activate(void)
 		openDir(path, NULL);
 		return;
 	}
+	if (genCmpFileExt(path, "PNG")) {
+		dashShowPngViewer(path, f->name);
+		return;
+	}
 	if (IsTextEditorFileType(path)) {
 		dashOpenTextEditor(path);
 		refresh();
