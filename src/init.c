@@ -1650,6 +1650,16 @@ static void resetRuntimeDeviceState(int show_status)
 #ifdef DS34
 	stopDs34Input();
 #endif
+	/*
+	 * Tear down EE-side RPC clients before destroying their IOP servers.
+	 * Rebinding libpad on top of a dead pre-reset client is intermittent on
+	 * hardware and is one cause of the "UI alive, controller dead" state.
+	 */
+	closeKeyboardIfOpened();
+	padPortClose(1, 0);
+	padPortClose(0, 0);
+	padEnd();
+	clearPadPressState();
 	if (show_status)
 		showRebootingIopMsg();
 	unmountAll();
@@ -1657,7 +1667,9 @@ static void resetRuntimeDeviceState(int show_status)
 #ifdef DS34
 	loadDs34InputModules();
 #endif
-	setupPad();
+	if (!setupPad())
+		DPRINTF("PAD setup failed after IOP reset\n");
+	clearPadPressState();
 	DPRINTF("Starting keyboard\n");
 	startKbd();
 	if (iopResetNotify != NULL)
