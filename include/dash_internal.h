@@ -352,6 +352,12 @@ void dashSparkle(float cx, float cy, float size, DashColor c);
 void dashTexDraw(GSTEXTURE *tex, float x, float y, float w, float h, DashColor tint);
 void dashTexDrawUV(GSTEXTURE *tex, float x, float y, float w, float h,
                    float u1, float v1, float u2, float v2, DashColor tint);
+void dashTexDrawQuadUV(GSTEXTURE *tex,
+                       float x1, float y1, float u1, float v1,
+                       float x2, float y2, float u2, float v2,
+                       float x3, float y3, float u3, float v3,
+                       float x4, float y4, float u4, float v4,
+                       DashColor tint);
 void dashTexDrawFit(GSTEXTURE *tex, float x, float y, float w, float h, DashColor tint);
 
 /* Batched textured sprites (used by text and icons). */
@@ -973,7 +979,20 @@ void dashShowBuildInfo(void);
 void dashShowSystemInfo(void);
 void dashShowFontViewer(void);
 void dashShowTextLines(int icon, const char *title, const char *subtitle, const char *const *lines, int n);
-void dashShowImageViewer(const char *path, const char *title);
+typedef struct
+{
+	int fullscreen;
+	int slideshow;
+	int slide_seconds;
+} DashImageViewerState;
+
+enum {
+	DASH_IMAGE_EXIT = 0,
+	DASH_IMAGE_PREV = -1,
+	DASH_IMAGE_NEXT = 1
+};
+
+int dashShowImageViewer(const char *path, const char *title, DashImageViewerState *state);
 void dashExploitInstaller(void); /* dash_exploit.c */
 void dashOpenBrowser(const char *start_dir);        /* native File Browser */
 void dashFileBrowser(const char *start_dir);        /* dash_browser.c */
