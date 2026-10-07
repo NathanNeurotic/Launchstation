@@ -18,7 +18,7 @@ def body(source: str, signature: str) -> str:
         pos += 1
     return source[start:pos]
 
-poweroff = body(init, "void closeAllAndPoweroff(void)")
+poweroff = body(init, "void closeAllAndPoweroff(void)\n{")
 run_misc = body(dash, "static void runMiscCommand(")
 
 # DEV9 shutdown is best effort. Never restore the historical unbounded
