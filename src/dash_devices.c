@@ -391,6 +391,23 @@ static int probeMount(const char *m)
 	if (!strncmp(m, "usb", 3)) {
 		loadUsbModules();
 		ok = (prepareUsbRootBrowse() >= 0);
+		/*
+		 * A partially initialized USB/BDM session can leave USBD resident but
+		 * never enumerate mass storage until the IOP is rebooted. Hardware has
+		 * reproduced this intermittently. If a first-time lazy USB activation
+		 * fails, recover automatically with the same clean IOP rebuild the user
+		 * would otherwise have to trigger manually, then try exactly once more.
+		 *
+		 * Never do this when wLaunchELF itself booted from USB: a missing boot
+		 * drive in that case is a disconnect, not a poisoned lazy stack.
+		 */
+		if (!ok && dashBootDeviceBit() != DASH_DEVA_USB) {
+			DPRINTF(" [USB]: first probe failed; rebuilding IOP and retrying once\n");
+			rebootIopAndReloadCoreStackSilent();
+			loadUsbModules();
+			ok = (prepareUsbRootBrowse() >= 0);
+			DPRINTF(" [USB]: recovery probe %s\n", ok ? "succeeded" : "failed");
+		}
 	} else if (!strncmp(m, "hdd", 3)) {
 		ok = loadHddModules();
 		if (ok) ok = probeRoot("hdd0:", 0);
