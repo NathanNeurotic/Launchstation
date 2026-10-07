@@ -511,8 +511,8 @@ static void activate(void)
 		openDir(path, NULL);
 		return;
 	}
-	if (genCmpFileExt(path, "PNG")) {
-		dashShowPngViewer(path, f->name);
+	if (genCmpFileExt(path, "PNG") || genCmpFileExt(path, "JPG") || genCmpFileExt(path, "JPEG")) {
+		dashShowImageViewer(path, f->name);
 		return;
 	}
 	if (IsTextEditorFileType(path)) {
@@ -1925,7 +1925,7 @@ static int fileIcon(const FILEINFO *f)
 		return DI_FOLDER;
 	if (genCmpFileExt(f->name, "ELF") || genCmpFileExt(f->name, "KELF") || genCmpFileExt(f->name, "XLF"))
 		return DI_APP;
-	if (genCmpFileExt(f->name, "PNG") || genCmpFileExt(f->name, "JPG"))
+	if (genCmpFileExt(f->name, "PNG") || genCmpFileExt(f->name, "JPG") || genCmpFileExt(f->name, "JPEG"))
 		return DI_IMAGE;
 	if (genCmpFileExt(f->name, "VCD") || genCmpFileExt(f->name, "ISO") ||
 	    genCmpFileExt(f->name, "CUE") || genCmpFileExt(f->name, "BIN"))
