@@ -43,14 +43,13 @@ static int sound_reboot_count; /* IOP reboot count when audsrv was started */
 static int sound_retry;
 static int sound_tried_reboot = -1; /* IOP session of the last automatic attempt */
 
-extern int _iop_reboot_count;
 
 /* audsrv lives on the IOP: after any IOP reboot the server and the uploaded
  * samples are gone, and calling into the stale RPC client hangs. Every
  * entry point checks this first. */
 static int soundAlive(void)
 {
-	return sound_ready && _iop_reboot_count == sound_reboot_count;
+	return sound_ready && getIopResetGeneration() == sound_reboot_generation;
 }
 
 /* Voices 0..13 belong to interface SFX (see below). Keep the looping music
@@ -98,7 +97,7 @@ int dashSoundInit(void)
 		sound_retry = 1; /* dashSoundMaintain() tries again */
 		return 0;
 	}
-	sound_tried_reboot = _iop_reboot_count;
+	sound_tried_generation = getIopResetGeneration();
 	/* BGM and interface SFX are separate buses; initialize audsrv when
 	 * either one is enabled. */
 	if (!dashCfg.sound && !dashCfg.bgm)
@@ -149,7 +148,7 @@ int dashSoundInit(void)
 		for (i = 8; i < 14; i++)
 			audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound_vol, 0);
 	}
-	sound_reboot_count = _iop_reboot_count;
+	sound_reboot_generation = getIopResetGeneration();
 	sound_ready = 1;
 	return 1;
 }
@@ -169,9 +168,9 @@ void dashSoundMaintain(void)
 	}
 	/* one automatic attempt per IOP session (a broken driver would
 	 * otherwise be retried every frame), plus retries that were deferred */
-	if (sound_tried_reboot == _iop_reboot_count && !sound_retry)
+	if (sound_tried_generation == getIopResetGeneration() && !sound_retry)
 		return;
-	sound_tried_reboot = _iop_reboot_count;
+	sound_tried_generation = getIopResetGeneration();
 	sound_retry = 0;
 	if (dashSoundInit())
 		dashBgmStart();
