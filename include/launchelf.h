@@ -504,6 +504,7 @@ extern int semRunning,semFinish;
 extern int isRunning;
 #endif
 int setupPad(void);
+int reopenPadPorts(void);
 int readpad(void);
 int readpad_no_KB(void);
 int readpad_noRepeat(void);
