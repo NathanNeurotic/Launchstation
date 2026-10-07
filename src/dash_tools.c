@@ -715,76 +715,189 @@ void dashToolsCheckUpdates(void)
 #endif
 
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+static int cloudSetupGui(void)
+{
+	char client_id[384], client_secret[384], error[192], picked[MAX_PATH];
+	int ca_present, linked, r;
+
+	for (;;) {
+		DashMenuItem items[4];
+		int ids[4], n = 0;
+
+		error[0] = '\0';
+		if (cloudGoogleGetClientConfig(client_id, sizeof(client_id),
+		                               client_secret, sizeof(client_secret),
+		                               &ca_present, error, sizeof(error)) < 0) {
+			dashModalMessage(DI_WARNING, "Google Drive setup unavailable",
+			                 error[0] ? error : "The cloud settings folder is unavailable.", NULL);
+			return 0;
+		}
+		linked = cloudGoogleIsLinked();
+
+		items[n].icon = DI_TEXT;
+		items[n].label = "OAuth client ID...";
+		items[n].detail = client_id[0] ? "Configured" : "Required";
+		items[n].disabled = 0;
+		ids[n++] = 0;
+
+		items[n].icon = DI_TEXT;
+		items[n].label = "OAuth client secret...";
+		items[n].detail = client_secret[0] ? "Configured (optional)" : "Not set (optional)";
+		items[n].disabled = 0;
+		ids[n++] = 1;
+
+		items[n].icon = DI_FILE;
+		items[n].label = ca_present ? "Replace Google CA bundle..." : "Install Google CA bundle...";
+		items[n].detail = ca_present ? "WLE-CLOUD-CA.PEM installed" : "Required for verified HTTPS";
+		items[n].disabled = 0;
+		ids[n++] = 2;
+
+		items[n].icon = DI_BACK;
+		items[n].label = "Done";
+		items[n].detail = (client_id[0] && ca_present) ? "Setup ready" : "Setup incomplete";
+		items[n].disabled = 0;
+		ids[n++] = 3;
+
+		r = dashModalMenu("Google Drive setup",
+		                  linked ? "Account linked — changing OAuth credentials disconnects it"
+		                         : "Configure the Google TV / limited-input OAuth client",
+		                  items, n, (client_id[0] && ca_present) ? 3 : 0);
+		if (r < 0 || ids[r] == 3)
+			return client_id[0] && ca_present;
+
+		if (ids[r] == 0 || ids[r] == 1) {
+			char *field = ids[r] == 0 ? client_id : client_secret;
+			const char *title = ids[r] == 0 ? "Google OAuth client ID" : "Google OAuth client secret (optional)";
+
+			if (!dashModalKeyboard(title, field, 384))
+				continue;
+			if (ids[r] == 0 && field[0] == '\0') {
+				dashModalMessage(DI_WARNING, "Client ID required",
+				                 "Google Drive linking needs a TV / limited-input OAuth client ID.", NULL);
+				continue;
+			}
+			if (linked &&
+			    !dashModalConfirm("Change Google OAuth credentials?",
+			                      "The saved Google refresh token belongs to the current OAuth client. Changing credentials will disconnect this PS2 first.",
+			                      "Change & disconnect", 1))
+				continue;
+			if (linked) {
+				error[0] = '\0';
+				if (cloudGoogleDisconnect(error, sizeof(error)) < 0) {
+					dashModalMessage(DI_WARNING, "Could not disconnect Google Drive",
+					                 error[0] ? error : "The saved token could not be removed.", NULL);
+					continue;
+				}
+				dashCfg.igr_cloud_sync = 0;
+				dashStoreSaveSettings();
+				dashStoreFlush(1);
+			}
+			error[0] = '\0';
+			if (cloudGoogleSaveClientConfig(client_id, client_secret, error, sizeof(error)) < 0)
+				dashModalMessage(DI_WARNING, "Google OAuth settings not saved",
+				                 error[0] ? error : "WLE-CLOUD.CNF could not be written.", NULL);
+			else
+				dashToast(DASH_TOAST_OK, "Google OAuth settings saved");
+			continue;
+		}
+
+		if (ids[r] == 2) {
+			dashStrCopy(picked, LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir, sizeof(picked));
+			if (!dashPickPath("Choose Google CA PEM bundle", picked, DASH_PICK_FILE, "PEM",
+			                  picked, sizeof(picked)))
+				continue;
+			error[0] = '\0';
+			if (cloudGoogleInstallCaBundle(picked, error, sizeof(error)) < 0)
+				dashModalMessage(DI_WARNING, "CA bundle not installed",
+				                 error[0] ? error : "The selected PEM bundle could not be installed.", picked);
+			else
+				dashModalMessage(DI_CHECK, "Google CA bundle installed",
+				                 "Verified HTTPS for Google Drive can now use WLE-CLOUD-CA.PEM.", picked);
+		}
+	}
+}
+
 void dashToolsCloudBackup(void)
 {
-	static const char *const linked_actions[] = {"Sync now", "Relink Google Drive", "Disconnect Google Drive"};
-	static const char *const unlinked_actions[] = {"Link Google Drive"};
-	char error[192];
-	int linked, action;
+	char error[192], client_id[384], client_secret[384];
+	int ca_present, configured, linked, has_token, r;
 
-	error[0] = '\0';
-	if (!cloudGoogleConfigured(error, sizeof(error))) {
-		/* Configuration can be removed independently of the saved refresh token.
-		 * Never strand credentials just because the client ID or CA file is gone. */
-		if (cloudGoogleHasLocalToken()) {
-			static const char *const cleanup_actions[] = {"Clear saved Google token"};
-			action = dashModalChoice("Google Drive setup incomplete",
-			                         cleanup_actions, 1, 0);
-			if (action == 0 &&
-			    dashModalConfirm("Clear saved Google token?",
-			                     "Removes WLE-CLOUD.TOK from this PS2. Drive files are untouched.",
-			                     "Clear token", 1)) {
+	for (;;) {
+		DashMenuItem items[5];
+		int ids[5], n = 0;
+
+		error[0] = '\0';
+		if (cloudGoogleGetClientConfig(client_id, sizeof(client_id),
+		                               client_secret, sizeof(client_secret),
+		                               &ca_present, error, sizeof(error)) < 0) {
+			dashModalMessage(DI_WARNING, "Google Drive unavailable",
+			                 error[0] ? error : "The cloud settings folder is unavailable.", NULL);
+			return;
+		}
+		error[0] = '\0';
+		configured = cloudGoogleConfigured(error, sizeof(error));
+		linked = configured && cloudGoogleIsLinked();
+		has_token = cloudGoogleHasLocalToken();
+
+		items[n].icon = DI_SETTINGS;
+		items[n].label = "Google Drive setup...";
+		items[n].detail = configured ? "OAuth client and CA bundle ready" :
+		                  (client_id[0] ? "CA bundle or configuration missing" : "OAuth client ID required");
+		items[n].disabled = 0;
+		ids[n++] = 0;
+
+		items[n].icon = DI_NETWORK;
+		items[n].label = linked ? "Relink Google Drive" : "Link Google Drive";
+		items[n].detail = linked ? "Request a new Google authorization" : "Authorize this PS2 with a device code";
+		items[n].disabled = !configured;
+		ids[n++] = 1;
+
+		items[n].icon = DI_REFRESH;
+		items[n].label = "Sync now";
+		items[n].detail = "Upload the saved MMCE backup history";
+		items[n].disabled = !linked;
+		ids[n++] = 2;
+
+		items[n].icon = DI_CLOSE;
+		items[n].label = linked ? "Disconnect Google Drive" : "Clear saved Google token";
+		items[n].detail = "Drive files are not deleted";
+		items[n].disabled = !has_token;
+		ids[n++] = 3;
+
+		r = dashModalMenu("Google Drive backups",
+		                  linked ? "Linked" : configured ? "Ready to link" : "Setup required",
+		                  items, n, configured ? (linked ? 2 : 1) : 0);
+		if (r < 0)
+			return;
+
+		switch (ids[r]) {
+			case 0:
+				cloudSetupGui();
+				continue;
+			case 1:
+				cloudLink();
+				continue;
+			case 2:
+				cloudSyncNow();
+				continue;
+			case 3:
+				if (!dashModalConfirm(linked ? "Disconnect Google Drive?" : "Clear saved Google token?",
+				                      "Deletes the saved refresh token from this PS2. Files already uploaded to Drive are untouched.",
+				                      linked ? "Disconnect" : "Clear token", 1))
+					continue;
 				error[0] = '\0';
 				if (cloudGoogleDisconnect(error, sizeof(error)) == 0) {
 					dashCfg.igr_cloud_sync = 0;
 					dashStoreSaveSettings();
 					dashStoreFlush(1);
-					dashModalMessage(DI_CHECK, "Saved Google token removed",
+					dashModalMessage(DI_CHECK, linked ? "Google Drive disconnected" : "Saved Google token removed",
 					                 "The local OAuth token was removed and automatic IGR cloud sync was turned off.",
-					                 "Restore WLE-CLOUD.CNF and WLE-CLOUD-CA.PEM before linking again.");
+					                 "Files already uploaded to Drive are untouched.");
 				} else
 					dashModalMessage(DI_WARNING, "Could not remove saved Google token",
 					                 error[0] ? error : "Token removal failed.", NULL);
-			}
-			return;
+				continue;
 		}
-		dashModalMessage(DI_WARNING, "Native cloud setup is incomplete",
-		                 error[0] ? error : "Google Drive is not configured.",
-		                 "See docs/NATIVE_CLOUD.md. No Google credentials are built into the repository.");
-		return;
-	}
-
-	linked = cloudGoogleIsLinked();
-	action = dashModalChoice("Google Drive backups",
-	                         linked ? linked_actions : unlinked_actions,
-	                         linked ? 3 : 1, 0);
-	if (action < 0)
-		return;
-	if (!linked || action == 1) {
-		cloudLink();
-		return;
-	}
-	if (action == 0) {
-		cloudSyncNow();
-		return;
-	}
-	if (action == 2 &&
-	    dashModalConfirm("Disconnect Google Drive?",
-	                     "Deletes the saved refresh token from this PS2. Files already uploaded to Drive are untouched.",
-	                     "Disconnect", 1)) {
-		error[0] = '\0';
-		if (cloudGoogleDisconnect(error, sizeof(error)) == 0) {
-			/* A disconnected account cannot satisfy automatic IGR sync. Keep the
-			 * persisted setting consistent so later IGR returns do not repeatedly
-			 * attempt a guaranteed-to-fail cloud operation. */
-			dashCfg.igr_cloud_sync = 0;
-			dashStoreSaveSettings();
-			dashStoreFlush(1);
-			dashModalMessage(DI_CHECK, "Google Drive disconnected",
-			                 "The local OAuth token was removed and automatic IGR cloud sync was turned off.", NULL);
-		} else
-			dashModalMessage(DI_WARNING, "Could not disconnect Google Drive",
-			                 error[0] ? error : "Token removal failed.", NULL);
 	}
 }
 #endif
