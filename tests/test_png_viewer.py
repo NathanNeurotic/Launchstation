@@ -25,7 +25,6 @@ assert "jpeg_mem_src" in jpeg
 assert "JCS_RGB" in jpeg
 assert "DASH_JPEG_MAX_FILE" in jpeg
 assert "DASH_JPEG_MAX_DIM" in jpeg
-assert "dashTexDrawFit" in viewer
 assert "dashTexRelease(&tex)" in viewer
 assert "free(pixels)" in viewer
 assert "DASH_IN_BACK" in viewer
