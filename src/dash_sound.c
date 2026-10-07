@@ -180,7 +180,16 @@ void dashSoundMaintain(void)
 void dashSoundShutdown(void)
 {
 	if (soundAlive()) {
+		/*
+		 * BGM is a looping SPU2 ADPCM voice. Merely setting its volume to
+		 * zero and dropping the EE RPC client can leave the IOP/SPU2 voice
+		 * alive across a keep-IOP ExecPS2 handoff. audsrv_adpcm_init() is the
+		 * library's hard reset for ADPCM state: it stops every voice and frees
+		 * the uploaded sample list before audsrv_quit() releases RPC.
+		 */
 		dashBgmStop();
+		audsrv_adpcm_init();
+		audsrv_stop_audio();
 		audsrv_quit();
 	}
 	sound_ready = 0;
