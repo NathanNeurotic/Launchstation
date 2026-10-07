@@ -140,7 +140,6 @@ jobs:
           mkdir -p artifacts
           cp build/bin/wLaunchELF-packed.elf artifacts/BOOT.ELF
           cp build/bin/wLaunchELF-packed.elf artifacts/r3LaunchELF_ATTDASH.ELF
-          (cd artifacts && sha256sum r3LaunchELF_ATTDASH.ELF > r3LaunchELF_ATTDASH.ELF.sha256)
           cp res/music.sad artifacts/BGM.ADP
           cp res/WLE-CLOUD.CNF.example artifacts/WLE-CLOUD.CNF.example
           cp res/WLE-UPDATE-CA.PEM artifacts/WLE-UPDATE-CA.PEM
@@ -162,6 +161,28 @@ jobs:
             --zip artifacts/r3LaunchELF_ATTDASH-Documentation.zip
           unzip -t artifacts/r3LaunchELF_ATTDASH-Documentation.zip
           ls -lh artifacts/r3LaunchELF_ATTDASH-Documentation.zip
+
+      - name: Build complete release package
+        run: |
+          set -euo pipefail
+          rm -rf build/release-package
+          mkdir -p build/release-package
+          cp artifacts/BOOT.ELF build/release-package/
+          cp artifacts/r3LaunchELF_ATTDASH.ELF build/release-package/
+          cp artifacts/BGM.ADP build/release-package/
+          cp artifacts/WLE-CLOUD.CNF.example build/release-package/
+          cp artifacts/WLE-CLOUD-CA.PEM build/release-package/
+          cp artifacts/WLE-UPDATE-CA.PEM build/release-package/
+          cp artifacts/r3LaunchELF_ATTDASH-Documentation.zip build/release-package/
+          if [ -f artifacts/r3LaunchELF_ATTDASH-unpacked.ELF ]; then
+            cp artifacts/r3LaunchELF_ATTDASH-unpacked.ELF build/release-package/
+          fi
+          (
+            cd build/release-package
+            zip -9 -r ../../artifacts/r3LaunchELF_ATTDASH-Complete.zip .
+          )
+          unzip -t artifacts/r3LaunchELF_ATTDASH-Complete.zip
+          ls -lh artifacts/r3LaunchELF_ATTDASH-Complete.zip
 
       - name: Show artifact hashes
         run: sha256sum artifacts/*
@@ -189,14 +210,14 @@ jobs:
 
           ## Which download do I need?
 
-          For a normal PS2 install, download **BOOT.ELF**. **r3LaunchELF_ATTDASH.ELF** is the same packed executable with the project name instead. The remaining files are optional sidecars, verification/debugging files, or documentation.
+          Want everything in one download? Grab **r3LaunchELF_ATTDASH-Complete.zip**. For a minimal normal PS2 install, download **BOOT.ELF**. **r3LaunchELF_ATTDASH.ELF** is the same packed executable with the project name instead. The remaining files are optional sidecars, debugging files, or documentation.
 
           | File | What it is | What it does | What it is for |
           | --- | --- | --- | --- |
+          | **r3LaunchELF_ATTDASH-Complete.zip** | One archive containing all useful files from this release. | Bundles both packed ELF names, the unpacked debug ELF when available, BGM, cloud/update sidecars, and offline documentation. | Best choice when you want the entire release in one download instead of clicking every asset individually. |
           | **BOOT.ELF** | The normal packed PS2 executable. | Runs r3LaunchELF_ATTDASH on the PlayStation 2. It is byte-identical to r3LaunchELF_ATTDASH.ELF. | Recommended for normal installs, boot managers, FMCB/FHDB setups, USB/MASS launches, and general testing. |
           | **r3LaunchELF_ATTDASH.ELF** | The same packed PS2 executable, kept under the project name. | Runs the exact same build as BOOT.ELF. | Use this when you want a descriptive filename instead of BOOT.ELF. You do not need both executables. |
           | **r3LaunchELF_ATTDASH-unpacked.ELF** | The uncompressed development/debug build. | Runs without the normal packing step and is much larger. | Developers and troubleshooting only. Normal users should use BOOT.ELF or r3LaunchELF_ATTDASH.ELF. |
-          | **r3LaunchELF_ATTDASH.ELF.sha256** | A SHA-256 checksum sidecar for the named packed ELF. | Lets the native updater and users verify that r3LaunchELF_ATTDASH.ELF downloaded intact and matches the published build. | Verification and the built-in verified updater; it is not an executable. |
           | **BGM.ADP** | Optional PS2 ADPCM background music data. | Enables the dashboard background track when placed beside the boot ELF. Interface sound effects remain available without it. | Users who want dashboard background music. Omit it if you do not want the music. |
           | **WLE-CLOUD.CNF.example** | Example configuration for the native Google Drive client. | Provides the template used to create WLE-CLOUD.CNF with your Google OAuth client ID. | Only users enabling native Google Drive backup/sync. Copy/customize it as WLE-CLOUD.CNF in the dashboard settings folder beside DASHBOARD.CNF. |
           | **WLE-CLOUD-CA.PEM** | Google CA trust-root bundle for HTTPS/TLS. | Lets the native Google Drive client verify Google's TLS certificates securely. | Only users enabling native Google Drive backup/sync; keep it with WLE-CLOUD.CNF in the dashboard settings folder. |
@@ -206,23 +227,24 @@ jobs:
 
           ### Minimal normal install
 
-          1. Download **BOOT.ELF**.
-          2. Optionally put **BGM.ADP** beside it for background music.
+          1. Download **r3LaunchELF_ATTDASH-Complete.zip** if you want every release file at once, or **BOOT.ELF** for the minimal executable-only route.
+          2. Optionally put **BGM.ADP** beside the ELF for background music.
           3. Add **WLE-UPDATE-CA.PEM** to the dashboard settings folder if you use the built-in update checker.
-          4. Download the WLE-CLOUD files only if you plan to use native Google Drive backup/sync.
+          4. The updater verifies the ELF against GitHub's published SHA-256 asset digest; no separate checksum text file is required.
+          5. Use the WLE-CLOUD files only if you plan to use native Google Drive backup/sync.
           EOF
           )"
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}" --prerelease || true
           fi
-          for stale in wLaunchELF_R3Z.ELF wLaunchELF_R3Z-unpacked.ELF wLaunchELF_R3Z-Documentation.zip; do
+          for stale in wLaunchELF_R3Z.ELF wLaunchELF_R3Z-unpacked.ELF wLaunchELF_R3Z-Documentation.zip r3LaunchELF_ATTDASH.ELF.sha256; do
             gh release delete-asset "$tag" "$stale" -y >/dev/null 2>&1 || true
           done
 
           gh release upload "$tag" \
             "artifacts/BOOT.ELF#Main packed PS2 executable for normal installs and general use" \
             "artifacts/r3LaunchELF_ATTDASH.ELF#Same packed executable as BOOT.ELF, using the project filename" \
-            "artifacts/r3LaunchELF_ATTDASH.ELF.sha256#SHA-256 checksum for verification and the native verified updater" \
+            "artifacts/r3LaunchELF_ATTDASH-Complete.zip#Complete release package containing all useful downloadable files" \
             "artifacts/BGM.ADP#Optional dashboard background music; place beside the boot ELF" \
             "artifacts/WLE-CLOUD.CNF.example#Google Drive OAuth configuration template; customize as WLE-CLOUD.CNF" \
             "artifacts/WLE-CLOUD-CA.PEM#Google TLS trust roots required for native Google Drive backup and sync" \
