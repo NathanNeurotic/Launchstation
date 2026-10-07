@@ -381,7 +381,7 @@ void dashBgSceneDisc(float t, int fx)
 
 	dashRect(0, 0, DASH_VW, DASH_VH, base_c);
 	/* the dim red body of the cloud bank */
-	dashGlow(cx, cy, 380, 300, colA(dashColorScale(red, 0.55f), 160));
+	dashGlow(cx, cy, 380, 300, colA(dashColorScale(red, 0.55f), 145));
 
 	dashGfxBlend(DASH_BLEND_ADD);
 	/* cloud blobs streaming towards the camera */
@@ -398,12 +398,12 @@ void dashBgSceneDisc(float t, int fx)
 		float a = dashClampf((1.0f - z) * 3.0f, 0.0f, 1.0f) * dashClampf(z * 4.0f, 0.0f, 1.0f);
 		DashColor cc = dashColorLerp(red, DC(255, 120, 110, 255), dashBgHash(i, 23) * 0.4f);
 
-		dashGlow(x, y, size, size * 0.8f, colA(cc, (int)(34 * a)));
-		dashGlow(x + size * 0.35f, y - size * 0.2f, size * 0.7f, size * 0.55f, colA(cc, (int)(22 * a)));
+		dashGlow(x, y, size, size * 0.8f, colA(cc, (int)(30 * a)));
+		dashGlow(x + size * 0.35f, y - size * 0.2f, size * 0.7f, size * 0.55f, colA(cc, (int)(19 * a)));
 	}
 	/* the flare above the centre */
-	dashGlow(cx + 8, cy - 26, 60 * pulse, 52 * pulse, colA(DC(255, 110, 110, 255), 60));
-	dashGlow(cx + 8, cy - 26, 230, 190, colA(dashColorScale(red, 0.8f), 40));
+	dashGlow(cx + 8, cy - 26, 60 * pulse, 52 * pulse, colA(DC(255, 110, 110, 255), 52));
+	dashGlow(cx + 8, cy - 26, 230, 190, colA(dashColorScale(red, 0.8f), 35));
 	dashGfxBlend(DASH_BLEND_NORMAL);
 
 	/* glass cubes: one large, one small and far */
@@ -602,7 +602,10 @@ static void osdOrbs(const OrbStyle *st, float t, int fx)
 		         colA(glow_c, (int)((56.0f + 46.0f * head[k].d) * share)));
 		dashGlow(head[k].x, head[k].y, 11.0f * sz * grow, 11.0f * sz * grow,
 		         colA(halo_c, (int)((153.0f + 77.0f * head[k].d) * share)));
-		dashGlow(head[k].x, head[k].y, 5.2f * sz * grow, 5.2f * sz * grow, DC(255, 255, 255, 255));
+		/* Keep merged lights only a touch less glaring: each member still draws
+		 * the shared core, so divide a 235-alpha group budget across them. */
+		dashGlow(head[k].x, head[k].y, 5.2f * sz * grow, 5.2f * sz * grow,
+		         colA(DC(255, 255, 255, 255), together > 1 ? 235 / together : 255));
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
 }
