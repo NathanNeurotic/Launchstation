@@ -57,7 +57,7 @@ Completed so far:
 
 1. `src/main_fileops.c` now owns file/path support helpers (`wleExists`, `uLE_related`, file-type checks).
 2. `src/main_startup.c` now owns startup/system parsing helpers (`getIpConfig`, `readSystemCnf`).
-3. Legacy SMB and JPG subsystems were removed from runtime/build paths (`src/main.c`, `Makefile`, `embed.make`).
+3. Legacy SMB and the old classic JPG-viewer subsystem were removed from the runtime/build paths. Image viewing has since returned as a native dashboard viewer: PNG uses `src/dash_png.c`, while JPG/JPEG uses the bounded `src/dash_jpeg.c` libjpeg path.
 4. `src/filer.c` helper splits now include:
    - `src/gui_sort.c` (`cmpFile`, `sort`)
    - `src/gui_texteditor.c` (`canOpenInTextEditor`)
