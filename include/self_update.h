@@ -1,6 +1,6 @@
 #ifndef WLE_SELF_UPDATE_H
 #define WLE_SELF_UPDATE_H
 
-int selfUpdateInstall(const char *ca_path, char *result, int result_size);
+int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *result, int result_size);
 
 #endif
