@@ -1,5 +1,4 @@
 #include "popstarter_internal.h"
-#include "init.h"
 
 #define EMBER_NAME_MAX 180
 #define EMBER_BIOS_SIZE (512 * 1024)
@@ -198,16 +197,6 @@ static int validBios(const char *path)
 	return size == EMBER_BIOS_SIZE;
 }
 
-static int isUsbEmberPath(const char *path)
-{
-	if (path == NULL)
-		return 0;
-	return (!strncmp(path, "usb", 3) &&
-	        (path[3] == ':' || (path[3] >= '0' && path[3] <= '9' && path[4] == ':'))) ||
-	       (!strncmp(path, "mass", 4) &&
-	        (path[4] == ':' || (path[4] >= '0' && path[4] <= '9' && path[5] == ':')));
-}
-
 static int samePath(const char *a, const char *b)
 {
 	if (a == NULL || b == NULL)
@@ -363,19 +352,11 @@ int LaunchEmberGame(const char *path, char *message, size_t message_size)
 	}
 
 	/*
-	 * Hardware has now proven RiptOPL's R1 failure mode on USB: Ember reaches
-	 * its own pad setup but reports "pad init rc=-1" when the launcher's
-	 * homebrew SIO2MAN/PADMAN remain resident. padEnd() only releases our EE
-	 * RPC client; it cannot remove those IRX modules. For USB, rebuild a
-	 * minimal pad-free IOP (IOMANX/fileXio/USBD/BDM/BDMFS/USBMASS) and let
-	 * Ember load rom0:SIO2MAN + rom0:PADMAN itself, just like its launcher.
+	 * Ember explicitly requires the launcher's storage IOP to survive the
+	 * handoff. Do not reset or rebuild it here: USB/MMCE/HDD files are read
+	 * through the inherited drivers. CleanUpForEmberExec() has already drained
+	 * dashboard I/O/audio and ended this EE process's libpad RPC session.
 	 */
-	if (isUsbEmberPath(ember_elf) && !prepareEmberCleanUsbIop(ember_elf)) {
-		DPRINTF("[EMBER] clean USB IOP bootstrap failed; returning to OSDSYS\n");
-		LaunchArgsClear();
-		ExecOSD(0, NULL);
-		return 0;
-	}
 
 	RunLoaderElfKeepIOPWithArgv0(fullpath, party, fullpath, exec_kind);
 	return 1;
