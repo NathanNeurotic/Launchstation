@@ -55,12 +55,7 @@ static void cleanUpForExecInternal(int end_pad_rpc)
 
 void CleanUpForExec(void)
 {
-	/*
-	 * Do not leave this EE process's libpad RPC client attached to the IOP.
-	 * Apps that keep the current IOP must be able to bind their own pad client
-	 * cleanly; leaving ours open is a classic handoff-poisoning failure mode.
-	 */
-	cleanUpForExecInternal(1);
+	cleanUpForExecInternal(0);
 }
 
 int CleanUpForEmberExec(void)
