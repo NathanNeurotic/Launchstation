@@ -50,7 +50,7 @@ int dashJpegDecode(const u8 *data, int size, int max_w, int max_h,
 	u32 *volatile dst = NULL;
 	u32 *volatile acc = NULL;
 	u32 *volatile acc_n = NULL;
-	int started = 0;
+	volatile int created = 0, started = 0;
 	int sw, sh, dw, dh, y, x, cur_dy = 0;
 
 	if (out == NULL || out_w == NULL || out_h == NULL)
@@ -65,9 +65,11 @@ int dashJpegDecode(const u8 *data, int size, int max_w, int max_h,
 	cinfo.err = jpeg_std_error(&jerr.pub);
 	jerr.pub.error_exit = dashJpegErrorExit;
 	if (setjmp(jerr.jump)) {
-		if (started)
-			jpeg_abort_decompress(&cinfo);
-		jpeg_destroy_decompress(&cinfo);
+		if (created) {
+			if (started)
+				jpeg_abort_decompress(&cinfo);
+			jpeg_destroy_decompress(&cinfo);
+		}
 		free((void *)row);
 		free((void *)dst);
 		free((void *)acc);
@@ -76,6 +78,7 @@ int dashJpegDecode(const u8 *data, int size, int max_w, int max_h,
 	}
 
 	jpeg_create_decompress(&cinfo);
+	created = 1;
 	jpeg_mem_src(&cinfo, (unsigned char *)data, (unsigned long)size);
 	if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK)
 		longjmp(jerr.jump, 1);
@@ -147,6 +150,7 @@ int dashJpegDecode(const u8 *data, int size, int max_w, int max_h,
 	jpeg_finish_decompress(&cinfo);
 	started = 0;
 	jpeg_destroy_decompress(&cinfo);
+	created = 0;
 	free((void *)row);
 	free((void *)acc);
 	free((void *)acc_n);
