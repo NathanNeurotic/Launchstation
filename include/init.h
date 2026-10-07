@@ -33,6 +33,10 @@ int prepareExploitSignerIop(void);
 int isPathDeviceStackLoaded(const char *path);
 int isUsbMassStackLoaded(void);
 
+/* Rebuild the USB storage IOP for Ember using the launcHER module order.
+ * PADMAN is deliberately omitted; Ember owns pad initialization. */
+int prepareEmberUsbHandoffIop(const char *ember_path);
+
 
 #ifdef ETH
 void loadNetModules(void);
