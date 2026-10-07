@@ -265,6 +265,7 @@ static void runMiscCommand(const char *misc_path)
 	const char *title = "Working";
 	int leaves = 0;
 	int network_command = 0;
+	int poweroff_command = 0;
 
 	if (!stricmp(misc_path, setting->Misc_PS2Disc))
 		title = "Starting the disc", leaves = 1;
@@ -273,7 +274,7 @@ static void runMiscCommand(const char *misc_path)
 	else if (!stricmp(misc_path, setting->Misc_PS2Browser))
 		title = "Opening the PS2 browser", leaves = 1;
 	else if (!stricmp(misc_path, setting->Misc_PS2PowerOff))
-		title = "Powering off", leaves = 1;
+		title = "Powering off", leaves = 1, poweroff_command = 1;
 	else if (!stricmp(misc_path, setting->Misc_PS2Net))
 		title = "Starting FTP / remote access", network_command = 1;
 	else if (!stricmp(misc_path, setting->Misc_Reboot_IOP))
@@ -302,6 +303,14 @@ static void runMiscCommand(const char *misc_path)
 	}
 #endif
 #endif
+	if (poweroff_command)
+		/*
+		 * A successful shutdown never returns, and a stuck device teardown
+		 * must not leave the looping SPU2 BGM playing forever behind the
+		 * "Powering off" overlay. If poweroff unexpectedly returns,
+		 * afterMiscCommand() below restores audio normally.
+		 */
+		dashSoundShutdown();
 	if (leaves)
 		dashGfxRestoreLegacyState();
 	ExecuteMainAction(path, &exec_ctx);
