@@ -11,6 +11,8 @@ elf = (root / "src/elf.c").read_text(encoding="utf-8")
 header = (root / "include/launchelf.h").read_text(encoding="utf-8")
 makefile = (root / "Makefile").read_text(encoding="utf-8")
 yaml = (root / "ps2.yaml").read_text(encoding="utf-8")
+init = (root / "src/init.c").read_text(encoding="utf-8")
+init_h = (root / "include/init.h").read_text(encoding="utf-8")
 
 # POPStarter and Ember remain independent automatic PS1 routes.
 assert "IsPopstarterVcdPath(path)" in actions
@@ -45,6 +47,10 @@ assert "game's umbrella" in ember
 assert "LaunchArgsLoadFromBuffer" in ember
 assert "CleanUpForEmberExec()" in ember
 assert "RunLoaderElfKeepIOPWithArgv0" in ember
+assert "prepareEmberCleanUsbIop(ember_elf)" in ember
+assert "prepareEmberCleanUsbIop" in init_h
+assert "SifIopReset" in init
+assert '"USBMASS_BD"' in init
 assert "CleanUpForEmberExec" in header
 assert "RunLoaderElfKeepIOPWithArgv0" in header
 assert "DashPrepareKeepIopHandoff" in actions
