@@ -413,5 +413,29 @@ int setupPad(void)
 	return 1;
 }
 //---------------------------------------------------------------------------
+// Fully rebind the EE libpad client after a runtime USB/IOP topology change.
+// Re-running setupPad() on top of stale RPC/port bindings is intermittent on
+// real hardware; close both ports and end the client before reopening them.
+//---------------------------------------------------------------------------
+int reopenPadPorts(void)
+{
+	int attempt;
+
+	for (attempt = 0; attempt < 2; attempt++) {
+		padPortClose(1, 0);
+		padPortClose(0, 0);
+		padEnd();
+		DelayThread((attempt ? 100 : 50) * 1000);
+		if (setupPad()) {
+			clearPadPressState();
+			return 1;
+		}
+	}
+
+	clearPadPressState();
+	return 0;
+}
+
+//---------------------------------------------------------------------------
 // End of file: pad.c
 //---------------------------------------------------------------------------
