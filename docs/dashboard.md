@@ -12,7 +12,9 @@ screen of their own (start disc, OSDSYS, PS2 browser, network, power off,
 reboot IOP) run behind the loading overlay.
 
 File Browser: Confirm opens a folder, previews PNG/JPG/JPEG images, starts an ELF/KELF/VCD/ISO or opens a
-text file in the Text Editor; Square selects; Triangle has copy, cut,
+text file in the Text Editor. The image viewer supports sibling-image browsing,
+90-degree rotation, 1x-4x zoom, left-stick panning, fullscreen mode and a
+configurable 1-60 second slideshow; Square selects; Triangle has copy, cut,
 paste (also with new names), PSU create/extract, delete, rename, new
 folder, folder icon (icon.sys), size, start with arguments, title.cfg,
 mount as vmc0:/vmc1: (for .bin/.vmc/.mc2/.ps2 images; mounted images
