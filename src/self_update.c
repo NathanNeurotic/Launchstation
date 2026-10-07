@@ -11,9 +11,7 @@
 #include <ctype.h>
 
 #define UPDATE_ELF_URL "https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases/download/latest/r3LaunchELF_ATTDASH.ELF"
-#define UPDATE_SHA_URL "https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases/download/latest/r3LaunchELF_ATTDASH.ELF.sha256"
 #define UPDATE_MAX_ELF (16 * 1024 * 1024)
-#define UPDATE_MAX_SHA 1024
 
 static int device_path(const char *path, const char *name, int allow_bare)
 {
@@ -132,19 +130,16 @@ static int hex_nibble(int ch)
     return -1;
 }
 
-static int read_expected_sha(const char *path, unsigned char expected[32])
+static int parse_expected_sha(const char *text, unsigned char expected[32])
 {
-    char text[128];
-    int fd, r, i;
+    int i;
 
-    fd = genOpen(path, FIO_O_RDONLY);
-    if (fd < 0)
+    if (text == NULL)
         return 0;
-    r = genRead(fd, text, sizeof(text) - 1);
-    genClose(fd);
-    if (r < 64)
+    if (!strncmp(text, "sha256:", 7))
+        text += 7;
+    if (strlen(text) != 64)
         return 0;
-    text[r] = '\0';
 
     for (i = 0; i < 32; i++) {
         int hi = hex_nibble((unsigned char)text[i * 2]);
@@ -182,12 +177,12 @@ static int download_file(const char *url, const char *path, const char *ca_path,
     return size;
 }
 
-int selfUpdateInstall(const char *ca_path, char *result, int result_size)
+int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *result, int result_size)
 {
     const char *boot = wleBootElfPath();
     char parent[MAX_PATH], leaf[MAX_NAME];
-    char stage_leaf[MAX_NAME], backup_leaf[MAX_NAME], sha_leaf[MAX_NAME];
-    char stage[MAX_PATH], backup[MAX_PATH], sha_path[MAX_PATH];
+    char stage_leaf[MAX_NAME], backup_leaf[MAX_NAME];
+    char stage[MAX_PATH], backup[MAX_PATH];
     char error[256], remove_path[MAX_PATH];
     unsigned char expected[32], actual[32];
     int size, rollback_ok;
@@ -208,10 +203,8 @@ int selfUpdateInstall(const char *ca_path, char *result, int result_size)
     }
     if (snprintf(stage_leaf, sizeof(stage_leaf), "%s.UPDATE", leaf) >= (int)sizeof(stage_leaf) ||
         snprintf(backup_leaf, sizeof(backup_leaf), "%s.BAK", leaf) >= (int)sizeof(backup_leaf) ||
-        snprintf(sha_leaf, sizeof(sha_leaf), "%s.SHA256", leaf) >= (int)sizeof(sha_leaf) ||
         !join_leaf(stage, sizeof(stage), parent, stage_leaf) ||
-        !join_leaf(backup, sizeof(backup), parent, backup_leaf) ||
-        !join_leaf(sha_path, sizeof(sha_path), parent, sha_leaf)) {
+        !join_leaf(backup, sizeof(backup), parent, backup_leaf)) {
         snprintf(result, result_size, "The running ELF path is too long for a safe staged update.");
         return -1;
     }
@@ -221,18 +214,11 @@ int selfUpdateInstall(const char *ca_path, char *result, int result_size)
         return -1;
     }
 
-    error[0] = '\0';
-    size = download_file(UPDATE_SHA_URL, sha_path, ca_path, UPDATE_MAX_SHA,
-                         NULL, error, sizeof(error));
-    if (size < 64 || !read_expected_sha(sha_path, expected)) {
-        snprintf(remove_path, sizeof(remove_path), "%s", sha_path);
-        genRemove(remove_path);
-        snprintf(result, result_size, "Update checksum download failed: %s",
-                 error[0] ? error : "invalid SHA-256 file");
+    if (!parse_expected_sha(expected_sha256, expected)) {
+        snprintf(result, result_size,
+                 "GitHub did not provide a valid SHA-256 digest for the release ELF.");
         return -1;
     }
-    snprintf(remove_path, sizeof(remove_path), "%s", sha_path);
-    genRemove(remove_path);
 
     error[0] = '\0';
     size = download_file(UPDATE_ELF_URL, stage, ca_path, UPDATE_MAX_ELF,
