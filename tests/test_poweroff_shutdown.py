@@ -37,12 +37,18 @@ assert 'PDIOC_CLOSEALL' in poweroff
 assert "idleDev9StorageForPoweroff();" in poweroff
 assert "stopUsbMassForPoweroff();" in poweroff
 
-# The dashboard's looping SPU2 music must end before entering the blocking
-# poweroff path. If poweroff returns, afterMiscCommand restores sound.
-assert "poweroff_command = 1" in run_misc
-assert "if (poweroff_command)" in run_misc
+# Any action that leaves wLaunchELF must silence dashboard SPU2 audio before
+# the handoff. If a MISC handoff returns, afterMiscCommand restores it.
+assert "if (leaves)" in run_misc
 assert "dashSoundShutdown();" in run_misc
 assert run_misc.index("dashSoundShutdown();") < run_misc.index("ExecuteMainAction(path, &exec_ctx);")
 assert "afterMiscCommand();" in run_misc
 
-print("PASS: poweroff bounds DEV9 teardown and stops dashboard audio before shutdown")
+# Ordinary ELF launches need the same teardown. A failed launch returns and
+# explicitly reinitializes the dashboard audio service/BGM.
+assert "dashSoundShutdown();" in launch_app
+assert launch_app.index("dashSoundShutdown();") < launch_app.index("ExecuteMainAction(path, &exec_ctx);")
+assert launch_app.index("dashSoundInit();") > launch_app.index("ExecuteMainAction(path, &exec_ctx);")
+assert launch_app.index("dashBgmStart();") > launch_app.index("ExecuteMainAction(path, &exec_ctx);")
+
+print("PASS: poweroff is bounded and every leaving handoff stops dashboard audio")
