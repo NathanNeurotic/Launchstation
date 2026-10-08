@@ -1059,6 +1059,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	exec_ctx = *ctx;
 
 	dashGfxCheckScreenChange();
+	drawMsg("Boot check 5: entering dashboard initialization");
 	drawMsgOverride = dashMsgHook;
 	dashClassicUiInstall(1);
 	if (!dash_inited)
@@ -1069,8 +1070,10 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	}
 	DashThemeSetLegacyEnabled(1);
 	mainActionLaunchHook = dashLaunchHook;
+	drawMsg("Boot check 6: dashboard initialized; starting audio");
 	dashSoundInit();
 	dashBgmStart();
+	drawMsg("Boot check 7: audio startup returned");
 	if (from_boot)
 		dashSoundPlay(DASH_SND_BOOT);
 

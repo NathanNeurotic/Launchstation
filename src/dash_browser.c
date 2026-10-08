@@ -51,6 +51,9 @@ static struct
 	u64 free_bytes;     /* free space of this folder's device */
 	int free_valid;
 	int args_loaded;    /* launch arguments loaded here, not started yet */
+	int pad_state[2], pad_request[2]; /* UI-thread DMA snapshot, no recovery RPC */
+	unsigned int pad_generation;
+	int pad_snapshot_valid;
 } fb;
 
 /* View and sort choices last the session, like the classic browser's
@@ -2138,6 +2141,15 @@ static void browserScene(void)
 	}
 	dashDrawToasts();
 	dashDrawActivity();
+	/* Temporary hardware diagnostic for the completed USB listing/input-loss
+	 * report. Rendering uses the cached UI snapshot, never polls the IOP. */
+	if (fb.pad_snapshot_valid && isUsbBrowsePath(fb.dir)) {
+		char status[96];
+		snprintf(status, sizeof(status), "PAD 0:%d/%d  1:%d/%d  IOP:%u  IO:%d",
+		         fb.pad_state[0], fb.pad_request[0], fb.pad_state[1], fb.pad_request[1],
+		         fb.pad_generation, dashWorkerIoBusy());
+		dashText(FB_X, FB_Y + FB_ROWS * FB_ROW_H + 20, status, DASH_FS_CAPTION, DASH_C_TEXT2);
+	}
 }
 
 //--------------------------------------------------------------
@@ -2185,6 +2197,17 @@ void dashFileBrowser(const char *start_dir)
 			memset(&in, 0, sizeof(in));
 		else
 			dashInputPoll(&in);
+		/* These libpad queries inspect EE DMA data. Keep them on the input
+		 * thread, outside worker IO and IOP reset parking. */
+		if (!dashWorkerIoBusy() && !dashIopParked()) {
+			int port;
+			for (port = 0; port < 2; port++) {
+				fb.pad_state[port] = padGetState(port, 0);
+				fb.pad_request[port] = padGetReqState(port, 0);
+			}
+			fb.pad_generation = getIopResetGeneration();
+			fb.pad_snapshot_valid = 1;
+		}
 		total = fb.dir[0] ? fb.n : fb.ndevs;
 		prev = fb.sel;
 		if (!fb.loading) {

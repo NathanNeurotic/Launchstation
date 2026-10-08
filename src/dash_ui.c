@@ -35,7 +35,8 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	dashWorkerParkPoint();
 	if (dashIopParked())
 		return; /* the IOP (and padman with it) is being rebooted */
-	waitAnyPadReady();
+	/* readpad checks each port's state and skips unsettled ports. Waiting
+	 * here stalls every frame while both controllers are negotiating. */
 	/* the USB keyboard driver is on the IOP: leave it alone while the
 	 * background worker talks to the IOP */
 	ret = usb_kb_as_pad && !dashWorkerIoBusy() ? readpad() : readpad_no_KB();
@@ -92,7 +93,6 @@ void dashInputFlush(void)
 
 	/* swallow presses that were in flight when a screen changed */
 	for (i = 0; i < 2; i++) {
-		waitAnyPadReady();
 		readpad_noRepeat();
 	}
 	held_prev = paddata;

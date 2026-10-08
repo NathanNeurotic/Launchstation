@@ -222,7 +222,7 @@ targets:
       - mcman
       - mcserv
       - mmceman
-      - usbd
+      - usbd_mini:usbd
       - bdm
       - bdmfs_fatfs
       - usbmass_bd
@@ -382,7 +382,9 @@ targets:
       - dev9_poweroff
       - ps2hdd_osd:ps2hdd
       - fs:ps2fs
-      - usbd
+      # Controlled console comparison for USB-probe/PAD loss: same SDK,
+      # smaller host driver. This is not RiptOPL's older vendored driver.
+      - usbd_mini:usbd
       - mcman
       - mcserv
       - cdfs:cdvd

@@ -12,6 +12,7 @@ u32 new_pad, new_pad_t[2];
 u32 joy_value = 0;
 static u64 rpt_time[2];
 static int rpt_count[2];
+static int pad_reopen_active;
 
 void clearPadPressState(void)
 {
@@ -351,10 +352,16 @@ void waitPadReady(int port, int slot)
 {
 	int state, lastState;
 	char stateString[16];
+	u64 deadline = pad_reopen_active ? Timer() + 1000 : 0;
 
 	state = padGetState(port, slot);
 	lastState = -1;
 	while ((state != PAD_STATE_DISCONN) && (state != PAD_STATE_STABLE) && (state != PAD_STATE_FINDCTP1)) {
+		if (pad_reopen_active) {
+			if (Timer() >= deadline)
+				return;
+			DelayThread(1000);
+		}
 		if (state != lastState)
 			padStateInt2String(state, stateString);
 		lastState = state;
@@ -388,6 +395,8 @@ int setupPad(void)
 			return 0;
 		waitPadReady(port, 0);
 		state = padGetState(port, 0);
+		if (state != PAD_STATE_DISCONN && state != PAD_STATE_STABLE && state != PAD_STATE_FINDCTP1)
+			return 0;
 		if (state != PAD_STATE_DISCONN) {  //if anything connected to this port
 			modes = padInfoMode(port, 0, PAD_MODETABLE, -1);
 			if (modes != 0) {  //modes != 0, so it may be a dualshock type
@@ -409,6 +418,9 @@ int setupPad(void)
 			padSetMainMode(port, 0, PAD_MMODE_DUALSHOCK, PAD_MMODE_LOCK);      //Fake DualShock
 			waitPadReady(port, 0);                                             //Await completion
 		}
+		state = padGetState(port, 0);
+		if (state != PAD_STATE_DISCONN && state != PAD_STATE_STABLE && state != PAD_STATE_FINDCTP1)
+			return 0;
 	}  //ends for (port)
 	return 1;
 }
@@ -419,14 +431,17 @@ int setupPad(void)
 //---------------------------------------------------------------------------
 int reopenPadPorts(void)
 {
-	int attempt;
+	int attempt, ok;
 
 	for (attempt = 0; attempt < 2; attempt++) {
 		padPortClose(1, 0);
 		padPortClose(0, 0);
 		padEnd();
 		DelayThread((attempt ? 100 : 50) * 1000);
-		if (setupPad()) {
+		pad_reopen_active = 1;
+		ok = setupPad();
+		pad_reopen_active = 0;
+		if (ok) {
 			clearPadPressState();
 			return 1;
 		}

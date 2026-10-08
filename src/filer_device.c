@@ -60,6 +60,10 @@ int ensurePathDeviceStackReady(const char *path)
 	if (!strncmp(path, "xfrom", 5))
 		return loadFlashModules();
 #endif
+#ifdef EXFAT
+	if (!strncmp(path, "mass", 4) && path[4] >= '0' && path[4] <= '9' && path[5] == ':')
+		return isPathDeviceStackLoaded(path); /* do not guess its transport */
+#endif
 	if (!strncmp(path, "mass", 4) || !strncmp(path, "usb", 3)) {
 		loadUsbModules();
 		return (USB_mass_loaded != 0);

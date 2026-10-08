@@ -202,7 +202,7 @@ static int mapUsbPathToFatFsPath(const char *usb_path, char *fatfs_path)
 }
 
 #ifdef EXFAT
-static int mapMassPathToUsbFatFsPath(const char *mass_path, char *usb_path)
+static int mapMassPathToFatFsPath(const char *mass_path, char *fatfs_path)
 {
 	const char *suffix;
 	int unit = 0;
@@ -221,7 +221,9 @@ static int mapMassPathToUsbFatFsPath(const char *mass_path, char *usb_path)
 	if (*suffix == 0)
 		suffix = "/";
 
-	snprintf(usb_path, MAX_PATH, "usb%d:%s", unit, suffix);
+	/* Only the unnumbered legacy alias denotes USB. Numbered mass slots
+	 * belong to shared BDM mount order, which can include ATA and MX4SIO. */
+	snprintf(fatfs_path, MAX_PATH, mass_path[4] == ':' ? "usb%d:%s" : "mass%d:%s", unit, suffix);
 	return 0;
 }
 #endif
@@ -720,10 +722,11 @@ int genFixPath(const char *inp_path, char *gen_path)
 		}
 		//end of clause for using a USB alias path
 
-	} else if (!strncmp(uLE_path, "mass", 4)) {  //if using USB mass: path
-		loadUsbModules();
+	} else if (!strncmp(uLE_path, "mass", 4)) {
 #ifdef EXFAT
-		if (mapMassPathToUsbFatFsPath(uLE_path, gen_path) < 0)
+		if (uLE_path[4] == ':')
+			loadUsbModules();
+		if (mapMassPathToFatFsPath(uLE_path, gen_path) < 0)
 			part_ix = -1;
 		else {
 			pathSep = strchr(gen_path, '/');
@@ -731,6 +734,7 @@ int genFixPath(const char *inp_path, char *gen_path)
 				strcpy(gen_path + (pathSep - gen_path), pathSep + 1);
 		}
 #else
+		loadUsbModules();
 		if (pathSep && (pathSep - uLE_path < 7) && pathSep[-1] == ':')
 			strcpy(gen_path + (pathSep - uLE_path), pathSep + 1);
 #endif
@@ -1525,12 +1529,10 @@ int getDir(const char *path, FILEINFO *info)
 #ifdef EXFAT
 		char usb_path[MAX_PATH];
 
-		if (mapMassPathToUsbFatFsPath(path, usb_path) < 0)
+		if (mapMassPathToFatFsPath(path, usb_path) < 0)
 			return 0;
 		if (force_usb_scan)
 			scanUsbMassDevices(1);
-		else if (!USB_mass_scanned)
-			scan_USB_mass();
 		n = readGENERICWithFirstOpenRetry(usb_path, info, max, 2000);
 #else
 		if (force_usb_scan)
