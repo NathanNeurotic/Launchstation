@@ -23,7 +23,7 @@ enum { PROBE_HDD, PROBE_ATA, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1
 static u32 probe_checked, probe_present;
 static unsigned int probe_reset_generation = (unsigned int)-1;
 
-#define DASH_USB_PROBE_ATTEMPTS 11
+#define DASH_USB_PROBE_ATTEMPTS 20
 #define DASH_USB_PROBE_DELAY_US 200000
 
 static int probeIndex(const char *mount)

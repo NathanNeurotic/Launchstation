@@ -27,11 +27,11 @@ from memory card. Hardware reproduction remains necessary.
    one-second yielding state deadlines only during runtime reopening, and reject
    an unsettled state in setup. Preserve boot/legacy readiness waits. The harness
    covers runtime timeout and legacy negotiation without sleeps or a deadline.
-3. Extend USB enumeration from five to eleven checks, 200 ms apart (up to two
-   seconds of scheduled waiting). The harness detects media arriving at 1.8 s
-   without an IOP reset. Absent media takes longer to report failure, but avoids
-   the much more disruptive reset/reload cycle. Successful initial checks return
-   immediately.
+3. Extend USB enumeration from five to twenty checks, 200 ms apart (up to four
+   seconds of scheduled waiting). This accommodates multi-device setups (such as
+   simultaneous exFAT and FAT32 USB drives) where SCSI inquiry, capacity checks
+   and partition discovery take longer than two seconds. Successful initial checks
+   return immediately.
 4. Startup loaded USB before other device families. A later stack reset could
    remove already loaded devices; MX4SIO activation could clear USB discovery.
    Run USB discovery last and replay the startup pass once if its IOP generation
@@ -47,6 +47,10 @@ from memory card. Hardware reproduction remains necessary.
    During a loading overlay, allow cached textures but defer new theme-image IO.
    A production-function harness verifies no job is submitted while loading and
    that loading resumes afterward.
+7. Safe DEV9 shutdown before IOP resets: `Reset()` now idles open storage and
+   powers down the DEV9 interface (`DDIOC_OFF`) before invoking `SifIopReset()`.
+   This prevents hardware hangs in `SifIopSync()` when internal ATA exFAT or
+   network adapters (such as UDPFS) are active.
 
 Run `python tests/test_device_input.py 2790d91` to exercise the same assertions
 against the published baseline: absent-media, dashboard input, startup ordering

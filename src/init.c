@@ -448,6 +448,26 @@ static void idleDev9StorageForPoweroff(void)
 //------------------------------
 //endfunc idleDev9StorageForPoweroff
 //---------------------------------------------------------------------------
+static void idleDev9StorageBeforeReset(void)
+{
+	if (ps2dev9_loaded) {
+		int dev9_ret = -1;
+		int retry = 20;
+
+		fileXioDevctl("pfs:", PDIOC_CLOSEALL, NULL, 0, NULL, 0);
+#ifdef DVRP
+		fileXioDevctl("dvr_pfs:", PDIOC_CLOSEALL, NULL, 0, NULL, 0);
+#endif
+		idleDev9StorageForPoweroff();
+
+		while (retry-- > 0) {
+			dev9_ret = fileXioDevctl("dev9x:", DDIOC_OFF, NULL, 0, NULL, 0);
+			if (dev9_ret >= 0)
+				break;
+		}
+	}
+}
+//---------------------------------------------------------------------------
 static void stopUsbMassForPoweroff(void)
 {
 	if (!have_usb_mass)
@@ -2300,6 +2320,7 @@ void Reset()
 	if (iopResetNotify != NULL)
 		iopResetNotify(0);
 #ifndef NO_IOP_RESET
+	idleDev9StorageBeforeReset();
 	resetUsbHostControllerBeforeIopReset();
 	SifInitRpc(0);
 	while (!SifIopReset("", 0)) {
