@@ -23,12 +23,7 @@ enum { PROBE_HDD, PROBE_ATA, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1
 static u32 probe_checked, probe_present;
 static unsigned int probe_reset_generation = (unsigned int)-1;
 
-/* An absent drive is not proof that the USB IOP is poisoned. Remember
- * consecutive explicit failures and only escalate to a reset after the
- * stack itself fails, or after a second no-media/no-enumeration result. */
-static unsigned int usb_probe_generation = (unsigned int)-1;
-static int usb_probe_failures;
-#define DASH_USB_PROBE_ATTEMPTS 5
+#define DASH_USB_PROBE_ATTEMPTS 11
 #define DASH_USB_PROBE_DELAY_US 200000
 
 static int probeIndex(const char *mount)
@@ -393,16 +388,6 @@ static int probeRoot(const char *path, int wait_ms)
 	}
 }
 
-static void syncUsbProbeFailures(void)
-{
-	unsigned int gen = getIopResetGeneration();
-
-	if (usb_probe_generation != gen) {
-		usb_probe_generation = gen;
-		usb_probe_failures = 0;
-	}
-}
-
 static int probeUsbMediaAnimated(void)
 {
 	int attempt, mask;
@@ -423,51 +408,16 @@ static int probeUsbMediaAnimated(void)
 	return 0;
 }
 
-static int probeMount(const char *m, int explicit_request)
+static int probeMount(const char *m)
 {
 	int ok = 1;
 
 	filerRootMcPollIdle();
 	if (!strncmp(m, "usb", 3)) {
-		int stack_ok;
-
-		syncUsbProbeFailures();
 		loadUsbModules();
-		stack_ok = isUsbMassStackLoaded();
-
-		/* A module-start failure is an actual broken USB stack, not merely an
-		 * unplugged drive. Recover that immediately when it is safe to do so. */
-		if (!stack_ok && dashBootDeviceBit() != DASH_DEVA_USB) {
-			DPRINTF(" [USB]: storage stack failed to start; rebuilding IOP once\n");
-			rebootIopAndReloadCoreStackSilent();
-			syncUsbProbeFailures();
-			loadUsbModules();
-			stack_ok = isUsbMassStackLoaded();
-		}
-
-		ok = stack_ok && probeUsbMediaAnimated();
-		if (ok) {
-			usb_probe_failures = 0;
-		} else {
-			usb_probe_failures++;
-			/*
-			 * An explicit user request means a drive is expected to be there:
-			 * recover a resident-but-wedged USB stack immediately. Automatic
-			 * startup must not reboot the whole IOP just because the USB port is
-			 * empty, so it waits for a second failed pass before escalating.
-			 */
-			if (stack_ok && (explicit_request || usb_probe_failures >= 2) &&
-			    dashBootDeviceBit() != DASH_DEVA_USB) {
-				DPRINTF(" [USB]: %s enumeration failure; rebuilding IOP and retrying once\n",
-				        explicit_request ? "explicit" : "repeated");
-				rebootIopAndReloadCoreStackSilent();
-				syncUsbProbeFailures();
-				loadUsbModules();
-				ok = isUsbMassStackLoaded() && probeUsbMediaAnimated();
-				usb_probe_failures = ok ? 0 : 1;
-				DPRINTF(" [USB]: recovery probe %s\n", ok ? "succeeded" : "failed");
-			}
-		}
+		/* Missing media and a failed module load both return a failed probe.
+		 * Neither authorizes destroying every other resident IOP service. */
+		ok = isUsbMassStackLoaded() && probeUsbMediaAnimated();
 	} else if (!strncmp(m, "hdd", 3)) {
 		ok = loadHddModules();
 		if (ok) ok = probeRoot("hdd0:", 0);
@@ -570,7 +520,7 @@ static int startSync(const char *mount, const char *title)
 		return -1;
 	dashLoadingBegin(title);
 	dashLoadingStatus("Starting device drivers...", 0, 0);
-	ok = probeMount(mount, 1);
+	ok = probeMount(mount);
 	dashLoadingEnd();
 	return ok;
 }
@@ -646,28 +596,28 @@ void dashDevicesAutoProbe(void)
 	const int mask = safeAutoStartMask();
 
 	if ((mask & DASH_DEVA_USB) && !isUsbMassStackLoaded())
-		probeMount("usb:", 0);
+		probeMount("usb:");
 	if ((mask & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
-		probeMount("hdd0:", 0);
+		probeMount("hdd0:");
 #ifdef EXFAT
 	if ((mask & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
-		probeMount("ata0:", 0);
+		probeMount("ata0:");
 #endif
 #ifdef MMCE
 	if ((mask & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))
-		probeMount("mmce0:", 0);
+		probeMount("mmce0:");
 #endif
 #ifdef MX4SIO
 	if ((mask & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
-		probeMount("mx4sio:", 0);
+		probeMount("mx4sio:");
 #endif
 #ifdef ILINK
 	if ((mask & DASH_DEVA_ILINK) && !isPathDeviceStackLoaded("ilink:"))
-		probeMount("ilink:", 0);
+		probeMount("ilink:");
 #endif
 #ifdef UDPFS
 	if ((mask & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
-		probeMount("udpfs:", 0);
+		probeMount("udpfs:");
 #endif
 }
 

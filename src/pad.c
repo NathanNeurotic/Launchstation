@@ -351,13 +351,17 @@ void waitPadReady(int port, int slot)
 {
 	int state, lastState;
 	char stateString[16];
+	u64 deadline = Timer() + 1000;
 
 	state = padGetState(port, slot);
 	lastState = -1;
 	while ((state != PAD_STATE_DISCONN) && (state != PAD_STATE_STABLE) && (state != PAD_STATE_FINDCTP1)) {
+		if (Timer() >= deadline)
+			return;
 		if (state != lastState)
 			padStateInt2String(state, stateString);
 		lastState = state;
+		DelayThread(1000);
 		state = padGetState(port, slot);
 	}
 }
@@ -366,10 +370,14 @@ void waitPadReady(int port, int slot)
 void waitAnyPadReady(void)
 {
 	int state_1, state_2;
+	u64 deadline = Timer() + 1000;
 
 	state_1 = padGetState(0, 0);
 	state_2 = padGetState(1, 0);
 	while ((state_1 != PAD_STATE_DISCONN) && (state_2 != PAD_STATE_DISCONN) && (state_1 != PAD_STATE_STABLE) && (state_2 != PAD_STATE_STABLE) && (state_1 != PAD_STATE_FINDCTP1) && (state_2 != PAD_STATE_FINDCTP1)) {
+		if (Timer() >= deadline)
+			return;
+		DelayThread(1000);
 		state_1 = padGetState(0, 0);
 		state_2 = padGetState(1, 0);
 	}
@@ -388,6 +396,8 @@ int setupPad(void)
 			return 0;
 		waitPadReady(port, 0);
 		state = padGetState(port, 0);
+		if (state != PAD_STATE_DISCONN && state != PAD_STATE_STABLE && state != PAD_STATE_FINDCTP1)
+			return 0;
 		if (state != PAD_STATE_DISCONN) {  //if anything connected to this port
 			modes = padInfoMode(port, 0, PAD_MODETABLE, -1);
 			if (modes != 0) {  //modes != 0, so it may be a dualshock type
@@ -405,9 +415,15 @@ int setupPad(void)
 			else                                                               //else
 				padSetMainMode(port, 0, PAD_MMODE_DIGITAL, PAD_MMODE_UNLOCK);  //Set Digital
 			waitPadReady(port, 0);                                             //Await completion
+			state = padGetState(port, 0);
+			if (state != PAD_STATE_DISCONN && state != PAD_STATE_STABLE && state != PAD_STATE_FINDCTP1)
+				return 0;
 		} else {                                                               //Nothing is connected to this port
 			padSetMainMode(port, 0, PAD_MMODE_DUALSHOCK, PAD_MMODE_LOCK);      //Fake DualShock
 			waitPadReady(port, 0);                                             //Await completion
+			state = padGetState(port, 0);
+			if (state != PAD_STATE_DISCONN && state != PAD_STATE_STABLE && state != PAD_STATE_FINDCTP1)
+				return 0;
 		}
 	}  //ends for (port)
 	return 1;

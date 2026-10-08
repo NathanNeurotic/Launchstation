@@ -191,7 +191,8 @@ static int filerUsbDriversLoaded(void) { return usb_loaded; }
 static int filerUsbDriveMask(void) { return usb_mask; }
 static int dashLoadingActive(void) { return 0; }
 static void dashLoadingFrame(const char *s,int d,int n) { (void)s;(void)d;(void)n; }
-static int filerUsbRefreshDriveMask(void) { return usb_mask; }
+static u64 usb_media_ready;
+static int filerUsbRefreshDriveMask(void) { return now_ms>=usb_media_ready?usb_mask:0; }
 static int isUsbMassStackLoaded(void) { return usb_loaded; }
 static void rebootIopAndReloadCoreStackSilent(void) { reset_generation++; resident=0; usb_loaded=0; }
 int dashBootDeviceBit(void);
@@ -223,6 +224,14 @@ static void probe(const char *m) {
     assert(dashDevicesStart(&d,done,NULL)==0);
 }
 int main(void) {
+    /* An absent/late USB disk must never reset unrelated IOP services. */
+    strcpy(LaunchElfBootDir,"mc0:/BOOT/"); resident=63; usb_loaded=1;
+    unsigned int gen=reset_generation;
+    probe("usb:"); probe("usb:");
+    assert(!result && reset_generation==gen && resident==63);
+    usb_mask=1; usb_media_ready=now_ms+1800; probe("usb:");
+    assert(result && reset_generation==gen && resident==63);
+    usb_media_ready=0; usb_mask=0;
     dashDevicesInit(); resident=63;
     const char *mounts[]={"hdd0:","ata0:","mx4sio:","mmce0:","mmce1:","udpfs:"};
     /* Resident drivers on an empty setup must not claim that storage exists. */
@@ -264,15 +273,33 @@ compiler = shutil.which("gcc") or shutil.which("clang")
 if not compiler:
     raise SystemExit("Host gcc or clang required")
 failures = []
+waitcode = common + r"""
+enum { PAD_STATE_STABLE=1, PAD_STATE_FINDCTP1=2, PAD_STATE_DISCONN=0 };
+static int states[2]={3,3}, settle;
+static int padGetState(int p,int s) { (void)s; return settle && now_ms>=1500 ? PAD_STATE_STABLE : states[p]; }
+static void padStateInt2String(int s,char *out) { (void)s; out[0]=0; }
+static void DelayThread(int us) { now_ms+=us/1000; }
+"""
+waitcode += function(pad, "void waitPadReady(") + function(pad, "void waitAnyPadReady(")
+waitcode += r"""
+int main(void) {
+    waitPadReady(0,0); assert(now_ms==2000);
+    waitAnyPadReady(); assert(now_ms==3000);
+    states[0]=PAD_STATE_DISCONN; waitAnyPadReady(); assert(now_ms==3000);
+    states[0]=PAD_STATE_STABLE; waitPadReady(0,0); assert(now_ms==3000);
+    now_ms=1000; states[0]=3; settle=1; waitPadReady(0,0); assert(now_ms==1500);
+    puts("PASS: pad waits yield, expire for stuck state, and accept delayed/stable/disconnected pads");
+}
+"""
 with tempfile.TemporaryDirectory(prefix="wle-device-input-") as tmp:
-    for name, code in (("input", padcode), ("devices", devcode)):
+    for name, code in (("input", padcode), ("devices", devcode), ("pad-waits", waitcode)):
         source = Path(tmp) / f"{name}.c"
         exe = Path(tmp) / f"{name}.exe"
         source.write_text(code)
         try:
             subprocess.run([compiler, "-std=gnu11", "-O1", str(source), "-o", str(exe)], check=True)
-            subprocess.run([str(exe)], check=True)
-        except subprocess.CalledProcessError:
+            subprocess.run([str(exe)], check=True, timeout=5)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
             failures.append(name)
 if failures:
     raise SystemExit("FAILED: " + ", ".join(failures))
