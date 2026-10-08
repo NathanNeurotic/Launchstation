@@ -133,3 +133,27 @@ set. This is instrumentation, not a claimed fix. Reference RiptOPL also vendors
 an older usbd_mini rather than our current SDK full usbd, which remains a lead
 requiring a controlled comparison. Controller reconnect behavior is unknown;
 the user cannot test it now.
+
+## Console result for 110be3f: fails during synchronous USB media probe
+
+The new screenshot stops at Checking USB media..., before the directory and
+its pad diagnostic are visible; analog light goes off. The scan calls
+fileXioGetStat on usb0:/ and usb1:/ synchronously. Outer retry deadlines cannot
+interrupt that RPC. No conclusion about a specific port or IOP fault is proven.
+
+Controlled comparison: switch only the launcher's embedded USBD from the SDK
+full driver to the same SDK's usbd_mini variant. Keep USBMASS_BD, BDMFS, media
+probe and pad session code unchanged. This compares host-driver variant/resource
+footprint, NOT the older version RiptOPL vendors. Loader bootstrap's driver is
+unchanged and this comparison should be tested by launching from memory card.
+The mini variant may have different USB-class compatibility; do not merge or
+call stable without console acceptance. Two directly attached mass-storage
+devices are within its configured capacity. No source-harness can reproduce the
+observed IOP/pad failure; CI validates build/package only for this comparison.
+
+Local SDK binary inspection: full and mini IRX files are both 26,225 bytes,
+with identical text/data/BSS sizes. The difference is runtime pool sizing:
+full devices/endpoints/general TD/iso TD/hubs/ports = 32/64/128/128/8/8;
+mini = 16/32/64/64/4/4. Callback/HCD priorities remain 36/30 in both.
+This comparison reduces configured runtime pools, not executable size.
+The generated Ninja BIN2C input was checked to point at usbd_mini.irx.
