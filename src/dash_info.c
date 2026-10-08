@@ -314,7 +314,7 @@ void dashShowSystemInfo(void)
 	         (ctx->default_osdsys_path2 && strchr(ctx->default_osdsys_path2, '/')) ? strchr(ctx->default_osdsys_path2, '/') + 1 : "?");
 	if (job.rom_version < 0x230 && job.rom_version > 0x130)
 		sheetAdd(&s, SL_TEXT, "Specific KELF: B%cEXEC-SYSTEM/osd%03x.elf", ctx->rough_region, (job.rom_version + 10) & ~0x0F);
-	sheetAdd(&s, SL_HEAD, "wLaunchELF");
+	sheetAdd(&s, SL_HEAD, "Launchstation");
 	sheetAdd(&s, SL_TEXT, "Started from: %s", ctx->boot_path ? ctx->boot_path : "");
 	sheetAdd(&s, SL_TEXT, "Folder: %s", LaunchElfDir);
 	sheetAdd(&s, SL_TEXT, "Configuration: %s", LoadedConfigPath[0] ? LoadedConfigPath : "defaults (not loaded from a file)");

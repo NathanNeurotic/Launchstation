@@ -324,7 +324,8 @@ static void tls_free(CloudTls *tls)
 static int tls_open(CloudTls *tls, const char *host, const char *ca_path,
                     char *error, int error_size)
 {
-    static const unsigned char personal[] = "wLaunchELF native cloud";
+    /* Compatibility-critical cryptographic personalization: existing tokens depend on this exact byte sequence. */
+static const unsigned char personal[] = "wLaunchELF native cloud";
     unsigned char *ca_data = NULL;
     int ca_len = 0;
     u32 network_start;

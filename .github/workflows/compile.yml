@@ -246,7 +246,7 @@ jobs:
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}" --prerelease || true
           fi
-          for stale in wLaunchELF_R3Z.ELF wLaunchELF_R3Z-unpacked.ELF wLaunchELF_R3Z-Documentation.zip Launchstation.ELF.sha256; do
+          for stale in wLaunchELF_R3Z.ELF wLaunchELF_R3Z-unpacked.ELF wLaunchELF_R3Z-Documentation.zip r3LaunchELF_ATTDASH-unpacked.ELF r3LaunchELF_ATTDASH-Documentation.zip r3LaunchELF_ATTDASH-Complete.zip r3LaunchELF_ATTDASH.ELF.sha256 Launchstation.ELF.sha256; do
             gh release delete-asset "$tag" "$stale" -y >/dev/null 2>&1 || true
           done
 

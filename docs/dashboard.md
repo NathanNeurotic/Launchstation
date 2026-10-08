@@ -2,7 +2,7 @@
 
 The dashboard is the only shell of this build; the classic launch-key
 menu and the classic screens are gone. Underneath it still uses the proven
-Launchstation code: every launch goes through `ExecuteMainAction()`, and file
+underlying wLaunchELF code: every launch goes through `ExecuteMainAction()`, and file
 operations, the HDD tools and the exploit installer run the same logic as
 before. Settings, the File Browser, the Text Editor, the HDD Manager (PSX
 included), the memory card exploit installer, the information screens and
@@ -117,7 +117,7 @@ an accurate date/time or replace the footer clock. A valid RTC tick
 re-anchors the effect. Motion at 0% still holds the scene.
 
 Confirm/cancel follow the existing `GUI_Swap_Keys` setting (Settings >
-Input > Confirm button), as Launchstation always has.
+Input > Confirm button), as the classic browser did.
 
 | Button | Action |
 |--------|--------|
@@ -131,7 +131,7 @@ Input > Confirm button), as Launchstation always has.
 | START | Dashboard menu (home, refresh library, File Browser, settings, reboot IOP, power off) |
 | SELECT | Tap: switch application view (APPS). Hold: your launch keys appear; press a button to start its application |
 
-Launchstation's boot behaviour is kept: `Init_Delay` is honoured,
+Legacy boot behaviour is kept: `Init_Delay` is honoured,
 a launch key held when the delay ends starts its application, and a
 configured `LK_auto` path starts after the classic timeout unless a button
 is pressed (a countdown banner is shown).
@@ -343,7 +343,7 @@ python scripts/gen_dash_font.py path/to/Font.ttf
 
 ## Developer aid
 
-Defining `DASH_AUTOTEST` (add it to the `Launchstation` target's `defines` in
+Defining `DASH_AUTOTEST` (add it to the `wLaunchELF` target's `defines` in
 ps2.yaml) replays the timed button script in `include/dash_autotest.h` and
 seeds a sample library, so every screen can be exercised in an emulator.
 `DASH_THEME_TOUR` shows every theme preset for five seconds. Never ship

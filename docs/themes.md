@@ -362,6 +362,6 @@ video mode (NTSC/PAL/480p).
 
 ## Developer aid
 
-Defining `DASH_THEME_TOUR` (add it to the `Launchstation` target's `defines`
+Defining `DASH_THEME_TOUR` (add it to the `wLaunchELF` target's `defines`
 in ps2.yaml) shows every preset for five seconds, which makes checking
 them in an emulator easy. Never ship such a build.

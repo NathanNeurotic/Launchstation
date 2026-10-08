@@ -348,5 +348,5 @@ MG_CHALLENGE_IV=11569b681f98ebe5c9fab2cf670ee97e380a94ee9d85e69d99aa32d6ab2471b7
 - **[wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z)** by **R3Z3N / Saildot4K**: direct upstream base and major foundation of this fork. ([Ko-fi](https://ko-fi.com/r3z3n))
 - **[johnson-cooper](https://github.com/johnson-cooper)**: created this fork and handed the project over to NathanNeurotic / Ripto to maintain and improve. ([Buy Me a Coffee](https://buymeacoffee.com/attackishere))
 - **NathanNeurotic (Ripto)**: current maintainer. ([Ko-fi](https://ko-fi.com/NathanNeurotic))
-- Original Launchstation / uLaunchELF / LaunchELF maintainers, contributors, and the PS2Dev community.
+- Original wLaunchELF / uLaunchELF / LaunchELF maintainers, contributors, and the PS2Dev community.
 

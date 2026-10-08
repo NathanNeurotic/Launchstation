@@ -1754,7 +1754,7 @@ static int cfgSave(int kind, int target, const char *path)
 			j->len = snprintf(j->text, 50, "%s %s %s\n\r", ip, netmask, gw);
 	} else
 		j->text = configBuildSaveText(&j->len);
-	if (j->text == NULL || dashWorkerSubmit(kind == CFG_SAVE_NET ? "Saving network settings" : " Saving Launchstation settings",
+	if (j->text == NULL || dashWorkerSubmit(kind == CFG_SAVE_NET ? "Saving network settings" : "Saving Launchstation settings",
 	                                      DASH_JOB_SAVE | DASH_JOB_VISIBLE, cfgSaveRun, cfgSaveDone, j) < 0) {
 		free(j->text);
 		free(j);
@@ -2045,7 +2045,7 @@ static void saveClassicAs(void)
 	targets[n] = CONFIG_SAVE_TARGET_SYSCONF, paths[n++] = j->s;
 	r = dashModalMenu("Save Launchstation settings to", LoadedConfigPath[0] ? LoadedConfigPath : "not loaded from a file yet", items, n, 0);
 	if (r >= 0 && cfgSave(CFG_SAVE_CNF, targets[r], paths[r])) {
-		/* the wLaunchELF part of the session is saved now */
+		/* the classic settings portion of the session is saved now */
 		memcpy(&snap_classic, setting, sizeof(snap_classic));
 		free(snap_cnf_text);
 		snap_cnf_text = cnfSaveText();

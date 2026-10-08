@@ -142,7 +142,7 @@ def validate_output(out: Path, manifest, slugs):
         text = p.read_text(encoding="utf-8")
         if "{{" in text or "}}" in text:
             errors.append(f"{p.name}: unresolved template token")
-        if p.name != "credits.html" and ("Launchstation R3Z" in text or "wLaunchELF_R3Z" in text):
+        if p.name != "credits.html" and ("wLaunchELF R3Z" in text or "wLaunchELF_R3Z" in text):
             errors.append(f"{p.name}: stale upstream branding outside credits")
         for href in re.findall(r'href="([^"]+)"', text):
             if href.startswith(("http://", "https://", "#", "mailto:")):
