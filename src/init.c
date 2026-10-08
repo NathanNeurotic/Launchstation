@@ -1347,6 +1347,10 @@ static int pathUsesUsbMass(const char *path)
 		return 0;
 	if (!strncmp(path, "uLE:/", 5))
 		return pathUsesUsbMass(LaunchElfDir);
+#ifdef EXFAT
+	if (!strncmp(path, "mass", 4) && path[4] >= '0' && path[4] <= '9' && path[5] == ':')
+		return 0; /* a numbered BDM slot does not identify USB */
+#endif
 	if (!strncmp(path, "mass", 4) && (path[4] == ':' || (path[4] >= '0' && path[4] <= '9' && path[5] == ':')))
 		return 1;
 	if (!strncmp(path, "usb", 3) && (path[3] == ':' || (path[3] >= '0' && path[3] <= '9' && path[4] == ':')))

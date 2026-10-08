@@ -21,6 +21,7 @@ def function(text, signature):
     return text[start:pos]+'\n'
 helpers = function((root/'src/filer.c').read_text(), 'static int mapMassPathToFatFsPath(')
 helpers += function(source, 'int isPathDeviceStackLoaded(const char *path)\n{')
+helpers += function(source, 'static int pathUsesUsbMass(const char *path)\n{')
 helpers += function((root/'src/filer_device.c').read_text(), 'int ensurePathDeviceStackReady(')
 stub = r'''
 #include <assert.h>
@@ -37,6 +38,7 @@ stub = r'''
 static int have_usbd,have_usb_mass,have_bdm,have_bdmfs,USB_mass_loaded,USB_mass_max_drives;
 static int is_early_init,loads,pad_restarts,failed_mass,worker;
 static int have_HDD_modules,block_storage_stack_mode,have_ata_bd,have_cdvd;
+static char LaunchElfDir[256];
 static char bdm_irx[1],bdmfs_fatfs_irx[1],usbmass_bd_irx[1];
 static int size_bdm_irx=1,size_bdmfs_fatfs_irx=1,size_usbmass_bd_irx=1;
 static int onWorker(void) { return worker; }
@@ -64,8 +66,10 @@ int main(void) {
         snprintf(path,sizeof(path),"mass%d:/APPS/test.ELF",slot);
         assert(mapMassPathToFatFsPath(path,mapped)==0 && !strcmp(path,mapped));
         assert(isPathDeviceStackLoaded(path) && ensurePathDeviceStackReady(path) && loads==0);
+        assert(!pathUsesUsbMass(path));
     }
     assert(!isPathDeviceStackLoaded("usb0:/"));
+    assert(pathUsesUsbMass("usb1:/") && pathUsesUsbMass("mass:/"));
     assert(mapMassPathToFatFsPath("mass:/",mapped)==0 && !strcmp(mapped,"usb0:/"));
     assert(mapMassPathToFatFsPath("mass10:/",mapped)<0);
     have_bdm=0; assert(!ensurePathDeviceStackReady("mass3:/") && loads==0);
