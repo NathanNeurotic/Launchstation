@@ -22,7 +22,7 @@ assert '"File Browser", "Open the canonical wLaunchELF File Browser"' in files
 assert "dashCfg.files_mode = !dashCfg.files_mode" in files
 assert "const DashScreen dashFilesScreen = {storageEnter" in files
 assert "MASS (USB)" in devices
-assert "mass0:/" in files
+assert "mass%d:/" in files
 assert "Not connected" in devices
 assert "out[i].state == DASH_DEV_READY" in devices
 assert "devs[idx].state == DASH_DEV_READY" in files

@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         ### __Disclaimer:__
-        Issue reports must be from wLaunchELF 4.43x_isr. issues with 4.43x_isr_hdd are expected [here](https://github.com/israpps/wLaunchELF_ISR_HDD/issues)
+        Issue reports must be for r3LaunchELF_ATTDASH builds from this repository. Issues with other wLaunchELF variants belong to their respective projects.
         Issue reports for consoles with installed and enabled modchip are considered as incomplete reports (we won't ignore you, but confirmation that the issue can be reproduced on a virgin console will be appreciated).
         ## Before posting the issue confirm that you meet the below requirements.
 
@@ -18,7 +18,7 @@ body:
       description: "Check before posting"
       options:
         - label: I have checked existing [__Issue reports__](https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH/issues) for duplicates and found none
-        - label: I downloaded wLaunchELF from this repository or the [official download link](https://israpps.github.io/20210113_wLaunchELF_isr/)
+        - label: I downloaded r3LaunchELF_ATTDASH from this repository's [releases](https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases)
 
   - type: markdown
     attributes:

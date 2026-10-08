@@ -189,7 +189,13 @@ static int filerRootMcPresent(int p,int *t,int *f) {
 }
 static int filerUsbDriversLoaded(void) { return usb_loaded; }
 static int filerUsbDriveMask(void) { return usb_mask; }
+static int dashLoadingActive(void) { return 0; }
+static void dashLoadingFrame(const char *s,int d,int n) { (void)s;(void)d;(void)n; }
+static int filerUsbRefreshDriveMask(void) { return usb_mask; }
 static int isUsbMassStackLoaded(void) { return usb_loaded; }
+static void rebootIopAndReloadCoreStackSilent(void) { reset_generation++; resident=0; usb_loaded=0; }
+int dashBootDeviceBit(void);
+#define DPRINTF(...) ((void)0)
 static void loadUsbModules(void) { usb_loaded=1; }
 static int prepareUsbRootBrowse(void) { return usb_mask?0:-1; }
 static int filerShowHddUnit(int p) { (void)p; return 1; }

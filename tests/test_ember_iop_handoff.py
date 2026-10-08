@@ -23,7 +23,7 @@ def body(source: str, signature: str) -> str:
     return source[start:pos]
 
 launch = body(ember, "int LaunchEmberGame(")
-cleanup = body(actions, "int CleanUpForEmberExec(")
+cleanup = body(actions, "int CleanUpForKeepIopExec(")
 internal = body(actions, "static void cleanUpForExecInternal(")
 prepare = body(dash, "int DashPrepareKeepIopHandoff(")
 usb = body(init, "int prepareEmberUsbHandoffIop(")
