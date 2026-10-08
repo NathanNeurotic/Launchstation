@@ -116,3 +116,20 @@ input remains responsive and other enabled storage/network devices remain
 available after a failed USB probe. Repeat the failing scenario with an older
 known-good binary if available. Host tests/build/CI do not establish console
 stability; keep this candidate separate from `latest` until that evidence exists.
+
+## Console result for 5189e10: USB directory completes, wired pad lost
+
+The user reports usb0:/ files appeared and the application kept animating, but
+wired pad input died and the analog light turned off. This candidate fails
+console acceptance. Completed listDone releases the USB input gate, so this
+report is not explained by the deliberate suppression during directory IO.
+Do not reinstate blanket pad close/end/reopen RPC as a speculative recovery.
+
+Add a temporary File Browser status line showing cached PAD state/request for
+both ports, IOP reset generation and worker IO state. libpad state/request
+queries inspect EE DMA buffers; rendering uses a UI-thread snapshot and issues
+no RPC or driver load. Capture one failing-screen photo with the complete device
+set. This is instrumentation, not a claimed fix. Reference RiptOPL also vendors
+an older usbd_mini rather than our current SDK full usbd, which remains a lead
+requiring a controlled comparison. Controller reconnect behavior is unknown;
+the user cannot test it now.
