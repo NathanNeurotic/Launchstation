@@ -102,7 +102,6 @@ IMPORT_BIN2C(allowdvdv_irx);
 static u8 have_HDD_modules = 0;
 static u8 have_basic_modules = 0;
 static u8 have_filexio_ready = 0;
-static u8 have_filexio_rwbuf_tuned = 0;
 static u8 have_mc_rpc_ready = 0;
 static unsigned int iop_reset_generation = 0;
 
@@ -177,8 +176,6 @@ static u8 have_dvrfile = 0;
 static u8 is_early_init = 1;
 static u8 done_setupPowerOff = 0;
 
-#define FILEXIO_RWBUF_NET_PRIMARY (128 * 1024)
-#define FILEXIO_RWBUF_NET_FALLBACK (64 * 1024)
 static u8 ps2kbd_opened = 0;
 
 unsigned int getIopResetGeneration(void)
@@ -1043,26 +1040,8 @@ void ensureCoreIoStackReady(void)
 
 	if (!have_filexio_ready) {
 		fileXioInit();
-		/*
-		 * Use a larger FILEXIO IOP-side RW buffer for better throughput.
-		 * This mainly helps network filesystems (UDPFS/HOST) by reducing
-		 * tiny 16KB IOP write batches.
-		 */
-		if (!have_filexio_rwbuf_tuned) {
-			int rwbuf_ret = fileXioSetRWBufferSize(FILEXIO_RWBUF_NET_PRIMARY);
-			if (rwbuf_ret < 0) {
-				rwbuf_ret = fileXioSetRWBufferSize(FILEXIO_RWBUF_NET_FALLBACK);
-				if (rwbuf_ret < 0) {
-					DPRINTF(" [FILEXIO_RWB]: keeping default (ret=%d)\n", rwbuf_ret);
-				} else {
-					DPRINTF(" [FILEXIO_RWB]: set %d bytes\n", FILEXIO_RWBUF_NET_FALLBACK);
-					have_filexio_rwbuf_tuned = 1;
-				}
-			} else {
-				DPRINTF(" [FILEXIO_RWB]: set %d bytes\n", FILEXIO_RWBUF_NET_PRIMARY);
-				have_filexio_rwbuf_tuned = 1;
-			}
-		}
+		/* Keep the SDK transfer buffer: network, USB and BDM services share
+		 * the IOP heap. Do not reserve a large throughput buffer here. */
 		have_filexio_ready = 1;
 	}
 
@@ -2222,7 +2201,6 @@ static void clearIopModuleState(void)
 {
 	have_basic_modules = 0;
 	have_filexio_ready = 0;
-	have_filexio_rwbuf_tuned = 0;
 	have_mc_rpc_ready = 0;
 	have_cdvd = 0;
 	have_usbd = 0;
