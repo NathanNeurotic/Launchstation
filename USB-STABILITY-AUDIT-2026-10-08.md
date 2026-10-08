@@ -169,3 +169,20 @@ bits are present, accepting a lone drive at expiration. No new frame-time IO.
 Regression harness gives unit 0 immediately and unit 1 after one second: fails
 419e3c1 and passes corrected source. Console discovery of both formats remains
 pending; no conclusion that every missing-drive case has this cause.
+
+## UDPFS first, then two-drive USB: intermittent console freeze
+
+User queues a UDPFS file in clipboard, then starts USB; screenshot stops at
+Checking USB media... and analog light goes off. Reverse order does not seem
+to trigger it. Hardware fault is possible but not established. Preserve the
+released 58d4514 baseline and use separate codex/udpfs-usb-transition candidate.
+
+startSync drains the worker before module/probe calls; no overlapping browser
+worker request established. Resource comparison restores SDK-default fileXio
+transfer buffer instead of reserving 128KB. Upstream SetRWBufferSize frees the
+old buffer before allocation and leaves rwbuf NULL if allocation fails; our
+fallback ultimately claims keeping default even though that is not guaranteed.
+Remove tuning entirely, matching RiptOPL's absence of this call. This saves IOP
+heap relative to 128KB configuration; actual heap exhaustion on this console
+is NOT proven. Network throughput may decrease. USB host, discovery and pad
+lifecycle remain as baseline. UDPFS-first copy test remains the hardware gate.
