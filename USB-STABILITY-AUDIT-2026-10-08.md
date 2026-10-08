@@ -1,6 +1,14 @@
 # USB stability audit, 2026-10-08
 
 Published baseline: `2790d91dbada146a3d41b9634a92a7ac13f9fde0` (PR #80).
+Hardware update: the user tested the a50cb4e PR #81 ELF and reported a black
+screen. That release is withdrawn. The boot-repair candidate retains the USB,
+startup, input and theme-IO corrections but restores legacy boot pad waiting.
+Only explicit runtime `reopenPadPorts()` enables a yielding deadline. Visible
+boot-check markers identify pad, keyboard, dashboard and audio boundaries.
+The deadline change was the only PR #81 change executed during initial pad
+setup before the dashboard; its causal role remains a hypothesis until the
+repair candidate is tested on the same console.
 Historical comparison: `06c32f9f9a8b1b71e3726047bb93bf78539ce540`.
 The user reports USB freezes/non-detection across launch devices, usually booting
 from memory card. Hardware reproduction remains necessary.
@@ -16,8 +24,9 @@ from memory card. Hardware reproduction remains necessary.
 2. Runtime USB activation invokes `reopenPadPorts()`. Its two outer attempts call
    `setupPad()`, whose state waits previously had no deadline or yield. A
    permanently busy pad prevents even the first attempt from returning. Add
-   one-second yielding state deadlines and reject an unsettled state in setup.
-   Both single-port and any-port waits are covered by the executable harness.
+   one-second yielding state deadlines only during runtime reopening, and reject
+   an unsettled state in setup. Preserve boot/legacy readiness waits. The harness
+   covers runtime timeout and legacy negotiation without sleeps or a deadline.
 3. Extend USB enumeration from five to eleven checks, 200 ms apart (up to two
    seconds of scheduled waiting). The harness detects media arriving at 1.8 s
    without an IOP reset. Absent media takes longer to report failure, but avoids

@@ -12,6 +12,7 @@ u32 new_pad, new_pad_t[2];
 u32 joy_value = 0;
 static u64 rpt_time[2];
 static int rpt_count[2];
+static int pad_reopen_active;
 
 void clearPadPressState(void)
 {
@@ -351,17 +352,19 @@ void waitPadReady(int port, int slot)
 {
 	int state, lastState;
 	char stateString[16];
-	u64 deadline = Timer() + 1000;
+	u64 deadline = pad_reopen_active ? Timer() + 1000 : 0;
 
 	state = padGetState(port, slot);
 	lastState = -1;
 	while ((state != PAD_STATE_DISCONN) && (state != PAD_STATE_STABLE) && (state != PAD_STATE_FINDCTP1)) {
-		if (Timer() >= deadline)
-			return;
+		if (pad_reopen_active) {
+			if (Timer() >= deadline)
+				return;
+			DelayThread(1000);
+		}
 		if (state != lastState)
 			padStateInt2String(state, stateString);
 		lastState = state;
-		DelayThread(1000);
 		state = padGetState(port, slot);
 	}
 }
@@ -370,14 +373,10 @@ void waitPadReady(int port, int slot)
 void waitAnyPadReady(void)
 {
 	int state_1, state_2;
-	u64 deadline = Timer() + 1000;
 
 	state_1 = padGetState(0, 0);
 	state_2 = padGetState(1, 0);
 	while ((state_1 != PAD_STATE_DISCONN) && (state_2 != PAD_STATE_DISCONN) && (state_1 != PAD_STATE_STABLE) && (state_2 != PAD_STATE_STABLE) && (state_1 != PAD_STATE_FINDCTP1) && (state_2 != PAD_STATE_FINDCTP1)) {
-		if (Timer() >= deadline)
-			return;
-		DelayThread(1000);
 		state_1 = padGetState(0, 0);
 		state_2 = padGetState(1, 0);
 	}
@@ -415,16 +414,13 @@ int setupPad(void)
 			else                                                               //else
 				padSetMainMode(port, 0, PAD_MMODE_DIGITAL, PAD_MMODE_UNLOCK);  //Set Digital
 			waitPadReady(port, 0);                                             //Await completion
-			state = padGetState(port, 0);
-			if (state != PAD_STATE_DISCONN && state != PAD_STATE_STABLE && state != PAD_STATE_FINDCTP1)
-				return 0;
 		} else {                                                               //Nothing is connected to this port
 			padSetMainMode(port, 0, PAD_MMODE_DUALSHOCK, PAD_MMODE_LOCK);      //Fake DualShock
 			waitPadReady(port, 0);                                             //Await completion
-			state = padGetState(port, 0);
-			if (state != PAD_STATE_DISCONN && state != PAD_STATE_STABLE && state != PAD_STATE_FINDCTP1)
-				return 0;
 		}
+		state = padGetState(port, 0);
+		if (state != PAD_STATE_DISCONN && state != PAD_STATE_STABLE && state != PAD_STATE_FINDCTP1)
+			return 0;
 	}  //ends for (port)
 	return 1;
 }
@@ -435,14 +431,17 @@ int setupPad(void)
 //---------------------------------------------------------------------------
 int reopenPadPorts(void)
 {
-	int attempt;
+	int attempt, ok;
 
 	for (attempt = 0; attempt < 2; attempt++) {
 		padPortClose(1, 0);
 		padPortClose(0, 0);
 		padEnd();
 		DelayThread((attempt ? 100 : 50) * 1000);
-		if (setupPad()) {
+		pad_reopen_active = 1;
+		ok = setupPad();
+		pad_reopen_active = 0;
+		if (ok) {
 			clearPadPressState();
 			return 1;
 		}

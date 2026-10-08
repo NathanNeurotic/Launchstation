@@ -285,7 +285,13 @@ failures = []
 waitcode = common + r"""
 enum { PAD_STATE_STABLE=1, PAD_STATE_FINDCTP1=2, PAD_STATE_DISCONN=0 };
 static int states[2]={3,3}, settle;
-static int padGetState(int p,int s) { (void)s; return settle && now_ms>=1500 ? PAD_STATE_STABLE : states[p]; }
+static int pad_reopen_active=1;
+static int legacy_reads;
+static int padGetState(int p,int s) {
+    (void)s;
+    if(!pad_reopen_active && states[p]==3 && ++legacy_reads>=4) return PAD_STATE_STABLE;
+    return settle && now_ms>=1500 ? PAD_STATE_STABLE : states[p];
+}
 static void padStateInt2String(int s,char *out) { (void)s; out[0]=0; }
 static void DelayThread(int us) { now_ms+=us/1000; }
 """
@@ -293,11 +299,13 @@ waitcode += function(pad, "void waitPadReady(") + function(pad, "void waitAnyPad
 waitcode += r"""
 int main(void) {
     waitPadReady(0,0); assert(now_ms==2000);
-    waitAnyPadReady(); assert(now_ms==3000);
-    states[0]=PAD_STATE_DISCONN; waitAnyPadReady(); assert(now_ms==3000);
-    states[0]=PAD_STATE_STABLE; waitPadReady(0,0); assert(now_ms==3000);
+    states[0]=PAD_STATE_DISCONN; waitAnyPadReady(); assert(now_ms==2000);
+    states[0]=PAD_STATE_STABLE; pad_reopen_active=0; waitPadReady(0,0); assert(now_ms==2000);
+    pad_reopen_active=1;
     now_ms=1000; states[0]=3; settle=1; waitPadReady(0,0); assert(now_ms==1500);
-    puts("PASS: pad waits yield, expire for stuck state, and accept delayed/stable/disconnected pads");
+    now_ms=1000; settle=0; pad_reopen_active=0; legacy_reads=0;
+    waitPadReady(0,0); assert(now_ms==1000 && legacy_reads==4);
+    puts("PASS: runtime pad wait yields/expires; legacy ready/disconnected handling is preserved");
 }
 """
 autocode = devcode[:devcode.index("int main(void)")] + r"""
