@@ -558,9 +558,7 @@ GSTEXTURE *dashThemeTextureFile(const char *path, int max_w, int max_h)
 		if (theme_slots[i].state == TS_EMPTY && free_i < 0)
 			free_i = i;
 	}
-	/* A loading scene may surround driver startup after the worker drained.
-	 * Drawing it must not start fresh file IO against that changing stack. */
-	if (free_i < 0 || dashLoadingActive() || !isPathDeviceStackLoaded(path))
+	if (free_i < 0 || !isPathDeviceStackLoaded(path))
 		return NULL;
 
 	j = (ThemeTexJob *)malloc(sizeof(ThemeTexJob));
