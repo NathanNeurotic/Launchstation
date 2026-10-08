@@ -45,11 +45,18 @@ assert "dashSoundShutdown();" in run_misc
 assert run_misc.index("dashSoundShutdown();") < run_misc.index("ExecuteMainAction(path, &exec_ctx);")
 assert "afterMiscCommand();" in run_misc
 
-# Ordinary ELF launches need the same teardown. A failed launch returns and
-# explicitly reinitializes the dashboard audio service/BGM.
-assert "dashSoundShutdown();" in launch_app
-assert launch_app.index("dashSoundShutdown();") < launch_app.index("ExecuteMainAction(path, &exec_ctx);")
-assert launch_app.index("dashSoundInit();") > launch_app.index("ExecuteMainAction(path, &exec_ctx);")
+# Failed validation must preserve the audsrv client and uploaded samples.
+assert "dashSoundShutdown();" not in launch_app
+assert launch_app.index("dashSoundSuspend();") < launch_app.index("ExecuteMainAction(path, &exec_ctx);")
+assert launch_app.index("dashSoundMaintain();") > launch_app.index("ExecuteMainAction(path, &exec_ctx);")
 assert launch_app.index("dashBgmStart();") > launch_app.index("ExecuteMainAction(path, &exec_ctx);")
+after_misc = body(dash, "static void afterMiscCommand(")
+assert "dashSoundShutdown();" not in after_misc
+assert "dashSoundMaintain();" in after_misc
+actions = (root / "src/main_actions.c").read_text(encoding="utf-8")
+cleanup = body(actions, "static void cleanUpForExecInternal(")
+assert cleanup.index("dashSoundShutdown();") < cleanup.index("free(setting);")
+assert "next_disc_poll = last_frame_ms + 750;" in dash
+assert "else if (now >= next_device_poll)" in dash
 
 print("PASS: poweroff is bounded and every leaving handoff stops dashboard audio")

@@ -9,6 +9,7 @@
 #include "main_history.h"
 #include "main_info_screens.h"
 #include "dash.h"
+#include "dash_sound.h"
 
 /* Optional observer called right before an ELF is handed to the loader
  * (used by the dashboard to maintain its "recent" list). */
@@ -18,6 +19,7 @@ void (*mainActionLaunchHook)(const char *path) = NULL;
 //------------------------------
 static void cleanUpForExecInternal(int end_pad_rpc)
 {
+	dashSoundShutdown(); /* the launch is now committed */
 	clrScr(GS_SETREG_RGBA(0x00, 0x00, 0x00, 0));
 	drawScr();
 	clrScr(GS_SETREG_RGBA(0x00, 0x00, 0x00, 0));

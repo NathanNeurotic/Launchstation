@@ -200,6 +200,21 @@ void dashSoundShutdown(void)
 	bgm_data = NULL;
 }
 
+void dashSoundSuspend(void)
+{
+	int i;
+
+	if (!soundAlive() || dashIopParked())
+		return;
+	/* Keep the RPC client and samples valid until the launch is committed.
+	 * audsrv_quit() destroys client state that audsrv_init() cannot recreate
+	 * in the same IOP session. Failed launches must be able to resume music. */
+	for (i = 0; i < 14; i++)
+		audsrv_adpcm_set_volume_and_pan(i, 0, 0);
+	if (bgm_channel >= 0)
+		audsrv_adpcm_set_volume_and_pan(bgm_channel, 0, 0);
+}
+
 /* voice map: boot..disconnect on 0..7, cursor rotates over 8..13 (OPL-style) */
 #define SND_CURSOR_CH_BASE 8
 #define SND_CURSOR_CH_COUNT 6
@@ -211,7 +226,7 @@ void dashSoundApplyVolume(void)
 	if (!soundAlive())
 		return;
 	for (i = 0; i < 8 + SND_CURSOR_CH_COUNT; i++)
-		audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound_vol, 0);
+		audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound ? dashCfg.sound_vol : 0, 0);
 }
 
 void dashSoundPlay(int id)

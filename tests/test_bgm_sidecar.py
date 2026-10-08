@@ -38,9 +38,10 @@ typedef struct { void *buffer; } audsrv_adpcm_t;
 #define MAX_PATH 256
 #define BGM_MAX_BYTES (1024*1024)
 #define DASH_BGM_CHANNEL 23
+#define SND_CURSOR_CH_COUNT 6
 #define FIO_O_RDONLY 1
 #define DASH_TOAST_WARN 1
-static struct { int sound,bgm,bgm_vol; } dashCfg={1,1,80};
+static struct { int sound,bgm,bgm_vol,sound_vol; } dashCfg={1,1,80,60};
 static audsrv_adpcm_t bgm_sample;
 static int bgm_loaded,bgm_tried,bgm_channel=-1,sound_ready=1;
 static void *bgm_data;
@@ -83,7 +84,7 @@ static int audsrv_ch_play_adpcm(int ch,audsrv_adpcm_t *s) {
     assert(ch==23 && s->buffer==bgm_data && bgm_data); plays++; return ch;
 }
 static void audsrv_adpcm_set_volume_and_pan(int ch,int v,int p) {
-    assert(ch==23 && v>=0 && v<=100 && p==0); volumes++;
+    assert(ch>=0 && ch<=23 && v>=0 && v<=100 && p==0); volumes++;
 }
 static int audsrv_adpcm_init(void) { hard_stops++; return 0; }
 static int audsrv_stop_audio(void) { hard_stops++; return 0; }
@@ -99,7 +100,8 @@ static int dashSoundInit(void) {
 """
 for signature in ("static int loadBgmSidecar(", "void dashBgmSetVolume(",
                   "void dashBgmStop(", "void dashBgmStart(",
-                  "void dashSoundShutdown(", "void dashSoundMaintain("):
+                  "void dashSoundShutdown(", "void dashSoundMaintain(",
+                  "void dashSoundSuspend(", "void dashSoundApplyVolume("):
     code += function(signature)
 code += r"""
 static void reset(void) {
@@ -116,6 +118,11 @@ int main(void) {
     assert(bgm_loaded && bgm_channel==23 && allocs==1 && opens==1 && uploads==1 && plays==1);
     assert(!strcmp(opened,"usb0:/BOOT/BGM.ADP")); /* not the imported config's folder */
     for(int i=0;i<20;i++)dashSoundMaintain(); assert(opens==1 && plays==1);
+    /* Returning from a failed launch must not quit/reload a resident server. */
+    int quits=quit_calls;
+    dashSoundSuspend(); dashSoundMaintain(); dashSoundApplyVolume(); dashBgmStart();
+    assert(quit_calls==quits && !hard_stops && opens==1 && uploads==1 && plays==1);
+    assert(soundAlive() && allocs==1 && bgm_channel==23);
     dashCfg.bgm=0; dashBgmStop(); dashCfg.bgm=1; dashBgmStart();
     assert(opens==1 && plays==1 && volumes>1);
     /* Missing file is silent, attempted once, and explicit off/on retries. */
