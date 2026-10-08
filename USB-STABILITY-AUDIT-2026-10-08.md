@@ -23,10 +23,26 @@ from memory card. Hardware reproduction remains necessary.
    without an IOP reset. Absent media takes longer to report failure, but avoids
    the much more disruptive reset/reload cycle. Successful initial checks return
    immediately.
+4. Startup loaded USB before other device families. A later stack reset could
+   remove already loaded devices; MX4SIO activation could clear USB discovery.
+   Run USB discovery last and replay the startup pass once if its IOP generation
+   changed. The harness reproduces a later network-loader reset and MX4SIO cache
+   invalidation, and checks earlier storage plus USB are available afterward.
+5. Dashboard input polling and flushing called `waitAnyPadReady()` even though
+   the read routine already skips unsettled ports. Remove these waits from the
+   dashboard frame path; busy controllers no longer stall drawing. Retain bounded
+   waits for explicit setup/legacy callers. The harness checks busy-port polling
+   and flushing use no state waits, alongside existing repeat/held-action tests.
+6. Loading overlays draw the normal scene, whose uncached theme textures could
+   immediately submit worker file IO after driver startup had drained the worker.
+   During a loading overlay, allow cached textures but defer new theme-image IO.
+   A production-function harness verifies no job is submitted while loading and
+   that loading resumes afterward.
 
 Run `python tests/test_device_input.py 2790d91` to exercise the same assertions
-against the published baseline: the absent-media assertion fails and the stuck
-pad harness times out. Run without a revision to test the candidate.
+against the published baseline: absent-media, dashboard input, startup ordering
+and theme-IO assertions fail, and the stuck pad harness times out. Run without a
+revision to test the candidate.
 
 ## Broader audit findings and limits
 
@@ -36,9 +52,8 @@ pad harness times out. Run without a revision to test the candidate.
   whole-IOP reset for absent USB media. Preserve existing module order and the
   hardware-motivated pad rebind pending console testing.
 - The dashboard's periodic USB poll reads a cache; it does not perform fresh
-  discovery. MX4SIO activation invalidates that cache, and a later network-stack
-  switch can reset earlier loaded drivers. These can explain disappearing device
-  listings, but are separate from the reproduced absent-media reset. Explicit
+  discovery. Startup now refreshes after cache invalidation and replays a changed
+  IOP generation. Fresh discovery for idle hotplug remains separate; explicit
   activation/browsing refreshes discovery. Continuous synchronous rescans would
   add blocking storage RPCs to the frame loop and are not introduced here.
 - The shared `massN:` namespace is not a reliable USB identity. Keep USB-specific

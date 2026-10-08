@@ -588,37 +588,43 @@ void dashDevicesStartForPath(const char *path)
 		startSync(mount, "Starting devices");
 }
 
-/* Load the drivers for every device family marked auto-start that is not
- * already running. Never unloads anything: "off" only means "not at
- * startup" — the DEVICES screen can still start a device by hand. */
+/* Load the requested device families. A stack switch can reset earlier
+ * loaders, so replay once after a changed IOP generation. USB discovery runs
+ * last because another BDM loader may invalidate its mount cache. */
 void dashDevicesAutoProbe(void)
 {
 	const int mask = safeAutoStartMask();
+	int pass;
 
-	if ((mask & DASH_DEVA_USB) && !isUsbMassStackLoaded())
-		probeMount("usb:");
-	if ((mask & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
-		probeMount("hdd0:");
+	for (pass = 0; pass < 2; pass++) {
+		unsigned int generation = getIopResetGeneration();
+		if ((mask & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
+			probeMount("hdd0:");
 #ifdef EXFAT
-	if ((mask & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
-		probeMount("ata0:");
+		if ((mask & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
+			probeMount("ata0:");
 #endif
 #ifdef MMCE
-	if ((mask & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))
-		probeMount("mmce0:");
+		if ((mask & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))
+			probeMount("mmce0:");
 #endif
 #ifdef MX4SIO
-	if ((mask & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
-		probeMount("mx4sio:");
+		if ((mask & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
+			probeMount("mx4sio:");
 #endif
 #ifdef ILINK
-	if ((mask & DASH_DEVA_ILINK) && !isPathDeviceStackLoaded("ilink:"))
-		probeMount("ilink:");
+		if ((mask & DASH_DEVA_ILINK) && !isPathDeviceStackLoaded("ilink:"))
+			probeMount("ilink:");
 #endif
 #ifdef UDPFS
-	if ((mask & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
-		probeMount("udpfs:");
+		if ((mask & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
+			probeMount("udpfs:");
 #endif
+		if (mask & DASH_DEVA_USB)
+			probeMount("usb:");
+		if (getIopResetGeneration() == generation)
+			break;
+	}
 }
 
 /* The DASH_DEVA_* bit of the device the ELF was launched from, 0 when it
