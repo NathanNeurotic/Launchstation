@@ -91,7 +91,7 @@ Drivers load on demand for maximum compatibility and initial boot speed.
 - All drivers besides core lazy loading for faster boot and support of all devices.
 - FTP and PS2Link network services are included in the standard build and start only when requested from Tools > FTP / Network.
 - Create and Extract PSU options so user knows what will happen
-- Native dashboard image viewer for PNG, JPG and JPEG files opened directly from the File Browser.
+- Native dashboard image viewer for PNG, JPG and JPEG files opened directly from the File Browser, with previous/next browsing, rotation, zoom/pan, fullscreen and slideshow controls.
 - Extra file extensions for Text Editor ShortCuts
 - Timestamp manipulation feature to fix the date of any memory card folder containing any icon-based exploit _(\*tuna)_
 - Launch KELFs (encrypted elfs)

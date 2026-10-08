@@ -1115,7 +1115,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		if (screens[section]->update)
 			screens[section]->update(dt);
 
-		/* results of background work that change what screens point at */
+		/* Results of background work that change what screens point at. */
 		applyScanResult();
 		dashFilesPoll();
 		/*
@@ -1149,11 +1149,12 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 				next_device_poll = now + 250;
 			}
 		}
+		idle_ms = dashInputIdleMs();
 		dashSoundMaintain();
-		dashThemeSavePending((int)dashInputIdleMs());
+		dashThemeSavePending((int)idle_ms);
 		if (!boot_phase)
-			dashArtStep((int)dashInputIdleMs());
-		if (dashInputIdleMs() > 6000 && dashArtTakeDirty())
+			dashArtStep((int)idle_ms);
+		if (idle_ms > 6000 && dashArtTakeDirty())
 			dashLibSaveCache();
 		dashStoreFlush(0);
 

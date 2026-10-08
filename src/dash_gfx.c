@@ -579,6 +579,26 @@ void dashTexDrawUV(GSTEXTURE *tex, float x, float y, float w, float h,
 	texQuad(tex, x, y, x + w, y + h, u1, v1, u2, v2, gsColor(tint));
 }
 
+void dashTexDrawQuadUV(GSTEXTURE *tex,
+                       float x1, float y1, float u1, float v1,
+                       float x2, float y2, float u2, float v2,
+                       float x3, float y3, float u3, float v3,
+                       float x4, float y4, float u4, float v4,
+                       DashColor tint)
+{
+	if (tex == NULL || tint.a == 0 || g_alpha <= 0.0f)
+		return;
+	dashSpriteBatchEnd();
+	if (!dashTexBind(tex))
+		return;
+	gsKit_prim_quad_texture_3d(gsGlobal, tex,
+	                          SX(x1), SY(y1), 0, u1, v1,
+	                          SX(x2), SY(y2), 0, u2, v2,
+	                          SX(x3), SY(y3), 0, u3, v3,
+	                          SX(x4), SY(y4), 0, u4, v4,
+	                          gsColor(tint));
+}
+
 void dashTexDraw(GSTEXTURE *tex, float x, float y, float w, float h, DashColor tint)
 {
 	if (tex == NULL)

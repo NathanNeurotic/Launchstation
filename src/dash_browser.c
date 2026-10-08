@@ -89,6 +89,43 @@ static int isDir(const FILEINFO *f)
 	return (f->stats.AttrFile & sceMcFileAttrSubdir) != 0;
 }
 
+static int isImageFile(const FILEINFO *f)
+{
+	if (f == NULL || isDir(f))
+		return 0;
+	return genCmpFileExt(f->name, "PNG") ||
+	       genCmpFileExt(f->name, "JPG") ||
+	       genCmpFileExt(f->name, "JPEG");
+}
+
+static int nextImageIndex(int from, int dir)
+{
+	int step;
+
+	if (fb.n <= 1)
+		return -1;
+	for (step = 1; step < fb.n; step++) {
+		int idx = (from + dir * step) % fb.n;
+		if (idx < 0)
+			idx += fb.n;
+		if (isImageFile(&fb.files[idx]))
+			return idx;
+	}
+	return -1;
+}
+
+static void revealSelection(void)
+{
+	if (fb.sel < fb.top)
+		fb.top = fb.sel;
+	else if (fb.sel >= fb.top + FB_ROWS)
+		fb.top = fb.sel - FB_ROWS + 1;
+	if (fb.top < 0)
+		fb.top = 0;
+	if (fb.n > FB_ROWS && fb.top > fb.n - FB_ROWS)
+		fb.top = fb.n - FB_ROWS;
+}
+
 static u64 fbFileBytes(const FILEINFO *f)
 {
 	return ((u64)f->stats.Reserve2 << 32) | f->stats.FileSizeByte;
@@ -511,8 +548,30 @@ static void activate(void)
 		openDir(path, NULL);
 		return;
 	}
-	if (genCmpFileExt(path, "PNG") || genCmpFileExt(path, "JPG") || genCmpFileExt(path, "JPEG")) {
-		dashShowImageViewer(path, f->name);
+	if (isImageFile(f)) {
+		DashImageViewerState iv;
+		int nav;
+
+		memset(&iv, 0, sizeof(iv));
+		iv.slide_seconds = 5;
+		for (;;) {
+			int next;
+
+			f = &fb.files[fb.sel];
+			if (!fullPath(f, path, sizeof(path)))
+				break;
+			nav = dashShowImageViewer(path, f->name, &iv);
+			if (nav == DASH_IMAGE_EXIT)
+				break;
+			next = nextImageIndex(fb.sel, nav);
+			if (next < 0) {
+				iv.slideshow = 0;
+				dashToast(DASH_TOAST_INFO, "No other images in this folder");
+				break;
+			}
+			fb.sel = next;
+			revealSelection();
+		}
 		return;
 	}
 	if (IsTextEditorFileType(path)) {
