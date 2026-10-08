@@ -393,6 +393,8 @@ static int probeUsbMediaAnimated(void)
 	int attempt, mask;
 
 	for (attempt = 0; attempt < DASH_USB_PROBE_ATTEMPTS; attempt++) {
+		if (dashLoadingActive())
+			dashLoadingStatus("Checking USB media...", attempt + 1, DASH_USB_PROBE_ATTEMPTS);
 		mask = filerUsbRefreshDriveMask();
 		if (mask)
 			return 1;
@@ -560,6 +562,10 @@ void dashDevicesStartForPath(const char *path)
 
 	if (path == NULL || !strncmp(path, "mc", 2) || isPathDeviceStackLoaded(path))
 		return;
+#ifdef EXFAT
+	if (!strncmp(path, "mass", 4) && path[4] >= '0' && path[4] <= '9' && path[5] == ':')
+		return; /* mount order cannot identify which driver should be started */
+#endif
 	if (!strncmp(path, "mass", 4) || !strncmp(path, "usb", 3))
 		mount = "usb:";
 	else if (!strncmp(path, "hdd", 3))

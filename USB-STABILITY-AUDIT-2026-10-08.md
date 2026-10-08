@@ -13,6 +13,35 @@ Historical comparison: `06c32f9f9a8b1b71e3726047bb93bf78539ce540`.
 The user reports USB freezes/non-detection across launch devices, usually booting
 from memory card. Hardware reproduction remains necessary.
 
+## Runtime USB report and shared BDM repair
+
+The boot-repair candidate reached the File Browser on the user's console, then
+froze at Starting MASS (USB). The user observed the analog LED cycle off/on/off.
+Connected devices: two USB disks (exFAT and FAT32), exFAT MX4SIO, internal ATA
+exFAT and UDPFS. This localizes the next failure to runtime USB activation;
+it does not establish the exact blocking RPC.
+
+Compared the separate C++ RiptOPL checkout at
+49e4a02ff78b127880ee63d493deb7b85c16471f: USB mass activation does not close/end
+the wired pad session. Remove our USB-triggered `reopenPadPorts()` and the unused
+duplicate teardown helper. A state-poll deadline never protected blocking
+`padPortClose`/`padEnd` RPCs. Also forbid module activation from the file worker.
+Stages now name core IO, USBD, BDM, BDMFS, USBMASS_BD and media checking before
+blocking work, so a remaining freeze identifies its last stage.
+
+Found numbered `massN:` paths being rewritten to `usbN:` and having USB residency
+required. In EXFAT builds, preserve numbered shared-BDM paths through normalization,
+directory enumeration and readiness checks. Do not scan/start USB to access an
+already numbered slot. The unnumbered legacy `mass:` alias remains USB discovery
+for compatibility, and explicit `usbN:` remains USB-specific. Generic numbered
+slots do not establish backing transport or media presence; their actual open
+must succeed. A missing namespace is not grounds to guess and load USB.
+
+Executable tests exercise all ten numbered slots, missing shared-core readiness,
+USB core reuse, repeated activation, failed block-driver load, and worker rejection.
+They verify separation of namespace and lifecycle, not physical exFAT/FAT32 IO.
+Same-console acceptance with the full listed device set is pending.
+
 ## Reproduced source failures and candidate fixes
 
 1. Explicit USB activation reset the whole IOP after only 800 ms of failed

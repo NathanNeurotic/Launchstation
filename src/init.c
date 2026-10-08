@@ -1381,43 +1381,20 @@ void loadDs34InputModules(void)
 //endfunc loadDs34InputModules
 //---------------------------------------------------------------------------
 #endif
-static int refreshPadSessionAfterUsb(void)
-{
-	int ok;
-
-	/* Lazy USB activation has produced real-hardware sessions where an
-	 * implicit padPortOpen refresh returns but wired input remains dead.
-	 * Tear down the EE libpad RPC client explicitly and rebind it against the
-	 * still-running PADMAN. One retry covers the short post-USB window without
-	 * resetting the IOP or disturbing the mounted storage stack. */
-	padPortClose(1, 0);
-	padPortClose(0, 0);
-	padEnd();
-	DelayThread(5000);
-	ok = setupPad();
-	if (!ok) {
-		padPortClose(1, 0);
-		padPortClose(0, 0);
-		padEnd();
-		DelayThread(20000);
-		ok = setupPad();
-	}
-	clearPadPressState();
-	return ok;
-}
-
-//------------------------------
-//endfunc refreshPadSessionAfterUsb
-//---------------------------------------------------------------------------
 void loadUsbModules(void)
 {
 	int ret, ID __attribute__((unused));
-	int had_usb_mass = have_usb_mass;
+
+	/* Worker jobs only use resident drivers. USB activation must not load
+	 * modules or reconfigure an EE RPC client while the UI is using it. */
+	if (iopResetBlocked != NULL && iopResetBlocked())
+		return;
 
 	if (!have_usbd || !have_usb_mass)
-		showLoadingModulesMsg("usb");
-
+		showLoadingModulesMsg("USB core IO");
 	ensureCoreIoStackReady();
+	if (!have_usbd)
+		showLoadingModulesMsg("USB USBD");
 	loadUsbDModule();
 
 #ifdef EXFAT
@@ -1428,6 +1405,7 @@ void loadUsbModules(void)
 		 * There is no dedicated external override path in current config.
 		 */
 		if (!have_bdm) {
+			showLoadingModulesMsg("USB BDM");
 			ID = SifExecModuleBuffer(bdm_irx, size_bdm_irx, 0, NULL, &ret);
 			DPRINTF(" [BDM] ID=%d, ret=%d\n", ID, ret);
 			have_bdm = (ID >= 0 && ret >= 0);
@@ -1435,6 +1413,7 @@ void loadUsbModules(void)
 		if (!have_bdm)
 			loaded_ok = 0;
 		if (loaded_ok && !have_bdmfs) {
+			showLoadingModulesMsg("USB BDMFS");
 			ID = SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, &ret);
 			DPRINTF(" [BDMFS_FATFS] ID=%d, ret=%d\n", ID, ret);
 			have_bdmfs = (ID >= 0 && ret >= 0);
@@ -1444,6 +1423,7 @@ void loadUsbModules(void)
 		if (!have_bdmfs)
 			loaded_ok = 0;
 		if (loaded_ok) {
+			showLoadingModulesMsg("USB USBMASS_BD");
 			ID = SifExecModuleBuffer(usbmass_bd_irx, size_usbmass_bd_irx, 0, NULL, &ret);
 			DPRINTF(" [USBMASS_BD] ID=%d, ret=%d\n", ID, ret);
 			if (ID < 0 || ret < 0)
@@ -1476,15 +1456,8 @@ void loadUsbModules(void)
 	loadDs34Modules();
 #endif
 
-	/*
-	 * Keep USB demand-driven, but repair the wired PAD session after the
-	 * first runtime USB-mass activation with a deterministic EE RPC rebind.
-	 */
-	if (!had_usb_mass && have_usb_mass && !is_early_init) {
-		DPRINTF(" [USB]: rebinding PAD RPC/ports after lazy USB activation\n");
-		if (!reopenPadPorts())
-			DPRINTF(" [USB]: PAD rebind failed after lazy USB activation\n");
-	}
+	/* Adding a BDM block driver does not replace PADMAN. Preserve the live
+	 * wired-pad session, as in RiptOPL, instead of closing/reopening RPC. */
 }
 //------------------------------
 //endfunc loadUsbModules
@@ -2366,6 +2339,10 @@ int isPathDeviceStackLoaded(const char *path)
 		return 0;
 	if (!strncmp(path, "mc", 2))
 		return 1; /* mcman/mcserv are part of the core stack */
+#ifdef EXFAT
+	if (!strncmp(path, "mass", 4) && path[4] >= '0' && path[4] <= '9' && path[5] == ':')
+		return have_bdm && have_bdmfs; /* shared namespace, not USB identity */
+#endif
 	if (!strncmp(path, "mass", 4) || !strncmp(path, "usb", 3))
 		return have_usbd && have_usb_mass;
 	if (!strncmp(path, "hdd", 3) || !strncmp(path, "pfs", 3))
