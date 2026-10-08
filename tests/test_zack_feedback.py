@@ -18,7 +18,7 @@ assert "visible_sections[] = {DASH_SEC_HOME, DASH_SEC_APPS, DASH_SEC_FILES, DASH
 assert "dashAdjacentSection(section, -1)" in main and "dashAdjacentSection(section, 1)" in main
 assert "dashVisibleSectionCount()" in ui and "tab_w * vcount" in ui
 
-assert '"File Browser", "Open the canonical wLaunchELF File Browser"' in files
+assert '"File Browser", "Open the Launchstation File Browser"' in files
 assert "dashCfg.files_mode = !dashCfg.files_mode" in files
 assert "const DashScreen dashFilesScreen = {storageEnter" in files
 assert "MASS (USB)" in devices
