@@ -1086,6 +1086,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	while (1) {
 		float dt = dashVisualUpdate();
 		u64 now = Timer();
+		u64 idle_ms;
 
 		if (dashGfxCheckScreenChange())
 			dashArtInvalidateVram();
