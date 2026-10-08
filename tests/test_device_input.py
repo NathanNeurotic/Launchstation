@@ -200,8 +200,12 @@ static int filerUsbDriversLoaded(void) { return usb_loaded; }
 static int filerUsbDriveMask(void) { return usb_snapshot_valid?usb_mask:0; }
 static int dashLoadingActive(void) { return 0; }
 static void dashLoadingFrame(const char *s,int d,int n) { (void)s;(void)d;(void)n; }
-static u64 usb_media_ready;
-static int filerUsbRefreshDriveMask(void) { usb_snapshot_valid=1; return now_ms>=usb_media_ready?usb_mask:0; }
+static u64 usb_media_ready, usb_second_ready;
+static int filerUsbRefreshDriveMask(void) {
+    usb_snapshot_valid=1;
+    if(usb_second_ready && now_ms>=usb_second_ready) usb_mask|=2;
+    return now_ms>=usb_media_ready?usb_mask:0;
+}
 static int isUsbMassStackLoaded(void) { return usb_loaded; }
 static void rebootIopAndReloadCoreStackSilent(void) { reset_generation++; resident=0; usb_loaded=0; }
 int dashBootDeviceBit(void);
@@ -240,6 +244,10 @@ int main(void) {
     assert(!result && reset_generation==gen && resident==63);
     usb_mask=1; usb_media_ready=now_ms+1800; probe("usb:");
     assert(result && reset_generation==gen && resident==63);
+    usb_mask=1; usb_media_ready=0; usb_second_ready=now_ms+1000;
+    probe("usb:");
+    assert(result && usb_mask==3 && now_ms>=usb_second_ready);
+    usb_second_ready=0;
     usb_media_ready=0; usb_mask=0;
     dashDevicesInit(); resident=63;
     const char *mounts[]={"hdd0:","ata0:","mx4sio:","mmce0:","mmce1:","udpfs:"};

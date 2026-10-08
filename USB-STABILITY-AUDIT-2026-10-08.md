@@ -157,3 +157,15 @@ full devices/endpoints/general TD/iso TD/hubs/ports = 32/64/128/128/8/8;
 mini = 16/32/64/64/4/4. Callback/HCD priorities remain 36/30 in both.
 This comparison reduces configured runtime pools, not executable size.
 The generated Ninja BIN2C input was checked to point at usbd_mini.irx.
+
+## Mini host build console pass and missing second USB
+
+User reports 419e3c1 usable but only one USB entry. Which filesystem is visible
+is unknown. Confirmed source bug: probeUsbMediaAnimated returns on the first
+nonzero mask; activate then bypasses prepareUsbRootBrowse and directly opens the
+first cached unit. The second independently enumerating drive can be missed.
+Keep the existing 20-pass/200ms bounded window until both supported USB unit
+bits are present, accepting a lone drive at expiration. No new frame-time IO.
+Regression harness gives unit 0 immediately and unit 1 after one second: fails
+419e3c1 and passes corrected source. Console discovery of both formats remains
+pending; no conclusion that every missing-drive case has this cause.

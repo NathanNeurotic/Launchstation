@@ -390,13 +390,15 @@ static int probeRoot(const char *path, int wait_ms)
 
 static int probeUsbMediaAnimated(void)
 {
-	int attempt, mask;
+	int attempt, mask = 0;
 
 	for (attempt = 0; attempt < DASH_USB_PROBE_ATTEMPTS; attempt++) {
 		if (dashLoadingActive())
 			dashLoadingStatus("Checking USB media...", attempt + 1, DASH_USB_PROBE_ATTEMPTS);
 		mask = filerUsbRefreshDriveMask();
-		if (mask)
+		/* Both physical USB ports enumerate independently. A first mount
+		 * must not end discovery before the second has had time to arrive. */
+		if ((mask & 3) == 3)
 			return 1;
 		if (attempt == DASH_USB_PROBE_ATTEMPTS - 1)
 			break;
@@ -407,7 +409,7 @@ static int probeUsbMediaAnimated(void)
 			dashLoadingFrame("Waiting for USB storage...", attempt + 1, DASH_USB_PROBE_ATTEMPTS);
 		DelayThread(DASH_USB_PROBE_DELAY_US);
 	}
-	return 0;
+	return mask != 0;
 }
 
 static int probeMount(const char *m)
