@@ -10,7 +10,7 @@ for label in (
     '"Sync all cards"', '"Automatic sync"', '"IGR helper"',
     '"After IGR, open"', '"Language"', '"Backups per card"',
     '"Backup format"', '"Google account"', '"Check for updates"',
-    '"About r3LaunchELF_ATTDASH"'
+    '"About Launchstation"'
 ):
     assert label in settings
 
@@ -38,7 +38,7 @@ assert '"MMCE could not be started"' in tools
 assert "void dashToolsSyncAllMmceCards(void)" in tools
 assert "mmceBackupAllCards" in tools
 assert "cloudGoogleSyncBackupRoot" in tools
-assert "/repos/NathanNeurotic/r3LaunchELF_ATTDASH/releases/tags/latest" in tools
+assert "/repos/NathanNeurotic/Launchstation/releases/tags/latest" in tools
 assert '"WLE-UPDATE-CA.PEM"' in tools
 assert "releaseJsonString" in tools
 

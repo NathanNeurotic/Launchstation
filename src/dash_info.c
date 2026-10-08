@@ -175,13 +175,13 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_TEXT, "and others in the PS2Dev community");
 	sheetAdd(&s, SL_HEAD, "Releases");
 	sheetAdd(&s, SL_TEXT, "github.com/ps2homebrew/wLaunchELF/releases");
-	sheetAdd(&s, SL_TEXT, "github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases");
+	sheetAdd(&s, SL_TEXT, "github.com/NathanNeurotic/Launchstation/releases");
 	sheetAdd(&s, SL_GAP, NULL);
 	sheetAdd(&s, SL_MUTED, "Ancestral project: LaunchELF v3.41 by Mirakichi");
 	sheetAdd(&s, SL_MUTED, "Dashboard text: Roboto (Apache License 2.0)");
 	{
 		char title[64];
-		snprintf(title, sizeof(title), "wLaunchELF %s", ULE_VERSION);
+		snprintf(title, sizeof(title), "Launchstation %s", ULE_VERSION);
 		sheetShow(DI_INFO, title, ULE_VERDATE, &s);
 	}
 }
@@ -263,10 +263,10 @@ void dashShowBuildInfo(void)
 #endif
 #endif
 	sheetAdd(&s, SL_GAP, NULL);
-	sheetAdd(&s, SL_MUTED, "github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases");
+	sheetAdd(&s, SL_MUTED, "github.com/NathanNeurotic/Launchstation/releases");
 	{
 		char sub[64];
-		snprintf(sub, sizeof(sub), "wLaunchELF %s (%s)", ULE_VERSION, GIT_HASH);
+		snprintf(sub, sizeof(sub), "Launchstation %s (%s)", ULE_VERSION, GIT_HASH);
 		sheetShow(DI_CHIP, "Build information", sub, &s);
 	}
 }

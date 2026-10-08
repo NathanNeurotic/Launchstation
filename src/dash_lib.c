@@ -598,7 +598,7 @@ char *dashLibBuildCache(int *out_len)
 	buf = (char *)malloc(cap);
 	if (buf == NULL)
 		return NULL;
-	len += snprintf(buf + len, cap - len, "# wLaunchELF dashboard application cache (safe to delete)\r\n");
+	len += snprintf(buf + len, cap - len, "# Launchstation dashboard application cache (safe to delete)\r\n");
 	for (i = 0; i < dashAppCount; i++) {
 		DashApp *a = &dashApps[i];
 		if (a->flags & DASH_APP_TRANSIENT)

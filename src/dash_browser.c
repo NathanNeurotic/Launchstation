@@ -590,7 +590,7 @@ static void activate(void)
 		launchPath(path, 0);
 		return;
 	}
-	dashModalMessage(DI_FILE, f->name, "r3LaunchELF_ATTDASH cannot open this type of file. Use the menu to copy, move or rename it.", path);
+	dashModalMessage(DI_FILE, f->name, "Launchstation cannot open this type of file. Use the menu to copy, move or rename it.", path);
 }
 
 //--------------------------------------------------------------
@@ -1833,7 +1833,7 @@ static void actionsMenu(void)
 	if (LaunchArgsPending())
 		ADD(DI_CLOSE, "Clear launch arguments", NULL, 0, F_CLEAR_ARGS);
 	ADD(DI_STAR, "Bookmarks...", "PathPad", 0, F_BOOKMARK);
-	ADD(DI_HOME, "Go to wLaunchELF's folder", NULL, 0, F_HOME);
+	ADD(DI_HOME, "Go to Launchstation's folder", NULL, 0, F_HOME);
 	ADD(DI_REFRESH, "Refresh", NULL, 0, F_REFRESH);
 #undef ADD
 	r = dashModalMenu("File Browser", fb.dir[0] ? fb.dir : "Devices", items, n, 0);

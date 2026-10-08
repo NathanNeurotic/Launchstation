@@ -1,4 +1,4 @@
-/* r3LaunchELF_ATTDASH Docs — self-contained search + nav. No dependencies. */
+/* Launchstation Docs — self-contained search + nav. No dependencies. */
 (function () {
   "use strict";
   var INDEX = [], ready = false;

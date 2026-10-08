@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build r3LaunchELF_ATTDASH (ps2build)
+    name: Build Launchstation (ps2build)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -112,7 +112,7 @@ jobs:
           set -euo pipefail
           bash scripts/build_cloud_tls.sh
 
-      - name: Build r3LaunchELF_ATTDASH with ps2build
+      - name: Build Launchstation with ps2build
         run: |
           ps2build build
 
@@ -121,7 +121,7 @@ jobs:
           ee_size="$HOME/.local/share/ps2build/toolchain/ee/bin/mips64r5900el-ps2-elf-size"
           echo "== Mbed TLS archives =="
           ls -lh .cloud-deps/lib/libmbedtls.a .cloud-deps/lib/libmbedx509.a .cloud-deps/lib/libmbedcrypto.a
-          echo "== r3LaunchELF_ATTDASH sections =="
+          echo "== Launchstation sections =="
           "$ee_size" build/bin/wLaunchELF.elf || true
           if [ -f build/bin/wLaunchELF-packed.elf ]; then
             ls -lh build/bin/wLaunchELF-packed.elf
@@ -143,7 +143,9 @@ jobs:
           fi
           mkdir -p artifacts
           cp build/bin/wLaunchELF-packed.elf artifacts/BOOT.ELF
-          cp build/bin/wLaunchELF-packed.elf artifacts/r3LaunchELF_ATTDASH.ELF
+          cp build/bin/wLaunchELF-packed.elf artifacts/Launchstation.ELF
+          # Compatibility alias for installations running the previous branded updater.
+          cp artifacts/Launchstation.ELF artifacts/r3LaunchELF_ATTDASH.ELF
           cp res/music.sad artifacts/BGM.ADP
           cp res/WLE-CLOUD.CNF.example artifacts/WLE-CLOUD.CNF.example
           cp res/WLE-UPDATE-CA.PEM artifacts/WLE-UPDATE-CA.PEM
@@ -154,7 +156,7 @@ jobs:
             exit 1
           fi
           if [ -f "build/bin/wLaunchELF.elf" ]; then
-            cp build/bin/wLaunchELF.elf artifacts/r3LaunchELF_ATTDASH-unpacked.ELF
+            cp build/bin/wLaunchELF.elf artifacts/Launchstation-unpacked.ELF
           fi
           ls -lh artifacts/
 
@@ -162,9 +164,9 @@ jobs:
         run: |
           python3 docs-site/build.py \
             --out build/docs-site \
-            --zip artifacts/r3LaunchELF_ATTDASH-Documentation.zip
-          unzip -t artifacts/r3LaunchELF_ATTDASH-Documentation.zip
-          ls -lh artifacts/r3LaunchELF_ATTDASH-Documentation.zip
+            --zip artifacts/Launchstation-Documentation.zip
+          unzip -t artifacts/Launchstation-Documentation.zip
+          ls -lh artifacts/Launchstation-Documentation.zip
 
       - name: Build complete release package
         run: |
@@ -172,21 +174,22 @@ jobs:
           rm -rf build/release-package
           mkdir -p build/release-package
           cp artifacts/BOOT.ELF build/release-package/
+          cp artifacts/Launchstation.ELF build/release-package/
           cp artifacts/r3LaunchELF_ATTDASH.ELF build/release-package/
           cp artifacts/BGM.ADP build/release-package/
           cp artifacts/WLE-CLOUD.CNF.example build/release-package/
           cp artifacts/WLE-CLOUD-CA.PEM build/release-package/
           cp artifacts/WLE-UPDATE-CA.PEM build/release-package/
-          cp artifacts/r3LaunchELF_ATTDASH-Documentation.zip build/release-package/
-          if [ -f artifacts/r3LaunchELF_ATTDASH-unpacked.ELF ]; then
-            cp artifacts/r3LaunchELF_ATTDASH-unpacked.ELF build/release-package/
+          cp artifacts/Launchstation-Documentation.zip build/release-package/
+          if [ -f artifacts/Launchstation-unpacked.ELF ]; then
+            cp artifacts/Launchstation-unpacked.ELF build/release-package/
           fi
           (
             cd build/release-package
-            zip -9 -r ../../artifacts/r3LaunchELF_ATTDASH-Complete.zip .
+            zip -9 -r ../../artifacts/Launchstation-Complete.zip .
           )
-          unzip -t artifacts/r3LaunchELF_ATTDASH-Complete.zip
-          ls -lh artifacts/r3LaunchELF_ATTDASH-Complete.zip
+          unzip -t artifacts/Launchstation-Complete.zip
+          ls -lh artifacts/Launchstation-Complete.zip
 
       - name: Show artifact hashes
         run: sha256sum artifacts/*
@@ -195,7 +198,7 @@ jobs:
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: r3LaunchELF_ATTDASH
+          name: Launchstation
           path: artifacts/
           retention-days: 1
 
@@ -209,30 +212,31 @@ jobs:
         run: |
           set -euo pipefail
           tag="latest"
-          title="Latest automated build"
+          title="Latest Launchstation automated build"
           notes="$(cat <<EOF
           Automated build for ${GITHUB_SHA} using ps2build.
 
           ## Which download do I need?
 
-          Want everything in one download? Grab **r3LaunchELF_ATTDASH-Complete.zip**. For a minimal normal PS2 install, download **BOOT.ELF**. **r3LaunchELF_ATTDASH.ELF** is the same packed executable with the project name instead. The remaining files are optional sidecars, debugging files, or documentation.
+          Want everything in one download? Grab **Launchstation-Complete.zip**. For a minimal normal PS2 install, download **BOOT.ELF**. **Launchstation.ELF** is the same packed executable with the project name instead. The legacy r3LaunchELF_ATTDASH.ELF alias is retained for existing native updaters. The remaining files are optional sidecars, debugging files, or documentation.
 
           | File | What it is | What it does | What it is for |
           | --- | --- | --- | --- |
-          | **r3LaunchELF_ATTDASH-Complete.zip** | One archive containing all useful files from this release. | Bundles both packed ELF names, the unpacked debug ELF when available, BGM, cloud/update sidecars, and offline documentation. | Best choice when you want the entire release in one download instead of clicking every asset individually. |
-          | **BOOT.ELF** | The normal packed PS2 executable. | Runs r3LaunchELF_ATTDASH on the PlayStation 2. It is byte-identical to r3LaunchELF_ATTDASH.ELF. | Recommended for normal installs, boot managers, FMCB/FHDB setups, USB/MASS launches, and general testing. |
-          | **r3LaunchELF_ATTDASH.ELF** | The same packed PS2 executable, kept under the project name. | Runs the exact same build as BOOT.ELF. | Use this when you want a descriptive filename instead of BOOT.ELF. You do not need both executables. |
-          | **r3LaunchELF_ATTDASH-unpacked.ELF** | The uncompressed development/debug build. | Runs without the normal packing step and is much larger. | Developers and troubleshooting only. Normal users should use BOOT.ELF or r3LaunchELF_ATTDASH.ELF. |
+          | **Launchstation-Complete.zip** | One archive containing all useful files from this release. | Bundles both packed ELF names, the unpacked debug ELF when available, BGM, cloud/update sidecars, and offline documentation. | Best choice when you want the entire release in one download instead of clicking every asset individually. |
+          | **BOOT.ELF** | The normal packed PS2 executable. | Runs Launchstation on the PlayStation 2. It is byte-identical to Launchstation.ELF. | Recommended for normal installs, boot managers, FMCB/FHDB setups, USB/MASS launches, and general testing. |
+          | **Launchstation.ELF** | The same packed PS2 executable, kept under the project name. | Runs the exact same build as BOOT.ELF. | Use this when you want a descriptive filename instead of BOOT.ELF. You do not need both executables. |
+          | **r3LaunchELF_ATTDASH.ELF** | Legacy compatibility name for the same packed executable. | Keeps update downloads working for existing installations that request the old filename. | Existing users only; new installs should use Launchstation.ELF or BOOT.ELF. |
+          | **Launchstation-unpacked.ELF** | The uncompressed development/debug build. | Runs without the normal packing step and is much larger. | Developers and troubleshooting only. Normal users should use BOOT.ELF or Launchstation.ELF. |
           | **BGM.ADP** | Optional PS2 ADPCM background music data. | Enables the dashboard background track when placed beside the boot ELF. Interface sound effects remain available without it. | Users who want dashboard background music. Omit it if you do not want the music. |
           | **WLE-CLOUD.CNF.example** | Example configuration for the native Google Drive client. | Provides the template used to create WLE-CLOUD.CNF with your Google OAuth client ID. | Only users enabling native Google Drive backup/sync. Copy/customize it as WLE-CLOUD.CNF in the dashboard settings folder beside DASHBOARD.CNF. |
           | **WLE-CLOUD-CA.PEM** | Google CA trust-root bundle for HTTPS/TLS. | Lets the native Google Drive client verify Google's TLS certificates securely. | Only users enabling native Google Drive backup/sync; keep it with WLE-CLOUD.CNF in the dashboard settings folder. |
           | **WLE-UPDATE-CA.PEM** | CA trust-root bundle for GitHub HTTPS. | Lets the built-in update checker securely contact GitHub and verify redirected release-asset downloads. | Users who want the dashboard's built-in Check for updates / verified update path; place it in the dashboard settings folder. |
-          | **r3LaunchELF_ATTDASH-Documentation.zip** | An offline copy of the generated documentation website. | Contains the HTML documentation, assets, and search index for browsing without GitHub Pages. | PC/browser reference and offline documentation; it is not a PS2 executable. |
+          | **Launchstation-Documentation.zip** | An offline copy of the generated documentation website. | Contains the HTML documentation, assets, and search index for browsing without GitHub Pages. | PC/browser reference and offline documentation; it is not a PS2 executable. |
           | **Source code (zip)** / **Source code (tar.gz)** | GitHub-generated snapshots of this repository at the release commit. | Provide the source tree for building, auditing, or development. | Developers only. These archives are not ready-to-run PS2 builds. |
 
           ### Minimal normal install
 
-          1. Download **r3LaunchELF_ATTDASH-Complete.zip** if you want every release file at once, or **BOOT.ELF** for the minimal executable-only route.
+          1. Download **Launchstation-Complete.zip** if you want every release file at once, or **BOOT.ELF** for the minimal executable-only route.
           2. Optionally put **BGM.ADP** beside the ELF for background music.
           3. Add **WLE-UPDATE-CA.PEM** to the dashboard settings folder if you use the built-in update checker.
           4. The updater verifies the ELF against GitHub's published SHA-256 asset digest; no separate checksum text file is required.
@@ -242,23 +246,24 @@ jobs:
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}" --prerelease || true
           fi
-          for stale in wLaunchELF_R3Z.ELF wLaunchELF_R3Z-unpacked.ELF wLaunchELF_R3Z-Documentation.zip r3LaunchELF_ATTDASH.ELF.sha256; do
+          for stale in wLaunchELF_R3Z.ELF wLaunchELF_R3Z-unpacked.ELF wLaunchELF_R3Z-Documentation.zip Launchstation.ELF.sha256; do
             gh release delete-asset "$tag" "$stale" -y >/dev/null 2>&1 || true
           done
 
           gh release upload "$tag" \
             "artifacts/BOOT.ELF#BOOT.ELF — Main packed PS2 executable" \
-            "artifacts/r3LaunchELF_ATTDASH.ELF#r3LaunchELF_ATTDASH.ELF — Same packed build as BOOT.ELF" \
-            "artifacts/r3LaunchELF_ATTDASH-Complete.zip#r3LaunchELF_ATTDASH-Complete.zip — Complete release package" \
+            "artifacts/Launchstation.ELF#Launchstation.ELF — Same packed build as BOOT.ELF" \
+            "artifacts/r3LaunchELF_ATTDASH.ELF#r3LaunchELF_ATTDASH.ELF — Legacy update compatibility alias" \
+            "artifacts/Launchstation-Complete.zip#Launchstation-Complete.zip — Complete release package" \
             "artifacts/BGM.ADP#BGM.ADP — Optional dashboard background music" \
             "artifacts/WLE-CLOUD.CNF.example#WLE-CLOUD.CNF.example — Google Drive OAuth template" \
             "artifacts/WLE-CLOUD-CA.PEM#WLE-CLOUD-CA.PEM — Google Drive TLS trust roots" \
             "artifacts/WLE-UPDATE-CA.PEM#WLE-UPDATE-CA.PEM — GitHub update TLS trust roots" \
-            "artifacts/r3LaunchELF_ATTDASH-Documentation.zip#r3LaunchELF_ATTDASH-Documentation.zip — Offline documentation" \
+            "artifacts/Launchstation-Documentation.zip#Launchstation-Documentation.zip — Offline documentation" \
             --clobber
-          if [ -f "artifacts/r3LaunchELF_ATTDASH-unpacked.ELF" ]; then
+          if [ -f "artifacts/Launchstation-unpacked.ELF" ]; then
             gh release upload "$tag" \
-              "artifacts/r3LaunchELF_ATTDASH-unpacked.ELF#r3LaunchELF_ATTDASH-unpacked.ELF — Development/debug build" \
+              "artifacts/Launchstation-unpacked.ELF#Launchstation-unpacked.ELF — Development/debug build" \
               --clobber
           fi
 
@@ -275,7 +280,7 @@ jobs:
           notes="$(cat <<EOF
           Automated language files for ${GITHUB_SHA}.
 
-          Each **.LNG** download is a r3LaunchELF_ATTDASH user-interface translation file. These are data files, not PS2 executables. Download the language(s) you want and place them in the launcher's **Lang/** directory so r3LaunchELF_ATTDASH can offer that translation.
+          Each **.LNG** download is a Launchstation user-interface translation file. These are data files, not PS2 executables. Download the language(s) you want and place them in the launcher's **Lang/** directory so Launchstation can offer that translation.
 
           | File | Language | What it is for |
           | --- | --- | --- |
@@ -311,7 +316,7 @@ jobs:
               POR.LNG) label="POR.LNG — Portuguese UI translation" ;;
               PTBR.LNG) label="PTBR.LNG — Brazilian Portuguese UI translation" ;;
               SPA.LNG) label="SPA.LNG — Spanish UI translation" ;;
-              *) label="${file} — r3LaunchELF_ATTDASH UI translation" ;;
+              *) label="${file} — Launchstation UI translation" ;;
             esac
             gh release upload "$tag" "${asset}#${label}" --clobber
           done

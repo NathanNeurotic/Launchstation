@@ -1,4 +1,4 @@
-<h1>Internal HDD</h1><p class="lead">r3LaunchELF_ATTDASH retains classic APA/PFS management while surfacing HDD state through the dashboard.</p>
+<h1>Internal HDD</h1><p class="lead">Launchstation retains classic APA/PFS management while surfacing HDD state through the dashboard.</p>
 <h2 id="apa">APA / PFS</h2><p>The Devices card is labeled <b>Internal HDD (APA)</b>. Opening it while unprobed starts the HDD stack and exposes partitions through existing browser logic. A Not checked card is intentionally actionable; confirmed-absent hardware is not.</p>
 <h2 id="manager">HDD Manager</h2><p>Tools → HDD Manager exposes classic partition-management functions such as create, remove, rename, expand, format and HDL-related information. Partition operations can destroy data; make backups before resizing, removing or formatting anything.</p>
 <h2 id="paths">Path forms</h2><p>Browser paths commonly use <code>hdd0:/partition/path/to/file</code>. Internally a mounted filesystem is represented as <code>pfsN:</code>. Loader helpers retain the owning APA partition so an ELF on PFS remains reachable through teardown/handoff.</p>

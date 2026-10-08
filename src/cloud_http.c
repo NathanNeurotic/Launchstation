@@ -660,7 +660,7 @@ static int request_open(CloudTls *tls, const char *method, const char *host,
     len = snprintf(request, cap,
                    "%s %s HTTP/1.1\r\n"
                    "Host: %s\r\n"
-                   "User-Agent: r3LaunchELF_ATTDASH/Cloud\r\n"
+                   "User-Agent: Launchstation/Cloud\r\n"
                    "Accept: application/json\r\n"
                    "Connection: close\r\n"
                    "%s"
@@ -925,7 +925,7 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
         r = snprintf(request, sizeof(request),
                      "GET %s HTTP/1.1\r\n"
                      "Host: %s\r\n"
-                     "User-Agent: r3LaunchELF_ATTDASH/Updater\r\n"
+                     "User-Agent: Launchstation/Updater\r\n"
                      "Accept: application/octet-stream\r\n"
                      "Connection: close\r\n\r\n",
                      path, host);

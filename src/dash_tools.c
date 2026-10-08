@@ -54,8 +54,8 @@ static const Tool tools[] = {
     {TA_MISC, DI_MC, "Memory card exploit installer", "Install a memory card system-update exploit for this console, another model or region, or PSX/DESR.", "Writes system folders to the memory card. Follow the on-screen checks carefully.", 1, MISC(Misc_Exploit_Installer), NULL},
     {TA_IGR_SETUP, DI_MC, "OPL IGR automatic MMCE backup", "Set up verified automatic backup of every MMCE card image when OPL exits a game through IGR.", "Installs or updates WLE-IGR.ELF on the required boot medium and tells you the exact OPL Exit-to path.", 0, 0, NULL},
     {TA_HEADER, -1, "SYSTEM", NULL, NULL, 0, 0, NULL},
-    {TA_MISC, DI_APP, "PS2 system browser", "Leave wLaunchELF and open the console's own Browser.", NULL, 1, MISC(Misc_PS2Browser), NULL},
-    {TA_MISC, DI_APP, "OSDSYS", "Start the console's OSD (or the OSDSYS path configured in wLaunchELF).", NULL, 1, MISC(Misc_OSDSYS), NULL},
+    {TA_MISC, DI_APP, "PS2 system browser", "Leave Launchstation and open the console's own Browser.", NULL, 1, MISC(Misc_PS2Browser), NULL},
+    {TA_MISC, DI_APP, "OSDSYS", "Start the console's OSD (or the OSDSYS path configured in Launchstation).", NULL, 1, MISC(Misc_OSDSYS), NULL},
 #ifdef ETH
     {TA_MISC, DI_NETWORK, "FTP / Remote access", "Start FTP and PS2Link on demand, accept remote commands, and receive staged/resumable ISO transfers from MrRexD-compatible PC tools.", "Network and HDD drivers stay unloaded until you start this tool.", 0, MISC(Misc_PS2Net), NULL},
 #ifdef WLE_NATIVE_CLOUD
@@ -63,9 +63,9 @@ static const Tool tools[] = {
 #endif
 #endif
     {TA_MISC, DI_INFO, "System information", "Console model, ROM version, boot path, loaded configuration and debug details.", NULL, 0, MISC(Misc_Debug_Info), NULL},
-    {TA_MISC, DI_CHIP, "Build information", "Features and drivers included in this build of r3LaunchELF_ATTDASH.", NULL, 0, MISC(Misc_Show_Build_Info), NULL},
+    {TA_MISC, DI_CHIP, "Build information", "Features and drivers included in this build of Launchstation.", NULL, 0, MISC(Misc_Show_Build_Info), NULL},
     {TA_MISC, DI_TEXT, "Font viewer", "Show every glyph of the active font.", NULL, 0, MISC(Misc_ShowFont), NULL},
-    {TA_MISC, DI_INFO, "About r3LaunchELF_ATTDASH", "Credits and version.", NULL, 0, MISC(Misc_About_uLE), NULL},
+    {TA_MISC, DI_INFO, "About Launchstation", "Credits and version.", NULL, 0, MISC(Misc_About_uLE), NULL},
     {TA_HEADER, -1, "POWER", NULL, NULL, 0, 0, NULL},
     {TA_MISC, DI_REFRESH, "Reboot IOP", "Restart the I/O processor and all device drivers. Devices are detected again when used.", NULL, 1, MISC(Misc_Reboot_IOP), NULL},
     {TA_MISC, DI_POWER, "Power off", "Turn the console off.", NULL, 2, MISC(Misc_PS2PowerOff), NULL},
@@ -108,7 +108,7 @@ void dashToolsIgrBackupSetup(void)
 
 	if (action == 1) {
 		if (!dashModalConfirm("Remove OPL IGR backup helper?",
-		                      "Removes WLE-IGR.ELF from the locations managed by this wLaunchELF installation. Existing card backups are not deleted.",
+		                      "Removes WLE-IGR.ELF from the locations managed by this Launchstation installation. Existing card backups are not deleted.",
 		                      "Remove", 1))
 			return;
 		dashLoadingBegin("Removing OPL IGR helper");
@@ -127,7 +127,7 @@ void dashToolsIgrBackupSetup(void)
 		return;
 
 	if (!dashModalConfirm("Install OPL IGR backup helper?",
-	                      "wLaunchELF will install or update a verified WLE-IGR.ELF where OPL can launch it. MMCE-hosted setups update every discovered BootCard image.",
+	                      "Launchstation will install or update a verified WLE-IGR.ELF where OPL can launch it. MMCE-hosted setups update every discovered BootCard image.",
 	                      "Install", 0))
 		return;
 
@@ -142,7 +142,7 @@ void dashToolsIgrBackupSetup(void)
 		dashStoreSaveSettings();
 		dashStoreFlush(1);
 		dashModalMessage(DI_CHECK, "OPL IGR automatic backup ready", result,
-		                 "After setting OPL Exit-to to the shown helper, IGR will back up changed MMCE card images and then open wLaunchELF.");
+		                 "After setting OPL Exit-to to the shown helper, IGR will back up changed MMCE card images and then open Launchstation.");
 	} else
 		dashModalMessage(DI_WARNING, "OPL IGR setup incomplete", result[0] ? result : "Setup failed.", NULL);
 }
@@ -175,7 +175,7 @@ static void cloudLink(void)
 	         "On a phone or computer, open:\n%s\n\nEnter this code: %s",
 	         code.verification_url, code.user_code);
 	snprintf(detail, sizeof(detail),
-	         "The token is stored only on this PS2. Scope: files created by wLaunchELF.");
+	         "The token is stored only on this PS2. Scope: files created by Launchstation.");
 	dashModalMessage(DI_INFO, "Link Google Drive", body, detail);
 
 	for (;;) {
@@ -213,7 +213,7 @@ static void cloudSyncNow(void)
 
 	if (dashCfg.igr_backup_path[0] == '\0') {
 		dashModalMessage(DI_WARNING, "No MMCE backup destination saved",
-		                 "Run Tools > OPL IGR automatic MMCE backup > Install / update once so wLaunchELF knows which local history to upload.",
+		                 "Run Tools > OPL IGR automatic MMCE backup > Install / update once so Launchstation knows which local history to upload.",
 		                 "Existing backups are not moved or deleted.");
 		return;
 	}
@@ -633,7 +633,7 @@ void dashToolsCheckUpdates(void)
 	CloudHttpResponse response;
 	char ca_path[MAX_PATH], error[192], latest[80], asset_digest[80], body[320];
 	const char headers[] =
-	    "User-Agent: r3LaunchELF_ATTDASH-PS2\r\n"
+	    "User-Agent: Launchstation-PS2\r\n"
 	    "Accept: application/vnd.github+json\r\n";
 	int same = 0;
 
@@ -652,9 +652,9 @@ void dashToolsCheckUpdates(void)
 
 	memset(&response, 0, sizeof(response));
 	error[0] = latest[0] = asset_digest[0] = '\0';
-	dashLoadingBegin("Checking for r3LaunchELF_ATTDASH updates");
+	dashLoadingBegin("Checking for Launchstation updates");
 	if (cloudHttpRequest("GET", "api.github.com",
-	                     "/repos/NathanNeurotic/r3LaunchELF_ATTDASH/releases/tags/latest",
+	                     "/repos/NathanNeurotic/Launchstation/releases/tags/latest",
 	                     headers, NULL, 0, ca_path, &response,
 	                     error, sizeof(error)) < 0) {
 		dashLoadingEnd();
@@ -666,7 +666,7 @@ void dashToolsCheckUpdates(void)
 
 	if (response.status != 200 ||
 	    !releaseJsonString(response.body, "target_commitish", latest, sizeof(latest)) ||
-	    !releaseAssetDigest(response.body, "r3LaunchELF_ATTDASH.ELF",
+	    !releaseAssetDigest(response.body, "Launchstation.ELF",
 	                        asset_digest, sizeof(asset_digest))) {
 		snprintf(body, sizeof(body), "GitHub returned HTTP %d or an unexpected release response.", response.status);
 		cloudHttpResponseFree(&response);
@@ -681,7 +681,7 @@ void dashToolsCheckUpdates(void)
 
 	if (same) {
 		snprintf(body, sizeof(body), "This build (%s) matches the current latest release.", GIT_HASH);
-		dashModalMessage(DI_CHECK, "r3LaunchELF_ATTDASH is up to date", body, NULL);
+		dashModalMessage(DI_CHECK, "Launchstation is up to date", body, NULL);
 	} else {
 		char install_result[384];
 		int installed;
@@ -689,12 +689,12 @@ void dashToolsCheckUpdates(void)
 		snprintf(body, sizeof(body),
 		         "Current: %s\nLatest: %.16s\n\nDownload, verify and install the latest packed ELF beside the running copy?",
 		         GIT_HASH, latest);
-		if (!dashModalConfirm("A newer r3LaunchELF_ATTDASH build is available",
+		if (!dashModalConfirm("A newer Launchstation build is available",
 		                      body, "Install update", 0))
 			return;
 
 		install_result[0] = '\0';
-		dashLoadingBegin("Downloading and verifying r3LaunchELF_ATTDASH update");
+		dashLoadingBegin("Downloading and verifying Launchstation update");
 		installed = selfUpdateInstall(ca_path, asset_digest, install_result, sizeof(install_result));
 		dashLoadingEnd();
 		dashModalMessage(installed == 0 ? DI_CHECK : DI_WARNING,
@@ -965,7 +965,7 @@ static void toolsDraw(void)
 	const Tool *t = &tools[tsel];
 	int i;
 
-	dashDrawSectionTitle(48, 68, "Tools", "everything wLaunchELF can do");
+	dashDrawSectionTitle(48, 68, "Tools", "everything Launchstation can do");
 	if (tsel < ttop + 1)
 		ttop = tsel - 1;
 	if (tsel >= ttop + rows)

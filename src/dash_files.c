@@ -191,10 +191,10 @@ static void filesRebuild(void)
 
 	nfentries = 0;
 	fAdd(FE_HEADER, -1, 0, "BROWSE", NULL);
-	fAdd(FE_ROOT, DI_FOLDER, 0, "File Browser", "Open the canonical wLaunchELF File Browser");
+	fAdd(FE_ROOT, DI_FOLDER, 0, "File Browser", "Open the Launchstation File Browser");
 	if (LastDir[0] && strchr(LastDir, ':') != NULL)
 		fAdd(FE_LAST, DI_CLOCK, 0, "Last folder", LastDir);
-	fAdd(FE_MISC, DI_TOOLS, 0, "MISC commands", "wLaunchELF built-in commands folder");
+	fAdd(FE_MISC, DI_TOOLS, 0, "MISC commands", "Launchstation built-in commands folder");
 
 	nfdevs = 0; /* Devices are the alternate mode of this same section. */
 
@@ -327,7 +327,7 @@ static void filesDraw(void)
 	int i;
 	FileEntry *e = &fentries[fsel];
 
-	dashDrawSectionTitle(48, 68, "Files", "the complete wLaunchELF file manager");
+	dashDrawSectionTitle(48, 68, "Files", "the complete Launchstation file manager");
 
 	if (fsel < ftop + 1)
 		ftop = fsel - 1;

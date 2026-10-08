@@ -1,5 +1,5 @@
 //--------------------------------------------------------------
-// Native staged self-update for r3LaunchELF_ATTDASH.
+// Native staged self-update for Launchstation.
 //--------------------------------------------------------------
 #include "launchelf.h"
 #include "cloud_http.h"
@@ -10,7 +10,7 @@
 #include <malloc.h>
 #include <ctype.h>
 
-#define UPDATE_ELF_URL "https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases/download/latest/r3LaunchELF_ATTDASH.ELF"
+#define UPDATE_ELF_URL "https://github.com/NathanNeurotic/Launchstation/releases/download/latest/Launchstation.ELF"
 #define UPDATE_MAX_ELF (16 * 1024 * 1024)
 
 static int device_path(const char *path, const char *name, int allow_bare)
@@ -274,7 +274,7 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
     }
 
     snprintf(result, result_size,
-             "Update installed and verified (%d bytes). Recovery copy: %s%s. Restart r3LaunchELF_ATTDASH to run the new build.",
+             "Update installed and verified (%d bytes). Recovery copy: %s%s. Restart Launchstation to run the new build.",
              size, parent, backup_leaf);
     return 0;
 }

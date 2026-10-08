@@ -1,13 +1,13 @@
-# __r3LaunchELF_ATTDASH__
+# __Launchstation__
 
-**r3LaunchELF_ATTDASH** is a maintained PlayStation 2 file manager, executable launcher, dashboard and device toolkit built from **wLaunchELF_R3Z** and the wider wLaunchELF/uLaunchELF/LaunchELF lineage. It extends that base with the ATTDASH interface, modern storage/device workflows, Neutrino, POPStarter and Ember handoffs, MMCE backup/cloud features, networking tools and additional hardware support.
+**Launchstation** is a maintained PlayStation 2 file manager, executable launcher, dashboard and device toolkit built from **wLaunchELF_R3Z** and the wider wLaunchELF/uLaunchELF/LaunchELF lineage. It extends that base with the dashboard interface, modern storage/device workflows, Neutrino, POPStarter and Ember handoffs, MMCE backup/cloud features, networking tools and additional hardware support.
 
 ## Documentation
 
-The full r3LaunchELF_ATTDASH reference is published as a PS2-styled GitHub Pages site:
+The full Launchstation reference is published as a PS2-styled GitHub Pages site:
 
-- **Online:** https://nathanneurotic.github.io/r3LaunchELF_ATTDASH/
-- **Offline:** `r3LaunchELF_ATTDASH-Documentation.zip` in the latest automated release
+- **Online:** https://nathanneurotic.github.io/Launchstation/
+- **Offline:** `Launchstation-Documentation.zip` in the latest automated release
 - **Source:** `docs-site/` in this repository
 
 The site covers installation, dashboard controls, File Browser, Apps, Text Editor, storage/device support, APA/PFS, iLink, MMCE, networking, POPStarter VCD launching, Ember PS1 image launching, Neutrino ISO launching, IGR/MMCE backups, native Google Drive sync, settings, configuration files, troubleshooting and developer notes.
@@ -108,13 +108,13 @@ Drivers load on demand for maximum compatibility and initial boot speed.
 <details>
 
 In FileBrowser, select a TextEditor-supported file, press `R1`, then choose `LaunchELF with Args`.
-wLaunchELF parses the file immediately, caches the args in memory, and leaves you in FileBrowser to select the target `ELF`.
+Launchstation parses the file immediately, caches the args in memory, and leaves you in FileBrowser to select the target `ELF`.
 
 The same action is available from TextEditor's `R1` menu for the active opened file.
 From TextEditor the current in-memory buffer is parsed, so unsaved edits are used.
-After caching args, wLaunchELF returns to FileBrowser so you can choose the target executable.
+After caching args, Launchstation returns to FileBrowser so you can choose the target executable.
 
-For normal executable launches, wLaunchELF also checks for a sidecar arg file named `<elf name>.arg` in the same folder, for example `BOOT.arg` for `BOOT.ELF`.
+For normal executable launches, Launchstation also checks for a sidecar arg file named `<elf name>.arg` in the same folder, for example `BOOT.arg` for `BOOT.ELF`.
 Sidecar args use the same parser and limits.
 If args were already cached through `R1` -> `LaunchELF with Args`, the sidecar `.arg` file is ignored.
 
@@ -348,5 +348,5 @@ MG_CHALLENGE_IV=11569b681f98ebe5c9fab2cf670ee97e380a94ee9d85e69d99aa32d6ab2471b7
 - **[wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z)** by **R3Z3N / Saildot4K**: direct upstream base and major foundation of this fork. ([Ko-fi](https://ko-fi.com/r3z3n))
 - **[johnson-cooper](https://github.com/johnson-cooper)**: created this fork and handed the project over to NathanNeurotic / Ripto to maintain and improve. ([Buy Me a Coffee](https://buymeacoffee.com/attackishere))
 - **NathanNeurotic (Ripto)**: current maintainer. ([Ko-fi](https://ko-fi.com/NathanNeurotic))
-- Original wLaunchELF / uLaunchELF / LaunchELF maintainers, contributors, and the PS2Dev community.
+- Original Launchstation / uLaunchELF / LaunchELF maintainers, contributors, and the PS2Dev community.
 

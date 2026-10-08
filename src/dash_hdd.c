@@ -671,7 +671,7 @@ static void actFormat(void)
 	HddJob *j;
 
 	if (console_is_PSX) {
-		dashModalMessage(DI_WARNING, "Not available", "The PSX internal HDD cannot be formatted from r3LaunchELF_ATTDASH.", NULL);
+		dashModalMessage(DI_WARNING, "Not available", "The PSX internal HDD cannot be formatted from Launchstation.", NULL);
 		return;
 	}
 	if (!dashModalConfirm("Format the HDD", "Every partition, game and file on the internal HDD will be erased.", "Continue", 1))
@@ -1086,7 +1086,7 @@ static void drawDetails(void)
 	} else if (p->type == HP_SYSTEM)
 		dashTextWrap(x + 16, y, w - 32, 3, "Reserved for the system. It cannot be changed.", DASH_FS_CAPTION, DASH_C_TEXT3, 17);
 	else
-		dashTextWrap(x + 16, y, w - 32, 3, "Not a PFS or HDL partition; wLaunchELF cannot open it.", DASH_FS_CAPTION, DASH_C_TEXT3, 17);
+		dashTextWrap(x + 16, y, w - 32, 3, "Not a PFS or HDL partition; Launchstation cannot open it.", DASH_FS_CAPTION, DASH_C_TEXT3, 17);
 }
 
 static void hddScene(void)

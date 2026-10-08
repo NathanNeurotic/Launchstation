@@ -281,7 +281,7 @@ static int save_refresh_token(GoogleSession *s, const char *token,
         set_error(error, error_size, "Out of memory saving Google token");
         return -1;
     }
-    len = snprintf(text, len, "# wLaunchELF Google Drive OAuth token\r\nRefresh_Token = %s\r\nStage_Complete = 1\r\n", token);
+    len = snprintf(text, len, "# Launchstation Google Drive OAuth token\r\nRefresh_Token = %s\r\nStage_Complete = 1\r\n", token);
 
     /* Write and read back a recovery copy before touching the primary file.
      * If power fails during the primary write, load_session() prefers this
@@ -450,7 +450,7 @@ int cloudGoogleSaveClientConfig(const char *client_id, const char *client_secret
     }
 
     len = snprintf(text, sizeof(text),
-                   "# r3LaunchELF_ATTDASH Google Drive OAuth configuration\r\n"
+                   "# Launchstation Google Drive OAuth configuration\r\n"
                    "Google_Client_ID = %s\r\n"
                    "Google_Client_Secret = %s\r\n",
                    client_id, client_secret ? client_secret : "");
