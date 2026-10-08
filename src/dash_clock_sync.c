@@ -301,6 +301,113 @@ int dashClockSyncInternet(char *result, int result_size)
 }
 
 #endif
+
+/* Manual clock entry is available even in builds without Ethernet. The PS2
+ * RTC stores the hardware time in its fixed base zone; convert the user's
+ * displayed/local value through the same OSDSYS offset logic used elsewhere. */
+static u8 manualToBcd(int v)
+{
+	return (u8)(((v / 10) << 4) | (v % 10));
+}
+
+static int manualFromBcd(u8 v)
+{
+	return ((v >> 4) & 15) * 10 + (v & 15);
+}
+
+static int manualLeap(int year)
+{
+	return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+}
+
+static int manualDaysInMonth(int year, int month)
+{
+	static const u8 days[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+
+	if (month < 1 || month > 12)
+		return 0;
+	return days[month - 1] + ((month == 2 && manualLeap(year)) ? 1 : 0);
+}
+
+static s64 manualSerialSeconds(int year, int month, int day, int hour, int minute, int second)
+{
+	s64 days = 0;
+	int y, m;
+
+	for (y = 2000; y < year; y++)
+		days += manualLeap(y) ? 366 : 365;
+	for (m = 1; m < month; m++)
+		days += manualDaysInMonth(year, m);
+	days += day - 1;
+	return days * 86400 + hour * 3600 + minute * 60 + second;
+}
+
+int dashClockSetManual(int year, int month, int day, int hour, int minute, int second,
+                       char *result, int result_size)
+{
+	sceCdCLOCK set, check;
+	int raw_y = year, raw_m = month, raw_d = day;
+	int raw_h = hour, raw_min = minute, raw_s = second;
+	int chk_y, chk_m, chk_d, chk_h, chk_min, chk_s;
+	s64 want, got, diff;
+
+	if (result != NULL && result_size > 0)
+		result[0] = '\0';
+	if (year < 2000 || year > 2099 || month < 1 || month > 12 ||
+	    day < 1 || day > manualDaysInMonth(year, month) ||
+	    hour < 0 || hour > 23 || minute < 0 || minute > 59 ||
+	    second < 0 || second > 59) {
+		if (result) snprintf(result, result_size, "Use YYYY-MM-DD HH:MM:SS with a valid date and 24-hour time.");
+		return 0;
+	}
+
+	if (!menuTitleConvertTimestampFromLocalTime(&raw_y, &raw_m, &raw_d, &raw_h, &raw_min, &raw_s)) {
+		if (result) snprintf(result, result_size, "Could not convert the entered local time to the PS2 RTC base.");
+		return 0;
+	}
+
+	memset(&set, 0, sizeof(set));
+	set.second = manualToBcd(raw_s);
+	set.minute = manualToBcd(raw_min);
+	set.hour = manualToBcd(raw_h);
+	set.day = manualToBcd(raw_d);
+	set.month = manualToBcd(raw_m);
+	set.year = manualToBcd(raw_y % 100);
+	if (!sceCdWriteClock(&set)) {
+		if (result) snprintf(result, result_size, "The PS2 RTC write failed.");
+		return 0;
+	}
+
+	memset(&check, 0, sizeof(check));
+	if (!sceCdReadClock(&check) || check.stat) {
+		if (result) snprintf(result, result_size, "The PS2 RTC could not be read back for verification.");
+		return 0;
+	}
+	chk_y = 2000 + manualFromBcd(check.year);
+	chk_m = manualFromBcd(check.month & 0x7f);
+	chk_d = manualFromBcd(check.day);
+	chk_h = manualFromBcd(check.hour);
+	chk_min = manualFromBcd(check.minute);
+	chk_s = manualFromBcd(check.second);
+	if (!menuTitleConvertTimestampToLocalTime(&chk_y, &chk_m, &chk_d, &chk_h, &chk_min, &chk_s)) {
+		if (result) snprintf(result, result_size, "The PS2 RTC read-back value was invalid.");
+		return 0;
+	}
+
+	want = manualSerialSeconds(year, month, day, hour, minute, second);
+	got = manualSerialSeconds(chk_y, chk_m, chk_d, chk_h, chk_min, chk_s);
+	diff = got - want;
+	if (diff < 0)
+		diff = -diff;
+	if (diff > 2) {
+		if (result) snprintf(result, result_size, "The PS2 RTC write did not verify.");
+		return 0;
+	}
+
+	menuTitleUpdateAsync(1);
+	if (result) snprintf(result, result_size, "PS2 system clock set and verified.");
+	return 1;
+}
 //--------------------------------------------------------------
 //End of file: dash_clock_sync.c
 //--------------------------------------------------------------

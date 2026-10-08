@@ -22,6 +22,13 @@ typedef struct {
 typedef void (*CloudGoogleProgress)(const char *status, int done, int total);
 
 int cloudGoogleConfigured(char *error, int error_size);
+/* GUI setup helpers. Client secret is optional for TV/limited-input clients. */
+int cloudGoogleGetClientConfig(char *client_id, int client_id_size,
+                               char *client_secret, int client_secret_size,
+                               int *ca_present, char *error, int error_size);
+int cloudGoogleSaveClientConfig(const char *client_id, const char *client_secret,
+                                char *error, int error_size);
+int cloudGoogleInstallCaBundle(const char *source_path, char *error, int error_size);
 int cloudGoogleIsLinked(void);
 int cloudGoogleHasLocalToken(void);
 int cloudGoogleBeginLink(CloudGoogleDeviceCode *code, char *error, int error_size);

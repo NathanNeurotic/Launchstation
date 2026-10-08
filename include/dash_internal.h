@@ -1003,6 +1003,8 @@ void dashClassicUiDone(void);
 int dashOpenTextEditor(const char *file); /* 0 = the user backed out before it opened */
 void dashAppActions(DashApp *app);
 void dashRescanLibrary(int interactive);
+int dashClockSetManual(int year, int month, int day, int hour, int minute, int second,
+                       char *result, int result_size);
 int dashClockSyncInternet(char *result, int result_size);
 const MainExecuteContext *dashExecContext(void);
 const char *dashOkLabelKey(void);
@@ -1023,6 +1025,7 @@ extern int gsScreenGeneration;
 int getDir(const char *path, FILEINFO *info);
 int filerRootMcPresent(int port, int *type, int *free_kb);
 int filerUsbDriveMask(void);
+int filerUsbRefreshDriveMask(void); /* force one cached USB root refresh */
 int filerUsbDriversLoaded(void);
 int filerShowHddUnit(int unit);
 int filerShowAtaUnit(int unit);

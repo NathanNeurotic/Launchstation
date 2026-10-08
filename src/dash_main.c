@@ -236,8 +236,8 @@ static void afterMiscCommand(void)
 	dashClassicUiInstall(1);
 	dashInputFlush();
 	last_frame_ms = Timer();
-	dashSoundShutdown(); /* drop stale state after IOP resets */
-	dashSoundInit();
+	dashSoundMaintain(); /* recover only when the IOP actually changed */
+	dashSoundApplyVolume();
 	dashBgmStart();
 	/* Restart auto-start devices (an IOP reset may have dropped them) from
 	 * the main loop. */
@@ -304,11 +304,14 @@ static void runMiscCommand(const char *misc_path)
 	if (leaves) {
 		/*
 		 * Any successful handoff destroys this EE process. Stop audsrv/BGM
-		 * before entering the legacy launcher so the next ELF, OSDSYS or disc
-		 * never inherits our looping SPU2 voice. If the action returns,
-		 * afterMiscCommand() restores dashboard audio.
+		 * before entering the legacy launcher. Mute returnable launches here;
+		 * final cleanup quits audsrv once the handoff is committed. Poweroff
+		 * has no launch cleanup, so it performs the full teardown here.
 		 */
-		dashSoundShutdown();
+		if (!stricmp(misc_path, setting->Misc_PS2PowerOff))
+			dashSoundShutdown();
+		else
+			dashSoundSuspend();
 		dashGfxRestoreLegacyState();
 	}
 	ExecuteMainAction(path, &exec_ctx);
@@ -505,10 +508,10 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	mainActionLaunchHook = NULL; /* already recorded */
 	/*
 	 * Ordinary ELF launches used to leave audsrv's looping BGM voice alive.
-	 * Stop dashboard audio before every handoff, just like the keep-IOP path.
-	 * A failed launch returns here and explicitly restores it below.
+	 * Mute until the legacy launcher validates the target; final cleanup
+	 * stops audsrv. A failed validation can restore the existing audio below.
 	 */
-	dashSoundShutdown();
+	dashSoundSuspend();
 	dashGfxRestoreLegacyState();
 	dashClassicUiInstall(0); /* launch-time prompts stay classic */
 	ExecuteMainAction(path, &exec_ctx);
@@ -518,7 +521,8 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	dashGfxCheckScreenChange();
 	drawMsgOverride = dashMsgHook;
 	dashClassicUiInstall(1);
-	dashSoundInit();
+	dashSoundMaintain();
+	dashSoundApplyVolume();
 	dashBgmStart();
 	dashLoadingEnd();
 	friendlyLaunchError(&copy, exec_ctx.main_msg);
@@ -1045,7 +1049,9 @@ static void firstInit(void)
 void DashRun(const MainExecuteContext *ctx, int from_boot)
 {
 	DashInput in;
-	u64 next_device_poll_ms, next_disc_poll_ms, next_remote_poll_ms;
+	u64 next_device_poll;
+	u64 next_disc_poll;
+	u64 next_remote_poll;
 
 	if (dash_active || ctx == NULL)
 		return;
@@ -1075,12 +1081,9 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	dashAppsRebuildView();
 	dashInputFlush();
 	last_frame_ms = Timer();
-	/* IOP-facing housekeeping is deliberately time-sliced. Rendering can run
-	 * at 50/60 Hz without hammering libmc, CDVD or remote-control RPCs every
-	 * frame. Stagger the disc poll from the faster device poll. */
-	next_device_poll_ms = last_frame_ms;
-	next_disc_poll_ms = last_frame_ms + 750;
-	next_remote_poll_ms = last_frame_ms;
+	next_device_poll = last_frame_ms;
+	next_disc_poll = last_frame_ms + 750;
+	next_remote_poll = last_frame_ms;
 	if (from_boot)
 		bootBegin();
 	/* the dashboard is the only shell: it never returns */
@@ -1120,27 +1123,35 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		/* Results of background work that change what screens point at. */
 		applyScanResult();
 		dashFilesPoll();
-		if (now >= next_remote_poll_ms) {
-			next_remote_poll_ms = now + 250;
+		/*
+		 * Remote-control and receiver probes touch the network filesystem.
+		 * Polling them every rendered frame was needlessly hammering the IOP
+		 * once FTP/network access was enabled and showed up as animation/input
+		 * stutter. Half-second latency is still effectively immediate for a
+		 * file-based command inbox.
+		 */
+		if (now >= next_remote_poll) {
 			pollPcGameReceiver();
 			pollRemotePcCommand();
+			next_remote_poll = now + 500;
 		}
 		if (autoprobe_pending) {
 			autoprobe_pending = 0;
 			dashDevicesAutoStart();
 		}
 
-		/* IOP-facing housekeeping is paced and never overlaps worker IO.
-		 * Memory-card polling already has a 500 ms hotplug cadence, so 8 Hz
-		 * avoids dozens of mcSync() calls per second. CDVD can block in
-		 * sceCdSync(), so it is checked only once per second. */
+		/* Housekeeping is wall-clock throttled. The old per-frame device poll
+		 * and frame-count CD probe caused regular IOP RPC traffic even when
+		 * nothing changed. Keep hotplug responsive without spending render time
+		 * polling hardware tens of times per second. */
 		if (!dashWorkerIoBusy() && !dashIopParked()) {
-			if (now >= next_disc_poll_ms) {
-				next_disc_poll_ms = now + 1000;
+			if (now >= next_disc_poll) {
 				uLE_cdStop();
-			} else if (now >= next_device_poll_ms) {
-				next_device_poll_ms = now + 125;
+				next_disc_poll = now + 1000;
+			}
+			else if (now >= next_device_poll) {
 				dashDevicesPoll();
+				next_device_poll = now + 250;
 			}
 		}
 		idle_ms = dashInputIdleMs();

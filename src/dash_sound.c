@@ -39,18 +39,17 @@ static int bgm_loaded;
 static int bgm_tried;
 static void *bgm_data; /* audsrv uses this buffer address as the sample ID */
 static int bgm_channel = -1;
-static int sound_reboot_count; /* IOP reboot count when audsrv was started */
+static unsigned int sound_reboot_generation; /* reset epoch when audsrv was started */
+static unsigned int sound_tried_generation = (unsigned int)-1; /* last automatic attempt */
 static int sound_retry;
-static int sound_tried_reboot = -1; /* IOP session of the last automatic attempt */
 
-extern int _iop_reboot_count;
 
 /* audsrv lives on the IOP: after any IOP reboot the server and the uploaded
  * samples are gone, and calling into the stale RPC client hangs. Every
  * entry point checks this first. */
 static int soundAlive(void)
 {
-	return sound_ready && _iop_reboot_count == sound_reboot_count;
+	return sound_ready && getIopResetGeneration() == sound_reboot_generation;
 }
 
 /* Voices 0..13 belong to interface SFX (see below). Keep the looping music
@@ -98,7 +97,7 @@ int dashSoundInit(void)
 		sound_retry = 1; /* dashSoundMaintain() tries again */
 		return 0;
 	}
-	sound_tried_reboot = _iop_reboot_count;
+	sound_tried_generation = getIopResetGeneration();
 	/* BGM and interface SFX are separate buses; initialize audsrv when
 	 * either one is enabled. */
 	if (!dashCfg.sound && !dashCfg.bgm)
@@ -149,7 +148,7 @@ int dashSoundInit(void)
 		for (i = 8; i < 14; i++)
 			audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound_vol, 0);
 	}
-	sound_reboot_count = _iop_reboot_count;
+	sound_reboot_generation = getIopResetGeneration();
 	sound_ready = 1;
 	return 1;
 }
@@ -169,9 +168,9 @@ void dashSoundMaintain(void)
 	}
 	/* one automatic attempt per IOP session (a broken driver would
 	 * otherwise be retried every frame), plus retries that were deferred */
-	if (sound_tried_reboot == _iop_reboot_count && !sound_retry)
+	if (sound_tried_generation == getIopResetGeneration() && !sound_retry)
 		return;
-	sound_tried_reboot = _iop_reboot_count;
+	sound_tried_generation = getIopResetGeneration();
 	sound_retry = 0;
 	if (dashSoundInit())
 		dashBgmStart();
@@ -180,7 +179,16 @@ void dashSoundMaintain(void)
 void dashSoundShutdown(void)
 {
 	if (soundAlive()) {
+		/*
+		 * BGM is a looping SPU2 ADPCM voice. Merely setting its volume to
+		 * zero and dropping the EE RPC client can leave the IOP/SPU2 voice
+		 * alive across a keep-IOP ExecPS2 handoff. audsrv_adpcm_init() is the
+		 * library's hard reset for ADPCM state: it stops every voice and frees
+		 * the uploaded sample list before audsrv_quit() releases RPC.
+		 */
 		dashBgmStop();
+		audsrv_adpcm_init();
+		audsrv_stop_audio();
 		audsrv_quit();
 	}
 	sound_ready = 0;
@@ -190,6 +198,21 @@ void dashSoundShutdown(void)
 	bgm_sample.buffer = NULL;
 	free(bgm_data);
 	bgm_data = NULL;
+}
+
+void dashSoundSuspend(void)
+{
+	int i;
+
+	if (!soundAlive() || dashIopParked())
+		return;
+	/* Keep the RPC client and samples valid until the launch is committed.
+	 * audsrv_quit() destroys client state that audsrv_init() cannot recreate
+	 * in the same IOP session. Failed launches must be able to resume music. */
+	for (i = 0; i < 14; i++)
+		audsrv_adpcm_set_volume_and_pan(i, 0, 0);
+	if (bgm_channel >= 0)
+		audsrv_adpcm_set_volume_and_pan(bgm_channel, 0, 0);
 }
 
 /* voice map: boot..disconnect on 0..7, cursor rotates over 8..13 (OPL-style) */
@@ -203,7 +226,7 @@ void dashSoundApplyVolume(void)
 	if (!soundAlive())
 		return;
 	for (i = 0; i < 8 + SND_CURSOR_CH_COUNT; i++)
-		audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound_vol, 0);
+		audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound ? dashCfg.sound_vol : 0, 0);
 }
 
 void dashSoundPlay(int id)

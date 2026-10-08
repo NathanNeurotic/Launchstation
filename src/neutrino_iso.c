@@ -216,9 +216,10 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	if (!buildArgs(bsd, opened_iso, fullpath, args, sizeof(args), message, message_size))
 		return 0;
 
-	/* Neutrino's quick-boot path consumes the already-mounted device stack.
-	 * Never apply the generic reset-IOP preference to this handoff. */
-	CleanUpForExec();
+	/* Neutrino consumes the already-mounted device stack. Drain every
+	 * dashboard RPC user and release libpad, but never reset that storage IOP. */
+	if (!CleanUpForKeepIopExec("Preparing Neutrino"))
+		return 0;
 	RunLoaderElfKeepIOP(fullpath, party, selected, exec_kind);
 	return 1;
 }

@@ -47,10 +47,10 @@ assert "game's umbrella" in ember
 assert "LaunchArgsLoadFromBuffer" in ember
 assert "CleanUpForEmberExec()" in ember
 assert "RunLoaderElfKeepIOPWithArgv0" in ember
-assert "prepareEmberCleanUsbIop(ember_elf)" in ember
-assert "prepareEmberCleanUsbIop" in init_h
-assert "SifIopReset" in init
-assert '"USBMASS_BD"' in init
+assert "prepareEmberUsbHandoffIop(ember_elf)" in ember
+assert "prepareEmberUsbHandoffIop" in init_h
+assert '"SIO2MAN"' in init and '"MCMAN"' in init and '"MCSERV"' in init
+assert '"BDMFS_FATFS"' in init and '"USBMASS_BD"' in init
 assert "CleanUpForEmberExec" in header
 assert "RunLoaderElfKeepIOPWithArgv0" in header
 assert "DashPrepareKeepIopHandoff" in actions

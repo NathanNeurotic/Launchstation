@@ -9,6 +9,7 @@
 #include "main_history.h"
 #include "main_info_screens.h"
 #include "dash.h"
+#include "dash_sound.h"
 
 /* Optional observer called right before an ELF is handed to the loader
  * (used by the dashboard to maintain its "recent" list). */
@@ -18,6 +19,7 @@ void (*mainActionLaunchHook)(const char *path) = NULL;
 //------------------------------
 static void cleanUpForExecInternal(int end_pad_rpc)
 {
+	dashSoundShutdown(); /* the launch is now committed */
 	clrScr(GS_SETREG_RGBA(0x00, 0x00, 0x00, 0));
 	drawScr();
 	clrScr(GS_SETREG_RGBA(0x00, 0x00, 0x00, 0));
@@ -27,15 +29,10 @@ static void cleanUpForExecInternal(int end_pad_rpc)
 	free(External_Lang_Buffer);
 
 	/*
-	 * Closing the ports releases our pad buffers. For ordinary legacy
-	 * launches preserve the historical wLaunchELF behaviour. Ember is
-	 * different: it either inherits a tested device stack or, on USB,
-	 * immediately follows this cleanup with Ember's clean-IOP bootstrap.
-	 * padEnd() is still required to release this EE process's libpad RPC
-	 * client before either handoff. Hardware proved that padEnd() alone is
-	 * not sufficient on USB because the homebrew SIO2MAN/PADMAN IRX modules
-	 * themselves remain resident; the USB Ember path removes those with a
-	 * clean IOP reset in prepareEmberCleanUsbIop().
+	 * Closing the ports releases our pad buffers. Ordinary launches retain the
+	 * historical wLaunchELF behavior. Ember also ends this EE libpad RPC client.
+	 * On USB, its launcher then rebuilds a launcHER-compatible storage IOP
+	 * without PADMAN and performs no further reset before ExecPS2.
 	 */
 	padPortClose(1, 0);
 	padPortClose(0, 0);
@@ -58,19 +55,24 @@ void CleanUpForExec(void)
 	cleanUpForExecInternal(0);
 }
 
-int CleanUpForEmberExec(void)
+int CleanUpForKeepIopExec(const char *title)
 {
 	/*
-	 * Ember performs no IOP reset. Any dashboard file IO/audio RPC still in
-	 * flight would survive on the IOP side after this EE process disappears.
-	 * Drain those users first, but do not unmount or unload the game/storage
-	 * stack: Ember must inherit it exactly as RiptOPL's keep-IOP path does.
+	 * Any ELF that inherits the current IOP also inherits every IOP-side RPC
+	 * server and device driver. Drain dashboard IO/audio first and release our
+	 * libpad client so the child can bind cleanly instead of inheriting stale
+	 * EE ownership.
 	 */
-	if (!DashPrepareKeepIopHandoff("Preparing Ember"))
+	if (!DashPrepareKeepIopHandoff(title != NULL ? title : "Preparing application"))
 		return 0;
 
 	cleanUpForExecInternal(1);
 	return 1;
+}
+
+int CleanUpForEmberExec(void)
+{
+	return CleanUpForKeepIopExec("Preparing Ember");
 }
 //------------------------------
 //endfunc CleanUpForExec / CleanUpForEmberExec
@@ -239,7 +241,10 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 			goto ELFnotFound;
 
 		x = setting->reboot_iop_elf_load;
-		CleanUpForExec();
+		if (x)
+			CleanUpForExec();
+		else if (!CleanUpForKeepIopExec("Preparing application"))
+			return;
 		LaunchArgsClear();
 		RunLoaderMemory("rom0:HDDBOOT", mbr_mem_arg, x);
 		return;
@@ -654,7 +659,10 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 			if (mainActionLaunchHook != NULL)
 				mainActionLaunchHook(path);
 			x = setting->reboot_iop_elf_load;
-			CleanUpForExec();
+			if (x)
+				CleanUpForExec();
+			else if (!CleanUpForKeepIopExec("Preparing application"))
+				return;
 			if (show_launch_gameid)
 				displayRetroGemGameID(launch_gameid, 2);
 			RunLoaderElf(fullpath, party, path, t, x);

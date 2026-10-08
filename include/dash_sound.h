@@ -20,6 +20,7 @@ enum DashSound {
 
 int dashSoundInit(void);
 void dashSoundShutdown(void);
+void dashSoundSuspend(void); /* mute while a launch can still return */
 void dashSoundPlay(int id);
 void dashSoundApplyVolume(void);
 void dashBgmStart(void);

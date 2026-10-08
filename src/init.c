@@ -1461,15 +1461,24 @@ void loadUsbModules(void)
 	 * first runtime USB-mass activation with a deterministic EE RPC rebind.
 	 */
 	if (!had_usb_mass && have_usb_mass && !is_early_init) {
-		DPRINTF(" [USB]: rebinding PAD RPC after lazy USB activation\n");
-		if (!refreshPadSessionAfterUsb())
-			DPRINTF(" [USB]: PAD RPC rebind failed; input may require Reboot IOP\n");
+		DPRINTF(" [USB]: rebinding PAD RPC/ports after lazy USB activation\n");
+		if (!reopenPadPorts())
+			DPRINTF(" [USB]: PAD rebind failed after lazy USB activation\n");
 	}
 }
 //------------------------------
 //endfunc loadUsbModules
 //---------------------------------------------------------------------------
 
+/*
+ * Ember USB handoff.
+ *
+ * This intentionally mirrors launcHER's proven USB initialization shape:
+ * reset the IOP once, then load the basic filesystem/SIO2 services followed
+ * by BDM and USB storage. PADMAN is deliberately NOT loaded. Ember loads and
+ * owns its pad stack after ExecPS2. Once this function succeeds there must be
+ * no second IOP reset before Ember starts, or its USB tree disappears.
+ */
 static int emberUsbProbePath(const char *path, char *out, size_t out_size)
 {
 	const char *suffix;
@@ -1499,11 +1508,11 @@ static int emberUsbProbePath(const char *path, char *out, size_t out_size)
 
 	if (*suffix == '\0')
 		suffix = "/";
+
 #ifdef EXFAT
 	return snprintf(out, out_size, "usb%d:%s%s", unit,
 	                *suffix == '/' ? "" : "/", suffix) < (int)out_size;
 #else
-	/* The classic USBMASS driver registers "mass", not the BDMFS "usbN". */
 	if (unit == 0)
 		return snprintf(out, out_size, "mass:%s%s",
 		                *suffix == '/' ? "" : "/", suffix) < (int)out_size;
@@ -1517,39 +1526,43 @@ static int emberStartIrx(const char *name, const void *module, int size)
 	int id, ret = -1;
 
 	id = SifExecModuleBuffer(module, size, 0, NULL, &ret);
-	DPRINTF(" [EMBER CLEAN %s]: id=%d ret=%d\n", name, id, ret);
+	DPRINTF(" [EMBER USB %s]: id=%d ret=%d\n", name, id, ret);
 	return id >= 0 && ret >= 0;
 }
 
-int prepareEmberCleanUsbIop(const char *ember_path)
+static int emberStartSio2man(void)
+{
+#ifdef HOMEBREW_SIO2MAN
+	return emberStartIrx("SIO2MAN", sio2man_irx, size_sio2man_irx);
+#else
+	int id = SifLoadModule("rom0:SIO2MAN", 0, NULL);
+	DPRINTF(" [EMBER USB rom0:SIO2MAN]: id=%d\n", id);
+	return id >= 0;
+#endif
+}
+
+int prepareEmberUsbHandoffIop(const char *ember_path)
 {
 	char probe[MAX_PATH];
 	iox_stat_t stat;
 	int attempt;
 
 	if (!emberUsbProbePath(ember_path, probe, sizeof(probe))) {
-		DPRINTF("[EMBER CLEAN] not a USB path: %s\n",
+		DPRINTF("[EMBER USB] invalid USB path: %s\n",
 		        ember_path != NULL ? ember_path : "(null)");
 		return 0;
 	}
 
 #ifdef NO_IOP_RESET
-	/* This build must never reset the IOP; keep the inherited stack. */
-	DPRINTF("[EMBER CLEAN] NO_IOP_RESET build; keeping IOP for %s\n", probe);
-	(void)stat;
-	(void)attempt;
+	/* Respect no-reset builds. They can only use the already-live stack. */
+	DPRINTF("[EMBER USB] NO_IOP_RESET: preserving current stack for %s\n", probe);
 	return 1;
 #else
-	/*
-	 * Hardware result: keeping r3LaunchELF_ATTDASH's homebrew
-	 * SIO2MAN/PADMAN alive makes Ember report "pad init rc=-1".
-	 *
-	 * Do NOT call Reset() or ensureCoreIoStackReady() here: both would load
-	 * the same homebrew pad stack again. This is intentionally the minimal
-	 * USB environment Ember's own launcher provides. Ember then loads
-	 * rom0:SIO2MAN and rom0:PADMAN itself into a clean IOP.
-	 */
-	DPRINTF("[EMBER CLEAN] rebuilding USB IOP for %s\n", probe);
+	DPRINTF("[EMBER USB] rebuilding launcHER-style storage IOP for %s\n", probe);
+
+	/* All EE RPC clients that used the old storage IOP are already drained by
+	 * CleanUpForEmberExec(). Drop the remaining file/load RPC bindings before
+	 * replacing their IOP servers. */
 	fileXioExit();
 	SifLoadFileExit();
 	resetUsbHostControllerBeforeIopReset();
@@ -1565,40 +1578,42 @@ int prepareEmberCleanUsbIop(const char *ember_path)
 	SifInitIopHeap();
 	initsbv_patches();
 
+	/* launcHER basic module order. Do not insert PADMAN here. */
 	if (!emberStartIrx("IOMANX", iomanx_irx, size_iomanx_irx) ||
 	    !emberStartIrx("FILEXIO", filexio_irx, size_filexio_irx) ||
-	    !emberStartIrx("USBD", usbd_irx, size_usbd_irx))
+	    !emberStartSio2man() ||
+	    !emberStartIrx("MCMAN", mcman_irx, size_mcman_irx) ||
+	    !emberStartIrx("MCSERV", mcserv_irx, size_mcserv_irx))
 		return 0;
 
 #ifdef EXFAT
+	/* launcHER loads the generic BDM/FatFs layer before the USB transport. */
 	if (!emberStartIrx("BDM", bdm_irx, size_bdm_irx) ||
-	    !emberStartIrx("BDMFS_FATFS", bdmfs_fatfs_irx, size_bdmfs_fatfs_irx))
-		return 0;
-	/* Match the already hardware-used lazy USB bring-up timing: BDMFS needs
-	 * a short settle before the block driver registers its device. */
-	waitForUsbMassBdmfsSettle();
-	if (!emberStartIrx("USBMASS_BD", usbmass_bd_irx, size_usbmass_bd_irx))
+	    !emberStartIrx("BDMFS_FATFS", bdmfs_fatfs_irx, size_bdmfs_fatfs_irx) ||
+	    !emberStartIrx("USBD", usbd_irx, size_usbd_irx) ||
+	    !emberStartIrx("USBMASS_BD", usbmass_bd_irx, size_usbmass_bd_irx))
 		return 0;
 #else
-	if (!emberStartIrx("USBMASS", usb_mass_irx, size_usb_mass_irx))
+	if (!emberStartIrx("USBD", usbd_irx, size_usbd_irx) ||
+	    !emberStartIrx("USBMASS", usb_mass_irx, size_usb_mass_irx))
 		return 0;
 #endif
-	delay(3);
 
 	fileXioInit();
 
-	/* USB enumeration is asynchronous. Do not hand Ember a clean but
-	 * not-yet-mounted IOP: wait up to five seconds for its own ELF path. */
+	/* Enumeration is asynchronous. Do not ExecPS2 until the exact ember.elf
+	 * path is readable again. Five seconds matches the existing hardware
+	 * recovery windows without an unbounded black-screen wait. */
 	for (attempt = 0; attempt < 50; attempt++) {
 		memset(&stat, 0, sizeof(stat));
 		if (fileXioGetStat(probe, &stat) >= 0) {
-			DPRINTF("[EMBER CLEAN] USB ready after %d ms\n", attempt * 100);
+			DPRINTF("[EMBER USB] storage ready after %d ms\n", attempt * 100);
 			return 1;
 		}
 		DelayThread(100 * 1000);
 	}
 
-	DPRINTF("[EMBER CLEAN] USB did not remount: %s\n", probe);
+	DPRINTF("[EMBER USB] ember.elf never remounted: %s\n", probe);
 	return 0;
 #endif
 }
@@ -1672,6 +1687,16 @@ static void resetRuntimeDeviceState(int show_status)
 #ifdef DS34
 	stopDs34Input();
 #endif
+	/*
+	 * Tear down EE-side RPC clients before destroying their IOP servers.
+	 * Rebinding libpad on top of a dead pre-reset client is intermittent on
+	 * hardware and is one cause of the "UI alive, controller dead" state.
+	 */
+	closeKeyboardIfOpened();
+	padPortClose(1, 0);
+	padPortClose(0, 0);
+	padEnd();
+	clearPadPressState();
 	if (show_status)
 		showRebootingIopMsg();
 	unmountAll();
@@ -1679,7 +1704,9 @@ static void resetRuntimeDeviceState(int show_status)
 #ifdef DS34
 	loadDs34InputModules();
 #endif
-	setupPad();
+	if (!setupPad())
+		DPRINTF("PAD setup failed after IOP reset\n");
+	clearPadPressState();
 	DPRINTF("Starting keyboard\n");
 	startKbd();
 	if (iopResetNotify != NULL)

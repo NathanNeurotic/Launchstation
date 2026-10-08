@@ -1032,11 +1032,9 @@ int readHDDDVRP(const char *path, FILEINFO *info, int max)
 
 static void waitUsbDiscoverySettle(void)
 {
-	u64 wait_start;
-
-	wait_start = Timer();
-	while (Timer() < wait_start + USB_DISCOVERY_SETTLE_MS) {
-	}
+	/* USB enumeration happens on the IOP. Do not burn the EE in a spin loop
+	 * while waiting for the next discovery pass. */
+	DelayThread(USB_DISCOVERY_SETTLE_MS * 1000);
 }
 
 static void scanUsbMassDevices(int force)
@@ -2006,6 +2004,14 @@ int filerUsbDriveMask(void)
 		if (USB_mass_ix[i])
 			mask |= 1 << i;
 	return mask;
+}
+
+int filerUsbRefreshDriveMask(void)
+{
+	/* One physical-media refresh only. Dashboard startup/probe code supplies
+	 * its own pacing so the UI can keep drawing between enumeration checks. */
+	scanUsbMassDevices(1);
+	return filerUsbDriveMask();
 }
 
 int filerUsbDriversLoaded(void)

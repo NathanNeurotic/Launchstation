@@ -86,7 +86,10 @@ int LaunchPopstarterVcd(const char *path, char *message, size_t message_size)
 		show_launch_gameid = have_launch_gameid;
 	if (isHddDevicePath(path) || isHddPfsPath(path) || isHddPartyPath(popstarter_party))
 		unmountAll();
-	CleanUpForExec();
+	if (reboot_iop_elf_load)
+		CleanUpForExec();
+	else if (!CleanUpForKeepIopExec("Preparing POPStarter"))
+		return POPSTARTER_ERR_OPEN_POPSTARTER;
 	if (show_launch_gameid)
 		displayRetroGemGameID(launch_gameid, 2);
 	RunLoaderElf(popstarter_fullpath, popstarter_party, arg0, exec_kind, reboot_iop_elf_load);

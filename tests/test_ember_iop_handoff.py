@@ -1,4 +1,4 @@
-"""Guard Ember's hardware-proven clean USB IOP handoff."""
+"""Guard Ember's launcHER-style USB storage handoff."""
 from pathlib import Path
 import re
 
@@ -23,14 +23,14 @@ def body(source: str, signature: str) -> str:
     return source[start:pos]
 
 launch = body(ember, "int LaunchEmberGame(")
-cleanup = body(actions, "int CleanUpForEmberExec(")
+cleanup = body(actions, "int CleanUpForKeepIopExec(")
 internal = body(actions, "static void cleanUpForExecInternal(")
 prepare = body(dash, "int DashPrepareKeepIopHandoff(")
-clean_usb = body(init, "int prepareEmberCleanUsbIop(")
+usb = body(init, "int prepareEmberUsbHandoffIop(")
 embedded_main = body(loader, "int main(")
+generic = body(actions, "void CleanUpForExec(")
 
-# Shared pre-handoff cleanup remains important: no worker/fileXio or audsrv
-# activity is allowed to race an IOP reboot.
+# Dashboard-owned IO/audio must be gone before the handoff starts.
 assert "CleanUpForEmberExec()" in launch
 assert "settleBackgroundWork" in prepare
 assert "filerRootMcPollIdle()" in prepare
@@ -40,45 +40,36 @@ assert "padPortClose(1, 0)" in internal
 assert "padPortClose(0, 0)" in internal
 assert "padEnd();" in internal
 
-# Hardware reported pad init rc=-1 with the inherited freepad/freesio2 stack.
-# USB therefore MUST take the clean-IOP branch.
-assert "isUsbEmberPath(ember_elf)" in launch
-assert "prepareEmberCleanUsbIop(ember_elf)" in launch
-assert "SifIopReset" in clean_usb
-assert "SifIopSync" in clean_usb
-assert "resetUsbHostControllerBeforeIopReset" in clean_usb
-assert "SifLoadFileInit" in clean_usb
-assert "SifInitIopHeap" in clean_usb
-assert "initsbv_patches" in clean_usb
+# USB gets one clean IOP reset BEFORE the final storage stack is built.
+assert "prepareEmberUsbHandoffIop(ember_elf)" in launch
+assert "SifIopReset" in usb
+assert "SifIopSync" in usb
+assert "resetUsbHostControllerBeforeIopReset" in usb
 
-# Rebuild exactly the filesystem side needed to re-open the USB Ember tree.
-for module in (
-    '"IOMANX"', '"FILEXIO"', '"USBD"', '"BDM"',
-    '"BDMFS_FATFS"', '"USBMASS_BD"',
-):
-    assert module in clean_usb
-assert "fileXioInit()" in clean_usb
-assert "fileXioGetStat(probe" in clean_usb
-assert "DelayThread(100 * 1000)" in clean_usb
+# Mirror launcHER's dependency order: basic filesystem/SIO2 services,
+# then BDM/FatFs, then the USB transport. PADMAN must remain absent.
+order = [
+    '"IOMANX"', '"FILEXIO"', "emberStartSio2man()",
+    '"MCMAN"', '"MCSERV"', '"BDM"', '"BDMFS_FATFS"',
+    '"USBD"', '"USBMASS_BD"',
+]
+positions = [usb.index(token) for token in order]
+assert positions == sorted(positions)
 
-# Ember, not the launcher, must load ROM SIO2MAN/PADMAN after this reset.
-# Strip comments so explanatory function names do not satisfy/fail the check.
-clean_usb_code = re.sub(r"/\*.*?\*/", "", clean_usb, flags=re.S)
-clean_usb_code = re.sub(r"//.*", "", clean_usb_code)
-for forbidden in (
-    "sio2man_irx", "padman_irx", "ensureCoreIoStackReady",
-    "loadBasicModules", "setupPad",
-):
-    assert forbidden not in clean_usb_code
+usb_code = re.sub(r"/\*.*?\*/", "", usb, flags=re.S)
+usb_code = re.sub(r"//.*", "", usb_code)
+assert "padman_irx" not in usb_code
+assert "setupPad(" not in usb_code
+assert "fileXioInit()" in usb
+assert "fileXioGetStat(probe" in usb
+assert "DelayThread(100 * 1000)" in usb
 
-# Other launch types keep their established cleanup behavior.
-generic = body(actions, "void CleanUpForExec(")
-assert "cleanUpForExecInternal(0)" in generic
-
-# After rebuilding USB, use the existing no-reset loader. Requesting R here
-# would immediately destroy the stack we just constructed.
+# After the stack is ready, the embedded loader MUST NOT reset it again.
 assert "RunLoaderElfKeepIOPWithArgv0" in launch
 assert "reset_iop = 0;" in embedded_main
 assert "case 'R':" in embedded_main
 
-print("PASS: USB Ember gets a clean pad-free IOP and a rebuilt USB filesystem stack")
+# Ordinary ELF launches retain legacy cleanup semantics.
+assert "cleanUpForExecInternal(0)" in generic
+
+print("PASS: Ember USB gets one launcHER-style storage reset, no PADMAN, and no final reset")
