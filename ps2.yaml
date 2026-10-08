@@ -19,6 +19,25 @@ project: wLaunchELF
 
 targets:
   # ------------------------------------------------------------------ IOP --
+  - name: usbd_ra
+    type: iop
+    sources:
+      - iop/usbd-ra/src/driver.c
+      - iop/usbd-ra/src/hcd.c
+      - iop/usbd-ra/src/hub.c
+      - iop/usbd-ra/src/interface.c
+      - iop/usbd-ra/src/mem.c
+      - iop/usbd-ra/src/usbd.c
+      - iop/usbd-ra/src/usbio.c
+    include_dirs: [iop/usbd-ra/include, iop/usbd-ra/src]
+    imports_lst: iop/usbd-ra/src/imports.lst
+    exports_tab: iop/usbd-ra/src/exports.tab
+    defines:
+      - MINI_DRIVER
+      - USE_GP_REGISTER=0
+    cflags: [-Wall]
+    headers: [loadcore, stdio, sysclib, sysmem, intrman, threadman, vblank]
+
   - name: dev9_poweroff
     type: iop
     sources: [iop/dev9_poweroff/main.c]
@@ -222,7 +241,7 @@ targets:
       - mcman
       - mcserv
       - mmceman
-      - usbd_mini:usbd
+      - usbd_ra:usbd
       - bdm
       - bdmfs_fatfs
       - usbmass_bd
@@ -383,9 +402,10 @@ targets:
       - dev9_poweroff
       - ps2hdd_osd:ps2hdd
       - fs:ps2fs
-      # Controlled console comparison for USB-probe/PAD loss: same SDK,
-      # smaller host driver. This is not RiptOPL's older vendored driver.
-      - usbd_mini:usbd
+      # RiptOPL vendored USBD (usbd-ra): ps2sdk pre-rewrite (314d87e7)
+      # with MINI_DRIVER and USE_GP_REGISTER=0. Avoids the post-2024-09-04
+      # USBD rewrite that drops controller/SIO2 and freezes IOP on real hardware.
+      - usbd_ra:usbd
       - mcman
       - mcserv
       - cdfs:cdvd
