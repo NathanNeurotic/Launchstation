@@ -186,3 +186,12 @@ Remove tuning entirely, matching RiptOPL's absence of this call. This saves IOP
 heap relative to 128KB configuration; actual heap exhaustion on this console
 is NOT proven. Network throughput may decrease. USB host, discovery and pad
 lifecycle remain as baseline. UDPFS-first copy test remains the hardware gate.
+
+## Hardware finding: Intermittent USB hang isolated to post-2024 ps2sdk USBD rewrite
+
+User reports that USB hangs intermittently: opening UDPFS first then USB froze at Checking USB media with analog LED off; doing MMCE first then USB worked fine; USB directly sometimes hung.
+
+Investigation of RiptOPL\'s working configuration revealed the root cause:
+On 2024-09-04, upstream ps2sdk rewrote its USB host driver (commit b1f7ff96, \'USBD feature update\'). On real hardware, that rewritten driver intermittently loses controller communication (taking down SIO2/PADMAN, turning off the analog LED) and hangs the IOP during USB transfers. Both ps2sdk\'s full usbd.irx and usbd_mini.irx in current toolchains come from this rewritten codebase. RiptOPL resolved this exact hardware regression by vendoring the pre-rewrite driver (ps2sdk commit 314d87e7 as of 2024-04-01) built with -DMINI_DRIVER and -DUSE_GP_REGISTER=0 (usbd-ra).
+
+We have vendored usbd-ra into iop/usbd-ra and configured ps2.yaml to build it as target usbd_ra, embedding it in both wLaunchELF and wle_igr in place of ps2sdk\'s prepackaged usbd_mini.irx.
