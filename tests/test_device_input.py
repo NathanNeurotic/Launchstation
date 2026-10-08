@@ -71,7 +71,8 @@ static int padRead(int p,int s,struct padButtonStatus *b) {
 static void dashWorkerParkPoint(void) {}
 static int dashIopParked(void) { return 0; }
 static int dashWorkerIoBusy(void) { return busy; }
-static void waitAnyPadReady(void) {}
+static int pad_wait_calls;
+static void waitAnyPadReady(void) { pad_wait_calls++; }
 """
 padcode += pad[pad.index("static char padBuf_t"):pad.index("int simPadKB(void)")]
 padcode += r"""
@@ -87,6 +88,10 @@ padcode += function(ui, "void dashInputPollEx(") + function(ui, "void dashInputF
 padcode += r"""
 int main(void) {
     DashInput in;
+    connected[0]=connected[1]=3;
+    dashInputPollEx(&in,0); dashInputFlush();
+    assert(!in.any && pad_wait_calls==0 && now_ms==1000);
+    connected[0]=1; connected[1]=0;
     /* A successful press followed by failed reads must not replay it. */
     keys[0]=PAD_TRIANGLE;
     assert(readpad_no_KB() && new_pad==PAD_TRIANGLE);
@@ -136,8 +141,9 @@ int main(void) {
 devices = read("src/dash_devices.c")
 device_types = header[header.index("enum DashDevState"):
                       header.index("void dashDevicesInit(void)")]
-symbols = sorted(set(re.findall(r"\b(?:DI_|DASH_SND_|DASH_DEVA_|SCECd)\w+", devices)))
+symbols = sorted(set(re.findall(r"\b(?:DI_|DASH_SND_|SCECd)\w+", devices)))
 devcode = common + device_types + "enum { " + ",".join(symbols) + " };\n"
+devcode += "\n".join(re.findall(r"^#define DASH_DEVA_.*", header, re.M)) + "\n"
 devcode += r"""
 #define MMCE 1
 #define MX4SIO 1
@@ -150,7 +156,7 @@ static unsigned int getIopResetGeneration(void) { return reset_generation; }
 static char LaunchElfBootDir[256], LaunchElfDir[256], netConfig[32];
 static struct { int dev_auto; int show_unavailable_devices; } dashCfg = {0,1};
 static int mc_present[2], usb_mask, usb_loaded, resident, media, loads, opens, closes;
-static int failed_load, reset_on_load;
+static int failed_load, reset_on_load, reset_on_type, usb_snapshot_valid=1;
 static u64 delayed_ata;
 enum { S_HDD=1, S_ATA=2, S_MX=4, S_MMCE0=8, S_MMCE1=16, S_UDPFS=32 };
 static int slot(const char *p) {
@@ -167,13 +173,16 @@ static int isPathDeviceStackLoaded(const char *p) {
 }
 static int load(int s) {
     loads++;
-    if(reset_on_load) { reset_generation++; resident=0; reset_on_load=0; }
+    if(reset_on_load || reset_on_type==s) {
+        reset_generation++; resident=0; usb_loaded=0; usb_snapshot_valid=0;
+        reset_on_load=0; reset_on_type=0;
+    }
     if(failed_load) return 0;
     resident|=s; return 1;
 }
 static int loadHddModules(void) { return load(S_HDD); }
 static int loadAtaModules(void) { return load(S_ATA); }
-static int loadMx4sioModules(void) { return load(S_MX); }
+static int loadMx4sioModules(void) { usb_snapshot_valid=0; return load(S_MX); }
 static int loadMmceModules(void) { return load(S_MMCE0|S_MMCE1); }
 static int load_udpfs(void) { return load(S_UDPFS); }
 static int fileXioDopen(const char *p) {
@@ -188,11 +197,11 @@ static int filerRootMcPresent(int p,int *t,int *f) {
     if(t)*t=2; if(f)*f=1024; return mc_present[p];
 }
 static int filerUsbDriversLoaded(void) { return usb_loaded; }
-static int filerUsbDriveMask(void) { return usb_mask; }
+static int filerUsbDriveMask(void) { return usb_snapshot_valid?usb_mask:0; }
 static int dashLoadingActive(void) { return 0; }
 static void dashLoadingFrame(const char *s,int d,int n) { (void)s;(void)d;(void)n; }
 static u64 usb_media_ready;
-static int filerUsbRefreshDriveMask(void) { return now_ms>=usb_media_ready?usb_mask:0; }
+static int filerUsbRefreshDriveMask(void) { usb_snapshot_valid=1; return now_ms>=usb_media_ready?usb_mask:0; }
 static int isUsbMassStackLoaded(void) { return usb_loaded; }
 static void rebootIopAndReloadCoreStackSilent(void) { reset_generation++; resident=0; usb_loaded=0; }
 int dashBootDeviceBit(void);
@@ -291,8 +300,58 @@ int main(void) {
     puts("PASS: pad waits yield, expire for stuck state, and accept delayed/stable/disconnected pads");
 }
 """
+autocode = devcode[:devcode.index("int main(void)")] + r"""
+int main(void) {
+    strcpy(LaunchElfBootDir,"mc0:/BOOT/");
+    dashCfg.dev_auto=DASH_DEVA_USB|DASH_DEVA_HDD|DASH_DEVA_UDPFS;
+    usb_mask=1; media=S_HDD|S_UDPFS; reset_on_type=S_UDPFS;
+    dashDevicesAutoProbe();
+    assert(usb_loaded && filerUsbDriveMask()==1);
+    assert((resident&(S_HDD|S_UDPFS))==(S_HDD|S_UDPFS));
+    resident=0; usb_loaded=1; usb_snapshot_valid=1;
+    dashCfg.dev_auto=DASH_DEVA_USB|DASH_DEVA_MX4SIO; media=S_MX;
+    dashDevicesAutoProbe();
+    assert((resident&S_MX) && usb_loaded && filerUsbDriveMask()==1);
+    puts("PASS: startup restores devices lost to a later reset and refreshes USB after MX4SIO invalidation");
+}
+"""
+art = read("src/dash_art.c")
+themecode = common + r"""
+#include <stdlib.h>
+#define ART_SLOTS 8
+#define THEME_SLOTS 8
+#define DASH_PATH_MAX 256
+#define DASH_JOB_THEME 1
+#define DASH_JOB_VISIBLE 2
+typedef int GSTEXTURE;
+enum { TS_EMPTY,TS_LOADED,TS_MISSING,TS_LOADING };
+typedef struct { char path[256]; GSTEXTURE tex; int state,gen; } ThemeSlot;
+typedef struct { char path[256]; int slot,gen,max_w,max_h; } ThemeTexJob;
+static ThemeSlot theme_slots[THEME_SLOTS];
+static int loading=1, submitted;
+static void *submitted_arg;
+static int dashLoadingActive(void) { return loading; }
+static int isPathDeviceStackLoaded(const char *p) { (void)p; return 1; }
+static void dashStrCopy(char *d,const char *s,int n) { snprintf(d,n,"%s",s); }
+static void themeTexRun(void *a) { (void)a; }
+static void themeTexDone(void *a) { (void)a; }
+static int dashWorkerSubmit(const char *s,int f,void (*r)(void *),void (*d)(void *),void *a) {
+    (void)s;(void)f;(void)r;(void)d; submitted++; submitted_arg=a; return 1;
+}
+"""
+themecode += function(art, "GSTEXTURE *dashThemeTextureFile(")
+themecode += r"""
+int main(void) {
+    assert(!dashThemeTextureFile("mc0:/THEME/new.png",64,64) && !submitted);
+    strcpy(theme_slots[0].path,"mc0:/THEME/cached.png"); theme_slots[0].state=TS_LOADED;
+    assert(dashThemeTextureFile("mc0:/THEME/cached.png",64,64)==&theme_slots[0].tex);
+    loading=0; assert(!dashThemeTextureFile("mc0:/THEME/new.png",64,64) && submitted==1);
+    free(submitted_arg);
+    puts("PASS: loading overlays use cached theme textures and defer new IO until loading ends");
+}
+"""
 with tempfile.TemporaryDirectory(prefix="wle-device-input-") as tmp:
-    for name, code in (("input", padcode), ("devices", devcode), ("pad-waits", waitcode)):
+    for name, code in (("input", padcode), ("devices", devcode), ("pad-waits", waitcode), ("startup", autocode), ("theme-io", themecode)):
         source = Path(tmp) / f"{name}.c"
         exe = Path(tmp) / f"{name}.exe"
         source.write_text(code)
