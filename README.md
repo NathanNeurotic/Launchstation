@@ -10,6 +10,8 @@ The full Launchstation reference is published as a PS2-styled GitHub Pages site:
 - **Offline:** `Launchstation-Documentation.zip` in the latest automated release
 - **Source:** `docs-site/` in this repository
 
+**Upgrading from a pre-rename build:** Older native update checks use the previous GitHub API repository path and may not follow GitHub's repository-rename redirect. If an in-app check reports an unexpected response, manually replace the executable with the current `BOOT.ELF` or `Launchstation.ELF` once; the new updater uses the canonical `NathanNeurotic/Launchstation` endpoint. The release also retains `r3LaunchELF_ATTDASH.ELF` as an asset-name compatibility alias.
+
 The site covers installation, dashboard controls, File Browser, Apps, Text Editor, storage/device support, APA/PFS, iLink, MMCE, networking, POPStarter VCD launching, Ember PS1 image launching, Neutrino ISO launching, IGR/MMCE backups, native Google Drive sync, settings, configuration files, troubleshooting and developer notes.
 
 ## Dashboard

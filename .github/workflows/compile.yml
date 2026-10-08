@@ -218,14 +218,14 @@ jobs:
 
           ## Which download do I need?
 
-          Want everything in one download? Grab **Launchstation-Complete.zip**. For a minimal normal PS2 install, download **BOOT.ELF**. **Launchstation.ELF** is the same packed executable with the project name instead. The legacy r3LaunchELF_ATTDASH.ELF alias is retained for existing native updaters. The remaining files are optional sidecars, debugging files, or documentation.
+          Want everything in one download? Grab **Launchstation-Complete.zip**. For a minimal normal PS2 install, download **BOOT.ELF**. **Launchstation.ELF** is the same packed executable with the project name instead. The legacy r3LaunchELF_ATTDASH.ELF filename is retained for compatibility. Pre-rename updater builds may need a one-time manual update because their GitHub API request does not follow repository-rename redirects. The remaining files are optional sidecars, debugging files, or documentation.
 
           | File | What it is | What it does | What it is for |
           | --- | --- | --- | --- |
           | **Launchstation-Complete.zip** | One archive containing all useful files from this release. | Bundles both packed ELF names, the unpacked debug ELF when available, BGM, cloud/update sidecars, and offline documentation. | Best choice when you want the entire release in one download instead of clicking every asset individually. |
           | **BOOT.ELF** | The normal packed PS2 executable. | Runs Launchstation on the PlayStation 2. It is byte-identical to Launchstation.ELF. | Recommended for normal installs, boot managers, FMCB/FHDB setups, USB/MASS launches, and general testing. |
           | **Launchstation.ELF** | The same packed PS2 executable, kept under the project name. | Runs the exact same build as BOOT.ELF. | Use this when you want a descriptive filename instead of BOOT.ELF. You do not need both executables. |
-          | **r3LaunchELF_ATTDASH.ELF** | Legacy compatibility name for the same packed executable. | Keeps update downloads working for existing installations that request the old filename. | Existing users only; new installs should use Launchstation.ELF or BOOT.ELF. |
+          | **r3LaunchELF_ATTDASH.ELF** | Legacy compatibility name for the same packed executable. | Preserves the old asset name, although older update checks may need one manual upgrade due to the repository API redirect. | Existing users only; new installs should use Launchstation.ELF or BOOT.ELF. |
           | **Launchstation-unpacked.ELF** | The uncompressed development/debug build. | Runs without the normal packing step and is much larger. | Developers and troubleshooting only. Normal users should use BOOT.ELF or Launchstation.ELF. |
           | **BGM.ADP** | Optional PS2 ADPCM background music data. | Enables the dashboard background track when placed beside the boot ELF. Interface sound effects remain available without it. | Users who want dashboard background music. Omit it if you do not want the music. |
           | **WLE-CLOUD.CNF.example** | Example configuration for the native Google Drive client. | Provides the template used to create WLE-CLOUD.CNF with your Google OAuth client ID. | Only users enabling native Google Drive backup/sync. Copy/customize it as WLE-CLOUD.CNF in the dashboard settings folder beside DASHBOARD.CNF. |
