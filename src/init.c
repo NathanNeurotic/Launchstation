@@ -1376,12 +1376,8 @@ void loadUsbModules(void)
 	if (!have_usbd || !have_usb_mass)
 		showLoadingModulesMsg("USB core IO");
 	ensureCoreIoStackReady();
-	if (!have_usbd)
-		showLoadingModulesMsg("USB USBD");
-	loadUsbDModule();
-
 #ifdef EXFAT
-	if (have_usbd && !have_usb_mass) {
+	if (!have_usb_mass) {
 		int loaded_ok = 1;
 		/*
 		 * EXFAT builds use the embedded BDM stack.
@@ -1405,6 +1401,15 @@ void loadUsbModules(void)
 		}
 		if (!have_bdmfs)
 			loaded_ok = 0;
+		/* Match the existing Ember handoff and BDM stack dependency order:
+		 * register BDM/FatFs before bringing up the USB host/controller.
+		 * USBD is reused if another USB client (e.g. DS34) started it. */
+		if (loaded_ok) {
+			if (!have_usbd)
+				showLoadingModulesMsg("USB USBD");
+			loadUsbDModule();
+			loaded_ok = have_usbd;
+		}
 		if (loaded_ok) {
 			showLoadingModulesMsg("USB USBMASS_BD");
 			ID = SifExecModuleBuffer(usbmass_bd_irx, size_usbmass_bd_irx, 0, NULL, &ret);
@@ -1419,6 +1424,9 @@ void loadUsbModules(void)
 		}
 	}
 #else
+	if (!have_usbd)
+		showLoadingModulesMsg("USB USBD");
+	loadUsbDModule();
 	if (have_usbd && !have_usb_mass) {
 		ID = SifExecModuleBuffer(usb_mass_irx, size_usb_mass_irx, 0, NULL, &ret);
 		DPRINTF(" [USBMASS] ID=%d, ret=%d\n", ID, ret);
