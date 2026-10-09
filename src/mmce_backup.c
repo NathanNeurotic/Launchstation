@@ -311,7 +311,7 @@ static int backup_one(const char *source, const char *relative,
                       const char *backup_root, const MmceBackupOptions *options,
                       MmceBackupStats *stats)
 {
-    char dir[MAX_PATH], name[MAX_NAME], dest[MAX_PATH];
+    char dir[MAX_PATH], name[MAX_NAME], dest[MAX_PATH], staged[MAX_PATH];
     char previous[MAX_NAME], previous_path[MAX_PATH];
     int r, newest, same = -1;
     int format = options->format;
@@ -329,43 +329,67 @@ static int backup_one(const char *source, const char *relative,
     if (previous_path[0] != '\0' && format == MMCE_BACKUP_FORMAT_MCD)
         same = files_equal_serial(source, previous_path);
 
-    /* Native .mcd history can detect unchanged cards before any write. */
+    /* Native .mcd history can detect unchanged cards before any write.
+     * A failed comparison is not proof of a changed card: do not prune
+     * previous history if an existing snapshot cannot be read. */
     if (same == 1) {
         stats->unchanged++;
         return 0;
     }
-
-    if (!unique_history_path(dir, format, name, sizeof(name), dest, sizeof(dest))) {
+    if (newest < 0 || (newest > 0 && (previous_path[0] == '\0' ||
+        (format == MMCE_BACKUP_FORMAT_MCD && same < 0)))) {
         stats->failed++;
         return -1;
     }
 
+    if (!unique_history_path(dir, format, name, sizeof(name), dest, sizeof(dest)) ||
+        snprintf(staged, sizeof(staged), "%s.PART", dest) >= (int)sizeof(staged)) {
+        stats->failed++;
+        return -1;
+    }
+
+    /* Incomplete writes must never be visible as .mcd/.ps2 history to the
+     * pending scan, retention or Google Drive uploader. The export routine
+     * fully verifies its output against the source before we publish it. */
     if (format == MMCE_BACKUP_FORMAT_PCSX2)
-        r = mcCardExportPcsx2(source, dest, NULL);
+        r = mcCardExportPcsx2(source, staged, NULL);
     else
-        r = mcCardBackupNoEcc(source, dest, NULL);
+        r = mcCardBackupNoEcc(source, staged, NULL);
     if (r != MC_CARD_EXPORT_OK) {
+        genRemove(staged);
         stats->failed++;
         return -1;
     }
 
-    /* PCSX2 history is a converted representation, so compare the verified
-     * converted file with the newest previous .ps2 after writing. */
-    if (format == MMCE_BACKUP_FORMAT_PCSX2 && newest > 0 &&
-        previous_path[0] != '\0') {
-        same = files_equal_serial(dest, previous_path);
+    /* Compare converted history before publishing. A comparison I/O error
+     * must not be treated as a changed card and trigger retention pruning. */
+    if (format == MMCE_BACKUP_FORMAT_PCSX2 && newest > 0) {
+        same = files_equal_serial(staged, previous_path);
         if (same == 1) {
-            if (genRemove(dest) < 0) {
+            if (genRemove(staged) < 0) {
                 stats->failed++;
                 return -1;
             }
             stats->unchanged++;
             return 0;
         }
+        if (same < 0) {
+            genRemove(staged);
+            stats->failed++;
+            return -1;
+        }
     }
 
+    /* Both paths are in the same directory/filesystem. Never overwrite a
+     * history entry if a concurrent writer claimed the selected name. */
+    if (wleExists(dest) || fileXioRename(staged, dest) < 0) {
+        genRemove(staged);
+        stats->failed++;
+        return -1;
+    }
     stats->backed_up++;
 
+    /* Retention only operates on committed, verified history entries. */
     if (prune_history(dir, options->keep, format) < 0) {
         stats->failed++;
         return -1;
