@@ -43,6 +43,8 @@ jobs:
           python3 tests/test_worker_queue.py
           python3 tests/test_device_input.py
           python3 tests/test_usb_storage_lifecycle.py
+          python3 tests/test_usb_shared_namespace.py
+          python3 tests/test_usb_boot_paths.py
           python3 tests/test_device_autostart_safe_mode.py
           python3 tests/test_home_focus.py
           python3 tests/test_bgm_sidecar.py
@@ -54,6 +56,7 @@ jobs:
           python3 tests/test_igr_return_policy.py
           python3 tests/test_cloud_relay.py
           python3 tests/test_native_cloud.py
+          python3 tests/test_cloud_menu.py
           python3 tests/test_mmce_protocol.py
           python3 tests/test_sd2cloud_parity.py
           python3 tests/test_self_update.py

@@ -27,7 +27,7 @@ assert '"Current"' in tools
 assert '"Outdated"' in tools
 assert '"Not installed"' in tools
 assert '"Partial / mixed"' in tools
-assert '"All synced"' in tools
+assert '"Locally backed up"' in tools
 assert '"%d pending"' in tools
 assert '"Checking..."' in tools
 assert "void dashToolsPrepareMmceStatus(void)" in tools

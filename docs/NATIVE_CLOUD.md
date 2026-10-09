@@ -51,6 +51,36 @@ bundle named `WLE-CLOUD-CA.PEM`.
 The requested scope is `https://www.googleapis.com/auth/drive.file`, not
 whole-Drive access.
 
+## Backup controls
+
+Open Settings > Storage & devices > MMCE backups. **Backup folder** selects
+the parent folder containing `WLE-MMCE-Backups`; it does not move existing
+history. Save the setting before leaving Settings. If an OPL IGR helper is
+already installed, reinstall it after changing the folder because the helper
+embeds its destination.
+
+The Google account menu offers two distinct actions:
+
+- **Back up cards & upload** creates verified backups of changed MMCE cards,
+  then uploads the local history to the linked Google Drive account. If no
+  backup folder is saved, it asks for one. Both MMCE units are checked.
+- **Upload existing backups** uploads history from the selected backup folder
+  without reading live MMCE cards. It requires a linked account and a saved
+  backup folder; installing the IGR helper is not required.
+
+The Google account menu also has **Backup folder...**, so a missing destination
+can be configured without leaving the menu. This action saves the selected
+folder immediately, like the destination picker used by Sync all cards. Cancel
+or selecting the current folder leaves settings unchanged. Changing an existing
+folder asks for confirmation and reminds you to reinstall the IGR helper.
+The card status **Locally backed up** describes only verified local backup
+history; it does not claim that Google Drive has been checked.
+
+Google Drive setup starts on the missing required item: client ID first, then
+CA bundle. The optional client secret can remain empty. Returning from an
+action preserves menu selection. Accepting an unchanged credential does not
+disconnect the account or rewrite the configuration.
+
 ## Backup behavior
 
 Cloud sync uploads the existing versioned `WLE-MMCE-Backups` tree. Before an
