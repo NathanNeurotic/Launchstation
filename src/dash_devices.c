@@ -168,6 +168,13 @@ int dashDevicePathReady(const char *path)
 		return filerRootMcPresent(0, NULL, NULL) > 0 ||
 		       filerRootMcPresent(1, NULL, NULL) > 0;
 
+#ifdef EXFAT
+	/* Numbered massN: is the shared BDM namespace (USB, ATA, MX4SIO,
+	 * iLink), not a USB drive ID. Its transport must not be inferred
+	 * from the spelling of the path. A subsequent open checks the medium. */
+	if (!strncmp(path, "mass", 4) && path[4] >= '0' && path[4] <= '9' && path[5] == ':')
+		return isPathDeviceStackLoaded(path);
+#endif
 	/* USB's driver can remain resident with no drive inserted, so require a
 	 * mounted unit as well. "mass:" is the legacy alias for USB storage. */
 	if (!strncmp(path, "mass", 4) || !strncmp(path, "usb", 3)) {
@@ -642,6 +649,12 @@ int dashBootDeviceBit(void)
 {
 	const char *p = LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir;
 
+#ifdef EXFAT
+	/* A numbered massN: boot path can be assigned by any BDM transport.
+	 * Do not force USB autostart merely because the namespace says mass. */
+	if (!strncmp(p, "mass", 4) && p[4] >= '0' && p[4] <= '9' && p[5] == ':')
+		return 0;
+#endif
 	if (!strncmp(p, "mass", 4) || !strncmp(p, "usb", 3))
 		return DASH_DEVA_USB;
 	if (!strncmp(p, "hdd", 3))
