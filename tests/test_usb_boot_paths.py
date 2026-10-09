@@ -35,7 +35,7 @@ helpers = [
     "static void normalizeBootPath(char *path)\\n{",
 ]
 # Written as escaped signatures so the test does not depend on line endings.
-functions = "".join(extract(sig.replace("\\\\n", "\n")) for sig in helpers)
+functions = "".join(extract(sig.replace("\\n", "\n")) for sig in helpers)
 
 program = r"""
 #include <assert.h>
