@@ -2,6 +2,11 @@
 #include "init.h"
 #include <unistd.h>
 #include <iopcontrol_special.h>
+
+/* The dashboard's asynchronous libmc root poll must finish before IOP/PAD
+ * teardown. Implemented by filer.c even in non-dashboard variants. */
+extern void filerRootMcPollIdle(void);
+
 #ifdef ETH
 #include <ps2ips.h>
 #endif
