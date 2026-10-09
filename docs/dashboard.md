@@ -59,6 +59,25 @@ foreground behind a short loading overlay.
 | TOOLS    | HDD Manager, Text Editor, start disc, POPStarter VCD launching, Neutrino ISO launching, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, reboot IOP, power off. |
 | SETTINGS | Eight groups: Appearance, Home & applications, Sound, Input, Launching, Storage & devices, Network, System. Each opens a focused page with breadcrumbs and contextual help. Triangle opens *Save changes / Discard changes / Keep editing* from any page. Leaving with changes offers the same decision. Existing configuration files and keys are retained. |
 
+## Intermittent USB stalls (standard build)
+
+Launchstation limits USB-startup media discovery to four spaced scans, accepting
+late first and second drives without probing an absent port twenty times.
+The checks use synchronous IOP filesystem RPC: a single stalled request
+cannot be interrupted by the retry timer, so this is containment, **not a
+proven fix for every USB hang**. A pending async memory-card poll is drained
+before any deliberate IOP reset closes/reopens PADMAN, to avoid an outstanding
+SIO2 request crossing a reset. This applies to the standard and DS34 build;
+the user-reported failure was on the standard build, not yet on DS34.
+
+When a controller's analog LED goes dark as the USB screen stalls, suspect
+an IOP/PADMAN/SIO2 session disruption or a console USB power issue; the LED
+alone does not identify which. If the issue persists, checking the same drive
+on one port, the second port, and through a **powered USB hub** can help
+isolate electrical loading. With two devices, compare drive combinations.
+Do not unplug drives during active writes. No automatic IOP reset is attempted
+as a recovery from a blocked USB filesystem RPC.
+
 ## Settings navigation
 
 Settings opens at the overview. Confirm or Right opens a group; Back returns

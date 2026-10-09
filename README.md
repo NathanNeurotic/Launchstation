@@ -30,8 +30,9 @@ This build starts in a controller-first dashboard (HOME, APPS, FILES,
 DEVICES, TOOLS, SETTINGS) with an ELF library, artwork, favorites and
 recents. It is the only interface: Settings, the File Browser, the HDD
 Manager, the Text Editor, the exploit installer and the information screens
-are all dashboard screens, and file access runs in the background so
-navigation never freezes. See
+are all dashboard screens, and most file browsing runs on a background worker. Some device initialization
+and USB filesystem probes remain synchronous IOP RPCs and can still block on
+faulty/unresponsive USB hardware or drivers. See
 [docs/dashboard.md](docs/dashboard.md) for controls, metadata, artwork
 naming and the files it writes.
 
