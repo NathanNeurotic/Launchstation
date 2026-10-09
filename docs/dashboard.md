@@ -1,8 +1,8 @@
-# wLaunchELF dashboard
+# Launchstation dashboard
 
 The dashboard is the only shell of this build; the classic launch-key
 menu and the classic screens are gone. Underneath it still uses the proven
-wLaunchELF code: every launch goes through `ExecuteMainAction()`, and file
+underlying wLaunchELF code: every launch goes through `ExecuteMainAction()`, and file
 operations, the HDD tools and the exploit installer run the same logic as
 before. Settings, the File Browser, the Text Editor, the HDD Manager (PSX
 included), the memory card exploit installer, the information screens and
@@ -33,13 +33,13 @@ Also in the File Browser menu, as in the classic browser:
 * *Bookmarks...*: the PathPad. Jump to a bookmarked folder, bookmark the
   current one or remove one (saved in LAUNCHELF.CNF; *Lock shortcuts & bookmarks*
   under Settings > Launching locks them).
-* *Go to wLaunchELF's folder*, *Invert selection*.
+* *Go to Launchstation's folder*, *Invert selection*.
 * *Use as launch arguments* on a text file: its lines become the
   arguments of the application you start next from the browser.
 * The header shows the free space of memory cards and HDD partitions.
 
 In file pickers (Settings, launch keys) R3 chooses the highlighted file as
-a `uLE:/` path, relative to wLaunchELF's own folder, like the classic R3;
+a `uLE:/` path, relative to Launchstation's own folder, like the classic R3;
 elsewhere R3 opens that folder.
 
 The cursor never waits for the memory card or a slow device: file reads
@@ -117,7 +117,7 @@ an accurate date/time or replace the footer clock. A valid RTC tick
 re-anchors the effect. Motion at 0% still holds the scene.
 
 Confirm/cancel follow the existing `GUI_Swap_Keys` setting (Settings >
-Input > Confirm button), as wLaunchELF always has.
+Input > Confirm button), as the classic browser did.
 
 | Button | Action |
 |--------|--------|
@@ -131,7 +131,7 @@ Input > Confirm button), as wLaunchELF always has.
 | START | Dashboard menu (home, refresh library, File Browser, settings, reboot IOP, power off) |
 | SELECT | Tap: switch application view (APPS). Hold: your launch keys appear; press a button to start its application |
 
-wLaunchELF's boot behaviour is kept: `Init_Delay` is honoured,
+Legacy boot behaviour is kept: `Init_Delay` is honoured,
 a launch key held when the delay ends starts its application, and a
 configured `LK_auto` path starts after the classic timeout unless a button
 is pressed (a countdown banner is shown).
@@ -149,7 +149,7 @@ controller. Themes can be saved to and loaded from
 
 Only the configured folders are scanned (Settings > Home & applications >
 Application library > Application folders). The defaults are `mc:/APPS/`,
-`mc:/BOOT/`, `mass:/APPS/`, and `mass:/BOOT/`; wLaunchELF does not
+`mc:/BOOT/`, `mass:/APPS/`, and `mass:/BOOT/`; Launchstation does not
 silently scan every folder on every device. Each configured folder is searched
 one sub-folder deep (`APPS/<folder>/*.ELF`). The settings screen shows the
 active list and lets the user add or remove exact scan roots.
@@ -254,7 +254,7 @@ mono format/version 1 with a valid SPU2 pitch. Use loop-enabled encoding
 for continuous music.
 
 The file is read from the actual boot folder, not the folder of an imported
-LAUNCHELF.CNF. If no boot folder is known, the existing wLaunchELF folder
+LAUNCHELF.CNF. If no boot folder is known, the existing Launchstation folder
 is the fallback. Disc boots preserve the disc folder for sidecar reads
 while keeping the writable memory-card configuration fallback.
 

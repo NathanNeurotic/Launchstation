@@ -132,7 +132,7 @@ when this happened.
 
 * **Roboto** (default): the bundled smooth proportional font, in three
   pre-rasterised sizes (see [dashboard.md](dashboard.md#typography)).
-* **System**: wLaunchELF's own 8x16 font, smoothed. It follows a custom
+* **System**: Launchstation's own 8x16 font, smoothed. It follows a custom
   `.fnt` chosen under Appearance > Customize theme > Text and draws the Latin-1
   characters used by the language files, and at the dashboard's body size
   it maps almost 1:1 to screen pixels, which is crisp on a CRT.
@@ -208,7 +208,7 @@ it back.
 
 Theme folders are looked up in two places, in this order:
 
-1. `THEMES/` in the ELF's own folder (the folder wLaunchELF was launched
+1. `THEMES/` in the ELF's own folder (the folder Launchstation was launched
    from), so themes on a USB stick, memory card or HDD partition work
    wherever the ELF goes, with no device handling.
 2. `THEMES/` in the dashboard folder described above.

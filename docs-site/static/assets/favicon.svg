@@ -1,1 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#4d9cff"/><stop offset="1" stop-color="#173a70"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="#07101e"/><path d="M14 18h36v7H21v8h25v7H21v13h-7z" fill="url(#g)"/><circle cx="49" cy="49" r="6" fill="#79b9ff"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Launchstation PS2 towers and orbs">
+  <rect width="64" height="64" rx="12" fill="#070b15"/>
+  <path d="M4 52h56" stroke="#1c2940" stroke-width="2"/>
+  <path d="M12 55V22l7-5 7 5v33H12Z" fill="#596171" fill-opacity=".82"/>
+  <path d="M19 17v38" stroke="#8891a1" stroke-opacity=".48" stroke-width="1"/>
+  <path d="M27 55V13l8-5 8 5v42H27Z" fill="#707988" fill-opacity=".74"/>
+  <path d="M35 8v47" stroke="#b0b8c5" stroke-opacity=".48" stroke-width="1"/>
+  <path d="M44 55V27l7-5 5 5v28H44Z" fill="#515b6c" fill-opacity=".84"/>
+  <path d="M51 22v33" stroke="#a6b0c1" stroke-opacity=".36" stroke-width="1"/>
+  <path d="M5 43C15 29 30 49 42 35c5-6 12-5 17-3" stroke="#4676c6" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <circle cx="12" cy="38" r="3.7" fill="#55a5ff"/>
+  <circle cx="36" cy="40" r="3.4" fill="#e34a59"/>
+  <circle cx="52" cy="32" r="3.4" fill="#e6b44d"/>
+</svg>

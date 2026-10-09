@@ -31,6 +31,8 @@ ps2keys.dat
 
 # PS2BUILD output
 build/
+.ps2-ds34.yaml
+build-ds34/
 
 # Native cloud build/cache output
 .cloud-deps/

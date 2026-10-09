@@ -89,7 +89,7 @@ static void drawMenuTitleLine(void)
 
 	x = SCREEN_MARGIN;
 	y = Menu_title_y;
-	sprintf(app_title, "\xff\x34 r3LaunchELF_ATTDASH %s \xff\x34", ULE_VERSION);
+	sprintf(app_title, "\xff\x34 Launchstation %s \xff\x34", ULE_VERSION);
 
 	drawSprite(setting->color[COLOR_BACKGR], 0, Menu_title_y - 1, SCREEN_WIDTH, Menu_message_y - 1);
 	printXY(app_title, x, y, setting->color[COLOR_FRAME], TRUE, 0);

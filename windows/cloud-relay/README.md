@@ -2,12 +2,12 @@
 
 This is an optional extension for the existing MrRexD-compatible PC workflow. It does **not** replace the existing Command PS2 / PS2 Drive tools and it does not add Google OAuth, TLS, curl or wolfSSL to the PS2 executable.
 
-The relay uses `rclone.exe` on the PC, talks to wLaunchELF through the same FTP server used by MrRexD's tools, finds the versioned `WLE-MMCE-Backups` history, and copies new history files to any rclone cloud remote.
+The relay uses `rclone.exe` on the PC, talks to Launchstation through the same FTP server used by MrRexD's tools, finds the versioned `WLE-MMCE-Backups` history, and copies new history files to any rclone cloud remote.
 
 ## Setup
 
 1. Keep using MrRexD's existing PC bundle. Put this `Cloud Relay` folder beside its `PS2 Drive` folder, or pass `-Rclone` with the path to another rclone executable.
-2. Start **FTP / Remote access** in wLaunchELF and leave the dashboard open.
+2. Start **FTP / Remote access** in Launchstation and leave the dashboard open.
 3. Configure a cloud remote once:
    `Cloud Relay.bat -Configure`
 4. Run a relay:
@@ -17,7 +17,7 @@ The cloud provider is entirely an rclone choice; Google Drive is only one exampl
 
 ## Backup discovery
 
-Without extra arguments the script searches the PS2 FTP tree for exactly one `WLE-MMCE-Backups` folder. If there are several histories, or the chosen backup destination is too deeply nested to auto-detect, specify the destination selected in wLaunchELF:
+Without extra arguments the script searches the PS2 FTP tree for exactly one `WLE-MMCE-Backups` folder. If there are several histories, or the chosen backup destination is too deeply nested to auto-detect, specify the destination selected in Launchstation:
 
 `Cloud Relay.bat -CloudRemote "gdrive:PS2/WLE-MMCE-Backups" -BackupRoot "ata0:/Backups"`
 
@@ -29,7 +29,7 @@ Supported PS2 path families match the existing MrRexD companion conventions: `at
 
 ## Safety
 
-The relay intentionally runs **rclone copy**, never **rclone sync**. It also uses `--ignore-existing`, because wLaunchELF's MMCE history files are versioned and immutable. A relay therefore uploads missing history without deleting or replacing cloud backups.
+The relay intentionally runs **rclone copy**, never **rclone sync**. It also uses `--ignore-existing`, because Launchstation's MMCE history files are versioned and immutable. A relay therefore uploads missing history without deleting or replacing cloud backups.
 
 Use `-DryRun` to inspect what would be copied:
 

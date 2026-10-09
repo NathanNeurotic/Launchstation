@@ -330,7 +330,7 @@ static const SetItem mmce_backup_items[] = {
     {ST_ACTION, S_MMCE_SYNC_ALL, "Sync all cards", "Back up every changed MMCE card now. If Google Drive is linked, upload pending local history afterward."},
     {ST_CHOICE, S_IGR_SYNC_MODE, "Automatic sync", "What happens after OPL returns through WLE-IGR: Off, verified local backup, or local backup plus Google Drive."},
     {ST_ACTION, S_IGR_HELPER, "IGR helper", "Install, update or remove the verified WLE-IGR helper used by OPL Exit-to."},
-    {ST_CHOICE, S_IGR_AFTER, "After IGR, open", "Choose where to go after the IGR backup/sync step: r3LaunchELF_ATTDASH, the PS2 system menu, or a selected application."},
+    {ST_CHOICE, S_IGR_AFTER, "After IGR, open", "Choose where to go after the IGR backup/sync step: Launchstation, the PS2 system menu, or a selected application."},
     {ST_PATH, S_IGR_AFTER_APP, "IGR application", "Application started after IGR when 'After IGR, open' is set to Application."},
     {ST_ACTION, S_MMCE_LANGUAGE, "Language", "Open the existing language settings used by file operations and tools."},
     {ST_NUMBER, S_MMCE_BACKUP_KEEP, "Backups per card", "0 keeps every verified version. Otherwise keep the newest 1-99 versions per card."},
@@ -339,7 +339,7 @@ static const SetItem mmce_backup_items[] = {
     {ST_ACTION, S_GOOGLE_ACCOUNT, "Google account", "Link, relink, sync or disconnect the native Google Drive backup account."},
     {ST_ACTION, S_CHECK_UPDATES, "Check for updates", "Compare with the rolling latest release; a newer build can be downloaded, SHA-256 verified and installed in place."},
 #endif
-    {ST_ACTION, S_ABOUT_PROJECT, "About r3LaunchELF_ATTDASH", "Version, commit, project origin, upstream credits and contributors."},
+    {ST_ACTION, S_ABOUT_PROJECT, "About Launchstation", "Version, commit, project origin, upstream credits and contributors."},
 };
 
 static const SetItem net_items[] = {
@@ -421,7 +421,7 @@ static const SetItem tstyle_items[] = {
     {ST_ACTION, S_T_RESETCAT, "Reset style", "Back to the values of the theme's preset."},
 };
 static const SetItem ttype_items[] = {
-    {ST_CHOICE, S_T_FONT, "Font", "System uses the wLaunchELF font (or your .fnt) and its accented characters."},
+    {ST_CHOICE, S_T_FONT, "Font", "System uses the built-in font (or your .fnt) and its accented characters."},
     {ST_PATH, S_FONT_FILE, "System font file", "External .FNT font used when Font is set to System."},
     {ST_CHOICE, S_T_FSCALE, "Text size", "Larger sizes can shorten long names."},
     {ST_CHOICE, S_T_BOLD, "Bold", "Heavier strokes; easier to read on a CRT."},
@@ -1541,7 +1541,7 @@ static void pathApplied(int id)
 			Load_External_Language();
 		else if (setting->font_file[0] && loadFont(setting->font_file) == 0) {
 			setting->font_file[0] = '\0';
-			dashModalMessage(DI_WARNING, "Font not loaded", "The file is not a wLaunchELF font. The built-in font stays in use.", NULL);
+			dashModalMessage(DI_WARNING, "Font not loaded", "The file is not a compatible font. The built-in font stays in use.", NULL);
 		} else if (!setting->font_file[0])
 			loadFont("");
 	}
@@ -1754,7 +1754,7 @@ static int cfgSave(int kind, int target, const char *path)
 			j->len = snprintf(j->text, 50, "%s %s %s\n\r", ip, netmask, gw);
 	} else
 		j->text = configBuildSaveText(&j->len);
-	if (j->text == NULL || dashWorkerSubmit(kind == CFG_SAVE_NET ? "Saving network settings" : "Saving wLaunchELF settings",
+	if (j->text == NULL || dashWorkerSubmit(kind == CFG_SAVE_NET ? "Saving network settings" : "Saving Launchstation settings",
 	                                      DASH_JOB_SAVE | DASH_JOB_VISIBLE, cfgSaveRun, cfgSaveDone, j) < 0) {
 		free(j->text);
 		free(j);
@@ -1969,7 +1969,7 @@ static int settingsLeave(void)
 	if (dash_dirty || ((session_saves & SESSION_SAVE_DASH) && dashStoreSettingsFailed()))
 		n += snprintf(what + n, sizeof(what) - n, "Dashboard");
 	if (classic_dirty || ((session_saves & SESSION_SAVE_CNF) && cfg_failed[CFG_SAVE_CNF]))
-		n += snprintf(what + n, sizeof(what) - n, "%swLaunchELF", n ? ", " : "");
+		n += snprintf(what + n, sizeof(what) - n, "%sLaunchstation", n ? ", " : "");
 	if (net_dirty || ((session_saves & SESSION_SAVE_NET) && cfg_failed[CFG_SAVE_NET]))
 		n += snprintf(what + n, sizeof(what) - n, "%snetwork", n ? ", " : "");
 	snprintf(what + n, sizeof(what) - n, " settings changed");
@@ -1990,7 +1990,7 @@ static int settingsLeave(void)
 	return 0;
 }
 
-/* "Save wLaunchELF settings to...": the classic save-location choice. */
+/* "Save Launchstation settings to...": the classic save-location choice. */
 typedef struct
 {
 	char o[MAX_PATH], c[MAX_PATH], s[MAX_PATH];
@@ -2043,9 +2043,9 @@ static void saveClassicAs(void)
 	targets[n] = CONFIG_SAVE_TARGET_CWD, paths[n++] = j->c;
 	items[n].icon = DI_MC, items[n].label = j->s, items[n].detail = "memory card", items[n].disabled = 0;
 	targets[n] = CONFIG_SAVE_TARGET_SYSCONF, paths[n++] = j->s;
-	r = dashModalMenu("Save wLaunchELF settings to", LoadedConfigPath[0] ? LoadedConfigPath : "not loaded from a file yet", items, n, 0);
+	r = dashModalMenu("Save Launchstation settings to", LoadedConfigPath[0] ? LoadedConfigPath : "not loaded from a file yet", items, n, 0);
 	if (r >= 0 && cfgSave(CFG_SAVE_CNF, targets[r], paths[r])) {
-		/* the wLaunchELF part of the session is saved now */
+		/* the classic settings portion of the session is saved now */
 		memcpy(&snap_classic, setting, sizeof(snap_classic));
 		free(snap_cnf_text);
 		snap_cnf_text = cnfSaveText();

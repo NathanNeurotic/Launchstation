@@ -383,7 +383,7 @@ clean-ci-variants:
 rebuild: clean all
 
 info2:
-	$(info -------- r3LaunchELF_ATTDASH --------)
+	$(info -------- Launchstation --------)
 	$(info EE_BIN = $(EE_BIN))
 	$(info EE_BIN_PKD = $(EE_BIN_PKD))
 	$(info EE_OBJS = $(EE_OBJS))
