@@ -158,7 +158,7 @@ jobs:
       - name: Show artifact hashes
         run: sha256sum artifacts/*
 
-      - name: Upload ELF artifacts
+      - name: Upload app packages
         uses: actions/upload-artifact@v4
         with:
           name: Launchstation
@@ -202,4 +202,7 @@ jobs:
               *) gh release delete-asset "$tag" "$asset" -y ;;
             esac
           done
+          # Keep GitHub's generated source archives aligned with the packaged ELFs.
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/$tag" \
+            -f sha="${GITHUB_SHA}" -F force=true
           gh release edit "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}"
