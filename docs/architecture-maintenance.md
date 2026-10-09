@@ -1,4 +1,4 @@
-# wLaunchELF Maintainer Notes
+# Launchstation Maintainer Notes
 
 This project is now organized around two maintenance goals:
 

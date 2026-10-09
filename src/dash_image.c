@@ -62,12 +62,14 @@ static void drawRotatedImage(GSTEXTURE *tex, float x, float y, float w, float h,
 	}
 
 	dashGfxScissor(x, y, w, h);
+	/* GS texture modulation uses RGB 0x80 for unity; 0xFF doubles and
+	 * clips the decoded image colors. DashColor alpha stays in 0..255. */
 	dashTexDrawQuadUV(tex,
 	                  dx,      dy,      u1, v1,
 	                  dx + dw, dy,      u2, v2,
 	                  dx,      dy + dh, u3, v3,
 	                  dx + dw, dy + dh, u4, v4,
-	                  DC(255, 255, 255, 255));
+	                  DC(128, 128, 128, 255));
 	dashGfxScissorReset();
 }
 

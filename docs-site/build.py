@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the r3LaunchELF_ATTDASH static documentation site and optional offline ZIP."""
+"""Build the Launchstation static documentation site and optional offline ZIP."""
 from __future__ import annotations
 
 import argparse
@@ -42,7 +42,7 @@ def page_map(manifest):
 
 def nav_html(manifest, active):
     rows = [
-        '<div class="sidebar-brand-sub">PLAYSTATION 2 // r3LaunchELF_ATTDASH</div>'
+        '<div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>'
     ]
     for section in manifest["sections"]:
         rows.append(f'<h4>{html.escape(section["name"])}</h4>')
@@ -103,8 +103,8 @@ def render(manifest, slug, meta, fragment):
   <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
 </div>
 <footer>
-  <p><b>r3LaunchELF_ATTDASH Documentation</b> — dashboard-focused wLaunchELF maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
-  <p class="prov-inline">wLaunchELF descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
 </footer>
 <script src="data/search-index.js"></script>
 <script src="assets/app.js"></script>
@@ -168,7 +168,7 @@ def make_zip(out: Path, zip_path: Path):
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for p in sorted(out.rglob("*")):
             if p.is_file():
-                z.write(p, Path("r3LaunchELF_ATTDASH-Documentation") / p.relative_to(out))
+                z.write(p, Path("Launchstation-Documentation") / p.relative_to(out))
 
 def main():
     ap = argparse.ArgumentParser()

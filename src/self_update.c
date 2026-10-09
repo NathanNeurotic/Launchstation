@@ -1,5 +1,5 @@
 //--------------------------------------------------------------
-// Native staged self-update for r3LaunchELF_ATTDASH.
+// Native staged self-update for Launchstation.
 //--------------------------------------------------------------
 #include "launchelf.h"
 #include "cloud_http.h"
@@ -10,7 +10,7 @@
 #include <malloc.h>
 #include <ctype.h>
 
-#define UPDATE_ELF_URL "https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases/download/latest/r3LaunchELF_ATTDASH.ELF"
+#define UPDATE_ELF_URL "https://github.com/NathanNeurotic/Launchstation/releases/download/latest/" SELF_UPDATE_ASSET
 #define UPDATE_MAX_ELF (16 * 1024 * 1024)
 
 static int device_path(const char *path, const char *name, int allow_bare)
@@ -183,6 +183,7 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
     char parent[MAX_PATH], leaf[MAX_NAME];
     char stage_leaf[MAX_NAME], backup_leaf[MAX_NAME];
     char stage[MAX_PATH], backup[MAX_PATH];
+    char package_leaf[MAX_NAME], package[MAX_PATH];
     char error[256], remove_path[MAX_PATH];
     unsigned char expected[32], actual[32];
     int size, rollback_ok;
@@ -204,7 +205,9 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
     if (snprintf(stage_leaf, sizeof(stage_leaf), "%s.UPDATE", leaf) >= (int)sizeof(stage_leaf) ||
         snprintf(backup_leaf, sizeof(backup_leaf), "%s.BAK", leaf) >= (int)sizeof(backup_leaf) ||
         !join_leaf(stage, sizeof(stage), parent, stage_leaf) ||
-        !join_leaf(backup, sizeof(backup), parent, backup_leaf)) {
+        !join_leaf(backup, sizeof(backup), parent, backup_leaf) ||
+        snprintf(package_leaf, sizeof(package_leaf), "%s.PACKAGE", leaf) >= (int)sizeof(package_leaf) ||
+        !join_leaf(package, sizeof(package), parent, package_leaf)) {
         snprintf(result, result_size, "The running ELF path is too long for a safe staged update.");
         return -1;
     }
@@ -216,12 +219,12 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
 
     if (!parse_expected_sha(expected_sha256, expected)) {
         snprintf(result, result_size,
-                 "GitHub did not provide a valid SHA-256 digest for the release ELF.");
+                 "GitHub did not provide a valid SHA-256 digest for the app package.");
         return -1;
     }
 
     error[0] = '\0';
-    size = download_file(UPDATE_ELF_URL, stage, ca_path, UPDATE_MAX_ELF,
+    size = download_file(UPDATE_ELF_URL, package, ca_path, UPDATE_MAX_ELF,
                          actual, error, sizeof(error));
     if (size <= 0) {
         snprintf(result, result_size, "Update download failed: %s",
@@ -229,10 +232,18 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
         return -1;
     }
     if (memcmp(expected, actual, sizeof(expected)) != 0) {
-        snprintf(remove_path, sizeof(remove_path), "%s", stage);
+        snprintf(remove_path, sizeof(remove_path), "%s", package);
         genRemove(remove_path);
         snprintf(result, result_size,
                  "Downloaded update failed SHA-256 verification. The running ELF was not changed.");
+        return -1;
+    }
+    size = selfUpdateExtractPsu(package, stage, size);
+    snprintf(remove_path, sizeof(remove_path), "%s", package);
+    genRemove(remove_path);
+    if (size <= 0) {
+        snprintf(result, result_size,
+                 "The verified package does not contain the expected app ELF. The running ELF was not changed.");
         return -1;
     }
     if (checkELFheader(stage) < 0) {
@@ -274,7 +285,7 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
     }
 
     snprintf(result, result_size,
-             "Update installed and verified (%d bytes). Recovery copy: %s%s. Restart r3LaunchELF_ATTDASH to run the new build.",
+             "Update installed and verified (%d bytes). Recovery copy: %s%s. Restart Launchstation to run the new build.",
              size, parent, backup_leaf);
     return 0;
 }

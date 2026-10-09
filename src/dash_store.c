@@ -477,7 +477,7 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	if (buf == NULL)
 		return NULL;
 	len += snprintf(buf + len, cap - len,
-	                "# wLaunchELF dashboard settings (LAUNCHELF.CNF is not modified)\r\n"
+	                "# Launchstation dashboard settings (LAUNCHELF.CNF is not modified)\r\n"
 	                "Dash_Enabled = %d\r\n"
 	                "Dash_StartSection = %d\r\n"
 	                "Dash_View = %d\r\n"
@@ -535,7 +535,7 @@ static char *buildLists(int *out_len)
 	buf = (char *)malloc(cap);
 	if (buf == NULL)
 		return NULL;
-	len += snprintf(buf + len, cap - len, "# wLaunchELF dashboard: favorites, pinned and recent apps\r\n");
+	len += snprintf(buf + len, cap - len, "# Launchstation dashboard: favorites, pinned and recent apps\r\n");
 	for (i = 0; i < dashLists.npin; i++)
 		len += snprintf(buf + len, cap - len, "Pinned = %s\r\n", dashLists.pin[i]);
 	for (i = 0; i < dashLists.nfav; i++)

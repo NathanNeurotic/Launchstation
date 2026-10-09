@@ -1187,10 +1187,10 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 
 		/* first run: short introduction once the dashboard has faded in */
 		if (!dashCfg.intro_done && boot_phase != 1 && fade_in > 0.95f) {
-			dashModalMessage(DI_APP, "Welcome to wLaunchELF",
+			dashModalMessage(DI_APP, "Welcome to Launchstation",
 			                 "Your applications are on HOME and APPS. Use the D-pad to move, the confirm button to start, "
 			                 "Triangle for options and Square to add favorites. L1/R1 switch sections; everything "
-			                 "wLaunchELF can do is still under FILES and TOOLS.",
+			                 "Launchstation can do is still under FILES and TOOLS.",
 			                 NULL);
 			dashCfg.intro_done = 1;
 			dashStoreSaveSettings();

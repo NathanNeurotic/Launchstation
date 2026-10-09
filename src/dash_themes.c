@@ -187,7 +187,7 @@ static const DashThemePresetInfo presets[P_COUNT] = {
 static void base(DashTheme *t)
 {
 	memset(t, 0, sizeof(*t));
-	strcpy(t->author, "wLaunchELF");
+	strcpy(t->author, "Launchstation");
 	t->bg = DASH_BG_TUNNEL;
 	t->bg_bright = 100;
 	t->bg1 = DC(46, 36, 78, 255);
@@ -1070,7 +1070,7 @@ char *dashThemeFolderText(int *out_len)
 	if (buf == NULL)
 		return NULL;
 	len = snprintf(buf, cap,
-	               "# wLaunchELF dashboard theme\r\n"
+	               "# Launchstation dashboard theme\r\n"
 	               "# Colours: #RRGGBB or #RRGGBBAA (AA = opacity). Image paths are relative\r\n"
 	               "# to this folder unless they contain a device (mc0:/...).\r\n");
 	len += dashThemeSerialize(&dashTheme, buf + len, cap - len, "");
@@ -1167,7 +1167,7 @@ int dashThemeFolderExport(const char *folder)
 	if (buf == NULL)
 		return -1;
 	len = snprintf(buf, cap,
-	               "# wLaunchELF dashboard theme\r\n"
+	               "# Launchstation dashboard theme\r\n"
 	               "# Colours: #RRGGBB or #RRGGBBAA (AA = opacity). Image paths are relative\r\n"
 	               "# to this folder unless they contain a device (mc0:/...).\r\n");
 	len += dashThemeSerialize(&dashTheme, buf + len, cap - len, "");

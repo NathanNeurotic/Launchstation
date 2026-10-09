@@ -1,14 +1,18 @@
-# __r3LaunchELF_ATTDASH__
+# __Launchstation__
 
-**r3LaunchELF_ATTDASH** is a maintained PlayStation 2 file manager, executable launcher, dashboard and device toolkit built from **wLaunchELF_R3Z** and the wider wLaunchELF/uLaunchELF/LaunchELF lineage. It extends that base with the ATTDASH interface, modern storage/device workflows, Neutrino, POPStarter and Ember handoffs, MMCE backup/cloud features, networking tools and additional hardware support.
+**Launchstation** is a maintained PlayStation 2 file manager, executable launcher, dashboard and device toolkit built from **wLaunchELF_R3Z** and the wider wLaunchELF/uLaunchELF/LaunchELF lineage. It extends that base with the dashboard interface, modern storage/device workflows, Neutrino, POPStarter and Ember handoffs, MMCE backup/cloud features, networking tools and additional hardware support.
 
 ## Documentation
 
-The full r3LaunchELF_ATTDASH reference is published as a PS2-styled GitHub Pages site:
+The full Launchstation reference is published as a PS2-styled GitHub Pages site:
 
-- **Online:** https://nathanneurotic.github.io/r3LaunchELF_ATTDASH/
-- **Offline:** `r3LaunchELF_ATTDASH-Documentation.zip` in the latest automated release
+- **Online:** https://nathanneurotic.github.io/Launchstation/
+- **Offline:** generate locally with `python docs-site/build.py --out build/docs --zip build/Launchstation-Documentation.zip`
 - **Source:** `docs-site/` in this repository
+
+**Release packages:** Standard builds ship as `APP_LAUNCHSTATION.psu` and `APP_LAUNCHSTATION.zip`, containing `APP_LAUNCHSTATION/LAUNCHSTATION.ELF` and `title.cfg`. DualShock builds ship as `APP_LAUNCHSTATION-DS.psu` and `APP_LAUNCHSTATION-DS.zip`, containing `APP_LAUNCHSTATION-DS/LAUNCHSTATION-DS.ELF` and `title.cfg`. Both executables are packed. Extract a ZIP to install on a filesystem, or use PSU Paste to install a PSU on a memory card.
+
+**Upgrading older builds:** Older updaters expect standalone ELF release assets. Manually replace the executable once with the packed ELF from the matching app package. The updated native updater verifies the matching PSU's SHA-256 digest, extracts its ELF and preserves the controller variant. Keep existing configuration and optional sidecars.
 
 The site covers installation, dashboard controls, File Browser, Apps, Text Editor, storage/device support, APA/PFS, iLink, MMCE, networking, POPStarter VCD launching, Ember PS1 image launching, Neutrino ISO launching, IGR/MMCE backups, native Google Drive sync, settings, configuration files, troubleshooting and developer notes.
 
@@ -41,8 +45,21 @@ off). Ethernet/FTP support is embedded but remains demand-driven: no network
 driver is started during normal boot. The legacy Makefile is kept for the
 other feature profiles.
 
-Background music is **optional**, not embedded in either ELF. Release/CI
-downloads include `BGM.ADP`: put it in the same folder as the ELF if you
+For the optional PS3/PS4 DualShock USB/Bluetooth build (the legacy
+`DS34=1` option), run:
+
+```
+python scripts/configure_ds34.py
+ps2build build -c .ps2-ds34.yaml -o build-ds34
+```
+
+This uses the retained wLaunchELF_R3Z DS34 drivers and `pad_ds34.c`.
+CI builds both variants and packages them under the names above. The DualShock
+executable uses the same settings and optional sidecars as the standard build.
+The DS34 variant still needs console validation with USB/Bluetooth controllers
+and concurrent storage access.
+
+Background music is **optional**, not embedded in either ELF. Copy `res/music.sad` as `BGM.ADP`: put it in the same folder as the ELF if you
 want music, or leave it out for a standalone ELF. For local builds, copy
 `res/music.sad` unchanged to that folder under the name `BGM.ADP`.
 Interface sound effects remain embedded. See
@@ -108,13 +125,13 @@ Drivers load on demand for maximum compatibility and initial boot speed.
 <details>
 
 In FileBrowser, select a TextEditor-supported file, press `R1`, then choose `LaunchELF with Args`.
-wLaunchELF parses the file immediately, caches the args in memory, and leaves you in FileBrowser to select the target `ELF`.
+Launchstation parses the file immediately, caches the args in memory, and leaves you in FileBrowser to select the target `ELF`.
 
 The same action is available from TextEditor's `R1` menu for the active opened file.
 From TextEditor the current in-memory buffer is parsed, so unsaved edits are used.
-After caching args, wLaunchELF returns to FileBrowser so you can choose the target executable.
+After caching args, Launchstation returns to FileBrowser so you can choose the target executable.
 
-For normal executable launches, wLaunchELF also checks for a sidecar arg file named `<elf name>.arg` in the same folder, for example `BOOT.arg` for `BOOT.ELF`.
+For normal executable launches, Launchstation also checks for a sidecar arg file named `<elf name>.arg` in the same folder, for example `BOOT.arg` for `BOOT.ELF`.
 Sidecar args use the same parser and limits.
 If args were already cached through `R1` -> `LaunchELF with Args`, the sidecar `.arg` file is ignored.
 

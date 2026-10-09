@@ -1,11 +1,11 @@
 {
   "site": {
-    "title": "r3LaunchELF_ATTDASH Docs",
-    "brand": "r3LaunchELF_ATTDASH",
-    "subtitle": "RIPTO ATTDASH",
-    "repo": "https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH",
-    "pages_url": "https://nathanneurotic.github.io/r3LaunchELF_ATTDASH/",
-    "latest": "https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases/tag/latest"
+    "title": "Launchstation Docs",
+    "brand": "Launchstation",
+    "subtitle": "PLAYSTATION 2 DASHBOARD",
+    "repo": "https://github.com/NathanNeurotic/Launchstation",
+    "pages_url": "https://nathanneurotic.github.io/Launchstation/",
+    "latest": "https://github.com/NathanNeurotic/Launchstation/releases/tag/latest"
   },
   "sections": [
     {

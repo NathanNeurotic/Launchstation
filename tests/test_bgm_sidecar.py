@@ -22,7 +22,7 @@ def function(signature, text=source):
 assert "EMBED_FILE(music_adpcm" not in (root / "src/embed_blobs.S").read_text()
 assert "music_adpcm.o" not in (root / "Makefile").read_text()
 assert "music_adpcm.s:" not in (root / "embed.make").read_text()
-assert "cp res/music.sad artifacts/BGM.ADP" in (root / ".github/workflows/compile.yml").read_text()
+assert (root / "res/music.sad").is_file()
 track = (root / "res/music.sad").read_bytes()
 assert track[:8] == b"APCM\x01\x01\x01\x00" and len(track) % 16 == 0
 

@@ -61,7 +61,7 @@ void Show_About_uLE(void)
 		//Display section
 		if (event || post_event) {  //NB: We need to update two frame buffers per event
 			clrScr(setting->color[COLOR_BACKGR]);
-			sprintf(TextRow, "About r3LaunchELF_ATTDASH %s  %s", ULE_VERSION, ULE_VERDATE);
+			sprintf(TextRow, "About Launchstation %s  %s", ULE_VERSION, ULE_VERDATE);
 			PrintPos(01, hpos, TextRow, COLOR_SELECT);
 			sprintf(TextRow, " commit: %s", GIT_HASH);
 			PrintPos(02, hpos, TextRow, COLOR_TEXT);
@@ -88,7 +88,7 @@ void Show_About_uLE(void)
 			PrintPos(-1, hpos, "Main release site:", COLOR_TEXT);
 			PrintPos(-1, hpos, "   github.com/ps2homebrew/wLaunchELF/releases", COLOR_TEXT);
 			PrintPos(-1, hpos, "Mod Release site:", COLOR_SELECT);
-			PrintPos(-1, hpos, "   github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases", COLOR_TEXT);
+			PrintPos(-1, hpos, "   github.com/NathanNeurotic/Launchstation/releases", COLOR_TEXT);
 			PrintPos(-1, hpos, "Ancestral project: LaunchELF v3.41 by Mirakichi", COLOR_TEXT);
 		}  //ends if(event||post_event)
 		drawScr();
@@ -117,7 +117,7 @@ void Show_build_info(void)
 		//Display section
 		if (event || post_event) {  //NB: We need to update two frame buffers per event
 			clrScr(setting->color[COLOR_BACKGR]);
-			sprintf(TextRow, " wLaunchELF %s (%s)", ULE_VERSION, GIT_HASH);
+			sprintf(TextRow, " Launchstation %s (%s)", ULE_VERSION, GIT_HASH);
 			PrintPos(03, hpos, TextRow, COLOR_TEXT);
 			PrintPos(-1, hpos, "Build features:", COLOR_SELECT);
 
@@ -200,7 +200,7 @@ void Show_build_info(void)
 			         , COLOR_TEXT);
 #endif
 			PrintPos(-1, hpos, "Mod Release site:", COLOR_TEXT);
-			PrintPos(-1, hpos, "   github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases", COLOR_TEXT);
+			PrintPos(-1, hpos, "   github.com/NathanNeurotic/Launchstation/releases", COLOR_TEXT);
 		}  //ends if(event||post_event)
 		drawScr();
 		post_event = event;

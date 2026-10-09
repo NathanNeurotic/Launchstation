@@ -154,7 +154,7 @@ static void editMetadata(DashApp *a)
 		/* create a starter sidecar the user can fill in */
 		char text[512];
 		int len = snprintf(text, sizeof(text),
-		                   "# r3LaunchELF_ATTDASH dashboard metadata for %s\r\n"
+		                   "# Launchstation dashboard metadata for %s\r\n"
 		                   "# Every key is optional. Lines starting with # are ignored.\r\n"
 		                   "title = %s\r\n"
 		                   "description = \r\n"

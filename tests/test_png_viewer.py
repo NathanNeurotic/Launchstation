@@ -1,5 +1,6 @@
 """Guard the native PNG/JPG/JPEG dashboard image viewer."""
 from pathlib import Path
+import re
 
 root = Path(__file__).resolve().parents[1]
 browser = (root / "src/dash_browser.c").read_text()
@@ -35,6 +36,11 @@ assert "PAD_L3_H0" in viewer and "PAD_L3_V1" in viewer
 assert "rotation" in viewer
 assert "slideshow" in viewer
 assert "dashTexDrawQuadUV" in viewer
+# Check the actual image draw tint: GS MODULATE unity is 128, not 255.
+# Alpha uses the dashboard's 0..255 API and is converted separately.
+image_draw = re.search(r"dashTexDrawQuadUV\(tex,[\s\S]*?DC\((\d+), (\d+), (\d+), (\d+)\)\);", viewer)
+assert image_draw, "Missing image texture draw tint"
+assert tuple(map(int, image_draw.groups())) == (128, 128, 128, 255), "Image tint doubles/clips colors instead of preserving them"
 assert "dash_image.o" in makefile
 assert "gsKit_prim_quad_texture_3d" in (root / "src/dash_gfx.c").read_text()
 assert "dash_jpeg.o" in makefile

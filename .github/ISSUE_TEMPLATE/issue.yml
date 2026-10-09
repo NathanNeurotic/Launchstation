@@ -1,5 +1,5 @@
-name: r3LaunchELF_ATTDASH issue report
-description: Report a problem with r3LaunchELF_ATTDASH
+name: Launchstation issue report
+description: Report a problem with Launchstation
 title: "[ISSUE]: "
 labels: [bug]
 body:
@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         ### __Disclaimer:__
-        Issue reports must be for r3LaunchELF_ATTDASH builds from this repository. Issues with other wLaunchELF variants belong to their respective projects.
+        Issue reports must be for Launchstation builds from this repository. Issues with other Launchstation variants belong to their respective projects.
         Issue reports for consoles with installed and enabled modchip are considered as incomplete reports (we won't ignore you, but confirmation that the issue can be reproduced on a virgin console will be appreciated).
         ## Before posting the issue confirm that you meet the below requirements.
 
@@ -17,8 +17,8 @@ body:
       label: Checks
       description: "Check before posting"
       options:
-        - label: I have checked existing [__Issue reports__](https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH/issues) for duplicates and found none
-        - label: I downloaded r3LaunchELF_ATTDASH from this repository's [releases](https://github.com/NathanNeurotic/r3LaunchELF_ATTDASH/releases)
+        - label: I have checked existing [__Issue reports__](https://github.com/NathanNeurotic/Launchstation/issues) for duplicates and found none
+        - label: I downloaded Launchstation from this repository's [releases](https://github.com/NathanNeurotic/Launchstation/releases)
 
   - type: markdown
     attributes:
@@ -38,7 +38,7 @@ body:
   - type: input
     id: oplver
     attributes:
-      label: "wLaunchELF commit code"
+      label: "Launchstation commit code"
       description: "you can see it on (Filebrowser > MISC > Debug Info)"
       placeholder: "eg: commit 0a70367"
     validations:

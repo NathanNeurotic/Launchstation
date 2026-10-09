@@ -15,19 +15,32 @@ issue = (root / ".github/ISSUE_TEMPLATE/issue.yml").read_text(encoding="utf-8")
 readme = (root / "README.md").read_text(encoding="utf-8")
 credits = (root / "src/dash_info.c").read_text(encoding="utf-8")
 
-assert "About r3LaunchELF_ATTDASH" in main_info
-assert '"About r3LaunchELF_ATTDASH"' in tools
-assert "r3LaunchELF_ATTDASH %s" in draw
-assert "r3LaunchELF_ATTDASH cannot open this type of file" in browser
-assert "cannot be formatted from r3LaunchELF_ATTDASH" in hdd
-assert "# r3LaunchELF_ATTDASH dashboard metadata" in apps
-assert "User-Agent: r3LaunchELF_ATTDASH/Cloud" in cloud
+assert "About Launchstation" in main_info
+assert '"About Launchstation"' in tools
+assert "Launchstation %s" in draw
+assert "Launchstation cannot open this type of file" in browser
+assert "cannot be formatted from Launchstation" in hdd
+assert "# Launchstation dashboard metadata" in apps
+assert "User-Agent: Launchstation/Cloud" in cloud
 
-assert "r3LaunchELF_ATTDASH issue report" in issue
-assert "NathanNeurotic/r3LaunchELF_ATTDASH/issues" in issue
+assert "Launchstation issue report" in issue
+assert "NathanNeurotic/Launchstation/issues" in issue
 assert "wLaunchELF 4.43x_isr" not in issue
 assert "israpps/wLaunchELF_ISR/issues" not in issue
 
 # Rebranding must never erase the project's direct-base attribution.
 assert "wLaunchELF_R3Z" in readme
 assert "Direct base: wLaunchELF_R3Z" in credits
+
+# Validate the docs website, current repository path, and tab icon.
+manifest = (root / "docs-site/manifest.json").read_text(encoding="utf-8")
+logo = (root / "docs-site/static/assets/favicon.svg").read_text(encoding="utf-8")
+workflow = (root / ".github/workflows/compile.yml").read_text(encoding="utf-8")
+assert '"brand": "Launchstation"' in manifest
+assert "NathanNeurotic/Launchstation" in manifest
+assert "nathanneurotic.github.io/Launchstation/" in manifest
+assert 'viewBox="0 0 64 64"' in logo
+assert 'aria-label="Launchstation PS2 towers and orbs"' in logo
+assert "artifacts/APP_LAUNCHSTATION.zip" in workflow
+assert "artifacts/APP_LAUNCHSTATION-DS.psu" in workflow
+assert "About r3LaunchELF_ATTDASH" not in main_info
