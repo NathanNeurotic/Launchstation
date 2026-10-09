@@ -2,7 +2,7 @@
 
 PSU records/padding follow RiptOPL's package_release_app.py and PSUManager:
 512-byte root/dot/dotdot/file records, with file payloads padded to 1024 bytes.
-ZIPs and PSUs contain the same two direct app files, under the same folder name.
+ZIPs and PSUs contain the same four direct app files, under the same folder name.
 """
 import argparse
 import datetime
@@ -13,6 +13,21 @@ import zipfile
 ENTRY = struct.Struct("<HHI8sII8sI28s448s")
 VARIANTS = (("APP_LAUNCHSTATION", "LAUNCHSTATION.ELF", "Launchstation"),
             ("APP_LAUNCHSTATION-DS", "LAUNCHSTATION-DS.ELF", "Launchstation (DualShock)"))
+
+ASSET_ROOT = Path(__file__).resolve().parents[1] / "res"
+
+
+def bundled_sidecars():
+    """Provide the runtime files beside the ELF in both install formats."""
+    ca = (ASSET_ROOT / "WLE-UPDATE-CA.PEM").read_bytes()
+    bgm = (ASSET_ROOT / "music.sad").read_bytes()
+    cert_start = b"-----BEGIN CERTIFICATE-----"
+    cert_end = b"-----END CERTIFICATE-----"
+    if ca.count(cert_start) < 2 or ca.count(cert_start) != ca.count(cert_end):
+        raise ValueError("The updater CA bundle is missing or incomplete")
+    if not 32 <= len(bgm) <= 1024 * 1024 or len(bgm) % 16 or bgm[:8] != b"APCM\x01\x01\x01\x00":
+        raise ValueError("The BGM asset is not a valid PS2 ADPCM sidecar")
+    return {"WLE-UPDATE-CA.PEM": ca, "BGM.ADP": bgm}
 
 
 def record(name, size, mode, date):
@@ -75,7 +90,7 @@ def package(standard, dualshock, output, revision, epoch):
                "Developer=github.com/nathanneurotic/\nGenre=Homebrew\n"
                "Description=PlayStation 2 file manager, launcher and device toolkit.\n"
                "PlayersText=1\nSource=github.com/nathanneurotic/Launchstation/\n").encode()
-        members = {elf_name: elf, "title.cfg": cfg}
+        members = {elf_name: elf, "title.cfg": cfg, **bundled_sidecars()}
         psu = make_psu(folder, members, date)
         assert inspect_psu(psu) == (folder, members)
         (output / (folder + ".psu")).write_bytes(psu)
@@ -88,7 +103,7 @@ def package(standard, dualshock, output, revision, epoch):
         with zipfile.ZipFile(output / (folder + ".zip")) as archive:
             assert archive.testzip() is None
             assert {name.split("/", 1)[1]: archive.read(name) for name in archive.namelist()} == members
-        print(f"Verified {folder}.psu/.zip: {elf_name} and title.cfg")
+        print(f"Verified {folder}.psu/.zip: {elf_name}, title.cfg, updater CA, and BGM.ADP")
 
 
 if __name__ == "__main__":
