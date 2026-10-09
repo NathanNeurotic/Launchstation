@@ -43,6 +43,23 @@ off). Ethernet/FTP support is embedded but remains demand-driven: no network
 driver is started during normal boot. The legacy Makefile is kept for the
 other feature profiles.
 
+For the optional PS3/PS4 DualShock USB/Bluetooth build (the legacy
+`DS34=1` option), run:
+
+```
+python scripts/configure_ds34.py
+ps2build build -c .ps2-ds34.yaml -o build-ds34
+```
+
+This uses the retained wLaunchELF_R3Z DS34 drivers and `pad_ds34.c`.
+CI/release packages offer `Launchstation-DS34.ELF` separately; `BOOT.ELF`
+and `Launchstation.ELF` remain the standard controller build. Use the DS34
+executable in place of the standard ELF when you need this controller support.
+It uses the same settings and sidecars. Updating through the native updater
+currently installs the standard `Launchstation.ELF`; update DS34 builds manually.
+The DS34 variant still needs console validation with USB/Bluetooth controllers
+and concurrent storage access.
+
 Background music is **optional**, not embedded in either ELF. Release/CI
 downloads include `BGM.ADP`: put it in the same folder as the ELF if you
 want music, or leave it out for a standalone ELF. For local builds, copy

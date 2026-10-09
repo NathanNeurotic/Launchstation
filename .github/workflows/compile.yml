@@ -116,6 +116,18 @@ jobs:
         run: |
           ps2build build
 
+      - name: Build optional DS34 controller variant
+        run: |
+          python3 scripts/configure_ds34.py
+          ps2build build -c .ps2-ds34.yaml -o build-ds34
+
+      - name: Verify controller variants in linked ELFs
+        run: |
+          python3 scripts/check_ds34_build.py \
+            "$HOME/.local/share/ps2build/toolchain/ee/bin/mips64r5900el-ps2-elf-nm" \
+            build/obj/wLaunchELF/wLaunchELF.unstripped.elf \
+            build-ds34/obj/wLaunchELF/wLaunchELF.unstripped.elf
+
       - name: Report native cloud size
         run: |
           ee_size="$HOME/.local/share/ps2build/toolchain/ee/bin/mips64r5900el-ps2-elf-size"
@@ -144,6 +156,8 @@ jobs:
           mkdir -p artifacts
           cp build/bin/wLaunchELF-packed.elf artifacts/BOOT.ELF
           cp build/bin/wLaunchELF-packed.elf artifacts/Launchstation.ELF
+          cp build-ds34/bin/wLaunchELF-packed.elf artifacts/Launchstation-DS34.ELF
+          cp build-ds34/bin/wLaunchELF.elf artifacts/Launchstation-DS34-unpacked.ELF
           # Compatibility alias for installations running the previous branded updater.
           cp artifacts/Launchstation.ELF artifacts/r3LaunchELF_ATTDASH.ELF
           cp res/music.sad artifacts/BGM.ADP
@@ -175,6 +189,8 @@ jobs:
           mkdir -p build/release-package
           cp artifacts/BOOT.ELF build/release-package/
           cp artifacts/Launchstation.ELF build/release-package/
+          cp artifacts/Launchstation-DS34.ELF build/release-package/
+          cp artifacts/Launchstation-DS34-unpacked.ELF build/release-package/
           cp artifacts/r3LaunchELF_ATTDASH.ELF build/release-package/
           cp artifacts/BGM.ADP build/release-package/
           cp artifacts/WLE-CLOUD.CNF.example build/release-package/
@@ -225,6 +241,8 @@ jobs:
           | **Launchstation-Complete.zip** | One archive containing all useful files from this release. | Bundles both packed ELF names, the unpacked debug ELF when available, BGM, cloud/update sidecars, and offline documentation. | Best choice when you want the entire release in one download instead of clicking every asset individually. |
           | **BOOT.ELF** | The normal packed PS2 executable. | Runs Launchstation on the PlayStation 2. It is byte-identical to Launchstation.ELF. | Recommended for normal installs, boot managers, FMCB/FHDB setups, USB/MASS launches, and general testing. |
           | **Launchstation.ELF** | The same packed PS2 executable, kept under the project name. | Runs the exact same build as BOOT.ELF. | Use this when you want a descriptive filename instead of BOOT.ELF. You do not need both executables. |
+          | **Launchstation-DS34.ELF** | Optional packed build with the inherited PS3/PS4 USB/Bluetooth controller support. | Uses the DS34 controller drivers alongside wired PS2 pads. | Install instead of the standard ELF when you need DS34. Update this variant manually; the native updater selects the standard build. |
+          | **Launchstation-DS34-unpacked.ELF** | Uncompressed DS34 build. | Provides the same optional controller support without packing. | Development/debugging only. |
           | **r3LaunchELF_ATTDASH.ELF** | Legacy compatibility name for the same packed executable. | Preserves the old asset name, although older update checks may need one manual upgrade due to the repository API redirect. | Existing users only; new installs should use Launchstation.ELF or BOOT.ELF. |
           | **Launchstation-unpacked.ELF** | The uncompressed development/debug build. | Runs without the normal packing step and is much larger. | Developers and troubleshooting only. Normal users should use BOOT.ELF or Launchstation.ELF. |
           | **BGM.ADP** | Optional PS2 ADPCM background music data. | Enables the dashboard background track when placed beside the boot ELF. Interface sound effects remain available without it. | Users who want dashboard background music. Omit it if you do not want the music. |
@@ -253,6 +271,8 @@ jobs:
           gh release upload "$tag" \
             "artifacts/BOOT.ELF#BOOT.ELF — Main packed PS2 executable" \
             "artifacts/Launchstation.ELF#Launchstation.ELF — Same packed build as BOOT.ELF" \
+            "artifacts/Launchstation-DS34.ELF#Launchstation-DS34.ELF — Optional PS3/PS4 controller build" \
+            "artifacts/Launchstation-DS34-unpacked.ELF#Launchstation-DS34-unpacked.ELF — DS34 development/debug build" \
             "artifacts/r3LaunchELF_ATTDASH.ELF#r3LaunchELF_ATTDASH.ELF — Legacy update compatibility alias" \
             "artifacts/Launchstation-Complete.zip#Launchstation-Complete.zip — Complete release package" \
             "artifacts/BGM.ADP#BGM.ADP — Optional dashboard background music" \
