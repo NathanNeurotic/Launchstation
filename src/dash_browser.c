@@ -1393,6 +1393,118 @@ static void opConvertCard(int to_pcsx2)
 	}
 }
 
+
+/* Non-destructive local backup recovery. Never overwrite an emulated card.
+ * The MMCE driver does not guarantee safe rename semantics, so recover to
+ * a new image on USB/HDD and use explicit separate card management later. */
+static int recoveryTargetPath(const char *folder, char *dest, int capacity,
+                              char *stage, int stage_capacity)
+{
+    int i, n, m;
+    if (folder == NULL || !folder[0] || !strchr(folder, ':') ||
+        (strncmp(folder, "mass", 4) && strncmp(folder, "usb", 3) &&
+         strncmp(folder, "ata", 3) && strncmp(folder, "hdd", 3)))
+        return 0;
+    for (i = 1; i <= 999; i++) {
+        size_t len = strlen(folder);
+        n = snprintf(dest, capacity, "%s%sRECOVER-%03d.mcd",
+                     folder, (len && folder[len - 1] != '/' &&
+                              folder[len - 1] != ':') ? "/" : "", i);
+        if (n <= 0 || n >= capacity)
+            return 0;
+        m = snprintf(stage, stage_capacity, "%s.PART", dest);
+        if (m <= 0 || m >= stage_capacity)
+            return 0;
+        /* An interrupted recovery leaves .PART; never truncate it on retry. */
+        if (!wleExists(dest) && !wleExists(stage))
+            return 1;
+    }
+    return 0;
+}
+
+static void opRecoverCard(void)
+{
+    FILEINFO *f;
+    char source[MAX_PATH], folder[MAX_PATH], dest[MAX_PATH], stage[MAX_PATH];
+    int r, prep, pcsx2;
+    char clean[MAX_PATH];
+
+    if (fb.sel >= fb.n)
+        return;
+    f = &fb.files[fb.sel];
+    if (isDir(f) || fb.nmarked || !fullPath(f, source, sizeof(source)))
+        return;
+    pcsx2 = genCmpFileExt(f->name, "PS2");
+    if (!pcsx2 && !genCmpFileExt(f->name, "MCD"))
+        return;
+    if (!prepareOp())
+        return;
+    if (!ensurePathDeviceStackReady(source)) {
+        dashModalMessage(DI_WARNING, "Source is unavailable",
+                         "Could not start the device containing the selected card image.",
+                         source);
+        return;
+    }
+    r = pcsx2 ? mcCardValidatePcsx2(source) : mcCardValidateNoEcc(source);
+    if (r != MC_CARD_EXPORT_OK) {
+        dashModalMessage(DI_WARNING, "Invalid memory-card image",
+                         "The file's PS2 memory-card header, geometry or size is invalid. No recovery file was created.",
+                         source);
+        return;
+    }
+
+    dashStrCopy(folder, fb.dir, sizeof(folder));
+    if (!dashPickPath("Recover to a new image on USB / HDD",
+                      folder, DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
+        return;
+    if (!recoveryTargetPath(folder, dest, sizeof(dest), stage, sizeof(stage))) {
+        dashModalMessage(DI_WARNING, "Choose a different recovery folder",
+                         "Recovery requires a writable USB/HDD folder with a free filename. MMCE and memory-card destinations are excluded.",
+                         folder);
+        return;
+    }
+    if (!dashModalConfirm("Recover backup as a separate card image?",
+                          "A new verified .mcd will be created. No existing or active MMCE card image will be replaced or selected.",
+                          "Recover", 0))
+        return;
+    prep = prepareTransferDeviceStacks(source, dest);
+    if (prep != TRANSFER_STACK_READY) {
+        dashModalMessage(DI_WARNING, "Recovery device unavailable",
+                         prep == TRANSFER_STACK_INCOMPATIBLE ?
+                         "The source and recovery devices require incompatible driver stacks." :
+                         "The recovery destination could not be started.", folder);
+        return;
+    }
+    /* Recheck the chosen name: device state may change while picker is open. */
+    if (wleExists(dest) || wleExists(stage)) {
+        dashModalMessage(DI_WARNING, "Recovery filename already exists",
+                         "The selected name was claimed. Nothing was replaced; retry to select a fresh name.",
+                         dest);
+        return;
+    }
+
+    dashLoadingBegin("Recovering verified memory-card image");
+    r = pcsx2 ? mcCardImportPcsx2(source, stage, cardExportProgress) :
+                mcCardBackupNoEcc(source, stage, cardExportProgress);
+    /* Export has already compared the complete output to its source.
+     * Publish only after read-back verification succeeds. */
+    if (r == MC_CARD_EXPORT_OK &&
+        !wleExists(dest) && fileXioRename(stage, dest) >= 0) {
+        dashLoadingEnd();
+        dashModalMessage(DI_CHECK, "Card image recovered and verified",
+                         "The recovered card is a new .mcd file. Existing and active cards were not changed.",
+                         dest);
+        refresh();
+        return;
+    }
+    snprintf(clean, sizeof(clean), "%s", stage);
+    genRemove(clean);
+    dashLoadingEnd();
+    dashModalMessage(DI_WARNING, "Card recovery failed",
+                     "No existing card was changed. The incomplete recovery image was removed if possible.",
+                     dest);
+}
+
 static void opNewIcon(void)
 {
 	char title[40], text[40];
@@ -1745,6 +1857,7 @@ static void actionsMenu(void)
 		F_BACKUP_MCD,
 		F_EXPORT_PS2,
 		F_IMPORT_MCD,
+		F_RECOVER_NEW_MCD,
 		F_TUNA,
 		F_DATES,
 		F_SELALL,
@@ -1817,6 +1930,9 @@ static void actionsMenu(void)
 		}
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "PS2"))
 			ADD(DI_MC, "Convert to no-ECC .mcd...", "strips PCSX2 spare bytes and verifies", 0, F_IMPORT_MCD);
+		if (f != NULL && !isDir(f) && fb.nmarked == 0 &&
+		    (genCmpFileExt(f->name, "PS2") || genCmpFileExt(f->name, "MCD")))
+			ADD(DI_MC, "Recover as new .mcd...", "verified separate copy; never overwrites active cards", 0, F_RECOVER_NEW_MCD);
 		if (f != NULL && en[TIMEMANIP])
 			ADD(DI_CLOCK, LNG(time_manip), "2099-12-31", 0, F_TUNA);
 		if (en[TIMEMANIP_CUSTOM])
@@ -1909,6 +2025,9 @@ static void actionsMenu(void)
 			break;
 		case F_IMPORT_MCD:
 			opConvertCard(0);
+			break;
+		case F_RECOVER_NEW_MCD:
+			opRecoverCard();
 			break;
 		case F_TUNA:
 			opTimestamps(0);
