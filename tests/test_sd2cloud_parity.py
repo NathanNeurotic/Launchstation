@@ -38,6 +38,9 @@ assert '"MMCE could not be started"' in tools
 assert "void dashToolsSyncAllMmceCards(void)" in tools
 assert "mmceBackupAllCards" in tools
 assert "cloudGoogleSyncBackupRoot" in tools
+assert "total.candidates == 0" in tools
+assert "!j->total.candidates" in tools
+assert "No cloud upload was attempted." in tools
 assert "/repos/NathanNeurotic/Launchstation/releases/tags/latest" in tools
 assert '"WLE-UPDATE-CA.PEM"' in tools
 assert "releaseJsonString" in tools
