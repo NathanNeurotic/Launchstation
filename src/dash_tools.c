@@ -307,7 +307,7 @@ static void mmceStatusDone(void *arg)
 		snprintf(mmce_status_text, sizeof(mmce_status_text), "Set destination");
 	else if (!j->scan_mmce)
 		snprintf(mmce_status_text, sizeof(mmce_status_text), "Not checked");
-	else if (!j->any_unit)
+	else if (!j->any_unit || (!j->total.candidates && !j->total.failed))
 		snprintf(mmce_status_text, sizeof(mmce_status_text), "No cards");
 	else if (j->total.failed && j->total.pending)
 		snprintf(mmce_status_text, sizeof(mmce_status_text), "%d pending, %d errors",
@@ -513,9 +513,12 @@ void dashToolsSyncAllMmceCards(void)
 	}
 	dashLoadingEnd();
 
-	if (!any_unit) {
+	if (!any_unit || total.candidates == 0) {
 		dashModalMessage(DI_WARNING, "No MMCE cards found",
-		                 "No readable MemoryCards tree was found on either MMCE unit.", NULL);
+		                 any_unit
+		                     ? "MemoryCards folders were found, but contain no .mcd cards. No cloud upload was attempted."
+		                     : "No readable MemoryCards tree was found on either MMCE unit.",
+		                 NULL);
 		dashToolsRefreshMmceStatus();
 		return;
 	}
