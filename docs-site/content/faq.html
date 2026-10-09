@@ -6,5 +6,5 @@
 <h2 id="popstarter">Does it include POPStarter?</h2><p>No. POPStarter is external; Launchstation uses an explicit path and device-specific fallback search.</p>
 <h2 id="ember">Does it include Ember?</h2><p>No. Ember is external. Put <code>ember.elf</code> and your own 512 KB <code>bios.bin</code> in <code>EMBER/</code> on the game device, with each title under <code>EMBER/games/&lt;Game&gt;/</code>. POPStarter and Ember coexist; the selected format chooses the core.</p>
 <h2 id="cloud-default">Does Google Drive upload automatically?</h2><p>No. Cloud support is optional and “Google Drive after IGR” is off by default.</p>
-<h2 id="docs">Can I use these docs offline?</h2><p>Yes. Download <a href="downloads/Launchstation-Documentation.zip">Launchstation-Documentation.zip</a>. It contains the same generated HTML, assets and search index as GitHub Pages.</p>
+<h2 id="docs">Can I use these docs offline?</h2><p>Yes. Generate a local copy with <code>python docs-site/build.py --out build/docs --zip build/Launchstation-Documentation.zip</code>. It contains the generated HTML, assets and search index.</p>
 <h2 id="hardware">Does CI mean every device is hardware-tested?</h2><p>No. CI verifies source contracts, builds, links and loader memory layout. Hardware-specific timing, bridges, displays and external-core behavior still require console testing.</p>

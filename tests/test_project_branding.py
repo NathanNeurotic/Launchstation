@@ -41,6 +41,6 @@ assert "NathanNeurotic/Launchstation" in manifest
 assert "nathanneurotic.github.io/Launchstation/" in manifest
 assert 'viewBox="0 0 64 64"' in logo
 assert 'aria-label="Launchstation PS2 towers and orbs"' in logo
-assert "artifacts/Launchstation.ELF" in workflow
-assert "artifacts/r3LaunchELF_ATTDASH.ELF" in workflow  # legacy updater alias
+assert "artifacts/APP_LAUNCHSTATION.zip" in workflow
+assert "artifacts/APP_LAUNCHSTATION-DS.psu" in workflow
 assert "About r3LaunchELF_ATTDASH" not in main_info

@@ -45,7 +45,7 @@ assert "releaseJsonString" in tools
 assert "dashToolsSyncAllMmceCards" in header
 assert "dashToolsPrepareMmceStatus" in header
 assert "dashToolsCheckUpdates" in header
-assert "cp res/WLE-UPDATE-CA.PEM artifacts/WLE-UPDATE-CA.PEM" in workflow
+assert (root / "res/WLE-UPDATE-CA.PEM").stat().st_size <= 262144
 
 pem = (root/"res/WLE-UPDATE-CA.PEM").read_text()
 assert "BEGIN CERTIFICATE" in pem

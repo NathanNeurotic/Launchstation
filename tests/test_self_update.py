@@ -19,7 +19,8 @@ assert "Transfer-Encoding" in http_c and "chunked" in http_c
 
 assert "r3LaunchELF_ATTDASH.ELF.sha256" not in update
 assert "parse_expected_sha" in update
-assert "Launchstation.ELF" in update
+assert "SELF_UPDATE_ASSET" in update
+assert "selfUpdateExtractPsu(package, stage, size)" in update
 assert "checkELFheader(stage)" in update
 assert '"%s.BAK"' in update
 assert '"%s.UPDATE"' in update
@@ -39,13 +40,17 @@ assert "SHA-256 verified and installed in place" in settings
 assert "src/self_update.c" in yaml
 assert "sha256sum Launchstation.ELF > Launchstation.ELF.sha256" not in workflow
 assert "artifacts/Launchstation.ELF.sha256#SHA-256" not in workflow
-assert "Launchstation-Complete.zip" in workflow
+assert "scripts/package_apps.py" in workflow
 
 print("PASS: native updater verifies GitHub release digests, stages safely, backs up, and rolls back")
 
 update_ca = (root / "res/WLE-UPDATE-CA.PEM").read_text()
 assert update_ca.count("-----BEGIN CERTIFICATE-----") >= 2
 
-# Older installations still download the legacy asset by name.
-assert "cp artifacts/Launchstation.ELF artifacts/r3LaunchELF_ATTDASH.ELF" in workflow
-assert "artifacts/r3LaunchELF_ATTDASH.ELF#r3LaunchELF_ATTDASH.ELF" in workflow
+# Controller variants select matching package and ELF names.
+header = (root / "include/self_update.h").read_text()
+assert '#ifdef DS34' in header
+assert '"APP_LAUNCHSTATION-DS"' in header and '"APP_LAUNCHSTATION"' in header
+assert '"LAUNCHSTATION-DS.ELF"' in header and '"LAUNCHSTATION.ELF"' in header
+assert 'releaseAssetDigest(response.body, SELF_UPDATE_ASSET' in tools
+assert update.index("memcmp(expected, actual") < update.index("selfUpdateExtractPsu(package, stage, size)") < update.index("checkELFheader(stage)") < update.index("rename_leaf(parent, leaf, backup_leaf)")

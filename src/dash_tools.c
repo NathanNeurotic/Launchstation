@@ -641,7 +641,7 @@ void dashToolsCheckUpdates(void)
 	    !wleExists(ca_path)) {
 		dashModalMessage(DI_WARNING, "Update check needs the CA bundle",
 		                 "WLE-UPDATE-CA.PEM was not found in the dashboard settings folder.",
-		                 "It is included in the automated release and is used only for the GitHub update check.");
+		                 "Copy res/WLE-UPDATE-CA.PEM from the source repository to enable the GitHub update check.");
 		return;
 	}
 	if (!ensureDashboardIpNetworkReady()) {
@@ -666,7 +666,7 @@ void dashToolsCheckUpdates(void)
 
 	if (response.status != 200 ||
 	    !releaseJsonString(response.body, "target_commitish", latest, sizeof(latest)) ||
-	    !releaseAssetDigest(response.body, "Launchstation.ELF",
+	    !releaseAssetDigest(response.body, SELF_UPDATE_ASSET,
 	                        asset_digest, sizeof(asset_digest))) {
 		snprintf(body, sizeof(body), "GitHub returned HTTP %d or an unexpected release response.", response.status);
 		cloudHttpResponseFree(&response);

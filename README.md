@@ -7,10 +7,12 @@
 The full Launchstation reference is published as a PS2-styled GitHub Pages site:
 
 - **Online:** https://nathanneurotic.github.io/Launchstation/
-- **Offline:** `Launchstation-Documentation.zip` in the latest automated release
+- **Offline:** generate locally with `python docs-site/build.py --out build/docs --zip build/Launchstation-Documentation.zip`
 - **Source:** `docs-site/` in this repository
 
-**Upgrading from a pre-rename build:** Older native update checks use the previous GitHub API repository path and may not follow GitHub's repository-rename redirect. If an in-app check reports an unexpected response, manually replace the executable with the current `BOOT.ELF` or `Launchstation.ELF` once; the new updater uses the canonical `NathanNeurotic/Launchstation` endpoint. The release also retains `r3LaunchELF_ATTDASH.ELF` as an asset-name compatibility alias.
+**Release packages:** Standard builds ship as `APP_LAUNCHSTATION.psu` and `APP_LAUNCHSTATION.zip`, containing `APP_LAUNCHSTATION/LAUNCHSTATION.ELF` and `title.cfg`. DualShock builds ship as `APP_LAUNCHSTATION-DS.psu` and `APP_LAUNCHSTATION-DS.zip`, containing `APP_LAUNCHSTATION-DS/LAUNCHSTATION-DS.ELF` and `title.cfg`. Both executables are packed. Extract a ZIP to install on a filesystem, or use PSU Paste to install a PSU on a memory card.
+
+**Upgrading older builds:** Older updaters expect standalone ELF release assets. Manually replace the executable once with the packed ELF from the matching app package. The updated native updater verifies the matching PSU's SHA-256 digest, extracts its ELF and preserves the controller variant. Keep existing configuration and optional sidecars.
 
 The site covers installation, dashboard controls, File Browser, Apps, Text Editor, storage/device support, APA/PFS, iLink, MMCE, networking, POPStarter VCD launching, Ember PS1 image launching, Neutrino ISO launching, IGR/MMCE backups, native Google Drive sync, settings, configuration files, troubleshooting and developer notes.
 
@@ -52,16 +54,12 @@ ps2build build -c .ps2-ds34.yaml -o build-ds34
 ```
 
 This uses the retained wLaunchELF_R3Z DS34 drivers and `pad_ds34.c`.
-CI/release packages offer `Launchstation-DS34.ELF` separately; `BOOT.ELF`
-and `Launchstation.ELF` remain the standard controller build. Use the DS34
-executable in place of the standard ELF when you need this controller support.
-It uses the same settings and sidecars. Updating through the native updater
-currently installs the standard `Launchstation.ELF`; update DS34 builds manually.
+CI builds both variants and packages them under the names above. The DualShock
+executable uses the same settings and optional sidecars as the standard build.
 The DS34 variant still needs console validation with USB/Bluetooth controllers
 and concurrent storage access.
 
-Background music is **optional**, not embedded in either ELF. Release/CI
-downloads include `BGM.ADP`: put it in the same folder as the ELF if you
+Background music is **optional**, not embedded in either ELF. Copy `res/music.sad` as `BGM.ADP`: put it in the same folder as the ELF if you
 want music, or leave it out for a standalone ELF. For local builds, copy
 `res/music.sad` unchanged to that folder under the name `BGM.ADP`.
 Interface sound effects remain embedded. See

@@ -145,9 +145,8 @@ assert "dashCfg.igr_cloud_sync = 0;" in disconnect
 assert "dashStoreSaveSettings();" in disconnect
 assert "automatic IGR cloud sync was turned off" in disconnect
 
-# Release packaging must never ship a CA bundle larger than the PS2 loader accepts.
-assert 'ca_bytes="$(wc -c < artifacts/WLE-CLOUD-CA.PEM)"' in workflow
-assert '"$ca_bytes" -gt 262144' in workflow
+# User-supplied CA bundles retain the native loader's size guard.
+assert "len > 256 * 1024" in http
 
 # Clean-room documentation and no source-level dependency on SD2Cloud.
 assert "does not use\nSD2Cloud source code" in docs
