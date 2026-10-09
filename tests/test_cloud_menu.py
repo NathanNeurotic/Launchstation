@@ -19,19 +19,20 @@ def function(signature):
     return source[start:end] + "\n"
 
 
-functions = function("static int cloudSetupGui(void)") + function("void dashToolsCloudBackup(void)")
+functions = function("static int chooseMmceBackupRoot(") + function("static int cloudSetupGui(void)") + function("void dashToolsCloudBackup(void)")
 icons = sorted(set(re.findall(r"\bDI_\w+", functions)))
 code = "#include <assert.h>\n#include <stdio.h>\n#include <string.h>\n"
 code += "enum {" + ",".join(icons) + "};\n"
 code += r'''
 #define MAX_PATH 1024
 #define DASH_PICK_FILE 1
+#define DASH_PICK_FOLDER 2
 #define DASH_TOAST_OK 1
 typedef struct { int icon; const char *label, *detail; int disabled; } DashMenuItem;
 static struct { char igr_backup_path[MAX_PATH]; int igr_cloud_sync; } dashCfg;
 static char LaunchElfBootDir[MAX_PATH], LaunchElfDir[MAX_PATH];
 static int configured, linked, token, ca, client;
-static int scenario, calls, backup_calls, upload_calls, disconnects, saves;
+static int scenario, calls, backup_calls, upload_calls, disconnects, saves, settings_saves, picks, accept_change;
 static void dashStrCopy(char *d, const char *s, int n) { snprintf(d,n,"%s",s); }
 static int cloudGoogleGetClientConfig(char *id,int ni,char *secret,int ns,int *present,char *err,int ne) {
     (void)err; (void)ne; snprintf(id,ni,"%s",client?"client":"");
@@ -45,16 +46,20 @@ static int cloudGoogleSaveClientConfig(const char *a,const char *b,char *e,int n
     (void)a;(void)b;(void)e;(void)n;saves++;return 0;
 }
 static int cloudGoogleInstallCaBundle(const char *p,char *e,int n) { (void)p;(void)e;(void)n;return 0; }
-static void dashStoreSaveSettings(void) {}
+static void dashStoreSaveSettings(void) { settings_saves++; }
+static int dashWorkerAwaitAll(const char *s) { (void)s;return 1; }
+static void dashToolsRefreshMmceStatus(void) {}
 static void dashStoreFlush(int n) { (void)n; }
 static void dashModalMessage(int i,const char *t,const char *b,const char *d) { (void)i;(void)t;(void)b;(void)d; }
 static int dashModalConfirm(const char *t,const char *b,const char *a,int n) {
-    (void)t;(void)b;(void)a;(void)n; assert(0 && "Unexpected destructive confirmation"); return 0;
+    (void)b;(void)a;(void)n; assert(!strcmp(t,"Change backup folder?")); return accept_change;
 }
 static int dashModalKeyboard(const char *t,char *b,int n) { (void)t;(void)b;(void)n;return 1; }
 static void dashToast(int i,const char *t) { (void)i;(void)t; }
 static int dashPickPath(const char *t,const char *s,int m,const char *e,char *p,int n) {
-    (void)t;(void)s;(void)m;(void)e;(void)p;(void)n;return 0;
+    (void)t;(void)s;(void)e;picks++;assert(m==DASH_PICK_FOLDER);
+    if (scenario==9) return 0;
+    snprintf(p,n,"mass0:/new/");return 1;
 }
 static void cloudLink(void) {}
 static void cloudSyncNow(void) { upload_calls++; }
@@ -69,16 +74,18 @@ static int dashModalMenu(const char *title,const char *sub,const DashMenuItem *i
         /* Accept unchanged credentials on a linked account, then leave. */
         assert(initial== (calls==1?3:0)); return calls==1?0:-1;
     }
-    assert(!strcmp(title,"Google Drive backups") && n==5);
+    assert(!strcmp(title,"Google Drive backups") && n==6);
     assert(!strcmp(items[0].label,"Back up cards & upload"));
     assert(!strcmp(items[3].label,"Upload existing backups"));
     assert(items[0].disabled==!linked);
     assert(items[3].disabled==(!linked || !dashCfg.igr_backup_path[0]));
-    assert(items[4].disabled==!token);
+    assert(!strcmp(items[4].label,"Backup folder...") && !items[4].disabled);
+    assert(items[5].disabled==!token);
     if (scenario==3) { assert(initial==1); return -1; }
     if (scenario==4) { assert(initial==2); return -1; }
     if (scenario==5) { assert(initial==0); return -1; }
     if (scenario==6) { assert(initial==0); return calls==1?0:-1; }
+    if (scenario>=8) { assert(initial==(calls==1?0:4)); return calls==1?4:-1; }
     assert(initial==(calls==1?0:3)); return calls==1?3:-1;
 }
 '''
@@ -96,6 +103,14 @@ int main(void) {
     scenario=7; calls=0; strcpy(dashCfg.igr_backup_path,"mass0:/backups/");
     dashToolsCloudBackup(); assert(backup_calls==1 && upload_calls==1);
     assert(!disconnects && !saves);
+    scenario=8; calls=0; accept_change=0; dashToolsCloudBackup();
+    assert(!strcmp(dashCfg.igr_backup_path,"mass0:/backups/") && !settings_saves);
+    scenario=9; calls=0; dashToolsCloudBackup(); assert(!settings_saves);
+    scenario=10; calls=0; accept_change=1; dashToolsCloudBackup();
+    assert(!strcmp(dashCfg.igr_backup_path,"mass0:/new/") && settings_saves==1);
+    calls=0; dashToolsCloudBackup(); assert(settings_saves==1); /* Same folder is a no-op. */
+    scenario=11; calls=0; dashCfg.igr_backup_path[0]=0; accept_change=0;
+    dashToolsCloudBackup(); assert(settings_saves==2 && picks==5);
     puts("PASS: cloud readiness, action dispatch, retained focus and unchanged credentials");
 }
 '''

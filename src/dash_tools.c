@@ -318,7 +318,7 @@ static void mmceStatusDone(void *arg)
 	else if (j->total.pending)
 		snprintf(mmce_status_text, sizeof(mmce_status_text), "%d pending", j->total.pending);
 	else
-		snprintf(mmce_status_text, sizeof(mmce_status_text), "All synced");
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "Locally backed up");
 
 	switch (j->igr_status) {
 		case WLE_IGR_STATUS_CURRENT:
@@ -449,20 +449,28 @@ static void mmceSyncProgress(const char *source, int done, int total)
 	dashLoadingStatus(leaf != NULL ? leaf + 1 : (source != NULL ? source : "MMCE card"), done, total);
 }
 
-static int ensureMmceBackupRoot(char *out, size_t out_size)
+static int chooseMmceBackupRoot(char *out, size_t out_size, int change)
 {
 	char start[MAX_PATH];
 
-	if (dashCfg.igr_backup_path[0] != '\0') {
+	if (!change && dashCfg.igr_backup_path[0] != '\0') {
 		dashStrCopy(out, dashCfg.igr_backup_path, out_size);
 		return 1;
 	}
 
-	dashStrCopy(start, LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir, sizeof(start));
+	dashStrCopy(start, dashCfg.igr_backup_path[0] ? dashCfg.igr_backup_path :
+	            (LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir), sizeof(start));
 	out[0] = '\0';
-	if (!dashPickPath("MMCE backup destination", start, DASH_PICK_FOLDER, NULL, out, out_size))
+	if (!dashPickPath("Parent folder for WLE-MMCE-Backups", start, DASH_PICK_FOLDER, NULL, out, out_size))
 		return 0;
 	if (out[0] == '\0')
+		return 0;
+	if (!strcmp(out, dashCfg.igr_backup_path))
+		return 1;
+	if (dashCfg.igr_backup_path[0] &&
+	    !dashModalConfirm("Change backup folder?",
+	                      "Existing history stays in the old folder. Reinstall any installed IGR helper to use the new destination.",
+	                      "Use folder", 0))
 		return 0;
 
 	dashStrCopy(dashCfg.igr_backup_path, out, sizeof(dashCfg.igr_backup_path));
@@ -481,7 +489,7 @@ void dashToolsSyncAllMmceCards(void)
 	if (!dashWorkerAwaitAll("Finishing backup status check"))
 		return;
 	memset(&total, 0, sizeof(total));
-	if (!ensureMmceBackupRoot(root, sizeof(root))) {
+	if (!chooseMmceBackupRoot(root, sizeof(root), 0)) {
 		dashToolsRefreshMmceStatus();
 		return;
 	}
@@ -827,8 +835,8 @@ void dashToolsCloudBackup(void)
 	int ca_present, configured, linked, has_token, r, selected = -1;
 
 	for (;;) {
-		DashMenuItem items[5];
-		int ids[5], n = 0;
+		DashMenuItem items[6];
+		int ids[6], n = 0;
 
 		error[0] = '\0';
 		if (cloudGoogleGetClientConfig(client_id, sizeof(client_id),
@@ -864,9 +872,15 @@ void dashToolsCloudBackup(void)
 
 		items[n].icon = DI_REFRESH;
 		items[n].label = "Upload existing backups";
-		items[n].detail = dashCfg.igr_backup_path[0] ? dashCfg.igr_backup_path : "Choose Backup folder in MMCE backup settings first";
+		items[n].detail = dashCfg.igr_backup_path[0] ? dashCfg.igr_backup_path : "Choose Backup folder below first";
 		items[n].disabled = !linked || !dashCfg.igr_backup_path[0];
 		ids[n++] = 2;
+
+		items[n].icon = DI_FILE;
+		items[n].label = "Backup folder...";
+		items[n].detail = dashCfg.igr_backup_path[0] ? dashCfg.igr_backup_path : "Select the parent of WLE-MMCE-Backups";
+		items[n].disabled = 0;
+		ids[n++] = 5;
 
 		items[n].icon = DI_CLOSE;
 		items[n].label = linked ? "Disconnect Google Drive" : "Clear saved Google token";
@@ -882,6 +896,14 @@ void dashToolsCloudBackup(void)
 			return;
 
 		switch (ids[r]) {
+			case 5: {
+				char folder[MAX_PATH];
+				if (!dashWorkerAwaitAll("Finishing backup status check"))
+					continue;
+				chooseMmceBackupRoot(folder, sizeof(folder), 1);
+				dashToolsRefreshMmceStatus();
+				continue;
+			}
 			case 4:
 				dashToolsSyncAllMmceCards();
 				continue;

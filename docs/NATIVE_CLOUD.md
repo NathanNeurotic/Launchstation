@@ -68,6 +68,14 @@ The Google account menu offers two distinct actions:
   without reading live MMCE cards. It requires a linked account and a saved
   backup folder; installing the IGR helper is not required.
 
+The Google account menu also has **Backup folder...**, so a missing destination
+can be configured without leaving the menu. This action saves the selected
+folder immediately, like the destination picker used by Sync all cards. Cancel
+or selecting the current folder leaves settings unchanged. Changing an existing
+folder asks for confirmation and reminds you to reinstall the IGR helper.
+The card status **Locally backed up** describes only verified local backup
+history; it does not claim that Google Drive has been checked.
+
 Google Drive setup starts on the missing required item: client ID first, then
 CA bundle. The optional client secret can remain empty. Returning from an
 action preserves menu selection. Accepting an unchanged credential does not
