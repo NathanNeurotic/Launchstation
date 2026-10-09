@@ -636,6 +636,24 @@ static int releaseAssetDigest(const char *json, const char *asset_name, char *ou
 	return 0;
 }
 
+/* Prefer the CA shipped with the running ELF. Existing installs may
+ * still keep a user-provided CA in the dashboard configuration folder. */
+static int launchstationUpdateCaPath(char *path, int path_size)
+{
+    const char *dir = LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir;
+    int n;
+
+    if (dir[0]) {
+        size_t len = strlen(dir);
+        n = snprintf(path, path_size, "%s%sWLE-UPDATE-CA.PEM", dir,
+                     dir[len - 1] == '/' ? "" : "/");
+        if (n > 0 && n < path_size && wleExists(path))
+            return 1;
+    }
+    return dashStoreBuildPath(path, path_size, "WLE-UPDATE-CA.PEM") == 0 &&
+           wleExists(path);
+}
+
 void dashToolsCheckUpdates(void)
 {
 	CloudHttpResponse response;
@@ -645,11 +663,10 @@ void dashToolsCheckUpdates(void)
 	    "Accept: application/vnd.github+json\r\n";
 	int same = 0;
 
-	if (dashStoreBuildPath(ca_path, sizeof(ca_path), "WLE-UPDATE-CA.PEM") < 0 ||
-	    !wleExists(ca_path)) {
+	if (!launchstationUpdateCaPath(ca_path, sizeof(ca_path))) {
 		dashModalMessage(DI_WARNING, "Update check needs the CA bundle",
-		                 "WLE-UPDATE-CA.PEM was not found in the dashboard settings folder.",
-		                 "Copy res/WLE-UPDATE-CA.PEM from the source repository to enable the GitHub update check.");
+		                 "WLE-UPDATE-CA.PEM was not found beside the running ELF or in the dashboard settings folder.",
+		                 "Install the complete Launchstation ZIP/PSU package, or copy res/WLE-UPDATE-CA.PEM beside the boot ELF.");
 		return;
 	}
 	if (!ensureDashboardIpNetworkReady()) {
