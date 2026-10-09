@@ -187,7 +187,7 @@ jobs:
           | APP_LAUNCHSTATION-DS.zip | DualShock USB/Bluetooth | Extract APP_LAUNCHSTATION-DS/ and launch LAUNCHSTATION-DS.ELF. |
           | APP_LAUNCHSTATION-DS.psu | DualShock USB/Bluetooth | Use PSU Paste to install the DualShock app folder to a memory card. |
 
-          Each package contains its packed ELF and title.cfg. ZIP and PSU payloads match. Existing settings and optional sidecars can be retained. The native updater verifies the matching PSU package digest and preserves the controller variant. Older raw-ELF updater builds need one manual replacement for this package format.
+          Each package contains its packed ELF, title.cfg, WLE-UPDATE-CA.PEM (HTTPS update verification) and BGM.ADP (music). ZIP and PSU payloads match. Existing settings are retained. The native updater verifies the matching PSU package digest and preserves the controller variant. Older updater builds must be replaced manually once before they can consume four-file PSU packages.
 
           Documentation: https://nathanneurotic.github.io/Launchstation/
           Source: https://github.com/NathanNeurotic/Launchstation/tree/${GITHUB_SHA}
