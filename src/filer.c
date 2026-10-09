@@ -1051,7 +1051,10 @@ static void scanUsbMassDevices(int force)
 	char usb_path[8] = "mass0:/";
 #endif
 
-	loadUsbModules();
+	/* A scan only inspects media. Driver bring-up is required once, not on
+	 * every per-port stat during the dashboard's twenty-pass USB probe. */
+	if (!USB_mass_loaded)
+		loadUsbModules();
 	if (!USB_mass_loaded) {
 		if (force) {
 			for (i = 0; i < 10; i++)
