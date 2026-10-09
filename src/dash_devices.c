@@ -429,7 +429,7 @@ static int probeUsbMediaAnimated(void)
 			                 DASH_USB_PROBE_ATTEMPTS);
 		DelayThread(DASH_USB_PROBE_DELAY_US);
 	}
-	return first_seen >= 0 || mask != 0;
+	return mask != 0;
 }
 
 static int probeMount(const char *m)
