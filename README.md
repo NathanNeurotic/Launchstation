@@ -20,6 +20,10 @@ The full Launchstation reference is published as a PS2-styled GitHub Pages site:
 
 The site covers installation, dashboard controls, File Browser, Apps, Text Editor, storage/device support, APA/PFS, iLink, MMCE, networking, POPStarter VCD launching, Ember PS1 image launching, Neutrino ISO launching, IGR/MMCE backups, native Google Drive sync, settings, configuration files, troubleshooting and developer notes.
 
+## Local MMCE backup recovery
+
+In the File Browser, select a verified local `.mcd` or PCSX2 `.ps2` memory-card snapshot and use **Recover as new .mcd...**. This non-destructive option validates the image, creates a fresh numbered `RECOVER-###.mcd` on USB/HDD through a verified staged copy, and never modifies an existing or active MMCE card. Direct restore over an MMCE image and Google Drive download/restore are still separate parity goals. See [the dashboard recovery notes](docs/dashboard.md#recovering-local-mmce-backup-images).
+
 ## Dashboard
 
 This build starts in a controller-first dashboard (HOME, APPS, FILES,

@@ -236,6 +236,22 @@ turning off interface effects keeps enabled music playing. When the audio driver
 start, everything stays silent — the dashboard works normally without
 sound (a toast says why).
 
+## Recovering local MMCE backup images
+
+The File Browser options for a PS2 memory-card `.mcd` or PCSX2 `.ps2`
+include **Recover as new .mcd...**. It validates the complete card geometry
+before writing, converts PCSX2 spare/ECC pages when needed, and compares the
+new image to the source after writing. It uses a unique `RECOVER-###.mcd.PART`
+temporary name and only publishes the matching `.mcd` after verification.
+A failed or interrupted recovery does not replace an existing image.
+
+This first recovery workflow deliberately requires a USB/HDD destination.
+The MMCE filesystem cannot be assumed to support rename, and writing to a
+card currently emulated by sd2psx can corrupt it. Recovery does **not** select
+a card on the adapter, replace an active card, or restore from Google Drive.
+Use the recovered standalone image for review and explicit subsequent card
+management. Do not manually overwrite an actively emulated MMCE card.
+
 ## Optional background music
 
 Music is no longer embedded in the ELF. Installable ZIP/PSU packages now
