@@ -95,6 +95,7 @@ enum SetId {
 	S_DEVA_MX4SIO,
 	S_DEVA_ILINK,
 	S_DEVA_UDPFS,
+	S_MMCE_BACKUP_PATH,
 	S_MMCE_BACKUP_KEEP,
 	S_MMCE_BACKUP_FORMAT,
 	S_MMCE_SYNC_ALL,
@@ -327,6 +328,7 @@ static const SetItem autostart_items[] = {
 };
 
 static const SetItem mmce_backup_items[] = {
+    {ST_PATH, S_MMCE_BACKUP_PATH, "Backup folder", "Choose the parent folder for WLE-MMCE-Backups. Existing history stays where it is. Reinstall the IGR helper after changing this folder."},
     {ST_ACTION, S_MMCE_SYNC_ALL, "Sync all cards", "Back up every changed MMCE card now. If Google Drive is linked, upload pending local history afterward."},
     {ST_CHOICE, S_IGR_SYNC_MODE, "Automatic sync", "What happens after OPL returns through WLE-IGR: Off, verified local backup, or local backup plus Google Drive."},
     {ST_ACTION, S_IGR_HELPER, "IGR helper", "Install, update or remove the verified WLE-IGR helper used by OPL Exit-to."},
@@ -1490,6 +1492,9 @@ static int pathInfo(int id, PathSpec *p)
 		case S_NEUTRINO_PATH:
 			p->field = setting->neutrino_file, p->size = sizeof(setting->neutrino_file), p->ext = "ELF", p->mc_alias = 1;
 			return 1;
+		case S_MMCE_BACKUP_PATH:
+			p->field = dashCfg.igr_backup_path, p->size = sizeof(dashCfg.igr_backup_path), p->mode = DASH_PICK_FOLDER;
+			return 1;
 		case S_IGR_AFTER_APP:
 			p->field = dashCfg.igr_after_path, p->size = sizeof(dashCfg.igr_after_path), p->ext = "ELF";
 			return 1;
@@ -1528,7 +1533,9 @@ static void mcAlias(char *path, int size)
 /* Applies a changed path setting (fonts and languages are loaded now). */
 static void pathApplied(int id)
 {
-	if (id == S_IGR_AFTER_APP) {
+	if (id == S_IGR_AFTER_APP || id == S_MMCE_BACKUP_PATH) {
+		if (id == S_MMCE_BACKUP_PATH)
+			dashToolsRefreshMmceStatus();
 		dash_dirty = 1;
 		return;
 	}

@@ -213,7 +213,7 @@ static void cloudSyncNow(void)
 
 	if (dashCfg.igr_backup_path[0] == '\0') {
 		dashModalMessage(DI_WARNING, "No MMCE backup destination saved",
-		                 "Run Tools > OPL IGR automatic MMCE backup > Install / update once so Launchstation knows which local history to upload.",
+		                 "Choose Backup folder under Settings > Storage & devices > MMCE backups. Select the parent of WLE-MMCE-Backups, then upload again.",
 		                 "Existing backups are not moved or deleted.");
 		return;
 	}
@@ -718,7 +718,7 @@ void dashToolsCheckUpdates(void)
 static int cloudSetupGui(void)
 {
 	char client_id[384], client_secret[384], error[192], start[MAX_PATH], picked[MAX_PATH];
-	int ca_present, linked, r;
+	int ca_present, linked, r, selected = -1;
 
 	for (;;) {
 		DashMenuItem items[4];
@@ -761,15 +761,18 @@ static int cloudSetupGui(void)
 		r = dashModalMenu("Google Drive setup",
 		                  linked ? "Account linked — changing OAuth credentials disconnects it"
 		                         : "Configure the Google TV / limited-input OAuth client",
-		                  items, n, (client_id[0] && ca_present) ? 3 : 0);
+		                  items, n, selected >= 0 ? selected : (!client_id[0] ? 0 : !ca_present ? 2 : 3));
+		selected = r;
 		if (r < 0 || ids[r] == 3)
 			return client_id[0] && ca_present;
 
 		if (ids[r] == 0 || ids[r] == 1) {
+			char previous[384];
 			char *field = ids[r] == 0 ? client_id : client_secret;
 			const char *title = ids[r] == 0 ? "Google OAuth client ID" : "Google OAuth client secret (optional)";
 
-			if (!dashModalKeyboard(title, field, 384))
+			dashStrCopy(previous, field, sizeof(previous));
+			if (!dashModalKeyboard(title, field, 384) || !strcmp(previous, field))
 				continue;
 			if (ids[r] == 0 && field[0] == '\0') {
 				dashModalMessage(DI_WARNING, "Client ID required",
@@ -821,7 +824,7 @@ static int cloudSetupGui(void)
 void dashToolsCloudBackup(void)
 {
 	char error[192], client_id[384], client_secret[384];
-	int ca_present, configured, linked, has_token, r;
+	int ca_present, configured, linked, has_token, r, selected = -1;
 
 	for (;;) {
 		DashMenuItem items[5];
@@ -840,6 +843,12 @@ void dashToolsCloudBackup(void)
 		linked = configured && cloudGoogleIsLinked();
 		has_token = cloudGoogleHasLocalToken();
 
+		items[n].icon = DI_REFRESH;
+		items[n].label = "Back up cards & upload";
+		items[n].detail = linked ? "Create changed card backups, then upload history" : "Link Google Drive before backing up and uploading";
+		items[n].disabled = !linked;
+		ids[n++] = 4;
+
 		items[n].icon = DI_SETTINGS;
 		items[n].label = "Google Drive setup...";
 		items[n].detail = configured ? "OAuth client and CA bundle ready" :
@@ -854,9 +863,9 @@ void dashToolsCloudBackup(void)
 		ids[n++] = 1;
 
 		items[n].icon = DI_REFRESH;
-		items[n].label = "Sync now";
-		items[n].detail = "Upload the saved MMCE backup history";
-		items[n].disabled = !linked;
+		items[n].label = "Upload existing backups";
+		items[n].detail = dashCfg.igr_backup_path[0] ? dashCfg.igr_backup_path : "Choose Backup folder in MMCE backup settings first";
+		items[n].disabled = !linked || !dashCfg.igr_backup_path[0];
 		ids[n++] = 2;
 
 		items[n].icon = DI_CLOSE;
@@ -867,11 +876,15 @@ void dashToolsCloudBackup(void)
 
 		r = dashModalMenu("Google Drive backups",
 		                  linked ? "Linked" : configured ? "Ready to link" : "Setup required",
-		                  items, n, configured ? (linked ? 2 : 1) : 0);
+		                  items, n, selected >= 0 ? selected : (linked ? 0 : configured ? 2 : 1));
+		selected = r;
 		if (r < 0)
 			return;
 
 		switch (ids[r]) {
+			case 4:
+				dashToolsSyncAllMmceCards();
+				continue;
 			case 0:
 				cloudSetupGui();
 				continue;
