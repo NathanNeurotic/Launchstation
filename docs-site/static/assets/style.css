@@ -1854,8 +1854,6 @@ footer {
 }
 /* Launchstation documentation extensions */
 .hero-wle{position:relative;overflow:hidden}
-.hero-wle .wle-mark{display:inline-grid;place-items:center;width:76px;height:76px;border:1px solid rgba(84,160,255,.5);border-radius:18px;background:linear-gradient(145deg,rgba(34,82,151,.34),rgba(8,18,38,.76));box-shadow:0 0 34px rgba(52,134,255,.22);font:800 26px/1 system-ui;letter-spacing:-.08em;color:#d7e8ff;margin-bottom:14px}
-.hero-wle .wle-mark span{transform:translateX(-2px)}
 .version-chip{display:inline-flex;gap:.45rem;align-items:center;padding:.25rem .55rem;border-radius:999px;border:1px solid rgba(99,172,255,.3);background:rgba(24,68,126,.2);font-size:.78rem;color:#b9d7ff}
 .matrix td:first-child,.matrix th:first-child{white-space:nowrap}
 .path-order{counter-reset:pathstep;list-style:none;padding-left:0}
@@ -1873,4 +1871,14 @@ pre.tree{white-space:pre;overflow:auto;line-height:1.55}
 /* Launchstation identity logo: centered, responsive, no stretching. */
 .brand .brand-logo {display:block;width:auto;height:58px;max-width:116px;object-fit:contain;flex-shrink:0}
 .hero-wle .hero-logo {display:block;width:min(100%,760px);height:auto;margin:0 auto 18px;object-fit:contain}
+
+/* The site-wide img rule draws a blue frame; the project logos stay frameless. */
+.brand .brand-logo,
+.hero-wle .hero-logo {
+  border: 0;
+  outline: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
 @media (max-width:600px) {.brand .brand-logo {height:48px;max-width:96px}.hero-wle .hero-logo {width:100%;margin-bottom:12px}}
