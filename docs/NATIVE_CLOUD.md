@@ -33,8 +33,12 @@ Place these beside `DASHBOARD.CNF`:
   partially written staging file is ignored and the intact primary token is
   retained. Disconnect removes both token files.
 
-Release artifacts include `WLE-CLOUD.CNF.example` and a current Google trust
-bundle named `WLE-CLOUD-CA.PEM`.
+The standard and DualShock app ZIP/PSU packages include
+`WLE-UPDATE-CA.PEM` for GitHub update checks, but do **not** contain the
+user's Google OAuth client ID or the separate Google trust file
+`WLE-CLOUD-CA.PEM`. Google Drive requires explicit setup; users can install
+a Google CA PEM through the in-app Google Drive setup menu. The source
+repository provides `res/WLE-CLOUD.CNF.example` as a configuration template.
 
 ## Google setup
 
