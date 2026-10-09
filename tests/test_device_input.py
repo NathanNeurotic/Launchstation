@@ -201,7 +201,9 @@ static int filerUsbDriveMask(void) { return usb_snapshot_valid?usb_mask:0; }
 static int dashLoadingActive(void) { return 0; }
 static void dashLoadingFrame(const char *s,int d,int n) { (void)s;(void)d;(void)n; }
 static u64 usb_media_ready, usb_second_ready;
+static int usb_scan_calls;
 static int filerUsbRefreshDriveMask(void) {
+    usb_scan_calls++;
     usb_snapshot_valid=1;
     if(usb_second_ready && now_ms>=usb_second_ready) usb_mask|=2;
     return now_ms>=usb_media_ready?usb_mask:0;
@@ -242,11 +244,22 @@ int main(void) {
     unsigned int gen=reset_generation;
     probe("usb:"); probe("usb:");
     assert(!result && reset_generation==gen && resident==63);
+    /* With neither port mounted we must not hit a blocking IOP RPC twenty
+     * times; the production probe is limited to four scans per request. */
+    assert(usb_scan_calls==8);
+    usb_scan_calls=0;
     usb_mask=1; usb_media_ready=now_ms+1800; probe("usb:");
     assert(result && reset_generation==gen && resident==63);
+    assert(usb_scan_calls==4); /* preserve late-media acceptance */
+    usb_scan_calls=0;
     usb_mask=1; usb_media_ready=0; usb_second_ready=now_ms+1000;
     probe("usb:");
     assert(result && usb_mask==3 && now_ms>=usb_second_ready);
+    assert(usb_scan_calls==3); /* second device can arrive a second later */
+    usb_scan_calls=0;
+    usb_mask=1; usb_second_ready=0;
+    probe("usb:"); assert(result && usb_scan_calls==3);
+    usb_scan_calls=0;
     usb_second_ready=0;
     usb_media_ready=0; usb_mask=0;
     dashDevicesInit(); resident=63;
