@@ -1869,3 +1869,8 @@ footer {
 .badge-off{background:rgba(146,155,173,.14);color:#b8c0d0;border:1px solid rgba(146,155,173,.28)}
 pre.tree{white-space:pre;overflow:auto;line-height:1.55}
 .hero .btn-row .btn.download-docs:before{content:"ZIP";font-size:.62rem;font-weight:800;letter-spacing:.08em;border:1px solid currentColor;border-radius:.25rem;padding:.08rem .24rem}
+
+/* Launchstation identity logo: centered, responsive, no stretching. */
+.brand .brand-logo {display:block;width:auto;height:58px;max-width:116px;object-fit:contain;flex-shrink:0}
+.hero-wle .hero-logo {display:block;width:min(100%,760px);height:auto;margin:0 auto 18px;object-fit:contain}
+@media (max-width:600px) {.brand .brand-logo {height:48px;max-width:96px}.hero-wle .hero-logo {width:100%;margin-bottom:12px}}

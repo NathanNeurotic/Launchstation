@@ -60,8 +60,7 @@ def topbar(manifest):
     return f'''<header class="topbar">
   <button class="menu-btn" aria-label="Menu">☰</button>
   <a class="brand" href="index.html">
-    <span class="psbtns"><i class="tri">&#9651;</i><i class="cir">&#9711;</i><i class="cro">&#10005;</i><i class="squ">&#9633;</i></span>
-    {html.escape(s["brand"])} <small>DOCS</small></a>
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="{html.escape(s["brand"])}" width="116" height="58"></a>
   <div class="topbar-actions">
     <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
     <a class="topbar-btn" href="{html.escape(s["repo"])}" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
@@ -142,6 +141,11 @@ def validate_output(out: Path, manifest, slugs):
         text = p.read_text(encoding="utf-8")
         if "{{" in text or "}}" in text:
             errors.append(f"{p.name}: unresolved template token")
+        for src in re.findall(r'<img\b[^>]*\bsrc="([^"]+)"', text):
+            if src.startswith(("http://", "https://", "data:")):
+                continue
+            if not (out / src.split("?", 1)[0]).is_file():
+                errors.append(f"{p.name}: missing image asset {src}")
         if p.name != "credits.html" and ("wLaunchELF R3Z" in text or "wLaunchELF_R3Z" in text):
             errors.append(f"{p.name}: stale upstream branding outside credits")
         for href in re.findall(r'href="([^"]+)"', text):

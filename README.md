@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs-site/static/assets/launchstation-logo.avif" alt="Launchstation — PlayStation 2 dashboard and file manager" width="800">
+</p>
+
 # __Launchstation__
 
 **Launchstation** is a maintained PlayStation 2 file manager, executable launcher, dashboard and device toolkit built from **wLaunchELF_R3Z** and the wider wLaunchELF/uLaunchELF/LaunchELF lineage. It extends that base with the dashboard interface, modern storage/device workflows, Neutrino, POPStarter and Ember handoffs, MMCE backup/cloud features, networking tools and additional hardware support.
