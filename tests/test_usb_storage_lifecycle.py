@@ -36,7 +36,14 @@ stub = r'''
 #define USB_MASS_MAX_DRIVES 10
 #define DPRINTF(...) ((void)0)
 static int have_usbd,have_usb_mass,have_bdm,have_bdmfs,USB_mass_loaded,USB_mass_max_drives;
-static int is_early_init,loads,pad_restarts,failed_mass,worker;
+static int is_early_init,loads,pad_restarts,failed_mass,failed_bdm,failed_usbd,worker;
+static char load_order[16];
+static int load_order_count;
+static void trackLoad(char stage) {
+    assert(load_order_count < (int)sizeof(load_order)-1);
+    load_order[load_order_count++] = stage;
+    load_order[load_order_count] = 0;
+}
 static int have_HDD_modules,block_storage_stack_mode,have_ata_bd,have_cdvd;
 static char LaunchElfDir[256];
 static char bdm_irx[1],bdmfs_fatfs_irx[1],usbmass_bd_irx[1];
@@ -45,7 +52,10 @@ static int onWorker(void) { return worker; }
 static int (*iopResetBlocked)(void)=onWorker;
 static void showLoadingModulesMsg(const char *s) { (void)s; }
 static void ensureCoreIoStackReady(void) {}
-static void loadUsbDModule(void) { have_usbd=1; }
+static void loadUsbDModule(void) {
+    if (!have_usbd) trackLoad('U');
+    have_usbd = !failed_usbd;
+}
 static void waitForUsbMassBdmfsSettle(void) {}
 static void delay(int n) { (void)n; }
 static int reopenPadPorts(void) { pad_restarts++; return 1; }
@@ -54,7 +64,9 @@ static int loadHddModules(void) { return 1; }
 static void loadCdModules(void) {}
 static int SifExecModuleBuffer(void *p,int n,int ac,void *av,int *ret) {
     (void)n;(void)ac;(void)av; loads++; *ret=0;
-    if(p==usbmass_bd_irx && failed_mass) return -1;
+    if(p==bdm_irx) { trackLoad('B'); if(failed_bdm) return -1; }
+    if(p==bdmfs_fatfs_irx) trackLoad('F');
+    if(p==usbmass_bd_irx) { trackLoad('M'); if(failed_mass) return -1; }
     return 1;
 }
 '''
@@ -88,7 +100,23 @@ int main(void) {
     failed_mass=0; have_bdm=have_bdmfs=0;
     int before=loads; loadUsbModules();
     assert(have_bdm && have_bdmfs && have_usb_mass && loads==before+3 && !pad_restarts);
-    puts("PASS: USB reuses shared BDM, preserves PAD session, blocks worker startup and reports module failure");
+    /* Cold EXFAT startup must order BDM -> BDMFS -> USBD -> USBMASS_BD. */
+    have_usbd=have_usb_mass=have_bdm=have_bdmfs=USB_mass_loaded=0;
+    load_order_count=0; load_order[0]=0;
+    loadUsbModules();
+    assert(!strcmp(load_order,"BFUM") && have_usb_mass && !pad_restarts);
+    /* A failed BDM core must not leave a newly started USBD behind. */
+    have_usbd=have_usb_mass=have_bdm=have_bdmfs=USB_mass_loaded=0;
+    load_order_count=0; load_order[0]=0; failed_bdm=1;
+    loadUsbModules();
+    assert(!strcmp(load_order,"B") && !have_usbd && !have_usb_mass);
+    failed_bdm=0;
+    /* Failed USB host initialization must not start USBMASS_BD. */
+    load_order_count=0; load_order[0]=0; failed_usbd=1;
+    loadUsbModules();
+    assert(!strcmp(load_order,"BFU") && !have_usb_mass);
+    failed_usbd=0;
+    puts("PASS: USB BDM->USBD order, failure isolation, shared-core reuse and PAD preservation");
 }
 '''
 compiler = shutil.which('gcc') or shutil.which('clang')
