@@ -238,8 +238,9 @@ sound (a toast says why).
 
 ## Optional background music
 
-Music is no longer embedded in the ELF. Put the optional release asset
-`BGM.ADP` beside the ELF, for example:
+Music is no longer embedded in the ELF. Installable ZIP/PSU packages now
+include `BGM.ADP` beside the ELF automatically. For an ELF-only installation,
+you can add the optional `BGM.ADP` beside the ELF, for example:
 
 ```text
 usb0:/BOOT/BOOT.ELF
