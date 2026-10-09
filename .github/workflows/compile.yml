@@ -58,6 +58,8 @@ jobs:
           python3 tests/test_native_cloud.py
           python3 tests/test_cloud_menu.py
           python3 tests/test_mmce_protocol.py
+          python3 tests/test_mmce_backup.py
+          python3 tests/test_mmce_publish.py
           python3 tests/test_sd2cloud_parity.py
           python3 tests/test_self_update.py
           python3 tests/test_png_viewer.py
