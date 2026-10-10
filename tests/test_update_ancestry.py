@@ -36,6 +36,7 @@ program = r'''
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define MAX_PATH 256
 #define GIT_HASH "e70d903"
 #define SELF_UPDATE_ASSET "APP_LAUNCHSTATION.psu"
 #define DI_CHECK 1
