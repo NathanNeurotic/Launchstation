@@ -657,6 +657,79 @@ static int launchstationUpdateCaPath(char *path, int path_size)
            wleExists(path);
 }
 
+/* Compare the installed commit to the published release before offering to
+ * replace the running ELF. A different hash alone cannot prove an upgrade.
+ * Page 2 suppresses the large first-page changed-files array in GitHub's
+ * compare response, keeping the metadata within the PS2 HTTP body limit. */
+enum { UPDATE_RELATION_UNKNOWN = -1, UPDATE_RELATION_SAME = 0,
+       UPDATE_RELATION_NEWER = 1, UPDATE_RELATION_OLDER = 2,
+       UPDATE_RELATION_DIVERGED = 3 };
+
+static int updateIsCommitId(const char *value)
+{
+    int i, n;
+    if (value == NULL)
+        return 0;
+    n = (int)strlen(value);
+    if (n < 7 || n > 40)
+        return 0;
+    for (i = 0; i < n; i++) {
+        char c = value[i];
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
+              (c >= 'A' && c <= 'F')))
+            return 0;
+    }
+    return 1;
+}
+
+static int updateCommitRelation(const char *current, const char *latest,
+                                const char *ca_path, const char *headers,
+                                char *error, int error_size)
+{
+    CloudHttpResponse response;
+    char path[256], status[24];
+    int result = UPDATE_RELATION_UNKNOWN, n;
+
+    if (!updateIsCommitId(current) || !updateIsCommitId(latest)) {
+        snprintf(error, error_size,
+                 "Cannot establish update order for an unrecognized or local build.");
+        return result;
+    }
+
+    /* compare/base...head: ahead means the release is newer; behind
+     * means the installed build is newer. Diverged is NOT an upgrade. */
+    n = snprintf(path, sizeof(path),
+                 "/repos/NathanNeurotic/Launchstation/compare/%s...%s?per_page=1&page=2",
+                 current, latest);
+    if (n <= 0 || n >= (int)sizeof(path)) {
+        snprintf(error, error_size, "Commit comparison URL was too long.");
+        return result;
+    }
+
+    memset(&response, 0, sizeof(response));
+    if (cloudHttpRequest("GET", "api.github.com", path, headers, NULL, 0,
+                         ca_path, &response, error, error_size) < 0)
+        return result;
+    if (response.status != 200 ||
+        !releaseJsonString(response.body, "status", status, sizeof(status))) {
+        snprintf(error, error_size,
+                 "GitHub did not provide a valid commit ancestry comparison (HTTP %d).",
+                 response.status);
+    } else if (!strcmp(status, "ahead")) {
+        result = UPDATE_RELATION_NEWER;
+    } else if (!strcmp(status, "behind")) {
+        result = UPDATE_RELATION_OLDER;
+    } else if (!strcmp(status, "identical")) {
+        result = UPDATE_RELATION_SAME;
+    } else if (!strcmp(status, "diverged")) {
+        result = UPDATE_RELATION_DIVERGED;
+    } else {
+        snprintf(error, error_size, "GitHub returned an unknown commit relationship.");
+    }
+    cloudHttpResponseFree(&response);
+    return result;
+}
+
 void dashToolsCheckUpdates(void)
 {
 	CloudHttpResponse response;
@@ -712,10 +785,35 @@ void dashToolsCheckUpdates(void)
 		dashModalMessage(DI_CHECK, "Launchstation is up to date", body, NULL);
 	} else {
 		char install_result[384];
-		int installed;
+		int installed, relation;
+
+		error[0] = '\0';
+		dashLoadingBegin("Verifying release is newer");
+		relation = updateCommitRelation(GIT_HASH, latest, ca_path, headers,
+		                                error, sizeof(error));
+		dashLoadingEnd();
+		if (relation == UPDATE_RELATION_SAME || relation == UPDATE_RELATION_OLDER) {
+			snprintf(body, sizeof(body),
+			         "Installed: %s\nPublished: %.16s\n\nThe published release is not newer. No update is needed.",
+			         GIT_HASH, latest);
+			dashModalMessage(DI_CHECK, "No newer release available", body, NULL);
+			return;
+		}
+		if (relation == UPDATE_RELATION_DIVERGED) {
+			dashModalMessage(DI_WARNING, "Release is on another commit history",
+			                 "The published release is not a verified descendant of this build. Automatic replacement was blocked.",
+			                 "Use a complete ZIP/PSU package to change builds manually.");
+			return;
+		}
+		if (relation != UPDATE_RELATION_NEWER) {
+			dashModalMessage(DI_WARNING, "Could not verify update order",
+			                 error[0] ? error : "Unable to compare installed and published commits.",
+			                 "No files were changed. Update manually only after checking the release.");
+			return;
+		}
 
 		snprintf(body, sizeof(body),
-		         "Current: %s\nLatest: %.16s\n\nDownload, verify and install the latest packed ELF beside the running copy?",
+		         "Current: %s\nLatest: %.16s\n\nGitHub confirms this release is newer. Download and install the packed ELF?",
 		         GIT_HASH, latest);
 		if (!dashModalConfirm("A newer Launchstation build is available",
 		                      body, "Install update", 0))
