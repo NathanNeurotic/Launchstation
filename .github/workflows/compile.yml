@@ -65,6 +65,7 @@ jobs:
           python3 tests/test_mmce_recovery.py
           python3 tests/test_sd2cloud_parity.py
           python3 tests/test_self_update.py
+          python3 tests/test_update_ancestry.py
           python3 tests/test_png_viewer.py
 
       - name: Validate documentation site
