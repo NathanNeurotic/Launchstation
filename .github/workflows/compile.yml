@@ -44,6 +44,7 @@ jobs:
           python3 tests/test_device_input.py
           python3 tests/test_usb_storage_lifecycle.py
           python3 tests/test_usb_iop_pad_handoff.py
+          python3 tests/test_usb_probe_status.py
           python3 tests/test_usb_shared_namespace.py
           python3 tests/test_usb_boot_paths.py
           python3 tests/test_device_autostart_safe_mode.py

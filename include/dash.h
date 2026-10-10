@@ -20,6 +20,10 @@ int DashIsEnabled(void);
 /* Non-zero while DashRun() is on the call stack (guards re-entry). */
 int DashIsActive(void);
 
+/* Publish the next blocking storage operation before entering its RPC.
+ * Worker callers only update status; UI callers draw an existing overlay. */
+void DashStorageProbeStatus(const char *status);
+
 /* Finish dashboard-owned IO/audio before a child ELF that deliberately
  * inherits the live IOP. Returns 0 if the user cancels the bounded wait. */
 int DashPrepareKeepIopHandoff(const char *title);

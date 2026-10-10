@@ -1044,6 +1044,8 @@ static void waitUsbDiscoverySettle(void)
 static void scanUsbMassDevices(int force)
 {
 	int i, found, max_drives;
+	int stat_result;
+	char probe_status[80];
 	iox_stat_t chk_stat;
 #ifdef EXFAT
 	char usb_path[8] = "usb0:/";
@@ -1080,7 +1082,14 @@ static void scanUsbMassDevices(int force)
 #else
 		usb_path[4] = '0' + i;
 #endif
-		if (fileXioGetStat(usb_path, &chk_stat) < 0) {
+		snprintf(probe_status, sizeof(probe_status), "Checking USB root %s", usb_path);
+		DashStorageProbeStatus(probe_status);
+		DPRINTF("[USB probe] begin %s\n", usb_path);
+		stat_result = fileXioGetStat(usb_path, &chk_stat);
+		DPRINTF("[USB probe] end %s result=%d\n", usb_path, stat_result);
+		snprintf(probe_status, sizeof(probe_status), "USB root %s returned %d", usb_path, stat_result);
+		DashStorageProbeStatus(probe_status);
+		if (stat_result < 0) {
 			USB_mass_ix[i] = 0;
 			continue;
 		}
@@ -2042,7 +2051,10 @@ void filerRootMcPollIdle(void)
 
 	if (!root_mc_poll_active)
 		return;
+	DashStorageProbeStatus("Waiting for memory card status");
+	DPRINTF("[MC poll] drain begin port=%d\n", root_mc_poll_port);
 	mcSync(0, NULL, &result);
+	DPRINTF("[MC poll] drain end port=%d result=%d\n", root_mc_poll_port, result);
 	root_mc_poll_active = 0;
 	root_mc_polled[root_mc_poll_port] = 1;
 	root_mc_present[root_mc_poll_port] = memoryCardResultIndicatesPresent(result);
