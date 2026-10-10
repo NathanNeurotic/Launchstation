@@ -43,6 +43,8 @@ jobs:
           python3 tests/test_worker_queue.py
           python3 tests/test_device_input.py
           python3 tests/test_usb_storage_lifecycle.py
+          python3 tests/test_usb_iop_pad_handoff.py
+          python3 tests/test_usb_probe_status.py
           python3 tests/test_usb_shared_namespace.py
           python3 tests/test_usb_boot_paths.py
           python3 tests/test_device_autostart_safe_mode.py
@@ -58,6 +60,9 @@ jobs:
           python3 tests/test_native_cloud.py
           python3 tests/test_cloud_menu.py
           python3 tests/test_mmce_protocol.py
+          python3 tests/test_mmce_backup.py
+          python3 tests/test_mmce_publish.py
+          python3 tests/test_mmce_recovery.py
           python3 tests/test_sd2cloud_parity.py
           python3 tests/test_self_update.py
           python3 tests/test_png_viewer.py
@@ -187,7 +192,7 @@ jobs:
           | APP_LAUNCHSTATION-DS.zip | DualShock USB/Bluetooth | Extract APP_LAUNCHSTATION-DS/ and launch LAUNCHSTATION-DS.ELF. |
           | APP_LAUNCHSTATION-DS.psu | DualShock USB/Bluetooth | Use PSU Paste to install the DualShock app folder to a memory card. |
 
-          Each package contains its packed ELF and title.cfg. ZIP and PSU payloads match. Existing settings and optional sidecars can be retained. The native updater verifies the matching PSU package digest and preserves the controller variant. Older raw-ELF updater builds need one manual replacement for this package format.
+          Each package contains its packed ELF, title.cfg, WLE-UPDATE-CA.PEM (HTTPS update verification) and BGM.ADP (music). ZIP and PSU payloads match. Existing settings are retained. The native updater verifies the matching PSU package digest and preserves the controller variant. Older updater builds must be replaced manually once before they can consume four-file PSU packages.
 
           Documentation: https://nathanneurotic.github.io/Launchstation/
           Source: https://github.com/NathanNeurotic/Launchstation/tree/${GITHUB_SHA}

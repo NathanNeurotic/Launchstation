@@ -54,9 +54,19 @@ int main(int argc,char **argv) {
     for index, (folder, name, _) in enumerate(p.VARIANTS):
         archive = (tmp / "out" / (folder + ".psu")).read_bytes()
         with zipfile.ZipFile(tmp / "out" / (folder + ".zip")) as z:
-            assert set(z.namelist()) == {folder + "/" + name, folder + "/title.cfg"}
+            assert set(z.namelist()) == {
+                folder + "/" + filename for filename in
+                (name, "title.cfg", "WLE-UPDATE-CA.PEM", "BGM.ADP")
+            }
+            assert z.read(folder + "/WLE-UPDATE-CA.PEM") == (root / "res/WLE-UPDATE-CA.PEM").read_bytes()
+            assert z.read(folder + "/BGM.ADP") == (root / "res/music.sad").read_bytes()
             assert z.read(folder + "/" + name) == elf
             assert ("boot=" + name + "\n").encode() in z.read(folder + "/title.cfg")
+        packaged_folder, packaged_members = p.inspect_psu(archive)
+        assert packaged_folder == folder
+        assert set(packaged_members) == {name, "title.cfg", "WLE-UPDATE-CA.PEM", "BGM.ADP"}
+        assert packaged_members["WLE-UPDATE-CA.PEM"] == (root / "res/WLE-UPDATE-CA.PEM").read_bytes()
+        assert packaged_members["BGM.ADP"] == (root / "res/music.sad").read_bytes()
         binary = tmp / ("parser" + str(index) + ".exe")
         subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror",
                         "-Wno-unused-parameter", "-I" + str(tmp), "-I" + str(root / "include"),
@@ -79,8 +89,15 @@ int main(int argc,char **argv) {
         bad = bytearray(archive); bad[1600:1600+448] = b"x" * 448; check(bad)
         check((tmp / "out" / (p.VARIANTS[1-index][0] + ".psu")).read_bytes())
         date = bytes(8)
+        # Legacy two-file packages continue to work after the parser upgrade.
         check(p.make_psu(folder, {"title.cfg": b"boot=x\n", name: bytes(elf)}, date), True)
         check(p.make_psu(folder, {name: bytes(elf), "wrong.cfg": b"x"}, date))
+        # A partly bundled package, duplicate/unknown sidecar or corrupt record
+        # must never result in an installed ELF.
+        check(p.make_psu(folder, {name: bytes(elf), "title.cfg": b"x",
+                                  "WLE-UPDATE-CA.PEM": b"x"}, date))
+        check(p.make_psu(folder, {name: bytes(elf), "title.cfg": b"x",
+                                  "WLE-UPDATE-CA.PEM": b"x", "bogus": b"x"}, date))
         # Duplicate ELF records, which a dictionary-based producer cannot represent.
         check(archive[:512] + archive[512:1536] + archive[1536:8192] * 2)
 print("App package payloads and both native PSU parsers passed")

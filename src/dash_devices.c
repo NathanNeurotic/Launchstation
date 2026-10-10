@@ -23,8 +23,11 @@ enum { PROBE_HDD, PROBE_ATA, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1
 static u32 probe_checked, probe_present;
 static unsigned int probe_reset_generation = (unsigned int)-1;
 
-#define DASH_USB_PROBE_ATTEMPTS 20
-#define DASH_USB_PROBE_DELAY_US 200000
+/* Each probe is a synchronous IOP RPC that may never return for a
+ * wedged/missing USB slot. Bounded retries limit repeated exposure; the
+ * wall-clock backoff is NOT an RPC timeout. */
+#define DASH_USB_PROBE_ATTEMPTS 4
+#define DASH_USB_PROBE_DELAY_US 600000
 
 static int probeIndex(const char *mount)
 {
@@ -397,23 +400,33 @@ static int probeRoot(const char *path, int wait_ms)
 
 static int probeUsbMediaAnimated(void)
 {
-	int attempt, mask = 0;
+	int attempt, mask = 0, first_seen = -1;
 
 	for (attempt = 0; attempt < DASH_USB_PROBE_ATTEMPTS; attempt++) {
 		if (dashLoadingActive())
 			dashLoadingStatus("Checking USB media...", attempt + 1, DASH_USB_PROBE_ATTEMPTS);
+		/* USB filesystem RPCs are synchronous; a retry delay cannot rescue
+		 * a single wedged fileXioGetStat. Do not probe an absent second slot
+		 * twenty times merely because only one drive is connected. */
 		mask = filerUsbRefreshDriveMask();
-		/* Both physical USB ports enumerate independently. A first mount
-		 * must not end discovery before the second has had time to arrive. */
 		if ((mask & 3) == 3)
 			return 1;
+		if (mask) {
+			/* Preserve the older 1.8-second late-mount acceptance window,
+			 * with at most four IOP probes instead of twenty. Allow up to
+			 * two more spaced probes after the first device arrives to see
+			 * the second drive; never require both to consider USB ready. */
+			if (first_seen < 0)
+				first_seen = attempt;
+			else if (attempt - first_seen >= 2)
+				return 1;
+		}
 		if (attempt == DASH_USB_PROBE_ATTEMPTS - 1)
 			break;
 
-		/* Keep the dashboard/background/spinner alive while USB enumeration
-		 * settles instead of burning a second in a tight discovery loop. */
 		if (dashLoadingActive())
-			dashLoadingFrame("Waiting for USB storage...", attempt + 1, DASH_USB_PROBE_ATTEMPTS);
+			dashLoadingFrame("Waiting for USB storage...", attempt + 1,
+			                 DASH_USB_PROBE_ATTEMPTS);
 		DelayThread(DASH_USB_PROBE_DELAY_US);
 	}
 	return mask != 0;

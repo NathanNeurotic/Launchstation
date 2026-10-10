@@ -59,6 +59,25 @@ foreground behind a short loading overlay.
 | TOOLS    | HDD Manager, Text Editor, start disc, POPStarter VCD launching, Neutrino ISO launching, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, reboot IOP, power off. |
 | SETTINGS | Eight groups: Appearance, Home & applications, Sound, Input, Launching, Storage & devices, Network, System. Each opens a focused page with breadcrumbs and contextual help. Triangle opens *Save changes / Discard changes / Keep editing* from any page. Leaving with changes offers the same decision. Existing configuration files and keys are retained. |
 
+## Intermittent USB stalls (standard build)
+
+Launchstation limits USB-startup media discovery to four spaced scans, accepting
+late first and second drives without probing an absent port twenty times.
+The checks use synchronous IOP filesystem RPC: a single stalled request
+cannot be interrupted by the retry timer, so this is containment, **not a
+proven fix for every USB hang**. A pending async memory-card poll is drained
+before any deliberate IOP reset closes/reopens PADMAN, to avoid an outstanding
+SIO2 request crossing a reset. This applies to the standard and DS34 build;
+the user-reported failure was on the standard build, not yet on DS34.
+
+When a controller's analog LED goes dark as the USB screen stalls, suspect
+an IOP/PADMAN/SIO2 session disruption or a console USB power issue; the LED
+alone does not identify which. If the issue persists, checking the same drive
+on one port, the second port, and through a **powered USB hub** can help
+isolate electrical loading. With two devices, compare drive combinations.
+Do not unplug drives during active writes. No automatic IOP reset is attempted
+as a recovery from a blocked USB filesystem RPC.
+
 ## Settings navigation
 
 Settings opens at the overview. Confirm or Right opens a group; Back returns
@@ -236,10 +255,27 @@ turning off interface effects keeps enabled music playing. When the audio driver
 start, everything stays silent — the dashboard works normally without
 sound (a toast says why).
 
+## Recovering local MMCE backup images
+
+The File Browser options for a PS2 memory-card `.mcd` or PCSX2 `.ps2`
+include **Recover as new .mcd...**. It validates the complete card geometry
+before writing, converts PCSX2 spare/ECC pages when needed, and compares the
+new image to the source after writing. It uses a unique `RECOVER-###.mcd.PART`
+temporary name and only publishes the matching `.mcd` after verification.
+A failed or interrupted recovery does not replace an existing image.
+
+This first recovery workflow deliberately requires a USB/HDD destination.
+The MMCE filesystem cannot be assumed to support rename, and writing to a
+card currently emulated by sd2psx can corrupt it. Recovery does **not** select
+a card on the adapter, replace an active card, or restore from Google Drive.
+Use the recovered standalone image for review and explicit subsequent card
+management. Do not manually overwrite an actively emulated MMCE card.
+
 ## Optional background music
 
-Music is no longer embedded in the ELF. Put the optional release asset
-`BGM.ADP` beside the ELF, for example:
+Music is no longer embedded in the ELF. Installable ZIP/PSU packages now
+include `BGM.ADP` beside the ELF automatically. For an ELF-only installation,
+you can add the optional `BGM.ADP` beside the ELF, for example:
 
 ```text
 usb0:/BOOT/BOOT.ELF

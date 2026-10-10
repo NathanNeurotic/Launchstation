@@ -14,11 +14,15 @@ The full Launchstation reference is published as a PS2-styled GitHub Pages site:
 - **Offline:** generate locally with `python docs-site/build.py --out build/docs --zip build/Launchstation-Documentation.zip`
 - **Source:** `docs-site/` in this repository
 
-**Release packages:** Standard builds ship as `APP_LAUNCHSTATION.psu` and `APP_LAUNCHSTATION.zip`, containing `APP_LAUNCHSTATION/LAUNCHSTATION.ELF` and `title.cfg`. DualShock builds ship as `APP_LAUNCHSTATION-DS.psu` and `APP_LAUNCHSTATION-DS.zip`, containing `APP_LAUNCHSTATION-DS/LAUNCHSTATION-DS.ELF` and `title.cfg`. Both executables are packed. Extract a ZIP to install on a filesystem, or use PSU Paste to install a PSU on a memory card.
+**Release packages:** Standard builds ship as `APP_LAUNCHSTATION.psu` and `APP_LAUNCHSTATION.zip`, containing `APP_LAUNCHSTATION/LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.PEM` and `BGM.ADP`. DualShock builds ship as `APP_LAUNCHSTATION-DS.psu` and `APP_LAUNCHSTATION-DS.zip`, containing `APP_LAUNCHSTATION-DS/LAUNCHSTATION-DS.ELF` and those same three sidecar files. Both executables are packed. Extract a ZIP to install on a filesystem, or use PSU Paste to install a PSU on a memory card.
 
-**Upgrading older builds:** Older updaters expect standalone ELF release assets. Manually replace the executable once with the packed ELF from the matching app package. The updated native updater verifies the matching PSU's SHA-256 digest, extracts its ELF and preserves the controller variant. Keep existing configuration and optional sidecars.
+**Upgrading older builds:** Previous updaters expect standalone ELFs or two-file PSU packages and cannot install the new four-file PSU automatically. Install the matching complete ZIP/PSU package manually once (without deleting existing settings). The updated native updater verifies the matching PSU's SHA-256 digest, extracts the correct ELF and preserves the controller variant. It replaces the ELF only on subsequent in-app updates; retain the bundled `WLE-UPDATE-CA.PEM` and `BGM.ADP` beside it.
 
 The site covers installation, dashboard controls, File Browser, Apps, Text Editor, storage/device support, APA/PFS, iLink, MMCE, networking, POPStarter VCD launching, Ember PS1 image launching, Neutrino ISO launching, IGR/MMCE backups, native Google Drive sync, settings, configuration files, troubleshooting and developer notes.
+
+## Local MMCE backup recovery
+
+In the File Browser, select a verified local `.mcd` or PCSX2 `.ps2` memory-card snapshot and use **Recover as new .mcd...**. This non-destructive option validates the image, creates a fresh numbered `RECOVER-###.mcd` on USB/HDD through a verified staged copy, and never modifies an existing or active MMCE card. Direct restore over an MMCE image and Google Drive download/restore are still separate parity goals. See [the dashboard recovery notes](docs/dashboard.md#recovering-local-mmce-backup-images).
 
 ## Dashboard
 
@@ -26,8 +30,9 @@ This build starts in a controller-first dashboard (HOME, APPS, FILES,
 DEVICES, TOOLS, SETTINGS) with an ELF library, artwork, favorites and
 recents. It is the only interface: Settings, the File Browser, the HDD
 Manager, the Text Editor, the exploit installer and the information screens
-are all dashboard screens, and file access runs in the background so
-navigation never freezes. See
+are all dashboard screens, and most file browsing runs on a background worker. Some device initialization
+and USB filesystem probes remain synchronous IOP RPCs and can still block on
+faulty/unresponsive USB hardware or drivers. See
 [docs/dashboard.md](docs/dashboard.md) for controls, metadata, artwork
 naming and the files it writes.
 
@@ -63,9 +68,7 @@ executable uses the same settings and optional sidecars as the standard build.
 The DS34 variant still needs console validation with USB/Bluetooth controllers
 and concurrent storage access.
 
-Background music is **optional**, not embedded in either ELF. Copy `res/music.sad` as `BGM.ADP`: put it in the same folder as the ELF if you
-want music, or leave it out for a standalone ELF. For local builds, copy
-`res/music.sad` unchanged to that folder under the name `BGM.ADP`.
+Background music is **not embedded** in either ELF. Both installable ZIP/PSU variants include `BGM.ADP` beside the boot ELF by default. For standalone/local ELF builds, music is optional: copy `res/music.sad` unchanged beside the ELF under the name `BGM.ADP`, or omit it for a music-free installation. Packaged `WLE-UPDATE-CA.PEM` is also stored beside the ELF so HTTPS update checks work without a separate manual CA installation (older settings-folder certificates remain supported).
 Interface sound effects remain embedded. See
 [background music](docs/dashboard.md#optional-background-music).
 

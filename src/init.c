@@ -2,6 +2,11 @@
 #include "init.h"
 #include <unistd.h>
 #include <iopcontrol_special.h>
+
+/* The dashboard's asynchronous libmc root poll must finish before IOP/PAD
+ * teardown. Implemented by filer.c even in non-dashboard variants. */
+extern void filerRootMcPollIdle(void);
+
 #ifdef ETH
 #include <ps2ips.h>
 #endif
@@ -1666,6 +1671,11 @@ static void resetRuntimeDeviceState(int show_status)
 		DPRINTF("IOP reset refused on this thread\n");
 		return;
 	}
+	/* A dashboard root-card presence poll uses asynchronous libmc RPC on
+	 * the same SIO2/PADMAN IOP session. Drain it before closing PAD ports
+	 * or restarting the IOP, otherwise a pending mcGetInfo may outlive
+	 * its server and leave the wired controller's analog light dark. */
+	filerRootMcPollIdle();
 	if (iopResetNotify != NULL)
 		iopResetNotify(0);
 #ifdef DS34

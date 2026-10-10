@@ -1,4 +1,4 @@
-// Extract only the current controller variant's ELF from a verified app PSU.
+// Extract the selected ELF from verified legacy (2-file) or sidecar-complete (4-file) app PSUs.
 #include "launchelf.h"
 #include "self_update.h"
 
@@ -28,7 +28,7 @@ static int record_is(const unsigned char *record, unsigned int mode, const char 
 int selfUpdateExtractPsu(const char *package, const char *stage, int size)
 {
     unsigned char directories[1536], entry[512], buffer[4096];
-    int input = -1, output = -1, position = 1536, seen = 0, elf_size = -1, i;
+    int input = -1, output = -1, position = 1536, seen = 0, elf_size = -1, i, entries;
     char remove_path[MAX_PATH];
 
     if (size < 1536 || size > 16 * 1024 * 1024)
@@ -37,12 +37,16 @@ int selfUpdateExtractPsu(const char *package, const char *stage, int size)
     if (input < 0 || genLseek(input, 0, SEEK_END) != size ||
         genLseek(input, 0, SEEK_SET) != 0 || !read_exact(input, directories, 1536))
         goto done;
-    if (!record_is(directories, 0x8027, SELF_UPDATE_FOLDER) || psu32(directories + 4) != 4 ||
+    entries = (int)psu32(directories + 4);
+    /* A root entry counts itself, "." and ".." plus 2 or 4 files.
+     * Preserve compatibility with older packages during migration. */
+    if (!record_is(directories, 0x8027, SELF_UPDATE_FOLDER) ||
+        (entries != 4 && entries != 6) ||
         !record_is(directories + 512, 0x8027, ".") ||
         !record_is(directories + 1024, 0x8027, ".."))
         goto done;
 
-    for (i = 0; i < 2; i++) {
+    for (i = 0; i < entries - 2; i++) {
         unsigned int length, padded;
         int is_elf;
         if (position > size - 512 || genLseek(input, position, SEEK_SET) != position ||
@@ -85,12 +89,21 @@ int selfUpdateExtractPsu(const char *package, const char *stage, int size)
             elf_size = length;
         } else if (record_is(entry, 0x8017, "title.cfg") && !(seen & 2) && length <= 4096) {
             seen |= 2;
+        } else if (entries == 6 &&
+                   record_is(entry, 0x8017, "WLE-UPDATE-CA.PEM") &&
+                   !(seen & 4) && length <= 32768) {
+            seen |= 4;
+        } else if (entries == 6 &&
+                   record_is(entry, 0x8017, "BGM.ADP") &&
+                   !(seen & 8) && length >= 32 && length <= 1024 * 1024 &&
+                   !(length & 15)) {
+            seen |= 8;
         } else {
             goto done;
         }
         position += padded;
     }
-    if (seen == 3 && position == size) {
+    if (seen == (entries == 6 ? 15 : 3) && position == size) {
         if (genClose(input) < 0)
             goto remove_stage;
         return elf_size;
