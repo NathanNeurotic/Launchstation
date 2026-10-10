@@ -196,6 +196,33 @@ probe passes and the libmc drain before deliberate IOP reset. The earlier
 root-cause claim below was too strong: the driver substitution has not
 eliminated this console failure. No navigation order is a reliable trigger.
 
+### Diagnostic-head console failure (2026-10-09)
+
+The user reproduced the freeze with the diagnostic text visible:
+`Checking USB root usb0:/`. Music continues, the wired controller's analog
+LED goes out, and all screen animation and the clock stop. Two USB drives,
+MX4SIO, ATA/APA, MMCE and Ethernet remain physically connected throughout.
+Physical connection does not establish which drivers were activated; do not
+infer a simultaneous MMCE/MX4SIO software stack from this inventory.
+
+The pre-call frame completed, but the post-call result frame did not appear.
+The immediate suspect is `fileXioGetStat("usb0:/", ...)` or the IOP services
+needed to complete it, rather than a retry delay or second-slot probe. BGM
+is uploaded looping SPU2 ADPCM; continued music does not prove that IOP
+threads, PADMAN or RPC are progressing. The controller symptom also prevents
+calling this merely a rendering failure.
+
+Upstream ps2sdk source audit at
+`2c670453980fcc3fe46ead6399b730b12c8556eb`: BDMFS `fs_getstat` handles root
+paths using mount metadata, before the filesystem lock and `f_stat` disk IO.
+This makes a claim of a root-directory sector-read hang premature. The exact
+packaged IRX must still be correlated with that source. The packaged IOMANX
+disassembly uses the array device table, so an observed source hazard in the
+optional linked-list implementation is not grounds to patch this build.
+Neither heap exhaustion, USBD stack overflow nor a device-power fault has
+been established. Run 38010230432 completed successfully for diagnostic head
+`c87bb5633734e5dc9057eed5c340307cb4dc8f8f`; that is build evidence only.
+
 The follow-up adds explicit pre-RPC USB slot status, return codes, and an
 explicit status before draining a pending libmc poll. The UI presents the
 stage before entering the blocking call; worker callers report status without
