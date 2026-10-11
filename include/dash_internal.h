@@ -996,6 +996,9 @@ int dashShowImageViewer(const char *path, const char *title, DashImageViewerStat
 void dashExploitInstaller(void); /* dash_exploit.c */
 void dashOpenBrowser(const char *start_dir);        /* native File Browser */
 void dashFileBrowser(const char *start_dir);        /* dash_browser.c */
+void dashFileBrowserTabClose(void);                /* release inactive-tab state */
+int dashFileBrowserTabInputReady(void);            /* serialize USB fileXio / pad */
+void dashFileBrowserTabOpen(const char *start_dir);/* navigate within Files tab */
 int dashSettingsSaveCnf(void);                      /* LAUNCHELF.CNF now */
 /* classic dialogs (ynDialog/nonDialog/keyboard) as dashboard dialogs */
 void dashClassicUiInstall(int on);
