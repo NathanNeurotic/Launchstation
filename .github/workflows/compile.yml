@@ -188,9 +188,19 @@ jobs:
         run: |
           set -euo pipefail
           tag="latest"
-          title="Latest Launchstation app packages"
+          title="Launchstation latest — $(date -u +%Y-%m-%d)"
           notes="$(cat <<EOF
-          Automated ps2build packages for ${GITHUB_SHA}.
+          Fresh Launchstation rolling release built from verified commit ${GITHUB_SHA}.
+
+          ### USB startup — console-confirmed correction
+          - Restored the original wLE_R3Z **USBD → BDM → BDMFS → USBMASS_BD** initialization sequence for normal USB storage (PR #101). The user confirmed the earlier two-USB freeze is fixed by the corrected artifact. Ember's separate IOP handoff remains unchanged.
+          - Reduced duplicate USB-root probes and corrected memory-card polling coordination; per-unit diagnostics remain available under Tools > Storage when useful (PRs #95, #96, #100).
+          - The standard and DualShock variants passed the complete build, packaging, and host regression checks. DS34-specific real-console coverage remains a separate acceptance consideration.
+
+          ### Updater, MMCE, and packaging
+          - The native updater rejects older or divergent release histories, verifies package digests, restores **missing-only** certificate/BGM sidecars and protects interrupted .UPDATE/.PACKAGE files (PRs #94, #97, #98).
+          - MMCE now distinguishes unavailable card scans from a successfully scanned empty source (PR #99).
+          - Four-file ZIP and PSU packages include the packed ELF, title.cfg, WLE-UPDATE-CA.PEM and BGM.ADP.
 
           | Download | Controller build | Installation |
           | --- | --- | --- |
@@ -203,7 +213,7 @@ jobs:
 
           Documentation: https://nathanneurotic.github.io/Launchstation/
           Source: https://github.com/NathanNeurotic/Launchstation/tree/${GITHUB_SHA}
-          Build success does not establish console validation for every configuration.
+          USB two-drive startup is user-confirmed for the corrected build; other hardware and feature combinations are not implied to be verified.
           EOF
           )"
           if ! gh release view "$tag" >/dev/null 2>&1; then
