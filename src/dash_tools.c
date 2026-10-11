@@ -22,6 +22,7 @@ enum ToolAction {
 	TA_MISC,
 	TA_BROWSER,
 	TA_BROWSER_AT,
+	TA_MISC_FOLDER,
 	TA_EDITOR,
 	TA_USB_DIAG,
 	TA_IGR_SETUP,
@@ -51,6 +52,7 @@ static const Tool tools[] = {
     {TA_BROWSER_AT, DI_DISC, "PS1 images (Ember)", "Open the File Browser; select a .CUE, .BIN or PS1 .EXE inside <Ember directory>/games/<Game>/ to start Ember.", "The umbrella can be named anything. Its 512 KB bios.bin stays local; if ember.elf is missing, Settings can supply it from another Ember directory.", 0, 0, ""},
     {TA_BROWSER_AT, DI_DISC, "PS2 ISOs (Neutrino)", "Open the File Browser; select a .ISO image to start it through Neutrino.", "Set Neutrino under Settings > Launching > Disc & image loaders. The game device is also searched automatically.", 0, 0, ""},
     {TA_HEADER, -1, "STORAGE", NULL, NULL, 0, 0, NULL},
+    {TA_MISC_FOLDER, DI_TOOLS, "MISC commands", "Open all classic wLaunchELF built-in MISC commands.", "Choose a command in this folder to run it through Launchstation.", 0, 0, NULL},
     {TA_USB_DIAG, DI_USB, "USB unit diagnostics", "Inspect the cached USB drive mask without IO, or manually probe logical USB unit 0 or 1 one at a time.", "Each manual probe is a synchronous IOP request and could freeze a failing console. Logical units may not match physical USB ports.", 0, 0, NULL},
     {TA_MISC, DI_HDD, "HDD Manager", "Create, remove, rename and expand APA partitions, view HDL game information and format the internal HDD.", "Partition changes and formatting are permanent.", 0, MISC(Misc_HddManager), NULL},
     {TA_MISC, DI_MC, "Memory card exploit installer", "Install a memory card system-update exploit for this console, another model or region, or PSX/DESR.", "Writes system folders to the memory card. Follow the on-screen checks carefully.", 1, MISC(Misc_Exploit_Installer), NULL},
@@ -1151,6 +1153,9 @@ static void runTool(const Tool *t)
 			break;
 		case TA_BROWSER_AT:
 			dashOpenBrowser(t->path ? t->path : "");
+			break;
+		case TA_MISC_FOLDER:
+			dashOpenBrowser(setting->Misc);
 			break;
 		case TA_EDITOR:
 			dashOpenTextEditor(NULL);
