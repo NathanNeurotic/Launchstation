@@ -100,23 +100,48 @@ int main(void) {
     failed_mass=0; have_bdm=have_bdmfs=0;
     int before=loads; loadUsbModules();
     assert(have_bdm && have_bdmfs && have_usb_mass && loads==before+3 && !pad_restarts);
-    /* Cold EXFAT startup must order BDM -> BDMFS -> USBD -> USBMASS_BD. */
+    /* Work against the working wLaunchELF_R3Z USB host-first sequence.
+     * Cold storage startup: USBD -> BDM -> BDMFS -> USBMASS_BD. */
     have_usbd=have_usb_mass=have_bdm=have_bdmfs=USB_mass_loaded=0;
     load_order_count=0; load_order[0]=0;
     loadUsbModules();
-    assert(!strcmp(load_order,"BFUM") && have_usb_mass && !pad_restarts);
-    /* A failed BDM core must not leave a newly started USBD behind. */
+    assert(!strcmp(load_order,"UBFM") && have_usb_mass && !pad_restarts);
+
+    /* A failed BDM core cannot start BDMFS or USBMASS_BD, but the shared
+     * USBD host legitimately stays resident (as in the R3Z baseline). */
     have_usbd=have_usb_mass=have_bdm=have_bdmfs=USB_mass_loaded=0;
     load_order_count=0; load_order[0]=0; failed_bdm=1;
     loadUsbModules();
-    assert(!strcmp(load_order,"B") && !have_usbd && !have_usb_mass);
+    assert(!strcmp(load_order,"UB") && have_usbd && !have_usb_mass);
+    assert(!have_bdm && !have_bdmfs);
     failed_bdm=0;
-    /* Failed USB host initialization must not start USBMASS_BD. */
+
+    /* Failed USB host init must NOT start BDM, BDMFS or USBMASS. */
+    have_usbd=have_usb_mass=have_bdm=have_bdmfs=USB_mass_loaded=0;
     load_order_count=0; load_order[0]=0; failed_usbd=1;
     loadUsbModules();
-    assert(!strcmp(load_order,"BFU") && !have_usb_mass);
+    assert(!strcmp(load_order,"U") && !have_usbd && !have_usb_mass);
+    assert(!have_bdm && !have_bdmfs);
     failed_usbd=0;
-    puts("PASS: USB BDM->USBD order, failure isolation, shared-core reuse and PAD preservation");
+
+    /* Reuse USBD if controllers, keyboard or another client loaded it. */
+    have_usbd=1;have_usb_mass=have_bdm=have_bdmfs=USB_mass_loaded=0;
+    load_order_count=0; load_order[0]=0;
+    loadUsbModules();
+    assert(!strcmp(load_order,"BFM") && have_usb_mass && have_usbd);
+
+    /* Already-resident shared BDM/BDMFS core remains untouched. */
+    have_usbd=have_bdm=have_bdmfs=1;
+    have_usb_mass=USB_mass_loaded=0;
+    load_order_count=0; load_order[0]=0;
+    loadUsbModules();
+    assert(!strcmp(load_order,"M") && have_usb_mass && !pad_restarts);
+
+    /* Reinvoking the loader must not unload/reinit the host or PADMAN. */
+    load_order_count=0; load_order[0]=0;
+    loadUsbModules();
+    assert(!strcmp(load_order,"") && pad_restarts==0);
+    puts("PASS: wLE_R3Z USBD->BDM->BDMFS->USBMASS_BD parity, failures, shared reuse and PAD preservation");
 }
 '''
 compiler = shutil.which('gcc') or shutil.which('clang')
