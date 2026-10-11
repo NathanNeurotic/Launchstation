@@ -3,8 +3,8 @@
 //Dashboard renderer: GS state, alpha/offset stacks, gradients, rounded
 //panels, glows and batched textured sprites.
 //
-//Rendering model (kept identical to the classic UI): single-buffered
-//gsKit ONESHOT queue, executed right after vsync by dashGfxPresent(). All
+//Rendering model: gsKit ONESHOT queue, double-buffered for the animated
+//dashboard to prevent rendering into the displayed frame. All
 //dashboard textures are owned by gsKit's texture manager (inline uploads
 //inside the draw queue, LRU eviction), the same VRAM strategy LUNA/OPL use.
 //Procedural helper textures are tiny (32x32/64x64 CT32).
@@ -324,6 +324,23 @@ void dashGfxInit(void)
 		buildGlowTextures();
 		gfx_ready = 1;
 	}
+	/*
+	 * The classic wLE menu uses a single framebuffer. That works for its
+	 * mostly static screens, but the animated dashboard writes new pixels
+	 * into the framebuffer that the GS is currently scanning out. The
+	 * resulting horizontal tear is particularly obvious along the header.
+	 *
+	 * Switch only on entering the dashboard: gsKit allocates the second
+	 * framebuffer, and later sync_flip() presents complete frames at VBLANK.
+	 * The dashboard is the only UI from here on; launch/IOP handoffs retain
+	 * their established paths. Screen-mode changes keep DoubleBuffering ON.
+	 */
+	if (gsGlobal->DoubleBuffering != GS_SETTING_ON) {
+		gsGlobal->DoubleBuffering = GS_SETTING_ON;
+		gsKit_init_screen(gsGlobal);
+		gsScreenGeneration++; /* drop every stale texture VRAM mapping */
+		gsKit_set_display_offset(gsGlobal, setting->screen_x, setting->screen_y);
+	}
 	gfx_screen_gen = -1;
 	dashGfxCheckScreenChange();
 }
@@ -373,9 +390,10 @@ void dashGfxBeginFrame(void)
 	dashGfxScissorReset();
 }
 
-/* gsKit_sync_flip() spins on the GS CSR until vblank, which would starve the
- * lower-priority background worker. While the worker has a job, wait in
- * short sleeps instead so it gets the time the UI spends waiting. */
+/* gsKit_sync_flip() spins on the GS CSR until vblank, which can starve
+ * the lower-priority file worker. Use the same flip sequence with short
+ * sleeps when IO is pending. This MUST preserve the double-buffer swap:
+ * previously the yielding fast path only worked for single buffering. */
 static void waitVsyncSharing(void)
 {
 	*GS_CSR = *GS_CSR & 8;
@@ -385,14 +403,28 @@ static void waitVsyncSharing(void)
 	}
 }
 
+static void flipVsyncSharing(void)
+{
+	if (!gsGlobal->FirstFrame) {
+		waitVsyncSharing();
+		if (gsGlobal->DoubleBuffering == GS_SETTING_ON) {
+			/* Same display/active-buffer progression as gsKit_sync_flip().
+			 * Show the completed buffer, then draw into the other one. */
+			GS_SET_DISPFB2(gsGlobal->ScreenBuffer[gsGlobal->ActiveBuffer & 1] / 8192,
+			                gsGlobal->Width / 64, gsGlobal->PSM, 0, 0);
+			gsGlobal->ActiveBuffer ^= 1;
+		}
+	}
+	gsKit_setactive(gsGlobal);
+}
+
 void dashGfxPresent(void)
 {
 	dashSpriteBatchEnd();
 	dashWorkerParkPoint();
-	if (gsGlobal->DoubleBuffering == GS_SETTING_OFF && !gsGlobal->FirstFrame && dashWorkerIoBusy()) {
-		waitVsyncSharing();
-		gsKit_setactive(gsGlobal);
-	} else
+	if (!gsGlobal->FirstFrame && dashWorkerIoBusy())
+		flipVsyncSharing();
+	else
 		gsKit_sync_flip(gsGlobal);
 	gsKit_queue_exec(gsGlobal);
 	gsKit_TexManager_nextFrame(gsGlobal);
