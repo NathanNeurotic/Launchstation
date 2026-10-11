@@ -20,7 +20,7 @@ assert 'dashAppsScreen.input(in)' in home and 'dashAppsScreen.draw()' in home
 assert 'dashAppsScreen.update(dt)' in home and 'dashAppsScreen.hints()' in home
 assert 'library_open = 0;' in home and 'if (in->pressed & DASH_IN_BACK)' in home
 assert 'DASH_VIEW_COUNT' in apps and 'FILTER_COUNT' in apps
-assert '"Home", "Tools", "Settings"' in settings
+assert '"Home", "Files", "Tools", "Settings"' in settings
 assert 'S_FILES_MODE, "Files / Devices view"' not in settings
 
 def function(source,signature):
