@@ -1077,7 +1077,7 @@ static void dashToolsUsbUnitDiagnostics(void)
 	int choice = dashModalChoice("USB unit diagnostics", choices, 3, 0);
 	int mask, result;
 
-	if (choice < 0)
+	if (choice < 0 || choice > 2)
 		return;
 	if (choice == 0) {
 		if (!filerUsbDriversLoaded()) {
@@ -1113,9 +1113,9 @@ static void dashToolsUsbUnitDiagnostics(void)
 		return;
 	}
 #ifdef EXFAT
-	snprintf(path, sizeof(path), "usb%d:/", choice - 1);
+	snprintf(path, sizeof(path), "usb%c:/", (char)('0' + choice - 1));
 #else
-	snprintf(path, sizeof(path), "mass%d:/", choice - 1);
+	snprintf(path, sizeof(path), "mass%c:/", (char)('0' + choice - 1));
 #endif
 	snprintf(status, sizeof(status), "Checking USB root %s", path);
 	/* Present this exact unit before the blocking RPC, so the last frame
