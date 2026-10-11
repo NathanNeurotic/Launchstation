@@ -3,16 +3,20 @@
 //HOME: the landing page.
 //  * hero panel describing the focused item
 //  * "Continue" carousel: pinned apps, then recent, then favorites
-//  * direct launch chips: disc and configured launch keys
+//  * unified full application library subview (all filters/views retained)
+//  * direct chips: full library, Last folder, configured launch keys
 //  * compact live device status
 //--------------------------------------------------------------
 #include "dash_internal.h"
 
 #define HOME_MAX_APPS 24
+
+extern char LastDir[MAX_NAME];
 #define HOME_MAX_CHIPS 24
 
 enum ChipKind {
-	CHIP_DISC = 0,
+	CHIP_LIBRARY = 0,
+	CHIP_LAST_FOLDER,
 	CHIP_LAUNCHKEY
 };
 
@@ -33,6 +37,7 @@ static Chip chips[HOME_MAX_CHIPS];
 static int nchips;
 
 static int row;
+static int library_open; /* full Apps screen nested inside Home */
 static int row_forced; /* row 1 chosen only because Continue was empty */
 static int col[2];
 static float col_anim[2];
@@ -105,8 +110,11 @@ static void homeRebuild(void)
 		homeAdd(dashApps[i].path, 0);
 
 	nchips = 0;
-	if (dashCfg.home_shortcuts)
-		addChip(CHIP_DISC, -1, DI_DISC, "Start disc", "Boot the disc in the drive (PS2, PS1, DVD Video or ESR).");
+	/* These two navigation shortcuts remain available even when the user
+	 * disables the optional launch-key shortcuts. */
+	addChip(CHIP_LIBRARY, -1, DI_APPS, "Applications", "Browse all applications in Grid, List or Carousel view.");
+	if (LastDir[0] && strchr(LastDir, ':') != NULL)
+		addChip(CHIP_LAST_FOLDER, -1, DI_CLOCK, "Last folder", LastDir);
 	for (i = 1; dashCfg.home_shortcuts && i < SETTING_LK_BTN_COUNT; i++) {
 		const char *p = setting->LK_Path[i];
 		char name[DASH_TITLE_MAX], label[48], desc[96];
@@ -152,6 +160,7 @@ static void homeRebuild(void)
 
 static void homeEnter(void)
 {
+	library_open = 0;
 	homeRebuild();
 	if (nhome > 0 || nchips == 0)
 		row = 0;
@@ -167,9 +176,22 @@ static DashApp *focusedApp(void)
 static void activateChip(const Chip *c)
 {
 	switch (c->kind) {
-		case CHIP_DISC:
-			dashRunMisc(setting->Misc_PS2Disc);
+		case CHIP_LIBRARY:
+			library_open = 1;
+			if (dashAppsScreen.enter)
+				dashAppsScreen.enter();
+			dashUiFocusPoke();
 			break;
+		case CHIP_LAST_FOLDER: {
+			/* LastDir can change after the previous file operation. Copy it
+			 * because the File Browser updates this same global as it enters. */
+			char dir[MAX_NAME];
+			dashStrCopy(dir, LastDir, sizeof(dir));
+			if (dir[0] && strchr(dir, ':') != NULL)
+				dashOpenBrowser(dir);
+			homeRebuild();
+			break;
+		}
 		case CHIP_LAUNCHKEY: {
 			const char *p = setting->LK_Path[c->lk];
 			if (strchr(p, ':') != NULL && genCmpFileExt(p, "ELF")) {
@@ -188,6 +210,16 @@ static void activateChip(const Chip *c)
 static void homeInput(const DashInput *in)
 {
 	int n = (row == 0) ? nhome : nchips;
+
+	if (library_open) {
+		if (in->pressed & DASH_IN_BACK) {
+			library_open = 0;
+			homeRebuild();
+			dashUiFocusPoke();
+		} else if (dashAppsScreen.input)
+			dashAppsScreen.input(in);
+		return;
+	}
 
 	if (in->pressed & DASH_IN_UP) {
 		if (row == 1 && nhome > 0) {
@@ -247,6 +279,12 @@ static void homeUpdate(float dt)
 {
 	int r;
 	float sp = dashAnimSpeed();
+
+	if (library_open) {
+		if (dashAppsScreen.update)
+			dashAppsScreen.update(dt);
+		return;
+	}
 
 	row_anim = dashApproach(row_anim, (float)row, 12.0f * sp, dt);
 	for (r = 0; r < 2; r++) {
@@ -319,6 +357,12 @@ static void drawHero(void)
 static void homeDraw(void)
 {
 	int i;
+
+	if (library_open) {
+		if (dashAppsScreen.draw)
+			dashAppsScreen.draw();
+		return;
+	}
 	/* Row geometry: the focused tile grows by HOME_TILE_ZOOM, so keep about
 	 * 8 px between its edges and the row labels/underlines above and below
 	 * (the 1.14x zoom of a 90 px tile used to touch both). */
@@ -357,7 +401,7 @@ static void homeDraw(void)
 	}
 
 	/* Direct launch actions are optional for browser-centric users. */
-	if (dashCfg.home_shortcuts && nchips > 0) {
+	if (nchips > 0) {
 		float cy = 361;
 		float x = 48;
 		float focus_x = 0, focus_w = 0;
@@ -365,9 +409,9 @@ static void homeDraw(void)
 		static float chip_cam;
 		float target;
 
-		dashText(48, cy - 24, "Quick launch", DASH_FS_SMALL, row == 1 ? DASH_C_TEXT : DASH_C_TEXT3);
+		dashText(48, cy - 24, "Browse & shortcuts", DASH_FS_SMALL, row == 1 ? DASH_C_TEXT : DASH_C_TEXT3);
 		if (row == 1)
-			dashRect(48, cy - 6, dashTextWidth("Quick launch", DASH_FS_SMALL), 2, DASH_C_ACCENT);
+			dashRect(48, cy - 6, dashTextWidth("Browse & shortcuts", DASH_FS_SMALL), 2, DASH_C_ACCENT);
 		/* measure focus position for horizontal scrolling */
 		for (i = 0; i < nchips; i++) {
 			float w = dashTextWidth(chips[i].label, DASH_FS_SMALL) + 46;
@@ -418,6 +462,12 @@ static void homeDraw(void)
 static void homeHints(void)
 {
 	DashHint h[5];
+
+	if (library_open) {
+		if (dashAppsScreen.hints)
+			dashAppsScreen.hints();
+		return;
+	}
 	int n = 0;
 
 	h[n].button = dashOkIcon(), h[n].key = NULL, h[n].label = (row == 0) ? "Start" : "Open", n++;
