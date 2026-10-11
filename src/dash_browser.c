@@ -71,6 +71,11 @@ enum {
 static int fb_sort = FB_SORT_NAME;
 static int fb_sort_desc;
 
+/* The Files tab reuses the native browser engine, but owns no private frame
+ * loop. The modal browser remains available for Tools / launch-key callers. */
+static int fb_tab_active;
+static char fb_tab_resume[MAX_PATH];
+
 //--------------------------------------------------------------
 // Listing
 //--------------------------------------------------------------
@@ -368,7 +373,7 @@ static void openDir(const char *dir, const char *select)
 			}
 		}
 		/* the built-in commands, like the classic device list */
-		if (setting->Misc[0]) {
+		if (setting->Misc[0] && !fb_tab_active) {
 			DashDevice *d = &fb.devs[fb.ndevs++];
 			memset(d, 0, sizeof(*d));
 			d->icon = DI_TOOLS;
@@ -2140,16 +2145,20 @@ static void fmtSize(char *out, int size, const FILEINFO *f)
 		snprintf(out, size, "%u B", (unsigned)b);
 }
 
-static void browserScene(void)
+static void browserDrawBody(void)
 {
 	int i, rows_total = fb.dir[0] ? fb.n : fb.ndevs;
 	char info[64];
 
-	dashGfxBeginFrame();
-	dashBgDraw();
-	dashIcon(DI_FOLDER, FB_X, 20, 24, DASH_C_ACCENT);
-	dashTextS(FB_X + 32, 20, "File Browser", DASH_FS_TITLE, DASH_C_TEXT);
-	dashTextScroll(FB_X, 58, FB_W - 150, fb.dir[0] ? fb.dir : "Choose a device", DASH_FS_SMALL, DASH_C_TEXT2);
+	/* A dashboard tab must not overwrite the shared header or render its
+	 * background a second time; modal callers still get a complete scene. */
+	if (!fb_tab_active) {
+		dashIcon(DI_FOLDER, FB_X, 20, 24, DASH_C_ACCENT);
+		dashTextS(FB_X + 32, 20, "File Browser", DASH_FS_TITLE, DASH_C_TEXT);
+	}
+	dashTextScroll(FB_X, fb_tab_active ? 74 : 58,
+	               fb_tab_active ? FB_W - 215 : FB_W - 150,
+	               fb.dir[0] ? fb.dir : "Choose a device", DASH_FS_SMALL, DASH_C_TEXT2);
 	if (fb.dir[0]) {
 		char space[24];
 
@@ -2162,16 +2171,22 @@ static void browserScene(void)
 			snprintf(info, sizeof(info), "%d item%s   %s free", fb.n, fb.n == 1 ? "" : "s", space);
 		else
 			snprintf(info, sizeof(info), "%d item%s", fb.n, fb.n == 1 ? "" : "s");
-		dashTextRight(FB_X + FB_W, 60, info, DASH_FS_CAPTION, DASH_C_TEXT3);
+		dashTextRight(FB_X + FB_W, fb_tab_active ? 76 : 60, info, DASH_FS_CAPTION, DASH_C_TEXT3);
 	}
 	if (LaunchArgsPending()) {
 		snprintf(info, sizeof(info), "%d launch argument%s loaded: choose the application", LaunchArgsGetCount(),
 		         LaunchArgsGetCount() == 1 ? "" : "s");
-		dashTextRight(FB_X + FB_W, 42, info, DASH_FS_CAPTION, DASH_C_ACCENT);
+		if (!fb_tab_active)
+			dashTextRight(FB_X + FB_W, 42, info, DASH_FS_CAPTION, DASH_C_ACCENT);
+		else
+			dashText(FB_X, FB_Y + FB_ROWS * FB_ROW_H + 14, info, DASH_FS_CAPTION, DASH_C_ACCENT);
 	}
 	if (nclipFiles > 0) {
 		snprintf(info, sizeof(info), "Clipboard: %d to %s", nclipFiles, browser_cut ? "move" : "copy");
-		dashTextRight(FB_X + FB_W, 26, info, DASH_FS_CAPTION, DASH_C_ACCENT);
+		if (!fb_tab_active)
+			dashTextRight(FB_X + FB_W, 26, info, DASH_FS_CAPTION, DASH_C_ACCENT);
+		else if (!LaunchArgsPending())
+			dashText(FB_X, FB_Y + FB_ROWS * FB_ROW_H + 14, info, DASH_FS_CAPTION, DASH_C_ACCENT);
 	}
 
 	dashDrawPanelBox(FB_X - 6, FB_Y - 6, FB_W + 12, FB_ROWS * FB_ROW_H + 12, 14);
@@ -2255,11 +2270,9 @@ static void browserScene(void)
 		if (fb.dir[0] && !isMisc(fb.dir))
 			h[n].button = DI_BTN_SQUARE, h[n].key = NULL, h[n].label = "Select", n++;
 		h[n].button = DI_BTN_TRIANGLE, h[n].key = NULL, h[n].label = "Menu", n++;
-		h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = fb.dir[0] ? "Up" : "Close", n++;
+		h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = fb.dir[0] ? "Up" : (fb_tab_active ? "Home" : "Close"), n++;
 		dashDrawHints(h, n);
 	}
-	dashDrawToasts();
-	dashDrawActivity();
 	/* Temporary hardware diagnostic for the completed USB listing/input-loss
 	 * report. Rendering uses the cached UI snapshot, never polls the IOP. */
 	if (fb.pad_snapshot_valid && isUsbBrowsePath(fb.dir)) {
@@ -2271,16 +2284,22 @@ static void browserScene(void)
 	}
 }
 
-//--------------------------------------------------------------
-// Entry
-//--------------------------------------------------------------
-void dashFileBrowser(const char *start_dir)
+/* The modal still supplies its own scene, while the tab is drawn as one
+ * component of dashRenderScene() with the shared header and footer. */
+static void browserScene(void)
 {
-	DashInput in;
-	int running = 1;
+	dashGfxBeginFrame();
+	dashBgDraw();
+	browserDrawBody();
+	dashDrawToasts();
+	dashDrawActivity();
+}
 
-	int gen = fb.gen; /* keeps counting: a listing from a previous visit is never taken */
-
+static int browserOpenState(const char *start_dir)
+{
+	int gen = fb.gen;
+	if (fb.files != NULL)
+		return 0;
 	memset(&fb, 0, sizeof(fb));
 	fb.gen = gen;
 	fb.files = (FILEINFO *)malloc(sizeof(FILEINFO) * MAX_ENTRY);
@@ -2288,45 +2307,53 @@ void dashFileBrowser(const char *start_dir)
 	if (fb.files == NULL || fb.mark == NULL) {
 		free(fb.files);
 		free(fb.mark);
+		fb.files = NULL;
+		fb.mark = NULL;
 		dashToast(DASH_TOAST_ERROR, "Not enough memory for the File Browser");
-		return;
+		return 0;
 	}
 	memset(fb.mark, 0, MAX_ENTRY);
-	dashPushSceneOverride(browserScene);
-	/* a start folder on a device that is not running starts at the list */
-	if (start_dir != NULL && start_dir[0] && (isMisc(start_dir) || (strchr(start_dir, ':') && dashDevicePathReady(start_dir))))
+	if (start_dir != NULL && start_dir[0] &&
+	    (isMisc(start_dir) || (strchr(start_dir, ':') && dashDevicePathReady(start_dir))))
 		openDir(start_dir, NULL);
 	else
 		openDir("", NULL);
-	dashInputFlush();
+	return 1;
+}
 
-	while (running) {
-		int total, prev;
+static void browserCloseState(void)
+{
+	fb.gen++; /* outstanding worker listings no longer apply to this browser */
+	if (fb.args_loaded && LaunchArgsPending())
+		LaunchArgsClear();
+	free(fb.files);
+	free(fb.mark);
+	fb.files = NULL;
+	fb.mark = NULL;
+	fb.loading = 0;
+	fb.usb_input_jobs = 0;
+	fb.input_rearm = 0;
+}
 
-		/* The classic wLaunchELF browser serializes USB directory I/O and PAD
-		 * polling. Keep the dashboard animated, but preserve that ordering for
-		 * USB: fileXio runs on the worker while input stays untouched. Once the
-		 * listing completion is applied, re-anchor the pad state before accepting
-		 * a new action so the confirm press that opened USB cannot leak through. */
-		if (fb.input_rearm && !dashWorkerIoBusy()) {
-			dashInputFlush();
-			fb.input_rearm = 0;
+static void browserSnapshotPad(void)
+{
+	/* Cached EE DMA reads only; no IOP pad RPC during worker/device jobs. */
+	if (!dashWorkerIoBusy() && !dashIopParked()) {
+		int port;
+		for (port = 0; port < 2; port++) {
+			fb.pad_state[port] = padGetState(port, 0);
+			fb.pad_request[port] = padGetReqState(port, 0);
 		}
-		if (fb.usb_input_jobs > 0 && dashWorkerIoBusy())
-			memset(&in, 0, sizeof(in));
-		else
-			dashInputPoll(&in);
-		/* These libpad queries inspect EE DMA data. Keep them on the input
-		 * thread, outside worker IO and IOP reset parking. */
-		if (!dashWorkerIoBusy() && !dashIopParked()) {
-			int port;
-			for (port = 0; port < 2; port++) {
-				fb.pad_state[port] = padGetState(port, 0);
-				fb.pad_request[port] = padGetReqState(port, 0);
-			}
-			fb.pad_generation = getIopResetGeneration();
-			fb.pad_snapshot_valid = 1;
-		}
+		fb.pad_generation = getIopResetGeneration();
+		fb.pad_snapshot_valid = 1;
+	}
+}
+
+static void browserProcessInput(const DashInput *in, int *running)
+{
+	int total, prev;
+	if (fb.files == NULL)
+		return;
 		total = fb.dir[0] ? fb.n : fb.ndevs;
 		prev = fb.sel;
 		if (!fb.loading) {
@@ -2359,9 +2386,14 @@ void dashFileBrowser(const char *start_dir)
 		}
 		if (in.pressed & DASH_IN_BACK) {
 			dashSoundPlay(DASH_SND_CANCEL);
-			if (fb.dir[0] == '\0')
-				running = 0;
-			else {
+			if (fb.dir[0] == '\0') {
+				if (running != NULL)
+					*running = 0;
+				else {
+					dashSwitchSection(DASH_SEC_HOME);
+					return;
+				}
+			} else {
 				char parent[MAX_PATH], child[MAX_NAME];
 				parentOf(fb.dir, parent, sizeof(parent), child, sizeof(child));
 				openDir(parent, child[0] ? child : NULL);
@@ -2375,18 +2407,107 @@ void dashFileBrowser(const char *start_dir)
 			fb.top = fb.sel;
 		if (fb.sel >= fb.top + FB_ROWS)
 			fb.top = fb.sel - FB_ROWS + 1;
+
+}
+
+static void browserTabEnter(void)
+{
+	fb_tab_active = 1;
+	if (!browserOpenState(fb_tab_resume))
+		fb_tab_active = 0;
+}
+
+static void browserTabInput(const DashInput *in)
+{
+	browserProcessInput(in, NULL);
+}
+
+static void browserTabUpdate(float dt)
+{
+	if (!fb_tab_active)
+		return;
+	browserSnapshotPad();
+	fb.sel_anim = dashApproach(fb.sel_anim, (float)fb.sel, 22.0f * dashAnimSpeed(), dt);
+}
+
+static void browserTabDraw(void)
+{
+	if (fb_tab_active)
+		browserDrawBody();
+}
+
+void dashFileBrowserTabClose(void)
+{
+	if (!fb_tab_active)
+		return;
+	/* Preserve the folder when navigating to another tab. An explicit
+	 * return to the device root clears this remembered location. */
+	dashStrCopy(fb_tab_resume, fb.dir, sizeof(fb_tab_resume));
+	browserCloseState();
+	fb_tab_active = 0;
+	dashHomeRebuild(); /* Last folder shortcut updated by browsing Files */
+}
+
+int dashFileBrowserTabInputReady(void)
+{
+	if (!fb_tab_active)
+		return 1;
+	if (fb.usb_input_jobs > 0 && dashWorkerIoBusy())
+		return 0; /* USB fileXio and PAD share the live IOP stack */
+	if (fb.input_rearm && !dashWorkerIoBusy()) {
+		dashInputFlush();
+		fb.input_rearm = 0;
+		return 0; /* consume stale USB-pad transitions before new input */
+	}
+	return 1;
+}
+
+void dashFileBrowserTabOpen(const char *start_dir)
+{
+	if (!fb_tab_active || start_dir == NULL)
+		return;
+	openDir(start_dir, NULL);
+}
+
+const DashScreen dashFilesScreen = {
+	browserTabEnter, browserTabInput, browserTabUpdate, browserTabDraw, NULL
+};
+
+//--------------------------------------------------------------
+// Entry
+//--------------------------------------------------------------
+void dashFileBrowser(const char *start_dir)
+{
+	DashInput in;
+	int running = 1;
+
+	if (!browserOpenState(start_dir))
+		return;
+	dashPushSceneOverride(browserScene);
+	dashInputFlush();
+
+	while (running) {
+		/* The classic wLaunchELF browser serializes USB directory I/O and PAD
+		 * polling. Keep the dashboard animated, but preserve that ordering for
+		 * USB: fileXio runs on the worker while input stays untouched. Once the
+		 * listing completion is applied, re-anchor the pad state before accepting
+		 * a new action so the confirm press that opened USB cannot leak through. */
+		if (fb.input_rearm && !dashWorkerIoBusy()) {
+			dashInputFlush();
+			fb.input_rearm = 0;
+		}
+		if (fb.usb_input_jobs > 0 && dashWorkerIoBusy())
+			memset(&in, 0, sizeof(in));
+		else
+			dashInputPoll(&in);
+		browserSnapshotPad();
+		browserProcessInput(&in, &running);
 		fb.sel_anim = dashApproach(fb.sel_anim, (float)fb.sel, 22.0f * dashAnimSpeed(), dashVisualUpdate());
 		dashRenderScene();
 		dashGfxPresent();
 	}
-	fb.gen++; /* a listing still in flight is dropped */
-	if (fb.args_loaded && LaunchArgsPending())
-		LaunchArgsClear(); /* loaded here but no application was started */
+	browserCloseState();
 	dashPopSceneOverride();
-	free(fb.files);
-	free(fb.mark);
-	fb.files = NULL;
-	fb.mark = NULL;
 	dashInputFlush();
 }
 //--------------------------------------------------------------
