@@ -170,6 +170,9 @@ static int root_mc_polled[2] = {0, 0};
 static u64 root_mc_next_poll_time = 0;
 static int discard_next_mx4sio_root_listing = 0;
 
+/* The USB scanner must drain any outstanding root MC request first. */
+void filerRootMcPollIdle(void);
+
 static int mapUsbPathToFatFsPath(const char *usb_path, char *fatfs_path)
 {
 	const char *suffix;
@@ -1052,6 +1055,10 @@ static void scanUsbMassDevices(int force)
 #else
 	char usb_path[8] = "mass0:/";
 #endif
+
+	/* Classic direct USB browsing and refreshes can bypass probeMount().
+	 * Never overlap the first synchronous USB RPC with a pending libmc poll. */
+	filerRootMcPollIdle();
 
 	/* A scan only inspects media. Driver bring-up is required once, not on
 	 * every per-port stat during the dashboard's twenty-pass USB probe. */
@@ -2047,19 +2054,23 @@ int filerShowAtaUnit(int unit)
  * card or fileXio traffic never overlaps a pending libmc request. */
 void filerRootMcPollIdle(void)
 {
-	int result;
+	int result = 0, sync;
 
 	if (!root_mc_poll_active)
 		return;
 	DashStorageProbeStatus("Waiting for memory card status");
 	DPRINTF("[MC poll] drain begin port=%d\n", root_mc_poll_port);
-	mcSync(0, NULL, &result);
-	DPRINTF("[MC poll] drain end port=%d result=%d\n", root_mc_poll_port, result);
+	sync = mcSync(0, NULL, &result);
+	DPRINTF("[MC poll] drain end port=%d sync=%d result=%d\n", root_mc_poll_port, sync, result);
 	root_mc_poll_active = 0;
+	root_mc_next_poll_time = Timer() + ROOT_MC_POLL_INTERVAL_MS;
+	/* An unsuccessful completion has no trustworthy result. Preserve the
+	 * last-known card state and let the periodic poll retry after settling. */
+	if (sync <= 0)
+		return;
 	root_mc_polled[root_mc_poll_port] = 1;
 	root_mc_present[root_mc_poll_port] = memoryCardResultIndicatesPresent(result);
 	root_mc_known_type[root_mc_poll_port] = root_mc_present[root_mc_poll_port] ? root_mc_poll_type : 0;
 	root_mc_known_free[root_mc_poll_port] = root_mc_present[root_mc_poll_port] ? root_mc_poll_free : -1;
 	root_mc_poll_port = (root_mc_poll_port + 1) & 1;
-	root_mc_next_poll_time = Timer() + ROOT_MC_POLL_INTERVAL_MS;
 }
