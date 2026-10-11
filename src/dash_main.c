@@ -19,6 +19,7 @@ static int dash_active;
 static int dash_inited;
 static int section = DASH_SEC_HOME;
 static int prev_section = DASH_SEC_HOME;
+static int nav_section = DASH_SEC_HOME; /* remembers transient FILES action for L1/R1 cycling */
 static float section_anim = 1.0f;
 static int section_dir = 1;
 static float anim_time;
@@ -84,7 +85,10 @@ const char *dashVisibleSectionName(int index)
 
 int dashAdjacentSection(int s, int direction)
 {
-	int i = dashVisibleSectionIndex(s) + direction;
+	/* FILES launches a modal browser without replacing the underlying screen.
+	 * Keep the tab-navigation cursor on Files so the next R1 reaches Tools. */
+	int from = (nav_section == DASH_SEC_FILES) ? nav_section : s;
+	int i = dashVisibleSectionIndex(from) + direction;
 	if (i < 0) i = DASH_VISIBLE_SEC_COUNT - 1;
 	if (i >= DASH_VISIBLE_SEC_COUNT) i = 0;
 	return visible_sections[i];
@@ -165,19 +169,24 @@ void dashSwitchSection(int s)
 	if (s == DASH_SEC_FILES) {
 		/* FILES is an action, not a second menu before File Browser.
 		 * Do not change section: closing the browser returns to the caller. */
-		if (dashConfirmLeave())
+		if (dashConfirmLeave()) {
+			nav_section = DASH_SEC_FILES;
 			dashOpenBrowser("");
+		}
 		return;
 	}
 	if (s < 0 || s >= DASH_SEC_COUNT)
 		s = DASH_SEC_HOME;
-	if (s == section)
+	if (s == section) {
+		nav_section = s;
 		return;
+	}
 	if (!dashConfirmLeave())
 		return;
 	section_dir = (s > section) ? 1 : -1;
 	prev_section = section;
 	section = s;
+	nav_section = s;
 	section_anim = 0.0f;
 	dashUiFocusPoke();
 	dashSoundPlay(DASH_SND_TRANSITION);
@@ -1088,6 +1097,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	if (from_boot)
 		dashSoundPlay(DASH_SND_BOOT);
 
+	nav_section = section;
 	section_anim = 1.0f;
 	fade_in = 0.0f;
 	if (screens[section]->enter)
