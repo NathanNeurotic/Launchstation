@@ -241,15 +241,15 @@ We have vendored usbd-ra into iop/usbd-ra and configured ps2.yaml to build it as
 ## Direct USB scan / libmc serialization follow-up
 
 A code audit after the #93 merge identified an unguarded path: dashboard
-\`probeMount()\` drains asynchronous root memory-card status before a USB
+`probeMount()` drains asynchronous root memory-card status before a USB
 probe, but classic File Browser and direct USB media refreshes can enter
-\`scanUsbMassDevices()\` without going through \`probeMount()\`. The scanner
+`scanUsbMassDevices()` without going through `probeMount()`. The scanner
 now drains any outstanding root-card status request before the first
 synchronous USB filesystem RPC. The worker's existing pre-job drain remains;
 this is defense in depth for calls that bypass the dashboard device layer.
 
-Separately, \`filerRootMcPollIdle()\` previously updated cached card presence,
-type and free space with \`result\` even if blocking \`mcSync()\` returned a
+Separately, `filerRootMcPollIdle()` previously updated cached card presence,
+type and free space with `result` even if blocking `mcSync()` returned a
 failure (when that result cannot be trusted). It now clears the pending flag
 and schedules another poll after the normal interval while retaining the
 last known card status on an error or unfinished request.
@@ -257,4 +257,4 @@ last known card status on an error or unfinished request.
 Compiled host harnesses exercise the exact USB scan ordering and both
 successful/failed/pending libmc completions. This is a *correctness and
 serialization fix*, not an IOP RPC timeout and not proof that the intermittent
-\`usb0:/\` console freeze is solved. Console acceptance remains required.
+`usb0:/` console freeze is solved. Console acceptance remains required.
