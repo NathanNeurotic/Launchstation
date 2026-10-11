@@ -2357,34 +2357,35 @@ static void browserProcessInput(const DashInput *in, int *running)
 		total = fb.dir[0] ? fb.n : fb.ndevs;
 		prev = fb.sel;
 		if (!fb.loading) {
-			if (in.pressed & DASH_IN_UP)
+			if (in->pressed & DASH_IN_UP)
 				fb.sel--;
-			if (in.pressed & DASH_IN_DOWN)
+			if (in->pressed & DASH_IN_DOWN)
 				fb.sel++;
-			if (in.pressed & (DASH_IN_L2 | DASH_IN_LEFT))
+			if (in->pressed & (DASH_IN_L2 | DASH_IN_LEFT))
 				fb.sel -= FB_ROWS;
-			if (in.pressed & (DASH_IN_R2 | DASH_IN_RIGHT))
+			if (in->pressed & (DASH_IN_R2 | DASH_IN_RIGHT))
 				fb.sel += FB_ROWS;
 			if (fb.sel >= total)
 				fb.sel = total - 1;
 			if (fb.sel < 0)
 				fb.sel = 0;
-			if (fb.sel != prev)
+			if (fb.sel != prev && running != NULL)
 				dashSoundPlay(DASH_SND_CURSOR);
-			if (in.pressed & DASH_IN_OK) {
-				dashSoundPlay(DASH_SND_CONFIRM);
+			if (in->pressed & DASH_IN_OK) {
+				if (running != NULL)
+					dashSoundPlay(DASH_SND_CONFIRM);
 				activate();
 			}
-			if ((in.pressed & DASH_IN_FAV) && fb.dir[0] && !isMisc(fb.dir) && fb.sel < fb.n) {
+			if ((in->pressed & DASH_IN_FAV) && fb.dir[0] && !isMisc(fb.dir) && fb.sel < fb.n) {
 				fb.mark[fb.sel] = !fb.mark[fb.sel];
 				fb.nmarked += fb.mark[fb.sel] ? 1 : -1;
 				if (fb.sel < fb.n - 1)
 					fb.sel++;
 			}
-			if (in.pressed & DASH_IN_MENU)
+			if (in->pressed & DASH_IN_MENU)
 				actionsMenu();
 		}
-		if (in.pressed & DASH_IN_BACK) {
+		if (in->pressed & DASH_IN_BACK) {
 			dashSoundPlay(DASH_SND_CANCEL);
 			if (fb.dir[0] == '\0') {
 				if (running != NULL)
