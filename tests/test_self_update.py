@@ -20,7 +20,15 @@ assert "Transfer-Encoding" in http_c and "chunked" in http_c
 assert "r3LaunchELF_ATTDASH.ELF.sha256" not in update
 assert "parse_expected_sha" in update
 assert "SELF_UPDATE_ASSET" in update
-assert "selfUpdateExtractPsu(package, stage, size)" in update
+assert "selfUpdateExtractPsu(package, stage, package_size)" in update
+assert 'selfUpdateExtractPsuSidecar(package, "WLE-UPDATE-CA.PEM"' in update
+assert 'selfUpdateExtractPsuSidecar(package, "BGM.ADP"' in update
+assert "need_ca = !wleExists(update_ca)" in update
+assert "need_bgm = !wleExists(bgm)" in update
+assert "wleExists(update_ca_stage)" in update and "wleExists(bgm_stage)" in update
+assert update.index("checkELFheader(stage)") < update.index('selfUpdateExtractPsuSidecar(package, "WLE-UPDATE-CA.PEM"') < update.index("rename_leaf(parent, leaf, backup_leaf)")
+assert 'rename_leaf(parent, "WLE-UPDATE-CA.PEM.UPDATE", "WLE-UPDATE-CA.PEM")' in update
+assert 'rename_leaf(parent, "BGM.ADP.UPDATE", "BGM.ADP")' in update
 assert "checkELFheader(stage)" in update
 assert '"%s.BAK"' in update
 assert '"%s.UPDATE"' in update
