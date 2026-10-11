@@ -236,3 +236,25 @@ The earlier investigation used RiptOPL's configuration as a driver candidate:
 On 2024-09-04, upstream ps2sdk rewrote its USB host driver (commit b1f7ff96, \'USBD feature update\'). On real hardware, that rewritten driver intermittently loses controller communication (taking down SIO2/PADMAN, turning off the analog LED) and hangs the IOP during USB transfers. Both ps2sdk\'s full usbd.irx and usbd_mini.irx in current toolchains come from this rewritten codebase. RiptOPL resolved this exact hardware regression by vendoring the pre-rewrite driver (ps2sdk commit 314d87e7 as of 2024-04-01) built with -DMINI_DRIVER and -DUSE_GP_REGISTER=0 (usbd-ra).
 
 We have vendored usbd-ra into iop/usbd-ra and configured ps2.yaml to build it as target usbd_ra, embedding it in both wLaunchELF and wle_igr in place of ps2sdk\'s prepackaged usbd_mini.irx.
+
+
+## Direct USB scan / libmc serialization follow-up
+
+A code audit after the #93 merge identified an unguarded path: dashboard
+\`probeMount()\` drains asynchronous root memory-card status before a USB
+probe, but classic File Browser and direct USB media refreshes can enter
+\`scanUsbMassDevices()\` without going through \`probeMount()\`. The scanner
+now drains any outstanding root-card status request before the first
+synchronous USB filesystem RPC. The worker's existing pre-job drain remains;
+this is defense in depth for calls that bypass the dashboard device layer.
+
+Separately, \`filerRootMcPollIdle()\` previously updated cached card presence,
+type and free space with \`result\` even if blocking \`mcSync()\` returned a
+failure (when that result cannot be trusted). It now clears the pending flag
+and schedules another poll after the normal interval while retaining the
+last known card status on an error or unfinished request.
+
+Compiled host harnesses exercise the exact USB scan ordering and both
+successful/failed/pending libmc completions. This is a *correctness and
+serialization fix*, not an IOP RPC timeout and not proof that the intermittent
+\`usb0:/\` console freeze is solved. Console acceptance remains required.
