@@ -307,7 +307,11 @@ static void mmceStatusDone(void *arg)
 		snprintf(mmce_status_text, sizeof(mmce_status_text), "Set destination");
 	else if (!j->scan_mmce)
 		snprintf(mmce_status_text, sizeof(mmce_status_text), "Not checked");
-	else if (!j->any_unit || (!j->total.candidates && !j->total.failed))
+	/* A failed scan of both units cannot establish that no cards exist.
+	 * Distinguish inaccessible/MMCE-not-ready from a successful empty scan. */
+	else if (!j->any_unit)
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "MMCE unavailable");
+	else if (!j->total.candidates && !j->total.failed)
 		snprintf(mmce_status_text, sizeof(mmce_status_text), "No cards");
 	else if (j->total.failed && j->total.pending)
 		snprintf(mmce_status_text, sizeof(mmce_status_text), "%d pending, %d errors",
