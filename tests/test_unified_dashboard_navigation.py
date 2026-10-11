@@ -1,4 +1,4 @@
-"""Exercise the production section routing after Home+Apps+Files consolidation."""
+"""Exercise production section routing with Files as a first-class tab."""
 from pathlib import Path
 import shutil
 import subprocess
@@ -40,11 +40,11 @@ typedef struct { void (*enter)(void); } DashScreen;
 enum { DASH_SEC_HOME=0, DASH_SEC_APPS, DASH_SEC_FILES, DASH_SEC_DEVICES,
        DASH_SEC_TOOLS, DASH_SEC_SETTINGS, DASH_SEC_COUNT };
 enum { DASH_SND_TRANSITION=1 };
-static int section = DASH_SEC_HOME,prev_section=DASH_SEC_HOME,nav_section=DASH_SEC_HOME;
+static int section = DASH_SEC_HOME,prev_section=DASH_SEC_HOME;
 static float section_anim=1.0f;
-static int section_dir=1, leave_ok=1, opened, enter_count, sound_count, focus_count, home_rebuilds;
+static int section_dir=1, leave_ok=1, opened, enter_count, sound_count, focus_count, home_rebuilds, tab_closes;
 static int dashConfirmLeave(void) { return leave_ok; }
-static void dashOpenBrowser(const char *path) { assert(path[0]==0); opened++; }
+static void dashFileBrowserTabClose(void) { assert(section==DASH_SEC_FILES); tab_closes++; }
 static void dashHomeRebuild(void) { home_rebuilds++; }
 static void dashUiFocusPoke(void) { focus_count++; }
 static void dashSoundPlay(int sound) { assert(sound==DASH_SND_TRANSITION); sound_count++; }
@@ -70,32 +70,33 @@ int main(void) {
     assert(dashVisibleSectionIndex(DASH_SEC_DEVICES)==1);
     assert(dashAdjacentSection(section,+1)==DASH_SEC_FILES);
     dashSwitchSection(DASH_SEC_FILES);
-    assert(opened==1 && section==DASH_SEC_HOME && nav_section==DASH_SEC_FILES);
-    assert(home_rebuilds==1);
-    assert(enter_count==0 && sound_count==0);
+    assert(section==DASH_SEC_FILES && tab_closes==0);
+    assert(enter_count==1 && sound_count==1);
     assert(dashAdjacentSection(section,+1)==DASH_SEC_TOOLS);
     assert(dashAdjacentSection(section,-1)==DASH_SEC_HOME);
+    /* Returning to the same tab doesn't open a second browser. */
+    dashSwitchSection(DASH_SEC_FILES);
+    assert(enter_count==1 && tab_closes==0);
     dashSwitchSection(DASH_SEC_TOOLS);
-    assert(section==DASH_SEC_TOOLS && enter_count==1 && nav_section==DASH_SEC_TOOLS);
+    assert(section==DASH_SEC_TOOLS && enter_count==2 && tab_closes==1);
     assert(dashAdjacentSection(section,-1)==DASH_SEC_FILES);
-    /* Cancel any pending edits before opening browser. */
+    /* Unsaved changes prevent the target tab from being initialized. */
     leave_ok=0;
     dashSwitchSection(DASH_SEC_FILES);
-    assert(opened==1 && section==DASH_SEC_TOOLS && nav_section==DASH_SEC_TOOLS);
+    assert(section==DASH_SEC_TOOLS && tab_closes==1 && enter_count==2);
     leave_ok=1;
     dashSwitchSection(DASH_SEC_FILES);
-    assert(opened==2 && section==DASH_SEC_TOOLS && nav_section==DASH_SEC_FILES);
-    assert(home_rebuilds==1); /* A Tools caller need not refresh Home yet. */
+    assert(section==DASH_SEC_FILES && enter_count==3 && tab_closes==1);
     assert(dashAdjacentSection(section,+1)==DASH_SEC_TOOLS);
     dashSwitchSection(DASH_SEC_APPS);
-    assert(section==DASH_SEC_HOME && nav_section==DASH_SEC_HOME);
-    assert(enter_count==2);
+    assert(section==DASH_SEC_HOME && tab_closes==2);
+    assert(enter_count==4);
     assert(dashAdjacentSection(section,-1)==DASH_SEC_SETTINGS);
     dashSwitchSection(DASH_SEC_SETTINGS);
-    assert(section==DASH_SEC_SETTINGS);
+    assert(section==DASH_SEC_SETTINGS && enter_count==5);
     dashSwitchSection(DASH_SEC_SETTINGS);
-    assert(enter_count==3);
-    puts("PASS: unified Home, Files direct browser, transient shoulder navigation and leave cancel");
+    assert(enter_count==5);
+    puts("PASS: unified Home, Files as real tab, shoulder cycling, cancel and cleanup");
 }
 '''
 compiler=shutil.which("gcc") or shutil.which("clang")
