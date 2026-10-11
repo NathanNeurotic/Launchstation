@@ -38,6 +38,7 @@ jobs:
           python3 tests/test_scene_override_nesting.py
           python3 tests/test_gage_alignment.py
           python3 tests/test_modal_animation.py
+          python3 tests/test_dashboard_present_buffers.py
           python3 tests/test_theme_motion.py
           python3 tests/test_tile_styles.py
           python3 tests/test_worker_queue.py
