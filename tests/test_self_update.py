@@ -26,6 +26,8 @@ assert 'selfUpdateExtractPsuSidecar(package, "BGM.ADP"' in update
 assert "need_ca = !wleExists(update_ca)" in update
 assert "need_bgm = !wleExists(bgm)" in update
 assert "wleExists(update_ca_stage)" in update and "wleExists(bgm_stage)" in update
+assert "wleExists(package) || wleExists(stage)" in update
+assert update.index("wleExists(package) || wleExists(stage)") < update.index("download_file(UPDATE_ELF_URL")
 assert update.index("checkELFheader(stage)") < update.index('selfUpdateExtractPsuSidecar(package, "WLE-UPDATE-CA.PEM"') < update.index("rename_leaf(parent, leaf, backup_leaf)")
 assert 'rename_leaf(parent, "WLE-UPDATE-CA.PEM.UPDATE", "WLE-UPDATE-CA.PEM")' in update
 assert 'rename_leaf(parent, "BGM.ADP.UPDATE", "BGM.ADP")' in update
