@@ -255,6 +255,15 @@ turning off interface effects keeps enabled music playing. When the audio driver
 start, everything stays silent — the dashboard works normally without
 sound (a toast says why).
 
+## MMCE backup status reliability
+
+The MMCE management page distinguishes an unreadable card source from an empty
+one. **MMCE unavailable** means neither card unit could be scanned successfully;
+**No cards** appears only after at least one reachable unit was scanned and no
+card images or scan errors were found. An unavailable status does not establish
+that the adapter's cards have been removed or erased. Retry after checking the
+device and driver settings. Pending counts and scan errors remain separate.
+
 ## Recovering local MMCE backup images
 
 The File Browser options for a PS2 memory-card `.mcd` or PCSX2 `.ps2`
