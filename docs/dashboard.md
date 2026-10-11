@@ -50,14 +50,35 @@ foreground behind a short loading overlay.
 
 ## Sections
 
-| Section  | What it does |
-|----------|--------------|
-| HOME     | Hero panel for the focused item, a *Continue* row (pinned, recent, favorite apps), and quick-launch chips for starting a disc or a configured launch key. Section tabs at the top provide Apps, Files, Devices, Tools and Settings. Long focused labels scroll inside their available space. |
-| APPS     | ELF library in **Grid**, **List** or **Carousel** view (SELECT switches, saved). Filters: all, favorites, memory cards, USB, HDD, other. |
-| FILES    | Entry points into the full FileBrowser: device list, last folder, MISC commands, each detected device and your PathPad bookmarks. |
-| DEVICES  | Cards for memory cards (type, free space), USB, MMCE, MX4SIO, HDD, exFAT HDD, disc, UDPFS, PSX flash/DVR HDD and mounted VMCs. |
-| TOOLS    | HDD Manager, Text Editor, start disc, POPStarter VCD launching, Neutrino ISO launching, exploit installer, OSDSYS, PS2 browser, system/build info, font viewer, about, reboot IOP, power off. |
-| SETTINGS | Eight groups: Appearance, Home & applications, Sound, Input, Launching, Storage & devices, Network, System. Each opens a focused page with breadcrumbs and contextual help. Triangle opens *Save changes / Discard changes / Keep editing* from any page. Leaving with changes offers the same decision. Existing configuration files and keys are retained. |
+The four top-level destinations are **HOME, FILES, TOOLS, SETTINGS**. HOME
+includes both Continue and the entire application library. Use the
+**Applications** shortcut in Home's **Browse & shortcuts** row to enter
+the full library (Grid, List, Carousel, filters, favorite/pin actions and
+refresh). Press **Back** to return to the Continue row. This does not
+create a separate Apps tab; existing application view/filter settings,
+pinned entries, favorites and recent history are retained.
+
+**FILES** opens the native File Browser **immediately**, with the root
+device list. Pressing Back returns to the section you were on before Files;
+the next L1/R1 continues cycling through the tabs instead of reopening
+the browser by mistake. Last folder is a Home shortcut (shown only after
+a valid directory has been visited). PathPad bookmarks and device browsing
+remain available in the native File Browser.
+
+**MISC commands** have moved to **TOOLS > Storage > MISC commands**.
+This exposes the classic built-in-command folder in addition to the
+individual named Tools actions (start disc, HDD Manager, OSDSYS, etc.).
+
+| Destination | Contents |
+| --- | --- |
+| HOME | Continue carousel, full Applications library shortcut, Last folder, and optional launch-key shortcuts. |
+| FILES | Opens the native File Browser directly with all device roots and existing file operations. |
+| TOOLS | MISC commands, storage and device utilities, ELF/ISO/PS1 launch helpers, system actions, information and power commands. |
+| SETTINGS | Appearance, Home & applications, Sound, Input, Launching, Storage & devices, Network and System; unchanged save/discard behavior. |
+
+Older saved startup values pointing to separate Apps or Files/Devices
+screens are interpreted as Home on startup, without changing the saved
+favorites, filters or scan paths.
 
 ## Intermittent USB stalls (standard build)
 
