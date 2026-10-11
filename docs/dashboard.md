@@ -78,6 +78,27 @@ isolate electrical loading. With two devices, compare drive combinations.
 Do not unplug drives during active writes. No automatic IOP reset is attempted
 as a recovery from a blocked USB filesystem RPC.
 
+**Explicit two-drive diagnosis:** Open **Tools > Storage > USB unit
+diagnostics**. **Show cached units** reads only the previous detection result
+without performing USB I/O. Select **Probe logical unit 0 once** or
+**Probe logical unit 1 once** to issue exactly one filesystem root-stat RPC
+(after the worker and outstanding memory-card status request have finished).
+A confirmation warns that the console can lock up within this synchronous
+request; no timeout or automatic IOP reset can recover a wedged RPC. The
+diagnostic shows which request begins before it enters the RPC and displays
+its return code if it completes. It does **not** rescan both units, change
+auto-start settings, reset the IOP, write to USB, or alter the cached device
+list. A successful root stat alone is not a completed file-read test.
+
+For two attached drives, first capture the cache, then probe logical unit 0
+and 1 separately. Repeat with only the FAT32 drive, only the exFAT drive, both
+connected but swapped between physical ports, and (when available) through a
+powered USB hub. Record the last on-screen probe path, whether the clock
+freezes, whether the controller's analog light stays on, and which drive
+was plugged into which *physical* port. **usb0/usb1 are logical enumeration
+units, not guaranteed physical port numbers.** On a frozen screen, power-cycle
+safely rather than unplugging a drive during an active transfer.
+
 ## Settings navigation
 
 Settings opens at the overview. Confirm or Right opens a group; Back returns

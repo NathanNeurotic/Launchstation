@@ -45,6 +45,7 @@ jobs:
           python3 tests/test_usb_storage_lifecycle.py
           python3 tests/test_usb_iop_pad_handoff.py
           python3 tests/test_usb_probe_status.py
+          python3 tests/test_usb_unit_diagnostics.py
           python3 tests/test_mc_poll_usb_barrier.py
           python3 tests/test_usb_browse_cache.py
           python3 tests/test_usb_shared_namespace.py

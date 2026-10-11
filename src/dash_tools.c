@@ -11,9 +11,9 @@
 #include "mmce_igr.h"
 #include "cloud_google.h"
 #include "self_update.h"
+#include "init.h"
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 #include "cloud_http.h"
-#include "init.h"
 #endif
 #include <stddef.h>
 
@@ -23,6 +23,7 @@ enum ToolAction {
 	TA_BROWSER,
 	TA_BROWSER_AT,
 	TA_EDITOR,
+	TA_USB_DIAG,
 	TA_IGR_SETUP,
 	TA_CLOUD
 };
@@ -50,6 +51,7 @@ static const Tool tools[] = {
     {TA_BROWSER_AT, DI_DISC, "PS1 images (Ember)", "Open the File Browser; select a .CUE, .BIN or PS1 .EXE inside <Ember directory>/games/<Game>/ to start Ember.", "The umbrella can be named anything. Its 512 KB bios.bin stays local; if ember.elf is missing, Settings can supply it from another Ember directory.", 0, 0, ""},
     {TA_BROWSER_AT, DI_DISC, "PS2 ISOs (Neutrino)", "Open the File Browser; select a .ISO image to start it through Neutrino.", "Set Neutrino under Settings > Launching > Disc & image loaders. The game device is also searched automatically.", 0, 0, ""},
     {TA_HEADER, -1, "STORAGE", NULL, NULL, 0, 0, NULL},
+    {TA_USB_DIAG, DI_USB, "USB unit diagnostics", "Inspect the cached USB drive mask without IO, or manually probe logical USB unit 0 or 1 one at a time.", "Each manual probe is a synchronous IOP request and could freeze a failing console. Logical units may not match physical USB ports.", 0, 0, NULL},
     {TA_MISC, DI_HDD, "HDD Manager", "Create, remove, rename and expand APA partitions, view HDL game information and format the internal HDD.", "Partition changes and formatting are permanent.", 0, MISC(Misc_HddManager), NULL},
     {TA_MISC, DI_MC, "Memory card exploit installer", "Install a memory card system-update exploit for this console, another model or region, or PSX/DESR.", "Writes system folders to the memory card. Follow the on-screen checks carefully.", 1, MISC(Misc_Exploit_Installer), NULL},
     {TA_IGR_SETUP, DI_MC, "OPL IGR automatic MMCE backup", "Set up verified automatic backup of every MMCE card image when OPL exits a game through IGR.", "Installs or updates WLE-IGR.ELF on the required boot medium and tells you the exact OPL Exit-to path.", 0, 0, NULL},
@@ -1060,6 +1062,78 @@ void dashToolsCloudBackup(void)
 }
 #endif
 
+/* Explicit hardware diagnostic for two connected USB drives. Never called by
+ * startup/device auto-probe and never modifies global USB mount discovery.
+ * A wedged IOP fileXio RPC cannot be cancelled; warn before every probe. */
+static void dashToolsUsbUnitDiagnostics(void)
+{
+	static const char *const choices[] = {
+		"Show cached units (no I/O)",
+		"Probe logical unit 0 once",
+		"Probe logical unit 1 once"
+	};
+	char path[12], status[96], body[240];
+	iox_stat_t stat;
+	int choice = dashModalChoice("USB unit diagnostics", choices, 3, 0);
+	int mask, result;
+
+	if (choice < 0 || choice > 2)
+		return;
+	if (choice == 0) {
+		if (!filerUsbDriversLoaded()) {
+			dashModalMessage(DI_INFO, "USB cache", "USB storage drivers are not loaded. No USB filesystem request was made.", NULL);
+			return;
+		}
+		mask = filerUsbDriveMask();
+		snprintf(body, sizeof(body),
+		         "Last recorded units: %s%s%s. This is cached state only; no device I/O was performed.",
+		         (mask & 1) ? "unit 0" : "",
+		         ((mask & 3) == 3) ? ", " : "",
+		         (mask & 2) ? "unit 1" : ((mask & 1) ? "" : "none confirmed"));
+		dashModalMessage(DI_INFO, "USB cached units", body, NULL);
+		return;
+	}
+
+	if (!dashModalConfirm("Probe one USB unit?",
+	                      "A single synchronous USB filesystem request may freeze a failing console. No automatic IOP reset or timeout can interrupt it. Continue?",
+	                      "Probe once", 0))
+		return;
+	if (!dashWorkerAwaitAll("Finishing background storage work"))
+		return;
+	/* Worker/file operations must finish before accessing synchronous IOP
+	 * fileXio, and libmc may still have a pending EE-side status RPC. */
+	filerRootMcPollIdle();
+	dashLoadingBegin("Preparing USB diagnostic");
+	if (!isUsbMassStackLoaded())
+		loadUsbModules();
+	if (!isUsbMassStackLoaded()) {
+		dashLoadingEnd();
+		dashModalMessage(DI_WARNING, "USB driver unavailable",
+		                 "USB modules could not be started. No filesystem probe was issued.", NULL);
+		return;
+	}
+#ifdef EXFAT
+	snprintf(path, sizeof(path), "usb%c:/", (char)('0' + choice - 1));
+#else
+	snprintf(path, sizeof(path), "mass%c:/", (char)('0' + choice - 1));
+#endif
+	snprintf(status, sizeof(status), "Checking USB root %s", path);
+	/* Present this exact unit before the blocking RPC, so the last frame
+	 * identifies the stuck request even if the pad/IOP becomes unresponsive. */
+	dashLoadingFrame(status, 0, 0);
+	DPRINTF("[USB diagnostic] begin %s\n", path);
+	memset(&stat, 0, sizeof(stat));
+	result = fileXioGetStat(path, &stat);
+	DPRINTF("[USB diagnostic] end %s result=%d\n", path, result);
+	dashLoadingEnd();
+	snprintf(body, sizeof(body),
+	         "%s returned %d (%s). One logical unit was probed, not the other. A successful root stat does not prove file reads or power stability.",
+	         path, result, result >= 0 ? "root responded" : "root unavailable / error");
+	dashModalMessage(result >= 0 ? DI_CHECK : DI_WARNING,
+	                 "Single-unit USB probe result", body,
+	                 "Logical USB units are not guaranteed to match physical ports.");
+}
+
 static void runTool(const Tool *t)
 {
 	if (t->confirm) {
@@ -1080,6 +1154,9 @@ static void runTool(const Tool *t)
 			break;
 		case TA_EDITOR:
 			dashOpenTextEditor(NULL);
+			break;
+		case TA_USB_DIAG:
+			dashToolsUsbUnitDiagnostics();
 			break;
 		case TA_IGR_SETUP:
 			dashToolsIgrBackupSetup();
