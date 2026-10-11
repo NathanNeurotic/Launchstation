@@ -48,7 +48,11 @@ with tempfile.TemporaryDirectory(prefix="app-packages-") as tmp:
 #include "self_update.h"
 int main(int argc,char **argv) {
     int fd=open(argv[1],O_RDONLY), size=lseek(fd,0,SEEK_END); close(fd);
-    printf("%d",selfUpdateExtractPsu(argv[1],argv[2],size)); return 0;
+    if(argc==4)
+        printf("%d",selfUpdateExtractPsuSidecar(argv[1],argv[2],argv[3],size));
+    else
+        printf("%d",selfUpdateExtractPsu(argv[1],argv[2],size));
+    return 0;
 }
 ''')
     for index, (folder, name, _) in enumerate(p.VARIANTS):
@@ -81,6 +85,32 @@ int main(int argc,char **argv) {
             else:
                 assert result == -1 and not stage.exists()
         check(archive, True)
+        # The native sidecar helper reads the already-verified PSU without
+        # changing existing user files. Both assets stream under short IO.
+        def check_sidecar(data, asset, expected):
+            path, stage = tmp / "sidecar_candidate.psu", tmp / "sidecar.stage"
+            path.write_bytes(data)
+            stage.unlink(missing_ok=True)
+            got = int(subprocess.check_output([str(binary), str(path), asset, str(stage)]))
+            if isinstance(expected, bytes):
+                assert got == len(expected) and stage.read_bytes() == expected
+                stage.unlink()
+            else:
+                assert got == expected and not stage.exists()
+        check_sidecar(archive, "WLE-UPDATE-CA.PEM",
+                      (root / "res/WLE-UPDATE-CA.PEM").read_bytes())
+        check_sidecar(archive, "BGM.ADP", (root / "res/music.sad").read_bytes())
+        check_sidecar(archive, "wrong.name", -1)
+        check_sidecar(archive[:-1], "BGM.ADP", -1)
+        # The package parser validates names and lengths; the sidecar reader
+        # additionally rejects invalid certificate/ADPCM payload signatures.
+        invalid_ca = dict(packaged_members)
+        invalid_ca["WLE-UPDATE-CA.PEM"] = b"X" * 64
+        check_sidecar(p.make_psu(folder, invalid_ca, bytes(8)),
+                      "WLE-UPDATE-CA.PEM", -1)
+        invalid_bgm = dict(packaged_members)
+        invalid_bgm["BGM.ADP"] = b"X" * 32
+        check_sidecar(p.make_psu(folder, invalid_bgm, bytes(8)), "BGM.ADP", -1)
         check(archive[:-1])
         check(archive + b"trailing")
         bad = bytearray(archive); struct.pack_into("<I", bad, 4, 5); check(bad)
@@ -91,6 +121,10 @@ int main(int argc,char **argv) {
         date = bytes(8)
         # Legacy two-file packages continue to work after the parser upgrade.
         check(p.make_psu(folder, {"title.cfg": b"boot=x\n", name: bytes(elf)}, date), True)
+        check_sidecar(p.make_psu(folder, {"title.cfg": b"boot=x\n", name: bytes(elf)}, date),
+                      "WLE-UPDATE-CA.PEM", 0)
+        check_sidecar(p.make_psu(folder, {"title.cfg": b"boot=x\n", name: bytes(elf)}, date),
+                      "BGM.ADP", 0)
         check(p.make_psu(folder, {name: bytes(elf), "wrong.cfg": b"x"}, date))
         # A partly bundled package, duplicate/unknown sidecar or corrupt record
         # must never result in an installed ELF.

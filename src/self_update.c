@@ -184,9 +184,13 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
     char stage_leaf[MAX_NAME], backup_leaf[MAX_NAME];
     char stage[MAX_PATH], backup[MAX_PATH];
     char package_leaf[MAX_NAME], package[MAX_PATH];
+    char update_ca[MAX_PATH], update_ca_stage[MAX_PATH];
+    char bgm[MAX_PATH], bgm_stage[MAX_PATH];
     char error[256], remove_path[MAX_PATH];
     unsigned char expected[32], actual[32];
-    int size, rollback_ok;
+    int size, package_size, rollback_ok, sidecar_size;
+    int need_ca, need_bgm, staged_ca = 0, staged_bgm = 0;
+    int added_ca = 0, added_bgm = 0;
 
     if (result == NULL || result_size <= 0)
         return -1;
@@ -217,6 +221,24 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
         return -1;
     }
 
+    /* Never touch customized sidecars. A .UPDATE collision is an unfinished
+     * earlier attempt: refuse to truncate it and request manual cleanup. */
+    if (!join_leaf(update_ca, sizeof(update_ca), parent, "WLE-UPDATE-CA.PEM") ||
+        !join_leaf(update_ca_stage, sizeof(update_ca_stage), parent, "WLE-UPDATE-CA.PEM.UPDATE") ||
+        !join_leaf(bgm, sizeof(bgm), parent, "BGM.ADP") ||
+        !join_leaf(bgm_stage, sizeof(bgm_stage), parent, "BGM.ADP.UPDATE")) {
+        snprintf(result, result_size, "The app folder path is too long for a safe sidecar update.");
+        return -1;
+    }
+    need_ca = !wleExists(update_ca);
+    need_bgm = !wleExists(bgm);
+    if ((need_ca && wleExists(update_ca_stage)) ||
+        (need_bgm && wleExists(bgm_stage))) {
+        snprintf(result, result_size,
+                 "An unfinished CA or BGM .UPDATE file already exists. Clear the stale file manually before updating; no files were changed.");
+        return -1;
+    }
+
     if (!parse_expected_sha(expected_sha256, expected)) {
         snprintf(result, result_size,
                  "GitHub did not provide a valid SHA-256 digest for the app package.");
@@ -238,20 +260,59 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
                  "Downloaded update failed SHA-256 verification. The running ELF was not changed.");
         return -1;
     }
-    size = selfUpdateExtractPsu(package, stage, size);
-    snprintf(remove_path, sizeof(remove_path), "%s", package);
-    genRemove(remove_path);
+    package_size = size;
+    size = selfUpdateExtractPsu(package, stage, package_size);
     if (size <= 0) {
+        snprintf(remove_path, sizeof(remove_path), "%s", package);
+        genRemove(remove_path);
         snprintf(result, result_size,
                  "The verified package does not contain the expected app ELF. The running ELF was not changed.");
         return -1;
     }
     if (checkELFheader(stage) < 0) {
+        snprintf(remove_path, sizeof(remove_path), "%s", package);
+        genRemove(remove_path);
         snprintf(remove_path, sizeof(remove_path), "%s", stage);
         genRemove(remove_path);
         snprintf(result, result_size,
                  "Downloaded update is not a valid PlayStation 2 ELF. The running ELF was not changed.");
         return -1;
+    }
+
+    /* The verified four-file PSU can initialize missing runtime sidecars.
+     * Never overwrite existing CA/BGM assets; they may be user customized.
+     * A verified legacy two-file PSU simply has no sidecars to stage. */
+    if (need_ca) {
+        sidecar_size = selfUpdateExtractPsuSidecar(package, "WLE-UPDATE-CA.PEM",
+                                                   update_ca_stage, package_size);
+        if (sidecar_size < 0)
+            goto sidecar_failed;
+        staged_ca = sidecar_size > 0;
+    }
+    if (need_bgm) {
+        sidecar_size = selfUpdateExtractPsuSidecar(package, "BGM.ADP",
+                                                   bgm_stage, package_size);
+        if (sidecar_size < 0)
+            goto sidecar_failed;
+        staged_bgm = sidecar_size > 0;
+    }
+    snprintf(remove_path, sizeof(remove_path), "%s", package);
+    genRemove(remove_path);
+
+    /* Publish newly created files only after all required sidecars are
+     * staged. Existing files are never renamed or replaced. If one commit
+     * fails, the running ELF stays untouched. */
+    if (staged_ca) {
+        if (wleExists(update_ca) ||
+            rename_leaf(parent, "WLE-UPDATE-CA.PEM.UPDATE", "WLE-UPDATE-CA.PEM") < 0)
+            goto sidecar_publish_failed;
+        added_ca = 1;
+    }
+    if (staged_bgm) {
+        if (wleExists(bgm) ||
+            rename_leaf(parent, "BGM.ADP.UPDATE", "BGM.ADP") < 0)
+            goto sidecar_publish_failed;
+        added_bgm = 1;
     }
 
     /* Only now, after a complete verified download, touch the current ELF.
@@ -285,7 +346,43 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
     }
 
     snprintf(result, result_size,
-             "Update installed and verified (%d bytes). Recovery copy: %s%s. Restart Launchstation to run the new build.",
-             size, parent, backup_leaf);
+             "Update installed and verified (%d bytes). %s%s%sRecovery copy: %s%s. Restart Launchstation to run the new build.",
+             size,
+             added_ca ? "Installed updater CA. " : "",
+             added_bgm ? "Installed BGM. " : "",
+             (!added_ca && !added_bgm) ? "Existing sidecars preserved. " : "",
+             parent, backup_leaf);
     return 0;
+
+sidecar_failed:
+    /* These temporary files are owned by this attempt only. */
+    if (staged_ca) {
+        snprintf(remove_path, sizeof(remove_path), "%s", update_ca_stage);
+        genRemove(remove_path);
+    }
+    snprintf(remove_path, sizeof(remove_path), "%s", package);
+    genRemove(remove_path);
+    snprintf(remove_path, sizeof(remove_path), "%s", stage);
+    genRemove(remove_path);
+    snprintf(result, result_size,
+             "Failed to stage verified updater CA or BGM. The running ELF and existing sidecars were not changed.");
+    return -1;
+
+sidecar_publish_failed:
+    if (staged_ca && !added_ca) {
+        snprintf(remove_path, sizeof(remove_path), "%s", update_ca_stage);
+        genRemove(remove_path);
+    }
+    if (staged_bgm && !added_bgm) {
+        snprintf(remove_path, sizeof(remove_path), "%s", bgm_stage);
+        genRemove(remove_path);
+    }
+    /* Already published missing sidecars are harmless and safe to retain;
+     * deleting them during recovery risks removing a file another component
+     * may already have opened. No old file has been replaced. */
+    snprintf(remove_path, sizeof(remove_path), "%s", stage);
+    genRemove(remove_path);
+    snprintf(result, result_size,
+             "Could not install the missing bundled sidecar. The original ELF and existing sidecars were not changed; any newly added CA may remain.");
+    return -1;
 }

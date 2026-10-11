@@ -11,6 +11,8 @@
 #define SELF_UPDATE_ASSET SELF_UPDATE_FOLDER ".psu"
 
 int selfUpdateExtractPsu(const char *package, const char *stage, int size);
+int selfUpdateExtractPsuSidecar(const char *package, const char *name,
+                                const char *stage, int size);
 
 int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *result, int result_size);
 
