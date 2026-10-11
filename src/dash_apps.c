@@ -620,7 +620,7 @@ static void appsDraw(void)
 	if (norder == 0) {
 		if (dashAppCount == 0)
 			dashDrawEmptyState(320, 238, DI_APPS, "No applications found",
-				                   "Add a folder in Settings > Home & applications > Application library, or browse to an ELF in Files. "
+				                   "Add a folder in Settings > Home & applications > Application library, or browse to an ELF in File Browser. "
 			                   "Press the confirm button to scan now.");
 		else
 			dashDrawEmptyState(320, 238, DI_STAR, filter == FILTER_FAV ? "No favorites yet" : "Nothing to show",
@@ -654,6 +654,7 @@ static void appsHints(void)
 		h[n].button = DI_BTN_TRIANGLE, h[n].key = NULL, h[n].label = "Options", n++;
 		h[n].button = -1, h[n].key = "SELECT", h[n].label = "View", n++;
 	}
+	h[n].button = -1, h[n].key = "BACK", h[n].label = "Home", n++;
 	dashDrawHints(h, n);
 }
 

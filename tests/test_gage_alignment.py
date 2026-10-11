@@ -35,12 +35,12 @@ zoom = num(r"#define HOME_TILE_ZOOM ([\d.]+)f")
 y0 = num(r"float y0 = ([\d.]+), cw = HOME_TILE;")
 underline = y0 - num(r"dashRect\(48, y0 - ([\d.]+), dashTextWidth\(\"Continue\"")
 cy = num(r"float cy = ([\d.]+);")
-quick_label = cy - num(r"dashText\(48, cy - ([\d.]+), \"Quick launch\"")
+quick_label = cy - num(r"dashText\(48, cy - ([\d.]+), \"Browse & shortcuts\"")
 
 grow = tile * zoom / 2
 assert y0 - grow - (underline + 2) >= 6, "focused tile touches the Continue underline"
-assert quick_label - (y0 + tile + grow) >= 6, "focused tile touches the Quick launch label"
-assert cy + 32 <= 394, "Quick launch chips run into the hint bar"
+assert quick_label - (y0 + tile + grow) >= 6, "focused tile touches the Browse & shortcuts label"
+assert cy + 32 <= 394, "Browse & shortcuts chips run into the hint bar"
 
 # Chip label: icon 16 px at cy + 8 -> centre cy + 16.
 chip_text = num(r"dashTextFit\(x \+ 34, cy \+ ([\d.]+)f")

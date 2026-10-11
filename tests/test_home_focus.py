@@ -36,6 +36,8 @@ typedef unsigned char u8;
 #define stricmp strcmp
 #define CHIP_APPS 1
 #define CHIP_FILES 2
+#define CHIP_LIBRARY 0
+#define CHIP_LAST_FOLDER 1
 #define DI_DISC 1
 #define DI_KEY 2
 #define CHIP_DISC 3
@@ -44,6 +46,7 @@ typedef unsigned char u8;
 #define CHIP_SETTINGS 6
 #define CHIP_LAUNCHKEY 7
 #define DI_APPS 3
+#define DI_CLOCK 8
 #define DI_FOLDER 4
 #define DI_DEVICES 5
 #define DI_TOOLS 6
@@ -55,6 +58,7 @@ static Lists dashLists;
 static struct { int recent_count; int home_shortcuts; } dashCfg = {8,1};
 static Setting setting_data;
 static Setting *setting = &setting_data;
+static char LastDir[DASH_PATH_MAX];
 static DashApp dashApps[8], home_tmp[HOME_MAX_APPS], *home_apps[HOME_MAX_APPS];
 static u8 home_badge[HOME_MAX_APPS];
 static int dashAppCount, nhome, nchips, row, row_forced, col[2];
@@ -87,6 +91,17 @@ int main(void) {
     assert(!strcmp(home_apps[col[0]]->path, dashApps[1].path));
     assert(col[0] == 0);
     assert(col_anim[0] == 0.0f);
+    /* Library is always accessible; Last folder is Home-only and conditional.
+     * Disabling user-configured launch keys must not hide navigation. */
+    dashCfg.home_shortcuts = 0;
+    homeRebuild();
+    assert(nchips == 1);
+    dashStrCopy(LastDir, "mass0:/APPS/", sizeof(LastDir));
+    homeRebuild();
+    assert(nchips == 2);
+    LastDir[0] = '\0';
+    homeRebuild();
+    assert(nchips == 1);
     return 0;
 }
 """

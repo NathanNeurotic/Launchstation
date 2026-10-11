@@ -14,11 +14,17 @@ for field in ("files_mode","home_shortcuts","icon_backing","show_unavailable_dev
 for key in ("Dash_FilesMode","Dash_HomeShortcuts","Dash_IconBacking","Dash_ShowUnavailableDevices"):
     assert key in store
 
-assert "visible_sections[] = {DASH_SEC_HOME, DASH_SEC_APPS, DASH_SEC_FILES, DASH_SEC_TOOLS, DASH_SEC_SETTINGS}" in main
+assert "visible_sections[] = {DASH_SEC_HOME, DASH_SEC_FILES, DASH_SEC_TOOLS, DASH_SEC_SETTINGS}" in main
+assert "s == DASH_SEC_FILES" in main and 'dashOpenBrowser("")' in main
+assert "DASH_SEC_APPS" in main  # older saved section values migrate to Home
 assert "dashAdjacentSection(section, -1)" in main and "dashAdjacentSection(section, 1)" in main
 assert "dashVisibleSectionCount()" in ui and "tab_w * vcount" in ui
 
-assert '"File Browser", "Open the Launchstation File Browser"' in files
+assert "dashOpenBrowser(LastDir)" in files or "LastDir" in home
+assert '"Applications"' in home and '"Last folder"' in home
+assert "dashAppsScreen.input(in)" in home
+assert "dashAppsScreen.draw()" in home
+assert "dashOpenBrowser(setting->Misc)" in (root/"src/dash_tools.c").read_text()
 assert "dashCfg.files_mode = !dashCfg.files_mode" in files
 assert "const DashScreen dashFilesScreen = {storageEnter" in files
 assert "MASS (USB)" in devices
