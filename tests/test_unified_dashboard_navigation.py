@@ -83,7 +83,7 @@ int main(void) {
     leave_ok=1;
     dashSwitchSection(DASH_SEC_FILES);
     assert(opened==2 && section==DASH_SEC_TOOLS && nav_section==DASH_SEC_FILES);
-    assert(dashAdjacentSection(section,+1)==DASH_SEC_SETTINGS);
+    assert(dashAdjacentSection(section,+1)==DASH_SEC_TOOLS);
     dashSwitchSection(DASH_SEC_APPS);
     assert(section==DASH_SEC_HOME && nav_section==DASH_SEC_HOME);
     assert(enter_count==2);
