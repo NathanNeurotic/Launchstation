@@ -275,3 +275,37 @@ those cases, including real cache invalidation due to a simulated disconnect.
 
 This optimization reduces redundant IOP RPC exposure; it cannot fix a freeze
 inside the first USB stat RPC, which remains an unresolved console issue.
+
+
+## 2026-10-11 regression isolation: normal USB module initialization diverged from wLE_R3Z
+
+The user confirms original wLE_R3Z and RiptOPL support their two physical USB
+devices, while Launchstation intermittently hangs inside the first
+`fileXioGetStat("usb0:/")`. The observed failure cannot be attributed to the
+user's devices simply because they coexist.
+
+Direct source comparison against `saildot4k/wLaunchELF_R3Z` at
+`src/init.c::loadUsbModules` found a concrete change introduced in
+Launchstation's **ordinary EXFAT USB startup**:
+
+- Working wLE_R3Z: `USBD -> BDM -> BDMFS_FATFS -> USBMASS_BD`.
+- Launchstation before this correction:
+  `BDM -> BDMFS_FATFS -> USBD -> USBMASS_BD`.
+
+The three checked-in BDM/BDMFS_FATFS/USBMASS_BD IRX blobs have identical
+Git object hashes between the repositories. Launchstation additionally uses
+the older `usbd-ra` host implementation also vendored by RiptOPL.
+This does **not** establish that initialization order is the only difference,
+but it provides a specific regression that can be restored without swapping
+IRX drivers or altering console input code.
+
+The normal storage loader is restored to the **original USBD-first sequence**.
+The *separate* Ember reset/handoff sequence intentionally remains
+`BDM -> BDMFS_FATFS -> USBD -> USBMASS_BD`, because Ember hands control to
+a different launcher on a freshly initialized IOP. Host tests now execute the
+production USB loader to verify: cold `UBFM`, reusing an existing host
+`BFM`, reusing existing host and block filesystem `M`, no duplicate
+loads, no PAD teardown, no worker thread driver initialization, and
+failure isolation on USBD/BDM/USBMASS. This is a narrowly scoped
+**regression correction**, not yet a hardware-confirmed cure for the
+intermittent IOP lock.
