@@ -37,7 +37,7 @@ static const DashScreen *const screens[DASH_SEC_COUNT] = {
 
 static const char *const section_names[DASH_SEC_COUNT] = {"HOME", "APPS", "FILES", "DEVICES", "TOOLS", "SETTINGS"};
 static const int section_icons[DASH_SEC_COUNT] = {DI_HOME, DI_APPS, DI_FOLDER, DI_DEVICES, DI_TOOLS, DI_SETTINGS};
-static const int visible_sections[] = {DASH_SEC_HOME, DASH_SEC_APPS, DASH_SEC_FILES, DASH_SEC_TOOLS, DASH_SEC_SETTINGS};
+static const int visible_sections[] = {DASH_SEC_HOME, DASH_SEC_FILES, DASH_SEC_TOOLS, DASH_SEC_SETTINGS};
 #define DASH_VISIBLE_SEC_COUNT ((int)(sizeof(visible_sections) / sizeof(visible_sections[0])))
 
 const char *dashSectionName(int s)
@@ -71,6 +71,7 @@ int dashVisibleSectionIndex(int s)
 {
 	int i;
 	if (s == DASH_SEC_DEVICES) s = DASH_SEC_FILES;
+	if (s == DASH_SEC_APPS) s = DASH_SEC_HOME;
 	for (i = 0; i < DASH_VISIBLE_SEC_COUNT; i++)
 		if (visible_sections[i] == s) return i;
 	return 0;
@@ -156,9 +157,17 @@ int DashIsEnabled(void)
 
 void dashSwitchSection(int s)
 {
-	if (s == DASH_SEC_DEVICES) {
-		dashCfg.files_mode = 1;
+	/* Keep legacy callers compatible with the former Apps section. */
+	if (s == DASH_SEC_APPS)
+		s = DASH_SEC_HOME;
+	if (s == DASH_SEC_DEVICES)
 		s = DASH_SEC_FILES;
+	if (s == DASH_SEC_FILES) {
+		/* FILES is an action, not a second menu before File Browser.
+		 * Do not change section: closing the browser returns to the caller. */
+		if (dashConfirmLeave())
+			dashOpenBrowser("");
+		return;
 	}
 	if (s < 0 || s >= DASH_SEC_COUNT)
 		s = DASH_SEC_HOME;
@@ -1039,10 +1048,12 @@ static void firstInit(void)
 	}
 #endif
 	section = dashCfg.start_section;
-	if (section == DASH_SEC_DEVICES) {
-		dashCfg.files_mode = 1;
-		section = DASH_SEC_FILES;
-	}
+	/* Previous settings may name Apps, Files, or Devices as the startup
+	 * section; their former landing screens are now a Home library subview
+	 * and an on-demand File Browser action, respectively. */
+	if (section == DASH_SEC_APPS || section == DASH_SEC_FILES ||
+	    section == DASH_SEC_DEVICES || section < 0 || section >= DASH_SEC_COUNT)
+		section = DASH_SEC_HOME;
 	dash_inited = 1;
 }
 
@@ -1188,9 +1199,9 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		/* first run: short introduction once the dashboard has faded in */
 		if (!dashCfg.intro_done && boot_phase != 1 && fade_in > 0.95f) {
 			dashModalMessage(DI_APP, "Welcome to Launchstation",
-			                 "Your applications are on HOME and APPS. Use the D-pad to move, the confirm button to start, "
-			                 "Triangle for options and Square to add favorites. L1/R1 switch sections; everything "
-			                 "Launchstation can do is still under FILES and TOOLS.",
+			                 "HOME contains Continue, your full application library and Last folder. "
+			                 "Use the confirm button to open, Triangle for options and Square for favorites. "
+			                 "L1/R1 switch sections; FILES goes directly to File Browser and MISC commands are in TOOLS.",
 			                 NULL);
 			dashCfg.intro_done = 1;
 			dashStoreSaveSettings();
