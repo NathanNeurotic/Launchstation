@@ -236,9 +236,8 @@ static const SetItem display_items[] = {
 
 static const SetItem dash_items[] = {
     {ST_CHOICE, S_START, "Start screen", "Section shown when the dashboard opens."},
-    {ST_CHOICE, S_FILES_MODE, "Files / Devices view", "Which view opens inside the combined Files section; SELECT also toggles it there."},
-    {ST_CHOICE, S_HOME_SHORTCUTS, "Home quick-launch shortcuts", "Show the disc and launch-key shortcut row on Home."},
-    {ST_CHOICE, S_VIEW, "Application view", "Grid, list or carousel (SELECT also switches it in APPS)."},
+    {ST_CHOICE, S_HOME_SHORTCUTS, "Home quick-launch shortcuts", "Show configured launch-key shortcuts alongside Applications and Last folder."},
+    {ST_CHOICE, S_VIEW, "Application view", "Grid, list or carousel (SELECT also switches it in Home > Applications)."},
     {ST_CHOICE, S_ARTWORK, "Application artwork", "Load cover art for tiles and artwork backgrounds."},
     {ST_CHOICE, S_RECENT, "Recent applications", "How many recently started applications HOME shows."},
     {ST_PAGE, P_LIBRARY, "Application library", "Search folders, startup refresh and a full library refresh."},
@@ -602,12 +601,11 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			*names = pct_names, *cur = dashCfg.bgm_vol / 10;
 			return 11;
 		case S_START: {
-			static const char *secs[DASH_SEC_COUNT];
-			int i, n = dashVisibleSectionCount();
-			for (i = 0; i < n; i++)
-				secs[i] = dashVisibleSectionName(i);
-			*names = secs, *cur = dashVisibleSectionIndex(dashCfg.start_section);
-			return n;
+			static const char *const start_names[] = {"Home", "Tools", "Settings"};
+			*names = start_names;
+			*cur = (dashCfg.start_section == DASH_SEC_TOOLS) ? 1 :
+			       (dashCfg.start_section == DASH_SEC_SETTINGS) ? 2 : 0;
+			return 3;
 		}
 		case S_FILES_MODE: {
 			static const char *const modes[] = {"Files", "Devices"};
@@ -1235,7 +1233,8 @@ static void setChoice(int id, int v)
 			break;
 		}
 		case S_START:
-			dashCfg.start_section = dashVisibleSectionAt(v);
+			dashCfg.start_section = (v == 1) ? DASH_SEC_TOOLS :
+			                        (v == 2) ? DASH_SEC_SETTINGS : DASH_SEC_HOME;
 			break;
 		case S_FILES_MODE:
 			dashCfg.files_mode = v;
