@@ -36,6 +36,8 @@ typedef unsigned char u8;
 #define stricmp strcmp
 #define CHIP_APPS 1
 #define CHIP_FILES 2
+#define CHIP_LIBRARY 0
+#define CHIP_LAST_FOLDER 1
 #define DI_DISC 1
 #define DI_KEY 2
 #define CHIP_DISC 3
@@ -55,6 +57,7 @@ static Lists dashLists;
 static struct { int recent_count; int home_shortcuts; } dashCfg = {8,1};
 static Setting setting_data;
 static Setting *setting = &setting_data;
+static char LastDir[DASH_PATH_MAX];
 static DashApp dashApps[8], home_tmp[HOME_MAX_APPS], *home_apps[HOME_MAX_APPS];
 static u8 home_badge[HOME_MAX_APPS];
 static int dashAppCount, nhome, nchips, row, row_forced, col[2];
