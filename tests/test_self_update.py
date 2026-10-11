@@ -61,4 +61,4 @@ assert '#ifdef DS34' in header
 assert '"APP_LAUNCHSTATION-DS"' in header and '"APP_LAUNCHSTATION"' in header
 assert '"LAUNCHSTATION-DS.ELF"' in header and '"LAUNCHSTATION.ELF"' in header
 assert 'releaseAssetDigest(response.body, SELF_UPDATE_ASSET' in tools
-assert update.index("memcmp(expected, actual") < update.index("selfUpdateExtractPsu(package, stage, size)") < update.index("checkELFheader(stage)") < update.index("rename_leaf(parent, leaf, backup_leaf)")
+assert update.index("memcmp(expected, actual") < update.index("selfUpdateExtractPsu(package, stage, package_size)") < update.index("checkELFheader(stage)") < update.index("rename_leaf(parent, leaf, backup_leaf)")
