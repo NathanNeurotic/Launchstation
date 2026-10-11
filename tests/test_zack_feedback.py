@@ -15,7 +15,7 @@ for key in ("Dash_FilesMode","Dash_HomeShortcuts","Dash_IconBacking","Dash_ShowU
     assert key in store
 
 assert "visible_sections[] = {DASH_SEC_HOME, DASH_SEC_FILES, DASH_SEC_TOOLS, DASH_SEC_SETTINGS}" in main
-assert "s == DASH_SEC_FILES" in main and 'dashOpenBrowser("")' in main
+assert "s == DASH_SEC_FILES" in main and "dashFileBrowserTabClose();" in main
 assert "DASH_SEC_APPS" in main  # older saved section values migrate to Home
 assert "dashAdjacentSection(section, -1)" in main and "dashAdjacentSection(section, 1)" in main
 assert "dashVisibleSectionCount()" in ui and "tab_w * vcount" in ui
@@ -26,7 +26,8 @@ assert "dashAppsScreen.input(in)" in home
 assert "dashAppsScreen.draw()" in home
 assert "dashOpenBrowser(setting->Misc)" in (root/"src/dash_tools.c").read_text()
 assert "dashCfg.files_mode = !dashCfg.files_mode" in files
-assert "const DashScreen dashFilesScreen = {storageEnter" in files
+assert "const DashScreen dashDevicesScreen = {storageEnter" in files
+assert "const DashScreen dashFilesScreen" in (root/"src/dash_browser.c").read_text()
 assert "MASS (USB)" in devices
 assert "mass%d:/" in files
 assert "Not connected" in devices
