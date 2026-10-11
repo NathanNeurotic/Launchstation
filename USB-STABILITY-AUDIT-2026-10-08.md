@@ -258,3 +258,20 @@ Compiled host harnesses exercise the exact USB scan ordering and both
 successful/failed/pending libmc completions. This is a *correctness and
 serialization fix*, not an IOP RPC timeout and not proof that the intermittent
 `usb0:/` console freeze is solved. Console acceptance remains required.
+
+
+## Fresh two-drive cache on generic USB browse
+
+A second code-path review found that `prepareUsbRootBrowse()` always issued fresh
+synchronous USB filesystem probes, even immediately after a successful dashboard
+probe had already discovered both drives. This produced avoidable repeat
+`fileXioGetStat()` RPCs on entry to the generic `usb:` / `mass:` root.
+
+Now a recently completed (500 ms or less) **two-drive** media scan is reused
+once for root selection. One-drive, zero-drive, stale, or timer-discontinuous
+states retain the original three-pass discovery window, preserving late-arriving
+drives and the first available USB unit. A compiled host test exercises all
+those cases, including real cache invalidation due to a simulated disconnect.
+
+This optimization reduces redundant IOP RPC exposure; it cannot fix a freeze
+inside the first USB stat RPC, which remains an unresolved console issue.
