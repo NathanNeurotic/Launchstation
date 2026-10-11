@@ -75,6 +75,7 @@ static int fb_sort_desc;
  * loop. The modal browser remains available for Tools / launch-key callers. */
 static int fb_tab_active;
 static char fb_tab_resume[MAX_PATH];
+static char fb_tab_selection[MAX_NAME];
 
 //--------------------------------------------------------------
 // Listing
@@ -2295,7 +2296,7 @@ static void browserScene(void)
 	dashDrawActivity();
 }
 
-static int browserOpenState(const char *start_dir)
+static int browserOpenState(const char *start_dir, const char *select)
 {
 	int gen = fb.gen;
 	if (fb.files != NULL)
@@ -2315,9 +2316,9 @@ static int browserOpenState(const char *start_dir)
 	memset(fb.mark, 0, MAX_ENTRY);
 	if (start_dir != NULL && start_dir[0] &&
 	    (isMisc(start_dir) || (strchr(start_dir, ':') && dashDevicePathReady(start_dir))))
-		openDir(start_dir, NULL);
+		openDir(start_dir, select);
 	else
-		openDir("", NULL);
+		openDir("", select);
 	return 1;
 }
 
@@ -2414,7 +2415,8 @@ static void browserProcessInput(const DashInput *in, int *running)
 static void browserTabEnter(void)
 {
 	fb_tab_active = 1;
-	if (!browserOpenState(fb_tab_resume))
+	if (!browserOpenState(fb_tab_resume,
+	                      fb_tab_selection[0] ? fb_tab_selection : NULL))
 		fb_tab_active = 0;
 }
 
@@ -2444,6 +2446,11 @@ void dashFileBrowserTabClose(void)
 	/* Preserve the folder when navigating to another tab. An explicit
 	 * return to the device root clears this remembered location. */
 	dashStrCopy(fb_tab_resume, fb.dir, sizeof(fb_tab_resume));
+	fb_tab_selection[0] = '\0';
+	if (fb.dir[0] && fb.sel < fb.n && fb.files != NULL)
+		dashStrCopy(fb_tab_selection, fb.files[fb.sel].name, sizeof(fb_tab_selection));
+	else if (!fb.dir[0] && fb.sel < fb.ndevs)
+		dashStrCopy(fb_tab_selection, fb.devs[fb.sel].browse, sizeof(fb_tab_selection));
 	browserCloseState();
 	fb_tab_active = 0;
 	dashHomeRebuild(); /* Last folder shortcut updated by browsing Files */
@@ -2482,7 +2489,7 @@ void dashFileBrowser(const char *start_dir)
 	DashInput in;
 	int running = 1;
 
-	if (!browserOpenState(start_dir))
+	if (!browserOpenState(start_dir, NULL))
 		return;
 	dashPushSceneOverride(browserScene);
 	dashInputFlush();
