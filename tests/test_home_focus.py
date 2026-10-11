@@ -46,6 +46,7 @@ typedef unsigned char u8;
 #define CHIP_SETTINGS 6
 #define CHIP_LAUNCHKEY 7
 #define DI_APPS 3
+#define DI_CLOCK 8
 #define DI_FOLDER 4
 #define DI_DEVICES 5
 #define DI_TOOLS 6
@@ -90,6 +91,17 @@ int main(void) {
     assert(!strcmp(home_apps[col[0]]->path, dashApps[1].path));
     assert(col[0] == 0);
     assert(col_anim[0] == 0.0f);
+    /* Library is always accessible; Last folder is Home-only and conditional.
+     * Disabling user-configured launch keys must not hide navigation. */
+    dashCfg.home_shortcuts = 0;
+    homeRebuild();
+    assert(nchips == 1);
+    dashStrCopy(LastDir, "mass0:/APPS/", sizeof(LastDir));
+    homeRebuild();
+    assert(nchips == 2);
+    LastDir[0] = '\0';
+    homeRebuild();
+    assert(nchips == 1);
     return 0;
 }
 """
