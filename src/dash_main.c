@@ -172,6 +172,10 @@ void dashSwitchSection(int s)
 		if (dashConfirmLeave()) {
 			nav_section = DASH_SEC_FILES;
 			dashOpenBrowser("");
+			/* File Browser just updated LastDir; refresh Home's shortcut
+			 * immediately instead of requiring another section transition. */
+			if (section == DASH_SEC_HOME)
+				dashHomeRebuild();
 		}
 		return;
 	}
