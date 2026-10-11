@@ -187,7 +187,7 @@ int selfUpdateExtractPsuSidecar(const char *package, const char *name,
                     goto done;
                 if (remaining == length &&
                     ((is_ca && memcmp(buffer, "-----BEGIN CERTIFICATE-----", 27)) ||
-                     (is_bgm && memcmp(buffer, "APCM\\x01\\x01\\x01\\x00", 8))))
+                     (is_bgm && memcmp(buffer, "APCM\x01\x01\x01\x00", 8))))
                     goto done;
                 while (written < count) {
                     int n = genWrite(output, buffer + written, count - written);
