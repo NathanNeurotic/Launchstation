@@ -1121,6 +1121,16 @@ void scan_USB_mass(void)
 int prepareUsbRootBrowse(void)
 {
 	int attempt, first_unit, unit;
+	u64 now = Timer();
+
+	/* A completed two-drive probe already validated both mounts. When the
+	 * dashboard immediately opens the generic USB root, don't issue another
+	 * pair of synchronous fileXioGetStat RPCs just to repeat that discovery.
+	 * Keep this fast path short-lived: hotplug and stale mounts still probe. */
+	if (USB_mass_scanned && USB_mass_ix[0] && USB_mass_ix[1] &&
+	    now >= USB_mass_scan_time &&
+	    now - USB_mass_scan_time <= USB_DISCOVERY_SETTLE_MS)
+		return 0;
 
 	first_unit = -1;
 	for (attempt = 0; attempt < USB_DISCOVERY_ATTEMPTS; attempt++) {
