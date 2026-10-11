@@ -118,6 +118,8 @@ int main(void) {
     const char *ca_tmp="mc0:/APP_LAUNCHSTATION/WLE-UPDATE-CA.PEM.UPDATE";
     const char *bgm_tmp="mc0:/APP_LAUNCHSTATION/BGM.ADP.UPDATE";
     const char *backup="mc0:/APP_LAUNCHSTATION/LAUNCHSTATION.ELF.BAK";
+    const char *elf_tmp="mc0:/APP_LAUNCHSTATION/LAUNCHSTATION.ELF.UPDATE";
+    const char *package_tmp="mc0:/APP_LAUNCHSTATION/LAUNCHSTATION.ELF.PACKAGE";
     char msg[512];
     reset();
     assert(install(msg)==0);
@@ -134,6 +136,17 @@ int main(void) {
     assert(!has(ca)&&!has(bgm)&&has(boot)&&has(backup));
     reset();put(ca_tmp);
     assert(install(msg)<0 && downloads==0&&has(boot)&&has(ca_tmp)&&!has(backup));
+    /* An interrupted ELF stage/download must not be truncated or removed.
+     * No network traffic or package parsing should begin in these cases. */
+    reset();put(elf_tmp);
+    assert(install(msg)<0 && downloads==0 && sidecar_calls==0);
+    assert(has(elf_tmp) && has(boot) && !has(backup) && !has(package_tmp));
+    reset();put(package_tmp);
+    assert(install(msg)<0 && downloads==0 && sidecar_calls==0);
+    assert(has(package_tmp) && has(boot) && !has(backup) && !has(elf_tmp));
+    reset();put(elf_tmp);put(package_tmp);
+    assert(install(msg)<0 && downloads==0 && has(elf_tmp) && has(package_tmp));
+    assert(has(boot) && !has(backup));
     reset();fail_bgm_stage=1;
     assert(install(msg)<0 && !has(ca_tmp)&&!has(bgm_tmp));
     assert(has(boot)&&!has(backup)&&!has(ca)&&!has(bgm));
@@ -146,7 +159,7 @@ int main(void) {
     assert(install(msg)<0 && has(boot)&&!has(backup)&&!has(ca)&&!has(bgm));
     reset();fail_elf_rename=1;
     assert(install(msg)<0 && !has(boot)&&has(backup)); /* simulated rollback fails too */
-    puts("PASS: updater installs missing-only sidecars; existing data and early failures preserve ELF");
+    puts("PASS: updater refuses to truncate old stages; missing-only sidecars and ELF recover safely");
 }
 '''
 compiler=shutil.which("gcc") or shutil.which("clang")
