@@ -171,7 +171,8 @@ int selfUpdateExtractPsuSidecar(const char *package, const char *name,
             goto done;
         if (record_is(entry, 0x8017, name)) {
             unsigned int remaining = length;
-            if ((is_ca && length > 32768) ||
+            if ((is_ca && (length < sizeof("-----BEGIN CERTIFICATE-----") - 1 ||
+                           length > 32768)) ||
                 (is_bgm && (length < 32 || length > 1024 * 1024 ||
                             (length & 15))))
                 goto done;
@@ -183,6 +184,10 @@ int selfUpdateExtractPsuSidecar(const char *package, const char *name,
                 int count = remaining > sizeof(buffer) ? sizeof(buffer) : remaining;
                 int written = 0;
                 if (!read_exact(input, buffer, count))
+                    goto done;
+                if (remaining == length &&
+                    ((is_ca && memcmp(buffer, "-----BEGIN CERTIFICATE-----", 27)) ||
+                     (is_bgm && memcmp(buffer, "APCM\\x01\\x01\\x01\\x00", 8))))
                     goto done;
                 while (written < count) {
                     int n = genWrite(output, buffer + written, count - written);
