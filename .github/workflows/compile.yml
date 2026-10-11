@@ -66,6 +66,7 @@ jobs:
           python3 tests/test_mmce_publish.py
           python3 tests/test_mmce_recovery.py
           python3 tests/test_sd2cloud_parity.py
+          python3 tests/test_mmce_status_failures.py
           python3 tests/test_self_update.py
           python3 tests/test_app_packages.py
           python3 tests/test_update_sidecar_transaction.py
