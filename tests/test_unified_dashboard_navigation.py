@@ -42,9 +42,10 @@ enum { DASH_SEC_HOME=0, DASH_SEC_APPS, DASH_SEC_FILES, DASH_SEC_DEVICES,
 enum { DASH_SND_TRANSITION=1 };
 static int section = DASH_SEC_HOME,prev_section=DASH_SEC_HOME,nav_section=DASH_SEC_HOME;
 static float section_anim=1.0f;
-static int section_dir=1, leave_ok=1, opened, enter_count, sound_count, focus_count;
+static int section_dir=1, leave_ok=1, opened, enter_count, sound_count, focus_count, home_rebuilds;
 static int dashConfirmLeave(void) { return leave_ok; }
 static void dashOpenBrowser(const char *path) { assert(path[0]==0); opened++; }
+static void dashHomeRebuild(void) { home_rebuilds++; }
 static void dashUiFocusPoke(void) { focus_count++; }
 static void dashSoundPlay(int sound) { assert(sound==DASH_SND_TRANSITION); sound_count++; }
 static void entered(void) { enter_count++; }
@@ -70,6 +71,7 @@ int main(void) {
     assert(dashAdjacentSection(section,+1)==DASH_SEC_FILES);
     dashSwitchSection(DASH_SEC_FILES);
     assert(opened==1 && section==DASH_SEC_HOME && nav_section==DASH_SEC_FILES);
+    assert(home_rebuilds==1);
     assert(enter_count==0 && sound_count==0);
     assert(dashAdjacentSection(section,+1)==DASH_SEC_TOOLS);
     assert(dashAdjacentSection(section,-1)==DASH_SEC_HOME);
@@ -83,6 +85,7 @@ int main(void) {
     leave_ok=1;
     dashSwitchSection(DASH_SEC_FILES);
     assert(opened==2 && section==DASH_SEC_TOOLS && nav_section==DASH_SEC_FILES);
+    assert(home_rebuilds==1); /* A Tools caller need not refresh Home yet. */
     assert(dashAdjacentSection(section,+1)==DASH_SEC_TOOLS);
     dashSwitchSection(DASH_SEC_APPS);
     assert(section==DASH_SEC_HOME && nav_section==DASH_SEC_HOME);
