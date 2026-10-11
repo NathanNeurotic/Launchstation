@@ -230,6 +230,14 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
         snprintf(result, result_size, "The app folder path is too long for a safe sidecar update.");
         return -1;
     }
+    /* The package download uses O_TRUNC and the ELF extractor does likewise.
+     * Never destroy an unfinished recovery/download file from an earlier
+     * attempt. An existing temporary file requires explicit manual handling. */
+    if (wleExists(package) || wleExists(stage)) {
+        snprintf(result, result_size,
+                 "An earlier ELF .UPDATE or .PACKAGE file remains beside the app. Resolve that file manually before retrying; no files were changed.");
+        return -1;
+    }
     need_ca = !wleExists(update_ca);
     need_bgm = !wleExists(bgm);
     if ((need_ca && wleExists(update_ca_stage)) ||
