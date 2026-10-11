@@ -664,8 +664,9 @@ static void globalMenu(void)
 	    {DI_POWER, "Power off", NULL, 0}};
 	int r = dashModalMenu("Dashboard", NULL, items, sizeof(items) / sizeof(items[0]), 0);
 
-	/* everything except "Settings" and a refresh leaves the current section */
-	if (r >= 0 && r != 1 && r != 3 && !dashConfirmLeave())
+	/* Switching tabs handles any unsaved Settings confirmation inside
+	 * dashSwitchSection(). System actions require their own leave guard. */
+	if ((r == 4 || r == 5) && !dashConfirmLeave())
 		return;
 	switch (r) {
 		case 0:
