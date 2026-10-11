@@ -50,59 +50,40 @@ foreground behind a short loading overlay.
 
 ## Sections
 
-The four top-level destinations are **HOME, FILES, TOOLS, SETTINGS**. HOME
-includes both Continue and the entire application library. Use the
+The four top-level tabs are **HOME, FILES, TOOLS, SETTINGS**. Unlike the
+earlier modal browser shortcut, **FILES is now a full dashboard section**.
+Its file list is drawn inside the ordinary dashboard frame with the section
+selector, L1/R1 shoulder navigation, animated background and status bar still
+visible. Entering Files does not start a second independent input/draw loop.
+L1/R1 moves between adjacent tabs even when browsing a folder. On returning
+to Files, the browser restores the previous folder and highlighted entry.
+
+HOME includes both Continue and the entire application library. Use the
 **Applications** shortcut in Home's **Browse & shortcuts** row to enter
-the full library (Grid, List, Carousel, filters, favorite/pin actions and
-refresh). Press **Back** to return to the Continue row. This does not
-create a separate Apps tab; existing application view/filter settings,
-pinned entries, favorites and recent history are retained.
+the full library (Grid, List, Carousel, filters, favorites/pins and refresh).
+Back returns to Home. The Home **Last folder** chip updates after leaving
+the Files tab, not just when a separate modal browser closes.
 
-**FILES** opens the native File Browser **immediately**, with the root
-device list. Pressing Back returns to the section you were on before Files;
-the next L1/R1 continues cycling through the tabs instead of reopening
-the browser by mistake. Last folder is a Home shortcut (shown only after
-a valid directory has been visited). PathPad bookmarks and device browsing
-remain available in the native File Browser.
+Within Files, **Back** moves to the parent folder. Back from the device
+root returns to Home, but Files remains available as a regular tab. The file
+operations, browse/view/sort modes, copy/paste, VMC backup operations and
+PathPad features remain in the same browser. The directory reader keeps its
+USB/PAD serialization and invalidates in-flight results when switching tabs.
 
-**MISC commands** have moved to **TOOLS > Storage > MISC commands**.
-This exposes the classic built-in-command folder in addition to the
-individual named Tools actions (start disc, HDD Manager, OSDSYS, etc.).
+**MISC commands** live in **Tools > Storage > MISC commands** rather than
+being duplicated among the Files tab's device roots. Other launch actions
+that request an independent File Browser still use the modal implementation.
 
-| Destination | Contents |
+| Tab | Contents |
 | --- | --- |
-| HOME | Continue carousel, full Applications library shortcut, Last folder, and optional launch-key shortcuts. |
-| FILES | Opens the native File Browser directly with all device roots and existing file operations. |
-| TOOLS | MISC commands, storage and device utilities, ELF/ISO/PS1 launch helpers, system actions, information and power commands. |
+| HOME | Continue carousel, full Applications library shortcut, Last folder, optional launch-key shortcuts. |
+| FILES | Native File Browser as an actual tab, with shared header and L1/R1 navigation. |
+| TOOLS | MISC commands, storage/device utilities, application and disc launch helpers, information and power commands. |
 | SETTINGS | Appearance, Home & applications, Sound, Input, Launching, Storage & devices, Network and System; unchanged save/discard behavior. |
 
-Older saved startup values pointing to separate Apps or Files/Devices
-screens are interpreted as Home on startup, without changing the saved
-favorites, filters or scan paths.
-
-## Dashboard top-edge flicker / tearing
-
-The classic wLE GS renderer uses a single framebuffer. This is suitable for
-mostly static screens but causes horizontal tear bands when the animated
-dashboard draws into the same image being scanned by the TV. The earlier
-header-selector smoothing removed a high-frequency highlight animation but
-did not fix that scanout race.
-
-Launchstation now enables **gsKit double buffering when the dashboard starts**,
-without altering the classic GS initialization routine. It renders the next
-complete frame into the hidden buffer and flips buffers at VBLANK. It retains
-GS screen offsets and refreshes the texture manager after the framebuffer
-layout changes, including when changing the video mode. When file I/O is
-running in the background, the renderer continues yielding during VBLANK but
-uses exactly the same display/active-buffer progression as gsKit's standard
-double-buffer flip. Standard and DS34 builds use the same path.
-
-Trade-off: the second frame consumes approximately 1.1 MiB (NTSC/480p)
-or 1.25 MiB (PAL) of the PS2's 4 MiB GS VRAM, leaving less room for
-cached artwork. The existing small (128px) art thumbnails and texture-manager
-eviction are retained. This is a code-level anti-tearing correction; actual
-console output still needs verification across video modes before concluding
-that every source of interlaced display shimmer has been eliminated.
+Startup can now select any of the four tabs, including Files. Older startup
+values pointing to the separate Apps page still open Home, and the old
+Devices page points to Files; no app metadata or favorites are rewritten.
 
 ## Intermittent USB stalls (standard build)
 
