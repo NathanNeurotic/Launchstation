@@ -723,6 +723,8 @@ static int drive_browse_parse(const char *json, CloudGoogleBrowsePage *page)
     char item[768], mime[96];
     int inside = 0, escaped = 0, depth, len;
 
+    if (json == NULL || page == NULL)
+        return -1;
     p = strstr(json, "\"files\"");
     if (!p || !(p = strchr(p, '[')))
         return -1;
@@ -798,9 +800,10 @@ int cloudGoogleListBackupHistory(const char *parent_id, const char *page_token,
     if (page == NULL)
         return -1;
     memset(page, 0, sizeof(*page));
-    if (load_session(&session, 1, error, error_size) < 0 ||
-        !ensureDashboardIpNetworkReady()) {
-        set_error(error, error_size, "Google Drive session or network is unavailable");
+    if (load_session(&session, 1, error, error_size) < 0)
+        return -1;
+    if (!ensureDashboardIpNetworkReady()) {
+        set_error(error, error_size, "Network is unavailable for Drive history browsing");
         return -1;
     }
     if (refresh_access_token(&session, error, error_size) < 0)
