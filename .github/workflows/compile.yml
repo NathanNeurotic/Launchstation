@@ -61,6 +61,7 @@ jobs:
           python3 tests/test_poweroff_shutdown.py
           python3 tests/test_mc_card_export.py
           python3 tests/test_mmce_backup.py
+          python3 tests/test_mmce_targeted_safety.py
           python3 tests/test_opl_title_cfg.py
           python3 tests/test_wle_igr.py
           python3 tests/test_igr_return_policy.py
@@ -68,7 +69,6 @@ jobs:
           python3 tests/test_native_cloud.py
           python3 tests/test_cloud_menu.py
           python3 tests/test_mmce_protocol.py
-          python3 tests/test_mmce_backup.py
           python3 tests/test_mmce_publish.py
           python3 tests/test_mmce_recovery.py
           python3 tests/test_sd2cloud_parity.py

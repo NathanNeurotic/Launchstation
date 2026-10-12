@@ -17,7 +17,7 @@ compare = body.index("files_equal_serial(source, previous_path)")
 unchanged = body.index("stats->unchanged++")
 copy = body.index("mcCardBackupNoEcc(source, staged, NULL)")
 publish = body.index("fileXioRename(staged, dest)")
-verified_retention = body.index("prune_history(dir, options->keep, format)")
+verified_retention = body.index("prune_history(dir, options->keep, format, protect_name, name)")
 
 assert compare < unchanged < copy, "unchanged cards must be detected before any new backup write"
 assert copy < publish < verified_retention, "verified export must publish before retention"
@@ -30,6 +30,7 @@ assert mcd_fast < copy, "native MCD history must check for unchanged data before
 assert "mcCardExportPcsx2(source, staged, NULL)" in body, "PCSX2 format must use the verified converter"
 assert "keep == 0" in src, "zero retention must mean keep all"
 assert "backup_ext(format)" in src, "history extension must follow configured format"
+assert "!wleExists(staged)" in src, "do not reuse a prior interrupted backup file"
 
 fn = src[src.index("int mmceBackupAllCards("):]
 assert "strlen(source_root)" in fn
