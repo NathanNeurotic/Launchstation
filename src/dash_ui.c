@@ -162,8 +162,7 @@ static int keyIcon(const char *key)
 		return DI_BTN_START;
 	if (!strcmp(key, "SELECT"))
 		return DI_BTN_SELECT;
-	if (!dashIconsPadPng())
-		return -1;
+	/* All six shoulder/stick buttons are rendered by the vector atlas. */
 	for (i = 0; i < (int)(sizeof(map) / sizeof(map[0])); i++)
 		if (!strcmp(key, map[i].key))
 			return map[i].icon;
@@ -694,7 +693,9 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 {
 	int sel = initial, top = 0, i, previewed = -1;
 	void (*preview)(int) = modal_preview;
-	const int max_rows = 8;
+	/* Eight subtitled rows left only 3 logical pixels above the popup.
+	 * Keep a full safe margin for rounded corners on 4:3/interlaced TVs. */
+	const int max_rows = 7;
 	float sel_anim, open = 0.0f;
 	float w = 400.0f, row_h = 38.0f;
 	int rows = (n < max_rows) ? n : max_rows;
