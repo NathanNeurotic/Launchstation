@@ -29,6 +29,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Preflight generated Wiki pages
+        run: |
+          set -euo pipefail
+          git init --quiet "$RUNNER_TEMP/wiki-preflight"
+          python3 scripts/sync_github_wiki.py --wiki-dir "$RUNNER_TEMP/wiki-preflight" --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA"
       - name: Clone existing Wiki with repository-scoped token
         env:
           WIKI_TOKEN: ${{ github.token }}
