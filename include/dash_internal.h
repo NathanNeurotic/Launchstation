@@ -460,7 +460,6 @@ enum DashIcon {
 void dashIconsInit(void);
 void dashIconsShutdown(void);
 void dashIcon(int id, float x, float y, float size, DashColor c);
-int dashIconsPadPng(void); /* non-zero when the embedded pad-button PNG tiles decoded */
 DashColor dashIconTint(DashColor c);
 GSTEXTURE *dashIconsTexture(void);
 
