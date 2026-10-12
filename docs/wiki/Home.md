@@ -2,7 +2,7 @@
 
 [Browsable GitHub Pages guide index](https://nathanneurotic.github.io/Launchstation/wiki.html) · [Current releases](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest) · [Repository](https://github.com/NathanNeurotic/Launchstation)
 
-This is the maintained Markdown guide collection stored in the repository. It is **not** a claim that these files have been pushed to GitHub's separate `.wiki.git` repository. GitHub Pages is built automatically from `docs-site/content/`.
+This is the maintained Markdown guide collection stored in the repository. An automated sync publishes these guides and the authored website reference pages to the standalone GitHub Wiki when the Wiki repository is initialized and the publish workflow succeeds. GitHub Pages continues to build from `docs-site/content/` independently.
 
 ## Read by task
 

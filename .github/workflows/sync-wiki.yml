@@ -1,0 +1,66 @@
+name: Synchronize GitHub Wiki
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'docs/wiki/**'
+      - 'docs-site/content/**'
+      - 'docs-site/manifest.json'
+      - 'docs/THIRD_PARTY_CREDITS.md'
+      - 'scripts/sync_github_wiki.py'
+      - '.github/workflows/sync-wiki.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: launchstation-wiki-sync
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out documentation source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Clone existing Wiki with repository-scoped token
+        env:
+          WIKI_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          auth="$(printf 'x-access-token:%s' "$WIKI_TOKEN" | base64 -w0)"
+          if ! git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" clone --quiet "https://github.com/${GITHUB_REPOSITORY}.wiki.git" "$RUNNER_TEMP/launchstation-wiki"; then
+            echo '::error::GitHub Wiki cannot be cloned. First create one starter page in the repository Wiki tab (or verify Wiki is enabled), then rerun this workflow.'
+            exit 1
+          fi
+      - name: Generate Wiki without removing existing pages
+        env:
+          WIKI_DIR: ${{ runner.temp }}/launchstation-wiki
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          python3 scripts/sync_github_wiki.py --wiki-dir "$WIKI_DIR" --repo "$GITHUB_REPOSITORY" --sha "$SOURCE_SHA"
+      - name: Commit and publish managed Wiki pages
+        env:
+          WIKI_TOKEN: ${{ github.token }}
+          WIKI_DIR: ${{ runner.temp }}/launchstation-wiki
+        run: |
+          set -euo pipefail
+          cd "$WIKI_DIR"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- '*.md'
+          if git diff --cached --quiet; then
+            echo 'Wiki is already in sync; no commit required.'
+            exit 0
+          fi
+          git diff --cached --stat
+          git commit -m "docs: sync Launchstation wiki from ${GITHUB_SHA}"
+          branch="$(git symbolic-ref --short HEAD)"
+          auth="$(printf 'x-access-token:%s' "$WIKI_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin "HEAD:${branch}"
+          echo 'Published GitHub Wiki without force-push or deleting historical/unmanaged pages.'
