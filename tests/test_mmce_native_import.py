@@ -39,8 +39,10 @@ assert "prepareTransferDeviceStacks(source, folder)" in action
 assert "genMkdir(folder, fileMode)" in action
 assert "mcCardImportPcsx2(source, stage" in action
 assert "mcCardBackupNoEcc(source, stage" in action
-assert "fileXioRename(stage, dest)" in action
-assert "mcCardValidateNoEcc(dest)" in action
+assert "mmcePublishInactiveSnapshot(stage, dest)" in action
+publisher = extract("static int mmcePublishInactiveSnapshot(")
+assert "fileXioRename(stage, dest)" in publisher
+assert "mcCardValidateNoEcc(dest)" in publisher
 assert action.index("prepareTransferDeviceStacks(") < action.index("genMkdir(") < \
        action.index("mcCardBackupNoEcc(source, stage")
 assert "mmce_cmd_set_card" not in action
