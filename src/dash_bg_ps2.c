@@ -627,26 +627,32 @@ static void osdOrbs(const OrbStyle *st, float t, int fx)
 	 * circle, so meeting means equal phase; screen distance would also
 	 * bloom a front and a back orb that merely cross in the projection. */
 	for (k = 0; k < ORB_N; k++) {
-		int together = 1;
+		int together = 1, already_drawn = 0;
 		float grow, share, sz = head[k].s * (0.7f + 0.4f * head[k].d);
 
 		for (j = 0; j < ORB_N; j++) {
 			float dp = fabsf(head_phi[j] - head_phi[k]);
 			if (dp > PI_F)
 				dp = TAU_F - dp;
-			if (j != k && dp < 0.1f)
+			if (j != k && dp < 0.1f) {
 				together++;
+				if (j < k)
+					already_drawn = 1;
+			}
 		}
-		grow = sqrtf((float)together);
-		share = dashClampf(1.6f / together, 0.0f, 1.0f);
+		/* Render each phase cluster once. Drawing the same merged orb for
+		 * every member made additive blending overexpose collisions. */
+		if (already_drawn)
+			continue;
+		grow = dashClampf(1.0f + 0.25f * (together - 1), 1.0f, 1.8f);
+		share = together > 1 ? 0.85f : 1.0f;
 		dashGlow(head[k].x, head[k].y, 30.0f * sz * grow, 30.0f * sz * grow,
 		         colA(glow_c, (int)((56.0f + 46.0f * head[k].d) * share)));
 		dashGlow(head[k].x, head[k].y, 11.0f * sz * grow, 11.0f * sz * grow,
 		         colA(halo_c, (int)((153.0f + 77.0f * head[k].d) * share)));
-		/* Keep merged lights only a touch less glaring: each member still draws
-		 * the shared core, so divide a 235-alpha group budget across them. */
+		/* One central highlight per cluster prevents stacked white cores. */
 		dashGlow(head[k].x, head[k].y, 5.2f * sz * grow, 5.2f * sz * grow,
-		         colA(DC(255, 255, 255, 255), together > 1 ? 235 / together : 255));
+		         colA(DC(255, 255, 255, 255), together > 1 ? 210 : 255));
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
 }
