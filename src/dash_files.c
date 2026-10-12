@@ -660,7 +660,8 @@ static void storageHints(void)
 		dashFilesListScreen.hints();
 }
 
-const DashScreen dashFilesScreen = {storageEnter, storageInput, storageUpdate, storageDraw, storageHints};
+/* The Files section now runs the native File Browser within the dashboard
+ * frame (dash_browser.c). Keep this old storage view for Devices only. */
 const DashScreen dashDevicesScreen = {storageEnter, storageInput, storageUpdate, storageDraw, storageHints};
 //--------------------------------------------------------------
 //End of file: dash_files.c

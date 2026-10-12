@@ -202,7 +202,9 @@ with tempfile.TemporaryDirectory(prefix="wle-modal-animation-") as tmp:
 if len(sys.argv) == 1:
     for name in ("dash_ui", "dash_widgets", "dash_settings", "dash_browser",
                  "dash_hdd", "dash_info", "dash_editor", "dash_worker"):
-        text = read(f"src/{name}.c")
+        # Count actual call sites, not prose in C comments. Embedded Files
+        # draws through the shared dashboard frame and documents that path.
+        text = re.sub(r"/\*.*?\*/|//[^\n]*", "", read(f"src/{name}.c"), flags=re.S)
         assert text.count("dashVisualUpdate()") == text.count("dashRenderScene()"), name
         assert "1.0f / 60.0f" not in text and "1.0f / 30.0f" not in text, name
     run = function(shell, "void DashRun(")

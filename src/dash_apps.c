@@ -141,7 +141,7 @@ static void openFolder(const DashApp *a)
 		return;
 	memcpy(dir, a->path, n);
 	dir[n] = '\0';
-	dashOpenBrowser(dir);
+	dashNavigateFilesTab(dir);
 }
 
 static void editMetadata(DashApp *a)

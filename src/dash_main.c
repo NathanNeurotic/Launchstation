@@ -19,7 +19,6 @@ static int dash_active;
 static int dash_inited;
 static int section = DASH_SEC_HOME;
 static int prev_section = DASH_SEC_HOME;
-static int nav_section = DASH_SEC_HOME; /* remembers transient FILES action for L1/R1 cycling */
 static float section_anim = 1.0f;
 static int section_dir = 1;
 static float anim_time;
@@ -85,10 +84,8 @@ const char *dashVisibleSectionName(int index)
 
 int dashAdjacentSection(int s, int direction)
 {
-	/* FILES launches a modal browser without replacing the underlying screen.
-	 * Keep the tab-navigation cursor on Files so the next R1 reaches Tools. */
-	int from = (nav_section == DASH_SEC_FILES) ? nav_section : s;
-	int i = dashVisibleSectionIndex(from) + direction;
+	/* All four tabs now have real section state, including the File Browser. */
+	int i = dashVisibleSectionIndex(s) + direction;
 	if (i < 0) i = DASH_VISIBLE_SEC_COUNT - 1;
 	if (i >= DASH_VISIBLE_SEC_COUNT) i = 0;
 	return visible_sections[i];
@@ -161,36 +158,23 @@ int DashIsEnabled(void)
 
 void dashSwitchSection(int s)
 {
-	/* Keep legacy callers compatible with the former Apps section. */
 	if (s == DASH_SEC_APPS)
-		s = DASH_SEC_HOME;
+		s = DASH_SEC_HOME; /* legacy callers use Home's library */
 	if (s == DASH_SEC_DEVICES)
 		s = DASH_SEC_FILES;
-	if (s == DASH_SEC_FILES) {
-		/* FILES is an action, not a second menu before File Browser.
-		 * Do not change section: closing the browser returns to the caller. */
-		if (dashConfirmLeave()) {
-			nav_section = DASH_SEC_FILES;
-			dashOpenBrowser("");
-			/* File Browser just updated LastDir; refresh Home's shortcut
-			 * immediately instead of requiring another section transition. */
-			if (section == DASH_SEC_HOME)
-				dashHomeRebuild();
-		}
-		return;
-	}
 	if (s < 0 || s >= DASH_SEC_COUNT)
 		s = DASH_SEC_HOME;
-	if (s == section) {
-		nav_section = s;
+	if (s == section)
 		return;
-	}
 	if (!dashConfirmLeave())
 		return;
+	/* A tab switch closes only the in-tab browser session, not the
+	 * independent modal browser used by launch-key and Tools actions. */
+	if (section == DASH_SEC_FILES)
+		dashFileBrowserTabClose();
 	section_dir = (s > section) ? 1 : -1;
 	prev_section = section;
 	section = s;
-	nav_section = s;
 	section_anim = 0.0f;
 	dashUiFocusPoke();
 	dashSoundPlay(DASH_SND_TRANSITION);
@@ -393,7 +377,20 @@ void dashRunMisc(const char *misc_path)
 
 void dashOpenBrowser(const char *start_dir)
 {
-	dashFileBrowser(start_dir);
+	if (section == DASH_SEC_FILES)
+		dashFileBrowserTabOpen(start_dir); /* use the already-active tab */
+	else
+		dashFileBrowser(start_dir); /* modal path for other callers */
+}
+
+/* Navigation shortcuts (Home Last folder and Apps file location) should
+ * enter the actual Files tab. Keep dashOpenBrowser() for explicitly modal
+ * Tool/MISC browser actions. */
+void dashNavigateFilesTab(const char *start_dir)
+{
+	dashSwitchSection(DASH_SEC_FILES);
+	if (section == DASH_SEC_FILES && start_dir != NULL && start_dir[0])
+		dashFileBrowserTabOpen(start_dir);
 }
 
 
@@ -677,8 +674,9 @@ static void globalMenu(void)
 	    {DI_POWER, "Power off", NULL, 0}};
 	int r = dashModalMenu("Dashboard", NULL, items, sizeof(items) / sizeof(items[0]), 0);
 
-	/* everything except "Settings" and a refresh leaves the current section */
-	if (r >= 0 && r != 1 && r != 3 && !dashConfirmLeave())
+	/* Switching tabs handles any unsaved Settings confirmation inside
+	 * dashSwitchSection(). System actions require their own leave guard. */
+	if ((r == 4 || r == 5) && !dashConfirmLeave())
 		return;
 	switch (r) {
 		case 0:
@@ -688,7 +686,7 @@ static void globalMenu(void)
 			dashRescanLibrary(1);
 			break;
 		case 2:
-			dashOpenBrowser("");
+			dashSwitchSection(DASH_SEC_FILES);
 			break;
 		case 3:
 			dashSwitchSection(DASH_SEC_SETTINGS);
@@ -1061,11 +1059,13 @@ static void firstInit(void)
 	}
 #endif
 	section = dashCfg.start_section;
-	/* Previous settings may name Apps, Files, or Devices as the startup
-	 * section; their former landing screens are now a Home library subview
-	 * and an on-demand File Browser action, respectively. */
-	if (section == DASH_SEC_APPS || section == DASH_SEC_FILES ||
-	    section == DASH_SEC_DEVICES || section < 0 || section >= DASH_SEC_COUNT)
+	/* Apps now lives inside Home; Files and old Devices startup values
+	 * both open the real File Browser tab instead of a modal. */
+	if (section == DASH_SEC_APPS)
+		section = DASH_SEC_HOME;
+	else if (section == DASH_SEC_DEVICES)
+		section = DASH_SEC_FILES;
+	else if (section < 0 || section >= DASH_SEC_COUNT)
 		section = DASH_SEC_HOME;
 	dash_inited = 1;
 }
@@ -1101,7 +1101,6 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	if (from_boot)
 		dashSoundPlay(DASH_SND_BOOT);
 
-	nav_section = section;
 	section_anim = 1.0f;
 	fade_in = 0.0f;
 	if (screens[section]->enter)
@@ -1123,7 +1122,12 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		if (dashGfxCheckScreenChange())
 			dashArtInvalidateVram();
 
-		dashInputPoll(&in);
+		/* USB fileXio completion can outlive its Files tab; serialize PAD
+		 * input across all dashboard sections until the final USB read ends. */
+		if (!dashBrowserPadInputReady())
+			memset(&in, 0, sizeof(in));
+		else
+			dashInputPoll(&in);
 		if (boot_phase) {
 			bootUpdate(&in);
 			if (boot_phase == 1)

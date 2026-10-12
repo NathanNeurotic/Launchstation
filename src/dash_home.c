@@ -188,8 +188,11 @@ static void activateChip(const Chip *c)
 			char dir[MAX_NAME];
 			dashStrCopy(dir, LastDir, sizeof(dir));
 			if (dir[0] && strchr(dir, ':') != NULL)
-				dashOpenBrowser(dir);
-			homeRebuild();
+				dashNavigateFilesTab(dir);
+			/* A successful switch already leaves Home. Rebuilding now would
+			 * access device status while the new Files listing is in flight. */
+			if (dashCurrentSection() == DASH_SEC_HOME)
+				homeRebuild();
 			break;
 		}
 		case CHIP_LAUNCHKEY: {

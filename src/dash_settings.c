@@ -601,11 +601,12 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			*names = pct_names, *cur = dashCfg.bgm_vol / 10;
 			return 11;
 		case S_START: {
-			static const char *const start_names[] = {"Home", "Tools", "Settings"};
+			static const char *const start_names[] = {"Home", "Files", "Tools", "Settings"};
 			*names = start_names;
-			*cur = (dashCfg.start_section == DASH_SEC_TOOLS) ? 1 :
-			       (dashCfg.start_section == DASH_SEC_SETTINGS) ? 2 : 0;
-			return 3;
+			*cur = (dashCfg.start_section == DASH_SEC_FILES || dashCfg.start_section == DASH_SEC_DEVICES) ? 1 :
+			       (dashCfg.start_section == DASH_SEC_TOOLS) ? 2 :
+			       (dashCfg.start_section == DASH_SEC_SETTINGS) ? 3 : 0;
+			return 4;
 		}
 		case S_FILES_MODE: {
 			static const char *const modes[] = {"Files", "Devices"};
@@ -1233,8 +1234,9 @@ static void setChoice(int id, int v)
 			break;
 		}
 		case S_START:
-			dashCfg.start_section = (v == 1) ? DASH_SEC_TOOLS :
-			                        (v == 2) ? DASH_SEC_SETTINGS : DASH_SEC_HOME;
+			dashCfg.start_section = (v == 1) ? DASH_SEC_FILES :
+			                        (v == 2) ? DASH_SEC_TOOLS :
+			                        (v == 3) ? DASH_SEC_SETTINGS : DASH_SEC_HOME;
 			break;
 		case S_FILES_MODE:
 			dashCfg.files_mode = v;

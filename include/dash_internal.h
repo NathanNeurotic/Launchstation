@@ -995,7 +995,11 @@ enum {
 int dashShowImageViewer(const char *path, const char *title, DashImageViewerState *state);
 void dashExploitInstaller(void); /* dash_exploit.c */
 void dashOpenBrowser(const char *start_dir);        /* native File Browser */
+void dashNavigateFilesTab(const char *start_dir);  /* navigate dashboard Files tab */
 void dashFileBrowser(const char *start_dir);        /* dash_browser.c */
+void dashFileBrowserTabClose(void);                /* release inactive-tab state */
+int dashBrowserPadInputReady(void);              /* global USB fileXio / pad guard */
+void dashFileBrowserTabOpen(const char *start_dir);/* navigate within Files tab */
 int dashSettingsSaveCnf(void);                      /* LAUNCHELF.CNF now */
 /* classic dialogs (ynDialog/nonDialog/keyboard) as dashboard dialogs */
 void dashClassicUiInstall(int on);
