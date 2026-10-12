@@ -299,6 +299,7 @@ int LaunchEmberGame(const char *path, char *message, size_t message_size)
 	char umbrella[MAX_PATH], ember_elf[MAX_PATH], bios_path[MAX_PATH];
 	char game_name[EMBER_NAME_MAX + 1];
 	char selected[MAX_PATH], fullpath[MAX_PATH], party[MAX_PATH];
+	char remounted_elf[MAX_PATH];
 	int exec_kind, ret;
 
 	if (!parseEmberGamePath(path, umbrella, sizeof(umbrella),
@@ -358,12 +359,18 @@ int LaunchEmberGame(const char *path, char *message, size_t message_size)
 	 * wait until this exact ember.elf is visible again, then perform a true
 	 * keep-IOP ExecPS2. There must be no reset after this point.
 	 */
-	if ((!strncmp(ember_elf, "usb", 3) || !strncmp(ember_elf, "mass", 4)) &&
-	    !prepareEmberUsbHandoffIop(ember_elf)) {
-		DPRINTF("[EMBER] USB handoff IOP did not become ready; returning to OSDSYS\n");
-		LaunchArgsClear();
-		ExecOSD(0, NULL);
-		return 0;
+	if ((!strncmp(ember_elf, "usb", 3) || !strncmp(ember_elf, "mass", 4))) {
+		if (!prepareEmberUsbHandoffIop(ember_elf, path,
+		                              remounted_elf, sizeof(remounted_elf))) {
+			DPRINTF("[EMBER] USB post-reset game identity failed; returning to OSDSYS\n");
+			LaunchArgsClear();
+			ExecOSD(0, NULL);
+			return 0;
+		}
+		/* The live mount number can change when both USB devices enumerate.
+		 * Always hand both the loader and Ember argv[0] the remounted path,
+		 * not the number selected by Launchstation's former IOP stack. */
+		snprintf(fullpath, sizeof(fullpath), "%s", remounted_elf);
 	}
 
 	RunLoaderElfKeepIOPWithArgv0(fullpath, party, fullpath, exec_kind);

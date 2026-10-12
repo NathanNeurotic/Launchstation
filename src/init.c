@@ -1524,53 +1524,172 @@ static int emberStartSio2man(void)
 #endif
 }
 
-int prepareEmberUsbHandoffIop(const char *ember_path)
+/* A massN: mount is not necessarily a USB device. It is a shared BDM
+ * slot (ATA, MX4SIO and i.Link can be present). Follow launcHER's slot
+ * provenance check instead of treating every numbered mass path as USB. */
+static int emberUsbSourceIsUsb(const char *path)
+{
+	char root[16], driver[32];
+	int unit = 0, dd, ret;
+
+	if (!strncmp(path, "usb", 3))
+		return path[3] == ':' ||
+		       (path[3] >= '0' && path[3] <= '9' && path[4] == ':');
+	if (strncmp(path, "mass", 4))
+		return 0;
+	if (path[4] == ':')
+		unit = 0;
+	else if (path[4] >= '0' && path[4] <= '9' && path[5] == ':')
+		unit = path[4] - '0';
+	else
+		return 0;
+	snprintf(root, sizeof(root), "mass%d:/", unit);
+	dd = fileXioDopen(root);
+	if (dd < 0)
+		return 0;
+	memset(driver, 0, sizeof(driver));
+	ret = fileXioIoctl2(dd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0,
+	                    driver, sizeof(driver) - 1);
+	fileXioDclose(dd);
+	return ret >= 0 && !strcmp(driver, "usb");
+}
+
+typedef struct {
+	u32 size, high, digest;
+} EmberUsbIdentity;
+
+/* Compare the selected *game image*, not ember.elf: two sticks may carry
+ * identical copies of the executable. Size plus a short contents fingerprint
+ * distinguishes their games without reading an entire BIN image into RAM. */
+static int emberUsbIdentifyFile(const char *path, EmberUsbIdentity *id)
+{
+	iox_stat_t st;
+	u8 data[512];
+	int fd, n, got = 0, j;
+	u32 hash = 2166136261u;
+
+	memset(&st, 0, sizeof(st));
+	if (fileXioGetStat(path, &st) < 0 || FIO_S_ISDIR(st.mode))
+		return 0;
+	fd = fileXioOpen(path, FIO_O_RDONLY, 0);
+	if (fd < 0)
+		return 0;
+	while (got < (int)sizeof(data)) {
+		n = fileXioRead(fd, data + got, sizeof(data) - got);
+		if (n <= 0)
+			break;
+		got += n;
+	}
+	fileXioClose(fd);
+	if (!got)
+		return 0;
+	for (j = 0; j < got; j++)
+		hash = (hash ^ data[j]) * 16777619u;
+	id->size = st.size;
+	id->high = st.hisize;
+	id->digest = hash;
+	return 1;
+}
+
+/* Return the selected game's USB device after an IOP rebuild, NOT the old
+ * mount number. Numbering can change when two drives enumerate in a
+ * different order. Reject multiple identical matches instead of guessing. */
+static int emberUsbFindRemounted(const char *image_path, const char *ember_path,
+                                const EmberUsbIdentity *before,
+                                char *resolved, size_t resolved_size)
+{
+	const char *image_tail = strchr(image_path, ':');
+	const char *elf_tail = strchr(ember_path, ':');
+	int attempt, unit, found, matches;
+	char candidate[MAX_PATH], elf_candidate[MAX_PATH];
+	EmberUsbIdentity current;
+	iox_stat_t st;
+
+	if (!image_tail || !elf_tail || !image_tail[1] || !elf_tail[1])
+		return 0;
+	image_tail++;
+	elf_tail++;
+	/* The BDM driver can take time to expose its second USB device. Wait
+	 * for enumeration to settle instead of accepting the first match. */
+	for (attempt = 0; attempt < 50; attempt++) {
+		matches = 0;
+		found = -1;
+		for (unit = 0; unit < 10; unit++) {
+			if (snprintf(candidate, sizeof(candidate), "usb%d:%s%s", unit,
+			             *image_tail == '/' ? "" : "/", image_tail) >= (int)sizeof(candidate) ||
+			    snprintf(elf_candidate, sizeof(elf_candidate), "usb%d:%s%s", unit,
+			             *elf_tail == '/' ? "" : "/", elf_tail) >= (int)sizeof(elf_candidate))
+				continue;
+			if (!emberUsbIdentifyFile(candidate, &current) ||
+			    current.size != before->size || current.high != before->high ||
+			    current.digest != before->digest)
+				continue;
+			memset(&st, 0, sizeof(st));
+			if (fileXioGetStat(elf_candidate, &st) < 0 || FIO_S_ISDIR(st.mode))
+				continue;
+			found = unit;
+			matches++;
+		}
+		if (matches > 1) {
+			DPRINTF("[EMBER USB] multiple matching games after IOP reset; refusing ambiguous handoff\n");
+			return 0;
+		}
+		if (matches == 1 && attempt >= 20) {
+			if (snprintf(resolved, resolved_size, "usb%d:%s%s", found,
+			             *elf_tail == '/' ? "" : "/", elf_tail) >= (int)resolved_size)
+				return 0;
+			DPRINTF("[EMBER USB] game remounted on usb%d: (post-reset identity matched)\n", found);
+			return 1;
+		}
+		DelayThread(100 * 1000);
+	}
+	DPRINTF("[EMBER USB] cannot uniquely rediscover selected game after reset\n");
+	return 0;
+}
+
+int prepareEmberUsbHandoffIop(const char *ember_path, const char *game_image,
+                             char *resolved, size_t resolved_size)
 {
 	char probe[MAX_PATH];
-	iox_stat_t stat;
-	int attempt;
+	EmberUsbIdentity image_identity;
+	int id;
 
-	if (!emberUsbProbePath(ember_path, probe, sizeof(probe))) {
-		DPRINTF("[EMBER USB] invalid USB path: %s\n",
+	if (!resolved || !resolved_size || !game_image ||
+	    !emberUsbProbePath(ember_path, probe, sizeof(probe)) ||
+	    !emberUsbSourceIsUsb(ember_path) ||
+	    !emberUsbSourceIsUsb(game_image) ||
+	    !emberUsbIdentifyFile(game_image, &image_identity)) {
+		DPRINTF("[EMBER USB] selected source cannot be verified as USB: %s\n",
 		        ember_path != NULL ? ember_path : "(null)");
 		return 0;
 	}
-
 #ifdef NO_IOP_RESET
-	/* Respect no-reset builds. They can only use the already-live stack. */
-	DPRINTF("[EMBER USB] NO_IOP_RESET: preserving current stack for %s\n", probe);
-	return 1;
+	/* No-reset builds keep the existing mounted path; never renumber it. */
+	return snprintf(resolved, resolved_size, "%s", ember_path) < (int)resolved_size;
 #else
-	DPRINTF("[EMBER USB] rebuilding launcHER-style storage IOP for %s\n", probe);
-
-	/* All EE RPC clients that used the old storage IOP are already drained by
-	 * CleanUpForEmberExec(). Drop the remaining file/load RPC bindings before
-	 * replacing their IOP servers. */
+	DPRINTF("[EMBER USB] launcHER-style storage reset for %s\n", probe);
 	fileXioExit();
 	SifLoadFileExit();
 	resetUsbHostControllerBeforeIopReset();
-
 	SifInitRpc(0);
-	while (!SifIopReset("", 0)) {
-	}
-	while (!SifIopSync()) {
-	}
+	while (!SifIopReset("", 0)) {}
+	while (!SifIopSync()) {}
 
 	SifInitRpc(0);
 	SifLoadFileInit();
 	SifInitIopHeap();
 	initsbv_patches();
 
-	/* launcHER basic module order. Do not insert PADMAN here. */
+	/* Mirror launcHER's BDM/FATFS-first stack, without PADMAN.
+	 * Keep the already verified multi-USB startup initialization order
+	 * elsewhere in Launchstation unchanged. */
 	if (!emberStartIrx("IOMANX", iomanx_irx, size_iomanx_irx) ||
 	    !emberStartIrx("FILEXIO", filexio_irx, size_filexio_irx) ||
 	    !emberStartSio2man() ||
 	    !emberStartIrx("MCMAN", mcman_irx, size_mcman_irx) ||
 	    !emberStartIrx("MCSERV", mcserv_irx, size_mcserv_irx))
 		return 0;
-
 #ifdef EXFAT
-	/* launcHER loads the generic BDM/FatFs layer before the USB transport. */
 	if (!emberStartIrx("BDM", bdm_irx, size_bdm_irx) ||
 	    !emberStartIrx("BDMFS_FATFS", bdmfs_fatfs_irx, size_bdmfs_fatfs_irx) ||
 	    !emberStartIrx("USBD", usbd_irx, size_usbd_irx) ||
@@ -1583,21 +1702,9 @@ int prepareEmberUsbHandoffIop(const char *ember_path)
 #endif
 
 	fileXioInit();
-
-	/* Enumeration is asynchronous. Do not ExecPS2 until the exact ember.elf
-	 * path is readable again. Five seconds matches the existing hardware
-	 * recovery windows without an unbounded black-screen wait. */
-	for (attempt = 0; attempt < 50; attempt++) {
-		memset(&stat, 0, sizeof(stat));
-		if (fileXioGetStat(probe, &stat) >= 0) {
-			DPRINTF("[EMBER USB] storage ready after %d ms\n", attempt * 100);
-			return 1;
-		}
-		DelayThread(100 * 1000);
-	}
-
-	DPRINTF("[EMBER USB] ember.elf never remounted: %s\n", probe);
-	return 0;
+	id = emberUsbFindRemounted(game_image, ember_path, &image_identity,
+	                          resolved, resolved_size);
+	return id;
 #endif
 }
 

@@ -41,7 +41,8 @@ assert "padPortClose(0, 0)" in internal
 assert "padEnd();" in internal
 
 # USB gets one clean IOP reset BEFORE the final storage stack is built.
-assert "prepareEmberUsbHandoffIop(ember_elf)" in launch
+assert "prepareEmberUsbHandoffIop(ember_elf, path," in launch
+assert "remounted_elf" in launch
 assert "SifIopReset" in usb
 assert "SifIopSync" in usb
 assert "resetUsbHostControllerBeforeIopReset" in usb
@@ -61,8 +62,10 @@ usb_code = re.sub(r"//.*", "", usb_code)
 assert "padman_irx" not in usb_code
 assert "setupPad(" not in usb_code
 assert "fileXioInit()" in usb
-assert "fileXioGetStat(probe" in usb
-assert "DelayThread(100 * 1000)" in usb
+assert "emberUsbFindRemounted(game_image, ember_path" in usb
+assert "emberUsbIdentifyFile(game_image" in usb
+assert "emberUsbFindRemounted(game_image, ember_path" in usb
+assert "DelayThread(100 * 1000)" in init
 
 # After the stack is ready, the embedded loader MUST NOT reset it again.
 assert "RunLoaderElfKeepIOPWithArgv0" in launch
