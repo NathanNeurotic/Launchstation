@@ -8,6 +8,11 @@ people's firmware. The supported adapter-side path is to save a separately
 verified image under `mmceN:/WLE-Recovered`; that neutral holding directory
 is not part of the selectable `MemoryCards/PS2` backing-card hierarchy.
 It makes a new file on the adapter but does not activate or replace a card.
+A separate **new selectable card** action may install a verified image into an
+entirely unused `MemoryCards/PS2/CardN/CardN-1.mcd` path. It does not overwrite
+an existing card or switch selection. The newly created directory is not a
+journaled, power-loss-safe publish transaction: a failed fallback copy may
+leave a partial final-name image and must not be selected until inspected.
 The optional transaction research under `research/sd2psxtd/` is
 non-production reference material, **not a requirement to fork or change
 adapter firmware**.
