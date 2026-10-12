@@ -701,6 +701,172 @@ static int drive_find_child(GoogleSession *s, const char *parent, const char *na
     return id[0] ? 1 : 0;
 }
 
+
+/* Drive browsing is deliberately metadata-only. Files are never fetched or
+ * written by this API, and it only walks the app-owned backup root. */
+static int drive_safe_id(const char *id)
+{
+    const unsigned char *p = (const unsigned char *)id;
+    if (id == NULL || !*id || strlen(id) >= CLOUD_ID_MAX)
+        return 0;
+    for (; *p; ++p)
+        if (!isalnum(*p) && *p != '-' && *p != '_')
+            return 0;
+    return 1;
+}
+
+/* Extract exactly one JSON object, respecting quoted braces and escapes.
+ * Google may add fields in the future, but we only request three strings. */
+static int drive_browse_parse(const char *json, CloudGoogleBrowsePage *page)
+{
+    const char *p, *start, *end;
+    char item[768], mime[96];
+    int inside = 0, escaped = 0, depth, len;
+
+    if (json == NULL || page == NULL)
+        return -1;
+    p = strstr(json, "\"files\"");
+    if (!p || !(p = strchr(p, '[')))
+        return -1;
+    ++p;
+    while (*p) {
+        while (*p && (isspace((unsigned char)*p) || *p == ','))
+            ++p;
+        if (*p == ']')
+            return 0;
+        if (*p != '{')
+            return -1;
+        start = p;
+        depth = 0;
+        inside = escaped = 0;
+        for (; *p; ++p) {
+            if (inside) {
+                if (escaped)
+                    escaped = 0;
+                else if (*p == '\\')
+                    escaped = 1;
+                else if (*p == '"')
+                    inside = 0;
+            } else if (*p == '"') {
+                inside = 1;
+            } else if (*p == '{') {
+                depth++;
+            } else if (*p == '}' && --depth == 0) {
+                ++p;
+                break;
+            }
+        }
+        if (depth != 0 || inside)
+            return -1;
+        end = p;
+        len = (int)(end - start);
+        if (len <= 0 || len >= (int)sizeof(item))
+            return -1;
+        memcpy(item, start, len);
+        item[len] = 0;
+        if (page->count < CLOUD_GOOGLE_BROWSE_MAX) {
+            CloudGoogleBrowseItem *e = &page->items[page->count];
+            if (!json_string(item, "id", e->id, sizeof(e->id)) ||
+                !json_string(item, "name", e->name, sizeof(e->name)) ||
+                !json_string(item, "mimeType", mime, sizeof(mime)))
+                return -1;
+            if (!drive_safe_id(e->id) ||
+                e->name[0] == '\0' || !strcmp(e->name, ".") ||
+                !strcmp(e->name, ".."))
+                return -1;
+            e->is_folder = !strcmp(mime, "application/vnd.google-apps.folder");
+            if (e->is_folder ||
+                (!strncmp(e->name, "WLE-", 4) &&
+                 (genCmpFileExt(e->name, "MCD") ||
+                  genCmpFileExt(e->name, "PS2"))))
+                page->count++;
+            else
+                memset(e, 0, sizeof(*e));
+        }
+    }
+    return -1;
+}
+
+int cloudGoogleListBackupHistory(const char *parent_id, const char *page_token,
+                                 CloudGoogleBrowsePage *page,
+                                 char *error, int error_size)
+{
+    GoogleSession session;
+    CloudHttpResponse response;
+    char root[CLOUD_ID_MAX], escaped[CLOUD_ID_MAX * 2];
+    char query[384], encoded[1152], path[2304];
+    int n, at;
+
+    if (page == NULL)
+        return -1;
+    memset(page, 0, sizeof(*page));
+    if (load_session(&session, 1, error, error_size) < 0)
+        return -1;
+    if (!ensureDashboardIpNetworkReady()) {
+        set_error(error, error_size, "Network is unavailable for Drive history browsing");
+        return -1;
+    }
+    if (refresh_access_token(&session, error, error_size) < 0)
+        return -1;
+    if (parent_id == NULL || parent_id[0] == '\0') {
+        n = drive_find_child(&session, "root", "WLE-MMCE-Backups", 1, NULL,
+                             root, sizeof(root), error, error_size);
+        if (n <= 0) {
+            if (n == 0)
+                set_error(error, error_size, "No Launchstation backup folder found on Drive");
+            return -1;
+        }
+    } else {
+        if (!drive_safe_id(parent_id)) {
+            set_error(error, error_size, "Invalid Google Drive history folder ID");
+            return -1;
+        }
+        snprintf(root, sizeof(root), "%s", parent_id);
+    }
+    snprintf(page->folder_id, sizeof(page->folder_id), "%s", root);
+    if (q_escape(root, escaped, sizeof(escaped)) < 0)
+        return -1;
+    n = snprintf(query, sizeof(query), "'%s' in parents and trashed=false", escaped);
+    if (n <= 0 || n >= (int)sizeof(query))
+        return -1;
+    at = append_url(encoded, sizeof(encoded), 0, query);
+    if (at < 0)
+        return -1;
+    n = snprintf(path, sizeof(path),
+                 "/drive/v3/files?q=%s&spaces=drive&pageSize=%d"
+                 "&fields=nextPageToken,files(id,name,mimeType)&orderBy=name",
+                 encoded, CLOUD_GOOGLE_BROWSE_MAX);
+    if (n <= 0 || n >= (int)sizeof(path))
+        return -1;
+    if (page_token != NULL && *page_token != '\0') {
+        int at_path;
+        if (strlen(page_token) > 240) {
+            set_error(error, error_size, "Invalid cloud-history pagination token");
+            return -1;
+        }
+        at_path = n;
+        n = snprintf(path + at_path, sizeof(path) - at_path, "&pageToken=");
+        if (n < 0 || n >= (int)(sizeof(path) - at_path))
+            return -1;
+        if (append_url(path, sizeof(path), at_path + n, page_token) < 0)
+            return -1;
+    }
+    memset(&response, 0, sizeof(response));
+    if (drive_request(&session, "GET", path, "application/json", NULL,
+                      &response, error, error_size) < 0)
+        return -1;
+    if (response.status != 200 ||
+        drive_browse_parse(response.body, page) < 0) {
+        snprintf(error, error_size, "Drive history listing failed (HTTP %d)", response.status);
+        cloudHttpResponseFree(&response);
+        return -1;
+    }
+    json_string(response.body, "nextPageToken", page->next_page_token,
+                sizeof(page->next_page_token));
+    cloudHttpResponseFree(&response);
+    return 0;
+}
+
 static int drive_create_folder(GoogleSession *s, const char *parent, const char *name,
                                char *id, int id_size, char *error, int error_size)
 {

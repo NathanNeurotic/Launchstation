@@ -16,6 +16,7 @@
 #include "cloud_http.h"
 #endif
 #include <stddef.h>
+#include <stdlib.h>
 
 enum ToolAction {
 	TA_HEADER = 0,
@@ -955,13 +956,125 @@ static int cloudSetupGui(void)
 	}
 }
 
+
+/* Read-only, bounded navigation through the app-created Drive backup tree.
+ * There is deliberately no direct restore or download button here: an MMCE
+ * card must not be replaced without active-card and write safety guarantees. */
+static void cloudBrowseHistory(void)
+{
+    CloudGoogleBrowsePage *page;
+    char current[192] = "", token[256] = "", parent_ids[12][192];
+    char folder_name[256] = "WLE-MMCE-Backups", parent_names[12][256];
+    char names[CLOUD_GOOGLE_BROWSE_MAX][256];
+    int depth = 0, i;
+
+    if (!cloudGoogleIsLinked()) {
+        dashModalMessage(DI_INFO, "Google Drive is not linked",
+                         "Link Google Drive before browsing backed-up snapshots.", NULL);
+        return;
+    }
+    if (!dashWorkerAwaitAll("Finishing device operations"))
+        return;
+    page = (CloudGoogleBrowsePage *)calloc(1, sizeof(*page));
+    if (!page) {
+        dashModalMessage(DI_WARNING, "Not enough memory",
+                         "Could not allocate the Drive history page.", NULL);
+        return;
+    }
+    for (;;) {
+        char error[192];
+        DashMenuItem items[CLOUD_GOOGLE_BROWSE_MAX + 3];
+        int actions[CLOUD_GOOGLE_BROWSE_MAX + 3], n = 0, choice;
+
+        error[0] = '\0';
+        dashLoadingBegin("Reading Google Drive backup history");
+        i = cloudGoogleListBackupHistory(current, token, page,
+                                         error, sizeof(error));
+        dashLoadingEnd();
+        if (i < 0) {
+            dashModalMessage(DI_WARNING, "Cloud history unavailable",
+                             error[0] ? error : "Could not list the Drive backup folder.",
+                             "Existing local and cloud backups were not changed.");
+            break;
+        }
+        if (current[0] == '\0')
+            dashStrCopy(current, page->folder_id, sizeof(current));
+        items[n].icon = DI_BACK;
+        items[n].label = depth ? "Up one folder" : "Close";
+        items[n].detail = depth ? "Return to the parent backup folder" : NULL;
+        items[n].disabled = 0;
+        actions[n++] = -1;
+        for (i = 0; i < page->count; ++i) {
+            CloudGoogleBrowseItem *entry = &page->items[i];
+            /* Modal item labels must remain live while the selection runs. */
+            dashStrCopy(names[i], entry->name, sizeof(names[i]));
+            items[n].icon = entry->is_folder ? DI_FOLDER : DI_MC;
+            items[n].label = names[i];
+            items[n].detail = entry->is_folder ? "Browse backup folder" :
+                              "Uploaded snapshot name (contents not downloaded or verified)";
+            items[n].disabled = 0;
+            actions[n++] = i;
+        }
+        if (page->next_page_token[0]) {
+            items[n].icon = DI_REFRESH;
+            items[n].label = "Next page";
+            items[n].detail = "Load more Drive backup entries";
+            items[n].disabled = 0;
+            actions[n++] = -2;
+        }
+        if (page->count == 0 && !page->next_page_token[0]) {
+            items[n].icon = DI_INFO;
+            items[n].label = "No backup files in this folder";
+            items[n].detail = "This page contains no visible app-created snapshots";
+            items[n].disabled = 1;
+            actions[n++] = -3;
+        }
+        choice = dashModalMenu("Google Drive backup history", folder_name,
+                               items, n, 0);
+        if (choice < 0 || actions[choice] == -1) {
+            if (depth == 0)
+                break;
+            dashStrCopy(current, parent_ids[--depth], sizeof(current));
+            dashStrCopy(folder_name, parent_names[depth], sizeof(folder_name));
+            token[0] = '\0';
+            continue;
+        }
+        if (actions[choice] == -2) {
+            dashStrCopy(token, page->next_page_token, sizeof(token));
+            continue;
+        }
+        if (actions[choice] < 0)
+            continue;
+        {
+            CloudGoogleBrowseItem *item = &page->items[actions[choice]];
+            if (!item->is_folder) {
+                dashModalMessage(DI_INFO, "Saved Google Drive snapshot",
+                                 item->name,
+                                 "This is a read-only listing. Cloud download and direct MMCE card replacement are not yet enabled.");
+                continue;
+            }
+            if (depth >= 12) {
+                dashToast(DASH_TOAST_WARN, "Backup folder nesting limit reached");
+                continue;
+            }
+            dashStrCopy(parent_ids[depth], current, sizeof(parent_ids[0]));
+            dashStrCopy(parent_names[depth], folder_name, sizeof(parent_names[0]));
+            depth++;
+            dashStrCopy(current, item->id, sizeof(current));
+            dashStrCopy(folder_name, item->name, sizeof(folder_name));
+            token[0] = '\0';
+        }
+    }
+    free(page);
+}
+
 void dashToolsCloudBackup(void)
 {
 	char error[192], client_id[384], client_secret[384];
 	int ca_present, configured, linked, has_token, r, selected = -1;
 
 	for (;;) {
-		DashMenuItem items[6];
+		DashMenuItem items[7];
 		int ids[6], n = 0;
 
 		error[0] = '\0';
@@ -1002,6 +1115,12 @@ void dashToolsCloudBackup(void)
 		items[n].disabled = !linked || !dashCfg.igr_backup_path[0];
 		ids[n++] = 2;
 
+		items[n].icon = DI_FOLDER;
+		items[n].label = "Browse cloud history...";
+		items[n].detail = "Read-only folders and saved card snapshots";
+		items[n].disabled = !linked;
+		ids[n++] = 6;
+
 		items[n].icon = DI_FILE;
 		items[n].label = "Backup folder...";
 		items[n].detail = dashCfg.igr_backup_path[0] ? dashCfg.igr_backup_path : "Select the parent of WLE-MMCE-Backups";
@@ -1022,6 +1141,9 @@ void dashToolsCloudBackup(void)
 			return;
 
 		switch (ids[r]) {
+			case 6:
+				cloudBrowseHistory();
+				continue;
 			case 5: {
 				char folder[MAX_PATH];
 				if (!dashWorkerAwaitAll("Finishing backup status check"))
