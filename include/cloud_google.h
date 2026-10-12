@@ -37,7 +37,8 @@ int cloudGoogleInstallCaBundle(const char *source_path, char *error, int error_s
 int cloudGoogleIsLinked(void);
 int cloudGoogleHasLocalToken(void);
 int cloudGoogleBeginLink(CloudGoogleDeviceCode *code, char *error, int error_size);
-/* 0 = linked, 1 = authorization still pending, <0 = failed/expired. */
+/* 0 = linked, 1 = authorization still pending, 2 = pending and Google asked
+ * to poll more slowly (add 5 s to the interval), <0 = failed/expired. */
 int cloudGoogleFinishLink(const CloudGoogleDeviceCode *code, char *error, int error_size);
 int cloudGoogleDisconnect(char *error, int error_size);
 /* Read-only browsing of backups created by this Launchstation OAuth client.

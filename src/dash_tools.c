@@ -6,6 +6,7 @@
 //runs the command (disc, OSDSYS, network...) behind the loading overlay.
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "dash_sound.h"
 #include "mmce_igr.h"
 #include "mmce_backup.h"
 #include "mmce_igr.h"
@@ -14,6 +15,7 @@
 #include "init.h"
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 #include "cloud_http.h"
+#include "qrcodegen.h"
 #endif
 #include <stddef.h>
 #include <stdlib.h>
@@ -159,11 +161,53 @@ static void cloudProgress(const char *status, int done, int total)
 	dashLoadingStatus(status != NULL ? status : "Google Drive", done, total);
 }
 
+#define CLOUD_QR_MAX_VERSION 6
+#define CLOUD_LINK_NET_RETRIES 3
+
+enum { CLOUD_LINK_DONE = 0, CLOUD_LINK_FAILED = -1, CLOUD_LINK_CANCELLED = -2, CLOUD_LINK_EXPIRED = -3 };
+
+/* A QR symbol as dark row runs on a white square with a 4-module quiet zone,
+ * so a phone can scan it straight off the TV. */
+static void cloudDrawQr(const uint8_t *qr, float x, float y, float side)
+{
+	int size = qrcodegen_getSize(qr), mx, my;
+	float m = (float)(int)(side / (size + 8));
+	float ox, oy;
+
+	if (m < 1.0f)
+		m = 1.0f;
+	ox = x + (side - m * size) * 0.5f;
+	oy = y + (side - m * size) * 0.5f;
+	dashRect(x, y, side, side, DC(255, 255, 255, 255));
+	for (my = 0; my < size; my++) {
+		for (mx = 0; mx < size;) {
+			int run = 0;
+			while (mx + run < size && qrcodegen_getModule(qr, mx + run, my))
+				run++;
+			if (run) {
+				dashRect(ox + mx * m, oy + my * m, run * m, m, DC(0, 0, 0, 255));
+				mx += run;
+			} else
+				mx++;
+		}
+	}
+}
+
+/* One screen for the whole device flow: QR + address + code, then poll
+ * Google at its requested interval until approved, expired or cancelled. */
 static void cloudLink(void)
 {
 	CloudGoogleDeviceCode code;
-	char error[256], body[448], detail[256];
-	int r;
+	uint8_t qr[qrcodegen_BUFFER_LEN_FOR_VERSION(CLOUD_QR_MAX_VERSION)];
+	uint8_t qr_tmp[qrcodegen_BUFFER_LEN_FOR_VERSION(CLOUD_QR_MAX_VERSION)];
+	char error[256], status[160];
+	const char *url;
+	const float w = 540.0f, h = 300.0f, x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
+	const float qside = 150.0f, rx = x + 24 + qside + 24, rw = w - (rx - x) - 24;
+	u64 start, deadline, next_poll;
+	int r, have_qr, interval, failures = 0, result;
+	float open = 0.0f;
+	DashInput in;
 
 	error[0] = '\0';
 	dashLoadingBegin("Starting Google Drive authorization");
@@ -176,38 +220,100 @@ static void cloudLink(void)
 		return;
 	}
 
-	snprintf(body, sizeof(body),
-	         "On a phone or computer, open:\n%s\n\nEnter this code: %s\n\nThen sign in and choose Allow.",
-	         code.verification_url, code.user_code);
-	snprintf(detail, sizeof(detail),
-	         "No Google Cloud setup or payment details are needed. Launchstation can only see files it creates.");
-	dashModalMessage(DI_INFO, "Link Google Drive", body, detail);
+	have_qr = qrcodegen_encodeText(code.verification_url, qr_tmp, qr, qrcodegen_Ecc_MEDIUM,
+	                               qrcodegen_VERSION_MIN, CLOUD_QR_MAX_VERSION, qrcodegen_Mask_AUTO, true);
+	url = strncmp(code.verification_url, "https://", 8) ? code.verification_url : code.verification_url + 8;
+	interval = code.interval > 0 ? code.interval : 5;
+	start = Timer();
+	deadline = start + (u64)(code.expires_in > 0 ? code.expires_in : 1800) * 1000;
+	next_poll = start + (u64)interval * 1000;
 
+	dashInputFlush();
 	for (;;) {
-		if (!dashModalConfirm("Check Google Drive authorization?",
-		                      "Finish the browser step first, then choose Check. Back keeps the account unlinked.",
-		                      "Check", 0))
-			return;
+		u64 now = Timer();
+		int checking = now >= next_poll;
+		float oe;
+
+		dashInputPoll(&in);
+		if (in.pressed & DASH_IN_BACK) {
+			dashSoundPlay(DASH_SND_CANCEL);
+			result = CLOUD_LINK_CANCELLED;
+			break;
+		}
+		if (now >= deadline) {
+			result = CLOUD_LINK_EXPIRED;
+			break;
+		}
+		if (checking)
+			snprintf(status, sizeof(status), "Checking with Google...");
+		else if (failures)
+			snprintf(status, sizeof(status), "Network problem - retrying in %d s", (int)((next_poll - now + 999) / 1000));
+		else
+			snprintf(status, sizeof(status), "Waiting for approval - code expires in %d min",
+			         (int)((deadline - now + 59999) / 60000));
+
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dashVisualUpdate());
+		oe = dashEaseOutCubic(open);
+		dashRenderScene();
+		dashModalBackdrop(oe);
+		dashGfxPushAlpha(oe);
+		dashGfxPushOffset(0, 18.0f * (1.0f - oe));
+		dashModalPanel(x, y, w, h, oe);
+		dashIcon(DI_NETWORK, x + 24, y + 18, 24, DASH_C_ACCENT);
+		dashTextS(x + 58, y + 20, "Link Google Drive", DASH_FS_LABEL, DASH_C_TEXT);
+		if (have_qr)
+			cloudDrawQr(qr, x + 24, y + 58, qside);
+		dashTextFit(rx, y + 58, rw, have_qr ? "1. Scan the code, or open:" : "1. On a phone or computer, open:",
+		            DASH_FS_CAPTION, DASH_C_TEXT2);
+		dashTextFit(rx, y + 76, rw, url, DASH_FS_SMALL, DASH_C_ACCENT);
+		dashTextFit(rx, y + 106, rw, "2. Enter this code:", DASH_FS_CAPTION, DASH_C_TEXT2);
+		dashTextFit(rx, y + 122, rw, code.user_code, DASH_FS_TITLE, DASH_C_TEXT);
+		dashTextFit(rx, y + 158, rw, "3. Sign in and choose Allow.", DASH_FS_CAPTION, DASH_C_TEXT2);
+		dashTextFit(rx, y + 186, rw, status, DASH_FS_CAPTION, failures ? DASH_C_WARM : DASH_C_ACCENT);
+		dashTextWrap(x + 24, y + 222, w - 48, 2,
+		             "No Google Cloud setup or payment details are needed. Launchstation can only see files it creates.",
+		             DASH_FS_CAPTION, DASH_C_TEXT3, 15);
+		dashModalHintRow(x + 24, y + h - 36, -1, NULL, dashBackIcon(), "Cancel");
+		dashGfxPopOffset();
+		dashGfxPopAlpha();
+		dashGfxPresent();
+
+		if (!checking)
+			continue;
+		/* Blocking HTTPS round trip; the frame above already says so. */
 		error[0] = '\0';
-		dashLoadingBegin("Checking Google authorization");
 		r = cloudGoogleFinishLink(&code, error, sizeof(error));
-		dashLoadingEnd();
 		if (r == 0) {
-			dashModalMessage(DI_CHECK, "Google Drive linked",
-			                 "Native PS2 cloud backup is ready.",
-			                 "Use this tool to sync now, or enable Google Drive after IGR under Settings > Storage & devices > MMCE backups.");
-			return;
+			result = CLOUD_LINK_DONE;
+			break;
 		}
+		if (r == 2)
+			interval += 5; /* Google's slow_down: back off as RFC 8628 requires */
 		if (r < 0) {
-			dashModalMessage(DI_WARNING, "Google Drive link failed",
-			                 error[0] ? error : "Google authorization failed.",
-			                 "Start Link Google Drive again if the device code expired.");
-			return;
-		}
-		dashModalMessage(DI_INFO, "Still waiting for Google",
-		                 error[0] ? error : "Authorization is not complete yet.",
-		                 "Complete the code entry in your browser, then check again.");
+			/* An OAuth answer (denied, expired...) is final; a network hiccup
+			 * is retried a few times before giving up. */
+			if (!strncmp(error, "Google OAuth:", 13) || ++failures >= CLOUD_LINK_NET_RETRIES) {
+				result = CLOUD_LINK_FAILED;
+				break;
+			}
+		} else
+			failures = 0;
+		next_poll = Timer() + (u64)interval * 1000;
 	}
+	dashInputFlush();
+
+	if (result == CLOUD_LINK_DONE)
+		dashModalMessage(DI_CHECK, "Google Drive linked",
+		                 "Native PS2 cloud backup is ready.",
+		                 "Use this tool to sync now, or enable Google Drive after IGR under Settings > Storage & devices > MMCE backups.");
+	else if (result == CLOUD_LINK_EXPIRED)
+		dashModalMessage(DI_WARNING, "Google code expired",
+		                 "The sign-in code was not approved in time.",
+		                 "Choose Link Google Drive again to get a new code.");
+	else if (result == CLOUD_LINK_FAILED)
+		dashModalMessage(DI_WARNING, "Google Drive link failed",
+		                 error[0] ? error : "Google authorization failed.",
+		                 "Choose Link Google Drive again to retry.");
 }
 
 static void cloudSyncNow(void)

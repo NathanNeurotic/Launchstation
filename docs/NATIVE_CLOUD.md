@@ -44,9 +44,13 @@ failure behavior therefore remains part of the real-hardware validation matrix.
 No setup files and no Google Cloud project are needed:
 
 1. Open Tools > Google Drive backups and choose **Link Google Drive**.
-2. On a phone or computer, open the displayed address
-   (`https://www.google.com/device`) and enter the displayed code.
-3. Sign in, choose Allow, then choose Check on the PS2.
+2. Scan the QR code with a phone, or open the displayed address
+   (`https://www.google.com/device`) on any device, and enter the displayed
+   code.
+3. Sign in and choose Allow. The PS2 checks with Google automatically (at
+   Google's requested interval, slowing down when asked) and shows when the
+   account is linked. Back cancels; an unused code expires after Google's
+   time limit.
 
 Official builds embed Launchstation's own OAuth client (type **TVs and
 Limited Input devices**) and the Google Trust Services root certificates

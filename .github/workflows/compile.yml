@@ -73,6 +73,7 @@ jobs:
           python3 tests/test_root_mc_poll.py
           python3 tests/test_pad_icon_order.py
           python3 tests/test_hint_clearance.py
+          python3 tests/test_cloud_link_screen.py
           python3 tests/test_mmce_protocol.py
           python3 tests/test_mmce_upstream_contract.py
           python3 tests/test_mmce_restore_txn_model.py

@@ -454,7 +454,8 @@ enum DashIcon {
 	DI_PALETTE, /* theme settings */
 	DI_RECENT,  /* recently used */
 	DI_IMAGE,   /* wallpaper / picture */
-	DI_COUNT    /* the SDF atlas holds 55 icons (7 x 8); pad tiles are PNGs */
+	DI_DPAD_UD, /* D-pad with up/down highlighted ("scroll") */
+	DI_COUNT    /* the SDF atlas holds 56 icons (7 x 8, now full); pad tiles are PNGs */
 };
 
 void dashIconsInit(void);
