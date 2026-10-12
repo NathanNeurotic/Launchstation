@@ -3,12 +3,20 @@
 ## Remote history browser
 
 From **Tools > Google Drive backups**, choose **Browse cloud history...** to
-inspect the app-created `WLE-MMCE-Backups` folder. The picker is read-only,
-paginates Drive metadata in groups of twelve and shows card snapshot names
-without downloading or modifying remote files. Only folders and completed
-`WLE-*.mcd` / `WLE-*.ps2` history entries appear; incomplete `.PART` files are
-excluded. Direct cloud download/restore and writing over MMCE cards are
-not yet enabled; continue using local verified recovery for those images.
+inspect the app-created `WLE-MMCE-Backups` folder. The picker paginates Drive
+metadata in groups of twelve and shows completed `WLE-*.mcd` / `WLE-*.ps2`
+backup entries; incomplete `.PART` files are excluded. Select a snapshot with
+a stored `wle_sha256` digest, choose an external USB/HDD folder and confirm
+to download a new `RECOVER-CLOUD-###.mcd` there. The app streams the complete
+file with authenticated TLS, enforces a size limit, checks the uploaded SHA-256
+and PS2 card geometry, verifies its local converted copy, then publishes the
+completed image. A failed download or verification cannot publish a final card.
+
+Snapshots without a stored digest can be inspected but not recovered through
+this workflow. Google Drive history is never modified and downloaded backups
+are **not** automatically activated or copied over an emulated MMCE card.
+Direct in-place MMCE restore remains disabled until the active-card detection
+and interrupted-write recovery guarantees can be established.
 
 
 Launchstation contains an original Google Drive client for uploading the

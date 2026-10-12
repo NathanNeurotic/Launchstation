@@ -873,16 +873,41 @@ static int download_chunked_consume(CloudChunkDecoder *dec,
     return dec->state == 4 ? 1 : 0;
 }
 
-int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
-                        int max_bytes, int *out_size,
-                        unsigned char digest[32],
-                        char *error, int error_size)
+/* The Drive media reader may follow Google's signed content redirects, but
+ * bearer credentials never leave www.googleapis.com. The existing updater
+ * uses the same streaming engine with no credentials/restrictions changed. */
+static int cloud_google_media_host(const char *host)
+{
+    static const char suffix[] = ".googleusercontent.com";
+    size_t n;
+    if (host == NULL)
+        return 0;
+    if (!strcmp(host, "www.googleapis.com") ||
+        !strcmp(host, "content.googleapis.com"))
+        return 1;
+    n = strlen(host);
+    return n > sizeof(suffix) - 1 &&
+           !strcmp(host + n - (sizeof(suffix) - 1), suffix);
+}
+
+static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
+                                       int fd, const char *ca_path,
+                                       int max_bytes, int *out_size,
+                                       unsigned char digest[32],
+                                       char *error, int error_size)
 {
     char current[CLOUD_HTTP_LOCATION_MAX];
     int redirect;
 
     if (url == NULL || fd < 0 || ca_path == NULL || max_bytes <= 0)
         return -1;
+    if (bearer != NULL &&
+        (strncmp(url, "https://www.googleapis.com/drive/v3/files/", 42) != 0 ||
+         bearer[0] == '\0' || strlen(bearer) > 2048 ||
+         strchr(bearer, '\r') != NULL || strchr(bearer, '\n') != NULL)) {
+        set_error(error, error_size, "Invalid authenticated Google media request", 0);
+        return -1;
+    }
     if (strlen(url) >= sizeof(current)) {
         set_error(error, error_size, "HTTPS download URL is too long", 0);
         return -1;
@@ -895,7 +920,7 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
 
     for (redirect = 0; redirect < 6; redirect++) {
         CloudTls tls;
-        char host[256], path[2048], request[3072];
+        char host[256], path[2048], request[6144], auth_line[2112];
         char *raw, *header_end, value[64], location[CLOUD_HTTP_LOCATION_MAX];
         unsigned char *io_buf;
         int used = 0, header_len, body_len, status, chunked = 0;
@@ -911,10 +936,11 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
             set_error(error, error_size, "Out of memory preparing HTTPS download", 0);
             return -1;
         }
-        if (split_https_url(current, host, sizeof(host), path, sizeof(path)) < 0) {
+        if (split_https_url(current, host, sizeof(host), path, sizeof(path)) < 0 ||
+            (bearer != NULL && !cloud_google_media_host(host))) {
             free(raw);
             free(io_buf);
-            set_error(error, error_size, "Invalid HTTPS download URL", 0);
+            set_error(error, error_size, "Untrusted Google media redirect host", 0);
             return -1;
         }
         if (tls_open(&tls, host, ca_path, error, error_size) < 0) {
@@ -923,13 +949,25 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
             return -1;
         }
 
+        auth_line[0] = 0;
+        if (bearer != NULL && !strcmp(host, "www.googleapis.com")) {
+            r = snprintf(auth_line, sizeof(auth_line),
+                         "Authorization: Bearer %s\r\n", bearer);
+            if (r < 0 || r >= (int)sizeof(auth_line)) {
+                tls_free(&tls);
+                free(raw);
+                free(io_buf);
+                set_error(error, error_size, "Google token header is too large", 0);
+                return -1;
+            }
+        }
         r = snprintf(request, sizeof(request),
                      "GET %s HTTP/1.1\r\n"
                      "Host: %s\r\n"
                      "User-Agent: Launchstation/Updater\r\n"
                      "Accept: application/octet-stream\r\n"
-                     "Connection: close\r\n\r\n",
-                     path, host);
+                     "%sConnection: close\r\n\r\n",
+                     path, host, auth_line);
         if (r <= 0 || r >= (int)sizeof(request) ||
             ssl_write_all(&tls, request, r, error, error_size) < 0) {
             tls_free(&tls);
@@ -1171,4 +1209,24 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
 
     set_error(error, error_size, "Too many HTTPS redirects", 0);
     return -1;
+}
+
+/* Historical self-update interface, deliberately unauthenticated. */
+int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
+                        int max_bytes, int *out_size,
+                        unsigned char digest[32],
+                        char *error, int error_size)
+{
+    return cloudHttpDownloadFdInternal(url, NULL, fd, ca_path, max_bytes,
+                                       out_size, digest, error, error_size);
+}
+
+int cloudHttpDownloadGoogleFd(const char *url, const char *bearer_token, int fd,
+                              const char *ca_path, int max_bytes,
+                              int *out_size, unsigned char digest[32],
+                              char *error, int error_size)
+{
+    return cloudHttpDownloadFdInternal(url, bearer_token, fd, ca_path,
+                                       max_bytes, out_size, digest,
+                                       error, error_size);
 }

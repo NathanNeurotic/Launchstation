@@ -42,6 +42,7 @@ int cloudGoogleDisconnect(char *error, int error_size);
 typedef struct {
     char id[192];
     char name[256];
+    char sha256[65]; /* app-uploaded digest; empty for legacy/unverified items */
     int is_folder;
 } CloudGoogleBrowseItem;
 typedef struct {
@@ -54,6 +55,13 @@ typedef struct {
 int cloudGoogleListBackupHistory(const char *parent_id, const char *page_token,
                                  CloudGoogleBrowsePage *page,
                                  char *error, int error_size);
+
+/* Download one listed Drive snapshot, verify its uploaded SHA-256 and
+ * memory-card geometry, then create a NEW verified .mcd on USB/HDD.
+ * Never overwrites local files or touches the MMCE filesystem. */
+int cloudGoogleRecoverSnapshot(const CloudGoogleBrowseItem *snapshot,
+                               const char *dest_dir, char *result_path,
+                               int result_size, char *error, int error_size);
 
 int cloudGoogleSyncBackupRoot(const char *backup_root, CloudGoogleSyncStats *stats,
                               CloudGoogleProgress progress, char *error, int error_size);

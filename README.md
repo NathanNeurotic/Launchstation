@@ -14,7 +14,7 @@ The full Launchstation reference is published as a PS2-styled GitHub Pages site:
 - **Offline:** generate locally with `python docs-site/build.py --out build/docs --zip build/Launchstation-Documentation.zip`
 - **Source:** `docs-site/` in this repository
 
-**Cloud history browsing:** In Tools > Google Drive backups, linked users can inspect uploaded `WLE-MMCE-Backups` history through a paged, read-only folder browser. This does not download or restore images, and never changes Drive or MMCE files.
+**Cloud recovery:** In Tools > Google Drive backups, linked users can browse uploaded `WLE-MMCE-Backups` history and download an individually selected, SHA-256-bearing snapshot to a NEW verified `RECOVER-CLOUD-###.mcd` on USB/HDD. No Drive history is altered and no emulated MMCE card is replaced. Cloud items without an uploader digest remain view-only.
 
 **Release packages:** Standard builds ship as `APP_LAUNCHSTATION.psu` and `APP_LAUNCHSTATION.zip`, containing `APP_LAUNCHSTATION/LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.PEM` and `BGM.ADP`. DualShock builds ship as `APP_LAUNCHSTATION-DS.psu` and `APP_LAUNCHSTATION-DS.zip`, containing `APP_LAUNCHSTATION-DS/LAUNCHSTATION-DS.ELF` and those same three sidecar files. Both executables are packed. Extract a ZIP to install on a filesystem, or use PSU Paste to install a PSU on a memory card.
 
