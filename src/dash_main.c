@@ -1122,9 +1122,9 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		if (dashGfxCheckScreenChange())
 			dashArtInvalidateVram();
 
-		/* Native Files listings that use USB still serialize libpad input
-		 * with fileXio and discard the pending confirm on completion. */
-		if (section == DASH_SEC_FILES && !dashFileBrowserTabInputReady())
+		/* USB fileXio completion can outlive its Files tab; serialize PAD
+		 * input across all dashboard sections until the final USB read ends. */
+		if (!dashBrowserPadInputReady())
 			memset(&in, 0, sizeof(in));
 		else
 			dashInputPoll(&in);
