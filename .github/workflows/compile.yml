@@ -73,6 +73,7 @@ jobs:
           python3 tests/test_mmce_status_failures.py
           python3 tests/test_self_update.py
           python3 tests/test_app_packages.py
+          python3 tests/test_rolling_release_workflow.py
           python3 tests/test_update_sidecar_transaction.py
           python3 tests/test_update_ancestry.py
           python3 tests/test_png_viewer.py
@@ -281,12 +282,22 @@ jobs:
           # Validate that every public asset has the exact packaged byte size
           # before moving the tag or claiming a successful release. Keep any
           # unrelated manually maintained attachments intact.
+          verify_dir="${RUNNER_TEMP}/launchstation-published-assets"
+          mkdir -p "${verify_dir}"
           for asset in "${assets[@]}"; do
             expected="$(stat -c '%s' "artifacts/${asset}")"
             actual="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
               --jq ".assets[] | select(.name == \"${asset}\") | .size")"
             if [ "${expected}" != "${actual}" ]; then
-              echo "Release asset verification failed: ${asset}, local=${expected}, remote=${actual}" >&2
+              echo "Release asset size verification failed: ${asset}, local=${expected}, remote=${actual}" >&2
+              exit 1
+            fi
+            # Download the actual published bytes; a matching length alone
+            # does not prove an upload was intact or from this build.
+            gh release download "${tag}" --pattern "${asset}" \
+              --dir "${verify_dir}" --clobber
+            if ! cmp -s "artifacts/${asset}" "${verify_dir}/${asset}"; then
+              echo "Release asset content differs from the compiled package: ${asset}" >&2
               exit 1
             fi
           done
