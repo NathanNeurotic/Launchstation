@@ -61,14 +61,14 @@ to Files, the browser restores the previous folder and highlighted entry.
 HOME includes both Continue and the entire application library. Use the
 **Applications** shortcut in Home's **Browse & shortcuts** row to enter
 the full library (Grid, List, Carousel, filters, favorites/pins and refresh).
-Back returns to Home. The Home **Last folder** chip updates after leaving
-the Files tab, not just when a separate modal browser closes.
+Back returns to Home. The Home **Last folder** chip refreshes when Home
+becomes active, without device-readiness probes during Files I/O.
 
 Within Files, **Back** moves to the parent folder. Back from the device
 root returns to Home, but Files remains available as a regular tab. The file
 operations, browse/view/sort modes, copy/paste, VMC backup operations and
 PathPad features remain in the same browser. The directory reader keeps its
-USB/PAD serialization and invalidates in-flight results when switching tabs.
+USB/PAD serialization across all tabs (including reads started before a tab switch) and invalidates in-flight results when switching tabs.
 
 **MISC commands** live in **Tools > Storage > MISC commands** rather than
 being duplicated among the Files tab's device roots. Other launch actions
