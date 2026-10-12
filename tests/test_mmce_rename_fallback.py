@@ -21,9 +21,9 @@ prod = source[start:at]
 assert "mmcePublishInactiveSnapshot(stage, dest)" in source
 assert "fileXioRename(stage, dest)" in prod
 assert "wleExists(dest) || !wleExists(stage)" in prod
-assert "mcCardBackupNoEcc(stage, dest, cardExportProgress)" in prod
+assert "mcCardBackupNoEccNewFile(stage, dest, cardExportProgress)" in prod
 assert "mcCardValidateNoEcc(dest)" in prod
-assert prod.index("wleExists(dest) || !wleExists(stage)") < prod.index("mcCardBackupNoEcc(")
+assert prod.index("wleExists(dest) || !wleExists(stage)") < prod.index("mcCardBackupNoEccNewFile(")
 assert "genRemove(remove_path)" in prod
 
 h = r'''
@@ -47,7 +47,7 @@ static int fileXioRename(const char *a,const char *b){
 static int mcCardValidateNoEcc(const char *p){
     assert(!is_stage(p));return valid==0||valid==12?0:-1;
 }
-static int mcCardBackupNoEcc(const char *a,const char *b,void *progress){
+static int mcCardBackupNoEccNewFile(const char *a,const char *b,void *progress){
     (void)progress;assert(is_stage(a)&&!is_stage(b));
     assert(stage_present && !dest_present);
     copied++;dest_present=1;return fail_copy ? -1 : 0;

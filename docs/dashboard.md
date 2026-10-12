@@ -388,7 +388,12 @@ may be used; power loss during that copy can leave a partial selectable-name
 file in the newly allocated directory. Never select a failed or interrupted
 install until the new directory has been inspected and cleaned up. This is
 not an atomic power-loss-safe card publication guarantee. Original cards
-and source snapshots remain untouched.
+and source snapshots remain untouched. On firmware configurations that return
+success when an existing directory is passed to mkdir, Launchstation additionally
+checks the candidate folder's contents and refuses an occupied directory.
+New MMCE stage and final outputs are opened with exclusive creation so a
+late-arriving existing file cannot be truncated; if another process claims the
+name, installation fails without replacing it.
 
 The USB/HDD recovery action remains unchanged. Direct overwrite of an
 existing MMCE backing image is still unavailable; that is distinct from

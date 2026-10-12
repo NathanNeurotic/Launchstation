@@ -1477,7 +1477,7 @@ static int mmcePublishInactiveSnapshot(const char *stage, const char *dest)
 
     if (wleExists(dest) || !wleExists(stage))
         return 0;
-    copied = mcCardBackupNoEcc(stage, dest, cardExportProgress) ==
+    copied = mcCardBackupNoEccNewFile(stage, dest, cardExportProgress) ==
              MC_CARD_EXPORT_OK;
     if (!copied || mcCardValidateNoEcc(dest) != MC_CARD_EXPORT_OK)
         return 0;
@@ -1566,8 +1566,8 @@ static void opImportCardToMmce(void)
     }
 
     dashLoadingBegin("Copying and verifying an inactive MMCE snapshot");
-    r = pcsx2 ? mcCardImportPcsx2(source, stage, cardExportProgress) :
-                mcCardBackupNoEcc(source, stage, cardExportProgress);
+    r = pcsx2 ? mcCardImportPcsx2NewFile(source, stage, cardExportProgress) :
+                mcCardBackupNoEccNewFile(source, stage, cardExportProgress);
     if (r == MC_CARD_EXPORT_OK &&
         mmcePublishInactiveSnapshot(stage, dest)) {
         dashLoadingEnd();
@@ -1699,7 +1699,21 @@ static void opInstallNewMmceCard(void)
                          folder);
         return;
     }
-    genDclose(fd);
+    /* The stock firmware mkdir returns success even for an existing
+     * directory. Refuse a numbered folder containing any prior entry. */
+    {
+        iox_dirent_t ent;
+        int occupied;
+        memset(&ent, 0, sizeof(ent));
+        occupied = fileXioDread(fd, &ent) > 0;
+        genDclose(fd);
+        if (occupied) {
+            dashModalMessage(DI_WARNING, "Card folder already occupied",
+                             "This CardN folder contains data despite mkdir success; existing card data was left untouched.",
+                             folder);
+            return;
+        }
+    }
     if (wleExists(dest) || wleExists(stage)) {
         dashModalMessage(DI_WARNING, "Card filename already claimed",
                          "The adapter created a file during allocation. No existing image was overwritten.",
@@ -1708,8 +1722,8 @@ static void opInstallNewMmceCard(void)
     }
 
     dashLoadingBegin("Installing verified NEW MMCE memory card");
-    result = pcsx2 ? mcCardImportPcsx2(source, stage, cardExportProgress) :
-                     mcCardBackupNoEcc(source, stage, cardExportProgress);
+    result = pcsx2 ? mcCardImportPcsx2NewFile(source, stage, cardExportProgress) :
+                     mcCardBackupNoEccNewFile(source, stage, cardExportProgress);
     if (result == MC_CARD_EXPORT_OK &&
         mmcePublishInactiveSnapshot(stage, dest)) {
         dashLoadingEnd();

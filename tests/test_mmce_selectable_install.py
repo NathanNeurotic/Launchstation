@@ -36,8 +36,8 @@ assert "number <= 255" in allocator
 assert "mmceSelectableCandidate(unit, folder" in installer
 assert "genMkdir(folder, fileMode)" in installer
 assert "genDopen(parent)" in installer
-assert "mcCardImportPcsx2(source, stage" in installer
-assert "mcCardBackupNoEcc(source, stage" in installer
+assert "mcCardImportPcsx2NewFile(source, stage" in installer
+assert "mcCardBackupNoEccNewFile(source, stage" in installer
 assert "mmcePublishInactiveSnapshot(stage, dest)" in installer
 assert "mcCardValidatePcsx2(source)" in installer
 assert "mcCardValidateNoEcc(source)" in installer

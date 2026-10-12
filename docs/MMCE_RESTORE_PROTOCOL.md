@@ -13,6 +13,10 @@ entirely unused `MemoryCards/PS2/CardN/CardN-1.mcd` path. It does not overwrite
 an existing card or switch selection. The newly created directory is not a
 journaled, power-loss-safe publish transaction: a failed fallback copy may
 leave a partial final-name image and must not be selected until inspected.
+New-file operations use exclusive create flags and refuse occupied numbered
+folders. These controls prevent accidental truncation of an existing file,
+but cannot guarantee atomic publication or prevent firmware from selecting
+a newly created incomplete image after a sudden power loss.
 The optional transaction research under `research/sd2psxtd/` is
 non-production reference material, **not a requirement to fork or change
 adapter firmware**.

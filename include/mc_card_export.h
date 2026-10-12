@@ -22,6 +22,9 @@ typedef void (*McCardExportProgress)(int phase, u64 done, u64 total);
 /* Copy a valid no-ECC .mcd image and verify the completed destination
  * byte-for-byte. Source and destination are never open at the same time. */
 int mcCardBackupNoEcc(const char *source, const char *dest, McCardExportProgress progress);
+/* Create an entirely NEW image with exclusive create; never overwrite or
+ * remove a pre-existing destination after a failed attempt. */
+int mcCardBackupNoEccNewFile(const char *source, const char *dest, McCardExportProgress progress);
 
 /* Same verified native copy, but keeps the synthetic active-MMCE source open
  * for the full operation so active-card discovery occurs only once. */
@@ -38,6 +41,7 @@ int mcCardExportPcsx2(const char *source, const char *dest, McCardExportProgress
 /* Strip PCSX2's 16-byte spare/ECC area from every 512-byte page and verify
  * the resulting no-ECC .mcd image. */
 int mcCardImportPcsx2(const char *source, const char *dest, McCardExportProgress progress);
+int mcCardImportPcsx2NewFile(const char *source, const char *dest, McCardExportProgress progress);
 
 /* Validate an existing image's header/geometry and exact on-disk size.
  * These checks reject interrupted/truncated final-named backup files. */
