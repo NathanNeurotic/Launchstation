@@ -926,6 +926,7 @@ extern const DashScreen dashSettingsScreen;
 /* MMCE/cloud actions and cached Settings status shared by Tools/Settings. */
 void dashToolsIgrBackupSetup(void);
 void dashToolsSyncAllMmceCards(void);
+void dashBrowserRecoverCardPath(const char *source); /* verified new USB/HDD copy only */
 void dashToolsPrepareMmceStatus(void);
 void dashToolsRefreshMmceStatus(void);
 const char *dashToolsMmceStatus(void);
