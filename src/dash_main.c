@@ -1083,7 +1083,9 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	exec_ctx = *ctx;
 
 	dashGfxCheckScreenChange();
+#ifdef WLE_BOOT_DIAGNOSTICS
 	drawMsg("Boot check 5: entering dashboard initialization");
+#endif
 	drawMsgOverride = dashMsgHook;
 	dashClassicUiInstall(1);
 	if (!dash_inited)
@@ -1094,10 +1096,14 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	}
 	DashThemeSetLegacyEnabled(1);
 	mainActionLaunchHook = dashLaunchHook;
+#ifdef WLE_BOOT_DIAGNOSTICS
 	drawMsg("Boot check 6: dashboard initialized; starting audio");
+#endif
 	dashSoundInit();
 	dashBgmStart();
+#ifdef WLE_BOOT_DIAGNOSTICS
 	drawMsg("Boot check 7: audio startup returned");
+#endif
 	if (from_boot)
 		dashSoundPlay(DASH_SND_BOOT);
 
