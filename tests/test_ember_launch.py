@@ -47,7 +47,8 @@ assert "game's umbrella" in ember
 assert "LaunchArgsLoadFromBuffer" in ember
 assert "CleanUpForEmberExec()" in ember
 assert "RunLoaderElfKeepIOPWithArgv0" in ember
-assert "prepareEmberUsbHandoffIop(ember_elf)" in ember
+assert "prepareEmberUsbHandoffIop(ember_elf, path," in ember
+assert "remounted_elf" in ember
 assert "prepareEmberUsbHandoffIop" in init_h
 assert '"SIO2MAN"' in init and '"MCMAN"' in init and '"MCSERV"' in init
 assert '"BDMFS_FATFS"' in init and '"USBMASS_BD"' in init
