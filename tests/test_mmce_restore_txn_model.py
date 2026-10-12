@@ -122,8 +122,9 @@ int main(void) {
     assert(begin(&f,&t,0)==MMCE_TXN_UNSUPPORTED);
     assert(!f.locked && !f.releases && !f.commit_calls);
     reset(&f,&t);f.fail_drain=1;
-    assert(begin(&f,&t,0)==MMCE_TXN_IDENTITY_CHANGED);
-    assert(!f.locked && f.releases==1);
+    assert(begin(&f,&t,0)==MMCE_TXN_NEEDS_RECOVERY);
+    assert(t.state==MMCE_TXN_RECOVERY_REQUIRED);
+    assert(f.locked && f.releases==0 && !f.commit_calls);
     reset(&f,&t);f.fail_backup=1;
     assert(begin(&f,&t,0)==MMCE_TXN_UNSUPPORTED);
     assert(!f.locked && f.releases==1);
