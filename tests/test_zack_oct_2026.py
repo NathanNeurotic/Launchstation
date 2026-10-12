@@ -22,7 +22,7 @@ blobs = read("src/embed_blobs.S")
 header = read("include/dash_internal.h")
 
 # Eight subtitled menu rows previously left just three pixels at the top.
-rows = int(re.search(r"const int max_rows = (\\d+);", ui).group(1))
+rows = int(re.search(r"const int max_rows = ([0-9]+);", ui).group(1))
 tallest_menu = 76 + rows * 38 + 44 + 18
 assert (448 - tallest_menu) / 2 >= 20, (rows, tallest_menu)
 assert "dashGfxScissor(" in ui and "dashGfxScissorReset()" in ui
