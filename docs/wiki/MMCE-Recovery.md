@@ -11,6 +11,22 @@ LAUNCHSTATION retains local verified version history for MMCE card images and, o
 
 To preserve an individual MMCE card before a manual recovery, highlight its `.mcd` in `mmce0:/MemoryCards` or `mmce1:/MemoryCards` and choose the targeted history-backup action. Verification and retention must protect the selected source.
 
+## Install a NEW selectable card on the existing firmware
+
+In File Browser, select a complete USB/HDD `.mcd` or `.ps2` image, or an
+image stored in `mmce0:/WLE-Recovered` / `mmce1:/WLE-Recovered`.
+Choose **Install as NEW selectable MMCE card...**, then select the adapter.
+Launchstation allocates a previously unused numbered `CardN` directory and
+publishes `mmceN:/MemoryCards/PS2/CardN/CardN-1.mcd` after readback
+verification. The newly installed card is **not** automatically selected;
+users can select it through their normal adapter workflow later.
+
+No existing card or GameID/BootCard backing image is replaced, and no sd2psXtd
+firmware update is needed. If copying or publishing fails, leave that
+numbered directory unselected: it may contain a partial `.PART` or `.mcd`
+and needs inspection before cleanup. This is not a safe operation for
+replacing a card already in use and is not an atomic power-loss guarantee.
+
 ## Google Drive history
 
 1. Link the Google account using the native OAuth settings and the Google CA trust bundle; Drive support is optional.
