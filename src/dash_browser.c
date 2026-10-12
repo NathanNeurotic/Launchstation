@@ -1543,14 +1543,33 @@ static void opImportCardToMmce(void)
     dashLoadingBegin("Copying and verifying an inactive MMCE snapshot");
     r = pcsx2 ? mcCardImportPcsx2(source, stage, cardExportProgress) :
                 mcCardBackupNoEcc(source, stage, cardExportProgress);
-    if (r == MC_CARD_EXPORT_OK && !wleExists(dest) &&
-        fileXioRename(stage, dest) >= 0 &&
-        mcCardValidateNoEcc(dest) == MC_CARD_EXPORT_OK) {
-        dashLoadingEnd();
-        dashModalMessage(DI_CHECK, "Snapshot stored on MMCE",
-                         "Verified image saved in WLE-Recovered. This is an inactive holding area, not a selected game memory card.",
-                         dest);
-        return;
+    if (r == MC_CARD_EXPORT_OK && !wleExists(dest)) {
+        int moved = fileXioRename(stage, dest) >= 0;
+        int copied = 0;
+
+        /* sd2cloud's firmware compatibility experience shows that some
+         * MMCE filesystem configurations do not support rename. Do not
+         * treat an ambiguous rename response as proof that a new file was
+         * published. Only fall back if the staged source still exists AND
+         * the destination does not. Never copy over an existing name.
+         * The verified fallback opens one MMCE descriptor at a time. */
+        if (!moved && !wleExists(dest) && wleExists(stage)) {
+            copied = mcCardBackupNoEcc(stage, dest, cardExportProgress) ==
+                     MC_CARD_EXPORT_OK;
+        }
+        if ((moved || copied) &&
+            mcCardValidateNoEcc(dest) == MC_CARD_EXPORT_OK) {
+            if (copied) {
+                char staged_copy[MAX_PATH];
+                dashStrCopy(staged_copy, stage, sizeof(staged_copy));
+                genRemove(staged_copy); /* safe to leave .PART if removal fails */
+            }
+            dashLoadingEnd();
+            dashModalMessage(DI_CHECK, "Snapshot stored on MMCE",
+                             "Verified image saved in WLE-Recovered. This inactive holding area is not a selected game memory card.",
+                             dest);
+            return;
+        }
     }
     /* A partially written or ambiguous file remains in the holding area,
      * never in a firmware-selectable MemoryCards path. No auto-activation. */
