@@ -23,7 +23,7 @@ assert "fileXioRename(stage, dest)" in prod
 assert "wleExists(dest) || !wleExists(stage)" in prod
 assert "mcCardBackupNoEccNewFile(stage, dest, cardExportProgress)" in prod
 assert "mcCardValidateNoEcc(dest)" in prod
-assert prod.index("wleExists(dest) || !wleExists(stage)") < prod.index("mcCardBackupNoEcc(")
+assert prod.index("wleExists(dest) || !wleExists(stage)") < prod.index("mcCardBackupNoEccNewFile(")
 assert "genRemove(remove_path)" in prod
 
 h = r'''
