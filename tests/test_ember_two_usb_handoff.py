@@ -46,7 +46,7 @@ typedef struct {u32 size, hisize, mode;} iox_stat_t;
 #define USBMASS_IOCTL_GET_DRIVERNAME 0xDEAD
 #define FIO_S_ISDIR(mode) (((mode) & 0x4000) != 0)
 #define DPRINTF(...) ((void)0)
-static int duplicate = 0, bad_driver=0;
+static int duplicate = 0, bad_driver=0, after_reset=0;
 static int active_fd=-1, file_pos;
 static const char *game_tail="/EMBER/games/Spyro/Disc.CUE";
 static const char *elf_tail="/EMBER/ember.elf";
@@ -54,7 +54,8 @@ static int unit_of(const char *path) {
     return (!strncmp(path, "usb0:", 5) ? 0 :
             !strncmp(path, "usb1:", 5) ? 1 :
             !strncmp(path, "mass1:", 6) ? 2 :
-            !strncmp(path, "mass2:", 6) ? 3 : -1);
+            !strncmp(path, "mass2:", 6) ? 3 :
+            !strncmp(path, "mass:", 5) ? 4 : -1);
 }
 static int fileXioGetStat(const char *path, iox_stat_t *st) {
     int unit=unit_of(path);
@@ -75,7 +76,9 @@ static int fileXioRead(int fd,void *dst,int count) {
     const char *s;
     int n=6;
     assert(fd==active_fd);
-    s=(fd==1 || fd==3 || (duplicate && fd==2)) ? "TARGET" : "OTHER!";
+    s=(fd==1 || fd==5 || (fd==3 && !after_reset) ||
+       (duplicate && (fd==2 || (fd==3 && after_reset))))
+          ? "TARGET" : "OTHER!";
     if(file_pos>=n)return 0;
     if(count>n-file_pos)count=n-file_pos;
     memcpy(dst,s+file_pos,count);file_pos+=count;return count;
@@ -96,7 +99,8 @@ static void DelayThread(int us){(void)us;}
 """
 code += src[src.index("typedef struct {\n\tu32 size, high, digest;\n} EmberUsbIdentity;"):
             src.index("\n/* Compare the selected *game image*", src.index("typedef struct {\n\tu32 size, high, digest;\n} EmberUsbIdentity;"))]
-for f in ("static int emberUsbSourceIsUsb(", "static int emberUsbIdentifyFile(", "static int emberUsbFindRemounted("):
+for f in ("static int emberUsbRemountPath(", "static int emberUsbSourceIsUsb(",
+          "static int emberUsbIdentifyFile(", "static int emberUsbFindRemounted("):
     code += extract(f)
 code += r"""
 int main(void) {
@@ -105,17 +109,30 @@ int main(void) {
     const char *image="mass1:/EMBER/games/Spyro/Disc.CUE";
     const char *elf="mass1:/EMBER/ember.elf";
     assert(emberUsbSourceIsUsb(image));
+#ifdef EXFAT
     assert(!emberUsbSourceIsUsb("mass2:/EMBER/ember.elf"));
+#else
+    /* Classic USBMASS has only USB-backed mass slots, no BDM ioctl. */
+    assert(emberUsbSourceIsUsb("mass2:/EMBER/ember.elf"));
+#endif
     assert(emberUsbIdentifyFile(image,&before));
+    after_reset=1;
     assert(emberUsbFindRemounted(image,elf,&before,out,sizeof(out)));
-    /* Original mass1 now lives at usb0 after the reset. */
+#ifdef EXFAT
     assert(!strcmp(out,"usb0:/EMBER/ember.elf"));
+#else
+    assert(!strcmp(out,"mass:/EMBER/ember.elf"));
+#endif
     duplicate=1;
     assert(!emberUsbFindRemounted(image,elf,&before,out,sizeof(out)));
     bad_driver=1;
+#ifdef EXFAT
     assert(!emberUsbSourceIsUsb(image));
+#else
+    assert(emberUsbSourceIsUsb(image));
+#endif
     assert(emberUsbSourceIsUsb("usb0:/EMBER/ember.elf"));
-    puts("PASS: two USB drives, reordered enumeration, duplicate games, shared-BDM transport");
+    puts("PASS: two USB drives, reordered enumeration, duplicates, native transport namespace");
     return 0;
 }
 """
@@ -125,5 +142,8 @@ with tempfile.TemporaryDirectory(prefix="ember-dual-usb-") as td:
     source = Path(td) / "handoff.c"
     exe = Path(td) / "handoff"
     source.write_text(code)
-    subprocess.run([cc,"-std=gnu11","-Wall","-Werror","-Wno-unused-parameter",str(source),"-o",str(exe)],check=True)
-    subprocess.run([str(exe)],check=True)
+    for label, flags in (("exfat", ["-DEXFAT"]), ("classic", [])):
+        exe = Path(td) / ("handoff-" + label)
+        subprocess.run([cc,"-std=gnu11","-Wall","-Werror","-Wno-unused-parameter",
+                        "-Wno-unused-function",*flags,str(source),"-o",str(exe)],check=True)
+        subprocess.run([str(exe)],check=True)
