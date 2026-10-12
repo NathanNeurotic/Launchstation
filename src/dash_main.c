@@ -171,6 +171,9 @@ void dashSwitchSection(int s)
 		return;
 	if (!dashConfirmLeave())
 		return;
+	/* Trigger feedback before the potentially slow File Browser tab close.
+	 * Confirmation/cancel dialogs still resolve before a transition sound. */
+	dashSoundPlay(DASH_SND_TRANSITION);
 	/* A tab switch closes only the in-tab browser session, not the
 	 * independent modal browser used by launch-key and Tools actions. */
 	if (section == DASH_SEC_FILES)
@@ -180,7 +183,6 @@ void dashSwitchSection(int s)
 	section = s;
 	section_anim = 0.0f;
 	dashUiFocusPoke();
-	dashSoundPlay(DASH_SND_TRANSITION);
 	if (screens[section]->enter)
 		screens[section]->enter();
 }
