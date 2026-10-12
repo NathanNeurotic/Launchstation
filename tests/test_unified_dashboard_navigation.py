@@ -15,7 +15,8 @@ assert "DASH_SEC_APPS" not in main[main.index("static const int visible_sections
 assert 'dashOpenBrowser(setting->Misc)' in tools
 assert 'TA_MISC_FOLDER' in tools
 assert 'CHIP_LAST_FOLDER' in home and 'CHIP_LIBRARY' in home
-assert 'dashOpenBrowser(dir);' in home
+assert 'dashNavigateFilesTab(dir);' in home
+assert 'dashNavigateFilesTab(dir);' in (root / "src/dash_apps.c").read_text()
 assert 'dashAppsScreen.input(in)' in home and 'dashAppsScreen.draw()' in home
 assert 'dashAppsScreen.update(dt)' in home and 'dashAppsScreen.hints()' in home
 assert 'library_open = 0;' in home and 'if (in->pressed & DASH_IN_BACK)' in home
