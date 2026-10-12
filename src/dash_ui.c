@@ -357,7 +357,7 @@ void dashDrawHeader(int section, float section_anim)
 	dashIcon(DI_APP, 38, 23, 26, DASH_C_ACCENT);
 
 	dashDrawPanelBox(tab_x0 - 40, tab_y - 2, tab_w * vcount + 80, 44, 14);
-	if (!DASH_C_BORDER.a && dashTheme.glow)
+	if (DASH_C_PANEL.a && !DASH_C_BORDER.a && dashTheme.glow)
 		dashPanelBorder(tab_x0 - 40, tab_y - 2, tab_w * vcount + 80, 44, 14, DC(255, 255, 255, 18));
 	dashAccentGlow(tab_anim_x + tab_w * 0.5f, tab_y + 20, tab_w * 0.75f, 26, 1.2f);
 	if (dashTheme.highlight != DASH_HL_TEXT)
@@ -439,11 +439,18 @@ void dashDrawFocusFrame(float x, float y, float w, float h, float r, float stren
 	}
 }
 
+/* A panel's outline belongs to the panel: with Panels opacity 0 (transparent)
+ * there is no box left to outline, so no stray borders float on the scene. */
+static int panelBorderVisible(void)
+{
+	return DASH_C_PANEL.a && DASH_C_BORDER.a;
+}
+
 void dashDrawPanelBox(float x, float y, float w, float h, float r)
 {
 	if (DASH_C_PANEL.a)
 		dashPanel(x, y, w, h, r, DASH_C_PANEL);
-	if (DASH_C_BORDER.a)
+	if (panelBorderVisible())
 		dashPanelBorder(x, y, w, h, r, DASH_C_BORDER);
 }
 
@@ -457,7 +464,7 @@ void dashDrawCard(float x, float y, float w, float h, float r)
 		c.a = (u8)((c.a + 30 > 230) ? 230 : c.a + 30);
 		dashPanel(x, y, w, h, r, c);
 	}
-	if (DASH_C_BORDER.a)
+	if (panelBorderVisible())
 		dashPanelBorder(x, y, w, h, r, DASH_C_BORDER);
 }
 

@@ -75,8 +75,8 @@ static const void *pad_blob(int i)
 		case 5: return icon_down_png;
 		case 6: return icon_left_png;
 		case 7: return icon_right_png;
-		case 8: return icon_select_png;
-		case 9: return icon_start_png;
+		case 8: return icon_start_png;  /* DI_BTN_START precedes DI_BTN_SELECT */
+		case 9: return icon_select_png;
 		case 10: return icon_l1_png;
 		case 11: return icon_l2_png;
 		case 12: return icon_l3_png;
@@ -97,8 +97,8 @@ static int pad_blob_size(int i)
 		case 5: return size_icon_down_png;
 		case 6: return size_icon_left_png;
 		case 7: return size_icon_right_png;
-		case 8: return size_icon_select_png;
-		case 9: return size_icon_start_png;
+		case 8: return size_icon_start_png;
+		case 9: return size_icon_select_png;
 		case 10: return size_icon_l1_png;
 		case 11: return size_icon_l2_png;
 		case 12: return size_icon_l3_png;
