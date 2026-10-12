@@ -99,6 +99,7 @@ enum SetId {
 	S_MMCE_BACKUP_KEEP,
 	S_MMCE_BACKUP_FORMAT,
 	S_MMCE_SYNC_ALL,
+	S_MMCE_RECOVER_LOCAL,
 	S_IGR_SYNC_MODE,
 	S_IGR_HELPER,
 	/* Legacy/internal split flags retained for persisted settings compatibility. */
@@ -329,6 +330,7 @@ static const SetItem autostart_items[] = {
 static const SetItem mmce_backup_items[] = {
     {ST_PATH, S_MMCE_BACKUP_PATH, "Backup folder", "Choose the parent folder for WLE-MMCE-Backups. Existing history stays where it is. Reinstall the IGR helper after changing this folder."},
     {ST_ACTION, S_MMCE_SYNC_ALL, "Sync all cards", "Back up every changed MMCE card now. If Google Drive is linked, upload pending local history afterward."},
+    {ST_ACTION, S_MMCE_RECOVER_LOCAL, "Recover saved card image...", "Choose a local .mcd/.ps2 snapshot and recover it as a NEW verified .mcd on USB/HDD; never overwrites an active MMCE card."},
     {ST_CHOICE, S_IGR_SYNC_MODE, "Automatic sync", "What happens after OPL returns through WLE-IGR: Off, verified local backup, or local backup plus Google Drive."},
     {ST_ACTION, S_IGR_HELPER, "IGR helper", "Install, update or remove the verified WLE-IGR helper used by OPL Exit-to."},
     {ST_CHOICE, S_IGR_AFTER, "After IGR, open", "Choose where to go after the IGR backup/sync step: Launchstation, the PS2 system menu, or a selected application."},
@@ -2542,6 +2544,34 @@ static void runAction(int id)
 			dashToolsSyncAllMmceCards();
 			dashToolsRefreshMmceStatus();
 			break;
+		case S_MMCE_RECOVER_LOCAL: {
+			char history[MAX_PATH], snapshot[MAX_PATH];
+			const char *parent = dashCfg.igr_backup_path;
+			size_t length = strlen(parent);
+			int n;
+
+			if (length == 0) {
+				dashModalMessage(DI_INFO, "Set a local backup folder first",
+				                 "Choose Backup folder on this page to locate WLE-MMCE-Backups history.",
+				                 "Existing history is not moved.");
+				break;
+			}
+			n = snprintf(history, sizeof(history), "%s%sWLE-MMCE-Backups",
+			             parent, (parent[length - 1] == '/' ||
+			                      parent[length - 1] == ':') ? "" : "/");
+			if (n <= 0 || n >= (int)sizeof(history)) {
+				dashModalMessage(DI_WARNING, "Backup path is too long",
+				                 "Choose a shorter local backup folder.", NULL);
+				break;
+			}
+			snapshot[0] = '\0';
+			if (!dashPickPath("Select local .mcd or .ps2 snapshot",
+			                  history, DASH_PICK_FILE, NULL,
+			                  snapshot, sizeof(snapshot)))
+				break;
+			dashBrowserRecoverCardPath(snapshot);
+			break;
+		}
 		case S_IGR_HELPER:
 			dashToolsIgrBackupSetup();
 			dashToolsRefreshMmceStatus();

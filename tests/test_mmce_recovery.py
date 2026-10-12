@@ -19,12 +19,19 @@ def extract(signature):
 
 
 picker = extract("static int recoveryTargetPath(")
-action = extract("static void opRecoverCard(void)")
+action = extract("static void recoverCardFromPath(")
+browser_entry = extract("static void opRecoverCard(void)")
+settings_entry = extract("void dashBrowserRecoverCardPath(")
+selected_backup = extract("static void opBackupSelectedMmceCard(void)")
 
 # UI actions must not expose destructive writes to a possibly emulated card.
 assert "Recover as new .mcd..." in source
 assert "F_RECOVER_NEW_MCD" in source
 assert 'opRecoverCard();' in source
+assert "recoverCardFromPath(source, fb.dir)" in browser_entry
+assert "recoverCardFromPath(source, dashCfg.igr_backup_path)" in settings_entry
+assert "refresh();" not in action, "settings recovery must not refresh an inactive browser"
+assert "refresh();" in browser_entry, "File Browser recovery must refresh its own listing"
 assert 'mcCardValidatePcsx2(source)' in action
 assert 'mcCardValidateNoEcc(source)' in action
 assert action.index("if (r != MC_CARD_EXPORT_OK)") < action.index("dashPickPath(")
@@ -34,6 +41,24 @@ assert "fileXioRename(stage, dest)" in action
 assert action.index("mcCardBackupNoEcc(source, stage") < action.index("fileXioRename(stage, dest)")
 assert "genRemove(clean)" in action
 assert 'mcCardImportPcsx2(source, stage' in action
+assert "F_BACKUP_SELECTED_MMCE" in source
+assert "mmceBackupCardPath(unit, source, folder, &options, NULL, &stats)" in selected_backup
+assert "prepareTransferDeviceStacks(source, folder)" in selected_backup
+assert "fb.nmarked" in selected_backup and 'genCmpFileExt(f->name, "MCD")' in selected_backup
+assert 'strncmp(folder, "mass", 4)' in selected_backup
+assert "mmceBackupAllCards(" not in selected_backup
+assert "fileXioRename(" not in selected_backup, "selected card must use verified history API"
+assert "mcCardBackupNoEcc(" not in selected_backup, "selected card must use verified history API"
+
+settings = (root / "src/dash_settings.c").read_text(encoding="utf-8")
+header = (root / "include/dash_internal.h").read_text(encoding="utf-8")
+assert '"Recover saved card image..."' in settings
+assert "S_MMCE_RECOVER_LOCAL" in settings
+assert "DASH_PICK_FILE" in settings
+assert "WLE-MMCE-Backups" in settings
+assert "dashBrowserRecoverCardPath(snapshot)" in settings
+assert "void dashBrowserRecoverCardPath(const char *source)" in header
+assert "mcCardImportPcsx2(" not in settings, "settings must never duplicate recovery writes"
 
 c = r'''
 #include <assert.h>

@@ -22,7 +22,7 @@ The site covers installation, dashboard controls, File Browser, Apps, Text Edito
 
 ## Local MMCE backup recovery
 
-In the File Browser, select a verified local `.mcd` or PCSX2 `.ps2` memory-card snapshot and use **Recover as new .mcd...**. This non-destructive option validates the image, creates a fresh numbered `RECOVER-###.mcd` on USB/HDD through a verified staged copy, and never modifies an existing or active MMCE card. Direct restore over an MMCE image and Google Drive download/restore are still separate parity goals. See [the dashboard recovery notes](docs/dashboard.md#recovering-local-mmce-backup-images).
+From **Settings > Storage & devices > MMCE backups**, choose **Recover saved card image...** to select a history snapshot directly. Alternatively, in the File Browser, select a verified local `.mcd` or PCSX2 `.ps2` snapshot and use **Recover as new .mcd...**. To create verified history for one MMCE card, select its `.mcd` under `mmce0:/MemoryCards` or `mmce1:/MemoryCards` and choose **Back up selected MMCE card to history...**. This non-destructive option validates the image, creates a fresh numbered `RECOVER-###.mcd` on USB/HDD through a verified staged copy, and never modifies an existing or active MMCE card. Direct restore over an MMCE image and Google Drive download/restore are still separate parity goals. See [the dashboard recovery notes](docs/dashboard.md#recovering-local-mmce-backup-images).
 
 ## Dashboard
 

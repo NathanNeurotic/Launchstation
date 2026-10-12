@@ -1433,21 +1433,24 @@ static int recoveryTargetPath(const char *folder, char *dest, int capacity,
     return 0;
 }
 
-static void opRecoverCard(void)
+/* Reuse the same verified recovery path from MMCE Settings and the
+ * File Browser. Neither entry point targets an emulated MMCE image. */
+static void recoverCardFromPath(const char *chosen_source, const char *start_dir)
 {
-    FILEINFO *f;
     char source[MAX_PATH], folder[MAX_PATH], dest[MAX_PATH], stage[MAX_PATH];
     int r, prep, pcsx2;
     char clean[MAX_PATH];
 
-    if (fb.sel >= fb.n)
+    if (chosen_source == NULL || chosen_source[0] == '\0' ||
+        !strchr(chosen_source, ':') || strlen(chosen_source) >= sizeof(source))
         return;
-    f = &fb.files[fb.sel];
-    if (isDir(f) || fb.nmarked || !fullPath(f, source, sizeof(source)))
+    dashStrCopy(source, chosen_source, sizeof(source));
+    pcsx2 = genCmpFileExt(source, "PS2");
+    if (!pcsx2 && !genCmpFileExt(source, "MCD")) {
+        dashModalMessage(DI_WARNING, "Choose a memory-card snapshot",
+                         "Select a complete .mcd or PCSX2 .ps2 card image.", source);
         return;
-    pcsx2 = genCmpFileExt(f->name, "PS2");
-    if (!pcsx2 && !genCmpFileExt(f->name, "MCD"))
-        return;
+    }
     if (!prepareOp())
         return;
     if (!ensurePathDeviceStackReady(source)) {
@@ -1464,7 +1467,7 @@ static void opRecoverCard(void)
         return;
     }
 
-    dashStrCopy(folder, fb.dir, sizeof(folder));
+    dashStrCopy(folder, start_dir != NULL ? start_dir : "", sizeof(folder));
     if (!dashPickPath("Recover to a new image on USB / HDD",
                       folder, DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
         return;
@@ -1505,7 +1508,6 @@ static void opRecoverCard(void)
         dashModalMessage(DI_CHECK, "Card image recovered and verified",
                          "The recovered card is a new .mcd file. Existing and active cards were not changed.",
                          dest);
-        refresh();
         return;
     }
     snprintf(clean, sizeof(clean), "%s", stage);
@@ -1514,6 +1516,83 @@ static void opRecoverCard(void)
     dashModalMessage(DI_WARNING, "Card recovery failed",
                      "No existing card was changed. The incomplete recovery image was removed if possible.",
                      dest);
+}
+
+static void opRecoverCard(void)
+{
+    FILEINFO *f;
+    char source[MAX_PATH];
+
+    if (fb.files == NULL || fb.sel >= fb.n)
+        return;
+    f = &fb.files[fb.sel];
+    if (isDir(f) || fb.nmarked || !fullPath(f, source, sizeof(source)))
+        return;
+    recoverCardFromPath(source, fb.dir);
+    refresh();
+}
+
+/* MMCE Settings selects a source snapshot first; the common File Browser
+ * implementation then validates and publishes a separate verified copy. */
+void dashBrowserRecoverCardPath(const char *source)
+{
+    recoverCardFromPath(source, dashCfg.igr_backup_path);
+}
+
+static void opBackupSelectedMmceCard(void)
+{
+    MmceBackupStats stats;
+    MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format};
+    char source[MAX_PATH], folder[MAX_PATH], msg[192];
+    int unit = mmceUnitFromPath(fb.dir), prep, r;
+    FILEINFO *f;
+
+    if (unit < 0 || fb.files == NULL || fb.sel >= fb.n || fb.nmarked)
+        return;
+    f = &fb.files[fb.sel];
+    if (isDir(f) || !genCmpFileExt(f->name, "MCD") ||
+        !fullPath(f, source, sizeof(source)))
+        return;
+
+    dashStrCopy(folder, dashCfg.igr_backup_path[0] ?
+                dashCfg.igr_backup_path : "", sizeof(folder));
+    if (!dashPickPath("Parent folder for MMCE card history", folder,
+                      DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
+        return;
+    if (strncmp(folder, "mass", 4) && strncmp(folder, "usb", 3) &&
+        strncmp(folder, "ata", 3) && strncmp(folder, "hdd", 3)) {
+        dashModalMessage(DI_WARNING, "Choose USB or HDD storage",
+                         "Card history must be written outside MMCE, on USB or HDD.",
+                         folder);
+        return;
+    }
+    if (!prepareOp())
+        return;
+    prep = prepareTransferDeviceStacks(source, folder);
+    if (prep != TRANSFER_STACK_READY) {
+        dashModalMessage(DI_WARNING, "Card backup device unavailable",
+                         prep == TRANSFER_STACK_INCOMPATIBLE ?
+                         "The MMCE card and backup destination need incompatible drivers." :
+                         "The source or backup destination could not be started.",
+                         folder);
+        return;
+    }
+
+    dashLoadingBegin("Backing up selected MMCE card");
+    r = mmceBackupCardPath(unit, source, folder, &options, NULL, &stats);
+    dashLoadingEnd();
+    if (r < 0 || stats.failed) {
+        dashModalMessage(DI_WARNING, "Card history backup failed",
+                         "No MMCE card was changed. Check the card image and destination.",
+                         source);
+    } else if (stats.unchanged) {
+        dashToast(DASH_TOAST_INFO, "Card unchanged; existing verified history retained");
+    } else {
+        snprintf(msg, sizeof(msg), "%d verified snapshot added to MMCE backup history.",
+                 stats.backed_up);
+        dashToast(DASH_TOAST_OK, msg);
+    }
+    refresh();
 }
 
 static void opNewIcon(void)
@@ -1863,6 +1942,7 @@ static void actionsMenu(void)
 		F_VMC0,
 		F_VMC1,
 		F_BACKUP_ALL_MMCE,
+		F_BACKUP_SELECTED_MMCE,
 		F_BACKUP_ACTIVE_MMCE,
 		F_EXPORT_ACTIVE_MMCE_PS2,
 		F_BACKUP_MCD,
@@ -1931,6 +2011,10 @@ static void actionsMenu(void)
 			ADD(DI_MC, "Mount as vmc1:", vmcMounted[1] ? "replaces the mounted one" : NULL, !en[MOUNTVMC1], F_VMC1);
 		}
 		if (mmceUnitFromPath(fb.dir) >= 0) {
+			if (f != NULL && !isDir(f) && !fb.nmarked &&
+			    genCmpFileExt(f->name, "MCD"))
+				ADD(DI_MC, "Back up selected MMCE card to history...",
+				    "verified individual snapshot; never writes to card", 0, F_BACKUP_SELECTED_MMCE);
 			ADD(DI_MC, "Back up all MMCE cards...", "normal, named, GameID and BootCard images", 0, F_BACKUP_ALL_MMCE);
 			ADD(DI_MC, "Back up active MMCE card...", "reads the exact firmware-selected backing image", 0, F_BACKUP_ACTIVE_MMCE);
 			ADD(DI_MC, "Export active MMCE card as PCSX2 .ps2...", "adds ECC/spare bytes and verifies", 0, F_EXPORT_ACTIVE_MMCE_PS2);
@@ -2021,6 +2105,9 @@ static void actionsMenu(void)
 			break;
 		case F_BACKUP_ALL_MMCE:
 			opBackupAllMmceCards();
+			break;
+		case F_BACKUP_SELECTED_MMCE:
+			opBackupSelectedMmceCard();
 			break;
 		case F_BACKUP_ACTIVE_MMCE:
 			opBackupActiveMmce();

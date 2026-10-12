@@ -337,6 +337,18 @@ device and driver settings. Pending counts and scan errors remain separate.
 
 ## Recovering local MMCE backup images
 
+From **Settings > Storage & devices > MMCE backups**, choose **Recover saved
+card image...** to open the local `WLE-MMCE-Backups` history picker. Choose
+a complete `.mcd` or PCSX2 `.ps2` snapshot, then a writable USB/HDD folder.
+The same recovery engine is also available from the File Browser's
+**Recover as new .mcd...** action on a selected snapshot.
+
+To back up one particular card without scanning every MMCE image, browse to
+its `.mcd` file under `mmce0:/MemoryCards` or `mmce1:/MemoryCards`
+and choose **Back up selected MMCE card to history...**. The selected card
+is validated, its verified history is stored on USB/HDD and unchanged card
+images are not duplicated. This action never overwrites or activates cards.
+
 The File Browser options for a PS2 memory-card `.mcd` or PCSX2 `.ps2`
 include **Recover as new .mcd...**. It validates the complete card geometry
 before writing, converts PCSX2 spare/ECC pages when needed, and compares the
