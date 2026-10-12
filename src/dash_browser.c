@@ -1508,8 +1508,6 @@ static void recoverCardFromPath(const char *chosen_source, const char *start_dir
         dashModalMessage(DI_CHECK, "Card image recovered and verified",
                          "The recovered card is a new .mcd file. Existing and active cards were not changed.",
                          dest);
-        if (fb.files != NULL)
-            refresh();
         return;
     }
     snprintf(clean, sizeof(clean), "%s", stage);
@@ -1531,6 +1529,7 @@ static void opRecoverCard(void)
     if (isDir(f) || fb.nmarked || !fullPath(f, source, sizeof(source)))
         return;
     recoverCardFromPath(source, fb.dir);
+    refresh();
 }
 
 /* MMCE Settings selects a source snapshot first; the common File Browser
