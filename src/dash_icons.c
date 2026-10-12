@@ -380,6 +380,45 @@ static float iconSdf(int id, V2 p)
 		case DI_BTN_SELECT:
 			d = sdBoxOutline(p, 0.0f, 0.0f, 0.58f, 0.38f, 0.17f, 0.1f);
 			break;
+		case DI_BTN_L1:
+		case DI_BTN_L2:
+		case DI_BTN_L3:
+		case DI_BTN_R1:
+		case DI_BTN_R2:
+		case DI_BTN_R3: {
+			/* The baked PNG atlas used to supply L/R trigger labels. Draw
+			 * both letters and numbers directly as SDF strokes instead, so
+			 * quick-launch and hint glyphs remain visible without the PNGs. */
+			int right = (id >= DI_BTN_R1);
+			int digit = right ? id - DI_BTN_R1 + 1 : id - DI_BTN_L1 + 1;
+			const float t = 0.095f;
+			d = sdBoxOutline(p, 0, 0, 0.90f, 0.78f, 0.13f, 0.055f);
+			if (!right) {
+				d = U(d, sdSeg(p, -0.60f, -0.52f, -0.60f, 0.48f, t));
+				d = U(d, sdSeg(p, -0.60f, 0.48f, -0.12f, 0.48f, t));
+			} else {
+				d = U(d, sdSeg(p, -0.65f, -0.52f, -0.65f, 0.48f, t));
+				d = U(d, sdSeg(p, -0.65f, -0.52f, -0.25f, -0.52f, t));
+				d = U(d, sdSeg(p, -0.25f, -0.52f, -0.25f, -0.06f, t));
+				d = U(d, sdSeg(p, -0.65f, -0.06f, -0.25f, -0.06f, t));
+				d = U(d, sdSeg(p, -0.47f, -0.06f, -0.16f, 0.48f, t));
+			}
+			if (digit == 1) {
+				d = U(d, sdSeg(p, 0.46f, -0.52f, 0.46f, 0.48f, t));
+				d = U(d, sdSeg(p, 0.24f, -0.30f, 0.46f, -0.52f, t));
+			} else if (digit == 2) {
+				d = U(d, sdSeg(p, 0.10f, -0.52f, 0.70f, -0.52f, t));
+				d = U(d, sdSeg(p, 0.70f, -0.52f, 0.70f, -0.12f, t));
+				d = U(d, sdSeg(p, 0.70f, -0.12f, 0.10f, 0.48f, t));
+				d = U(d, sdSeg(p, 0.10f, 0.48f, 0.70f, 0.48f, t));
+			} else {
+				d = U(d, sdSeg(p, 0.10f, -0.52f, 0.70f, -0.52f, t));
+				d = U(d, sdSeg(p, 0.12f, -0.02f, 0.70f, -0.02f, t));
+				d = U(d, sdSeg(p, 0.10f, 0.48f, 0.70f, 0.48f, t));
+				d = U(d, sdSeg(p, 0.70f, -0.52f, 0.70f, 0.48f, t));
+			}
+			break;
+		}
 		case DI_KEY:
 			d = sdRing(p, -0.4f, 0.0f, 0.3f, T);
 			d = U(d, sdSeg(p, -0.1f, 0.0f, 0.78f, 0.0f, T));
