@@ -1433,6 +1433,133 @@ static int recoveryTargetPath(const char *folder, char *dest, int capacity,
     return 0;
 }
 
+/* The firmware already supports ordinary MMCE filesystem file creation,
+ * readback, and rename. Use ONLY a dedicated staging/holding directory:
+ * this must never overlap the firmware's active MemoryCards/PS2 tree.
+ * The produced snapshot is not installed or automatically activated. */
+static int mmceImportCandidate(int unit, char *folder, int folder_size,
+                               char *dest, int dest_size,
+                               char *stage, int stage_size)
+{
+    int i, a, b, c;
+    if (unit < 0 || unit > 1 || folder == NULL || dest == NULL ||
+        stage == NULL || folder_size <= 0 || dest_size <= 0 || stage_size <= 0)
+        return 0;
+    a = snprintf(folder, folder_size, "mmce%d:/WLE-Recovered", unit);
+    if (a <= 0 || a >= folder_size)
+        return 0;
+    for (i = 1; i <= 999; ++i) {
+        b = snprintf(dest, dest_size, "%s/RECOVER-%03d.mcd", folder, i);
+        if (b <= 0 || b >= dest_size)
+            return 0;
+        c = snprintf(stage, stage_size, "%s.PART", dest);
+        if (c <= 0 || c >= stage_size)
+            return 0;
+        /* Never reuse a completed image or interrupted staging file. */
+        if (!wleExists(dest) && !wleExists(stage))
+            return 1;
+    }
+    return 0;
+}
+
+static void opImportCardToMmce(void)
+{
+    static const char *const slots[] = {
+        "MMCE slot 1 (mmce0:)", "MMCE slot 2 (mmce1:)"
+    };
+    FILEINFO *f;
+    char source[MAX_PATH], folder[MAX_PATH], dest[MAX_PATH], stage[MAX_PATH];
+    int unit, prep, r, pcsx2, fd;
+
+    if (fb.files == NULL || fb.sel >= fb.n || fb.nmarked)
+        return;
+    f = &fb.files[fb.sel];
+    if (isDir(f) || !fullPath(f, source, sizeof(source)))
+        return;
+    pcsx2 = genCmpFileExt(source, "PS2");
+    if (!pcsx2 && !genCmpFileExt(source, "MCD"))
+        return;
+
+    /* Normal file transfer works through the shipped MMCE FS, but do not
+     * read and write the same adapter or import from a live card image. */
+    if (strncmp(source, "mass", 4) && strncmp(source, "usb", 3) &&
+        strncmp(source, "ata", 3) && strncmp(source, "hdd", 3)) {
+        dashModalMessage(DI_WARNING, "Use a verified external backup",
+                         "Import from a local USB/HDD .mcd or .ps2. Back up a card outside MMCE first.",
+                         source);
+        return;
+    }
+    unit = dashModalChoice("Save a NEW image on which MMCE adapter?",
+                           slots, 2, 0);
+    if (unit < 0)
+        return;
+    if (snprintf(folder, sizeof(folder), "mmce%d:/WLE-Recovered", unit) >=
+        (int)sizeof(folder))
+        return;
+    if (!dashModalConfirm("Import snapshot to the adapter?",
+                          "Creates a new verified .mcd in MMCE's WLE-Recovered holding folder. It will NOT overwrite, switch or activate any memory card.",
+                          "Import as new", 0))
+        return;
+    if (!prepareOp())
+        return;
+    prep = prepareTransferDeviceStacks(source, folder);
+    if (prep != TRANSFER_STACK_READY) {
+        dashModalMessage(DI_WARNING, "MMCE import unavailable",
+                         prep == TRANSFER_STACK_INCOMPATIBLE ?
+                         "Source and MMCE drivers cannot run together. Copy the snapshot to another USB/HDD device first." :
+                         "Source or MMCE adapter could not be started.",
+                         folder);
+        return;
+    }
+
+    /* A dedicated folder outside MemoryCards/PS2 cannot become an active
+     * backing file through ordinary numeric/GameID card selection. */
+    fd = genDopen(folder);
+    if (fd >= 0) {
+        genDclose(fd);
+    } else {
+        if (genMkdir(folder, fileMode) < 0) {
+            dashModalMessage(DI_WARNING, "Cannot create recovery folder",
+                             "MMCE could not create WLE-Recovered. The adapter has not been changed otherwise.",
+                             folder);
+            return;
+        }
+        fd = genDopen(folder);
+        if (fd < 0) {
+            dashModalMessage(DI_WARNING, "Cannot open recovery folder",
+                             "The MMCE recovery folder could not be verified.", folder);
+            return;
+        }
+        genDclose(fd);
+    }
+    /* The folder may have been created while we were selecting the slot. */
+    if (!mmceImportCandidate(unit, folder, sizeof(folder), dest,
+                             sizeof(dest), stage, sizeof(stage))) {
+        dashModalMessage(DI_WARNING, "No free MMCE recovery filename",
+                         "No existing .mcd or .PART image was replaced.", folder);
+        return;
+    }
+
+    dashLoadingBegin("Copying and verifying an inactive MMCE snapshot");
+    r = pcsx2 ? mcCardImportPcsx2(source, stage, cardExportProgress) :
+                mcCardBackupNoEcc(source, stage, cardExportProgress);
+    if (r == MC_CARD_EXPORT_OK && !wleExists(dest) &&
+        fileXioRename(stage, dest) >= 0 &&
+        mcCardValidateNoEcc(dest) == MC_CARD_EXPORT_OK) {
+        dashLoadingEnd();
+        dashModalMessage(DI_CHECK, "Snapshot stored on MMCE",
+                         "Verified image saved in WLE-Recovered. This is an inactive holding area, not a selected game memory card.",
+                         dest);
+        return;
+    }
+    /* A partially written or ambiguous file remains in the holding area,
+     * never in a firmware-selectable MemoryCards path. No auto-activation. */
+    dashLoadingEnd();
+    dashModalMessage(DI_WARNING, "MMCE import was not verified",
+                     "The adapter's WLE-Recovered folder may contain an incomplete .PART or image. No active card was touched; inspect before retrying.",
+                     dest);
+}
+
 /* Reuse the same verified recovery path from MMCE Settings and the
  * File Browser. Neither entry point targets an emulated MMCE image. */
 static void recoverCardFromPath(const char *chosen_source, const char *start_dir)
@@ -1949,6 +2076,7 @@ static void actionsMenu(void)
 		F_EXPORT_PS2,
 		F_IMPORT_MCD,
 		F_RECOVER_NEW_MCD,
+		F_IMPORT_TO_MMCE_NEW,
 		F_TUNA,
 		F_DATES,
 		F_SELALL,
@@ -2026,8 +2154,12 @@ static void actionsMenu(void)
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "PS2"))
 			ADD(DI_MC, "Convert to no-ECC .mcd...", "strips PCSX2 spare bytes and verifies", 0, F_IMPORT_MCD);
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 &&
-		    (genCmpFileExt(f->name, "PS2") || genCmpFileExt(f->name, "MCD")))
+		    (genCmpFileExt(f->name, "PS2") || genCmpFileExt(f->name, "MCD"))) {
 			ADD(DI_MC, "Recover as new .mcd...", "verified separate copy; never overwrites active cards", 0, F_RECOVER_NEW_MCD);
+			ADD(DI_MC, "Store NEW snapshot on MMCE...",
+			    "copy to inactive WLE-Recovered folder; does not install/activate a card",
+			    0, F_IMPORT_TO_MMCE_NEW);
+		}
 		if (f != NULL && en[TIMEMANIP])
 			ADD(DI_CLOCK, LNG(time_manip), "2099-12-31", 0, F_TUNA);
 		if (en[TIMEMANIP_CUSTOM])
@@ -2126,6 +2258,9 @@ static void actionsMenu(void)
 			break;
 		case F_RECOVER_NEW_MCD:
 			opRecoverCard();
+			break;
+		case F_IMPORT_TO_MMCE_NEW:
+			opImportCardToMmce();
 			break;
 		case F_TUNA:
 			opTimestamps(0);

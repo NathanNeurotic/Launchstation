@@ -76,6 +76,7 @@ jobs:
           python3 tests/test_mmce_fs_restore_guard.py
           python3 tests/test_mmce_publish.py
           python3 tests/test_mmce_recovery.py
+          python3 tests/test_mmce_native_import.py
           python3 tests/test_sd2cloud_parity.py
           python3 tests/test_mmce_status_failures.py
           python3 tests/test_self_update.py

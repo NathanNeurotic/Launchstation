@@ -356,12 +356,28 @@ new image to the source after writing. It uses a unique `RECOVER-###.mcd.PART`
 temporary name and only publishes the matching `.mcd` after verification.
 A failed or interrupted recovery does not replace an existing image.
 
-This first recovery workflow deliberately requires a USB/HDD destination.
-The MMCE filesystem cannot be assumed to support rename, and writing to a
-card currently emulated by sd2psx can corrupt it. Recovery does **not** select
-a card on the adapter, replace an active card, or restore from Google Drive.
-Use the recovered standalone image for review and explicit subsequent card
-management. Do not manually overwrite an actively emulated MMCE card.
+The existing sd2psXtd firmware supports filesystem create, write, read and
+rename commands; it does **not** provide a safe transaction for replacing
+an actively emulated card. No adapter firmware changes are needed for the
+supported non-destructive workflow.
+
+To store a recovered card image **on the adapter itself**, first place the
+verified `.mcd` or `.ps2` backup on USB/HDD (including cloud recovery files).
+In **File Browser**, highlight the file and choose **Store NEW snapshot on
+MMCE...**, then choose `mmce0:` or `mmce1:`. Launchstation creates
+`mmceN:/WLE-Recovered/RECOVER-###.mcd.PART`, verifies its contents,
+and publishes a new `RECOVER-###.mcd` in that folder. Interrupted `.PART`
+files and existing outputs are not reused. The holding area is intentionally
+**outside** `MemoryCards/PS2`, `BOOT`, GameID or named card directories;
+the adapter will **not** automatically select or mount it as a game card.
+The user must explicitly install or organize that image later, with card
+emulation safely inactive. Never overwrite a currently emulated card.
+
+The USB/HDD recovery action remains unchanged. Direct overwrite of an
+existing MMCE backing image is still unavailable; that is distinct from
+copying a **new** snapshot to inactive MMCE storage. The standard upstream
+firmware remains unmodified, and Google Drive downloads still produce
+verified local images before the optional MMCE storage step.
 
 ## Optional background music
 
