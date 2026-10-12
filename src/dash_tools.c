@@ -1011,7 +1011,8 @@ static void cloudBrowseHistory(void)
             items[n].icon = entry->is_folder ? DI_FOLDER : DI_MC;
             items[n].label = names[i];
             items[n].detail = entry->is_folder ? "Browse backup folder" :
-                              "Uploaded snapshot name (contents not downloaded or verified)";
+                              (entry->sha256[0] ? "Select to download, verify and recover locally" :
+                               "Missing uploaded SHA-256: inspect only");
             items[n].disabled = 0;
             actions[n++] = i;
         }
@@ -1048,9 +1049,40 @@ static void cloudBrowseHistory(void)
         {
             CloudGoogleBrowseItem *item = &page->items[actions[choice]];
             if (!item->is_folder) {
-                dashModalMessage(DI_INFO, "Saved Google Drive snapshot",
-                                 item->name,
-                                 "This is a read-only listing. Cloud download and direct MMCE card replacement are not yet enabled.");
+                char folder[MAX_PATH], result[MAX_PATH], error[256];
+                int ok;
+                if (item->sha256[0] == '\0') {
+                    dashModalMessage(DI_INFO, "Cloud snapshot lacks a verified digest",
+                                     item->name,
+                                     "Only backups with an uploaded SHA-256 can be downloaded and recovered safely.");
+                    continue;
+                }
+                dashStrCopy(folder, dashCfg.igr_backup_path[0] ?
+                            dashCfg.igr_backup_path :
+                            (LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir),
+                            sizeof(folder));
+                if (!dashPickPath("Download snapshot to NEW image on USB / HDD",
+                                  folder, DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
+                    continue;
+                if (!dashModalConfirm("Recover selected cloud snapshot?",
+                                      "The complete Drive file will be downloaded, SHA-256 checked and converted to a NEW .mcd on USB/HDD. Existing MMCE cards and backup history are untouched.",
+                                      "Recover", 0))
+                    continue;
+                if (!dashWorkerAwaitAll("Finishing device operations"))
+                    continue;
+                error[0] = result[0] = '\0';
+                dashLoadingBegin("Downloading and verifying Google card backup");
+                ok = cloudGoogleRecoverSnapshot(item, folder, result, sizeof(result),
+                                                error, sizeof(error));
+                dashLoadingEnd();
+                if (ok == 0)
+                    dashModalMessage(DI_CHECK, "Cloud card recovered as a new image",
+                                     result,
+                                     "SHA-256 and PS2 card geometry verified. No MMCE card was replaced or activated.");
+                else
+                    dashModalMessage(DI_WARNING, "Cloud card recovery failed",
+                                     error[0] ? error : "No verified image was published.",
+                                     "An existing card and saved backup history were not changed.");
                 continue;
             }
             if (depth >= 12) {
