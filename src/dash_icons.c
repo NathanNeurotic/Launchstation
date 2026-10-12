@@ -462,6 +462,14 @@ static float iconSdf(int id, V2 p)
 			d = U(d, fmaxf2(sdTriP(p, -0.66f, 0.46f, -0.18f, -0.12f, 0.3f, 0.46f), sdBox(p, 0.0f, 0.0f, 0.74f, 0.54f, 0.0f)));
 			d = U(d, fmaxf2(sdTriP(p, 0.0f, 0.46f, 0.36f, 0.1f, 0.72f, 0.46f), sdBox(p, 0.0f, 0.0f, 0.74f, 0.54f, 0.0f)));
 			break;
+		case DI_DPAD_UD:
+			/* one D-pad: left/right arms outlined, up/down arms solid with
+			 * arrow cut-outs, so a single glyph reads as "scroll up/down" */
+			d = sdBoxOutline(p, 0.0f, 0.0f, 0.9f, 0.28f, 0.08f, 0.06f);
+			d = U(d, sdBox(p, 0.0f, 0.0f, 0.28f, 0.9f, 0.08f));
+			d = S(d, sdTriP(p, 0.0f, -0.74f, -0.15f, -0.46f, 0.15f, -0.46f));
+			d = S(d, sdTriP(p, 0.0f, 0.74f, 0.15f, 0.46f, -0.15f, 0.46f));
+			break;
 		default:
 			d = sdCircle(p, 0.0f, 0.0f, 0.5f);
 			break;

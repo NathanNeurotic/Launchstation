@@ -649,7 +649,7 @@ int cloudGoogleFinishLink(const CloudGoogleDeviceCode *code, char *error, int er
     cloudHttpResponseFree(&response);
     if (!strcmp(oauth_error, "authorization_pending") || !strcmp(oauth_error, "slow_down")) {
         set_error(error, error_size, "Authorization is not complete yet.");
-        return 1;
+        return strcmp(oauth_error, "slow_down") ? 1 : 2;
     }
     if (oauth_error[0])
         snprintf(error, error_size, "Google OAuth: %s", oauth_error);

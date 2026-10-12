@@ -412,7 +412,7 @@ static const SetItem tcol_items[] = {
     {ST_COLOR, S_T_ACCENT, "Accent", "Focus marks, values and icons that need attention."},
     {ST_COLOR, S_T_SELECT, "Selection", "Selection bar colour and opacity."},
     {ST_COLOR, S_T_PANEL, "Panels", "Panel colour and opacity (0 = no panels)."},
-    {ST_COLOR, S_T_BORDER, "Borders", "Panel outline colour and opacity (0 = no borders)."},
+    {ST_COLOR, S_T_BORDER, "Borders", "Panel outline colour and opacity (0 = no borders). Hidden when Panels is transparent."},
     {ST_COLOR, S_T_WARN, "Warnings", "Favourites, warnings and unsaved-change marks."},
     {ST_ACTION, S_T_RESETCAT, "Reset colours", "Back to the values of the theme's preset."},
 };
@@ -493,7 +493,9 @@ static const SetPage pages[P_COUNT] = {
 
 /* Root -> category -> subpage -> theme group is the deepest path. */
 #define PAGE_DEPTH 4
-#define ITEM_ROWS 8
+/* Seven rows leave room for the two-line help text above the hint bar
+ * (dashDrawHints draws from y = 394); eight pushed it onto the buttons. */
+#define ITEM_ROWS 7
 static int page, item;
 static int item_top;
 static float item_anim;
@@ -2874,7 +2876,8 @@ static void settingsDraw(void)
 {
 	int i;
 	/* Give the breadcrumb a real lane below the L1/R1 tabs. */
-	/* Preserve the original eight-row/footer spacing: only the header lanes move. */
+	/* Only the header lanes move; the list keeps ITEM_ROWS rows so its two-line
+	 * help still clears the footer hints. */
 	const float ix = 48, iy = 136, irow = 29, iw = 544;
 	const SetPage *c = &pages[page];
 	char trail[192];

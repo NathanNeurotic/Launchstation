@@ -274,6 +274,7 @@ targets:
       - src/self_update.c
       - src/update_psu.c
       - src/cloud_google.c
+      - src/qrcodegen.c
       - src/init.c
       - src/main_startup.c
       - src/main_fileops.c

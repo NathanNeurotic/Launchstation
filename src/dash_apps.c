@@ -654,7 +654,7 @@ static void appsHints(void)
 		h[n].button = DI_BTN_TRIANGLE, h[n].key = NULL, h[n].label = "Options", n++;
 		h[n].button = -1, h[n].key = "SELECT", h[n].label = "View", n++;
 	}
-	h[n].button = -1, h[n].key = "BACK", h[n].label = "Home", n++;
+	h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = "Home", n++;
 	dashDrawHints(h, n);
 }
 

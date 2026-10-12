@@ -42,7 +42,7 @@ assert "icon_cross_png.o" not in make
 assert "icon_cross_png.s:" not in embed
 assert "EMBED_FILE(icon_cross_png" not in blobs
 assert "res/icons/cross.png" not in blobs + embed
-assert "res/icons/cross.png" in {str(p.relative_to(root)) for p in (root / "res/icons").glob("*.png")}
+assert "res/icons/cross.png" in {p.relative_to(root).as_posix() for p in (root / "res/icons").glob("*.png")}
 # The original images remain in the repository as a reversible reference.
 
 # Background-only is a temporary, HOME-only presentation state and cannot
