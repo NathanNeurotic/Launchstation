@@ -30,7 +30,8 @@ assert "F_RECOVER_NEW_MCD" in source
 assert 'opRecoverCard();' in source
 assert "recoverCardFromPath(source, fb.dir)" in browser_entry
 assert "recoverCardFromPath(source, dashCfg.igr_backup_path)" in settings_entry
-assert "if (fb.files != NULL)" in action, "settings recovery must not refresh an inactive browser"
+assert "refresh();" not in action, "settings recovery must not refresh an inactive browser"
+assert "refresh();" in browser_entry, "File Browser recovery must refresh its own listing"
 assert 'mcCardValidatePcsx2(source)' in action
 assert 'mcCardValidateNoEcc(source)' in action
 assert action.index("if (r != MC_CARD_EXPORT_OK)") < action.index("dashPickPath(")
