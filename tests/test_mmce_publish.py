@@ -38,6 +38,7 @@ typedef struct { int candidates, backed_up, unchanged, failed; } MmceBackupStats
 
 static int previous, comparison, export_result, collision, rename_result, prune_result;
 static int copies, renames, cleanups, prunes;
+static const char *expected_protect;
 static char last_source[MAX_PATH], last_stage[MAX_PATH], last_published[MAX_PATH];
 
 static int card_history_dir(const char *root, const char *relative, char *out, size_t n) {
@@ -87,9 +88,14 @@ static int fileXioRename(const char *source, const char *dest) {
     snprintf(last_published,sizeof(last_published),"%s",dest);
     return rename_result;
 }
-static int prune_history(const char *dir, int keep, int format) {
+static int prune_history(const char *dir, int keep, int format,
+                         const char *protect_name, const char *fresh_name) {
     (void)dir; (void)keep; (void)format;
     assert(renames == 1);
+    assert(fresh_name != NULL && !strncmp(fresh_name,"WLE-new.",8));
+    assert((expected_protect == NULL && protect_name == NULL) ||
+           (expected_protect != NULL && protect_name != NULL &&
+            !strcmp(expected_protect,protect_name)));
     prunes++;
     return prune_result;
 }
@@ -97,6 +103,7 @@ static void reset(void) {
     previous=0; comparison=0; export_result=0; collision=0;
     rename_result=0; prune_result=0;
     copies=renames=cleanups=prunes=0;
+    expected_protect=NULL;
     last_source[0]=last_stage[0]=last_published[0]=0;
 }
 """
@@ -108,53 +115,54 @@ int main(void) {
     int result;
 
     reset(); memset(&stats,0,sizeof(stats));
-    result=backup_one("mmce0:/MemoryCards/C1.mcd","C1.mcd","mass0:/backup",&opts,&stats);
+    expected_protect="WLE-old.mcd";
+    result=backup_one("mmce0:/MemoryCards/C1.mcd","C1.mcd","mass0:/backup",&opts,expected_protect,&stats);
     assert(result==0 && stats.backed_up==1 && stats.failed==0);
     assert(copies==1 && renames==1 && prunes==1 && cleanups==0);
     assert(strstr(last_published,".mcd") && !strstr(last_published,".PART"));
 
     reset(); memset(&stats,0,sizeof(stats)); export_result=-1;
-    result=backup_one("source","card.mcd","backup",&opts,&stats);
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
     assert(result<0 && stats.failed==1 && copies==1 && !renames && !prunes && cleanups==1);
 
     reset(); memset(&stats,0,sizeof(stats)); rename_result=-1;
-    result=backup_one("source","card.mcd","backup",&opts,&stats);
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
     assert(result<0 && stats.failed==1 && copies==1 && renames==1 && !prunes && cleanups==1);
 
     reset(); memset(&stats,0,sizeof(stats)); collision=1;
-    result=backup_one("source","card.mcd","backup",&opts,&stats);
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
     assert(result<0 && stats.failed==1 && copies==1 && !renames && !prunes && cleanups==1);
 
     reset(); memset(&stats,0,sizeof(stats)); previous=1; comparison=1;
-    result=backup_one("source","card.mcd","backup",&opts,&stats);
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
     assert(result==0 && stats.unchanged==1 && !copies && !renames && !prunes);
 
     reset(); memset(&stats,0,sizeof(stats)); previous=1; comparison=-1;
-    result=backup_one("source","card.mcd","backup",&opts,&stats);
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
     assert(result<0 && stats.failed==1 && !copies && !renames && !prunes);
 
     reset(); memset(&stats,0,sizeof(stats)); previous=-1;
-    result=backup_one("source","card.mcd","backup",&opts,&stats);
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
     assert(result<0 && stats.failed==1 && !copies && !renames && !prunes);
 
     opts.format=MMCE_BACKUP_FORMAT_PCSX2;
     reset(); memset(&stats,0,sizeof(stats)); previous=1; comparison=1;
-    result=backup_one("source","card.mcd","backup",&opts,&stats);
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
     assert(result==0 && stats.unchanged==1 && !stats.backed_up);
     assert(copies==1 && cleanups==1 && !renames && !prunes);
 
     reset(); memset(&stats,0,sizeof(stats)); previous=1; comparison=-1;
-    result=backup_one("source","card.mcd","backup",&opts,&stats);
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
     assert(result<0 && stats.failed==1 && copies==1 && cleanups==1 && !renames && !prunes);
 
     reset(); memset(&stats,0,sizeof(stats)); previous=1; comparison=0;
-    result=backup_one("source","card.mcd","backup",&opts,&stats);
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
     assert(result==0 && stats.backed_up==1 && !stats.failed && copies==1);
     assert(renames==1 && prunes==1 && !cleanups);
     assert(strstr(last_stage,".ps2.PART") && strstr(last_published,".ps2"));
 
     reset(); memset(&stats,0,sizeof(stats)); prune_result=-1;
-    result=backup_one("source","card.mcd","backup",&opts,&stats);
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
     assert(result<0 && stats.backed_up==1 && stats.failed==1);
     assert(copies==1 && renames==1 && prunes==1); /* committed snapshot survives */
 
