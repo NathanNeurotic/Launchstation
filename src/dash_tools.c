@@ -1107,7 +1107,7 @@ void dashToolsCloudBackup(void)
 
 	for (;;) {
 		DashMenuItem items[7];
-		int ids[6], n = 0;
+		int ids[7], n = 0;
 
 		error[0] = '\0';
 		if (cloudGoogleGetClientConfig(client_id, sizeof(client_id),
