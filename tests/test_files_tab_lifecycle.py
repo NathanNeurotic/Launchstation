@@ -19,7 +19,7 @@ assert "const DashScreen dashFilesScreen" in browser
 assert "const DashScreen dashFilesScreen" not in files
 assert "if (section == DASH_SEC_FILES)" in main
 assert "dashFileBrowserTabClose();" in main
-assert "dashFileBrowserTabInputReady()" in main
+assert "dashBrowserPadInputReady()" in main
 assert "dashFileBrowserTabOpen(start_dir)" in main
 assert "dashFileBrowser(start_dir)" in main
 assert "void dashFileBrowserTabClose(void)" in hdr
@@ -59,11 +59,12 @@ typedef struct {
     FILEINFO *files;
     unsigned char *mark;
     DashDevice devs[4];
-    int gen, args_loaded, loading, usb_input_jobs, input_rearm;
+    int gen, args_loaded, loading;
     int sel,n,ndevs;
 } FbState;
 static FbState fb;
 static int fb_tab_active;
+static int browser_usb_jobs,browser_usb_input_rearm;
 static char fb_tab_resume[MAX_PATH];
 static char fb_tab_selection[MAX_NAME];
 static int busy,flush_count,clear_args_count,rebuild_count,open_count;
@@ -91,34 +92,43 @@ for signature in (
     "static void browserCloseState(void)",
     "static void browserTabEnter(void)",
     "void dashFileBrowserTabClose(void)",
-    "int dashFileBrowserTabInputReady(void)",
+    "int dashBrowserPadInputReady(void)",
     "void dashFileBrowserTabOpen(const char *start_dir)",
 ):
     code+=function(signature)
 code+=r'''
 int main(void) {
-    assert(dashFileBrowserTabInputReady()==1);
+    assert(dashBrowserPadInputReady()==1);
     browserTabEnter();
     assert(fb_tab_active && fb.files && fb.mark);
     assert(open_count==1 && !strcmp(opened,"") && fb.gen==0);
-    fb.usb_input_jobs=1;busy=1;
-    assert(dashFileBrowserTabInputReady()==0 && flush_count==0);
-    busy=0;fb.input_rearm=1;
-    assert(dashFileBrowserTabInputReady()==0 && flush_count==1);
-    assert(dashFileBrowserTabInputReady()==1);
+    browser_usb_jobs=1;busy=1;
+    assert(dashBrowserPadInputReady()==0 && flush_count==0);
+    busy=0;browser_usb_jobs=0;browser_usb_input_rearm=1;
+    assert(dashBrowserPadInputReady()==0 && flush_count==1);
+    assert(dashBrowserPadInputReady()==1);
     dashFileBrowserTabOpen("usb0:/APPS/");
     assert(!strcmp(opened,"usb0:/APPS/"));
     fb.n=2;fb.sel=1;
     strcpy(fb.files[1].name,"LOADER.ELF");
     fb.args_loaded=1;fb.gen=40;
+    /* A queued USB read belongs to the worker, NOT this browser
+     * session. Closing/reopening the tab must never reset its PAD guard. */
+    browser_usb_jobs=1;busy=1;
     dashFileBrowserTabClose();
     assert(!fb_tab_active && !fb.files && !fb.mark);
+    assert(browser_usb_jobs==1 && dashBrowserPadInputReady()==0);
     assert(fb.gen==41 && clear_args_count==1);
     assert(!strcmp(fb_tab_resume,"usb0:/APPS/"));
     assert(!strcmp(fb_tab_selection,"LOADER.ELF"));
     assert(rebuild_count==1);
     browserTabEnter();
     assert(fb_tab_active && fb.files && fb.mark);
+    assert(browser_usb_jobs==1 && dashBrowserPadInputReady()==0);
+    /* Old completion arrives after the new tab has allocated its buffer. */
+    busy=0;browser_usb_jobs=0;browser_usb_input_rearm=1;
+    assert(dashBrowserPadInputReady()==0 && flush_count==2);
+    assert(dashBrowserPadInputReady()==1);
     assert(!strcmp(opened,"usb0:/APPS/"));
     assert(!strcmp(selected,"LOADER.ELF"));
     assert(fb.gen==41);
