@@ -1,0 +1,127 @@
+"""Host-compile the production new-card allocation policy, with fault injection.
+
+No existing CardN folder may be reused: even an apparently empty directory
+could belong to a selected card, another channel, or an interrupted import.
+"""
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+
+root = Path(__file__).resolve().parents[1]
+source = (root / "src/dash_browser.c").read_text(encoding="utf-8")
+workflow = (root / ".github/workflows/compile.yml").read_text(encoding="utf-8")
+
+
+def extract(signature):
+    at = source.index(signature)
+    p = source.index("{", at) + 1
+    level = 1
+    while level:
+        if p >= len(source):
+            raise AssertionError("Unclosed C function " + signature)
+        level += (source[p] == "{") - (source[p] == "}")
+        p += 1
+    return source[at:p] + "\n"
+
+
+allocator = extract("static int mmceSelectableCandidate(")
+installer = extract("static void opInstallNewMmceCard(void)")
+assert '"mmce%d:/MemoryCards/PS2/Card%d"' in allocator
+assert '"%s/Card%d-1.mcd"' in allocator
+assert '"%s.PART"' in allocator
+assert "genDopen(folder)" in allocator
+assert "genDclose(fd);" in allocator
+assert "number <= 255" in allocator
+assert "mmceSelectableCandidate(unit, folder" in installer
+assert "genMkdir(folder, fileMode)" in installer
+assert "genDopen(parent)" in installer
+assert "mcCardImportPcsx2(source, stage" in installer
+assert "mcCardBackupNoEcc(source, stage" in installer
+assert "mmcePublishInactiveSnapshot(stage, dest)" in installer
+assert "mcCardValidatePcsx2(source)" in installer
+assert "mcCardValidateNoEcc(source)" in installer
+assert "prepareTransferDeviceStacks(source, parent)" in installer
+assert "mmce0:/WLE-Recovered/" in installer
+assert "mmce1:/WLE-Recovered/" in installer
+assert "mmce_cmd_set_card" not in installer
+assert "mmce_cmd_set_channel" not in installer
+assert "mmce_cmd_reset" not in installer
+assert "genRemove(" not in installer
+assert "F_INSTALL_NEW_MMCE_CARD" in source
+assert '"Install as NEW selectable MMCE card..."' in source
+assert "opInstallNewMmceCard();" in source
+assert "python3 tests/test_mmce_selectable_install.py" in workflow
+
+harness = r"""
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+static int first_free = 1, all_exists, exists_probe, opened, closed;
+static int genDopen(const char *name) {
+    int n = -1;
+    if (sscanf(name, "mmce%*d:/MemoryCards/PS2/Card%d", &n) != 1)
+        return -1;
+    opened++;
+    return all_exists || n < first_free ? 1 : -1;
+}
+static void genDclose(int fd) { assert(fd == 1); closed++; }
+static int wleExists(const char *name) {
+    assert(strstr(name, "Card") != NULL);
+    return exists_probe && strstr(name, "Card1") != NULL;
+}
+"""
+harness += allocator + r"""
+int main(void) {
+    char folder[128], dest[256], stage[256];
+    int r;
+    r = mmceSelectableCandidate(0, folder, sizeof(folder), dest, sizeof(dest),
+                                stage, sizeof(stage));
+    assert(r == 1);
+    assert(!strcmp(folder, "mmce0:/MemoryCards/PS2/Card1"));
+    assert(!strcmp(dest, "mmce0:/MemoryCards/PS2/Card1/Card1-1.mcd"));
+    assert(!strcmp(stage, "mmce0:/MemoryCards/PS2/Card1/Card1-1.mcd.PART"));
+    first_free = 2;
+    r = mmceSelectableCandidate(1, folder, sizeof(folder), dest, sizeof(dest),
+                                stage, sizeof(stage));
+    assert(r == 2);
+    assert(opened > 0 && closed > 0);
+    first_free = 1;
+    exists_probe = 1;
+    assert(mmceSelectableCandidate(0, folder, sizeof(folder), dest, sizeof(dest),
+                                   stage, sizeof(stage)) == 2);
+    exists_probe = 0;
+    all_exists = 1;
+    assert(mmceSelectableCandidate(0, folder, sizeof(folder), dest, sizeof(dest),
+                                   stage, sizeof(stage)) == 0);
+    all_exists = 0;
+    first_free = 255;
+    assert(mmceSelectableCandidate(0, folder, sizeof(folder), dest, sizeof(dest),
+                                   stage, sizeof(stage)) == 255);
+    first_free = 256;
+    assert(mmceSelectableCandidate(0, folder, sizeof(folder), dest, sizeof(dest),
+                                   stage, sizeof(stage)) == 0);
+    assert(!mmceSelectableCandidate(-1, folder, sizeof(folder), dest,
+                                     sizeof(dest), stage, sizeof(stage)));
+    assert(!mmceSelectableCandidate(2, folder, sizeof(folder), dest,
+                                     sizeof(dest), stage, sizeof(stage)));
+    assert(!mmceSelectableCandidate(0, folder, 5, dest,
+                                     sizeof(dest), stage, sizeof(stage)));
+    assert(!mmceSelectableCandidate(0, folder, sizeof(folder), dest,
+                                     5, stage, sizeof(stage)));
+    assert(!mmceSelectableCandidate(0, folder, sizeof(folder), dest,
+                                     sizeof(dest), stage, 5));
+    assert(!mmceSelectableCandidate(0, NULL, sizeof(folder), dest,
+                                     sizeof(dest), stage, sizeof(stage)));
+    puts("PASS: new MMCE selectable cards never reuse an existing numbered directory");
+}
+"""
+cc = shutil.which("gcc") or shutil.which("clang")
+assert cc, "C host compiler required"
+with tempfile.TemporaryDirectory(prefix="mmce-selectable-") as tmp:
+    c = Path(tmp) / "test.c"
+    exe = Path(tmp) / "test"
+    c.write_text(harness, encoding="utf-8")
+    subprocess.run([cc, "-std=c99", "-Wall", "-Wextra", "-Werror",
+                    str(c), "-o", str(exe)], check=True)
+    subprocess.run([str(exe)], check=True)
