@@ -39,8 +39,6 @@ static struct
 	u8 *mark;
 	int n, nmarked;
 	int loading;
-	int usb_input_jobs; /* outstanding USB/mass list jobs that must not overlap PAD */
-	int input_rearm;    /* swallow presses accumulated while USB fileXio was active */
 	int gen;
 	int sel, top;
 	float sel_anim;
@@ -76,6 +74,14 @@ static int fb_sort_desc;
 static int fb_tab_active;
 static char fb_tab_resume[MAX_PATH];
 static char fb_tab_selection[MAX_NAME];
+
+/* Async USB reads can finish AFTER the Files tab has been closed and
+ * reopened. A per-browser counter is unsafe: resetting it on a tab switch
+ * lets old completions consume the new session's count and can poll PAD while
+ * fileXio is still active. Keep the count and the final input-rearm flag
+ * independent of any browser session (modal or tab). */
+static int browser_usb_jobs;
+static int browser_usb_input_rearm;
 
 //--------------------------------------------------------------
 // Listing
@@ -283,10 +289,10 @@ static void listDone(void *arg)
 			selectName(fb.want_sel);
 		fb.want_sel[0] = '\0';
 	}
-	if (j->quiet_input && fb.usb_input_jobs > 0) {
-		fb.usb_input_jobs--;
-		if (fb.usb_input_jobs == 0)
-			fb.input_rearm = 1;
+	if (j->quiet_input && browser_usb_jobs > 0) {
+		browser_usb_jobs--;
+		if (browser_usb_jobs == 0)
+			browser_usb_input_rearm = 1;
 	}
 	free(j->files);
 	free(j);
@@ -348,7 +354,6 @@ static void openDir(const char *dir, const char *select)
 	fb.n = 0;
 	fb.nmarked = 0;
 	fb.free_valid = 0;
-	fb.input_rearm = 0;
 	fb.sel = fb.top = 0;
 	fb.sel_anim = 0.0f;
 	fb.want_sel[0] = '\0';
@@ -434,7 +439,7 @@ static void openDir(const char *dir, const char *select)
 		fb.loading = 0;
 		dashToast(DASH_TOAST_WARN, "Busy, try again in a moment");
 	} else if (j->quiet_input) {
-		fb.usb_input_jobs++;
+		browser_usb_jobs++;
 	}
 }
 
@@ -2332,8 +2337,7 @@ static void browserCloseState(void)
 	fb.files = NULL;
 	fb.mark = NULL;
 	fb.loading = 0;
-	fb.usb_input_jobs = 0;
-	fb.input_rearm = 0;
+	/* Never reset global pending-USB reads or the PAD flush on tab close. */
 }
 
 static void browserSnapshotPad(void)
@@ -2456,16 +2460,16 @@ void dashFileBrowserTabClose(void)
 	dashHomeRebuild(); /* Last folder shortcut updated by browsing Files */
 }
 
-int dashFileBrowserTabInputReady(void)
+int dashBrowserPadInputReady(void)
 {
-	if (!fb_tab_active)
-		return 1;
-	if (fb.usb_input_jobs > 0 && dashWorkerIoBusy())
-		return 0; /* USB fileXio and PAD share the live IOP stack */
-	if (fb.input_rearm && !dashWorkerIoBusy()) {
+	/* Applies to ALL dashboard sections: a prior Files tab's USB read may
+	 * still be running after the user navigates away. */
+	if (browser_usb_jobs > 0 && dashWorkerIoBusy())
+		return 0;
+	if (browser_usb_input_rearm && !dashWorkerIoBusy()) {
 		dashInputFlush();
-		fb.input_rearm = 0;
-		return 0; /* consume stale USB-pad transitions before new input */
+		browser_usb_input_rearm = 0;
+		return 0; /* do not replay stale PAD transitions into another tab */
 	}
 	return 1;
 }
@@ -2500,11 +2504,7 @@ void dashFileBrowser(const char *start_dir)
 		 * USB: fileXio runs on the worker while input stays untouched. Once the
 		 * listing completion is applied, re-anchor the pad state before accepting
 		 * a new action so the confirm press that opened USB cannot leak through. */
-		if (fb.input_rearm && !dashWorkerIoBusy()) {
-			dashInputFlush();
-			fb.input_rearm = 0;
-		}
-		if (fb.usb_input_jobs > 0 && dashWorkerIoBusy())
+		if (!dashBrowserPadInputReady())
 			memset(&in, 0, sizeof(in));
 		else
 			dashInputPoll(&in);
