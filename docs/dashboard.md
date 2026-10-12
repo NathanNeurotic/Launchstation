@@ -85,6 +85,30 @@ Startup can now select any of the four tabs, including Files. Older startup
 values pointing to the separate Apps page still open Home, and the old
 Devices page points to Files; no app metadata or favorites are rewritten.
 
+## Dashboard top-edge flicker / tearing
+
+The classic wLE GS renderer uses a single framebuffer. This is suitable for
+mostly static screens but causes horizontal tear bands when the animated
+dashboard draws into the same image being scanned by the TV. The earlier
+header-selector smoothing removed a high-frequency highlight animation but
+did not fix that scanout race.
+
+Launchstation now enables **gsKit double buffering when the dashboard starts**,
+without altering the classic GS initialization routine. It renders the next
+complete frame into the hidden buffer and flips buffers at VBLANK. It retains
+GS screen offsets and refreshes the texture manager after the framebuffer
+layout changes, including when changing the video mode. When file I/O is
+running in the background, the renderer continues yielding during VBLANK but
+uses exactly the same display/active-buffer progression as gsKit's standard
+double-buffer flip. Standard and DS34 builds use the same path.
+
+Trade-off: the second frame consumes approximately 1.1 MiB (NTSC/480p)
+or 1.25 MiB (PAL) of the PS2's 4 MiB GS VRAM, leaving less room for
+cached artwork. The existing small (128px) art thumbnails and texture-manager
+eviction are retained. This is a code-level anti-tearing correction; actual
+console output still needs verification across video modes before concluding
+that every source of interlaced display shimmer has been eliminated.
+
 ## Intermittent USB stalls (standard build)
 
 Launchstation limits USB-startup media discovery to four spaced scans, accepting
