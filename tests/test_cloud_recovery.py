@@ -71,6 +71,7 @@ c = r'''
 #include <string.h>
 #include <strings.h>
 #define CLOUD_ID_MAX 192
+#define CLOUD_RECOVERY_MAX_BYTES (96 * 1024 * 1024)
 #define MAX_PATH 1024
 #define FIO_O_WRONLY 1
 #define FIO_O_CREAT 2
