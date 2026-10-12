@@ -377,6 +377,19 @@ the adapter will **not** automatically select or mount it as a game card.
 The user must explicitly install or organize that image later, with card
 emulation safely inactive. Never overwrite a currently emulated card.
 
+**New numbered card installation:** Highlight a valid local `.mcd`/`.ps2` or a
+completed `mmceN:/WLE-Recovered` image in File Browser and choose **Install as
+NEW selectable MMCE card...**. Select the adapter unit; Launchstation scans
+`MemoryCards/PS2` for an entirely unused numeric `CardN` directory, creates
+`CardN/CardN-1.mcd.PART`, verifies the data and publishes `CardN-1.mcd`.
+It does not request a card switch or replace any existing numbered, GameID,
+BootCard, or named card. If rename is unsupported, a new-file verified copy
+may be used; power loss during that copy can leave a partial selectable-name
+file in the newly allocated directory. Never select a failed or interrupted
+install until the new directory has been inspected and cleaned up. This is
+not an atomic power-loss-safe card publication guarantee. Original cards
+and source snapshots remain untouched.
+
 The USB/HDD recovery action remains unchanged. Direct overwrite of an
 existing MMCE backing image is still unavailable; that is distinct from
 copying a **new** snapshot to inactive MMCE storage. The standard upstream
