@@ -1148,7 +1148,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		/* R3 is unused by HOME navigation; SELECT+R3 remains a launch key
 		 * because quick-launch intercepts it before dashboard dispatch. */
 		if (!boot_phase && section == DASH_SEC_HOME && !ql_down &&
-		    (in.pressed & DASH_IN_R3)) {
+		    !(paddata & PAD_SELECT) && (in.pressed & DASH_IN_R3)) {
 			background_only = !background_only;
 			dashInputFlush();
 			memset(&in, 0, sizeof(in));
