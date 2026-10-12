@@ -66,8 +66,18 @@ int mmce_txn_begin(mmce_txn *t, const mmce_txn_ops *ops, void *ctx,
         return MMCE_TXN_INVALID;
     if (ops->acquire(ctx, unit) != 0)
         return MMCE_TXN_UNSUPPORTED;
-    if (ops->drain(ctx, unit) != 0 ||
-        ops->identify(ctx, unit, actual, sizeof(actual), &actual_generation) != 0 ||
+    if (ops->drain(ctx, unit) != 0) {
+        /* If dirty writes cannot be proven drained, dropping the lease
+         * could reopen emulation in an unknown state. Fail closed. */
+        memset(&t->record, 0, sizeof(t->record));
+        t->record.unit = (uint8_t)unit;
+        t->record.nonce = nonce;
+        t->ops = ops;
+        t->context = ctx;
+        t->state = MMCE_TXN_RECOVERY_REQUIRED;
+        return MMCE_TXN_NEEDS_RECOVERY;
+    }
+    if (ops->identify(ctx, unit, actual, sizeof(actual), &actual_generation) != 0 ||
         !valid_identity(actual) ||
         strcmp(actual, expected_identity) ||
         actual_generation != expected_generation) {
