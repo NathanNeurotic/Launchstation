@@ -549,7 +549,7 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 	u0 = (float)((id % ICON_COLS) * ICON_SLOT);
 	v0 = (float)((id / ICON_COLS) * ICON_SLOT);
 	pad = size * 2.0f / ICON_SIZE;
-	if (id > DI_PAD_BADGE && id <= DI_BTN_SELECT) {
+	if (id > DI_PAD_BADGE && id <= DI_BTN_R3) {
 		/* Preserve colored controller glyphs while letting each theme decide
 		 * whether they sit on a background. Baked PNGs forced a fixed navy
 		 * tile into every theme, ignoring icon-backings entirely. */
