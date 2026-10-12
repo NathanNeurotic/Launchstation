@@ -18,6 +18,14 @@
   var ctx = canvas.getContext('2d');
   if (!ctx) return;
 
+  var toggle = document.getElementById('orb-toggle');
+  var storageKey = 'launchstation.cursor-orbs';
+  var mobile = window.matchMedia && window.matchMedia('(max-width: 768px), (pointer: coarse)').matches;
+  var saved = null;
+  try { saved = window.localStorage.getItem(storageKey); } catch (e) { /* Private browsing may block storage. */ }
+  var enabled = saved === 'on' || (saved !== 'off' && !mobile);
+  var frameId = null;
+
   var width = window.innerWidth;
   var height = window.innerHeight;
   var dpr = window.devicePixelRatio || 1;
@@ -89,6 +97,7 @@
   var lastTime = performance.now();
 
   function tick(now) {
+    if (!enabled) { frameId = null; return; }
     var dt = Math.min((now - lastTime) / 1000, 0.05);
     lastTime = now;
     // Everything below was tuned per 60 Hz frame; f scales it so 120/144 Hz screens move the same.
@@ -269,8 +278,39 @@
       }
     }
 
-    requestAnimationFrame(tick);
+    frameId = requestAnimationFrame(tick);
   }
 
-  requestAnimationFrame(tick);
+  function syncToggle() {
+    canvas.hidden = !enabled;
+    if (!toggle) return;
+    toggle.setAttribute('aria-pressed', String(enabled));
+    toggle.setAttribute('aria-label', (enabled ? 'Disable' : 'Enable') + ' cursor orbs');
+    toggle.title = (enabled ? 'Disable' : 'Enable') + ' cursor orbs';
+    var label = toggle.querySelector('.orb-toggle-label');
+    var symbol = toggle.querySelector('.orb-toggle-symbol');
+    if (label) label.textContent = enabled ? 'Orbs On' : 'Orbs Off';
+    if (symbol) symbol.textContent = enabled ? '✦' : '✧';
+  }
+
+  if (toggle) {
+    toggle.addEventListener('click', function () {
+      enabled = !enabled;
+      try { window.localStorage.setItem(storageKey, enabled ? 'on' : 'off'); } catch (e) { /* Toggle still works. */ }
+      syncToggle();
+      if (enabled) {
+        if (frameId === null) {
+          lastTime = performance.now();
+          frameId = requestAnimationFrame(tick);
+        }
+      } else {
+        if (frameId !== null) cancelAnimationFrame(frameId);
+        frameId = null;
+        particles.length = 0;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    });
+  }
+  syncToggle();
+  if (enabled) frameId = requestAnimationFrame(tick);
 })();

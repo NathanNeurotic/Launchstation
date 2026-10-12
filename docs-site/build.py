@@ -62,6 +62,7 @@ def topbar(manifest):
   <a class="brand" href="index.html">
     <img class="brand-logo" src="assets/launchstation-logo.avif" alt="{html.escape(s["brand"])}" width="116" height="58"></a>
   <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
     <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
     <a class="topbar-btn" href="{html.escape(s["repo"])}" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
   </div>

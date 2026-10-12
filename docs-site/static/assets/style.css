@@ -1882,3 +1882,14 @@ pre.tree{white-space:pre;overflow:auto;line-height:1.55}
   background: transparent;
 }
 @media (max-width:600px) {.brand .brand-logo {height:48px;max-width:96px}.hero-wle .hero-logo {width:100%;margin-bottom:12px}}
+
+/* Shared header control for the site-wide cursor-orb animation. */
+.topbar-btn.orb-toggle { cursor: pointer; }
+.topbar-btn.orb-toggle[aria-pressed="true"] { color: var(--ps-cyan); border-color: var(--ps-cyan); }
+.topbar-btn.orb-toggle .orb-toggle-symbol { font-size: 16px; line-height: 1; }
+.ps2-orbs-canvas[hidden] { display: none !important; }
+@media (max-width: 600px) {
+  .topbar-btn.orb-toggle { width: 32px; min-width: 32px; padding: 0; }
+  .topbar-btn.orb-toggle .orb-toggle-symbol { display: inline; }
+  .topbar-btn.orb-toggle .orb-toggle-label { display: none; }
+}
