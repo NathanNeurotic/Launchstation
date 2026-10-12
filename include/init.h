@@ -35,7 +35,8 @@ int isUsbMassStackLoaded(void);
 
 /* Rebuild the USB storage IOP for Ember using the launcHER module order.
  * PADMAN is deliberately omitted; Ember owns pad initialization. */
-int prepareEmberUsbHandoffIop(const char *ember_path);
+int prepareEmberUsbHandoffIop(const char *ember_path, const char *game_image,
+                             char *resolved, size_t resolved_size);
 
 
 #ifdef ETH
