@@ -195,7 +195,7 @@ static float drawButton(float x, float y, int icon, const char *key)
 		int keep;
 		float w;
 		if (ki >= 0) {
-			dashIcon(ki, x, y, d, DC(255, 255, 255, 255));
+			dashIcon(ki, x, y, d, DASH_C_TEXT);
 			return d;
 		}
 		tw = dashTextWidth(key, DASH_FS_CAPTION);
@@ -204,8 +204,11 @@ static float drawButton(float x, float y, int icon, const char *key)
 		keep = dashTheme.corner;
 		if (dashCfg.icon_backing) {
 			dashTheme.corner = DASH_CORNER_SOFT;
-			dashPanelGradV(x, y, w, d, 6.0f, DC(30, 36, 54, 235), DC(13, 16, 26, 235));
-			dashPanelBorder(x, y, w, d, 6.0f, DC(255, 255, 255, 60));
+			/* Theme-derived badges instead of hard-coded navy/white tiles. */
+			dashPanelGradV(x, y, w, d, 6.0f,
+			               dashColorA(DASH_C_PANEL_HI, 0.80f),
+			               dashColorA(DASH_C_PANEL, 0.80f));
+			dashPanelBorder(x, y, w, d, 6.0f, dashColorA(DASH_C_BORDER, 0.75f));
 		}
 		dashTheme.corner = keep;
 		dashTextS(x + (w - tw) * 0.5f, y + 2.5f, key, DASH_FS_CAPTION, DASH_C_TEXT); /* caps centred in the badge */
@@ -434,7 +437,8 @@ void dashDrawFocusFrame(float x, float y, float w, float h, float r, float stren
 	dashPanelBorder(x - 2, y - 2, w + 4, h + 4, r + 2, edge);
 	if (!dashTheme.glow) {
 		/* no glow: a second, fainter outline keeps focus obvious on a CRT */
-		edge.a = (u8)(70 * strength * pulse);
+		/* Avoid animated shimmer from the second fine line on interlaced CRTs. */
+		edge.a = (u8)(65 * strength);
 		dashPanelBorder(x - 4, y - 4, w + 8, h + 8, r + 4, edge);
 	}
 }
