@@ -54,3 +54,11 @@ These are mentioned or launched through an integration; that does **not** imply 
 3. For new vendored source, record upstream repository, base revision, component path, license and any local modifications.
 4. Check linked binary/package provenance independently. Do not assert a license for the whole tree based on a single checked-in notice.
 5. Build the docs site and run CI before publishing. Retain the hardware-versus-CI distinction in user-facing release notes.
+
+## Further graphics and bootloader references
+
+- [gsKit/dmaKit](https://github.com/ps2dev/gsKit): dashboard GS rendering libraries, upstream credit to Chris "Neovanglist" Gilbert and others; upstream AFL-2.0. Actual linked SDK package terms must be preserved.
+- [libpng](http://www.libpng.org/pub/png/libpng.html) and [Independent JPEG Group / libjpeg](https://www.ijg.org/): image decoding and library interfaces used by src/dash_png.c and src/dash_jpeg.c. Preserve the notices applicable to linked versions.
+- [PS2BBL](https://github.com/israpps/PlayStation2-Basic-BootLoader) by El_isra and [PS2BBLE](https://github.com/saildot4k/PlayStation2-Basic-BootLoader-Extended) by R3Z3N: separate bootloader projects referenced within PS2 homebrew history, not the Launchstation exploit installer.
+- LoadBOOTer: named memory-card exploit installer option in src/main_exploit_installer.c. Exact historical source and authorship still require verification; do not attribute it to PS2BBL without evidence.
+- ESR, FreeMcBoot and PSBBN: compatibility targets, boot environments or platform software. References do not establish redistribution of their binaries.
