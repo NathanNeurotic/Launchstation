@@ -27,9 +27,13 @@ void initializeRuntimeInputModules(enum BOOT_DEVICE boot_device)
 	loadDs34InputModules();
 #endif
 	DPRINTF("setup pad\n");
+#ifdef WLE_BOOT_DIAGNOSTICS
 	drawMsg("Boot check 1: setting up controller ports");
+#endif
 	setupPad();  //Comment out this line when using early setupPad above
+#ifdef WLE_BOOT_DIAGNOSTICS
 	drawMsg("Boot check 2: controller setup returned");
+#endif
 	waitAnyPadReady();
 	if (readpad_no_KB() && (new_pad & PAD_SELECT)) {
 		/* Recovery boot: keep legacy "show all devices" behavior, but also
@@ -42,9 +46,13 @@ void initializeRuntimeInputModules(enum BOOT_DEVICE boot_device)
 		clearPadPressState();
 	}
 	DPRINTF("Starting keyboard\n");
+#ifdef WLE_BOOT_DIAGNOSTICS
 	drawMsg("Boot check 3: starting keyboard");
+#endif
 	startKbd();
+#ifdef WLE_BOOT_DIAGNOSTICS
 	drawMsg("Boot check 4: input initialization complete");
+#endif
 	WaitTime = Timer();
 }
 
