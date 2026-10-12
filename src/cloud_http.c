@@ -903,9 +903,8 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
         return -1;
     if (bearer != NULL &&
         (strncmp(url, "https://www.googleapis.com/drive/v3/files/", 42) != 0 ||
-         bearer[0] == ' ' || strlen(bearer) > 2048 ||
-         strchr(bearer, '') != NULL || strchr(bearer, '
-') != NULL)) {
+         bearer[0] == '\0' || strlen(bearer) > 2048 ||
+         strchr(bearer, '\r') != NULL || strchr(bearer, '\n') != NULL)) {
         set_error(error, error_size, "Invalid authenticated Google media request", 0);
         return -1;
     }
