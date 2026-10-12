@@ -282,15 +282,19 @@ static int unique_history_path(const char *dir, int format,
                                char *path, size_t path_size)
 {
     char stamp[32];
-    int suffix;
+    int suffix, written;
 
+    if (name_size == 0 || path_size == 0)
+        return 0;
     backup_stamp(stamp, sizeof(stamp));
     for (suffix = 0; suffix < 100; suffix++) {
         const char *ext = backup_ext(format);
         if (suffix == 0)
-            snprintf(name, name_size, "WLE-%s.%s", stamp, ext);
+            written = snprintf(name, name_size, "WLE-%s.%s", stamp, ext);
         else
-            snprintf(name, name_size, "WLE-%s-%02d.%s", stamp, suffix, ext);
+            written = snprintf(name, name_size, "WLE-%s-%02d.%s", stamp, suffix, ext);
+        if (written < 0 || (size_t)written >= name_size)
+            return 0;
         if (!join_path(path, path_size, dir, name))
             return 0;
         {
