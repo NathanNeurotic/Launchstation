@@ -19,18 +19,25 @@ def function(text, signature):
     pos = text.index("{", start) + 1
     depth = 1
     in_string = False
+    in_char = False
     escape = False
     while depth:
+        if pos >= len(text):
+            raise AssertionError("Unbalanced function braces: " + signature)
         c = text[pos]
-        if in_string:
+        if in_string or in_char:
             if escape:
                 escape = False
             elif c == "\\":
                 escape = True
-            elif c == '"':
+            elif in_string and c == '"':
                 in_string = False
+            elif in_char and c == "'":
+                in_char = False
         elif c == '"':
             in_string = True
+        elif c == "'":
+            in_char = True
         elif c == "{":
             depth += 1
         elif c == "}":
