@@ -1584,6 +1584,148 @@ static void opImportCardToMmce(void)
                      dest);
 }
 
+
+/* Install a NEW numeric card without replacing any existing backing file.
+ * SD2Cloud documents the stock sd2psXtd CardN/CardN-1.mcd layout. An
+ * entire CardN directory must be absent before we claim its number:
+ * another channel, unknown file or interrupted import reserves it. */
+static int mmceSelectableCandidate(int unit, char *folder, int folder_size,
+                                   char *dest, int dest_size,
+                                   char *stage, int stage_size)
+{
+    int number, n, m, p, fd;
+    if (unit < 0 || unit > 1 || !folder || !dest || !stage ||
+        folder_size <= 0 || dest_size <= 0 || stage_size <= 0)
+        return 0;
+    for (number = 1; number <= 255; ++number) {
+        n = snprintf(folder, folder_size, "mmce%d:/MemoryCards/PS2/Card%d",
+                     unit, number);
+        m = snprintf(dest, dest_size, "%s/Card%d-1.mcd", folder, number);
+        p = snprintf(stage, stage_size, "%s.PART", dest);
+        if (n <= 0 || n >= folder_size || m <= 0 || m >= dest_size ||
+            p <= 0 || p >= stage_size)
+            return 0;
+        fd = genDopen(folder);
+        if (fd >= 0) {
+            genDclose(fd);
+            continue; /* directory present, even if expected image is not */
+        }
+        if (!wleExists(dest) && !wleExists(stage))
+            return number;
+    }
+    return 0;
+}
+
+static void opInstallNewMmceCard(void)
+{
+    static const char *const slots[] = {
+        "MMCE slot 1 (mmce0:)", "MMCE slot 2 (mmce1:)"
+    };
+    FILEINFO *f;
+    char source[MAX_PATH], parent[MAX_PATH], folder[MAX_PATH];
+    char dest[MAX_PATH], stage[MAX_PATH], message[192];
+    int unit, number, pcsx2, fd, prep, result;
+
+    if (!fb.files || fb.sel >= fb.n || fb.nmarked)
+        return;
+    f = &fb.files[fb.sel];
+    if (isDir(f) || !fullPath(f, source, sizeof(source)))
+        return;
+    pcsx2 = genCmpFileExt(source, "PS2");
+    if (!pcsx2 && !genCmpFileExt(source, "MCD"))
+        return;
+
+    /* Only external snapshots and the known neutral holding area.
+     * Never read a card backing file through this installation action. */
+    if (strncmp(source, "mass", 4) && strncmp(source, "usb", 3) &&
+        strncmp(source, "ata", 3) && strncmp(source, "hdd", 3) &&
+        strncmp(source, "mmce0:/WLE-Recovered/", 21) &&
+        strncmp(source, "mmce1:/WLE-Recovered/", 21)) {
+        dashModalMessage(DI_WARNING, "Use a recovered snapshot",
+                         "Choose a USB/HDD .mcd/.ps2 or a verified image in WLE-Recovered. Never install from a live card file.",
+                         source);
+        return;
+    }
+    unit = dashModalChoice("Install a NEW card on which MMCE adapter?",
+                           slots, 2, 0);
+    if (unit < 0)
+        return;
+    if (snprintf(parent, sizeof(parent), "mmce%d:/MemoryCards/PS2", unit) >=
+        (int)sizeof(parent))
+        return;
+    if (!dashModalConfirm("Create a NEW selectable MMCE card?",
+                          "Adds an unused numbered CardN-1.mcd; never replaces an existing card. Selection stays unchanged. Do not remove power during installation.",
+                          "Create new card", 0))
+        return;
+    if (!prepareOp())
+        return;
+    prep = prepareTransferDeviceStacks(source, parent);
+    if (prep != TRANSFER_STACK_READY) {
+        dashModalMessage(DI_WARNING, "MMCE card installation unavailable",
+                         prep == TRANSFER_STACK_INCOMPATIBLE ?
+                         "The source and adapter require incompatible driver stacks." :
+                         "Could not start the source or adapter driver.",
+                         parent);
+        return;
+    }
+    result = pcsx2 ? mcCardValidatePcsx2(source) : mcCardValidateNoEcc(source);
+    if (result != MC_CARD_EXPORT_OK) {
+        dashModalMessage(DI_WARNING, "Invalid source memory card",
+                         "The selected image does not have valid PS2 memory card geometry and size.",
+                         source);
+        return;
+    }
+    fd = genDopen(parent);
+    if (fd < 0) {
+        dashModalMessage(DI_WARNING, "MMCE card hierarchy unavailable",
+                         "Cannot inspect MemoryCards/PS2; no new card was created.",
+                         parent);
+        return;
+    }
+    genDclose(fd);
+
+    number = mmceSelectableCandidate(unit, folder, sizeof(folder),
+                                     dest, sizeof(dest), stage, sizeof(stage));
+    if (!number || genMkdir(folder, fileMode) < 0) {
+        dashModalMessage(DI_WARNING, "Cannot reserve unused card number",
+                         "No existing numbered card has been replaced.",
+                         parent);
+        return;
+    }
+    fd = genDopen(folder);
+    if (fd < 0) {
+        dashModalMessage(DI_WARNING, "New card folder unavailable",
+                         "The newly allocated folder could not be reopened.",
+                         folder);
+        return;
+    }
+    genDclose(fd);
+    if (wleExists(dest) || wleExists(stage)) {
+        dashModalMessage(DI_WARNING, "Card filename already claimed",
+                         "The adapter created a file during allocation. No existing image was overwritten.",
+                         dest);
+        return;
+    }
+
+    dashLoadingBegin("Installing verified NEW MMCE memory card");
+    result = pcsx2 ? mcCardImportPcsx2(source, stage, cardExportProgress) :
+                     mcCardBackupNoEcc(source, stage, cardExportProgress);
+    if (result == MC_CARD_EXPORT_OK &&
+        mmcePublishInactiveSnapshot(stage, dest)) {
+        dashLoadingEnd();
+        snprintf(message, sizeof(message),
+                 "New Card%d installed and verified. It is selectable but has NOT been activated.", number);
+        dashModalMessage(DI_CHECK, "New MMCE card installed", message, dest);
+        return;
+    }
+    dashLoadingEnd();
+    /* The new directory is retained intentionally: an ambiguous write
+     * must never be retried against a possibly existing backing image. */
+    dashModalMessage(DI_WARNING, "New card installation unverified",
+                     "Card folder may contain a partial .PART or .mcd. Do NOT select that card; inspect or back it up before cleanup.",
+                     folder);
+}
+
 /* Reuse the same verified recovery path from MMCE Settings and the
  * File Browser. Neither entry point targets an emulated MMCE image. */
 static void recoverCardFromPath(const char *chosen_source, const char *start_dir)
@@ -2101,6 +2243,7 @@ static void actionsMenu(void)
 		F_IMPORT_MCD,
 		F_RECOVER_NEW_MCD,
 		F_IMPORT_TO_MMCE_NEW,
+		F_INSTALL_NEW_MMCE_CARD,
 		F_TUNA,
 		F_DATES,
 		F_SELALL,
@@ -2183,6 +2326,9 @@ static void actionsMenu(void)
 			ADD(DI_MC, "Store NEW snapshot on MMCE...",
 			    "copy to inactive WLE-Recovered folder; does not install/activate a card",
 			    0, F_IMPORT_TO_MMCE_NEW);
+			ADD(DI_MC, "Install as NEW selectable MMCE card...",
+			    "creates an unused CardN; never replaces or selects existing cards",
+			    0, F_INSTALL_NEW_MMCE_CARD);
 		}
 		if (f != NULL && en[TIMEMANIP])
 			ADD(DI_CLOCK, LNG(time_manip), "2099-12-31", 0, F_TUNA);
@@ -2285,6 +2431,9 @@ static void actionsMenu(void)
 			break;
 		case F_IMPORT_TO_MMCE_NEW:
 			opImportCardToMmce();
+			break;
+		case F_INSTALL_NEW_MMCE_CARD:
+			opInstallNewMmceCard();
 			break;
 		case F_TUNA:
 			opTimestamps(0);
