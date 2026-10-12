@@ -495,7 +495,7 @@ static void osdTime(int fx, OsdTime *o)
 #define ORB_N 7
 #define ORB_SAMPLES 32 /* visually continuous trails without spending 672 line draws/frame */
 #define ORB_SPAN 6.5f  /* seconds of after-image */
-#define ORB_BASE 20.0f /* the whole group circles once per 20 s */
+#define ORB_BASE 20.0f /* nominal full revolution (orb speeds intentionally differ) */
 #define ORB_CAM 420.0f /* perspective distance */
 
 typedef struct
@@ -540,13 +540,38 @@ static void orbProject(const OrbStyle *st, const OrbMat *o, float phi, float r, 
 	p->d = (z / r + 1.0f) * 0.5f;
 }
 
+/* Time-continuous orbit phase. Multiplying a modulo-20-second phase by
+ * per-orb non-integer speeds made every orb teleport at each wrap. The
+ * dashboard scene clock is monotonic (and freezes at 0% effects), unlike
+ * the RTC seconds field, so no time-base restart is needed. */
+static float orbPhaseAt(int k, float t)
+{
+	float dir = (k & 1) ? -1.0f : 1.0f;
+	float rate = (TAU_F / ORB_BASE) * (0.70f + dashBgHash(k, 71) * 0.75f);
+	float wobble_rate = 0.08f + dashBgHash(k, 72) * 0.08f;
+
+	return k * (TAU_F / ORB_N) + dir * rate * t +
+	       0.12f * dashSinf(t * wobble_rate + dashBgHash(k, 73) * TAU_F);
+}
+
+/* Smooth AND periodic at the hour boundary: small at :00, fullest at
+ * :30, shrinking naturally towards :00 again. The former linear grow
+ * jumped from rmax straight back to rmin at every hour transition. */
+static float orbRadiusAt(const OrbStyle *st, int minute, float second)
+{
+	float hour_frac = (minute + second / 60.0f) / 60.0f;
+	float amount = 0.5f - 0.5f * dashCosf(TAU_F * hour_frac);
+
+	return st->rmin + (st->rmax - st->rmin) * amount;
+}
+
 static void osdOrbs(const OrbStyle *st, float t, int fx)
 {
 	static OrbMat mats[ORB_SAMPLES + 1];
 	OrbPt pts[ORB_SAMPLES + 1], head[ORB_N];
 	float head_phi[ORB_N];
 	OsdTime ot;
-	float r, base, hour_frac;
+	float r;
 	DashColor glow_c = dashColorScale(st->c, 0.8f), core_c = dashColorLighten(st->c, 0.35f);
 	DashColor halo_c = dashColorLighten(st->c, 0.62f);
 	int n = (fx == DASH_FX_SUBTLE) ? ORB_SAMPLES / 2 : ORB_SAMPLES;
@@ -559,10 +584,7 @@ static void osdOrbs(const OrbStyle *st, float t, int fx)
 		span = ORB_SPAN * 0.4f;
 	}
 	osdTime(fx, &ot);
-	hour_frac = (ot.minute + ot.second / 60.0f) / 60.0f;
-	r = st->rmin + (st->rmax - st->rmin) * hour_frac;
-	/* continuous across minutes and hours: 3600 is a multiple of ORB_BASE */
-	base = TAU_F * fmodf(ot.minute * 60.0f + ot.second, ORB_BASE) / ORB_BASE;
+	r = orbRadiusAt(st, ot.minute, ot.second);
 
 	/* faint haze around the sphere */
 	dashGfxBlend(DASH_BLEND_ADD);
@@ -573,17 +595,13 @@ static void osdOrbs(const OrbStyle *st, float t, int fx)
 		orbPlane(t - span * i / n, &mats[i]);
 
 	for (k = 0; k < ORB_N; k++) {
-		/* Alternate directions and vary speed/radius phase per orb. The hashes
-		 * are stable, so the motion is organic without visual jitter. */
-		float dir = (k & 1) ? -1.0f : 1.0f;
-		float rate = (TAU_F / ORB_BASE) * (0.70f + dashBgHash(k, 71) * 0.75f);
-		float wobble_rate = 0.08f + dashBgHash(k, 72) * 0.08f;
-		float wobble = 0.12f * dashSinf(t * wobble_rate + dashBgHash(k, 73) * TAU_F);
-		float w = dir * rate;
-		float phi = k * (TAU_F / ORB_N) + dir * base * (0.72f + dashBgHash(k, 74) * 0.42f) + wobble;
+		float phi = orbPhaseAt(k, t);
 
+		/* Sample the same physical trajectory at the actual moment of each
+		 * after-image. This includes the slow wobble at that past moment,
+		 * instead of extrapolating a different motion for the trail. */
 		for (i = 0; i <= n; i++)
-			orbProject(st, &mats[i], phi - w * span * i / n, r, &pts[i]);
+			orbProject(st, &mats[i], orbPhaseAt(k, t - span * i / n), r, &pts[i]);
 		/* after-image: a wide soft glow, then a thin bright core */
 		for (j = 0; j < 2; j++) {
 			float width = j ? 2.2f : 11.0f;
@@ -601,6 +619,8 @@ static void osdOrbs(const OrbStyle *st, float t, int fx)
 		}
 		head[k] = pts[0];
 		head_phi[k] = fmodf(phi, TAU_F);
+		if (head_phi[k] < 0.0f)
+			head_phi[k] += TAU_F;
 	}
 
 	/* orbs that meet merge into one bigger, brighter orb. They share one
