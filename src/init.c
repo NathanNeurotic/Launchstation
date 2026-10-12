@@ -1533,7 +1533,8 @@ static int emberUsbSourceIsUsb(const char *path)
 	int unit = 0, dd, ret;
 
 	if (!strncmp(path, "usb", 3))
-		return emberUsbProbePath(path, root, sizeof(root));
+		return path[3] == ':' ||
+		       (path[3] >= '0' && path[3] <= '9' && path[4] == ':');
 	if (strncmp(path, "mass", 4))
 		return 0;
 	if (path[4] == ':')
