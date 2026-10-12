@@ -284,7 +284,9 @@ int dashDevicesList(DashDevice *out, int max)
 		snprintf(name, sizeof(name), "Memory Card %d", port);
 		snprintf(mount, sizeof(mount), "mc%d:", port);
 		snprintf(browse, sizeof(browse), "mc%d:/", port);
-		if (present < 0)
+		if (present == -2)
+			d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Not responding - open to retry");
+		else if (present < 0)
 			d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Checking...");
 		else if (present == 0)
 			d = add(out, &n, max, DI_MC, DASH_DEV_ABSENT, name, mount, browse, "Slot empty");

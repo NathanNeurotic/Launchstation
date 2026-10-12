@@ -417,10 +417,13 @@ static float dcam;
 static int devSelectable(int idx)
 {
 	/* PROBE means "not checked yet", not unavailable. Let the user select it
-	 * so OK can invoke the existing lazy loader. Explicitly absent devices
-	 * remain display-only and are skipped by navigation. */
+	 * so OK can invoke the existing lazy loader. A memory card still being
+	 * checked is selectable too: browsing it makes the slot accessible (e.g.
+	 * switches the IOP away from MX4SIO) and retries. Explicitly absent
+	 * devices remain display-only and are skipped by navigation. */
 	return idx >= 0 && idx < ndevs &&
-	       (devs[idx].state == DASH_DEV_READY || devs[idx].state == DASH_DEV_PROBE);
+	       (devs[idx].state == DASH_DEV_READY || devs[idx].state == DASH_DEV_PROBE ||
+	        (devs[idx].icon == DI_MC && devs[idx].state == DASH_DEV_BUSY));
 }
 
 static void devSelectFirst(void)
@@ -594,7 +597,9 @@ static void devDraw(void)
 	if (ndevs > 0 && dsel >= 0) {
 		DashDevice *d = &devs[dsel];
 		const char *tip = (d->state == DASH_DEV_PROBE) ? "Not connected: opening it will load its driver."
-		                                               : (d->state == DASH_DEV_ABSENT) ? d->status : "Ready to browse.";
+		                  : (d->state == DASH_DEV_ABSENT) ? d->status
+		                  : (d->state == DASH_DEV_BUSY) ? "Still checking: opening it checks the card now."
+		                                                : "Ready to browse.";
 		dashDrawCard(48, 368, 400, 26, 13);
 		dashTextFit(60, 374.5f, 380, tip, DASH_FS_SMALL, DASH_C_TEXT2);
 	}
