@@ -78,6 +78,11 @@ static void release(void *p) { if(p)allocs--; free(p); }
 #define free release
 static int audsrv_load_adpcm(audsrv_adpcm_t *s,void *p,int n) {
     assert(n==64 && !memcmp(p,"APCM",4)); uploads++;
+    /* A real BGM voice MUST have SPU2 start, repeat and repeat-end flags.
+       The original fixture deliberately has no frame flags to catch
+       accidental dependence on whichever encoder produced the sidecar. */
+    const unsigned char *b=(const unsigned char *)p;
+    assert(b[6]==1 && b[17]==6 && b[33]==2 && b[49]==3);
     if(upload_error)return -1; s->buffer=p; return 0;
 }
 static int audsrv_ch_play_adpcm(int ch,audsrv_adpcm_t *s) {
@@ -98,7 +103,7 @@ static int dashSoundInit(void) {
     sound_reboot_generation=reset_generation; return 1;
 }
 """
-for signature in ("static int loadBgmSidecar(", "void dashBgmSetVolume(",
+for signature in ("static int prepareBgmLoop(", "static int loadBgmSidecar(", "void dashBgmSetVolume(",
                   "void dashBgmStop(", "void dashBgmStart(",
                   "void dashSoundShutdown(", "void dashSoundMaintain(",
                   "void dashSoundSuspend(", "void dashSoundApplyVolume("):
@@ -116,6 +121,7 @@ static void reset(void) {
 int main(void) {
     reset(); dashBgmStart();
     assert(bgm_loaded && bgm_channel==23 && allocs==1 && opens==1 && uploads==1 && plays==1);
+    assert(file[17]==0 && file[33]==0 && file[49]==0); /* never mutate the sidecar */
     assert(!strcmp(opened,"usb0:/BOOT/BGM.ADP")); /* not the imported config's folder */
     for(int i=0;i<20;i++)dashSoundMaintain(); assert(opens==1 && plays==1);
     /* Returning from a failed launch must not quit/reload a resident server. */
