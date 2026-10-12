@@ -1462,6 +1462,31 @@ static int mmceImportCandidate(int unit, char *folder, int folder_size,
     return 0;
 }
 
+/* Publishing a NEW recovery file on stock sd2psXtd. A rename may be
+ * unsupported even when the card permits create/read/write/close.
+ * Never fall back if a destination exists or the stage disappeared. */
+static int mmcePublishInactiveSnapshot(const char *stage, const char *dest)
+{
+    int copied;
+    char remove_path[MAX_PATH];
+
+    if (!stage || !dest || wleExists(dest))
+        return 0;
+    if (fileXioRename(stage, dest) >= 0)
+        return mcCardValidateNoEcc(dest) == MC_CARD_EXPORT_OK;
+
+    if (wleExists(dest) || !wleExists(stage))
+        return 0;
+    copied = mcCardBackupNoEcc(stage, dest, cardExportProgress) ==
+             MC_CARD_EXPORT_OK;
+    if (!copied || mcCardValidateNoEcc(dest) != MC_CARD_EXPORT_OK)
+        return 0;
+
+    dashStrCopy(remove_path, stage, sizeof(remove_path));
+    genRemove(remove_path); /* preserve verified output if cleanup fails */
+    return 1;
+}
+
 static void opImportCardToMmce(void)
 {
     static const char *const slots[] = {
@@ -1543,33 +1568,13 @@ static void opImportCardToMmce(void)
     dashLoadingBegin("Copying and verifying an inactive MMCE snapshot");
     r = pcsx2 ? mcCardImportPcsx2(source, stage, cardExportProgress) :
                 mcCardBackupNoEcc(source, stage, cardExportProgress);
-    if (r == MC_CARD_EXPORT_OK && !wleExists(dest)) {
-        int moved = fileXioRename(stage, dest) >= 0;
-        int copied = 0;
-
-        /* sd2cloud's firmware compatibility experience shows that some
-         * MMCE filesystem configurations do not support rename. Do not
-         * treat an ambiguous rename response as proof that a new file was
-         * published. Only fall back if the staged source still exists AND
-         * the destination does not. Never copy over an existing name.
-         * The verified fallback opens one MMCE descriptor at a time. */
-        if (!moved && !wleExists(dest) && wleExists(stage)) {
-            copied = mcCardBackupNoEcc(stage, dest, cardExportProgress) ==
-                     MC_CARD_EXPORT_OK;
-        }
-        if ((moved || copied) &&
-            mcCardValidateNoEcc(dest) == MC_CARD_EXPORT_OK) {
-            if (copied) {
-                char staged_copy[MAX_PATH];
-                dashStrCopy(staged_copy, stage, sizeof(staged_copy));
-                genRemove(staged_copy); /* safe to leave .PART if removal fails */
-            }
-            dashLoadingEnd();
-            dashModalMessage(DI_CHECK, "Snapshot stored on MMCE",
-                             "Verified image saved in WLE-Recovered. This inactive holding area is not a selected game memory card.",
-                             dest);
-            return;
-        }
+    if (r == MC_CARD_EXPORT_OK &&
+        mmcePublishInactiveSnapshot(stage, dest)) {
+        dashLoadingEnd();
+        dashModalMessage(DI_CHECK, "Snapshot stored on MMCE",
+                         "Verified image saved in WLE-Recovered. This inactive holding area is not a selected game memory card.",
+                         dest);
+        return;
     }
     /* A partially written or ambiguous file remains in the holding area,
      * never in a firmware-selectable MemoryCards path. No auto-activation. */
