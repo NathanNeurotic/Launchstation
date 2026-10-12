@@ -1504,6 +1504,29 @@ static int emberUsbProbePath(const char *path, char *out, size_t out_size)
 #endif
 }
 
+/* Resolve a post-reset USB unit in the namespace actually registered by
+ * its storage driver. EXFAT BDM uses usbN:, classic USBMASS uses mass: and
+ * massN:. Keep the selected game's relative path and ELF path identical. */
+static int emberUsbRemountPath(int unit, const char *tail, char *out, size_t out_size)
+{
+    int n;
+
+    if (unit < 0 || unit > 9 || tail == NULL || out == NULL || out_size == 0)
+        return 0;
+#ifdef EXFAT
+    n = snprintf(out, out_size, "usb%d:%s%s", unit,
+                 *tail == '/' ? "" : "/", tail);
+#else
+    if (unit == 0)
+        n = snprintf(out, out_size, "mass:%s%s",
+                     *tail == '/' ? "" : "/", tail);
+    else
+        n = snprintf(out, out_size, "mass%d:%s%s", unit,
+                     *tail == '/' ? "" : "/", tail);
+#endif
+    return n > 0 && (size_t)n < out_size;
+}
+
 static int emberStartIrx(const char *name, const void *module, int size)
 {
 	int id, ret = -1;
@@ -1529,14 +1552,22 @@ static int emberStartSio2man(void)
  * provenance check instead of treating every numbered mass path as USB. */
 static int emberUsbSourceIsUsb(const char *path)
 {
+#ifdef EXFAT
 	char root[16], driver[32];
 	int unit = 0, dd, ret;
+#endif
 
 	if (!strncmp(path, "usb", 3))
 		return path[3] == ':' ||
 		       (path[3] >= '0' && path[3] <= '9' && path[4] == ':');
 	if (strncmp(path, "mass", 4))
 		return 0;
+#ifndef EXFAT
+	/* Classic USBMASS owns the mass namespace; it does not expose the
+	 * shared-BDM provenance ioctl used by exFAT configurations. */
+	return path[4] == ':' ||
+	       (path[4] >= '0' && path[4] <= '9' && path[5] == ':');
+#else
 	if (path[4] == ':')
 		unit = 0;
 	else if (path[4] >= '0' && path[4] <= '9' && path[5] == ':')
@@ -1552,6 +1583,7 @@ static int emberUsbSourceIsUsb(const char *path)
 	                    driver, sizeof(driver) - 1);
 	fileXioDclose(dd);
 	return ret >= 0 && !strcmp(driver, "usb");
+#endif
 }
 
 typedef struct {
@@ -1615,10 +1647,8 @@ static int emberUsbFindRemounted(const char *image_path, const char *ember_path,
 		matches = 0;
 		found = -1;
 		for (unit = 0; unit < 10; unit++) {
-			if (snprintf(candidate, sizeof(candidate), "usb%d:%s%s", unit,
-			             *image_tail == '/' ? "" : "/", image_tail) >= (int)sizeof(candidate) ||
-			    snprintf(elf_candidate, sizeof(elf_candidate), "usb%d:%s%s", unit,
-			             *elf_tail == '/' ? "" : "/", elf_tail) >= (int)sizeof(elf_candidate))
+			if (!emberUsbRemountPath(unit, image_tail, candidate, sizeof(candidate)) ||
+			    !emberUsbRemountPath(unit, elf_tail, elf_candidate, sizeof(elf_candidate)))
 				continue;
 			if (!emberUsbIdentifyFile(candidate, &current) ||
 			    current.size != before->size || current.high != before->high ||
@@ -1635,10 +1665,9 @@ static int emberUsbFindRemounted(const char *image_path, const char *ember_path,
 			return 0;
 		}
 		if (matches == 1 && attempt >= 20) {
-			if (snprintf(resolved, resolved_size, "usb%d:%s%s", found,
-			             *elf_tail == '/' ? "" : "/", elf_tail) >= (int)resolved_size)
+			if (!emberUsbRemountPath(found, elf_tail, resolved, resolved_size))
 				return 0;
-			DPRINTF("[EMBER USB] game remounted on usb%d: (post-reset identity matched)\n", found);
+			DPRINTF("[EMBER USB] game remounted on unit %d: (post-reset identity matched)\n", found);
 			return 1;
 		}
 		DelayThread(100 * 1000);
