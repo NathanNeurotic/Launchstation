@@ -129,6 +129,37 @@ static int write_exact_at(const char *path, u64 pos, const u8 *buf, int size, in
 	return genClose(fd) < 0 ? -1 : 0;
 }
 
+
+/* An exclusively created output must never truncate somebody else's file.
+ * Stock MMCEMAN forwards FIO_O_EXCL to the sd2psXtd SdFat open flags.
+ * Source/destination handles remain sequential for MMCE compatibility.
+ * owned is set immediately after successful creation, even if I/O fails. */
+static int write_exact_at_new(const char *path, u64 pos, const u8 *buf,
+                              int size, int first, int *owned)
+{
+    int fd, total = 0;
+    int flags = FIO_O_WRONLY | (first ? (FIO_O_CREAT | FIO_O_EXCL) : 0);
+
+    fd = genOpen(path, flags);
+    if (fd < 0)
+        return -1;
+    if (first)
+        *owned = 1;
+    if (pos && genLseek(fd, (s64)pos, SEEK_SET) != (s64)pos) {
+        genClose(fd);
+        return -1;
+    }
+    while (total < size) {
+        int r = genWrite(fd, (void *)(buf + total), size - total);
+        if (r <= 0) {
+            genClose(fd);
+            return -1;
+        }
+        total += r;
+    }
+    return genClose(fd) < 0 ? -1 : 0;
+}
+
 static u16 read_le16(const u8 *p)
 {
 	return (u16)(p[0] | (p[1] << 8));
@@ -264,10 +295,10 @@ close_source:
 	return ret;
 }
 
-int mcCardBackupNoEcc(const char *source, const char *dest, McCardExportProgress progress)
+static int mcCardBackupNoEccImpl(const char *source, const char *dest, McCardExportProgress progress, int only_new)
 {
 	u64 src_size = 0, pos = 0;
-	int ret, chunk;
+	int ret, chunk, owned = 0;
 	char remove_path[MAX_PATH];
 
 	if (source == NULL || dest == NULL || source[0] == '\0' || dest[0] == '\0')
@@ -284,7 +315,8 @@ int mcCardBackupNoEcc(const char *source, const char *dest, McCardExportProgress
 	while (pos < src_size) {
 		chunk = (src_size - pos > MC_EXPORT_IN) ? MC_EXPORT_IN : (int)(src_size - pos);
 		if (read_exact_at(source, pos, export_in, chunk) < 0 ||
-		    write_exact_at(dest, pos, export_in, chunk, pos == 0) < 0)
+		    (only_new ? write_exact_at_new(dest, pos, export_in, chunk, pos == 0, &owned) :
+	                   write_exact_at(dest, pos, export_in, chunk, pos == 0)) < 0)
 			goto io_fail;
 		pos += chunk;
 		if (progress)
@@ -313,9 +345,21 @@ verify_fail:
 	ret = MC_CARD_EXPORT_VERIFY_FAILED;
 remove_bad:
 	snprintf(remove_path, sizeof(remove_path), "%s", dest);
-	genRemove(remove_path);
+	if (!only_new || owned)
+		genRemove(remove_path);
 	return ret;
 }
+
+int mcCardBackupNoEcc(const char *source, const char *dest, McCardExportProgress progress)
+{
+    return mcCardBackupNoEccImpl(source, dest, progress, 0);
+}
+
+int mcCardBackupNoEccNewFile(const char *source, const char *dest, McCardExportProgress progress)
+{
+    return mcCardBackupNoEccImpl(source, dest, progress, 1);
+}
+
 
 static int convert_block(const u8 *in, int in_size, u8 *out)
 {
@@ -509,10 +553,10 @@ static int strip_pcsx2_block(const u8 *in, int in_size, u8 *out)
 	return made;
 }
 
-int mcCardImportPcsx2(const char *source, const char *dest, McCardExportProgress progress)
+static int mcCardImportPcsx2Impl(const char *source, const char *dest, McCardExportProgress progress, int only_new)
 {
 	u64 raw_size = 0, encoded_size = 0, src_pos = 0, dst_pos = 0;
-	int ret, chunk, stripped;
+	int ret, chunk, stripped, owned = 0;
 	char remove_path[MAX_PATH];
 
 	if (source == NULL || dest == NULL || source[0] == '\0' || dest[0] == '\0')
@@ -527,7 +571,8 @@ int mcCardImportPcsx2(const char *source, const char *dest, McCardExportProgress
 		if (read_exact_at(source, src_pos, verify_out, chunk) < 0)
 			goto io_fail;
 		stripped = strip_pcsx2_block(verify_out, chunk, export_in);
-		if (stripped < 0 || write_exact_at(dest, dst_pos, export_in, stripped, src_pos == 0) < 0)
+		if (stripped < 0 || (only_new ? write_exact_at_new(dest, dst_pos, export_in, stripped, src_pos == 0, &owned) :
+	                              write_exact_at(dest, dst_pos, export_in, stripped, src_pos == 0)) < 0)
 			goto io_fail;
 		src_pos += chunk;
 		dst_pos += stripped;
@@ -559,9 +604,21 @@ verify_fail:
 	ret = MC_CARD_EXPORT_VERIFY_FAILED;
 remove_bad:
 	snprintf(remove_path, sizeof(remove_path), "%s", dest);
-	genRemove(remove_path);
+	if (!only_new || owned)
+		genRemove(remove_path);
 	return ret;
 }
+
+int mcCardImportPcsx2(const char *source, const char *dest, McCardExportProgress progress)
+{
+    return mcCardImportPcsx2Impl(source, dest, progress, 0);
+}
+
+int mcCardImportPcsx2NewFile(const char *source, const char *dest, McCardExportProgress progress)
+{
+    return mcCardImportPcsx2Impl(source, dest, progress, 1);
+}
+
 
 //--------------------------------------------------------------
 // End of file: mc_card_export.c
