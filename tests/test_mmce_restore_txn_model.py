@@ -108,7 +108,8 @@ int main(void) {
     reset(&f,&t);
     assert(begin(&f,&t,0)==0 && t.state==MMCE_TXN_HELD);
     assert(f.locked && f.backup_checks==1 && !f.commit_calls);
-    assert(mmce_txn_prepare(&t,99,(const unsigned char*)"hash")==MMCE_TXN_INVALID);
+    { unsigned char unused_digest[32] = {0};
+      assert(mmce_txn_prepare(&t,99,unused_digest)==MMCE_TXN_INVALID); }
     assert(t.state==MMCE_TXN_HELD && f.locked);
     assert(prepare(&t)==0 && t.state==MMCE_TXN_PREPARED);
     assert(mmce_txn_commit(&t,99)==MMCE_TXN_INVALID);
