@@ -1,6 +1,19 @@
-<h1>Dashboard</h1><p class="lead">A PS2-style front end over classic LaunchELF-family capabilities.</p>
-<h2 id="sections">Sections</h2><table><thead><tr><th>Section</th><th>Purpose</th></tr></thead><tbody><tr><td>Home</td><td>Recent/favorite or configured quick actions. Home shortcuts can be hidden.</td></tr><tr><td>Apps</td><td>Applications discovered from configured scan folders.</td></tr><tr><td>Files / Devices</td><td>One merged section with a remembered Devices/File-list view toggle.</td></tr><tr><td>Tools</td><td>File Browser, Text Editor, HDD tools, POPStarter/Neutrino entry points, system info, cloud actions and utilities.</td></tr><tr><td>Settings</td><td>Appearance, Home/apps, sound, input, launching, storage/devices, network and system options.</td></tr></tbody></table>
-<h2 id="navigation">Navigation model</h2><p>L1/R1 changes top-level sections. The active tab uses a stable monotonic selector animation; the earlier fast overshoot was removed because it could look like top-edge video flicker on interlaced displays.</p>
-<h2 id="files-devices">Files and Devices</h2><p>Files and Devices share one section. SELECT toggles view and the choice is remembered. <b>Show unavailable devices</b> controls confirmed-unavailable cards. Devices that are merely <b>Not checked</b> remain selectable so opening them can load their driver.</p>
-<h2 id="status">Reserved status areas</h2><p>Unsaved settings, confirmation toasts and clock/date have defined lanes instead of drawing over one another. Long labels and notifications use bounded scrolling.</p>
-<h2 id="themes">Presentation</h2><p>Selection style, icon backing, theme motion, clock placement, BGM and related options are configurable. See <a href="themes.html">Display, Themes &amp; BGM</a>.</p>
+<h1>Dashboard: Current Navigation</h1>
+<p class="lead">LAUNCHSTATION now has four visible top-level tabs. Applications live under Home; Files is the actual native File Browser, not an extra landing page.</p>
+<h2 id="tabs">Four top-level tabs</h2>
+<table><thead><tr><th>Tab</th><th>Behavior in current builds</th></tr></thead><tbody>
+<tr><td><b>Home</b></td><td>Continue carousel, pinned/recent/favorite applications, <b>Applications</b> library shortcut, <b>Last folder</b> shortcut when available, and optional configured launch-key shortcuts.</td></tr>
+<tr><td><b>Files</b></td><td>Opens the native File Browser directly inside the dashboard frame. Browse drives and folders, operate on files and return to the same folder/selection after switching tabs.</td></tr>
+<tr><td><b>Tools</b></td><td>File Browser, Text Editor, <b>MISC commands</b>, USB unit diagnostics, HDD Manager, exploit installer, network tools, MMCE/IGR and Google Drive functions where enabled.</td></tr>
+<tr><td><b>Settings</b></td><td>Appearance, Home/app library, sound, input, launching, devices/MMCE, network, and system settings.</td></tr>
+</tbody></table>
+<h2 id="home-apps">Home and Applications</h2>
+<p>Select <b>Applications</b> from Home to enter the full library without adding a fifth top-level tab. The library keeps its Grid/List/Carousel views, favorites, pins, filtering and recents. <b>SELECT</b> cycles application views. Add or remove a favorite from the application options; the result also displays a toast.</p>
+<p><b>Last folder</b> appears on Home after the browser has a valid remembered location. Optional launch-key shortcuts can be disabled without removing the Applications and Last folder navigation shortcuts.</p>
+<h2 id="files">Files and device discovery</h2>
+<p>Files is a persistent browser tab using the same engine as the modal browser opened from Tools. The root lets you select devices and start lazy drivers; <b>Not checked</b> is not the same as absent. The old separate Devices landing view and Files landing page are not additional visible tabs.</p>
+<p>Asynchronous USB reads can complete after a tab change. Input remains guarded until outstanding reads finish, rather than treating a tab switch as permission to poll PAD immediately.</p>
+<h2 id="navigation">Navigation</h2>
+<p><b>L1/R1</b> cycles Home, Files, Tools and Settings. <b>START</b> opens the global menu; File Browser supports context actions and multi-selection. The visible section count is four even though compatibility code retains older internal section identifiers.</p>
+<h2 id="display">Status and visuals</h2>
+<p>Clock, notifications, confirmation toasts, animation, BGM, screen calibration and themes have explicit display settings. Dashboard double buffering reduces horizontal scanout tearing, but passing CI does not establish every console/display combination is flicker-free. See <a href="themes.html">Themes &amp; BGM</a> and <a href="troubleshooting.html">Troubleshooting</a>.</p>

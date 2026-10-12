@@ -13,14 +13,14 @@
 <a class="tile" href="neutrino.html"><span class="icon icon-neutrino"></span><b>PS2 ISO · Neutrino</b><span>Launch .ISO images from supported devices</span></a>
 <a class="tile" href="popstarter.html"><span class="icon icon-ps1"></span><b>PS1 VCD · POPStarter</b><span>Launch POPStarter-compatible .VCD images</span></a>
 <a class="tile" href="ember.html"><span class="icon icon-ps1"></span><b>PS1 Images · Ember</b><span>Launch save-safe EMBER/games/&lt;Game&gt;/ images</span></a>
-<a class="tile" href="mmce-backup.html"><span class="icon icon-vmc"></span><b>MMCE Backups</b><span>Versioned local backup and IGR integration</span></a>
-<a class="tile" href="cloud.html"><span class="icon icon-smb"></span><b>Google Drive</b><span>Optional native PS2 cloud backup</span></a>
+<a class="tile" href="mmce-backup.html"><span class="icon icon-vmc"></span><b>MMCE Backups</b><span>Verified local/Drive history and new-file recovery</span></a>
+<a class="tile" href="cloud.html"><span class="icon icon-smb"></span><b>Google Drive</b><span>Optional cloud upload and verified recovery</span></a><a class="tile" href="wiki.html"><span class="icon icon-book"></span><b>Wiki &amp; Guides</b><span>Feature map, troubleshooting, credits, offline docs</span></a>
 </div>
 <h2 id="design">Design goals</h2>
 <ul class="checklist"><li><b>Device-agnostic launching.</b> Work from the device the user actually browsed instead of assuming mass0 or mc0.</li><li><b>Demand-load expensive stacks.</b> Drivers and networking stay out of startup until needed.</li><li><b>Keep classic functionality.</b> Dashboard actions wrap proven filesystem and browser operations instead of discarding them.</li><li><b>Visible state.</b> Not checked, absent, busy, unsaved changes and background work are explicit.</li><li><b>Hardware-first validation.</b> CI catches structural/link/layout regressions; device behavior is still verified on consoles.</li></ul>
 <h2 id="feature-map">Feature map</h2>
 <table class="matrix" data-sortable><thead><tr><th>Area</th><th>Highlights</th></tr></thead><tbody>
-<tr><td>Dashboard</td><td>Home, Apps, Files/Devices, Tools, Settings; configurable startup section; optional Home shortcuts; themes, clock, BGM and animation.</td></tr>
+<tr><td>Dashboard</td><td>Home, Files, Tools, Settings; Applications library nested in Home, Last folder shortcut; themes, clock, BGM and animation.</td></tr>
 <tr><td>File management</td><td>Classic and dashboard browsers, copy/cut/paste, rename, delete, folders, PSU operations, VMC mounting, timestamp tools, sorting and metadata.</td></tr>
 <tr><td>Storage</td><td>Memory cards, USB/MASS, MMCE, MX4SIO, iLink, internal APA/PFS, ATA/exFAT and supported network storage.</td></tr>
 <tr><td>Game images</td><td>PS1 VCD via POPStarter; PS1 CUE/BIN/EXE folder layouts via Ember; PS2 ISO via Neutrino.</td></tr>

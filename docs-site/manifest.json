@@ -192,6 +192,11 @@
       "name": "Reference",
       "pages": [
         [
+          "wiki",
+          "Wiki & Guide Index",
+          "book"
+        ],
+        [
           "troubleshooting",
           "Troubleshooting",
           "troubleshoot"

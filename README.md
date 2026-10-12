@@ -368,11 +368,23 @@ MG_CHALLENGE_IV=11569b681f98ebe5c9fab2cf670ee97e380a94ee9d85e69d99aa32d6ab2471b7
 - `make all-ds34-on` builds a dedicated ELF with DS34 support.
 - `make all-ds34-variants` builds both variants in one run.
 
+## Documentation, Wiki, and Release Reference
+
+- [Current documentation and searchable Wiki/Guide index](https://nathanneurotic.github.io/Launchstation/wiki.html)
+- [Version-controlled Markdown wiki](docs/wiki/Home.md)
+- [Current dashboard tabs and Applications library](https://nathanneurotic.github.io/Launchstation/dashboard.html)
+- [Verified MMCE local/cloud recovery](docs/wiki/MMCE-Recovery.md)
+- [Rolling releases and update/rollback policy](docs/wiki/Releases-and-Recovery.md)
+- [Full external project and third-party license inventory](docs/THIRD_PARTY_CREDITS.md)
+
+The four current dashboard tabs are **Home, Files, Tools, Settings**. The Applications library is nested under Home; Files is the persistent native browser; the MISC command folder is under Tools. This documentation is authored on `master` and generated to `gh-pages` by CI.
+
 ## Credits & Acknowledgments
 
-- **[@techwritescode](https://github.com/techwritescode)**: Special thanks for their role and collaborative contributions in the development process. ([GitHub Sponsors](https://github.com/sponsors/techwritescode))
-- **[wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z)** by **R3Z3N / Saildot4K**: direct upstream base and major foundation of this fork. ([Ko-fi](https://ko-fi.com/r3z3n))
-- **[johnson-cooper](https://github.com/johnson-cooper)**: created this fork and handed the project over to NathanNeurotic / Ripto to maintain and improve. ([Buy Me a Coffee](https://buymeacoffee.com/attackishere))
-- **NathanNeurotic (Ripto)**: current maintainer. ([Ko-fi](https://ko-fi.com/NathanNeurotic))
-- Original wLaunchELF / uLaunchELF / LaunchELF maintainers, contributors, and the PS2Dev community.
+**Direct lineage and maintainers:** [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z) by R3Z3N / Saildot4K; earlier wLaunchELF, uLaunchELF and LaunchELF authors; [johnson-cooper](https://github.com/johnson-cooper), who created and transferred this fork; [NathanNeurotic / Ripto](https://github.com/NathanNeurotic), current maintainer; [techwritescode](https://github.com/techwritescode), TnA, oMrRexD, Zack and FitthFox for collaboration, insight or testing as noted in the detailed credits.
 
+**Source/dependency credits:** [PS2SDK/ps2dev](https://github.com/ps2dev/ps2sdk), [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman), [RiptOPL usbd-ra](https://github.com/NathanNeurotic/Open-PS2-Loader), legacy [ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), the legacy libcdvd authors, inherited DS34 driver authors including Alex Parrado, [Mbed TLS](https://github.com/Mbed-TLS/mbedtls), [Xiph.org ogg/vorbis](https://xiph.org/), audsrv and font contributors.
+
+**External launcher and reference projects:** [Neutrino](https://github.com/rickgaiser/neutrino), [POPStarter](https://www.psx-place.com/threads/popstarter.19139/), [Ember](https://github.com/Gageformer/Ember), [PS2Link](https://github.com/ps2dev/ps2link), [UDPFSD](https://github.com/pcm720/udpfsd), [OSDMenu](https://github.com/pcm720/OSDMenu), [KELFTool](https://github.com/xfwcfw/kelftool), [CosmicScale's HDD-OSD icon generator](https://github.com/CosmicScale/HDD-OSD-Icon-Generator), [PixelFX RetroGem](https://www.pixelfx.co/hdmi-retro-gem), the Google Drive APIs and the MMCE/PS2 homebrew ecosystem. External programs are **not** automatically bundled merely because Launchstation can launch or reference them.
+
+For each project's exact role, paths, credit, bundled/unbundled status and license caveats, read [Third-Party Credits & License Inventory](docs/THIRD_PARTY_CREDITS.md) and the [website Credits page](https://nathanneurotic.github.io/Launchstation/credits.html). Original file-level notices remain authoritative; there is currently no single root LICENSE in the repository.

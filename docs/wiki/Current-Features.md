@@ -1,0 +1,28 @@
+# Current LAUNCHSTATION features and navigation
+
+This guide reflects the four visible tabs implemented in `src/dash_main.c` and the Home/Files integration on `master` after PRs #104 and #107.
+
+| Visible tab | User-facing behavior | Source |
+| --- | --- | --- |
+| **Home** | Continue, pins, recents, favorites, nested Applications library and Last folder | `src/dash_home.c`, `src/dash_apps.c` |
+| **Files** | Direct persistent File Browser, remembered folder and selection across tabs; device roots | `src/dash_browser.c` |
+| **Tools** | MISC commands, USB unit diagnostics, Text Editor, HDD Manager, exploit installer, PS2Link/FTP, IGR and cloud actions where enabled | `src/dash_tools.c` |
+| **Settings** | Appearance, app library folders, sound, input, launching, devices and backup/Drive options | `src/dash_settings.c` |
+
+**Navigation:** L1/R1 switches tabs. SELECT changes Grid/List/Carousel in Home's Applications library. The separate Apps and Devices internal screen constants are compatibility details, not extra visible top-level tabs.
+
+## Files and app roots
+
+Default app scanning: `mc:/APPS`, `mc:/BOOT`, `mass:/APPS`, `mass:/BOOT`, each one subfolder deep. Adjust under Settings → Home & applications → Application library → Application folders. Other paths can still be browsed/launched from Files.
+
+For storage, do not equate `Not checked` with physically absent. Lazy drivers start when selected. Logical USB mount numbers can change. Use Tools → USB unit diagnostics deliberately; a manual fileXio probe can block in an IOP RPC.
+
+## External game cores
+
+- **PS2 ISO** → Neutrino (external ELF, configured or discovered with TOML sidecars).
+- **PS1 VCD** → POPStarter (external launcher, own VCD and HDD argument conventions).
+- **PS1 CUE/BIN/EXE** → Ember (external ELF), only under a save-safe `<umbrella>/games/<Game>/` folder. The umbrella can be anywhere and can be named arbitrarily.
+- For Ember on USB, the launcher rebuilds the storage IOP without resident PADMAN and confirms game identity after USB mount-number reassignment before final keep-IOP launch.
+- Normal generic ELF reset preferences do not govern Neutrino or Ember's dedicated handoff.
+
+These external programs, user BIOS and commercial games are not bundled. See the [full web documentation](https://nathanneurotic.github.io/Launchstation/) for per-core setup and troubleshooting.
