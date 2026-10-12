@@ -79,6 +79,7 @@ jobs:
           python3 tests/test_mmce_native_import.py
           python3 tests/test_mmce_rename_fallback.py
           python3 tests/test_mmce_selectable_install.py
+          python3 tests/test_mmce_exclusive_new_files.py
           python3 tests/test_sd2cloud_parity.py
           python3 tests/test_mmce_status_failures.py
           python3 tests/test_self_update.py
