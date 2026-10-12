@@ -2,6 +2,16 @@
 
 ## Current status
 
+**Direct overwrite of an existing, potentially active card is not enabled.**
+This project uses the existing sd2psXtd filesystem commands without modifying
+people's firmware. The supported adapter-side path is to save a separately
+verified image under `mmceN:/WLE-Recovered`; that neutral holding directory
+is not part of the selectable `MemoryCards/PS2` backing-card hierarchy.
+It makes a new file on the adapter but does not activate or replace a card.
+The optional transaction research under `research/sd2psxtd/` is
+non-production reference material, **not a requirement to fork or change
+adapter firmware**.
+
 **Not enabled.** Launchstation can already save verified local/card-history snapshots and download verified cloud snapshots to **new USB/HDD `.mcd` files**, without touching active MMCE images. This remains the supported recovery path.
 
 The present MMCEMAN/firmware interface cannot certify that an arbitrary `mmce0:/MemoryCards/...` or `mmce1:/MemoryCards/...` target is inactive and atomically replaceable. Do not infer that from a successful pathname lookup, `GET_CARD`, an idle `GET_STATUS` flag, or `RESET`.
