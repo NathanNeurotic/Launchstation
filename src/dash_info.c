@@ -82,7 +82,9 @@ static void sheetShow(int icon, const char *title, const char *subtitle, const S
 		scroll = dashApproach(scroll, scroll_target, 18.0f * dashAnimSpeed(), dt);
 		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
 		{
-			float oe = dashEaseOutCubic(open), ly = body_y - scroll;
+			/* Keep scrolled glyph baselines aligned to logical pixels. Fractional
+			 * Y coordinates shimmer in interlaced video and distort font edges. */
+			float oe = dashEaseOutCubic(open), ly = body_y - floorf(scroll + 0.5f);
 
 			dashRenderScene();
 			dashModalBackdrop(oe);

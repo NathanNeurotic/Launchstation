@@ -404,7 +404,10 @@ void dashBgSceneDisc(float t, int fx)
 	/* the dim red body of the cloud bank */
 	dashGlow(cx, cy, 380, 300, colA(dashColorScale(red, 0.55f), 145));
 
-	dashGfxBlend(DASH_BLEND_ADD);
+	/* Render broad, overlapping cloud shapes with ordinary alpha. The
+	 * previous additive pass stacked every cloud into shiny clipped reds,
+	 * especially on interlaced 4:3 displays. Reserve additive blending
+	 * for the focused flare below. */
 	/* cloud blobs streaming towards the camera */
 	for (i = 0; i < n; i++) {
 		float life = t * (0.050f + (i % 5) * 0.008f) + dashBgHash(i, 3);
@@ -422,6 +425,9 @@ void dashBgSceneDisc(float t, int fx)
 		dashGlow(x, y, size, size * 0.8f, colA(cc, (int)(30 * a)));
 		dashGlow(x + size * 0.35f, y - size * 0.2f, size * 0.7f, size * 0.55f, colA(cc, (int)(19 * a)));
 	}
+	/* A restrained additive focal flare keeps the red disc-error
+	 * identity without burning out all of the atmospheric cloud detail. */
+	dashGfxBlend(DASH_BLEND_ADD);
 	/* the flare above the centre */
 	dashGlow(cx + 8, cy - 26, 60 * pulse, 52 * pulse, colA(DC(255, 110, 110, 255), 52));
 	dashGlow(cx + 8, cy - 26, 230, 190, colA(dashColorScale(red, 0.8f), 35));
@@ -627,26 +633,32 @@ static void osdOrbs(const OrbStyle *st, float t, int fx)
 	 * circle, so meeting means equal phase; screen distance would also
 	 * bloom a front and a back orb that merely cross in the projection. */
 	for (k = 0; k < ORB_N; k++) {
-		int together = 1;
+		int together = 1, already_drawn = 0;
 		float grow, share, sz = head[k].s * (0.7f + 0.4f * head[k].d);
 
 		for (j = 0; j < ORB_N; j++) {
 			float dp = fabsf(head_phi[j] - head_phi[k]);
 			if (dp > PI_F)
 				dp = TAU_F - dp;
-			if (j != k && dp < 0.1f)
+			if (j != k && dp < 0.1f) {
 				together++;
+				if (j < k)
+					already_drawn = 1;
+			}
 		}
-		grow = sqrtf((float)together);
-		share = dashClampf(1.6f / together, 0.0f, 1.0f);
+		/* Render each phase cluster once. Drawing the same merged orb for
+		 * every member made additive blending overexpose collisions. */
+		if (already_drawn)
+			continue;
+		grow = dashClampf(1.0f + 0.25f * (together - 1), 1.0f, 1.8f);
+		share = together > 1 ? 0.85f : 1.0f;
 		dashGlow(head[k].x, head[k].y, 30.0f * sz * grow, 30.0f * sz * grow,
 		         colA(glow_c, (int)((56.0f + 46.0f * head[k].d) * share)));
 		dashGlow(head[k].x, head[k].y, 11.0f * sz * grow, 11.0f * sz * grow,
 		         colA(halo_c, (int)((153.0f + 77.0f * head[k].d) * share)));
-		/* Keep merged lights only a touch less glaring: each member still draws
-		 * the shared core, so divide a 235-alpha group budget across them. */
+		/* One central highlight per cluster prevents stacked white cores. */
 		dashGlow(head[k].x, head[k].y, 5.2f * sz * grow, 5.2f * sz * grow,
-		         colA(DC(255, 255, 255, 255), together > 1 ? 235 / together : 255));
+		         colA(DC(255, 255, 255, 255), together > 1 ? 210 : 255));
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
 }
@@ -708,9 +720,12 @@ void dashBgSceneClockRing(float t, int fx)
 		          cx + ca * r1 + nx, cy + sa * r1 * 0.9f + ny, cx + ca * r1 - nx, cy + sa * r1 * 0.9f - ny, ci, ci, co, co);
 		if (lit && fx != DASH_FX_OFF) {
 			float rf = r0 + (r1 - r0) * fill;
-			DashColor cb = colA(dashColorLighten(rod, 0.4f), 150);
+			DashColor cb = colA(dashColorLighten(rod, 0.18f), 100);
+			DashColor tip = colA(cb, 0);
+			/* A solid-color segment ended in a sharp rectangular box on the
+			 * active clock pillar. Feather the moving fill along its length. */
 			dashQuadG(cx + ca * r0 + nx * 0.5f, cy + sa * r0 * 0.9f + ny * 0.5f, cx + ca * r0 - nx * 0.5f, cy + sa * r0 * 0.9f - ny * 0.5f,
-			          cx + ca * rf + nx * 0.5f, cy + sa * rf * 0.9f + ny * 0.5f, cx + ca * rf - nx * 0.5f, cy + sa * rf * 0.9f - ny * 0.5f, cb, cb, cb, cb);
+			          cx + ca * rf + nx * 0.5f, cy + sa * rf * 0.9f + ny * 0.5f, cx + ca * rf - nx * 0.5f, cy + sa * rf * 0.9f - ny * 0.5f, cb, cb, tip, tip);
 		}
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);

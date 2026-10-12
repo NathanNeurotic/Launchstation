@@ -2875,6 +2875,9 @@ static const char *actionStatus(int id)
 static void settingsDraw(void)
 {
 	int i;
+	/* Give the breadcrumb a real lane below the L1/R1 tabs. */
+	/* Only the header lanes move; the list keeps ITEM_ROWS rows so its two-line
+	 * help still clears the footer hints. */
 	const float ix = 48, iy = 136, irow = 29, iw = 544;
 	const SetPage *c = &pages[page];
 	char trail[192];
@@ -2885,9 +2888,9 @@ static void settingsDraw(void)
 		snprintf(trail + len, sizeof(trail) - len, "%s%s", i ? " > " : "", pages[page_stack[i].page].name);
 	}
 	if (page_depth)
-		dashTextFit(ix, 51, iw - 126, trail, DASH_FS_CAPTION, DASH_C_TEXT3);
-	dashDrawSectionTitle(ix, 68, c->name, NULL);
-	dashTextFit(ix, 106, iw, c->help, DASH_FS_CAPTION, DASH_C_TEXT3);
+		dashTextFit(ix, 57, iw - 126, trail, DASH_FS_CAPTION, DASH_C_TEXT3);
+	dashDrawSectionTitle(ix, 74, c->name, NULL);
+	dashTextFit(ix, 112, iw, c->help, DASH_FS_CAPTION, DASH_C_TEXT3);
 	{
 		int dirty = anyDirtyCached();
 		int pending = cfg_pending[0] || cfg_pending[1] || dashStoreSettingsPending();
@@ -2895,7 +2898,7 @@ static void settingsDraw(void)
 		const char *state = dirty ? "unsaved changes" : pending ? "saving..." : failed ? "save failed" : "no changes";
 		DashColor state_col = (dirty || failed) ? DASH_C_WARM : pending ? DASH_C_ACCENT : DASH_C_TEXT3;
 		/* Dedicated status lane under the header clock/date: never inherits selection text. */
-		dashTextRight(ix + iw, 78, state, DASH_FS_CAPTION, state_col);
+		dashTextRight(ix + iw, 84, state, DASH_FS_CAPTION, state_col);
 	}
 
 	/* keep the focused row inside the visible window */

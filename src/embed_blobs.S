@@ -84,22 +84,4 @@ EMBED_FILE(sfx_boot_adp, "res/sfx/boot.adp")
 EMBED_FILE(sfx_connect_adp, "res/sfx/bd_connect.adp")
 EMBED_FILE(sfx_disconnect_adp, "res/sfx/bd_disconnect.adp")
 
-/* OSDSYS-style pad-button tiles (32x32 PNG, decoded at icon init). */
-EMBED_FILE(icon_cross_png, "res/icons/cross.png")
-EMBED_FILE(icon_circle_png, "res/icons/circle.png")
-EMBED_FILE(icon_square_png, "res/icons/square.png")
-EMBED_FILE(icon_triangle_png, "res/icons/triangle.png")
-EMBED_FILE(icon_up_png, "res/icons/up.png")
-EMBED_FILE(icon_down_png, "res/icons/down.png")
-EMBED_FILE(icon_left_png, "res/icons/left.png")
-EMBED_FILE(icon_right_png, "res/icons/right.png")
-EMBED_FILE(icon_select_png, "res/icons/select.png")
-EMBED_FILE(icon_start_png, "res/icons/start.png")
-EMBED_FILE(icon_l1_png, "res/icons/L1.png")
-EMBED_FILE(icon_l2_png, "res/icons/L2.png")
-EMBED_FILE(icon_l3_png, "res/icons/L3.png")
-EMBED_FILE(icon_r1_png, "res/icons/R1.png")
-EMBED_FILE(icon_r2_png, "res/icons/R2.png")
-EMBED_FILE(icon_r3_png, "res/icons/R3.png")
-
 /* Background music is an optional BGM.ADP beside the ELF, not embedded. */

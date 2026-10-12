@@ -162,8 +162,7 @@ static int keyIcon(const char *key)
 		return DI_BTN_START;
 	if (!strcmp(key, "SELECT"))
 		return DI_BTN_SELECT;
-	if (!dashIconsPadPng())
-		return -1;
+	/* All six shoulder/stick buttons are rendered by the vector atlas. */
 	for (i = 0; i < (int)(sizeof(map) / sizeof(map[0])); i++)
 		if (!strcmp(key, map[i].key))
 			return map[i].icon;
@@ -195,7 +194,7 @@ static float drawButton(float x, float y, int icon, const char *key)
 		int keep;
 		float w;
 		if (ki >= 0) {
-			dashIcon(ki, x, y, d, DC(255, 255, 255, 255));
+			dashIcon(ki, x, y, d, DASH_C_TEXT);
 			return d;
 		}
 		tw = dashTextWidth(key, DASH_FS_CAPTION);
@@ -204,8 +203,11 @@ static float drawButton(float x, float y, int icon, const char *key)
 		keep = dashTheme.corner;
 		if (dashCfg.icon_backing) {
 			dashTheme.corner = DASH_CORNER_SOFT;
-			dashPanelGradV(x, y, w, d, 6.0f, DC(30, 36, 54, 235), DC(13, 16, 26, 235));
-			dashPanelBorder(x, y, w, d, 6.0f, DC(255, 255, 255, 60));
+			/* Theme-derived badges instead of hard-coded navy/white tiles. */
+			dashPanelGradV(x, y, w, d, 6.0f,
+			               dashColorA(DASH_C_PANEL_HI, 0.80f),
+			               dashColorA(DASH_C_PANEL, 0.80f));
+			dashPanelBorder(x, y, w, d, 6.0f, dashColorA(DASH_C_BORDER, 0.75f));
 		}
 		dashTheme.corner = keep;
 		dashTextS(x + (w - tw) * 0.5f, y + 2.5f, key, DASH_FS_CAPTION, DASH_C_TEXT); /* caps centred in the badge */
@@ -434,7 +436,8 @@ void dashDrawFocusFrame(float x, float y, float w, float h, float r, float stren
 	dashPanelBorder(x - 2, y - 2, w + 4, h + 4, r + 2, edge);
 	if (!dashTheme.glow) {
 		/* no glow: a second, fainter outline keeps focus obvious on a CRT */
-		edge.a = (u8)(70 * strength * pulse);
+		/* Avoid animated shimmer from the second fine line on interlaced CRTs. */
+		edge.a = (u8)(65 * strength);
 		dashPanelBorder(x - 4, y - 4, w + 8, h + 8, r + 4, edge);
 	}
 }
@@ -697,7 +700,9 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 {
 	int sel = initial, top = 0, i, previewed = -1;
 	void (*preview)(int) = modal_preview;
-	const int max_rows = 8;
+	/* Eight subtitled rows left only 3 logical pixels above the popup.
+	 * Keep a full safe margin for rounded corners on 4:3/interlaced TVs. */
+	const int max_rows = 7;
 	float sel_anim, open = 0.0f;
 	float w = 400.0f, row_h = 38.0f;
 	int rows = (n < max_rows) ? n : max_rows;

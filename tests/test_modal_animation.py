@@ -224,6 +224,9 @@ assert "detail ? 90" not in menu
 assert "detail_w = avail - label_w - 14.0f;" in menu
 assert "dashTextFit(tx, ry + 7, label_w," in menu
 key_icon = function(ui, "static int keyIcon(")
-assert key_icon.index('"START"') < key_icon.index("dashIconsPadPng()")
+assert '"START"' in key_icon and '"L1"' in key_icon and '"R3"' in key_icon
+assert "dashIconsPadPng()" not in key_icon
 assert "return DI_BTN_START;" in key_icon
-print("PASS: menu detail cannot overlap labels; START hint uses the START glyph")
+assert "const int max_rows = 7;" in menu
+assert 76 + 7 * 38 + 44 + 18 <= 448 - 40  # 20px safe margin on each side
+print("PASS: menus fit inside 4:3 safe area; controller hints use vector glyphs")

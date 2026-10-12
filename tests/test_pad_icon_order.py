@@ -1,26 +1,29 @@
-"""The embedded pad-button PNG tiles must follow the DI_BTN_* enum order.
+"""Controller hint glyphs: START must look like START, SELECT like SELECT,
+and hints may only name real PS2 buttons.
 
-Regression: tiles 8/9 were loaded as select/start while the enum declares
-DI_BTN_START before DI_BTN_SELECT, so every START ("Menu") hint drew the
-SELECT bar whenever the pad PNG atlas was available.
+Regressions: "Menu" (START) once drew the SELECT bar, and the Applications
+screen showed a "BACK" badge, which is not a PS2 button.
 """
 from pathlib import Path
 import re
 
 root = Path(__file__).resolve().parents[1]
-header = (root / "include/dash_internal.h").read_text(encoding="utf-8")
 icons = (root / "src/dash_icons.c").read_text(encoding="utf-8")
+ui = (root / "src/dash_ui.c").read_text(encoding="utf-8")
 
-enum = re.findall(r"\bDI_BTN_(\w+),", header[header.index("DI_BTN_CROSS,"):header.index("DI_BTN_R3,") + 11])
-blob = icons[icons.index("static const void *pad_blob("):icons.index("static int pad_blob_size(")]
-sizes = icons[icons.index("static int pad_blob_size("):icons.index("int dashIconsPadPng(")]
-tiles = re.findall(r"return icon_(\w+)_png;", blob)
-tile_sizes = re.findall(r"return size_icon_(\w+)_png;", sizes)
 
-assert len(enum) == 16, enum
-assert [t.upper() for t in tiles] == enum, list(zip(enum, tiles))
-assert tile_sizes == tiles, list(zip(tiles, tile_sizes))
-print("PASS: pad PNG tiles match DI_BTN_* order (START draws the START glyph)")
+def case(name):
+    start = icons.index(f"case {name}:")
+    return icons[start:icons.index("break;", start)]
+
+
+# START is the right-pointing wedge, SELECT the flat rounded bar.
+assert "sdTriP(" in case("DI_BTN_START") and "sdBoxOutline(" not in case("DI_BTN_START")
+assert "sdBoxOutline(" in case("DI_BTN_SELECT") and "sdTriP(" not in case("DI_BTN_SELECT")
+key_icon = ui[ui.index("static int keyIcon("):ui.index("static float buttonWidth(")]
+assert 'if (!strcmp(key, "START"))\n\t\treturn DI_BTN_START;' in key_icon
+assert 'if (!strcmp(key, "SELECT"))\n\t\treturn DI_BTN_SELECT;' in key_icon
+print("PASS: START/SELECT hint keys map to their own glyphs")
 
 # Hint key badges must name real PS2 controller buttons ("BACK" is not one;
 # the back action uses dashBackIcon(), i.e. Circle or Cross).

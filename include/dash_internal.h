@@ -455,13 +455,12 @@ enum DashIcon {
 	DI_RECENT,  /* recently used */
 	DI_IMAGE,   /* wallpaper / picture */
 	DI_DPAD_UD, /* D-pad with up/down highlighted ("scroll") */
-	DI_COUNT    /* the SDF atlas holds 56 icons (7 x 8, now full); pad tiles are PNGs */
+	DI_COUNT    /* the SDF atlas holds 56 icons (7 x 8) and is now full, pad glyphs included */
 };
 
 void dashIconsInit(void);
 void dashIconsShutdown(void);
 void dashIcon(int id, float x, float y, float size, DashColor c);
-int dashIconsPadPng(void); /* non-zero when the embedded pad-button PNG tiles decoded */
 DashColor dashIconTint(DashColor c);
 GSTEXTURE *dashIconsTexture(void);
 

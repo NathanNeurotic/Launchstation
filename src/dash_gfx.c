@@ -719,7 +719,8 @@ void dashRoundedBorder(float x, float y, float w, float h, float r, DashColor c)
 		r = h * 0.5f;
 	if (r < 2.0f) {
 		/* square corners: four plain edges */
-		float t = 1.5f;
+		/* Two logical pixels survive interlaced output better than 1.5. */
+		float t = 2.0f;
 		dashSpriteBatchEnd();
 		dashRect(x, y, w, t, c);
 		dashRect(x, y + h - t, w, t, c);
@@ -730,8 +731,8 @@ void dashRoundedBorder(float x, float y, float w, float h, float r, DashColor c)
 	dashSpriteBatchEnd();
 	/* Ring texture band covers the outer 3.5/32 of the corner radius. */
 	t = r * 3.5f / 32.0f;
-	if (t < 1.5f)
-		t = 1.5f;
+	if (t < 2.0f)
+		t = 2.0f;
 	dashRect(x + r, y, w - 2 * r, t, c);
 	dashRect(x + r, y + h - t, w - 2 * r, t, c);
 	dashRect(x, y + r, t, h - 2 * r, c);

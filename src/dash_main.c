@@ -21,6 +21,9 @@ static int section = DASH_SEC_HOME;
 static int prev_section = DASH_SEC_HOME;
 static float section_anim = 1.0f;
 static int section_dir = 1;
+/* R3 on HOME hides dashboard chrome until R3 is pressed again.
+ * This is presentation-only: background updates and all device state stay live. */
+static int background_only;
 static float anim_time;
 static float fade_in;
 static int autoprobe_pending;
@@ -168,6 +171,9 @@ void dashSwitchSection(int s)
 		return;
 	if (!dashConfirmLeave())
 		return;
+	/* Trigger feedback before the potentially slow File Browser tab close.
+	 * Confirmation/cancel dialogs still resolve before a transition sound. */
+	dashSoundPlay(DASH_SND_TRANSITION);
 	/* A tab switch closes only the in-tab browser session, not the
 	 * independent modal browser used by launch-key and Tools actions. */
 	if (section == DASH_SEC_FILES)
@@ -177,7 +183,6 @@ void dashSwitchSection(int s)
 	section = s;
 	section_anim = 0.0f;
 	dashUiFocusPoke();
-	dashSoundPlay(DASH_SND_TRANSITION);
 	if (screens[section]->enter)
 		screens[section]->enter();
 }
@@ -991,6 +996,8 @@ void dashRenderScene(void)
 	dashArtBeginFrame();
 	dashGfxBeginFrame();
 	dashBgDraw();
+	if (background_only)
+		return; /* background scene only, no hidden interactive UI */
 
 	dashDrawHeader(section, section_anim);
 
@@ -1080,10 +1087,13 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	if (dash_active || ctx == NULL)
 		return;
 	dash_active = 1;
+	background_only = 0; /* never persist hidden UI across launches/restarts */
 	exec_ctx = *ctx;
 
 	dashGfxCheckScreenChange();
+#ifdef WLE_BOOT_DIAGNOSTICS
 	drawMsg("Boot check 5: entering dashboard initialization");
+#endif
 	drawMsgOverride = dashMsgHook;
 	dashClassicUiInstall(1);
 	if (!dash_inited)
@@ -1094,10 +1104,14 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	}
 	DashThemeSetLegacyEnabled(1);
 	mainActionLaunchHook = dashLaunchHook;
+#ifdef WLE_BOOT_DIAGNOSTICS
 	drawMsg("Boot check 6: dashboard initialized; starting audio");
+#endif
 	dashSoundInit();
 	dashBgmStart();
+#ifdef WLE_BOOT_DIAGNOSTICS
 	drawMsg("Boot check 7: audio startup returned");
+#endif
 	if (from_boot)
 		dashSoundPlay(DASH_SND_BOOT);
 
@@ -1133,8 +1147,21 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			if (boot_phase == 1)
 				memset(&in, 0, sizeof(in));
 		}
-		if (!boot_phase)
+		/* R3 is unused by HOME navigation; SELECT+R3 remains a launch key
+		 * because quick-launch intercepts it before dashboard dispatch. */
+		if (!boot_phase && section == DASH_SEC_HOME && !ql_down &&
+		    !(paddata & PAD_SELECT) && (in.pressed & DASH_IN_R3)) {
+			background_only = !background_only;
+			dashInputFlush();
+			memset(&in, 0, sizeof(in));
+		}
+		/* Preserve SELECT+button launch keys even with the HOME chrome hidden.
+		 * Process SELECT edges/held chords before filtering ordinary input. */
+		if (!boot_phase && (!background_only || ql_down ||
+		    (paddata & PAD_SELECT) || (in.raw_new & PAD_SELECT)))
 			quickLaunchInput(&in);
+		if (background_only)
+			memset(&in, 0, sizeof(in));
 		/* Main dashboard screens do not run through the modal helpers, so give
 		 * their ordinary navigation/activation inputs the same UI feedback. */
 		if (in.pressed & (DASH_IN_UP | DASH_IN_DOWN | DASH_IN_LEFT | DASH_IN_RIGHT))
@@ -1211,7 +1238,8 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		}
 #endif
 		dashRenderScene();
-		quickLaunchDraw();
+		if (!background_only)
+			quickLaunchDraw();
 		dashGfxPresent();
 
 		/* first run: short introduction once the dashboard has faded in */
