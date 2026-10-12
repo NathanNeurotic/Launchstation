@@ -383,6 +383,16 @@ void dashOpenBrowser(const char *start_dir)
 		dashFileBrowser(start_dir); /* modal path for other callers */
 }
 
+/* Navigation shortcuts (Home Last folder and Apps file location) should
+ * enter the actual Files tab. Keep dashOpenBrowser() for explicitly modal
+ * Tool/MISC browser actions. */
+void dashNavigateFilesTab(const char *start_dir)
+{
+	dashSwitchSection(DASH_SEC_FILES);
+	if (section == DASH_SEC_FILES && start_dir != NULL && start_dir[0])
+		dashFileBrowserTabOpen(start_dir);
+}
+
 
 int dashOpenTextEditor(const char *file)
 {
