@@ -959,15 +959,20 @@ int cloudGoogleRecoverSnapshot(const CloudGoogleBrowseItem *snapshot,
                   "Choose a writable USB/HDD folder with an unused recovery filename");
         return -1;
     }
+    if (strlen(result) >= (size_t)result_size) {
+        set_error(error, error_size, "Recovery destination path is too long");
+        return -1;
+    }
     /* Start local storage before Ethernet so network startup cannot reuse
      * a mount whose driver has not yet been initialized. */
     if (!ensurePathDeviceStackReady(dest_dir)) {
         set_error(error, error_size, "Could not start the recovery storage device");
         return -1;
     }
-    if (load_session(&session, 1, error, error_size) < 0 ||
-        !ensureDashboardIpNetworkReady()) {
-        set_error(error, error_size, "Drive connection or Ethernet is unavailable");
+    if (load_session(&session, 1, error, error_size) < 0)
+        return -1;
+    if (!ensureDashboardIpNetworkReady()) {
+        set_error(error, error_size, "Ethernet is unavailable for Drive recovery");
         return -1;
     }
     if (refresh_access_token(&session, error, error_size) < 0)
