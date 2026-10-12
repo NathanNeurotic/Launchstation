@@ -32,7 +32,7 @@ typedef struct { int icon; const char *label, *detail; int disabled; } DashMenuI
 static struct { char igr_backup_path[MAX_PATH]; int igr_cloud_sync; } dashCfg;
 static char LaunchElfBootDir[MAX_PATH], LaunchElfDir[MAX_PATH];
 static int configured, linked, token, ca, client;
-static int scenario, calls, backup_calls, upload_calls, disconnects, saves, settings_saves, picks, accept_change;
+static int scenario, calls, backup_calls, upload_calls, browse_calls, disconnects, saves, settings_saves, picks, accept_change;
 static void dashStrCopy(char *d, const char *s, int n) { snprintf(d,n,"%s",s); }
 static int cloudGoogleGetClientConfig(char *id,int ni,char *secret,int ns,int *present,char *err,int ne) {
     (void)err; (void)ne; snprintf(id,ni,"%s",client?"client":"");
@@ -63,6 +63,7 @@ static int dashPickPath(const char *t,const char *s,int m,const char *e,char *p,
 }
 static void cloudLink(void) {}
 static void cloudSyncNow(void) { upload_calls++; }
+static void cloudBrowseHistory(void) { browse_calls++; }
 static void dashToolsSyncAllMmceCards(void) { backup_calls++; }
 static int dashModalMenu(const char *title,const char *sub,const DashMenuItem *items,int n,int initial) {
     (void)sub;
@@ -74,18 +75,21 @@ static int dashModalMenu(const char *title,const char *sub,const DashMenuItem *i
         /* Accept unchanged credentials on a linked account, then leave. */
         assert(initial== (calls==1?3:0)); return calls==1?0:-1;
     }
-    assert(!strcmp(title,"Google Drive backups") && n==6);
+    assert(!strcmp(title,"Google Drive backups") && n==7);
     assert(!strcmp(items[0].label,"Back up cards & upload"));
     assert(!strcmp(items[3].label,"Upload existing backups"));
     assert(items[0].disabled==!linked);
     assert(items[3].disabled==(!linked || !dashCfg.igr_backup_path[0]));
-    assert(!strcmp(items[4].label,"Backup folder...") && !items[4].disabled);
-    assert(items[5].disabled==!token);
+    assert(!strcmp(items[4].label,"Browse cloud history..."));
+    assert(items[4].disabled==!linked);
+    assert(!strcmp(items[5].label,"Backup folder...") && !items[5].disabled);
+    assert(items[6].disabled==!token);
     if (scenario==3) { assert(initial==1); return -1; }
     if (scenario==4) { assert(initial==2); return -1; }
     if (scenario==5) { assert(initial==0); return -1; }
     if (scenario==6) { assert(initial==0); return calls==1?0:-1; }
-    if (scenario>=8) { assert(initial==(calls==1?0:4)); return calls==1?4:-1; }
+    if (scenario==12) { assert(initial==(calls==1?0:4)); return calls==1?4:-1; }
+    if (scenario>=8) { assert(initial==(calls==1?0:5)); return calls==1?5:-1; }
     assert(initial==(calls==1?0:3)); return calls==1?3:-1;
 }
 '''
@@ -111,7 +115,9 @@ int main(void) {
     calls=0; dashToolsCloudBackup(); assert(settings_saves==1); /* Same folder is a no-op. */
     scenario=11; calls=0; dashCfg.igr_backup_path[0]=0; accept_change=0;
     dashToolsCloudBackup(); assert(settings_saves==2 && picks==5);
-    puts("PASS: cloud readiness, action dispatch, retained focus and unchanged credentials");
+    scenario=12; calls=0; linked=1; dashToolsCloudBackup();
+    assert(browse_calls==1 && !disconnects);
+    puts("PASS: cloud readiness, read-only browse, action dispatch and retained focus");
 }
 '''
 compiler = shutil.which("gcc") or shutil.which("clang")
