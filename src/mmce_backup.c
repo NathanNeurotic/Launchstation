@@ -595,10 +595,11 @@ int mmceBackupCardPath(int unit, const char *source, const char *dest_root,
         unit < 0 || unit > 1 || options->keep < 0 || options->keep > 99 ||
         options->format < 0 || options->format >= MMCE_BACKUP_FORMAT_COUNT ||
         !strchr(dest_root, ':') ||
-        (dest_root[0] == 'm' || dest_root[0] == 'M') &&
-            (dest_root[1] == 'm' || dest_root[1] == 'M') &&
-            (dest_root[2] == 'c' || dest_root[2] == 'C') &&
-            (dest_root[3] == 'e' || dest_root[3] == 'E'))
+        (strlen(dest_root) >= 4 &&
+         (dest_root[0] == 'm' || dest_root[0] == 'M') &&
+         (dest_root[1] == 'm' || dest_root[1] == 'M') &&
+         (dest_root[2] == 'c' || dest_root[2] == 'C') &&
+         (dest_root[3] == 'e' || dest_root[3] == 'E')))
         return -1;
     memset(stats, 0, sizeof(*stats));
     stats->candidates = 1;
