@@ -183,54 +183,127 @@ jobs:
           path: artifacts/
           retention-days: 1
 
-      - name: Publish latest app packages
-        # Ordinary PRs produce review artifacts. Deliberate publication remains explicit.
-        if: (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[publish latest]'))) && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+      - name: Publish rolling release from verified master build
+        # Each merge (including squash merges) creates a push to master.
+        # PRs build review artifacts but must never overwrite public downloads.
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          tag="latest"
-          title="Launchstation latest — $(date -u +%Y-%m-%d)"
-          notes="$(cat <<EOF
-          Fresh Launchstation rolling release built from verified commit ${GITHUB_SHA}.
+          tag="latest" # Keep existing website and native-updater download URLs.
+          assets=(
+            APP_LAUNCHSTATION.psu
+            APP_LAUNCHSTATION.zip
+            APP_LAUNCHSTATION-DS.psu
+            APP_LAUNCHSTATION-DS.zip
+          )
 
-          ### USB startup — console-confirmed correction
-          - Restored the original wLE_R3Z **USBD → BDM → BDMFS → USBMASS_BD** initialization sequence for normal USB storage (PR #101). The user confirmed the earlier two-USB freeze is fixed by the corrected artifact. Ember's separate IOP handoff remains unchanged.
-          - Reduced duplicate USB-root probes and corrected memory-card polling coordination; per-unit diagnostics remain available under Tools > Storage when useful (PRs #95, #96, #100).
-          - The standard and DualShock variants passed the complete build, packaging, and host regression checks. DS34-specific real-console coverage remains a separate acceptance consideration.
-
-          ### Updater, MMCE, and packaging
-          - The native updater rejects older or divergent release histories, verifies package digests, restores **missing-only** certificate/BGM sidecars and protects interrupted .UPDATE/.PACKAGE files (PRs #94, #97, #98).
-          - MMCE now distinguishes unavailable card scans from a successfully scanned empty source (PR #99).
-          - Four-file ZIP and PSU packages include the packed ELF, title.cfg, WLE-UPDATE-CA.PEM and BGM.ADP.
-
-          | Download | Controller build | Installation |
-          | --- | --- | --- |
-          | APP_LAUNCHSTATION.zip | Standard | Extract APP_LAUNCHSTATION/ and launch LAUNCHSTATION.ELF. |
-          | APP_LAUNCHSTATION.psu | Standard | Use PSU Paste in the file manager to install the app folder to a memory card. |
-          | APP_LAUNCHSTATION-DS.zip | DualShock USB/Bluetooth | Extract APP_LAUNCHSTATION-DS/ and launch LAUNCHSTATION-DS.ELF. |
-          | APP_LAUNCHSTATION-DS.psu | DualShock USB/Bluetooth | Use PSU Paste to install the DualShock app folder to a memory card. |
-
-          Each package contains its packed ELF, title.cfg, WLE-UPDATE-CA.PEM (HTTPS update verification) and BGM.ADP (music). ZIP and PSU payloads match. Existing settings are retained. The native updater verifies the matching PSU package digest and preserves the controller variant. Older updater builds must be replaced manually once before they can consume four-file PSU packages.
-
-          Documentation: https://nathanneurotic.github.io/Launchstation/
-          Source: https://github.com/NathanNeurotic/Launchstation/tree/${GITHUB_SHA}
-          USB two-drive startup is user-confirmed for the corrected build; other hardware and feature combinations are not implied to be verified.
-          EOF
-          )"
-          if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}" --prerelease
-          fi
-          gh release upload "$tag" artifacts/APP_LAUNCHSTATION.psu artifacts/APP_LAUNCHSTATION.zip artifacts/APP_LAUNCHSTATION-DS.psu artifacts/APP_LAUNCHSTATION-DS.zip --clobber
-          # Remove obsolete assets only after all four replacement packages uploaded.
-          gh release view "$tag" --json assets --jq '.assets[].name' | while IFS= read -r asset; do
-            case "$asset" in
-              APP_LAUNCHSTATION.psu|APP_LAUNCHSTATION.zip|APP_LAUNCHSTATION-DS.psu|APP_LAUNCHSTATION-DS.zip) ;;
-              *) gh release delete-asset "$tag" "$asset" -y ;;
-            esac
+          # All tests, both EE builds, variant checks, memory layout and
+          # ZIP/PSU verification already succeeded before this step starts.
+          # Do not touch the release for incomplete or superseded builds.
+          for asset in "${assets[@]}"; do
+            test -s "artifacts/${asset}" || {
+              echo "Missing/empty packaged asset: ${asset}" >&2
+              exit 1
+            }
           done
-          # Keep GitHub's generated source archives aligned with the packaged ELFs.
-          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/$tag" \
+          remote_master="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/master" --jq '.object.sha')"
+          if [ "${remote_master}" != "${GITHUB_SHA}" ]; then
+            echo "Master moved to ${remote_master}; skipping superseded release ${GITHUB_SHA}."
+            exit 0
+          fi
+
+          # Keep the rolling tag on the same lineage, as expected by the
+          # built-in updater's release-ancestry protection.
+          previous_sha=""
+          if git rev-parse -q --verify "refs/tags/${tag}^{commit}" >/dev/null; then
+            previous_sha="$(git rev-parse "refs/tags/${tag}^{commit}")"
+            if ! git merge-base --is-ancestor "${previous_sha}" "${GITHUB_SHA}"; then
+              echo "Refusing to move ${tag}: ${previous_sha} is not an ancestor of ${GITHUB_SHA}" >&2
+              exit 1
+            fi
+            changes="$(git log --format='- %s (%h)' "${previous_sha}..${GITHUB_SHA}")"
+          else
+            changes="$(git log -1 --format='- %s (%h)' "${GITHUB_SHA}")"
+          fi
+          if [ -z "${changes}" ]; then
+            changes="- Rebuild of existing master revision"
+          fi
+
+          title="Launchstation Rolling — $(date -u +%Y-%m-%d) (${GITHUB_SHA:0:7})"
+          hashes="$(sha256sum "${assets[@]/#/artifacts/}")"
+          notes_file="${RUNNER_TEMP}/launchstation-rolling-notes.md"
+          cat > "${notes_file}" <<EOF
+          Automatically updated rolling release from the verified master commit ${GITHUB_SHA}.
+
+          ### Changes since the preceding rolling build
+          ${changes}
+
+          ### CI verification
+          - Host regression tests and documentation validation passed.
+          - Standard and DS34 PS2 ELFs compiled successfully.
+          - Controller variant, native cloud TLS, loader-memory layout, ZIP/PSU and updater-package checks passed.
+          - Build success is not PS2 hardware acceptance; device/console behavior remains separately verified.
+
+          ### Downloads
+          | Package | Contents |
+          | --- | --- |
+          | APP_LAUNCHSTATION.zip | Standard memory-card app folder; extract and launch LAUNCHSTATION.ELF. |
+          | APP_LAUNCHSTATION.psu | Standard memory-card install via PSU Paste. |
+          | APP_LAUNCHSTATION-DS.zip | DS34 USB/Bluetooth variant; extract and launch LAUNCHSTATION-DS.ELF. |
+          | APP_LAUNCHSTATION-DS.psu | DS34 memory-card install via PSU Paste. |
+
+          Each package includes its ELF, title.cfg, WLE-UPDATE-CA.PEM and BGM.ADP. Existing user settings are retained. The updater preserves the controller variant.
+
+          ### SHA-256
+          ~~~text
+          ${hashes}
+          ~~~
+
+          Source: https://github.com/${GITHUB_REPOSITORY}/tree/${GITHUB_SHA}
+          Workflow: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          Documentation: https://nathanneurotic.github.io/Launchstation/
+          EOF
+
+          if ! gh release view "${tag}" >/dev/null 2>&1; then
+            gh release create "${tag}" --title "${title}" \
+              --notes-file "${notes_file}" --target "${GITHUB_SHA}" --latest
+          fi
+
+          # A moving release retains its four canonical asset names so both
+          # existing download links and the updater continue to resolve.
+          gh release upload "${tag}" \
+            "artifacts/${assets[0]}" "artifacts/${assets[1]}" \
+            "artifacts/${assets[2]}" "artifacts/${assets[3]}" --clobber
+
+          # Validate that every public asset has the exact packaged byte size
+          # before moving the tag or claiming a successful release. Keep any
+          # unrelated manually maintained attachments intact.
+          for asset in "${assets[@]}"; do
+            expected="$(stat -c '%s' "artifacts/${asset}")"
+            actual="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
+              --jq ".assets[] | select(.name == \"${asset}\") | .size")"
+            if [ "${expected}" != "${actual}" ]; then
+              echo "Release asset verification failed: ${asset}, local=${expected}, remote=${actual}" >&2
+              exit 1
+            fi
+          done
+
+          remote_master="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/master" --jq '.object.sha')"
+          if [ "${remote_master}" != "${GITHUB_SHA}" ]; then
+            echo "Master advanced during asset upload. Not moving rolling tag to a superseded commit." >&2
+            exit 1
+          fi
+
+          # Only now point the moving source tag and public release at this
+          # exact tested build. Mark it Latest and not a pre-release, like RiptOPL.
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/${tag}" \
             -f sha="${GITHUB_SHA}" -F force=true
-          gh release edit "$tag" --title "$title" --notes "$notes" --target "${GITHUB_SHA}"
+          gh release edit "${tag}" --title "${title}" \
+            --notes-file "${notes_file}" --target "${GITHUB_SHA}" \
+            --draft=false --prerelease=false --latest
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" --jq '.object.sha')" = "${GITHUB_SHA}"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" --jq '.prerelease')" = "false"
+          echo "Published Launchstation Rolling ${GITHUB_SHA} as GitHub Latest."
