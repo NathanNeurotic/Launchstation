@@ -2,10 +2,8 @@
 //File name:   dash_icons.c
 //Dashboard icon set, rasterized once from signed distance functions into
 //one 512x544 PSMT8 alpha atlas (64x64 icons, tinted by vertex colour).
-//No image files are needed and every icon stays anti-aliased at the sizes
-//used by the dashboard (16..96 px). The pad-button tiles (cross..R3) are
-//the original OSDSYS-style PNGs, decoded once into a CT32 texture; the
-//SDF versions of the glyphs stay as the fallback when a PNG is missing.
+//The pad glyphs use the same theme-aware SDF atlas as other icons.
+//No additional CT32 pad tile atlas or PNG decoding is needed at startup.
 //--------------------------------------------------------------
 #include "dash_internal.h"
 
@@ -18,134 +16,6 @@
 static GSTEXTURE icon_tex;
 static u32 icon_clut[256] __attribute__((aligned(64)));
 static int icons_ready;
-
-/* Embedded OSDSYS-style pad-button PNG tiles (DI_BTN_CROSS .. DI_BTN_R3,
- * 16 contiguous ids), decoded once into a CT32 grid texture. */
-#define PAD_TILE 32
-#define PAD_COLS 4
-#define PAD_ROWS 4
-#define PAD_TEX_W (PAD_COLS * PAD_TILE)
-#define PAD_TEX_H (PAD_ROWS * PAD_TILE)
-#define PAD_PNG_COUNT (PAD_ROWS * PAD_COLS)
-
-static GSTEXTURE pad_tex;
-static int pad_png_ready;
-
-extern u8 icon_cross_png[];
-extern int size_icon_cross_png;
-extern u8 icon_circle_png[];
-extern int size_icon_circle_png;
-extern u8 icon_square_png[];
-extern int size_icon_square_png;
-extern u8 icon_triangle_png[];
-extern int size_icon_triangle_png;
-extern u8 icon_up_png[];
-extern int size_icon_up_png;
-extern u8 icon_down_png[];
-extern int size_icon_down_png;
-extern u8 icon_left_png[];
-extern int size_icon_left_png;
-extern u8 icon_right_png[];
-extern int size_icon_right_png;
-extern u8 icon_select_png[];
-extern int size_icon_select_png;
-extern u8 icon_start_png[];
-extern int size_icon_start_png;
-extern u8 icon_l1_png[];
-extern int size_icon_l1_png;
-extern u8 icon_l2_png[];
-extern int size_icon_l2_png;
-extern u8 icon_l3_png[];
-extern int size_icon_l3_png;
-extern u8 icon_r1_png[];
-extern int size_icon_r1_png;
-extern u8 icon_r2_png[];
-extern int size_icon_r2_png;
-extern u8 icon_r3_png[];
-extern int size_icon_r3_png;
-
-static const void *pad_blob(int i)
-{
-	switch (i) {
-		case 0: return icon_cross_png;
-		case 1: return icon_circle_png;
-		case 2: return icon_square_png;
-		case 3: return icon_triangle_png;
-		case 4: return icon_up_png;
-		case 5: return icon_down_png;
-		case 6: return icon_left_png;
-		case 7: return icon_right_png;
-		case 8: return icon_select_png;
-		case 9: return icon_start_png;
-		case 10: return icon_l1_png;
-		case 11: return icon_l2_png;
-		case 12: return icon_l3_png;
-		case 13: return icon_r1_png;
-		case 14: return icon_r2_png;
-		default: return icon_r3_png;
-	}
-}
-
-static int pad_blob_size(int i)
-{
-	switch (i) {
-		case 0: return size_icon_cross_png;
-		case 1: return size_icon_circle_png;
-		case 2: return size_icon_square_png;
-		case 3: return size_icon_triangle_png;
-		case 4: return size_icon_up_png;
-		case 5: return size_icon_down_png;
-		case 6: return size_icon_left_png;
-		case 7: return size_icon_right_png;
-		case 8: return size_icon_select_png;
-		case 9: return size_icon_start_png;
-		case 10: return size_icon_l1_png;
-		case 11: return size_icon_l2_png;
-		case 12: return size_icon_l3_png;
-		case 13: return size_icon_r1_png;
-		case 14: return size_icon_r2_png;
-		default: return size_icon_r3_png;
-	}
-}
-
-int dashIconsPadPng(void)
-{
-	return pad_png_ready;
-}
-
-static void initPadTiles(void)
-{
-	u32 *mem;
-	u32 *pix;
-	int i, w, h, y;
-
-	mem = (u32 *)memalign(128, PAD_TEX_W * PAD_TEX_H * 4);
-	if (mem == NULL)
-		return;
-	memset(mem, 0, PAD_TEX_W * PAD_TEX_H * 4);
-	for (i = 0; i < PAD_PNG_COUNT; i++) {
-		if (dashPngDecode((const u8 *)pad_blob(i), pad_blob_size(i), PAD_TILE, PAD_TILE, &pix, &w, &h) != 0)
-			continue; /* tile stays transparent; SDF fallback still draws */
-		if (w > PAD_TILE)
-			w = PAD_TILE;
-		if (h > PAD_TILE)
-			h = PAD_TILE;
-		for (y = 0; y < h; y++)
-			memcpy(&mem[(i / PAD_COLS * PAD_TILE + y) * PAD_TEX_W + (i % PAD_COLS) * PAD_TILE],
-			       &pix[y * w], w * 4);
-		free(pix);
-	}
-	memset(&pad_tex, 0, sizeof(pad_tex));
-	pad_tex.Width = PAD_TEX_W;
-	pad_tex.Height = PAD_TEX_H;
-	pad_tex.PSM = GS_PSM_CT32;
-	pad_tex.Mem = mem;
-	pad_tex.Filter = GS_FILTER_LINEAR;
-	pad_tex.Delayed = 1;
-	gsKit_setup_tbw(&pad_tex);
-	SyncDCache(mem, (u8 *)mem + PAD_TEX_W * PAD_TEX_H * 4);
-	pad_png_ready = 1;
-}
 
 typedef struct
 {
@@ -510,6 +380,45 @@ static float iconSdf(int id, V2 p)
 		case DI_BTN_SELECT:
 			d = sdBoxOutline(p, 0.0f, 0.0f, 0.58f, 0.38f, 0.17f, 0.1f);
 			break;
+		case DI_BTN_L1:
+		case DI_BTN_L2:
+		case DI_BTN_L3:
+		case DI_BTN_R1:
+		case DI_BTN_R2:
+		case DI_BTN_R3: {
+			/* The baked PNG atlas used to supply L/R trigger labels. Draw
+			 * both letters and numbers directly as SDF strokes instead, so
+			 * quick-launch and hint glyphs remain visible without the PNGs. */
+			int right = (id >= DI_BTN_R1);
+			int digit = right ? id - DI_BTN_R1 + 1 : id - DI_BTN_L1 + 1;
+			const float t = 0.095f;
+			d = sdBoxOutline(p, 0, 0, 0.90f, 0.78f, 0.13f, 0.055f);
+			if (!right) {
+				d = U(d, sdSeg(p, -0.60f, -0.52f, -0.60f, 0.48f, t));
+				d = U(d, sdSeg(p, -0.60f, 0.48f, -0.12f, 0.48f, t));
+			} else {
+				d = U(d, sdSeg(p, -0.65f, -0.52f, -0.65f, 0.48f, t));
+				d = U(d, sdSeg(p, -0.65f, -0.52f, -0.25f, -0.52f, t));
+				d = U(d, sdSeg(p, -0.25f, -0.52f, -0.25f, -0.06f, t));
+				d = U(d, sdSeg(p, -0.65f, -0.06f, -0.25f, -0.06f, t));
+				d = U(d, sdSeg(p, -0.47f, -0.06f, -0.16f, 0.48f, t));
+			}
+			if (digit == 1) {
+				d = U(d, sdSeg(p, 0.46f, -0.52f, 0.46f, 0.48f, t));
+				d = U(d, sdSeg(p, 0.24f, -0.30f, 0.46f, -0.52f, t));
+			} else if (digit == 2) {
+				d = U(d, sdSeg(p, 0.10f, -0.52f, 0.70f, -0.52f, t));
+				d = U(d, sdSeg(p, 0.70f, -0.52f, 0.70f, -0.12f, t));
+				d = U(d, sdSeg(p, 0.70f, -0.12f, 0.10f, 0.48f, t));
+				d = U(d, sdSeg(p, 0.10f, 0.48f, 0.70f, 0.48f, t));
+			} else {
+				d = U(d, sdSeg(p, 0.10f, -0.52f, 0.70f, -0.52f, t));
+				d = U(d, sdSeg(p, 0.12f, -0.02f, 0.70f, -0.02f, t));
+				d = U(d, sdSeg(p, 0.10f, 0.48f, 0.70f, 0.48f, t));
+				d = U(d, sdSeg(p, 0.70f, -0.52f, 0.70f, 0.48f, t));
+			}
+			break;
+		}
 		case DI_KEY:
 			d = sdRing(p, -0.4f, 0.0f, 0.3f, T);
 			d = U(d, sdSeg(p, -0.1f, 0.0f, 0.78f, 0.0f, T));
@@ -617,13 +526,11 @@ void dashIconsInit(void)
 	SyncDCache(mem, mem + ICON_TEX_W * ICON_TEX_H);
 	SyncDCache(icon_clut, (u8 *)icon_clut + sizeof(icon_clut));
 	icons_ready = 1;
-	initPadTiles();
 }
 
 void dashIconsShutdown(void)
 {
 	dashTexRelease(&icon_tex);
-	dashTexRelease(&pad_tex);
 }
 
 GSTEXTURE *dashIconsTexture(void)
@@ -637,32 +544,27 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 
 	if (!icons_ready || id < 0 || id >= DI_COUNT || size <= 0.0f || c.a == 0)
 		return;
-	if (id >= DI_BTN_CROSS && id <= DI_BTN_R3 && pad_png_ready) {
-		/* real OSDSYS pad tile: baked colours, drawn untinted */
-		int idx = id - DI_BTN_CROSS;
-		float pu0 = (float)((idx % PAD_COLS) * PAD_TILE);
-		float pv0 = (float)((idx / PAD_COLS) * PAD_TILE);
-		float ppad = size * 2.0f / PAD_TILE;
-
-		dashSpriteBatchBegin(&pad_tex, DC(255, 255, 255, 255));
-		dashSpriteBatchAdd(x - ppad, y - ppad, pu0, pv0, x + size + ppad, y + size + ppad, pu0 + PAD_TILE, pv0 + PAD_TILE);
-		dashSpriteBatchEnd();
-		return;
-	}
 	if (id < DI_PAD_BADGE || id > DI_BTN_R3)
 		c = dashIconTint(c);
 	u0 = (float)((id % ICON_COLS) * ICON_SLOT);
 	v0 = (float)((id / ICON_COLS) * ICON_SLOT);
 	pad = size * 2.0f / ICON_SIZE;
-	if (id > DI_PAD_BADGE && id <= DI_BTN_SELECT) {
-		/* SDF fallback: fixed dark badge, then the coloured glyph at 56% */
-		float bu0 = (float)((DI_PAD_BADGE % ICON_COLS) * ICON_SLOT);
-		float bv0 = (float)((DI_PAD_BADGE / ICON_COLS) * ICON_SLOT);
-		float g = size * 0.56f, go = (size - g) * 0.5f;
-
-		dashSpriteBatchBegin(&icon_tex, DC(16, 18, 30, 232));
-		dashSpriteBatchAdd(x - pad, y - pad, bu0, bv0, x + size + pad, y + size + pad, bu0 + ICON_SLOT, bv0 + ICON_SLOT);
-		dashSpriteBatchEnd();
+	if (id > DI_PAD_BADGE && id <= DI_BTN_R3) {
+		/* Preserve colored controller glyphs while letting each theme decide
+		 * whether they sit on a background. Baked PNGs forced a fixed navy
+		 * tile into every theme, ignoring icon-backings entirely. */
+		float g = size * (dashCfg.icon_backing ? 0.56f : 0.78f);
+		float go = (size - g) * 0.5f;
+		if (dashCfg.icon_backing) {
+			float bu0 = (float)((DI_PAD_BADGE % ICON_COLS) * ICON_SLOT);
+			float bv0 = (float)((DI_PAD_BADGE / ICON_COLS) * ICON_SLOT);
+			DashColor badge = dashColorMix(DASH_C_PANEL_HI, DASH_C_PANEL, 0.45f);
+			if (badge.a < 56)
+				badge = dashColorA(DASH_C_TEXT3, 0.36f);
+			dashSpriteBatchBegin(&icon_tex, badge);
+			dashSpriteBatchAdd(x - pad, y - pad, bu0, bv0, x + size + pad, y + size + pad, bu0 + ICON_SLOT, bv0 + ICON_SLOT);
+			dashSpriteBatchEnd();
+		}
 		dashSpriteBatchBegin(&icon_tex, c);
 		dashSpriteBatchAdd(x + go, y + go, u0, v0, x + go + g, y + go + g, u0 + ICON_SLOT, v0 + ICON_SLOT);
 		dashSpriteBatchEnd();

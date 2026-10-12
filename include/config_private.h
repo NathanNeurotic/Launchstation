@@ -30,7 +30,8 @@ enum {
 	DEF_SWAPKEYS = FALSE,
 	DEF_HOSTWRITE = FALSE,
 	DEF_LEGACY_NET_DRIVERS = FALSE,
-	DEF_APP_GAMEID = TRUE,
+	/* Color-bar Game ID output is opt-in for compatible display adapters. */
+	DEF_APP_GAMEID = FALSE,
 	DEF_CDROM_DISABLE_GAMEID = FALSE,
 	DEF_POPUP_OPAQUE = FALSE,
 	DEF_INIT_DELAY = 1,

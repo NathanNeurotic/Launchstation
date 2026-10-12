@@ -39,6 +39,8 @@ jobs:
           python3 tests/test_scene_override_nesting.py
           python3 tests/test_gage_alignment.py
           python3 tests/test_modal_animation.py
+          python3 tests/test_zack_oct_2026.py
+          python3 tests/test_background_only_hotkeys.py
           python3 tests/test_dashboard_present_buffers.py
           python3 tests/test_theme_motion.py
           python3 tests/test_orb_seamless.py
@@ -177,6 +179,19 @@ jobs:
           if [ -f build/bin/wLaunchELF-packed.elf ]; then
             ls -lh build/bin/wLaunchELF-packed.elf
           fi
+          # Compare build footprints without stripping features or changing
+          # the release publication flow. Sizes are measured after packing.
+          {
+            echo "### Launchstation ELF footprint (bytes)"
+            echo "| Controller variant | Unpacked ELF | Packed ELF |"
+            echo "| --- | ---: | ---: |"
+            for variant in standard dualshock; do
+              if [ "$variant" = standard ]; then dir=build; else dir=build-ds34; fi
+              raw="$(stat -c '%s' "$dir/bin/wLaunchELF.elf")"
+              packed="$(stat -c '%s' "$dir/bin/wLaunchELF-packed.elf")"
+              echo "| $variant | $raw | $packed |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check embedded loader low-memory layout
         run: |
