@@ -5,7 +5,6 @@
  * NUL. Validate before narrowing size_t to u8, especially before write,
  * rename and remove commands. These helpers perform no device I/O. */
 #include <stddef.h>
-#include <string.h>
 
 #define MMCE_FS_ACTIVE_NAME "__active_card__.mcd"
 #define MMCE_FS_WIRE_NAME_MAX 254
@@ -40,9 +39,15 @@ static int mmce_fs_reserved_component(const char *name)
         start = p;
         while (*p && *p != '/' && *p != '\\')
             ++p;
-        if ((size_t)(p - start) == sizeof(reserved) - 1 &&
-            !memcmp(start, reserved, sizeof(reserved) - 1))
-            return 1;
+        if ((size_t)(p - start) == sizeof(reserved) - 1) {
+            size_t i;
+            /* PS2 IOP sysclib does not export memcmp: compare in place. */
+            for (i = 0; i < sizeof(reserved) - 1; ++i)
+                if (start[i] != reserved[i])
+                    break;
+            if (i == sizeof(reserved) - 1)
+                return 1;
+        }
     }
     return 0;
 }
