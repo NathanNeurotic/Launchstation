@@ -1,11 +1,12 @@
-# Launchstation native Google Drive configuration
+# Launchstation native Google Drive configuration (OPTIONAL)
 #
-# Create an OAuth client of type "TVs and Limited Input devices" in a
-# Google Cloud project with the Google Drive API enabled.
+# Official builds already include Launchstation's own Google client, so this
+# file is NOT needed to link Google Drive. Use it only to substitute your own
+# OAuth client of type "TVs and Limited Input devices" from a Google Cloud
+# project with the Google Drive API enabled.
 #
 # This file belongs beside DASHBOARD.CNF. Do not put refresh/access tokens
 # here; Launchstation stores the user's refresh token separately in WLE-CLOUD.TOK.
+# Both values are required: Google's device flow needs the client secret.
 Google_Client_ID =
-# Some Google client registrations provide a client secret. Leave blank when
-# the device client does not require one.
 Google_Client_Secret =

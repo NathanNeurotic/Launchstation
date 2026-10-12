@@ -4,6 +4,7 @@
 //--------------------------------------------------------------
 #include "launchelf.h"
 #include "cloud_http.h"
+#include "cloud_google_roots.h"
 
 #include <ctype.h>
 #include <limits.h>
@@ -339,14 +340,20 @@ static const unsigned char personal[] = "wLaunchELF native cloud";
     mbedtls_ctr_drbg_init(&tls->ctr);
     mbedtls_entropy_init(&tls->entropy);
 
-    ca_data = read_file(ca_path, &ca_len);
-    if (ca_data == NULL) {
-        set_error(error, error_size, "Could not read WLE-CLOUD-CA.PEM", 0);
-        goto fail;
+    if (ca_path == NULL || ca_path[0] == '\0') {
+        /* No override file: trust the built-in Google Trust Services roots. */
+        r = mbedtls_x509_crt_parse(&tls->ca, (const unsigned char *)cloud_google_roots_pem,
+                                   sizeof(cloud_google_roots_pem));
+    } else {
+        ca_data = read_file(ca_path, &ca_len);
+        if (ca_data == NULL) {
+            set_error(error, error_size, "Could not read WLE-CLOUD-CA.PEM", 0);
+            goto fail;
+        }
+        r = mbedtls_x509_crt_parse(&tls->ca, ca_data, (size_t)ca_len + 1);
+        free(ca_data);
+        ca_data = NULL;
     }
-    r = mbedtls_x509_crt_parse(&tls->ca, ca_data, (size_t)ca_len + 1);
-    free(ca_data);
-    ca_data = NULL;
     if (r < 0) {
         set_error(error, error_size, "Could not parse cloud CA bundle", r);
         goto fail;

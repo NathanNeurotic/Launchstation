@@ -143,6 +143,13 @@ jobs:
           set -euo pipefail
           bash scripts/build_cloud_tls.sh
 
+      - name: Embed Launchstation Google Drive client
+        env:
+          WLE_GOOGLE_CLIENT_ID: ${{ secrets.WLE_GOOGLE_CLIENT_ID }}
+          WLE_GOOGLE_CLIENT_SECRET: ${{ secrets.WLE_GOOGLE_CLIENT_SECRET }}
+        run: |
+          python3 scripts/gen_cloud_client.py
+
       - name: Build Launchstation with ps2build
         run: |
           ps2build build

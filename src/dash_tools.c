@@ -172,15 +172,15 @@ static void cloudLink(void)
 	if (r < 0) {
 		dashModalMessage(DI_WARNING, "Google Drive link unavailable",
 		                 error[0] ? error : "Could not start Google authorization.",
-		                 "WLE-CLOUD.CNF and WLE-CLOUD-CA.PEM must be available in the dashboard settings folder.");
+		                 "Check the Ethernet connection and that the PS2 date and time are correct.");
 		return;
 	}
 
 	snprintf(body, sizeof(body),
-	         "On a phone or computer, open:\n%s\n\nEnter this code: %s",
+	         "On a phone or computer, open:\n%s\n\nEnter this code: %s\n\nThen sign in and choose Allow.",
 	         code.verification_url, code.user_code);
 	snprintf(detail, sizeof(detail),
-	         "The token is stored only on this PS2. Scope: files created by Launchstation.");
+	         "No Google Cloud setup or payment details are needed. Launchstation can only see files it creates.");
 	dashModalMessage(DI_INFO, "Link Google Drive", body, detail);
 
 	for (;;) {
@@ -850,14 +850,41 @@ void dashToolsCheckUpdates(void)
 #endif
 
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
-static int cloudSetupGui(void)
+/* The saved refresh token belongs to the OAuth client that issued it, so any
+ * client change must unlink this PS2 first. Returns 0 if the user declined. */
+static int cloudDisconnectForClientChange(int linked)
+{
+	char error[192];
+
+	if (!linked)
+		return 1;
+	if (!dashModalConfirm("Change Google OAuth client?",
+	                      "The saved Google authorization belongs to the current OAuth client. Changing it will disconnect this PS2 first.",
+	                      "Change & disconnect", 1))
+		return 0;
+	error[0] = '\0';
+	if (cloudGoogleDisconnect(error, sizeof(error)) < 0) {
+		dashModalMessage(DI_WARNING, "Could not disconnect Google Drive",
+		                 error[0] ? error : "The saved token could not be removed.", NULL);
+		return 0;
+	}
+	dashCfg.igr_cloud_sync = 0;
+	dashStoreSaveSettings();
+	dashStoreFlush(1);
+	return 1;
+}
+
+/* Advanced overrides only. Official builds link Google Drive with the built-in
+ * Launchstation client and Google root CAs; nothing here is needed normally. */
+static void cloudSetupGui(void)
 {
 	char client_id[384], client_secret[384], error[192], start[MAX_PATH], picked[MAX_PATH];
-	int ca_present, linked, r, selected = -1;
+	int ca_present, linked, builtin, r, selected = -1;
 
+	builtin = cloudGoogleHasBuiltinClient();
 	for (;;) {
-		DashMenuItem items[4];
-		int ids[4], n = 0;
+		DashMenuItem items[5];
+		int ids[5], n = 0;
 
 		error[0] = '\0';
 		if (cloudGoogleGetClientConfig(client_id, sizeof(client_id),
@@ -865,71 +892,78 @@ static int cloudSetupGui(void)
 		                               &ca_present, error, sizeof(error)) < 0) {
 			dashModalMessage(DI_WARNING, "Google Drive setup unavailable",
 			                 error[0] ? error : "The cloud settings folder is unavailable.", NULL);
-			return 0;
+			return;
 		}
 		linked = cloudGoogleIsLinked();
 
 		items[n].icon = DI_TEXT;
-		items[n].label = "OAuth client ID...";
-		items[n].detail = client_id[0] ? "Configured" : "Required";
+		items[n].label = "Custom OAuth client ID...";
+		items[n].detail = client_id[0] ? "Custom client in use" :
+		                  builtin ? "Not set (built-in client in use)" : "Required: this build has no built-in client";
 		items[n].disabled = 0;
 		ids[n++] = 0;
 
 		items[n].icon = DI_TEXT;
-		items[n].label = "OAuth client secret...";
-		items[n].detail = client_secret[0] ? "Configured (optional)" : "Not set (optional)";
-		items[n].disabled = 0;
+		items[n].label = "Custom OAuth client secret...";
+		items[n].detail = client_secret[0] ? "Configured" : client_id[0] ? "Required by Google" : "Not set";
+		items[n].disabled = !client_id[0];
 		ids[n++] = 1;
 
+		if (client_id[0] && builtin) {
+			items[n].icon = DI_REFRESH;
+			items[n].label = "Use built-in Launchstation client";
+			items[n].detail = "Remove the custom client from WLE-CLOUD.CNF";
+			items[n].disabled = 0;
+			ids[n++] = 4;
+		}
+
 		items[n].icon = DI_FILE;
-		items[n].label = ca_present ? "Replace Google CA bundle..." : "Install Google CA bundle...";
-		items[n].detail = ca_present ? "WLE-CLOUD-CA.PEM installed" : "Required for verified HTTPS";
+		items[n].label = ca_present ? "Replace custom CA bundle..." : "Install custom CA bundle...";
+		items[n].detail = ca_present ? "WLE-CLOUD-CA.PEM overrides built-in Google roots" : "Not needed (built-in Google roots in use)";
 		items[n].disabled = 0;
 		ids[n++] = 2;
 
 		items[n].icon = DI_BACK;
 		items[n].label = "Done";
-		items[n].detail = (client_id[0] && ca_present) ? "Setup ready" : "Setup incomplete";
+		items[n].detail = NULL;
 		items[n].disabled = 0;
 		ids[n++] = 3;
 
-		r = dashModalMenu("Google Drive setup",
-		                  linked ? "Account linked — changing OAuth credentials disconnects it"
-		                         : "Configure the Google TV / limited-input OAuth client",
-		                  items, n, selected >= 0 ? selected : (!client_id[0] ? 0 : !ca_present ? 2 : 3));
+		r = dashModalMenu("Advanced Google Drive setup",
+		                  "Optional: use your own Google Cloud OAuth client",
+		                  items, n, selected >= 0 ? selected : n - 1);
 		selected = r;
 		if (r < 0 || ids[r] == 3)
-			return client_id[0] && ca_present;
+			return;
+
+		if (ids[r] == 4) {
+			if (!cloudDisconnectForClientChange(linked))
+				continue;
+			error[0] = '\0';
+			if (cloudGoogleClearClientConfig(error, sizeof(error)) < 0)
+				dashModalMessage(DI_WARNING, "Custom client not removed",
+				                 error[0] ? error : "WLE-CLOUD.CNF could not be removed.", NULL);
+			else
+				dashToast(DASH_TOAST_OK, "Using built-in Google client");
+			continue;
+		}
 
 		if (ids[r] == 0 || ids[r] == 1) {
 			char previous[384];
 			char *field = ids[r] == 0 ? client_id : client_secret;
-			const char *title = ids[r] == 0 ? "Google OAuth client ID" : "Google OAuth client secret (optional)";
+			const char *title = ids[r] == 0 ? "Google OAuth client ID (TV / limited input)" : "Google OAuth client secret";
 
 			dashStrCopy(previous, field, sizeof(previous));
 			if (!dashModalKeyboard(title, field, 384) || !strcmp(previous, field))
 				continue;
 			if (ids[r] == 0 && field[0] == '\0') {
 				dashModalMessage(DI_WARNING, "Client ID required",
-				                 "Google Drive linking needs a TV / limited-input OAuth client ID.", NULL);
+				                 builtin ? "To go back to the built-in client, choose Use built-in Launchstation client."
+				                         : "Google Drive linking needs a TV / limited-input OAuth client ID.", NULL);
 				continue;
 			}
-			if (linked &&
-			    !dashModalConfirm("Change Google OAuth credentials?",
-			                      "The saved Google refresh token belongs to the current OAuth client. Changing credentials will disconnect this PS2 first.",
-			                      "Change & disconnect", 1))
+			if (!cloudDisconnectForClientChange(linked))
 				continue;
-			if (linked) {
-				error[0] = '\0';
-				if (cloudGoogleDisconnect(error, sizeof(error)) < 0) {
-					dashModalMessage(DI_WARNING, "Could not disconnect Google Drive",
-					                 error[0] ? error : "The saved token could not be removed.", NULL);
-					continue;
-				}
-				dashCfg.igr_cloud_sync = 0;
-				dashStoreSaveSettings();
-				dashStoreFlush(1);
-			}
 			error[0] = '\0';
 			if (cloudGoogleSaveClientConfig(client_id, client_secret, error, sizeof(error)) < 0)
 				dashModalMessage(DI_WARNING, "Google OAuth settings not saved",
@@ -1104,6 +1138,7 @@ void dashToolsCloudBackup(void)
 {
 	char error[192], client_id[384], client_secret[384];
 	int ca_present, configured, linked, has_token, r, selected = -1;
+	int builtin = cloudGoogleHasBuiltinClient();
 
 	for (;;) {
 		DashMenuItem items[7];
@@ -1128,16 +1163,10 @@ void dashToolsCloudBackup(void)
 		items[n].disabled = !linked;
 		ids[n++] = 4;
 
-		items[n].icon = DI_SETTINGS;
-		items[n].label = "Google Drive setup...";
-		items[n].detail = configured ? "OAuth client and CA bundle ready" :
-		                  (client_id[0] ? "CA bundle or configuration missing" : "OAuth client ID required");
-		items[n].disabled = 0;
-		ids[n++] = 0;
-
 		items[n].icon = DI_NETWORK;
 		items[n].label = linked ? "Relink Google Drive" : "Link Google Drive";
-		items[n].detail = linked ? "Request a new Google authorization" : "Authorize this PS2 with a device code";
+		items[n].detail = linked ? "Request a new Google authorization" :
+		                  configured ? "Enter a short code at google.com/device" : "This build has no built-in Google client";
 		items[n].disabled = !configured;
 		ids[n++] = 1;
 
@@ -1165,9 +1194,16 @@ void dashToolsCloudBackup(void)
 		items[n].disabled = !has_token;
 		ids[n++] = 3;
 
+		items[n].icon = DI_SETTINGS;
+		items[n].label = "Advanced setup...";
+		items[n].detail = client_id[0] ? "Custom OAuth client in WLE-CLOUD.CNF" :
+		                  builtin ? "Optional: custom OAuth client or CA bundle" : "Custom OAuth client required";
+		items[n].disabled = 0;
+		ids[n++] = 0;
+
 		r = dashModalMenu("Google Drive backups",
-		                  linked ? "Linked" : configured ? "Ready to link" : "Setup required",
-		                  items, n, selected >= 0 ? selected : (linked ? 0 : configured ? 2 : 1));
+		                  linked ? "Linked" : configured ? "Not linked yet" : "Setup required",
+		                  items, n, selected >= 0 ? selected : (linked ? 0 : configured ? 1 : n - 1));
 		selected = r;
 		if (r < 0)
 			return;
