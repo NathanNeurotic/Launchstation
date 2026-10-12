@@ -1011,7 +1011,7 @@ static void cloudBrowseHistory(void)
             items[n].icon = entry->is_folder ? DI_FOLDER : DI_MC;
             items[n].label = names[i];
             items[n].detail = entry->is_folder ? "Browse backup folder" :
-                              "Verified cloud-history candidate (read-only listing)";
+                              "Uploaded snapshot name (contents not downloaded or verified)";
             items[n].disabled = 0;
             actions[n++] = i;
         }
