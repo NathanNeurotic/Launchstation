@@ -8,6 +8,15 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 source = (root / "src/dash_tools.c").read_text(encoding="utf-8")
 
+# The menu action map and rendered menu must have identical capacity:
+# seven current entries, including cloud-history browsing.
+menu = source[source.index("void dashToolsCloudBackup(void)"):source.index("static void runTool", source.index("void dashToolsCloudBackup(void)"))]
+sizes = re.search(r"DashMenuItem\s+items\[(\d+)\];\s*int\s+ids\[(\d+)\]", menu)
+assert sizes is not None and sizes.group(1) == sizes.group(2), \
+    "cloud menu action IDs must not write beyond the per-item action array"
+assert int(sizes.group(1)) >= 7, "all seven cloud menu commands need capacity"
+
+
 
 def function(signature):
     start = source.index(signature)
