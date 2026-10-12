@@ -64,7 +64,8 @@ assert "setupPad(" not in usb_code
 assert "fileXioInit()" in usb
 assert "emberUsbFindRemounted(game_image, ember_path" in usb
 assert "emberUsbIdentifyFile(game_image" in usb
-assert "DelayThread(100 * 1000)" in usb
+assert "emberUsbFindRemounted(game_image, ember_path" in usb
+assert "DelayThread(100 * 1000)" in init
 
 # After the stack is ready, the embedded loader MUST NOT reset it again.
 assert "RunLoaderElfKeepIOPWithArgv0" in launch
