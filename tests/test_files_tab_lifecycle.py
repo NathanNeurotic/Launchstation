@@ -53,6 +53,7 @@ code=r'''
 #define MAX_NAME 64
 #define MAX_ENTRY 5
 #define DASH_TOAST_ERROR 1
+typedef unsigned char u8;
 typedef struct { char name[MAX_NAME]; } FILEINFO;
 typedef struct { char browse[MAX_PATH]; } DashDevice;
 typedef struct {
