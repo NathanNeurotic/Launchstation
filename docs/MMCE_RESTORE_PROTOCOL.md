@@ -20,6 +20,10 @@ This plan is now grounded in the canonical [sd2psXtd firmware source audit](MMCE
 
 This module now reserves the synthetic active-card pathname against mutation and refuses paths that overflow the firmware's 8-bit on-wire length. These are defensive checks, not the missing proof of in-place restoration safety.
 
+## Host-tested reference for a future firmware transaction
+
+A non-production C99 [transaction reference model](../research/sd2psxtd/README.md) now exercises exclusive-lease ownership, exact backing identity + generation checks, a verified external safety-backup requirement, prepare/commit journaling and fail-closed cold-boot recovery. It deliberately contains **no implementation of SD durability, SIO2 fencing or card emulation quiescence** and is not linked into the shipping executable or upstream firmware. All real callbacks and power-loss validation remain required. Passing host-model tests does not enable an in-place restore GUI.
+
 ## Required transaction before enabling direct MMCE restore
 
 | Phase | Required guarantee | Failure policy |
