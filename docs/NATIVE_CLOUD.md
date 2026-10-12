@@ -1,5 +1,16 @@
 # Native Google Drive backup
 
+## Remote history browser
+
+From **Tools > Google Drive backups**, choose **Browse cloud history...** to
+inspect the app-created `WLE-MMCE-Backups` folder. The picker is read-only,
+paginates Drive metadata in groups of twelve and shows card snapshot names
+without downloading or modifying remote files. Only folders and completed
+`WLE-*.mcd` / `WLE-*.ps2` history entries appear; incomplete `.PART` files are
+excluded. Direct cloud download/restore and writing over MMCE cards are
+not yet enabled; continue using local verified recovery for those images.
+
+
 Launchstation contains an original Google Drive client for uploading the
 versioned MMCE backup history directly from a PlayStation 2. It does not use
 SD2Cloud source code.
