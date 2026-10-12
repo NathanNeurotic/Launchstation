@@ -356,9 +356,13 @@ new image to the source after writing. It uses a unique `RECOVER-###.mcd.PART`
 temporary name and only publishes the matching `.mcd` after verification.
 A failed or interrupted recovery does not replace an existing image.
 
-The existing sd2psXtd firmware supports filesystem create, write, read and
-rename commands; it does **not** provide a safe transaction for replacing
-an actively emulated card. No adapter firmware changes are needed for the
+The existing sd2psXtd firmware supports filesystem create, write and read;
+rename may be unsupported or fail on some adapter configurations (as also
+observed by SD2Cloud). Launchstation first attempts rename when publishing a
+new image in the inactive holding folder, then falls back to a separate,
+read-back-verified copy **only if no final image exists and the stage remains**.
+Neither method replaces a selectable card. It does **not** provide a safe
+transaction for replacing an actively emulated card. No adapter firmware changes are needed for the
 supported non-destructive workflow.
 
 To store a recovered card image **on the adapter itself**, first place the
