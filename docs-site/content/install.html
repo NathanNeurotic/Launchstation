@@ -1,10 +1,13 @@
-<h1>Install &amp; Update</h1><p class="lead">Launchstation is portable: the ELF can live on any filesystem that the launcher can read.</p>
-<h2 id="minimum">Minimum install</h2><pre class="tree"><code>LAUNCHSTATION.ELF</code></pre><p>That is sufficient for normal dashboard and file-management use. Release packages also include <code>title.cfg</code> for app menus. Use <code>LAUNCHSTATION-DS.ELF</code> from the -DS package for DualShock USB/Bluetooth support.</p>
-<h2 id="recommended">Recommended install</h2><pre class="tree"><code>APP_LAUNCHSTATION/
-├── LAUNCHSTATION.ELF
-├── BGM.ADP                  optional
-├── WLE-CLOUD.CNF            optional; create from example
-└── WLE-CLOUD-CA.PEM         optional; native cloud TLS</code></pre>
-<h2 id="config-discovery">Configuration discovery</h2><p>The project keeps classic <code>LAUNCHELF.CNF</code> compatibility and a dashboard settings store. A custom CNF path can be selected in Settings. Saving can target the configured folder, next to the ELF or a memory-card SYS-CONF location.</p>
-<h2 id="update">Updating safely</h2><ol><li>Download the matching standard or DualShock app ZIP and extract its packed ELF.</li><li>Back up the current ELF and configuration.</li><li>Replace the ELF first.</li><li>Replace sidecars when release notes say their format/content changed or when enabling a new feature.</li><li>Boot and review Settings before overwriting older configuration copies.</li></ol>
-<h2 id="portable">Portable sidecar strategy</h2><p>For a self-contained installation, keep BGM and cloud support files beside the program. For multi-console setups, use explicit save/loader paths so shared and per-console state are intentional rather than accidental.</p>
+<h1>Install &amp; Update</h1><p class="lead">Install the matching app package and preserve your existing configuration and customized files.</p>
+<h2 id="package">Standard rolling package</h2><pre class="tree"><code>mc0:/
+└── APP_LAUNCHSTATION/
+    ├── LAUNCHSTATION.ELF
+    ├── title.cfg
+    ├── BGM.ADP
+    └── WLE-UPDATE-CA.PEM</code></pre>
+<p>Both standard ZIP and PSU packages contain those four files. DS34 controller packages use APP_LAUNCHSTATION-DS with LAUNCHSTATION-DS.ELF. The ELF alone can run the dashboard, but the packaged updater CA supports native verified HTTPS updating; BGM.ADP is optional for a standalone installation.</p>
+<h2 id="downloads">Choose your installer</h2><p>Download the matching ZIP/PSU from <a href="releases.html">Downloads &amp; Releases</a>. Extract the ZIP app folder to readable storage or use the File Browser PSU Paste command to install a PSU on a memory card. Keep a separate copy of your previous working ELF, settings and customized sidecars.</p>
+<h2 id="config">Configuration</h2><p>LAUNCHSTATION retains classic LAUNCHELF.CNF support and its dashboard settings store. The saved path can be configured next to the ELF, in a selected folder or on a memory-card SYS-CONF location. See <a href="configuration.html">Configuration</a>.</p>
+<h2 id="cloud">Google Drive remains opt-in</h2><p>Native cloud requires separate user-provided WLE-CLOUD.CNF OAuth settings, Google trust roots in WLE-CLOUD-CA.PEM and a generated refresh token after linking. Do not publish your token or include it in a bug report. Google Drive is optional for ordinary files and local MMCE history.</p>
+<h2 id="native">Native updates and rollback</h2><p>The current in-app updater checks release ancestry, downloads the matching standard or DS34 PSU, validates the published SHA-256 and ELF, stages replacement and keeps a .BAK copy of the preceding executable. It restores missing only CA/BGM sidecars from the verified four-file PSU without overwriting customized ones. Existing interrupted .UPDATE or .PACKAGE artifacts require manual resolution. Restart LAUNCHSTATION to use installed code; older clients may need a one-time manual package update.</p>
+<h2 id="baseline">Preserve a hardware-tested baseline</h2><p>If a newer rolling build regresses on your console, retain the <a href="https://github.com/NathanNeurotic/Launchstation/releases/tag/usb-second-drive-2026-10-08-58d4514">2026-10-08 USB-tested baseline</a> and collect hardware details before retrying. Compiled CI success is distinct from successful console validation.</p>
