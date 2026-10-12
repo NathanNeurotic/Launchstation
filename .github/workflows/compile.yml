@@ -67,6 +67,7 @@ jobs:
           python3 tests/test_igr_return_policy.py
           python3 tests/test_cloud_relay.py
           python3 tests/test_native_cloud.py
+          python3 tests/test_cloud_history_browser.py
           python3 tests/test_cloud_menu.py
           python3 tests/test_mmce_protocol.py
           python3 tests/test_mmce_publish.py
