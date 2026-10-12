@@ -775,6 +775,8 @@ static int drive_browse_parse(const char *json, CloudGoogleBrowsePage *page)
                 !strcmp(e->name, ".."))
                 return -1;
             e->is_folder = !strcmp(mime, "application/vnd.google-apps.folder");
+            if (!e->is_folder)
+                json_string(item, "wle_sha256", e->sha256, sizeof(e->sha256));
             if (e->is_folder ||
                 (!strncmp(e->name, "WLE-", 4) &&
                  (genCmpFileExt(e->name, "MCD") ||
@@ -834,7 +836,7 @@ int cloudGoogleListBackupHistory(const char *parent_id, const char *page_token,
         return -1;
     n = snprintf(path, sizeof(path),
                  "/drive/v3/files?q=%s&spaces=drive&pageSize=%d"
-                 "&fields=nextPageToken,files(id,name,mimeType)&orderBy=name",
+                 "&fields=nextPageToken,files(id,name,mimeType,appProperties)&orderBy=name",
                  encoded, CLOUD_GOOGLE_BROWSE_MAX);
     if (n <= 0 || n >= (int)sizeof(path))
         return -1;
@@ -865,6 +867,173 @@ int cloudGoogleListBackupHistory(const char *parent_id, const char *page_token,
                 sizeof(page->next_page_token));
     cloudHttpResponseFree(&response);
     return 0;
+}
+
+
+#define CLOUD_RECOVERY_MAX_BYTES (96 * 1024 * 1024)
+
+/* The digest lives in Drive metadata created by our verified uploader.
+ * A plain filename, file ID or HTTP success is never sufficient to publish
+ * an image that will later be used as a PS2 memory card. */
+static int cloud_valid_digest(const char *hex)
+{
+    int i;
+    if (hex == NULL || strlen(hex) != 64)
+        return 0;
+    for (i = 0; i < 64; ++i)
+        if (!isxdigit((unsigned char)hex[i]))
+            return 0;
+    return 1;
+}
+
+static int cloud_digest_matches(const unsigned char digest[32], const char *hex)
+{
+    static const char digits[] = "0123456789abcdef";
+    int i;
+    if (!cloud_valid_digest(hex))
+        return 0;
+    for (i = 0; i < 32; ++i) {
+        if (tolower((unsigned char)hex[2 * i]) != digits[digest[i] >> 4] ||
+            tolower((unsigned char)hex[2 * i + 1]) != digits[digest[i] & 15])
+            return 0;
+    }
+    return 1;
+}
+
+/* Valid recovered images are created only on a device with standard
+ * same-directory rename semantics, never an actively emulated MMCE card. */
+static int cloud_recovery_path(const char *folder, char *result, size_t result_size,
+                               char *download, size_t download_size,
+                               char *stage, size_t stage_size)
+{
+    int i, n, a, b;
+    size_t len;
+
+    if (folder == NULL || !strchr(folder, ':') ||
+        (strncmp(folder, "usb", 3) && strncmp(folder, "mass", 4) &&
+         strncmp(folder, "ata", 3) && strncmp(folder, "hdd", 3)))
+        return 0;
+    len = strlen(folder);
+    if (len == 0)
+        return 0;
+    for (i = 1; i <= 999; i++) {
+        n = snprintf(result, result_size, "%s%sRECOVER-CLOUD-%03d.mcd",
+                     folder, folder[len - 1] == ':' || folder[len - 1] == '/' ? "" : "/", i);
+        a = snprintf(stage, stage_size, "%s.PART", result);
+        b = snprintf(download, download_size, "%s%sRECOVER-CLOUD-%03d.DOWNLOAD.PART",
+                     folder, folder[len - 1] == ':' || folder[len - 1] == '/' ? "" : "/", i);
+        if (n <= 0 || n >= (int)result_size || a <= 0 || a >= (int)stage_size ||
+            b <= 0 || b >= (int)download_size)
+            return 0;
+        if (!wleExists(result) && !wleExists(stage) && !wleExists(download))
+            return 1;
+    }
+    return 0;
+}
+
+int cloudGoogleRecoverSnapshot(const CloudGoogleBrowseItem *snapshot,
+                               const char *dest_dir, char *result_path,
+                               int result_size, char *error, int error_size)
+{
+    GoogleSession session;
+    char result[MAX_PATH], stage[MAX_PATH], download[MAX_PATH], url[512];
+    unsigned char digest[32];
+    int is_pcsx2, bytes = 0, fd = -1, r, result_created = 0;
+
+    if (result_path && result_size > 0)
+        result_path[0] = '\0';
+    if (snapshot == NULL || snapshot->is_folder || dest_dir == NULL ||
+        result_path == NULL || result_size <= 0 ||
+        !drive_safe_id(snapshot->id) ||
+        !cloud_valid_digest(snapshot->sha256) ||
+        (!genCmpFileExt(snapshot->name, "MCD") &&
+         !genCmpFileExt(snapshot->name, "PS2"))) {
+        set_error(error, error_size,
+                  "This item lacks valid snapshot metadata and cannot be recovered");
+        return -1;
+    }
+    is_pcsx2 = genCmpFileExt(snapshot->name, "PS2");
+    if (!cloud_recovery_path(dest_dir, result, sizeof(result),
+                             download, sizeof(download), stage, sizeof(stage))) {
+        set_error(error, error_size,
+                  "Choose a writable USB/HDD folder with an unused recovery filename");
+        return -1;
+    }
+    /* Start local storage before Ethernet so network startup cannot reuse
+     * a mount whose driver has not yet been initialized. */
+    if (!ensurePathDeviceStackReady(dest_dir)) {
+        set_error(error, error_size, "Could not start the recovery storage device");
+        return -1;
+    }
+    if (load_session(&session, 1, error, error_size) < 0 ||
+        !ensureDashboardIpNetworkReady()) {
+        set_error(error, error_size, "Drive connection or Ethernet is unavailable");
+        return -1;
+    }
+    if (refresh_access_token(&session, error, error_size) < 0)
+        return -1;
+    r = snprintf(url, sizeof(url),
+                 "https://www.googleapis.com/drive/v3/files/%s?alt=media", snapshot->id);
+    if (r <= 0 || r >= (int)sizeof(url))
+        return -1;
+
+    /* Never reuse a stale interrupted download or a published file. */
+    if (wleExists(result) || wleExists(stage) || wleExists(download)) {
+        set_error(error, error_size, "A recovery filename was claimed; choose another");
+        return -1;
+    }
+    fd = genOpen(download, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
+    if (fd < 0) {
+        set_error(error, error_size, "Could not create staged cloud download");
+        return -1;
+    }
+    r = cloudHttpDownloadGoogleFd(url, session.access_token, fd, session.ca_path,
+                                  CLOUD_RECOVERY_MAX_BYTES, &bytes, digest,
+                                  error, error_size);
+    if (genClose(fd) < 0)
+        r = -1;
+    fd = -1;
+    if (r < 0)
+        goto fail;
+    if (bytes <= 0 || !cloud_digest_matches(digest, snapshot->sha256)) {
+        set_error(error, error_size, "Downloaded card SHA-256 differs from backup history");
+        goto fail;
+    }
+    if ((is_pcsx2 ? mcCardValidatePcsx2(download) :
+                     mcCardValidateNoEcc(download)) != MC_CARD_EXPORT_OK) {
+        set_error(error, error_size, "Downloaded image failed PS2 card geometry verification");
+        goto fail;
+    }
+
+    r = is_pcsx2 ? mcCardImportPcsx2(download, stage, NULL) :
+                    mcCardBackupNoEcc(download, stage, NULL);
+    if (r != MC_CARD_EXPORT_OK ||
+        mcCardValidateNoEcc(stage) != MC_CARD_EXPORT_OK) {
+        set_error(error, error_size, "Could not create a verified local card copy");
+        goto fail;
+    }
+    if (wleExists(result) || fileXioRename(stage, result) < 0) {
+        set_error(error, error_size, "Could not publish the verified recovery image");
+        goto fail;
+    }
+    result_created = 1;
+    if (mcCardValidateNoEcc(result) != MC_CARD_EXPORT_OK) {
+        set_error(error, error_size, "Published card geometry verification failed");
+        goto fail;
+    }
+
+    /* The original Drive item and local history remain untouched. */
+    genRemove(download);
+    snprintf(result_path, result_size, "%s", result);
+    return 0;
+fail:
+    if (fd >= 0)
+        genClose(fd);
+    genRemove(download);
+    genRemove(stage);
+    if (result_created)
+        genRemove(result);
+    return -1;
 }
 
 static int drive_create_folder(GoogleSession *s, const char *parent, const char *name,
