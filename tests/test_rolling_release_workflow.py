@@ -26,7 +26,7 @@ assert "gh release edit" in publish
 assert "--draft=false --prerelease=false --latest" in publish
 assert "git merge-base --is-ancestor" in publish
 assert "gh api --method PATCH" in publish
-assert publish.index("Build") < publish.index("gh release upload")
+assert publish.index('for asset in "${assets[@]}"') < publish.index("gh release upload")
 assert publish.index("gh release upload") < publish.index("gh api --method PATCH")
 assert publish.index("gh api --method PATCH") < publish.index("gh release edit")
 for asset in ("APP_LAUNCHSTATION.psu", "APP_LAUNCHSTATION.zip",
