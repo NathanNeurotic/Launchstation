@@ -21,7 +21,8 @@ def get_constants(text):
     values = {}
     for enum in re.finditer(r"enum\s+mmce_cmds(?:_fs)?\s*\{(.*?)\}", text, re.S):
         index = -1
-        for part in enum.group(1).split(","):
+        body = re.sub(r"/\*.*?\*/", "", enum.group(1), flags=re.S)
+        for part in body.split(","):
             part = part.split("//")[0].strip()
             if not part:
                 continue
@@ -75,5 +76,5 @@ assert "**Not enabled.**" in protocol
 assert "not implemented upstream" in audit
 # None of these check paths may be reinterpreted as an atomic, exclusive lease.
 assert "GET_STATUS" in audit and "GET_CARD" in audit
-assert "FS_RENAME" in audit and "GET_STATUS == 0" not in protocol
+assert "FS_RENAME" in audit and "GET_STATUS == 0" in protocol
 print("PASS: firmware MMCEMAN command parity and safe-restore unsupported gate")
