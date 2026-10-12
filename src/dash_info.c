@@ -111,10 +111,11 @@ static void sheetShow(int icon, const char *title, const char *subtitle, const S
 				dashDrawScrollbar(x + w - 14, body_y, body_h, (int)scroll, (int)body_h, (int)total);
 			dashModalHintRow(x + 24, y + h - 36, dashOkIcon(), "Close", -1, NULL);
 			if (max_scroll > 0.0f) {
-				float hx = x + w - 120;
-				hx += dashDrawButton(hx, y + h - 36, DI_BTN_UP, NULL) + 2;
-				hx += dashDrawButton(hx, y + h - 36, DI_BTN_DOWN, NULL) + 4;
-				dashTextS(hx, y + h - 31.5f, "Scroll", DASH_FS_SMALL, DASH_C_TEXT2);
+				/* Up/down glyphs alone, spaced so the pad tiles (drawn
+				 * slightly larger than their 22 px slot) never touch. */
+				float hx = x + w - 24 - (22 + 12 + 22);
+				hx += dashDrawButton(hx, y + h - 36, DI_BTN_UP, NULL) + 12;
+				dashDrawButton(hx, y + h - 36, DI_BTN_DOWN, NULL);
 			}
 			dashGfxPopOffset();
 			dashGfxPopAlpha();

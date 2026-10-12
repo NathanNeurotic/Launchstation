@@ -148,6 +148,29 @@ assert "automatic IGR cloud sync was turned off" in disconnect
 # User-supplied CA bundles retain the native loader's size guard.
 assert "len > 256 * 1024" in http
 
+# Zero-setup linking: official builds embed Launchstation's OAuth client from CI
+# secrets and Google's roots, so users never create a Google Cloud project.
+roots = (root / "include/cloud_google_roots.h").read_text(encoding="utf-8")
+assert roots.count("-----BEGIN CERTIFICATE-----") == 4
+for name in ("GTS Root R1", "GTS Root R2", "GTS Root R3", "GTS Root R4"):
+    assert name in roots
+assert '#include "cloud_google_roots.h"' in http
+assert "cloud_google_roots_pem" in http
+assert "ca_path == NULL || ca_path[0] == '\\0'" in http
+# An installed WLE-CLOUD-CA.PEM still overrides; a missing one falls back.
+assert "if (!wleExists(s->ca_path))\n        s->ca_path[0] = '\\0';" in google
+assert "WLE-CLOUD-CA.PEM is missing" not in google
+# A custom client ID is never paired with the built-in secret.
+load_client = google[google.index("static void load_client("):google.index("int cloudGoogleHasBuiltinClient")]
+assert load_client.index("if (client->client_id[0])") < load_client.index("WLE_GOOGLE_CLIENT_SECRET")
+assert '__has_include("wle_cloud_client.h")' in google
+generator = (root / "scripts/gen_cloud_client.py").read_text(encoding="utf-8")
+assert ".cloud-deps" in generator and "wle_cloud_client.h" in generator
+assert "secrets.WLE_GOOGLE_CLIENT_ID" in workflow and "secrets.WLE_GOOGLE_CLIENT_SECRET" in workflow
+assert workflow.index("scripts/build_cloud_tls.sh") < workflow.index("scripts/gen_cloud_client.py") \
+    < workflow.index("ps2build build\n")
+assert "No Google Cloud setup or payment details are needed" in tools
+
 # Clean-room documentation and no source-level dependency on SD2Cloud.
 assert "does not use\nSD2Cloud source code" in docs
 for source in (google, http):

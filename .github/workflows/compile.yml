@@ -70,6 +70,7 @@ jobs:
           python3 tests/test_cloud_history_browser.py
           python3 tests/test_cloud_recovery.py
           python3 tests/test_cloud_menu.py
+          python3 tests/test_root_mc_poll.py
           python3 tests/test_mmce_protocol.py
           python3 tests/test_mmce_upstream_contract.py
           python3 tests/test_mmce_restore_txn_model.py
@@ -142,6 +143,13 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/build_cloud_tls.sh
+
+      - name: Embed Launchstation Google Drive client
+        env:
+          WLE_GOOGLE_CLIENT_ID: ${{ secrets.WLE_GOOGLE_CLIENT_ID }}
+          WLE_GOOGLE_CLIENT_SECRET: ${{ secrets.WLE_GOOGLE_CLIENT_SECRET }}
+        run: |
+          python3 scripts/gen_cloud_client.py
 
       - name: Build Launchstation with ps2build
         run: |

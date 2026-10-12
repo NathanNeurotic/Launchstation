@@ -155,6 +155,7 @@ int readGENERIC(const char *path, FILEINFO *info, int max);
 #define USB_DISCOVERY_ATTEMPTS 3
 #define USB_DISCOVERY_SETTLE_MS 500
 #define ROOT_MC_POLL_INTERVAL_MS 500
+#define ROOT_MC_POLL_FAIL_LIMIT 3
 #define MC_BROWSER_RETRY_COUNT 4
 #define MC_BROWSER_RETRY_DELAY_US 100000
 
@@ -167,6 +168,7 @@ static int root_mc_poll_format = 0;
 static int root_mc_known_type[2] = {0, 0};
 static int root_mc_known_free[2] = {-1, -1};
 static int root_mc_polled[2] = {0, 0};
+static int root_mc_failures[2] = {0, 0};
 static u64 root_mc_next_poll_time = 0;
 static int discard_next_mx4sio_root_listing = 0;
 
@@ -1219,6 +1221,16 @@ static int rootMemoryCardExists(int port)
 	return root_mc_present[port];
 }
 
+/* A request with no trustworthy result keeps the slot's last-known state but
+ * still moves on to the other slot, so one unresponsive slot (for example
+ * slot 2 while the MX4SIO stack owns it) can never starve the other. */
+static void rootMcPollFailed(void)
+{
+	if (root_mc_failures[root_mc_poll_port] < ROOT_MC_POLL_FAIL_LIMIT)
+		root_mc_failures[root_mc_poll_port]++;
+	root_mc_poll_port = (root_mc_poll_port + 1) & 1;
+}
+
 int pollRootMemoryCardDevices(void)
 {
 	int result, sync, changed, start_ret;
@@ -1230,12 +1242,15 @@ int pollRootMemoryCardDevices(void)
 
 		root_mc_poll_active = 0;
 		root_mc_next_poll_time = Timer() + ROOT_MC_POLL_INTERVAL_MS;
-		if (sync < 0)
+		if (sync < 0) {
+			rootMcPollFailed();
 			return FALSE;
+		}
 
 		changed = (root_mc_present[root_mc_poll_port] != memoryCardResultIndicatesPresent(result));
 		root_mc_present[root_mc_poll_port] = memoryCardResultIndicatesPresent(result);
 		root_mc_polled[root_mc_poll_port] = 1;
+		root_mc_failures[root_mc_poll_port] = 0;
 		root_mc_known_type[root_mc_poll_port] = root_mc_present[root_mc_poll_port] ? root_mc_poll_type : 0;
 		root_mc_known_free[root_mc_poll_port] = root_mc_present[root_mc_poll_port] ? root_mc_poll_free : -1;
 		root_mc_poll_port = (root_mc_poll_port + 1) & 1;
@@ -1248,8 +1263,10 @@ int pollRootMemoryCardDevices(void)
 	start_ret = mcGetInfo(root_mc_poll_port, 0, &root_mc_poll_type, &root_mc_poll_free, &root_mc_poll_format);
 	if (start_ret == 0)
 		root_mc_poll_active = 1;
-	else
+	else {
 		root_mc_next_poll_time = Timer() + ROOT_MC_POLL_INTERVAL_MS;
+		rootMcPollFailed();
+	}
 
 	return FALSE;
 }
@@ -2020,8 +2037,8 @@ int filerRootMcPresent(int port, int *type, int *free_kb)
 		*type = root_mc_known_type[port];
 	if (free_kb != NULL)
 		*free_kb = root_mc_known_free[port];
-	if (!root_mc_polled[port])
-		return -1; /* not polled yet */
+	if (!root_mc_polled[port]) /* -2: never answered; opening it retries */
+		return root_mc_failures[port] >= ROOT_MC_POLL_FAIL_LIMIT ? -2 : -1;
 	return root_mc_present[port];
 }
 
@@ -2079,6 +2096,7 @@ void filerRootMcPollIdle(void)
 	if (sync <= 0)
 		return;
 	root_mc_polled[root_mc_poll_port] = 1;
+	root_mc_failures[root_mc_poll_port] = 0;
 	root_mc_present[root_mc_poll_port] = memoryCardResultIndicatesPresent(result);
 	root_mc_known_type[root_mc_poll_port] = root_mc_present[root_mc_poll_port] ? root_mc_poll_type : 0;
 	root_mc_known_free[root_mc_poll_port] = root_mc_present[root_mc_poll_port] ? root_mc_poll_free : -1;

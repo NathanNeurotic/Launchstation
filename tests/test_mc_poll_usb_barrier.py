@@ -29,7 +29,7 @@ program=r'''
 static unsigned long long now_ms=10000;
 static unsigned long long Timer(void) { return now_ms; }
 static int root_mc_poll_active,root_mc_poll_port,root_mc_poll_type,root_mc_poll_free;
-static int root_mc_present[2]={1,0},root_mc_polled[2]={1,1};
+static int root_mc_present[2]={1,0},root_mc_polled[2]={1,1},root_mc_failures[2];
 static int root_mc_known_type[2]={2,0},root_mc_known_free[2]={800,0};
 static unsigned long long root_mc_next_poll_time;
 static int sync_return=1, sync_result, sync_calls, status_calls;

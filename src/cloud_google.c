@@ -16,6 +16,14 @@
 
 #include <mbedtls/sha256.h>
 
+/* Release builds generate this header from CI secrets (scripts/gen_cloud_client.py)
+ * so users can link Google Drive without creating their own Google Cloud client. */
+#if defined(__has_include)
+#if __has_include("wle_cloud_client.h")
+#include "wle_cloud_client.h"
+#endif
+#endif
+
 #define CLOUD_CLIENT_MAX 384
 #define CLOUD_TOKEN_MAX 2048
 #define CLOUD_ID_MAX 192
@@ -193,6 +201,49 @@ static int client_kv(const char *key, char *value, void *user)
     return 0;
 }
 
+static int builtin_client_available(void)
+{
+#ifdef WLE_GOOGLE_CLIENT_ID
+    return WLE_GOOGLE_CLIENT_ID[0] != '\0';
+#else
+    return 0;
+#endif
+}
+
+static void read_custom_client(GoogleClient *client, const char *cnf_path)
+{
+    char *text;
+    int len;
+
+    memset(client, 0, sizeof(*client));
+    text = dashLoadTextFile(cnf_path, 16 * 1024, &len);
+    if (text != NULL) {
+        dashKvParse(text, client_kv, client);
+        free(text);
+    }
+}
+
+/* WLE-CLOUD.CNF overrides the built-in client only as a complete pair: a
+ * custom client ID must never be sent with the built-in client's secret. */
+static void load_client(GoogleClient *client, const char *cnf_path)
+{
+    read_custom_client(client, cnf_path);
+    if (client->client_id[0])
+        return;
+    memset(client, 0, sizeof(*client));
+#ifdef WLE_GOOGLE_CLIENT_ID
+    strcopy(client->client_id, sizeof(client->client_id), WLE_GOOGLE_CLIENT_ID);
+#endif
+#ifdef WLE_GOOGLE_CLIENT_SECRET
+    strcopy(client->client_secret, sizeof(client->client_secret), WLE_GOOGLE_CLIENT_SECRET);
+#endif
+}
+
+int cloudGoogleHasBuiltinClient(void)
+{
+    return builtin_client_available();
+}
+
 static int token_kv(const char *key, char *value, void *user)
 {
     GoogleSession *s = user;
@@ -219,28 +270,15 @@ static int load_session(GoogleSession *s, int need_token, char *error, int error
         return -1;
     }
 
-#ifdef WLE_GOOGLE_CLIENT_ID
-    strcopy(s->client.client_id, sizeof(s->client.client_id), WLE_GOOGLE_CLIENT_ID);
-#endif
-#ifdef WLE_GOOGLE_CLIENT_SECRET
-    strcopy(s->client.client_secret, sizeof(s->client.client_secret), WLE_GOOGLE_CLIENT_SECRET);
-#endif
-
-    text = dashLoadTextFile(path, 16 * 1024, &len);
-    if (text != NULL) {
-        dashKvParse(text, client_kv, &s->client);
-        free(text);
-    }
+    load_client(&s->client, path);
     if (s->client.client_id[0] == 0) {
         set_error(error, error_size,
-                  "No Google OAuth client. Put Google_Client_ID in WLE-CLOUD.CNF.");
+                  "This build has no Google client. Use an official release or set a custom OAuth client.");
         return -1;
     }
-    if (!wleExists(s->ca_path)) {
-        set_error(error, error_size,
-                  "WLE-CLOUD-CA.PEM is missing from the dashboard settings folder.");
-        return -1;
-    }
+    /* An installed WLE-CLOUD-CA.PEM overrides the built-in Google roots. */
+    if (!wleExists(s->ca_path))
+        s->ca_path[0] = '\0';
 
     if (need_token) {
         /* A .NEW file is a verified staging copy left only if power was lost
@@ -385,10 +423,7 @@ int cloudGoogleGetClientConfig(char *client_id, int client_id_size,
 {
     GoogleClient client;
     char cnf_path[MAX_PATH], ca_path[MAX_PATH];
-    char *text;
-    int len;
 
-    memset(&client, 0, sizeof(client));
     if (client_id && client_id_size > 0)
         client_id[0] = '\0';
     if (client_secret && client_secret_size > 0)
@@ -403,17 +438,9 @@ int cloudGoogleGetClientConfig(char *client_id, int client_id_size,
         return -1;
     }
 
-#ifdef WLE_GOOGLE_CLIENT_ID
-    strcopy(client.client_id, sizeof(client.client_id), WLE_GOOGLE_CLIENT_ID);
-#endif
-#ifdef WLE_GOOGLE_CLIENT_SECRET
-    strcopy(client.client_secret, sizeof(client.client_secret), WLE_GOOGLE_CLIENT_SECRET);
-#endif
-    text = dashLoadTextFile(cnf_path, 16 * 1024, &len);
-    if (text != NULL) {
-        dashKvParse(text, client_kv, &client);
-        free(text);
-    }
+    /* Report only the user's custom override; the built-in client is never
+     * exposed for editing or copied into WLE-CLOUD.CNF. */
+    read_custom_client(&client, cnf_path);
 
     if (client_id && client_id_size > 0)
         strcopy(client_id, client_id_size, client.client_id);
@@ -456,6 +483,24 @@ int cloudGoogleSaveClientConfig(const char *client_id, const char *client_secret
                    client_id, client_secret ? client_secret : "");
     if (len <= 0 || len >= (int)sizeof(text) || dashWriteFile(path, text, len) != 0) {
         set_error(error, error_size, "Could not save WLE-CLOUD.CNF.");
+        return -1;
+    }
+    if (error && error_size > 0)
+        error[0] = '\0';
+    return 0;
+}
+
+int cloudGoogleClearClientConfig(char *error, int error_size)
+{
+    char path[MAX_PATH];
+
+    dashStoreInit();
+    if (dashStoreBuildPath(path, sizeof(path), "WLE-CLOUD.CNF") < 0) {
+        set_error(error, error_size, "Cloud settings folder is unavailable");
+        return -1;
+    }
+    if (wleExists(path) && genRemove(path) < 0) {
+        set_error(error, error_size, "Could not remove WLE-CLOUD.CNF.");
         return -1;
     }
     if (error && error_size > 0)

@@ -22,12 +22,17 @@ typedef struct {
 typedef void (*CloudGoogleProgress)(const char *status, int done, int total);
 
 int cloudGoogleConfigured(char *error, int error_size);
-/* GUI setup helpers. Client secret is optional for TV/limited-input clients. */
+/* Official builds embed Launchstation's own OAuth client and Google's root
+ * CAs, so linking needs no user setup. The helpers below manage the optional
+ * advanced overrides: a custom client in WLE-CLOUD.CNF and WLE-CLOUD-CA.PEM. */
+int cloudGoogleHasBuiltinClient(void);
+/* Reports only the custom WLE-CLOUD.CNF values (empty when not overridden). */
 int cloudGoogleGetClientConfig(char *client_id, int client_id_size,
                                char *client_secret, int client_secret_size,
                                int *ca_present, char *error, int error_size);
 int cloudGoogleSaveClientConfig(const char *client_id, const char *client_secret,
                                 char *error, int error_size);
+int cloudGoogleClearClientConfig(char *error, int error_size);
 int cloudGoogleInstallCaBundle(const char *source_path, char *error, int error_size);
 int cloudGoogleIsLinked(void);
 int cloudGoogleHasLocalToken(void);

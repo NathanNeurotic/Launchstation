@@ -86,7 +86,7 @@ code += header[input_start:header.index("};", input_start) + 2] + "\n"
 for color in colors:
     code += f"#define {color} ((DashColor){{255,255,255,255}})\n"
 for draw in ("modalBackdrop", "dashGfxPushAlpha", "dashGfxPushOffset", "modalPanel",
-             "dashTextS", "dashTextFit", "dashTextScrollTimed", "dashGfxScissor", "dashDrawSelection",
+             "dashTextS", "dashTextFit", "dashTextScrollTimed", "dashTextScroll", "dashGfxScissor", "dashDrawSelection",
              "dashIcon", "dashTextRight", "dashGfxScissorReset", "dashDrawScrollbar",
              "modalHintRow", "dashGfxPopOffset", "dashGfxPopAlpha", "dashGfxBlend",
              "dashGlow", "dashTextWrap", "dashPanel", "dashPanelBorder", "dashTextCenter"):
@@ -215,3 +215,15 @@ if len(sys.argv) == 1:
     assert calls <= {"Timer", "dashBgUpdate", "dashUiUpdate", "dashApproach", "dashAnimSpeed"}, calls
     assert "dashVisualUpdate" not in function(shell, "void dashRenderScene(")
     print("PASS: every scene loop ticks once; visual helper excludes input, device polling and IO")
+
+# Menu rows: a long detail must never overlap its label (Settings changes >
+# Discard changes), and START hints must draw the START glyph even without the
+# pad PNG atlas (the text badge read as a SELECT bar on CRTs).
+menu = function(ui, "int dashModalMenu(")
+assert "detail ? 90" not in menu
+assert "detail_w = avail - label_w - 14.0f;" in menu
+assert "dashTextFit(tx, ry + 7, label_w," in menu
+key_icon = function(ui, "static int keyIcon(")
+assert key_icon.index('"START"') < key_icon.index("dashIconsPadPng()")
+assert "return DI_BTN_START;" in key_icon
+print("PASS: menu detail cannot overlap labels; START hint uses the START glyph")
