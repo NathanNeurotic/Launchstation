@@ -35,6 +35,26 @@ int cloudGoogleBeginLink(CloudGoogleDeviceCode *code, char *error, int error_siz
 /* 0 = linked, 1 = authorization still pending, <0 = failed/expired. */
 int cloudGoogleFinishLink(const CloudGoogleDeviceCode *code, char *error, int error_size);
 int cloudGoogleDisconnect(char *error, int error_size);
+/* Read-only browsing of backups created by this Launchstation OAuth client.
+ * Each page is bounded so no full Drive file listing enters PS2 memory.
+ * A null parent_id locates the app's WLE-MMCE-Backups root. */
+#define CLOUD_GOOGLE_BROWSE_MAX 12
+typedef struct {
+    char id[192];
+    char name[256];
+    int is_folder;
+} CloudGoogleBrowseItem;
+typedef struct {
+    char folder_id[192];
+    char next_page_token[256];
+    int count;
+    CloudGoogleBrowseItem items[CLOUD_GOOGLE_BROWSE_MAX];
+} CloudGoogleBrowsePage;
+
+int cloudGoogleListBackupHistory(const char *parent_id, const char *page_token,
+                                 CloudGoogleBrowsePage *page,
+                                 char *error, int error_size);
+
 int cloudGoogleSyncBackupRoot(const char *backup_root, CloudGoogleSyncStats *stats,
                               CloudGoogleProgress progress, char *error, int error_size);
 
