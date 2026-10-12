@@ -6,6 +6,10 @@
 
 The present MMCEMAN/firmware interface cannot certify that an arbitrary `mmce0:/MemoryCards/...` or `mmce1:/MemoryCards/...` target is inactive and atomically replaceable. Do not infer that from a successful pathname lookup, `GET_CARD`, an idle `GET_STATUS` flag, or `RESET`.
 
+## Verified firmware source
+
+This plan is now grounded in the canonical [sd2psXtd firmware source audit](MMCE_SD2PSXTD_FIRMWARE_AUDIT.md), pinned to upstream commit `8a20bd991b43ac731882f5f85030b19e94c23a3b`. That audit distinguishes actual wire commands and host/firmware behaviors from proposed future transaction features. Existing `GET_STATUS`, `GET_CARD`, and `FS_RENAME` must not be promoted to restore guarantees without firmware changes.
+
 ## What the existing MMCE commands actually establish
 
 - `GET_STATUS` supplies firmware status flags; the current active-card export checks its busy bit before probing. **Idle does not certify a selected backing filename or exclude later activity.**
