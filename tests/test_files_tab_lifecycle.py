@@ -33,6 +33,7 @@ assert "dashGfxBeginFrame" not in draw and "dashBgDraw()" not in draw
 assert "fb_tab_active ? 74 : 58" in draw
 assert "dashDrawHeader(section, section_anim)" in main
 assert "if (setting->Misc[0] && !fb_tab_active)" in browser
+assert "dashHomeRebuild();" not in browser[browser.index("void dashFileBrowserTabClose(void)"):browser.index("int dashBrowserPadInputReady(void)")]
 
 def function(signature):
     start=browser.index(signature)
@@ -67,13 +68,12 @@ static int fb_tab_active;
 static int browser_usb_jobs,browser_usb_input_rearm;
 static char fb_tab_resume[MAX_PATH];
 static char fb_tab_selection[MAX_NAME];
-static int busy,flush_count,clear_args_count,rebuild_count,open_count;
+static int busy,flush_count,clear_args_count,open_count;
 static char opened[MAX_PATH], selected[MAX_NAME];
 static int LaunchArgsPending(void) {return fb.args_loaded;}
 static void LaunchArgsClear(void) {clear_args_count++;fb.args_loaded=0;}
 static int dashWorkerIoBusy(void) {return busy;}
 static void dashInputFlush(void) {assert(!busy);flush_count++;}
-static void dashHomeRebuild(void) {rebuild_count++;}
 static void dashToast(int type,const char *msg) {(void)type;(void)msg;}
 static int isMisc(const char *p) {(void)p;return 0;}
 static int dashDevicePathReady(const char *p) {(void)p;return 1;}
@@ -121,7 +121,6 @@ int main(void) {
     assert(fb.gen==41 && clear_args_count==1);
     assert(!strcmp(fb_tab_resume,"usb0:/APPS/"));
     assert(!strcmp(fb_tab_selection,"LOADER.ELF"));
-    assert(rebuild_count==1);
     browserTabEnter();
     assert(fb_tab_active && fb.files && fb.mark);
     assert(browser_usb_jobs==1 && dashBrowserPadInputReady()==0);
