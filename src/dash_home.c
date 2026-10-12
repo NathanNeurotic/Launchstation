@@ -188,7 +188,7 @@ static void activateChip(const Chip *c)
 			char dir[MAX_NAME];
 			dashStrCopy(dir, LastDir, sizeof(dir));
 			if (dir[0] && strchr(dir, ':') != NULL)
-				dashOpenBrowser(dir);
+				dashNavigateFilesTab(dir);
 			homeRebuild();
 			break;
 		}
