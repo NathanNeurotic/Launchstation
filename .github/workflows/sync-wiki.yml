@@ -11,6 +11,7 @@ on:
       - 'scripts/sync_github_wiki.py'
       - '.github/workflows/sync-wiki.yml'
   workflow_dispatch:
+  gollum:  # First wiki page created through GitHub UI
 
 permissions:
   contents: write
