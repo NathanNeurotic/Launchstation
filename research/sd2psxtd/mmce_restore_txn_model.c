@@ -97,8 +97,10 @@ int mmce_txn_prepare(mmce_txn *t, uint64_t nonce,
     if (!t || t->state != MMCE_TXN_HELD || !nonce ||
         t->record.nonce != nonce || !sha256)
         return MMCE_TXN_INVALID;
-    if (!unchanged_under_fence(t))
-        return MMCE_TXN_IDENTITY_CHANGED; /* stay fenced */
+    if (!unchanged_under_fence(t)) {
+        t->state = MMCE_TXN_RECOVERY_REQUIRED;
+        return MMCE_TXN_NEEDS_RECOVERY; /* a violated fence is never ignored */
+    }
     memcpy(t->record.image_sha256, sha256, MMCE_TXN_DIGEST_SIZE);
     if (t->ops->stage_verified(t->context, &t->record) != 0)
         return MMCE_TXN_IO_FAILURE; /* stay fenced */
@@ -116,8 +118,10 @@ int mmce_txn_commit(mmce_txn *t, uint64_t nonce)
     if (!t || t->state != MMCE_TXN_PREPARED || !nonce ||
         t->record.nonce != nonce)
         return MMCE_TXN_INVALID;
-    if (!unchanged_under_fence(t))
-        return MMCE_TXN_IDENTITY_CHANGED; /* lease stays held */
+    if (!unchanged_under_fence(t)) {
+        t->state = MMCE_TXN_RECOVERY_REQUIRED;
+        return MMCE_TXN_NEEDS_RECOVERY; /* do not release a compromised lease */
+    }
     /* Recovery becomes mandatory BEFORE any destructive operation. */
     t->state = MMCE_TXN_RECOVERY_REQUIRED;
     if (t->ops->journal(t->context, MMCE_JOURNAL_COMMITTING,
