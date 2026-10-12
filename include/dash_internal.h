@@ -995,6 +995,7 @@ enum {
 int dashShowImageViewer(const char *path, const char *title, DashImageViewerState *state);
 void dashExploitInstaller(void); /* dash_exploit.c */
 void dashOpenBrowser(const char *start_dir);        /* native File Browser */
+void dashNavigateFilesTab(const char *start_dir);  /* navigate dashboard Files tab */
 void dashFileBrowser(const char *start_dir);        /* dash_browser.c */
 void dashFileBrowserTabClose(void);                /* release inactive-tab state */
 int dashFileBrowserTabInputReady(void);            /* serialize USB fileXio / pad */
