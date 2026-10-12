@@ -1493,13 +1493,9 @@ static void opImportCardToMmce(void)
                            slots, 2, 0);
     if (unit < 0)
         return;
-    if (!mmceImportCandidate(unit, folder, sizeof(folder), dest,
-                             sizeof(dest), stage, sizeof(stage))) {
-        dashModalMessage(DI_WARNING, "MMCE recovery area is full",
-                         "No unused RECOVER filename is available. Existing images and .PART files were preserved.",
-                         NULL);
+    if (snprintf(folder, sizeof(folder), "mmce%d:/WLE-Recovered", unit) >=
+        (int)sizeof(folder))
         return;
-    }
     if (!dashModalConfirm("Import snapshot to the adapter?",
                           "Creates a new verified .mcd in MMCE's WLE-Recovered holding folder. It will NOT overwrite, switch or activate any memory card.",
                           "Import as new", 0))
