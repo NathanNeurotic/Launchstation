@@ -281,7 +281,9 @@ int dashDevicesList(DashDevice *out, int max)
 		int present = filerRootMcPresent(port, &type, &free_kb);
 		char name[32], mount[8], browse[8];
 
-		snprintf(name, sizeof(name), "Memory Card %d", port);
+		/* PS2 port 0 is mc0 (physical slot 1); port 1 is mc1 (slot 2).
+		 * Keep the label and actual filesystem mount tied to the same port. */
+		snprintf(name, sizeof(name), "mc%d (Slot %d)", port, port + 1);
 		snprintf(mount, sizeof(mount), "mc%d:", port);
 		snprintf(browse, sizeof(browse), "mc%d:/", port);
 		if (present == -2)
