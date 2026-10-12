@@ -151,11 +151,18 @@ static int keyIcon(const char *key)
 	} map[] = {
 	    {"L1", DI_BTN_L1}, {"L2", DI_BTN_L2}, {"L3", DI_BTN_L3},
 	    {"R1", DI_BTN_R1}, {"R2", DI_BTN_R2}, {"R3", DI_BTN_R3},
-	    {"START", DI_BTN_START}, {"SELECT", DI_BTN_SELECT},
 	};
 	int i;
 
-	if (!dashIconsPadPng() || key == NULL)
+	if (key == NULL)
+		return -1;
+	/* START/SELECT always have vector glyphs. Their tiny text-badge fallback
+	 * read as a blank SELECT-like bar on CRTs, so "Menu" looked like SELECT. */
+	if (!strcmp(key, "START"))
+		return DI_BTN_START;
+	if (!strcmp(key, "SELECT"))
+		return DI_BTN_SELECT;
+	if (!dashIconsPadPng())
 		return -1;
 	for (i = 0; i < (int)(sizeof(map) / sizeof(map[0])); i++)
 		if (!strcmp(key, map[i].key))
@@ -787,9 +794,26 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 					dashIcon(items[i].icon, x + 26, ry + 6, 18, c);
 					tx = x + 54;
 				}
-				dashTextFit(tx, ry + 7, w - (tx - x) - 30 - (items[i].detail ? 90 : 0), items[i].label, DASH_FS_BODY * 0.92f, c);
-				if (items[i].detail)
-					dashTextRight(x + w - 28, ry + 8, items[i].detail, DASH_FS_SMALL, DASH_C_TEXT3);
+				{
+					/* Label first (natural width, at most 60% of the row);
+					 * the detail gets only the space that is left, so the
+					 * two can never overlap. */
+					float avail = w - (tx - x) - 30.0f, label_w = avail;
+					if (items[i].detail) {
+						float dw = dashTextWidth(items[i].detail, DASH_FS_SMALL), detail_w;
+						label_w = dashTextWidth(items[i].label, DASH_FS_BODY * 0.92f);
+						if (label_w > avail * 0.6f)
+							label_w = avail * 0.6f;
+						detail_w = avail - label_w - 14.0f;
+						if (dw <= detail_w)
+							dashTextRight(x + w - 28, ry + 8, items[i].detail, DASH_FS_SMALL, DASH_C_TEXT3);
+						else if (i == sel)
+							dashTextScroll(x + w - 28 - detail_w, ry + 8, detail_w, items[i].detail, DASH_FS_SMALL, DASH_C_TEXT3);
+						else
+							dashTextFit(x + w - 28 - detail_w, ry + 8, detail_w, items[i].detail, DASH_FS_SMALL, DASH_C_TEXT3);
+					}
+					dashTextFit(tx, ry + 7, label_w, items[i].label, DASH_FS_BODY * 0.92f, c);
+				}
 			}
 			dashGfxScissorReset();
 			dashDrawScrollbar(x + w - 12, ly, rows * row_h - 4, top, rows, n);
