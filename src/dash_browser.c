@@ -2457,7 +2457,8 @@ void dashFileBrowserTabClose(void)
 		dashStrCopy(fb_tab_selection, fb.devs[fb.sel].browse, sizeof(fb_tab_selection));
 	browserCloseState();
 	fb_tab_active = 0;
-	dashHomeRebuild(); /* Last folder shortcut updated by browsing Files */
+	/* Home's enter() rebuilds its shortcuts on demand. Running a rebuild
+	 * here could probe game-device readiness while an old USB job is active. */
 }
 
 int dashBrowserPadInputReady(void)
