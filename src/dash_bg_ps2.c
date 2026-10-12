@@ -714,9 +714,12 @@ void dashBgSceneClockRing(float t, int fx)
 		          cx + ca * r1 + nx, cy + sa * r1 * 0.9f + ny, cx + ca * r1 - nx, cy + sa * r1 * 0.9f - ny, ci, ci, co, co);
 		if (lit && fx != DASH_FX_OFF) {
 			float rf = r0 + (r1 - r0) * fill;
-			DashColor cb = colA(dashColorLighten(rod, 0.4f), 150);
+			DashColor cb = colA(dashColorLighten(rod, 0.18f), 100);
+			DashColor tip = colA(cb, 0);
+			/* A solid-color segment ended in a sharp rectangular box on the
+			 * active clock pillar. Feather the moving fill along its length. */
 			dashQuadG(cx + ca * r0 + nx * 0.5f, cy + sa * r0 * 0.9f + ny * 0.5f, cx + ca * r0 - nx * 0.5f, cy + sa * r0 * 0.9f - ny * 0.5f,
-			          cx + ca * rf + nx * 0.5f, cy + sa * rf * 0.9f + ny * 0.5f, cx + ca * rf - nx * 0.5f, cy + sa * rf * 0.9f - ny * 0.5f, cb, cb, cb, cb);
+			          cx + ca * rf + nx * 0.5f, cy + sa * rf * 0.9f + ny * 0.5f, cx + ca * rf - nx * 0.5f, cy + sa * rf * 0.9f - ny * 0.5f, cb, cb, tip, tip);
 		}
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
