@@ -84,6 +84,4 @@ EMBED_FILE(sfx_boot_adp, "res/sfx/boot.adp")
 EMBED_FILE(sfx_connect_adp, "res/sfx/bd_connect.adp")
 EMBED_FILE(sfx_disconnect_adp, "res/sfx/bd_disconnect.adp")
 
-/* OSDSYS-style pad-button tiles (32x32 PNG, decoded at icon init). */
-
 /* Background music is an optional BGM.ADP beside the ELF, not embedded. */
