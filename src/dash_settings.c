@@ -2874,7 +2874,8 @@ static void settingsDraw(void)
 {
 	int i;
 	/* Give the breadcrumb a real lane below the L1/R1 tabs. */
-	const float ix = 48, iy = 142, irow = 29, iw = 544;
+	/* Preserve the original eight-row/footer spacing: only the header lanes move. */
+	const float ix = 48, iy = 136, irow = 29, iw = 544;
 	const SetPage *c = &pages[page];
 	char trail[192];
 
