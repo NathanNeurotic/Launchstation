@@ -43,8 +43,8 @@ EE_OBJS = main.o main_actions.o main_boot.o main_modules.o main_menu.o main_titl
 	exploit_list_icn.o \
 	secrsif_irx.o exploit_ioprp_img.o \
 	audsrv_irx.o libsd_irx.o \
-	sfx_cursor_adp.o sfx_confirm_adp.o sfx_cancel_adp.o sfx_transition_adp.o sfx_message_adp.o sfx_boot_adp.o sfx_connect_adp.o sfx_disconnect_adp.o \
-	# Pad-button glyphs now come from the existing SDF atlas; no extra PNG objects.
+	sfx_cursor_adp.o sfx_confirm_adp.o sfx_cancel_adp.o sfx_transition_adp.o sfx_message_adp.o sfx_boot_adp.o sfx_connect_adp.o sfx_disconnect_adp.o
+# Pad-button glyphs now come from the existing SDF atlas; no extra PNG objects.
 
 EE_INCS := -I$(PS2DEV)/gsKit/include -I$(PS2SDK)/ports/include -Iinclude
 EE_INCS += -Ipackages/world/audsrv/include
