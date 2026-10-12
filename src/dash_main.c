@@ -1155,10 +1155,13 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			dashInputFlush();
 			memset(&in, 0, sizeof(in));
 		}
+		/* Preserve SELECT+button launch keys even with the HOME chrome hidden.
+		 * Process SELECT edges/held chords before filtering ordinary input. */
+		if (!boot_phase && (!background_only || ql_down ||
+		    (paddata & PAD_SELECT) || (in.raw_new & PAD_SELECT)))
+			quickLaunchInput(&in);
 		if (background_only)
 			memset(&in, 0, sizeof(in));
-		else if (!boot_phase)
-			quickLaunchInput(&in);
 		/* Main dashboard screens do not run through the modal helpers, so give
 		 * their ordinary navigation/activation inputs the same UI feedback. */
 		if (in.pressed & (DASH_IN_UP | DASH_IN_DOWN | DASH_IN_LEFT | DASH_IN_RIGHT))
