@@ -404,7 +404,10 @@ void dashBgSceneDisc(float t, int fx)
 	/* the dim red body of the cloud bank */
 	dashGlow(cx, cy, 380, 300, colA(dashColorScale(red, 0.55f), 145));
 
-	dashGfxBlend(DASH_BLEND_ADD);
+	/* Render broad, overlapping cloud shapes with ordinary alpha. The
+	 * previous additive pass stacked every cloud into shiny clipped reds,
+	 * especially on interlaced 4:3 displays. Reserve additive blending
+	 * for the focused flare below. */
 	/* cloud blobs streaming towards the camera */
 	for (i = 0; i < n; i++) {
 		float life = t * (0.050f + (i % 5) * 0.008f) + dashBgHash(i, 3);
@@ -422,6 +425,9 @@ void dashBgSceneDisc(float t, int fx)
 		dashGlow(x, y, size, size * 0.8f, colA(cc, (int)(30 * a)));
 		dashGlow(x + size * 0.35f, y - size * 0.2f, size * 0.7f, size * 0.55f, colA(cc, (int)(19 * a)));
 	}
+	/* A restrained additive focal flare keeps the red disc-error
+	 * identity without burning out all of the atmospheric cloud detail. */
+	dashGfxBlend(DASH_BLEND_ADD);
 	/* the flare above the centre */
 	dashGlow(cx + 8, cy - 26, 60 * pulse, 52 * pulse, colA(DC(255, 110, 110, 255), 52));
 	dashGlow(cx + 8, cy - 26, 230, 190, colA(dashColorScale(red, 0.8f), 35));
