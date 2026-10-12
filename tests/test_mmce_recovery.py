@@ -55,7 +55,7 @@ header = (root / "include/dash_internal.h").read_text(encoding="utf-8")
 assert '"Recover saved card image..."' in settings
 assert "S_MMCE_RECOVER_LOCAL" in settings
 assert "DASH_PICK_FILE" in settings
-assert '"WLE-MMCE-Backups"' in settings
+assert "WLE-MMCE-Backups" in settings
 assert "dashBrowserRecoverCardPath(snapshot)" in settings
 assert "void dashBrowserRecoverCardPath(const char *source)" in header
 assert "mcCardImportPcsx2(" not in settings, "settings must never duplicate recovery writes"
