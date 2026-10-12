@@ -21,6 +21,9 @@ static int section = DASH_SEC_HOME;
 static int prev_section = DASH_SEC_HOME;
 static float section_anim = 1.0f;
 static int section_dir = 1;
+/* R3 on HOME hides dashboard chrome until R3 is pressed again.
+ * This is presentation-only: background updates and all device state stay live. */
+static int background_only;
 static float anim_time;
 static float fade_in;
 static int autoprobe_pending;
@@ -991,6 +994,8 @@ void dashRenderScene(void)
 	dashArtBeginFrame();
 	dashGfxBeginFrame();
 	dashBgDraw();
+	if (background_only)
+		return; /* background scene only, no hidden interactive UI */
 
 	dashDrawHeader(section, section_anim);
 
@@ -1080,6 +1085,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	if (dash_active || ctx == NULL)
 		return;
 	dash_active = 1;
+	background_only = 0; /* never persist hidden UI across launches/restarts */
 	exec_ctx = *ctx;
 
 	dashGfxCheckScreenChange();
@@ -1139,7 +1145,17 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			if (boot_phase == 1)
 				memset(&in, 0, sizeof(in));
 		}
-		if (!boot_phase)
+		/* R3 is unused by HOME navigation; SELECT+R3 remains a launch key
+		 * because quick-launch intercepts it before dashboard dispatch. */
+		if (!boot_phase && section == DASH_SEC_HOME && !ql_down &&
+		    (in.pressed & DASH_IN_R3)) {
+			background_only = !background_only;
+			dashInputFlush();
+			memset(&in, 0, sizeof(in));
+		}
+		if (background_only)
+			memset(&in, 0, sizeof(in));
+		else if (!boot_phase)
 			quickLaunchInput(&in);
 		/* Main dashboard screens do not run through the modal helpers, so give
 		 * their ordinary navigation/activation inputs the same UI feedback. */
@@ -1217,7 +1233,8 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		}
 #endif
 		dashRenderScene();
-		quickLaunchDraw();
+		if (!background_only)
+			quickLaunchDraw();
 		dashGfxPresent();
 
 		/* first run: short introduction once the dashboard has faded in */
