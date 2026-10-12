@@ -134,8 +134,7 @@ int main(void) {
     occupied_stage=0;
     assert(unique_history_path("mass0:/history",0,name,sizeof(name),path,sizeof(path)));
     assert(!strcmp(name,"WLE-20261012-001122.mcd"));
-    assert(!unique_history_path("mass0:/history",0,name,4,path,sizeof(path)) ||
-           strlen(name)<4); /* Any shortening must stay bounded. */
+    assert(!unique_history_path("mass0:/history",0,name,4,path,sizeof(path)));
 
     puts("PASS: protected old and new MMCE snapshots are retained and staged names are preserved");
     return 0;
