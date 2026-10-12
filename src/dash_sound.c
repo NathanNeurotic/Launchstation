@@ -265,6 +265,28 @@ void dashSoundPlay(int id)
 
 #define BGM_MAX_BYTES (1024 * 1024)
 
+/* SPU2 does not loop merely because the audsrv APCM header requests it.
+ * The 16-byte ADPCM frames ALSO require a loop-start marker (6), a
+ * repeating section (2), and an end/repeat marker (3). A one-shot-encoded
+ * BGM can otherwise continue reading stale SPU RAM at the end of the sample,
+ * producing a sustained buzzing/horn note. Work on our own EE copy only;
+ * never rewrite a user's BGM.ADP sidecar. */
+static int prepareBgmLoop(u8 *data, int size)
+{
+	int i, end;
+
+	if (data == NULL || size < 16 + 32 || ((size - 16) & 15))
+		return 0;
+	end = size - 16;
+	for (i = 16; i < size; i += 16) {
+		/* Mask away old one-shot flags rather than keeping an incompatible
+		 * loop/end combination from whichever encoder was used. */
+		data[i + 1] = (i == 16) ? 6 : (i == end) ? 3 : 2;
+	}
+	data[6] = 1; /* APCM 'loop' byte */
+	return 1;
+}
+
 static int loadBgmSidecar(void)
 {
 	char path[MAX_PATH], fixed[MAX_PATH];
@@ -303,6 +325,12 @@ static int loadBgmSidecar(void)
 	if (got != size || closed < 0 || memcmp(data, "APCM", 4) || data[4] != 1 ||
 	    data[5] != 1 || data[6] > 1 || data[7] != 0 ||
 	    *(u32 *)(data + 8) == 0 || *(u32 *)(data + 8) > 0x3fff) {
+		free(data);
+		return 0;
+	}
+	/* The soundtrack is a permanent looping voice, unlike one-shot SFX.
+	 * Normalize SPU2 per-frame loop control BEFORE audsrv DMA uploads it. */
+	if (!prepareBgmLoop(data, size)) {
 		free(data);
 		return 0;
 	}
