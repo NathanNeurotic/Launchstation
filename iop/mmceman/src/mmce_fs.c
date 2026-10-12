@@ -5,6 +5,7 @@
 
 #include "mmce_sio2.h"
 #include "mmce_cmds.h"
+#include "mmce_restore_guard.h"
 
 #include "module_debug.h"
 
@@ -15,7 +16,6 @@
  * the card firmware. It is intentionally not listed by dread; callers must
  * opt in by opening this exact name. */
 #define MMCE_FS_ACTIVE_HANDLE 250
-#define MMCE_FS_ACTIVE_NAME "__active_card__.mcd"
 
 #define NOT_SUPPORTED_OP (void*)&not_supported_operation
 static int not_supported_operation() {
@@ -236,6 +236,13 @@ int mmce_fs_open(iomanX_iop_file_t *file, const char *name, int flags, int mode)
     u8 wrbuf[0x5];
     u8 rdbuf[0x3];
 
+    /* Reject unrepresentable firmware paths before a single SIO2 command.
+     * The synthetic active-card handle has one canonical read-only path. */
+    if (!mmce_fs_wire_name_ok(name))
+        return -ENAMETOOLONG;
+    if (mmce_fs_reserved_component(name) && !mmce_fs_is_active_name(name))
+        return -EROFS;
+
     DPRINTF("%s unit: %i name: %s flags: 0x%x\n", __func__, file->unit, name, flags);
 
     //Update SIO2 port if unit changed ex mmce0: -> mmce1:
@@ -254,7 +261,7 @@ int mmce_fs_open(iomanX_iop_file_t *file, const char *name, int flags, int mode)
         int active_fd;
         s64 active_size;
 
-        if ((flags & 3) != FIO_O_RDONLY) {
+        if ((flags & 3) != FIO_O_RDONLY || (flags & 0xF00) != 0) {
             file->privdata = NULL;
             return -EROFS;
         }
@@ -318,7 +325,7 @@ int mmce_fs_open(iomanX_iop_file_t *file, const char *name, int flags, int mode)
         return -1;
     }
 
-    if (rdbuf[0x1] != 0xff) {
+    if (rdbuf[0x1] < MMCE_FS_MAX_FD) {
         *(int*)file->privdata = rdbuf[0x1];
         DPRINTF("%s Opened fd: %i\n", __func__, rdbuf[0x1]);
     } else {
@@ -612,6 +619,10 @@ int mmce_fs_remove(iomanX_iop_file_t *file, const char *name)
     u8 wrbuf[0x4];
     u8 rdbuf[0x3];
 
+    if (!mmce_fs_wire_name_ok(name))
+        return -ENAMETOOLONG;
+    if (mmce_fs_reserved_component(name))
+        return -EROFS;
     DPRINTF("%s name: %s\n", __func__, name);
 
     mmce_fs_update_unit(file->unit);
@@ -671,6 +682,10 @@ int mmce_fs_mkdir(iomanX_iop_file_t *file, const char *name, int flags)
     u8 wrbuf[0x4];
     u8 rdbuf[0x3];
 
+    if (!mmce_fs_wire_name_ok(name))
+        return -ENAMETOOLONG;
+    if (mmce_fs_reserved_component(name))
+        return -EROFS;
     DPRINTF("%s name: %s\n", __func__, name);
 
     mmce_fs_update_unit(file->unit);
@@ -730,6 +745,10 @@ int mmce_fs_rmdir(iomanX_iop_file_t *file, const char *name)
     u8 wrbuf[0x4];
     u8 rdbuf[0x3];
 
+    if (!mmce_fs_wire_name_ok(name))
+        return -ENAMETOOLONG;
+    if (mmce_fs_reserved_component(name))
+        return -EROFS;
     DPRINTF("%s name: %s\n", __func__, name);
 
     mmce_fs_update_unit(file->unit);
@@ -1131,8 +1150,13 @@ int	mmce_fs_rename(iomanX_iop_file_t *file, const char *old_name, const char *ne
     u8 wrbuf[0x4];
     u8 rdbuf[0x3];
 
-    DPRINTF("%s unit: %i old_name: %s new_name: %s\n", __func__, file->unit, old_name, new_name);
+    if (!mmce_fs_wire_name_ok(old_name) || !mmce_fs_wire_name_ok(new_name))
+        return -ENAMETOOLONG;
+    if (mmce_fs_reserved_component(old_name) ||
+        mmce_fs_reserved_component(new_name))
+        return -EROFS;
 
+    DPRINTF("%s unit: %i old_name: %s new_name: %s\n", __func__, file->unit, old_name, new_name);
 
     //Update SIO2 port if unit changed ex mmce0: -> mmce1:
     mmce_fs_update_unit(file->unit);
