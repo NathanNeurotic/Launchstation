@@ -31,7 +31,7 @@ assert "image = background.png" in cfg
 assert "wallpaper = off" in cfg
 assert 'float screen_aspect = 4.0f / 3.0f' in bg
 assert "dashThemeTextureFile(dashTheme.image, 320, 256)" in bg
-assert "320x240" in theme and "640x480" in theme
+assert "320x240" in theme and "640 × 480" in theme
 assert "wallpaper-example.png" in site
 assert "320 &times; 240" in site
 assert "Theme-and-Wallpaper-Guide.md" in home
