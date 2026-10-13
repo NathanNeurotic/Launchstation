@@ -564,6 +564,8 @@ void dashGfxScissorPush(float x, float y, float w, float h)
 	if (r.y0 < clip_current.y0) r.y0 = clip_current.y0;
 	if (r.x1 > clip_current.x1) r.x1 = clip_current.x1;
 	if (r.y1 > clip_current.y1) r.y1 = clip_current.y1;
+	if (r.x0 > clip_current.x1) r.x0 = clip_current.x1;
+	if (r.y0 > clip_current.y1) r.y0 = clip_current.y1;
 	if (r.x1 < r.x0) r.x1 = r.x0;
 	if (r.y1 < r.y0) r.y1 = r.y0;
 	clipApply(r);
