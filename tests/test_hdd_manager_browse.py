@@ -41,7 +41,7 @@ assert "dashTextFit(40, 78, 560, line" in scene
 # Display APA identifiers, not titles, while navigating the partition list.
 assert "const char *label = p->name;" in scene
 assert "const char *label = (p->type == HP_HDL" not in scene
-assert "drawPartName(LIST_X + 30, y + 3, LIST_W - 110, label, col);" in scene
+assert "drawPartName(LIST_X + 30, y + 1.5f, LIST_W - 110, label, col);" in scene
 
 # Idle browsing may read PFS usage but must not perform synchronous HDL
 # title queries. R1 and the explicit Rename game action may request them.

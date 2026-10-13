@@ -1522,7 +1522,7 @@ static void toolsDraw(void)
 			continue;
 		}
 		dashIcon(tools[i].icon, lx + 10, y + 5, 16, dashItemColor(i == tsel));
-		dashTextFit(lx + 34, y + 6.5f, lw - 44, tools[i].name, DASH_FS_SMALL, dashItemColor(i == tsel));
+		dashTextFit(lx + 34, y + 3.0f, lw - 44, tools[i].name, DASH_FS_SMALL, dashItemColor(i == tsel));
 		if (tools[i].confirm == 2 || tools[i].note)
 			dashGlow(lx + lw - 14, y + 13, 4, 4, tools[i].confirm == 2 ? DASH_C_DANGER : DASH_C_WARM);
 	}
