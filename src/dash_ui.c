@@ -696,6 +696,21 @@ void dashModalSetPreview(void (*fn)(int index))
 	modal_preview = fn;
 }
 
+/* L2/R2 jump only to actionable rows. Never focus disabled actions,
+ * including a disabled initial selection or a menu without usable entries. */
+static int modalEnabledEdge(const DashMenuItem *items, int n, int from_end)
+{
+	int i;
+	if (items == NULL || n <= 0)
+		return -1;
+	for (i = 0; i < n; i++) {
+		int index = from_end ? n - 1 - i : i;
+		if (!items[index].disabled)
+			return index;
+	}
+	return -1;
+}
+
 int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *items, int n, int initial)
 {
 	int sel = initial, top = 0, i, previewed = -1;
@@ -710,12 +725,12 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 	float x = (DASH_VW - w) * 0.5f, y;
 	DashInput in;
 
-	if (n <= 0)
+	if (items == NULL || n <= 0)
 		return -1;
-	if (sel < 0 || sel >= n)
-		sel = 0;
-	while (items[sel].disabled && sel < n - 1)
-		sel++;
+	if (sel < 0 || sel >= n || items[sel].disabled)
+		sel = modalEnabledEdge(items, n, 0);
+	if (sel < 0)
+		return -1;
 	sel_anim = (float)sel;
 	y = (DASH_VH - h) * 0.5f;
 	modal_preview = NULL;
@@ -744,14 +759,18 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			sel = s;
 		}
 		if (in.pressed & DASH_IN_L2) {
-			if (sel != 0)
+			int first = modalEnabledEdge(items, n, 0);
+			if (first >= 0 && sel != first) {
 				dashSoundPlay(DASH_SND_CURSOR);
-			sel = 0;
+				sel = first;
+			}
 		}
 		if (in.pressed & DASH_IN_R2) {
-			if (sel != n - 1)
+			int last = modalEnabledEdge(items, n, 1);
+			if (last >= 0 && sel != last) {
 				dashSoundPlay(DASH_SND_CURSOR);
-			sel = n - 1;
+				sel = last;
+			}
 		}
 		if ((in.pressed & DASH_IN_OK) && !items[sel].disabled) {
 			dashSoundPlay(DASH_SND_CONFIRM);
@@ -842,6 +861,8 @@ int dashModalChoice(const char *title, const char *const *options, int n, int cu
 	DashMenuItem items[24];
 	int i;
 
+	if (options == NULL || n <= 0)
+		return -1;
 	if (n > 24)
 		n = 24;
 	for (i = 0; i < n; i++) {
