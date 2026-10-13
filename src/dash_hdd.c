@@ -3,8 +3,9 @@
 //Native dashboard HDD Manager. Replaces the classic hddManager() whenever
 //the dashboard runs MISC/HddManager (Tools, Devices, launch keys).
 //
-//* The partition list is read by the background worker; PFS usage and
-//  HDL game details load for the focused partition while you browse.
+//* The partition list is read by the background worker; PFS usage is
+//  probed while browsing. HDL titles load only on explicit R1/details
+//  or when the user explicitly requests a game rename.
 //* Create / remove / rename / rename game / format / header injection
 //  run on the worker behind an overlay that cannot be backed out of
 //  (they must not be interrupted halfway).
@@ -1052,11 +1053,13 @@ static void drawDetails(void)
 	}
 	p = &hm.parts[sel];
 	dashIcon(typeIcon(p), x + w * 0.5f - 24, y + 16, 48, DASH_C_TEXT);
-	dashTextCenter(x + w * 0.5f, y + 72, p->name, DASH_FS_LABEL, DASH_C_TEXT);
-	dashTextCenter(x + w * 0.5f, y + 98, typeName(p), DASH_FS_SMALL, DASH_C_ACCENT);
+	/* APA names can be 32 characters (e.g. PP.SLUS-...); unrestricted
+	 * centered text overflowed the 244px details card on 4:3 TVs. */
+	dashTextFit(x + 16, y + 72, w - 32, p->name, DASH_FS_LABEL, DASH_C_TEXT);
+	dashTextFit(x + 16, y + 98, w - 32, typeName(p), DASH_FS_SMALL, DASH_C_ACCENT);
 	fmtMB(a, sizeof(a), p->raw_mb);
 	snprintf(line, sizeof(line), "Size on disk: %s", a);
-	dashTextCenter(x + w * 0.5f, y + 122, line, DASH_FS_SMALL, DASH_C_TEXT2);
+	dashTextFit(x + 16, y + 122, w - 32, line, DASH_FS_SMALL, DASH_C_TEXT2);
 	y += 150;
 	if (p->type == HP_PFS) {
 		if (p->pfs_state == 1) {
@@ -1065,9 +1068,9 @@ static void drawDetails(void)
 			fmtMB(b, sizeof(b), p->pfs_free);
 			usageBar(x + 20, y, w - 40, used, p->pfs_total, DASH_C_ACCENT);
 			snprintf(line, sizeof(line), "%s used, %s free", a, b);
-			dashTextCenter(x + w * 0.5f, y + 18, line, DASH_FS_CAPTION, DASH_C_TEXT2);
+			dashTextFit(x + 16, y + 18, w - 32, line, DASH_FS_CAPTION, DASH_C_TEXT2);
 		} else if (p->pfs_state == -1)
-			dashTextCenter(x + w * 0.5f, y, "Could not be mounted", DASH_FS_CAPTION, DASH_C_WARM);
+			dashTextFit(x + 16, y, w - 32, "Could not be mounted", DASH_FS_CAPTION, DASH_C_WARM);
 		else {
 			dashGfxBlend(DASH_BLEND_ADD);
 			dashDrawSpinner(x + w * 0.5f - 60, y + 8, 6, DASH_C_ACCENT);
@@ -1078,11 +1081,11 @@ static void drawDetails(void)
 		if (p->hdl_state == 1) {
 			dashTextWrap(x + 16, y, w - 32, 2, p->game.Name, DASH_FS_SMALL, DASH_C_TEXT, 18);
 			snprintf(line, sizeof(line), "%s  |  %s", p->game.Startup, p->game.Is_Dvd ? "DVD" : "CD");
-			dashTextCenter(x + w * 0.5f, y + 44, line, DASH_FS_CAPTION, DASH_C_TEXT2);
+			dashTextFit(x + 16, y + 44, w - 32, line, DASH_FS_CAPTION, DASH_C_TEXT2);
 		} else if (p->hdl_state == -1)
-			dashTextCenter(x + w * 0.5f, y, "Game information unavailable", DASH_FS_CAPTION, DASH_C_TEXT3);
+			dashTextFit(x + 16, y, w - 32, "Game information unavailable", DASH_FS_CAPTION, DASH_C_TEXT3);
 		else
-			dashTextCenter(x + w * 0.5f, y, "Reading game information...", DASH_FS_CAPTION, DASH_C_TEXT3);
+			dashTextFit(x + 16, y, w - 32, "Press R1 for game information", DASH_FS_CAPTION, DASH_C_TEXT3);
 	} else if (p->type == HP_SYSTEM)
 		dashTextWrap(x + 16, y, w - 32, 3, "Reserved for the system. It cannot be changed.", DASH_FS_CAPTION, DASH_C_TEXT3, 17);
 	else
@@ -1108,7 +1111,7 @@ static void hddScene(void)
 		usageBar(40, 62, 560, hm.used_mb, hm.size_mb, DASH_C_ACCENT);
 		snprintf(line, sizeof(line), "%s used  |  %s free  |  %s  |  %d partition%s%s", a, b, c, hm.n, hm.n == 1 ? "" : "s",
 		         hm.overflow ? " (list full)" : "");
-		dashText(40, 78, line, DASH_FS_CAPTION, DASH_C_TEXT2);
+		dashTextFit(40, 78, 560, line, DASH_FS_CAPTION, DASH_C_TEXT2);
 	} else if (hm.scanned)
 		dashText(40, 64, hm.present ? "The HDD is not APA formatted." : "No HDD was found.", DASH_FS_SMALL, DASH_C_WARM);
 
@@ -1120,7 +1123,9 @@ static void hddScene(void)
 			HddPart *p = &hm.parts[i];
 			float y = LIST_Y + (i - top) * ROW_H;
 			DashColor col = dashItemColor(i == sel);
-			const char *label = (p->type == HP_HDL && p->hdl_state == 1) ? p->game.Name : p->name;
+			/* Classic wLaunchELF-style APA browsing: never replace partition
+			 * identifiers with asynchronously fetched game titles. */
+			const char *label = p->name;
 
 			dashIcon(typeIcon(p), LIST_X + 8, y + 4, 15, p->type == HP_OTHER ? DASH_C_TEXT3 : col);
 			dashTextFit(LIST_X + 30, y + 3, LIST_W - 110, label, DASH_FS_SMALL, col);
@@ -1132,7 +1137,7 @@ static void hddScene(void)
 	}
 	drawDetails();
 	{
-		DashHint h[] = {{dashOkIcon(), NULL, "Actions"}, {-1, "L2/R2", "Page"}, {-1, "L1", "Status"}, {dashBackIcon(), NULL, "Exit"}};
+		DashHint h[] = {{dashOkIcon(), NULL, "Actions"}, {-1, "L2/R2", "Page"}, {-1, "L1", "Status"}, {-1, "R1", "Game info"}, {dashBackIcon(), NULL, "Exit"}};
 		dashDrawHints(h, 4);
 	}
 	dashDrawToasts();
@@ -1186,6 +1191,13 @@ void dashHddManager(void)
 			partitionMenu();
 		if (in.pressed & DASH_IN_L1)
 			actStatus();
+		/* Game metadata is deliberately opt-in. Some old HDDs stall when
+		 * every highlighted HDL partition triggers synchronous title RPC. */
+		if ((in.pressed & DASH_IN_R1) && hm.n > 0 && sel < hm.n && hm.parts[sel].type == HP_HDL) {
+			loadGameInfo(&hm.parts[sel]);
+			if (hm.parts[sel].hdl_state < 0)
+				dashToast(DASH_TOAST_WARN, "Could not read this HDL game's information");
+		}
 		if (in.pressed & DASH_IN_BACK)
 			break;
 
@@ -1195,11 +1207,10 @@ void dashHddManager(void)
 			top = sel;
 		if (sel >= top + ROWS)
 			top = sel - ROWS + 1;
-		/* details of the focused partition, once browsing pauses */
-		if (hm.n > 0 && Timer() - last_move > 180) {
+		/* Keep PFS usage polling as before; HDL title RPCs are explicit
+		 * (R1 or Rename game) and never run on cursor movement. */
+		if (hm.n > 0 && Timer() - last_move > 180)
 			loadPfsInfo(sel);
-			loadGameInfo(&hm.parts[sel]);
-		}
 		sel_anim = dashApproach(sel_anim, (float)sel, 20.0f * dashAnimSpeed(), dashVisualUpdate());
 		dashRenderScene();
 		dashGfxPresent();

@@ -327,6 +327,9 @@ void dashGfxPopOffset(void);
 void dashGfxBlend(int mode);
 void dashGfxScissor(float x, float y, float w, float h);
 void dashGfxScissorReset(void);
+/* Nested child clipping intersects the parent's GS scissor and restores it. */
+void dashGfxScissorPush(float x, float y, float w, float h);
+void dashGfxScissorPop(void);
 
 int dashTexBind(GSTEXTURE *tex);
 void dashTexInvalidate(GSTEXTURE *tex);
