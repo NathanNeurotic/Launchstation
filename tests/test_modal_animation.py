@@ -202,9 +202,9 @@ int main(void) {
     reset(); nav_scenario=3; /* disabled initial selection is corrected */
     assert(dashModalMenu("disabled initial",NULL,disabled_ends,5,4)==1);
     DashMenuItem all_disabled[]={{0,"a",NULL,1},{0,"b",NULL,1}};
-    reset();
+    reset(); modal_preview=preview;
     assert(dashModalMenu("all disabled",NULL,all_disabled,2,0)==-1);
-    assert(renders==0); /* never render a non-interactive modal */
+    assert(renders==0 && modal_preview==NULL); /* no stranded preview callback */
     reset(); now_ms+=2000;
     assert(dashVisualUpdate()==0.1f); /* retain the long-stall clamp */
     now_ms=last_frame_ms-1;
