@@ -908,9 +908,9 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 					label = e->name;
 				}
 				dashIcon(icon, lx + 10, ry + 5, 16, c);
-				dashTextFit(lx + 36, ry + 4, lw - 60 - (detail ? 130 : 0), label, DASH_FS_SMALL, c);
+				dashTextFit(lx + 36, ry + 2.5f, lw - 60 - (detail ? 130 : 0), label, DASH_FS_SMALL, c);
 				if (detail)
-					dashTextRight(lx + lw - 12, ry + 6, detail, DASH_FS_CAPTION, DASH_C_TEXT3);
+					dashTextRight(lx + lw - 12, ry + 3.5f, detail, DASH_FS_CAPTION, DASH_C_TEXT3);
 			}
 			dashGfxScissorReset();
 			if (pk.loading || pk.starting) {

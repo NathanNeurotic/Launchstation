@@ -1168,9 +1168,9 @@ static void hddScene(void)
 			const char *label = p->name;
 
 			dashIcon(typeIcon(p), LIST_X + 8, y + 4, 15, p->type == HP_OTHER ? DASH_C_TEXT3 : col);
-			drawPartName(LIST_X + 30, y + 3, LIST_W - 110, label, col);
+			drawPartName(LIST_X + 30, y + 1.5f, LIST_W - 110, label, col);
 			fmtMB(a, sizeof(a), p->raw_mb);
-			dashTextRight(LIST_X + LIST_W - 10, y + 5, a, DASH_FS_CAPTION, DASH_C_TEXT3);
+			dashTextRight(LIST_X + LIST_W - 10, y + 2, a, DASH_FS_CAPTION, DASH_C_TEXT3);
 		}
 		dashGfxScissorReset();
 		dashDrawScrollbar(LIST_X + LIST_W + 8, LIST_Y, ROWS * ROW_H, top, ROWS, hm.n);

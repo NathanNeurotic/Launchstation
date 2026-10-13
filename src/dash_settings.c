@@ -2928,19 +2928,19 @@ static void settingsDraw(void)
 		if (it->type == ST_INFO) {
 			char buf[64];
 			snprintf(buf, sizeof(buf), "%s / %s", ip, netmask);
-			dashText(ix + 38, y + 7.5f, it->label, DASH_FS_SMALL, DASH_C_TEXT3);
-			dashTextRight(ix + iw - 12, y + 7.5f, buf, DASH_FS_SMALL, DASH_C_TEXT2);
+			dashText(ix + 38, y + 4.0f, it->label, DASH_FS_SMALL, DASH_C_TEXT3);
+			dashTextRight(ix + iw - 12, y + 4.0f, buf, DASH_FS_SMALL, DASH_C_TEXT2);
 			continue;
 		}
 		if (it->type == ST_PAGE) {
-			dashTextFit(ix + 38, y + 7.5f, iw - 70, it->label, DASH_FS_SMALL, col);
+			dashTextFit(ix + 38, y + 4.0f, iw - 70, it->label, DASH_FS_SMALL, col);
 			dashIcon(DI_PLAY, ix + iw - 22, y + 9, 12, DASH_C_TEXT3);
 			continue;
 		}
 		{
 			const char *ast = it->type == ST_ACTION ? actionStatus(it->id) : NULL;
 			float label_w = it->type == ST_ACTION ? (ast ? iw * 0.58f : iw - 70) : iw * 0.56f - 50;
-			dashTextFit(ix + 38, y + 7.5f, label_w, it->label, DASH_FS_SMALL, col);
+			dashTextFit(ix + 38, y + 4.0f, label_w, it->label, DASH_FS_SMALL, col);
 		}
 		if (it->type == ST_COLOR) {
 			int alpha;
@@ -2949,7 +2949,7 @@ static void settingsDraw(void)
 				char hex[12];
 				float sx = ix + iw - 50;
 				snprintf(hex, sizeof(hex), "#%02X%02X%02X", cv->r, cv->g, cv->b);
-				dashTextRight(sx - 10, y + 6.5f, hex, DASH_FS_SMALL, on ? DASH_C_TEXT2 : DASH_C_TEXT3);
+				dashTextRight(sx - 10, y + 4.0f, hex, DASH_FS_SMALL, on ? DASH_C_TEXT2 : DASH_C_TEXT3);
 				dashRect(sx, y + 6, 36, 15, DC(cv->r, cv->g, cv->b, alpha ? (cv->a < 40 ? 40 : cv->a) : 255));
 				dashPanelBorder(sx - 1, y + 5, 38, 17, 2, dashColorA(DASH_C_TEXT, 0.35f));
 			}
@@ -2969,9 +2969,9 @@ static void settingsDraw(void)
 					dashIcon(DI_PLAY, ix + iw - 16, y + 8, 10, DASH_C_ACCENT);
 				}
 				if (on)
-					dashTextScroll(vx, y + 6.5f, maxw, names[cur], DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : (n == 2 && names == onoff && cur == 1) ? DASH_C_OK : DASH_C_ACCENT);
+					dashTextScroll(vx, y + 4.0f, maxw, names[cur], DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : (n == 2 && names == onoff && cur == 1) ? DASH_C_OK : DASH_C_ACCENT);
 				else
-					dashTextFit(vx, y + 6.5f, maxw, names[cur], DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : DASH_C_ACCENT);
+					dashTextFit(vx, y + 4.0f, maxw, names[cur], DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : DASH_C_ACCENT);
 			}
 		} else if (it->type == ST_NUMBER || it->type == ST_PATH || it->type == ST_IP || it->type == ST_LKEY) {
 			char text[MAX_PATH], leaf[MAX_PATH];
@@ -3008,14 +3008,14 @@ static void settingsDraw(void)
 					dashIcon(DI_PLAY, ix + iw - 16, y + 8, 10, DASH_C_ACCENT);
 				}
 				if (on)
-					dashTextScroll(vx, y + 6.5f, maxw, v, DASH_FS_SMALL, set && !disabled ? DASH_C_ACCENT : DASH_C_TEXT3);
+					dashTextScroll(vx, y + 4.0f, maxw, v, DASH_FS_SMALL, set && !disabled ? DASH_C_ACCENT : DASH_C_TEXT3);
 				else
-					dashTextFit(vx, y + 6.5f, maxw, v, DASH_FS_SMALL, set && !disabled ? DASH_C_ACCENT : DASH_C_TEXT3);
+					dashTextFit(vx, y + 4.0f, maxw, v, DASH_FS_SMALL, set && !disabled ? DASH_C_ACCENT : DASH_C_TEXT3);
 			}
 		} else {
 			const char *ast = actionStatus(it->id);
 			if (ast != NULL && ast[0] != '\0')
-				dashTextRight(ix + iw - 32, y + 6.5f, ast, DASH_FS_SMALL,
+				dashTextRight(ix + iw - 32, y + 4.0f, ast, DASH_FS_SMALL,
 				              disabled ? DASH_C_TEXT3 : (on ? DASH_C_ACCENT : DASH_C_TEXT2));
 			dashIcon(DI_PLAY, ix + iw - 22, y + 8, 12, DASH_C_TEXT3);
 		}
