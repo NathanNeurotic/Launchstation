@@ -184,6 +184,19 @@ void dashShowAbout(void)
 	}
 }
 
+/* Console region from the rom0:ROMVER region letter (5th character). */
+static const char *consoleRegionName(char letter)
+{
+	switch (letter) {
+		case 'J': return "Japan (NTSC-J)";
+		case 'A': return "Americas (NTSC-U/C)";
+		case 'H': return "Asia (NTSC-J)";
+		case 'E': return "Europe / Oceania (PAL)";
+		case 'C': return "China";
+		default: return "unknown";
+	}
+}
+
 //--------------------------------------------------------------
 // Build information
 //--------------------------------------------------------------
@@ -305,7 +318,9 @@ void dashShowSystemInfo(void)
 	sheetAdd(&s, SL_TEXT, "ROM version: %s", ctx->romver_data[0] ? ctx->romver_data : "unavailable");
 	if (job.dvd[0])
 		sheetAdd(&s, SL_TEXT, "DVD player: %s", job.dvd);
-	sheetAdd(&s, SL_TEXT, "Region: %c", ctx->rough_region ? ctx->rough_region : '?');
+	/* ROMVER[4] is the console's real region. rough_region is only the
+	 * memory-card system-folder letter (BxEXEC), which USA and Asia share. */
+	sheetAdd(&s, SL_TEXT, "Region: %s", consoleRegionName(ctx->romver_data[0] ? ctx->romver_data[4] : '\0'));
 	sheetAdd(&s, SL_HEAD, "System update");
 	sheetAdd(&s, SL_TEXT, "Main KELF: %s",
 	         console_is_PSX ? "BIEXEC-SYSTEM/xosdmain.elf" :
