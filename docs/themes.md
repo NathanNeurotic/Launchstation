@@ -128,6 +128,49 @@ when this happened.
   comes from the existing artwork cache, so nothing extra is loaded and
   applications without artwork just show the theme's background.
 
+### Wallpaper canvas size and starter example
+
+**Use a 4:3 canvas.** The most efficient choice is a **320 × 240 PNG**;
+**640 × 480** is a convenient working size if you want to draw at 2× and
+downsample before copying to the PS2. Launchstation center-crops images
+that are wider or taller than 4:3, then cover-fits to the screen without
+letterboxing. Its image decoder holds wallpapers at no more than **320 × 256**
+pixels, preserving the original aspect ratio; a 4:3 image therefore ends
+up at most **320 × 240**, not 320 × 256. The 640 × 448 internal UI coordinate
+grid is **not** a wallpaper aspect ratio; the displayed wallpaper targets
+the console's 4:3 screen.
+
+![Bundled 320 × 240 wallpaper example](theme-example/background.png)
+
+[View/download the real 320 × 240 PNG](theme-example/background.png) ·
+[Matching ready-to-load theme.cfg](theme-example/theme.cfg) ·
+[Example folder instructions](theme-example/README.md)
+
+* Keep the central area clear enough for menus, clock text and application
+  tiles. Avoid placing important lettering at the extreme edges: CRT overscan
+  and screen calibration vary by console and display.
+* Use a dark or lower-contrast backdrop for legible text; adjust theme
+  *Brightness*, *Panels*, *Text* and *Artwork dimming* separately as needed.
+* **Format:** PNG; up to **1.5 MB** and **2048 × 2048** source pixels.
+  Decode/texture limits are lower than source-file limits. A non-interlaced
+  RGB or indexed PNG at 320 × 240 is a simple reliable choice.
+* A 320 × 256 image has a **5:4** aspect ratio, and 320 × 224 is **10:7**:
+  both can load but **will be cropped** by the 4:3 cover-fit. A 16:9 image
+  also crops at the sides. Avoid those ratios when designing from scratch.
+
+**Use the example:** Copy both files from `docs/theme-example/` to a single
+folder under `THEMES/` alongside the Launchstation ELF, such as
+`mass:/APPS/Launchstation/THEMES/WallpaperExample/`. Then choose
+**Settings > Appearance > Theme files & resets > Load theme from folder...**
+and select that folder. Save the Settings changes to keep the theme. Or
+choose **Settings > Appearance > Customize theme > Background > Wallpaper
+image...** to select your own PNG without importing an entire theme.
+
+**Important configuration distinction:** `background = image` plus
+`image = background.png` selects the static theme wallpaper;
+`wallpaper = focused` instead overlays focused application cover artwork.
+The sample uses `wallpaper = off` so its static background stays visible.
+
 ## Fonts
 
 * **Roboto** (default): the bundled smooth proportional font, in three
@@ -302,7 +345,7 @@ A complete example is in [theme-example/theme.cfg](theme-example/theme.cfg).
 | File size | up to 1.5 MB | up to 1.5 MB |
 | Source size | up to 2048x2048 | up to 2048x2048 |
 | Kept in memory | box-filtered to fit 320x256 (at most 320 KB) | fit 128x128 (at most 64 KB) |
-| Recommended | 320x224 or 320x256, 4:3 | 128x128 with alpha |
+| Recommended | **320x240 (4:3)**; 640x480 source is also fine | 128x128 with alpha |
 | Alpha | used | used |
 
 Images are decoded once and kept (8 theme image slots). Interlaced PNGs are
