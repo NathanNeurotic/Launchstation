@@ -496,31 +496,87 @@ void dashGfxBlend(int mode)
 		gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0, 1, 0, 1, 0), 0);
 }
 
+/* Clip state is tracked because scrolling text may run inside a clipped
+ * menu/list. Its temporary horizontal marquee must not discard the parent
+ * scissor: restoring full-screen clipping caused lower rows to draw outside
+ * seven-row popups. Coordinates are GS pixels (inclusive). */
+typedef struct {
+	int x0, x1, y0, y1;
+} DashClipRect;
+
+#define DASH_CLIP_STACK 8
+static DashClipRect clip_current, clip_stack[DASH_CLIP_STACK];
+static int clip_depth, clip_overflow, clip_valid;
+
+static DashClipRect clipFromLogical(float x, float y, float w, float h)
+{
+	DashClipRect r;
+	r.x0 = (int)SX(x);
+	r.y0 = (int)SY(y);
+	r.x1 = (int)SX(x + w) - 1;
+	r.y1 = (int)SY(y + h) - 1;
+	if (r.x0 < 0) r.x0 = 0;
+	if (r.y0 < 0) r.y0 = 0;
+	if (r.x0 >= SCREEN_WIDTH) r.x0 = SCREEN_WIDTH - 1;
+	if (r.y0 >= SCREEN_HEIGHT) r.y0 = SCREEN_HEIGHT - 1;
+	if (r.x1 > SCREEN_WIDTH - 1) r.x1 = SCREEN_WIDTH - 1;
+	if (r.y1 > SCREEN_HEIGHT - 1) r.y1 = SCREEN_HEIGHT - 1;
+	if (r.x1 < r.x0) r.x1 = r.x0;
+	if (r.y1 < r.y0) r.y1 = r.y0;
+	return r;
+}
+
+static void clipApply(DashClipRect r)
+{
+	dashSpriteBatchEnd(); /* queued sprites must keep the preceding clip */
+	clip_current = r;
+	clip_valid = 1;
+	gsKit_set_scissor(gsGlobal,
+	                 GS_SETREG_SCISSOR(r.x0, r.x1, r.y0, r.y1));
+}
+
 void dashGfxScissor(float x, float y, float w, float h)
 {
-	int x0 = (int)SX(x), y0 = (int)SY(y);
-	int x1 = (int)SX(x + w) - 1, y1 = (int)SY(y + h) - 1;
-
-	dashSpriteBatchEnd();
-	if (x0 < 0)
-		x0 = 0;
-	if (y0 < 0)
-		y0 = 0;
-	if (x1 > SCREEN_WIDTH - 1)
-		x1 = SCREEN_WIDTH - 1;
-	if (y1 > SCREEN_HEIGHT - 1)
-		y1 = SCREEN_HEIGHT - 1;
-	if (x1 < x0)
-		x1 = x0;
-	if (y1 < y0)
-		y1 = y0;
-	gsKit_set_scissor(gsGlobal, GS_SETREG_SCISSOR(x0, x1, y0, y1));
+	clipApply(clipFromLogical(x, y, w, h));
 }
 
 void dashGfxScissorReset(void)
 {
-	dashSpriteBatchEnd();
-	gsKit_set_scissor(gsGlobal, GS_SETREG_SCISSOR(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1));
+	DashClipRect full = {0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1};
+	clip_depth = clip_overflow = 0;
+	clipApply(full);
+}
+
+/* Child clipping is the intersection with the current parent's scissor.
+ * A bounded stack prevents recursive UI from consuming unbounded memory. */
+void dashGfxScissorPush(float x, float y, float w, float h)
+{
+	DashClipRect r;
+	if (!clip_valid)
+		dashGfxScissorReset();
+	if (clip_depth >= DASH_CLIP_STACK) {
+		clip_overflow++;
+		return; /* keep the stricter existing clip */
+	}
+	clip_stack[clip_depth++] = clip_current;
+	r = clipFromLogical(x, y, w, h);
+	if (r.x0 < clip_current.x0) r.x0 = clip_current.x0;
+	if (r.y0 < clip_current.y0) r.y0 = clip_current.y0;
+	if (r.x1 > clip_current.x1) r.x1 = clip_current.x1;
+	if (r.y1 > clip_current.y1) r.y1 = clip_current.y1;
+	if (r.x1 < r.x0) r.x1 = r.x0;
+	if (r.y1 < r.y0) r.y1 = r.y0;
+	clipApply(r);
+}
+
+void dashGfxScissorPop(void)
+{
+	if (clip_overflow > 0) {
+		clip_overflow--;
+		return;
+	}
+	if (clip_depth > 0)
+		clipApply(clip_stack[--clip_depth]);
 }
 
 //--------------------------------------------------------------
