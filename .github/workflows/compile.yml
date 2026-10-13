@@ -276,6 +276,19 @@ jobs:
             changes="- Rebuild of existing master revision"
           fi
 
+          # A rolling build usually holds one PR; users updating from older
+          # builds need the wider history too (tester request).
+          recent_prs="$(gh pr list --repo "${GITHUB_REPOSITORY}" --state merged --base master --limit 20 \
+            --json number,title,mergedAt --jq '.[] | "- #\(.number) \(.title) (\(.mergedAt[0:10]))"' || true)"
+          if [ -z "${recent_prs}" ]; then
+            recent_prs="- See the complete history below."
+          fi
+          if [ -n "${previous_sha}" ]; then
+            full_changelog="https://github.com/${GITHUB_REPOSITORY}/compare/${previous_sha}...${GITHUB_SHA}"
+          else
+            full_changelog="https://github.com/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}"
+          fi
+
           title="Launchstation Rolling — $(date -u +%Y-%m-%d) (${GITHUB_SHA:0:7})"
           hashes="$(sha256sum "${assets[@]/#/artifacts/}")"
           notes_file="${RUNNER_TEMP}/launchstation-rolling-notes.md"
@@ -284,6 +297,12 @@ jobs:
 
           ### Changes since the preceding rolling build
           ${changes}
+
+          ### Recently merged pull requests
+          ${recent_prs}
+
+          Full changelog for this update: ${full_changelog}
+          Complete history: https://github.com/${GITHUB_REPOSITORY}/commits/master
 
           ### CI verification
           - Host regression tests and documentation validation passed.

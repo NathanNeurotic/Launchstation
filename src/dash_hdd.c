@@ -1020,6 +1020,46 @@ static int typeIcon(const HddPart *p)
 	return DI_WARNING;
 }
 
+/* HDL partitions are named "PP.<startup ID>..<TITLE>" (older hdl_dump:
+ * "PP.HDL.<TITLE>"). Returns the offset of the title part, or 0. */
+static int hdlTitleOffset(const char *name)
+{
+	const char *t;
+
+	if (strncmp(name, "PP.", 3))
+		return 0;
+	t = strstr(name + 3, "..");
+	if (t != NULL && t[2])
+		return (int)(t + 2 - name);
+	if (!strncmp(name + 3, "HDL.", 4) && name[7])
+		return 7;
+	return 0;
+}
+
+/* The raw APA name (classic browsing, no HDL lookups) with its game-title
+ * part highlighted: the ID prefix is dimmed and gives way to the title. */
+static void drawPartName(float x, float y, float maxw, const char *name, DashColor col)
+{
+	char prefix[40];
+	int off = hdlTitleOffset(name);
+	float tw, pw;
+
+	if (off <= 0 || off >= (int)sizeof(prefix)) {
+		dashTextFit(x, y, maxw, name, DASH_FS_SMALL, col);
+		return;
+	}
+	memcpy(prefix, name, off);
+	prefix[off] = '\0';
+	tw = dashTextWidth(name + off, DASH_FS_SMALL);
+	if (tw > maxw * 0.65f)
+		tw = maxw * 0.65f;
+	pw = maxw - tw;
+	if (pw > dashTextWidth(prefix, DASH_FS_SMALL))
+		pw = dashTextWidth(prefix, DASH_FS_SMALL);
+	x = dashTextFit(x, y, pw, prefix, DASH_FS_SMALL, dashColorA(col, 0.5f));
+	dashTextFit(x, y, maxw - pw, name + off, DASH_FS_SMALL, col);
+}
+
 static void fmtMB(char *out, int size, u32 mb)
 {
 	if (mb >= 1024)
@@ -1128,7 +1168,7 @@ static void hddScene(void)
 			const char *label = p->name;
 
 			dashIcon(typeIcon(p), LIST_X + 8, y + 4, 15, p->type == HP_OTHER ? DASH_C_TEXT3 : col);
-			dashTextFit(LIST_X + 30, y + 3, LIST_W - 110, label, DASH_FS_SMALL, col);
+			drawPartName(LIST_X + 30, y + 3, LIST_W - 110, label, col);
 			fmtMB(a, sizeof(a), p->raw_mb);
 			dashTextRight(LIST_X + LIST_W - 10, y + 5, a, DASH_FS_CAPTION, DASH_C_TEXT3);
 		}
@@ -1138,7 +1178,7 @@ static void hddScene(void)
 	drawDetails();
 	{
 		DashHint h[] = {{dashOkIcon(), NULL, "Actions"}, {-1, "L2/R2", "Page"}, {-1, "L1", "Status"}, {-1, "R1", "Game info"}, {dashBackIcon(), NULL, "Exit"}};
-		dashDrawHints(h, 4);
+		dashDrawHints(h, (int)(sizeof(h) / sizeof(h[0])));
 	}
 	dashDrawToasts();
 	dashDrawActivity();
