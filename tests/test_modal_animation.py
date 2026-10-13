@@ -56,6 +56,7 @@ static float anim_time,frame_dt,section_anim=1,fade_in=1,bg_time,ui_time;
 static u64 last_frame_ms,now_ms;
 static int bg_calls,ui_calls,renders,depth,nested,frames[2],step_ms[3]={16,20,33};
 static int preview_calls;
+static int nav_scenario;
 static u64 Timer(void) { return now_ms; }
 static void dashBgUpdate(float dt) { bg_calls++; bg_time+=dt*dashCfg.effects/100.0f; }
 static void dashUiUpdate(float dt) { ui_calls++; ui_time+=dt; }
@@ -118,6 +119,12 @@ static void dashInputPoll(DashInput *in) {
     int f=++frames[depth];
     now_ms+=step_ms[(f-1)%3];
     in->pressed=f==4?DASH_IN_BACK:0;
+    if(nav_scenario && depth==0) {
+        if(f==1)
+            in->pressed=nav_scenario==1?DASH_IN_L2:nav_scenario==2?DASH_IN_R2:0;
+        else if(f==2)
+            in->pressed=DASH_IN_OK;
+    }
     if(nested && depth==0 && f==2) {
         depth=1;
         assert(!modalButtons("nested","confirm",NULL,0,(DashColor){0},"OK","Cancel",0));
@@ -133,7 +140,7 @@ static void reset(void) {
     anim_time=bg_time=ui_time=0; bg_calls=ui_calls=renders=preview_calls=0;
     section_anim=fade_in=0;
     now_ms=last_frame_ms=1000; frame_dt=0;
-    depth=nested=0; memset(frames,0,sizeof(frames)); modal_preview=NULL;
+    depth=nested=nav_scenario=0; memset(frames,0,sizeof(frames)); modal_preview=NULL;
     dashCfg.anim=100; dashCfg.effects=100;
 }
 static void check(void) {
@@ -182,6 +189,22 @@ int main(void) {
     reset(); dashCfg.effects=0; dashCfg.anim=0;
     assert(dashModalMenu("motion off",NULL,items,2,0)==-1);
     check(); assert(bg_time==0 && section_anim==1 && fade_in==1);
+    /* Exercise real L2/R2 dispatch against disabled edge entries. */
+    DashMenuItem disabled_ends[]={{0,"no top",NULL,1},
+                                   {0,"first active",NULL,0},
+                                   {0,"no middle",NULL,1},
+                                   {0,"last active",NULL,0},
+                                   {0,"no bottom",NULL,1}};
+    reset(); nav_scenario=1; /* from last active, jump to first enabled */
+    assert(dashModalMenu("jump first",NULL,disabled_ends,5,3)==1);
+    reset(); nav_scenario=2; /* from first active, jump to last enabled */
+    assert(dashModalMenu("jump last",NULL,disabled_ends,5,1)==3);
+    reset(); nav_scenario=3; /* disabled initial selection is corrected */
+    assert(dashModalMenu("disabled initial",NULL,disabled_ends,5,4)==1);
+    DashMenuItem all_disabled[]={{0,"a",NULL,1},{0,"b",NULL,1}};
+    reset();
+    assert(dashModalMenu("all disabled",NULL,all_disabled,2,0)==-1);
+    assert(renders==0); /* never render a non-interactive modal */
     reset(); now_ms+=2000;
     assert(dashVisualUpdate()==0.1f); /* retain the long-stall clamp */
     now_ms=last_frame_ms-1;
