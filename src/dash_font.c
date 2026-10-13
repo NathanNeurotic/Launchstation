@@ -530,9 +530,9 @@ void dashTextScrollTimed(float x, float y, float maxw, const char *str, float sc
 		u = u * u * (3.0f - 2.0f * u);
 		offset = travel * (1.0f - u);
 	}
-	dashGfxScissor(x, y - 2.0f, maxw, dashTextLineH(scale) + 4.0f);
+	dashGfxScissorPush(x, y - 2.0f, maxw, dashTextLineH(scale) + 4.0f);
 	dashTextS(x - offset, y, str, scale, c);
-	dashGfxScissorReset();
+	dashGfxScissorPop();
 }
 
 void dashTextScroll(float x, float y, float maxw, const char *str, float scale, DashColor c)
