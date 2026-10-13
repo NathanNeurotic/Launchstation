@@ -39,6 +39,8 @@ jobs:
           python3 tests/test_scene_override_nesting.py
           python3 tests/test_gage_alignment.py
           python3 tests/test_modal_animation.py
+          python3 tests/test_nested_scissor.py
+          python3 tests/test_hdd_manager_browse.py
           python3 tests/test_zack_oct_2026.py
           python3 tests/test_background_only_hotkeys.py
           python3 tests/test_dashboard_present_buffers.py
