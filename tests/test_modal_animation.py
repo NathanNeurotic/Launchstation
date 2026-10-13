@@ -125,6 +125,8 @@ static void dashInputPoll(DashInput *in) {
     }
 }
 """
+if "static int modalEnabledEdge(" in ui:
+    code += function(ui, "static int modalEnabledEdge(")
 code += menu + buttons
 code += r"""
 static void reset(void) {
