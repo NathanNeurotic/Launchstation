@@ -725,12 +725,16 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 	float x = (DASH_VW - w) * 0.5f, y;
 	DashInput in;
 
-	if (items == NULL || n <= 0)
+	if (items == NULL || n <= 0) {
+		modal_preview = NULL;
 		return -1;
+	}
 	if (sel < 0 || sel >= n || items[sel].disabled)
 		sel = modalEnabledEdge(items, n, 0);
-	if (sel < 0)
+	if (sel < 0) {
+		modal_preview = NULL;
 		return -1;
+	}
 	sel_anim = (float)sel;
 	y = (DASH_VH - h) * 0.5f;
 	modal_preview = NULL;
