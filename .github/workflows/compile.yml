@@ -202,6 +202,11 @@ jobs:
               echo "| $variant | $raw | $packed |"
             done
           } >> "$GITHUB_STEP_SUMMARY"
+          # Largest symbols (embedded IRX/sounds/fonts, libraries) so ELF size
+          # work (#129) targets measured contributors. Report only.
+          ee_nm="$HOME/.local/share/ps2build/toolchain/ee/bin/mips64r5900el-ps2-elf-nm"
+          echo "== Largest symbols (bytes, hex) =="
+          "$ee_nm" --size-sort -S build/obj/wLaunchELF/wLaunchELF.unstripped.elf | tail -n 40 || true
 
       - name: Check embedded loader low-memory layout
         run: |
