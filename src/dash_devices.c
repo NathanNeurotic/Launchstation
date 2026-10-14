@@ -570,12 +570,26 @@ int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user)
 	return 0;
 }
 
+/* Boot auto-start keeps the plain "Starting devices" overlay animating but
+ * hides per-driver "Loading udpfs drivers..." lines, like the boot checks
+ * (#138). Manually started devices still show which driver is loading. */
+static void quietDriverMsg(const char *msg)
+{
+	(void)msg;
+	dashLoadingStatus(NULL, 0, 0);
+}
+
 void dashDevicesAutoStart(void)
 {
+	void (*prev)(const char *msg);
+
 	if (!autoStartNeeded() || !dashWorkerAwaitAll("Finishing up"))
 		return;
 	dashLoadingBegin("Starting devices");
+	prev = drawMsgOverride;
+	drawMsgOverride = quietDriverMsg;
 	dashDevicesAutoProbe();
+	drawMsgOverride = prev;
 	dashLoadingEnd();
 	dashAppsRebuildView();
 }

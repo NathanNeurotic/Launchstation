@@ -2875,7 +2875,8 @@ static const char *actionStatus(int id)
 static void settingsDraw(void)
 {
 	int i;
-	/* Give the breadcrumb a real lane below the L1/R1 tabs. */
+	/* Give the breadcrumb a real lane below the L1/R1 tab bar (it ends at
+	 * y=62): ~7 px of clear space above the breadcrumb's capitals (#135). */
 	/* Only the header lanes move; the list keeps ITEM_ROWS rows so its two-line
 	 * help still clears the footer hints. */
 	const float ix = 48, iy = 136, irow = 29, iw = 544;
@@ -2888,8 +2889,8 @@ static void settingsDraw(void)
 		snprintf(trail + len, sizeof(trail) - len, "%s%s", i ? " > " : "", pages[page_stack[i].page].name);
 	}
 	if (page_depth)
-		dashTextFit(ix, 57, iw - 126, trail, DASH_FS_CAPTION, DASH_C_TEXT3);
-	dashDrawSectionTitle(ix, 74, c->name, NULL);
+		dashTextFit(ix, 66, iw - 126, trail, DASH_FS_CAPTION, DASH_C_TEXT3);
+	dashDrawSectionTitle(ix, 82, c->name, NULL);
 	dashTextFit(ix, 112, iw, c->help, DASH_FS_CAPTION, DASH_C_TEXT3);
 	{
 		int dirty = anyDirtyCached();

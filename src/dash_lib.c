@@ -165,10 +165,11 @@ static u16 hashHue(const char *s)
 
 void dashLibDeviceLabel(const char *path, char *out, int out_size)
 {
+	/* Same wording as the Files tab: device name plus physical slot (#141). */
 	if (!strncmp(path, "mc0", 3))
-		dashStrCopy(out, "Memory Card 1", out_size);
+		dashStrCopy(out, "mc0 (Slot 1)", out_size);
 	else if (!strncmp(path, "mc1", 3))
-		dashStrCopy(out, "Memory Card 2", out_size);
+		dashStrCopy(out, "mc1 (Slot 2)", out_size);
 	else if (!strncmp(path, "mc:", 3))
 		dashStrCopy(out, "Memory Card", out_size);
 	else if (!strncmp(path, "mass", 4) || !strncmp(path, "usb", 3))

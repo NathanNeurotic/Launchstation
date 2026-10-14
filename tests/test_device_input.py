@@ -222,6 +222,7 @@ static void dashStrCopy(char *d,const char *s,int n) { snprintf(d,n,"%s",s); }
 static int dashWorkerAwaitAll(const char *t) { (void)t; return 1; }
 static void dashLoadingBegin(const char *t) { (void)t; }
 static void dashLoadingStatus(const char *t,int d,int n) { (void)t;(void)d;(void)n; }
+static void (*drawMsgOverride)(const char *msg);
 static void dashLoadingEnd(void) {}
 static void dashDevicesAutoProbe(void);
 """

@@ -670,6 +670,12 @@ void dashDrawTileFocus(float x, float y, float w, float h, float r, float streng
 	DashColor edge = dashColorA(dashColorLighten(DASH_C_ACCENT, .45f), strength);
 	if (strength <= .01f)
 		return;
+	/* Zoomed Continue tiles land on fractional coordinates; an outline
+	 * straddling two scanlines flickers between interlaced fields (#140). */
+	x = floorf(x + .5f);
+	y = floorf(y + .5f);
+	w = floorf(w + .5f);
+	h = floorf(h + .5f);
 	if (dashTheme.tile_style == DASH_TILE_FLOATING) {
 		/* A solid pedestal remains visible even with theme glow disabled. */
 		dashLine(x + w * .20f, y + h * .92f, x + w * .80f, y + h * .92f, 2.0f, edge);
@@ -744,8 +750,11 @@ static void appTile(const DashApp *app, GSTEXTURE *tex, float x, float y, float 
 		badge_size = .12f;
 	} else if (style == DASH_TILE_FLOATING) {
 		ay = .16f - .06f * focus;
-		if (dashCfg.anim > 0)
-			ay += .015f * focus * dashClampf(dashCfg.anim / 100.0f, 0.1f, 2.0f) * dashSinf(dashTime() * 2.0f);
+		if (dashCfg.anim > 0) {
+			/* Whole-pixel bob: sub-pixel motion shimmers on interlaced TVs (#140). */
+			float bob = h * .015f * focus * dashClampf(dashCfg.anim / 100.0f, 0.1f, 2.0f) * dashSinf(dashTime() * 2.0f);
+			ay += floorf(bob + .5f) / h;
+		}
 		badge_y = .73f;
 	}
 	tileBody(x, y, w, h, focus, top, bot);

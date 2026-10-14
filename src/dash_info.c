@@ -82,9 +82,9 @@ static void sheetShow(int icon, const char *title, const char *subtitle, const S
 		scroll = dashApproach(scroll, scroll_target, 18.0f * dashAnimSpeed(), dt);
 		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
 		{
-			/* Keep scrolled glyph baselines aligned to logical pixels. Fractional
-			 * Y coordinates shimmer in interlaced video and distort font edges. */
-			float oe = dashEaseOutCubic(open), ly = body_y - floorf(scroll + 0.5f);
+			/* Scroll in whole line pairs: fractional Y shimmers, and odd 1 px
+			 * steps split the two interlaced fields so text ghosts (#139). */
+			float oe = dashEaseOutCubic(open), ly = body_y - 2.0f * floorf(scroll * 0.5f + 0.5f);
 
 			dashRenderScene();
 			dashModalBackdrop(oe);

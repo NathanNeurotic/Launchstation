@@ -58,7 +58,7 @@ assert 'snprintf(mount, sizeof(mount), "mc%d:", port);' in devices
 assert '"MASS (USB)"' in devices   # issue #132 specifically excluded
 
 # Scrolling text and second focus outline are stable at interlaced cadence.
-assert "floorf(scroll + 0.5f)" in info
+assert "2.0f * floorf(scroll * 0.5f + 0.5f)" in info  # even line pairs (#139)
 assert "edge.a = (u8)(65 * strength);" in ui
 assert "if (t < 2.0f)" in gfx
 
