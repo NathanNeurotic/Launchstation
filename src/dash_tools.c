@@ -39,7 +39,7 @@ typedef struct
 	const char *name;
 	const char *desc;
 	const char *note; /* safety note shown in the detail panel */
-	int confirm;      /* 1: ask before running, 2: dangerous */
+	int confirm;      /* 1: ask before running, 2: dangerous or leaves Launchstation (red confirm) */
 	size_t misc_offset;
 	const char *path;
 } Tool;
@@ -61,8 +61,8 @@ static const Tool tools[] = {
     {TA_MISC, DI_MC, "Memory card exploit installer", "Install a memory card system-update exploit for this console, another model or region, or PSX/DESR.", "Writes system folders to the memory card. Follow the on-screen checks carefully.", 1, MISC(Misc_Exploit_Installer), NULL},
     {TA_IGR_SETUP, DI_MC, "OPL IGR automatic MMCE backup", "Set up verified automatic backup of every MMCE card image when OPL exits a game through IGR.", "Installs or updates WLE-IGR.ELF on the required boot medium and tells you the exact OPL Exit-to path.", 0, 0, NULL},
     {TA_HEADER, -1, "SYSTEM", NULL, NULL, 0, 0, NULL},
-    {TA_MISC, DI_APP, "PS2 system browser", "Leave Launchstation and open the console's own Browser.", NULL, 1, MISC(Misc_PS2Browser), NULL},
-    {TA_MISC, DI_APP, "OSDSYS", "Start the console's OSD (or the OSDSYS path configured in Launchstation).", NULL, 1, MISC(Misc_OSDSYS), NULL},
+    {TA_MISC, DI_APP, "PS2 system browser", "Leave Launchstation and open the console's own Browser.", NULL, 2, MISC(Misc_PS2Browser), NULL},
+    {TA_MISC, DI_APP, "OSDSYS", "Start the console's OSD (or the OSDSYS path configured in Launchstation).", NULL, 2, MISC(Misc_OSDSYS), NULL},
 #ifdef ETH
     {TA_MISC, DI_NETWORK, "FTP / Remote access", "Start FTP and PS2Link on demand, accept remote commands, and receive staged/resumable ISO transfers from MrRexD-compatible PC tools.", "Network and HDD drivers stay unloaded until you start this tool.", 0, MISC(Misc_PS2Net), NULL},
 #ifdef WLE_NATIVE_CLOUD
@@ -74,7 +74,7 @@ static const Tool tools[] = {
     {TA_MISC, DI_TEXT, "Font viewer", "Show every glyph of the active font.", NULL, 0, MISC(Misc_ShowFont), NULL},
     {TA_MISC, DI_INFO, "About Launchstation", "Credits and version.", NULL, 0, MISC(Misc_About_uLE), NULL},
     {TA_HEADER, -1, "POWER", NULL, NULL, 0, 0, NULL},
-    {TA_MISC, DI_REFRESH, "Reboot IOP", "Restart the I/O processor and all device drivers. Devices are detected again when used.", NULL, 1, MISC(Misc_Reboot_IOP), NULL},
+    {TA_MISC, DI_REFRESH, "Reboot IOP", "Restart the I/O processor and all device drivers. Devices are detected again when used.", NULL, 2, MISC(Misc_Reboot_IOP), NULL},
     {TA_MISC, DI_POWER, "Power off", "Turn the console off.", NULL, 2, MISC(Misc_PS2PowerOff), NULL},
 };
 

@@ -24,8 +24,8 @@
 //             pulsing red flare and one slowly turning glass cube.
 //  Orbit      The main menu's orbs on near black (see "OSD orbs" below).
 //  ClockRing  System Configuration's twelve-rod clock: the ring turns with
-//             the seconds, the rod of the current hour is lit and fills
-//             with the minutes; the orbs fly inside it.
+//             the seconds, the rod of the current hour is gently lit;
+//             the orbs fly inside it.
 //
 //  OSD orbs   The main menu / System Configuration "light spots" (Sony
 //             patent US 6,693,606: light spots moving around a single
@@ -388,8 +388,18 @@ static void glassCube(float cx, float cy, float size, float ax, float ay, DashCo
 		if (cross <= 0.0f)
 			continue;
 		dashQuadG(sx[f[0]], sy[f[0]], sx[f[1]], sy[f[1]], sx[f[2]], sy[f[2]], sx[f[3]], sy[f[3]], c1, c2, c2, c1);
-		/* lit rim */
-		dashLine(sx[f[0]], sy[f[0]], sx[f[1]], sy[f[1]], 1.2f, colA(dashColorLighten(col, 0.4f), (int)(alpha * 70)));
+		/* Feather every face edge: the hard polygon edges and a 1.2 px rim
+		 * stair-stepped and shimmered on 4:3 interlaced TVs (#134). A wide
+		 * faint pass softens the silhouette; the lit rim stays on top. */
+		{
+			static const u8 edge[4][2] = {{0, 1}, {1, 3}, {3, 2}, {2, 0}};
+			int e;
+			for (e = 0; e < 4; e++)
+				dashLine(sx[f[edge[e][0]]], sy[f[edge[e][0]]], sx[f[edge[e][1]]], sy[f[edge[e][1]]],
+				         3.0f, colA(c1, (int)(alpha * 28)));
+		}
+		dashLine(sx[f[0]], sy[f[0]], sx[f[1]], sy[f[1]], 3.2f, colA(dashColorLighten(col, 0.4f), (int)(alpha * 22)));
+		dashLine(sx[f[0]], sy[f[0]], sx[f[1]], sy[f[1]], 1.6f, colA(dashColorLighten(col, 0.4f), (int)(alpha * 60)));
 	}
 }
 
@@ -652,13 +662,16 @@ static void osdOrbs(const OrbStyle *st, float t, int fx)
 			continue;
 		grow = dashClampf(1.0f + 0.25f * (together - 1), 1.0f, 1.8f);
 		share = together > 1 ? 0.85f : 1.0f;
+		/* The head continues its own trail: same tint and a brightness close
+		 * to the trail's core (max 178). A near-white halo plus a pure-white
+		 * core read as a shiny blob detached from the trace (#130). */
 		dashGlow(head[k].x, head[k].y, 30.0f * sz * grow, 30.0f * sz * grow,
-		         colA(glow_c, (int)((56.0f + 46.0f * head[k].d) * share)));
+		         colA(glow_c, (int)((40.0f + 30.0f * head[k].d) * share)));
 		dashGlow(head[k].x, head[k].y, 11.0f * sz * grow, 11.0f * sz * grow,
-		         colA(halo_c, (int)((153.0f + 77.0f * head[k].d) * share)));
-		/* One central highlight per cluster prevents stacked white cores. */
-		dashGlow(head[k].x, head[k].y, 5.2f * sz * grow, 5.2f * sz * grow,
-		         colA(DC(255, 255, 255, 255), together > 1 ? 210 : 255));
+		         colA(core_c, (int)((110.0f + 50.0f * head[k].d) * share)));
+		/* One central highlight per cluster prevents stacked cores. */
+		dashGlow(head[k].x, head[k].y, 4.4f * sz * grow, 4.4f * sz * grow,
+		         colA(halo_c, together > 1 ? 150 : 170));
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
 }
@@ -695,7 +708,7 @@ void dashBgSceneClockRing(float t, int fx)
 {
 	DashColor rod = dashTheme.bg1, b = dashTheme.bg2;
 	float cx = 430.0f, cy = 226.0f;
-	float spin, fill;
+	float spin;
 	int i, held_hour;
 	OsdTime ot;
 	OrbStyle st;
@@ -703,7 +716,6 @@ void dashBgSceneClockRing(float t, int fx)
 	osdTime(fx, &ot);
 	held_hour = ot.hour;
 	spin = -(ot.second / 60.0f) * TAU_F;
-	fill = (ot.minute + ot.second / 60.0f) / 60.0f;
 
 	dashRectGradV(0, 0, DASH_VW, DASH_VH, dashColorLighten(b, 0.05f), dashColorScale(b, 0.55f));
 	dashGfxBlend(DASH_BLEND_ADD);
@@ -714,19 +726,13 @@ void dashBgSceneClockRing(float t, int fx)
 		float r0 = 70.0f, r1 = 190.0f, w = 7.0f;
 		float nx = -sa * w, ny = ca * w;
 		int lit = (i == held_hour % 12);
-		DashColor ci = colA(rod, lit ? 110 : 34), co = colA(rod, 0);
+		/* The current hour is only gently brighter. A 3x-bright rod plus a
+		 * lightened minute bar, both additive, washed out to a white pillar
+		 * with a white block inside it, unlike every other rod (#133). */
+		DashColor ci = colA(rod, lit ? 56 : 34), co = colA(rod, 0);
 
 		dashQuadG(cx + ca * r0 + nx, cy + sa * r0 * 0.9f + ny, cx + ca * r0 - nx, cy + sa * r0 * 0.9f - ny,
 		          cx + ca * r1 + nx, cy + sa * r1 * 0.9f + ny, cx + ca * r1 - nx, cy + sa * r1 * 0.9f - ny, ci, ci, co, co);
-		if (lit && fx != DASH_FX_OFF) {
-			float rf = r0 + (r1 - r0) * fill;
-			DashColor cb = colA(dashColorLighten(rod, 0.18f), 100);
-			DashColor tip = colA(cb, 0);
-			/* A solid-color segment ended in a sharp rectangular box on the
-			 * active clock pillar. Feather the moving fill along its length. */
-			dashQuadG(cx + ca * r0 + nx * 0.5f, cy + sa * r0 * 0.9f + ny * 0.5f, cx + ca * r0 - nx * 0.5f, cy + sa * r0 * 0.9f - ny * 0.5f,
-			          cx + ca * rf + nx * 0.5f, cy + sa * rf * 0.9f + ny * 0.5f, cx + ca * rf - nx * 0.5f, cy + sa * rf * 0.9f - ny * 0.5f, cb, cb, tip, tip);
-		}
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
 	/* the orbs fly inside the rods, as in System Configuration */

@@ -174,7 +174,7 @@ static float iconSdf(int id, V2 p)
 			d = sdSeg(p, -0.62f, 0.62f, 0.12f, -0.12f, 0.13f);
 			d = U(d, sdCircle(p, 0.32f, -0.32f, 0.36f));
 			d = S(d, sdCircle(p, 0.52f, -0.52f, 0.24f));
-			d = S(d, sdCircle(p, 0.32f, -0.32f, 0.12f));
+			d = S(d, sdCircle(p, 0.32f, -0.32f, 0.16f));
 			break;
 		case DI_SETTINGS:
 			d = sdCircle(p, 0.0f, 0.0f, 0.56f);
@@ -194,7 +194,7 @@ static float iconSdf(int id, V2 p)
 			d = U(d, sdTriP(p, -0.18f, -0.46f, 0.0f, -0.82f, 0.18f, -0.46f));
 			d = U(d, sdSeg(p, 0.0f, 0.28f, -0.42f, 0.0f, T));
 			d = U(d, sdSeg(p, -0.42f, 0.0f, -0.42f, -0.22f, T));
-			d = U(d, sdCircle(p, -0.42f, -0.3f, 0.12f));
+			d = U(d, sdCircle(p, -0.42f, -0.3f, 0.16f));
 			d = U(d, sdSeg(p, 0.0f, 0.12f, 0.42f, -0.14f, T));
 			d = U(d, sdSeg(p, 0.42f, -0.14f, 0.42f, -0.3f, T));
 			d = U(d, sdBox(p, 0.42f, -0.38f, 0.11f, 0.11f, 0.0f));
@@ -346,33 +346,33 @@ static float iconSdf(int id, V2 p)
 			d = sdBox(p, 0.0f, 0.0f, 0.92f, 0.92f, 0.20f);
 			break;
 		case DI_BTN_CROSS:
-			d = sdSeg(p, -0.5f, -0.5f, 0.5f, 0.5f, 0.11f);
-			d = U(d, sdSeg(p, -0.5f, 0.5f, 0.5f, -0.5f, 0.11f));
+			d = sdSeg(p, -0.52f, -0.52f, 0.52f, 0.52f, 0.17f);
+			d = U(d, sdSeg(p, -0.52f, 0.52f, 0.52f, -0.52f, 0.17f));
 			break;
 		case DI_BTN_CIRCLE:
-			d = sdRing(p, 0.0f, 0.0f, 0.56f, 0.11f);
+			d = sdRing(p, 0.0f, 0.0f, 0.58f, 0.16f);
 			break;
 		case DI_BTN_SQUARE:
-			d = sdBoxOutline(p, 0.0f, 0.0f, 0.54f, 0.54f, 0.02f, 0.1f);
+			d = sdBoxOutline(p, 0.0f, 0.0f, 0.58f, 0.58f, 0.03f, 0.15f);
 			break;
 		case DI_BTN_TRIANGLE:
-			d = fabsf(sdTriP(p, -0.66f, 0.46f, 0.0f, -0.68f, 0.66f, 0.46f) + 0.03f) - 0.1f;
+			d = fabsf(sdTriP(p, -0.7f, 0.5f, 0.0f, -0.72f, 0.7f, 0.5f) + 0.04f) - 0.15f;
 			break;
 		case DI_BTN_UP:
-			d = U(sdSeg(p, -0.5f, -0.22f, 0.0f, 0.34f, 0.12f),
-			    sdSeg(p, 0.0f, 0.34f, 0.5f, -0.22f, 0.12f));
+			d = U(sdSeg(p, -0.5f, -0.22f, 0.0f, 0.34f, 0.16f),
+			    sdSeg(p, 0.0f, 0.34f, 0.5f, -0.22f, 0.16f));
 			break;
 		case DI_BTN_DOWN:
-			d = U(sdSeg(p, -0.5f, 0.22f, 0.0f, -0.34f, 0.12f),
-			    sdSeg(p, 0.0f, -0.34f, 0.5f, 0.22f, 0.12f));
+			d = U(sdSeg(p, -0.5f, 0.22f, 0.0f, -0.34f, 0.16f),
+			    sdSeg(p, 0.0f, -0.34f, 0.5f, 0.22f, 0.16f));
 			break;
 		case DI_BTN_LEFT:
-			d = U(sdSeg(p, 0.22f, -0.5f, -0.34f, 0.0f, 0.12f),
-			    sdSeg(p, -0.34f, 0.0f, 0.22f, 0.5f, 0.12f));
+			d = U(sdSeg(p, 0.22f, -0.5f, -0.34f, 0.0f, 0.16f),
+			    sdSeg(p, -0.34f, 0.0f, 0.22f, 0.5f, 0.16f));
 			break;
 		case DI_BTN_RIGHT:
-			d = U(sdSeg(p, -0.22f, -0.5f, 0.34f, 0.0f, 0.12f),
-			    sdSeg(p, 0.34f, 0.0f, -0.22f, 0.5f, 0.12f));
+			d = U(sdSeg(p, -0.22f, -0.5f, 0.34f, 0.0f, 0.16f),
+			    sdSeg(p, 0.34f, 0.0f, -0.22f, 0.5f, 0.16f));
 			break;
 		case DI_BTN_START:
 			d = sdTriP(p, -0.36f, -0.44f, -0.36f, 0.44f, 0.44f, 0.0f);
@@ -463,12 +463,12 @@ static float iconSdf(int id, V2 p)
 			d = U(d, fmaxf2(sdTriP(p, 0.0f, 0.46f, 0.36f, 0.1f, 0.72f, 0.46f), sdBox(p, 0.0f, 0.0f, 0.74f, 0.54f, 0.0f)));
 			break;
 		case DI_DPAD_UD:
-			/* one D-pad: left/right arms outlined, up/down arms solid with
-			 * arrow cut-outs, so a single glyph reads as "scroll up/down" */
-			d = sdBoxOutline(p, 0.0f, 0.0f, 0.9f, 0.28f, 0.08f, 0.06f);
-			d = U(d, sdBox(p, 0.0f, 0.0f, 0.28f, 0.9f, 0.08f));
-			d = S(d, sdTriP(p, 0.0f, -0.74f, -0.15f, -0.46f, 0.15f, -0.46f));
-			d = S(d, sdTriP(p, 0.0f, 0.74f, 0.15f, 0.46f, -0.15f, 0.46f));
+			/* one solid D-pad; large arrow cut-outs mark the up/down arms.
+			 * No hairline outlines: those flickered on interlaced TVs (#127). */
+			d = sdBox(p, 0.0f, 0.0f, 0.92f, 0.3f, 0.1f);
+			d = U(d, sdBox(p, 0.0f, 0.0f, 0.3f, 0.92f, 0.1f));
+			d = S(d, sdTriP(p, 0.0f, -0.8f, -0.2f, -0.42f, 0.2f, -0.42f));
+			d = S(d, sdTriP(p, 0.0f, 0.8f, 0.2f, 0.42f, -0.2f, 0.42f));
 			break;
 		default:
 			d = sdCircle(p, 0.0f, 0.0f, 0.5f);
@@ -561,7 +561,7 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 		/* Preserve colored controller glyphs while letting each theme decide
 		 * whether they sit on a background. Baked PNGs forced a fixed navy
 		 * tile into every theme, ignoring icon-backings entirely. */
-		float g = size * (dashCfg.icon_backing ? 0.56f : 0.78f);
+		float g = size * (dashCfg.icon_backing ? 0.74f : 0.86f); /* #152: legible on CRTs */
 		float go = (size - g) * 0.5f;
 		if (dashCfg.icon_backing) {
 			float bu0 = (float)((DI_PAD_BADGE % ICON_COLS) * ICON_SLOT);

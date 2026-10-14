@@ -996,8 +996,13 @@ void dashRenderScene(void)
 	dashArtBeginFrame();
 	dashGfxBeginFrame();
 	dashBgDraw();
-	if (background_only)
-		return; /* background scene only, no hidden interactive UI */
+	if (background_only) {
+		/* background scene only; keep the footer hint so the way back is
+		 * visible (#137) */
+		DashHint h[] = {{-1, "R3", "Show interface"}};
+		dashDrawHints(h, 1);
+		return;
+	}
 
 	dashDrawHeader(section, section_anim);
 
