@@ -1,6 +1,6 @@
 # Plan: early PS2 PC CARD CompactFlash support (Launchstation)
 
-**Status:** Planning / agent handoff. **Scope:** Launchstation native Files and Devices integration; independent from RiptOPL game loader. **Target base:** `master`.
+**Status:** Driver foundation implemented; runtime integration pending. **Scope:** Launchstation native Files and Devices integration; independent from RiptOPL game loader. **Target base:** `master`.
 
 ## Purpose and non-goals
 Plan-only draft PR for native CompactFlash/SD-to-CF access via the *original PS2 PC CARD slot*, based on [mihhru/PS2CF 1.0](https://github.com/mihhru/PS2CF). Other agents should add **implementation commits to this same branch/PR**, updating this checklist as evidence accumulates. **No production code is implemented by this initial commit**. No firmware changes, memory-card image installation, FMCB packaging, blanket storage replacement, or existing save modification are in scope.
@@ -52,3 +52,43 @@ Target hardware: SCPH-10000 (PS2CF hardware tested), SCPH-15000 / SCPH-18000 (ta
 - [ ] L6 (optional independent scope after L1-L5): define and test direct ELF launch or external PS1/PS2 loader handoff from `cf:/`; do not block safe file browsing on unsupported launch modes.
 
 **Merge gate:** unchanged behavior on non-target systems; no ownership theft or unsafe media writes; passing relevant builds/tests; at least one documented real PC CARD CF hardware run; no lingering placeholders represented as implemented.
+
+
+## Implementation evidence (2026-10-15)
+
+Imported the minimal PS2CF PIO/ATA/BDM module from pinned upstream commit
+`9b6ed3702b59a87512426952e003125a5b4f0e3c` into `iop/pccf/` with the
+PS2SDK license and an explicit origin/adaptation inventory in `VENDORED.md`.
+Removed the dedicated-session forced power reclaim. The module rejects a
+resident DEV9 export library before MMIO, including idle/powered-down DEV9;
+unknown/cyclic loadcore library state fails closed. The hardware layer also
+rejects incompatible revision, absent cards, nonzero power and active mode.
+CIS validation rejects LAN/non-fixed-disk profiles before ATA commands.
+
+Validation:
+- Standalone IOP module built successfully with ps2build v2026.10.13 / GCC.
+- Production C host harnesses cover bounded CIS parsing, fixed-disk profile
+  checks, ATA IDENTIFY/transfers, LBA48, flush/read-back errors, offline latching,
+  real MMIO power/reset/restoration with modeled registers, and module ownership.
+- CI now runs these host harnesses and compiles the standalone module.
+- These are host and target-compilation results. No full application integration,
+  CI result, emulator run or early-console acceptance is claimed.
+
+The L0/L1 checkboxes remain open: no EE eligibility/owner service is wired yet,
+and standard/DS34 embedding is not complete. No CF driver is auto-loaded and no
+Files/Devices entry is advertised by this foundation commit. Remaining stages
+L2-L5 retain their original scope, including FAT32/exFAT filesystem acceptance,
+manual rescan, handle invalidation, safe removal, and cross-device regression.
+
+Confirmed integration boundaries to resolve next:
+- `setupPowerOff()` in `src/init.c` calls `load_ps2dev9()`. A CF owner must register
+  poweroff handling without loading a competing driver, and DEV9 requests must
+  fail explicitly while CF owns the slot.
+- IOP reboot alone does not prove that the card is powered off. Add an explicit
+  CF-only shutdown channel before reset/launch teardown; never substitute a
+  global BDM STOP_ALL call which can affect other devices.
+- The installed BDM header supports `block_device.path` typed prefixes. Validate
+  `cf:/` mapping against the installed filesystem module; do not assume the
+  generic `massN:` namespace identifies CF or permits writes safely.
+- Keep direct ELF, Neutrino, Ember and POPStarter handoffs disabled for CF until
+  their driver-lifetime and loader backend paths are implemented and tested.
