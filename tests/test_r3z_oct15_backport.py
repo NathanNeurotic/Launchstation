@@ -60,6 +60,8 @@ int main(void) {
     strcpy(b.name,"B.TXT");
     assert(cmpFile(&a,&b)<0); /* ELF stays first even descending */
 
+    /* Compare entries within the same file class for sort ordering. */
+    strcpy(a.name,"A.TXT");
     file_sort=3; file_show=1; file_sort_descending=0;
     a.stats._Modify=100; b.stats._Modify=200;
     assert(cmpFile(&a,&b)<0); /* oldest first */
