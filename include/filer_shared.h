@@ -66,6 +66,7 @@ extern int fileMode;
 
 extern int file_show;
 extern int file_sort;
+extern int file_sort_descending;
 extern int size_valid;
 extern int time_valid;
 
