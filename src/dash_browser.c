@@ -2258,7 +2258,6 @@ static void actionsMenu(void)
 		F_RECOVER_NEW_MCD,
 		F_IMPORT_TO_MMCE_NEW,
 		F_INSTALL_NEW_MMCE_CARD,
-		F_TUNA,
 		F_DATES,
 		F_SELALL,
 		F_INVERT,
@@ -2344,8 +2343,6 @@ static void actionsMenu(void)
 			    "creates an unused CardN; never replaces or selects existing cards",
 			    0, F_INSTALL_NEW_MMCE_CARD);
 		}
-		if (f != NULL && en[TIMEMANIP])
-			ADD(DI_CLOCK, LNG(time_manip), "2099-12-31", 0, F_TUNA);
 		if (en[TIMEMANIP_CUSTOM])
 			ADD(DI_CLOCK, "Folder dates...", "order the saves", 0, F_DATES);
 		if (f != NULL && !isDir(f) && en[LAUNCH_ELF_ARGS] && !is_elf)
@@ -2448,9 +2445,6 @@ static void actionsMenu(void)
 			break;
 		case F_INSTALL_NEW_MMCE_CARD:
 			opInstallNewMmceCard();
-			break;
-		case F_TUNA:
-			opTimestamps(0);
 			break;
 		case F_DATES:
 			opTimestamps(1);
