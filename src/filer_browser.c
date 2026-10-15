@@ -415,16 +415,7 @@ void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char 
 		enable[MOUNTVMC1] = FALSE;
 		enable[GETSIZE] = FALSE;
 	}
-//#ifdef TMANIP
-	if ((file->stats.AttrFile & sceMcFileAttrSubdir) &&
-	    strcmp(file->name, "..") &&
-	    ((!strcmp(path, "mc0:/")) || (!strcmp(path, "mc1:/")))) {
-		enable[TIMEMANIP] = TRUE;
-	} else {
-		enable[TIMEMANIP] = FALSE;
-	}
 	enable[TIMEMANIP_CUSTOM] = filerCanOrganizeFolderTimestamps(path);
-//#endif //TMANIP
 	if (genCmpFileExt(file->name, "ELF") && isTitleCfgPathEligible(path, menu_disabled))
 		enable[TITLE_CFG] = TRUE;
 	else
@@ -502,7 +493,6 @@ static int menu(const char *path, FILEINFO *file)
 	menu_len = strlen(LNG(TextEditor)) > menu_len ? strlen(LNG(TextEditor)) : menu_len;
 	menu_len = strlen(LNG(Launch_With_Args)) > menu_len ? strlen(LNG(Launch_With_Args)) : menu_len;
 	menu_len = strlen(psu_action_label) > menu_len ? strlen(psu_action_label) : menu_len;
-	menu_len = strlen(LNG(time_manip)) > menu_len ? strlen(LNG(time_manip)) : menu_len;
 	menu_len = strlen(LNG(Set_Custom_Date)) > menu_len ? strlen(LNG(Set_Custom_Date)) : menu_len;
 	menu_len = strlen(LNG(title_cfg)) > menu_len ? strlen(LNG(title_cfg)) : menu_len;
 	menu_len = (strlen(LNG(Mount)) + 6) > menu_len ? (strlen(LNG(Mount)) + 6) : menu_len;
@@ -588,8 +578,6 @@ static int menu(const char *path, FILEINFO *file)
 					strcpy(tmp, LNG(Launch_With_Args));
 				else if (i == TITLE_CFG)
 					strcpy(tmp, LNG(title_cfg));
-				else if (i == TIMEMANIP)
-					strcpy(tmp, LNG(time_manip));
 				else if (i == TIMEMANIP_CUSTOM)
 					strcpy(tmp, LNG(Set_Custom_Date));
 
@@ -1566,13 +1554,6 @@ int getFilePath(char *out, int cnfmode)
 					else if (ret == GETSIZE) {
 						submenu_func_GetSize(msg0, path, files);
 					}  //ends GETSIZE
-//#ifdef TMANIP
-					else if (ret == TIMEMANIP) {
-						time_manip(path, &files[browser_sel], msg0);
-						browser_pushed = FALSE;
-						browser_repos = TRUE;  // TEST
-						browser_cd = TRUE;     //TEST
-					}
 					else if (ret == TIMEMANIP_CUSTOM) {
 						ret = time_manip_organize(path, &files[browser_sel], msg0);
 						if (ret != 0)
