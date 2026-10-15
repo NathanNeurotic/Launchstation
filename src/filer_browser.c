@@ -1129,6 +1129,7 @@ int getFilePath(char *out, int cnfmode)
 
 	file_show = 1;
 	file_sort = 1;
+	file_sort_descending = FALSE;
 
 	font_height = getBrowserListFontHeight();
 	rows = getBrowserListRows(path, font_height);
