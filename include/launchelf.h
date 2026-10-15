@@ -539,7 +539,7 @@ char *preloadCNF(char *path);          //loads file into RAM it allocates
 typedef struct
 {
 	char name[MAX_NAME];
-	unsigned char title[32 * 2 + 1];
+	unsigned char title[32 * 2 + 2]; /* optional separator and NUL */
 	sceMcTblGetDir stats;
 } FILEINFO;
 

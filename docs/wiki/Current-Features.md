@@ -11,6 +11,10 @@ This guide reflects the four visible tabs implemented in `src/dash_main.c` and t
 
 **Navigation:** L1/R1 switches tabs. SELECT changes Grid/List/Carousel in Home's Applications library. The separate Apps and Devices internal screen constants are compatibility details, not extra visible top-level tabs.
 
+## Upstream wLaunchELF_R3Z integration (October 15, 2026)
+
+Launchstation selectively incorporates [upstream PR #56](https://github.com/saildot4k/wLaunchELF_R3Z/pull/56) from the **ember-support** development branch. The classic L1 file-browser mode menu allows reverse filename/title/date sorting; memory-card save and PSU titles honor valid two-line `icon.sys` separation; the *Tuna Date action is grouped inside Folder dates and only appears for eligible selected real MC folders. Launchstation's dashboard Files tab already provides independent six-criterion reversible sorting. Existing MMCE, USB, networking, dashboard, and Ember launch paths were **not** replaced by upstream code.
+
 ## Files and app roots
 
 Default app scanning: `mc:/APPS`, `mc:/BOOT`, `mass:/APPS`, `mass:/BOOT`, each one subfolder deep. Adjust under Settings → Home & applications → Application library → Application folders. Other paths can still be browsed/launched from Files.

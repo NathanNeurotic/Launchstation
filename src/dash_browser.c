@@ -1933,7 +1933,7 @@ static void opNewIcon(void)
 //--------------------------------------------------------------
 static int tsChoose(const char *title, const char **labels, int count)
 {
-	static const char *const details[] = {"edit dates yourself", "oldest first by name", "newest first by name", "SAS layout"};
+	static const char *const details[] = {"edit dates yourself", "oldest first by name", "newest first by name", "SAS layout", "set selected MC folder to 2099"};
 	DashMenuItem items[8];
 	int i;
 
@@ -2071,21 +2071,18 @@ static int tsEdit(FilerDateEditor *e)
 
 static const FilerTimestampUi dash_timestamp_ui = {tsChoose, tsProgress, tsEdit};
 
-/* custom = 0: the *Tuna date (2099) on this memory card folder;
- * custom = 1: set or organise the dates of every folder here */
-static void opTimestamps(int custom)
+/* The root-safe *Tuna Date option is nested under Folder dates, alongside
+ * manual editing and automatic ordering, like upstream wLaunchELF_R3Z. */
+static void opTimestamps(void)
 {
 	FILEINFO *f = fb.sel < fb.n ? &fb.files[fb.sel] : NULL;
-	int r = 0;
+	int r;
 
 	if (!prepareOp())
 		return;
 	fb.msg[0] = '\0';
 	filerTimestampUi = &dash_timestamp_ui;
-	if (custom)
-		r = time_manip_organize(fb.dir, f, fb.msg);
-	else if (f != NULL)
-		time_manip(fb.dir, f, fb.msg);
+	r = time_manip_organize(fb.dir, f, fb.msg);
 	filerTimestampUi = NULL;
 	opDone();
 	if (fb.msg[0])
@@ -2258,7 +2255,6 @@ static void actionsMenu(void)
 		F_RECOVER_NEW_MCD,
 		F_IMPORT_TO_MMCE_NEW,
 		F_INSTALL_NEW_MMCE_CARD,
-		F_TUNA,
 		F_DATES,
 		F_SELALL,
 		F_INVERT,
@@ -2344,8 +2340,6 @@ static void actionsMenu(void)
 			    "creates an unused CardN; never replaces or selects existing cards",
 			    0, F_INSTALL_NEW_MMCE_CARD);
 		}
-		if (f != NULL && en[TIMEMANIP])
-			ADD(DI_CLOCK, LNG(time_manip), "2099-12-31", 0, F_TUNA);
 		if (en[TIMEMANIP_CUSTOM])
 			ADD(DI_CLOCK, "Folder dates...", "order the saves", 0, F_DATES);
 		if (f != NULL && !isDir(f) && en[LAUNCH_ELF_ARGS] && !is_elf)
@@ -2449,11 +2443,8 @@ static void actionsMenu(void)
 		case F_INSTALL_NEW_MMCE_CARD:
 			opInstallNewMmceCard();
 			break;
-		case F_TUNA:
-			opTimestamps(0);
-			break;
 		case F_DATES:
-			opTimestamps(1);
+			opTimestamps();
 			break;
 		case F_SELALL:
 			memset(fb.mark, 1, fb.n);
