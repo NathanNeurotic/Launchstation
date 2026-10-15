@@ -319,6 +319,7 @@ enum {
 	TIMESTAMP_ORGANIZE_AZ,
 	TIMESTAMP_ORGANIZE_ZA,
 	TIMESTAMP_ORGANIZE_SAS,
+	TIMESTAMP_ORGANIZE_TUNA,
 	TIMESTAMP_ORGANIZE_COUNT
 };
 
@@ -1170,20 +1171,20 @@ static void drawTimestampProgress(int completed, int total, const char *folder_n
 	drawScr();
 }
 
-void time_manip(const char *path, const FILEINFO *file, char *message)
+static int time_manip(const char *path, const FILEINFO *file, char *message)
 {
 	sceMcStDateTime timestamp;
+	int result;
 
-	timestamp.Resv2 = 0;
-	timestamp.Sec = 59;
-	timestamp.Min = 59;
-	timestamp.Hour = 23;
-	timestamp.Day = 31;
-	timestamp.Month = 12;
-	timestamp.Year = 2099;
+	/* The 2099 Tuna date is valid only for a selected real folder on
+	 * a physical memory-card root, never on HDD/PFS or a save file. */
+	if (!isMemoryCardRootPath(path) || !filerCanSetCustomTimestamp(path, file))
+		return -1;
+	setTunaFolderTimestamp(&timestamp);
 	drawTimestampProgress(0, 1, file->name);
-	setMemoryCardFolderTimestamp(path, file, &timestamp, message);
+	result = setMemoryCardFolderTimestamp(path, file, &timestamp, message);
 	drawTimestampProgress(1, 1, file->name);
+	return result == 0 ? 1 : -1;
 }
 
 int time_manip_custom(const char *path, const FILEINFO *file, char *message)
@@ -1299,14 +1300,18 @@ int time_manip_custom(const char *path, const FILEINFO *file, char *message)
 	return 1;
 }
 
-static int selectTimestampOrganizationMode(void)
+static int selectTimestampOrganizationMode(int allow_tuna)
 {
 	const char *items[TIMESTAMP_ORGANIZE_COUNT] = {
 		LNG(Manual_Edit),
-		"A-Z",
-		"Z-A",
+		"A -> Z",
+		"Z -> A",
 		LNG(SAS_Timestamps),
+		LNG(time_manip),
 	};
+	/* Hide the *Tuna Date command unless a writable memory-card root
+	 * folder is selected; other folder-date tools remain available. */
+	int count = allow_tuna ? TIMESTAMP_ORGANIZE_COUNT : TIMESTAMP_ORGANIZE_TUNA;
 	int selection = TIMESTAMP_ORGANIZE_MANUAL;
 	int event = 1;
 	int post_event = 0;
@@ -1320,16 +1325,16 @@ static int selectTimestampOrganizationMode(void)
 	int y;
 
 	if (filerTimestampUi != NULL && filerTimestampUi->choose != NULL)
-		return filerTimestampUi->choose(LNG(Set_Custom_Date), items, TIMESTAMP_ORGANIZE_COUNT);
+		return filerTimestampUi->choose(LNG(Set_Custom_Date), items, count);
 	label_width = strlen(LNG(Set_Custom_Date));
-	for (i = 0; i < TIMESTAMP_ORGANIZE_COUNT; i++) {
+	for (i = 0; i < count; i++) {
 		if ((int)strlen(items[i]) > label_width)
 			label_width = strlen(items[i]);
 	}
 	popup_x1 = (SCREEN_WIDTH - (label_width + 5) * FONT_WIDTH) / 2;
 	popup_x2 = SCREEN_WIDTH - popup_x1;
-	popup_y1 = (SCREEN_HEIGHT - (TIMESTAMP_ORGANIZE_COUNT + 2) * FONT_HEIGHT) / 2;
-	popup_y2 = popup_y1 + (TIMESTAMP_ORGANIZE_COUNT + 2) * FONT_HEIGHT;
+	popup_y1 = (SCREEN_HEIGHT - (count + 2) * FONT_HEIGHT) / 2;
+	popup_y2 = popup_y1 + (count + 2) * FONT_HEIGHT;
 	x = popup_x1 + FONT_WIDTH;
 	y = popup_y1 + FONT_HEIGHT / 2;
 
@@ -1339,11 +1344,11 @@ static int selectTimestampOrganizationMode(void)
 			if (new_pad & PAD_UP) {
 				selection--;
 				if (selection < 0)
-					selection = TIMESTAMP_ORGANIZE_COUNT - 1;
+					selection = count - 1;
 				event = 1;
 			} else if (new_pad & PAD_DOWN) {
 				selection++;
-				if (selection >= TIMESTAMP_ORGANIZE_COUNT)
+				if (selection >= count)
 					selection = 0;
 				event = 1;
 			} else if ((new_pad & PAD_TRIANGLE) || (!swapKeys && (new_pad & PAD_CROSS)) || (swapKeys && (new_pad & PAD_CIRCLE))) {
@@ -1357,7 +1362,7 @@ static int selectTimestampOrganizationMode(void)
 			drawPopSprite(setting->color[COLOR_BACKGR], popup_x1, popup_y1, popup_x2, popup_y2);
 			drawFrame(popup_x1, popup_y1, popup_x2, popup_y2, setting->color[COLOR_FRAME]);
 			printXY(LNG(Set_Custom_Date), x + FONT_WIDTH, y, setting->color[COLOR_SELECT], TRUE, 0);
-			for (i = 0; i < TIMESTAMP_ORGANIZE_COUNT; i++) {
+			for (i = 0; i < count; i++) {
 				printXY(items[i], x + FONT_WIDTH * 2, y + (i + 1) * FONT_HEIGHT, setting->color[COLOR_TEXT], TRUE, 0);
 			}
 			drawChar(LEFT_CUR, x, y + (selection + 1) * FONT_HEIGHT, setting->color[COLOR_SELECT]);
@@ -1713,11 +1718,13 @@ int time_manip_organize(const char *path, const FILEINFO *file, char *message)
 	if (!filerCanOrganizeFolderTimestamps(path))
 		return -1;
 
-	mode = selectTimestampOrganizationMode();
+	mode = selectTimestampOrganizationMode(isMemoryCardRootPath(path) && filerCanSetCustomTimestamp(path, file));
 	if (mode < 0)
 		return 0;
 	if (mode == TIMESTAMP_ORGANIZE_MANUAL)
 		return time_manip_custom(path, file, message);
+	if (mode == TIMESTAMP_ORGANIZE_TUNA)
+		return time_manip(path, file, message);
 
 	return time_manip_automatic(path, mode, message);
 }
