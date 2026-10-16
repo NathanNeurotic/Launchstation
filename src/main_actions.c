@@ -15,31 +15,11 @@
  * (used by the dashboard to maintain its "recent" list). */
 void (*mainActionLaunchHook)(const char *path) = NULL;
 
-/* The parent owns the GS only until the ELF handoff. Fade its last frame to
- * black before dropping pad/RPC/IOP state, rather than flashing to an opaque
- * clear. No new threads, timers or device calls: drawScr() already presents at
- * VBLANK and supports the dashboard's double-buffered GS. The final two
- * opaque clears below still protect both buffers on exit. */
-static void fadeForExec(void)
-{
-	int frame;
-	if (gsGlobal == NULL)
-		return;
-	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
-	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0, 1, 0, 1, 0), 0);
-	for (frame = 1; frame <= 8; frame++) {
-		gsKit_prim_sprite(gsGlobal, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0,
-		                  GS_SETREG_RGBA(0, 0, 0, (frame * 0x80) / 8));
-		drawScr();
-	}
-	gsGlobal->PrimAlphaEnable = GS_SETTING_OFF;
-}
-
 //CleanUpForExec releases uLE stuff preparatory to launching some other application
 //------------------------------
 static void cleanUpForExecInternal(int end_pad_rpc)
 {
-	fadeForExec();
+	fadeScreenToBlack();
 	dashSoundShutdown(); /* the launch is now committed */
 	clrScr(GS_SETREG_RGBA(0x00, 0x00, 0x00, 0));
 	drawScr();
