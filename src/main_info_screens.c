@@ -74,7 +74,7 @@ void Show_About_uLE(void)
 			PrintPos(-1, hpos, "DS3/DS4 support by Alex Parrado", COLOR_TEXT);
 			PrintPos(-1, hpos, "Thanks to TnA for all his insight and support", COLOR_TEXT);
 			PrintPos(-1, hpos, "Project maintainers:  sp193 & AKuHAK", COLOR_TEXT);
-			PrintPos(-1, hpos, "  ", COLOR_TEXT);
+			PrintPos(-1, hpos, "CF driver reference: mihhru / PS2CF", COLOR_TEXT);
 			PrintPos(-1, hpos, "uLaunchELF Project maintainers:", COLOR_TEXT);
 			PrintPos(-1, hpos, "  Eric Price       (aka: 'E P')", COLOR_TEXT);
 			PrintPos(-1, hpos, "  Ronald Andersson (aka: 'dlanor')", COLOR_TEXT);

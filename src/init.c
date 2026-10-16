@@ -1,5 +1,6 @@
 #include "launchelf.h"
 #include "init.h"
+#include "pccf_control.h"
 #include <unistd.h>
 #include <iopcontrol_special.h>
 
@@ -180,6 +181,41 @@ static u8 have_dvrfile = 0;
 //Use this to determine whether code that loads a device's driver(s) can print onto the screen.
 static u8 is_early_init = 1;
 static u8 done_setupPowerOff = 0;
+/* Reservation covers probing and a stopped resident driver. Only an actual
+ * IOP reset releases it: BDM can retain pointers into the resident module. */
+static int pccf_bus_owned = 0;
+static int pccf_loaded = 0;
+#ifdef EXFAT
+IMPORT_BIN2C(pccf_irx);
+#endif
+
+int pcCardCfOwnsBus(void) { return pccf_bus_owned; }
+
+int isPcCardCfPath(const char *path)
+{
+    if (!path || strncmp(path, "cf", 2)) return 0;
+    path += 2;
+    while (*path >= '0' && *path <= '9') ++path;
+    return *path == ':';
+}
+
+int isPcCardCfEligible(void)
+{
+    /* Early Japanese retail ROMs are an eligibility hint. Actual revision,
+       card presence and fixed-disk CIS checks remain in the IOP driver. */
+    if (console_is_PSX || strlen(ROMVER_data) < 6 || ROMVER_data[4] != 'J' || ROMVER_data[5] != 'C')
+        return 0;
+    return !strncmp(ROMVER_data, "0100", 4) || !strncmp(ROMVER_data, "0101", 4) ||
+           !strncmp(ROMVER_data, "0110", 4) || !strncmp(ROMVER_data, "0120", 4);
+}
+
+int shutdownPcCardCf(void)
+{
+    if (!pccf_loaded) return 0;
+    /* OFF cannot be used as unmount/release or followed by a same-session
+       rescan. Keep ownership latched even when the socket is powered off. */
+    return fileXioDevctl(PCCF_CONTROL_DEVICE, PCCF_CONTROL_OFF, NULL, 0, NULL, 0);
+}
 
 static u8 ps2kbd_opened = 0;
 
@@ -381,6 +417,7 @@ static void load_ps2dev9(void)
 	int desired_variant = DEV9_VARIANT_CURRENT;
 	const void *module = ps2dev9_irx;
 	int module_size = size_ps2dev9_irx;
+	if (pcCardCfOwnsBus()) return;
 
 #ifdef ETH
 	if (setting != NULL && setting->legacy_net_drivers) {
@@ -452,6 +489,8 @@ static void idleDev9StorageForPoweroff(void)
 //---------------------------------------------------------------------------
 static void idleDev9StorageBeforeReset(void)
 {
+	if (shutdownPcCardCf() < 0)
+		DPRINTF(" [PCCF]: shutdown failed before IOP reset\n");
 	if (ps2dev9_loaded) {
 		int dev9_ret = -1;
 		int retry = 20;
@@ -497,6 +536,7 @@ static void stopUsbMassForPoweroff(void)
 static void load_ps2ip(void)
 {
 	int ret, ID __attribute__((unused));
+	if (pcCardCfOwnsBus()) return;
 
 #if defined(ETH) && defined(UDPFS)
 	switchNetworkStack(NETWORK_STACK_ETH);
@@ -678,6 +718,7 @@ int prepareExploitSignerIop(void)
 	return 0;
 #else
 	int ret;
+	if (shutdownPcCardCf() < 0) return 0;
 
 	if (have_exploit_signer_iop) {
 		ensureCoreIoStackReady();
@@ -713,6 +754,7 @@ int prepareExploitSignerIop(void)
 	}
 	while (!SifIopSync()) {
 	};
+	pccf_bus_owned = pccf_loaded = 0;
 	SifInitRpc(0);
 	SifLoadFileInit();
 	initsbv_patches();
@@ -760,6 +802,7 @@ static void load_pflash(void)
 void load_ps2host(void)
 {
 	int ret, ID __attribute__((unused));
+	if (pcCardCfOwnsBus()) return;
 
 #if defined(ETH) && defined(UDPFS)
 	switchNetworkStack(NETWORK_STACK_ETH);
@@ -788,6 +831,7 @@ static void load_udpfs_stack(void)
 {
 	int ret, ID __attribute__((unused));
 	char ministack_arg[32];
+	if (pcCardCfOwnsBus()) return;
 
 #if defined(ETH) && defined(UDPFS)
 	switchNetworkStack(NETWORK_STACK_UDPFS);
@@ -1697,12 +1741,14 @@ int prepareEmberUsbHandoffIop(const char *ember_path, const char *game_image,
 	return snprintf(resolved, resolved_size, "%s", ember_path) < (int)resolved_size;
 #else
 	DPRINTF("[EMBER USB] launcHER-style storage reset for %s\n", probe);
+	if (shutdownPcCardCf() < 0) return 0;
 	fileXioExit();
 	SifLoadFileExit();
 	resetUsbHostControllerBeforeIopReset();
 	SifInitRpc(0);
 	while (!SifIopReset("", 0)) {}
 	while (!SifIopSync()) {}
+	pccf_bus_owned = pccf_loaded = 0;
 
 	SifInitRpc(0);
 	SifLoadFileInit();
@@ -2036,6 +2082,24 @@ static int loadBdmCoreModules(void)
 	return (have_bdm && have_bdmfs);
 }
 
+int loadPcCardCfModules(void)
+{
+    int id, ret;
+    if (pccf_loaded) return 1;
+    if (pccf_bus_owned || boot_safe_mode || !isPcCardCfEligible() || have_ps2dev9 || ps2dev9_loaded)
+        return 0;
+    /* Reserve before registering poweroff: ordinary setupPowerOff loads
+       DEV9, which must never happen during a CF probe. */
+    pccf_bus_owned = 1;
+    ensureCoreIoStackReady();
+    if (!loadBdmCoreModules()) { pccf_bus_owned = 0; return 0; }
+    setupPowerOff();
+    id = SifExecModuleBuffer(pccf_irx, size_pccf_irx, 0, NULL, &ret);
+    pccf_loaded = (id >= 0 && ret == 0);
+    if (!pccf_loaded) pccf_bus_owned = 0;
+    return pccf_loaded;
+}
+
 static void pauseAfterAtaBlockDriverLoad(void)
 {
 	/* Keep a brief settle window before loading/using APA stack modules. */
@@ -2069,6 +2133,7 @@ static int loadAtaBlockDriver(void)
 int loadAtaModules(void)
 {
 	int needs_feedback;
+	if (pcCardCfOwnsBus()) return 0;
 
 	if ((block_storage_stack_mode & BLOCK_STACK_ATA) &&
 	    have_ata_bd && ps2dev9_loaded && have_bdm && have_bdmfs)
@@ -2092,6 +2157,8 @@ int loadAtaModules(void)
 	}
 	return have_ata_bd;
 }
+#else
+int loadPcCardCfModules(void) { return 0; }
 #endif
 
 void loadHdlInfoModule(void)
@@ -2111,6 +2178,8 @@ void loadHdlInfoModule(void)
 //---------------------------------------------------------------------------
 void closeAllAndPoweroff(void)
 {
+	/* CF-only stop first; do not load modules from the callback thread. */
+	shutdownPcCardCf();
 	if (ps2dev9_loaded) {
 		int dev9_ret = -1;
 		int retry = 100;
@@ -2177,7 +2246,7 @@ void setupPowerOff(void)
 		}
 		poweroffInit();
 		poweroffSetCallback((void *)poweroffHandler, NULL);
-		load_ps2dev9();
+		if (!pcCardCfOwnsBus()) load_ps2dev9();
 		done_setupPowerOff = 1;
 	}
 }
@@ -2186,6 +2255,7 @@ void setupPowerOff(void)
 //---------------------------------------------------------------------------
 int loadHddModules(void)
 {
+	if (pcCardCfOwnsBus()) return 0;
 #ifdef DVRP
 	switchPsxHddDriverStack(0);
 #endif
@@ -2264,6 +2334,7 @@ int loadDVRPHddModules(void)
 #ifdef ETH
 void loadNetModules(void)
 {
+	if (pcCardCfOwnsBus()) return;
 	ensureCoreIoStackReady();
 	if (!have_NetModules) {
 		showLoadingModulesMsg("ps2net");
@@ -2286,6 +2357,7 @@ int isFtpNetworkReady(void)
  * Unlike loadNetModules(), this does not start FTP/netfs services. */
 int ensureDashboardIpNetworkReady(void)
 {
+	if (pcCardCfOwnsBus()) return 0;
 	ensureCoreIoStackReady();
 	showLoadingModulesMsg("dashboard network");
 	getIpConfig();
@@ -2430,6 +2502,7 @@ void Reset()
 	};
 	while (!SifIopSync()) {
 	};
+	pccf_bus_owned = pccf_loaded = 0;
 	SifInitRpc(0);
 #endif
 	SifLoadFileInit();

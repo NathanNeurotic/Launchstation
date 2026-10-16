@@ -26,6 +26,8 @@ jobs:
 
       - name: Test Settings sessions, navigation and theme compatibility
         run: |
+          python3 tests/test_pccf.py
+          python3 tests/test_pccf_owner.py
           python3 tests/test_settings_save_prompt.py
           python3 tests/test_settings_navigation.py
           python3 tests/test_zack_feedback.py
@@ -163,6 +165,9 @@ jobs:
           WLE_GOOGLE_CLIENT_SECRET: ${{ secrets.WLE_GOOGLE_CLIENT_SECRET }}
         run: |
           python3 scripts/gen_cloud_client.py
+
+      - name: Build isolated PC CARD CF driver
+        run: ps2build build -c iop/pccf/ps2.yaml
 
       - name: Build Launchstation with ps2build
         run: |
