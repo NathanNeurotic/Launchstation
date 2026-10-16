@@ -113,6 +113,8 @@ void updateScreenMode(void)
 	}
 
 	if (New_TV_mode != TV_mode) {
+		/* Keep the outgoing picture from flashing while GS changes timings. */
+		fadeScreenToBlack();
 		setGS_flag = 1;
 		TV_mode = New_TV_mode;
 
