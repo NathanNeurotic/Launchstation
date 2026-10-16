@@ -71,8 +71,10 @@ Validation:
   checks, ATA IDENTIFY/transfers, LBA48, flush/read-back errors, offline latching,
   real MMIO power/reset/restoration with modeled registers, and module ownership.
 - CI now runs these host harnesses and compiles the standalone module.
-- These are host and target-compilation results. No full application integration,
-  CI result, emulator run or early-console acceptance is claimed.
+- GitHub Actions run 38838799371 passed on cdcafb1d1fd097af55c111986ba95f11fbbc9385,
+  including the host harnesses, standalone driver and standard/DS34 builds.
+- Full application integration, emulator runtime and early-console acceptance
+  remain unverified.
 
 The L0/L1 checkboxes remain open: no EE eligibility/owner service is wired yet,
 and standard/DS34 embedding is not complete. No CF driver is auto-loaded and no

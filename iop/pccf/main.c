@@ -24,7 +24,7 @@ static int cf_read(struct block_device *bd, u64 sector, void *buffer, u16 count)
     unsigned int remaining=count, take; unsigned char *out=buffer; int rc=count;
     (void)bd;
     if (!buffer || !count || sector>=ata.sectors || count>ata.sectors-sector) return -EINVAL;
-    WaitSema(io_lock);
+    if (WaitSema(io_lock) < 0) return -EIO;
     if (!ata.ready || !pccf_hw_present()) { ata.ready=0; rc=-EIO; goto done; }
     while (remaining) {
         take=remaining>64 ? 64 : remaining;
@@ -42,7 +42,7 @@ static int cf_write(struct block_device *bd, u64 sector, const void *buffer, u16
     unsigned int remaining=count, take; const unsigned char *in=buffer; int rc=count;
     (void)bd;
     if (!buffer || !count || sector>=ata.sectors || count>ata.sectors-sector) return -EINVAL;
-    WaitSema(io_lock);
+    if (WaitSema(io_lock) < 0) return -EIO;
     if (!ata.ready || !pccf_hw_present()) { ata.ready=0; rc=-EIO; goto done; }
     while (remaining) {
         take=remaining>64 ? 64 : remaining;
@@ -57,7 +57,9 @@ done:
 static void cf_flush(struct block_device *bd) { (void)bd; }
 static int cf_stop(struct block_device *bd)
 {
-    (void)bd; WaitSema(io_lock); ata.ready=0; pccf_hw_stop(); SignalSema(io_lock); return 0;
+    (void)bd;
+    if (WaitSema(io_lock) < 0) return -EIO;
+    ata.ready=0; pccf_hw_stop(); SignalSema(io_lock); return 0;
 }
 
 int _start(int argc, char **argv)
