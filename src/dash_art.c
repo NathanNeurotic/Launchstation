@@ -489,6 +489,7 @@ typedef struct
 {
 	char path[DASH_PATH_MAX];
 	GSTEXTURE tex;
+	int max_w, max_h; /* decode bounds are part of the cache identity */
 	u8 state;
 	u16 gen; /* bumped when the slot is freed, so a stale load is dropped */
 } ThemeSlot;
@@ -553,7 +554,8 @@ GSTEXTURE *dashThemeTextureFile(const char *path, int max_w, int max_h)
 	if (path == NULL || path[0] == '\0' || strlen(path) >= DASH_PATH_MAX)
 		return NULL;
 	for (i = 0; i < THEME_SLOTS; i++) {
-		if (theme_slots[i].state != TS_EMPTY && !strcmp(theme_slots[i].path, path))
+		if (theme_slots[i].state != TS_EMPTY && !strcmp(theme_slots[i].path, path) &&
+		    theme_slots[i].max_w == max_w && theme_slots[i].max_h == max_h)
 			return (theme_slots[i].state == TS_LOADED) ? &theme_slots[i].tex : NULL;
 		if (theme_slots[i].state == TS_EMPTY && free_i < 0)
 			free_i = i;
@@ -568,6 +570,8 @@ GSTEXTURE *dashThemeTextureFile(const char *path, int max_w, int max_h)
 		return NULL;
 	memset(j, 0, sizeof(*j));
 	dashStrCopy(theme_slots[free_i].path, path, sizeof(theme_slots[free_i].path));
+	theme_slots[free_i].max_w = max_w;
+	theme_slots[free_i].max_h = max_h;
 	theme_slots[free_i].state = TS_LOADING;
 	j->slot = free_i;
 	j->gen = theme_slots[free_i].gen;

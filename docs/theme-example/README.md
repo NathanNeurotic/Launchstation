@@ -23,13 +23,13 @@ To use only your own wallpaper without a theme folder, choose
 ## Create your own
 
 - **4:3** is the actual wallpaper display ratio.
-- Use **320 × 240 PNG** for the final file, or design at **640 × 480**
-  and downsample before copying it to the console.
+- Use **640 × 480 PNG** for detailed artwork, or **320 × 240 PNG**
+  for the lower-memory option demonstrated by this example.
 - Keep essential artwork and lettering away from the outside edges: CRT
   overscan and the theme's foreground panels/hints vary.
 - PNG files up to **1.5 MB**, source size up to **2048 × 2048**, are
-  supported, but the PS2 decodes theme wallpaper to fit **320 × 256**
-  (a 4:3 source becomes at most **320 × 240**).
+  supported. The PS2 decodes theme wallpaper to fit **640 × 512**
+  (a 4:3 source can retain **640 × 480**).
 - Wider pictures like 16:9 are center-cropped left and right to 4:3.
   320 × 256 and 320 × 224 are supported inputs but aren't 4:3.
 - Use a dim background for readable menus and appropriate text contrast.

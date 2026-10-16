@@ -376,7 +376,7 @@ static void drawCover(GSTEXTURE *tex, DashColor tint)
 
 static void sceneImage(float t, int fx)
 {
-	GSTEXTURE *tex = dashThemeTextureFile(dashTheme.image, 320, 256);
+	GSTEXTURE *tex = dashThemeTextureFile(dashTheme.image, 640, 512);
 
 	if (tex == NULL) {
 		dashBgSceneGradient(t, fx);

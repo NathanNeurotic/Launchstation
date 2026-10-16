@@ -251,6 +251,8 @@ void Config_Screen(void)
 					tv_mode_value = "VGA";
 				else if (setting->TV_mode == TV_mode_480P)
 					tv_mode_value = "Progressive";
+				else if (setting->TV_mode == TV_mode_576P)
+					tv_mode_value = "576p";
 				else
 					tv_mode_value = "AUTO";
 				configFormatLabelValueAligned(c, sizeof(c), LNG(TV_mode), tv_mode_value, bool_label_width);
