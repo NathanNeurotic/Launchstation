@@ -62,6 +62,8 @@ static int cf_stop(struct block_device *bd)
     ata.ready=0; pccf_hw_stop(); SignalSema(io_lock); return 0;
 }
 
+#include "pccf_control.inc"
+
 int _start(int argc, char **argv)
 {
     iop_sema_t sema; int rc;
@@ -93,6 +95,12 @@ int _start(int argc, char **argv)
     device.name="cf"; device.path="cf"; device.devNr=0; device.parNr=0;
     device.sectorSize=512; device.sectorCount=ata.sectors;
     device.read=cf_read; device.write=cf_write; device.flush=cf_flush; device.stop=cf_stop;
+    /* Do not register with BDM unless the owner can later be stopped by EE.
+       A duplicate endpoint is never removed or replaced. */
+    if (iomanX_AddDrv(&control_device) < 0) {
+        ata.ready=0; pccf_hw_stop(); DeleteSema(io_lock); io_lock=-1;
+        return MODULE_NO_RESIDENT_END;
+    }
     bdm_connect_bd(&device);
     return MODULE_RESIDENT_END;
 }

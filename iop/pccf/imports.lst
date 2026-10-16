@@ -4,6 +4,9 @@ loadcore_IMPORTS_end
 bdm_IMPORTS_start
 I_bdm_connect_bd
 bdm_IMPORTS_end
+iomanX_IMPORTS_start
+I_iomanX_AddDrv
+iomanX_IMPORTS_end
 sysclib_IMPORTS_start
 I_memcpy
 I_memset

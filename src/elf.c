@@ -738,6 +738,9 @@ static void RunLoaderElfInternal(char *filename, char *party, const char *select
 	int dvr_pfs_ix = -1;
 	char dvr_pfs_name[10] = "dvr_pfs0:";
 #endif
+	/* Direct CF executable handoff needs a separate loader backend. */
+	if (isPcCardCfPath(filename) || isPcCardCfPath(selected_path)) return;
+	if (shutdownPcCardCf() < 0) return;
 
 	if (selected_path != NULL && selected_path[0] != '\0')
 		handoff_path = normalizeExecArg0Path(selected_path, exec_arg0, sizeof(exec_arg0));

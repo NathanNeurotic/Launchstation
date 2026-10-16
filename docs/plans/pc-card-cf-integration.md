@@ -1,9 +1,9 @@
 # Plan: early PS2 PC CARD CompactFlash support (Launchstation)
 
-**Status:** Driver foundation implemented; runtime integration pending. **Scope:** Launchstation native Files and Devices integration; independent from RiptOPL game loader. **Target base:** `master`.
+**Status:** Driver embedded; EE ownership/probe service and CF-only shutdown implemented; filesystem/UI integration pending. **Scope:** Launchstation native Files and Devices integration; independent from RiptOPL game loader. **Target base:** `master`.
 
 ## Purpose and non-goals
-Plan-only draft PR for native CompactFlash/SD-to-CF access via the *original PS2 PC CARD slot*, based on [mihhru/PS2CF 1.0](https://github.com/mihhru/PS2CF). Other agents should add **implementation commits to this same branch/PR**, updating this checklist as evidence accumulates. **No production code is implemented by this initial commit**. No firmware changes, memory-card image installation, FMCB packaging, blanket storage replacement, or existing save modification are in scope.
+Implementation PR for native CompactFlash/SD-to-CF access via the *original PS2 PC CARD slot*, based on [mihhru/PS2CF 1.0](https://github.com/mihhru/PS2CF). Continue implementation on this same branch/PR, updating this checklist as evidence accumulates. The original plan-only commit has been followed by production driver and lifecycle commits. No firmware changes, memory-card image installation, FMCB packaging, blanket storage replacement, or existing save modification are in scope.
 
 Target hardware: SCPH-10000 (PS2CF hardware tested), SCPH-15000 / SCPH-18000 (targeted but unconfirmed separately). Exclude expansion-bay PS2, Slim, and DESR unless separate hardware evidence establishes compatibility. CF/ATA through a compatible PCMCIA Type II adapter, optionally MicroSD via SD-to-CF bridge. Supported storage filesystem goal: MBR FAT32/exFAT, ordinary OPL/launcher file semantics. Hardware/bridge/card combinations remain unverified until independently tested.
 
@@ -27,7 +27,7 @@ Target hardware: SCPH-10000 (PS2CF hardware tested), SCPH-15000 / SCPH-18000 (ta
 - Keep PS2CF author credited in code, documentation, releases, and relevant GUI credit screens.
 
 ## Agent handoff discipline
-- Continue this branch; use one draft PR per repository, not a PR per subfeature. Coordinate the shared low-level driver ABI and lifecycle with the companion PR in the other repository without coupling release schedules.
+- Continue this branch; use one implementation PR per repository, not a PR per subfeature. Coordinate the shared low-level driver ABI and lifecycle with the companion PR in the other repository without coupling release schedules.
 - Track implementation commits and host test evidence in this plan; state explicitly what is modeled, what was run on PCSX2, and what requires real early-PS2 hardware.
 - Keep unrelated regressions and refactors out. Do not merge or publish CF compatibility claims without a review of conflicts, successful builds, and actual hardware evidence.
 
@@ -43,8 +43,8 @@ Target hardware: SCPH-10000 (PS2CF hardware tested), SCPH-15000 / SCPH-18000 (ta
 - Docs: `README.md`, special-hardware docs page, dashboard/storage docs, wiki if used, release notes, credits; distinguish supported/verified hardware, usable filesystems, supported operations, unsupported game launch, and safe-removal rules.
 
 ## Work stages and acceptance
-- [ ] L0: Record current driver ownership and device-lifecycle wiring; create host fixtures for ROMVER + DEV9 family (PCMCIA 0x20, expansion-bay 0x30, absent/unknown) and network-card rejection. No register writes during classification.
-- [ ] L1: Port/import minimum licensed CF hardware + ATA code and build isolated on-demand module(s). Reuse PS2CF read timings/profile validation, bounds checks, fallbacks, LBA48 and conservative writes/flush/verify without replacing existing BDM drivers. Build standard and DualShock configurations.
+- [x] L0: Record current driver ownership and device-lifecycle wiring; create host fixtures for ROMVER + DEV9 family (PCMCIA 0x20, expansion-bay 0x30, absent/unknown) and network-card rejection. No register writes during classification.
+- [x] L1: Port/import minimum licensed CF hardware + ATA code and build isolated on-demand module(s). Reuse PS2CF read timings/profile validation, bounds checks, fallbacks, LBA48 and conservative writes/flush/verify without replacing existing BDM drivers. Build standard and DualShock configurations.
 - [ ] L2: Implement correct IOP/EE `cf:/` mount registration/unmount + failure cleanup + safe recovery semantics; no early init on unrelated consoles. Verify FAT32/exFAT and >4-GiB read/copy, file enumeration, write/read-back, interrupted write, missing/removed card.
 - [ ] L3: Integrate Files/Devices, icons/labels and manual refresh, error states, path mapping; ensure no false direct ELF or Neutrino/Ember claims. Keep Settings > Storage & devices coherent.
 - [ ] L4: Verify zero regression to USB (single and dual USB), MMCE, MX4SIO, internal ATA/APA, iLink, UDPFS, Ethernet/FTP, DESR/xfrom and Deckard visibility; PS2CF ownership conflicts must fail closed. Verify existing safe-mode boot remains functional.
@@ -76,11 +76,48 @@ Validation:
 - Full application integration, emulator runtime and early-console acceptance
   remain unverified.
 
-The L0/L1 checkboxes remain open: no EE eligibility/owner service is wired yet,
-and standard/DS34 embedding is not complete. No CF driver is auto-loaded and no
-Files/Devices entry is advertised by this foundation commit. Remaining stages
-L2-L5 retain their original scope, including FAT32/exFAT filesystem acceptance,
-manual rescan, handle invalidation, safe removal, and cross-device regression.
+## Ownership and embedding checkpoint (2026-10-16)
+
+L0/L1 are implemented and locally validated. Both application variants embed
+`pccf.irx`. The on-demand EE service checks cached early Japanese retail ROM
+hints, rejects DESR/debug/unknown ROMs and safe mode, reserves the slot before
+poweroff setup, and rejects resident DEV9 before probing. The IOP independently
+checks its library registry, hardware revision and fixed-disk CIS profile.
+The service currently has no boot/UI caller: CF remains unadvertised.
+
+`pccfctl:` is a separate control endpoint, not a filesystem. STATUS returns a
+versioned 16-byte record; OFF serializes with ATA transfers, latches the driver
+offline and restores the saved PC CARD registers. The endpoint cannot be
+unloaded while BDM retains module pointers. Registration failure powers down
+only this driver's hardware and never replaces an existing endpoint.
+
+DEV9, ATA/HDD and network loaders reject CF ownership before stack switches.
+Poweroff setup registers its callback without loading DEV9 during a CF claim.
+Reset, signer and Ember paths request CF shutdown before IOP teardown; generic
+ELF handoff also stops CF and refuses CF source paths (including numbered
+prefixes). A stopped resident module retains ownership. Only successful
+`SifIopSync()` after an actual reboot clears it; ordinary state clearing or a
+failed signer reboot cannot release the reservation. Normal Reset retains its
+existing best-effort policy if the shutdown RPC reports an error; signer,
+Ember and ELF handoffs abort on that error. Physical-console shutdown behavior
+is not validated.
+
+Validation: all 79 workflow host scripts passed locally, with the release
+workflow's Bash syntax-only check run separately using native Git Bash outside
+the sandbox. Production-source EE fixtures cover eligibility, safe mode,
+DEV9 rejection, reservation before poweroff, failed probe rollback, shutdown
+failure and retained ownership. IOP fixtures cover status ABI, invalid units
+and buffer lengths, registration failure, semaphore errors, offline latching
+and repeated OFF. Standard and DS34 full GCC builds linked and packed with
+ps2build v2026.10.13 and the matching Mbed TLS 3.6.7 cache. These do not prove
+CF filesystem runtime or console compatibility; exact-commit CI is separate.
+
+L2-L5 remain open. No CF filesystem unmount/disconnect/rescan is implemented.
+The shared BDM reference mounts asynchronously and disconnects by mutating
+mount records directly; mount-worker coordination and stale filesystem handles
+must be resolved before exposing refresh or writes through Files. OFF is not
+safe removal, does not invalidate filesystem/cache state and must not be
+followed by a same-session re-probe.
 
 Confirmed integration boundaries to resolve next:
 - `setupPowerOff()` in `src/init.c` calls `load_ps2dev9()`. A CF owner must register

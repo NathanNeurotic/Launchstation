@@ -7,4 +7,4 @@ targets:
     imports_lst: imports.lst
     defines: [PCCF_SETTLE_US=1000]
     cflags: [-Wall, -fno-strict-aliasing]
-    headers: [bdm, loadcore, stdio, sysclib, threadman]
+    headers: [bdm, iomanx, loadcore, stdio, sysclib, threadman]
