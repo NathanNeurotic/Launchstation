@@ -87,6 +87,7 @@ jobs:
           python3 tests/test_console_region.py
           python3 tests/test_selector_centering.py
           python3 tests/test_zack_round3.py
+          python3 tests/test_zack_quickwins.py
           python3 tests/test_mmce_protocol.py
           python3 tests/test_mmce_upstream_contract.py
           python3 tests/test_mmce_restore_txn_model.py

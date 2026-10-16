@@ -88,7 +88,7 @@ for color in colors:
     code += f"#define {color} ((DashColor){{255,255,255,255}})\n"
 for draw in ("modalBackdrop", "dashGfxPushAlpha", "dashGfxPushOffset", "modalPanel",
              "dashTextS", "dashTextFit", "dashTextScrollTimed", "dashTextScroll", "dashGfxScissor", "dashDrawSelection",
-             "dashIcon", "dashTextRight", "dashGfxScissorReset", "dashDrawScrollbar",
+             "dashIcon", "drawButton", "dashTextRight", "dashGfxScissorReset", "dashDrawScrollbar",
              "modalHintRow", "dashGfxPopOffset", "dashGfxPopAlpha", "dashGfxBlend",
              "dashGlow", "dashTextWrap", "dashPanel", "dashPanelBorder", "dashTextCenter"):
     code += f"#define {draw}(...) ((void)0)\n"
