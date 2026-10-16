@@ -205,9 +205,9 @@ static float drawButton(float x, float y, int icon, const char *key)
 			dashTheme.corner = DASH_CORNER_SOFT;
 			/* Theme-derived badges instead of hard-coded navy/white tiles. */
 			dashPanelGradV(x, y, w, d, 6.0f,
-			               dashColorA(DASH_C_PANEL_HI, 0.80f),
-			               dashColorA(DASH_C_PANEL, 0.80f));
-			dashPanelBorder(x, y, w, d, 6.0f, dashColorA(DASH_C_BORDER, 0.75f));
+			               DC(30, 35, 46, 230),
+			               DC(18, 22, 30, 230));
+			dashPanelBorder(x, y, w, d, 6.0f, DC(210, 220, 240, 120));
 		}
 		dashTheme.corner = keep;
 		dashTextS(x + (w - tw) * 0.5f, y + 2.5f, key, DASH_FS_CAPTION, DASH_C_TEXT); /* caps centred in the badge */
@@ -246,7 +246,7 @@ void dashDrawHints(const DashHint *hints, int n)
 		x += drawButton(x, y, hints[i].button, hints[i].key) + 8.0f;
 		/* x-height centre (y + 16 * scale) about 1 px under the 22 px button's
 		 * centre, so mixed-case labels read as centred on the button */
-		x = dashTextS(x, y + 1.5f, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT2) + 24.0f;
+		x = dashTextS(x, y + 1.5f, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT) + 24.0f;
 	}
 }
 
@@ -965,10 +965,16 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 				dashPanelBorder(fx, by, bw, 34, 12, dashColorA(DASH_C_ACCENT, 0.8f));
 			} else
 				dashDrawSelection(fx, by, bw, 34, 12, 1.0f);
-			dashIcon(dashOkIcon(), bx0 + 12, by + 8, 18, sel == 0 ? DASH_C_TEXT : DASH_C_TEXT3);
+			/* Confirmation actions use exactly the same sized glyph/badge
+			 * renderer as the dashboard footer and modal hints (#158). */
+			dashGfxPushAlpha(sel == 0 ? 1.0f : 0.55f);
+			drawButton(bx0 + 12, by + 6, dashOkIcon(), NULL);
+			dashGfxPopAlpha();
 			dashTextCenter(bx0 + bw * 0.5f + 10, by + 10.0f, ok_label, DASH_FS_BODY * 0.9f, dashItemColor(sel == 0));
 			if (cancel_label != NULL) {
-				dashIcon(dashBackIcon(), bx1 + 12, by + 8, 18, sel == 1 ? DASH_C_TEXT : DASH_C_TEXT3);
+				dashGfxPushAlpha(sel == 1 ? 1.0f : 0.55f);
+				drawButton(bx1 + 12, by + 6, dashBackIcon(), NULL);
+				dashGfxPopAlpha();
 				dashTextCenter(bx1 + bw * 0.5f + 10, by + 10.0f, cancel_label, DASH_FS_BODY * 0.9f, dashItemColor(sel == 1));
 			}
 		}

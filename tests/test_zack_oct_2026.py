@@ -34,8 +34,8 @@ for name in ("CROSS", "CIRCLE", "SQUARE", "TRIANGLE", "UP", "DOWN",
              "L1", "L2", "L3", "R1", "R2", "R3"):
     assert f"case DI_BTN_{name}:" in icons, name
 assert "dashCfg.icon_backing" in icons
-assert "if (id > DI_PAD_BADGE && id <= DI_BTN_R3)" in icons
-assert "DashColor badge = dashColorMix(" in icons
+assert "if ((id > DI_PAD_BADGE && id <= DI_BTN_R3) || id == DI_DPAD_UD)" in icons
+assert "DashColor badge = DC(18, 22, 30, 230)" in icons
 assert "initPadTiles" not in icons and "pad_png_ready" not in icons
 assert "dashIconsPadPng" not in ui + icons + header
 assert "icon_cross_png.o" not in make

@@ -14,6 +14,7 @@
 
 | Project or contributor | Evidence in this repository | Upstream / license information | Role |
 | --- | --- | --- | --- |
+| [PS2CF](https://github.com/mihhru/PS2CF) / [mihhru](https://github.com/mihhru) | `iop/pccf/`, `tests/test_pccf*`; pinned origin in `iop/pccf/VENDORED.md` | Original component notices retained; PS2SDK-derived hardware code AFL-2.0, bundled `iop/pccf/PS2SDK_LICENSE.txt` | Isolated early-PS2 CF driver foundation; application/runtime integration pending |
 | PS2SDK / PS2Dev | `iop/vmcman/`, `iop/ps2hdd_osd/` and EE/IOP build inputs | [ps2dev/ps2sdk](https://github.com/ps2dev/ps2sdk); inspect the specific upstream license and local source headers | Local variants and build dependency |
 | MMCEMAN / MMCEDRV | `iop/mmceman/`, `iop/__precompiled/mmceman.irx` | [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman) (MIT in upstream repo); upstream acknowledges Wisi and Maximus32 | MMCE filesystem, protocol and GameID foundations |
 | RiptOPL USB driver | `iop/usbd-ra/` | [NathanNeurotic/Open-PS2-Loader](https://github.com/NathanNeurotic/Open-PS2-Loader); source review needed for inherited notices | Updated usbd-ra imported in USB stability work |

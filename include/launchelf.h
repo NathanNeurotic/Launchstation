@@ -521,6 +521,7 @@ enum TV_mode {
 	TV_mode_PAL,
 	TV_mode_VGA,
 	TV_mode_480P,
+	TV_mode_576P, /* append: preserve saved IDs of existing modes */
 
 	TV_mode_COUNT
 };

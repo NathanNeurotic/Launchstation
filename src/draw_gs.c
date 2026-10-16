@@ -14,6 +14,13 @@ static void applyGSParams(void)
 			gsGlobal->Field = GS_FRAME;
 			Menu_end_y = Menu_start_y + 22 * FONT_HEIGHT;
 			break;
+		case GS_MODE_DTV_576P:
+			SCREEN_WIDTH = 640;
+			SCREEN_HEIGHT = 512;
+			gsGlobal->Interlace = GS_NONINTERLACED;
+			gsGlobal->Field = GS_FRAME;
+			Menu_end_y = Menu_start_y + 26 * FONT_HEIGHT;
+			break;
 		case GS_MODE_PAL:
 			SCREEN_WIDTH = 640;
 			SCREEN_HEIGHT = 512;
@@ -66,6 +73,9 @@ void setupGS(void)
 	switch (New_TV_mode) {
 		case TV_mode_PAL:
 			gsGlobal->Mode = GS_MODE_PAL;
+			break;
+		case TV_mode_576P:
+			gsGlobal->Mode = GS_MODE_DTV_576P;
 			break;
 		case TV_mode_480P:
 			gsGlobal->Mode = GS_MODE_DTV_480P;
@@ -121,6 +131,9 @@ void updateScreenMode(void)
 		switch (New_TV_mode) {
 			case TV_mode_PAL:
 				gsGlobal->Mode = GS_MODE_PAL;
+				break;
+			case TV_mode_576P:
+				gsGlobal->Mode = GS_MODE_DTV_576P;
 				break;
 			case TV_mode_480P:
 				gsGlobal->Mode = GS_MODE_DTV_480P;

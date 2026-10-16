@@ -33,6 +33,14 @@ int prepareExploitSignerIop(void);
 int isPathDeviceStackLoaded(const char *path);
 int isUsbMassStackLoaded(void);
 
+/* Driver ownership only; a successful probe does not prove a mounted volume.
+ * No automatic startup or Files/Devices advertisement uses these yet. */
+int isPcCardCfEligible(void);
+int pcCardCfOwnsBus(void);
+int isPcCardCfPath(const char *path);
+int loadPcCardCfModules(void);
+int shutdownPcCardCf(void);
+
 /* Rebuild the USB storage IOP for Ember using the launcHER module order.
  * PADMAN is deliberately omitted; Ember owns pad initialization. */
 int prepareEmberUsbHandoffIop(const char *ember_path, const char *game_image,

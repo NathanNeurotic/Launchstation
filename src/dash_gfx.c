@@ -169,6 +169,18 @@ float dashGfxScaleY(void)
 	return g_sy;
 }
 
+/* Align text translations in physical framebuffer coordinates, after modal
+ * offsets and PAL scaling. In interlaced FIELD mode, both fields must keep
+ * the same line-pair phase. Preserve progressive subpixel animation. */
+float dashGfxTextY(float y)
+{
+	float physical;
+	if (gsGlobal->Interlace != GS_INTERLACED || gsGlobal->Field != GS_FIELD)
+		return y;
+	physical = (y + g_oy) * g_sy;
+	return (2.0f * floorf(physical * 0.5f + 0.5f)) / g_sy - g_oy;
+}
+
 //--------------------------------------------------------------
 // Procedural textures
 //--------------------------------------------------------------
