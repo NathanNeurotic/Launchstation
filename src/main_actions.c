@@ -19,6 +19,7 @@ void (*mainActionLaunchHook)(const char *path) = NULL;
 //------------------------------
 static void cleanUpForExecInternal(int end_pad_rpc)
 {
+	fadeScreenToBlack();
 	dashSoundShutdown(); /* the launch is now committed */
 	clrScr(GS_SETREG_RGBA(0x00, 0x00, 0x00, 0));
 	drawScr();
