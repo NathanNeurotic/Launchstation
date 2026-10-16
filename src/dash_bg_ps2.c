@@ -581,6 +581,32 @@ static float orbRadiusAt(const OrbStyle *st, int minute, float second)
 	return st->rmin + (st->rmax - st->rmin) * amount;
 }
 
+
+/* Fade overlapping orb heads continuously instead of dropping one head the
+ * instant two phases cross a hard collision threshold (#130). At the same
+ * position their weights sum to one; when separated each reaches full
+ * intensity. No orb disappears for one interlaced frame. */
+#define ORB_MERGE_SPAN 0.16f
+static float orbHeadWeight(const float phase[ORB_N], int k)
+{
+	float neighbors = 0.0f;
+	int j;
+
+	for (j = 0; j < ORB_N; j++) {
+		float dp, x;
+		if (j == k)
+			continue;
+		dp = fabsf(phase[j] - phase[k]);
+		if (dp > PI_F)
+			dp = TAU_F - dp;
+		if (dp >= ORB_MERGE_SPAN)
+			continue;
+		x = 1.0f - dp / ORB_MERGE_SPAN;
+		neighbors += x * x * (3.0f - 2.0f * x);
+	}
+	return 1.0f / (1.0f + neighbors);
+}
+
 static void osdOrbs(const OrbStyle *st, float t, int fx)
 {
 	static OrbMat mats[ORB_SAMPLES + 1];
@@ -639,39 +665,22 @@ static void osdOrbs(const OrbStyle *st, float t, int fx)
 			head_phi[k] += TAU_F;
 	}
 
-	/* orbs that meet merge into one bigger, brighter orb. They share one
-	 * circle, so meeting means equal phase; screen distance would also
-	 * bloom a front and a back orb that merely cross in the projection. */
+	/* Render every head continuously. Hard skipping a phase-cluster member
+	 * made orb lights visibly blink at collision boundaries, especially
+	 * during slow interlaced refresh. Smooth weights prevent additive
+	 * overexposure without a single-frame brightness drop (#130). */
 	for (k = 0; k < ORB_N; k++) {
-		int together = 1, already_drawn = 0;
-		float grow, share, sz = head[k].s * (0.7f + 0.4f * head[k].d);
+		float share = orbHeadWeight(head_phi, k);
+		float sz = head[k].s * (0.7f + 0.4f * head[k].d);
 
-		for (j = 0; j < ORB_N; j++) {
-			float dp = fabsf(head_phi[j] - head_phi[k]);
-			if (dp > PI_F)
-				dp = TAU_F - dp;
-			if (j != k && dp < 0.1f) {
-				together++;
-				if (j < k)
-					already_drawn = 1;
-			}
-		}
-		/* Render each phase cluster once. Drawing the same merged orb for
-		 * every member made additive blending overexpose collisions. */
-		if (already_drawn)
-			continue;
-		grow = dashClampf(1.0f + 0.25f * (together - 1), 1.0f, 1.8f);
-		share = together > 1 ? 0.85f : 1.0f;
-		/* The head continues its own trail: same tint and a brightness close
-		 * to the trail's core (max 178). A near-white halo plus a pure-white
-		 * core read as a shiny blob detached from the trace (#130). */
-		dashGlow(head[k].x, head[k].y, 30.0f * sz * grow, 30.0f * sz * grow,
+		/* Head colors match their trails; all three glows use the same
+		 * smooth overlap weight, including the narrow central highlight. */
+		dashGlow(head[k].x, head[k].y, 30.0f * sz, 30.0f * sz,
 		         colA(glow_c, (int)((40.0f + 30.0f * head[k].d) * share)));
-		dashGlow(head[k].x, head[k].y, 11.0f * sz * grow, 11.0f * sz * grow,
+		dashGlow(head[k].x, head[k].y, 11.0f * sz, 11.0f * sz,
 		         colA(core_c, (int)((110.0f + 50.0f * head[k].d) * share)));
-		/* One central highlight per cluster prevents stacked cores. */
-		dashGlow(head[k].x, head[k].y, 4.4f * sz * grow, 4.4f * sz * grow,
-		         colA(halo_c, together > 1 ? 150 : 170));
+		dashGlow(head[k].x, head[k].y, 4.4f * sz, 4.4f * sz,
+		         colA(halo_c, (int)(170.0f * share)));
 	}
 	dashGfxBlend(DASH_BLEND_NORMAL);
 }
