@@ -26,6 +26,7 @@ jobs:
 
       - name: Test Settings sessions, navigation and theme compatibility
         run: |
+          python3 tests/test_display_feedback.py
           python3 tests/test_pccf.py
           python3 tests/test_pccf_owner.py
           python3 tests/test_settings_save_prompt.py

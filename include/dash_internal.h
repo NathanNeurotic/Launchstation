@@ -319,6 +319,7 @@ void dashGfxBeginFrame(void);
 void dashGfxPresent(void);
 void dashGfxRestoreLegacyState(void);
 float dashGfxScaleY(void);
+float dashGfxTextY(float y);
 
 void dashGfxPushAlpha(float mul);
 void dashGfxPopAlpha(void);

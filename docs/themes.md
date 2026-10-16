@@ -130,15 +130,14 @@ when this happened.
 
 ### Wallpaper canvas size and starter example
 
-**Use a 4:3 canvas.** The most efficient choice is a **320 × 240 PNG**;
-**640 × 480** is a convenient working size if you want to draw at 2× and
-downsample before copying to the PS2. Launchstation center-crops images
-that are wider or taller than 4:3, then cover-fits to the screen without
-letterboxing. Its image decoder holds wallpapers at no more than **320 × 256**
-pixels, preserving the original aspect ratio; a 4:3 image therefore ends
-up at most **320 × 240**, not 320 × 256. The 640 × 448 internal UI coordinate
-grid is **not** a wallpaper aspect ratio; the displayed wallpaper targets
-the console's 4:3 screen.
+**Use a 4:3 canvas.** Use a **640 × 480 PNG** for detailed wallpaper;
+a **320 × 240 PNG** remains a smaller, lower-memory option and is used by the
+starter example. Launchstation preserves aspect ratio and center-crops wider
+or taller inputs before filling the screen. The decoder now keeps wallpapers
+inside a **640 × 512** box, so a 4:3 source can retain **640 × 480** pixels.
+It never enlarges a smaller source during decoding. The 640 × 448 logical UI
+grid is not the required artwork ratio; the displayed wallpaper targets the
+console's 4:3 screen.
 
 ![Bundled 320 × 240 wallpaper example](theme-example/background.png)
 
@@ -344,16 +343,17 @@ A complete example is in [theme-example/theme.cfg](theme-example/theme.cfg).
 | Format | PNG (grey, palette, RGB; 8 or 16 bits; with or without alpha or tRNS) | same |
 | File size | up to 1.5 MB | up to 1.5 MB |
 | Source size | up to 2048x2048 | up to 2048x2048 |
-| Kept in memory | box-filtered to fit 320x256 (at most 320 KB) | fit 128x128 (at most 64 KB) |
-| Recommended | **320x240 (4:3)**; 640x480 source is also fine | 128x128 with alpha |
+| Kept in memory | box-filtered to fit 640x512 (at most 1.25 MiB) | fit 128x128 (at most 64 KB) |
+| Recommended | **640x480 (4:3)**; 320x240 uses less memory | 128x128 with alpha |
 | Alpha | used | used |
 
 Images are decoded once and kept (8 theme image slots). Interlaced PNGs are
 accepted only up to 256x256. Missing, too large or broken files are
 remembered and skipped, and the built-in fallback is drawn instead.
-Because the screen is at most 640x512 and wallpapers are shown behind
-dimmed menus, a larger wallpaper would not look sharper, only cost more
-memory.
+A 640x480 texture uses four times the decoded memory of 320x240
+(about 1.17 MiB versus 300 KiB). This preserves detail at the existing
+output resolutions; it does not change the selected video mode. Larger
+source images are downsampled once and do not add display detail.
 
 ## Where settings are stored
 
