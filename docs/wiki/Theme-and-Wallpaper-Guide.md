@@ -1,8 +1,9 @@
 # Launchstation theme wallpapers: sizing and examples
 
 A **4:3** image is the correct canvas for a Launchstation static wallpaper.
-The simplest final asset is **320 × 240 PNG**. You can design at **640 × 480**
-and downsample to 320 × 240. Both dimensions are exactly 4:3.
+Use **640 × 480 PNG** to preserve detail, or **320 × 240 PNG** for lower
+memory use. Both dimensions are exactly 4:3; smaller sources are not
+upscaled during decoding.
 
 ![320 × 240 wallpaper example](https://nathanneurotic.github.io/Launchstation/assets/wallpaper-example.png)
 
@@ -19,8 +20,8 @@ and downsample to 320 × 240. Both dimensions are exactly 4:3.
   (5:4) source is cropped vertically; 320 × 224 (10:7) is cropped
   horizontally. These can be loaded, but aren't ideal authoring sizes.
 - **Limits:** PNG no more than **1.5 MB** and up to **2048 × 2048**
-  input pixels. The cached PS2 texture fits inside **320 × 256**, so
-  a 4:3 image is kept at no more than **320 × 240**.
+  input pixels. The cached PS2 texture fits inside **640 × 512**, so
+  a 4:3 image can retain **640 × 480** pixels.
 - **Recommended:** a normal non-interlaced RGB or indexed PNG.
 - **Composition:** leave room for the dashboard's text, panels and hints.
   Keep vital artwork away from the edges; CRT overscan varies.

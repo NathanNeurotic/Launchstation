@@ -374,7 +374,10 @@ static float drawRun(float x, float y, const unsigned char *s, const unsigned ch
 		return x + dashTextWidthN((const char *)s, end ? (int)(end - s) : -1, scale);
 	facesInit();
 	pickFace(scale, &sel);
-	top = y + sel.yshift;
+	/* Shared by every face, title, caption and bitmap pad run. Quantize
+	 * translation only: glyph metrics, dimensions and advances stay intact. */
+	top = dashGfxTextY(y + sel.yshift);
+	y += top - (y + sel.yshift);
 	/* bold: every glyph twice, the second copy nudged right */
 	bold_dx = dashTheme.bold ? (sel.px < 16.0f ? 0.5f : 0.7f) : 0.0f;
 

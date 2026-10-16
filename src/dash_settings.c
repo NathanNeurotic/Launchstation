@@ -542,7 +542,7 @@ static char *snap_dash_text, *snap_cnf_text;
 static u64 dirty_checked_ms;
 
 static const char *const onoff[] = {"Off", "On"};
-static const char *const tv_names[] = {"Auto", "NTSC", "PAL", "VGA", "480p"};
+static const char *const tv_names[] = {"Auto", "NTSC", "PAL", "VGA", "480p", "576p"};
 static const char *const view_names[] = {"Grid", "List", "Carousel"};
 static const char *const recent_names[] = {"0", "4", "8", "12", "16"};
 static const char *const mmce_backup_format_names[] = {"Native .mcd", "PCSX2 .ps2"};

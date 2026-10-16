@@ -26,6 +26,7 @@ jobs:
 
       - name: Test Settings sessions, navigation and theme compatibility
         run: |
+          python3 tests/test_display_feedback.py
           python3 tests/test_settings_save_prompt.py
           python3 tests/test_settings_navigation.py
           python3 tests/test_zack_feedback.py

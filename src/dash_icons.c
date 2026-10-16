@@ -557,7 +557,7 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 	u0 = (float)((id % ICON_COLS) * ICON_SLOT);
 	v0 = (float)((id / ICON_COLS) * ICON_SLOT);
 	pad = size * 2.0f / ICON_SIZE;
-	if (id > DI_PAD_BADGE && id <= DI_BTN_R3) {
+	if ((id > DI_PAD_BADGE && id <= DI_BTN_R3) || id == DI_DPAD_UD) {
 		/* Preserve colored controller glyphs while letting each theme decide
 		 * whether they sit on a background. Baked PNGs forced a fixed navy
 		 * tile into every theme, ignoring icon-backings entirely. */
@@ -566,12 +566,13 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 		if (dashCfg.icon_backing) {
 			float bu0 = (float)((DI_PAD_BADGE % ICON_COLS) * ICON_SLOT);
 			float bv0 = (float)((DI_PAD_BADGE / ICON_COLS) * ICON_SLOT);
-			DashColor badge = dashColorMix(DASH_C_PANEL_HI, DASH_C_PANEL, 0.45f);
-			if (badge.a < 56)
-				badge = dashColorA(DASH_C_TEXT3, 0.36f);
+			/* A fixed neutral keycap remains visible on dark and bright
+			 * wallpapers, regardless of transparent panel/theme colors. */
+			DashColor badge = DC(18, 22, 30, 230);
 			dashSpriteBatchBegin(&icon_tex, badge);
 			dashSpriteBatchAdd(x - pad, y - pad, bu0, bv0, x + size + pad, y + size + pad, bu0 + ICON_SLOT, bv0 + ICON_SLOT);
 			dashSpriteBatchEnd();
+			dashPanelBorder(x, y, size, size, 4.0f, DC(210, 220, 240, 120));
 		}
 		dashSpriteBatchBegin(&icon_tex, c);
 		dashSpriteBatchAdd(x + go, y + go, u0, v0, x + go + g, y + go + g, u0 + ICON_SLOT, v0 + ICON_SLOT);

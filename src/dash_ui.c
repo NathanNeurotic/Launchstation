@@ -205,9 +205,9 @@ static float drawButton(float x, float y, int icon, const char *key)
 			dashTheme.corner = DASH_CORNER_SOFT;
 			/* Theme-derived badges instead of hard-coded navy/white tiles. */
 			dashPanelGradV(x, y, w, d, 6.0f,
-			               dashColorA(DASH_C_PANEL_HI, 0.80f),
-			               dashColorA(DASH_C_PANEL, 0.80f));
-			dashPanelBorder(x, y, w, d, 6.0f, dashColorA(DASH_C_BORDER, 0.75f));
+			               DC(30, 35, 46, 230),
+			               DC(18, 22, 30, 230));
+			dashPanelBorder(x, y, w, d, 6.0f, DC(210, 220, 240, 120));
 		}
 		dashTheme.corner = keep;
 		dashTextS(x + (w - tw) * 0.5f, y + 2.5f, key, DASH_FS_CAPTION, DASH_C_TEXT); /* caps centred in the badge */
@@ -246,7 +246,7 @@ void dashDrawHints(const DashHint *hints, int n)
 		x += drawButton(x, y, hints[i].button, hints[i].key) + 8.0f;
 		/* x-height centre (y + 16 * scale) about 1 px under the 22 px button's
 		 * centre, so mixed-case labels read as centred on the button */
-		x = dashTextS(x, y + 1.5f, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT2) + 24.0f;
+		x = dashTextS(x, y + 1.5f, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT) + 24.0f;
 	}
 }
 
