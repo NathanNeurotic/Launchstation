@@ -35,7 +35,7 @@ assert "dashIcon(dashBackIcon(), bx1" not in modal
 # Coverflow depth fades through existing alpha; no square tinted overlay.
 carousel = apps[apps.index("static void drawCarousel("):apps.index("static void appsDraw(")]
 assert "dashGfxPushAlpha(alpha);" in carousel
-assert "dashRect(cx + xo - s * 0.5f" not in carousel
+assert "dashRect(" not in carousel
 
 # Compile the actual production smooth overlap helper (not a reimplementation).
 def extract(signature):
@@ -95,7 +95,11 @@ with tempfile.TemporaryDirectory(prefix="launchstation-zack-") as folder:
     source = Path(folder) / "orb-weights.c"
     binary = Path(folder) / "orb-weights"
     source.write_text(test, encoding="utf-8")
-    subprocess.run([cc, "-std=c11", "-Wall", "-Wextra", "-Werror",
-                    str(source), "-lm", "-o", str(binary)], check=True)
-    subprocess.run([str(binary)], check=True, timeout=10)
+    try:
+        subprocess.run([cc, "-std=c11", "-Wall", "-Wextra", "-Werror",
+                        str(source), "-lm", "-o", str(binary)],
+                       check=True, timeout=30)
+        subprocess.run([str(binary)], check=True, timeout=10)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"Timed out running {exc.cmd}") from exc
 print("PASS: R3 visibility, shared modal glyphs, Coverflow, collision continuity")
