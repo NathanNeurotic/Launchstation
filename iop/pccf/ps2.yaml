@@ -1,0 +1,10 @@
+project: launchstation_pccf
+targets:
+  - name: pccf
+    type: iop
+    sources: [main.c, pccf_hw.c, pccf_ata.c, pcdiag_cis.c, pcdiag_cf.c]
+    include_dirs: [.]
+    imports_lst: imports.lst
+    defines: [PCCF_SETTLE_US=1000]
+    cflags: [-Wall, -fno-strict-aliasing]
+    headers: [bdm, iomanx, loadcore, stdio, sysclib, threadman]

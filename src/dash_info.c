@@ -161,6 +161,9 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_TEXT, "to maintain and continue improving");
 	sheetAdd(&s, SL_TEXT, "DS3/DS4 support by Alex Parrado");
 	sheetAdd(&s, SL_TEXT, "Thanks to TnA for all his insight and support");
+	sheetAdd(&s, SL_HEAD, "PC CARD CompactFlash reference");
+	sheetAdd(&s, SL_TEXT, "mihhru - PS2CF");
+	sheetAdd(&s, SL_TEXT, "github.com/mihhru/PS2CF");
 	sheetAdd(&s, SL_HEAD, "wLaunchELF");
 	sheetAdd(&s, SL_TEXT, "Project maintainers: sp193 & AKuHAK");
 	sheetAdd(&s, SL_HEAD, "uLaunchELF");

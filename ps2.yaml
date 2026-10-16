@@ -18,6 +18,14 @@
 project: wLaunchELF
 
 targets:
+  - name: pccf
+    type: iop
+    sources: [iop/pccf/main.c, iop/pccf/pccf_hw.c, iop/pccf/pccf_ata.c, iop/pccf/pcdiag_cis.c, iop/pccf/pcdiag_cf.c]
+    include_dirs: [iop/pccf]
+    imports_lst: iop/pccf/imports.lst
+    defines: [PCCF_SETTLE_US=1000]
+    cflags: [-Wall, -fno-strict-aliasing]
+    headers: [bdm, iomanx, loadcore, stdio, sysclib, threadman]
   # ------------------------------------------------------------------ IOP --
   - name: usbd_ra
     type: iop
@@ -401,6 +409,7 @@ targets:
       - netfs:ps2netfs
       - ps2ftpd
       - dev9_poweroff
+      - pccf
       - ps2hdd_osd:ps2hdd
       - fs:ps2fs
       # RiptOPL vendored USBD (usbd-ra): ps2sdk pre-rewrite (314d87e7)

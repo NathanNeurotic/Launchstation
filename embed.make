@@ -708,6 +708,12 @@ $(EE_ASM_DIR)ps2dev9_v10_irx.s: iop/__v10/ps2dev9.irx | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ ps2dev9_v10_irx
 
 LOCAL_DEV9_POWEROFF_IRX := iop/dev9_poweroff/dev9_poweroff.irx
+LOCAL_PCCF_IRX := iop/pccf.irx
+PCCF_DEPS := $(wildcard iop/pccf/*.[ch] iop/pccf/*.inc) iop/pccf/imports.lst iop/pccf/Makefile include/pccf_control.h
+$(LOCAL_PCCF_IRX): $(PCCF_DEPS)
+	$(MAKE) -C iop/pccf
+$(EE_ASM_DIR)pccf_irx.s: $(LOCAL_PCCF_IRX) | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ pccf_irx
 DEV9_POWEROFF_DEPS := $(wildcard iop/dev9_poweroff/*.[ch]) iop/dev9_poweroff/imports.lst iop/dev9_poweroff/Makefile
 
 $(LOCAL_DEV9_POWEROFF_IRX): $(DEV9_POWEROFF_DEPS)
