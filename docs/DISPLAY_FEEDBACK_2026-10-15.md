@@ -65,3 +65,8 @@ v2026.10.13 / GCC. The first build attempt exposed missing local cloud TLS
 headers; validation then reused the existing project Mbed TLS 3.6.7 dependency
 cache from the media-cloud checkout. CI builds that dependency from the pinned
 source archive independently. No console/display acceptance has been run.
+
+The complete CI host-test list was also exercised locally. Its older
+loading-overlay fixture was updated for the cache decode-size fields. The
+release-workflow syntax check requires native Git Bash on Windows; the WSL
+launcher cannot run in the sandbox. Both documentation sites build locally.

@@ -355,7 +355,7 @@ themecode = common + r"""
 #define DASH_JOB_VISIBLE 2
 typedef int GSTEXTURE;
 enum { TS_EMPTY,TS_LOADED,TS_MISSING,TS_LOADING };
-typedef struct { char path[256]; GSTEXTURE tex; int state,gen; } ThemeSlot;
+typedef struct { char path[256]; GSTEXTURE tex; int state,gen,max_w,max_h; } ThemeSlot;
 typedef struct { char path[256]; int slot,gen,max_w,max_h; } ThemeTexJob;
 static ThemeSlot theme_slots[THEME_SLOTS];
 static int loading=1, submitted;
@@ -373,7 +373,7 @@ themecode += function(art, "GSTEXTURE *dashThemeTextureFile(")
 themecode += r"""
 int main(void) {
     assert(!dashThemeTextureFile("mc0:/THEME/new.png",64,64) && !submitted);
-    strcpy(theme_slots[0].path,"mc0:/THEME/cached.png"); theme_slots[0].state=TS_LOADED;
+    strcpy(theme_slots[0].path,"mc0:/THEME/cached.png"); theme_slots[0].state=TS_LOADED; theme_slots[0].max_w=theme_slots[0].max_h=64;
     assert(dashThemeTextureFile("mc0:/THEME/cached.png",64,64)==&theme_slots[0].tex);
     loading=0; assert(!dashThemeTextureFile("mc0:/THEME/new.png",64,64) && submitted==1);
     free(submitted_arg);
