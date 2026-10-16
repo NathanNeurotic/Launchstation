@@ -965,10 +965,16 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 				dashPanelBorder(fx, by, bw, 34, 12, dashColorA(DASH_C_ACCENT, 0.8f));
 			} else
 				dashDrawSelection(fx, by, bw, 34, 12, 1.0f);
-			dashIcon(dashOkIcon(), bx0 + 12, by + 8, 18, sel == 0 ? DASH_C_TEXT : DASH_C_TEXT3);
+			/* Confirmation actions use exactly the same sized glyph/badge
+			 * renderer as the dashboard footer and modal hints (#158). */
+			dashGfxPushAlpha(sel == 0 ? 1.0f : 0.55f);
+			drawButton(bx0 + 12, by + 6, dashOkIcon(), NULL);
+			dashGfxPopAlpha();
 			dashTextCenter(bx0 + bw * 0.5f + 10, by + 10.0f, ok_label, DASH_FS_BODY * 0.9f, dashItemColor(sel == 0));
 			if (cancel_label != NULL) {
-				dashIcon(dashBackIcon(), bx1 + 12, by + 8, 18, sel == 1 ? DASH_C_TEXT : DASH_C_TEXT3);
+				dashGfxPushAlpha(sel == 1 ? 1.0f : 0.55f);
+				drawButton(bx1 + 12, by + 6, dashBackIcon(), NULL);
+				dashGfxPopAlpha();
 				dashTextCenter(bx1 + bw * 0.5f + 10, by + 10.0f, cancel_label, DASH_FS_BODY * 0.9f, dashItemColor(sel == 1));
 			}
 		}
