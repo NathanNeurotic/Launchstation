@@ -240,6 +240,26 @@ void clrScr(u64 color)
 }
 
 //--------------------------------------------------------------
+/* The parent owns the GS only until the ELF handoff. Fade its last frame to
+ * black before dropping pad/RPC/IOP state or reprogramming the TV mode, rather than flashing to an opaque
+ * clear. No new threads, timers or device calls: drawScr() already presents at
+ * VBLANK and supports the dashboard's double-buffered GS. The final two
+ * opaque clears below still protect both buffers on exit. */
+void fadeScreenToBlack(void)
+{
+	int frame;
+	if (gsGlobal == NULL)
+		return;
+	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
+	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0, 1, 0, 1, 0), 0);
+	for (frame = 1; frame <= 8; frame++) {
+		gsKit_prim_sprite(gsGlobal, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0,
+		                  GS_SETREG_RGBA(0, 0, 0, (frame * 0x80) / 8));
+		drawScr();
+	}
+	gsGlobal->PrimAlphaEnable = GS_SETTING_OFF;
+}
+
 void drawScr(void)
 {
 	updateDynamicMenuTitleLine();
