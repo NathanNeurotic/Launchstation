@@ -2,7 +2,7 @@
 
 **Canonical plan:** [docs/plans/2026-10-17-storage-driver-lifecycle-172-175.md](docs/plans/2026-10-17-storage-driver-lifecycle-172-175.md)
 
-**Tracking PR:** [#176](https://github.com/NathanNeurotic/Launchstation/pull/176) (draft, planning only). **Do not create a second branch or PR.**
+**Tracking PR:** [#176](https://github.com/NathanNeurotic/Launchstation/pull/176) (incremental production fixes; hardware validation pending). **Do not create a second branch or PR.**
 
 **Issues:** [#172](https://github.com/NathanNeurotic/Launchstation/issues/172) iLink, [#173](https://github.com/NathanNeurotic/Launchstation/issues/173) MX4SIO, [#174](https://github.com/NathanNeurotic/Launchstation/issues/174) MMCE + audio, [#175](https://github.com/NathanNeurotic/Launchstation/issues/175) storage interference + dialog.
 
@@ -13,7 +13,7 @@
 - **Animation:** show status before/after synchronous calls and while returned retry loops permit; do not move IOP module initialization to the background worker or pretend it can animate during a blocked call.
 - **Audio:** generation-safe shutdown while the old IOP service still exists; restore through existing deferred maintenance after safe recovery.
 - **UX:** no raw mount IDs in generic missing-device modal.
-- **Tests:** next agent should add `tests/test_zack_storage_drivers.py` and extend reset/PAD, device, audio, UI and MMCE host tests. Verify that the newly built MMCEMAN IRX is actually embedded and test on real MMCE/MX4SIO/iLink devices.
+- **Tests:** Existing startup/modal and reset/PAD host tests are implemented. Remaining coverage: real-device audio recovery, cold boot and reconnect timing, and mixed-storage transitions. Verify that the newly built MMCEMAN IRX is actually embedded and test on real MMCE/MX4SIO/iLink devices.
 
 The detailed implementation sequence, safety gates and test matrix are in the **canonical document linked above**. This root entry is an index to prevent multiple versions of the plan from drifting.
 

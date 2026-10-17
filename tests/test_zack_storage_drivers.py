@@ -85,6 +85,35 @@ c += function("src/dash_files.c", "static void deviceNotFound(const DashDevice *
 c += function("src/dash_devices.c", "static int startSync(const char *mount, const char *title)\n{")
 
 c += r"""
+#define MMCE 1
+#define MX4SIO 1
+#define TRUE 1
+#define STORAGE_STACK_DEFAULT 0
+#define STORAGE_STACK_MMCE 1
+#define STORAGE_STACK_MX4SIO 2
+#define DPRINTF(...) do { if (0) printf(__VA_ARGS__); } while (0)
+static int storage_driver_stack_mode, reset_allowed, resets;
+static void resetRuntimeDeviceState(int status) {
+    assert(status == TRUE);
+    resets++;
+    if (reset_allowed) storage_driver_stack_mode = STORAGE_STACK_DEFAULT;
+}
+static const char *mmce_product_ids[] = {"Unknown", "SD2PSX", "MemCard PRO2", "PicoMemcard+", "PicoMemcardZero"};
+static int ping_calls, ping_success_at, reset_commands, selected_port;
+static void mmce_sio2_set_port(int port) { selected_port = port; }
+static int mmce_cmd_ping(void) {
+    return ++ping_calls == ping_success_at ? 0x100 : -1;
+}
+static int mmce_cmd_reset(void) { reset_commands++; return 0; }
+"""
+c += function("src/init.c", "static int switchStorageDriverStack(int target_mode)\n{")
+mmce = (root / "iop/mmceman/src/mmceman.c").read_text()
+import re
+attempts = re.search(r"^#define MMCE_PING_ATTEMPTS (\d+)$", mmce, re.M).group(1)
+c += "#define MMCE_PING_ATTEMPTS " + attempts + "\n"
+c += function("iop/mmceman/src/mmceman.c", "static void mmce_init(int port)\n{")
+
+c += r"""
 int main(void) {
     DashDevice mmce = {DI_SDCARD, "mmce0:", "MMCE Slot 1", "No MMCE storage found"};
     DashDevice ilink = {DI_SDCARD, "ilink:", "iLink / FireWire", "No iLink storage found"};
@@ -111,7 +140,28 @@ int main(void) {
     assert(startSync("ready", "Blocked by pending I/O") == -1);
     assert(start_calls == 2 && frame_calls == 2);
     assert(probe_calls == 2 && end_calls == 2);
-    puts("PASS: safe missing-device dialogs, pre-RPC status and failed worker wait");
+    storage_driver_stack_mode = STORAGE_STACK_DEFAULT;
+    assert(switchStorageDriverStack(STORAGE_STACK_MMCE) == 1 && resets == 0);
+    storage_driver_stack_mode = STORAGE_STACK_MMCE;
+    assert(switchStorageDriverStack(STORAGE_STACK_MMCE) == 1 && resets == 0);
+    reset_allowed = 0;
+    assert(switchStorageDriverStack(STORAGE_STACK_MX4SIO) == 0);
+    assert(storage_driver_stack_mode == STORAGE_STACK_MMCE && resets == 1);
+    reset_allowed = 1;
+    assert(switchStorageDriverStack(STORAGE_STACK_MX4SIO) == 1);
+    assert(storage_driver_stack_mode == STORAGE_STACK_DEFAULT && resets == 2);
+    for (int port = 2; port <= 3; port++) {
+        ping_calls = reset_commands = ping_success_at = 0;
+        mmce_init(port);
+        assert(selected_port == port && ping_calls == 2 && reset_commands == 0);
+        for (int success = 1; success <= 2; success++) {
+            ping_calls = reset_commands = 0;
+            ping_success_at = success;
+            mmce_init(port);
+            assert(ping_calls == success && reset_commands == 1);
+        }
+    }
+    puts("PASS: startup/modal, refused stack transitions and MMCE retry outcomes");
     return 0;
 }
 """

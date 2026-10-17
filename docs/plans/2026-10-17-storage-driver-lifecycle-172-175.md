@@ -138,3 +138,10 @@ This section **supersedes contradictory implementation instructions** from the t
 - `src/dash_files.c`: `deviceNotFound`
 - `iop/mmceman/src/mmceman.c`, `iop/mmceman/src/mmce_cmds.c`, `iop/mmceman/src/mmce_sio2.c`
 - `embed.make` and `iop/mmceman/Makefile` for generated IRX contents.
+
+## October 17 implementation follow-up
+
+- MMCE startup now uses `MMCE_PING_ATTEMPTS = 2` per port, retaining the 200 ms ping timeout. The existing filesystem discovery/reconnect path remains available; this changes startup retries only. Host C tests execute absence, first-attempt success, and second-attempt success on both ports. Physical cold-boot and slow-card acceptance is pending.
+- `switchStorageDriverStack()` returns failure when a required reset leaves the previous non-default stack resident. Both MMCE and MX4SIO loaders stop before loading another driver. Host C tests execute no-reset, same-stack, refused-reset and completed-reset transitions. This fixes a confirmed failure path; it does not prove the reported main-thread storage delays resolved.
+- Local host reset/PAD and USB lifecycle harnesses pass. Initial local cross-build reached MMCEMAN compilation but stopped at absent mbedTLS headers; final complete-build evidence is recorded separately.
+- The UI thread still owns module entry. No claim of animation during blocked IOP RPCs, shorter iLink/MX4SIO mount tolerance, or physical adapter validation.
