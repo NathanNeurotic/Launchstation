@@ -715,7 +715,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 #ifdef MX4SIO
 				} else if (!strncmp(out, "mx4sio", 6)) {  //for files copied to mx4sio: we skip Chstat
 #endif
-				} else if (!strncmp(out, "ata", 3)) {  //for files copied to ata: we skip Chstat
+				} else if (!strncmp(out, "ata", 3) || isPcCardCfPath(out)) {  //for files copied to ata/cf: we skip Chstat
 				} else {                                //for other devices we use fileXio_ stuff
 					memcpy(iox_stat.ctime, (void *)&file.stats._Create, 8);
 					memcpy(iox_stat.mtime, (void *)&file.stats._Modify, 8);
@@ -834,8 +834,8 @@ non_PSU_RESTORE_init:
        To prevent a loss in performance, these values must each be in a multiple of the device's sector/page size.
        They must also be in multiples of 64, to prevent FILEIO from doing alignment correction in software. */
 	buffSize = COPY_BUFFER_FAST_DEFAULT;  //First assume fast-device buffer size
-	if (!strncmp(out, "mc", 2) || !strncmp(out, "mass", 4) || !strncmp(out, "vmc", 3))
-		buffSize = 131072;  //Use  128KB if writing to USB (Flash RAM writes) or MC (pretty slow).
+	if (!strncmp(out, "mc", 2) || !strncmp(out, "mass", 4) || !strncmp(out, "vmc", 3) || isPcCardCfPath(out))
+		buffSize = 131072;  //Use  128KB if writing to USB/CF (Flash RAM writes) or MC (pretty slow).
 	                        //VMC contents should use the same size, as VMCs will often be stored on USB
 #ifdef MX4SIO
 	else if (!strncmp(out, "mx4sio", 6))
@@ -847,12 +847,12 @@ non_PSU_RESTORE_init:
 	else if (!strncmp(out, "host", 4))
 		buffSize = 393216;  //Use 384KB if writing to HOST (acceptable)
 #endif
-	else if ((!strncmp(in, "mass", 4)) || (!strncmp(in, "host", 4))
+	else if ((!strncmp(in, "mass", 4)) || (!strncmp(in, "host", 4)) || isPcCardCfPath(in)
 #ifdef MX4SIO
 	         || (!strncmp(in, "mx4sio", 6))
 #endif
 	        )
-		buffSize = 524288;  //Use 512KB reading from USB or HOST (acceptable)
+		buffSize = 524288;  //Use 512KB reading from USB, CF, or HOST (acceptable)
 
 	if (size < (u64)buffSize)
 		buffSize = (int)size;
@@ -1067,9 +1067,14 @@ copy_file_data_done:
 #endif
 		if (dummy < 0)
 			ret = dummy;
+		else if ((isPcCardCfPath(out) && !isPcCardCfOnline()) || (isPcCardCfPath(in) && !isPcCardCfOnline()))
+			ret = -EIO;
 		out_fd = -1;  //prevent dual closure attempt
-		if (ret < 0)
+		if (ret < 0) {
+			if (PM_flag[recurses] != PM_PSU_BACKUP)
+				genRemove(out);
 			goto copy_file_exit;
+		}
 	}
 
 	if (!strncmp(out, "mc", 2)) {                                 //Handle file copied to MC
@@ -1107,7 +1112,7 @@ copy_file_data_done:
 #ifdef MX4SIO
 			} else if (!strncmp(out, "mx4sio", 6)) {  //for files copied to mx4sio: we skip Chstat
 #endif
-			} else if (!strncmp(out, "ata", 3)) {  //for files copied to ata: we skip Chstat
+			} else if (!strncmp(out, "ata", 3) || isPcCardCfPath(out)) {  //for files copied to ata/cf: we skip Chstat
 			} else {                                //for other devices we use fileXio_ stuff
 			memcpy(iox_stat.ctime, (void *)&file.stats._Create, 8);
 			memcpy(iox_stat.mtime, (void *)&file.stats._Modify, 8);

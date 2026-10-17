@@ -526,6 +526,23 @@ static const char *canonicalizeAtaPath(const char *path, char *buffer)
 	return path;
 }
 
+static const char *canonicalizePcCardCfPath(const char *path, char *buffer)
+{
+	if (!strncmp(path, "cf:", 3)) {
+		if (path[3] == '\0')
+			strcpy(buffer, "cf0:/");
+		else
+			snprintf(buffer, MAX_PATH, "cf0:%s", path + 3);
+		return buffer;
+	}
+	if (!strncmp(path, "cf", 2) && path[2] >= '0' && path[2] <= '9' && path[3] == ':' && path[4] == '\0') {
+		snprintf(buffer, MAX_PATH, "cf%c:/", path[2]);
+		return buffer;
+	}
+
+	return path;
+}
+
 static int getHddUnitFromDevice(const char *device)
 {
 	if (device == NULL || strncmp(device, "hdd", 3) || device[3] < '0' || device[3] > '1' || device[4] != ':')
@@ -757,6 +774,15 @@ int genFixPath(const char *inp_path, char *gen_path)
 		loadAtaModules();
 #endif
 		canonical_path = canonicalizeAtaPath(uLE_path, ata_path);
+		strcpy(gen_path, canonical_path);
+		pathSep = strchr(gen_path, '/');
+		if (pathSep && (pathSep - gen_path < 7) && pathSep[-1] == ':')
+			strcpy(gen_path + (pathSep - gen_path), pathSep + 1);
+
+	} else if (isPcCardCfPath(uLE_path)) {
+		if (!loadPcCardCfModules() || !isPcCardCfOnline())
+			part_ix = -1;
+		canonical_path = canonicalizePcCardCfPath(uLE_path, ata_path);
 		strcpy(gen_path, canonical_path);
 		pathSep = strchr(gen_path, '/');
 		if (pathSep && (pathSep - gen_path < 7) && pathSep[-1] == ':')
@@ -1815,6 +1841,17 @@ int getDir(const char *path, FILEINFO *info)
 		n = readGENERICWithFirstOpenRetry(path, info, max, 3000);
 	}
 #endif
+	else if (isPcCardCfPath(path)) {
+		char cf_path[MAX_PATH];
+		const char *read_path = canonicalizePcCardCfPath(path, cf_path);
+		if (!isPathDeviceStackLoaded(path) && !loadPcCardCfModules())
+			return 0;
+		if (!isPcCardCfOnline())
+			return 0;
+		n = readGENERICWithFirstOpenRetry(read_path, info, max, 2000);
+		if (!isPcCardCfOnline())
+			return 0;
+	}
 	else if (!strncmp(path, "vmc", 3))
 		n = readVMC(path, info, max);
 	else
@@ -1889,6 +1926,10 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 		}
 		if (allow_usb_devices && shouldShowAtaDevice(1)) {
 			strcpy(files[nfiles].name, "ata1:");
+			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
+		}
+		if (allow_usb_devices && (isPcCardCfEligible() || boot_show_all_devices)) {
+			strcpy(files[nfiles].name, "cf:");
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 		}
 #endif

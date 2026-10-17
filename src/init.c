@@ -2565,6 +2565,8 @@ int isPathDeviceStackLoaded(const char *path)
 #ifdef EXFAT
 	if (!strncmp(path, "ata", 3))
 		return have_ata_bd && have_bdmfs && (block_storage_stack_mode & BLOCK_STACK_ATA);
+	if (isPcCardCfPath(path))
+		return pccf_loaded && have_bdm && have_bdmfs;
 #endif
 #ifdef MMCE
 	if (!strncmp(path, "mmce", 4))
@@ -2585,6 +2587,41 @@ int isPathDeviceStackLoaded(const char *path)
 	if (!strncmp(path, "cdfs", 4) || !strncmp(path, "cdrom", 5))
 		return have_cdvd;
 	return 0;
+}
+
+int isPcCardCfLoaded(void)
+{
+	return pccf_loaded;
+}
+
+int isPcCardCfBusBusy(void)
+{
+	return !pccf_loaded && (pccf_bus_owned || have_ps2dev9 || ps2dev9_loaded);
+}
+
+int getPcCardCfCapacitySectors(u32 *sectors_out)
+{
+	pccf_control_status_t st;
+	int ret;
+
+	if (sectors_out != NULL)
+		*sectors_out = 0;
+	if (!pccf_loaded)
+		return -ENODEV;
+
+	memset(&st, 0, sizeof(st));
+	ret = fileXioDevctl(PCCF_CONTROL_DEVICE, PCCF_CONTROL_STATUS, NULL, 0, &st, sizeof(st));
+	if (ret < 0 || st.version != 1 || !st.online || !st.sectors)
+		return -ENODEV;
+
+	if (sectors_out != NULL)
+		*sectors_out = st.sectors;
+	return 0;
+}
+
+int isPcCardCfOnline(void)
+{
+	return getPcCardCfCapacitySectors(NULL) == 0;
 }
 
 int isUsbMassStackLoaded(void)

@@ -225,6 +225,15 @@ static void dashLoadingStatus(const char *t,int d,int n) { (void)t;(void)d;(void
 static void (*drawMsgOverride)(const char *msg);
 static void dashLoadingEnd(void) {}
 static void dashDevicesAutoProbe(void);
+static int boot_show_all_devices = 0;
+static int boot_safe_mode = 0;
+static int isPcCardCfPath(const char *p) { return p && !strncmp(p, "cf", 2); }
+static int isPcCardCfOnline(void) { return 0; }
+static int isPcCardCfEligible(void) { return 0; }
+static int isPcCardCfBusBusy(void) { return 0; }
+static int isPcCardCfLoaded(void) { return 0; }
+static int getPcCardCfCapacitySectors(u32 *s) { (void)s; return -1; }
+static int loadPcCardCfModules(void) { return 0; }
 """
 devcode += re.sub(r"^#include[^\n]*\n", "", devices, flags=re.M)
 devcode += r"""

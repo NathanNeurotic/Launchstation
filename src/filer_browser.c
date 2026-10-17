@@ -81,6 +81,8 @@ static const char *getRootDeviceLabel(const char *name)
 		return "ata0:/";
 	if (!strcmp(name, "ata1:"))
 		return "ata1:/";
+	if (!strcmp(name, "cf:") || !strcmp(name, "cf0:"))
+		return "cf:/";
 #endif
 	if (!strcmp(name, "cdfs:"))
 		return "cdfs:/";
@@ -333,6 +335,7 @@ static int isTitleCfgPathEligible(const char *path, int menu_disabled)
 	        (!strncmp(path, "udpfs", 5)) ||
 #endif
 	        (!strncmp(path, "ata", 3)) ||
+	        isPcCardCfPath(path) ||
 	        (isHddBrowserPath(path) && !menu_disabled));
 }
 
@@ -389,6 +392,13 @@ void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char 
 
 	memset(enable, TRUE, NUM_MENU);  //Assume that all menu items are legal by default
 
+	if (isPcCardCfPath(path)) {
+		if (!isPcCardCfOnline()) {
+			menu_disabled = 1;
+			write_disabled = 1;
+		}
+	}
+
 	//identify cases where write access is illegal, and disable menu items accordingly
 	if ((!strncmp(path, "cdfs", 4))  //Writing is always illegal for CDVD drive
 #if defined(ETH) && defined(UDPFS)
@@ -423,6 +433,14 @@ void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char 
 
 	enable[OPEN_TEXTEDITOR] = canOpenInTextEditor(path, file);
 	enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR];
+
+	if (isPcCardCfPath(path)) {
+		enable[MOUNTVMC0] = FALSE;
+		enable[MOUNTVMC1] = FALSE;
+		enable[LAUNCH_ELF_ARGS] = FALSE;
+		if (!isPcCardCfOnline())
+			enable[OPEN_TEXTEDITOR] = FALSE;
+	}
 
 
 	if (write_disabled || menu_disabled) {

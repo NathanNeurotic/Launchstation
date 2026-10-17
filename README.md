@@ -83,6 +83,7 @@ Interface sound effects remain embedded. See
 | __mx4sio:/__[^1] | SD card interface over memory card port. | Always |
 | __hdd:/__[^2] | APA formatted internal HDD | Hidden on deckard |
 | __ata:/__[^2] | BDM hard drive, exFAT for now till more are supported | Hiddon on deckard |
+| __cf:/__[^3] | PC CARD CompactFlash (early PS2 models) | Early retail JP models (SCPH-10000/15000/18000) or when show-all enabled |
 | __xfrom:/__ | PSX DESR-XXXX flash storage | Hidden on non-PSX |
 | __dvr_hdd0:/__ | PSX DESR-XXXX digital video recorder hdd partition/side | Hidden on non-PSX |
 | __cdfs:/__ | CD/DVD File System | Always |
@@ -93,6 +94,8 @@ Drivers load on demand for maximum compatibility and initial boot speed.
 [^1]: MMCE and MX4SIO will incure an IOP reboot as the 2 are incompatible.
 
 [^2]: Dual HDD/ATA support is built in for future development.
+
+[^3]: PC CARD CF (`cf:/`) uses the PCMCIA slot on early Japanese consoles; direct ELF/game execution from `cf:/` is unsupported and DEV9 is mutually exclusive. Physical console test required before marking hardware verified.
 
 ## Features:
 - LoadBOOTer MC Exploit installer, supports Retail PS2/PSX and DEX(DTL-HXXXXX)

@@ -10,6 +10,7 @@
 //that are not running are only loaded when the user asks for it.
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "init.h"
 
 extern char PathPad[30][MAX_PATH];
 extern char LastDir[MAX_NAME];
@@ -39,6 +40,8 @@ static void deviceNotFound(const DashDevice *d)
 		snprintf(body, sizeof(body), "No USB storage device was found. Connect a USB drive and try again.");
 	else if (d->icon == DI_NETWORK)
 		snprintf(body, sizeof(body), "The network share could not be reached. Check the cable, IP settings and that the UDPFS server is running.");
+	else if (isPcCardCfPath(d->mount))
+		snprintf(body, sizeof(body), "%s: %s", d->name, d->status[0] ? d->status : "CF card not detected or incompatible.");
 	else
 		snprintf(body, sizeof(body), "%s is not available on this console, or it is not connected.", d->name);
 	{
@@ -421,6 +424,9 @@ static int devSelectable(int idx)
 	 * checked is selectable too: browsing it makes the slot accessible (e.g.
 	 * switches the IOP away from MX4SIO) and retries. Explicitly absent
 	 * devices remain display-only and are skipped by navigation. */
+	if (idx >= 0 && idx < ndevs && isPcCardCfPath(devs[idx].mount)) {
+		return isPcCardCfEligible() && !boot_safe_mode && !isPcCardCfBusBusy();
+	}
 	return idx >= 0 && idx < ndevs &&
 	       (devs[idx].state == DASH_DEV_READY || devs[idx].state == DASH_DEV_PROBE ||
 	        (devs[idx].icon == DI_MC && devs[idx].state == DASH_DEV_BUSY));

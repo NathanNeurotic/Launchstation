@@ -17,6 +17,28 @@ static void ensurePathMemoryCardAccessible(const char *path)
 		ensureMemoryCardPortAccessible(1);
 }
 
+static int ensurePathPcCardCfOnline(const char *path)
+{
+	if (path != NULL && isPcCardCfPath(path) && !isPcCardCfOnline())
+		return 0;
+	return 1;
+}
+
+static void normalizePcCardCfPath(char *path, size_t path_size)
+{
+	char tmp[MAX_PATH];
+
+	if (path == NULL || path_size == 0 || !isPcCardCfPath(path))
+		return;
+	if (!strncmp(path, "cf:", 3)) {
+		snprintf(tmp, sizeof(tmp), "cf0:%s", path[3] ? path + 3 : "/");
+		snprintf(path, path_size, "%s", tmp);
+	} else if (!strncmp(path, "cf", 2) && path[2] >= '0' && path[2] <= '9' && path[3] == ':' && path[4] == '\0') {
+		snprintf(tmp, sizeof(tmp), "cf%c:/", path[2]);
+		snprintf(path, path_size, "%s", tmp);
+	}
+}
+
 #if FILEOP_TRACE
 #define FILEOP_TRACE_FD_SLOTS 128
 typedef struct
@@ -201,6 +223,7 @@ limited:
 int genRmdir(char *path)
 {
 	int ret;
+	char rmdir_path[MAX_PATH];
 #if FILEOP_TRACE
 	u64 t0, t1;
 	char log_path[MAX_PATH];
@@ -212,16 +235,20 @@ int genRmdir(char *path)
 	path = mapped_path;
 #endif
 
+	if (!ensurePathPcCardCfOnline(path))
+		return -ENODEV;
 	ensurePathMemoryCardAccessible(path);
-	genLimObjName(path, 0);
+	snprintf(rmdir_path, sizeof(rmdir_path), "%s", path);
+	normalizePcCardCfPath(rmdir_path, sizeof(rmdir_path));
+	genLimObjName(rmdir_path, 0);
 #if FILEOP_TRACE
 	t0 = Timer();
 #endif
-	ret = fileXioRmdir(path);
+	ret = fileXioRmdir(rmdir_path);
 #if FILEOP_TRACE
 	t1 = Timer();
 	printf("[FILEOP] rmdir path=%s ret=%d dt=%llu ms\n",
-	       fileopTraceDisplayPath(path, log_path, sizeof(log_path)),
+	       fileopTraceDisplayPath(rmdir_path, log_path, sizeof(log_path)),
 	       ret, (unsigned long long)((t1 >= t0) ? (t1 - t0) : 0));
 #endif
 	return ret;
@@ -232,6 +259,7 @@ int genRmdir(char *path)
 int genRemove(char *path)
 {
 	int ret;
+	char rm_path[MAX_PATH];
 #if FILEOP_TRACE
 	u64 t0, t1;
 	char log_path[MAX_PATH];
@@ -246,16 +274,20 @@ int genRemove(char *path)
 	path = mapped_path;
 #endif
 
+	if (!ensurePathPcCardCfOnline(path))
+		return -ENODEV;
 	ensurePathMemoryCardAccessible(path);
-	genLimObjName(path, 0);
+	snprintf(rm_path, sizeof(rm_path), "%s", path);
+	normalizePcCardCfPath(rm_path, sizeof(rm_path));
+	genLimObjName(rm_path, 0);
 #if FILEOP_TRACE
 	t0 = Timer();
 #endif
-	ret = fileXioRemove(path);
+	ret = fileXioRemove(rm_path);
 #if FILEOP_TRACE
 	t1 = Timer();
 	printf("[FILEOP] remove path=%s ret=%d dt=%llu ms\n",
-	       fileopTraceDisplayPath(path, log_path, sizeof(log_path)),
+	       fileopTraceDisplayPath(rm_path, log_path, sizeof(log_path)),
 	       ret, (unsigned long long)((t1 >= t0) ? (t1 - t0) : 0));
 #endif
 	return ret;
@@ -269,11 +301,14 @@ int genGetStat(const char *path, iox_stat_t *stat)
 
 	if (path == NULL || path[0] == '\0' || stat == NULL)
 		return -1;
+	if (!ensurePathPcCardCfOnline(path))
+		return -ENODEV;
 	snprintf(stat_path, sizeof(stat_path), "%s", path);
 #if defined(ETH) || defined(UDPFS)
 	makeHostPath(stat_path, stat_path);
 #endif
 	ensurePathMemoryCardAccessible(stat_path);
+	normalizePcCardCfPath(stat_path, sizeof(stat_path));
 	genLimObjName(stat_path, 0);
 	return fileXioGetStat(stat_path, stat);
 }
@@ -291,11 +326,14 @@ int genMkdir(const char *path, int mode)
 
 	if (path == NULL || path[0] == '\0')
 		return -1;
+	if (!ensurePathPcCardCfOnline(path))
+		return -ENODEV;
 	snprintf(mkdir_path, sizeof(mkdir_path), "%s", path);
 #if defined(ETH) || defined(UDPFS)
 	makeHostPath(mkdir_path, mkdir_path);
 #endif
 	ensurePathMemoryCardAccessible(mkdir_path);
+	normalizePcCardCfPath(mkdir_path, sizeof(mkdir_path));
 	genLimObjName(mkdir_path, 0);
 
 #if FILEOP_TRACE
@@ -325,12 +363,15 @@ int genOpen(const char *path, int mode)
 
 	if (path == NULL || path[0] == '\0')
 		return -1;
+	if (!ensurePathPcCardCfOnline(path))
+		return -ENODEV;
 	DPRINTF("%s: '%s' @ %d\n", __FUNCTION__, path, mode);
 	snprintf(open_path, sizeof(open_path), "%s", path);
 #if defined(ETH) || defined(UDPFS)
 	makeHostPath(open_path, open_path);
 #endif
 	ensurePathMemoryCardAccessible(open_path);
+	normalizePcCardCfPath(open_path, sizeof(open_path));
 	genLimObjName(open_path, 0);
 #if FILEOP_TRACE
 	t0 = Timer();
@@ -397,6 +438,7 @@ int genOpen(const char *path, int mode)
 int genDopen(char *path)
 {
 	int fd;
+	char dopen_path[MAX_PATH];
 #if FILEOP_TRACE
 	u64 t0, t1;
 	char req_log_path[MAX_PATH];
@@ -411,11 +453,15 @@ int genDopen(char *path)
 
 	DPRINTF("%s: '%s'\n", __FUNCTION__, path);
 
+	if (!ensurePathPcCardCfOnline(path))
+		return -ENODEV;
 	ensurePathMemoryCardAccessible(path);
-	if (!strncmp(path, "pfs", 3) || !strncmp(path, "vmc", 3)) {
+	snprintf(dopen_path, sizeof(dopen_path), "%s", path);
+	normalizePcCardCfPath(dopen_path, sizeof(dopen_path));
+	if (!strncmp(dopen_path, "pfs", 3) || !strncmp(dopen_path, "vmc", 3)) {
 		char tmp[MAX_PATH];
 
-		strcpy(tmp, path);
+		strcpy(tmp, dopen_path);
 		if (tmp[strlen(tmp) - 1] == '/')
 			tmp[strlen(tmp) - 1] = '\0';
 #if FILEOP_TRACE
@@ -436,16 +482,16 @@ int genDopen(char *path)
 #if FILEOP_TRACE
 		t0 = Timer();
 #endif
-		fd = fileXioDopen(path);
+		fd = fileXioDopen(dopen_path);
 #if FILEOP_TRACE
 		t1 = Timer();
 		printf("[FILEOP] dopen req=%s mapped=%s fd=%d dt=%llu ms\n",
 		       fileopTraceDisplayPath(path, req_log_path, sizeof(req_log_path)),
-		       fileopTraceDisplayPath(path, mapped_log_path, sizeof(mapped_log_path)),
+		       fileopTraceDisplayPath(dopen_path, mapped_log_path, sizeof(mapped_log_path)),
 		       fd,
 		       (unsigned long long)((t1 >= t0) ? (t1 - t0) : 0));
 		if (fd >= 0)
-			fileopTraceSet(fd, path, 0, 1);
+			fileopTraceSet(fd, dopen_path, 0, 1);
 #endif
 	}
 

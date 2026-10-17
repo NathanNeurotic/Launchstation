@@ -51,6 +51,12 @@ static int storageState(const char *path) {
 static int isPathDeviceStackLoaded(const char *path) {
     (void)path; return bdm_ready;
 }
+static int isPcCardCfPath(const char *path) {
+    (void)path; return 0;
+}
+static int isPcCardCfOnline(void) {
+    return 0;
+}
 """
 program += extract("int dashDevicePathReady(const char *path)\n{")
 program += extract("int dashBootDeviceBit(void)\n{")

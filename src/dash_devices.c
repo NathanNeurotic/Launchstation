@@ -19,7 +19,7 @@ extern int vmcMounted[2];
 
 /* Driver residency does not establish that a card, disk or server exists.
  * Cache explicit root checks; never do blocking device IO from drawing. */
-enum { PROBE_HDD, PROBE_ATA, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1, PROBE_UDPFS };
+enum { PROBE_HDD, PROBE_ATA, PROBE_PCCF, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1, PROBE_UDPFS };
 static u32 probe_checked, probe_present;
 static unsigned int probe_reset_generation = (unsigned int)-1;
 
@@ -33,6 +33,7 @@ static int probeIndex(const char *mount)
 {
 	if (!strncmp(mount, "hdd0:", 5)) return PROBE_HDD;
 	if (!strncmp(mount, "ata0:", 5)) return PROBE_ATA;
+	if (isPcCardCfPath(mount)) return PROBE_PCCF;
 	if (!strncmp(mount, "mx4sio", 6)) return PROBE_MX4SIO;
 	if (!strncmp(mount, "ilink", 5)) return PROBE_ILINK;
 	if (!strncmp(mount, "mmce", 4)) return mount[4] == '1' ? PROBE_MMCE1 : PROBE_MMCE0;
@@ -204,6 +205,9 @@ int dashDevicePathReady(const char *path)
 	 * IOP stack is active. isPathDeviceStackLoaded() has no side effects. */
 	if (!strncmp(path, "rom", 3))
 		return 1;
+	if (isPcCardCfPath(path))
+		return storageState(path) != DASH_DEV_ABSENT &&
+		       isPathDeviceStackLoaded(path) && isPcCardCfOnline();
 	/* A failed explicit check must also hide cached apps from that storage. */
 	if (storageState(path) == DASH_DEV_ABSENT)
 		return 0;
@@ -339,6 +343,37 @@ int dashDevicesList(DashDevice *out, int max)
 	if (filerShowAtaUnit(0) && !console_is_PSX) {
 		addStorage(out, &n, max, DI_HDD, "exFAT HDD", "ata0:", "ata0:/", "Ready", "No exFAT storage found");
 	}
+	if (isPcCardCfEligible() || boot_show_all_devices) {
+		if (!isPcCardCfEligible()) {
+			add(out, &n, max, DI_SDCARD, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "Unsupported console model");
+		} else if (boot_safe_mode) {
+			add(out, &n, max, DI_SDCARD, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "Disabled in safe mode");
+		} else if (isPcCardCfBusBusy()) {
+			add(out, &n, max, DI_SDCARD, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "PC CARD / DEV9 bus busy");
+		} else if (isPcCardCfLoaded()) {
+			u32 sectors = 0;
+			int st_ret = getPcCardCfCapacitySectors(&sectors);
+			if (st_ret < 0 || sectors == 0) {
+				add(out, &n, max, DI_SDCARD, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "CF card offline or I/O fault");
+			} else if ((probe_checked & (1u << PROBE_PCCF)) && !(probe_present & (1u << PROBE_PCCF))) {
+				add(out, &n, max, DI_SDCARD, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "FAT32/exFAT volume not found");
+			} else {
+				DashDevice *cd = add(out, &n, max, DI_SDCARD, DASH_DEV_READY, "PC CARD CF", "cf0:", "cf0:/", "Ready (PCMCIA)");
+				if (cd != NULL && sectors > 0) {
+					u64 bytes = (u64)sectors * 512ULL;
+					if (bytes >= (1024ULL * 1024ULL * 1024ULL))
+						snprintf(cd->detail, sizeof(cd->detail), "%.1f GB capacity", (double)bytes / (1024.0 * 1024.0 * 1024.0));
+					else
+						snprintf(cd->detail, sizeof(cd->detail), "%u MB capacity", (unsigned int)(bytes / (1024ULL * 1024ULL)));
+				}
+			}
+		} else {
+			if (probe_checked & (1u << PROBE_PCCF))
+				add(out, &n, max, DI_SDCARD, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "No compatible CF adapter");
+			else
+				add(out, &n, max, DI_SDCARD, DASH_DEV_PROBE, "PC CARD CF", "cf0:", "cf0:/", "Not connected");
+		}
+	}
 #endif
 
 	{
@@ -454,6 +489,10 @@ static int probeMount(const char *m)
 	else if (!strncmp(m, "ata", 3)) {
 		ok = loadAtaModules();
 		if (ok) ok = probeRoot("ata0:/", 2000);
+	}
+	else if (isPcCardCfPath(m)) {
+		ok = loadPcCardCfModules() && isPcCardCfOnline();
+		if (ok) ok = probeRoot("cf0:/", 2000) && isPcCardCfOnline();
 	}
 #endif
 #ifdef MMCE
@@ -613,6 +652,8 @@ void dashDevicesStartForPath(const char *path)
 #ifdef EXFAT
 	else if (!strncmp(path, "ata", 3))
 		mount = "ata0:";
+	else if (isPcCardCfPath(path))
+		mount = "cf0:";
 #endif
 #ifdef MMCE
 	else if (!strncmp(path, "mmce", 4))

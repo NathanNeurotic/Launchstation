@@ -33,10 +33,13 @@ int prepareExploitSignerIop(void);
 int isPathDeviceStackLoaded(const char *path);
 int isUsbMassStackLoaded(void);
 
-/* Driver ownership only; a successful probe does not prove a mounted volume.
- * No automatic startup or Files/Devices advertisement uses these yet. */
+/* PC CARD CompactFlash (cf: / cf0:) ownership and status queries. */
 int isPcCardCfEligible(void);
 int pcCardCfOwnsBus(void);
+int isPcCardCfLoaded(void);
+int isPcCardCfBusBusy(void);
+int isPcCardCfOnline(void);
+int getPcCardCfCapacitySectors(u32 *sectors_out);
 int isPcCardCfPath(const char *path);
 int loadPcCardCfModules(void);
 int shutdownPcCardCf(void);

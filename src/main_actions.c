@@ -196,6 +196,12 @@ void ExecuteMainAction(char *pathin, const MainExecuteContext *ctx)
 
 Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 
+	if (isPcCardCfPath(path)) {
+		LaunchArgsClear();
+		snprintf(ctx->main_msg, MAX_PATH, "Direct launch from PC CARD CF is not supported; copy to another device first.");
+		return;
+	}
+
 	if (IsPopstarterVcdPath(path)) {
 		LaunchPopstarterVcd(path, ctx->main_msg, MAX_PATH);
 		return;

@@ -598,6 +598,12 @@ static void activate(void)
 	if (genCmpFileExt(path, "ELF") || genCmpFileExt(path, "XLF") || genCmpFileExt(path, "KELF") ||
 	    genCmpFileExt(path, "VCD") || genCmpFileExt(path, "ISO") ||
 	    genCmpFileExt(path, "CUE") || IsEmberGamePath(path)) {
+		if (isPcCardCfPath(path)) {
+			dashModalMessage(DI_WARNING, "Direct launch unsupported",
+			                 "Launching executables or game images directly from PC CARD CF (cf:/) is not supported yet. Copy the file to another storage device first.",
+			                 path);
+			return;
+		}
 		launchPath(path, 0);
 		return;
 	}
@@ -2288,8 +2294,17 @@ static void actionsMenu(void)
 		snprintf(sort_detail, sizeof(sort_detail), "%s, %s", sort_names[fb_sort], direction_names[fb_sort_desc ? 1 : 0]);
 #define ADD(ic, lab, det, dis, id) \
 	(items[n].icon = (ic), items[n].label = (lab), items[n].detail = (det), items[n].disabled = (dis), ids[n++] = (id))
-	if (f != NULL)
-		ADD(isDir(f) ? DI_FOLDER : DI_PLAY, isDir(f) ? "Open" : "Open / start", NULL, 0, F_OPEN);
+	if (f != NULL) {
+		int open_disabled = 0;
+		if (!isDir(f) && isPcCardCfPath(fb.dir)) {
+			if (genCmpFileExt(f->name, "ELF") || genCmpFileExt(f->name, "XLF") ||
+			    genCmpFileExt(f->name, "KELF") || genCmpFileExt(f->name, "VCD") ||
+			    genCmpFileExt(f->name, "ISO") || genCmpFileExt(f->name, "CUE"))
+				open_disabled = 1;
+		}
+		ADD(isDir(f) ? DI_FOLDER : DI_PLAY, isDir(f) ? "Open" : "Open / start",
+		    open_disabled ? "Direct launch unsupported" : NULL, open_disabled, F_OPEN);
+	}
 	if (in_folder) {
 		ADD(DI_FILE, "Copy", fb.nmarked ? marked : NULL, !has_target || !en[COPY], F_COPY);
 		ADD(DI_CLOSE, "Cut", fb.nmarked ? marked : NULL, !has_target || !en[CUT], F_CUT);
@@ -2307,7 +2322,9 @@ static void actionsMenu(void)
 		if (f != NULL && !isDir(f) && en[OPEN_TEXTEDITOR])
 			ADD(DI_TEXT, "Open in Text Editor", NULL, 0, F_EDIT);
 		if (is_elf) {
-			ADD(DI_EDIT, "Start with arguments...", NULL, 0, F_ARGS);
+			int args_disabled = isPcCardCfPath(fb.dir) ? 1 : 0;
+			ADD(DI_EDIT, "Start with arguments...", args_disabled ? "Direct launch unsupported" : NULL,
+			    args_disabled, F_ARGS);
 			if (en[TITLE_CFG])
 				ADD(DI_SETTINGS, "Create title.cfg", NULL, 0, F_TITLECFG);
 		}

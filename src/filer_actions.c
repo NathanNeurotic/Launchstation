@@ -295,8 +295,9 @@ u64 getFileSize(const char *path, const FILEINFO *file)
 		if (!strncmp(dir, "host:/", 6))
 			makeHostPath(dir, dir);
 #endif
-		fileXioGetStat(dir, &stat);
-		size = stat.size;
+		if (genGetStat(dir, &stat) < 0)
+			return 0;
+		size = ((u64)stat.hisize << 32) | (u64)stat.size;
 	}
 	return size;
 }
@@ -1939,12 +1940,24 @@ int Rename(const char *path, const FILEINFO *file, const char *name)
 		}
 #endif
 	} else {  //For all other devices
+		if (isPcCardCfPath(path) && !isPcCardCfOnline())
+			return -ENODEV;
 		sprintf(oldPath, "%s%s", path, file->name);
 		sprintf(newPath, "%s%s", path, name);
 		if (filerPathExistsForConflict(newPath))
 			ret = -EEXIST;
-		else
-			ret = fileXioRename(oldPath, newPath);
+		else {
+			char normOld[MAX_PATH], normNew[MAX_PATH];
+			snprintf(normOld, sizeof(normOld), "%s", oldPath);
+			snprintf(normNew, sizeof(normNew), "%s", newPath);
+			if (isPcCardCfPath(normOld)) {
+				if (!strncmp(normOld, "cf:", 3))
+					snprintf(normOld, sizeof(normOld), "cf0:%s", oldPath + 3);
+				if (!strncmp(normNew, "cf:", 3))
+					snprintf(normNew, sizeof(normNew), "cf0:%s", newPath + 3);
+			}
+			ret = fileXioRename(normOld, normNew);
+		}
 	}
 
 	return ret;
