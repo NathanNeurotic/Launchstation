@@ -301,6 +301,10 @@ typedef struct
 	char popstarter_file[MAX_PATH];
 	char ember_dir[MAX_PATH];
 	char neutrino_file[MAX_PATH];
+	/* Opt-out gates for automatic game-image handlers. Old CNFs default to enabled. */
+	int disable_ember;
+	int disable_popstarter;
+	int disable_neutrino;
 	int Menu_Frame;
 	int timeout;
 	int Hide_Paths;
