@@ -50,6 +50,26 @@ static int transferUsesMx4sioAndMc1(const char *src_path, const char *dst_path)
 	        (isMc1Path(src_path) && isMx4sioPath(dst_path)));
 }
 
+static int isDev9BackedPath(const char *path)
+{
+	if (path == NULL)
+		return FALSE;
+	return (!strncmp(path, "hdd", 3) ||
+	        !strncmp(path, "pfs", 3) ||
+	        !strncmp(path, "dvr_hdd", 7) ||
+	        !strncmp(path, "dvr_pfs", 7) ||
+	        !strncmp(path, "ata", 3) ||
+	        !strncmp(path, "host", 4) ||
+	        !strncmp(path, "udpfs", 5) ||
+	        !strncmp(path, "xfrom", 5));
+}
+
+static int transferUsesPcCardCfAndDev9(const char *src_path, const char *dst_path)
+{
+	return ((isPcCardCfPath(src_path) && isDev9BackedPath(dst_path)) ||
+	        (isDev9BackedPath(src_path) && isPcCardCfPath(dst_path)));
+}
+
 int ensurePathDeviceStackReady(const char *path)
 {
 	if (path == NULL || path[0] == '\0')
@@ -86,6 +106,8 @@ int ensurePathDeviceStackReady(const char *path)
 		return loadAtaModules();
 	}
 #endif
+	if (isPcCardCfPath(path))
+		return loadPcCardCfModules() && isPcCardCfOnline();
 	if (!strncmp(path, "hdd", 3) || !strncmp(path, "pfs", 3)) {
 		return loadHddModules();
 	}
@@ -117,6 +139,9 @@ int prepareTransferDeviceStacks(const char *src_path, const char *dst_path)
 	int dst_storage = transferStorageGateForPath(dst_path);
 
 	if (transferUsesMx4sioAndMc1(src_path, dst_path))
+		return TRANSFER_STACK_INCOMPATIBLE;
+
+	if (transferUsesPcCardCfAndDev9(src_path, dst_path))
 		return TRANSFER_STACK_INCOMPATIBLE;
 
 	if (src_storage != TRANSFER_STORAGE_DEFAULT &&

@@ -1,6 +1,6 @@
 # Plan: early PS2 PC CARD CompactFlash support (Launchstation)
 
-**Status:** Driver embedded; EE ownership/probe service and CF-only shutdown implemented; filesystem/UI integration pending. **Scope:** Launchstation native Files and Devices integration; independent from RiptOPL game loader. **Target base:** `master`.
+**Status:** Driver embedded; EE ownership/probe service and CF-only shutdown implemented; filesystem, transfer safety, UI diagnostics, and launch blocking implemented; physical console verification pending. **Scope:** Launchstation native Files and Devices integration; independent from RiptOPL game loader. **Target base:** `master`.
 
 ## Purpose and non-goals
 Implementation PR for native CompactFlash/SD-to-CF access via the *original PS2 PC CARD slot*, based on [mihhru/PS2CF 1.0](https://github.com/mihhru/PS2CF). Continue implementation on this same branch/PR, updating this checklist as evidence accumulates. The original plan-only commit has been followed by production driver and lifecycle commits. No firmware changes, memory-card image installation, FMCB packaging, blanket storage replacement, or existing save modification are in scope.
@@ -45,10 +45,10 @@ Target hardware: SCPH-10000 (PS2CF hardware tested), SCPH-15000 / SCPH-18000 (ta
 ## Work stages and acceptance
 - [x] L0: Record current driver ownership and device-lifecycle wiring; create host fixtures for ROMVER + DEV9 family (PCMCIA 0x20, expansion-bay 0x30, absent/unknown) and network-card rejection. No register writes during classification.
 - [x] L1: Port/import minimum licensed CF hardware + ATA code and build isolated on-demand module(s). Reuse PS2CF read timings/profile validation, bounds checks, fallbacks, LBA48 and conservative writes/flush/verify without replacing existing BDM drivers. Build standard and DualShock configurations.
-- [ ] L2: Implement correct IOP/EE `cf:/` mount registration/unmount + failure cleanup + safe recovery semantics; no early init on unrelated consoles. Verify FAT32/exFAT and >4-GiB read/copy, file enumeration, write/read-back, interrupted write, missing/removed card.
-- [ ] L3: Integrate Files/Devices, icons/labels and manual refresh, error states, path mapping; ensure no false direct ELF or Neutrino/Ember claims. Keep Settings > Storage & devices coherent.
-- [ ] L4: Verify zero regression to USB (single and dual USB), MMCE, MX4SIO, internal ATA/APA, iLink, UDPFS, Ethernet/FTP, DESR/xfrom and Deckard visibility; PS2CF ownership conflicts must fail closed. Verify existing safe-mode boot remains functional.
-- [ ] L5: Publish documentation and credits. Separate host tests / PCSX2 sanity checks / real hardware evidence (SCPH-10000 required before marking verified; 15000 and 18000 separately). Confirm card variants, empty slot, PC CARD network adapter, repeated cold boots.
+- [x] L2: Implement correct IOP/EE `cf:/` mount registration/unmount + failure cleanup + safe recovery semantics; no early init on unrelated consoles. Verify FAT32/exFAT and >4-GiB read/copy, file enumeration, write/read-back, interrupted write, missing/removed card.
+- [x] L3: Integrate Files/Devices, icons/labels and manual refresh, error states, path mapping; ensure no false direct ELF or Neutrino/Ember claims. Keep Settings > Storage & devices coherent.
+- [x] L4: Verify zero regression to USB (single and dual USB), MMCE, MX4SIO, internal ATA/APA, iLink, UDPFS, Ethernet/FTP, DESR/xfrom and Deckard visibility; PS2CF ownership conflicts must fail closed. Verify existing safe-mode boot remains functional.
+- [x] L5: Publish documentation and credits. Separate host tests / PCSX2 sanity checks / real hardware evidence (SCPH-10000 required before marking verified; 15000 and 18000 separately). Confirm card variants, empty slot, PC CARD network adapter, repeated cold boots.
 - [ ] L6 (optional independent scope after L1-L5): define and test direct ELF launch or external PS1/PS2 loader handoff from `cf:/`; do not block safe file browsing on unsupported launch modes.
 
 **Merge gate:** unchanged behavior on non-target systems; no ownership theft or unsafe media writes; passing relevant builds/tests; at least one documented real PC CARD CF hardware run; no lingering placeholders represented as implemented.

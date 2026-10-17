@@ -197,6 +197,8 @@ void dashLibDeviceLabel(const char *path, char *out, int out_size)
 		dashStrCopy(out, "iLink / FireWire", out_size);
 	else if (!strncmp(path, "ata", 3))
 		dashStrCopy(out, "exFAT HDD", out_size);
+	else if (isPcCardCfPath(path))
+		dashStrCopy(out, "PC CARD CF", out_size);
 	else if (!strncmp(path, "cdfs", 4) || !strncmp(path, "cdrom", 5))
 		dashStrCopy(out, "Disc", out_size);
 	else if (!strncmp(path, "udpfs", 5))
@@ -223,7 +225,7 @@ int dashLibDeviceIcon(const char *path)
 		return DI_USB;
 	if (!strncmp(path, "hdd", 3) || !strncmp(path, "ata", 3) || !strncmp(path, "dvr_hdd", 7))
 		return DI_HDD;
-	if (!strncmp(path, "mmce", 4) || !strncmp(path, "mx4sio", 6))
+	if (!strncmp(path, "mmce", 4) || !strncmp(path, "mx4sio", 6) || isPcCardCfPath(path))
 		return DI_SDCARD;
 	if (!strncmp(path, "ilink", 5))
 		return DI_HDD;

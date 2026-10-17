@@ -202,7 +202,8 @@ static int have_usbd, have_usb_mass, have_HDD_modules, block_storage_stack_mode;
 static int have_ps2host, have_ps2ip, have_ps2smap, ps2dev9_loaded;
 static int have_Flash_modules, have_DVRP_HDD_modules, have_ata_bd, have_bdmfs;
 static int have_mmce, have_mx4sio, storage_driver_stack_mode, have_udpfs_ioman, have_cdvd;
-static int have_ilinkman, have_ieee1394_bd, have_bdm;
+static int have_ilinkman, have_ieee1394_bd, have_bdm, pccf_loaded;
+static int isPcCardCfPath(const char *path) { (void)path; return 0; }
 """
 bootcode += boot_header[boot_header.index("enum BOOT_DEVICE {"):boot_header.index("enum BOOT_DEVICE prepare")]
 signatures = ("static void normalizeBootPath(", "static int isSlashRootedBootPathDevice(",

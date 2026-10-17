@@ -44,7 +44,10 @@ static void trackLoad(char stage) {
     load_order[load_order_count++] = stage;
     load_order[load_order_count] = 0;
 }
-static int have_HDD_modules,block_storage_stack_mode,have_ata_bd,have_cdvd;
+static int have_HDD_modules,block_storage_stack_mode,have_ata_bd,have_cdvd,pccf_loaded;
+static int isPcCardCfPath(const char *path) { (void)path; return 0; }
+static int loadPcCardCfModules(void) { return 0; }
+static int isPcCardCfOnline(void) { return 0; }
 static char LaunchElfDir[256];
 static char bdm_irx[1],bdmfs_fatfs_irx[1],usbmass_bd_irx[1];
 static int size_bdm_irx=1,size_bdmfs_fatfs_irx=1,size_usbmass_bd_irx=1;
