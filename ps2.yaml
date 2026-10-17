@@ -332,6 +332,7 @@ targets:
       - src/popstarter_elf.c
       - src/ember.c
       - src/neutrino_iso.c
+      - src/gui_neutrino.c
       - src/font_uLE.c
       - src/makeicon.c
       - src/chkesr.c

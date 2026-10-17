@@ -302,6 +302,12 @@ int LaunchEmberGame(const char *path, char *message, size_t message_size)
 	char remounted_elf[MAX_PATH];
 	int exec_kind, ret;
 
+	/* Disable must take effect before any image, BIOS or driver access. */
+	if (setting != NULL && setting->disable_ember) {
+		setEmberMessage(message, message_size, "Ember support disabled in Launching settings", NULL);
+		return 0;
+	}
+
 	if (!parseEmberGamePath(path, umbrella, sizeof(umbrella),
 	                        game_name, sizeof(game_name))) {
 		setEmberMessage(message, message_size,

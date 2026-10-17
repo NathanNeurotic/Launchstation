@@ -103,7 +103,7 @@ Drivers load on demand for maximum compatibility and initial boot speed.
 - RetroGem Game ID for [PIXEL FX RetroGem](https://www.pixelfx.co/hdmi-retro-gem)
 - Launch PS1 VCDs through POPStarter with an optional custom POPStarter path and device-specific fallbacks.
 - Launch PS1 CUE/BIN/EXE images through Ember from any save-safe `<Ember directory>/games/<Game>/` umbrella. The umbrella name/location is configurable, and a configured Ember directory can supply `ember.elf` to a target device that lacks it. POPStarter remains the independent VCD path; format selects the core automatically.
-- Launch PS2 ISO images through Neutrino with an optional custom Neutrino path and game-device/memory-card fallbacks.
+- Launch PS2 ISO images through Neutrino with custom or discovered loader paths, and R3Z per-launch compatibility (modes 0/2/3/5/7), GSM video, debug-colors and PS2-logo options. Independent Ember/POPStarter/Neutrino disable switches default to Off.
 - MMCE backup & sync page with Sync all cards, Off/Local/Local+Google automatic sync, IGR helper management, Google account controls and HTTPS update checks
 - Writes to history file for disc launches for mmce vmc change
 - Applies deckard disc patches
