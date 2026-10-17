@@ -1,6 +1,6 @@
 # Consolidated storage-driver lifecycle repair — #172–#175
 
-> **Status: implementation handoff; no production fixes in this plan-only PR.** Do not merge this planning PR as a bug fix. Implement all four issues in this single branch/PR, update this checklist with evidence, and request CodeRabbit review before marking ready. No background test run was independently verified while preparing this plan.
+> **Status: partial implementation on PR #176; not merge ready.** Safe initial EE fixes and focused host regression tests have been committed in this same branch. The critical MMCE residency/physical-device hang investigations remain open. Continue implementation in this one PR; request CodeRabbit review and hardware validation before marking ready.
 
 ## Adjudication of Gemini's alternate blueprint (2026-10-17)
 
@@ -25,6 +25,15 @@ This section **supersedes contradictory implementation instructions** from the t
 **Final implementation default:** `MMCE_PING_ATTEMPTS = 2`, with the existing `timeout_200ms` for both attempts and each port. Nominal timeout waiting when both ports have no MMCE: **~800 ms maximum** instead of **~2400 ms** (not an end-to-end timing guarantee). An isolated 100 ms ping timeout is allowed only as a *separately validated follow-up commit in this same PR* when real SD2PSX, MemCard PRO2 and available PicoMemcard hardware pass repeated cold boot, first-try, slow-start and reconnect trials. If any regressions occur, retain 200 ms. Do not change the timeout for unrelated MMCE commands.
 
 **Additional cross-check:** current vendored `iop/mmceman/src/sio2man_hook.c` already has `PORT_NR` disabled; upstream `ps2-mmce/mmceman` merged an mc1/unblock fix on 2026-08-01. Do not reintroduce port blocking or blindly cherry-pick an already-equivalent upstream fix. The upstream MMCEMAN `mmceman.c` still uses six attempts and `mmce_cmd_ping` still uses a 200 ms timeout; our reduction is Launchstation-specific and needs hardware verification. Upstream docs also caution about SIO2MAN version/driver compatibility. See [upstream MMCEMAN](https://github.com/ps2-mmce/mmceman) and [the mc1 fix](https://github.com/ps2-mmce/mmceman/commit/21dbc0a7e5640b4d77520ab362dab62bafccacd8).
+
+## Changes already implemented in PR #176
+
+- `src/dash_files.c`: the **generic missing-device error modal** passes `NULL` as detail, hiding raw mount IDs. The existing `deviceDisplayMount()` helper **must remain** for normal device panels and file-picker paths (including MASS unit labels).
+- `src/dash_devices.c::startSync()`: pre-render a loading-status frame before synchronous `probeMount()` starts. This does **not** keep animation moving during a blocked IOP RPC.
+- `src/init.c::resetRuntimeDeviceState()`: invoke generation-aware `dashSoundShutdown()` after the early blocked-reset guard and root libmc poll drain, **before** `Reset()` and PAD teardown; the main-loop maintenance path restores audio after the IOP generation advances.
+- Updated the production-reset execution harness `tests/test_usb_iop_pad_handoff.py`, the retained MASS-label + modal contract `tests/test_zack_feedback.py`, and added the compiled host behavior harness `tests/test_zack_storage_drivers.py`, which runs in CI.
+- No `MMCE_PING_ATTEMPTS`, transaction timeout, module-residency tracking, iLink/MX4SIO wait-window or mount-switch policy change has been committed. These require further implementation and/or real hardware evidence.
+- GitHub Actions host tests and documentation checks passed on the safe-fix commit set. Standard/DS34 cross-compilation and packaging must be checked on the final branch SHA; prior CI failures from an obsolete modal test and an inadvertently deleted shared display helper have been corrected.
 
 ## Provenance and scope
 
