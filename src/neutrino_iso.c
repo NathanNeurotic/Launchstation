@@ -176,6 +176,12 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	const char *bsd;
 	int exec_kind, ret;
 
+	/* Do not probe the ISO or candidates when the Neutrino route is disabled. */
+	if (setting != NULL && setting->disable_neutrino) {
+		setMessage(message, message_size, "Neutrino support disabled in Launching settings", NULL);
+		return 0;
+	}
+
 	if (!IsNeutrinoIsoPath(path)) {
 		setMessage(message, message_size, "Not a PS2 ISO image", path);
 		return 0;
