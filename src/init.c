@@ -1,5 +1,6 @@
 #include "launchelf.h"
 #include "init.h"
+#include "dash_sound.h"
 #include "pccf_control.h"
 #include <unistd.h>
 #include <iopcontrol_special.h>
@@ -311,7 +312,7 @@ static void resetUsbMassScanState(void);
 static void resetUsbMassRuntimeState(void);
 static void resetDriverStackLoadTracking(void);
 static void resetRuntimeDeviceState(int show_status);
-static void switchStorageDriverStack(int target_mode);
+static int switchStorageDriverStack(int target_mode);
 static void switchBlockStorageStack(int target_mode);
 #if defined(ETH) && defined(UDPFS)
 static void switchNetworkStack(int target_mode);
@@ -1854,6 +1855,11 @@ static void resetRuntimeDeviceState(int show_status)
 	filerRootMcPollIdle();
 	if (iopResetNotify != NULL)
 		iopResetNotify(0);
+	/* audsrv is an IOP RPC client: release it while its server is still
+	 * alive. dashSoundShutdown() skips dead-generation RPCs and only clears
+	 * local state in that case. The main dashboard loop restores audio
+	 * after Reset() advances the IOP generation and PAD is ready. */
+	dashSoundShutdown();
 #ifdef DS34
 	stopDs34Input();
 #endif
@@ -1905,19 +1911,24 @@ void ensureMemoryCardPortAccessible(int port)
 #endif
 }
 
-static void switchStorageDriverStack(int target_mode)
+static int switchStorageDriverStack(int target_mode)
 {
 #if defined(MMCE) || defined(MX4SIO)
 	if (storage_driver_stack_mode == target_mode)
-		return;
+		return 1;
 
 	if (storage_driver_stack_mode != STORAGE_STACK_DEFAULT) {
 		DPRINTF("Switching storage driver stack (%d -> %d), resetting IOP\n", storage_driver_stack_mode, target_mode);
 		resetRuntimeDeviceState(TRUE);
+		/* A refused reset leaves the old SIO2 hooks resident. Never load an
+		 * incompatible module or relabel that stack after a refused reset. */
+		if (storage_driver_stack_mode != STORAGE_STACK_DEFAULT)
+			return 0;
 	}
 #else
 	(void)target_mode;
 #endif
+	return 1;
 }
 
 static void switchBlockStorageStack(int target_mode)
@@ -1984,7 +1995,8 @@ int loadMmceModules(void)
 		showLoadingModulesMsg("mmce");
 
 	ensureCoreIoStackReady();
-	switchStorageDriverStack(STORAGE_STACK_MMCE);
+	if (!switchStorageDriverStack(STORAGE_STACK_MMCE))
+		return 0;
 	if (!have_mmce) {
 		id = SifExecModuleBuffer(mmceman_irx, size_mmceman_irx, 0, NULL, &ret);
 		DPRINTF(" [MMCE]: id=%d ret=%d\n", id, ret);
@@ -2005,7 +2017,8 @@ int loadMx4sioModules(void)
 		showLoadingModulesMsg("mx4sio");
 
 	ensureCoreIoStackReady();
-	switchStorageDriverStack(STORAGE_STACK_MX4SIO);
+	if (!switchStorageDriverStack(STORAGE_STACK_MX4SIO))
+		return 0;
 #ifdef EXFAT
 	if (!loadBdmCoreModules())
 		return 0;
