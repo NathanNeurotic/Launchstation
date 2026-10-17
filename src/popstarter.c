@@ -52,6 +52,13 @@ int LaunchPopstarterVcd(const char *path, char *message, size_t message_size)
 	int show_launch_gameid;
 	int ret;
 
+	/* Preserve existing routes but fail closed before opening a VCD or loader. */
+	if (setting != NULL && setting->disable_popstarter) {
+		if (message != NULL && message_size != 0)
+			snprintf(message, message_size, "POPStarter support disabled in Launching settings");
+		return POPSTARTER_ERR_UNSUPPORTED_PATH;
+	}
+
 	arg0[0] = '\0';
 	launch_gameid[0] = '\0';
 	popstarter_path[0] = '\0';
