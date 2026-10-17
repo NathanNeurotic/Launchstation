@@ -30,6 +30,7 @@ assert "const DashScreen dashDevicesScreen = {storageEnter" in files
 assert "const DashScreen dashFilesScreen" in (root/"src/dash_browser.c").read_text()
 assert '"MASS"' in devices
 assert '"MASS (USB)"' not in devices
+assert "mass%d:/" in files  # keep path labels in device panels and picker
 assert "No USB storage device was found." in files
 assert 'dashModalMessage(DI_WARNING, "Device not found", body, NULL);' in files  # no raw mount IDs in errors
 assert "Not connected" in devices
