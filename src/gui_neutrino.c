@@ -1,5 +1,7 @@
 #include "launchelf.h"
 #include "gui_neutrino.h"
+#include "dash.h"
+#include "dash_internal.h"
 
 static const struct {
 	int mode;
@@ -101,6 +103,58 @@ static int moveNeutrinoSelection(int selection, int direction)
 	return selection + 1;
 }
 
+/* Keep dashboard rendering, input and audio maintenance on their existing
+ * modal path. The classic shell continues to use the upstream dialog below. */
+static int showDashboardNeutrinoOptions(NEUTRINO_LAUNCH_OPTIONS *options)
+{
+	DashMenuItem items[NEUTRINO_CANCEL + 1];
+	int selection = 0, i, choice;
+
+	for (;;) {
+		memset(items, 0, sizeof(items));
+		for (i = 0; i < NEUTRINO_COMPAT_COUNT; i++) {
+			items[i].icon = DI_INFO;
+			items[i].label = compatibility_options[i].label;
+			items[i].detail = options->game_compatibility & (1u << compatibility_options[i].mode) ? "On" : "Off";
+		}
+		items[NEUTRINO_VIDEO_MODE].icon = DI_SETTINGS;
+		items[NEUTRINO_VIDEO_MODE].label = "Video mode";
+		items[NEUTRINO_VIDEO_MODE].detail = video_modes[options->video_mode].label;
+		items[NEUTRINO_VIDEO_COMPATIBILITY].icon = DI_SETTINGS;
+		items[NEUTRINO_VIDEO_COMPATIBILITY].label = "Video compatibility";
+		items[NEUTRINO_VIDEO_COMPATIBILITY].detail = video_compatibility_modes[options->video_compatibility];
+		items[NEUTRINO_DEBUG_COLORS].icon = DI_INFO;
+		items[NEUTRINO_DEBUG_COLORS].label = "Debug colors";
+		items[NEUTRINO_DEBUG_COLORS].detail = options->debug_colors ? "On" : "Off";
+		items[NEUTRINO_LOGO].icon = DI_INFO;
+		items[NEUTRINO_LOGO].label = "PS2 logo";
+		items[NEUTRINO_LOGO].detail = options->logo ? "On" : "Off";
+		items[NEUTRINO_RUN].icon = DI_PLAY;
+		items[NEUTRINO_RUN].label = "Run game";
+		items[NEUTRINO_CANCEL].icon = DI_BACK;
+		items[NEUTRINO_CANCEL].label = "Cancel";
+		selection = dashModalMenu("Neutrino launch options", "For this launch only", items, NEUTRINO_CANCEL + 1, selection);
+		if (selection < 0 || selection == NEUTRINO_CANCEL)
+			return FALSE;
+		if (selection == NEUTRINO_RUN)
+			return TRUE;
+		if (selection < NEUTRINO_COMPAT_COUNT)
+			options->game_compatibility ^= 1u << compatibility_options[selection].mode;
+		else if (selection == NEUTRINO_VIDEO_MODE) {
+			const char *labels[NEUTRINO_VIDEO_COUNT];
+			for (i = 0; i < NEUTRINO_VIDEO_COUNT; i++) labels[i] = video_modes[i].label;
+			choice = dashModalChoice("Video mode", labels, NEUTRINO_VIDEO_COUNT, options->video_mode);
+			if (choice >= 0) options->video_mode = choice;
+		} else if (selection == NEUTRINO_VIDEO_COMPATIBILITY) {
+			choice = dashModalChoice("Video compatibility", video_compatibility_modes, NEUTRINO_VIDEO_COMPAT_COUNT, options->video_compatibility);
+			if (choice >= 0) options->video_compatibility = choice;
+		} else if (selection == NEUTRINO_DEBUG_COLORS)
+			options->debug_colors = !options->debug_colors;
+		else if (selection == NEUTRINO_LOGO)
+			options->logo = !options->logo;
+	}
+}
+
 static void drawNeutrinoHeading(const char *heading, int y)
 {
 	int width = printXY(heading, 0, 0, 0, FALSE, 0);
@@ -133,6 +187,8 @@ int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 	if (options == NULL)
 		return FALSE;
 	memset(options, 0, sizeof(*options));
+	if (DashIsActive())
+		return showDashboardNeutrinoOptions(options);
 	while (1) {
 		waitPadReady(0, 0);
 		if (readpad()) {

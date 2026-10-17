@@ -5,6 +5,7 @@ PS2 executable, without needing a PS2 graphics/pad stack on the host.
 """
 from pathlib import Path
 import subprocess
+import shutil
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
@@ -31,10 +32,40 @@ pure_c = (
     '#include "gui_neutrino.h"\n'
     + gui[start:end]
 )
+# Execute the dashboard menu with scripted user choices, including cancel.
+native_start = gui.index("static int showDashboardNeutrinoOptions")
+native_end = gui.index("static void drawNeutrinoHeading", native_start)
+pure_c += r"""
+#define TRUE 1
+#define FALSE 0
+#define DI_INFO 0
+#define DI_SETTINGS 1
+#define DI_PLAY 2
+#define DI_BACK 3
+typedef struct { int icon; const char *label; const char *detail; int disabled; } DashMenuItem;
+int dashModalMenu(const char *, const char *, const DashMenuItem *, int, int);
+int dashModalChoice(const char *, const char *const *, int, int);
+"""
+pure_c += gui[native_start:native_end]
+pure_c += "int testDashboard(NEUTRINO_LAUNCH_OPTIONS *o) { return showDashboardNeutrinoOptions(o); }\n"
+
 harness = r"""
 #include <assert.h>
 #include <string.h>
 #include "gui_neutrino.h"
+static const int *script;
+static int step, choice;
+int testDashboard(NEUTRINO_LAUNCH_OPTIONS *);
+typedef struct { int icon; const char *label; const char *detail; int disabled; } DashMenuItem;
+int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *items, int count, int selected) {
+    assert(title && subtitle && selected >= 0 && selected < count && count == 11);
+    for (int i = 0; i < count; i++) assert(items[i].label && !items[i].disabled);
+    return script[step++];
+}
+int dashModalChoice(const char *title, const char *const *labels, int count, int selected) {
+    assert(title && labels && count > selected);
+    return choice;
+}
 int main(void) {
     NEUTRINO_LAUNCH_OPTIONS o = {0};
     NEUTRINO_OPTION_ARGS a;
@@ -67,6 +98,15 @@ int main(void) {
     assert(buildNeutrinoOptionArgs(&o, &a) == -1);
     assert(buildNeutrinoOptionArgs(0, &a) == -1);
     assert(buildNeutrinoOptionArgs(&o, 0) == -1);
+    const int run[] = {0, 4, 5, 6, 7, 8, 9};
+    memset(&o, 0, sizeof(o)); script = run; step = 0; choice = 3;
+    assert(testDashboard(&o) == 1 && step == 7);
+    assert(o.game_compatibility == ((1u << 0) | (1u << 7)));
+    assert(o.video_mode == 3 && o.video_compatibility == 3 && o.debug_colors && o.logo);
+    const int cancel[] = {-1}; script = cancel; step = 0;
+    assert(testDashboard(&o) == 0);
+    const int submenu_cancel[] = {5, 10}; script = submenu_cancel; step = 0; choice = -1;
+    assert(testDashboard(&o) == 0 && o.video_mode == 3);
     return 0;
 }
 """
@@ -76,7 +116,7 @@ with tempfile.TemporaryDirectory(prefix="r3z-neutrino-") as folder:
     (temp / "main.c").write_text(harness, encoding="utf-8")
     binary = temp / "test_neutrino_args"
     subprocess.run(
-        ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
+        [shutil.which("gcc") or shutil.which("cc"), "-std=c11", "-Wall", "-Wextra", "-Werror",
          "-I", str(root / "include"), str(temp / "builder.c"),
          str(temp / "main.c"), "-o", str(binary)],
         check=True,

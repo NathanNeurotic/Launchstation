@@ -35,3 +35,7 @@
 - [ ] Device, game, and core parity verified on real hardware
 
 This document distinguishes **published master**, **public development-branch source**, **screenshot evidence**, **committed changes**, and **unverified runtime/hardware parity**.
+
+## Dashboard presentation follow-up
+
+Dashboard launches now use the existing dashboard modal menu for per-launch Neutrino options, preserving the scene, input mapping and normal modal maintenance. Classic launches retain the upstream dialog. A compiled host harness exercises all option types, Run, Cancel and submenu cancellation. Standard local PS2BUILD v2026.10.13 compilation and ELF packing pass; console launch and display acceptance remain pending.
