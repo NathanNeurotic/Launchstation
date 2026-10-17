@@ -37,6 +37,7 @@ jobs:
           python3 tests/test_ilink_browser.py
           python3 tests/test_neutrino_iso.py
           python3 tests/test_r3z_loader_disable.py
+          python3 tests/test_r3z_neutrino_options.py
           python3 tests/test_ember_launch.py
           python3 tests/test_ember_paths.py
           python3 tests/test_ember_iop_handoff.py
