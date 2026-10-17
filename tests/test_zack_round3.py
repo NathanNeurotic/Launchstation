@@ -42,10 +42,24 @@ assert "drawMsgOverride = quietDriverMsg;" in auto and "drawMsgOverride = prev;"
 # #137: background-only mode still shows how to bring the UI back.
 assert '{-1, "R3", "Show interface"}' in main
 
-# #140: Continue tile focus outlines and icon bob land on whole pixels.
+# #140: Continue tile focus outlines and icon bob land on whole pixels,
+# line thickness survives alternating interlaced fields without 30Hz flicker.
 focus = art[art.index("void dashDrawTileFocus("):art.index("static void tileBody(")]
 assert "x = floorf(x + .5f);" in focus and "h = floorf(h + .5f);" in focus
 assert "ay += floorf(bob + .5f) / h;" in art
+assert "vx[i] = floorf(v[i][0] * w + .5f);" in art
+assert "vy[i] = floorf(v[i][1] * h + .5f);" in art
+assert "dashLine(x + vx[i], y + vy[i], x + vx[j], y + vy[j], 2.0f, top);" in art
+draw_art = art[art.index("void dashDrawAppArt("):]
+assert "x = floorf(x + .5f);" in draw_art and "h = floorf(h + .5f);" in draw_art
+
+# #136: L1/R1 transition sound uses a rotating channel pool to avoid dropped notes on rapid input.
+sound = src("dash_sound.c")
+assert "#define SND_TRANS_CH_BASE 14" in sound
+assert "#define SND_TRANS_CH_COUNT 4" in sound
+assert "ch = SND_TRANS_CH_BASE + transSlot;" in sound
+assert "transSlot = (transSlot + 1) % SND_TRANS_CH_COUNT;" in sound
+assert "audsrv_ch_play_adpcm(-1, &samples[id]);" in sound
 
 # #133: the current-hour clock rod is gently lit, with no white fill block.
 clock = bg[bg.index("void dashBgSceneClockRing("):bg.index("// Light streaks")]

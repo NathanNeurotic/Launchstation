@@ -39,5 +39,5 @@ start = publish.index("        run: |\n") + len("        run: |\n")
 script = publish[start:]
 assert all(not line.strip() or line.startswith("          ") for line in script.splitlines())
 script = "\n".join(line[10:] for line in script.splitlines()) + "\n"
-subprocess.run(["bash", "-n"], input=script, text=True, check=True)
+subprocess.run(["bash", "-n"], input=script.encode("utf-8"), check=True)
 print("PASS: auto-rolling master trigger, existing stable URLs, ancestry and assets, Bash syntax")
