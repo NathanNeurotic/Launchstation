@@ -648,8 +648,8 @@ static int tileVertices(float w, float h, float *vx, float *vy)
 	int i, n = dashTheme.tile_style == DASH_TILE_MEMORY_CARD ? 5 : dashTheme.tile_style == DASH_TILE_CRYSTAL ? 6 :
                                                                                                                8;
 	for (i = 0; i < n; i++) {
-		vx[i] = v[i][0] * w;
-		vy[i] = v[i][1] * h;
+		vx[i] = floorf(v[i][0] * w + .5f);
+		vy[i] = floorf(v[i][1] * h + .5f);
 	}
 	return n;
 }
@@ -662,7 +662,7 @@ static void tilePolygon(float x, float y, float w, float h, DashColor top, DashC
 	for (i = 0; i < n; i++) {
 		int j = (i + 1) % n;
 		if (outline)
-			dashLine(x + vx[i], y + vy[i], x + vx[j], y + vy[j], 1.5f, top);
+			dashLine(x + vx[i], y + vy[i], x + vx[j], y + vy[j], 2.0f, top);
 		else
 			dashTri(x + w * .5f, y + h * .5f, x + vx[i], y + vy[i], x + vx[j], y + vy[j], mid,
 			        dashColorLerp(top, bot, vy[i] / h), dashColorLerp(top, bot, vy[j] / h));
@@ -792,12 +792,6 @@ void dashDrawAppTile(const DashApp *app, float x, float y, float w, float h, flo
 void dashDrawAppArt(DashApp *app, float x, float y, float w, float h, float focus, int prio)
 {
 	GSTEXTURE *tex = dashArtGet(app, prio);
-	if (focus <= .01f) {
-		x = floorf(x + .5f);
-		y = floorf(y + .5f);
-		w = floorf(w + .5f);
-		h = floorf(h + .5f);
-	}
 	if (focus > .5f) {
 		float k = dashUiFocusPop();
 		x -= w * (k - 1.0f) * .5f;
@@ -805,6 +799,12 @@ void dashDrawAppArt(DashApp *app, float x, float y, float w, float h, float focu
 		w *= k;
 		h *= k;
 	}
+	/* Snap tile coordinates to whole pixels so outlines and bevels
+	 * remain stable on 4:3 interlaced CRT displays (#140). */
+	x = floorf(x + .5f);
+	y = floorf(y + .5f);
+	w = floorf(w + .5f);
+	h = floorf(h + .5f);
 	/* Dim the actual silhouette/content, avoiding a rectangular missing-app overlay. */
 	dashGfxPushAlpha(app->flags & DASH_APP_MISSING ? .5f : 1.0f);
 	appTile(app, tex, x, y, w, h, focus);

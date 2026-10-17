@@ -52,9 +52,19 @@ static int soundAlive(void)
 	return sound_ready && getIopResetGeneration() == sound_reboot_generation;
 }
 
-/* Voices 0..13 belong to interface SFX (see below). Keep the looping music
- * on a voice they never touch so menu changes cannot replace it. */
+/* SPU2 voice allocation (24 hardware voices total):
+ *   0..7: fixed single-voice SFX (boot, confirm, cancel, message, connect, disconnect)
+ *   8..13: cursor SFX (6-voice rotating pool)
+ *  14..17: transition SFX (4-voice rotating pool for L1/R1, #136)
+ *  18..22: general SFX headroom
+ *     23: DASH_BGM_CHANNEL (looping background music, isolated from SFX)
+ */
 #define DASH_BGM_CHANNEL 23
+#define SND_SFX_CH_MAX 23
+#define SND_CURSOR_CH_BASE 8
+#define SND_CURSOR_CH_COUNT 6
+#define SND_TRANS_CH_BASE 14
+#define SND_TRANS_CH_COUNT 4
 
 static void *blob_data(int id)
 {
@@ -140,12 +150,10 @@ int dashSoundInit(void)
 		snprintf(msg, sizeof(msg), "%d sound effect%s unavailable", failed, failed == 1 ? "" : "s");
 		dashToast(DASH_TOAST_WARN, msg);
 	}
-	/* channel map and volumes follow Open-PS2-Loader: boot..disconnect on
-	 * voices 0..7, cursor rotating over 8..13; set once, here */
+	/* Channel map and volumes: boot..disconnect on voices 0..7, cursor
+	 * rotating over 8..13, transition rotating over 14..17, general SFX 18..22. */
 	if (dashCfg.sound) {
-		for (i = 0; i < 8; i++)
-			audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound_vol, 0);
-		for (i = 8; i < 14; i++)
+		for (i = 0; i < SND_SFX_CH_MAX; i++)
 			audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound_vol, 0);
 	}
 	sound_reboot_generation = getIopResetGeneration();
@@ -209,15 +217,11 @@ void dashSoundSuspend(void)
 	/* Keep the RPC client and samples valid until the launch is committed.
 	 * audsrv_quit() destroys client state that audsrv_init() cannot recreate
 	 * in the same IOP session. Failed launches must be able to resume music. */
-	for (i = 0; i < 14; i++)
+	for (i = 0; i < SND_SFX_CH_MAX; i++)
 		audsrv_adpcm_set_volume_and_pan(i, 0, 0);
 	if (bgm_channel >= 0)
 		audsrv_adpcm_set_volume_and_pan(bgm_channel, 0, 0);
 }
-
-/* voice map: boot..disconnect on 0..7, cursor rotates over 8..13 (OPL-style) */
-#define SND_CURSOR_CH_BASE 8
-#define SND_CURSOR_CH_COUNT 6
 
 void dashSoundApplyVolume(void)
 {
@@ -225,13 +229,14 @@ void dashSoundApplyVolume(void)
 
 	if (!soundAlive())
 		return;
-	for (i = 0; i < 8 + SND_CURSOR_CH_COUNT; i++)
+	for (i = 0; i < SND_SFX_CH_MAX; i++)
 		audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound ? dashCfg.sound_vol : 0, 0);
 }
 
 void dashSoundPlay(int id)
 {
 	static int cursorSlot;
+	static int transSlot;
 	static u64 lastCursorMs;
 	int ch;
 
@@ -249,10 +254,16 @@ void dashSoundPlay(int id)
 		lastCursorMs = now;
 		ch = SND_CURSOR_CH_BASE + cursorSlot;
 		cursorSlot = (cursorSlot + 1) % SND_CURSOR_CH_COUNT;
+	} else if (id == DASH_SND_TRANSITION) {
+		ch = SND_TRANS_CH_BASE + transSlot;
+		transSlot = (transSlot + 1) % SND_TRANS_CH_COUNT;
 	} else {
-		ch = id; /* any fixed voice < 8; cursor occupies 8..13 */
+		ch = id; /* any fixed voice < 8; cursor occupies 8..13, transition 14..17 */
 	}
-	audsrv_ch_play_adpcm(ch, &samples[id]);
+	if (audsrv_ch_play_adpcm(ch, &samples[id]) < 0) {
+		/* If targeted voice was busy, play on any free SFX voice (#136) */
+		audsrv_ch_play_adpcm(-1, &samples[id]);
+	}
 }
 
 //--------------------------------------------------------------
@@ -260,7 +271,7 @@ void dashSoundPlay(int id)
 //
 // Optional BGM.ADP beside the boot ELF: an adpenc-produced mono PS-ADPCM
 // track is uploaded once to SPU2 RAM, then the SPU2 loops it in hardware.
-// Voice 23 is reserved exclusively for BGM; interface sounds use 0..13.
+// Voice 23 is reserved exclusively for BGM; interface sounds use 0..22.
 //--------------------------------------------------------------
 
 #define BGM_MAX_BYTES (1024 * 1024)

@@ -38,6 +38,7 @@ typedef struct { void *buffer; } audsrv_adpcm_t;
 #define MAX_PATH 256
 #define BGM_MAX_BYTES (1024*1024)
 #define DASH_BGM_CHANNEL 23
+#define SND_SFX_CH_MAX 23
 #define SND_CURSOR_CH_COUNT 6
 #define FIO_O_RDONLY 1
 #define DASH_TOAST_WARN 1
