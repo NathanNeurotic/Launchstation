@@ -23,7 +23,8 @@ For storage, do not equate `Not checked` with physically absent. Lazy drivers st
 
 ## External game cores
 
-- **PS2 ISO** → Neutrino (external ELF, configured or discovered with TOML sidecars).
+- **PS2 ISO** → Neutrino (external ELF, configured or discovered with TOML sidecars), with the R3Z per-launch compatibility modes 0/2/3/5/7, GSM/field-flipping, debug colors and PS2 logo. Options reset on every launch.
+- **Loader availability** → Three independent Disable Ember/POPStarter/Neutrino controls in Launching settings and the classic Advanced Settings screen, Off by default.
 - **PS1 VCD** → POPStarter (external launcher, own VCD and HDD argument conventions).
 - **PS1 CUE/BIN/EXE** → Ember (external ELF), only under a save-safe `<umbrella>/games/<Game>/` folder. The umbrella can be anywhere and can be named arbitrarily.
 - For Ember on USB, the launcher rebuilds the storage IOP without resident PADMAN and confirms game identity after USB mount-number reassignment before final keep-IOP launch.
