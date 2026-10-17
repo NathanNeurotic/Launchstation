@@ -586,7 +586,9 @@ static int startSync(const char *mount, const char *title)
 	if (!dashWorkerAwaitAll("Finishing up"))
 		return -1;
 	dashLoadingBegin(title);
-	dashLoadingStatus("Starting device drivers...", 0, 0);
+	/* Present the status before a synchronous IOP module call can block
+	 * the UI thread. This cannot animate during the call itself. */
+	dashLoadingFrame("Starting device drivers...", 0, 0);
 	ok = probeMount(mount);
 	dashLoadingEnd();
 	return ok;
