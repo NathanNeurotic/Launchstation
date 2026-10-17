@@ -10,6 +10,7 @@
 //that are not running are only loaded when the user asks for it.
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "init.h"
 
 extern char PathPad[30][MAX_PATH];
 extern char LastDir[MAX_NAME];
