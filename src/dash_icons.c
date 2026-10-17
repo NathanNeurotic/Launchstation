@@ -391,8 +391,8 @@ static float iconSdf(int id, V2 p)
 			 * quick-launch and hint glyphs remain visible without the PNGs. */
 			int right = (id >= DI_BTN_R1);
 			int digit = right ? id - DI_BTN_R1 + 1 : id - DI_BTN_L1 + 1;
-			const float t = 0.095f;
-			d = sdBoxOutline(p, 0, 0, 0.90f, 0.78f, 0.13f, 0.055f);
+			const float t = 0.13f;
+			d = 1000.0f; /* one outer keycap; no thin nested shoulder border */
 			if (!right) {
 				d = U(d, sdSeg(p, -0.60f, -0.52f, -0.60f, 0.48f, t));
 				d = U(d, sdSeg(p, -0.60f, 0.48f, -0.12f, 0.48f, t));
@@ -561,7 +561,8 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 		/* Preserve colored controller glyphs while letting each theme decide
 		 * whether they sit on a background. Baked PNGs forced a fixed navy
 		 * tile into every theme, ignoring icon-backings entirely. */
-		float g = size * (dashCfg.icon_backing ? 0.74f : 0.86f); /* #152: legible on CRTs */
+		int shoulder = id >= DI_BTN_L1 && id <= DI_BTN_R3;
+		float g = size * (shoulder ? 0.96f : (dashCfg.icon_backing ? 0.74f : 0.86f)); /* #152: legible on CRTs */
 		float go = (size - g) * 0.5f;
 		if (dashCfg.icon_backing) {
 			float bu0 = (float)((DI_PAD_BADGE % ICON_COLS) * ICON_SLOT);
@@ -572,7 +573,10 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 			dashSpriteBatchBegin(&icon_tex, badge);
 			dashSpriteBatchAdd(x - pad, y - pad, bu0, bv0, x + size + pad, y + size + pad, bu0 + ICON_SLOT, bv0 + ICON_SLOT);
 			dashSpriteBatchEnd();
-			dashPanelBorder(x, y, size, size, 4.0f, DC(210, 220, 240, 120));
+			/* Match the SDF badge's 0.92 half extent and fixed corner radius. */
+			dashRoundedBorder(x + size * 0.04f, y + size * 0.04f,
+			                  size * 0.92f, size * 0.92f, size * 0.10f,
+			                  DC(210, 220, 240, 120));
 		}
 		dashSpriteBatchBegin(&icon_tex, c);
 		dashSpriteBatchAdd(x + go, y + go, u0, v0, x + go + g, y + go + g, u0 + ICON_SLOT, v0 + ICON_SLOT);
