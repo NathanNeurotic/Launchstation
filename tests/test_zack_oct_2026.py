@@ -55,7 +55,8 @@ assert "if (background_only)" in shell
 # Physical slot identity remains mapped to the port used for actual access.
 assert 'snprintf(name, sizeof(name), "mc%d (Slot %d)", port, port + 1);' in devices
 assert 'snprintf(mount, sizeof(mount), "mc%d:", port);' in devices
-assert '"MASS (USB)"' in devices   # issue #132 specifically excluded
+assert '"MASS"' in devices
+assert '"MASS (USB)"' not in devices   # issue #132 resolved
 
 # Scrolling text and second focus outline are stable at interlaced cadence.
 assert "2.0f * floorf(scroll * 0.5f + 0.5f)" in info  # even line pairs (#139)
