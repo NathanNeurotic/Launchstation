@@ -350,6 +350,17 @@ EMBER_DIR =
 # passes -bsd, the full -dvd path, -qb, and an automatic -cwd.
 # ----------------------------------------------------------------------
 NEUTRINO_ELF =
+# ----------------------------------------------------------------------
+# Optional per-core disable switches. Default 0 (NO) retains all existing
+# automatic image launchers for old and new configuration files.
+# Set an individual switch to 1 (YES) to refuse its format's automatic
+# launcher without probing its image, loader path, or storage stack.
+# Generic ELF execution and the other image launchers remain unaffected.
+# Exposed at Settings > Launching > Disc & image loaders.
+# ----------------------------------------------------------------------
+Disable_EMBER = 0
+Disable_POPSTARTER = 0
+Disable_NEUTRINO = 0
 # From v3.92 Two options for PSU gamesave files are saved here.
 # Set PSU_HugeNames non-zero to make PSU names contain both original
 # gamesave folder names and the gamesave titles (from icon.sys).
