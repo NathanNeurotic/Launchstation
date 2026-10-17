@@ -28,7 +28,8 @@ assert "dashOpenBrowser(setting->Misc)" in (root/"src/dash_tools.c").read_text()
 assert "dashCfg.files_mode = !dashCfg.files_mode" in files
 assert "const DashScreen dashDevicesScreen = {storageEnter" in files
 assert "const DashScreen dashFilesScreen" in (root/"src/dash_browser.c").read_text()
-assert "MASS (USB)" in devices
+assert '"MASS"' in devices
+assert '"MASS (USB)"' not in devices
 assert "mass%d:/" in files
 assert "Not connected" in devices
 assert "out[i].state == DASH_DEV_READY" in devices

@@ -21,10 +21,8 @@ static void cleanUpForExecInternal(int end_pad_rpc)
 {
 	fadeScreenToBlack();
 	dashSoundShutdown(); /* the launch is now committed */
-	clrScr(GS_SETREG_RGBA(0x00, 0x00, 0x00, 0));
-	drawScr();
-	clrScr(GS_SETREG_RGBA(0x00, 0x00, 0x00, 0));
-	drawScr();
+	DashThemeSetLegacyEnabled(0);
+	clearScreenToBlack();
 	free(setting);
 	free(elisaFnt);
 	free(External_Lang_Buffer);

@@ -1035,6 +1035,7 @@ static void firstInit(void)
 	dashBgInit();
 	dashDevicesInit();
 	dashGfxInit();
+	clearScreenToBlack();
 	dashFontInit();
 	dashIconsInit();
 	dashWorkerInit();
@@ -1105,6 +1106,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		firstInit();
 	else {
 		dashGfxInit();
+		clearScreenToBlack();
 		dashFontInit();
 	}
 	DashThemeSetLegacyEnabled(1);

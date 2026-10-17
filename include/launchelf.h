@@ -479,6 +479,7 @@ void updateScreenMode(void);
 void clrScr(u64 color);
 void drawScr(void);
 void fadeScreenToBlack(void); /* prior to irreversible handoff or GS mode switch */
+void clearScreenToBlack(void); /* clear both framebuffers and GS BG to black */
 void drawFrame(int x1, int y1, int x2, int y2, u64 color);
 void drawChar(unsigned int c, int x, int y, u64 colour);
 int printXY(const char *s, int x, int y, u64 colour, int draw, int space);

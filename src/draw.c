@@ -260,6 +260,26 @@ void fadeScreenToBlack(void)
 	gsGlobal->PrimAlphaEnable = GS_SETTING_OFF;
 }
 
+void clearScreenToBlack(void)
+{
+	int i;
+	if (gsGlobal == NULL)
+		return;
+	if (gsGlobal->BGColor != NULL) {
+		gsGlobal->BGColor->Red = 0;
+		gsGlobal->BGColor->Green = 0;
+		gsGlobal->BGColor->Blue = 0;
+	}
+	GS_SET_BGCOLOR(0, 0, 0);
+	gsGlobal->PrimAlphaEnable = GS_SETTING_OFF;
+	for (i = 0; i < 2; i++) {
+		gsKit_clear(gsGlobal, GS_SETREG_RGBAQ(0x00, 0x00, 0x00, 0x00, 0x00));
+		gsKit_queue_exec(gsGlobal);
+		gsKit_finish();
+		gsKit_sync_flip(gsGlobal);
+	}
+}
+
 void drawScr(void)
 {
 	updateDynamicMenuTitleLine();
