@@ -1,5 +1,6 @@
 #include "launchelf.h"
 #include "init.h"
+#include "dash_sound.h"
 #include "pccf_control.h"
 #include <unistd.h>
 #include <iopcontrol_special.h>
@@ -1854,6 +1855,11 @@ static void resetRuntimeDeviceState(int show_status)
 	filerRootMcPollIdle();
 	if (iopResetNotify != NULL)
 		iopResetNotify(0);
+	/* audsrv is an IOP RPC client: release it while its server is still
+	 * alive. dashSoundShutdown() skips dead-generation RPCs and only clears
+	 * local state in that case. The main dashboard loop restores audio
+	 * after Reset() advances the IOP generation and PAD is ready. */
+	dashSoundShutdown();
 #ifdef DS34
 	stopDs34Input();
 #endif
