@@ -26,10 +26,10 @@
 
 int IsTextEditorFileType(const char *path);
 
-#define FB_ROWS 11
+#define FB_ROWS 10
 #define FB_ROW_H 25.0f
 #define FB_X 40.0f
-#define FB_Y 92.0f
+#define FB_Y 100.0f
 #define FB_W 560.0f
 
 static struct
@@ -2571,7 +2571,13 @@ static void fmtSize(char *out, int size, const FILEINFO *f)
 static void browserDrawBody(void)
 {
 	int i, rows_total = fb.dir[0] ? fb.n : fb.ndevs;
-	char info[64];
+	char info[64], display_path[MAX_PATH + 2];
+
+	/* Display the public MASS label without changing the path used for I/O. */
+	if (!strncmp(fb.dir, "usb", 3) && fb.dir[3] >= '0' && fb.dir[3] <= '9' && fb.dir[4] == ':')
+		snprintf(display_path, sizeof(display_path), "mass%s", fb.dir + 3);
+	else
+		dashStrCopy(display_path, fb.dir, sizeof(display_path));
 
 	/* A dashboard tab must not overwrite the shared header or render its
 	 * background a second time; modal callers still get a complete scene. */
@@ -2579,9 +2585,11 @@ static void browserDrawBody(void)
 		dashIcon(DI_FOLDER, FB_X, 20, 24, DASH_C_ACCENT);
 		dashTextS(FB_X + 32, 20, "File Browser", DASH_FS_TITLE, DASH_C_TEXT);
 	}
-	dashTextScroll(FB_X, fb_tab_active ? 74 : 58,
-	               fb_tab_active ? FB_W - 215 : FB_W - 150,
-	               fb.dir[0] ? fb.dir : "Choose a device", DASH_FS_SMALL, DASH_C_TEXT2);
+	/* Give the current folder its own aligned lane above the file list. */
+	dashDrawPanelBox(FB_X - 6, fb_tab_active ? 68 : 52, FB_W + 12, 24, 6);
+	dashTextScroll(FB_X + 6, fb_tab_active ? 74 : 58,
+	               fb_tab_active ? FB_W - 227 : FB_W - 162,
+	               fb.dir[0] ? display_path : "Choose a device", DASH_FS_SMALL, DASH_C_TEXT2);
 	if (fb.dir[0]) {
 		char space[24];
 

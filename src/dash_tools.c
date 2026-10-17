@@ -1436,8 +1436,12 @@ static void runTool(const Tool *t)
 {
 	if (t->confirm) {
 		char body[200];
+		const char *action_label = t->confirm == 2 ? t->name : "Continue";
+		if (t->action == TA_MISC &&
+		    (t->misc_offset == MISC(Misc_PS2Browser) || t->misc_offset == MISC(Misc_OSDSYS)))
+			action_label = "Leave";
 		snprintf(body, sizeof(body), "%s", t->desc);
-		if (!dashModalConfirm(t->name, body, t->confirm == 2 ? t->name : "Continue", t->confirm == 2))
+		if (!dashModalConfirm(t->name, body, action_label, t->confirm == 2))
 			return;
 	}
 	switch (t->action) {

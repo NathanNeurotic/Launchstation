@@ -534,6 +534,7 @@ typedef struct
 	int intro_done;
 	int sound;
 	int sound_vol;
+	char software_clock[24]; /* optional local seed; resumes saved time without RTC */
 	int bgm;
 	int bgm_vol;
 	int app_filter;
