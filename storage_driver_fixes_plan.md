@@ -17,4 +17,4 @@
 
 The detailed implementation sequence, safety gates and test matrix are in the **canonical document linked above**. This root entry is an index to prevent multiple versions of the plan from drifting.
 
-No bug fixes, completed background test results, or hardware verification are asserted by this handoff file.
+PR #176 now contains incremental production fixes for generic missing-device modal details, pre-RPC loading feedback, and pre-reset audsrv teardown, plus accompanying host regression tests. These do not resolve all four bug reports, and physical hardware reliability remains unverified. Check CI for current final-SHA PS2 build status.
