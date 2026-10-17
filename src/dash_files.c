@@ -18,6 +18,22 @@ extern char LastDir[MAX_NAME];
 //--------------------------------------------------------------
 // Shared: open a device, probing its driver first when needed
 //--------------------------------------------------------------
+/* Keep human-readable mount labels for device panels and pickers. Only the
+ * missing-device error modal suppresses these internal path identifiers. */
+static const char *deviceDisplayMount(const DashDevice *d, char *buf, int size)
+{
+	if (d != NULL && d->icon == DI_USB) {
+		int unit = 0;
+
+		if (!strncmp(d->mount, "usb", 3) &&
+		    d->mount[3] >= '0' && d->mount[3] <= '9' && d->mount[4] == ':')
+			unit = d->mount[3] - '0';
+		snprintf(buf, size, "mass%d:/", unit);
+		return buf;
+	}
+	return (d != NULL) ? d->mount : "";
+}
+
 static void deviceNotFound(const DashDevice *d)
 {
 	char body[160];
