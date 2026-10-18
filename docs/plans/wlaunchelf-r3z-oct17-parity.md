@@ -20,7 +20,7 @@
 - Added upstream-compatible numeric display-mode values 0=filenames only, 1=filenames with details, 2=titles with details, 3=titles only. Existing dashboard choices 0/1/2 are preserved.
 - Added shared `fileShowTitles()` and `fileShowDetails()` predicates. Classic Circle toggles filename-only/details and Square toggles title-only/details. Title extraction, Shift-JIS row height, PSUs and sorting use the correct predicate rather than `file_show == 2`. No device probing changes.
 - Added executable host four-state predicate test and updated the older upstream sorting harness so it compiles the new *production* predicates.
-- **Concurrent PR #178 owns `src/dash_browser.c`.** The dashboard Files tab remains on its original three options to avoid overlapping independent PRs; integrating the fourth mode there is explicitly deferred until #178 is reconciled. This is a remaining full-UI parity gap, not a completed item.
+- **Concurrent PR #178 owns `src/dash_browser.c`.** Companion PR #178 now implements the fourth native Files mode at `2765787`, including title loading, independent details visibility, filename fallback and legacy-operation mapping. This branch alone retains three native choices; the combined source is ready for integration checks, while merge and console acceptance remain pending.
 - Follow-up real hardware acceptance: both classic title-only/no-details and title+details with MC/PSU/USB/MMCE sources, font failures, date sort, selection and long names.
 
 ## Implementation policy

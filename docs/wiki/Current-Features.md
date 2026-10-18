@@ -17,7 +17,7 @@ Launchstation selectively incorporates [upstream PR #56](https://github.com/sail
 
 ## Classic File Browser display modes
 
-The upstream R3Z four-mode layout is now available in the **classic** browser's L1 mode menu: filename, filename + details, game title, or game title + details. Circle toggles filename variants; Square toggles title variants; sorting is unchanged. The dashboard Files tab still presents its original three choices, pending reconciliation with the separate UI work in PR #178.
+The upstream R3Z four-mode layout is now available in the **classic** browser's L1 mode menu: filename, filename + details, game title, or game title + details. Circle toggles filename variants; Square toggles title variants; sorting is unchanged. Companion PR #178 adds the corresponding title-only choice to the dashboard Files tab. That native UI change remains in its own unmerged PR; console acceptance of the combined changes is pending.
 
 ## Files and app roots
 
