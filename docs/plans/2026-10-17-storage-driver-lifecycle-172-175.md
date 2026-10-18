@@ -145,3 +145,22 @@ This section **supersedes contradictory implementation instructions** from the t
 - `switchStorageDriverStack()` returns failure when a required reset leaves the previous non-default stack resident. Both MMCE and MX4SIO loaders stop before loading another driver. Host C tests execute no-reset, same-stack, refused-reset and completed-reset transitions. This fixes a confirmed failure path; it does not prove the reported main-thread storage delays resolved.
 - Local host reset/PAD and USB lifecycle harnesses pass. Initial local cross-build reached MMCEMAN compilation but stopped at absent mbedTLS headers; final complete-build evidence is recorded separately.
 - The UI thread still owns module entry. No claim of animation during blocked IOP RPCs, shorter iLink/MX4SIO mount tolerance, or physical adapter validation.
+
+
+## Follow-up: MMCE presence command and refused ETH/UDPFS reset
+
+`mmce_fs_dopen()` may start a longer filesystem transaction for an
+unresponsive or absent MMCE card. Dashboard probing now issues up to two
+`MMCE_CMD_PING` devctl attempts to that physical unit (using the
+existing 200 ms command timeout) before entering root-directory probing.
+Absent cards bypass the longer root open. A positive ping is **not** a READY
+state: the root still must open. A new explicit probe can find a card added
+after an earlier absence. Resident SIO2 hooks are never falsely demoted.
+
+`switchNetworkStack()` now propagates a blocked/refused IOP reset:
+ETH and UDPFS launch paths return instead of relabeling resident modules
+and loading an incompatible network stack. Focused production-function
+host tests and the existing MMCE/IOP lifecycle tests cover these cases.
+Real-world latency, poweroff, audio, USB/PAD recovery, and delayed mount
+acceptance remain hardware acceptance gates; this does not make
+synchronous IOP RPCs animate.

@@ -13,6 +13,9 @@
 #include "dash_sound.h"
 #include "init.h"
 #include <delaythread.h>
+#ifdef MMCE
+#include "../iop/mmceman/include/mmce_cmds.h"
+#endif
 
 extern int cdmode;
 extern int vmcMounted[2];
@@ -437,6 +440,23 @@ static int probeRoot(const char *path, int wait_ms)
 	}
 }
 
+#ifdef MMCE
+/* An absent MMCE root starts with a long filesystem request. A short
+ * per-slot presence command avoids that RPC when the card is absent.
+ * Presence never implies a mounted/usable filesystem. */
+static int probeMmceRoot(const char *path)
+{
+	int attempt;
+	for (attempt = 0; attempt < 2; attempt++) {
+		if (dashLoadingActive())
+			dashLoadingFrame("Checking memory card...", 0, 0);
+		if (fileXioDevctl(path, MMCE_CMD_PING, NULL, 0, NULL, 0) >= 0)
+			return probeRoot(path, 0);
+	}
+	return 0;
+}
+#endif
+
 static int probeUsbMediaAnimated(void)
 {
 	int attempt, mask = 0, first_seen = -1;
@@ -498,7 +518,7 @@ static int probeMount(const char *m)
 #ifdef MMCE
 	else if (!strncmp(m, "mmce", 4)) {
 		ok = loadMmceModules();
-		if (ok) ok = probeRoot(m[4] == '1' ? "mmce1:/" : "mmce0:/", 0);
+		if (ok) ok = probeMmceRoot(m[4] == '1' ? "mmce1:/" : "mmce0:/");
 	}
 #endif
 #ifdef MX4SIO

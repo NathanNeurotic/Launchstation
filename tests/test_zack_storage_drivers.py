@@ -92,11 +92,15 @@ c += r"""
 #define STORAGE_STACK_MMCE 1
 #define STORAGE_STACK_MX4SIO 2
 #define DPRINTF(...) do { if (0) printf(__VA_ARGS__); } while (0)
+#define NETWORK_STACK_NONE 0
+#define NETWORK_STACK_ETH 1
+#define NETWORK_STACK_UDPFS 2
+static int network_stack_mode;
 static int storage_driver_stack_mode, reset_allowed, resets;
 static void resetRuntimeDeviceState(int status) {
     assert(status == TRUE);
     resets++;
-    if (reset_allowed) storage_driver_stack_mode = STORAGE_STACK_DEFAULT;
+    if (reset_allowed) { storage_driver_stack_mode = STORAGE_STACK_DEFAULT; network_stack_mode = NETWORK_STACK_NONE; }
 }
 static const char *mmce_product_ids[] = {"Unknown", "SD2PSX", "MemCard PRO2", "PicoMemcard+", "PicoMemcardZero"};
 static int ping_calls, ping_success_at, reset_commands, selected_port;
@@ -107,6 +111,7 @@ static int mmce_cmd_ping(void) {
 static int mmce_cmd_reset(void) { reset_commands++; return 0; }
 """
 c += function("src/init.c", "static int switchStorageDriverStack(int target_mode)\n{")
+c += function("src/init.c", "static int switchNetworkStack(int target_mode)\n{")
 mmce = (root / "iop/mmceman/src/mmceman.c").read_text()
 import re
 attempts = re.search(r"^#define MMCE_PING_ATTEMPTS (\d+)$", mmce, re.M).group(1)
@@ -150,6 +155,16 @@ int main(void) {
     reset_allowed = 1;
     assert(switchStorageDriverStack(STORAGE_STACK_MX4SIO) == 1);
     assert(storage_driver_stack_mode == STORAGE_STACK_DEFAULT && resets == 2);
+    network_stack_mode = NETWORK_STACK_NONE;
+    int before = resets;
+    assert(switchNetworkStack(NETWORK_STACK_ETH) == 1 && resets == before);
+    assert(switchNetworkStack(NETWORK_STACK_ETH) == 1 && resets == before);
+    reset_allowed = 0;
+    assert(switchNetworkStack(NETWORK_STACK_UDPFS) == 0);
+    assert(network_stack_mode == NETWORK_STACK_ETH && resets == before + 1);
+    reset_allowed = 1;
+    assert(switchNetworkStack(NETWORK_STACK_UDPFS) == 1);
+    assert(network_stack_mode == NETWORK_STACK_UDPFS && resets == before + 2);
     for (int port = 2; port <= 3; port++) {
         ping_calls = reset_commands = ping_success_at = 0;
         mmce_init(port);
