@@ -46,6 +46,11 @@ static int genCmpFileExt(const char *name,const char *ext) {
     const char *dot=strrchr(name,'.'); return dot && strcmp(dot+1,ext)==0;
 }
 '''
+# The comparator now uses the production four-mode predicates; host harness
+# must compile their real implementation rather than a reimplemented stub.
+start = shared.index("enum {\n\tFILE_SHOW_NAME = 0")
+show_helpers = shared[start:shared.index("extern int file_sort;", start)]
+test += show_helpers + "\n"
 test += comparator + "\n" + join
 test += r'''
 int main(void) {
