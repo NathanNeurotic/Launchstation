@@ -229,6 +229,8 @@ void setNeutrinoMmceGameID(const char *gameID, const char *iso_path, const char 
 
 	if (!validGameID(gameID) || iso_path == NULL || elf_path == NULL ||
 	    !strncmp(iso_path, "mx4sio", 6) || !strncmp(elf_path, "mx4sio", 6) ||
+	    !strncmp(iso_path, "mmce:", 5) || !strncmp(elf_path, "mmce:", 5) ||
+	    !strncmp(elf_path, "mc:", 3) ||
 	    !isPathDeviceStackLoaded("mmce0:/"))
 		return;
 
