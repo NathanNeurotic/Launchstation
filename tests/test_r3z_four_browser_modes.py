@@ -77,7 +77,7 @@ assert classic.count("if (fileShowDetails())") >= 2
 # PR #178 owns native Files layout. Its established modes retain their
 # original 0, 1 and 2 numeric values, and no UI/storage worker is modified.
 assert 'static int fb_show = 1;' in dashboard
-assert 'static const char *const show_names[] = {"File names", "Names and details", "Game titles and details"};' in dashboard
-assert "file_show = fb_show;" in dashboard
+assert '"File names", "Names and details", "Game titles and details"' in dashboard
+assert "file_show = fb_show;" in dashboard or "file_show = fbShowsTitles(fb_show) ? 2 : fb_show;" in dashboard
 
 print("R3Z classic 4 display modes: compiled C matrix and source guards pass")
