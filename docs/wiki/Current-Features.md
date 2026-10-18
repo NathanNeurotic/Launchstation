@@ -15,6 +15,10 @@ This guide reflects the four visible tabs implemented in `src/dash_main.c` and t
 
 Launchstation selectively incorporates [upstream PR #56](https://github.com/saildot4k/wLaunchELF_R3Z/pull/56) from the **ember-support** development branch. The classic L1 file-browser mode menu allows reverse filename/title/date sorting; memory-card save and PSU titles honor valid two-line `icon.sys` separation; the *Tuna Date action is grouped inside Folder dates and only appears for eligible selected real MC folders. Launchstation's dashboard Files tab already provides independent six-criterion reversible sorting. Existing MMCE, USB, networking, dashboard, and Ember launch paths were **not** replaced by upstream code.
 
+## Classic File Browser display modes
+
+The upstream R3Z four-mode layout is now available in the **classic** browser's L1 mode menu: filename, filename + details, game title, or game title + details. Circle toggles filename variants; Square toggles title variants; sorting is unchanged. Companion PR #178 adds the corresponding title-only choice to the dashboard Files tab. That native UI change remains in its own unmerged PR; console acceptance of the combined changes is pending.
+
 ## Files and app roots
 
 Default app scanning: `mc:/APPS`, `mc:/BOOT`, `mass:/APPS`, `mass:/BOOT`, each one subfolder deep. Adjust under Settings → Home & applications → Application library → Application folders. Other paths can still be browsed/launched from Files.
@@ -23,7 +27,8 @@ For storage, do not equate `Not checked` with physically absent. Lazy drivers st
 
 ## External game cores
 
-- **PS2 ISO** → Neutrino (external ELF, configured or discovered with TOML sidecars).
+- **PS2 ISO** → Neutrino (external ELF, configured or discovered with TOML sidecars), with the R3Z per-launch compatibility modes 0/2/3/5/7, GSM/field-flipping, debug colors and PS2 logo. Options reset on every launch. ISO `SYSTEM.CNF` game IDs also drive RetroGem display and best-effort active-MMCE card switching, without initializing or replacing live storage drivers.
+- **Loader availability** → Three independent Disable Ember/POPStarter/Neutrino controls in Launching settings and the classic Advanced Settings screen, Off by default.
 - **PS1 VCD** → POPStarter (external launcher, own VCD and HDD argument conventions).
 - **PS1 CUE/BIN/EXE** → Ember (external ELF), only under a save-safe `<umbrella>/games/<Game>/` folder. The umbrella can be anywhere and can be named arbitrarily.
 - For Ember on USB, the launcher rebuilds the storage IOP without resident PADMAN and confirms game identity after USB mount-number reassignment before final keep-IOP launch.
