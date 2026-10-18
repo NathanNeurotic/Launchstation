@@ -30,7 +30,7 @@ def extract(name):
         cur += 1
     return source[m.start():cur] + "\n"
 
-names = ("profileGameIdValid", "profileChecksum", "profilePath",
+names = ("profileGameIdValid", "profileChecksum", "profilePath", "profileStorageSafe",
          "profileOptionsValid", "profileReadSlot", "profileReadLatest", "profileSave")
 code = r'''
 #include <assert.h>
@@ -40,6 +40,13 @@ code = r'''
 #include <string.h>
 #define MAX_PATH 256
 #define NEUTRINO_GAME_ID_SIZE 12
+#define MX4SIO 1
+#define MMCE 1
+static int mx4sio_driver_running, mmce_stack;
+static int isPathDeviceStackLoaded(const char *path) {
+    if (!strcmp(path,"mmce0:/")) return mmce_stack;
+    return 1;
+}
 typedef struct { unsigned int game_compatibility; int video_mode, video_compatibility, debug_colors, logo; } NEUTRINO_LAUNCH_OPTIONS;
 typedef struct { int unused; } NEUTRINO_OPTION_ARGS;
 static char content[2][256];
@@ -78,7 +85,7 @@ static int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *p, NEUTRINO_OP
 for name in names:
     code += extract(name)
 code += r'''
-static void clear_slots(void) { memset(content,0,sizeof(content)); fail_write=truncate_write=0; allow_wait=1; }
+static void clear_slots(void) { memset(content,0,sizeof(content)); fail_write=truncate_write=0; allow_wait=1; mx4sio_driver_running=mmce_stack=0; }
 int main(void)
 {
     const char *id="SLUS_123.45";
@@ -111,6 +118,11 @@ int main(void)
     a.video_mode=9;
     assert(!profileSave(id,&a));
     assert(!profileSave("INVALID", &b));
+    /* Reading/writing MC profiles must not switch SIO2 ownership. */
+    mx4sio_driver_running=1;
+    assert(!profileSave(id, &b) && !profileReadSlot(id,1,&got,&rev));
+    mx4sio_driver_running=0; mmce_stack=1;
+    assert(!profileSave(id, &b) && !profileReadSlot(id,1,&got,&rev));
     clear_slots();
     assert(!profileReadLatest(id,&got,&rev,&slot));
     puts("PASS: Neutrino profile round-trip, A/B generations, failed/truncated writes, corrupt recovery, validation");
