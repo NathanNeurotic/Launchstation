@@ -1867,6 +1867,7 @@ static void snapshotTexts(void)
 
 static void sessionSnapshot(void)
 {
+	menuTitleClockSnapshot();
 	/* byte copies, so the comparison in refreshDirty() never sees padding */
 	memcpy(&snap_dash, &dashCfg, sizeof(snap_dash));
 	memcpy(&snap_theme, &dashTheme, sizeof(snap_theme));
@@ -1939,6 +1940,7 @@ static void settingsRevert(void)
 		int art = dashCfg.artwork != snap_dash.artwork;
 
 		dashCfg = snap_dash;
+		menuTitleClockRestore();
 		dashThemeRestore(&snap_theme, snap_theme_preset, snap_theme_custom);
 		DashThemeSetLegacyEnabled(1);
 		if (dashCfg.sound || dashCfg.bgm)

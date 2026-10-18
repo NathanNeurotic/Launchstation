@@ -642,7 +642,7 @@ int dashStoreFlushWait(const char *title)
 int dashStoreSaveSettings(void)
 {
 	/* Checkpoint only on an explicit settings save, never write every tick. */
-	if (dashCfg.software_clock[0]) {
+	if (dashCfg.software_clock[0] && menuTitleSoftwareClockActive()) {
 		int y, m, d, h, min, sec, use12, fmt;
 		if (menuTitleGetClockFields(&y, &m, &d, &h, &min, &sec, &use12, &fmt))
 			snprintf(dashCfg.software_clock, sizeof(dashCfg.software_clock),

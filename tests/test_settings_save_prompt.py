@@ -73,6 +73,9 @@ static int dashModalMenu(const char *t,const char *d,DashMenuItem *m,int n,int s
     modal_calls++; return modal_result;
 }
 static void dashToast(int kind,const char *s) { (void)kind; (void)s; }
+static int clock_snapshots, clock_restores;
+static void menuTitleClockSnapshot(void) { clock_snapshots++; }
+static void menuTitleClockRestore(void) { clock_restores++; }
 static void updateScreenMode(void) {}
 static int dashWorkerAwaitAll(const char *s) { (void)s; return 1; }
 static void Set_Language(int l) { (void)l; }
@@ -113,7 +116,11 @@ static void clean(void) {
     queue_ok=1; modal_result=2; begin();
 }
 int main(void) {
-    clean(); assert(settingsLeave()==1 && !modal_calls);
+    clean(); assert(settingsLeave()==1 && !modal_calls && clock_snapshots>0);
+    int restores = clock_restores;
+    clean(); dashCfg.sound++; modal_result=1;
+    assert(settingsLeave()==1 && clock_restores==restores+1);
+    clean();
     /* An unrelated failed write must not turn an untouched visit into edits. */
     for(int k=0;k<3;k++) {
         clean(); if(k<2) cfg_failed[k]=1; else store_failed=1;

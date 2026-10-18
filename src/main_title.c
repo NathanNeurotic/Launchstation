@@ -472,6 +472,36 @@ static int updateClock(u64 tick_ms, int force, int care_time, int care_date)
 	return 0;
 }
 
+/* Keep the running software-clock state across Settings previews / Discard. */
+static MenuTitleClockState settings_clock;
+static char settings_software_seed[24];
+
+void menuTitleClockSnapshot(void)
+{
+	updateClock(Timer(), 0, 1, 1);
+	settings_clock = title_clock;
+	strcpy(settings_software_seed, active_software_seed);
+}
+
+void menuTitleClockRestore(void)
+{
+	if (settings_software_seed[0]) {
+		title_clock = settings_clock;
+		strcpy(active_software_seed, settings_software_seed);
+	} else {
+		/* A hardware RTC write cannot be undone by Discard. Reread it. */
+		active_software_seed[0] = '\0';
+		title_clock.initialized = 0;
+	}
+	updateClock(Timer(), 1, 1, 1);
+}
+
+int menuTitleSoftwareClockActive(void)
+{
+	updateClock(Timer(), 0, 1, 1);
+	return active_software_seed[0] != '\0';
+}
+
 static int queryTemperatureCelsius(char *temp_buf, size_t temp_buf_size)
 {
 	unsigned char in_buffer[1];
