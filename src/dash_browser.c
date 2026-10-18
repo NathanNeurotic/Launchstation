@@ -56,7 +56,16 @@ static struct
 
 /* View and sort choices last the session, like the classic browser's
  * L1 pop-up (they are the classic file_show / file_sort values). */
-static int fb_show = 1; /* 0 names, 1 names + details, 2 game titles + details */
+static int fb_show = 1; /* 0 names, 1 names + details, 2 titles + details, 3 titles */
+static int fbShowsTitles(int mode)
+{
+	return mode == 2 || mode == 3;
+}
+
+static int fbShowsDetails(int mode)
+{
+	return mode == 1 || mode == 2;
+}
 enum {
 	FB_SORT_STORED = 0,
 	FB_SORT_NAME,
@@ -273,7 +282,7 @@ static void listDone(void *arg)
 			fb.files[o++] = *f;
 		}
 		fb.n = o;
-		file_show = fb_show;
+		file_show = fbShowsTitles(fb_show) ? 2 : fb_show;
 		/* Shared operations still inspect the legacy globals; native sorting is
 		 * broader and handled here. */
 		file_sort = (fb_sort == FB_SORT_TITLE) ? 2 : (fb_sort == FB_SORT_DATE) ? 3 : 1;
@@ -428,7 +437,7 @@ static void openDir(const char *dir, const char *select)
 	j->gen = fb.gen;
 	j->n = 0;
 	j->abandoned = 0;
-	j->titles = (fb_show == 2 || fb_sort == FB_SORT_TITLE);
+	j->titles = (fbShowsTitles(fb_show) || fb_sort == FB_SORT_TITLE);
 	j->quiet_input = isUsbBrowsePath(dir);
 	j->free_valid = 0;
 	dashStrCopy(j->path, dir, sizeof(j->path));
@@ -2273,7 +2282,7 @@ static void actionsMenu(void)
 		F_HOME,
 		F_REFRESH
 	};
-	static const char *const show_names[] = {"File names", "Names and details", "Game titles and details"};
+	static const char *const show_names[] = {"File names", "Names and details", "Game titles and details", "Game titles"};
 	static const char *const sort_names[FB_SORT_COUNT] = {"As stored", "Name", "Game title", "Size", "Date-Time", "Kind"};
 	static const char *const direction_names[] = {"Ascending", "Descending"};
 
@@ -2485,7 +2494,7 @@ static void actionsMenu(void)
 			dashToast(DASH_TOAST_INFO, "Launch arguments cleared");
 			break;
 		case F_VIEW:
-			r = dashModalChoice("Show", show_names, 3, fb_show);
+			r = dashModalChoice("Show", show_names, 4, fb_show);
 			if (r >= 0 && r != fb_show) {
 				fb_show = r;
 				refresh();
@@ -2641,7 +2650,7 @@ static void browserDrawBody(void)
 		} else {
 			FILEINFO *f = &fb.files[i];
 			char sz[24], date[40], label[MAX_NAME + 8];
-			int details = fb_show > 0 && !isMisc(fb.dir);
+			int details = fbShowsDetails(fb_show) && !isMisc(fb.dir);
 			float label_w = FB_W - 60;
 			float meta_right = FB_X + FB_W - 12;
 			float meta_left = meta_right;
@@ -2667,7 +2676,7 @@ static void browserDrawBody(void)
 			else
 				dashIcon(isMisc(fb.dir) ? DI_TOOLS : fileIcon(f), FB_X + 8, y + 3, 16, col);
 			/* save titles are Shift-JIS; the dashboard font shows their ASCII */
-			if (fb_show == 2 && f->title[0])
+			if (fbShowsTitles(fb_show) && f->title[0])
 				transcpy_sjis(label, f->title);
 			else
 				dashStrCopy(label, f->name, sizeof(label));

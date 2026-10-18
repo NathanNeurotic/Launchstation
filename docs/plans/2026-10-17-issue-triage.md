@@ -38,3 +38,13 @@ hash in `test_transition_latency.py`. Header now correctly describes the mono
 stream audsrv actually plays. No new effects or stock samples were introduced.
 This is an asset-onset improvement, not a measurement of controller-to-speaker
 latency or physical-console audio recovery.
+
+## Native Files four-mode parity
+
+The native Files Show menu now includes Game titles without details, preserving
+existing mode values 0/1/2 and adding 3. Title loading and rendering share the
+same predicate; the details lane uses an independent predicate. Legacy title
+operations receive mode 2 for either native title view, so this branch remains
+compatible with master before the classic four-mode changes in #177 merge.
+Missing titles retain the filename fallback. Compiled predicate tests and
+source integration checks cover the four modes; console layout remains pending.
