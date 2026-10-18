@@ -259,7 +259,10 @@ static int moveNeutrinoSelection(int selection, int direction)
  * modal path. The classic shell continues to use the upstream dialog below. */
 static int showDashboardNeutrinoOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 {
-	DashMenuItem items[NEUTRINO_CANCEL + 1];
+	DashMenuItem items[NEUTRINO_CANCEL + 3];
+	const int profile_enabled = active_profile_gameid[0] != '\0';
+	const int cancel_index = profile_enabled ? NEUTRINO_CANCEL + 2 : NEUTRINO_CANCEL;
+	const int item_count = cancel_index + 1;
 	int selection = 0, i, choice;
 
 	for (;;) {
@@ -283,13 +286,31 @@ static int showDashboardNeutrinoOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 		items[NEUTRINO_LOGO].detail = options->logo ? "On" : "Off";
 		items[NEUTRINO_RUN].icon = DI_PLAY;
 		items[NEUTRINO_RUN].label = "Run game";
-		items[NEUTRINO_CANCEL].icon = DI_BACK;
-		items[NEUTRINO_CANCEL].label = "Cancel";
-		selection = dashModalMenu("Neutrino launch options", "For this launch only", items, NEUTRINO_CANCEL + 1, selection);
-		if (selection < 0 || selection == NEUTRINO_CANCEL)
+		if (profile_enabled) {
+			items[NEUTRINO_CANCEL].icon = DI_STAR;
+			items[NEUTRINO_CANCEL].label = "Save for this game";
+			items[NEUTRINO_CANCEL + 1].icon = DI_REFRESH;
+			items[NEUTRINO_CANCEL + 1].label = "Reset this launch";
+		}
+		items[cancel_index].icon = DI_BACK;
+		items[cancel_index].label = "Cancel";
+		selection = dashModalMenu("Neutrino launch options",
+		                          profile_enabled ? active_profile_gameid : "For this launch only",
+		                          items, item_count, selection);
+		if (selection < 0 || selection == cancel_index)
 			return FALSE;
 		if (selection == NEUTRINO_RUN)
 			return TRUE;
+		if (profile_enabled && selection == NEUTRINO_CANCEL) {
+			int saved = profileSave(active_profile_gameid, options);
+			dashToast(saved ? DASH_TOAST_OK : DASH_TOAST_WARN,
+			          saved ? "Saved Neutrino game profile" : "Could not save game profile");
+			continue;
+		}
+		if (profile_enabled && selection == NEUTRINO_CANCEL + 1) {
+			memset(options, 0, sizeof(*options));
+			continue;
+		}
 		if (selection < NEUTRINO_COMPAT_COUNT)
 			options->game_compatibility ^= 1u << compatibility_options[selection].mode;
 		else if (selection == NEUTRINO_VIDEO_MODE) {
@@ -339,8 +360,15 @@ int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 	if (options == NULL)
 		return FALSE;
 	memset(options, 0, sizeof(*options));
-	if (DashIsActive())
+	if (DashIsActive()) {
+		NEUTRINO_LAUNCH_OPTIONS saved;
+		unsigned int revision;
+		int slot;
+		if (active_profile_gameid[0] && dashWorkerAwaitAll("Loading game profile") &&
+		    profileReadLatest(active_profile_gameid, &saved, &revision, &slot))
+			*options = saved;
 		return showDashboardNeutrinoOptions(options);
+	}
 	while (1) {
 		waitPadReady(0, 0);
 		if (readpad()) {
@@ -412,4 +440,18 @@ int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 		post_event = event;
 		event = 0;
 	}
+}
+
+/* The context is restricted to one synchronous UI call and always cleared.
+ * Classic/no-ID launches retain their historical launch-only defaults. */
+int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *options, const char *game_id)
+{
+	int result;
+
+	active_profile_gameid[0] = '\0';
+	if (profileGameIdValid(game_id))
+		snprintf(active_profile_gameid, sizeof(active_profile_gameid), "%s", game_id);
+	result = showNeutrinoLaunchOptions(options);
+	active_profile_gameid[0] = '\0';
+	return result;
 }
