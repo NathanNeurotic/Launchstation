@@ -1,6 +1,7 @@
 #include "launchelf.h"
 #include "neutrino_gameid.h"
 #include "popstarter_internal.h"
+#include "init.h"
 
 #define ISO_SECTOR_SIZE 2048
 #define ISO_PVD_LBA 16
