@@ -1,5 +1,6 @@
 #include "popstarter_internal.h"
 #include "gui_neutrino.h"
+#include "dash.h"
 #include "neutrino_gameid.h"
 #include "main_gameid.h"
 #include "init.h"
