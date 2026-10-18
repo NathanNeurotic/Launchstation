@@ -39,6 +39,7 @@ jobs:
           python3 tests/test_r3z_loader_disable.py
           python3 tests/test_r3z_neutrino_options.py
           python3 tests/test_r3z_neutrino_gameid.py
+          python3 tests/test_r3z_four_browser_modes.py
           python3 tests/test_ember_launch.py
           python3 tests/test_ember_paths.py
           python3 tests/test_ember_iop_handoff.py
