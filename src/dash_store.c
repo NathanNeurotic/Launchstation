@@ -12,6 +12,7 @@
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "config_private.h"
+#include "main_title.h"
 
 DashSettings dashCfg;
 DashUserLists dashLists;
@@ -305,6 +306,8 @@ static int settingsKv(const char *key, char *value, void *user)
 		dashCfg.legacy_theme = 1; /* no unstyled classic look any more */
 	else if (!stricmp(key, "Dash_IntroDone"))
 		dashCfg.intro_done = clampInt(value, 0, 1, 0);
+	else if (!stricmp(key, "Dash_SoftwareClock"))
+		dashStrCopy(dashCfg.software_clock, value, sizeof(dashCfg.software_clock));
 	else if (!stricmp(key, "Dash_Sound"))
 		dashCfg.sound = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_SoundVolume"))
@@ -488,6 +491,7 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                "Dash_RecentCount = %d\r\n"
 	                "Dash_LegacyTheme = %d\r\n"
 	                "Dash_IntroDone = %d\r\n"
+	                "Dash_SoftwareClock = %s\r\n"
 	                "Dash_Sound = %d\r\n"
 	                "Dash_SoundVolume = %d\r\n"
 	                "Dash_BGM = %d\r\n"
@@ -507,7 +511,7 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                "Dash_IGRAfterPath = %s\r\n",
 	                c->enabled, c->start_section, c->view, c->effects,
 	                c->anim, c->autoscan, c->artwork, c->recent_count,
-	                c->legacy_theme, c->intro_done, c->sound, c->sound_vol,
+	                c->legacy_theme, c->intro_done, c->software_clock, c->sound, c->sound_vol,
 	                c->bgm, c->bgm_vol, c->app_filter, c->files_mode,
 	                c->home_shortcuts, c->icon_backing, c->show_unavailable_devices, c->dev_auto,
 	                c->mmce_backup_keep, c->mmce_backup_format,
@@ -637,6 +641,13 @@ int dashStoreFlushWait(const char *title)
 
 int dashStoreSaveSettings(void)
 {
+	/* Checkpoint only on an explicit settings save, never write every tick. */
+	if (dashCfg.software_clock[0] && menuTitleSoftwareClockActive()) {
+		int y, m, d, h, min, sec, use12, fmt;
+		if (menuTitleGetClockFields(&y, &m, &d, &h, &min, &sec, &use12, &fmt))
+			snprintf(dashCfg.software_clock, sizeof(dashCfg.software_clock),
+			         "%04d-%02d-%02d %02d:%02d:%02d", y, m, d, h, min, sec);
+	}
 	persisted = dashCfg;
 	save_dirty[SAVE_SETTINGS] = 1;
 	return 0;

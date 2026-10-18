@@ -33,6 +33,9 @@ jobs:
           python3 tests/test_settings_save_prompt.py
           python3 tests/test_settings_navigation.py
           python3 tests/test_zack_feedback.py
+          python3 tests/test_software_clock.py
+          python3 tests/test_transition_latency.py
+          python3 tests/test_native_four_browser_modes.py
           python3 tests/test_feedback_35_82.py
           python3 tests/test_ilink_browser.py
           python3 tests/test_neutrino_iso.py

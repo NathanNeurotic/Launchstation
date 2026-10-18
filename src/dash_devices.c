@@ -646,7 +646,7 @@ void dashDevicesAutoStart(void)
 
 	if (!autoStartNeeded() || !dashWorkerAwaitAll("Finishing up"))
 		return;
-	dashLoadingBegin("Starting devices");
+	dashLoadingBegin("Starting Launchstation");
 	prev = drawMsgOverride;
 	drawMsgOverride = quietDriverMsg;
 	dashDevicesAutoProbe();

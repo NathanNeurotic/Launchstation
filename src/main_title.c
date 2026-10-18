@@ -1,5 +1,6 @@
 #include "launchelf.h"
 #include "main_title.h"
+#include "dash_internal.h"
 
 #include <osd_config.h>
 
@@ -412,17 +413,52 @@ static int seedClockFromPs2(u64 tick_ms, int care_time, int care_date)
 	return refreshClockText(care_time, care_date);
 }
 
+/* A saved software seed is local display time. It advances only while this
+ * process runs; unpowered elapsed time requires RTC or Internet time. */
+static char active_software_seed[24];
+static int seedSoftwareClock(u64 tick_ms)
+{
+	int y, m, d, h, min, sec, offset;
+	char extra;
+	if (sscanf(dashCfg.software_clock, "%4d-%2d-%2d %2d:%2d:%2d %c", &y, &m, &d, &h, &min, &sec, &extra) != 6 ||
+	    y < 2000 || y > 2099 || !isValidTimestamp(y, m, d, h, min, sec))
+		return 0;
+	if (strcmp(active_software_seed, dashCfg.software_clock)) {
+		title_clock.year = y; title_clock.month = m; title_clock.day = d;
+		title_clock.hour = h; title_clock.minute = min; title_clock.second = sec;
+		readOsdClockFormats(&title_clock.use_12h, &title_clock.date_format, &offset);
+		title_clock.local_offset_minutes = offset;
+		title_clock.last_tick_ms = tick_ms;
+		strcpy(active_software_seed, dashCfg.software_clock);
+	}
+	title_clock.initialized = title_clock.valid = 1;
+	return 1;
+}
+
 static int updateClock(u64 tick_ms, int force, int care_time, int care_date)
 {
 	u64 elapsed_ms;
 	u64 elapsed_seconds;
+	int changed = 0;
 
-	if (force || !title_clock.initialized || tick_ms < title_clock.last_tick_ms)
-		return seedClockFromPs2(tick_ms, care_time, care_date);
+	if (seedSoftwareClock(tick_ms)) {
+		if (tick_ms < title_clock.last_tick_ms)
+			title_clock.last_tick_ms = tick_ms;
+		/* A forced text refresh must not replace software time with RTC. */
+		if (force || title_clock.last_tick_ms == tick_ms)
+			changed = refreshClockText(care_time, care_date);
+	} else {
+		if (active_software_seed[0]) {
+			active_software_seed[0] = '\0';
+			title_clock.initialized = 0;
+		}
+		if (force || !title_clock.initialized || tick_ms < title_clock.last_tick_ms)
+			return seedClockFromPs2(tick_ms, care_time, care_date);
+	}
 
 	elapsed_ms = tick_ms - title_clock.last_tick_ms;
 	if (elapsed_ms < MENU_TITLE_CLOCK_POLL_MS)
-		return 0;
+		return changed;
 
 	elapsed_seconds = elapsed_ms / 1000u;
 	if (elapsed_seconds > 0) {
@@ -434,6 +470,36 @@ static int updateClock(u64 tick_ms, int force, int care_time, int care_date)
 	}
 
 	return 0;
+}
+
+/* Keep the running software-clock state across Settings previews / Discard. */
+static MenuTitleClockState settings_clock;
+static char settings_software_seed[24];
+
+void menuTitleClockSnapshot(void)
+{
+	updateClock(Timer(), 0, 1, 1);
+	settings_clock = title_clock;
+	strcpy(settings_software_seed, active_software_seed);
+}
+
+void menuTitleClockRestore(void)
+{
+	if (settings_software_seed[0]) {
+		title_clock = settings_clock;
+		strcpy(active_software_seed, settings_software_seed);
+	} else {
+		/* A hardware RTC write cannot be undone by Discard. Reread it. */
+		active_software_seed[0] = '\0';
+		title_clock.initialized = 0;
+	}
+	updateClock(Timer(), 1, 1, 1);
+}
+
+int menuTitleSoftwareClockActive(void)
+{
+	updateClock(Timer(), 0, 1, 1);
+	return active_software_seed[0] != '\0';
 }
 
 static int queryTemperatureCelsius(char *temp_buf, size_t temp_buf_size)

@@ -393,3 +393,14 @@ The four current dashboard tabs are **Home, Files, Tools, Settings**. The Applic
 **External launcher and reference projects:** [Neutrino](https://github.com/rickgaiser/neutrino), [POPStarter](https://www.psx-place.com/threads/popstarter.19139/), [Ember](https://github.com/Gageformer/Ember), [PS2Link](https://github.com/ps2dev/ps2link), [UDPFSD](https://github.com/pcm720/udpfsd), [OSDMenu](https://github.com/pcm720/OSDMenu), [KELFTool](https://github.com/xfwcfw/kelftool), [CosmicScale's HDD-OSD icon generator](https://github.com/CosmicScale/HDD-OSD-Icon-Generator), [PixelFX RetroGem](https://www.pixelfx.co/hdmi-retro-gem), the Google Drive APIs and the MMCE/PS2 homebrew ecosystem. External programs are **not** automatically bundled merely because Launchstation can launch or reference them.
 
 For each project's exact role, paths, credit, bundled/unbundled status and license caveats, read [Third-Party Credits & License Inventory](docs/THIRD_PARTY_CREDITS.md) and the [website Credits page](https://nathanneurotic.github.io/Launchstation/credits.html). Original file-level notices remain authoritative; there is currently no single root LICENSE in the repository.
+
+### Software clock for consoles with a dead CMOS battery
+
+In **Settings > System**, choose **Set software clock...** and enter local time.
+Choose **Save** when leaving Settings to store a checkpoint in `DASHBOARD.CNF`.
+The clock advances while Launchstation runs and resumes the saved checkpoint
+on the next start. Saving Settings again checkpoints the current software time.
+Time spent powered off or unplugged is unknown; a working RTC or Internet time
+source is required for accurate wall time across those intervals. **Use PS2
+hardware clock** restores the normal RTC source. Discard restores the previous
+clock setting along with the rest of the Settings session.

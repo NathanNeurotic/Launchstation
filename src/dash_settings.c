@@ -13,6 +13,7 @@
 #include "dash_internal.h"
 #include "config_private.h"
 #include "dash_sound.h"
+#include "main_title.h"
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 #include "cloud_google.h"
 #endif
@@ -121,6 +122,8 @@ enum SetId {
 	S_HOSTWRITE,
 	S_NET_LEGACY,
 	S_CLOCK_MANUAL,
+	S_CLOCK_SOFTWARE,
+	S_CLOCK_HARDWARE,
 	S_CLOCK_SYNC,
 	/* advanced */
 	S_LANGUAGE,
@@ -383,6 +386,8 @@ static const SetItem psu_items[] = {
 static const SetItem system_items[] = {
     {ST_PAGE, P_LANGUAGE, "Language", "Built-in language and external translations for file operations and tools."},
     {ST_PAGE, P_PSU, "Memory card backup files", "PSU naming and overwrite rules used by File Browser operations."},
+    {ST_ACTION, S_CLOCK_SOFTWARE, "Set software clock...", "Works without a CMOS battery. Save settings to retain a checkpoint; time while unplugged is unknown."},
+    {ST_ACTION, S_CLOCK_HARDWARE, "Use PS2 hardware clock", "Stop the software clock and use the console RTC again."},
     {ST_ACTION, S_CLOCK_MANUAL, "Set PS2 clock manually...", "Enter the local date and time as YYYY-MM-DD HH:MM:SS; the hardware RTC is written and verified."},
     {ST_PATH, S_CNF_PATH, "Configuration folder", "Load and save LAUNCHELF.CNF in this folder instead of the default places."},
     {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
@@ -1886,6 +1891,7 @@ static void snapshotTexts(void)
 
 static void sessionSnapshot(void)
 {
+	menuTitleClockSnapshot();
 	/* byte copies, so the comparison in refreshDirty() never sees padding */
 	memcpy(&snap_dash, &dashCfg, sizeof(snap_dash));
 	memcpy(&snap_theme, &dashTheme, sizeof(snap_theme));
@@ -1958,6 +1964,7 @@ static void settingsRevert(void)
 		int art = dashCfg.artwork != snap_dash.artwork;
 
 		dashCfg = snap_dash;
+		menuTitleClockRestore();
 		dashThemeRestore(&snap_theme, snap_theme_preset, snap_theme_custom);
 		DashThemeSetLegacyEnabled(1);
 		if (dashCfg.sound || dashCfg.bgm)
@@ -2617,6 +2624,11 @@ static void runAction(int id)
 		case S_ABOUT_PROJECT:
 			dashShowAbout();
 			break;
+		case S_CLOCK_HARDWARE:
+			dashCfg.software_clock[0] = '\0';
+			menuTitleUpdateAsync(1);
+			break;
+		case S_CLOCK_SOFTWARE:
 		case S_CLOCK_MANUAL: {
 			char input[24];
 			char result[160];
@@ -2633,10 +2645,24 @@ static void runAction(int id)
 
 			if (!dashModalKeyboard("Set PS2 clock: YYYY-MM-DD HH:MM:SS", input, sizeof(input)))
 				break;
-			if (sscanf(input, "%d-%d-%d %d:%d:%d",
+			if (sscanf(input, "%4d-%2d-%2d %2d:%2d:%2d",
 			           &year, &month, &day, &hour, &minute, &second) != 6) {
 				dashModalMessage(DI_WARNING, "Invalid date / time",
 				                 "Use YYYY-MM-DD HH:MM:SS, for example 2026-10-07 15:30:00.", input);
+				break;
+			}
+			if (id == S_CLOCK_SOFTWARE) {
+				int days = 0;
+				static const int mdays[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+				if (month >= 1 && month <= 12)
+					days = mdays[month - 1] + (month == 2 && (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)));
+				if (year < 2000 || year > 2099 || day < 1 || day > days || hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
+					dashModalMessage(DI_WARNING, "Invalid date / time", "Enter a valid date from 2000 to 2099 and a 24-hour time.", NULL);
+					break;
+				}
+				snprintf(dashCfg.software_clock, sizeof(dashCfg.software_clock), "%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
+				menuTitleUpdateAsync(1);
+				dashModalMessage(DI_CHECK, "Software clock running", "Save settings to retain this time. After restarting, it resumes the saved checkpoint; time spent unplugged cannot be measured.", NULL);
 				break;
 			}
 			ok = dashClockSetManual(year, month, day, hour, minute, second, result, sizeof(result));
