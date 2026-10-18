@@ -32,8 +32,9 @@ assert "dashConsoleSummaryText(console, sizeof(console));" in devices
 assert "GetConsoleModelName(" not in home
 assert "GetConsoleModelName(" not in devices
 dev_input = devices.split("static void devInput(const DashInput *in)", 1)[1].split("static void devUpdate(", 1)[0]
-assert "in->pressed & DASH_IN_FAV" in dev_input
-assert "dashShowSystemInfo();" in dev_input
-assert dev_input.index("dashShowSystemInfo();") < dev_input.index("if (ndevs <= 0")
-assert 'h[2].label = "Console info"' in devices
+assert 'items[n].label = "Console information"' in dev_input
+assert "ids[n++] = 4;" in dev_input
+assert "case 4:" in dev_input and "dashShowSystemInfo();" in dev_input
+assert "DashHint h[4];" in devices
+assert "dashDrawHints(h, 4);" in devices
 print("PASS: passive HOME/DEVICES console summary; explicit model discovery")
