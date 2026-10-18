@@ -15,6 +15,10 @@ This guide reflects the four visible tabs implemented in `src/dash_main.c` and t
 
 Launchstation selectively incorporates [upstream PR #56](https://github.com/saildot4k/wLaunchELF_R3Z/pull/56) from the **ember-support** development branch. The classic L1 file-browser mode menu allows reverse filename/title/date sorting; memory-card save and PSU titles honor valid two-line `icon.sys` separation; the *Tuna Date action is grouped inside Folder dates and only appears for eligible selected real MC folders. Launchstation's dashboard Files tab already provides independent six-criterion reversible sorting. Existing MMCE, USB, networking, dashboard, and Ember launch paths were **not** replaced by upstream code.
 
+## Classic File Browser display modes
+
+The upstream R3Z four-mode layout is now available in the **classic** browser's L1 mode menu: filename, filename + details, game title, or game title + details. Circle toggles filename variants; Square toggles title variants; sorting is unchanged. The dashboard Files tab still presents its original three choices, pending reconciliation with the separate UI work in PR #178.
+
 ## Files and app roots
 
 Default app scanning: `mc:/APPS`, `mc:/BOOT`, `mass:/APPS`, `mass:/BOOT`, each one subfolder deep. Adjust under Settings → Home & applications → Application library → Application folders. Other paths can still be browsed/launched from Files.
