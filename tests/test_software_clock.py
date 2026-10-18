@@ -33,6 +33,8 @@ static int save_dirty[1];
 static u64 tick;
 static u64 Timer(void) { return tick; }
 static char active_software_seed[24];
+static MenuTitleClockState settings_clock;
+static char settings_software_seed[24];
 static int rtc_reads;
 static int refreshClockText(int t, int d) { (void)t; (void)d; return 1; }
 static int seedClockFromPs2(u64 tick, int t, int d) {
