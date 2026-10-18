@@ -398,8 +398,10 @@ For each project's exact role, paths, credit, bundled/unbundled status and licen
 
 In **Settings > System**, choose **Set software clock...** and enter local time.
 Choose **Save** when leaving Settings to store a checkpoint in `DASHBOARD.CNF`.
-The clock advances while Launchstation runs and resumes the saved checkpoint
-on the next start. Saving Settings again checkpoints the current software time.
+The clock advances while Launchstation runs. Before restarting, use **Settings
+changes > Save current clock** to retain additional runtime even when no other
+setting changed, and wait for the pending save to finish before cutting power.
+The next start resumes the last saved checkpoint.
 Time spent powered off or unplugged is unknown; a working RTC or Internet time
 source is required for accurate wall time across those intervals. **Use PS2
 hardware clock** restores the normal RTC source. Discard restores the previous

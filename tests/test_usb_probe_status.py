@@ -25,6 +25,7 @@ c = r'''
 static int active=1, worker, loading_active=1, frames, reports, stats;
 static char last[128];
 static int DashIsActive(void) { return active; }
+static int isStartupDriverStatusQuiet(void) { return 0; }
 static int dashWorkerOnThread(void) { return worker; }
 static void dashWorkerStatus(const char *s,int d,int t) {
     (void)d;(void)t; reports++; snprintf(last,sizeof(last),"%s",s);

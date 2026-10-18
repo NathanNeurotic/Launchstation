@@ -49,13 +49,15 @@ static struct { int usbkbd_used; char LK_Path[SETTING_LK_COUNT][MAX_PATH]; } con
 static __typeof__(config) *setting = &config;
 static int session, begins, home, saves, reverts, changes, resets, edits, toast;
 static int modal_result = -1, dirty = 1, failed;
+static int clock_save;
+static int softwareClockCheckpointAvailable(void) { return clock_save; }
 typedef struct { int icon; const char *label, *detail; int disabled; } DashMenuItem;
 static void sessionBegin(void) { if (!session) { session = 1; begins++; } }
 static int anyDirty(void) { return dirty; }
 static int failedSaves(void) { return failed; }
 static int dashModalMenu(const char *t,const char *d,DashMenuItem *m,int n,int s) {
     (void)t; (void)d; (void)s; assert(n == 3); changes++;
-    assert(m[0].disabled == !(dirty || failed) && m[1].disabled == !dirty);
+    assert(m[0].disabled == !(dirty || failed || clock_save) && m[1].disabled == !dirty);
     return modal_result;
 }
 static void runAction(int id) { if(id==S_SAVE_CLASSIC) saves++; else if(id==S_REVERT) reverts++; }
@@ -162,7 +164,9 @@ int main(void) {
     modal_result=1; press(DASH_IN_MENU); assert(reverts==1);
     modal_result=-1; dirty=0; press(DASH_IN_MENU); assert(saves==P_COUNT && reverts==1);
     failed=1; modal_result=0; press(DASH_IN_MENU); assert(saves==P_COUNT+1 && reverts==1);
-    failed=0; modal_result=-1;
+    failed=0; clock_save=1; modal_result=0; press(DASH_IN_MENU);
+    assert(saves==P_COUNT+2 && reverts==1);
+    clock_save=0; modal_result=-1;
     select_id(P_SOUND,S_SVOL); edits=0; press(DASH_IN_RIGHT); assert(!edits && toast);
     dashCfg.sound=1; press(DASH_IN_RIGHT); assert(edits==1);
     select_id(P_BOOT,S_TIMEOUT); press(DASH_IN_RIGHT); assert(edits==1);

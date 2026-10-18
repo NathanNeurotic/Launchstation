@@ -225,6 +225,9 @@ static void dashSoundPlay(int i) { (void)i; }
 static void dashAppsRebuildView(void) {}
 static void dashStrCopy(char *d,const char *s,int n) { snprintf(d,n,"%s",s); }
 static int dashWorkerAwaitAll(const char *t) { (void)t; return 1; }
+static int startup_quiet;
+static int isStartupDriverStatusQuiet(void) { return startup_quiet; }
+static void setStartupDriverStatusQuiet(int quiet) { startup_quiet = quiet; }
 static void dashLoadingBegin(const char *t) { (void)t; }
 static void dashLoadingStatus(const char *t,int d,int n) { (void)t;(void)d;(void)n; }
 static void (*drawMsgOverride)(const char *msg);

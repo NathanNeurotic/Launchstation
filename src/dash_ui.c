@@ -9,6 +9,7 @@
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "dash_sound.h"
+#include "init.h"
 
 extern u32 paddata;
 
@@ -1056,6 +1057,18 @@ void dashLoadingSetCancel(int cancelable)
 	loading_cancel = cancelable;
 }
 
+static void loadingProgress(const char *status, int done, int total)
+{
+	int quiet = isStartupDriverStatusQuiet();
+
+	/* Device retry loops can update the overlay directly, bypassing drawMsg.
+	 * Keep branded startup progress, but hide its driver stages and counts. */
+	if (status != NULL || quiet)
+		dashStrCopy(loading_status, quiet ? "" : status, sizeof(loading_status));
+	loading_done = quiet ? 0 : done;
+	loading_total = quiet ? 0 : total;
+}
+
 void dashLoadingStatus(const char *status, int done, int total)
 {
 	if (dashWorkerOnThread()) {
@@ -1063,10 +1076,7 @@ void dashLoadingStatus(const char *status, int done, int total)
 		dashWorkerStatus(status, done, total);
 		return;
 	}
-	if (status != NULL)
-		dashStrCopy(loading_status, status, sizeof(loading_status));
-	loading_done = done;
-	loading_total = total;
+	loadingProgress(status, done, total);
 	if (!loading_active) {
 		/* one-shot status (e.g. a driver load started by a legacy path) */
 		loading_active = 1;
@@ -1082,16 +1092,13 @@ void dashLoadingStatus(const char *status, int done, int total)
 
 void dashLoadingFrame(const char *status, int done, int total)
 {
-	if (status != NULL)
-		dashStrCopy(loading_status, status, sizeof(loading_status));
-	loading_done = done;
-	loading_total = total;
+	loadingProgress(status, done, total);
 	loadingDraw();
 }
 
 void DashStorageProbeStatus(const char *status)
 {
-	if (!DashIsActive())
+	if (!DashIsActive() || isStartupDriverStatusQuiet())
 		return;
 	if (dashWorkerOnThread()) {
 		dashWorkerStatus(status, 0, 0);

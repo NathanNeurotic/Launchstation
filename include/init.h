@@ -2,6 +2,9 @@
 #define INIT_H
 
 void setInitPhaseComplete(void);
+/* Presentation only: independent of IOP/PAD initialization lifetime. */
+int isStartupDriverStatusQuiet(void);
+void setStartupDriverStatusQuiet(int quiet);
 void closeKeyboardIfOpened(void);
 
 void Reset(void);

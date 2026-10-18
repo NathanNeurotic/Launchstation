@@ -1132,6 +1132,9 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		screens[section]->enter();
 	dashAppsRebuildView();
 	dashInputFlush();
+	/* Include the initial Files/Devices entry in startup presentation.
+	 * Runtime/manual device actions restore detailed feedback. */
+	setStartupDriverStatusQuiet(0);
 	last_frame_ms = Timer();
 	next_device_poll = last_frame_ms;
 	next_disc_poll = last_frame_ms + 750;

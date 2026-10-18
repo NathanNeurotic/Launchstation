@@ -386,7 +386,7 @@ static const SetItem psu_items[] = {
 static const SetItem system_items[] = {
     {ST_PAGE, P_LANGUAGE, "Language", "Built-in language and external translations for file operations and tools."},
     {ST_PAGE, P_PSU, "Memory card backup files", "PSU naming and overwrite rules used by File Browser operations."},
-    {ST_ACTION, S_CLOCK_SOFTWARE, "Set software clock...", "Works without a CMOS battery. Save settings to retain a checkpoint; time while unplugged is unknown."},
+    {ST_ACTION, S_CLOCK_SOFTWARE, "Set software clock...", "Works without a CMOS battery. Restarts at the last saved time; save again before power-off to retain elapsed runtime."},
     {ST_ACTION, S_CLOCK_HARDWARE, "Use PS2 hardware clock", "Stop the software clock and use the console RTC again."},
     {ST_ACTION, S_CLOCK_MANUAL, "Set PS2 clock manually...", "Enter the local date and time as YYYY-MM-DD HH:MM:SS; the hardware RTC is written and verified."},
     {ST_PATH, S_CNF_PATH, "Configuration folder", "Load and save LAUNCHELF.CNF in this folder instead of the default places."},
@@ -1914,13 +1914,18 @@ static void sessionBegin(void)
 	sessionSnapshot();
 }
 
-/* Writes everything that changed, in the background. */
+static int softwareClockCheckpointAvailable(void)
+{
+	return dashCfg.software_clock[0] && menuTitleSoftwareClockActive();
+}
+
+/* Writes explicit settings saves, including the current software time. */
 static void settingsCommit(void)
 {
 	int cnf_failed = 0, net_failed = 0;
 
 	refreshDirty(1);
-	if (dash_dirty || dashStoreSettingsFailed()) {
+	if (dash_dirty || dashStoreSettingsFailed() || softwareClockCheckpointAvailable()) {
 		session_saves |= SESSION_SAVE_DASH;
 		dashStoreSaveSettings();
 	}
@@ -1934,6 +1939,14 @@ static void settingsCommit(void)
 	}
 	if (!cnf_failed && !net_failed)
 		sessionSnapshot();
+}
+
+static void settingsSaveAction(void)
+{
+	if (!anyDirty() && !failedSaves() && !softwareClockCheckpointAvailable())
+		dashToast(DASH_TOAST_INFO, "Nothing to save");
+	else
+		settingsCommit();
 }
 
 /* Puts back what was there when SETTINGS was opened. */
@@ -2643,7 +2656,7 @@ static void runAction(int id)
 			else
 				snprintf(input, sizeof(input), "2000-01-01 00:00:00");
 
-			if (!dashModalKeyboard("Set PS2 clock: YYYY-MM-DD HH:MM:SS", input, sizeof(input)))
+			if (!dashModalKeyboard(id == S_CLOCK_SOFTWARE ? "Set software clock: YYYY-MM-DD HH:MM:SS" : "Set PS2 clock: YYYY-MM-DD HH:MM:SS", input, sizeof(input)))
 				break;
 			if (sscanf(input, "%4d-%2d-%2d %2d:%2d:%2d",
 			           &year, &month, &day, &hour, &minute, &second) != 6) {
@@ -2685,10 +2698,7 @@ static void runAction(int id)
 		}
 #endif
 		case S_SAVE_CLASSIC:
-			if (!anyDirty() && !failedSaves())
-				dashToast(DASH_TOAST_INFO, "Nothing to save");
-			else
-				settingsCommit();
+			settingsSaveAction();
 			break;
 		case S_SAVE_AS:
 			saveClassicAs();
@@ -2768,11 +2778,12 @@ static void settingsMenu(void)
 {
 	int changed = anyDirty();
 	int failed = failedSaves();
+	int clock_save = softwareClockCheckpointAvailable();
 	DashMenuItem menu[] = {
-	    {DI_CHECK, !changed && failed ? "Retry failed saves" : "Save changes", "Apply to the settings files", !(changed || failed)},
+	    {DI_CHECK, !changed && failed ? "Retry failed saves" : !changed && clock_save ? "Save current clock" : "Save changes", "Save settings and current software time", !(changed || failed || clock_save)},
 	    {DI_CLOSE, "Discard changes", "Undo edits since opening Settings or choosing Save", !changed},
 	    {DI_BACK, "Keep editing", NULL, 0}};
-	int r = dashModalMenu("Settings changes", changed ? "Changes preview immediately" : failed ? "An earlier save failed; retry is optional" : "No unsaved changes", menu, NITEMS(menu), (changed || failed) ? 0 : 2);
+	int r = dashModalMenu("Settings changes", changed ? "Changes preview immediately" : failed ? "An earlier save failed; retry is optional" : clock_save ? "Save the current clock before restarting" : "No unsaved changes", menu, NITEMS(menu), (changed || failed || clock_save) ? 0 : 2);
 	if (r == 0)
 		runAction(S_SAVE_CLASSIC);
 	else if (r == 1)

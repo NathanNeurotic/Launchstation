@@ -32,7 +32,7 @@ code = r"""
 #include <stdlib.h>
 #include <string.h>
 typedef uint64_t u64;
-typedef struct { int sound, bgm, recent_count, artwork; char path[64]; } DashSettings;
+typedef struct { int sound, bgm, recent_count, artwork; char path[64], software_clock[24]; } DashSettings;
 typedef struct { int color; } DashTheme;
 typedef struct {
     int TV_mode, screen_x, screen_y, language, swapKeys;
@@ -53,8 +53,9 @@ static int dashThemeBasePreset(void) { return preset; }
 static int dashThemeIsCustom(void) { return custom; }
 static int dashStoreSettingsFailed(void) { return store_failed && !store_pending; }
 static char *dashStoreSettingsText(const DashSettings *c,int *len) {
-    char s[256]; *len=snprintf(s,sizeof(s),"%d/%d/%d/%d/%s/%d/%d/%d",
-        c->sound,c->bgm,c->recent_count,c->artwork,c->path,dashTheme.color,preset,custom);
+    char s[256]; *len=snprintf(s,sizeof(s),"%d/%d/%d/%d/%s/%s/%d/%d/%d",
+        c->sound,c->bgm,c->recent_count,c->artwork,c->path,c->software_clock,
+        dashTheme.color,preset,custom);
     return strdup(s);
 }
 static char *configBuildSaveText(int *len) {
@@ -74,6 +75,8 @@ static int dashModalMenu(const char *t,const char *d,DashMenuItem *m,int n,int s
 }
 static void dashToast(int kind,const char *s) { (void)kind; (void)s; }
 static int clock_snapshots, clock_restores;
+static int software_clock_active;
+static int menuTitleSoftwareClockActive(void) { return software_clock_active; }
 static void menuTitleClockSnapshot(void) { clock_snapshots++; }
 static void menuTitleClockRestore(void) { clock_restores++; }
 static void updateScreenMode(void) {}
@@ -103,11 +106,17 @@ for signature in ("static char *dashSaveText(", "static char *cnfSaveText(",
 if "static int failedSaves(" in source:
     code += function("static int failedSaves(")
 code += function("static int dirtyOrFailed(")
+if "static int softwareClockCheckpointAvailable(" in source:
+    code += function("static int softwareClockCheckpointAvailable(")
 for signature in ("static int anyDirty(", "static int anyDirtyCached(",
                   "static void snapshotTexts(", "static void sessionSnapshot(",
                   "static void sessionBegin(", "static void settingsCommit(",
                   "static void settingsRevert(", "static int settingsLeave("):
     code += function(signature)
+if "static void settingsSaveAction(" in source:
+    code += function("static void settingsSaveAction(")
+action = source[source.index("case S_SAVE_CLASSIC:") + len("case S_SAVE_CLASSIC:"):]
+code += "static void clickSaveSettings(void) {\n" + action[:action.index("break;")] + "\n}\n"
 code += r"""
 static void begin(void) { session=0; modal_calls=0; sessionBegin(); }
 static void clean(void) {
@@ -168,6 +177,21 @@ int main(void) {
     /* Discard acknowledges session edits, not successful persistence. */
     modal_result=1; assert(settingsLeave()==1);
     assert(cfg_failed[0]); begin(); assert(!anyDirty() && settingsLeave()==1);
+    /* A clock-only edit must participate in the production dirty/leave flow. */
+    clean(); strcpy(dashCfg.software_clock,"2028-06-01 10:00:20");
+    sessionSnapshot(); assert(!anyDirtyCached());
+    strcpy(dashCfg.software_clock,"2028-06-01 10:01:20");
+    assert(anyDirtyCached());
+    assert(settingsLeave()==0 && modal_calls==1 && session);
+    modal_result=1; assert(settingsLeave()==1);
+    assert(strcmp(dashCfg.software_clock,"2028-06-01 10:00:20")==0);
+    /* Explicit Save remains usable for elapsed software time without edits. */
+    clean(); strcpy(dashCfg.software_clock,"2028-06-01 10:00:20"); software_clock_active=1;
+    sessionSnapshot(); assert(!anyDirty());
+    int clock_saves=queued[2]; clickSaveSettings(); assert(queued[2]==clock_saves+1);
+    begin(); assert(!anyDirty() && settingsLeave()==1 && !modal_calls);
+    software_clock_active=0; clean(); clock_saves=queued[2];
+    clickSaveSettings(); assert(queued[2]==clock_saves);
     free(snap_dash_text); free(snap_cnf_text);
     puts("PASS: pristine/reverted/canceled sessions, stale failures, actual edits, failed saves/retry/discard");
 }
