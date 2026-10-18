@@ -900,13 +900,9 @@ static int BrowserModePopup(void)
 					sprintf(tmp, "   %s", &minuses_s[80 - Show_len]);
 				else if (i == 2)
 					sprintf(tmp, "\xFF"
-					             "0 %s",
-					        LNG(Filename));
-				else if (i == 3)
-					sprintf(tmp, "\xFF"
-					             "1 %s%s",
+					             "0 %s%s",
 					        LNG(Filename), file_show == FILE_SHOW_NAME_DETAILS ? LNG(_plus_Details) : "");
-				else if (i == 4)
+				else if (i == 3)
 					sprintf(tmp, "\xFF"
 					             "2 %s%s",
 					        LNG(Game_Title), file_show == FILE_SHOW_TITLE_DETAILS ? LNG(_plus_Details) : "");
@@ -936,8 +932,8 @@ static int BrowserModePopup(void)
 
 				printXY(tmp, mSprite_X1 + 2 * FONT_WIDTH, y, setting->color[COLOR_TEXT], TRUE, 0);
 				//Display marker for current modes
-				if ((i == 2 && !fileShowTitles()) || (i == 3 && !fileShowTitles()) ||
-				    (i == 4 && fileShowTitles()) || (file_sort == i - 8))
+				if ((i == 2 && !fileShowTitles()) || (i == 3 && fileShowTitles()) ||
+				    (i >= 8 && i <= 11 && file_sort == i - 8))
 					drawChar(LEFT_CUR, mSprite_X1 + FONT_WIDTH / 2, y, setting->color[COLOR_SELECT]);
 				y += FONT_HEIGHT;
 
