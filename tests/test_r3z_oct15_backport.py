@@ -54,6 +54,15 @@ test += show_helpers + "\n"
 test += comparator + "\n" + join
 test += r'''
 int main(void) {
+    /* Both production predicates are part of the classic display contract.
+     * Exercise details here as well as title-based comparator selection. */
+    file_show = FILE_SHOW_TITLE;
+    assert(fileShowTitles() && !fileShowDetails());
+    file_show = FILE_SHOW_TITLE_DETAILS;
+    assert(fileShowTitles() && fileShowDetails());
+    file_show = FILE_SHOW_NAME_DETAILS;
+    assert(!fileShowTitles() && fileShowDetails());
+
     FILEINFO a={0}, b={0};
     strcpy(a.name,"A.ELF"); strcpy(b.name,"B.ELF");
     assert(cmpFile(&a,&b)<0);
