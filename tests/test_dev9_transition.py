@@ -38,6 +38,7 @@ static u8 ps2ip_irx[1], ps2ip_v10_irx[1], ps2smap_irx[1], ps2host_irx[1], ps2ftp
 static int size_ps2ip_irx=1, size_ps2ip_v10_irx=1, size_ps2smap_irx=1, size_ps2host_irx=1, size_ps2ftpd_irx=1, size_ps2netfs_irx=1;
 static int have_ps2ip, have_ps2smap, have_ps2host, have_ps2ftpd, have_ps2netfs, network_calls;
 static int network_allowed=1, client_calls, if_conf_len;
+static int console_is_PSX, have_Flash_modules, xfromserv_loaded, power_calls, flash_calls;
 static char if_conf[1];
 static struct Config { int legacy_net_drivers; } config;
 static struct Config *setting = &config;
@@ -48,7 +49,8 @@ static int pcCardCfOwnsBus(void) { return cf_owned; }
 static int switchNetworkStack(int mode) { assert(mode==NETWORK_STACK_ETH); return network_allowed; }
 static void showLoadingModulesMsg(const char *name) { (void)name; }
 static void ensureCoreIoStackReady(void) {}
-static void setupPowerOff(void) {}
+static void setupPowerOff(void) { power_calls++; }
+static void load_pflash(void) { flash_calls++; xfromserv_loaded=1; }
 static void getIpConfig(void) {}
 static int ps2ip_init(void) { client_calls++; return 0; }
 static void resetRuntimeDeviceState(int show) {
@@ -70,7 +72,7 @@ static int SifExecModuleBuffer(const void *module, int size, int len, const void
 static void pauseAfterAtaBlockDriverLoad(void) { settle_calls++; }
 '''
 for name in ("load_ps2dev9", "loadAtaBlockDriver", "load_ps2ip", "load_ps2host",
-             "load_ps2ftpd", "load_ps2netfs", "ensureDashboardIpNetworkReady"):
+             "load_ps2ftpd", "load_ps2netfs", "ensureDashboardIpNetworkReady", "loadFlashModules"):
     code += function(name)
 code += r'''
 static void reset(void) {
@@ -80,6 +82,7 @@ static void reset(void) {
     ps2dev9_variant=DEV9_VARIANT_NONE; allow_reset=bdm_ok=module_id=1;
     have_ps2ip=have_ps2smap=have_ps2host=have_ps2ftpd=have_ps2netfs=network_calls=client_calls=0;
     network_allowed=1;
+    console_is_PSX=have_Flash_modules=xfromserv_loaded=power_calls=flash_calls=0;
 }
 int main(void) {
     /* Refused reset must preserve ownership and perform no dependent load. */
@@ -112,6 +115,7 @@ int main(void) {
     ps2dev9_variant=DEV9_VARIANT_CURRENT; config.legacy_net_drivers=1; allow_reset=0;
     load_ps2host(); load_ps2ftpd(); load_ps2netfs();
     assert(!ensureDashboardIpNetworkReady());
+    assert(resets==4 && have_ps2ip && have_ps2smap);
     assert(!network_calls && !client_calls && !dev9_calls);
     assert(!have_ps2host && !have_ps2ftpd && !have_ps2netfs);
     reset(); network_allowed=0;
@@ -121,7 +125,12 @@ int main(void) {
     assert(dev9_calls==1 && network_calls==2 && client_calls==1);
     load_ps2host(); load_ps2ftpd(); load_ps2netfs();
     assert(network_calls==5 && have_ps2host && have_ps2ftpd && have_ps2netfs);
-    puts("PASS: refused DEV9/IP transitions, BDM reload ordering, dependent services, failures and CF ownership");
+    /* XFROM boot registers power-off even if DEV9 rejects initialization. */
+    reset(); console_is_PSX=1; module_id=-1;
+    assert(!loadFlashModules() && power_calls==1 && !flash_calls);
+    reset(); console_is_PSX=1;
+    assert(loadFlashModules() && power_calls==1 && flash_calls==1);
+    puts("PASS: refused DEV9/IP transitions, BDM ordering, dependent services, XFROM power-off and CF ownership");
 }
 '''
 with tempfile.TemporaryDirectory(prefix="dev9-transition-") as folder:

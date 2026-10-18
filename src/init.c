@@ -2312,9 +2312,9 @@ int loadFlashModules(void)
 	ensureCoreIoStackReady();
 	if (!have_Flash_modules) {
 		showLoadingModulesMsg("flash");
+		setupPowerOff();
 		if (!load_ps2dev9())
 			return 0;
-		setupPowerOff();
 		load_pflash();
 		have_Flash_modules = TRUE;
 	}
