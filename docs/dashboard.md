@@ -85,6 +85,13 @@ Startup can now select any of the four tabs, including Files. Older startup
 values pointing to the separate Apps page still open Home, and the old
 Devices page points to Files; no app metadata or favorites are rewritten.
 
+On HOME and the DEVICES grid, a small console label uses the ROM region already
+read at boot. It does not probe hardware while drawing. The DEVICES grid's
+**Square — Console info** action opens the detailed System information sheet;
+that explicit action may query CDVD for the exact console model. Once read,
+the model is cached for the small HOME/DEVICES labels. Until then they show
+PS2 or PSX and the available ROM region rather than guessing a model.
+
 ## Dashboard top-edge flicker / tearing
 
 The classic wLE GS renderer uses a single framebuffer. This is suitable for
