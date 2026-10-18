@@ -82,7 +82,7 @@ static void clear_slots(void) { memset(content,0,sizeof(content)); fail_write=tr
 int main(void)
 {
     const char *id="SLUS_123.45";
-    NEUTRINO_LAUNCH_OPTIONS a={1,2,1,0,1}, b={0xA5u,5,3,1,0}, c={2,1,0,0,0}, got;
+    NEUTRINO_LAUNCH_OPTIONS a={1,2,1,0,1}, b={0xA5u,5,3,1,0}, c={4,1,0,0,0}, got;
     unsigned int rev=0;
     int slot=-1;
     assert(!profileGameIdValid("SLUS/123.45"));
