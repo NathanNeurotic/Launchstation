@@ -275,6 +275,7 @@ targets:
       - src/main_console_info.c
       - src/main_gameid.c
       - src/main_gameid_table.c
+      - src/neutrino_gameid.c
       - src/main_history.c
       - src/remote_control.c
       - src/pc_game_receiver.c
