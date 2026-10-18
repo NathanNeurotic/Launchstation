@@ -66,7 +66,8 @@ typedef unsigned int u32;
 typedef long long s64;
 static FILE *iso;
 static int stack_present = 0;
-static int calls = 0, pings = 0, delays = 0;
+static int calls = 0, pings = 0, delays = 0, polls = 0;
+static int ping_error, set_error, status_result, read_limit, read_error, seek_error;
 static int wle_ascii_tolower(int c) { return c >= 'A' && c <= 'Z' ? c + ('a'-'A') : c; }
 int openPathForRead(const char *path, char *out, size_t out_size) {
     (void)out; (void)out_size;
@@ -75,11 +76,14 @@ int openPathForRead(const char *path, char *out, size_t out_size) {
 }
 s64 genLseek(int fd, s64 where, int how) {
     (void)fd;
+    if (seek_error) return -1;
     if (fseek(iso, (long)where, how)) return -1;
     return ftell(iso);
 }
 int genRead(int fd, void *buffer, int count) {
     (void)fd;
+    if (read_error) return 0;
+    if (read_limit && count > read_limit) count = read_limit;
     return (int)fread(buffer, 1, count, iso);
 }
 void genClose(int fd) { (void)fd; fclose(iso); iso = NULL; }
@@ -89,11 +93,14 @@ int isPathDeviceStackLoaded(const char *path) {
 }
 int fileXioDevctl(const char *device, int cmd, void *arg, int arglen, void *out, int outlen) {
     (void)device; (void)arg; (void)arglen; (void)out; (void)outlen;
-    if (cmd == 1) pings++;
-    if (cmd == 8) calls++;
-    return 0;
+    if (cmd == 1) { pings++; return ping_error ? -1 : 0; }
+    if (cmd == 8) {
+        assert(arglen == NEUTRINO_GAME_ID_SIZE && !strcmp(arg, "SLUS_123.45"));
+        calls++; return set_error ? -1 : 0;
+    }
+    assert(cmd == 2); polls++; return status_result;
 }
-void DelayThread(int usec) { (void)usec; delays++; }
+void DelayThread(int usec) { assert(usec == 1000000); delays++; }
 #define DPRINTF(...) ((void)0)
 """
 code = (
@@ -104,13 +111,22 @@ code = (
 main = r"""
 int main(int argc, char **argv) {
     char id[12];
-    assert(argc == 4);
+    assert(argc >= 4);
     assert(prepareNeutrinoGameID(argv[1], id, sizeof(id)) == 1);
     assert(strcmp(id, "SLUS_123.45") == 0);
-    assert(prepareNeutrinoGameID(argv[2], id, sizeof(id)) == 0);
-    assert(id[0] == '\0');
-    assert(prepareNeutrinoGameID(argv[3], id, sizeof(id)) == 0);
-    assert(id[0] == '\0');
+    assert(iso == NULL);
+    for (int i=2; i<argc; i++) {
+        strcpy(id, "SLUS_123.45");
+        assert(prepareNeutrinoGameID(argv[i], id, sizeof(id)) == 0);
+        assert(id[0] == '\0' && iso == NULL);
+    }
+    read_limit = 11; /* Complete fragmented reads, not just sector-sized reads. */
+    assert(prepareNeutrinoGameID(argv[1], id, sizeof(id)) == 1 && iso == NULL);
+    read_error = 1;
+    assert(!prepareNeutrinoGameID(argv[1], id, sizeof(id)) && !id[0] && iso == NULL);
+    read_error = 0; seek_error = 1;
+    assert(!prepareNeutrinoGameID(argv[1], id, sizeof(id)) && !id[0] && iso == NULL);
+    seek_error = read_limit = 0;
     assert(prepareNeutrinoGameID(argv[1], id, sizeof(id)-1) == 0);
     assert(prepareNeutrinoGameID(argv[1], NULL, 0) == 0);
 
@@ -128,6 +144,25 @@ int main(int argc, char **argv) {
     setNeutrinoMmceGameID("bad", "usb0:/GAME.iso", "mass0:/NEUTRINO.ELF");
     assert(calls == 2);
     assert(delays == 0);
+    /* Both source cards are protected, including Neutrino on a real MC alias. */
+    pings = calls = polls = 0;
+    setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mc1:/N.ELF");
+    assert(!pings && !calls && !polls);
+    setNeutrinoMmceGameID("SLUS_123.45", "mmce1:/GAME.iso", "mmce0:/N.ELF");
+    assert(!pings && !calls && !polls);
+    /* No status waits when absent or when SET_GAMEID was rejected. */
+    ping_error = 1;
+    setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF");
+    assert(pings == 1 && !calls && !polls && !delays);
+    ping_error = 0; set_error = 1;
+    setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF");
+    assert(calls == 1 && !polls && !delays);
+    set_error = 0; status_result = -1;
+    setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF");
+    assert(polls == 1 && !delays);
+    status_result = 1; polls = 0;
+    setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF");
+    assert(polls == 15 && delays == 15); /* Genuine busy card has a finite bound. */
     return 0;
 }
 """
@@ -139,11 +174,35 @@ with tempfile.TemporaryDirectory(prefix="launchstation-r3z-gameid-") as td:
     iso_fixture(valid, b"BOOT2 = cdrom0:\\SLUS_123.45;1\r\nVER = 1.00\r\n")
     iso_fixture(malformed, b"BOOT2 = cdrom0:\\SLUS_123.45;1\r\n", valid=False)
     iso_fixture(missing, b"BOOT2 = cdrom0:\\NOT_A_GAME;1\r\n")
+    invalid = [malformed, missing]
+    original = valid.read_bytes()
+    # Mutate on-disk lengths/extents, not parser implementation details.
+    pvd, record = 16 * 2048, 20 * 2048 + 34
+    mutations = [
+        (pvd + 158, struct.pack("<I", 0xffffffff)),  # root outside image
+        (pvd + 166, struct.pack("<I", 0xffffffff)),  # root size exceeds image
+        (record, b"\x21"),                         # short directory record
+        (record + 32, b"\xff"),                    # name exceeds record
+        (record + 2, struct.pack("<I", 0xffffffff)), # CNF outside image
+        (record + 10, struct.pack("<I", 4097)),      # oversized CNF
+        (record + 10, struct.pack("<I", 0)),         # empty CNF
+        (record + 25, b"\x80"),                    # unsupported multi-extent CNF
+        (record + 26, b"\x01"),                    # unsupported interleave
+    ]
+    for i, (offset, value) in enumerate(mutations):
+        image = bytearray(original)
+        image[offset:offset + len(value)] = value
+        path = temp / f"invalid-{i}.iso"
+        path.write_bytes(image)
+        invalid.append(path)
+    truncated = temp / "truncated.iso"
+    truncated.write_bytes(original[:pvd + 100])
+    invalid.extend([truncated, temp / "nonexistent.iso"])
     (temp / "test.c").write_text(prefix + code + main, encoding="utf-8")
     binary = temp / "neutrino_gameid_test"
     subprocess.run(["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
                     "-I", str(ROOT / "include"), str(temp / "test.c"),
                     "-o", str(binary)], check=True)
-    subprocess.run([str(binary), str(valid), str(malformed), str(missing)], check=True)
+    subprocess.run([str(binary), str(valid), *map(str, invalid)], check=True, timeout=10)
 
-print("R3Z Neutrino GameID: valid/malformed ISO, MMCE protections passed")
+print("R3Z Neutrino GameID: malformed extents, fragmented/failed IO, source protection and bounded MMCE failures passed")
