@@ -471,6 +471,11 @@ static void devEnter(void)
 
 static void devInput(const DashInput *in)
 {
+	/* An explicit action may query CDVD for the exact model; drawing cannot. */
+	if (in->pressed & DASH_IN_FAV) {
+		dashShowSystemInfo();
+		return;
+	}
 	if (ndevs <= 0 || dsel < 0)
 		return;
 	if (in->pressed & DASH_IN_LEFT)
@@ -609,17 +614,23 @@ static void devDraw(void)
 		dashDrawCard(48, 368, 400, 26, 13);
 		dashTextFit(60, 374.5f, 380, tip, DASH_FS_SMALL, DASH_C_TEXT2);
 	}
+	{
+		char console[80];
+		dashConsoleSummaryText(console, sizeof(console));
+		dashTextFit(458, 374.5f, 134, console, DASH_FS_CAPTION, DASH_C_TEXT3);
+	}
 }
 
 static void devHints(void)
 {
-	DashHint h[4];
+	DashHint h[5];
 
 	h[0].button = dashOkIcon(), h[0].key = NULL, h[0].label = "Browse";
 	h[1].button = DI_BTN_TRIANGLE, h[1].key = NULL, h[1].label = "Options";
-	h[2].button = -1, h[2].key = "SELECT", h[2].label = "Files";
-	h[3].button = -1, h[3].key = "START", h[3].label = "Menu";
-	dashDrawHints(h, 4);
+	h[2].button = DI_BTN_SQUARE, h[2].key = NULL, h[2].label = "Console info";
+	h[3].button = -1, h[3].key = "SELECT", h[3].label = "Files";
+	h[4].button = -1, h[4].key = "START", h[4].label = "Menu";
+	dashDrawHints(h, 5);
 }
 
 static const DashScreen dashDevicesGridScreen = {devEnter, devInput, devUpdate, devDraw, devHints};
