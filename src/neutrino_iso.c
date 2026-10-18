@@ -1,4 +1,8 @@
 #include "popstarter_internal.h"
+#include "gui_neutrino.h"
+#include "neutrino_gameid.h"
+#include "main_gameid.h"
+#include "init.h"
 
 #define NEUTRINO_ISO_PVD_OFFSET (16 * 2048)
 
@@ -142,10 +146,12 @@ static int validateIso(const char *path, char *opened_path, size_t opened_size)
 }
 
 static int buildArgs(const char *bsd, const char *dvd_path, const char *neutrino_path,
+                     const NEUTRINO_LAUNCH_OPTIONS *options,
                      char *buffer, size_t buffer_size, char *message, size_t message_size)
 {
 	char cwd[MAX_PATH], *slash;
-	int n;
+	NEUTRINO_OPTION_ARGS option_args;
+	int n, appended, option_argc, i;
 
 	snprintf(cwd, sizeof(cwd), "%s", neutrino_path);
 	slash = strrchr(cwd, '/');
@@ -162,6 +168,22 @@ static int buildArgs(const char *bsd, const char *dvd_path, const char *neutrino
 		setMessage(message, message_size, "Neutrino launch arguments are too long", dvd_path);
 		return 0;
 	}
+
+	/* R3Z Neutrino -gc/-gsm/-dbc/-logo options use our existing keep-IOP
+	 * argument buffer, not the older reset-IOP game launcher. */
+	option_argc = buildNeutrinoOptionArgs(options, &option_args);
+	if (option_argc < 0) {
+		setMessage(message, message_size, "Invalid Neutrino launch options", NULL);
+		return 0;
+	}
+	for (i = 0; i < option_argc; i++) {
+		appended = snprintf(buffer + n, buffer_size - n, "%s\n", option_args.argv[i]);
+		if (appended < 0 || appended >= (int)(buffer_size - n)) {
+			setMessage(message, message_size, "Neutrino launch arguments are too long", dvd_path);
+			return 0;
+		}
+		n += appended;
+	}
 	if (LaunchArgsLoadFromBuffer("Neutrino ISO", buffer, n, message, message_size) <= 0)
 		return 0;
 	return 1;
@@ -170,11 +192,20 @@ static int buildArgs(const char *bsd, const char *dvd_path, const char *neutrino
 int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 {
 	POPSTARTER_CANDIDATE_LIST candidates;
+	NEUTRINO_LAUNCH_OPTIONS options;
+	char gameID[NEUTRINO_GAME_ID_SIZE];
+	int have_gameid = 0;
 	char candidate[MAX_PATH];
 	char selected[MAX_PATH], fullpath[MAX_PATH], party[MAX_PATH];
 	char opened_iso[MAX_PATH], args[1400];
 	const char *bsd;
 	int exec_kind, ret;
+
+	/* Do not probe the ISO or candidates when the Neutrino route is disabled. */
+	if (setting != NULL && setting->disable_neutrino) {
+		setMessage(message, message_size, "Neutrino support disabled in Launching settings", NULL);
+		return 0;
+	}
 
 	if (!IsNeutrinoIsoPath(path)) {
 		setMessage(message, message_size, "Not a PS2 ISO image", path);
@@ -190,6 +221,23 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 		setMessage(message, message_size, "ISO9660 image could not be read", path);
 		return 0;
 	}
+
+	/* Show the choices before candidate preparation, which can change the
+	 * mounted device stack. Cancel without any extra ISO reads or IOP work. */
+	if (!showNeutrinoLaunchOptions(&options)) {
+		if (message != NULL && message_size > 0)
+			message[0] = '\0';
+		return 0;
+	}
+
+	/* Reuse the already-validated, physically resolved ISO path. Read the
+	 * disc's SYSTEM.CNF only when RetroGem or an active MMCE stack needs it. */
+	if (!setting->cdrom_disable_gameid
+#ifdef MMCE
+	    || isPathDeviceStackLoaded("mmce0:/")
+#endif
+	)
+		have_gameid = prepareNeutrinoGameID(opened_iso, gameID, sizeof(gameID));
 
 	initPopstarterCandidates(&candidates);
 	/* Same deterministic policy used by RiptOPL: explicit path, game device,
@@ -213,13 +261,21 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 		setMessage(message, message_size, "Neutrino executable could not be prepared", selected);
 		return 0;
 	}
-	if (!buildArgs(bsd, opened_iso, fullpath, args, sizeof(args), message, message_size))
+	if (!buildArgs(bsd, opened_iso, fullpath, &options, args, sizeof(args), message, message_size))
 		return 0;
 
 	/* Neutrino consumes the already-mounted device stack. Drain every
 	 * dashboard RPC user and release libpad, but never reset that storage IOP. */
+#ifdef MMCE
+	/* No MMCE initialization here: only adapt already active hardware, and
+	 * protect any slot holding the source ISO or Neutrino executable. */
+	if (have_gameid)
+		setNeutrinoMmceGameID(gameID, opened_iso, selected);
+#endif
 	if (!CleanUpForKeepIopExec("Preparing Neutrino"))
 		return 0;
+	if (have_gameid && !setting->cdrom_disable_gameid)
+		displayRetroGemGameID(gameID, 2);
 	RunLoaderElfKeepIOP(fullpath, party, selected, exec_kind);
 	return 1;
 }

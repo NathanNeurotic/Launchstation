@@ -63,7 +63,24 @@ extern u64 PasteTime;
 extern int PSU_content;
 extern int fileMode;
 
+/* Preserve the existing 0/1/2 values; 3 is R3Z's new title-only mode.
+ * Dashboard sessions using the original three options remain compatible. */
+enum {
+	FILE_SHOW_NAME = 0,
+	FILE_SHOW_NAME_DETAILS = 1,
+	FILE_SHOW_TITLE_DETAILS = 2,
+	FILE_SHOW_TITLE = 3
+};
+
 extern int file_show;
+static inline int fileShowTitles(void)
+{
+	return file_show == FILE_SHOW_TITLE || file_show == FILE_SHOW_TITLE_DETAILS;
+}
+static inline int fileShowDetails(void)
+{
+	return file_show == FILE_SHOW_NAME_DETAILS || file_show == FILE_SHOW_TITLE_DETAILS;
+}
 extern int file_sort;
 extern int file_sort_descending;
 extern int size_valid;

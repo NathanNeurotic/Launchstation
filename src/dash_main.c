@@ -451,6 +451,10 @@ static int argSidecarExists(const char *elf)
 static void friendlyLaunchError(const DashApp *app, const char *tech)
 {
 	char dev[48], body[200];
+	/* Neutrino options cancellation deliberately returns an empty message.
+	 * Keep the generic fallback warning for other failed launch routes. */
+	if (IsNeutrinoIsoPath(app->path) && (tech == NULL || tech[0] == '\0'))
+		return;
 	int not_found = (tech != NULL && strstr(tech, LNG(is_Not_Found)) != NULL);
 	int not_elf = (tech != NULL && strstr(tech, LNG(This_file_isnt_an_ELF)) != NULL);
 

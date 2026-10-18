@@ -275,6 +275,7 @@ targets:
       - src/main_console_info.c
       - src/main_gameid.c
       - src/main_gameid_table.c
+      - src/neutrino_gameid.c
       - src/main_history.c
       - src/remote_control.c
       - src/pc_game_receiver.c
@@ -332,6 +333,7 @@ targets:
       - src/popstarter_elf.c
       - src/ember.c
       - src/neutrino_iso.c
+      - src/gui_neutrino.c
       - src/font_uLE.c
       - src/makeicon.c
       - src/chkesr.c

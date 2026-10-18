@@ -846,17 +846,17 @@ static int BrowserModePopup(void)
 					event |= 2;  //event |= valid pad command
 					break;
 				case PAD_CIRCLE:
-					file_show = 0;
+					file_show = (file_show == FILE_SHOW_NAME) ? FILE_SHOW_NAME_DETAILS : FILE_SHOW_NAME;
 					event |= 2;  //event |= valid pad command
 					break;
 				case PAD_CROSS:
-					file_show = 1;
+					file_show = FILE_SHOW_NAME_DETAILS;
 					event |= 2;  //event |= valid pad command
 					break;
 				case PAD_SQUARE:
-					file_show = 2;
+					file_show = (file_show == FILE_SHOW_TITLE) ? FILE_SHOW_TITLE_DETAILS : FILE_SHOW_TITLE;
 					event |= 2;  //event |= valid pad command
-					if ((file_show == 2) && (elisaFnt == NULL) && (elisa_failed == FALSE)) {
+					if (fileShowTitles() && (elisaFnt == NULL) && (elisa_failed == FALSE)) {
 						int fd, res;
 						elisa_failed = TRUE;  //Default to FAILED. If it succeeds, then this status will be cleared.
 
@@ -900,16 +900,12 @@ static int BrowserModePopup(void)
 					sprintf(tmp, "   %s", &minuses_s[80 - Show_len]);
 				else if (i == 2)
 					sprintf(tmp, "\xFF"
-					             "0 %s",
-					        LNG(Filename));
+					             "0 %s%s",
+					        LNG(Filename), file_show == FILE_SHOW_NAME_DETAILS ? LNG(_plus_Details) : "");
 				else if (i == 3)
 					sprintf(tmp, "\xFF"
-					             "1 %s%s",
-					        LNG(Filename), LNG(_plus_Details));
-				else if (i == 4)
-					sprintf(tmp, "\xFF"
 					             "2 %s%s",
-					        LNG(Game_Title), LNG(_plus_Details));
+					        LNG(Game_Title), file_show == FILE_SHOW_TITLE_DETAILS ? LNG(_plus_Details) : "");
 				else if (i == 6)
 					sprintf(tmp, "   %s:", LNG(Sort_Content_by));
 				else if (i == 7)
@@ -936,7 +932,8 @@ static int BrowserModePopup(void)
 
 				printXY(tmp, mSprite_X1 + 2 * FONT_WIDTH, y, setting->color[COLOR_TEXT], TRUE, 0);
 				//Display marker for current modes
-				if ((file_show == i - 2) || (file_sort == i - 8))
+				if ((i == 2 && !fileShowTitles()) || (i == 3 && fileShowTitles()) ||
+				    (i >= 8 && i <= 11 && file_sort == i - 8))
 					drawChar(LEFT_CUR, mSprite_X1 + FONT_WIDTH / 2, y, setting->color[COLOR_SELECT]);
 				y += FONT_HEIGHT;
 
@@ -1006,7 +1003,7 @@ static void skipRootSpacerSelection(const char *path, FILEINFO *files, int nfile
 
 static int getBrowserListFontHeight(void)
 {
-	return ((file_show == 2) && (elisaFnt != NULL)) ? (FONT_HEIGHT + 2) : FONT_HEIGHT;
+	return (fileShowTitles() && (elisaFnt != NULL)) ? (FONT_HEIGHT + 2) : FONT_HEIGHT;
 }
 
 static int getBrowserDeviceInfoRows(const char *path)
@@ -1133,7 +1130,7 @@ int getFilePath(char *out, int cnfmode)
 	nclipFiles = 0;
 	browser_cut = 0;
 
-	file_show = 1;
+	file_show = FILE_SHOW_NAME_DETAILS;
 	file_sort = 1;
 	file_sort_descending = FALSE;
 
@@ -1760,7 +1757,7 @@ int getFilePath(char *out, int cnfmode)
 				device_info_ready = TRUE;
 			}
 
-			if (file_show > 0)
+			if (fileShowDetails())
 				menuTitleGetClockFormat(&use_12h, &date_format);
 			/* Keep the time/date edge immediately before the scrollbar in both clock formats. */
 			details_column = use_12h ? 39 : 42;
@@ -1786,7 +1783,7 @@ int getFilePath(char *out, int cnfmode)
 				if (!strcmp(files[top + i].name, ".."))
 					strcpy(tmp, "..");
 
-				else if ((file_show == 2) && files[top + i].title[0] != 0) {
+				else if (fileShowTitles() && files[top + i].title[0] != 0) {
 					mcTitle = files[top + i].title;
 				} else {  //Show normal file/folder names
 					const char *root_label;
@@ -1798,7 +1795,7 @@ int getFilePath(char *out, int cnfmode)
 						strcpy(tmp, root_label);
 					else
 						strcpy(tmp, files[top + i].name);
-					if (file_show > 0) {  //Does display mode include file details ?
+					if (fileShowDetails()) {  //Does display mode include file details ?
 						name_limit = (details_column - 1) * FONT_WIDTH;
 					} else {  //Filenames are shown without file details
 						name_limit = 71 * 8;
@@ -1821,7 +1818,7 @@ int getFilePath(char *out, int cnfmode)
 					printXY_sjis(mcTitle, x + 4, y, color, TRUE);
 				else
 					printXY(tmp, x + 4, y, color, TRUE, name_limit);
-				if (file_show > 0) {
+				if (fileShowDetails()) {
 					//					unsigned int size = files[top+i].stats.fileSizeByte;
 					u64 size = ((u64)files[top + i].stats.Reserve2 << 32) | files[top + i].stats.FileSizeByte;
 					int scale = 0;  //0==Bytes, 1==KBytes, 2==MBytes, 3==GB
