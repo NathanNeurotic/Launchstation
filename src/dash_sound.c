@@ -142,9 +142,10 @@ int dashSoundInit(void)
 	 * later without reinitializing audsrv (BGM may already own the service). */
 	if (dashCfg.sound && failed == DASH_SND_COUNT) {
 		dashToast(DASH_TOAST_WARN, "Sound unavailable: no samples loaded");
-		return 0;
-	}
-	if (dashCfg.sound && failed > 0) {
+		/* The server is healthy even if its SFX uploads failed. Retain its
+		 * lifetime so BGM can use its independent sample and shutdown can
+		 * release the live RPC client before the next IOP reset. */
+	} else if (dashCfg.sound && failed > 0) {
 		char msg[64];
 
 		snprintf(msg, sizeof(msg), "%d sound effect%s unavailable", failed, failed == 1 ? "" : "s");

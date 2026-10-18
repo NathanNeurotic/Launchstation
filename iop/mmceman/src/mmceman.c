@@ -15,6 +15,11 @@
 #define MAJOR 2
 #define MINOR 1
 
+/* Keep the 200 ms per-command timeout; tolerate one missed handshake per
+ * port without spending six timeouts when no MMCE device is attached.
+ * Filesystem operations retain their existing reconnect/discovery path. */
+#define MMCE_PING_ATTEMPTS 2
+
 const char *mmce_product_ids[] = {"Unknown", "SD2PSX", "MemCard PRO2", "PicoMemcard+", "PicoMemcardZero"};
 
 IRX_ID("mmceman", MAJOR, MINOR);
@@ -26,7 +31,7 @@ static void mmce_init(int port)
 
     mmce_sio2_set_port(port);
 
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < MMCE_PING_ATTEMPTS; i++) {
         res = mmce_cmd_ping();
         if (res != -1) {
             DPRINTF("Found card in port %i\n", port);
