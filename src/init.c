@@ -607,8 +607,9 @@ static int load_ps2hdd_stack(int with_ata_bd)
 
 #ifdef EXFAT
 	/*
-	 * Match nhddl-rewrite stack ordering:
-	 * BDM -> BDMFS -> DEV9 -> ATA_BD -> short pause -> PS2HDD/PS2FS.
+	 * Load BDM/BDMFS and DEV9 before ATA_BD, then allow a short pause
+	 * before PS2HDD/PS2FS. Resolve a possible DEV9 reset before BDM so
+	 * ATA_BD never enters with dependencies from a discarded IOP session.
 	 */
 	if (with_ata_bd && !loadAtaBlockDriver()) {
 		DPRINTF(" [HDD]: skipping HDD/FS load because ATA_BD stack did not initialize\n");
