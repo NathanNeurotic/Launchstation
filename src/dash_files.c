@@ -471,11 +471,6 @@ static void devEnter(void)
 
 static void devInput(const DashInput *in)
 {
-	/* An explicit action may query CDVD for the exact model; drawing cannot. */
-	if (in->pressed & DASH_IN_FAV) {
-		dashShowSystemInfo();
-		return;
-	}
 	if (ndevs <= 0 || dsel < 0)
 		return;
 	if (in->pressed & DASH_IN_LEFT)
@@ -492,9 +487,9 @@ static void devInput(const DashInput *in)
 	}
 	if (in->pressed & DASH_IN_MENU) {
 		DashDevice *d = &devs[dsel];
-		DashMenuItem items[4];
+		DashMenuItem items[5];
 		char display_mount[16];
-		int n = 0, r, ids[4];
+		int n = 0, r, ids[5];
 
 		items[n].icon = DI_FOLDER, items[n].label = "Browse",
 		items[n].detail = deviceDisplayMount(d, display_mount, sizeof(display_mount)),
@@ -505,6 +500,9 @@ static void devInput(const DashInput *in)
 			items[n].icon = DI_HDD, items[n].label = "HDD Manager", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 2;
 		if (d->icon == DI_DISC)
 			items[n].icon = DI_PLAY, items[n].label = "Start disc", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 3;
+		/* Exact model discovery happens only through this user-selected sheet. */
+		items[n].icon = DI_INFO, items[n].label = "Console information", items[n].detail = NULL,
+		items[n].disabled = 0, ids[n++] = 4;
 		r = dashModalMenu(d->name, d->status, items, n, 0);
 		if (r >= 0) {
 			switch (ids[r]) {
@@ -519,6 +517,9 @@ static void devInput(const DashInput *in)
 					break;
 				case 3:
 					dashRunMisc(setting->Misc_PS2Disc);
+					break;
+				case 4:
+					dashShowSystemInfo();
 					break;
 			}
 		}
@@ -623,14 +624,13 @@ static void devDraw(void)
 
 static void devHints(void)
 {
-	DashHint h[5];
+	DashHint h[4];
 
 	h[0].button = dashOkIcon(), h[0].key = NULL, h[0].label = "Browse";
 	h[1].button = DI_BTN_TRIANGLE, h[1].key = NULL, h[1].label = "Options";
-	h[2].button = DI_BTN_SQUARE, h[2].key = NULL, h[2].label = "Console info";
-	h[3].button = -1, h[3].key = "SELECT", h[3].label = "Files";
-	h[4].button = -1, h[4].key = "START", h[4].label = "Menu";
-	dashDrawHints(h, 5);
+	h[2].button = -1, h[2].key = "SELECT", h[2].label = "Files";
+	h[3].button = -1, h[3].key = "START", h[3].label = "Menu";
+	dashDrawHints(h, 4);
 }
 
 static const DashScreen dashDevicesGridScreen = {devEnter, devInput, devUpdate, devDraw, devHints};
