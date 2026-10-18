@@ -297,6 +297,23 @@ typedef struct
 	unsigned short rom_version;
 } SysInfo;
 
+/* Console identity is read-only in normal dashboard frames. An exact model
+ * becomes available only after the user explicitly opens System information,
+ * since model discovery can call CDVD/IOP modules. */
+static char cached_console_model[CONSOLE_MODEL_NAME_MAX_LEN + 1];
+
+void dashConsoleSummaryText(char *out, size_t out_size)
+{
+	const char *identity;
+	const char *region;
+
+	if (out == NULL || out_size == 0)
+		return;
+	identity = cached_console_model[0] ? cached_console_model : (console_is_PSX ? "PSX" : "PS2");
+	region = ROMVER_data[0] ? consoleRegionName(ROMVER_data[4]) : "region unknown";
+	snprintf(out, out_size, "%s | %s", identity, region);
+}
+
 void dashShowSystemInfo(void)
 {
 	static Sheet s;
@@ -311,6 +328,10 @@ void dashShowSystemInfo(void)
 	if (ctx->romver_data[0] == '\0')
 		uLE_InitializeRegion();
 	GetConsoleModelName(ctx->romver_data, job.model, sizeof(job.model));
+	if (job.model[0] && strcmp(job.model, "Unknown"))
+		snprintf(cached_console_model, sizeof(cached_console_model), "%s", job.model);
+	else
+		cached_console_model[0] = '\0';
 	GetConsoleDvdVersion(job.dvd, sizeof(job.dvd));
 	job.rom_version = getROMVersion();
 	dashLoadingEnd();
