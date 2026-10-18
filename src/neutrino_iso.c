@@ -194,7 +194,7 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	POPSTARTER_CANDIDATE_LIST candidates;
 	NEUTRINO_LAUNCH_OPTIONS options;
 	char gameID[NEUTRINO_GAME_ID_SIZE];
-	int have_gameid = 0;
+	int have_gameid = 0, tried_gameid = 0;
 	char candidate[MAX_PATH];
 	char selected[MAX_PATH], fullpath[MAX_PATH], party[MAX_PATH];
 	char opened_iso[MAX_PATH], args[1400];
@@ -222,21 +222,29 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 		return 0;
 	}
 
-	/* Show the choices before candidate preparation, which can change the
-	 * mounted device stack. Cancel without any extra ISO reads or IOP work. */
-	if (!showNeutrinoLaunchOptions(&options)) {
+	/* For dashboard profiles, read the bounded ISO Game ID once before
+	 * presenting options. Never mount or switch another storage stack merely
+	 * to discover a profile, and never write beside the selected ISO. */
+	if (DashIsActive()) {
+		tried_gameid = 1;
+		have_gameid = prepareNeutrinoGameID(opened_iso, gameID, sizeof(gameID));
+	}
+	/* Choosing Cancel still happens before any Neutrino ELF preparation. */
+	if (!(have_gameid ?
+	      showNeutrinoLaunchOptionsForGame(&options, gameID) :
+	      showNeutrinoLaunchOptions(&options))) {
 		if (message != NULL && message_size > 0)
 			message[0] = '\0';
 		return 0;
 	}
 
-	/* Reuse the already-validated, physically resolved ISO path. Read the
-	 * disc's SYSTEM.CNF only when RetroGem or an active MMCE stack needs it. */
-	if (!setting->cdrom_disable_gameid
+	/* Reuse the preflight Game ID if already read. Classic launches continue
+	 * their previous lazy read only when RetroGem or MMCE actually needs it. */
+	if (!tried_gameid && (!setting->cdrom_disable_gameid
 #ifdef MMCE
 	    || isPathDeviceStackLoaded("mmce0:/")
 #endif
-	)
+	))
 		have_gameid = prepareNeutrinoGameID(opened_iso, gameID, sizeof(gameID));
 
 	initPopstarterCandidates(&candidates);
