@@ -61,6 +61,7 @@ prefix = r"""
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
+#include "neutrino_gameid.h"
 typedef unsigned int u32;
 typedef long long s64;
 static FILE *iso;
