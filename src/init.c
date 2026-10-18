@@ -277,11 +277,11 @@ extern u8 mx4sio_driver_running;
 
 static void delay(int count);
 static void initsbv_patches(void);
-static void load_ps2dev9(void);
+static int load_ps2dev9(void);
 static void prepareDev9Poweroff(void);
 static void stopUsbMassForPoweroff(void);
 #ifdef ETH
-static void load_ps2ip(void);
+static int load_ps2ip(void);
 #endif
 static int load_ps2hdd_stack(int with_ata_bd);
 static void showLoadingModulesMsg(const char *device_name);
@@ -412,13 +412,13 @@ static void resetUsbHostControllerBeforeIopReset(void)
 	ee_kmode_exit();
 }
 
-static void load_ps2dev9(void)
+static int load_ps2dev9(void)
 {
 	int ID, rcode;
 	int desired_variant = DEV9_VARIANT_CURRENT;
 	const void *module = ps2dev9_irx;
 	int module_size = size_ps2dev9_irx;
-	if (pcCardCfOwnsBus()) return;
+	if (pcCardCfOwnsBus()) return 0;
 
 #ifdef ETH
 	if (setting != NULL && setting->legacy_net_drivers) {
@@ -430,8 +430,13 @@ static void load_ps2dev9(void)
 
 	/* DEV9 is shared by Ethernet and ATA/HDD. Switching driver families
 	 * requires a clean IOP instead of stacking a second DEV9. */
-	if (ps2dev9_loaded && ps2dev9_variant != desired_variant)
+	if (ps2dev9_loaded && ps2dev9_variant != desired_variant) {
 		resetRuntimeDeviceState(TRUE);
+		/* A refused reset keeps the old DEV9 family resident. Its presence
+		 * is not permission to initialize consumers of the requested family. */
+		if (ps2dev9_loaded && ps2dev9_variant != desired_variant)
+			return 0;
+	}
 
 	if (!have_ps2dev9) {
 		ID = SifExecModuleBuffer(module, module_size, 0, NULL, &rcode);
@@ -442,6 +447,7 @@ static void load_ps2dev9(void)
 		have_ps2dev9 = ps2dev9_loaded;
 		ps2dev9_variant = ps2dev9_loaded ? desired_variant : DEV9_VARIANT_NONE;
 	}
+	return ps2dev9_loaded && ps2dev9_variant == desired_variant;
 }
 //------------------------------
 //endfunc load_ps2dev9
@@ -534,19 +540,18 @@ static void stopUsbMassForPoweroff(void)
 //endfunc stopUsbMassForPoweroff
 //---------------------------------------------------------------------------
 #ifdef ETH
-static void load_ps2ip(void)
+static int load_ps2ip(void)
 {
 	int ret, ID __attribute__((unused));
-	if (pcCardCfOwnsBus()) return;
+	if (pcCardCfOwnsBus()) return 0;
 
 #if defined(ETH) && defined(UDPFS)
 	if (!switchNetworkStack(NETWORK_STACK_ETH))
-		return;
+		return 0;
 #endif
-	load_ps2dev9();
-	if (!ps2dev9_loaded) {
+	if (!load_ps2dev9()) {
 		DPRINTF(" [NET]: skipping PS2IP/SMAP because DEV9 failed to initialize\n");
-		return;
+		return 0;
 	}
 
 	if (!have_ps2ip) {
@@ -562,7 +567,7 @@ static void load_ps2ip(void)
 		        ID, ret);
 		have_ps2ip = (ID >= 0 && ret >= 0);
 		if (!have_ps2ip)
-			return;
+			return 0;
 	}
 	if (!have_ps2smap) {
 		ID = SifExecModuleBuffer(ps2smap_irx, size_ps2smap_irx,
@@ -570,6 +575,7 @@ static void load_ps2ip(void)
 		DPRINTF(" [SMAP]: ID=%d, ret=%d\n", ID, ret);
 		have_ps2smap = (ID >= 0 && ret >= 0);
 	}
+	return have_ps2ip && have_ps2smap;
 }
 #endif
 //------------------------------
@@ -615,8 +621,7 @@ static int load_ps2hdd_stack(int with_ata_bd)
 	(void)with_ata_bd;
 #endif
 	if (!dev9_ready) {
-		load_ps2dev9();
-		if (!ps2dev9_loaded) {
+		if (!load_ps2dev9()) {
 			DPRINTF(" [HDD]: skipping HDD/FS load because DEV9 failed to initialize\n");
 			return 0;
 		}
@@ -663,8 +668,7 @@ static int __attribute__((unused)) load_ps2atad_stack(void)
 	                       "\0"
 	                       "40";
 
-	load_ps2dev9();
-	if (!ps2dev9_loaded) {
+	if (!load_ps2dev9()) {
 		DPRINTF(" [ATAD]: skipping load because DEV9 failed to initialize\n");
 		return 0;
 	}
@@ -815,8 +819,7 @@ void load_ps2host(void)
 
 	ensureCoreIoStackReady();
 	setupPowerOff();  //resolves the stall out when opening host: from LaunchELF's FileBrowser
-	load_ps2ip();
-	if (!(have_ps2ip && have_ps2smap))
+	if (!load_ps2ip())
 		return;
 	if (!have_ps2host) {
 		ID = SifExecModuleBuffer(ps2host_irx, size_ps2host_irx, 0, NULL, &ret);
@@ -846,8 +849,7 @@ static void load_udpfs_stack(void)
 	ensureCoreIoStackReady();
 	setupPowerOff();
 	getIpConfig();
-	load_ps2dev9();
-	if (!ps2dev9_loaded) {
+	if (!load_ps2dev9()) {
 		DPRINTF(" [UDPFS]: skipping load because DEV9 failed to initialize\n");
 		return;
 	}
@@ -1000,8 +1002,7 @@ static void load_ps2ftpd(void)
 	arg_p = "-anonymous";
 	arglen = strlen(arg_p);
 
-	load_ps2ip();
-	if (!(have_ps2ip && have_ps2smap))
+	if (!load_ps2ip())
 		return;
 	if (!have_ps2ftpd) {
 		ID = SifExecModuleBuffer(ps2ftpd_irx, size_ps2ftpd_irx, arglen, arg_p, &ret);
@@ -1018,8 +1019,7 @@ static void load_ps2netfs(void)
 {
 	int ret, ID __attribute__((unused));
 
-	load_ps2ip();
-	if (!(have_ps2ip && have_ps2smap))
+	if (!load_ps2ip())
 		return;
 	if (!have_ps2netfs) {
 		ID = SifExecModuleBuffer(ps2netfs_irx, size_ps2netfs_irx, 0, NULL, &ret);
@@ -2130,13 +2130,14 @@ static int loadAtaBlockDriver(void)
 {
 	int ret, id __attribute__((unused));
 
-	if (!loadBdmCoreModules()) {
-		DPRINTF(" [ATA_BD]: skipping load because BDM core stack failed to initialize\n");
+	/* A DEV9 family switch may reboot the IOP and clear BDM. Resolve it
+	 * before loading the block-device modules that depend on that IOP. */
+	if (!load_ps2dev9()) {
+		DPRINTF(" [ATA_BD]: skipping load because DEV9 failed to initialize\n");
 		return 0;
 	}
-	load_ps2dev9();
-	if (!ps2dev9_loaded) {
-		DPRINTF(" [ATA_BD]: skipping load because DEV9 failed to initialize\n");
+	if (!loadBdmCoreModules()) {
+		DPRINTF(" [ATA_BD]: skipping load because BDM core stack failed to initialize\n");
 		return 0;
 	}
 	if (!have_ata_bd) {
@@ -2310,7 +2311,8 @@ int loadFlashModules(void)
 	ensureCoreIoStackReady();
 	if (!have_Flash_modules) {
 		showLoadingModulesMsg("flash");
-		load_ps2dev9();
+		if (!load_ps2dev9())
+			return 0;
 		setupPowerOff();
 		load_pflash();
 		have_Flash_modules = TRUE;
@@ -2381,8 +2383,7 @@ int ensureDashboardIpNetworkReady(void)
 	ensureCoreIoStackReady();
 	showLoadingModulesMsg("dashboard network");
 	getIpConfig();
-	load_ps2ip();
-	if (!(have_ps2ip && have_ps2smap && ps2dev9_loaded))
+	if (!load_ps2ip())
 		return 0;
 	/* PS2SDK ps2ip_init() is idempotent and detects IOP reboots. */
 	return ps2ip_init() >= 0;
@@ -2538,9 +2539,10 @@ int i, d;
 
 #ifdef UDPTTY
 int i, d;
-	load_ps2ip();
-	i = SifExecModuleBuffer(&udptty_irx, size_udptty_irx, 0, NULL, &d);
-	DPRINTF(" [UDPTTY]: id=%d, ret=%d\n", i, d);
+	if (load_ps2ip()) {
+		i = SifExecModuleBuffer(&udptty_irx, size_udptty_irx, 0, NULL, &d);
+		DPRINTF(" [UDPTTY]: id=%d, ret=%d\n", i, d);
+	}
 #endif
 	ensureCoreIoStackReady();
 	iop_reset_generation++;
