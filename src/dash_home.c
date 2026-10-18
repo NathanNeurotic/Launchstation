@@ -374,7 +374,7 @@ static void homeDraw(void)
 
 	/* ROMVER is already populated at boot; no CDVD/IOP query during draw. */
 	dashConsoleSummaryText(console, sizeof(console));
-	dashTextFit(48, 63, 544, console, DASH_FS_CAPTION, DASH_C_TEXT3);
+	dashTextFit(48, 60, 544, console, DASH_FS_CAPTION, DASH_C_TEXT3);
 	drawHero();
 
 	/* Continue row */
