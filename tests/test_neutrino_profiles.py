@@ -43,6 +43,7 @@ code = r'''
 #define MX4SIO 1
 #define MMCE 1
 static int mx4sio_driver_running, mmce_stack;
+static const char *dashStoreDir(void) { return "mc0:/SYS-CONF/"; }
 static int isPathDeviceStackLoaded(const char *path) {
     if (!strcmp(path,"mmce0:/")) return mmce_stack;
     return 1;
