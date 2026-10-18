@@ -164,3 +164,17 @@ host tests and the existing MMCE/IOP lifecycle tests cover these cases.
 Real-world latency, poweroff, audio, USB/PAD recovery, and delayed mount
 acceptance remain hardware acceptance gates; this does not make
 synchronous IOP RPCs animate.
+
+## Host-verifiable sound failure recovery
+
+`tests/test_sound_recovery.py` executes the production initializer, maintenance
+and shutdown functions with controlled module, RPC and sample-upload failures.
+It covers IO/park deferral, one automatic attempt per IOP generation, recovery
+on a new generation, and stale-server teardown with zero old-generation RPCs.
+
+The harness exposed a real failure path: successful audsrv/ADPCM initialization
+followed by failure of every SFX upload returned before marking the service
+alive. That prevented independent BGM initialization and hid the live RPC client
+from pre-reset shutdown. Keep the healthy service alive, leave rejected samples
+silent, and warn once. Module/RPC initialization failures still return failure.
+This is host evidence for lifecycle policy, not physical SPU2 acceptance.
