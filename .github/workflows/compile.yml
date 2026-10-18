@@ -34,6 +34,7 @@ jobs:
           python3 tests/test_settings_navigation.py
           python3 tests/test_zack_feedback.py
           python3 tests/test_software_clock.py
+          python3 tests/test_startup_status.py
           python3 tests/test_transition_latency.py
           python3 tests/test_native_four_browser_modes.py
           python3 tests/test_feedback_35_82.py
@@ -118,6 +119,7 @@ jobs:
           python3 tests/test_self_update.py
           python3 tests/test_app_packages.py
           python3 tests/test_rolling_release_workflow.py
+          python3 tests/test_release_notes.py
           python3 tests/test_update_sidecar_transaction.py
           python3 tests/test_update_ancestry.py
           python3 tests/test_png_viewer.py
@@ -297,67 +299,14 @@ jobs:
               echo "Refusing to move ${tag}: ${previous_sha} is not an ancestor of ${GITHUB_SHA}" >&2
               exit 1
             fi
-            changes="$(git log --format='- %s (%h)' "${previous_sha}..${GITHUB_SHA}")"
-          else
-            changes="$(git log -1 --format='- %s (%h)' "${GITHUB_SHA}")"
-          fi
-          if [ -z "${changes}" ]; then
-            changes="- Rebuild of existing master revision"
           fi
 
-          # A rolling build usually holds one PR; users updating from older
-          # builds need the wider history too (tester request).
-          recent_prs="$(gh pr list --repo "${GITHUB_REPOSITORY}" --state merged --base master --limit 20 \
-            --json number,title,mergedAt --jq '.[] | "- #\(.number) \(.title) (\(.mergedAt[0:10]))"' || true)"
-          if [ -z "${recent_prs}" ]; then
-            recent_prs="- See the complete history below."
-          fi
-          if [ -n "${previous_sha}" ]; then
-            full_changelog="https://github.com/${GITHUB_REPOSITORY}/compare/${previous_sha}...${GITHUB_SHA}"
-          else
-            full_changelog="https://github.com/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}"
-          fi
-
-          title="Launchstation Rolling — $(date -u +%Y-%m-%d) (${GITHUB_SHA:0:7})"
-          hashes="$(sha256sum "${assets[@]/#/artifacts/}")"
+          title="Launchstation Rolling - $(date -u +%Y-%m-%d) (${GITHUB_SHA:0:7})"
           notes_file="${RUNNER_TEMP}/launchstation-rolling-notes.md"
-          cat > "${notes_file}" <<EOF
-          Automatically updated rolling release from the verified master commit ${GITHUB_SHA}.
-
-          ### Changes since the preceding rolling build
-          ${changes}
-
-          ### Recently merged pull requests
-          ${recent_prs}
-
-          Full changelog for this update: ${full_changelog}
-          Complete history: https://github.com/${GITHUB_REPOSITORY}/commits/master
-
-          ### CI verification
-          - Host regression tests and documentation validation passed.
-          - Standard and DS34 PS2 ELFs compiled successfully.
-          - Controller variant, native cloud TLS, loader-memory layout, ZIP/PSU and updater-package checks passed.
-          - Build success is not PS2 hardware acceptance; device/console behavior remains separately verified.
-
-          ### Downloads
-          | Package | Contents |
-          | --- | --- |
-          | APP_LAUNCHSTATION.zip | Standard memory-card app folder; extract and launch LAUNCHSTATION.ELF. |
-          | APP_LAUNCHSTATION.psu | Standard memory-card install via PSU Paste. |
-          | APP_LAUNCHSTATION-DS.zip | DS34 USB/Bluetooth variant; extract and launch LAUNCHSTATION-DS.ELF. |
-          | APP_LAUNCHSTATION-DS.psu | DS34 memory-card install via PSU Paste. |
-
-          Each package includes its ELF, title.cfg, WLE-UPDATE-CA.PEM and BGM.ADP. Existing user settings are retained. The updater preserves the controller variant.
-
-          ### SHA-256
-          ~~~text
-          ${hashes}
-          ~~~
-
-          Source: https://github.com/${GITHUB_REPOSITORY}/tree/${GITHUB_SHA}
-          Workflow: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
-          Documentation: https://nathanneurotic.github.io/Launchstation/
-          EOF
+          python3 scripts/release_notes.py \
+            --repo "${GITHUB_REPOSITORY}" --revision "${GITHUB_SHA}" \
+            --previous "${previous_sha}" --run-id "${GITHUB_RUN_ID}" \
+            --assets-dir artifacts --output "${notes_file}"
 
           if ! gh release view "${tag}" >/dev/null 2>&1; then
             gh release create "${tag}" --title "${title}" \

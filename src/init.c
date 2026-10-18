@@ -181,6 +181,7 @@ static u8 have_dvrfile = 0;
 //State of whether the UI has been initialized.
 //Use this to determine whether code that loads a device's driver(s) can print onto the screen.
 static u8 is_early_init = 1;
+static u8 startup_driver_status_quiet = 1;
 static u8 done_setupPowerOff = 0;
 /* Reservation covers probing and a stopped resident driver. Only an actual
  * IOP reset releases it: BDM can retain pointers into the resident module. */
@@ -337,6 +338,16 @@ void setInitPhaseComplete(void)
 	is_early_init = 0;
 }
 
+int isStartupDriverStatusQuiet(void)
+{
+	return startup_driver_status_quiet;
+}
+
+void setStartupDriverStatusQuiet(int quiet)
+{
+	startup_driver_status_quiet = quiet != 0;
+}
+
 void closeKeyboardIfOpened(void)
 {
 	if (ps2kbd_opened) {
@@ -371,7 +382,7 @@ static void showLoadingModulesMsg(const char *device_name)
 {
 	char msg[64];
 
-	if (is_early_init)
+	if (is_early_init || isStartupDriverStatusQuiet())
 		return;
 
 	snprintf(msg, sizeof(msg), LNG(Loading_Drivers), device_name);
@@ -380,7 +391,7 @@ static void showLoadingModulesMsg(const char *device_name)
 
 static void showRebootingIopMsg(void)
 {
-	if (!is_early_init)
+	if (!is_early_init && !isStartupDriverStatusQuiet())
 		drawMsg(LNG(Rebooting_IOP));
 }
 
