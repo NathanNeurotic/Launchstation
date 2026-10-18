@@ -983,6 +983,8 @@ void dashHddManager(void);
 void dashShowAbout(void);
 void dashShowBuildInfo(void);
 void dashShowSystemInfo(void);
+/* Pure cached identity string; never starts hardware probes during drawing. */
+void dashConsoleSummaryText(char *out, size_t out_size);
 void dashShowFontViewer(void);
 void dashShowTextLines(int icon, const char *title, const char *subtitle, const char *const *lines, int n);
 typedef struct
