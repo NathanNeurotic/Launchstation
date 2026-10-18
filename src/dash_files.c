@@ -487,9 +487,9 @@ static void devInput(const DashInput *in)
 	}
 	if (in->pressed & DASH_IN_MENU) {
 		DashDevice *d = &devs[dsel];
-		DashMenuItem items[4];
+		DashMenuItem items[5];
 		char display_mount[16];
-		int n = 0, r, ids[4];
+		int n = 0, r, ids[5];
 
 		items[n].icon = DI_FOLDER, items[n].label = "Browse",
 		items[n].detail = deviceDisplayMount(d, display_mount, sizeof(display_mount)),
@@ -500,6 +500,9 @@ static void devInput(const DashInput *in)
 			items[n].icon = DI_HDD, items[n].label = "HDD Manager", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 2;
 		if (d->icon == DI_DISC)
 			items[n].icon = DI_PLAY, items[n].label = "Start disc", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 3;
+		/* Exact model discovery happens only through this user-selected sheet. */
+		items[n].icon = DI_INFO, items[n].label = "Console information", items[n].detail = NULL,
+		items[n].disabled = 0, ids[n++] = 4;
 		r = dashModalMenu(d->name, d->status, items, n, 0);
 		if (r >= 0) {
 			switch (ids[r]) {
@@ -514,6 +517,9 @@ static void devInput(const DashInput *in)
 					break;
 				case 3:
 					dashRunMisc(setting->Misc_PS2Disc);
+					break;
+				case 4:
+					dashShowSystemInfo();
 					break;
 			}
 		}
@@ -608,6 +614,11 @@ static void devDraw(void)
 		                                                : "Ready to browse.";
 		dashDrawCard(48, 368, 400, 26, 13);
 		dashTextFit(60, 374.5f, 380, tip, DASH_FS_SMALL, DASH_C_TEXT2);
+	}
+	{
+		char console[80];
+		dashConsoleSummaryText(console, sizeof(console));
+		dashTextFit(458, 374.5f, 134, console, DASH_FS_CAPTION, DASH_C_TEXT3);
 	}
 }
 

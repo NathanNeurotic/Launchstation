@@ -370,7 +370,11 @@ static void homeDraw(void)
 	 * 8 px between its edges and the row labels/underlines above and below
 	 * (the 1.14x zoom of a 90 px tile used to touch both). */
 	float y0 = 236, cw = HOME_TILE;
+	char console[80];
 
+	/* ROMVER is already populated at boot; no CDVD/IOP query during draw. */
+	dashConsoleSummaryText(console, sizeof(console));
+	dashTextFit(48, 60, 544, console, DASH_FS_CAPTION, DASH_C_TEXT3);
 	drawHero();
 
 	/* Continue row */

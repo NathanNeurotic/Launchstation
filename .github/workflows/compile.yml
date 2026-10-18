@@ -98,6 +98,7 @@ jobs:
           python3 tests/test_cloud_link_screen.py
           python3 tests/test_project_branding.py
           python3 tests/test_console_region.py
+          python3 tests/test_dashboard_console_summary.py
           python3 tests/test_selector_centering.py
           python3 tests/test_zack_round3.py
           python3 tests/test_zack_quickwins.py
