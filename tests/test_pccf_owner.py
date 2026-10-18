@@ -32,7 +32,7 @@ static int pcCardCfOwnsBus(void);
 static void poweroffHandler(int i) { (void)i; }
 static void ensureCoreIoStackReady(void) { assert(pccf_bus_owned); ++core_calls; }
 static int loadBdmCoreModules(void) { assert(pccf_bus_owned); return bdm_ok; }
-static void load_ps2dev9(void) { ++dev9_calls; }
+static int load_ps2dev9(void) { ++dev9_calls; return 1; }
 static void poweroffInit(void) { ++power_calls; }
 static void poweroffSetCallback(void *fn, void *data) { (void)fn; (void)data; }
 static int SifExecModuleBuffer(const void *module, int size, int len, void *args, int *ret) {
@@ -88,7 +88,7 @@ int main(void) {
 '''
 
 # Prevent a network stack switch from resetting away an established CF owner.
-for signature in ("static void load_ps2dev9(void)", "static void load_ps2ip(void)",
+for signature in ("static int load_ps2dev9(void)", "static int load_ps2ip(void)",
                   "void load_ps2host(void)", "static void load_udpfs_stack(void)",
                   "int loadAtaModules(void)", "int loadHddModules(void)",
                   "void loadNetModules(void)", "int ensureDashboardIpNetworkReady(void)"):
