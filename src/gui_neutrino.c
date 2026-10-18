@@ -3,6 +3,7 @@
 #include "dash.h"
 #include "dash_internal.h"
 #include "neutrino_gameid.h"
+#include "init.h"
 #include <limits.h>
 
 static const struct {
@@ -130,6 +131,28 @@ static int profilePath(const char *id, int slot, char *out, int size)
 	return dashStoreBuildPath(out, size, filename) == 0;
 }
 
+/* A profile lookup must never switch the IOP stack underneath the ISO.
+ * In particular MC access while MMCE/MX4SIO owns SIO2 is not assumed safe.
+ * Hardware validation may later permit more specific per-slot exceptions. */
+static int profileStorageSafe(void)
+{
+	const char *dir = dashStoreDir();
+
+	if (dir == NULL || dir[0] == '\0' || !isPathDeviceStackLoaded(dir))
+		return 0;
+	if (!strncmp(dir, "mc", 2)) {
+#ifdef MX4SIO
+		if (mx4sio_driver_running)
+			return 0;
+#endif
+#ifdef MMCE
+		if (isPathDeviceStackLoaded("mmce0:/"))
+			return 0;
+#endif
+	}
+	return 1;
+}
+
 static int profileOptionsValid(const NEUTRINO_LAUNCH_OPTIONS *options)
 {
 	NEUTRINO_OPTION_ARGS encoded;
@@ -148,7 +171,7 @@ static int profileReadSlot(const char *id, int slot, NEUTRINO_LAUNCH_OPTIONS *ou
 	NEUTRINO_LAUNCH_OPTIONS parsed;
 	int len, consumed = 0, payload_len, ok = 0;
 
-	if (!profilePath(id, slot, path, sizeof(path)))
+	if (!profileStorageSafe() || !profilePath(id, slot, path, sizeof(path)))
 		return 0;
 	text = dashLoadTextFile(path, 128, &len);
 	if (text == NULL)
@@ -213,7 +236,7 @@ static int profileSave(const char *id, const NEUTRINO_LAUNCH_OPTIONS *options)
 	char path[MAX_PATH], payload[112], record[128];
 
 	if (!profileGameIdValid(id) || !profileOptionsValid(options) ||
-	    !dashWorkerAwaitAll("Finishing up"))
+	    !profileStorageSafe() || !dashWorkerAwaitAll("Finishing up"))
 		return 0;
 	(void)profileReadLatest(id, &previous, &last_rev, &last_slot);
 	if (last_rev == UINT_MAX)
