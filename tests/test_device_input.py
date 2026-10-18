@@ -185,6 +185,11 @@ static int loadAtaModules(void) { return load(S_ATA); }
 static int loadMx4sioModules(void) { usb_snapshot_valid=0; return load(S_MX); }
 static int loadMmceModules(void) { return load(S_MMCE0|S_MMCE1); }
 static int load_udpfs(void) { return load(S_UDPFS); }
+#define MMCE_CMD_PING 1
+static int fileXioDevctl(const char *p,int cmd,void *arg,int len,void *out,int size) {
+    assert(cmd==MMCE_CMD_PING && !arg && len==0 && !out && size==0);
+    return (media & slot(p)) ? 0x100 : -1;
+}
 static int fileXioDopen(const char *p) {
     opens++; int s=slot(p);
     return (media&s) && (s!=S_ATA || now_ms>=delayed_ata)?0:-1;
