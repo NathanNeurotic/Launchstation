@@ -15,6 +15,14 @@
 | Neutrino ISO `SYSTEM.CNF` Game ID and RetroGem/MMCE | October 17 upstream `master` #61 parses `BOOT2`, signals RetroGem and sends Game ID to MMCE | **Implemented with Launchstation-specific safety gates**: validated ISO parser and RetroGem launch signal; MMCE uses only a pre-existing MMCE stack, excludes ISO/ELF source slots and skips MX4SIO. The upstream unconditional MMCE initialization and driver-reset risks were intentionally not copied. Host test and build verification pending. |
 | Upstream revision and release status | Public `master` advanced to `39fb5bc`; feature branches are merged/deleted | Use pinned October 17 `master` commits #60 and #61 for final source comparison; check for new changes before merge. |
 
+## Classic File Browser four-mode parity (PR #177 follow-up)
+
+- Added upstream-compatible numeric display-mode values 0=filenames only, 1=filenames with details, 2=titles with details, 3=titles only. Existing dashboard choices 0/1/2 are preserved.
+- Added shared `fileShowTitles()` and `fileShowDetails()` predicates. Classic Circle toggles filename-only/details and Square toggles title-only/details. Title extraction, Shift-JIS row height, PSUs and sorting use the correct predicate rather than `file_show == 2`. No device probing changes.
+- Added executable host four-state predicate test and updated the older upstream sorting harness so it compiles the new *production* predicates.
+- **Concurrent PR #178 owns `src/dash_browser.c`.** The dashboard Files tab remains on its original three options to avoid overlapping independent PRs; integrating the fourth mode there is explicitly deferred until #178 is reconciled. This is a remaining full-UI parity gap, not a completed item.
+- Follow-up real hardware acceptance: both classic title-only/no-details and title+details with MC/PSU/USB/MMCE sources, font failures, date sort, selection and long names.
+
 ## Implementation policy
 
 1. Preserve the dashboard interface and storage ownership model, including dual USB, MMCE, MX4SIO, i.LINK, HDD, UDPFS and deferred probes.
