@@ -34,6 +34,7 @@ jobs:
           python3 tests/test_transfer_progress.py
           python3 tests/test_clock_save_action.py
           python3 tests/test_storage_probe_frames.py
+          python3 tests/test_mmce_bus_restore.py
           python3 tests/test_settings_save_prompt.py
           python3 tests/test_settings_navigation.py
           python3 tests/test_zack_feedback.py

@@ -76,7 +76,10 @@ int __start(int argc, char *argv[], void *startaddr, ModuleInfo_t *mi)
     mmce_init(3);
 
     //Attach filesystem to iomanX
-    mmce_fs_register();
+    if (!mmce_fs_register()) {
+        mmce_sio2_deinit();
+        return MODULE_NO_RESIDENT_END;
+    }
 
     // If modload has certain flags set indicating new version,
     // set the unloadable flag
