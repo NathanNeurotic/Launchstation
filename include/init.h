@@ -25,6 +25,7 @@ void loadDs34InputModules(void);
 int loadIlinkModules(void);
 #endif
 void setupPowerOff(void);
+int isPowerOffReady(void);
 void closeAllAndPoweroff(void);
 void startKbd(void);
 void ensureCoreIoStackReady(void);

@@ -2275,13 +2275,20 @@ void setupPowerOff(void)
 		if (!have_poweroff) {
 			ID = SifExecModuleBuffer(poweroff_irx, size_poweroff_irx, 0, NULL, &ret);
 			DPRINTF(" [POWEROFF]: ID=%d, ret=%d\n", ID, ret);
+			if (ID < 0 || ret < 0)
+				return;
 			have_poweroff = 1;
 		}
-		poweroffInit();
+		if (poweroffInit() < 0)
+			return;
 		poweroffSetCallback((void *)poweroffHandler, NULL);
-		if (!pcCardCfOwnsBus()) load_ps2dev9();
 		done_setupPowerOff = 1;
 	}
+}
+
+int isPowerOffReady(void)
+{
+	return done_setupPowerOff;
 }
 //------------------------------
 //endfunc setupPowerOff

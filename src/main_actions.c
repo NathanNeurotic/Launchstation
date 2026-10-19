@@ -581,6 +581,10 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		ctx->main_msg[0] = 0;
 		drawMsg(LNG(Powering_Off_Console));
 		setupPowerOff();
+		if (!isPowerOffReady()) {
+			snprintf(ctx->main_msg, MAX_PATH, "Power-off service could not be started. Use the console power button.");
+			return;
+		}
 		closeAllAndPoweroff();
 		return;
 	} else if (!stricmp(path, setting->Misc_HddManager)) {

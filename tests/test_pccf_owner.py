@@ -32,8 +32,7 @@ static int pcCardCfOwnsBus(void);
 static void poweroffHandler(int i) { (void)i; }
 static void ensureCoreIoStackReady(void) { assert(pccf_bus_owned); ++core_calls; }
 static int loadBdmCoreModules(void) { assert(pccf_bus_owned); return bdm_ok; }
-static int load_ps2dev9(void) { ++dev9_calls; return 1; }
-static void poweroffInit(void) { ++power_calls; }
+static int poweroffInit(void) { ++power_calls; return 0; }
 static void poweroffSetCallback(void *fn, void *data) { (void)fn; (void)data; }
 static int SifExecModuleBuffer(const void *module, int size, int len, void *args, int *ret) {
     (void)size; (void)len; (void)args;
