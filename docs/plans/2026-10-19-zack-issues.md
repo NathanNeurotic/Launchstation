@@ -1,6 +1,6 @@
 # Zack's October 19 follow-up
 
-All changes in this checklist belong to one branch and one PR:
+All changes in this checklist belong to one branch and [PR #188](https://github.com/NathanNeurotic/Launchstation/pull/188):
 `fix/zack-issues-20261019`, based on `82082b6`. Keep follow-up commits here.
 The user explicitly excluded #160 (stock PS2 sound effects).
 
@@ -28,3 +28,33 @@ files before removing anything: the BAK contains the old file and the TMP the
 replacement. Failed cleanup keeps the BAK. Failed rollback keeps both files.
 New files and PSU container generation retain their existing paths; ordinary
 files extracted from a PSU use the replacement protection too.
+
+## Validation
+
+- All 104 Python host checks pass, including six new production-function harnesses.
+- Standard and DS34 variants compile, link and pack locally; controller-symbol
+  separation and the embedded loader's low-memory boundary are checked separately.
+- The documentation generator builds 35 pages and 262 search entries.
+- Final package and GitHub Actions results are recorded on the PR.
+- Review follow-up covers ambiguous libmc completion, false-success rename
+  responses, long filenames, and a paste error message that no longer assumes
+  the destination is read-only.
+
+## Console acceptance still required
+
+1. On both MC slots, repeatedly replace an existing ELF with the same and newer
+   files. Test insufficient space and cancel midway; the original must survive.
+   Inspect recovery files after a deliberate interruption during publication.
+2. Check copy/delete/readback progress with long filenames across light, dark
+   and animated themes. Inspect the Home MASS label.
+3. Set software time to `10:00:10`, accept Save, wait for **Clock saved**, then
+   unplug/restart. The saved seconds must persist. Later unsaved runtime and
+   elapsed unpowered time are not reconstructed.
+4. Time present and absent MX4SIO/MMCE activation from the reported console.
+   Separate module-entry delay, the MMCE ping calls, and returned mount waits.
+   Synchronous module/RPC stalls remain an unresolved part of #173/#174.
+5. After MMCE probing, read ordinary cards in both slots, switch storage stacks,
+   verify PAD/audio/USB recovery, and exercise menu and button power-off. Repeat
+   with real MMCE/MX4SIO hardware; cross-storage reliability in #175 is unproven.
+
+No issues are automatically closed and no merge or release is requested by this PR.

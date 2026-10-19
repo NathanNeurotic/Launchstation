@@ -32,6 +32,7 @@ typedef struct { char EntryName[32]; } sceMcTblGetDir;
 #define FIO_O_RDONLY O_RDONLY
 #define FIO_S_ISDIR S_ISDIR
 static int rename_calls, fail_rename, fail_rollback, mc_result, denied, removed, fail_close;
+static int false_rename, sync_calls, fail_sync;
 static int DashFileProgress(const char *a,const char *n,u64 r,u64 t) { (void)a;(void)n;assert(r<=t);return 1; }
 static void ensureMemoryCardPortAccessible(int p) { assert(p==0 || p==1); }
 static int genGetStat(const char *p,iox_stat_t *s) {
@@ -41,6 +42,7 @@ static int genGetStat(const char *p,iox_stat_t *s) {
 }
 static int rename_file(const char *from,const char *to) {
  rename_calls++;
+ if(false_rename) return 0;
  if(rename_calls==fail_rename || (fail_rollback && rename_calls>fail_rename)) return -EIO;
  return rename(from,to) ? -errno : 0;
 }
@@ -51,7 +53,7 @@ static int mcSetFileInfo(int p,int slot,const char *from,sceMcTblGetDir *s,int f
  assert(leaf); snprintf(leaf+1,sizeof(b)-(leaf+1-b),"%.32s",s->EntryName);
  mc_result=rename_file(a,b); return 0;
 }
-static int mcSync(int m,void *c,int *r) { (void)m;(void)c;*r=mc_result;return 1; }
+static int mcSync(int m,void *c,int *r) { (void)m;(void)c;if(++sync_calls==fail_sync)return -1;*r=mc_result;return 1; }
 static int genOpen(const char *p,int flags) { int r=open(p,flags,0600);return r<0?-errno:r; }
 static int genRead(int fd,void *p,int n) { return read(fd,p,n>17?17:n); }
 static int genClose(int fd) { int r=close(fd);return fail_close?-EIO:r; }
@@ -95,6 +97,18 @@ int main(void) {
  put("disk/LS-COPY-000.TMP","recover me");put("disk/LS-OLD-001.BAK","old recovery");
  strcpy(out,"disk/APP.ELF");assert(!copyPrepareTarget(out,target,backup));assert(strstr(out,"002"));
  expect("disk/LS-COPY-000.TMP","recover me");expect("disk/LS-OLD-001.BAK","old recovery");
+ /* Drivers reporting success without renaming cannot discard the old file. */
+ strcpy(out,"disk/APP.ELF");put(out,"original ELF");assert(!copyPrepareTarget(out,target,backup));put(out,fresh);
+ false_rename=1;assert(copyPublishTarget(out,target,backup)<0);false_rename=0;
+ expect(target,"original ELF");expect(out,fresh);unlink(out);
+ /* An ambiguous libmc completion preserves all surviving copies. */
+ for(int which=1;which<=2;which++) {
+  rename_calls=fail_rename=fail_rollback=sync_calls=0;fail_sync=which;
+  strcpy(out,"mc0:/BOOT.ELF");put(out,"original ELF");assert(!copyPrepareTarget(out,target,backup));put(out,fresh);
+  assert(copyPublishTarget(out,target,backup)<0);expect(backup,"original ELF");
+  if(which==1)expect(out,fresh);else expect(target,fresh);
+  unlink(out);unlink(backup);fail_sync=0;
+ }
  puts("PASS: verified replacements, MC slots, short readback, rollback, retained recovery and permission failures");
 }
 '''

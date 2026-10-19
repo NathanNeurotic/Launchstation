@@ -36,6 +36,9 @@ int main(void){
  assert(loading_fraction==0&&loading_done==0&&!strcmp(loading_remaining,"Remaining size: 0.00 MB"));
  DashFileProgress("Pasting file","empty",0,0);assert(loading_done==10000);
  DashFileProgress("Pasting file","bad count",200,100);assert(loading_done==0);
+ char long_name[256];memset(long_name,'x',sizeof(long_name)-1);long_name[255]=0;
+ DashFileProgress("Pasting file",long_name,100,200);loading_fraction=0.5f;
+ DashFileProgress("Pasting file",long_name,50,200);assert(loading_fraction==0.5f);
  int old=draws;worker=1;assert(!DashFileProgress("Pasting file","unsafe",0,0));
  DashFileDeleteProgress("unsafe");assert(draws==old);worker=0;
  active=0;assert(!DashFileProgress("Pasting file","classic",0,0));active=1;

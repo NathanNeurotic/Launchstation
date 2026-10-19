@@ -63,10 +63,15 @@ static int copyRenameFile(const char *from, const char *to)
 		ensureMemoryCardPortAccessible(from[2] - '0');
 		ret = mcSetFileInfo(from[2] - '0', 0, from + 4, &info, 0x0010);
 		if (ret < 0) return ret;
-		mcSync(0, NULL, &ret);
-		return ret;
+		if (mcSync(0, NULL, &ret) <= 0) return -EIO;
+	} else {
+		ret = fileXioRename(from, to);
 	}
-	return fileXioRename(from, to);
+	if (ret < 0) return ret;
+	/* Do not discard a recovery copy on an ambiguous/false success. */
+	ret = genGetStat(from, &stat);
+	if (!copyPathMissing(from, ret)) return -EIO;
+	return genGetStat(to, &stat) < 0 ? -EIO : 0;
 }
 
 static int copyPrepareTarget(char *out, char *target, char *backup)

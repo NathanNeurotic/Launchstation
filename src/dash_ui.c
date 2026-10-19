@@ -1104,7 +1104,8 @@ int DashFileProgress(const char *action, const char *name, u64 remaining, u64 to
 	int done;
 	if (!DashIsActive() || dashWorkerOnThread()) return 0;
 	if (!loading_active) dashLoadingBegin(action);
-	if (strcmp(loading_status, name ? name : "") || strcmp(loading_title, action))
+	if (strncmp(loading_status, name ? name : "", sizeof(loading_status) - 1) ||
+	    strncmp(loading_title, action, sizeof(loading_title) - 1))
 		loading_fraction = 0.0f;
 	dashStrCopy(loading_title, action, sizeof(loading_title));
 	dashStrCopy(loading_status, name ? name : "", sizeof(loading_status));
