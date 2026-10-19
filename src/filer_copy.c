@@ -2,6 +2,7 @@
 //File name:   filer_copy.c
 //--------------------------------------------------------------
 #include "launchelf.h"
+#include "dash.h"
 #include "filer_copy.h"
 #include "filer_actions.h"
 #include "filer_shared.h"
@@ -102,10 +103,12 @@ static int copyPrepareTarget(char *out, char *target, char *backup)
 static int copyVerifyTarget(const char *path, u64 size, u32 checksum)
 {
 	unsigned char buffer[4096];
+	u64 total = size;
 	u32 hash = 2166136261u;
 	int fd = genOpen(path, FIO_O_RDONLY), count, ret = -EIO;
 	if (fd < 0) return fd;
 	while (size > 0) {
+		DashFileProgress("Verifying file", "", size, total);
 		int request = size < sizeof(buffer) ? (int)size : (int)sizeof(buffer);
 		count = genRead(fd, buffer, request);
 		if (count <= 0 || count > request) goto done;
@@ -961,6 +964,12 @@ non_PSU_RESTORE_init:
 
 	if (size < (u64)buffSize)
 		buffSize = (int)size;
+	/* Bound returned I/O chunks on slow card media so the dashboard gets
+	 * regular opportunities to draw its scene and handle cancellation. */
+	if (DashIsActive() && buffSize > 16384 &&
+	    (!strncmp(in, "mc", 2) || !strncmp(out, "mc", 2) ||
+	     !strncmp(in, "vmc", 3) || !strncmp(out, "vmc", 3)))
+		buffSize = 16384;
 
 	if (buffSize == 0) {
 #if FILEOP_TRACE
@@ -1088,11 +1097,13 @@ non_PSU_RESTORE_init:
 		}
 		strcat(progress, tmp);
 
-		if (PasteProgress_f)  //if progress report was used earlier in this pasting
-			nonDialog(NULL);  //order cleanup for that screen area
-		nonDialog(progress);  //Make new progress report
-		PasteProgress_f = 1;  //and note that it was done for next time
-		drawMsg(file.name);
+		if (!DashFileProgress("Pasting file", file.name, size, original_size)) {
+			if (PasteProgress_f)
+				nonDialog(NULL);
+			nonDialog(progress);
+			PasteProgress_f = 1;
+			drawMsg(file.name);
+		}
 #ifdef DS34
 		if (readpad() && new_pad) {
 #else
@@ -1153,6 +1164,7 @@ non_PSU_RESTORE_init:
 	}
 #endif
 copy_file_data_done:
+	DashFileProgress("Pasting file", file.name, 0, original_size);
 	//Here the file has been copied. without error, as indicated by 'ret' above
 	//but we also need to copy attributes and timestamps (as yet only for MC)
 	//For PSU backup output padding may be needed, but not output file closure

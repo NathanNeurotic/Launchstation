@@ -7,7 +7,7 @@ The user explicitly excluded #160 (stock PS2 sound effects).
 | Issue | Work and evidence | Remaining acceptance |
 | --- | --- | --- |
 | #187 destructive ELF replacement | Write a separate sibling, close and checksum its readback before parking the original and publishing. Failed publication rolls back; failed rollback retains both recovery files. Never delete the existing destination before copying. Host fault injection covers both MC ports, ordinary filesystem, short reads, corruption, close failure, both rename failures, rollback failure and stale recovery files. | Console repeated ELF replacement and low-space cases. Replacement needs room for both files and rename support; unsupported operations preserve the original. |
-| #184 transfer progress | Pending. | Console/theme inspection. |
+| #184 transfer progress | Dedicated filename and remaining-MB lines, smoothly approached progress fill, one visual tick per frame. Native copies bypass legacy metric flattening. Slow MC/VMC operations use 16 KiB chunks; recursive deletion refreshes between entries and advances selected-item progress after completion. Readback verification also draws progress. | Console/theme inspection; a blocked synchronous filesystem RPC still prevents drawing until it returns. |
 | #185 Home MASS label | Pending. | Console inspection. |
 | #182 summarized release changelog | Pending. | Inspect generated release notes. |
 | #125 software-clock persistence | Pending. | Unplug/restart on dead-RTC console. Unpowered elapsed time is unavailable without an external time source. |

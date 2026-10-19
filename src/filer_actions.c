@@ -1,4 +1,5 @@
 #include "launchelf.h"
+#include "dash.h"
 #include "filer_actions.h"
 #include "filer_shared.h"
 #include "gui_hdd0_format.h"
@@ -1761,6 +1762,7 @@ int delete (const char *path, const FILEINFO *file)
 
 	if (!ensurePathDeviceStackReady(path))
 		return -1;
+	DashFileDeleteProgress(file->name);
 
 	if (!strncmp(path, "hdd", 3)) {
 		if (getHddParty(path, file, party, hdddir) < 0)

@@ -32,6 +32,7 @@ typedef struct { char EntryName[32]; } sceMcTblGetDir;
 #define FIO_O_RDONLY O_RDONLY
 #define FIO_S_ISDIR S_ISDIR
 static int rename_calls, fail_rename, fail_rollback, mc_result, denied, removed, fail_close;
+static int DashFileProgress(const char *a,const char *n,u64 r,u64 t) { (void)a;(void)n;assert(r<=t);return 1; }
 static void ensureMemoryCardPortAccessible(int p) { assert(p==0 || p==1); }
 static int genGetStat(const char *p,iox_stat_t *s) {
  struct stat st; if(denied) return -EACCES;

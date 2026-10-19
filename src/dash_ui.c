@@ -1003,6 +1003,8 @@ void dashModalMessage(int icon, const char *title, const char *body, const char 
 static int loading_active;
 static char loading_title[64];
 static char loading_status[128];
+static char loading_remaining[64];
+static float loading_fraction;
 static int loading_done, loading_total;
 static u64 loading_last_draw;
 static float loading_open;
@@ -1015,11 +1017,12 @@ int dashLoadingActive(void)
 
 static void loadingDraw(void)
 {
-	float w = 420.0f, h = loading_cancel ? 150.0f : 128.0f;
+	float w = 420.0f, h = loading_remaining[0] ? 158.0f : loading_cancel ? 150.0f : 128.0f;
 	float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
-	float bar_y = y + 102.0f;
+	float bar_y = y + (loading_remaining[0] ? 126.0f : 102.0f);
+	float dt = dashVisualUpdate();
 
-	loading_open = dashApproach(loading_open, 1.0f, 12.0f, dashVisualUpdate());
+	loading_open = dashApproach(loading_open, 1.0f, 12.0f, dt);
 	dashRenderScene();
 	modalBackdrop(loading_open);
 	dashGfxPushAlpha(loading_open);
@@ -1027,12 +1030,16 @@ static void loadingDraw(void)
 	dashGfxBlend(DASH_BLEND_ADD);
 	dashDrawSpinner(x + 46, y + 50, 16, DASH_C_ACCENT);
 	dashGfxBlend(DASH_BLEND_NORMAL);
-	dashTextS(x + 84, y + 26, loading_title, DASH_FS_LABEL, DASH_C_TEXT);
+	dashTextFit(x + 84, y + 26, w - 110, loading_title, DASH_FS_LABEL, DASH_C_TEXT);
 	dashTextFit(x + 84, y + 58, w - 110, loading_status, DASH_FS_SMALL, DASH_C_TEXT2);
+	if (loading_remaining[0])
+		dashTextFit(x + 84, y + 84, w - 110, loading_remaining, DASH_FS_SMALL, DASH_C_TEXT2);
 	if (loading_total > 0) {
 		float p = dashClampf(loading_done / (float)loading_total, 0.0f, 1.0f);
+		loading_fraction = dashApproach(loading_fraction, p, 14.0f, dt);
 		dashPanel(x + 30, bar_y, w - 60, 8, 4, dashColorA(DASH_C_TEXT3, 0.3f));
-		dashPanel(x + 30, bar_y, (w - 60) * p + 8, 8, 4, DASH_C_ACCENT);
+		if (loading_fraction > 0.0f)
+			dashPanel(x + 30, bar_y, (w - 60) * loading_fraction, 8, 4, DASH_C_ACCENT);
 	}
 	if (loading_cancel)
 		modalHintRow(x + 24, y + h - 34, -1, NULL, dashBackIcon(), "Continue in background");
@@ -1048,6 +1055,8 @@ void dashLoadingBegin(const char *title)
 	loading_cancel = 0;
 	dashStrCopy(loading_title, title, sizeof(loading_title));
 	loading_status[0] = '\0';
+	loading_remaining[0] = '\0';
+	loading_fraction = 0.0f;
 	loading_done = loading_total = 0;
 	loadingDraw();
 }
@@ -1088,6 +1097,33 @@ void dashLoadingStatus(const char *status, int done, int total)
 	}
 	if (Timer() - loading_last_draw >= 30)
 		loadingDraw();
+}
+
+int DashFileProgress(const char *action, const char *name, u64 remaining, u64 total)
+{
+	int done;
+	if (!DashIsActive() || dashWorkerOnThread()) return 0;
+	if (!loading_active) dashLoadingBegin(action);
+	if (strcmp(loading_status, name ? name : "") || strcmp(loading_title, action))
+		loading_fraction = 0.0f;
+	dashStrCopy(loading_title, action, sizeof(loading_title));
+	dashStrCopy(loading_status, name ? name : "", sizeof(loading_status));
+	if (remaining > total) remaining = total;
+	snprintf(loading_remaining, sizeof(loading_remaining), "Remaining size: %.2f MB",
+	         (double)remaining / (1024.0 * 1024.0));
+	done = total ? (int)((1.0 - (double)remaining / (double)total) * 10000.0) : 10000;
+	loading_done = done;
+	loading_total = 10000;
+	if (Timer() - loading_last_draw >= 16 || remaining == 0) loadingDraw();
+	return 1;
+}
+
+void DashFileDeleteProgress(const char *name)
+{
+	if (!DashIsActive() || dashWorkerOnThread() || !loading_active) return;
+	dashStrCopy(loading_title, "Deleting file", sizeof(loading_title));
+	dashStrCopy(loading_status, name, sizeof(loading_status));
+	if (Timer() - loading_last_draw >= 16) loadingDraw();
 }
 
 void dashLoadingFrame(const char *status, int done, int total)

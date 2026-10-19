@@ -737,6 +737,7 @@ static void opDelete(void)
 		if (ret < 0)
 			break;
 		done++;
+		dashLoadingFrame(f->name, done, n);
 	}
 	opDone();
 	if (ret < 0) {
