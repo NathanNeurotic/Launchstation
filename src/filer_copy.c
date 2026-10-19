@@ -30,6 +30,109 @@
 #define TRANSFER_ETA_UPDATE_MS 1000
 #define COPY_BUFFER_FAST_DEFAULT 0x100000
 
+/* File replacements keep the old entry until a complete sibling copy has
+ * been closed and read back. Never delete an existing file to make room. */
+static int copyPathMissing(const char *path, int result)
+{
+	return result == -ENOENT || (!strncmp(path, "mc", 2) && result == -4);
+}
+
+static u32 copyChecksum(u32 hash, const void *data, int size)
+{
+	const unsigned char *p = data;
+	while (size-- > 0)
+		hash = (hash ^ *p++) * 16777619u;
+	return hash;
+}
+
+static int copyRenameFile(const char *from, const char *to)
+{
+	iox_stat_t stat;
+	int ret = genGetStat(to, &stat);
+	if (!copyPathMissing(to, ret))
+		return ret < 0 ? ret : -EEXIST;
+	if (!strncmp(from, "mc", 2)) {
+		sceMcTblGetDir info;
+		const char *leaf = strrchr(to, '/');
+		if (leaf == NULL) leaf = strchr(to, ':');
+		if (leaf == NULL || !leaf[1] || strlen(leaf + 1) > sizeof(info.EntryName))
+			return -EINVAL;
+		memset(&info, 0, sizeof(info));
+		memcpy(info.EntryName, leaf + 1, strlen(leaf + 1));
+		ensureMemoryCardPortAccessible(from[2] - '0');
+		ret = mcSetFileInfo(from[2] - '0', 0, from + 4, &info, 0x0010);
+		if (ret < 0) return ret;
+		mcSync(0, NULL, &ret);
+		return ret;
+	}
+	return fileXioRename(from, to);
+}
+
+static int copyPrepareTarget(char *out, char *target, char *backup)
+{
+	iox_stat_t stat;
+	char stage[MAX_PATH];
+	const char *leaf;
+	int ret = genGetStat(out, &stat), parent, i;
+	target[0] = backup[0] = '\0';
+	if (copyPathMissing(out, ret)) return 0;
+	if (ret < 0) return ret;
+	if (FIO_S_ISDIR(stat.mode)) return -EISDIR;
+	leaf = strrchr(out, '/');
+	if (leaf == NULL) leaf = strchr(out, ':');
+	if (leaf == NULL) return -EINVAL;
+	parent = (int)(leaf - out + 1);
+	for (i = 0; i < 100; i++) {
+		if (snprintf(stage, sizeof(stage), "%.*sLS-COPY-%03d.TMP", parent, out, i) >= (int)sizeof(stage) ||
+		    snprintf(backup, MAX_PATH, "%.*sLS-OLD-%03d.BAK", parent, out, i) >= MAX_PATH)
+			return -ENAMETOOLONG;
+		ret = genGetStat(stage, &stat);
+		if (ret >= 0) continue;
+		if (!copyPathMissing(stage, ret)) return ret;
+		ret = genGetStat(backup, &stat);
+		if (ret >= 0) continue;
+		if (!copyPathMissing(backup, ret)) return ret;
+		strcpy(target, out);
+		strcpy(out, stage);
+		return 0;
+	}
+	return -EEXIST;
+}
+
+static int copyVerifyTarget(const char *path, u64 size, u32 checksum)
+{
+	unsigned char buffer[4096];
+	u32 hash = 2166136261u;
+	int fd = genOpen(path, FIO_O_RDONLY), count, ret = -EIO;
+	if (fd < 0) return fd;
+	while (size > 0) {
+		int request = size < sizeof(buffer) ? (int)size : (int)sizeof(buffer);
+		count = genRead(fd, buffer, request);
+		if (count <= 0 || count > request) goto done;
+		hash = copyChecksum(hash, buffer, count);
+		size -= count;
+	}
+	if (hash == checksum && genRead(fd, buffer, 1) == 0) ret = 0;
+done:
+	count = genClose(fd);
+	return ret < 0 ? ret : count;
+}
+
+static int copyPublishTarget(char *stage, const char *target, char *backup)
+{
+	int ret = copyRenameFile(target, backup);
+	if (ret < 0) return ret;
+	ret = copyRenameFile(stage, target);
+	if (ret < 0) {
+		/* Preserve both recoverable copies if rollback itself is refused. */
+		copyRenameFile(backup, target);
+		return ret;
+	}
+	genRemove(backup); /* A failed cleanup retains the old copy, never the new one. */
+	strcpy(stage, target);
+	return 0;
+}
+
 static int isMemoryCardLikePath(const char *path)
 {
 	return (!strncmp(path, "mc", 2) || !strncmp(path, "vmc", 3)
@@ -372,6 +475,9 @@ int copy(char *outPath, const char *inPath, FILEINFO file, int recurses)
 	    *buff = NULL, *buff2 = NULL, *copyBuff, inParty[MAX_NAME], outParty[MAX_NAME];
 	int nfiles, i;
 	u64 size = 0;
+	u64 original_size = 0;
+	u32 copy_hash = 2166136261u;
+	char replace_target[MAX_PATH] = "", replace_backup[MAX_PATH] = "";
 	int ret = -1, pfsout = -1, pfsin = -1, in_fd = -1, out_fd = -1, buffSize, bytesRead, bytesWritten;
 	int buffCount = 1, buffIndex = 0;
 	int dummy;
@@ -811,12 +917,10 @@ non_PSU_RESTORE_init:
 			makeHostPath(out, out);
 #endif
 		genLimObjName(out, 0);                                //Limit dest file name
-		dummy = genRemove(out);                               //Remove old file if present
-#if FILEOP_TRACE
-		if (trace_vmc_copy)
-			printf("[VMC_COPY] remove existing out='%s' ret=%d recurse=%d\n", out, dummy, recurses);
-#endif
-		out_fd = genOpen(out, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT);  //Create new file
+		if (!strcmp(in, out)) { ret = 0; goto copy_file_exit; }
+		ret = copyPrepareTarget(out, replace_target, replace_backup);
+		if (ret < 0) goto copy_file_exit;
+		out_fd = genOpen(out, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL);
 		if (out_fd < 0) {
 			ret = out_fd;
 #if FILEOP_TRACE
@@ -827,6 +931,7 @@ non_PSU_RESTORE_init:
 		}
 	}
 
+	original_size = size;
 	//Here the output file has been opened, indicated by 'out_fd'
 
 	/* Determine the block size. Since LaunchELF is single-threaded,
@@ -1026,6 +1131,7 @@ non_PSU_RESTORE_init:
 				ret = -EIO;  // flag generic I/O error
 				goto copy_file_exit;
 			}
+			copy_hash = copyChecksum(copy_hash, copyBuff, buffSize);
 			size -= buffSize;
 			written_size += buffSize;
 			if (buffCount > 1)
@@ -1075,6 +1181,13 @@ copy_file_data_done:
 				genRemove(out);
 			goto copy_file_exit;
 		}
+	}
+
+	if (replace_target[0]) {
+		ret = copyVerifyTarget(out, original_size, copy_hash);
+		if (ret < 0) { genRemove(out); goto copy_file_exit; }
+		ret = copyPublishTarget(out, replace_target, replace_backup);
+		if (ret < 0) goto copy_file_exit;
 	}
 
 	if (!strncmp(out, "mc", 2)) {                                 //Handle file copied to MC
