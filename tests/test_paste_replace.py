@@ -36,8 +36,8 @@ static int false_rename, sync_calls, fail_sync;
 static int DashFileProgress(const char *a,const char *n,u64 r,u64 t) { (void)a;(void)n;assert(r<=t);return 1; }
 static void ensureMemoryCardPortAccessible(int p) { assert(p==0 || p==1); }
 static int genGetStat(const char *p,iox_stat_t *s) {
- struct stat st; if(denied) return -EACCES;
- if(stat(p,&st)) return !strncmp(p,"mc",2) && errno==ENOENT ? -4 : -errno;
+ struct stat st; if(denied) return -denied;
+ if(stat(p,&st)) return -errno;
  s->mode=st.st_mode; return 0;
 }
 static int rename_file(const char *from,const char *to) {
@@ -92,7 +92,8 @@ int main(void) {
   else {assert(r<0);expect(target,"original ELF");expect(out,fresh);unlink(out);}
  }
  strcpy(out,"disk/new.elf");assert(!copyPrepareTarget(out,target,backup) && !target[0]);
- denied=1;strcpy(out,"disk/APP.ELF");assert(copyPrepareTarget(out,target,backup)==-EACCES);denied=0;
+ denied=EACCES;strcpy(out,"disk/APP.ELF");assert(copyPrepareTarget(out,target,backup)==-EACCES);denied=0;
+ denied=EINTR;strcpy(out,"mc0:/BOOT.ELF");assert(copyPrepareTarget(out,target,backup)==-EINTR);denied=0;
  /* Stale recovery artifacts are never reused or deleted. */
  put("disk/LS-COPY-000.TMP","recover me");put("disk/LS-OLD-001.BAK","old recovery");
  strcpy(out,"disk/APP.ELF");assert(!copyPrepareTarget(out,target,backup));assert(strstr(out,"002"));

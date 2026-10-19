@@ -39,6 +39,11 @@ files extracted from a PSU use the replacement protection too.
 - Review follow-up covers ambiguous libmc completion, false-success rename
   responses, long filenames, and a paste error message that no longer assumes
   the destination is read-only.
+- Checked PS2SDK's `mcdev.c` error translation and `ps2mc_fio.c` against the
+  replacement code: fileXio stat absence is `-ENOENT`; an interrupted or failed
+  stat must fail closed. MC's create flag does not provide atomic exclusive
+  creation, so the code does not claim protection against an external writer
+  racing the same filename. Dashboard workers are drained before file operations.
 
 ## Console acceptance still required
 

@@ -33,9 +33,10 @@
 
 /* File replacements keep the old entry until a complete sibling copy has
  * been closed and read back. Never delete an existing file to make room. */
-static int copyPathMissing(const char *path, int result)
+static int copyPathMissing(int result)
 {
-	return result == -ENOENT || (!strncmp(path, "mc", 2) && result == -4);
+	/* genGetStat uses fileXio errno values, not raw libmc result codes. */
+	return result == -ENOENT;
 }
 
 static u32 copyChecksum(u32 hash, const void *data, int size)
@@ -50,7 +51,7 @@ static int copyRenameFile(const char *from, const char *to)
 {
 	iox_stat_t stat;
 	int ret = genGetStat(to, &stat);
-	if (!copyPathMissing(to, ret))
+	if (!copyPathMissing(ret))
 		return ret < 0 ? ret : -EEXIST;
 	if (!strncmp(from, "mc", 2)) {
 		sceMcTblGetDir info;
@@ -70,7 +71,7 @@ static int copyRenameFile(const char *from, const char *to)
 	if (ret < 0) return ret;
 	/* Do not discard a recovery copy on an ambiguous/false success. */
 	ret = genGetStat(from, &stat);
-	if (!copyPathMissing(from, ret)) return -EIO;
+	if (!copyPathMissing(ret)) return -EIO;
 	return genGetStat(to, &stat) < 0 ? -EIO : 0;
 }
 
@@ -81,7 +82,7 @@ static int copyPrepareTarget(char *out, char *target, char *backup)
 	const char *leaf;
 	int ret = genGetStat(out, &stat), parent, i;
 	target[0] = backup[0] = '\0';
-	if (copyPathMissing(out, ret)) return 0;
+	if (copyPathMissing(ret)) return 0;
 	if (ret < 0) return ret;
 	if (FIO_S_ISDIR(stat.mode)) return -EISDIR;
 	leaf = strrchr(out, '/');
@@ -94,10 +95,10 @@ static int copyPrepareTarget(char *out, char *target, char *backup)
 			return -ENAMETOOLONG;
 		ret = genGetStat(stage, &stat);
 		if (ret >= 0) continue;
-		if (!copyPathMissing(stage, ret)) return ret;
+		if (!copyPathMissing(ret)) return ret;
 		ret = genGetStat(backup, &stat);
 		if (ret >= 0) continue;
-		if (!copyPathMissing(backup, ret)) return ret;
+		if (!copyPathMissing(ret)) return ret;
 		strcpy(target, out);
 		strcpy(out, stage);
 		return 0;
