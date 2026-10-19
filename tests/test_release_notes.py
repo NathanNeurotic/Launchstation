@@ -17,6 +17,9 @@ log = (
     + previous + "\0Merge pull request #183: Simplify [release] notes\n\nInternal merge metadata\n\x1e\n"
 )
 changes = notes.changes_from_log(log, repo)
+public = notes.rolling_changelog("# Changes\n## Rolling\n\n- **Files:** safe copying.\n- Clear progress.\n\n## Older\n- Old entry.\n")
+assert public == ["- **Files:** safe copying.", "- Clear progress."]
+assert notes.rolling_changelog("# Empty") == []
 assert len(changes) == 2
 assert "Hide startup driver status" in changes[0] and "/pull/184" in changes[0]
 assert r"Simplify \[release\] notes" in changes[1] and "/pull/183" in changes[1]
@@ -47,7 +50,13 @@ with tempfile.TemporaryDirectory(prefix="release-notes-") as folder:
             "--assets-dir", str(path), "--output", str(output)]
     subprocess.run(args, cwd=root, check=True)
     generated = output.read_text()
-    assert "Rebuild of the current revision" in generated
+    summary = subprocess.run(["git", "show", f"{head}:CHANGELOG.md"], cwd=root, capture_output=True, text=True)
+    expected = notes.rolling_changelog(summary.stdout)
+    if expected:
+        assert all(line in generated for line in expected)
+        assert "Rebuild of the current revision" not in generated
+    else:
+        assert "Rebuild of the current revision" in generated
     for name in notes.ASSETS:
         assert hashlib.sha256((path / name).read_bytes()).hexdigest() in generated
     (path / notes.ASSETS[0]).unlink()
