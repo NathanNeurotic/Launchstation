@@ -1949,6 +1949,25 @@ static void settingsSaveAction(void)
 		settingsCommit();
 }
 
+static int settingsSaveSoftwareClock(const char *timestamp)
+{
+	if (!dashModalConfirm("Save clock and settings?",
+	                      "Save this time and your current Settings changes before starting the software clock?",
+	                      "Save", 0))
+		return 0;
+	dashStrCopy(dashCfg.software_clock, timestamp, sizeof(dashCfg.software_clock));
+	menuTitleUpdateAsync(1);
+	settingsCommit();
+	if (!dashStoreFlushWait("Saving clock") || dashStoreSettingsPending() || failedSaves()) {
+		dashModalMessage(DI_WARNING, "Clock not saved",
+		                 "The clock is running, but its time could not be saved. Keep the storage connected and retry Save changes before restarting.", NULL);
+		return 0;
+	}
+	dashModalMessage(DI_CHECK, "Clock saved",
+	                 "After restarting, the clock resumes this saved checkpoint. Use Save current clock to keep later runtime; time spent unplugged cannot be measured.", NULL);
+	return 1;
+}
+
 /* Puts back what was there when SETTINGS was opened. */
 static void settingsRevert(void)
 {
@@ -2673,9 +2692,8 @@ static void runAction(int id)
 					dashModalMessage(DI_WARNING, "Invalid date / time", "Enter a valid date from 2000 to 2099 and a 24-hour time.", NULL);
 					break;
 				}
-				snprintf(dashCfg.software_clock, sizeof(dashCfg.software_clock), "%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
-				menuTitleUpdateAsync(1);
-				dashModalMessage(DI_CHECK, "Software clock running", "Save settings to retain this time. After restarting, it resumes the saved checkpoint; time spent unplugged cannot be measured.", NULL);
+				snprintf(input, sizeof(input), "%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
+				settingsSaveSoftwareClock(input);
 				break;
 			}
 			ok = dashClockSetManual(year, month, day, hour, minute, second, result, sizeof(result));
