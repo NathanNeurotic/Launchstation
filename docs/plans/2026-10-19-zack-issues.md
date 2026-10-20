@@ -32,6 +32,7 @@ files extracted from a PSU use the replacement protection too.
 ## Validation
 
 - All 104 Python host checks pass, including six new production-function harnesses.
+  This is the `54a7bc9` baseline; subsequent exact-head counts are recorded on the PR.
 - Standard and DS34 variants compile, link and pack locally; controller-symbol
   separation and the embedded loader's low-memory boundary are checked separately.
 - The documentation generator builds 35 pages and 262 search entries.
@@ -135,3 +136,32 @@ Local size comparison against `72be137`: the packed standard ELF grows by 768
 bytes and DS34 by 976 bytes. Host fixture code and the generator are not linked
 into the PS2 program. Full-copy cases include destination stat/open refusal,
 premature EOF, failed measurement, corrupt verification and publish failure.
+
+## UDPFS directory error propagation (October 20 follow-up)
+
+The earlier copy harness supplied negative listing errors, but the real
+`readUDPFS` converted directory-open errors into zero entries and ignored
+negative directory reads after returning some entries. The new production-reader
+harness exercises the initializer and directory RPC adapter together. Open,
+read and close failures now remain negative, including after a partial listing.
+Copy aborts before reporting success or deleting move sources; recursive deletion
+also stops before attempting to remove a directory whose listing failed.
+Classic browsing clamps failed counts while retaining the parent-directory row.
+This specifically covers UDPFS; other readers retain their existing contracts.
+
+Neutrino's current upstream `udpfs_dread` distinguishes zero EOF from negative
+errors: https://github.com/rickgaiser/neutrino/blob/master/iop/udpfs/src/udpfs_ioman.c
+This reference is not proof of the exact bundled binary/server combination.
+The bundled IRX files are unchanged. Normal listing limits and retry behavior
+are retained; no new RPC, IOP reset, allocation or resident record is added.
+
+An independent full-copy regression caught repeated empty-folder paste failing
+when an optional game-title lookup failed. A successful empty listing now clears
+that unrelated result. The copy harness also executes new/replacement files at
+0, 1, 16383, 16384, 16385, 65535, 65536 and 65537 bytes.
+
+Replacement readback retains the filename during progress, reports 100% only
+after successful verification/close, and preserves actual negative read errors.
+Focused host tests and standard/DS34 target builds validate these changes; the
+PR records exact-head CI. No physical-console acceptance is claimed, and the
+user's original single-file UDPFS-to-mc0 failure is still unconfirmed.

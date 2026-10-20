@@ -147,7 +147,7 @@ static int copyPrepareTarget(char *out, char *target, char *backup)
 	return -EEXIST;
 }
 
-static int copyVerifyTarget(const char *path, u64 size, u32 checksum)
+static int copyVerifyTarget(const char *path, const char *name, u64 size, u32 checksum)
 {
 	unsigned char buffer[4096];
 	u64 total = size;
@@ -155,17 +155,24 @@ static int copyVerifyTarget(const char *path, u64 size, u32 checksum)
 	int fd = genOpen(path, FIO_O_RDONLY), count, ret = -EIO;
 	if (fd < 0) return fd;
 	while (size > 0) {
-		DashFileProgress("Verifying file", "", size, total);
+		DashFileProgress("Verifying file", name, size, total);
 		int request = size < sizeof(buffer) ? (int)size : (int)sizeof(buffer);
 		count = genRead(fd, buffer, request);
-		if (count <= 0 || count > request) goto done;
+		if (count < 0) { ret = count; goto done; }
+		if (count == 0 || count > request) goto done;
 		hash = copyChecksum(hash, buffer, count);
 		size -= count;
 	}
-	if (hash == checksum && genRead(fd, buffer, 1) == 0) ret = 0;
+	if (hash == checksum) {
+		count = genRead(fd, buffer, 1);
+		ret = count < 0 ? count : (count == 0 ? 0 : -EIO);
+	}
 done:
 	count = genClose(fd);
-	return ret < 0 ? ret : count;
+	if (ret < 0) return ret;
+	if (count < 0) return count;
+	DashFileProgress("Verifying file", name, 0, total);
+	return 0;
 }
 
 static int copyPublishTarget(char *stage, const char *target, char *backup)
@@ -848,6 +855,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			filerCopyDiagStage("Listing source");
 			nfiles = getDir(in, files);
 			if (nfiles < 0) return copyDiagFail(nfiles);
+			ret = 0;  //An empty listing succeeds regardless of optional title lookup.
 			for (i = 0; i < nfiles; i++) {
 				if ((ret = copy(out, in, files[i], recurses + 1)) < 0) {
 #if FILEOP_TRACE
@@ -1298,7 +1306,7 @@ copy_file_data_done:
 
 	if (replace_target[0]) {
 		filerCopyDiagStage("Verifying replacement");
-		ret = copyVerifyTarget(out, original_size, copy_hash);
+		ret = copyVerifyTarget(out, file.name, original_size, copy_hash);
 		if (ret < 0) { genRemove(out); goto copy_file_exit; }
 		filerCopyDiagStage("Publishing replacement");
 		ret = copyPublishTarget(out, replace_target, replace_backup);

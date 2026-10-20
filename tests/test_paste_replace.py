@@ -13,7 +13,7 @@ production = source[start:end]
 copy = source[source.index('int copy('):]
 assert 'dummy = genRemove(out)' not in copy
 assert 'copyPrepareTarget(out, replace_target, replace_backup)' in copy
-assert copy.index('genClose(out_fd);', copy.index('copy_file_data_done:')) < copy.index('copyVerifyTarget(out, original_size, copy_hash)') < copy.index('copyPublishTarget(out, replace_target, replace_backup)')
+assert copy.index('genClose(out_fd);', copy.index('copy_file_data_done:')) < copy.index('copyVerifyTarget(out, file.name, original_size, copy_hash)') < copy.index('copyPublishTarget(out, replace_target, replace_backup)')
 assert 'copy_hash = copyChecksum(copy_hash, copyBuff, buffSize)' in copy
 header = r'''
 #include <assert.h>
@@ -32,8 +32,12 @@ typedef struct { char EntryName[32]; } sceMcTblGetDir;
 #define FIO_O_RDONLY O_RDONLY
 #define FIO_S_ISDIR S_ISDIR
 static int rename_calls, fail_rename, fail_rollback, mc_result, denied, removed, fail_close;
-static int false_rename, sync_calls, fail_sync;
-static int DashFileProgress(const char *a,const char *n,u64 r,u64 t) { (void)a;(void)n;assert(r<=t);return 1; }
+static int false_rename, sync_calls, fail_sync, fail_read, fail_eof, verified;
+static int DashFileProgress(const char *a,const char *n,u64 r,u64 t) {
+ assert(!strcmp(a,"Verifying file")&&!strcmp(n,"BOOT.ELF"));assert(r<=t);
+ if(!r)verified++;
+ return 1;
+}
 static void ensureMemoryCardPortAccessible(int p) { assert(p==0 || p==1); }
 static int genGetStat(const char *p,iox_stat_t *s) {
  struct stat st; if(denied) return -denied;
@@ -55,7 +59,7 @@ static int mcSetFileInfo(int p,int slot,const char *from,sceMcTblGetDir *s,int f
 }
 static int mcSync(int m,void *c,int *r) { (void)m;(void)c;if(++sync_calls==fail_sync)return -1;*r=mc_result;return 1; }
 static int genOpen(const char *p,int flags) { int r=open(p,flags,0600);return r<0?-errno:r; }
-static int genRead(int fd,void *p,int n) { return read(fd,p,n>17?17:n); }
+static int genRead(int fd,void *p,int n) { if(fail_read)return -ETIMEDOUT;if(fail_eof&&n==1)return -EACCES;return read(fd,p,n>17?17:n); }
 static int genClose(int fd) { int r=close(fd);return fail_close?-EIO:r; }
 static int genRemove(char *p) { removed++;return unlink(p); }
 static void put(const char *p,const char *s) { int f=open(p,O_WRONLY|O_TRUNC|O_CREAT,0600);assert(f>=0);assert(write(f,s,strlen(s))==(int)strlen(s));assert(close(f)==0); }
@@ -74,16 +78,18 @@ int main(void) {
   assert(strcmp(out,target) && !strcmp(target,paths[device]));
   expect(target,"original ELF");put(out,fresh);
   u32 hash=copyChecksum(2166136261u,fresh,strlen(fresh));
-  assert(!copyVerifyTarget(out,strlen(fresh),hash));
+  verified=0;assert(!copyVerifyTarget(out,"BOOT.ELF",strlen(fresh),hash));assert(verified==1);
+  fail_read=1;assert(copyVerifyTarget(out,"BOOT.ELF",strlen(fresh),hash)==-ETIMEDOUT);fail_read=0;
+  fail_eof=1;assert(copyVerifyTarget(out,"BOOT.ELF",strlen(fresh),hash)==-EACCES);fail_eof=0;
   if(scenario==1) { /* write/readback corruption: old entry is untouched */
-   put(out,"partial");assert(copyVerifyTarget(out,strlen(fresh),hash)<0);
+   put(out,"partial");assert(copyVerifyTarget(out,"BOOT.ELF",strlen(fresh),hash)<0);
    expect(target,"original ELF");unlink(out);continue;
   }
   if(scenario==2) fail_rename=1; /* cannot park the old file */
   if(scenario==3) fail_rename=2; /* publish fails and rolls back */
   if(scenario==4) {fail_rename=2;fail_rollback=1;}
   if(scenario==5) { /* readback close failure */
-   fail_close=1;assert(copyVerifyTarget(out,strlen(fresh),hash)<0);
+   fail_close=1;verified=0;assert(copyVerifyTarget(out,"BOOT.ELF",strlen(fresh),hash)<0);assert(!verified);
    fail_close=0;expect(target,"original ELF");unlink(out);continue;
   }
   int r=copyPublishTarget(out,target,backup);

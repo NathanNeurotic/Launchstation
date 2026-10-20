@@ -125,7 +125,7 @@ static int fileXioChStat(const char *p,const iox_stat_t *s,int f){(void)p;(void)
 static int getHddParty(const char *p,const FILEINFO *f,char *a,char *b){(void)p;(void)f;(void)a;(void)b;assert(0);return -1;}
 static int mountParty(const char *p){(void)p;assert(0);return -1;}
 static int fileShowTitles(void){return 0;}
-static int filerGetGameTitle(const char *p,const FILEINFO *f,unsigned char *out){(void)p;(void)f;out[0]=0;return 0;}
+static int filerGetGameTitle(const char *p,const FILEINFO *f,unsigned char *out){(void)p;(void)f;out[0]=0;return -1;}
 static void transcpy_sjis(char *out,const unsigned char *in){strcpy(out,(const char *)in);}
 static int filerConfirmExploitDelete(const char *p,const FILEINFO *f){(void)p;(void)f;return 1;}
 static int filerConfirmExploitModify(const char *p,const FILEINFO *f){(void)p;(void)f;return 1;}
@@ -175,6 +175,16 @@ int main(void){
   subfunc_Paste(message,dest);assert(!message[0]&&!handles);
   snprintf(target,sizeof(target),"%sBOOT.ELF",dest);assert(matches(target,input,sizeof(input)));
  }
+ /* Exercise all fixture boundary lengths through ordinary and replacement I/O. */
+ const int lengths[]={0,1,16383,16384,16385,65535,65536,65537};
+ for(unsigned length=0;length<sizeof(lengths)/sizeof(lengths[0]);length++){
+  put("udpfs:/BOUNDARY.BIN",input,lengths[length]);unlink("mc0:/BOUNDARY.BIN");
+  for(int attempt=0;attempt<2;attempt++){
+   reset();strcpy(clipFiles[0].name,"BOUNDARY.BIN");clipFiles[0].stats.FileSizeByte=lengths[length];
+   message[0]=0;subfunc_Paste(message,"mc0:/");assert(!message[0]&&!handles);
+   assert(matches("mc0:/BOUNDARY.BIN",input,lengths[length]));
+  }
+ }
  const unsigned char old[]="original ELF";
  const char *stages[]={"Opening source","Rewinding source","Reading source","Writing destination","Closing destination","Copy cancelled","Preparing devices","Checking source","Checking destination","Opening destination","Reading source","Measuring source","Verifying replacement","Publishing replacement"};
  for(int failure=0;failure<14;failure++){
@@ -197,6 +207,9 @@ int main(void){
  /* A failed source listing must not report a successful empty folder copy. */
  reset();strcpy(clipFiles[0].name,"NESTED");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;fail_listing=1;
  message[0]=0;subfunc_Paste(message,"mc1:/");assert(strstr(message,"Listing source (-5)"));
+ /* An empty folder can be pasted repeatedly even without a game-save title. */
+ reset();mkdir("udpfs:/EMPTY",0700);strcpy(clipFiles[0].name,"EMPTY");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;
+ for(int attempt=0;attempt<3;attempt++){message[0]=0;subfunc_Paste(message,"mc0:/");assert(!message[0]&&!handles);}
  /* Repeated operations clear prior error state, and formatting is bounded. */
  reset();message[0]=0;subfunc_Paste(message,"mc0:/");assert(!message[0]);
  char bounded[17];memset(bounded,'x',sizeof(bounded));filerCopyDiagFormat(bounded,16,-1);assert(!bounded[15]&&bounded[16]=='x');

@@ -1790,6 +1790,7 @@ int delete (const char *path, const FILEINFO *file)
 	if (file->stats.AttrFile & sceMcFileAttrSubdir) {  //Is the object to delete a folder ?
 		strcat(dir, "/");
 		nfiles = getDir(dir, files);
+		if (nfiles < 0) return nfiles;
 		for (i = 0; i < nfiles; i++) {
 			ret = delete (dir, &files[i]);  //recursively delete contents of folder
 			if (ret < 0)
