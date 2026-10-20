@@ -20,6 +20,7 @@ typedef struct
 } NEUTRINO_OPTION_ARGS;
 
 int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options);
+int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *options, const char *game_id);
 int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *options, NEUTRINO_OPTION_ARGS *args);
 
 #endif

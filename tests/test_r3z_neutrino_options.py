@@ -26,7 +26,7 @@ assert "if (message != NULL && message_size > 0)" in neutrino
 
 # Extract the actual data and pure argument builder without pulling in PS2 UI.
 start = gui.index("static const struct {")
-end = gui.index("static int moveNeutrinoSelection", start)
+end = gui.index("/* Versioned two-slot Neutrino profiles.", start)
 pure_c = (
     '#include <stdio.h>\n#include <string.h>\n'
     '#include "gui_neutrino.h"\n'
@@ -42,6 +42,13 @@ pure_c += r"""
 #define DI_SETTINGS 1
 #define DI_PLAY 2
 #define DI_BACK 3
+#define DI_STAR 4
+#define DI_REFRESH 5
+#define DASH_TOAST_OK 1
+#define DASH_TOAST_WARN 2
+static char active_profile_gameid[12];
+static int profileSave(const char *id, const NEUTRINO_LAUNCH_OPTIONS *o) { (void)id; (void)o; return 1; }
+static void dashToast(int kind, const char *text) { (void)kind; (void)text; }
 typedef struct { int icon; const char *label; const char *detail; int disabled; } DashMenuItem;
 int dashModalMenu(const char *, const char *, const DashMenuItem *, int, int);
 int dashModalChoice(const char *, const char *const *, int, int);
