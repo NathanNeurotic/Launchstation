@@ -37,6 +37,7 @@ typedef uint8_t u8;typedef uint16_t u16;typedef uint32_t u32;typedef uint64_t u6
 #define MAX_RECURSE 16
 #define FILEOP_TRACE 0
 #define UDPFS 1
+#define ETH 1
 #define GIT_HASH "fixture-head"
 #define TRUE 1
 #define FALSE 0
@@ -62,6 +63,7 @@ typedef uint8_t u8;typedef uint16_t u16;typedef uint32_t u32;typedef uint64_t u6
 #define FIO_O_WRONLY O_WRONLY
 #define FIO_O_CREAT O_CREAT
 #define FIO_O_EXCL O_EXCL
+#define FIO_O_TRUNC O_TRUNC
 #define FIO_S_ISDIR S_ISDIR
 #define FIO_CST_ATTR 1
 #define FIO_CST_CT 2
@@ -101,7 +103,7 @@ static int isPcCardCfOnline(void){return 1;}
 static void ensureMemoryCardPortAccessible(int p){assert(p==0||p==1);}
 static char *makeHostPath(char *d,char *s){if(d!=s)strcpy(d,s);return d;}
 static void genLimObjName(char *p,int reserve){(void)p;(void)reserve;}
-static int genGetStat(const char *p,iox_stat_t *out){struct stat s;if(fail_stat&&!strncmp(p,"mc0:",4))return -EACCES;if(stat(p,&s))return -errno;out->mode=s.st_mode;return 0;}
+static int genGetStat(const char *p,iox_stat_t *out){struct stat s;if(!strncmp(p,"host:",5))return -EIO;if(fail_stat&&!strncmp(p,"mc0:",4))return -EACCES;if(stat(p,&s))return -errno;out->mode=s.st_mode;return 0;}
 static int genOpen(const char *p,int flags){
  if(fail_open&&flags==O_RDONLY&&!strncmp(p,"udpfs:",6))return -ENOENT;
  if(fail_out_open&&(flags&O_WRONLY))return -EACCES;
@@ -166,7 +168,7 @@ static unsigned char input[65537];
 static void reset(void){assert(!handles);source_ready=load_ok=1;reset_preflight=0;fail_open=fail_rewind=fail_read=fail_write=fail_close=fail_listing=cancel_copy=fail_stat=fail_out_open=early_eof=fail_measure=corrupt_verify=fail_publish=0;read_calls=write_calls=0;browser_cut=0;browser_cd=0;generation=1;clipIopResetGeneration=1;PasteMode=PM_NORMAL;strcpy(clipPath,"udpfs:/");nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));strcpy(clipFiles[0].name,"BOOT.ELF");clipFiles[0].stats.FileSizeByte=sizeof(input);}
 int main(void){
  assert(sizeof(copy_diag)<=128); /* fixed runtime budget, no log allocation */
- mkdir("udpfs:",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);mkdir("usb0:",0700);
+ mkdir("udpfs:",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);mkdir("usb0:",0700);mkdir("host:",0700);
  for(int i=0;i<(int)sizeof(input);i++)input[i]=(unsigned char)(i*19+7);
  put("udpfs:/BOOT.ELF",input,sizeof(input));
  const char *destinations[]={"mc0:/","mc1:/","usb0:/"};char message[MAX_PATH],target[MAX_PATH];
@@ -174,6 +176,13 @@ int main(void){
   reset();message[0]=0;char dest[12];strcpy(dest,destinations[device]);
   subfunc_Paste(message,dest);assert(!message[0]&&!handles);
   snprintf(target,sizeof(target),"%sBOOT.ELF",dest);assert(matches(target,input,sizeof(input)));
+ }
+ /* Legacy host: cannot stat files; new and shorter replacement writes must work. */
+ for(int attempt=0;attempt<3;attempt++){
+  int length=attempt==2?17:(int)sizeof(input);
+  put("usb0:/HOST.BIN",input,length);reset();strcpy(clipPath,"usb0:/");strcpy(clipFiles[0].name,"HOST.BIN");
+  message[0]=0;subfunc_Paste(message,"host:/");assert(!message[0]&&!handles);
+  assert(matches("host:/HOST.BIN",input,length));
  }
  /* Exercise all fixture boundary lengths through ordinary and replacement I/O. */
  const int lengths[]={0,1,16383,16384,16385,65535,65536,65537};

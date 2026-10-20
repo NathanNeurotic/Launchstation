@@ -1012,17 +1012,27 @@ non_PSU_RESTORE_init:
 			goto copy_file_exit;
 		}
 	} else {            //Any other PasteMode than PM_PSU_BACKUP needs a new output file
+		int open_mode = FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL;
 #if defined(ETH) || defined(UDPFS)
 		if (!strncmp(out, "host:/", 6))
 			makeHostPath(out, out);
 #endif
 		genLimObjName(out, 0);                                //Limit dest file name
 		if (!strcmp(in, out)) { ret = 0; goto copy_file_exit; }
-		filerCopyDiagStage("Checking destination");
-		ret = copyPrepareTarget(out, replace_target, replace_backup);
-		if (ret < 0) goto copy_file_exit;
+#ifdef ETH
+		/* The legacy host driver has no stat/rename operations. Retain its
+		 * direct-write behavior; sibling replacement requires those operations. */
+		if (!strncmp(out, "host:", 5))
+			open_mode = FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC;
+		else
+#endif
+		{
+			filerCopyDiagStage("Checking destination");
+			ret = copyPrepareTarget(out, replace_target, replace_backup);
+			if (ret < 0) goto copy_file_exit;
+		}
 		filerCopyDiagStage("Opening destination");
-		out_fd = genOpen(out, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL);
+		out_fd = genOpen(out, open_mode);
 		if (out_fd < 0) {
 			ret = out_fd;
 #if FILEOP_TRACE

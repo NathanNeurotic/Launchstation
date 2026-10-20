@@ -165,3 +165,18 @@ after successful verification/close, and preserves actual negative read errors.
 Focused host tests and standard/DS34 target builds validate these changes; the
 PR records exact-head CI. No physical-console acceptance is claimed, and the
 user's original single-file UDPFS-to-mc0 failure is still unconfirmed.
+
+## Host destination review correction
+
+The bundled legacy `host:` driver's `dummyGetstat()` always returns -5 and its
+operations table has no rename operation. Requiring a destination stat therefore
+regressed writable host pastes. Only `host:` destinations retain direct
+create/truncate behavior; other paths still require the checked sibling
+replacement transaction and fail closed on stat errors. Host overwrites do not
+gain that transaction's interruption/rollback protection. No failure-based
+fallback is enabled for MC, UDPFS or ordinary filesystem paths.
+
+The production copy harness models host stat as -EIO and covers a new file,
+same-size overwrite and shorter overwrite from USB. The prior source fails
+before opening output; the corrected path copies exact contents without a stale
+tail. This is a host-adapter regression test, not a live host-server test.
