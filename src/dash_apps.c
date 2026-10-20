@@ -21,7 +21,7 @@ enum AppFilter {
 	FILTER_COUNT
 };
 
-static const char *const filter_names[FILTER_COUNT] = {"All", "Favorites", "Memory Cards", "USB", "HDD", "Other devices"};
+static const char *const filter_names[FILTER_COUNT] = {"All", "Favorites", "Memory Cards", "MASS", "HDD", "Other devices"};
 
 static int order[DASH_MAX_APPS];
 static int norder;

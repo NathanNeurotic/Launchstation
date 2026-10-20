@@ -24,6 +24,8 @@ static u32 mmce_sio2_port_ctrl1;
 static u32 mmce_sio2_port_ctrl2;
 
 static u32 sio2_save_ctrl;
+static u32 sio2_save_port_ctrl1, sio2_save_port_ctrl2;
+static int sio2_save_port;
 static int event_flag = -1;
 
 //Replacement intr handler
@@ -131,6 +133,9 @@ void mmce_sio2_lock()
     sio2man_hook_sio2_lock();
 
     sio2_save_ctrl = inl_sio2_ctrl_get();
+    sio2_save_port = mmce_port;
+    sio2_save_port_ctrl1 = inl_sio2_portN_ctrl1_get(sio2_save_port);
+    sio2_save_port_ctrl2 = inl_sio2_portN_ctrl2_get(sio2_save_port);
 
     //Swap SIO2MAN's intr handler with ours
     sio2man_hook_sio2_set_intr_handler(mmce_sio2_intr_handler_ptr, mmce_sio2_intr_arg_ptr);
@@ -142,11 +147,15 @@ void mmce_sio2_lock()
 
 void mmce_sio2_unlock()
 {
+    /* MMCE temporarily owns this port's timing and IRQ state. Restore it
+     * before waking MCMAN/PADMAN, including after an absent-card timeout. */
+    inl_sio2_ctrl_set(sio2_save_ctrl | 0xc);
+    inl_sio2_stat_set(0x3);
+    inl_sio2_portN_ctrl1_set(sio2_save_port, sio2_save_port_ctrl1);
+    inl_sio2_portN_ctrl2_set(sio2_save_port, sio2_save_port_ctrl2);
+
     //Swap our intr handler with SIO2MAN's intr handler
     sio2man_hook_sio2_set_intr_handler(NULL, NULL);
-
-    //Restore ctrl state, and reset STATE + FIFOS
-    inl_sio2_ctrl_set(sio2_save_ctrl | 0xc);
 
     //Unlock sio2man driver
     sio2man_hook_sio2_unlock();

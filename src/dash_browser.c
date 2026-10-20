@@ -705,7 +705,7 @@ static void opPaste(int mode)
 		filerPasteModeInto(fb.msg, fb.dir, mode == PASTE_RENAME);
 	opDone();
 	if (fb.msg[0]) /* the classic paste only leaves a message when it failed */
-		dashModalMessage(DI_WARNING, psu ? "PSU failed" : "Paste failed", "Not everything could be pasted. The destination may be full or read-only.", fb.msg);
+		dashModalMessage(DI_WARNING, psu ? "PSU failed" : "Paste failed", fb.msg, NULL);
 	else
 		dashToast(DASH_TOAST_OK, browser_cut ? "Moved" : "Pasted");
 	refresh();
@@ -737,6 +737,7 @@ static void opDelete(void)
 		if (ret < 0)
 			break;
 		done++;
+		dashLoadingFrame(f->name, done, n);
 	}
 	opDone();
 	if (ret < 0) {

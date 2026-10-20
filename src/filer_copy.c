@@ -2,6 +2,7 @@
 //File name:   filer_copy.c
 //--------------------------------------------------------------
 #include "launchelf.h"
+#include "dash.h"
 #include "filer_copy.h"
 #include "filer_actions.h"
 #include "filer_shared.h"
@@ -30,6 +31,165 @@
 #define TRANSFER_ETA_UPDATE_MS 1000
 #define COPY_BUFFER_FAST_DEFAULT 0x100000
 
+/* One paste context, owned by the UI thread after workers are drained.
+ * Keep no history and perform no diagnostic I/O during the transfer. */
+static struct {
+	const char *stage;
+	char name[40], source[12], destination[12];
+	u64 done, total;
+	unsigned int generation;
+	int error;
+} copy_diag;
+
+void filerCopyDiagBegin(const char *source, const char *destination)
+{
+	memset(&copy_diag, 0, sizeof(copy_diag));
+	copy_diag.stage = "Preparing devices";
+	copy_diag.generation = getIopResetGeneration();
+	snprintf(copy_diag.source, sizeof(copy_diag.source), "%.*s", (int)strcspn(source, ":") + 1, source);
+	snprintf(copy_diag.destination, sizeof(copy_diag.destination), "%.*s", (int)strcspn(destination, ":") + 1, destination);
+}
+
+void filerCopyDiagStage(const char *stage)
+{
+	copy_diag.stage = stage;
+}
+
+static int copyDiagFail(int result)
+{
+	/* Preserve a child's actual error when a recursive caller returns -1. */
+	if (!copy_diag.error && result < 0)
+		copy_diag.error = result;
+	return result;
+}
+
+void filerCopyDiagFormat(char *out, int size, int result)
+{
+	snprintf(out, size, "%s (%d)\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
+	         copy_diag.stage ? copy_diag.stage : "Copy failed", copy_diag.error ? copy_diag.error : result,
+	         copy_diag.name, copy_diag.source, copy_diag.destination,
+	         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
+	         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
+}
+
+/* File replacements keep the old entry until a complete sibling copy has
+ * been closed and read back. Never delete an existing file to make room. */
+static int copyPathMissing(int result)
+{
+	/* genGetStat uses fileXio errno values, not raw libmc result codes. */
+	return result == -ENOENT;
+}
+
+static u32 copyChecksum(u32 hash, const void *data, int size)
+{
+	const unsigned char *p = data;
+	while (size-- > 0)
+		hash = (hash ^ *p++) * 16777619u;
+	return hash;
+}
+
+static int copyRenameFile(const char *from, const char *to)
+{
+	iox_stat_t stat;
+	int ret = genGetStat(to, &stat);
+	if (!copyPathMissing(ret))
+		return ret < 0 ? ret : -EEXIST;
+	if (!strncmp(from, "mc", 2)) {
+		sceMcTblGetDir info;
+		const char *leaf = strrchr(to, '/');
+		if (leaf == NULL) leaf = strchr(to, ':');
+		if (leaf == NULL || !leaf[1] || strlen(leaf + 1) > sizeof(info.EntryName))
+			return -EINVAL;
+		memset(&info, 0, sizeof(info));
+		memcpy(info.EntryName, leaf + 1, strlen(leaf + 1));
+		ensureMemoryCardPortAccessible(from[2] - '0');
+		ret = mcSetFileInfo(from[2] - '0', 0, from + 4, &info, 0x0010);
+		if (ret < 0) return ret;
+		if (mcSync(0, NULL, &ret) <= 0) return -EIO;
+	} else {
+		ret = fileXioRename(from, to);
+	}
+	if (ret < 0) return ret;
+	/* Do not discard a recovery copy on an ambiguous/false success. */
+	ret = genGetStat(from, &stat);
+	if (!copyPathMissing(ret)) return -EIO;
+	return genGetStat(to, &stat) < 0 ? -EIO : 0;
+}
+
+static int copyPrepareTarget(char *out, char *target, char *backup)
+{
+	iox_stat_t stat;
+	char stage[MAX_PATH];
+	const char *leaf;
+	int ret = genGetStat(out, &stat), parent, i;
+	target[0] = backup[0] = '\0';
+	if (copyPathMissing(ret)) return 0;
+	if (ret < 0) return ret;
+	if (FIO_S_ISDIR(stat.mode)) return -EISDIR;
+	leaf = strrchr(out, '/');
+	if (leaf == NULL) leaf = strchr(out, ':');
+	if (leaf == NULL) return -EINVAL;
+	parent = (int)(leaf - out + 1);
+	for (i = 0; i < 100; i++) {
+		if (snprintf(stage, sizeof(stage), "%.*sLS-COPY-%03d.TMP", parent, out, i) >= (int)sizeof(stage) ||
+		    snprintf(backup, MAX_PATH, "%.*sLS-OLD-%03d.BAK", parent, out, i) >= MAX_PATH)
+			return -ENAMETOOLONG;
+		ret = genGetStat(stage, &stat);
+		if (ret >= 0) continue;
+		if (!copyPathMissing(ret)) return ret;
+		ret = genGetStat(backup, &stat);
+		if (ret >= 0) continue;
+		if (!copyPathMissing(ret)) return ret;
+		strcpy(target, out);
+		strcpy(out, stage);
+		return 0;
+	}
+	return -EEXIST;
+}
+
+static int copyVerifyTarget(const char *path, const char *name, u64 size, u32 checksum)
+{
+	unsigned char buffer[4096];
+	u64 total = size;
+	u32 hash = 2166136261u;
+	int fd = genOpen(path, FIO_O_RDONLY), count, ret = -EIO;
+	if (fd < 0) return fd;
+	while (size > 0) {
+		DashFileProgress("Verifying file", name, size, total);
+		int request = size < sizeof(buffer) ? (int)size : (int)sizeof(buffer);
+		count = genRead(fd, buffer, request);
+		if (count < 0) { ret = count; goto done; }
+		if (count == 0 || count > request) goto done;
+		hash = copyChecksum(hash, buffer, count);
+		size -= count;
+	}
+	if (hash == checksum) {
+		count = genRead(fd, buffer, 1);
+		ret = count < 0 ? count : (count == 0 ? 0 : -EIO);
+	}
+done:
+	count = genClose(fd);
+	if (ret < 0) return ret;
+	if (count < 0) return count;
+	DashFileProgress("Verifying file", name, 0, total);
+	return 0;
+}
+
+static int copyPublishTarget(char *stage, const char *target, char *backup)
+{
+	int ret = copyRenameFile(target, backup);
+	if (ret < 0) return ret;
+	ret = copyRenameFile(stage, target);
+	if (ret < 0) {
+		/* Preserve both recoverable copies if rollback itself is refused. */
+		copyRenameFile(backup, target);
+		return ret;
+	}
+	genRemove(backup); /* A failed cleanup retains the old copy, never the new one. */
+	strcpy(stage, target);
+	return 0;
+}
+
 static int isMemoryCardLikePath(const char *path)
 {
 	return (!strncmp(path, "mc", 2) || !strncmp(path, "vmc", 3)
@@ -47,6 +207,34 @@ static int isHddRootPath(const char *path)
 static int isHddCommonParty(const char *party)
 {
 	return (!strncmp(party, "hdd", 3) && party[3] >= '0' && party[3] <= '9' && !strcmp(party + 4, ":__common"));
+}
+
+/* File drivers may return a positive short transfer. Complete only the
+ * remaining bytes, never replay already-consumed data or retry an error.
+ * A zero-byte result before the measured length is exhausted is failure. */
+static int copyReadChunk(int fd, void *buffer, int size)
+{
+	int done = 0;
+	while (done < size) {
+		int count = genRead(fd, (char *)buffer + done, size - done);
+		if (count < 0) return count;
+		if (count == 0 || count > size - done) return -EIO;
+		done += count;
+	}
+	return done;
+}
+
+static int copyWriteChunk(int fd, void *buffer, int size)
+{
+	int done = 0;
+	while (done < size) {
+		int count = genWrite(fd, (char *)buffer + done, size - done);
+		if (count < 0) return count;
+		if (count == 0 || count > size - done) return -EIO;
+		done += count;
+		copy_diag.done += count;
+	}
+	return done;
 }
 
 static int calcTransferSpeed(u64 bytes, int millis)
@@ -372,6 +560,9 @@ int copy(char *outPath, const char *inPath, FILEINFO file, int recurses)
 	    *buff = NULL, *buff2 = NULL, *copyBuff, inParty[MAX_NAME], outParty[MAX_NAME];
 	int nfiles, i;
 	u64 size = 0;
+	u64 original_size = 0;
+	u32 copy_hash = 2166136261u;
+	char replace_target[MAX_PATH] = "", replace_backup[MAX_PATH] = "";
 	int ret = -1, pfsout = -1, pfsin = -1, in_fd = -1, out_fd = -1, buffSize, bytesRead, bytesWritten;
 	int buffCount = 1, buffIndex = 0;
 	int dummy;
@@ -393,20 +584,24 @@ int copy(char *outPath, const char *inPath, FILEINFO file, int recurses)
 #endif
 	u64 CurrentTime = 0LL;
 
+	snprintf(copy_diag.name, sizeof(copy_diag.name), "%.39s", file.name);
+	copy_diag.done = copy_diag.total = 0;
+	filerCopyDiagStage("Preparing devices");
+	inParty[0] = outParty[0] = '\0';
 	if (recurses + 1 >= MAX_RECURSE)
-		return -1;
+		return copyDiagFail(-1);
 
 #if FILEOP_TRACE
 	trace_vmc_copy = (!strncmp(inPath, "vmc", 3) || !strncmp(outPath, "vmc", 3));
 #endif
 
-	if (!ensurePathDeviceStackReady(inPath) || !ensurePathDeviceStackReady(outPath)) {
+	if (prepareTransferDeviceStacks(inPath, outPath) != TRANSFER_STACK_READY) {
 #if FILEOP_TRACE
 		if (trace_vmc_copy)
 			printf("[VMC_COPY] stack-ready failed inPath='%s' outPath='%s' name='%s' recurse=%d\n",
 			       inPath, outPath, file.name, recurses);
 #endif
-		return -1;
+		return copyDiagFail(-1);
 	}
 
 	PM_flag[recurses + 1] = PM_NORMAL;  //assume normal mode for next level
@@ -425,11 +620,11 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 
 	if (!strncmp(inPath, "hdd", 3)) {
 		if (getHddParty(inPath, &file, inParty, in) < 0)
-			return -1;
+			return copyDiagFail(-1);
 		/* Re-resolve/mount source partition each copy so stale browser mounts do not break paste/move. */
 		pfsin = mountParty(inParty);
 		if (pfsin < 0)
-			return -1;
+			return copyDiagFail(-1);
 		in[3] = pfsin + '0';
 #if FILEOP_TRACE
 		printf("[FILEOP] hdd-map src %s:pfs%d:%s recurse=%d\n",
@@ -438,10 +633,10 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 #ifdef DVRP
 	} else if (!strncmp(inPath, "dvr_hdd", 7)) {
 		if (getHddDVRPParty(inPath, &file, inParty, in) < 0)
-			return -1;
+			return copyDiagFail(-1);
 		pfsin = mountDVRPParty(inParty);
 		if (pfsin < 0)
-			return -1;
+			return copyDiagFail(-1);
 		in[7] = pfsin + '0';
 #endif
 	} else
@@ -449,11 +644,11 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 
 	if (!strncmp(outPath, "hdd", 3)) {
 		if (getHddParty(outPath, &newfile, outParty, out) < 0)
-			return -1;
+			return copyDiagFail(-1);
 		/* Re-resolve/mount destination partition each copy so stale browser mounts do not break paste/move. */
 		pfsout = mountParty(outParty);
 		if (pfsout < 0)
-			return -1;
+			return copyDiagFail(-1);
 		out[3] = pfsout + '0';
 #if FILEOP_TRACE
 		printf("[FILEOP] hdd-map dst %s:pfs%d:%s recurse=%d\n",
@@ -462,10 +657,10 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 #ifdef DVRP
 	} else if (!strncmp(outPath, "dvr_hdd", 7)) {
 		if (getHddDVRPParty(outPath, &newfile, outParty, out) < 0)
-			return -1;
+			return copyDiagFail(-1);
 		pfsout = mountDVRPParty(outParty);
 		if (pfsout < 0)
-			return -1;
+			return copyDiagFail(-1);
 		out[7] = pfsout + '0';
 #endif
 	} else
@@ -495,7 +690,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		//This is where we must act differently for PSU backup, creating a PSU file instead
 		if (PasteMode == PM_PSU_BACKUP) {
 			if (recurses)
-				return -1;  //abort, as subfolders are not copied to PSU backups
+				return copyDiagFail(-1);  //abort, as subfolders are not copied to PSU backups
 			i = strlen(out) - 1;
 			if (out[i] == '/')
 				out[i] = 0;
@@ -551,10 +746,11 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			//here tmp is the name of an existing file, to be removed before making new one
 			genRemove(tmp);
 			if (psu_backup_create_root_image(tmp, mcT_head_p, &out_fd, &PSU_content) < 0)
-				return -1;
+				return copyDiagFail(-1);
 			PM_file[recurses + 1] = out_fd;
 			PM_flag[recurses + 1] = PM_PSU_BACKUP;  //Set PSU backup mode for next level
 		} else {  //any other PasteMode than PM_PSU_BACKUP
+			filerCopyDiagStage("Creating directory");
 			ret = newdir(outPath, newfile.name);
 			if (ret == -17) {  //NB: 'newdir' must return -17 for ALL pre-existing folder cases
 				ret = filerGetGameTitle(outPath, &newfile, newfile.title);
@@ -573,18 +769,18 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 				sprintf(tmp, "\n\n%s ?", LNG(Do_you_wish_to_overwrite_it));
 				strcat(progress, tmp);
 				if (ynDialog(progress) < 0)
-					return -1;
+					return copyDiagFail(-1);
 				if (PasteMode == PM_PSU_RESTORE) {
 					if (filerConfirmExploitDelete(outPath, &newfile) < 0)
-						return -1;
+						return copyDiagFail(-1);
 					ret = delete (outPath, &newfile);  //Attempt recursive delete
 					if (ret < 0)
-						return -1;
+						return copyDiagFail(-1);
 					if (newdir(outPath, newfile.name) < 0)
-						return -1;
+						return copyDiagFail(-1);
 				} else if (!filerIsExploitProtectedPath(outPath, NULL) &&
 				           filerConfirmExploitModify(outPath, &newfile) < 0) {
-					return -1;
+					return copyDiagFail(-1);
 				}
 				drawMsg(LNG(Pasting));
 			} else if (ret < 0) {
@@ -593,7 +789,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 					printf("[VMC_COPY] mkdir failed outPath='%s' name='%s' out='%s' ret=%d recurse=%d\n",
 					       outPath, newfile.name, out, ret, recurses);
 #endif
-				return -1;  //return error for failure to create destination folder
+				return copyDiagFail(ret);  //preserve the destination filesystem error
 			}
 
 			//Set save folder attributes for __common partition when copying to HDD to make it show up in the HDD-OSD Browser
@@ -656,7 +852,10 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			                                  //It has to be done last, as timestamps would change when fixing files
 			                                  //--- This has been moved to a later clause.
 		} else {                              //Any other mode than a valid PM_PSU_RESTORE
+			filerCopyDiagStage("Listing source");
 			nfiles = getDir(in, files);
+			if (nfiles < 0) return copyDiagFail(nfiles);
+			ret = 0;  //An empty listing succeeds regardless of optional title lookup.
 			for (i = 0; i < nfiles; i++) {
 				if ((ret = copy(out, in, files[i], recurses + 1)) < 0) {
 #if FILEOP_TRACE
@@ -672,7 +871,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		if (ret < 0) {
 			if ((PM_flag[recurses + 1] == PM_PSU_BACKUP) && (PM_file[recurses + 1] >= 0))
 				genClose(PM_file[recurses + 1]);
-			return -1;
+			return copyDiagFail(-1);
 		}
 
 		//Here folder contents have been copied error-free, but we also need to copy
@@ -680,7 +879,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		//Lots of stuff need to be done here to make PSU operations work properly
 		if (PM_flag[recurses + 1] == PM_PSU_BACKUP) {  //PSU Backup mode folder paste closure
 			if (psu_backup_finalize_root_image(PM_file[recurses + 1], mcT_head_p, PSU_content) < 0)
-				return -1;
+				return copyDiagFail(-1);
 		} else if (PM_flag[recurses + 1] == PM_NORMAL) {             //Normal mode folder paste closure
 			if (!strncmp(out, "mc", 2)) {                            //Handle folder copied to MC
 				ensureMemoryCardPortAccessible(out[2] - '0');
@@ -753,7 +952,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			goto non_PSU_RESTORE_init;  //if not a PSU file, go do normal pasting
 
 		if (psu_restore_open_root_image(in, &file, &in_fd, &PSU_content) < 0)
-			return -1;
+			return copyDiagFail(-1);
 		PM_file[recurses + 1] = in_fd;           //File descriptor for PSU
 		PM_flag[recurses + 1] = PM_PSU_RESTORE;  //Mode flag for recursive entry
 		//The helper above transformed the PSU header into a folder-like FILEINFO entry
@@ -771,6 +970,7 @@ non_PSU_RESTORE_init:
 			if (!strncmp(in, "host:/", 6))
 				makeHostPath(in, in);
 #endif
+			filerCopyDiagStage("Opening source");
 			in_fd = genOpen(in, FIO_O_RDONLY);
 			if (in_fd < 0) {
 				ret = in_fd;
@@ -781,6 +981,7 @@ non_PSU_RESTORE_init:
 				goto copy_file_exit;
 			}
 			{
+				filerCopyDiagStage("Measuring source");
 				s64 in_size = genLseek(in_fd, 0, SEEK_END);
 				if (in_size < 0) {
 					ret = (int)in_size;
@@ -793,9 +994,14 @@ non_PSU_RESTORE_init:
 				}
 				size = (u64)in_size;
 			}
-			genLseek(in_fd, 0, SEEK_SET);
+			filerCopyDiagStage("Rewinding source");
+			if (genLseek(in_fd, 0, SEEK_SET) != 0) {
+				ret = -EIO;
+				goto copy_file_exit;
+			}
 		}
 
+	copy_diag.total = size;
 	//Here the input file has been opened, indicated by 'in_fd'
 	//It is now time to open the output file, indicated by 'out_fd'
 	//except in the case of a PSU backup, when we must add a header to PSU instead
@@ -806,17 +1012,27 @@ non_PSU_RESTORE_init:
 			goto copy_file_exit;
 		}
 	} else {            //Any other PasteMode than PM_PSU_BACKUP needs a new output file
+		int open_mode = FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL;
 #if defined(ETH) || defined(UDPFS)
 		if (!strncmp(out, "host:/", 6))
 			makeHostPath(out, out);
 #endif
 		genLimObjName(out, 0);                                //Limit dest file name
-		dummy = genRemove(out);                               //Remove old file if present
-#if FILEOP_TRACE
-		if (trace_vmc_copy)
-			printf("[VMC_COPY] remove existing out='%s' ret=%d recurse=%d\n", out, dummy, recurses);
+		if (!strcmp(in, out)) { ret = 0; goto copy_file_exit; }
+#ifdef ETH
+		/* The legacy host driver has no stat/rename operations. Retain its
+		 * direct-write behavior; sibling replacement requires those operations. */
+		if (!strncmp(out, "host:", 5))
+			open_mode = FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC;
+		else
 #endif
-		out_fd = genOpen(out, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT);  //Create new file
+		{
+			filerCopyDiagStage("Checking destination");
+			ret = copyPrepareTarget(out, replace_target, replace_backup);
+			if (ret < 0) goto copy_file_exit;
+		}
+		filerCopyDiagStage("Opening destination");
+		out_fd = genOpen(out, open_mode);
 		if (out_fd < 0) {
 			ret = out_fd;
 #if FILEOP_TRACE
@@ -827,6 +1043,8 @@ non_PSU_RESTORE_init:
 		}
 	}
 
+	original_size = size;
+	copy_diag.total = size;
 	//Here the output file has been opened, indicated by 'out_fd'
 
 	/* Determine the block size. Since LaunchELF is single-threaded,
@@ -856,6 +1074,12 @@ non_PSU_RESTORE_init:
 
 	if (size < (u64)buffSize)
 		buffSize = (int)size;
+	/* Bound returned I/O chunks on slow card media so the dashboard gets
+	 * regular opportunities to draw its scene and handle cancellation. */
+	if (DashIsActive() && buffSize > 16384 &&
+	    (!strncmp(in, "mc", 2) || !strncmp(out, "mc", 2) ||
+	     !strncmp(in, "vmc", 3) || !strncmp(out, "vmc", 3)))
+		buffSize = 16384;
 
 	if (buffSize == 0) {
 #if FILEOP_TRACE
@@ -868,6 +1092,7 @@ non_PSU_RESTORE_init:
 		goto copy_file_data_done;
 	}
 
+	filerCopyDiagStage("Allocating buffer");
 	buff = (char *)memalign(64, buffSize);  //Attempt buffer allocation
 	if (buff == NULL) {                     //if allocation fails
 		ret = -ENOMEM;
@@ -983,11 +1208,13 @@ non_PSU_RESTORE_init:
 		}
 		strcat(progress, tmp);
 
-		if (PasteProgress_f)  //if progress report was used earlier in this pasting
-			nonDialog(NULL);  //order cleanup for that screen area
-		nonDialog(progress);  //Make new progress report
-		PasteProgress_f = 1;  //and note that it was done for next time
-		drawMsg(file.name);
+		if (!DashFileProgress("Pasting file", file.name, size, original_size)) {
+			if (PasteProgress_f)
+				nonDialog(NULL);
+			nonDialog(progress);
+			PasteProgress_f = 1;
+			drawMsg(file.name);
+		}
 #ifdef DS34
 		if (readpad() && new_pad) {
 #else
@@ -998,13 +1225,19 @@ non_PSU_RESTORE_init:
 				out_fd = -1;
 				if (PM_flag[recurses] != PM_PSU_BACKUP)
 					genRemove(out);
+				filerCopyDiagStage("Copy cancelled");
 				ret = -1;             // flag generic error
 				goto copy_file_exit;  // go deal with it
 			}
 			}
 			copyBuff = (buffIndex == 0) ? buff : buff2;
-			bytesRead = genRead(in_fd, copyBuff, buffSize);
-			bytesWritten = (bytesRead == buffSize) ? genWrite(out_fd, copyBuff, buffSize) : 0;
+			filerCopyDiagStage("Reading source");
+			bytesRead = copyReadChunk(in_fd, copyBuff, buffSize);
+			bytesWritten = 0;
+			if (bytesRead == buffSize) {
+				filerCopyDiagStage("Writing destination");
+				bytesWritten = copyWriteChunk(out_fd, copyBuff, buffSize);
+			}
 #if FILEOP_TRACE
 			chunk_remaining_before = size;
 			if (trace_net_copy || trace_vmc_copy) {
@@ -1023,11 +1256,13 @@ non_PSU_RESTORE_init:
 				out_fd = -1;
 				if (PM_flag[recurses] != PM_PSU_BACKUP)
 					genRemove(out);
-				ret = -EIO;  // flag generic I/O error
+				ret = bytesRead < 0 ? bytesRead : (bytesWritten < 0 ? bytesWritten : -EIO);
 				goto copy_file_exit;
 			}
+			copy_hash = copyChecksum(copy_hash, copyBuff, buffSize);
 			size -= buffSize;
 			written_size += buffSize;
+			copy_diag.done = original_size - size;
 			if (buffCount > 1)
 				buffIndex ^= 1;
 #if FILEOP_TRACE
@@ -1047,6 +1282,7 @@ non_PSU_RESTORE_init:
 	}
 #endif
 copy_file_data_done:
+	DashFileProgress("Pasting file", file.name, 0, original_size);
 	//Here the file has been copied. without error, as indicated by 'ret' above
 	//but we also need to copy attributes and timestamps (as yet only for MC)
 	//For PSU backup output padding may be needed, but not output file closure
@@ -1060,6 +1296,7 @@ copy_file_data_done:
 	}
 
 	if (out_fd >= 0) {
+		filerCopyDiagStage("Closing destination");
 		dummy = genClose(out_fd);
 #if FILEOP_TRACE
 		if (trace_vmc_copy)
@@ -1075,6 +1312,15 @@ copy_file_data_done:
 				genRemove(out);
 			goto copy_file_exit;
 		}
+	}
+
+	if (replace_target[0]) {
+		filerCopyDiagStage("Verifying replacement");
+		ret = copyVerifyTarget(out, file.name, original_size, copy_hash);
+		if (ret < 0) { genRemove(out); goto copy_file_exit; }
+		filerCopyDiagStage("Publishing replacement");
+		ret = copyPublishTarget(out, replace_target, replace_backup);
+		if (ret < 0) goto copy_file_exit;
 	}
 
 	if (!strncmp(out, "mc", 2)) {                                 //Handle file copied to MC
@@ -1130,9 +1376,11 @@ copy_file_data_done:
 //The code below is also used for all errors in copying a file,
 //but those cases are distinguished by a negative value in 'ret'
 copy_file_exit:
+	copyDiagFail(ret);
 	free(buff2);
 	free(buff);
 copy_file_exit_mem_err:
+	copyDiagFail(ret);
 #if FILEOP_TRACE
 	if (trace_vmc_copy && ret < 0) {
 		printf("[VMC_COPY] exit-error ret=%d recurse=%d in='%s' out='%s' in_fd=%d out_fd=%d remaining=%llu chunks=%u\n",

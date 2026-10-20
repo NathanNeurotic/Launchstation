@@ -1411,18 +1411,21 @@ char *makeFslPath(char *dp, char *sp)
 //--------------------------------------------------------------
 #if defined(ETH) || defined(UDPFS)
 #ifdef UDPFS
-static void initUDPFS(void)
+static int initUDPFS(void)
 {
-	int fd;
+	int fd, ret;
 
-	load_udpfs();
-	host_error = 0;
+	ret = load_udpfs();
+	host_error = 1;
 	host_elflist = 0;
-	if ((fd = fileXioDopen("udpfs:/")) >= 0)
-		fileXioDclose(fd);
-	else
-		host_error = 1;
 	host_ready = 1;
+	if (!ret) return -ENODEV;
+	fd = fileXioDopen("udpfs:/");
+	if (fd < 0) return fd;
+	ret = fileXioDclose(fd);
+	if (ret < 0) return ret;
+	host_error = 0;
+	return 0;
 }
 #endif
 
@@ -1537,20 +1540,20 @@ int readHOST(const char *path, FILEINFO *info, int max)
 int readUDPFS(const char *path, FILEINFO *info, int max)
 {
 	iox_dirent_t dirent;
-	int fd, count = 0;
+	int fd, ret, close_ret, count = 0;
 
 	udpfs_dir_open_failed = 0;
-	initUDPFS();
-	if (host_error) {
+	ret = initUDPFS();
+	if (ret < 0) {
 		udpfs_dir_open_failed = 1;
-		return 0;
+		return ret;
 	}
 	if ((fd = fileXioDopen(path)) < 0) {
 		udpfs_dir_open_failed = 1;
-		return 0;
+		return fd;
 	}
 
-	while (fileXioDread(fd, &dirent) > 0) {
+	while ((ret = fileXioDread(fd, &dirent)) > 0) {
 		if (strcmp(dirent.name, ".") && strcmp(dirent.name, "..")) {
 			size_valid = 1;
 			time_valid = 1;
@@ -1571,7 +1574,10 @@ int readUDPFS(const char *path, FILEINFO *info, int max)
 				break;
 		}
 	}
-	fileXioDclose(fd);
+	close_ret = fileXioDclose(fd);
+	/* A partial listing cannot authorize a successful copy or move. */
+	if (ret < 0) return ret;
+	if (close_ret < 0) return close_ret;
 	strcpy(info[count].name, "\0");
 	return count;
 }
@@ -2035,7 +2041,9 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 		//-- Start case for normal folder with file/folder links --
 		strcpy(files[0].name, "..");
 		files[0].stats.AttrFile = sceMcFileAttrSubdir;
-		nfiles = getDir(path, &files[1]) + 1;
+		nfiles = getDir(path, &files[1]);
+		if (nfiles < 0) nfiles = 0;
+		nfiles++;
 		if (strcmp(ext, "*")) {
 			for (i = j = 1; i < nfiles; i++) {
 				if (files[i].stats.AttrFile & sceMcFileAttrSubdir)

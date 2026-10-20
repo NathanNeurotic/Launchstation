@@ -144,7 +144,8 @@ char *dashLoadTextFile(const char *path, int max_size, int *out_len)
 int dashWriteFile(const char *path, const void *data, int size)
 {
 	char fixed[MAX_PATH];
-	int fd, wr;
+	unsigned char verify[1024];
+	int fd, wr, closed, offset = 0;
 
 	if (genFixPath(path, fixed) < 0)
 		return -1;
@@ -153,8 +154,20 @@ int dashWriteFile(const char *path, const void *data, int size)
 	if (fd < 0)
 		return -1;
 	wr = genWrite(fd, (void *)data, size);
-	genClose(fd);
-	return (wr == size) ? 0 : -1;
+	closed = genClose(fd);
+	if (wr != size || closed < 0) return -1;
+	fd = genOpen(fixed, FIO_O_RDONLY);
+	if (fd < 0) return -1;
+	while (offset < size) {
+		int amount = size - offset;
+		if (amount > (int)sizeof(verify)) amount = sizeof(verify);
+		wr = genRead(fd, verify, amount);
+		if (wr <= 0 || wr > amount || memcmp(verify, (const unsigned char *)data + offset, wr)) break;
+		offset += wr;
+	}
+	wr = offset == size ? genRead(fd, verify, 1) : -1;
+	closed = genClose(fd);
+	return offset == size && wr == 0 && closed >= 0 ? 0 : -1;
 }
 
 //--------------------------------------------------------------
@@ -593,6 +606,7 @@ static void submitSave(int kind)
 	if (dashStoreBuildPath(j->path, sizeof(j->path), files[kind]) < 0) {
 		free(j);
 		save_dirty[kind] = 0;
+		save_failed[kind] = 1;
 		return;
 	}
 	if (kind == SAVE_SETTINGS)

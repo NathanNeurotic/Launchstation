@@ -173,7 +173,7 @@ void dashLibDeviceLabel(const char *path, char *out, int out_size)
 	else if (!strncmp(path, "mc:", 3))
 		dashStrCopy(out, "Memory Card", out_size);
 	else if (!strncmp(path, "mass", 4) || !strncmp(path, "usb", 3))
-		dashStrCopy(out, "USB Storage", out_size);
+		dashStrCopy(out, "MASS Storage", out_size);
 	else if (!strncmp(path, "hdd", 3)) {
 		char part[40];
 		const char *p = strchr(path, '/');

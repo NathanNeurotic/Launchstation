@@ -39,6 +39,31 @@ def changes_from_log(log, repo):
     return changes
 
 
+def rolling_changelog(text):
+    """Use the maintained public summary, stopping before older releases."""
+    match = re.search(r"^## Rolling\s*\n(.*?)(?=^## |\Z)", text, re.M | re.S)
+    if not match:
+        return []
+    return [line.strip() for line in match.group(1).splitlines()
+            if line.lstrip().startswith("- ")]
+
+
+def revision_changelog(revision):
+    summary = subprocess.run(["git", "show", f"{revision}:CHANGELOG.md"],
+                             capture_output=True, text=True)
+    return rolling_changelog(summary.stdout) if summary.returncode == 0 else []
+
+
+def release_changes(repo, revision, previous, log):
+    current = revision_changelog(revision)
+    # Keep useful notes on reruns, but never hide new commits behind an old
+    # unchanged Rolling section carried over from the previous release.
+    if current and (not previous or revision == previous or
+                    current != revision_changelog(previous)):
+        return current
+    return changes_from_log(log, repo)
+
+
 def render(repo, revision, previous, run_id, changes, digests):
     base = f"https://github.com/{repo}"
     compare = f"{base}/compare/{previous}...{revision}" if previous else f"{base}/commits/{revision}"
@@ -96,6 +121,8 @@ def main():
     history = [f"{args.previous}..{args.revision}"] if args.previous else ["-n", "10", args.revision]
     log = subprocess.check_output(
         ["git", "log", "--first-parent", "--format=%H%x00%B%x1e", *history], encoding="utf-8")
+    # Read the summary from the exact built revision, never a dirty worktree.
+    changes = release_changes(args.repo, args.revision, args.previous, log)
     digests = {}
     for name in ASSETS:
         asset = args.assets_dir / name
@@ -104,7 +131,7 @@ def main():
         with asset.open("rb") as stream:
             digests[name] = hashlib.file_digest(stream, "sha256").hexdigest()
     args.output.write_text(render(args.repo, args.revision, args.previous, args.run_id,
-                                  changes_from_log(log, args.repo), digests), encoding="utf-8")
+                                  changes, digests), encoding="utf-8")
 
 
 if __name__ == "__main__":

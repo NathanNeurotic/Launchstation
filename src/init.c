@@ -2120,8 +2120,7 @@ int loadPcCardCfModules(void)
     if (pccf_loaded) return 1;
     if (pccf_bus_owned || boot_safe_mode || !isPcCardCfEligible() || have_ps2dev9 || ps2dev9_loaded)
         return 0;
-    /* Reserve before registering poweroff: ordinary setupPowerOff loads
-       DEV9, which must never happen during a CF probe. */
+    /* Reserve the shared bus before starting any dependency of a CF probe. */
     pccf_bus_owned = 1;
     ensureCoreIoStackReady();
     if (!loadBdmCoreModules()) { pccf_bus_owned = 0; return 0; }
@@ -2269,19 +2268,26 @@ static void poweroffHandler(int i)
 //---------------------------------------------------------------------------
 void setupPowerOff(void)
 {
-	int ret, ID __attribute__((unused));
+	int ret = -1, ID __attribute__((unused));
 
 	if (!done_setupPowerOff) {
 		if (!have_poweroff) {
 			ID = SifExecModuleBuffer(poweroff_irx, size_poweroff_irx, 0, NULL, &ret);
 			DPRINTF(" [POWEROFF]: ID=%d, ret=%d\n", ID, ret);
+			if (ID < 0 || ret < 0)
+				return;
 			have_poweroff = 1;
 		}
-		poweroffInit();
+		if (poweroffInit() < 0)
+			return;
 		poweroffSetCallback((void *)poweroffHandler, NULL);
-		if (!pcCardCfOwnsBus()) load_ps2dev9();
 		done_setupPowerOff = 1;
 	}
+}
+
+int isPowerOffReady(void)
+{
+	return done_setupPowerOff;
 }
 //------------------------------
 //endfunc setupPowerOff

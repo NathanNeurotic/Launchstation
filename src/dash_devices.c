@@ -424,6 +424,9 @@ static int probeRoot(const char *path, int wait_ms)
 {
 	u64 deadline = Timer() + wait_ms;
 	while (1) {
+		u64 retry_at;
+		/* Keep the 100 ms mount-check cadence, while presenting the scene
+		 * between returned calls rather than sleeping for six frames. */
 		int dd = fileXioDopen(path);
 		if (dd >= 0) {
 			fileXioDclose(dd);
@@ -431,12 +434,15 @@ static int probeRoot(const char *path, int wait_ms)
 		}
 		if (Timer() >= deadline)
 			return 0;
-		/* BDM mounts can arrive after the driver returns. Keep drawing the
-		 * loading scene at a modest rate while yielding to the IOP so device
-		 * startup never looks like a frozen dashboard. */
-		if (dashLoadingActive())
-			dashLoadingFrame("Waiting for storage...", 0, 0);
-		DelayThread(100000);
+		retry_at = Timer() + 100;
+		if (retry_at > deadline) retry_at = deadline;
+		do {
+			if (dashLoadingActive()) {
+				dashLoadingFrame("Waiting for storage...", 0, 0);
+				DelayThread(1000); /* Present already waits for the frame. */
+			} else
+				DelayThread(16000);
+		} while (Timer() < retry_at);
 	}
 }
 
