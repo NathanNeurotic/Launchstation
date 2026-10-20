@@ -1069,6 +1069,7 @@ void dashLoadingSetCancel(int cancelable)
 static void loadingProgress(const char *status, int done, int total)
 {
 	int quiet = isStartupDriverStatusQuiet();
+	loading_remaining[0] = '\0';
 
 	/* Device retry loops can update the overlay directly, bypassing drawMsg.
 	 * Keep branded startup progress, but hide its driver stages and counts. */
@@ -1122,6 +1123,11 @@ int DashFileProgress(const char *action, const char *name, u64 remaining, u64 to
 void DashFileDeleteProgress(const char *name)
 {
 	if (!DashIsActive() || dashWorkerOnThread() || !loading_active) return;
+	if (loading_remaining[0]) {
+		loading_done = loading_total = 0;
+		loading_fraction = 0.0f;
+	}
+	loading_remaining[0] = '\0';
 	dashStrCopy(loading_title, "Deleting file", sizeof(loading_title));
 	dashStrCopy(loading_status, name, sizeof(loading_status));
 	if (Timer() - loading_last_draw >= 16) loadingDraw();

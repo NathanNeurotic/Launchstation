@@ -149,6 +149,17 @@ int prepareTransferDeviceStacks(const char *src_path, const char *dst_path)
 	    src_storage != dst_storage)
 		return TRANSFER_STACK_INCOMPATIBLE;
 
+#ifdef MX4SIO
+	/* Normal slot-2 access can retire the MX4SIO IOP session. Do this
+	 * before starting either transfer device or opening any file handle;
+	 * a late mc1: stat/open would otherwise invalidate an open UDPFS/USB
+	 * source. The incompatible MX4SIO <-> mc1 pair was rejected above. */
+	if (isMc1Path(src_path) || isMc1Path(dst_path)) {
+		ensureMemoryCardPortAccessible(1);
+		if (mx4sio_driver_running || isPathDeviceStackLoaded("mx4sio:/"))
+			return TRANSFER_STACK_LOAD_FAILED;
+	}
+#endif
 	if (!ensurePathDeviceStackReady(src_path))
 		return TRANSFER_STACK_LOAD_FAILED;
 	if (!ensurePathDeviceStackReady(dst_path))

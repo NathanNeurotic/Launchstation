@@ -39,5 +39,7 @@ actions=(root/'src/main_actions.c').read_text();a=actions.index('} else if (!str
 assert actions[a:b].index('if (!isPowerOffReady())')<actions[a:b].index('closeAllAndPoweroff();')
 with tempfile.TemporaryDirectory(prefix='poweroff-init-') as folder:
  p=Path(folder);(p/'test.c').write_text(code)
- subprocess.run([shutil.which('gcc'),'-std=c99','-Wall','-Wextra','-Werror',str(p/'test.c'),'-o',str(p/'test')],check=True)
+ gcc=shutil.which('gcc')
+ if not gcc: raise SystemExit('Host gcc required')
+ subprocess.run([gcc,'-std=c99','-Wall','-Wextra','-Werror',str(p/'test.c'),'-o',str(p/'test')],check=True)
  subprocess.run([str(p/'test')],check=True)

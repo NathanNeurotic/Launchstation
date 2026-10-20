@@ -44,6 +44,9 @@ int main(void){
  active=0;assert(!DashFileProgress("Pasting file","classic",0,0));active=1;
  tick+=20;DashFileDeleteProgress("nested.bin");
  assert(!strcmp(loading_title,"Deleting file")&&!strcmp(loading_status,"nested.bin"));
+ assert(!loading_remaining[0]&&!loading_total&&!loading_done&&loading_fraction==0);
+ loading_total=10;loading_done=3;DashFileDeleteProgress("another.bin");
+ assert(loading_total==10&&loading_done==3);
  puts("PASS: MB units, 64-bit sizes, bounded progress, throttling, per-file reset and thread ownership");
 }
 '''

@@ -161,6 +161,33 @@ static int isHddCommonParty(const char *party)
 	return (!strncmp(party, "hdd", 3) && party[3] >= '0' && party[3] <= '9' && !strcmp(party + 4, ":__common"));
 }
 
+/* File drivers may return a positive short transfer. Complete only the
+ * remaining bytes, never replay already-consumed data or retry an error.
+ * A zero-byte result before the measured length is exhausted is failure. */
+static int copyReadChunk(int fd, void *buffer, int size)
+{
+	int done = 0;
+	while (done < size) {
+		int count = genRead(fd, (char *)buffer + done, size - done);
+		if (count < 0) return count;
+		if (count == 0 || count > size - done) return -EIO;
+		done += count;
+	}
+	return done;
+}
+
+static int copyWriteChunk(int fd, void *buffer, int size)
+{
+	int done = 0;
+	while (done < size) {
+		int count = genWrite(fd, (char *)buffer + done, size - done);
+		if (count < 0) return count;
+		if (count == 0 || count > size - done) return -EIO;
+		done += count;
+	}
+	return done;
+}
+
 static int calcTransferSpeed(u64 bytes, int millis)
 {
 	u64 bytes_per_second;
@@ -515,7 +542,7 @@ int copy(char *outPath, const char *inPath, FILEINFO file, int recurses)
 	trace_vmc_copy = (!strncmp(inPath, "vmc", 3) || !strncmp(outPath, "vmc", 3));
 #endif
 
-	if (!ensurePathDeviceStackReady(inPath) || !ensurePathDeviceStackReady(outPath)) {
+	if (prepareTransferDeviceStacks(inPath, outPath) != TRANSFER_STACK_READY) {
 #if FILEOP_TRACE
 		if (trace_vmc_copy)
 			printf("[VMC_COPY] stack-ready failed inPath='%s' outPath='%s' name='%s' recurse=%d\n",
@@ -908,7 +935,10 @@ non_PSU_RESTORE_init:
 				}
 				size = (u64)in_size;
 			}
-			genLseek(in_fd, 0, SEEK_SET);
+			if (genLseek(in_fd, 0, SEEK_SET) != 0) {
+				ret = -EIO;
+				goto copy_file_exit;
+			}
 		}
 
 	//Here the input file has been opened, indicated by 'in_fd'
@@ -1125,8 +1155,8 @@ non_PSU_RESTORE_init:
 			}
 			}
 			copyBuff = (buffIndex == 0) ? buff : buff2;
-			bytesRead = genRead(in_fd, copyBuff, buffSize);
-			bytesWritten = (bytesRead == buffSize) ? genWrite(out_fd, copyBuff, buffSize) : 0;
+			bytesRead = copyReadChunk(in_fd, copyBuff, buffSize);
+			bytesWritten = (bytesRead == buffSize) ? copyWriteChunk(out_fd, copyBuff, buffSize) : 0;
 #if FILEOP_TRACE
 			chunk_remaining_before = size;
 			if (trace_net_copy || trace_vmc_copy) {
@@ -1145,7 +1175,7 @@ non_PSU_RESTORE_init:
 				out_fd = -1;
 				if (PM_flag[recurses] != PM_PSU_BACKUP)
 					genRemove(out);
-				ret = -EIO;  // flag generic I/O error
+				ret = bytesRead < 0 ? bytesRead : (bytesWritten < 0 ? bytesWritten : -EIO);
 				goto copy_file_exit;
 			}
 			copy_hash = copyChecksum(copy_hash, copyBuff, buffSize);

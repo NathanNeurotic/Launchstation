@@ -62,6 +62,20 @@ with tempfile.TemporaryDirectory(prefix="release-notes-") as folder:
     (path / notes.ASSETS[0]).unlink()
     assert subprocess.run(args, cwd=root, capture_output=True).returncode != 0
 
+# Unchanged summaries cannot hide subsequent commits; same-SHA reruns keep them.
+original_reader = notes.revision_changelog
+try:
+    notes.revision_changelog = lambda sha: ["- Maintained summary"]
+    assert notes.release_changes(repo, revision, revision, "") == ["- Maintained summary"]
+    assert notes.release_changes(repo, revision, previous, log) == changes
+    notes.revision_changelog = lambda sha: ["- New summary"] if sha == revision else ["- Old summary"]
+    assert notes.release_changes(repo, revision, previous, log) == ["- New summary"]
+    assert notes.release_changes(repo, revision, "", log) == ["- New summary"]
+    notes.revision_changelog = lambda sha: []
+    assert notes.release_changes(repo, revision, previous, log) == changes
+finally:
+    notes.revision_changelog = original_reader
+
 workflow = (root / ".github/workflows/compile.yml").read_text()
 assert "python3 scripts/release_notes.py" in workflow
 assert 'gh pr list' not in workflow and "git log --format='- %s (%h)'" not in workflow

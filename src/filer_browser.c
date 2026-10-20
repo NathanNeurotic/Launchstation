@@ -2186,7 +2186,7 @@ finished:
 	if (ret < 0) {
 		printf("[PASTE] failed ret=%d src='%s' dst='%s' mode=%d cut=%d\n",
 		       ret, clipPath, path, PasteMode, browser_cut);
-		strcpy(mess, LNG(Paste_Failed));
+		snprintf(mess, MAX_PATH, "%s (error %d)", LNG(Paste_Failed), ret);
 		browser_pushed = FALSE;
 	} else {
 		if (browser_cut)

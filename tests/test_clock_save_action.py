@@ -23,14 +23,15 @@ code=r'''
 #define DI_WARNING 1
 #define DI_CHECK 2
 static struct { char software_clock[24]; } dashCfg;
-static int accepted=1,commits,updates,wait_ok=1,pending,failed,last_icon;
+static int accepted=1,commits,updates,wait_ok=1,pending,failed,last_icon,unrelated_failed;
 static void dashStrCopy(char *a,const char *b,int n){snprintf(a,n,"%s",b);}
 static int dashModalConfirm(const char *t,const char *b,const char *a,int x){assert(strstr(t,"settings")&&b&&a&&!x);return accepted;}
 static int menuTitleUpdateAsync(int force){assert(force);updates++;return 1;}
 static void settingsCommit(void){commits++;}
 static int dashStoreFlushWait(const char *s){assert(!strcmp(s,"Saving clock"));return wait_ok;}
 static int dashStoreSettingsPending(void){return pending;}
-static int failedSaves(void){return failed;}
+static int dashStoreSettingsFailed(void){return failed;}
+static int __attribute__((unused)) failedSaves(void){return failed||unrelated_failed;}
 static void dashModalMessage(int icon,const char *title,const char *body,const char *path){assert(title&&body&&!path);last_icon=icon;}
 static int corrupt,fail_write_close,fail_read_close,short_write,read_error,opens,open_error;
 static int genFixPath(const char *p,char *out){strcpy(out,p);return 0;}
@@ -55,6 +56,8 @@ int main(void){
  wait_ok=0;assert(!settingsSaveSoftwareClock("2026-10-19 10:00:20")&&last_icon==DI_WARNING);wait_ok=1;
  pending=1;assert(!settingsSaveSoftwareClock("2026-10-19 10:00:30")&&last_icon==DI_WARNING);pending=0;
  failed=1;assert(!settingsSaveSoftwareClock("2026-10-19 10:00:40")&&last_icon==DI_WARNING);
+ failed=0;unrelated_failed=1;
+ assert(settingsSaveSoftwareClock("2026-10-19 10:00:50")&&last_icon==DI_CHECK);
  const char data[]="Dash_SoftwareClock = 2026-10-19 10:00:10\r\n";
  for(int scenario=0;scenario<8;scenario++){
   opens=corrupt=short_write=read_error=fail_write_close=fail_read_close=open_error=0;

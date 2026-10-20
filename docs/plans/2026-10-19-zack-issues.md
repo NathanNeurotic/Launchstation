@@ -63,3 +63,40 @@ files extracted from a PSU use the replacement protection too.
    with real MMCE/MX4SIO hardware; cross-storage reliability in #175 is unproven.
 
 No issues are automatically closed and no merge or release is requested by this PR.
+
+## October 20 continuation - UDPFS-to-MC report and review
+
+User reports that the newest Actions artifact acts as though a UDPFS source file
+is no longer available at paste time. Destination confirmed as **mc0: / slot 1**.
+The exact tested SHA, returned error and source/server trace are not available.
+Do not call this report reproduced or fixed based on the following host fixtures.
+
+- The production copy loop rejected positive short reads/writes. It now consumes
+  the remaining bytes without replaying completed I/O, stops on zero/error/invalid
+  counts, preserves negative driver errors, and checks the rewind after sizing.
+  Fault injection executes the production dispatch over 131081 bytes with full,
+  4096-byte, 17-byte and single-byte transfers, plus timeout/space/EOF failures.
+  The old PR head fails the short-read case; corrected production dispatch passes.
+- A separate preflight defect affects **slot 2 after MX4SIO**, not the user's
+  confirmed mc0 case. Previously the late destination stat/open could reset the
+  IOP after the source was opened. Preflight now releases that stack before
+  loading either transfer device; copy uses that same policy before opening.
+  Refused resets and MX4SIO-to-mc1 transfers fail closed. Tests cover UDPFS, USB
+  and mc0 in both directions. Old preflight fails; corrected preflight passes.
+- Paste failure text includes the numeric error, so a subsequent artifact retest
+  can distinguish missing source, I/O, permission and space failures. Existing
+  serial logs already record source, destination, item and returned code.
+- CodeRabbit follow-up removes a pre-existing startup changelog item, falls back
+  to commit changes when a new revision has unchanged Rolling notes, scopes Clock
+  not saved to dashboard persistence failure, and removes stale transfer-only
+  size/bar state on copy-to-delete transitions. A missing compiler is reported
+  explicitly in the power-off harness.
+
+The upstream UDPFS read implementation can return completed byte progress before
+an error in a later internal request. This supports handling positive short reads,
+but does not identify the behavior of the exact bundled binary/server pair here.
+Reference: https://github.com/ps2max32/neutrino/blob/master/iop/udpfs/src/udpfs_core.c
+
+No hardware execution was performed. Retest fresh and replacement UDPFS copies
+to mc0 and mc1, including nested folders and a source larger than one chunk. Keep
+all Zack issues open until he confirms acceptance. Stock sounds remain deferred.

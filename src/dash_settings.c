@@ -1958,7 +1958,7 @@ static int settingsSaveSoftwareClock(const char *timestamp)
 	dashStrCopy(dashCfg.software_clock, timestamp, sizeof(dashCfg.software_clock));
 	menuTitleUpdateAsync(1);
 	settingsCommit();
-	if (!dashStoreFlushWait("Saving clock") || dashStoreSettingsPending() || failedSaves()) {
+	if (!dashStoreFlushWait("Saving clock") || dashStoreSettingsPending() || dashStoreSettingsFailed()) {
 		dashModalMessage(DI_WARNING, "Clock not saved",
 		                 "The clock is running, but its time could not be saved. Keep the storage connected and retry Save changes before restarting.", NULL);
 		return 0;
