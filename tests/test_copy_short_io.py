@@ -28,6 +28,8 @@ code = r'''
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+static struct { unsigned long long done; } copy_diag;
+static void __attribute__((unused)) filerCopyDiagStage(const char *s) { (void)s; }
 static unsigned char input[131081], output[131081], buffer[16384];
 static int pos_in,pos_out,read_cap,write_cap,read_calls,write_calls;
 static int read_fault,write_fault,fault_value;
@@ -46,6 +48,7 @@ static int genWrite(int fd,void *p,int size) {
  memcpy(output+pos_out,p,count);pos_out+=count;return count;
 }
 static void reset(void) {
+ copy_diag.done=0;
  pos_in=pos_out=read_calls=write_calls=read_fault=write_fault=0;
  read_cap=write_cap=sizeof(buffer);memset(output,0xA5,sizeof(output));
 }

@@ -5,6 +5,7 @@
 #include "dash.h"
 #include "gui_texteditor.h"
 #include "filer_actions.h"
+#include "filer_copy.h"
 #include "filer_shared.h"
 #include "gui_hdd0_format.h"
 #include "init.h"
@@ -2122,6 +2123,7 @@ static void subfunc_Paste(char *mess, char *path)
 	char tmp[MAX_PATH], tmp1[MAX_PATH];
 	int i, ret = -1, trace_vmc_paste;
 
+	filerCopyDiagBegin(clipPath, path);
 	written_size = 0;
 	PasteTime = Timer();  //Note initial pasting time
 	if (!strcmp(path, clipPath))
@@ -2139,6 +2141,7 @@ static void subfunc_Paste(char *mess, char *path)
 		goto finished;
 	}
 	drawMsg(LNG(Pasting));
+	filerCopyDiagStage("Checking source");
 	if (waitForClipboardSourceDevice() < 0) {
 		printf("[PASTE] source device unavailable after IOP reset src='%s' dst='%s'\n", clipPath, path);
 		ret = -1;
@@ -2169,11 +2172,13 @@ static void subfunc_Paste(char *mess, char *path)
 		}
 	}
 	if ((ret >= 0) && browser_cut) {
+		filerCopyDiagBegin(clipPath, path);
 		for (i = 0; i < nclipFiles; i++) {
 			if (filerConfirmExploitDelete(clipPath, &clipFiles[i]) < 0) {
 				ret = -1;
 				break;
 			}
+			filerCopyDiagStage("Deleting move source");
 			ret = delete (clipPath, &clipFiles[i]);
 			if (ret < 0)
 				break;
@@ -2186,7 +2191,7 @@ finished:
 	if (ret < 0) {
 		printf("[PASTE] failed ret=%d src='%s' dst='%s' mode=%d cut=%d\n",
 		       ret, clipPath, path, PasteMode, browser_cut);
-		snprintf(mess, MAX_PATH, "%s (error %d)", LNG(Paste_Failed), ret);
+		filerCopyDiagFormat(mess, MAX_PATH, ret);
 		browser_pushed = FALSE;
 	} else {
 		if (browser_cut)

@@ -32,6 +32,8 @@ jobs:
           python3 tests/test_pccf_fs.py
           python3 tests/test_paste_replace.py
           python3 tests/test_copy_short_io.py
+          python3 tests/test_copy_pipeline.py
+          python3 tests/test_copy_test_pack.py
           python3 tests/test_transfer_stack_preflight.py
           python3 tests/test_transfer_progress.py
           python3 tests/test_clock_save_action.py
@@ -126,6 +128,7 @@ jobs:
           python3 tests/test_mmce_status_failures.py
           python3 tests/test_self_update.py
           python3 tests/test_app_packages.py
+          python3 scripts/copy_test_pack.py --output test-fixtures/LS-COPY-TEST.zip
           python3 tests/test_rolling_release_workflow.py
           python3 tests/test_release_notes.py
           python3 tests/test_update_sidecar_transaction.py
@@ -255,6 +258,14 @@ jobs:
             --output artifacts --revision "${GITHUB_SHA}" \
             --epoch "$(git show -s --format=%ct HEAD)"
           python3 tests/test_app_packages.py
+          python3 scripts/copy_test_pack.py --output test-fixtures/LS-COPY-TEST.zip
+
+      - name: Upload copy-test fixtures
+        uses: actions/upload-artifact@v4
+        with:
+          name: Launchstation-copy-test
+          path: test-fixtures/LS-COPY-TEST.zip
+          retention-days: 7
 
       - name: Show artifact hashes
         run: sha256sum artifacts/*

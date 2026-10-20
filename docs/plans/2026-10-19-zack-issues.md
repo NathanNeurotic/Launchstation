@@ -100,3 +100,38 @@ Reference: https://github.com/ps2max32/neutrino/blob/master/iop/udpfs/src/udpfs_
 No hardware execution was performed. Retest fresh and replacement UDPFS copies
 to mc0 and mc1, including nested folders and a source larger than one chunk. Keep
 all Zack issues open until he confirms acceptance. Stock sounds remain deferred.
+
+## Compact test preparation (October 20)
+
+- Paste failures now show stage, a bounded filename, source/destination devices,
+  error, written/total bytes, IOP generation before/after and build ID. This uses
+  one static record (96 bytes in the PS2 ELF; host budget assertion <=128 bytes), no history, allocation,
+  worker, or diagnostic storage/network I/O. The dashboard displays it as the
+  error body so a photograph contains the useful fields. Full paths remain in
+  the existing serial diagnostics. Move-source deletion clears copy-only context.
+- `test_copy_pipeline.py` compiles the intact production `copy`, `subfunc_Paste`,
+  clipboard source wait, replacement and diagnostic functions with POSIX file
+  adapters. It covers new/repeated replacement copies to both MC slots and USB,
+  source disappearance, rewind/read/write/close errors, failed source checks,
+  cancellation, recursive folders and preservation of the old destination.
+  It does not run actual UDPFS or libmc. A failed source-directory listing now
+  propagates its error rather than reporting an empty-folder copy as successful;
+  HDD-only partition buffers are initialized before ordinary folder processing.
+- `scripts/copy_test_pack.py --output LS-COPY-TEST.zip` creates nine deterministic
+  data fixtures (246018 bytes total), boundary lengths around 16/64 KiB, a nested
+  child and SHA256SUMS. It does not include an ELF or alter app packages. Verify
+  returned files using `--verify <returned LS-COPY-TEST folder>`; expected hashes
+  come from the generator rather than trusting the returned manifest. CI uploads
+  this ZIP separately as `Launchstation-copy-test`.
+
+Console pass: UDPFS -> mc0 new files; repeat over existing files twice; compare
+USB -> mc0 and UDPFS -> USB with the same fixtures. Copy results back to a new PC
+folder and verify. Photograph any failure including build/stage/error. Inspect
+progress UI while these operations run. Test an ELF separately using the app ZIP,
+then slot 2 and storage transitions if available. The reported UDPFS -> mc0
+failure is still unconfirmed; these additions make the next session diagnostic.
+
+Local size comparison against `72be137`: the packed standard ELF grows by 768
+bytes and DS34 by 976 bytes. Host fixture code and the generator are not linked
+into the PS2 program. Full-copy cases include destination stat/open refusal,
+premature EOF, failed measurement, corrupt verification and publish failure.
