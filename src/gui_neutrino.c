@@ -2,6 +2,9 @@
 #include "gui_neutrino.h"
 #include "dash.h"
 #include "dash_internal.h"
+#include "neutrino_gameid.h"
+#include "init.h"
+#include <limits.h>
 
 static const struct {
 	int mode;
@@ -85,6 +88,178 @@ int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *options, NEUTRINO_OPT
 	return argc;
 }
 
+
+/* Versioned two-slot Neutrino profiles. A save overwrites only the older (or
+ * invalid) slot; the newest verified slot remains intact if an I/O write is
+ * interrupted. No game image, VMC, or LAUNCHELF.CNF is ever modified. */
+static char active_profile_gameid[NEUTRINO_GAME_ID_SIZE];
+
+static int profileGameIdValid(const char *id)
+{
+	int i;
+
+	if (id == NULL || strlen(id) != NEUTRINO_GAME_ID_SIZE - 1 || id[4] != '_' || id[8] != '.')
+		return 0;
+	for (i = 0; i < 4; i++)
+		if (id[i] < 'A' || id[i] > 'Z')
+			return 0;
+	for (i = 5; i < NEUTRINO_GAME_ID_SIZE - 1; i++)
+		if (i != 8 && (id[i] < '0' || id[i] > '9'))
+			return 0;
+	return 1;
+}
+
+static unsigned int profileChecksum(const char *buf, int size)
+{
+	unsigned int hash = 2166136261u;
+	int i;
+
+	for (i = 0; i < size; i++) {
+		hash ^= (unsigned char)buf[i];
+		hash *= 16777619u;
+	}
+	return hash;
+}
+
+static int profilePath(const char *id, int slot, char *out, int size)
+{
+	char filename[40];
+
+	if (!profileGameIdValid(id) || (slot != 0 && slot != 1))
+		return 0;
+	snprintf(filename, sizeof(filename), "NEUT-%s-%c.CNF", id, slot ? 'B' : 'A');
+	return dashStoreBuildPath(out, size, filename) == 0;
+}
+
+/* A profile lookup must never switch the IOP stack underneath the ISO.
+ * In particular MC access while MMCE/MX4SIO owns SIO2 is not assumed safe.
+ * Hardware validation may later permit more specific per-slot exceptions. */
+static int profileStorageSafe(void)
+{
+	const char *dir = dashStoreDir();
+
+	if (dir == NULL || dir[0] == '\0' || !isPathDeviceStackLoaded(dir))
+		return 0;
+	if (!strncmp(dir, "mc", 2)) {
+#ifdef MX4SIO
+		if (mx4sio_driver_running)
+			return 0;
+#endif
+#ifdef MMCE
+		if (isPathDeviceStackLoaded("mmce0:/"))
+			return 0;
+#endif
+	}
+	return 1;
+}
+
+static int profileOptionsValid(const NEUTRINO_LAUNCH_OPTIONS *options)
+{
+	NEUTRINO_OPTION_ARGS encoded;
+
+	if (options->debug_colors < 0 || options->debug_colors > 1 ||
+	    options->logo < 0 || options->logo > 1)
+		return 0;
+	return buildNeutrinoOptionArgs(options, &encoded) >= 0;
+}
+
+static int profileReadSlot(const char *id, int slot, NEUTRINO_LAUNCH_OPTIONS *out, unsigned int *revision)
+{
+	char path[MAX_PATH], parsed_id[NEUTRINO_GAME_ID_SIZE];
+	char *text, *checksum_separator;
+	unsigned int parsed_rev, compat, checksum;
+	NEUTRINO_LAUNCH_OPTIONS parsed;
+	int len, consumed = 0, payload_len, ok = 0;
+
+	if (!profileStorageSafe() || !profilePath(id, slot, path, sizeof(path)))
+		return 0;
+	text = dashLoadTextFile(path, 128, &len);
+	if (text == NULL)
+		return 0;
+	if (len <= 0 || (int)strlen(text) != len)
+		goto done;
+	memset(&parsed, 0, sizeof(parsed));
+	if (sscanf(text, "NTP1|%11[^|]|%8x|%8x|%1d|%1d|%1d|%1d|%8x%n",
+	           parsed_id, &parsed_rev, &compat, &parsed.video_mode,
+	           &parsed.video_compatibility, &parsed.debug_colors,
+	           &parsed.logo, &checksum, &consumed) != 8)
+		goto done;
+	if (consumed <= 0 || text[consumed] != '\n' || text[consumed + 1] != '\0' ||
+	    strcmp(parsed_id, id) || parsed_rev == 0)
+		goto done;
+	checksum_separator = strrchr(text, '|');
+	if (checksum_separator == NULL)
+		goto done;
+	payload_len = (int)(checksum_separator - text);
+	if (payload_len < 1 || payload_len >= len ||
+	    profileChecksum(text, payload_len) != checksum)
+		goto done;
+	parsed.game_compatibility = compat;
+	if (!profileOptionsValid(&parsed))
+		goto done;
+	*out = parsed;
+	*revision = parsed_rev;
+	ok = 1;
+done:
+	free(text);
+	return ok;
+}
+
+static int profileReadLatest(const char *id, NEUTRINO_LAUNCH_OPTIONS *out,
+                             unsigned int *revision, int *slot)
+{
+	NEUTRINO_LAUNCH_OPTIONS a, b;
+	unsigned int a_rev = 0, b_rev = 0;
+	int have_a, have_b;
+
+	have_a = profileReadSlot(id, 0, &a, &a_rev);
+	have_b = profileReadSlot(id, 1, &b, &b_rev);
+	if (!have_a && !have_b)
+		return 0;
+	if (have_b && (!have_a || b_rev > a_rev)) {
+		*out = b;
+		*revision = b_rev;
+		*slot = 1;
+	} else {
+		*out = a;
+		*revision = a_rev;
+		*slot = 0;
+	}
+	return 1;
+}
+
+static int profileSave(const char *id, const NEUTRINO_LAUNCH_OPTIONS *options)
+{
+	NEUTRINO_LAUNCH_OPTIONS previous, read_back;
+	unsigned int last_rev = 0, verify_rev = 0, next_rev;
+	int last_slot = 1, target, n, len, slot_read = -1;
+	char path[MAX_PATH], payload[112], record[128];
+
+	if (!profileGameIdValid(id) || !profileOptionsValid(options) ||
+	    !profileStorageSafe() || !dashWorkerAwaitAll("Finishing up"))
+		return 0;
+	(void)profileReadLatest(id, &previous, &last_rev, &last_slot);
+	if (last_rev == UINT_MAX)
+		return 0;
+	next_rev = last_rev + 1;
+	target = 1 - last_slot;
+	if (!profilePath(id, target, path, sizeof(path)))
+		return 0;
+	n = snprintf(payload, sizeof(payload), "NTP1|%s|%08X|%08X|%d|%d|%d|%d",
+	             id, next_rev, options->game_compatibility, options->video_mode,
+	             options->video_compatibility, options->debug_colors, options->logo);
+	if (n <= 0 || n >= (int)sizeof(payload))
+		return 0;
+	len = snprintf(record, sizeof(record), "%s|%08X\n", payload, profileChecksum(payload, n));
+	if (len <= 0 || len >= (int)sizeof(record) ||
+	    dashWriteFile(path, record, len) < 0)
+		return 0;
+	return profileReadLatest(id, &read_back, &verify_rev, &slot_read) &&
+	       slot_read == target && verify_rev == next_rev &&
+	       memcmp(&read_back, options, sizeof(*options)) == 0;
+}
+
+
 static int moveNeutrinoSelection(int selection, int direction)
 {
 	if (direction < 0) {
@@ -107,7 +282,10 @@ static int moveNeutrinoSelection(int selection, int direction)
  * modal path. The classic shell continues to use the upstream dialog below. */
 static int showDashboardNeutrinoOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 {
-	DashMenuItem items[NEUTRINO_CANCEL + 1];
+	DashMenuItem items[NEUTRINO_CANCEL + 3];
+	const int profile_enabled = active_profile_gameid[0] != '\0';
+	const int cancel_index = profile_enabled ? NEUTRINO_CANCEL + 2 : NEUTRINO_CANCEL;
+	const int item_count = cancel_index + 1;
 	int selection = 0, i, choice;
 
 	for (;;) {
@@ -131,13 +309,31 @@ static int showDashboardNeutrinoOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 		items[NEUTRINO_LOGO].detail = options->logo ? "On" : "Off";
 		items[NEUTRINO_RUN].icon = DI_PLAY;
 		items[NEUTRINO_RUN].label = "Run game";
-		items[NEUTRINO_CANCEL].icon = DI_BACK;
-		items[NEUTRINO_CANCEL].label = "Cancel";
-		selection = dashModalMenu("Neutrino launch options", "For this launch only", items, NEUTRINO_CANCEL + 1, selection);
-		if (selection < 0 || selection == NEUTRINO_CANCEL)
+		if (profile_enabled) {
+			items[NEUTRINO_CANCEL].icon = DI_STAR;
+			items[NEUTRINO_CANCEL].label = "Save for this game";
+			items[NEUTRINO_CANCEL + 1].icon = DI_REFRESH;
+			items[NEUTRINO_CANCEL + 1].label = "Reset this launch";
+		}
+		items[cancel_index].icon = DI_BACK;
+		items[cancel_index].label = "Cancel";
+		selection = dashModalMenu("Neutrino launch options",
+		                          profile_enabled ? active_profile_gameid : "For this launch only",
+		                          items, item_count, selection);
+		if (selection < 0 || selection == cancel_index)
 			return FALSE;
 		if (selection == NEUTRINO_RUN)
 			return TRUE;
+		if (profile_enabled && selection == NEUTRINO_CANCEL) {
+			int saved = profileSave(active_profile_gameid, options);
+			dashToast(saved ? DASH_TOAST_OK : DASH_TOAST_WARN,
+			          saved ? "Saved Neutrino game profile" : "Could not save game profile");
+			continue;
+		}
+		if (profile_enabled && selection == NEUTRINO_CANCEL + 1) {
+			memset(options, 0, sizeof(*options));
+			continue;
+		}
 		if (selection < NEUTRINO_COMPAT_COUNT)
 			options->game_compatibility ^= 1u << compatibility_options[selection].mode;
 		else if (selection == NEUTRINO_VIDEO_MODE) {
@@ -187,8 +383,15 @@ int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 	if (options == NULL)
 		return FALSE;
 	memset(options, 0, sizeof(*options));
-	if (DashIsActive())
+	if (DashIsActive()) {
+		NEUTRINO_LAUNCH_OPTIONS saved;
+		unsigned int revision;
+		int slot;
+		if (active_profile_gameid[0] && dashWorkerAwaitAll("Loading game profile") &&
+		    profileReadLatest(active_profile_gameid, &saved, &revision, &slot))
+			*options = saved;
 		return showDashboardNeutrinoOptions(options);
+	}
 	while (1) {
 		waitPadReady(0, 0);
 		if (readpad()) {
@@ -260,4 +463,18 @@ int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 		post_event = event;
 		event = 0;
 	}
+}
+
+/* The context is restricted to one synchronous UI call and always cleared.
+ * Classic/no-ID launches retain their historical launch-only defaults. */
+int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *options, const char *game_id)
+{
+	int result;
+
+	active_profile_gameid[0] = '\0';
+	if (profileGameIdValid(game_id))
+		snprintf(active_profile_gameid, sizeof(active_profile_gameid), "%s", game_id);
+	result = showNeutrinoLaunchOptions(options);
+	active_profile_gameid[0] = '\0';
+	return result;
 }
