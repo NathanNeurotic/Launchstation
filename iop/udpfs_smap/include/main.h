@@ -39,4 +39,3 @@ int SMAPGetMACAddress(u8 *buffer);
 
 
 #endif
-

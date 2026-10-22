@@ -269,4 +269,3 @@ int smap_transmit(void *header, uint16_t headersize, const void *data, uint16_t 
 
     return 0;
 }
-

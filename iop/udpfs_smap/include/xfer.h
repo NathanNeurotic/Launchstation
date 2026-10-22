@@ -39,4 +39,3 @@ int HandleRxIntr(struct SmapDriverData *SmapDrivPrivData);
 
 
 #endif
-

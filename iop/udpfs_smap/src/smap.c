@@ -637,4 +637,3 @@ int SMAPGetMACAddress(uint8_t *buffer)
 
     return 0;
 }
-

@@ -39,4 +39,3 @@ int smap_transmit(void *header, uint16_t headersize, const void *data, uint16_t 
 #define I_smap_fifo_read             DECLARE_IMPORT(7, smap_fifo_read)
 
 #endif
-
