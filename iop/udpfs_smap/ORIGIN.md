@@ -14,6 +14,9 @@ Local modifications:
   timing, retry, or protocol changes are imported from RiptOPL.
 - `src/exports.tab`: define `_retonly` after the unchanged export table for
   PS2SDK iopfixup compatibility. Export name/version/ordinal order stay intact.
+- `src/smap.c`: correct two inherited startup defects found during review:
+  allow up to nine 1 ms waits for PHY reset to clear, retaining cancellation and
+  bounded failure; test the SMAP capability bit before touching its hardware.
 - PS2SDK Makefile and ps2build target for reproducible source builds.
 
 The old upstream wLaunchELF_R3Z / Launchstation precompiled SMAP is 8,216 bytes,
@@ -26,5 +29,9 @@ binary only as a historical reference; neither build route should embed it.
 simulated FIFO across lengths, offsets and DMA sizes, checking destination
 bounds and padded FIFO reads. It also requires the old algorithm to fail.
 Build and host-model evidence do not establish physical-console reliability.
+`tests/test_udpfs_smap_startup.py` additionally exercises the production startup
+checks with immediate, delayed and stuck PHY reset responses, cancellation and
+every possible 16-bit DEV9 capability value. Both inherited defects must fail
+their corresponding negative controls.
 Acceptance requires UDPFS-to-card and UDPFS-to-USB copies of odd/even files,
 byte/hash comparison after readback, a server restart, and actual Neutrino launch.

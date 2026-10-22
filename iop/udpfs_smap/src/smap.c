@@ -135,7 +135,7 @@ static int InitPHY(struct SmapDriverData *SmapDrivPrivData)
         M_DEBUG("smap: Resetting PHY\n");
 
     _smap_write_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR, SMAP_PHY_BMCR_RST);
-    for (i = 0; _smap_read_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR) & SMAP_PHY_BMCR_RST; i++) {
+    for (i = 9; _smap_read_phy(SmapDrivPrivData->emac3_regbase, SMAP_DsPHYTER_BMCR) & SMAP_PHY_BMCR_RST; i--) {
         if (i <= 0) {
             M_DEBUG("smap: PHY reset error\n");
             return -1;
@@ -513,7 +513,7 @@ int smap_init(int argc, char *argv[])
 
     SmapDriverData.smap_regbase = smap_regbase;
     SmapDriverData.emac3_regbase = emac3_regbase;
-    if (!SPD_REG16(SPD_R_REV_3) & SPD_CAPS_SMAP)
+    if (!(SPD_REG16(SPD_R_REV_3) & SPD_CAPS_SMAP))
         return -1;
     {
         u16 rev1 = SPD_REG16(SPD_R_REV_1);

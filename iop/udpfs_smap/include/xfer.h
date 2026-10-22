@@ -29,8 +29,8 @@ int smap_register_rx_callback(int (*cb)(uint16_t len, const uint8_t *hdr, uint16
  * Must be called from within the RX callback registered via smap_register_rx_callback.
  * Uses DMA for large transfers (>= 64 bytes), PIO otherwise.
  * @param offset Frame-relative byte offset (0 = start of Ethernet header)
- * @param dst    Destination buffer (must be 4-byte aligned for DMA path)
- * @param bytes  Number of bytes to read (2 or multiple of 4)
+ * @param dst    Destination buffer (must be 4-byte aligned for both DMA and PIO)
+ * @param bytes  Number of bytes to read (any byte count, including odd counts)
  */
 void smap_fifo_read(uint16_t offset, void *dst, uint32_t bytes);
 

@@ -28,6 +28,7 @@ jobs:
         run: |
           python3 tests/test_display_feedback.py
           python3 tests/test_udpfs_smap_fifo_tail.py
+          python3 tests/test_udpfs_smap_startup.py
           python3 tests/test_pccf.py
           python3 tests/test_pccf_owner.py
           python3 tests/test_pccf_fs.py

@@ -16,6 +16,7 @@
 | --- | --- | --- | --- |
 | [PS2CF](https://github.com/mihhru/PS2CF) / [mihhru](https://github.com/mihhru) | `iop/pccf/`, `tests/test_pccf*`; pinned origin in `iop/pccf/VENDORED.md` | Original component notices retained; PS2SDK-derived hardware code AFL-2.0, bundled `iop/pccf/PS2SDK_LICENSE.txt` | Isolated early-PS2 CF driver foundation; application/runtime integration pending |
 | PS2SDK / PS2Dev | `iop/vmcman/`, `iop/ps2hdd_osd/` and EE/IOP build inputs | [ps2dev/ps2sdk](https://github.com/ps2dev/ps2sdk); inspect the specific upstream license and local source headers | Local variants and build dependency |
+| Neutrino SMAP driver — Rick Gaiser / contributors | `iop/udpfs_smap/`, `tests/test_udpfs_smap_fifo_tail.py`, `tests/test_udpfs_smap_startup.py`; pinned origin in [ORIGIN.md](../iop/udpfs_smap/ORIGIN.md) | Neutrino `iop/smap` at `06188cce7cd07d2a158cb4b2646c5719fc16a565`; [bundled AFL-3.0](../iop/udpfs_smap/LICENSE) | Source-built UDPFS NIC module with receive-tail and startup corrections |
 | MMCEMAN / MMCEDRV | `iop/mmceman/`, `iop/__precompiled/mmceman.irx` | [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman) (MIT in upstream repo); upstream acknowledges Wisi and Maximus32 | MMCE filesystem, protocol and GameID foundations |
 | RiptOPL USB driver | `iop/usbd-ra/` | [NathanNeurotic/Open-PS2-Loader](https://github.com/NathanNeurotic/Open-PS2-Loader); source review needed for inherited notices | Updated usbd-ra imported in USB stability work |
 | PS2FTPD | `iop/oldlibs/ps2ftpd/` | [ps2homebrew/ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), Jesper Svennevid; [bundled AFL 2.0](../iop/oldlibs/ps2ftpd/LICENSE) | Legacy local FTP source |
@@ -36,7 +37,6 @@ These are mentioned or launched through an integration; that does **not** imply 
 | Project | Why LAUNCHSTATION references it |
 | --- | --- |
 | [Neutrino](https://github.com/rickgaiser/neutrino) — Rick Gaiser / contributors | External PS2 ISO loader, quick-boot/backing-store backend |
-| [Neutrino SMAP driver](../iop/udpfs_smap/ORIGIN.md) — Rick Gaiser / contributors | Source-built UDPFS NIC module, pinned upstream source with an odd-byte receive-tail correction; AFL-3.0 license retained beside the source |
 | [POPStarter](https://www.psx-place.com/threads/popstarter.19139/) — krHACKen | External PS1 VCD launcher |
 | [Ember](https://github.com/Gageformer/Ember) — Gageformer | External PS1 core; its beta license limits redistribution/commercial use. See upstream LICENSE-BETA.txt |
 | [PS2Link](https://github.com/ps2dev/ps2link), [PS2Client](https://github.com/ps2dev/ps2client) | Network debugger and PC-side transfer/launch ecosystem |
