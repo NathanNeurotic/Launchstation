@@ -11,13 +11,22 @@
 # IOP drivers that the SDK suite already packages are embedded straight from
 # PS2BUILD packages (embed_irx). Modules that are wLaunchELF-specific, or that
 # the suite does not package (xparam, ata_bd), are built here as iop targets.
-# Plain binary payloads (exploit slices, prebuilt UDPFS modules) are embedded
+# Plain binary payloads (exploit slices, prebuilt UDPFS ministack/ioman) are embedded
 # by src/embed_blobs.S. All modules keep the legacy lazy-loading behaviour:
 # embedding only places them in the ELF, init.c still decides when to load.
 
 project: wLaunchELF
 
 targets:
+  - name: udpfs_smap
+    type: iop
+    sources: [iop/udpfs_smap/src/main.c, iop/udpfs_smap/src/smap.c, iop/udpfs_smap/src/xfer.c]
+    include_dirs: [iop/udpfs_smap/include]
+    imports_lst: iop/udpfs_smap/src/imports.lst
+    exports_tab: iop/udpfs_smap/src/exports.tab
+    cflags: [-Wall, -mno-check-zero-division]
+    headers: [dev9, dmacman, intrman, loadcore, modload, stdio, sysclib, threadman]
+
   - name: pccf
     type: iop
     sources: [iop/pccf/main.c, iop/pccf/pccf_hw.c, iop/pccf/pccf_ata.c, iop/pccf/pcdiag_cis.c, iop/pccf/pcdiag_cf.c]
@@ -399,6 +408,7 @@ targets:
     headers: [sior, audsrv]
     libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, jpeg, mc, kbd, mbedtls, mbedx509, mbedcrypto, ps2ips, cglue, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv]
     embed_irx:
+      - udpfs_smap
       - loader:loader_elf
       - wle_igr:wle_igr_elf
       - poweroff

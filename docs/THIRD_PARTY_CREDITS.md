@@ -36,6 +36,7 @@ These are mentioned or launched through an integration; that does **not** imply 
 | Project | Why LAUNCHSTATION references it |
 | --- | --- |
 | [Neutrino](https://github.com/rickgaiser/neutrino) — Rick Gaiser / contributors | External PS2 ISO loader, quick-boot/backing-store backend |
+| [Neutrino SMAP driver](../iop/udpfs_smap/ORIGIN.md) — Rick Gaiser / contributors | Source-built UDPFS NIC module, pinned upstream source with an odd-byte receive-tail correction; AFL-3.0 license retained beside the source |
 | [POPStarter](https://www.psx-place.com/threads/popstarter.19139/) — krHACKen | External PS1 VCD launcher |
 | [Ember](https://github.com/Gageformer/Ember) — Gageformer | External PS1 core; its beta license limits redistribution/commercial use. See upstream LICENSE-BETA.txt |
 | [PS2Link](https://github.com/ps2dev/ps2link), [PS2Client](https://github.com/ps2dev/ps2client) | Network debugger and PC-side transfer/launch ecosystem |
