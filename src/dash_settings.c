@@ -2843,30 +2843,38 @@ static void editLaunchMenu(const SetItem *it)
 static void settingsInput(const DashInput *in)
 {
 	const SetItem *it;
+	int total;
 
 	if (in->pressed & DASH_IN_MENU) {
 		settingsMenu();
 		return;
 	}
 	it = curItem();
+	total = pages[page].n;
 	if (in->pressed & DASH_IN_UP) {
-		if (item > 0) {
-			item--;
-			dashUiFocusPoke();
+		if (total > 0) {
+			int next = item > 0 ? item - 1 : total - 1;
+			if (next != item)
+				dashUiFocusPoke();
+			item = next;
 		}
 	} else if (in->pressed & DASH_IN_DOWN) {
-		if (item < pages[page].n - 1) {
-			item++;
-			dashUiFocusPoke();
+		if (total > 0) {
+			int next = item < total - 1 ? item + 1 : 0;
+			if (next != item)
+				dashUiFocusPoke();
+			item = next;
 		}
 	} else if (in->pressed & DASH_IN_L2) {
-		if (item != 0)
+		if (item != 0) {
 			dashUiFocusPoke();
-		item = 0;
+			item = 0;
+		}
 	} else if (in->pressed & DASH_IN_R2) {
-		if (item != pages[page].n - 1)
+		if (item != pages[page].n - 1) {
 			dashUiFocusPoke();
-		item = pages[page].n - 1;
+			item = pages[page].n - 1;
+		}
 	} else if (in->pressed & DASH_IN_BACK) {
 		if (page_depth) {
 			dashSoundPlay(DASH_SND_CANCEL);

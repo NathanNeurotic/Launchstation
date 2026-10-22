@@ -241,15 +241,24 @@ static void filesEnter(void)
 
 static void fMove(int d)
 {
-	int s = fsel;
+	int start, s;
 
+	if (nfentries <= 0 || d == 0)
+		return;
+	start = s = fsel;
 	do {
 		s += d;
-		if (s < 0 || s >= nfentries)
+		if (s < 0)
+			s = nfentries - 1;
+		else if (s >= nfentries)
+			s = 0;
+		if (fentries[s].kind != FE_HEADER) {
+			if (s != fsel)
+				dashUiFocusPoke();
+			fsel = s;
 			return;
-	} while (fentries[s].kind == FE_HEADER);
-	fsel = s;
-	dashUiFocusPoke();
+		}
+	} while (s != start);
 }
 
 static void filesActivate(void)
@@ -452,15 +461,38 @@ static void devRefresh(void)
 
 static void devMove(int delta)
 {
-	int s;
-	if (dsel < 0)
+	int start, s, step;
+	if (dsel < 0 || ndevs <= 0 || delta == 0)
 		return;
-	for (s = dsel + delta; s >= 0 && s < ndevs; s += delta)
+
+	start = s = dsel;
+	do {
+		s += delta;
+		while (s < 0)
+			s += ndevs;
+		while (s >= ndevs)
+			s -= ndevs;
 		if (devSelectable(s)) {
 			dsel = s;
 			dashUiFocusPoke();
 			return;
 		}
+	} while (s != start);
+
+	step = delta < 0 ? -1 : 1;
+	s = start;
+	do {
+		s += step;
+		if (s < 0)
+			s = ndevs - 1;
+		else if (s >= ndevs)
+			s = 0;
+		if (devSelectable(s)) {
+			dsel = s;
+			dashUiFocusPoke();
+			return;
+		}
+	} while (s != start);
 }
 
 static void devEnter(void)

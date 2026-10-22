@@ -307,15 +307,15 @@ static void appsEnter(void)
 
 static void move(int delta)
 {
+	int next;
 	int old = sel;
 
 	if (norder <= 0)
 		return;
-	sel += delta;
-	if (sel < 0)
-		sel = 0;
-	if (sel >= norder)
-		sel = norder - 1;
+	next = (sel + delta) % norder;
+	if (next < 0)
+		next += norder;
+	sel = next;
 	if (sel != old)
 		dashUiFocusPoke();
 }
@@ -342,9 +342,9 @@ static void appsInput(const DashInput *in)
 			move(-1);
 		if (in->pressed & DASH_IN_RIGHT)
 			move(1);
-		if ((in->pressed & DASH_IN_UP) && sel >= GRID_COLS)
+		if (in->pressed & DASH_IN_UP)
 			move(-GRID_COLS);
-		if ((in->pressed & DASH_IN_DOWN) && sel + GRID_COLS < norder + (GRID_COLS - 1 - (norder - 1) % GRID_COLS))
+		if (in->pressed & DASH_IN_DOWN)
 			move(GRID_COLS);
 		if (in->pressed & DASH_IN_L2)
 			move(-GRID_COLS * 3);

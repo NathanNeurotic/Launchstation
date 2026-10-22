@@ -85,14 +85,24 @@ static float tsel_anim = 1.0f;
 
 static void tMove(int d)
 {
-	int s = tsel;
+	int start, s;
 
+	if (NTOOLS <= 0 || d == 0)
+		return;
+	start = s = tsel;
 	do {
 		s += d;
-		if (s < 0 || s >= NTOOLS)
+		if (s < 0)
+			s = NTOOLS - 1;
+		else if (s >= NTOOLS)
+			s = 0;
+		if (tools[s].action != TA_HEADER) {
+			if (s != tsel)
+				dashUiFocusPoke();
+			tsel = s;
 			return;
-	} while (tools[s].action == TA_HEADER);
-	tsel = s;
+		}
+	} while (s != start);
 }
 
 static void toolsEnter(void)

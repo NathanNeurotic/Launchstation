@@ -67,7 +67,12 @@ original_reader = notes.revision_changelog
 try:
     notes.revision_changelog = lambda sha: ["- Maintained summary"]
     assert notes.release_changes(repo, revision, revision, "") == ["- Maintained summary"]
-    assert notes.release_changes(repo, revision, previous, log) == changes
+    assert notes.release_changes(repo, revision, previous, log) == [
+        "- Maintained summary",
+        "",
+        "- Additional merged changes in this rolling build:",
+        *changes,
+    ]
     notes.revision_changelog = lambda sha: ["- New summary"] if sha == revision else ["- Old summary"]
     assert notes.release_changes(repo, revision, previous, log) == ["- New summary"]
     assert notes.release_changes(repo, revision, "", log) == ["- New summary"]

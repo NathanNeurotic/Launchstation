@@ -1211,18 +1211,19 @@ void dashHddManager(void)
 		int prev = sel;
 
 		dashInputPoll(&in);
-		if (in.pressed & DASH_IN_UP)
-			sel--;
-		if (in.pressed & DASH_IN_DOWN)
-			sel++;
-		if (in.pressed & DASH_IN_L2)
-			sel -= ROWS;
-		if (in.pressed & DASH_IN_R2)
-			sel += ROWS;
-		if (sel >= hm.n)
-			sel = hm.n - 1;
-		if (sel < 0)
-			sel = 0;
+		if (hm.n > 0) {
+			if (in.pressed & DASH_IN_UP)
+				sel = sel > 0 ? sel - 1 : hm.n - 1;
+			if (in.pressed & DASH_IN_DOWN)
+				sel = (sel + 1) % hm.n;
+			if (in.pressed & DASH_IN_L2) {
+				sel = (sel - ROWS) % hm.n;
+				if (sel < 0)
+					sel += hm.n;
+			}
+			if (in.pressed & DASH_IN_R2)
+				sel = (sel + ROWS) % hm.n;
+		}
 		if (sel != prev) {
 			dashSoundPlay(DASH_SND_CURSOR);
 			last_move = Timer();

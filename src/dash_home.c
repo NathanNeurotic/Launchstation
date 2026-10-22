@@ -210,6 +210,27 @@ static void activateChip(const Chip *c)
 	}
 }
 
+static int rowCount(int r)
+{
+	return r == 0 ? nhome : nchips;
+}
+
+static int wrapCol(int value, int n)
+{
+	if (n <= 0)
+		return 0;
+	value %= n;
+	if (value < 0)
+		value += n;
+	return value;
+}
+
+static int otherRowWithEntries(int current)
+{
+	int other = current ? 0 : 1;
+	return rowCount(other) > 0 ? other : current;
+}
+
 static void homeInput(const DashInput *in)
 {
 	int n = (row == 0) ? nhome : nchips;
@@ -225,39 +246,53 @@ static void homeInput(const DashInput *in)
 	}
 
 	if (in->pressed & DASH_IN_UP) {
-		if (row == 1 && nhome > 0) {
-			row = 0;
+		int next = otherRowWithEntries(row);
+		if (next != row) {
+			row = next;
 			dashUiFocusPoke();
 		}
 	} else if (in->pressed & DASH_IN_DOWN) {
-		if (row == 0) {
-			row = 1;
+		int next = otherRowWithEntries(row);
+		if (next != row) {
+			row = next;
 			dashUiFocusPoke();
 		}
 	} else if (in->pressed & DASH_IN_LEFT) {
-		if (col[row] > 0) {
-			col[row]--;
-			dashUiFocusPoke();
+		if (n > 0) {
+			int next = wrapCol(col[row] - 1, n);
+			if (next != col[row])
+				dashUiFocusPoke();
+			col[row] = next;
 		}
 	} else if (in->pressed & DASH_IN_RIGHT) {
-		if (col[row] < n - 1) {
-			col[row]++;
-			dashUiFocusPoke();
+		if (n > 0) {
+			int next = wrapCol(col[row] + 1, n);
+			if (next != col[row])
+				dashUiFocusPoke();
+			col[row] = next;
 		}
 	} else if (in->pressed & DASH_IN_L2) {
-		if (col[row] != 0)
-			dashUiFocusPoke();
-		col[row] = 0;
+		if (n > 0) {
+			if (col[row] != 0)
+				dashUiFocusPoke();
+			col[row] = 0;
+		}
 	} else if (in->pressed & DASH_IN_R2) {
-		if (col[row] != (n > 0 ? n - 1 : 0))
-			dashUiFocusPoke();
-		col[row] = n > 0 ? n - 1 : 0;
+		if (n > 0) {
+			int last = n - 1;
+			if (col[row] != last)
+				dashUiFocusPoke();
+			col[row] = last;
+		}
 	} else if (in->pressed & DASH_IN_OK) {
 		if (row == 0 && nhome > 0) {
+			col[0] = wrapCol(col[0], nhome);
 			dashLaunchApp(home_apps[col[0]], 0);
 			homeRebuild();
-		} else if (row == 1 && nchips > 0)
+		} else if (row == 1 && nchips > 0) {
+			col[1] = wrapCol(col[1], nchips);
 			activateChip(&chips[col[1]]);
+		}
 	} else if (in->pressed & DASH_IN_FAV) {
 		DashApp *a = focusedApp();
 		if (a != NULL) {
@@ -276,6 +311,14 @@ static void homeInput(const DashInput *in)
 			homeRebuild();
 		}
 	}
+
+	n = rowCount(row);
+	if (n > 0)
+		col[row] = wrapCol(col[row], n);
+	else
+		col[row] = 0;
+	if (rowCount(row) == 0)
+		row = otherRowWithEntries(row);
 }
 
 static void homeUpdate(float dt)

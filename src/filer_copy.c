@@ -106,6 +106,7 @@ static int copyRenameFile(const char *from, const char *to)
 		ret = mcSetFileInfo(from[2] - '0', 0, from + 4, &info, 0x0010);
 		if (ret < 0) return ret;
 		if (mcSync(0, NULL, &ret) <= 0) return -EIO;
+		if (ret < 0) return ret;
 	} else {
 		ret = fileXioRename(from, to);
 	}
@@ -130,7 +131,7 @@ static int copyPrepareTarget(char *out, char *target, char *backup)
 	if (leaf == NULL) leaf = strchr(out, ':');
 	if (leaf == NULL) return -EINVAL;
 	parent = (int)(leaf - out + 1);
-	for (i = 0; i < 100; i++) {
+	for (i = 0; i < 1000; i++) {
 		if (snprintf(stage, sizeof(stage), "%.*sLS-COPY-%03d.TMP", parent, out, i) >= (int)sizeof(stage) ||
 		    snprintf(backup, MAX_PATH, "%.*sLS-OLD-%03d.BAK", parent, out, i) >= MAX_PATH)
 			return -ENAMETOOLONG;
