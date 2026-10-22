@@ -64,9 +64,8 @@ EMBED_FILE(exploit_chn_sys, "exploits/CHN.sys")
 EMBED_FILE(exploit_list_icn, "exploits/list.icn")
 EMBED_FILE(exploit_ioprp_img, "exploits/IOPRP_LTS.IMG")
 
-/* UDPFS stack: the nhddl-legacy sources are not vendored, use the bundled
- * prebuilt modules exactly like embed.make's fallback path does. */
-EMBED_FILE(udpfs_smap_irx, "iop/__precompiled/udpfs_smap.irx")
+/* UDPFS SMAP is source-built by ps2.yaml. The unchanged ministack/ioman
+ * prebuilt modules retain the existing export-table ABI. */
 EMBED_FILE(udpfs_ministack_irx, "iop/__precompiled/udpfs_ministack.irx")
 EMBED_FILE(udpfs_ioman_irx, "iop/__precompiled/udpfs_ioman.irx")
 
