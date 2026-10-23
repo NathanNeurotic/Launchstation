@@ -1136,6 +1136,8 @@ static void scanUsbMassDevices(int force)
 		USB_mass_ix[i] = 0;
 
 	USB_mass_scanned = found;
+	if (force)
+		filerInvalidateUsbMassDisplayAliases();
 	if (found)
 		USB_mass_scan_time = Timer();
 }
@@ -1636,6 +1638,10 @@ int getDir(const char *path, FILEINFO *info)
 		n = readGENERICWithFirstOpenRetry(usb_path, info, max, 2000);
 		if (force_usb_scan)
 			scanUsbMassDevices(1);
+		/* Resolve the actual MASS slot only during an explicit USB root read. */
+		if (n >= 0 && isSimpleDeviceRootPath(path) && path[3] >= '0' &&
+		    path[3] <= '9' && path[4] == ':')
+			filerRefreshUsbMassDisplayAlias(path[3] - '0');
 	}
 	else if (isAtaPath(path)) {
 		char ata_path[MAX_PATH];
