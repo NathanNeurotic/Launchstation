@@ -66,23 +66,27 @@ static int copyDiagFail(int result)
 void filerCopyDiagFormat(char *out, int size, int result)
 {
 	int error = copy_diag.error ? copy_diag.error : result;
+	const char *reason;
 
-	if (error == -ENOSPC) {
-		snprintf(out, size, "%s (%d)\n"
-		         "Not enough free space to copy the complete file. For replacements, "
-		         "free space must cover the new file before the old one can be replaced.\n"
-		         "%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
-		         copy_diag.stage ? copy_diag.stage : "Copy failed", error,
-		         copy_diag.name, copy_diag.source, copy_diag.destination,
-		         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
-		         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
-	} else {
-		snprintf(out, size, "%s (%d)\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
-		         copy_diag.stage ? copy_diag.stage : "Copy failed", error,
-		         copy_diag.name, copy_diag.source, copy_diag.destination,
-		         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
-		         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
+	switch (error) {
+		case -ENOSPC:
+			reason = "Not enough free space. Replacing a file needs room for the full new copy while the original is kept.";
+			break;
+		case -EACCES: reason = "Access denied by the device. Check file or card protection."; break;
+		case -EROFS: reason = "The destination filesystem is read-only."; break;
+		case -ENOENT: reason = "A source or destination file or folder was not found."; break;
+		case -ENODEV: reason = "The device is unavailable."; break;
+		case -EIO: reason = "The device reported an I/O failure."; break;
+		case -ETIMEDOUT: reason = "The device did not respond in time."; break;
+		case -ENOMEM: reason = "Not enough memory to complete the transfer."; break;
+		case -EEXIST: reason = "A destination or recovery file already exists."; break;
+		default: reason = "The operation failed. Keep the error code and device details below for diagnosis."; break;
 	}
+	snprintf(out, size, "%s (%d)\n%s\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
+	         copy_diag.stage ? copy_diag.stage : "Copy failed", error, reason,
+	         copy_diag.name, copy_diag.source, copy_diag.destination,
+	         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
+	         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
 }
 
 /* File replacements keep the old entry until a complete sibling copy has

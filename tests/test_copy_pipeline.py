@@ -208,6 +208,16 @@ int main(void){
   assert(!handles&&matches("mc0:/BOOT.ELF",old,sizeof(old)));
   if(failure==3){assert(strstr(message,"37/65537 B")&&strstr(message,"(-28)")&&strstr(message,"Not enough free space"));}
   if(failure==7)assert(strstr(message,"IOP 1>2"));
+  if(failure==8 || failure==9)assert(strstr(message,"Access denied"));
+  if(failure==0)assert(strstr(message,"was not found"));
+  if(failure==2)assert(strstr(message,"did not respond in time"));
+ }
+ const int codes[]={-ENOSPC,-EACCES,-EROFS,-ENOENT,-ENODEV,-EIO,-ETIMEDOUT,-ENOMEM,-EEXIST,-999};
+ const char *reasons[]={"Not enough free space","Access denied","read-only","was not found","unavailable","I/O failure","did not respond in time","Not enough memory","already exists","Keep the error code"};
+ for(unsigned i=0;i<sizeof(codes)/sizeof(*codes);i++){
+  filerCopyDiagBegin("usb0:/","mc0:/");char expected[20];snprintf(expected,sizeof(expected),"(%d)",codes[i]);
+  filerCopyDiagFormat(message,sizeof(message),codes[i]);
+  assert(strstr(message,reasons[i])&&strstr(message,expected)&&strstr(message,"fixture-head"));
  }
  /* Nested ordinary folders use the same production recursion. */
  reset();mkdir("udpfs:/NESTED",0700);put("udpfs:/NESTED/CHILD.BIN",input,257);

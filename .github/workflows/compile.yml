@@ -40,6 +40,7 @@ jobs:
           python3 tests/test_copy_test_pack.py
           python3 tests/test_transfer_stack_preflight.py
           python3 tests/test_transfer_progress.py
+          python3 tests/test_file_operation_overlay.py
           python3 tests/test_clock_save_action.py
           python3 tests/test_storage_probe_frames.py
           python3 tests/test_mmce_bus_restore.py

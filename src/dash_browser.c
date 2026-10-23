@@ -707,6 +707,25 @@ enum {
 	PASTE_PSU
 };
 
+static void showPasteFailure(int psu)
+{
+	char *detail = strchr(fb.msg, '\n');
+	char *p;
+
+	/* The copy diagnostic begins with stage/code and a readable reason.
+	 * Keep those in the body; scroll the remaining context on the detail
+	 * line so the six-line body limit cannot hide it. */
+	if (detail != NULL)
+		detail = strchr(detail + 1, '\n');
+	if (detail != NULL) {
+		*detail++ = '\0';
+		for (p = detail; *p; p++)
+			if (*p == '\n' || *p == '\r')
+				*p = ' ';
+	}
+	dashModalMessage(DI_WARNING, psu ? "PSU failed" : "Paste failed", fb.msg, detail);
+}
+
 static void opPaste(int mode)
 {
 	int psu = (mode == PASTE_PSU);
@@ -720,14 +739,14 @@ static void opPaste(int mode)
 	if (filerConfirmExploitModify(fb.dir, NULL) <= 0)
 		return;
 	fb.msg[0] = '\0';
-	dashLoadingBegin(psu ? "PSU" : (browser_cut ? "Moving" : "Pasting"));
+	dashFileLoadingBegin(psu ? "PSU" : (browser_cut ? "Moving file" : "Pasting file"));
 	if (psu)
 		filerPsuPasteInto(fb.msg, fb.dir);
 	else
 		filerPasteModeInto(fb.msg, fb.dir, mode == PASTE_RENAME);
 	opDone();
 	if (fb.msg[0]) /* the classic paste only leaves a message when it failed */
-		dashModalMessage(DI_WARNING, psu ? "PSU failed" : "Paste failed", fb.msg, NULL);
+		showPasteFailure(psu);
 	else
 		dashToast(DASH_TOAST_OK, browser_cut ? "Moved" : "Pasted");
 	refresh();
@@ -749,7 +768,7 @@ static void opDelete(void)
 		return;
 	if (!prepareOp())
 		return;
-	dashLoadingBegin("Deleting");
+	dashFileLoadingBegin("Deleting file");
 	for (i = 0; i < n; i++) {
 		FILEINFO *f = &fb.files[idx[i]];
 		if (filerIsExploitProtectedPath(fb.dir, f) && filerConfirmExploitDelete(fb.dir, f) < 0)
