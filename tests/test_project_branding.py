@@ -32,6 +32,18 @@ assert "israpps/wLaunchELF_ISR/issues" not in issue
 assert "wLaunchELF_R3Z" in readme
 assert "Direct base: wLaunchELF_R3Z" in credits
 
+# Preserve the current external build SDK credit independently of PS2SDK.
+site_credits = (root / "docs-site/content/credits.html").read_text(encoding="utf-8")
+third_party = (root / "docs/THIRD_PARTY_CREDITS.md").read_text(encoding="utf-8")
+for source in (readme, site_credits, third_party):
+    assert "https://git.techwritescode.dev/ps2/ps2build" in source
+    assert "PS2BUILD SDK" in source
+    assert "PS2SDK" in source
+assert "Build system: PS2BUILD SDK" in credits
+assert "by techwritescode" in credits
+assert "git.techwritescode.dev/ps2/ps2build" in credits
+assert "PS2BUILD SDK by techwritescode" in main_info
+
 # Validate the docs website, current repository path, and tab icon.
 manifest = (root / "docs-site/manifest.json").read_text(encoding="utf-8")
 logo = (root / "docs-site/static/assets/favicon.svg").read_text(encoding="utf-8")
