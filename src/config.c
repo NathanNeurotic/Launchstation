@@ -540,6 +540,7 @@ char *configBuildSaveText(int *out_size)
 	        "Init_Delay = %d\r\n"
 	        "REBOOT_IOP_ELFLOAD = %d\r\n"
 	        "Modern_Device_Handoff = %d\r\n"
+	        "Modern_Browser_Device_Paths = %d\r\n"
 	        "VirtualKeyboardLayout = %s\r\n"
 	        "Hide_Hdd = %d\r\n"
 	        "Hide_MCMMCE = %d\r\n"
@@ -573,6 +574,7 @@ char *configBuildSaveText(int *out_size)
 	        setting->Init_Delay,       //Init_Delay
 	        setting->reboot_iop_elf_load,
 	        setting->modern_device_handoff,
+	        setting->modern_browser_device_paths,
 	        getVirtualKeyboardLayoutConfigName(setting->virtual_keyboard_layout),
 	        setting->Hide_Hdd,
 	        setting->Hide_MCMMCE,
@@ -782,6 +784,7 @@ void initConfig(void)
 	setting->language = DEF_LANGUAGE;
 	setting->reboot_iop_elf_load = DEF_STARTUP_RESET_IOP_ELFLOAD;
 	setting->modern_device_handoff = 0;
+	setting->modern_browser_device_paths = 0;
 	setting->virtual_keyboard_layout = DEF_VIRTUAL_KEYBOARD_LAYOUT;
 	setting->Hide_Hdd = DEF_HIDE_HDD;
 	setting->Hide_MCMMCE = DEF_HIDE_MCMMCE;
@@ -943,6 +946,8 @@ int loadConfig(char *mainMsg, char *CNF)
 			setting->usbkbd_used = atoi(value);
 		else if (!strcmp(name, "Modern_Device_Handoff"))
 			setting->modern_device_handoff = (atoi(value) == 1);
+		else if (!strcmp(name, "Modern_Browser_Device_Paths"))
+			setting->modern_browser_device_paths = (atoi(value) == 1);
 		else if (!strcmp(name, "REBOOT_IOP_ELFLOAD"))
 			setting->reboot_iop_elf_load = atoi(value);
 		else if (!stricmp(name, "VirtualKeyboardLayout") || !stricmp(name, "Virtual_Keyboard_Layout") || !stricmp(name, "VKEY_Layout")) {
