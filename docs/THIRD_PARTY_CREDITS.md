@@ -8,15 +8,20 @@
 - **[johnson-cooper](https://github.com/johnson-cooper)** — created this fork and handed its maintenance to NathanNeurotic / Ripto.
 - **[NathanNeurotic / Ripto](https://github.com/NathanNeurotic)** — current maintainer.
 - **[techwritescode](https://github.com/techwritescode)** — development collaboration; **TnA** — insight and support; **oMrRexD** — remote/FTP PC-side ecosystem reference and collaboration; **zackcage6 and FitthFox** — dashboard and file browser testing and UX feedback.
-- **[ps2dev community](https://github.com/ps2dev)** — toolchain, driver, graphics and filesystem foundations. Additional contributors retain credit through original source comments, Git history, and upstream notices.
+- **[ps2dev community](https://github.com/ps2dev)** — historical driver, graphics and filesystem foundations. Additional contributors retain credit through original source comments, Git history, and upstream notices.
+
+## Build SDK
+
+Launchstation is built and validated with the **PS2BUILD SDK by [TechWritesCode](https://github.com/techwritescode)**. It provides our EE/IOP toolchains, SDK packages and `ps2.yaml` build workflow, locally and in CI. Start with the [official PS2BUILD installation and guide](https://ps2.techwritescode.dev/guide/getting-started).
+
+Upstream PS2SDK, ps2dev and ps2homebrew references below identify component authorship and licenses. Our supported development environment is TechWritesCode's PS2BUILD SDK.
 
 ## Checked-in source, vendored modules and build dependencies
 
 | Project or contributor | Evidence in this repository | Upstream / license information | Role |
 | --- | --- | --- | --- |
 | [PS2CF](https://github.com/mihhru/PS2CF) / [mihhru](https://github.com/mihhru) | `iop/pccf/`, `tests/test_pccf*`; pinned origin in `iop/pccf/VENDORED.md` | Original component notices retained; PS2SDK-derived hardware code AFL-2.0, bundled `iop/pccf/PS2SDK_LICENSE.txt` | Isolated early-PS2 CF driver foundation; application/runtime integration pending |
-| [PS2BUILD SDK](https://git.techwritescode.dev/ps2/ps2build) — [techwritescode](https://github.com/techwritescode) | `ps2.yaml`, `.github/workflows/compile.yml`, `scripts/configure_ds34.py` | [PS2BUILD source](https://git.techwritescode.dev/ps2/ps2build) and [SDK documentation](https://ps2.techwritescode.dev/); upstream toolchain/package licenses apply independently | Primary external build system and SDK environment for standard and DS34 EE/IOP builds; not an ELF runtime component |
-| PS2SDK / PS2Dev | `iop/vmcman/`, `iop/ps2hdd_osd/` and EE/IOP build inputs | [ps2dev/ps2sdk](https://github.com/ps2dev/ps2sdk); inspect the specific upstream license and local source headers | Local variants and build dependency |
+| Upstream PS2SDK / ps2dev | `iop/vmcman/`, `iop/ps2hdd_osd/` and EE/IOP build inputs | [ps2dev/ps2sdk](https://github.com/ps2dev/ps2sdk); inspect the specific upstream license and local source headers | Vendored source ancestry and component interfaces; built with PS2BUILD |
 | Neutrino SMAP driver — Rick Gaiser / contributors | `iop/udpfs_smap/`, `tests/test_udpfs_smap_fifo_tail.py`, `tests/test_udpfs_smap_startup.py`; pinned origin in [ORIGIN.md](../iop/udpfs_smap/ORIGIN.md) | Neutrino `iop/smap` at `06188cce7cd07d2a158cb4b2646c5719fc16a565`; [bundled AFL-3.0](../iop/udpfs_smap/LICENSE) | Source-built UDPFS NIC module with receive-tail and startup corrections |
 | MMCEMAN / MMCEDRV | `iop/mmceman/`, `iop/__precompiled/mmceman.irx` | [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman) (MIT in upstream repo); upstream acknowledges Wisi and Maximus32 | MMCE filesystem, protocol and GameID foundations |
 | RiptOPL USB driver | `iop/usbd-ra/` | [NathanNeurotic/Open-PS2-Loader](https://github.com/NathanNeurotic/Open-PS2-Loader); source review needed for inherited notices | Updated usbd-ra imported in USB stability work |
