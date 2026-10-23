@@ -12,6 +12,7 @@
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "config_private.h"
+#include "init.h"
 #include "dash_sound.h"
 #include "main_title.h"
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
@@ -236,7 +237,7 @@ static const SetItem appearance_items[] = {
 };
 
 static const SetItem display_items[] = {
-    {ST_CHOICE, S_TVMODE, "Video mode", "Auto follows the console region. Changing it applies immediately."},
+    {ST_CHOICE, S_TVMODE, "Video mode", "Auto follows the console region. Changes need confirmation within 5 seconds."},
     {ST_NUMBER, S_SCREEN_X, "Screen position X", "Moves the picture left or right to fit your TV (overscan)."},
     {ST_NUMBER, S_SCREEN_Y, "Screen position Y", "Moves the picture up or down to fit your TV."},
     {ST_ACTION, S_SCREEN_RESET, "Reset screen settings", "Video mode Auto and a centred picture."},
@@ -283,7 +284,7 @@ static const SetItem launch_items[] = {
     {ST_CHOICE, S_PATHPAD_LOCK, "Lock shortcuts & bookmarks", "Prevents editing launch keys and File Browser bookmarks."},
     {ST_PAGE, P_LOADERS, "Disc & image loaders", "ESR, OSDSYS, POPStarter, Ember and Neutrino paths."},
     {ST_CHOICE, S_REBOOT_ELF, "Reset IOP before launch", "Recommended: gives launched ELFs a clean IOP."},
-    {ST_CHOICE, S_MODERN_HANDOFF, "Modern device handoffs", "Off: legacy mass paths for compatibility. On: device-specific usb, ata, mx4sio and ilink paths for compatible ELFs."},
+    {ST_CHOICE, S_MODERN_HANDOFF, "ELF handoff paths", "Select application path names, not storage drivers. Legacy mass is the compatibility default; Device-specific uses usb, ata, mx4sio and ilink paths."},
     {ST_PAGE, P_GAMEID, "Game ID output", "Game IDs for RetroGem and compatible OSD/HDMI adapters."},
 };
 
@@ -671,9 +672,12 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_SHOW_UNAVAILABLE:
 			*cur = dashCfg.show_unavailable_devices;
 			return 2;
-		case S_MODERN_HANDOFF:
+		case S_MODERN_HANDOFF: {
+			static const char *const handoff_names[] = {"Legacy mass (default)", "Device-specific"};
+			*names = handoff_names;
 			*cur = setting->modern_device_handoff ? 1 : 0;
 			return 2;
+		}
 		case S_REBOOT_ELF:
 			*cur = setting->reboot_iop_elf_load ? 1 : 0;
 			return 2;
@@ -1177,6 +1181,30 @@ static void colorEditor(const char *title, int id)
 	}
 }
 
+static int previewVideoMode(int mode)
+{
+	int old_mode = setting->TV_mode;
+	int old_x = setting->screen_x, old_y = setting->screen_y;
+	int accepted;
+
+	if (mode == old_mode)
+		return 0;
+	setting->TV_mode = mode;
+	updateScreenMode();
+	if (dashGfxCheckScreenChange())
+		dashArtInvalidateVram();
+	accepted = dashModalKeepVideo();
+	if (!accepted) {
+		setting->TV_mode = old_mode;
+		setting->screen_x = old_x;
+		setting->screen_y = old_y;
+		updateScreenMode();
+		if (dashGfxCheckScreenChange())
+			dashArtInvalidateVram();
+	}
+	return accepted;
+}
+
 static void setChoice(int id, int v)
 {
 	int dash_changed = 1;
@@ -1185,9 +1213,9 @@ static void setChoice(int id, int v)
 		return;
 	switch (id) {
 		case S_TVMODE:
-			setting->TV_mode = v;
-			updateScreenMode();
-			classic_dirty = 1, dash_changed = 0;
+			if (previewVideoMode(v))
+				classic_dirty = 1;
+			dash_changed = 0;
 			break;
 		case S_EFFECTS:
 			dashCfg.effects = v * 10;
@@ -2198,6 +2226,8 @@ static void resetScreen(void)
 {
 	if (!dashModalConfirm("Reset screen settings", "Video mode Auto and a centred picture?", "Reset", 0))
 		return;
+	if (setting->TV_mode != TV_mode_AUTO && !previewVideoMode(TV_mode_AUTO))
+		return;
 	setting->color[COLOR_BACKGR] = DEF_COLOR1;
 	setting->color[COLOR_FRAME] = DEF_COLOR2;
 	setting->color[COLOR_SELECT] = DEF_COLOR3;
@@ -2218,6 +2248,8 @@ static void resetScreen(void)
 static void resetDisplayThemeDefaults(void)
 {
 	if (!dashModalConfirm("Reset display & theme defaults", "Restore the screen, motion, animation and OSD Classic theme defaults?", "Reset", 0))
+		return;
+	if (setting->TV_mode != TV_mode_AUTO && !previewVideoMode(TV_mode_AUTO))
 		return;
 	setting->color[COLOR_BACKGR] = DEF_COLOR1;
 	setting->color[COLOR_FRAME] = DEF_COLOR2;
@@ -2762,6 +2794,10 @@ static int itemDisabled(const SetItem *it)
 {
 	if (it->type == ST_PAGE)
 		return 0;
+#ifdef ILINK
+	if (it->id == S_DEVA_ILINK && !isIlinkConsoleSupported())
+		return 1;
+#endif
 	switch (it->id) {
 		case S_SVOL: return !dashCfg.sound;
 		case S_BGMVOL: return !dashCfg.bgm;
@@ -2783,6 +2819,9 @@ static int itemDisabled(const SetItem *it)
 static const char *disabledHelp(const SetItem *it)
 {
 	switch (it->id) {
+#ifdef ILINK
+		case S_DEVA_ILINK: return "This console has no supported PS2 i.Link storage port.";
+#endif
 		case S_SVOL: return "Enable Interface sounds to adjust their volume.";
 		case S_BGMVOL: return "Enable Background music to adjust its volume.";
 		case S_USBKBD_FILE:

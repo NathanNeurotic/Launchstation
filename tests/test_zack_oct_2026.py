@@ -53,7 +53,7 @@ assert "background_only = 0;" in shell
 assert "if (background_only)" in shell
 
 # Physical slot identity remains mapped to the port used for actual access.
-assert 'snprintf(name, sizeof(name), "mc%d (Slot %d)", port, port + 1);' in devices
+assert 'snprintf(name, sizeof(name), "Memory card (Slot %d)", port + 1);' in devices
 assert 'snprintf(mount, sizeof(mount), "mc%d:", port);' in devices
 assert '"USB Mass Storage"' in devices
 assert '"MASS (USB)"' not in devices   # issue #132 resolved

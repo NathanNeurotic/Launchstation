@@ -21,7 +21,11 @@ int ensureUsbKeyboardReady(void);
 #ifdef DS34
 void loadDs34InputModules(void);
 #endif
+#ifdef MMCE
+int loadMmceModulesForGameID(void);
+#endif
 #ifdef ILINK
+int isIlinkConsoleSupported(void);
 int loadIlinkModules(void);
 #endif
 void setupPowerOff(void);

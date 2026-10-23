@@ -608,7 +608,7 @@ $(EE_ASM_DIR)sfx_disconnect_adp.s: res/sfx/bd_disconnect.adp | $(EE_ASM_DIR)
 
 AUDSRV_SOURCE := $(PS2DEV)/packages/world/audsrv/bin/audsrv.irx
 ifeq ($(wildcard $(AUDSRV_SOURCE)),)
-  $(error Missing audsrv.irx. Update the ps2dev packages)
+  $(error Missing audsrv.irx. Update the PS2BUILD SDK packages)
 endif
 
 $(EE_ASM_DIR)audsrv_irx.s: $(AUDSRV_SOURCE) | $(EE_ASM_DIR)

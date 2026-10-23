@@ -741,6 +741,7 @@ void dashDevicesPoll(void);
 void dashDevicesAutoProbe(void);
 void dashDevicesResetBaseline(void);
 int dashBootDeviceBit(void);
+const char *dashDeviceDisplayMount(const DashDevice *d, char *buf, int size);
 int dashDevicesList(DashDevice *out, int max);
 /* Starts a device's drivers (UI thread, loading overlay); `cb` is called
  * with ok = device usable. -1 = the user backed out of the wait. */
@@ -860,6 +861,7 @@ enum {
 };
 int dashPickPath(const char *title, const char *start_dir, int mode, const char *ext, char *out, int out_size);
 void dashModalSetPreview(void (*fn)(int index)); /* applies to the next dashModalMenu() */
+int dashModalKeepVideo(void);
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger);
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail);
 int dashModalChoice(const char *title, const char *const *options, int n, int current);

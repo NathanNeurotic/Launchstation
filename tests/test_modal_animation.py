@@ -56,7 +56,7 @@ static float anim_time,frame_dt,section_anim=1,fade_in=1,bg_time,ui_time;
 static u64 last_frame_ms,now_ms;
 static int bg_calls,ui_calls,renders,depth,nested,frames[2],step_ms[3]={16,20,33};
 static int preview_calls;
-static int nav_scenario;
+static int nav_scenario, timed_scenario;
 static u64 Timer(void) { return now_ms; }
 static void dashBgUpdate(float dt) { bg_calls++; bg_time+=dt*dashCfg.effects/100.0f; }
 static void dashUiUpdate(float dt) { ui_calls++; ui_time+=dt; }
@@ -114,11 +114,11 @@ static int menuTitleGetClockFields(int *y,int *mo,int *d,int *h,int *mi,int *s,i
 code += function(orbs, "static void osdTime(")
 code += r"""
 static int modalButtons(const char *,const char *,const char *,int,DashColor,
-                        const char *,const char *,int);
+                        const char *,const char *,int,u64);
 static void dashInputPoll(DashInput *in) {
     int f=++frames[depth];
     now_ms+=step_ms[(f-1)%3];
-    in->pressed=f==4?DASH_IN_BACK:0;
+    in->pressed=timed_scenario ? 0 : (f==4?DASH_IN_BACK:0);
     if(nav_scenario && depth==0) {
         if(f==1)
             in->pressed=nav_scenario==1?DASH_IN_L2:nav_scenario==2?DASH_IN_R2:0;
@@ -127,7 +127,7 @@ static void dashInputPoll(DashInput *in) {
     }
     if(nested && depth==0 && f==2) {
         depth=1;
-        assert(!modalButtons("nested","confirm",NULL,0,(DashColor){0},"OK","Cancel",0));
+        assert(!modalButtons("nested","confirm",NULL,0,(DashColor){0},"OK","Cancel",0,0));
         depth=0;
     }
 }
@@ -140,7 +140,7 @@ static void reset(void) {
     anim_time=bg_time=ui_time=0; bg_calls=ui_calls=renders=preview_calls=0;
     section_anim=fade_in=0;
     now_ms=last_frame_ms=1000; frame_dt=0;
-    depth=nested=nav_scenario=0; memset(frames,0,sizeof(frames)); modal_preview=NULL;
+    depth=nested=nav_scenario=timed_scenario=0; memset(frames,0,sizeof(frames)); modal_preview=NULL;
     dashCfg.anim=100; dashCfg.effects=100;
 }
 static void check(void) {
@@ -205,6 +205,12 @@ int main(void) {
     reset(); modal_preview=preview;
     assert(dashModalMenu("all disabled",NULL,all_disabled,2,0)==-1);
     assert(renders==0 && modal_preview==NULL); /* no stranded preview callback */
+    reset(); timed_scenario=1; step_ms[0]=step_ms[1]=step_ms[2]=100;
+    assert(!modalButtons("video","visible?","",0,(DashColor){0},"Keep","Revert",1,Timer()+5000));
+    assert(now_ms==6000 && frames[0]==50); /* no input: revert at five seconds */
+    reset(); timed_scenario=1; now_ms=7000;
+    assert(!modalButtons("expired","visible?","",0,(DashColor){0},"Keep","Revert",1,7000));
+    assert(frames[0]==0); /* expired confirmation cannot accept a late button */
     reset(); now_ms+=2000;
     assert(dashVisualUpdate()==0.1f); /* retain the long-stall clamp */
     now_ms=last_frame_ms-1;

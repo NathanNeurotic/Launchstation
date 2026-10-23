@@ -21,3 +21,5 @@ This is the maintained Markdown guide collection stored in the repository. An au
 - Package and feature behavior: actual `src/`, `include/`, `iop/` and verified Git history.
 - Generated `gh-pages` output: **do not edit manually**.
 - Hardware reports: identify exact build commit, console model, media transport and whether a behavior was hardware-tested. Passing CI alone does not prove compatibility.
+
+- [Building with TechWritesCode's PS2BUILD SDK](Building-and-Validation.md) - supported local/CI toolchain and validation boundaries.

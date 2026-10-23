@@ -714,9 +714,9 @@ static void pickParent(char *dir, int size)
 int dashPickPath(const char *title, const char *start_dir, int mode, const char *ext, char *out, int out_size)
 {
 	int sel = 0, top = 0, result = 0;
-	const int rows = 9;
+	const int rows = 10;
 	float open = 0.0f, sel_anim = 0.0f;
-	float w = 480.0f, row_h = 28.0f;
+	float w = 480.0f, row_h = 25.0f;
 	float h = 96.0f + rows * row_h + 48.0f;
 	float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
 	DashInput in;
@@ -767,6 +767,14 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 		}
 		if ((in.pressed & DASH_IN_DOWN) && n_rows > 0) {
 			sel = sel < n_rows - 1 ? sel + 1 : 0;
+			dashSoundPlay(DASH_SND_CURSOR);
+		}
+		if ((in.pressed & DASH_IN_LEFT) && n_rows > 0) {
+			sel = sel == 0 ? n_rows - 1 : (sel < rows ? 0 : sel - rows);
+			dashSoundPlay(DASH_SND_CURSOR);
+		}
+		if ((in.pressed & DASH_IN_RIGHT) && n_rows > 0) {
+			sel = sel == n_rows - 1 ? 0 : (sel + rows >= n_rows ? n_rows - 1 : sel + rows);
 			dashSoundPlay(DASH_SND_CURSOR);
 		}
 		if (in.pressed & DASH_IN_L2)
@@ -859,10 +867,11 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 			}
 		}
 
-		if (sel < top)
-			top = sel;
-		if (sel >= top + rows)
-			top = sel - rows + 1;
+		top = sel - (rows - 1) / 2;
+		if (top > n_rows - rows)
+			top = n_rows - rows;
+		if (top < 0)
+			top = 0;
 		if (sel_anim < top || sel_anim >= top + rows)
 			sel_anim = (float)sel;
 		float dt = dashVisualUpdate();
@@ -890,12 +899,13 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 				DashColor c = dashItemColor(i == sel);
 				int icon;
 				const char *label, *detail = NULL;
+				char display_mount[24];
 
 				if (pk.dir[0] == '\0') {
 					DashDevice *d = &pk.devs[i];
 					icon = d->icon;
 					label = d->name;
-					detail = d->status;
+					detail = dashDeviceDisplayMount(d, display_mount, sizeof(display_mount));
 					if (d->state != DASH_DEV_READY && i != sel)
 						c = DASH_C_TEXT3;
 				} else if (has_use && i == 0) {
@@ -907,12 +917,12 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 				} else {
 					PickEntry *e = &pk.entries[i - first_entry];
 					icon = e->dir ? DI_FOLDER : pickIsMisc(pk.dir) ? DI_TOOLS : (genCmpFileExt(e->name, "PNG") || genCmpFileExt(e->name, "JPG") || genCmpFileExt(e->name, "JPEG")) ? DI_IMAGE : genCmpFileExt(e->name, "ELF") ? DI_APP : DI_FILE;
-					label = e->name;
+					label = getMiscEntryDisplayName(pk.dir, e->name);
 				}
-				dashIcon(icon, lx + 10, ry + 5, 16, c);
-				dashTextFit(lx + 36, ry + 2.5f, lw - 60 - (detail ? 130 : 0), label, DASH_FS_SMALL, c);
+				dashIcon(icon, lx + 10, ry + 3, 16, c);
+				dashTextFit(lx + 36, ry + 1.0f, lw - 60 - (detail ? 130 : 0), label, DASH_FS_SMALL, c);
 				if (detail)
-					dashTextRight(lx + lw - 12, ry + 3.5f, detail, DASH_FS_CAPTION, DASH_C_TEXT3);
+					dashTextRight(lx + lw - 12, ry + 1.5f, detail, DASH_FS_CAPTION, DASH_C_TEXT3);
 			}
 			dashGfxScissorReset();
 			if (pk.loading || pk.starting) {

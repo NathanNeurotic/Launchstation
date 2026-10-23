@@ -148,6 +148,14 @@ int DashIsActive(void)
 	return dash_active;
 }
 
+int DashOpenSettings(void)
+{
+	if (!dash_active)
+		return 0;
+	dashSwitchSection(DASH_SEC_SETTINGS);
+	return 1;
+}
+
 const char *DashMiscCommandName(void)
 {
 	return "Dashboard";
@@ -341,7 +349,7 @@ void dashRunMisc(const char *misc_path)
 	/* screens and tools that have a native dashboard version */
 	if (!stricmp(misc_path, setting->Misc_Configure)) {
 		/* every classic configuration option lives in SETTINGS now */
-		dashSwitchSection(DASH_SEC_SETTINGS);
+		DashOpenSettings();
 		return;
 	}
 	if (!stricmp(misc_path, setting->Misc_HddManager)) {

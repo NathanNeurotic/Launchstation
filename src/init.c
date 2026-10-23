@@ -2006,6 +2006,19 @@ static void switchPsxHddDriverStack(int use_dvr_stack)
 #endif
 
 #ifdef MMCE
+/* Game-ID requests must never replace the source's live SIO2 stack. */
+int loadMmceModulesForGameID(void)
+{
+	if (storage_driver_stack_mode != STORAGE_STACK_DEFAULT &&
+	    storage_driver_stack_mode != STORAGE_STACK_MMCE)
+		return 0;
+#ifdef MX4SIO
+	if (mx4sio_driver_running)
+		return 0;
+#endif
+	return loadMmceModules();
+}
+
 int loadMmceModules(void)
 {
 	int ret, id __attribute__((unused));
@@ -2062,10 +2075,27 @@ int loadMx4sioModules(void)
 #endif
 
 #ifdef ILINK
+/* Match iLinkman's supported BIOS range. PSX exposes a camcorder-only
+ * port. Unknown/malformed ROM versions must not trigger hardware probing. */
+int isIlinkConsoleSupported(void)
+{
+	int i, version = 0;
+	if (console_is_PSX)
+		return 0;
+	for (i = 0; i < 4; i++) {
+		if (ROMVER_data[i] < '0' || ROMVER_data[i] > '9')
+			return 0;
+		version = version * 10 + ROMVER_data[i] - '0';
+	}
+	return version >= 100 && version <= 160;
+}
+
 int loadIlinkModules(void)
 {
 	int ret, id __attribute__((unused));
 
+	if (!isIlinkConsoleSupported())
+		return 0;
 	if (!have_ilinkman || !have_ieee1394_bd)
 		showLoadingModulesMsg("iLink / FireWire");
 

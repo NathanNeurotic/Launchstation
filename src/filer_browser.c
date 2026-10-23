@@ -44,9 +44,9 @@ static const char *getUsbRootDeviceLabel(char unit)
 static const char *getRootDeviceLabel(const char *name)
 {
 	if (!strcmp(name, "mc0:"))
-		return "mc0:/";
+		return "Memory card, Slot 1 (mc0:/)";
 	if (!strcmp(name, "mc1:"))
-		return "mc1:/";
+		return "Memory card, Slot 2 (mc1:/)";
 	if (!strcmp(name, "mass:"))
 		return "mass:/  USB Mass Storage";
 	if (!strncmp(name, "mass", 4) && name[4] >= '0' && name[4] <= '9' && name[5] == ':' && name[6] == '\0')
@@ -57,54 +57,60 @@ static const char *getRootDeviceLabel(const char *name)
 		return getUsbRootDeviceLabel(name[3]);
 #ifdef MMCE
 	if (!strcmp(name, "mmce0:"))
-		return "mmce0:/";
+		return "MMCE, Slot 1 (mmce0:/)";
 	if (!strcmp(name, "mmce1:"))
-		return "mmce1:/";
+		return "MMCE, Slot 2 (mmce1:/)";
 #endif
 #ifdef MX4SIO
 	if (!strcmp(name, "mx4sio:"))
-		return "mx4sio:/";
+		return "MX4SIO SD Card (mx4sio:/)";
 #endif
 #ifdef ILINK
 	if (!strcmp(name, "ilink:"))
-		return "ilink:/";
+		return "i.Link / FireWire (ilink:/)";
 	if (!strcmp(name, "ilink0:"))
-		return "ilink0:/";
+		return "i.Link / FireWire (ilink0:/)";
 #endif
 	if (!strcmp(name, "hdd0:"))
-		return "hdd0:/";
+		return "Internal HDD, APA (hdd0:/)";
 	if (!strcmp(name, "hdd1:"))
-		return "hdd1:/";
+		return "Internal HDD, APA (hdd1:/)";
 #ifdef EXFAT
 	if (!strcmp(name, "ata:"))
-		return "ata0:/";
+		return "exFAT HDD (ata0:/)";
 	if (!strcmp(name, "ata0:"))
-		return "ata0:/";
+		return "exFAT HDD (ata0:/)";
 	if (!strcmp(name, "ata1:"))
-		return "ata1:/";
+		return "exFAT HDD (ata1:/)";
 	if (!strcmp(name, "cf:") || !strcmp(name, "cf0:"))
-		return "cf:/";
+		return "PC CARD CF (cf:/)";
 #endif
 	if (!strcmp(name, "cdfs:"))
-		return "cdfs:/";
+		return "Optical disc (cdfs:/)";
 #ifdef XFROM
-	if (!strcmp(name, "xfrom0:") || !strcmp(name, "xfrom:"))
-		return "xfrom:/";
+	if (!strcmp(name, "xfrom0:"))
+		return "PSX Flash (xfrom0:/)";
+	if (!strcmp(name, "xfrom:"))
+		return "PSX Flash (xfrom:/)";
 #endif
 #ifdef DVRP
 	if (!strcmp(name, "dvr_hdd0:"))
-		return "dvr:/";
+		return "PSX DVR HDD (dvr_hdd0:/)";
 #endif
 #ifdef ETH
 	if (!strcmp(name, "host:"))
-		return "host:/";
+		return "PS2Link host (host:/)";
 #endif
 #ifdef UDPFS
 	if (!strcmp(name, "udpfs:"))
-		return "udpfs:/";
+		return "UDP filesystem (udpfs:/)";
 #endif
+	if (!strcmp(name, "vmc0:"))
+		return "Memory card image 0 (vmc0:/)";
+	if (!strcmp(name, "vmc1:"))
+		return "Memory card image 1 (vmc1:/)";
 	if (!strcmp(name, LNG(MISC)))
-		return "MISC/";
+		return "Built-in commands (MISC/)";
 
 	return NULL;
 }
@@ -1796,7 +1802,7 @@ int getFilePath(char *out, int cnfmode)
 					if (root_label != NULL)
 						strcpy(tmp, root_label);
 					else
-						strcpy(tmp, files[top + i].name);
+						strcpy(tmp, getMiscEntryDisplayName(path, files[top + i].name));
 					if (fileShowDetails()) {  //Does display mode include file details ?
 						name_limit = (details_column - 1) * FONT_WIDTH;
 					} else {  //Filenames are shown without file details

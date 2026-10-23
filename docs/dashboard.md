@@ -542,8 +542,8 @@ USB devices are named **USB Mass Storage**. The File Browser and device panels
 show legacy `mass:` / `mass0:` / `mass1:` labels while browsing keeps the exact
 USB device mapping internally.
 
-**Settings > Launching > Modern device handoffs** is off by default and is saved
-as `Modern_Device_Handoff = 0` in `LAUNCHELF.CNF`. With it off, ordinary ELF
+**Settings > Launching > ELF handoff paths** defaults to **Legacy mass (default)** and is saved
+as `Modern_Device_Handoff = 0` in `LAUNCHELF.CNF`. With the default choice, ordinary ELF
 launches use a verified legacy `massN:` alias where available. Turn it on for
 applications that support device-specific `usbN:`, `ataN:`, `mx4sioN:` and
 `ilinkN:` paths. It changes the path handed to the application, not the device
@@ -556,3 +556,9 @@ matching alias is available, it retains the selected live path. Classic USB
 builds retain their mass aliases. Ember, POPStarter and Neutrino keep their
 own loader-specific handoff rules. Console validation is still required for
 applications that use the modern aliases.
+
+### Video mode preview and browser navigation
+
+Video mode changes require confirmation within **5 seconds**. Keep retains the mode in the current settings session; Cancel or timeout restores the previous mode and screen offsets. Settings are written only through the existing Save action. Physical-console timing and display compatibility still require testing.
+
+The native File Browser and path picker provide ten rows, centered scrolling, and endpoint-first Left/Right paging. A page that overshoots lands at the first/last item; the next press at that endpoint wraps. Device rows show friendly names and mount IDs, with USB displayed as USB Mass Storage and mass-style IDs. Diagnostic status remains in device tools and opening a device reports initialization/errors. MISC/Configure opens dashboard Settings while the dashboard owns the screen; its classic configuration behavior remains available outside the dashboard.

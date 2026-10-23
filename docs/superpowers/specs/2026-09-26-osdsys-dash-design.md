@@ -113,7 +113,7 @@ All gated by `dashCfg.anim` (off = instant, reduced = shorter/simpler):
 ## Workstream 3 — SFX subsystem
 
 Current state: the project has no audio at all (no `audsrv`, no IRX, no
-libs). `audsrv` (EE lib + IOP driver) is installed in the ps2dev packages.
+libs). `audsrv` (EE lib + IOP driver) is installed as a package in TechWritesCode's PS2BUILD SDK.
 
 Design:
 
