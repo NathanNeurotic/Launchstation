@@ -80,7 +80,7 @@ void Show_About_uLE(void)
 			PrintPos(-1, hpos, "  Ronald Andersson (aka: 'dlanor')", COLOR_TEXT);
 			PrintPos(-1, hpos, " ", COLOR_TEXT);
 			PrintPos(-1, hpos, "Other contributors:", COLOR_TEXT);
-			PrintPos(-1, hpos, "  techwritescode", COLOR_TEXT);
+			PrintPos(-1, hpos, "  PS2BUILD SDK by techwritescode", COLOR_TEXT);
 			PrintPos(-1, hpos, "  Polo35, radad, Drakonite, sincro", COLOR_TEXT);
 			PrintPos(-1, hpos, "  kthu, Slam-Tilt, chip, pixel, Hermes, PCM720", COLOR_TEXT);
 			PrintPos(-1, hpos, "  and others in the PS2Dev community", COLOR_TEXT);

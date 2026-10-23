@@ -65,11 +65,24 @@ static int copyDiagFail(int result)
 
 void filerCopyDiagFormat(char *out, int size, int result)
 {
-	snprintf(out, size, "%s (%d)\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
-	         copy_diag.stage ? copy_diag.stage : "Copy failed", copy_diag.error ? copy_diag.error : result,
-	         copy_diag.name, copy_diag.source, copy_diag.destination,
-	         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
-	         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
+	int error = copy_diag.error ? copy_diag.error : result;
+
+	if (error == -ENOSPC) {
+		snprintf(out, size, "%s (%d)\n"
+		         "Not enough free space to copy the complete file. For replacements, "
+		         "free space must cover the new file before the old one can be replaced.\n"
+		         "%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
+		         copy_diag.stage ? copy_diag.stage : "Copy failed", error,
+		         copy_diag.name, copy_diag.source, copy_diag.destination,
+		         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
+		         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
+	} else {
+		snprintf(out, size, "%s (%d)\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
+		         copy_diag.stage ? copy_diag.stage : "Copy failed", error,
+		         copy_diag.name, copy_diag.source, copy_diag.destination,
+		         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
+		         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
+	}
 }
 
 /* File replacements keep the old entry until a complete sibling copy has
