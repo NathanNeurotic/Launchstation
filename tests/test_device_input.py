@@ -243,6 +243,12 @@ static int isPcCardCfLoaded(void) { return 0; }
 static int getPcCardCfCapacitySectors(u32 *s) { (void)s; return -1; }
 static int loadPcCardCfModules(void) { return 0; }
 """
+devcode += r"""
+/* Device-probe harness tests state transitions, not actual MASS aliases. */
+static void filerFormatDevicePathForDisplay(const char *p,char *out,int size) {
+    snprintf(out,size,"%s",p);
+}
+"""
 devcode += re.sub(r"^#include[^\n]*\n", "", devices, flags=re.M)
 devcode += r"""
 static int state(const char *mount) {
