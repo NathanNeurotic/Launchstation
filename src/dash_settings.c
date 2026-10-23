@@ -94,6 +94,7 @@ enum SetId {
 	S_SHOW_UNAVAILABLE,
 	S_REBOOT_ELF,
 	S_MODERN_HANDOFF,
+	S_BROWSER_PATHS,
 	S_DEVA_USB,
 	S_DEVA_HDD,
 	S_DEVA_ATA,
@@ -324,6 +325,7 @@ static const SetItem device_items[] = {
     {ST_CHOICE, S_HIDE_HDD, "Internal HDD / ATA units", "Which HDD and exFAT units appear in the File Browser."},
     {ST_CHOICE, S_HIDE_MC, "Hide empty memory card slots", "Also hides unused MMCE entries in the File Browser."},
     {ST_CHOICE, S_SHOW_UNAVAILABLE, "Show unavailable devices", "On keeps disconnected/probe-only device families visible; Off shows only devices that are ready."},
+    {ST_CHOICE, S_BROWSER_PATHS, "File Browser path names", "Legacy MASS (default) shows verified massN mounts; device-specific displays usbN paths. Storage operations retain their real mounted paths."},
     {ST_PAGE, P_AUTOSTART, "Start devices automatically", "The boot device always stays enabled. Starting other drivers takes effect immediately."},
 };
 
@@ -672,6 +674,12 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_SHOW_UNAVAILABLE:
 			*cur = dashCfg.show_unavailable_devices;
 			return 2;
+		case S_BROWSER_PATHS: {
+			static const char *const browser_names[] = {"Legacy MASS (default)", "Device-specific"};
+			*names = browser_names;
+			*cur = setting->modern_browser_device_paths ? 1 : 0;
+			return 2;
+		}
 		case S_MODERN_HANDOFF: {
 			static const char *const handoff_names[] = {"Legacy mass (default)", "Device-specific"};
 			*names = handoff_names;
@@ -1383,6 +1391,10 @@ static void setChoice(int id, int v)
 					break;
 				case S_HIDE_MC:
 					setting->Hide_MCMMCE = v;
+					break;
+				case S_BROWSER_PATHS:
+					setting->modern_browser_device_paths = v;
+					filerInvalidateUsbMassDisplayAliases();
 					break;
 				case S_MODERN_HANDOFF:
 					setting->modern_device_handoff = v;
