@@ -206,7 +206,7 @@ int main(void){
   message[0]=0;subfunc_Paste(message,"mc0:/");
   assert(message[0]&&strstr(message,stages[failure])&&strstr(message,"fixture-head"));
   assert(!handles&&matches("mc0:/BOOT.ELF",old,sizeof(old)));
-  if(failure==3){assert(strstr(message,"37/65537 B")&&strstr(message,"(-28)"));}
+  if(failure==3){assert(strstr(message,"37/65537 B")&&strstr(message,"(-28)")&&strstr(message,"Not enough free space"));}
   if(failure==7)assert(strstr(message,"IOP 1>2"));
  }
  /* Nested ordinary folders use the same production recursion. */
