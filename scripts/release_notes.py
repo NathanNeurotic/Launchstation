@@ -56,10 +56,15 @@ def revision_changelog(revision):
 
 def release_changes(repo, revision, previous, log):
     current = revision_changelog(revision)
-    # Keep useful notes on reruns, but never hide new commits behind an old
-    # unchanged Rolling section carried over from the previous release.
-    if current and (not previous or revision == previous or
-                    current != revision_changelog(previous)):
+    # Keep the public rolling summary visible on every release page.
+    # If the summary text did not change but new commits exist, append those
+    # commit links so fresh changes are still visible.
+    if current:
+        if not previous or revision == previous or current != revision_changelog(previous):
+            return current
+        commit_changes = changes_from_log(log, repo)
+        if commit_changes:
+            return current + ["", "- Additional merged changes in this rolling build:"] + commit_changes
         return current
     return changes_from_log(log, repo)
 

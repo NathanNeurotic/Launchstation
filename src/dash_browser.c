@@ -138,6 +138,16 @@ static int nextImageIndex(int from, int dir)
 	return -1;
 }
 
+static int wrapIndex(int index, int total)
+{
+	if (total <= 0)
+		return 0;
+	index %= total;
+	if (index < 0)
+		index += total;
+	return index;
+}
+
 static void revealSelection(void)
 {
 	if (fb.sel < fb.top)
@@ -148,6 +158,9 @@ static void revealSelection(void)
 		fb.top = 0;
 	if (fb.n > FB_ROWS && fb.top > fb.n - FB_ROWS)
 		fb.top = fb.n - FB_ROWS;
+	/* A viewport jump must not leave the animated highlight off screen. */
+	if (fb.sel_anim < fb.top || fb.sel_anim >= fb.top + FB_ROWS)
+		fb.sel_anim = (float)fb.sel;
 }
 
 static u64 fbFileBytes(const FILEINFO *f)
@@ -2584,7 +2597,9 @@ static void browserDrawBody(void)
 	char info[64], display_path[MAX_PATH + 2];
 
 	/* Display the public MASS label without changing the path used for I/O. */
-	if (!strncmp(fb.dir, "usb", 3) && fb.dir[3] >= '0' && fb.dir[3] <= '9' && fb.dir[4] == ':')
+	if (!strncmp(fb.dir, "usb:", 4))
+		snprintf(display_path, sizeof(display_path), "mass%s", fb.dir + 3);
+	else if (!strncmp(fb.dir, "usb", 3) && fb.dir[3] >= '0' && fb.dir[3] <= '9' && fb.dir[4] == ':')
 		snprintf(display_path, sizeof(display_path), "mass%s", fb.dir + 3);
 	else
 		dashStrCopy(display_path, fb.dir, sizeof(display_path));
@@ -2640,13 +2655,19 @@ static void browserDrawBody(void)
 
 		if (fb.dir[0] == '\0') {
 			DashDevice *d = &fb.devs[i];
+			char device_label[80];
+			const char *name = d->name;
+			if (d->icon == DI_USB) {
+				snprintf(device_label, sizeof(device_label), "mass%s  USB Mass Storage", d->mount + 3);
+				name = device_label;
+			}
 			if (d->state != DASH_DEV_READY && i != fb.sel)
 				col = DASH_C_TEXT3;
 			dashIcon(d->icon, FB_X + 10, y + 3, 16, col);
 			if (i == fb.sel)
-				dashTextScroll(FB_X + 36, y + 1, FB_W - 220, d->name, DASH_FS_SMALL, col);
+				dashTextScroll(FB_X + 36, y + 1, FB_W - 220, name, DASH_FS_SMALL, col);
 			else
-				dashTextFit(FB_X + 36, y + 1, FB_W - 220, d->name, DASH_FS_SMALL, col);
+				dashTextFit(FB_X + 36, y + 1, FB_W - 220, name, DASH_FS_SMALL, col);
 			dashTextRight(FB_X + FB_W - 12, y + 2, d->status, DASH_FS_CAPTION, DASH_C_TEXT3);
 		} else {
 			FILEINFO *f = &fb.files[i];
@@ -2794,60 +2815,57 @@ static void browserProcessInput(const DashInput *in, int *running)
 	int total, prev;
 	if (fb.files == NULL)
 		return;
-		total = fb.dir[0] ? fb.n : fb.ndevs;
-		prev = fb.sel;
-		if (!fb.loading) {
+	total = fb.dir[0] ? fb.n : fb.ndevs;
+	prev = fb.sel;
+	if (!fb.loading) {
+		if (total > 0) {
 			if (in->pressed & DASH_IN_UP)
-				fb.sel--;
+				fb.sel = wrapIndex(fb.sel - 1, total);
 			if (in->pressed & DASH_IN_DOWN)
-				fb.sel++;
+				fb.sel = wrapIndex(fb.sel + 1, total);
 			if (in->pressed & (DASH_IN_L2 | DASH_IN_LEFT))
-				fb.sel -= FB_ROWS;
+				fb.sel = wrapIndex(fb.sel - FB_ROWS, total);
 			if (in->pressed & (DASH_IN_R2 | DASH_IN_RIGHT))
-				fb.sel += FB_ROWS;
-			if (fb.sel >= total)
-				fb.sel = total - 1;
-			if (fb.sel < 0)
-				fb.sel = 0;
-			if (fb.sel != prev && running != NULL)
-				dashSoundPlay(DASH_SND_CURSOR);
-			if (in->pressed & DASH_IN_OK) {
-				if (running != NULL)
-					dashSoundPlay(DASH_SND_CONFIRM);
-				activate();
-			}
-			if ((in->pressed & DASH_IN_FAV) && fb.dir[0] && !isMisc(fb.dir) && fb.sel < fb.n) {
-				fb.mark[fb.sel] = !fb.mark[fb.sel];
-				fb.nmarked += fb.mark[fb.sel] ? 1 : -1;
-				if (fb.sel < fb.n - 1)
-					fb.sel++;
-			}
-			if (in->pressed & DASH_IN_MENU)
-				actionsMenu();
+				fb.sel = wrapIndex(fb.sel + FB_ROWS, total);
 		}
-		if (in->pressed & DASH_IN_BACK) {
-			dashSoundPlay(DASH_SND_CANCEL);
-			if (fb.dir[0] == '\0') {
-				if (running != NULL)
-					*running = 0;
-				else {
-					dashSwitchSection(DASH_SEC_HOME);
-					return;
-				}
-			} else {
-				char parent[MAX_PATH], child[MAX_NAME];
-				parentOf(fb.dir, parent, sizeof(parent), child, sizeof(child));
-				openDir(parent, child[0] ? child : NULL);
-			}
+		if (fb.sel != prev && running != NULL)
+			dashSoundPlay(DASH_SND_CURSOR);
+		if ((in->pressed & DASH_IN_OK) && total > 0) {
+			if (running != NULL)
+				dashSoundPlay(DASH_SND_CONFIRM);
+			activate();
 		}
+		if ((in->pressed & DASH_IN_FAV) && fb.dir[0] && !isMisc(fb.dir) && fb.sel < fb.n) {
+			fb.mark[fb.sel] = !fb.mark[fb.sel];
+			fb.nmarked += fb.mark[fb.sel] ? 1 : -1;
+			if (fb.n > 0)
+				fb.sel = wrapIndex(fb.sel + 1, fb.n);
+		}
+		if (in->pressed & DASH_IN_MENU)
+			actionsMenu();
+	}
+	if (in->pressed & DASH_IN_BACK) {
+		dashSoundPlay(DASH_SND_CANCEL);
+		if (fb.dir[0] == '\0') {
+			if (running != NULL)
+				*running = 0;
+			else {
+				dashSwitchSection(DASH_SEC_HOME);
+				return;
+			}
+		} else {
+			char parent[MAX_PATH], child[MAX_NAME];
+			parentOf(fb.dir, parent, sizeof(parent), child, sizeof(child));
+			openDir(parent, child[0] ? child : NULL);
+		}
+	}
 
-		total = fb.dir[0] ? fb.n : fb.ndevs;
-		if (fb.sel >= total)
-			fb.sel = total > 0 ? total - 1 : 0;
-		if (fb.sel < fb.top)
-			fb.top = fb.sel;
-		if (fb.sel >= fb.top + FB_ROWS)
-			fb.top = fb.sel - FB_ROWS + 1;
+	total = fb.dir[0] ? fb.n : fb.ndevs;
+	if (total > 0)
+		fb.sel = wrapIndex(fb.sel, total);
+	else
+		fb.sel = 0;
+	revealSelection();
 
 }
 

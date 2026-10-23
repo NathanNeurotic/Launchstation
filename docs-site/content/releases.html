@@ -1,12 +1,59 @@
-<h1>Downloads &amp; Releases</h1><p class="lead">Four installable app packages, built from the same commit.</p>
-<div class="btn-row"><a class="btn" href="https://github.com/NathanNeurotic/Launchstation/releases/tag/latest">Latest automated build</a><a class="btn ghost" href="https://github.com/NathanNeurotic/Launchstation/actions">GitHub Actions</a></div>
-<h2 id="assets">Release assets</h2><table><thead><tr><th>Package</th><th>Packed executable</th><th>Installation</th></tr></thead><tbody>
-<tr><td>APP_LAUNCHSTATION.zip</td><td>LAUNCHSTATION.ELF</td><td>Extract APP_LAUNCHSTATION/ to a supported filesystem.</td></tr>
-<tr><td>APP_LAUNCHSTATION.psu</td><td>LAUNCHSTATION.ELF</td><td>Use PSU Paste to install APP_LAUNCHSTATION/ on a memory card.</td></tr>
-<tr><td>APP_LAUNCHSTATION-DS.zip</td><td>LAUNCHSTATION-DS.ELF</td><td>Extract APP_LAUNCHSTATION-DS/ to a supported filesystem.</td></tr>
-<tr><td>APP_LAUNCHSTATION-DS.psu</td><td>LAUNCHSTATION-DS.ELF</td><td>Use PSU Paste to install APP_LAUNCHSTATION-DS/ on a memory card.</td></tr>
-</tbody></table><p>Each app folder contains its packed executable, <code>title.cfg</code>, <code>WLE-UPDATE-CA.PEM</code> for verified HTTPS updates, and <code>BGM.ADP</code> for background music. ZIP and PSU payloads match. Back up any existing settings before replacing an app folder.</p>
-<h2 id="ds34">DualShock build</h2><p>The -DS packages enable the inherited PS3/PS4 USB/Bluetooth controller drivers. The standard packages use the standard PS2 pad driver. Build checks do not establish controller and storage coexistence on a real console.</p>
-<h2 id="integrity">Integrity and native updates</h2><p>The native updater first verifies that the published release descends from the running Git commit (and refuses older, divergent or unverifiable updates). It then selects the PSU matching its controller variant, verifies GitHub's SHA-256 asset digest, extracts only the matching ELF, and validates its PS2 ELF header before staged replacement with rollback. Older updater builds expecting standalone ELFs or two-file PSUs require one manual installation of the new package before the four-file PSU can be used by the native updater. Subsequent native updates restore missing updater CA/BGM sidecars from the verified four-file PSU and replace the ELF; existing/custom sidecars are never overwritten. Updates from legacy two-file PSUs remain ELF-only. For bug reports, record the commit and package or ELF SHA-256.</p>
-<p>The app packages include music and the update CA; standalone ELF installations can copy <code>res/music.sad</code> as <code>BGM.ADP</code> and <code>res/WLE-UPDATE-CA.PEM</code> alongside the ELF. Google Drive account configuration and its separate CA setup remain optional and are not bundled. Offline documentation can be generated with <code>python docs-site/build.py --out build/docs --zip build/Launchstation-Documentation.zip</code>.</p>
-<h2 id="rolling">Rolling publication policy</h2><p>The rolling <code>latest</code> tag is refreshed by successful verified <code>master</code> CI publication, including docs-only commits. The four ZIP/PSU variants come from the same source commit and have recorded checksums. If a new build behaves differently on a particular PS2, use the known-good preserved baseline release and report console model, source hash, device and reproduction steps. CI and package integrity do not substitute for real hardware acceptance. See <a href="https://github.com/NathanNeurotic/Launchstation/releases/tag/usb-second-drive-2026-10-08-58d4514">preserved USB-tested baseline</a>.</p>
+<h1>Downloads &amp; Releases</h1>
+<p class="lead">Install the latest verified package and review the current Rolling changelog summary.</p>
+
+<div class="btn-row">
+  <a class="btn" href="https://github.com/NathanNeurotic/Launchstation/releases/tag/latest">Latest release</a>
+  <a class="btn ghost" href="https://github.com/NathanNeurotic/Launchstation/actions">Build checks</a>
+</div>
+
+<h2 id="assets">Release assets</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Package</th>
+      <th>Packed executable</th>
+      <th>Installation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>APP_LAUNCHSTATION.zip</td>
+      <td>LAUNCHSTATION.ELF</td>
+      <td>Extract <code>APP_LAUNCHSTATION/</code> to a supported filesystem.</td>
+    </tr>
+    <tr>
+      <td>APP_LAUNCHSTATION.psu</td>
+      <td>LAUNCHSTATION.ELF</td>
+      <td>Use PSU Paste to install <code>APP_LAUNCHSTATION/</code> on a memory card.</td>
+    </tr>
+    <tr>
+      <td>APP_LAUNCHSTATION-DS.zip</td>
+      <td>LAUNCHSTATION-DS.ELF</td>
+      <td>Extract <code>APP_LAUNCHSTATION-DS/</code> to a supported filesystem.</td>
+    </tr>
+    <tr>
+      <td>APP_LAUNCHSTATION-DS.psu</td>
+      <td>LAUNCHSTATION-DS.ELF</td>
+      <td>Use PSU Paste to install <code>APP_LAUNCHSTATION-DS/</code> on a memory card.</td>
+    </tr>
+  </tbody>
+</table>
+<p>Each package includes the ELF plus updater support files (<code>title.cfg</code>, <code>WLE-UPDATE-CA.PEM</code>, <code>BGM.ADP</code>). ZIP and PSU payloads match.</p>
+
+<p><strong>Upgrading an older installation:</strong> updaters expecting standalone ELFs or two-file PSUs need one manual installation of the new package before using the newer four-file PSU format. Back up existing settings before replacing an app folder.</p>
+
+<h2 id="changelog">Rolling changelog summary</h2>
+<ul>
+  <li>Infinite wrap-around navigation for dashboard lists and file-browser views.</li>
+  <li>Safer replacement when pasting over existing files (old copy preserved until replacement is verified).</li>
+  <li>Copy/delete overlays now show cleaner progress with filename, remaining size in MB and smooth progress fill.</li>
+  <li>Cross-device copy reliability improvements for short reads/writes and storage handoff timing.</li>
+  <li>Clock-save and storage-load reliability fixes across restart and card/driver transitions.</li>
+</ul>
+<p>
+  Full details: <a href="https://github.com/NathanNeurotic/Launchstation/releases/tag/latest">latest release notes</a> ·
+  <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/CHANGELOG.md">CHANGELOG.md</a>.
+</p>
+
+<h2 id="notes">Notes</h2>
+<p>The <code>-DS</code> packages enable inherited PS3/PS4 controller support; standard packages keep the standard PS2 pad driver. CI success and package integrity do not replace real hardware validation. If a new rolling build regresses on your console, keep a known-good baseline and report console model, source hash and reproduction steps.</p>

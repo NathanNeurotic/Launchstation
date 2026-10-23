@@ -32,12 +32,12 @@ static int isGenericUsbRootPath(const char *path)
 
 static const char *getUsbRootDeviceLabel(char unit)
 {
-	static char label[] = "usb0:/";
+	static char label[] = "mass0:/  USB Mass Storage";
 
 	if ((unit < '0') || (unit > '9'))
 		return NULL;
 
-	label[3] = unit;
+	label[4] = unit;
 	return label;
 }
 
@@ -48,11 +48,11 @@ static const char *getRootDeviceLabel(const char *name)
 	if (!strcmp(name, "mc1:"))
 		return "mc1:/";
 	if (!strcmp(name, "mass:"))
-		return "usb:/";
+		return "mass:/  USB Mass Storage";
 	if (!strncmp(name, "mass", 4) && name[4] >= '0' && name[4] <= '9' && name[5] == ':' && name[6] == '\0')
 		return getUsbRootDeviceLabel(name[4]);
 	if (!strcmp(name, "usb:"))
-		return "usb:/";
+		return "mass:/  USB Mass Storage";
 	if (!strncmp(name, "usb", 3) && name[3] >= '0' && name[3] <= '9' && name[4] == ':' && name[5] == '\0')
 		return getUsbRootDeviceLabel(name[3]);
 #ifdef MMCE
@@ -262,8 +262,9 @@ static void formatBrowserPathForDisplay(const char *path, char *display_path)
 	const char *sep;
 	int part_len;
 
-	if (!strncmp(path, "mass", 4)) {
-		snprintf(display_path, MAX_PATH, "usb%s", path + 4);
+	if (!strncmp(path, "usb", 3) && (path[3] == ':' ||
+	    (path[3] >= '0' && path[3] <= '9' && path[4] == ':'))) {
+		snprintf(display_path, MAX_PATH, "mass%s", path + 3);
 		return;
 	}
 
@@ -2126,8 +2127,14 @@ static void subfunc_Paste(char *mess, char *path)
 	filerCopyDiagBegin(clipPath, path);
 	written_size = 0;
 	PasteTime = Timer();  //Note initial pasting time
-	if (!strcmp(path, clipPath))
-		goto finished;
+	/* Pasting back into the source directory is a successful no-op.
+	 * Do not reach the move-source deletion loop or claim a device failure. */
+	if (!strcmp(path, clipPath)) {
+		if (browser_cut)
+			nclipFiles = 0;
+		browser_cd = TRUE;
+		return;
+	}
 	trace_vmc_paste = (!strncmp(clipPath, "vmc", 3) || !strncmp(path, "vmc", 3));
 	ret = prepareTransferDeviceStacks(clipPath, path);
 	if (ret == TRANSFER_STACK_INCOMPATIBLE) {

@@ -92,6 +92,7 @@ enum SetId {
 	S_HIDE_MC,
 	S_SHOW_UNAVAILABLE,
 	S_REBOOT_ELF,
+	S_MODERN_HANDOFF,
 	S_DEVA_USB,
 	S_DEVA_HDD,
 	S_DEVA_ATA,
@@ -282,6 +283,7 @@ static const SetItem launch_items[] = {
     {ST_CHOICE, S_PATHPAD_LOCK, "Lock shortcuts & bookmarks", "Prevents editing launch keys and File Browser bookmarks."},
     {ST_PAGE, P_LOADERS, "Disc & image loaders", "ESR, OSDSYS, POPStarter, Ember and Neutrino paths."},
     {ST_CHOICE, S_REBOOT_ELF, "Reset IOP before launch", "Recommended: gives launched ELFs a clean IOP."},
+    {ST_CHOICE, S_MODERN_HANDOFF, "Modern device handoffs", "Off: legacy mass paths for compatibility. On: device-specific usb, ata, mx4sio and ilink paths for compatible ELFs."},
     {ST_PAGE, P_GAMEID, "Game ID output", "Game IDs for RetroGem and compatible OSD/HDMI adapters."},
 };
 
@@ -668,6 +670,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return 2;
 		case S_SHOW_UNAVAILABLE:
 			*cur = dashCfg.show_unavailable_devices;
+			return 2;
+		case S_MODERN_HANDOFF:
+			*cur = setting->modern_device_handoff ? 1 : 0;
 			return 2;
 		case S_REBOOT_ELF:
 			*cur = setting->reboot_iop_elf_load ? 1 : 0;
@@ -1350,6 +1355,9 @@ static void setChoice(int id, int v)
 					break;
 				case S_HIDE_MC:
 					setting->Hide_MCMMCE = v;
+					break;
+				case S_MODERN_HANDOFF:
+					setting->modern_device_handoff = v;
 					break;
 				case S_REBOOT_ELF:
 					setting->reboot_iop_elf_load = v;
@@ -2843,30 +2851,38 @@ static void editLaunchMenu(const SetItem *it)
 static void settingsInput(const DashInput *in)
 {
 	const SetItem *it;
+	int total;
 
 	if (in->pressed & DASH_IN_MENU) {
 		settingsMenu();
 		return;
 	}
 	it = curItem();
+	total = pages[page].n;
 	if (in->pressed & DASH_IN_UP) {
-		if (item > 0) {
-			item--;
-			dashUiFocusPoke();
+		if (total > 0) {
+			int next = item > 0 ? item - 1 : total - 1;
+			if (next != item)
+				dashUiFocusPoke();
+			item = next;
 		}
 	} else if (in->pressed & DASH_IN_DOWN) {
-		if (item < pages[page].n - 1) {
-			item++;
-			dashUiFocusPoke();
+		if (total > 0) {
+			int next = item < total - 1 ? item + 1 : 0;
+			if (next != item)
+				dashUiFocusPoke();
+			item = next;
 		}
 	} else if (in->pressed & DASH_IN_L2) {
-		if (item != 0)
+		if (item != 0) {
 			dashUiFocusPoke();
-		item = 0;
+			item = 0;
+		}
 	} else if (in->pressed & DASH_IN_R2) {
-		if (item != pages[page].n - 1)
+		if (item != pages[page].n - 1) {
 			dashUiFocusPoke();
-		item = pages[page].n - 1;
+			item = pages[page].n - 1;
+		}
 	} else if (in->pressed & DASH_IN_BACK) {
 		if (page_depth) {
 			dashSoundPlay(DASH_SND_CANCEL);
@@ -2986,6 +3002,8 @@ static void settingsDraw(void)
 		item_top = item;
 	if (item >= item_top + ITEM_ROWS)
 		item_top = item - ITEM_ROWS + 1;
+	if (item_anim < item_top || item_anim >= item_top + ITEM_ROWS)
+		item_anim = (float)item;
 
 	/* items */
 	dashDrawPanelBox(ix - 6, iy - 6, iw + 12, ITEM_ROWS * irow + 12, 14);

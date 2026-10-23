@@ -535,3 +535,24 @@ Demand-loaded storage such as the internal APA HDD and iLink/FireWire is
 selectable while its state is `Not checked`. Opening it runs the existing
 lazy loader/probe. Only a device that was explicitly checked and found absent
 is skipped by navigation.
+
+### Device names and ELF handoffs
+
+USB devices are named **USB Mass Storage**. The File Browser and device panels
+show legacy `mass:` / `mass0:` / `mass1:` labels while browsing keeps the exact
+USB device mapping internally.
+
+**Settings > Launching > Modern device handoffs** is off by default and is saved
+as `Modern_Device_Handoff = 0` in `LAUNCHELF.CNF`. With it off, ordinary ELF
+launches use a verified legacy `massN:` alias where available. Turn it on for
+applications that support device-specific `usbN:`, `ataN:`, `mx4sioN:` and
+`ilinkN:` paths. It changes the path handed to the application, not the device
+shown in the browser or the IOP reset option.
+
+A numbered `massN:` slot may belong to any BDM device; its number is not a USB
+unit number. Before translating, Launchstation matches the driver, physical
+device number and file LBA. If a driver lacks these identity queries or no
+matching alias is available, it retains the selected live path. Classic USB
+builds retain their mass aliases. Ember, POPStarter and Neutrino keep their
+own loader-specific handoff rules. Console validation is still required for
+applications that use the modern aliases.

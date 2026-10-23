@@ -85,14 +85,24 @@ static float tsel_anim = 1.0f;
 
 static void tMove(int d)
 {
-	int s = tsel;
+	int start, s;
 
+	if (NTOOLS <= 0 || d == 0)
+		return;
+	start = s = tsel;
 	do {
 		s += d;
-		if (s < 0 || s >= NTOOLS)
+		if (s < 0)
+			s = NTOOLS - 1;
+		else if (s >= NTOOLS)
+			s = 0;
+		if (tools[s].action != TA_HEADER) {
+			if (s != tsel)
+				dashUiFocusPoke();
+			tsel = s;
 			return;
-	} while (tools[s].action == TA_HEADER);
-	tsel = s;
+		}
+	} while (s != start);
 }
 
 static void toolsEnter(void)
@@ -1511,6 +1521,8 @@ static void toolsDraw(void)
 		ttop = tsel - rows + 1;
 	if (ttop < 0)
 		ttop = 0;
+	if (tsel_anim < ttop || tsel_anim >= ttop + rows)
+		tsel_anim = (float)tsel;
 
 	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, rows * row_h + 12, 14);
 	dashGfxScissor(lx - 6, ly - 4, lw + 12, rows * row_h + 8);

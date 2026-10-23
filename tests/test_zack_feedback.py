@@ -28,8 +28,8 @@ assert "dashOpenBrowser(setting->Misc)" in (root/"src/dash_tools.c").read_text()
 assert "dashCfg.files_mode = !dashCfg.files_mode" in files
 assert "const DashScreen dashDevicesScreen = {storageEnter" in files
 assert "const DashScreen dashFilesScreen" in (root/"src/dash_browser.c").read_text()
-assert '"MASS"' in devices
-assert '"MASS Storage"' in (root/"src/dash_lib.c").read_text()
+assert '"USB Mass Storage"' in devices
+assert '"USB Mass Storage"' in (root/"src/dash_lib.c").read_text()
 assert '"USB Storage"' not in (root/"src/dash_lib.c").read_text()
 assert '"MASS (USB)"' not in devices
 assert "mass%d:/" in files  # keep path labels in device panels and picker

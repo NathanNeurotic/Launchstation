@@ -315,18 +315,18 @@ int dashDevicesList(DashDevice *out, int max)
 	if (isUsbMassStackLoaded()) {
 		int mask = filerUsbDriveMask();
 		if (mask == 0)
-			add(out, &n, max, DI_USB, DASH_DEV_ABSENT, "MASS", "usb:", "usb:/", "Connect a USB storage device");
+			add(out, &n, max, DI_USB, DASH_DEV_ABSENT, "USB Mass Storage", "usb:", "usb:/", "Connect a USB storage device");
 		for (i = 0; i < 10; i++) {
 			char name[32], mount[8], browse[8];
 			if (!(mask & (1 << i)))
 				continue;
-			snprintf(name, sizeof(name), "MASS %d", i);
+			snprintf(name, sizeof(name), "USB Mass Storage");
 			snprintf(mount, sizeof(mount), "usb%d:", i);
 			snprintf(browse, sizeof(browse), "usb%d:/", i);
 			add(out, &n, max, DI_USB, DASH_DEV_READY, name, mount, browse, "Ready");
 		}
 	} else
-		add(out, &n, max, DI_USB, DASH_DEV_PROBE, "MASS", "usb:", "usb:/", "Not connected");
+		add(out, &n, max, DI_USB, DASH_DEV_PROBE, "USB Mass Storage", "usb:", "usb:/", "Not connected");
 
 #ifdef MMCE
 	addStorage(out, &n, max, DI_SDCARD, "MMCE Slot 1", "mmce0:", "mmce0:/", "SD2PSX / MemCard PRO2", "No MMCE storage found");
