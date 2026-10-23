@@ -542,7 +542,7 @@ USB devices are named **USB Mass Storage**. The File Browser and device panels
 show legacy `mass:` / `mass0:` / `mass1:` labels while browsing keeps the exact
 USB device mapping internally.
 
-**Settings ? Launching ? Modern device handoffs** is off by default and is saved
+**Settings > Launching > Modern device handoffs** is off by default and is saved
 as `Modern_Device_Handoff = 0` in `LAUNCHELF.CNF`. With it off, ordinary ELF
 launches use a verified legacy `massN:` alias where available. Turn it on for
 applications that support device-specific `usbN:`, `ataN:`, `mx4sioN:` and
