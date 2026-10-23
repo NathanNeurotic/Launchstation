@@ -32,7 +32,8 @@ assert '"USB Mass Storage"' in devices
 assert '"USB Mass Storage"' in (root/"src/dash_lib.c").read_text()
 assert '"USB Storage"' not in (root/"src/dash_lib.c").read_text()
 assert '"MASS (USB)"' not in devices
-assert "mass%d:/" in devices  # keep path labels in device panels and picker
+assert "filerFormatDevicePathForDisplay(d->browse, buf, size)" in devices  # verified MASS display, not usbN == massN
+assert "mass%d:%s" in (root/"src/filer_device.c").read_text()  # real slot resolved from identity
 assert "No USB storage device was found." in files
 assert 'dashModalMessage(DI_WARNING, "Device not found", body, NULL);' in files  # no raw mount IDs in errors
 assert "Not connected" in devices
