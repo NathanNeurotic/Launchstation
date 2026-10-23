@@ -107,6 +107,8 @@ static int genGetStat(const char *p,iox_stat_t *out){struct stat s;if(!strncmp(p
 static int genOpen(const char *p,int flags){
  if(fail_open&&flags==O_RDONLY&&!strncmp(p,"udpfs:",6))return -ENOENT;
  if(fail_out_open&&(flags&O_WRONLY))return -EACCES;
+ /* Physical MC treats FIO_O_EXCL (0x0800) as PDAExec, not exclusive open. */
+ if ((flags&O_WRONLY) && (!strncmp(p,"mc0:",4)||!strncmp(p,"mc1:",4))) assert(!(flags&O_EXCL));
  int fd=open(p,flags,0600);if(fd<0)return -errno;assert(fd<1024);
  fd_kind[fd]=(flags&O_WRONLY)?2:!strncmp(p,"udpfs:",6)?1:3;
  fd_generation[fd]=generation;handles++;return fd;
