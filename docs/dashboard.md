@@ -565,6 +565,6 @@ The native File Browser and path picker provide ten rows, centered scrolling, an
 
 ### Transfer popup and errors
 
-Copy and verification show an action/filename line, remaining MB and a themed bar. Deletion shows the current filename and completed selected-item count; nested files update the filename without inventing a byte percentage. Intermediate progress eases, and completion fills the bar before closing. A blocking device call can still pause drawing until it returns.
+Copy and verification show an action heading and a dedicated full-width filename line, remaining MB and a themed bar. Deletion shows the current filename and completed selected-item count; nested files update the filename without inventing a byte percentage. Intermediate progress eases, and completion fills the bar before closing. A blocking device call can still pause drawing until it returns.
 
 Paste failures keep the stage, numeric error and device/build diagnostics alongside distinct explanations for insufficient space, access denied, read-only filesystems, missing paths/devices, I/O and timeout failures. Preserve the exact error for troubleshooting; a permission failure is not diagnosed as insufficient space.

@@ -45,6 +45,7 @@ static int active=1, worker, scenes, ticks, presents, spinners, texts, bars, emi
 static u64 tick;
 static float px,py,pw,ph,fill,track,bar_y;
 static char lines[3][256];
+static float widths[3], text_bottom;
 static int DashIsActive(void) { return active; }
 static int dashWorkerOnThread(void) { return worker; }
 static int isStartupDriverStatusQuiet(void) { return 0; }
@@ -54,7 +55,7 @@ static void dashWorkerStatus(const char *s,int done,int total) { (void)s;(void)d
 static void dashStrCopy(char *out,const char *in,int n) { snprintf(out,n,"%s",in); }
 static float dashClampf(float v,float lo,float hi) { return v<lo?lo:v>hi?hi:v; }
 static float dashVisualUpdate(void) { ticks++; return 0.016f; }
-static void dashRenderScene(void) { scenes++; texts=bars=spinners=0;fill=track=0; }
+static void dashRenderScene(void) { scenes++; texts=bars=spinners=0;fill=track=0;text_bottom=0; }
 static void dashGfxPresent(void) { presents++; }
 static void modalPanel(float x,float y,float w,float h,float alpha) {
  (void)alpha;px=x;py=y;pw=w;ph=h;
@@ -65,14 +66,15 @@ static void dashDrawSpinner(float x,float y,float radius,DashColor c) {
  (void)x;(void)y;(void)radius;(void)c;spinners++;
 }
 static void dashTextFit(float x,float y,float w,const char *s,float fs,DashColor c) {
- (void)c; assert(texts<3);snprintf(lines[texts++],256,"%s",s);
+ (void)c; assert(texts<3);widths[texts]=w;snprintf(lines[texts++],256,"%s",s);
+ assert(y>=text_bottom);text_bottom=y+32*fs;
  assert(x>=px+20 && x+w<=px+pw-20 && y>=py+20 && y+32*fs<=py+ph-20);
  if(emit)printf("TEXT|%.2f|%.2f|%.2f|%.2f|%s\n",x,y,w,fs,s);
 }
 static void dashPanel(float x,float y,float w,float h,float radius,DashColor c) {
  (void)radius;(void)c;
  assert(x>=px && x+w<=px+pw && y>=py && y+h<=py+ph && w>=0);
- if(!bars) { track=w;bar_y=y; } else { fill=w;assert(w<=track); }
+ if(!bars) { assert(y>=text_bottom+12);track=w;bar_y=y; } else { fill=w;assert(w<=track); }
  bars++;
  if(emit)printf("BAR|%.2f|%.2f|%.2f|%.2f|%d\n",x,y,w,h,bars);
 }
@@ -130,8 +132,9 @@ int main(int argc,char **argv) {
  assert(DashFileProgress("Pasting file","BOOT.ELF",64ULL<<20,64ULL<<20));
  assert(presents==before+1);
  capture("Copy starting");
- assert(texts==2 && !strcmp(lines[0],"Pasting file: BOOT.ELF"));
- assert(!strcmp(lines[1],"Remaining size: 64.00 MB") && !spinners && fill==0);
+ assert(texts==3 && !strcmp(lines[0],"Pasting file"));
+ assert(!strcmp(lines[1],"BOOT.ELF") && widths[1]==432);
+ assert(!strcmp(lines[2],"Remaining size: 64.00 MB") && !spinners && fill==0);
  tick+=20;DashFileProgress("Pasting file","BOOT.ELF",32ULL<<20,64ULL<<20);
  float first=loading_fraction;capture("Copy halfway");
  assert(loading_fraction>first && loading_fraction<0.5f && fill>0 && fill<track);
@@ -142,12 +145,12 @@ int main(int argc,char **argv) {
  assert(loading_fraction==0);
  char long_name[256];memset(long_name,'X',255);long_name[255]=0;
  DashFileProgress("Verifying file",long_name,1024,1024);capture("Long filename");
- assert(texts==2 && !spinners);
+ assert(texts==3 && !spinners && !strcmp(lines[1],loading_status) && strlen(lines[1])==sizeof(loading_status)-1 && widths[1]==432);
  dashFileLoadingBegin("Deleting file");
  dashLoadingFrame("folder",0,2);tick+=20;DashFileDeleteProgress("nested.bin");
  capture("Deleting selected items");
- assert(!strcmp(lines[0],"Deleting file: nested.bin"));
- assert(!strcmp(lines[1],"Completed items: 0 / 2") && !spinners);
+ assert(texts==3 && !strcmp(lines[0],"Deleting file") && !strcmp(lines[1],"nested.bin"));
+ assert(!strcmp(lines[2],"Completed items: 0 / 2") && !spinners);
  dashLoadingFrame("folder",1,2);capture("Deletion halfway");assert(fill>0 && fill<track);
  dashLoadingFrame("second.bin",2,2);capture("Deletion complete");assert(fill==track);
  loading_cancel=1;capture("Cancelable transfer");

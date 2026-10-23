@@ -1043,9 +1043,9 @@ int dashLoadingActive(void)
 static void loadingDraw(void)
 {
 	float w = loading_file_operation ? 480.0f : 420.0f;
-	float h = loading_file_operation ? (loading_cancel ? 174.0f : 138.0f) : loading_remaining[0] ? 158.0f : loading_cancel ? 150.0f : 128.0f;
+	float h = loading_file_operation ? (loading_cancel ? 210.0f : 174.0f) : loading_remaining[0] ? 158.0f : loading_cancel ? 150.0f : 128.0f;
 	float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
-	float bar_y = y + (loading_file_operation ? 106.0f : loading_remaining[0] ? 126.0f : 102.0f);
+	float bar_y = y + (loading_file_operation ? 142.0f : loading_remaining[0] ? 126.0f : 102.0f);
 	float dt = dashVisualUpdate();
 
 	loading_open = dashApproach(loading_open, 1.0f, 12.0f, dt);
@@ -1054,14 +1054,14 @@ static void loadingDraw(void)
 	dashGfxPushAlpha(loading_open);
 	modalPanel(x, y, w, h, loading_open);
 	if (loading_file_operation) {
-		char line[sizeof(loading_title) + sizeof(loading_status) + 3];
-		snprintf(line, sizeof(line), "%s%s%s", loading_title, loading_status[0] ? ": " : "", loading_status);
-		dashTextFit(x + 24, y + 28, w - 48, line, DASH_FS_BODY, DASH_C_TEXT);
+		char line[64];
+		dashTextFit(x + 24, y + 24, w - 48, loading_title, DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextFit(x + 24, y + 62, w - 48, loading_status, DASH_FS_BODY, DASH_C_TEXT);
 		if (loading_remaining[0])
-			dashTextFit(x + 24, y + 64, w - 48, loading_remaining, DASH_FS_SMALL, DASH_C_TEXT2);
+			dashTextFit(x + 24, y + 100, w - 48, loading_remaining, DASH_FS_SMALL, DASH_C_TEXT2);
 		else if (loading_total > 0) {
 			snprintf(line, sizeof(line), "Completed items: %d / %d", loading_done, loading_total);
-			dashTextFit(x + 24, y + 64, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);
+			dashTextFit(x + 24, y + 100, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);
 		}
 	} else {
 		dashGfxBlend(DASH_BLEND_ADD);
