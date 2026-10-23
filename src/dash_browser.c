@@ -148,16 +148,25 @@ static int wrapIndex(int index, int total)
 	return index;
 }
 
+/* Reach an endpoint before wrapping on the next page press. */
+static int pageIndex(int index, int total, int direction)
+{
+	if (total <= 0)
+		return 0;
+	if (direction < 0)
+		return index == 0 ? total - 1 : (index < FB_ROWS ? 0 : index - FB_ROWS);
+	return index == total - 1 ? 0 : (index + FB_ROWS >= total ? total - 1 : index + FB_ROWS);
+}
+
 static void revealSelection(void)
 {
-	if (fb.sel < fb.top)
-		fb.top = fb.sel;
-	else if (fb.sel >= fb.top + FB_ROWS)
-		fb.top = fb.sel - FB_ROWS + 1;
+	int total = fb.dir[0] ? fb.n : fb.ndevs;
+	int max_top = total > FB_ROWS ? total - FB_ROWS : 0;
+	fb.top = fb.sel - (FB_ROWS - 1) / 2;
 	if (fb.top < 0)
 		fb.top = 0;
-	if (fb.n > FB_ROWS && fb.top > fb.n - FB_ROWS)
-		fb.top = fb.n - FB_ROWS;
+	if (fb.top > max_top)
+		fb.top = max_top;
 	/* A viewport jump must not leave the animated highlight off screen. */
 	if (fb.sel_anim < fb.top || fb.sel_anim >= fb.top + FB_ROWS)
 		fb.sel_anim = (float)fb.sel;
@@ -2655,20 +2664,17 @@ static void browserDrawBody(void)
 
 		if (fb.dir[0] == '\0') {
 			DashDevice *d = &fb.devs[i];
-			char device_label[80];
-			const char *name = d->name;
-			if (d->icon == DI_USB) {
-				snprintf(device_label, sizeof(device_label), "mass%s  USB Mass Storage", d->mount + 3);
-				name = device_label;
-			}
+			char device_label[112], mount[24];
+			snprintf(device_label, sizeof(device_label), "%s  (%s)", d->name,
+			         dashDeviceDisplayMount(d, mount, sizeof(mount)));
+			const char *name = device_label;
 			if (d->state != DASH_DEV_READY && i != fb.sel)
 				col = DASH_C_TEXT3;
 			dashIcon(d->icon, FB_X + 10, y + 3, 16, col);
 			if (i == fb.sel)
-				dashTextScroll(FB_X + 36, y + 1, FB_W - 220, name, DASH_FS_SMALL, col);
+				dashTextScroll(FB_X + 36, y + 1, FB_W - 54, name, DASH_FS_SMALL, col);
 			else
-				dashTextFit(FB_X + 36, y + 1, FB_W - 220, name, DASH_FS_SMALL, col);
-			dashTextRight(FB_X + FB_W - 12, y + 2, d->status, DASH_FS_CAPTION, DASH_C_TEXT3);
+				dashTextFit(FB_X + 36, y + 1, FB_W - 54, name, DASH_FS_SMALL, col);
 		} else {
 			FILEINFO *f = &fb.files[i];
 			char sz[24], date[40], label[MAX_NAME + 8];
@@ -2701,7 +2707,7 @@ static void browserDrawBody(void)
 			if (fbShowsTitles(fb_show) && f->title[0])
 				transcpy_sjis(label, f->title);
 			else
-				dashStrCopy(label, f->name, sizeof(label));
+				dashStrCopy(label, getMiscEntryDisplayName(fb.dir, f->name), sizeof(label));
 			if (i == fb.sel)
 				dashTextScroll(FB_X + 34, y + 1, label_w, label, DASH_FS_SMALL, fb.mark[i] ? DASH_C_OK : col);
 			else
@@ -2824,9 +2830,9 @@ static void browserProcessInput(const DashInput *in, int *running)
 			if (in->pressed & DASH_IN_DOWN)
 				fb.sel = wrapIndex(fb.sel + 1, total);
 			if (in->pressed & (DASH_IN_L2 | DASH_IN_LEFT))
-				fb.sel = wrapIndex(fb.sel - FB_ROWS, total);
+				fb.sel = pageIndex(fb.sel, total, -1);
 			if (in->pressed & (DASH_IN_R2 | DASH_IN_RIGHT))
-				fb.sel = wrapIndex(fb.sel + FB_ROWS, total);
+				fb.sel = pageIndex(fb.sel, total, 1);
 		}
 		if (fb.sel != prev && running != NULL)
 			dashSoundPlay(DASH_SND_CURSOR);

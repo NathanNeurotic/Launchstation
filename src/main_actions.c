@@ -605,6 +605,8 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		}
 		return;
 	} else if (!stricmp(path, setting->Misc_Configure)) {
+		if (DashOpenSettings())
+			return;
 		Load_External_Language();
 		loadFont(setting->font_file);
 		config(ctx->main_msg, ctx->cnf_path);

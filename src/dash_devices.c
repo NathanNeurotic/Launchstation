@@ -278,6 +278,25 @@ static void addStorage(DashDevice *out, int *n, int max, int icon,
 	    state == DASH_DEV_READY ? ready : state == DASH_DEV_ABSENT ? absent : "Not connected");
 }
 
+/* Keep human-readable mount labels for device panels and pickers. Only the
+ * missing-device error modal suppresses these internal path identifiers. */
+const char *dashDeviceDisplayMount(const DashDevice *d, char *buf, int size)
+{
+	if (d != NULL && d->icon == DI_USB) {
+		int unit = 0;
+
+		if (!strncmp(d->mount, "usb", 3) &&
+		    d->mount[3] >= '0' && d->mount[3] <= '9' && d->mount[4] == ':')
+			unit = d->mount[3] - '0';
+		if (d->mount[3] == ':')
+			snprintf(buf, size, "mass:/");
+		else
+			snprintf(buf, size, "mass%d:/", unit);
+		return buf;
+	}
+	return (d != NULL) ? (d->mount[0] ? d->mount : d->browse) : "";
+}
+
 int dashDevicesList(DashDevice *out, int max)
 {
 	int n = 0, port, i;
@@ -290,7 +309,7 @@ int dashDevicesList(DashDevice *out, int max)
 
 		/* PS2 port 0 is mc0 (physical slot 1); port 1 is mc1 (slot 2).
 		 * Keep the label and actual filesystem mount tied to the same port. */
-		snprintf(name, sizeof(name), "mc%d (Slot %d)", port, port + 1);
+		snprintf(name, sizeof(name), "Memory card (Slot %d)", port + 1);
 		snprintf(mount, sizeof(mount), "mc%d:", port);
 		snprintf(browse, sizeof(browse), "mc%d:/", port);
 		if (present == -2)
@@ -336,7 +355,8 @@ int dashDevicesList(DashDevice *out, int max)
 	addStorage(out, &n, max, DI_SDCARD, "MX4SIO SD Card", "mx4sio:", "mx4sio:/", "Ready (slot 2)", "No MX4SIO storage found");
 #endif
 #ifdef ILINK
-	addStorage(out, &n, max, DI_HDD, "iLink / FireWire", "ilink:", "ilink:/", "IEEE1394 storage ready", "No iLink storage found");
+	if (isIlinkConsoleSupported())
+		addStorage(out, &n, max, DI_HDD, "iLink / FireWire", "ilink:", "ilink:/", "IEEE1394 storage ready", "No iLink storage found");
 #endif
 
 	if (filerShowHddUnit(0) && !console_is_PSX) {
@@ -596,7 +616,7 @@ static int autoStartNeeded(void)
 	       || ((mask & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
 #endif
 #ifdef ILINK
-	       || ((mask & DASH_DEVA_ILINK) && !isPathDeviceStackLoaded("ilink:"))
+	       || ((mask & DASH_DEVA_ILINK) && isIlinkConsoleSupported() && !isPathDeviceStackLoaded("ilink:"))
 #endif
 #ifdef UDPFS
 	       || ((mask & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
@@ -731,7 +751,7 @@ void dashDevicesAutoProbe(void)
 			probeMount("mx4sio:");
 #endif
 #ifdef ILINK
-		if ((mask & DASH_DEVA_ILINK) && !isPathDeviceStackLoaded("ilink:"))
+		if ((mask & DASH_DEVA_ILINK) && isIlinkConsoleSupported() && !isPathDeviceStackLoaded("ilink:"))
 			probeMount("ilink:");
 #endif
 #ifdef UDPFS

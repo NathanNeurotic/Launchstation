@@ -243,7 +243,7 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	 * their previous lazy read only when RetroGem or MMCE actually needs it. */
 	if (!tried_gameid && (!setting->cdrom_disable_gameid
 #ifdef MMCE
-	    || isPathDeviceStackLoaded("mmce0:/")
+	    || strncmp(opened_iso, "mx4sio", 6)
 #endif
 	))
 		have_gameid = prepareNeutrinoGameID(opened_iso, gameID, sizeof(gameID));
@@ -276,8 +276,8 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	/* Neutrino consumes the already-mounted device stack. Drain every
 	 * dashboard RPC user and release libpad, but never reset that storage IOP. */
 #ifdef MMCE
-	/* No MMCE initialization here: only adapt already active hardware, and
-	 * protect any slot holding the source ISO or Neutrino executable. */
+	/* Initialize MMCE without replacing the source stack, then protect any
+	 * slot holding the source ISO or Neutrino executable. */
 	if (have_gameid)
 		setNeutrinoMmceGameID(gameID, opened_iso, selected);
 #endif

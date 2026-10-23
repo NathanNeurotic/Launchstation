@@ -45,7 +45,9 @@ PS2-inspired themes, custom RGB colours, backgrounds, wallpapers, fonts,
 icons and clock, plus shareable theme folders. See
 [docs/themes.md](docs/themes.md).
 
-## Building (PS2BUILD)
+## Building with TechWritesCode's PS2BUILD SDK
+
+Launchstation is built and validated with the **PS2BUILD SDK by [TechWritesCode](https://github.com/techwritescode)**. It provides our EE/IOP toolchains, SDK packages and `ps2.yaml` build workflow, locally and in CI. Start with the [official PS2BUILD installation and guide](https://ps2.techwritescode.dev/guide/getting-started).
 
 ```
 ps2build build
@@ -105,7 +107,7 @@ Drivers load on demand for maximum compatibility and initial boot speed.
 - RetroGem Game ID for [PIXEL FX RetroGem](https://www.pixelfx.co/hdmi-retro-gem)
 - Launch PS1 VCDs through POPStarter with an optional custom POPStarter path and device-specific fallbacks.
 - Launch PS1 CUE/BIN/EXE images through Ember from any save-safe `<Ember directory>/games/<Game>/` umbrella. The umbrella name/location is configurable, and a configured Ember directory can supply `ember.elf` to a target device that lacks it. POPStarter remains the independent VCD path; format selects the core automatically.
-- Launch PS2 ISO images through Neutrino with custom or discovered loader paths, and R3Z per-launch compatibility (modes 0/2/3/5/7), GSM video, debug-colors and PS2-logo options. A valid ISO `SYSTEM.CNF` Game ID is used for RetroGem, and optionally for MMCE cards only when the compatible driver stack is already active. Independent Ember/POPStarter/Neutrino disable switches default to Off.
+- Launch PS2 ISO images through Neutrino with custom or discovered loader paths, and R3Z per-launch compatibility (modes 0/2/3/5/7), GSM video, debug-colors and PS2-logo options. A valid ISO `SYSTEM.CNF` Game ID is used for RetroGem, and for best-effort MMCE card switching with on-demand initialization that preserves the mounted source and excludes MX4SIO. Independent Ember/POPStarter/Neutrino disable switches default to Off.
 - MMCE backup & sync page with Sync all cards, Off/Local/Local+Google automatic sync, IGR helper management, Google account controls and HTTPS update checks
 - Writes to history file for disc launches for mmce vmc change
 - Applies deckard disc patches
@@ -120,7 +122,7 @@ Drivers load on demand for maximum compatibility and initial boot speed.
 - HDD Manager can inject APA partition headers
 - View/edit APA partiion header `system.cnf`
 - All drivers besides core lazy loading for faster boot and support of all devices.
-- FTP and PS2Link network services are included in the standard build and start only when requested from Tools > FTP / Network.
+- FTP and PS2Link network services are included in the standard build and start only when requested from Tools > FTP server / Remote access.
 - Create and Extract PSU options so user knows what will happen
 - Native dashboard image viewer for PNG, JPG and JPEG files opened directly from the File Browser, with previous/next browsing, rotation, zoom/pan, fullscreen and slideshow controls.
 - Extra file extensions for Text Editor ShortCuts
@@ -388,9 +390,9 @@ The four current dashboard tabs are **Home, Files, Tools, Settings**. The Applic
 
 **Direct lineage and maintainers:** [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z) by R3Z3N / Saildot4K; earlier wLaunchELF, uLaunchELF and LaunchELF authors; [johnson-cooper](https://github.com/johnson-cooper), who created and transferred this fork; [NathanNeurotic / Ripto](https://github.com/NathanNeurotic), current maintainer; [techwritescode](https://github.com/techwritescode), TnA, oMrRexD, Zack and FitthFox for collaboration, insight or testing as noted in the detailed credits.
 
-**Build system:** [PS2BUILD SDK](https://git.techwritescode.dev/ps2/ps2build) by [techwritescode](https://github.com/techwritescode) is Launchstation's primary external build system and SDK environment. It supplies the `ps2.yaml`-based workflow, compiler toolchains and SDK packages used for standard and DS34 builds; its SDK packages build on the PS2SDK ecosystem, but PS2BUILD and PS2SDK are distinct projects. PS2BUILD itself is not bundled into the released ELF.
+**Build SDK:** [TechWritesCode's PS2BUILD SDK](https://ps2.techwritescode.dev/guide/getting-started) powers our local and CI builds.
 
-**Source/dependency credits:** [PS2SDK/ps2dev](https://github.com/ps2dev/ps2sdk), [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman), [RiptOPL usbd-ra](https://github.com/NathanNeurotic/Open-PS2-Loader), legacy [ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), the legacy libcdvd authors, inherited DS34 driver authors including Alex Parrado, [Mbed TLS](https://github.com/Mbed-TLS/mbedtls), [Xiph.org ogg/vorbis](https://xiph.org/), audsrv and font contributors.
+**Upstream source/dependency credits:** [PS2SDK/ps2dev](https://github.com/ps2dev/ps2sdk), [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman), [RiptOPL usbd-ra](https://github.com/NathanNeurotic/Open-PS2-Loader), legacy [ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), the legacy libcdvd authors, inherited DS34 driver authors including Alex Parrado, [Mbed TLS](https://github.com/Mbed-TLS/mbedtls), [Xiph.org ogg/vorbis](https://xiph.org/), audsrv and font contributors.
 
 **PC CARD CompactFlash driver reference:** [mihhru](https://github.com/mihhru) and [PS2CF](https://github.com/mihhru/PS2CF) supplied the early-PS2 CF PIO/ATA foundation and host tests. The driver port is currently an isolated development target; native CF browsing and console compatibility are not yet verified.
 

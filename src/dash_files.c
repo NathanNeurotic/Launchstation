@@ -18,25 +18,6 @@ extern char LastDir[MAX_NAME];
 //--------------------------------------------------------------
 // Shared: open a device, probing its driver first when needed
 //--------------------------------------------------------------
-/* Keep human-readable mount labels for device panels and pickers. Only the
- * missing-device error modal suppresses these internal path identifiers. */
-static const char *deviceDisplayMount(const DashDevice *d, char *buf, int size)
-{
-	if (d != NULL && d->icon == DI_USB) {
-		int unit = 0;
-
-		if (!strncmp(d->mount, "usb", 3) &&
-		    d->mount[3] >= '0' && d->mount[3] <= '9' && d->mount[4] == ':')
-			unit = d->mount[3] - '0';
-		if (d->mount[3] == ':')
-			snprintf(buf, size, "mass:/");
-		else
-			snprintf(buf, size, "mass%d:/", unit);
-		return buf;
-	}
-	return (d != NULL) ? d->mount : "";
-}
-
 static void deviceNotFound(const DashDevice *d)
 {
 	char body[160];
@@ -394,7 +375,7 @@ static void filesDraw(void)
 				dashTextScrollCenter(dx + dw * 0.5f, dy + 174, dw - 32, d->detail, DASH_FS_CAPTION, DASH_C_TEXT3);
 			{
 				char id[16];
-				dashTextScrollCenter(dx + dw * 0.5f, dy + 200, dw - 32, deviceDisplayMount(d, id, sizeof(id)), DASH_FS_CAPTION, DASH_C_TEXT3);
+				dashTextScrollCenter(dx + dw * 0.5f, dy + 200, dw - 32, dashDeviceDisplayMount(d, id, sizeof(id)), DASH_FS_CAPTION, DASH_C_TEXT3);
 			}
 			if (d->state == DASH_DEV_PROBE)
 				dashTextWrap(dx + 16, dy + 228, dw - 32, 3, "Its driver is loaded only when you open it, to keep startup fast.", DASH_FS_CAPTION, DASH_C_TEXT3, 18);
@@ -529,7 +510,7 @@ static void devInput(const DashInput *in)
 		int n = 0, r, ids[5];
 
 		items[n].icon = DI_FOLDER, items[n].label = "Browse",
-		items[n].detail = deviceDisplayMount(d, display_mount, sizeof(display_mount)),
+		items[n].detail = dashDeviceDisplayMount(d, display_mount, sizeof(display_mount)),
 		items[n].disabled = 0, ids[n++] = 0;
 		items[n].icon = DI_REFRESH, items[n].label = (d->state == DASH_DEV_READY) ? "Check again" : "Detect now", items[n].detail = NULL,
 		items[n].disabled = (d->icon == DI_MC || d->icon == DI_DISC), ids[n++] = 1;
@@ -631,7 +612,7 @@ static void devDraw(void)
 			dashTextFit(x + 64, y + 12, DEV_W - 72, d->name, DASH_FS_SMALL, dim ? DASH_C_TEXT3 : DASH_C_TEXT);
 		{
 			char id[16];
-			dashTextFit(x + 64, y + 34, DEV_W - 72, deviceDisplayMount(d, id, sizeof(id)), DASH_FS_CAPTION, DASH_C_TEXT3);
+			dashTextFit(x + 64, y + 34, DEV_W - 72, dashDeviceDisplayMount(d, id, sizeof(id)), DASH_FS_CAPTION, DASH_C_TEXT3);
 		}
 		dashGlow(x + 18, y + 67, 4, 4, stc);
 		dashTextFit(x + 28, y + 58, DEV_W - 36, d->detail[0] ? d->detail : d->status, DASH_FS_CAPTION,

@@ -17,13 +17,13 @@ widgets = src("dash_widgets.c")
 hdd = src("dash_hdd.c")
 home = src("dash_home.c")
 
-# File Browser: directional and page motion wraps instead of clamping.
+# File Browser: single steps wrap; pages stop at endpoints before wrapping.
 assert "static int wrapIndex(int index, int total)" in browser
 for expr in (
     "fb.sel = wrapIndex(fb.sel - 1, total);",
     "fb.sel = wrapIndex(fb.sel + 1, total);",
-    "fb.sel = wrapIndex(fb.sel - FB_ROWS, total);",
-    "fb.sel = wrapIndex(fb.sel + FB_ROWS, total);",
+    "fb.sel = pageIndex(fb.sel, total, -1);",
+    "fb.sel = pageIndex(fb.sel, total, 1);",
 ):
     assert expr in browser
 
@@ -85,7 +85,7 @@ grid_move = apps[start:end]
 code = r"""
 #include <assert.h>
 #include <stddef.h>
-#define FB_ROWS 12
+#define FB_ROWS 10
 #define GRID_COLS 5
 #define GRID_PITCH_Y 100
 #define DASH_IN_UP 1
@@ -95,12 +95,13 @@ code = r"""
 #define DASH_IN_L2 16
 #define DASH_IN_R2 32
 typedef struct { unsigned pressed; } DashInput;
-static struct { int sel, top, n; float sel_anim; } fb;
+static struct { int sel, top, n, ndevs; char dir[2]; float sel_anim; } fb;
 static int sel, norder;
 static float sel_anim, grid_cam;
 static void dashUiFocusPoke(void) {}
 """
 code += function(browser, "static int wrapIndex(") + "\n"
+code += function(browser, "static int pageIndex(") + "\n"
 code += function(browser, "static void revealSelection(") + "\n"
 code += function(apps, "static void move(") + "\n"
 code += r"""
@@ -115,13 +116,17 @@ code += function(home, "static float homeChipScrollTarget(") + "\n"
 code += function(home, "static void snapHomeColumn(") + "\n"
 
 code += "static void browserMove(const DashInput *in, int total) {\n" + browser_move + "\nrevealSelection();}\n"
+pick_start = widgets.index("\t\tif ((in.pressed & DASH_IN_UP)", widgets.index("int dashPickPath("))
+pick_end = widgets.index("\n\t\tif (in.pressed & DASH_IN_MENU)", pick_start)
+code += "#define DASH_SND_CURSOR 0\nstatic void dashSoundPlay(int s) { (void)s; }\n"
+code += "static int pickerMove(int sel, int n_rows, DashInput in) { const int rows=10;\n" + widgets[pick_start:pick_end] + "\nreturn sel; }\n"
 code += "static void gridMove(const DashInput *in) {\n" + grid_move + "\n}\n"
 code += r"""
 int main(void) {
  DashInput up={DASH_IN_UP}, down={DASH_IN_DOWN};
  const int counts[]={0,1,2,5,7,12,13,127};
  for(unsigned i=0;i<sizeof(counts)/sizeof(counts[0]);i++) {
-  int n=counts[i]; fb.n=n; fb.sel=fb.top=0; fb.sel_anim=0;
+  int n=counts[i]; fb.dir[0]=1; fb.n=n; fb.sel=fb.top=0; fb.sel_anim=0;
   browserMove(&up,n); assert(fb.sel==(n?n-1:0));
   assert(fb.sel>=fb.top && fb.sel<fb.top+FB_ROWS);
   assert(fb.sel_anim>=fb.top && fb.sel_anim<fb.top+FB_ROWS);
@@ -129,7 +134,23 @@ int main(void) {
   browserMove(&down,n); assert(fb.sel==0 && fb.top==0);
   assert(fb.sel_anim>=fb.top && fb.sel_anim<fb.top+FB_ROWS);
  }
- fb.n=127;fb.sel=5;fb.top=0;fb.sel_anim=5;
+ for(int n=0;n<=127;n++) {
+  DashInput left={DASH_IN_LEFT}, right={DASH_IN_RIGHT};
+  for(int i=0;i<n;i++) {
+   assert(pickerMove(i,n,left)==pageIndex(i,n,-1));
+   assert(pickerMove(i,n,right)==pageIndex(i,n,1));
+   assert(pickerMove(i,n,up)==(i?i-1:n-1));
+   assert(pickerMove(i,n,down)==(i<n-1?i+1:0));
+  }
+  for(int i=0;i<n;i++) {
+   int left=pageIndex(i,n,-1), right=pageIndex(i,n,1);
+   assert(left==(i==0?n-1:(i<FB_ROWS?0:i-FB_ROWS)));
+   assert(right==(i==n-1?0:(i+FB_ROWS>=n?n-1:i+FB_ROWS)));
+  }
+  fb.dir[0]=0;fb.n=127;fb.ndevs=n;fb.sel=n?n-1:0;fb.sel_anim=fb.sel;
+  revealSelection();assert(fb.top==(n>FB_ROWS?n-FB_ROWS:0));
+ }
+ fb.dir[0]=1;fb.n=127;fb.sel=5;fb.top=0;fb.sel_anim=5;
  browserMove(&down,127);assert(fb.sel==6 && fb.sel_anim==5); /* retain adjacent easing */
  for(norder=1;norder<=17;norder++) {
   sel=0;sel_anim=grid_cam=0;gridMove(&up);assert(sel==norder-1 && sel_anim==sel);
