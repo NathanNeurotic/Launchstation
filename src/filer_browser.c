@@ -32,12 +32,14 @@ static int isGenericUsbRootPath(const char *path)
 
 static const char *getUsbRootDeviceLabel(char unit)
 {
-	static char label[] = "mass0:/  USB Mass Storage";
+	static char label[80];
+	char native[8], display[24];
 
 	if ((unit < '0') || (unit > '9'))
 		return NULL;
-
-	label[4] = unit;
+	snprintf(native, sizeof(native), "usb%c:/", unit);
+	filerFormatDevicePathForDisplay(native, display, sizeof(display));
+	snprintf(label, sizeof(label), "%s  USB Mass Storage", display);
 	return label;
 }
 
@@ -49,8 +51,9 @@ static const char *getRootDeviceLabel(const char *name)
 		return "Memory card, Slot 2 (mc1:/)";
 	if (!strcmp(name, "mass:"))
 		return "mass:/  USB Mass Storage";
+	/* Numbered MASS slots may be ATA/MX4SIO; do not relabel them USB. */
 	if (!strncmp(name, "mass", 4) && name[4] >= '0' && name[4] <= '9' && name[5] == ':' && name[6] == '\0')
-		return getUsbRootDeviceLabel(name[4]);
+		return NULL;
 	if (!strcmp(name, "usb:"))
 		return "mass:/  USB Mass Storage";
 	if (!strncmp(name, "usb", 3) && name[3] >= '0' && name[3] <= '9' && name[4] == ':' && name[5] == '\0')
@@ -270,7 +273,7 @@ static void formatBrowserPathForDisplay(const char *path, char *display_path)
 
 	if (!strncmp(path, "usb", 3) && (path[3] == ':' ||
 	    (path[3] >= '0' && path[3] <= '9' && path[4] == ':'))) {
-		snprintf(display_path, MAX_PATH, "mass%s", path + 3);
+		filerFormatDevicePathForDisplay(path, display_path, MAX_PATH);
 		return;
 	}
 
