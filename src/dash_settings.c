@@ -15,6 +15,7 @@
 #include "init.h"
 #include "dash_sound.h"
 #include "main_title.h"
+#include "filer_shared.h"
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 #include "cloud_google.h"
 #endif
