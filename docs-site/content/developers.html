@@ -1,5 +1,10 @@
 <h1>Developer and Documentation Maintenance</h1><p class="lead">Keep source behavior, user instructions, CI contracts, release packaging and third-party attribution synchronized.</p>
-<h2 id="repo">Source of truth</h2><p>The public site is generated from <code>docs-site/content/*.html</code> plus <code>docs-site/manifest.json</code> by <code>docs-site/build.py</code>. <code>docs/wiki/*.md</code> contains the version-controlled, wiki-style guide set. Do not hand-edit the generated <code>gh-pages</code> branch: the publishing workflow replaces it.</p>
+<h2 id="repo">Source of truth</h2><p>The public site is generated from <code>docs-site/content/*.html</code> plus <code>docs-site/manifest.json</code> by <code>docs-site/build.py</code>. <code>docs/wiki/*.md</code> contains the version-controlled, wiki-style guide set. A separate synchronization workflow publishes these guides and the site reference pages to GitHub Wiki, preserving unmanaged pages and history. Do not hand-edit the generated <code>gh-pages</code> branch: the publishing workflow replaces it.</p>
+<h2 id="sdk">TechWritesCode PS2BUILD SDK</h2>
+<p>Launchstation is built and validated with the <a href="https://ps2.techwritescode.dev/guide/getting-started"><b>PS2BUILD SDK by TechWritesCode</b></a>. It supplies our EE/IOP toolchains, SDK packages and <code>ps2.yaml</code> build workflow for local development and CI. Follow the official guide to install the SDK, then run the commands below.</p>
+<pre><code>ps2build build
+python scripts/configure_ds34.py
+ps2build build -c .ps2-ds34.yaml -o build-ds34</code></pre>
 <h2 id="build">Build and validate the documentation</h2><pre><code>python3 docs-site/build.py --out site --zip Launchstation-Documentation.zip</code></pre><p>The generator checks the page inventory, unresolved template fragments, site assets, and internal HTML links before writing the offline archive.</p>
 <h2 id="ci">Main CI gates</h2><ul>
 <li>Compiled host regression contracts for device/USB/PAD timing, navigation, settings, MMCE backup/recovery, cloud and update safeguards.</li>
