@@ -323,6 +323,7 @@ typedef struct
 	int language;
 	int reboot_iop_elf_load;
 	int modern_device_handoff;
+	int modern_browser_device_paths; /* 0=verified legacy MASS display, 1=typed display */
 	int virtual_keyboard_layout;
 	int Hide_Hdd;
 	int Hide_MCMMCE;
