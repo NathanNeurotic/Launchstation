@@ -7,7 +7,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 source = (root / "src/elf.c").read_text()
 
-def function(signature):
+def function(signature, source=source):
     start = source.index(signature)
     end = source.index("{", start) + 1
     depth = 1
@@ -62,11 +62,17 @@ code += "static int isHddBrowserPath(const char *p) { return !strncmp(p,\"hdd0:/
 code += function("static int parseUsbMassPathUnit(")
 code += function("static const char *normalizeExecArg0Path(")
 code += function("void PrepareElfHandoffPath(")
+code += function("static void formatBrowserPathForDisplay(", (root / "src/filer_browser.c").read_text())
 code += r"""
 static void expect(const char *p,const char *wanted) {
  char out[MAX_PATH];PrepareElfHandoffPath(p,out,sizeof(out));assert(!strcmp(out,wanted));
 }
 int main(void) {
+ char display[MAX_PATH];
+ formatBrowserPathForDisplay("usb1:/APPS/APP.ELF",display);assert(!strcmp(display,"mass1:/APPS/APP.ELF"));
+ formatBrowserPathForDisplay("usb:/APPS/APP.ELF",display);assert(!strcmp(display,"mass:/APPS/APP.ELF"));
+ formatBrowserPathForDisplay("mass3:/APPS/APP.ELF",display);assert(!strcmp(display,"mass3:/APPS/APP.ELF"));
+ formatBrowserPathForDisplay("ata0:/APP.ELF",display);assert(!strcmp(display,"ata0:/APP.ELF"));
  settings.modern_device_handoff=0;
 #ifdef EXFAT
  expect("usb0:/APP.ELF","mass3:/APP.ELF");

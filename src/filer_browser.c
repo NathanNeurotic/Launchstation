@@ -262,8 +262,9 @@ static void formatBrowserPathForDisplay(const char *path, char *display_path)
 	const char *sep;
 	int part_len;
 
-	if (!strncmp(path, "mass", 4)) {
-		snprintf(display_path, MAX_PATH, "usb%s", path + 4);
+	if (!strncmp(path, "usb", 3) && (path[3] == ':' ||
+	    (path[3] >= '0' && path[3] <= '9' && path[4] == ':'))) {
+		snprintf(display_path, MAX_PATH, "mass%s", path + 3);
 		return;
 	}
 
