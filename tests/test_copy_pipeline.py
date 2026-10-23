@@ -219,6 +219,15 @@ int main(void){
  /* An empty folder can be pasted repeatedly even without a game-save title. */
  reset();mkdir("udpfs:/EMPTY",0700);strcpy(clipFiles[0].name,"EMPTY");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;
  for(int attempt=0;attempt<3;attempt++){message[0]=0;subfunc_Paste(message,"mc0:/");assert(!message[0]&&!handles);}
+ /* Same-directory paste is a no-op, even for Cut. Preserve the source and
+  * do not perform device setup, copy I/O, or move-source deletion. */
+ for(int cut=0;cut<2;cut++) {
+  reset();strcpy(clipPath,"mc0:/");browser_cut=cut;message[0]=0;
+  put("mc0:/BOOT.ELF",input,sizeof(input));load_ok=source_ready=0;
+  subfunc_Paste(message,"mc0:/");
+  assert(!message[0] && browser_cd && !handles && !read_calls && !write_calls);
+  assert(nclipFiles==(cut?0:1));assert(matches("mc0:/BOOT.ELF",input,sizeof(input)));
+ }
  /* Repeated operations clear prior error state, and formatting is bounded. */
  reset();message[0]=0;subfunc_Paste(message,"mc0:/");assert(!message[0]);
  char bounded[17];memset(bounded,'x',sizeof(bounded));filerCopyDiagFormat(bounded,16,-1);assert(!bounded[15]&&bounded[16]=='x');

@@ -2126,8 +2126,14 @@ static void subfunc_Paste(char *mess, char *path)
 	filerCopyDiagBegin(clipPath, path);
 	written_size = 0;
 	PasteTime = Timer();  //Note initial pasting time
-	if (!strcmp(path, clipPath))
-		goto finished;
+	/* Pasting back into the source directory is a successful no-op.
+	 * Do not reach the move-source deletion loop or claim a device failure. */
+	if (!strcmp(path, clipPath)) {
+		if (browser_cut)
+			nclipFiles = 0;
+		browser_cd = TRUE;
+		return;
+	}
 	trace_vmc_paste = (!strncmp(clipPath, "vmc", 3) || !strncmp(path, "vmc", 3));
 	ret = prepareTransferDeviceStacks(clipPath, path);
 	if (ret == TRANSFER_STACK_INCOMPATIBLE) {
