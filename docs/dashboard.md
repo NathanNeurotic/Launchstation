@@ -538,9 +538,7 @@ is skipped by navigation.
 
 ### Device names and ELF handoffs
 
-USB devices are named **USB Mass Storage**. The File Browser and device panels
-show legacy `mass:` / `mass0:` / `mass1:` labels while browsing keeps the exact
-USB device mapping internally.
+USB devices are named **USB Mass Storage**. **Settings > Storage & devices > File Browser path names** defaults to **Legacy MASS** (`Modern_Browser_Device_Paths = 0` in `LAUNCHELF.CNF`). Legacy displays the verified `massN:` mount for the specific USB device; **Device-specific** displays the true `usbN:` path. If the driver/device identity cannot be verified, or two partitions of the same disk make the mapping ambiguous, display the real `usbN:` path rather than guessing `massN:`. This option changes *presentation only*: all file operations use the actual mounted driver paths; no cached display aliases are passed to the I/O layer. Refresh occurs when explicitly browsing a USB root, never in the render loop. IOP resets and forced USB discovery invalidate the mapping.
 
 **Settings > Launching > ELF handoff paths** defaults to **Legacy mass (default)** and is saved
 as `Modern_Device_Handoff = 0` in `LAUNCHELF.CNF`. With the default choice, ordinary ELF
