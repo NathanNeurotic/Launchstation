@@ -25,8 +25,8 @@ code = r"""
 static struct { int modern_browser_device_paths; } cfg, *setting = &cfg;
 static unsigned generation = 1;
 static unsigned getIopResetGeneration(void) {return generation;}
-static int duplicate_partition, probes, identity_queries;
 #ifdef EXFAT
+static int duplicate_partition, probes, identity_queries;
 static int fileXioDopen(const char *path) {
  int n = -1;
  probes++;
