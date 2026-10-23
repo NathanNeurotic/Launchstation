@@ -4,6 +4,9 @@
 #include "launchelf.h"
 #include "init.h"
 #include <elf.h>
+#ifdef EXFAT
+#include <usbhdfsd-common.h>
+#endif
 #ifdef XFROM
 #include <libsecr.h>
 #endif
@@ -412,6 +415,95 @@ static const char *normalizeExecArg0Path(const char *path, char *buffer, size_t 
 	return buffer;
 }
 
+
+#ifdef EXFAT
+typedef struct {
+	char driver[32];
+	u32 device;
+	u64 lba;
+} ElfBdmIdentity;
+
+/* Query a file, not a directory: FatFs's identity ioctls use FIL state. */
+static int elfBdmIdentity(const char *path, ElfBdmIdentity *id)
+{
+	int fd = fileXioOpen(path, FIO_O_RDONLY, 0), ok;
+	if (fd < 0)
+		return 0;
+	memset(id, 0, sizeof(*id));
+	ok = fileXioIoctl2(fd, USBMASS_IOCTL_GET_DRIVERNAME, NULL, 0, id->driver, sizeof(id->driver) - 1) >= 0 &&
+	     fileXioIoctl2(fd, USBMASS_IOCTL_GET_DEVICE_NUMBER, NULL, 0, &id->device, sizeof(id->device)) >= 0 &&
+	     fileXioIoctl2(fd, USBMASS_IOCTL_GET_LBA, NULL, 0, &id->lba, sizeof(id->lba)) >= 0;
+	if (fileXioClose(fd) < 0)
+		ok = 0;
+	return ok && id->driver[0] != '\0';
+}
+#endif
+
+/* Called before launch cleanup while the selected device is still mounted.
+ * massN is a shared BDM slot, never a USB unit inferred from the number.
+ * On older drivers without identity ioctls, retain the live selected alias. */
+void PrepareElfHandoffPath(const char *path, char *out, int size)
+{
+	static const char *const prefixes[] = {"mass", "usb", "ata", "mx4sio", "ilink"};
+	const char *suffix;
+	int unit, kind;
+	char normalized[MAX_PATH];
+#ifdef EXFAT
+	char usb_alias[MAX_PATH];
+#endif
+	const char *result = path;
+
+	for (kind = 0; kind < 5; kind++) {
+		if (parseUsbMassPathUnit(path, prefixes[kind], strlen(prefixes[kind]), &unit, &suffix))
+			break;
+	}
+#ifdef EXFAT
+	/* Launchstation's unnumbered mass: browser alias denotes USB unit zero,
+	 * whereas raw fileXio mass: denotes shared BDM slot zero. */
+	if (kind == 0 && path[4] == ':') {
+		snprintf(usb_alias, sizeof(usb_alias), "usb0:%s%s", *suffix == '/' ? "" : "/", suffix);
+		path = usb_alias;
+		suffix = strchr(path, ':') + 1;
+		result = path;
+		kind = 1;
+	}
+#endif
+	if (kind == 5) {
+		result = normalizeExecArg0Path(path, normalized, sizeof(normalized));
+	} else {
+#ifdef EXFAT
+		int modern = setting->modern_device_handoff;
+		/* Already in the requested namespace: preserve mount and partition. */
+		if ((modern && kind == 0) || (!modern && kind != 0)) {
+			ElfBdmIdentity selected, candidate;
+			if (elfBdmIdentity(path, &selected)) {
+				int first = modern ? 1 : 0, last = modern ? 5 : 1;
+				int prefix, slot, found = 0;
+				for (prefix = first; prefix < last && !found; prefix++) {
+					for (slot = 0; slot < USB_MASS_MAX_DRIVES; slot++) {
+						int n = snprintf(normalized, sizeof(normalized), "%s%d:%s%s", prefixes[prefix], slot,
+						                 *suffix == '/' ? "" : "/", suffix);
+						if (n < 0 || n >= (int)sizeof(normalized))
+							break;
+						if (elfBdmIdentity(normalized, &candidate) &&
+						    !strcmp(selected.driver, candidate.driver) && selected.device == candidate.device &&
+						    selected.lba == candidate.lba) {
+							result = normalized;
+							found = 1;
+							break;
+						}
+					}
+				}
+			}
+		}
+#else
+		/* The classic USB driver exposes only mass aliases. */
+		result = normalizeExecArg0Path(path, normalized, sizeof(normalized));
+#endif
+	}
+	snprintf(out, size, "%s", result);
+}
+
 static int tryCheckExecPath(const char *path, int *opened_any)
 {
 	u8 header[256];
@@ -725,7 +817,7 @@ int PrepareMbrLaunchPayload(const char *path, char *mem_arg, size_t mem_arg_size
 // Modified version of loader from Independence
 //	(C) 2003 Marcus R. Brown <mrbrown@0xd6.org>
 //------------------------------
-static void RunLoaderElfInternal(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load, int preserve_devices, const char *child_argv0_override)
+static void RunLoaderElfInternal(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load, int preserve_devices, const char *child_argv0_override, int prepared_handoff)
 {
 	char *argv[ELFLOAD_MAX_ARGC], bootpath[256];
 	static char exec_target[MAX_PATH];
@@ -743,7 +835,7 @@ static void RunLoaderElfInternal(char *filename, char *party, const char *select
 	if (shutdownPcCardCf() < 0) return;
 
 	if (selected_path != NULL && selected_path[0] != '\0')
-		handoff_path = normalizeExecArg0Path(selected_path, exec_arg0, sizeof(exec_arg0));
+		handoff_path = prepared_handoff ? selected_path : normalizeExecArg0Path(selected_path, exec_arg0, sizeof(exec_arg0));
 	snprintf(exec_target, sizeof(exec_target), "%s", filename);
 	cleanup_hdd_launch = !preserve_devices && isHddPartyPath(party);
 	if (exec_kind == 1 && handoff_path != NULL && !strncmp(handoff_path, "mass", 4))
@@ -832,7 +924,12 @@ static void RunLoaderElfInternal(char *filename, char *party, const char *select
 
 void RunLoaderElf(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load)
 {
-	RunLoaderElfInternal(filename, party, selected_path, exec_kind, reboot_iop_elf_load, 0, NULL);
+	RunLoaderElfInternal(filename, party, selected_path, exec_kind, reboot_iop_elf_load, 0, NULL, 0);
+}
+
+void RunLoaderElfWithHandoff(char *filename, char *party, const char *handoff, int exec_kind, int reboot_iop_elf_load)
+{
+	RunLoaderElfInternal(filename, party, handoff, exec_kind, reboot_iop_elf_load, 0, NULL, 1);
 }
 
 /* External cores such as Neutrino need the currently mounted storage stack.
@@ -840,12 +937,12 @@ void RunLoaderElf(char *filename, char *party, const char *selected_path, int ex
  * and never powers down an HDD/DEV9 stack simply because the core lives there. */
 void RunLoaderElfKeepIOP(char *filename, char *party, const char *selected_path, int exec_kind)
 {
-	RunLoaderElfInternal(filename, party, selected_path, exec_kind, 0, 1, NULL);
+	RunLoaderElfInternal(filename, party, selected_path, exec_kind, 0, 1, NULL, 0);
 }
 
 void RunLoaderElfKeepIOPWithArgv0(char *filename, char *party, const char *child_argv0, int exec_kind)
 {
-	RunLoaderElfInternal(filename, party, child_argv0, exec_kind, 0, 1, child_argv0);
+	RunLoaderElfInternal(filename, party, child_argv0, exec_kind, 0, 1, child_argv0, 0);
 }
 //------------------------------
 //End of func: RunLoaderElf / RunLoaderElfKeepIOP

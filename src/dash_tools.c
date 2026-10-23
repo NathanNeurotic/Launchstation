@@ -1521,6 +1521,8 @@ static void toolsDraw(void)
 		ttop = tsel - rows + 1;
 	if (ttop < 0)
 		ttop = 0;
+	if (tsel_anim < ttop || tsel_anim >= ttop + rows)
+		tsel_anim = (float)tsel;
 
 	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, rows * row_h + 12, 14);
 	dashGfxScissor(lx - 6, ly - 4, lw + 12, rows * row_h + 8);

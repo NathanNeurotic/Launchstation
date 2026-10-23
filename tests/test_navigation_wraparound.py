@@ -30,8 +30,8 @@ for expr in (
 # Applications: list/grid/carousel moves now cycle through all entries.
 assert "next = (sel + delta) % norder;" in apps
 assert "if (next < 0)" in apps and "next += norder;" in apps
-assert "if (in->pressed & DASH_IN_UP)\n\t\t\tmove(-GRID_COLS);" in apps
-assert "if (in->pressed & DASH_IN_DOWN)\n\t\t\tmove(GRID_COLS);" in apps
+assert "move(sel == 0 ? norder - 1" in apps
+assert "move(sel == norder - 1 ? -sel" in apps
 
 # Files list and Devices grid: movement wraps and keeps skipping non-selectable rows.
 assert "if (s < 0)\n\t\t\ts = nfentries - 1;" in files
@@ -57,3 +57,88 @@ assert "int next = wrapCol(col[row] - 1, n);" in home
 assert "int next = wrapCol(col[row] + 1, n);" in home
 
 print("PASS: dashboard list navigation wraps across file, menu and browser views")
+
+
+# Execute the production directional-input block and viewport helper on the host.
+# SDK actions after navigation are excluded; selection arithmetic is unchanged.
+import shutil
+import subprocess
+import tempfile
+
+
+def function(source, signature):
+    start = source.index(signature)
+    end = source.index("{", start) + 1
+    depth = 1
+    while depth:
+        depth += (source[end] == "{") - (source[end] == "}")
+        end += 1
+    return source[start:end]
+
+
+start = browser.index("\t\tif (total > 0) {", browser.index("static void browserProcessInput"))
+end = browser.index("\n\t\tif (fb.sel != prev", start)
+browser_move = browser[start:end]
+start = apps.index("\t\tif (in->pressed & DASH_IN_UP)", apps.index("static void appsInput"))
+end = apps.index("\n\t\tif (in->pressed & DASH_IN_L2)", start)
+grid_move = apps[start:end]
+code = r"""
+#include <assert.h>
+#include <stddef.h>
+#define FB_ROWS 12
+#define GRID_COLS 5
+#define GRID_PITCH_Y 100
+#define DASH_IN_UP 1
+#define DASH_IN_DOWN 2
+#define DASH_IN_LEFT 4
+#define DASH_IN_RIGHT 8
+#define DASH_IN_L2 16
+#define DASH_IN_R2 32
+typedef struct { unsigned pressed; } DashInput;
+static struct { int sel, top, n; float sel_anim; } fb;
+static int sel, norder;
+static float sel_anim, grid_cam;
+static void dashUiFocusPoke(void) {}
+"""
+code += function(browser, "static int wrapIndex(") + "\n"
+code += function(browser, "static void revealSelection(") + "\n"
+code += function(apps, "static void move(") + "\n"
+code += "static void browserMove(const DashInput *in, int total) {\n" + browser_move + "\nrevealSelection();}\n"
+code += "static void gridMove(const DashInput *in) {\n" + grid_move + "\n}\n"
+code += r"""
+int main(void) {
+ DashInput up={DASH_IN_UP}, down={DASH_IN_DOWN};
+ const int counts[]={0,1,2,5,7,12,13,127};
+ for(unsigned i=0;i<sizeof(counts)/sizeof(counts[0]);i++) {
+  int n=counts[i]; fb.n=n; fb.sel=fb.top=0; fb.sel_anim=0;
+  browserMove(&up,n); assert(fb.sel==(n?n-1:0));
+  assert(fb.sel>=fb.top && fb.sel<fb.top+FB_ROWS);
+  assert(fb.sel_anim>=fb.top && fb.sel_anim<fb.top+FB_ROWS);
+  fb.sel_anim=(float)fb.sel;
+  browserMove(&down,n); assert(fb.sel==0 && fb.top==0);
+  assert(fb.sel_anim>=fb.top && fb.sel_anim<fb.top+FB_ROWS);
+ }
+ fb.n=127;fb.sel=5;fb.top=0;fb.sel_anim=5;
+ browserMove(&down,127);assert(fb.sel==6 && fb.sel_anim==5); /* retain adjacent easing */
+ for(norder=1;norder<=17;norder++) {
+  sel=0;sel_anim=grid_cam=0;gridMove(&up);assert(sel==norder-1 && sel_anim==sel);
+  gridMove(&down);assert(sel==0 && sel_anim==0 && grid_cam==0);
+  for(int old=0;old<norder;old++) {
+   sel=old;gridMove(&up);assert(sel>=0 && sel<norder);
+   if(old>=GRID_COLS)assert(sel==old-GRID_COLS);
+   sel=old;gridMove(&down);assert(sel>=0 && sel<norder);
+   if(old+GRID_COLS<norder)assert(sel==old+GRID_COLS);
+  }
+ }
+ return 0;
+}
+"""
+cc = shutil.which("gcc") or shutil.which("cc")
+assert cc, "A host C compiler is required"
+with tempfile.TemporaryDirectory(prefix="navigation-wrap-") as folder:
+    path = Path(folder)
+    (path / "test.c").write_text(code)
+    binary = path / "test.exe"
+    subprocess.run([cc, "-std=c99", "-Wall", "-Wextra", "-Werror", str(path / "test.c"), "-o", str(binary)], check=True)
+    subprocess.run([str(binary)], check=True)
+print("PASS: production browser endpoint/viewport transitions and incomplete application grids")

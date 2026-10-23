@@ -28,7 +28,10 @@ static const char *deviceDisplayMount(const DashDevice *d, char *buf, int size)
 		if (!strncmp(d->mount, "usb", 3) &&
 		    d->mount[3] >= '0' && d->mount[3] <= '9' && d->mount[4] == ':')
 			unit = d->mount[3] - '0';
-		snprintf(buf, size, "mass%d:/", unit);
+		if (d->mount[3] == ':')
+			snprintf(buf, size, "mass:/");
+		else
+			snprintf(buf, size, "mass%d:/", unit);
 		return buf;
 	}
 	return (d != NULL) ? d->mount : "";
@@ -347,6 +350,8 @@ static void filesDraw(void)
 		ftop = fsel - rows + 1;
 	if (ftop < 0)
 		ftop = 0;
+	if (fsel_anim < ftop || fsel_anim >= ftop + rows)
+		fsel_anim = (float)fsel;
 
 	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, rows * row_h + 12, 14);
 	dashGfxScissor(lx - 6, ly - 4, lw + 12, rows * row_h + 8);

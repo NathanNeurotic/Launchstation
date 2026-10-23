@@ -863,6 +863,8 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 			top = sel;
 		if (sel >= top + rows)
 			top = sel - rows + 1;
+		if (sel_anim < top || sel_anim >= top + rows)
+			sel_anim = (float)sel;
 		float dt = dashVisualUpdate();
 		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), dt);
 		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);

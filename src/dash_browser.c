@@ -158,6 +158,9 @@ static void revealSelection(void)
 		fb.top = 0;
 	if (fb.n > FB_ROWS && fb.top > fb.n - FB_ROWS)
 		fb.top = fb.n - FB_ROWS;
+	/* A viewport jump must not leave the animated highlight off screen. */
+	if (fb.sel_anim < fb.top || fb.sel_anim >= fb.top + FB_ROWS)
+		fb.sel_anim = (float)fb.sel;
 }
 
 static u64 fbFileBytes(const FILEINFO *f)
@@ -2594,7 +2597,9 @@ static void browserDrawBody(void)
 	char info[64], display_path[MAX_PATH + 2];
 
 	/* Display the public MASS label without changing the path used for I/O. */
-	if (!strncmp(fb.dir, "usb", 3) && fb.dir[3] >= '0' && fb.dir[3] <= '9' && fb.dir[4] == ':')
+	if (!strncmp(fb.dir, "usb:", 4))
+		snprintf(display_path, sizeof(display_path), "mass%s", fb.dir + 3);
+	else if (!strncmp(fb.dir, "usb", 3) && fb.dir[3] >= '0' && fb.dir[3] <= '9' && fb.dir[4] == ':')
 		snprintf(display_path, sizeof(display_path), "mass%s", fb.dir + 3);
 	else
 		dashStrCopy(display_path, fb.dir, sizeof(display_path));
@@ -2650,13 +2655,19 @@ static void browserDrawBody(void)
 
 		if (fb.dir[0] == '\0') {
 			DashDevice *d = &fb.devs[i];
+			char device_label[80];
+			const char *name = d->name;
+			if (d->icon == DI_USB) {
+				snprintf(device_label, sizeof(device_label), "mass%s  USB Mass Storage", d->mount + 3);
+				name = device_label;
+			}
 			if (d->state != DASH_DEV_READY && i != fb.sel)
 				col = DASH_C_TEXT3;
 			dashIcon(d->icon, FB_X + 10, y + 3, 16, col);
 			if (i == fb.sel)
-				dashTextScroll(FB_X + 36, y + 1, FB_W - 220, d->name, DASH_FS_SMALL, col);
+				dashTextScroll(FB_X + 36, y + 1, FB_W - 220, name, DASH_FS_SMALL, col);
 			else
-				dashTextFit(FB_X + 36, y + 1, FB_W - 220, d->name, DASH_FS_SMALL, col);
+				dashTextFit(FB_X + 36, y + 1, FB_W - 220, name, DASH_FS_SMALL, col);
 			dashTextRight(FB_X + FB_W - 12, y + 2, d->status, DASH_FS_CAPTION, DASH_C_TEXT3);
 		} else {
 			FILEINFO *f = &fb.files[i];

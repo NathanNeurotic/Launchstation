@@ -667,6 +667,8 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 
 			if (mainActionLaunchHook != NULL)
 				mainActionLaunchHook(path);
+			static char handoff[MAX_PATH];
+			PrepareElfHandoffPath(path, handoff, sizeof(handoff));
 			x = setting->reboot_iop_elf_load;
 			if (x)
 				CleanUpForExec();
@@ -674,7 +676,7 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 				return;
 			if (show_launch_gameid)
 				displayRetroGemGameID(launch_gameid, 2);
-			RunLoaderElf(fullpath, party, path, t, x);
+			RunLoaderElfWithHandoff(fullpath, party, handoff, t, x);
 		}
 	} else {  //Invalid path
 		t = 0;

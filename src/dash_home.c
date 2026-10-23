@@ -231,6 +231,18 @@ static int otherRowWithEntries(int current)
 	return rowCount(other) > 0 ? other : current;
 }
 
+static void snapHomeColumn(int next)
+{
+	col_anim[row] = (float)next;
+	if (row == 0) {
+		float target = (next - 2) * 104.0f;
+		float maxcam = (nhome - 5) * 104.0f;
+		if (target > maxcam)
+			target = maxcam;
+		cam[0] = target > 0 ? target : 0.0f;
+	}
+}
+
 static void homeInput(const DashInput *in)
 {
 	int n = (row == 0) ? nhome : nchips;
@@ -262,6 +274,8 @@ static void homeInput(const DashInput *in)
 			int next = wrapCol(col[row] - 1, n);
 			if (next != col[row])
 				dashUiFocusPoke();
+			if ((col[row] == 0 && next == n - 1) || (col[row] == n - 1 && next == 0))
+				snapHomeColumn(next);
 			col[row] = next;
 		}
 	} else if (in->pressed & DASH_IN_RIGHT) {
@@ -269,6 +283,8 @@ static void homeInput(const DashInput *in)
 			int next = wrapCol(col[row] + 1, n);
 			if (next != col[row])
 				dashUiFocusPoke();
+			if ((col[row] == 0 && next == n - 1) || (col[row] == n - 1 && next == 0))
+				snapHomeColumn(next);
 			col[row] = next;
 		}
 	} else if (in->pressed & DASH_IN_L2) {
