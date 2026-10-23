@@ -80,7 +80,8 @@ int main(void) {
  expect("usb1:/APP.ELF","mass4:/APP.ELF");
  expect("ata0:/APP.ELF","mass0:/APP.ELF");
  expect("mx4sio0:/APP.ELF","mass2:/APP.ELF");
- unsupported=1;expect("usb0:/APP.ELF","usb0:/APP.ELF");unsupported=0;
+ unsupported=1;expect("usb0:/APP.ELF","usb0:/APP.ELF");
+ expect("mass:/APP.ELF","mass:/APP.ELF");unsupported=0;
  close_failure=1;expect("ata0:/APP.ELF","ata0:/APP.ELF");close_failure=0;
  settings.modern_device_handoff=1;
  expect("usb1:/APP.ELF","usb1:/APP.ELF");

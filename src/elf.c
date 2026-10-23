@@ -450,6 +450,7 @@ void PrepareElfHandoffPath(const char *path, char *out, int size)
 	char normalized[MAX_PATH];
 #ifdef EXFAT
 	char usb_alias[MAX_PATH];
+	const char *selected_path = path;
 #endif
 	const char *result = path;
 
@@ -476,6 +477,7 @@ void PrepareElfHandoffPath(const char *path, char *out, int size)
 		/* Already in the requested namespace: preserve mount and partition. */
 		if ((modern && kind == 0) || (!modern && kind != 0)) {
 			ElfBdmIdentity selected, candidate;
+			result = selected_path;
 			if (elfBdmIdentity(path, &selected)) {
 				int first = modern ? 1 : 0, last = modern ? 5 : 1;
 				int prefix, slot, found = 0;

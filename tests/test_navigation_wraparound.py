@@ -103,6 +103,17 @@ static void dashUiFocusPoke(void) {}
 code += function(browser, "static int wrapIndex(") + "\n"
 code += function(browser, "static void revealSelection(") + "\n"
 code += function(apps, "static void move(") + "\n"
+code += r"""
+#define DASH_FS_SMALL 12
+#define DASH_SAFE_R 592
+static int row, nhome, nchips;
+static float col_anim[2], cam[2], chip_cam;
+static struct { char label[48]; } chips[24];
+static float dashTextWidth(const char *label, int size) {(void)label;(void)size;return 140;}
+"""
+code += function(home, "static float homeChipScrollTarget(") + "\n"
+code += function(home, "static void snapHomeColumn(") + "\n"
+
 code += "static void browserMove(const DashInput *in, int total) {\n" + browser_move + "\nrevealSelection();}\n"
 code += "static void gridMove(const DashInput *in) {\n" + grid_move + "\n}\n"
 code += r"""
@@ -130,6 +141,11 @@ int main(void) {
    if(old+GRID_COLS<norder)assert(sel==old+GRID_COLS);
   }
  }
+ row=1;nchips=12;chip_cam=0;snapHomeColumn(11);
+ assert(chip_cam==homeChipScrollTarget(11) && chip_cam>0 && col_anim[1]==11);
+ snapHomeColumn(0);assert(chip_cam==0 && col_anim[1]==0);
+ row=0;nhome=12;cam[0]=0;snapHomeColumn(11);assert(cam[0]>0 && col_anim[0]==11);
+ snapHomeColumn(0);assert(cam[0]==0 && col_anim[0]==0);
  return 0;
 }
 """
