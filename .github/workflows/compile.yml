@@ -82,6 +82,7 @@ jobs:
           python3 tests/test_worker_queue.py
           python3 tests/test_device_input.py
           python3 tests/test_usb_storage_lifecycle.py
+          python3 tests/test_usb_mass_semantics.py
           python3 tests/test_usb_iop_pad_handoff.py
           python3 tests/test_zack_storage_drivers.py
           python3 tests/test_dev9_transition.py
