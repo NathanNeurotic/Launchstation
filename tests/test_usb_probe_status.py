@@ -42,7 +42,8 @@ c += r'''
 typedef int iox_stat_t;
 static int USB_mass_loaded=1, USB_mass_scanned, USB_mass_max_drives=2;
 static int USB_mass_ix[10];
-static int drains;
+static int drains, display_invalidations;
+static void filerInvalidateUsbMassDisplayAliases(void) {display_invalidations++;}
 static void filerRootMcPollIdle(void) { drains++; }
 static unsigned long USB_mass_scan_time;
 static unsigned long Timer(void) { return 10000; }
@@ -59,11 +60,11 @@ c += function("src/filer.c", "static void scanUsbMassDevices(int force)\n{")
 c += r'''
 int main(void) {
     scanUsbMassDevices(1);
-    assert(stats==2 && drains==1 && frames==4 && reports==0);
+    assert(stats==2 && drains==1 && frames==4 && reports==0 && display_invalidations==1);
     assert(USB_mass_ix[0]=='0' && !USB_mass_ix[1]);
     assert(!strcmp(last,"USB root usb1:/ returned -19"));
     worker=1; scanUsbMassDevices(1);
-    assert(stats==4 && drains==2 && frames==4 && reports==4);
+    assert(stats==4 && drains==2 && frames==4 && reports==4 && display_invalidations==2);
     worker=0; loading_active=0;
     DashStorageProbeStatus("no overlay"); assert(frames==4);
     active=0; worker=1;
