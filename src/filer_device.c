@@ -96,7 +96,7 @@ void filerFormatDevicePathForDisplay(const char *path, char *out, int size)
 	if (out == NULL || size <= 0)
 		return;
 	if (path == NULL) {
-		out[0] = '\\0';
+		out[0] = '\0';
 		return;
 	}
 	if (setting == NULL || setting->modern_browser_device_paths ||
