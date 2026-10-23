@@ -11,6 +11,7 @@
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "dash_sound.h"
+#include "filer_shared.h"
 #include "init.h"
 #include <delaythread.h>
 #ifdef MMCE
