@@ -1139,6 +1139,7 @@ void dashLoadingStatus(const char *status, int done, int total)
 	}
 	loadingProgress(status, done, total);
 	if (!loading_active) {
+		loading_file_operation = 0;
 		/* one-shot status (e.g. a driver load started by a legacy path) */
 		loading_active = 1;
 		loading_open = 0.6f;
@@ -1212,6 +1213,7 @@ void DashStorageProbeStatus(const char *status)
 void dashLoadingEnd(void)
 {
 	loading_active = 0;
+	loading_file_operation = 0;
 	loading_cancel = 0;
 	dashInputFlush();
 }

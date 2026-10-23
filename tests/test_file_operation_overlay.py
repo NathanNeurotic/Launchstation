@@ -49,6 +49,8 @@ static int DashIsActive(void) { return active; }
 static int dashWorkerOnThread(void) { return worker; }
 static int isStartupDriverStatusQuiet(void) { return 0; }
 static u64 Timer(void) { return tick; }
+static void dashInputFlush(void) {}
+static void dashWorkerStatus(const char *s,int done,int total) { (void)s;(void)done;(void)total; }
 static void dashStrCopy(char *out,const char *in,int n) { snprintf(out,n,"%s",in); }
 static float dashClampf(float v,float lo,float hi) { return v<lo?lo:v>hi?hi:v; }
 static float dashVisualUpdate(void) { ticks++; return 0.016f; }
@@ -101,7 +103,7 @@ b=source.index("int dashLoadingActive(",a)
 code += source[a:b]
 for sig in ["static void loadingDraw(", "static void loadingBegin(", "void dashLoadingBegin(",
             "void dashFileLoadingBegin(", "static void loadingProgress(", "int DashFileProgress(",
-            "void DashFileDeleteProgress(", "void dashLoadingFrame("]:
+            "void DashFileDeleteProgress(", "void dashLoadingFrame(", "void dashLoadingStatus(", "void dashLoadingEnd("]:
     code += function(source,sig)
 code += r"""
 static void capture(const char *name) {
@@ -149,6 +151,10 @@ int main(int argc,char **argv) {
  dashLoadingFrame("folder",1,2);capture("Deletion halfway");assert(fill>0 && fill<track);
  dashLoadingFrame("second.bin",2,2);capture("Deletion complete");assert(fill==track);
  loading_cancel=1;capture("Cancelable transfer");
+ dashLoadingEnd();assert(!loading_active && !loading_file_operation);
+ /* One-shot device status must never inherit the file-operation layout. */
+ loading_file_operation=1;tick+=40;dashLoadingStatus("USB",0,0);
+ assert(!loading_active && !loading_file_operation && spinners==1);
  dashLoadingBegin("Starting device");capture("Generic device loading");
  assert(!loading_file_operation && spinners==1 && texts==2);
  int old=presents;active=0;assert(!DashFileProgress("Pasting file","classic",1,1));
