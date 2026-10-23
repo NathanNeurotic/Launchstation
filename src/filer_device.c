@@ -4,6 +4,117 @@
 #include "filer_internal.h"
 #include "init.h"
 
+#ifdef EXFAT
+#include <usbhdfsd-common.h>
+#endif
+
+/* Display names are never filesystem paths. A USB unit is NOT a massN slot:
+ * mixed BDM mounts may place ATA, MX4SIO or other transports before USB.
+ * This cache is updated only when a user browses a USB root, never by a
+ * per-frame drawing function, and expires across IOP reset/discovery. */
+static int usb_mass_display_slot[USB_MASS_MAX_DRIVES];
+static unsigned int usb_mass_display_valid_mask;
+static unsigned int usb_mass_display_generation = (unsigned int)-1;
+
+void filerInvalidateUsbMassDisplayAliases(void)
+{
+	usb_mass_display_valid_mask = 0;
+	usb_mass_display_generation = getIopResetGeneration();
+}
+
+#ifdef EXFAT
+static int filerReadUsbMassRootIdentity(const char *root, int *device)
+{
+	char driver[32] = {0};
+	int fd = fileXioDopen(root);
+	int rc;
+
+	if (fd < 0)
+		return 0;
+	/* Unlike GET_DRIVERNAME with a return buffer, GET_DEVICE_NUMBER
+	 * safely rejects a filesystem slot with no mounted backing device.
+	 * Never issue a buffered driver-name ioctl on an empty BDM slot. */
+	rc = fileXioIoctl2(fd, USBMASS_IOCTL_GET_DEVICE_NUMBER,
+	                   NULL, 0, device, sizeof(*device));
+	if (rc >= 0)
+		rc = fileXioIoctl2(fd, USBMASS_IOCTL_GET_DRIVERNAME,
+		                   NULL, 0, driver, sizeof(driver) - 1);
+	fileXioDclose(fd);
+	return rc >= 0 && !strcmp(driver, "usb");
+}
+#endif
+
+void filerRefreshUsbMassDisplayAlias(int unit)
+{
+	if (unit < 0 || unit >= USB_MASS_MAX_DRIVES)
+		return;
+	if (usb_mass_display_generation != getIopResetGeneration())
+		filerInvalidateUsbMassDisplayAliases();
+
+	usb_mass_display_valid_mask &= ~(1u << unit);
+	if (setting == NULL || setting->modern_browser_device_paths)
+		return;
+#ifdef EXFAT
+	{
+		char root[16];
+		int actual_device = -1, match = -1;
+		int slot;
+
+		snprintf(root, sizeof(root), "usb%d:/", unit);
+		if (!filerReadUsbMassRootIdentity(root, &actual_device))
+			return;
+		for (slot = 0; slot < USB_MASS_MAX_DRIVES; slot++) {
+			int candidate_device = -1;
+			snprintf(root, sizeof(root), "mass%d:/", slot);
+			if (!filerReadUsbMassRootIdentity(root, &candidate_device) ||
+			    candidate_device != actual_device)
+				continue;
+			/* Multiple partitions of one USB disk can share an IOP device
+			 * number. Do not claim to know which MASS slot matches. */
+			if (match >= 0)
+				return;
+			match = slot;
+		}
+		if (match < 0)
+			return;
+		usb_mass_display_slot[unit] = match;
+	}
+#else
+	/* Classic USBMASS registers units as massN, not a shared BDM pool. */
+	usb_mass_display_slot[unit] = unit;
+#endif
+	usb_mass_display_valid_mask |= (1u << unit);
+}
+
+/* Pure formatter: safe for dashboard rendering. On unverified identity use
+ * the actual driver path, never a fictitious mass<unit> label. */
+void filerFormatDevicePathForDisplay(const char *path, char *out, int size)
+{
+	int unit;
+	const char *tail;
+
+	if (out == NULL || size <= 0)
+		return;
+	if (path == NULL) {
+		out[0] = '\\0';
+		return;
+	}
+	if (setting == NULL || setting->modern_browser_device_paths ||
+	    strncmp(path, "usb", 3) || path[3] < '0' || path[3] > '9' ||
+	    path[4] != ':') {
+		snprintf(out, size, "%s", path);
+		return;
+	}
+	unit = path[3] - '0';
+	tail = path + 5;
+	if (usb_mass_display_generation != getIopResetGeneration() ||
+	    !(usb_mass_display_valid_mask & (1u << unit))) {
+		snprintf(out, size, "%s", path);
+		return;
+	}
+	snprintf(out, size, "mass%d:%s", usb_mass_display_slot[unit], tail);
+}
+
 enum {
 	TRANSFER_STORAGE_DEFAULT = 0,
 	TRANSFER_STORAGE_MMCE,
