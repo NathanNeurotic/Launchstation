@@ -557,14 +557,14 @@ builds retain their mass aliases. Ember, POPStarter and Neutrino keep their
 own loader-specific handoff rules. Console validation is still required for
 applications that use the modern aliases.
 
-### Video mode preview and browser navigation
-
-Video mode changes require confirmation within **5 seconds**. Keep retains the mode in the current settings session; Cancel or timeout restores the previous mode and screen offsets. Settings are written only through the existing Save action. Physical-console timing and display compatibility still require testing.
-
-The native File Browser and path picker provide ten rows, centered scrolling, and endpoint-first Left/Right paging. A page that overshoots lands at the first/last item; the next press at that endpoint wraps. Device rows show friendly names and mount IDs, with USB displayed as USB Mass Storage. Diagnostic status remains in device tools and opening a device reports initialization/errors. MISC/Configure opens dashboard Settings while the dashboard owns the screen; its classic configuration behavior remains available outside the dashboard.
-
 ### Transfer popup and errors
 
 Copy and verification show an action heading and a dedicated full-width filename line, remaining MB and a themed bar. Deletion shows the current filename and completed selected-item count; nested files update the filename without inventing a byte percentage. Intermediate progress eases, and completion fills the bar before closing. A blocking device call can still pause drawing until it returns.
 
 Paste failures keep the stage, numeric error and device/build diagnostics alongside distinct explanations for insufficient space, access denied, read-only filesystems, missing paths/devices, I/O and timeout failures. Preserve the exact error for troubleshooting; a permission failure is not diagnosed as insufficient space.
+
+### Video mode preview and browser navigation
+
+Video mode changes require confirmation within **5 seconds**. Keep retains the mode in the current settings session; Cancel or timeout restores the previous mode and screen offsets. Settings are written only through the existing Save action. Physical-console timing and display compatibility still require testing.
+
+The native File Browser and path picker provide ten rows, centered scrolling, and endpoint-first Left/Right paging. A page that overshoots lands at the first/last item; the next press at that endpoint wraps. Device rows show friendly names and mount IDs, with USB displayed as USB Mass Storage. Diagnostic status remains in device tools and opening a device reports initialization/errors. MISC/Configure opens dashboard Settings while the dashboard owns the screen; its classic configuration behavior remains available outside the dashboard.
