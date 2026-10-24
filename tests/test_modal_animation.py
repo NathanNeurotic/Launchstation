@@ -56,7 +56,7 @@ static float anim_time,frame_dt,section_anim=1,fade_in=1,bg_time,ui_time;
 static u64 last_frame_ms,now_ms;
 static int bg_calls,ui_calls,renders,depth,nested,frames[2],step_ms[3]={16,20,33};
 static int preview_calls;
-static int nav_scenario, timed_scenario, offscreen;
+static int nav_scenario, timed_scenario, offscreen, selection_draws;
 static float clip_top, clip_bottom, selection_y;
 static u64 Timer(void) { return now_ms; }
 static void dashBgUpdate(float dt) { bg_calls++; bg_time+=dt*dashCfg.effects/100.0f; }
@@ -94,7 +94,7 @@ for draw in ("modalBackdrop", "dashGfxPushAlpha", "dashGfxPushOffset", "modalPan
              "dashGlow", "dashTextWrap", "dashPanel", "dashPanelBorder", "dashTextCenter"):
     code += f"#define {draw}(...) ((void)0)\n"
 code += "#undef dashGfxScissor\n#define dashGfxScissor(x,y,w,h) (clip_top=(y),clip_bottom=(y)+(h))\n"
-code += "#undef dashDrawSelection\n#define dashDrawSelection(x,y,w,h,r,a) ((void)(nav_scenario>=4 && depth==0 ? (selection_y=(y), offscreen+=((y)<clip_top || (y)+(h)>clip_bottom)) : 0))\n"
+code += "#undef dashDrawSelection\n#define dashDrawSelection(x,y,w,h,r,a) ((void)(nav_scenario>=4 && depth==0 ? (selection_draws++, selection_y=(y), offscreen+=((y)<clip_top || (y)+(h)>clip_bottom)) : 0))\n"
 code += function(gfx, "float dashApproach(")
 code += function(shell, "float dashTime(")
 code += function(shell, "float dashAnimSpeed(")
@@ -143,7 +143,9 @@ static void reset(void) {
     anim_time=bg_time=ui_time=0; bg_calls=ui_calls=renders=preview_calls=0;
     section_anim=fade_in=0;
     now_ms=last_frame_ms=1000; frame_dt=0;
-    depth=nested=nav_scenario=timed_scenario=offscreen=0; memset(frames,0,sizeof(frames)); modal_preview=NULL;
+    depth=nested=nav_scenario=timed_scenario=offscreen=selection_draws=0;
+    selection_y=clip_top=clip_bottom=0;
+    memset(frames,0,sizeof(frames)); modal_preview=NULL;
     dashCfg.anim=100; dashCfg.effects=100;
 }
 static void check(void) {
@@ -214,11 +216,11 @@ int main(void) {
         reset();step_ms[0]=step_ms[1]=step_ms[2]=16;nav_scenario=scenario;
         int first=scenario==4 || scenario==7;
         assert(dashModalMenu("long wrap/jump",NULL,long_items,30,first?1:28)==(first?28:1));
-        assert(offscreen==0); /* highlight visible on the very first wrapped frame */
+        assert(selection_draws>0 && offscreen==0); /* highlight drawn and visible on the first wrapped frame */
     }
     reset();step_ms[0]=step_ms[1]=step_ms[2]=16;nav_scenario=8;
     assert(dashModalMenu("adjacent",NULL,long_items,30,1)==2);
-    assert(offscreen==0 && selection_y<clip_top+80); /* adjacent motion still eases */
+    assert(selection_draws>0 && offscreen==0 && selection_y<clip_top+80); /* adjacent motion still eases */
     reset(); timed_scenario=1; step_ms[0]=step_ms[1]=step_ms[2]=100;
     assert(!modalButtons("video","visible?","",0,(DashColor){0},"Keep","Revert",1,Timer()+5000));
     assert(now_ms==6000 && frames[0]==50); /* no input: revert at five seconds */

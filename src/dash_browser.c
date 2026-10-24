@@ -773,7 +773,8 @@ static void opDelete(void)
 		FILEINFO *f = &fb.files[idx[i]];
 		if (filerIsExploitProtectedPath(fb.dir, f) && filerConfirmExploitDelete(fb.dir, f) < 0)
 			continue;
-		dashLoadingStatus(f->name, i, n);
+		dashLoadingStatus(f->name, done, n);
+		dashLoadingFrame(f->name, done, n);
 		ret = delete (fb.dir, f);
 		if (ret < 0)
 			break;

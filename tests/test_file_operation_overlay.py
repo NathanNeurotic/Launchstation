@@ -22,6 +22,9 @@ def function(text, signature):
         pos += 1
     return text[start:pos] + "\n"
 
+delete_op = function((root / "src/dash_browser.c").read_text(), "static void opDelete(")
+assert delete_op.index("dashLoadingFrame(f->name, done, n)") < delete_op.index("ret = delete (fb.dir, f)")
+
 code = r"""
 #include <assert.h>
 #include <math.h>
