@@ -66,6 +66,7 @@ typedef uint8_t u8;typedef uint16_t u16;typedef uint32_t u32;typedef uint64_t u6
 #define FIO_O_EXCL O_EXCL
 #define FIO_O_TRUNC O_TRUNC
 #define FIO_S_ISDIR S_ISDIR
+#define FIO_S_ISREG S_ISREG
 #define FIO_CST_ATTR 1
 #define FIO_CST_CT 2
 #define FIO_CST_AT 4

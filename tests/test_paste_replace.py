@@ -34,6 +34,7 @@ typedef struct { char EntryName[32]; } sceMcTblGetDir;
 #define FIO_O_RDONLY O_RDONLY
 #define FIO_O_EXCL O_EXCL
 #define FIO_S_ISDIR S_ISDIR
+#define FIO_S_ISREG S_ISREG
 static int rename_calls, fail_rename, fail_rollback, mc_result, denied, removed, fail_close;
 static int false_rename, sync_calls, fail_sync, fail_read, fail_eof, verified;
 static int stat_reports_eisdir, stat_reports_enoent, stat_reports_untyped;
