@@ -539,8 +539,8 @@ is skipped by navigation.
 ### Device names and ELF handoffs
 
 USB devices are named **USB Mass Storage**. The File Browser and device panels
-show legacy `mass:` / `mass0:` / `mass1:` labels while browsing keeps the exact
-USB device mapping internally.
+show the mounted path (`usbN:` with the exFAT stack, `massN:` with the classic
+driver). They do not infer a shared MASS slot from a USB unit number.
 
 **Settings > Launching > ELF handoff paths** defaults to **Legacy mass (default)** and is saved
 as `Modern_Device_Handoff = 0` in `LAUNCHELF.CNF`. With the default choice, ordinary ELF
@@ -561,4 +561,4 @@ applications that use the modern aliases.
 
 Video mode changes require confirmation within **5 seconds**. Keep retains the mode in the current settings session; Cancel or timeout restores the previous mode and screen offsets. Settings are written only through the existing Save action. Physical-console timing and display compatibility still require testing.
 
-The native File Browser and path picker provide ten rows, centered scrolling, and endpoint-first Left/Right paging. A page that overshoots lands at the first/last item; the next press at that endpoint wraps. Device rows show friendly names and mount IDs, with USB displayed as USB Mass Storage and its mounted path (`usbN:` with the exFAT stack, `massN:` with the classic driver). Numbered MASS slots can belong to any BDM device and are not inferred from USB unit numbers. Diagnostic status remains in device tools and opening a device reports initialization/errors. MISC/Configure opens dashboard Settings while the dashboard owns the screen; its classic configuration behavior remains available outside the dashboard.
+The native File Browser and path picker provide ten rows, centered scrolling, and endpoint-first Left/Right paging. A page that overshoots lands at the first/last item; the next press at that endpoint wraps. Device rows show friendly names and mount IDs, with USB displayed as USB Mass Storage. Diagnostic status remains in device tools and opening a device reports initialization/errors. MISC/Configure opens dashboard Settings while the dashboard owns the screen; its classic configuration behavior remains available outside the dashboard.
