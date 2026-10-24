@@ -20,16 +20,19 @@ header = r'''
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <dirent.h>
 typedef uint64_t u64;
 typedef uint32_t u32;
 typedef struct { unsigned mode; } iox_stat_t;
 typedef struct { char EntryName[32]; } sceMcTblGetDir;
 #define MAX_PATH 1024
 #define FIO_O_RDONLY O_RDONLY
+#define FIO_O_EXCL O_EXCL
 #define FIO_S_ISDIR S_ISDIR
 static int rename_calls, fail_rename, fail_rollback, mc_result, denied, removed, fail_close;
 static int false_rename, sync_calls, fail_sync, fail_read, fail_eof, verified;
@@ -64,6 +67,27 @@ static int genClose(int fd) { int r=close(fd);return fail_close?-EIO:r; }
 static int genRemove(char *p) { removed++;return unlink(p); }
 static void put(const char *p,const char *s) { int f=open(p,O_WRONLY|O_TRUNC|O_CREAT,0600);assert(f>=0);assert(write(f,s,strlen(s))==(int)strlen(s));assert(close(f)==0); }
 static void expect(const char *p,const char *s) { char b[128]={0};int f=open(p,O_RDONLY);assert(f>=0);assert(read(f,b,sizeof(b))==(int)strlen(s));close(f);assert(!strcmp(b,s)); }
+
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+typedef struct { iox_stat_t stat; char name[256]; } iox_dirent_t;
+static DIR *lookup_dir;
+static char lookup_parent[MAX_PATH];
+static int lookup_read_error, lookup_close_error, lookup_open_error;
+static int genDopen(char *p) {
+ assert(!lookup_dir);if(lookup_open_error)return lookup_open_error;
+ lookup_dir=opendir(p);if(!lookup_dir)return -errno;
+ snprintf(lookup_parent,sizeof(lookup_parent),"%s",p);return 900;
+}
+static int fileXioDread(int fd,iox_dirent_t *entry) {
+ assert(fd==900&&lookup_dir);if(lookup_read_error)return lookup_read_error;
+ errno=0;struct dirent *e=readdir(lookup_dir);if(!e)return errno?-errno:0;
+ snprintf(entry->name,sizeof(entry->name),"%s",e->d_name);
+ char path[MAX_PATH+256];snprintf(path,sizeof(path),"%s%s",lookup_parent,e->d_name);
+ struct stat s;if(stat(path,&s))return -errno;entry->stat.mode=s.st_mode;return 1;
+}
+static int genDclose(int fd) {assert(fd==900&&lookup_dir);int r=closedir(lookup_dir);lookup_dir=NULL;return lookup_close_error?lookup_close_error:r;}
 '''
 main = r'''
 int main(void) {
@@ -116,6 +140,21 @@ int main(void) {
   if(which==1)expect(out,fresh);else expect(target,fresh);
   unlink(out);unlink(backup);fail_sync=0;
  }
+
+ /* Native MC creation strips the foreign flag only after checking absence. */
+ strcpy(out,"mc0:/brand-new.elf");unlink(out);
+ int fd=copyOpenTarget(out,O_WRONLY|O_CREAT|O_EXCL);assert(fd>=0);close(fd);
+ assert(copyOpenTarget(out,O_WRONLY|O_CREAT|O_EXCL)==-EEXIST);unlink(out);
+ /* Ambiguous getstat is not itself proof of absence. */
+ denied=1;iox_stat_t probe;
+ assert(copyLookupPath(NULL,&probe)==-EINVAL);
+ assert(copyLookupPath("mc0:/file",NULL)==-EINVAL);
+ assert(copyLookupPath("mc0:/new.elf",&probe)==-ENOENT&&!lookup_dir);
+ put("mc0:/new.elf","preserve");assert(!copyLookupPath("mc0:/new.elf",&probe));
+ lookup_read_error=-ETIMEDOUT;assert(copyLookupPath("mc0:/missing.elf",&probe)==-ETIMEDOUT&&!lookup_dir);lookup_read_error=0;
+ lookup_close_error=-EIO;assert(copyLookupPath("mc0:/missing.elf",&probe)==-EIO&&!lookup_dir);lookup_close_error=0;
+ lookup_open_error=-EACCES;assert(copyLookupPath("mc0:/missing.elf",&probe)==-EACCES&&!lookup_dir);lookup_open_error=0;
+ assert(copyLookupPath("disk/",&probe)==-EINVAL);denied=0;
  puts("PASS: verified replacements, MC slots, short readback, rollback, retained recovery and permission failures");
 }
 '''

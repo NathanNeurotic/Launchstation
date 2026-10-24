@@ -468,7 +468,7 @@ static void friendlyLaunchError(const DashApp *app, const char *tech)
 	dashModalMessage(DI_WARNING, not_elf ? "Not an application" : "Application unavailable", body,
 	                 (tech && tech[0]) ? tech : app->path);
 	if (not_found && (dashStoreIsFavorite(app->path) || dashStoreIsPinned(app->path) || (app->flags & DASH_APP_TRANSIENT))) {
-		if (dashModalConfirm("Remove shortcut?", "Remove this application from Home, Favorites and Recent?", "Remove", 0))
+		if (dashModalConfirm("Remove shortcut?", "Remove this application from Home, Favorites and Recent?", localizeDashboardText("Remove"), 0))
 			dashStoreRemoveEverywhere(app->path);
 	}
 }
@@ -537,9 +537,12 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	/*
 	 * Ordinary ELF launches used to leave audsrv's looping BGM voice alive.
 	 * Mute until the legacy launcher validates the target; final cleanup
-	 * stops audsrv. A failed validation can restore the existing audio below.
+	 * stops audsrv. Neutrino still presents an interactive options menu;
+	 * its committed-launch cleanup stops audio after the user chooses Run.
+	 * A failed validation can restore the existing audio below.
 	 */
-	dashSoundSuspend();
+	if (!IsNeutrinoIsoPath(path))
+		dashSoundSuspend();
 	dashGfxRestoreLegacyState();
 	dashClassicUiInstall(0); /* launch-time prompts stay classic */
 	ExecuteMainAction(path, &exec_ctx);
@@ -701,11 +704,11 @@ static void globalMenu(void)
 			dashSwitchSection(DASH_SEC_SETTINGS);
 			break;
 		case 4:
-			if (dashModalConfirm("Reboot IOP", "All loaded device drivers will be restarted. Devices will be detected again when used.", "Reboot", 0))
+			if (dashModalConfirm(localizeDashboardText("Reboot IOP"), "All loaded device drivers will be restarted. Devices will be detected again when used.", "Reboot", 0))
 				dashRunMisc(setting->Misc_Reboot_IOP);
 			break;
 		case 5:
-			if (dashModalConfirm("Power off", "Turn off the PlayStation 2 now?", "Power off", 1))
+			if (dashModalConfirm(localizeDashboardText("Power off"), "Turn off the PlayStation 2 now?", localizeDashboardText("Power off"), 1))
 				dashRunMisc(setting->Misc_PS2PowerOff);
 			break;
 	}
@@ -857,7 +860,7 @@ static void quickLaunchDraw(void)
 	dashGfxPushAlpha(k);
 	dashModalPanel(x, y, w, h, k);
 	dashIcon(DI_KEY, x + 24, y + 18, 24, DASH_C_ACCENT);
-	dashTextS(x + 58, y + 20, "Launch keys", DASH_FS_LABEL, DASH_C_TEXT);
+	dashTextS(x + 58, y + 20, localizeDashboardText("Launch keys"), DASH_FS_LABEL, DASH_C_TEXT);
 	dashText(x + 58, y + 44, "Keep SELECT held and press a button", DASH_FS_CAPTION, DASH_C_TEXT3);
 	if (n == 0)
 		dashText(x + 28, y + 72, "Set launch keys in Settings > Launching > Launch keys.", DASH_FS_SMALL, DASH_C_TEXT2);

@@ -184,7 +184,7 @@ static void fAdd(int kind, int icon, int index, const char *label, const char *d
 	e->kind = kind;
 	e->icon = icon;
 	e->index = index;
-	dashStrCopy(e->label, label, sizeof(e->label));
+	dashStrCopy(e->label, kind == FE_BOOKMARK ? label : localizeDashboardText(label), sizeof(e->label));
 	dashStrCopy(e->detail, detail ? detail : "", sizeof(e->detail));
 }
 
@@ -307,7 +307,7 @@ static void filesInput(const DashInput *in)
 		    {DI_FOLDER, "Open File Browser", NULL, 0},
 		    {DI_TEXT, "Text Editor", NULL, 0},
 		    {DI_REFRESH, "Refresh devices", NULL, 0}};
-		int r = dashModalMenu("Files", NULL, items, 3, 0);
+		int r = dashModalMenu(localizeDashboardText("Files"), NULL, items, 3, 0);
 		if (r == 0)
 			filesActivate();
 		else if (r == 1)
@@ -339,7 +339,7 @@ static void filesDraw(void)
 	int i;
 	FileEntry *e = &fentries[fsel];
 
-	dashDrawSectionTitle(48, 68, "Files", "the complete Launchstation file manager");
+	dashDrawSectionTitle(48, 68, localizeDashboardText("Files"), "the complete Launchstation file manager");
 
 	if (fsel < ftop + 1)
 		ftop = fsel - 1;
@@ -347,6 +347,8 @@ static void filesDraw(void)
 		ftop = fsel - rows + 1;
 	if (ftop < 0)
 		ftop = 0;
+	if (fsel_anim < ftop || fsel_anim >= ftop + rows)
+		fsel_anim = (float)fsel;
 
 	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, rows * row_h + 12, 14);
 	dashGfxScissor(lx - 6, ly - 4, lw + 12, rows * row_h + 8);
@@ -523,13 +525,13 @@ static void devInput(const DashInput *in)
 		char display_mount[16];
 		int n = 0, r, ids[5];
 
-		items[n].icon = DI_FOLDER, items[n].label = "Browse",
+		items[n].icon = DI_FOLDER, items[n].label = localizeDashboardText("Browse"),
 		items[n].detail = deviceDisplayMount(d, display_mount, sizeof(display_mount)),
 		items[n].disabled = 0, ids[n++] = 0;
 		items[n].icon = DI_REFRESH, items[n].label = (d->state == DASH_DEV_READY) ? "Check again" : "Detect now", items[n].detail = NULL,
 		items[n].disabled = (d->icon == DI_MC || d->icon == DI_DISC), ids[n++] = 1;
 		if (d->icon == DI_HDD && !strncmp(d->mount, "hdd", 3))
-			items[n].icon = DI_HDD, items[n].label = "HDD Manager", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 2;
+			items[n].icon = DI_HDD, items[n].label = localizeDashboardText("HDD Manager"), items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 2;
 		if (d->icon == DI_DISC)
 			items[n].icon = DI_PLAY, items[n].label = "Start disc", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 3;
 		/* Exact model discovery happens only through this user-selected sheet. */
@@ -591,7 +593,7 @@ static void devDraw(void)
 		if (devs[i].state == DASH_DEV_READY)
 			ready++;
 	snprintf(sub, sizeof(sub), "%d ready", ready);
-	dashDrawSectionTitle(48, 68, "Devices", sub);
+	dashDrawSectionTitle(48, 68, localizeDashboardText("Devices"), sub);
 
 	dashGfxScissor(DASH_SAFE_L - 10, 98, DASH_SAFE_R - DASH_SAFE_L + 20, 296);
 	for (i = 0; i < ndevs; i++) {

@@ -191,6 +191,6 @@ if not compiler:
 with tempfile.TemporaryDirectory(prefix="wle-settings-") as tmp:
     source = Path(tmp) / "settings.c"
     exe = Path(tmp) / "settings.exe"
-    source.write_text(code)
+    source.write_text("#define localizeDashboardText(s) (s)\n" + code)
     subprocess.run([compiler, "-std=gnu11", str(source), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)

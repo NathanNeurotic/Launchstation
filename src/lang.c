@@ -571,3 +571,29 @@ void Load_External_Language(void)
 //---------------------------------------------------------------------------
 //End of file:  lang.c
 //---------------------------------------------------------------------------
+
+/* Only UI-owned labels/formats opt in. Resolve against the current table on
+ * every call, so changing language or replacing an external LNG cannot leave
+ * stale translated pointers in static dashboard metadata. */
+const char *localizeDashboardText(const char *source)
+{
+	static const struct { const char *source; int id; } labels[] = {
+#include "../Lang/DASHBOARD.inc"
+	};
+	int lo = 0, hi = (int)(sizeof(labels) / sizeof(labels[0]));
+	if (source == NULL)
+		return source;
+	while (lo < hi) {
+		int mid = lo + (hi - lo) / 2;
+		int cmp = strcmp(source, labels[mid].source);
+		if (cmp == 0) {
+			const char *translated = Lang_String[labels[mid].id].String;
+			return translated != NULL && translated[0] ? translated : source;
+		}
+		if (cmp < 0)
+			hi = mid;
+		else
+			lo = mid + 1;
+	}
+	return source;
+}

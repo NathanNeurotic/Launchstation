@@ -24,6 +24,7 @@ code=r'''
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -83,6 +84,7 @@ static FILEINFO clipFiles[MAX_ENTRY];static char clipPath[MAX_PATH];
 static unsigned clipIopResetGeneration,generation;
 static u64 written_size,PasteTime,clock_ms;
 static int source_ready=1,load_ok=1,reset_preflight,read_cap=4096,write_cap=37,cancel_copy;
+static int ambiguous_stat;
 static int fail_open,fail_rewind,fail_read,fail_write,fail_close,fail_listing,fail_stat,fail_out_open,early_eof,fail_measure,corrupt_verify,fail_publish;
 static int fd_kind[1024],handles,read_calls,write_calls;
 static unsigned fd_generation[1024];
@@ -103,7 +105,7 @@ static int isPcCardCfOnline(void){return 1;}
 static void ensureMemoryCardPortAccessible(int p){assert(p==0||p==1);}
 static char *makeHostPath(char *d,char *s){if(d!=s)strcpy(d,s);return d;}
 static void genLimObjName(char *p,int reserve){(void)p;(void)reserve;}
-static int genGetStat(const char *p,iox_stat_t *out){struct stat s;if(!strncmp(p,"host:",5))return -EIO;if(fail_stat&&!strncmp(p,"mc0:",4))return -EACCES;if(stat(p,&s))return -errno;out->mode=s.st_mode;return 0;}
+static int genGetStat(const char *p,iox_stat_t *out){struct stat s;if(!strncmp(p,"host:",5))return -EIO;if(fail_stat&&!strncmp(p,"mc0:",4))return -EACCES;if(stat(p,&s))return ambiguous_stat?-1:-errno;out->mode=s.st_mode;return 0;}
 static int genOpen(const char *p,int flags){
  if(fail_open&&flags==O_RDONLY&&!strncmp(p,"udpfs:",6))return -ENOENT;
  if(fail_out_open&&(flags&O_WRONLY))return -EACCES;
@@ -149,6 +151,27 @@ static int unexpected(void){assert(!"PSU branch is outside this ordinary-copy fi
 #define psu_restore_open_root_image(...) unexpected()
 #define psu_restore_apply_entry_stats_to_mc(...) unexpected()
 static int applyMcInfoToVmcPath(const char *p,const sceMcTblGetDir *s){(void)p;(void)s;return 0;}
+
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+typedef struct { iox_stat_t stat; char name[256]; } iox_dirent_t;
+static DIR *lookup_dir;
+static char lookup_parent[MAX_PATH];
+static int lookup_read_error, lookup_close_error, lookup_open_error;
+static int genDopen(char *p) {
+ assert(!lookup_dir);if(lookup_open_error)return lookup_open_error;
+ lookup_dir=opendir(p);if(!lookup_dir)return -errno;
+ snprintf(lookup_parent,sizeof(lookup_parent),"%s",p);return 900;
+}
+static int fileXioDread(int fd,iox_dirent_t *entry) {
+ assert(fd==900&&lookup_dir);if(lookup_read_error)return lookup_read_error;
+ errno=0;struct dirent *e=readdir(lookup_dir);if(!e)return errno?-errno:0;
+ snprintf(entry->name,sizeof(entry->name),"%s",e->d_name);
+ char path[MAX_PATH+256];snprintf(path,sizeof(path),"%s%s",lookup_parent,e->d_name);
+ struct stat s;if(stat(path,&s))return -errno;entry->stat.mode=s.st_mode;return 1;
+}
+static int genDclose(int fd) {assert(fd==900&&lookup_dir);int r=closedir(lookup_dir);lookup_dir=NULL;return lookup_close_error?lookup_close_error:r;}
 '''
 # Use the real PSU layout declarations; these branches are compiled but not executed.
 psu=(root/'include/psu_types.h').read_text();code+=psu[psu.index('typedef struct'):psu.rindex('#endif')]
@@ -209,6 +232,14 @@ int main(void){
   if(failure==3){assert(strstr(message,"37/65537 B")&&strstr(message,"(-28)"));}
   if(failure==7)assert(strstr(message,"IOP 1>2"));
  }
+
+ /* Legacy missing-entry status uses parent EOF, including repeated replacement. */
+ reset();ambiguous_stat=1;unlink("mc1:/BOOT.ELF");
+ for(int attempt=0;attempt<3;attempt++){
+  message[0]=0;subfunc_Paste(message,"mc1:/");assert(!message[0]&&!handles&&!lookup_dir);
+  assert(matches("mc1:/BOOT.ELF",input,sizeof(input)));
+ }
+ ambiguous_stat=0;
  /* Nested ordinary folders use the same production recursion. */
  reset();mkdir("udpfs:/NESTED",0700);put("udpfs:/NESTED/CHILD.BIN",input,257);
  strcpy(clipFiles[0].name,"NESTED");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;

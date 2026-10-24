@@ -274,7 +274,7 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 				hx += dashDrawButton(hx, hy, dashOkIcon(), NULL) + 4;
 				hx = dashTextS(hx, hy + 4.5f, "Type", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
 				hx += dashDrawButton(hx, hy, dashBackIcon(), NULL) + 4;
-				hx = dashTextS(hx, hy + 4.5f, "Delete", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
+				hx = dashTextS(hx, hy + 4.5f, localizeDashboardText("Delete"), DASH_FS_SMALL, DASH_C_TEXT2) + 12;
 				hx += dashDrawButton(hx, hy, DI_BTN_SQUARE, NULL) + 4;
 				hx = dashTextS(hx, hy + 4.5f, "Caps", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
 				hx += dashDrawButton(hx, hy, -1, "L1") + 2;
@@ -283,7 +283,7 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 				hx += dashDrawButton(hx, hy, -1, "START") + 4;
 				hx = dashTextS(hx, hy + 4.5f, "Done", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
 				hx += dashDrawButton(hx, hy, DI_BTN_TRIANGLE, NULL) + 4;
-				dashTextS(hx, hy + 4.5f, "Cancel", DASH_FS_SMALL, DASH_C_TEXT2);
+				dashTextS(hx, hy + 4.5f, localizeDashboardText("Cancel"), DASH_FS_SMALL, DASH_C_TEXT2);
 			}
 			dashGfxPopOffset();
 			dashGfxPopAlpha();
@@ -486,11 +486,11 @@ int dashModalIp(const char *title, const char *help, char *ip_str, int size)
 				 * Match the 12px gap used by the credits sheet. */
 				hx += dashDrawButton(hx, hy, DI_BTN_UP, NULL) + 12;
 				hx += dashDrawButton(hx, hy, DI_BTN_DOWN, NULL) + 4;
-				hx = dashTextS(hx, hy + 4.5f, "Change", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
+				hx = dashTextS(hx, hy + 4.5f, localizeDashboardText("Change"), DASH_FS_SMALL, DASH_C_TEXT2) + 12;
 				hx += dashDrawButton(hx, hy, -1, "L1") + 2;
 				hx += dashDrawButton(hx, hy, -1, "R1") + 4;
 				hx = dashTextS(hx, hy + 4.5f, "10", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
-				dashModalHintRow(hx, hy, dashOkIcon(), "OK", dashBackIcon(), "Cancel");
+				dashModalHintRow(hx, hy, dashOkIcon(), localizeDashboardText("OK"), dashBackIcon(), localizeDashboardText("Cancel"));
 			}
 			dashGfxPopOffset();
 			dashGfxPopAlpha();
@@ -863,6 +863,8 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 			top = sel;
 		if (sel >= top + rows)
 			top = sel - rows + 1;
+		if (sel_anim < top || sel_anim >= top + rows)
+			sel_anim = (float)sel;
 		float dt = dashVisualUpdate();
 		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), dt);
 		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
@@ -926,9 +928,9 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 			{
 				float hx = x + 24, hy = y + h - 36;
 				hx += dashDrawButton(hx, hy, dashOkIcon(), NULL) + 4;
-				hx = dashTextS(hx, hy + 4.5f, "Open", DASH_FS_SMALL, DASH_C_TEXT2) + 14;
+				hx = dashTextS(hx, hy + 4.5f, localizeDashboardText("Open"), DASH_FS_SMALL, DASH_C_TEXT2) + 14;
 				hx += dashDrawButton(hx, hy, dashBackIcon(), NULL) + 4;
-				hx = dashTextS(hx, hy + 4.5f, pk.dir[0] ? "Up" : "Cancel", DASH_FS_SMALL, DASH_C_TEXT2) + 14;
+				hx = dashTextS(hx, hy + 4.5f, pk.dir[0] ? localizeDashboardText("Up") : localizeDashboardText("Cancel"), DASH_FS_SMALL, DASH_C_TEXT2) + 14;
 				if (mode == DASH_PICK_FOLDER && pk.dir[0]) {
 					hx += dashDrawButton(hx, hy, -1, "START") + 4;
 					hx = dashTextS(hx, hy + 4.5f, "Use this folder", DASH_FS_SMALL, DASH_C_TEXT2) + 14;
@@ -937,7 +939,7 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 					hx = dashTextS(hx, hy + 4.5f, "uLE:/ path", DASH_FS_SMALL, DASH_C_TEXT2) + 14;
 				}
 				hx += dashDrawButton(hx, hy, DI_BTN_TRIANGLE, NULL) + 4;
-				dashTextS(hx, hy + 4.5f, "Cancel", DASH_FS_SMALL, DASH_C_TEXT2);
+				dashTextS(hx, hy + 4.5f, localizeDashboardText("Cancel"), DASH_FS_SMALL, DASH_C_TEXT2);
 			}
 			dashGfxPopOffset();
 			dashGfxPopAlpha();

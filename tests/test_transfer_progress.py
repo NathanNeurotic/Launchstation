@@ -13,7 +13,7 @@ code=r'''
 #include <stdio.h>
 #include <string.h>
 typedef uint64_t u64;
-static int active=1, worker, loading_active=1, draws, loading_done,loading_total;
+static int active=1, worker, loading_active=1, draws, loading_done,loading_total,loading_file_operation;
 static float loading_fraction;
 static char loading_title[64],loading_status[128],loading_remaining[64];
 static u64 tick,loading_last_draw;
@@ -22,16 +22,16 @@ static int dashWorkerOnThread(void){return worker;}
 static u64 Timer(void){return tick;}
 static void dashStrCopy(char *a,const char *b,int cap){snprintf(a,cap,"%s",b);}
 static void loadingDraw(void){draws++;loading_last_draw=tick;}
-static void dashLoadingBegin(const char *s){loading_active=1;snprintf(loading_title,sizeof(loading_title),"%s",s);}
+static void dashFileLoadingBegin(const char *s){loading_active=1;snprintf(loading_title,sizeof(loading_title),"%s",s);}
 '''+source[a:b]+r'''
 int main(void){
  assert(DashFileProgress("Pasting file","BOOT.ELF",8ULL<<30,8ULL<<30));
  assert(!strcmp(loading_status,"BOOT.ELF")&&!strcmp(loading_remaining,"Remaining size: 8192.00 MB"));
- assert(loading_done==0&&loading_total==10000&&!draws);
+ assert(loading_done==0&&loading_total==10000&&draws==1);
  tick=20;DashFileProgress("Pasting file","BOOT.ELF",4ULL<<30,8ULL<<30);
- assert(loading_done==5000&&draws==1);
- tick=21;DashFileProgress("Pasting file","BOOT.ELF",4ULL<<30,8ULL<<30);assert(draws==1);
- DashFileProgress("Pasting file","BOOT.ELF",0,8ULL<<30);assert(loading_done==10000&&draws==2);
+ assert(loading_done==5000&&draws==2);
+ tick=21;DashFileProgress("Pasting file","BOOT.ELF",4ULL<<30,8ULL<<30);assert(draws==2);
+ DashFileProgress("Pasting file","BOOT.ELF",0,8ULL<<30);assert(loading_done==10000&&draws==3);
  loading_fraction=1;DashFileProgress("Pasting file","SECOND.ELF",1024,1024);
  assert(loading_fraction==0&&loading_done==0&&!strcmp(loading_remaining,"Remaining size: 0.00 MB"));
  DashFileProgress("Pasting file","empty",0,0);assert(loading_done==10000);
@@ -60,6 +60,6 @@ assert 'if (!DashFileProgress("Pasting file", file.name, size, original_size))' 
 assert 'buffSize = 16384' in copy
 assert 'DashFileDeleteProgress(file->name)' in (root/'src/filer_actions.c').read_text()
 with tempfile.TemporaryDirectory(prefix='transfer-progress-') as folder:
- p=Path(folder);(p/'test.c').write_text(code)
+ p=Path(folder);(p/'test.c').write_text("#define localizeDashboardText(s) (s)\n" + code)
  subprocess.run([shutil.which('gcc'),'-std=c99','-Wall','-Wextra','-Werror',str(p/'test.c'),'-o',str(p/'test')],check=True)
  subprocess.run([str(p/'test')],check=True)
