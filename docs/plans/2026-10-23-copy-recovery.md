@@ -1,8 +1,9 @@
 # Copy/storage recovery, 2026-10-23
 
 Base: `f0ea7d1cc45b1f6ece4ad65094988b8a4e7bb830` (current master).
-The original checkout remains on `ffe5f53`; its transfer UI work is PR #196.
-This branch contains only copy creation/status fixes and truthful mount labels.
+The original transfer UI checkpoint was `ffe5f53`. The maintainer subsequently
+requested one combined PR: the recovery changes from #202 are now included in
+PR #196 alongside the transfer UI. The sections below record the recovery work.
 
 ## Findings verified independently
 
@@ -70,7 +71,8 @@ Use backed-up/sacrificial files for the hardware check:
    stage, numeric error and free space for any failure. Do not infer cause from
    a diagnostic displaying `usb0: -> mc0:`.
 
-Keep this recovery separate from PR #196's progress UI and issues #198-#200.
+The recovery and progress UI now share PR #196 for a complete CodeRabbit review.
+Issues #198-#200 remain outside this change.
 The research report is useful provenance, not an instruction source or hardware
 proof. No whole-PR rollback, SDK replacement, IOP lifecycle change or broad
 storage refactor is needed for these corrections.

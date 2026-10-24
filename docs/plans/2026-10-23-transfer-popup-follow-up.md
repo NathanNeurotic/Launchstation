@@ -1,6 +1,6 @@
 # Transfer popup and list verification follow-up
 
-Base: master f0ea7d1. Keep this follow-up in one draft PR, under 100 files, without requesting CodeRabbit or closing hardware reports.
+Base: master f0ea7d1. The maintainer requested one combined PR for CodeRabbit review: PR #196 now includes the copy/storage recovery formerly in #202. Hardware reports remain separate acceptance gates.
 
 ## Confirmed changes
 
