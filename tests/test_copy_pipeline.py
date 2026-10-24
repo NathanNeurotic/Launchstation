@@ -2,7 +2,8 @@
 
 Drivers/RPCs are replaced by bounded file adapters and injected failures. The
 copy orchestration, recursion, replacement transaction and diagnostics are real.
-This does not emulate a UDPFS server, libmc or physical memory cards.
+SDK open flags and FatFs stat results are adapted explicitly. This does not
+emulate a UDPFS server, libmc or physical memory cards.
 """
 from pathlib import Path
 import shutil
@@ -11,6 +12,7 @@ import tempfile
 root=Path(__file__).resolve().parents[1]
 copy=(root/'src/filer_copy.c').read_text()
 browser=(root/'src/filer_browser.c').read_text()
+fileops=(root/'src/filer_fileops.c').read_text()
 
 def function(source, signature):
     a=source.index(signature);b=source.index('{',a)+1;depth=1
@@ -38,6 +40,7 @@ typedef uint8_t u8;typedef uint16_t u16;typedef uint32_t u32;typedef uint64_t u6
 #define FILEOP_TRACE 0
 #define UDPFS 1
 #define ETH 1
+#define EXFAT 1
 #define GIT_HASH "fixture-head"
 #define TRUE 1
 #define FALSE 0
@@ -57,13 +60,13 @@ typedef uint8_t u8;typedef uint16_t u16;typedef uint32_t u32;typedef uint64_t u6
 #define HDD_ATTR_save_prot_folder 0xC4AF
 #define HDD_ATTR_save_folder 0xC4A7
 #define sceMcFileAttrSubdir 0x20
-#define sceMcFileAttrPDAExec 0x100
+#define sceMcFileAttrPDAExec 0x0800
 #define sceMcFileAttrDupProhibit 0x80
-#define FIO_O_RDONLY O_RDONLY
-#define FIO_O_WRONLY O_WRONLY
-#define FIO_O_CREAT O_CREAT
-#define FIO_O_EXCL O_EXCL
-#define FIO_O_TRUNC O_TRUNC
+#define FIO_O_RDONLY 0x0001
+#define FIO_O_WRONLY 0x0002
+#define FIO_O_CREAT 0x0200
+#define FIO_O_EXCL 0x0800
+#define FIO_O_TRUNC 0x0400
 #define FIO_S_ISDIR S_ISDIR
 #define FIO_CST_ATTR 1
 #define FIO_CST_CT 2
@@ -103,12 +106,29 @@ static int isPcCardCfOnline(void){return 1;}
 static void ensureMemoryCardPortAccessible(int p){assert(p==0||p==1);}
 static char *makeHostPath(char *d,char *s){if(d!=s)strcpy(d,s);return d;}
 static void genLimObjName(char *p,int reserve){(void)p;(void)reserve;}
-static int genGetStat(const char *p,iox_stat_t *out){struct stat s;if(!strncmp(p,"host:",5))return -EIO;if(fail_stat&&!strncmp(p,"mc0:",4))return -EACCES;if(stat(p,&s))return -errno;out->mode=s.st_mode;return 0;}
+static int normalizeFatFsStatResult(const char *,int);
+static int genGetStat(const char *p,iox_stat_t *out){
+ struct stat s;
+ if(!strncmp(p,"host:",5))return -EIO;
+ if(fail_stat&&!strncmp(p,"mc0:",4))return -EACCES;
+ if(stat(p,&s)) {
+  int raw=!strncmp(p,"usb0:",5)&&errno==ENOENT?-4:-errno; /* SDK FR_NO_FILE */
+  return normalizeFatFsStatResult(p,raw);
+ }
+ out->mode=s.st_mode;return 0;
+}
 static int genOpen(const char *p,int flags){
- if(fail_open&&flags==O_RDONLY&&!strncmp(p,"udpfs:",6))return -ENOENT;
- if(fail_out_open&&(flags&O_WRONLY))return -EACCES;
- int fd=open(p,flags,0600);if(fd<0)return -errno;assert(fd<1024);
- fd_kind[fd]=(flags&O_WRONLY)?2:!strncmp(p,"udpfs:",6)?1:3;
+ if(fail_open&&flags==FIO_O_RDONLY&&!strncmp(p,"udpfs:",6))return -ENOENT;
+ if(fail_out_open&&(flags&FIO_O_WRONLY))return -EACCES;
+ /* Physical MC treats FIO_O_EXCL (0x0800) as PDAExec, not exclusive open. */
+ if ((flags&FIO_O_WRONLY) && (!strncmp(p,"mc0:",4)||!strncmp(p,"mc1:",4))) assert(!(flags&sceMcFileAttrPDAExec));
+ if ((flags&FIO_O_WRONLY) && !strncmp(p,"usb0:",5)) assert(flags&FIO_O_EXCL);
+ int host_flags=(flags&FIO_O_WRONLY)?O_WRONLY:O_RDONLY;
+ if(flags&FIO_O_CREAT)host_flags|=O_CREAT;
+ if(flags&FIO_O_TRUNC)host_flags|=O_TRUNC;
+ if(flags&FIO_O_EXCL)host_flags|=O_EXCL;
+ int fd=open(p,host_flags,0600);if(fd<0)return -errno;assert(fd<1024);
+ fd_kind[fd]=(flags&FIO_O_WRONLY)?2:!strncmp(p,"udpfs:",6)?1:3;
  fd_generation[fd]=generation;handles++;return fd;
 }
 static int genClose(int fd){int kind=fd_kind[fd];assert(kind&&handles>0);fd_kind[fd]=0;handles--;int r=close(fd);return fail_close&&kind==2?-EIO:r;}
@@ -152,6 +172,7 @@ static int applyMcInfoToVmcPath(const char *p,const sceMcTblGetDir *s){(void)p;(
 '''
 # Use the real PSU layout declarations; these branches are compiled but not executed.
 psu=(root/'include/psu_types.h').read_text();code+=psu[psu.index('typedef struct'):psu.rindex('#endif')]
+code+=function(fileops,'static int normalizeFatFsStatResult(')
 a=copy.index('/* One paste context');b=copy.index('static int isMemoryCardLikePath(',a);code+=copy[a:b]
 for sig in ('static int isMemoryCardLikePath(', 'static int isHddCommonParty(',
             'static int copyReadChunk(', 'static int copyWriteChunk(',
