@@ -25,8 +25,8 @@ def body(source: str, signature: str) -> str:
 
 # 1. Issue #132: MASS labeling in dash_devices.c
 devices_src = read("src/dash_devices.c")
-assert '"USB Mass Storage"' in devices_src
-assert 'snprintf(name, sizeof(name), "USB Mass Storage");' in devices_src
+assert '"MASS"' in devices_src
+assert '"MASS %d"' in devices_src
 assert '"MASS (USB)"' not in devices_src
 assert '"MASS (USB) %d"' not in devices_src
 

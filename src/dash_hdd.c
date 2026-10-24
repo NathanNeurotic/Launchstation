@@ -1248,8 +1248,6 @@ void dashHddManager(void)
 			top = sel;
 		if (sel >= top + ROWS)
 			top = sel - ROWS + 1;
-		if (sel_anim < top || sel_anim >= top + ROWS)
-			sel_anim = (float)sel;
 		/* Keep PFS usage polling as before; HDL title RPCs are explicit
 		 * (R1 or Rename game) and never run on cursor movement. */
 		if (hm.n > 0 && Timer() - last_move > 180)

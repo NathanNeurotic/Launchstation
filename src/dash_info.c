@@ -169,9 +169,6 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_HEAD, "uLaunchELF");
 	sheetAdd(&s, SL_TEXT, "Eric Price (aka 'E P')");
 	sheetAdd(&s, SL_TEXT, "Ronald Andersson (aka 'dlanor')");
-	sheetAdd(&s, SL_HEAD, "Build system: PS2BUILD SDK");
-	sheetAdd(&s, SL_TEXT, "by techwritescode");
-	sheetAdd(&s, SL_TEXT, "git.techwritescode.dev/ps2/ps2build");
 	sheetAdd(&s, SL_HEAD, "Other contributors");
 	sheetAdd(&s, SL_TEXT, "techwritescode");
 	sheetAdd(&s, SL_TEXT, "Polo35, radad, Drakonite, sincro");

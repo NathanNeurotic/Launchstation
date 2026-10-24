@@ -278,23 +278,6 @@ static void addStorage(DashDevice *out, int *n, int max, int icon,
 	    state == DASH_DEV_READY ? ready : state == DASH_DEV_ABSENT ? absent : "Not connected");
 }
 
-/* Keep human-readable mount labels for device panels and pickers. Only the
- * missing-device error modal suppresses these internal path identifiers. */
-const char *dashDeviceDisplayMount(const DashDevice *d, char *buf, int size)
-{
-	if (d != NULL && d->icon == DI_USB) {
-#ifdef EXFAT
-		/* Display the mounted path; typed USB units are not BDM slots. */
-		snprintf(buf, size, "%s", d->browse);
-#else
-		/* Classic USBMASS owns this namespace; usb is a browser alias. */
-		snprintf(buf, size, "mass%s", d->browse + 3);
-#endif
-		return buf;
-	}
-	return (d != NULL) ? (d->mount[0] ? d->mount : d->browse) : "";
-}
-
 int dashDevicesList(DashDevice *out, int max)
 {
 	int n = 0, port, i;
@@ -307,7 +290,7 @@ int dashDevicesList(DashDevice *out, int max)
 
 		/* PS2 port 0 is mc0 (physical slot 1); port 1 is mc1 (slot 2).
 		 * Keep the label and actual filesystem mount tied to the same port. */
-		snprintf(name, sizeof(name), "Memory card (Slot %d)", port + 1);
+		snprintf(name, sizeof(name), "mc%d (Slot %d)", port, port + 1);
 		snprintf(mount, sizeof(mount), "mc%d:", port);
 		snprintf(browse, sizeof(browse), "mc%d:/", port);
 		if (present == -2)
@@ -332,18 +315,18 @@ int dashDevicesList(DashDevice *out, int max)
 	if (isUsbMassStackLoaded()) {
 		int mask = filerUsbDriveMask();
 		if (mask == 0)
-			add(out, &n, max, DI_USB, DASH_DEV_ABSENT, "USB Mass Storage", "usb:", "usb:/", "Connect a USB storage device");
+			add(out, &n, max, DI_USB, DASH_DEV_ABSENT, "MASS", "usb:", "usb:/", "Connect a USB storage device");
 		for (i = 0; i < 10; i++) {
 			char name[32], mount[8], browse[8];
 			if (!(mask & (1 << i)))
 				continue;
-			snprintf(name, sizeof(name), "USB Mass Storage");
+			snprintf(name, sizeof(name), "MASS %d", i);
 			snprintf(mount, sizeof(mount), "usb%d:", i);
 			snprintf(browse, sizeof(browse), "usb%d:/", i);
 			add(out, &n, max, DI_USB, DASH_DEV_READY, name, mount, browse, "Ready");
 		}
 	} else
-		add(out, &n, max, DI_USB, DASH_DEV_PROBE, "USB Mass Storage", "usb:", "usb:/", "Not connected");
+		add(out, &n, max, DI_USB, DASH_DEV_PROBE, "MASS", "usb:", "usb:/", "Not connected");
 
 #ifdef MMCE
 	addStorage(out, &n, max, DI_SDCARD, "MMCE Slot 1", "mmce0:", "mmce0:/", "SD2PSX / MemCard PRO2", "No MMCE storage found");
@@ -353,8 +336,7 @@ int dashDevicesList(DashDevice *out, int max)
 	addStorage(out, &n, max, DI_SDCARD, "MX4SIO SD Card", "mx4sio:", "mx4sio:/", "Ready (slot 2)", "No MX4SIO storage found");
 #endif
 #ifdef ILINK
-	if (isIlinkConsoleSupported())
-		addStorage(out, &n, max, DI_HDD, "iLink / FireWire", "ilink:", "ilink:/", "IEEE1394 storage ready", "No iLink storage found");
+	addStorage(out, &n, max, DI_HDD, "iLink / FireWire", "ilink:", "ilink:/", "IEEE1394 storage ready", "No iLink storage found");
 #endif
 
 	if (filerShowHddUnit(0) && !console_is_PSX) {
@@ -614,7 +596,7 @@ static int autoStartNeeded(void)
 	       || ((mask & DASH_DEVA_MX4SIO) && !isPathDeviceStackLoaded("mx4sio:"))
 #endif
 #ifdef ILINK
-	       || ((mask & DASH_DEVA_ILINK) && isIlinkConsoleSupported() && !isPathDeviceStackLoaded("ilink:"))
+	       || ((mask & DASH_DEVA_ILINK) && !isPathDeviceStackLoaded("ilink:"))
 #endif
 #ifdef UDPFS
 	       || ((mask & DASH_DEVA_UDPFS) && !isPathDeviceStackLoaded("udpfs:"))
@@ -749,7 +731,7 @@ void dashDevicesAutoProbe(void)
 			probeMount("mx4sio:");
 #endif
 #ifdef ILINK
-		if ((mask & DASH_DEVA_ILINK) && isIlinkConsoleSupported() && !isPathDeviceStackLoaded("ilink:"))
+		if ((mask & DASH_DEVA_ILINK) && !isPathDeviceStackLoaded("ilink:"))
 			probeMount("ilink:");
 #endif
 #ifdef UDPFS

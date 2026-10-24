@@ -64,7 +64,7 @@ static const Tool tools[] = {
     {TA_MISC, DI_APP, "PS2 system browser", "Leave Launchstation and open the console's own Browser.", NULL, 2, MISC(Misc_PS2Browser), NULL},
     {TA_MISC, DI_APP, "OSDSYS", "Start the console's OSD (or the OSDSYS path configured in Launchstation).", NULL, 2, MISC(Misc_OSDSYS), NULL},
 #ifdef ETH
-    {TA_MISC, DI_NETWORK, "FTP server / Remote access", "Start FTP and PS2Link on demand, accept remote commands, and receive staged/resumable ISO transfers from MrRexD-compatible PC tools.", "Network and HDD drivers stay unloaded until you start this tool.", 0, MISC(Misc_PS2Net), NULL},
+    {TA_MISC, DI_NETWORK, "FTP / Remote access", "Start FTP and PS2Link on demand, accept remote commands, and receive staged/resumable ISO transfers from MrRexD-compatible PC tools.", "Network and HDD drivers stay unloaded until you start this tool.", 0, MISC(Misc_PS2Net), NULL},
 #ifdef WLE_NATIVE_CLOUD
     {TA_CLOUD, DI_NETWORK, "Google Drive backups", "Link Google Drive and upload missing WLE-MMCE-Backups versions directly from the PS2 over HTTPS.", "Cloud sync is copy-only. It never deletes local or Drive backup history.", 0, 0, NULL},
 #endif
@@ -1521,8 +1521,6 @@ static void toolsDraw(void)
 		ttop = tsel - rows + 1;
 	if (ttop < 0)
 		ttop = 0;
-	if (tsel_anim < ttop || tsel_anim >= ttop + rows)
-		tsel_anim = (float)tsel;
 
 	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, rows * row_h + 12, 14);
 	dashGfxScissor(lx - 6, ly - 4, lw + 12, rows * row_h + 8);

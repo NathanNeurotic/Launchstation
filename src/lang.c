@@ -353,17 +353,6 @@ static int copy_LANG_value(char *dst, const char *src, int len)
 	return di;
 }
 
-/* Presentation only: saved/localized command paths keep their aliases. */
-const char *getMiscEntryDisplayName(const char *path, const char *name)
-{
-	size_t prefix = strlen(setting->Misc);
-	if (!strcmp(path, setting->Misc) &&
-	    !strncmp(setting->Misc_PS2Net, setting->Misc, prefix) &&
-	    !strcmp(name, setting->Misc_PS2Net + prefix))
-		return "FTP server";
-	return name;
-}
-
 static int isMiscLaunchNameAlias(const char *name, const char *configured_path, const char *default_name)
 {
 	return !strcmp(name, configured_path + strlen(setting->Misc)) || !strcmp(name, default_name);

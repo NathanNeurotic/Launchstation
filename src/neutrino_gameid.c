@@ -218,8 +218,8 @@ int prepareNeutrinoGameID(const char *iso_path, char *gameID, size_t gameID_len)
 }
 
 #ifdef MMCE
-/* Best-effort per-game card selection. Initialize only through the no-stack-
- * replacement entry point, preserving the live ISO and loader mounts.
+/* Best-effort per-game card selection. Never autoload MMCE: doing so can
+ * reboot the IOP and invalidate a live MX4SIO, USB or UDPFS game mount.
  * No status polling occurs unless a responding MMCE accepts SET_GAMEID.
  * The 15 polls mirror upstream's upper bound for a genuine card switch.
  */
@@ -232,7 +232,7 @@ void setNeutrinoMmceGameID(const char *gameID, const char *iso_path, const char 
 	    !strncmp(iso_path, "mx4sio", 6) || !strncmp(elf_path, "mx4sio", 6) ||
 	    !strncmp(iso_path, "mmce:", 5) || !strncmp(elf_path, "mmce:", 5) ||
 	    !strncmp(elf_path, "mc:", 3) ||
-	    !loadMmceModulesForGameID())
+	    !isPathDeviceStackLoaded("mmce0:/"))
 		return;
 
 	for (port = 0; port < 2; port++) {
@@ -247,11 +247,10 @@ void setNeutrinoMmceGameID(const char *gameID, const char *iso_path, const char 
 		    fileXioDevctl(device, MMCE_CMD_SET_GAMEID, (void *)gameID, NEUTRINO_GAME_ID_SIZE, NULL, 0) < 0)
 			continue;
 		for (poll = 0; poll < MMCE_SWITCH_POLLS; poll++) {
-			/* Firmware may acknowledge SET_GAMEID before marking itself busy. */
-			DelayThread(1000000);
 			status = fileXioDevctl(device, MMCE_CMD_GET_STATUS, NULL, 0, NULL, 0);
 			if (status < 0 || !(status & 1))
 				break;
+			DelayThread(1000000);
 		}
 		DPRINTF("Neutrino MMCE: %s game=%s polls=%d\n", device, gameID, poll);
 	}

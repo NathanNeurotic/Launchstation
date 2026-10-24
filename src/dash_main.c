@@ -148,14 +148,6 @@ int DashIsActive(void)
 	return dash_active;
 }
 
-int DashOpenSettings(void)
-{
-	if (!dash_active)
-		return 0;
-	dashSwitchSection(DASH_SEC_SETTINGS);
-	return 1;
-}
-
 const char *DashMiscCommandName(void)
 {
 	return "Dashboard";
@@ -349,7 +341,7 @@ void dashRunMisc(const char *misc_path)
 	/* screens and tools that have a native dashboard version */
 	if (!stricmp(misc_path, setting->Misc_Configure)) {
 		/* every classic configuration option lives in SETTINGS now */
-		DashOpenSettings();
+		dashSwitchSection(DASH_SEC_SETTINGS);
 		return;
 	}
 	if (!stricmp(misc_path, setting->Misc_HddManager)) {
@@ -545,12 +537,9 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	/*
 	 * Ordinary ELF launches used to leave audsrv's looping BGM voice alive.
 	 * Mute until the legacy launcher validates the target; final cleanup
-	 * stops audsrv. Neutrino still has an interactive options menu, so keep
-	 * its sounds live until the existing committed-launch cleanup (#200).
-	 * A failed validation can restore the existing audio below.
+	 * stops audsrv. A failed validation can restore the existing audio below.
 	 */
-	if (!IsNeutrinoIsoPath(path))
-		dashSoundSuspend();
+	dashSoundSuspend();
 	dashGfxRestoreLegacyState();
 	dashClassicUiInstall(0); /* launch-time prompts stay classic */
 	ExecuteMainAction(path, &exec_ctx);

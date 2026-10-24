@@ -39,7 +39,7 @@
 - [x] Disabled loader attempts rejected before module load or IOP teardown
 - [x] Old configs and default values preserve existing behavior in code (CI/hardware verification pending)
 - [x] No new eager driver probing/startup paths introduced
-- [ ] Host/static regression checks and PS2BUILD SDK builds pass on the final head (CI pending)
+- [ ] Host/static regression checks and PS2SDK builds pass on the final head (CI pending)
 - [x] R3Z development-branch game-compat/video UI and command-line behavior ported (physical-console verification pending)
 - [ ] Device, game, and core parity verified on real hardware
 - [x] Game-ID parser and opt-in RetroGem/MMCE integration ported from upstream #61, without automatic MMCE driver-stack changes

@@ -68,11 +68,6 @@ static void expect(const char *p,const char *s) { char b[128]={0};int f=open(p,O
 main = r'''
 int main(void) {
  char out[MAX_PATH],target[MAX_PATH],backup[MAX_PATH];
- assert(copyIsPhysicalMcPath("mc0:/BOOT.ELF"));
- assert(copyIsPhysicalMcPath("mc1:/BOOT.ELF"));
- assert(!copyIsPhysicalMcPath("vmc0:/BOOT.ELF"));
- assert(!copyIsPhysicalMcPath("mass0:/BOOT.ELF"));
- assert(!copyIsPhysicalMcPath("mc2:/BOOT.ELF"));
  const char *fresh="new ELF bytes: complete replacement";
  const char *paths[]={"disk/APP.ELF","mc0:/BOOT.ELF","mc1:/BOOT.ELF"};
  mkdir("disk",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);

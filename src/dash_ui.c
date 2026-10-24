@@ -791,10 +791,6 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			top = sel;
 		if (sel >= top + rows)
 			top = sel - rows + 1;
-		/* Wrapping/jumping changes the viewport immediately. Do not ease the
-		 * selection through clipped rows; adjacent motion still animates. */
-		if (sel_anim < top || sel_anim >= top + rows)
-			sel_anim = (float)sel;
 		if (preview != NULL) {
 			if (sel != previewed) {
 				preview(sel);
@@ -884,14 +880,13 @@ int dashModalChoice(const char *title, const char *const *options, int n, int cu
 }
 
 static int modalButtons(const char *title, const char *body, const char *detail, int icon, DashColor icon_col,
-                        const char *ok_label, const char *cancel_label, int default_sel, u64 deadline)
+                        const char *ok_label, const char *cancel_label, int default_sel)
 {
 	int sel = default_sel;
 	float open = 0.0f, sel_anim = (float)default_sel, title_age = 0.0f;
 	float w = 440.0f, h;
 	float x = (DASH_VW - w) * 0.5f, y;
 	int body_lines;
-	char countdown[64];
 	DashInput in;
 
 	body_lines = 1;
@@ -910,20 +905,7 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 	dashInputFlush();
 
 	while (1) {
-		if (deadline) {
-			u64 now = Timer();
-			if (now >= deadline) {
-				dashInputFlush();
-				return 0;
-			}
-			snprintf(countdown, sizeof(countdown), "Reverting in %u seconds", (unsigned)((deadline - now + 999) / 1000));
-			detail = countdown;
-		}
 		dashInputPoll(&in);
-		if (deadline && Timer() >= deadline) {
-			dashInputFlush();
-			return 0;
-		}
 		if (cancel_label != NULL && (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
 			sel ^= 1;
 			dashSoundPlay(DASH_SND_CURSOR);
@@ -1006,19 +988,13 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger)
 {
 	return modalButtons(title, body, NULL, danger ? DI_WARNING : DI_INFO,
-	                    danger ? DASH_C_WARM : DASH_C_ACCENT, ok_label ? ok_label : "OK", "Cancel", danger ? 1 : 0, 0);
-}
-
-int dashModalKeepVideo(void)
-{
-	return modalButtons("Keep this video mode?", "Confirm only if the picture is visible and stable.",
-	                    "", DI_INFO, DASH_C_ACCENT, "Keep", "Revert", 1, Timer() + 5000);
+	                    danger ? DASH_C_WARM : DASH_C_ACCENT, ok_label ? ok_label : "OK", "Cancel", danger ? 1 : 0);
 }
 
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail)
 {
 	DashColor c = (icon == DI_WARNING) ? DASH_C_WARM : DASH_C_ACCENT;
-	modalButtons(title, body, detail, icon, c, "OK", NULL, 0, 0);
+	modalButtons(title, body, detail, icon, c, "OK", NULL, 0);
 }
 
 //--------------------------------------------------------------
@@ -1033,7 +1009,6 @@ static int loading_done, loading_total;
 static u64 loading_last_draw;
 static float loading_open;
 static int loading_cancel;
-static int loading_file_operation;
 
 int dashLoadingActive(void)
 {
@@ -1042,10 +1017,9 @@ int dashLoadingActive(void)
 
 static void loadingDraw(void)
 {
-	float w = loading_file_operation ? 480.0f : 420.0f;
-	float h = loading_file_operation ? (loading_cancel ? 210.0f : 174.0f) : loading_remaining[0] ? 158.0f : loading_cancel ? 150.0f : 128.0f;
+	float w = 420.0f, h = loading_remaining[0] ? 158.0f : loading_cancel ? 150.0f : 128.0f;
 	float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
-	float bar_y = y + (loading_file_operation ? 142.0f : loading_remaining[0] ? 126.0f : 102.0f);
+	float bar_y = y + (loading_remaining[0] ? 126.0f : 102.0f);
 	float dt = dashVisualUpdate();
 
 	loading_open = dashApproach(loading_open, 1.0f, 12.0f, dt);
@@ -1053,30 +1027,16 @@ static void loadingDraw(void)
 	modalBackdrop(loading_open);
 	dashGfxPushAlpha(loading_open);
 	modalPanel(x, y, w, h, loading_open);
-	if (loading_file_operation) {
-		char line[64];
-		dashTextFit(x + 24, y + 24, w - 48, loading_title, DASH_FS_LABEL, DASH_C_TEXT);
-		dashTextFit(x + 24, y + 62, w - 48, loading_status, DASH_FS_BODY, DASH_C_TEXT);
-		if (loading_remaining[0])
-			dashTextFit(x + 24, y + 100, w - 48, loading_remaining, DASH_FS_SMALL, DASH_C_TEXT2);
-		else if (loading_total > 0) {
-			snprintf(line, sizeof(line), "Completed items: %d / %d", loading_done, loading_total);
-			dashTextFit(x + 24, y + 100, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);
-		}
-	} else {
-		dashGfxBlend(DASH_BLEND_ADD);
-		dashDrawSpinner(x + 46, y + 50, 16, DASH_C_ACCENT);
-		dashGfxBlend(DASH_BLEND_NORMAL);
-		dashTextFit(x + 84, y + 26, w - 110, loading_title, DASH_FS_LABEL, DASH_C_TEXT);
-		dashTextFit(x + 84, y + 58, w - 110, loading_status, DASH_FS_SMALL, DASH_C_TEXT2);
-		if (loading_remaining[0])
-			dashTextFit(x + 84, y + 84, w - 110, loading_remaining, DASH_FS_SMALL, DASH_C_TEXT2);
-	}
+	dashGfxBlend(DASH_BLEND_ADD);
+	dashDrawSpinner(x + 46, y + 50, 16, DASH_C_ACCENT);
+	dashGfxBlend(DASH_BLEND_NORMAL);
+	dashTextFit(x + 84, y + 26, w - 110, loading_title, DASH_FS_LABEL, DASH_C_TEXT);
+	dashTextFit(x + 84, y + 58, w - 110, loading_status, DASH_FS_SMALL, DASH_C_TEXT2);
+	if (loading_remaining[0])
+		dashTextFit(x + 84, y + 84, w - 110, loading_remaining, DASH_FS_SMALL, DASH_C_TEXT2);
 	if (loading_total > 0) {
 		float p = dashClampf(loading_done / (float)loading_total, 0.0f, 1.0f);
-		/* The final frame is followed by closing the overlay. It must show
-		 * completion rather than disappear with a partly filled bar. */
-		loading_fraction = p >= 1.0f ? 1.0f : dashApproach(loading_fraction, p, 14.0f, dt);
+		loading_fraction = dashApproach(loading_fraction, p, 14.0f, dt);
 		dashPanel(x + 30, bar_y, w - 60, 8, 4, dashColorA(DASH_C_TEXT3, 0.3f));
 		if (loading_fraction > 0.0f)
 			dashPanel(x + 30, bar_y, (w - 60) * loading_fraction, 8, 4, DASH_C_ACCENT);
@@ -1088,9 +1048,8 @@ static void loadingDraw(void)
 	loading_last_draw = Timer();
 }
 
-static void loadingBegin(const char *title, int file_operation)
+void dashLoadingBegin(const char *title)
 {
-	loading_file_operation = file_operation;
 	loading_active = 1;
 	loading_open = 0.3f;
 	loading_cancel = 0;
@@ -1100,16 +1059,6 @@ static void loadingBegin(const char *title, int file_operation)
 	loading_fraction = 0.0f;
 	loading_done = loading_total = 0;
 	loadingDraw();
-}
-
-void dashLoadingBegin(const char *title)
-{
-	loadingBegin(title, 0);
-}
-
-void dashFileLoadingBegin(const char *title)
-{
-	loadingBegin(title, 1);
 }
 
 void dashLoadingSetCancel(int cancelable)
@@ -1139,7 +1088,6 @@ void dashLoadingStatus(const char *status, int done, int total)
 	}
 	loadingProgress(status, done, total);
 	if (!loading_active) {
-		loading_file_operation = 0;
 		/* one-shot status (e.g. a driver load started by a legacy path) */
 		loading_active = 1;
 		loading_open = 0.6f;
@@ -1154,15 +1102,11 @@ void dashLoadingStatus(const char *status, int done, int total)
 
 int DashFileProgress(const char *action, const char *name, u64 remaining, u64 total)
 {
-	int done, changed;
+	int done;
 	if (!DashIsActive() || dashWorkerOnThread()) return 0;
-	if (!loading_active) dashFileLoadingBegin(action);
-	changed = !loading_file_operation ||
-	          strncmp(loading_status, name ? name : "", sizeof(loading_status) - 1) ||
-	          strncmp(loading_title, action, sizeof(loading_title) - 1) ||
-	          (remaining > 0 && loading_total > 0 && loading_done >= loading_total);
-	loading_file_operation = 1;
-	if (changed)
+	if (!loading_active) dashLoadingBegin(action);
+	if (strncmp(loading_status, name ? name : "", sizeof(loading_status) - 1) ||
+	    strncmp(loading_title, action, sizeof(loading_title) - 1))
 		loading_fraction = 0.0f;
 	dashStrCopy(loading_title, action, sizeof(loading_title));
 	dashStrCopy(loading_status, name ? name : "", sizeof(loading_status));
@@ -1172,14 +1116,13 @@ int DashFileProgress(const char *action, const char *name, u64 remaining, u64 to
 	done = total ? (int)((1.0 - (double)remaining / (double)total) * 10000.0) : 10000;
 	loading_done = done;
 	loading_total = 10000;
-	if (changed || Timer() - loading_last_draw >= 16 || remaining == 0) loadingDraw();
+	if (Timer() - loading_last_draw >= 16 || remaining == 0) loadingDraw();
 	return 1;
 }
 
 void DashFileDeleteProgress(const char *name)
 {
 	if (!DashIsActive() || dashWorkerOnThread() || !loading_active) return;
-	loading_file_operation = 1;
 	if (loading_remaining[0]) {
 		loading_done = loading_total = 0;
 		loading_fraction = 0.0f;
@@ -1213,7 +1156,6 @@ void DashStorageProbeStatus(const char *status)
 void dashLoadingEnd(void)
 {
 	loading_active = 0;
-	loading_file_operation = 0;
 	loading_cancel = 0;
 	dashInputFlush();
 }

@@ -322,7 +322,6 @@ typedef struct
 	int usbkbd_used;
 	int language;
 	int reboot_iop_elf_load;
-	int modern_device_handoff;
 	int virtual_keyboard_layout;
 	int Hide_Hdd;
 	int Hide_MCMMCE;
@@ -425,8 +424,6 @@ int loadAtaModules(void);
 /* elf.c */
 int checkELFheader(char *filename);
 void RunLoaderElf(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load);
-void PrepareElfHandoffPath(const char *path, char *out, int size);
-void RunLoaderElfWithHandoff(char *filename, char *party, const char *handoff, int exec_kind, int reboot_iop_elf_load);
 void RunLoaderElfKeepIOP(char *filename, char *party, const char *selected_path, int exec_kind);
 void RunLoaderElfKeepIOPWithArgv0(char *filename, char *party, const char *child_argv0, int exec_kind);
 void RunLoaderMemory(const char *arg0, const char *mem_arg, int reboot_iop);
@@ -684,7 +681,6 @@ int isVirtualKeyboardEditorKey(int layout, int editor_index);
 int getVirtualKeyboardEditorNextKey(int layout, int editor_index, int dx, int dy);
 
 void Init_Default_Language(void);
-const char *getMiscEntryDisplayName(const char *path, const char *name);
 void Load_External_Language(void);
 void Set_Language(int language);
 int normalizeBuiltinLanguage(int language);

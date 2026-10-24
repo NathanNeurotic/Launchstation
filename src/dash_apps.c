@@ -316,14 +316,6 @@ static void move(int delta)
 	if (next < 0)
 		next += norder;
 	sel = next;
-	if ((old == 0 && sel == norder - 1) || (old == norder - 1 && sel == 0)) {
-		float target = (sel / GRID_COLS - 1) * GRID_PITCH_Y;
-		float maxcam = ((norder - 1) / GRID_COLS - 2) * GRID_PITCH_Y;
-		sel_anim = (float)sel;
-		if (target > maxcam)
-			target = maxcam;
-		grid_cam = target > 0 ? target : 0.0f;
-	}
 	if (sel != old)
 		dashUiFocusPoke();
 }
@@ -351,9 +343,9 @@ static void appsInput(const DashInput *in)
 		if (in->pressed & DASH_IN_RIGHT)
 			move(1);
 		if (in->pressed & DASH_IN_UP)
-			move(sel == 0 ? norder - 1 : (sel < GRID_COLS ? -sel : -GRID_COLS));
+			move(-GRID_COLS);
 		if (in->pressed & DASH_IN_DOWN)
-			move(sel == norder - 1 ? -sel : (sel + GRID_COLS >= norder ? norder - 1 - sel : GRID_COLS));
+			move(GRID_COLS);
 		if (in->pressed & DASH_IN_L2)
 			move(-GRID_COLS * 3);
 		if (in->pressed & DASH_IN_R2)
@@ -507,8 +499,6 @@ static void drawList(void)
 		top = norder - LIST_ROWS;
 	if (top < 0)
 		top = 0;
-	if (sel_anim < top || sel_anim >= top + LIST_ROWS)
-		sel_anim = (float)sel;
 
 	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, LIST_ROWS * LIST_ROW_H + 12, 14);
 	{

@@ -231,38 +231,6 @@ static int otherRowWithEntries(int current)
 	return rowCount(other) > 0 ? other : current;
 }
 
-static float chip_cam;
-
-static float homeChipScrollTarget(int selected)
-{
-	float x = 48.0f;
-	int i;
-	for (i = 0; i < nchips; i++) {
-		float w = dashTextWidth(chips[i].label, DASH_FS_SMALL) + 46;
-		if (w > 170)
-			w = 170;
-		if (i == selected) {
-			float target = x + w - (DASH_SAFE_R - 48);
-			return target > 0 ? target : 0.0f;
-		}
-		x += w + 8;
-	}
-	return 0.0f;
-}
-
-static void snapHomeColumn(int next)
-{
-	col_anim[row] = (float)next;
-	if (row == 0) {
-		float target = (next - 2) * 104.0f;
-		float maxcam = (nhome - 5) * 104.0f;
-		if (target > maxcam)
-			target = maxcam;
-		cam[0] = target > 0 ? target : 0.0f;
-	} else
-		chip_cam = homeChipScrollTarget(next);
-}
-
 static void homeInput(const DashInput *in)
 {
 	int n = (row == 0) ? nhome : nchips;
@@ -294,8 +262,6 @@ static void homeInput(const DashInput *in)
 			int next = wrapCol(col[row] - 1, n);
 			if (next != col[row])
 				dashUiFocusPoke();
-			if ((col[row] == 0 && next == n - 1) || (col[row] == n - 1 && next == 0))
-				snapHomeColumn(next);
 			col[row] = next;
 		}
 	} else if (in->pressed & DASH_IN_RIGHT) {
@@ -303,8 +269,6 @@ static void homeInput(const DashInput *in)
 			int next = wrapCol(col[row] + 1, n);
 			if (next != col[row])
 				dashUiFocusPoke();
-			if ((col[row] == 0 && next == n - 1) || (col[row] == n - 1 && next == 0))
-				snapHomeColumn(next);
 			col[row] = next;
 		}
 	} else if (in->pressed & DASH_IN_L2) {
@@ -490,13 +454,28 @@ static void homeDraw(void)
 	if (nchips > 0) {
 		float cy = 361;
 		float x = 48;
+		float focus_x = 0, focus_w = 0;
 		float label_x = 0, label_w = 0;
+		static float chip_cam;
 		float target;
 
 		dashText(48, cy - 24, "Browse & shortcuts", DASH_FS_SMALL, row == 1 ? DASH_C_TEXT : DASH_C_TEXT3);
 		if (row == 1)
 			dashRect(48, cy - 6, dashTextWidth("Browse & shortcuts", DASH_FS_SMALL), 2, DASH_C_ACCENT);
-		target = homeChipScrollTarget(col[1]);
+		/* measure focus position for horizontal scrolling */
+		for (i = 0; i < nchips; i++) {
+			float w = dashTextWidth(chips[i].label, DASH_FS_SMALL) + 46;
+			if (w > 170)
+				w = 170;
+			if (i == col[1]) {
+				focus_x = x;
+				focus_w = w;
+			}
+			x += w + 8;
+		}
+		target = focus_x + focus_w - (DASH_SAFE_R - 48);
+		if (target < 0)
+			target = 0;
 		chip_cam = dashApproach(chip_cam, target, 10.0f * dashAnimSpeed(), dashFrameDelta());
 		dashGfxScissor(DASH_SAFE_L - 6, cy - 6, DASH_SAFE_R - DASH_SAFE_L + 12, 44);
 		x = 48 - chip_cam;

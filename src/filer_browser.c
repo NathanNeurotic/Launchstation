@@ -32,101 +32,79 @@ static int isGenericUsbRootPath(const char *path)
 
 static const char *getUsbRootDeviceLabel(char unit)
 {
-#ifdef EXFAT
-	static char label[] = "usb0:/  USB Mass Storage";
-#else
-	static char label[] = "mass0:/  USB Mass Storage";
-#endif
+	static char label[] = "usb0:/";
 
 	if ((unit < '0') || (unit > '9'))
 		return NULL;
 
-#ifdef EXFAT
 	label[3] = unit;
-#else
-	label[4] = unit;
-#endif
 	return label;
 }
 
 static const char *getRootDeviceLabel(const char *name)
 {
 	if (!strcmp(name, "mc0:"))
-		return "Memory card, Slot 1 (mc0:/)";
+		return "mc0:/";
 	if (!strcmp(name, "mc1:"))
-		return "Memory card, Slot 2 (mc1:/)";
+		return "mc1:/";
 	if (!strcmp(name, "mass:"))
-		return "mass:/  USB Mass Storage";
+		return "usb:/";
 	if (!strncmp(name, "mass", 4) && name[4] >= '0' && name[4] <= '9' && name[5] == ':' && name[6] == '\0')
-#ifdef EXFAT
-		return NULL; /* Shared BDM slot: do not identify it as USB. */
-#else
 		return getUsbRootDeviceLabel(name[4]);
-#endif
 	if (!strcmp(name, "usb:"))
-#ifdef EXFAT
-		return "usb:/  USB Mass Storage";
-#else
-		return "mass:/  USB Mass Storage";
-#endif
+		return "usb:/";
 	if (!strncmp(name, "usb", 3) && name[3] >= '0' && name[3] <= '9' && name[4] == ':' && name[5] == '\0')
 		return getUsbRootDeviceLabel(name[3]);
 #ifdef MMCE
 	if (!strcmp(name, "mmce0:"))
-		return "MMCE, Slot 1 (mmce0:/)";
+		return "mmce0:/";
 	if (!strcmp(name, "mmce1:"))
-		return "MMCE, Slot 2 (mmce1:/)";
+		return "mmce1:/";
 #endif
 #ifdef MX4SIO
 	if (!strcmp(name, "mx4sio:"))
-		return "MX4SIO SD Card (mx4sio:/)";
+		return "mx4sio:/";
 #endif
 #ifdef ILINK
 	if (!strcmp(name, "ilink:"))
-		return "i.Link / FireWire (ilink:/)";
+		return "ilink:/";
 	if (!strcmp(name, "ilink0:"))
-		return "i.Link / FireWire (ilink0:/)";
+		return "ilink0:/";
 #endif
 	if (!strcmp(name, "hdd0:"))
-		return "Internal HDD, APA (hdd0:/)";
+		return "hdd0:/";
 	if (!strcmp(name, "hdd1:"))
-		return "Internal HDD, APA (hdd1:/)";
+		return "hdd1:/";
 #ifdef EXFAT
 	if (!strcmp(name, "ata:"))
-		return "exFAT HDD (ata0:/)";
+		return "ata0:/";
 	if (!strcmp(name, "ata0:"))
-		return "exFAT HDD (ata0:/)";
+		return "ata0:/";
 	if (!strcmp(name, "ata1:"))
-		return "exFAT HDD (ata1:/)";
+		return "ata1:/";
 	if (!strcmp(name, "cf:") || !strcmp(name, "cf0:"))
-		return "PC CARD CF (cf:/)";
+		return "cf:/";
 #endif
 	if (!strcmp(name, "cdfs:"))
-		return "Optical disc (cdfs:/)";
+		return "cdfs:/";
 #ifdef XFROM
-	if (!strcmp(name, "xfrom0:"))
-		return "PSX Flash (xfrom0:/)";
-	if (!strcmp(name, "xfrom:"))
-		return "PSX Flash (xfrom:/)";
+	if (!strcmp(name, "xfrom0:") || !strcmp(name, "xfrom:"))
+		return "xfrom:/";
 #endif
 #ifdef DVRP
 	if (!strcmp(name, "dvr_hdd0:"))
-		return "PSX DVR HDD (dvr_hdd0:/)";
+		return "dvr:/";
 #endif
 #ifdef ETH
 	if (!strcmp(name, "host:"))
-		return "PS2Link host (host:/)";
+		return "host:/";
 #endif
 #ifdef UDPFS
 	if (!strcmp(name, "udpfs:"))
-		return "UDP filesystem (udpfs:/)";
+		return "udpfs:/";
 #endif
-	if (!strcmp(name, "vmc0:"))
-		return "Memory card image 0 (vmc0:/)";
-	if (!strcmp(name, "vmc1:"))
-		return "Memory card image 1 (vmc1:/)";
 	if (!strcmp(name, LNG(MISC)))
-		return "Built-in commands (MISC/)";
+		return "MISC/";
 
 	return NULL;
 }
@@ -284,13 +262,10 @@ static void formatBrowserPathForDisplay(const char *path, char *display_path)
 	const char *sep;
 	int part_len;
 
-#ifndef EXFAT
-	if (!strncmp(path, "usb", 3) && (path[3] == ':' ||
-	    (path[3] >= '0' && path[3] <= '9' && path[4] == ':'))) {
-		snprintf(display_path, MAX_PATH, "mass%s", path + 3);
+	if (!strncmp(path, "mass", 4)) {
+		snprintf(display_path, MAX_PATH, "usb%s", path + 4);
 		return;
 	}
-#endif
 
 	if (isHddBrowserPath(path)) {
 		char hdd_device[6];
@@ -1820,7 +1795,7 @@ int getFilePath(char *out, int cnfmode)
 					if (root_label != NULL)
 						strcpy(tmp, root_label);
 					else
-						strcpy(tmp, getMiscEntryDisplayName(path, files[top + i].name));
+						strcpy(tmp, files[top + i].name);
 					if (fileShowDetails()) {  //Does display mode include file details ?
 						name_limit = (details_column - 1) * FONT_WIDTH;
 					} else {  //Filenames are shown without file details
@@ -2151,14 +2126,8 @@ static void subfunc_Paste(char *mess, char *path)
 	filerCopyDiagBegin(clipPath, path);
 	written_size = 0;
 	PasteTime = Timer();  //Note initial pasting time
-	/* Pasting back into the source directory is a successful no-op.
-	 * Do not reach the move-source deletion loop or claim a device failure. */
-	if (!strcmp(path, clipPath)) {
-		if (browser_cut)
-			nclipFiles = 0;
-		browser_cd = TRUE;
-		return;
-	}
+	if (!strcmp(path, clipPath))
+		goto finished;
 	trace_vmc_paste = (!strncmp(clipPath, "vmc", 3) || !strncmp(path, "vmc", 3));
 	ret = prepareTransferDeviceStacks(clipPath, path);
 	if (ret == TRANSFER_STACK_INCOMPATIBLE) {

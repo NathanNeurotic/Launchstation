@@ -82,7 +82,7 @@ void dashBgSceneTunnel(float t, int fx)
 	float ca[TUN_SEGS + 1], sa[TUN_SEGS + 1];
 	float bright[TUN_RINGS + 1];
 	float z;
-	int seg_step = (fx == DASH_FX_OFF) ? 2 : 1;
+	int seg_step = (fx == DASH_FX_FULL) ? 1 : 2;
 	int k, j;
 
 	dashRect(0, 0, DASH_VW, DASH_VH, far_c);
@@ -617,7 +617,7 @@ static void osdOrbs(const OrbStyle *st, float t, int fx)
 	DashColor glow_c = dashColorScale(st->c, 0.8f), core_c = dashColorLighten(st->c, 0.35f);
 	DashColor halo_c = dashColorLighten(st->c, 0.62f);
 	int n = (fx == DASH_FX_SUBTLE) ? ORB_SAMPLES / 2 : ORB_SAMPLES;
-	float span = ORB_SPAN;
+	float span = (fx == DASH_FX_SUBTLE) ? ORB_SPAN * 0.6f : ORB_SPAN;
 	int k, i, j;
 
 	if (fx == DASH_FX_OFF) {
