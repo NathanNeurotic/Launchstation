@@ -84,7 +84,7 @@ static FILEINFO clipFiles[MAX_ENTRY];static char clipPath[MAX_PATH];
 static unsigned clipIopResetGeneration,generation;
 static u64 written_size,PasteTime,clock_ms;
 static int source_ready=1,load_ok=1,reset_preflight,read_cap=4096,write_cap=37,cancel_copy;
-static int ambiguous_stat;
+static int ambiguous_stat, wrong_eisdir_status;
 static int fail_open,fail_rewind,fail_read,fail_write,fail_close,fail_listing,fail_stat,fail_out_open,early_eof,fail_measure,corrupt_verify,fail_publish;
 static int fd_kind[1024],handles,read_calls,write_calls;
 static unsigned fd_generation[1024];
@@ -105,7 +105,7 @@ static int isPcCardCfOnline(void){return 1;}
 static void ensureMemoryCardPortAccessible(int p){assert(p==0||p==1);}
 static char *makeHostPath(char *d,char *s){if(d!=s)strcpy(d,s);return d;}
 static void genLimObjName(char *p,int reserve){(void)p;(void)reserve;}
-static int genGetStat(const char *p,iox_stat_t *out){struct stat s;if(!strncmp(p,"host:",5))return -EIO;if(fail_stat&&!strncmp(p,"mc0:",4))return -EACCES;if(stat(p,&s))return ambiguous_stat?-1:-errno;out->mode=s.st_mode;return 0;}
+static int genGetStat(const char *p,iox_stat_t *out){struct stat s;if(!strncmp(p,"host:",5))return -EIO;if(fail_stat&&!strncmp(p,"mc0:",4))return -EACCES;if(wrong_eisdir_status)return -EISDIR;if(stat(p,&s))return ambiguous_stat?-1:-errno;out->mode=s.st_mode;return 0;}
 static int genOpen(const char *p,int flags){
  if(fail_open&&flags==O_RDONLY&&!strncmp(p,"udpfs:",6))return -ENOENT;
  if(fail_out_open&&(flags&O_WRONLY))return -EACCES;
@@ -125,7 +125,7 @@ static int mcSetFileInfo(int port,int slot,const char *from,const sceMcTblGetDir
 }
 static int mcSync(int mode,void *c,int *r){(void)mode;(void)c;if(r)*r=mc_result;return 1;}
 static int mcGetInfo(int p,int s,int *type,int *a,int *b){(void)p;(void)s;if(type)*type=2;if(a)*a=1000;if(b)*b=1000;return 0;}
-static int fileXioChStat(const char *p,const iox_stat_t *s,int f){(void)p;(void)s;(void)f;return 0;}
+static int fileXioChStat(const char *p,const iox_stat_t *s,int f){assert(strncmp(p,"mmce",4));(void)p;(void)s;(void)f;return 0;}
 static int getHddParty(const char *p,const FILEINFO *f,char *a,char *b){(void)p;(void)f;(void)a;(void)b;assert(0);return -1;}
 static int mountParty(const char *p){(void)p;assert(0);return -1;}
 static int fileShowTitles(void){return 0;}
@@ -188,14 +188,14 @@ code+=r'''
 static void put(const char *p,const unsigned char *data,int n){int fd=open(p,O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0);assert(write(fd,data,n)==n);assert(!close(fd));}
 static int matches(const char *p,const unsigned char *data,int n){unsigned char out[70000];int fd=open(p,O_RDONLY);if(fd<0)return 0;int count=read(fd,out,sizeof(out));close(fd);return count==n&&!memcmp(data,out,n);}
 static unsigned char input[65537];
-static void reset(void){assert(!handles);source_ready=load_ok=1;reset_preflight=0;fail_open=fail_rewind=fail_read=fail_write=fail_close=fail_listing=cancel_copy=fail_stat=fail_out_open=early_eof=fail_measure=corrupt_verify=fail_publish=0;read_calls=write_calls=0;browser_cut=0;browser_cd=0;generation=1;clipIopResetGeneration=1;PasteMode=PM_NORMAL;strcpy(clipPath,"udpfs:/");nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));strcpy(clipFiles[0].name,"BOOT.ELF");clipFiles[0].stats.FileSizeByte=sizeof(input);}
+static void reset(void){assert(!handles);source_ready=load_ok=1;reset_preflight=0;wrong_eisdir_status=0;fail_open=fail_rewind=fail_read=fail_write=fail_close=fail_listing=cancel_copy=fail_stat=fail_out_open=early_eof=fail_measure=corrupt_verify=fail_publish=0;read_calls=write_calls=0;browser_cut=0;browser_cd=0;generation=1;clipIopResetGeneration=1;PasteMode=PM_NORMAL;strcpy(clipPath,"udpfs:/");nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));strcpy(clipFiles[0].name,"BOOT.ELF");clipFiles[0].stats.FileSizeByte=sizeof(input);}
 int main(void){
  assert(sizeof(copy_diag)<=128); /* fixed runtime budget, no log allocation */
- mkdir("udpfs:",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);mkdir("usb0:",0700);mkdir("host:",0700);
+ mkdir("udpfs:",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);mkdir("usb0:",0700);mkdir("host:",0700);mkdir("mmce0:",0700);mkdir("mmce1:",0700);
  for(int i=0;i<(int)sizeof(input);i++)input[i]=(unsigned char)(i*19+7);
  put("udpfs:/BOOT.ELF",input,sizeof(input));
- const char *destinations[]={"mc0:/","mc1:/","usb0:/"};char message[MAX_PATH],target[MAX_PATH];
- for(int device=0;device<3;device++)for(int attempt=0;attempt<3;attempt++){
+ const char *destinations[]={"mc0:/","mc1:/","usb0:/","mmce0:/","mmce1:/"};char message[MAX_PATH],target[MAX_PATH];
+ for(int device=0;device<5;device++)for(int attempt=0;attempt<3;attempt++){
   reset();message[0]=0;char dest[12];strcpy(dest,destinations[device]);
   subfunc_Paste(message,dest);assert(!message[0]&&!handles);
   snprintf(target,sizeof(target),"%sBOOT.ELF",dest);assert(matches(target,input,sizeof(input)));
@@ -240,6 +240,27 @@ int main(void){
   assert(matches("mc1:/BOOT.ELF",input,sizeof(input)));
  }
  ambiguous_stat=0;
+ /* Cross-device source/destination matrix with a backend reporting -EISDIR
+  * for both absent and existing leaves. Exercise real copy orchestration. */
+ const char *cross_sources[]={"usb0:/","mc0:/","mmce0:/"};
+ const char *cross_destinations[]={"mc1:/","mmce0:/","mmce1:/","usb0:/"};
+ put("usb0:/EISDIR.ELF",input,sizeof(input));
+ put("mc0:/EISDIR.ELF",input,sizeof(input));
+ put("mmce0:/EISDIR.ELF",input,sizeof(input));
+ for(int source=0;source<3;source++)for(int destination=0;destination<4;destination++) {
+  if(!strcmp(cross_sources[source],cross_destinations[destination]))continue;
+  snprintf(target,sizeof(target),"%sEISDIR.ELF",cross_destinations[destination]);
+  unlink(target);
+  for(int attempt=0;attempt<2;attempt++){
+   reset();wrong_eisdir_status=1;
+   strcpy(clipPath,cross_sources[source]);
+   strcpy(clipFiles[0].name,"EISDIR.ELF");
+   message[0]=0;subfunc_Paste(message,(char*)cross_destinations[destination]);
+   assert(!message[0]&&!handles&&!lookup_dir);
+   assert(matches(target,input,sizeof(input)));
+  }
+ }
+ wrong_eisdir_status=0;
  /* Nested ordinary folders use the same production recursion. */
  reset();mkdir("udpfs:/NESTED",0700);put("udpfs:/NESTED/CHILD.BIN",input,257);
  strcpy(clipFiles[0].name,"NESTED");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;
