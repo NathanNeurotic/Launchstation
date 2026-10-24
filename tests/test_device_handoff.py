@@ -22,6 +22,7 @@ code = r"""
 #include <string.h>
 #include <stdint.h>
 #define MAX_PATH 1025
+#define LNG(x) #x
 #define USB_MASS_MAX_DRIVES 10
 #define FIO_O_RDONLY 1
 #define USBMASS_IOCTL_GET_DRIVERNAME 3
@@ -62,6 +63,10 @@ code += "static int isHddBrowserPath(const char *p) { return !strncmp(p,\"hdd0:/
 code += function("static int parseUsbMassPathUnit(")
 code += function("static const char *normalizeExecArg0Path(")
 code += function("void PrepareElfHandoffPath(")
+code += "typedef struct {int icon;char mount[16],browse[16];} DashDevice;\n#define DI_USB 1\n"
+code += function("const char *dashDeviceDisplayMount(", (root / "src/dash_devices.c").read_text())
+code += function("static const char *getUsbRootDeviceLabel(", (root / "src/filer_browser.c").read_text())
+code += function("static const char *getRootDeviceLabel(", (root / "src/filer_browser.c").read_text())
 code += function("static void formatBrowserPathForDisplay(", (root / "src/filer_browser.c").read_text())
 code += r"""
 static void expect(const char *p,const char *wanted) {
@@ -69,8 +74,24 @@ static void expect(const char *p,const char *wanted) {
 }
 int main(void) {
  char display[MAX_PATH];
+ DashDevice usb={DI_USB,"usb1:","usb1:/"};
+ assert(!strcmp(dashDeviceDisplayMount(&usb,display,sizeof(display)),"usb1:/"));
+ assert(!strcmp(dashDeviceDisplayMount(NULL,display,sizeof(display)),""));
+#ifdef EXFAT
+ assert(!strcmp(getUsbRootDeviceLabel('1'),"usb1:/  USB Mass Storage"));
+ assert(!strcmp(getRootDeviceLabel("usb:"),"usb:/  USB Mass Storage"));
+ assert(getRootDeviceLabel("mass3:")==NULL);
+#else
+ assert(!strcmp(getUsbRootDeviceLabel('1'),"mass1:/  USB Mass Storage"));
+ assert(!strcmp(getRootDeviceLabel("mass1:"),"mass1:/  USB Mass Storage"));
+#endif
+#ifdef EXFAT
+ formatBrowserPathForDisplay("usb1:/APPS/APP.ELF",display);assert(!strcmp(display,"usb1:/APPS/APP.ELF"));
+ formatBrowserPathForDisplay("usb:/APPS/APP.ELF",display);assert(!strcmp(display,"usb:/APPS/APP.ELF"));
+#else
  formatBrowserPathForDisplay("usb1:/APPS/APP.ELF",display);assert(!strcmp(display,"mass1:/APPS/APP.ELF"));
  formatBrowserPathForDisplay("usb:/APPS/APP.ELF",display);assert(!strcmp(display,"mass:/APPS/APP.ELF"));
+#endif
  formatBrowserPathForDisplay("mass3:/APPS/APP.ELF",display);assert(!strcmp(display,"mass3:/APPS/APP.ELF"));
  formatBrowserPathForDisplay("ata0:/APP.ELF",display);assert(!strcmp(display,"ata0:/APP.ELF"));
  settings.modern_device_handoff=0;

@@ -283,15 +283,8 @@ static void addStorage(DashDevice *out, int *n, int max, int icon,
 const char *dashDeviceDisplayMount(const DashDevice *d, char *buf, int size)
 {
 	if (d != NULL && d->icon == DI_USB) {
-		int unit = 0;
-
-		if (!strncmp(d->mount, "usb", 3) &&
-		    d->mount[3] >= '0' && d->mount[3] <= '9' && d->mount[4] == ':')
-			unit = d->mount[3] - '0';
-		if (d->mount[3] == ':')
-			snprintf(buf, size, "mass:/");
-		else
-			snprintf(buf, size, "mass%d:/", unit);
+		/* Display the mounted path; typed USB units are not BDM slots. */
+		snprintf(buf, size, "%s", d->browse);
 		return buf;
 	}
 	return (d != NULL) ? (d->mount[0] ? d->mount : d->browse) : "";
