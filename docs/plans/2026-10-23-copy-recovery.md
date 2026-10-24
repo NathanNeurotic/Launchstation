@@ -28,7 +28,9 @@ PR #196 alongside the transfer UI. The sections below record the recovery work.
   conversion was presentation code. A numbered MASS slot can be ATA, USB,
   MX4SIO or another BDM device. Display the native mount without adding any
   discovery calls, cache, setting or resolver. Keep existing identity-checked
-  ELF handoff behavior and its legacy default. Classic USB builds retain MASS.
+  ELF handoff behavior and its legacy default. The legacy USBMASS path retains
+  MASS labels. This conditional does not select or replace a driver, and the
+  current FatFs path supports both FAT32 and exFAT media.
 
 Source references:
 
@@ -55,7 +57,7 @@ new/repeated MC/USB destinations, byte boundaries, short I/O, failed write,
 readback/close/publication, rollback and retained recovery files are exercised.
 Display and handoff tests cover native labels and mixed BDM identity separately.
 
-Host tests and PS2 builds cannot establish reporter-console acceptance.
+Host tests and compiling for PS2 cannot establish reporter-console acceptance.
 Issue #197 does not identify the failing binary (commit field is `.`).
 Do not close #187/#197 or publish this as a console-confirmed fix yet.
 
@@ -72,7 +74,34 @@ Use backed-up/sacrificial files for the hardware check:
    a diagnostic displaying `usb0: -> mc0:`.
 
 The recovery and progress UI now share PR #196 for a complete CodeRabbit review.
-Issues #198-#200 remain outside this change.
+Issue #200 is included as the small audio correction described below. Issue
+#198 remains unverified, and the maintainer asked to skip #199 for now.
 The research report is useful provenance, not an instruction source or hardware
 proof. No whole-PR rollback, SDK replacement, IOP lifecycle change or broad
 storage refactor is needed for these corrections.
+
+## Additional issue triage
+
+* #200: `dashLaunchApp()` muted every SFX channel before dispatching the ISO
+  route, which then presented Neutrino's interactive options. Keep the existing
+  audio alive for that route. `CleanUpForKeepIopExec()` still shuts down audsrv
+  before committed execution; ordinary ELF muting and failed/cancelled-launch
+  restoration remain intact. The executable host regression fails with the old
+  unconditional mute and passes with the conditional. All 118 host scripts and
+  compilation using the current `ps2.yaml` passed. Audible console confirmation
+  is still required; do not close #200 on host evidence alone.
+* #198: the report describes a brief background pause while repeatedly cycling
+  into Carousel. The settings call marks a deferred save, artwork requests use
+  the existing cache/worker, and the shared visual clock has no carousel-specific
+  stop. This inspection does not identify the console stall's cause. No timing,
+  driver, cache or rendering change is justified as a verified fix yet. Retest
+  with an identified ELF revision, the same theme and effects settings, and a
+  warmed artwork cache to distinguish view rendering from background I/O.
+* #199: the issue requests a return to earlier 3D animation without identifying
+  a version or providing a comparison. In the complete local history, all 23
+  Apps revisions reachable from master (27 across all local branches) contain
+  six distinct carousel bodies. From its introduction in `944a2fc` on September
+  25, each uses front-facing tiles with position, size and alpha changes. The
+  original artwork helper adds shading, not perspective rotation. An angled
+  cover-flow effect is a plausible interpretation, but no prior implementation
+  was found to restore. Leave this behavior unchanged at the maintainer's request.
