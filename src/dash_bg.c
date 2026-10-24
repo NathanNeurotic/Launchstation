@@ -563,6 +563,14 @@ static int effectiveFx(void)
 		bg_perf_reduced = bg_slow_frames = bg_fast_frames = 0;
 		return requested;
 	}
+	/* Never step down scenes whose element count or trail span changes between
+	 * FULL and SUBTLE (such as OSD orbs in Tunnel, Orbit and ClockRing, or
+	 * Crystal towers): toggling fx mid-flight makes trails and geometry jump. */
+	if (dashTheme.bg == DASH_BG_TUNNEL || dashTheme.bg == DASH_BG_ORBIT ||
+	    dashTheme.bg == DASH_BG_CLOCKRING || dashTheme.bg == DASH_BG_CRYSTAL) {
+		bg_perf_reduced = bg_slow_frames = bg_fast_frames = 0;
+		return DASH_FX_FULL;
+	}
 	dt = dashFrameDelta();
 	if (dt > 0.024f) {
 		if (bg_slow_frames < 1000)

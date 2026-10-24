@@ -1,4 +1,4 @@
-﻿"""Run the full production clipboard/paste/copy sequence on POSIX fixtures.
+"""Run the full production clipboard/paste/copy sequence on POSIX fixtures.
 
 Drivers/RPCs are replaced by bounded file adapters and injected failures. The
 copy orchestration, recursion, replacement transaction and diagnostics are real.
@@ -112,7 +112,7 @@ static int genGetStat(const char *p,iox_stat_t *out){
  if(!strncmp(p,"host:",5))return -EIO;
  if(fail_stat&&!strncmp(p,"mc0:",4))return -EACCES;
  if(stat(p,&s)) {
-  int raw=!strncmp(p,"usb0:",5)&&errno==ENOENT?-4:-errno; /* SDK FR_NO_FILE */
+  int raw=!strncmp(p,"usb0:",5)&&errno==ENOENT?-4:(!strncmp(p,"mc",2)&&(p[2]=='0'||p[2]=='1')&&p[3]==':'&&errno==ENOENT?1:-errno);
   return normalizeFatFsStatResult(p,raw);
  }
  out->mode=s.st_mode;return 0;

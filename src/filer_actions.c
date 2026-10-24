@@ -44,6 +44,7 @@ static int filerPathConflictType(const char *path)
 	if (path == NULL || path[0] == '\0')
 		return FILER_CONFLICT_NONE;
 
+	memset(&stat, 0, sizeof(stat));
 	stat_found = (genGetStat(path, &stat) >= 0);
 	if (stat_found && FIO_S_ISDIR(stat.mode))
 		return FILER_CONFLICT_DIR;

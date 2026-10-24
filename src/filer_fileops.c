@@ -301,6 +301,15 @@ int genRemove(char *path)
  * Do not apply this table to unrelated filesystems or the classic driver. */
 static int normalizeFatFsStatResult(const char *path, int result)
 {
+	if (result > 0 && path != NULL &&
+	    ((!strncmp(path, "mc", 2) && (path[2] == '0' || path[2] == '1') && path[3] == ':') ||
+	     (!strncmp(path, "xfrom", 5) && (path[5] == ':' || (path[5] >= '0' && path[5] <= '9' && path[6] == ':'))))) {
+		if (result == 1 || result == 2)
+			return -ENOENT;
+		if (result == 3)
+			return -EACCES;
+		return -EIO;
+	}
 #ifdef EXFAT
 	static const char *const stems[] = {"mass", "usb", "ata", "mx4sio", "ilink", "cf"};
 	static const int errors[] = {
@@ -342,6 +351,7 @@ int genGetStat(const char *path, iox_stat_t *stat)
 	ensurePathMemoryCardAccessible(stat_path);
 	normalizePcCardCfPath(stat_path, sizeof(stat_path));
 	genLimObjName(stat_path, 0);
+	memset(stat, 0, sizeof(*stat));
 	return normalizeFatFsStatResult(stat_path, fileXioGetStat(stat_path, stat));
 }
 //------------------------------
