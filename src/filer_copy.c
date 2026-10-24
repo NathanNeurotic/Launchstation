@@ -93,6 +93,14 @@ static int copyPathMissing(int result)
 	return result == -ENOENT;
 }
 
+/* libmc passes FIO_O_EXCL (0x0800) straight to McOpen, where the same
+ * bit is sceMcFileAttrPDAExec. Never set it on physical memory cards. */
+static int copyIsPhysicalMcPath(const char *path)
+{
+	return path && path[0] == 'm' && path[1] == 'c' &&
+	       (path[2] == '0' || path[2] == '1') && path[3] == ':';
+}
+
 static u32 copyChecksum(u32 hash, const void *data, int size)
 {
 	const unsigned char *p = data;
@@ -1044,6 +1052,22 @@ non_PSU_RESTORE_init:
 			filerCopyDiagStage("Checking destination");
 			ret = copyPrepareTarget(out, replace_target, replace_backup);
 			if (ret < 0) goto copy_file_exit;
+		}
+
+		/* The MC driver treats FIO_O_EXCL as a file attribute, not an
+		 * exclusive-open request. The transaction already found an unused
+		 * destination/staging name; recheck it before creation. This is not
+		 * atomic exclusion; paste owns the operation after workers drain. */
+		if (copyIsPhysicalMcPath(out)) {
+			iox_stat_t existing;
+			filerCopyDiagStage("Checking destination");
+			ret = genGetStat(out, &existing);
+			if (!copyPathMissing(ret)) {
+				if (ret >= 0)
+					ret = -EEXIST;
+				goto copy_file_exit;
+			}
+			open_mode = FIO_O_WRONLY | FIO_O_CREAT;
 		}
 		filerCopyDiagStage("Opening destination");
 		out_fd = genOpen(out, open_mode);
