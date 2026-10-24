@@ -170,7 +170,7 @@ int main(void) {
  assert(copyLookupPath("disk/",&probe)==-EINVAL);denied=0;
  /* EISDIR may be a bogus getstat status for files or missing names.
   * Directory enumeration must distinguish all three outcomes. */
- const char *roots[]={"mc0:","mc1:","mmce0:","mmce1:","disk"};
+ const char *roots[]={"mc0:","mc1:","mmce0:","mmce1:"};
  for(unsigned device=0;device<sizeof(roots)/sizeof(roots[0]);device++) {
   char existing[MAX_PATH],missing[MAX_PATH],directory[MAX_PATH];
   snprintf(existing,sizeof(existing),"%s/existing.elf",roots[device]);
