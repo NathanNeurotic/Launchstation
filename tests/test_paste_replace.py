@@ -36,7 +36,7 @@ typedef struct { char EntryName[32]; } sceMcTblGetDir;
 #define FIO_S_ISDIR S_ISDIR
 static int rename_calls, fail_rename, fail_rollback, mc_result, denied, removed, fail_close;
 static int false_rename, sync_calls, fail_sync, fail_read, fail_eof, verified;
-static int stat_reports_eisdir;
+static int stat_reports_eisdir, stat_reports_enoent, stat_reports_untyped;
 static int DashFileProgress(const char *a,const char *n,u64 r,u64 t) {
  assert(!strcmp(a,"Verifying file")&&!strcmp(n,"BOOT.ELF"));assert(r<=t);
  if(!r)verified++;
@@ -46,8 +46,9 @@ static void ensureMemoryCardPortAccessible(int p) { assert(p==0 || p==1); }
 static int genGetStat(const char *p,iox_stat_t *s) {
  struct stat st; if(denied) return -denied;
  if(stat_reports_eisdir) return -EISDIR;
+ if(stat_reports_enoent) return -ENOENT;
  if(stat(p,&st)) return -errno;
- s->mode=st.st_mode; return 0;
+ s->mode=stat_reports_untyped ? 0 : st.st_mode; return 0;
 }
 static int rename_file(const char *from,const char *to) {
  rename_calls++;
@@ -180,10 +181,19 @@ int main(void) {
   stat_reports_eisdir=1;
   assert(copyLookupPath(missing,&probe)==-ENOENT&&!lookup_dir);
   assert(copyLookupPath(existing,&probe)==0&&!FIO_S_ISDIR(probe.mode)&&!lookup_dir);
+  stat_reports_eisdir=0;stat_reports_enoent=1;
+  assert(copyLookupPath(existing,&probe)==0&&!FIO_S_ISDIR(probe.mode)&&!lookup_dir);
+  assert(copyLookupPath(missing,&probe)==-ENOENT&&!lookup_dir);
+  stat_reports_enoent=0;stat_reports_untyped=1;
+  assert(copyLookupPath(existing,&probe)==0&&!FIO_S_ISDIR(probe.mode)&&!lookup_dir);
+  stat_reports_untyped=0;stat_reports_eisdir=1;
   strcpy(out,existing);assert(!copyPrepareTarget(out,target,backup));
   assert(strcmp(out,existing)&&!strcmp(target,existing)&&!lookup_dir);
   assert(copyPrepareTarget(directory,target,backup)==-EISDIR&&!lookup_dir);
   stat_reports_eisdir=0;
+  stat_reports_enoent=1;
+  strcpy(out,existing);assert(!copyPrepareTarget(out,target,backup));
+  stat_reports_enoent=0;
   expect(existing,"old bytes");unlink(existing);rmdir(directory);
  }
  /* Enumeration errors must never be mistaken for an absent target. */

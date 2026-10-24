@@ -114,11 +114,17 @@ static int copyLookupPath(const char *path, iox_stat_t *stat)
 		return -EINVAL;
 	memset(stat, 0, sizeof(*stat));
 	ret = genGetStat(path, stat);
-	if (ret == 0 || ret == -ENOENT)
+	/* Never trust an absent-name result on backends that have historically
+	 * returned inconsistent getstat errors: MCMAN, MMCE and VMC. Treat a
+	 * successful but untyped stat as uncertain too. A complete listing will
+	 * prove the actual entry type or a genuinely absent leaf. */
+	if (ret == 0 && (FIO_S_ISREG(stat->mode) || FIO_S_ISDIR(stat->mode)))
 		return ret;
-	/* A getstat EISDIR on a leaf needs confirmation by parent listing.
-	 * Actual directories will still be rejected as overwrite targets. */
-	if (ret < 0 && ret != -1 && ret != -EISDIR)
+	if (ret == -ENOENT && strncmp(path, "mc0:", 4) &&
+	    strncmp(path, "mc1:", 4) && strncmp(path, "mmce", 4) &&
+	    strncmp(path, "vmc", 3))
+		return ret;
+	if (ret < 0 && ret != -ENOENT && ret != -1 && ret != -EISDIR)
 		return ret;
 	colon = strchr(path, ':');
 	leaf = strrchr(path, '/');
@@ -152,8 +158,12 @@ static int copyLookupPath(const char *path, iox_stat_t *stat)
 		}
 		/* Conservatively reject case-only collisions on FAT/card backends. */
 		if (!stricmp(entry.name, leaf + 1)) {
-			*stat = entry.stat;
-			ret = 0;
+			if (!FIO_S_ISREG(entry.stat.mode) && !FIO_S_ISDIR(entry.stat.mode)) {
+				ret = -EIO; /* Unknown entry type; never overwrite. */
+			} else {
+				*stat = entry.stat;
+				ret = 0;
+			}
 			break;
 		}
 	}
@@ -226,6 +236,7 @@ static int copyPrepareTarget(char *out, char *target, char *backup)
 	if (copyPathMissing(ret)) return 0;
 	if (ret < 0) return ret;
 	if (FIO_S_ISDIR(stat.mode)) return -EISDIR;
+	if (!FIO_S_ISREG(stat.mode)) return -EIO; /* Do not replace unknown node types. */
 	leaf = strrchr(out, '/');
 	if (leaf == NULL) leaf = strchr(out, ':');
 	if (leaf == NULL) return -EINVAL;
