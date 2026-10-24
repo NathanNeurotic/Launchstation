@@ -172,6 +172,8 @@ static int applyMcInfoToVmcPath(const char *p,const sceMcTblGetDir *s){(void)p;(
 '''
 # Use the real PSU layout declarations; these branches are compiled but not executed.
 psu=(root/'include/psu_types.h').read_text();code+=psu[psu.index('typedef struct'):psu.rindex('#endif')]
+if 'static int isMcmanStatPath(' in fileops:
+    code+=function(fileops,'static int isMcmanStatPath(')
 code+=function(fileops,'static int normalizeFatFsStatResult(')
 a=copy.index('/* One paste context');b=copy.index('static int isMemoryCardLikePath(',a);code+=copy[a:b]
 for sig in ('static int isMemoryCardLikePath(', 'static int isHddCommonParty(',

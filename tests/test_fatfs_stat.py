@@ -25,23 +25,44 @@ def function(signature):
 code = r"""
 #include <assert.h>
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #define MAX_PATH 1024
-typedef struct { int mode; } iox_stat_t;
-static int driver_result;
+#define FIO_O_RDONLY 1
+#define FIO_S_IFDIR 0x2000
+#define FIO_S_IFREG 0x1000
+#define SEEK_END 2
+typedef uint64_t u64;
+typedef int64_t s64;
+typedef struct { int mode; unsigned int size; unsigned int hisize; } iox_stat_t;
+static int driver_result, dopen_result = -ENOENT, open_result = -ENOENT;
+static s64 lseek_result = 0;
 static int ensurePathPcCardCfOnline(const char *p) {(void)p;return 1;}
 static void ensurePathMemoryCardAccessible(const char *p) {(void)p;}
 static void normalizePcCardCfPath(char *p, unsigned long n) {(void)p;(void)n;}
 static void genLimObjName(char *p,int n) {(void)p;(void)n;}
 static int fileXioGetStat(const char *p,iox_stat_t *s) {(void)p;(void)s;return driver_result;}
+static int fileXioDopen(const char *p) {(void)p;return dopen_result;}
+static int fileXioDclose(int fd) {(void)fd;return 0;}
+static int fileXioOpen(const char *p,int flags,int mode) {(void)p;(void)flags;(void)mode;return open_result;}
+static int fileXioLseek(int fd,int pos,int how) {(void)fd;(void)pos;(void)how;return (int)lseek_result;}
+static int fileXioClose(int fd) {(void)fd;return 0;}
 """
+if "static int isMcmanStatPath(" in source:
+    code += function("static int isMcmanStatPath(")
+if "static int probeMcmanStat(" in source:
+    code += function("static int probeMcmanStat(")
 if "static int normalizeFatFsStatResult(" in source:
     code += function("static int normalizeFatFsStatResult(")
 code += function("int genGetStat(")
 code += r"""
 static int stat_result(const char *p,int raw) {
- iox_stat_t st;st.mode=0x2000;driver_result=raw;int r=genGetStat(p,&st);assert(st.mode==0);return r;
+ iox_stat_t st;st.mode=0x2000;driver_result=raw;
+ dopen_result=-ENOENT;open_result=raw;lseek_result=1234;
+ int r=genGetStat(p,&st);
+ if (!isMcmanStatPath(p) || raw < 0) assert(st.mode==0);
+ return r;
 }
 int main(void) {
  const char *fatfs[]={"usb0:/NEW.ELF","mass3:/NEW.ELF","mx4sio0:/NEW.ELF",
@@ -65,9 +86,8 @@ int main(void) {
   assert(stat_result(fatfs[i],0)==0);
   assert(stat_result(fatfs[i],-ENXIO)==-ENXIO);
  }
- const char *other[]={"mc0:/NEW.ELF","mc1:/NEW.ELF","vmc0:/NEW.ELF",
-                      "pfs0:/NEW.ELF","host:/NEW.ELF","udpfs:/NEW.ELF",
-                      "mmce0:/NEW.ELF","usbgarbage:/NEW.ELF","mass3x:/NEW.ELF"};
+ const char *other[]={"vmc0:/NEW.ELF","pfs0:/NEW.ELF","host:/NEW.ELF",
+                      "udpfs:/NEW.ELF","mmce0:/NEW.ELF","usbgarbage:/NEW.ELF","mass3x:/NEW.ELF"};
  for (unsigned i=0;i<sizeof(other)/sizeof(*other);i++) {
   assert(stat_result(other[i],-ENOENT)==-ENOENT);
   assert(stat_result(other[i],-EINTR)==-EINTR);
@@ -75,11 +95,20 @@ int main(void) {
  }
  const char *mc[]={"mc0:/NEW.ELF","mc1:/NEW.ELF","xfrom:/NEW.ELF","xfrom0:/NEW.ELF"};
  for (unsigned i=0;i<sizeof(mc)/sizeof(*mc);i++) {
-  assert(stat_result(mc[i],0)==0);
-  assert(stat_result(mc[i],1)==-ENOENT);
-  assert(stat_result(mc[i],2)==-ENOENT);
-  assert(stat_result(mc[i],3)==-EACCES);
-  assert(stat_result(mc[i],4)==-EIO);
+  iox_stat_t st;
+  /* Missing file when mcman's getstat would falsely return 0 with directory mode. */
+  driver_result=0;dopen_result=-4;open_result=-4;
+  assert(genGetStat(mc[i],&st)==-ENOENT && st.mode==0);
+  driver_result=0;dopen_result=-ENOENT;open_result=-ENOENT;
+  assert(genGetStat(mc[i],&st)==-ENOENT && st.mode==0);
+  driver_result=0;dopen_result=-ENOENT;open_result=-EACCES;
+  assert(genGetStat(mc[i],&st)==-EACCES && st.mode==0);
+  /* Existing regular file on mc0/mc1/xfrom. */
+  driver_result=0;dopen_result=-4;open_result=7;lseek_result=1566464;
+  assert(genGetStat(mc[i],&st)==0 && st.mode==FIO_S_IFREG && st.size==1566464);
+  /* Existing directory on mc0/mc1/xfrom. */
+  driver_result=0;dopen_result=3;open_result=-4;
+  assert(genGetStat(mc[i],&st)==0 && st.mode==FIO_S_IFDIR);
  }
  puts("PASS: FatFs and mcman stat results become errno without changing other filesystem domains");
 }

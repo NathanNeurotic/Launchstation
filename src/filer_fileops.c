@@ -295,15 +295,50 @@ int genRemove(char *path)
 //------------------------------
 //endfunc genRemove
 //--------------------------------------------------------------
+static int isMcmanStatPath(const char *path)
+{
+	return path != NULL &&
+	       ((!strncmp(path, "mc", 2) && (path[2] == '0' || path[2] == '1') && path[3] == ':') ||
+	        (!strncmp(path, "xfrom", 5) && (path[5] == ':' || (path[5] >= '0' && path[5] <= '9' && path[6] == ':'))));
+}
+
+/* mcman is a legacy ioman driver: fileXioGetStat on missing entries returns 0
+ * with bogus/parent mode bits instead of -ENOENT. Probe existence via dopen/open
+ * and query real size/attributes from the file descriptor or directory entry. */
+static int probeMcmanStat(const char *stat_path, iox_stat_t *stat)
+{
+	int fd;
+	s64 end;
+
+	fd = fileXioDopen(stat_path);
+	if (fd >= 0) {
+		fileXioDclose(fd);
+		stat->mode = FIO_S_IFDIR;
+		return 0;
+	}
+	fd = fileXioOpen(stat_path, FIO_O_RDONLY, 0);
+	if (fd >= 0) {
+		stat->mode = FIO_S_IFREG;
+		end = fileXioLseek(fd, 0, SEEK_END);
+		if (end >= 0) {
+			stat->size = (unsigned int)end;
+			stat->hisize = (unsigned int)((u64)end >> 32);
+		}
+		fileXioClose(fd);
+		return 0;
+	}
+	if (fd == -4)
+		return -ENOENT;
+	return fd < 0 ? fd : -ENOENT;
+}
+
 /* bdmfs_fatfs returns -FRESULT from f_stat, unlike mc/PFS/UDPFS errno.
  * In particular FR_NO_FILE=4, while 2 means FR_INT_ERR, not ENOENT.
  * Normalize here, before callers decide whether a name is safe to create.
  * Do not apply this table to unrelated filesystems or the classic driver. */
 static int normalizeFatFsStatResult(const char *path, int result)
 {
-	if (result > 0 && path != NULL &&
-	    ((!strncmp(path, "mc", 2) && (path[2] == '0' || path[2] == '1') && path[3] == ':') ||
-	     (!strncmp(path, "xfrom", 5) && (path[5] == ':' || (path[5] >= '0' && path[5] <= '9' && path[6] == ':'))))) {
+	if (result > 0 && isMcmanStatPath(path)) {
 		if (result == 1 || result == 2)
 			return -ENOENT;
 		if (result == 3)
@@ -352,6 +387,8 @@ int genGetStat(const char *path, iox_stat_t *stat)
 	normalizePcCardCfPath(stat_path, sizeof(stat_path));
 	genLimObjName(stat_path, 0);
 	memset(stat, 0, sizeof(*stat));
+	if (isMcmanStatPath(stat_path))
+		return probeMcmanStat(stat_path, stat);
 	return normalizeFatFsStatResult(stat_path, fileXioGetStat(stat_path, stat));
 }
 //------------------------------
