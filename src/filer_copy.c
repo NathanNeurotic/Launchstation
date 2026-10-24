@@ -113,16 +113,14 @@ static int copyLookupPath(const char *path, iox_stat_t *stat)
 	if (path == NULL || stat == NULL || !path[0])
 		return -EINVAL;
 	memset(stat, 0, sizeof(*stat));
+	/* Restrict mandatory mode/absence confirmation to card-family devices.
+	 * Other filesystem drivers may legitimately return non-POSIX mode bits. */
+	int card_path = !strncmp(path, "mc0:", 4) || !strncmp(path, "mc1:", 4) ||
+	                !strncmp(path, "mmce", 4) || !strncmp(path, "vmc", 3);
 	ret = genGetStat(path, stat);
-	/* Never trust an absent-name result on backends that have historically
-	 * returned inconsistent getstat errors: MCMAN, MMCE and VMC. Treat a
-	 * successful but untyped stat as uncertain too. A complete listing will
-	 * prove the actual entry type or a genuinely absent leaf. */
-	if (ret == 0 && (FIO_S_ISREG(stat->mode) || FIO_S_ISDIR(stat->mode)))
+	if (ret == 0 && (!card_path || FIO_S_ISREG(stat->mode) || FIO_S_ISDIR(stat->mode)))
 		return ret;
-	if (ret == -ENOENT && strncmp(path, "mc0:", 4) &&
-	    strncmp(path, "mc1:", 4) && strncmp(path, "mmce", 4) &&
-	    strncmp(path, "vmc", 3))
+	if (ret == -ENOENT && !card_path)
 		return ret;
 	if (ret < 0 && ret != -ENOENT && ret != -1 && ret != -EISDIR)
 		return ret;
@@ -236,7 +234,12 @@ static int copyPrepareTarget(char *out, char *target, char *backup)
 	if (copyPathMissing(ret)) return 0;
 	if (ret < 0) return ret;
 	if (FIO_S_ISDIR(stat.mode)) return -EISDIR;
-	if (!FIO_S_ISREG(stat.mode)) return -EIO; /* Do not replace unknown node types. */
+	/* For card-family backends, only a proven regular file is replaceable.
+	 * Do not impose POSIX mode expectations on unrelated filesystems. */
+	if ((!strncmp(out, "mc0:", 4) || !strncmp(out, "mc1:", 4) ||
+	     !strncmp(out, "mmce", 4) || !strncmp(out, "vmc", 3)) &&
+	    !FIO_S_ISREG(stat.mode))
+		return -EIO;
 	leaf = strrchr(out, '/');
 	if (leaf == NULL) leaf = strchr(out, ':');
 	if (leaf == NULL) return -EINVAL;

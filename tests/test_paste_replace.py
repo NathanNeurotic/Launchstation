@@ -203,6 +203,11 @@ int main(void) {
  lookup_close_error=-ETIMEDOUT;assert(copyPrepareTarget(out,target,backup)==-ETIMEDOUT&&!lookup_dir);lookup_close_error=0;
  lookup_open_error=-EACCES;assert(copyPrepareTarget(out,target,backup)==-EACCES&&!lookup_dir);lookup_open_error=0;
  stat_reports_eisdir=0;
+ /* Non-card filesystem drivers are not forced through PS2-card mode rules. */
+ put("disk/opaque.bin","keep");strcpy(out,"disk/opaque.bin");
+ stat_reports_untyped=1;
+ assert(!copyPrepareTarget(out,target,backup)&&!strcmp(target,"disk/opaque.bin"));
+ stat_reports_untyped=0;expect(target,"keep");unlink(target);
  puts("PASS: MC/MMCE target lookup, EISDIR disambiguation, safe replacements and error preservation");
 }
 '''
