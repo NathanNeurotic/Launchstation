@@ -176,7 +176,7 @@ with tempfile.TemporaryDirectory(prefix="file-overlay-") as folder:
     path=Path(folder);(path/"test.c").write_text(code)
     exe=path/"test.exe"
     subprocess.run([cc,"-std=c99","-Wall","-Wextra","-Werror",str(path/"test.c"),"-lm","-o",str(exe)],check=True)
-    result=subprocess.run([str(exe),*( ["preview"] if len(sys.argv)>1 else [])],capture_output=True,text=True)
+    result=subprocess.run([str(exe),*( ["preview"] if len(sys.argv)>1 else [])],capture_output=True,text=True,check=False)
     assert result.returncode==0,result.stdout+result.stderr
 print(result.stdout.splitlines()[-1])
 if len(sys.argv)>1:

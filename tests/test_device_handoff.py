@@ -75,7 +75,19 @@ static void expect(const char *p,const char *wanted) {
 int main(void) {
  char display[MAX_PATH];
  DashDevice usb={DI_USB,"usb1:","usb1:/"};
+#ifdef EXFAT
  assert(!strcmp(dashDeviceDisplayMount(&usb,display,sizeof(display)),"usb1:/"));
+#else
+ assert(!strcmp(dashDeviceDisplayMount(&usb,display,sizeof(display)),"mass1:/"));
+#endif
+ assert(!strcmp(usb.browse,"usb1:/")); /* presentation must not change I/O state */
+ strcpy(usb.mount,"usb:");strcpy(usb.browse,"usb:/");
+#ifdef EXFAT
+ assert(!strcmp(dashDeviceDisplayMount(&usb,display,sizeof(display)),"usb:/"));
+#else
+ assert(!strcmp(dashDeviceDisplayMount(&usb,display,sizeof(display)),"mass:/"));
+#endif
+ assert(!strcmp(usb.browse,"usb:/"));
  assert(!strcmp(dashDeviceDisplayMount(NULL,display,sizeof(display)),""));
 #ifdef EXFAT
  assert(!strcmp(getUsbRootDeviceLabel('1'),"usb1:/  USB Mass Storage"));
