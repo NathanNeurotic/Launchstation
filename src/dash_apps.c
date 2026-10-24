@@ -252,7 +252,7 @@ static void appsMenu(void)
 	int n = 0, r;
 	char filt[48];
 
-	snprintf(filt, sizeof(filt), localizeDashboardText("Show: %s"), localizeDashboardText(filter_names[filter]));
+	snprintf(filt, sizeof(filt), localizeDashboardFormat("Show: %s"), localizeDashboardText(filter_names[filter]));
 	if (a != NULL) {
 		items[n].icon = DI_APP, items[n].label = localizeDashboardText("Application options..."), items[n].detail = NULL, items[n].disabled = 0, n++;
 	}

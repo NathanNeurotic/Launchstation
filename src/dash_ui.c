@@ -1054,7 +1054,7 @@ static void loadingDraw(void)
 		if (loading_remaining[0])
 			dashTextFit(x + 24, y + 100, w - 48, loading_remaining, DASH_FS_SMALL, DASH_C_TEXT2);
 		else if (loading_total > 0) {
-			snprintf(line, sizeof(line), localizeDashboardText("Completed items: %d / %d"), loading_done, loading_total);
+			snprintf(line, sizeof(line), localizeDashboardFormat("Completed items: %d / %d"), loading_done, loading_total);
 			dashTextFit(x + 24, y + 100, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);
 		}
 	} else {
@@ -1161,7 +1161,7 @@ int DashFileProgress(const char *action, const char *name, u64 remaining, u64 to
 	dashStrCopy(loading_title, action, sizeof(loading_title));
 	dashStrCopy(loading_status, name ? name : "", sizeof(loading_status));
 	if (remaining > total) remaining = total;
-	snprintf(loading_remaining, sizeof(loading_remaining), localizeDashboardText("Remaining size: %.2f MB"),
+	snprintf(loading_remaining, sizeof(loading_remaining), localizeDashboardFormat("Remaining size: %.2f MB"),
 	         (double)remaining / (1024.0 * 1024.0));
 	done = total ? (int)((1.0 - (double)remaining / (double)total) * 10000.0) : 10000;
 	loading_done = done;
