@@ -1,0 +1,102 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Developer Notes · Launchstation Docs</title>
+<meta name="description" content="Developer and Documentation Maintenance Keep source behavior, user instructions, CI contracts, release packaging and third-party attribution synchronized. Source of truth The public site is generated from docs-site/content/*.html plus docs-site/manifest.json b">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/developers.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Developer Notes · Launchstation Docs">
+<meta property="og:description" content="Developer and Documentation Maintenance Keep source behavior, user instructions, CI contracts, release packaging and third-party attribution synchronized. Source of truth The public site is generated from docs-site/content/*.html plus docs-site/manifest.json b">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html" class="active"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Developer and Documentation Maintenance</h1><p class="lead">Keep source behavior, user instructions, CI contracts, release packaging and third-party attribution synchronized.</p>
+<h2 id="repo">Source of truth</h2><p>The public site is generated from <code>docs-site/content/*.html</code> plus <code>docs-site/manifest.json</code> by <code>docs-site/build.py</code>. <code>docs/wiki/*.md</code> contains the version-controlled, wiki-style guide set. Do not hand-edit the generated <code>gh-pages</code> branch: the publishing workflow replaces it.</p>
+<h2 id="build">Build and validate the documentation</h2><pre><code>python3 docs-site/build.py --out site --zip Launchstation-Documentation.zip</code></pre><p>The generator checks the page inventory, unresolved template fragments, site assets, and internal HTML links before writing the offline archive.</p>
+<h2 id="ci">Main CI gates</h2><ul>
+<li>Compiled host regression contracts for device/USB/PAD timing, navigation, settings, MMCE backup/recovery, cloud and update safeguards.</li>
+<li>Standard and DS34 cross-builds and relevant embedded loader/IOP checks.</li>
+<li>Native cloud TLS dependency cross-build and release package validation.</li>
+<li>Generated documentation and offline ZIP validation.</li>
+</ul><p>Hardware-only timing, USB bridge behavior, console model quirks and external game-core interaction remain separate from automated acceptance.</p>
+<h2 id="release">Rolling release and Pages</h2><p>Verified pushes/merges to <code>master</code> can update the rolling <a href="https://github.com/NathanNeurotic/Launchstation/releases/tag/latest">latest release</a>, including matching standard/DS34 ZIP and PSU packages. The documentation workflow builds from the same authored source and publishes <code>gh-pages</code> automatically. A docs-only commit can therefore produce a new rolling build without implying runtime behavior changed.</p>
+<h2 id="native-update">Native updater</h2><p>The updater validates the release's ancestry and the expected package digest, selects the correct controller variant, stages a verified PSU package and ELF, and retains a rollback path. It can restore absent updater CA and BGM sidecars without overwriting custom files. See <a href="releases.html">Downloads</a>.</p>
+<h2 id="architecture">Runtime architecture</h2><p>Neutrino uses an already mounted backing-store stack for quick-boot, while Ember's USB path first performs a controlled clean IOP storage-stack rebuild and remounts the same game identity before its final keep-IOP launch. Neither follows the ordinary ELF reset preference. Local MMCE history is verified before optional Drive upload.</p>
+<h2 id="credits">Attribution discipline</h2><p>Every external project mentioned in READMEs, site pages and guides must appear in <a href="credits.html">Credits</a> with its role identified. Update <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/docs/THIRD_PARTY_CREDITS.md">the attribution inventory</a> when vendoring modules, incorporating sources or adding external handoff targets. Preserve each original file-level license; a reference is not the same as a redistributed component.</p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

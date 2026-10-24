@@ -1,0 +1,98 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Settings Reference · Launchstation Docs</title>
+<meta name="description" content="Settings Reference Dashboard settings are grouped by purpose and retain explicit unsaved-state behavior. Major groups Group Examples Appearance Theme, selection style, icon backing, clock/date, screen position. Home &amp; applications Application folders, startup ">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/settings.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Settings Reference · Launchstation Docs">
+<meta property="og:description" content="Settings Reference Dashboard settings are grouped by purpose and retain explicit unsaved-state behavior. Major groups Group Examples Appearance Theme, selection style, icon backing, clock/date, screen position. Home &amp; applications Application folders, startup ">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html" class="active"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Settings Reference</h1><p class="lead">Dashboard settings are grouped by purpose and retain explicit unsaved-state behavior.</p>
+<h2 id="groups">Major groups</h2><table><thead><tr><th>Group</th><th>Examples</th></tr></thead><tbody><tr><td>Appearance</td><td>Theme, selection style, icon backing, clock/date, screen position.</td></tr><tr><td>Home &amp; applications</td><td>Application folders, startup section/view, Home shortcuts.</td></tr><tr><td>Sound</td><td>Dashboard audio and BGM behavior.</td></tr><tr><td>Input</td><td>Confirm/cancel mapping, USB keyboard, virtual keyboard layout.</td></tr><tr><td>Launching</td><td>Normal ELF IOP reset, ESR, OSDSYS, POPStarter, Ember/PS1 behavior, Neutrino and launch keys.</td></tr><tr><td>Storage &amp; devices</td><td>Unavailable-device visibility, MMCE history and storage behavior.</td></tr><tr><td>Network</td><td>IP, netmask, gateway and network-oriented feature controls.</td></tr><tr><td>System</td><td>Core runtime options and maintenance actions.</td></tr></tbody></table>
+<h2 id="clock-manual">PS2 clock without a working CMOS battery</h2><p>Use <b>Settings &gt; System &gt; Set PS2 clock manually...</b> and enter <code>YYYY-MM-DD HH:MM:SS</code>. Launchstation validates the date, writes the PS2 RTC and verifies the readback. With a dead clock battery, the time may need setting again after power loss.</p><h2 id="gameid-launch">Colored Game ID launch bars</h2><p>Game ID color output for ELF/application launches is off by default on new configurations. It remains available in <b>Settings &gt; Launching &gt; Game ID output</b> for RetroGEM-compatible display adapters. Previously saved configurations retain their selected value until changed.</p><h2 id="control-icon-backing">Theme-matched controller button icons</h2><p><b>Settings &gt; Appearance &gt; Control icon backings</b> controls whether face-button and D-pad symbols receive a theme-derived badge. When disabled, the symbols render without the backing. Button symbols are generated from the built-in vector atlas and need no external icon PNGs.</p><h2 id="dirty">Unsaved state</h2><p>Settings compare current serialized values with the session snapshot. Touching a control and returning it to the original value does not leave a false dirty flag. Save failures remain visible and can be retried.</p>
+<h2 id="paths">Path pickers</h2><p>Program/file settings use the native browser picker. POPStarter and Neutrino have explicit ELF path fields. Ember uses an <b>Ember directory</b> picker instead: the folder name/location is arbitrary, but the save-safe umbrella still contains <code>ember.elf</code>, <code>bios.bin</code> and <code>games/&lt;Game&gt;/</code>. When a selected game's own umbrella lacks <code>ember.elf</code>, the configured Ember directory can supply it to that device automatically. VCD remains POPStarter; CUE/BIN/EXE remains Ember.</p>
+<h2 id="devices">Unavailable devices</h2><p><b>Show unavailable devices</b> controls whether confirmed-missing devices are displayed. Hidden devices are removed from navigation as well as drawing. Unprobed devices remain actionable.</p>
+<h2 id="reset">Reset actions</h2><p>Display/theme reset actions restore known project defaults so users do not need to manually reverse each visual setting.</p>
+
+<h2 id="mmce-sync-page">MMCE backup &amp; sync page</h2><p>The <b>IGR helper</b> row reports <b>Current</b>, <b>Outdated</b>, <b>Not installed</b> or <b>Partial / mixed</b> by comparing installed helper bytes with the helper this build would install for the current application and backup paths. Entering this page is treated as an explicit request for live MMCE status: if a backup destination is configured and MMCE is not already running, the MMCE stack is started on demand before the read-only status scan. A startup failure is shown instead of leaving the page silently at <code>Not checked</code>.</p><p>This page groups the controls that previously lived across Settings and Tools: Sync all cards, Automatic sync, IGR helper, After IGR, Language, retention, backup format, Google account, Check for updates and About. Existing lower-level backup/cloud routines are reused rather than duplicated.</p>
+<h2 id="native-update">Native update install</h2><p><b>Check for updates</b> validates ancestry against the rolling <code>latest</code> release. The updater selects the standard or DS34 <b>PSU package</b> for the running variant, verifies its advertised SHA-256 and contents over trusted HTTPS, stages the verified ELF and then replaces the running app's ELF using a <code>.BAK</code> rollback file. The verified four-file PSU can restore <b>missing</b> updater CA and BGM sidecars, but it does not overwrite existing customized sidecars. Interrupted <code>.UPDATE</code>/<code>.PACKAGE</code> staging files are preserved for manual recovery rather than silently truncated. Restart LAUNCHSTATION to execute the new build. Older update clients may require a one-time manual package install.</p><h2 id="mmce-sync-status">MMCE sync status</h2><p><b>Sync all cards</b> reports <code>Checking...</code>, <code>All synced</code>, or the number of card images still pending. The pending check is read-only: it compares live MMCE card images with the newest local history without creating, pruning or deleting backups. PCSX2-format history is compared in memory rather than by creating a temporary conversion. Opening this Settings page starts MMCE on demand when live card status is needed, even when MMCE auto-start is disabled. The page shows <code>Starting MMCE...</code> during initialization and reports a startup failure explicitly rather than leaving the status indefinitely at <code>Not checked</code>. The Google account row similarly reports whether the native Drive account is linked.</p><h2 id="home-navigation">Current Home, Apps and Files placement</h2><p>Home includes the Applications library and Last folder shortcut. Files runs the native File Browser directly; separate Apps and Devices labels are retained only where the old internal section identifiers require compatibility. Tools is where classic MISC commands live.</p><h2 id="cloud-history">MMCE and Drive recovery</h2><p>The MMCE backups Settings page can select a local snapshot for non-destructive recovery. The Google account/Tools cloud menu can browse remote history and recover a SHA-256-qualified snapshot into a <b>new</b> image on USB/HDD. Neither flow automatically replaces a live MMCE card. <a href="mmce-backup.html">Recovery details</a>.</p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

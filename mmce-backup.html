@@ -1,0 +1,101 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MMCE Backups · Launchstation Docs</title>
+<meta name="description" content="MMCE Backup History Versioned local backup protects an active MMCE card without creating an identical copy after every return. Local history The workflow exports an MMCE card image into WLE-MMCE-Backups , verifies it against the source, and publishes the compl">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/mmce-backup.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="MMCE Backups · Launchstation Docs">
+<meta property="og:description" content="MMCE Backup History Versioned local backup protects an active MMCE card without creating an identical copy after every return. Local history The workflow exports an MMCE card image into WLE-MMCE-Backups , verifies it against the source, and publishes the compl">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html" class="active"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>MMCE Backup History</h1><p class="lead">Versioned local backup protects an active MMCE card without creating an identical copy after every return.</p>
+<h2 id="local">Local history</h2><p>The workflow exports an MMCE card image into <code>WLE-MMCE-Backups</code>, verifies it against the source, and publishes the completed snapshot through a same-folder rename. During export it has a <code>.PART</code> suffix, so interrupted writes cannot be mistaken for completed <code>.mcd</code> or <code>.ps2</code> history or uploaded to Drive. Retention runs only after publication and never removes previous snapshots on a failed export, comparison, or rename. The retention setting can keep all history or prune older versions.</p>
+<h2 id="unchanged">Skip unchanged cards</h2><p>Before adding another history entry, Launchstation can compare the active card with the latest backup. If it is unchanged, the UI reports that no duplicate history was saved.</p>
+<h2 id="verification">Verification matters</h2><p>A copy is not treated as a successful backup merely because file creation returned. The backup path verifies the output before reporting success or allowing the next automatic step.</p>
+<h2 id="recovery">Non-destructive local recovery</h2><p>In <b>Settings &gt; Storage &amp; devices &gt; MMCE backups</b>, choose <b>Recover saved card image...</b> to browse your configured local <code>WLE-MMCE-Backups</code> history and select a complete <code>.mcd</code> or <code>.ps2</code> snapshot. You can also select the snapshot in the File Browser and choose <b>Recover as new .mcd...</b>.</p><p>To back up a specific MMCE card, highlight its <code>.mcd</code> under <code>mmce0:/MemoryCards</code> or <code>mmce1:/MemoryCards</code> and select <b>Back up selected MMCE card to history...</b>. Both routes use verified copies and leave the original emulated card untouched.</p><p>From the File Browser, highlight a complete <code>.mcd</code> or PCSX2 <code>.ps2</code> history snapshot, open the options menu and choose <b>Recover as new .mcd...</b>. Launchstation validates the card image first, asks you to select a USB/HDD folder, writes to a distinct <code>.PART</code> file, reads it back and verifies the copy, then publishes a new <code>RECOVER-###.mcd</code> image. Existing files and MMCE cards are not replaced or activated. Choose the separate recovery file for further inspection or manual installation after verification. To store a verified snapshot on the adapter using the <em>unchanged</em> sd2psXtd firmware, highlight a local USB/HDD <code>.mcd</code> or <code>.ps2</code> file and choose <b>Store NEW snapshot on MMCE...</b>, then choose the adapter slot. Launchstation creates and verifies a new <code>mmceN:/WLE-Recovered/RECOVER-###.mcd</code> with staged <code>.PART</code> output. If adapter rename fails but the stage remains and the final name is free, a separate read-back-verified copy is used instead. This separate holding folder is not an active/selected card directory; the adapter does not automatically mount it. Direct replacement or activation of an emulated card remains disabled. No firmware fork, update or custom protocol is required for the new-file storage workflow. To create a <b>new selectable card</b> rather than a holding-area snapshot, select the completed local <code>.mcd</code>/<code>.ps2</code> or a <code>WLE-Recovered</code> image in File Browser and choose <b>Install as NEW selectable MMCE card...</b>. Launchstation selects an entirely unused <code>MemoryCards/PS2/CardN</code> directory, verifies its new <code>CardN-1.mcd</code> image, and leaves adapter card selection unchanged. It never replaces an existing numbered, BootCard or GameID image. If rename is unsupported, the verified-copy fallback still cannot guarantee atomic power-loss publication; never select a failed/interrupted installation until that new directory has been inspected.</p>
+<h2 id="igr">IGR integration</h2><p>When <b>Automatic IGR backup</b> is enabled, an OPL return through WLE-IGR can capture a changed card before continuing. This keeps the safety-critical local copy independent of network/cloud availability.</p>
+<h2 id="cloud-browser">Browse and recover remote backup history</h2><p>In <b>Tools &gt; Google Drive backups &gt; Browse cloud history...</b>, explore the app-created <code>WLE-MMCE-Backups</code> folder on Google Drive. The paged browser lists folders and available <code>.mcd</code>/<code>.ps2</code> snapshots. Selecting one with an uploaded SHA-256 allows verified download to a NEW <code>RECOVER-CLOUD-###.mcd</code> on USB/HDD. Launchstation checks the complete downloaded SHA-256, validates the card image, converts PCSX2 snapshots where needed and publishes only a verified staged recovery. Google Drive history and emulated MMCE cards are never modified; direct replacement of an MMCE card remains disabled.</p>
+<h2 id="cloud">Cloud is additive</h2><p>Optional Google Drive synchronization is performed after the verified local backup. A cloud failure does not erase or invalidate the local history entry. See <a href="cloud.html">Native Google Drive Cloud Backup</a>.</p>
+
+<h2 id="sync-all">Sync all cards</h2><p><b>Sync all cards</b> scans both MMCE units, creates history only for changed cards, and summarizes new/unchanged/failed cards. If Google Drive is linked, pending local history is uploaded afterward.</p>
+<h2 id="automatic-sync">Automatic sync modes</h2><p>The single <b>Automatic sync</b> control replaces two separate toggles with three clear modes: <b>Off</b>, <b>Local backup</b>, and <b>Local + Google Drive</b>. Cloud mode requires a linked account.</p>
+<h2 id="helper-control">IGR helper control</h2><p>The MMCE backup page now exposes the existing verified WLE-IGR installer/update/remove flow directly, alongside the after-IGR destination.</p><h2 id="safety-matrix">Recovery safety summary</h2><table><thead><tr><th>Action</th><th>Allowed now</th><th>Effect on active MMCE card</th></tr></thead><tbody><tr><td>Browse local history</td><td>Yes</td><td>Read-only</td></tr><tr><td>Browse Drive history</td><td>Yes, linked account</td><td>Read-only</td></tr><tr><td>Recover complete local snapshot to new USB/HDD .mcd</td><td>Yes</td><td>Unchanged</td></tr><tr><td>Recover Drive snapshot with verified stored SHA-256 to new USB/HDD .mcd</td><td>Yes</td><td>Unchanged</td></tr><tr><td>Overwrite/activate current MMCE card directly</td><td>No</td><td>Intentionally disabled</td></tr></tbody></table><p>Remote entries without the expected saved digest may be inspected but are not eligible for the verified download workflow. Incomplete <code>.PART</code> files never count as completed backups. For step-by-step recovery, see the <a href="wiki.html">wiki index</a> and <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/docs/wiki/MMCE-Recovery.md">recovery guide</a>.</p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>
