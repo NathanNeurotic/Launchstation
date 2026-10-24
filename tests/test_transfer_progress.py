@@ -60,6 +60,6 @@ assert 'if (!DashFileProgress("Pasting file", file.name, size, original_size))' 
 assert 'buffSize = 16384' in copy
 assert 'DashFileDeleteProgress(file->name)' in (root/'src/filer_actions.c').read_text()
 with tempfile.TemporaryDirectory(prefix='transfer-progress-') as folder:
- p=Path(folder);(p/'test.c').write_text("#define localizeDashboardText(s) (s)\n" + code)
+ p=Path(folder);(p/'test.c').write_text("#define localizeDashboardText(s) (s)\n#define localizeDashboardFormat(s) (s)\n" + code)
  subprocess.run([shutil.which('gcc'),'-std=c99','-Wall','-Wextra','-Werror',str(p/'test.c'),'-o',str(p/'test')],check=True)
  subprocess.run([str(p/'test')],check=True)

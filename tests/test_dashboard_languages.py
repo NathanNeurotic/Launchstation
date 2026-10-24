@@ -67,6 +67,35 @@ int main(void) {
             tables[language][LANG_Dashboard_Remaining_size_2f_MB].String));
         assert(!strcmp(localizeDashboardText("mass0:/Files/BOOT.ELF"), "mass0:/Files/BOOT.ELF"));
         assert(localizeDashboardText(NULL) == NULL);
+        assert(localizeDashboardFormat(NULL) == NULL);
+        assert(!strcmp(localizeDashboardFormat("Remaining size: %.2f MB"),
+            tables[language][LANG_Dashboard_Remaining_size_2f_MB].String));
+        assert(!strcmp(localizeDashboardFormat("Show: %s"),
+            tables[language][LANG_Dashboard_Show_s].String));
+        assert(!strcmp(localizeDashboardFormat("Completed items: %d / %d"),
+            tables[language][LANG_Dashboard_Completed_items_d_d].String));
+        /* Simulate malicious external LNG overrides. */
+        Lang_String[LANG_Dashboard_Remaining_size_2f_MB].String = "Bad: %n";
+        assert(!strcmp(localizeDashboardFormat("Remaining size: %.2f MB"),
+            "Remaining size: %.2f MB"));
+        Lang_String[LANG_Dashboard_Remaining_size_2f_MB].String = "Bad: %s";
+        assert(!strcmp(localizeDashboardFormat("Remaining size: %.2f MB"),
+            "Remaining size: %.2f MB"));
+        Lang_String[LANG_Dashboard_Remaining_size_2f_MB].String =
+            tables[language][LANG_Dashboard_Remaining_size_2f_MB].String;
+        Lang_String[LANG_Dashboard_Show_s].String = "Bad: %s%n";
+        assert(!strcmp(localizeDashboardFormat("Show: %s"), "Show: %s"));
+        Lang_String[LANG_Dashboard_Show_s].String = "Bad: %*s";
+        assert(!strcmp(localizeDashboardFormat("Show: %s"), "Show: %s"));
+        Lang_String[LANG_Dashboard_Show_s].String = "Safe: %s (%%)";
+        assert(!strcmp(localizeDashboardFormat("Show: %s"), "Safe: %s (%%)"));
+        Lang_String[LANG_Dashboard_Show_s].String =
+            tables[language][LANG_Dashboard_Show_s].String;
+        Lang_String[LANG_Dashboard_Completed_items_d_d].String = "Bad: %d / %s";
+        assert(!strcmp(localizeDashboardFormat("Completed items: %d / %d"),
+            "Completed items: %d / %d"));
+        Lang_String[LANG_Dashboard_Completed_items_d_d].String =
+            tables[language][LANG_Dashboard_Completed_items_d_d].String;
         Lang_String[LANG_Dashboard_Home].String = "external override";
         assert(!strcmp(localizeDashboardText("Home"), "external override"));
         Lang_String[LANG_Dashboard_Home].String = NULL;

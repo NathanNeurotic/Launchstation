@@ -61,7 +61,8 @@ static int mcSetFileInfo(int p,int slot,const char *from,sceMcTblGetDir *s,int f
  mc_result=rename_file(a,b); return 0;
 }
 static int mcSync(int m,void *c,int *r) { (void)m;(void)c;if(++sync_calls==fail_sync)return -1;*r=mc_result;return 1; }
-static int genOpen(const char *p,int flags) { int r=open(p,flags,0600);return r<0?-errno:r; }
+static int gen_open_calls, last_gen_open_flags;
+static int genOpen(const char *p,int flags) { gen_open_calls++;last_gen_open_flags=flags;int r=open(p,flags,0600);return r<0?-errno:r; }
 static int genRead(int fd,void *p,int n) { if(fail_read)return -ETIMEDOUT;if(fail_eof&&n==1)return -EACCES;return read(fd,p,n>17?17:n); }
 static int genClose(int fd) { int r=close(fd);return fail_close?-EIO:r; }
 static int genRemove(char *p) { removed++;return unlink(p); }
@@ -141,10 +142,20 @@ int main(void) {
   unlink(out);unlink(backup);fail_sync=0;
  }
 
- /* Native MC creation strips the foreign flag only after checking absence. */
- strcpy(out,"mc0:/brand-new.elf");unlink(out);
- int fd=copyOpenTarget(out,O_WRONLY|O_CREAT|O_EXCL);assert(fd>=0);close(fd);
- assert(copyOpenTarget(out,O_WRONLY|O_CREAT|O_EXCL)==-EEXIST);unlink(out);
+ /* Native MC creation strips O_EXCL on both slots, but only after absence. */
+ for(int slot=0;slot<=1;slot++) {
+  snprintf(out,sizeof(out),"mc%d:/brand-new.elf",slot);unlink(out);
+  gen_open_calls=last_gen_open_flags=0;
+  int fd=copyOpenTarget(out,O_WRONLY|O_CREAT|O_EXCL);assert(fd>=0);
+  assert(gen_open_calls==1 && !(last_gen_open_flags&O_EXCL) && (last_gen_open_flags&O_CREAT));close(fd);
+  assert(copyOpenTarget(out,O_WRONLY|O_CREAT|O_EXCL)==-EEXIST && gen_open_calls==1);
+  unlink(out);
+ }
+ /* Non-MC filesystems keep atomic exclusive creation. */
+ gen_open_calls=last_gen_open_flags=0;
+ int fd=copyOpenTarget("disk/excl.tmp",O_WRONLY|O_CREAT|O_EXCL);assert(fd>=0);
+ assert(gen_open_calls==1 && (last_gen_open_flags&O_EXCL) && (last_gen_open_flags&O_CREAT));close(fd);
+ unlink("disk/excl.tmp");
  /* Ambiguous getstat is not itself proof of absence. */
  denied=1;iox_stat_t probe;
  assert(copyLookupPath(NULL,&probe)==-EINVAL);

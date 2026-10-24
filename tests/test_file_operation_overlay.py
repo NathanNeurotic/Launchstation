@@ -173,7 +173,7 @@ int main(int argc,char **argv) {
 cc=shutil.which("gcc") or shutil.which("cc")
 assert cc
 with tempfile.TemporaryDirectory(prefix="file-overlay-") as folder:
-    path=Path(folder);(path/"test.c").write_text("#define localizeDashboardText(s) (s)\n" + code)
+    path=Path(folder);(path/"test.c").write_text("#define localizeDashboardText(s) (s)\n#define localizeDashboardFormat(s) (s)\n" + code)
     exe=path/"test.exe"
     subprocess.run([cc,"-std=c99","-Wall","-Wextra","-Werror",str(path/"test.c"),"-lm","-o",str(exe)],check=True)
     result=subprocess.run([str(exe),*( ["preview"] if len(sys.argv)>1 else [])],capture_output=True,text=True,check=False)
