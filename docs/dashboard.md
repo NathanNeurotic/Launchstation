@@ -539,8 +539,8 @@ is skipped by navigation.
 ### Device names and ELF handoffs
 
 USB devices are named **USB Mass Storage**. The File Browser and device panels
-show legacy `mass:` / `mass0:` / `mass1:` labels while browsing keeps the exact
-USB device mapping internally.
+show the mounted path (`usbN:` with the exFAT stack, `massN:` with the classic
+driver). They do not infer a shared MASS slot from a USB unit number.
 
 **Settings > Launching > ELF handoff paths** defaults to **Legacy mass (default)** and is saved
 as `Modern_Device_Handoff = 0` in `LAUNCHELF.CNF`. With the default choice, ordinary ELF

@@ -32,7 +32,7 @@ assert '"USB Mass Storage"' in devices
 assert '"USB Mass Storage"' in (root/"src/dash_lib.c").read_text()
 assert '"USB Storage"' not in (root/"src/dash_lib.c").read_text()
 assert '"MASS (USB)"' not in devices
-assert "mass%d:/" in devices  # keep path labels in device panels and picker
+assert 'snprintf(buf, size, "%s", d->browse)' in devices  # expose the mounted path, not a guessed BDM slot
 assert "No USB storage device was found." in files
 assert 'dashModalMessage(DI_WARNING, "Device not found", body, NULL);' in files  # no raw mount IDs in errors
 assert "Not connected" in devices

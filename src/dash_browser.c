@@ -2625,13 +2625,8 @@ static void browserDrawBody(void)
 	int i, rows_total = fb.dir[0] ? fb.n : fb.ndevs;
 	char info[64], display_path[MAX_PATH + 2];
 
-	/* Display the public MASS label without changing the path used for I/O. */
-	if (!strncmp(fb.dir, "usb:", 4))
-		snprintf(display_path, sizeof(display_path), "mass%s", fb.dir + 3);
-	else if (!strncmp(fb.dir, "usb", 3) && fb.dir[3] >= '0' && fb.dir[3] <= '9' && fb.dir[4] == ':')
-		snprintf(display_path, sizeof(display_path), "mass%s", fb.dir + 3);
-	else
-		dashStrCopy(display_path, fb.dir, sizeof(display_path));
+	/* Keep the actual mounted namespace visible, without guessing aliases. */
+	dashStrCopy(display_path, fb.dir, sizeof(display_path));
 
 	/* A dashboard tab must not overwrite the shared header or render its
 	 * background a second time; modal callers still get a complete scene. */

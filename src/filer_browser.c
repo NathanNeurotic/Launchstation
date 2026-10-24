@@ -32,12 +32,20 @@ static int isGenericUsbRootPath(const char *path)
 
 static const char *getUsbRootDeviceLabel(char unit)
 {
+#ifdef EXFAT
+	static char label[] = "usb0:/  USB Mass Storage";
+#else
 	static char label[] = "mass0:/  USB Mass Storage";
+#endif
 
 	if ((unit < '0') || (unit > '9'))
 		return NULL;
 
+#ifdef EXFAT
+	label[3] = unit;
+#else
 	label[4] = unit;
+#endif
 	return label;
 }
 
@@ -50,9 +58,17 @@ static const char *getRootDeviceLabel(const char *name)
 	if (!strcmp(name, "mass:"))
 		return "mass:/  USB Mass Storage";
 	if (!strncmp(name, "mass", 4) && name[4] >= '0' && name[4] <= '9' && name[5] == ':' && name[6] == '\0')
+#ifdef EXFAT
+		return NULL; /* Shared BDM slot: do not identify it as USB. */
+#else
 		return getUsbRootDeviceLabel(name[4]);
+#endif
 	if (!strcmp(name, "usb:"))
+#ifdef EXFAT
+		return "usb:/  USB Mass Storage";
+#else
 		return "mass:/  USB Mass Storage";
+#endif
 	if (!strncmp(name, "usb", 3) && name[3] >= '0' && name[3] <= '9' && name[4] == ':' && name[5] == '\0')
 		return getUsbRootDeviceLabel(name[3]);
 #ifdef MMCE
@@ -268,11 +284,13 @@ static void formatBrowserPathForDisplay(const char *path, char *display_path)
 	const char *sep;
 	int part_len;
 
+#ifndef EXFAT
 	if (!strncmp(path, "usb", 3) && (path[3] == ':' ||
 	    (path[3] >= '0' && path[3] <= '9' && path[4] == ':'))) {
 		snprintf(display_path, MAX_PATH, "mass%s", path + 3);
 		return;
 	}
+#endif
 
 	if (isHddBrowserPath(path)) {
 		char hdd_device[6];
