@@ -80,6 +80,7 @@ void filerCopyDiagFormat(char *out, int size, int result)
 		case -ETIMEDOUT: reason = "The device did not respond in time."; break;
 		case -ENOMEM: reason = "Not enough memory to complete the transfer."; break;
 		case -EEXIST: reason = "A destination or recovery file already exists."; break;
+		case -EISDIR: reason = "A directory occupies the destination name, or the device could not verify it as a regular file. No directory was overwritten."; break;
 		default: reason = "The operation failed. Keep the error code and device details below for diagnosis."; break;
 	}
 	snprintf(out, size, "%s (%d)\n%s\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
@@ -97,9 +98,10 @@ static int copyPathMissing(int result)
 	return result == -ENOENT;
 }
 
-/* A few legacy drivers do not distinguish a missing entry from a generic
- * getstat failure. Prove absence with a clean directory EOF, never by
- * treating -1 as ENOENT. Keep this compatibility policy local to copying. */
+/* Legacy drivers may report -1 or -EISDIR for an ordinary or absent file.
+ * Verify these ambiguous results by scanning the parent directory; only a
+ * clean EOF proves absence, and a matching directory remains protected.
+ * Never convert access, transport, or enumeration errors into absence. */
 static int copyLookupPath(const char *path, iox_stat_t *stat)
 {
 	char parent[MAX_PATH];
@@ -110,10 +112,13 @@ static int copyLookupPath(const char *path, iox_stat_t *stat)
 
 	if (path == NULL || stat == NULL || !path[0])
 		return -EINVAL;
+	memset(stat, 0, sizeof(*stat));
 	ret = genGetStat(path, stat);
 	if (ret == 0 || ret == -ENOENT)
 		return ret;
-	if (ret != -1 && ret <= 0)
+	/* A getstat EISDIR on a leaf needs confirmation by parent listing.
+	 * Actual directories will still be rejected as overwrite targets. */
+	if (ret < 0 && ret != -1 && ret != -EISDIR)
 		return ret;
 	colon = strchr(path, ':');
 	leaf = strrchr(path, '/');
@@ -1449,7 +1454,8 @@ copy_file_data_done:
 #endif
 	} else {                                          //Handle file copied to non-MC
 		if (!strncmp(out, "host", 4) || !strncmp(out, "udpfs", 5)) {  //for files copied to host/udpfs: we skip Chstat
-		} else if (!strncmp(out, "mass", 4)) {  //for files copied to mass: we skip Chstat
+		} else if (!strncmp(out, "mmce", 4)) {  //MMCE has no Chstat operation
+			} else if (!strncmp(out, "mass", 4)) {  //for files copied to mass: we skip Chstat
 #ifdef MX4SIO
 			} else if (!strncmp(out, "mx4sio", 6)) {  //for files copied to mx4sio: we skip Chstat
 #endif
