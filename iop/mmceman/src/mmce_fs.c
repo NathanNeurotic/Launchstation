@@ -1135,7 +1135,7 @@ int mmce_fs_getstat(iomanX_iop_file_t *file, const char *name, iox_stat_t *stat)
 
     if (rdbuf[0x29] != 0) {
         DPRINTF("Got bad return: %i\n", rdbuf[0x29]);
-        return -ENOENT;
+        return -1;
     } else {
         DPRINTF("Got good return\n");
     }

@@ -322,18 +322,14 @@ static void sceneCrystal(int fx)
 	drawOrbs(fx == DASH_FX_FULL ? 1.0f : 0.7f);
 	drawStars(fx == DASH_FX_FULL ? BG_STARS : BG_STARS / 2);
 
-	if (fx == DASH_FX_FULL) {
-		float strength = 0.55f;
-
-		for (i = 0; i < BG_TOWERS; i++)
-			drawTower(&towers[i], strength);
-		if (streak_t >= 0.0f) {
-			float p = streak_t / 2.6f;
-			float sx = -200.0f + p * (DASH_VW + 400.0f);
-			float a = dashSinf(p * 3.14159f);
-			dashGlow(sx, streak_y, 240.0f, 3.0f, DC(160, 210, 255, (int)(110 * a)));
-			dashGlow(sx, streak_y, 90.0f, 10.0f, DC(160, 210, 255, (int)(50 * a)));
-		}
+	for (i = 0; i < BG_TOWERS; i++)
+		drawTower(&towers[i], 0.55f);
+	if (fx == DASH_FX_FULL && streak_t >= 0.0f) {
+		float p = streak_t / 2.6f;
+		float sx = -200.0f + p * (DASH_VW + 400.0f);
+		float a = dashSinf(p * 3.14159f);
+		dashGlow(sx, streak_y, 240.0f, 3.0f, DC(160, 210, 255, (int)(110 * a)));
+		dashGlow(sx, streak_y, 90.0f, 10.0f, DC(160, 210, 255, (int)(50 * a)));
 	}
 	for (i = 0; i < (fx == DASH_FX_FULL ? BG_SPARKS : BG_SPARKS / 2); i++) {
 		Spark *s = &sparks[i];
@@ -562,14 +558,6 @@ static int effectiveFx(void)
 	if (requested != DASH_FX_FULL) {
 		bg_perf_reduced = bg_slow_frames = bg_fast_frames = 0;
 		return requested;
-	}
-	/* Never step down scenes whose element count or trail span changes between
-	 * FULL and SUBTLE (such as OSD orbs in Tunnel, Orbit and ClockRing, or
-	 * Crystal towers): toggling fx mid-flight makes trails and geometry jump. */
-	if (dashTheme.bg == DASH_BG_TUNNEL || dashTheme.bg == DASH_BG_ORBIT ||
-	    dashTheme.bg == DASH_BG_CLOCKRING || dashTheme.bg == DASH_BG_CRYSTAL) {
-		bg_perf_reduced = bg_slow_frames = bg_fast_frames = 0;
-		return DASH_FX_FULL;
 	}
 	dt = dashFrameDelta();
 	if (dt > 0.024f) {
