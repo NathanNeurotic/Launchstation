@@ -262,6 +262,15 @@ int main(void){
   }
  }
  wrong_eisdir_status=0;
+ /* Stock-firmware MMCE rename can fail. The existing destination must
+  * remain untouched, with the verified stage retained for recovery. */
+ reset();put("mmce0:/BOOT.ELF",(const unsigned char*)"OLD",3);
+ fail_publish=1;message[0]=0;
+ subfunc_Paste(message,"mmce0:/");
+ assert(strstr(message,"Publishing replacement")&&!handles);
+ assert(matches("mmce0:/BOOT.ELF",(const unsigned char*)"OLD",3));
+ assert(matches("mmce0:/LS-COPY-000.TMP",input,sizeof(input)));
+ unlink("mmce0:/LS-COPY-000.TMP");fail_publish=0;
  /* Nested ordinary folders use the same production recursion. */
  reset();mkdir("udpfs:/NESTED",0700);put("udpfs:/NESTED/CHILD.BIN",input,257);
  strcpy(clipFiles[0].name,"NESTED");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;

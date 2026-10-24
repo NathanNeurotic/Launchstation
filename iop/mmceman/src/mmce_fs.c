@@ -808,6 +808,9 @@ int mmce_fs_dopen(iomanX_iop_file_t *file, const char *name)
     u8 wrbuf[0x5];
     u8 rdbuf[0x3];
 
+    /* Firmware uses a one-byte pathname length; fail before narrowing or I/O. */
+    if (!mmce_fs_wire_name_ok(name))
+        return -ENAMETOOLONG;
     DPRINTF("%s name: %s\n", __func__, name);
 
     mmce_fs_update_unit(file->unit);
@@ -1041,6 +1044,9 @@ int mmce_fs_getstat(iomanX_iop_file_t *file, const char *name, iox_stat_t *stat)
     u8 wrbuf[0xFF];
     u8 rdbuf[0x2B];
 
+    /* The MMCE wire protocol cannot represent 255+ byte pathnames. */
+    if (!mmce_fs_wire_name_ok(name))
+        return -ENAMETOOLONG;
     u8 len = strlen(name) + 1;
 
     DPRINTF("%s filename: %s\n", __func__, name);
