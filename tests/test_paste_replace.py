@@ -36,6 +36,7 @@ typedef struct { char EntryName[32]; } sceMcTblGetDir;
 #define FIO_S_ISDIR S_ISDIR
 static int rename_calls, fail_rename, fail_rollback, mc_result, denied, removed, fail_close;
 static int false_rename, sync_calls, fail_sync, fail_read, fail_eof, verified;
+static int stat_reports_eisdir;
 static int DashFileProgress(const char *a,const char *n,u64 r,u64 t) {
  assert(!strcmp(a,"Verifying file")&&!strcmp(n,"BOOT.ELF"));assert(r<=t);
  if(!r)verified++;
@@ -44,6 +45,7 @@ static int DashFileProgress(const char *a,const char *n,u64 r,u64 t) {
 static void ensureMemoryCardPortAccessible(int p) { assert(p==0 || p==1); }
 static int genGetStat(const char *p,iox_stat_t *s) {
  struct stat st; if(denied) return -denied;
+ if(stat_reports_eisdir) return -EISDIR;
  if(stat(p,&st)) return -errno;
  s->mode=st.st_mode; return 0;
 }
@@ -95,7 +97,7 @@ int main(void) {
  char out[MAX_PATH],target[MAX_PATH],backup[MAX_PATH];
  const char *fresh="new ELF bytes: complete replacement";
  const char *paths[]={"disk/APP.ELF","mc0:/BOOT.ELF","mc1:/BOOT.ELF"};
- mkdir("disk",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);
+ mkdir("disk",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);mkdir("mmce0:",0700);mkdir("mmce1:",0700);
  for(int device=0;device<3;device++) for(int scenario=0;scenario<6;scenario++) {
   rename_calls=fail_rename=fail_rollback=denied=removed=fail_close=0;
   put(paths[device],"original ELF");strcpy(out,paths[device]);
@@ -166,7 +168,31 @@ int main(void) {
  lookup_close_error=-EIO;assert(copyLookupPath("mc0:/missing.elf",&probe)==-EIO&&!lookup_dir);lookup_close_error=0;
  lookup_open_error=-EACCES;assert(copyLookupPath("mc0:/missing.elf",&probe)==-EACCES&&!lookup_dir);lookup_open_error=0;
  assert(copyLookupPath("disk/",&probe)==-EINVAL);denied=0;
- puts("PASS: verified replacements, MC slots, short readback, rollback, retained recovery and permission failures");
+ /* EISDIR may be a bogus getstat status for files or missing names.
+  * Directory enumeration must distinguish all three outcomes. */
+ const char *roots[]={"mc0:","mc1:","mmce0:","mmce1:","disk"};
+ for(unsigned device=0;device<sizeof(roots)/sizeof(roots[0]);device++) {
+  char existing[MAX_PATH],missing[MAX_PATH],directory[MAX_PATH];
+  snprintf(existing,sizeof(existing),"%s/existing.elf",roots[device]);
+  snprintf(missing,sizeof(missing),"%s/missing.elf",roots[device]);
+  snprintf(directory,sizeof(directory),"%s/actual-dir",roots[device]);
+  put(existing,"old bytes");unlink(missing);mkdir(directory,0700);
+  stat_reports_eisdir=1;
+  assert(copyLookupPath(missing,&probe)==-ENOENT&&!lookup_dir);
+  assert(copyLookupPath(existing,&probe)==0&&!FIO_S_ISDIR(probe.mode)&&!lookup_dir);
+  strcpy(out,existing);assert(!copyPrepareTarget(out,target,backup));
+  assert(strcmp(out,existing)&&!strcmp(target,existing)&&!lookup_dir);
+  assert(copyPrepareTarget(directory,target,backup)==-EISDIR&&!lookup_dir);
+  stat_reports_eisdir=0;
+  expect(existing,"old bytes");unlink(existing);rmdir(directory);
+ }
+ /* Enumeration errors must never be mistaken for an absent target. */
+ strcpy(out,"mc0:/missing.elf");stat_reports_eisdir=1;
+ lookup_read_error=-EIO;assert(copyPrepareTarget(out,target,backup)==-EIO&&!lookup_dir);lookup_read_error=0;
+ lookup_close_error=-ETIMEDOUT;assert(copyPrepareTarget(out,target,backup)==-ETIMEDOUT&&!lookup_dir);lookup_close_error=0;
+ lookup_open_error=-EACCES;assert(copyPrepareTarget(out,target,backup)==-EACCES&&!lookup_dir);lookup_open_error=0;
+ stat_reports_eisdir=0;
+ puts("PASS: MC/MMCE target lookup, EISDIR disambiguation, safe replacements and error preservation");
 }
 '''
 with tempfile.TemporaryDirectory(prefix='paste-replace-') as folder:
