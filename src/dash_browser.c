@@ -707,6 +707,25 @@ enum {
 	PASTE_PSU
 };
 
+static void showPasteFailure(int psu)
+{
+	char *detail = strchr(fb.msg, '\n');
+	char *p;
+
+	/* The copy diagnostic begins with stage/code and a readable reason.
+	 * Keep those in the body; scroll the remaining context on the detail
+	 * line so the six-line body limit cannot hide it. */
+	if (detail != NULL)
+		detail = strchr(detail + 1, '\n');
+	if (detail != NULL) {
+		*detail++ = '\0';
+		for (p = detail; *p; p++)
+			if (*p == '\n' || *p == '\r')
+				*p = ' ';
+	}
+	dashModalMessage(DI_WARNING, psu ? "PSU failed" : "Paste failed", fb.msg, detail);
+}
+
 static void opPaste(int mode)
 {
 	int psu = (mode == PASTE_PSU);
@@ -720,14 +739,14 @@ static void opPaste(int mode)
 	if (filerConfirmExploitModify(fb.dir, NULL) <= 0)
 		return;
 	fb.msg[0] = '\0';
-	dashLoadingBegin(psu ? "PSU" : (browser_cut ? "Moving" : "Pasting"));
+	dashFileLoadingBegin(psu ? "PSU" : (browser_cut ? "Moving file" : "Pasting file"));
 	if (psu)
 		filerPsuPasteInto(fb.msg, fb.dir);
 	else
 		filerPasteModeInto(fb.msg, fb.dir, mode == PASTE_RENAME);
 	opDone();
 	if (fb.msg[0]) /* the classic paste only leaves a message when it failed */
-		dashModalMessage(DI_WARNING, psu ? "PSU failed" : "Paste failed", fb.msg, NULL);
+		showPasteFailure(psu);
 	else
 		dashToast(DASH_TOAST_OK, browser_cut ? "Moved" : "Pasted");
 	refresh();
@@ -749,12 +768,13 @@ static void opDelete(void)
 		return;
 	if (!prepareOp())
 		return;
-	dashLoadingBegin("Deleting");
+	dashFileLoadingBegin("Deleting file");
 	for (i = 0; i < n; i++) {
 		FILEINFO *f = &fb.files[idx[i]];
 		if (filerIsExploitProtectedPath(fb.dir, f) && filerConfirmExploitDelete(fb.dir, f) < 0)
 			continue;
-		dashLoadingStatus(f->name, i, n);
+		dashLoadingStatus(f->name, done, n);
+		dashLoadingFrame(f->name, done, n);
 		ret = delete (fb.dir, f);
 		if (ret < 0)
 			break;
@@ -2605,13 +2625,8 @@ static void browserDrawBody(void)
 	int i, rows_total = fb.dir[0] ? fb.n : fb.ndevs;
 	char info[64], display_path[MAX_PATH + 2];
 
-	/* Display the public MASS label without changing the path used for I/O. */
-	if (!strncmp(fb.dir, "usb:", 4))
-		snprintf(display_path, sizeof(display_path), "mass%s", fb.dir + 3);
-	else if (!strncmp(fb.dir, "usb", 3) && fb.dir[3] >= '0' && fb.dir[3] <= '9' && fb.dir[4] == ':')
-		snprintf(display_path, sizeof(display_path), "mass%s", fb.dir + 3);
-	else
-		dashStrCopy(display_path, fb.dir, sizeof(display_path));
+	/* Keep the actual mounted namespace visible, without guessing aliases. */
+	dashStrCopy(display_path, fb.dir, sizeof(display_path));
 
 	/* A dashboard tab must not overwrite the shared header or render its
 	 * background a second time; modal callers still get a complete scene. */

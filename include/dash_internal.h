@@ -868,6 +868,8 @@ int dashModalChoice(const char *title, const char *const *options, int n, int cu
 
 /* Synchronous work feedback: draws a full frame immediately. */
 void dashLoadingBegin(const char *title);
+/* Compact file-operation layout: filename, remaining MB and progress bar. */
+void dashFileLoadingBegin(const char *title);
 void dashLoadingStatus(const char *status, int done, int total);
 void dashLoadingFrame(const char *status, int done, int total); /* always draws */
 void dashLoadingSetCancel(int cancelable); /* shows "Back: keep working in background" */

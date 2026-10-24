@@ -295,6 +295,47 @@ int genRemove(char *path)
 //------------------------------
 //endfunc genRemove
 //--------------------------------------------------------------
+/* bdmfs_fatfs returns -FRESULT from f_stat, unlike mc/PFS/UDPFS errno.
+ * In particular FR_NO_FILE=4, while 2 means FR_INT_ERR, not ENOENT.
+ * Normalize here, before callers decide whether a name is safe to create.
+ * Do not apply this table to unrelated filesystems or the classic driver. */
+static int normalizeFatFsStatResult(const char *path, int result)
+{
+	if (result > 0 && path != NULL &&
+	    ((!strncmp(path, "mc", 2) && (path[2] == '0' || path[2] == '1') && path[3] == ':') ||
+	     (!strncmp(path, "xfrom", 5) && (path[5] == ':' || (path[5] >= '0' && path[5] <= '9' && path[6] == ':'))))) {
+		if (result == 1 || result == 2)
+			return -ENOENT;
+		if (result == 3)
+			return -EACCES;
+		return -EIO;
+	}
+#ifdef EXFAT
+	static const char *const stems[] = {"mass", "usb", "ata", "mx4sio", "ilink", "cf"};
+	static const int errors[] = {
+		0, EIO, EIO, ENODEV, ENOENT, ENOENT, ENXIO, EACCES, EEXIST,
+		EBADF, EROFS, ENODEV, ENODEV, ENODEV, EIO, ETIMEDOUT, EBUSY,
+		ENOMEM, EMFILE, EINVAL
+	};
+	unsigned int i;
+	if (result >= 0 || result <= -(int)(sizeof(errors) / sizeof(errors[0])))
+		return result;
+	for (i = 0; i < sizeof(stems) / sizeof(stems[0]); i++) {
+		size_t n = strlen(stems[i]);
+		const char *tail;
+		if (strncmp(path, stems[i], n))
+			continue;
+		tail = path + n;
+		if (*tail >= '0' && *tail <= '9') tail++;
+		if (*tail == ':')
+			return -errors[-result];
+	}
+#else
+	(void)path;
+#endif
+	return result;
+}
+
 int genGetStat(const char *path, iox_stat_t *stat)
 {
 	char stat_path[MAX_PATH];
@@ -310,7 +351,8 @@ int genGetStat(const char *path, iox_stat_t *stat)
 	ensurePathMemoryCardAccessible(stat_path);
 	normalizePcCardCfPath(stat_path, sizeof(stat_path));
 	genLimObjName(stat_path, 0);
-	return fileXioGetStat(stat_path, stat);
+	memset(stat, 0, sizeof(*stat));
+	return normalizeFatFsStatResult(stat_path, fileXioGetStat(stat_path, stat));
 }
 //------------------------------
 //endfunc genGetStat

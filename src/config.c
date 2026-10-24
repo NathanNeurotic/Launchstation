@@ -354,12 +354,18 @@ void configRefreshSaveTargetForWrite(enum CONFIG_SAVE_TARGET save_target, char *
 
 void configEnsureSysconfDir(const char *path)
 {
+	iox_stat_t st;
 	int ret;
 
 	if (path == NULL)
 		return;
 	if (!strncmp(path, "mc0:/SYS-CONF/", 14) || !strncmp(path, "mc1:/SYS-CONF/", 14)) {
+		char dir[16];
+		snprintf(dir, sizeof(dir), "mc%c:/SYS-CONF", path[2]);
 		ensureMemoryCardPortAccessible(path[2] - '0');
+		memset(&st, 0, sizeof(st));
+		if (genGetStat(dir, &st) >= 0 && FIO_S_ISDIR(st.mode))
+			return;
 		mcSync(0, NULL, NULL);
 		mcMkDir(path[2] - '0', 0, "SYS-CONF");
 		mcSync(0, NULL, &ret);

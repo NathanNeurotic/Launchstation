@@ -66,23 +66,27 @@ static int copyDiagFail(int result)
 void filerCopyDiagFormat(char *out, int size, int result)
 {
 	int error = copy_diag.error ? copy_diag.error : result;
+	const char *reason;
 
-	if (error == -ENOSPC) {
-		snprintf(out, size, "%s (%d)\n"
-		         "Not enough free space to copy the complete file. For replacements, "
-		         "free space must cover the new file before the old one can be replaced.\n"
-		         "%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
-		         copy_diag.stage ? copy_diag.stage : "Copy failed", error,
-		         copy_diag.name, copy_diag.source, copy_diag.destination,
-		         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
-		         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
-	} else {
-		snprintf(out, size, "%s (%d)\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
-		         copy_diag.stage ? copy_diag.stage : "Copy failed", error,
-		         copy_diag.name, copy_diag.source, copy_diag.destination,
-		         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
-		         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
+	switch (error) {
+		case -ENOSPC:
+			reason = "Not enough free space. Replacing a file needs room for the full new copy while the original is kept.";
+			break;
+		case -EACCES: reason = "Access denied by the device. Check file or card protection."; break;
+		case -EROFS: reason = "The destination filesystem is read-only."; break;
+		case -ENOENT: reason = "A source or destination file or folder was not found."; break;
+		case -ENODEV: reason = "The device is unavailable."; break;
+		case -EIO: reason = "The device reported an I/O failure."; break;
+		case -ETIMEDOUT: reason = "The device did not respond in time."; break;
+		case -ENOMEM: reason = "Not enough memory to complete the transfer."; break;
+		case -EEXIST: reason = "A destination or recovery file already exists."; break;
+		default: reason = "The operation failed. Keep the error code and device details below for diagnosis."; break;
 	}
+	snprintf(out, size, "%s (%d)\n%s\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
+	         copy_diag.stage ? copy_diag.stage : "Copy failed", error, reason,
+	         copy_diag.name, copy_diag.source, copy_diag.destination,
+	         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
+	         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
 }
 
 /* File replacements keep the old entry until a complete sibling copy has
@@ -91,6 +95,14 @@ static int copyPathMissing(int result)
 {
 	/* genGetStat uses fileXio errno values, not raw libmc result codes. */
 	return result == -ENOENT;
+}
+
+/* libmc passes FIO_O_EXCL (0x0800) straight to McOpen, where the same
+ * bit is sceMcFileAttrPDAExec. Never set it on physical memory cards. */
+static int copyIsPhysicalMcPath(const char *path)
+{
+	return path && path[0] == 'm' && path[1] == 'c' &&
+	       (path[2] == '0' || path[2] == '1') && path[3] == ':';
 }
 
 static u32 copyChecksum(u32 hash, const void *data, int size)
@@ -1044,6 +1056,22 @@ non_PSU_RESTORE_init:
 			filerCopyDiagStage("Checking destination");
 			ret = copyPrepareTarget(out, replace_target, replace_backup);
 			if (ret < 0) goto copy_file_exit;
+		}
+
+		/* The MC driver treats FIO_O_EXCL as a file attribute, not an
+		 * exclusive-open request. The transaction already found an unused
+		 * destination/staging name; recheck it before creation. This is not
+		 * atomic exclusion; paste owns the operation after workers drain. */
+		if (copyIsPhysicalMcPath(out)) {
+			iox_stat_t existing;
+			filerCopyDiagStage("Checking destination");
+			ret = genGetStat(out, &existing);
+			if (!copyPathMissing(ret)) {
+				if (ret >= 0)
+					ret = -EEXIST;
+				goto copy_file_exit;
+			}
+			open_mode = FIO_O_WRONLY | FIO_O_CREAT;
 		}
 		filerCopyDiagStage("Opening destination");
 		out_fd = genOpen(out, open_mode);

@@ -545,9 +545,12 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	/*
 	 * Ordinary ELF launches used to leave audsrv's looping BGM voice alive.
 	 * Mute until the legacy launcher validates the target; final cleanup
-	 * stops audsrv. A failed validation can restore the existing audio below.
+	 * stops audsrv. Neutrino still has an interactive options menu, so keep
+	 * its sounds live until the existing committed-launch cleanup (#200).
+	 * A failed validation can restore the existing audio below.
 	 */
-	dashSoundSuspend();
+	if (!IsNeutrinoIsoPath(path))
+		dashSoundSuspend();
 	dashGfxRestoreLegacyState();
 	dashClassicUiInstall(0); /* launch-time prompts stay classic */
 	ExecuteMainAction(path, &exec_ctx);
