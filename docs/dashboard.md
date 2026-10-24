@@ -233,6 +233,20 @@ a launch key held when the delay ends starts its application, and a
 configured `LK_auto` path starts after the classic timeout unless a button
 is pressed (a countdown banner is shown).
 
+## Language
+
+Settings > System > Language selects English, Spanish, French, Italian,
+Polish, Portuguese, Brazilian Portuguese, German or Hungarian. Dashboard
+navigation, Settings labels, common actions and copy/delete progress use the
+selected language. An optional external `.LNG` file can override the same
+message IDs; existing files remain compatible. Some extended help and
+specialist dialogs still use English.
+
+Filenames, application titles and descriptions, bookmarks, paths and protocol
+identifiers retain their original text. `Network Host (host:)` means files
+shared by a computer running the PS2Link host service over the network. It is
+separate from the UDPFS server entry.
+
 ## Themes
 
 Settings > Appearance chooses among 19 built-in themes (OSD Classic, PS2

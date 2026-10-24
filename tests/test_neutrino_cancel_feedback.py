@@ -40,7 +40,7 @@ int main(void) {
 }
 """
 with tempfile.TemporaryDirectory(prefix='neutrino-cancel-') as folder:
- p=Path(folder);(p/'test.c').write_text(c);exe=p/'test.exe'
+ p=Path(folder);(p/'test.c').write_text("#define localizeDashboardText(s) (s)\n" + c);exe=p/'test.exe'
  subprocess.run([shutil.which('gcc') or shutil.which('cc'),'-std=c11','-Wall','-Wextra','-Werror',str(p/'test.c'),'-o',str(exe)],check=True)
  subprocess.run([str(exe)],check=True,timeout=10)
 print('PASS: cancelled Neutrino launch is quiet; actual errors and ELF fallback still warn')

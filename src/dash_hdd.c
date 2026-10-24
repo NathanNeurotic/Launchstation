@@ -526,7 +526,7 @@ static int pickSize(const char *title, int min_mb, int max_mb, int start_mb)
 				hx += dashDrawButton(hx, hy, -1, "L2") + 2;
 				hx += dashDrawButton(hx, hy, -1, "R2") + 4;
 				hx = dashTextS(hx, hy + 4.5f, "10 GB", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
-				dashModalHintRow(hx, hy, dashOkIcon(), "OK", dashBackIcon(), "Cancel");
+				dashModalHintRow(hx, hy, dashOkIcon(), localizeDashboardText("OK"), dashBackIcon(), localizeDashboardText("Cancel"));
 			}
 			dashGfxPresent();
 		}
@@ -556,7 +556,7 @@ static void actCreate(void)
 	if (!dashModalKeyboard("New partition name", name, MAX_PART_NAME - 3) || name[0] == '\0')
 		return;
 	if (!strncmp(name, "__", 2) &&
-	    !dashModalConfirm("System partition name", "Names starting with \"__\" are reserved for the system and for PSBBN. Create it anyway?", "Create", 1))
+	    !dashModalConfirm("System partition name", "Names starting with \"__\" are reserved for the system and for PSBBN. Create it anyway?", localizeDashboardText("Create"), 1))
 		return;
 	max_mb = hm.free_mb < MAX_PART_MB ? (int)hm.free_mb : MAX_PART_MB;
 	if (max_mb < 128) {
@@ -568,7 +568,7 @@ static void actCreate(void)
 		return;
 	uniqueName(name, unique, sizeof(unique), -1);
 	snprintf(body, sizeof(body), "Create hdd0:%s with %d MB?", unique, size);
-	if (!dashModalConfirm("Create partition", body, "Create", 0))
+	if (!dashModalConfirm("Create partition", body, localizeDashboardText("Create"), 0))
 		return;
 	j = jobNew(HOP_CREATE);
 	if (j == NULL)
@@ -592,7 +592,7 @@ static void actRemove(HddPart *p)
 	HddJob *j;
 
 	snprintf(body, sizeof(body), "Delete hdd0:%s and everything on it? This cannot be undone.", p->name);
-	if (!dashModalConfirm("Remove partition", body, "Remove", 1))
+	if (!dashModalConfirm("Remove partition", body, localizeDashboardText("Remove"), 1))
 		return;
 	dashStrCopy(name, p->name, sizeof(name));
 	j = jobNew(HOP_REMOVE);
@@ -675,9 +675,9 @@ static void actFormat(void)
 		dashModalMessage(DI_WARNING, "Not available", "The PSX internal HDD cannot be formatted from Launchstation.", NULL);
 		return;
 	}
-	if (!dashModalConfirm("Format the HDD", "Every partition, game and file on the internal HDD will be erased.", "Continue", 1))
+	if (!dashModalConfirm("Format the HDD", "Every partition, game and file on the internal HDD will be erased.", localizeDashboardText("Continue"), 1))
 		return;
-	if (!dashModalConfirm("Are you sure?", "This erases the whole HDD and cannot be undone.", "Format", 1))
+	if (!dashModalConfirm("Are you sure?", "This erases the whole HDD and cannot be undone.", localizeDashboardText("Format"), 1))
 		return;
 	j = jobNew(HOP_FORMAT);
 	if (j == NULL)
@@ -739,7 +739,7 @@ static void injectOne(HddPart *p, const char *src)
 	snprintf(body, sizeof(body),
 	         "Write the APA header of hdd0:%s from %s__Headers/%s/? Required: system.cnf; PS2 titles also icon.sys and list.ico.",
 	         p->name, src, p->name);
-	if (!dashModalConfirm("Inject header", body, "Inject", 1))
+	if (!dashModalConfirm("Inject header", body, localizeDashboardText("Inject"), 1))
 		return;
 	j = jobNew(HOP_INJECT);
 	if (j == NULL)
@@ -784,7 +784,7 @@ static void injectMatching(const char *src, int create_missing)
 	}
 	snprintf(body, sizeof(body), "%d header folder%s in %s__Headers/. Inject them into the matching partitions%s?",
 	         list->nsources, list->nsources == 1 ? "" : "s", src, create_missing ? ", creating missing ones" : "");
-	if (!dashModalConfirm("Inject headers", body, "Inject", 1)) {
+	if (!dashModalConfirm("Inject headers", body, localizeDashboardText("Inject"), 1)) {
 		hddJobFree(list);
 		return;
 	}
@@ -949,7 +949,7 @@ static void partitionMenu(void)
 	if (!console_is_PSX && hm.present)
 		ADD(DI_WARNING, "Format HDD...", NULL, 0, A_FORMAT);
 #undef ADD
-	r = dashModalMenu("HDD Manager", p ? p->name : "hdd0:", items, n, 0);
+	r = dashModalMenu(localizeDashboardText("HDD Manager"), p ? p->name : "hdd0:", items, n, 0);
 	if (r < 0)
 		return;
 	switch (ids[r]) {
@@ -1140,7 +1140,7 @@ static void hddScene(void)
 	dashGfxBeginFrame();
 	dashBgDraw();
 	dashIcon(DI_HDD, 40, 20, 24, DASH_C_ACCENT);
-	dashTextS(72, 20, "HDD Manager", DASH_FS_TITLE, DASH_C_TEXT);
+	dashTextS(72, 20, localizeDashboardText("HDD Manager"), DASH_FS_TITLE, DASH_C_TEXT);
 	snprintf(line, sizeof(line), "Status: %s", hddStatusShortText(hm.status));
 	dashTextRight(DASH_SAFE_R, 26, line, DASH_FS_SMALL, hm.status == 0 ? DASH_C_OK : DASH_C_WARM);
 
@@ -1248,6 +1248,8 @@ void dashHddManager(void)
 			top = sel;
 		if (sel >= top + ROWS)
 			top = sel - ROWS + 1;
+		if (sel_anim < top || sel_anim >= top + ROWS)
+			sel_anim = (float)sel;
 		/* Keep PFS usage polling as before; HDL title RPCs are explicit
 		 * (R1 or Rename game) and never run on cursor movement. */
 		if (hm.n > 0 && Timer() - last_move > 180)

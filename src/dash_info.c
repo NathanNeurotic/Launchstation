@@ -111,7 +111,7 @@ static void sheetShow(int icon, const char *title, const char *subtitle, const S
 			dashGfxScissorReset();
 			if (max_scroll > 0.0f)
 				dashDrawScrollbar(x + w - 14, body_y, body_h, (int)scroll, (int)body_h, (int)total);
-			dashModalHintRow(x + 24, y + h - 36, dashOkIcon(), "Close", -1, NULL);
+			dashModalHintRow(x + 24, y + h - 36, dashOkIcon(), localizeDashboardText("Close"), -1, NULL);
 			if (max_scroll > 0.0f) /* one D-pad glyph, up/down highlighted */
 				dashDrawButton(x + w - 24 - 22, y + h - 36, DI_DPAD_UD, NULL);
 			dashGfxPopOffset();
@@ -395,7 +395,7 @@ void dashShowFontViewer(void)
 		dashModalBackdrop(dashEaseOutCubic(open));
 		dashModalPanel(x, y, w, h, 1.0f);
 		dashIcon(DI_TEXT, x + 24, y + 18, 22, DASH_C_ACCENT);
-		dashTextS(x + 56, y + 18, "Font viewer", DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextS(x + 56, y + 18, localizeDashboardText("Font viewer"), DASH_FS_LABEL, DASH_C_TEXT);
 		dashTextRight(x + w - 24, y + 22, setting->font_file[0] ? setting->font_file : "built-in font", DASH_FS_CAPTION, DASH_C_TEXT3);
 		for (r = 0; r <= 16; r++) {
 			for (c = 0; c <= 16; c++) {
@@ -417,7 +417,7 @@ void dashShowFontViewer(void)
 				                   (int)((cy + 3) * sy), gsColor(DASH_C_TEXT));
 			}
 		}
-		dashModalHintRow(x + 24, y + h - 36, dashOkIcon(), "Close", -1, NULL);
+		dashModalHintRow(x + 24, y + h - 36, dashOkIcon(), localizeDashboardText("Close"), -1, NULL);
 		dashGfxPresent();
 	}
 	dashSoundPlay(DASH_SND_CANCEL);

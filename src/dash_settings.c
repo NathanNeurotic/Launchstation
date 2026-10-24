@@ -368,8 +368,8 @@ static const SetItem net_items[] = {
 };
 
 static const SetItem language_items[] = {
-    {ST_CHOICE, S_LANGUAGE, "Language", "Language of the messages from file operations and tools."},
-    {ST_PATH, S_LANG_FILE, "Language file", "External .LNG translation for the messages of the file operations and tools."},
+    {ST_CHOICE, S_LANGUAGE, "Language", "Dashboard labels, file operations and tools."},
+    {ST_PATH, S_LANG_FILE, "Language file", "Optional .LNG overrides, including dashboard labels."},
 };
 
 static const SetItem gameid_items[] = {
@@ -490,7 +490,7 @@ static const SetPage pages[P_COUNT] = {
     [P_MMCE_BACKUP] = PAGE("MMCE backup & sync", DI_MC, "Backup, cloud, IGR return and maintenance controls in one place.", mmce_backup_items),
     [P_NETWORK] = PAGE("Network", DI_NETWORK, "Console address for FTP, PS2Link and UDPFS.", net_items),
     [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules and settings locations.", system_items),
-    [P_LANGUAGE] = PAGE("Language", DI_TEXT, "These translations apply to file operations and tools.", language_items),
+    [P_LANGUAGE] = PAGE("Language", DI_TEXT, "Some extended help remains in English.", language_items),
     [P_PSU] = PAGE("Memory card backup files", DI_MC, "Naming and overwrite behavior when creating PSU backups.", psu_items),
     [P_THEME_BG] = PAGE("Background", DI_IMAGE, "Scene, brightness and static wallpaper.", tbg_items),
     [P_THEME_COLORS] = PAGE("Interface colours", DI_PALETTE, "Colours and opacity for text, focus and panels.", tcol_items),
@@ -1164,7 +1164,7 @@ static void colorEditor(const char *title, int id)
 				dashIcon(dashOkIcon(), hx, hy + 3, 14, DASH_C_TEXT2);
 				hx = dashTextS(hx + 18, hy + 4, "Done", DASH_FS_CAPTION, DASH_C_TEXT2) + 10;
 				dashIcon(dashBackIcon(), hx, hy + 3, 14, DASH_C_TEXT2);
-				dashTextS(hx + 18, hy + 4, "Cancel", DASH_FS_CAPTION, DASH_C_TEXT2);
+				dashTextS(hx + 18, hy + 4, localizeDashboardText("Cancel"), DASH_FS_CAPTION, DASH_C_TEXT2);
 			}
 		}
 		dashGfxPopAlpha();
@@ -1440,7 +1440,7 @@ static int numberInfo(int id, int *val, int *lo, int *hi, char *text, int text_s
 			if (*val)
 				snprintf(text, text_size, "%d s", *val);
 			else
-				snprintf(text, text_size, "Off");
+				snprintf(text, text_size, "%s", localizeDashboardText("Off"));
 			return 1;
 		case S_TIMEOUT:
 			*val = setting->timeout, *lo = 0, *hi = 99;
@@ -1449,7 +1449,7 @@ static int numberInfo(int id, int *val, int *lo, int *hi, char *text, int text_s
 		case S_MMCE_BACKUP_KEEP:
 			*val = dashCfg.mmce_backup_keep, *lo = 0, *hi = 99;
 			if (*val == 0)
-				snprintf(text, text_size, "All");
+				snprintf(text, text_size, "%s", localizeDashboardText("All"));
 			else
 				snprintf(text, text_size, "%d", *val);
 			return 1;
@@ -1618,7 +1618,7 @@ static void editPath(const SetItem *it)
 	if (!pathInfo(it->id, &ps))
 		return;
 	startDirOf(ps.field, start, sizeof(start));
-	snprintf(title, sizeof(title), "%s", it->label);
+	snprintf(title, sizeof(title), "%s", localizeDashboardText(it->label));
 	out[0] = '\0';
 	if (!dashPickPath(title, start, ps.mode, ps.ext, out, sizeof(out)))
 		return;
@@ -1653,7 +1653,7 @@ static void editIp(const SetItem *it)
 	char buf[16];
 
 	dashStrCopy(buf, ipField(it->id), sizeof(buf));
-	if (!dashModalIp(it->label, it->help, buf, sizeof(buf)) || !strcmp(buf, ipField(it->id)))
+	if (!dashModalIp(localizeDashboardText(it->label), localizeDashboardText(it->help), buf, sizeof(buf)) || !strcmp(buf, ipField(it->id)))
 		return;
 	dashStrCopy(ipField(it->id), buf, 16);
 	updateIpConfigRuntimeState();
@@ -1685,7 +1685,7 @@ static void editLaunchKey(const SetItem *it, int what)
 	if (lkeyLocked())
 		return;
 	if (what == 0) {
-		snprintf(title, sizeof(title), "Launch key: %s", it->label);
+		snprintf(title, sizeof(title), "Launch key: %s", localizeDashboardText(it->label));
 		startDirOf(setting->LK_Path[lk], start, sizeof(start));
 		out[0] = '\0';
 		if (!dashPickPath(title, start, DASH_PICK_LAUNCH, "ELF", out, sizeof(out)))
@@ -1953,7 +1953,7 @@ static int settingsSaveSoftwareClock(const char *timestamp)
 {
 	if (!dashModalConfirm("Save clock and settings?",
 	                      "Save this time and your current Settings changes before starting the software clock?",
-	                      "Save", 0))
+	                      localizeDashboardText("Save"), 0))
 		return 0;
 	dashStrCopy(dashCfg.software_clock, timestamp, sizeof(dashCfg.software_clock));
 	menuTitleUpdateAsync(1);
@@ -2153,7 +2153,7 @@ static void editScanPaths(void)
 		if (r < dashCfg.nscan) {
 			char body[DASH_PATH_MAX + 48];
 			snprintf(body, sizeof(body), "Stop looking for applications in %s?", dashCfg.scan[r]);
-			if (dashModalConfirm("Remove folder", body, "Remove", 0)) {
+			if (dashModalConfirm("Remove folder", body, localizeDashboardText("Remove"), 0)) {
 				for (i = r; i < dashCfg.nscan - 1; i++)
 					memcpy(dashCfg.scan[i], dashCfg.scan[i + 1], DASH_PATH_MAX);
 				dashCfg.nscan--;
@@ -2188,7 +2188,7 @@ static void editScanPaths(void)
 
 static void resetScreen(void)
 {
-	if (!dashModalConfirm("Reset screen settings", "Video mode Auto and a centred picture?", "Reset", 0))
+	if (!dashModalConfirm(localizeDashboardText("Reset screen settings"), "Video mode Auto and a centred picture?", localizeDashboardText("Reset"), 0))
 		return;
 	setting->color[COLOR_BACKGR] = DEF_COLOR1;
 	setting->color[COLOR_FRAME] = DEF_COLOR2;
@@ -2209,7 +2209,7 @@ static void resetScreen(void)
 
 static void resetDisplayThemeDefaults(void)
 {
-	if (!dashModalConfirm("Reset display & theme defaults", "Restore the screen, motion, animation and OSD Classic theme defaults?", "Reset", 0))
+	if (!dashModalConfirm("Reset display & theme defaults", "Restore the screen, motion, animation and OSD Classic theme defaults?", localizeDashboardText("Reset"), 0))
 		return;
 	setting->color[COLOR_BACKGR] = DEF_COLOR1;
 	setting->color[COLOR_FRAME] = DEF_COLOR2;
@@ -2364,7 +2364,7 @@ static void themeSave(void)
 		strcpy(name, "MyTheme");
 	snprintf(body, sizeof(body), "Save the current theme as %sTHEMES/%s/theme.cfg? An existing theme with that name is replaced.",
 	         dashStoreDir(), name);
-	if (!dashModalConfirm("Save theme", body, "Save", 0))
+	if (!dashModalConfirm("Save theme", body, localizeDashboardText("Save"), 0))
 		return;
 	j = (ThemeIoJob *)malloc(sizeof(ThemeIoJob));
 	if (j == NULL)
@@ -2520,7 +2520,7 @@ static void runThemeAction(int id)
 			themeSave();
 			break;
 		case S_T_DEFAULT:
-			if (dashModalConfirm("Restore default theme", "Replace the current theme with OSD Classic? Saved theme folders are not affected.", "Restore", 0)) {
+			if (dashModalConfirm(localizeDashboardText("Restore default theme"), "Replace the current theme with OSD Classic? Saved theme folders are not affected.", "Restore", 0)) {
 				dashThemeSetPreset(0);
 				dashCfg.effects = 100;
 				dashCfg.anim = 100;
@@ -2532,7 +2532,7 @@ static void runThemeAction(int id)
 			char body[160];
 			int p = dashThemeBasePreset();
 			snprintf(body, sizeof(body), "Undo every change and return to \"%s\"?", dashThemePresetInfo(p)->name);
-			if (dashModalConfirm("Reset entire theme", body, "Reset", 0)) {
+			if (dashModalConfirm(localizeDashboardText("Reset entire theme"), body, localizeDashboardText("Reset"), 0)) {
 				dashThemeSetPreset(p);
 				dashCfg.effects = 100;
 				dashCfg.anim = 100;
@@ -2591,7 +2591,7 @@ static void runAction(int id)
 			dashRescanLibrary(1);
 			break;
 		case S_CLEAR_RECENT:
-			if (dashModalConfirm("Clear recent applications", "Remove every entry from the recent list? Applications are not affected.", "Clear", 0)) {
+			if (dashModalConfirm(localizeDashboardText("Clear recent applications"), "Remove every entry from the recent list? Applications are not affected.", localizeDashboardText("Clear"), 0)) {
 				dashStoreClearRecent();
 				dashHomeRebuild();
 				dashToast(DASH_TOAST_OK, "Recent list cleared");
@@ -2788,7 +2788,7 @@ static const char *disabledHelp(const SetItem *it)
 		case S_T_DATE: return "Enable the clock to configure its placement and format.";
 		case S_TIMEOUT: return "Choose an automatic start target before setting its timeout.";
 		case S_IGR_AFTER_APP: return "Set 'After IGR, open' to Application first.";
-		default: return it->help;
+		default: return localizeDashboardText(it->help);
 	}
 }
 
@@ -2818,7 +2818,7 @@ static void editPathMenu(const SetItem *it)
 	if (!pathInfo(it->id, &ps))
 		return;
 	menu[1].disabled = !ps.field[0];
-	r = dashModalMenu(it->label, ps.field[0] ? ps.field : "Default", menu, NITEMS(menu), 0);
+	r = dashModalMenu(localizeDashboardText(it->label), ps.field[0] ? ps.field : localizeDashboardText("Default"), menu, NITEMS(menu), 0);
 	if (r == 0)
 		editPath(it);
 	else if (r == 1)
@@ -2835,7 +2835,7 @@ static void editLaunchMenu(const SetItem *it)
 	if (lkeyLocked())
 		return;
 	menu[2].disabled = !setting->LK_Path[lk][0];
-	r = dashModalMenu(it->label, setting->LK_Path[lk][0] ? setting->LK_Path[lk] : "Not set", menu, NITEMS(menu), 0);
+	r = dashModalMenu(localizeDashboardText(it->label), setting->LK_Path[lk][0] ? setting->LK_Path[lk] : localizeDashboardText("Not set"), menu, NITEMS(menu), 0);
 	if (r >= 0)
 		editLaunchKey(it, r);
 }
@@ -2892,7 +2892,7 @@ static void settingsInput(const DashInput *in)
 	} else if (it->type == ST_PAGE && (in->pressed & (DASH_IN_OK | DASH_IN_RIGHT))) {
 		openPage(it->id);
 	} else if (it->type == ST_COLOR && (in->pressed & DASH_IN_OK)) {
-		colorEditor(it->label, it->id);
+		colorEditor(localizeDashboardText(it->label), it->id);
 	} else if (it->type == ST_CHOICE && it->id == S_T_PRESET && (in->pressed & DASH_IN_OK)) {
 		choosePreset();
 	} else if (it->type == ST_NUMBER && (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
@@ -2921,7 +2921,11 @@ static void settingsInput(const DashInput *in)
 			else if (in->pressed & DASH_IN_RIGHT)
 				cur = (cur + 1) % n;
 			else if (n > 2) {
-				int r = dashModalChoice(it->label, names, n, cur);
+				const char *display[128];
+				int choice;
+				for (choice = 0; choice < n && choice < 128; choice++)
+					display[choice] = it->id == S_LANGUAGE || it->id == S_T_PRESET ? names[choice] : localizeDashboardText(names[choice]);
+				int r = dashModalChoice(localizeDashboardText(it->label), n <= 128 ? display : names, n, cur);
 				if (r < 0)
 					return;
 				cur = r;
@@ -2973,12 +2977,12 @@ static void settingsDraw(void)
 	trail[0] = '\0';
 	for (i = 0; i < page_depth; i++) {
 		int len = strlen(trail);
-		snprintf(trail + len, sizeof(trail) - len, "%s%s", i ? " > " : "", pages[page_stack[i].page].name);
+		snprintf(trail + len, sizeof(trail) - len, "%s%s", i ? " > " : "", localizeDashboardText(pages[page_stack[i].page].name));
 	}
 	if (page_depth)
 		dashTextFit(ix, 66, iw - 126, trail, DASH_FS_CAPTION, DASH_C_TEXT3);
-	dashDrawSectionTitle(ix, 82, c->name, NULL);
-	dashTextFit(ix, 112, iw, c->help, DASH_FS_CAPTION, DASH_C_TEXT3);
+	dashDrawSectionTitle(ix, 82, localizeDashboardText(c->name), NULL);
+	dashTextFit(ix, 112, iw, localizeDashboardText(c->help), DASH_FS_CAPTION, DASH_C_TEXT3);
 	{
 		int dirty = anyDirtyCached();
 		int pending = cfg_pending[0] || cfg_pending[1] || dashStoreSettingsPending();
@@ -2994,6 +2998,8 @@ static void settingsDraw(void)
 		item_top = item;
 	if (item >= item_top + ITEM_ROWS)
 		item_top = item - ITEM_ROWS + 1;
+	if (item_anim < item_top || item_anim >= item_top + ITEM_ROWS)
+		item_anim = (float)item;
 
 	/* items */
 	dashDrawPanelBox(ix - 6, iy - 6, iw + 12, ITEM_ROWS * irow + 12, 14);
@@ -3016,19 +3022,19 @@ static void settingsDraw(void)
 		if (it->type == ST_INFO) {
 			char buf[64];
 			snprintf(buf, sizeof(buf), "%s / %s", ip, netmask);
-			dashText(ix + 38, y + 4.0f, it->label, DASH_FS_SMALL, DASH_C_TEXT3);
+			dashText(ix + 38, y + 4.0f, localizeDashboardText(it->label), DASH_FS_SMALL, DASH_C_TEXT3);
 			dashTextRight(ix + iw - 12, y + 4.0f, buf, DASH_FS_SMALL, DASH_C_TEXT2);
 			continue;
 		}
 		if (it->type == ST_PAGE) {
-			dashTextFit(ix + 38, y + 4.0f, iw - 70, it->label, DASH_FS_SMALL, col);
+			dashTextFit(ix + 38, y + 4.0f, iw - 70, localizeDashboardText(it->label), DASH_FS_SMALL, col);
 			dashIcon(DI_PLAY, ix + iw - 22, y + 9, 12, DASH_C_TEXT3);
 			continue;
 		}
 		{
 			const char *ast = it->type == ST_ACTION ? actionStatus(it->id) : NULL;
 			float label_w = it->type == ST_ACTION ? (ast ? iw * 0.58f : iw - 70) : iw * 0.56f - 50;
-			dashTextFit(ix + 38, y + 4.0f, label_w, it->label, DASH_FS_SMALL, col);
+			dashTextFit(ix + 38, y + 4.0f, label_w, localizeDashboardText(it->label), DASH_FS_SMALL, col);
 		}
 		if (it->type == ST_COLOR) {
 			int alpha;
@@ -3047,7 +3053,7 @@ static void settingsDraw(void)
 			int cur, n = choiceInfo(it->id, &cur, &names, &single);
 			if (n > 0 && cur >= 0 && cur < n) {
 				float maxw = iw * 0.40f;
-				float vw = dashTextWidth(names[cur], DASH_FS_SMALL);
+				float vw = dashTextWidth((it->id == S_LANGUAGE || it->id == S_T_PRESET ? names[cur] : localizeDashboardText(names[cur])), DASH_FS_SMALL);
 				float vx;
 				if (vw > maxw)
 					vw = maxw;
@@ -3057,9 +3063,9 @@ static void settingsDraw(void)
 					dashIcon(DI_PLAY, ix + iw - 16, y + 8, 10, DASH_C_ACCENT);
 				}
 				if (on)
-					dashTextScroll(vx, y + 4.0f, maxw, names[cur], DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : (n == 2 && names == onoff && cur == 1) ? DASH_C_OK : DASH_C_ACCENT);
+					dashTextScroll(vx, y + 4.0f, maxw, (it->id == S_LANGUAGE || it->id == S_T_PRESET ? names[cur] : localizeDashboardText(names[cur])), DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : (n == 2 && names == onoff && cur == 1) ? DASH_C_OK : DASH_C_ACCENT);
 				else
-					dashTextFit(vx, y + 4.0f, maxw, names[cur], DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : DASH_C_ACCENT);
+					dashTextFit(vx, y + 4.0f, maxw, (it->id == S_LANGUAGE || it->id == S_T_PRESET ? names[cur] : localizeDashboardText(names[cur])), DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : DASH_C_ACCENT);
 			}
 		} else if (it->type == ST_NUMBER || it->type == ST_PATH || it->type == ST_IP || it->type == ST_LKEY) {
 			char text[MAX_PATH], leaf[MAX_PATH];
@@ -3112,7 +3118,7 @@ static void settingsDraw(void)
 	/* help line */
 	{
 		const SetItem *it = curItem();
-		const char *help = itemDisabled(it) ? disabledHelp(it) : it->help;
+		const char *help = itemDisabled(it) ? disabledHelp(it) : localizeDashboardText(it->help);
 		if (it->type == ST_CHOICE && it->id == S_T_PRESET)
 			help = dashThemePresetInfo(dashThemeBasePreset())->desc;
 		if (help)

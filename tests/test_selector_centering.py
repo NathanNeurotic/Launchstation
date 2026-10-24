@@ -20,10 +20,10 @@ def num(text, pattern):
 lists = []
 s = src("dash_settings.c")
 irow = num(s, r"irow = (\d+)")
-lists.append(("Settings", 2, irow - 5, s, r"dashTextFit\(ix \+ 38, y \+ ([\d.]+)f, iw - 70, it->label", SMALL))
+lists.append(("Settings", 2, irow - 5, s, r"dashTextFit\(ix \+ 38, y \+ ([\d.]+)f, iw - 70, localizeDashboardText\(it->label", SMALL))
 lists.append(("Settings value", 2, irow - 5, s, r"dashTextFit\(vx, y \+ ([\d.]+)f, maxw, v,", SMALL))
 t = src("dash_tools.c")
-lists.append(("Tools", 0, num(t, r"ly = 102, row_h = (\d+)") - 3, t, r"dashTextFit\(lx \+ 34, y \+ ([\d.]+)f, lw - 44, tools\[i\]\.name", SMALL))
+lists.append(("Tools", 0, num(t, r"ly = 102, row_h = (\d+)") - 3, t, r"dashTextFit\(lx \+ 34, y \+ ([\d.]+)f, lw - 44, localizeDashboardText\(tools\[i\]\.name", SMALL))
 f = src("dash_files.c")
 lists.append(("Files", 0, num(f, r"ly = 102, row_h = (\d+)") - 3, f, r"dashTextFit\(lx \+ 34, y \+ ([\d.]+), lw - 50, f->label", SMALL))
 a = src("dash_apps.c")

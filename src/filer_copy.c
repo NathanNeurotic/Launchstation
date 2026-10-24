@@ -65,8 +65,25 @@ static int copyDiagFail(int result)
 
 void filerCopyDiagFormat(char *out, int size, int result)
 {
-	snprintf(out, size, "%s (%d)\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
-	         copy_diag.stage ? copy_diag.stage : "Copy failed", copy_diag.error ? copy_diag.error : result,
+	int error = copy_diag.error ? copy_diag.error : result;
+	const char *reason;
+
+	switch (error) {
+		case -ENOSPC:
+			reason = "Not enough free space. Replacing a file needs room for the full new copy while the original is kept.";
+			break;
+		case -EACCES: reason = "Access denied by the device. Check file or card protection."; break;
+		case -EROFS: reason = "The destination filesystem is read-only."; break;
+		case -ENOENT: reason = "A source or destination file or folder was not found."; break;
+		case -ENODEV: reason = "The device is unavailable."; break;
+		case -EIO: reason = "The device reported an I/O failure."; break;
+		case -ETIMEDOUT: reason = "The device did not respond in time."; break;
+		case -ENOMEM: reason = "Not enough memory to complete the transfer."; break;
+		case -EEXIST: reason = "A destination or recovery file already exists."; break;
+		default: reason = "The operation failed. Keep the error code and device details below for diagnosis."; break;
+	}
+	snprintf(out, size, "%s (%d)\n%s\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
+	         copy_diag.stage ? copy_diag.stage : "Copy failed", error, reason,
 	         copy_diag.name, copy_diag.source, copy_diag.destination,
 	         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
 	         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
@@ -80,6 +97,83 @@ static int copyPathMissing(int result)
 	return result == -ENOENT;
 }
 
+/* A few legacy drivers do not distinguish a missing entry from a generic
+ * getstat failure. Prove absence with a clean directory EOF, never by
+ * treating -1 as ENOENT. Keep this compatibility policy local to copying. */
+static int copyLookupPath(const char *path, iox_stat_t *stat)
+{
+	char parent[MAX_PATH];
+	const char *leaf, *colon;
+	iox_dirent_t entry;
+	int ret, fd, close_ret;
+	size_t length;
+
+	if (path == NULL || stat == NULL || !path[0])
+		return -EINVAL;
+	ret = genGetStat(path, stat);
+	if (ret == 0 || ret == -ENOENT)
+		return ret;
+	if (ret != -1 && ret <= 0)
+		return ret;
+	colon = strchr(path, ':');
+	leaf = strrchr(path, '/');
+	if (colon == NULL || (leaf != NULL && leaf < colon))
+		return -EINVAL;
+	if (leaf == NULL)
+		leaf = colon;
+	if (!leaf[1] || !strcmp(leaf + 1, ".") || !strcmp(leaf + 1, ".."))
+		return -EINVAL;
+	length = (size_t)(leaf - path + 1);
+	if (length + (leaf == colon ? 1 : 0) >= sizeof(parent))
+		return -ENAMETOOLONG;
+	memcpy(parent, path, length);
+	if (leaf == colon)
+		parent[length++] = '/';
+	parent[length] = '\0';
+	fd = genDopen(parent);
+	if (fd < 0)
+		return fd;
+	while (1) {
+		memset(&entry, 0, sizeof(entry));
+		ret = fileXioDread(fd, &entry);
+		if (ret <= 0) {
+			if (ret == 0)
+				ret = -ENOENT;
+			break;
+		}
+		if (memchr(entry.name, '\0', sizeof(entry.name)) == NULL) {
+			ret = -EIO;
+			break;
+		}
+		/* Conservatively reject case-only collisions on FAT/card backends. */
+		if (!stricmp(entry.name, leaf + 1)) {
+			*stat = entry.stat;
+			ret = 0;
+			break;
+		}
+	}
+	close_ret = genDclose(fd);
+	if (close_ret < 0 && (ret == 0 || ret == -ENOENT))
+		return close_ret;
+	return ret;
+}
+
+static int copyOpenTarget(const char *path, int mode)
+{
+	/* MCMAN forwards 0x0800 as the PDA attribute, not exclusive creation.
+	 * Recheck the selected new/staging name before using its native flags.
+	 * Other filesystems retain their atomic O_EXCL protection. */
+	if ((!strncmp(path, "mc0:", 4) || !strncmp(path, "mc1:", 4)) &&
+	    (mode & FIO_O_EXCL)) {
+		iox_stat_t stat;
+		int ret = copyLookupPath(path, &stat);
+		if (ret != -ENOENT)
+			return ret < 0 ? ret : -EEXIST;
+		mode &= ~FIO_O_EXCL;
+	}
+	return genOpen(path, mode);
+}
+
 static u32 copyChecksum(u32 hash, const void *data, int size)
 {
 	const unsigned char *p = data;
@@ -91,7 +185,7 @@ static u32 copyChecksum(u32 hash, const void *data, int size)
 static int copyRenameFile(const char *from, const char *to)
 {
 	iox_stat_t stat;
-	int ret = genGetStat(to, &stat);
+	int ret = copyLookupPath(to, &stat);
 	if (!copyPathMissing(ret))
 		return ret < 0 ? ret : -EEXIST;
 	if (!strncmp(from, "mc", 2)) {
@@ -112,9 +206,9 @@ static int copyRenameFile(const char *from, const char *to)
 	}
 	if (ret < 0) return ret;
 	/* Do not discard a recovery copy on an ambiguous/false success. */
-	ret = genGetStat(from, &stat);
+	ret = copyLookupPath(from, &stat);
 	if (!copyPathMissing(ret)) return -EIO;
-	return genGetStat(to, &stat) < 0 ? -EIO : 0;
+	return copyLookupPath(to, &stat) < 0 ? -EIO : 0;
 }
 
 static int copyPrepareTarget(char *out, char *target, char *backup)
@@ -122,7 +216,7 @@ static int copyPrepareTarget(char *out, char *target, char *backup)
 	iox_stat_t stat;
 	char stage[MAX_PATH];
 	const char *leaf;
-	int ret = genGetStat(out, &stat), parent, i;
+	int ret = copyLookupPath(out, &stat), parent, i;
 	target[0] = backup[0] = '\0';
 	if (copyPathMissing(ret)) return 0;
 	if (ret < 0) return ret;
@@ -135,10 +229,10 @@ static int copyPrepareTarget(char *out, char *target, char *backup)
 		if (snprintf(stage, sizeof(stage), "%.*sLS-COPY-%03d.TMP", parent, out, i) >= (int)sizeof(stage) ||
 		    snprintf(backup, MAX_PATH, "%.*sLS-OLD-%03d.BAK", parent, out, i) >= MAX_PATH)
 			return -ENAMETOOLONG;
-		ret = genGetStat(stage, &stat);
+		ret = copyLookupPath(stage, &stat);
 		if (ret >= 0) continue;
 		if (!copyPathMissing(ret)) return ret;
-		ret = genGetStat(backup, &stat);
+		ret = copyLookupPath(backup, &stat);
 		if (ret >= 0) continue;
 		if (!copyPathMissing(ret)) return ret;
 		strcpy(target, out);
@@ -1033,7 +1127,7 @@ non_PSU_RESTORE_init:
 			if (ret < 0) goto copy_file_exit;
 		}
 		filerCopyDiagStage("Opening destination");
-		out_fd = genOpen(out, open_mode);
+		out_fd = copyOpenTarget(out, open_mode);
 		if (out_fd < 0) {
 			ret = out_fd;
 #if FILEOP_TRACE
