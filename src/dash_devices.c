@@ -262,10 +262,10 @@ static DashDevice *add(DashDevice *out, int *n, int max, int icon, int state,
 	d->icon = icon;
 	d->state = state;
 	d->fill = -1.0f;
-	dashStrCopy(d->name, name, sizeof(d->name));
+	dashStrCopy(d->name, localizeDashboardText(name), sizeof(d->name));
 	dashStrCopy(d->mount, mount, sizeof(d->mount));
 	dashStrCopy(d->browse, browse, sizeof(d->browse));
-	dashStrCopy(d->status, status, sizeof(d->status));
+	dashStrCopy(d->status, localizeDashboardText(status), sizeof(d->status));
 	return d;
 }
 

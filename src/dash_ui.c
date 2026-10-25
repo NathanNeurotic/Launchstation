@@ -218,15 +218,22 @@ static float drawButton(float x, float y, int icon, const char *key)
 
 void dashDrawHints(const DashHint *hints, int n)
 {
-	float total = 0.0f, x;
+	float total = 0.0f, x, labels = 0.0f, label_ratio = 1.0f;
 	float y = 400.0f;
 	int i;
 
 	/* Measure exactly what the drawing loop below advances by, so every
 	 * screen's hint bar ends at the same right edge whatever its keys are
 	 * (START/SELECT may be pad icons or text badges). */
-	for (i = 0; i < n; i++)
-		total += buttonWidth(hints[i].button, hints[i].key) + 8.0f + dashTextWidth(hints[i].label, DASH_FS_SMALL) + 24.0f;
+	for (i = 0; i < n; i++) {
+		total += buttonWidth(hints[i].button, hints[i].key) + 8.0f + 24.0f;
+		labels += dashTextWidth(localizeDashboardText(hints[i].label), DASH_FS_SMALL);
+	}
+	/* Long translated action names share the remaining label space. Keep
+	 * button glyphs/readable type sizes intact, ellipsizing labels as needed. */
+	if (labels > 0.0f)
+		label_ratio = dashClampf((DASH_SAFE_R - DASH_SAFE_L + 12.0f - total) / labels, 0.0f, 1.0f);
+	total += labels * label_ratio;
 	x = DASH_SAFE_R - total + 12.0f;
 	if (x < DASH_SAFE_L)
 		x = DASH_SAFE_L;
@@ -244,10 +251,14 @@ void dashDrawHints(const DashHint *hints, int n)
 		dashRectGradH(x - 40, y - 6, DASH_SAFE_R - x + 60, 34, sh, DC(sh.r, sh.g, sh.b, 150));
 	}
 	for (i = 0; i < n; i++) {
+		const char *label = localizeDashboardText(hints[i].label);
+		float label_w = dashTextWidth(label, DASH_FS_SMALL) * label_ratio;
 		x += drawButton(x, y, hints[i].button, hints[i].key) + 8.0f;
 		/* x-height centre (y + 16 * scale) about 1 px under the 22 px button's
 		 * centre, so mixed-case labels read as centred on the button */
-		x = dashTextS(x, y + 1.5f, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT) + 24.0f;
+		if (label_w > 0.0f)
+			dashTextFit(x, y + 1.5f, label_w, label, DASH_FS_SMALL, DASH_C_TEXT);
+		x += label_w + 24.0f;
 	}
 }
 
@@ -374,7 +385,12 @@ void dashDrawHeader(int section, float section_anim)
 		float k = dashClampf(1.0f - dist, 0.0f, 1.0f);
 		DashColor c = dashColorLerp(DASH_C_TEXT3, DASH_C_SELTEXT, k);
 		dashIcon(dashSectionIcon(actual), cx - 8, tab_y + 3, 16, c);
-		dashTextCenter(cx, tab_y + 20, dashSectionName(actual), DASH_FS_CAPTION * 0.92f, c);
+		const char *name = localizeDashboardText(dashSectionLabel(actual));
+		float scale = DASH_FS_CAPTION * 0.92f;
+		if (dashTextWidth(name, scale) <= tab_w - 8)
+			dashTextCenter(cx, tab_y + 20, name, scale, c);
+		else
+			dashTextFit(cx - (tab_w - 8) * 0.5f, tab_y + 20, tab_w - 8, name, scale, c);
 	}
 	{
 		float strip_l = tab_x0 - 40, strip_r = tab_x0 + tab_w * vcount + 40;
@@ -791,6 +807,8 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			top = sel;
 		if (sel >= top + rows)
 			top = sel - rows + 1;
+		if (sel_anim < top || sel_anim >= top + rows)
+			sel_anim = (float)sel;
 		if (preview != NULL) {
 			if (sel != previewed) {
 				preview(sel);
@@ -1009,6 +1027,7 @@ static int loading_done, loading_total;
 static u64 loading_last_draw;
 static float loading_open;
 static int loading_cancel;
+static int loading_file_operation;
 
 int dashLoadingActive(void)
 {
@@ -1017,9 +1036,10 @@ int dashLoadingActive(void)
 
 static void loadingDraw(void)
 {
-	float w = 420.0f, h = loading_remaining[0] ? 158.0f : loading_cancel ? 150.0f : 128.0f;
+	float w = loading_file_operation ? 480.0f : 420.0f;
+	float h = loading_file_operation ? (loading_cancel ? 210.0f : 174.0f) : loading_remaining[0] ? 158.0f : loading_cancel ? 150.0f : 128.0f;
 	float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
-	float bar_y = y + (loading_remaining[0] ? 126.0f : 102.0f);
+	float bar_y = y + (loading_file_operation ? 142.0f : loading_remaining[0] ? 126.0f : 102.0f);
 	float dt = dashVisualUpdate();
 
 	loading_open = dashApproach(loading_open, 1.0f, 12.0f, dt);
@@ -1027,16 +1047,30 @@ static void loadingDraw(void)
 	modalBackdrop(loading_open);
 	dashGfxPushAlpha(loading_open);
 	modalPanel(x, y, w, h, loading_open);
-	dashGfxBlend(DASH_BLEND_ADD);
-	dashDrawSpinner(x + 46, y + 50, 16, DASH_C_ACCENT);
-	dashGfxBlend(DASH_BLEND_NORMAL);
-	dashTextFit(x + 84, y + 26, w - 110, loading_title, DASH_FS_LABEL, DASH_C_TEXT);
-	dashTextFit(x + 84, y + 58, w - 110, loading_status, DASH_FS_SMALL, DASH_C_TEXT2);
-	if (loading_remaining[0])
-		dashTextFit(x + 84, y + 84, w - 110, loading_remaining, DASH_FS_SMALL, DASH_C_TEXT2);
+	if (loading_file_operation) {
+		char line[64];
+		dashTextFit(x + 24, y + 24, w - 48, localizeDashboardText(loading_title), DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextFit(x + 24, y + 62, w - 48, loading_status, DASH_FS_BODY, DASH_C_TEXT);
+		if (loading_remaining[0])
+			dashTextFit(x + 24, y + 100, w - 48, loading_remaining, DASH_FS_SMALL, DASH_C_TEXT2);
+		else if (loading_total > 0) {
+			snprintf(line, sizeof(line), localizeDashboardFormat("Completed items: %d / %d"), loading_done, loading_total);
+			dashTextFit(x + 24, y + 100, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);
+		}
+	} else {
+		dashGfxBlend(DASH_BLEND_ADD);
+		dashDrawSpinner(x + 46, y + 50, 16, DASH_C_ACCENT);
+		dashGfxBlend(DASH_BLEND_NORMAL);
+		dashTextFit(x + 84, y + 26, w - 110, localizeDashboardText(loading_title), DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextFit(x + 84, y + 58, w - 110, loading_status, DASH_FS_SMALL, DASH_C_TEXT2);
+		if (loading_remaining[0])
+			dashTextFit(x + 84, y + 84, w - 110, loading_remaining, DASH_FS_SMALL, DASH_C_TEXT2);
+	}
 	if (loading_total > 0) {
 		float p = dashClampf(loading_done / (float)loading_total, 0.0f, 1.0f);
-		loading_fraction = dashApproach(loading_fraction, p, 14.0f, dt);
+		/* The final frame is followed by closing the overlay. It must show
+		 * completion rather than disappear with a partly filled bar. */
+		loading_fraction = p >= 1.0f ? 1.0f : dashApproach(loading_fraction, p, 14.0f, dt);
 		dashPanel(x + 30, bar_y, w - 60, 8, 4, dashColorA(DASH_C_TEXT3, 0.3f));
 		if (loading_fraction > 0.0f)
 			dashPanel(x + 30, bar_y, (w - 60) * loading_fraction, 8, 4, DASH_C_ACCENT);
@@ -1048,8 +1082,9 @@ static void loadingDraw(void)
 	loading_last_draw = Timer();
 }
 
-void dashLoadingBegin(const char *title)
+static void loadingBegin(const char *title, int file_operation)
 {
+	loading_file_operation = file_operation;
 	loading_active = 1;
 	loading_open = 0.3f;
 	loading_cancel = 0;
@@ -1059,6 +1094,16 @@ void dashLoadingBegin(const char *title)
 	loading_fraction = 0.0f;
 	loading_done = loading_total = 0;
 	loadingDraw();
+}
+
+void dashLoadingBegin(const char *title)
+{
+	loadingBegin(title, 0);
+}
+
+void dashFileLoadingBegin(const char *title)
+{
+	loadingBegin(title, 1);
 }
 
 void dashLoadingSetCancel(int cancelable)
@@ -1088,6 +1133,7 @@ void dashLoadingStatus(const char *status, int done, int total)
 	}
 	loadingProgress(status, done, total);
 	if (!loading_active) {
+		loading_file_operation = 0;
 		/* one-shot status (e.g. a driver load started by a legacy path) */
 		loading_active = 1;
 		loading_open = 0.6f;
@@ -1102,27 +1148,32 @@ void dashLoadingStatus(const char *status, int done, int total)
 
 int DashFileProgress(const char *action, const char *name, u64 remaining, u64 total)
 {
-	int done;
+	int done, changed;
 	if (!DashIsActive() || dashWorkerOnThread()) return 0;
-	if (!loading_active) dashLoadingBegin(action);
-	if (strncmp(loading_status, name ? name : "", sizeof(loading_status) - 1) ||
-	    strncmp(loading_title, action, sizeof(loading_title) - 1))
+	if (!loading_active) dashFileLoadingBegin(action);
+	changed = !loading_file_operation ||
+	          strncmp(loading_status, name ? name : "", sizeof(loading_status) - 1) ||
+	          strncmp(loading_title, action, sizeof(loading_title) - 1) ||
+	          (remaining > 0 && loading_total > 0 && loading_done >= loading_total);
+	loading_file_operation = 1;
+	if (changed)
 		loading_fraction = 0.0f;
 	dashStrCopy(loading_title, action, sizeof(loading_title));
 	dashStrCopy(loading_status, name ? name : "", sizeof(loading_status));
 	if (remaining > total) remaining = total;
-	snprintf(loading_remaining, sizeof(loading_remaining), "Remaining size: %.2f MB",
+	snprintf(loading_remaining, sizeof(loading_remaining), localizeDashboardFormat("Remaining size: %.2f MB"),
 	         (double)remaining / (1024.0 * 1024.0));
 	done = total ? (int)((1.0 - (double)remaining / (double)total) * 10000.0) : 10000;
 	loading_done = done;
 	loading_total = 10000;
-	if (Timer() - loading_last_draw >= 16 || remaining == 0) loadingDraw();
+	if (changed || Timer() - loading_last_draw >= 16 || remaining == 0) loadingDraw();
 	return 1;
 }
 
 void DashFileDeleteProgress(const char *name)
 {
 	if (!DashIsActive() || dashWorkerOnThread() || !loading_active) return;
+	loading_file_operation = 1;
 	if (loading_remaining[0]) {
 		loading_done = loading_total = 0;
 		loading_fraction = 0.0f;
@@ -1156,6 +1207,7 @@ void DashStorageProbeStatus(const char *status)
 void dashLoadingEnd(void)
 {
 	loading_active = 0;
+	loading_file_operation = 0;
 	loading_cancel = 0;
 	dashInputFlush();
 }

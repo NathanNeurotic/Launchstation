@@ -515,7 +515,7 @@ static int docWrite(EdDoc *d, const char *path)
 	}
 	dashStrCopy(d->path, path, sizeof(d->path));
 	d->dirty = 0;
-	dashToast(DASH_TOAST_OK, "Saved");
+	dashToast(DASH_TOAST_OK, localizeDashboardText("Saved"));
 	return 1;
 }
 
@@ -795,7 +795,7 @@ static void copySelection(EdDoc *d, int cut)
 		docDelete(d, a, b);
 	else
 		d->mark = -1;
-	dashToast(DASH_TOAST_INFO, cut ? "Cut" : "Copied");
+	dashToast(DASH_TOAST_INFO, cut ? localizeDashboardText("Cut") : "Copied");
 }
 
 /* returns an M_* action, or -1 */
@@ -966,7 +966,7 @@ static void drawKeyboard(void)
 				dashDrawSelection(ax, ay, aw, 24, 8, 1.0f);
 			else
 				dashPanel(ax, ay, aw, 24, 8, DC(255, 255, 255, (a == KA_CAPS && kb_caps) ? 40 : 18));
-			dashTextCenter(ax + aw * 0.5f, ay + 4, (a == KA_CAPS && kb_caps) ? "CAPS" : ka_names[a], DASH_FS_SMALL, dashItemColor(on));
+			dashTextCenter(ax + aw * 0.5f, ay + 4, (a == KA_CAPS && kb_caps) ? localizeDashboardText("CAPS") : ka_names[a], DASH_FS_SMALL, dashItemColor(on));
 		}
 	}
 }

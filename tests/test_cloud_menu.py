@@ -159,6 +159,6 @@ if not compiler:
 with tempfile.TemporaryDirectory(prefix="wle-cloud-menu-") as tmp:
     harness = Path(tmp) / "cloud.c"
     exe = Path(tmp) / "cloud.exe"
-    harness.write_text(code, encoding="utf-8")
+    harness.write_text("#define localizeDashboardText(s) (s)\n" + code, encoding="utf-8")
     subprocess.run([compiler, "-std=gnu11", str(harness), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)

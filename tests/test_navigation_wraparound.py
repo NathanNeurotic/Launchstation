@@ -57,3 +57,17 @@ assert "int next = wrapCol(col[row] - 1, n);" in home
 assert "int next = wrapCol(col[row] + 1, n);" in home
 
 print("PASS: dashboard list navigation wraps across file, menu and browser views")
+
+# Wrapped/jumped viewports must not animate their highlight through clipped rows.
+for text, guard, snap in (
+    (browser, 'fb.sel_anim < fb.top || fb.sel_anim >= fb.top + FB_ROWS', 'fb.sel_anim = (float)fb.sel;'),
+    (apps, 'sel_anim < top || sel_anim >= top + LIST_ROWS', 'sel_anim = (float)sel;'),
+    (files, 'fsel_anim < ftop || fsel_anim >= ftop + rows', 'fsel_anim = (float)fsel;'),
+    (tools, 'tsel_anim < ttop || tsel_anim >= ttop + rows', 'tsel_anim = (float)tsel;'),
+    (settings, 'item_anim < item_top || item_anim >= item_top + ITEM_ROWS', 'item_anim = (float)item;'),
+    (widgets, 'sel_anim < top || sel_anim >= top + rows', 'sel_anim = (float)sel;'),
+    (hdd, 'sel_anim < top || sel_anim >= top + ROWS', 'sel_anim = (float)sel;'),
+    (src('dash_ui.c'), 'sel_anim < top || sel_anim >= top + rows', 'sel_anim = (float)sel;'),
+):
+    assert guard in text and snap in text
+print('PASS: wrapped highlight remains in the viewport across eight list/modal controllers')

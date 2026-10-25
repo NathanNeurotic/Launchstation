@@ -126,7 +126,7 @@ void dashToolsIgrBackupSetup(void)
 	if (action == 1) {
 		if (!dashModalConfirm("Remove OPL IGR backup helper?",
 		                      "Removes WLE-IGR.ELF from the locations managed by this Launchstation installation. Existing card backups are not deleted.",
-		                      "Remove", 1))
+		                      localizeDashboardText("Remove"), 1))
 			return;
 		dashLoadingBegin("Removing OPL IGR helper");
 		r = wleIgrRemove(&stats, result, sizeof(result));
@@ -283,7 +283,7 @@ static void cloudLink(void)
 		dashTextWrap(x + 24, y + 222, w - 48, 2,
 		             "No Google Cloud setup or payment details are needed. Launchstation can only see files it creates.",
 		             DASH_FS_CAPTION, DASH_C_TEXT3, 15);
-		dashModalHintRow(x + 24, y + h - 36, -1, NULL, dashBackIcon(), "Cancel");
+		dashModalHintRow(x + 24, y + h - 36, -1, NULL, dashBackIcon(), localizeDashboardText("Cancel"));
 		dashGfxPopOffset();
 		dashGfxPopAlpha();
 		dashGfxPresent();
@@ -531,11 +531,11 @@ void dashToolsRefreshMmceStatus(void)
 	if (j->root[0] == '\0')
 		snprintf(mmce_status_text, sizeof(mmce_status_text), "Set destination");
 	else if (j->scan_mmce)
-		snprintf(mmce_status_text, sizeof(mmce_status_text), "Checking...");
+		snprintf(mmce_status_text, sizeof(mmce_status_text), "%s", localizeDashboardText("Checking..."));
 	else
 		snprintf(mmce_status_text, sizeof(mmce_status_text), "Not checked");
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
-	snprintf(google_status_text, sizeof(google_status_text), "Checking...");
+	snprintf(google_status_text, sizeof(google_status_text), "%s", localizeDashboardText("Checking..."));
 #endif
 
 	id = dashWorkerSubmit("Checking MMCE backup status",
@@ -1446,12 +1446,12 @@ static void runTool(const Tool *t)
 {
 	if (t->confirm) {
 		char body[200];
-		const char *action_label = t->confirm == 2 ? t->name : "Continue";
+		const char *action_label = t->confirm == 2 ? localizeDashboardText(t->name) : "Continue";
 		if (t->action == TA_MISC &&
 		    (t->misc_offset == MISC(Misc_PS2Browser) || t->misc_offset == MISC(Misc_OSDSYS)))
 			action_label = "Leave";
-		snprintf(body, sizeof(body), "%s", t->desc);
-		if (!dashModalConfirm(t->name, body, action_label, t->confirm == 2))
+		snprintf(body, sizeof(body), "%s", localizeDashboardText(t->desc));
+		if (!dashModalConfirm(localizeDashboardText(t->name), body, action_label, t->confirm == 2))
 			return;
 	}
 	switch (t->action) {
@@ -1514,13 +1514,15 @@ static void toolsDraw(void)
 	const Tool *t = &tools[tsel];
 	int i;
 
-	dashDrawSectionTitle(48, 68, "Tools", "everything Launchstation can do");
+	dashDrawSectionTitle(48, 68, localizeDashboardText("Tools"), "everything Launchstation can do");
 	if (tsel < ttop + 1)
 		ttop = tsel - 1;
 	if (tsel >= ttop + rows)
 		ttop = tsel - rows + 1;
 	if (ttop < 0)
 		ttop = 0;
+	if (tsel_anim < ttop || tsel_anim >= ttop + rows)
+		tsel_anim = (float)tsel;
 
 	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, rows * row_h + 12, 14);
 	dashGfxScissor(lx - 6, ly - 4, lw + 12, rows * row_h + 8);
@@ -1532,11 +1534,11 @@ static void toolsDraw(void)
 		float y = ly + (i - ttop) * row_h;
 
 		if (tools[i].action == TA_HEADER) {
-			dashText(lx + 8, y + 7, tools[i].name, DASH_FS_CAPTION, DASH_C_ACCENT);
+			dashText(lx + 8, y + 7, localizeDashboardText(tools[i].name), DASH_FS_CAPTION, DASH_C_ACCENT);
 			continue;
 		}
 		dashIcon(tools[i].icon, lx + 10, y + 5, 16, dashItemColor(i == tsel));
-		dashTextFit(lx + 34, y + 3.0f, lw - 44, tools[i].name, DASH_FS_SMALL, dashItemColor(i == tsel));
+		dashTextFit(lx + 34, y + 3.0f, lw - 44, localizeDashboardText(tools[i].name), DASH_FS_SMALL, dashItemColor(i == tsel));
 		if (tools[i].confirm == 2 || tools[i].note)
 			dashGlow(lx + lw - 14, y + 13, 4, 4, tools[i].confirm == 2 ? DASH_C_DANGER : DASH_C_WARM);
 	}
@@ -1549,8 +1551,8 @@ static void toolsDraw(void)
 		dashDrawCard(dx, dy, dw, dh, 16);
 		dashAccentGlow(dx + dw * 0.5f, dy + 66, 80, 60, 1.0f);
 		dashIcon(t->icon, dx + dw * 0.5f - 30, dy + 34, 60, DASH_C_TEXT);
-		dashTextCenter(dx + dw * 0.5f, dy + 108, t->name, DASH_FS_BODY, DASH_C_TEXT);
-		dashTextWrap(dx + 16, dy + 142, dw - 32, 4, t->desc, DASH_FS_CAPTION, DASH_C_TEXT2, 19);
+		dashTextCenter(dx + dw * 0.5f, dy + 108, localizeDashboardText(t->name), DASH_FS_BODY, DASH_C_TEXT);
+		dashTextWrap(dx + 16, dy + 142, dw - 32, 4, localizeDashboardText(t->desc), DASH_FS_CAPTION, DASH_C_TEXT2, 19);
 		if (t->note) {
 			DashColor wb = dashColorScale(DASH_C_WARM, 0.24f);
 			wb.a = 130;

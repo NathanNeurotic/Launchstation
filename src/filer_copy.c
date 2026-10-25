@@ -65,130 +65,29 @@ static int copyDiagFail(int result)
 
 void filerCopyDiagFormat(char *out, int size, int result)
 {
-	snprintf(out, size, "%s (%d)\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
-	         copy_diag.stage ? copy_diag.stage : "Copy failed", copy_diag.error ? copy_diag.error : result,
+	int error = copy_diag.error ? copy_diag.error : result;
+	const char *reason;
+
+	switch (error) {
+		case -ENOSPC:
+			reason = "Not enough free space.";
+			break;
+		case -EACCES: reason = "Access denied by the device. Check file or card protection."; break;
+		case -EROFS: reason = "The destination filesystem is read-only."; break;
+		case -ENOENT: reason = "A source or destination file or folder was not found."; break;
+		case -ENODEV: reason = "The device is unavailable."; break;
+		case -EIO: reason = "The device reported an I/O failure."; break;
+		case -ETIMEDOUT: reason = "The device did not respond in time."; break;
+		case -ENOMEM: reason = "Not enough memory to complete the transfer."; break;
+		case -EEXIST: reason = "A destination file or folder already exists."; break;
+		case -EISDIR: reason = "The destination name refers to a directory."; break;
+		default: reason = "The operation failed. Keep the error code and device details below for diagnosis."; break;
+	}
+	snprintf(out, size, "%s (%d)\n%s\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
+	         copy_diag.stage ? copy_diag.stage : "Copy failed", error, reason,
 	         copy_diag.name, copy_diag.source, copy_diag.destination,
 	         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
 	         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
-}
-
-/* File replacements keep the old entry until a complete sibling copy has
- * been closed and read back. Never delete an existing file to make room. */
-static int copyPathMissing(int result)
-{
-	/* genGetStat uses fileXio errno values, not raw libmc result codes. */
-	return result == -ENOENT;
-}
-
-static u32 copyChecksum(u32 hash, const void *data, int size)
-{
-	const unsigned char *p = data;
-	while (size-- > 0)
-		hash = (hash ^ *p++) * 16777619u;
-	return hash;
-}
-
-static int copyRenameFile(const char *from, const char *to)
-{
-	iox_stat_t stat;
-	int ret = genGetStat(to, &stat);
-	if (!copyPathMissing(ret))
-		return ret < 0 ? ret : -EEXIST;
-	if (!strncmp(from, "mc", 2)) {
-		sceMcTblGetDir info;
-		const char *leaf = strrchr(to, '/');
-		if (leaf == NULL) leaf = strchr(to, ':');
-		if (leaf == NULL || !leaf[1] || strlen(leaf + 1) > sizeof(info.EntryName))
-			return -EINVAL;
-		memset(&info, 0, sizeof(info));
-		memcpy(info.EntryName, leaf + 1, strlen(leaf + 1));
-		ensureMemoryCardPortAccessible(from[2] - '0');
-		ret = mcSetFileInfo(from[2] - '0', 0, from + 4, &info, 0x0010);
-		if (ret < 0) return ret;
-		if (mcSync(0, NULL, &ret) <= 0) return -EIO;
-		if (ret < 0) return ret;
-	} else {
-		ret = fileXioRename(from, to);
-	}
-	if (ret < 0) return ret;
-	/* Do not discard a recovery copy on an ambiguous/false success. */
-	ret = genGetStat(from, &stat);
-	if (!copyPathMissing(ret)) return -EIO;
-	return genGetStat(to, &stat) < 0 ? -EIO : 0;
-}
-
-static int copyPrepareTarget(char *out, char *target, char *backup)
-{
-	iox_stat_t stat;
-	char stage[MAX_PATH];
-	const char *leaf;
-	int ret = genGetStat(out, &stat), parent, i;
-	target[0] = backup[0] = '\0';
-	if (copyPathMissing(ret)) return 0;
-	if (ret < 0) return ret;
-	if (FIO_S_ISDIR(stat.mode)) return -EISDIR;
-	leaf = strrchr(out, '/');
-	if (leaf == NULL) leaf = strchr(out, ':');
-	if (leaf == NULL) return -EINVAL;
-	parent = (int)(leaf - out + 1);
-	for (i = 0; i < 1000; i++) {
-		if (snprintf(stage, sizeof(stage), "%.*sLS-COPY-%03d.TMP", parent, out, i) >= (int)sizeof(stage) ||
-		    snprintf(backup, MAX_PATH, "%.*sLS-OLD-%03d.BAK", parent, out, i) >= MAX_PATH)
-			return -ENAMETOOLONG;
-		ret = genGetStat(stage, &stat);
-		if (ret >= 0) continue;
-		if (!copyPathMissing(ret)) return ret;
-		ret = genGetStat(backup, &stat);
-		if (ret >= 0) continue;
-		if (!copyPathMissing(ret)) return ret;
-		strcpy(target, out);
-		strcpy(out, stage);
-		return 0;
-	}
-	return -EEXIST;
-}
-
-static int copyVerifyTarget(const char *path, const char *name, u64 size, u32 checksum)
-{
-	unsigned char buffer[4096];
-	u64 total = size;
-	u32 hash = 2166136261u;
-	int fd = genOpen(path, FIO_O_RDONLY), count, ret = -EIO;
-	if (fd < 0) return fd;
-	while (size > 0) {
-		DashFileProgress("Verifying file", name, size, total);
-		int request = size < sizeof(buffer) ? (int)size : (int)sizeof(buffer);
-		count = genRead(fd, buffer, request);
-		if (count < 0) { ret = count; goto done; }
-		if (count == 0 || count > request) goto done;
-		hash = copyChecksum(hash, buffer, count);
-		size -= count;
-	}
-	if (hash == checksum) {
-		count = genRead(fd, buffer, 1);
-		ret = count < 0 ? count : (count == 0 ? 0 : -EIO);
-	}
-done:
-	count = genClose(fd);
-	if (ret < 0) return ret;
-	if (count < 0) return count;
-	DashFileProgress("Verifying file", name, 0, total);
-	return 0;
-}
-
-static int copyPublishTarget(char *stage, const char *target, char *backup)
-{
-	int ret = copyRenameFile(target, backup);
-	if (ret < 0) return ret;
-	ret = copyRenameFile(stage, target);
-	if (ret < 0) {
-		/* Preserve both recoverable copies if rollback itself is refused. */
-		copyRenameFile(backup, target);
-		return ret;
-	}
-	genRemove(backup); /* A failed cleanup retains the old copy, never the new one. */
-	strcpy(stage, target);
-	return 0;
 }
 
 static int isMemoryCardLikePath(const char *path)
@@ -208,34 +107,6 @@ static int isHddRootPath(const char *path)
 static int isHddCommonParty(const char *party)
 {
 	return (!strncmp(party, "hdd", 3) && party[3] >= '0' && party[3] <= '9' && !strcmp(party + 4, ":__common"));
-}
-
-/* File drivers may return a positive short transfer. Complete only the
- * remaining bytes, never replay already-consumed data or retry an error.
- * A zero-byte result before the measured length is exhausted is failure. */
-static int copyReadChunk(int fd, void *buffer, int size)
-{
-	int done = 0;
-	while (done < size) {
-		int count = genRead(fd, (char *)buffer + done, size - done);
-		if (count < 0) return count;
-		if (count == 0 || count > size - done) return -EIO;
-		done += count;
-	}
-	return done;
-}
-
-static int copyWriteChunk(int fd, void *buffer, int size)
-{
-	int done = 0;
-	while (done < size) {
-		int count = genWrite(fd, (char *)buffer + done, size - done);
-		if (count < 0) return count;
-		if (count == 0 || count > size - done) return -EIO;
-		done += count;
-		copy_diag.done += count;
-	}
-	return done;
 }
 
 static int calcTransferSpeed(u64 bytes, int millis)
@@ -562,8 +433,6 @@ int copy(char *outPath, const char *inPath, FILEINFO file, int recurses)
 	int nfiles, i;
 	u64 size = 0;
 	u64 original_size = 0;
-	u32 copy_hash = 2166136261u;
-	char replace_target[MAX_PATH] = "", replace_backup[MAX_PATH] = "";
 	int ret = -1, pfsout = -1, pfsin = -1, in_fd = -1, out_fd = -1, buffSize, bytesRead, bytesWritten;
 	int buffCount = 1, buffIndex = 0;
 	int dummy;
@@ -1013,27 +882,15 @@ non_PSU_RESTORE_init:
 			goto copy_file_exit;
 		}
 	} else {            //Any other PasteMode than PM_PSU_BACKUP needs a new output file
-		int open_mode = FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL;
 #if defined(ETH) || defined(UDPFS)
 		if (!strncmp(out, "host:/", 6))
 			makeHostPath(out, out);
 #endif
 		genLimObjName(out, 0);                                //Limit dest file name
 		if (!strcmp(in, out)) { ret = 0; goto copy_file_exit; }
-#ifdef ETH
-		/* The legacy host driver has no stat/rename operations. Retain its
-		 * direct-write behavior; sibling replacement requires those operations. */
-		if (!strncmp(out, "host:", 5))
-			open_mode = FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC;
-		else
-#endif
-		{
-			filerCopyDiagStage("Checking destination");
-			ret = copyPrepareTarget(out, replace_target, replace_backup);
-			if (ret < 0) goto copy_file_exit;
-		}
 		filerCopyDiagStage("Opening destination");
-		out_fd = genOpen(out, open_mode);
+		dummy = genRemove(out);  // Upstream: remove the old file before creating its replacement.
+		out_fd = genOpen(out, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT);
 		if (out_fd < 0) {
 			ret = out_fd;
 #if FILEOP_TRACE
@@ -1075,12 +932,6 @@ non_PSU_RESTORE_init:
 
 	if (size < (u64)buffSize)
 		buffSize = (int)size;
-	/* Bound returned I/O chunks on slow card media so the dashboard gets
-	 * regular opportunities to draw its scene and handle cancellation. */
-	if (DashIsActive() && buffSize > 16384 &&
-	    (!strncmp(in, "mc", 2) || !strncmp(out, "mc", 2) ||
-	     !strncmp(in, "vmc", 3) || !strncmp(out, "vmc", 3)))
-		buffSize = 16384;
 
 	if (buffSize == 0) {
 #if FILEOP_TRACE
@@ -1233,11 +1084,11 @@ non_PSU_RESTORE_init:
 			}
 			copyBuff = (buffIndex == 0) ? buff : buff2;
 			filerCopyDiagStage("Reading source");
-			bytesRead = copyReadChunk(in_fd, copyBuff, buffSize);
+			bytesRead = genRead(in_fd, copyBuff, buffSize);
 			bytesWritten = 0;
 			if (bytesRead == buffSize) {
 				filerCopyDiagStage("Writing destination");
-				bytesWritten = copyWriteChunk(out_fd, copyBuff, buffSize);
+				bytesWritten = genWrite(out_fd, copyBuff, buffSize);
 			}
 #if FILEOP_TRACE
 			chunk_remaining_before = size;
@@ -1260,7 +1111,6 @@ non_PSU_RESTORE_init:
 				ret = bytesRead < 0 ? bytesRead : (bytesWritten < 0 ? bytesWritten : -EIO);
 				goto copy_file_exit;
 			}
-			copy_hash = copyChecksum(copy_hash, copyBuff, buffSize);
 			size -= buffSize;
 			written_size += buffSize;
 			copy_diag.done = original_size - size;
@@ -1308,20 +1158,8 @@ copy_file_data_done:
 		else if ((isPcCardCfPath(out) && !isPcCardCfOnline()) || (isPcCardCfPath(in) && !isPcCardCfOnline()))
 			ret = -EIO;
 		out_fd = -1;  //prevent dual closure attempt
-		if (ret < 0) {
-			if (PM_flag[recurses] != PM_PSU_BACKUP)
-				genRemove(out);
+		if (ret < 0)
 			goto copy_file_exit;
-		}
-	}
-
-	if (replace_target[0]) {
-		filerCopyDiagStage("Verifying replacement");
-		ret = copyVerifyTarget(out, file.name, original_size, copy_hash);
-		if (ret < 0) { genRemove(out); goto copy_file_exit; }
-		filerCopyDiagStage("Publishing replacement");
-		ret = copyPublishTarget(out, replace_target, replace_backup);
-		if (ret < 0) goto copy_file_exit;
 	}
 
 	if (!strncmp(out, "mc", 2)) {                                 //Handle file copied to MC
@@ -1355,7 +1193,8 @@ copy_file_data_done:
 #endif
 	} else {                                          //Handle file copied to non-MC
 		if (!strncmp(out, "host", 4) || !strncmp(out, "udpfs", 5)) {  //for files copied to host/udpfs: we skip Chstat
-		} else if (!strncmp(out, "mass", 4)) {  //for files copied to mass: we skip Chstat
+		} else if (!strncmp(out, "mmce", 4)) {  //MMCE has no Chstat operation
+			} else if (!strncmp(out, "mass", 4)) {  //for files copied to mass: we skip Chstat
 #ifdef MX4SIO
 			} else if (!strncmp(out, "mx4sio", 6)) {  //for files copied to mx4sio: we skip Chstat
 #endif

@@ -164,7 +164,7 @@ static void editMetadata(DashApp *a)
 		                   "# cover = cover.png\r\n"
 		                   "# arg = first argument (one per line)\r\n",
 		                   a->path, a->title);
-		if (!dashModalConfirm("Create metadata file?", "A small text file describing this application will be created next to it. You can then edit it in the Text Editor.", "Create", 0))
+		if (!dashModalConfirm("Create metadata file?", "A small text file describing this application will be created next to it. You can then edit it in the Text Editor.", localizeDashboardText("Create"), 0))
 			return;
 		/* the UI thread writes directly: background work must finish first */
 		if (!dashWorkerAwaitAll("Finishing up"))
@@ -192,7 +192,7 @@ void dashAppActions(DashApp *a)
 	int ids[9];
 	int n = 0, r;
 
-	items[n].icon = DI_PLAY, items[n].label = "Start", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 0;
+	items[n].icon = DI_PLAY, items[n].label = localizeDashboardText("Start"), items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 0;
 	items[n].icon = DI_EDIT, items[n].label = "Start with arguments...", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 1;
 	items[n].icon = DI_STAR, items[n].label = fav ? "Remove from Favorites" : "Add to Favorites", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 2;
 	items[n].icon = DI_PIN, items[n].label = pin ? "Unpin from Home" : "Pin to Home", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 3;
@@ -252,15 +252,15 @@ static void appsMenu(void)
 	int n = 0, r;
 	char filt[48];
 
-	snprintf(filt, sizeof(filt), "Show: %s", filter_names[filter]);
+	snprintf(filt, sizeof(filt), localizeDashboardFormat("Show: %s"), localizeDashboardText(filter_names[filter]));
 	if (a != NULL) {
-		items[n].icon = DI_APP, items[n].label = "Application options...", items[n].detail = NULL, items[n].disabled = 0, n++;
+		items[n].icon = DI_APP, items[n].label = localizeDashboardText("Application options..."), items[n].detail = NULL, items[n].disabled = 0, n++;
 	}
-	items[n].icon = DI_VIEW_GRID + dashCfg.view, items[n].label = "Change view", items[n].detail = NULL, items[n].disabled = 0, n++;
+	items[n].icon = DI_VIEW_GRID + dashCfg.view, items[n].label = localizeDashboardText("Change view"), items[n].detail = NULL, items[n].disabled = 0, n++;
 	items[n].icon = DI_STAR, items[n].label = filt, items[n].detail = NULL, items[n].disabled = 0, n++;
-	items[n].icon = DI_REFRESH, items[n].label = "Refresh library", items[n].detail = "scan now", items[n].disabled = 0, n++;
+	items[n].icon = DI_REFRESH, items[n].label = localizeDashboardText("Refresh library"), items[n].detail = "scan now", items[n].disabled = 0, n++;
 
-	r = dashModalMenu("Applications", NULL, items, n, 0);
+	r = dashModalMenu(localizeDashboardText("Applications"), NULL, items, n, 0);
 	if (r < 0)
 		return;
 	if (a == NULL)
@@ -270,8 +270,8 @@ static void appsMenu(void)
 			dashAppActions(a);
 			break;
 		case 1: {
-			static const char *const views[DASH_VIEW_COUNT] = {"Grid", "List", "Carousel"};
-			int v = dashModalChoice("View", views, DASH_VIEW_COUNT, dashCfg.view);
+			const char *const views[DASH_VIEW_COUNT] = {localizeDashboardText("Grid"), localizeDashboardText("List"), localizeDashboardText("Carousel")};
+			int v = dashModalChoice(localizeDashboardText("View"), views, DASH_VIEW_COUNT, dashCfg.view);
 			if (v >= 0 && v != dashCfg.view) {
 				dashCfg.view = v;
 				view_anim = 0.0f;
@@ -280,7 +280,9 @@ static void appsMenu(void)
 			break;
 		}
 		case 2: {
-			int f = dashModalChoice("Show applications", filter_names, FILTER_COUNT, filter);
+			const char *names[FILTER_COUNT];
+			for (int i = 0; i < FILTER_COUNT; i++) names[i] = localizeDashboardText(filter_names[i]);
+			int f = dashModalChoice(localizeDashboardText("Show applications"), names, FILTER_COUNT, filter);
 			if (f >= 0) {
 				filter = f;
 				dashCfg.app_filter = f;
@@ -416,10 +418,10 @@ static void drawTitleBar(void)
 	dashThemeSetFocusApp(a);
 
 	if (filter != FILTER_ALL)
-		snprintf(sub, sizeof(sub), "%d shown - %s", norder, filter_names[filter]);
+		snprintf(sub, sizeof(sub), "%d shown - %s", norder, localizeDashboardText(filter_names[filter]));
 	else
 		snprintf(sub, sizeof(sub), "%d %s", norder, norder == 1 ? "application" : "applications");
-	dashDrawSectionTitle(48, 68, "Applications", sub);
+	dashDrawSectionTitle(48, 68, localizeDashboardText("Applications"), sub);
 	for (v = 0; v < DASH_VIEW_COUNT; v++) {
 		float x = 526 + v * 26;
 		int on = (v == dashCfg.view);
@@ -499,6 +501,8 @@ static void drawList(void)
 		top = norder - LIST_ROWS;
 	if (top < 0)
 		top = 0;
+	if (sel_anim < top || sel_anim >= top + LIST_ROWS)
+		sel_anim = (float)sel;
 
 	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, LIST_ROWS * LIST_ROW_H + 12, 14);
 	{
@@ -582,9 +586,17 @@ static void drawCarousel(void)
 				float xo = (ad < 1.0f) ? off * 150.0f : (off > 0 ? 1 : -1) * (150.0f + (ad - 1.0f) * 88.0f);
 				float alpha = dashClampf(1.25f - ad * 0.28f, 0.0f, 1.0f);
 				float f = dashClampf(1.0f - ad, 0.0f, 1.0f);
+				float left = cx + xo - s * 0.5f;
+
+				/* The outer cards can be wholly outside the virtual screen.
+				 * Do not submit their procedural tiles, texture binds or artwork
+				 * requests. Keep a margin for outlines and glow; partially visible
+				 * cards retain their exact geometry and back-to-front ordering. */
+				if (left + s < -8.0f || left > DASH_VW + 8.0f)
+					continue;
 
 				dashGfxPushAlpha(alpha);
-				dashDrawAppArt(&dashApps[order[idx]], cx + xo - s * 0.5f, cy - s * 0.5f + ad * 6.0f, s, s, f, (int)(ad + 0.5f));
+				dashDrawAppArt(&dashApps[order[idx]], left, cy - s * 0.5f + ad * 6.0f, s, s, f, (int)(ad + 0.5f));
 				/* Distance is already represented by alpha. A second solid
 				 * rectangle tinted to bg2 created a black square around
 				 * nonfocused artwork in Coverflow, especially with transparent

@@ -74,6 +74,6 @@ int main(void){
 }
 '''
 with tempfile.TemporaryDirectory(prefix='clock-save-') as folder:
- p=Path(folder);(p/'test.c').write_text(code)
+ p=Path(folder);(p/'test.c').write_text("#define localizeDashboardText(s) (s)\n" + code)
  subprocess.run([shutil.which('gcc'),'-std=c99','-Wall','-Wextra','-Werror',str(p/'test.c'),'-o',str(p/'test')],check=True)
  subprocess.run([str(p/'test')],cwd=p,check=True)

@@ -421,9 +421,9 @@ static void homeDraw(void)
 	drawHero();
 
 	/* Continue row */
-	dashText(48, y0 - 33, "Continue", DASH_FS_SMALL, row == 0 ? DASH_C_TEXT : DASH_C_TEXT3);
+	dashText(48, y0 - 33, localizeDashboardText("Continue"), DASH_FS_SMALL, row == 0 ? DASH_C_TEXT : DASH_C_TEXT3);
 	if (row == 0)
-		dashRect(48, y0 - 15, dashTextWidth("Continue", DASH_FS_SMALL), 2, DASH_C_ACCENT);
+		dashRect(48, y0 - 15, dashTextWidth(localizeDashboardText("Continue"), DASH_FS_SMALL), 2, DASH_C_ACCENT);
 	if (nhome == 0) {
 		dashDrawPanelBox(48, y0, 552, cw, 14);
 		dashIcon(DI_CLOCK, 70, y0 + 25, 40, DASH_C_TEXT3);

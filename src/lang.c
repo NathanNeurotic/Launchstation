@@ -571,3 +571,72 @@ void Load_External_Language(void)
 //---------------------------------------------------------------------------
 //End of file:  lang.c
 //---------------------------------------------------------------------------
+
+/* Only UI-owned labels/formats opt in. Resolve against the current table on
+ * every call, so changing language or replacing an external LNG cannot leave
+ * stale translated pointers in static dashboard metadata. */
+const char *localizeDashboardText(const char *source)
+{
+	static const struct { const char *source; int id; } labels[] = {
+#include "../Lang/DASHBOARD.inc"
+	};
+	int lo = 0, hi = (int)(sizeof(labels) / sizeof(labels[0]));
+	if (source == NULL)
+		return source;
+	while (lo < hi) {
+		int mid = lo + (hi - lo) / 2;
+		int cmp = strcmp(source, labels[mid].source);
+		if (cmp == 0) {
+			const char *translated = Lang_String[labels[mid].id].String;
+			return translated != NULL && translated[0] ? translated : source;
+		}
+		if (cmp < 0)
+			hi = mid;
+		else
+			lo = mid + 1;
+	}
+	return source;
+}
+
+/* External LNG overrides are untrusted: accept only the argument conversions
+ * expected by a dashboard format string. Invalid overrides use English. */
+static const char *dashboardNextFormatConversion(const char *cursor)
+{
+	while (*cursor) {
+		if (*cursor != '%')
+			cursor++;
+		else if (cursor[1] == '%')
+			cursor += 2; /* escaped literal percent: no argument */
+		else
+			return cursor;
+	}
+	return NULL;
+}
+
+const char *localizeDashboardFormat(const char *source)
+{
+	const char *expected, *translated, *candidate;
+	size_t length;
+	if (source == NULL)
+		return NULL;
+	translated = localizeDashboardText(source);
+	expected = source;
+	candidate = translated;
+	while ((expected = dashboardNextFormatConversion(expected)) != NULL) {
+		candidate = dashboardNextFormatConversion(candidate);
+		if (candidate == NULL)
+			return source;
+		/* Refuse unsupported source signatures instead of guessing. */
+		if (!strncmp(expected, "%d", 2) || !strncmp(expected, "%s", 2))
+			length = 2;
+		else if (!strncmp(expected, "%.2f", 4))
+			length = 4;
+		else
+			return source;
+		if (strncmp(candidate, expected, length))
+			return source;
+		expected += length;
+		candidate += length;
+	}
+	return dashboardNextFormatConversion(candidate) == NULL ? translated : source;
+}

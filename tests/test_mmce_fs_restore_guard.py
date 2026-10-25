@@ -19,6 +19,8 @@ assert "MMCE_FS_ACTIVE_NAME" not in source.split("#define MMCE_FS_ACTIVE_HANDLE"
 
 mutations = {
     "int mmce_fs_open(": "if (!mmce_fs_wire_name_ok(name))",
+    "int mmce_fs_dopen(": "if (!mmce_fs_wire_name_ok(name))",
+    "int mmce_fs_getstat(": "if (!mmce_fs_wire_name_ok(name))",
     "int mmce_fs_remove(": "if (mmce_fs_reserved_component(name))",
     "int mmce_fs_mkdir(": "if (mmce_fs_reserved_component(name))",
     "int mmce_fs_rmdir(": "if (mmce_fs_reserved_component(name))",

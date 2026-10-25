@@ -401,7 +401,7 @@ with tempfile.TemporaryDirectory(prefix="wle-device-input-") as tmp:
     for name, code in (("input", padcode), ("devices", devcode), ("pad-waits", waitcode), ("startup", autocode), ("theme-io", themecode)):
         source = Path(tmp) / f"{name}.c"
         exe = Path(tmp) / f"{name}.exe"
-        source.write_text(code)
+        source.write_text("#define localizeDashboardText(s) (s)\n" + code)
         try:
             subprocess.run([compiler, "-std=gnu11", "-O1", str(source), "-o", str(exe)], check=True)
             subprocess.run([str(exe)], check=True, timeout=5)

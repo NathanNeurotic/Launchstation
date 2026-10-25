@@ -683,6 +683,8 @@ int getVirtualKeyboardEditorNextKey(int layout, int editor_index, int dx, int dy
 void Init_Default_Language(void);
 void Load_External_Language(void);
 void Set_Language(int language);
+const char *localizeDashboardText(const char *source);
+const char *localizeDashboardFormat(const char *source);
 int normalizeBuiltinLanguage(int language);
 int getBuiltinLanguageByConfigName(const char *name);
 const char *getBuiltinLanguageConfigName(int language);

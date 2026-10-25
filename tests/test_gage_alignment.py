@@ -19,6 +19,9 @@ hints = ui[ui.index("void dashDrawHints("):]
 hints = hints[: hints.index("\n}\n") if "\n}\n" in hints else hints.index("\r\n}\r\n")]
 assert "total += buttonWidth(hints[i].button, hints[i].key) + 8.0f" in hints
 assert "x += drawButton(x, y, hints[i].button, hints[i].key) + 8.0f;" in hints
+assert "total += labels * label_ratio;" in hints
+assert "x += label_w + 24.0f;" in hints
+assert "dashTextFit(x, y + 1.5f, label_w, label" in hints
 assert "+ 16.0f;" not in hints
 
 FS_SMALL = 0.66
@@ -33,7 +36,7 @@ def num(pattern: str) -> float:
 tile = num(r"#define HOME_TILE ([\d.]+)f")
 zoom = num(r"#define HOME_TILE_ZOOM ([\d.]+)f")
 y0 = num(r"float y0 = ([\d.]+), cw = HOME_TILE;")
-underline = y0 - num(r"dashRect\(48, y0 - ([\d.]+), dashTextWidth\(\"Continue\"")
+underline = y0 - num(r"dashRect\(48, y0 - ([\d.]+), dashTextWidth\(localizeDashboardText\(\"Continue\"")
 cy = num(r"float cy = ([\d.]+);")
 quick_label = cy - num(r"dashText\(48, cy - ([\d.]+), \"Browse & shortcuts\"")
 

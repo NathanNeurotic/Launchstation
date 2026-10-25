@@ -158,6 +158,8 @@ static void revealSelection(void)
 		fb.top = 0;
 	if (fb.n > FB_ROWS && fb.top > fb.n - FB_ROWS)
 		fb.top = fb.n - FB_ROWS;
+	if (fb.sel_anim < fb.top || fb.sel_anim >= fb.top + FB_ROWS)
+		fb.sel_anim = (float)fb.sel;
 }
 
 static u64 fbFileBytes(const FILEINFO *f)
@@ -695,6 +697,25 @@ enum {
 	PASTE_PSU
 };
 
+static void showPasteFailure(int psu)
+{
+	char *detail = strchr(fb.msg, '\n');
+	char *p;
+
+	/* The copy diagnostic begins with stage/code and a readable reason.
+	 * Keep those in the body; scroll the remaining context on the detail
+	 * line so the six-line body limit cannot hide it. */
+	if (detail != NULL)
+		detail = strchr(detail + 1, '\n');
+	if (detail != NULL) {
+		*detail++ = '\0';
+		for (p = detail; *p; p++)
+			if (*p == '\n' || *p == '\r')
+				*p = ' ';
+	}
+	dashModalMessage(DI_WARNING, psu ? "PSU failed" : localizeDashboardText("Paste failed"), fb.msg, detail);
+}
+
 static void opPaste(int mode)
 {
 	int psu = (mode == PASTE_PSU);
@@ -708,14 +729,14 @@ static void opPaste(int mode)
 	if (filerConfirmExploitModify(fb.dir, NULL) <= 0)
 		return;
 	fb.msg[0] = '\0';
-	dashLoadingBegin(psu ? "PSU" : (browser_cut ? "Moving" : "Pasting"));
+	dashFileLoadingBegin(psu ? "PSU" : (browser_cut ? localizeDashboardText("Moving file") : localizeDashboardText("Pasting file")));
 	if (psu)
 		filerPsuPasteInto(fb.msg, fb.dir);
 	else
 		filerPasteModeInto(fb.msg, fb.dir, mode == PASTE_RENAME);
 	opDone();
 	if (fb.msg[0]) /* the classic paste only leaves a message when it failed */
-		dashModalMessage(DI_WARNING, psu ? "PSU failed" : "Paste failed", fb.msg, NULL);
+		showPasteFailure(psu);
 	else
 		dashToast(DASH_TOAST_OK, browser_cut ? "Moved" : "Pasted");
 	refresh();
@@ -733,16 +754,17 @@ static void opDelete(void)
 		snprintf(body, sizeof(body), "Delete %s%s? This cannot be undone.", fb.files[idx[0]].name, isDir(&fb.files[idx[0]]) ? "/ and everything in it" : "");
 	else
 		snprintf(body, sizeof(body), "Delete the %d selected items? This cannot be undone.", n);
-	if (!dashModalConfirm("Delete", body, "Delete", 1))
+	if (!dashModalConfirm(localizeDashboardText("Delete"), body, localizeDashboardText("Delete"), 1))
 		return;
 	if (!prepareOp())
 		return;
-	dashLoadingBegin("Deleting");
+	dashFileLoadingBegin(localizeDashboardText("Deleting file"));
 	for (i = 0; i < n; i++) {
 		FILEINFO *f = &fb.files[idx[i]];
 		if (filerIsExploitProtectedPath(fb.dir, f) && filerConfirmExploitDelete(fb.dir, f) < 0)
 			continue;
-		dashLoadingStatus(f->name, i, n);
+		dashLoadingStatus(f->name, done, n);
+		dashLoadingFrame(f->name, done, n);
 		ret = delete (fb.dir, f);
 		if (ret < 0)
 			break;
@@ -2084,11 +2106,11 @@ static int tsEdit(FilerDateEditor *e)
 		{
 			DashHint hn[6];
 			hn[0].button = DI_BTN_LEFT, hn[0].key = NULL, hn[0].label = "Field";
-			hn[1].button = DI_BTN_UP, hn[1].key = NULL, hn[1].label = "Change";
+			hn[1].button = DI_BTN_UP, hn[1].key = NULL, hn[1].label = localizeDashboardText("Change");
 			hn[2].button = DI_BTN_R1, hn[2].key = NULL, hn[2].label = "Folder";
 			hn[3].button = DI_BTN_R2, hn[3].key = NULL, hn[3].label = "Next to";
 			hn[4].button = dashOkIcon(), hn[4].key = NULL, hn[4].label = "Apply";
-			hn[5].button = dashBackIcon(), hn[5].key = NULL, hn[5].label = "Cancel";
+			hn[5].button = dashBackIcon(), hn[5].key = NULL, hn[5].label = localizeDashboardText("Cancel");
 			dashDrawHints(hn, 6);
 		}
 		dashGfxPresent();
@@ -2394,7 +2416,7 @@ static void actionsMenu(void)
 	ADD(DI_HOME, "Go to Launchstation's folder", NULL, 0, F_HOME);
 	ADD(DI_REFRESH, "Refresh", NULL, 0, F_REFRESH);
 #undef ADD
-	r = dashModalMenu("File Browser", fb.dir[0] ? fb.dir : "Devices", items, n, 0);
+	r = dashModalMenu(localizeDashboardText("File Browser"), fb.dir[0] ? fb.dir : localizeDashboardText("Devices"), items, n, 0);
 	if (r < 0 || items[r].disabled)
 		return;
 	switch (ids[r]) {
@@ -2603,7 +2625,7 @@ static void browserDrawBody(void)
 	 * background a second time; modal callers still get a complete scene. */
 	if (!fb_tab_active) {
 		dashIcon(DI_FOLDER, FB_X, 20, 24, DASH_C_ACCENT);
-		dashTextS(FB_X + 32, 20, "File Browser", DASH_FS_TITLE, DASH_C_TEXT);
+		dashTextS(FB_X + 32, 20, localizeDashboardText("File Browser"), DASH_FS_TITLE, DASH_C_TEXT);
 	}
 	/* Give the current folder its own aligned lane above the file list. */
 	dashDrawPanelBox(FB_X - 6, fb_tab_active ? 68 : 52, FB_W + 12, 24, 6);

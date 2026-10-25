@@ -866,6 +866,7 @@ int dashModalChoice(const char *title, const char *const *options, int n, int cu
 
 /* Synchronous work feedback: draws a full frame immediately. */
 void dashLoadingBegin(const char *title);
+void dashFileLoadingBegin(const char *title);
 void dashLoadingStatus(const char *status, int done, int total);
 void dashLoadingFrame(const char *status, int done, int total); /* always draws */
 void dashLoadingSetCancel(int cancelable); /* shows "Back: keep working in background" */
@@ -943,6 +944,7 @@ const char *dashToolsGoogleStatus(void);
 void dashToolsCheckUpdates(void);
 
 const char *dashSectionName(int section);
+const char *dashSectionLabel(int section);
 int dashSectionIcon(int section);
 void dashSwitchSection(int section);
 int dashConfirmLeave(void); /* asks the current section; 0 = stay */

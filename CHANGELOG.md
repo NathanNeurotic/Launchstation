@@ -2,16 +2,12 @@
 
 ## Rolling
 
-- **Infinite list navigation wrap-around:** dashboard lists now cycle at boundaries (up from first selects last, down from last selects first), including File Browser views, app/library lists, Files/Devices pickers, Tools, Settings and HDD Manager.
-- **Safer file replacement:** an existing destination is retained until its replacement has been written and checked. Failed publication rolls back; recovery files survive interrupted operations.
-- **Copy failure details:** compact stage/error, device, byte-count and build information make failed transfers diagnosable. A failed source-folder listing is no longer reported as an empty successful copy.
-- **Cross-device copying:** positive short reads and writes complete the remaining bytes. Slot-2 card preparation happens before opening source files when leaving MX4SIO.
-- **Clearer file operations:** the dashboard shows the filename, remaining megabytes and a progress bar while copying, with progress updates during deletion and verification.
-- **Release-page clarity:** the public release page now includes a concise Rolling changelog summary and links directly to full release notes and changelog history.
-- **Consistent storage names:** Home and the application library use MASS labels for mass-storage applications.
-- **Software clock:** setting a time now offers to save it immediately and waits for verified storage completion. Save current clock retains later runtime. The clock resumes the saved checkpoint after restart; elapsed time while unplugged is unavailable.
-- **Storage loading:** returned mount waits redraw more frequently while retaining the existing device discovery windows. MMCE returns each probed port's bus state to the normal card/controller drivers.
-- **Power-off:** setup starts only the power-off service, without loading unused DEV9 drivers, and detects failed initialization.
+- **Dashboard languages:** navigation, Settings labels, common actions and transfer progress use the nine built-in language tables. External LNG overrides also apply to these labels. User filenames, paths and application metadata keep their original text; some extended help remains in English.
+- **File-copy compatibility:** restore upstream wLaunchELF_R3Z direct overwrite behavior. Remove the custom destination-stat, staging, verification, backup and rename transaction so ordinary paste does not depend on those additional operations.
+- **Clearer file operations:** copy/delete popups give filenames their own full-width row, show remaining MB or completed selected items, and finish with a full progress bar. Paste failures include a readable reason, stage and numeric error.
+- **Navigation and rendering:** wrapped list selections stay visible in the new viewport. Carousel rendering omits fully offscreen cards while retaining visible geometry and order. Physical-console acceptance remains unverified.
+- **Neutrino options:** menu audio stays active until launch is committed, with ordinary ELF muting and failure recovery preserved.
+- **Retained improvements:** concise release notes, dashboard free-space display, MASS display names, verified software-clock saves, lazy storage loading and power-off service initialization remain available.
 
 ## Earlier changes
 

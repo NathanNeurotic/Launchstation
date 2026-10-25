@@ -34,10 +34,9 @@ INSTRUCTIONS = """Launchstation copy test - scratch files only
    Record source/destination, whether a file already existed, and the server build.
 
 Payload: 246018 bytes; normal MC filesystem overhead is additional.
-Replacement requires room for old and new files. Avoid delete/move for this pass.
+Replacement uses upstream wLaunchELF_R3Z direct overwrite behavior.
 The files are data, not executable ELFs. Test an ELF separately from the app ZIP;
 never overwrite the running launcher or your only known-good boot ELF.
-LS-COPY-*.TMP / LS-OLD-*.BAK are recovery files: preserve them after failures.
 No console or adapter behavior is established by a PC verification result.
 """
 
