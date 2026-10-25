@@ -1,7 +1,7 @@
 ﻿"""Run the full production clipboard/paste/copy sequence on POSIX fixtures.
 
 Drivers/RPCs are replaced by bounded file adapters and injected failures. The
-copy orchestration, recursion, replacement transaction and diagnostics are real.
+copy orchestration, recursion, direct overwrite and diagnostics are real.
 This does not emulate a UDPFS server, libmc or physical memory cards.
 """
 from pathlib import Path
@@ -11,6 +11,11 @@ import tempfile
 root=Path(__file__).resolve().parents[1]
 copy=(root/'src/filer_copy.c').read_text()
 browser=(root/'src/filer_browser.c').read_text()
+assert 'dummy = genRemove(out);' in copy
+assert 'out_fd = genOpen(out, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT);' in copy
+for removed in ('copyPrepareTarget', 'copyLookupPath', 'copyVerifyTarget',
+                'copyPublishTarget', 'copyOpenTarget', 'LS-COPY-', 'LS-OLD-', 'FIO_O_EXCL'):
+    assert removed not in copy, removed
 
 def function(source, signature):
     a=source.index(signature);b=source.index('{',a)+1;depth=1
@@ -85,8 +90,7 @@ static FILEINFO clipFiles[MAX_ENTRY];static char clipPath[MAX_PATH];
 static unsigned clipIopResetGeneration,generation;
 static u64 written_size,PasteTime,clock_ms;
 static int source_ready=1,load_ok=1,reset_preflight,read_cap=4096,write_cap=37,cancel_copy;
-static int ambiguous_stat, wrong_eisdir_status, fatfs_internal_error;
-static int fail_open,fail_rewind,fail_read,fail_write,fail_close,fail_listing,fail_stat,fail_out_open,early_eof,fail_measure,corrupt_verify,fail_publish;
+static int fail_open,fail_rewind,fail_read,fail_write,fail_close,fail_listing,fail_out_open,early_eof,fail_measure;
 static int fd_kind[1024],handles,read_calls,write_calls;
 static unsigned fd_generation[1024];
 static u64 Timer(void){return ++clock_ms;}
@@ -106,20 +110,7 @@ static int isPcCardCfOnline(void){return 1;}
 static void ensureMemoryCardPortAccessible(int p){assert(p==0||p==1);}
 static char *makeHostPath(char *d,char *s){if(d!=s)strcpy(d,s);return d;}
 static void genLimObjName(char *p,int reserve){(void)p;(void)reserve;}
-'''
-# Execute the production status-domain translation, then the production copy.
-fileops=(root/'src/filer_fileops.c').read_text()
-code+='#define EXFAT 1\n'+function(fileops,'static int normalizeFatFsStatResult(')
-code+=r'''
-static int genGetStat(const char *p,iox_stat_t *out){
- struct stat s;
- if(!strncmp(p,"host:",5))return -EIO;
- if(fail_stat&&!strncmp(p,"mc0:",4))return -EACCES;
- if(wrong_eisdir_status)return -EISDIR;
- if(fatfs_internal_error&&!strncmp(p,"usb",3))return normalizeFatFsStatResult(p,-2);
- if(stat(p,&s))return !strncmp(p,"usb",3)?normalizeFatFsStatResult(p,-4):(ambiguous_stat?-1:-errno);
- out->mode=s.st_mode;return 0;
-}
+static int genGetStat(const char *p,iox_stat_t *out){(void)p;(void)out;assert(!"paste must not stat the destination");return -EIO;}
 static int genOpen(const char *p,int flags){
  if(fail_open&&flags==O_RDONLY&&!strncmp(p,"udpfs:",6))return -ENOENT;
  if(fail_out_open&&(flags&O_WRONLY))return -EACCES;
@@ -129,10 +120,10 @@ static int genOpen(const char *p,int flags){
 }
 static int genClose(int fd){int kind=fd_kind[fd];assert(kind&&handles>0);fd_kind[fd]=0;handles--;int r=close(fd);return fail_close&&kind==2?-EIO:r;}
 static s64 genLseek(int fd,s64 n,int whence){assert(fd_generation[fd]==generation);if(fail_measure&&whence==SEEK_END)return -EIO;if(fail_rewind&&whence==SEEK_SET)return -EIO;return lseek(fd,n,whence);}
-static int genRead(int fd,void *p,int n){assert(fd_generation[fd]==generation);read_calls++;if(early_eof&&fd_kind[fd]==1&&read_calls>1)return 0;if(fail_read&&fd_kind[fd]==1)return -ETIMEDOUT;int r=read(fd,p,n>read_cap?read_cap:n);if(corrupt_verify&&fd_kind[fd]==3&&r>0)((char*)p)[0]^=1;return r<0?-errno:r;}
+static int genRead(int fd,void *p,int n){assert(fd_generation[fd]==generation);read_calls++;if(early_eof&&fd_kind[fd]==1&&read_calls>1)return 0;if(fail_read&&fd_kind[fd]==1)return -ETIMEDOUT;int r=read(fd,p,n>read_cap?read_cap:n);return r<0?-errno:r;}
 static int genWrite(int fd,void *p,int n){assert(fd_generation[fd]==generation);write_calls++;if(fail_write&&write_calls>=2)return -ENOSPC;int r=write(fd,p,n>write_cap?write_cap:n);return r<0?-errno:r;}
 static int genRemove(char *p){return unlink(p)?-errno:0;}
-static int fileXioRename(const char *a,const char *b){return fail_publish?-EIO:rename(a,b)?-errno:0;}
+static int fileXioRename(const char *a,const char *b){assert(!"paste must not require rename");(void)a;(void)b;return -EIO;}
 static int mc_result;
 static int mcSetFileInfo(int port,int slot,const char *from,const sceMcTblGetDir *info,int flags){
  (void)slot;if(flags==0x10){char a[MAX_PATH],b[MAX_PATH];snprintf(a,sizeof(a),"mc%d:/%s",port,from);strcpy(b,a);char *leaf=strrchr(b,'/');assert(leaf);snprintf(leaf+1,sizeof(b)-(leaf+1-b),"%.32s",info->EntryName);mc_result=fileXioRename(a,b);}else mc_result=0;return 0;
@@ -166,26 +157,6 @@ static int unexpected(void){assert(!"PSU branch is outside this ordinary-copy fi
 #define psu_restore_apply_entry_stats_to_mc(...) unexpected()
 static int applyMcInfoToVmcPath(const char *p,const sceMcTblGetDir *s){(void)p;(void)s;return 0;}
 
-#ifndef stricmp
-#define stricmp strcasecmp
-#endif
-typedef struct { iox_stat_t stat; char name[256]; } iox_dirent_t;
-static DIR *lookup_dir;
-static char lookup_parent[MAX_PATH];
-static int lookup_read_error, lookup_close_error, lookup_open_error;
-static int genDopen(char *p) {
- assert(!lookup_dir);if(lookup_open_error)return lookup_open_error;
- lookup_dir=opendir(p);if(!lookup_dir)return -errno;
- snprintf(lookup_parent,sizeof(lookup_parent),"%s",p);return 900;
-}
-static int fileXioDread(int fd,iox_dirent_t *entry) {
- assert(fd==900&&lookup_dir);if(lookup_read_error)return lookup_read_error;
- errno=0;struct dirent *e=readdir(lookup_dir);if(!e)return errno?-errno:0;
- snprintf(entry->name,sizeof(entry->name),"%s",e->d_name);
- char path[MAX_PATH+256];snprintf(path,sizeof(path),"%s%s",lookup_parent,e->d_name);
- struct stat s;if(stat(path,&s))return -errno;entry->stat.mode=s.st_mode;return 1;
-}
-static int genDclose(int fd) {assert(fd==900&&lookup_dir);int r=closedir(lookup_dir);lookup_dir=NULL;return lookup_close_error?lookup_close_error:r;}
 '''
 # Use the real PSU layout declarations; these branches are compiled but not executed.
 psu=(root/'include/psu_types.h').read_text();code+=psu[psu.index('typedef struct'):psu.rindex('#endif')]
@@ -202,7 +173,7 @@ code+=r'''
 static void put(const char *p,const unsigned char *data,int n){int fd=open(p,O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0);assert(write(fd,data,n)==n);assert(!close(fd));}
 static int matches(const char *p,const unsigned char *data,int n){unsigned char out[70000];int fd=open(p,O_RDONLY);if(fd<0)return 0;int count=read(fd,out,sizeof(out));close(fd);return count==n&&!memcmp(data,out,n);}
 static unsigned char input[65537];
-static void reset(void){assert(!handles);source_ready=load_ok=1;reset_preflight=0;wrong_eisdir_status=0;fail_open=fail_rewind=fail_read=fail_write=fail_close=fail_listing=cancel_copy=fail_stat=fail_out_open=early_eof=fail_measure=corrupt_verify=fail_publish=0;read_calls=write_calls=0;browser_cut=0;browser_cd=0;generation=1;clipIopResetGeneration=1;PasteMode=PM_NORMAL;strcpy(clipPath,"udpfs:/");nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));strcpy(clipFiles[0].name,"BOOT.ELF");clipFiles[0].stats.FileSizeByte=sizeof(input);}
+static void reset(void){assert(!handles);source_ready=load_ok=1;reset_preflight=0;fail_open=fail_rewind=fail_read=fail_write=fail_close=fail_listing=cancel_copy=fail_out_open=early_eof=fail_measure=0;read_calls=write_calls=0;browser_cut=0;browser_cd=0;generation=1;clipIopResetGeneration=1;PasteMode=PM_NORMAL;strcpy(clipPath,"udpfs:/");nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));strcpy(clipFiles[0].name,"BOOT.ELF");clipFiles[0].stats.FileSizeByte=sizeof(input);}
 int main(void){
  assert(sizeof(copy_diag)<=128); /* fixed runtime budget, no log allocation */
  mkdir("udpfs:",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);mkdir("usb0:",0700);mkdir("host:",0700);mkdir("mmce0:",0700);mkdir("mmce1:",0700);
@@ -232,30 +203,30 @@ int main(void){
   }
  }
  const unsigned char old[]="original ELF";
- const char *stages[]={"Opening source","Rewinding source","Reading source","Writing destination","Closing destination","Copy cancelled","Preparing devices","Checking source","Checking destination","Opening destination","Reading source","Measuring source","Verifying replacement","Publishing replacement"};
- for(int failure=0;failure<14;failure++){
+ const char *stages[]={"Opening source","Rewinding source","Reading source","Writing destination","Closing destination","Copy cancelled","Preparing devices","Checking source","Opening destination","Reading source","Measuring source"};
+ for(int failure=0;failure<11;failure++){
   reset();put("mc0:/BOOT.ELF",old,sizeof(old));
   if(failure==0)fail_open=1;if(failure==1)fail_rewind=1;if(failure==2)fail_read=1;
   if(failure==3)fail_write=1;if(failure==4)fail_close=1;if(failure==5)cancel_copy=1;
   if(failure==6)load_ok=0;if(failure==7){source_ready=0;reset_preflight=1;}
-  if(failure==8)fail_stat=1;if(failure==9)fail_out_open=1;if(failure==10)early_eof=1;
-  if(failure==11)fail_measure=1;if(failure==12)corrupt_verify=1;if(failure==13)fail_publish=1;
+  if(failure==8)fail_out_open=1;if(failure==9)early_eof=1;if(failure==10)fail_measure=1;
   message[0]=0;subfunc_Paste(message,"mc0:/");
   assert(message[0]&&strstr(message,stages[failure])&&strstr(message,"fixture-head"));
-  assert(!handles&&matches("mc0:/BOOT.ELF",old,sizeof(old)));
+  assert(!handles);
+  if(failure==0||failure==1||failure==6||failure==7||failure==10)
+   assert(matches("mc0:/BOOT.ELF",old,sizeof(old)));
+  else assert(access("mc0:/BOOT.ELF",F_OK)); /* upstream direct replacement cleanup */
   if(failure==3){assert(strstr(message,"37/65537 B")&&strstr(message,"(-28)"));}
   if(failure==7)assert(strstr(message,"IOP 1>2"));
  }
-
- /* Legacy missing-entry status uses parent EOF, including repeated replacement. */
- reset();ambiguous_stat=1;unlink("mc1:/BOOT.ELF");
+ /* Direct copying does not depend on a driver's missing-entry stat status. */
+ reset();unlink("mc1:/BOOT.ELF");
  for(int attempt=0;attempt<3;attempt++){
-  message[0]=0;subfunc_Paste(message,"mc1:/");assert(!message[0]&&!handles&&!lookup_dir);
+  message[0]=0;subfunc_Paste(message,"mc1:/");assert(!message[0]&&!handles);
   assert(matches("mc1:/BOOT.ELF",input,sizeof(input)));
  }
- ambiguous_stat=0;
- /* Cross-device source/destination matrix with a backend reporting -EISDIR
-  * for both absent and existing leaves. Exercise real copy orchestration. */
+ /* Cross-device source/destination matrix. Any destination stat/rename call
+  * aborts in the adapters, including ordinary MC-to-MMCE replacements. */
  const char *cross_sources[]={"usb0:/","mc0:/","mmce0:/"};
  const char *cross_destinations[]={"mc1:/","mmce0:/","mmce1:/","usb0:/"};
  put("usb0:/EISDIR.ELF",input,sizeof(input));
@@ -266,34 +237,15 @@ int main(void){
   snprintf(target,sizeof(target),"%sEISDIR.ELF",cross_destinations[destination]);
   unlink(target);
   for(int attempt=0;attempt<2;attempt++){
-   reset();wrong_eisdir_status=1;
+   reset();
    strcpy(clipPath,cross_sources[source]);
    strcpy(clipFiles[0].name,"EISDIR.ELF");
    message[0]=0;subfunc_Paste(message,(char*)cross_destinations[destination]);
-   assert(!message[0]&&!handles&&!lookup_dir);
+   assert(!message[0]&&!handles);
    assert(matches(target,input,sizeof(input)));
   }
  }
- wrong_eisdir_status=0;
- /* Raw FatFs FR_INT_ERR=2 must fail before any write, even for a new name. */
- reset();fatfs_internal_error=1;message[0]=0;
- put("usb0:/BOOT.ELF",(const unsigned char*)"OLD",3);
- subfunc_Paste(message,"usb0:/");
- assert(strstr(message,"Checking destination (-5)")&&!handles&&!write_calls);
- assert(matches("usb0:/BOOT.ELF",(const unsigned char*)"OLD",3));
- unlink("usb0:/BOOT.ELF");message[0]=0;
- subfunc_Paste(message,"usb0:/");
- assert(strstr(message,"Checking destination (-5)")&&!handles&&!write_calls);
- assert(access("usb0:/BOOT.ELF",F_OK));fatfs_internal_error=0;
- /* Stock-firmware MMCE rename can fail. The existing destination must
-  * remain untouched, with the verified stage retained for recovery. */
- reset();put("mmce0:/BOOT.ELF",(const unsigned char*)"OLD",3);
- fail_publish=1;message[0]=0;
- subfunc_Paste(message,"mmce0:/");
- assert(strstr(message,"Publishing replacement")&&!handles);
- assert(matches("mmce0:/BOOT.ELF",(const unsigned char*)"OLD",3));
- assert(matches("mmce0:/LS-COPY-000.TMP",input,sizeof(input)));
- unlink("mmce0:/LS-COPY-000.TMP");fail_publish=0;
+
  /* Nested ordinary folders use the same production recursion. */
  reset();mkdir("udpfs:/NESTED",0700);put("udpfs:/NESTED/CHILD.BIN",input,257);
  strcpy(clipFiles[0].name,"NESTED");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;
@@ -307,7 +259,7 @@ int main(void){
  /* Repeated operations clear prior error state, and formatting is bounded. */
  reset();message[0]=0;subfunc_Paste(message,"mc0:/");assert(!message[0]);
  char bounded[17];memset(bounded,'x',sizeof(bounded));filerCopyDiagFormat(bounded,16,-1);assert(!bounded[15]&&bounded[16]=='x');
- puts("PASS: full paste/copy sequence, both slots, replacement, failures, recursion and bounded diagnostics");
+ puts("PASS: full paste/copy sequence, both slots, upstream direct overwrite, failures, recursion and bounded diagnostics");
 }
 '''
 with tempfile.TemporaryDirectory(prefix='copy-pipeline-') as folder:
