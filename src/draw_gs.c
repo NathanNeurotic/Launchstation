@@ -117,35 +117,38 @@ void updateScreenMode(void)
 {
 	int setGS_flag = 0;
 	int New_TV_mode = setting->TV_mode;
+	int requested_gs_mode;
+	int requested_height, requested_interlace, requested_field;
 
 	if (New_TV_mode == TV_mode_AUTO) {         //If no forced request
 		New_TV_mode = uLE_InitializeRegion();  //Let console region decide TV_mode
 	}
 
-	if (New_TV_mode != TV_mode) {
+	switch (New_TV_mode) {
+		case TV_mode_PAL: requested_gs_mode = GS_MODE_PAL; break;
+		case TV_mode_576P: requested_gs_mode = GS_MODE_DTV_576P; break;
+		case TV_mode_480P: requested_gs_mode = GS_MODE_DTV_480P; break;
+		case TV_mode_VGA: requested_gs_mode = GS_MODE_VGA_640_60; break;
+		default: requested_gs_mode = GS_MODE_NTSC; break;
+	}
+	requested_height = (requested_gs_mode == GS_MODE_PAL || requested_gs_mode == GS_MODE_DTV_576P) ? 512 : 448;
+	requested_interlace = (requested_gs_mode == GS_MODE_NTSC || requested_gs_mode == GS_MODE_PAL) ? GS_INTERLACED : GS_NONINTERLACED;
+	requested_field = requested_interlace == GS_INTERLACED ? GS_FIELD : GS_FRAME;
+	/* Compare the current GS object too, rather than assuming the cached
+	 * menu TV_mode also guarantees matching timing and framebuffer geometry. */
+	if (New_TV_mode != TV_mode || gsGlobal->Mode != requested_gs_mode ||
+	    gsGlobal->Width != 640 || gsGlobal->Height != requested_height ||
+	    gsGlobal->Interlace != requested_interlace || gsGlobal->Field != requested_field) {
 		/* Keep the outgoing picture from flashing while GS changes timings. */
 		fadeScreenToBlack();
+		/* Complete the final old-mode queue before changing framebuffer
+		 * addresses and resetting the GS. Both buffers are cleared below. */
+		gsKit_queue_exec(gsGlobal);
+		gsKit_finish();
 		setGS_flag = 1;
 		TV_mode = New_TV_mode;
 
-		switch (New_TV_mode) {
-			case TV_mode_PAL:
-				gsGlobal->Mode = GS_MODE_PAL;
-				break;
-			case TV_mode_576P:
-				gsGlobal->Mode = GS_MODE_DTV_576P;
-				break;
-			case TV_mode_480P:
-				gsGlobal->Mode = GS_MODE_DTV_480P;
-				break;
-			case TV_mode_VGA:
-				gsGlobal->Mode = GS_MODE_VGA_640_60;
-				break;
-			default:
-			case TV_mode_NTSC:
-				gsGlobal->Mode = GS_MODE_NTSC;
-				break;
-		}
+		gsGlobal->Mode = requested_gs_mode;
 	}  // end TV_Mode change
 
 	// Init screen parameters
@@ -154,6 +157,8 @@ void updateScreenMode(void)
 	if (setGS_flag) {
 		// Init screen modes
 		gsKit_init_screen(gsGlobal);
+		gsKit_mode_switch(gsGlobal, GS_ONESHOT);
+		clearScreenToBlack();
 		gsScreenGeneration++;
 	}
 

@@ -150,16 +150,26 @@ static int wrapIndex(int index, int total)
 
 static void revealSelection(void)
 {
-	if (fb.sel < fb.top)
-		fb.top = fb.sel;
-	else if (fb.sel >= fb.top + FB_ROWS)
-		fb.top = fb.sel - FB_ROWS + 1;
+	int total = fb.dir[0] ? fb.n : fb.ndevs;
+	fb.top = fb.sel - (FB_ROWS - 1) / 2;
 	if (fb.top < 0)
 		fb.top = 0;
-	if (fb.n > FB_ROWS && fb.top > fb.n - FB_ROWS)
-		fb.top = fb.n - FB_ROWS;
+	if (total <= FB_ROWS)
+		fb.top = 0;
+	else if (fb.top > total - FB_ROWS)
+		fb.top = total - FB_ROWS;
 	if (fb.sel_anim < fb.top || fb.sel_anim >= fb.top + FB_ROWS)
 		fb.sel_anim = (float)fb.sel;
+}
+
+/* A page reaches the boundary before a subsequent press wraps. */
+static int pageIndex(int selected, int total, int direction)
+{
+	if (total <= 0)
+		return 0;
+	if (direction < 0)
+		return selected == 0 ? total - 1 : (selected < FB_ROWS ? 0 : selected - FB_ROWS);
+	return selected == total - 1 ? 0 : (selected + FB_ROWS >= total ? total - 1 : selected + FB_ROWS);
 }
 
 static u64 fbFileBytes(const FILEINFO *f)
@@ -400,7 +410,7 @@ static void openDir(const char *dir, const char *select)
 			}
 		}
 		/* the built-in commands, like the classic device list */
-		if (setting->Misc[0] && !fb_tab_active) {
+		if (setting->Misc[0]) {
 			DashDevice *d = &fb.devs[fb.ndevs++];
 			memset(d, 0, sizeof(*d));
 			d->icon = DI_TOOLS;
@@ -2835,9 +2845,9 @@ static void browserProcessInput(const DashInput *in, int *running)
 			if (in->pressed & DASH_IN_DOWN)
 				fb.sel = wrapIndex(fb.sel + 1, total);
 			if (in->pressed & (DASH_IN_L2 | DASH_IN_LEFT))
-				fb.sel = wrapIndex(fb.sel - FB_ROWS, total);
+				fb.sel = pageIndex(fb.sel, total, -1);
 			if (in->pressed & (DASH_IN_R2 | DASH_IN_RIGHT))
-				fb.sel = wrapIndex(fb.sel + FB_ROWS, total);
+				fb.sel = pageIndex(fb.sel, total, 1);
 		}
 		if (fb.sel != prev && running != NULL)
 			dashSoundPlay(DASH_SND_CURSOR);

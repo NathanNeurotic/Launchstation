@@ -17,13 +17,13 @@ widgets = src("dash_widgets.c")
 hdd = src("dash_hdd.c")
 home = src("dash_home.c")
 
-# File Browser: directional and page motion wraps instead of clamping.
+# File Browser: directional motion wraps; pages stop at boundaries before wrapping.
 assert "static int wrapIndex(int index, int total)" in browser
 for expr in (
     "fb.sel = wrapIndex(fb.sel - 1, total);",
     "fb.sel = wrapIndex(fb.sel + 1, total);",
-    "fb.sel = wrapIndex(fb.sel - FB_ROWS, total);",
-    "fb.sel = wrapIndex(fb.sel + FB_ROWS, total);",
+    "fb.sel = pageIndex(fb.sel, total, -1);",
+    "fb.sel = pageIndex(fb.sel, total, 1);",
 ):
     assert expr in browser
 

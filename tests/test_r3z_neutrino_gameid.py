@@ -87,10 +87,7 @@ int genRead(int fd, void *buffer, int count) {
     return (int)fread(buffer, 1, count, iso);
 }
 void genClose(int fd) { (void)fd; fclose(iso); iso = NULL; }
-int isPathDeviceStackLoaded(const char *path) {
-    assert(!strcmp(path, "mmce0:/"));
-    return stack_present;
-}
+int ensureMmceGameIdControl(void) { return stack_present; }
 int fileXioDevctl(const char *device, int cmd, void *arg, int arglen, void *out, int outlen) {
     (void)device; (void)arg; (void)arglen; (void)out; (void)outlen;
     if (cmd == 1) { pings++; return ping_error ? -1 : 0; }

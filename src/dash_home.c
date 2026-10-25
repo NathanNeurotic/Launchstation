@@ -204,7 +204,10 @@ static void activateChip(const Chip *c)
 				dashLaunchApp(a, 0);
 			} else
 				dashRunMisc(p);
-			homeRebuild();
+			/* File Browser shortcuts now start the Files tab's asynchronous
+			 * listing. Do not poll Home device state after leaving Home. */
+			if (dashCurrentSection() == DASH_SEC_HOME)
+				homeRebuild();
 			break;
 		}
 	}

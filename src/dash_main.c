@@ -180,8 +180,7 @@ void dashSwitchSection(int s)
 	/* Trigger feedback before the potentially slow File Browser tab close.
 	 * Confirmation/cancel dialogs still resolve before a transition sound. */
 	dashSoundPlay(DASH_SND_TRANSITION);
-	/* A tab switch closes only the in-tab browser session, not the
-	 * independent modal browser used by launch-key and Tools actions. */
+	/* Leave the tab's browser session before another section takes focus. */
 	if (section == DASH_SEC_FILES)
 		dashFileBrowserTabClose();
 	section_dir = (s > section) ? 1 : -1;
@@ -388,15 +387,12 @@ void dashRunMisc(const char *misc_path)
 
 void dashOpenBrowser(const char *start_dir)
 {
+	dashSwitchSection(DASH_SEC_FILES);
 	if (section == DASH_SEC_FILES)
-		dashFileBrowserTabOpen(start_dir); /* use the already-active tab */
-	else
-		dashFileBrowser(start_dir); /* modal path for other callers */
+		dashFileBrowserTabOpen(start_dir != NULL ? start_dir : "");
 }
 
-/* Navigation shortcuts (Home Last folder and Apps file location) should
- * enter the actual Files tab. Keep dashOpenBrowser() for explicitly modal
- * Tool/MISC browser actions. */
+/* All user-facing File Browser shortcuts enter the same Files tab. */
 void dashNavigateFilesTab(const char *start_dir)
 {
 	dashSwitchSection(DASH_SEC_FILES);

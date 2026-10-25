@@ -180,7 +180,8 @@ enum SetId {
 	S_T_WALLDIM,
 	S_T_RENAME,
 	S_T_RESTORE_PRESET,
-	S_T_RESETCAT
+	S_T_RESETCAT,
+	S_MISC_COMMANDS
 };
 
 typedef struct
@@ -220,6 +221,7 @@ static const SetItem root_items[] = {
     {ST_PAGE, P_DEVICES, "Storage & devices", "Device visibility and which devices start automatically."},
     {ST_PAGE, P_NETWORK, "Network", "Console address and network write access."},
     {ST_PAGE, P_SYSTEM, "System", "Language, save-file options and configuration locations."},
+    {ST_ACTION, S_MISC_COMMANDS, "Built-in commands", "Open MISC, including configuration and system tools."},
 };
 
 static const SetItem appearance_items[] = {
@@ -2655,6 +2657,9 @@ static void runAction(int id)
 #endif
 		case S_ABOUT_PROJECT:
 			dashShowAbout();
+			break;
+		case S_MISC_COMMANDS:
+			dashOpenBrowser(setting->Misc);
 			break;
 		case S_CLOCK_HARDWARE:
 			dashCfg.software_clock[0] = '\0';

@@ -336,7 +336,8 @@ int dashDevicesList(DashDevice *out, int max)
 	addStorage(out, &n, max, DI_SDCARD, "MX4SIO SD Card", "mx4sio:", "mx4sio:/", "Ready (slot 2)", "No MX4SIO storage found");
 #endif
 #ifdef ILINK
-	addStorage(out, &n, max, DI_HDD, "iLink / FireWire", "ilink:", "ilink:/", "IEEE1394 storage ready", "No iLink storage found");
+	if (consoleHasIlink())
+		addStorage(out, &n, max, DI_HDD, "iLink / FireWire", "ilink:", "ilink:/", "IEEE1394 storage ready", "No iLink storage found");
 #endif
 
 	if (filerShowHddUnit(0) && !console_is_PSX) {

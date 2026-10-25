@@ -1910,7 +1910,7 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 		}
 #endif
 #ifdef ILINK
-		if (allow_usb_devices) {
+		if (allow_usb_devices && consoleHasIlink()) {
 			strcpy(files[nfiles].name, "ilink:");
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 		}

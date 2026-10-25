@@ -218,8 +218,7 @@ int prepareNeutrinoGameID(const char *iso_path, char *gameID, size_t gameID_len)
 }
 
 #ifdef MMCE
-/* Best-effort per-game card selection. Never autoload MMCE: doing so can
- * reboot the IOP and invalidate a live MX4SIO, USB or UDPFS game mount.
+/* Best-effort per-game card selection using a manager-only bring-up.
  * No status polling occurs unless a responding MMCE accepts SET_GAMEID.
  * The 15 polls mirror upstream's upper bound for a genuine card switch.
  */
@@ -232,7 +231,7 @@ void setNeutrinoMmceGameID(const char *gameID, const char *iso_path, const char 
 	    !strncmp(iso_path, "mx4sio", 6) || !strncmp(elf_path, "mx4sio", 6) ||
 	    !strncmp(iso_path, "mmce:", 5) || !strncmp(elf_path, "mmce:", 5) ||
 	    !strncmp(elf_path, "mc:", 3) ||
-	    !isPathDeviceStackLoaded("mmce0:/"))
+	    !ensureMmceGameIdControl())
 		return;
 
 	for (port = 0; port < 2; port++) {
