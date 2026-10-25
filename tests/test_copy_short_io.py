@@ -1,7 +1,7 @@
-﻿"""Production copy I/O against short-transfer and failure fixtures.
+"""Exercise upstream single-call copy dispatch and terminal short-I/O behavior.
 
-Covers the common network/card transfer boundary, not live UDPFS or libmc.
-An optional git ref demonstrates the old loop rejecting positive short reads.
+The production read/write statements are extracted directly; short transfers
+must report failure rather than invoking a custom completion/retry loop.
 """
 from pathlib import Path
 import shutil
@@ -28,7 +28,6 @@ code = r'''
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-static struct { unsigned long long done; } copy_diag;
 static void __attribute__((unused)) filerCopyDiagStage(const char *s) { (void)s; }
 static unsigned char input[131081], output[131081], buffer[16384];
 static int pos_in,pos_out,read_cap,write_cap,read_calls,write_calls;
@@ -48,13 +47,11 @@ static int genWrite(int fd,void *p,int size) {
  memcpy(output+pos_out,p,count);pos_out+=count;return count;
 }
 static void reset(void) {
- copy_diag.done=0;
  pos_in=pos_out=read_calls=write_calls=read_fault=write_fault=0;
  read_cap=write_cap=sizeof(buffer);memset(output,0xA5,sizeof(output));
 }
 '''
-if 'static int copyReadChunk(' in source:
-    code += function('static int copyReadChunk(') + function('static int copyWriteChunk(')
+assert 'copyReadChunk' not in source and 'copyWriteChunk' not in source
 # Exercise the exact production dispatch statements, including write suppression.
 a = source.index('bytesRead = ', source.index('copyBuff = (buffIndex'))
 b = source.index('\n#if FILEOP_TRACE', a)
@@ -63,28 +60,30 @@ code += source[a:b] + '\nreturn bytesRead<0?bytesRead:bytesWritten<0?bytesWritte
 code += r'''
 int main(void) {
  for(int i=0;i<(int)sizeof(input);i++) input[i]=(unsigned char)(i*17+3);
- const int caps[][2]={{16384,16384},{4096,16384},{16384,17},{7,23},{1,1}};
+ reset();
+ for(int left=sizeof(input);left>0;) {
+  int n=left<(int)sizeof(buffer)?left:(int)sizeof(buffer);
+  assert(!transfer(n));left-=n;
+ }
+ assert(pos_in==sizeof(input)&&pos_out==sizeof(input));
+ assert(!memcmp(input,output,sizeof(input)));
+ const int caps[][2]={{4096,16384},{16384,17},{7,23},{1,1}};
  for(unsigned c=0;c<sizeof(caps)/sizeof(caps[0]);c++) {
   reset();read_cap=caps[c][0];write_cap=caps[c][1];
-  for(int left=sizeof(input);left>0;) {
-   int n=left<(int)sizeof(buffer)?left:(int)sizeof(buffer);
-   assert(!transfer(n));left-=n;
-  }
-  assert(pos_in==sizeof(input)&&pos_out==sizeof(input));
-  assert(!memcmp(input,output,sizeof(input)));
+  assert(transfer(16384)==-EIO);
+  assert(read_calls==1);
+  assert(write_calls==(read_cap==16384?1:0));
  }
- /* No EOF/zero/error is retried indefinitely; a failed read never writes. */
  const int errors[]={0,-ETIMEDOUT,-ENOSPC,20000};
  for(unsigned e=0;e<sizeof(errors)/sizeof(errors[0]);e++) {
-  reset();read_cap=100;read_fault=2;fault_value=errors[e];
+  reset();read_fault=1;fault_value=errors[e];
   assert(transfer(16384)==(errors[e]<0?errors[e]:-EIO));
-  assert(read_calls==2&&write_calls==0&&pos_out==0);
-  reset();write_cap=100;write_fault=2;fault_value=errors[e];
+  assert(read_calls==1&&write_calls==0&&pos_out==0);
+  reset();write_fault=1;fault_value=errors[e];
   assert(transfer(16384)==(errors[e]<0?errors[e]:-EIO));
-  assert(read_calls==1&&write_calls==2&&pos_out==100);
-  assert(!memcmp(input,output,100)&&output[100]==0xA5);
+  assert(read_calls==1&&write_calls==1&&pos_out==0);
  }
- puts("PASS: production copy dispatch preserves short reads/writes, byte order and terminal errors");
+ puts("PASS: upstream single-call copy dispatch, exact bytes, short-I/O failure and no retry");
 }
 '''
 if len(sys.argv) == 1:

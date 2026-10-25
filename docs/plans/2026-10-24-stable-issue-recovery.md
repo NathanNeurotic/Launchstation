@@ -20,7 +20,9 @@ Reference: saildot4k/wLaunchELF_R3Z master `06b06d000072d358c93d98104d64d2f081e4
 
 Normal and recursive file replacement now use the upstream operation sequence: `genRemove(out)`, then `genOpen(out, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT)`, transfer and close. No destination-stat preflight, parent-directory scan, exclusive-create flag, sibling staging file, checksum verification, backup publication or rename is required. Remove the FatFs stat reinterpretation introduced for that transaction; `genGetStat` again passes through driver results. Existing device-path integration remains.
 
-The dashboard progress/error presentation, worker/device preparation, source handling, short-I/O completion and supported-device metadata dispatch remain integrated. Same-path protection avoids deleting the source. MMCE's unsupported timestamp operation is skipped. No user firmware change is required by copying or replacement.
+The dashboard progress/error presentation, worker/device preparation, source handling and supported-device metadata dispatch remain integrated. The follow-up restores upstream's single read/write per chunk, buffer sizing, and retention of the output after close failure. Custom short-I/O completion loops and the dashboard-specific MC/VMC buffer cap are removed. Same-path protection avoids deleting the source. MMCE's unsupported timestamp operation is skipped. No user firmware change is required by copying or replacement.
+
+Scope: normal copy/move/delete/rename, folders, metadata and their dashboard call paths. The inherited rename/delete operations remain in use; cut/move deletes its source only after successful copying. Preserve CF/i.Link support, driver lifecycle coordination, launcher handoffs, timestamp-editor UI, backup/history/recovery features, translations and dashboard rendering. This correction does not revert those features or claim their complete source identity with upstream.
 
 Direct replacement has upstream's failure behavior: once the old destination is removed, a failed copy does not retain the original. There is no automatic backup or rollback promise. Existing unrelated backup/history features are unchanged.
 

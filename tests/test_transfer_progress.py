@@ -57,7 +57,7 @@ assert '(w - 60) * loading_fraction' in renderer and '* p + 8' not in renderer
 assert 'dashTextFit(x + 84, y + 26' in renderer
 copy=(root/'src/filer_copy.c').read_text()
 assert 'if (!DashFileProgress("Pasting file", file.name, size, original_size))' in copy
-assert 'buffSize = 16384' in copy
+assert 'buffSize = 16384' not in copy
 assert 'DashFileDeleteProgress(file->name)' in (root/'src/filer_actions.c').read_text()
 with tempfile.TemporaryDirectory(prefix='transfer-progress-') as folder:
  p=Path(folder);(p/'test.c').write_text("#define localizeDashboardText(s) (s)\n#define localizeDashboardFormat(s) (s)\n" + code)

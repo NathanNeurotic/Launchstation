@@ -89,7 +89,7 @@ static int nclipFiles,browser_cut,browser_pushed,browser_cd;
 static FILEINFO clipFiles[MAX_ENTRY];static char clipPath[MAX_PATH];
 static unsigned clipIopResetGeneration,generation;
 static u64 written_size,PasteTime,clock_ms;
-static int source_ready=1,load_ok=1,reset_preflight,read_cap=4096,write_cap=37,cancel_copy;
+static int source_ready=1,load_ok=1,reset_preflight,read_cap=1048576,write_cap=1048576,cancel_copy;
 static int fail_open,fail_rewind,fail_read,fail_write,fail_close,fail_listing,fail_out_open,early_eof,fail_measure;
 static int fd_kind[1024],handles,read_calls,write_calls;
 static unsigned fd_generation[1024];
@@ -120,8 +120,8 @@ static int genOpen(const char *p,int flags){
 }
 static int genClose(int fd){int kind=fd_kind[fd];assert(kind&&handles>0);fd_kind[fd]=0;handles--;int r=close(fd);return fail_close&&kind==2?-EIO:r;}
 static s64 genLseek(int fd,s64 n,int whence){assert(fd_generation[fd]==generation);if(fail_measure&&whence==SEEK_END)return -EIO;if(fail_rewind&&whence==SEEK_SET)return -EIO;return lseek(fd,n,whence);}
-static int genRead(int fd,void *p,int n){assert(fd_generation[fd]==generation);read_calls++;if(early_eof&&fd_kind[fd]==1&&read_calls>1)return 0;if(fail_read&&fd_kind[fd]==1)return -ETIMEDOUT;int r=read(fd,p,n>read_cap?read_cap:n);return r<0?-errno:r;}
-static int genWrite(int fd,void *p,int n){assert(fd_generation[fd]==generation);write_calls++;if(fail_write&&write_calls>=2)return -ENOSPC;int r=write(fd,p,n>write_cap?write_cap:n);return r<0?-errno:r;}
+static int genRead(int fd,void *p,int n){assert(fd_generation[fd]==generation);read_calls++;if(early_eof&&fd_kind[fd]==1)return 0;if(fail_read&&fd_kind[fd]==1)return -ETIMEDOUT;int r=read(fd,p,n>read_cap?read_cap:n);return r<0?-errno:r;}
+static int genWrite(int fd,void *p,int n){assert(fd_generation[fd]==generation);write_calls++;if(fail_write)return -ENOSPC;int r=write(fd,p,n>write_cap?write_cap:n);return r<0?-errno:r;}
 static int genRemove(char *p){return unlink(p)?-errno:0;}
 static int fileXioRename(const char *a,const char *b){assert(!"paste must not require rename");(void)a;(void)b;return -EIO;}
 static int mc_result;
@@ -139,7 +139,8 @@ static void transcpy_sjis(char *out,const unsigned char *in){strcpy(out,(const c
 static int filerConfirmExploitDelete(const char *p,const FILEINFO *f){(void)p;(void)f;return 1;}
 static int filerConfirmExploitModify(const char *p,const FILEINFO *f){(void)p;(void)f;return 1;}
 static int filerIsExploitProtectedPath(const char *p,const FILEINFO *f){(void)p;(void)f;return 0;}
-static int delete(const char *p,const FILEINFO *f){(void)p;(void)f;assert(0);return -1;}
+static int move_deletes;
+static int delete(const char *p,const FILEINFO *f){char source[MAX_PATH];assert(!handles);assert(!access("mmce0:/MOVE.BIN",F_OK));snprintf(source,sizeof(source),"%s%s",p,f->name);move_deletes++;return genRemove(source);}
 static void markMx4sioDestinationAfterWrite(const char *p){(void)p;}
 static int genCmpFileExt(const char *p,const char *e){(void)p;(void)e;return 0;}
 static int newdir(const char *parent,const char *name){char p[MAX_PATH];snprintf(p,sizeof(p),"%s%s",parent,name);return mkdir(p,0700)?-errno:0;}
@@ -162,7 +163,6 @@ static int applyMcInfoToVmcPath(const char *p,const sceMcTblGetDir *s){(void)p;(
 psu=(root/'include/psu_types.h').read_text();code+=psu[psu.index('typedef struct'):psu.rindex('#endif')]
 a=copy.index('/* One paste context');b=copy.index('static int isMemoryCardLikePath(',a);code+=copy[a:b]
 for sig in ('static int isMemoryCardLikePath(', 'static int isHddCommonParty(',
-            'static int copyReadChunk(', 'static int copyWriteChunk(',
             'static int calcTransferSpeed(', 'static int calcRemainingTime(',
             'static int smoothTransferSpeed(', 'static int applyMcInfoToMcPath('):
     code+=function(copy,sig)
@@ -215,8 +215,9 @@ int main(void){
   assert(!handles);
   if(failure==0||failure==1||failure==6||failure==7||failure==10)
    assert(matches("mc0:/BOOT.ELF",old,sizeof(old)));
+  else if(failure==4) assert(matches("mc0:/BOOT.ELF",input,sizeof(input))); /* close error retains output, as upstream */
   else assert(access("mc0:/BOOT.ELF",F_OK)); /* upstream direct replacement cleanup */
-  if(failure==3){assert(strstr(message,"37/65537 B")&&strstr(message,"(-28)"));}
+  if(failure==3){assert(strstr(message,"0/65537 B")&&strstr(message,"(-28)"));}
   if(failure==7)assert(strstr(message,"IOP 1>2"));
  }
  /* Direct copying does not depend on a driver's missing-entry stat status. */
@@ -246,6 +247,17 @@ int main(void){
   }
  }
 
+ /* Nested ordinary folders use the same production recursion. */
+ reset();put("mc0:/MOVE.BIN",input,sizeof(input));
+ strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"MOVE.BIN");browser_cut=1;
+ message[0]=0;subfunc_Paste(message,"mmce0:/");
+ assert(!message[0]&&move_deletes==1&&!nclipFiles);
+ assert(access("mc0:/MOVE.BIN",F_OK)&&matches("mmce0:/MOVE.BIN",input,sizeof(input)));
+ reset();put("mc0:/MOVE.BIN",input,sizeof(input));
+ strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"MOVE.BIN");browser_cut=1;fail_write=1;
+ message[0]=0;subfunc_Paste(message,"mmce0:/");
+ assert(message[0]&&move_deletes==1&&nclipFiles==1);
+ assert(matches("mc0:/MOVE.BIN",input,sizeof(input))&&!handles);
  /* Nested ordinary folders use the same production recursion. */
  reset();mkdir("udpfs:/NESTED",0700);put("udpfs:/NESTED/CHILD.BIN",input,257);
  strcpy(clipFiles[0].name,"NESTED");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;

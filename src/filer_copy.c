@@ -109,34 +109,6 @@ static int isHddCommonParty(const char *party)
 	return (!strncmp(party, "hdd", 3) && party[3] >= '0' && party[3] <= '9' && !strcmp(party + 4, ":__common"));
 }
 
-/* File drivers may return a positive short transfer. Complete only the
- * remaining bytes, never replay already-consumed data or retry an error.
- * A zero-byte result before the measured length is exhausted is failure. */
-static int copyReadChunk(int fd, void *buffer, int size)
-{
-	int done = 0;
-	while (done < size) {
-		int count = genRead(fd, (char *)buffer + done, size - done);
-		if (count < 0) return count;
-		if (count == 0 || count > size - done) return -EIO;
-		done += count;
-	}
-	return done;
-}
-
-static int copyWriteChunk(int fd, void *buffer, int size)
-{
-	int done = 0;
-	while (done < size) {
-		int count = genWrite(fd, (char *)buffer + done, size - done);
-		if (count < 0) return count;
-		if (count == 0 || count > size - done) return -EIO;
-		done += count;
-		copy_diag.done += count;
-	}
-	return done;
-}
-
 static int calcTransferSpeed(u64 bytes, int millis)
 {
 	u64 bytes_per_second;
@@ -960,12 +932,6 @@ non_PSU_RESTORE_init:
 
 	if (size < (u64)buffSize)
 		buffSize = (int)size;
-	/* Bound returned I/O chunks on slow card media so the dashboard gets
-	 * regular opportunities to draw its scene and handle cancellation. */
-	if (DashIsActive() && buffSize > 16384 &&
-	    (!strncmp(in, "mc", 2) || !strncmp(out, "mc", 2) ||
-	     !strncmp(in, "vmc", 3) || !strncmp(out, "vmc", 3)))
-		buffSize = 16384;
 
 	if (buffSize == 0) {
 #if FILEOP_TRACE
@@ -1118,11 +1084,11 @@ non_PSU_RESTORE_init:
 			}
 			copyBuff = (buffIndex == 0) ? buff : buff2;
 			filerCopyDiagStage("Reading source");
-			bytesRead = copyReadChunk(in_fd, copyBuff, buffSize);
+			bytesRead = genRead(in_fd, copyBuff, buffSize);
 			bytesWritten = 0;
 			if (bytesRead == buffSize) {
 				filerCopyDiagStage("Writing destination");
-				bytesWritten = copyWriteChunk(out_fd, copyBuff, buffSize);
+				bytesWritten = genWrite(out_fd, copyBuff, buffSize);
 			}
 #if FILEOP_TRACE
 			chunk_remaining_before = size;
@@ -1192,11 +1158,8 @@ copy_file_data_done:
 		else if ((isPcCardCfPath(out) && !isPcCardCfOnline()) || (isPcCardCfPath(in) && !isPcCardCfOnline()))
 			ret = -EIO;
 		out_fd = -1;  //prevent dual closure attempt
-		if (ret < 0) {
-			if (PM_flag[recurses] != PM_PSU_BACKUP)
-				genRemove(out);
+		if (ret < 0)
 			goto copy_file_exit;
-		}
 	}
 
 	if (!strncmp(out, "mc", 2)) {                                 //Handle file copied to MC
