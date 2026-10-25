@@ -385,7 +385,7 @@ void dashDrawHeader(int section, float section_anim)
 		float k = dashClampf(1.0f - dist, 0.0f, 1.0f);
 		DashColor c = dashColorLerp(DASH_C_TEXT3, DASH_C_SELTEXT, k);
 		dashIcon(dashSectionIcon(actual), cx - 8, tab_y + 3, 16, c);
-		const char *name = localizeDashboardText(dashSectionName(actual));
+		const char *name = localizeDashboardText(dashSectionLabel(actual));
 		float scale = DASH_FS_CAPTION * 0.92f;
 		if (dashTextWidth(name, scale) <= tab_w - 8)
 			dashTextCenter(cx, tab_y + 20, name, scale, c);

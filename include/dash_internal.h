@@ -944,6 +944,7 @@ const char *dashToolsGoogleStatus(void);
 void dashToolsCheckUpdates(void);
 
 const char *dashSectionName(int section);
+const char *dashSectionLabel(int section);
 int dashSectionIcon(int section);
 void dashSwitchSection(int section);
 int dashConfirmLeave(void); /* asks the current section; 0 = stay */

@@ -8,6 +8,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def revision():
+    top = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
+                         cwd=ROOT, capture_output=True, text=True)
+    if top.returncode or Path(top.stdout.strip()).resolve() != ROOT.resolve():
+        return None
     result = subprocess.run(['git', 'show', '-s', '--format=%H%n%cs', 'HEAD'],
                             cwd=ROOT, capture_output=True, text=True)
     lines = result.stdout.splitlines()

@@ -2,6 +2,7 @@
 from pathlib import Path
 import subprocess
 import sys
+import shutil
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
@@ -21,3 +22,19 @@ with tempfile.TemporaryDirectory(prefix='build-identity-') as folder:
 workflow = (root / '.github/workflows/compile.yml').read_text()
 assert workflow.index('python3 scripts/gen_githash.py --require-git') < workflow.index('ps2build build\n')
 print('PASS: stale header replaced with checkout identity; stable reruns; CI stamps before target builds')
+
+# An unpacked source tree nested in another checkout has no own identity.
+with tempfile.TemporaryDirectory(prefix='archive-identity-') as folder:
+    parent = Path(folder)
+    subprocess.run(['git', 'init', str(parent)], check=True, capture_output=True)
+    subprocess.run(['git', '-C', str(parent), '-c', 'user.name=Fixture',
+                    '-c', 'user.email=fixture@example.invalid', 'commit',
+                    '--allow-empty', '-m', 'Parent repository'], check=True, capture_output=True)
+    archive = parent / 'unpacked'
+    (archive / 'scripts').mkdir(parents=True)
+    shutil.copyfile(root / 'scripts/gen_githash.py', archive / 'scripts/gen_githash.py')
+    script = archive / 'scripts/gen_githash.py'
+    result = subprocess.run([sys.executable, str(script), '--require-git'], capture_output=True)
+    assert result.returncode != 0 and not (archive / 'githash.h').exists()
+    subprocess.run([sys.executable, str(script)], check=True, capture_output=True)
+    assert '#define GIT_HASH "local"' in (archive / 'githash.h').read_text()

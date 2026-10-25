@@ -48,6 +48,12 @@ const char *dashSectionName(int s)
 	return (s >= 0 && s < DASH_SEC_COUNT) ? section_names[s] : "";
 }
 
+const char *dashSectionLabel(int s)
+{
+	static const char *const labels[DASH_SEC_COUNT] = {"Home", "Applications", "Files", "Devices", "Tools", "Settings"};
+	return (s >= 0 && s < DASH_SEC_COUNT) ? labels[s] : "";
+}
+
 int dashSectionIcon(int s)
 {
 	return (s >= 0 && s < DASH_SEC_COUNT) ? section_icons[s] : DI_HOME;
