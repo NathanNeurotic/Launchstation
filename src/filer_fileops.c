@@ -295,6 +295,37 @@ int genRemove(char *path)
 //------------------------------
 //endfunc genRemove
 //--------------------------------------------------------------
+/* The embedded bdmfs_fatfs getstat returns -FRESULT, not -errno.
+ * FR_NO_FILE is 4; FR_INT_ERR is 2 and must never authorize creation.
+ * Keep this stat-only translation out of other driver/error domains. */
+static int normalizeFatFsStatResult(const char *path, int result)
+{
+#ifdef EXFAT
+	static const char *const stems[] = {"mass", "usb", "ata", "mx4sio", "ilink", "cf"};
+	static const int errors[] = {
+		0, EIO, EIO, ENODEV, ENOENT, ENOENT, ENXIO, EACCES, EEXIST,
+		EBADF, EROFS, ENODEV, ENODEV, ENODEV, EIO, ETIMEDOUT, EBUSY,
+		ENOMEM, EMFILE, EINVAL
+	};
+	unsigned int i;
+	if (path == NULL || result >= 0 || result <= -(int)(sizeof(errors) / sizeof(errors[0])))
+		return result;
+	for (i = 0; i < sizeof(stems) / sizeof(stems[0]); i++) {
+		size_t n = strlen(stems[i]);
+		const char *tail;
+		if (strncmp(path, stems[i], n))
+			continue;
+		tail = path + n;
+		while (*tail >= '0' && *tail <= '9') tail++;
+		if (*tail == ':')
+			return -errors[-result];
+	}
+#else
+	(void)path;
+#endif
+	return result;
+}
+
 int genGetStat(const char *path, iox_stat_t *stat)
 {
 	char stat_path[MAX_PATH];
@@ -310,7 +341,8 @@ int genGetStat(const char *path, iox_stat_t *stat)
 	ensurePathMemoryCardAccessible(stat_path);
 	normalizePcCardCfPath(stat_path, sizeof(stat_path));
 	genLimObjName(stat_path, 0);
-	return fileXioGetStat(stat_path, stat);
+	memset(stat, 0, sizeof(*stat));
+	return normalizeFatFsStatResult(stat_path, fileXioGetStat(stat_path, stat));
 }
 //------------------------------
 //endfunc genGetStat

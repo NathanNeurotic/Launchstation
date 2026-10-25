@@ -37,7 +37,7 @@ typedef struct { char EntryName[32]; } sceMcTblGetDir;
 #define FIO_S_ISREG S_ISREG
 static int rename_calls, fail_rename, fail_rollback, mc_result, denied, removed, fail_close;
 static int false_rename, sync_calls, fail_sync, fail_read, fail_eof, verified;
-static int stat_reports_eisdir, stat_reports_enoent, stat_reports_untyped;
+static int stat_reports_eisdir, stat_reports_enoent, stat_reports_untyped, stat_reports_parent;
 static int DashFileProgress(const char *a,const char *n,u64 r,u64 t) {
  assert(!strcmp(a,"Verifying file")&&!strcmp(n,"BOOT.ELF"));assert(r<=t);
  if(!r)verified++;
@@ -48,6 +48,7 @@ static int genGetStat(const char *p,iox_stat_t *s) {
  struct stat st; if(denied) return -denied;
  if(stat_reports_eisdir) return -EISDIR;
  if(stat_reports_enoent) return -ENOENT;
+ if(stat_reports_parent) { assert(!stat(".",&st));s->mode=st.st_mode;return 0; }
  if(stat(p,&st)) return -errno;
  s->mode=stat_reports_untyped ? 0 : st.st_mode; return 0;
 }
@@ -179,6 +180,12 @@ int main(void) {
   snprintf(missing,sizeof(missing),"%s/missing.elf",roots[device]);
   snprintf(directory,sizeof(directory),"%s/actual-dir",roots[device]);
   put(existing,"old bytes");unlink(missing);mkdir(directory,0700);
+  /* A plausible success containing the parent's mode is still ambiguous. */
+  stat_reports_parent=1;
+  assert(copyLookupPath(missing,&probe)==-ENOENT&&!lookup_dir);
+  assert(!copyLookupPath(existing,&probe)&&FIO_S_ISREG(probe.mode)&&!lookup_dir);
+  assert(copyLookupPath(directory,&probe)==0&&FIO_S_ISDIR(probe.mode)&&!lookup_dir);
+  stat_reports_parent=0;
   stat_reports_eisdir=1;
   assert(copyLookupPath(missing,&probe)==-ENOENT&&!lookup_dir);
   assert(copyLookupPath(existing,&probe)==0&&!FIO_S_ISDIR(probe.mode)&&!lookup_dir);

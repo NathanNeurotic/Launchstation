@@ -118,7 +118,9 @@ static int copyLookupPath(const char *path, iox_stat_t *stat)
 	int card_path = !strncmp(path, "mc0:", 4) || !strncmp(path, "mc1:", 4) ||
 	                !strncmp(path, "mmce", 4) || !strncmp(path, "vmc", 3);
 	ret = genGetStat(path, stat);
-	if (ret == 0 && (!card_path || FIO_S_ISREG(stat->mode) || FIO_S_ISDIR(stat->mode)))
+	/* Legacy card stat may even return success with parent-directory bits.
+	 * Confirm both existence and type from the named parent entry. */
+	if (ret == 0 && !card_path)
 		return ret;
 	if (ret == -ENOENT && !card_path)
 		return ret;
@@ -156,7 +158,7 @@ static int copyLookupPath(const char *path, iox_stat_t *stat)
 		}
 		/* Conservatively reject case-only collisions on FAT/card backends. */
 		if (!stricmp(entry.name, leaf + 1)) {
-			if (!FIO_S_ISREG(entry.stat.mode) && !FIO_S_ISDIR(entry.stat.mode)) {
+			if (card_path && !FIO_S_ISREG(entry.stat.mode) && !FIO_S_ISDIR(entry.stat.mode)) {
 				ret = -EIO; /* Unknown entry type; never overwrite. */
 			} else {
 				*stat = entry.stat;
@@ -175,7 +177,7 @@ static int copyOpenTarget(const char *path, int mode)
 {
 	/* MCMAN forwards 0x0800 as the PDA attribute, not exclusive creation.
 	 * Recheck the selected new/staging name before using its native flags.
-	 * Other filesystems retain their atomic O_EXCL protection. */
+	 * Other filesystems retain their existing O_EXCL creation flag. */
 	if ((!strncmp(path, "mc0:", 4) || !strncmp(path, "mc1:", 4)) &&
 	    (mode & FIO_O_EXCL)) {
 		iox_stat_t stat;

@@ -85,7 +85,7 @@ static FILEINFO clipFiles[MAX_ENTRY];static char clipPath[MAX_PATH];
 static unsigned clipIopResetGeneration,generation;
 static u64 written_size,PasteTime,clock_ms;
 static int source_ready=1,load_ok=1,reset_preflight,read_cap=4096,write_cap=37,cancel_copy;
-static int ambiguous_stat, wrong_eisdir_status;
+static int ambiguous_stat, wrong_eisdir_status, fatfs_internal_error;
 static int fail_open,fail_rewind,fail_read,fail_write,fail_close,fail_listing,fail_stat,fail_out_open,early_eof,fail_measure,corrupt_verify,fail_publish;
 static int fd_kind[1024],handles,read_calls,write_calls;
 static unsigned fd_generation[1024];
@@ -106,7 +106,20 @@ static int isPcCardCfOnline(void){return 1;}
 static void ensureMemoryCardPortAccessible(int p){assert(p==0||p==1);}
 static char *makeHostPath(char *d,char *s){if(d!=s)strcpy(d,s);return d;}
 static void genLimObjName(char *p,int reserve){(void)p;(void)reserve;}
-static int genGetStat(const char *p,iox_stat_t *out){struct stat s;if(!strncmp(p,"host:",5))return -EIO;if(fail_stat&&!strncmp(p,"mc0:",4))return -EACCES;if(wrong_eisdir_status)return -EISDIR;if(stat(p,&s))return ambiguous_stat?-1:-errno;out->mode=s.st_mode;return 0;}
+'''
+# Execute the production status-domain translation, then the production copy.
+fileops=(root/'src/filer_fileops.c').read_text()
+code+='#define EXFAT 1\n'+function(fileops,'static int normalizeFatFsStatResult(')
+code+=r'''
+static int genGetStat(const char *p,iox_stat_t *out){
+ struct stat s;
+ if(!strncmp(p,"host:",5))return -EIO;
+ if(fail_stat&&!strncmp(p,"mc0:",4))return -EACCES;
+ if(wrong_eisdir_status)return -EISDIR;
+ if(fatfs_internal_error&&!strncmp(p,"usb",3))return normalizeFatFsStatResult(p,-2);
+ if(stat(p,&s))return !strncmp(p,"usb",3)?normalizeFatFsStatResult(p,-4):(ambiguous_stat?-1:-errno);
+ out->mode=s.st_mode;return 0;
+}
 static int genOpen(const char *p,int flags){
  if(fail_open&&flags==O_RDONLY&&!strncmp(p,"udpfs:",6))return -ENOENT;
  if(fail_out_open&&(flags&O_WRONLY))return -EACCES;
@@ -262,6 +275,16 @@ int main(void){
   }
  }
  wrong_eisdir_status=0;
+ /* Raw FatFs FR_INT_ERR=2 must fail before any write, even for a new name. */
+ reset();fatfs_internal_error=1;message[0]=0;
+ put("usb0:/BOOT.ELF",(const unsigned char*)"OLD",3);
+ subfunc_Paste(message,"usb0:/");
+ assert(strstr(message,"Checking destination (-5)")&&!handles&&!write_calls);
+ assert(matches("usb0:/BOOT.ELF",(const unsigned char*)"OLD",3));
+ unlink("usb0:/BOOT.ELF");message[0]=0;
+ subfunc_Paste(message,"usb0:/");
+ assert(strstr(message,"Checking destination (-5)")&&!handles&&!write_calls);
+ assert(access("usb0:/BOOT.ELF",F_OK));fatfs_internal_error=0;
  /* Stock-firmware MMCE rename can fail. The existing destination must
   * remain untouched, with the verified stage retained for recovery. */
  reset();put("mmce0:/BOOT.ELF",(const unsigned char*)"OLD",3);

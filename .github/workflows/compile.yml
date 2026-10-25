@@ -33,6 +33,7 @@ jobs:
           python3 tests/test_pccf_owner.py
           python3 tests/test_pccf_fs.py
           python3 tests/test_paste_replace.py
+          python3 tests/test_fatfs_stat.py
           python3 tests/test_copy_short_io.py
           python3 tests/test_copy_pipeline.py
           python3 tests/test_udpfs_directory_errors.py
