@@ -357,8 +357,8 @@ back.
 
 ## Interface sounds
 
-The dashboard plays short sound effects through the ps2sdk `audsrv`
-audio server: cursor moves, confirm/cancel in dialogs, section switches,
+The dashboard plays short sound effects through the PS2BUILD SDK `audio`
+driver (via the `audsrv-compat` client): cursor moves, confirm/cancel in dialogs, section switches,
 toasts, the startup boot sound, and device connect/disconnect. They are
 Sony ADP samples embedded in the ELF (no files needed at runtime).
 
