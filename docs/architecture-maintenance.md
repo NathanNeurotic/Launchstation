@@ -16,7 +16,8 @@ user-facing versions of these notes.
 | --- | --- | --- |
 | **PS2BUILD (release)** | `ps2.yaml`; `iop/pccf/ps2.yaml` for the isolated CF driver | What CI builds and publishes. LLVM/Clang toolchain (`toolchain: llvm`). Standard variant plus a generated DualShock variant. |
 | **DualShock (DS34)** | `.ps2-ds34.yaml`, generated from `ps2.yaml` by `scripts/configure_ds34.py` | Built by CI as `build-ds34/`; shares every source and define except the pad driver. |
-| **Legacy make** | `Makefile` + `embed.make` | Best-effort. Needs `PS2DEV`/`PS2SDK`, `ps2-packer` and `bin2s`. Not run in CI. Does **not** define `WLE_NATIVE_CLOUD` or link Mbed TLS, so Google Drive and the native updater are compiled out. |
+
+The legacy `Makefile`/`embed.make` build was retired on 2026-10-26; `PS2BUILD_TOOLCHAIN=gcc` gives a GCC comparison build of the same `ps2.yaml`.
 
 The release profile in `ps2.yaml` is: MMCE, MX4SIO, iLink, exFAT (BDM), UDPFS and
 ETH, DVRP, XFROM, TMANIP, custom colors, homebrew SIO2MAN, latest `cdfs` CD/DVD
@@ -28,21 +29,6 @@ Changing a feature set means editing `defines:`, `libs:` and `embed_irx:` for th
 `wLaunchELF` target in `ps2.yaml`, then re-running the host contract tests
 (`tests/test_llvm_toolchain.py` protects the LLVM invariants: no GCC-built
 archives, `audsrv` EE client from source, `libjpegturbo`, loader flags).
-
-### Legacy profile helpers
-
-`scripts/ci/resolve_make_args.sh` (used by `make ci-build-profile` and
-`make ci-build-storage-matrix`) maps profile selectors:
-
-- `psx_profile`: `no-psx` or `psx`
-- `pad_profile`: `no-ds34` or `ds34`
-- `storage_profile`: `usb`, `mmce`, `mx4sio`, `all`, `minimal`
-
-into concrete make flags (`EXFAT`, `MMCE`, `MX4SIO`, `DVRP`, `XFROM`, `DS34`).
-They are retained for the legacy Makefile only; CI no longer uses them.
-Local `make` defaults to `ETH=0 UDPFS=1`; the older host/netfs stack is enabled
-with `ETH=1`, and combined builds must switch between `host:` and `udpfs:` by
-rebooting the IOP before loading the other network stack. `ps2.yaml` enables both.
 
 ## CI
 
@@ -68,7 +54,7 @@ built-in `GITHUB_TOKEN`.
 | Path | Purpose |
 | --- | --- |
 | `src/`, `include/` | EE application (dashboard, File Browser, backup/recovery, cloud, updater, handoffs, PC protocols) |
-| `iop/` | IOP modules: source-built targets from `ps2.yaml`, prebuilt `__precompiled/` and `__v10/`, `oldlibs/` (ps2ftpd, legacy libcdvd) |
+| `iop/` | IOP modules: source-built targets from `ps2.yaml`, prebuilt UDPFS blobs in `__precompiled/` and the `__v10/` DEV9/PS2IP pair, `oldlibs/` (ps2ftpd) |
 | `ee_libs/` | EE libraries built from vendored source (`hdd`, `iopreboot`, `audsrv` client) |
 | `loader/`, `igr/` | Embedded low-memory ELF loader; WLE-IGR OPL trampoline |
 | `exploits/`, `res/`, `Lang/` | Embedded exploit-installer payloads; sounds, CA bundle, icons, BGM, cloud template; language tables |
@@ -91,7 +77,7 @@ Current checks:
 
 Use:
 
-- `make stale-audit` (needs `make` and `rg`; writes `build/stale-code-report.txt`)
+- `sh scripts/stale_code_audit.sh` (needs `rg`; writes `build/stale-code-report.txt`)
 
 CI does not run this; it is a local/manual maintenance aid only.
 
