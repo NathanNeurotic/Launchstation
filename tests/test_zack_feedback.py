@@ -24,7 +24,7 @@ assert "dashOpenBrowser(LastDir)" in files or "LastDir" in home
 assert '"Applications"' in home and '"Last folder"' in home
 assert "dashAppsScreen.input(in)" in home
 assert "dashAppsScreen.draw()" in home
-assert "dashOpenBrowser(setting->Misc)" in (root/"src/dash_tools.c").read_text()
+assert "showMiscCommands();" in (root/"src/dash_tools.c").read_text()
 assert "dashCfg.files_mode = !dashCfg.files_mode" in files
 assert "const DashScreen dashDevicesScreen = {storageEnter" in files
 assert "const DashScreen dashFilesScreen" in (root/"src/dash_browser.c").read_text()
