@@ -72,7 +72,7 @@ built-in `GITHUB_TOKEN`.
 | `ee_libs/` | EE libraries built from vendored source (`hdd`, `iopreboot`, `audsrv` client) |
 | `loader/`, `igr/` | Embedded low-memory ELF loader; WLE-IGR OPL trampoline |
 | `exploits/`, `res/`, `Lang/` | Embedded exploit-installer payloads; sounds, CA bundle, icons, BGM, cloud template; language tables |
-| `packages/` | Legacy `audsrv`/`ogg`/`vorbis` copies (see its README) |
+| `packages/` | Retained `audsrv` copy (see its README) |
 | `scripts/`, `tests/` | Build helpers and CI checks; host regression tests |
 | `docs/`, `docs-site/` | Maintainer notes and wiki guides; website source |
 | `windows/cloud-relay/` | Optional PC-side rclone relay |
