@@ -248,6 +248,7 @@ void dashStoreDefaults(void)
 	dashCfg.intro_done = 0;
 	dashCfg.sound = 1;
 	dashCfg.sound_vol = 80;
+	dashCfg.sound_theme = 0;
 	dashCfg.bgm = 1;
 	dashCfg.bgm_vol = 80;
 	dashCfg.app_filter = 0;
@@ -329,6 +330,8 @@ static int settingsKv(const char *key, char *value, void *user)
 		dashCfg.sound = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_SoundVolume"))
 		dashCfg.sound_vol = clampInt(value, 0, 100, 80);
+	else if (!stricmp(key, "Dash_SoundTheme"))
+		dashCfg.sound_theme = clampInt(value, 0, 1, 0);
 	else if (!stricmp(key, "Dash_BGM"))
 		dashCfg.bgm = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_BGMVolume"))
@@ -515,6 +518,7 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                "Dash_SoftwareClock = %s\r\n"
 	                "Dash_Sound = %d\r\n"
 	                "Dash_SoundVolume = %d\r\n"
+	                "Dash_SoundTheme = %d\r\n"
 	                "Dash_BGM = %d\r\n"
 	                "Dash_BGMVolume = %d\r\n"
 	                "Dash_AppFilter = %d\r\n"
@@ -533,7 +537,7 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                "Dash_TemperatureFahrenheit = %d\r\n",
 	                c->enabled, c->start_section, c->view, c->effects,
 	                c->anim, c->autoscan, c->artwork, c->recent_count,
-	                c->legacy_theme, c->intro_done, c->software_clock, c->sound, c->sound_vol,
+	                c->legacy_theme, c->intro_done, c->software_clock, c->sound, c->sound_vol, c->sound_theme,
 	                c->bgm, c->bgm_vol, c->app_filter, c->files_mode,
 	                c->home_shortcuts, c->icon_backing, c->show_unavailable_devices, c->dev_auto,
 	                c->mmce_backup_keep, c->mmce_backup_format,

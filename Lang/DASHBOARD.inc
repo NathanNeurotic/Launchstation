@@ -572,6 +572,7 @@
     {"Some extended help remains in English.", LANG_Dashboard_Some_extended_help_remains_in_English},
     {"Sort Content by", LANG_Sort_Content_by},
     {"Sound", LANG_Dashboard_Sound},
+    {"Sound theme", LANG_Dashboard_Sound_theme},
     {"Square", LANG_Square},
     {"Start", LANG_Dashboard_Start},
     {"Start devices automatically", LANG_Dashboard_Start_devices_automatically},

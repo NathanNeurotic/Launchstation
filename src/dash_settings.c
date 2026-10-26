@@ -48,6 +48,7 @@ enum SetId {
 	S_ENABLED,
 	S_SOUND,
 	S_SVOL,
+	S_STHEME,
 	S_BGM,
 	S_BGMVOL,
 	S_START,
@@ -263,6 +264,7 @@ static const SetItem library_items[] = {
 static const SetItem sound_items[] = {
     {ST_CHOICE, S_SOUND, "Interface sounds", "Cursor moves, confirmations and other dashboard sound effects."},
     {ST_CHOICE, S_SVOL, "Interface sound volume", "Volume for dashboard cursor, confirm and notification effects only."},
+    {ST_CHOICE, S_STHEME, "Sound theme", "Classic keeps the original effects; PS2 uses soft console-style tones."},
     {ST_CHOICE, S_BGM, "Background music", "Hardware-looped dashboard music, independent from interface sounds."},
     {ST_CHOICE, S_BGMVOL, "Music volume", "Volume for background music only."},
 };
@@ -585,6 +587,7 @@ static const char *const mmce_backup_format_names[] = {"Native .mcd", "PCSX2 .ps
 static const char *const igr_sync_names[] = {"Off", "Local backup", "Local + Google Drive"};
 static const char *const igr_after_names[] = {"Dashboard", "PS2 system menu", "Application"};
 static const char *const hide_names[] = {"Show all", "Hide HDD1", "Hide HDD0+1", "Hide ATA1", "Hide ATA0+1", "Hide HDD1+ATA1", "Hide all"};
+static const char *const sound_theme_names[] = {"Classic", "PS2"};
 static const char *const confirm_names[] = {"Circle", "Cross"};
 static const char *const hl_names[] = {"Solid bar", "Accent bar", "Outline", "Text colour"};
 static const char *const tile_names[] = {"Memory card", "Rounded", "Chamfered", "Floating object", "Crystal slab"};
@@ -634,6 +637,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_SVOL:
 			*names = pct_names, *cur = dashCfg.sound_vol / 10;
 			return 11;
+		case S_STHEME:
+			*names = sound_theme_names, *cur = dashCfg.sound_theme;
+			return 2;
 		case S_BGM:
 			*cur = dashCfg.bgm;
 			return 2;
@@ -1252,6 +1258,11 @@ static void setChoice(int id, int v)
 		case S_SVOL:
 			dashCfg.sound_vol = v * 10;
 			dashSoundApplyVolume();
+			break;
+		case S_STHEME:
+			dashCfg.sound_theme = v;
+			dashSoundReloadTheme();
+			dashSoundPlay(DASH_SND_CONFIRM);
 			break;
 		case S_BGM:
 			dashCfg.bgm = v;
@@ -2815,7 +2826,8 @@ static int itemDisabled(const SetItem *it)
 	if (it->type == ST_PAGE)
 		return 0;
 	switch (it->id) {
-		case S_SVOL: return !dashCfg.sound;
+		case S_SVOL:
+		case S_STHEME: return !dashCfg.sound;
 		case S_BGMVOL: return !dashCfg.bgm;
 		case S_USBKBD_FILE:
 		case S_KBDMAP_FILE: return !setting->usbkbd_used;
@@ -2836,6 +2848,7 @@ static const char *disabledHelp(const SetItem *it)
 {
 	switch (it->id) {
 		case S_SVOL: return "Enable Interface sounds to adjust their volume.";
+		case S_STHEME: return "Enable Interface sounds to choose a sound theme.";
 		case S_BGMVOL: return "Enable Background music to adjust its volume.";
 		case S_USBKBD_FILE:
 		case S_KBDMAP_FILE: return "Enable USB keyboard to configure its driver and key map.";

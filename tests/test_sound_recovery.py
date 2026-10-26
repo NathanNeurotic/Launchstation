@@ -28,7 +28,7 @@ static audsrv_adpcm_t samples[DASH_SND_COUNT], bgm_sample;
 static int sound_ready, bgm_loaded, bgm_tried, bgm_channel = -1, sound_retry;
 static void *bgm_data;
 static unsigned int generation, sound_reboot_generation, sound_tried_generation = -1;
-static struct { int sound, bgm, sound_vol; } dashCfg = {1, 1, 50};
+static struct { int sound, bgm, sound_vol, sound_theme; } dashCfg = {1, 1, 50, 0};
 static unsigned char libsd_irx[1], audsrv_irx[1];
 static int size_libsd_irx = 1, size_audsrv_irx = 1;
 static int busy, parked, module_failure, init_failure, adpcm_failure, sample_failures;
