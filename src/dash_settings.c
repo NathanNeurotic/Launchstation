@@ -237,7 +237,7 @@ static const SetItem appearance_items[] = {
 };
 
 static const SetItem display_items[] = {
-    {ST_CHOICE, S_TVMODE, "Video mode", "Auto follows the console region. Changing it applies immediately."},
+    {ST_CHOICE, S_TVMODE, "Video mode", "Auto follows the console region. 576p needs PS2 ROM 2.20+ or PSX 1.80J/2.10J; 576i uses PAL."},
     {ST_NUMBER, S_SCREEN_X, "Screen position X", "Moves the picture left or right to fit your TV (overscan)."},
     {ST_NUMBER, S_SCREEN_Y, "Screen position Y", "Moves the picture up or down to fit your TV."},
     {ST_ACTION, S_SCREEN_RESET, "Reset screen settings", "Video mode Auto and a centred picture."},
@@ -576,7 +576,7 @@ static char *snap_dash_text, *snap_cnf_text;
 static u64 dirty_checked_ms;
 
 static const char *const onoff[] = {"Off", "On"};
-static const char *const tv_names[] = {"Auto", "NTSC", "PAL", "VGA", "480p", "576p"};
+static const char *const tv_names[] = {"Auto", "NTSC", "PAL", "VGA", "480p", "576p", "576i"};
 static const char *const view_names[] = {"Grid", "List", "Carousel"};
 static const char *const recent_names[] = {"0", "4", "8", "12", "16"};
 static const char *const mmce_backup_format_names[] = {"Native .mcd", "PCSX2 .ps2"};
@@ -1195,6 +1195,20 @@ static void colorEditor(const char *title, int id)
 	}
 }
 
+static int chooseVideoMode(const char *title, const char *const *names, int n, int current)
+{
+	DashMenuItem choices[TV_mode_COUNT];
+	int i;
+
+	for (i = 0; i < n && i < TV_mode_COUNT; i++) {
+		choices[i].icon = i == current ? DI_CHECK : -1;
+		choices[i].label = localizeDashboardText(names[i]);
+		choices[i].disabled = i == TV_mode_576P && !is576pSupported();
+		choices[i].detail = choices[i].disabled ? "Unsupported by this console" : (i == TV_mode_576I ? "PAL, 50 Hz" : NULL);
+	}
+	return dashModalMenu(title, NULL, choices, i, current);
+}
+
 static void setChoice(int id, int v)
 {
 	int dash_changed = 1;
@@ -1203,6 +1217,8 @@ static void setChoice(int id, int v)
 		return;
 	switch (id) {
 		case S_TVMODE:
+			if (v < TV_mode_AUTO || v >= TV_mode_COUNT || (v == TV_mode_576P && !is576pSupported()))
+				return;
 			setting->TV_mode = v;
 			updateScreenMode();
 			classic_dirty = 1, dash_changed = 0;
@@ -2948,11 +2964,17 @@ static void settingsInput(const DashInput *in)
 		const char *single;
 		int cur, n = choiceInfo(it->id, &cur, &names, &single);
 		if (n > 0) {
-			if (in->pressed & DASH_IN_LEFT)
-				cur = (cur + n - 1) % n;
-			else if (in->pressed & DASH_IN_RIGHT)
-				cur = (cur + 1) % n;
-			else if (n > 2) {
+			if (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT)) {
+				int step = (in->pressed & DASH_IN_LEFT) ? n - 1 : 1;
+				do {
+					cur = (cur + step) % n;
+				} while (it->id == S_TVMODE && cur == TV_mode_576P && !is576pSupported());
+			} else if (it->id == S_TVMODE) {
+				int r = chooseVideoMode(localizeDashboardText(it->label), names, n, cur);
+				if (r < 0)
+					return;
+				cur = r;
+			} else if (n > 2) {
 				const char *display[128];
 				int choice;
 				for (choice = 0; choice < n && choice < 128; choice++)

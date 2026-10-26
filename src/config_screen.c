@@ -142,7 +142,9 @@ void Config_Screen(void)
 						    GS_SETREG_RGBA(rgb[s / 3][0], rgb[s / 3][1], rgb[s / 3][2], 0);
 					}
 				} else if (s == CONFIG_SCREEN_TV_MODE) {
-					setting->TV_mode = (setting->TV_mode + 1) % TV_mode_COUNT;  //Change between the various modes
+					do {
+						setting->TV_mode = (setting->TV_mode + 1) % TV_mode_COUNT;  //Change between the various modes
+					} while (setting->TV_mode == TV_mode_576P && !is576pSupported());
 					updateScreenMode();
 				} else if (s == CONFIG_SCREEN_TV_STARTX) {
 					if (setting->screen_x < gsGlobal->StartX) {
@@ -253,6 +255,8 @@ void Config_Screen(void)
 					tv_mode_value = "Progressive";
 				else if (setting->TV_mode == TV_mode_576P)
 					tv_mode_value = "576p";
+				else if (setting->TV_mode == TV_mode_576I)
+					tv_mode_value = "576i";
 				else
 					tv_mode_value = "AUTO";
 				configFormatLabelValueAligned(c, sizeof(c), LNG(TV_mode), tv_mode_value, bool_label_width);

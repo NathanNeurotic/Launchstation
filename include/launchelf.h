@@ -480,6 +480,7 @@ void drawMsg(const char *msg);
 void drawLastMsg(void);
 void setupGS(void);
 void updateScreenMode(void);
+int is576pSupported(void); /* PS2 ROM 2.20+ or PSX 1.80J/2.10J */
 void clrScr(u64 color);
 void drawScr(void);
 void fadeScreenToBlack(void); /* prior to irreversible handoff or GS mode switch */
@@ -527,6 +528,7 @@ enum TV_mode {
 	TV_mode_VGA,
 	TV_mode_480P,
 	TV_mode_576P, /* append: preserve saved IDs of existing modes */
+	TV_mode_576I,
 
 	TV_mode_COUNT
 };
