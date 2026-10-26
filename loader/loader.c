@@ -54,6 +54,19 @@ DISABLE_PATCHED_FUNCTIONS();
 DISABLE_EXTRA_TIMERS_FUNCTIONS();
 PS2_DISABLE_AUTOSTART_PTHREAD();
 
+/* The loader is single-threaded and never starts pthreads. The LLVM
+ * toolchain's newlib-nano stdio calls pthread_setcancelstate() around its
+ * FILE locks, which would otherwise pull uninitialised libpthread, its
+ * kernel-timer glue and ~23 KiB more into the fixed 0x84000..0xa0000 window.
+ * GCC's newlib does not reference it, so this is unused there. */
+int pthread_setcancelstate(int state, int *oldstate)
+{
+	(void)state;
+	if (oldstate != NULL)
+		*oldstate = 0;
+	return 0;
+}
+
 static int parseHex8(const char *text, u32 *value)
 {
 	u32 out;

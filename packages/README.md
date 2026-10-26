@@ -1,12 +1,13 @@
 # Legacy copies of ps2build packages
 
 The current ps2build SDK supplies `vorbis` and `ogg` in its world
-package set. `audsrv` has a separate release schedule and may need to
-be installed separately. Use `ps2build update` and `ps2build build`;
-do not copy these files over a current SDK installation. The project
-references the package names in `ps2.yaml` (`libs:`, `headers:`,
-`embed_irx:`). CI installs the in-repo `audsrv` copy only when the
-SDK does not already contain it.
+package set. Do not copy these files over a current SDK installation.
+
+`ps2.yaml` does not use the `audsrv` package: its EE client is built from
+`ee_libs/audsrv/` by the selected toolchain (GCC or LLVM), and
+`audsrv/bin/audsrv.irx` here is embedded unchanged by `src/embed_blobs.S`.
+The IRX is compiler-independent and byte-identical to the PS2BUILD package
+driver.
 
 This directory retains copies for the legacy Makefile, which reads
 them directly:

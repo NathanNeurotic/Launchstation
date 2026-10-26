@@ -47,9 +47,22 @@ icons and clock, plus shareable theme folders. See
 
 ## Building (PS2BUILD)
 
+Release builds use the PS2BUILD **LLVM/Clang** toolchain (`toolchain: llvm`
+in `ps2.yaml`, EE and IOP). Third-party EE archives are compiled by the same
+toolchain first, so run these once (and again after changing toolchain):
+
 ```
+bash scripts/build_cloud_tls.sh
+bash scripts/build_jpeg.sh
+python scripts/gen_cloud_client.py
 ps2build build
 ```
+
+Both dependency scripts follow ps2build's own precedence
+(`PS2BUILD_TOOLCHAIN`, then `ps2.yaml`). For a GCC comparison build, set
+`PS2BUILD_TOOLCHAIN=gcc` for all four commands and use a separate `-o`
+output directory. CI verifies that the release ELFs contain only Clang-built
+objects (`scripts/check_toolchain_purity.py`).
 
 Outputs `build/bin/wLaunchELF-packed.elf` (release, ps2pack compressed) and
 `build/bin/wLaunchELF.elf`. `ps2.yaml` reproduces the Makefile's default

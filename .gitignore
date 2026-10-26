@@ -37,6 +37,8 @@ build-ds34/
 # Native cloud build/cache output
 .cloud-deps/
 .cache/cloud-deps/
+.jpeg-deps/
+.cache/jpeg-deps/
 
 # Standalone PC CARD driver validation output
 iop/pccf/build/

@@ -138,6 +138,7 @@ jobs:
           python3 tests/test_app_packages.py
           python3 scripts/copy_test_pack.py --output test-fixtures/LS-COPY-TEST.zip
           python3 tests/test_rolling_release_workflow.py
+          python3 tests/test_llvm_toolchain.py
           python3 tests/test_release_notes.py
           python3 tests/test_update_sidecar_transaction.py
           python3 tests/test_update_ancestry.py
@@ -178,23 +179,28 @@ jobs:
           set -euo pipefail
           command -v ps2build
           ps2build update
-          ps2build version
-
-      - name: Provide audsrv if absent from ps2build
-        shell: bash
-        run: |
-          set -euo pipefail
-          dest="$HOME/.local/share/ps2build/packages/world/audsrv"
-          if [ ! -f "$dest/package.yaml" ]; then
-            mkdir -p "$dest"
-            cp -r packages/world/audsrv/. "$dest/"
+          # Launchstation release builds use the LLVM/Clang toolchain.
+          sdk="$HOME/.local/share/ps2build"
+          if [ ! -f "$sdk/llvm-toolchain/ee/bin/mips64r5900el-ps2-elf-clang.cfg" ]; then
+            ps2build update llvm-toolchain
           fi
+          test -f "$sdk/llvm-toolchain/ee/bin/mips64r5900el-ps2-elf-clang.cfg"
+          test -d "$sdk/packages-llvm/core"
+          ps2build version
+          test -x "$sdk/llvm-toolchain/llvm/bin/llvm-nm"
+          echo "LLVM_BIN=$sdk/llvm-toolchain/llvm/bin" >> "$GITHUB_ENV"
 
       - name: Build native cloud TLS
         shell: bash
         run: |
           set -euo pipefail
           bash scripts/build_cloud_tls.sh
+
+      - name: Build libjpeg-turbo for the selected toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/build_jpeg.sh
 
       - name: Embed Launchstation Google Drive client
         env:
@@ -219,16 +225,26 @@ jobs:
       - name: Verify controller variants in linked ELFs
         run: |
           python3 scripts/check_ds34_build.py \
-            "$HOME/.local/share/ps2build/toolchain/ee/bin/mips64r5900el-ps2-elf-nm" \
+            "$LLVM_BIN/llvm-nm" \
             build/obj/wLaunchELF/wLaunchELF.unstripped.elf \
             build-ds34/obj/wLaunchELF/wLaunchELF.unstripped.elf
+
+      - name: Verify release ELFs contain only Clang-built objects
+        run: |
+          python3 scripts/check_toolchain_purity.py "$LLVM_BIN/llvm-readobj" \
+            build/obj/wLaunchELF/wLaunchELF.unstripped.elf \
+            build-ds34/obj/wLaunchELF/wLaunchELF.unstripped.elf \
+            build/obj/loader/loader.unstripped.elf \
+            build/obj/wle_igr/wle_igr.unstripped.elf \
+            build/obj/usbd_ra/usbd_ra.notiopmod.elf \
+            build/obj/mmceman/mmceman.notiopmod.elf
 
       - name: Verify source-built UDPFS SMAP and bundled peer ABI
         run: python3 scripts/check_udpfs_smap.py build build-ds34
 
       - name: Report native cloud size
         run: |
-          ee_size="$HOME/.local/share/ps2build/toolchain/ee/bin/mips64r5900el-ps2-elf-size"
+          ee_size="$LLVM_BIN/llvm-size"
           echo "== Mbed TLS archives =="
           ls -lh .cloud-deps/lib/libmbedtls.a .cloud-deps/lib/libmbedx509.a .cloud-deps/lib/libmbedcrypto.a
           echo "== Launchstation sections =="
@@ -251,7 +267,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           # Largest symbols (embedded IRX/sounds/fonts, libraries) so ELF size
           # work (#129) targets measured contributors. Report only.
-          ee_nm="$HOME/.local/share/ps2build/toolchain/ee/bin/mips64r5900el-ps2-elf-nm"
+          ee_nm="$LLVM_BIN/llvm-nm"
           echo "== Largest symbols (bytes, hex) =="
           "$ee_nm" --size-sort -S build/obj/wLaunchELF/wLaunchELF.unstripped.elf | tail -n 40 || true
 
@@ -259,7 +275,7 @@ jobs:
         run: |
           sh scripts/check_loader_layout.sh \
             build/obj/loader/loader.unstripped.elf \
-            "$HOME/.local/share/ps2build/toolchain/ee/bin/mips64r5900el-ps2-elf-nm" \
+            "$LLVM_BIN/llvm-nm" \
             0x84000 auto auto 0xa0000
 
       - name: Build installable app packages
