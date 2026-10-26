@@ -340,6 +340,7 @@ targets:
       - src/gui_hdd0_format.c
       - src/psu_functions.c
       - src/mc_card_export.c
+      - src/mc_card_view.c
       - src/mmce_backup.c
       - src/mmce_igr.c
       - src/hdd.c
