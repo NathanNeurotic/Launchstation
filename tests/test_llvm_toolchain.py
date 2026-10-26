@@ -21,15 +21,15 @@ jpeg = (root / "scripts/build_jpeg.sh").read_text()
 assert re.search(r"^toolchain: llvm$", yaml, re.M)
 assert re.search(r"^toolchain: llvm$", pccf, re.M)
 
-# audsrv: EE client from source, unchanged IOP server embedded as a blob.
-assert "name: audsrv_ee" in yaml and "ee_libs/audsrv/audsrv_rpc.c" in yaml
-assert (root / "ee_libs/audsrv/audsrv_rpc.c").is_file()
-assert (root / "ee_libs/audsrv/include/audsrv.h").is_file()
-assert 'EMBED_FILE(audsrv_irx, "packages/world/audsrv/bin/audsrv.irx")' in blobs
-assert not re.search(r"^\s+- audsrv\s*$", yaml, re.M)  # no package driver embed
+# Sound: the SDK audio driver plus the audsrv-compat client (both toolchain tiers ship them).
+assert 'embed_irx' in yaml and re.search(r'^\s+- "audio:audsrv"\s*$', yaml, re.M)
+assert "name: audsrv_ee" not in yaml and "ee_libs/audsrv" not in yaml
+assert not (root / "ee_libs/audsrv").exists() and not (root / "packages").exists()
+assert "EMBED_FILE(audsrv_irx" not in blobs
+assert not re.search(r"^\s+- audsrv\s*$", yaml, re.M)  # the old audsrv package driver is not used
 assert "headers: [sior]" in yaml
 libs = re.search(r"^    libs: \[iopreboot.*\]$", yaml, re.M).group(0)
-assert "audsrv_ee" in libs and " audsrv," not in libs and " audsrv]" not in libs
+assert "audsrv-compat" in libs and "audsrv_ee" not in libs
 
 # libjpeg-turbo: built by the active toolchain, never the SDK package archive.
 assert "jpegturbo" in libs and " jpeg," not in libs

@@ -72,12 +72,7 @@ EMBED_FILE(udpfs_ioman_irx, "iop/__precompiled/udpfs_ioman.irx")
 EMBED_FILE(ps2dev9_v10_irx, "iop/__v10/ps2dev9.irx")
 EMBED_FILE(ps2ip_v10_irx, "iop/__v10/ps2ip.irx")
 
-/* audsrv IOP server (ps2sdk, LGPL-2.0). The EE RPC client is built from
- * ee_libs/audsrv by the active toolchain; this IRX is compiler-independent
- * and byte-identical to the PS2BUILD audsrv package driver. */
-EMBED_FILE(audsrv_irx, "packages/world/audsrv/bin/audsrv.irx")
-
-/* Dashboard UI sounds (Sony ADP, played via audsrv). */
+/* Dashboard UI sounds (Sony ADP, played through the SDK audio driver via audsrv-compat). */
 EMBED_FILE(sfx_cursor_adp, "res/sfx/cursor.adp")
 EMBED_FILE(sfx_confirm_adp, "res/sfx/confirm.adp")
 EMBED_FILE(sfx_cancel_adp, "res/sfx/cancel.adp")

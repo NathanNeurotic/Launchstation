@@ -183,7 +183,7 @@ The repository ships `.claude/settings.json` with a `SessionStart` hook that run
 - **`ps2build: command not found`:** add `~/.local/share/ps2build` to `PATH`.
 - **`PS2 EE clang config not found`:** run `ps2build update llvm-toolchain`.
 - **Missing `mbedtls/ssl.h` or `jpeglib.h`:** run the two dependency scripts first.
-- **`symbol has invalid binding` from `ld.lld`, or a purity failure listing `GCC:`:** a GCC-built archive was linked; rebuild the dependencies with the same toolchain, and do not add `jpeg` or the SDK's `audsrv` package to `ps2.yaml` (`tests/test_llvm_toolchain.py` guards this).
+- **`symbol has invalid binding` from `ld.lld`, or a purity failure listing `GCC:`:** a GCC-built archive was linked; rebuild the dependencies with the same toolchain, and do not add `jpeg` or the GCC-only SDK `audsrv` package to `ps2.yaml` (sound uses `audsrv-compat` and the `audio:audsrv` driver) (`tests/test_llvm_toolchain.py` guards this).
 - **`Expected a Git revision` / `outside the PS2 timestamp range`:** pass a lowercase hex `--revision` and a Unix `--epoch` in 2000-2099 to `package_apps.py`.
 - **Update check says the build cannot be compared:** it was stamped `local`; rebuild with `--require-git` from a real commit.
 

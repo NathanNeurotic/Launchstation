@@ -28,7 +28,7 @@ not load it; `src/init.c` decides when.
 Changing a feature set means editing `defines:`, `libs:` and `embed_irx:` for the
 `wLaunchELF` target in `ps2.yaml`, then re-running the host contract tests
 (`tests/test_llvm_toolchain.py` protects the LLVM invariants: no GCC-built
-archives, `audsrv` EE client from source, `libjpegturbo`, loader flags).
+archives, SDK `audio`/`audsrv-compat` for sound, `libjpegturbo`, loader flags).
 
 ## CI
 
@@ -55,10 +55,9 @@ built-in `GITHUB_TOKEN`.
 | --- | --- |
 | `src/`, `include/` | EE application (dashboard, File Browser, backup/recovery, cloud, updater, handoffs, PC protocols) |
 | `iop/` | IOP modules: source-built targets from `ps2.yaml`, prebuilt UDPFS blobs in `__precompiled/` and the `__v10/` DEV9/PS2IP pair, `oldlibs/` (ps2ftpd) |
-| `ee_libs/` | EE libraries built from vendored source (`hdd`, `iopreboot`, `audsrv` client) |
+| `ee_libs/` | EE libraries built from vendored source (`hdd`, `iopreboot`) |
 | `loader/`, `igr/` | Embedded low-memory ELF loader; WLE-IGR OPL trampoline |
 | `exploits/`, `res/`, `Lang/` | Embedded exploit-installer payloads; sounds, CA bundle, icons, BGM, cloud template; language tables |
-| `packages/` | Retained `audsrv` copy (see its README) |
 | `scripts/`, `tests/` | Build helpers and CI checks; host regression tests |
 | `docs/`, `docs-site/` | Maintainer notes and wiki guides; website source |
 | `windows/cloud-relay/` | Optional PC-side rclone relay |
