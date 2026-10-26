@@ -113,7 +113,8 @@ def check(upstream=None):
     assert set(ROWS) <= saved_keys(config)|saved_keys(colours)
     for key,(field,control,consumer) in ROWS.items():
         assert re.search(r'\b'+re.escape(field)+r'\b',config+colours), (key,'missing persistence field')
-        if control.startswith('S_'): assert control in ui,(key,'unreachable control')
+        if control.startswith('S_'):
+            assert re.search(r'\b' + re.escape(control) + r'\b', ui), (key, 'unreachable control')
         for path in re.findall(r'src/[\w_]+\.c',consumer): assert (ROOT/path).exists(),path
     check_editor_routes(settings, (ROOT/'src/dash_browser.c').read_text(), ui)
     # Optional full comparison against the original serializer, not a name sample.
