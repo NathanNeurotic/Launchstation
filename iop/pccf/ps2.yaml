@@ -1,4 +1,5 @@
 project: launchstation_pccf
+toolchain: llvm
 targets:
   - name: pccf
     type: iop

@@ -17,6 +17,13 @@
 
 project: wLaunchELF
 
+# Release builds use the PS2BUILD LLVM/Clang toolchain (EE and IOP). Its
+# libraries come from packages-llvm, so every EE archive linked here must be
+# Clang-built too: Mbed TLS is rebuilt per toolchain by
+# scripts/build_cloud_tls.sh and the audsrv RPC client is built from source
+# below. Override with --toolchain gcc / PS2BUILD_TOOLCHAIN=gcc for comparison.
+toolchain: llvm
+
 targets:
   - name: udpfs_smap
     type: iop
@@ -217,6 +224,15 @@ targets:
     include_dirs: [ee_libs/hdd/include]
     headers: [kernel, filexio, poweroff]
 
+  # ps2sdk ee/rpc/audsrv EE RPC client (LGPL-2.0, ps2dev/ps2sdk c27cc8a).
+  # Built from source so the EE side always matches the selected compiler;
+  # the unchanged IOP audsrv.irx is embedded by src/embed_blobs.S.
+  - name: audsrv_ee
+    type: ee_lib
+    sources: [ee_libs/audsrv/audsrv_rpc.c]
+    include_dirs: [ee_libs/audsrv/include]
+    headers: [kernel]
+
   # Embedded ELF loader: linked into the 0x84000..0xa0000 low-memory window,
   # built compact with newlib-nano exactly like loader/Makefile.
   - name: loader
@@ -381,7 +397,7 @@ targets:
       - src/dash_browser.c
       - src/dash_exploit.c
       - src/embed_blobs.S
-    include_dirs: [include, ., ee_libs/hdd/include, .cloud-deps/include]
+    include_dirs: [include, ., ee_libs/hdd/include, ee_libs/audsrv/include, .cloud-deps/include, .jpeg-deps/include]
     defines:
       - WLE_PS2BUILD
       - NEWLIB_PORT_AWARE
@@ -399,15 +415,16 @@ targets:
       - EXFAT
       - CUSTOM_COLORS
     cflags:
-      - -mgpopt
       - -G0
       - "-Wa,-I."
       - "-Wa,-I.."
     ldflags:
       - "-Wl,--no-warn-mismatch"
       - "-L../.cloud-deps/lib"
-    headers: [sior, audsrv]
-    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, jpeg, mc, kbd, mbedtls, mbedx509, mbedcrypto, ps2ips, cglue, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv]
+      # libjpeg-turbo from scripts/build_jpeg.sh, built by the active toolchain.
+      - "-L../.jpeg-deps/lib"
+    headers: [sior]
+    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, jpegturbo, mc, kbd, mbedtls, mbedx509, mbedcrypto, ps2ips, cglue, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv_ee]
     embed_irx:
       - udpfs_smap
       - loader:loader_elf
@@ -455,4 +472,3 @@ targets:
       - usbmass_bd
       - ata_bd
       - libsd
-      - audsrv
