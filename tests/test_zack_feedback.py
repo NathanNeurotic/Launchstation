@@ -56,8 +56,8 @@ assert "Set PS2 clock manually..." in settings
 assert "dashClockSetManual" in settings
 assert "Sync PS2 clock from Internet" in settings
 assert "dashClockSyncInternet" in settings
-assert "time.google.com" in clock and "time.cloudflare.com" in clock and "pool.ntp.org" in clock
-assert "diff <= 10" in clock
+assert 'static const char server[] = "0.pool.ntp.org";' in clock
+assert "SNTP_AGREEMENT" not in clock and "sources disagree" not in clock
 assert "sceCdWriteClock" in clock and "sceCdReadClock" in clock
 assert "9ULL * 3600ULL" in clock
 assert "toBcd" in clock
