@@ -66,6 +66,7 @@ static float col_anim[2], cam[2];
 static const char *const lk_names[SETTING_LK_BTN_COUNT] = {"Auto", "Left", "Right"};
 static void dashStrCopy(char *d, const char *s, int n) { snprintf(d, n, "%s", s); }
 static int dashDevicePathReady(const char *p) { (void)p; return 1; }
+static int dashStoreIsHidden(const char *p) { (void)p; return 0; }
 static DashApp *dashLibResolve(const char *p, DashApp *tmp) {
     int i;
     for (i = 0; i < dashAppCount; i++) if (!strcmp(dashApps[i].path, p)) return &dashApps[i];

@@ -15,15 +15,17 @@
 
 #define SNTP_PACKET_SIZE 48
 #define SNTP_PORT 123
-#define SNTP_TIMEOUT_MS 1800
+#define SNTP_TIMEOUT_MS 5000
+#define SNTP_ATTEMPTS 2
 #define SNTP_EPOCH_DELTA 2208988800ULL
 #define UNIX_2020 1577836800ULL
 #define UNIX_2100 4102444800ULL
 
 struct hostent;
 extern int ps2ipc_disconnect(int s);
-extern int ps2ipc_recvfrom(int s, void *mem, int len, unsigned int flags, struct sockaddr *from, int *fromlen);
-extern int ps2ipc_sendto(int s, const void *dataptr, int size, unsigned int flags, const struct sockaddr *to, int tolen);
+extern int ps2ipc_connect(int s, const struct sockaddr *name, int namelen);
+extern int ps2ipc_recv(int s, void *mem, int len, unsigned int flags);
+extern int ps2ipc_send(int s, const void *dataptr, int size, unsigned int flags);
 extern int ps2ipc_socket(int domain, int type, int protocol);
 extern int ps2ipc_select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, struct timeval *timeout);
 extern struct hostent *ps2ipc_gethostbyname(const char *name);
@@ -43,6 +45,52 @@ typedef struct {
 	u32 sin_addr;
 	char sin_zero[8];
 } SntpSockaddrIn;
+
+/* Pair the received server time with the local elapsed timer, as in NTPS2. */
+typedef struct {
+	u64 unix_ms;
+	u64 received_ms;
+} SntpSample;
+
+enum {
+	SNTP_OK = 0,
+	SNTP_DNS,
+	SNTP_SOCKET,
+	SNTP_CONNECT,
+	SNTP_SEND,
+	SNTP_WAIT,
+	SNTP_TIMEOUT,
+	SNTP_RECEIVE,
+	SNTP_SHORT,
+	SNTP_INVALID,
+	SNTP_UNSYNCED,
+	SNTP_REFUSED,
+	SNTP_ORIGIN,
+	SNTP_DATE,
+	SNTP_TIMER
+};
+
+static const char *sntpStatusText(int status)
+{
+	switch (status) {
+		case SNTP_OK: return "OK";
+		case SNTP_DNS: return "DNS lookup failed";
+		case SNTP_SOCKET: return "socket creation failed";
+		case SNTP_CONNECT: return "server connection failed";
+		case SNTP_SEND: return "request send failed";
+		case SNTP_WAIT: return "socket wait failed";
+		case SNTP_TIMEOUT: return "reply timed out";
+		case SNTP_RECEIVE: return "reply receive failed";
+		case SNTP_SHORT: return "short reply";
+		case SNTP_INVALID: return "invalid reply";
+		case SNTP_UNSYNCED: return "server unsynchronized";
+		case SNTP_REFUSED: return "server refused request";
+		case SNTP_ORIGIN: return "request/reply mismatch";
+		case SNTP_DATE: return "server date out of range";
+		case SNTP_TIMER: return "local timer restarted";
+		default: return "not checked";
+	}
+}
 
 static u16 sntpHtons(u16 v)
 {
@@ -66,28 +114,35 @@ static int sntpWaitReadable(int sock)
 {
 	fd_set fds;
 	struct timeval tv;
+	int ready;
 
 	FD_ZERO(&fds);
 	FD_SET(sock, &fds);
 	tv.tv_sec = SNTP_TIMEOUT_MS / 1000;
 	tv.tv_usec = (SNTP_TIMEOUT_MS % 1000) * 1000;
-	return ps2ipc_select(sock + 1, &fds, NULL, NULL, &tv) > 0 && FD_ISSET(sock, &fds);
+	ready = ps2ipc_select(sock + 1, &fds, NULL, NULL, &tv);
+	if (ready < 0)
+		return SNTP_WAIT;
+	if (ready == 0)
+		return SNTP_TIMEOUT;
+	return FD_ISSET(sock, &fds) ? SNTP_OK : SNTP_WAIT;
 }
 
-static int sntpQuery(const char *host, u64 *unix_time)
+static int sntpQuery(const char *host, SntpSample *sample)
 {
 	SntpHostEnt *he;
-	SntpSockaddrIn addr, from;
+	SntpSockaddrIn addr;
 	u8 req[SNTP_PACKET_SIZE], reply[SNTP_PACKET_SIZE];
 	u32 nonce_hi, nonce_lo, ntp_sec, ntp_frac;
-	u64 full_ntp, unix_sec;
-	int sock = -1, fromlen = sizeof(from), got;
+	u64 full_ntp, unix_sec, sent_ms, received_ms;
+	int sock, got, status;
 
-	if (host == NULL || unix_time == NULL)
-		return 0;
+	if (host == NULL || sample == NULL)
+		return SNTP_INVALID;
 	he = (SntpHostEnt *)(void *)ps2ipc_gethostbyname(host);
-	if (he == NULL || he->h_addr_list == NULL || he->h_addr_list[0] == NULL)
-		return 0;
+	if (he == NULL || he->h_addrtype != AF_INET || he->h_length != 4 ||
+	    he->h_addr_list == NULL || he->h_addr_list[0] == NULL)
+		return SNTP_DNS;
 
 	memset(req, 0, sizeof(req));
 	req[0] = 0x23; /* LI=0, VN=4, mode=client */
@@ -104,25 +159,41 @@ static int sntpQuery(const char *host, u64 *unix_time)
 
 	sock = ps2ipc_socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0)
-		return 0;
-	if (ps2ipc_sendto(sock, req, sizeof(req), 0, (const struct sockaddr *)&addr, sizeof(addr)) != sizeof(req) ||
-	    !sntpWaitReadable(sock)) {
+		return SNTP_SOCKET;
+	/* Connected UDP limits replies to this server and uses the RPC receive
+	 * path without sockaddr/request overlap, including SDK-provided servers. */
+	if (ps2ipc_connect(sock, (const struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		ps2ipc_disconnect(sock);
-		return 0;
+		return SNTP_CONNECT;
+	}
+	sent_ms = Timer();
+	if (ps2ipc_send(sock, req, sizeof(req), 0) != sizeof(req)) {
+		ps2ipc_disconnect(sock);
+		return SNTP_SEND;
+	}
+	status = sntpWaitReadable(sock);
+	if (status != SNTP_OK) {
+		ps2ipc_disconnect(sock);
+		return status;
 	}
 
-	memset(&from, 0, sizeof(from));
-	got = ps2ipc_recvfrom(sock, reply, sizeof(reply), 0, (struct sockaddr *)&from, &fromlen);
+	got = ps2ipc_recv(sock, reply, sizeof(reply), 0);
+	received_ms = Timer();
 	ps2ipc_disconnect(sock);
+	if (got < 0)
+		return SNTP_RECEIVE;
 	if (got < SNTP_PACKET_SIZE)
-		return 0;
-	if ((reply[0] >> 6) == 3 || ((reply[0] & 7) != 4 && (reply[0] & 7) != 5))
-		return 0;
-	if (reply[1] == 0 || reply[1] > 15)
-		return 0;
+		return SNTP_SHORT;
+	if (((reply[0] & 7) != 4 && (reply[0] & 7) != 5) || reply[1] > 15)
+		return SNTP_INVALID;
 	/* A valid server echoes our transmit timestamp as its origin timestamp. */
 	if (memcmp(reply + 24, req + 40, 8) != 0)
-		return 0;
+		return SNTP_ORIGIN;
+	/* Stratum zero includes rate-limit/denial replies. Do not retry them. */
+	if (reply[1] == 0)
+		return SNTP_REFUSED;
+	if ((reply[0] >> 6) == 3)
+		return SNTP_UNSYNCED;
 
 	ntp_sec = getBe32(reply + 40);
 	ntp_frac = getBe32(reply + 44);
@@ -132,14 +203,17 @@ static int sntpQuery(const char *host, u64 *unix_time)
 	if (ntp_sec < 0x80000000U)
 		full_ntp += 0x100000000ULL;
 	if (full_ntp < SNTP_EPOCH_DELTA)
-		return 0;
+		return SNTP_DATE;
 	unix_sec = full_ntp - SNTP_EPOCH_DELTA;
-	if (ntp_frac >= 0x80000000U)
-		unix_sec++;
 	if (unix_sec < UNIX_2020 || unix_sec >= UNIX_2100)
-		return 0;
-	*unix_time = unix_sec;
-	return 1;
+		return SNTP_DATE;
+	if (received_ms < sent_ms)
+		return SNTP_TIMER;
+	/* Start elapsed-time tracking when the server timestamp is received.
+	 * Retain milliseconds until the final one-second-resolution RTC write. */
+	sample->unix_ms = unix_sec * 1000ULL + (((u64)ntp_frac * 1000ULL) >> 32);
+	sample->received_ms = received_ms;
+	return SNTP_OK;
 }
 
 static s64 civilDays(int year, unsigned month, unsigned day)
@@ -240,54 +314,49 @@ static int writePs2Clock(u64 unix_utc)
 
 int dashClockSyncInternet(char *result, int result_size)
 {
-	static const char *const servers[] = {
-	    "time.google.com",
-	    "time.cloudflare.com",
-	    "pool.ntp.org",
-	};
-	u64 samples[3];
-	int ok[3] = {0, 0, 0};
-	int i, j, best_i = -1, best_j = -1;
-	u64 best_diff = ~0ULL, chosen;
+	static const char server[] = "0.pool.ntp.org";
+	SntpSample sample;
+	int attempt, status = SNTP_INVALID;
+	u64 now, chosen;
 
 	if (result != NULL && result_size > 0)
 		result[0] = '\0';
 	if (!ensureDashboardIpNetworkReady()) {
-		if (result) snprintf(result, result_size, "Network stack could not be started.");
+		if (result != NULL && result_size > 0)
+			snprintf(result, result_size, "%s", dashboardIpNetworkError());
 		return 0;
 	}
-	for (i = 0; i < 3; i++) {
-		char status[96];
-		snprintf(status, sizeof(status), "Checking time source %d of 3...", i + 1);
-		dashLoadingFrame(status, i, 3);
-		ok[i] = sntpQuery(servers[i], &samples[i]);
+	for (attempt = 0; attempt < SNTP_ATTEMPTS; attempt++) {
+		char progress[128];
+		snprintf(progress, sizeof(progress), "Checking %s (attempt %d of %d)...",
+		         server, attempt + 1, SNTP_ATTEMPTS);
+		dashLoadingFrame(progress, attempt, SNTP_ATTEMPTS);
+		status = sntpQuery(server, &sample);
+		DPRINTF(" [SNTP] %s attempt %d: %s\n", server, attempt + 1, sntpStatusText(status));
+		if (status == SNTP_OK || status == SNTP_REFUSED)
+			break;
 	}
-	for (i = 0; i < 3; i++) {
-		if (!ok[i])
-			continue;
-		for (j = i + 1; j < 3; j++) {
-			u64 diff;
-			if (!ok[j])
-				continue;
-			diff = samples[i] > samples[j] ? samples[i] - samples[j] : samples[j] - samples[i];
-			if (diff <= 10 && diff < best_diff) {
-				best_diff = diff;
-				best_i = i;
-				best_j = j;
-			}
-		}
-	}
-	if (best_i < 0) {
-		if (result) snprintf(result, result_size, "Could not get two Internet time sources to agree.");
+	if (status != SNTP_OK) {
+		if (result != NULL && result_size > 0)
+			snprintf(result, result_size, "%s: %s.", server, sntpStatusText(status));
 		return 0;
 	}
-	chosen = (samples[best_i] + samples[best_j]) / 2ULL;
+	now = Timer();
+	if (now < sample.received_ms) {
+		if (result != NULL && result_size > 0)
+			snprintf(result, result_size, "Local timer restarted. Try clock synchronization again.");
+		return 0;
+	}
+	/* Like NTPS2, add time elapsed since receipt before writing the RTC. */
+	chosen = (sample.unix_ms + now - sample.received_ms + 500ULL) / 1000ULL;
 	if (!writePs2Clock(chosen)) {
-		if (result) snprintf(result, result_size, "Internet time was received, but the PS2 RTC write could not be verified.");
+		if (result != NULL && result_size > 0)
+			snprintf(result, result_size, "Internet time was received, but the PS2 RTC write could not be verified.");
 		return 0;
 	}
 	menuTitleUpdateAsync(1);
-	if (result) snprintf(result, result_size, "PS2 system clock synchronized and verified.");
+	if (result != NULL && result_size > 0)
+		snprintf(result, result_size, "PS2 system clock synchronized and verified.");
 	return 1;
 }
 

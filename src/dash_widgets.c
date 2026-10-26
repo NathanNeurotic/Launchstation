@@ -116,6 +116,8 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 		int r;
 
 		dashInputPollEx(&in, 0);
+		if (dashDashboardPending())
+			break;
 		r = kbUsb(buf, max_len, &cur);
 		if (r != 0) {
 			result = (r > 0);
@@ -166,7 +168,7 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 			kbDelete(buf, &cur);
 			dashSoundPlay(DASH_SND_CANCEL);
 		}
-		if (in.pressed & DASH_IN_START) {
+		if (in.pressed & DASH_IN_SELECT) {
 			result = 1;
 			break;
 		}
@@ -280,7 +282,7 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 				hx += dashDrawButton(hx, hy, -1, "L1") + 2;
 				hx += dashDrawButton(hx, hy, -1, "R1") + 4;
 				hx = dashTextS(hx, hy + 4.5f, "Move", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
-				hx += dashDrawButton(hx, hy, -1, "START") + 4;
+				hx += dashDrawButton(hx, hy, -1, "SELECT") + 4;
 				hx = dashTextS(hx, hy + 4.5f, "Done", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
 				hx += dashDrawButton(hx, hy, DI_BTN_TRIANGLE, NULL) + 4;
 				dashTextS(hx, hy + 4.5f, localizeDashboardText("Cancel"), DASH_FS_SMALL, DASH_C_TEXT2);
@@ -440,11 +442,11 @@ int dashModalIp(const char *title, const char *help, char *ip_str, int size)
 				oct[sel] = 255;
 			dashSoundPlay(DASH_SND_CURSOR);
 		}
-		if (in.pressed & (DASH_IN_OK | DASH_IN_START)) {
+		if (in.pressed & DASH_IN_OK) {
 			result = 1;
 			break;
 		}
-		if (in.pressed & (DASH_IN_BACK | DASH_IN_MENU)) {
+		if (dashDashboardPending() || (in.pressed & (DASH_IN_BACK | DASH_IN_MENU))) {
 			memcpy(oct, orig, sizeof(oct));
 			break;
 		}
@@ -773,7 +775,7 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 			sel = 0;
 		if (in.pressed & DASH_IN_R2)
 			sel = n_rows > 0 ? n_rows - 1 : 0;
-		if (in.pressed & DASH_IN_MENU) {
+		if (dashDashboardPending() || (in.pressed & DASH_IN_MENU)) {
 			result = 0;
 			break;
 		}
@@ -810,7 +812,7 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 				}
 			}
 		}
-		if ((in.pressed & DASH_IN_START) && mode == DASH_PICK_FOLDER && pk.dir[0]) {
+		if ((in.pressed & DASH_IN_SELECT) && mode == DASH_PICK_FOLDER && pk.dir[0]) {
 			dashStrCopy(out, pk.dir, out_size);
 			result = 1;
 			break;
@@ -932,7 +934,7 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 				hx += dashDrawButton(hx, hy, dashBackIcon(), NULL) + 4;
 				hx = dashTextS(hx, hy + 4.5f, pk.dir[0] ? localizeDashboardText("Up") : localizeDashboardText("Cancel"), DASH_FS_SMALL, DASH_C_TEXT2) + 14;
 				if (mode == DASH_PICK_FOLDER && pk.dir[0]) {
-					hx += dashDrawButton(hx, hy, -1, "START") + 4;
+					hx += dashDrawButton(hx, hy, -1, "SELECT") + 4;
 					hx = dashTextS(hx, hy + 4.5f, "Use this folder", DASH_FS_SMALL, DASH_C_TEXT2) + 14;
 				} else if (mode != DASH_PICK_FOLDER) {
 					hx += dashDrawButton(hx, hy, DI_BTN_R3, NULL) + 4;

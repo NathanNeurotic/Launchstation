@@ -1,4 +1,4 @@
-"""Console labels are passive; exact model lookup stays user-initiated."""
+"""Console labels are passive; identity is read once at startup (R3Z 0aeaaea)."""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,9 +13,10 @@ summary = info.split("void dashConsoleSummaryText(char *out, size_t out_size)", 
 for forbidden in ("GetConsoleModelName(", "GetConsoleDvdVersion(", "getROMVersion(",
                   "Sif", "fileXio", "load", "DelayThread", "uLE_InitializeRegion("):
     assert forbidden not in summary, forbidden
-assert "cached_console_model[0]" in summary
+assert "cached_console_info.model[0]" in summary
 assert 'console_is_PSX ? "PSX" : "PS2"' in summary
 assert "consoleRegionName(ROMVER_data[4])" in summary
+assert '"ROM: %c.%c%c%c"' in summary and '"DVD: unavailable"' in summary
 # The region must be derived from ROMVER, never from the memory-card system-folder key.
 assert "rough_region" not in summary
 assert 'case \'H\': return "Asia (NTSC-J)"' in info
@@ -23,18 +24,26 @@ assert 'case \'A\': return "Americas (NTSC-U/C)"' in info
 
 sheet = info.split("void dashShowSystemInfo(void)", 1)[1].split("void dashShowFontViewer(", 1)[0] if "void dashShowFontViewer(" in info else info.split("void dashShowSystemInfo(void)", 1)[1]
 assert 'dashWorkerAwaitAll("Finishing up")' in sheet
-assert "GetConsoleModelName(ctx->romver_data, job.model, sizeof(job.model));" in sheet
-assert "snprintf(cached_console_model, sizeof(cached_console_model)" in sheet
-assert "cached_console_model[0] = '\\0';" in sheet
+assert "dashConsoleIdentityInit();" in sheet and "job = cached_console_info;" in sheet
+assert "GetConsoleModelName(" not in sheet
+init = info.split("void dashConsoleIdentityInit(void)", 1)[1].split("void dashConsoleSummaryText(", 1)[0]
+assert "if (console_identity_initialized)" in init
+assert "GetConsoleModelName(ROMVER_data, cached_console_info.model" in init
+assert "GetConsoleDvdVersion(cached_console_info.dvd" in init
+main = (ROOT / "src/dash_main.c").read_text()
+first = main.split("static void firstInit(void)", 1)[1]
+# Identity is cached before the dashboard worker can run IOP-side file work.
+assert first.index("dashConsoleIdentityInit();") < first.index("dashWorkerInit();")
 
 assert "dashConsoleSummaryText(console, sizeof(console));" in home
 assert "dashConsoleSummaryText(console, sizeof(console));" in devices
 assert "GetConsoleModelName(" not in home
 assert "GetConsoleModelName(" not in devices
+assert "char console[160];" in home and "char console[160];" in devices
 dev_input = devices.split("static void devInput(const DashInput *in)", 1)[1].split("static void devUpdate(", 1)[0]
 assert 'items[n].label = "Console information"' in dev_input
 assert "ids[n++] = 4;" in dev_input
 assert "case 4:" in dev_input and "dashShowSystemInfo();" in dev_input
 assert "DashHint h[4];" in devices
 assert "dashDrawHints(h, 4);" in devices
-print("PASS: passive HOME/DEVICES console summary; explicit model discovery")
+print("PASS: passive HOME/DEVICES console summary; identity cached once at startup")

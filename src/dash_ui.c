@@ -86,6 +86,19 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	in->any = (in->pressed != 0);
 	if (in->any)
 		last_input_ms = Timer();
+	/* Held SELECT turns START into its quick launch key (dash_main.c). */
+	if ((in->pressed & DASH_IN_START) && !(paddata & PAD_SELECT)) {
+		/* Consume the entire chord: START cannot also type, accept a dialog
+		 * or trigger another action after the Dashboard popup closes.
+		 * A second press cancels only the open Dashboard through normal Back. */
+		memset(in, 0, sizeof(*in));
+		if (dashDashboardMenuIsOpen()) {
+			in->pressed = DASH_IN_BACK;
+			in->any = 1;
+		} else {
+			dashDashboardMenu();
+		}
+	}
 }
 
 void dashInputFlush(void)
@@ -239,7 +252,7 @@ void dashDrawHints(const DashHint *hints, int n)
 		x = DASH_SAFE_L;
 	x += 14.0f * (1.0f - dashEaseOutCubic(dashSectionAnim()));
 	{
-		char ct[24], cd[24];
+		char ct[48], cd[24];
 		float cw = footerClockWidth(ct, sizeof(ct), cd, sizeof(cd));
 		/* only when it does not collide with the hints */
 		if (cw > 0.0f && DASH_SAFE_L + cw + 24.0f < x)
@@ -265,7 +278,30 @@ void dashDrawHints(const DashHint *hints, int n)
 //--------------------------------------------------------------
 // Header
 //--------------------------------------------------------------
+#define HEADER_TAB_X (DASH_PANE_L + HEADER_TAB_PAD)
+#define HEADER_TAB_W 66.0f
+#define HEADER_TAB_PAD 40.0f
+#define HEADER_ICON_SIZE 26.0f
+#define HEADER_ICON_GAP 12.0f
+
 static float tab_anim_x = -1.0f;
+
+/* The text renderer uses literal Latin-1 bytes, including degree (0xB0). */
+static void appendClockTemperature(char *time, int size)
+{
+	int raw, tenths;
+	size_t len;
+	if (!menuTitleGetTemperatureRaw(&raw))
+		return;
+	if (dashCfg.temp_fahrenheit)
+		tenths = (raw * 18 + 64) / 128 + 320;
+	else
+		tenths = (raw * 10 + 64) / 128;
+	len = strlen(time);
+	if (len < (size_t)size)
+		snprintf(time + len, size - len, "  %d.%d\260%c", tenths / 10,
+		         tenths % 10, dashCfg.temp_fahrenheit ? 'F' : 'C');
+}
 
 /* Clock text per the theme: 12/24 h and date order follow the console's
  * own settings unless the theme overrides them. */
@@ -292,6 +328,7 @@ static int clockText(char *t, int tsize, char *d, int dsize)
 	if (!valid) {
 		dashStrCopy(t, dashTheme.clock_seconds ? "--:--:--" : "--:--", tsize);
 		dashStrCopy(d, "", dsize);
+		appendClockTemperature(t, tsize);
 		return 0;
 	}
 	menuTitleFormatClockTime(t, tsize, h, mi, s, use12);
@@ -302,23 +339,32 @@ static int clockText(char *t, int tsize, char *d, int dsize)
 		d[0] = '\0';
 	else
 		menuTitleFormatClockDate(d, dsize, y, mo, dd, dfmt);
+	appendClockTemperature(t, tsize);
 	return 1;
 }
 
 void dashDrawClock(void)
 {
-	char t[24], d[24];
+	char t[48], d[24];
+	float scale, width, available;
 
 	if (dashTheme.clock == DASH_CLOCK_OFF || dashTheme.clock_pos != DASH_CLOCKPOS_HEADER)
 		return;
 	clockText(t, sizeof(t), d, sizeof(d));
+	/* Shrink a long time+temperature string rather than overlap the tabs. */
+	scale = dashTheme.clock == DASH_CLOCK_SYSTEM ? DASH_FS_BODY : DASH_FS_LABEL;
+	available = DASH_SAFE_R - (HEADER_TAB_X + HEADER_TAB_W * dashVisibleSectionCount() + HEADER_TAB_PAD +
+	                           HEADER_ICON_GAP + HEADER_ICON_SIZE + 8.0f);
+	width = dashTextWidth(t, scale);
+	if (width > available && available > 0.0f)
+		scale *= available / width;
 	if (dashTheme.clock == DASH_CLOCK_SYSTEM) {
 		/* OSDSYS: light grey, even weight, no emphasis */
-		dashTextRight(DASH_SAFE_R, 24, t, DASH_FS_BODY, DASH_C_TEXT);
+		dashTextRight(DASH_SAFE_R, 24, t, scale, DASH_C_TEXT);
 		if (d[0])
 			dashTextRight(DASH_SAFE_R, 45, d, DASH_FS_CAPTION, DASH_C_TEXT2);
 	} else {
-		dashTextRight(DASH_SAFE_R, 22, t, DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextRight(DASH_SAFE_R, 22, t, scale, DASH_C_TEXT);
 		if (d[0])
 			dashTextRight(DASH_SAFE_R, 46, d, DASH_FS_CAPTION, DASH_C_TEXT3);
 	}
@@ -351,10 +397,12 @@ static void drawFooterClock(float y, const char *t, const char *d)
 
 void dashDrawHeader(int section, float section_anim)
 {
-	const float tab_w = 66.0f, tab_x0 = 108.0f, tab_y = 20.0f;
+	const float tab_w = HEADER_TAB_W, tab_x0 = HEADER_TAB_X, tab_y = 20.0f;
 	int vcount = dashVisibleSectionCount();
 	int vindex = dashVisibleSectionIndex(section);
 	float target_x = tab_x0 + vindex * tab_w;
+	float strip_l = DASH_PANE_L, strip_r = tab_x0 + tab_w * vcount + HEADER_TAB_PAD;
+	float icon_x = strip_r + HEADER_ICON_GAP, row_cy = tab_y + 20;
 	int i;
 
 	(void)section_anim;
@@ -367,12 +415,9 @@ void dashDrawHeader(int section, float section_anim)
 	if (fabsf(target_x - tab_anim_x) < 0.25f)
 		tab_anim_x = target_x;
 
-	dashAccentGlow(51, 36, 22, 18, 1.2f);
-	dashIcon(DI_APP, 38, 23, 26, DASH_C_ACCENT);
-
-	dashDrawPanelBox(tab_x0 - 40, tab_y - 2, tab_w * vcount + 80, 44, 14);
+	dashDrawPanelBox(strip_l, tab_y - 2, strip_r - strip_l, 44, 14);
 	if (DASH_C_PANEL.a && !DASH_C_BORDER.a && dashTheme.glow)
-		dashPanelBorder(tab_x0 - 40, tab_y - 2, tab_w * vcount + 80, 44, 14, DC(255, 255, 255, 18));
+		dashPanelBorder(strip_l, tab_y - 2, strip_r - strip_l, 44, 14, DC(255, 255, 255, 18));
 	dashAccentGlow(tab_anim_x + tab_w * 0.5f, tab_y + 20, tab_w * 0.75f, 26, 1.2f);
 	if (dashTheme.highlight != DASH_HL_TEXT)
 		dashPanel(tab_anim_x + 3, tab_y + 1, tab_w - 6, 38, 11, dashColorA(DASH_C_SELECT, 0.65f));
@@ -393,11 +438,13 @@ void dashDrawHeader(int section, float section_anim)
 			dashTextFit(cx - (tab_w - 8) * 0.5f, tab_y + 20, tab_w - 8, name, scale, c);
 	}
 	{
-		float strip_l = tab_x0 - 40, strip_r = tab_x0 + tab_w * vcount + 40;
 		float lw = buttonWidth(-1, "L1"), rw = buttonWidth(-1, "R1");
-		drawButton(strip_l + (40.0f - lw) * 0.5f, tab_y + 9, -1, "L1");
-		drawButton(strip_r - 40.0f + (40.0f - rw) * 0.5f, tab_y + 9, -1, "R1");
+		drawButton(strip_l + (HEADER_TAB_PAD - lw) * 0.5f, tab_y + 9, -1, "L1");
+		drawButton(strip_r - HEADER_TAB_PAD + (HEADER_TAB_PAD - rw) * 0.5f, tab_y + 9, -1, "R1");
 	}
+
+	dashAccentGlow(icon_x + HEADER_ICON_SIZE * 0.5f, row_cy, 22, 18, 1.2f);
+	dashIcon(DI_APP, icon_x, row_cy - HEADER_ICON_SIZE * 0.5f, HEADER_ICON_SIZE, DASH_C_ACCENT);
 
 	dashDrawClock();
 }
@@ -761,6 +808,8 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 
 	while (1) {
 		dashInputPoll(&in);
+		if (dashDashboardPending())
+			return -1;
 		if (in.pressed & DASH_IN_UP) {
 			int s = sel;
 			do
@@ -844,6 +893,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 				float ry = ly + (i - top) * row_h;
 				DashColor c = items[i].disabled ? DASH_C_TEXT3 : dashItemColor(i == sel);
 				float tx = x + 28;
+				dashGfxPushAlpha(items[i].disabled ? DASH_DISABLED_ALPHA : 1.0f);
 				if (items[i].icon >= 0) {
 					dashIcon(items[i].icon, x + 26, ry + 6, 18, c);
 					tx = x + 54;
@@ -868,6 +918,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 					}
 					dashTextFit(tx, ry + 7, label_w, items[i].label, DASH_FS_BODY * 0.92f, c);
 				}
+				dashGfxPopAlpha();
 			}
 			dashGfxScissorReset();
 			dashDrawScrollbar(x + w - 12, ly, rows * row_h - 4, top, rows, n);
@@ -924,6 +975,8 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 
 	while (1) {
 		dashInputPoll(&in);
+		if (dashDashboardPending())
+			return 0;
 		if (cancel_label != NULL && (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
 			sel ^= 1;
 			dashSoundPlay(DASH_SND_CURSOR);

@@ -57,6 +57,8 @@ static u64 last_frame_ms,now_ms;
 static int bg_calls,ui_calls,renders,depth,nested,frames[2],step_ms[3]={16,20,33};
 static int preview_calls;
 static int nav_scenario;
+static int dashboard_pending;
+static int dashDashboardPending(void) { return dashboard_pending; }
 static u64 Timer(void) { return now_ms; }
 static void dashBgUpdate(float dt) { bg_calls++; bg_time+=dt*dashCfg.effects/100.0f; }
 static void dashUiUpdate(float dt) { ui_calls++; ui_time+=dt; }
@@ -80,6 +82,7 @@ static void preview(int i) { (void)i; preview_calls++; }
 #define DASH_SAFE_R 592
 #define DASH_BLEND_ADD 1
 #define DASH_BLEND_NORMAL 0
+#define DASH_DISABLED_ALPHA 0.5f
 """
 code += "enum { " + ",".join(symbols) + " };\n"
 input_start = header.rfind("enum {", 0, header.index("DASH_IN_UP"))
@@ -117,6 +120,7 @@ static int modalButtons(const char *,const char *,const char *,int,DashColor,
                         const char *,const char *,int);
 static void dashInputPoll(DashInput *in) {
     int f=++frames[depth];
+    if(nav_scenario==4)dashboard_pending=1;
     now_ms+=step_ms[(f-1)%3];
     in->pressed=f==4?DASH_IN_BACK:0;
     if(nav_scenario && depth==0) {
@@ -140,6 +144,7 @@ static void reset(void) {
     anim_time=bg_time=ui_time=0; bg_calls=ui_calls=renders=preview_calls=0;
     section_anim=fade_in=0;
     now_ms=last_frame_ms=1000; frame_dt=0;
+    dashboard_pending=0;
     depth=nested=nav_scenario=0; memset(frames,0,sizeof(frames)); modal_preview=NULL;
     dashCfg.anim=100; dashCfg.effects=100;
 }
@@ -205,6 +210,11 @@ int main(void) {
     reset(); modal_preview=preview;
     assert(dashModalMenu("all disabled",NULL,all_disabled,2,0)==-1);
     assert(renders==0 && modal_preview==NULL); /* no stranded preview callback */
+    /* A Dashboard request unwinds each blocking dialog before dispatch. */
+    reset();nav_scenario=4;
+    assert(dashModalMenu("interrupted",NULL,items,2,0)==-1 && !renders);
+    reset();nav_scenario=4;
+    assert(!modalButtons("interrupted","confirm",NULL,0,(DashColor){0},"OK","Cancel",0) && !renders);
     reset(); now_ms+=2000;
     assert(dashVisualUpdate()==0.1f); /* retain the long-stall clamp */
     now_ms=last_frame_ms-1;

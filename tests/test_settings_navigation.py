@@ -83,6 +83,11 @@ static int dashModalChoice(const char *l,const char *const *o,int n,int c) {
     (void)l; (void)o; (void)n; return c;
 }
 static void setChoice(int id,int v) { (void)id; (void)v; edits++; }
+enum { TV_mode_576P = 5 };
+static int is576pSupported(void) { return 1; }
+static int chooseVideoMode(const char *l,const char *const *o,int n,int c) {
+    (void)l; (void)o; (void)n; return c;
+}
 static int resetThemeSetting(int id) { (void)id; resets++; return 1; }
 """
 for signature in (

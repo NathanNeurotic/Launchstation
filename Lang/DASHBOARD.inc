@@ -411,6 +411,7 @@
     {"PFS USED", LANG_PFS_USED},
     {"PS2 HDD MANAGER", LANG_PS2_HDD_MANAGER},
     {"PS2 TEXT EDITOR", LANG_PS2_TEXT_EDITOR},
+    {"PS2 Temperature Units (50K and later)", LANG_Dashboard_PS2_Temperature_Units},
     {"PS2Browser", LANG_PS2Browser},
     {"PS2Disc", LANG_PS2Disc},
     {"PS2KEYS.dat does not contain valid %s keys.\nError %d", LANG_Exploit_KEYS_DAT_invalid},
