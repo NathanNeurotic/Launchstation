@@ -11,7 +11,7 @@ settings = (root / "src/dash_settings.c").read_text(encoding="utf-8")
 ui = (root / "src/dash_ui.c").read_text(encoding="utf-8")
 
 rows = int(re.search(r"#define ITEM_ROWS (\d+)", settings).group(1))
-geo = re.search(r"const float ix = \d+, iy = (\d+), irow = (\d+), iw = \d+;", settings)
+geo = re.search(r"const float ix = [^,]+, iy = (\d+), irow = (\d+), iw = [^;]+;", settings)
 iy, irow = int(geo.group(1)), int(geo.group(2))
 wrap = re.search(r"dashTextWrap\(ix, iy \+ ITEM_ROWS \* irow \+ (\d+), iw, (\d+), help, DASH_FS_CAPTION, DASH_C_TEXT3, (\d+)\)", settings)
 gap, lines, line_h = (int(g) for g in wrap.groups())

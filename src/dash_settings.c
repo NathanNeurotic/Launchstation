@@ -3036,7 +3036,7 @@ static void settingsDraw(void)
 	 * y=62): ~7 px of clear space above the breadcrumb's capitals (#135). */
 	/* Only the header lanes move; the list keeps ITEM_ROWS rows so its two-line
 	 * help still clears the footer hints. */
-	const float ix = 48, iy = 136, irow = 29, iw = 544;
+	const float ix = DASH_SAFE_L, iy = 136, irow = 29, iw = DASH_SAFE_R - DASH_SAFE_L;
 	const SetPage *c = &pages[page];
 	char trail[192];
 
@@ -3068,7 +3068,7 @@ static void settingsDraw(void)
 		item_anim = (float)item;
 
 	/* items */
-	dashDrawPanelBox(ix - 6, iy - 6, iw + 12, ITEM_ROWS * irow + 12, 14);
+	dashDrawPanelBox(DASH_PANE_L, iy - 6, DASH_PANE_W, ITEM_ROWS * irow + 12, 14);
 	dashDrawSelection(ix, iy + dashClampf(item_anim - item_top, 0, ITEM_ROWS - 1) * irow + 2, iw, irow - 5, 9, 1.0f);
 	for (i = item_top; i < c->n && i < item_top + ITEM_ROWS; i++) {
 		const SetItem *it = &c->items[i];

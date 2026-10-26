@@ -375,8 +375,8 @@ static void drawHero(void)
 	DashApp *a = focusedApp();
 
 	dashThemeSetFocusApp(a);
-	const float x = 48, y = 78, art = 120;
-	const float tx = 190, tw = 400;
+	const float x = DASH_SAFE_L, y = 78, art = 120;
+	const float tx = x + art + 22, tw = DASH_SAFE_R - tx;
 
 	if (a != NULL) {
 		char meta[128], dev[48];
@@ -431,22 +431,22 @@ static void homeDraw(void)
 
 	/* ROMVER is already populated at boot; no CDVD/IOP query during draw. */
 	dashConsoleSummaryText(console, sizeof(console));
-	dashTextFit(48, 60, 544, console, DASH_FS_CAPTION, DASH_C_TEXT3);
+	dashTextFit(DASH_SAFE_L, 60, DASH_SAFE_R - DASH_SAFE_L, console, DASH_FS_CAPTION, DASH_C_TEXT3);
 	drawHero();
 
 	/* Continue row */
-	dashText(48, y0 - 33, localizeDashboardText("Continue"), DASH_FS_SMALL, row == 0 ? DASH_C_TEXT : DASH_C_TEXT3);
+	dashText(DASH_SAFE_L, y0 - 33, localizeDashboardText("Continue"), DASH_FS_SMALL, row == 0 ? DASH_C_TEXT : DASH_C_TEXT3);
 	if (row == 0)
-		dashRect(48, y0 - 15, dashTextWidth(localizeDashboardText("Continue"), DASH_FS_SMALL), 2, DASH_C_ACCENT);
+		dashRect(DASH_SAFE_L, y0 - 15, dashTextWidth(localizeDashboardText("Continue"), DASH_FS_SMALL), 2, DASH_C_ACCENT);
 	if (nhome == 0) {
-		dashDrawPanelBox(48, y0, 552, cw, 14);
-		dashIcon(DI_CLOCK, 70, y0 + 25, 40, DASH_C_TEXT3);
-		dashText(126, y0 + 20, "Nothing here yet", DASH_FS_BODY, DASH_C_TEXT2);
-		dashText(126, y0 + 48, "Started, pinned and favorite apps will appear here.", DASH_FS_SMALL, DASH_C_TEXT3);
+		dashDrawPanelBox(DASH_PANE_L, y0, DASH_PANE_W, cw, 14);
+		dashIcon(DI_CLOCK, DASH_SAFE_L + 22, y0 + 25, 40, DASH_C_TEXT3);
+		dashText(DASH_SAFE_L + 78, y0 + 20, "Nothing here yet", DASH_FS_BODY, DASH_C_TEXT2);
+		dashText(DASH_SAFE_L + 78, y0 + 48, "Started, pinned and favorite apps will appear here.", DASH_FS_SMALL, DASH_C_TEXT3);
 	} else {
-		dashGfxScissor(DASH_SAFE_L - 8, y0 - 14, DASH_SAFE_R - DASH_SAFE_L + 16, 130);
+		dashGfxScissor(DASH_PANE_L, y0 - 14, DASH_PANE_W, 130);
 		for (i = 0; i < nhome; i++) {
-			float x = 48 + i * 104 - cam[0];
+			float x = DASH_SAFE_L + i * 104 - cam[0];
 			float f = (row == 0) ? dashClampf(1.0f - fabsf(i - col_anim[0]), 0.0f, 1.0f) : 0.0f;
 			float s = 1.0f + HOME_TILE_ZOOM * f;
 			float w = cw * s;
@@ -467,15 +467,15 @@ static void homeDraw(void)
 	/* Direct launch actions are optional for browser-centric users. */
 	if (nchips > 0) {
 		float cy = 361;
-		float x = 48;
+		float x = DASH_SAFE_L;
 		float focus_x = 0, focus_w = 0;
 		float label_x = 0, label_w = 0;
 		static float chip_cam;
 		float target;
 
-		dashText(48, cy - 24, "Browse & shortcuts", DASH_FS_SMALL, row == 1 ? DASH_C_TEXT : DASH_C_TEXT3);
+		dashText(DASH_SAFE_L, cy - 24, "Browse & shortcuts", DASH_FS_SMALL, row == 1 ? DASH_C_TEXT : DASH_C_TEXT3);
 		if (row == 1)
-			dashRect(48, cy - 6, dashTextWidth("Browse & shortcuts", DASH_FS_SMALL), 2, DASH_C_ACCENT);
+			dashRect(DASH_SAFE_L, cy - 6, dashTextWidth("Browse & shortcuts", DASH_FS_SMALL), 2, DASH_C_ACCENT);
 		/* measure focus position for horizontal scrolling */
 		for (i = 0; i < nchips; i++) {
 			float w = dashTextWidth(chips[i].label, DASH_FS_SMALL) + 46;
@@ -487,12 +487,12 @@ static void homeDraw(void)
 			}
 			x += w + 8;
 		}
-		target = focus_x + focus_w - (DASH_SAFE_R - 48);
+		target = focus_x + focus_w - DASH_SAFE_R;
 		if (target < 0)
 			target = 0;
 		chip_cam = dashApproach(chip_cam, target, 10.0f * dashAnimSpeed(), dashFrameDelta());
-		dashGfxScissor(DASH_SAFE_L - 6, cy - 6, DASH_SAFE_R - DASH_SAFE_L + 12, 44);
-		x = 48 - chip_cam;
+		dashGfxScissor(DASH_PANE_L, cy - 6, DASH_PANE_W, 44);
+		x = DASH_SAFE_L - chip_cam;
 		for (i = 0; i < nchips; i++) {
 			float w = dashTextWidth(chips[i].label, DASH_FS_SMALL) + 46;
 			int foc = (row == 1 && i == col[1]);
@@ -512,12 +512,12 @@ static void homeDraw(void)
 		}
 		dashGfxScissorReset();
 		if (row == 1 && label_w > 0) {
-			if (label_x < DASH_SAFE_L - 6) {
-				label_w -= DASH_SAFE_L - 6 - label_x;
-				label_x = DASH_SAFE_L - 6;
+			if (label_x < DASH_PANE_L) {
+				label_w -= DASH_PANE_L - label_x;
+				label_x = DASH_PANE_L;
 			}
-			if (label_x + label_w > DASH_SAFE_R + 6)
-				label_w = DASH_SAFE_R + 6 - label_x;
+			if (label_x + label_w > DASH_PANE_R)
+				label_w = DASH_PANE_R - label_x;
 			dashTextScroll(label_x, cy + 6.5f, label_w, chips[col[1]].label, DASH_FS_SMALL, dashItemColor(1));
 		}
 	}

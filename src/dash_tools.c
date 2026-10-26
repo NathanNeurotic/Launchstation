@@ -1509,12 +1509,12 @@ static void toolsUpdate(float dt)
 
 static void toolsDraw(void)
 {
-	const float lx = 48, ly = 102, row_h = 29, lw = 300;
+	const float lx = DASH_SAFE_L, ly = 102, row_h = 29, lw = 300;
 	const int rows = 10;
 	const Tool *t = &tools[tsel];
 	int i;
 
-	dashDrawSectionTitle(48, 68, localizeDashboardText("Tools"), "everything Launchstation can do");
+	dashDrawSectionTitle(lx, 68, localizeDashboardText("Tools"), "everything Launchstation can do");
 	if (tsel < ttop + 1)
 		ttop = tsel - 1;
 	if (tsel >= ttop + rows)
@@ -1546,7 +1546,7 @@ static void toolsDraw(void)
 	dashDrawScrollbar(lx + lw + 10, ly, rows * row_h, ttop, rows, NTOOLS);
 
 	{
-		float dx = 372, dy = 98, dw = 228, dh = 292;
+		float dx = lx + lw + 24, dy = 98, dw = DASH_PANE_R - dx, dh = 292;
 
 		dashDrawCard(dx, dy, dw, dh, 16);
 		dashAccentGlow(dx + dw * 0.5f, dy + 66, 80, 60, 1.0f);

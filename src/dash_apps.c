@@ -456,7 +456,7 @@ static void drawTitleBar(void)
 		snprintf(sub, sizeof(sub), "%d shown - %s", norder, localizeDashboardText(filter_names[filter]));
 	else
 		snprintf(sub, sizeof(sub), "%d %s", norder, norder == 1 ? "application" : "applications");
-	dashDrawSectionTitle(48, 68, localizeDashboardText("Applications"), sub);
+	dashDrawSectionTitle(DASH_SAFE_L, 68, localizeDashboardText("Applications"), sub);
 	for (v = 0; v < DASH_VIEW_COUNT; v++) {
 		float x = 526 + v * 26;
 		int on = (v == dashCfg.view);
@@ -480,7 +480,7 @@ static void drawGrid(void)
 	if (last > norder)
 		last = norder;
 
-	dashGfxScissor(DASH_SAFE_L - 10, 98, DASH_SAFE_R - DASH_SAFE_L + 20, 296);
+	dashGfxScissor(DASH_PANE_L, 98, DASH_PANE_W, 296);
 	for (i = first; i < last; i++) {
 		int r = i / GRID_COLS, c = i % GRID_COLS;
 		float x = 64 + c * GRID_PITCH_X;
@@ -533,7 +533,7 @@ static void drawList(void)
 {
 	int top, i;
 	DashApp *a = selApp();
-	float lx = 48, ly = 104, lw = 290;
+	float lx = DASH_SAFE_L, ly = 104, lw = 290;
 
 	top = sel - LIST_ROWS / 2;
 	if (top > norder - LIST_ROWS)
@@ -576,7 +576,7 @@ static void drawList(void)
 
 	/* detail panel */
 	if (a != NULL) {
-		float dx = 362, dy = 98, dw = 238;
+		float dx = lx + lw + 24, dy = 98, dw = DASH_PANE_R - dx;
 		char dev[48];
 
 		dashDrawCard(dx, dy, dw, 290, 16);

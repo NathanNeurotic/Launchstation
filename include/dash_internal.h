@@ -22,6 +22,12 @@
 #define DASH_SAFE_T 26
 #define DASH_SAFE_B 424
 
+/* All main panes share the Files tab's outer horizontal bounds. Split
+ * layouts keep their divider inside this same span. */
+#define DASH_PANE_L (DASH_SAFE_L - 6)
+#define DASH_PANE_R (DASH_SAFE_R + 6)
+#define DASH_PANE_W (DASH_PANE_R - DASH_PANE_L)
+
 /* Bounded storage sizes. Paths longer than DASH_PATH_MAX are skipped by the
  * library (the FileBrowser still handles them). */
 #define DASH_PATH_MAX 256

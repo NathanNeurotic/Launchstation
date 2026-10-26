@@ -51,8 +51,9 @@ static int menuTitleGetClockFields(int *y,int *mo,int *d,int *h,int *mi,int *s,i
     *y=2026;*mo=10;*d=25;*h=23;*mi=59;*s=58;*u=0;*fmt=0;return clock_valid;
 }
 static void dashStrCopy(char *out,const char *in,int size) { snprintf(out,size,"%s",in); }
-#define DASH_SAFE_R 592
-#define DASH_SAFE_L 48
+#define DASH_SAFE_R 600
+#define DASH_SAFE_L 40
+#define DASH_PANE_L (DASH_SAFE_L - 6)
 #define DASH_FS_BODY 0.8f
 #define DASH_FS_LABEL 0.9f
 #define DASH_FS_SMALL 0.66f
@@ -72,7 +73,7 @@ static void record(float x,float y,const char *text,float scale) {
 static void dashTextRight(float x,float y,const char *text,float scale,int color) { (void)color;record(x-dashTextWidth(text,scale),y,text,scale); }
 static float dashTextS(float x,float y,const char *text,float scale,int color) { (void)color;record(x,y,text,scale);return x+dashTextWidth(text,scale); }
 '''
-for macro in ("HEADER_TAB_X", "HEADER_TAB_W", "HEADER_TAB_PAD"):
+for macro in ("HEADER_TAB_X", "HEADER_TAB_W", "HEADER_TAB_PAD", "HEADER_ICON_SIZE", "HEADER_ICON_GAP"):
     code += re.search(r"^#define " + macro + r" .+$", ui, re.M).group() + "\n"
 for name in ("void menuTitleFormatClockTime(", "void menuTitleFormatClockDate("):
     code += function(title, name)
@@ -127,11 +128,12 @@ int main(void) {
     assert(!strcmp(time,"23:59:58  40.0\260C") && !strcmp(date,"2026/10/25"));
     dashTheme.clock_seconds=0;dashTheme.clock_hours=DASH_HOURS_12;dashCfg.temp_fahrenheit=1;
     clockText(time,sizeof(time),date,sizeof(date));assert(!strcmp(time,"11:59 PM  104.0\260F"));
-    /* Long 12-hour clock/temperature text respects the navigation strip. */
+    /* Long 12-hour clock/temperature text also clears the icon after R1. */
+    const float clock_left=HEADER_TAB_X+HEADER_TAB_W*dashVisibleSectionCount()+HEADER_TAB_PAD+HEADER_ICON_GAP+HEADER_ICON_SIZE+8;
     dashTheme.clock_seconds=1;
     for(int mode=DASH_CLOCK_STANDARD;mode<=DASH_CLOCK_SYSTEM;mode++) {
         dashTheme.clock=mode;draws=0;dashDrawClock();assert(draws==2);
-        assert(drawn[0].x>=420-0.01f && fabsf(drawn[0].x+dashTextWidth(drawn[0].text,drawn[0].scale)-DASH_SAFE_R)<0.01f);
+        assert(drawn[0].x>=clock_left-0.01f && fabsf(drawn[0].x+dashTextWidth(drawn[0].text,drawn[0].scale)-DASH_SAFE_R)<0.01f);
         assert(strstr(drawn[0].text,"  104.0\260F"));
     }
     dashTheme.clock_pos=DASH_CLOCKPOS_FOOTER;

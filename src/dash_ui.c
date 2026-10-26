@@ -278,9 +278,11 @@ void dashDrawHints(const DashHint *hints, int n)
 //--------------------------------------------------------------
 // Header
 //--------------------------------------------------------------
-#define HEADER_TAB_X 108.0f
+#define HEADER_TAB_X (DASH_PANE_L + HEADER_TAB_PAD)
 #define HEADER_TAB_W 66.0f
 #define HEADER_TAB_PAD 40.0f
+#define HEADER_ICON_SIZE 26.0f
+#define HEADER_ICON_GAP 12.0f
 
 static float tab_anim_x = -1.0f;
 
@@ -351,7 +353,8 @@ void dashDrawClock(void)
 	clockText(t, sizeof(t), d, sizeof(d));
 	/* Shrink a long time+temperature string rather than overlap the tabs. */
 	scale = dashTheme.clock == DASH_CLOCK_SYSTEM ? DASH_FS_BODY : DASH_FS_LABEL;
-	available = DASH_SAFE_R - (HEADER_TAB_X + HEADER_TAB_W * dashVisibleSectionCount() + HEADER_TAB_PAD + 8.0f);
+	available = DASH_SAFE_R - (HEADER_TAB_X + HEADER_TAB_W * dashVisibleSectionCount() + HEADER_TAB_PAD +
+	                           HEADER_ICON_GAP + HEADER_ICON_SIZE + 8.0f);
 	width = dashTextWidth(t, scale);
 	if (width > available && available > 0.0f)
 		scale *= available / width;
@@ -398,6 +401,8 @@ void dashDrawHeader(int section, float section_anim)
 	int vcount = dashVisibleSectionCount();
 	int vindex = dashVisibleSectionIndex(section);
 	float target_x = tab_x0 + vindex * tab_w;
+	float strip_l = DASH_PANE_L, strip_r = tab_x0 + tab_w * vcount + HEADER_TAB_PAD;
+	float icon_x = strip_r + HEADER_ICON_GAP, row_cy = tab_y + 20;
 	int i;
 
 	(void)section_anim;
@@ -410,12 +415,9 @@ void dashDrawHeader(int section, float section_anim)
 	if (fabsf(target_x - tab_anim_x) < 0.25f)
 		tab_anim_x = target_x;
 
-	dashAccentGlow(51, 36, 22, 18, 1.2f);
-	dashIcon(DI_APP, 38, 23, 26, DASH_C_ACCENT);
-
-	dashDrawPanelBox(tab_x0 - 40, tab_y - 2, tab_w * vcount + 80, 44, 14);
+	dashDrawPanelBox(strip_l, tab_y - 2, strip_r - strip_l, 44, 14);
 	if (DASH_C_PANEL.a && !DASH_C_BORDER.a && dashTheme.glow)
-		dashPanelBorder(tab_x0 - 40, tab_y - 2, tab_w * vcount + 80, 44, 14, DC(255, 255, 255, 18));
+		dashPanelBorder(strip_l, tab_y - 2, strip_r - strip_l, 44, 14, DC(255, 255, 255, 18));
 	dashAccentGlow(tab_anim_x + tab_w * 0.5f, tab_y + 20, tab_w * 0.75f, 26, 1.2f);
 	if (dashTheme.highlight != DASH_HL_TEXT)
 		dashPanel(tab_anim_x + 3, tab_y + 1, tab_w - 6, 38, 11, dashColorA(DASH_C_SELECT, 0.65f));
@@ -436,11 +438,13 @@ void dashDrawHeader(int section, float section_anim)
 			dashTextFit(cx - (tab_w - 8) * 0.5f, tab_y + 20, tab_w - 8, name, scale, c);
 	}
 	{
-		float strip_l = tab_x0 - 40, strip_r = tab_x0 + tab_w * vcount + 40;
 		float lw = buttonWidth(-1, "L1"), rw = buttonWidth(-1, "R1");
-		drawButton(strip_l + (40.0f - lw) * 0.5f, tab_y + 9, -1, "L1");
-		drawButton(strip_r - 40.0f + (40.0f - rw) * 0.5f, tab_y + 9, -1, "R1");
+		drawButton(strip_l + (HEADER_TAB_PAD - lw) * 0.5f, tab_y + 9, -1, "L1");
+		drawButton(strip_r - HEADER_TAB_PAD + (HEADER_TAB_PAD - rw) * 0.5f, tab_y + 9, -1, "R1");
 	}
+
+	dashAccentGlow(icon_x + HEADER_ICON_SIZE * 0.5f, row_cy, 22, 18, 1.2f);
+	dashIcon(DI_APP, icon_x, row_cy - HEADER_ICON_SIZE * 0.5f, HEADER_ICON_SIZE, DASH_C_ACCENT);
 
 	dashDrawClock();
 }
