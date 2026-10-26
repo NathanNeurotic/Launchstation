@@ -1,5 +1,17 @@
 # R3Z-10: upstream feature parity audit
 
+> **Status as of 2026-10-26: historical audit; its findings are resolved or deliberately divergent.**
+> * Resolved: the Neutrino/MMCE "active stack" gap (R3Z-12) is `ensureMmceGameIdControl()` in `src/init.c`
+>   (PR #208); configuration/GUI parity is complete (61 key families, see [R3Z-CONFIG-PARITY.md](R3Z-CONFIG-PARITY.md),
+>   `scripts/audit_r3z_settings.py`, `tests/test_r3z_config_inventory.py`); Ember RetroGem was added afterward
+>   ([EMBER-RETROGEM.md](EMBER-RETROGEM.md)).
+> * Correction: the Neutrino row says "explicit `-bs`"; the argument Launchstation actually passes is
+>   `-bsd=<backend>` (`src/neutrino_iso.c`).
+> * Still true: upstream was pinned at `06b06d0` (2026-10-25); later upstream commits were not compared, and
+>   no row proves physical-console parity. Intentional downstream differences (Neutrino per-game profiles,
+>   manager-only MMCE Game ID, native Settings) stand.
+
+
 Audit date: 2026-10-25. This report changes no implementation to obtain parity.
 The companion R3Z requests have their own implementation changes in this PR.
 

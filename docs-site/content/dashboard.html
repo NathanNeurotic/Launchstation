@@ -1,19 +1,98 @@
-<h1>Dashboard: Current Navigation</h1>
-<p class="lead">LAUNCHSTATION now has four visible top-level tabs. Applications live under Home; Files is the actual native File Browser, not an extra landing page.</p>
-<h2 id="tabs">Four top-level tabs</h2>
-<table><thead><tr><th>Tab</th><th>Behavior in current builds</th></tr></thead><tbody>
-<tr><td><b>Home</b></td><td>Continue carousel, pinned/recent/favorite applications, <b>Applications</b> library shortcut, <b>Last folder</b> shortcut when available, and optional configured launch-key shortcuts.</td></tr>
-<tr><td><b>Files</b></td><td>Opens the native File Browser directly inside the dashboard frame. Browse drives and folders, operate on files and return to the same folder/selection after switching tabs.</td></tr>
-<tr><td><b>Tools</b></td><td>File Browser, Text Editor, <b>MISC commands</b>, USB unit diagnostics, HDD Manager, exploit installer, network tools, MMCE/IGR and Google Drive functions where enabled.</td></tr>
-<tr><td><b>Settings</b></td><td>Appearance, Home/app library, sound, input, launching, devices/MMCE, network, and system settings.</td></tr>
+<h1>Dashboard</h1>
+<p class="lead">Launchstation is a single dashboard shell with four top-level tabs: <b>Home</b>, <b>Files</b>, <b>Tools</b> and <b>Settings</b>. The application library lives under Home, Files is the real native File Browser, and every former classic screen (Settings, HDD Manager, Text Editor, exploit installer, information screens, file pickers and dialogs) is drawn inside the same frame.</p>
+
+<div class="callout info"><div class="h">What was verified</div>This page is written against the current source (<code>dash_main.c</code>, <code>dash_home.c</code>, <code>dash_apps.c</code>, <code>dash_tools.c</code>, <code>dash_settings.c</code>). Behaviour that depends on a particular console, TV or storage device cannot be proven from the source and is called out as such. See <a href="controls.html">Controls</a> for every button, <a href="settings.html">Settings</a> for every option and <a href="configuration.html">Configuration</a> for the files the dashboard writes.</div>
+
+<h2 id="anatomy">Screen anatomy</h2>
+<ul>
+<li><b>Header:</b> the four tab icons with <b>L1</b> and <b>R1</b> badges at each end of the strip, and the clock/date on the side (see <a href="themes.html#clock">clock options</a>). The selector slides smoothly between tabs.</li>
+<li><b>Body:</b> the active tab. Panels, tiles, selection style, fonts and the animated background all follow the active <a href="themes.html">theme</a>.</li>
+<li><b>Footer hints:</b> the buttons that currently do something. They use your configured Confirm/Cancel mapping, so Circle and Cross swap if you changed <b>Settings &gt; Input &gt; Confirm button</b>.</li>
+<li><b>Toasts and the activity indicator:</b> short confirmations (for example <i>Added to Favorites</i>) and a small indicator above the hints while background work (folder listings, artwork, library scans, saves) is running. The cursor never waits for the memory card or a slow device.</li>
+<li><b>Loading overlay:</b> starting a device's drivers, launching an application and long file operations run behind a modal overlay with a status line and, for file operations, a progress bar.</li>
+</ul>
+
+<h2 id="tabs">The four tabs</h2>
+<table><thead><tr><th>Tab</th><th>What it holds</th></tr></thead><tbody>
+<tr><td><b>Home</b></td><td>Hero panel for the focused item, the <b>Continue</b> row (pinned, recent and favorite applications) and the <b>Browse &amp; shortcuts</b> row (<b>Applications</b>, <b>Last folder</b> and your launch-key shortcuts). A small console label shows PS2 or PSX plus the ROM region.</td></tr>
+<tr><td><b>Files</b></td><td>The native File Browser inside the dashboard frame: device roots, folders, file operations, image viewer. Returning to the tab restores the folder and highlighted entry.</td></tr>
+<tr><td><b>Tools</b></td><td>A grouped list of everything Launchstation can do outside the application library: browser/editor shortcuts, disc and game-image launchers, storage utilities, system commands and power commands.</td></tr>
+<tr><td><b>Settings</b></td><td>Appearance, Home &amp; applications, Sound, Input, Launching, Storage &amp; devices, Network and System, with one shared Save/Discard session.</td></tr>
 </tbody></table>
-<h2 id="home-apps">Home and Applications</h2>
-<p>Select <b>Applications</b> from Home to enter the full library without adding a fifth top-level tab. The library keeps its Grid/List/Carousel views, favorites, pins, filtering and recents. <b>SELECT</b> cycles application views. Add or remove a favorite from the application options; the result also displays a toast.</p>
-<p><b>Last folder</b> appears on Home after the browser has a valid remembered location. Optional launch-key shortcuts can be disabled without removing the Applications and Last folder navigation shortcuts.</p>
-<h2 id="files">Files and device discovery</h2>
-<p>Files is a persistent browser tab using the same engine as the modal browser opened from Tools. The root lets you select devices and start lazy drivers; <b>Not checked</b> is not the same as absent. The old separate Devices landing view and Files landing page are not additional visible tabs.</p>
-<p>Asynchronous USB reads can complete after a tab change. Input remains guarded until outstanding reads finish, rather than treating a tab switch as permission to poll PAD immediately.</p>
-<h2 id="navigation">Navigation</h2>
-<p><b>L1/R1</b> cycles Home, Files, Tools and Settings. <b>START</b> opens the global menu; File Browser supports context actions and multi-selection. The visible section count is four even though compatibility code retains older internal section identifiers.</p>
-<h2 id="display">Status and visuals</h2>
-<p>Clock, notifications, confirmation toasts, animation, BGM, screen calibration and themes have explicit display settings. Dashboard double buffering reduces horizontal scanout tearing, but passing CI does not establish every console/display combination is flicker-free. See <a href="themes.html">Themes &amp; BGM</a> and <a href="troubleshooting.html">Troubleshooting</a>.</p>
+<p>The startup tab is configurable (<b>Settings &gt; Home &amp; applications &gt; Start screen</b>: Home, Files, Tools or Settings; default Home). Older saved values for the retired Apps and Devices pages map to Home and Files; no favorites or metadata are rewritten.</p>
+
+<h2 id="home">Home</h2>
+<p>Home has two rows. Up/Down moves between them (an empty row is skipped), Left/Right moves within a row and wraps around, and <b>L2</b>/<b>R2</b> jump to the first/last entry.</p>
+<h3 id="continue">Continue row</h3>
+<p>Up to 24 tiles, in this order: pinned applications (including apps whose metadata says <code>pinned = 1</code>), then recent applications (as many as <b>Recent applications</b> allows: 0, 4, 8, 12 or 16; default 8), then favorites. If that leaves fewer than six tiles, the first applications of the library fill the row so a fresh install is not empty. Stored shortcuts whose device is not currently mounted are kept but hidden until the device returns. Pins and favorites show a small badge; recents do not.</p>
+<table><thead><tr><th>Button</th><th>Action</th></tr></thead><tbody>
+<tr><td>Confirm</td><td>Start the focused application.</td></tr>
+<tr><td>Square</td><td>Add/remove Favorite (a toast confirms; the list holds up to 48 favorites).</td></tr>
+<tr><td>Triangle</td><td>Application options: Start, Start with arguments, Favorite, Pin to Home, Details, Show in File Browser, Edit metadata, Hide from library (or Remove shortcut). See <a href="apps.html#options">Applications</a>.</td></tr>
+</tbody></table>
+<h3 id="shortcuts">Browse &amp; shortcuts row</h3>
+<ul>
+<li><b>Applications</b> opens the full library nested inside Home. <b>Back</b> returns to Home. This chip is always present.</li>
+<li><b>Last folder</b> appears once the browser has a valid remembered location and jumps to it in the Files tab. Always present when available.</li>
+<li><b>Launch-key shortcuts</b> are one chip for every launch key that has a target (<code>Launch key Circle: ...</code>). Disable them with <b>Settings &gt; Home &amp; applications &gt; Home quick-launch shortcuts</b>; Applications and Last folder stay.</li>
+</ul>
+<h3 id="background-only">Background-only view</h3>
+<p><b>R3</b> on Home hides the interface so you can see the animated background; the footer keeps a single <i>R3 Show interface</i> hint. Press R3 again to restore. SELECT+R3 is still the R3 launch key. The hidden state is never saved across launches.</p>
+
+<h2 id="apps">Applications library</h2>
+<p>Home &gt; Applications shows the library as <b>Grid</b> (5 columns), <b>List</b> (9 rows plus a detail panel) or <b>Carousel</b> (depth carousel). <b>SELECT</b> cycles the view (saved), Triangle opens the library menu (application options, change view, filter, refresh) and Square toggles Favorite. The filter is one of <b>All, Favorites</b> (favorites and pinned), <b>Memory Cards, MASS, HDD</b> and <b>Other devices</b>, and is remembered. Full details, artwork rules and metadata are on the <a href="apps.html">Applications</a> page.</p>
+
+<h2 id="files">Files</h2>
+<p>Files is a persistent tab using the same engine as the modal browser opened from Tools. At the device root you select a device; devices that need a driver start when you open them (<b>Not checked</b> is not the same as absent). <b>Back</b> goes to the parent folder; at the device root it returns to Home. <b>L1/R1</b> still switch tabs while you are inside a folder. The device root also carries a <b>Built-in commands</b> entry (the classic MISC folder). Everything about browsing, copy/move/delete, sorting and the image viewer is on the <a href="file-browser.html">File Browser</a> page.</p>
+<p>USB directory reads are asynchronous. After a tab change, input stays guarded until any outstanding USB read has finished and the pad state has been re-armed, so a tab switch can never poll the controller during an active fileXio read.</p>
+
+<h2 id="tools">Tools</h2>
+<p>Tools is a grouped list with a detail card for the focused entry (Up/Down, <b>L2/R2</b> jump six rows, Confirm runs it). A small coloured dot marks entries with a safety note (amber, shown in the card) or entries that leave Launchstation or change console state (red; these always ask for confirmation first).</p>
+<table><thead><tr><th>Group</th><th>Entry</th><th>What it does</th></tr></thead><tbody>
+<tr><td rowspan="6">Essentials</td><td>File Browser</td><td>Opens the Files tab.</td></tr>
+<tr><td>Text Editor</td><td>Opens the <a href="text-editor.html">Text Editor</a> with no document.</td></tr>
+<tr><td>Start disc</td><td>Boots the disc in the drive: PS2 and PS1 games, DVD Video, ESR discs.</td></tr>
+<tr><td>PS1 VCDs (POPStarter)</td><td>Opens the browser so you can pick a <code>.VCD</code>. See <a href="popstarter.html">POPStarter</a>.</td></tr>
+<tr><td>PS1 images (Ember)</td><td>Opens the browser; select a <code>.CUE</code>, <code>.BIN</code> or PS1 <code>.EXE</code> inside <code>&lt;Ember directory&gt;/games/&lt;Game&gt;/</code>. See <a href="ember.html">Ember</a>.</td></tr>
+<tr><td>PS2 ISOs (Neutrino)</td><td>Opens the browser; select an <code>.ISO</code>. See <a href="neutrino.html">Neutrino</a>.</td></tr>
+<tr><td rowspan="5">Storage</td><td>MISC commands</td><td>Opens the classic built-in command folder as a list inside the browser.</td></tr>
+<tr><td>USB unit diagnostics</td><td>Show the cached USB drive mask (no I/O) or probe logical unit 0 or 1 once. A probe is a single synchronous IOP request and can freeze a failing console; logical units are not physical ports.</td></tr>
+<tr><td>HDD Manager</td><td>APA partitions and HDL info. See <a href="hdd-manager.html">HDD Manager</a>.</td></tr>
+<tr><td>Memory card exploit installer</td><td>Asks first. See <a href="exploit-installer.html">Exploit Installer</a>.</td></tr>
+<tr><td>OPL IGR automatic MMCE backup</td><td>Installs/updates/removes the IGR helper. See <a href="igr.html">IGR</a>.</td></tr>
+<tr><td rowspan="8">System</td><td>PS2 system browser</td><td>Leaves Launchstation for the console's own Browser (asks first).</td></tr>
+<tr><td>OSDSYS</td><td>Starts the console OSD or the OSDSYS path set in Settings (asks first).</td></tr>
+<tr><td>FTP / Remote access</td><td>Network builds only. Starts FTP and PS2Link on demand and accepts remote commands. See <a href="network-services.html">Network services</a>.</td></tr>
+<tr><td>Google Drive backups</td><td>Network builds with native cloud only. See <a href="cloud.html">Cloud</a>.</td></tr>
+<tr><td>System information</td><td>Console model, ROM version, boot path, loaded configuration and debug details.</td></tr>
+<tr><td>Build information</td><td>Features and drivers included in this build.</td></tr>
+<tr><td>Font viewer</td><td>Every glyph of the active font.</td></tr>
+<tr><td>About Launchstation</td><td>Credits and version.</td></tr>
+<tr><td rowspan="2">Power</td><td>Reboot IOP</td><td>Restarts the IOP and all device drivers; devices are detected again when used (asks first).</td></tr>
+<tr><td>Power off</td><td>Turns the console off (asks first).</td></tr>
+</tbody></table>
+
+<h2 id="global-menu">START menu</h2>
+<p><b>START</b> opens the global Dashboard menu on every tab: <b>Home</b>, <b>Refresh application library</b>, <b>File Browser</b>, <b>Settings</b>, <b>Reboot IOP (reset drivers)</b> and <b>Power off</b>. Reboot IOP and Power off ask for confirmation. Switching tabs from this menu goes through the same unsaved-Settings guard as L1/R1.</p>
+
+<h2 id="launch-keys">Launch keys and quick launch</h2>
+<p>Every controller button can be assigned an application or built-in command under <b>Settings &gt; Launching &gt; Launch keys</b> (Circle, Cross, Square, Triangle, L1, R1, L2, R2, L3, R3, START, plus optional Left and Right). SELECT is reserved for the configuration shortcut. Two ways to use them:</p>
+<ul>
+<li><b>Quick launch:</b> hold <b>SELECT</b> anywhere in the dashboard; after a quarter of a second a <i>Launch keys</i> panel lists every assigned key. While SELECT is held, pressing a button starts its target instead of navigating. A short SELECT tap (under half a second, with no other button) keeps its normal meaning, such as cycling the application view. Pressing a button with no target shows a toast pointing to the setting.</li>
+<li><b>At boot:</b> a launch key held when the startup delay ends starts that target before the dashboard is used.</li>
+</ul>
+<p>A fresh configuration assigns Circle to the File Browser and Triangle to About, which is why those two appear as Home shortcuts out of the box.</p>
+
+<h2 id="boot">Boot behaviour</h2>
+<ol>
+<li><b>Startup delay</b> (<b>Settings &gt; Launching &gt; Automatic start &amp; boot</b>, default 1 second, 0 to 60): input is ignored during the delay so a button used to start Launchstation is not misread. A launch key held when the delay ends starts its target.</li>
+<li><b>Automatic start:</b> if the <i>Automatic start target</i> is set, a banner <i>Starting NAME in N</i> counts down (<b>Automatic start timeout</b>, default 10 seconds). <i>Press any button to stay</i> cancels it with the toast <i>Automatic start cancelled</i>. Clear the target to disable automatic start.</li>
+<li><b>Recovery boot:</b> hold <b>SELECT</b> while Launchstation starts. For that session <code>DASHBOARD.CNF</code> is ignored (nothing saved is changed, a toast says so) and all device families are listed, so a bad saved device/auto-start combination can never trap you.</li>
+<li><b>Welcome message:</b> the first time the dashboard fades in it shows a short introduction. <b>Settings &gt; System &gt; Show welcome message again</b> repeats it.</li>
+</ol>
+
+<h2 id="devices">Devices and driver start-up</h2>
+<p>Only the device you booted from is always on. Other families (USB, internal HDD, exFAT HDD, MMCE, MX4SIO, UDPFS and, where built, iLink) start when you open them or when enabled under <b>Settings &gt; Storage &amp; devices &gt; Start devices automatically</b> (all off by default). Optional storage is dimmed and marked <i>Not checked</i> until a root check succeeds; checks are user- or auto-start-initiated, never run while drawing, and are not continuous hotplug monitoring for optional families. See <a href="devices.html">Device Support</a>.</p>
+
+<h2 id="display">Rendering notes</h2>
+<p>The dashboard enables gsKit double buffering at start and flips at VBLANK to avoid horizontal tear bands from animated drawing. The second frame costs about 1.1 MiB (NTSC/480p) or 1.25 MiB (PAL) of the 4 MiB GS VRAM, so artwork is limited to small thumbnails (at most 128x128, up to 40 cached). This is a code-level anti-tearing measure; whether every console/display combination is free of flicker has to be confirmed on hardware. Animations run on a measured visual clock, so menu easing does not assume 60 frames per second, and a long blocking operation never makes an animation jump forward more than 100 ms. See <a href="themes.html#motion">Motion</a> and <a href="troubleshooting.html">Troubleshooting</a>.</p>

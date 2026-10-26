@@ -1,5 +1,13 @@
 # sd2psXtd firmware evidence for MMCE restoration
 
+> **Status as of 2026-10-26: valid for the pinned firmware revision only; not re-audited.**
+> The conclusions are pinned to sd2psXtd `8a20bd991b43ac731882f5f85030b19e94c23a3b`. Nothing in this
+> repository has since added a restore-transaction command: `iop/mmceman/include/mmce_cmds.h` still has
+> no prepare/commit/abort restore ID, and `research/sd2psxtd/` remains a host-only model. Newer sd2psXtd
+> releases were not checked in this pass (unverifiable here); re-audit before relying on this table with
+> newer firmware. Companion policy: [MMCE_RESTORE_PROTOCOL.md](MMCE_RESTORE_PROTOCOL.md).
+
+
 ## Verified upstream
 
 - Canonical repository: [sd2psXtd/firmware](https://github.com/sd2psXtd/firmware).

@@ -1,5 +1,15 @@
 # Dashboard report follow-up
 
+> **Status as of 2026-10-26: mostly resolved or superseded; hardware items remain open.**
+> * Implemented and merged: loose `BGM.ADP` music, explicit device probes (`src/dash_devices.c`),
+>   MB/GB free-space labels, input-state fixes, Back/Cancel sounds, software-clock fallback (PRs #178, #183, #188).
+> * Superseded: "Combine Home, Apps and Files under Devices" - the dashboard now has four visible tabs
+>   (Home, Files, Tools, Settings; `visible_sections` in `src/dash_main.c`); Devices lives at the top of Files.
+> * Unresolved: the exFAT HDD start-up crash (needs ELF hash and trace), Settings sharing `LAUNCHELF.CNF`/
+>   `IPCONFIG.DAT` with other LaunchELFs (no private namespace was added), font/flicker/orb visual requests.
+> * Test name drift: the "eight tests" validation list is obsolete; CI now runs the whole `tests/` set.
+
+
 This tracks the supplied `wlaunchelf issues.txt` report. Reports are leads,
 not proof of a cause. The changes below address defects demonstrated by
 source inspection and host regressions. Neither a host test nor a compiled

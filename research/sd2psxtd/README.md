@@ -1,5 +1,10 @@
 # sd2psXtd restore transaction — reference model only
 
+> **Status as of 2026-10-26: unchanged research artefact.** Still not linked into the PS2 ELF, the MMCEMAN IRX
+> or any firmware; capability remains `MMCE_TXN_IMPLEMENTED_ON_DEVICE == 0`. Pinned firmware reference is
+> `8a20bd9`; see [docs/MMCE_SD2PSXTD_FIRMWARE_AUDIT.md](../../docs/MMCE_SD2PSXTD_FIRMWARE_AUDIT.md).
+
+
 **Safety status: NOT IMPLEMENTED ON DEVICE.** This C99 state machine is
 deliberately isolated in the research directory and is **not** linked into
 the PS2 ELF, Launchstation MMCEMAN IRX, or sd2psXtd firmware. Its capability

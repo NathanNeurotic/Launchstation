@@ -37,7 +37,7 @@ Wallpaper image... > select the PNG > save changes.
 
 **Shareable theme folder:** Copy both `theme.cfg` and `background.png`
 from the example to `THEMES/WallpaperExample/` alongside the Launchstation
-ELF (or into the dashboard configuration directory's `THEMES/`).
+ELF (or into the `THEMES/` folder next to `DASHBOARD.CNF`).
 Open Settings > Appearance > Theme files & resets >
 Load theme from folder... > choose that folder > save changes.
 
@@ -50,7 +50,9 @@ image = background.png
 wallpaper = off
 ```
 
-The **`background` / `image`** settings are for the static background.
+The **`background` / `image`** settings are for the static background. Add
+`preset = towers` (or any other built-in preset id) first if you want the rest
+of the theme to start from one of the 18 built-in looks; every key is optional.
 The separate **`wallpaper = focused`** setting overlays the selected
 application's cover artwork, if enabled, and isn't required for a static PNG.
 

@@ -1,5 +1,12 @@
 ﻿# Cloud-agent continuation checkpoint - October 18, 2026
 
+> **Status as of 2026-10-26: superseded handoff snapshot - do not resume from it.**
+> PR #183 merged (`82082b6`) and the follow-ups it lists (#184 overlay, #185, #181 profiles, #188) are in the tree.
+> The CodeRabbit comment on `tests/test_settings_save_prompt.py` is stale. Issue-level acceptance statements
+> (#125, #138, #173-#175) have not been re-confirmed by testers. Release steps described here are done by the
+> normal master release workflow.
+
+
 ## Start here
 
 Continue branch `codex/oct18-feedback` and PR [#183](https://github.com/NathanNeurotic/Launchstation/pull/183). The implementation commit is `e62dbfb4e442503913c7b4c41b26c9ef8c9f7363`, based on master `2836fdaf6214a1b592e245a092285d96210adc41`. This handoff is a later documentation-only commit; fetch and verify the actual current head before working. The user requested this pushed checkpoint for another cloud agent. No merge or new release was performed for this PR.

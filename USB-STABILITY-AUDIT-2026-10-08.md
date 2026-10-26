@@ -1,5 +1,16 @@
 # USB stability audit, 2026-10-08
 
+> **Status as of 2026-10-26: historical audit; mitigations merged, root cause not proven, console freeze not confirmed fixed.**
+> * Still in tree: `usbd-ra` driver (`iop/usbd-ra`, `ps2.yaml` target `usbd_ra`), USBD-first load order in
+>   `loadUsbModules()` (`src/init.c`), no IOP reset on empty USB probe, `massN:` shared-BDM namespace handling,
+>   libmc drain before USB scans.
+> * **Superseded numbers:** the "five to twenty checks, 200 ms apart" enumeration was replaced by at most four
+>   probes 600 ms apart (`DASH_USB_PROBE_ATTEMPTS`, `DASH_USB_PROBE_DELAY_US` in `src/dash_devices.c`).
+> * Diagnostics shipped: *Tools > USB unit diagnostics* (`tests/test_usb_unit_diagnostics.py`).
+> * Open: the intermittent first `fileXioGetStat("usb0:/")` hang on the reporter's two-drive + MX4SIO + ATA + MMCE
+>   setup needs console re-test of a current build; a synchronous IOP RPC cannot be given an EE-side timeout.
+
+
 Published baseline: `2790d91dbada146a3d41b9634a92a7ac13f9fde0` (PR #80).
 Hardware update: the user tested the a50cb4e PR #81 ELF and reported a black
 screen. That release is withdrawn. The boot-repair candidate retains the USB,

@@ -1,5 +1,11 @@
 # wLaunchELF_R3Z parity audit — 2026-10-17
 
+> **Status as of 2026-10-26: historical; all gate-checklist items shipped.**
+> Disable switches, Neutrino options, four-mode browser parity and Game ID work landed in PRs #177, #178 and
+> #208. Follow [R3Z-10-PARITY-AUDIT.md](../R3Z-10-PARITY-AUDIT.md) for the later (2026-10-25) pinned comparison.
+> Hardware verification is still outstanding.
+
+
 **Target:** Launchstation `master` at `ec3723f26c43e04cbfa7227e970302684aed4bbc`  
 **Current public reference:** [saildot4k/wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z) `master` at [`39fb5bc`](https://github.com/saildot4k/wLaunchELF_R3Z/commit/39fb5bc7700b0d9bf9ed8448f4b9f080b08d81d7) (October 17). [Upstream PR #60](https://github.com/saildot4k/wLaunchELF_R3Z/pull/60) merged Ember and Neutrino options; [PR #61](https://github.com/saildot4k/wLaunchELF_R3Z/pull/61) added Neutrino ISO Game IDs for RetroGem and MMCE.  
 **Development provenance:** [former `neutrino-and-options-2` commit `2c3364a`](https://github.com/saildot4k/wLaunchELF_R3Z/commit/2c3364a3f12e1c5b170b7b49e36ce2e03e4f068d) supplied the menu matching the October 17 screenshots. This development work is now merged into public `master`; former branch names can disappear after merge.

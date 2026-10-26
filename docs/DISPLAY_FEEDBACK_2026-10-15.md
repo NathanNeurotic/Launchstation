@@ -1,5 +1,13 @@
 # Display feedback implementation, 2026-10-15
 
+> **Status as of 2026-10-26: implemented (PR #161); console acceptance pending.**
+> In tree: 576p is the last video-mode entry (`src/dash_settings.c` `tv_names`, `src/config_screen.c`),
+> wallpaper decode box is 640x512 (`src/dash_bg.c`), interlace-aware text alignment and neutral
+> controller-glyph backings are covered by `tests/test_display_feedback.py`. 720p/1080i menu modes were
+> **not** added, as planned. Known stale text outside this file: the Settings wallpaper help string in
+> `src/dash_settings.c` still says images are scaled to at most 320x256 although the decoder allows 640x512.
+
+
 The tester requested the credits scrolling clarity fix across fonts, consistent
 and more visible controller hints, and less pixelated custom wallpaper. The
 tester separately reported that the console-region issue was fixed.

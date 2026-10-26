@@ -1,6 +1,60 @@
-<h1>Text Editor</h1><p class="lead">A dashboard-native editor for configuration, scripts, argument lists and other text files.</p>
-<h2 id="formats">Typical files</h2><p>CNF, CFG, TXT, INI, CHT, PBT, JS, LUA, XML, TOML, YAML, YML and ARG files can be opened from File Browser.</p>
-<h2 id="navigation">Navigation</h2><div class="kbdline"><span>D-pad Move</span><span>L1/R1 Line start/end</span><span>L2/R2 Page</span><span>Square Select</span><span>START Menu</span></div><p>The full current path is shown beneath the document title and scrolls when necessary. Footer hints are intentionally compact enough for the PS2 safe width.</p>
-<h2 id="menu">Editor menu</h2><p>Save, Save As, New, Open, Switch Document, Start/Stop Selection, Select All, Copy, Cut, Paste, Line Endings, Go to Start, Go to End, Launch with Arguments, Close and Exit are available from START.</p>
-<h2 id="keyboard">On-screen and USB keyboards</h2><p>Confirm opens the virtual keyboard. SELECT hides/shows it. USB keyboard input is supported when enabled and its driver is available.</p>
-<h2 id="launch-args">Launch with arguments</h2><p>Write one argument per line and choose <b>Launch with these arguments…</b>. The editor validates the buffer and hands argv to the same loader used elsewhere.</p>
+<h1>Text Editor</h1>
+<p class="lead">A dashboard-native editor for configuration files, scripts, argument lists and notes. It runs inside the dashboard frame with the active theme, supports up to eight open documents, an on-screen keyboard that docks at the bottom of the screen, and a USB keyboard.</p>
+
+<h2 id="opening">Opening the editor</h2>
+<ul>
+<li>From the <a href="file-browser.html">File Browser</a>: Confirm on a supported file, or Triangle &gt; <b>Open in Text Editor</b>.</li>
+<li>From <b>Tools &gt; Text Editor</b> (starts with no document; the first menu offers New document, Open... and Exit).</li>
+<li>From <b>Application options &gt; Start with arguments...</b> and <b>Edit metadata</b> (opens or creates the <code>.arg</code> / <code>.cfg</code> file).</li>
+</ul>
+<h2 id="formats">Supported file types</h2>
+<p><code>TXT</code>, <code>CHT</code>, <code>CFG</code>, <code>INI</code>, <code>CNF</code>, <code>PBT</code>, <code>JS</code>, <code>LUA</code>, <code>XML</code>, <code>TOML</code>, <code>YAML</code>, <code>YML</code> and <code>ARG</code> open directly from the File Browser. Through <b>Open...</b> inside the editor you can pick any file. Files larger than <b>512 KB</b> are refused; a document can grow to that size. The editor remembers each document's own line endings (<b>CR/LF (PC)</b>, <b>LF (Unix)</b> or <b>CR (old Mac)</b>) and keeps them on save unless you change them in the menu.</p>
+
+<h2 id="navigation">Navigation</h2>
+<p>With the keyboard hidden (the default view):</p>
+<table><thead><tr><th>Button</th><th>Action</th></tr></thead><tbody>
+<tr><td>D-pad / left stick</td><td>Move the cursor (Up/Down keep the wanted column).</td></tr>
+<tr><td>L1 / R1</td><td>Start / end of the current line.</td></tr>
+<tr><td>L2 / R2</td><td>Page up / page down.</td></tr>
+<tr><td>Square</td><td>Start or end a selection.</td></tr>
+<tr><td>Confirm</td><td>Show the on-screen keyboard.</td></tr>
+<tr><td>SELECT</td><td>Show/hide the on-screen keyboard.</td></tr>
+<tr><td>Triangle or START</td><td>Open the editor menu.</td></tr>
+<tr><td>Back</td><td>Exit the editor (asks about unsaved documents).</td></tr>
+</tbody></table>
+<div class="kbdline"><span>D-pad Move</span><span>L1/R1 Line start/end</span><span>L2/R2 Page</span><span>Square Select</span><span>START Menu</span></div>
+<p>The full current path is shown beneath the document title and scrolls when necessary. The compact footer keeps all hints inside the PS2 safe width.</p>
+
+<h2 id="keyboard">On-screen keyboard</h2>
+<p>Confirm (or SELECT) docks the virtual keyboard. Its layout comes from <b>Settings &gt; Input &gt; On-screen keyboard layout</b> (QWERTY by default; also ABC, Dvorak, AZERTY, QWERTZ, ABNT).</p>
+<table><thead><tr><th>Button (keyboard shown)</th><th>Action</th></tr></thead><tbody>
+<tr><td>D-pad</td><td>Move over keys. Going down from the bottom row reaches the action keys <b>Caps, Space, Tab, Enter, Delete, Hide</b>.</td></tr>
+<tr><td>Confirm</td><td>Type the key.</td></tr>
+<tr><td>Back</td><td>Delete the character to the left.</td></tr>
+<tr><td>Square</td><td>Toggle Caps.</td></tr>
+<tr><td>L1 / R1</td><td>Move the text cursor left / right.</td></tr>
+<tr><td>L2 / R2</td><td>Move the text cursor up / down one line.</td></tr>
+<tr><td>Triangle or SELECT</td><td>Hide the keyboard. START still opens the menu.</td></tr>
+</tbody></table>
+
+<h2 id="usb-keyboard">USB keyboard</h2>
+<p>With <b>Settings &gt; Input &gt; USB keyboard</b> on (it is off by default), a USB keyboard types directly into the document: printable keys and Enter, Tab and Backspace insert/delete, and the arrow keys, Home/End, Page Up/Page Down and Delete move or edit as expected. <b>Escape</b> opens the editor menu. Optional driver and key-map files are set on the same page. Typing is paused while background storage work is using the IOP. See <a href="controls.html#keyboard">Controls</a> for the keyboard-as-pad map used elsewhere.</p>
+
+<h2 id="menu">Editor menu</h2>
+<table><thead><tr><th>Item</th><th>Notes</th></tr></thead><tbody>
+<tr><td>Save, Save as...</td><td>Save keeps the document's path; Save as asks for a new name. If a save is slow it continues in the background and a toast says so.</td></tr>
+<tr><td>New document, Open...</td><td>Up to eight documents at once.</td></tr>
+<tr><td>Switch document...</td><td>Appears with two or more documents.</td></tr>
+<tr><td>Start/Stop selecting, Select all</td><td>Start/stop is also on Square.</td></tr>
+<tr><td>Copy, Cut, Paste</td><td>A clipboard shared between documents.</td></tr>
+<tr><td>Line endings</td><td>CR/LF (PC), LF (Unix), CR (old Mac).</td></tr>
+<tr><td>Go to the start, Go to the end</td><td>Jump to the beginning or end of the document.</td></tr>
+<tr><td>Launch with these arguments...</td><td>Uses the buffer as an argument list (see below).</td></tr>
+<tr><td>Close document, Exit Text Editor</td><td>Both ask about unsaved changes (Save / Don't save / Cancel).</td></tr>
+</tbody></table>
+
+<h2 id="launch-args">Launch with arguments</h2>
+<p>Write one argument per line and choose <b>Launch with these arguments...</b>. The editor validates the buffer (empty lines are skipped; at most 12 arguments, 255 characters each, 2,048 bytes total) and, if valid, closes and asks which application to start. Unsaved edits are used, so you can test flags without writing the file first. A message appears if the text is not usable. Details and the sidecar rules are on the <a href="launch-arguments.html">Launch Arguments</a> page.</p>
+
+<h2 id="saving">Notes on saving</h2>
+<p>Saving writes the file; failures show <i>File not saved</i> with a hint that the device may be read-only or full. Discs cannot be written (use Save as to choose another place). After editing metadata for an application, that app is re-read automatically. When you leave the editor, its last document's folder becomes the browser's <i>Last folder</i>.</p>

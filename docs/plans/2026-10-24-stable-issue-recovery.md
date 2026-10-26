@@ -1,5 +1,11 @@
 # Stable-baseline issue recovery
 
+> **Status as of 2026-10-26: implemented and merged (PR #206, `b815d10`); this is the current file-copy contract.**
+> Direct overwrite, 9-language catalogs (IDs appended after 467), carousel culling and the copy/delete overlay
+> are in tree. #187 and #198 are intentionally kept open pending reporter confirmation. #182 release summary
+> is maintained in `CHANGELOG.md` and `scripts/release_notes.py`.
+
+
 Base: `3e03e640a1434a6d23dd1b80498fa0fbb7c88672`, whose tree matches `2e140ab6baa720334a90da4aad031228ab3d9baa`. All work is scoped to `codex/stable-issue-recovery` and one review PR. Existing untracked work/build directories are retained. No hardware report is automatically closed and no release is published by this branch.
 
 | Issue | Implementation or verified state | Remaining acceptance |

@@ -1,5 +1,10 @@
 # OSDSYS-ify the dashboard — design spec
 
+> **Status as of 2026-10-26: implemented; historical design.** See the status note in
+> [the implementation plan](../plans/2026-09-26-osdsys-dash.md). The deferred `bgm.ogg` item was resolved
+> differently (loose `BGM.ADP` sidecar, never embedded).
+
+
 Date: 2026-09-26
 Branch: `nathan/feature/theme-engine-commits-09252026`
 

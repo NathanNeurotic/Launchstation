@@ -4,167 +4,204 @@
 
 # __Launchstation__
 
-**Launchstation** is a maintained PlayStation 2 file manager, executable launcher, dashboard and device toolkit built from **wLaunchELF_R3Z** and the wider wLaunchELF/uLaunchELF/LaunchELF lineage. It extends that base with the dashboard interface, modern storage/device workflows, Neutrino, POPStarter and Ember handoffs, MMCE backup/cloud features, networking tools and additional hardware support.
+**Launchstation** is a maintained PlayStation 2 file manager, executable launcher, dashboard and device toolkit built from **wLaunchELF_R3Z** and the wider wLaunchELF/uLaunchELF/LaunchELF lineage. It extends that base with a controller-first dashboard, modern storage/device workflows, Neutrino, POPStarter and Ember handoffs, MMCE backup and Google Drive features, networking tools and additional hardware support.
+
+Repository: <https://github.com/NathanNeurotic/Launchstation> · Documentation: <https://nathanneurotic.github.io/Launchstation/> · Latest build: <https://github.com/NathanNeurotic/Launchstation/releases/tag/latest>
+
+## Quick start
+
+1. Download **`APP_LAUNCHSTATION.zip`** (standard PS2 controllers) or **`APP_LAUNCHSTATION-DS.zip`** (adds PS3/PS4 DualShock USB/Bluetooth support) from the [`latest` release](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest). The matching `.psu` files are the same contents for memory-card installation.
+2. Extract the `APP_LAUNCHSTATION` folder to a filesystem the console can boot from (memory card, USB, MMCE, MX4SIO, iLink, internal HDD/ATA), or copy the `.psu` in the File Browser and use **Extract PSU** (the PSU paste action) in a memory-card folder to install it.
+3. Start `LAUNCHSTATION.ELF` (or `LAUNCHSTATION-DS.ELF`) from your usual launcher, FreeMcBoot/OPL/exploit entry or file manager. The packaged `title.cfg` is an OPL-style application descriptor (`title=`, `boot=`) so launchers that read it list the app as "Launchstation".
+4. Use **L1/R1** to move between **Home, Files, Tools and Settings**. In Files, pick a device, then a folder.
+
+Launchstation is a homebrew program for real PS2 hardware. A passing CI build proves that the code compiles, links, packages and passes its host tests; it does not replace console testing. Reports should include the console model, storage devices and commit hash (Tools > About Launchstation shows the version and commit).
 
 ## Documentation
 
-The full Launchstation reference is published as a PS2-styled GitHub Pages site:
+The full Launchstation reference is a PS2-styled GitHub Pages site generated from `docs-site/`:
 
-- **Online:** https://nathanneurotic.github.io/Launchstation/
-- **Offline:** generate locally with `python docs-site/build.py --out build/docs --zip build/Launchstation-Documentation.zip`
-- **Source:** `docs-site/` in this repository
+- **Online:** <https://nathanneurotic.github.io/Launchstation/>
+- **Offline:** `python3 docs-site/build.py --out build/docs --zip build/Launchstation-Documentation.zip`
+- **Markdown wiki (version-controlled):** [docs/wiki/Home.md](docs/wiki/Home.md), synchronized to the repository's GitHub Wiki by CI
+- **Changes:** [CHANGELOG.md](CHANGELOG.md) (the `## Rolling` section is what the GitHub `latest` release page shows)
 
-**Cloud recovery:** In Tools > Google Drive backups, linked users can browse uploaded `WLE-MMCE-Backups` history and download an individually selected, SHA-256-bearing snapshot to a NEW verified `RECOVER-CLOUD-###.mcd` on USB/HDD. No Drive history is altered and no emulated MMCE card is replaced. Cloud items without an uploader digest remain view-only.
+The site covers installation, dashboard controls, File Browser, Applications, Text Editor, storage and device support, APA/PFS, iLink, MMCE, networking, POPStarter VCD launching, Ember PS1 image launching, Neutrino ISO launching, IGR/MMCE backups, native Google Drive sync, settings, configuration files, themes, troubleshooting and developer notes.
 
-**Release packages:** Standard builds ship as `APP_LAUNCHSTATION.psu` and `APP_LAUNCHSTATION.zip`, containing `APP_LAUNCHSTATION/LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.PEM` and `BGM.ADP`. DualShock builds ship as `APP_LAUNCHSTATION-DS.psu` and `APP_LAUNCHSTATION-DS.zip`, containing `APP_LAUNCHSTATION-DS/LAUNCHSTATION-DS.ELF` and those same three sidecar files. Both executables are packed. Extract a ZIP to install on a filesystem, or use PSU Paste to install a PSU on a memory card.
+## Release packages and updates
 
-**Upgrading older builds:** Previous updaters expect standalone ELFs or two-file PSU packages and cannot install the new four-file PSU automatically. Install the matching complete ZIP/PSU package manually once (without deleting existing settings). The updated native updater verifies GitHub commit ancestry and the matching PSU's SHA-256 digest, extracts the correct ELF and preserves the controller variant. A stale, divergent or unverifiable release will not be offered as an automatic upgrade. On subsequent in-app updates, it restores **missing** `WLE-UPDATE-CA.PEM` and `BGM.ADP` from a verified four-file PSU before replacing the ELF. Existing sidecars, including custom BGM, are never overwritten; legacy two-file PSU updates remain ELF-only. Existing `LAUNCHSTATION.ELF.UPDATE` or `.PACKAGE` recovery artifacts are not overwritten by a retry; inspect and clear them manually once you have recovered anything important.
+Every verified push to `master` publishes four assets to the single moving **`latest`** release (the tag is only ever advanced to a descendant commit):
 
-The site covers installation, dashboard controls, File Browser, Apps, Text Editor, storage/device support, APA/PFS, iLink, MMCE, networking, POPStarter VCD launching, Ember PS1 image launching, Neutrino ISO launching, IGR/MMCE backups, native Google Drive sync, settings, configuration files, troubleshooting and developer notes.
+| Asset | Contents | Use |
+|---|---|---|
+| `APP_LAUNCHSTATION.zip` | `APP_LAUNCHSTATION/LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.PEM`, `BGM.ADP` | Extract to a filesystem |
+| `APP_LAUNCHSTATION.psu` | Same four files | Copy, then Extract PSU onto a memory card |
+| `APP_LAUNCHSTATION-DS.zip` | `APP_LAUNCHSTATION-DS/LAUNCHSTATION-DS.ELF` + the same three sidecars | DualShock (DS34) variant, filesystem |
+| `APP_LAUNCHSTATION-DS.psu` | Same four files | DualShock variant, memory card |
 
-**Neutrino per-game profiles (optional):** Valid PS2 ISO Game IDs can load a separately saved Neutrino compatibility/video preset from Launchstation's dashboard settings directory. Use **Save for this game** in the launch dialog; ordinary Run never persists edits. Two verified per-title slots preserve the last valid settings if writing is interrupted. Missing, corrupt or inaccessible profiles fall back to launch-only defaults, without rewriting any ISO, VMC or `LAUNCHELF.CNF`. The console may skip profile I/O when MMCE/MX4SIO currently owns incompatible memory-card access.
+Both executables are packed (`ps2pack`). The ELF runs without its sidecars, but `WLE-UPDATE-CA.PEM` is needed for HTTPS update checks and `BGM.ADP` is the optional background music. The two variants share the same settings and optional sidecars.
 
-## Local MMCE backup recovery
+**In-app updates.** *Settings > Storage & devices > MMCE backups > Check for updates* (builds with networking and native cloud, which includes the release packages) compares the running commit with the `latest` release using GitHub's commit-comparison API. A release that is not strictly newer, is divergent from your build, or whose ancestry cannot be verified is never offered. For a newer release the updater downloads the PSU matching your variant (standard or DS), checks it against the SHA-256 digest GitHub publishes for that asset, extracts and validates the ELF, and only then replaces the running executable, keeping the previous one as `<name>.ELF.BAK`. From a verified four-file PSU it also adds a **missing** `WLE-UPDATE-CA.PEM` or `BGM.ADP`; existing sidecars, including a custom BGM, are never overwritten. An existing `.UPDATE` or `.PACKAGE` file from an interrupted attempt is not overwritten either: inspect and clear it manually. Supported boot locations are `mc`, `mass`/`usb`, `mmce`, `mx4sio`, `ilink`, `ata` and `hdd` paths. Restart Launchstation to run the new build.
 
-From **Settings > Storage & devices > MMCE backups**, choose **Recover saved card image...** to select a history snapshot directly. Alternatively, in the File Browser, select a verified local `.mcd` or PCSX2 `.ps2` snapshot and use **Recover as new .mcd...**. To create verified history for one MMCE card, select its `.mcd` under `mmce0:/MemoryCards` or `mmce1:/MemoryCards` and choose **Back up selected MMCE card to history...**. This non-destructive option validates the image, creates a fresh numbered `RECOVER-###.mcd` on USB/HDD through a verified staged copy, and never modifies an existing or active MMCE card. Google Drive snapshots can be recovered as separate SHA-256-verified images on USB/HDD. To store a verified local `.mcd`/`.ps2` on an MMCE adapter using its **existing firmware**, select it in File Browser and choose **Store NEW snapshot on MMCE...**. The file is independently verified and stored in `mmceN:/WLE-Recovered`, outside all firmware-selectable card paths; it is **not** activated or installed as a game card. To create a **NEW selectable numbered card** on stock sd2psXtd firmware, highlight a verified local snapshot or a completed `WLE-Recovered` image and choose **Install as NEW selectable MMCE card...**. Launchstation allocates an unused `MemoryCards/PS2/CardN/CardN-1.mcd`, verifies it and never switches cards automatically. Existing cards are not overwritten; failed/interrupted installations must not be selected before inspection. Direct overwrite of an existing MMCE card remains disabled. See [the dashboard recovery notes](docs/dashboard.md#recovering-local-mmce-backup-images) and the [direct-restore safety protocol](docs/MMCE_RESTORE_PROTOCOL.md).
+**Upgrading older builds.** Previous updaters expect standalone ELFs or two-file PSU packages and cannot install the four-file PSU automatically. Install the matching complete ZIP/PSU once by hand (keep your existing settings), after which in-app updates work. Legacy two-file PSU updates remain ELF-only.
+
+**Rollback.** Keep the `.BAK` copy, or a known-good build; [the Releases and Recovery guide](docs/wiki/Releases-and-Recovery.md) has the details, including the preserved [2026-10-08 USB-tested baseline](https://github.com/NathanNeurotic/Launchstation/releases/tag/usb-second-drive-2026-10-08-58d4514).
+
+Background music is **not embedded** in either ELF. For a standalone/local ELF build, copy `res/music.sad` unchanged beside the ELF as `BGM.ADP`, or omit it for a music-free install. Interface sound effects remain embedded. See [background music](docs/dashboard.md#optional-background-music).
 
 ## Dashboard
 
-This build starts in a controller-first dashboard (HOME, APPS, FILES,
-DEVICES, TOOLS, SETTINGS) with an ELF library, artwork, favorites and
-recents. It is the only interface: Settings, the File Browser, the HDD
-Manager, the Text Editor, the exploit installer and the information screens
-are all dashboard screens, and most file browsing runs on a background worker. Some device initialization
-and USB filesystem probes remain synchronous IOP RPCs and can still block on
-faulty/unresponsive USB hardware or drivers. See
-[docs/dashboard.md](docs/dashboard.md) for controls, metadata, artwork
-naming and the files it writes.
+Launchstation starts in a controller-first dashboard with four tabs, switched with **L1/R1**:
 
-The dashboard is fully themeable from the controller: 19 built-in
-PS2-inspired themes, custom RGB colours, backgrounds, wallpapers, fonts,
-icons and clock, plus shareable theme folders. See
-[docs/themes.md](docs/themes.md).
+| Tab | What it holds |
+|---|---|
+| **Home** | Continue, pinned/favorite/recent items and the **Applications** library (Grid, List or Carousel view with SELECT), artwork, and a Last folder shortcut |
+| **Files** | The native File Browser (device roots, remembered folder and selection, PSU, VMC, MMCE and image tools) |
+| **Tools** | File Browser, Text Editor, Start disc, PS1/PS2 image shortcuts, MISC commands, USB unit diagnostics, HDD Manager, memory card exploit installer, OPL IGR setup, PS2 browser, OSDSYS, FTP / Remote access, Google Drive backups, system/build information, Reboot IOP and Power off |
+| **Settings** | Appearance, Home & applications, Sound, Input, Launching, Storage & devices (including MMCE backups), Network and System |
 
-## Building (PS2BUILD)
+The dashboard is the only interface: Settings, the File Browser, the HDD Manager, the Text Editor, the exploit installer and the information screens are all dashboard screens, and most file browsing runs on a background worker. Some device initialization and USB filesystem probes are still synchronous IOP RPCs and can block on faulty or unresponsive USB hardware or drivers. See [docs/dashboard.md](docs/dashboard.md) for controls, metadata, artwork naming and the files it writes.
 
-Release builds use the PS2BUILD **LLVM/Clang** toolchain (`toolchain: llvm`
-in `ps2.yaml`, EE and IOP). Third-party EE archives are compiled by the same
-toolchain first, so run these once (and again after changing toolchain):
+It is fully themeable from the controller: 18 built-in PS2-inspired theme presets, custom RGB colours, backgrounds, wallpapers, fonts, icons and clock, plus shareable theme folders. See [docs/themes.md](docs/themes.md) and the [wallpaper guide](docs/wiki/Theme-and-Wallpaper-Guide.md).
 
-```
-bash scripts/build_cloud_tls.sh
-bash scripts/build_jpeg.sh
-python scripts/gen_cloud_client.py
-ps2build build
-```
+## Features
 
-Both dependency scripts follow ps2build's own precedence
-(`PS2BUILD_TOOLCHAIN`, then `ps2.yaml`). For a GCC comparison build, set
-`PS2BUILD_TOOLCHAIN=gcc` for all four commands and use a separate `-o`
-output directory. CI verifies that the release ELFs contain only Clang-built
-objects (`scripts/check_toolchain_purity.py`).
+**Launching**
+- Launch ELF, KELF (encrypted ELF), ISO, VCD and Ember disc-image entries from any browsed device; ELFs from the Applications library, favorites or the File Browser. Device-agnostic: Launchstation works from the device you browsed instead of assuming `mass0:` or `mc0:`.
+- **Neutrino** for PS2 ISO images, with custom or discovered loader paths, the R3Z per-launch compatibility modes (0/2/3/5/7), GSM video, debug-colors and PS2-logo options. A valid ISO `SYSTEM.CNF` Game ID is used for RetroGem, and optionally for MMCE card switching with manager-only bring-up (excluding active MX4SIO and protected source-card slots).
+- **POPStarter** for PS1 VCDs, with an optional custom POPStarter path and device-specific fallbacks.
+- **Ember** for PS1 CUE/BIN/EXE images from any save-safe `<Ember directory>/games/<Game>/` umbrella. The umbrella name and location are configurable, and a configured Ember directory can supply `ember.elf` to a device that lacks it. Format selects the core automatically. Ember disc images can show the same [RetroGem Game ID](docs/EMBER-RETROGEM.md) as an equivalent VCD, controlled by the existing disc Game ID preference.
+- Independent switches to disable Ember, POPStarter and Neutrino (Settings > Launching > Disc & image loaders), all Off by default.
+- [LaunchELF with arguments](#launching-with-arguments), `<elf name>.arg` sidecars, and launch history written for disc launches (MMCE VMC change).
+- X/O confirm default follows the console region when no config file exists (O is only the default for Japan). Applies deckard disc patches.
+- RetroGem Game ID output for the [PIXEL FX RetroGem](https://www.pixelfx.co/hdmi-retro-gem) HDMI adapter (Settings > Launching > Game ID output); the colored identification bars before an ELF opens can be switched off there.
 
-Outputs `build/bin/wLaunchELF-packed.elf` (release, ps2pack compressed) and
-`build/bin/wLaunchELF.elf`. `ps2.yaml` reproduces the Makefile's default
-profile (MMCE, MX4SIO, EXFAT, UDPFS, ETH, DVRP, XFROM, IOP reset; DS34
-off). Ethernet/FTP support is embedded but remains demand-driven: no network
-driver is started during normal boot. The legacy Makefile is kept for the
-other feature profiles.
+**Files and storage**
+- Copy/cut/paste (also with new names), rename, delete, new folder, folder icons, `title.cfg`, size, multi-select, bookmarks (PathPad), sorting (name, game title, date or as stored, reversible) and name/title/details display modes, with progress popups that show the file name, remaining size and a clear failure reason.
+- PSU create/extract, VMC mounting (`vmc0:`/`vmc1:` from `.bin`/`.vmc`/`.mc2`/`.ps2`), timestamp tools, and organizing the OSDSYS/HOSDSYS MC and `hdd0:__common:pfs:/*` browser order (Manual, A-Z, Z-A, SAS timestamps; the *Tuna date is under Folder dates for eligible memory-card folders).
+- Native image viewer for PNG, JPG and JPEG opened from the File Browser: previous/next browsing, rotation, zoom/pan, fullscreen and slideshow.
+- Text Editor with extra file-extension shortcuts.
+- HDD Manager for APA partitions, [APA header injection](#hdd-apa-header-injection) and viewing/editing the partition `system.cnf`; dual internal HDD/ATA support is built in.
+- Multi-USB support; drivers (everything except the core) load on demand for faster boot and broad device compatibility.
+- Warnings when modifying or deleting exploit folders on PS2/PSX.
 
-For the optional PS3/PS4 DualShock USB/Bluetooth build (the legacy
-`DS34=1` option), run:
+**Backups and cloud**
+- MMCE backup & sync page: Sync all cards, Off/Local/Local+Google automatic sync, IGR helper management, backups per card, native `.mcd` or PCSX2 `.ps2` format.
+- [Verified local and Google Drive recovery](#local-mmce-backup-recovery) to new files, never over an active card.
+- Native Google Drive upload and history browsing over HTTPS (Mbed TLS), linked with a code at google.com/device, with no setup files in official builds.
 
-```
-python scripts/configure_ds34.py
-ps2build build -c .ps2-ds34.yaml -o build-ds34
-```
+**Network**
+- FTP and PS2Link are in the standard build and start only when requested from Tools > FTP / Remote access (which also accepts staged, resumable ISO transfers from MrRexD-compatible PC tools). The UDPFS client for the [UDPFSD server](https://github.com/pcm720/udpfsd) can be auto-started or opened on demand; Sync PS2 clock from Internet is under Settings > Network.
 
-This uses the retained wLaunchELF_R3Z DS34 drivers and `pad_ds34.c`.
-CI builds both variants and packages them under the names above. The DualShock
-executable uses the same settings and optional sidecars as the standard build.
-The DS34 variant still needs console validation with USB/Bluetooth controllers
-and concurrent storage access.
+**System**
+- LoadBOOTer memory card exploit installer for retail PS2/PSX and DEX (DTL-HXXXXX), with [custom ELF binding](#bind-an-elf-to-a-memory-card-as-an-exploit-update).
+- PS3/PS4 DualShock USB/Bluetooth support in the DS34 variant (drivers by Alex Parrado).
+- [Software clock](#software-clock-for-consoles-with-a-dead-cmos-battery) for consoles with a dead CMOS battery.
+- Device entries that cannot exist on the running console are hidden: internal HDD/ATA on deckard and PSX, XFROM and DVR HDD on non-PSX, iLink on consoles without the port (see the device table).
+- On-screen keyboard layouts: QWERTY, DVORAK, AZERTY, QWERTZ, ABNT, ABC.
+- Languages: English, Spanish, Italian, French, German, Polish, Portuguese, Brazilian Portuguese and Hungarian (`Lang/`). Dashboard navigation, Settings labels, common actions and transfer progress follow the selected language; external `.LNG` files override the same message IDs. File names, paths and application metadata keep their original text, and some extended help remains English.
+- All configuration options are exposed in the Settings GUI.
 
-Background music is **not embedded** in either ELF. Both installable ZIP/PSU variants include `BGM.ADP` beside the boot ELF by default. For standalone/local ELF builds, music is optional: copy `res/music.sad` unchanged beside the ELF under the name `BGM.ADP`, or omit it for a music-free installation. Packaged `WLE-UPDATE-CA.PEM` is also stored beside the ELF so HTTPS update checks work without a separate manual CA installation (older settings-folder certificates remain supported).
-Interface sound effects remain embedded. See
-[background music](docs/dashboard.md#optional-background-music).
+## Supported devices
 
-## Supported devices:
 | Device | Description | Visibility |
 |---|---|---|
-| __mc:/__ | Memory Cards | Always |
-| __usb:/__ | Fat/exFAT (BDM) USB | Always |
-| __mmce:/__[^1] | Multi Purpose Memory Card Emulator IE SD2PSX, PSxMemCard Gen2 or MemCard Pro 2. | Always |
-| __mx4sio:/__[^1] | SD card interface over memory card port. | Always |
-| __hdd:/__[^2] | APA formatted internal HDD | Hidden on deckard |
-| __ata:/__[^2] | BDM hard drive, exFAT for now till more are supported | Hiddon on deckard |
-| __cf:/__[^3] | PC CARD CompactFlash (early PS2 models) | Early retail JP models (SCPH-10000/15000/18000) or when show-all enabled |
-| __xfrom:/__ | PSX DESR-XXXX flash storage | Hidden on non-PSX |
-| __dvr_hdd0:/__ | PSX DESR-XXXX digital video recorder hdd partition/side | Hidden on non-PSX |
-| __cdfs:/__ | CD/DVD File System | Always |
-| __udpfs:/__ | Network interface used with [PCM720s UDPFSD Server](https://github.com/pcm720/udpfsd) | Always |
+| `mc0:/` `mc1:/` | Memory cards | Always |
+| `usb:/` (`usbN:`, legacy `mass:`) | FAT/exFAT USB mass storage (BDM) | Always |
+| `mmce0:/` `mmce1:/`[^1] | Multi-purpose memory card emulator: SD2PSX, PSxMemCard Gen2, MemCard PRO 2 | Always |
+| `mx4sio:/`[^1] | SD card interface in a memory-card port | Always |
+| `ilink:/` | IEEE1394 (i.Link/FireWire) storage | Hidden on retail PS2 ROMs 1.70 and newer (SCPH-50000 onward, which lack the port); shown on earlier retail models, PSX and unrecognized consoles |
+| `hdd0:/`[^2] | APA-formatted internal HDD | Hidden on deckard consoles (SCPH-75K+) and PSX; otherwise unit 1 is hidden by default (Settings > Storage & devices) |
+| `ata0:/`[^2] | BDM/exFAT hard drive | Same visibility rules as `hdd0:/` |
+| `cf0:/`[^3] | PC CARD CompactFlash (early Japanese PS2 models) | Retail JP ROMs 0100/0101/0110/0120 (SCPH-10000/15000/18000 family) or when show-all-devices is enabled |
+| `xfrom0:/` | PSX DESR-XXXX flash storage | Hidden on non-PSX |
+| `dvr_hdd0:/` | PSX DESR-XXXX digital video recorder HDD partition | Hidden on non-PSX |
+| `cdfs:/` | CD/DVD file system | Always |
+| `udpfs:/` | Network device used with [pcm720's UDPFSD server](https://github.com/pcm720/udpfsd) | Always |
+| `host:/` | PS2Link host filesystem | When network support is built (standard release builds) |
 
-Drivers load on demand for maximum compatibility and initial boot speed.
+Drivers load on demand; **Not checked** means the driver has not been started, not that nothing is connected. USB unit numbers follow attach order, so do not assume `usb0:` is a particular drive.
 
-[^1]: MMCE and MX4SIO will incure an IOP reboot as the 2 are incompatible.
+[^1]: MMCE and MX4SIO cause an IOP reboot when switching between them, because the two are incompatible.
 
 [^2]: Dual HDD/ATA support is built in for future development.
 
-[^3]: PC CARD CF (`cf:/`) uses the PCMCIA slot on early Japanese consoles; direct ELF/game execution from `cf:/` is unsupported and DEV9 is mutually exclusive. Physical console test required before marking hardware verified.
+[^3]: PC CARD CF (`cf0:/`) uses the PCMCIA slot on early Japanese consoles. The PCCF driver is embedded and integrated into the device list and file operations; direct ELF/game execution from `cf:/`/`cf0:/` is unsupported and DEV9 is mutually exclusive with the CF bus. It is only built in `EXFAT` configurations, and a physical-console test is still required before marking the hardware verified.
 
-## Features:
-- LoadBOOTer MC Exploit installer, supports Retail PS2/PSX and DEX(DTL-HXXXXX)
-- [Bind any ELF to memory card](#Bind-ELF-to-Memory-Card-as-exploit-update), just provide PS2KEYS.dat (kelftool no longer needed on pc)
-- RetroGem Game ID for [PIXEL FX RetroGem](https://www.pixelfx.co/hdmi-retro-gem)
-- Launch PS1 VCDs through POPStarter with an optional custom POPStarter path and device-specific fallbacks.
-- Launch PS1 CUE/BIN/EXE images through Ember from any save-safe `<Ember directory>/games/<Game>/` umbrella. The umbrella name/location is configurable, and a configured Ember directory can supply `ember.elf` to a target device that lacks it. POPStarter remains the independent VCD path; format selects the core automatically.
-- Ember CUE/BIN launches can display the same [RetroGem Game ID](docs/EMBER-RETROGEM.md) as an equivalent VCD, using disc SYSTEM.CNF and the shared PS1 timestamp database. The existing disc Game ID preference controls the signal.
-- Launch PS2 ISO images through Neutrino with custom or discovered loader paths, and R3Z per-launch compatibility (modes 0/2/3/5/7), GSM video, debug-colors and PS2-logo options. A valid ISO `SYSTEM.CNF` Game ID is used for RetroGem, and optionally for MMCE cards with manager-only bring-up, excluding active MX4SIO and protected source-card slots. Independent Ember/POPStarter/Neutrino disable switches default to Off.
-- MMCE backup & sync page with Sync all cards, Off/Local/Local+Google automatic sync, IGR helper management, Google account controls and HTTPS update checks
-- Writes to history file for disc launches for mmce vmc change
-- Applies deckard disc patches
-- X/0 applied per region if no config file is found so O is only default for Japan
-- Keyboard layout choices: QWERTY, DVORAK, AZERTY, QWERTZ, ABNT, ABC
-- Language built: English, Spanish, Italian, French, German, Polish, Portuguese, Portuguese Brazilian, Hungarian
-- All config options exposed in gui
-- HDD/ATA drives hidden for deckard ps2 (SCPH-75K+)
-- Xfrom/dvr_hdd0 hidden from non-PSX consoles
-- Dual hdd support
-- multi-usb support
-- HDD Manager can inject APA partition headers
-- View/edit APA partiion header `system.cnf`
-- All drivers besides core lazy loading for faster boot and support of all devices.
-- FTP and PS2Link network services are included in the standard build and start only when requested from Tools > FTP / Network.
-- Create and Extract PSU options so user knows what will happen
-- Native dashboard image viewer for PNG, JPG and JPEG files opened directly from the File Browser, with previous/next browsing, rotation, zoom/pan, fullscreen and slideshow controls.
-- Extra file extensions for Text Editor ShortCuts
-- Timestamp manipulation feature to fix the date of any memory card folder containing any icon-based exploit _(\*tuna)_
-- Launch KELFs (encrypted elfs)
-- [LaunchELF with Args](#launchelf-with-args)
-- [APA Header injection](#HDD-APA-header-injection) from usb, mmce and udpfs. Thanks to Alex Parrado and @israpps
-- warnings when modifying/deleting exploit folders on PS2/PSX
-- Support for PS3/PS4 Dualshocks thanks to Alex Parrado (DS34 build)
-- Organize OSDSYS/HOSDSYS MC/HDD browser by altering timestamps on root of memcard and `hdd0:__common:pfs:/*`
-  - Sort order: Manual, A-Z, Z-A, SAS Timestamps (should ignore game saves)
+## Building
 
+Release builds use the [PS2BUILD](https://git.techwritescode.dev/ps2) SDK with its **LLVM/Clang** toolchain (`toolchain: llvm` in `ps2.yaml`, for both EE and IOP code). Third-party EE archives must come from the same toolchain, so run these once in a fresh checkout (and again after changing toolchain):
 
-### LaunchELF with Args
+```
+ps2build update                  # SDK packages
+ps2build update llvm-toolchain   # only if the Clang toolchain is missing
+bash scripts/build_cloud_tls.sh  # Mbed TLS 3.6.7 -> .cloud-deps/
+bash scripts/build_jpeg.sh       # libjpeg-turbo 3.1.3 -> .jpeg-deps/
+python3 scripts/gen_cloud_client.py
+python3 scripts/gen_githash.py --require-git
+ps2build build
+```
 
-<details>
+- Outputs: `build/bin/wLaunchELF-packed.elf` (the ps2pack-compressed release ELF) and `build/bin/wLaunchELF.elf`.
+- `scripts/gen_cloud_client.py` embeds Launchstation's Google OAuth client from `WLE_GOOGLE_CLIENT_ID` and `WLE_GOOGLE_CLIENT_SECRET` (set both, or neither). Without them a local build still compiles, but Drive linking needs a custom client in `WLE-CLOUD.CNF`.
+- `scripts/gen_githash.py` stamps the commit hash and date shown in About; `--require-git` fails instead of falling back to `local`.
+- `build_cloud_tls.sh`, `build_jpeg.sh` and `ps2build` all pick the toolchain with the same precedence: `PS2BUILD_TOOLCHAIN`, then `ps2.yaml`. **GCC comparison build:** export `PS2BUILD_TOOLCHAIN=gcc`, run all of the above, and use a separate output directory (`ps2build build -o build-gcc`) so Clang and GCC archives never mix.
+- `ps2.yaml` enables MMCE, MX4SIO, iLink, EXFAT, UDPFS, ETH (FTP/PS2Link, demand-started), DVRP, XFROM, TMANIP, native Google Drive cloud and custom colours; DS34 is off. Ethernet/FTP support is embedded but no network driver is started during normal boot.
+- The PC CARD CF IOP module can also be built on its own with `ps2build build -c iop/pccf/ps2.yaml`.
 
-In FileBrowser, select a TextEditor-supported file, press `R1`, then choose `LaunchELF with Args`.
-Launchstation parses the file immediately, caches the args in memory, and leaves you in FileBrowser to select the target `ELF`.
+**DualShock (DS34) variant** (retained wLaunchELF_R3Z drivers and `pad_ds34.c`):
 
-The same action is available from TextEditor's `R1` menu for the active opened file.
-From TextEditor the current in-memory buffer is parsed, so unsaved edits are used.
-After caching args, Launchstation returns to FileBrowser so you can choose the target executable.
+```
+python3 scripts/configure_ds34.py
+ps2build build -c .ps2-ds34.yaml -o build-ds34
+```
 
-For normal executable launches, Launchstation also checks for a sidecar arg file named `<elf name>.arg` in the same folder, for example `BOOT.arg` for `BOOT.ELF`.
-Sidecar args use the same parser and limits.
-If args were already cached through `R1` -> `LaunchELF with Args`, the sidecar `.arg` file is ignored.
+**Installable packages:** `python3 scripts/package_apps.py --standard build/bin/wLaunchELF-packed.elf --dualshock build-ds34/bin/wLaunchELF-packed.elf --output artifacts --revision <git sha> --epoch <commit time>` writes the four release assets.
 
-Each non-empty line becomes one argument.
-Line endings are stripped; other characters on the line are preserved.
+**Legacy Makefile.** `Makefile` (PS2SDK/PS2DEV toolchain) remains for other feature profiles, but it is not the release build: its defaults differ from `ps2.yaml` (for example `ETH ?= 0`), and it does not define `WLE_NATIVE_CLOUD`, so the Makefile profiles have no native Google Drive and no in-app update. `make all-ds34-off`, `make all-ds34-on` and `make all-ds34-variants` build isolated DS34 off/on ELFs; `make info` lists the options (`MMCE`, `DS34`, `ETH`, `UDPFS`, `EXFAT`, `DVRP`, `XFROM`, `MX4SIO`, `ILINK`, `IOP_RESET`, ...).
+
+**Tests.** Host-side regression tests live in `tests/` and run with plain Python, for example `python3 tests/test_self_update.py`; CI runs the full list (see `.github/workflows/compile.yml`). Documentation changes should at least pass:
+
+```
+python3 docs-site/build.py --out /tmp/site
+python3 tests/test_wallpaper_docs.py
+python3 tests/test_project_branding.py
+```
+
+### Continuous integration
+
+`.github/workflows/compile.yml` (**Automated-Build**) runs on pushes to `master`/`main`, pull requests and manual dispatch:
+
+1. Host regression tests, the copy-test fixture pack and a documentation-site build.
+2. Installs the ps2build SDK and LLVM toolchain; builds Mbed TLS, libjpeg-turbo and the PC CARD CF module.
+3. Builds the standard and DS34 ELFs, then verifies the controller variants in the linked ELFs, that release ELFs contain only Clang-built objects (`scripts/check_toolchain_purity.py`), the UDPFS SMAP ABI, and the embedded loader's low-memory layout.
+4. Packages the four app archives (`scripts/package_apps.py`), re-reads them, and uploads them as a build artifact.
+5. **Only for pushes to `master` and manual dispatch on `master`:** uploads the four assets to the `latest` release, downloads them back to compare bytes, moves the `latest` tag to the tested commit (refused unless the old tag is an ancestor), and marks it as the GitHub Latest release. Pull requests build and test but never publish.
+
+`.github/workflows/docs-pages.yml` rebuilds the site and force-publishes it to `gh-pages` when `docs-site/**` changes. `.github/workflows/sync-wiki.yml` mirrors `docs/wiki/` and the authored site pages into the GitHub Wiki.
+
+## Neutrino per-game profiles (optional)
+
+Valid PS2 ISO Game IDs can load a separately saved Neutrino compatibility/video preset from Launchstation's dashboard settings directory. Use **Save for this game** in the launch dialog; ordinary Run never persists edits. Two verified per-title slots preserve the last valid settings if writing is interrupted. Missing, corrupt or inaccessible profiles fall back to launch-only defaults, without rewriting any ISO, VMC or `LAUNCHELF.CNF`. The console may skip profile I/O when MMCE/MX4SIO currently owns incompatible memory-card access.
+
+## Local MMCE backup recovery
+
+Recovery never overwrites an existing or active MMCE card. From **Settings > Storage & devices > MMCE backups**, choose **Recover saved card image...** to select a history snapshot directly. In the File Browser you can also:
+
+- select a verified local `.mcd` or PCSX2 `.ps2` snapshot and use **Recover as new .mcd...** (a fresh numbered `RECOVER-###.mcd` on USB/HDD, written through a verified staged copy);
+- select a card's `.mcd` under `mmce0:/MemoryCards` or `mmce1:/MemoryCards` and choose **Back up selected MMCE card to history...**;
+- choose **Store NEW snapshot on MMCE...** to keep a verified `.mcd`/`.ps2` on an adapter using its **existing firmware**, in `mmceN:/WLE-Recovered`, outside all firmware-selectable card paths (not activated as a game card);
+- choose **Install as NEW selectable MMCE card...** on stock sd2psXtd firmware to allocate an unused `MemoryCards/PS2/CardN/CardN-1.mcd`, verified after writing. Launchstation never switches cards automatically, and failed or interrupted installations must not be selected before inspection.
+
+**Cloud recovery:** in Tools > Google Drive backups, linked users can browse uploaded `WLE-MMCE-Backups` history and download an individually selected snapshot that carries its SHA-256 digest to a NEW verified `RECOVER-CLOUD-###.mcd` on USB/HDD. No Drive history is altered and no emulated card is replaced; items without an uploader digest stay view-only.
+
+Direct overwrite of an existing MMCE card remains disabled. See [the dashboard recovery notes](docs/dashboard.md#recovering-local-mmce-backup-images), the [MMCE recovery guide](docs/wiki/MMCE-Recovery.md) and the [direct-restore safety protocol](docs/MMCE_RESTORE_PROTOCOL.md).
+
+## Launching with arguments
+
+In the File Browser, highlight a text file (CNF/CFG/TXT/INI/argument file), open the actions menu and choose **Use as launch arguments**, then select the application to start. The Text Editor offers the same action for its current in-memory buffer, so unsaved edits are used. **Start with arguments...** on an ELF and **Clear launch arguments** are in the same menu.
+
+For ordinary executable launches Launchstation also looks for a sidecar named `<elf name>.arg` in the same folder (for example `BOOT.arg` for `BOOT.ELF`). Arguments cached through the browser take priority over the sidecar. Each non-empty line becomes one argument; line endings are stripped and other characters are preserved. The target receives its normal path as `argv[0]`, followed by the cached lines.
 
 | Limit | Value |
 |---|---:|
@@ -172,17 +209,11 @@ Line endings are stripped; other characters on the line are preserved.
 | Characters per argument | 255 |
 | Total cached argument text | 2,048 bytes including terminators |
 
-The target receives the normal selected/handoff path as `argv[0]`, followed by the cached line arguments.
+## HDD APA header injection
 
-</details>
-
-### HDD APA header injection
-
-<details>
-
-The HDD Manager R1 menu includes `Inject Header` for PFS partitions.
+In the HDD Manager (Tools > HDD Manager), the partition actions include header injection for PFS partitions.
 Source devices are `usb:`, `mmce0:`, `mmce1:`, and `udpfs:`.
-After choosing a source device, choose one injection mode:
+After choosing a source device, choose one injection mode (the site's [HDD Manager page](https://nathanneurotic.github.io/Launchstation/hdd-manager.html) has the full workflow):
 
 | Mode | Behavior |
 |---|---|
@@ -207,7 +238,7 @@ Header files must be placed in a flat folder matching the partition name:
 | `jkt_002.png` | Optional | `pfs0:/res/jkt_002.png` | N/A | PSX XMB image | 76x108 PNG 8-bit indexed color 32-bit RGBA palette. |
 | `jkt_cp.png` | Optional | `pfs0:/res/jkt_cp.png` | N/A | PSX XMB copyright image | 290 pixels wide, 46-300 pixels high, 32-bit RGBA PNG. |
 
-#### Example system.cnf
+### Example system.cnf
 
 ```ini
 BOOT2 = pfs:/boot.kelf
@@ -216,7 +247,7 @@ VMODE = NTSC
 HDDUNITPOWER = NICHDD
 ```
 
-#### Example info.sys
+### Example info.sys
 
 ```ini
 title = [SYS] R3CONFIGURATOR
@@ -242,22 +273,16 @@ content_type = 255
 content_subtype = 0
 ```
 
-</details>
+## Bind an ELF to a memory card as an exploit update
 
-
-### Bind ELF to Memory Card as exploit update
-
-<details>
-
-In `MISC` -> `MC Exploit Installer`, choose a supported installation mode and then choose `Choose other ELF`.
-Select a native `ELF` file. Its accompanying `PS2KEYS.dat` must be in the same source folder, for example:
+In **Tools > Memory card exploit installer**, choose a supported installation mode and then **Choose other ELF**. Select a native `ELF`; its accompanying `PS2KEYS.dat` must be in the same source folder, for example:
 
 ```text
 usb0:/APPS/MyApp.ELF
 usb0:/APPS/PS2KEYS.dat
 ```
 
-`PS2KEYS.dat` is user-provided, is required to sign a custom ELF, and is intentionally not included in this repository. It remains at the source location; it is not copied to the memory card.
+`PS2KEYS.dat` is user-provided, is required to sign a custom ELF, and is intentionally not included in this repository. It stays at the source location; it is not copied to the memory card.
 
 The installer chooses the signing configuration from the detected console model:
 
@@ -269,156 +294,40 @@ The installer chooses the signing configuration from the detected console model:
 | `COH-*`, System 246/256, or Python 1 | `arcade` | DONGLE | PS2 |
 | `SCPH-50000MB` / Python 2 | `retail` | DONGLE | PS2 |
 
-The values below are SHA-256 fingerprints of the expected uppercase hexadecimal values, calculated from the ASCII value with no trailing newline. They identify the required format only: `sha256:<digest>` is **not** a valid `PS2KEYS.dat` value. Replace every fingerprint with the corresponding user-provided uppercase hexadecimal value. The `arcade` section requires both `OVERRIDE_KBIT` and `OVERRIDE_KC`.
+**`PS2KEYS.dat` format.** An INI-style file with an optional `[default]` section and one section per key set (`[retail]`, `[dev]`, `[arcade]`); the selected section is overlaid on `[default]`. Values are hexadecimal (whitespace allowed) and must be exactly the stated length; `;` and `#` start comments. Ten keys are required:
 
-PS2KEYS.dat example but replaced with hashed values:  
-```ini
-[retail]
-MG_CARDKEY_0=10b3e77ebefdfc5799437702728daf8cfb690478f1609091b162df010a2c312d
-MG_CARDIV_0=32a05c2d8df0a2f09c46a771797a8165fc4ed3bff287aa8eff2f5b32d80aea32
-MG_CARDKEY2_0=f8fca3262cefaa7c2a395550f0db2e401f9f6227fdebe7426ee23f1c535a0371
-MG_CARDIV2_0=e77db0f555df1cd15727e262572105d71f33b5b6728998cf5dba142b7332b859
-MG_CARDKEY_1=095c3a5a9524c1718a0a486cdeb5674b6dbc43f0327facc83a8dad6adc9468c5
-MG_CARDIV_1=563ae74b29f816162f9e74bae8aa41c782e68f19cdb9e17a500b8e95f0a467c2
-MG_CARDKEY2_1=2c8329f3fc5b861cfe647b99cb7bebf3f92af3a95c08072afd9beea2a281b454
-MG_CARDIV2_1=3cc5259d406637502de781af3658418a9988078fbd103cab43d55c26f42aaffb
-MG_CARDKEY_2=34505998124831ce8cb5b2c86c80162d485653fc8c2b4a5025f6bfc1750d89f6
-MG_CARDIV_2=9d3e9e8b18c8cd86bc28b7e8699169b0334241ac217303cfb7c3f98cb23d11ba
-MG_CARDKEY2_2=c5333cf25cacef73597d73ba1fe1de988b8bf0138aee8f5085a5fdbc34e0fd59
-MG_CARDIV2_2=0d27a23fd7154fe795aa0aa1f23209996ee7251ce6b7dc050bde21c20c4c2faa
-MG_KBIT_MASTER_KEY=fcc2366ae3437b38425e16b01072be2c878e614f66b9c86899e912837c1f5973
-MG_KC_MASTER_KEY=a0a827e712a19e541adc9ffee921a7c45240ef8137412a94227ec0a1f4b41dc0
-MG_KBIT_IV=83f7bf81eb2513bde54522c4b18289ce259b81685ff55f021a533583da54a739
-MG_KC_IV=5ec05c6613eb8c0f278070f9e36f610134021b7f29db548c9e26fed154191705
-MG_SIG_MASTER_KEY=9a374c2a012666f3117fc11dfe2640ccff9b7c616af1defb70045ac08f193259
-MG_SIG_HASH_KEY=b14de37e8381040ba0721129b87ab0f0d4d60f081f5d113675500ff941e500f0
-MG_ROOTSIG_HASH_KEY=68b1ecec391291714f819e6974bfd22398b06c08fdd6546ddd7d066f42c32d30
-MG_ROOTSIG_MASTER_KEY=ad77c6d5162de9004e684a609154131f8a92e41212374b0ae62a81fbfe3bf7a0
-MG_CONTENT_IV=5f40d05a6b00218d000938172a90b17de5c13cdcc92e9d9bf24f892947206715
-MG_CONTENT_TABLE_IV=8697f69515b4f7abb69c8e45283076da678aa6165cc3099306f6c0dd55a4e591
-MG_CHALLENGE_IV=11569b681f98ebe5c9fab2cf670ee97e380a94ee9d85e69d99aa32d6ab2471b7
+| Key | Length |
+|---|---|
+| `MG_SIG_MASTER_KEY`, `MG_SIG_HASH_KEY`, `MG_KBIT_IV`, `MG_KC_IV`, `MG_ROOTSIG_MASTER_KEY`, `MG_CONTENT_TABLE_IV`, `MG_CONTENT_IV` | 8 bytes (16 hex digits) |
+| `MG_KBIT_MASTER_KEY`, `MG_KC_MASTER_KEY`, `MG_ROOTSIG_HASH_KEY` | 16 bytes (32 hex digits) |
 
+The `arcade` key set additionally requires `OVERRIDE_KBIT` and `OVERRIDE_KC` (16 bytes each); for any key set these two must appear together or not at all.
 
-[dev]
-MG_CARDKEY_0=5b3e6b167257de9607cb5a740a45dd91e64c63e7daaaea0b519ee422ccc3df2d
-MG_CARDIV_0=75dce6aea56243fbc3a050e5c3e1efa54d6d172b7fdedcd624ebb47789ff7b59
-MG_CARDKEY2_0=6e16dd5299ebd48f9e4ca454f308a0ac5a7e3e8e1ce982de0effcdc156f835c6
-MG_CARDIV2_0=82f0055bdd2fd5504529f478f0ffad8a3b257b46b4b5df4b13085afc28ee212d
-MG_CARDKEY_1=2fd64443f8baf1f1d515d1d29d67cf812dd607c54db9c1072d944531fad8eb16
-MG_CARDIV_1=c086bc63539695c04b7ad0e3191ffca581edca16077398f55cc1099aa25e01d0
-MG_CARDKEY2_1=2fd64443f8baf1f1d515d1d29d67cf812dd607c54db9c1072d944531fad8eb16
-MG_CARDIV2_1=c086bc63539695c04b7ad0e3191ffca581edca16077398f55cc1099aa25e01d0
-MG_CARDKEY_2=2fd64443f8baf1f1d515d1d29d67cf812dd607c54db9c1072d944531fad8eb16
-MG_CARDIV_2=c086bc63539695c04b7ad0e3191ffca581edca16077398f55cc1099aa25e01d0
-MG_CARDKEY2_2=2fd64443f8baf1f1d515d1d29d67cf812dd607c54db9c1072d944531fad8eb16
-MG_CARDIV2_2=c086bc63539695c04b7ad0e3191ffca581edca16077398f55cc1099aa25e01d0
-MG_KBIT_MASTER_KEY=fcc2366ae3437b38425e16b01072be2c878e614f66b9c86899e912837c1f5973
-MG_KC_MASTER_KEY=a0a827e712a19e541adc9ffee921a7c45240ef8137412a94227ec0a1f4b41dc0
-MG_KBIT_IV=83f7bf81eb2513bde54522c4b18289ce259b81685ff55f021a533583da54a739
-MG_KC_IV=5ec05c6613eb8c0f278070f9e36f610134021b7f29db548c9e26fed154191705
-MG_SIG_MASTER_KEY=9a374c2a012666f3117fc11dfe2640ccff9b7c616af1defb70045ac08f193259
-MG_SIG_HASH_KEY=b14de37e8381040ba0721129b87ab0f0d4d60f081f5d113675500ff941e500f0
-MG_ROOTSIG_HASH_KEY=68b1ecec391291714f819e6974bfd22398b06c08fdd6546ddd7d066f42c32d30
-MG_ROOTSIG_MASTER_KEY=ad77c6d5162de9004e684a609154131f8a92e41212374b0ae62a81fbfe3bf7a0
-MG_CONTENT_IV=5f40d05a6b00218d000938172a90b17de5c13cdcc92e9d9bf24f892947206715
-MG_CONTENT_TABLE_IV=8697f69515b4f7abb69c8e45283076da678aa6165cc3099306f6c0dd55a4e591
-MG_CHALLENGE_IV=11569b681f98ebe5c9fab2cf670ee97e380a94ee9d85e69d99aa32d6ab2471b7
+## Software clock for consoles with a dead CMOS battery
 
+In **Settings > System**, choose **Set software clock...** and enter the local time. Choose **Save changes** when leaving Settings to store a checkpoint in `DASHBOARD.CNF`. The clock advances while Launchstation runs. Before restarting, use **Settings changes > Save current clock** to retain additional runtime even when no other setting changed, and wait for the pending save to finish before cutting power. The next start resumes the last saved checkpoint.
 
-[arcade]
-MG_CARDKEY_0=56b688be9e3f4019986886c25c46ba881a72c167dfe4c7ab9a4b82ce90ee3d90
-MG_CARDIV_0=f04115dc7b5e97624e9ee1fcebae9db330401cda3bdc8eb7de85a67c653d1acb
-MG_CARDKEY2_0=55ef86747f1b8a6c746c85d429528afbdee934c9a5dcb52421cfba41875b2a78
-MG_CARDIV2_0=89fd514976db406b9f53a76a3d27d3b59dc21486b1b71dc62d3488fac2c61c5d
-MG_CARDKEY_1=bf670992348132010f10d3061728d5f8057b3e8575939fd1d7187e7664faa16c
-MG_CARDIV_1=5ae0acd2dccfff45d6ef4ada82b8caf4b7b0fb84841bc6c56a986505d45e1c38
-MG_CARDKEY2_1=810f0861759a757f098e04335fa584618ac8e461688bfee4cd8bc03e9f4efefc
-MG_CARDIV2_1=c96656e1d9a02fc575148f4a734fa669ddeab346504c48017c21645e4d1da2d8
-MG_CARDKEY_2=bf670992348132010f10d3061728d5f8057b3e8575939fd1d7187e7664faa16c
-MG_CARDIV_2=5ae0acd2dccfff45d6ef4ada82b8caf4b7b0fb84841bc6c56a986505d45e1c38
-MG_CARDKEY2_2=810f0861759a757f098e04335fa584618ac8e461688bfee4cd8bc03e9f4efefc
-MG_CARDIV2_2=c96656e1d9a02fc575148f4a734fa669ddeab346504c48017c21645e4d1da2d8
-MG_KBIT_MASTER_KEY=0ce7ef3379dc65192146c2acc19629a90db151ceda32ad5ed4b3646f6b5c688a
-MG_KC_MASTER_KEY=d084d40e43a93d4f71de4e1cebfc565eec06411b9de6a6676e5a2baa078f2f3f
-MG_KBIT_IV=7f233e2abe0609bd985a6d73126f8fa88408809454905875bc608681fd0850a4
-MG_KC_IV=e234051a356ab9ddd49cc6498a3b5d225ecdfd4dfa0bc9ac89fb8a8d686b8a5c
-MG_SIG_MASTER_KEY=b9294362296593489a96587d9e808097ecfb81c303466ec8270af583fa52267c
-MG_SIG_HASH_KEY=29ebbbab992cf16081434bd9ea5c6aed0bd5ee6f10f8dba999c6554a617c3b8e
-MG_ROOTSIG_HASH_KEY=fcd17bcaea888de254bd43d32011ade6c5a38739d690b1b5a7d344efb619664c
-MG_ROOTSIG_MASTER_KEY=a073ee8a155a43b5ab879926efe048930e6e1d7388d552329f18ccb73d852777
-MG_CONTENT_IV=9939fd347b26baa1e5ed8a89db9fa865f70ac9b53a14bccde18b1a1b86ee949f
-MG_CONTENT_TABLE_IV=62b40bbd0f9a3ff72c0794e07a20c51537d08a8b93fdfa11433aa0c6413c9c90
-MG_CHALLENGE_IV=11569b681f98ebe5c9fab2cf670ee97e380a94ee9d85e69d99aa32d6ab2471b7
-OVERRIDE_KBIT=d45a3ffcbef644059e7a5b3171e61307f82706030c2aed2ad06b486190b934c0
-OVERRIDE_KC=8ed5233f34040e6a60ef1cee714913e898d558cf552e2bbef147378fcc2539d0
+Time spent powered off or unplugged is unknown; a working RTC or an Internet time source (Settings > Network > Sync PS2 clock from Internet) is required for accurate wall time across those intervals. **Use PS2 hardware clock** restores the normal RTC source. Discard restores the previous clock setting along with the rest of the Settings session.
 
+## More documentation
 
-[prototype]
-MG_CARDKEY_0=0408351013a632af3b9942f861c128bdc036267d43f84c025d3a26fcc575cc7e
-MG_CARDIV_0=26a8ecd3271975ac8ec60b7e55137fe332de7f2a6666c9ff5c6124e9ff308688
-MG_CARDKEY2_0=ac1d5ea8aedb8ed6bbd7c703fd4a12618dd417fec67f12ae9d72f00a4feab0b5
-MG_CARDIV2_0=0471eaff23672149fb328744837d9ff0031c557ba339a375877e3e9ab397bc9d
-MG_CARDKEY_1=3b5102e174acca23b2c5f9cb420f84995ec96626da4b0af7adf5b4688dfe9728
-MG_CARDIV_1=27a103b77fa24bc84fee78848adf3f86c009e165164cab9da788e83cb575acf1
-MG_CARDKEY2_1=640da93499ed0fc938db5b4868fdbf9d1a755732e5c244ff4980c42bd2d62e67
-MG_CARDIV2_1=73da8e3d8fbb243fb0d43c717790ee23148524e3e2608e0d650f07eaa0d741e4
-MG_CARDKEY_2=7372c53892a720abe2e7d42a4e8b31c87bd5213579c513c539ecf8e9acb30ac5
-MG_CARDIV_2=c33052107a3c3109722723301112609df51aa11ccf68a74f7a3ef8d64e996747
-MG_CARDKEY2_2=a74a56fff8d44406bd9f2317583f7f28d62da49ec5649d7ab18d9cdec0de66da
-MG_CARDIV2_2=49f11bb7a40ed48e55efb61b166f86a5b492e1e3dc8b2909b4defba9a2d70f59
-MG_KBIT_MASTER_KEY=24f91d27cd4b60f843f08b83d8a3840a1c1eeb8cb2f6fad301feedea3a693b5b
-MG_KC_MASTER_KEY=01d02a712965de548a60d8f6d6e99078d7e2097b3fa5fe245d8817585b29fc48
-MG_KBIT_IV=6b8682420158660d3e5813e11aac50f89216fe0012dc4665b9ca8114065f12e8
-MG_KC_IV=dc05524b2925091e103205959f608e21b71228938b390058e9c614de0306cbb5
-MG_SIG_MASTER_KEY=6f7b5925f018c5d2ed24950a58e06daacc4638003f9fe6660f15a06ebb89f830
-MG_SIG_HASH_KEY=969229b7cced83355317ae625aec8f2b9fb89606ea95c3b6cff32798be5f4e39
-MG_ROOTSIG_HASH_KEY=6922fdef36385473e89660febc23471bfee20a02bf6587918f5d78d3767529df
-MG_ROOTSIG_MASTER_KEY=560e50a8b9b4ca735b83248dddbaedda73fec20bbcc092d81e2b60c8d9fa232f
-MG_CONTENT_IV=8224540de8460eb4bc26f25cadd39350ef9b5f64887a9afc1ac8bde5d4d69e3f
-MG_CONTENT_TABLE_IV=6d187c4758f828b1bc228bd0ad7679978558501578cf0f9bbb3cdbd967523b95
-MG_CHALLENGE_IV=11569b681f98ebe5c9fab2cf670ee97e380a94ee9d85e69d99aa32d6ab2471b7
-```
-
-</details>
-
-### Build shortcuts
-
-- `make all-ds34-off` builds a dedicated ELF without DS34 support.
-- `make all-ds34-on` builds a dedicated ELF with DS34 support.
-- `make all-ds34-variants` builds both variants in one run.
-
-## Documentation, Wiki, and Release Reference
-
-- [Current documentation and searchable Wiki/Guide index](https://nathanneurotic.github.io/Launchstation/wiki.html)
-- [Version-controlled Markdown wiki](docs/wiki/Home.md)
-- [Current dashboard tabs and Applications library](https://nathanneurotic.github.io/Launchstation/dashboard.html)
-- [Verified MMCE local/cloud recovery](docs/wiki/MMCE-Recovery.md)
+- [Searchable site and wiki index](https://nathanneurotic.github.io/Launchstation/wiki.html) · [Markdown wiki](docs/wiki/Home.md)
+- [Dashboard tabs and Applications library](https://nathanneurotic.github.io/Launchstation/dashboard.html) · [docs/dashboard.md](docs/dashboard.md)
+- [Verified MMCE local/cloud recovery](docs/wiki/MMCE-Recovery.md) · [Native Google Drive notes](docs/NATIVE_CLOUD.md)
 - [Rolling releases and update/rollback policy](docs/wiki/Releases-and-Recovery.md)
+- [Themes](docs/themes.md) · [Wallpaper guide](docs/wiki/Theme-and-Wallpaper-Guide.md)
 - [Full external project and third-party license inventory](docs/THIRD_PARTY_CREDITS.md)
 
-The four current dashboard tabs are **Home, Files, Tools, Settings**. The Applications library is nested under Home; Files is the persistent native browser; the MISC command folder is under Tools. This documentation is authored on `master` and generated to `gh-pages` by CI.
+This documentation is authored on `master` and generated to `gh-pages` by CI; do not edit the generated branch.
 
 ## Credits & Acknowledgments
 
 **Direct lineage and maintainers:** [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z) by R3Z3N / Saildot4K; earlier wLaunchELF, uLaunchELF and LaunchELF authors; [johnson-cooper](https://github.com/johnson-cooper), who created and transferred this fork; [NathanNeurotic / Ripto](https://github.com/NathanNeurotic), current maintainer; [techwritescode](https://github.com/techwritescode), TnA, oMrRexD, Zack and FitthFox for collaboration, insight or testing as noted in the detailed credits.
 
-**Source/dependency credits:** [PS2SDK/ps2dev](https://github.com/ps2dev/ps2sdk), [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman), [RiptOPL usbd-ra](https://github.com/NathanNeurotic/Open-PS2-Loader), legacy [ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), the legacy libcdvd authors, inherited DS34 driver authors including Alex Parrado, [Mbed TLS](https://github.com/Mbed-TLS/mbedtls), [Xiph.org ogg/vorbis](https://xiph.org/), audsrv and font contributors.
+**Source/dependency credits:** the [PS2BUILD SDK](https://git.techwritescode.dev/ps2) and its LLVM/Clang toolchain (used to build releases), [PS2SDK/ps2dev](https://github.com/ps2dev/ps2sdk), [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman), [RiptOPL usbd-ra](https://github.com/NathanNeurotic/Open-PS2-Loader), legacy [ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), the legacy libcdvd authors, inherited DS34 driver authors including Alex Parrado, [Mbed TLS](https://github.com/Mbed-TLS/mbedtls), [libjpeg-turbo](https://libjpeg-turbo.org/), [Xiph.org ogg/vorbis](https://xiph.org/), audsrv and font contributors.
 
-**PC CARD CompactFlash driver reference:** [mihhru](https://github.com/mihhru) and [PS2CF](https://github.com/mihhru/PS2CF) supplied the early-PS2 CF PIO/ATA foundation and host tests. The driver port is currently an isolated development target; native CF browsing and console compatibility are not yet verified.
+**PC CARD CompactFlash driver reference:** [mihhru](https://github.com/mihhru) and [PS2CF](https://github.com/mihhru/PS2CF) supplied the early-PS2 CF PIO/ATA foundation and host tests. The driver is integrated into this build; console compatibility is not yet verified on hardware.
 
 **External launcher and reference projects:** [Neutrino](https://github.com/rickgaiser/neutrino), [POPStarter](https://www.psx-place.com/threads/popstarter.19139/), [Ember](https://github.com/Gageformer/Ember), [PS2Link](https://github.com/ps2dev/ps2link), [UDPFSD](https://github.com/pcm720/udpfsd), [OSDMenu](https://github.com/pcm720/OSDMenu), [KELFTool](https://github.com/xfwcfw/kelftool), [CosmicScale's HDD-OSD icon generator](https://github.com/CosmicScale/HDD-OSD-Icon-Generator), [PixelFX RetroGem](https://www.pixelfx.co/hdmi-retro-gem), the Google Drive APIs and the MMCE/PS2 homebrew ecosystem. External programs are **not** automatically bundled merely because Launchstation can launch or reference them.
 
 For each project's exact role, paths, credit, bundled/unbundled status and license caveats, read [Third-Party Credits & License Inventory](docs/THIRD_PARTY_CREDITS.md) and the [website Credits page](https://nathanneurotic.github.io/Launchstation/credits.html). Original file-level notices remain authoritative; there is currently no single root LICENSE in the repository.
-
-### Software clock for consoles with a dead CMOS battery
-
-In **Settings > System**, choose **Set software clock...** and enter local time.
-Choose **Save** when leaving Settings to store a checkpoint in `DASHBOARD.CNF`.
-The clock advances while Launchstation runs. Before restarting, use **Settings
-changes > Save current clock** to retain additional runtime even when no other
-setting changed, and wait for the pending save to finish before cutting power.
-The next start resumes the last saved checkpoint.
-Time spent powered off or unplugged is unknown; a working RTC or Internet time
-source is required for accurate wall time across those intervals. **Use PS2
-hardware clock** restores the normal RTC source. Discard restores the previous
-clock setting along with the rest of the Settings session.

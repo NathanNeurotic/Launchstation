@@ -4,12 +4,16 @@ LAUNCHSTATION retains local verified version history for MMCE card images and, o
 
 ## Local recovery
 
-1. Configure the parent folder of `WLE-MMCE-Backups` in Settings → Storage & devices → MMCE backups.
+1. Configure the parent folder of `WLE-MMCE-Backups` in Settings → Storage & devices → MMCE backups (Backup folder). The same page sets Backups per card (0 keeps every verified version), Backup format (native `.mcd` or PCSX2 `.ps2`) and Automatic sync (Off, Local, Local + Google Drive).
 2. Choose **Recover saved card image...** in Settings or select a completed `.mcd`/`.ps2` snapshot in File Browser.
 3. Select a new USB/HDD destination. LAUNCHSTATION validates the image, writes a distinct `.PART`, reads back/verifies it and publishes `RECOVER-###.mcd` only after success.
 4. Inspect the newly produced file before making any manual card replacement. The current MMCE card is not replaced or activated.
 
-To preserve an individual MMCE card before a manual recovery, highlight its `.mcd` in `mmce0:/MemoryCards` or `mmce1:/MemoryCards` and choose the targeted history-backup action. Verification and retention must protect the selected source.
+To preserve an individual MMCE card before a manual recovery, highlight its `.mcd` in `mmce0:/MemoryCards` or `mmce1:/MemoryCards` and choose **Back up selected MMCE card to history...** in the File Browser menu. Verification and retention must protect the selected source. The same menu offers **Back up all MMCE cards...** (normal, named, GameID and BootCard images), **Back up active MMCE card...** (the exact firmware-selected backing image), **Export active MMCE card as PCSX2 .ps2...** (adds ECC/spare bytes and verifies), **Back up .mcd...**, **Export as PCSX2 .ps2...** and **Convert to no-ECC .mcd...** for local images.
+
+## Store a snapshot on the adapter without activating it
+
+Highlight a verified local `.mcd`/`.ps2` and choose **Store NEW snapshot on MMCE...**. The image is verified independently and stored in `mmceN:/WLE-Recovered`, outside all firmware-selectable card paths. It is not activated or installed as a game card; use the next section for that.
 
 ## Install a NEW selectable card on the existing firmware
 
@@ -37,7 +41,7 @@ replacing a card already in use and is not an atomic power-loss guarantee.
 
 ## Retention, IGR and failures
 
-Local snapshot export uses `.PART` and verifies before publication. Retention follows successful completion and must not prune a protected restore source. Unchanged cards may skip creating a new version. OPL IGR helper integration backs up changed cards locally before optional cloud upload. A cloud failure does not erase a verified local snapshot.
+Local snapshot export uses `.PART` and verifies before publication. Retention follows successful completion and must not prune a protected restore source. Unchanged cards may skip creating a new version. The OPL IGR helper (install or update it from Tools → OPL IGR automatic MMCE backup or Settings → Storage & devices → MMCE backups → IGR helper) backs up changed cards locally when OPL exits a game, before optional cloud upload; **After IGR, open** chooses where to go afterwards. Reinstall the helper after changing the backup folder, because it embeds its destination. A cloud failure does not erase a verified local snapshot.
 
 **Not implemented:** direct overwrite/activation of a live MMCE card from local history or Drive. Do not misread a successfully recovered USB/HDD file as an installed MMCE card.
 

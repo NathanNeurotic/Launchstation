@@ -1,5 +1,10 @@
 # Storage driver fixes — one-PR implementation handoff
 
+> **Status as of 2026-10-26: index only; PR #176 merged (`f29a28f`).** The "do not create a second branch or PR"
+> instruction applied to that work and is complete. Remaining items are the hardware-only acceptance checks listed
+> in [the canonical plan](docs/plans/2026-10-17-storage-driver-lifecycle-172-175.md).
+
+
 **Canonical plan:** [docs/plans/2026-10-17-storage-driver-lifecycle-172-175.md](docs/plans/2026-10-17-storage-driver-lifecycle-172-175.md)
 
 **Tracking PR:** [#176](https://github.com/NathanNeurotic/Launchstation/pull/176) (incremental production fixes; hardware validation pending). **Do not create a second branch or PR.**

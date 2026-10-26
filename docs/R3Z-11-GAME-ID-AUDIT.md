@@ -1,5 +1,14 @@
 # R3Z-11: independent Game ID channels
 
+> **Status as of 2026-10-26: historical audit, findings implemented; keep as the channel-separation reference.**
+> Code still matches the table: `LaunchNeutrinoIso` (`src/neutrino_iso.c`), `setNeutrinoMmceGameID`
+> (`src/neutrino_gameid.c`, 15-poll bound `MMCE_SWITCH_POLLS`), `LaunchPopstarterVcd`
+> (`src/popstarter.c`), `LaunchEmberGame` (`src/ember.c`). The Ember row (shown with a stray `?` in the
+> table heading; read it as "RetroGem x Ember") is implemented and documented in
+> [EMBER-RETROGEM.md](EMBER-RETROGEM.md). Still open: the hardware acceptance matrix at the end
+> (RetroGem decode, MMCE card switching on real adapters, MX4SIO refusal).
+
+
 Source audit dated 2026-10-25 against Launchstation baseline
 `b815d10da29274200572e61467d72a718004a708`, with R3Z-12's changes described
 separately. Upstream reference is
@@ -22,7 +31,7 @@ failure modes and acceptance criteria.
 | **RetroGem × POPS/POPStarter** | `LaunchPopstarterVcd` in `src/popstarter.c` uses `buildPopstarterVcdGameID` in `src/popstarter_gameid.c`, then conditionally calls `displayRetroGemGameID(..., 2)` after cleanup. | Present. Lookup prefers VCD SYSTEM.CNF, then the existing generic PVD timestamp ID, then filename/partition fallback. The RetroGem disc preference controls display. Correct recognition and fallback identity still require a RetroGem-equipped test. |
 | **MMCE × POPS/POPStarter** | Inspected `src/popstarter.c`, `src/popstarter_gameid.c`, candidate preparation/path/ELF modules and `src/main_actions.c`. | **Not applicable, by design.** POPStarter uses its own VMC files and does not need a real-card image selected through MMCE. Do not add SET_GAMEID to VCD launches. The earlier audit incorrectly classified its absence as a gap. |
 
-| **RetroGem ? Ember** | `buildEmberGameID` resolves CUE data-track FILE/INDEX 01, then uses the shared PS1 ISO reader, SYSTEM.CNF parser, timestamp database and existing filename fallback. `LaunchEmberGame` displays the cached ID after cleanup and successful USB remount. | Implemented by requested follow-up. Uses the existing disc Game ID preference. CUE/BIN-to-VCD identity equivalence and handoff ordering have executable host tests; physical RetroGem recognition remains unverified. No Ember MMCE selection is added. |
+| **RetroGem × Ember** | `buildEmberGameID` resolves CUE data-track FILE/INDEX 01, then uses the shared PS1 ISO reader, SYSTEM.CNF parser, timestamp database and existing filename fallback. `LaunchEmberGame` displays the cached ID after cleanup and successful USB remount. | Implemented by requested follow-up. Uses the existing disc Game ID preference. CUE/BIN-to-VCD identity equivalence and handoff ordering have executable host tests; physical RetroGem recognition remains unverified. No Ember MMCE selection is added. |
 
 ## Conflations to reject
 
