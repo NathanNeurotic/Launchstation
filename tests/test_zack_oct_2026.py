@@ -16,8 +16,7 @@ shell = read("src/dash_main.c")
 gfx = read("src/dash_gfx.c")
 info = read("src/dash_info.c")
 devices = read("src/dash_devices.c")
-make = read("Makefile")
-embed = read("embed.make")
+make = read("ps2.yaml")
 blobs = read("src/embed_blobs.S")
 header = read("include/dash_internal.h")
 
@@ -38,10 +37,9 @@ assert "if ((id > DI_PAD_BADGE && id <= DI_BTN_R3) || id == DI_DPAD_UD)" in icon
 assert "DashColor badge = DC(18, 22, 30, 230)" in icons
 assert "initPadTiles" not in icons and "pad_png_ready" not in icons
 assert "dashIconsPadPng" not in ui + icons + header
-assert "icon_cross_png.o" not in make
-assert "icon_cross_png.s:" not in embed
+assert "icon_cross_png" not in make
 assert "EMBED_FILE(icon_cross_png" not in blobs
-assert "res/icons/cross.png" not in blobs + embed
+assert "res/icons/cross.png" not in blobs + make
 assert "res/icons/cross.png" in {p.relative_to(root).as_posix() for p in (root / "res/icons").glob("*.png")}
 # The original images remain in the repository as a reversible reference.
 

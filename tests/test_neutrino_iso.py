@@ -9,7 +9,7 @@ dash_settings = (root / "src/dash_settings.c").read_text(encoding="utf-8")
 elf = (root / "src/elf.c").read_text(encoding="utf-8")
 config = (root / "src/config.c").read_text(encoding="utf-8")
 header = (root / "include/launchelf.h").read_text(encoding="utf-8")
-makefile = (root / "Makefile").read_text(encoding="utf-8")
+makefile = (root / "ps2.yaml").read_text(encoding="utf-8")
 yaml = (root / "ps2.yaml").read_text(encoding="utf-8")
 
 assert "char neutrino_file[MAX_PATH]" in header
@@ -60,7 +60,7 @@ assert "IsNeutrinoIsoPath(path)" in main_fileops
 assert 'genCmpFileExt(path, "ISO")' in dash_browser
 assert "S_NEUTRINO_PATH" in dash_settings
 
-assert "neutrino_iso.o" in makefile
+assert "- src/neutrino_iso.c" in makefile
 assert "- src/neutrino_iso.c" in yaml
 
 print("Neutrino ISO launch contract: OK")

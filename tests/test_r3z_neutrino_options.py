@@ -11,11 +11,11 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 gui = (root / "src/gui_neutrino.c").read_text(encoding="utf-8")
 neutrino = (root / "src/neutrino_iso.c").read_text(encoding="utf-8")
-makefile = (root / "Makefile").read_text(encoding="utf-8")
+makefile = (root / "ps2.yaml").read_text(encoding="utf-8")
 ps2build = (root / "ps2.yaml").read_text(encoding="utf-8")
 
 assert '"gui_neutrino.h"' in neutrino
-assert "gui_neutrino.o" in makefile
+assert "- src/gui_neutrino.c" in makefile
 assert "src/gui_neutrino.c" in ps2build
 assert "showNeutrinoLaunchOptions(&options)" in neutrino
 assert "buildNeutrinoOptionArgs(options, &option_args)" in neutrino

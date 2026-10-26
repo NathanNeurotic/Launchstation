@@ -12,9 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 GAMEID = (ROOT / "src/neutrino_gameid.c").read_text(encoding="utf-8")
 NEUTRINO = (ROOT / "src/neutrino_iso.c").read_text(encoding="utf-8")
 BUILD = (ROOT / "ps2.yaml").read_text(encoding="utf-8")
-MAKE = (ROOT / "Makefile").read_text(encoding="utf-8")
+MAKE = (ROOT / "ps2.yaml").read_text(encoding="utf-8")
 
-assert "neutrino_gameid.o" in MAKE
+assert "- src/neutrino_gameid.c" in MAKE
 assert "src/neutrino_gameid.c" in BUILD
 assert "loadMmceModules(" not in GAMEID, "ID lookup must never reboot/replace storage"
 assert "load_udpfs(" not in GAMEID

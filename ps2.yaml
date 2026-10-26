@@ -4,7 +4,7 @@
 # Output:  build/bin/wLaunchELF.elf         (stripped)
 #          build/bin/wLaunchELF-packed.elf  (ps2pack compressed, the release ELF)
 #
-# This mirrors the legacy Makefile's default profile:
+# Default feature profile (formerly the legacy Makefile defaults):
 #   MMCE=1 MX4SIO=1 SIO2MAN=1 EXFAT=1 UDPFS=1 ETH=1 DVRP=1 XFROM=1
 #   TMANIP=1 IOP_RESET=1 DS34=0 LCDVD=LATEST CUSTOM_COLORS
 #
@@ -245,7 +245,7 @@ targets:
     headers: [kernel]
 
   # Embedded ELF loader: linked into the 0x84000..0xa0000 low-memory window,
-  # built compact with newlib-nano exactly like loader/Makefile.
+  # built compact with newlib-nano.
   - name: loader
     type: ee
     sources: [loader/loader.c]

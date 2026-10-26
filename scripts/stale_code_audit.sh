@@ -7,7 +7,7 @@ if [ "${1:-}" = "--strict" ]; then
 	shift
 fi
 
-ROOTS="src include iop loader .github/workflows Makefile embed.make"
+ROOTS="src include iop loader .github/workflows ps2.yaml"
 REPORT_DIR="${1:-build}"
 REPORT_FILE="$REPORT_DIR/stale-code-report.txt"
 

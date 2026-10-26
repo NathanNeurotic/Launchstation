@@ -210,10 +210,7 @@ assert 'udpfs_smap' in targets['wLaunchELF']['embed_irx']
 assert targets['udpfs_smap']['sources'] == [
     'iop/udpfs_smap/src/main.c', 'iop/udpfs_smap/src/smap.c', 'iop/udpfs_smap/src/xfer.c']
 assert 'EMBED_FILE(udpfs_smap_irx' not in read(root / 'src/embed_blobs.S')
-legacy = read(root / 'embed.make')
-assert 'UDPFS_SMAP_SOURCE := iop/__generated/udpfs_smap.irx' in legacy
-assert '$(MAKE) -C iop/udpfs_smap' in legacy
-assert 'UDPFS_SMAP_SOURCE := iop/__precompiled' not in legacy
+assert not (root / 'embed.make').exists() and not (root / 'Makefile').exists()
 
 if failures:
     print('\n'.join(failures))

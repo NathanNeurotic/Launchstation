@@ -9,7 +9,7 @@ tools = (root / "src/dash_tools.c").read_text(encoding="utf-8")
 dash_main = (root / "src/dash_main.c").read_text(encoding="utf-8")
 elf = (root / "src/elf.c").read_text(encoding="utf-8")
 header = (root / "include/launchelf.h").read_text(encoding="utf-8")
-makefile = (root / "Makefile").read_text(encoding="utf-8")
+makefile = (root / "ps2.yaml").read_text(encoding="utf-8")
 yaml = (root / "ps2.yaml").read_text(encoding="utf-8")
 init = (root / "src/init.c").read_text(encoding="utf-8")
 init_h = (root / "include/init.h").read_text(encoding="utf-8")
@@ -72,7 +72,7 @@ assert "IsEmberGamePath(path)" in browser
 for ext in ('"CUE"', '"BIN"'):
     assert ext in browser
 
-assert "ember.o" in makefile
+assert "- src/ember.c" in makefile
 assert "- src/ember.c" in yaml
 
 # Classic config persists the Ember directory and Settings exposes a folder picker.

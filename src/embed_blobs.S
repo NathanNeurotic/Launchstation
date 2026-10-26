@@ -3,9 +3,8 @@
  *
  * PS2BUILD's embed_irx: handles IOP targets and SDK driver packages. The
  * payloads below are plain files (or slices of files) that have no package or
- * target to reference, so they are pulled in with .incbin, producing exactly
- * the same symbols that embed.make generates with bin2s for the legacy
- * Makefile build:
+ * target to reference, so they are pulled in with .incbin, producing the
+ * same style of symbols that bin2s used to generate:
  *
  *     <name>       - first byte of the payload
  *     size_<name>  - 32-bit payload size
@@ -50,7 +49,7 @@ sym##_end:                               \
 size_##sym:                              \
 	.word sym##_end - sym
 
-/* Exploit installer payloads (see embed.make: EXPLOIT_XLF_HEADER_SIZE=128). */
+/* Exploit installer payloads: only the first 128 bytes (the XLF header) are embedded. */
 EMBED_SLICE(exploit_system_xlf_header, "exploits/SYSTEM.XLF", 0, 128)
 EMBED_SLICE(exploit_xsystem_xlf_header, "exploits/XSYSTEM.XLF", 0, 128)
 EMBED_SLICE(exploit_dtl_system_xlf_header, "exploits/DTL-SYSTEM.XLF", 0, 128)
