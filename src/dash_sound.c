@@ -118,11 +118,11 @@ int dashSoundInit(void)
 		return 0;
 	}
 	if (SifExecModuleBuffer(audsrv_irx, size_audsrv_irx, 0, NULL, &r) < 0 || r < 0) {
-		dashToast(DASH_TOAST_WARN, "Sound unavailable: audsrv would not start");
+		dashToast(DASH_TOAST_WARN, "Sound unavailable: audio driver would not start");
 		return 0;
 	}
 	if (audsrv_init() != 0) {
-		dashToast(DASH_TOAST_WARN, "Sound unavailable: audsrv init failed");
+		dashToast(DASH_TOAST_WARN, "Sound unavailable: audio init failed");
 		return 0;
 	}
 	if (audsrv_adpcm_init() != 0) {
