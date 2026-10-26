@@ -600,6 +600,9 @@ int dashStoreFlushWait(const char *title);
 const char *dashStoreDir(void);
 int dashStoreBuildPath(char *out, int out_size, const char *file);
 int dashStoreIsFavorite(const char *path);
+/* Hidden paths persist independently of library scans. Set: 1 changed, 0 unchanged, -1 failed. */
+int dashStoreIsHidden(const char *path);
+int dashStoreSetHidden(const char *path, int hidden);
 int dashStoreIsPinned(const char *path);
 int dashStoreToggleFavorite(const char *path);
 int dashStoreTogglePinned(const char *path);
@@ -829,6 +832,10 @@ void dashDrawSpinner(float cx, float cy, float r, DashColor c);
 void dashToast(int kind, const char *msg);
 void dashDrawToasts(void);
 
+/* Disabled controls stay visibly dim even when a theme uses similar text
+ * colours. Apply to the whole row, including icons and secondary values. */
+#define DASH_DISABLED_ALPHA 0.5f
+
 /* Blocking modal dialogs. They keep rendering the current dashboard scene
  * underneath through dashRenderScene(). */
 typedef struct
@@ -1040,6 +1047,7 @@ extern int gsScreenGeneration;
 /* filer.c accessors used by the device model. */
 int getDir(const char *path, FILEINFO *info);
 int filerRootMcPresent(int port, int *type, int *free_kb);
+int filerPrepareMemoryCardRead(int port);
 int filerUsbDriveMask(void);
 int filerUsbRefreshDriveMask(void); /* force one cached USB root refresh */
 int filerUsbDriversLoaded(void);

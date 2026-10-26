@@ -32,6 +32,7 @@ static void dashGlow(float x,float y,float w,float h,int c){(void)x;(void)y;(voi
 static float dashClampf(float x,float a,float b){return fminf(b,fmaxf(a,x));}
 static float dashLerpf(float a,float b,float t){return a+(b-a)*t;}
 static void dashGfxPushAlpha(float a){(void)a;}static void dashGfxPopAlpha(void){}
+static float appOpacity(const DashApp*a){(void)a;return 1.0f;}
 static void dashDrawTileFocus(float x,float y,float w,float h,float r,float f){(void)x;(void)y;(void)w;(void)h;(void)r;(void)f;}
 static void dashTextScrollCenter(float x,float y,float w,const char*s,float f,int c){(void)x;(void)y;(void)w;(void)s;(void)f;(void)c;}
 static void dashTextCenter(float x,float y,const char*s,float f,int c){(void)x;(void)y;(void)s;(void)f;(void)c;}
