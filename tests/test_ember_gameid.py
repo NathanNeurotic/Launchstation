@@ -69,6 +69,10 @@ for filename in ['popstarter_vcd.c','popstarter_gameid.c','ember_gameid.c']:
 program+=r'''
 int main(int argc,char **argv){
  assert(argc>=5);char cue[12],vcd[12];
+ assert(!normalizePs1Serial("LSP12345678",cue,sizeof(cue)));
+ assert(!normalizePs1Serial("SLUS_12A.45",cue,sizeof(cue)));
+ assert(!normalizePs1Serial("SLUS_123.45",cue,11));
+ assert(!normalizePs1Serial("",cue,sizeof(cue)));
  int fd=openPathForRead(argv[1],NULL,0);assert(fd>0);genClose(fd);
  assert(buildEmberGameID(argv[1],cue,sizeof(cue)) && !opened);
  assert(buildPopstarterVcdGameID(argv[2],vcd,sizeof(vcd)) && !opened);
@@ -103,9 +107,11 @@ with tempfile.TemporaryDirectory(prefix='ember-gameid-') as td:
  (folder/'standalone.exe').write_bytes(b'PS-X EXE'+bytes(2048));bad.append(folder/'standalone.exe')
  count=0
  for size,mode in [(2352,1),(2352,2),(2048,1),(2336,2)]:
-  for has_serial in [True,False]:
-   logical=sectors(boot=b'BOOT = cdrom0:\\SLUS_123.45;1\r\n' if has_serial else b'BOOT = cdrom0:\\PSX.EXE;1\r\n')
-   expected='SLUS_123.45' if has_serial else 'SLPS_000.01'
+  for serial,expected in [('SLUS_123.45','SLUS_123.45'), ('slus-12345','SLUS_123.45'),
+                          ('SLUS12345','SLUS_123.45'), ('SLUS.123_45','SLUS_123.45'),
+                          ('slusp_123.45','SLUS_123.45'), ('lsp12345.67','LSP12345.67'),
+                          ('LSP-123456','LSP12345.6'), ('PSX.EXE','SLPS_000.01')]:
+   logical=sectors(boot=f'BOOT = cdrom0:\\{serial};1\r\n'.encode())
    stem=f'case{count}';count+=1
    data=folder/(stem+' track 01.bin');data.write_bytes(bytes(size*2)+image(logical,size,mode))
    cue=folder/(stem+'.cue');cue.write_text('\ufeffREM comment\r\nFILE "audio.wav" WAVE\r\n TRACK 01 AUDIO\r\n INDEX 01 00:00:00\r\n'+
