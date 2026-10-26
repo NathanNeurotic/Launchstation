@@ -18,7 +18,7 @@ python3 scripts/gen_githash.py
 ps2build build
 ```
 
-The release ELF is `build/bin/wLaunchELF-packed.elf`. The legacy `Makefile` is not the release path and does not include native cloud support.
+The release ELF is `build/bin/wLaunchELF-packed.elf`. `ps2build` is the only build path; the legacy `Makefile` build was retired on 2026-10-26.
 
 ## Requirements
 
@@ -86,7 +86,7 @@ ps2build build
 
 - `build/bin/wLaunchELF-packed.elf` is the release ELF (compressed with `ps2pack`).
 - `build/bin/wLaunchELF.elf` is the stripped, unpacked ELF; `build/obj/wLaunchELF/wLaunchELF.unstripped.elf` is the linked ELF with symbols used by the checks below.
-- `build/bin/*.irx` are the source-built IOP modules (`udpfs_smap`, `ps2ips_rpc` (vendored PS2IP socket RPC server, `iop/ps2ips_rpc/`, ETH builds only; the legacy `embed.make` builds it via its own Makefile), `usbd_ra`, `mmceman`, `vmcman`, `ps2ftpd`, `ps2host`, `pccf`, `ata_bd` and others); `loader.elf` and `wle_igr.elf` are also embedded.
+- `build/bin/*.irx` are the source-built IOP modules (`udpfs_smap`, `ps2ips_rpc` (vendored PS2IP socket RPC server, `iop/ps2ips_rpc/`, ETH builds only), `usbd_ra`, `mmceman`, `vmcman`, `ps2ftpd`, `ps2host`, `pccf`, `ata_bd` and others); `loader.elf` and `wle_igr.elf` are also embedded.
 
 At the time of writing the packed ELF is about 1.6 MB (unpacked about 4.6 MB). A change to the default feature profile belongs in `ps2.yaml` (`defines:`, `embed_irx:`, `libs:`); the standard profile is MMCE, MX4SIO, iLink, exFAT, UDPFS plus ETH, DVRP, XFROM, TMANIP and custom colors with native cloud enabled and DS34 off.
 
@@ -165,11 +165,7 @@ ps2build build -o build-gcc
 
 Use a separate `-o` directory. The dependency scripts overwrite `.cloud-deps/` and `.jpeg-deps/`, so unset the variable and re-run them before your next LLVM build. GCC output is for comparison only; the purity check does not apply to it and release packages are Clang-built.
 
-## 11. Legacy Makefile
-
-The root `Makefile` and `embed.make` are kept for feature profiles outside `ps2.yaml` and for the older toolchain. They need `PS2DEV`/`PS2SDK` in the environment, `ps2-packer` and `bin2s` (or the fallback scripts in `scripts/`), and produce `BOOT-*.ELF` (packed) and `UNC-BOOT-*.ELF` names derived from the options. `make info` lists the options (`EXFAT`, `ETH`, `UDPFS`, `DS34`, `MX4SIO`, `MMCE`, `DEBUG`, `PPC_UART`, and so on). Local `make` defaults to `ETH=0 UDPFS=1`, whereas `ps2.yaml` enables both. The Makefile does **not** define `WLE_NATIVE_CLOUD` or link Mbed TLS, so Google Drive and the native updater are compiled out ("This build does not include native HTTPS support"). It is not run in CI; treat it as best effort.
-
-## 12. Documentation site and wiki
+## 11. Documentation site and wiki
 
 ```
 python3 docs-site/build.py --out build/docs-site
@@ -178,7 +174,7 @@ python3 docs-site/build.py --out site --zip Launchstation-Documentation.zip
 
 `build.py` renders every page in `docs-site/manifest.json` from `docs-site/content/<slug>.html`, builds the search index and fails on missing pages, broken internal links, unresolved template tokens, missing images and stale upstream branding outside Credits. CI builds it on every run; the *Publish Documentation* workflow pushes it to `gh-pages` when `docs-site/**` changes on `master`. *Synchronize GitHub Wiki* runs `scripts/sync_github_wiki.py` to mirror `docs/wiki/*.md`, the site pages and `docs/THIRD_PARTY_CREDITS.md` into the repository wiki without deleting unmanaged pages or force-pushing.
 
-## 13. Claude Code cloud sessions
+## 12. Claude Code cloud sessions
 
 The repository ships `.claude/settings.json` with a `SessionStart` hook that runs `.claude/hooks/session-start.sh`. In a Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`; it does nothing elsewhere) the hook installs the PS2BUILD SDK with the same installer and retry options as CI if `ps2build` is missing, runs `ps2build update` and `ps2build update llvm-toolchain`, and exports `PATH`, `LLVM_BIN` and `PS2BUILD_TOOLCHAIN=llvm` for the session through `CLAUDE_ENV_FILE`. It honors `PS2DEV_INSTALL_DIR` as the install location. After it runs, the commands in sections 3 to 9 work unchanged.
 
