@@ -32,3 +32,15 @@ for path in sorted((root / "src").glob("*.c")):
     for key in re.findall(r'\.key = "([^"]+)"', path.read_text(encoding="utf-8", errors="replace")):
         assert key in allowed, f"{path.name}: hint key {key!r} is not a PS2 button"
 print("PASS: hint key badges name real PS2 buttons")
+
+# Controller glyphs snap to whole GS pixels; the texture pool rejects
+# textures it can never fit instead of looping in gsKit's evictor.
+gfx = (root / "src" / "dash_gfx.c").read_text(encoding="utf-8")
+icons = (root / "src" / "dash_icons.c").read_text(encoding="utf-8")
+assert "void dashSpriteBatchAddAligned(" in gfx and "floorf(SX(x1) + 0.5f) - 0.5f" in gfx
+assert "dashSpriteBatchAddAligned(x + go, y + go," in icons
+bind = gfx[gfx.index("int dashTexBind("):]
+assert bind.index("size > available") < bind.index("gsKit_TexManager_bind")
+gs = (root / "src" / "draw_gs.c").read_text(encoding="utf-8")
+assert gs.index("dmaKit_wait_fast();") < gs.index("gsKit_finish();", gs.index("dmaKit_wait_fast();") - 400)
+print("PASS: aligned pad glyphs, bounded texture binds, GS drained before mode reset")

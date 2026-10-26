@@ -321,6 +321,10 @@ static void listDone(void *arg)
 		if (fb.want_sel[0])
 			selectName(fb.want_sel);
 		fb.want_sel[0] = '\0';
+		/* Completion can arrive with no new pad input. Restore the viewport
+		 * and highlight now, before the first frame of the parent listing. */
+		revealSelection();
+		fb.sel_anim = (float)fb.sel;
 	}
 	if (j->quiet_input && browser_usb_jobs > 0) {
 		browser_usb_jobs--;
@@ -428,6 +432,8 @@ static void openDir(const char *dir, const char *select)
 				if (!strcmp(fb.devs[i].browse, select))
 					fb.sel = i;
 		}
+		revealSelection();
+		fb.sel_anim = (float)fb.sel;
 		return;
 	}
 	if (isMisc(dir)) {
@@ -435,6 +441,8 @@ static void openDir(const char *dir, const char *select)
 		fb.loading = 0;
 		if (select != NULL)
 			selectName(select);
+		revealSelection();
+		fb.sel_anim = (float)fb.sel;
 		return;
 	}
 	/* drivers and the HDD partition list are set up here on the UI thread;

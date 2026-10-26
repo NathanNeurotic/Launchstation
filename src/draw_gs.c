@@ -144,6 +144,10 @@ void updateScreenMode(void)
 		/* Complete the final old-mode queue before changing framebuffer
 		 * addresses and resetting the GS. Both buffers are cleared below. */
 		gsKit_queue_exec(gsGlobal);
+		/* Drain the last GIF transfer and its GS FINISH before
+		 * gsKit_init_screen() resets the hardware; resetting mid-transfer can
+		 * strand the next DMA/FINISH wait. */
+		dmaKit_wait_fast();
 		gsKit_finish();
 		setGS_flag = 1;
 		TV_mode = New_TV_mode;

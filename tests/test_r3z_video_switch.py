@@ -32,6 +32,7 @@ static int gsScreenGeneration,stage,rebuilds,native_mode=TV_mode_PAL;
 static int uLE_InitializeRegion(void) { return native_mode; }
 static void fadeScreenToBlack(void) { assert(stage==0);stage=1; }
 static void gsKit_queue_exec(GSGLOBAL *p) { (void)p;assert(stage==1);stage=2; }
+static void dmaKit_wait_fast(void) { assert(stage==2); }
 static void gsKit_finish(void) { assert(stage==2);stage=3; }
 static void gsKit_init_screen(GSGLOBAL *p) {
     assert(stage==3);stage=4;rebuilds++;p->StartX=500;p->StartY=40;

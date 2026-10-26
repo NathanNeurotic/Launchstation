@@ -367,6 +367,7 @@ void dashTexDrawFit(GSTEXTURE *tex, float x, float y, float w, float h, DashColo
 /* Batched textured sprites (used by text and icons). */
 void dashSpriteBatchBegin(GSTEXTURE *tex, DashColor c);
 void dashSpriteBatchAdd(float x1, float y1, float u1, float v1, float x2, float y2, float u2, float v2);
+void dashSpriteBatchAddAligned(float x1, float y1, float u1, float v1, float x2, float y2, float u2, float v2);
 void dashSpriteBatchEnd(void);
 
 //--------------------------------------------------------------
