@@ -38,6 +38,8 @@ Every verified push to `master` publishes four assets to the single moving **`la
 | `APP_LAUNCHSTATION.psu` | Same four files | Copy, then Extract PSU onto a memory card |
 | `APP_LAUNCHSTATION-DS.zip` | `APP_LAUNCHSTATION-DS/LAUNCHSTATION-DS.ELF` + the same three sidecars | DualShock (DS34) variant, filesystem |
 | `APP_LAUNCHSTATION-DS.psu` | Same four files | DualShock variant, memory card |
+| `LAUNCHSTATION.ELF`, `LAUNCHSTATION-DS.ELF` | The packed ELF alone (standard / DS34) | When you only need the executable |
+| `BOOT.ELF`, `BOOT2.ELF` | Byte-identical copies of the standard `LAUNCHSTATION.ELF` | Boot paths that look for those names |
 
 Both executables are packed (`ps2pack`). The ELF runs without its sidecars, but `WLE-UPDATE-CA.PEM` is needed for HTTPS update checks and `BGM.ADP` is the optional background music. The two variants share the same settings and optional sidecars.
 

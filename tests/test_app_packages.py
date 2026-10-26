@@ -21,7 +21,11 @@ with tempfile.TemporaryDirectory(prefix="app-packages-") as tmp:
     elf[52:] = bytes(i % 251 for i in range(len(elf) - 52))
     (tmp / "elf").write_bytes(elf)
     p.package(tmp / "elf", tmp / "elf", tmp / "out", "a" * 40, 1791500000)
-    assert len(list((tmp / "out").iterdir())) == 4
+    assert len(list((tmp / "out").iterdir())) == 8
+    for loose, variant in p.LOOSE_ELFS:
+        assert (tmp / "out" / loose).read_bytes() == elf, loose
+    assert [name for name, _ in p.LOOSE_ELFS] == [
+        "LAUNCHSTATION.ELF", "LAUNCHSTATION-DS.ELF", "BOOT.ELF", "BOOT2.ELF"]
     (tmp / "launchelf.h").write_text('''
 #include <stdio.h>
 #include <string.h>

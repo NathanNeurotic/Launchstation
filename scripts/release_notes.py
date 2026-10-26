@@ -9,6 +9,7 @@ import subprocess
 ASSETS = (
     "APP_LAUNCHSTATION.zip", "APP_LAUNCHSTATION.psu",
     "APP_LAUNCHSTATION-DS.zip", "APP_LAUNCHSTATION-DS.psu",
+    "LAUNCHSTATION.ELF", "LAUNCHSTATION-DS.ELF", "BOOT.ELF", "BOOT2.ELF",
 )
 
 
@@ -78,12 +79,13 @@ def render(repo, revision, previous, run_id, changes, digests):
     hashes = "\n".join(f"{digests[name]}  {name}" for name in ASSETS)
     return f"""## Downloads
 
-| Version | ZIP | PSU |
-| --- | --- | --- |
-| Standard | [Download]({download}/{ASSETS[0]}) | [Download]({download}/{ASSETS[1]}) |
-| DS34 USB/Bluetooth controllers | [Download]({download}/{ASSETS[2]}) | [Download]({download}/{ASSETS[3]}) |
+| Version | ZIP | PSU | ELF |
+| --- | --- | --- | --- |
+| Standard | [Download]({download}/{ASSETS[0]}) | [Download]({download}/{ASSETS[1]}) | [Download]({download}/{ASSETS[4]}) |
+| DS34 USB/Bluetooth controllers | [Download]({download}/{ASSETS[2]}) | [Download]({download}/{ASSETS[3]}) | [Download]({download}/{ASSETS[5]}) |
 
 Extract the ZIP and launch its ELF, or install the PSU with **PSU Paste**.
+For boot-path installs, [BOOT.ELF]({download}/{ASSETS[6]}) and [BOOT2.ELF]({download}/{ASSETS[7]}) are copies of the standard ELF.
 Existing user settings are retained. The built-in updater preserves your controller version.
 
 ## Changelog

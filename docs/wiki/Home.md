@@ -18,7 +18,7 @@ This is the maintained Markdown guide collection stored in the repository. An au
 
 - Repository: <https://github.com/NathanNeurotic/Launchstation> · Site: <https://nathanneurotic.github.io/Launchstation/>
 - Fork of [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z); the dashboard is the only interface.
-- Releases: one moving `latest` release with `APP_LAUNCHSTATION.psu/.zip` and `APP_LAUNCHSTATION-DS.psu/.zip`, built from `master` by CI with the PS2BUILD LLVM/Clang toolchain.
+- Releases: one moving `latest` release with `APP_LAUNCHSTATION.psu/.zip`, `APP_LAUNCHSTATION-DS.psu/.zip` and loose `LAUNCHSTATION.ELF`, `LAUNCHSTATION-DS.ELF`, `BOOT.ELF`, `BOOT2.ELF`, built from `master` by CI with the PS2BUILD LLVM/Clang toolchain.
 - History: [CHANGELOG.md](../../CHANGELOG.md) (the Rolling section feeds the release notes).
 
 ## Source-of-truth policy
