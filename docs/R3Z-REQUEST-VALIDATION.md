@@ -110,3 +110,16 @@ Follow-up validation uses 27 focused host scripts: the original 16 plus
 The glyph mapper is checked against Python's independent Shift-JIS/EUC-JP codecs.
 New Settings labels are included in all nine built-in language catalogs, with
 legacy IDs preserved. Colour serialization now gives sprintf's %n an int pointer.
+
+## Ember RetroGem follow-up (2026-10-26)
+
+Requested after the original audit scope: Ember CUE/BIN disc identities now use
+shared PS1 ISO/serial/timestamp readers with VCD-equivalence fixtures. The existing
+disc RetroGem preference applies. The signal follows cleanup and successful USB
+remount, immediately before the unchanged keep-IOP handoff. No Ember MMCE card
+selection is introduced. See [Ember RetroGem details](EMBER-RETROGEM.md).
+
+Additional production-code host tests: `test_ember_gameid.py` and
+`test_ember_retrogem_handoff.py`; existing Ember path, launch, IOP and two-USB
+handoff checks remain relevant. Physical RetroGem decode/game acceptance is
+unverified.

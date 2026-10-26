@@ -184,3 +184,24 @@ int buildPopstarterVcdGameID(const char *path, char *gameID, size_t gameID_len)
 
 	return buildGameIDFromPopstarterName(path, gameID, gameID_len);
 }
+
+/* Same serial, timestamp database and name fallback as a VCD of this disc. */
+int buildPs1ImageGameID(const PS1_IMAGE_READER *image, const char *fallback,
+                       char *gameID, size_t gameID_len)
+{
+	char cnf[POPSTARTER_CD_SECTOR_DATA_SIZE + 1];
+	unsigned char pvd[POPSTARTER_CD_SECTOR_DATA_SIZE] __attribute__((aligned(16)));
+	if (gameID == NULL || gameID_len < 12 || image == NULL)
+		return 0;
+	gameID[0] = '\0';
+	if (readPs1SystemCnf(image, cnf, sizeof(cnf)) &&
+	    parseSystemCnfBootGameID(cnf, gameID, gameID_len))
+		return 1;
+	/* Require a real ISO filesystem before using timestamp/name fallbacks. */
+	if (!readPs1IsoPrimaryVolumeDescriptor(image, pvd))
+		return 0;
+	if (buildPS1GenericGameIDFromTimestamp((const char *)pvd + PS1_PVD_VOLUME_TIMESTAMP_OFFSET,
+	                                     gameID, gameID_len))
+		return 1;
+	return buildGameIDFromPopstarterName(fallback, gameID, gameID_len);
+}

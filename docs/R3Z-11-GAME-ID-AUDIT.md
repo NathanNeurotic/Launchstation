@@ -4,7 +4,9 @@ Source audit dated 2026-10-25 against Launchstation baseline
 `b815d10da29274200572e61467d72a718004a708`, with R3Z-12's changes described
 separately. Upstream reference is
 [`06b06d000072d358c93d98104d64d2f081e47ba7`](https://github.com/saildot4k/wLaunchELF_R3Z/tree/06b06d000072d358c93d98104d64d2f081e47ba7).
-Ember is out of scope. POPStarter uses its own VMC files rather than the physical memory-card path;
+The original four-cell audit covered Neutrino and POPStarter. The authorized
+Ember RetroGem follow-up is now included below. POPStarter uses its own VMC
+files rather than the physical memory-card path;
 MMCE Game ID selection is therefore not applicable to POPStarter. RetroGem
 output remains required and independent.
 
@@ -19,6 +21,8 @@ failure modes and acceptance criteria.
 | **MMCE × Neutrino** | `setNeutrinoMmceGameID` in `src/neutrino_gameid.c`; PING `0x01`, SET_GAMEID `0x08`, GET_STATUS `0x02` through `fileXioDevctl`. | Present but baseline required active MMCE. R3Z-12 adds manager-only bring-up independently of the source stack, protects ISO/ELF slots, skips MX4SIO path or resident driver, and keeps the existing finite 15-poll busy bound. `cdrom_disable_gameid` does not disable this channel. Unknown IDs or control errors remain best-effort and do not prevent launch. |
 | **RetroGem × POPS/POPStarter** | `LaunchPopstarterVcd` in `src/popstarter.c` uses `buildPopstarterVcdGameID` in `src/popstarter_gameid.c`, then conditionally calls `displayRetroGemGameID(..., 2)` after cleanup. | Present. Lookup prefers VCD SYSTEM.CNF, then the existing generic PVD timestamp ID, then filename/partition fallback. The RetroGem disc preference controls display. Correct recognition and fallback identity still require a RetroGem-equipped test. |
 | **MMCE × POPS/POPStarter** | Inspected `src/popstarter.c`, `src/popstarter_gameid.c`, candidate preparation/path/ELF modules and `src/main_actions.c`. | **Not applicable, by design.** POPStarter uses its own VMC files and does not need a real-card image selected through MMCE. Do not add SET_GAMEID to VCD launches. The earlier audit incorrectly classified its absence as a gap. |
+
+| **RetroGem ? Ember** | `buildEmberGameID` resolves CUE data-track FILE/INDEX 01, then uses the shared PS1 ISO reader, SYSTEM.CNF parser, timestamp database and existing filename fallback. `LaunchEmberGame` displays the cached ID after cleanup and successful USB remount. | Implemented by requested follow-up. Uses the existing disc Game ID preference. CUE/BIN-to-VCD identity equivalence and handoff ordering have executable host tests; physical RetroGem recognition remains unverified. No Ember MMCE selection is added. |
 
 ## Conflations to reject
 
