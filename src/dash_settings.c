@@ -2602,7 +2602,7 @@ static void runThemeAction(int id)
 
 static void runAction(int id)
 {
-	if (id >= S_T_PRESET) {
+	if (id >= S_T_PRESET && id <= S_T_RESETCAT) {
 		runThemeAction(id);
 		return;
 	}

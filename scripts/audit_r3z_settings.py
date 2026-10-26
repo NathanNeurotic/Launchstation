@@ -6,6 +6,7 @@ drift rather than silently treating a newer upstream as the audited baseline.
 """
 from pathlib import Path
 import argparse
+import json
 import re
 import subprocess
 
@@ -64,10 +65,43 @@ for name in ['Misc','Misc_PS2Disc','Misc_FileBrowser','Misc_PS2Browser','Misc_PS
 def saved_keys(source):
     return set(re.findall(r'"([^"\n]+) = %', source))
 
+
+def function_body(source, signature):
+    start = source.index(signature)
+    pos = source.index('{', start) + 1
+    depth = 1
+    while depth:
+        depth += (source[pos] == '{') - (source[pos] == '}')
+        pos += 1
+    return source[start:pos]
+
+
+def check_editor_routes(settings, browser, reachable_ui):
+    """Settings launch-key dispatch and File Browser bookmarks are distinct."""
+    assert re.search(r'\{ST_LKEY,\s*S_LK_0\s*\+', reachable_ui), 'unreachable launch-key editor'
+    inputs = function_body(settings, 'static void settingsInput(')
+    for button, callback in [('OK', 'editLaunchMenu(it)'), ('FAV', 'editLaunchKey(it, 1)')]:
+        pattern = r'it->type == ST_LKEY[^{}]*DASH_IN_' + button + r'[^{}]*\{\s*' + re.escape(callback) + ';'
+        assert re.search(pattern, inputs), ('missing launch-key dispatch', button)
+    menu = function_body(settings, 'static void editLaunchMenu(')
+    assert 'editLaunchKey(it, r)' in menu, 'launch-key menu does not reach the editor'
+    editor = function_body(settings, 'static void editLaunchKey(')
+    assert 'setting->LK_Path[lk]' in editor and 'setting->LK_Title[lk]' in editor
+    actions = function_body(browser, 'static void actionsMenu(')
+    assert re.search(r'ADD\([^;\n]*\bF_BOOKMARK\);', actions), 'missing File Browser bookmark menu item'
+    assert re.search(r'case F_BOOKMARK:\s*opBookmark\(\);', actions), 'missing File Browser bookmark dispatch'
+
+
 def check(upstream=None):
     settings=(ROOT/'src/dash_settings.c').read_text()
     config=(ROOT/'src/config.c').read_text()
     colours=(ROOT/'src/gui_colors.c').read_text()
+    fixture = json.loads((ROOT/'tests/fixtures/r3z-06b06d0-config-keys.json').read_text())
+    assert fixture['upstream_commit'] == UPSTREAM, 'fixture revision differs from the audited upstream'
+    expected = set(fixture['keys'])
+    assert set(ROWS) == expected, {
+        'unmapped': sorted(expected - set(ROWS)), 'obsolete': sorted(set(ROWS) - expected)
+    }
     arrays=dict(re.findall(r'static const SetItem (\w+)\[\] = \{(.*?)\n\};',settings,re.S))
     pages=dict(re.findall(r'\[(P_\w+)\] = PAGE\([^\n]*, (\w+)\),',settings))
     reached=set();pending=['P_ROOT'];ui=''
@@ -78,9 +112,10 @@ def check(upstream=None):
         pending+=re.findall(r'\{ST_PAGE, (P_\w+),',items)
     assert set(ROWS) <= saved_keys(config)|saved_keys(colours)
     for key,(field,control,consumer) in ROWS.items():
-        assert re.search(r'\b'+field+r'\b',config+colours), (key,'missing persistence field')
+        assert re.search(r'\b'+re.escape(field)+r'\b',config+colours), (key,'missing persistence field')
         if control.startswith('S_'): assert control in ui,(key,'unreachable control')
         for path in re.findall(r'src/[\w_]+\.c',consumer): assert (ROOT/path).exists(),path
+    check_editor_routes(settings, (ROOT/'src/dash_browser.c').read_text(), ui)
     # Optional full comparison against the original serializer, not a name sample.
     if upstream:
         sha=subprocess.check_output(['git','-C',str(upstream),'rev-parse','HEAD'],text=True).strip()
@@ -88,7 +123,7 @@ def check(upstream=None):
         original=(upstream/'src/config.c').read_text(errors='replace')
         a=original.index('// Save LAUNCHELF.CNF');b=original.index('int loadConfig',a)
         inventory=saved_keys(original[a:b])|saved_keys((upstream/'src/gui_colors.c').read_text(errors='replace'))
-        assert inventory==set(ROWS), {'unmapped':sorted(inventory-set(ROWS)),'obsolete':sorted(set(ROWS)-inventory)}
+        assert inventory == expected, 'pinned checkout differs from the checked-in key fixture'
     return pages,arrays
 
 def report():
@@ -100,6 +135,9 @@ def report():
         lines.append(f'| `{key}` | `{field}` | `{control}` | {consumer} |')
     lines += ['', 'Settings control IDs identify the actual entries in `src/dash_settings.c`. '+
               'The validation script traverses registered pages from the Settings root, so orphaned handler code does not count as an editor.',
+              '', 'Every routine run compares the mapping with an independent checked-in inventory fixture, '+
+              'so dropping a key family fails even without an upstream checkout. Launch-key OK/title dispatch '+
+              'and File Browser bookmark-menu dispatch have separate route checks and executable host tests.',
               '', 'Classic-only frame, opacity, colours, launch labels and file-picker icon settings are now under '+
               '**Settings > System > Classic screen settings**. They retain their classic consumers and do not change dashboard themes.',
               '', 'Launch keys: Auto is in Automatic start & boot; Circle through START and optional Left/Right are in Launch keys; '+

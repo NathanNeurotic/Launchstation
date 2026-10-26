@@ -47,6 +47,7 @@ static const unsigned char *elisa_source;
 static u32 font_clut[256];
 static unsigned char data[55016],*elisaFnt;
 static int alloc_fail,font_ready,adds,jp_adds,classic_adds;
+static GSTEXTURE *active_batch;
 static struct {int bold;} dashTheme;
 static void *memalign(int a,size_t n){(void)a;return alloc_fail?NULL:malloc(n);}
 static void dashTexInvalidate(GSTEXTURE *t){(void)t;}
@@ -56,8 +57,8 @@ static char *transcpy_sjis(char *out,const unsigned char *s){(void)s;strcpy(out,
 static void facesInit(void){}
 static void pickFace(float scale,FaceSel *s){static DashFaceData f;s->f=&f;s->tex=&face_tex;s->s=1;s->px=20*scale;s->yshift=0;s->classic=0;}
 static float dashGfxTextY(float y){return y;}
-static void dashSpriteBatchBegin(GSTEXTURE *t,DashColor c){(void)c;if(t==&elisa_tex)jp_adds++;}
-static void dashSpriteBatchEnd(void){}
+static void dashSpriteBatchBegin(GSTEXTURE *t,DashColor c){(void)c;assert(!active_batch);active_batch=t;if(t==&elisa_tex)jp_adds++;}
+static void dashSpriteBatchEnd(void){active_batch=NULL;}
 static void dashSpriteBatchAdd(float a,float b,float c,float d,float e,float f,float g,float h){(void)a;(void)b;(void)c;(void)d;(void)e;(void)f;(void)g;(void)h;adds++;}
 static float dashTextWidthN(const char *s,int n,float f){(void)s;(void)n;(void)f;return 0;}
 '''
@@ -116,6 +117,21 @@ int main(void){
     DashColor color={255,255,255,255};
     drawRun(0,0,(unsigned char *)out,NULL,1,color);assert(adds==1 && jp_adds==1);
     adds=jp_adds=0;drawRun(0,0,(unsigned char *)out,(unsigned char *)out+3,1,color);assert(!adds);
+    /* Consecutive Japanese glyphs share one batch, including bold sprites. */
+    dashSjisTitle(out,sizeof(out),(const unsigned char *)"\x81\x40\x81\x40\x81\x40");
+    adds=jp_adds=0;drawRun(0,0,(unsigned char *)out,NULL,1,color);
+    assert(adds==3 && jp_adds==1 && !active_batch);
+    dashTheme.bold=1;adds=jp_adds=0;drawRun(0,0,(unsigned char *)out,NULL,1,color);
+    assert(adds==6 && jp_adds==1 && !active_batch);dashTheme.bold=0;
+    /* A Latin or pad run ends the Japanese batch; later Japanese resumes it. */
+    dashSjisTitle(out,sizeof(out),(const unsigned char *)"\x81\x40" "A" "\x81\x40");
+    adds=jp_adds=0;drawRun(0,0,(unsigned char *)out,NULL,1,color);
+    assert(adds==2 && jp_adds==2 && !active_batch);
+    font_ready=1;
+    dashSjisTitle(out,sizeof(out),(const unsigned char *)"\x81\x40\x81\x9B\x81\x40");
+    adds=jp_adds=0;drawRun(0,0,(unsigned char *)out,NULL,1,color);
+    assert(adds==4 && jp_adds==2 && !active_batch);
+
     free(elisa_tex.Mem);elisa_tex.Mem=NULL;elisa_source=NULL;alloc_fail=1;
     dashSjisTitle(out,sizeof(out),(const unsigned char *)"\x82\xA0");assert(!strcmp(out,"_"));
     (void)classic_adds;

@@ -66,6 +66,7 @@ typedef unsigned int u32;
 typedef long long s64;
 static FILE *iso;
 static int stack_present = 0;
+static int control_success = 0;
 static int calls = 0, pings = 0, delays = 0, polls = 0;
 static int ping_error, set_error, status_result, read_limit, read_error, seek_error;
 static int wle_ascii_tolower(int c) { return c >= 'A' && c <= 'Z' ? c + ('a'-'A') : c; }
@@ -87,7 +88,9 @@ int genRead(int fd, void *buffer, int count) {
     return (int)fread(buffer, 1, count, iso);
 }
 void genClose(int fd) { (void)fd; fclose(iso); iso = NULL; }
-int ensureMmceGameIdControl(void) { return stack_present; }
+int ensureMmceGameIdControl(void) { return control_success; }
+/* Retain this legacy predicate so reintroducing the old caller guard is tested. */
+int isPathDeviceStackLoaded(const char *path) { (void)path; return stack_present; }
 int fileXioDevctl(const char *device, int cmd, void *arg, int arglen, void *out, int outlen) {
     (void)device; (void)arg; (void)arglen; (void)out; (void)outlen;
     if (cmd == 1) { pings++; return ping_error ? -1 : 0; }
@@ -129,6 +132,11 @@ int main(int argc, char **argv) {
 
     setNeutrinoMmceGameID("SLUS_123.45", "usb0:/GAME.iso", "mass0:/NEUTRINO.ELF");
     assert(calls == 0 && pings == 0);
+    control_success = 1;
+    assert(!stack_present);
+    setNeutrinoMmceGameID("SLUS_123.45", "usb0:/GAME.iso", "mass0:/NEUTRINO.ELF");
+    assert(calls == 2 && pings == 2 && polls == 2 && !stack_present);
+    calls = pings = polls = 0;
     stack_present = 1;
     setNeutrinoMmceGameID("SLUS_123.45", "mx4sio0:/GAME.iso", "mc0:/N.ELF");
     assert(calls == 0);

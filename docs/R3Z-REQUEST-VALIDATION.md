@@ -123,3 +123,20 @@ Additional production-code host tests: `test_ember_gameid.py` and
 `test_ember_retrogem_handoff.py`; existing Ember path, launch, IOP and two-USB
 handoff checks remain relevant. Physical RetroGem decode/game acceptance is
 unverified.
+
+## CodeRabbit follow-up (2026-10-26)
+
+All five actionable review comments are accepted. The MISC Settings action now
+falls outside the theme-action dispatch range. A production-gate regression
+checks MISC routing and every theme ID. Consecutive ELISA glyphs retain one batch,
+with mixed Latin/pad/Japanese and bold runs checked for correct batch closure.
+
+The 61-key configuration inventory is independently pinned in
+`tests/fixtures/r3z-06b06d0-config-keys.json` and compared during every offline
+run, not just --upstream runs. Launch-key OK/title and File Browser bookmark
+routes have explicit audit checks plus executable menu/editor and
+add/jump/remove/locked-navigation tests. Neutrino's sender test independently
+controls manager success and verifies a successful send with its stack absent.
+
+The focused host set now contains 35 scripts: the previous 33 plus
+`test_misc_settings_dispatch.py` and `test_bookmark_routes.py`.

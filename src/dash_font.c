@@ -507,6 +507,7 @@ static float drawRun(float x, float y, const unsigned char *s, const unsigned ch
 {
 	unsigned int g[2];
 	int k, cnt;
+	int elisa_active = 0;
 	FaceSel sel;
 	float top, bold_dx;
 
@@ -528,19 +529,25 @@ static float drawRun(float x, float y, const unsigned char *s, const unsigned ch
 		for (k = 0; k < cnt; k++) {
 			unsigned int gc = g[k];
 
+			if (elisa_active && gc < ELISA_CODE) {
+				dashSpriteBatchEnd();
+				dashSpriteBatchBegin(sel.tex, c);
+				elisa_active = 0;
+			}
 			if (gc >= ELISA_CODE) {
 				unsigned int gi = gc - ELISA_CODE;
 				float u = (gi % 64) * 8, v = (gi / 64) * 8;
 				float h = sel.px * CLASSIC_CELL_EM, w = h * 0.5f;
 				float gy = y + 16.0f * scale - h * (CLASSIC_XMID_ROW / 16.0f);
 				if (elisa_tex.Mem != NULL) {
-					dashSpriteBatchEnd();
-					dashSpriteBatchBegin(&elisa_tex, c);
+					if (!elisa_active) {
+						dashSpriteBatchEnd();
+						dashSpriteBatchBegin(&elisa_tex, c);
+						elisa_active = 1;
+					}
 					dashSpriteBatchAdd(x, gy, u, v, x + w, gy + h, u + 8, v + 8);
 					if (bold_dx > 0.0f)
 						dashSpriteBatchAdd(x + bold_dx, gy, u, v, x + w + bold_dx, gy + h, u + 8, v + 8);
-					dashSpriteBatchEnd();
-					dashSpriteBatchBegin(sel.tex, c);
 				}
 			} else if (gc >= 0x100) {
 				/* classic pad glyph (two 8px halves) from the bitmap atlas */

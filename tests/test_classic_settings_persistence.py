@@ -27,11 +27,16 @@ prefix+='enum { '+header[header.index('COLOR_BACKGR'):header.index('};',header.i
 prefix+=header[header.index('enum SETTING_LK {'):header.index('};',header.index('enum SETTING_LK {'))+2]+'\n'
 prefix+=settings[settings.index('enum SetId {'):settings.index('};',settings.index('enum SetId {'))+2]+'\n'
 prefix+=r'''
+#define NITEMS(a) ((int)(sizeof(a)/sizeof((a)[0])))
 #define MAX_PATH 1025
 #define MAX_ELF_TITLE 72
 #define DASH_PICK_LAUNCH 1
 #define DASH_TOAST_INFO 1
 typedef struct {int id;const char *label;} SetItem;
+enum {DI_FOLDER,DI_TEXT,DI_CLOSE};
+typedef struct {int icon;const char *label,*detail;int disabled;} DashMenuItem;
+static int menu_result=-1,keyboard_ok;
+static int dashModalMenu(const char *t,const char *d,DashMenuItem *items,int n,int selected){(void)t;(void)d;(void)items;(void)n;(void)selected;return menu_result;}
 static int locked,pick_ok=1,home_updates;
 static int lkeyLocked(void){return locked;}
 static const char *localizeDashboardText(const char *s){return s;}
@@ -40,13 +45,13 @@ static int dashPickPath(const char *t,const char *s,int k,const char *ext,char *
 static void mcAlias(char *p,int n){(void)p;(void)n;}
 static void dashStrCopy(char *o,const char *s,int n){snprintf(o,n,"%s",s);}
 static void dashToast(int k,const char *m){(void)k;(void)m;}
-static int dashModalKeyboard(const char *s,char *o,int n){(void)s;(void)o;(void)n;return 0;}
+static int dashModalKeyboard(const char *s,char *o,int n){(void)s;if(keyboard_ok)snprintf(o,n,"Custom title");return keyboard_ok;}
 static void dashHomeRebuild(void){home_updates++;}
 static struct {char LK_Path[SETTING_LK_COUNT][MAX_PATH],LK_Title[SETTING_LK_COUNT][MAX_ELF_TITLE];int LK_Flag[SETTING_LK_COUNT];u64 color[8];int TV_mode,screen_x,screen_y,Popup_Opaque,Menu_Frame,Show_Titles,Hide_Paths,FB_NoIcons;} config,*setting=&config;
 static DashColor classic_col[8];
 static int classic_dirty;
 '''
-program=prefix+fn(settings,'static void classicColorStore(')+fn(settings,'static void editLaunchKey(')
+program=prefix+fn(settings,'static void classicColorStore(')+fn(settings,'static void editLaunchKey(')+fn(settings,'static void editLaunchMenu(')
 for sig in ['static u32 hextou32(', 'size_t storeGuiColorsCNF(', 'int scanGuiColorsCNF(']:program+=fn(colors,sig)
 setter=fn(settings,'static void setChoice(')
 a=setter.index('case S_MENU_FRAME:');b=setter.index('case S_PATHPAD_LOCK:',a)
@@ -63,6 +68,13 @@ int main(void){
  key.id=S_LK_0+SETTING_LK_RIGHT;locked=1;classic_dirty=0;
  editLaunchKey(&key,0);assert(!config.LK_Flag[SETTING_LK_RIGHT] && !classic_dirty);
  locked=0;pick_ok=0;editLaunchKey(&key,0);assert(!config.LK_Flag[SETTING_LK_RIGHT] && !classic_dirty);
+ locked=0;pick_ok=1;menu_result=0;editLaunchMenu(&key);
+ assert(config.LK_Flag[SETTING_LK_RIGHT] && config.LK_Path[SETTING_LK_RIGHT][0]);
+ menu_result=1;keyboard_ok=1;editLaunchMenu(&key);
+ assert(!strcmp(config.LK_Title[SETTING_LK_RIGHT],"Custom title"));
+ menu_result=-1;editLaunchMenu(&key);assert(config.LK_Flag[SETTING_LK_RIGHT]);
+ menu_result=2;editLaunchMenu(&key);
+ assert(!config.LK_Flag[SETTING_LK_RIGHT] && !config.LK_Title[SETTING_LK_RIGHT][0]);
  for(int v=0;v<2;v++){
   setClassic(S_MENU_FRAME,v);setClassic(S_POPUP_OPAQUE,v);
   setClassic(S_SHOW_TITLES,v);setClassic(S_HIDE_PATHS,v);setClassic(S_FB_ICONS,v);

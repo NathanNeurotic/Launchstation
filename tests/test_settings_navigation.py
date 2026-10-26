@@ -68,8 +68,9 @@ static void colorEditor(const char *name,int id) { (void)name; (void)id; edits++
 static void choosePreset(void) { edits++; }
 static void editPathMenu(const SetItem *it) { (void)it; edits++; }
 static void editIp(const SetItem *it) { (void)it; edits++; }
-static void editLaunchMenu(const SetItem *it) { (void)it; edits++; }
-static void editLaunchKey(const SetItem *it,int what) { (void)it; (void)what; edits++; }
+static int launch_menu_edits, launch_title_edits;
+static void editLaunchMenu(const SetItem *it) { (void)it; launch_menu_edits++; edits++; }
+static void editLaunchKey(const SetItem *it,int what) { (void)it; assert(what==1); launch_title_edits++; edits++; }
 static int numberInfo(int id,int *v,int *lo,int *hi,char *s,int n) {
     (void)id; (void)s; (void)n; *v=0; *lo=0; *hi=60; return 1;
 }
@@ -182,6 +183,9 @@ int main(void) {
     dashCfg.artwork=1; dashTheme.wallpaper=1; press(DASH_IN_RIGHT); assert(edits==5);
     select_id(P_THEME_CLOCK,S_T_SECONDS); press(DASH_IN_OK); assert(edits==5);
     dashTheme.clock=1; press(DASH_IN_OK); assert(edits==6);
+    select_id(P_LKEY,S_LK_0+SETTING_LK_CROSS);
+    press(DASH_IN_OK);assert(launch_menu_edits==1 && !launch_title_edits);
+    press(DASH_IN_FAV);assert(launch_title_edits==1 && launch_menu_edits==1);
     page=P_ROOT; page_depth=0; item=0; press(DASH_IN_BACK); assert(home==1);
     session=0; page=P_THEME_COLORS; assert(occurrences[S_LK_0+SETTING_LK_LEFT]==1 && occurrences[S_LK_0+SETTING_LK_RIGHT]==1);
     settingsEnter(); assert(page==P_ROOT && begins==2);

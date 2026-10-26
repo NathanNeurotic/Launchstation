@@ -70,6 +70,8 @@ All **61 serialized key families** from upstream config.c and gui_colors.c are m
 
 Settings control IDs identify the actual entries in `src/dash_settings.c`. The validation script traverses registered pages from the Settings root, so orphaned handler code does not count as an editor.
 
+Every routine run compares the mapping with an independent checked-in inventory fixture, so dropping a key family fails even without an upstream checkout. Launch-key OK/title dispatch and File Browser bookmark-menu dispatch have separate route checks and executable host tests.
+
 Classic-only frame, opacity, colours, launch labels and file-picker icon settings are now under **Settings > System > Classic screen settings**. They retain their classic consumers and do not change dashboard themes.
 
 Launch keys: Auto is in Automatic start & boot; Circle through START and optional Left/Right are in Launch keys; ESR/OSDSYS paths are in Disc & image loaders. SELECT is reserved for Configure, as in the existing runtime. LK_Flag is derived state, refreshed when a target is chosen/cleared and when CNF loads.
