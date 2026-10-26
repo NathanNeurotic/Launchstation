@@ -11,5 +11,5 @@ Local change:
 - Track the HDD unit in each open file slot.
 - Treat a partition as already open only when both the HDD unit and APA ID match.
 
-`embed.make` builds this module and embeds it as `ps2hdd_irx`; `ps2fs.irx` still comes
+`ps2.yaml` builds this module (target `ps2hdd_osd`) and embeds it as `ps2hdd`; `ps2fs.irx` still comes
 from the active PS2SDK/latest ps2dev container.

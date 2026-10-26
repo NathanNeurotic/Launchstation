@@ -50,7 +50,6 @@ body:
         - DualShock / DS34 (APP_LAUNCHSTATION-DS)
         - Built from source with PS2BUILD (LLVM/Clang)
         - Built from source with PS2BUILD (GCC)
-        - Built with the legacy Makefile
         - Other / not sure
     validations:
       required: true

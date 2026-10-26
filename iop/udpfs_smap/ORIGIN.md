@@ -17,7 +17,7 @@ Local modifications:
 - `src/smap.c`: correct two inherited startup defects found during review:
   allow up to nine 1 ms waits for PHY reset to clear, retaining cancellation and
   bounded failure; test the SMAP capability bit before touching its hardware.
-- PS2SDK Makefile and ps2build target for reproducible source builds.
+- ps2build target (`ps2.yaml`) for reproducible source builds; the PS2SDK Makefile was removed with the legacy build.
 
 The old upstream wLaunchELF_R3Z / Launchstation precompiled SMAP is 8,216 bytes,
 SHA-256 `4b81d9bf0c176d3291258eb97f6188a2bb935a69ae4cba13546b51d603ee1a09`.
