@@ -37,6 +37,114 @@ static GlyphMetric metrics[FONT_GLYPHS];
 static int font_ready;
 static u32 font_hash;
 
+#define ELISA_GLYPHS (55016 / 8)
+#define ELISA_CODE 0x10000u
+static GSTEXTURE elisa_tex;
+static const unsigned char *elisa_source;
+extern const u16 font404[];
+
+/* Same Shift-JIS -> packed ELISA index mapping as the classic renderer. */
+static int elisaGlyphIndex(unsigned int code)
+{
+	int n, j;
+	unsigned int lead = code >> 8, trail = code & 255;
+	if (!((lead >= 0x81 && lead <= 0x9F) || (lead >= 0xE0 && lead <= 0xEF)) ||
+	    trail < 0x40 || trail > 0xFC || trail == 0x7F)
+		return -1;
+	if (code >= 0xE000)
+		code -= 0x4000;
+	code = ((((code >> 8) & 255) - 0x81) << 9) + (code & 255);
+	if ((code & 255) >= 0x80) code--;
+	if ((code & 255) >= 0x9E) code += 0x62;
+	else code -= 0x40;
+	code += 0xA1A1;
+	n = (((code >> 8) & 255) - 0xA1) * 94 + (code & 255) - 0xA1;
+	for (j = 0; font404[j]; j += 2) {
+		if (code >= font404[j]) {
+			if (code < font404[j] + font404[j + 1]) return -1;
+			n -= font404[j + 1];
+		}
+	}
+	return n >= 0 && n < ELISA_GLYPHS ? n : -1;
+}
+
+static int elisaAtlasReady(void)
+{
+	u8 *mem;
+	int glyph, row, col;
+	if (elisaFnt == NULL)
+		return 0;
+	if (elisa_source == elisaFnt && elisa_tex.Mem != NULL)
+		return 1;
+	mem = (u8 *)elisa_tex.Mem;
+	if (mem == NULL) {
+		mem = memalign(128, 512 * 1024);
+		if (mem == NULL) return 0;
+	}
+	memset(mem, 0, 512 * 1024);
+	for (glyph = 0; glyph < ELISA_GLYPHS; glyph++)
+		for (row = 0; row < 8; row++)
+			for (col = 0; col < 8; col++)
+				mem[((glyph / 64) * 8 + row) * 512 + (glyph % 64) * 8 + col] =
+				    (elisaFnt[glyph * 8 + row] & (0x80 >> col)) ? 255 : 0;
+	if (elisa_tex.Mem != NULL) dashTexInvalidate(&elisa_tex);
+	memset(&elisa_tex, 0, sizeof(elisa_tex));
+	elisa_tex.Width = 512;
+	elisa_tex.Height = 1024;
+	elisa_tex.PSM = GS_PSM_T8;
+	elisa_tex.ClutPSM = GS_PSM_CT32;
+	elisa_tex.ClutStorageMode = GS_CLUT_STORAGE_CSM1;
+	elisa_tex.Clut = font_clut;
+	elisa_tex.Mem = (u32 *)mem;
+	elisa_tex.Filter = GS_FILTER_NEAREST;
+	elisa_tex.Delayed = 1;
+	gsKit_setup_tbw(&elisa_tex);
+	SyncDCache(mem, mem + 512 * 1024);
+	elisa_source = elisaFnt;
+	return 1;
+}
+
+void dashSjisTitle(char *out, size_t size, const unsigned char *title)
+{
+	static const char hex[] = "0123456789ABCDEF";
+	size_t used = 0;
+	int atlas = 0;
+	if (size == 0) return;
+	while (title != NULL && *title) {
+		unsigned int c = *title++;
+		char token[6];
+		int count = 1, glyph = -1;
+		token[0] = c >= 0x80 ? '_' : (char)c;
+		if (((c >= 0x81 && c <= 0x9F) || (c >= 0xE0 && c <= 0xEF)) && *title) {
+			unsigned char pair[3] = {(unsigned char)c, *title++, 0};
+			unsigned int code = (c << 8) | pair[1];
+			char fallback[3];
+			if (code == 0x819B) glyph = 0;
+			else if (code == 0x817E) glyph = 1;
+			else if (code == 0x81A0) glyph = 2;
+			else if (code == 0x81A2) glyph = 3;
+			else if (code == 0x81A1) glyph = 4;
+			if (glyph >= 0) {
+				token[0] = (char)0xFF; token[1] = '0' + glyph; count = 2;
+			} else {
+				glyph = elisaGlyphIndex(code);
+				if (glyph >= 0 && atlas == 0) atlas = elisaAtlasReady() ? 1 : -1;
+				if (glyph >= 0 && atlas > 0) {
+					token[0] = (char)0xFF; token[1] = 'J'; count = 6;
+					for (int i = 0; i < 4; i++) token[2 + i] = hex[(glyph >> (12 - 4 * i)) & 15];
+				} else {
+					transcpy_sjis(fallback, pair);
+					token[0] = fallback[0];
+				}
+			}
+		}
+		if (used + count >= size) break;
+		memcpy(out + used, token, count);
+		used += count;
+	}
+	out[used] = '\0';
+}
+
 static inline int clutSwizzle(int i)
 {
 	return (i & 0xE7) | ((i & 0x08) << 1) | ((i & 0x10) >> 1);
@@ -200,6 +308,7 @@ void dashFontInit(void)
 void dashFontShutdown(void)
 {
 	dashTexRelease(&font_tex);
+	dashTexRelease(&elisa_tex);
 }
 
 static void facesInit(void);
@@ -226,6 +335,20 @@ static int nextGlyphs(const unsigned char **s, unsigned int out[2])
 		if (c2 == 0)
 			return 0;
 		(*s)++;
+		if (c2 == 'J') {
+			unsigned int glyph = 0;
+			for (int i = 0; i < 4; i++) {
+				unsigned int digit = **s;
+				if (!((digit >= '0' && digit <= '9') || (digit >= 'A' && digit <= 'F'))) {
+					out[0] = '?';
+					return 1;
+				}
+				(*s)++;
+				glyph = (glyph << 4) | (digit <= '9' ? digit - '0' : digit - 'A' + 10);
+			}
+			out[0] = glyph < ELISA_GLYPHS ? ELISA_CODE + glyph : '?';
+			return 1;
+		}
 		if (c2 < '0' || c2 > '=')
 			return 0;
 		c = (c2 - '0') * 2 + 0x100;
@@ -320,6 +443,8 @@ static void pickFace(float scale, FaceSel *sel)
  * classic pad button glyphs, taken from the bitmap atlas. */
 static float glyphAdv(const FaceSel *sel, unsigned int c)
 {
+	if (c >= ELISA_CODE)
+		return sel->px * 0.62f;
 	if (c >= 0x100)
 		return sel->px * 0.62f;
 	if (sel->classic) {
@@ -347,6 +472,7 @@ float dashTextWidthN(const char *str, int n, float scale)
 	end = (n >= 0) ? s + n : NULL;
 	while (*s && (end == NULL || s < end)) {
 		cnt = nextGlyphs(&s, g);
+		if (end != NULL && s > end) break;
 		for (k = 0; k < cnt; k++)
 			w += glyphAdv(&sel, g[k]);
 	}
@@ -356,6 +482,20 @@ float dashTextWidthN(const char *str, int n, float scale)
 float dashTextWidth(const char *s, float scale)
 {
 	return dashTextWidthN(s, -1, scale);
+}
+
+/* Never clip within a pad sequence or an encoded ELISA glyph. */
+static int glyphPrefixLength(const char *str, int limit)
+{
+	const unsigned char *start = (const unsigned char *)str, *p = start;
+	unsigned int glyphs[2];
+	int prefix = 0;
+	while (*p) {
+		nextGlyphs(&p, glyphs);
+		if (p - start > limit) break;
+		prefix = p - start;
+	}
+	return prefix;
 }
 
 float dashTextLineH(float scale)
@@ -384,10 +524,25 @@ static float drawRun(float x, float y, const unsigned char *s, const unsigned ch
 	dashSpriteBatchBegin(sel.tex, c);
 	while (*s && (end == NULL || s < end)) {
 		cnt = nextGlyphs(&s, g);
+		if (end != NULL && s > end) break;
 		for (k = 0; k < cnt; k++) {
 			unsigned int gc = g[k];
 
-			if (gc >= 0x100) {
+			if (gc >= ELISA_CODE) {
+				unsigned int gi = gc - ELISA_CODE;
+				float u = (gi % 64) * 8, v = (gi / 64) * 8;
+				float h = sel.px * CLASSIC_CELL_EM, w = h * 0.5f;
+				float gy = y + 16.0f * scale - h * (CLASSIC_XMID_ROW / 16.0f);
+				if (elisa_tex.Mem != NULL) {
+					dashSpriteBatchEnd();
+					dashSpriteBatchBegin(&elisa_tex, c);
+					dashSpriteBatchAdd(x, gy, u, v, x + w, gy + h, u + 8, v + 8);
+					if (bold_dx > 0.0f)
+						dashSpriteBatchAdd(x + bold_dx, gy, u, v, x + w + bold_dx, gy + h, u + 8, v + 8);
+					dashSpriteBatchEnd();
+					dashSpriteBatchBegin(sel.tex, c);
+				}
+			} else if (gc >= 0x100) {
 				/* classic pad glyph (two 8px halves) from the bitmap atlas */
 				if (font_ready) {
 					int gi = gc - FONT_FIRST;
@@ -485,11 +640,11 @@ float dashTextFit(float x, float y, float maxw, const char *str, float scale, Da
 		return dashTextS(x, y, str, scale, c);
 
 	ell = dashTextWidth("...", scale);
-	dashStrCopy(buf, str, sizeof(buf));
-	len = strlen(buf);
+	len = glyphPrefixLength(str, sizeof(buf) - 5);
+	memcpy(buf, str, len);
+	buf[len] = '\0';
 	for (cut = len; cut > 0; cut--) {
-		/* do not split a \xFF sequence */
-		if (cut >= 1 && (unsigned char)buf[cut - 1] == 0xFF)
+		if (glyphPrefixLength(buf, cut) != cut)
 			continue;
 		if (dashTextWidthN(buf, cut, scale) + ell <= maxw)
 			break;

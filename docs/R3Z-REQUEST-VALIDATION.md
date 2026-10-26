@@ -12,7 +12,7 @@
 | R3Z-05 | D-pad left/right and existing L2/R2 page controls jump ten entries, stop at the first/last entry on overshoot, and wrap only when pressed again at that boundary. |
 | R3Z-09 | Mode updates compare requested timing, interlace/field mode and framebuffer geometry with the current GS object in addition to cached TV mode. Outgoing GS work finishes before reinitialization; the new screen returns to ONESHOT and clears both buffers before drawing resumes. Existing generation-based texture-manager invalidation remains. |
 | R3Z-10 | [Latest-upstream parity audit](R3Z-10-PARITY-AUDIT.md), pinned to upstream `06b06d0`. Audit does not introduce parity code changes. |
-| R3Z-11 | [Four-cell Game ID audit](R3Z-11-GAME-ID-AUDIT.md). Flags absent explicit POPStarter/MMCE card switching; does not implement it. Ember excluded. |
+| R3Z-11 | [Four-cell Game ID audit](R3Z-11-GAME-ID-AUDIT.md). Marks POPStarter/MMCE selection not applicable because POPStarter uses its own VMC files; verifies required RetroGem output. Ember excluded. |
 | R3Z-12 | Neutrino can start MMCE manager control without resetting/replacing USB, ATA/HDD, i.Link or UDPFS mounts. Resident/active MX4SIO refuses control bring-up. Existing source-card/ELF-slot protection and bounded status polling remain. RetroGem's display preference does not disable MMCE selection. |
 
 ## Video reference and evidence boundary
@@ -78,7 +78,35 @@ This establishes layout bounds in source; it is not a captured console screen.
 * MMCE selection from USB, ATA/HDD, i.Link and UDPFS; Neutrino on each memory
   card, ISO on MMCE, no card, busy/error cards, and MX4SIO refusal. Standard and
   DS34 have separate controller/storage acceptance boundaries.
-* All four Game ID audit combinations retain separate recipient evidence.
+* The three applicable Game ID combinations retain separate recipient evidence; POPStarter/MMCE selection is not applicable.
 
 No physical-console run, card-image change, HDD write or exploit installation
 was performed during this work.
+
+## Authorized audit follow-up (2026-10-26)
+
+The complete configuration map covers all 61 upstream serialized key families.
+Classic presentation controls are restored under System > Classic screen settings;
+optional Left/Right launch-key editors are restored and target edits refresh
+LK_Flag immediately. MISC naming strings remain persisted compatibility data.
+
+Japanese save titles now use optional ELISA100.FNT through a managed T8 atlas
+(512 KiB EE allocation plus existing shared CLUT). The font is loaded on the
+serialized browser reader, checked for exact size, read fully before publication,
+and retried on a new browser session after a failure. Filenames and localized
+Latin text keep their existing encoding. Missing/invalid fonts or atlas allocation
+failure retain the existing title transliteration. Clipping never splits a title
+or pad glyph token. No external font is bundled.
+
+Additional host tests cover actual POPStarter RetroGem handoff, complete/failed
+font reads, atlas pixels and glyph drawing, token boundaries and allocation
+failure. These are host checks, not physical RetroGem/display acceptance.
+
+Follow-up validation uses 27 focused host scripts: the original 16 plus
+`test_sjis_dashboard_titles`, `test_elisa_font_load`, `test_popstarter_retrogem`,
+`test_classic_settings_persistence`, `test_r3z_config_inventory`,
+`test_settings_navigation`, `test_settings_save_prompt`, `test_selector_centering`,
+`test_gage_alignment`, `test_modal_animation`, and `test_dashboard_languages`.
+The glyph mapper is checked against Python's independent Shift-JIS/EUC-JP codecs.
+New Settings labels are included in all nine built-in language catalogs, with
+legacy IDs preserved. Colour serialization now gives sprintf's %n an int pointer.

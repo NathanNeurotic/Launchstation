@@ -63,7 +63,7 @@ assert "if (fileShowTitles() || setting->PSU_HugeNames)" in copy
 for snippet in (
     "file_show = (file_show == FILE_SHOW_NAME) ? FILE_SHOW_NAME_DETAILS : FILE_SHOW_NAME;",
     "file_show = (file_show == FILE_SHOW_TITLE) ? FILE_SHOW_TITLE_DETAILS : FILE_SHOW_TITLE;",
-    "if (fileShowTitles() && (elisaFnt == NULL)",
+    "filerEnsureElisaFont();",
     "return (fileShowTitles() && (elisaFnt != NULL))",
     "else if (fileShowTitles() && files[top + i].title[0] != 0)",
     "LNG(Filename), file_show == FILE_SHOW_NAME_DETAILS ? LNG(_plus_Details) :",

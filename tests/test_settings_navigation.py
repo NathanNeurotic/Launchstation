@@ -32,6 +32,7 @@ code += "#define ETH 1\n#define WLE_NATIVE_CLOUD 1\n#define UDPFS 1\n#define ILI
 code += "static void dashToolsPrepareMmceStatus(void);\n"
 code += "enum { " + ", ".join(icons) + " };\n"
 code += classic[classic.index("enum SETTING_LK {"):classic.index("};", classic.index("enum SETTING_LK {")) + 2]
+code += "enum { " + classic[classic.index("COLOR_BACKGR"):classic.index("};", classic.index("COLOR_BACKGR")) + 2]
 code += declarations
 input_start = header.rfind("enum {", 0, header.index("DASH_IN_UP"))
 code += header[input_start:header.index("void dashInputPoll(")]
@@ -116,14 +117,14 @@ S_T_RENAME S_T_RESTORE_PRESET
 """.split()
 code += "static const int expected[] = {" + ",".join(expected) + "};\n"
 code += r"""
-static int seen[P_COUNT], occurrences[S_T_RESETCAT+1];
+static int seen[P_COUNT], occurrences[S_MISC_COMMANDS+1];
 static void visit(int p,int depth) {
     assert(p>=0 && p<P_COUNT && depth<=PAGE_DEPTH && !seen[p]);
     seen[p]=1; assert(pages[p].n>0);
     for(int i=0;i<pages[p].n;i++) {
         const SetItem *it=&pages[p].items[i];
         if(it->type==ST_PAGE) visit(it->id,depth+1);
-        else { assert(it->id>=0 && it->id<=S_T_RESETCAT); occurrences[it->id]++; }
+        else { assert(it->id>=0 && it->id<=S_MISC_COMMANDS); occurrences[it->id]++; }
     }
 }
 static void press(int key) { DashInput in={.pressed=key}; settingsInput(&in); }
@@ -137,7 +138,8 @@ int main(void) {
     for(int p=0;p<P_COUNT;p++) assert(seen[p]);
     for(int i=0;i<NITEMS(expected);i++) assert(occurrences[expected[i]]==1);
     for(int k=SETTING_LK_AUTO;k<=SETTING_LK_START;k++) assert(occurrences[S_LK_0+k]==1);
-    for(int s=0;s<S_T_RESETCAT;s++) assert(occurrences[s]<=1);
+    for(int s=0;s<=S_MISC_COMMANDS;s++) if(s!=S_T_RESETCAT) assert(occurrences[s]<=1);
+    assert(occurrences[S_LK_0+SETTING_LK_LEFT]==1 && occurrences[S_LK_0+SETTING_LK_RIGHT]==1);
     settingsEnter(); assert(page==P_ROOT && begins==1);
     /* Root shortcuts never interpret a page ID as an overlapping SetId. */
     for(item=0;item<pages[P_ROOT].n;item++) press(DASH_IN_FAV);
@@ -181,7 +183,8 @@ int main(void) {
     select_id(P_THEME_CLOCK,S_T_SECONDS); press(DASH_IN_OK); assert(edits==5);
     dashTheme.clock=1; press(DASH_IN_OK); assert(edits==6);
     page=P_ROOT; page_depth=0; item=0; press(DASH_IN_BACK); assert(home==1);
-    session=0; page=P_THEME_COLORS; settingsEnter(); assert(page==P_ROOT && begins==2);
+    session=0; page=P_THEME_COLORS; assert(occurrences[S_LK_0+SETTING_LK_LEFT]==1 && occurrences[S_LK_0+SETTING_LK_RIGHT]==1);
+    settingsEnter(); assert(page==P_ROOT && begins==2);
     puts("PASS: all pages reachable, baseline controls unique, navigation/scroll, session menu and dependencies");
 }
 """

@@ -67,6 +67,8 @@ typedef struct {
 } FbState;
 static FbState fb;
 static int fb_tab_active;
+static int elisa_failed;
+#define FALSE 0
 static int browser_usb_jobs,browser_usb_input_rearm;
 static char fb_tab_resume[MAX_PATH];
 static char fb_tab_selection[MAX_NAME];

@@ -268,6 +268,8 @@ static void listRun(void *arg)
 
 	dashWorkerStatus(j->path, 0, 0);
 	j->n = getDir(j->path, j->files);
+	if (j->titles && j->n > 0)
+		filerEnsureElisaFont();
 	/* right after the read: for the HDD this asks the partition just mounted */
 	j->free_valid = j->n >= 0 ? filerFreeSpace(j->path, &j->free_bytes) : 0;
 	for (i = 0; i < j->n; i++) {
@@ -2718,9 +2720,9 @@ static void browserDrawBody(void)
 				dashIcon(DI_CHECK, FB_X + 8, y + 3, 16, DASH_C_OK);
 			else
 				dashIcon(isMisc(fb.dir) ? DI_TOOLS : fileIcon(f), FB_X + 8, y + 3, 16, col);
-			/* save titles are Shift-JIS; the dashboard font shows their ASCII */
+			/* Only icon.sys/save titles are Shift-JIS; filenames remain literal. */
 			if (fbShowsTitles(fb_show) && f->title[0])
-				transcpy_sjis(label, f->title);
+				dashSjisTitle(label, sizeof(label), f->title);
 			else
 				dashStrCopy(label, f->name, sizeof(label));
 			if (i == fb.sel)
@@ -2784,6 +2786,7 @@ static int browserOpenState(const char *start_dir, const char *select)
 	if (fb.files != NULL)
 		return 0;
 	memset(&fb, 0, sizeof(fb));
+	elisa_failed = FALSE; /* retry a missing font when a new browser opens */
 	fb.gen = gen;
 	fb.files = (FILEINFO *)malloc(sizeof(FILEINFO) * MAX_ENTRY);
 	fb.mark = (u8 *)malloc(MAX_ENTRY);

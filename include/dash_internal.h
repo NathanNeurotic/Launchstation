@@ -385,6 +385,8 @@ void dashFontRebuild(void);
 void dashFontShutdown(void);
 float dashTextWidth(const char *s, float scale);
 float dashTextWidthN(const char *s, int n, float scale);
+/* Converts only known Shift-JIS save titles to bounded internal glyph runs. */
+void dashSjisTitle(char *out, size_t size, const unsigned char *title);
 float dashTextLineH(float scale);
 float dashText(float x, float y, const char *s, float scale, DashColor c);
 float dashTextS(float x, float y, const char *s, float scale, DashColor c); /* with drop shadow */

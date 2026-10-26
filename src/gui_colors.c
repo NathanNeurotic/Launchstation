@@ -15,7 +15,7 @@ static u32 hextou32(const char *string)
 // storeGuiColorsCNF saves cosmetic color settings into a CNF buffer and returns written length.
 size_t storeGuiColorsCNF(char *cnf_buf)
 {
-	size_t CNF_size;
+	int CNF_size; /* sprintf %n writes int, regardless of host size_t width. */
 
 	sprintf(cnf_buf,
 	        "GUI_Col_1_ABGR = %08X\r\n"

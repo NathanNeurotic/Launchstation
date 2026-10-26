@@ -772,7 +772,7 @@ char *PathPad_menu(const char *path)
 static int BrowserModePopup(void)
 {
 	char tmp[80];
-	int y, i, test;
+	int y, i;
 	int event, post_event = 0;
 
 	int entry_file_show = file_show;
@@ -857,28 +857,8 @@ static int BrowserModePopup(void)
 				case PAD_SQUARE:
 					file_show = (file_show == FILE_SHOW_TITLE) ? FILE_SHOW_TITLE_DETAILS : FILE_SHOW_TITLE;
 					event |= 2;  //event |= valid pad command
-					if (fileShowTitles() && (elisaFnt == NULL) && (elisa_failed == FALSE)) {
-						int fd, res;
-						elisa_failed = TRUE;  //Default to FAILED. If it succeeds, then this status will be cleared.
-
-						res = genFixPath("uLE:/ELISA100.FNT", tmp);
-						if (!strncmp(tmp, "cdrom", 5))
-							strcat(tmp, ";1");
-						if (res >= 0) {
-							fd = genOpen(tmp, FIO_O_RDONLY);
-							if (fd >= 0) {
-								test = genLseek(fd, 0, SEEK_END);
-								if (test == 55016) {
-									elisaFnt = (unsigned char *)memalign(64, test);
-									genLseek(fd, 0, SEEK_SET);
-									genRead(fd, elisaFnt, test);
-
-									elisa_failed = FALSE;
-								}
-								genClose(fd);
-							}
-						}
-					}
+					if (fileShowTitles())
+						filerEnsureElisaFont();
 					break;
 				case PAD_TRIANGLE:
 					return (file_show != entry_file_show) || (file_sort != entry_file_sort) ||

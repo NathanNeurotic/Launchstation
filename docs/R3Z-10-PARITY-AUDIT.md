@@ -28,19 +28,19 @@ Source paths below are relative to each repository's root.
 | MMCE card selection for Neutrino | `src/neutrino_gameid.c`, `src/init.c` | Baseline gap: selection required an already active MMCE stack. R3Z-12 addresses it separately without copying upstream's reset-capable stack bring-up. MX4SIO and source-slot exclusions remain explicit. See Game ID audit. |
 | RetroGem ID for Neutrino | `src/neutrino_iso.c`, `src/main_gameid.c` | Present; independent of MMCE compilation/availability and suppressed by the disc RetroGem setting. Shared serial extraction does not mean a shared transport. |
 | POPStarter VCD launching | `src/popstarter.c`, `src/popstarter_path.c`, `src/popstarter_elf.c`, `src/main_actions.c` | Present. Launchstation's candidate/preparation path has downstream changes; execution and device compatibility require hardware evidence. |
-| RetroGem ID for POPStarter | `src/popstarter.c`, `src/popstarter_gameid.c`, `src/main_gameid.c` | Present. Serial from VCD SYSTEM.CNF, then generic timestamp identity, then existing filename/partition fallbacks. This is not evidence of MMCE card switching. |
+| RetroGem ID for POPStarter | `src/popstarter.c`, `src/popstarter_gameid.c`, `src/main_gameid.c` | Present. Serial from VCD SYSTEM.CNF, then generic timestamp identity, then existing filename/partition fallbacks. POPStarter uses its own VMC files; MMCE card selection is not applicable. |
 | Enable/disable Neutrino, POPStarter, Ember routes | `src/config.c`, `src/dash_settings.c`, `src/main_actions.c`, `src/neutrino_iso.c` | Fields and UI are present. Ember implementation/launch acceptance is outside this change. |
 | Device names in root rows instead of meaningless timestamps | `src/filer_browser.c`, `src/dash_devices.c`, `src/dash_browser.c` | Present using different native dashboard presentation. Physical availability/probe state is separate from a device-family label. |
 | Forward/reverse sorting | `src/gui_sort.c`, `src/filer_browser.c`, `src/dash_browser.c` | Both paths support sort direction. Dashboard uses its actions menu; classic uses its existing sort dialog. Exact upstream L1 interaction is not dashboard UI parity. |
 | Four filename/title/detail display modes | `include/filer_shared.h`, `src/filer_browser.c`, `src/dash_browser.c` | Present in both implementations. This PR routes visible dashboard browser shortcuts to the Files tab; classic path pickers remain separate. |
-| Space between icon.sys title lines | `filerGetGameTitle` in `src/filer_copy.c` | Present; title loading feeds both browser implementations. Dashboard still applies its existing Shift-JIS-to-display conversion, so glyph coverage is not equivalent to raw classic rendering. |
+| Space between icon.sys title lines | `filerGetGameTitle` in `src/filer_copy.c` | Present; title loading feeds both browser implementations. Dashboard now renders supported Japanese save-title glyphs from optional ELISA100.FNT; the existing transliteration remains when the font is absent. |
 | *Tuna date integrated into timestamp editing | `src/filer_actions.c`, `src/dash_browser.c` | Present. Dashboard nests it under Folder dates; classic uses the timestamp menu. No separate conflicting timestamp implementation added. |
 | LoadBOOTer exploit installation; retail/PSX/DTL targets | `src/main_exploit_installer.c`, `src/kelf_signer.c`, `src/dash_tools.c` | Present. Target selection and key/device checks remain required; source coverage does not prove installation success. |
 | Bind arbitrary ELF to memory card using user keys | `src/kelf_signer.c`, `src/filer_actions.c` | Present. Key files are user supplied and excluded from version control; no signing/installation was performed. |
 | Disc launch history for MMCE and DECKARD patches | `src/main_actions.c`, `src/main_history.c`, xparam path | Present for physical-disc execution. **Do not extrapolate this to POPStarter VCD card selection.** |
 | Region-native Cross/Circle when configuration is absent | `src/main_boot.c`, `src/main_startup.c` | Present; J/C choose Circle, other regions Cross. Existing configuration still governs configured consoles. |
 | Keyboard layouts and nine built-in languages | `src/dash_widgets.c`, `src/config.c`, `Lang/`, `Lang/DASHBOARD.inc` | Present. Native dashboard localization differs from classic label layout and needs visual validation independently. |
-| Configuration exposed in GUI | `src/dash_settings.c`, classic `src/config*.c` | Settings pages expose downstream options; MISC/Configure routes to Settings. This report does not assert every upstream field has identical semantics. The R3Z-02 access restoration is separate. |
+| Configuration exposed in GUI | `src/dash_settings.c`, classic `src/config*.c` | Settings pages expose downstream options; MISC/Configure routes to Settings. All 61 upstream persisted key families are now mapped in [the configuration report](R3Z-CONFIG-PARITY.md), with reachable editors for user options. MISC naming strings remain CNF compatibility data. |
 | Hide HDD/ATA on DECKARD; PSX flash/DVR visibility | `src/filer.c`, `src/dash_devices.c`, `src/init.c` | Guards are present, including PSX distinctions. R3Z-01 adds i.Link visibility separately. Show-all/device diagnostics remain distinct from working hardware. |
 | Dual HDD/ATA, multiple USB units, lazy device drivers, MMCE/MX4SIO conflict handling | `src/init.c`, `src/filer.c`, `src/dash_devices.c` | Present. Conflict/reset policies intentionally differ in guarded downstream launch paths. Do not equate an enumerated second unit with proven dual-drive operation. |
 | HDD header injection and partition SYSTEM.CNF editing | `src/hdd_header_injector.c`, `src/hdd.c`, `src/dash_hdd.c` | Present; writes require device-specific validation. No HDD writes were attempted. |
@@ -53,9 +53,9 @@ Source paths below are relative to each repository's root.
 
 1. The active-stack requirement was a concrete Neutrino/MMCE gap; its correction
    belongs to R3Z-12, not an automatic parity import.
-2. POPStarter's RetroGem support is present, while explicit MMCE VCD card
-   selection is absent from the inspected launcher. R3Z-11 records this gap
-   without implementing it.
+2. POPStarter RetroGem support is present and covered by an executable handoff
+   test. MMCE selection is not applicable: POPStarter uses its own VMC files.
+   The earlier audit incorrectly treated this as a missing feature.
 3. Downstream browser navigation, Neutrino profiles, launch-device validation,
    keep-IOP behavior and native Settings intentionally diverge from upstream.
    Feature presence should not be reported as byte-for-byte or hardware parity.
@@ -63,6 +63,6 @@ Source paths below are relative to each repository's root.
    additions. It is not a proof that all possible device, media, language,
    hardware and build combinations are equivalent.
 
-The implementation changes in this PR are limited to the separately requested
-R3Z-01/02/03/04/05/09/12 behavior. No additional parity fixes are authorized by
-this report.
+Following maintainer authorization, confirmed configuration-access and save-title
+rendering gaps are implemented in this PR. See [the complete configuration
+mapping](R3Z-CONFIG-PARITY.md). Hardware acceptance remains separate.
