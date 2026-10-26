@@ -159,6 +159,7 @@ jobs:
           python3 tests/test_r3z_browser_contract.py
           python3 tests/test_r3z_config_inventory.py
           python3 tests/test_r3z_video_switch.py
+          python3 tests/test_cdvd_scmd_buffers.py
           python3 tests/test_sjis_dashboard_titles.py
           python3 tests/test_zack_launch_sizing.py
 
