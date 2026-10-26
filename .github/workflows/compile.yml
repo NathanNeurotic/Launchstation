@@ -44,6 +44,7 @@ jobs:
           python3 tests/test_dashboard_languages.py
           python3 tests/test_build_identity.py
           python3 tests/test_clock_save_action.py
+          python3 tests/test_clock_sync.py
           python3 tests/test_storage_probe_frames.py
           python3 tests/test_mmce_bus_restore.py
           python3 tests/test_poweroff_init.py
@@ -86,6 +87,7 @@ jobs:
           python3 tests/test_usb_iop_pad_handoff.py
           python3 tests/test_zack_storage_drivers.py
           python3 tests/test_dev9_transition.py
+          python3 tests/test_ps2ips_rpc.py
           python3 tests/test_mmce_presence_probe.py
           python3 tests/test_usb_probe_status.py
           python3 tests/test_usb_unit_diagnostics.py
@@ -211,6 +213,9 @@ jobs:
 
       - name: Build isolated PC CARD CF driver
         run: ps2build build -c iop/pccf/ps2.yaml
+
+      - name: Build isolated network socket server
+        run: ps2build build -c iop/ps2ips_rpc/ps2.yaml
 
       - name: Build Launchstation with ps2build
         run: |

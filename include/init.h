@@ -63,6 +63,7 @@ int prepareEmberUsbHandoffIop(const char *ember_path, const char *game_image,
 void loadNetModules(void);
 int isFtpNetworkReady(void);
 int ensureDashboardIpNetworkReady(void);
+const char *dashboardIpNetworkError(void);
 #endif
 #ifdef UDPFS
 int reloadUdpfsModules(void);

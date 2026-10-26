@@ -726,6 +726,15 @@ ifeq ($(ETH),1)
 $(EE_ASM_DIR)ps2ip_irx.s: $(PS2SDK)/iop/irx/ps2ip.irx | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ ps2ip_irx
 
+# The SDK ps2ips name is the EE client library. Build the matching IOP
+# socket RPC server from the vendored source with its UDP receive fixes.
+LOCAL_PS2IPS_IRX := iop/ps2ips_rpc.irx
+PS2IPS_DEPS := $(wildcard iop/ps2ips_rpc/*.[ch]) iop/ps2ips_rpc/imports.lst iop/ps2ips_rpc/Makefile
+$(LOCAL_PS2IPS_IRX): $(PS2IPS_DEPS)
+	$(MAKE) -C iop/ps2ips_rpc
+$(EE_ASM_DIR)ps2ips_irx.s: $(LOCAL_PS2IPS_IRX) | $(EE_ASM_DIR)
+	$(BIN2S) $< $@ ps2ips_irx
+
 $(EE_ASM_DIR)ps2ip_v10_irx.s: iop/__v10/ps2ip.irx | $(EE_ASM_DIR)
 	$(BIN2S) $< $@ ps2ip_v10_irx
 

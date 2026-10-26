@@ -1,0 +1,10 @@
+project: launchstation_ps2ips_rpc
+targets:
+  - name: ps2ips_rpc
+    type: iop
+    sources: [ps2ips.c]
+    include_dirs: [.]
+    imports_lst: imports.lst
+    defines: [PS2IP_DNS]
+    cflags: [-Wall]
+    headers: [intrman, loadcore, ps2ip-nm, sifcmd, sifman, stdio, sysclib, threadman]
