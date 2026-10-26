@@ -1,0 +1,45 @@
+<h1>Languages</h1>
+<p class="lead">Launchstation ships nine built-in languages and can load an external <code>.LNG</code> file that overrides individual strings. The language applies to dashboard navigation, Settings labels, common actions, file-operation progress and the classic tools.</p>
+
+<h2 id="select">Choosing a language</h2>
+<p>Open <b>Settings &gt; System &gt; Language</b> and pick one from the list (names are shown in their own language). The change applies immediately and takes part in the Save/Discard session; the choice is stored as <code>language = ...</code> in <code>LAUNCHELF.CNF</code>.</p>
+<table><thead><tr><th>Language</th><th>Shown as</th><th><code>language =</code> value</th><th>Source file</th></tr></thead><tbody>
+<tr><td>English (default)</td><td>English</td><td><code>english</code></td><td><code>Lang/ENG.LNG</code></td></tr>
+<tr><td>Spanish</td><td>Espanol</td><td><code>spanish</code></td><td><code>Lang/SPA.LNG</code></td></tr>
+<tr><td>French</td><td>Francais</td><td><code>french</code></td><td><code>Lang/FRE.LNG</code></td></tr>
+<tr><td>Italian</td><td>Italiano</td><td><code>italian</code></td><td><code>Lang/ITA.LNG</code></td></tr>
+<tr><td>Polish</td><td>Polski</td><td><code>polish</code></td><td><code>Lang/POL.LNG</code></td></tr>
+<tr><td>Portuguese</td><td>Portugues</td><td><code>portuguese</code></td><td><code>Lang/POR.LNG</code></td></tr>
+<tr><td>Brazilian Portuguese</td><td>Portugues Brasileiro</td><td><code>brazilian</code></td><td><code>Lang/PTBR.LNG</code></td></tr>
+<tr><td>German</td><td>Deutsch</td><td><code>german</code></td><td><code>Lang/GER.LNG</code></td></tr>
+<tr><td>Hungarian</td><td>Magyar</td><td><code>hungarian</code></td><td><code>Lang/HUN.LNG</code></td></tr>
+</tbody></table>
+<p>An omitted, blank or unrecognised value falls back to English. The loader also accepts short forms such as <code>en</code>, <code>eng</code>, <code>br</code> and the numeric index.</p>
+
+<h2 id="scope">What is and is not translated</h2>
+<ul>
+<li><b>Translated:</b> dashboard tab names, Home and Applications labels, Settings groups, options, values and help, common dialog buttons, the file-operation overlay (<i>Pasting file</i>, <i>Remaining size</i>, <i>Completed items N / M</i>) and the classic tool strings.</li>
+<li><b>Never translated:</b> file and folder names, application titles and descriptions, bookmarks, paths, device identifiers and protocol names. <i>Network Host (host:)</i> means files shared by a computer running the PS2Link host service; it is separate from the UDPFS server entry.</li>
+<li>Some extended help and specialist dialogs still use English.</li>
+</ul>
+
+<h2 id="external">External .LNG files</h2>
+<p>Set <b>Settings &gt; System &gt; Language &gt; Language file</b> (<code>LANG_FILE</code>) to a <code>.LNG</code> file. It is loaded on top of the selected built-in language: any string it does not define keeps the built-in text, and existing files remain compatible.</p>
+<pre>// comment lines start with //
+lang(468, Dashboard_Home, "Start")
+lang(469, Dashboard_Applications, "Programs")</pre>
+<ul>
+<li>Each entry is <code>lang(index, Name, "text")</code>. The <b>index</b> (0&ndash;676 in this build) is what matters; the symbolic name is ignored. The built-in files in <code>Lang/</code> list every index.</li>
+<li>Indexes 0&ndash;467 are the original classic strings and are never renumbered; indexes 468&ndash;676 are the dashboard labels (names begin <code>Dashboard_</code>), appended so older external files keep working.</li>
+<li>Escapes: <code>\n</code>, <code>\r</code>, <code>\t</code>, <code>\"</code> and <code>\\</code>. A trailing <code>// comment</code> after the closing parenthesis is allowed.</li>
+<li>A syntax error or an index beyond the table makes the whole file be ignored and the built-in text stays.</li>
+<li>Dashboard strings that contain format conversions (for example <code>%s</code> or <code>%d</code>) are only accepted if the translation uses the same conversions in the same order; otherwise English is used for that string.</li>
+</ul>
+
+<h2 id="matching">How dashboard labels are matched</h2>
+<p>The dashboard looks up each interface label in a sorted table (<code>Lang/DASHBOARD.inc</code>) and replaces it with the current language's string, so changing language or loading an external file never leaves stale text. Only interface labels opt in; text read from the storage (names, metadata, titles) is drawn as it is.</p>
+
+<h2 id="fonts">Characters and fonts</h2>
+<p>The built-in language files are plain ASCII (accented letters are written without accents, which is why the picker shows names such as <i>Espanol</i> and <i>Portugues</i>), so they render with any dashboard font. An external <code>.LNG</code> may use extra characters only if the active font has them: the System font covers the Latin-1 characters used by language files and can be replaced by an external <code>.FNT</code> (<b>Customize theme &gt; Text</b>); arbitrary TTF files are not loaded on the console. Game and save titles stored as Shift-JIS are decoded for display in the File Browser's title modes. See <a href="themes.html#text">Themes</a>.</p>
+
+<p>See also <a href="settings.html#languages">Settings</a> and <a href="configuration.html">Configuration</a>.</p>

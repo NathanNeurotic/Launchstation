@@ -1,11 +1,58 @@
-<h1>HDD Manager &amp; APA Header Injection</h1><p class="lead">Classic APA management is retained, with header injection tools for rebuilding or provisioning HDD-OSD style partition metadata.</p>
-<h2 id="manager">Partition operations</h2><p>The HDD Manager can inspect APA partitions and exposes creation/removal/rename/expand/format and related maintenance operations where supported. These actions are destructive; confirm the target disk and partition before writing.</p>
-<h2 id="browse">Browse partitions and game information</h2><p>The partition list displays original APA identifiers, as in classic wLaunchELF, without querying HDL game titles on every cursor movement. Scroll or page using the D-pad and L2/R2. For a selected HDL game partition, press <strong>R1 — Game info</strong> to load its title and disc information explicitly. The selected partition stays identified by its APA name; long names and startup IDs are fitted inside the details panel. PFS usage can still load in the background. L1 opens HDD status.</p>
-<h2 id="inject">Inject Header</h2><p>For a selected PFS partition, the operations menu can inject header resources from <code>device:/__Headers/&lt;matching partition name&gt;/</code>. Supported source families include USB, MMCE and UDPFS.</p>
-<h3 id="modes">Injection modes</h3><table><thead><tr><th>Mode</th><th>Behavior</th></tr></thead><tbody><tr><td>This partition only</td><td>Inject only the selected partition from its matching header folder.</td></tr><tr><td>Matching partitions</td><td>Scan <code>__Headers</code> and inject folders whose partitions already exist.</td></tr><tr><td>Matching and create missing</td><td>Inject existing matches, then prompt before creating each missing valid partition.</td></tr></tbody></table>
-<h3 id="header-files">Header files</h3><table><thead><tr><th>File</th><th>Status</th><th>Destination / role</th><th>Maximum</th></tr></thead><tbody><tr><td><code>system.cnf</code></td><td>Required</td><td>APA header configuration</td><td>512 B</td></tr><tr><td><code>icon.sys</code></td><td>Required on PS2</td><td>Icon metadata</td><td>1,024 B</td></tr><tr><td><code>list.ico</code></td><td>Required on PS2</td><td>HDD-OSD icon</td><td>1,112,064 B</td></tr><tr><td><code>boot.kelf</code> / <code>BOOT.KELF</code></td><td>Optional</td><td>Executable KELF in header</td><td>978,944 B</td></tr><tr><td><code>BOOT.ELF</code></td><td>Optional</td><td><code>pfs:/BOOT.ELF</code>, useful with a KELF forwarder</td><td>Filesystem-dependent</td></tr><tr><td><code>info.sys</code></td><td>Optional</td><td><code>pfs:/res/info.sys</code></td><td>Filesystem-dependent</td></tr><tr><td><code>jkt_001.png</code></td><td>Optional</td><td>PSBBN jacket image</td><td>Format-specific</td></tr><tr><td><code>jkt_002.png</code></td><td>Optional</td><td>PSX XMB image</td><td>Format-specific</td></tr><tr><td><code>jkt_cp.png</code></td><td>Optional</td><td>PSX copyright image</td><td>Format-specific</td></tr></tbody></table>
-<h2 id="systemcnf">Example system.cnf</h2><pre><code>BOOT2 = pfs:/boot.kelf
+<h1>HDD Manager &amp; APA Header Injection</h1>
+<p class="lead">The HDD Manager lists the APA partitions on <code>hdd0:</code>, creates, removes and renames them, edits a partition&rsquo;s header <code>SYSTEM.CNF</code>, formats the disk, and injects HDD-OSD / PSBBN style headers from a <code>__Headers</code> folder.</p>
+
+<div class="callout red"><div class="h">Everything here writes to the disk</div><p>Create, remove, rename, edit, format and inject change partition tables and boot-visible metadata immediately. Back up anything that matters first. Powering off while an operation runs can corrupt the disk.</p></div>
+
+<h2 id="open">Opening it</h2>
+<p>Use <b>Tools &gt; HDD Manager</b>, or press <b>Triangle</b> on the <b>Internal HDD (APA)</b> card in the Files tab&rsquo;s device cards and choose <b>HDD Manager</b>. If the HDD drivers cannot start you will see <em>No HDD</em> (&ldquo;Is an HDD connected?&rdquo;). An unformatted or non-APA disk shows <em>The HDD is not APA formatted</em> and offers <b>Format HDD</b> only. The HDD Manager also runs on the PSX, but formatting is disabled there (<em>The PSX internal HDD cannot be formatted from Launchstation</em>).</p>
+
+<h2 id="browse">Partition list and game information</h2>
+<p>The list shows the original APA identifiers as classic wLaunchELF did, without querying HDL titles on every cursor move. Controls: <b>D-pad</b> moves, <b>L2 / R2</b> page, <b>OK</b> opens the Actions menu, <b>L1</b> opens HDD status, <b>R1</b> loads <em>Game info</em> for the selected HDL partition (title and disc information; the partition keeps its APA name). The details panel shows the partition type (<em>PFS partition</em>, <em>HDL game</em>, <em>System</em> or <em>Not accessible</em>), size, and for PFS partitions their usage, which is read in the background (&ldquo;Reading usage&hellip;&rdquo; or &ldquo;Could not be mounted&rdquo;). Reserved partitions show &ldquo;Reserved for the system. It cannot be changed.&rdquo;</p>
+
+<h2 id="actions">Actions menu</h2>
+<table><thead><tr><th>Action</th><th>Available when</th><th>What it does</th></tr></thead><tbody>
+<tr><td>Create partition&hellip;</td><td>Disk is formatted</td><td>Asks for a name (a name beginning <code>__</code> triggers a &ldquo;system partition name&rdquo; warning), then a size, confirms, and creates <code>hdd0:&lt;name&gt;</code>. A clashing name becomes <code>name1</code>, <code>name2</code>&hellip; Minimum 128&nbsp;MB, maximum 128&nbsp;GB or the free space; sizes are multiples of 128&nbsp;MB.</td></tr>
+<tr><td>Remove partition&hellip;</td><td>A user partition is selected (not <code>__mbr</code>, not any name starting <code>__</code>)</td><td>Deletes the partition and everything in it after a confirmation. Cannot be undone.</td></tr>
+<tr><td>Rename partition&hellip;</td><td>Not <code>__mbr</code></td><td>Renames the APA partition. The HDD refusing the name is reported.</td></tr>
+<tr><td>Rename game&hellip;</td><td>An HDL game partition</td><td>Changes the game title stored for the HDL partition.</td></tr>
+<tr><td>Inject APA header&hellip;</td><td>A PFS partition</td><td>See <a href="#inject">below</a>.</td></tr>
+<tr><td>Edit SYSTEM.CNF&hellip;</td><td>The partition header already contains a <code>system.cnf</code></td><td>Opens it in an editor and writes it back; reports <em>SYSTEM.CNF updated</em>, <em>unchanged</em> or <em>not saved</em>. The header slot holds at most 512 bytes.</td></tr>
+<tr><td>HDD status</td><td>Always</td><td>Shows the <code>HDIOC_STATUS</code> value with an explanation.</td></tr>
+<tr><td>Refresh</td><td>Always</td><td>Rescans the partition table.</td></tr>
+<tr><td>Format HDD&hellip;</td><td>HDD present and not a PSX</td><td>Erases every partition, game and file after two confirmations (&ldquo;Continue&rdquo; then &ldquo;Format&rdquo;).</td></tr>
+</tbody></table>
+<p>The size picker moves in 128&nbsp;MB steps with <b>Left/Right</b>, 1&nbsp;GB with <b>L1/R1</b> and 10&nbsp;GB with <b>L2/R2</b>. The classic menu&rsquo;s <em>Expand</em> command exists in the source but is permanently disabled; partition expansion is not available.</p>
+
+<h2 id="inject">Inject header</h2>
+<p>For a selected <b>PFS</b> partition, <b>Inject APA header&hellip;</b> first asks for the <b>header source</b>: <code>usb:</code>, <code>mmce0:</code>, <code>mmce1:</code> or <code>udpfs:</code> (its driver starts on demand). The source must contain <code>__Headers/&lt;matching partition name&gt;/</code>, a flat folder of header files. Launchstation waits up to three seconds for the source to appear.</p>
+<h3 id="modes">Injection modes</h3>
+<table><thead><tr><th>Mode</th><th>Behavior</th></tr></thead><tbody>
+<tr><td>This partition</td><td>Inject only the selected partition from its matching header folder.</td></tr>
+<tr><td>All matching partitions</td><td>Scan <code>__Headers</code> and inject every folder whose partition already exists. Incomplete folders are ignored and reported.</td></tr>
+<tr><td>Matching, and create missing ones</td><td>Inject existing matches, then ask for each missing valid partition: <b>Create it</b> (you pick a size), <b>Skip it</b> or <b>Stop</b>. A summary shows Injected / Created / Skipped / Failed.</td></tr>
+</tbody></table>
+<h3 id="header-files">Header files</h3>
+<table><thead><tr><th>File</th><th>Status</th><th>Destination / role</th><th>Maximum</th></tr></thead><tbody>
+<tr><td><code>system.cnf</code></td><td>Required</td><td>APA header configuration</td><td>512 B</td></tr>
+<tr><td><code>icon.sys</code></td><td>Required for PS2 titles</td><td>APA header icon metadata</td><td>1,024 B</td></tr>
+<tr><td><code>list.ico</code></td><td>Required for PS2 titles</td><td>APA header HDD-OSD list icon</td><td>1,112,064 B</td></tr>
+<tr><td><code>boot.kelf</code> / <code>BOOT.KELF</code></td><td>Optional</td><td>Executable KELF stored in the header</td><td>978,944 B</td></tr>
+<tr><td><code>BOOT.ELF</code> / <code>boot.elf</code></td><td>Optional</td><td>Copied to <code>pfs:/BOOT.ELF</code> inside the partition, useful behind a KELF forwarder</td><td>Filesystem-dependent</td></tr>
+<tr><td><code>info.sys</code></td><td>Optional</td><td>Copied to <code>pfs:/res/info.sys</code></td><td>Filesystem-dependent</td></tr>
+<tr><td><code>jkt_001.png</code></td><td>Optional</td><td>PSBBN jacket image, <code>pfs:/res/jkt_001.png</code></td><td>Format-specific</td></tr>
+<tr><td><code>jkt_002.png</code></td><td>Optional</td><td>PSX XMB image, <code>pfs:/res/jkt_002.png</code></td><td>Format-specific</td></tr>
+<tr><td><code>jkt_cp.png</code></td><td>Optional</td><td>PSX copyright image, <code>pfs:/res/jkt_cp.png</code></td><td>Format-specific</td></tr>
+</tbody></table>
+<p>Result toasts distinguish <em>Header injected</em>, <em>Header and PFS files injected</em> and <em>Header injected; copying the PFS files failed</em>. If nothing is injected, check that the folder has a <code>system.cnf</code>.</p>
+<h2 id="systemcnf">Example system.cnf</h2>
+<pre><code>BOOT2 = pfs:/boot.kelf
 VER = 1.00
 VMODE = NTSC
 HDDUNITPOWER = NICHDD</code></pre>
-<h2 id="safety">Safety</h2><p>Header injection changes boot-visible partition metadata and can optionally create partitions. Keep known-good header folders and a backup of anything important before bulk operations.</p>
+
+<h2 id="safety">Safety</h2>
+<ul>
+<li>Keep known-good header folders and a backup before bulk operations; &ldquo;Matching, and create missing ones&rdquo; can create partitions.</li>
+<li>A disk with hundreds of partitions takes minutes to scan. Wait for the list to finish; there is no interrupt command yet.</li>
+<li>Do not remove a partition just because it looks unfamiliar: <code>__</code>-prefixed names belong to the system and PSBBN, and the HDD Manager protects them from removal.</li>
+</ul>

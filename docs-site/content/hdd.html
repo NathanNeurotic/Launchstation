@@ -1,6 +1,53 @@
-<h1>Internal HDD</h1><p class="lead">Launchstation retains classic APA/PFS management while surfacing HDD state through the dashboard.</p>
-<h2 id="apa">APA / PFS</h2><p>Open Files and select the internal HDD from the browser root. Opening an unprobed device starts its lazy HDD stack and exposes the APA/PFS partitions through the existing browser. Not checked remains actionable; confirmed absence does not.</p>
-<h2 id="manager">HDD Manager</h2><p>Tools → HDD Manager exposes classic partition-management functions such as create, remove, rename, expand, format and HDL-related information. Partition operations can destroy data; make backups before resizing, removing or formatting anything.</p>
-<h2 id="paths">Path forms</h2><p>Browser paths commonly use <code>hdd0:/partition/path/to/file</code>. Internally a mounted filesystem is represented as <code>pfsN:</code>. Loader helpers retain the owning APA partition so an ELF on PFS remains reachable through teardown/handoff.</p>
-<h2 id="common">Common partition workflows</h2><p><code>__common</code> is frequently used for shared application/data storage. The timestamp organizer also understands <code>hdd0:/__common/</code> alongside memory-card roots.</p>
-<h2 id="exfat">ATA / exFAT is separate</h2><p>ATA/exFAT storage is not the same thing as APA/PFS. It uses the BDM/FATFS path and appears as its own device class where compiled. Neutrino can use the ATA backend for an ISO on this path.</p>
+<h1>Internal HDD</h1>
+<p class="lead">Launchstation keeps the classic APA/PFS hard-disk workflow of the PS2 expansion bay: browse partitions, open files inside them, launch programs from them, and manage the disk with the <a href="hdd-manager.html">HDD Manager</a>. A FAT/exFAT disk is a different device (<a href="#exfat">ATA / exFAT</a>).</p>
+
+<div class="callout amber"><div class="h">Supported consoles</div><p>The expansion-bay HDD needs a fat PS2 with a network adapter / HDD unit. Slim consoles that report ROM 2.20 or newer have no bay, so Launchstation hides the HDD and ATA cards there automatically. The PSX (DESR) has its own recorder disk and appears as <code>dvr_hdd0:</code>, see <a href="special-hardware.html">PSX, Deckard &amp; RetroGem</a>.</p></div>
+
+<h2 id="apa">Opening the HDD</h2>
+<p>The device card is named <b>Internal HDD (APA)</b> (<code>hdd0:</code>). It starts <b>Not checked</b>: selecting it loads DEV9, the APA/PFS drivers and the HDL information module, then probes <code>hdd0:</code>. On success it reads <em>APA partitions</em>; otherwise <em>No browsable APA storage found</em>. You can also enable <b>Settings &gt; Storage &amp; devices &gt; Start devices automatically &gt; Auto-start internal HDD</b> so it is ready at boot (off by default). The first unit is <code>hdd0:</code>; a second disk would be <code>hdd1:</code>. By default <b>Hide HDD1 + ATA1</b> keeps the second unit out of the list; change it under <b>Settings &gt; Storage &amp; devices &gt; Internal HDD / ATA units</b>.</p>
+
+<h2 id="paths">Path forms</h2>
+<table><thead><tr><th>Form</th><th>Meaning</th></tr></thead><tbody>
+<tr><td><code>hdd0:/</code></td><td>The partition list in the File Browser.</td></tr>
+<tr><td><code>hdd0:/PARTITION/path/to/file</code></td><td>Browser path: Launchstation mounts the partition as PFS and shows the contents.</td></tr>
+<tr><td><code>hdd0:PARTITION:pfs:/path/to/file</code></td><td>Launch form used for executables, sidecars and external cores; the owning APA partition is carried through IOP teardown and hand-off so an ELF on PFS stays reachable.</td></tr>
+<tr><td><code>pfs0:/path</code>, <code>pfs1:/path</code></td><td>The mounted-filesystem name inside the IOP while a partition is open. Do not store these; they are session-specific.</td></tr>
+</tbody></table>
+<p>Browsing mounts a partition read/write. Starting a program from the HDD mounts its partition read-only for the loaded ELF, except Ember, which gets a writable write-through mount so its save files persist (see <a href="ember.html">Ember</a>).</p>
+
+<h2 id="partition-types">What you will see</h2>
+<ul>
+<li><b>PFS partitions</b> (<code>__common</code>, <code>__sysconf</code>, <code>__net</code>, user partitions) &ndash; browsable file systems.</li>
+<li><b>HDL games</b> (<code>PP.&lt;ID&gt;..&lt;TITLE&gt;</code>) &ndash; installed disc images. They are raw game data and are not browsable files. The HDD Manager can show the title and disc information on request (<b>R1</b>) and rename the game.</li>
+<li><b>System</b> &ndash; <code>__mbr</code> is never touched. Any partition whose name begins with <code>__</code> (for example <code>__common</code>, <code>__system</code>, <code>__sysconf</code>) is reserved: the HDD Manager will not remove it.</li>
+<li><b>Not accessible</b> &ndash; partitions that are neither PFS nor HDL.</li>
+</ul>
+
+<h2 id="common">Common partition workflows</h2>
+<ul>
+<li><code>__common</code> is the traditional shared application/data partition. POPStarter is searched in <code>hdd0:__common:pfs:/POPS/POPSTARTER.ELF</code> and <code>hdd0:__system:pfs:/launcher/POPSTARTER.ELF</code> when the VCD lives on the HDD (see <a href="popstarter.html">POPStarter</a>).</li>
+<li>The folder-date organizer also works in <code>hdd0:/__common/</code> as well as memory-card roots, see <a href="saves.html#timestamps">Saves &amp; timestamp tools</a>.</li>
+<li>Header injection writes HDD-OSD / PSBBN metadata into a PFS partition&rsquo;s APA header, see <a href="hdd-manager.html#inject">Inject header</a>.</li>
+</ul>
+
+<h2 id="neutrino">Game images on the APA disk</h2>
+<p>Launchstation does <b>not</b> start a Neutrino PS2 ISO from <code>hdd0:</code>; use a USB, MMCE, MX4SIO, iLink, exFAT (<code>ata0:</code>) or UDPFS source instead. PS1 VCDs can run from POPS partitions on the HDD, and Ember games can run from a PFS partition.</p>
+
+<h2 id="exfat">ATA / exFAT is separate</h2>
+<p>An exFAT or FAT32 disk in the bay is the <b>exFAT HDD</b> device (<code>ata0:</code>, <code>ata1:</code>). It uses the BDM/FatFs path, is detected only when the disk is not APA formatted, and is a normal ISO source for Neutrino. The APA and ATA stacks can be resident together, but one physical disk is only one or the other. Never format a disk from Launchstation to &ldquo;switch&rdquo; between them without a backup.</p>
+
+<h2 id="power">Power off and safety</h2>
+<ul>
+<li>Use <b>Tools &gt; Power off</b> (or the console power button) so the HDD stack can close open PFS files and shut DEV9 down cleanly. Pulling power while a partition is mounted can corrupt it.</li>
+<li>Partition operations (create, remove, rename, format) are permanent. Back up first and keep known-good header folders for bulk injection.</li>
+<li>If the disk was formatted by another tool, the HDD Manager reports <em>The HDD is not APA formatted</em>; if nothing answers it reports <em>No HDD was found</em>.</li>
+</ul>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>Card says &ldquo;No browsable APA storage found&rdquo;.</b> Check the HDD unit power and ribbon, then run <b>Check again</b>. A disk that is exFAT/FAT belongs on the <code>ata0:</code> card.</li>
+<li><b>HDD card is missing.</b> The console is ROM 2.20+ (no bay), the Hide HDD setting hides that unit, or the build lacks it. Hold <b>SELECT</b> at boot to show all devices.</li>
+<li><b>Slow or stuck at &ldquo;Reading the HDD&rdquo;.</b> Disks with very many partitions take a long time to scan; wait for the list to finish before pressing buttons.</li>
+<li><b>Nothing works after switching MMCE/MX4SIO or network.</b> Those stack changes reset the IOP and clear device probes; reopen the HDD card.</li>
+<li>Report the console model, drive/adapter, partition layout, exact build hash and whether the classic path works.</li>
+</ol>

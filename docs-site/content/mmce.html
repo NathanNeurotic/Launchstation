@@ -1,5 +1,31 @@
-<h1>MMCE</h1><p class="lead">MMCE is both a first-class storage device and the source for versioned memory-card backup workflows.</p>
-<h2 id="browse">Browsing</h2><p>MMCE devices are represented through the device layer and can be opened on demand. The code does not reduce all MMCE use to one hard-coded slot; active device/card state is tracked explicitly.</p>
-<h2 id="backup">Backup integration</h2><p>The active MMCE card image can be exported into local history. The workflow verifies the result, can retain a configured number of versions and avoids creating another copy when the card is unchanged.</p>
-<h2 id="igr">IGR workflow</h2><p>When enabled, returning through the Launchstation IGR helper can create the local backup before continuing to the configured after-IGR destination. Optional Google Drive sync runs after local success.</p>
-<h2 id="neutrino">Neutrino</h2><p>Neutrino has a dedicated <code>mmce</code> backend. Launchstation can also discover a complete <code>/neutrino/</code> install on the game device or on either memory-card slot.</p>
+<h1>MMCE (SD2PSX / MemCard PRO2)</h1>
+<p class="lead">MMCE is both a storage device and a memory card. Launchstation talks to the adapter&rsquo;s SD card through the MMCEMAN driver, so you can browse and copy files on it, launch games from it, switch its game card, and keep versioned <a href="mmce-backup.html">backups</a> of its emulated memory cards.</p>
+
+<div class="callout info"><div class="h">Supported adapters</div><p>Adapters that speak the MMCE protocol of the sd2psXtd firmware: SD2PSX, PSxMemCard Gen2 and MemCard PRO2. Launchstation uses the firmware commands as they exist and does <b>not</b> require patched or forked firmware. Other MMCE-capable devices are untested.</p></div>
+
+<h2 id="browse">Browsing</h2>
+<p>The device cards are <b>MMCE Slot 1</b> (<code>mmce0:</code>) and <b>MMCE Slot 2</b> (<code>mmce1:</code>), one per memory-card port, each checked separately. A card starts <b>Not checked</b>. Selecting it loads the MMCE driver, sends a short presence <em>ping</em> (two attempts) and only then opens the filesystem, so an empty slot is reported as <em>No MMCE storage found</em> without a long wait. A responding adapter reads <em>SD2PSX / MemCard PRO2</em>. Presence does not prove the SD card is healthy; the first directory listing does.</p>
+<p>Notes for file work: the adapter has no timestamp-set command (Launchstation skips it quietly after a copy), paths are limited to 254 bytes on the wire, and the name <code>__active_card__.mcd</code> is a read-only virtual file Launchstation reserves against create, rename, delete and truncate. Typical SD layout: <code>mmceN:/MemoryCards/</code> with numbered, named, GameID and <code>BOOT/BootCard*.mcd</code> card images, plus your own folders such as <code>POPS/</code> for PS1 VCDs.</p>
+
+<h2 id="stack">One SIO2 bus: MMCE and MX4SIO exclude each other</h2>
+<p>MMCEMAN hooks the memory-card SIO2 bus. MX4SIO uses the same bus, so loading one while the other is resident resets the IOP (controller and audio are rebuilt automatically). Launchstation will not load the second driver if that reset is refused. The auto-start settings enforce the same rule: enabling MMCE disables MX4SIO and vice versa, and neither can be enabled while you are booted from the other. See <a href="devices.html#stacks">Stacks that cannot coexist</a>.</p>
+
+<h2 id="backup">Backup integration</h2>
+<p>The File Browser offers, inside any <code>mmceN:</code> folder: <b>Back up all MMCE cards&hellip;</b> (normal, named, GameID and BootCard images), <b>Back up active MMCE card&hellip;</b> (reads the exact firmware-selected image through the virtual <code>__active_card__.mcd</code>), <b>Export active MMCE card as PCSX2 .ps2&hellip;</b>, and for a highlighted <code>.mcd</code> <b>Back up selected MMCE card to history&hellip;</b>. All write only to your local history folder (<code>WLE-MMCE-Backups</code>), verify the result, skip unchanged cards and never write to the adapter. The full workflow, retention, Google Drive sync and recovery are on <a href="mmce-backup.html">MMCE Backup History</a>.</p>
+
+<h2 id="recovery">Recovery without touching the active card</h2>
+<p>You can store a verified snapshot on the adapter as a <em>new file</em> in <code>mmceN:/WLE-Recovered/</code> (<b>Store NEW snapshot on MMCE&hellip;</b>), or create an additional selectable card with <b>Install as NEW selectable MMCE card&hellip;</b>, which picks an unused <code>MemoryCards/PS2/CardN/</code> folder and writes <code>CardN-1.mcd</code>. Neither replaces, renames over or activates an existing card. Direct replacement of an emulated card is intentionally unavailable; see the <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/docs/MMCE_RESTORE_PROTOCOL.md">restore protocol</a> for why. If an install is interrupted, inspect the new <code>CardN</code> folder before selecting it.</p>
+
+<h2 id="igr">IGR workflow</h2>
+<p>Launchstation can be started by OPL&rsquo;s <em>Exit to</em> (in-game reset) through a small helper, <code>WLE-IGR.ELF</code>. On return it can back up every MMCE card before continuing to Launchstation, the PS2 system menu or an application you choose. Setup, defaults and failure behaviour are on the <a href="igr.html">IGR page</a>.</p>
+
+<h2 id="neutrino">Neutrino and Game ID card switching</h2>
+<p>Neutrino has a dedicated <code>mmce</code> backend. Launchstation can also discover a complete <code>/neutrino/</code> install on the game device or on either memory-card slot. For PS2 ISOs it reads the title ID from the image&rsquo;s <code>SYSTEM.CNF</code> and, <em>if the MMCE driver is already running</em> or can be started without disturbing other storage, asks responding adapters to switch to that title&rsquo;s GameID card. It skips any slot that holds the ISO or the Neutrino ELF, never switches an ambiguous alias, and never replaces an active MX4SIO stack for this optional step. A missing Game ID or an adapter error never stops the launch. Details: <a href="neutrino.html#game-id">Game ID, RetroGem and MMCE cards</a>. Disc launches also write the OSD history file on a memory card so an MMCE can follow the game.</p>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>&ldquo;No MMCE storage found&rdquo; but the adapter works as a memory card.</b> The SD card may be missing or unreadable, or the firmware does not provide the filesystem commands. Update the adapter firmware.</li>
+<li><b>Slot 2 card missing after using MX4SIO.</b> MX4SIO owns memory-card port 2 while its stack is active. Opening <code>mc1:</code> or an MMCE slot makes Launchstation reset the IOP back to the card stack, after which the slot is probed again.</li>
+<li><b>Stalls when loading.</b> The driver startup handshake is synchronous; an absent adapter can pause drawing for a moment (about 0.8&nbsp;s nominal with both slots empty). Report firmware version, slot and whether audio recovered.</li>
+<li><b>Backups say &ldquo;Set destination&rdquo;.</b> Choose a backup folder first (Settings &gt; Storage &amp; devices &gt; MMCE backups). It cannot be inside <code>mmceN:/MemoryCards</code>.</li>
+</ol>
