@@ -1,3 +1,22 @@
+=====================================================================
+LEGACY / PARTLY OUTDATED (annotated 2026-10-26)
+
+This note describes the original classic (uLE v4.x) File Browser, which
+had 3 display modes and 4 sort modes chosen from the L1 pop-up. The
+Launchstation File Browser is a native dashboard screen with different
+choices (Triangle > Show / Sort by):
+  * Show: File names, Names and details (default), Game titles and
+    details, Game titles.
+  * Sort by: As stored, Name (default), Game title, Size, Date-Time, Kind,
+    each Ascending or Descending. Folders are always first; ELF files are
+    NOT moved above other files; HDD partition lists keep the drive order.
+    Date-Time ascending is oldest first (the classic "Timestamp" mode
+    below listed newest first).
+  * The choices last for the session and are not saved in a config file.
+See the File Browser page of the documentation site and docs/dashboard.md.
+The classic text below is kept as a description of the original design.
+=====================================================================
+
 uLE now has 3 different display modes, as follows:
 
 Display mode 0 == Filenames only

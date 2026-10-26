@@ -1,3 +1,19 @@
+=====================================================================
+PARTLY CURRENT (annotated 2026-10-26)
+
+The first section (Screen_Offset_X / Screen_Offset_Y relative to gsKit's
+display-mode offsets) is still how Launchstation works: the offsets are
+limited to -StartX..StartX and -StartY..StartY, default 0, and are edited
+under Settings > Appearance > Screen calibration (or in LAUNCHELF.CNF).
+Video modes available now: Auto, NTSC, PAL, VGA, 480p and 576p
+(TV_mode = 0..5). The dashboard UI is drawn on a 640x448 virtual canvas
+that is shown as 4:3.
+
+Everything after the first "no longer valid" divider (Screen_X/Screen_Y
+numbers, the Interlace option, v3.58/v3.81 offsets) is historical and is
+no longer read by the program.
+=====================================================================
+
 -----------------------------------------------------------------------------
 File name:      New Resolutions.txt
 -----------------------------------------------------------------------------
