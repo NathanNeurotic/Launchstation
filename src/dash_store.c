@@ -341,6 +341,8 @@ static int settingsKv(const char *key, char *value, void *user)
 		dashCfg.home_shortcuts = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_IconBacking"))
 		dashCfg.icon_backing = clampInt(value, 0, 1, 1);
+	else if (!stricmp(key, "Dash_TemperatureFahrenheit"))
+		dashCfg.temp_fahrenheit = clampInt(value, 0, 1, 0);
 	else if (!stricmp(key, "Dash_ShowUnavailableDevices"))
 		dashCfg.show_unavailable_devices = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_DevAuto"))
@@ -527,7 +529,8 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                "Dash_IGRCloudSync = %d\r\n"
 	                "Dash_IGRBackupPath = %s\r\n"
 	                "Dash_IGRAfter = %d\r\n"
-	                "Dash_IGRAfterPath = %s\r\n",
+	                "Dash_IGRAfterPath = %s\r\n"
+	                "Dash_TemperatureFahrenheit = %d\r\n",
 	                c->enabled, c->start_section, c->view, c->effects,
 	                c->anim, c->autoscan, c->artwork, c->recent_count,
 	                c->legacy_theme, c->intro_done, c->software_clock, c->sound, c->sound_vol,
@@ -535,7 +538,7 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                c->home_shortcuts, c->icon_backing, c->show_unavailable_devices, c->dev_auto,
 	                c->mmce_backup_keep, c->mmce_backup_format,
 	                c->igr_auto_backup, c->igr_cloud_sync, c->igr_backup_path,
-	                c->igr_after, c->igr_after_path);
+	                c->igr_after, c->igr_after_path, c->temp_fahrenheit);
 	for (i = 0; i < c->nscan && len < cap - DASH_PATH_MAX - 16; i++)
 		len += snprintf(buf + len, cap - len, "Dash_Scan = %s\r\n", c->scan[i]);
 	/* theme: preset name, plus a full snapshot once customised */

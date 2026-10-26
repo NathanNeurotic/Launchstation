@@ -239,7 +239,7 @@ void dashDrawHints(const DashHint *hints, int n)
 		x = DASH_SAFE_L;
 	x += 14.0f * (1.0f - dashEaseOutCubic(dashSectionAnim()));
 	{
-		char ct[24], cd[24];
+		char ct[48], cd[24];
 		float cw = footerClockWidth(ct, sizeof(ct), cd, sizeof(cd));
 		/* only when it does not collide with the hints */
 		if (cw > 0.0f && DASH_SAFE_L + cw + 24.0f < x)
@@ -265,7 +265,28 @@ void dashDrawHints(const DashHint *hints, int n)
 //--------------------------------------------------------------
 // Header
 //--------------------------------------------------------------
+#define HEADER_TAB_X 108.0f
+#define HEADER_TAB_W 66.0f
+#define HEADER_TAB_PAD 40.0f
+
 static float tab_anim_x = -1.0f;
+
+/* The text renderer uses literal Latin-1 bytes, including degree (0xB0). */
+static void appendClockTemperature(char *time, int size)
+{
+	int raw, tenths;
+	size_t len;
+	if (!menuTitleGetTemperatureRaw(&raw))
+		return;
+	if (dashCfg.temp_fahrenheit)
+		tenths = (raw * 18 + 64) / 128 + 320;
+	else
+		tenths = (raw * 10 + 64) / 128;
+	len = strlen(time);
+	if (len < (size_t)size)
+		snprintf(time + len, size - len, "  %d.%d\260%c", tenths / 10,
+		         tenths % 10, dashCfg.temp_fahrenheit ? 'F' : 'C');
+}
 
 /* Clock text per the theme: 12/24 h and date order follow the console's
  * own settings unless the theme overrides them. */
@@ -292,6 +313,7 @@ static int clockText(char *t, int tsize, char *d, int dsize)
 	if (!valid) {
 		dashStrCopy(t, dashTheme.clock_seconds ? "--:--:--" : "--:--", tsize);
 		dashStrCopy(d, "", dsize);
+		appendClockTemperature(t, tsize);
 		return 0;
 	}
 	menuTitleFormatClockTime(t, tsize, h, mi, s, use12);
@@ -302,23 +324,31 @@ static int clockText(char *t, int tsize, char *d, int dsize)
 		d[0] = '\0';
 	else
 		menuTitleFormatClockDate(d, dsize, y, mo, dd, dfmt);
+	appendClockTemperature(t, tsize);
 	return 1;
 }
 
 void dashDrawClock(void)
 {
-	char t[24], d[24];
+	char t[48], d[24];
+	float scale, width, available;
 
 	if (dashTheme.clock == DASH_CLOCK_OFF || dashTheme.clock_pos != DASH_CLOCKPOS_HEADER)
 		return;
 	clockText(t, sizeof(t), d, sizeof(d));
+	/* Shrink a long time+temperature string rather than overlap the tabs. */
+	scale = dashTheme.clock == DASH_CLOCK_SYSTEM ? DASH_FS_BODY : DASH_FS_LABEL;
+	available = DASH_SAFE_R - (HEADER_TAB_X + HEADER_TAB_W * dashVisibleSectionCount() + HEADER_TAB_PAD + 8.0f);
+	width = dashTextWidth(t, scale);
+	if (width > available && available > 0.0f)
+		scale *= available / width;
 	if (dashTheme.clock == DASH_CLOCK_SYSTEM) {
 		/* OSDSYS: light grey, even weight, no emphasis */
-		dashTextRight(DASH_SAFE_R, 24, t, DASH_FS_BODY, DASH_C_TEXT);
+		dashTextRight(DASH_SAFE_R, 24, t, scale, DASH_C_TEXT);
 		if (d[0])
 			dashTextRight(DASH_SAFE_R, 45, d, DASH_FS_CAPTION, DASH_C_TEXT2);
 	} else {
-		dashTextRight(DASH_SAFE_R, 22, t, DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextRight(DASH_SAFE_R, 22, t, scale, DASH_C_TEXT);
 		if (d[0])
 			dashTextRight(DASH_SAFE_R, 46, d, DASH_FS_CAPTION, DASH_C_TEXT3);
 	}
@@ -351,7 +381,7 @@ static void drawFooterClock(float y, const char *t, const char *d)
 
 void dashDrawHeader(int section, float section_anim)
 {
-	const float tab_w = 66.0f, tab_x0 = 108.0f, tab_y = 20.0f;
+	const float tab_w = HEADER_TAB_W, tab_x0 = HEADER_TAB_X, tab_y = 20.0f;
 	int vcount = dashVisibleSectionCount();
 	int vindex = dashVisibleSectionIndex(section);
 	float target_x = tab_x0 + vindex * tab_w;

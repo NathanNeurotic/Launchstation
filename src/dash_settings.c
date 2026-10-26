@@ -124,6 +124,7 @@ enum SetId {
 	S_CLOCK_MANUAL,
 	S_CLOCK_SOFTWARE,
 	S_CLOCK_HARDWARE,
+	S_TEMP_UNITS,
 	S_CLOCK_SYNC,
 	/* advanced */
 	S_LANGUAGE,
@@ -394,6 +395,7 @@ static const SetItem system_items[] = {
     {ST_ACTION, S_CLOCK_SOFTWARE, "Set software clock...", "Works without a CMOS battery. Restarts at the last saved time; save again before power-off to retain elapsed runtime."},
     {ST_ACTION, S_CLOCK_HARDWARE, "Use PS2 hardware clock", "Stop the software clock and use the console RTC again."},
     {ST_ACTION, S_CLOCK_MANUAL, "Set PS2 clock manually...", "Enter the local date and time as YYYY-MM-DD HH:MM:SS; the hardware RTC is written and verified."},
+    {ST_CHOICE, S_TEMP_UNITS, "PS2 Temperature Units (50K and later)", "Celsius or Fahrenheit beside the clock. Hidden automatically when the console has no supported temperature sensor."},
     {ST_PATH, S_CNF_PATH, "Configuration folder", "Load and save LAUNCHELF.CNF in this folder instead of the default places."},
     {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
     {ST_ACTION, S_INTRO, "Show welcome message again", "Show the introduction the next time the dashboard checks for it."},
@@ -654,6 +656,11 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_HOME_SHORTCUTS:
 			*cur = dashCfg.home_shortcuts;
 			return 2;
+		case S_TEMP_UNITS: {
+			static const char *const units[] = {"Celsius", "Fahrenheit"};
+			*names = units, *cur = dashCfg.temp_fahrenheit;
+			return 2;
+		}
 		case S_ICON_BACKING:
 			*cur = dashCfg.icon_backing;
 			return 2;
@@ -1307,6 +1314,9 @@ static void setChoice(int id, int v)
 		case S_HOME_SHORTCUTS:
 			dashCfg.home_shortcuts = v;
 			dashHomeRebuild();
+			break;
+		case S_TEMP_UNITS:
+			dashCfg.temp_fahrenheit = v;
 			break;
 		case S_ICON_BACKING:
 			dashCfg.icon_backing = v;

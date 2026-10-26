@@ -297,21 +297,41 @@ typedef struct
 	unsigned short rom_version;
 } SysInfo;
 
-/* Console identity is read-only in normal dashboard frames. An exact model
- * becomes available only after the user explicitly opens System information,
- * since model discovery can call CDVD/IOP modules. */
-static char cached_console_model[CONSOLE_MODEL_NAME_MAX_LEN + 1];
+/* Hardware identity is read once at startup, before the dashboard worker
+ * starts, so normal frames only format cached text. */
+static SysInfo cached_console_info;
+static int console_identity_initialized;
+
+void dashConsoleIdentityInit(void)
+{
+	if (console_identity_initialized)
+		return;
+	console_identity_initialized = 1;
+	if (ROMVER_data[0] == '\0')
+		uLE_InitializeRegion();
+	GetConsoleModelName(ROMVER_data, cached_console_info.model, sizeof(cached_console_info.model));
+	if (!strcmp(cached_console_info.model, "Unknown"))
+		cached_console_info.model[0] = '\0';
+	GetConsoleDvdVersion(cached_console_info.dvd, sizeof(cached_console_info.dvd));
+	cached_console_info.rom_version = getROMVersion();
+}
 
 void dashConsoleSummaryText(char *out, size_t out_size)
 {
 	const char *identity;
 	const char *region;
+	char rom[24];
 
 	if (out == NULL || out_size == 0)
 		return;
-	identity = cached_console_model[0] ? cached_console_model : (console_is_PSX ? "PSX" : "PS2");
-	region = ROMVER_data[0] ? consoleRegionName(ROMVER_data[4]) : "region unknown";
-	snprintf(out, out_size, "%s | %s", identity, region);
+	identity = cached_console_info.model[0] ? cached_console_info.model : (console_is_PSX ? "PSX" : "PS2");
+	region = strlen(ROMVER_data) >= 5 ? consoleRegionName(ROMVER_data[4]) : "region unknown";
+	if (strlen(ROMVER_data) >= 5)
+		snprintf(rom, sizeof(rom), "ROM: %c.%c%c%c", ROMVER_data[1], ROMVER_data[2], ROMVER_data[3], ROMVER_data[4]);
+	else
+		snprintf(rom, sizeof(rom), "ROM: unavailable");
+	snprintf(out, out_size, "%s | %s | %s | %s", identity, region, rom,
+	         cached_console_info.dvd[0] ? cached_console_info.dvd : "DVD: unavailable");
 }
 
 void dashShowSystemInfo(void)
@@ -323,18 +343,8 @@ void dashShowSystemInfo(void)
 
 	if (!dashWorkerAwaitAll("Finishing up"))
 		return;
-	memset(&job, 0, sizeof(job));
-	dashLoadingBegin("Reading console information");
-	if (ctx->romver_data[0] == '\0')
-		uLE_InitializeRegion();
-	GetConsoleModelName(ctx->romver_data, job.model, sizeof(job.model));
-	if (job.model[0] && strcmp(job.model, "Unknown"))
-		snprintf(cached_console_model, sizeof(cached_console_model), "%s", job.model);
-	else
-		cached_console_model[0] = '\0';
-	GetConsoleDvdVersion(job.dvd, sizeof(job.dvd));
-	job.rom_version = getROMVersion();
-	dashLoadingEnd();
+	dashConsoleIdentityInit();
+	job = cached_console_info;
 
 	s.n = 0;
 	sheetAdd(&s, SL_HEAD, "Console");

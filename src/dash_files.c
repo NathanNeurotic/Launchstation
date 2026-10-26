@@ -650,7 +650,7 @@ static void devDraw(void)
 		dashTextFit(60, 374.5f, 380, tip, DASH_FS_SMALL, DASH_C_TEXT2);
 	}
 	{
-		char console[80];
+		char console[160];
 		dashConsoleSummaryText(console, sizeof(console));
 		dashTextFit(458, 374.5f, 134, console, DASH_FS_CAPTION, DASH_C_TEXT3);
 	}
