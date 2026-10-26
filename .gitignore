@@ -43,3 +43,7 @@ build-ds34/
 # Standalone PC CARD driver validation output
 iop/pccf/build/
 iop/pccf/.clangd
+
+# Python bytecode
+__pycache__/
+*.pyc
