@@ -4,6 +4,7 @@
 <div class="btn-row">
   <a class="btn" href="https://github.com/NathanNeurotic/Launchstation/releases/tag/latest">Latest release</a>
   <a class="btn ghost" href="https://github.com/NathanNeurotic/Launchstation/actions">Build checks</a>
+  <a class="btn ghost" href="https://github.com/NathanNeurotic/Launchstation/blob/master/CHANGELOG.md">CHANGELOG.md</a>
 </div>
 
 <h2 id="assets">Release assets</h2>
@@ -24,7 +25,7 @@
     <tr>
       <td>APP_LAUNCHSTATION.psu</td>
       <td>LAUNCHSTATION.ELF</td>
-      <td>Use PSU Paste to install <code>APP_LAUNCHSTATION/</code> on a memory card.</td>
+      <td>Copy it in the File Browser and use <b>Extract PSU</b> in a memory-card folder to install <code>APP_LAUNCHSTATION/</code>.</td>
     </tr>
     <tr>
       <td>APP_LAUNCHSTATION-DS.zip</td>
@@ -34,24 +35,39 @@
     <tr>
       <td>APP_LAUNCHSTATION-DS.psu</td>
       <td>LAUNCHSTATION-DS.ELF</td>
-      <td>Use PSU Paste to install <code>APP_LAUNCHSTATION-DS/</code> on a memory card.</td>
+      <td>Extract it onto a memory card the same way to install <code>APP_LAUNCHSTATION-DS/</code>.</td>
     </tr>
   </tbody>
 </table>
-<p>Each package includes the ELF plus updater support files (<code>title.cfg</code>, <code>WLE-UPDATE-CA.PEM</code>, <code>BGM.ADP</code>). ZIP and PSU payloads match.</p>
+<p>Each package contains four files: the packed ELF plus <code>title.cfg</code>, <code>WLE-UPDATE-CA.PEM</code> and <code>BGM.ADP</code>. ZIP and PSU payloads match. Take the <b>standard</b> package unless you want PS3/PS4 DualShock USB/Bluetooth support, which the <b>-DS</b> package adds. See <a href="install.html">Install &amp; Update</a>.</p>
+
+<h2 id="rolling">How the rolling release works</h2>
+<ul>
+  <li>There is a single moving release, tagged <code>latest</code> and titled "Launchstation Rolling - &lt;date&gt; (&lt;commit&gt;)". It is marked as GitHub's Latest release and is not a pre-release.</li>
+  <li>Every push to <code>master</code> runs the full <a href="https://github.com/NathanNeurotic/Launchstation/actions">Automated-Build workflow</a>: host regression tests, standard and DS34 builds with PS2BUILD LLVM/Clang, controller-variant and Clang-only object checks, the embedded loader memory-layout check and ZIP/PSU verification.</li>
+  <li>Only after all of that passes are the four assets uploaded, downloaded again and byte-compared, and the <code>latest</code> tag moved to the tested commit. The tag is never moved to a commit that is not a descendant of the previous one, and a build superseded by a newer master commit is skipped.</li>
+  <li>Pull requests build and test but never touch the public release.</li>
+  <li>A documentation-only change also produces a new rolling build, so a new commit hash does not by itself mean the runtime changed.</li>
+  <li>The in-app updater downloads from this same <code>latest</code> release, so the download URLs stay stable: <code>https://github.com/NathanNeurotic/Launchstation/releases/download/latest/APP_LAUNCHSTATION.psu</code> and the other three names.</li>
+</ul>
+
+<h2 id="verify">Verify a download</h2>
+<p>GitHub shows a SHA-256 digest for each release asset, and the in-app updater compares against that digest before installing. To check by hand, run <code>sha256sum APP_LAUNCHSTATION.zip</code> (or <code>shasum -a 256</code>) and compare. The release notes list the build's commit and workflow run.</p>
 
 <h2 id="changelog">Rolling changelog summary</h2>
 <ul>
-  <li>Infinite wrap-around navigation for dashboard lists and file-browser views.</li>
-  <li>Safer replacement when pasting over existing files (old copy preserved until replacement is verified).</li>
-  <li>Copy/delete overlays now show cleaner progress with filename, remaining size in MB and smooth progress fill.</li>
-  <li>Cross-device copy reliability improvements for short reads/writes and storage handoff timing.</li>
-  <li>Clock-save and storage-load reliability fixes across restart and card/driver transitions.</li>
+  <li><b>Build toolchain:</b> release ELFs are built with the PS2BUILD LLVM/Clang toolchain; CI rejects non-Clang objects in release ELFs.</li>
+  <li><b>R3Z parity:</b> Settings cover the upstream R3Z option families; unified browser navigation; RetroGem Game IDs for Ember CUE/BIN images; PS1 serials normalized like OPL.</li>
+  <li><b>Languages:</b> dashboard navigation, Settings labels, common actions and transfer progress follow the nine built-in languages.</li>
+  <li><b>File operations:</b> ordinary paste follows upstream R3Z direct-overwrite behavior; copy/delete popups show the file name, remaining size and a readable failure reason.</li>
+  <li><b>Navigation:</b> wrap-around list navigation that keeps the selection visible; offscreen carousel cards are skipped.</li>
+  <li><b>Neutrino:</b> menu audio stays active until launch is committed; optional per-game profiles via <b>Save for this game</b>.</li>
+  <li><b>Retained:</b> verified software-clock saves, lazy storage loading, MASS display names, dashboard free-space display and power-off service initialization.</li>
 </ul>
 <p>
   Full details: <a href="https://github.com/NathanNeurotic/Launchstation/releases/tag/latest">latest release notes</a> ·
-  <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/CHANGELOG.md">CHANGELOG.md</a>.
+  <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/CHANGELOG.md">CHANGELOG.md</a> (dated history by theme).
 </p>
 
 <h2 id="notes">Notes</h2>
-<p>The <code>-DS</code> packages enable inherited PS3/PS4 controller support; standard packages keep the standard PS2 pad driver. CI success and package integrity do not replace real hardware validation. If a new rolling build regresses on your console, keep a known-good baseline and report console model, source hash and reproduction steps.</p>
+<p>The <code>-DS</code> packages enable inherited PS3/PS4 controller support; standard packages keep the standard PS2 pad driver. CI success and package integrity do not replace real hardware validation. If a new rolling build regresses on your console, keep a known-good baseline (or the <code>.BAK</code> the updater leaves) and report console model, source hash and reproduction steps. The <a href="https://github.com/NathanNeurotic/Launchstation/releases/tag/usb-second-drive-2026-10-08-58d4514">2026-10-08 USB-tested baseline</a> is kept as a separate release.</p>

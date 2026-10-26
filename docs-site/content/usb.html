@@ -1,0 +1,47 @@
+<h1>USB Mass Storage</h1>
+<p class="lead">USB flash drives, hard disks and card readers are the most flexible storage Launchstation supports: application library, file transfers, PS2 ISOs for Neutrino, POPStarter VCDs and Ember games can all live on a FAT32 or exFAT USB disk.</p>
+
+<h2 id="support">What is supported</h2>
+<ul>
+<li><b>Filesystems:</b> FAT32 and exFAT through the BDM/FatFs stack. Each partition of a drive becomes its own logical unit.</li>
+<li><b>Units:</b> up to ten logical units, <code>MASS 0</code> to <code>MASS 9</code> (<code>usb0:</code>&hellip;<code>usb9:</code> internally, shown as <code>mass0:</code>&hellip; in paths and breadcrumbs). The console itself has two ports; a hub is needed for more drives.</li>
+<li><b>Hot-plug:</b> attaching or removing a drive while the dashboard runs refreshes the device cards and plays the connect/disconnect sound (after a two-second settling period at start-up so boot-time mounts stay silent). Cached results are used for drawing; no USB I/O happens while the screen is being drawn.</li>
+<li><b>Also on USB:</b> a USB keyboard (<b>Settings &gt; Input &gt; USB keyboard</b>) shares the same host controller. The optional DS3/DS4 build adds its own USB/Bluetooth controller drivers.</li>
+</ul>
+
+<h2 id="using">Using USB</h2>
+<ol>
+<li>Plug the drive in. If <b>Auto-start USB storage</b> is on (<b>Settings &gt; Storage &amp; devices &gt; Start devices automatically</b>, default off) USB is ready when the dashboard opens. Otherwise the device card reads <em>Not connected</em> (dim) until you open it.</li>
+<li>Open <b>MASS</b> in the Files tab device cards. Launchstation loads the USB drivers (USB host, BDM, BDM file system, USB mass storage), then probes up to four times, 0.6&nbsp;s apart. It accepts the first drive and waits a short time for a second.</li>
+<li>When drives are found there is one card per logical unit (<em>MASS 0</em>, <em>MASS 1</em>&hellip;, status <em>Ready</em>). If none is found the card reads <em>Connect a USB storage device</em>.</li>
+</ol>
+<p>The USB card also appears with a legacy alias <code>mass:</code> (the first available unit). Do not hard-code <code>mass0:</code>: attach order, partitions and other BDM devices (MX4SIO, iLink) all take numbers from the same <code>massN:</code> namespace.</p>
+
+<h2 id="game-use">Using USB for games</h2>
+<table><thead><tr><th>Content</th><th>Layout</th></tr></thead><tbody>
+<tr><td>Applications</td><td><code>mass:/APPS/&lt;app&gt;/</code> and <code>mass:/BOOT/&lt;app&gt;/</code> are scanned by default for the Home application library (one sub-folder deep).</td></tr>
+<tr><td>PS2 ISO (<a href="neutrino.html">Neutrino</a>)</td><td>Any folder; Neutrino can be on the same disk in <code>/neutrino/</code> (or on a memory card). Backend <code>usb</code>.</td></tr>
+<tr><td>PS1 VCD (<a href="popstarter.html">POPStarter</a>)</td><td><code>POPS/*.VCD</code> at the root; <code>POPS/POPSTARTER.ELF</code> is found automatically.</td></tr>
+<tr><td>PS1 CUE/BIN/EXE (<a href="ember.html">Ember</a>)</td><td><code>&lt;folder&gt;/games/&lt;Game&gt;/</code> with <code>ember.elf</code> and <code>bios.bin</code> in the folder above <code>games</code>. USB gets a dedicated remount hand-off.</td></tr>
+</tbody></table>
+
+<h2 id="stability">Stability notes</h2>
+<ul>
+<li>Every USB filesystem probe is a synchronous call to the PS2&rsquo;s I/O processor. Retries are bounded, but a single call that blocks inside the driver cannot be timed out safely by the main CPU.</li>
+<li>If the controller&rsquo;s analog light goes out and animation stops during USB start, the IOP (or PAD/SIO2 session) is stalled. That is a driver/hardware stall, not necessarily a Launchstation reset.</li>
+<li>Two bus-powered drives can exceed the console&rsquo;s USB power budget; use a powered hub.</li>
+<li>Do not unplug a drive while writing. Copy errors name the numeric driver code.</li>
+<li>Launchstation loads the USB host driver <i>before</i> the BDM filesystem modules and uses the pre-rewrite <code>usbd</code> host driver, which avoids a lock-up seen with the newer one on some consoles. Intermittent first-access freezes on setups with many attached devices are still under investigation; see the <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/USB-STABILITY-AUDIT-2026-10-08.md">USB stability audit</a>.</li>
+<li>USB can be started together with HDD, exFAT HDD, iLink and UDPFS. MMCE and MX4SIO can also coexist with USB; only MMCE and MX4SIO exclude each other.</li>
+</ul>
+
+<h2 id="diagnostics">Diagnostics</h2>
+<p><b>Tools &gt; USB unit diagnostics</b> shows the cached logical-unit mask with no I/O, or probes unit 0 or unit 1 one at a time. Each manual probe could freeze a failing console; use it deliberately. Logical <code>usb0:</code>/<code>usb1:</code> numbers do not identify physical ports.</p>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>&ldquo;No USB storage device was found&rdquo;.</b> Check the drive is FAT32/exFAT and has a partition table the console can read; try one drive at a time and a different port.</li>
+<li><b>Second drive missing.</b> It may enumerate after the probe window. Use <b>Check again</b> on the USB card, or attach it before opening USB.</li>
+<li><b>A path with a remembered unit number fails.</b> Re-pick the unit from the device list; numbering follows attach order.</li>
+<li><b>Freezes at start.</b> Boot with only one drive, try a powered hub, and record whether MMCE/MX4SIO/UDPFS were started first. Include the exact build hash.</li>
+</ol>

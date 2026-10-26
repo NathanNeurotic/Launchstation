@@ -1,5 +1,16 @@
 # Plan: early PS2 PC CARD CompactFlash support (Launchstation)
 
+> **Status as of 2026-10-26: partly implemented; the later sections below are older than the code.**
+> Beyond the "Ownership and embedding checkpoint" text, the tree now has: CF listed as **PC CARD CF** in the
+> dashboard device list (`src/dash_devices.c`) and classic root (`src/filer.c`, eligible early-JP ROMs
+> `0100/0101/0110/0120` with region `JC`, or the boot-time show-all/safe-mode override); lazy loading through
+> `loadPcCardCfModules()`; `cf0:`/`cf:` browsing, copy, rename and delete with online checks; direct ELF/ISO/VCD
+> launch **blocked** with an explanatory modal (`src/dash_browser.c`, `src/elf.c`). "CF remains unadvertised"
+> and "no filesystem" are therefore obsolete. **Unchanged:** no filesystem unmount/rescan/safe-remove exists
+> (OFF is not safe removal), and nothing is hardware-verified on SCPH-10000/15000/18000 (L6 launch support is
+> not started). Host evidence: `tests/test_pccf*.py`, `tests/test_cf.c`, `tests/test_cis.c`.
+
+
 **Status:** Driver embedded; EE ownership/probe service and CF-only shutdown implemented; filesystem, transfer safety, UI diagnostics, and launch blocking implemented; physical console verification pending. **Scope:** Launchstation native Files and Devices integration; independent from RiptOPL game loader. **Target base:** `master`.
 
 ## Purpose and non-goals

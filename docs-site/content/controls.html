@@ -1,4 +1,105 @@
-<h1>Controls</h1><p class="lead">Button labels follow configured confirm/cancel mapping, so the face button can differ by region or preference.</p>
-<h2 id="dashboard">Dashboard</h2><table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody><tr><td>Confirm</td><td>Open focused item, device or page.</td></tr><tr><td>Back</td><td>Close or return.</td></tr><tr><td>L1 / R1</td><td>Previous / next top-level section.</td></tr><tr><td>SELECT in Home &gt; Applications</td><td>Cycle Grid, List and Carousel views.</td></tr><tr><td>START</td><td>Open the Dashboard menu from any native screen, including the editor, viewers and dialogs; press START again to close it. SELECT + START still follows the START launch key. Text entry and folder pickers use SELECT for Done / Use this folder; the image viewer slideshow is R3.</td></tr><tr><td>R3 on Home (without SELECT)</td><td>Toggle the background-only display; press R3 again to restore the interface. SELECT + R3 still follows the configured launch key.</td></tr><tr><td>Triangle / Menu</td><td>Context action; Settings exposes save/discard flow.</td></tr></tbody></table>
-<h2 id="tabs">Visible navigation</h2><p>L1/R1 cycles Home, Files, Tools and Settings. Home contains Applications and Last folder; Files opens directly into a persistent native browser. Classic MISC commands are under Tools. Returning to Files preserves the folder and selection.</p><h2 id="browser">File Browser</h2><table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody><tr><td>Confirm</td><td>Open folder/file or launch a supported executable/image.</td></tr><tr><td>Square</td><td>Mark/unmark entry.</td></tr><tr><td>Triangle</td><td>Operations menu.</td></tr><tr><td>Back</td><td>Parent folder / close at root.</td></tr></tbody></table>
-<h2 id="editor">Text Editor</h2><p>See <a href="text-editor.html#navigation">Text Editor navigation</a>. L1/R1 moves to line boundaries with the keyboard hidden; L2/R2 pages vertically. The compact footer keeps all six hints inside the dashboard safe width.</p>
+<h1>Controls</h1>
+<p class="lead">Every screen is driven by the same ten inputs: D-pad (or left stick), Confirm, Cancel, Triangle, Square, L1/R1, L2/R2, START, SELECT and R3. Button labels follow your <b>Confirm button</b> setting, so Circle and Cross swap if you change it.</p>
+
+<h2 id="mapping">Confirm and cancel</h2>
+<p><b>Settings &gt; Input &gt; Confirm button</b> chooses which face button confirms; the other cancels everywhere (default <b>Circle</b> confirms, <b>Cross</b> cancels). Footer hints and dialogs show the right icon automatically. The setting is saved as <code>GUI_Swap_Keys</code>. Both controller ports are read at once and a USB keyboard can be used in parallel.</p>
+<table><thead><tr><th>Input</th><th>General meaning</th></tr></thead><tbody>
+<tr><td>D-pad / left stick</td><td>Navigate. Directions, the left stick and L2/R2 auto-repeat; action buttons never repeat.</td></tr>
+<tr><td>Confirm</td><td>Open, start, select, change.</td></tr>
+<tr><td>Cancel</td><td>Back, close, parent folder.</td></tr>
+<tr><td>Triangle</td><td>Options/menu for the focused item. Also cancels most menus and dialogs.</td></tr>
+<tr><td>Square</td><td>Favorite (applications), mark (browser), select (editor), caps (keyboards), reset one setting (theme rows).</td></tr>
+<tr><td>L1 / R1</td><td>Previous / next tab.</td></tr>
+<tr><td>L2 / R2</td><td>Page or jump to first/last.</td></tr>
+<tr><td>START</td><td>Global dashboard menu.</td></tr>
+<tr><td>SELECT</td><td>Tap: switch application view. Hold: quick-launch overlay.</td></tr>
+<tr><td>R3</td><td>Home: toggle background-only view. Pickers: choose as a <code>uLE:/</code> path.</td></tr>
+</tbody></table>
+
+<h2 id="dashboard">Dashboard (all tabs)</h2>
+<table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody>
+<tr><td>L1 / R1</td><td>Previous / next tab in the order Home, Files, Tools, Settings (wraps). Works inside Files folders and inside Settings pages; leaving Settings with unsaved changes asks first.</td></tr>
+<tr><td>START</td><td>Dashboard menu from any native screen, including the editor, viewers and dialogs: Home, Refresh application library, File Browser, Settings, Reboot IOP, Power off. Press START again to close it. Text entry and folder pickers use SELECT for Done / Use this folder; the image viewer slideshow is R3. SELECT + START still follows the START launch key.</td></tr>
+<tr><td>R3 on Home (without SELECT)</td><td>Toggle the background-only display; press R3 again to restore the interface. SELECT + R3 still follows the configured launch key.</td></tr>
+<tr><td>Hold SELECT + a button</td><td>Quick launch: starts the target assigned to that button under <b>Settings &gt; Launching &gt; Launch keys</b>. A short SELECT tap keeps its normal meaning.</td></tr>
+<tr><td>Any button during the automatic start countdown</td><td>Cancels the automatic start.</td></tr>
+<tr><td>Hold SELECT while Launchstation starts</td><td>Recovery boot (saved dashboard settings ignored for the session).</td></tr>
+</tbody></table>
+<p>Opening a menu does not run dashboard input, device polling or library scans behind it, and animated backgrounds keep running behind menus and tools.</p>
+
+<h2 id="home">Home</h2>
+<table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody>
+<tr><td>Up / Down</td><td>Switch between the Continue row and the Browse &amp; shortcuts row.</td></tr>
+<tr><td>Left / Right</td><td>Move in the row (wraps).</td></tr>
+<tr><td>L2 / R2</td><td>First / last entry of the row.</td></tr>
+<tr><td>Confirm</td><td>Start the application / open the chip.</td></tr>
+<tr><td>Square</td><td>Toggle Favorite.</td></tr>
+<tr><td>Triangle</td><td>Application options.</td></tr>
+<tr><td>R3</td><td>Hide/show the interface (background only). Not when SELECT is held.</td></tr>
+<tr><td>Back (inside Applications)</td><td>Return to Home.</td></tr>
+</tbody></table>
+
+<h2 id="applications">Applications</h2>
+<table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody>
+<tr><td>D-pad</td><td>Grid: 2D; List: Up/Down; Carousel: any direction.</td></tr>
+<tr><td>L2 / R2</td><td>Grid: three rows; List: a page (Left/Right do the same); Carousel: five items.</td></tr>
+<tr><td>Confirm / Square / Triangle</td><td>Start / Favorite / library menu (options, view, filter, refresh).</td></tr>
+<tr><td>SELECT</td><td>Cycle Grid, List and Carousel.</td></tr>
+</tbody></table>
+
+<h2 id="tabs">Tools</h2>
+<p>Up/Down move (skipping group headers), <b>L2/R2</b> jump six rows, Confirm runs the entry (some ask first), START opens the menu.</p>
+
+<h2 id="browser">File Browser</h2>
+<table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody>
+<tr><td>Up / Down</td><td>Move one row (wraps).</td></tr>
+<tr><td>Left, Right, L2, R2</td><td>Page up / page down.</td></tr>
+<tr><td>Confirm</td><td>Open a folder, start an ELF/VCD/ISO/CUE, view an image, edit a text file.</td></tr>
+<tr><td>Square</td><td>Mark/unmark and move down.</td></tr>
+<tr><td>Triangle</td><td>File Browser menu (copy, cut, paste, delete, rename, new folder, size, sort, show, bookmarks...).</td></tr>
+<tr><td>Back</td><td>Parent folder; at the device root Home (or close, in the modal).</td></tr>
+</tbody></table>
+<p>Image viewer and menus are described on the <a href="file-browser.html">File Browser</a> page: Left/Right previous/next image, Up/Down rotate, L2/R2 zoom, left stick pan, Square fullscreen, R3 slideshow, L1/R1 slideshow delay, SELECT reset, Confirm/Back/Triangle close.</p>
+
+<h2 id="editor">Text Editor</h2>
+<p>See <a href="text-editor.html#navigation">Text Editor navigation</a>. In short, with the keyboard hidden: D-pad moves, L1/R1 go to line start/end, L2/R2 page, Square selects, Confirm shows the keyboard, SELECT toggles it, Triangle or START opens the menu, Back exits. With the keyboard shown: D-pad picks a key, Confirm types, Back deletes, Square caps, L1/R1 move the cursor left/right, L2/R2 up/down, Triangle or SELECT hides the keyboard.</p>
+
+<h2 id="settings">Settings</h2>
+<table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody>
+<tr><td>Up / Down</td><td>Move between rows (wraps).</td></tr>
+<tr><td>L2 / R2</td><td>First / last row of the page.</td></tr>
+<tr><td>Confirm or Right</td><td>Open a group or page; edit a path, colour, IP or launch key; open the list of a multi-value choice; run an action.</td></tr>
+<tr><td>Left / Right</td><td>Step a choice or a number (screen position, delays, backup count). On other rows Left goes back.</td></tr>
+<tr><td>Square</td><td>Theme rows: reset this one setting to the preset value. Launch-key rows: edit the title.</td></tr>
+<tr><td>Triangle</td><td>The <b>Changes</b> menu: Save changes, Discard changes, Keep editing (available on every page).</td></tr>
+<tr><td>Back</td><td>Up one page, keeping selection and scroll; at the overview it returns to Home (asking about unsaved changes).</td></tr>
+<tr><td>L1 / R1</td><td>Switch tab (same unsaved-changes prompt).</td></tr>
+</tbody></table>
+<p>Rows that depend on another setting stay visible; pressing them shows a toast explaining what to enable first.</p>
+
+<h2 id="dialogs">Menus, choices and dialogs</h2>
+<table><thead><tr><th>Widget</th><th>Controls</th></tr></thead><tbody>
+<tr><td>Menus and choice lists</td><td>Up/Down (wraps, skipping disabled rows), L2/R2 first/last, Confirm select, Back or Triangle close.</td></tr>
+<tr><td>Confirm dialogs</td><td>Left/Right switch buttons, Confirm accepts the highlighted button, Back cancels. Dangerous actions default to Cancel.</td></tr>
+<tr><td>Name keyboard</td><td>D-pad picks a key, Confirm types, Back deletes, Square caps, L1/R1 move the caret, START done, Triangle cancel; bottom action row Caps, Space, Delete, Done, Cancel.</td></tr>
+<tr><td>IPv4 editor</td><td>Left/Right pick an octet, Up/Down +/-1, L1/L2 -10, R1/R2 +10, Confirm or START accept, Back or Triangle cancel.</td></tr>
+<tr><td>Colour editor</td><td>Up/Down choose Red, Green, Blue, Opacity (where offered) or quick picks; Left/Right -1/+1 (quick picks: previous/next colour); L1/L2 -16; R1/R2 +16; Confirm keeps; Back restores.</td></tr>
+<tr><td>Theme preset list</td><td>Moving the cursor previews the preset live; Confirm keeps it, Back restores your previous theme.</td></tr>
+<tr><td>File/folder picker</td><td>Up/Down, L2/R2 first/last, Confirm open/choose, Back up/cancel, Triangle cancel, START use this folder (folder mode), R3 <code>uLE:/</code> path.</td></tr>
+<tr><td>Folder-dates editor</td><td>Left/Right field, Up/Down change, L1/R1 pick the folder to edit, L2/R2 <i>Next to</i>, Confirm or START apply, Back cancels.</td></tr>
+<tr><td>HDD Manager</td><td>Up/Down, L2/R2 page, Confirm or Triangle partition menu, L1 status, R1 load HDL game info, Back close. See <a href="hdd-manager.html">HDD Manager</a>.</td></tr>
+</tbody></table>
+
+<h2 id="keyboard">USB keyboard</h2>
+<p>Enable <b>Settings &gt; Input &gt; USB keyboard</b> (off by default; the setting is <code>USBKBD_USED</code>). Wherever the dashboard expects a controller, the keyboard acts as a virtual gamepad in addition to the real ones, so you can navigate the whole interface. Most buttons have more than one key because keyboards differ:</p>
+<table><thead><tr><th>Pad</th><th>Keys</th><th>Pad</th><th>Keys</th></tr></thead><tbody>
+<tr><td>Up</td><td>Up arrow, <kbd>w</kbd></td><td>Triangle</td><td>Home, <kbd>i</kbd>, Esc</td></tr>
+<tr><td>Down</td><td>Down arrow, <kbd>z</kbd></td><td>Square</td><td>End, <kbd>j</kbd></td></tr>
+<tr><td>Left</td><td>Left arrow, <kbd>a</kbd></td><td>Circle</td><td>Page Up, <kbd>k</kbd></td></tr>
+<tr><td>Right</td><td>Right arrow, <kbd>s</kbd></td><td>Cross</td><td>Page Down, <kbd>m</kbd></td></tr>
+<tr><td>L1</td><td>F1, <kbd>1</kbd></td><td>R1</td><td>F12, <kbd>0</kbd></td></tr>
+<tr><td>L2</td><td>F2, <kbd>2</kbd></td><td>R2</td><td>F11, <kbd>9</kbd></td></tr>
+<tr><td>L3</td><td>F3, <kbd>3</kbd></td><td>R3</td><td>F10, <kbd>8</kbd></td></tr>
+<tr><td>SELECT</td><td>Insert</td><td>START</td><td>Delete</td></tr>
+</tbody></table>
+<p>In addition, <kbd>Enter</kbd> is always <b>Confirm</b> and <kbd>Space</kbd> is always <b>Cancel</b>, whichever way your Confirm button is mapped. While typing a name (rename, new folder, keyboard dialogs) the keyboard types directly: Left/Right/Home/End move the caret, Backspace and Delete erase, <kbd>Enter</kbd> accepts and <kbd>Esc</kbd> cancels. In the Text Editor it types straight into the document. A different USB keyboard driver or key map can be set under Settings &gt; Input &gt; USB keyboard. There is no mouse support. See also <code>docs/keyboard.txt</code> in the repository.</p>

@@ -1,6 +1,41 @@
-<h1>PSX, Deckard &amp; RetroGem</h1><p class="lead">R3Z carries hardware-specific behavior for later slim consoles, DESR PSX systems and RetroGem-equipped consoles.</p>
-<h2 id="deckard">Deckard PS2 models</h2><p>On Deckard-family slim systems without a conventional internal expansion-bay HDD path, internal HDD/ATA cards are hidden where they are not meaningful. This avoids presenting dead hardware paths as normal choices.</p>
-<h2 id="psx">Sony PSX / DESR</h2><p>PSX-specific devices such as <code>xfrom:</code> and <code>dvr_hdd0:</code> are exposed only on compatible DESR hardware. The exploit installer also recognizes PSX-family targets and chooses the appropriate installation/header behavior.</p>
-<h2 id="retrogem">RetroGem Game ID</h2><p>The project includes RetroGem Game ID support for PixelFX RetroGem workflows. This allows compatible launch paths to communicate game identity to the video hardware where configured.</p>
-<h2 id="dual-hdd">Dual HDD / ATA groundwork</h2><p>The standard build includes dual HDD/ATA support groundwork for ongoing development. Treat experimental combinations as hardware-test territory and report exact console/device details when something differs from the primary paths.</p>
-<h2 id="reports">Hardware-specific reports</h2><p>Always include the exact console model. Behavior that is correct on a fat SCPH with DEV9/HDD can be intentionally different on a Deckard slim or a DESR PSX.</p>
+<h1>PSX, Deckard &amp; RetroGem</h1>
+<p class="lead">Launchstation adapts to the console it runs on: it hides hardware that cannot exist, shows PSX-only devices on a DESR PSX, offers PC CARD CompactFlash on early Japanese models, and can emit the Game ID signal that a PixelFX RetroGem reads. Always include the exact console model in reports; behaviour that is correct on a fat SCPH with an HDD can be intentionally different on a slim or a PSX.</p>
+
+<h2 id="models">What shows up on which console</h2>
+<table class="matrix"><thead><tr><th>Console</th><th>HDD / ATA</th><th>iLink</th><th>PC CARD CF</th><th>PSX flash / DVR HDD</th></tr></thead><tbody>
+<tr><td>Early Japanese retail PS2 (ROM 1.00, 1.01, 1.10, 1.20 with region <code>JC</code>)</td><td>Listed (ROM below 2.20), but these models have no expansion bay</td><td>Yes (ROM &lt; 1.70)</td><td>Eligible</td><td>No</td></tr>
+<tr><td>Other fat PS2 with the expansion bay (ROM below 2.20)</td><td>Yes</td><td>Yes below ROM 1.70, hidden from 1.70</td><td>No</td><td>No</td></tr>
+<tr><td>Slim &ldquo;Deckard&rdquo; class (ROM 2.20 or newer)</td><td>Hidden automatically</td><td>Hidden</td><td>No</td><td>No</td></tr>
+<tr><td>Sony PSX (DESR)</td><td>APA HDD card hidden; use PSX DVR HDD</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+<tr><td>Unknown or non-retail ROM</td><td>Per ROM number</td><td>Shown</td><td>No</td><td>No</td></tr>
+</tbody></table>
+<p>Hold <b>SELECT</b> while Launchstation starts to override the HDD/ATA, PSX flash/DVR and CF-entry hiding for that boot (iLink visibility is not overridden). Combined with the safe-mode side effect, that is the quickest way to test whether a hidden device is really unsupported.</p>
+
+<h2 id="deckard">Deckard PS2 models</h2>
+<p>On consoles whose ROM version is 2.20 or newer there is no internal expansion-bay HDD, so the <b>Internal HDD (APA)</b> and <b>exFAT HDD</b> cards are hidden. This avoids presenting dead hardware paths as normal choices. USB, MMCE, MX4SIO and the network remain available. On consoles with a PowerPC-type IOP, disc launches also load the XPARAM module, which applies Sony&rsquo;s per-title compatibility values (CPU delay, data-cache) from a built-in table before the game starts; this is automatic and has no setting.</p>
+
+<h2 id="psx">Sony PSX / DESR</h2>
+<p>On a DESR console Launchstation exposes <b>PSX Flash</b> (<code>xfrom0:</code>, the internal flash) and <b>PSX DVR HDD</b> (<code>dvr_hdd0:</code>, the recorder disk) and keeps iLink visible. Both are file-management devices; the exploit installer recognises the PSX and selects the PSX target. The HDD Manager works but refuses to format the PSX disk. They appear on other consoles only in the SELECT-held recovery boot, where they are not expected to work. See the <a href="exploit-installer.html">exploit installer</a> for PSX targets and key requirements.</p>
+
+<h2 id="pc-card-cf">Early PS2: PC CARD CompactFlash</h2>
+<p>Launchstation can read a CompactFlash card (or an SD card through a CF bridge) in the PCMCIA slot of early Japanese consoles (SCPH-10000, 15000, 18000 and the same ROM family). The device is <b>PC CARD CF</b> (<code>cf0:</code>). It supports browsing and file management on FAT32/exFAT; launching programs or games from it is deliberately unavailable, and the driver and DEV9 never run together. It has not been verified on a physical console yet. Full details, limits and troubleshooting are on the PC CARD CF page of the Storage &amp; Devices section.</p>
+
+<h2 id="retrogem">RetroGem Game ID</h2>
+<p>The PixelFX RetroGem reads a small two-frame signal that Launchstation draws on the video output just before it hands control to a game or program. It is a row of paired pixels along the lower part of the picture that encodes the ID (up to 11 characters, with a checksum); the picture is otherwise black for those frames and then cleared. It is separate from the MMCE &ldquo;Game ID&rdquo; command, which selects a per-game memory card on the adapter.</p>
+<table><thead><tr><th>Launch</th><th>ID source</th><th>Setting</th></tr></thead><tbody>
+<tr><td>Physical PS2 or PS1 disc</td><td><code>SYSTEM.CNF</code> boot file</td><td><b>Game ID launch signal for discs</b> (default on)</td></tr>
+<tr><td>Neutrino ISO</td><td>ISO <code>SYSTEM.CNF</code> <code>BOOT2</code></td><td>discs setting</td></tr>
+<tr><td>POPStarter VCD</td><td>VCD <code>SYSTEM.CNF</code>, then PS1 timestamp database, then file name</td><td>discs setting</td></tr>
+<tr><td>Ember CUE / BIN / EXE</td><td>Data track <code>SYSTEM.CNF</code> and timestamp database; a standalone EXE gets none</td><td>discs setting</td></tr>
+<tr><td>Other ELF</td><td>Title-ID-like file name</td><td><b>Game ID launch signal for apps</b> (default off)</td></tr>
+</tbody></table>
+<p>Both switches are under <b>Settings &gt; Launching &gt; Game ID output</b> (also in the classic Advanced settings). If you see brief coloured bars when starting an ELF, the apps switch is on; turn it off if your display adapter does not use it. The signal is only drawn, never required for the launch to succeed. A missing or unrecognised ID simply omits it. Physical RetroGem recognition has not been verified by the project, and a drawn signal is not proof the adapter decoded it.</p>
+
+<h2 id="dual-hdd">Dual HDD / ATA</h2>
+<p>The standard build contains groundwork for two APA units (<code>hdd0:</code>, <code>hdd1:</code>) and two exFAT units (<code>ata0:</code>, <code>ata1:</code>). Unit 1 is hidden by default (<b>Hide HDD1 + ATA1</b>); change it under Settings &gt; Storage &amp; devices. Treat dual-drive operation as hardware-test territory: an enumerated second unit is not proof of working dual-drive operation.</p>
+
+<h2 id="ds34">DualShock 3/4 build</h2>
+<p>A separate &ldquo;DS&rdquo; package includes the DS3/DS4 USB and Bluetooth controller drivers. It needs its own console validation with concurrent storage use; the standard package is the better choice unless you need those pads.</p>
+
+<h2 id="reports">Hardware-specific reports</h2>
+<p>Please include: console model and ROM version (Tools &gt; System information), attached adapters and drives, whether the same device worked in the classic launcher, whether it needs a SELECT-held boot to appear, the exact build hash, and any on-screen message.</p>

@@ -1,6 +1,25 @@
 //--------------------------------------------------------------
 // File name:   keyboard.txt
 //--------------------------------------------------------------
+LAUNCHSTATION NOTE (verified against src/pad.c, src/dash_widgets.c and
+src/dash_editor.c, 2026-10-26)
+
+The key map below is still exactly what the program uses. In Launchstation:
+ * The USB keyboard is OFF by default. Turn it on with Settings > Input >
+   USB keyboard (saved as USBKBD_USED = 1 in LAUNCHELF.CNF). The optional
+   driver (USBKBD_FILE) and key-map (KBDMAP_FILE) rows are enabled only when
+   it is on.
+ * The dashboard, File Browser, Settings and every dialog read the keyboard
+   as a virtual gamepad using the table below, in parallel with controllers
+   in port 1 and port 2. There is no mouse support.
+ * Text entry (rename, new folder, theme name, clock, paths) uses the
+   file-name mapping below. In the dashboard's name keyboard Enter accepts,
+   Esc cancels, Backspace/Delete erase, Left/Right/Home/End move the caret.
+ * The Text Editor types directly into the document (printable keys, Enter,
+   Tab, Backspace, Delete, arrows, Home/End, Page Up/Down); Esc opens its
+   menu.
+ * Keyboard input is ignored while background storage work is using the IOP.
+
 From version v3.65 uLaunchELF supports use of USB keyboard, both for entry of
 file and folder names, and for general control and navigation, in which the
 keyboard can be used as a replacement for the gamepad. In fact you can use

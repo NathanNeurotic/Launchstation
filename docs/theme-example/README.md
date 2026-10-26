@@ -37,5 +37,23 @@ To use only your own wallpaper without a theme folder, choose
   theme wallpaper. The separate `wallpaper = focused` key displays app
   cover art over it; the bundled example leaves that feature off.
 
+## If it does not load
+
+- The folder must be named under a `THEMES/` folder that is either beside the
+  Launchstation ELF or next to `DASHBOARD.CNF`, and its device must already
+  be running (loading a theme never starts a device driver; open the device
+  once from the Files tab first).
+- `theme.cfg` and `background.png` must sit directly in the same folder;
+  `image = background.png` is resolved relative to that folder. A missing or
+  unreadable image falls back to the gradient colours in `theme.cfg`.
+- `theme.cfg` is read only when you choose **Load theme from folder...**
+  (never at startup) and must be under 16 KB. Unknown keys are ignored.
+- The loaded theme is copied into `DASHBOARD.CNF`, so it keeps working if the
+  folder is later removed, except that its image is read from the folder.
+  Remember to save the Settings changes (Triangle > Save changes).
+- This example uses `preset = towers` as a starting point. Start your own theme
+  with **Export theme to folder...** to get a complete `theme.cfg` for the
+  theme you are currently using.
+
 See [Dashboard themes](../themes.md) and the
 [website's theme guide](https://nathanneurotic.github.io/Launchstation/themes.html).

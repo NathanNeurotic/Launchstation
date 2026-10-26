@@ -12,6 +12,10 @@ same active theme.
 
 ## Built-in themes
 
+There are 18 presets (`Settings > Appearance > Theme preset`); OSD Classic is
+the default. A matching user-facing guide is on the documentation site
+(<https://nathanneurotic.github.io/Launchstation/themes.html>).
+
 | Theme | Background | Look |
 |-------|------------|------|
 | **OSD Classic** (default) | System tunnel | Indigo tunnel like the PS2 system menu backdrop with the main menu's clock orbs, OSDSYS highlight blue, accent-bar selection |
@@ -62,10 +66,15 @@ the colour-swap selection.
   edited one).
 * **Customize theme** opens the theme's customization groups.
 * **Screen calibration** contains video mode, X/Y position and screen reset.
-* **Background motion**: 0-200% in 10% steps. 0% freezes the scene, 100%
-  is the normal speed, and 200% doubles it.
-* **Menu animation**: 0-200% in 10% steps. 0% makes transitions instant;
-  larger values keep transitions moving for longer.
+* **Background motion**: 0-200% in 10% steps (default 100%). 0% freezes the
+  scene, 100% is the normal speed, and 200% doubles it. Old files that stored
+  0/1/2 load as 0/50/100%.
+* **Menu animation**: 0-200% in 10% steps (default 100%). 0% makes
+  transitions instant; larger values keep transitions moving for longer.
+* **Panel transparency**: 0-100% opacity of the Panels colour (0% removes menu
+  panels).
+* **Control icon backings** (default On): theme-derived badges behind
+  face-button and D-pad symbols and quick-action chips.
 * **Theme files & resets** contains import, export, theme name, reset to the
   current preset and restore OSD Classic.
 * **Reset appearance** restores screen calibration, motion, animation and
@@ -78,16 +87,16 @@ puts that group back to the values of the preset the theme started from.
 
 | Group | Options |
 |-------|---------|
-| Background | Background type, Colour, Second colour, Brightness (10-200 %), CRT scanlines, Wallpaper image... |
+| Background | Background type (19, see `background` below), Colour, Second colour, Brightness (10-200 %), CRT scanlines, Wallpaper image... (choosing one switches the type to Wallpaper image) |
 | Interface colours | Text, Secondary text, Muted text, Selected text, Accent, Selection (with opacity), Panels (with opacity), Borders (with opacity), Warnings |
 | Tiles & menus | Tile style (memory card, rounded, chamfered, floating object, crystal slab), Selection style (solid bar, accent bar, outline, text colour), Corners (square, soft, round), Glow |
 | Text | Font (Roboto, System), external System font file, Text size (90-115 %), Bold, Text shadow |
-| Icons | Icon colour (text colours, accent, monochrome), Default app icon (application, device, initials), Custom app icon image... |
+| Icons | Icon colour (text colours, accent, monochrome), Default app icon (application, device, initials), Custom app icon image... (up to 128x128) |
 | Clock | Clock (off, standard, system), Position (header, footer), Hours (system, 24-hour, 12-hour), Seconds, Date (system, YYYY/MM/DD, MM/DD/YYYY, DD/MM/YYYY, off) |
-| Artwork background | App artwork background (off, focused app), Artwork dimming. Enable artwork loading under Settings > Home & applications. |
+| Artwork background | App artwork background (off, focused app), Artwork dimming (0-90 %, default 65 %). Enable artwork loading under Settings > Home & applications. |
 
 Motion and animation belong to Appearance. Panel opacity is edited with the
-Panels colour under Interface colours. Group resets only reset that group's
+Panels colour under Interface colours (or Appearance > Panel transparency). Group resets only reset that group's
 controls; resetting Tiles & menus does not change panel opacity. Clock
 format controls are unavailable while the clock is off; artwork-background
 controls explain their artwork-loading dependency when unavailable.
@@ -119,7 +128,7 @@ when this happened.
   gradient top, *Second colour* the gradient bottom.
 * **Scenes**: *Colour* tints the scene (tower walls, clouds, lights, grid
   lines...), *Second colour* is its base.
-* **Wallpaper image**: pick a PNG with the File Browser. It is
+* **Wallpaper image**: pick a PNG with the file picker. It is
   cover-fitted (aspect ratio kept, excess cropped) to the 4:3 screen. When
   the file is missing or cannot be read, the gradient is shown instead.
 * **App artwork background**: while an application with artwork is
@@ -255,8 +264,10 @@ Theme folders are looked up in two places, in this order:
    wherever the ELF goes, with no device handling.
 2. `THEMES/` in the dashboard folder described above.
 
-Both are only read from devices whose driver is already running. *Save
-theme to folder...* writes to the first of these that is writable.
+Both are only read from devices whose driver is already running. *Export
+theme to folder...* writes to the first of these that is writable and
+available, immediately, without saving the Settings session. A `theme.cfg`
+larger than 16 KB is not read.
 
 Theme folders are only read when you choose *Load theme from folder...*,
 never at startup, and their device must already be available (loading a

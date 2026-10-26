@@ -6,10 +6,12 @@ body:
   - type: markdown
     attributes:
       value: |
-        ### __Disclaimer:__
-        Issue reports must be for Launchstation builds from this repository. Issues with other Launchstation variants belong to their respective projects.
-        Issue reports for consoles with installed and enabled modchip are considered as incomplete reports (we won't ignore you, but confirmation that the issue can be reproduced on a virgin console will be appreciated).
-        ## Before posting the issue confirm that you meet the below requirements.
+        ### Before you report
+        Reports must be for Launchstation builds from this repository ([NathanNeurotic/Launchstation](https://github.com/NathanNeurotic/Launchstation)). Problems that also happen in upstream wLaunchELF_R3Z, in Neutrino, POPStarter, Ember or OPL belong to those projects' trackers; tell us if you are unsure.
+        Reports from consoles with an installed and enabled modchip are considered incomplete (we won't ignore you, but confirmation that the issue can be reproduced on an unmodified console is appreciated).
+        A passing CI build does not prove hardware behavior, so details about your hardware are the most useful part of a report. See [Troubleshooting](https://nathanneurotic.github.io/Launchstation/troubleshooting.html) first.
+
+        **Never paste or attach** `WLE-CLOUD.TOK`, `WLE-CLOUD.CNF`, `PS2KEYS.dat` or other secrets.
 
   - type: checkboxes
     id: terms
@@ -18,38 +20,181 @@ body:
       description: "Check before posting"
       options:
         - label: I have checked existing [__Issue reports__](https://github.com/NathanNeurotic/Launchstation/issues) for duplicates and found none
-        - label: I downloaded Launchstation from this repository's [releases](https://github.com/NathanNeurotic/Launchstation/releases)
+          required: true
+        - label: I downloaded Launchstation from this repository's [releases](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest) or built it from this repository's source
+          required: true
+        - label: I tried the latest rolling release (or say below why I could not)
 
   - type: markdown
     attributes:
       value: |
-        ### Configuration
-        > (please complete the following information):
+        ### Build
+        > Tools > About Launchstation (or System information) shows the commit.
+
+  - type: input
+    id: oplver
+    attributes:
+      label: "Launchstation commit"
+      description: "The commit shown in Tools > About Launchstation. A build marked `local` was not made from a Git checkout."
+      placeholder: "eg: 0a70367c1d2e"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: variant
+    attributes:
+      label: Package
+      description: Which file you installed, or how you built it.
+      options:
+        - Standard (APP_LAUNCHSTATION)
+        - DualShock / DS34 (APP_LAUNCHSTATION-DS)
+        - Built from source with PS2BUILD (LLVM/Clang)
+        - Built from source with PS2BUILD (GCC)
+        - Built with the legacy Makefile
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: toolchain
+    attributes:
+      label: Build details (only if you built it yourself)
+      description: "`ps2build version` output, host OS, and any changes to `ps2.yaml`."
+      placeholder: "eg: ps2build v2026.10.15, llvm-toolchain v0.3.8, Ubuntu 24.04, unmodified"
+
+  - type: markdown
+    attributes:
+      value: |
+        ### Console and setup
 
   - type: input
     id: console
     attributes:
       label: Console model
-      description: you can see it on the console sticker or inside OSDSYS (press triangle on main menú)
+      description: Printed on the console sticker; also shown in Tools > System information.
       placeholder: SCPH-????? / DTL-H????? / DESR-????? / COH-H?????
     validations:
       required: true
 
   - type: input
-    id: oplver
+    id: rom
     attributes:
-      label: "Launchstation commit code"
-      description: "you can see it on (Filebrowser > MISC > Debug Info)"
-      placeholder: "eg: commit 0a70367"
+      label: ROM version / region
+      description: Tools > System information shows the ROM version and region.
+      placeholder: "eg: ROMVER 0160 E 2004..., PAL"
+
+  - type: dropdown
+    id: boot
+    attributes:
+      label: How Launchstation was started
+      options:
+        - Memory card exploit installer (Launchstation-installed)
+        - FreeMcBoot / FreeHDBoot
+        - PS2BBL / PS2BBLE / OSDMenu
+        - Open PS2 Loader (OPL) or WLE-IGR return
+        - ps2client / PS2Link / FTP-triggered launch
+        - Disc or other launcher
+        - Other
     validations:
       required: true
+
+  - type: input
+    id: bootpath
+    attributes:
+      label: ELF location
+      description: The device and path of the running ELF.
+      placeholder: "eg: mc0:/APP_LAUNCHSTATION/LAUNCHSTATION.ELF, mass:/APPS/..., mmce0:/..."
+
+  - type: dropdown
+    id: modchip
+    attributes:
+      label: Modchip
+      options:
+        - No modchip
+        - Modchip installed but disabled
+        - Modchip installed and enabled
+        - Not sure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: devices
+    attributes:
+      label: Devices connected or involved
+      description: Tick everything attached, even if you think it is unrelated.
+      options:
+        - label: Memory card (mc0/mc1)
+        - label: MMCE (SD2PSX, MemCard PRO 2 or similar)
+        - label: MX4SIO
+        - label: USB mass storage
+        - label: Internal HDD (APA/PFS) or exFAT ATA drive
+        - label: iLink / FireWire
+        - label: PC CARD CompactFlash
+        - label: Network (Ethernet adapter, FTP or UDPFS)
+        - label: Disc drive
+        - label: PSX DESR flash / DVR HDD
+        - label: USB keyboard or other USB devices
+
+  - type: textarea
+    id: devices_detail
+    attributes:
+      label: Device details
+      description: Brand, size, filesystem (FAT32/exFAT/PFS), USB hub use, which port or slot, and for network issues the adapter and whether it is wired directly or via a switch.
+      placeholder: "eg: 128 GB exFAT USB stick in the front port, SD2PSX in slot 1, internal 500 GB HDD"
+
+  - type: input
+    id: video
+    attributes:
+      label: Video output and display
+      description: Cable or adapter, resolution/video mode, and display (important for display, flicker or color issues).
+      placeholder: "eg: component to RetroTINK, 480p, progressive, 4:3 / HDMI-adapter + 16:9 TV"
+
+  - type: markdown
+    attributes:
+      value: |
+        ### The problem
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Dashboard / navigation / themes
+        - File Browser / copy / PSU / saves
+        - Storage detection (USB, HDD, MMCE, MX4SIO, iLink, CF)
+        - Network (FTP, PS2Link, UDPFS, remote commands)
+        - Google Drive backup or cloud recovery
+        - Update check / in-app updater
+        - MMCE backup, IGR or recovery
+        - Neutrino / POPStarter / Ember launch
+        - Controllers (including DS34)
+        - Memory card exploit installer
+        - Sound / BGM
+        - Build or documentation
+        - Other
 
   - type: textarea
     id: explanation
     attributes:
       label: Describe the issue
-      description: A clear and concise description of what the issue is.
+      description: A clear and concise description of what the issue is and what you expected instead.
       placeholder: My issue is...
     validations:
       required: true
 
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The shortest sequence that triggers it, and how often it happens (always, sometimes, once).
+      placeholder: |
+        1. Boot ...
+        2. Open Files > ...
+        3. ...
+
+  - type: textarea
+    id: media
+    attributes:
+      label: Photos, logs or screenshots
+      description: Photograph the whole screen for error dialogs, including any stage, code and build text. Attach files or paste images here. For storage, network or crash reports, say whether it also happens after Tools > Reboot IOP and with only the affected device attached.

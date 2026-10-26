@@ -1,0 +1,45 @@
+<h1>Memory Cards</h1>
+<p class="lead">The two PS2 memory-card slots are always available: their services load at start-up, they are polled in the background, and they are where saves, exploit folders, the Launchstation install and several helper files live.</p>
+
+<h2 id="cards">Slot cards and what they report</h2>
+<p>The Files tab shows <b>mc0 (Slot 1)</b> and <b>mc1 (Slot 2)</b> (<code>mc0:</code>, <code>mc1:</code>). A background poller checks each slot, so the card never blocks while the screen is drawing. Status lines:</p>
+<table><thead><tr><th>Status</th><th>Meaning</th></tr></thead><tbody>
+<tr><td><em>PS2 memory card</em> / <em>PS1 memory card</em></td><td>A card answered. PS2 cards also show free space in MB (&ldquo;1.25 MB free of 8 MB&rdquo;) and a usage bar that turns red above 90%.</td></tr>
+<tr><td><em>Slot empty</em></td><td>No card. The card is shown but cannot be focused; browsing says &ldquo;Insert a memory card into this slot&rdquo;.</td></tr>
+<tr><td><em>Checking&hellip;</em></td><td>The first poll has not finished. Opening the card forces the check.</td></tr>
+<tr><td><em>Not responding &ndash; open to retry</em></td><td>The poll failed (card removed mid-read, or the SIO2 bus is busy). Opening the card retries; this also switches the IOP away from MX4SIO if that stack owns slot 2.</td></tr>
+</tbody></table>
+<p><b>Settings &gt; Storage &amp; devices &gt; Hide empty memory card slots</b> removes empty slots (and unused MMCE entries) from the File Browser. Card states are re-checked in the background while the dashboard is running.</p>
+
+<h2 id="uses">What lives on a memory card</h2>
+<table><thead><tr><th>Item</th><th>Location</th></tr></thead><tbody>
+<tr><td>Save games, PSU backups</td><td>Card root folders; see <a href="saves.html">Saves, PSU &amp; Timestamp Tools</a></td></tr>
+<tr><td>Launchstation install</td><td>The install folder from the release package (<code>LAUNCHSTATION.ELF</code>, <code>title.cfg</code>, <code>BGM.ADP</code>&hellip;). Home scans <code>mc:/APPS</code> and <code>mc:/BOOT</code> for applications by default.</td></tr>
+<tr><td>Settings</td><td><code>DASHBOARD.CNF</code>, <code>DASHAPPS.CNF</code>, <code>DASHLIB.CNF</code> beside the loaded configuration or ELF, falling back to <code>mc0:/SYS-CONF/</code></td></tr>
+<tr><td>Network config</td><td><code>mcN:/SYS-CONF/IPCONFIG.DAT</code> (after the ELF&rsquo;s own folder)</td></tr>
+<tr><td>Exploit installs</td><td><code>BIEXEC-SYSTEM</code>/<code>BAEXEC-SYSTEM</code>/<code>BEEXEC-SYSTEM</code>/<code>BCEXEC-SYSTEM</code> and <code>BOOT/BOOT.ELF</code>; see <a href="exploit-installer.html">exploit installer</a></td></tr>
+<tr><td>Neutrino install</td><td>Optional <code>mc0:/neutrino/</code> or <code>mc1:/neutrino/</code>; see <a href="neutrino.html">Neutrino</a></td></tr>
+<tr><td>OSD game history</td><td><code>mcN:/B?DATA-SYSTEM/history</code> (the second letter depends on the console region), written for disc launches so MMCE adapters can follow the game</td></tr>
+<tr><td>Updated DVD player</td><td><code>mc0:/BREXEC-DVDPLAYER/dvdplayer.elf</code> (or <code>mc1:</code>) is used for DVD Video when present</td></tr>
+<tr><td>IGR helper (non-MMCE boots)</td><td><code>mcN:/BOOT/WLE-IGR.ELF</code>; see <a href="igr.html">IGR</a></td></tr>
+</tbody></table>
+<p>A memory card cannot hold Neutrino ISOs, POPStarter VCDs or Ember games (too small and not a supported backend), but it is a valid place for the Neutrino loader.</p>
+
+<h2 id="limits">Limits</h2>
+<ul>
+<li>PS2 card names are short (about 32 characters); a longer name must be shortened, or the save wrapped in a PSU.</li>
+<li>Directory and file operations on a card are slower than on USB. Large copies use small transfer chunks so the progress overlay can update; a call that blocks inside the IOP still cannot redraw until it returns.</li>
+<li>Folders recognised as exploit folders ask for confirmation before deletion or modification and cannot be renamed from the dashboard.</li>
+<li>Opening <code>mc1:</code> while MX4SIO is the active stack resets the IOP back to the memory-card stack; copying directly between MX4SIO and <code>mc1:</code> is refused.</li>
+</ul>
+
+<h2 id="mmce">MMCE adapters in a slot</h2>
+<p>An SD2PSX or MemCard PRO2 in a slot also works as a normal memory card for games; its SD card is reached separately as <b>MMCE Slot 1/2</b>. See <a href="mmce.html">MMCE</a>. MMCE and MX4SIO cannot be used in the same session without an IOP reset.</p>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>Card shows &ldquo;Not responding&rdquo;.</b> Re-seat the card, then open it. If you recently used MX4SIO, wait for the IOP reset to finish.</li>
+<li><b>Free space looks wrong.</b> The bar compares to an 8 MB card; larger third-party cards report MB only.</li>
+<li><b>Save titles show as file names.</b> Switch the browser&rsquo;s Show mode to a game-title view.</li>
+<li><b>Everything on mc1 vanished after SD use.</b> Slot 2 belongs to MX4SIO while that stack is active; open the card again to restore it.</li>
+</ol>

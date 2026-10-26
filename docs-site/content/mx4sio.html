@@ -1,0 +1,35 @@
+<h1>MX4SIO SD Card</h1>
+<p class="lead">MX4SIO is an SD-card adapter that plugs into memory-card slot 2 and talks to the console over the same SIO2 bus. Launchstation treats the card as a normal FAT32/exFAT BDM device for browsing, applications, ISOs, VCDs and Ember games.</p>
+
+<div class="callout amber"><div class="h">It shares a bus with memory card slot 2 and with MMCE</div><p>While the MX4SIO driver is active, slot 2 belongs to the adapter. Opening <code>mc1:</code> makes Launchstation reset the IOP back to the memory-card stack, and loading MMCE does the same. MMCE and MX4SIO cannot be active together, and transfers between MX4SIO and <code>mc1:</code> or between MX4SIO and MMCE are refused. Slot 1 (<code>mc0:</code>) is unaffected.</p></div>
+
+<h2 id="open">Opening MX4SIO</h2>
+<p>The device card is <b>MX4SIO SD Card</b> (<code>mx4sio:</code>). It starts <em>Not connected</em> (not checked). Selecting it loads the MX4SIO block driver on top of the BDM core, then retries opening <code>mx4sio:/</code> for up to two seconds so a slow SD card can finish mounting. A readable card reads <em>Ready (slot 2)</em>; otherwise <em>No MX4SIO storage found</em>. If an MMCE stack is resident, the IOP is reset first (audio and controller are rebuilt); if that reset is refused the driver is not loaded and the card reports as absent.</p>
+<p><b>Settings &gt; Storage &amp; devices &gt; Start devices automatically &gt; Auto-start MX4SIO</b> (off by default) loads it at start. Enabling it turns the MMCE auto-start off, and you cannot enable it while booted from MMCE.</p>
+
+<h2 id="use">Using the card</h2>
+<table><thead><tr><th>Use</th><th>Notes</th></tr></thead><tbody>
+<tr><td>File Browser</td><td>List, copy, rename, delete; FAT32 and exFAT.</td></tr>
+<tr><td>Applications</td><td>Only the folders listed under <b>Settings &gt; Home &amp; applications &gt; Application library &gt; Application folders</b> are scanned; add a folder such as <code>mx4sio:/APPS</code> if you want the library to include the card.</td></tr>
+<tr><td>Neutrino ISO</td><td>Backend <code>mx4sio</code>; ISO and (optionally) Neutrino can be on the card.</td></tr>
+<tr><td>POPStarter VCD</td><td><code>mx4sio:/POPS/*.VCD</code> with <code>POPSTARTER.ELF</code> next to it.</td></tr>
+<tr><td>Ember</td><td>Umbrella folder anywhere on the card; the existing mount is kept for the hand-off.</td></tr>
+<tr><td>IGR</td><td>If Launchstation is started from MX4SIO, the IGR trampoline is placed on a physical memory card (slot 1 is tried first); see <a href="igr.html">IGR</a>.</td></tr>
+</tbody></table>
+<p>Neutrino&rsquo;s optional MMCE Game ID card switch is skipped entirely while MX4SIO is active, and per-game Neutrino profiles are not written to a memory card while the MX4SIO stack owns the bus.</p>
+
+<h2 id="limits">Limits</h2>
+<ul>
+<li>Not at the same time as MMCE or <code>mc1:</code> (see above). Stack changes reset the IOP, so other device checks are repeated afterwards.</li>
+<li>Numbering: an MX4SIO card can also take a <code>massN:</code> name from the shared BDM namespace; use the <b>MX4SIO SD Card</b> device rather than a remembered number.</li>
+<li>Adapter and SD card compatibility (speed class, size, firmware) is not catalogued; report the adapter model.</li>
+<li>Loading shows a frame before the blocking driver call and refreshes again when it returns, but cannot animate during a call that stalls.</li>
+</ul>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>&ldquo;No MX4SIO storage found&rdquo;.</b> Check the adapter is in slot 2, the card is FAT32/exFAT, and no MMCE adapter is in the way of the IOP reset. Try <b>Detect now</b>.</li>
+<li><b>Card appears slowly or after a retry.</b> Mount settling is tolerated for two seconds; slower cards may need a second <b>Detect now</b>.</li>
+<li><b>Memory card slot 2 is missing.</b> It returns when you open <code>mc1:</code>; Launchstation resets the IOP for you.</li>
+<li><b>Frame drops while loading.</b> Module entry is a synchronous call; report console model, adapter and build hash.</li>
+</ol>

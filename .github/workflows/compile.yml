@@ -148,6 +148,18 @@ jobs:
           python3 tests/test_update_sidecar_transaction.py
           python3 tests/test_update_ancestry.py
           python3 tests/test_png_viewer.py
+          python3 tests/test_bookmark_routes.py
+          python3 tests/test_classic_settings_persistence.py
+          python3 tests/test_elisa_font_load.py
+          python3 tests/test_ember_gameid.py
+          python3 tests/test_ember_retrogem_handoff.py
+          python3 tests/test_misc_settings_dispatch.py
+          python3 tests/test_navigation_wraparound.py
+          python3 tests/test_popstarter_retrogem.py
+          python3 tests/test_r3z_browser_contract.py
+          python3 tests/test_r3z_video_switch.py
+          python3 tests/test_sjis_dashboard_titles.py
+          python3 tests/test_zack_launch_sizing.py
 
       - name: Validate documentation site
         run: |

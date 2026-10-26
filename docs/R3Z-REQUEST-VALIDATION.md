@@ -1,5 +1,13 @@
 # R3Z request implementation and validation
 
+> **Status as of 2026-10-26: historical validation record for PR #208 (merged, `fa8f814`); not a live checklist.**
+> R3Z-01 (`consoleHasIlink`, `src/init.c`), R3Z-02..05 (Files tab navigation, `src/dash_files.c`,
+> `src/dash_browser.c`), R3Z-09 (GS mode switch) and R3Z-12 (manager-only MMCE Game ID) are in the tree.
+> The R3Z-11 row says "Ember excluded"; the later *Ember RetroGem follow-up* section supersedes it.
+> Test counts quoted below (16, 27, 35 scripts) were true when written; `tests/` now holds many more
+> and CI runs the full set. **Still open:** every hardware check under *Remaining hardware checks*.
+
+
 2026-10-25, branch `codex/r3z-review-changes`, based on
 `b815d10da29274200572e61467d72a718004a708`.
 

@@ -1,3 +1,25 @@
+=====================================================================
+LEGACY / PARTLY OUTDATED (annotated 2026-10-26)
+
+This note describes the v4.32-era classic browser behaviour for several
+USB drives and partitions. Launchstation still discovers several USB mass
+storage units, but differs in these ways:
+  * The dashboard lists USB under the public name "MASS" and shows each
+    detected unit; the internal path form is usbN: (a legacy massN: alias
+    is accepted). usb0/usb1 style numbers are logical enumeration units,
+    not physical port numbers.
+  * USB drivers are loaded on demand (or by Settings > Storage & devices >
+    Start devices automatically); the browser does not need you to browse
+    to "mass:" first, and a hot-plug is picked up by the device poll rather
+    than only when you press Triangle in the device list.
+  * Tools > Storage > USB unit diagnostics shows the cached unit mask and
+    can probe logical unit 0 or 1 once; use it to diagnose two-drive setups.
+  * The "5 second" rescan limit, the exact numbering rules and the SMS
+    single-partition advice below come from the original text and have not
+    been re-verified for this build.
+The original text is kept below.
+=====================================================================
+
 New "mass:" capabilities of uLE :
 ---------------------------------
 

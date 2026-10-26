@@ -1,5 +1,18 @@
 # Direct MMCE image restoration — safety protocol
 
+> **Status as of 2026-10-26: current policy, still in force. Direct in-place restore remains disabled.**
+> Shipped instead: verified recovery to a new USB/HDD `.mcd`, `WLE-Recovered` holding-folder storage,
+> and *Install as NEW selectable MMCE card...* (PRs #121/#122, `src/dash_browser.c`; guards in
+> `iop/mmceman/include/mmce_restore_guard.h`; tests `test_mmce_recovery.py`,
+> `test_mmce_exclusive_new_files.py`, `test_mmce_selectable_install.py`, `test_mmce_fs_restore_guard.py`,
+> `test_mmce_restore_txn_model.py`). No firmware transaction exists upstream or in this repository
+> (`MMCE_TXN_IMPLEMENTED_ON_DEVICE == 0`). **Scope clarification:** since PR #206 ordinary File Browser
+> copy/paste again uses upstream's direct *remove, create, copy* overwrite (see
+> [the stable-issue recovery plan](plans/2026-10-24-stable-issue-recovery.md)). That generic file operation is
+> not a safe way to replace an `.mcd` under `mmceN:/MemoryCards`; only the recovery features described here
+> carry the safety guarantees. Device acceptance of the new-file workflows is still unverified.
+
+
 ## Current status
 
 **Direct overwrite of an existing, potentially active card is not enabled.**

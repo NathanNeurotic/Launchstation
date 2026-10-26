@@ -1,5 +1,15 @@
 # Ember RetroGem Game ID
 
+> **Status as of 2026-10-26: current reference (implemented, hardware-unverified).**
+> Merged in PR #208 (`fa8f814`, with `0577f0e` and `feb0347`). Code: `buildEmberGameID()` in
+> `src/ember_gameid.c`; the signal is drawn by `LaunchEmberGame()` in `src/ember.c` after
+> `CleanUpForEmberExec()` and, on USB, after `prepareEmberUsbHandoffIop()`. The only gate is the
+> existing *Game ID launch signal for discs* setting (`cdrom_disable_gameid`). Host tests:
+> `tests/test_ember_gameid.py`, `tests/test_ember_retrogem_handoff.py`. **Still open:** RetroGem
+> decode and real Ember game acceptance on a console. Verified unchanged: CUE size cap is 64 KiB
+> (`EMBER_CUE_MAX`), and no Ember MMCE card selection exists.
+
+
 Ember disc-image launches use the same RetroGem visual signal and identity
 rules as POPStarter VCD launches. The existing **Settings > Launching > Game ID
 output > Game ID launch signal for discs** preference controls both. No separate

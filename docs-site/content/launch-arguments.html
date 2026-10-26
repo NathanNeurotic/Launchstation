@@ -1,9 +1,52 @@
-<h1>Launch Arguments</h1><p class="lead">Launchstation can cache a user argument list, consume a sidecar <code>.arg</code> file, or launch directly from a Text Editor buffer.</p>
-<h2 id="file-browser">File Browser workflow</h2><ol><li>Select a Text Editor-supported argument file.</li><li>Open its operations menu and choose <b>Launch ELF with Args</b>.</li><li>Launchstation parses and caches the argument lines in memory.</li><li>Select the target ELF. The cached arguments are appended after the normal handoff path.</li></ol>
-<h2 id="editor">Text Editor workflow</h2><p>The Text Editor offers the same action for the current in-memory buffer. Unsaved edits are used, which makes it convenient for testing launch flags without repeatedly writing the argument file.</p>
-<h2 id="sidecar">Automatic sidecar arguments</h2><p>For an ordinary ELF launch, Launchstation checks for a same-directory sidecar whose base name matches the ELF, for example:</p><pre class="tree"><code>APPS/
+<h1>Launch Arguments</h1>
+<p class="lead">Launchstation can pass your own command-line arguments to an ELF. They come from a sidecar <code>.arg</code> file, from a text file you load in the browser, from application metadata, or from a Text Editor buffer. Arguments apply to ordinary <code>.ELF</code>, <code>.KELF</code> and <code>.XLF</code> launches.</p>
+
+<h2 id="sources">Where arguments come from</h2>
+<table><thead><tr><th>Source</th><th>How</th><th>Persistence</th></tr></thead><tbody>
+<tr><td>Sidecar <code>.arg</code> file</td><td>Same folder and base name as the ELF (<code>BOOT.ELF</code> + <code>BOOT.arg</code>). Picked up automatically on an ordinary launch.</td><td>Permanent, on the device.</td></tr>
+<tr><td>Browser: <b>Use as launch arguments</b></td><td>Triangle on a text file in the File Browser, then choose the ELF.</td><td>Held in memory for the next ELF only.</td></tr>
+<tr><td>Application options: <b>Start with arguments...</b></td><td>Opens (or creates) the app's sidecar <code>.arg</code> in the Text Editor; choose <b>Launch with these arguments...</b>. Saving keeps the file beside the application.</td><td>The file is permanent if you save it.</td></tr>
+<tr><td>Text Editor buffer</td><td><b>Launch with these arguments...</b> from the editor menu, then pick the ELF.</td><td>Held in memory; unsaved edits are used.</td></tr>
+<tr><td>Metadata <code>arg = ...</code> lines</td><td>In the application's <code>.cfg</code> (see <a href="apps.html#metadata">Applications</a>). Used for Home/Applications launches only when no sidecar <code>.arg</code> exists.</td><td>Permanent.</td></tr>
+</tbody></table>
+
+<h2 id="file-browser">File Browser workflow</h2>
+<ol>
+<li>Highlight a Text Editor-supported file that contains your arguments (for example <code>.arg</code> or <code>.txt</code>).</li>
+<li>Press Triangle and choose <b>Use as launch arguments</b> (shown with &ldquo;then choose the application&rdquo;).</li>
+<li>Launchstation parses the lines and caches them in memory. A note <i>N launch arguments loaded: choose the application</i> appears above the list.</li>
+<li>Select the target ELF. The cached arguments follow the normal handoff path.</li>
+</ol>
+<p>Use Triangle &gt; <b>Clear launch arguments</b> to drop them. They are also dropped when you leave the browser, when you start anything that is not an ELF/KELF/XLF, and after any failed launch.</p>
+<p>For one-off use on a single ELF, <b>Start with arguments...</b> in the same menu opens that ELF's sidecar <code>.arg</code> in the editor for you.</p>
+
+<h2 id="editor">Text Editor workflow</h2>
+<p>The Text Editor offers the same action for the current in-memory buffer. After <b>Launch with these arguments...</b> succeeds the editor closes and the dashboard asks <i>Start which application with these arguments?</i> with a file picker. The editor validates first and shows <i>Arguments not usable</i> if the buffer is empty or exceeds a limit. It is convenient for testing flags without repeatedly writing the file.</p>
+
+<h2 id="sidecar">Automatic sidecar arguments</h2>
+<p>For an ordinary ELF launch, Launchstation checks for a same-directory sidecar whose base name matches the ELF (the extension is replaced by <code>.arg</code>):</p><pre class="tree"><code>APPS/
 ├── BOOT.ELF
-└── BOOT.arg</code></pre><p>If arguments were already cached manually through the browser/editor action, the sidecar is ignored for that launch.</p>
-<h2 id="format">Format and limits</h2><table><thead><tr><th>Rule</th><th>Current limit</th></tr></thead><tbody><tr><td>One non-empty line</td><td>One user argument</td></tr><tr><td>User arguments</td><td>12 lines</td></tr><tr><td>Characters per argument</td><td>255</td></tr><tr><td>Total cached argument text</td><td>2,048 bytes including terminators</td></tr></tbody></table>
-<p>Line endings are stripped. Other characters on each line are preserved.</p>
-<h2 id="argv0">argv[0]</h2><p>The target executable still receives the normal selected/handoff path as <code>argv[0]</code>; cached user lines follow it. External-core paths such as Neutrino build their own controlled argument set and do not consume a stray normal-ELF argument cache.</p>
+└── BOOT.arg</code></pre>
+<p>If arguments were already loaded manually (browser or editor), the sidecar is ignored for that launch. For memory card paths such as <code>mc:/...</code> the sidecar is looked up on the card the ELF was actually found on.</p>
+
+<h2 id="precedence">Precedence</h2>
+<ol>
+<li>Arguments already loaded in memory (browser, Text Editor, <i>Start with arguments...</i>).</li>
+<li>The sidecar <code>.arg</code> file beside the ELF.</li>
+<li>Metadata <code>arg</code> lines, only when no sidecar exists.</li>
+</ol>
+
+<h2 id="format">Format and limits</h2>
+<table><thead><tr><th>Rule</th><th>Current limit</th></tr></thead><tbody>
+<tr><td>One non-empty line</td><td>One user argument</td></tr>
+<tr><td>User arguments</td><td>12 lines</td></tr>
+<tr><td>Characters per argument</td><td>255</td></tr>
+<tr><td>Total cached argument text</td><td>2,048 bytes including terminators</td></tr>
+</tbody></table>
+<p>Line endings (CR, LF or CR/LF) are stripped and empty lines are skipped. Other characters on each line, including spaces, are preserved, so one line is one argument, not a shell command line. A NUL byte makes the file invalid. If a limit is exceeded, nothing is loaded and a message names the limit; a file with no usable lines reports that it is empty.</p>
+
+<h2 id="argv0">argv</h2>
+<p>The target executable still receives the normal selected/handoff path as <code>argv[0]</code>; your lines follow it as <code>argv[1]</code> onward.</p>
+
+<h2 id="external-cores">Game images and external cores</h2>
+<p>Image launches do not consume a stray argument cache: <code>.VCD</code> (POPStarter), <code>.CUE</code>/<code>.BIN</code>/<code>.EXE</code> (Ember), <code>.ISO</code> (Neutrino) and MISC commands clear it and build their own controlled argument set. Pending user arguments are not forwarded to them.</p>

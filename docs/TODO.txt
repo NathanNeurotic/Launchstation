@@ -1,3 +1,8 @@
+HISTORICAL (annotated 2026-10-26): the three items below date from the
+2014 LaunchELF wip era and are not a maintained roadmap. Open work for
+Launchstation is tracked in the GitHub issues and pull requests:
+https://github.com/NathanNeurotic/Launchstation
+----------------------------------------------------------------------
 -bind button combination for interrupting HDD_manager (cause with 200 partition it takes 7 minutes and it will be useful to stop hdd manager at some point)
 -rewrite ftp part to be more stable
 -cleanup code.

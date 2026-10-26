@@ -436,7 +436,7 @@ static const SetItem tbg_items[] = {
     {ST_COLOR, S_T_BG2, "Second colour", "Base or gradient bottom colour."},
     {ST_CHOICE, S_T_BRIGHT, "Brightness", "Darken the background behind the menus."},
     {ST_CHOICE, S_T_SCAN, "CRT scanlines", "An understated line pattern over the background only."},
-    {ST_ACTION, S_T_IMAGE, "Wallpaper image...", "Choose a PNG (up to 1.5 MB). It is scaled to at most 320x256 and cover-fitted."},
+    {ST_ACTION, S_T_IMAGE, "Wallpaper image...", "Choose a PNG (up to 1.5 MB). It is scaled to at most 640x512 and cover-fitted."},
     {ST_ACTION, S_T_RESETCAT, "Reset background", "Back to the values of the theme's preset."},
 };
 static const SetItem tcol_items[] = {

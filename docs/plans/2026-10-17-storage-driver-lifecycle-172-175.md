@@ -1,5 +1,16 @@
 # Consolidated storage-driver lifecycle repair — #172–#175
 
+> **Status as of 2026-10-26: partially implemented and merged (PR #176, `f29a28f`); the "not merge ready" banner below is obsolete.**
+> In tree: `MMCE_PING_ATTEMPTS 2` with the unchanged 200 ms timeout (`iop/mmceman/src/mmceman.c`, the 100 ms
+> option was *not* adopted), pre-RPC loading frames (`startSync()` in `src/dash_devices.c`), generation-safe
+> audio shutdown before `Reset()` (`resetRuntimeDeviceState()` in `src/init.c`), no raw mount IDs in the
+> generic missing-device modal, and refused-reset guards (`switchStorageDriverStack()` returns 0). Follow-ups:
+> DEV9 refusal ([2026-10-18-dev9-transition-follow-up.md](2026-10-18-dev9-transition-follow-up.md)) and
+> [2026-10-19-zack-issues.md](2026-10-19-zack-issues.md). **Still open:** continuous animation during blocked
+> synchronous IOP calls is impossible by design; root-cause proof of #172-#175 stalls and mixed-storage,
+> cold-boot and power-off behavior need real-console evidence.
+
+
 > **Status: partial implementation on PR #176; not merge ready.** Safe initial EE fixes and focused host regression tests have been committed in this same branch. The critical MMCE residency/physical-device hang investigations remain open. Continue implementation in this one PR; request CodeRabbit review and hardware validation before marking ready.
 
 ## Adjudication of Gemini's alternate blueprint (2026-10-17)

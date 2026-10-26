@@ -1,5 +1,12 @@
 # October 18 tester follow-up
 
+> **Status as of 2026-10-26: implemented (PR #183, `82082b6`); tester confirmation pending.**
+> Explicit *Save current clock*, quiet start-up status (`setStartupDriverStatusQuiet`) and the concise release
+> page are in tree (`tests/test_settings_save_prompt.py`, `test_startup_status.py`, `test_release_notes.py`).
+> #125 (one-minute rollback after power loss) and #138 (media-dependent boot text) were not re-verified by
+> the reporters.
+
+
 Base: `2836fdaf6214a1b592e245a092285d96210adc41` (includes #179 and #180).
 PR #181's draft per-game profiles are separate and are not included here.
 

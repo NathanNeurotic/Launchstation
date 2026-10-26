@@ -1,5 +1,12 @@
 # OSDSYS-ify the dashboard — Implementation Plan
 
+> **Status as of 2026-10-26: implemented; historical plan (agent task list, checkboxes not maintained).**
+> Streaks/clouds backgrounds, the *Light Show* preset (`src/dash_themes.c`), the audsrv SFX subsystem
+> (`res/sfx/*.adp`, `src/dash_sound.c`) and ELF-folder-first `THEMES/` lookup are in tree. Later changes:
+> background music is an optional loose `BGM.ADP` rather than an embedded track, and sound settings live under
+> Settings > Sound. Refer to [../../dashboard.md](../../dashboard.md) and [../../themes.md](../../themes.md) for current behaviour.
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** OSDSYS-style procedural button icons, two new animated backgrounds, UI animation polish, an audsrv-based SFX subsystem, and CWD-relative theme folders for the wLaunchELF dashboard.

@@ -77,6 +77,31 @@
           "usb"
         ],
         [
+          "memory-card",
+          "Memory Cards",
+          "vmc"
+        ],
+        [
+          "usb",
+          "USB Mass Storage",
+          "usb"
+        ],
+        [
+          "mx4sio",
+          "MX4SIO SD Card",
+          "mmce"
+        ],
+        [
+          "udpfs",
+          "Network Storage (UDPFS)",
+          "netboot"
+        ],
+        [
+          "pc-card-cf",
+          "PC CARD CompactFlash",
+          "hdd"
+        ],
+        [
           "hdd",
           "Internal HDD",
           "hdd"
@@ -111,6 +136,11 @@
     {
       "name": "Game Images",
       "pages": [
+        [
+          "game-launching",
+          "Launching Games & Images",
+          "play"
+        ],
         [
           "neutrino",
           "PS2 ISO · Neutrino",
@@ -185,6 +215,11 @@
           "themes",
           "Display, Themes & BGM",
           "themes"
+        ],
+        [
+          "languages",
+          "Languages",
+          "languages"
         ]
       ]
     },
@@ -210,6 +245,21 @@
           "developers",
           "Developer Notes",
           "fork-gaps"
+        ],
+        [
+          "building",
+          "Building from Source",
+          "install"
+        ],
+        [
+          "architecture",
+          "Architecture & Repo Layout",
+          "fork-gaps"
+        ],
+        [
+          "contributing",
+          "Contributing & Testing",
+          "github"
         ],
         [
           "credits",

@@ -1,7 +1,55 @@
-<h1>Saves, PSU &amp; Timestamp Tools</h1><p class="lead">Launchstation keeps the classic memory-card/save toolbox while making destructive actions and timestamp manipulation more explicit.</p>
-<h2 id="psu">PSU create and extract</h2><p>The browser uses explicit <b>Create PSU</b> and <b>Extract PSU</b> wording so the direction of the conversion is clear. PSU containers are useful for moving save folders while preserving PS2 metadata that ordinary host filesystems do not represent well.</p>
-<h2 id="copy">Copying saves</h2><p>Copy/paste and PSU workflows retain the specialized handling required by memory-card folders. Avoid treating a PS2 save as an arbitrary PC directory when preserving icon metadata, attributes and timestamps matters.</p>
-<h2 id="vmc">Virtual memory cards</h2><p>VMC image files can be mounted through the File Browser where supported, exposing their contents through the normal file-management path.</p>
-<h2 id="timestamps">Timestamp manipulation</h2><p>Launchstation can edit and organize directory timestamps. This is especially useful for OSDSYS/HOSDSYS ordering and icon-based exploit folders whose position is influenced by timestamps.</p>
-<h3 id="organizer">Organizer roots</h3><p>The organizer supports memory-card roots and <code>hdd0:/__common/</code>. Sorting modes include manual ordering, A–Z and SAS-style timestamps; game-save handling is kept distinct where appropriate.</p>
-<h2 id="protection">Exploit-folder protection</h2><p>Dangerous modifications/deletions of known exploit-style memory-card folders trigger warnings. That guard exists because a routine rename/delete can turn a bootable exploit card into an unbootable one.</p>
+<h1>Saves, PSU &amp; Timestamp Tools</h1>
+<p class="lead">Launchstation keeps the classic memory-card and save toolbox of the LaunchELF family: browse saves by title, copy them between devices, wrap them in <code>.PSU</code> containers, mount virtual memory cards, back up whole card images, and reorder folders on a card by editing their dates. Destructive actions on exploit folders are explicitly confirmed.</p>
+
+<div class="callout amber"><div class="h">Treat saves as saves, not as PC folders</div><p>A PS2 save is a folder with an <code>icon.sys</code>, icons and a PS2-specific timestamp and attribute set. Copying it as plain files to a PC disk can lose that metadata. Use <b>Create PSU</b> to move a save onto USB/HDD/network storage, and <b>Extract PSU</b> to put it back.</p></div>
+
+<h2 id="titles">Browsing saves by title</h2>
+<p>In the File Browser, <b>Show</b> (options menu) switches between <em>File names</em>, <em>Names and details</em>, <em>Game titles and details</em> and <em>Game titles</em>; titles come from the save&rsquo;s <code>icon.sys</code> for PS2 saves, PS1 saves and <code>.PSU</code> files, on any device. A valid two-line <code>icon.sys</code> title keeps its line separation. Japanese titles are drawn with the optional <code>ELISA100.FNT</code> font when it is present; without it they are transliterated. <b>Create folder icon&hellip;</b> writes an <code>icon.sys</code> for a folder so that it shows a title on the console.</p>
+
+<h2 id="psu">PSU create and extract</h2>
+<p>The paste command is labelled by what it will do, so the direction is never ambiguous:</p>
+<ul>
+<li><b>Create PSU</b> appears when the clipboard holds <em>folders</em> copied from a memory card or virtual card (<code>mc0:</code>, <code>mc1:</code>, <code>vmc0:</code>, <code>vmc1:</code>) and you paste into a folder on any other device. Each save becomes one <code>.psu</code> file.</li>
+<li><b>Extract PSU</b> appears when the clipboard holds only <code>.psu</code> files; pasting extracts them into the destination (normally a memory card or a VMC).</li>
+</ul>
+<p>Three switches under <b>Settings &gt; System &gt; Memory card backup files</b> control PSU names: <b>add game ID and title to names</b>, <b>add date to names</b> and <b>never overwrite existing files</b> (turning this on also turns dated names on; turning dated names off turns it off). Moving a protected folder (Cut) asks for confirmation first.</p>
+
+<h2 id="copy">Copying saves and files</h2>
+<p>Ordinary copy, move, rename and delete work on every writable device, with progress, readable errors and (for slow memory-card and VMC operations) small transfer chunks. Replacing an existing file follows the upstream behaviour: the old destination is removed, a new file is created, and the data is copied. If that copy fails after the removal, the old file is not restored, so copy important data elsewhere first. Same-path paste is blocked so a source cannot delete itself. Cut deletes the source only after the copy succeeded. MMCE cannot set timestamps, so that step is skipped after a copy to it.</p>
+
+<h2 id="vmc">Virtual memory cards</h2>
+<p>Highlight a <code>.BIN</code>, <code>.VMC</code>, <code>.MC2</code> or <code>.PS2</code> card image and choose <b>Mount as vmc0:</b> or <b>vmc1:</b>. The mounted card appears as <b>Virtual MC 0/1</b> in the device list and its saves can be copied, deleted or exported with the normal tools. Mounting into a slot replaces whatever was mounted there; the driver is loaded on demand. A VMC image used by Neutrino or POPStarter is managed by those programs, not by this dialog.</p>
+
+<h2 id="card-images">Card image backup and conversion</h2>
+<ul>
+<li><b>Back up .mcd&hellip;</b> &ndash; verified byte-for-byte copy of a card image.</li>
+<li><b>Export as PCSX2 .ps2&hellip;</b> &ndash; adds ECC bytes and verifies the copy.</li>
+<li><b>Convert to no-ECC .mcd&hellip;</b> &ndash; strips PCSX2 spare bytes from a <code>.ps2</code> and verifies it.</li>
+<li>MMCE-specific history, recovery and install-as-new-card actions are covered on <a href="mmce-backup.html">MMCE Backup History</a>.</li>
+</ul>
+
+<h2 id="timestamps">Timestamp tools: Folder dates</h2>
+<p>The OSD and exploit launchers list memory-card folders in date order, so the date is how you order them. Select a folder in a <b>memory-card root</b> (or in <code>hdd0:/__common/</code>) and choose <b>Folder dates&hellip;</b> (&ldquo;order the saves&rdquo;):</p>
+<table><thead><tr><th>Mode</th><th>Effect</th></tr></thead><tbody>
+<tr><td>Manual Edit</td><td>Pick a folder, then edit its date and time field by field; the list reorders live.</td></tr>
+<tr><td>A &rarr; Z / Z &rarr; A</td><td>Gives every eligible folder consecutive timestamps in alphabetical (or reverse) order.</td></tr>
+<tr><td>SAS Timestamps</td><td>Encodes each folder name into a timestamp so the console lists them by category: <code>APP_</code>, <code>APPS</code>, <code>PS1_</code>, <code>EMU_</code>, <code>GME_</code>, <code>DST_</code>, <code>DBG_</code>, <code>RAA_</code>, <code>RTE_</code>, plain names, <code>SYS_</code>, <code>ZZY_</code>, <code>ZZZ_</code>. Well-known names are mapped (for example <code>BOOT</code>, <code>EXPLOITS</code>, <code>OPL</code>, <code>NEUTRINO</code>, <code>RESTART</code>, <code>POWEROFF</code>).</td></tr>
+<tr><td>Set *Tuna Date</td><td>Only for a selected folder in a writable memory-card root: sets the reserved date that makes OpenTuna-style exploit folders sort correctly.</td></tr>
+</tbody></table>
+<p>Automatic modes leave game-save folders alone (names of the form <code>BxXXXX-12345</code>), give any folder with &ldquo;TUNA&rdquo; in its name the reserved *Tuna date, show a progress bar and report how many timestamps changed or failed. On a memory-card root the *Tuna date range is reserved so other folders never collide with it. On <code>hdd0:/__common/</code> the same tools work without that reservation.</p>
+
+<h2 id="protection">Exploit-folder protection</h2>
+<p>Launchstation recognises these top-level folders and protects them on memory cards (<code>mc0:</code>, <code>mc1:</code>) and on the PSX flash (<code>xfrom:</code>):</p>
+<ul>
+<li>System-update exploit folders <code>BIEXEC-SYSTEM</code>, <code>BAEXEC-SYSTEM</code>, <code>BEEXEC-SYSTEM</code>, <code>BCEXEC-SYSTEM</code>. The one matching your console&rsquo;s region (or <code>BIEXEC-SYSTEM</code> on a PSX) is &ldquo;for this console&rdquo;; the others are &ldquo;for other region consoles&rdquo;.</li>
+<li><code>BXEXEC-OPENTUNA</code>, <code>OPENTUNA</code>, <code>FUNTUNA</code> and <code>FORTUNA</code> (reported as a generic exploit folder).</li>
+</ul>
+<p>In the dashboard File Browser, <b>Delete</b>, <b>Cut</b>, pasting into, creating a folder or icon inside, and similar changes ask for confirmation with a &ldquo;Caution: Exploit folder&rdquo; message. <b>Rename</b> of a protected folder is refused outright (&ldquo;This system folder cannot be renamed from here&rdquo;). The guard exists because a routine rename or delete can turn a bootable exploit card into an unbootable one; a confirmed delete still happens. To install or replace exploits use the <a href="exploit-installer.html">exploit installer</a>.</p>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>Create PSU is missing.</b> The clipboard must contain folders from <code>mc</code>/<code>vmc</code>, and the destination must not be a memory card.</li>
+<li><b>Save titles show file names.</b> Titles need a valid <code>icon.sys</code>; switch Show to a title mode.</li>
+<li><b>Folder dates do nothing.</b> The command is available only in memory-card roots and <code>hdd0:/__common/</code>.</li>
+<li><b>Card full / copy error.</b> The error message includes the numeric driver code; report it with the device pair (for example UDPFS to mc0:).</li>
+</ol>

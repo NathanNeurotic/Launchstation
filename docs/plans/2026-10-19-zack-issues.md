@@ -1,5 +1,15 @@
 # Zack's October 19 follow-up
 
+> **Status as of 2026-10-26: partly superseded.**
+> * **#187 replacement protocol superseded.** The `LS-COPY-NNN.TMP` / `LS-OLD-NNN.BAK` publish-and-rollback
+>   design and the "never delete the destination first" rule described below were removed on 2026-10-25
+>   (PR #206, `b815d10`): copy again does `genRemove(out)` then `genOpen(WRONLY|TRUNC|CREAT)`
+>   (`src/filer_copy.c`; `tests/test_copy_pipeline.py` asserts the old tokens are gone). A failed copy after
+>   removal does not retain the original. See [2026-10-24-stable-issue-recovery.md](2026-10-24-stable-issue-recovery.md).
+> * Still in tree: #184 transfer overlay, #185 MASS label, #173/#174/#175 mitigations (PR #188, `593f16d`),
+>   UDPFS read-tail and short-read handling (PR #190, `6906a53`). Console acceptance of all of these is still required.
+
+
 All changes in this checklist belong to one branch and [PR #188](https://github.com/NathanNeurotic/Launchstation/pull/188):
 `fix/zack-issues-20261019`, based on `82082b6`. Keep follow-up commits here.
 The user explicitly excluded #160 (stock PS2 sound effects).

@@ -1,5 +1,11 @@
 # Launchstation issue triage, October 17, 2026
 
+> **Status as of 2026-10-26: historical triage; code items merged, hardware acceptance still open.**
+> Merged: #176 (`f29a28f`, storage lifecycle/audio), #177 (`ef02e7a`), #178 (`f4b621f`, UI/software clock),
+> #183 (`82082b6`), #181 (`59bb620`, Neutrino profiles). #175/#174/#173/#172 stall reports have source-level
+> mitigations only; physical confirmation by the reporter is still pending. #125/#138 likewise.
+
+
 Baseline: `ec3723f26c43e04cbfa7227e970302684aed4bbc` on master. Reports #167-175 cite that build and SCPH-30001R. Existing PRs #176 and #177 retain separate branches. This PR contains the related UI and clock work.
 
 | Priority | Issue | Evidence and implementation | Acceptance still needed |

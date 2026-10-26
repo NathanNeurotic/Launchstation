@@ -1,0 +1,52 @@
+<h1>PC CARD CompactFlash</h1>
+<p class="lead">Early Japanese PS2 models have a PCMCIA slot. With a CompactFlash card (or an SD card through a CF bridge) in it, Launchstation can browse the card and move files on and off it. This is file management only: programs and games cannot be launched from it.</p>
+
+<div class="callout amber"><div class="h">Experimental, not hardware-verified</div><p>The driver is adapted from the PS2CF project and passes its host tests, but it has not yet been confirmed on a physical SCPH-10000, 15000 or 18000 with this build. Treat it as test-only, keep backups, and report results with your exact adapter, card and console.</p></div>
+
+<h2 id="eligible">When the device appears</h2>
+<p>The <b>PC CARD CF</b> card (<code>cf0:</code>; <code>cf:</code> is accepted as an alias) is listed only on consoles whose ROM identifies the early Japanese retail family: ROM versions 1.00, 1.01, 1.10 and 1.20 with the Japanese retail region marker. DESR/PSX, development, arcade, later retail and unknown ROMs are not eligible. This is a first hint only: the IOP driver independently checks the hardware family, that no DEV9 driver is resident, that a card is present and that its CIS says it is a fixed (ATA) disk. A LAN PC card or an empty slot is rejected before any ATA command is sent. In the recovery boot (hold <b>SELECT</b>) the card is listed on every console, with the status <em>Unsupported console model</em> or <em>Disabled in safe mode</em>, and is never powered.</p>
+
+<h2 id="hardware">Hardware you need</h2>
+<ul>
+<li>A compatible PCMCIA Type II CompactFlash adapter, or a CF card in one. An SD or microSD card can be used through an SD-to-CF bridge; compatibility depends on the bridge.</li>
+<li>The card needs an MBR partition table with a FAT32 or exFAT volume. Other filesystems show <em>FAT32/exFAT volume not found</em>.</li>
+<li>Capacity is shown on the card (for example <em>3.7 GB capacity</em>). The driver supports LBA28 and LBA48 transfers (covered by host tests with modelled cards); behaviour with real large cards is unverified.</li>
+</ul>
+
+<h2 id="use">How to use it</h2>
+<ol>
+<li>Insert the card, then open <b>PC CARD CF</b> in the Files tab device cards. Launchstation reserves the PC CARD bus, loads the BDM modules and the CF driver, and probes <code>cf0:/</code> for up to two seconds.</li>
+<li>Browse, <b>Copy</b> / <b>Cut</b> / <b>Paste</b>, create folders, rename and delete as on USB. Text files open in the Text Editor. File operations stop with a clear message if the card goes offline.</li>
+<li>To start something you copied, copy it to USB, a memory card or another supported device first.</li>
+</ol>
+<h3 id="states">Status lines</h3>
+<table><thead><tr><th>Status</th><th>Meaning / action</th></tr></thead><tbody>
+<tr><td><em>Not connected</em> (dim)</td><td>Not checked yet; open the card.</td></tr>
+<tr><td><em>Ready (PCMCIA)</em></td><td>Mounted and online.</td></tr>
+<tr><td><em>No compatible CF adapter</em></td><td>The probe ran and found no supported fixed-disk card.</td></tr>
+<tr><td><em>CF card offline or I/O fault</em></td><td>The card was removed or an I/O error latched the driver offline.</td></tr>
+<tr><td><em>PC CARD / DEV9 bus busy</em></td><td>A DEV9 stack (HDD, exFAT HDD, network) is already using the bus. Reset the IOP first.</td></tr>
+<tr><td><em>Unsupported console model</em> / <em>Disabled in safe mode</em></td><td>Shown only in the recovery boot.</td></tr>
+</tbody></table>
+
+<h2 id="limits">Limits</h2>
+<ul>
+<li><b>No launching.</b> ELF/KELF, Neutrino ISOs, POPStarter VCDs, Ember games and <em>Start with arguments</em> are blocked from <code>cf:</code> with &ldquo;Direct launch unsupported&rdquo; or &ldquo;Launching executables or game images directly from PC CARD CF is not supported yet&rdquo;. Virtual memory card mounting from CF is disabled too.</li>
+<li><b>One bus owner.</b> The CF driver owns the PCMCIA/DEV9 bus. It refuses to start if HDD, exFAT HDD, network or UDPFS drivers are resident, and those loaders refuse once CF owns the bus. Only a real IOP reset (Tools &gt; Reboot IOP, or a stack change) releases the reservation.</li>
+<li><b>No safe-remove.</b> The driver can be powered off for reset or launch, but that is not an eject: filesystem state is not flushed for removal and a same-session re-probe is not supported. Do not remove the card while Launchstation is using it; power off or reboot first.</li>
+<li><b>Transfers with DEV9 devices are refused.</b> Copying between CF and internal HDD, exFAT HDD, UDPFS, <code>host:</code> or PSX flash/DVR shows &ldquo;Incompatible drivers to perform action&rdquo;. Use USB or a memory card as the middle step.</li>
+<li><b>Never auto-started</b> and never powered in safe mode.</li>
+<li>Before any ELF launch, reset or Ember hand-off the CF driver is asked to power down; if that request fails the signer, Ember and ELF hand-offs abort rather than continue.</li>
+</ul>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>No PC CARD CF card.</b> Your console is not in the eligible ROM set. Hold SELECT at boot to see it with its reason.</li>
+<li><b>&ldquo;No compatible CF adapter&rdquo;.</b> Re-seat the card, try a different adapter or card, and check it is a fixed-disk (not network) PC card.</li>
+<li><b>&ldquo;PC CARD / DEV9 bus busy&rdquo;.</b> Use Tools &gt; Reboot IOP, then open PC CARD CF before any other DEV9 device.</li>
+<li><b>&ldquo;FAT32/exFAT volume not found&rdquo;.</b> Re-partition with an MBR table and FAT32 or exFAT on a PC.</li>
+<li><b>Odd data after write.</b> Back up first, run a file-system check on a PC, and report the card, adapter and console.</li>
+</ol>
+
+<h2 id="credits">Credits</h2>
+<p>The CF PIO/ATA foundation comes from <a href="https://github.com/mihhru/PS2CF">PS2CF</a> by mihhru (pinned upstream commit recorded in the repository&rsquo;s <code>iop/pccf/VENDORED.md</code>), under the licences listed there.</p>

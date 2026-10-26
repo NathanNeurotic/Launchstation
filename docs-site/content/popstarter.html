@@ -1,12 +1,45 @@
-<h1>PS1 VCD Launching · POPStarter</h1><p class="lead">Open a POPStarter-compatible <code>.VCD</code> and Launchstation prepares the external POPStarter handoff.</p>
-<h2 id="setting">Preferred POPStarter</h2><p><b>Settings → Launching → Disc &amp; image loaders → POPStarter</b> selects the preferred executable. If it cannot be opened, device-specific fallback locations are tried.</p>
-<h2 id="fallbacks">Common fallback locations</h2><pre class="tree"><code>mass:/POPS/POPSTARTER.ELF
-mmce0:/POPS/POPSTARTER.ELF
-mmce1:/POPS/POPSTARTER.ELF
-mx4sio:/POPS/POPSTARTER.ELF
-ata0:/POPS/POPSTARTER.ELF
-hdd0:__common:pfs:/POPS/POPSTARTER.ELF
-hdd0:__system:pfs:/launcher/POPSTARTER.ELF</code></pre>
-<h2 id="arguments">Device-aware argument construction</h2><p>Launchstation does not simply launch POPStarter with the browser filename. FAT-style POPS folders, <code>__.POPS</code>, partition-style VCDs and HDD/PFS browser paths are normalized into the argument form POPStarter expects.</p>
-<h2 id="validation">Validation</h2><p>The VCD path is checked before launch, and the integration contains the existing VCD ISO/PVD and SYSTEM.CNF/GameID parsing helpers used by the POPStarter workflow.</p>
-<h2 id="external">External software</h2><p>POPStarter is maintained separately and is not distributed as part of Launchstation. Its own compatibility requirements still apply.</p>
+<h1>PS1 VCD Launching · POPStarter</h1>
+<p class="lead">Open a POPStarter-compatible <code>.VCD</code> in the File Browser and Launchstation validates it, builds the argument POPStarter expects for that device, finds the POPStarter ELF and starts it.</p>
+
+<div class="callout info"><div class="h">External software, your files</div><p>POPStarter is maintained separately and is not shipped with Launchstation. You supply <code>POPSTARTER.ELF</code> (and whatever BIOS/modules it needs) and your own VCD images. Its compatibility rules still apply. PS1 <code>.CUE</code>/<code>.BIN</code>/<code>.EXE</code> images use <a href="ember.html">Ember</a> instead: the file format picks the core.</p></div>
+
+<h2 id="setting">Preferred POPStarter</h2>
+<p><b>Settings &gt; Launching &gt; Disc &amp; image loaders &gt; POPStarter</b> sets the preferred <code>POPSTARTER.ELF</code>. This path is always tried first (<code>mc:/&hellip;</code> is tried as <code>mc0:</code> then <code>mc1:</code>). Under the same page, <b>Disable POPStarter support</b> (default Off) makes Launchstation refuse VCD launches before touching the image, the loader or any driver.</p>
+
+<h2 id="layouts">Supported VCD locations</h2>
+<table><thead><tr><th>Where the VCD is</th><th>Rule</th></tr></thead><tbody>
+<tr><td>USB (<code>massN:</code>/<code>usbN:</code>), MMCE, MX4SIO, exFAT HDD (<code>ata0:</code>)</td><td>The VCD must be inside a <code>POPS</code> folder at the root of the device (case-insensitive), for example <code>usb0:/POPS/Game.VCD</code>. Subfolders below <code>POPS</code> are passed through in the argument; POPStarter&rsquo;s own naming rules still apply.</td></tr>
+<tr><td>Internal APA HDD, partition named <code>__.POPS&hellip;</code></td><td>Any <code>.VCD</code> in that partition, e.g. <code>hdd0:/__.POPS/Game.VCD</code>; the file name is what is passed.</td></tr>
+<tr><td>Internal APA HDD, any other partition whose name begins <code>__.</code> or <code>PP.</code></td><td>The VCD must be named <code>IMAGE0.VCD</code> at the partition root (the one-game-per-partition layout).</td></tr>
+<tr><td>iLink, UDPFS, memory card, PC CARD CF, disc</td><td>Not supported. Copy the VCD to one of the devices above.</td></tr>
+</tbody></table>
+<p>A VCD elsewhere on a supported device is refused with &ldquo;POPStarter does not support that VCD path&rdquo;, because POPStarter locates its image by name.</p>
+
+<h2 id="fallbacks">Where the POPStarter ELF is looked for</h2>
+<ol class="path-order">
+<li><b>Your explicit path</b> from Settings (if set and the file can be opened).</li>
+<li><b>FAT-style devices:</b> <code>&lt;the VCD&rsquo;s own device&gt;/POPS/POPSTARTER.ELF</code>, e.g. <code>usb0:/POPS/POPSTARTER.ELF</code>, <code>mmce1:/POPS/POPSTARTER.ELF</code>, <code>mx4sio:/POPS/POPSTARTER.ELF</code>, <code>ata0:/POPS/POPSTARTER.ELF</code>.</li>
+<li><b>Internal HDD:</b> <code>hdd0:__common:pfs:/POPS/POPSTARTER.ELF</code>, then <code>hdd0:__system:pfs:/launcher/POPSTARTER.ELF</code>.</li>
+</ol>
+<p>Candidates that cannot be opened are skipped in order. A candidate that opens but is <em>not an ELF</em> stops the search with &ldquo;POPStarter ELF is not an ELF&rdquo; instead of silently falling through to another copy.</p>
+
+<h2 id="arguments">Device-aware argument construction</h2>
+<p>Launchstation does not pass POPStarter the browser filename. For FAT-style devices the VCD path below <code>POPS/</code> is turned into POPStarter&rsquo;s <code>uLE:XX.&hellip;</code> form with the extension replaced by <code>.elf</code>; for <code>__.POPS</code> partitions the file name is used, and for one-game partitions the argument names the partition. HDD paths pass through the partition-aware <code>hdd0:&lt;partition&gt;:pfs:</code> launch form and the owning partition is carried through the hand-off.</p>
+
+<h2 id="validation">Validation before launch</h2>
+<p>The file is opened and checked: at least 1,102,672 bytes, the first four bytes <code>41 00 A0 00</code>, and the POPS signature (<code>kHn</code>, with matching repeated bytes) at offset 1,024. A failing file is reported as &ldquo;This file isn&rsquo;t a POPS VCD&rdquo;. A cannot-open error is reported separately.</p>
+
+<h2 id="handoff">Hand-off, IOP reset and saves</h2>
+<p>POPStarter follows the generic <b>Reset IOP before launch</b> setting (default <b>on</b>, under Settings &gt; Launching): with it on, Launchstation resets the IOP and loads POPStarter from the device; with it off it keeps the already-mounted storage stack. This differs from <a href="neutrino.html">Neutrino</a> and <a href="ember.html">Ember</a>, which always use their own keep-IOP hand-off. When the VCD or the POPStarter ELF lives on the HDD, the partition mounts are released first. POPStarter keeps its own virtual memory cards (<code>.VMC</code> files managed by POPStarter), so MMCE card switching does not apply.</p>
+
+<h2 id="gameid">RetroGem Game ID</h2>
+<p>If <b>Game ID launch signal for discs</b> is on (default), the ID read from the VCD&rsquo;s <code>SYSTEM.CNF</code> boot line, then the shared PS1 timestamp database, then the file/partition name, is drawn for a RetroGem just before the hand-off. No MMCE command is sent. See <a href="special-hardware.html#retrogem">RetroGem Game ID</a>.</p>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>&ldquo;Cannot find POPStarter ELF&rdquo;.</b> Set the path explicitly, or place <code>POPSTARTER.ELF</code> where the fallback list expects it.</li>
+<li><b>&ldquo;VCD path unsupported&rdquo;.</b> Move the VCD into <code>POPS/</code> at the device root (or an HDD POPS partition).</li>
+<li><b>&ldquo;This file isn&rsquo;t a POPS VCD&rdquo;.</b> The image is truncated, not a VCD, or is a raw BIN/CUE. For CUE/BIN use the Ember layout.</li>
+<li><b>Starts and returns to a black screen / game fails.</b> Compare with the same VCD launched from POPStarter&rsquo;s own launcher on the same device; then try toggling <b>Reset IOP before launch</b>. Report exact build hash, POPStarter version and device.</li>
+<li><b>HDD VCD not found.</b> Names matter: <code>__.POPS</code> partitions list files by name; other partitions need exactly <code>IMAGE0.VCD</code>.</li>
+</ol>

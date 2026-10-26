@@ -1,3 +1,21 @@
+=====================================================================
+HISTORICAL / LEGACY FILE (annotated 2026-10-26)
+
+This is the upstream LaunchELF / uLaunchELF / wLaunchELF change history,
+up to "LaunchELF wip7 (2014.04.06)", followed by the original credits. It
+is kept for attribution and for people tracing old behaviour. It is NOT
+updated for Launchstation and does not describe the current program;
+many entries (the classic menu, libito, Screen_X/Screen_Y, USBD selector,
+and so on) no longer exist in this build.
+
+Launchstation's own history is in:
+  * CHANGELOG.md (repository root) - rolling change notes
+  * the GitHub releases and merged pull requests
+    https://github.com/NathanNeurotic/Launchstation
+  * the documentation site: https://nathanneurotic.github.io/Launchstation/
+Full credits: docs/THIRD_PARTY_CREDITS.md and the site's Credits page.
+=====================================================================
+
 Unofficial LaunchELF releases by EP + dlanor + various contributors
 
 LaunchELF wip7 (2014.04.06)

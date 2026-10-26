@@ -1,5 +1,11 @@
 # DEV9 transition follow-up after f4b621f
 
+> **Status as of 2026-10-26: implemented (PR #179, `8494c3f`).**
+> `load_ps2dev9()` returns success/failure and callers propagate it (`src/init.c`); ATA resolves the DEV9 family
+> before loading BDM; covered by `tests/test_dev9_transition.py`. The reported power-off crash and physical
+> DEV9 compatibility remain unreproduced/unverified.
+
+
 The #175 storage report includes a power-off crash, but that crash has not been
 reproduced on hardware. This follow-up addresses two separate source-confirmed
 failure paths found while auditing the same storage lifecycle. It does not

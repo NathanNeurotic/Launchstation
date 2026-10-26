@@ -1,5 +1,28 @@
-<h1>iLink / FireWire</h1><p class="lead">IEEE 1394 mass storage is demand-loaded and presented as a normal dashboard/browser device.</p>
-<h2 id="open">Opening iLink</h2><p>If the card says <b>Not checked</b>, it remains selectable. Confirm invokes the iLink stack; the dashboard refreshes after the probe. If no usable bridge/disk is detected, the card becomes unavailable instead of remaining in an ambiguous state.</p>
-<h2 id="browser">File Browser</h2><p>Once ready, iLink behaves like the other BDM-style filesystems for browsing and file operations. Test ordinary directory listing first when diagnosing a game-launch problem.</p>
-<h2 id="iso">Neutrino ISO source</h2><p>Current Neutrino includes an <code>ilink</code> backing-store driver. A selected <code>.ISO</code> is handed off with the live iLink device stack preserved so quick-boot can consume the existing mount.</p>
-<h2 id="hardware">Hardware notes</h2><p>Bridge chipsets, disk formatting and enclosure behavior vary. A useful report includes the console model, bridge/enclosure, filesystem, whether File Browser works, exact Launchstation build hash and Neutrino version.</p>
+<h1>iLink / FireWire</h1>
+<p class="lead">IEEE 1394 (i.Link, FireWire) mass storage is an independent BDM transport. It appears as the <b>iLink / FireWire</b> device and behaves like the other FAT/exFAT block devices for browsing, file operations and Neutrino ISOs.</p>
+
+<div class="callout info"><div class="h">Only on consoles that have the port</div><p>The i.Link connector was removed from the SCPH-50000 series. Launchstation hides the card on retail consoles whose ROM is 1.70 or newer, without loading any driver to find out. The PSX (DESR) is treated as having the port. Consoles with an unknown or non-retail ROM keep the card visible. Hold <b>SELECT</b> at boot does <em>not</em> override this rule.</p></div>
+
+<h2 id="open">Opening iLink</h2>
+<p>The card starts <b>Not checked</b> (dim, &ldquo;Not connected&rdquo;). Selecting it loads, in order, the BDM core, the BDM/FatFs filesystem driver, <code>iLinkman</code> and <code>IEEE1394_bd</code>, then retries opening <code>ilink:/</code> for up to three seconds while the bridge enumerates. When a filesystem answers, the card reads <em>IEEE1394 storage ready</em>; otherwise it becomes <em>No iLink storage found</em>. The dashboard refreshes after the probe. Optionally turn on <b>Settings &gt; Storage &amp; devices &gt; Start devices automatically &gt; Auto-start iLink / FireWire</b>; leave it off unless the console has a physical i.Link port.</p>
+<p>iLink is not part of the MMCE/MX4SIO SIO2 choice: it can run beside USB, ATA and HDD and does not trigger an IOP reset.</p>
+
+<h2 id="browser">File Browser</h2>
+<p>Once ready, <code>ilink:/</code> lists, copies, renames and deletes like USB and exFAT HDD. Because the BDM namespace is shared, an i.Link unit can also be assigned a <code>massN:</code> name; the card and the browser handle either spelling. Test ordinary directory listing first when diagnosing a game-launch problem. The supported filesystems are FAT32 and exFAT.</p>
+
+<h2 id="iso">Neutrino ISO source</h2>
+<p>Neutrino has an <code>ilink</code> backing-store driver. Selecting a <code>.ISO</code> hands Neutrino <code>-bsd=ilink</code> and the live iLink device stack, preserved so its quick-boot can use the existing mount. The image is validated (ISO9660 <code>CD001</code> at sector 16) first. Neutrino itself must be installed on iLink, on a memory card (<code>mc0:</code>/<code>mc1:</code>) or at a path you set. See <a href="neutrino.html">Neutrino</a>. POPStarter VCDs are not supported from iLink; Ember folders are handed off with the mounted stack retained.</p>
+
+<h2 id="igr">OPL IGR</h2>
+<p>If Launchstation itself is started from iLink, the WLE-IGR helper cannot live on the iLink disk: <b>Tools &gt; OPL IGR automatic MMCE backup</b> installs a trampoline on a physical memory card (<code>mc0:/BOOT/WLE-IGR.ELF</code> or <code>mc1:</code>) that reloads the iLink drivers and relaunches Launchstation. See <a href="igr.html">IGR</a>.</p>
+
+<h2 id="hardware">Hardware notes</h2>
+<p>Bridge chipsets, enclosure firmware, disk formatting and cable quality all matter, and not every IEEE1394-to-SATA/IDE bridge is supported. A useful report includes the console model, bridge/enclosure, disk size and filesystem, whether the File Browser works, the exact Launchstation build hash and the Neutrino version.</p>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>No iLink card.</b> Your console is ROM 1.70 or newer (no port) or the build lacks iLink. Check <b>Tools &gt; Build information</b>.</li>
+<li><b>&ldquo;No iLink storage found&rdquo;.</b> Power the enclosure before the console, reseat the cable, then reopen the card. The probe waits three seconds; a bridge that takes longer to spin up may need <b>Detect now</b> afterward.</li>
+<li><b>Stalls while loading.</b> Module entry and the first directory call are synchronous IOP calls; the loading screen cannot animate during a call that blocks. Report the bridge model and exact build.</li>
+<li><b>Unit number changed.</b> <code>massN:</code> numbering follows attach order among USB, MX4SIO and iLink; use the device card rather than a remembered number.</li>
+</ol>

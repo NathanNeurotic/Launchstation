@@ -1,14 +1,87 @@
-<h1>Applications Library</h1><p class="lead">Applications is the full library nested under Home, not an extra top-level tab. Use Home &gt; Applications to browse configured folders, favorites, pinned apps and recents.</p><h2 id="home">Home integration</h2><p>The Continue carousel surfaces pinned, recent and favorite applications; Last folder is available after a valid path has been visited. SELECT cycles Grid, List and Carousel in the Applications library. Filters include All, Favorites and device categories.</p>
-<h2 id="scope">What is scanned</h2><p>Only configured Application folders are scanned. Defaults:</p><pre class="tree"><code>mc:/APPS/
+<h1>Applications Library</h1>
+<p class="lead">Applications is the full library nested under Home, not an extra top-level tab. Open it with <b>Home &gt; Browse &amp; shortcuts &gt; Applications</b>. It lists the <code>.ELF</code> programs found in your configured application folders, with artwork, descriptions, favorites, pins and filters.</p>
+
+<h2 id="views">Views and controls</h2>
+<p><b>SELECT</b> cycles <b>Grid</b>, <b>List</b> and <b>Carousel</b>; the choice is saved (<b>Settings &gt; Home &amp; applications &gt; Application view</b>, default Grid). The small icons next to the title show the active view and the count (for example <i>12 applications</i> or <i>3 shown - Favorites</i>).</p>
+<table><thead><tr><th>View</th><th>Layout</th><th>Navigation</th></tr></thead><tbody>
+<tr><td>Grid</td><td>5 columns of cards, three rows visible, scrollbar on the right.</td><td>D-pad moves one card; Up/Down move a row; L2/R2 move three rows.</td></tr>
+<tr><td>List</td><td>9 compact rows plus a detail card (large artwork, title, device, description or author/version, full path).</td><td>Up/Down one row; Left/L2 and Right/R2 move a page of 9.</td></tr>
+<tr><td>Carousel</td><td>One large focused card with depth, title, description (or device) and a <i>N / total</i> counter.</td><td>Left/Up previous, Right/Down next; L2/R2 move five.</td></tr>
+</tbody></table>
+<table><thead><tr><th>Button</th><th>Action</th></tr></thead><tbody>
+<tr><td>Confirm</td><td>Start the application. With an empty library it starts a scan instead (<i>Scan now</i>).</td></tr>
+<tr><td>Square</td><td>Add/remove Favorite (a toast confirms).</td></tr>
+<tr><td>Triangle</td><td>Library menu: <b>Application options...</b>, <b>Change view</b>, <b>Show: &lt;filter&gt;</b>, <b>Hide from view</b> / <b>Show in view</b>, <b>Refresh library</b>.</td></tr>
+<tr><td>SELECT</td><td>Cycle the view. With nothing to show under a filter, SELECT returns to <b>All</b>; the footer shows <i>All apps</i> whenever another filter is active.</td></tr>
+<tr><td>Back</td><td>Return to Home.</td></tr>
+<tr><td>L1 / R1</td><td>Switch dashboard tab.</td></tr>
+</tbody></table>
+<p>Selections wrap at both ends. Long titles scroll in a bounded marquee. Unfocused tiles keep stable alpha and scissor state, so memory-card-style icons never render half-drawn.</p>
+
+<h2 id="filters">Filters</h2>
+<p>Triangle &gt; <b>Show</b> chooses <b>All</b>, <b>Favorites</b> (favorites and pinned applications), <b>Memory Cards</b>, <b>MASS</b> (USB), <b>HDD</b>, <b>Other devices</b> or <b>All including hidden</b>. The filter is remembered across restarts. Hidden applications (see <a href="#options">options</a>) are left out of every filter except <b>All including hidden</b>, where they appear dimmed. While a scan is running an empty list reads <i>Looking for applications...</i>. Cached applications whose device is not currently mounted are hidden until the device is ready; they stay in the cache and the shortcuts remain stored.</p>
+
+<h2 id="home">Home integration</h2>
+<p>The Home <b>Continue</b> row surfaces pinned, recent and favorite applications (see <a href="dashboard.html#continue">Dashboard</a>). <b>Pin to Home</b> adds an application to the front of that row; <code>pinned = 1</code> in a metadata file does the same.</p>
+
+<h2 id="scope">What is scanned</h2>
+<p>Only configured application folders are scanned. Defaults:</p><pre class="tree"><code>mc:/APPS/
 mc:/BOOT/
 mass:/APPS/
-mass:/BOOT/</code></pre><p>Each configured root includes one subfolder level. This avoids silently crawling every attached filesystem.</p>
-<h2 id="manage">Manage scan roots</h2><p>Open <b>Settings → Home &amp; applications → Application library → Application folders...</b>. Each current root is labeled “this folder + one subfolder.” Add Folder chooses an exact root; Restore Defaults restores the standard memory-card and mass roots.</p>
-<h2 id="presentation">Presentation</h2><p>The dashboard can show application metadata and artwork when present. Long titles use bounded marquee behavior. Unfocused app rendering has stable alpha/scissor state so memory-card-style icons do not become half rendered.</p>
-<h2 id="artwork">Artwork &amp; covers</h2><p>Every application gets a <b>default tile</b>: a generated icon tinted per app. Its style is set in <b>Settings &gt; Customize theme &gt; Icons &gt; Default app icon</b>. To show your own cover instead, add a PNG in one of the places below. <b>Settings &gt; Home &amp; applications &gt; Application artwork</b> must be On.</p>
-<h3>Image format</h3><ul><li>PNG only (transparency is supported).</li><li>Any size up to 1.5 MB per file. Images are scaled down to fit 128&times;128 and never enlarged, so square art of 128&times;128 or more looks best. Interlaced PNGs are limited to 256&times;256.</li></ul>
-<h3>Where Launchstation looks</h3><p>For an app at <code>mass:/APPS/OPL/OPNPS2LD.ELF</code>, the first file found wins:</p><ol><li>A <code>cover =</code> line in the app's metadata sidecar (see below).</li><li>Beside the ELF: <code>OPNPS2LD.ELF_COV.png</code>, <code>OPNPS2LD_COV.png</code> or <code>OPNPS2LD.png</code>.</li><li>In the app's own folder (not a scan root such as <code>mass:/APPS/</code> itself): <code>cover.png</code> or <code>icon.png</code>.</li><li>Beside the ELF: <code>OPNPS2LD_ICO.png</code> (OPL disc-icon naming).</li><li>An <code>ART</code> folder at the root of the same device, using OPL naming: <code>mass:/ART/OPNPS2LD.ELF_COV.png</code> or <code>mass:/ART/OPNPS2LD_COV.png</code> (the <code>+OPL</code> partition on an internal HDD).</li><li>An <code>ART</code> folder in Launchstation's settings folder (beside <code>DASHBOARD.CNF</code>): <code>OPNPS2LD.ELF_COV.png</code>, <code>OPNPS2LD_COV.png</code> or <code>OPNPS2LD.png</code>. Use this for apps on devices that are not started yet.</li></ol><p>Covers prepared for OPL's <code>ART</code> folder work as-is.</p>
-<h3>Choosing a cover in metadata</h3><p>Create <code>OPNPS2LD.cfg</code> next to the ELF (or use <b>Application options &gt; Edit metadata</b>), plain <code>key = value</code> text:</p><pre>title = Open PS2 Loader
-cover = covers/opl.png</pre><p>A relative <code>cover</code> path is resolved from the ELF's folder; a full path such as <code>mc0:/ART/opl.png</code> also works. <code>art</code> and <code>icon</code> are accepted as synonyms. OPL-style <code>title.cfg</code> files are read too.</p>
-<h3>After adding art</h3><p>Choose <b>Refresh library</b> (Applications options) or <b>Settings &gt; Home &amp; applications &gt; Application library &gt; Refresh library now</b>. Covers already found are kept, and apps that had none are checked again. Saving from <b>Edit metadata</b> re-reads that one app immediately.</p>
-<h2 id="favorites">Favorites and app metadata</h2><p>Application options can add/remove Favorites, pin a shortcut, edit metadata and show the app in File Browser. Favorite changes show a toast. Hiding an app does not delete its ELF and a later library refresh can reveal it again.</p><h2 id="launch">Launching</h2><p>ELFs use the shared loader path. Optional argument sidecars and the Text Editor's “Launch with these arguments” action can provide custom argv.</p>
+mass:/BOOT/</code></pre>
+<p>Each root is searched for <code>.ELF</code> files directly inside it and inside each immediate sub-folder (<code>APPS/&lt;folder&gt;/*.ELF</code>), no deeper. Listing goes through the File Browser's directory reader, so every device and driver quirk it handles applies here too. The library holds up to 512 applications and up to 12 scan folders.</p>
+<ul>
+<li><b>At startup</b> only memory cards and devices whose driver is already running are refreshed (<b>Refresh at startup</b>, default On). Nothing else is initialised just for the dashboard.</li>
+<li>A memory card is probed afresh when scanned, as when opening it in Files; with MX4SIO using slot 2, <code>mc1:</code> is skipped by background scans.</li>
+<li><b>Refresh library</b> (Triangle menu, START menu, or Settings) scans every configured folder, starting the drivers it needs first. The search itself runs in the background; a toast reports <i>N applications found</i>.</li>
+<li>Results are cached in <code>DASHLIB.CNF</code> and shown instantly on the next boot. Apps that disappear (device removed) stay usable as shortcuts and fail with a friendly message instead of an error.</li>
+<li>Titles are derived from the file name: a built-in table gives proper names to well-known programs (OPL, Neutrino, uLaunchELF, RetroArch, PS2Ident and more); generic names such as <code>BOOT</code> or <code>MAIN</code> use the parent folder's name; a leading <code>APP_</code> is dropped and underscores become spaces. Metadata <code>title</code> overrides all of this.</li>
+</ul>
+
+<h2 id="manage">Manage scan roots</h2>
+<p>Open <b>Settings &gt; Home &amp; applications &gt; Application library &gt; Application folders...</b>. Each current root is labeled <i>this folder + one subfolder</i>; select one to remove it. <b>Add folder...</b> chooses an exact folder (you are offered an immediate search afterwards) and <b>Restore defaults</b> restores the standard four roots. Changes take part in the Settings Save/Discard session.</p>
+
+<h2 id="options">Application options</h2>
+<p>Triangle on a focused application (Home or Applications) opens its options:</p>
+<table><thead><tr><th>Item</th><th>Effect</th></tr></thead><tbody>
+<tr><td>Start</td><td>Launch through the shared loader.</td></tr>
+<tr><td>Start with arguments...</td><td>Opens (or creates) the sidecar <code>&lt;name&gt;.arg</code> in the Text Editor. Choose <b>Launch with these arguments</b> from the editor menu. See <a href="launch-arguments.html">Launch Arguments</a>.</td></tr>
+<tr><td>Add to / Remove from Favorites</td><td>Up to 48 favorites.</td></tr>
+<tr><td>Pin to / Unpin from Home</td><td>Pinned apps lead the Continue row.</td></tr>
+<tr><td>Details</td><td>Location, file, author, version, category, artwork source and metadata path (or <i>none - create ...</i>).</td></tr>
+<tr><td>Show in File Browser</td><td>Opens the app's folder in the Files tab.</td></tr>
+<tr><td>Edit metadata</td><td>Creates a starter <code>.cfg</code> next to the ELF after confirmation, then opens it in the Text Editor; saving re-reads that one app.</td></tr>
+<tr><td>Hide from view / Show in view, Remove shortcut</td><td>Hiding keeps the ELF on the device and only removes it from Home and the Applications list (no confirmation); the path is stored as a <code>Hidden</code> line in <code>DASHAPPS.CNF</code>, survives library refreshes and is undone with <b>Show in view</b> (find it under <b>All including hidden</b>). <i>Remove shortcut</i> appears for entries that are not in the library and clears them from Home, Favorites and Recents.</td></tr>
+</tbody></table>
+<p>If a launch fails because the file is missing, a message names the device and, for favorites, pins and recents, offers to remove the shortcut. A file that is not a valid PlayStation 2 executable gets its own message.</p>
+
+<h2 id="metadata">Metadata (optional)</h2>
+<p>Plain <code>key = value</code> text; every key is optional; <code>#</code> starts a comment. Two sources are read, in addition to the ELF itself:</p>
+<ul>
+<li><code>&lt;dir&gt;/&lt;ELFNAME&gt;.cfg</code>, for example <code>OPNPS2LD.cfg</code> beside <code>OPNPS2LD.ELF</code>.</li>
+<li><code>&lt;dir&gt;/title.cfg</code> in OPL application format (<code>title=</code>, <code>boot=</code>); applied only when <code>boot=</code> matches the ELF.</li>
+</ul>
+<pre>title = Open PS2 Loader
+description = Game loader for USB, HDD, SMB and MX4SIO.
+author = ifcaro &amp; contributors
+version = 1.2.0
+category = Loader
+cover = covers/opl.png      # relative to the ELF folder, or a full path
+arg = -some-option          # one argument per line, repeatable
+pinned = 1                  # also show on Home</pre>
+<p>Accepted synonyms: <code>name</code> for title, <code>desc</code> for description, <code>developer</code> for author, <code>genre</code> for category, <code>art</code> and <code>icon</code> for cover, <code>args</code> for arg, <code>favorite</code> for pinned. A classic <code>&lt;ELFNAME&gt;.arg</code> sidecar always wins over metadata <code>arg</code> lines, which are used only when no <code>.arg</code> exists.</p>
+
+<h2 id="presentation">Presentation</h2>
+<p>The library shows metadata and artwork when present. The default tile for an app without artwork is chosen under <b>Settings &gt; Appearance &gt; Customize theme &gt; Icons &gt; Default app icon</b> (Application, Device or Initials). The shape of every tile follows <a href="themes.html#tile-styles">Tile style</a>.</p>
+
+<h2 id="artwork">Artwork &amp; covers</h2>
+<p>Every application gets a <b>default tile</b>. To show your own cover instead, add a PNG in one of the places below. <b>Settings &gt; Home &amp; applications &gt; Application artwork</b> must be On (default On).</p>
+<h3>Image format</h3><ul><li>PNG only (transparency is supported).</li><li>Up to 1.5 MB per file and 2048x2048 source pixels. Images are scaled down to fit 128&times;128 and never enlarged, so square art of 128&times;128 or more looks best. Interlaced PNGs are limited to 256&times;256. At most 40 thumbnails are kept in memory; they are loaded only after the pad has been idle for a moment.</li></ul>
+<h3>Where Launchstation looks</h3><p>For an app at <code>mass:/APPS/OPL/OPNPS2LD.ELF</code>, the first file found wins:</p><ol><li>A <code>cover =</code> line in the app's metadata.</li><li>Beside the ELF: <code>OPNPS2LD.ELF_COV.png</code>, <code>OPNPS2LD_COV.png</code> or <code>OPNPS2LD.png</code>.</li><li>In the app's own folder (not a scan root such as <code>mass:/APPS/</code> itself): <code>cover.png</code> or <code>icon.png</code>.</li><li>Beside the ELF: <code>OPNPS2LD_ICO.png</code> (OPL disc-icon naming).</li><li>An <code>ART</code> folder at the root of the same device, using OPL naming: <code>mass:/ART/OPNPS2LD.ELF_COV.png</code> or <code>mass:/ART/OPNPS2LD_COV.png</code> (the <code>+OPL</code> partition on an internal HDD).</li><li>An <code>ART</code> folder beside <code>DASHBOARD.CNF</code> (the settings folder): <code>OPNPS2LD.ELF_COV.png</code>, <code>OPNPS2LD_COV.png</code> or <code>OPNPS2LD.png</code>. Use this for apps on devices that are not started yet.</li><li>Otherwise the theme's default application icon.</li></ol><p>Covers prepared for OPL's <code>ART</code> folder work as-is. Artwork on a device whose driver is not running is looked up later, when that device is opened.</p>
+<h3>Choosing a cover in metadata</h3><p>Create <code>OPNPS2LD.cfg</code> next to the ELF (or use <b>Application options &gt; Edit metadata</b>):</p><pre>title = Open PS2 Loader
+cover = covers/opl.png</pre><p>A relative <code>cover</code> path is resolved from the ELF's folder; a full path such as <code>mc0:/ART/opl.png</code> also works.</p>
+<h3>After adding art</h3><p>Choose <b>Refresh library</b> (Applications menu) or <b>Settings &gt; Home &amp; applications &gt; Application library &gt; Refresh library now</b>. Covers already found are kept, and apps that had none are checked again. Saving from <b>Edit metadata</b> re-reads that one app immediately.</p>
+<p>Artwork can also fill the dashboard background: <b>Settings &gt; Appearance &gt; Customize theme &gt; Artwork background</b> shows the focused app's cover behind Home and Applications. See <a href="themes.html">Themes</a>.</p>
+
+<h2 id="launch">Launching</h2>
+<p>ELFs use the shared loader path: argument sidecars, device loading, KELF/HDD/PSX handling and cleanup before exec. By default the IOP is reset before launch (<b>Settings &gt; Launching &gt; Reset IOP before launch</b>, recommended). Every launch is added to the recent list (<b>Recent applications</b>). Background saves and driver work finish first, with a progress overlay, so nothing is lost when the application takes over.</p>

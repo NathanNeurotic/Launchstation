@@ -1,5 +1,11 @@
 # Launchstation dashboard
 
+> Maintainer reference for the current dashboard. The user-facing version of
+> most of this is the documentation site (`docs-site/`, published at
+> <https://nathanneurotic.github.io/Launchstation/>): Dashboard, File Browser,
+> Applications, Text Editor, Launch Arguments, Controls, Settings,
+> Configuration and Themes pages. Last verified against the source on 2026-10-26.
+
 The dashboard is the only shell of this build; the classic launch-key
 menu and the classic screens are gone. Underneath it still uses the proven
 underlying wLaunchELF code: every launch goes through `ExecuteMainAction()`, and file
@@ -14,7 +20,7 @@ reboot IOP) run behind the loading overlay.
 File Browser: Confirm opens a folder, previews PNG/JPG/JPEG images, starts an ELF/KELF/VCD/ISO or opens a
 text file in the Text Editor. The image viewer supports sibling-image browsing,
 90-degree rotation, 1x-4x zoom, left-stick panning, fullscreen mode and a
-configurable 1-60 second slideshow; Square selects; Triangle has copy, cut,
+configurable 1-60 second slideshow (R3 starts/stops it); Square selects; Triangle has copy, cut,
 paste (also with new names), PSU create/extract, delete, rename, new
 folder, folder icon (icon.sys), size, start with arguments, title.cfg,
 mount as vmc0:/vmc1: (for .bin/.vmc/.mc2/.ps2 images; mounted images
@@ -26,17 +32,21 @@ file operations in the partition list).
 
 Also in the File Browser menu, as in the classic browser:
 
-* *Show*: file names, names and details (size and date), or game titles
-  and details (the title of each save or PSU file).
-* *Sort by*: name, game title, date, or as stored. Folders come first,
-  then ELF files.
+* *Show*: four modes: file names, names and details (size and date-time;
+  the default), game titles and details, and game titles only (the title of
+  each save or PSU file; names are the fallback). The choice lasts for the
+  session and is not written to a config file.
+* *Sort by*: as stored, name (default), game title, size, date-time or kind,
+  then ascending or descending. Folders always stay first; the native
+  browser does not group ELF files ahead of other files, and HDD partition
+  lists keep the drive's order.
 * *Bookmarks...*: the PathPad. Jump to a bookmarked folder, bookmark the
   current one or remove one (saved in LAUNCHELF.CNF; *Lock shortcuts & bookmarks*
   under Settings > Launching locks them).
 * *Go to Launchstation's folder*, *Invert selection*.
 * *Use as launch arguments* on a text file: its lines become the
   arguments of the application you start next from the browser.
-* The header shows the free space of memory cards and HDD partitions.
+* The header shows the free space of memory cards and HDD partitions. The tab strip and main panes share the File Browser's left/right bounds, and the console temperature (cached sensor sample) is appended to the clock when the console has a sensor.
 
 In file pickers (Settings, launch keys) R3 chooses the highlighted file as
 a `uLE:/` path, relative to Launchstation's own folder, like the classic R3;
@@ -61,7 +71,8 @@ to Files, the browser restores the previous folder and highlighted entry.
 HOME includes both Continue and the entire application library. Use the
 **Applications** shortcut in Home's **Browse & shortcuts** row to enter
 the full library (Grid, List, Carousel, filters, favorites/pins and refresh).
-Back returns to Home. The Home **Last folder** chip refreshes when Home
+Back returns to Home. ("APPS" elsewhere in this file means that nested
+Home > Applications library.) The Home **Last folder** chip refreshes when Home
 becomes active, without device-readiness probes during Files I/O.
 
 Within Files, **Back** moves to the parent folder. Back from the device
@@ -70,9 +81,13 @@ operations, browse/view/sort modes, copy/paste, VMC backup operations and
 PathPad features remain in the same browser. The directory reader keeps its
 USB/PAD serialization across all tabs (including reads started before a tab switch) and invalidates in-flight results when switching tabs.
 
-**MISC commands** live in **Tools > Storage > MISC commands** rather than
-being duplicated among the Files tab's device roots. Other launch actions
-that request an independent File Browser still use the modal implementation.
+**MISC commands** (the classic built-in commands) open as a popup menu from
+**Tools > Storage > MISC commands** and also appear as a **Built-in
+commands** entry at the end of the Files device root and under
+**Settings > Built-in commands**. Other launch actions that request an
+independent File Browser still use the modal implementation of the same
+native browser; the original classic `getFilePath()` browser code remains in
+the source but no dashboard entry point opens it.
 
 | Tab | Contents |
 | --- | --- |
@@ -85,12 +100,13 @@ Startup can now select any of the four tabs, including Files. Older startup
 values pointing to the separate Apps page still open Home, and the old
 Devices page points to Files; no app metadata or favorites are rewritten.
 
-On HOME and the DEVICES grid, a small console label uses the ROM region already
-read at boot. It does not probe hardware while drawing. The DEVICES grid's
-**Triangle → Options → Console information** action opens the System information sheet;
-that explicit action may query CDVD for the exact console model. Once read,
-the model is cached for the small HOME/DEVICES labels. Until then they show
-PS2 or PSX and the available ROM region rather than guessing a model.
+On HOME, a small console label uses the ROM region already read at boot. It
+does not probe hardware while drawing. **Tools > System information**
+opens the System information sheet; that explicit action may query CDVD for
+the exact console model. Once read, the model is cached for the small label.
+Until then it shows PS2 or PSX and the available ROM region rather than
+guessing a model. (The separate DEVICES grid no longer exists as a tab; its
+device list is the Files root.)
 
 ## Dashboard top-edge flicker / tearing
 
@@ -166,19 +182,21 @@ first/last row. The breadcrumb shows where the page lives.
 
 | Group | Contents |
 |-------|----------|
-| Appearance | Theme preset, customization groups, screen calibration, motion, animation, theme files and resets. Panel opacity belongs to Interface colours > Panels. |
-| Home & applications | Start screen, view, artwork, recent count/history and Application library (folders and refresh). |
+| Appearance | Theme preset, customization groups, screen calibration, motion, animation, panel transparency, control icon backings, theme files and resets. |
+| Home & applications | Start screen (Home, Applications, Files, Tools, Settings), view, artwork, recent count/history and Application library (folders and refresh). |
 | Sound | Interface effects, music and their separate volumes. |
 | Input | Confirm button, on-screen keyboard and USB keyboard (driver and map). |
 | Launching | Automatic start & boot, Launch keys, shortcut/bookmark lock, disc/PS1 loaders, IOP reset and game IDs. |
-| Storage & devices | Browser visibility and device auto-start preferences. |
+| Storage & devices | MMCE backups, HDD/ATA visibility, empty slots, unavailable devices and device auto-start preferences. |
 | Network | IP address, netmask, gateway and network write access. |
-| System | Language, memory card backup-file rules, configuration folder, alternate launch/tool settings save location and welcome message. |
+| System | Language, memory card backup-file rules, classic screen settings, software/hardware clock, temperature units (50K and later; shown beside the header clock), configuration folder, alternate launch/tool settings save location and welcome message. |
 
 Unavailable dependent options remain visible with help explaining what to
 enable first. Path rows open a Choose/Clear dialog. Launch-key rows open
 Choose target/Edit title/Clear target; Square edits a title directly.
-Square resets individual appearance options to their preset defaults.
+Square resets a highlighted theme option to its preset default (and edits the
+title on launch-key rows). Every option, value and default is listed on the
+site's Settings page.
 
 Previewed changes share the existing Save/Discard session, including themes
 and network addresses. Unchanged sessions and changes returned to their
@@ -227,11 +245,16 @@ Input > Confirm button), as the classic browser did.
 | L2 / R2 | Page jump |
 | START | Dashboard menu from any native screen (home, refresh library, File Browser, settings, reboot IOP, power off); START again closes it. SELECT + START keeps the START launch key |
 | SELECT | Tap: switch application view (APPS). Hold: your launch keys appear; press a button to start its application |
+| R3 (HOME) | Hide/show the interface to see only the animated background |
 
-Legacy boot behaviour is kept: `Init_Delay` is honoured,
+Legacy boot behaviour is kept: `Init_Delay` (default 1 s) is honoured,
 a launch key held when the delay ends starts its application, and a
-configured `LK_auto` path starts after the classic timeout unless a button
-is pressed (a countdown banner is shown).
+configured `LK_auto` path starts after the classic timeout (default 10 s)
+unless a button is pressed (a countdown banner is shown). Holding SELECT
+while Launchstation starts is a recovery boot: `DASHBOARD.CNF` is ignored for
+that session (nothing saved is changed) and all device families are listed.
+The same buttons work from a USB keyboard when it is enabled; the key map is
+in `keyboard.txt`.
 
 ## Language
 
@@ -249,7 +272,7 @@ separate from the UDPFS server entry.
 
 ## Themes
 
-Settings > Appearance chooses among 19 built-in themes (OSD Classic, PS2
+Settings > Appearance chooses among 18 built-in themes (OSD Classic, PS2
 Towers, Disc Error Red, System Clock and more) and opens the theme editor,
 where the background, every colour, selection style, corners, font, text
 size, icons, clock and app-artwork wallpaper can be changed with the
@@ -323,7 +346,7 @@ running is looked up later, when that device is opened.
 ## Files written by the dashboard
 
 Next to LAUNCHELF.CNF when it was loaded from a writable device, otherwise
-in `mc0:/SYS-CONF/`: `DASHBOARD.CNF` (settings, scan folders),
+beside the ELF or in `mc0:/SYS-CONF/`: `DASHBOARD.CNF` (settings, scan folders),
 `DASHAPPS.CNF` (favorites, pins, recents), `DASHLIB.CNF` (library cache).
 The active theme is part of DASHBOARD.CNF (`Theme_*` keys); saved themes
 go to `THEMES/<name>/theme.cfg`, only when you choose
@@ -469,18 +492,21 @@ B/KB where appropriate.
 
 Settings > Storage & devices > Start devices automatically has an *Auto-start*
 switch per device family (USB
-storage, internal HDD, exFAT HDD, MMCE SD, MX4SIO, UDPFS network): ON
+storage, internal HDD, exFAT HDD, MMCE SD, MX4SIO, UDPFS network and, in
+iLink builds, iLink / FireWire): ON
 loads that device's drivers when the dashboard starts, so the device is
 ready immediately and its applications are found by the startup scan
-(`Dash_DevAuto` bitmask, all off by default). OFF never loads the driver
-by itself — the DEVICES screen can still start it manually, and drivers
+(`Dash_DevAuto` bitmask, all off by default; the boot device is always on). OFF never loads the driver
+by itself — the Files device root can still start it manually, and drivers
 already loaded stay loaded until the next IOP reboot. The device the ELF
 booted from is always on (its driver is already running) and cannot be
 switched off.
 
 On APPS, the *Show* choice (Triangle menu) filters the list — All,
-**Favorites**, Memory Cards, USB, HDD, Other devices — and the choice is
-remembered across restarts (`Dash_AppFilter`).
+**Favorites** (favorites and pinned), Memory Cards, MASS, HDD, Other devices, All including hidden — and the choice is
+remembered across restarts (`Dash_AppFilter`). *Hide from view* / *Show in view*
+(application options or Triangle menu) dims an application out of every filter
+except *All including hidden*; hidden paths are stored in `DASHAPPS.CNF`.
 
 ## Optional PSBBN layers (Crystal background)
 
@@ -511,7 +537,9 @@ python scripts/gen_dash_font.py path/to/Font.ttf
 
 ## Memory and VRAM budget
 
-* Framebuffer: unchanged (single buffered, CT32, as the classic UI).
+* Framebuffer: double buffered CT32 while the dashboard is active (see
+  "Dashboard top-edge flicker / tearing" above); the classic single-buffer
+  initialisation is untouched.
 * Dashboard font atlases ~215 KB, bitmap-font atlas 512x340 PSMT8 (~170 KB,
   only with the *System* font), icon atlas 512x408 PSMT8 (~204 KB),
   five tiny CT32 helper textures. All textures are owned by gsKit's texture
@@ -522,9 +550,9 @@ python scripts/gen_dash_font.py path/to/Font.ttf
   frame are never evicted.
 * Library: 512 entries x ~850 bytes. Scans temporarily allocate one
   FileBrowser listing buffer (~800 KB) and free it afterwards.
-* Themes: the theme itself is ~700 bytes. Theme images (wallpaper <= 320 KB,
-  default app icon <= 64 KB, PSBBN layers) share 8 slots and are loaded
-  once on first use. The Brushed background builds one 32 KB texture on
+* Themes: the theme itself is ~700 bytes. Theme images (wallpaper decoded
+  into a 640x512 box, at most 1.25 MiB; default app icon <= 64 KB; PSBBN
+  layers) share 8 slots and are loaded once on first use. The Brushed background builds one 32 KB texture on
   first use; every other background is pure geometry. Listing theme
   folders temporarily allocates one FileBrowser listing buffer.
 
