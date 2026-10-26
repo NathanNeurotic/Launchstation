@@ -146,6 +146,8 @@ int dashShowImageViewer(const char *path, const char *title, DashImageViewerStat
 		char status[160];
 
 		dashInputPoll(&in);
+		if (dashDashboardPending())
+			break;
 		now = Timer();
 
 		if (state->slideshow && slide_deadline && now >= slide_deadline) {
@@ -201,7 +203,7 @@ int dashShowImageViewer(const char *path, const char *title, DashImageViewerStat
 			state->fullscreen = !state->fullscreen;
 			dashSoundPlay(DASH_SND_CONFIRM);
 		}
-		if (in.pressed & DASH_IN_START) {
+		if (in.pressed & DASH_IN_R3) {
 			state->slideshow = !state->slideshow;
 			slide_deadline = state->slideshow ? now + (u64)state->slide_seconds * 1000 : 0;
 			dashSoundPlay(DASH_SND_CONFIRM);
@@ -224,7 +226,7 @@ int dashShowImageViewer(const char *path, const char *title, DashImageViewerStat
 			rotation = 0;
 			dashSoundPlay(DASH_SND_CONFIRM);
 		}
-		if (in.any && state->slideshow && !(in.pressed & DASH_IN_START))
+		if (in.any && state->slideshow && !(in.pressed & DASH_IN_R3))
 			slide_deadline = now + (u64)state->slide_seconds * 1000;
 
 		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dashVisualUpdate());
@@ -276,7 +278,7 @@ int dashShowImageViewer(const char *path, const char *title, DashImageViewerStat
 			         (int)(zoom * 100.0f + 0.5f), rotation * 90,
 			         state->slide_seconds, remain);
 		} else {
-			snprintf(status, sizeof(status), "%d%%  %d deg  START slideshow (%ds)  L1/R1 speed",
+			snprintf(status, sizeof(status), "%d%%  %d deg  R3 slideshow (%ds)  L1/R1 speed",
 			         (int)(zoom * 100.0f + 0.5f), rotation * 90, state->slide_seconds);
 		}
 

@@ -1007,12 +1007,12 @@ static void editorScene(void)
 	drawText(d, rows, cols);
 	if (kb_shown) {
 		DashHint h[] = {{dashOkIcon(), NULL, "Type"}, {dashBackIcon(), NULL, "Delete"}, {DI_BTN_SQUARE, NULL, "Caps"},
-		                {-1, "L1/R1", "Move"}, {-1, "SELECT", "Hide keys"}, {-1, "START", "Menu"}};
+		                {-1, "L1/R1", "Move"}, {-1, "SELECT", "Hide keys"}, {DI_BTN_TRIANGLE, NULL, "Options"}};
 		drawKeyboard();
 		dashDrawHints(h, 6);
 	} else {
 		DashHint h[] = {{dashOkIcon(), NULL, "Type"}, {DI_BTN_SQUARE, NULL, d->mark >= 0 ? "End select" : "Select"},
-		                {-1, "L1/R1", "Line"}, {-1, "L2/R2", "Page"}, {-1, "START", "Menu"}, {dashBackIcon(), NULL, "Exit"}};
+		                {-1, "L1/R1", "Line"}, {-1, "L2/R2", "Page"}, {DI_BTN_TRIANGLE, NULL, "Options"}, {dashBackIcon(), NULL, "Exit"}};
 		dashDrawHints(h, 6);
 	}
 	dashDrawToasts();
@@ -1093,6 +1093,11 @@ int dashTextEditorEx(const char *path, int create_if_missing)
 		EdDoc *d;
 		int rows, cols, action = -1;
 
+		if (dashDashboardPending()) {
+			if (dashDashboardConfirmLeave(leaveEditor))
+				goto done;
+			continue;
+		}
 		if (ndocs == 0) {
 			if (!emptyMenu())
 				break;
@@ -1103,10 +1108,12 @@ int dashTextEditorEx(const char *path, int create_if_missing)
 		cols = visibleCols();
 
 		dashInputPollEx(&in, 0);
+		if (dashDashboardPending())
+			continue;
 		if (usbKeys(d, rows) == 1)
 			action = editorMenu(d);
 
-		if (in.pressed & DASH_IN_START)
+		if (in.pressed & DASH_IN_MENU)
 			action = editorMenu(d);
 		else if (in.pressed & DASH_IN_SELECT)
 			kb_shown = !kb_shown;
@@ -1133,8 +1140,6 @@ int dashTextEditorEx(const char *path, int create_if_missing)
 				moveLines(d, -1);
 			if (in.pressed & DASH_IN_R2)
 				moveLines(d, 1);
-			if (in.pressed & DASH_IN_MENU)
-				kb_shown = 0;
 		} else {
 			int line = docLineOf(d, d->cur);
 			if (in.pressed & DASH_IN_UP)
@@ -1157,8 +1162,6 @@ int dashTextEditorEx(const char *path, int create_if_missing)
 				d->mark = (d->mark >= 0) ? -1 : d->cur;
 			if (in.pressed & DASH_IN_OK)
 				kb_shown = 1;
-			if (in.pressed & DASH_IN_MENU)
-				action = editorMenu(d);
 			if (in.pressed & DASH_IN_BACK)
 				action = M_EXIT;
 		}

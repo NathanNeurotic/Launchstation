@@ -245,7 +245,7 @@ static const SetItem display_items[] = {
 };
 
 static const SetItem dash_items[] = {
-    {ST_CHOICE, S_START, "Start screen", "Section shown when the dashboard opens."},
+    {ST_CHOICE, S_START, "Start screen", "Initial screen. Applications opens the library under Home directly."},
     {ST_CHOICE, S_HOME_SHORTCUTS, "Home quick-launch shortcuts", "Show configured launch-key shortcuts alongside Applications and Last folder."},
     {ST_CHOICE, S_VIEW, "Application view", "Grid, list or carousel (SELECT also switches it in Home > Applications)."},
     {ST_CHOICE, S_ARTWORK, "Application artwork", "Load cover art for tiles and artwork backgrounds."},
@@ -641,12 +641,13 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			*names = pct_names, *cur = dashCfg.bgm_vol / 10;
 			return 11;
 		case S_START: {
-			static const char *const start_names[] = {"Home", "Files", "Tools", "Settings"};
+			static const char *const start_names[] = {"Home", "Applications", "Files", "Tools", "Settings"};
 			*names = start_names;
-			*cur = (dashCfg.start_section == DASH_SEC_FILES || dashCfg.start_section == DASH_SEC_DEVICES) ? 1 :
-			       (dashCfg.start_section == DASH_SEC_TOOLS) ? 2 :
-			       (dashCfg.start_section == DASH_SEC_SETTINGS) ? 3 : 0;
-			return 4;
+			*cur = (dashCfg.start_section == DASH_SEC_APPS) ? 1 :
+			       (dashCfg.start_section == DASH_SEC_FILES || dashCfg.start_section == DASH_SEC_DEVICES) ? 2 :
+			       (dashCfg.start_section == DASH_SEC_TOOLS) ? 3 :
+			       (dashCfg.start_section == DASH_SEC_SETTINGS) ? 4 : 0;
+			return 5;
 		}
 		case S_FILES_MODE: {
 			static const char *const modes[] = {"Files", "Devices"};
@@ -1121,7 +1122,7 @@ static void colorEditor(const char *title, int id)
 			dashInputFlush();
 			return;
 		}
-		if (in.pressed & DASH_IN_BACK) {
+		if (dashDashboardPending() || (in.pressed & DASH_IN_BACK)) {
 			*c = orig;
 			if (!classic)
 				dashThemeApply();
@@ -1304,9 +1305,10 @@ static void setChoice(int id, int v)
 			break;
 		}
 		case S_START:
-			dashCfg.start_section = (v == 1) ? DASH_SEC_FILES :
-			                        (v == 2) ? DASH_SEC_TOOLS :
-			                        (v == 3) ? DASH_SEC_SETTINGS : DASH_SEC_HOME;
+			dashCfg.start_section = (v == 1) ? DASH_SEC_APPS :
+			                        (v == 2) ? DASH_SEC_FILES :
+			                        (v == 3) ? DASH_SEC_TOOLS :
+			                        (v == 4) ? DASH_SEC_SETTINGS : DASH_SEC_HOME;
 			break;
 		case S_FILES_MODE:
 			dashCfg.files_mode = v;
@@ -3074,6 +3076,7 @@ static void settingsDraw(void)
 		int on = i == item, disabled = itemDisabled(it);
 		DashColor col = disabled ? DASH_C_TEXT3 : dashItemColor(on);
 
+		dashGfxPushAlpha(disabled ? DASH_DISABLED_ALPHA : 1.0f);
 		{
 			int row_icon = it->type == ST_PAGE ? pages[it->id].icon :
 			               it->type == ST_PATH ? DI_FOLDER :
@@ -3088,11 +3091,13 @@ static void settingsDraw(void)
 			snprintf(buf, sizeof(buf), "%s / %s", ip, netmask);
 			dashText(ix + 38, y + 4.0f, localizeDashboardText(it->label), DASH_FS_SMALL, DASH_C_TEXT3);
 			dashTextRight(ix + iw - 12, y + 4.0f, buf, DASH_FS_SMALL, DASH_C_TEXT2);
+			dashGfxPopAlpha();
 			continue;
 		}
 		if (it->type == ST_PAGE) {
 			dashTextFit(ix + 38, y + 4.0f, iw - 70, localizeDashboardText(it->label), DASH_FS_SMALL, col);
 			dashIcon(DI_PLAY, ix + iw - 22, y + 9, 12, DASH_C_TEXT3);
+			dashGfxPopAlpha();
 			continue;
 		}
 		{
@@ -3177,6 +3182,7 @@ static void settingsDraw(void)
 				              disabled ? DASH_C_TEXT3 : (on ? DASH_C_ACCENT : DASH_C_TEXT2));
 			dashIcon(DI_PLAY, ix + iw - 22, y + 8, 12, DASH_C_TEXT3);
 		}
+		dashGfxPopAlpha();
 	}
 	dashDrawScrollbar(ix + iw + 10, iy, ITEM_ROWS * irow, item_top, ITEM_ROWS, c->n);
 	/* help line */

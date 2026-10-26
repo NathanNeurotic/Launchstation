@@ -158,6 +158,20 @@ static void homeRebuild(void)
 	row_forced = (nhome == 0 && nchips > 0);
 }
 
+void dashHomeOpenApplications(void)
+{
+	if (library_open)
+		return;
+	library_open = 1;
+	if (dashAppsScreen.enter)
+		dashAppsScreen.enter();
+	/* Back from the viewer returns to its Applications shortcut. */
+	row = 1;
+	col[1] = 0;
+	col_anim[1] = 0.0f;
+	dashUiFocusPoke();
+}
+
 static void homeEnter(void)
 {
 	library_open = 0;
@@ -177,10 +191,7 @@ static void activateChip(const Chip *c)
 {
 	switch (c->kind) {
 		case CHIP_LIBRARY:
-			library_open = 1;
-			if (dashAppsScreen.enter)
-				dashAppsScreen.enter();
-			dashUiFocusPoke();
+			dashHomeOpenApplications();
 			break;
 		case CHIP_LAST_FOLDER: {
 			/* LastDir can change after the previous file operation. Copy it

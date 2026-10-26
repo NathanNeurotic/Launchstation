@@ -83,7 +83,10 @@ static int readpad_noRepeat(void) {
 }
 static u64 last_input_ms;
 static u32 held_prev;
+static int dashboard_menus,dashboard_menu_open;
+static void dashDashboardMenu(void) { dashboard_menus++; }
 """
+padcode += function(read("src/dash_main.c"), "int dashDashboardMenuIsOpen(")
 padcode += function(ui, "void dashInputPollEx(") + function(ui, "void dashInputFlush(")
 padcode += r"""
 int main(void) {
@@ -126,6 +129,24 @@ int main(void) {
     kb=PAD_CROSS; dashInputPollEx(&in,1); assert(in.pressed==DASH_IN_OK);
     busy=1; kb=PAD_CROSS; dashInputPollEx(&in,1); assert(!in.any && kb);
     busy=0; dashInputPollEx(&in,0); assert(!in.any && kb);
+    /* START is consumed globally, even with another action held.
+     * Holding it never reopens the popup through the repeat path. */
+    kb=0;keys[0]=PAD_START|PAD_CROSS;clearPadPressState();held_prev=0;
+    dashInputPollEx(&in,0);assert(dashboard_menus==1 && !in.any && !in.pressed && !in.raw_new);
+    dashboard_menu_open=1;
+    now_ms+=600;dashInputPollEx(&in,0);assert(dashboard_menus==1 && !in.any);
+    /* Release/repress closes via Back; the chord is consumed so Confirm does not leak. */
+    keys[0]=0;dashInputPollEx(&in,0);keys[0]=PAD_START|PAD_CROSS;
+    dashInputPollEx(&in,1);
+    assert(dashboard_menus==1 && in.any && in.pressed==DASH_IN_BACK && !in.raw_new);
+    dashboard_menu_open=0;dashInputFlush();
+    keys[0]=0;dashInputPollEx(&in,0);keys[0]=PAD_START;
+    dashInputPollEx(&in,1);assert(dashboard_menus==2 && !in.any && !in.raw_new);
+    /* Held SELECT keeps START as the quick launch key (SELECT+START). */
+    keys[0]=0;dashInputPollEx(&in,0);keys[0]=PAD_SELECT;dashInputPollEx(&in,0);
+    keys[0]=PAD_SELECT|PAD_START;dashInputPollEx(&in,0);
+    assert(dashboard_menus==2 && (in.pressed & DASH_IN_START) && (in.raw_new & PAD_START));
+    keys[0]=0;dashInputPollEx(&in,0);clearPadPressState();held_prev=0;
     /* A tilted stick plus Triangle must not alternate held button masks. */
     kb=0; clearPadPressState(); held_prev=0; padtype_t[0]=2;
     left_v=0xff; keys[0]=PAD_TRIANGLE; now_ms=6000;

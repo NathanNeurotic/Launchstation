@@ -682,6 +682,7 @@ void dashLibPrettyName(const char *path, char *out, int out_size);
 int dashLibRemove(int index);
 void dashLibRefreshApp(DashApp *app);
 void dashHomeRebuild(void);
+void dashHomeOpenApplications(void);
 int dashLibMetadataPath(const DashApp *app, char *out, int out_size);
 
 //--------------------------------------------------------------
@@ -844,7 +845,7 @@ typedef struct
 	int icon;
 	const char *label;
 	const char *detail;
-	int disabled;
+	int disabled; /* dimmed and skipped by menu navigation */
 } DashMenuItem;
 
 int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *items, int n, int initial);
@@ -958,6 +959,13 @@ const char *dashSectionLabel(int section);
 int dashSectionIcon(int section);
 void dashSwitchSection(int section);
 int dashConfirmLeave(void); /* asks the current section; 0 = stay */
+/* START opens Dashboard from any native screen and closes it when open.
+ * Actions wait for blocking tools/dialogs to unwind; editor leave confirmation
+ * can cancel navigation. SELECT+START stays the START launch key. */
+void dashDashboardMenu(void);
+int dashDashboardMenuIsOpen(void);
+int dashDashboardPending(void);
+int dashDashboardConfirmLeave(int (*leave)(void));
 int dashCurrentSection(void);
 int dashVisibleSectionCount(void);
 int dashVisibleSectionAt(int index);
@@ -1040,6 +1048,7 @@ void dashFilesPoll(void);
 /* Home/Apps shared helpers. */
 int dashAppsVisibleCount(void);
 void dashAppsRebuildView(void);
+void dashAppsShowAll(void);
 void dashAppsFocusPath(const char *path);
 
 /* Legacy integration hooks (draw.c). */

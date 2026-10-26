@@ -457,6 +457,8 @@ static int pickSize(const char *title, int min_mb, int max_mb, int start_mb)
 		int step = 0;
 
 		dashInputPoll(&in);
+		if (dashDashboardPending())
+			return -1;
 		if (in.pressed & DASH_IN_RIGHT)
 			step = 128;
 		if (in.pressed & DASH_IN_LEFT)
@@ -1211,6 +1213,8 @@ void dashHddManager(void)
 		int prev = sel;
 
 		dashInputPoll(&in);
+		if (dashDashboardPending())
+			break;
 		if (hm.n > 0) {
 			if (in.pressed & DASH_IN_UP)
 				sel = sel > 0 ? sel - 1 : hm.n - 1;

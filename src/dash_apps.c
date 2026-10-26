@@ -319,6 +319,15 @@ static void appsMenu(void)
 }
 
 //--------------------------------------------------------------
+void dashAppsShowAll(void)
+{
+	/* Startup's Applications destination is the full library. Do not rewrite
+	 * the filter saved for ordinary visits through Home. */
+	filter = FILTER_ALL;
+	dashAppsRebuildView();
+	sel_anim = (float)sel;
+}
+
 static void appsEnter(void)
 {
 	filter = dashCfg.app_filter;

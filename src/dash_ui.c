@@ -86,6 +86,19 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	in->any = (in->pressed != 0);
 	if (in->any)
 		last_input_ms = Timer();
+	/* Held SELECT turns START into its quick launch key (dash_main.c). */
+	if ((in->pressed & DASH_IN_START) && !(paddata & PAD_SELECT)) {
+		/* Consume the entire chord: START cannot also type, accept a dialog
+		 * or trigger another action after the Dashboard popup closes.
+		 * A second press cancels only the open Dashboard through normal Back. */
+		memset(in, 0, sizeof(*in));
+		if (dashDashboardMenuIsOpen()) {
+			in->pressed = DASH_IN_BACK;
+			in->any = 1;
+		} else {
+			dashDashboardMenu();
+		}
+	}
 }
 
 void dashInputFlush(void)
@@ -791,6 +804,8 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 
 	while (1) {
 		dashInputPoll(&in);
+		if (dashDashboardPending())
+			return -1;
 		if (in.pressed & DASH_IN_UP) {
 			int s = sel;
 			do
@@ -874,6 +889,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 				float ry = ly + (i - top) * row_h;
 				DashColor c = items[i].disabled ? DASH_C_TEXT3 : dashItemColor(i == sel);
 				float tx = x + 28;
+				dashGfxPushAlpha(items[i].disabled ? DASH_DISABLED_ALPHA : 1.0f);
 				if (items[i].icon >= 0) {
 					dashIcon(items[i].icon, x + 26, ry + 6, 18, c);
 					tx = x + 54;
@@ -898,6 +914,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 					}
 					dashTextFit(tx, ry + 7, label_w, items[i].label, DASH_FS_BODY * 0.92f, c);
 				}
+				dashGfxPopAlpha();
 			}
 			dashGfxScissorReset();
 			dashDrawScrollbar(x + w - 12, ly, rows * row_h - 4, top, rows, n);
@@ -954,6 +971,8 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 
 	while (1) {
 		dashInputPoll(&in);
+		if (dashDashboardPending())
+			return 0;
 		if (cancel_label != NULL && (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
 			sel ^= 1;
 			dashSoundPlay(DASH_SND_CURSOR);

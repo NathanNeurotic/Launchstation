@@ -2032,12 +2032,14 @@ static int tsEdit(FilerDateEditor *e)
 	dashInputFlush();
 	while (1) {
 		dashInputPoll(&in);
+		if (dashDashboardPending())
+			return 0;
 		if (in.pressed & DASH_IN_BACK) {
 			dashSoundPlay(DASH_SND_CANCEL);
 			dashInputFlush();
 			return 0;
 		}
-		if (in.pressed & (DASH_IN_OK | DASH_IN_START)) {
+		if (in.pressed & DASH_IN_OK) {
 			dashSoundPlay(DASH_SND_CONFIRM);
 			dashInputFlush();
 			return 1;
@@ -2986,6 +2988,8 @@ void dashFileBrowser(const char *start_dir)
 			memset(&in, 0, sizeof(in));
 		else
 			dashInputPoll(&in);
+		if (dashDashboardPending())
+			break;
 		browserSnapshotPad();
 		browserProcessInput(&in, &running);
 		fb.sel_anim = dashApproach(fb.sel_anim, (float)fb.sel, 22.0f * dashAnimSpeed(), dashVisualUpdate());

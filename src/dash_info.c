@@ -67,7 +67,7 @@ static void sheetShow(int icon, const char *title, const char *subtitle, const S
 		float max_scroll = total > body_h ? total - body_h : 0.0f;
 
 		dashInputPoll(&in);
-		if (in.pressed & (DASH_IN_OK | DASH_IN_BACK | DASH_IN_MENU))
+		if (dashDashboardPending() || (in.pressed & (DASH_IN_OK | DASH_IN_BACK | DASH_IN_MENU)))
 			break;
 		if (in.pressed & DASH_IN_DOWN)
 			scroll_target += 40.0f;
@@ -398,7 +398,7 @@ void dashShowFontViewer(void)
 		float sy = dashGfxScaleY();
 
 		dashInputPoll(&in);
-		if (in.pressed & (DASH_IN_OK | DASH_IN_BACK | DASH_IN_MENU))
+		if (dashDashboardPending() || (in.pressed & (DASH_IN_OK | DASH_IN_BACK | DASH_IN_MENU)))
 			break;
 		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dashVisualUpdate());
 		dashRenderScene();
