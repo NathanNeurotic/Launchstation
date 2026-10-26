@@ -243,7 +243,7 @@ Input > Confirm button), as the classic browser did.
 | Square | Add to / remove from Favorites |
 | L1 / R1 | Previous / next section |
 | L2 / R2 | Page jump |
-| START | Dashboard menu (home, refresh library, File Browser, settings, reboot IOP, power off) |
+| START | Dashboard menu from any native screen (home, refresh library, File Browser, settings, reboot IOP, power off); START again closes it. SELECT + START keeps the START launch key |
 | SELECT | Tap: switch application view (APPS). Hold: your launch keys appear; press a button to start its application |
 | R3 (HOME) | Hide/show the interface to see only the animated background |
 

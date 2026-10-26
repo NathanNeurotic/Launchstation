@@ -29,7 +29,8 @@ assert "DASH_JPEG_MAX_DIM" in jpeg
 assert "dashTexRelease(&tex)" in viewer
 assert "free(pixels)" in viewer
 assert "DASH_IN_BACK" in viewer
-assert "DASH_IN_START" in viewer
+assert "DASH_IN_R3" in viewer
+assert "DASH_IN_START" not in viewer
 assert "DASH_IN_FAV" in viewer
 assert "DASH_IN_L2" in viewer and "DASH_IN_R2" in viewer
 assert "PAD_L3_H0" in viewer and "PAD_L3_V1" in viewer

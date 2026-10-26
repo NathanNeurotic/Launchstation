@@ -375,6 +375,28 @@ static int waitMemoryCardReadyForBrowse(int port)
 	return ret;
 }
 
+int filerPrepareMemoryCardRead(int port)
+{
+	int ret;
+
+	if (port < 0 || port > 1)
+		return sceMcResFailDetect;
+	filerRootMcPollIdle();
+	ensureMemoryCardPortAccessible(port);
+	ret = waitMemoryCardReadyForBrowse(port);
+	if (ret != sceMcResSucceed)
+		return ret;
+	/* A fresh handshake supersedes an unresolved or stale presence snapshot.
+	 * Failed checks leave cached applications intact for a later retry. */
+	if (!root_mc_polled[port] || !root_mc_present[port] || root_mc_known_type[port] != mctype_PSx)
+		root_mc_known_free[port] = -1; /* the next root poll supplies free space */
+	root_mc_present[port] = 1;
+	root_mc_polled[port] = 1;
+	root_mc_failures[port] = 0;
+	root_mc_known_type[port] = mctype_PSx;
+	return sceMcResSucceed;
+}
+
 int readMC(const char *path, FILEINFO *info, int max)
 {
 	static sceMcTblGetDir mcDir[MAX_ENTRY] __attribute__((aligned(64)));
@@ -384,10 +406,7 @@ int readMC(const char *path, FILEINFO *info, int max)
 	port = path[2] - '0';
 	if (port < 0 || port > 1)
 		return 0;
-
-	ensureMemoryCardPortAccessible(port);
-
-	ret = waitMemoryCardReadyForBrowse(port);
+	ret = filerPrepareMemoryCardRead(port);
 	if (mctype_PSx == 2)  //PS2 MC ?
 		time_valid = 1;
 	size_valid = 1;

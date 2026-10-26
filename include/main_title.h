@@ -6,6 +6,7 @@
 void menuTitleFormat(char *out, size_t out_size);
 void menuTitleFormatClock(char *out, size_t out_size);
 void menuTitleFormatTemperature(char *out, size_t out_size);
+int menuTitleGetTemperatureRaw(int *raw); /* cached 1/128 C sample; no IOP calls */
 int menuTitleUpdateAsync(int force);
 /* Restore a live software clock when unsaved Settings edits are discarded. */
 void menuTitleClockSnapshot(void);

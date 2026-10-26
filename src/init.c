@@ -20,6 +20,7 @@ extern void filerRootMcPollIdle(void);
 //IRX for togleable features
 #ifdef ETH
 IMPORT_BIN2C(ps2ip_irx);
+IMPORT_BIN2C(ps2ips_irx);
 IMPORT_BIN2C(ps2dev9_v10_irx);
 IMPORT_BIN2C(ps2ip_v10_irx);
 IMPORT_BIN2C(ps2smap_irx);
@@ -130,6 +131,10 @@ static u8 have_usb_mass = 0;
 static u8 have_ps2smap = 0;
 static u8 have_ps2host = 0;
 static u8 have_ps2ip = 0;
+static u8 have_ps2ips = 0;
+#ifdef ETH
+static const char *dashboard_ip_error = NULL;
+#endif
 static u8 have_NetModules = 0;
 static u8 have_ps2netfs = 0;
 #ifdef UDPFS
@@ -2428,16 +2433,40 @@ int isFtpNetworkReady(void)
 
 /* Minimal demand-driven network path for SNTP/other dashboard clients.
  * Unlike loadNetModules(), this does not start FTP/netfs services. */
+const char *dashboardIpNetworkError(void)
+{
+	return dashboard_ip_error != NULL ? dashboard_ip_error : "Network stack could not be started.";
+}
+
 int ensureDashboardIpNetworkReady(void)
 {
+	int id, ret;
+	dashboard_ip_error = "PC CARD CompactFlash is using the network adapter.";
 	if (pcCardCfOwnsBus()) return 0;
+	dashboard_ip_error = NULL;
 	ensureCoreIoStackReady();
 	showLoadingModulesMsg("dashboard network");
 	getIpConfig();
 	if (!load_ps2ip())
 		return 0;
-	/* PS2SDK ps2ip_init() is idempotent and detects IOP reboots. */
-	return ps2ip_init() >= 0;
+	if (!have_ps2ips) {
+		/* Vendored PS2IPS socket RPC server (iop/ps2ips_rpc). */
+		id = SifExecModuleBuffer(ps2ips_irx, size_ps2ips_irx, 0, NULL, &ret);
+		DPRINTF(" [PS2IPS]: ID=%d, ret=%d\n", id, ret);
+		/* MODULE_NO_RESIDENT_END is positive too; it is not a running server. */
+		have_ps2ips = (id >= 0 && ret == 0);
+		if (!have_ps2ips) {
+			dashboard_ip_error = "Socket server (PS2IPS) could not be loaded.";
+			return 0;
+		}
+	}
+	/* Binding before PS2IPS is resident can wait forever. The SDK client is
+	 * idempotent and detects IOP reboots, so rebind only after loading it. */
+	if (ps2ip_init() < 0) {
+		dashboard_ip_error = "Could not connect to the network socket server.";
+		return 0;
+	}
+	return 1;
 }
 #endif
 //------------------------------
@@ -2503,6 +2532,7 @@ static void clearIopModuleState(void)
 	have_ps2smap = 0;
 	have_ps2host = 0;
 	have_ps2ip = 0;
+	have_ps2ips = 0;
 	have_ps2netfs = 0;
 #ifdef UDPFS
 	have_udpfs_smap = 0;

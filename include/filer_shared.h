@@ -102,6 +102,8 @@ extern int udpfs_dir_open_failed;
 
 int getDir(const char *path, FILEINFO *info);
 int filerPrepareDirRead(const char *path);
+/* Serialized card handshake; slot 2 may require retiring MX4SIO first. */
+int filerPrepareMemoryCardRead(int port);
 int pollRootMemoryCardDevices(void);
 void discardNextMx4sioRootListing(const char *path);
 int ensurePathDeviceStackReady(const char *path);

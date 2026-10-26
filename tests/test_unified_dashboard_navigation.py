@@ -12,8 +12,8 @@ apps = (root / "src/dash_apps.c").read_text()
 settings = (root / "src/dash_settings.c").read_text()
 
 assert "DASH_SEC_APPS" not in main[main.index("static const int visible_sections[]"):main.index("#define DASH_VISIBLE_SEC_COUNT")]
-assert 'dashOpenBrowser(setting->Misc)' in tools
-assert 'TA_MISC_FOLDER' in tools
+assert 'showMiscCommands();' in tools and 'dashRunMisc(paths[selected])' in tools
+assert 'TA_MISC_MENU' in tools
 assert 'CHIP_LAST_FOLDER' in home and 'CHIP_LIBRARY' in home
 assert 'dashNavigateFilesTab(dir);' in home
 assert 'dashNavigateFilesTab(dir);' in (root / "src/dash_apps.c").read_text()
@@ -21,7 +21,7 @@ assert 'dashAppsScreen.input(in)' in home and 'dashAppsScreen.draw()' in home
 assert 'dashAppsScreen.update(dt)' in home and 'dashAppsScreen.hints()' in home
 assert 'library_open = 0;' in home and 'if (in->pressed & DASH_IN_BACK)' in home
 assert 'DASH_VIEW_COUNT' in apps and 'FILTER_COUNT' in apps
-assert '"Home", "Files", "Tools", "Settings"' in settings
+assert '"Home", "Applications", "Files", "Tools", "Settings"' in settings
 assert 'S_FILES_MODE, "Files / Devices view"' not in settings
 
 def function(source,signature):

@@ -677,7 +677,35 @@ static void pollRemotePcCommand(void)
 //--------------------------------------------------------------
 // Global (START) menu
 //--------------------------------------------------------------
-static void globalMenu(void)
+static int dashboard_action = -1;
+static int dashboard_menu_open;
+static int dashboard_leave_guard;
+static int ql_down, ql_used;
+static u64 ql_since;
+
+int dashDashboardMenuIsOpen(void)
+{
+	return dashboard_menu_open;
+}
+
+int dashDashboardPending(void)
+{
+	return dashboard_action >= 0 && !dashboard_leave_guard;
+}
+
+int dashDashboardConfirmLeave(int (*leave)(void))
+{
+	int ok;
+	/* Save/Discard dialogs must remain usable while the editor unwinds. */
+	dashboard_leave_guard++;
+	ok = leave();
+	dashboard_leave_guard--;
+	if (!ok)
+		dashboard_action = -1;
+	return ok;
+}
+
+void dashDashboardMenu(void)
 {
 	DashMenuItem items[] = {
 	    {DI_HOME, "Home", NULL, 0},
@@ -686,7 +714,28 @@ static void globalMenu(void)
 	    {DI_SETTINGS, "Settings", NULL, 0},
 	    {DI_REFRESH, "Reboot IOP (reset drivers)", NULL, 0},
 	    {DI_POWER, "Power off", NULL, 0}};
-	int r = dashModalMenu("Dashboard", NULL, items, sizeof(items) / sizeof(items[0]), 0);
+	int r;
+
+	if (!dash_active || dashboard_menu_open || dashboard_action >= 0 || dashboard_leave_guard)
+		return;
+	background_only = 0;
+	boot_phase = 0;
+	ql_down = ql_used = 0;
+	dashboard_menu_open = 1;
+	r = dashModalMenu("Dashboard", NULL, items, sizeof(items) / sizeof(items[0]), 0);
+	dashboard_menu_open = 0;
+	if (r >= 0)
+		dashboard_action = r;
+}
+
+static void globalMenu(void)
+{
+	int r = dashboard_action;
+	/* Dispatch only in DashRun, after modal resources and scene overrides
+	 * have been released. Clear first so Settings leave dialogs can run. */
+	dashboard_action = -1;
+	if (r < 0)
+		return;
 
 	/* Switching tabs handles any unsaved Settings confirmation inside
 	 * dashSwitchSection(). System actions require their own leave guard. */
@@ -784,9 +833,6 @@ static void runLaunchKey(int lk)
 // application". Hold SELECT: the launch keys appear, and a button starts
 // its application. A short SELECT tap keeps its normal meaning.
 //--------------------------------------------------------------
-static int ql_down, ql_used;
-static u64 ql_since;
-
 static void quickLaunchInput(DashInput *in)
 {
 	int i;
@@ -1047,6 +1093,7 @@ static void firstInit(void)
 	clearScreenToBlack();
 	dashFontInit();
 	dashIconsInit();
+	dashConsoleIdentityInit();
 	dashWorkerInit();
 	if (boot_safe_mode)
 		dashToast(DASH_TOAST_WARN,
@@ -1136,6 +1183,10 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	if (screens[section]->enter)
 		screens[section]->enter();
 	dashAppsRebuildView();
+	if (section == DASH_SEC_HOME && dashCfg.start_section == DASH_SEC_APPS) {
+		dashHomeOpenApplications();
+		dashAppsShowAll();
+	}
 	dashInputFlush();
 	/* Include the initial Files/Devices entry in startup presentation.
 	 * Runtime/manual device actions restore detailed feedback. */
@@ -1191,10 +1242,10 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			dashSwitchSection(dashAdjacentSection(section, -1));
 		else if (in.pressed & DASH_IN_R1)
 			dashSwitchSection(dashAdjacentSection(section, 1));
-		else if (in.pressed & DASH_IN_START)
-			globalMenu();
 		else if (in.any && screens[section]->input)
 			screens[section]->input(&in);
+		if (dashDashboardPending())
+			globalMenu();
 		if (screens[section]->update)
 			screens[section]->update(dt);
 

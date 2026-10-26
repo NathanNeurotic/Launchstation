@@ -34,11 +34,12 @@ typedef struct
 	int supported;
 	u64 last_poll_ms;
 	char text[8];
+	unsigned short raw; /* temperature in 1/128 degrees Celsius */
 } MenuTitleTempState;
 
 static MenuTitleClockState title_clock = {
 	0, 0, MENU_TITLE_CLOCK_YEAR_BASE, 1, 1, 0, 0, 0, 0, 0, MENU_TITLE_PS2_RTC_BASE_OFFSET_MINUTES, 0, "", ""};
-static MenuTitleTempState title_temp = {0, 0, 0, ""};
+static MenuTitleTempState title_temp = {0};
 static int osd_local_offset_cached = 0;
 static int osd_local_offset_minutes = MENU_TITLE_PS2_RTC_BASE_OFFSET_MINUTES;
 
@@ -526,6 +527,7 @@ static int queryTemperatureCelsius(char *temp_buf, size_t temp_buf_size)
 		return 0;
 
 	temp = (unsigned short)(out_buffer[1] * 256 + out_buffer[2]);
+	title_temp.raw = temp;
 	whole = (temp - (temp % 128)) / 128;
 	tenths = (int)(((temp % 128) * 10 + 64) / 128);
 	if (tenths >= 10) {
@@ -543,7 +545,7 @@ static int updateTemp(u64 tick_ms, int force)
 
 	if (!force && title_temp.checked && !title_temp.supported)
 		return 0;
-	if (!force && title_temp.last_poll_ms != 0 && tick_ms >= title_temp.last_poll_ms &&
+	if (!force && title_temp.checked && tick_ms >= title_temp.last_poll_ms &&
 	    tick_ms - title_temp.last_poll_ms < MENU_TITLE_TEMP_POLL_MS)
 		return 0;
 
@@ -624,6 +626,15 @@ void menuTitleFormatClock(char *out, size_t out_size)
 		appendText(out, out_size, &out_pos,
 		           title_clock.date_text[0] != '\0' ? title_clock.date_text : "----/--/--");
 	}
+}
+
+/* Cached sensor sample only: dashboard rendering never initiates a probe. */
+int menuTitleGetTemperatureRaw(int *raw)
+{
+	if (raw == NULL || !title_temp.checked || title_temp.text[0] == '\0')
+		return 0;
+	*raw = title_temp.raw;
+	return 1;
 }
 
 void menuTitleFormatTemperature(char *out, size_t out_size)
