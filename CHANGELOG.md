@@ -4,6 +4,7 @@ The `## Rolling` section below is the maintained summary shown on the GitHub [`l
 
 ## Rolling
 
+- **Build system:** the legacy Makefile build, the prebuilt SDK-duplicate IOP modules and the legacy libcdvd were removed; PS2BUILD (`ps2.yaml`) is the only build path.
 - **Release downloads:** the `latest` release now also offers the packed ELFs on their own: `LAUNCHSTATION.ELF`, `LAUNCHSTATION-DS.ELF`, and `BOOT.ELF` / `BOOT2.ELF` (identical copies of the standard ELF). Publishing also refreshes the release page date.
 - **Build toolchain:** release ELFs are now built with the PS2BUILD LLVM/Clang toolchain (EE and IOP). Mbed TLS, libjpeg-turbo and the audsrv RPC client are built from source with the same toolchain, and CI fails if a release ELF contains non-Clang objects. `PS2BUILD_TOOLCHAIN=gcc` remains available for comparison builds.
 - **R3Z parity and Ember Game IDs:** Settings now cover the upstream wLaunchELF_R3Z persisted option families (including Left/Right launch keys and previously hidden classic options). Browser navigation is unified (MISC access, centered ten-row browsing, page jumps stop at list boundaries, i.Link stays visible on PSX). Ember CUE/BIN images can show the same RetroGem Game ID as an equivalent POPStarter VCD, and PS1 serials are normalized like OPL. Japanese save titles render with the optional ELISA font.
