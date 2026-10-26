@@ -24,6 +24,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install sound-theme test dependency
+        run: python3 -m pip install --user numpy
+
       - name: Test Settings sessions, navigation and theme compatibility
         run: |
           python3 tests/test_display_feedback.py
