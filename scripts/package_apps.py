@@ -1,4 +1,4 @@
-"""Build the four installable Launchstation app archives.
+"""Build the four installable Launchstation app archives and four loose ELFs.
 
 PSU records/padding follow RiptOPL's package_release_app.py and PSUManager:
 512-byte root/dot/dotdot/file records, with file payloads padded to 1024 bytes.
@@ -13,6 +13,11 @@ import zipfile
 ENTRY = struct.Struct("<HHI8sII8sI28s448s")
 VARIANTS = (("APP_LAUNCHSTATION", "LAUNCHSTATION.ELF", "Launchstation"),
             ("APP_LAUNCHSTATION-DS", "LAUNCHSTATION-DS.ELF", "Launchstation (DualShock)"))
+
+# Loose ELF downloads: (file name, variant index into VARIANTS). BOOT.ELF and
+# BOOT2.ELF are copies of the standard build for boot-path installs.
+LOOSE_ELFS = (("LAUNCHSTATION.ELF", 0), ("LAUNCHSTATION-DS.ELF", 1),
+              ("BOOT.ELF", 0), ("BOOT2.ELF", 0))
 
 ASSET_ROOT = Path(__file__).resolve().parents[1] / "res"
 
@@ -81,8 +86,10 @@ def package(standard, dualshock, output, revision, epoch):
     date = struct.pack("<BBBBBBH", 0, instant.second, instant.minute, instant.hour,
                        instant.day, instant.month, instant.year)
     output.mkdir(parents=True, exist_ok=True)
+    elfs = []
     for (folder, elf_name, title), source in zip(VARIANTS, (standard, dualshock)):
         elf = source.read_bytes()
+        elfs.append(elf)
         if len(elf) < 52 or elf[:7] != b"\x7fELF\x01\x01\x01" or struct.unpack_from("<H", elf, 18)[0] != 8:
             raise ValueError(f"Not a little-endian ELF32 MIPS executable: {source}")
         cfg = (f"title=[APP] {title}\nboot={elf_name}\nTitle={title}\nCfgVersion=8\n"
@@ -104,6 +111,10 @@ def package(standard, dualshock, output, revision, epoch):
             assert archive.testzip() is None
             assert {name.split("/", 1)[1]: archive.read(name) for name in archive.namelist()} == members
         print(f"Verified {folder}.psu/.zip: {elf_name}, title.cfg, updater CA, and BGM.ADP")
+    for name, variant in LOOSE_ELFS:
+        (output / name).write_bytes(elfs[variant])
+        assert (output / name).read_bytes() == elfs[variant]
+        print(f"Verified {name}: identical to the {VARIANTS[variant][1]} inside the packages")
 
 
 if __name__ == "__main__":

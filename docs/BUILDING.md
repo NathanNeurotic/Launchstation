@@ -142,7 +142,7 @@ python3 scripts/package_apps.py \
 python3 tests/test_app_packages.py
 ```
 
-This writes `APP_LAUNCHSTATION.psu/.zip` and `APP_LAUNCHSTATION-DS.psu/.zip`. Each contains the ELF, a generated `title.cfg`, `WLE-UPDATE-CA.PEM` and `BGM.ADP` (from `res/music.sad`), and the script re-reads every archive to confirm that the ZIP and PSU payloads are identical. `--revision` must be lowercase hexadecimal and `--epoch` must fall in 2000-2099 (PS2 timestamps). `scripts/copy_test_pack.py --output test-fixtures/LS-COPY-TEST.zip` creates the deterministic copy-test fixture CI uploads for hardware testers.
+This writes `APP_LAUNCHSTATION.psu/.zip` and `APP_LAUNCHSTATION-DS.psu/.zip`, plus loose `LAUNCHSTATION.ELF`, `LAUNCHSTATION-DS.ELF`, `BOOT.ELF` and `BOOT2.ELF` (the last two are copies of the standard ELF). Each contains the ELF, a generated `title.cfg`, `WLE-UPDATE-CA.PEM` and `BGM.ADP` (from `res/music.sad`), and the script re-reads every archive to confirm that the ZIP and PSU payloads are identical. `--revision` must be lowercase hexadecimal and `--epoch` must fall in 2000-2099 (PS2 timestamps). `scripts/copy_test_pack.py --output test-fixtures/LS-COPY-TEST.zip` creates the deterministic copy-test fixture CI uploads for hardware testers.
 
 ## 9. Run the tests
 

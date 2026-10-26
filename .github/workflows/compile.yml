@@ -341,6 +341,10 @@ jobs:
             APP_LAUNCHSTATION.zip
             APP_LAUNCHSTATION-DS.psu
             APP_LAUNCHSTATION-DS.zip
+            LAUNCHSTATION.ELF
+            LAUNCHSTATION-DS.ELF
+            BOOT.ELF
+            BOOT2.ELF
           )
 
           # All tests, both EE builds, variant checks, memory layout and
@@ -381,11 +385,11 @@ jobs:
               --notes-file "${notes_file}" --target "${GITHUB_SHA}" --latest
           fi
 
-          # A moving release retains its four canonical asset names so both
+          # A moving release retains its canonical asset names so both
           # existing download links and the updater continue to resolve.
-          gh release upload "${tag}" \
-            "artifacts/${assets[0]}" "artifacts/${assets[1]}" \
-            "artifacts/${assets[2]}" "artifacts/${assets[3]}" --clobber
+          upload_paths=()
+          for asset in "${assets[@]}"; do upload_paths+=("artifacts/${asset}"); done
+          gh release upload "${tag}" "${upload_paths[@]}" --clobber
 
           # Validate that every public asset has the exact packaged byte size
           # before moving the tag or claiming a successful release. Keep any

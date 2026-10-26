@@ -35,7 +35,8 @@ assert "gh release edit \"${tag}\" --draft=true" in publish
 assert publish.index("--draft=true") < publish.index("--draft=false --prerelease=false --latest")
 assert publish.index("gh api --method PATCH") < publish.index("--draft=true")
 for asset in ("APP_LAUNCHSTATION.psu", "APP_LAUNCHSTATION.zip",
-              "APP_LAUNCHSTATION-DS.psu", "APP_LAUNCHSTATION-DS.zip"):
+              "APP_LAUNCHSTATION-DS.psu", "APP_LAUNCHSTATION-DS.zip",
+              "LAUNCHSTATION.ELF", "LAUNCHSTATION-DS.ELF", "BOOT.ELF", "BOOT2.ELF"):
     assert asset in publish
 
 # Fail the PR before shipping if the release's embedded shell script has
