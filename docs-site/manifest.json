@@ -77,6 +77,31 @@
           "usb"
         ],
         [
+          "memory-card",
+          "Memory Cards",
+          "vmc"
+        ],
+        [
+          "usb",
+          "USB Mass Storage",
+          "usb"
+        ],
+        [
+          "mx4sio",
+          "MX4SIO SD Card",
+          "mmce"
+        ],
+        [
+          "udpfs",
+          "Network Storage (UDPFS)",
+          "netboot"
+        ],
+        [
+          "pc-card-cf",
+          "PC CARD CompactFlash",
+          "hdd"
+        ],
+        [
           "hdd",
           "Internal HDD",
           "hdd"
@@ -111,6 +136,11 @@
     {
       "name": "Game Images",
       "pages": [
+        [
+          "game-launching",
+          "Launching Games & Images",
+          "play"
+        ],
         [
           "neutrino",
           "PS2 ISO · Neutrino",

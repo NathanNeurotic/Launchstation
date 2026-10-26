@@ -50,6 +50,7 @@
 <ul>
 <li><b>MMCE &harr; MX4SIO.</b> Each installs its own SIO2 hooks, so switching from one to the other forces an IOP reset (audio and controller are rebuilt afterward). If the reset is refused, the second driver is not loaded. MX4SIO also occupies memory-card port 2, so opening <code>mc1:</code> while MX4SIO is active resets the IOP back to the normal card stack.</li>
 <li><b>PC CARD CF &harr; DEV9.</b> The CF driver owns the PCMCIA bus and refuses to start if DEV9 (HDD, ATA, network) is resident; DEV9 loaders refuse in turn once CF owns the bus. Only an actual IOP reset releases it.</li>
+<li><b>Copy and move are refused between incompatible pairs</b> with &ldquo;Incompatible drivers to perform action&rdquo;: MMCE &harr; MX4SIO, MX4SIO &harr; <code>mc1:</code>, and PC CARD CF &harr; anything on DEV9 (internal HDD/PFS, exFAT HDD, UDPFS, <code>host:</code>, PSX flash/DVR). Use USB (or another compatible device) as the middle step.</li>
 <li><b>Compatible together:</b> USB, iLink, internal HDD (APA) and exFAT HDD (ATA) can all be resident at once; they share the BDM core where applicable. Network (UDPFS) shares DEV9 with HDD/ATA.</li>
 </ul>
 
@@ -66,7 +67,7 @@
 <h2 id="other-devices">Other device pages</h2>
 <ul>
 <li><a href="mmce.html">MMCE</a> (SD2PSX, MemCard PRO2, PicoMemcard) and <a href="mmce-backup.html">MMCE backup history</a>.</li>
-<li>MX4SIO, UDPFS network, PC CARD CF, USB and memory cards each have their own page in the Storage &amp; Devices sidebar section when your build of this site includes them.</li>
+<li>In-depth pages for <b>Memory Cards</b>, <b>USB Mass Storage</b>, <b>MX4SIO SD Card</b>, <b>Network Storage (UDPFS)</b> and <b>PC CARD CompactFlash</b>, and an overview of <b>Launching Games &amp; Images</b>, sit in the sidebar next to this page.</li>
 <li><a href="hdd.html">Internal HDD</a>, <a href="hdd-manager.html">HDD Manager</a>, <a href="ilink.html">iLink</a>.</li>
 <li><b>exFAT / FAT HDD (<code>ata0:</code>)</b> is a BDM block device and is <em>not</em> APA/PFS. An APA disk appears as <code>hdd0:</code>, a FAT/exFAT disk as <code>ata0:</code>; the two stacks can be loaded together.</li>
 <li><b>Disc Drive (<code>cdfs:</code>).</b> Read-only. The card shows the disc type (No disc, Reading disc&hellip;, PlayStation disc, PlayStation 2 CD/DVD, ESR disc, Audio CD, DVD Video, Unsupported disc). <b>Start disc</b> boots PS2 discs through their <code>SYSTEM.CNF</code> boot file (writing the OSD history entry and applying the console&rsquo;s XPARAM patches), PS1 discs through <code>rom0:PS1DRV</code>, DVD Video through the console&rsquo;s own player (or an updated <code>BREXEC-DVDPLAYER</code> on a memory card), and ESR discs through the configured ESR loader. Audio CDs are not started.</li>

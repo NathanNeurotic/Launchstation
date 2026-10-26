@@ -1,0 +1,54 @@
+<h1>Launching Games &amp; Images</h1>
+<p class="lead">Launchstation does not contain a game engine. It recognises the file you open, prepares the right external core or console service, and hands over control. This page ties the pieces together; each core has its own page for the details.</p>
+
+<h2 id="routing">What a file does when you press OK</h2>
+<table><thead><tr><th>You open&hellip;</th><th>Launchstation uses&hellip;</th><th>You supply</th><th>Page</th></tr></thead><tbody>
+<tr><td><code>.ELF</code>, <code>.KELF</code>, <code>.XLF</code></td><td>Its own loader (with optional arguments)</td><td>The program</td><td><a href="launch-arguments.html">Launch Arguments</a></td></tr>
+<tr><td><code>.ISO</code> (PS2)</td><td>Neutrino</td><td>Neutrino, the ISO</td><td><a href="neutrino.html">Neutrino</a></td></tr>
+<tr><td><code>.VCD</code> (PS1)</td><td>POPStarter</td><td><code>POPSTARTER.ELF</code>, the VCD</td><td><a href="popstarter.html">POPStarter</a></td></tr>
+<tr><td><code>.CUE</code>, <code>.BIN</code>, PS1 <code>.EXE</code> inside <code>&hellip;/games/&lt;Game&gt;/</code></td><td>Ember</td><td><code>ember.elf</code>, your <code>bios.bin</code>, the image</td><td><a href="ember.html">Ember</a></td></tr>
+<tr><td>A disc in the drive (<b>Start disc</b>)</td><td>The console&rsquo;s own boot services</td><td>The disc</td><td><a href="devices.html#other-devices">Disc Drive</a></td></tr>
+<tr><td>Text files (<code>.TXT</code>, <code>.CNF</code>, <code>.CFG</code>, <code>.INI</code>, argument files)</td><td>Text Editor</td><td>&mdash;</td><td><a href="text-editor.html">Text Editor</a></td></tr>
+<tr><td><code>.PNG</code>, <code>.JPG</code>, <code>.JPEG</code></td><td>Image viewer</td><td>&mdash;</td><td><a href="file-browser.html">File Browser</a></td></tr>
+</tbody></table>
+<p>The Tools tab also has shortcuts (<b>PS1 VCDs</b>, <b>PS1 images</b>, <b>PS2 ISOs</b>) that simply open the File Browser at the device list with a reminder of where each core is configured. A <code>.BIN</code> or <code>.EXE</code> outside the Ember layout is not launched as a game.</p>
+
+<h2 id="devices">Which devices each core can use</h2>
+<table class="matrix"><thead><tr><th>Source device</th><th>ELF</th><th>Neutrino ISO</th><th>POPStarter VCD</th><th>Ember</th></tr></thead><tbody>
+<tr><td>USB</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>MMCE</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>MX4SIO</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>exFAT HDD (<code>ata0:</code>)</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>iLink</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+<tr><td>Internal HDD (APA)</td><td>Yes (PFS)</td><td>No</td><td>Yes (POPS partitions)</td><td>Yes (PFS)</td></tr>
+<tr><td>UDPFS</td><td>Not documented</td><td>Yes</td><td>No</td><td>Not hardware-verified</td></tr>
+<tr><td>Memory card</td><td>Yes</td><td>No (can hold Neutrino)</td><td>No</td><td>No</td></tr>
+<tr><td>PC CARD CF</td><td>No</td><td>No</td><td>No</td><td>No</td></tr>
+</tbody></table>
+<p>&ldquo;Yes&rdquo; is what Launchstation prepares for; it is not a guarantee a given game runs. Details and caveats per device are in the <a href="devices.html">Device Support</a> matrix.</p>
+
+<h2 id="iop">Reset or keep the IOP?</h2>
+<table><thead><tr><th>Launch</th><th>IOP handling</th></tr></thead><tbody>
+<tr><td>Generic ELF</td><td>Follows <b>Settings &gt; Launching &gt; Reset IOP before launch</b> (default on, recommended: the program gets a clean IOP).</td></tr>
+<tr><td>POPStarter</td><td>Follows the same setting.</td></tr>
+<tr><td>Neutrino</td><td>Always keep-IOP: the mounted storage stack is handed to Neutrino.</td></tr>
+<tr><td>Ember</td><td>Always keep-IOP after a controlled USB rebuild, if the game is on USB.</td></tr>
+<tr><td>Disc</td><td>Console services (<code>PS1DRV</code>, boot ELF, DVD player) after normal cleanup.</td></tr>
+</tbody></table>
+
+<h2 id="disable">Turning cores off</h2>
+<p><b>Settings &gt; Launching &gt; Disc &amp; image loaders</b> has <b>Disable Ember support</b>, <b>Disable POPStarter support</b> and <b>Disable Neutrino support</b> (all Off by default). A disabled core refuses its own file type with a message before reading the image, loading drivers or tearing anything down, and does not hand the file to another handler. This page of settings also holds the loader paths (ESR, OSDSYS, POPStarter, Ember directory, Neutrino).</p>
+
+<h2 id="gameid">Game ID signals</h2>
+<p>Before a hand-off Launchstation may draw a short RetroGem signal (discs on by default, apps off by default). Neutrino can additionally ask an MMCE adapter to switch to the game&rsquo;s card. These are separate channels; see <a href="special-hardware.html#retrogem">RetroGem Game ID</a> and <a href="neutrino.html#game-id">Neutrino Game ID</a>.</p>
+
+<h2 id="failure">When a launch fails</h2>
+<p>Failures are reported on the dashboard with a specific message (for example &ldquo;POPStarter does not support that VCD path&rdquo;, &ldquo;Ember needs a user-supplied 512 KB bios.bin&hellip;&rdquo;, &ldquo;Neutrino not found&rdquo;). Work down this list:</p>
+<ol>
+<li>Can the File Browser read the file from that device? If not, fix the device first (<a href="devices.html">Device Support</a>).</li>
+<li>Is the layout exactly what the core page describes (folder names, <code>bios.bin</code>, <code>system.toml</code>)?</li>
+<li>Set the core&rsquo;s path explicitly in Settings to remove discovery ambiguity.</li>
+<li>Try the same image from a different device or after a clean boot with only that device started.</li>
+<li>Check it runs from the core&rsquo;s own launcher; Launchstation cannot fix a game the external core rejects.</li>
+<li>Report the exact build hash, console model, device, filesystem and core version.</li>
+</ol>

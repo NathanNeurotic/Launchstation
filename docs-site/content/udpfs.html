@@ -1,0 +1,43 @@
+<h1>Network Storage (UDPFS)</h1>
+<p class="lead">UDPFS exposes a folder on a PC over your local network as the <b>Network (UDPFS)</b> device (<code>udpfs:</code>). It is the fastest way to browse PC files, copy things to and from the console, and boot Neutrino ISOs without moving a drive.</p>
+
+<div class="callout info"><div class="h">What you need</div><ul>
+<li>A console with a network adapter (or built-in Ethernet) and a cable to the same LAN as the PC.</li>
+<li>A PC running the <a href="https://github.com/pcm720/udpfsd">UDPFSD</a> server with the folder you want to share.</li>
+<li>An IP address for the PS2 on that network (<b>Settings &gt; Network</b>).</li>
+</ul></div>
+
+<h2 id="setup">Setup</h2>
+<ol>
+<li><b>PC:</b> start UDPFSD with the folder to serve. Allow it through the PC firewall (it uses UDP, so it is local-network only).</li>
+<li><b>PS2:</b> in <b>Settings &gt; Network</b> set the IP address, netmask and gateway (defaults <code>192.168.0.10</code>, <code>255.255.255.0</code>, <code>192.168.0.1</code>). They are stored in <code>IPCONFIG.DAT</code> beside the running ELF, or in <code>mcN:/SYS-CONF/IPCONFIG.DAT</code>. UDPFS is given the IP address; there is no DNS field. Choose an address in the PC&rsquo;s subnet.</li>
+<li>Open <b>Network (UDPFS)</b> in the Files tab. Launchstation loads DEV9, the UDPFS Ethernet driver, a tiny built-in IP stack and the UDPFS filesystem, then opens <code>udpfs:/</code>. When the server answers the card shows the console&rsquo;s network settings; otherwise <em>UDPFS server not found</em> (&ldquo;Check the cable, IP settings and that the UDPFS server is running&rdquo;).</li>
+<li>Optionally enable <b>Settings &gt; Storage &amp; devices &gt; Start devices automatically &gt; Auto-start network (UDPFS)</b> (off by default).</li>
+</ol>
+
+<h2 id="use">What you can do</h2>
+<ul>
+<li><b>Browse and copy.</b> Directory listings come from the server with sizes and dates. A listing that fails part-way is treated as an error rather than a partial list, so a copy never silently skips files.</li>
+<li><b>Writing is off by default.</b> The File Browser&rsquo;s write commands (copy to, delete, rename, new folder, paste) stay disabled on <code>udpfs:</code> and <code>host:</code> until <b>Settings &gt; Network &gt; Allow writing over the network</b> is on. This does not affect FTP.</li>
+<li><b>Neutrino ISOs.</b> Backend <code>udpfs</code>; the ISO is read straight from the PC. The Neutrino ELF can be on the share, a memory card or elsewhere. See <a href="neutrino.html">Neutrino</a>.</li>
+<li><b>Ember.</b> The Ember path check does not exclude UDPFS, but that combination has not been hardware-verified.</li>
+<li><b>HDD header injection.</b> <code>udpfs:/__Headers/&lt;partition&gt;/</code> is one of the header sources for the <a href="hdd-manager.html">HDD Manager</a>.</li>
+<li><b>VMC images.</b> A virtual memory card image on the share can be mounted from the File Browser.</li>
+<li><b>Not supported:</b> POPStarter VCDs from UDPFS. Launching programs straight from the share is not a documented path; copy the program to USB, HDD or a memory card if it will not start.</li>
+</ul>
+
+<h2 id="stacks">Stack rules</h2>
+<ul>
+<li><b>UDPFS and FTP / PS2Link / Google Drive are different Ethernet stacks.</b> Only one can be loaded; switching resets the IOP (see <a href="network.html#stacks">Network &amp; PC Integration</a>). After using FTP or cloud features, opening UDPFS reloads the other stack.</li>
+<li><b>DEV9 sharing.</b> UDPFS, the internal HDD and exFAT HDD all use DEV9 and can be active together. On an early Japanese console the PC CARD CF driver owns the bus instead, and network loaders refuse to start while it does.</li>
+<li><b>Copying between UDPFS and PC CARD CF is refused</b> (&ldquo;Incompatible drivers to perform action&rdquo;).</li>
+<li>The IP address is handed to the UDPFS stack when it loads, so use Tools &gt; Reboot IOP after changing it and then open the device again.</li>
+</ul>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>&ldquo;UDPFS server not found&rdquo;.</b> Verify cable and link lights, the PS2&rsquo;s IP/netmask, that the PC is on the same subnet, and that UDPFSD is running and not blocked by a firewall.</li>
+<li><b>Writes are disabled.</b> Turn on <b>Allow writing over the network</b> (and make sure the server share is writable).</li>
+<li><b>Nothing happens on open.</b> If DEV9 is owned by PC CARD CF, or an earlier stack switch was refused, reboot the IOP from Tools and try again.</li>
+<li><b>Copy to a memory card fails mid-way.</b> The error message includes the driver code. UDPFS can return partial progress before an error; Launchstation handles short reads and stops at the error without claiming success. Report the exact build, server version, and a serial log if available.</li>
+</ol>
