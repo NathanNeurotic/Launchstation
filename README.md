@@ -55,7 +55,7 @@ Launchstation starts in a controller-first dashboard with four tabs, switched wi
 
 | Tab | What it holds |
 |---|---|
-| **Home** | Continue, pinned/favorite/recent items and the **Applications** library (Grid, List or Carousel view with SELECT), artwork, and a Last folder shortcut |
+| **Home** | Continue, pinned/favorite/recent items and the **Applications** library (Grid, List or Carousel view with SELECT; applications can be hidden from view), artwork, and a Last folder shortcut |
 | **Files** | The native File Browser (device roots, remembered folder and selection, PSU, VMC, MMCE and image tools) |
 | **Tools** | File Browser, Text Editor, Start disc, PS1/PS2 image shortcuts, MISC commands, USB unit diagnostics, HDD Manager, memory card exploit installer, OPL IGR setup, PS2 browser, OSDSYS, FTP / Remote access, Google Drive backups, system/build information, Reboot IOP and Power off |
 | **Settings** | Appearance, Home & applications, Sound, Input, Launching, Storage & devices (including MMCE backups), Network and System |
@@ -146,7 +146,7 @@ ps2build build
 - `scripts/gen_cloud_client.py` embeds Launchstation's Google OAuth client from `WLE_GOOGLE_CLIENT_ID` and `WLE_GOOGLE_CLIENT_SECRET` (set both, or neither). Without them a local build still compiles, but Drive linking needs a custom client in `WLE-CLOUD.CNF`.
 - `scripts/gen_githash.py` stamps the commit hash and date shown in About; `--require-git` fails instead of falling back to `local`.
 - `build_cloud_tls.sh`, `build_jpeg.sh` and `ps2build` all pick the toolchain with the same precedence: `PS2BUILD_TOOLCHAIN`, then `ps2.yaml`. **GCC comparison build:** export `PS2BUILD_TOOLCHAIN=gcc`, run all of the above, and use a separate output directory (`ps2build build -o build-gcc`) so Clang and GCC archives never mix.
-- `ps2.yaml` enables MMCE, MX4SIO, iLink, EXFAT, UDPFS, ETH (FTP/PS2Link, demand-started), DVRP, XFROM, TMANIP, native Google Drive cloud and custom colours; DS34 is off. Ethernet/FTP support is embedded but no network driver is started during normal boot.
+- `ps2.yaml` enables MMCE, MX4SIO, iLink, EXFAT, UDPFS, ETH (FTP/PS2Link, demand-started), DVRP, XFROM, TMANIP, native Google Drive cloud and custom colours; DS34 is off. Ethernet/FTP support is embedded but no network driver is started during normal boot. The ETH profile also builds the vendored `iop/ps2ips_rpc` PS2IP socket server (used by Internet clock sync).
 - The PC CARD CF IOP module can also be built on its own with `ps2build build -c iop/pccf/ps2.yaml`.
 
 **DualShock (DS34) variant** (retained wLaunchELF_R3Z drivers and `pad_ds34.c`):

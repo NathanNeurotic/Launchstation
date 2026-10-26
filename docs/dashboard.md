@@ -20,7 +20,7 @@ reboot IOP) run behind the loading overlay.
 File Browser: Confirm opens a folder, previews PNG/JPG/JPEG images, starts an ELF/KELF/VCD/ISO or opens a
 text file in the Text Editor. The image viewer supports sibling-image browsing,
 90-degree rotation, 1x-4x zoom, left-stick panning, fullscreen mode and a
-configurable 1-60 second slideshow; Square selects; Triangle has copy, cut,
+configurable 1-60 second slideshow (R3 starts/stops it); Square selects; Triangle has copy, cut,
 paste (also with new names), PSU create/extract, delete, rename, new
 folder, folder icon (icon.sys), size, start with arguments, title.cfg,
 mount as vmc0:/vmc1: (for .bin/.vmc/.mc2/.ps2 images; mounted images
@@ -46,7 +46,7 @@ Also in the File Browser menu, as in the classic browser:
 * *Go to Launchstation's folder*, *Invert selection*.
 * *Use as launch arguments* on a text file: its lines become the
   arguments of the application you start next from the browser.
-* The header shows the free space of memory cards and HDD partitions.
+* The header shows the free space of memory cards and HDD partitions. The tab strip and main panes share the File Browser's left/right bounds, and the console temperature (cached sensor sample) is appended to the clock when the console has a sensor.
 
 In file pickers (Settings, launch keys) R3 chooses the highlighted file as
 a `uLE:/` path, relative to Launchstation's own folder, like the classic R3;
@@ -81,7 +81,7 @@ operations, browse/view/sort modes, copy/paste, VMC backup operations and
 PathPad features remain in the same browser. The directory reader keeps its
 USB/PAD serialization across all tabs (including reads started before a tab switch) and invalidates in-flight results when switching tabs.
 
-**MISC commands** (the classic built-in commands) are listed in
+**MISC commands** (the classic built-in commands) open as a popup menu from
 **Tools > Storage > MISC commands** and also appear as a **Built-in
 commands** entry at the end of the Files device root and under
 **Settings > Built-in commands**. Other launch actions that request an
@@ -183,13 +183,13 @@ first/last row. The breadcrumb shows where the page lives.
 | Group | Contents |
 |-------|----------|
 | Appearance | Theme preset, customization groups, screen calibration, motion, animation, panel transparency, control icon backings, theme files and resets. |
-| Home & applications | Start screen, view, artwork, recent count/history and Application library (folders and refresh). |
+| Home & applications | Start screen (Home, Applications, Files, Tools, Settings), view, artwork, recent count/history and Application library (folders and refresh). |
 | Sound | Interface effects, music and their separate volumes. |
 | Input | Confirm button, on-screen keyboard and USB keyboard (driver and map). |
 | Launching | Automatic start & boot, Launch keys, shortcut/bookmark lock, disc/PS1 loaders, IOP reset and game IDs. |
 | Storage & devices | MMCE backups, HDD/ATA visibility, empty slots, unavailable devices and device auto-start preferences. |
 | Network | IP address, netmask, gateway and network write access. |
-| System | Language, memory card backup-file rules, classic screen settings, software/hardware clock, configuration folder, alternate launch/tool settings save location and welcome message. |
+| System | Language, memory card backup-file rules, classic screen settings, software/hardware clock, temperature units (50K and later; shown beside the header clock), configuration folder, alternate launch/tool settings save location and welcome message. |
 
 Unavailable dependent options remain visible with help explaining what to
 enable first. Path rows open a Choose/Clear dialog. Launch-key rows open
@@ -503,8 +503,10 @@ booted from is always on (its driver is already running) and cannot be
 switched off.
 
 On APPS, the *Show* choice (Triangle menu) filters the list — All,
-**Favorites** (favorites and pinned), Memory Cards, MASS, HDD, Other devices — and the choice is
-remembered across restarts (`Dash_AppFilter`).
+**Favorites** (favorites and pinned), Memory Cards, MASS, HDD, Other devices, All including hidden — and the choice is
+remembered across restarts (`Dash_AppFilter`). *Hide from view* / *Show in view*
+(application options or Triangle menu) dims an application out of every filter
+except *All including hidden*; hidden paths are stored in `DASHAPPS.CNF`.
 
 ## Optional PSBBN layers (Crystal background)
 

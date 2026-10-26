@@ -85,7 +85,7 @@ These are mentioned or launched through an integration; that does **not** imply 
 | [rclone](https://rclone.org/) | Used by the optional PC Cloud Relay helper |
 | [Google Drive API](https://developers.google.com/workspace/drive/api/guides/about-sdk) / [Google PKI](https://pki.goog/roots.pem) | Public OAuth/Drive and CA resources for original cloud implementation |
 | [GitHub releases and REST API](https://docs.github.com/en/rest) | Release metadata, commit comparison and package download for the update check |
-| Public time servers (`time.google.com`, `time.cloudflare.com`, `pool.ntp.org`) | Optional Internet clock sync |
+| Public time server (`0.pool.ntp.org`) | Optional Internet clock sync |
 | [SD2Cloud/MMCE ecosystem](https://github.com/ps2-mmce) | Comparison/integration context; **no SD2Cloud source was incorporated** |
 | oMrRexD / R3Z PC command environment | Reference for compatible remote command/transfer behavior |
 

@@ -33,7 +33,7 @@
 <table><thead><tr><th>Option</th><th>Values</th><th>Default</th></tr></thead><tbody>
 <tr><td>Theme preset</td><td>18 presets; Confirm opens a live preview list.</td><td>OSD Classic</td></tr>
 <tr><td>Customize theme</td><td>Background, Interface colours, Tiles &amp; menus, Text, Icons, Clock, Artwork background. See <a href="themes.html">Themes</a>.</td><td>&mdash;</td></tr>
-<tr><td>Screen calibration</td><td>Video mode (Auto, NTSC, PAL, VGA, 480p, 576p), Screen position X and Y (within the display mode's own offset range), Reset screen settings.</td><td>Auto, 0, 0</td></tr>
+<tr><td>Screen calibration</td><td>Video mode (Auto, NTSC, PAL, VGA, 480p, 576p, 576i; 576p is offered only on PS2 ROM 2.20+ or PSX 1.80J/2.10J, 576i is 50 Hz PAL interlaced), Screen position X and Y (within the display mode's own offset range), Reset screen settings.</td><td>Auto, 0, 0</td></tr>
 <tr><td>Background motion</td><td>0&ndash;200% in 10% steps</td><td>100%</td></tr>
 <tr><td>Menu animation</td><td>0&ndash;200% in 10% steps</td><td>100%</td></tr>
 <tr><td>Panel transparency</td><td>0&ndash;100% (0% removes menu panels)</td><td>Preset value</td></tr>
@@ -47,7 +47,7 @@
 
 <h2 id="home-apps">Home &amp; applications</h2>
 <table><thead><tr><th>Option</th><th>Values</th><th>Default</th></tr></thead><tbody>
-<tr><td>Start screen</td><td>Home, Files, Tools, Settings</td><td>Home</td></tr>
+<tr><td>Start screen</td><td>Home, Applications, Files, Tools, Settings</td><td>Home</td></tr>
 <tr><td>Home quick-launch shortcuts</td><td>On / Off (Applications and Last folder always stay)</td><td>On</td></tr>
 <tr><td>Application view</td><td>Grid, List, Carousel (SELECT also cycles it)</td><td>Grid</td></tr>
 <tr><td>Application artwork</td><td>On / Off</td><td>On</td></tr>
@@ -126,7 +126,7 @@
 <tr><td>IP address, Netmask, Gateway</td><td>IPv4 editor (Left/Right pick an octet, Up/Down +/-1, L1/R1 &plusmn;10). Used for FTP, PS2Link and UDPFS.</td><td>From <code>IPCONFIG.DAT</code></td></tr>
 <tr><td>Allow writing over the network</td><td>On / Off (lets <code>host:</code> and <code>udpfs:</code> be written to, not just read)</td><td>Off</td></tr>
 <tr><td>Legacy Ethernet drivers</td><td>On / Off. Use the older DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up; takes effect next time Ethernet/FTP is started.</td><td>Off</td></tr>
-<tr><td>Sync PS2 clock from Internet</td><td>Queries several Internet time sources, requires agreement, then writes and verifies the hardware RTC</td><td>&mdash;</td></tr>
+<tr><td>Sync PS2 clock from Internet</td><td>Sends SNTP requests to <code>0.pool.ntp.org</code> (two attempts, 5 s each), adds the time elapsed since the reply, then writes and verifies the hardware RTC. Failures name the step (DNS, connect, timeout, refused...).</td><td>&mdash;</td></tr>
 </tbody></table>
 <p>The write-access and legacy-driver rows appear only in builds with Ethernet/UDPFS support. See <a href="network-services.html">Network services</a>.</p>
 
@@ -137,6 +137,7 @@
 <tr><td>Classic screen settings</td><td>Menu frame, Opaque popups, Show launch titles, Hide full ELF paths, File Browser icons, and eight classic colours (Background, Frame, Text, Selected text, Graph 1&ndash;4). These affect legacy classic screens only; dashboard themes have their own controls.</td><td>On, Off, On, On, On</td></tr>
 <tr><td>Set software clock...</td><td>Works without a CMOS battery; enter <code>YYYY-MM-DD HH:MM:SS</code> (2000&ndash;2099). Restarts at the last saved time; save again before power-off to keep elapsed runtime.</td><td>&mdash;</td></tr>
 <tr><td>Use PS2 hardware clock</td><td>Stop the software clock and use the console RTC again</td><td>&mdash;</td></tr>
+<tr><td>PS2 Temperature Units (50K and later)</td><td>Celsius, Fahrenheit. Unit of the temperature shown beside the dashboard clock; hidden when the console has no supported sensor (<code>Dash_TemperatureFahrenheit</code>)</td><td>Celsius</td></tr>
 <tr><td>Set PS2 clock manually...</td><td>Enter <code>YYYY-MM-DD HH:MM:SS</code>; the hardware RTC is written and the readback verified</td><td>&mdash;</td></tr>
 <tr><td>Configuration folder</td><td>Load and save <code>LAUNCHELF.CNF</code> in this folder (<code>CNF_Path</code>)</td><td>Empty</td></tr>
 <tr><td>Save launch &amp; tool settings to...</td><td>Writes <code>LAUNCHELF.CNF</code> immediately to the configured folder, next to the ELF, or to the memory card <code>SYS-CONF</code>; dashboard and network settings are saved separately</td><td>&mdash;</td></tr>
@@ -152,4 +153,4 @@
 <h2 id="reset">Reset actions</h2>
 <p>Display/theme reset actions restore known project defaults so you do not have to reverse each visual setting by hand: <b>Reset screen settings</b>, <b>Reset appearance</b>, the per-group <i>Reset</i> rows and the theme file resets.</p>
 <h2 id="home-navigation">Where things live</h2>
-<p>Home includes the Applications library and Last folder shortcut. Files runs the native File Browser directly. Tools holds the classic MISC commands (also reachable from Settings &gt; <i>Built-in commands</i> and from the Files root). Separate Apps and Devices pages no longer exist as tabs; the old internal identifiers are kept only for compatibility.</p>
+<p>Home includes the Applications library and Last folder shortcut. Files runs the native File Browser directly. Tools holds the classic MISC commands in a popup menu (also reachable from Settings &gt; <i>Built-in commands</i> and from the Files root). Separate Apps and Devices pages no longer exist as tabs; the old internal identifiers are kept only for compatibility.</p>

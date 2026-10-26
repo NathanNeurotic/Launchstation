@@ -5,7 +5,7 @@
 <table><thead><tr><th>File</th><th>Purpose</th><th>Written by</th></tr></thead><tbody>
 <tr><td><code>LAUNCHELF.CNF</code></td><td>Classic settings: launch keys, loaders, video mode, language, keyboard, PSU rules, bookmarks.</td><td>Settings Save, bookmarks, Save as...</td></tr>
 <tr><td><code>DASHBOARD.CNF</code></td><td>Dashboard settings, application scan folders and the active theme (<code>Theme_*</code>).</td><td>Settings Save, view/filter changes, theme edits</td></tr>
-<tr><td><code>DASHAPPS.CNF</code></td><td>Favorites, pinned apps and recent apps (<code>Favorite</code>, <code>Pinned</code>, <code>Recent</code> lines).</td><td>Dashboard</td></tr>
+<tr><td><code>DASHAPPS.CNF</code></td><td>Favorites, pinned, recent and hidden apps (<code>Favorite</code>, <code>Pinned</code>, <code>Recent</code>, <code>Hidden</code> lines).</td><td>Dashboard</td></tr>
 <tr><td><code>DASHLIB.CNF</code></td><td>Cached application library, shown instantly on the next boot.</td><td>Library scans</td></tr>
 <tr><td><code>IPCONFIG.DAT</code></td><td>IP address, netmask and gateway (three space- or line-separated fields).</td><td>Settings &gt; Network</td></tr>
 <tr><td><code>THEMES/&lt;name&gt;/theme.cfg</code></td><td>Exported/shareable themes.</td><td>Export theme to folder</td></tr>
@@ -40,7 +40,7 @@
 <tr><td><code>Misc</code>, <code>Misc_*</code></td><td>Names of the built-in MISC device and commands (PS2Disc, FileBrowser, PS2Browser, PS2Net, PS2PowerOff, HddManager, Exploit_Installer, TextEditor, Configure, ShowFont, Debug_Info, About_uLE, Show_Build_Info, OSDSYS, Reboot_IOP).</td><td>language-dependent</td></tr>
 <tr><td><code>GUI_Swap_Keys</code></td><td>0 Circle confirms, 1 Cross confirms.</td><td>0</td></tr>
 <tr><td><code>GUI_Col_1_ABGR</code> &hellip; <code>GUI_Col_8_ABGR</code></td><td>Classic screen colours (hex).</td><td>built-in</td></tr>
-<tr><td><code>TV_mode</code></td><td>0 Auto, 1 NTSC, 2 PAL, 3 VGA, 4 480p, 5 576p.</td><td>0</td></tr>
+<tr><td><code>TV_mode</code></td><td>0 Auto, 1 NTSC, 2 PAL, 3 VGA, 4 480p, 5 576p, 6 576i. 576p on a console without ROM support loads as Auto.</td><td>0</td></tr>
 <tr><td><code>Screen_Offset_X</code>, <code>Screen_Offset_Y</code></td><td>Picture position relative to the display mode's own offsets.</td><td>0, 0</td></tr>
 <tr><td><code>Menu_Frame</code>, <code>Popup_Opaque</code></td><td>Classic frame and popup style.</td><td>1, 0</td></tr>
 <tr><td><code>Menu_Hide_Paths</code>, <code>Menu_Show_Titles</code></td><td>Classic launch menu path/title display.</td><td>1, 1</td></tr>
@@ -66,14 +66,15 @@
 
 <h2 id="dashboard-keys">DASHBOARD.CNF keys</h2>
 <table><thead><tr><th>Key</th><th>Meaning</th><th>Default</th></tr></thead><tbody>
-<tr><td><code>Dash_StartSection</code></td><td>Startup tab by internal id: 0 Home, 1 Apps (opens Home), 2 Files, 3 Devices (opens Files), 4 Tools, 5 Settings.</td><td>0</td></tr>
+<tr><td><code>Dash_StartSection</code></td><td>Startup tab by internal id: 0 Home, 1 Apps (opens the Applications library), 2 Files, 3 Devices (opens Files), 4 Tools, 5 Settings.</td><td>0</td></tr>
 <tr><td><code>Dash_View</code></td><td>0 Grid, 1 List, 2 Carousel.</td><td>0</td></tr>
-<tr><td><code>Dash_AppFilter</code></td><td>0 All, 1 Favorites, 2 Memory Cards, 3 MASS, 4 HDD, 5 Other.</td><td>0</td></tr>
+<tr><td><code>Dash_AppFilter</code></td><td>0 All, 1 Favorites, 2 Memory Cards, 3 MASS, 4 HDD, 5 Other, 6 All including hidden.</td><td>0</td></tr>
 <tr><td><code>Dash_Effects</code>, <code>Dash_Animations</code></td><td>Background motion and menu animation, 0&ndash;200 (%). Old files with 0/1/2 load as 0/50/100.</td><td>100, 100</td></tr>
 <tr><td><code>Dash_AutoScan</code></td><td>Refresh the library at startup.</td><td>1</td></tr>
 <tr><td><code>Dash_Artwork</code></td><td>Load application artwork.</td><td>1</td></tr>
 <tr><td><code>Dash_RecentCount</code></td><td>Recent applications shown (0&ndash;16; Settings offers 0/4/8/12/16).</td><td>8</td></tr>
 <tr><td><code>Dash_HomeShortcuts</code>, <code>Dash_IconBacking</code>, <code>Dash_ShowUnavailableDevices</code></td><td>Home shortcut chips, control icon backings, show unavailable devices.</td><td>1, 1, 1</td></tr>
+<tr><td><code>Dash_TemperatureFahrenheit</code></td><td>0 Celsius, 1 Fahrenheit for the temperature beside the clock.</td><td>0</td></tr>
 <tr><td><code>Dash_Sound</code>, <code>Dash_SoundVolume</code>, <code>Dash_BGM</code>, <code>Dash_BGMVolume</code></td><td>Interface sounds and music, 0&ndash;100 volume.</td><td>1, 80, 1, 80</td></tr>
 <tr><td><code>Dash_DevAuto</code></td><td>Auto-start bitmask: 1 USB, 2 HDD, 4 exFAT, 8 MMCE, 16 MX4SIO, 32 UDPFS, 64 iLink.</td><td>0</td></tr>
 <tr><td><code>Dash_MMCEBackupKeep</code>, <code>Dash_MMCEBackupFormat</code></td><td>Versions kept per card (0 = all, max 99); 0 native .mcd, 1 PCSX2 .ps2.</td><td>10, 0</td></tr>

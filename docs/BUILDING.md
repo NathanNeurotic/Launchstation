@@ -86,7 +86,7 @@ ps2build build
 
 - `build/bin/wLaunchELF-packed.elf` is the release ELF (compressed with `ps2pack`).
 - `build/bin/wLaunchELF.elf` is the stripped, unpacked ELF; `build/obj/wLaunchELF/wLaunchELF.unstripped.elf` is the linked ELF with symbols used by the checks below.
-- `build/bin/*.irx` are the source-built IOP modules (`udpfs_smap`, `usbd_ra`, `mmceman`, `vmcman`, `ps2ftpd`, `ps2host`, `pccf`, `ata_bd` and others); `loader.elf` and `wle_igr.elf` are also embedded.
+- `build/bin/*.irx` are the source-built IOP modules (`udpfs_smap`, `ps2ips_rpc` (vendored PS2IP socket RPC server, `iop/ps2ips_rpc/`, ETH builds only; the legacy `embed.make` builds it via its own Makefile), `usbd_ra`, `mmceman`, `vmcman`, `ps2ftpd`, `ps2host`, `pccf`, `ata_bd` and others); `loader.elf` and `wle_igr.elf` are also embedded.
 
 At the time of writing the packed ELF is about 1.6 MB (unpacked about 4.6 MB). A change to the default feature profile belongs in `ps2.yaml` (`defines:`, `embed_irx:`, `libs:`); the standard profile is MMCE, MX4SIO, iLink, exFAT, UDPFS plus ETH, DVRP, XFROM, TMANIP and custom colors with native cloud enabled and DS34 off.
 

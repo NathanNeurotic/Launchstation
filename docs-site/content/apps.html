@@ -11,15 +11,15 @@
 <table><thead><tr><th>Button</th><th>Action</th></tr></thead><tbody>
 <tr><td>Confirm</td><td>Start the application. With an empty library it starts a scan instead (<i>Scan now</i>).</td></tr>
 <tr><td>Square</td><td>Add/remove Favorite (a toast confirms).</td></tr>
-<tr><td>Triangle</td><td>Library menu: <b>Application options...</b>, <b>Change view</b>, <b>Show: &lt;filter&gt;</b>, <b>Refresh library</b>.</td></tr>
-<tr><td>SELECT</td><td>Cycle the view. With nothing to show under a filter, SELECT returns to <b>All</b>.</td></tr>
+<tr><td>Triangle</td><td>Library menu: <b>Application options...</b>, <b>Change view</b>, <b>Show: &lt;filter&gt;</b>, <b>Hide from view</b> / <b>Show in view</b>, <b>Refresh library</b>.</td></tr>
+<tr><td>SELECT</td><td>Cycle the view. With nothing to show under a filter, SELECT returns to <b>All</b>; the footer shows <i>All apps</i> whenever another filter is active.</td></tr>
 <tr><td>Back</td><td>Return to Home.</td></tr>
 <tr><td>L1 / R1</td><td>Switch dashboard tab.</td></tr>
 </tbody></table>
 <p>Selections wrap at both ends. Long titles scroll in a bounded marquee. Unfocused tiles keep stable alpha and scissor state, so memory-card-style icons never render half-drawn.</p>
 
 <h2 id="filters">Filters</h2>
-<p>Triangle &gt; <b>Show</b> chooses <b>All</b>, <b>Favorites</b> (favorites and pinned applications), <b>Memory Cards</b>, <b>MASS</b> (USB), <b>HDD</b> or <b>Other devices</b>. The filter is remembered across restarts. Cached applications whose device is not currently mounted are hidden until the device is ready; they stay in the cache and the shortcuts remain stored.</p>
+<p>Triangle &gt; <b>Show</b> chooses <b>All</b>, <b>Favorites</b> (favorites and pinned applications), <b>Memory Cards</b>, <b>MASS</b> (USB), <b>HDD</b>, <b>Other devices</b> or <b>All including hidden</b>. The filter is remembered across restarts. Hidden applications (see <a href="#options">options</a>) are left out of every filter except <b>All including hidden</b>, where they appear dimmed. While a scan is running an empty list reads <i>Looking for applications...</i>. Cached applications whose device is not currently mounted are hidden until the device is ready; they stay in the cache and the shortcuts remain stored.</p>
 
 <h2 id="home">Home integration</h2>
 <p>The Home <b>Continue</b> row surfaces pinned, recent and favorite applications (see <a href="dashboard.html#continue">Dashboard</a>). <b>Pin to Home</b> adds an application to the front of that row; <code>pinned = 1</code> in a metadata file does the same.</p>
@@ -32,6 +32,7 @@ mass:/BOOT/</code></pre>
 <p>Each root is searched for <code>.ELF</code> files directly inside it and inside each immediate sub-folder (<code>APPS/&lt;folder&gt;/*.ELF</code>), no deeper. Listing goes through the File Browser's directory reader, so every device and driver quirk it handles applies here too. The library holds up to 512 applications and up to 12 scan folders.</p>
 <ul>
 <li><b>At startup</b> only memory cards and devices whose driver is already running are refreshed (<b>Refresh at startup</b>, default On). Nothing else is initialised just for the dashboard.</li>
+<li>A memory card is probed afresh when scanned, as when opening it in Files; with MX4SIO using slot 2, <code>mc1:</code> is skipped by background scans.</li>
 <li><b>Refresh library</b> (Triangle menu, START menu, or Settings) scans every configured folder, starting the drivers it needs first. The search itself runs in the background; a toast reports <i>N applications found</i>.</li>
 <li>Results are cached in <code>DASHLIB.CNF</code> and shown instantly on the next boot. Apps that disappear (device removed) stay usable as shortcuts and fail with a friendly message instead of an error.</li>
 <li>Titles are derived from the file name: a built-in table gives proper names to well-known programs (OPL, Neutrino, uLaunchELF, RetroArch, PS2Ident and more); generic names such as <code>BOOT</code> or <code>MAIN</code> use the parent folder's name; a leading <code>APP_</code> is dropped and underscores become spaces. Metadata <code>title</code> overrides all of this.</li>
@@ -50,7 +51,7 @@ mass:/BOOT/</code></pre>
 <tr><td>Details</td><td>Location, file, author, version, category, artwork source and metadata path (or <i>none - create ...</i>).</td></tr>
 <tr><td>Show in File Browser</td><td>Opens the app's folder in the Files tab.</td></tr>
 <tr><td>Edit metadata</td><td>Creates a starter <code>.cfg</code> next to the ELF after confirmation, then opens it in the Text Editor; saving re-reads that one app.</td></tr>
-<tr><td>Hide from library / Remove shortcut</td><td>Hiding keeps the ELF on the device and a later library refresh can reveal it again. <i>Remove shortcut</i> appears for entries that are not in the library and clears them from Home, Favorites and Recents.</td></tr>
+<tr><td>Hide from view / Show in view, Remove shortcut</td><td>Hiding keeps the ELF on the device and only removes it from Home and the Applications list (no confirmation); the path is stored as a <code>Hidden</code> line in <code>DASHAPPS.CNF</code>, survives library refreshes and is undone with <b>Show in view</b> (find it under <b>All including hidden</b>). <i>Remove shortcut</i> appears for entries that are not in the library and clears them from Home, Favorites and Recents.</td></tr>
 </tbody></table>
 <p>If a launch fails because the file is missing, a message names the device and, for favorites, pins and recents, offers to remove the shortcut. A file that is not a valid PlayStation 2 executable gets its own message.</p>
 

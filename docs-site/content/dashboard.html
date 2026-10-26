@@ -5,7 +5,7 @@
 
 <h2 id="anatomy">Screen anatomy</h2>
 <ul>
-<li><b>Header:</b> the four tab icons with <b>L1</b> and <b>R1</b> badges at each end of the strip, and the clock/date on the side (see <a href="themes.html#clock">clock options</a>). The selector slides smoothly between tabs.</li>
+<li><b>Header:</b> the four tab icons with <b>L1</b> and <b>R1</b> badges at each end of the strip, left-aligned with the content panes (the Launchstation icon follows the strip), and the clock/date on the side (see <a href="themes.html#clock">clock options</a>). Consoles with a supported sensor (50K and later) show the console temperature beside the clock, in Celsius or Fahrenheit (<b>Settings &gt; System</b>); a long clock string shrinks rather than overlap the tabs. The selector slides smoothly between tabs.</li>
 <li><b>Body:</b> the active tab. Panels, tiles, selection style, fonts and the animated background all follow the active <a href="themes.html">theme</a>.</li>
 <li><b>Footer hints:</b> the buttons that currently do something. They use your configured Confirm/Cancel mapping, so Circle and Cross swap if you changed <b>Settings &gt; Input &gt; Confirm button</b>.</li>
 <li><b>Toasts and the activity indicator:</b> short confirmations (for example <i>Added to Favorites</i>) and a small indicator above the hints while background work (folder listings, artwork, library scans, saves) is running. The cursor never waits for the memory card or a slow device.</li>
@@ -19,7 +19,7 @@
 <tr><td><b>Tools</b></td><td>A grouped list of everything Launchstation can do outside the application library: browser/editor shortcuts, disc and game-image launchers, storage utilities, system commands and power commands.</td></tr>
 <tr><td><b>Settings</b></td><td>Appearance, Home &amp; applications, Sound, Input, Launching, Storage &amp; devices, Network and System, with one shared Save/Discard session.</td></tr>
 </tbody></table>
-<p>The startup tab is configurable (<b>Settings &gt; Home &amp; applications &gt; Start screen</b>: Home, Files, Tools or Settings; default Home). Older saved values for the retired Apps and Devices pages map to Home and Files; no favorites or metadata are rewritten.</p>
+<p>The startup tab is configurable (<b>Settings &gt; Home &amp; applications &gt; Start screen</b>: Home, Applications, Files, Tools or Settings; default Home). <b>Applications</b> opens the library under Home showing every application (the saved filter is not changed). Older saved values for the retired Devices page map to Files; no favorites or metadata are rewritten.</p>
 
 <h2 id="home">Home</h2>
 <p>Home has two rows. Up/Down moves between them (an empty row is skipped), Left/Right moves within a row and wraps around, and <b>L2</b>/<b>R2</b> jump to the first/last entry.</p>
@@ -28,7 +28,7 @@
 <table><thead><tr><th>Button</th><th>Action</th></tr></thead><tbody>
 <tr><td>Confirm</td><td>Start the focused application.</td></tr>
 <tr><td>Square</td><td>Add/remove Favorite (a toast confirms; the list holds up to 48 favorites).</td></tr>
-<tr><td>Triangle</td><td>Application options: Start, Start with arguments, Favorite, Pin to Home, Details, Show in File Browser, Edit metadata, Hide from library (or Remove shortcut). See <a href="apps.html#options">Applications</a>.</td></tr>
+<tr><td>Triangle</td><td>Application options: Start, Start with arguments, Favorite, Pin to Home, Details, Show in File Browser, Edit metadata, Hide from view / Show in view (or Remove shortcut). See <a href="apps.html#options">Applications</a>.</td></tr>
 </tbody></table>
 <h3 id="shortcuts">Browse &amp; shortcuts row</h3>
 <ul>
@@ -55,7 +55,7 @@
 <tr><td>PS1 VCDs (POPStarter)</td><td>Opens the browser so you can pick a <code>.VCD</code>. See <a href="popstarter.html">POPStarter</a>.</td></tr>
 <tr><td>PS1 images (Ember)</td><td>Opens the browser; select a <code>.CUE</code>, <code>.BIN</code> or PS1 <code>.EXE</code> inside <code>&lt;Ember directory&gt;/games/&lt;Game&gt;/</code>. See <a href="ember.html">Ember</a>.</td></tr>
 <tr><td>PS2 ISOs (Neutrino)</td><td>Opens the browser; select an <code>.ISO</code>. See <a href="neutrino.html">Neutrino</a>.</td></tr>
-<tr><td rowspan="5">Storage</td><td>MISC commands</td><td>Opens the classic built-in command folder as a list inside the browser.</td></tr>
+<tr><td rowspan="5">Storage</td><td>MISC commands</td><td>Opens a popup menu of the classic built-in commands, labelled from the configured MISC paths. The popup closes before the command runs.</td></tr>
 <tr><td>USB unit diagnostics</td><td>Show the cached USB drive mask (no I/O) or probe logical unit 0 or 1 once. A probe is a single synchronous IOP request and can freeze a failing console; logical units are not physical ports.</td></tr>
 <tr><td>HDD Manager</td><td>APA partitions and HDL info. See <a href="hdd-manager.html">HDD Manager</a>.</td></tr>
 <tr><td>Memory card exploit installer</td><td>Asks first. See <a href="exploit-installer.html">Exploit Installer</a>.</td></tr>
@@ -73,7 +73,7 @@
 </tbody></table>
 
 <h2 id="global-menu">START menu</h2>
-<p><b>START</b> opens the global Dashboard menu on every tab: <b>Home</b>, <b>Refresh application library</b>, <b>File Browser</b>, <b>Settings</b>, <b>Reboot IOP (reset drivers)</b> and <b>Power off</b>. Reboot IOP and Power off ask for confirmation. Switching tabs from this menu goes through the same unsaved-Settings guard as L1/R1.</p>
+<p><b>START</b> opens the global Dashboard menu from every native screen (tabs, File Browser, Text Editor, viewers, HDD Manager and most dialogs; pressing START again closes it): <b>Home</b>, <b>Refresh application library</b>, <b>File Browser</b>, <b>Settings</b>, <b>Reboot IOP (reset drivers)</b> and <b>Power off</b>. Reboot IOP and Power off ask for confirmation. Switching tabs from this menu goes through the same unsaved-Settings guard as L1/R1. The chosen action runs after the current screen has unwound; the Text Editor asks about unsaved documents first. SELECT + START is still the START launch key.</p>
 
 <h2 id="launch-keys">Launch keys and quick launch</h2>
 <p>Every controller button can be assigned an application or built-in command under <b>Settings &gt; Launching &gt; Launch keys</b> (Circle, Cross, Square, Triangle, L1, R1, L2, R2, L3, R3, START, plus optional Left and Right). SELECT is reserved for the configuration shortcut. Two ways to use them:</p>
