@@ -29,7 +29,11 @@ Local changes to the upstream server:
    for the received packet and its DMA/reassembly metadata.
 5. The shared socket transfer buffer reserves 64 bytes of headroom, covering
    a full 1024-byte payload at every supported alignment.
+6. `accept`, `getsockname` and `getpeername` initialize the address length
+   and buffer before calling lwIP, and `setsockopt` rejects option lengths
+   outside its 128-byte buffer.
 
 `ps2.yaml` provides an isolated PS2BUILD compile check. The root `ps2.yaml`
-builds the same source with DNS enabled. The legacy Makefile continues to use
-its SDK's matching `ps2ips.irx` / EE client pair.
+builds the same source with DNS enabled. The legacy Makefile builds this
+source through `iop/ps2ips_rpc/Makefile` (from `embed.make`) and links the
+SDK EE client `-lps2ips`.

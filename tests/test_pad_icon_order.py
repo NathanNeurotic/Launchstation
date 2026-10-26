@@ -42,5 +42,6 @@ assert "dashSpriteBatchAddAligned(x + go, y + go," in icons
 bind = gfx[gfx.index("int dashTexBind("):]
 assert bind.index("size > available") < bind.index("gsKit_TexManager_bind")
 gs = (root / "src" / "draw_gs.c").read_text(encoding="utf-8")
-assert gs.index("dmaKit_wait_fast();") < gs.index("gsKit_finish();", gs.index("dmaKit_wait_fast();") - 400)
+reset = gs[gs.index("fadeScreenToBlack();"):gs.index("setGS_flag = 1;")]
+assert reset.index("gsKit_queue_exec(gsGlobal);") < reset.index("dmaKit_wait_fast();") < reset.index("gsKit_finish();")
 print("PASS: aligned pad glyphs, bounded texture binds, GS drained before mode reset")

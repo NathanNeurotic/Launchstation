@@ -245,6 +245,10 @@ static void cloudLink(void)
 		float oe;
 
 		dashInputPoll(&in);
+		if (dashDashboardPending()) {
+			result = CLOUD_LINK_CANCELLED;
+			break;
+		}
 		if (in.pressed & DASH_IN_BACK) {
 			dashSoundPlay(DASH_SND_CANCEL);
 			result = CLOUD_LINK_CANCELLED;

@@ -446,7 +446,7 @@ int dashModalIp(const char *title, const char *help, char *ip_str, int size)
 			result = 1;
 			break;
 		}
-		if (in.pressed & (DASH_IN_BACK | DASH_IN_MENU)) {
+		if (dashDashboardPending() || (in.pressed & (DASH_IN_BACK | DASH_IN_MENU))) {
 			memcpy(oct, orig, sizeof(oct));
 			break;
 		}
@@ -775,7 +775,7 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 			sel = 0;
 		if (in.pressed & DASH_IN_R2)
 			sel = n_rows > 0 ? n_rows - 1 : 0;
-		if (in.pressed & DASH_IN_MENU) {
+		if (dashDashboardPending() || (in.pressed & DASH_IN_MENU)) {
 			result = 0;
 			break;
 		}

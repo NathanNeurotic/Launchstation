@@ -55,7 +55,9 @@ static void do_accept( void * rpcBuffer, int size )
 	int *ptr = rpcBuffer;
 	cmd_pkt *pkt = (cmd_pkt *)ptr;
 	struct sockaddr addr;
-	int addrlen, ret;
+	int addrlen = sizeof(addr), ret;
+
+	memset(&addr, 0, sizeof(addr));
 
 	(void)size;
 
@@ -450,7 +452,9 @@ static void do_getsockname( void *rpcBuffer, int size )
 	int *ptr = rpcBuffer;
 	cmd_pkt *pkt = (cmd_pkt *)ptr;
 	struct sockaddr addr;
-	int addrlen, ret;
+	int addrlen = sizeof(addr), ret;
+
+	memset(&addr, 0, sizeof(addr));
 
 	(void)size;
 
@@ -466,7 +470,9 @@ static void do_getpeername( void *rpcBuffer, int size )
 	int *ptr = rpcBuffer;
 	cmd_pkt *pkt = (cmd_pkt *)ptr;
 	struct sockaddr addr;
-	int addrlen, ret;
+	int addrlen = sizeof(addr), ret;
+
+	memset(&addr, 0, sizeof(addr));
 
 	(void)size;
 
@@ -511,6 +517,10 @@ static void do_setsockopt( void *rpcBuffer, int size )
 	level	= ((setsockopt_pkt*)rpcBuffer)->level;
 	optname	= ((setsockopt_pkt*)rpcBuffer)->optname;
 	optlen	= ((setsockopt_pkt*)rpcBuffer)->optlen;
+	if (optlen < 0 || optlen > (int)sizeof(optval)) {
+		ptr[0] = -1;
+		return;
+	}
 	memcpy(optval, ((setsockopt_pkt*)rpcBuffer)->buffer, optlen);
 
 	ret = setsockopt(s, level, optname, optval, optlen);
