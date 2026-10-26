@@ -560,6 +560,7 @@ extern int vmcMounted[2];
 extern int vmc_PartyIndex[2];            //PFS index for each VMC, unless -1
 extern int Party_vmcIndex[MOUNT_LIMIT];  //VMC index for each PFS, unless -1
 extern unsigned char *elisaFnt;
+int filerEnsureElisaFont(void);
 char *PathPad_menu(const char *path);
 int getFilePath(char *out, const int cnfmode);
 #ifdef ETH

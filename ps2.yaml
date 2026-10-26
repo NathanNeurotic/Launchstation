@@ -341,6 +341,7 @@ targets:
       - src/popstarter_gameid.c
       - src/popstarter_elf.c
       - src/ember.c
+      - src/ember_gameid.c
       - src/neutrino_iso.c
       - src/gui_neutrino.c
       - src/font_uLE.c

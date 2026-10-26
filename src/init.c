@@ -211,6 +211,20 @@ int isPcCardCfEligible(void)
            !strncmp(ROMVER_data, "0110", 4) || !strncmp(ROMVER_data, "0120", 4);
 }
 
+int consoleHasIlink(void)
+{
+	int i;
+	/* PSX has the port despite its newer ROM. Retail SCPH-50000 starts
+	 * at ROM 1.70. Keep unknown/non-retail identities visible rather than
+	 * loading CDVD or guessing their model while drawing a device list. */
+	if (console_is_PSX || strlen(ROMVER_data) < 6 || ROMVER_data[5] != 'C')
+		return 1;
+	for (i = 0; i < 4; i++)
+		if (ROMVER_data[i] < '0' || ROMVER_data[i] > '9')
+			return 1;
+	return strncmp(ROMVER_data, "0170", 4) < 0;
+}
+
 int shutdownPcCardCf(void)
 {
     if (!pccf_loaded) return 0;
@@ -2006,6 +2020,25 @@ static void switchPsxHddDriverStack(int use_dvr_stack)
 #endif
 
 #ifdef MMCE
+int ensureMmceGameIdControl(void)
+{
+	int ret, id;
+#ifdef MX4SIO
+	if (storage_driver_stack_mode == STORAGE_STACK_MX4SIO || mx4sio_driver_running)
+		return 0;
+#endif
+	if (have_mmce)
+		return 1;
+	/* The manager hooks SIO2 alongside MCMAN/PADMAN. USB, ATA, HDD,
+	 * iLink and UDPFS keep their mounts; never call the stack switcher. */
+	ensureCoreIoStackReady();
+	id = SifExecModuleBuffer(mmceman_irx, size_mmceman_irx, 0, NULL, &ret);
+	have_mmce = (id >= 0 && ret >= 0);
+	if (have_mmce)
+		storage_driver_stack_mode = STORAGE_STACK_MMCE;
+	return have_mmce;
+}
+
 int loadMmceModules(void)
 {
 	int ret, id __attribute__((unused));

@@ -62,6 +62,53 @@ int vmc_PartyIndex[2] = {-1, -1};                    //PFS index for each VMC, u
 int Party_vmcIndex[MOUNT_LIMIT] = {-1, -1, -1, -1};  //VMC for each PFS, unless -1
 unsigned char *elisaFnt = NULL;
 int elisa_failed = FALSE;  //Set at failure to load font, cleared at browser entry
+
+/* Called by the serialized browser reader, never while drawing. Publish only
+ * a complete font so the UI cannot observe a partially filled allocation. */
+int filerEnsureElisaFont(void)
+{
+	char path[MAX_PATH];
+	unsigned char *font;
+	int fd, total = 0, count;
+	if (elisaFnt != NULL)
+		return 1;
+	if (elisa_failed)
+		return 0;
+	elisa_failed = TRUE;
+	if (genFixPath("uLE:/ELISA100.FNT", path) < 0)
+		return 0;
+	if (!strncmp(path, "cdrom", 5)) {
+		if (strlen(path) + 2 >= sizeof(path))
+			return 0;
+		strcat(path, ";1");
+	}
+	fd = genOpen(path, FIO_O_RDONLY);
+	if (fd < 0)
+		return 0;
+	if (genLseek(fd, 0, SEEK_END) != 55016 || genLseek(fd, 0, SEEK_SET) < 0) {
+		genClose(fd);
+		return 0;
+	}
+	font = memalign(64, 55016);
+	if (font == NULL) {
+		genClose(fd);
+		return 0;
+	}
+	while (total < 55016) {
+		count = genRead(fd, font + total, 55016 - total);
+		if (count <= 0 || count > 55016 - total)
+			break;
+		total += count;
+	}
+	genClose(fd);
+	if (total != 55016) {
+		free(font);
+		return 0;
+	}
+	elisaFnt = font;
+	elisa_failed = FALSE;
+	return 1;
+}
 u64 freeSpace;
 int mcfreeSpace;
 int mctype_PSx;  //dlanor: Needed for proper scaling of mcfreespace
@@ -1910,7 +1957,7 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 		}
 #endif
 #ifdef ILINK
-		if (allow_usb_devices) {
+		if (allow_usb_devices && consoleHasIlink()) {
 			strcpy(files[nfiles].name, "ilink:");
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 		}

@@ -239,13 +239,13 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 		return 0;
 	}
 
-	/* Reuse the preflight Game ID if already read. Classic launches continue
-	 * their previous lazy read only when RetroGem or MMCE actually needs it. */
-	if (!tried_gameid && (!setting->cdrom_disable_gameid
-#ifdef MMCE
-	    || isPathDeviceStackLoaded("mmce0:/")
+	/* Reuse the preflight ID. MMCE switching is independent of RetroGem's
+	 * display preference and must also work when its stack is not loaded. */
+	if (!tried_gameid
+#ifndef MMCE
+	    && !setting->cdrom_disable_gameid
 #endif
-	))
+	)
 		have_gameid = prepareNeutrinoGameID(opened_iso, gameID, sizeof(gameID));
 
 	initPopstarterCandidates(&candidates);
@@ -276,8 +276,7 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	/* Neutrino consumes the already-mounted device stack. Drain every
 	 * dashboard RPC user and release libpad, but never reset that storage IOP. */
 #ifdef MMCE
-	/* No MMCE initialization here: only adapt already active hardware, and
-	 * protect any slot holding the source ISO or Neutrino executable. */
+	/* Manager-only control preserves mounts and protects source slots. */
 	if (have_gameid)
 		setNeutrinoMmceGameID(gameID, opened_iso, selected);
 #endif

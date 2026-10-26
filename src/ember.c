@@ -1,5 +1,6 @@
 #include "popstarter_internal.h"
 #include "init.h"
+#include "main_gameid.h"
 
 #define EMBER_NAME_MAX 180
 #define EMBER_BIOS_SIZE (512 * 1024)
@@ -300,6 +301,8 @@ int LaunchEmberGame(const char *path, char *message, size_t message_size)
 	char game_name[EMBER_NAME_MAX + 1];
 	char selected[MAX_PATH], fullpath[MAX_PATH], party[MAX_PATH];
 	char remounted_elf[MAX_PATH];
+	char game_id[12];
+	int show_game_id = 0;
 	int exec_kind, ret;
 
 	/* Disable must take effect before any image, BIOS or driver access. */
@@ -351,6 +354,10 @@ int LaunchEmberGame(const char *path, char *message, size_t message_size)
 	if (LaunchArgsLoadFromBuffer("Ember PS1 game", game_name, strlen(game_name),
 	                             message, message_size) <= 0)
 		return 0;
+	/* Read while the selected device is mounted; cleanup frees setting and
+	 * USB may then change mount numbers. ID lookup never changes launch args. */
+	if (setting != NULL && !setting->cdrom_disable_gameid)
+		show_game_id = buildEmberGameID(path, game_id, sizeof(game_id));
 
 	if (!CleanUpForEmberExec()) {
 		LaunchArgsClear();
@@ -379,6 +386,8 @@ int LaunchEmberGame(const char *path, char *message, size_t message_size)
 		snprintf(fullpath, sizeof(fullpath), "%s", remounted_elf);
 	}
 
+	if (show_game_id)
+		displayRetroGemGameID(game_id, 2);
 	RunLoaderElfKeepIOPWithArgv0(fullpath, party, fullpath, exec_kind);
 	return 1;
 }

@@ -53,6 +53,18 @@ int validateVcd(const char *path);
 int readVcdIsoPrimaryVolumeDescriptor(int fd, unsigned char *pvd);
 int readVcdSystemCnf(int fd, char *buffer, size_t buffer_size);
 
+/* An ISO data track inside a raw/cooked image, or a VCD container. */
+typedef struct {
+	int fd;
+	s64 offset;
+	int sector_size;
+} PS1_IMAGE_READER;
+int readPs1IsoPrimaryVolumeDescriptor(const PS1_IMAGE_READER *image, unsigned char *pvd);
+int readPs1SystemCnf(const PS1_IMAGE_READER *image, char *buffer, size_t buffer_size);
+int buildPs1ImageGameID(const PS1_IMAGE_READER *image, const char *fallback,
+                       char *gameID, size_t gameID_len);
+int buildEmberGameID(const char *path, char *gameID, size_t gameID_len);
+
 int buildPopstarterVcdGameID(const char *path, char *gameID, size_t gameID_len);
 
 int preparePopstarterCandidateLaunch(const POPSTARTER_CANDIDATE_LIST *candidates,

@@ -36,6 +36,11 @@ int loadSecrSifModule(void);
 int prepareExploitSignerIop(void);
 int isPathDeviceStackLoaded(const char *path);
 int isUsbMassStackLoaded(void);
+int consoleHasIlink(void);
+#ifdef MMCE
+/* Load MMCE control without resetting/replacing the active storage stack. */
+int ensureMmceGameIdControl(void);
+#endif
 
 /* PC CARD CompactFlash (cf: / cf0:) ownership and status queries. */
 int isPcCardCfEligible(void);

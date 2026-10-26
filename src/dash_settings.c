@@ -41,7 +41,7 @@ enum SetId {
 	S_MENU_FRAME,
 	S_POPUP_OPAQUE,
 	S_C_COL0, /* classic screen colours, COLOR_BACKGR..COLOR_GRAPH4 */
-	S_C_COL7 = S_C_COL0 + 7,
+	S_C_COL7 = S_C_COL0 + COLOR_GRAPH4,
 	S_SCREEN_RESET,
 	S_DISPLAY_THEME_RESET,
 	/* dashboard */
@@ -69,9 +69,9 @@ enum SetId {
 	S_USBKBD_FILE,
 	S_KBDMAP_FILE,
 	S_LAUNCHKEYS,
-	/* launch keys: S_LK_0 + SETTING_LK_AUTO..SETTING_LK_START */
+	/* SELECT remains reserved for configuration; Left/Right are optional keys. */
 	S_LK_0,
-	S_LK_LAST = S_LK_0 + SETTING_LK_START,
+	S_LK_LAST = S_LK_0 + SETTING_LK_RIGHT,
 	S_PATHPAD_LOCK,
 	/* startup */
 	S_INIT_DELAY,
@@ -180,7 +180,8 @@ enum SetId {
 	S_T_WALLDIM,
 	S_T_RENAME,
 	S_T_RESTORE_PRESET,
-	S_T_RESETCAT
+	S_T_RESETCAT,
+	S_MISC_COMMANDS
 };
 
 typedef struct
@@ -208,7 +209,7 @@ enum SetPageId {
 	/* Keep these in DashThemeGroup order for group resets. */
 	P_THEME_BG, P_THEME_COLORS, P_THEME_STYLE, P_THEME_TEXT,
 	P_THEME_ICONS, P_THEME_CLOCK, P_THEME_WALL, P_THEME_MANAGE,
-	P_COUNT
+	P_CLASSIC, P_COUNT
 };
 
 static const SetItem root_items[] = {
@@ -220,6 +221,7 @@ static const SetItem root_items[] = {
     {ST_PAGE, P_DEVICES, "Storage & devices", "Device visibility and which devices start automatically."},
     {ST_PAGE, P_NETWORK, "Network", "Console address and network write access."},
     {ST_PAGE, P_SYSTEM, "System", "Language, save-file options and configuration locations."},
+    {ST_ACTION, S_MISC_COMMANDS, "Built-in commands", "Open MISC, including configuration and system tools."},
 };
 
 static const SetItem appearance_items[] = {
@@ -297,6 +299,8 @@ static const SetItem lkey_items[] = {
     {ST_LKEY, S_LK_0 + SETTING_LK_L3, "L3", NULL},
     {ST_LKEY, S_LK_0 + SETTING_LK_R3, "R3", NULL},
     {ST_LKEY, S_LK_0 + SETTING_LK_START, "START", NULL},
+    {ST_LKEY, S_LK_0 + SETTING_LK_LEFT, "Left", "Optional classic launch-menu shortcut."},
+    {ST_LKEY, S_LK_0 + SETTING_LK_RIGHT, "Right", "Optional classic launch-menu shortcut."},
 };
 
 static const SetItem startup_items[] = {
@@ -386,12 +390,30 @@ static const SetItem psu_items[] = {
 static const SetItem system_items[] = {
     {ST_PAGE, P_LANGUAGE, "Language", "Built-in language and external translations for file operations and tools."},
     {ST_PAGE, P_PSU, "Memory card backup files", "PSU naming and overwrite rules used by File Browser operations."},
+    {ST_PAGE, P_CLASSIC, "Classic screen settings", "Appearance of classic dialogs and the legacy launch menu."},
     {ST_ACTION, S_CLOCK_SOFTWARE, "Set software clock...", "Works without a CMOS battery. Restarts at the last saved time; save again before power-off to retain elapsed runtime."},
     {ST_ACTION, S_CLOCK_HARDWARE, "Use PS2 hardware clock", "Stop the software clock and use the console RTC again."},
     {ST_ACTION, S_CLOCK_MANUAL, "Set PS2 clock manually...", "Enter the local date and time as YYYY-MM-DD HH:MM:SS; the hardware RTC is written and verified."},
     {ST_PATH, S_CNF_PATH, "Configuration folder", "Load and save LAUNCHELF.CNF in this folder instead of the default places."},
     {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
     {ST_ACTION, S_INTRO, "Show welcome message again", "Show the introduction the next time the dashboard checks for it."},
+};
+
+/* These are persisted upstream settings, independent of dashboard themes. */
+static const SetItem classic_items[] = {
+    {ST_CHOICE, S_MENU_FRAME, "Menu frame", "Draw the frame around classic screens."},
+    {ST_CHOICE, S_POPUP_OPAQUE, "Opaque popups", "Use an opaque background for classic popup menus."},
+    {ST_CHOICE, S_SHOW_TITLES, "Show launch titles", "Use custom launch-key titles in the classic launch menu."},
+    {ST_CHOICE, S_HIDE_PATHS, "Hide full ELF paths", "Show only the file name in the classic launch menu."},
+    {ST_CHOICE, S_FB_ICONS, "File Browser icons", "Show file and folder icons in classic file-selection dialogs."},
+    {ST_COLOR, S_C_COL0 + COLOR_BACKGR, "Background colour", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_FRAME, "Frame colour", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_TEXT, "Text colour", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_SELECT, "Selected text colour", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_GRAPH1, "Graph colour 1", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_GRAPH2, "Graph colour 2", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_GRAPH3, "Graph colour 3", NULL},
+    {ST_COLOR, S_C_COL0 + COLOR_GRAPH4, "Graph colour 4", NULL},
 };
 
 #define NITEMS(a) ((int)(sizeof(a) / sizeof(a[0])))
@@ -490,6 +512,7 @@ static const SetPage pages[P_COUNT] = {
     [P_MMCE_BACKUP] = PAGE("MMCE backup & sync", DI_MC, "Backup, cloud, IGR return and maintenance controls in one place.", mmce_backup_items),
     [P_NETWORK] = PAGE("Network", DI_NETWORK, "Console address for FTP, PS2Link and UDPFS.", net_items),
     [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules and settings locations.", system_items),
+    [P_CLASSIC] = PAGE("Classic screen settings", DI_SETTINGS, "These settings affect classic screens; dashboard themes have their own controls.", classic_items),
     [P_LANGUAGE] = PAGE("Language", DI_TEXT, "Some extended help remains in English.", language_items),
     [P_PSU] = PAGE("Memory card backup files", DI_MC, "Naming and overwrite behavior when creating PSU backups.", psu_items),
     [P_THEME_BG] = PAGE("Background", DI_IMAGE, "Scene, brightness and static wallpaper.", tbg_items),
@@ -1567,6 +1590,10 @@ static void mcAlias(char *path, int size)
 /* Applies a changed path setting (fonts and languages are loaded now). */
 static void pathApplied(int id)
 {
+	if (id == S_ESR_PATH || id == S_OSDSYS_PATH) {
+		int lk = id == S_ESR_PATH ? SETTING_LK_ESR : SETTING_LK_OSDSYS;
+		setting->LK_Flag[lk] = setting->LK_Path[lk][0] != '\0';
+	}
 	if (id == S_IGR_AFTER_APP || id == S_MMCE_BACKUP_PATH) {
 		if (id == S_MMCE_BACKUP_PATH)
 			dashToolsRefreshMmceStatus();
@@ -1692,6 +1719,7 @@ static void editLaunchKey(const SetItem *it, int what)
 			return;
 		mcAlias(out, sizeof(out));
 		dashStrCopy(setting->LK_Path[lk], out, MAX_PATH);
+		setting->LK_Flag[lk] = out[0] != '\0';
 		classic_dirty = 1;
 	} else if (what == 1) {
 		if (!setting->LK_Path[lk][0]) {
@@ -1705,6 +1733,7 @@ static void editLaunchKey(const SetItem *it, int what)
 		}
 	} else if (setting->LK_Path[lk][0]) {
 		setting->LK_Path[lk][0] = '\0';
+		setting->LK_Flag[lk] = 0;
 		setting->LK_Title[lk][0] = '\0';
 		classic_dirty = 1;
 		dashToast(DASH_TOAST_INFO, "Launch key cleared");
@@ -2573,7 +2602,7 @@ static void runThemeAction(int id)
 
 static void runAction(int id)
 {
-	if (id >= S_T_PRESET) {
+	if (id >= S_T_PRESET && id <= S_T_RESETCAT) {
 		runThemeAction(id);
 		return;
 	}
@@ -2655,6 +2684,9 @@ static void runAction(int id)
 #endif
 		case S_ABOUT_PROJECT:
 			dashShowAbout();
+			break;
+		case S_MISC_COMMANDS:
+			dashOpenBrowser(setting->Misc);
 			break;
 		case S_CLOCK_HARDWARE:
 			dashCfg.software_clock[0] = '\0';

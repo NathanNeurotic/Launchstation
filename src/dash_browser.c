@@ -150,16 +150,26 @@ static int wrapIndex(int index, int total)
 
 static void revealSelection(void)
 {
-	if (fb.sel < fb.top)
-		fb.top = fb.sel;
-	else if (fb.sel >= fb.top + FB_ROWS)
-		fb.top = fb.sel - FB_ROWS + 1;
+	int total = fb.dir[0] ? fb.n : fb.ndevs;
+	fb.top = fb.sel - (FB_ROWS - 1) / 2;
 	if (fb.top < 0)
 		fb.top = 0;
-	if (fb.n > FB_ROWS && fb.top > fb.n - FB_ROWS)
-		fb.top = fb.n - FB_ROWS;
+	if (total <= FB_ROWS)
+		fb.top = 0;
+	else if (fb.top > total - FB_ROWS)
+		fb.top = total - FB_ROWS;
 	if (fb.sel_anim < fb.top || fb.sel_anim >= fb.top + FB_ROWS)
 		fb.sel_anim = (float)fb.sel;
+}
+
+/* A page reaches the boundary before a subsequent press wraps. */
+static int pageIndex(int selected, int total, int direction)
+{
+	if (total <= 0)
+		return 0;
+	if (direction < 0)
+		return selected == 0 ? total - 1 : (selected < FB_ROWS ? 0 : selected - FB_ROWS);
+	return selected == total - 1 ? 0 : (selected + FB_ROWS >= total ? total - 1 : selected + FB_ROWS);
 }
 
 static u64 fbFileBytes(const FILEINFO *f)
@@ -258,6 +268,8 @@ static void listRun(void *arg)
 
 	dashWorkerStatus(j->path, 0, 0);
 	j->n = getDir(j->path, j->files);
+	if (j->titles && j->n > 0)
+		filerEnsureElisaFont();
 	/* right after the read: for the HDD this asks the partition just mounted */
 	j->free_valid = j->n >= 0 ? filerFreeSpace(j->path, &j->free_bytes) : 0;
 	for (i = 0; i < j->n; i++) {
@@ -400,7 +412,7 @@ static void openDir(const char *dir, const char *select)
 			}
 		}
 		/* the built-in commands, like the classic device list */
-		if (setting->Misc[0] && !fb_tab_active) {
+		if (setting->Misc[0]) {
 			DashDevice *d = &fb.devs[fb.ndevs++];
 			memset(d, 0, sizeof(*d));
 			d->icon = DI_TOOLS;
@@ -2708,9 +2720,9 @@ static void browserDrawBody(void)
 				dashIcon(DI_CHECK, FB_X + 8, y + 3, 16, DASH_C_OK);
 			else
 				dashIcon(isMisc(fb.dir) ? DI_TOOLS : fileIcon(f), FB_X + 8, y + 3, 16, col);
-			/* save titles are Shift-JIS; the dashboard font shows their ASCII */
+			/* Only icon.sys/save titles are Shift-JIS; filenames remain literal. */
 			if (fbShowsTitles(fb_show) && f->title[0])
-				transcpy_sjis(label, f->title);
+				dashSjisTitle(label, sizeof(label), f->title);
 			else
 				dashStrCopy(label, f->name, sizeof(label));
 			if (i == fb.sel)
@@ -2774,6 +2786,7 @@ static int browserOpenState(const char *start_dir, const char *select)
 	if (fb.files != NULL)
 		return 0;
 	memset(&fb, 0, sizeof(fb));
+	elisa_failed = FALSE; /* retry a missing font when a new browser opens */
 	fb.gen = gen;
 	fb.files = (FILEINFO *)malloc(sizeof(FILEINFO) * MAX_ENTRY);
 	fb.mark = (u8 *)malloc(MAX_ENTRY);
@@ -2835,9 +2848,9 @@ static void browserProcessInput(const DashInput *in, int *running)
 			if (in->pressed & DASH_IN_DOWN)
 				fb.sel = wrapIndex(fb.sel + 1, total);
 			if (in->pressed & (DASH_IN_L2 | DASH_IN_LEFT))
-				fb.sel = wrapIndex(fb.sel - FB_ROWS, total);
+				fb.sel = pageIndex(fb.sel, total, -1);
 			if (in->pressed & (DASH_IN_R2 | DASH_IN_RIGHT))
-				fb.sel = wrapIndex(fb.sel + FB_ROWS, total);
+				fb.sel = pageIndex(fb.sel, total, 1);
 		}
 		if (fb.sel != prev && running != NULL)
 			dashSoundPlay(DASH_SND_CURSOR);

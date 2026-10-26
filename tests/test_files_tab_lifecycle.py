@@ -21,7 +21,8 @@ assert "if (section == DASH_SEC_FILES)" in main
 assert "dashFileBrowserTabClose();" in main
 assert "dashBrowserPadInputReady()" in main
 assert "dashFileBrowserTabOpen(start_dir)" in main
-assert "dashFileBrowser(start_dir)" in main
+assert "dashFileBrowser(start_dir)" not in main
+assert "dashFileBrowserTabOpen(start_dir != NULL ? start_dir : \"\")" in main
 assert "void dashFileBrowserTabClose(void)" in hdr
 assert "browserTabInput, browserTabUpdate, browserTabDraw" in browser
 assert "browserProcessInput(in, NULL)" in browser
@@ -32,7 +33,7 @@ draw=browser[browser.index("static void browserDrawBody(void)"):browser.index("s
 assert "dashGfxBeginFrame" not in draw and "dashBgDraw()" not in draw
 assert "fb_tab_active ? 74 : 58" in draw
 assert "dashDrawHeader(section, section_anim)" in main
-assert "if (setting->Misc[0] && !fb_tab_active)" in browser
+assert "if (setting->Misc[0])" in browser
 assert "dashHomeRebuild();" not in browser[browser.index("void dashFileBrowserTabClose(void)"):browser.index("int dashBrowserPadInputReady(void)")]
 
 def function(signature):
@@ -66,6 +67,8 @@ typedef struct {
 } FbState;
 static FbState fb;
 static int fb_tab_active;
+static int elisa_failed;
+#define FALSE 0
 static int browser_usb_jobs,browser_usb_input_rearm;
 static char fb_tab_resume[MAX_PATH];
 static char fb_tab_selection[MAX_NAME];

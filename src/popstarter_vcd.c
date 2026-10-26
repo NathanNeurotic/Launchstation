@@ -60,20 +60,33 @@ int validateVcd(const char *path)
 	return POPSTARTER_OK;
 }
 
-static int readVcdIsoSector(int fd, u32 lba, unsigned char *data)
+static int readPs1IsoSector(const PS1_IMAGE_READER *image, u32 lba, unsigned char *data)
 {
 	unsigned char raw[POPSTARTER_VCD_RAW_SECTOR_SIZE] __attribute__((aligned(16)));
 	s64 offset;
 	int data_offset;
 
-	if (data == NULL)
+	if (image == NULL || data == NULL || image->offset < 0 ||
+	    (image->sector_size != 2352 && image->sector_size != 2336 && image->sector_size != 2048))
 		return 0;
 
-	offset = (s64)POPSTARTER_VCD_IMAGE_OFFSET + ((s64)lba * POPSTARTER_VCD_RAW_SECTOR_SIZE);
-	if (genLseek(fd, offset, SEEK_SET) < 0)
+	offset = image->offset + (s64)lba * image->sector_size;
+	if (genLseek(image->fd, offset, SEEK_SET) != offset)
 		return 0;
-	if (genRead(fd, raw, sizeof(raw)) != (int)sizeof(raw))
-		return 0;
+	for (int done = 0; done < image->sector_size;) {
+		int count = genRead(image->fd, raw + done, image->sector_size - done);
+		if (count <= 0 || count > image->sector_size - done) return 0;
+		done += count;
+	}
+	if (image->sector_size == 2048) {
+		memcpy(data, raw, 2048);
+		return 1;
+	}
+	if (image->sector_size == 2336) {
+		if (raw[2] & 0x20) return 0;
+		memcpy(data, raw + 8, 2048);
+		return 1;
+	}
 
 	if (raw[15] == 1) {
 		data_offset = 16;
@@ -89,7 +102,7 @@ static int readVcdIsoSector(int fd, u32 lba, unsigned char *data)
 	return 1;
 }
 
-int readVcdIsoPrimaryVolumeDescriptor(int fd, unsigned char *pvd)
+int readPs1IsoPrimaryVolumeDescriptor(const PS1_IMAGE_READER *image, unsigned char *pvd)
 {
 	unsigned char sector[POPSTARTER_CD_SECTOR_DATA_SIZE] __attribute__((aligned(16)));
 	u32 lba;
@@ -100,7 +113,7 @@ int readVcdIsoPrimaryVolumeDescriptor(int fd, unsigned char *pvd)
 
 	for (i = 0; i < POPSTARTER_ISO_PVD_SEARCH_SECTORS; i++) {
 		lba = POPSTARTER_ISO_PVD_LBA + i;
-		if (!readVcdIsoSector(fd, lba, sector))
+		if (!readPs1IsoSector(image, lba, sector))
 			return 0;
 		if (!memcmp(sector + 1, "CD001", 5)) {
 			if (sector[0] == 1) {
@@ -135,7 +148,7 @@ static int isoNameMatches(const unsigned char *name, int name_len, const char *t
 	return (name_len == target_len || name[target_len] == ';');
 }
 
-static int readVcdIsoFileContents(int fd, u32 extent_lba, u32 file_size, char *buffer, size_t buffer_size)
+static int readPs1IsoFileContents(const PS1_IMAGE_READER *image, u32 extent_lba, u32 file_size, char *buffer, size_t buffer_size)
 {
 	unsigned char sector[POPSTARTER_CD_SECTOR_DATA_SIZE] __attribute__((aligned(16)));
 	size_t copied;
@@ -150,7 +163,7 @@ static int readVcdIsoFileContents(int fd, u32 extent_lba, u32 file_size, char *b
 	copied = 0;
 	sector_index = 0;
 	while (copied < (buffer_size - 1) && copied < file_size) {
-		if (!readVcdIsoSector(fd, extent_lba + sector_index, sector))
+		if (!readPs1IsoSector(image, extent_lba + sector_index, sector))
 			break;
 
 		remaining_file = file_size - copied;
@@ -166,7 +179,7 @@ static int readVcdIsoFileContents(int fd, u32 extent_lba, u32 file_size, char *b
 	return copied > 0;
 }
 
-int readVcdSystemCnf(int fd, char *buffer, size_t buffer_size)
+int readPs1SystemCnf(const PS1_IMAGE_READER *image, char *buffer, size_t buffer_size)
 {
 	unsigned char pvd[POPSTARTER_CD_SECTOR_DATA_SIZE] __attribute__((aligned(16)));
 	unsigned char sector[POPSTARTER_CD_SECTOR_DATA_SIZE] __attribute__((aligned(16)));
@@ -181,7 +194,7 @@ int readVcdSystemCnf(int fd, char *buffer, size_t buffer_size)
 		return 0;
 
 	buffer[0] = '\0';
-	if (!readVcdIsoPrimaryVolumeDescriptor(fd, pvd))
+	if (!readPs1IsoPrimaryVolumeDescriptor(image, pvd))
 		return 0;
 
 	root_record = pvd + POPSTARTER_ISO_ROOT_RECORD_OFFSET;
@@ -195,7 +208,7 @@ int readVcdSystemCnf(int fd, char *buffer, size_t buffer_size)
 		root_sectors = POPSTARTER_ISO_MAX_ROOT_DIR_SECTORS;
 
 	for (sector_index = 0; sector_index < root_sectors; sector_index++) {
-		if (!readVcdIsoSector(fd, root_lba + sector_index, sector))
+		if (!readPs1IsoSector(image, root_lba + sector_index, sector))
 			return 0;
 
 		pos = 0;
@@ -220,7 +233,7 @@ int readVcdSystemCnf(int fd, char *buffer, size_t buffer_size)
 
 				file_lba = readIsoLe32(sector + pos + 2);
 				file_size = readIsoLe32(sector + pos + 10);
-				return readVcdIsoFileContents(fd, file_lba, file_size, buffer, buffer_size);
+				return readPs1IsoFileContents(image, file_lba, file_size, buffer, buffer_size);
 			}
 
 			pos += record_len;
@@ -228,4 +241,17 @@ int readVcdSystemCnf(int fd, char *buffer, size_t buffer_size)
 	}
 
 	return 0;
+}
+
+/* Preserve the existing VCD API and its one-MiB container offset. */
+int readVcdIsoPrimaryVolumeDescriptor(int fd, unsigned char *pvd)
+{
+	PS1_IMAGE_READER image = {fd, POPSTARTER_VCD_IMAGE_OFFSET, POPSTARTER_VCD_RAW_SECTOR_SIZE};
+	return readPs1IsoPrimaryVolumeDescriptor(&image, pvd);
+}
+
+int readVcdSystemCnf(int fd, char *buffer, size_t buffer_size)
+{
+	PS1_IMAGE_READER image = {fd, POPSTARTER_VCD_IMAGE_OFFSET, POPSTARTER_VCD_RAW_SECTOR_SIZE};
+	return readPs1SystemCnf(&image, buffer, buffer_size);
 }
