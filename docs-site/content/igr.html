@@ -1,5 +1,51 @@
-<h1>IGR Return &amp; Backup</h1><p class="lead">The Launchstation IGR path can return from a game, protect MMCE state and then continue according to the configured policy.</p>
-<h2 id="local">Automatic local backup</h2><p>If enabled, a changed active MMCE card is written to local history before the post-IGR destination is entered. An unchanged card can be skipped without being treated as an error.</p>
-<h2 id="cloud">Optional cloud phase</h2><p>Google Drive synchronization is a second phase and requires an already linked account. It is off by default and never replaces the local backup as the primary safety copy.</p>
-<h2 id="after">After-IGR behavior</h2><p>The dashboard exposes an after-IGR policy and optional ELF path. This allows a return to the dashboard or another configured destination after backup work finishes.</p>
-<h2 id="failure">Failure policy</h2><p>Backup and cloud errors are surfaced as status/toast messages. The design avoids silently pretending that a failed write or failed cloud operation succeeded.</p>
+<h1>IGR Return &amp; Backup</h1>
+<p class="lead">OPL&rsquo;s <em>Exit to</em> (in-game reset) can return to Launchstation through a small helper, <code>WLE-IGR.ELF</code>. On the way back Launchstation can back up every MMCE memory-card image, optionally copy the history to Google Drive, and then continue to the destination you chose.</p>
+
+<h2 id="why">Why a helper is needed</h2>
+<p>OPL starts its Exit-to program in a minimal environment that cannot read the sd2psXtd filesystem or most BDM devices directly. <code>WLE-IGR.ELF</code> is a tiny trampoline: it resets the IOP, loads only the storage family needed for the configured Launchstation path (memory card, MMCE, USB, MX4SIO, iLink, exFAT HDD or internal HDD), waits for that file to appear (up to 24 tries, a quarter second apart), and starts Launchstation with <code>-wle-igr</code> plus the backup folder. If it cannot find Launchstation it exits to the PS2 system menu instead of hanging. The helper is built in and its copy is patched with your paths at install time; it is rewritten and byte-verified after install.</p>
+
+<h2 id="setup">Setting it up</h2>
+<ol>
+<li>Choose a backup folder (<b>Settings &gt; Storage &amp; devices &gt; MMCE backups &gt; Backup folder</b>) or pick one when prompted. It must not be inside an MMCE <code>MemoryCards</code> tree.</li>
+<li>Run <b>Tools &gt; OPL IGR automatic MMCE backup</b> (or <b>MMCE backups &gt; IGR helper</b>) and choose <b>Install / update</b>. Launchstation installs or updates the helper where OPL can launch it and shows the <b>exact path to enter as OPL&rsquo;s Exit-to</b>.</li>
+<li>Set that path in OPL&rsquo;s settings. Re-run the install if you move Launchstation or change the backup folder. <b>Remove helper</b> deletes the helper copies Launchstation manages and leaves existing backups untouched.</li>
+</ol>
+<p>Where the helper goes depends on the device Launchstation was started from:</p>
+<table><thead><tr><th>Launchstation was started from</th><th>Helper is installed to</th><th>Set OPL Exit-to to</th></tr></thead><tbody>
+<tr><td>Memory card <code>mc0:</code> / <code>mc1:</code></td><td><code>mcN:/BOOT/WLE-IGR.ELF</code></td><td>that path</td></tr>
+<tr><td>USB</td><td>Next to the Launchstation ELF</td><td>that path</td></tr>
+<tr><td>MMCE</td><td>Inside <b>every</b> <code>BootCard*.mcd</code> image found under both <code>MemoryCards</code> trees (in the image&rsquo;s <code>/BOOT</code> folder; up to 32 images). A BootCard must exist and be enabled.</td><td><code>mc0:/BOOT/WLE-IGR.ELF</code> for MMCE slot 1, <code>mc1:/BOOT/WLE-IGR.ELF</code> for slot 2</td></tr>
+<tr><td>MX4SIO, iLink, exFAT HDD, internal HDD</td><td>The first writable <b>physical memory card</b> (<code>mc0:</code> then <code>mc1:</code>) as a trampoline that reloads the right drivers</td><td>the shown <code>mcN:/BOOT/WLE-IGR.ELF</code></td></tr>
+<tr><td>Other devices (UDPFS, disc&hellip;)</td><td>Not supported yet</td><td>&mdash;</td></tr>
+</tbody></table>
+<p>The settings page reports the helper as <em>Current</em>, <em>Outdated</em>, <em>Not installed</em> or <em>Partial / mixed</em> by comparing installed bytes with this build&rsquo;s helper and your backup folder.</p>
+
+<h2 id="local">What happens on return</h2>
+<ol>
+<li>OPL exits to the helper; the helper starts Launchstation.</li>
+<li>If <b>Automatic sync</b> is <b>Local backup</b> or <b>Local + Google Drive</b> (default: Local backup), Launchstation starts MMCE and backs up <em>every</em> valid <code>.mcd</code> under both <code>mmce0:/MemoryCards</code> and <code>mmce1:/MemoryCards</code>, not only the active card, because named and GameID cards cannot be reconstructed after the reset. Unchanged cards are skipped; details of verification, retention and layout are on <a href="mmce-backup.html">MMCE Backup History</a>.</li>
+<li>Only for <b>Local + Google Drive</b>, new history is then uploaded (copy-only). This needs an already linked Google account, otherwise the Drive step reports an error. Drive is a second phase and never replaces the local copy.</li>
+<li>Launchstation continues to the <b>After IGR, open</b> choice: <b>Launchstation</b> (dashboard, default), the <b>PS2 system menu</b> (OSDSYS), or an <b>Application</b> you select (its device is started first).</li>
+</ol>
+<p>Only a launch carrying the IGR flag takes this path; a normal boot never runs IGR routing or backups.</p>
+
+<h2 id="after">After-IGR behavior</h2>
+<p>Settings &gt; Storage &amp; devices &gt; MMCE backups has <b>After IGR, open</b> and <b>IGR application</b> (used when the destination is Application). If the chosen application cannot be started, Launchstation stays in the dashboard and shows <em>IGR: could not start device for &hellip;</em> or <em>no after-IGR application selected</em>.</p>
+
+<h2 id="failure">Failure policy</h2>
+<p>Backup and cloud problems are shown as a status message on the dashboard and never block the return:</p>
+<ul>
+<li><em>IGR: automatic MMCE backup disabled</em> &ndash; Automatic sync is Off.</li>
+<li><em>IGR: no MMCE backup destination configured</em> &ndash; choose a Backup folder and reinstall the helper.</li>
+<li><em>IGR: MMCE driver unavailable; backup skipped</em> / <em>no MMCE MemoryCards tree found</em>.</li>
+<li><em>IGR MMCE backup: N changed, N unchanged, N failed (N cards)</em>, followed when applicable by <em>Drive: N uploaded, N present, N failed</em> or the Drive error text.</li>
+</ul>
+<p>The design never reports a failed write or failed cloud step as a success. The helper itself can only fall back to the system menu if it cannot find Launchstation.</p>
+
+<h2 id="limits">Limits and tips</h2>
+<ul>
+<li>IGR backup applies to MMCE cards; if you do not use MMCE the helper is just a return trampoline.</li>
+<li>Use a stable destination (USB or HDD). A backup folder on a device that is not started during IGR will not work; the driver family for that device must be loadable after the reset.</li>
+<li>After updating Launchstation, re-run <b>Install / update</b> if the status reads <em>Outdated</em>.</li>
+<li>Hardware timing between OPL, the adapter and the helper has only been host-tested; report firmware version and boot device if an IGR return does not reach Launchstation.</li>
+</ul>

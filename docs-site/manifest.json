@@ -185,6 +185,11 @@
           "themes",
           "Display, Themes & BGM",
           "themes"
+        ],
+        [
+          "languages",
+          "Languages",
+          "languages"
         ]
       ]
     },
@@ -210,6 +215,21 @@
           "developers",
           "Developer Notes",
           "fork-gaps"
+        ],
+        [
+          "building",
+          "Building from Source",
+          "install"
+        ],
+        [
+          "architecture",
+          "Architecture & Repo Layout",
+          "fork-gaps"
+        ],
+        [
+          "contributing",
+          "Contributing & Testing",
+          "github"
         ],
         [
           "credits",
