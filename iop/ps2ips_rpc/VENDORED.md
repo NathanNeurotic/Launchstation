@@ -34,6 +34,4 @@ Local changes to the upstream server:
    outside its 128-byte buffer.
 
 `ps2.yaml` provides an isolated PS2BUILD compile check. The root `ps2.yaml`
-builds the same source with DNS enabled. The legacy Makefile builds this
-source through `iop/ps2ips_rpc/Makefile` (from `embed.make`) and links the
-SDK EE client `-lps2ips`.
+builds the same source with DNS enabled and links the SDK EE client `-lps2ips`.

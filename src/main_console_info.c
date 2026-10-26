@@ -73,7 +73,7 @@ static unsigned int mechacon_version;
 
 static void initialize_model_cdvd_rpc(void)
 {
-	u8 mecha_version[3];
+	u8 mecha_version[4]; /* RR MM mm TT; older CDVDMAN returns MM mm TT */
 	u32 stat = 0;
 	int i;
 
@@ -135,7 +135,8 @@ int IsDtlConsoleIdentity(const char *romver, const char *model)
 
 static int read_model_name_scmd17(char *model, size_t model_len, u32 *stat)
 {
-	unsigned char rdata[9];
+	/* sceCdApplySCmd always stores 16 bytes of output. */
+	unsigned char rdata[16];
 	unsigned char offset;
 	char raw_model[17];
 	int result1, result2;

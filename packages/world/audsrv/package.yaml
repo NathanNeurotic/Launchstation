@@ -10,12 +10,9 @@ license: LGPL-2.0
 # sdk-core or world/ at any point, transiently or otherwise.
 # Same "one package, two artifacts, same name for both" pattern as
 # cdvd/sior/netman/filexio/sdr.
+# Only the IOP driver remains here; the EE client is built from ee_libs/audsrv
+# by ps2.yaml so it always matches the ELF's compiler.
 artifacts:
-  - kind: library
-    target: [ee]
-    include_dirs: [include]
-    headers: [kernel, cglue]
-    lib: lib/libaudsrv.a
   - kind: driver
     target: [iop]
     headers: [libsd,intrman,loadcore,sifcmd,sifrpc,sysclib,sysmem,threadman]

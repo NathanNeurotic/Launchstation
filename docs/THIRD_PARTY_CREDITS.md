@@ -12,7 +12,7 @@
 
 ## How to read the tables
 
-*Role* values: **vendored** (source in this repository), **compiled** (built from upstream or an SDK package into the ELF), **embedded binary** (a prebuilt module or data file placed in the ELF), **external** (a separate program or hardware the user installs), **service** (a network service the app contacts on request) and **reference** (consulted, nothing redistributed). "Release build" means `ps2.yaml` (PS2BUILD, LLVM/Clang); the legacy `Makefile` links a different set.
+*Role* values: **vendored** (source in this repository), **compiled** (built from upstream or an SDK package into the ELF), **embedded binary** (a prebuilt module or data file placed in the ELF), **external** (a separate program or hardware the user installs), **service** (a network service the app contacts on request) and **reference** (consulted, nothing redistributed). "Release build" means `ps2.yaml` (PS2BUILD, LLVM/Clang).
 
 ## Vendored source in this repository
 
@@ -25,14 +25,12 @@
 | PS2SDK `atad` (BDM build) | `iop/ata_bd/` | ps2dev/ps2sdk; copyright 2003 Marcus R. Brown, AFL-2.0 | Compiled; the SDK suite does not package `ata_bd` |
 | `hdl_info`, `xparam`, `AllowDVDV`, `dev9_poweroff`, `iop/include_compat` | `iop/hdl_info/`, `iop/xparam/` (Deckard `xparam` and a homebrew database), `iop/AllowDVDV/`, `iop/dev9_poweroff/`, `iop/include_compat/` | PS2SDK-derived headers (AFL-2.0) where present; `AllowDVDV`/`dev9_poweroff` carry no copyright header; upstream of the remaining parts is not recorded in the repo | Compiled IOP helpers |
 | PS2SDK EE sources | `ee_libs/hdd/` (libhdd), `ee_libs/iopreboot/` (libiopreboot), `ee_libs/audsrv/` | [ps2dev/ps2sdk](https://github.com/ps2dev/ps2sdk); libhdd and iopreboot AFL-2.0; `audsrv_rpc.c` states the GNU Library General Public License version 2 (ps2sdk `c27cc8a`) | Compiled with the active toolchain |
-| MMCEMAN / MMCEDRV | `iop/mmceman/`, `iop/__precompiled/mmceman.irx` (legacy Makefile) | [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman) (MIT in upstream repo); upstream acknowledges Wisi and Maximus32; file headers carry the PS2SDK AFL-2.0 boilerplate | MMCE filesystem, protocol and GameID foundations; compiled from source in the release build |
+| MMCEMAN / MMCEDRV | `iop/mmceman/` | [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman) (MIT in upstream repo); upstream acknowledges Wisi and Maximus32; file headers carry the PS2SDK AFL-2.0 boilerplate | MMCE filesystem, protocol and GameID foundations; compiled from source in the release build |
 | RiptOPL USB driver | `iop/usbd-ra/` | [NathanNeurotic/Open-PS2-Loader](https://github.com/NathanNeurotic/Open-PS2-Loader); AFL-2.0 PS2SDK headers; source review needed for any other inherited notices | Compiled; updated usbd-ra imported in USB stability work |
 | PS2Link host (`ps2host`) | `iop/ps2host/` | [ps2dev/ps2link](https://github.com/ps2dev/ps2link); copyright 2003 Tord Lindstrom (pukko), 2004 adresd; file headers cite the PS2Link License (no license file is checked in beside it) | Compiled; the `host:` file-I/O server only |
 | PS2FTPD | `iop/oldlibs/ps2ftpd/` | [ps2homebrew/ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), Jesper Svennevid; [bundled AFL 2.0](../iop/oldlibs/ps2ftpd/LICENSE) | Compiled; started with anonymous login enabled |
-| libcdvd (legacy) | `iop/oldlibs/libcdvd/` | A. Lee and Nicholas Van Veen; [bundled restrictive historical license](../iop/oldlibs/libcdvd/license.txt), expressly limiting commercial use | **Not built by `ps2.yaml`.** Used only by the legacy Makefile with `LCDVD=LEGACY`; the release build uses the SDK `cdfs` module instead |
 | DS34 USB/Bluetooth | `iop/ds34usb/`, `iop/ds34bt/`, `src/pad_ds34.c` | inherited from [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z); thanks to Alex Parrado and upstream authors; AFL-2.0 PS2DEV headers | Compiled, DualShock package only |
 | audsrv | `packages/world/audsrv/bin/audsrv.irx` (IOP server) plus `ee_libs/audsrv/` | [ps2dev/ps2sdk](https://github.com/ps2dev/ps2sdk), LGPL-2.0 per source headers and [packages/README.md](../packages/README.md) | IOP module embedded unchanged by `src/embed_blobs.S`; EE client built by the active toolchain |
-| libogg / libvorbis | `packages/world/ogg/` and `packages/world/vorbis/` | [Xiph.org](https://xiph.org/), BSD-3-Clause per [packages/README.md](../packages/README.md) | Retained but unused: no build file or source links them (see [packages/README.md](../packages/README.md)) |
 | QR Code generator library | `src/qrcodegen.c`, `include/qrcodegen.h` | [Project Nayuki](https://github.com/nayuki/QR-Code-generator), MIT (notice at the top of the file) | Vendored; Google Drive link screen |
 | Roboto | `src/dash_font_data.c` (rasterized atlases), `scripts/gen_dash_font.py`, `docs/licenses/Roboto-COPYRIGHT.txt` | [Roboto](https://fonts.google.com/specimen/Roboto), Copyright 2015 Google Inc., Apache-2.0; [bundled notice](licenses/Roboto-COPYRIGHT.txt) | Dashboard typeface glyph data |
 | uLaunchELF default font | `src/font_uLE.c` | Inherited from the LaunchELF/uLaunchELF lineage; no separate notice in the file | Built-in 8x16 bitmap font |
@@ -53,7 +51,7 @@
 | UDPFS ministack and ioman | `iop/__precompiled/udpfs_ministack.irx`, `udpfs_ioman.irx` | Client half of the UDPFS protocol served by [UDPFSD](https://github.com/pcm720/udpfsd); exact upstream revision and license are not recorded in the repo | Embedded binary; ABI checked by `scripts/check_udpfs_smap.py` |
 | Public CA roots | `include/cloud_google_roots.h` (Google Trust Services R1–R4, expire 2036-06-22); `res/WLE-UPDATE-CA.PEM` (Sectigo Public Server Authentication Root R46; ISRG Root X1) | Public certificates from [pki.goog](https://pki.goog/) and the CAs | Embedded data; HTTPS verification |
 
-`iop/__precompiled/` also holds prebuilt modules (for example `bdm`, `bdmfs_fatfs`, `usbmass_bd`, `mx4sio_bd`, `ata_bd`, `iomanX`, `fileXio`, `ps2smap`, `xfromman`, `extflash`, `ppctty`) that the legacy Makefile embeds only as fallbacks when the installed PS2SDK lacks them; the PS2BUILD release takes these from SDK packages or `ps2.yaml` targets instead. The upstream and revision of each prebuilt file are not recorded in this repository.
+`iop/__precompiled/` now holds only `udpfs_ioman.irx` and `udpfs_ministack.irx` (embedded, above) and `udpfs_smap.irx`, a defective historical SMAP kept solely so `scripts/check_udpfs_smap.py` can verify the ELF does not embed it. The prebuilt SDK-duplicate modules that used to sit there were removed on 2026-10-26; the release takes those from SDK packages or `ps2.yaml` targets. The upstream and revision of the remaining prebuilt files are not recorded in this repository.
 
 ## Bundled data and tooling of unresolved provenance
 
@@ -65,7 +63,7 @@
 | Windows Cloud Relay | `windows/cloud-relay/` | Original scripts; they drive the external [rclone](https://rclone.org/) (MIT) that the user installs |
 | sd2psXtd restore model | `research/sd2psxtd/` | Original research code, not linked into any ELF |
 
-**License risk:** There is **no root `LICENSE` file in this repository snapshot**. Do not infer uniform relicensing of inherited code or a single license that overrides component terms. In particular, the checked-in `libcdvd` license includes non-commercial-use language (it is not part of the PS2BUILD release build, but is in the source tree). Preserve upstream copyright/license headers in source and release documentation. Confirm which legacy subdirectories are actually embedded/shipped per build variant before declaring a complete binary distribution notice set.
+**License risk:** There is **no root `LICENSE` file in this repository snapshot**. Do not infer uniform relicensing of inherited code or a single license that overrides component terms. Preserve upstream copyright/license headers in source and release documentation. Confirm which legacy subdirectories are actually embedded/shipped per build variant before declaring a complete binary distribution notice set.
 
 ## Independently installed applications and services
 

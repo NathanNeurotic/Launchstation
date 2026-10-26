@@ -50,7 +50,7 @@ print("zack structural feedback contract: OK")
 clock = (root / "src/dash_clock_sync.c").read_text()
 init = (root / "src/init.c").read_text()
 yaml = (root / "ps2.yaml").read_text()
-make = (root / "Makefile").read_text()
+make = (root / "ps2.yaml").read_text()
 
 assert "Set PS2 clock manually..." in settings
 assert "dashClockSetManual" in settings
@@ -64,5 +64,5 @@ assert "toBcd" in clock
 assert "ensureDashboardIpNetworkReady" in init
 assert "src/dash_clock_sync.c" in yaml
 assert "ps2ips, cglue" in yaml
-assert "dash_clock_sync.o" in make
+assert "- src/dash_clock_sync.c" in make
 print("clock sync contract: OK")

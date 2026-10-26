@@ -7,7 +7,6 @@ browser = (root / "src/dash_browser.c").read_text()
 viewer = (root / "src/dash_image.c").read_text()
 jpeg = (root / "src/dash_jpeg.c").read_text()
 header = (root / "include/dash_internal.h").read_text()
-makefile = (root / "Makefile").read_text()
 ps2yaml = (root / "ps2.yaml").read_text()
 widgets = (root / "src/dash_widgets.c").read_text()
 
@@ -42,10 +41,8 @@ assert "dashTexDrawQuadUV" in viewer
 image_draw = re.search(r"dashTexDrawQuadUV\(tex,[\s\S]*?DC\((\d+), (\d+), (\d+), (\d+)\)\);", viewer)
 assert image_draw, "Missing image texture draw tint"
 assert tuple(map(int, image_draw.groups())) == (128, 128, 128, 255), "Image tint doubles/clips colors instead of preserving them"
-assert "dash_image.o" in makefile
 assert "gsKit_prim_quad_texture_3d" in (root / "src/dash_gfx.c").read_text()
-assert "dash_jpeg.o" in makefile
-assert "-ljpeg" in makefile
+assert "jpegturbo" in ps2yaml
 assert "src/dash_image.c" in ps2yaml
 assert "src/dash_jpeg.c" in ps2yaml
 assert "jpeg" in ps2yaml

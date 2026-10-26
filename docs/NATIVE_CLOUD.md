@@ -41,7 +41,7 @@ the resumable upload endpoint) and Google content hosts under
 ## Requirements
 
 - A build with `WLE_NATIVE_CLOUD` and `ETH` defined. `ps2.yaml` (all official
-  packages) defines both; the legacy Makefile does not, and such a build shows
+  packages) defines both; a custom build that omits them shows
   "This build does not include native HTTPS support".
 - A working Ethernet adapter and IP configuration (`IPCONFIG.DAT`).
 - A roughly correct PS2 date and time (see [Security](#security)).

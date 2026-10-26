@@ -160,7 +160,7 @@ ps2build build -c .ps2-ds34.yaml -o build-ds34
 
 **Installable packages:** `python3 scripts/package_apps.py --standard build/bin/wLaunchELF-packed.elf --dualshock build-ds34/bin/wLaunchELF-packed.elf --output artifacts --revision <git sha> --epoch <commit time>` writes the four release assets.
 
-**Legacy Makefile.** `Makefile` (PS2SDK/PS2DEV toolchain) remains for other feature profiles, but it is not the release build: its defaults differ from `ps2.yaml` (for example `ETH ?= 0`), and it does not define `WLE_NATIVE_CLOUD`, so the Makefile profiles have no native Google Drive and no in-app update. `make all-ds34-off`, `make all-ds34-on` and `make all-ds34-variants` build isolated DS34 off/on ELFs; `make info` lists the options (`MMCE`, `DS34`, `ETH`, `UDPFS`, `EXFAT`, `DVRP`, `XFROM`, `MX4SIO`, `ILINK`, `IOP_RESET`, ...).
+**Build system.** The legacy `Makefile` build was retired on 2026-10-26; `ps2build` with `ps2.yaml` (LLVM/Clang) is the only build path. `PS2BUILD_TOOLCHAIN=gcc` still gives a GCC comparison build.
 
 **Tests.** Host-side regression tests live in `tests/` and run with plain Python, for example `python3 tests/test_self_update.py`; CI runs the full list (see `.github/workflows/compile.yml`). Documentation changes should at least pass:
 
@@ -326,7 +326,7 @@ This documentation is authored on `master` and generated to `gh-pages` by CI; do
 
 **Direct lineage and maintainers:** [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z) by R3Z3N / Saildot4K; earlier wLaunchELF, uLaunchELF and LaunchELF authors; [johnson-cooper](https://github.com/johnson-cooper), who created and transferred this fork; [NathanNeurotic / Ripto](https://github.com/NathanNeurotic), current maintainer; [techwritescode](https://github.com/techwritescode), TnA, oMrRexD, Zack and FitthFox for collaboration, insight or testing as noted in the detailed credits.
 
-**Source/dependency credits:** the [PS2BUILD SDK](https://git.techwritescode.dev/ps2) and its LLVM/Clang toolchain (used to build releases), [PS2SDK/ps2dev](https://github.com/ps2dev/ps2sdk), [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman), [RiptOPL usbd-ra](https://github.com/NathanNeurotic/Open-PS2-Loader), legacy [ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), the legacy libcdvd authors, inherited DS34 driver authors including Alex Parrado, [Mbed TLS](https://github.com/Mbed-TLS/mbedtls), [libjpeg-turbo](https://libjpeg-turbo.org/), [Xiph.org ogg/vorbis](https://xiph.org/), audsrv and font contributors.
+**Source/dependency credits:** the [PS2BUILD SDK](https://git.techwritescode.dev/ps2) and its LLVM/Clang toolchain (used to build releases), [PS2SDK/ps2dev](https://github.com/ps2dev/ps2sdk), [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman), [RiptOPL usbd-ra](https://github.com/NathanNeurotic/Open-PS2-Loader), [ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), inherited DS34 driver authors including Alex Parrado, [Mbed TLS](https://github.com/Mbed-TLS/mbedtls), [libjpeg-turbo](https://libjpeg-turbo.org/), [Xiph.org ogg/vorbis](https://xiph.org/), audsrv and font contributors.
 
 **PC CARD CompactFlash driver reference:** [mihhru](https://github.com/mihhru) and [PS2CF](https://github.com/mihhru/PS2CF) supplied the early-PS2 CF PIO/ATA foundation and host tests. The driver is integrated into this build; console compatibility is not yet verified on hardware.
 
