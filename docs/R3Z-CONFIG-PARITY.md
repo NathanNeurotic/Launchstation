@@ -1,13 +1,5 @@
 # Complete upstream configuration mapping
 
-> **Status as of 2026-10-26: current reference (generated mapping).**
-> Regenerated/checked by `scripts/audit_r3z_settings.py` against the pinned fixture
-> `tests/fixtures/r3z-06b06d0-config-keys.json` (test: `tests/test_r3z_config_inventory.py`). Downstream-only
-> keys with Settings controls but outside the 61-key upstream inventory include `EMBER_DIR` and
-> `NET_LegacyDrivers`. Upstream moved on after `06b06d0`; re-run with `--upstream <checkout>` before
-> claiming parity with newer commits.
-
-
 Upstream snapshot: `06b06d000072d358c93d98104d64d2f081e47ba7`.
 
 All **61 serialized key families** from upstream config.c and gui_colors.c are mapped below. Indexed launch-key, title and bookmark entries are counted as families. CNF_version is schema metadata.
