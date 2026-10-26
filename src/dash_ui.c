@@ -231,7 +231,8 @@ static float drawButton(float x, float y, int icon, const char *key)
 
 void dashDrawHints(const DashHint *hints, int n)
 {
-	float total = 0.0f, x, labels = 0.0f, label_ratio = 1.0f;
+	const float gap_max = 24.0f, gap_min = 10.0f;
+	float fixed = 0.0f, total, x, labels = 0.0f, label_ratio = 1.0f, gap = gap_max, avail;
 	float y = 400.0f;
 	int i;
 
@@ -239,14 +240,19 @@ void dashDrawHints(const DashHint *hints, int n)
 	 * screen's hint bar ends at the same right edge whatever its keys are
 	 * (START/SELECT may be pad icons or text badges). */
 	for (i = 0; i < n; i++) {
-		total += buttonWidth(hints[i].button, hints[i].key) + 8.0f + 24.0f;
+		fixed += buttonWidth(hints[i].button, hints[i].key) + 8.0f;
 		labels += dashTextWidth(localizeDashboardText(hints[i].label), DASH_FS_SMALL);
 	}
-	/* Long translated action names share the remaining label space. Keep
-	 * button glyphs/readable type sizes intact, ellipsizing labels as needed. */
-	if (labels > 0.0f)
-		label_ratio = dashClampf((DASH_SAFE_R - DASH_SAFE_L + 12.0f - total) / labels, 0.0f, 1.0f);
-	total += labels * label_ratio;
+	avail = DASH_SAFE_R - DASH_SAFE_L + 12.0f;
+	/* Long translated names, a larger font scale or the classic bitmap font can
+	 * make the bar too wide. First tighten the gaps between hints, which costs
+	 * nothing readable (#221); only then share what is left among the labels,
+	 * keeping button glyphs and type size intact and ellipsizing as a last resort. */
+	if (n > 0 && fixed + labels + n * gap > avail)
+		gap = dashClampf((avail - fixed - labels) / n, gap_min, gap_max);
+	if (labels > 0.0f && fixed + labels + n * gap > avail + 0.01f)
+		label_ratio = dashClampf((avail - fixed - n * gap) / labels, 0.0f, 1.0f);
+	total = fixed + n * gap + labels * label_ratio;
 	x = DASH_SAFE_R - total + 12.0f;
 	if (x < DASH_SAFE_L)
 		x = DASH_SAFE_L;
@@ -271,7 +277,7 @@ void dashDrawHints(const DashHint *hints, int n)
 		 * centre, so mixed-case labels read as centred on the button */
 		if (label_w > 0.0f)
 			dashTextFit(x, y + 1.5f, label_w, label, DASH_FS_SMALL, DASH_C_TEXT);
-		x += label_w + 24.0f;
+		x += label_w + gap;
 	}
 }
 
