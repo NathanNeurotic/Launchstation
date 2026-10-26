@@ -1,4 +1,5 @@
 project: launchstation_ps2ips_rpc
+toolchain: llvm
 targets:
   - name: ps2ips_rpc
     type: iop

@@ -60,3 +60,7 @@ assert "/toolchain/ee/bin/" not in workflow  # no GCC binutils in release checks
 assert '"$LLVM_BIN/llvm-nm"' in workflow
 
 print("PASS: LLVM toolchain configuration")
+
+ps2ips = (root / "iop/ps2ips_rpc/ps2.yaml").read_text()
+assert re.search(r"^toolchain: llvm$", ps2ips, re.M)
+print("PASS: vendored PS2IPS server IRX builds with the LLVM toolchain")
