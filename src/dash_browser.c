@@ -28,9 +28,9 @@ int IsTextEditorFileType(const char *path);
 
 #define FB_ROWS 10
 #define FB_ROW_H 25.0f
-#define FB_X 40.0f
+#define FB_X DASH_SAFE_L
 #define FB_Y 100.0f
-#define FB_W 560.0f
+#define FB_W (DASH_SAFE_R - DASH_SAFE_L)
 
 static struct
 {
@@ -2040,12 +2040,14 @@ static int tsEdit(FilerDateEditor *e)
 	dashInputFlush();
 	while (1) {
 		dashInputPoll(&in);
+		if (dashDashboardPending())
+			return 0;
 		if (in.pressed & DASH_IN_BACK) {
 			dashSoundPlay(DASH_SND_CANCEL);
 			dashInputFlush();
 			return 0;
 		}
-		if (in.pressed & (DASH_IN_OK | DASH_IN_START)) {
+		if (in.pressed & DASH_IN_OK) {
 			dashSoundPlay(DASH_SND_CONFIRM);
 			dashInputFlush();
 			return 1;
@@ -2648,7 +2650,7 @@ static void browserDrawBody(void)
 		dashTextS(FB_X + 32, 20, localizeDashboardText("File Browser"), DASH_FS_TITLE, DASH_C_TEXT);
 	}
 	/* Give the current folder its own aligned lane above the file list. */
-	dashDrawPanelBox(FB_X - 6, fb_tab_active ? 68 : 52, FB_W + 12, 24, 6);
+	dashDrawPanelBox(DASH_PANE_L, fb_tab_active ? 68 : 52, DASH_PANE_W, 24, 6);
 	dashTextScroll(FB_X + 6, fb_tab_active ? 74 : 58,
 	               fb_tab_active ? FB_W - 227 : FB_W - 162,
 	               fb.dir[0] ? display_path : "Choose a device", DASH_FS_SMALL, DASH_C_TEXT2);
@@ -2682,7 +2684,7 @@ static void browserDrawBody(void)
 			dashText(FB_X, FB_Y + FB_ROWS * FB_ROW_H + 14, info, DASH_FS_CAPTION, DASH_C_ACCENT);
 	}
 
-	dashDrawPanelBox(FB_X - 6, FB_Y - 6, FB_W + 12, FB_ROWS * FB_ROW_H + 12, 14);
+	dashDrawPanelBox(DASH_PANE_L, FB_Y - 6, DASH_PANE_W, FB_ROWS * FB_ROW_H + 12, 14);
 	dashGfxScissor(FB_X - 4, FB_Y - 4, FB_W + 8, FB_ROWS * FB_ROW_H + 8);
 	if (rows_total > 0 && !fb.loading)
 		dashDrawSelection(FB_X, FB_Y + (fb.sel_anim - fb.top) * FB_ROW_H, FB_W, FB_ROW_H - 3, 8, 1.0f);
@@ -2994,6 +2996,8 @@ void dashFileBrowser(const char *start_dir)
 			memset(&in, 0, sizeof(in));
 		else
 			dashInputPoll(&in);
+		if (dashDashboardPending())
+			break;
 		browserSnapshotPad();
 		browserProcessInput(&in, &running);
 		fb.sel_anim = dashApproach(fb.sel_anim, (float)fb.sel, 22.0f * dashAnimSpeed(), dashVisualUpdate());

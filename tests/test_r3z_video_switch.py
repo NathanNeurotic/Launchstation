@@ -8,6 +8,7 @@ source = (Path(__file__).resolve().parents[1] / 'src/draw_gs.c').read_text()
 source = source.replace('#include "draw_private.h"', '')
 prefix = r'''
 #include <assert.h>
+#include <string.h>
 #define GS_MODE_NTSC 2
 #define GS_MODE_PAL 3
 #define GS_MODE_VGA_640_60 4
@@ -22,7 +23,9 @@ prefix = r'''
 #define GS_SETTING_OFF 0
 #define FONT_HEIGHT 16
 #define LINE_THICKNESS 2
-enum {TV_mode_AUTO,TV_mode_NTSC,TV_mode_PAL,TV_mode_VGA,TV_mode_480P,TV_mode_576P};
+enum {TV_mode_AUTO,TV_mode_NTSC,TV_mode_PAL,TV_mode_VGA,TV_mode_480P,TV_mode_576P,TV_mode_576I,TV_mode_COUNT};
+static char ROMVER_data[16]="0220E";
+static unsigned char console_is_PSX;
 typedef struct { int Mode,Width,Height,Interlace,Field,StartX,StartY;
     int PrimAAEnable,DoubleBuffering,ZBuffering; } GSGLOBAL;
 static GSGLOBAL g,*gsGlobal=&g;
@@ -66,6 +69,24 @@ int main(void) {
     native_mode=TV_mode_NTSC;stage=0;updateScreenMode();assert(g.Mode==GS_MODE_NTSC);
     native_mode=TV_mode_PAL;stage=0;updateScreenMode();assert(g.Mode==GS_MODE_PAL);
     assert(gsScreenGeneration==rebuilds);
+    /* 576i is PAL timing under its own saved ID. */
+    stage=0;setting->TV_mode=TV_mode_576I;updateScreenMode();
+    assert(g.Mode==GS_MODE_PAL && TV_mode==TV_mode_PAL && setting->TV_mode==TV_mode_576I);
+    /* 576p on a pre-2.20 ROM (and non-PSX 1.80J) falls back to Auto before any GS reset. */
+    const struct { const char *rom; int psx, ok; } roms[]={
+        {"0100J",0,0},{"0200E",0,0},{"0219E",0,0},{"0220E",0,1},{"0250E",0,1},{"",0,0},{"02x0E",0,0},
+        {"0180J",0,0},{"0180J",1,1},{"0210J",1,1},{"0180E",1,0},{"0200J",1,0}
+    };
+    for(unsigned i=0;i<sizeof(roms)/sizeof(roms[0]);i++) {
+        strcpy(ROMVER_data,roms[i].rom);console_is_PSX=(unsigned char)roms[i].psx;
+        assert(is576pSupported()==roms[i].ok);
+        setting->TV_mode=TV_mode_576P;
+        assert(requestedTVMode()==(roms[i].ok?TV_mode_576P:native_mode));
+        assert(setting->TV_mode==(roms[i].ok?TV_mode_576P:TV_mode_AUTO));
+    }
+    const int invalid[]={-1,TV_mode_COUNT,9999};
+    for(unsigned i=0;i<3;i++) { setting->TV_mode=invalid[i];assert(requestedTVMode()==native_mode && setting->TV_mode==TV_mode_AUTO); }
+    assert(TV_mode_576P==5 && TV_mode_576I==6); /* saved IDs remain stable */
 }
 '''
 with tempfile.TemporaryDirectory(prefix='r3z-video-') as td:
@@ -73,4 +94,4 @@ with tempfile.TemporaryDirectory(prefix='r3z-video-') as td:
     (path/'test.c').write_text(program)
     subprocess.run([shutil.which('cc') or shutil.which('gcc'), '-std=c11', '-Wall', '-Wextra', '-Werror', str(path/'test.c'), '-o', str(path/'test.exe')], check=True)
     subprocess.run([str(path/'test.exe')], check=True)
-print('PASS: repeated video mode/Auto transitions, live state repair, DMA/reset/clear ordering')
+print('PASS: repeated video mode/Auto transitions, live state repair, DMA/reset/clear ordering, 576i as PAL, 576p ROM gating')

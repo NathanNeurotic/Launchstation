@@ -5,7 +5,7 @@
 //The dashboard never modifies LAUNCHELF.CNF on its own. Its state lives in
 //separate files next to the loaded configuration (or mc0:/SYS-CONF/):
 //  DASHBOARD.CNF  settings and application scan locations
-//  DASHAPPS.CNF   favorites, pinned apps and recently launched apps
+//  DASHAPPS.CNF   favorites, pinned/recent apps and hidden paths
 //  DASHLIB.CNF    cached application library (dash_lib.c)
 //Older wLaunchELF builds simply ignore these files, missing keys fall back
 //to defaults, and unknown keys are skipped.
@@ -21,6 +21,10 @@ static char store_dir[MAX_PATH];
 static int store_loaded;
 static int store_initialized;
 static DashSettings persisted; /* last committed settings (see Saving) */
+/* Allocate only paths the user hides; independent of scans and cache rebuilds. */
+static char *hidden_apps[DASH_MAX_APPS];
+static int nhidden;
+static int setHidden(const char *path, int hidden);
 
 static const char *const default_scan[] = {
     "mc:/APPS/",
@@ -330,13 +334,15 @@ static int settingsKv(const char *key, char *value, void *user)
 	else if (!stricmp(key, "Dash_BGMVolume"))
 		dashCfg.bgm_vol = clampInt(value, 0, 100, 80);
 	else if (!stricmp(key, "Dash_AppFilter"))
-		dashCfg.app_filter = clampInt(value, 0, 5, 0);
+		dashCfg.app_filter = clampInt(value, 0, 6, 0);
 	else if (!stricmp(key, "Dash_FilesMode"))
 		dashCfg.files_mode = clampInt(value, 0, 1, 0);
 	else if (!stricmp(key, "Dash_HomeShortcuts"))
 		dashCfg.home_shortcuts = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_IconBacking"))
 		dashCfg.icon_backing = clampInt(value, 0, 1, 1);
+	else if (!stricmp(key, "Dash_TemperatureFahrenheit"))
+		dashCfg.temp_fahrenheit = clampInt(value, 0, 1, 0);
 	else if (!stricmp(key, "Dash_ShowUnavailableDevices"))
 		dashCfg.show_unavailable_devices = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_DevAuto"))
@@ -383,6 +389,8 @@ static int listsKv(const char *key, char *value, void *user)
 		dashStrCopy(dashLists.pin[dashLists.npin++], value, DASH_PATH_MAX);
 	else if (!stricmp(key, "Recent") && dashLists.nrecent < DASH_MAX_RECENT)
 		dashStrCopy(dashLists.recent[dashLists.nrecent++], value, DASH_PATH_MAX);
+	else if (!stricmp(key, "Hidden"))
+		setHidden(value, 1);
 	return 0;
 }
 
@@ -436,7 +444,7 @@ void dashStoreInit(void)
 	persisted = dashCfg;
 
 	if (dashStoreBuildPath(path, sizeof(path), "DASHAPPS.CNF") == 0) {
-		text = dashLoadTextFile(path, 64 * 1024, &len);
+		text = dashLoadTextFile(path, 256 * 1024, &len); /* room for Hidden paths */
 		if (text != NULL) {
 			dashKvParse(text, listsKv, NULL);
 			free(text);
@@ -521,7 +529,8 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                "Dash_IGRCloudSync = %d\r\n"
 	                "Dash_IGRBackupPath = %s\r\n"
 	                "Dash_IGRAfter = %d\r\n"
-	                "Dash_IGRAfterPath = %s\r\n",
+	                "Dash_IGRAfterPath = %s\r\n"
+	                "Dash_TemperatureFahrenheit = %d\r\n",
 	                c->enabled, c->start_section, c->view, c->effects,
 	                c->anim, c->autoscan, c->artwork, c->recent_count,
 	                c->legacy_theme, c->intro_done, c->software_clock, c->sound, c->sound_vol,
@@ -529,7 +538,7 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                c->home_shortcuts, c->icon_backing, c->show_unavailable_devices, c->dev_auto,
 	                c->mmce_backup_keep, c->mmce_backup_format,
 	                c->igr_auto_backup, c->igr_cloud_sync, c->igr_backup_path,
-	                c->igr_after, c->igr_after_path);
+	                c->igr_after, c->igr_after_path, c->temp_fahrenheit);
 	for (i = 0; i < c->nscan && len < cap - DASH_PATH_MAX - 16; i++)
 		len += snprintf(buf + len, cap - len, "Dash_Scan = %s\r\n", c->scan[i]);
 	/* theme: preset name, plus a full snapshot once customised */
@@ -547,7 +556,7 @@ static char *buildLists(int *out_len)
 {
 	char *buf;
 	int len = 0, i;
-	const int cap = 256 + (DASH_MAX_FAV * 2 + DASH_MAX_RECENT) * (DASH_PATH_MAX + 16);
+	const int cap = 256 + (DASH_MAX_FAV * 2 + DASH_MAX_RECENT + nhidden) * (DASH_PATH_MAX + 16);
 
 	buf = (char *)malloc(cap);
 	if (buf == NULL)
@@ -559,6 +568,8 @@ static char *buildLists(int *out_len)
 		len += snprintf(buf + len, cap - len, "Favorite = %s\r\n", dashLists.fav[i]);
 	for (i = 0; i < dashLists.nrecent; i++)
 		len += snprintf(buf + len, cap - len, "Recent = %s\r\n", dashLists.recent[i]);
+	for (i = 0; i < nhidden; i++)
+		len += snprintf(buf + len, cap - len, "Hidden = %s\r\n", hidden_apps[i]);
 	*out_len = len;
 	return buf;
 }
@@ -711,6 +722,52 @@ static int listFind(char list[][DASH_PATH_MAX], int n, const char *path)
 		if (!stricmp(list[i], path))
 			return i;
 	return -1;
+}
+
+int dashStoreIsHidden(const char *path)
+{
+	int i;
+	if (path == NULL)
+		return 0;
+	for (i = 0; i < nhidden; i++)
+		if (!stricmp(hidden_apps[i], path))
+			return 1;
+	return 0;
+}
+
+static int setHidden(const char *path, int hidden)
+{
+	int i;
+	size_t len;
+	if (path == NULL || path[0] == '\0' || (len = strlen(path)) >= DASH_PATH_MAX)
+		return -1;
+	for (i = 0; i < nhidden; i++)
+		if (!stricmp(hidden_apps[i], path))
+			break;
+	if (hidden) {
+		char *copy;
+		if (i < nhidden)
+			return 0;
+		if (nhidden >= DASH_MAX_APPS || (copy = malloc(len + 1)) == NULL)
+			return -1;
+		memcpy(copy, path, len + 1);
+		hidden_apps[nhidden++] = copy;
+	} else {
+		if (i == nhidden)
+			return 0;
+		free(hidden_apps[i]);
+		memmove(hidden_apps + i, hidden_apps + i + 1, (nhidden - i - 1) * sizeof(*hidden_apps));
+		hidden_apps[--nhidden] = NULL;
+	}
+	return 1;
+}
+
+int dashStoreSetHidden(const char *path, int hidden)
+{
+	int ret = setHidden(path, hidden);
+	if (ret > 0)
+		dashStoreSaveLists();
+	return ret;
 }
 
 static void listRemoveAt(char list[][DASH_PATH_MAX], int *n, int idx)

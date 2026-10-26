@@ -22,6 +22,12 @@
 #define DASH_SAFE_T 26
 #define DASH_SAFE_B 424
 
+/* All main panes share the Files tab's outer horizontal bounds. Split
+ * layouts keep their divider inside this same span. */
+#define DASH_PANE_L (DASH_SAFE_L - 6)
+#define DASH_PANE_R (DASH_SAFE_R + 6)
+#define DASH_PANE_W (DASH_PANE_R - DASH_PANE_L)
+
 /* Bounded storage sizes. Paths longer than DASH_PATH_MAX are skipped by the
  * library (the FileBrowser still handles them). */
 #define DASH_PATH_MAX 256
@@ -544,6 +550,7 @@ typedef struct
 	int files_mode;              /* 0 = Files list, 1 = Devices cards */
 	int home_shortcuts;          /* HOME quick-launch row */
 	int icon_backing;            /* control/quick-action backing shapes */
+	int temp_fahrenheit;         /* 0 = Celsius, 1 = Fahrenheit */
 	int show_unavailable_devices;/* include disconnected/probe-only device cards */
 	int dev_auto; /* DASH_DEVA_* bitmask: drivers to load at startup */
 	int mmce_backup_keep;   /* 0 = all, otherwise 1..99 */
@@ -601,6 +608,9 @@ int dashStoreFlushWait(const char *title);
 const char *dashStoreDir(void);
 int dashStoreBuildPath(char *out, int out_size, const char *file);
 int dashStoreIsFavorite(const char *path);
+/* Hidden paths persist independently of library scans. Set: 1 changed, 0 unchanged, -1 failed. */
+int dashStoreIsHidden(const char *path);
+int dashStoreSetHidden(const char *path, int hidden);
 int dashStoreIsPinned(const char *path);
 int dashStoreToggleFavorite(const char *path);
 int dashStoreTogglePinned(const char *path);
@@ -679,6 +689,7 @@ void dashLibPrettyName(const char *path, char *out, int out_size);
 int dashLibRemove(int index);
 void dashLibRefreshApp(DashApp *app);
 void dashHomeRebuild(void);
+void dashHomeOpenApplications(void);
 int dashLibMetadataPath(const DashApp *app, char *out, int out_size);
 
 //--------------------------------------------------------------
@@ -830,6 +841,10 @@ void dashDrawSpinner(float cx, float cy, float r, DashColor c);
 void dashToast(int kind, const char *msg);
 void dashDrawToasts(void);
 
+/* Disabled controls stay visibly dim even when a theme uses similar text
+ * colours. Apply to the whole row, including icons and secondary values. */
+#define DASH_DISABLED_ALPHA 0.5f
+
 /* Blocking modal dialogs. They keep rendering the current dashboard scene
  * underneath through dashRenderScene(). */
 typedef struct
@@ -837,7 +852,7 @@ typedef struct
 	int icon;
 	const char *label;
 	const char *detail;
-	int disabled;
+	int disabled; /* dimmed and skipped by menu navigation */
 } DashMenuItem;
 
 int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *items, int n, int initial);
@@ -951,6 +966,13 @@ const char *dashSectionLabel(int section);
 int dashSectionIcon(int section);
 void dashSwitchSection(int section);
 int dashConfirmLeave(void); /* asks the current section; 0 = stay */
+/* START opens Dashboard from any native screen and closes it when open.
+ * Actions wait for blocking tools/dialogs to unwind; editor leave confirmation
+ * can cancel navigation. SELECT+START stays the START launch key. */
+void dashDashboardMenu(void);
+int dashDashboardMenuIsOpen(void);
+int dashDashboardPending(void);
+int dashDashboardConfirmLeave(int (*leave)(void));
 int dashCurrentSection(void);
 int dashVisibleSectionCount(void);
 int dashVisibleSectionAt(int index);
@@ -989,6 +1011,7 @@ void dashShowAbout(void);
 void dashShowBuildInfo(void);
 void dashShowSystemInfo(void);
 /* Pure cached identity string; never starts hardware probes during drawing. */
+void dashConsoleIdentityInit(void); /* read once at startup, worker idle */
 void dashConsoleSummaryText(char *out, size_t out_size);
 void dashShowFontViewer(void);
 void dashShowTextLines(int icon, const char *title, const char *subtitle, const char *const *lines, int n);
@@ -1032,6 +1055,7 @@ void dashFilesPoll(void);
 /* Home/Apps shared helpers. */
 int dashAppsVisibleCount(void);
 void dashAppsRebuildView(void);
+void dashAppsShowAll(void);
 void dashAppsFocusPath(const char *path);
 
 /* Legacy integration hooks (draw.c). */
@@ -1041,6 +1065,7 @@ extern int gsScreenGeneration;
 /* filer.c accessors used by the device model. */
 int getDir(const char *path, FILEINFO *info);
 int filerRootMcPresent(int port, int *type, int *free_kb);
+int filerPrepareMemoryCardRead(int port);
 int filerUsbDriveMask(void);
 int filerUsbRefreshDriveMask(void); /* force one cached USB root refresh */
 int filerUsbDriversLoaded(void);
@@ -1053,6 +1078,7 @@ int pollRootMemoryCardDevices(void);
 extern int uLE_cdmode;
 
 /* main_title.c accessor for split clock text. */
+int menuTitleGetTemperatureRaw(int *raw); /* cached 1/128 C sample; no IOP calls */
 void menuTitleGetClockText(char *time_out, int time_size, char *date_out, int date_size);
 int menuTitleGetClockFields(int *year, int *month, int *day, int *hour, int *minute, int *second,
                             int *use_12h, int *date_format);

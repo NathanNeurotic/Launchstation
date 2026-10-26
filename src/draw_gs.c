@@ -3,6 +3,36 @@
 //--------------------------------------------------------------
 #include "draw_private.h"
 
+int is576pSupported(void)
+{
+	int i, version = 0;
+
+	/* Retail PS2 ROMs support native SetGsCrt(0x53) from 2.20 onward.
+	 * PSX/DESR 1.80J and 2.10J also support it despite the lower version.
+	 * Other older/unknown ROMs use interlace, avoiding a GS init stall. */
+	for (i = 0; i < 4; i++) {
+		if (ROMVER_data[i] < '0' || ROMVER_data[i] > '9')
+			return 0;
+		version = version * 10 + ROMVER_data[i] - '0';
+	}
+	if (console_is_PSX && ROMVER_data[4] == 'J' && (version == 180 || version == 210))
+		return 1;
+	return version >= 220;
+}
+
+static int requestedTVMode(void)
+{
+	int mode = setting->TV_mode;
+
+	/* Validate before any GS reset, including startup/configuration reloads.
+	 * An incompatible saved choice must boot in the console's Auto mode. */
+	if (mode < TV_mode_AUTO || mode >= TV_mode_COUNT || (mode == TV_mode_576P && !is576pSupported()))
+		setting->TV_mode = mode = TV_mode_AUTO;
+	if (mode == TV_mode_576I)
+		return TV_mode_PAL;
+	return mode == TV_mode_AUTO ? uLE_InitializeRegion() : mode;
+}
+
 static void applyGSParams(void)
 {
 	switch (gsGlobal->Mode) {
@@ -59,14 +89,10 @@ static void initScreenParams(void)
 }
 void setupGS(void)
 {
-	int New_TV_mode = setting->TV_mode;
+	int New_TV_mode = requestedTVMode();
 
 	// GS Init
 	gsGlobal = gsKit_init_global();
-
-	if (New_TV_mode == TV_mode_AUTO) {         //If no forced request
-		New_TV_mode = uLE_InitializeRegion();  //Let console region decide TV_mode
-	}
 
 	// Screen display mode
 	TV_mode = New_TV_mode;
@@ -116,13 +142,9 @@ void setupGS(void)
 void updateScreenMode(void)
 {
 	int setGS_flag = 0;
-	int New_TV_mode = setting->TV_mode;
+	int New_TV_mode = requestedTVMode();
 	int requested_gs_mode;
 	int requested_height, requested_interlace, requested_field;
-
-	if (New_TV_mode == TV_mode_AUTO) {         //If no forced request
-		New_TV_mode = uLE_InitializeRegion();  //Let console region decide TV_mode
-	}
 
 	switch (New_TV_mode) {
 		case TV_mode_PAL: requested_gs_mode = GS_MODE_PAL; break;

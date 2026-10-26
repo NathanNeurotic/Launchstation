@@ -334,12 +334,12 @@ static void filesUpdate(float dt)
 
 static void filesDraw(void)
 {
-	const float lx = 48, ly = 102, row_h = 29, lw = 300;
+	const float lx = DASH_SAFE_L, ly = 102, row_h = 29, lw = 300;
 	const int rows = 10;
 	int i;
 	FileEntry *e = &fentries[fsel];
 
-	dashDrawSectionTitle(48, 68, localizeDashboardText("Files"), "the complete Launchstation file manager");
+	dashDrawSectionTitle(lx, 68, localizeDashboardText("Files"), "the complete Launchstation file manager");
 
 	if (fsel < ftop + 1)
 		ftop = fsel - 1;
@@ -377,7 +377,7 @@ static void filesDraw(void)
 
 	/* detail panel */
 	{
-		float dx = 372, dy = 98, dw = 228, dh = 292;
+		float dx = lx + lw + 24, dy = 98, dw = DASH_PANE_R - dx, dh = 292;
 		dashDrawCard(dx, dy, dw, dh, 16);
 		dashGfxBlend(DASH_BLEND_ADD);
 		dashAccentGlow(dx + dw * 0.5f, dy + 70, 80, 60, 1.0f);
@@ -650,7 +650,7 @@ static void devDraw(void)
 		dashTextFit(60, 374.5f, 380, tip, DASH_FS_SMALL, DASH_C_TEXT2);
 	}
 	{
-		char console[80];
+		char console[160];
 		dashConsoleSummaryText(console, sizeof(console));
 		dashTextFit(458, 374.5f, 134, console, DASH_FS_CAPTION, DASH_C_TEXT3);
 	}

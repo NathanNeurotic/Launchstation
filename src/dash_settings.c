@@ -124,6 +124,7 @@ enum SetId {
 	S_CLOCK_MANUAL,
 	S_CLOCK_SOFTWARE,
 	S_CLOCK_HARDWARE,
+	S_TEMP_UNITS,
 	S_CLOCK_SYNC,
 	/* advanced */
 	S_LANGUAGE,
@@ -237,14 +238,14 @@ static const SetItem appearance_items[] = {
 };
 
 static const SetItem display_items[] = {
-    {ST_CHOICE, S_TVMODE, "Video mode", "Auto follows the console region. Changing it applies immediately."},
+    {ST_CHOICE, S_TVMODE, "Video mode", "Auto follows the console region. 576p needs PS2 ROM 2.20+ or PSX 1.80J/2.10J; 576i uses PAL."},
     {ST_NUMBER, S_SCREEN_X, "Screen position X", "Moves the picture left or right to fit your TV (overscan)."},
     {ST_NUMBER, S_SCREEN_Y, "Screen position Y", "Moves the picture up or down to fit your TV."},
     {ST_ACTION, S_SCREEN_RESET, "Reset screen settings", "Video mode Auto and a centred picture."},
 };
 
 static const SetItem dash_items[] = {
-    {ST_CHOICE, S_START, "Start screen", "Section shown when the dashboard opens."},
+    {ST_CHOICE, S_START, "Start screen", "Initial screen. Applications opens the library under Home directly."},
     {ST_CHOICE, S_HOME_SHORTCUTS, "Home quick-launch shortcuts", "Show configured launch-key shortcuts alongside Applications and Last folder."},
     {ST_CHOICE, S_VIEW, "Application view", "Grid, list or carousel (SELECT also switches it in Home > Applications)."},
     {ST_CHOICE, S_ARTWORK, "Application artwork", "Load cover art for tiles and artwork backgrounds."},
@@ -394,6 +395,7 @@ static const SetItem system_items[] = {
     {ST_ACTION, S_CLOCK_SOFTWARE, "Set software clock...", "Works without a CMOS battery. Restarts at the last saved time; save again before power-off to retain elapsed runtime."},
     {ST_ACTION, S_CLOCK_HARDWARE, "Use PS2 hardware clock", "Stop the software clock and use the console RTC again."},
     {ST_ACTION, S_CLOCK_MANUAL, "Set PS2 clock manually...", "Enter the local date and time as YYYY-MM-DD HH:MM:SS; the hardware RTC is written and verified."},
+    {ST_CHOICE, S_TEMP_UNITS, "PS2 Temperature Units (50K and later)", "Celsius or Fahrenheit beside the clock. Hidden automatically when the console has no supported temperature sensor."},
     {ST_PATH, S_CNF_PATH, "Configuration folder", "Load and save LAUNCHELF.CNF in this folder instead of the default places."},
     {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
     {ST_ACTION, S_INTRO, "Show welcome message again", "Show the introduction the next time the dashboard checks for it."},
@@ -576,7 +578,7 @@ static char *snap_dash_text, *snap_cnf_text;
 static u64 dirty_checked_ms;
 
 static const char *const onoff[] = {"Off", "On"};
-static const char *const tv_names[] = {"Auto", "NTSC", "PAL", "VGA", "480p", "576p"};
+static const char *const tv_names[] = {"Auto", "NTSC", "PAL", "VGA", "480p", "576p", "576i"};
 static const char *const view_names[] = {"Grid", "List", "Carousel"};
 static const char *const recent_names[] = {"0", "4", "8", "12", "16"};
 static const char *const mmce_backup_format_names[] = {"Native .mcd", "PCSX2 .ps2"};
@@ -639,12 +641,13 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			*names = pct_names, *cur = dashCfg.bgm_vol / 10;
 			return 11;
 		case S_START: {
-			static const char *const start_names[] = {"Home", "Files", "Tools", "Settings"};
+			static const char *const start_names[] = {"Home", "Applications", "Files", "Tools", "Settings"};
 			*names = start_names;
-			*cur = (dashCfg.start_section == DASH_SEC_FILES || dashCfg.start_section == DASH_SEC_DEVICES) ? 1 :
-			       (dashCfg.start_section == DASH_SEC_TOOLS) ? 2 :
-			       (dashCfg.start_section == DASH_SEC_SETTINGS) ? 3 : 0;
-			return 4;
+			*cur = (dashCfg.start_section == DASH_SEC_APPS) ? 1 :
+			       (dashCfg.start_section == DASH_SEC_FILES || dashCfg.start_section == DASH_SEC_DEVICES) ? 2 :
+			       (dashCfg.start_section == DASH_SEC_TOOLS) ? 3 :
+			       (dashCfg.start_section == DASH_SEC_SETTINGS) ? 4 : 0;
+			return 5;
 		}
 		case S_FILES_MODE: {
 			static const char *const modes[] = {"Files", "Devices"};
@@ -654,6 +657,11 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_HOME_SHORTCUTS:
 			*cur = dashCfg.home_shortcuts;
 			return 2;
+		case S_TEMP_UNITS: {
+			static const char *const units[] = {"Celsius", "Fahrenheit"};
+			*names = units, *cur = dashCfg.temp_fahrenheit;
+			return 2;
+		}
 		case S_ICON_BACKING:
 			*cur = dashCfg.icon_backing;
 			return 2;
@@ -1114,7 +1122,7 @@ static void colorEditor(const char *title, int id)
 			dashInputFlush();
 			return;
 		}
-		if (in.pressed & DASH_IN_BACK) {
+		if (dashDashboardPending() || (in.pressed & DASH_IN_BACK)) {
 			*c = orig;
 			if (!classic)
 				dashThemeApply();
@@ -1195,6 +1203,20 @@ static void colorEditor(const char *title, int id)
 	}
 }
 
+static int chooseVideoMode(const char *title, const char *const *names, int n, int current)
+{
+	DashMenuItem choices[TV_mode_COUNT];
+	int i;
+
+	for (i = 0; i < n && i < TV_mode_COUNT; i++) {
+		choices[i].icon = i == current ? DI_CHECK : -1;
+		choices[i].label = localizeDashboardText(names[i]);
+		choices[i].disabled = i == TV_mode_576P && !is576pSupported();
+		choices[i].detail = choices[i].disabled ? "Unsupported by this console" : (i == TV_mode_576I ? "PAL, 50 Hz" : NULL);
+	}
+	return dashModalMenu(title, NULL, choices, i, current);
+}
+
 static void setChoice(int id, int v)
 {
 	int dash_changed = 1;
@@ -1203,6 +1225,8 @@ static void setChoice(int id, int v)
 		return;
 	switch (id) {
 		case S_TVMODE:
+			if (v < TV_mode_AUTO || v >= TV_mode_COUNT || (v == TV_mode_576P && !is576pSupported()))
+				return;
 			setting->TV_mode = v;
 			updateScreenMode();
 			classic_dirty = 1, dash_changed = 0;
@@ -1281,9 +1305,10 @@ static void setChoice(int id, int v)
 			break;
 		}
 		case S_START:
-			dashCfg.start_section = (v == 1) ? DASH_SEC_FILES :
-			                        (v == 2) ? DASH_SEC_TOOLS :
-			                        (v == 3) ? DASH_SEC_SETTINGS : DASH_SEC_HOME;
+			dashCfg.start_section = (v == 1) ? DASH_SEC_APPS :
+			                        (v == 2) ? DASH_SEC_FILES :
+			                        (v == 3) ? DASH_SEC_TOOLS :
+			                        (v == 4) ? DASH_SEC_SETTINGS : DASH_SEC_HOME;
 			break;
 		case S_FILES_MODE:
 			dashCfg.files_mode = v;
@@ -1291,6 +1316,9 @@ static void setChoice(int id, int v)
 		case S_HOME_SHORTCUTS:
 			dashCfg.home_shortcuts = v;
 			dashHomeRebuild();
+			break;
+		case S_TEMP_UNITS:
+			dashCfg.temp_fahrenheit = v;
 			break;
 		case S_ICON_BACKING:
 			dashCfg.icon_backing = v;
@@ -2948,11 +2976,17 @@ static void settingsInput(const DashInput *in)
 		const char *single;
 		int cur, n = choiceInfo(it->id, &cur, &names, &single);
 		if (n > 0) {
-			if (in->pressed & DASH_IN_LEFT)
-				cur = (cur + n - 1) % n;
-			else if (in->pressed & DASH_IN_RIGHT)
-				cur = (cur + 1) % n;
-			else if (n > 2) {
+			if (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT)) {
+				int step = (in->pressed & DASH_IN_LEFT) ? n - 1 : 1;
+				do {
+					cur = (cur + step) % n;
+				} while (it->id == S_TVMODE && cur == TV_mode_576P && !is576pSupported());
+			} else if (it->id == S_TVMODE) {
+				int r = chooseVideoMode(localizeDashboardText(it->label), names, n, cur);
+				if (r < 0)
+					return;
+				cur = r;
+			} else if (n > 2) {
 				const char *display[128];
 				int choice;
 				for (choice = 0; choice < n && choice < 128; choice++)
@@ -3002,7 +3036,7 @@ static void settingsDraw(void)
 	 * y=62): ~7 px of clear space above the breadcrumb's capitals (#135). */
 	/* Only the header lanes move; the list keeps ITEM_ROWS rows so its two-line
 	 * help still clears the footer hints. */
-	const float ix = 48, iy = 136, irow = 29, iw = 544;
+	const float ix = DASH_SAFE_L, iy = 136, irow = 29, iw = DASH_SAFE_R - DASH_SAFE_L;
 	const SetPage *c = &pages[page];
 	char trail[192];
 
@@ -3034,7 +3068,7 @@ static void settingsDraw(void)
 		item_anim = (float)item;
 
 	/* items */
-	dashDrawPanelBox(ix - 6, iy - 6, iw + 12, ITEM_ROWS * irow + 12, 14);
+	dashDrawPanelBox(DASH_PANE_L, iy - 6, DASH_PANE_W, ITEM_ROWS * irow + 12, 14);
 	dashDrawSelection(ix, iy + dashClampf(item_anim - item_top, 0, ITEM_ROWS - 1) * irow + 2, iw, irow - 5, 9, 1.0f);
 	for (i = item_top; i < c->n && i < item_top + ITEM_ROWS; i++) {
 		const SetItem *it = &c->items[i];
@@ -3042,6 +3076,7 @@ static void settingsDraw(void)
 		int on = i == item, disabled = itemDisabled(it);
 		DashColor col = disabled ? DASH_C_TEXT3 : dashItemColor(on);
 
+		dashGfxPushAlpha(disabled ? DASH_DISABLED_ALPHA : 1.0f);
 		{
 			int row_icon = it->type == ST_PAGE ? pages[it->id].icon :
 			               it->type == ST_PATH ? DI_FOLDER :
@@ -3056,11 +3091,13 @@ static void settingsDraw(void)
 			snprintf(buf, sizeof(buf), "%s / %s", ip, netmask);
 			dashText(ix + 38, y + 4.0f, localizeDashboardText(it->label), DASH_FS_SMALL, DASH_C_TEXT3);
 			dashTextRight(ix + iw - 12, y + 4.0f, buf, DASH_FS_SMALL, DASH_C_TEXT2);
+			dashGfxPopAlpha();
 			continue;
 		}
 		if (it->type == ST_PAGE) {
 			dashTextFit(ix + 38, y + 4.0f, iw - 70, localizeDashboardText(it->label), DASH_FS_SMALL, col);
 			dashIcon(DI_PLAY, ix + iw - 22, y + 9, 12, DASH_C_TEXT3);
+			dashGfxPopAlpha();
 			continue;
 		}
 		{
@@ -3145,6 +3182,7 @@ static void settingsDraw(void)
 				              disabled ? DASH_C_TEXT3 : (on ? DASH_C_ACCENT : DASH_C_TEXT2));
 			dashIcon(DI_PLAY, ix + iw - 22, y + 8, 12, DASH_C_TEXT3);
 		}
+		dashGfxPopAlpha();
 	}
 	dashDrawScrollbar(ix + iw + 10, iy, ITEM_ROWS * irow, item_top, ITEM_ROWS, c->n);
 	/* help line */

@@ -95,6 +95,8 @@ jobs:
           python3 tests/test_usb_boot_paths.py
           python3 tests/test_device_autostart_safe_mode.py
           python3 tests/test_home_focus.py
+          python3 tests/test_hidden_apps.py
+          python3 tests/test_temperature.py
           python3 tests/test_unified_dashboard_navigation.py
           python3 tests/test_files_tab_lifecycle.py
           python3 tests/test_bgm_sidecar.py
