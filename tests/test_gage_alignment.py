@@ -17,10 +17,10 @@ home = (root / "src/dash_home.c").read_text(encoding="utf-8")
 
 hints = ui[ui.index("void dashDrawHints("):]
 hints = hints[: hints.index("\n}\n") if "\n}\n" in hints else hints.index("\r\n}\r\n")]
-assert "total += buttonWidth(hints[i].button, hints[i].key) + 8.0f" in hints
+assert "fixed += buttonWidth(hints[i].button, hints[i].key) + 8.0f" in hints
 assert "x += drawButton(x, y, hints[i].button, hints[i].key) + 8.0f;" in hints
-assert "total += labels * label_ratio;" in hints
-assert "x += label_w + 24.0f;" in hints
+assert "total = fixed + n * gap + labels * label_ratio;" in hints
+assert "x += label_w + gap;" in hints
 assert "dashTextFit(x, y + 1.5f, label_w, label" in hints
 assert "+ 16.0f;" not in hints
 
