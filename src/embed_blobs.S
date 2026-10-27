@@ -82,4 +82,14 @@ EMBED_FILE(sfx_boot_adp, "res/sfx/boot.adp")
 EMBED_FILE(sfx_connect_adp, "res/sfx/bd_connect.adp")
 EMBED_FILE(sfx_disconnect_adp, "res/sfx/bd_disconnect.adp")
 
+/* Optional "PS2" sound theme: original synthesized effects, see scripts/gen_sfx.py. */
+EMBED_FILE(sfx2_cursor_adp, "res/sfx_ps2/cursor.adp")
+EMBED_FILE(sfx2_confirm_adp, "res/sfx_ps2/confirm.adp")
+EMBED_FILE(sfx2_cancel_adp, "res/sfx_ps2/cancel.adp")
+EMBED_FILE(sfx2_transition_adp, "res/sfx_ps2/transition.adp")
+EMBED_FILE(sfx2_message_adp, "res/sfx_ps2/message.adp")
+EMBED_FILE(sfx2_boot_adp, "res/sfx_ps2/boot.adp")
+EMBED_FILE(sfx2_bd_connect_adp, "res/sfx_ps2/bd_connect.adp")
+EMBED_FILE(sfx2_bd_disconnect_adp, "res/sfx_ps2/bd_disconnect.adp")
+
 /* Background music is an optional BGM.ADP beside the ELF, not embedded. */

@@ -543,6 +543,7 @@ typedef struct
 	int intro_done;
 	int sound;
 	int sound_vol;
+	int sound_theme; /* 0 = Classic, 1 = PS2 */
 	char software_clock[24]; /* optional local seed; resumes saved time without RTC */
 	int bgm;
 	int bgm_vol;

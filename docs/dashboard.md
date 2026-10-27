@@ -366,7 +366,9 @@ Settings > Sound has *Interface sounds* (the UI effects) and
 *Background music* (the music track), each with its own volume
 (`Dash_Sound` / `Dash_SoundVolume` / `Dash_BGM` / `Dash_BGMVolume` in
 DASHBOARD.CNF, all on at 80% by default). The two switches are independent;
-turning off interface effects keeps enabled music playing. When the audio driver cannot
+turning off interface effects keeps enabled music playing. *Sound theme*
+(`Dash_SoundTheme`, 0 = Classic, 1 = PS2) swaps the effect set live; the PS2 set is
+synthesized by `scripts/gen_sfx.py` (original tones, not Sony samples). When the audio driver cannot
 start, everything stays silent — the dashboard works normally without
 sound (a toast says why).
 

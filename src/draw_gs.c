@@ -25,9 +25,14 @@ static int requestedTVMode(void)
 	int mode = setting->TV_mode;
 
 	/* Validate before any GS reset, including startup/configuration reloads.
-	 * An incompatible saved choice must boot in the console's Auto mode. */
-	if (mode < TV_mode_AUTO || mode >= TV_mode_COUNT || (mode == TV_mode_576P && !is576pSupported()))
+	 * Meaningless values are normalized to Auto. A valid choice this console
+	 * cannot drive (576p on an unsupported ROM, e.g. a memory card moved from
+	 * another console) boots in Auto too, but stays saved so it applies again
+	 * on a console that supports it. */
+	if (mode < TV_mode_AUTO || mode >= TV_mode_COUNT)
 		setting->TV_mode = mode = TV_mode_AUTO;
+	if (mode == TV_mode_576P && !is576pSupported())
+		mode = TV_mode_AUTO;
 	if (mode == TV_mode_576I)
 		return TV_mode_PAL;
 	return mode == TV_mode_AUTO ? uLE_InitializeRegion() : mode;

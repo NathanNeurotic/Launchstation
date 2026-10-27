@@ -28,12 +28,12 @@ static audsrv_adpcm_t samples[DASH_SND_COUNT], bgm_sample;
 static int sound_ready, bgm_loaded, bgm_tried, bgm_channel = -1, sound_retry;
 static void *bgm_data;
 static unsigned int generation, sound_reboot_generation, sound_tried_generation = -1;
-static struct { int sound, bgm, sound_vol; } dashCfg = {1, 1, 50};
+static struct { int sound, bgm, sound_vol, sound_theme; } dashCfg = {1, 1, 50, 0};
 static unsigned char libsd_irx[1], audsrv_irx[1];
 static int size_libsd_irx = 1, size_audsrv_irx = 1;
 static int busy, parked, module_failure, init_failure, adpcm_failure, sample_failures;
 static int module_calls, init_calls, uploads, quits, hard_resets, stops, bgm_starts, warnings;
-static int forbidden_rpc;
+static int forbidden_rpc, theme_reload_pending;
 static unsigned int getIopResetGeneration(void) { return generation; }
 static int dashWorkerIoBusy(void) { return busy; }
 static int dashIopParked(void) { return parked; }
@@ -61,7 +61,8 @@ static void dashBgmStart(void) { bgm_starts++; bgm_tried = 1; }
 void dashSoundShutdown(void);
 '''
 for signature in ("static int soundAlive(", "int dashSoundInit(",
-                  "void dashSoundShutdown(", "void dashSoundMaintain("):
+                  "void dashSoundShutdown(", "void dashSoundApplyVolume(",
+                  "void dashSoundReloadTheme(", "void dashSoundMaintain("):
     code += function(signature)
 code += r'''
 static void reset(void) {
@@ -69,7 +70,7 @@ static void reset(void) {
     generation = sound_reboot_generation = 0; sound_tried_generation = -1;
     sound_retry = busy = parked = module_failure = init_failure = adpcm_failure = sample_failures = 0;
     module_calls = init_calls = uploads = quits = hard_resets = stops = bgm_starts = warnings = 0;
-    dashCfg.sound = dashCfg.bgm = 1;
+    dashCfg.sound = dashCfg.bgm = 1; theme_reload_pending = 0; dashCfg.sound_theme = 0;
 }
 int main(void) {
     /* Neither parked IOPs nor active IO may start modules or mark an attempt. */
@@ -80,6 +81,16 @@ int main(void) {
     assert(soundAlive() && module_calls == 2 && uploads == 8 && bgm_starts == 1);
     for (int i=0; i<20; i++) dashSoundMaintain();
     assert(module_calls == 2 && uploads == 8 && bgm_starts == 1);
+    /* A theme change while background I/O runs is remembered and applied once idle. */
+    reset(); dashSoundMaintain(); assert(soundAlive() && uploads == 8);
+    dashCfg.sound_theme = 1; busy = 1; dashSoundReloadTheme();
+    assert(theme_reload_pending && uploads == 8 && hard_resets == 1);
+    dashSoundMaintain(); assert(theme_reload_pending && uploads == 8);     /* still busy */
+    busy = 0; dashSoundMaintain();
+    assert(!theme_reload_pending && uploads == 16 && hard_resets == 2);   /* effects re-uploaded */
+    dashSoundMaintain(); assert(uploads == 16);                           /* and only once */
+    reset(); dashCfg.sound_theme = 1; dashSoundReloadTheme();             /* not running: nothing to reload */
+    assert(!theme_reload_pending && !uploads);
     /* A healthy service remains usable by BGM if every SFX upload fails. */
     reset(); sample_failures = DASH_SND_COUNT; dashSoundMaintain();
     assert(soundAlive() && warnings == 1 && bgm_starts == 1);

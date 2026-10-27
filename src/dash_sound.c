@@ -32,6 +32,23 @@ extern int size_sfx_connect_adp;
 extern u8 sfx_disconnect_adp[];
 extern int size_sfx_disconnect_adp;
 
+extern u8 sfx2_cursor_adp[];
+extern int size_sfx2_cursor_adp;
+extern u8 sfx2_confirm_adp[];
+extern int size_sfx2_confirm_adp;
+extern u8 sfx2_cancel_adp[];
+extern int size_sfx2_cancel_adp;
+extern u8 sfx2_transition_adp[];
+extern int size_sfx2_transition_adp;
+extern u8 sfx2_message_adp[];
+extern int size_sfx2_message_adp;
+extern u8 sfx2_boot_adp[];
+extern int size_sfx2_boot_adp;
+extern u8 sfx2_bd_connect_adp[];
+extern int size_sfx2_bd_connect_adp;
+extern u8 sfx2_bd_disconnect_adp[];
+extern int size_sfx2_bd_disconnect_adp;
+
 static audsrv_adpcm_t samples[DASH_SND_COUNT];
 static audsrv_adpcm_t bgm_sample;
 static int sound_ready;
@@ -42,6 +59,7 @@ static int bgm_channel = -1;
 static unsigned int sound_reboot_generation; /* reset epoch when audsrv was started */
 static unsigned int sound_tried_generation = (unsigned int)-1; /* last automatic attempt */
 static int sound_retry;
+static int theme_reload_pending;
 
 
 /* audsrv lives on the IOP: after any IOP reboot the server and the uploaded
@@ -66,8 +84,23 @@ static int soundAlive(void)
 #define SND_TRANS_CH_BASE 14
 #define SND_TRANS_CH_COUNT 4
 
+/* Theme 0 is the original set, theme 1 the synthesized "PS2" set. */
+#define SND_THEME_PS2 1
+
 static void *blob_data(int id)
 {
+	if (dashCfg.sound_theme == SND_THEME_PS2) {
+		switch (id) {
+			case DASH_SND_CURSOR: return sfx2_cursor_adp;
+			case DASH_SND_CONFIRM: return sfx2_confirm_adp;
+			case DASH_SND_CANCEL: return sfx2_cancel_adp;
+			case DASH_SND_TRANSITION: return sfx2_transition_adp;
+			case DASH_SND_MESSAGE: return sfx2_message_adp;
+			case DASH_SND_BOOT: return sfx2_boot_adp;
+			case DASH_SND_CONNECT: return sfx2_bd_connect_adp;
+			default: return sfx2_bd_disconnect_adp;
+		}
+	}
 	switch (id) {
 		case DASH_SND_CURSOR: return sfx_cursor_adp;
 		case DASH_SND_CONFIRM: return sfx_confirm_adp;
@@ -82,6 +115,18 @@ static void *blob_data(int id)
 
 static int blob_size(int id)
 {
+	if (dashCfg.sound_theme == SND_THEME_PS2) {
+		switch (id) {
+			case DASH_SND_CURSOR: return size_sfx2_cursor_adp;
+			case DASH_SND_CONFIRM: return size_sfx2_confirm_adp;
+			case DASH_SND_CANCEL: return size_sfx2_cancel_adp;
+			case DASH_SND_TRANSITION: return size_sfx2_transition_adp;
+			case DASH_SND_MESSAGE: return size_sfx2_message_adp;
+			case DASH_SND_BOOT: return size_sfx2_boot_adp;
+			case DASH_SND_CONNECT: return size_sfx2_bd_connect_adp;
+			default: return size_sfx2_bd_disconnect_adp;
+		}
+	}
 	switch (id) {
 		case DASH_SND_CURSOR: return size_sfx_cursor_adp;
 		case DASH_SND_CONFIRM: return size_sfx_confirm_adp;
@@ -162,6 +207,41 @@ int dashSoundInit(void)
 	return 1;
 }
 
+/* Switch the effect set while running. audsrv_adpcm_init() is the library's
+ * hard reset for ADPCM state (it also drops the music sample), so the effects
+ * are uploaded again and the music restarted from its sidecar file. */
+void dashSoundReloadTheme(void)
+{
+	int i;
+
+	if (!soundAlive())
+		return; /* the next dashSoundInit() uploads the theme that is selected then */
+	if (dashIopParked() || dashWorkerIoBusy()) {
+		theme_reload_pending = 1; /* dashSoundMaintain() applies it once I/O is idle */
+		return;
+	}
+	theme_reload_pending = 0;
+	dashBgmStop();
+	if (audsrv_adpcm_init() != 0) {
+		dashToast(DASH_TOAST_WARN, "Sound theme could not be changed");
+		return;
+	}
+	for (i = 0; i < DASH_SND_COUNT; i++) {
+		samples[i].buffer = NULL;
+		if (audsrv_load_adpcm(&samples[i], blob_data(i), blob_size(i)) != 0)
+			samples[i].buffer = NULL;
+	}
+	dashSoundApplyVolume();
+	bgm_loaded = 0;
+	bgm_tried = 0;
+	bgm_channel = -1;
+	bgm_sample.buffer = NULL;
+	free(bgm_data);
+	bgm_data = NULL;
+	if (dashCfg.bgm)
+		dashBgmStart();
+}
+
 void dashSoundMaintain(void)
 {
 	if (!dashCfg.sound && !dashCfg.bgm)
@@ -169,6 +249,8 @@ void dashSoundMaintain(void)
 	if (dashWorkerIoBusy() || dashIopParked())
 		return;
 	if (soundAlive()) {
+		if (theme_reload_pending)
+			dashSoundReloadTheme();
 		/* A sidecar read deferred by IO/driver startup is tried when idle.
 		 * Missing/invalid files are attempted once, not on every frame. */
 		if (dashCfg.bgm && bgm_channel < 0 && !bgm_tried)
