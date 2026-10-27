@@ -326,10 +326,14 @@ static int metaKv(const char *key, char *value, void *user)
 static void splitPath(const char *path, char *dir, int dir_size, char *file, int file_size, char *base, int base_size)
 {
 	const char *slash = strrchr(path, '/');
-	const char *name = slash ? slash + 1 : path;
+	const char *name;
 	char *dot;
-	int n = (int)(name - path);
+	int n;
 
+	if (slash == NULL)
+		slash = strrchr(path, ':'); /* "host:APP.ELF" has no slash */
+	name = slash ? slash + 1 : path;
+	n = (int)(name - path);
 	if (n >= dir_size)
 		n = dir_size - 1;
 	memcpy(dir, path, n);
@@ -346,7 +350,7 @@ int dashLibMetadataPath(const DashApp *app, char *out, int out_size)
 	char dir[DASH_PATH_MAX], file[DASH_PATH_MAX], base[DASH_PATH_MAX];
 
 	splitPath(app->path, dir, sizeof(dir), file, sizeof(file), base, sizeof(base));
-	return snprintf(out, out_size, "%s%s.cfg", dir, base) < out_size ? 0 : -1;
+	return snprintf(out, out_size, "%stitle.cfg", dir) < out_size ? 0 : -1;
 }
 
 /* Reads sidecar metadata into app (and optionally args). Returns number of

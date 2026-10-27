@@ -115,19 +115,6 @@ static DashApp *selApp(void)
 //--------------------------------------------------------------
 // Per-application options (shared with HOME)
 //--------------------------------------------------------------
-/* DASH_APP_HAS_META is also set by an OPL title.cfg alone, so it cannot say
- * whether the <ELFNAME>.cfg that Edit metadata targets actually exists. */
-static int sidecarExists(const char *path)
-{
-	int len;
-	char *text = dashLoadTextFile(path, 16 * 1024, &len);
-
-	if (text == NULL)
-		return 0;
-	free(text);
-	return 1;
-}
-
 static void showDetails(DashApp *a)
 {
 	char body[640], dev[48], meta[MAX_PATH];
@@ -144,7 +131,7 @@ static void showDetails(DashApp *a)
 	len += snprintf(body + len, sizeof(body) - len, "Artwork: %s\n",
 	                a->art_state == DASH_ART_FOUND ? a->art : (a->art_state == DASH_ART_NONE ? "none (generated tile)" : "not checked yet"));
 	dashLibMetadataPath(a, meta, sizeof(meta));
-	snprintf(body + len, sizeof(body) - len, "Metadata: %s%s", sidecarExists(meta) ? "" : "none - create ", meta);
+	snprintf(body + len, sizeof(body) - len, "Metadata: %s%s", (a->flags & DASH_APP_HAS_META) ? "" : "none - create ", meta);
 	dashModalMessage(DI_INFO, a->title, body, a->desc[0] ? a->desc : NULL);
 }
 
@@ -164,30 +151,43 @@ static void openFolder(const DashApp *a)
 static void editMetadata(DashApp *a)
 {
 	char meta[MAX_PATH];
+	int fd;
 
 	if (dashLibMetadataPath(a, meta, sizeof(meta)) < 0)
 		return;
-	if (!sidecarExists(meta)) {
-		/* create a starter sidecar (also when only an OPL title.cfg describes the app:
-		 * the sidecar overrides it, and its title line starts from the loaded one) */
-		char text[512];
-		int len = snprintf(text, sizeof(text),
-		                   "# Launchstation dashboard metadata for %s\r\n"
-		                   "# Every key is optional. Lines starting with # are ignored.\r\n"
-		                   "title = %s\r\n"
-		                   "description = \r\n"
-		                   "author = \r\n"
-		                   "version = \r\n"
-		                   "category = \r\n"
-		                   "# cover = cover.png\r\n"
-		                   "# arg = first argument (one per line)\r\n",
-		                   a->path, a->title);
-		if (!dashModalConfirm("Create metadata file?", "A small text file describing this application will be created next to it. You can then edit it in the Text Editor.", localizeDashboardText("Create"), 0))
+	/* Metadata may have come from an <ELFNAME>.cfg sidecar, so test for
+	 * title.cfg itself. The UI thread reads it, so background work finishes
+	 * first. */
+	if (!dashWorkerAwaitAll("Finishing up"))
+		return;
+	filerRootMcPollIdle();
+	fd = genOpen(meta, FIO_O_RDONLY);
+	if (fd >= 0)
+		genClose(fd);
+	else {
+		/* Create a starter title.cfg (OPL format) with this ELF's boot entry,
+		 * rather than inventing another metadata file. */
+		const char *file = strrchr(a->path, '/');
+		char text[DASH_PATH_MAX + DASH_TITLE_MAX + 320];
+		int len;
+
+		if (file == NULL)
+			file = strrchr(a->path, ':');
+		file = file ? file + 1 : a->path;
+		len = snprintf(text, sizeof(text),
+		               "# App Metadata (title.cfg)\r\n"
+		               "# Every key is optional. Lines starting with # are ignored.\r\n"
+		               "title = %s\r\n"
+		               "boot = %s\r\n"
+		               "description = \r\n"
+		               "author = \r\n"
+		               "version = \r\n"
+		               "category = \r\n"
+		               "# cover = cover.png\r\n"
+		               "# arg = first argument (one per line)\r\n",
+		               a->title, file);
+		if (!dashModalConfirm("Create title.cfg?", "Create title.cfg beside this application, then edit it in the Text Editor.", localizeDashboardText("Create"), 0))
 			return;
-		/* the UI thread writes directly: background work must finish first */
-		if (!dashWorkerAwaitAll("Finishing up"))
-			return;
-		filerRootMcPollIdle();
 		if (dashWriteFile(meta, text, len) != 0) {
 			dashModalMessage(DI_WARNING, "Could not create file", "The device may be read-only or full.", meta);
 			return;
@@ -195,8 +195,7 @@ static void editMetadata(DashApp *a)
 	}
 	if (!dashOpenTextEditor(meta))
 		return;
-	/* re-read this application's metadata after editing (the UI thread
-	 * reads it, so a save still running in the background finishes first) */
+	/* re-read this application's metadata after editing */
 	if (dashLibIndexOf(a) >= 0 && dashWorkerAwaitAll("Finishing up"))
 		dashLibRefreshApp(a);
 }
