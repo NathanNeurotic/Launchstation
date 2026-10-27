@@ -231,25 +231,36 @@ static float drawButton(float x, float y, int icon, const char *key)
 
 void dashDrawHints(const DashHint *hints, int n)
 {
-	const float gap_max = 24.0f, gap_min = 10.0f;
+	const float gap_max = 24.0f, gap_min = 10.0f, scale_min = 0.62f;
 	float fixed = 0.0f, total, x, labels = 0.0f, label_ratio = 1.0f, gap = gap_max, avail;
+	float fs = DASH_FS_SMALL;
 	float y = 400.0f;
-	int i;
+	int i, pass;
 
 	/* Measure exactly what the drawing loop below advances by, so every
 	 * screen's hint bar ends at the same right edge whatever its keys are
 	 * (START/SELECT may be pad icons or text badges). */
-	for (i = 0; i < n; i++) {
+	for (i = 0; i < n; i++)
 		fixed += buttonWidth(hints[i].button, hints[i].key) + 8.0f;
-		labels += dashTextWidth(localizeDashboardText(hints[i].label), DASH_FS_SMALL);
-	}
 	avail = DASH_SAFE_R - DASH_SAFE_L + 12.0f;
 	/* Long translated names, a larger font scale or the classic bitmap font can
-	 * make the bar too wide. First tighten the gaps between hints, which costs
-	 * nothing readable (#221); only then share what is left among the labels,
-	 * keeping button glyphs and type size intact and ellipsizing as a last resort. */
-	if (n > 0 && fixed + labels + n * gap > avail)
-		gap = dashClampf((avail - fixed - labels) / n, gap_min, gap_max);
+	 * make the bar too wide. A hint label must never be cut with "..." (#221),
+	 * so make room in this order: tighten the gaps between hints, then shrink
+	 * the label type (down to scale_min of its size), measuring the real glyph
+	 * widths each time. Ellipsizing is only the last resort for text that still
+	 * does not fit at the smallest size. */
+	for (pass = 0; pass < 8; pass++) {
+		labels = 0.0f;
+		for (i = 0; i < n; i++)
+			labels += dashTextWidth(localizeDashboardText(hints[i].label), fs);
+		gap = gap_max;
+		if (n > 0 && fixed + labels + n * gap > avail)
+			gap = dashClampf((avail - fixed - labels) / n, gap_min, gap_max);
+		if (fixed + labels + n * gap <= avail + 0.01f || fs <= DASH_FS_SMALL * scale_min + 0.001f)
+			break;
+		fs = dashClampf(fs * dashClampf((avail - fixed - n * gap_min) / labels, 0.0f, 0.96f),
+		                DASH_FS_SMALL * scale_min, DASH_FS_SMALL);
+	}
 	if (labels > 0.0f && fixed + labels + n * gap > avail + 0.01f)
 		label_ratio = dashClampf((avail - fixed - n * gap) / labels, 0.0f, 1.0f);
 	total = fixed + n * gap + labels * label_ratio;
@@ -271,12 +282,12 @@ void dashDrawHints(const DashHint *hints, int n)
 	}
 	for (i = 0; i < n; i++) {
 		const char *label = localizeDashboardText(hints[i].label);
-		float label_w = dashTextWidth(label, DASH_FS_SMALL) * label_ratio;
+		float label_w = dashTextWidth(label, fs) * label_ratio;
 		x += drawButton(x, y, hints[i].button, hints[i].key) + 8.0f;
 		/* x-height centre (y + 16 * scale) about 1 px under the 22 px button's
 		 * centre, so mixed-case labels read as centred on the button */
 		if (label_w > 0.0f)
-			dashTextFit(x, y + 1.5f, label_w, label, DASH_FS_SMALL, DASH_C_TEXT);
+			dashTextFit(x, y + 1.5f + (DASH_FS_SMALL - fs) * 16.0f, label_w, label, fs, DASH_C_TEXT);
 		x += label_w + gap;
 	}
 }

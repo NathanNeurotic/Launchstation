@@ -903,7 +903,7 @@ static void lkLabel(int lk, char *out, int size)
 static void quickLaunchDraw(void)
 {
 	int i, n = 0, col;
-	float w = 520.0f, h, x, y, row_h = 28.0f, k;
+	float w = 560.0f, h, x, y, row_h = 28.0f, k;
 	char label[64];
 
 	if (!ql_down || !(paddata & PAD_SELECT) || Timer() - ql_since < 250)
@@ -931,7 +931,7 @@ static void quickLaunchDraw(void)
 		by = y + 70 + (col / 2) * row_h;
 		bx += dashDrawButton(bx, by, lk_map[i].icon, NULL) + 8;
 		lkLabel(lk_map[i].lk, label, sizeof(label));
-		dashTextFit(bx, by + 4, (w - 48) * 0.5f - 44, label, DASH_FS_SMALL, DASH_C_TEXT);
+		dashTextFit(bx, by + 4, (w - 48) * 0.5f - 30, label, DASH_FS_SMALL, DASH_C_TEXT);
 		col++;
 	}
 	dashGfxPopAlpha();
