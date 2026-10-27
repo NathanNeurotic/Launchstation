@@ -100,7 +100,8 @@ static int clipboardSourceDeviceReady(void){return source_ready;}
 static void waitUntilTimer(u64 end){clock_ms=end;}
 static void drawMsg(const char *s){(void)s;}
 static int ynDialog(const char *s){(void)s;return cancel_copy?-1:1;}
-static int readpad(void){return cancel_copy;}
+static unsigned new_pad,paddata;
+static int readpad_noRepeat(void){paddata=0;new_pad=cancel_copy?0x4000:0;return cancel_copy;} /* a fresh press after a release */
 static int DashIsActive(void){return 1;}
 static int DashFileProgress(const char *a,const char *b,u64 r,u64 t){(void)a;(void)b;assert(r<=t);return 1;}
 static void nonDialog(char *s){(void)s;}
@@ -164,7 +165,8 @@ psu=(root/'include/psu_types.h').read_text();code+=psu[psu.index('typedef struct
 a=copy.index('/* One paste context');b=copy.index('static int isMemoryCardLikePath(',a);code+=copy[a:b]
 for sig in ('static int isMemoryCardLikePath(', 'static int isHddCommonParty(',
             'static int calcTransferSpeed(', 'static int calcRemainingTime(',
-            'static int smoothTransferSpeed(', 'static int applyMcInfoToMcPath('):
+            'static int smoothTransferSpeed(', 'static int applyMcInfoToMcPath(',
+            'static int copyAskedToStop('):
     code+=function(copy,sig)
 code+=copy[copy.index('int copy('):]
 code+=function(browser,'static int waitForClipboardSourceDevice(')
