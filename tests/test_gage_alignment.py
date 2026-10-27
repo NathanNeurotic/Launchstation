@@ -19,10 +19,11 @@ hints = ui[ui.index("void dashDrawHints("):]
 hints = hints[: hints.index("\n}\n") if "\n}\n" in hints else hints.index("\r\n}\r\n")]
 assert "fixed += buttonWidth(hints[i].button, hints[i].key) + 8.0f" in hints
 assert "x += drawButton(x, y, hints[i].button, hints[i].key) + 8.0f;" in hints
-assert "total = fixed + n * gap + labels * label_ratio;" in hints
-assert "x += label_w + gap;" in hints
+assert "total = fixed + n * gap + labels;" in hints
+assert "x += gap;" in hints
 # at full size the label sits at y + 1.5; shrunk type keeps the same x-height centre
-assert "dashTextFit(x, y + 1.5f + (DASH_FS_SMALL - fs) * 16.0f, label_w, label, fs" in hints
+assert "dashTextS(x, y + 1.5f + (DASH_FS_SMALL - fs) * 16.0f, label, fs" in hints
+assert "dashTextFit" not in hints, "hint labels are drawn whole, never ellipsized"
 assert "+ 16.0f;" not in hints
 
 FS_SMALL = 0.66
