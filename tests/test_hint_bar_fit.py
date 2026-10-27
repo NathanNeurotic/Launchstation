@@ -1,4 +1,4 @@
-"""Footer hint labels must not be ellipsized while tighter gaps would fit them (#221)."""
+"""Footer hint labels must never be cut with "..." while smaller type would fit them (#221)."""
 from pathlib import Path
 import subprocess
 import tempfile
@@ -32,10 +32,10 @@ static float footerClockWidth(char *a, int an, char *b, int bn) { (void)a; (void
 static void drawFooterClock(float y, const char *a, const char *b) { (void)y; (void)a; (void)b; }
 static DashColor dashColorScale(DashColor c, float f) { (void)f; return c; }
 static void dashRectGradH(float x, float y, float w, float h, DashColor a, DashColor b) { (void)x; (void)y; (void)w; (void)h; (void)a; (void)b; }
-static struct { float x, maxw, textw; } fit[8];
+static struct { float x, maxw, textw, sc; } fit[8];
 static int nfit;
 static void dashTextFit(float x, float y, float maxw, const char *s, float sc, int c) {
-    (void)y; (void)c; fit[nfit].x = x; fit[nfit].maxw = maxw; fit[nfit].textw = dashTextWidth(s, sc); nfit++;
+    (void)y; (void)c; fit[nfit].x = x; fit[nfit].maxw = maxw; fit[nfit].textw = dashTextWidth(s, sc); fit[nfit].sc = sc; nfit++;
 }
 ''' + func + r'''
 static int run(float factor, int n) {
@@ -52,10 +52,13 @@ static int run(float factor, int n) {
 }
 int main(void) {
     assert(run(1.0f, 5) == 0);     /* fits at full gaps */
-    assert(run(1.12f, 5) == 0);    /* wider font: used to ellipsize, tighter gaps now fit it */
+    assert(fit[0].sc == DASH_FS_SMALL);   /* ...at full size: nothing shrinks needlessly */
+    assert(run(1.12f, 5) == 0);    /* wider font: tighter gaps fit it */
     assert(run(1.2f, 5) == 0);
     assert(run(1.0f, 3) == 0);
-    assert(run(2.0f, 5) == 1);     /* truly too wide: ellipsis is still the last resort */
+    assert(run(1.5f, 5) == 0);     /* gaps alone are not enough: the type shrinks instead of getting dots */
+    assert(fit[0].sc < DASH_FS_SMALL && fit[0].sc >= DASH_FS_SMALL * 0.62f - 0.001f);
+    assert(run(3.0f, 5) == 1);     /* absurdly wide: ellipsis is still the very last resort */
     puts("ok");
     return 0;
 }
@@ -65,4 +68,4 @@ d = Path(tempfile.mkdtemp())
 subprocess.run(["gcc", "-std=gnu99", "-Wall", "-Wextra", "-Werror", "-o", str(d / "t"), str(d / "t.c")], check=True)
 out = subprocess.run([str(d / "t")], capture_output=True, text=True, check=True)
 assert out.stdout.strip() == "ok"
-print("PASS: hint bar tightens gaps before ellipsizing labels")
+print("PASS: hint bar tightens gaps, then shrinks type, before it ever ellipsizes a label")
