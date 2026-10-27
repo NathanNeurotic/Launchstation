@@ -13,6 +13,7 @@
 #include "init.h"
 
 extern void (*mainActionLaunchHook)(const char *path);
+extern int (*mainActionIopInvertHook)(void);
 
 static MainExecuteContext exec_ctx;
 static int dash_active;
@@ -214,6 +215,20 @@ static void dashLaunchHook(const char *path)
 	 * dashboard is active (library, FileBrowser, launch keys). */
 	if (path != NULL && strchr(path, ':') != NULL && strlen(path) < DASH_PATH_MAX && dashCfg.recent_count > 0)
 		dashStorePushRecent(path);
+}
+
+extern u32 paddata;
+
+/* Holding the confirm button while an application launches does the opposite of
+ * "Reset IOP before launch" for that one launch (Settings > Startup). A plain tap
+ * is released long before the launcher decides, so ordinary launches are unchanged. */
+static int dashIopInvertHook(void)
+{
+	u32 ok_btn = swapKeys ? PAD_CROSS : PAD_CIRCLE;
+
+	if (!dash_active || !readpad_no_KB())
+		return 0;
+	return (paddata & ok_btn) != 0;
 }
 
 /* Everything the background worker is doing (saves, scans, driver starts)
@@ -1167,6 +1182,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	}
 	DashThemeSetLegacyEnabled(1);
 	mainActionLaunchHook = dashLaunchHook;
+	mainActionIopInvertHook = dashIopInvertHook;
 #ifdef WLE_BOOT_DIAGNOSTICS
 	drawMsg("Boot check 6: dashboard initialized; starting audio");
 #endif

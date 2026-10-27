@@ -197,16 +197,44 @@ static void setAppHidden(DashApp *a)
 	dashAppsRebuildView();
 }
 
+/* The AUTO launch key (Settings > Launching > Automatic start & boot) starts one
+ * application after the startup timeout and any button cancels it. This picks that
+ * target straight from the library instead of typing a path. */
+static void toggleBootApp(DashApp *a)
+{
+	char *cur = setting->LK_Path[SETTING_LK_AUTO];
+	char msg[96];
+
+	if (setting->PathPad_Lock) {
+		dashToast(DASH_TOAST_WARN, "Launch keys are locked (Settings > Launching)");
+		return;
+	}
+	if (!stricmp(cur, a->path)) {
+		cur[0] = '\0';
+		setting->LK_Title[SETTING_LK_AUTO][0] = '\0';
+		if (dashSettingsSaveCnf())
+			dashToast(DASH_TOAST_INFO, "Automatic start cleared");
+		return;
+	}
+	dashStrCopy(cur, a->path, sizeof(setting->LK_Path[0]));
+	dashStrCopy(setting->LK_Title[SETTING_LK_AUTO], a->title, sizeof(setting->LK_Title[0]));
+	if (dashSettingsSaveCnf()) {
+		snprintf(msg, sizeof(msg), "Starts %d s after boot; any button cancels", setting->timeout);
+		dashToast(DASH_TOAST_OK, msg);
+	}
+}
+
 void dashAppActions(DashApp *a)
 {
 	int fav = dashStoreIsFavorite(a->path);
 	int pin = dashStoreIsPinned(a->path);
 	int in_lib = dashLibIndexOf(a) >= 0;
-	DashMenuItem items[9];
-	int ids[9];
+	DashMenuItem items[10];
+	int ids[10];
+	int boot = !stricmp(setting->LK_Path[SETTING_LK_AUTO], a->path);
 	int n = 0, r;
 
-	items[n].icon = DI_PLAY, items[n].label = localizeDashboardText("Start"), items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 0;
+	items[n].icon = DI_PLAY, items[n].label = localizeDashboardText("Start"), items[n].detail = setting->reboot_iop_elf_load ? "hold to skip IOP reset" : "hold to reset IOP", items[n].disabled = 0, ids[n++] = 0;
 	items[n].icon = DI_EDIT, items[n].label = "Start with arguments...", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 1;
 	items[n].icon = DI_STAR, items[n].label = fav ? "Remove from Favorites" : "Add to Favorites", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 2;
 	items[n].icon = DI_PIN, items[n].label = pin ? "Unpin from Home" : "Pin to Home", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 3;
@@ -218,10 +246,15 @@ void dashAppActions(DashApp *a)
 	else
 		items[n].icon = DI_CLOSE, items[n].label = "Remove shortcut", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 8;
 
+	items[n].icon = DI_CLOCK, items[n].label = boot ? "Don't start at boot" : "Start at boot", items[n].detail = boot ? NULL : "after the startup timeout", items[n].disabled = 0, ids[n++] = 9;
+
 	r = dashModalMenu(a->title, a->path, items, n, 0);
 	if (r < 0)
 		return;
 	switch (ids[r]) {
+		case 9:
+			toggleBootApp(a);
+			break;
 		case 0:
 			dashLaunchApp(a, 0);
 			break;

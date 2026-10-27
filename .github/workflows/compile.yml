@@ -125,6 +125,7 @@ jobs:
           python3 tests/test_pad_icon_order.py
           python3 tests/test_hint_clearance.py
           python3 tests/test_hint_bar_fit.py
+          python3 tests/test_launch_options.py
           python3 tests/test_cloud_link_screen.py
           python3 tests/test_project_branding.py
           python3 tests/test_console_region.py
