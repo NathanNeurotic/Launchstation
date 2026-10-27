@@ -98,6 +98,8 @@ static void dashToast(int k,const char *s) { (void)k; (void)s; }
 static void dashBgmStart(void);
 static void dashBgmStop(void);
 static void dashSoundShutdown(void);
+static int theme_reload_pending;
+static void dashSoundReloadTheme(void) { theme_reload_pending = 0; }
 static int dashSoundInit(void) {
     if(!soundAlive())dashSoundShutdown(); sound_ready=1;
     sound_reboot_generation=reset_generation; return 1;

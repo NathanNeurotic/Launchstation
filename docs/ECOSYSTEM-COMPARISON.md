@@ -26,16 +26,16 @@ card files on USB, MX4SIO or the internal HDD.
 | Backup history | 10 per card by default, restore any, verified before and after write | Versioned local history with a retention setting; verified recovery from local or cloud history |
 | Backup format | `.mcd`, or `.ps2` (PCSX2) | `.mcd` or `.ps2` |
 | Browse cloud history | From the Files tab | "Browse cloud history..." (read-only paged view, verified recovery) |
-| Backup by save (per-save versions on Drive) | Yes, optional | Not found in the docs: **not audited** |
-| Memory card manager (browse saves, 3D icons) | Yes, per card and "All saves" view | Save browsing by title, PSU create/extract, card image backup/conversion exist ([Saves](../docs-site/content/saves.html)); full card manager **not audited** |
-| Copy / move / delete saves across cards, multi-select | Yes | Copy/paste in the file browser; cross-card multi-select workflow **not audited** |
-| The Library (saves kept off cards) | Yes | None found |
-| Templates (default save sets applied to game cards) | Yes | None found |
-| Create / resize / rename / check / delete cards, convert to Game ID | Yes, with a safety copy | Neutrino Game ID card switching is documented; card create/resize/convert tools **not audited** |
-| OPL VMC and USB/HDD/MX4SIO card files | Yes | VMC support documented; breadth **not audited** |
+| Backup by save (per-save versions on Drive) | Yes, optional | **Missing** (code audit 2026-10-26): only whole-card history is uploaded |
+| Memory card manager (browse saves, 3D icons) | Yes, per card and "All saves" view | **Partial**: save browsing by title, PSU create/extract and card image backup/conversion exist ([Saves](../docs-site/content/saves.html)), but nothing opens a card image to list its saves (planned: [parity plan](plans/2026-10-26-sd2cloud-parity-plan.md)) |
+| Copy / move / delete saves across cards, multi-select | Yes | **Partial**: multi-select and copy/cut/paste/delete with confirmation work on `mc`/`vmc` folders; saves inside MMCE card images are not reachable. Copies are checked for short reads/writes, not read back |
+| The Library (saves kept off cards) | Yes | **Missing** |
+| Templates (default save sets applied to game cards) | Yes | **Missing** |
+| Create / resize / rename / check / delete cards, convert to Game ID | Yes, with a safety copy | **Partial**: "Install as NEW card" and file-level rename/delete only; no blank-card create, resize, check or Game ID conversion. Neutrino selects a Game ID card on launch |
+| OPL VMC and USB/HDD/MX4SIO card files | Yes | **Partial**: VMC mounting and card-image backup/export are supported; `.mc2`/`.bin` import and `.zip` are not |
 | Works without an sd2psx | Yes (regular cards, USB/HDD/MX4SIO) | Regular memory cards supported in the file browser |
-| MemCard PRO2 | Read/write `.mc2`; card switch is a preview | Not documented |
-| Self-update | Stable and Beta channels, SHA-256 verified | "Check for updates" against the rolling release |
+| MemCard PRO2 | Read/write `.mc2`; card switch is a preview | **Missing**: treated as a generic MMCE; no `.mc2` read/write |
+| Self-update | Stable and Beta channels, SHA-256 verified | "Check for updates" against the rolling release (no beta stream is published) |
 | Languages | 6 | 9 dashboard tables (some extended help still English) |
 | Installs a SAS package on the card for IGR | Yes (`APP_SD2CLOUD`) | Own IGR helper install/status in Settings |
 
@@ -68,10 +68,16 @@ AFL-3.0). A game launcher for a real PS2 that starts games through Neutrino. Com
 
 ## Suggested order for closing gaps
 
-1. Audit the Launchstation GUI against the unchecked SD2Cloud rows and #108's acceptance criteria, row by row, and
-   record "implemented / partial / missing" with evidence.
-2. Implement the cheapest high-value gaps first (save-level backup versions, a default-template apply, card
-   create/resize), each as its own PR with host-mocked GUI navigation tests.
-3. Keep ORBIT-only ideas (RetroAchievements agent, in-game pause menu) as separate proposals; they need a Neutrino
+The detailed, verified order is in the [parity plan](plans/2026-10-26-sd2cloud-parity-plan.md); in short:
+
+1. Finish auditing the remaining rows above against #108's acceptance criteria, recording implemented / partial /
+   missing with evidence.
+2. Build a host-tested, read-only card image parser first. A card contents view, "All saves" and restore previews
+   all depend on it.
+3. Then an MMCE card list, an active-card display (index only; the firmware exposes no name), and an automatic
+   safety copy before destructive card operations.
+4. Templates, the Library and per-save backup versions are later work that needs design decisions; they are not
+   cheap first steps.
+5. Keep ORBIT-only ideas (RetroAchievements agent, in-game pause menu) as separate proposals; they need a Neutrino
    fork or an in-game agent and are a different risk class.
-4. Do not copy code from either project without settling the licence question above.
+6. Do not copy code from either project without settling the licence question above.

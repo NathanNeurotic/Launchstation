@@ -2062,6 +2062,7 @@ static void settingsRevert(void)
 	if (dash_dirty) {
 		int recent = dashCfg.recent_count != snap_dash.recent_count;
 		int art = dashCfg.artwork != snap_dash.artwork;
+		int theme = dashCfg.sound_theme != snap_dash.sound_theme;
 
 		dashCfg = snap_dash;
 		menuTitleClockRestore();
@@ -2069,6 +2070,8 @@ static void settingsRevert(void)
 		DashThemeSetLegacyEnabled(1);
 		if (dashCfg.sound || dashCfg.bgm)
 			dashSoundInit();
+		if (theme)
+			dashSoundReloadTheme(); /* the effects in use are still the discarded theme's */
 		dashSoundApplyVolume();
 		if (dashCfg.bgm)
 			dashBgmStart();

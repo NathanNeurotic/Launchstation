@@ -59,6 +59,7 @@ static int bgm_channel = -1;
 static unsigned int sound_reboot_generation; /* reset epoch when audsrv was started */
 static unsigned int sound_tried_generation = (unsigned int)-1; /* last automatic attempt */
 static int sound_retry;
+static int theme_reload_pending;
 
 
 /* audsrv lives on the IOP: after any IOP reboot the server and the uploaded
@@ -213,8 +214,13 @@ void dashSoundReloadTheme(void)
 {
 	int i;
 
-	if (!soundAlive() || dashIopParked() || dashWorkerIoBusy())
+	if (!soundAlive())
+		return; /* the next dashSoundInit() uploads the theme that is selected then */
+	if (dashIopParked() || dashWorkerIoBusy()) {
+		theme_reload_pending = 1; /* dashSoundMaintain() applies it once I/O is idle */
 		return;
+	}
+	theme_reload_pending = 0;
 	dashBgmStop();
 	if (audsrv_adpcm_init() != 0) {
 		dashToast(DASH_TOAST_WARN, "Sound theme could not be changed");
@@ -243,6 +249,8 @@ void dashSoundMaintain(void)
 	if (dashWorkerIoBusy() || dashIopParked())
 		return;
 	if (soundAlive()) {
+		if (theme_reload_pending)
+			dashSoundReloadTheme();
 		/* A sidecar read deferred by IO/driver startup is tried when idle.
 		 * Missing/invalid files are attempted once, not on every frame. */
 		if (dashCfg.bgm && bgm_channel < 0 && !bgm_tried)

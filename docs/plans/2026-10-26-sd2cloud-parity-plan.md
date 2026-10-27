@@ -17,8 +17,9 @@ Corrections made while verifying:
 
 - **Save copy/move is not read-back verified.** `src/filer_copy.c` detects short reads and writes only. Only
   card-image backups are verified byte-for-byte. Do not claim "verified writes" for saves.
-- **MMCE card switching exists in the protocol** (see below) but no EE code uses it. The website sentence
-  "switch its game card" overstated the code; it now says Neutrino selects the Game ID card on launch.
+- **MMCE card switching exists in the protocol** (see below). Direct `SET_CARD`/`SET_CHANNEL` switching is not used
+  by any EE code; only `SET_GAMEID` is, via `setNeutrinoMmceGameID` during a Neutrino launch. The website sentence
+  "switch its game card" overstated this and now says Launchstation asks the adapter to select the Game ID card on launch.
 - **A stable/beta update channel is not worth building:** only the rolling `latest` release is published.
 
 ## Foundation 1: MMCE card/channel control (sd2psXtd firmware at the commit pinned by `docs/MMCE_SD2PSXTD_FIRMWARE_AUDIT.md`)
@@ -62,11 +63,13 @@ Sources: Ridge's format document, ps2sdk `mcman` / `libmc-common.h` (AFL 2.0), m
   bad blocks). Show "approx." or document it.
 
 ### Licensing rule
+
 Implement clean-room from Ridge's document and the ps2sdk struct definitions (AFL). Cross-check against mymc
 (public domain) and MIT ports. Treat GPL projects (PCSX2, mymc+/mymc++, ps2vmc-tool, SD2Cloud, ORBIT) as
 black-box test oracles only; do not copy their code.
 
 ### Validating a parser (required before building on it)
+
 1. Fixtures made by an independent tool (mymc / mymc-py: `format`, `import` a PSU, `dir`, `df`, `check`), 8 MB no-ECC
    and ECC, plus a 16 MB image. **Do not generate fixtures with our own writer only; that proves nothing.**
 2. Compare our listing, sizes and free-cluster count with the tool's output.
