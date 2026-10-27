@@ -1,4 +1,4 @@
-"""Footer hint labels must never be cut with "..." while smaller type would fit them (#221)."""
+"""Footer hint labels are drawn whole: gaps tighten, then the type shrinks, never "..." (#221)."""
 from pathlib import Path
 import subprocess
 import tempfile
@@ -32,10 +32,11 @@ static float footerClockWidth(char *a, int an, char *b, int bn) { (void)a; (void
 static void drawFooterClock(float y, const char *a, const char *b) { (void)y; (void)a; (void)b; }
 static DashColor dashColorScale(DashColor c, float f) { (void)f; return c; }
 static void dashRectGradH(float x, float y, float w, float h, DashColor a, DashColor b) { (void)x; (void)y; (void)w; (void)h; (void)a; (void)b; }
-static struct { float x, maxw, textw, sc; } fit[8];
+static struct { float x, w, sc; } fit[8];
 static int nfit;
-static void dashTextFit(float x, float y, float maxw, const char *s, float sc, int c) {
-    (void)y; (void)c; fit[nfit].x = x; fit[nfit].maxw = maxw; fit[nfit].textw = dashTextWidth(s, sc); fit[nfit].sc = sc; nfit++;
+static float dashTextS(float x, float y, const char *s, float sc, int c) {
+    (void)y; (void)c; fit[nfit].x = x; fit[nfit].w = dashTextWidth(s, sc); fit[nfit].sc = sc; nfit++;
+    return x + dashTextWidth(s, sc);
 }
 ''' + func + r'''
 static int run(float factor, int n) {
@@ -43,23 +44,18 @@ static int run(float factor, int n) {
     int i;
     font_factor = factor; nfit = 0;
     dashDrawHints(h, n);
-    assert(nfit == n);
-    for (i = 0; i < n; i++)
-        if (fit[i].maxw + 0.01f < fit[i].textw) return 1;      /* a label would get dots */
-    assert(fit[n - 1].x + fit[n - 1].maxw <= DASH_SAFE_R + 12.0f + 0.5f);   /* never past the right edge */
-    for (i = 1; i < n; i++) assert(fit[i].x > fit[i - 1].x + fit[i - 1].maxw); /* no overlap */
-    return 0;
+    assert(nfit == n);                       /* every label is drawn, whole, through dashTextS */
+    for (i = 1; i < n; i++) assert(fit[i].x > fit[i - 1].x + fit[i - 1].w); /* no overlap */
+    return fit[n - 1].x + fit[n - 1].w <= DASH_SAFE_R + 12.0f + 0.5f;       /* ends inside the safe edge */
 }
 int main(void) {
-    assert(run(1.0f, 5) == 0);     /* fits at full gaps */
-    assert(fit[0].sc == DASH_FS_SMALL);   /* ...at full size: nothing shrinks needlessly */
-    assert(run(1.12f, 5) == 0);    /* wider font: tighter gaps fit it */
-    assert(run(1.2f, 5) == 0);
-    assert(fit[0].sc == DASH_FS_SMALL);   /* gaps tighten first: the type must not shrink yet */
-    assert(run(1.0f, 3) == 0);
-    assert(run(1.5f, 5) == 0);     /* gaps alone are not enough: the type shrinks instead of getting dots */
-    assert(fit[0].sc < DASH_FS_SMALL && fit[0].sc >= DASH_FS_SMALL * 0.62f - 0.001f);
-    assert(run(3.0f, 5) == 1);     /* absurdly wide: ellipsis is still the very last resort */
+    assert(run(1.0f, 5) && fit[0].sc == DASH_FS_SMALL);   /* full size, nothing shrinks needlessly */
+    assert(run(1.12f, 5) && fit[0].sc == DASH_FS_SMALL);  /* wider font: tighter gaps are enough */
+    assert(run(1.2f, 5) && fit[0].sc == DASH_FS_SMALL);
+    assert(run(1.0f, 3));
+    assert(run(1.5f, 5) && fit[0].sc < DASH_FS_SMALL);    /* gaps are not enough: the type shrinks */
+    assert(fit[0].sc >= DASH_FS_SMALL * 0.5f - 0.001f);
+    assert(run(1.9f, 5));                                 /* still whole and inside the edge */
     puts("ok");
     return 0;
 }
@@ -69,4 +65,4 @@ d = Path(tempfile.mkdtemp())
 subprocess.run(["gcc", "-std=gnu99", "-Wall", "-Wextra", "-Werror", "-o", str(d / "t"), str(d / "t.c")], check=True)
 out = subprocess.run([str(d / "t")], capture_output=True, text=True, check=True)
 assert out.stdout.strip() == "ok"
-print("PASS: hint bar tightens gaps, then shrinks type, before it ever ellipsizes a label")
+print("PASS: hint bar draws labels whole: gaps tighten, then type shrinks, never an ellipsis")
