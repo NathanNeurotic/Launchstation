@@ -23,7 +23,10 @@ static int genCmpFileExt(const char *f, const char *e) {
     const char *d = strrchr(f, '.'); return d && !strcasecmp(d + 1, e);
 }
 static int listFind(char l[][DASH_PATH_MAX], int n, const char *p) {
-    for (int i = 0; i < n; i++) if (!strcmp(l[i], p)) return i; return -1;
+    for (int i = 0; i < n; i++) {
+        if (!strcmp(l[i], p)) return i;
+    }
+    return -1;
 }
 static void dashStrCopy(char *o, const char *i, int n) { snprintf(o, n, "%s", i); }
 static void dashStoreSaveLists(void) { saves++; }
