@@ -418,6 +418,28 @@ finish:
 	return ret;
 }
 //--------------------------------------------------------------
+//Decides whether a copy in progress should ask "Continue transfer?".
+//Only a fresh press of a real button asks. The pad driver's auto-repeat
+//(a button still held from confirming the paste) and stick drift used to
+//count as new input, so a slow device such as UDPFS asked again on nearly
+//every chunk. '*armed' becomes 1 once every button has been released and
+//goes back to 0 after each question, so one press asks once.
+//--------------------------------------------------------------
+extern u32 paddata; /* every button currently held, set by the pad readers */
+
+static int copyAskedToStop(int *armed)
+{
+	int pressed = readpad_noRepeat();
+
+	if (!paddata)
+		*armed = 1;
+	if (!pressed || !*armed || !(new_pad & 0xFFFF))
+		return 0;
+	*armed = 0;
+	return 1;
+}
+
+//--------------------------------------------------------------
 //The function 'copy' below is called to copy a single object,
 //indicated by 'file' from 'inPath' to 'outPath', but this may
 //be either a single file or a folder. In the latter case the
@@ -435,6 +457,7 @@ int copy(char *outPath, const char *inPath, FILEINFO file, int recurses)
 	u64 original_size = 0;
 	int ret = -1, pfsout = -1, pfsin = -1, in_fd = -1, out_fd = -1, buffSize, bytesRead, bytesWritten;
 	int buffCount = 1, buffIndex = 0;
+	int pad_armed = 0; /* see copyAskedToStop */
 	int dummy;
 	int speed = 0;
 	int remain_time = -1, TimeDiff = 0;
@@ -1067,11 +1090,7 @@ non_PSU_RESTORE_init:
 			PasteProgress_f = 1;
 			drawMsg(file.name);
 		}
-#ifdef DS34
-		if (readpad() && new_pad) {
-#else
-		if (readpad()) {
-#endif
+		if (copyAskedToStop(&pad_armed)) {
 			if (-1 == ynDialog(LNG(Continue_transfer))) {
 				genClose(out_fd);
 				out_fd = -1;
