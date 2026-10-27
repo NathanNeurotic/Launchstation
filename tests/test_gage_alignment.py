@@ -21,7 +21,8 @@ assert "fixed += buttonWidth(hints[i].button, hints[i].key) + 8.0f" in hints
 assert "x += drawButton(x, y, hints[i].button, hints[i].key) + 8.0f;" in hints
 assert "total = fixed + n * gap + labels * label_ratio;" in hints
 assert "x += label_w + gap;" in hints
-assert "dashTextFit(x, y + 1.5f, label_w, label" in hints
+# at full size the label sits at y + 1.5; shrunk type keeps the same x-height centre
+assert "dashTextFit(x, y + 1.5f + (DASH_FS_SMALL - fs) * 16.0f, label_w, label, fs" in hints
 assert "+ 16.0f;" not in hints
 
 FS_SMALL = 0.66
