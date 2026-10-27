@@ -72,7 +72,7 @@ int main(void) {
     /* 576i is PAL timing under its own saved ID. */
     stage=0;setting->TV_mode=TV_mode_576I;updateScreenMode();
     assert(g.Mode==GS_MODE_PAL && TV_mode==TV_mode_PAL && setting->TV_mode==TV_mode_576I);
-    /* 576p on a pre-2.20 ROM (and non-PSX 1.80J) falls back to Auto before any GS reset. */
+    /* 576p on a pre-2.20 ROM (and non-PSX 1.80J) boots in Auto before any GS reset, but stays saved. */
     const struct { const char *rom; int psx, ok; } roms[]={
         {"0100J",0,0},{"0200E",0,0},{"0219E",0,0},{"0220E",0,1},{"0250E",0,1},{"",0,0},{"02x0E",0,0},
         {"0180J",0,0},{"0180J",1,1},{"0210J",1,1},{"0180E",1,0},{"0200J",1,0}
@@ -82,7 +82,7 @@ int main(void) {
         assert(is576pSupported()==roms[i].ok);
         setting->TV_mode=TV_mode_576P;
         assert(requestedTVMode()==(roms[i].ok?TV_mode_576P:native_mode));
-        assert(setting->TV_mode==(roms[i].ok?TV_mode_576P:TV_mode_AUTO));
+        assert(setting->TV_mode==TV_mode_576P); /* the saved choice survives a console that cannot use it */
     }
     const int invalid[]={-1,TV_mode_COUNT,9999};
     for(unsigned i=0;i<3;i++) { setting->TV_mode=invalid[i];assert(requestedTVMode()==native_mode && setting->TV_mode==TV_mode_AUTO); }
