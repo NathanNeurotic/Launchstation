@@ -168,8 +168,8 @@ static void editMetadata(DashApp *a)
 	if (dashLibMetadataPath(a, meta, sizeof(meta)) < 0)
 		return;
 	if (!sidecarExists(meta)) {
-		/* create a starter (also when only an OPL title.cfg describes the app:
-		 * the sidecar overrides it, and its title line starts from the loaded one) */ sidecar the user can fill in */
+		/* create a starter sidecar (also when only an OPL title.cfg describes the app:
+		 * the sidecar overrides it, and its title line starts from the loaded one) */
 		char text[512];
 		int len = snprintf(text, sizeof(text),
 		                   "# Launchstation dashboard metadata for %s\r\n"
