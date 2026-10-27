@@ -20,7 +20,7 @@ assert '"About Launchstation"' in tools
 assert "Launchstation %s" in draw
 assert "Launchstation cannot open this type of file" in browser
 assert "cannot be formatted from Launchstation" in hdd
-assert "# Launchstation dashboard metadata" in apps
+assert "# Launchstation app metadata (title.cfg)" in apps
 assert "User-Agent: Launchstation/Cloud" in cloud
 
 assert "Launchstation issue report" in issue
