@@ -18,5 +18,8 @@ typedef struct
 void ExecuteMainAction(char *pathin, const MainExecuteContext *ctx);
 void ExecuteBrowserFrom(const char *start_dir, const MainExecuteContext *ctx);
 extern void (*mainActionLaunchHook)(const char *path);
+/* Returns nonzero when this launch should do the opposite of the "reset IOP before
+ * launch" setting (the dashboard reports its confirm button held). */
+extern int (*mainActionIopInvertHook)(void);
 
 #endif

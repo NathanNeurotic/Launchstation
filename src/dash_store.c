@@ -835,7 +835,11 @@ void dashStorePushRecent(const char *path)
 {
 	int idx, i;
 
-	if (path == NULL || strlen(path) >= DASH_PATH_MAX)
+	/* Game images are launched through the application path but are not
+	 * applications; keep them out of Recent (and its shared list save). */
+	if (path == NULL || strlen(path) >= DASH_PATH_MAX ||
+	    genCmpFileExt(path, "BIN") || genCmpFileExt(path, "CUE") ||
+	    genCmpFileExt(path, "VCD") || genCmpFileExt(path, "ISO"))
 		return;
 	idx = listFind(dashLists.recent, dashLists.nrecent, path);
 	if (idx < 0) {

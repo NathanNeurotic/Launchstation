@@ -286,7 +286,7 @@ static const SetItem launch_items[] = {
     {ST_PAGE, P_LKEY, "Launch keys", "Applications or commands assigned to controller buttons."},
     {ST_CHOICE, S_PATHPAD_LOCK, "Lock shortcuts & bookmarks", "Prevents editing launch keys and File Browser bookmarks."},
     {ST_PAGE, P_LOADERS, "Disc & image loaders", "ESR, OSDSYS, POPStarter, Ember and Neutrino paths."},
-    {ST_CHOICE, S_REBOOT_ELF, "Reset IOP before launch", "Recommended: gives launched ELFs a clean IOP."},
+    {ST_CHOICE, S_REBOOT_ELF, "Reset IOP before launch", "Recommended: gives launched ELFs a clean IOP. Hold the confirm button while launching to do the opposite once."},
     {ST_PAGE, P_GAMEID, "Game ID output", "Game IDs for RetroGem and compatible OSD/HDMI adapters."},
 };
 

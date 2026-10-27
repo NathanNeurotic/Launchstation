@@ -151,29 +151,43 @@ static void openFolder(const DashApp *a)
 static void editMetadata(DashApp *a)
 {
 	char meta[MAX_PATH];
+	int fd;
 
 	if (dashLibMetadataPath(a, meta, sizeof(meta)) < 0)
 		return;
-	if (!(a->flags & DASH_APP_HAS_META)) {
-		/* create a starter sidecar the user can fill in */
-		char text[512];
-		int len = snprintf(text, sizeof(text),
-		                   "# Launchstation dashboard metadata for %s\r\n"
-		                   "# Every key is optional. Lines starting with # are ignored.\r\n"
-		                   "title = %s\r\n"
-		                   "description = \r\n"
-		                   "author = \r\n"
-		                   "version = \r\n"
-		                   "category = \r\n"
-		                   "# cover = cover.png\r\n"
-		                   "# arg = first argument (one per line)\r\n",
-		                   a->path, a->title);
-		if (!dashModalConfirm("Create metadata file?", "A small text file describing this application will be created next to it. You can then edit it in the Text Editor.", localizeDashboardText("Create"), 0))
+	/* Metadata may have come from an <ELFNAME>.cfg sidecar, so test for
+	 * title.cfg itself. The UI thread reads it, so background work finishes
+	 * first. */
+	if (!dashWorkerAwaitAll("Finishing up"))
+		return;
+	filerRootMcPollIdle();
+	fd = genOpen(meta, FIO_O_RDONLY);
+	if (fd >= 0)
+		genClose(fd);
+	else {
+		/* Create a starter title.cfg (OPL format) with this ELF's boot entry,
+		 * rather than inventing another metadata file. */
+		const char *file = strrchr(a->path, '/');
+		char text[DASH_PATH_MAX + DASH_TITLE_MAX + 320];
+		int len;
+
+		if (file == NULL)
+			file = strrchr(a->path, ':');
+		file = file ? file + 1 : a->path;
+		len = snprintf(text, sizeof(text),
+		               "# Launchstation app metadata (title.cfg)\r\n"
+		               "# Every key is optional. Lines starting with # are ignored.\r\n"
+		               "title = %s\r\n"
+		               "boot = %s\r\n"
+		               "description = \r\n"
+		               "author = \r\n"
+		               "version = \r\n"
+		               "category = \r\n"
+		               "# cover = cover.png\r\n"
+		               "# arg = first argument (one per line)\r\n",
+		               a->title, file);
+		if (!dashModalConfirm("Create title.cfg?", "Create title.cfg beside this application, then edit it in the Text Editor.", localizeDashboardText("Create"), 0))
 			return;
-		/* the UI thread writes directly: background work must finish first */
-		if (!dashWorkerAwaitAll("Finishing up"))
-			return;
-		filerRootMcPollIdle();
 		if (dashWriteFile(meta, text, len) != 0) {
 			dashModalMessage(DI_WARNING, "Could not create file", "The device may be read-only or full.", meta);
 			return;
@@ -181,8 +195,7 @@ static void editMetadata(DashApp *a)
 	}
 	if (!dashOpenTextEditor(meta))
 		return;
-	/* re-read this application's metadata after editing (the UI thread
-	 * reads it, so a save still running in the background finishes first) */
+	/* re-read this application's metadata after editing */
 	if (dashLibIndexOf(a) >= 0 && dashWorkerAwaitAll("Finishing up"))
 		dashLibRefreshApp(a);
 }
@@ -197,16 +210,44 @@ static void setAppHidden(DashApp *a)
 	dashAppsRebuildView();
 }
 
+/* The AUTO launch key (Settings > Launching > Automatic start & boot) starts one
+ * application after the startup timeout and any button cancels it. This picks that
+ * target straight from the library instead of typing a path. */
+static void toggleBootApp(DashApp *a)
+{
+	char *cur = setting->LK_Path[SETTING_LK_AUTO];
+	char msg[96];
+
+	if (setting->PathPad_Lock) {
+		dashToast(DASH_TOAST_WARN, "Launch keys are locked (Settings > Launching)");
+		return;
+	}
+	if (!stricmp(cur, a->path)) {
+		cur[0] = '\0';
+		setting->LK_Title[SETTING_LK_AUTO][0] = '\0';
+		if (dashSettingsSaveCnf())
+			dashToast(DASH_TOAST_INFO, "Automatic start cleared");
+		return;
+	}
+	dashStrCopy(cur, a->path, sizeof(setting->LK_Path[0]));
+	dashStrCopy(setting->LK_Title[SETTING_LK_AUTO], a->title, sizeof(setting->LK_Title[0]));
+	if (dashSettingsSaveCnf()) {
+		snprintf(msg, sizeof(msg), "Starts %d s after boot; any button cancels", setting->timeout);
+		dashToast(DASH_TOAST_OK, msg);
+	}
+}
+
 void dashAppActions(DashApp *a)
 {
 	int fav = dashStoreIsFavorite(a->path);
 	int pin = dashStoreIsPinned(a->path);
 	int in_lib = dashLibIndexOf(a) >= 0;
-	DashMenuItem items[9];
-	int ids[9];
+	DashMenuItem items[10];
+	int ids[10];
+	int boot = !stricmp(setting->LK_Path[SETTING_LK_AUTO], a->path);
 	int n = 0, r;
 
-	items[n].icon = DI_PLAY, items[n].label = localizeDashboardText("Start"), items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 0;
+	items[n].icon = DI_PLAY, items[n].label = localizeDashboardText("Start"), items[n].detail = setting->reboot_iop_elf_load ? "hold to skip IOP reset" : "hold to reset IOP", items[n].disabled = 0, ids[n++] = 0;
 	items[n].icon = DI_EDIT, items[n].label = "Start with arguments...", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 1;
 	items[n].icon = DI_STAR, items[n].label = fav ? "Remove from Favorites" : "Add to Favorites", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 2;
 	items[n].icon = DI_PIN, items[n].label = pin ? "Unpin from Home" : "Pin to Home", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 3;
@@ -218,10 +259,15 @@ void dashAppActions(DashApp *a)
 	else
 		items[n].icon = DI_CLOSE, items[n].label = "Remove shortcut", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 8;
 
+	items[n].icon = DI_CLOCK, items[n].label = boot ? "Don't start at boot" : "Start at boot", items[n].detail = boot ? NULL : "after the startup timeout", items[n].disabled = 0, ids[n++] = 9;
+
 	r = dashModalMenu(a->title, a->path, items, n, 0);
 	if (r < 0)
 		return;
 	switch (ids[r]) {
+		case 9:
+			toggleBootApp(a);
+			break;
 		case 0:
 			dashLaunchApp(a, 0);
 			break;

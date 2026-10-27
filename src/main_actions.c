@@ -14,6 +14,7 @@
 /* Optional observer called right before an ELF is handed to the loader
  * (used by the dashboard to maintain its "recent" list). */
 void (*mainActionLaunchHook)(const char *path) = NULL;
+int (*mainActionIopInvertHook)(void) = NULL;
 
 //CleanUpForExec releases uLE stuff preparatory to launching some other application
 //------------------------------
@@ -668,6 +669,8 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 			if (mainActionLaunchHook != NULL)
 				mainActionLaunchHook(path);
 			x = setting->reboot_iop_elf_load;
+			if (mainActionIopInvertHook != NULL && mainActionIopInvertHook())
+				x = !x; /* confirm held at launch: this launch only does the opposite */
 			if (x)
 				CleanUpForExec();
 			else if (!CleanUpForKeepIopExec("Preparing application"))

@@ -243,7 +243,7 @@ Input > Confirm button), as the classic browser did.
 | Square | Add to / remove from Favorites |
 | L1 / R1 | Previous / next section |
 | L2 / R2 | Page jump |
-| START | Dashboard menu from any native screen (home, refresh library, File Browser, settings, reboot IOP, power off); START again closes it. SELECT + START keeps the START launch key |
+| START | Dashboard menu from any native screen (home, refresh library, settings, reboot IOP, power off; Files is a tab); START again closes it. SELECT + START keeps the START launch key |
 | SELECT | Tap: switch application view (APPS). Hold: your launch keys appear; press a button to start its application |
 | R3 (HOME) | Hide/show the interface to see only the animated background |
 
@@ -321,7 +321,9 @@ pinned = 1                 # show on HOME
 Arguments: a classic `<ELFNAME>.arg` sidecar always wins; metadata `arg`
 lines are used only when no `.arg` exists. *Start with arguments...* uses
 the Text Editor's "Launch with args" flow. APPS > Triangle > *Edit metadata*
-creates a starter file and opens it in the Text Editor.
+opens the OPL-format `title.cfg` in the ELF's folder in the Text Editor,
+creating a starter (`title=`, `boot=`) if there is none. An existing
+`<ELFNAME>.cfg` is still read, but no second file is created.
 
 ## Artwork (optional)
 
