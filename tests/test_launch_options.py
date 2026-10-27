@@ -21,6 +21,18 @@ assert "mainActionIopInvertHook = dashIopInvertHook;" in main
 assert 'detail = setting->reboot_iop_elf_load ? "hold to skip IOP reset" : "hold to reset IOP"' in apps
 assert "ids[n++] = 9;" in apps and "case 9:\n\t\t\ttoggleBootApp(a);" in apps
 
+# Dashboard (START) menu: Files is a tab, so there is no duplicate entry and the dispatcher matches the items
+menu = main[main.index("void dashDashboardMenu(void)"):]
+menu = menu[:menu.index("int r;")]
+labels = [l.split('"')[1] for l in menu.splitlines() if '{DI_' in l]
+assert labels == ["Home", "Refresh application library", "Settings", "Reboot IOP (reset drivers)", "Power off"], labels
+gm = function(main, "static void globalMenu(")
+assert "(r == 3 || r == 4) && !dashConfirmLeave()" in gm
+for n, what in ((0, "DASH_SEC_HOME"), (1, "dashRescanLibrary"), (2, "DASH_SEC_SETTINGS"), (3, "Misc_Reboot_IOP"), (4, "Misc_PS2PowerOff")):
+    body = gm[gm.index(f"case {n}:"):]
+    assert what in body[:body.index("break;")], (n, what)
+assert "case 5:" not in gm and "DASH_SEC_FILES" not in gm
+
 code = r'''
 #include <assert.h>
 #include <stdio.h>

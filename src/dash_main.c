@@ -725,7 +725,6 @@ void dashDashboardMenu(void)
 	DashMenuItem items[] = {
 	    {DI_HOME, "Home", NULL, 0},
 	    {DI_REFRESH, "Refresh application library", NULL, 0},
-	    {DI_FOLDER, "File Browser", NULL, 0},
 	    {DI_SETTINGS, "Settings", NULL, 0},
 	    {DI_REFRESH, "Reboot IOP (reset drivers)", NULL, 0},
 	    {DI_POWER, "Power off", NULL, 0}};
@@ -754,7 +753,7 @@ static void globalMenu(void)
 
 	/* Switching tabs handles any unsaved Settings confirmation inside
 	 * dashSwitchSection(). System actions require their own leave guard. */
-	if ((r == 4 || r == 5) && !dashConfirmLeave())
+	if ((r == 3 || r == 4) && !dashConfirmLeave())
 		return;
 	switch (r) {
 		case 0:
@@ -764,16 +763,13 @@ static void globalMenu(void)
 			dashRescanLibrary(1);
 			break;
 		case 2:
-			dashSwitchSection(DASH_SEC_FILES);
-			break;
-		case 3:
 			dashSwitchSection(DASH_SEC_SETTINGS);
 			break;
-		case 4:
+		case 3:
 			if (dashModalConfirm(localizeDashboardText("Reboot IOP"), "All loaded device drivers will be restarted. Devices will be detected again when used.", "Reboot", 0))
 				dashRunMisc(setting->Misc_Reboot_IOP);
 			break;
-		case 5:
+		case 4:
 			if (dashModalConfirm(localizeDashboardText("Power off"), "Turn off the PlayStation 2 now?", localizeDashboardText("Power off"), 1))
 				dashRunMisc(setting->Misc_PS2PowerOff);
 			break;
