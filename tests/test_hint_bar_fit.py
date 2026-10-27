@@ -55,6 +55,7 @@ int main(void) {
     assert(fit[0].sc == DASH_FS_SMALL);   /* ...at full size: nothing shrinks needlessly */
     assert(run(1.12f, 5) == 0);    /* wider font: tighter gaps fit it */
     assert(run(1.2f, 5) == 0);
+    assert(fit[0].sc == DASH_FS_SMALL);   /* gaps tighten first: the type must not shrink yet */
     assert(run(1.0f, 3) == 0);
     assert(run(1.5f, 5) == 0);     /* gaps alone are not enough: the type shrinks instead of getting dots */
     assert(fit[0].sc < DASH_FS_SMALL && fit[0].sc >= DASH_FS_SMALL * 0.62f - 0.001f);
