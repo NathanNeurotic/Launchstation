@@ -115,6 +115,19 @@ static DashApp *selApp(void)
 //--------------------------------------------------------------
 // Per-application options (shared with HOME)
 //--------------------------------------------------------------
+/* DASH_APP_HAS_META is also set by an OPL title.cfg alone, so it cannot say
+ * whether the <ELFNAME>.cfg that Edit metadata targets actually exists. */
+static int sidecarExists(const char *path)
+{
+	int len;
+	char *text = dashLoadTextFile(path, 16 * 1024, &len);
+
+	if (text == NULL)
+		return 0;
+	free(text);
+	return 1;
+}
+
 static void showDetails(DashApp *a)
 {
 	char body[640], dev[48], meta[MAX_PATH];
@@ -131,7 +144,7 @@ static void showDetails(DashApp *a)
 	len += snprintf(body + len, sizeof(body) - len, "Artwork: %s\n",
 	                a->art_state == DASH_ART_FOUND ? a->art : (a->art_state == DASH_ART_NONE ? "none (generated tile)" : "not checked yet"));
 	dashLibMetadataPath(a, meta, sizeof(meta));
-	snprintf(body + len, sizeof(body) - len, "Metadata: %s%s", (a->flags & DASH_APP_HAS_META) ? "" : "none - create ", meta);
+	snprintf(body + len, sizeof(body) - len, "Metadata: %s%s", sidecarExists(meta) ? "" : "none - create ", meta);
 	dashModalMessage(DI_INFO, a->title, body, a->desc[0] ? a->desc : NULL);
 }
 
@@ -154,8 +167,9 @@ static void editMetadata(DashApp *a)
 
 	if (dashLibMetadataPath(a, meta, sizeof(meta)) < 0)
 		return;
-	if (!(a->flags & DASH_APP_HAS_META)) {
-		/* create a starter sidecar the user can fill in */
+	if (!sidecarExists(meta)) {
+		/* create a starter (also when only an OPL title.cfg describes the app:
+		 * the sidecar overrides it, and its title line starts from the loaded one) */ sidecar the user can fill in */
 		char text[512];
 		int len = snprintf(text, sizeof(text),
 		                   "# Launchstation dashboard metadata for %s\r\n"
