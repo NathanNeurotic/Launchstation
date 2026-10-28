@@ -78,7 +78,8 @@ reset_dest() { # never delete something that is not an SDK install
 }
 
 fetch() { # url file
-    curl -sSfL --retry 6 --retry-delay 5 --retry-all-errors --connect-timeout 20 "$1" -o "$2"
+    # --speed-limit: a stalled transfer is aborted (and retried) instead of hanging the job.
+    curl -sSfL --retry 6 --retry-delay 5 --retry-all-errors --connect-timeout 20 --speed-limit 1024 --speed-time 60 "$1" -o "$2"
 }
 
 sha256() { sha256sum "$1" | cut -d' ' -f1; }
@@ -117,7 +118,8 @@ from_mirror() {
 
 update_component() { # name version, with retries: the official host has multi-minute outages
     for wait in 20 60 0; do
-        "$DEST/ps2build" update "$1" --version "$2" && return 0
+        # ps2build has no download timeout of its own; a stalled transfer would hang the job.
+        timeout "${PS2BUILD_SDK_UPDATE_TIMEOUT:-1200}" "$DEST/ps2build" update "$1" --version "$2" && return 0
         [ "$wait" = 0 ] && break
         log "update $1 $2 failed; retrying in $wait s"
         sleep "$wait"
