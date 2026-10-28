@@ -963,9 +963,10 @@ int dashModalChoice(const char *title, const char *const *options, int n, int cu
 }
 
 static int modalButtons(const char *title, const char *body, const char *detail, int icon, DashColor icon_col,
-                        const char *ok_label, const char *cancel_label, int default_sel)
+                        const char *ok_label, const char *cancel_label, int default_sel, u64 deadline)
 {
 	int sel = default_sel;
+	char countdown[64];
 	float open = 0.0f, sel_anim = (float)default_sel, title_age = 0.0f;
 	float w = 440.0f, h;
 	float x = (DASH_VW - w) * 0.5f, y;
@@ -988,7 +989,14 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 	dashInputFlush();
 
 	while (1) {
+		if (deadline) {
+			u64 now = Timer();
+			if (now >= deadline) { dashInputFlush(); return 0; }
+			snprintf(countdown, sizeof(countdown), "Reverting in %u seconds", (unsigned)((deadline - now + 999) / 1000));
+			detail = countdown;
+		}
 		dashInputPoll(&in);
+		if (deadline && Timer() >= deadline) { dashInputFlush(); return 0; }
 		if (dashDashboardPending())
 			return 0;
 		if (cancel_label != NULL && (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
@@ -1073,13 +1081,21 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger)
 {
 	return modalButtons(title, body, NULL, danger ? DI_WARNING : DI_INFO,
-	                    danger ? DASH_C_WARM : DASH_C_ACCENT, ok_label ? ok_label : "OK", "Cancel", danger ? 1 : 0);
+	                    danger ? DASH_C_WARM : DASH_C_ACCENT, ok_label ? ok_label : "OK", "Cancel", danger ? 1 : 0, 0);
+}
+
+/* Timed preview from saildot4k/Launchstation; ordinary confirmations retain
+ * their existing default selection and have no deadline. Timer() is in ms. */
+int dashModalKeepVideo(void)
+{
+	return modalButtons("Keep this video mode?", "Confirm only if the picture is visible and stable.",
+	                    "", DI_INFO, DASH_C_ACCENT, "Keep", "Revert", 1, Timer() + 10000);
 }
 
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail)
 {
 	DashColor c = (icon == DI_WARNING) ? DASH_C_WARM : DASH_C_ACCENT;
-	modalButtons(title, body, detail, icon, c, "OK", NULL, 0);
+	modalButtons(title, body, detail, icon, c, "OK", NULL, 0, 0);
 }
 
 //--------------------------------------------------------------

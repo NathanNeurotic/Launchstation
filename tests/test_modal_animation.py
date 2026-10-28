@@ -117,13 +117,16 @@ static int menuTitleGetClockFields(int *y,int *mo,int *d,int *h,int *mi,int *s,i
 code += function(orbs, "static void osdTime(")
 code += r"""
 static int modalButtons(const char *,const char *,const char *,int,DashColor,
-                        const char *,const char *,int);
+                        const char *,const char *,int,u64);
 static void dashInputPoll(DashInput *in) {
     int f=++frames[depth];
     if(nav_scenario==4)dashboard_pending=1;
     now_ms+=step_ms[(f-1)%3];
     in->pressed=f==4?DASH_IN_BACK:0;
-    if(nav_scenario && depth==0) {
+    if(nav_scenario==5)in->pressed=0;
+    if(nav_scenario==6)in->pressed=f==1?DASH_IN_LEFT:f==2?DASH_IN_OK:0;
+    if(nav_scenario==7) {now_ms+=10001;in->pressed=DASH_IN_OK;}
+    if(nav_scenario && nav_scenario<=3 && depth==0) {
         if(f==1)
             in->pressed=nav_scenario==1?DASH_IN_L2:nav_scenario==2?DASH_IN_R2:0;
         else if(f==2)
@@ -131,7 +134,7 @@ static void dashInputPoll(DashInput *in) {
     }
     if(nested && depth==0 && f==2) {
         depth=1;
-        assert(!modalButtons("nested","confirm",NULL,0,(DashColor){0},"OK","Cancel",0));
+        assert(!modalButtons("nested","confirm",NULL,0,(DashColor){0},"OK","Cancel",0,0));
         depth=0;
     }
 }
@@ -214,7 +217,14 @@ int main(void) {
     reset();nav_scenario=4;
     assert(dashModalMenu("interrupted",NULL,items,2,0)==-1 && !renders);
     reset();nav_scenario=4;
-    assert(!modalButtons("interrupted","confirm",NULL,0,(DashColor){0},"OK","Cancel",0) && !renders);
+    assert(!modalButtons("interrupted","confirm",NULL,0,(DashColor){0},"OK","Cancel",0,0) && !renders);
+    reset();nav_scenario=5;
+    assert(!modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",1,now_ms+10000));
+    assert(now_ms>=11000 && now_ms<11100);
+    reset();nav_scenario=6;
+    assert(modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",1,now_ms+10000));
+    reset();nav_scenario=7;
+    assert(!modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",0,now_ms+10000));
     reset(); now_ms+=2000;
     assert(dashVisualUpdate()==0.1f); /* retain the long-stall clamp */
     now_ms=last_frame_ms-1;

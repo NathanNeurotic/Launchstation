@@ -581,3 +581,15 @@ Demand-loaded storage such as the internal APA HDD and iLink/FireWire is
 selectable while its state is `Not checked`. Opening it runs the existing
 lazy loader/probe. Only a device that was explicitly checked and found absent
 is skipped by navigation.
+
+### Video mode confirmation
+
+Changing **Settings > Screen calibration > Video mode** previews the new mode
+and asks **Keep this video mode?**. Select Keep within 10 seconds to accept it.
+Revert is selected initially; Cancel or timeout restores the previous mode and
+screen offsets. Saving Settings is still required to persist an accepted mode.
+
+Sound effects retry only voices 0–22 when their preferred voice is busy; voice
+23 remains reserved for background music. These changes adapt saildot4k's
+Launchstation fixes. Console display resync and audio behavior require hardware
+validation.

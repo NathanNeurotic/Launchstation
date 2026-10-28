@@ -239,7 +239,7 @@ static const SetItem appearance_items[] = {
 };
 
 static const SetItem display_items[] = {
-    {ST_CHOICE, S_TVMODE, "Video mode", "Auto follows the console region. 576p needs PS2 ROM 2.20+ or PSX 1.80J/2.10J; 576i uses PAL."},
+    {ST_CHOICE, S_TVMODE, "Video mode", "Auto follows the console region. 576p needs PS2 ROM 2.20+ or PSX 1.80J/2.10J; 576i uses PAL. Confirm changes within 10 seconds."},
     {ST_NUMBER, S_SCREEN_X, "Screen position X", "Moves the picture left or right to fit your TV (overscan)."},
     {ST_NUMBER, S_SCREEN_Y, "Screen position Y", "Moves the picture up or down to fit your TV."},
     {ST_ACTION, S_SCREEN_RESET, "Reset screen settings", "Video mode Auto and a centred picture."},
@@ -1223,6 +1223,25 @@ static int chooseVideoMode(const char *title, const char *const *names, int n, i
 	return dashModalMenu(title, NULL, choices, i, current);
 }
 
+/* Adapted from saildot4k's timed video preview. Restore offsets as well as
+ * timing because changing the GS mode can normalize screen geometry. */
+static int previewVideoMode(int mode)
+{
+	int old_mode = setting->TV_mode;
+	int old_x = setting->screen_x, old_y = setting->screen_y;
+	if (mode == old_mode) return 0;
+	setting->TV_mode = mode;
+	updateScreenMode();
+	if (dashGfxCheckScreenChange()) dashArtInvalidateVram();
+	if (dashModalKeepVideo()) return 1;
+	setting->TV_mode = old_mode;
+	setting->screen_x = old_x;
+	setting->screen_y = old_y;
+	updateScreenMode();
+	if (dashGfxCheckScreenChange()) dashArtInvalidateVram();
+	return 0;
+}
+
 static void setChoice(int id, int v)
 {
 	int dash_changed = 1;
@@ -1233,8 +1252,7 @@ static void setChoice(int id, int v)
 		case S_TVMODE:
 			if (v < TV_mode_AUTO || v >= TV_mode_COUNT || (v == TV_mode_576P && !is576pSupported()))
 				return;
-			setting->TV_mode = v;
-			updateScreenMode();
+			if (!previewVideoMode(v)) return;
 			classic_dirty = 1, dash_changed = 0;
 			break;
 		case S_EFFECTS:
