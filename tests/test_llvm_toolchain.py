@@ -51,7 +51,10 @@ assert "PS2_DISABLE_AUTOSTART_PTHREAD();" in loader
 assert "int pthread_setcancelstate(int state, int *oldstate)" in loader
 
 # CI: LLVM present, deps built before the ELF, Clang-only objects verified.
-assert "ps2build update llvm-toolchain" in workflow
+# The pinned installer brings llvm-toolchain in with --llvm; the verify step checks it landed.
+assert "scripts/ps2build_sdk.sh --llvm" in workflow
+assert "mips64r5900el-ps2-elf-clang.cfg" in workflow
+assert "PS2BUILD_LLVM_TOOLCHAIN=" in (root / ".github/ps2build-sdk.env").read_text()
 assert "Provide audsrv if absent" not in workflow
 assert (workflow.index("scripts/build_cloud_tls.sh") < workflow.index("scripts/build_jpeg.sh")
         < workflow.index("ps2build build\n"))
