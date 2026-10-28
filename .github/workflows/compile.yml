@@ -182,8 +182,9 @@ jobs:
           test -f build/docs-site/index.html
           test -f build/docs-site/data/search-index.json
 
-      # The pinned SDK (.github/ps2build-sdk.env): a cache restore, else the checksummed
-      # NathanNeurotic/ps2build-mirror release, else git.techwritescode.dev pinned per component. That
+      # The pinned SDK (.github/ps2build-sdk.env): a cache restore, else git.techwritescode.dev
+      # pinned per component, else (only when that host fails) the checksummed
+      # NathanNeurotic/ps2build-mirror release. That
       # host has multi-minute HTTP 521 outages and resets connections (run 1112), and an unpinned update
       # would install whatever is newest; the pin keeps every build on the same SDK.
       - name: Restore the pinned ps2build SDK
