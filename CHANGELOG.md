@@ -4,6 +4,7 @@ The `## Rolling` section below is the maintained summary shown on the GitHub [`l
 
 ## Rolling
 
+- **MMCE driver:** a file or folder close that timed out or got a bad reply no longer keeps its handle slot, so repeated failures can no longer use up all 16 slots and make every MMCE open fail until reboot. Opening a file or folder the card reports as missing now returns "not found" (`-ENOENT`) instead of a generic error. Ported from RiptOPL's mmceman; pending hardware validation.
 - **Build system:** the legacy Makefile build, the prebuilt SDK-duplicate IOP modules and the legacy libcdvd were removed; PS2BUILD (`ps2.yaml`) is the only build path.
 - **Release downloads:** the `latest` release now also offers the packed ELFs on their own: `LAUNCHSTATION.ELF`, `LAUNCHSTATION-DS.ELF`, and `BOOT.ELF` / `BOOT2.ELF` (identical copies of the standard ELF). Publishing also refreshes the release page date.
 - **Footer hints (#221):** hint labels are now always drawn whole, never cut to "Op...", "Sele..." or "...". The bar spreads its gaps dynamically (24 px down to 10 px), then shrinks the label type if it is still too wide; it no longer goes through the ellipsizing text-fit step, so a measuring/fitting mismatch cannot clip a label. The SELECT **Launch keys** panel is wider as well.
