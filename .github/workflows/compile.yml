@@ -200,7 +200,21 @@ jobs:
             https://git.techwritescode.dev/ps2/install/raw/branch/master/install.sh \
             -o "$installer"
 
-          sh "$installer"
+          # The installer downloads ps2build itself, without retries; a reset
+          # connection there (curl exit 56) failed run 1112. Retry the whole
+          # install from a clean directory a few times before giving up.
+          for attempt in 1 2 3; do
+            if sh "$installer"; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "ps2build install failed 3 times" >&2
+              exit 1
+            fi
+            echo "ps2build install attempt $attempt failed; retrying in 20 s" >&2
+            rm -rf "$HOME/.local/share/ps2build"
+            sleep 20
+          done
           # The installer places the ps2build executable directly in this
           # directory and adds this directory (not a bin/ subdirectory) to PATH.
           echo "$HOME/.local/share/ps2build" >> "$GITHUB_PATH"
