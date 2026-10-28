@@ -341,6 +341,7 @@ targets:
       - src/psu_functions.c
       - src/mc_card_export.c
       - src/mc_card_view.c
+      - src/mc_sha256.c
       - src/mmce_backup.c
       - src/mmce_igr.c
       - src/hdd.c

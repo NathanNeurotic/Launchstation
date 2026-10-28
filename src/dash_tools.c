@@ -610,7 +610,8 @@ static int chooseMmceBackupRoot(char *out, size_t out_size, int change)
 
 void dashToolsSyncAllMmceCards(void)
 {
-	MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format};
+	/* Explicit backup: full compare (verify = 1); IGR uses the fingerprint. */
+	MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format, 1};
 	MmceBackupStats total, one;
 	char root[MAX_PATH], summary[384];
 	int unit, any_unit = 0;

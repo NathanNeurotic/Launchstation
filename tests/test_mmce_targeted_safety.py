@@ -20,6 +20,7 @@ def extract(signature):
 
 
 retention = extract("static int prune_history(")
+sidecar = extract("static int sidecar_path(")
 unique = extract("static int unique_history_path(")
 targeted = extract("int mmceBackupCardPath(")
 backup = extract("static int backup_one(")
@@ -34,7 +35,8 @@ assert "mcCardValidateNoEcc(source)" in targeted
 assert "history_name_match(protect_history + dir_len + 1, options->format)" in targeted
 assert "strchr(protect_history + dir_len + 1, '/') != NULL" in targeted
 assert "wleExists(protect_history)" in targeted
-assert "backup_one(source, relative, history_root, options" in targeted
+assert "backup_one(source, relative, history_root, &exact" in targeted
+assert "exact.verify = 1;" in targeted, "a pre-restore copy must never be skipped by fingerprint"
 assert "fileXioRename" not in targeted
 assert "genRemove" not in targeted
 assert '"%s.PART"' in unique, "must preserve interrupted backup files"
@@ -47,7 +49,7 @@ c = r'''
 #define MAX_NAME 256
 typedef struct {char name[MAX_NAME];} iox_dirent_t;
 static struct {char name[MAX_NAME];int live;} names[8];
-static int count, index_next, removals, fail_remove, occupied_stage;
+static int count, index_next, removals, fail_remove, occupied_stage, fp_removals;
 static void seed(int n) {
     int i;
     count=n;index_next=0;removals=0;fail_remove=0;
@@ -87,6 +89,7 @@ static int genRemove(const char *path) {
     const char *base=strrchr(path,'/');
     base=base?base+1:path;
     if(fail_remove)return -1;
+    if(strstr(base,".mcd.FP")){fp_removals++;return -1;} /* sidecar: may be absent */
     for(i=0;i<count;i++) {
         if(names[i].live && !strcmp(names[i].name,base)) {
             names[i].live=0;removals++;return 0;
@@ -102,7 +105,7 @@ static int wleExists(const char *p) {
     return occupied_stage && strstr(p,"WLE-20261012-001122.mcd.PART") != NULL;
 }
 '''
-c += retention + unique
+c += sidecar + retention + unique
 c += r'''
 int main(void) {
     char name[256],path[1024];
@@ -116,8 +119,10 @@ int main(void) {
     assert(remaining()==2 && removals==0); /* Safety beats keep=1. */
 
     seed(3);
+    fp_removals=0;
     assert(prune_history("mass0:/history",1,0,NULL,"WLE-0003.mcd")==0);
     assert(remaining()==1 && names[2].live && removals==2);
+    assert(fp_removals==2); /* each pruned copy's fingerprint sidecar goes too */
 
     seed(3);
     assert(prune_history("mass0:/history",0,0,NULL,"WLE-0003.mcd")==0);

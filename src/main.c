@@ -160,7 +160,9 @@ static int runWleIgrBackup(int argc, char *argv[])
 		 * valid .mcd under MemoryCards is considered, including named/GameID
 		 * cards that cannot be reconstructed from GET_CARD after IGR. */
 		for (unit = 0; unit < 2; unit++) {
-			MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format};
+			/* verify = 0: cards whose index fingerprint is unchanged are
+			 * skipped without a full read; see mcViewFingerprint. */
+			MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format, 0};
 			memset(&one, 0, sizeof(one));
 			if (mmceBackupAllCards(unit, backup_root, &options, &one, NULL) < 0)
 				continue;

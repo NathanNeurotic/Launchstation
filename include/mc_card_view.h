@@ -67,4 +67,17 @@ int mcViewListSaves(McView *v, McViewSave *out, int max, int *total);
 /* Counts free clusters (1024 bytes each). Free means FAT bit 31 clear. */
 int mcViewFreeClusters(McView *v, uint32_t *free_clusters, uint32_t *total_clusters);
 
+/* Fingerprint of the card's filesystem index: SHA-256 over the superblock and
+ * every directory entry (mode, size, times, first cluster, name), walking every
+ * folder. File contents are not read, so a 16 MiB card costs a few hundred KB
+ * of reads. Two cards with the same fingerprint have the same files with the
+ * same sizes, dates and locations; anything written through mcman changes it.
+ * Not covered: writers that rewrite raw pages without touching the index, and
+ * the contents of B?DATA-SYSTEM (the PS2 rewrites its history file on every game
+ * start; only that the folder exists is hashed). Use a full compare when those
+ * matter. ECC and no-ECC images of the same card give the same fingerprint.
+ * Returns MCV_OK or a negative MCV_ERR_*; on error *out is undefined. */
+#define MCV_FINGERPRINT_SIZE 32
+int mcViewFingerprint(McView *v, uint8_t out[MCV_FINGERPRINT_SIZE]);
+
 #endif

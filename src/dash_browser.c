@@ -1191,7 +1191,9 @@ static void opBackupAllMmceCards(void)
 
 	dashLoadingBegin("Backing up all MMCE cards");
 	{
-		MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format};
+		/* An explicit backup compares every byte (verify = 1), which also
+		 * catches raw-page writes the IGR fingerprint cannot see. */
+		MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format, 1};
 		r = mmceBackupAllCards(unit, folder, &options, &stats, mmceTreeBackupProgress);
 	}
 	dashLoadingEnd();

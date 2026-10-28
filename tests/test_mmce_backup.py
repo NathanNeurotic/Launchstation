@@ -13,9 +13,16 @@ start = src.index("static int backup_one(")
 end = src.index("\nstatic int count_candidates(", start)
 body = src[start:end]
 
+fingerprint = body.index("fingerprint_matches(source, previous_path)")
 compare = body.index("files_equal_serial(source, previous_path)")
 unchanged = body.index("stats->unchanged++")
 copy = body.index("mcCardBackupNoEcc(source, staged, NULL)")
+assert fingerprint < unchanged < compare < copy, "index fingerprint, then full compare, before any write"
+assert "!options->verify" in body[:compare], "verify = 1 must bypass the fingerprint"
+assert "write_sidecar(dest)" in body and body.index("write_sidecar(dest)") > body.index("fileXioRename(staged, dest)"), \
+    "a fingerprint describes only a committed history copy"
+assert "genRemove(fp_path)" in src[src.index("static int prune_history("):], "pruned copies take their sidecar"
+unchanged = body.index("stats->unchanged++", compare)
 publish = body.index("fileXioRename(staged, dest)")
 verified_retention = body.index("prune_history(dir, options->keep, format, protect_name, name)")
 

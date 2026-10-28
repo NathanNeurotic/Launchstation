@@ -12,6 +12,7 @@
 //--------------------------------------------------------------
 #include <string.h>
 #include "mc_card_view.h"
+#include "mc_sha256.h"
 
 #define MCV_CLUSTER 1024u
 #define MCV_PAGE 512u
@@ -24,6 +25,8 @@
 #define MCV_MODE_PS1 0x1000u
 #define MCV_ICON_SYS_MIN 260u
 #define MCV_END 0xFFFFFFFFu
+#define MCV_FP_MAX_DEPTH 8u
+#define MCV_FP_MAX_ENTRIES 65536u
 
 static uint32_t rd16(const uint8_t *p) { return (uint32_t)p[0] | ((uint32_t)p[1] << 8); }
 static uint32_t rd32(const uint8_t *p)
@@ -372,5 +375,119 @@ int mcViewFreeClusters(McView *v, uint32_t *free_clusters, uint32_t *total_clust
 	}
 	*free_clusters = freec;
 	*total_clusters = v->alloc_usable;
+	return MCV_OK;
+}
+
+/* Sequential walk over the first count entries of a directory chain: one
+ * cluster read per two entries, instead of re-walking the chain per entry. */
+typedef int (*McWalkFn)(McView *v, uint32_t index, const uint8_t *raw, void *ctx);
+
+static int walkDir(McView *v, uint32_t first, uint32_t count, McWalkFn fn, void *ctx)
+{
+	uint8_t raw[MCV_CLUSTER];
+	uint32_t idx = first, i;
+	int r;
+
+	if (count > MCV_MAX_SAVE_ENTRIES)
+		return MCV_ERR_CORRUPT;
+	for (i = 0; i < count; i++) {
+		if ((i & 1u) == 0) {
+			if (i > 0) {
+				r = chainNext(v, idx, &idx);
+				if (r != MCV_OK)
+					return r;
+			}
+			if (idx == MCV_END || idx >= v->alloc_usable)
+				return MCV_ERR_CORRUPT;
+			r = readCluster(v, v->alloc_offset + idx, raw);
+			if (r != MCV_OK)
+				return r;
+		}
+		r = fn(v, i, raw + (i & 1u) * MCV_ENT, ctx);
+		if (r != MCV_OK)
+			return r;
+	}
+	return MCV_OK;
+}
+
+typedef struct FpWalk {
+	McSha256 sha;
+	uint32_t depth;
+	uint32_t budget;
+} FpWalk;
+
+/* B?DATA-SYSTEM: the PS2 browser and OPL rewrite its history file when a game
+ * starts, which says nothing about the user's saves. */
+static int isSystemDir(const uint8_t *name)
+{
+	return name[0] == 'B' && name[1] >= 'A' && name[1] <= 'Z' &&
+	       !memcmp(name + 2, "DATA-SYSTEM", 12); /* includes the NUL */
+}
+
+static int fpEntry(McView *v, uint32_t i, const uint8_t *raw, void *ctx)
+{
+	FpWalk *f = (FpWalk *)ctx;
+	uint8_t rec[0x60];
+	uint32_t mode = rd16(raw), length, cluster;
+	int r;
+
+	/* mode, length, times, first cluster, attributes and name */
+	memcpy(rec, raw, sizeof(rec));
+	if (i < 2) {
+		/* "." and "..": times can move with any write below them; the
+		 * entries that changed are hashed themselves. */
+		memset(rec + 0x08, 0, 8);
+		memset(rec + 0x18, 0, 8);
+	} else if (f->depth == 0 && (mode & MCV_MODE_EXISTS) && isSystemDir(raw + 0x40)) {
+		memset(rec + 2, 0, 0x40 - 2); /* only that it exists, and its name */
+		mcSha256Update(&f->sha, rec, sizeof(rec));
+		return MCV_OK;
+	}
+	mcSha256Update(&f->sha, rec, sizeof(rec));
+	if (i < 2 || !(mode & MCV_MODE_EXISTS) || !(mode & MCV_MODE_DIR))
+		return MCV_OK;
+
+	if (raw[0x40] == '.' && (raw[0x41] == 0 || (raw[0x41] == '.' && raw[0x42] == 0)))
+		return MCV_ERR_CORRUPT; /* "." or ".." past slot 1: a looped chain */
+	length = rd32(raw + 4);
+	cluster = rd32(raw + 0x10);
+	if (f->depth + 1u >= MCV_FP_MAX_DEPTH || length > f->budget)
+		return MCV_ERR_CORRUPT;
+	f->budget -= length;
+	mcSha256Update(&f->sha, "{", 1);
+	f->depth++;
+	r = walkDir(v, cluster, length, fpEntry, f);
+	f->depth--;
+	mcSha256Update(&f->sha, "}", 1);
+	return r;
+}
+
+int mcViewFingerprint(McView *v, uint8_t out[MCV_FINGERPRINT_SIZE])
+{
+	uint8_t page[MCV_PAGE];
+	DirEnt root;
+	FpWalk f;
+	int r;
+
+	if (!v || !out)
+		return MCV_ERR_IO;
+	r = readPage(v, 0, page);
+	if (r != MCV_OK)
+		return r;
+	r = dirEntry(v, 0, 0, &root);
+	if (r != MCV_OK)
+		return r;
+	if (root.length > MCV_MAX_SAVE_ENTRIES)
+		return MCV_ERR_CORRUPT;
+
+	memset(&f, 0, sizeof(f));
+	f.budget = MCV_FP_MAX_ENTRIES;
+	mcSha256Init(&f.sha);
+	mcSha256Update(&f.sha, "LSFP1", 5);
+	mcSha256Update(&f.sha, page, 0x154); /* superblock: geometry, FAT list, card type */
+	r = walkDir(v, 0, root.length, fpEntry, &f);
+	if (r != MCV_OK)
+		return r;
+	mcSha256Final(&f.sha, out);
 	return MCV_OK;
 }

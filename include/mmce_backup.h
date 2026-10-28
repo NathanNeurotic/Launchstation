@@ -10,6 +10,11 @@ enum {
 typedef struct {
     int keep;   /* 0 = keep all, otherwise 1..99 */
     int format; /* MMCE_BACKUP_FORMAT_* */
+    /* 0: a card whose filesystem-index fingerprint matches the one stored
+     *    beside its newest history copy (<copy>.FP) is unchanged, without
+     *    reading the whole card. 1: always compare every byte, as before.
+     *    Fingerprints are still written either way. */
+    int verify;
 } MmceBackupOptions;
 
 typedef struct {
