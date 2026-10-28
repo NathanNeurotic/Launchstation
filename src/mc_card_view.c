@@ -380,8 +380,6 @@ int mcViewFreeClusters(McView *v, uint32_t *free_clusters, uint32_t *total_clust
 
 /* Sequential walk over the first count entries of a directory chain: one
  * cluster read per two entries, instead of re-walking the chain per entry. */
-typedef int (*McWalkFn)(McView *v, uint32_t index, const uint8_t *raw, void *ctx);
-
 static int walkDir(McView *v, uint32_t first, uint32_t count, McWalkFn fn, void *ctx)
 {
 	uint8_t raw[MCV_CLUSTER];
@@ -490,4 +488,56 @@ int mcViewFingerprint(McView *v, uint8_t out[MCV_FINGERPRINT_SIZE])
 		return r;
 	mcSha256Final(&f.sha, out);
 	return MCV_OK;
+}
+
+/* Low-level access for mc_card_write.c; see the header. */
+int mcViewReadClusterRel(McView *v, uint32_t rel, uint8_t buf[1024])
+{
+	if (rel >= v->alloc_usable)
+		return MCV_ERR_CORRUPT;
+	return readCluster(v, v->alloc_offset + rel, buf);
+}
+
+int mcViewFatLocate(McView *v, uint32_t idx, uint32_t *fat_abs)
+{
+	uint32_t ind_index = idx / MCV_FAT_PER_CLUSTER;
+	uint32_t dbl = ind_index / MCV_FAT_PER_CLUSTER;
+	uint32_t ifc_cluster;
+	int r;
+
+	if (idx >= v->alloc_usable || dbl >= 32u)
+		return MCV_ERR_CORRUPT;
+	ifc_cluster = v->ifc_list[dbl];
+	if (ifc_cluster == 0 || ifc_cluster >= v->clusters_per_card)
+		return MCV_ERR_CORRUPT;
+	r = loadCluster32(v, ifc_cluster, v->ifc_cache, &v->ifc_cache_cluster);
+	if (r != MCV_OK)
+		return r;
+	*fat_abs = v->ifc_cache[ind_index % MCV_FAT_PER_CLUSTER];
+	if (*fat_abs == 0 || *fat_abs >= v->clusters_per_card || *fat_abs >= v->alloc_offset)
+		return MCV_ERR_CORRUPT; /* FAT clusters live below the data area */
+	return MCV_OK;
+}
+
+int mcViewFatGet(McView *v, uint32_t idx, uint32_t *val)
+{
+	if (idx >= v->alloc_usable)
+		return MCV_ERR_CORRUPT;
+	return fatGet(v, idx, val);
+}
+
+int mcViewReadChain(McView *v, uint32_t first, uint32_t offset, void *dst, uint32_t len)
+{
+	return chainRead(v, first, offset, dst, len);
+}
+
+int mcViewWalkDir(McView *v, uint32_t first, uint32_t count, McWalkFn fn, void *ctx)
+{
+	return walkDir(v, first, count, fn, ctx);
+}
+
+void mcViewDropCaches(McView *v)
+{
+	v->ifc_cache_cluster = MCV_END;
+	v->fat_cache_cluster = MCV_END;
 }

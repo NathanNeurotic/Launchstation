@@ -2,7 +2,8 @@
 //File name:   mc_card_view.h
 //Read-only viewer for PS2 memory card images (.mcd/.bin/.mc2 without
 //ECC, .ps2 with ECC). Pure C over a read callback so it runs on the
-//host in tests. Nothing here ever writes.
+//host in tests. Nothing here ever writes; mc_card_write.c does, through
+//the low-level accessors at the end of this header.
 //
 //Written from Ross Ridge's public format description and the ps2sdk
 //mcman structure definitions; no GPL code was used.
@@ -79,5 +80,16 @@ int mcViewFreeClusters(McView *v, uint32_t *free_clusters, uint32_t *total_clust
  * Returns MCV_OK or a negative MCV_ERR_*; on error *out is undefined. */
 #define MCV_FINGERPRINT_SIZE 32
 int mcViewFingerprint(McView *v, uint8_t out[MCV_FINGERPRINT_SIZE]);
+
+/* Low-level access used by mc_card_write.c. Cluster numbers are relative to
+ * alloc_offset unless named _abs. All are bounded and checked like the rest. */
+typedef int (*McWalkFn)(McView *v, uint32_t index, const uint8_t *raw, void *ctx);
+int mcViewReadClusterRel(McView *v, uint32_t rel, uint8_t buf[1024]);
+int mcViewFatLocate(McView *v, uint32_t idx, uint32_t *fat_abs); /* which FAT cluster holds idx */
+int mcViewFatGet(McView *v, uint32_t idx, uint32_t *val);
+int mcViewReadChain(McView *v, uint32_t first, uint32_t offset, void *dst, uint32_t len);
+/* Calls fn for each of the first count raw 512-byte entries of a directory. */
+int mcViewWalkDir(McView *v, uint32_t first, uint32_t count, McWalkFn fn, void *ctx);
+void mcViewDropCaches(McView *v); /* after the image was written */
 
 #endif
