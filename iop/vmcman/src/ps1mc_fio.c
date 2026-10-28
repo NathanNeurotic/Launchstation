@@ -492,13 +492,16 @@ int mcman_setinfo1(int port, int slot, const char *filename, sceMcTblGetDir *inf
 	ret = 0;
 #ifdef BUILDING_XMCMAN
 	if ((flags & sceMcFileAttrFile) != 0) {
-		r = mcman_getPS1direntry(port, slot, info->EntryName, &fse1, 1);
+		char entry_name[sizeof(info->EntryName) + 1];
+		memcpy(entry_name, info->EntryName, sizeof(info->EntryName));
+		entry_name[sizeof(info->EntryName)] = 0;
+		r = mcman_getPS1direntry(port, slot, entry_name, &fse1, 1);
 		if (r < 0) {
 			if (r != sceMcResNoEntry) {
 				ret = r;
 			}
 			else {
-				if ((!strcmp(".", info->EntryName)) || (!strcmp("..", info->EntryName)) || (info->EntryName[0] == 0))
+				if ((!strcmp(".", entry_name)) || (!strcmp("..", entry_name)) || (entry_name[0] == 0))
 					ret = sceMcResNoEntry;
 			}
 		}

@@ -7,6 +7,7 @@
 #include "main_title.h"
 
 #define IOCTL_RENAME 0xFEEDC0DE
+#define HOST_RENAME_PATH_BYTES 256
 
 #ifdef XFROM
 static const char *getXfromRelativePath(const char *path)
@@ -1839,131 +1840,144 @@ int delete (const char *path, const FILEINFO *file)
 	return ret;
 }
 //--------------------------------------------------------------
+static int filerRenameHost(const char *old_path, const char *new_path, int directory, int case_alias)
+{
+	/* fileXio copies IOCTL_BUF_SIZE bytes on EE; the HOST peer uses 256. */
+	char payload[IOCTL_BUF_SIZE] = {0};
+	const char *relative = strchr(new_path, ':');
+	const char *old_relative = strchr(old_path, ':');
+	int fd, ret, closed;
+
+	if (relative == NULL || old_relative == NULL) return -EINVAL;
+	if (strlen(++relative) >= HOST_RENAME_PATH_BYTES || strlen(old_relative + 1) >= HOST_RENAME_PATH_BYTES)
+		return -ENAMETOOLONG;
+	/* case_alias is allowed only after checking stored directory spellings;
+	 * that caller also verifies the spelling after this native operation. */
+	if (!case_alias && filerPathExistsForConflict(new_path)) return -EEXIST;
+	memcpy(payload, relative, strlen(relative));
+	/* HOST's ioctl applies only to the most recently opened descriptor.
+	 * Finish all conflict probes before opening the source, then issue it
+	 * immediately. Both the EE RPC buffer and peer argument are padded. */
+	fd = directory ? fileXioDopen(old_path) : fileXioOpen(old_path, FIO_O_RDONLY, 0);
+	if (fd < 0) return fd;
+	ret = fileXioIoctl(fd, IOCTL_RENAME, payload);
+	closed = directory ? fileXioDclose(fd) : fileXioClose(fd);
+	if (ret < 0) return ret == -6 ? -EEXIST : ret;
+	if (closed < 0) return closed;
+	if (case_alias) return 0;
+	if (filerPathExistsForConflict(old_path)) return -EIO;
+	ret = filerPathConflictType(new_path);
+	return ret == (directory ? FILER_CONFLICT_DIR : FILER_CONFLICT_FILE) ? 0 : -EIO;
+}
+
+static int filerRenameSiblingOnce(const char *from, const char *to, int directory)
+{
+	return !strncmp(from, "host", 4) ? filerRenameHost(from, to, directory, 0) : genRenameNoReplace(from, to);
+}
+
+enum {
+	FILER_RENAME_OLD = 1,
+	FILER_RENAME_NEW = 2,
+	FILER_RENAME_COLLISION = 4
+};
+
+static int filerRenameCaseState(char *parent, const char *old_name, const char *new_name)
+{
+	iox_dirent_t entry;
+	int fd, ret, closed, state = 0;
+
+	/* Stat cannot distinguish two spellings of the same FAT/HOST entry.
+	 * Read the stored names instead, and finish listing before a HOST ioctl. */
+	fd = genDopen(parent);
+	if (fd < 0) return fd;
+	for (;;) {
+		memset(&entry, 0, sizeof(entry));
+		ret = fileXioDread(fd, &entry);
+		if (ret <= 0) break;
+		if (memchr(entry.name, '\0', sizeof(entry.name)) == NULL) {
+			ret = -EIO;
+			break;
+		}
+		if (!strcmp(entry.name, old_name)) state |= FILER_RENAME_OLD;
+		else if (!strcmp(entry.name, new_name)) state |= FILER_RENAME_NEW;
+		else if (!stricmp(entry.name, old_name)) state |= FILER_RENAME_COLLISION;
+	}
+	closed = genDclose(fd);
+	return ret < 0 ? ret : closed < 0 ? closed : state;
+}
+
+static int filerRenameCaseOnly(const char *from, const char *to, const char *old_name,
+                               const char *new_name, int directory)
+{
+	char parent[MAX_PATH];
+	iox_stat_t target;
+	size_t prefix = strlen(from) - strlen(old_name);
+	int ret, state, host = !strncmp(from, "host", 4);
+
+	/* MC/VMC, PFS (including mounted HDD/DVR partitions) and XFROM compare
+	 * names exactly. Use their normal checked rename without listing or staging. */
+	if (!strncmp(from, "mc", 2) || !strncmp(from, "vmc", 3) || !strncmp(from, "pfs", 3) ||
+	    !strncmp(from, "dvr_pfs", 7) || !strncmp(from, "xfrom", 5))
+		return filerRenameSiblingOnce(from, to, directory);
+	if (host) {
+		/* HOST's case behavior belongs to the PC filesystem/server. */
+		if (!filerPathExistsForConflict(to)) return filerRenameSiblingOnce(from, to, directory);
+	} else {
+		ret = genGetStat(to, &target);
+		if (ret == -ENOENT) return filerRenameSiblingOnce(from, to, directory);
+		if (ret < 0) return ret;
+	}
+	memcpy(parent, from, prefix);
+	parent[prefix] = '\0';
+	state = filerRenameCaseState(parent, old_name, new_name);
+	if (state < 0) return state;
+	if (state & (FILER_RENAME_NEW | FILER_RENAME_COLLISION)) return -EEXIST;
+	if (state != FILER_RENAME_OLD) return -ENOENT;
+	/* The target lookup aliases the one exact source entry. Ask its driver
+	 * once; unsupported case changes are not emulated with temporary names.
+	 * Ordinary no-replace renames retain their strict checks, including copy. */
+	ret = host ? filerRenameHost(from, to, directory, 1) : fileXioRename(from, to);
+	state = filerRenameCaseState(parent, old_name, new_name);
+	if (state == FILER_RENAME_NEW) return ret < 0 ? ret : 0;
+	if (ret < 0) return ret;
+	if (state < 0) return state;
+	return state == FILER_RENAME_OLD ? -EOPNOTSUPP : -EIO;
+}
+
 int Rename(const char *path, const FILEINFO *file, const char *name)
 {
-	char party[MAX_NAME], oldPath[MAX_PATH], newPath[MAX_PATH];
-	int test, ret = 0;
+	char dir[MAX_PATH], old_path[MAX_PATH], new_path[MAX_PATH];
+	const unsigned char *p;
+	int length;
 
-	if (!ensurePathDeviceStackReady(path))
-		return -1;
-
-	if (filerIsExploitProtectedPath(path, file))
-		return -EPERM;
-
-	if (!strncmp(path, "hdd", 3)) {
-		if (getHddParty(path, NULL, party, oldPath) < 0)
-			return -1;
-		sprintf(newPath, "%s%s", oldPath, name);
-		strcat(oldPath, file->name);
-
-		ret = mountParty(party);
-		if (ret < 0)
-			return -1;
-		oldPath[3] = newPath[3] = ret + '0';
-		ret = fileXioRename(oldPath, newPath);
-#ifdef DVRP
-	} else if (!strncmp(path, "dvr_hdd", 7)) {
-		sprintf(party, "dvr_hdd0:%s", &path[10]);
-		*strchr(party, '/') = 0;
-		sprintf(oldPath, "dvr_pfs0:%s", strchr(&path[10], '/') + 1);
-		sprintf(newPath, "%s%s", oldPath, name);
-		strcat(oldPath, file->name);
-
-		ret = mountDVRPParty(party);
-		if (ret < 0)
-			return -1;
-		oldPath[7] = newPath[7] = ret + '0';
-		ret = fileXioRename(oldPath, newPath);
-#endif
-	} else if (!strncmp(path, "mc", 2)) {
-		ensureMemoryCardPortAccessible(path[2] - '0');
-		sprintf(oldPath, "%s%s", path, file->name);
-		sprintf(newPath, "%s%s", path, name);
-		if ((test = fileXioDopen(newPath)) >= 0) {  //Does folder of same name exist ?
-			fileXioDclose(test);
-			ret = -EEXIST;
-		} else if ((test = fileXioOpen(newPath, FIO_O_RDONLY, 0)) >= 0) {  //Does file of same name exist ?
-			fileXioClose(test);
-			ret = -EEXIST;
-		} else {  //No file/folder of the same name exists
-			mcGetInfo(path[2] - '0', 0, &mctype_PSx, NULL, NULL);
-			mcSync(0, NULL, &test);
-			if (mctype_PSx == 2)  //PS2 MC ?
-				snprintf((char *)file->stats.EntryName, 32, "%.31s", name);
-			mcSetFileInfo(path[2] - '0', 0, oldPath + 4, &file->stats, 0x0010);  //Fix file stats
-			mcSync(0, NULL, &test);
-			if (ret == -4)
-				ret = -EEXIST;
-			else {  //PS1 MC !
-				snprintf((char *)file->stats.EntryName, 32, "%.31s", name);
-				mcSetFileInfo(path[2] - '0', 0, oldPath + 4, &file->stats, 0x0010);  //Fix file stats
-				mcSync(0, NULL, &test);
-				if (ret == -4)
-					ret = -EEXIST;
-			}
-		}
-#ifdef XFROM
-	} else if (!strncmp(path, "xfrom", 5)) {
-		sprintf(oldPath, "%s%s", path, file->name);
-		sprintf(newPath, "%s%s", path, name);
-		if ((test = fileXioDopen(newPath)) >= 0) {  //Does folder of same name exist ?
-			fileXioDclose(test);
-			ret = -EEXIST;
-		} else if ((test = fileXioOpen(newPath, FIO_O_RDONLY, 0)) >= 0) {  //Does file of same name exist ?
-			fileXioClose(test);
-			ret = -EEXIST;
-		} else {  //No file/folder of the same name exists
-			xfromGetInfo(0, 0, &mctype_PSx, NULL, NULL);
-			xfromSync(0, NULL, &test);
-			if (mctype_PSx == 2)  //PS2 MC ?
-				snprintf((char *)file->stats.EntryName, 32, "%.31s", name);
-			xfromSetFileInfo(0, 0, getXfromRelativePath(oldPath), &file->stats, 0x0010);  //Fix file stats
-			xfromSync(0, NULL, &ret);
-			if (ret == -4)
-				ret = -EEXIST;
-			else if (mctype_PSx != 2) {  //PS1 MC !
-				snprintf((char *)file->stats.EntryName, 32, "%.31s", name);
-				xfromSetFileInfo(0, 0, getXfromRelativePath(oldPath), &file->stats, 0x0010);  //Fix file stats
-				xfromSync(0, NULL, &ret);
-				if (ret == -4)
-					ret = -EEXIST;
-			}
-		}
-#endif
-#if defined(ETH) || defined(UDPFS)
-	} else if (!strncmp(path, "host", 4) || !strncmp(path, "udpfs", 5)) {
-		snprintf(oldPath, sizeof(oldPath), "%s%s", path, file->name);
-		snprintf(newPath, sizeof(newPath), "%s%s", path, name);
-		if (filerPathExistsForConflict(newPath)) {
-			ret = -EEXIST;
-		} else {
-			makeHostPath(oldPath, oldPath);
-			makeHostPath(newPath, newPath);
-			ret = fileXioRename(oldPath, newPath);
-		}
-#endif
-	} else {  //For all other devices
-		if (isPcCardCfPath(path) && !isPcCardCfOnline())
-			return -ENODEV;
-		sprintf(oldPath, "%s%s", path, file->name);
-		sprintf(newPath, "%s%s", path, name);
-		if (filerPathExistsForConflict(newPath))
-			ret = -EEXIST;
-		else {
-			char normOld[MAX_PATH], normNew[MAX_PATH];
-			snprintf(normOld, sizeof(normOld), "%s", oldPath);
-			snprintf(normNew, sizeof(normNew), "%s", newPath);
-			if (isPcCardCfPath(normOld)) {
-				if (!strncmp(normOld, "cf:", 3))
-					snprintf(normOld, sizeof(normOld), "cf0:%s", oldPath + 3);
-				if (!strncmp(normNew, "cf:", 3))
-					snprintf(normNew, sizeof(normNew), "cf0:%s", newPath + 3);
-			}
-			ret = fileXioRename(normOld, normNew);
-		}
-	}
-
-	return ret;
+	if (path == NULL || file == NULL || name == NULL || !path[0] || !file->name[0] || !name[0])
+		return -EINVAL;
+	if (!genCanRenamePath(path))
+		return !strncmp(path, "cdfs", 4) ? -EROFS : -ENOSYS;
+	if (!strcmp(name, ".") || !strcmp(name, "..") || strpbrk(name, "/\\:") ||
+	    !strcmp(file->name, ".") || !strcmp(file->name, "..") || strpbrk(file->name, "/\\:"))
+		return -EINVAL;
+	for (p = (const unsigned char *)name; *p; p++)
+		if (*p < 0x20 || *p == 0x7f) return -EINVAL;
+	if (strlen(path) >= sizeof(dir) || strlen(name) >= MAX_NAME) return -ENAMETOOLONG;
+	if (filerIsExploitProtectedPath(path, file)) return -EPERM;
+	if (!ensurePathDeviceStackReady(path)) return -ENODEV;
+	/* Resolve aliases and mount logical HDD/DVR partitions once, before
+	 * opening/probing anything. Both names must use the same physical parent. */
+	if (genFixPath(path, dir) < 0) return -ENODEV;
+	length = (int)strlen(dir);
+	if (length == 0) return -EINVAL;
+	if (snprintf(old_path, sizeof(old_path), "%s%s%s", dir,
+	             dir[length - 1] == '/' || dir[length - 1] == ':' ||
+	             (!strncmp(dir, "host", 4) && dir[length - 1] == '\\') ? "" : "/", file->name) >= (int)sizeof(old_path) ||
+	    snprintf(new_path, sizeof(new_path), "%s%s%s", dir,
+	             dir[length - 1] == '/' || dir[length - 1] == ':' ||
+	             (!strncmp(dir, "host", 4) && dir[length - 1] == '\\') ? "" : "/", name) >= (int)sizeof(new_path))
+		return -ENAMETOOLONG;
+	if (!strcmp(old_path, new_path) && !strncmp(old_path, "host", 4)) return 0;
+	if (strcmp(file->name, name) && !stricmp(file->name, name))
+		return filerRenameCaseOnly(old_path, new_path, file->name, name, !!(file->stats.AttrFile & sceMcFileAttrSubdir));
+	return filerRenameSiblingOnce(old_path, new_path, !!(file->stats.AttrFile & sceMcFileAttrSubdir));
 }
 
 //--------------------------------------------------------------
