@@ -6,7 +6,7 @@
 //
 //Every write follows the same steps:
 //  1. refuse an MMCE image the device is serving to the console right now
-//     (fingerprint against mmceN:/__active_card__.mcd; unknown also refuses);
+//     (mmce_card_switch.c: GET_CARD/GET_CHANNEL, then content; unknown refuses);
 //  2. check name and free space with the image opened read-only;
 //  3. make a verified safety copy of the whole image in WLE-Safety/;
 //  4. write through mc_card_write.c (crash-safe order, read-back);
@@ -19,6 +19,7 @@
 #include "mc_card_write.h"
 #include "mc_card_export.h"
 #include "mmce_backup.h"
+#include "mmce_card_switch.h"
 #include "dash_card_tool.h"
 
 #define CT_BLOCK 4096
@@ -177,13 +178,6 @@ static const char *ctError(int r)
 	}
 }
 
-static int ctMmceUnit(const char *path)
-{
-	if (strncmp(path, "mmce", 4) != 0 || path[4] < '0' || path[4] > '1' || path[5] != ':')
-		return -1;
-	return path[4] - '0';
-}
-
 static const char *ctBaseName(const char *path)
 {
 	const char *s = strrchr(path, '/');
@@ -194,33 +188,28 @@ static const char *ctBaseName(const char *path)
 }
 
 /* 1 when path may be written. An MMCE image is refused while the device is
- * serving it, and also when that cannot be confirmed. */
+ * serving it, reports it as selected, or when that cannot be ruled out. */
 static int ctWritable(const char *path)
 {
-	unsigned char mine[32], active[32];
-	char active_path[48];
-	int unit = ctMmceUnit(path);
-
-	if (unit < 0)
-		return 1;
-	if (mmceCardFingerprint(path, mine) < 0) {
-		dashModalMessage(DI_WARNING, "Card not changed", "The card image could not be read.", path);
-		return 0;
+	switch (mmceCardMaybeServed(path)) {
+		case MMCE_SERVED_NO:
+			return 1;
+		case MMCE_SERVED_YES:
+			dashModalMessage(DI_WARNING, "This card is in use",
+			                 "The MMCE device is serving this card to the console right now. Switch to another card first, or copy the save to a different card.",
+			                 path);
+			return 0;
+		case MMCE_SERVED_SELECTED:
+			dashModalMessage(DI_WARNING, "This card is in use",
+			                 "The MMCE device reports this card as the selected one. Switch to another card first, or copy the save to a different card.",
+			                 path);
+			return 0;
+		default:
+			dashModalMessage(DI_WARNING, "Card not changed",
+			                 "Launchstation could not read this card or the card the MMCE device is serving, so it cannot rule out that they are the same.",
+			                 path);
+			return 0;
 	}
-	snprintf(active_path, sizeof(active_path), "mmce%d:/__active_card__.mcd", unit);
-	if (mmceCardFingerprint(active_path, active) < 0) {
-		dashModalMessage(DI_WARNING, "Card not changed",
-		                 "Launchstation could not read the card the MMCE device is serving, so it cannot rule out that this is the same card.",
-		                 path);
-		return 0;
-	}
-	if (!memcmp(mine, active, sizeof(mine))) {
-		dashModalMessage(DI_WARNING, "This card is in use",
-		                 "The MMCE device is serving this card to the console right now. Switch to another card first, or copy the save to a different card.",
-		                 path);
-		return 0;
-	}
-	return 1;
 }
 
 static void ctSafetyProgress(int phase, u64 done, u64 total)
@@ -231,7 +220,7 @@ static void ctSafetyProgress(int phase, u64 done, u64 total)
 
 static int ctSafetyFolder(const char *image, char *out, int size)
 {
-	int unit = ctMmceUnit(image), len;
+	int unit = mmceCardUnit(image), len;
 
 	if (unit >= 0) /* outside MemoryCards/, where the firmware never looks */
 		return snprintf(out, size, "mmce%d:/WLE-Safety/", unit) < size;
@@ -747,4 +736,68 @@ void dashCardTool(const char *image)
 			ctSaveMenu(path, &sv, title, writable);
 		}
 	}
+}
+
+static void ctScanProgress(const char *path, int done)
+{
+	dashLoadingStatus(ctBaseName(path), done, done + 1);
+}
+
+void dashMmceShowActive(int unit)
+{
+	MmceActiveCard a;
+	char body[160];
+	int r;
+
+	dashLoadingBegin("Finding the card in use");
+	r = mmceActiveCard(unit, &a, ctScanProgress);
+	dashLoadingEnd();
+	if (r == MMCE_SWITCH_OK) {
+		if (a.card > 0)
+			snprintf(body, sizeof(body), "The device reports card %d, channel %d. %s", a.card, a.channel,
+			         a.by_number ? "The content matches that image." : "The image below matches by content.");
+		else
+			snprintf(body, sizeof(body), "The image below matches the served card by content.");
+		dashModalMessage(DI_MC, "MMCE card in use", body, a.path);
+	} else if (r == MMCE_SWITCH_DEVICE) {
+		dashModalMessage(DI_WARNING, "MMCE card in use", "The MMCE device did not answer.", NULL);
+	} else {
+		snprintf(body, sizeof(body), "The device reports card %d, channel %d, but %s.", a.card, a.channel,
+		         a.matches > 1 ? "several card images have the same content" :
+		                         "no card image under MemoryCards/PS2 could be matched by content");
+		dashModalMessage(DI_WARNING, "Not confirmed", body, a.matches > 1 ? a.path : NULL);
+	}
+}
+
+void dashMmceSwitch(const char *path)
+{
+	int card, chan, r;
+	char body[192];
+
+	if (!mmceCardParsePath(path, &card, &chan)) {
+		dashModalMessage(DI_WARNING, "Cannot switch to this image",
+		                 "Only numbered cards (MemoryCards/PS2/CardN/CardN-C.mcd) can be selected from here.", path);
+		return;
+	}
+	if (mmceCardMaybeServed(path) == MMCE_SERVED_YES) {
+		dashToast(DASH_TOAST_INFO, "This card is already in use");
+		return;
+	}
+	snprintf(body, sizeof(body),
+	         "The console's memory card in MMCE slot %d becomes card %d, channel %d. Games and Launchstation will see that card from now on.",
+	         mmceCardUnit(path) + 1, card, chan);
+	if (!dashModalConfirm("Switch MMCE card?", body, "Switch", 0))
+		return;
+	dashLoadingBegin("Switching card");
+	r = mmceSwitchToCard(path);
+	dashLoadingEnd();
+	if (r == MMCE_SWITCH_OK)
+		dashToast(DASH_TOAST_OK, "Card switched and confirmed");
+	else
+		dashModalMessage(DI_WARNING, "Switch not confirmed",
+		                 r == MMCE_SWITCH_BUSY ? "The device stayed busy for 15 seconds." :
+		                 r == MMCE_SWITCH_DEVICE ? "The MMCE device did not answer." :
+		                 r == MMCE_SWITCH_NOT_CARD ? "This image is not a readable PS2 memory card." :
+		                                             "Afterwards the device did not report this card, or the card it serves has different content. Check the device's screen.",
+		                 path);
 }

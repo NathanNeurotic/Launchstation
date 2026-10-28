@@ -17,8 +17,11 @@
 #include "mc_card_view.h"
 #include "mmce_backup.h"
 #include "dash_card_tool.h"
+#include "mmce_card_switch.h"
 
 static const char *root, *active;
+/* the simulated device: what it serves, what it reports, how long it is busy */
+static int dev_card = -1, dev_chan = -1, rep_card = -1, rep_chan = -1, busy, stale, devctls;
 static char **queue;
 static int nqueue, qpos, open_files, max_open, writes, fail_write_at = -1;
 int fileMode = 0777;
@@ -28,7 +31,11 @@ static void map(const char *path, char *out)
 	const char *colon = strchr(path, ':');
 
 	if (!strcmp(path, "mmce0:/__active_card__.mcd")) {
-		snprintf(out, MAX_PATH, "%s", active);
+		if (!strcmp(active, "auto"))
+			snprintf(out, MAX_PATH, "%s/mmce0/MemoryCards/PS2/Card%d/Card%d-%d.mcd", root, dev_card, dev_card,
+			         dev_chan);
+		else
+			snprintf(out, MAX_PATH, "%s", active);
 		return;
 	}
 	if (colon == NULL) {
@@ -92,10 +99,12 @@ int genDclose(int fd)
 int fileXioDread(int fd, iox_dirent_t *ent)
 {
 	struct dirent *d = readdir(dirs[fd]);
+	struct stat st;
 
 	if (!d)
 		return 0;
 	snprintf(ent->name, sizeof(ent->name), "%s", d->d_name);
+	ent->stat.mode = fstatat(dirfd(dirs[fd]), d->d_name, &st, 0) == 0 && S_ISDIR(st.st_mode) ? 0x1000 : 0x2000;
 	return 1;
 }
 int genMkdir(const char *path, int mode)
@@ -150,6 +159,54 @@ static const char *next(char kind)
 		abort();
 	}
 	return NULL;
+}
+
+int fileXioDevctl(const char *name, int cmd, void *arg, unsigned int arglen, void *buf, unsigned int buflen)
+{
+	u32 a = arg ? *(u32 *)arg : 0;
+
+	(void)buf;
+	(void)buflen;
+	if (strcmp(name, "mmce0:") || (arg && arglen != 4) || open_files) {
+		fprintf(stderr, "bad devctl %s len %u open %d\n", name, arglen, open_files);
+		abort();
+	}
+	devctls++;
+	if (dev_card < 0)
+		return -1;
+	switch (cmd) {
+		case 2:
+			if (busy > 0) {
+				busy--;
+				return 1;
+			}
+			return 0;
+		case 3:
+			return rep_card;
+		case 5:
+			return rep_chan;
+		case 4:
+			printf("SET_CARD|%08x\n", a);
+			dev_card = (int)(a & 0xFFFF);
+			dev_chan = 1;
+			if (!stale)
+				rep_card = dev_card, rep_chan = dev_chan;
+			if (getenv("SWITCH_BUSY"))
+				busy = atoi(getenv("SWITCH_BUSY"));
+			return 0;
+		case 6:
+			printf("SET_CHANNEL|%08x\n", a);
+			dev_chan = (int)(a & 0xFFFF);
+			if (!stale)
+				rep_chan = dev_chan;
+			return 0;
+	}
+	return -1;
+}
+int DelayThread(int usec)
+{
+	(void)usec;
+	return 0;
 }
 
 void dashToast(int kind, const char *msg) { printf("TOAST|%d|%s\n", kind, msg); }
@@ -261,9 +318,27 @@ int main(int argc, char **argv)
 	active = argv[2];
 	if (getenv("FAIL_WRITE_AT"))
 		fail_write_at = atoi(getenv("FAIL_WRITE_AT"));
+	if (getenv("CARD")) {
+		dev_card = rep_card = atoi(getenv("CARD"));
+		dev_chan = rep_chan = getenv("CHANNEL") ? atoi(getenv("CHANNEL")) : 1;
+	}
+	if (getenv("REPORT_CARD"))
+		rep_card = atoi(getenv("REPORT_CARD"));
+	stale = getenv("STALE") != NULL;
+	busy = getenv("BUSY") ? atoi(getenv("BUSY")) : 0;
 	queue = argv + 4;
 	nqueue = argc - 4;
-	dashCardTool(argv[3]);
+	if (!strncmp(argv[3], "switch:", 7)) {
+		printf("SWITCH|%d\n", mmceSwitchToCard(argv[3] + 7));
+	} else if (!strcmp(argv[3], "active")) {
+		MmceActiveCard a;
+		int r = mmceActiveCard(0, &a, NULL);
+		printf("ACTIVE|%d|%d|%d|%d|%d|%s\n", r, a.card, a.channel, a.matches, a.by_number, a.path);
+	} else if (!strncmp(argv[3], "served:", 7)) {
+		printf("SERVED|%d\n", mmceCardMaybeServed(argv[3] + 7));
+	} else {
+		dashCardTool(argv[3]);
+	}
 	if (qpos != nqueue) {
 		fprintf(stderr, "script not used up at %s\n", queue[qpos]);
 		return 4;

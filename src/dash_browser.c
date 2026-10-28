@@ -21,6 +21,7 @@
 #include "mc_card_export.h"
 #include "mmce_backup.h"
 #include "dash_card_tool.h"
+#include "mmce_card_switch.h"
 #include "main_title.h"
 #include "gui_sort.h"
 #include "init.h"
@@ -2299,7 +2300,7 @@ static void actionsMenu(void)
 	int in_folder = fb.dir[0] && !isMisc(fb.dir);
 	int is_elf = 0, has_target = (fb.nmarked > 0 || f != NULL);
 	DashMenuItem items[44];
-	int ids[44], n = 0, r;
+	int ids[44], n = 0, r, sw_card, sw_chan;
 	char marked[24], sort_detail[48];
 	enum {
 		F_OPEN,
@@ -2323,6 +2324,8 @@ static void actionsMenu(void)
 		F_BACKUP_ACTIVE_MMCE,
 		F_EXPORT_ACTIVE_MMCE_PS2,
 		F_CARD_CONTENTS,
+		F_MMCE_ACTIVE,
+		F_MMCE_SWITCH,
 		F_BACKUP_MCD,
 		F_EXPORT_PS2,
 		F_IMPORT_MCD,
@@ -2405,6 +2408,10 @@ static void actionsMenu(void)
 			    genCmpFileExt(f->name, "MCD"))
 				ADD(DI_MC, "Back up selected MMCE card to history...",
 				    "verified individual snapshot; never writes to card", 0, F_BACKUP_SELECTED_MMCE);
+			ADD(DI_MC, "Which MMCE card is in use?", "checked by content, not only by number", 0, F_MMCE_ACTIVE);
+			if (f != NULL && !isDir(f) && !fb.nmarked && genCmpFileExt(f->name, "MCD") &&
+			    fullPath(f, path, sizeof(path)) && mmceCardParsePath(path, &sw_card, &sw_chan))
+				ADD(DI_MC, "Make this the active MMCE card...", "switch and confirm by content", 0, F_MMCE_SWITCH);
 			ADD(DI_MC, "Back up all MMCE cards...", "normal, named, GameID and BootCard images", 0, F_BACKUP_ALL_MMCE);
 			ADD(DI_MC, "Back up active MMCE card...", "reads the exact firmware-selected backing image", 0, F_BACKUP_ACTIVE_MMCE);
 			ADD(DI_MC, "Export active MMCE card as PCSX2 .ps2...", "adds ECC/spare bytes and verifies", 0, F_EXPORT_ACTIVE_MMCE_PS2);
@@ -2517,6 +2524,14 @@ static void actionsMenu(void)
 				dashCardTool(path);
 				refresh();
 			}
+			break;
+		case F_MMCE_ACTIVE:
+			if (prepareOp())
+				dashMmceShowActive(mmceUnitFromPath(fb.dir));
+			break;
+		case F_MMCE_SWITCH:
+			if (fullPath(f, path, sizeof(path)) && prepareOp())
+				dashMmceSwitch(path);
 			break;
 		case F_BACKUP_MCD:
 			opBackupCard();

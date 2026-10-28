@@ -22,6 +22,7 @@ assert "python3 tests/test_dash_card_tool.py" in workflow
 browser = (root / "src/dash_browser.c").read_text(encoding="utf-8")
 assert '"Card contents..."' in browser and "dashCardTool(path)" in browser
 assert "src/dash_card_tool.c" in (root / "ps2.yaml").read_text(encoding="utf-8")
+assert "src/mmce_card_switch.c" in (root / "ps2.yaml").read_text(encoding="utf-8")
 
 tmp = Path(tempfile.mkdtemp(prefix="card-tool-"))
 tool, lister = tmp / "tool", tmp / "list"
@@ -29,6 +30,7 @@ flags = ["gcc", "-std=gnu99", "-O1", "-g", "-Wall", "-Wextra", "-Werror", "-fsan
          "-fno-sanitize-recover=all"]
 subprocess.run(flags + [f"-I{root/'tests/card-tool-shim'}", f"-I{root/'include'}",
                         str(root / "tests/dash_card_tool_host.c"), str(root / "src/dash_card_tool.c"),
+                        str(root / "src/mmce_card_switch.c"),
                         str(root / "src/mc_card_write.c"), str(root / "src/mc_card_view.c"),
                         str(root / "src/mc_sha256.c"), "-o", str(tool)], check=True)
 subprocess.run(flags + [f"-I{root/'include'}", str(root / "tests/mc_card_write_host.c"),
@@ -50,7 +52,7 @@ def host(path):
 def run(image, *script, active="mmce0:/MemoryCards/Card9/none.mcd", env=None):
     import os
     e = dict(os.environ, **(env or {}))
-    out = subprocess.run([str(tool), str(dev), str(host(active)), image, *script], capture_output=True, env=e,
+    out = subprocess.run([str(tool), str(dev), "auto" if active == "auto" else str(host(active)), image, *script], capture_output=True, env=e,
                          timeout=120)
     text = out.stdout.decode("latin-1")
     assert out.returncode == 0, (script, out.returncode, text[-1500:], out.stderr.decode("latin-1")[-1500:])
@@ -140,7 +142,7 @@ snap = sha(C1)
 lines = run(A, "m2", "m0", "p" + C1, active=C1)
 assert any("This card is in use" in l for l in kind(lines, "MESSAGE|")) and sha(C1) == snap
 lines = run(A, "m2", "m0", "p" + C1, active="mmce0:/MemoryCards/Card9/missing.mcd")
-assert any("could not read the card the MMCE device is serving" in l for l in kind(lines, "MESSAGE|"))
+assert any("could not read this card or the card the MMCE device is serving" in l for l in kind(lines, "MESSAGE|"))
 assert sha(C1) == snap and not kind(lines, "SAFETY|")
 lines = run(C1, "m0", active=C1)                                # import on the served card
 assert any("This card is in use" in l for l in kind(lines, "MESSAGE|"))
@@ -232,6 +234,72 @@ blank("mass:/out/x.mcd")
 lines = run(P, "m1", "m0", "pmass:/out/x.mcd", "c1")
 assert kind(lines, "TOAST|1|Save copied"), lines
 
+
+# 12. which card is served, and the guarded switch (simulated sd2psx)
+PS2 = "mmce0:/MemoryCards/PS2/"
+cards = {}
+for folder, name, tag in (("Card1", "Card1-1.mcd", 1), ("Card2", "Card2-1.mcd", 2), ("Card2", "Card2-2.mcd", 3),
+                          ("BOOT", "BootCard-1.mcd", 4), ("Card3", "Card3-1.mcd", 5)):
+    (dev / "mmce0/MemoryCards/PS2" / folder).mkdir(parents=True, exist_ok=True)
+    c = fx.Card(8, False)
+    c.add_save(f"TAG{tag}", {"t": bytes([tag]) * 100})
+    path = f"{PS2}{folder}/{name}"
+    put(path, c.finish())
+    cards[tag] = path
+host("mmce0:/MemoryCards/PS2/Card3/notes.txt").write_text("not a card")
+
+
+def dev_run(arg, *script, active="auto", **env):
+    return run(arg, *script, active=active, env={k: str(v) for k, v in env.items()})
+
+
+def served(path, **env):
+    return int(kind(dev_run("served:" + path, **env), "SERVED|")[0].split("|")[1])
+
+
+assert served(cards[1], CARD=1) == 2                               # reported as selected
+assert served(cards[2], CARD=1) == 0                               # confirmed different
+assert served(cards[1], CARD=1, REPORT_CARD=2) == 1                # stale number: content still says yes
+assert served(cards[2], CARD=1, REPORT_CARD=2) == 2                # stale number: refused, to be safe
+assert served(cards[2], active="mmce0:/MemoryCards/PS2/none.mcd", CARD=1) == 3
+assert served("mass:/A.mcd", CARD=1) == 0
+
+
+def active_card(**env):
+    p = kind(dev_run("active", **env), "ACTIVE|")[0].split("|")
+    return int(p[1]), int(p[4]), int(p[5]), p[6]
+
+
+assert active_card(CARD=2, CHANNEL=2) == (0, 1, 1, cards[3])       # by number, one fingerprint
+assert active_card(CARD=2, CHANNEL=2, REPORT_CARD=1) == (0, 1, 0, cards[3])   # stale: found by content
+assert active_card(CARD=0, active=cards[4]) == (0, 1, 0, cards[4])            # BootCard reports 0
+put(cards[5], fx.Card(8, False).finish())
+shutil.copy(host(cards[5]), dev / "mmce0/MemoryCards/PS2/Card3/Card3-2.mcd")
+r, m, _, _ = active_card(CARD=0, active=cards[5])
+assert (r, m) == (-3, 2)                                           # two identical cards: not confirmed
+
+
+def switch(path, **env):
+    lines = dev_run("switch:" + path, **env)
+    return int(kind(lines, "SWITCH|")[0].split("|")[1]), kind(lines, "SET_")
+
+
+assert switch(cards[3], CARD=1) == (0, ["SET_CARD|00000002", "SET_CHANNEL|00000002"])
+assert switch(cards[2], CARD=1) == (0, ["SET_CARD|00000002"])
+assert switch(cards[2], CARD=1, SWITCH_BUSY=40)[0] == -2           # still busy after 15 polls
+assert switch(cards[2], CARD=1, BUSY=40) == (-2, [])               # busy before: nothing sent
+assert switch(cards[2], CARD=1, STALE=1)[0] == -3                  # number never agrees
+assert switch(cards[2], CARD=1, active=cards[1])[0] == -3          # device kept serving Card1
+assert switch(cards[4], CARD=1) == (-4, [])                        # BootCard is not a numbered card
+host(f"{PS2}Card3/Card3-3.mcd").write_bytes(b"x" * 4096)
+assert switch(f"{PS2}Card3/Card3-3.mcd", CARD=1) == (-5, [])
+assert switch("mass:/A.mcd", CARD=1) == (-4, [])
+
+# the card tool refuses the card the device reports as selected
+snap = sha(cards[1])
+lines = dev_run(cards[1], "m1", "m3", CARD=1)
+assert any("reports this card as the selected one" in l for l in kind(lines, "MESSAGE|")) and sha(cards[1]) == snap
+
 print("Card contents tool: listing, copy, move, delete, .psu round trip, safety copies pruned to ten, "
-      "served MMCE card never written, refusals cost no safety copy, write failures reported, "
+      "served MMCE card never written, served-card detection by number and content, guarded switch, refusals cost no safety copy, write failures reported, "
       "one open file at a time: OK")

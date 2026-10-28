@@ -7,6 +7,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <strings.h>
 typedef uint8_t u8;
 typedef uint32_t u32;
 typedef uint64_t u64;
@@ -18,7 +19,9 @@ typedef int64_t s64;
 #define FIO_O_CREAT O_CREAT
 #define FIO_O_TRUNC O_TRUNC
 #define FIO_O_EXCL O_EXCL
-typedef struct { char name[256]; } iox_dirent_t;
+typedef struct { struct { unsigned int mode; } stat; char name[256]; } iox_dirent_t;
+#define FIO_S_ISDIR(m) (((m) & 0x1000) != 0)
+enum { MAX_NAME = 256 };
 enum { DI_WARNING = 1, DI_FILE, DI_CLOSE, DI_MC, DI_PLUS };
 enum { DASH_TOAST_OK = 1, DASH_TOAST_WARN, DASH_TOAST_INFO };
 enum { DASH_PICK_FILE = 0, DASH_PICK_FOLDER, DASH_PICK_LAUNCH };
@@ -32,6 +35,8 @@ int genDopen(char *path);
 int genDclose(int fd);
 int genMkdir(const char *path, int mode);
 int genRemove(char *path);
+int fileXioDevctl(const char *name, int cmd, void *arg, unsigned int arglen, void *buf, unsigned int buflen);
+int DelayThread(int usec);
 int genCmpFileExt(const char *filename, const char *extension);
 int fileXioDread(int fd, iox_dirent_t *ent);
 int wleExists(const char *path);
