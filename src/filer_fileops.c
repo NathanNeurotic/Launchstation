@@ -366,7 +366,7 @@ int genRenameNoReplace(const char *from, const char *to)
 	if (!strcmp(new_leaf, ".") || !strcmp(new_leaf, "..") || strpbrk(new_leaf, "\\:")) return -EINVAL;
 	if (strlen(new_leaf) >= MAX_NAME) return -ENAMETOOLONG;
 	if ((!strncmp(old_path, "mc", 2) || !strncmp(old_path, "vmc", 3) || !strncmp(old_path, "xfrom", 5)) &&
-	    strlen(new_leaf) > sizeof(((sceMcTblGetDir *)0)->EntryName)) return -ENAMETOOLONG;
+	    strlen(new_leaf) >= sizeof(((sceMcTblGetDir *)0)->EntryName)) return -ENAMETOOLONG;
 	ret = genGetStat(old_path, &source);
 	if (ret < 0) return ret;
 	if (!strcmp(old_path, new_path)) return 0;

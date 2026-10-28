@@ -160,7 +160,7 @@ static int fileXioRename(const char *a,const char *b){
  char from[MAX_PATH],to[MAX_PATH];physical(a,from);
  if(!strncmp(a,"vmc",3)){
   if(strchr(b,':')||strchr(b,'/'))return -EINVAL;
-  if(strlen(b)>(card_type==1?20:32))return -ENAMETOOLONG;
+  if(strlen(b)>(card_type==1?20:31))return -ENAMETOOLONG;
   strcpy(to,from);char *leaf=strrchr(to,'/');assert(leaf);snprintf(leaf+1,sizeof(to)-(leaf+1-to),"%s",b);
  }else physical(b,to);
  return mutate(from,to);
@@ -174,7 +174,7 @@ static int mcSync(int mode,void *cmd,int *result){
 static int cardSetInfo(const char *device,const char *from,const sceMcTblGetDir *info,int flags){
  assert(flags==0x10);set_calls++;if(submit_error==2)return -1;
  char old[MAX_PATH],to[MAX_PATH],leaf[33];memcpy(leaf,info->EntryName,32);leaf[32]=0;
- assert(strlen(leaf)<=(card_type==1?20:32));snprintf(old,sizeof(old),"%s/%s",device,from);strcpy(to,old);
+ assert(strlen(leaf)<=(card_type==1?20:31));snprintf(old,sizeof(old),"%s/%s",device,from);strcpy(to,old);
  char *sep=strrchr(to,'/');assert(sep);snprintf(sep+1,sizeof(to)-(sep+1-to),"%s",leaf);
  card_job=1;card_result=completion_error?completion_error:driver_error?-3:0;
  if(!card_result&&!false_success){int ret=mutate(old,to);card_result=ret==-ENOSPC?-3:ret==-EEXIST?-6:ret?-8:0;}
@@ -359,8 +359,8 @@ int main(void){
  }
  /* Native support and rejection at maximum name/path lengths. */
  const struct {const char *path;int length,type,windows,insensitive;} case_limits[]={
-  {"usb0:/",255,2,0,1},{"mc0:/",20,1,0,0},{"mc1:/",32,2,0,0},
-  {"vmc0:/",20,1,0,0},{"vmc1:/",32,2,0,0},{"xfrom0:/",32,2,0,0},
+  {"usb0:/",255,2,0,1},{"mc0:/",20,1,0,0},{"mc1:/",31,2,0,0},
+  {"vmc0:/",20,1,0,0},{"vmc1:/",31,2,0,0},{"xfrom0:/",31,2,0,0},
   {"host:/",255,2,0,1},{"host:/",255,2,1,1},{"host:/NESTED/",248,2,0,1},{"host:/NESTED/",248,2,1,1}
  };
  for(unsigned i=0;i<sizeof(case_limits)/sizeof(case_limits[0]);i++)for(int directory=0;directory<2;directory++)for(int support=0;support<(case_limits[i].insensitive?2:1);support++){
@@ -413,7 +413,7 @@ int main(void){
  /* Card name limits: never shorten the requested name or write FILEINFO. */
  const char *cards[]={"mc0:/","mc1:/","vmc0:/","vmc1:/","xfrom0:/"};
  for(unsigned d=0;d<sizeof(cards)/sizeof(cards[0]);d++)for(int type=1;type<=2;type++){
-  int limit=type==1?20:32;assert(!genFixPath(cards[d],parent));snprintf(old,sizeof(old),"%sOLD.BIN",parent);
+  int limit=type==1?20:31;assert(!genFixPath(cards[d],parent));snprintf(old,sizeof(old),"%sOLD.BIN",parent);
   FILEINFO file={0};strcpy(file.name,"OLD.BIN");FILEINFO unchanged=file;
   for(int length=limit;length<=limit+1;length++){
    reset();card_type=type;char name[34];memset(name,'N',length);name[length]=0;

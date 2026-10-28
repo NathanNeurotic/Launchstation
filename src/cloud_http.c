@@ -325,7 +325,7 @@ static void tls_free(CloudTls *tls)
 
 /* Name the certificate problem instead of a bare mbedTLS code. From
  * saildot4k/Launchstation 1d647f3. */
-static void tls_verify_error(CloudTls *tls, const char *host,
+static void tls_verify_error(CloudTls *tls, const char *host, const char *ca_path,
                              char *error, int error_size, int result)
 {
     uint32_t flags = mbedtls_ssl_get_verify_result(&tls->ssl);
@@ -349,7 +349,10 @@ static void tls_verify_error(CloudTls *tls, const char *host,
     }
     if (flags & MBEDTLS_X509_BADCERT_NOT_TRUSTED) {
         snprintf(error, error_size,
-                 "TLS certificate is not trusted for %.80s; install the current CA bundle beside the ELF", host);
+                 "TLS certificate is not trusted for %.80s; %s", host,
+                 ca_path == NULL || !ca_path[0] ? "update the built-in Google roots or install WLE-CLOUD-CA.PEM" :
+                 strstr(ca_path, "WLE-CLOUD-CA.PEM") ? "update the WLE-CLOUD-CA.PEM override" :
+                 "install the current update CA bundle beside the ELF");
         return;
     }
 #if !defined(MBEDTLS_X509_REMOVE_INFO)
@@ -449,13 +452,13 @@ static const unsigned char personal[] = "wLaunchELF native cloud";
         /* VERIFY_REQUIRED aborts the handshake on a bad certificate. Read
          * its flags here, before freeing the session, as well as on success. */
         if (r == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED)
-            tls_verify_error(tls, host, error, error_size, r);
+            tls_verify_error(tls, host, ca_path, error, error_size, r);
         else
             set_error(error, error_size, "TLS handshake", r);
         goto fail;
     }
     if (mbedtls_ssl_get_verify_result(&tls->ssl) != 0) {
-        tls_verify_error(tls, host, error, error_size, 0);
+        tls_verify_error(tls, host, ca_path, error, error_size, 0);
         goto fail;
     }
     return 0;

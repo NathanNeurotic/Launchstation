@@ -322,8 +322,14 @@ int ps2ipc_recvfrom(int s, void *mem, int len, unsigned int flags,
 		return -1;
 	}
 
-	memcpy((void *)from, (void *)&recv_pkt->sockaddr, sizeof(struct sockaddr));
-	*fromlen = sizeof(struct sockaddr);
+	if (from != NULL) {
+		int copylen = fromlen != NULL ? *fromlen : (int)sizeof(struct sockaddr);
+		if (copylen < 0) copylen = 0;
+		if (copylen > (int)sizeof(struct sockaddr)) copylen = sizeof(struct sockaddr);
+		memcpy(from, &recv_pkt->sockaddr, copylen);
+	}
+	if (fromlen != NULL)
+		*fromlen = sizeof(struct sockaddr);
 
 	result = recv_pkt->ret;
 
@@ -697,6 +703,7 @@ int ps2ipc_setsockopt(int s, int level, int optname, const void *optval, socklen
 	int result;
 
 	if(!_ps2ip.server) return -1;
+	if (optlen > sizeof(pkt->buffer) || (optlen && optval == NULL)) return -1;
 
 	WaitSema(lock_sema);
 

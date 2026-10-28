@@ -94,13 +94,13 @@ int main(void) {
         file.unit = port; mcman_devinfos[port][0].cardform = mounted;
         mcman_devinfos[port][0].cardtype = 2;
         for (int i = 0; i <= 33; i++) {
-            int length = i ? i : 32; /* Reproduce the rejected valid boundary first. */
+            int length = i ? i : 31; /* Reproduce the rejected valid boundary first. */
             char name[34]; memset(name, 'A', length); name[length] = 0;
-            if (length <= 32) strcpy(expected_name, name);
+            if (length <= 31) strcpy(expected_name, name);
             detect_result = set_result = set_calls = detected = 0;
             int result = mc_rename(&file, old, name);
-            assert(result == (length <= 32 ? 0 : -ENAMETOOLONG));
-            assert(set_calls == (length <= 32) && detected == !mounted && !locked);
+            assert(result == (length <= 31 ? 0 : -ENAMETOOLONG));
+            assert(set_calls == (length <= 31) && detected == !mounted && !locked);
         }
         strcpy(expected_name, "BOOT.ELF"); set_result = -3; /* card full */
         assert(mc_rename(&file, old, expected_name) == -ENOSPC && !locked);
@@ -124,7 +124,7 @@ int main(void) {
         strcpy(request.info.EntryName,invalid[i]);assert(validate_ps2(&request.info)==sceMcResNoEntry);
     }
     strcpy(request.info.EntryName,"BOOT.ELF");assert(validate_ps2(&request.info)==0);
-    puts("PASS: VMCMAN sibling renames enforce PS1/PS2 20/32-byte limits, initialize metadata, reject overflow and propagate card errors");
+    puts("PASS: VMCMAN sibling renames enforce PS1/PS2 20/31-byte limits, initialize metadata, reject overflow and propagate card errors");
     puts("PASS: PS1/PS2 metadata receivers bound full-width card names before C-string lookup");
 }
 '''

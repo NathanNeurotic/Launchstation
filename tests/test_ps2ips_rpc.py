@@ -495,6 +495,17 @@ int main(void) {
         check_receive(udp,offset,48,0,-1);
         check_send(udp,offset,48,-1);
     }
+    reset_transfer(0,48);wire_length=wanted=48;
+    assert(ps2ipc_recvfrom(7,expected_target,wanted,0,NULL,NULL)==48);
+    struct sockaddr address;
+    assert(ps2ipc_recvfrom(7,expected_target,wanted,0,&address,NULL)==48);
+    assert(!memcmp(&address,&peer,sizeof(peer)));
+    int capacity=0;
+    assert(ps2ipc_recvfrom(7,expected_target,wanted,0,NULL,&capacity)==48);
+    assert(capacity==sizeof(peer));
+    unsigned char tiny[2]={0xcc,0xa7};capacity=1;
+    assert(ps2ipc_recvfrom(7,expected_target,wanted,0,(struct sockaddr *)tiny,&capacity)==48);
+    assert(tiny[0]==((unsigned char *)&peer)[0] && tiny[1]==0xa7 && capacity==sizeof(peer));
     check_receive_retry(0);
     check_receive_retry(1);
     puts("PASS: real EE/IOP UDP/TCP transfers preserve bytes, metadata capacity, DMA ordering, unaligned buffers and guards across retries/EOF and fresh reads");
@@ -517,3 +528,39 @@ with tempfile.TemporaryDirectory(prefix="ps2ips-transfer-") as folder:
                     "-fno-pie","-no-pie","-DPS2IP_DNS","-I"+str(path),
                     "-I"+str(module),str(path/"transfer.c"),"-o",str(executable)],check=True)
     subprocess.run([str(executable)],check=True,timeout=10)
+
+# Oversized socket options must fail before locking or touching the RPC buffer.
+options = r"""
+#include <assert.h>
+#include <string.h>
+#include <stddef.h>
+typedef unsigned int u32; typedef unsigned int socklen_t;
+typedef int s32;
+#define PS2IPS_ID_SETSOCKOPT 1
+typedef struct {int s,level,optname;u32 optlen;char buffer[128];} setsockopt_pkt;
+static struct {int server;} _ps2ip={1};
+static union {setsockopt_pkt setsockopt_pkt;s32 result;} _rpc_buffer;
+static int lock_sema,locks,rpcs;
+static void WaitSema(int s) {(void)s;locks++;}
+static void SignalSema(int s) {(void)s;locks--;}
+static int sceSifCallRpc(void *c,int cmd,int mode,void *req,int n,void *reply,int nr,void *cb,void *arg) {
+ (void)c;(void)cmd;(void)mode;(void)req;(void)n;(void)nr;(void)cb;(void)arg;
+ assert(locks==1);rpcs++;*(int *)reply=0;return 0;
+}
+"""
+options += function("ps2ipc_setsockopt", client)
+options += r"""
+int main(void) {
+ char value[129];memset(value,7,sizeof(value));
+ assert(ps2ipc_setsockopt(1,2,3,value,129)==-1 && !locks && !rpcs);
+ assert(ps2ipc_setsockopt(1,2,3,NULL,1)==-1 && !locks && !rpcs);
+ assert(!ps2ipc_setsockopt(1,2,3,value,128) && !locks && rpcs==1);
+ return 0;
+}
+"""
+with tempfile.TemporaryDirectory(prefix="ps2ips-options-") as folder:
+    path=Path(folder)
+    (path/"options.c").write_text(options)
+    subprocess.run([compiler,"-std=c11","-Wall","-Wextra","-Werror",str(path/"options.c"),"-o",str(path/"options")],check=True)
+    subprocess.run([str(path/"options")],check=True)
+print("PASS: socket option bounds reject oversize and null data before RPC")
