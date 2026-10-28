@@ -10,6 +10,11 @@ enum {
 typedef struct {
     int keep;   /* 0 = keep all, otherwise 1..99 */
     int format; /* MMCE_BACKUP_FORMAT_* */
+    /* 0: a card whose filesystem-index fingerprint matches the one stored
+     *    beside its newest history copy (<copy>.FP) is unchanged, without
+     *    reading the whole card. 1: always compare every byte, as before.
+     *    Fingerprints are still written either way. */
+    int verify;
 } MmceBackupOptions;
 
 typedef struct {
@@ -43,5 +48,10 @@ int mmceBackupCardPath(int unit, const char *source, const char *dest_root,
  * converts, prunes or removes backup files. */
 int mmceBackupScanCards(int unit, const char *dest_root, const MmceBackupOptions *options,
                         MmceBackupScanStats *stats, MmceBackupProgress progress);
+
+/* Filesystem-index fingerprint (mcViewFingerprint) of one card image, .mcd or
+ * .ps2, read through the one file only. 0 on success, -1 if it cannot be read
+ * or is not a PS2 card. Works on mmceN:/__active_card__.mcd too. */
+int mmceCardFingerprint(const char *path, unsigned char out[32]);
 
 #endif

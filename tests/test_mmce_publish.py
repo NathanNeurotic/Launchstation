@@ -33,11 +33,13 @@ code = r"""
 #define MMCE_BACKUP_FORMAT_PCSX2 1
 #define MC_CARD_EXPORT_OK 0
 
-typedef struct { int keep, format; } MmceBackupOptions;
+typedef struct { int keep, format, verify; } MmceBackupOptions;
 typedef struct { int candidates, backed_up, unchanged, failed; } MmceBackupStats;
 
 static int previous, comparison, export_result, collision, rename_result, prune_result;
 static int copies, renames, cleanups, prunes;
+static int fingerprint, fp_calls, compares, sidecars;
+static char last_sidecar[MAX_PATH];
 static const char *expected_protect;
 static char last_source[MAX_PATH], last_stage[MAX_PATH], last_published[MAX_PATH];
 
@@ -56,7 +58,19 @@ static int join_path(char *out, size_t n, const char *a, const char *b) {
     return snprintf(out,n,"%s/%s",a,b) < (int)n;
 }
 static int files_equal_serial(const char *a, const char *b) {
-    (void)a; (void)b; return comparison;
+    (void)a; (void)b; compares++; return comparison;
+}
+static int fingerprint_matches(const char *source, const char *history, int consume) {
+    (void)source; assert(consume == 1);
+    assert(!strcmp(history,"mass0:/history/card/WLE-old.mcd") ||
+           !strcmp(history,"mass0:/history/card/WLE-old.ps2") || strstr(history,"WLE-old"));
+    fp_calls++; return fingerprint;
+}
+static void write_sidecar(const char *history) {
+    /* only committed history: never a .PART stage */
+    assert(strstr(history,".PART") == NULL);
+    sidecars++;
+    snprintf(last_sidecar,sizeof(last_sidecar),"%s",history);
 }
 static int unique_history_path(const char *dir, int format, char *name,
                                size_t name_size, char *path, size_t path_size) {
@@ -103,6 +117,7 @@ static void reset(void) {
     previous=0; comparison=0; export_result=0; collision=0;
     rename_result=0; prune_result=0;
     copies=renames=cleanups=prunes=0;
+    fingerprint=-1; fp_calls=compares=sidecars=0; last_sidecar[0]=0;
     expected_protect=NULL;
     last_source[0]=last_stage[0]=last_published[0]=0;
 }
@@ -110,7 +125,7 @@ static void reset(void) {
 code += function("static int backup_one(")
 code += r"""
 int main(void) {
-    MmceBackupOptions opts={10,MMCE_BACKUP_FORMAT_MCD};
+    MmceBackupOptions opts={10,MMCE_BACKUP_FORMAT_MCD,0};
     MmceBackupStats stats;
     int result;
 
@@ -165,6 +180,43 @@ int main(void) {
     result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
     assert(result<0 && stats.backed_up==1 && stats.failed==1);
     assert(copies==1 && renames==1 && prunes==1); /* committed snapshot survives */
+
+    /* Index fingerprint (IGR fast path). */
+    opts.format=MMCE_BACKUP_FORMAT_MCD; opts.verify=0;
+    reset(); memset(&stats,0,sizeof(stats)); previous=1; fingerprint=1;
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
+    assert(result==0 && stats.unchanged==1 && fp_calls==1 && !compares && !copies && !renames && !prunes);
+
+    reset(); memset(&stats,0,sizeof(stats)); previous=1; fingerprint=0;
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
+    assert(result==0 && stats.backed_up==1 && !compares && copies==1 && renames==1 && prunes==1);
+    assert(sidecars==1 && !strcmp(last_sidecar,last_published));
+
+    reset(); memset(&stats,0,sizeof(stats)); previous=1; fingerprint=-1; comparison=1;
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
+    assert(result==0 && stats.unchanged==1 && compares==1 && !copies);
+    assert(sidecars==1 && strstr(last_sidecar,"WLE-old.mcd")); /* seeded for next time */
+
+    reset(); memset(&stats,0,sizeof(stats)); previous=1; fingerprint=-1; comparison=-1;
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
+    assert(result<0 && stats.failed==1 && !copies && !prunes && !sidecars);
+
+    /* verify = 1 never trusts the fingerprint. */
+    opts.verify=1;
+    reset(); memset(&stats,0,sizeof(stats)); previous=1; fingerprint=1; comparison=0;
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
+    assert(result==0 && !fp_calls && compares==1 && stats.backed_up==1 && copies==1);
+
+    /* No previous history: nothing to compare against, and no fingerprint read. */
+    opts.verify=0;
+    reset(); memset(&stats,0,sizeof(stats)); previous=0; fingerprint=1;
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
+    assert(result==0 && !fp_calls && stats.backed_up==1 && sidecars==1);
+
+    opts.format=MMCE_BACKUP_FORMAT_PCSX2;
+    reset(); memset(&stats,0,sizeof(stats)); previous=1; fingerprint=1;
+    result=backup_one("source","card.mcd","backup",&opts,NULL,&stats);
+    assert(result==0 && stats.unchanged==1 && !copies);
 
     puts("PASS: atomic MMCE backup publication and pruning fault paths");
     return 0;

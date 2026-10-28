@@ -332,7 +332,10 @@ int mmce_fs_open(iomanX_iop_file_t *file, const char *name, int flags, int mode)
     } else {
         DPRINTF("%s ERROR: Got bad fd: %i\n", __func__, rdbuf[0x1]);
         file->privdata = NULL;
-        return -1;
+        /* 0xff is the card itself saying "no such file": report -ENOENT so
+         * callers can tell absence from a timeout or garbled reply, which
+         * stay -1. Ported from RiptOPL modules/mmce/mmceman. */
+        return rdbuf[0x1] == 0xff ? -ENOENT : -1;
     }
 
     return 0;
@@ -374,22 +377,28 @@ int mmce_fs_close(iomanX_iop_file_t *file)
     res = mmce_sio2_tx_rx_pio(sizeof(wrbuf), sizeof(rdbuf), wrbuf, rdbuf, &timeout_1s);
     mmce_sio2_unlock();
 
+    /* The handle is torn down whatever the card answers, so its slot goes
+     * back to the 16-entry pool on every exit. Before this, a timed-out or
+     * refused close stranded the slot until reboot, and after enough of them
+     * every mmceN: open/dopen failed. Only the slot value is reset; privdata
+     * stays a valid pointer. Ported from RiptOPL modules/mmce/mmceman. */
     if (res == -1) {
         DPRINTF("%s ERROR: P1 - Timedout waiting for /ACK\n", __func__);
+        *(int*)file->privdata = -1;
         return -1;
     }
 
     if (rdbuf[0x1] != MMCE_REPLY_CONST) {
         DPRINTF("%s ERROR: Invalid response from card. Got 0x%x, Expected 0x%x\n", __func__, rdbuf[0x1], MMCE_REPLY_CONST);
+        *(int*)file->privdata = -1;
         return -1;
     }
 
-    if (rdbuf[0x4] == 0x0) {
-        *(int*)file->privdata = -1;
-    } else {
+    if (rdbuf[0x4] != 0x0) {
         res = rdbuf[0x4];
         DPRINTF("%s ERROR: got return value %i\n", __func__, res);
     }
+    *(int*)file->privdata = -1;
 
     return res;
 }
@@ -870,9 +879,10 @@ int mmce_fs_dopen(iomanX_iop_file_t *file, const char *name)
     if (rdbuf[0x1] != 0xff) {
         *(int*)file->privdata = rdbuf[0x1];
     } else {
+        /* The card answered "no such directory": -ENOENT, as in open. */
         DPRINTF("%s ERROR: Got invalid fd: %i\n", __func__, rdbuf[0x1]);
         file->privdata = NULL;
-        return -1;
+        return -ENOENT;
     }
 
     return 0;
@@ -899,18 +909,23 @@ int mmce_fs_dclose(iomanX_iop_file_t *file)
     res = mmce_sio2_tx_rx_pio(0x4, 0x6, wrbuf, rdbuf, &timeout_1s);
     mmce_sio2_unlock();
 
+    /* Release the slot on every exit, as in mmce_fs_close. The pointer is
+     * cleared only on the clean path, as before. */
     if (res == -1) {
         DPRINTF("%s ERROR: P1 - Timedout waiting for /ACK\n", __func__);
+        *(int*)file->privdata = -1;
         return -1;
     }
 
     if (rdbuf[0x1] != MMCE_REPLY_CONST) {
         DPRINTF("%s ERROR: Invalid response from card. Got 0x%x, Expected 0x%x\n", __func__, rdbuf[0x1], MMCE_REPLY_CONST);
+        *(int*)file->privdata = -1;
         return -1;
     }
 
     if (rdbuf[0x4] != 0x0) {
-        DPRINTF("%s ERROR: Card failed to close dir %i, return value %i\n", __func__, (u8)*(int*)file->privdata, rdbuf[0x1]);
+        DPRINTF("%s ERROR: Card failed to close dir %i, return value %i\n", __func__, (u8)*(int*)file->privdata, rdbuf[0x4]);
+        *(int*)file->privdata = -1;
         return -1;
     }
 

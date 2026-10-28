@@ -12,7 +12,7 @@ tmp = Path(tempfile.mkdtemp())
 exe = tmp / "host"
 subprocess.run(["gcc", "-std=c99", "-O1", "-g", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
                 "-fno-sanitize-recover=all", f"-I{root/'include'}", str(root / "tests/mc_card_view_host.c"),
-                str(root / "src/mc_card_view.c"), "-o", str(exe)], check=True)
+                str(root / "src/mc_card_view.c"), str(root / "src/mc_sha256.c"), "-o", str(exe)], check=True)
 
 
 def run(raw, name):
