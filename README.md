@@ -197,6 +197,8 @@ Recovery never overwrites an existing or active MMCE card. From **Settings > Sto
 
 **Cloud recovery:** in Tools > Google Drive backups, linked users can browse uploaded `WLE-MMCE-Backups` history and download an individually selected snapshot that carries its SHA-256 digest to a NEW verified `RECOVER-CLOUD-###.mcd` on USB/HDD. No Drive history is altered and no emulated card is replaced; items without an uploader digest stay view-only.
 
+**Card contents:** **Card contents...** on a `.mcd`, `.ps2`, `.bin`, `.vmc` or `.mc2` image lists its saves and can copy, move, delete, export or import (`.psu`) a single save, or copy the whole card to a new 8-64 MB size. Every write starts with a verified safety copy in `WLE-Safety/` and ends with a read-back, and a card the MMCE adapter is serving is never written. In an `mmceN:` folder, **Which MMCE card is in use?** and **Make this the active MMCE card...** show and change the selected card, confirmed by content. The automatic IGR backup now skips unchanged cards by a fingerprint of the card's directory, with a full compare at least every 8 backups. Host-tested only; not yet tested on a console. Details: [Card contents](https://nathanneurotic.github.io/Launchstation/saves.html#card-contents).
+
 Direct overwrite of an existing MMCE card remains disabled. See [the dashboard recovery notes](docs/dashboard.md#recovering-local-mmce-backup-images), the [MMCE recovery guide](docs/wiki/MMCE-Recovery.md) and the [direct-restore safety protocol](docs/MMCE_RESTORE_PROTOCOL.md).
 
 ## Launching with arguments

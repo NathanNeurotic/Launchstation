@@ -1,5 +1,11 @@
 # SD2Cloud parity plan (issue #108): verified foundations
 
+> **Update 2026-10-28:** [#226](https://github.com/NathanNeurotic/Launchstation/pull/226) (merged) implemented the
+> card image parser and writer, **Card contents...** (list, copy, move, delete, `.psu` in/out, copy to a new size),
+> verified safety copies, the active-card check and guarded card switching (`SET_CARD`/`SET_CHANNEL`), the IGR
+> fingerprint backup and an mmceman handle-leak fix. Host-tested only; **not tested on a console**. The console test
+> matrix is in the PR. The text below is the original plan and is kept as written.
+>
 > **Status as of 2026-10-26: plan, nothing implemented.** Written after a code audit and two research passes.
 > Everything marked *unverified on hardware* has never been run on a console by anyone on this project.
 

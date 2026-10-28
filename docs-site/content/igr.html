@@ -23,7 +23,7 @@
 <h2 id="local">What happens on return</h2>
 <ol>
 <li>OPL exits to the helper; the helper starts Launchstation.</li>
-<li>If <b>Automatic sync</b> is <b>Local backup</b> or <b>Local + Google Drive</b> (default: Local backup), Launchstation starts MMCE and backs up <em>every</em> valid <code>.mcd</code> under both <code>mmce0:/MemoryCards</code> and <code>mmce1:/MemoryCards</code>, not only the active card, because named and GameID cards cannot be reconstructed after the reset. Unchanged cards are skipped; details of verification, retention and layout are on <a href="mmce-backup.html">MMCE Backup History</a>.</li>
+<li>If <b>Automatic sync</b> is <b>Local backup</b> or <b>Local + Google Drive</b> (default: Local backup), Launchstation starts MMCE and backs up <em>every</em> valid <code>.mcd</code> under both <code>mmce0:/MemoryCards</code> and <code>mmce1:/MemoryCards</code>, not only the active card, because named and GameID cards cannot be reconstructed after the reset. Unchanged cards are skipped, judged by a fingerprint of each card&rsquo;s directory instead of a full read, with a full compare at least every 8 backups; details of the fingerprint, verification, retention and layout are on <a href="mmce-backup.html#unchanged">MMCE Backup History</a>.</li>
 <li>Only for <b>Local + Google Drive</b>, new history is then uploaded (copy-only). This needs an already linked Google account, otherwise the Drive step reports an error. Drive is a second phase and never replaces the local copy.</li>
 <li>Launchstation continues to the <b>After IGR, open</b> choice: <b>Launchstation</b> (dashboard, default), the <b>PS2 system menu</b> (OSDSYS), or an <b>Application</b> you select (its device is started first).</li>
 </ol>

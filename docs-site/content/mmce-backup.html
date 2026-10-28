@@ -14,12 +14,15 @@
 
 <h2 id="unchanged">Skip unchanged cards</h2>
 <p>Before adding a history entry Launchstation compares the card with the newest snapshot of the same format. If it is identical, nothing is written and the summary counts it as <em>unchanged</em>. For the native format the comparison happens before any write.</p>
+<p>The automatic backup after IGR and the status scan decide this from a <b>fingerprint</b> instead of reading the whole card: a SHA-256 of the card&rsquo;s superblock and every directory entry (folders, file sizes, dates and locations, a few hundred KB). Each history copy gets a small <code>&lt;copy&gt;.FP</code> file holding it. History without one is compared in full once and then gets one. The contents of <code>B?DATA-SYSTEM</code> are left out, because the PS2 and OPL rewrite its history file when a game starts, which used to make every played card look changed.</p>
+<p>A fingerprint cannot see a save rewritten in place at the same size while the console clock is stuck or reset, because its date does not change. A match is therefore trusted for at most 8 backups in a row; the next one compares every byte and restarts the count. <b>Back up all MMCE cards</b> (Tools and File Browser) and the safety copy taken before a recovery always compare every byte.</p>
 
 <h2 id="verification">Verification matters</h2>
 <p>A copy only counts after it has been read back and matched. Failures are reported per card (<em>failed</em> in the summary) and automatic steps such as the cloud upload do not run for a card that failed.</p>
 
 <h2 id="manual">Manual backups from the File Browser</h2>
 <p>Inside an <code>mmceN:</code> folder the options menu offers <b>Back up all MMCE cards&hellip;</b>, <b>Back up active MMCE card&hellip;</b> (the exact firmware-selected image), <b>Export active MMCE card as PCSX2 .ps2&hellip;</b> and, with a <code>.mcd</code> highlighted, <b>Back up selected MMCE card to history&hellip;</b>. Any <code>.mcd</code> anywhere also offers <b>Back up .mcd&hellip;</b> (verified byte-for-byte copy) and <b>Export as PCSX2 .ps2&hellip;</b>; a <code>.ps2</code> offers <b>Convert to no-ECC .mcd&hellip;</b>. None of them writes to an emulated card.</p>
+<p>The same folder also offers <b>Which MMCE card is in use?</b> and, on a numbered card, <b>Make this the active MMCE card&hellip;</b> (see <a href="mmce.html#active-card">MMCE</a>). To change the saves inside a card image, use <a href="saves.html#card-contents">Card contents</a>; every change there starts with a verified safety copy of the whole card.</p>
 
 <h2 id="sync-all">Sync all cards</h2>
 <p><b>Settings &gt; Storage &amp; devices &gt; MMCE backups &gt; Sync all cards</b> scans both MMCE units, creates history only for changed cards and summarizes new / unchanged / failed. If Google Drive is linked, pending local history is uploaded afterward. The page also shows status rows: cards (<em>Locally backed up</em>, <em>N pending</em>, <em>N scan errors</em>, <em>No cards</em>, <em>MMCE unavailable</em>), the IGR helper (<em>Current</em>, <em>Outdated</em>, <em>Not installed</em>, <em>Partial / mixed</em>) and Google (<em>Linked</em> / <em>Not linked</em>). These are read-only scans.</p>
@@ -49,7 +52,10 @@
 <tr><td>Recover complete local snapshot to new USB/HDD .mcd</td><td>Yes</td><td>Unchanged</td></tr>
 <tr><td>Recover Drive snapshot (stored SHA-256) to new USB/HDD .mcd</td><td>Yes</td><td>Unchanged</td></tr>
 <tr><td>Store a new file in <code>WLE-Recovered</code> / install a new unused CardN</td><td>Yes</td><td>Unchanged; not activated</td></tr>
-<tr><td>Overwrite or activate the current MMCE card directly</td><td>No</td><td>Intentionally disabled</td></tr>
+<tr><td>Copy, move, delete or import saves in a card image (<a href="saves.html#card-contents">Card contents</a>)</td><td>Yes, on cards the adapter is not serving</td><td>Refused on the card in use, and on every card when Launchstation cannot tell which one that is</td></tr>
+<tr><td>Copy a card to a new size</td><td>Yes</td><td>Source only read; the new card is a new file in <code>WLE-Resized</code></td></tr>
+<tr><td>Select a numbered card (<b>Make this the active MMCE card&hellip;</b>)</td><td>Yes, when you choose it</td><td>Changes which card is in use; does not change any card&rsquo;s contents</td></tr>
+<tr><td>Overwrite the current MMCE card directly</td><td>No</td><td>Intentionally disabled</td></tr>
 </tbody></table>
 <p>Remote entries without the expected saved digest can be inspected but not downloaded through the verified workflow. Incomplete <code>.PART</code> files never count as backups. Step-by-step: <a href="wiki.html">wiki index</a> and the <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/docs/wiki/MMCE-Recovery.md">recovery guide</a>.</p>
 

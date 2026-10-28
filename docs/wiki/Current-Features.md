@@ -15,7 +15,7 @@ This guide reflects the code on `master`: the four visible tabs in `src/dash_mai
 
 Default app scanning: `mc:/APPS`, `mc:/BOOT`, `mass:/APPS`, `mass:/BOOT`, each one subfolder deep. Adjust under Settings → Home & applications → Application library → Application folders. Other paths can still be browsed/launched from Files.
 
-The File Browser's **Show** menu has four display modes (file names, names and details, game titles and details, game titles), **Sort by** offers As stored, Name, Game title, Size, Date-Time and Kind with an ascending/descending direction, and *Tuna date lives under **Folder dates** for eligible memory-card folders. Other actions include copy/cut/paste (also with new names), PSU create/extract, VMC mounting, bookmarks (PathPad), Use as launch arguments, and an image viewer for PNG/JPG/JPEG.
+The File Browser's **Show** menu has four display modes (file names, names and details, game titles and details, game titles), **Sort by** offers As stored, Name, Game title, Size, Date-Time and Kind with an ascending/descending direction, and *Tuna date lives under **Folder dates** for eligible memory-card folders. Other actions include copy/cut/paste (also with new names), PSU create/extract, VMC mounting, **Card contents...** for saves inside card images, bookmarks (PathPad), Use as launch arguments, and an image viewer for PNG/JPG/JPEG.
 
 For storage, do not equate `Not checked` with physically absent. Lazy drivers start when selected. Logical USB mount numbers can change. Use Tools → USB unit diagnostics deliberately; a manual fileXio probe can block in an IOP RPC.
 
@@ -36,7 +36,8 @@ These external programs, user BIOS and commercial games are not bundled. See the
 
 ## Backups, cloud and updates
 
-- **MMCE backups:** Settings → Storage & devices → MMCE backups (backup folder, Sync all cards, automatic sync Off/Local/Local+Google, IGR helper, backups per card, `.mcd` or PCSX2 `.ps2`). Recovery always produces a new verified file; see [MMCE recovery](MMCE-Recovery.md).
+- **MMCE backups:** Settings → Storage & devices → MMCE backups (backup folder, Sync all cards, automatic sync Off/Local/Local+Google, IGR helper, backups per card, `.mcd` or PCSX2 `.ps2`). Recovery always produces a new verified file; see [MMCE recovery](MMCE-Recovery.md). The automatic backup after IGR skips unchanged cards by a fingerprint of each card's directory, with a full compare at least every 8 backups.
+- **Card contents:** File Browser → **Card contents...** on a `.mcd`, `.ps2`, `.bin`, `.vmc` or `.mc2` image lists its saves and can copy, move, delete, export or import (`.psu`) one save, or copy the whole card to a new 8-64 MB size. Every write starts with a verified safety copy in `WLE-Safety/`, and the card an MMCE adapter is serving is never written. In an `mmceN:` folder, **Which MMCE card is in use?** and **Make this the active MMCE card...** show and change the selected card, confirmed by content. Not yet tested on a console.
 - **Google Drive:** linked with a device code (official builds embed Launchstation's OAuth client). Tools → Google Drive backups uploads missing history (copy-only) and browses cloud history.
 - **Updates:** Settings → Storage & devices → MMCE backups → Check for updates; see [Releases and recovery](Releases-and-Recovery.md).
 - **Networking:** FTP and PS2Link start on demand from Tools → FTP / Remote access, and the UDPFS client can auto-start from Settings → Storage & devices. Settings → Network holds the IP configuration, Legacy Ethernet drivers and Sync PS2 clock from Internet.

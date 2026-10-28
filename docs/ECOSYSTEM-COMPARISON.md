@@ -27,22 +27,25 @@ card files on USB, MX4SIO or the internal HDD.
 | Backup format | `.mcd`, or `.ps2` (PCSX2) | `.mcd` or `.ps2` |
 | Browse cloud history | From the Files tab | "Browse cloud history..." (read-only paged view, verified recovery) |
 | Backup by save (per-save versions on Drive) | Yes, optional | **Missing** (code audit 2026-10-26): only whole-card history is uploaded |
-| Memory card manager (browse saves, 3D icons) | Yes, per card and "All saves" view | **Partial**: save browsing by title, PSU create/extract and card image backup/conversion exist ([Saves](../docs-site/content/saves.html)), but nothing opens a card image to list its saves (planned: [parity plan](plans/2026-10-26-sd2cloud-parity-plan.md)) |
-| Copy / move / delete saves across cards, multi-select | Yes | **Partial**: multi-select and copy/cut/paste/delete with confirmation work on `mc`/`vmc` folders; saves inside MMCE card images are not reachable. Copies are checked for short reads/writes, not read back |
+| Memory card manager (browse saves, 3D icons) | Yes, per card and "All saves" view | **Partial**: **Card contents...** opens a card image and lists its saves with titles, file counts, sizes and free space ([Saves](../docs-site/content/saves.html), added in [#226](https://github.com/NathanNeurotic/Launchstation/pull/226)). No 3D icons and no "All saves" view |
+| Copy / move / delete saves across cards, multi-select | Yes | **Partial**: **Card contents...** copies, moves and deletes saves inside card images, including MMCE cards the adapter is not serving, one save at a time, with a verified safety copy first and a read-back after (#226). Multi-select copy/cut/paste/delete works on `mc`/`vmc` folders; those copies are checked for short reads/writes, not read back |
 | The Library (saves kept off cards) | Yes | **Missing** |
 | Templates (default save sets applied to game cards) | Yes | **Missing** |
-| Create / resize / rename / check / delete cards, convert to Game ID | Yes, with a safety copy | **Partial**: "Install as NEW card" and file-level rename/delete only; no blank-card create, resize, check or Game ID conversion. Neutrino selects a Game ID card on launch |
-| OPL VMC and USB/HDD/MX4SIO card files | Yes | **Partial**: VMC mounting and card-image backup/export are supported; `.mc2`/`.bin` import and `.zip` are not |
+| Create / resize / rename / check / delete cards, convert to Game ID | Yes, with a safety copy | **Partial**: copy a card to a new 8-64 MB size, "Install as NEW card", and select a numbered card with **Make this the active MMCE card...** (#226); file-level rename/delete. No blank-card create, check or Game ID conversion. Neutrino selects a Game ID card on launch |
+| OPL VMC and USB/HDD/MX4SIO card files | Yes | **Partial**: VMC mounting, card-image backup/export, and **Card contents...** on `.mcd`, `.ps2` (read-only), `.bin`, `.vmc` and `.mc2` images are supported; `.zip` is not |
 | Works without an sd2psx | Yes (regular cards, USB/HDD/MX4SIO) | Regular memory cards supported in the file browser |
-| MemCard PRO2 | Read/write `.mc2`; card switch is a preview | **Missing**: treated as a generic MMCE; no `.mc2` read/write |
+| MemCard PRO2 | Read/write `.mc2`; card switch is a preview | **Partial**: treated as a generic MMCE; `.mc2` image files open in **Card contents...** like other no-ECC images (#226, not tested with a MemCard PRO2) |
 | Self-update | Stable and Beta channels, SHA-256 verified | "Check for updates" against the rolling release (no beta stream is published) |
 | Languages | 6 | 9 dashboard tables (some extended help still English) |
 | Installs a SAS package on the card for IGR | Yes (`APP_SD2CLOUD`) | Own IGR helper install/status in Settings |
 
 The authoritative checklist for closing these gaps is [issue #108](https://github.com/NathanNeurotic/Launchstation/issues/108)
-("GUI parity: complete on-console SD2Cloud/MMCE management workflows"). It was closed within minutes of being filed
-and no pull request is linked, so treat every unchecked row above as open until audited. The existing
-`tests/test_sd2cloud_parity.py` checks that labels and features are present; it does not prove the workflows work.
+("GUI parity: complete on-console SD2Cloud/MMCE management workflows"). [#226](https://github.com/NathanNeurotic/Launchstation/pull/226)
+(merged 2026-10-28) added card contents, safety copies, card resize, the active-card check and card switching, and
+the IGR fingerprint backup. None of it is tested on a console yet. Rows still marked Partial or Missing remain open.
+`tests/test_sd2cloud_parity.py` checks that labels and features are present; the #226 host tests
+(`test_mc_card_write`, `test_dash_card_tool` and others) exercise the card code under simulation, which still does
+not prove the workflows on hardware.
 
 ## ORBIT
 
@@ -72,10 +75,9 @@ The detailed, verified order is in the [parity plan](plans/2026-10-26-sd2cloud-p
 
 1. Finish auditing the remaining rows above against #108's acceptance criteria, recording implemented / partial /
    missing with evidence.
-2. Build a host-tested, read-only card image parser first. A card contents view, "All saves" and restore previews
-   all depend on it.
-3. Then an MMCE card list, an active-card display (index only; the firmware exposes no name), and an automatic
-   safety copy before destructive card operations.
+2. Done in #226: the card image parser, the card contents view, the active-card check, card switching and the
+   automatic safety copy before every card write. Next: hardware validation (the console test matrix in #226),
+   then "All saves" and restore previews, which build on the same parser.
 4. Templates, the Library and per-save backup versions are later work that needs design decisions; they are not
    cheap first steps.
 5. Keep ORBIT-only ideas (RetroAchievements agent, in-game pause menu) as separate proposals; they need a Neutrino
