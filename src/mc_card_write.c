@@ -939,3 +939,98 @@ bad:
 	mcCardFreeSave(out);
 	return MCW_ERR_INVALID;
 }
+
+/* ---------------------------------------------------------------- formatting */
+
+int mcCardReadIdentity(McView *v, uint8_t sb[512], uint8_t root[1024])
+{
+	if (!v || !sb || !root || v->src.read(v->src.ctx, 0, sb, ENT) != 0)
+		return MCV_ERR_IO;
+	return mcViewReadClusterRel(v, 0, root);
+}
+
+int mcCardFormat(const uint8_t like_sb[512], const uint8_t like_root[1024], uint32_t size_mb, McWriteFn write,
+                 void *wctx)
+{
+	enum { BATCH = 32 };
+	uint8_t sb[ENT], root[CL], *buf;
+	uint32_t n, ppb, cpb, first_ifc = 8u, alloc, fat_cl, ind, alloc_offset, blocks, good1, good2, alloc_end;
+	uint32_t c, i, k, fill;
+	int r = MCV_OK;
+
+	if (!like_sb || !like_root || !write || (size_mb != 8u && size_mb != 16u && size_mb != 32u && size_mb != 64u))
+		return MCW_ERR_INVALID;
+	memcpy(sb, like_sb, ENT);
+	memcpy(root, like_root, CL);
+	ppb = rd16(sb + 0x2C);
+	if (ppb != 16u)
+		return MCW_ERR_UNSUPPORTED; /* every PS2 and sd2psx card we know of */
+
+	/* Geometry, as the PS2's own format lays it out: indirect FAT at 8,
+	 * then the FAT, then data up to the two spare blocks at the end. */
+	n = size_mb * 1024u;
+	cpb = ppb / 2u;
+	alloc = n - (first_ifc + 2u);
+	fat_cl = (alloc + 255u) / 256u;
+	ind = (fat_cl + 255u) / 256u;
+	if (ind != 1u)
+		return MCW_ERR_UNSUPPORTED;
+	alloc_offset = first_ifc + ind + fat_cl;
+	blocks = n / cpb;
+	good1 = blocks - 1u;
+	good2 = blocks - 2u;
+	alloc_end = good2 * cpb - alloc_offset;
+
+	/* Keep the source's identity bytes (version, card type and flags);
+	 * replace every geometry field. */
+	wr32(sb + 0x30, n);
+	wr32(sb + 0x34, alloc_offset);
+	wr32(sb + 0x38, alloc_end);
+	wr32(sb + 0x3C, 0);
+	wr32(sb + 0x40, good1);
+	wr32(sb + 0x44, good2);
+	memset(sb + 0x48, 0, 8);
+	for (i = 0; i < 32u; i++) {
+		wr32(sb + 0x50 + i * 4u, i == 0 ? first_ifc : 0u);
+		wr32(sb + 0xD0 + i * 4u, 0xFFFFFFFFu);
+	}
+	memset(sb + 0x154, 0, ENT - 0x154);
+
+	/* Root: the source's "." and ".." with an empty directory. */
+	wr32(root + 4, 2);
+	wr32(root + 0x10, 0);
+	wr32(root + 0x14, 0);
+
+	fill = (sb[0x151] & 0x10u) ? 0x00u : 0xFFu; /* how erased flash reads on this card */
+	buf = (uint8_t *)malloc(BATCH * CL);
+	if (!buf)
+		return MCW_ERR_NOMEM;
+	for (c = 0; c < n && r == MCV_OK; c += BATCH) {
+		for (k = 0; k < BATCH; k++) {
+			uint8_t *p = buf + k * CL;
+			uint32_t cl = c + k;
+
+			memset(p, (int)fill, CL);
+			if (cl == 0) {
+				memset(p, 0, CL);
+				memcpy(p, sb, ENT);
+			} else if (cl == first_ifc) {
+				for (i = 0; i < 256u; i++)
+					wr32(p + i * 4u, i < fat_cl ? first_ifc + ind + i : C_END);
+			} else if (cl >= first_ifc + ind && cl < alloc_offset) {
+				uint32_t base = (cl - first_ifc - ind) * 256u;
+
+				for (i = 0; i < 256u; i++) {
+					uint32_t e = base + i;
+					wr32(p + i * 4u, e == 0 || e >= alloc_end ? C_END : C_FREE);
+				}
+			} else if (cl == alloc_offset) {
+				memcpy(p, root, CL);
+			}
+		}
+		if (write(wctx, (uint64_t)c * CL, buf, BATCH * CL) != 0)
+			r = MCV_ERR_IO;
+	}
+	free(buf);
+	return r;
+}

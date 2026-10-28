@@ -102,15 +102,16 @@ lines = run(A)
 menu = kind(lines, "MENU|A.mcd|")[0].split("|")
 assert menu[2].startswith("4 saves, ") and " KB free of " in menu[2], menu[2]
 assert menu[3].startswith("Import .psu...")
-assert menu[4].startswith("T:Game Slot 1~BESLES-12345GAME, 3 files, ")
-assert menu[6].startswith("BISLPS-00001~PS1 BISLPS-00001, 2 files, 1 KB")
-assert menu[7].startswith("NOICON~NOICON, 2 files, 3 KB")
+assert menu[4].startswith("Copy to a new card of another size...")
+assert menu[5].startswith("T:Game Slot 1~BESLES-12345GAME, 3 files, ")
+assert menu[7].startswith("BISLPS-00001~PS1 BISLPS-00001, 2 files, 1 KB")
+assert menu[8].startswith("NOICON~NOICON, 2 files, 3 KB")
 
 # 2. copy A -> B: the save lands, B's old bytes are in WLE-Safety, A is untouched
 B = "mass:/B.mcd"
 blank(B)
 b_before, a_before = host(B).read_bytes(), host(A).read_bytes()
-lines = run(A, "m1", "m0", "p" + B, "c1")
+lines = run(A, "m2", "m0", "p" + B, "c1")
 assert kind(lines, "TOAST|1|Save copied and verified"), lines
 assert saves(B) == {names[0]: saves(A)[names[0]]}
 assert host("mass:/WLE-Safety/B-0001.mcd").read_bytes() == b_before
@@ -119,9 +120,9 @@ pick = kind(lines, "PICK|")[0].split("|")
 assert pick[2] == "mass:/" and pick[3] == "0"
 
 # 3. refusals cost nothing: already there, not a card, the same card, declined
-for script, needle in ((("m1", "m0", "p" + B, "c1"), "already on that card"),
-                       (("m1", "m0", "p" + A), "already on this card"),
-                       (("m2", "m0", "p" + B, "c0"), None)):
+for script, needle in ((("m2", "m0", "p" + B, "c1"), "already on that card"),
+                       (("m2", "m0", "p" + A), "already on this card"),
+                       (("m3", "m0", "p" + B, "c0"), None)):
     snap = {p: sha(p) for p in (A, B)}
     lines = run(A, *script)
     if needle:
@@ -129,7 +130,7 @@ for script, needle in ((("m1", "m0", "p" + B, "c1"), "already on that card"),
     assert {p: sha(p) for p in (A, B)} == snap
     assert not kind(lines, "SAFETY|")
 host("mass:/junk.mcd").write_bytes(b"\0" * 8192)
-lines = run(A, "m1", "m0", "pmass:/junk.mcd", "c1")
+lines = run(A, "m2", "m0", "pmass:/junk.mcd", "c1")
 assert any("not a PS2 memory card" in l for l in kind(lines, "MESSAGE|")) and not kind(lines, "SAFETY|")
 
 # 4. the card the MMCE device serves is never written; unknown also refuses
@@ -139,14 +140,14 @@ c = fx.Card(8, False)
 c.add_save("OTHER", {"x": b"q" * 5000})
 put(C2, c.finish())
 snap = sha(C1)
-lines = run(A, "m2", "m0", "p" + C1, active=C1)
+lines = run(A, "m3", "m0", "p" + C1, active=C1)
 assert any("This card is in use" in l for l in kind(lines, "MESSAGE|")) and sha(C1) == snap
-lines = run(A, "m2", "m0", "p" + C1, active="mmce0:/MemoryCards/Card9/missing.mcd")
+lines = run(A, "m3", "m0", "p" + C1, active="mmce0:/MemoryCards/Card9/missing.mcd")
 assert any("could not read this card or the card the MMCE device is serving" in l for l in kind(lines, "MESSAGE|"))
 assert sha(C1) == snap and not kind(lines, "SAFETY|")
 lines = run(C1, "m0", active=C1)                                # import on the served card
 assert any("This card is in use" in l for l in kind(lines, "MESSAGE|"))
-lines = run(A, "m2", "m0", "p" + C1, "c1", active=C2)            # another card is served: allowed
+lines = run(A, "m3", "m0", "p" + C1, "c1", active=C2)            # another card is served: allowed
 assert kind(lines, "TOAST|1|Save copied"), lines
 assert kind(lines, "SAFETY|mmce0:/WLE-Safety/Card1-1-0001.mcd|1")
 assert names[1] in saves(C1)
@@ -154,7 +155,7 @@ assert names[1] in saves(C1)
 # 5. move: lands there, then leaves here; both cards get a safety copy
 blank("mass:/D.mcd")
 a_before = host(A).read_bytes()
-lines = run(A, "m4", "m1", "pmass:/D.mcd", "c1")
+lines = run(A, "m5", "m1", "pmass:/D.mcd", "c1")
 assert kind(lines, "TOAST|1|Save moved and verified"), lines
 assert names[3] in saves("mass:/D.mcd") and names[3] not in saves(A)
 assert host("mass:/WLE-Safety/A-0001.mcd").read_bytes() == a_before
@@ -163,19 +164,19 @@ assert host("mass:/WLE-Safety/D-0001.mcd").exists()
 # 6. a move whose source is the served card is refused before anything is written
 put(C2, std)
 snap = (sha(C2), sha(B))
-lines = run(C2, "m3", "m1", "p" + B, active=C2)
+lines = run(C2, "m4", "m1", "p" + B, active=C2)
 assert any("This card is in use" in l for l in kind(lines, "MESSAGE|")) and (sha(C2), sha(B)) == snap
 
 # 7. delete: needs a yes, takes a safety copy, the save is gone
 snap = sha(A)
-lines = run(A, "m1", "m3", "c0")
+lines = run(A, "m2", "m3", "c0")
 assert sha(A) == snap and kind(lines, "CONFIRM|Delete this save?|")[0].endswith("|1")
-lines = run(A, "m1", "m3", "c1")
+lines = run(A, "m2", "m3", "c1")
 assert kind(lines, "TOAST|1|Save deleted") and names[0] not in saves(A)
 assert host("mass:/WLE-Safety/A-0002.mcd").read_bytes() != host(A).read_bytes()
 
 # 8. .psu export and import round trip
-lines = run(B, "m1", "m2", "pmass:/out/")
+lines = run(B, "m2", "m2", "pmass:/out/")
 assert kind(lines, "TOAST|1|.psu written and verified"), lines
 psu = host("mass:/out/BESLES-12345GAME.psu")
 assert psu.exists() and psu.stat().st_size % 512 == 0
@@ -189,14 +190,14 @@ host("mass:/out/bad.psu").write_bytes(b"\x27\x84" + bytes(2000))
 snap = sha(E)
 lines = run(E, "m0", "pmass:/out/bad.psu")
 assert any("not valid" in l for l in kind(lines, "MESSAGE|")) and sha(E) == snap
-lines = run(B, "m1", "m2", "pmass:/out/", "c0")                   # exists: replace declined
+lines = run(B, "m2", "m2", "pmass:/out/", "c0")                   # exists: replace declined
 assert not kind(lines, "TOAST|")
 
 # 9. safety copies are pruned to the newest ten, and only ours
 host("mass:/WLE-Safety/E-notes.txt").write_text("keep me")
 host("mass:/WLE-Safety/Other-0001.mcd").write_bytes(b"keep")
 for i in range(12):
-    run(E, "m1", "m3", "c1")
+    run(E, "m2", "m3", "c1")
     run(E, "m0", "pmass:/out/BESLES-12345GAME.psu", "c1")
 kept = sorted(p.name for p in (dev / "mass/WLE-Safety").glob("E-*.mcd"))
 assert kept == [f"E-{n:04d}.mcd" for n in range(16, 26)], kept
@@ -208,14 +209,14 @@ put(F, std)
 before = saves(F)
 for k in (1, 2):                                                  # delete: 1 safety + 2 card writes
     put(F, std)
-    lines = run(F, "m2", "m3", "c1", env={"FAIL_WRITE_AT": str(k)})
+    lines = run(F, "m3", "m3", "c1", env={"FAIL_WRITE_AT": str(k)})
     assert any(l.startswith("MESSAGE|1|Not done|") for l in lines), (k, lines)
     after = saves(F)
     assert {n: v for n, v in after.items() if n != names[1]} == {n: v for n, v in before.items() if n != names[1]}
 G = "mass:/G.mcd"
 for k in range(1, 9):                                              # copy: 1 safety + the card writes
     blank(G)
-    lines = run(A, "m1", "m0", "p" + G, "c1", env={"FAIL_WRITE_AT": str(k)})
+    lines = run(A, "m2", "m0", "p" + G, "c1", env={"FAIL_WRITE_AT": str(k)})
     assert any(l.startswith("MESSAGE|1|Not done|") and "|Safety copy: mass:/WLE-Safety/G-" in l
                for l in lines), (k, lines)
     assert saves(G) in ({}, {names[1]: saves(A)[names[1]]}), k     # absent or complete, never half
@@ -223,15 +224,15 @@ for k in range(1, 9):                                              # copy: 1 saf
 # 11. PCSX2 .ps2 cards: view and export only
 P = "mass:/P.ps2"
 put(P, fx.standard_card(8, True)[0])
-lines = run(P, "m1")
+lines = run(P, "m2")
 menu = kind(lines, "MENU|P.ps2|")[0].split("|")
-assert menu[3].startswith("!Import .psu...")
+assert menu[3].startswith("!Import .psu...") and menu[4].startswith("Copy to a new card")
 sub = kind(lines, "MENU|T:Game Slot 1|")[0].split("|")
 assert sub[3].startswith("Copy to") and sub[4].startswith("!Move") and sub[5].startswith("Export") \
     and sub[6].startswith("!Delete")
-lines = run(P, "m1", "m0", "pmass:/out/x.mcd")                    # copying out of it still works
+lines = run(P, "m2", "m0", "pmass:/out/x.mcd")                    # copying out of it still works
 blank("mass:/out/x.mcd")
-lines = run(P, "m1", "m0", "pmass:/out/x.mcd", "c1")
+lines = run(P, "m2", "m0", "pmass:/out/x.mcd", "c1")
 assert kind(lines, "TOAST|1|Save copied"), lines
 
 
@@ -297,9 +298,40 @@ assert switch("mass:/A.mcd", CARD=1) == (-4, [])
 
 # the card tool refuses the card the device reports as selected
 snap = sha(cards[1])
-lines = dev_run(cards[1], "m1", "m3", CARD=1)
+lines = dev_run(cards[1], "m2", "m3", CARD=1)
 assert any("reports this card as the selected one" in l for l in kind(lines, "MESSAGE|")) and sha(cards[1]) == snap
 
+
+# 13. copy the whole card to a new size: the source is only read, the result holds every save
+R = "mass:/R.mcd"
+put(R, std)
+r_before = sha(R)
+lines = run(R, "m1", "k1", "c1")
+assert kind(lines, "CHOICE|New card size|4|0|8 MB")
+assert kind(lines, "MESSAGE|4|New card made|"), lines
+new = "mass:/R-16MB.mcd"
+assert host(new).stat().st_size == 16 << 20 and saves(new) == saves(R) and sha(R) == r_before
+lines = run(R, "m1", "k1", "c1")                                   # never overwrites: -2 suffix
+assert host("mass:/R-16MB-2.mcd").exists() and kind(lines, "MESSAGE|4|New card made|")
+lines = run(P, "m1", "k3", "c1")                                   # from a PCSX2 .ps2 card
+assert saves("mass:/P-64MB.mcd") == saves(R)
+lines = dev_run(cards[1], "m1", "k0", "c1", CARD=1)                # served card: only read; result outside MemoryCards
+assert any(l.startswith("MESSAGE|4|New card made|") and l.endswith("|mmce0:/WLE-Resized/Card1-1-8MB.mcd")
+           for l in lines), lines
+assert saves("mmce0:/WLE-Resized/Card1-1-8MB.mcd") == saves(cards[1])
+# too full for the new size: nothing left behind
+big = fx.Card(16, False)
+big.add_save("HUGE", {"blob": b"\xA5" * (9000 * 1024)})
+put("mass:/H.mcd", big.finish())
+lines = run("mass:/H.mcd", "m1", "k0", "c1")
+assert any(l.startswith("MESSAGE|1|New card not made|") and "HUGE" in l for l in lines), lines
+assert not host("mass:/H-8MB.mcd").exists()
+for k in (1, 3, 40):                                               # a failing device mid-way: removed
+    lines = run(R, "m1", "k0", "c1", env={"FAIL_WRITE_AT": str(k)})
+    assert any(l.startswith("MESSAGE|1|New card not made|") for l in lines), (k, lines)
+    assert not host("mass:/R-8MB.mcd").exists(), k
+    assert sha(R) == r_before
+
 print("Card contents tool: listing, copy, move, delete, .psu round trip, safety copies pruned to ten, "
-      "served MMCE card never written, served-card detection by number and content, guarded switch, refusals cost no safety copy, write failures reported, "
+      "served MMCE card never written, served-card detection by number and content, guarded switch, copy to a new card size, refusals cost no safety copy, write failures reported, "
       "one open file at a time: OK")

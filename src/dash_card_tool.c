@@ -41,7 +41,7 @@ static McView ct_view;
 static McViewSave ct_saves[CT_MAX_SAVES];
 static char ct_titles[CT_MAX_SAVES][96];
 static char ct_details[CT_MAX_SAVES][96];
-static DashMenuItem ct_items[CT_MAX_SAVES + 1];
+static DashMenuItem ct_items[CT_MAX_SAVES + 2];
 
 static int ctRead(void *ctx, uint64_t offset, void *buf, uint32_t len)
 {
@@ -636,6 +636,170 @@ static void ctImportPsu(const char *image)
 	ctDone(r, "Save imported and verified", safety, image);
 }
 
+typedef struct {
+	int fd;
+	uint64_t pos;
+} AppendIo;
+
+/* mcCardFormat writes front to back; anything else is refused. */
+static int ctAppend(void *ctx, uint64_t offset, const void *buf, uint32_t len)
+{
+	AppendIo *a = (AppendIo *)ctx;
+	uint32_t done = 0;
+	int put;
+
+	if (offset != a->pos)
+		return -1;
+	while (done < len) {
+		put = genWrite(a->fd, (u8 *)buf + done, (int)(len - done));
+		if (put <= 0)
+			return -1;
+		done += (uint32_t)put;
+	}
+	a->pos += len;
+	return 0;
+}
+
+/* A new card image of another size holding every save; the source is only read. */
+static void ctResize(const char *image)
+{
+	static const char *const sizes[] = {"8 MB", "16 MB", "32 MB", "64 MB"};
+	static uint8_t sb[512], root[1024];
+	char folder[MAX_PATH], dir[MAX_PATH], dest[MAX_PATH], base[48], msg[160];
+	char (*names)[33] = NULL;
+	const char *name = ctBaseName(image), *dot;
+	CardIo io;
+	AppendIo out;
+	McSaveData s;
+	uint32_t freec, total;
+	int unit = mmceCardUnit(image), choice, mb, r, n = 0, found = 0, i, len, made = 0, bad = -1;
+
+	r = ctOpen(&io, image, 0);
+	if (r == MCV_OK) {
+		r = mcCardReadIdentity(&ct_view, sb, root);
+		if (r == MCV_OK)
+			r = mcViewFreeClusters(&ct_view, &freec, &total);
+		if (r == MCV_OK) {
+			n = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &found);
+			if (n < 0)
+				r = n;
+			else if (found > n)
+				r = MCV_ERR_CORRUPT;
+		}
+		ctClose(&io);
+	}
+	if (r == MCV_OK && n > 0) {
+		names = malloc((size_t)n * sizeof(*names));
+		if (names == NULL)
+			r = MCW_ERR_NOMEM;
+		for (i = 0; names != NULL && i < n; i++)
+			dashStrCopy(names[i], ct_saves[i].name, sizeof(names[i]));
+	}
+	if (r != MCV_OK) {
+		free(names);
+		dashModalMessage(DI_WARNING, "Cannot copy this card", ctError(r), image);
+		return;
+	}
+	choice = dashModalChoice("New card size", sizes, 4, total > 33000u ? 3 : total > 16500u ? 2 : total > 8250u ? 1 : 0);
+	if (choice < 0) {
+		free(names);
+		return;
+	}
+	mb = 8 << choice;
+
+	/* Outside MemoryCards/ on MMCE, so the device never serves a half-built card. */
+	if (unit >= 0)
+		snprintf(folder, sizeof(folder), "mmce%d:/WLE-Resized/", unit);
+	else {
+		dashStrCopy(folder, image, sizeof(folder));
+		folder[name - image] = 0;
+	}
+	dot = strrchr(name, '.');
+	len = dot != NULL ? (int)(dot - name) : (int)strlen(name);
+	if (len > (int)sizeof(base) - 1)
+		len = sizeof(base) - 1;
+	memcpy(base, name, len);
+	base[len] = 0;
+	dest[0] = 0;
+	for (i = 1; i < 100; i++) {
+		int w = i == 1 ? snprintf(dest, sizeof(dest), "%s%s-%dMB.mcd", folder, base, mb) :
+		                 snprintf(dest, sizeof(dest), "%s%s-%dMB-%d.mcd", folder, base, mb, i);
+		if (w >= (int)sizeof(dest) || !wleExists(dest))
+			break;
+	}
+	snprintf(msg, sizeof(msg), "%d save%s copied to a new %d MB card image. This card is not changed.", n,
+	         n == 1 ? " is" : "s are", mb);
+	if (i == 100 || !ctStacks(image, dest) || !dashModalConfirm("Make a new card?", msg, "Make", 0)) {
+		free(names);
+		return;
+	}
+
+	dashLoadingBegin("Making a new card");
+	if (unit >= 0) {
+		dashStrCopy(dir, folder, sizeof(dir));
+		dir[strlen(dir) - 1] = 0;
+		genMkdir(dir, fileMode);
+	}
+	out.fd = genOpen(dest, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL);
+	out.pos = 0;
+	r = out.fd < 0 ? MCV_ERR_IO : MCV_OK;
+	if (r == MCV_OK) {
+		made = 1;
+		dashLoadingStatus("Formatting", 0, n + 1);
+		r = mcCardFormat(sb, root, (uint32_t)mb, ctAppend, &out);
+		if (genClose(out.fd) < 0 && r == MCV_OK)
+			r = MCV_ERR_IO;
+	}
+	for (i = 0; r == MCV_OK && i < n; i++) {
+		dashLoadingStatus(names[i], i + 1, n + 1);
+		r = ctReadSave(image, names[i], &s);
+		if (r != MCW_OK)
+			break;
+		r = ctOpen(&io, dest, 1);
+		if (r == MCV_OK) {
+			int c;
+
+			r = mcCardWriteSave(&ct_view, ctWrite, &io, &s);
+			c = ctClose(&io);
+			if (r == MCW_OK && c != MCV_OK)
+				r = MCW_ERR_VERIFY;
+		}
+		mcCardFreeSave(&s);
+		if (r != MCV_OK)
+			bad = i;
+	}
+	if (r == MCV_OK) { /* the finished card lists exactly the source's saves */
+		int got = 0, k;
+
+		r = ctOpen(&io, dest, 0);
+		if (r == MCV_OK) {
+			k = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &got);
+			ctClose(&io);
+			if (k != n || got != n)
+				r = MCW_ERR_VERIFY;
+		}
+	}
+	dashLoadingEnd();
+	if (r != MCV_OK) {
+		if (made)
+			genRemove(dest);
+		if (r == MCW_ERR_FULL && bad >= 0)
+			snprintf(msg, sizeof(msg), "The saves do not fit in %d MB (stopped at %s). The new card was removed.", mb,
+			         names[bad]);
+		else if (bad >= 0)
+			snprintf(msg, sizeof(msg), "%s (save %s). The new card was removed.", ctError(r), names[bad]);
+		else
+			snprintf(msg, sizeof(msg), "%s The new card was removed.", ctError(r));
+		dashModalMessage(DI_WARNING, "New card not made", msg, dest);
+	} else {
+		dashModalMessage(DI_MC, "New card made",
+		                 unit >= 0 ? "Every save was copied and read back. To use it, install it with \"Install as NEW selectable MMCE card\"." :
+		                             "Every save was copied and read back.",
+		                 dest);
+	}
+	free(names);
+}
+
 static void ctSaveMenu(const char *image, const McViewSave *sv, const char *title, int writable)
 {
 	static const char *const ro = "PCSX2 .ps2 cards are read-only here";
@@ -703,6 +867,10 @@ void dashCardTool(const char *image)
 		ct_items[0].label = "Import .psu...";
 		ct_items[0].detail = writable ? "the card gets a safety copy first" : "PCSX2 .ps2 cards are read-only here";
 		ct_items[0].disabled = !writable;
+		ct_items[1].icon = DI_MC;
+		ct_items[1].label = "Copy to a new card of another size...";
+		ct_items[1].detail = "8 to 64 MB; this card is only read";
+		ct_items[1].disabled = 0;
 		for (i = 0; i < n; i++) {
 			const McViewSave *sv = &ct_saves[i];
 
@@ -713,26 +881,28 @@ void dashCardTool(const char *image)
 			snprintf(ct_details[i], sizeof(ct_details[i]), "%s%.32s, %u file%s, %u KB", sv->is_ps1 ? "PS1 " : "",
 			         sv->name, (unsigned)sv->files % 10000u, sv->files == 1 ? "" : "s",
 			         (unsigned)((sv->bytes + 1023u) / 1024u) % 1000000u);
-			ct_items[i + 1].icon = DI_MC;
-			ct_items[i + 1].label = ct_titles[i];
-			ct_items[i + 1].detail = ct_details[i];
-			ct_items[i + 1].disabled = 0;
+			ct_items[i + 2].icon = DI_MC;
+			ct_items[i + 2].label = ct_titles[i];
+			ct_items[i + 2].detail = ct_details[i];
+			ct_items[i + 2].disabled = 0;
 		}
 		snprintf(subtitle, sizeof(subtitle), "%d save%s, %u KB free of %u KB%s", found, found == 1 ? "" : "s",
 		         (unsigned)freec, (unsigned)total, found > n ? " (list shortened)" : "");
-		if (sel > n)
-			sel = n;
-		r = dashModalMenu(ctBaseName(path), subtitle, ct_items, n + 1, sel);
+		if (sel > n + 1)
+			sel = n + 1;
+		r = dashModalMenu(ctBaseName(path), subtitle, ct_items, n + 2, sel);
 		if (r < 0 || ct_items[r].disabled)
 			return;
 		sel = r;
 		if (r == 0) {
 			ctImportPsu(path);
+		} else if (r == 1) {
+			ctResize(path);
 		} else {
 			char title[96];
-			McViewSave sv = ct_saves[r - 1];
+			McViewSave sv = ct_saves[r - 2];
 
-			dashStrCopy(title, ct_titles[r - 1], sizeof(title));
+			dashStrCopy(title, ct_titles[r - 2], sizeof(title));
 			ctSaveMenu(path, &sv, title, writable);
 		}
 	}

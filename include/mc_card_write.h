@@ -78,4 +78,16 @@ uint32_t mcCardPsuSize(const McSaveData *s);
 int mcCardSaveToPsu(const McSaveData *s, uint8_t **out, uint32_t *len);
 int mcCardSaveFromPsu(const uint8_t *buf, uint32_t len, McSaveData *out);
 
+/* The superblock page and first root cluster of a card, for mcCardFormat.
+ * Read them, close that card, then open the new file: one file at a time. */
+int mcCardReadIdentity(McView *v, uint8_t sb[512], uint8_t root[1024]);
+
+/* Writes a complete, empty card image of size_mb (8, 16, 32 or 64) from
+ * offset 0 upwards in 32 KiB pieces, so write may append to a new file.
+ * Identity bytes (version, card type, flags) and the root's "." and ".."
+ * come from the source card; the geometry is computed for the new size the
+ * way the PS2 lays out an 8 MB card. */
+int mcCardFormat(const uint8_t like_sb[512], const uint8_t like_root[1024], uint32_t size_mb, McWriteFn write,
+                 void *wctx);
+
 #endif

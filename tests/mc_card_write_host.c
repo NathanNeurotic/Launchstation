@@ -166,6 +166,26 @@ int main(int argc, char **argv)
 		fclose(df);
 		return 0;
 	}
+	if (argc >= 5 && !strcmp(argv[1], "format")) {
+		FILE *o;
+
+		uint8_t sb[512], root[1024];
+
+		sf = openCard(argv[2], "rb", &sv);
+		r = mcCardReadIdentity(&sv, sb, root);
+		fclose(sf);
+		if (r != 0) {
+			printf("identity=%d\n", r);
+			return 0;
+		}
+		o = fopen(argv[4], "wb");
+		if (!o)
+			return 3;
+		r = mcCardFormat(sb, root, (uint32_t)atoi(argv[3]), wr, o);
+		fclose(o);
+		printf("r=%d\n", r);
+		return 0;
+	}
 	if (argc >= 4 && !strcmp(argv[1], "delete")) {
 		if (argc >= 5)
 			fail_after = atol(argv[4]);

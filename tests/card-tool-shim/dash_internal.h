@@ -47,6 +47,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 int dashPickPath(const char *title, const char *start_dir, int mode, const char *ext, char *out, int out_size);
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger);
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail);
+int dashModalChoice(const char *title, const char *const *options, int n, int current);
 void dashLoadingBegin(const char *title);
 void dashLoadingStatus(const char *status, int done, int total);
 void dashLoadingEnd(void);

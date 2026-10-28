@@ -402,7 +402,33 @@ for n in range(200):
     py_read((tmp / "fzpsu.mcd").read_bytes())                  # still consistent either way
 
 
+
+# 11. formatting a new card from an existing one's identity
+fmt = tmp / "fmt8.mcd"
+blank_ref = fx.Card(8, False).finish().image()
+assert op("format", src, 8, fmt)["r"] == "0"
+assert fmt.read_bytes() == blank_ref                                # identical to the fixture built from mymc format() constants
+assert op("format", ecc, 8, fmt)["r"] == "0" and fmt.read_bytes() == blank_ref
+assert op("format", src, 12, fmt)["r"] == "-16"
+for mb in (16, 32, 64):
+    out = tmp / f"fmt{mb}.mcd"
+    assert op("format", src, mb, out)["r"] == "0"
+    data = out.read_bytes()
+    assert len(data) == mb << 20
+    ref = fx.Card(mb, False)
+    assert struct.unpack_from("<LLL", data, 0x30) == (mb * 1024, ref.alloc_offset, ref.alloc_end)
+    got, free = py_read(data)
+    assert got == {} and free == ref.alloc_end - 1, (mb, free)
+    cfree, csaves = c_list(out)
+    assert cfree == free and csaves == {}
+    for n in names:                                                 # a resize is format + copy every save
+        assert op("copy", src, n, out)["r"] == "0", (mb, n)
+    got, _ = py_read(out.read_bytes())
+    assert {k: sig(v) for k, v in got.items()} == {k: sig(v) for k, v in src_saves.items()}
+    out.unlink()
+
 print(f"Card writer: copy/delete verified by two readers, refusals leave images untouched, "
       f"root growth and slot reuse, cross-links refused, crash-safe at every write "
       f"({n_copy} copy and {n_del} delete crash points), 120-step model run, fuzz, "
-      f".psu export/import round trip with {len(bad_cases)} malformed files refused: OK")
+      f".psu export/import round trip with {len(bad_cases)} malformed files refused, "
+      f"format 8/16/32/64 MB (8 MB byte-identical to the mymc-constant fixture) and resize by copy: OK")

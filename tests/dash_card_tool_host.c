@@ -5,7 +5,7 @@
  * and mmce0:/__active_card__.mcd opens the image named by ACTIVE.
  *
  * Dialog answers come from argv, in order: m<N> menu choice (-1 = Back),
- * p<path> picker result, c<0|1> confirm. An empty queue answers Back/No.
+ * p<path> picker result, c<0|1> confirm, k<N> choice. An empty queue answers Back/No.
  * Every dialog is printed, and the harness aborts if two files are ever open
  * at once (the MMCE driver allows one). */
 #include <dirent.h>
@@ -221,6 +221,13 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 		printf("|%s%s%s%s", items[i].disabled ? "!" : "", items[i].label, items[i].detail ? "~" : "",
 		       items[i].detail ? items[i].detail : "");
 	printf("\n");
+	return a ? atoi(a) : -1;
+}
+int dashModalChoice(const char *title, const char *const *options, int n, int current)
+{
+	const char *a = next('k');
+
+	printf("CHOICE|%s|%d|%d|%s\n", title, n, current, options[0]);
 	return a ? atoi(a) : -1;
 }
 int dashPickPath(const char *title, const char *start, int mode, const char *ext, char *out, int size)
