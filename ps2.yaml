@@ -307,6 +307,7 @@ targets:
       - src/remote_control.c
       - src/pc_game_receiver.c
       - src/cloud_http.c
+      - ee_libs/tcpips/ps2ipc.c
       - src/self_update.c
       - src/update_psu.c
       - src/cloud_google.c

@@ -134,6 +134,13 @@ static u8 have_ps2ip = 0;
 static u8 have_ps2ips = 0;
 #ifdef ETH
 static const char *dashboard_ip_error = NULL;
+/* The vendored EE socket client (ee_libs/tcpips/ps2ipc.c) is not declared by
+ * an installed header. These DNS calls use the same IPv4 ABI as its sockets. */
+typedef struct {
+	u32 addr;
+} DashboardDnsAddress;
+extern const DashboardDnsAddress *ps2ipc_dns_getserver(u8 numdns);
+extern void ps2ipc_dns_setserver(u8 numdns, const DashboardDnsAddress *server);
 #endif
 static u8 have_NetModules = 0;
 static u8 have_ps2netfs = 0;
@@ -2431,6 +2438,36 @@ int isFtpNetworkReady(void)
 	return have_NetModules && have_ps2ftpd && have_ps2ip && have_ps2smap && ps2dev9_loaded;
 }
 
+/* Give a cold stack a resolver. Static IPCONFIG.DAT only holds IP, netmask
+ * and gateway, so nothing else sets one. Keep any server already assigned
+ * (for example by DHCP). Ported from saildot4k/Launchstation 8619b18. */
+static void configureDashboardDns(void)
+{
+	const DashboardDnsAddress *existing = ps2ipc_dns_getserver(0);
+	DashboardDnsAddress server;
+	unsigned int a, b, c, d;
+	char extra;
+	u8 primary[4] = {1, 1, 1, 1};
+	u8 fallback[4] = {8, 8, 8, 8};
+
+	if (existing != NULL && existing->addr != 0)
+		return;
+	if (sscanf(gw, "%u.%u.%u.%u%c", &a, &b, &c, &d, &extra) == 4 &&
+	    a > 0 && a < 224 && b <= 255 && c <= 255 && d <= 255) {
+		primary[0] = (u8)a;
+		primary[1] = (u8)b;
+		primary[2] = (u8)c;
+		primary[3] = (u8)d;
+		fallback[0] = fallback[1] = fallback[2] = fallback[3] = 1;
+		if (a == 1 && b == 1 && c == 1 && d == 1)
+			fallback[0] = fallback[1] = fallback[2] = fallback[3] = 8;
+	}
+	memcpy(&server.addr, primary, sizeof(server.addr));
+	ps2ipc_dns_setserver(0, &server);
+	memcpy(&server.addr, fallback, sizeof(server.addr));
+	ps2ipc_dns_setserver(1, &server);
+}
+
 /* Minimal demand-driven network path for SNTP/other dashboard clients.
  * Unlike loadNetModules(), this does not start FTP/netfs services. */
 const char *dashboardIpNetworkError(void)
@@ -2466,6 +2503,7 @@ int ensureDashboardIpNetworkReady(void)
 		dashboard_ip_error = "Could not connect to the network socket server.";
 		return 0;
 	}
+	configureDashboardDns();
 	return 1;
 }
 #endif
