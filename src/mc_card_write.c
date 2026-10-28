@@ -198,6 +198,19 @@ void mcCardFreeSave(McSaveData *s)
 	memset(s, 0, sizeof(*s));
 }
 
+int mcCardFindSave(McView *v, const char *name)
+{
+	RootFind f;
+	int r;
+
+	if (!v || !name)
+		return MCW_ERR_INVALID;
+	r = rootFind(v, name, &f);
+	if (r != MCV_OK)
+		return r;
+	return f.found < 0 ? MCW_ERR_NOT_FOUND : MCW_ERR_EXISTS;
+}
+
 int mcCardReadSave(McView *v, const char *name, McSaveData *out)
 {
 	RootFind f;

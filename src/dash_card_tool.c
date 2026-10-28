@@ -187,16 +187,24 @@ static const char *ctBaseName(const char *path)
 	return s != NULL ? s + 1 : path;
 }
 
-/* 1 when path may be written. An MMCE image is refused while the device is
- * serving it, reports it as selected, or when that cannot be ruled out. */
+/* 1 when path may be written. Refused while a VMC is mounted (the driver
+ * caches the card's tables and would write them back over the change; which
+ * image is mounted is not recorded, so any mount refuses), and for an MMCE
+ * image the device is serving, reports as selected, or cannot rule out. */
 static int ctWritable(const char *path)
 {
+	if (vmcMounted[0] || vmcMounted[1]) {
+		dashModalMessage(DI_WARNING, "Unmount the VMC first",
+		                 "A virtual memory card is mounted as vmc0: or vmc1:. If it is this card, the VMC driver would write its own copy of the card's tables back over the change. Unmount it, then try again.",
+		                 path);
+		return 0;
+	}
 	switch (mmceCardMaybeServed(path)) {
 		case MMCE_SERVED_NO:
 			return 1;
 		case MMCE_SERVED_YES:
 			dashModalMessage(DI_WARNING, "This card is in use",
-			                 "The MMCE device is serving this card to the console right now. Switch to another card first, or copy the save to a different card.",
+			                 "The MMCE device is serving this card to the console right now, or a card with exactly the same contents that cannot be told apart from it. Switch to another card first, or copy the save to a different card.",
 			                 path);
 			return 0;
 		case MMCE_SERVED_SELECTED:
@@ -321,7 +329,8 @@ static int ctPrecheck(const char *image, const McSaveData *s)
 {
 	CardIo io;
 	uint32_t freec, total;
-	int r, n, found, i;
+	char name[33];
+	int r;
 
 	r = ctOpen(&io, image, 0);
 	if (r != MCV_OK)
@@ -332,15 +341,12 @@ static int ctPrecheck(const char *image, const McSaveData *s)
 		r = mcViewFreeClusters(&ct_view, &freec, &total);
 	if (r == MCV_OK && freec < mcCardSaveClusters(s) + 1u)
 		r = MCW_ERR_FULL;
-	if (r == MCV_OK) {
-		n = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &found);
-		if (n < 0)
-			r = n;
-		else if (found > n)
-			r = MCV_ERR_CORRUPT;
-		for (i = 0; r == MCV_OK && i < n; i++)
-			if (!strncmp(ct_saves[i].name, (const char *)s->entry + 0x40, 32))
-				r = MCW_ERR_EXISTS;
+	if (r == MCV_OK) { /* by name, so a card with any number of saves is checked in full */
+		memcpy(name, s->entry + 0x40, 32);
+		name[32] = 0;
+		r = mcCardFindSave(&ct_view, name);
+		if (r == MCW_ERR_NOT_FOUND)
+			r = MCV_OK;
 	}
 	ctClose(&io);
 	return r;
@@ -388,7 +394,7 @@ static int ctPutSave(const char *image, const McSaveData *s, char *safety, int s
 static int ctDropSave(const char *image, const char *name, char *safety, int safety_size)
 {
 	CardIo io;
-	int r, c, i, n, found;
+	int r, c, n, found;
 
 	dashLoadingStatus("Making a safety copy", 0, 1);
 	if (ctSafetyCopy(image, safety, safety_size) < 0)
@@ -409,11 +415,8 @@ static int ctDropSave(const char *image, const char *name, char *safety, int saf
 	if (r != MCV_OK)
 		return MCW_ERR_VERIFY;
 	n = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &found);
-	if (n < 0)
+	if (n < 0 || mcCardFindSave(&ct_view, name) != MCW_ERR_NOT_FOUND)
 		r = MCW_ERR_VERIFY;
-	for (i = 0; i < n; i++)
-		if (!strncmp(ct_saves[i].name, name, 32))
-			r = MCW_ERR_VERIFY;
 	ctClose(&io);
 	return r;
 }
@@ -683,10 +686,14 @@ static void ctResize(const char *image)
 			n = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &found);
 			if (n < 0)
 				r = n;
-			else if (found > n)
-				r = MCV_ERR_CORRUPT;
 		}
 		ctClose(&io);
+	}
+	if (r == MCV_OK && found > n) {
+		dashModalMessage(DI_WARNING, "Cannot copy this card",
+		                 "This card holds more saves than this tool can copy at once (250). Move some saves to another card first.",
+		                 image);
+		return;
 	}
 	if (r == MCV_OK && n > 0) {
 		names = malloc((size_t)n * sizeof(*names));
@@ -949,7 +956,7 @@ void dashMmceSwitch(const char *path)
 		                 "Only numbered cards (MemoryCards/PS2/CardN/CardN-C.mcd) can be selected from here.", path);
 		return;
 	}
-	if (mmceCardMaybeServed(path) == MMCE_SERVED_YES) {
+	if (mmceCardIsActive(path)) {
 		dashToast(DASH_TOAST_INFO, "This card is already in use");
 		return;
 	}

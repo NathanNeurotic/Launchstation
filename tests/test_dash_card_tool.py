@@ -302,6 +302,53 @@ lines = dev_run(cards[1], "m2", "m3", CARD=1)
 assert any("reports this card as the selected one" in l for l in kind(lines, "MESSAGE|")) and sha(cards[1]) == snap
 
 
+# a content-equal clone of the served card: writes stay refused (cannot be told
+# apart), but switching to it is allowed and confirmed by number and channel
+(dev / "mmce0/MemoryCards/PS2/Card4").mkdir(parents=True, exist_ok=True)
+clone = f"{PS2}Card4/Card4-1.mcd"
+shutil.copy(host(cards[1]), host(clone))
+assert served(clone, CARD=1) == 1
+assert int(kind(dev_run("isactive:" + cards[1], CARD=1), "ISACTIVE|")[0].split("|")[1]) == 1
+assert int(kind(dev_run("isactive:" + clone, CARD=1), "ISACTIVE|")[0].split("|")[1]) == 0
+assert int(kind(dev_run("isactive:" + cards[1], CARD=1, STALE=1, REPORT_CARD=2), "ISACTIVE|")[0].split("|")[1]) == 0
+lines = dev_run("pick-switch:" + clone, "c1", CARD=1)
+assert kind(lines, "SET_CARD|00000004") and kind(lines, "TOAST|1|Card switched and confirmed"), lines
+lines = dev_run("pick-switch:" + cards[1], CARD=1)
+assert kind(lines, "TOAST|3|This card is already in use") and not kind(lines, "SET_"), lines
+lines = dev_run(clone, "m2", "m3", CARD=1)
+assert any("exactly the same contents" in l for l in kind(lines, "MESSAGE|")), lines
+
+# a mounted VMC blocks every write (the driver would write its cached tables back)
+snap = sha(B)
+lines = run(A, "m3", "m0", "p" + B, env={"VMC": "1"})
+assert any("Unmount the VMC first" in l for l in kind(lines, "MESSAGE|")) and sha(B) == snap
+assert not kind(lines, "SAFETY|")
+lines = run(B, "m0", env={"VMC": "1"})
+assert any("Unmount the VMC first" in l for l in kind(lines, "MESSAGE|")) and sha(B) == snap
+
+# more saves than the menu lists (250): not "damaged"; duplicates still found by name
+M = "mass:/M.mcd"
+many = fx.Card(8, False)
+for i in range(260):
+    many.add_save(f"MANY{i:04d}", {"d": bytes([i & 0xFF]) * 16})
+put(M, many.finish())
+lines = run(M)
+assert "260 saves, " in kind(lines, "MENU|M.mcd|")[0] and "(list shortened)" in kind(lines, "MENU|M.mcd|")[0]
+lines = run(A, "m3", "m0", "p" + M, "c1")
+assert kind(lines, "TOAST|1|Save copied and verified"), lines
+got = saves(M)
+assert len(got) == 261 and names[2] in got, (len(got), sorted(set(got) - {f"MANY{i:04d}" for i in range(260)}))
+dup = fx.Card(8, False)
+dup.add_save("MANY0255", {"d": b"z"})
+put("mass:/dup.mcd", dup.finish())
+snap = sha(M)
+lines = run("mass:/dup.mcd", "m2", "m0", "p" + M, "c1")
+assert any("already on that card" in l for l in kind(lines, "MESSAGE|")) and sha(M) == snap, lines
+lines = run(M, "m1")
+assert any("more saves than this tool can copy" in l for l in kind(lines, "MESSAGE|")), lines
+assert not list((dev / "mass").glob("M-*MB*.mcd"))
+
+
 # 13. copy the whole card to a new size: the source is only read, the result holds every save
 R = "mass:/R.mcd"
 put(R, std)
@@ -333,5 +380,6 @@ for k in (1, 3, 40):                                               # a failing d
     assert sha(R) == r_before
 
 print("Card contents tool: listing, copy, move, delete, .psu round trip, safety copies pruned to ten, "
-      "served MMCE card never written, served-card detection by number and content, guarded switch, copy to a new card size, refusals cost no safety copy, write failures reported, "
+      "served MMCE card never written, served-card detection by number and content, guarded switch (also to a clone), "
+      "mounted VMC blocks writes, 250+ save cards, copy to a new card size, refusals cost no safety copy, write failures reported, "
       "one open file at a time: OK")

@@ -101,6 +101,19 @@ int mmceCardMaybeServed(const char *path)
 	return memcmp(mine, active, sizeof(mine)) ? MMCE_SERVED_NO : MMCE_SERVED_YES;
 }
 
+int mmceCardIsActive(const char *path)
+{
+	unsigned char mine[32], active[32];
+	char ap[48];
+	int unit = mmceCardUnit(path), card, chan;
+
+	if (unit < 0 || !mmceCardParsePath(path, &card, &chan) ||
+	    devctl(unit, MMCE_DEVCTL_GET_CARD, NULL) != card || devctl(unit, MMCE_DEVCTL_GET_CHANNEL, NULL) != chan)
+		return 0;
+	return mmceCardFingerprint(path, mine) == 0 && activePath(unit, ap, sizeof(ap)) &&
+	       mmceCardFingerprint(ap, active) == 0 && !memcmp(mine, active, sizeof(mine));
+}
+
 /* Every .mcd one level below MemoryCards/PS2/, in directory order. */
 static int scanCards(int unit, void (*fn)(const char *path, void *ctx), void *ctx)
 {

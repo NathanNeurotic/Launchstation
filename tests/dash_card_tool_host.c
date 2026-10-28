@@ -25,6 +25,7 @@ static int dev_card = -1, dev_chan = -1, rep_card = -1, rep_chan = -1, busy, sta
 static char **queue;
 static int nqueue, qpos, open_files, max_open, writes, fail_write_at = -1;
 int fileMode = 0777;
+int vmcMounted[2];
 
 static void map(const char *path, char *out)
 {
@@ -332,6 +333,7 @@ int main(int argc, char **argv)
 	if (getenv("REPORT_CARD"))
 		rep_card = atoi(getenv("REPORT_CARD"));
 	stale = getenv("STALE") != NULL;
+	vmcMounted[1] = getenv("VMC") != NULL;
 	busy = getenv("BUSY") ? atoi(getenv("BUSY")) : 0;
 	queue = argv + 4;
 	nqueue = argc - 4;
@@ -341,6 +343,10 @@ int main(int argc, char **argv)
 		MmceActiveCard a;
 		int r = mmceActiveCard(0, &a, NULL);
 		printf("ACTIVE|%d|%d|%d|%d|%d|%s\n", r, a.card, a.channel, a.matches, a.by_number, a.path);
+	} else if (!strncmp(argv[3], "isactive:", 9)) {
+		printf("ISACTIVE|%d\n", mmceCardIsActive(argv[3] + 9));
+	} else if (!strncmp(argv[3], "pick-switch:", 12)) {
+		dashMmceSwitch(argv[3] + 12);
 	} else if (!strncmp(argv[3], "served:", 7)) {
 		printf("SERVED|%d\n", mmceCardMaybeServed(argv[3] + 7));
 	} else {

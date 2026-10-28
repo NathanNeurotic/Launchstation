@@ -101,7 +101,7 @@ def py_read(img):
         name = e[0x40:0x60].split(b"\0")[0].decode("latin-1")
         files = {}
         sub = list(ents(first, length, name))
-        assert struct.unpack_from("<L", sub[0], 0x14)[0] in (0, slot) or True
+        assert struct.unpack_from("<L", sub[0], 0x14)[0] in (0, slot), (name, slot)
         for f in sub[2:]:
             fmode, flen, ffirst = struct.unpack_from("<H2xL8xL", f)
             if not fmode & 0x8000:

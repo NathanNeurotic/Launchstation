@@ -55,7 +55,7 @@ static FILE *openCard(const char *path, const char *mode, McView *v)
 static void list(const char *path)
 {
 	static McView v;
-	McViewSave saves[200];
+	static McViewSave saves[1000];
 	McSaveData s;
 	uint32_t freec, tot, i, j;
 	uint8_t d[32];
@@ -65,7 +65,7 @@ static void list(const char *path)
 	printf("open=0\n");
 	r = mcViewFreeClusters(&v, &freec, &tot);
 	printf("free=%d %u %u\n", r, freec, tot);
-	n = mcViewListSaves(&v, saves, 200, &total);
+	n = mcViewListSaves(&v, saves, 1000, &total);
 	printf("nsaves=%d\n", n);
 	for (k = 0; k < n; k++) {
 		r = mcCardReadSave(&v, saves[k].name, &s);

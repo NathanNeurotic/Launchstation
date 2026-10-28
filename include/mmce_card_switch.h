@@ -36,6 +36,9 @@ int mmceCardUnit(const char *path);
 int mmceCardParsePath(const char *path, int *card, int *channel);
 /* MMCE_SERVED_*: anything but NO means do not write this image. Non-MMCE paths are NO. */
 int mmceCardMaybeServed(const char *path);
+/* 1 when the device reports this numbered card and channel and serves its
+ * content; 0 otherwise (also for a different card with equal content). */
+int mmceCardIsActive(const char *path);
 /* MMCE_SWITCH_OK with out->path when exactly one image matches the served
  * content; MMCE_SWITCH_UNKNOWN with out->matches 0 or > 1 otherwise. */
 int mmceActiveCard(int unit, MmceActiveCard *out, MmceScanProgress progress);

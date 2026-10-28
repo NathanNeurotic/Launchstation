@@ -51,6 +51,10 @@ typedef struct McSaveData {
 	McSaveFile *files;
 } McSaveData;
 
+/* MCW_ERR_EXISTS when the root holds an entry with that name (up to 32 bytes),
+ * MCW_ERR_NOT_FOUND when not, or a read error. No limit on the save count. */
+int mcCardFindSave(McView *v, const char *name);
+
 /* Reads a whole save (a root folder of files) into memory. Free with mcCardFreeSave. */
 int mcCardReadSave(McView *v, const char *name, McSaveData *out);
 void mcCardFreeSave(McSaveData *s);
