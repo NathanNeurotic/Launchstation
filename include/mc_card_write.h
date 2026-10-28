@@ -66,4 +66,16 @@ int mcCardWriteSave(McView *v, McWriteFn write, void *wctx, const McSaveData *s)
  * any of its clusters is also used elsewhere (a damaged card). */
 int mcCardDeleteSave(McView *v, McWriteFn write, void *wctx, const char *name);
 
+/* 1 when both hold the same save name and the same files with the same data. */
+int mcCardSameSave(const McSaveData *a, const McSaveData *b);
+
+/* .psu (EMS / uLaunchELF save export): bytes a save takes as a .psu, and the
+ * conversions both ways. mcCardSaveToPsu mallocs *out. mcCardSaveFromPsu
+ * checks the whole file (entry kinds, names, unique names, sizes against the
+ * file length, nothing trailing) and returns MCW_ERR_INVALID for anything
+ * else, or MCW_ERR_UNSUPPORTED for a save holding sub-folders. */
+uint32_t mcCardPsuSize(const McSaveData *s);
+int mcCardSaveToPsu(const McSaveData *s, uint8_t **out, uint32_t *len);
+int mcCardSaveFromPsu(const uint8_t *buf, uint32_t len, McSaveData *out);
+
 #endif

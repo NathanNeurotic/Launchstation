@@ -114,6 +114,58 @@ int main(int argc, char **argv)
 		fclose(df);
 		return 0;
 	}
+	if (argc >= 5 && !strcmp(argv[1], "psuout")) {
+		uint8_t *buf;
+		uint32_t len;
+		FILE *o;
+
+		sf = openCard(argv[2], "rb", &sv);
+		r = mcCardReadSave(&sv, argv[3], &s);
+		fclose(sf);
+		if (r != 0) {
+			printf("read=%d\n", r);
+			return 0;
+		}
+		r = mcCardSaveToPsu(&s, &buf, &len);
+		if (r == 0) {
+			o = fopen(argv[4], "wb");
+			if (!o || fwrite(buf, 1, len, o) != len || fclose(o) != 0)
+				return 3;
+			free(buf);
+		}
+		printf("r=%d size=%u\n", r, r == 0 ? mcCardPsuSize(&s) : 0);
+		mcCardFreeSave(&s);
+		return 0;
+	}
+	if (argc >= 4 && !strcmp(argv[1], "psuin")) {
+		uint8_t *buf;
+		long len;
+		FILE *in = fopen(argv[2], "rb");
+
+		if (argc >= 5)
+			fail_after = atol(argv[4]);
+		if (!in)
+			return 3;
+		fseek(in, 0, SEEK_END);
+		len = ftell(in);
+		fseek(in, 0, SEEK_SET);
+		buf = (uint8_t *)malloc(len ? (size_t)len : 1);
+		if (!buf || fread(buf, 1, (size_t)len, in) != (size_t)len)
+			return 3;
+		fclose(in);
+		r = mcCardSaveFromPsu(buf, (uint32_t)len, &s);
+		free(buf); /* the parsed save owns copies of everything */
+		if (r != 0) {
+			printf("parse=%d\n", r);
+			return 0;
+		}
+		df = openCard(argv[3], "r+b", &dv);
+		r = mcCardWriteSave(&dv, wr, df, &s);
+		printf("r=%d writes=%ld\n", r, writes);
+		mcCardFreeSave(&s);
+		fclose(df);
+		return 0;
+	}
 	if (argc >= 4 && !strcmp(argv[1], "delete")) {
 		if (argc >= 5)
 			fail_after = atol(argv[4]);

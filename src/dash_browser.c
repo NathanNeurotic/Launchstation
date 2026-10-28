@@ -20,6 +20,7 @@
 #include "filer_copy.h"
 #include "mc_card_export.h"
 #include "mmce_backup.h"
+#include "dash_card_tool.h"
 #include "main_title.h"
 #include "gui_sort.h"
 #include "init.h"
@@ -1919,7 +1920,7 @@ void dashBrowserRecoverCardPath(const char *source)
 static void opBackupSelectedMmceCard(void)
 {
     MmceBackupStats stats;
-    MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format};
+    MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format, 1};
     char source[MAX_PATH], folder[MAX_PATH], msg[192];
     int unit = mmceUnitFromPath(fb.dir), prep, r;
     FILEINFO *f;
@@ -2321,6 +2322,7 @@ static void actionsMenu(void)
 		F_BACKUP_SELECTED_MMCE,
 		F_BACKUP_ACTIVE_MMCE,
 		F_EXPORT_ACTIVE_MMCE_PS2,
+		F_CARD_CONTENTS,
 		F_BACKUP_MCD,
 		F_EXPORT_PS2,
 		F_IMPORT_MCD,
@@ -2407,6 +2409,8 @@ static void actionsMenu(void)
 			ADD(DI_MC, "Back up active MMCE card...", "reads the exact firmware-selected backing image", 0, F_BACKUP_ACTIVE_MMCE);
 			ADD(DI_MC, "Export active MMCE card as PCSX2 .ps2...", "adds ECC/spare bytes and verifies", 0, F_EXPORT_ACTIVE_MMCE_PS2);
 		}
+		if (f != NULL && !isDir(f) && fb.nmarked == 0 && (genCmpFileExt(f->name, "MCD") || isVmcImage(f->name)))
+			ADD(DI_MC, "Card contents...", "saves: copy, move, delete, .psu", 0, F_CARD_CONTENTS);
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "MCD")) {
 			ADD(DI_MC, "Back up .mcd...", "verified byte-for-byte copy", 0, F_BACKUP_MCD);
 			ADD(DI_MC, "Export as PCSX2 .ps2...", "adds ECC and verifies the copy", 0, F_EXPORT_PS2);
@@ -2507,6 +2511,12 @@ static void actionsMenu(void)
 			break;
 		case F_EXPORT_ACTIVE_MMCE_PS2:
 			opExportActiveMmcePcsx2();
+			break;
+		case F_CARD_CONTENTS:
+			if (fullPath(f, path, sizeof(path)) && prepareOp()) {
+				dashCardTool(path);
+				refresh();
+			}
 			break;
 		case F_BACKUP_MCD:
 			opBackupCard();

@@ -35,14 +35,16 @@ static void wr32(uint8_t *p, uint32_t v)
 	p[3] = (uint8_t)(v >> 24);
 }
 
-/* A name field is 32 bytes; a usable name is 1..31 bytes, NUL-terminated,
- * not "." or "..", without '/'. */
+/* A name field is 32 bytes; a usable name is 1..31 printable ASCII bytes,
+ * NUL-terminated, not "." or "..", without / \ * or ?. Real saves stay
+ * well inside this; anything else is a damaged entry or a hostile .psu. */
 static int nameOk(const uint8_t *name)
 {
 	uint32_t n;
 
 	for (n = 0; n < 32 && name[n]; n++)
-		if (name[n] == '/')
+		if (name[n] < 0x20 || name[n] > 0x7E || name[n] == '/' || name[n] == '\\' ||
+		    name[n] == '*' || name[n] == '?')
 			return 0;
 	if (n == 0 || n == 32)
 		return 0;
@@ -796,4 +798,144 @@ int mcCardDeleteSave(McView *v, McWriteFn write, void *wctx, const char *name)
 	if (r != MCV_OK || f.found >= 0)
 		return MCW_ERR_VERIFY;
 	return MCW_OK;
+}
+
+int mcCardSameSave(const McSaveData *a, const McSaveData *b)
+{
+	return a && b && sameSave(a, b);
+}
+
+/* ---------------------------------------------------------------- .psu */
+
+/* A .psu is the save's directory written out in order: its root entry (length
+ * = entries that follow), "." and "..", then each file's entry followed by its
+ * data padded with 0xFF to a whole cluster. Entries use the card layout. */
+
+static void psuEntry(uint8_t *out, const uint8_t *ent, uint32_t length)
+{
+	memcpy(out, ent, ENT);
+	wr32(out + 4, length);
+	memset(out + 0x10, 0, 8); /* cluster and dir_entry mean nothing outside a card */
+	memset(out + 0x28, 0, 0x18);
+	out[0x40 + 31] = 0;
+	memset(out + 0x60, 0, ENT - 0x60);
+}
+
+uint32_t mcCardPsuSize(const McSaveData *s)
+{
+	uint32_t i, n = 3u * ENT;
+
+	for (i = 0; i < s->nfiles; i++)
+		n += ENT + (s->files[i].size + CL - 1u) / CL * CL;
+	return n;
+}
+
+int mcCardSaveToPsu(const McSaveData *s, uint8_t **out, uint32_t *len)
+{
+	uint8_t *p, *q;
+	uint32_t i, size;
+
+	if (!s || !out || !len || !validSave(s))
+		return MCW_ERR_INVALID;
+	size = mcCardPsuSize(s);
+	p = (uint8_t *)malloc(size);
+	if (!p)
+		return MCW_ERR_NOMEM;
+	q = p;
+	psuEntry(q, s->entry, s->nfiles + 2u);
+	wr16(q, rd16(s->entry) | M_EXISTS | M_DIR);
+	q += ENT;
+	psuEntry(q, s->dot, 0);
+	wr16(q, rd16(s->dot) | M_EXISTS | M_DIR);
+	memset(q + 0x40, 0, 32);
+	q[0x40] = '.';
+	q += ENT;
+	psuEntry(q, s->dotdot, 0);
+	wr16(q, rd16(s->dotdot) | M_EXISTS | M_DIR);
+	memset(q + 0x40, 0, 32);
+	q[0x40] = q[0x41] = '.';
+	q += ENT;
+	for (i = 0; i < s->nfiles; i++) {
+		const McSaveFile *f = &s->files[i];
+		uint32_t padded = (f->size + CL - 1u) / CL * CL;
+
+		psuEntry(q, f->entry, f->size);
+		wr16(q, rd16(f->entry) | M_EXISTS | M_FILE);
+		q += ENT;
+		if (f->size)
+			memcpy(q, f->data, f->size);
+		memset(q + f->size, 0xFF, padded - f->size);
+		q += padded;
+	}
+	*out = p;
+	*len = size;
+	return MCW_OK;
+}
+
+int mcCardSaveFromPsu(const uint8_t *buf, uint32_t len, McSaveData *out)
+{
+	uint32_t count, i, pos;
+	const uint8_t *h;
+
+	if (!buf || !out)
+		return MCW_ERR_INVALID;
+	memset(out, 0, sizeof(*out));
+	if (len < 3u * ENT)
+		return MCW_ERR_INVALID;
+	count = rd32(buf + 4);
+	if ((rd16(buf) & (M_EXISTS | M_DIR)) != (M_EXISTS | M_DIR) || (rd16(buf) & M_FILE) ||
+	    !nameOk(buf + 0x40) || count < 2u || count > MAX_ENTRIES)
+		return MCW_ERR_INVALID;
+	for (i = 1; i <= 2; i++) {
+		h = buf + i * ENT;
+		if ((rd16(h) & (M_EXISTS | M_DIR)) != (M_EXISTS | M_DIR) || (rd16(h) & M_FILE))
+			return MCW_ERR_INVALID;
+	}
+	memcpy(out->entry, buf, ENT);
+	memcpy(out->dot, buf + ENT, ENT);
+	memcpy(out->dotdot, buf + 2u * ENT, ENT);
+	out->nfiles = count - 2u;
+	if (out->nfiles) {
+		out->files = (McSaveFile *)calloc(out->nfiles, sizeof(McSaveFile));
+		if (!out->files) {
+			out->nfiles = 0;
+			return MCW_ERR_NOMEM;
+		}
+	}
+	pos = 3u * ENT;
+	for (i = 0; i < out->nfiles; i++) {
+		McSaveFile *f = &out->files[i];
+		uint32_t size, padded;
+
+		if (len - pos < ENT)
+			goto bad;
+		h = buf + pos;
+		if (rd16(h) & M_DIR) {
+			mcCardFreeSave(out);
+			return MCW_ERR_UNSUPPORTED;
+		}
+		size = rd32(h + 4);
+		if ((rd16(h) & (M_EXISTS | M_FILE)) != (M_EXISTS | M_FILE) || !nameOk(h + 0x40) ||
+		    size > len - pos - ENT)
+			goto bad;
+		padded = (size + CL - 1u) / CL * CL;
+		memcpy(f->entry, h, ENT);
+		f->size = size;
+		f->data = (uint8_t *)malloc(size ? size : 1);
+		if (!f->data) {
+			mcCardFreeSave(out);
+			return MCW_ERR_NOMEM;
+		}
+		memcpy(f->data, h + ENT, size);
+		/* the last file's padding may be cut short, nothing may follow it */
+		if (padded > len - pos - ENT)
+			padded = len - pos - ENT;
+		pos += ENT + padded;
+	}
+	if (pos != len || !validSave(out))
+		goto bad;
+	return MCW_OK;
+bad:
+	mcCardFreeSave(out);
+	return MCW_ERR_INVALID;
 }

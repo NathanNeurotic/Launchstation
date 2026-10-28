@@ -270,6 +270,11 @@ static int card_fingerprint(const char *path, u8 out[MCV_FINGERPRINT_SIZE])
     return r == MCV_OK ? 0 : -1;
 }
 
+int mmceCardFingerprint(const char *path, unsigned char out[32])
+{
+    return card_fingerprint(path, out);
+}
+
 static int sidecar_path(const char *history, char *out, size_t out_size)
 {
     int n = snprintf(out, out_size, "%s.FP", history);

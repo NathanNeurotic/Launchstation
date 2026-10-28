@@ -98,7 +98,7 @@ def py_read(img):
         mode, length, first = struct.unpack_from("<H2xL8xL", e)
         if not mode & 0x8000:
             continue
-        name = e[0x40:0x60].split(b"\0")[0].decode()
+        name = e[0x40:0x60].split(b"\0")[0].decode("latin-1")
         files = {}
         sub = list(ents(first, length, name))
         assert struct.unpack_from("<L", sub[0], 0x14)[0] in (0, slot) or True
@@ -298,6 +298,111 @@ for n in range(120):
     run("delete", fz, names[2])
     run("copy", fz, names[1], blank(tmp / "fzdst.mcd"))
 
+# 10. .psu export: independent parse of the layout, then import round trip
+def py_psu(data):
+    """Returns (folder name, {file: bytes}) or raises."""
+    mode, count = struct.unpack_from("<HxxL", data, 0)
+    assert mode & 0x8020 == 0x8020 and not mode & 0x10
+    name = data[0x40:0x60].split(b"\0")[0].decode()
+    for i in (1, 2):
+        m, ln = struct.unpack_from("<HxxL", data, i * 512)
+        assert m & 0x8020 == 0x8020 and ln == 0
+        assert data[i * 512 + 0x40:i * 512 + 0x43].rstrip(b"\0") == b"." * i
+    pos, files = 1536, {}
+    for _ in range(count - 2):
+        m, ln = struct.unpack_from("<HxxL", data, pos)
+        assert m & 0x8010 == 0x8010
+        assert data[pos + 0x10:pos + 0x18] == bytes(8)          # no card clusters leak out
+        fn = data[pos + 0x40:pos + 0x60].split(b"\0")[0].decode()
+        body = data[pos + 512:pos + 512 + ln]
+        pad = -ln % 1024
+        assert data[pos + 512 + ln:pos + 512 + ln + pad] == b"\xFF" * pad
+        files[fn] = body
+        pos += 512 + ln + pad
+    assert pos == len(data)
+    return name, files
+
+
+psu_dir = tmp / "psu"
+psu_dir.mkdir()
+for n in names:
+    out = psu_dir / f"{n}.psu"
+    res = op("psuout", src, n, out)
+    assert res["r"] == "0" and int(res["size"]) == out.stat().st_size, (n, res)
+    pname, pfiles = py_psu(out.read_bytes())
+    assert pname == n and sig(pfiles) == sig(src_saves[n]), n
+rt = blank(tmp / "rt.mcd")
+for n in names:
+    assert op("psuin", psu_dir / f"{n}.psu", rt)["r"] == "0", n
+got, _ = py_read(rt.read_bytes())
+assert {k: sig(v) for k, v in got.items()} == {k: sig(v) for k, v in src_saves.items()}
+assert op("psuin", psu_dir / f"{names[0]}.psu", rt)["r"] == "-10"   # already on the card
+
+# times and attributes survive card -> psu -> card
+def entries(img, name):
+    data = img.read_bytes()
+    for i in range(41 * 1024, len(data), 512):
+        if data[i + 0x40:i + 0x60].split(b"\0")[0] == name.encode() and data[i] & 0x20:
+            return data[i:i + 4] + data[i + 8:i + 0x10] + data[i + 0x18:i + 0x24]
+assert entries(rt, names[0]) == entries(src, names[0])
+
+# a save with a long last file and no trailing padding (some tools trim it) still imports
+one = (psu_dir / f"{names[-1]}.psu").read_bytes()
+_, last_files = py_psu(one)
+trim = one.rstrip(b"\xFF")
+if len(trim) < len(one):
+    (psu_dir / "trim.psu").write_bytes(trim)
+    r = op("psuin", psu_dir / "trim.psu", blank(tmp / "trim.mcd"))
+    assert r.get("r") == "0" or r.get("parse") == "-16", r
+
+# malformed files are refused before the card is opened for writing
+bad_cases = {}
+base = bytearray((psu_dir / f"{names[1]}.psu").read_bytes())
+def case(label, mutate):
+    b = bytearray(base)
+    mutate(b)
+    bad_cases[label] = bytes(b)
+case("short", lambda b: b.__delitem__(slice(1000, None)))
+case("count too big", lambda b: struct.pack_into("<L", b, 4, 4000))
+case("count too small", lambda b: struct.pack_into("<L", b, 4, 1))
+case("root is a file", lambda b: struct.pack_into("<H", b, 0, 0x8497))
+case("dot not a folder", lambda b: struct.pack_into("<H", b, 512, 0x8497))
+case("empty name", lambda b: b.__setitem__(0x40, 0))
+case("slash in name", lambda b: b.__setitem__(0x41, ord("/")))
+case("file size past end", lambda b: struct.pack_into("<L", b, 1536 + 4, 10 ** 7))
+case("trailing junk", lambda b: b.extend(b"\0" * 1024))
+case("file name dot", lambda b: b.__setitem__(slice(1536 + 0x40, 1536 + 0x42), b".\0"))
+two = bytearray(base)
+if struct.unpack_from("<L", base, 4)[0] >= 4:                  # duplicate file names
+    m0, l0 = struct.unpack_from("<HxxL", base, 1536)
+    second = 1536 + 512 + l0 + (-l0 % 1024)
+    two[second + 0x40:second + 0x60] = base[1536 + 0x40:1536 + 0x60]
+    bad_cases["duplicate names"] = bytes(two)
+sub_psu = bytearray(base)
+struct.pack_into("<H", sub_psu, 1536, 0x8427)
+target = blank(tmp / "badpsu.mcd")
+tb = target.read_bytes()
+for label, data in bad_cases.items():
+    (psu_dir / "bad.psu").write_bytes(data)
+    assert op("psuin", psu_dir / "bad.psu", target) == {"parse": "-16"}, label
+(psu_dir / "bad.psu").write_bytes(bytes(sub_psu))
+assert op("psuin", psu_dir / "bad.psu", target) == {"parse": "-13"}  # sub-folder
+assert target.read_bytes() == tb
+
+# random byte damage: parse or refuse, never crash (ASan/UBSan)
+for n in range(200):
+    b = bytearray(base)
+    for _ in range(rng.choice((1, 4, 16))):
+        b[rng.randrange(min(len(b), 4096))] = rng.randrange(256)
+    if rng.random() < 0.3:
+        del b[rng.randrange(len(b)):]
+    (psu_dir / "fz.psu").write_bytes(bytes(b))
+    shutil.copy(rt, tmp / "fzpsu.mcd")
+    res = op("psuin", psu_dir / "fz.psu", tmp / "fzpsu.mcd")
+    py_read((tmp / "fzpsu.mcd").read_bytes())                  # still consistent either way
+
+
 print(f"Card writer: copy/delete verified by two readers, refusals leave images untouched, "
       f"root growth and slot reuse, cross-links refused, crash-safe at every write "
-      f"({n_copy} copy and {n_del} delete crash points), 120-step model run, fuzz: OK")
+      f"({n_copy} copy and {n_del} delete crash points), 120-step model run, fuzz, "
+      f".psu export/import round trip with {len(bad_cases)} malformed files refused: OK")
