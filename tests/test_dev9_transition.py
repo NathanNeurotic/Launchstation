@@ -54,6 +54,8 @@ static void setupPowerOff(void) { power_calls++; }
 static void load_pflash(void) { flash_calls++; xfromserv_loaded=1; }
 static void getIpConfig(void) {}
 static int ps2ip_init(void) { client_calls++; return 0; }
+static int dns_calls;
+static void configureDashboardDns(void) { dns_calls++; }
 static void resetRuntimeDeviceState(int show) {
     assert(show == TRUE); resets++;
     if (allow_reset) {
