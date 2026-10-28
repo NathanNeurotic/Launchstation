@@ -182,22 +182,32 @@ jobs:
           test -f build/docs-site/index.html
           test -f build/docs-site/data/search-index.json
 
-      # The pinned SDK (.github/ps2build-sdk.env): a cache restore, else git.techwritescode.dev
-      # pinned per component, else (only when that host fails) the checksummed
-      # NathanNeurotic/ps2build-mirror release. That
-      # host has multi-minute HTTP 521 outages and resets connections (run 1112), and an unpinned update
-      # would install whatever is newest; the pin keeps every build on the same SDK.
-      - name: Restore the pinned ps2build SDK
-        uses: actions/cache@v4
+      # The newest ps2build SDK: the latest versions come from git.techwritescode.dev's release API (or,
+      # when it is down, the newest NathanNeurotic/ps2build-mirror release). The SDK cached under them is
+      # restored, else an older cached SDK is updated in place, else it is installed; then it is cached. A
+      # mirror fallback older than the latest is never cached under the latest versions.
+      - name: Resolve the latest ps2build SDK
+        id: sdk
+        run: sh scripts/ps2build_sdk.sh --resolve --llvm "$RUNNER_TEMP/ps2build-sdk.env"
+      - name: Restore the ps2build SDK
+        id: sdk-cache
+        uses: actions/cache/restore@v4
         with:
           path: ~/.local/share/ps2build
-          key: ps2build-sdk-${{ runner.os }}-${{ hashFiles('.github/ps2build-sdk.env') }}-llvm
+          key: ps2build-sdk-${{ runner.os }}-llvm-${{ steps.sdk.outputs.key }}
+          restore-keys: ps2build-sdk-${{ runner.os }}-llvm-
 
-      - name: Install the pinned ps2build SDK
+      - name: Install the ps2build SDK
         env:
           # The official host resets HTTP/2 streams under load; ps2build is a Go binary.
           GODEBUG: http2client=0
         run: sh scripts/ps2build_sdk.sh --llvm "$HOME/.local/share/ps2build"
+      - name: Cache the ps2build SDK
+        if: ${{ steps.sdk-cache.outputs.cache-hit != 'true' && env.PS2BUILD_SDK_STALE != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.local/share/ps2build
+          key: ps2build-sdk-${{ runner.os }}-llvm-${{ steps.sdk.outputs.key }}
 
       - name: Verify ps2build
         shell: bash
