@@ -22,8 +22,24 @@ image stored in `mmce0:/WLE-Recovered` / `mmce1:/WLE-Recovered`.
 Choose **Install as NEW selectable MMCE card...**, then select the adapter.
 Launchstation allocates a previously unused numbered `CardN` directory and
 publishes `mmceN:/MemoryCards/PS2/CardN/CardN-1.mcd` after readback
-verification. The newly installed card is **not** automatically selected;
-users can select it through their normal adapter workflow later.
+verification. The newly installed card is **not** automatically selected.
+Select it with the adapter's buttons, or highlight its `CardN-1.mcd` and choose
+**Make this the active MMCE card...**, which selects it and confirms the switch
+by number, channel and content. **Which MMCE card is in use?** shows the card the
+adapter is serving, confirmed by content.
+
+## Restore single saves instead of a whole card
+
+To bring back one save without touching the rest of a card, open a recovered
+image (or any card image) with **Card contents...**, then use **Copy to another
+card...** or **Export as .psu...**. Copying into an MMCE card works only on a
+card the adapter is not serving: select another card first. Every write starts
+with a verified safety copy of the target card in `WLE-Safety/`
+(`mmceN:/WLE-Safety/` on MMCE; the newest 10 are kept). A recovered card of the
+wrong size can be rebuilt with **Copy to a new card of another size...**, which
+writes a new file to `mmceN:/WLE-Resized/` for **Install as NEW selectable MMCE
+card...**. Not yet tested on a console: keep a PC copy of your `MemoryCards`
+folder.
 
 No existing card or GameID/BootCard backing image is replaced, and no sd2psXtd
 firmware update is needed. If copying or publishing fails, leave that
