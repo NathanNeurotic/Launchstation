@@ -246,10 +246,12 @@ void setNeutrinoMmceGameID(const char *gameID, const char *iso_path, const char 
 		    fileXioDevctl(device, MMCE_CMD_SET_GAMEID, (void *)gameID, NEUTRINO_GAME_ID_SIZE, NULL, 0) < 0)
 			continue;
 		for (poll = 0; poll < MMCE_SWITCH_POLLS; poll++) {
+			/* Firmware may acknowledge SET_GAMEID before marking itself busy.
+			 * Wait first (saildot4k/Launchstation 1e911e5). */
+			DelayThread(1000000);
 			status = fileXioDevctl(device, MMCE_CMD_GET_STATUS, NULL, 0, NULL, 0);
 			if (status < 0 || !(status & 1))
 				break;
-			DelayThread(1000000);
 		}
 		DPRINTF("Neutrino MMCE: %s game=%s polls=%d\n", device, gameID, poll);
 	}

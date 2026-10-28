@@ -148,9 +148,10 @@ int main(int argc, char **argv) {
     assert(calls == 2);
     setNeutrinoMmceGameID("bad", "usb0:/GAME.iso", "mass0:/NEUTRINO.ELF");
     assert(calls == 2);
-    assert(delays == 0);
+    /* One settle delay before each of the four accepted cards' first poll. */
+    assert(delays == 4);
     /* Both source cards are protected, including Neutrino on a real MC alias. */
-    pings = calls = polls = 0;
+    pings = calls = polls = delays = 0;
     setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mc1:/N.ELF");
     assert(!pings && !calls && !polls);
     setNeutrinoMmceGameID("SLUS_123.45", "mmce1:/GAME.iso", "mmce0:/N.ELF");
@@ -164,8 +165,8 @@ int main(int argc, char **argv) {
     assert(calls == 1 && !polls && !delays);
     set_error = 0; status_result = -1;
     setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF");
-    assert(polls == 1 && !delays);
-    status_result = 1; polls = 0;
+    assert(polls == 1 && delays == 1);
+    status_result = 1; polls = delays = 0;
     setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF");
     assert(polls == 15 && delays == 15); /* Genuine busy card has a finite bound. */
     return 0;
