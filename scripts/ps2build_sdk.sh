@@ -72,8 +72,10 @@ fetch() { # url file
 
 sha256() { sha256sum "$1" | cut -d' ' -f1; }
 
+# Versions, tags and hashes from the network end up in a pin file that later steps source, so anything
+# but these characters is refused (an empty result, as if the value were missing).
 pin_value() { # name file -> the value a pin.env assigns, without quotes
-    sed -n "s/^$1=\"\{0,1\}\([^\"]*\)\"\{0,1\}\$/\1/p" "$2"
+    sed -n "s/^$1=\"\{0,1\}\([A-Za-z0-9._+= -]*\)\"\{0,1\}\$/\1/p" "$2" | head -n 1
 }
 
 version_in() { # component "name=version ..." -> version
@@ -89,7 +91,7 @@ extra_var() { echo "$1" | tr 'a-z-' 'A-Z_'; } # ogg -> OGG, read as OGG_VERSION
 
 latest_tag() { # repository -> its newest official release tag
     curl -sSfL --retry 3 --retry-delay 5 --retry-all-errors --connect-timeout 20 --max-time 60 \
-        "$OFFICIAL/api/v1/repos/ps2/$1/releases/latest" | sed -n 's/.*"tag_name":"\([^"]*\)".*/\1/p' | head -n 1 | grep .
+        "$OFFICIAL/api/v1/repos/ps2/$1/releases/latest" | sed -n 's/.*"tag_name":"\([^"]*\)".*/\1/p' | head -n 1 | grep -E '^[A-Za-z0-9._+-]+$'
 }
 
 resolve_official() { # fill in each unpinned version with the newest official release
@@ -136,6 +138,7 @@ resolve_mirror() { # the release API is down: the newest mirror release defines 
     PS2BUILD_SDK_TAG=$(pin_value PS2BUILD_SDK_TAG "$pin_tmp")
     PS2BUILD_SDK_SUMS_SHA256=$(pin_value PS2BUILD_SDK_SUMS_SHA256 "$pin_tmp")
     rm -f "$pin_tmp"
+    [ -n "$PS2BUILD_SDK_TAG" ] && [ -n "$PS2BUILD_SDK_SUMS_SHA256" ] || { log "$MIRROR_LATEST/pin.env is incomplete"; return 1; }
     warn "$OFFICIAL's release API is unreachable; using the newest ps2build-mirror release $PS2BUILD_SDK_TAG, which may be older than the latest SDK"
 }
 
@@ -236,9 +239,13 @@ adopt_mirror_pin() { # pin.env of the newest mirror release: install that, and s
         warn "the newest ps2build-mirror release $tag is older than the latest SDK: ${older% }"
     fi
     PS2BUILD_SDK_TAG=$tag PS2BUILD_SDK_SUMS_SHA256=$sums PS2BUILD_COMPONENTS=$components PS2BUILD_LLVM_TOOLCHAIN=$llvm
+    for name in $PS2BUILD_EXTRAS; do
+        var=$(extra_var "$name")_VERSION
+        eval "$var=\$(pin_value $var \"\$1\")"
+    done
     # Later steps (the ogg/vorbis packages) then take the same release.
     if [ "$PS2BUILD_SDK_RESOLVED" = 1 ]; then
-        { echo "PS2BUILD_SDK_RESOLVED=1"; echo "PS2BUILD_EXTRAS=\"$PS2BUILD_EXTRAS\""; cat "$1"; } > "$PIN"
+        write_pin "$PIN"
     fi
 }
 
