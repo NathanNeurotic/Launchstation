@@ -869,6 +869,13 @@ void dashToolsCheckUpdates(void)
 	    "Accept: application/vnd.github+json\r\n";
 	int same = 0;
 
+	/* CA/device access and network stack changes use synchronous IOP RPCs.
+	 * Finish queued IO and any root-card status request before starting.
+	 * From saildot4k/Launchstation 1d647f3. */
+	if (!dashWorkerAwaitAll("Finishing background storage work"))
+		return;
+	filerRootMcPollIdle();
+
 	if (!launchstationUpdateCaPath(ca_path, sizeof(ca_path))) {
 		dashModalMessage(DI_WARNING, "Update check needs the CA bundle",
 		                 "WLE-UPDATE-CA.PEM was not found beside the running ELF or in the dashboard settings folder.",
@@ -877,7 +884,7 @@ void dashToolsCheckUpdates(void)
 	}
 	if (!ensureDashboardIpNetworkReady()) {
 		dashModalMessage(DI_WARNING, "Update check unavailable",
-		                 "The Ethernet stack could not be started.", NULL);
+		                 dashboardIpNetworkError(), NULL);
 		return;
 	}
 

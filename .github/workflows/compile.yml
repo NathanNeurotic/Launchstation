@@ -153,6 +153,7 @@ jobs:
           python3 tests/test_sd2cloud_parity.py
           python3 tests/test_mmce_status_failures.py
           python3 tests/test_self_update.py
+          python3 tests/test_https_tls.py
           python3 tests/test_app_packages.py
           python3 scripts/copy_test_pack.py --output test-fixtures/LS-COPY-TEST.zip
           python3 tests/test_rolling_release_workflow.py

@@ -310,7 +310,8 @@ static void tls_free(CloudTls *tls)
 {
     if (tls == NULL)
         return;
-    mbedtls_ssl_close_notify(&tls->ssl);
+    /* This also handles fatal TLS errors and incomplete handshakes. Close the
+     * transport without sending another TLS record from a failed session. */
     if (tls->sock >= 0) {
         ps2ipc_disconnect(tls->sock);
         tls->sock = -1;
@@ -320,6 +321,47 @@ static void tls_free(CloudTls *tls)
     mbedtls_x509_crt_free(&tls->ca);
     mbedtls_ctr_drbg_free(&tls->ctr);
     mbedtls_entropy_free(&tls->entropy);
+}
+
+/* Name the certificate problem instead of a bare mbedTLS code. From
+ * saildot4k/Launchstation 1d647f3. */
+static void tls_verify_error(CloudTls *tls, const char *host,
+                             char *error, int error_size, int result)
+{
+    uint32_t flags = mbedtls_ssl_get_verify_result(&tls->ssl);
+
+    if (error == NULL || error_size <= 0)
+        return;
+    /* An aborted handshake can have no verification result yet. Do not
+     * interpret the unavailable sentinel as every certificate error. */
+    if (flags == 0 || flags == (uint32_t)-1) {
+        set_error(error, error_size, "TLS certificate verification failed", result);
+        return;
+    }
+    if (flags & (MBEDTLS_X509_BADCERT_EXPIRED | MBEDTLS_X509_BADCERT_FUTURE)) {
+        snprintf(error, error_size,
+                 "TLS certificate date check failed for %.80s; verify the PS2 date and time", host);
+        return;
+    }
+    if (flags & MBEDTLS_X509_BADCERT_CN_MISMATCH) {
+        snprintf(error, error_size, "TLS certificate hostname check failed for %.80s", host);
+        return;
+    }
+    if (flags & MBEDTLS_X509_BADCERT_NOT_TRUSTED) {
+        snprintf(error, error_size,
+                 "TLS certificate is not trusted for %.80s; install the current CA bundle beside the ELF", host);
+        return;
+    }
+#if !defined(MBEDTLS_X509_REMOVE_INFO)
+    {
+        char info[192];
+        if (mbedtls_x509_crt_verify_info(info, sizeof(info), "", flags) >= 0) {
+            snprintf(error, error_size, "TLS certificate verification for %.60s: %.100s", host, info);
+            return;
+        }
+    }
+#endif
+    set_error(error, error_size, "TLS certificate verification failed", result);
 }
 
 static int tls_open(CloudTls *tls, const char *host, const char *ca_path,
@@ -404,27 +446,17 @@ static const unsigned char personal[] = "wLaunchELF native cloud";
             set_error(error, error_size, "TLS handshake timed out", 0);
             goto fail;
         }
-        set_error(error, error_size, "TLS handshake", r);
+        /* VERIFY_REQUIRED aborts the handshake on a bad certificate. Read
+         * its flags here, before freeing the session, as well as on success. */
+        if (r == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED)
+            tls_verify_error(tls, host, error, error_size, r);
+        else
+            set_error(error, error_size, "TLS handshake", r);
         goto fail;
     }
-    {
-        uint32_t verify_flags = mbedtls_ssl_get_verify_result(&tls->ssl);
-        if (verify_flags != 0) {
-            if (verify_flags & (MBEDTLS_X509_BADCERT_EXPIRED | MBEDTLS_X509_BADCERT_FUTURE)) {
-                set_error(error, error_size,
-                          "TLS certificate date check failed; verify the PS2 date and time", 0);
-            } else {
-#if !defined(MBEDTLS_X509_REMOVE_INFO)
-                char verify_info[192];
-                if (mbedtls_x509_crt_verify_info(verify_info, sizeof(verify_info), "",
-                                                 verify_flags) >= 0)
-                    snprintf(error, error_size, "TLS certificate verification: %.160s", verify_info);
-                else
-#endif
-                    set_error(error, error_size, "TLS certificate verification failed", 0);
-            }
-            goto fail;
-        }
+    if (mbedtls_ssl_get_verify_result(&tls->ssl) != 0) {
+        tls_verify_error(tls, host, error, error_size, 0);
+        goto fail;
     }
     return 0;
 
