@@ -182,54 +182,29 @@ jobs:
           test -f build/docs-site/index.html
           test -f build/docs-site/data/search-index.json
 
-      - name: Install ps2build SDK
-        shell: bash
-        run: |
-          set -euo pipefail
-          installer="$(mktemp)"
-          trap 'rm -f "$installer"' EXIT
+      # The pinned SDK (.github/ps2build-sdk.env): a cache restore, else the checksummed
+      # NathanNeurotic/ps2build-mirror release, else git.techwritescode.dev pinned per component. That
+      # host has multi-minute HTTP 521 outages and resets connections (run 1112), and an unpinned update
+      # would install whatever is newest; the pin keeps every build on the same SDK.
+      - name: Restore the pinned ps2build SDK
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/ps2build
+          key: ps2build-sdk-${{ runner.os }}-${{ hashFiles('.github/ps2build-sdk.env') }}-llvm
 
-          # git.techwritescode.dev occasionally returns transient 5xx errors.
-          # Retry the download before failing the job, and never let a failed
-          # curl be hidden by the pipe into sh.
-          curl -sSfL \
-            --retry 8 \
-            --retry-delay 5 \
-            --retry-all-errors \
-            --connect-timeout 20 \
-            https://git.techwritescode.dev/ps2/install/raw/branch/master/install.sh \
-            -o "$installer"
-
-          # The installer downloads ps2build itself, without retries; a reset
-          # connection there (curl exit 56) failed run 1112. Retry the whole
-          # install from a clean directory a few times before giving up.
-          for attempt in 1 2 3; do
-            if sh "$installer"; then
-              break
-            fi
-            if [ "$attempt" -eq 3 ]; then
-              echo "ps2build install failed 3 times" >&2
-              exit 1
-            fi
-            echo "ps2build install attempt $attempt failed; retrying in 20 s" >&2
-            rm -rf "$HOME/.local/share/ps2build"
-            sleep 20
-          done
-          # The installer places the ps2build executable directly in this
-          # directory and adds this directory (not a bin/ subdirectory) to PATH.
-          echo "$HOME/.local/share/ps2build" >> "$GITHUB_PATH"
+      - name: Install the pinned ps2build SDK
+        env:
+          # The official host resets HTTP/2 streams under load; ps2build is a Go binary.
+          GODEBUG: http2client=0
+        run: sh scripts/ps2build_sdk.sh --llvm "$HOME/.local/share/ps2build"
 
       - name: Verify ps2build
         shell: bash
         run: |
           set -euo pipefail
           command -v ps2build
-          ps2build update
           # Launchstation release builds use the LLVM/Clang toolchain.
           sdk="$HOME/.local/share/ps2build"
-          if [ ! -f "$sdk/llvm-toolchain/ee/bin/mips64r5900el-ps2-elf-clang.cfg" ]; then
-            ps2build update llvm-toolchain
-          fi
           test -f "$sdk/llvm-toolchain/ee/bin/mips64r5900el-ps2-elf-clang.cfg"
           test -d "$sdk/packages-llvm/core"
           ps2build version
