@@ -16,11 +16,17 @@ extern int fileMode;
 static u8 compare_a[MMCE_BACKUP_IO] __attribute__((aligned(64)));
 static u8 compare_b[MMCE_BACKUP_IO] __attribute__((aligned(64)));
 
-/* Fingerprint sidecar beside a history copy: "LSF1" + SHA-256 of the copy's
- * filesystem index (mcViewFingerprint). */
-#define MMCE_FP_TAG "LSF1"
+/* Fingerprint sidecar beside a history copy: "LSF2" + SHA-256 of the copy's
+ * filesystem index (mcViewFingerprint) + how many runs it has been trusted
+ * since the last full compare. The index misses a save rewritten in place at
+ * the same size while the console clock is stuck (no CMOS battery, or reset at
+ * boot): its entry keeps the same time. So a match is trusted at most
+ * MMCE_FP_MAX_SKIPS runs in a row, then the next run compares every byte.
+ * "LSF1" sidecars (no count) are not trusted: one full compare replaces them. */
+#define MMCE_FP_TAG "LSF2"
 #define MMCE_FP_TAG_LEN 4
-#define MMCE_FP_FILE (MMCE_FP_TAG_LEN + MCV_FINGERPRINT_SIZE)
+#define MMCE_FP_FILE (MMCE_FP_TAG_LEN + MCV_FINGERPRINT_SIZE + 1)
+#define MMCE_FP_MAX_SKIPS 8
 #define MMCE_FP_BLOCK 4096
 #define MMCE_FP_WAYS 4
 
@@ -281,8 +287,9 @@ static int sidecar_path(const char *history, char *out, size_t out_size)
     return n > 0 && n < (int)out_size;
 }
 
-/* 0 and the stored fingerprint, or -1 if missing, short, long or foreign. */
-static int read_sidecar(const char *history, u8 out[MCV_FINGERPRINT_SIZE])
+/* 0 and the stored fingerprint and skip count, or -1 if missing, short, long
+ * or foreign. */
+static int read_sidecar(const char *history, u8 out[MCV_FINGERPRINT_SIZE], int *skips)
 {
     char path[MAX_PATH];
     u8 raw[MMCE_FP_FILE + 1];
@@ -303,6 +310,34 @@ static int read_sidecar(const char *history, u8 out[MCV_FINGERPRINT_SIZE])
         memcmp(raw, MMCE_FP_TAG, MMCE_FP_TAG_LEN) != 0)
         return -1;
     memcpy(out, raw + MMCE_FP_TAG_LEN, MCV_FINGERPRINT_SIZE);
+    *skips = raw[MMCE_FP_TAG_LEN + MCV_FINGERPRINT_SIZE];
+    return 0;
+}
+
+/* Writes the sidecar and reads it back. 0 = stored; otherwise it is removed
+ * (best effort) and the caller must not rely on it. */
+static int store_sidecar(const char *history, const u8 fp[MCV_FINGERPRINT_SIZE], int skips)
+{
+    char path[MAX_PATH];
+    u8 check[MCV_FINGERPRINT_SIZE], raw[MMCE_FP_FILE];
+    int fd, ok, got;
+
+    if (!sidecar_path(history, path, sizeof(path)))
+        return -1;
+    memcpy(raw, MMCE_FP_TAG, MMCE_FP_TAG_LEN);
+    memcpy(raw + MMCE_FP_TAG_LEN, fp, MCV_FINGERPRINT_SIZE);
+    raw[MMCE_FP_TAG_LEN + MCV_FINGERPRINT_SIZE] = (u8)skips;
+    fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
+    if (fd < 0)
+        return -1;
+    ok = genWrite(fd, raw, sizeof(raw)) == (int)sizeof(raw);
+    if (genClose(fd) < 0)
+        ok = 0;
+    if (!ok || read_sidecar(history, check, &got) < 0 ||
+        memcmp(check, fp, MCV_FINGERPRINT_SIZE) != 0 || got != skips) {
+        genRemove(path);
+        return -1;
+    }
     return 0;
 }
 
@@ -311,34 +346,30 @@ static int read_sidecar(const char *history, u8 out[MCV_FINGERPRINT_SIZE])
  * sidecar the next run falls back to the full compare. */
 static void write_sidecar(const char *history)
 {
-    char path[MAX_PATH];
-    u8 fp[MCV_FINGERPRINT_SIZE], check[MCV_FINGERPRINT_SIZE], raw[MMCE_FP_FILE];
-    int fd, ok;
+    u8 fp[MCV_FINGERPRINT_SIZE];
 
-    if (!sidecar_path(history, path, sizeof(path)) || card_fingerprint(history, fp) < 0)
-        return;
-    memcpy(raw, MMCE_FP_TAG, MMCE_FP_TAG_LEN);
-    memcpy(raw + MMCE_FP_TAG_LEN, fp, MCV_FINGERPRINT_SIZE);
-    fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
-    if (fd < 0)
-        return;
-    ok = genWrite(fd, raw, sizeof(raw)) == (int)sizeof(raw);
-    if (genClose(fd) < 0)
-        ok = 0;
-    if (!ok || read_sidecar(history, check) < 0 ||
-        memcmp(check, fp, MCV_FINGERPRINT_SIZE) != 0)
-        genRemove(path);
+    if (card_fingerprint(history, fp) == 0)
+        store_sidecar(history, fp, 0);
 }
 
-/* 1 = same index as the history copy, 0 = different, -1 = cannot tell
- * (no sidecar, or either side could not be parsed): use the full compare. */
-static int fingerprint_matches(const char *source, const char *history)
+/* 1 = same index as the history copy, 0 = different, -1 = cannot tell (no
+ * sidecar, either side could not be parsed, or a full compare is due): use the
+ * full compare. With consume set, a 1 is only returned once the raised skip
+ * count is stored, so a sidecar that cannot be updated never skips forever. */
+static int fingerprint_matches(const char *source, const char *history, int consume)
 {
     u8 now[MCV_FINGERPRINT_SIZE], then[MCV_FINGERPRINT_SIZE];
+    int skips;
 
-    if (read_sidecar(history, then) < 0 || card_fingerprint(source, now) < 0)
+    if (read_sidecar(history, then, &skips) < 0 || card_fingerprint(source, now) < 0)
         return -1;
-    return memcmp(now, then, MCV_FINGERPRINT_SIZE) == 0;
+    if (memcmp(now, then, MCV_FINGERPRINT_SIZE) != 0)
+        return 0;
+    if (skips >= MMCE_FP_MAX_SKIPS)
+        return -1;
+    if (consume && store_sidecar(history, then, skips + 1) < 0)
+        return -1;
+    return 1;
 }
 
 static int files_equal_serial(const char *a, const char *b)
@@ -524,7 +555,7 @@ static int backup_one(const char *source, const char *relative,
      * whole card; a mismatch proves a change, so the full read is spent on the
      * copy instead of a compare. Without a usable sidecar, compare as before. */
     if (previous_path[0] != '\0' && !options->verify) {
-        fp_same = fingerprint_matches(source, previous_path);
+        fp_same = fingerprint_matches(source, previous_path, 1);
         if (fp_same == 1) {
             stats->unchanged++;
             return 0;
@@ -533,7 +564,7 @@ static int backup_one(const char *source, const char *relative,
     if (previous_path[0] != '\0' && format == MMCE_BACKUP_FORMAT_MCD && fp_same != 0) {
         same = files_equal_serial(source, previous_path);
         if (same == 1)
-            write_sidecar(previous_path); /* first run after an update: seed it */
+            write_sidecar(previous_path); /* seed it, or restart its skip count */
     }
 
     /* Native .mcd history can detect unchanged cards before any write.
@@ -636,7 +667,8 @@ static int scan_one(const char *source, const char *relative,
         return -1;
     }
 
-    same = options->verify ? -1 : fingerprint_matches(source, previous_path);
+    /* Read-only scan: a match does not use up one of the trusted runs. */
+    same = options->verify ? -1 : fingerprint_matches(source, previous_path, 0);
     if (same < 0)
         same = options->format == MMCE_BACKUP_FORMAT_PCSX2
                    ? files_equal_pcsx2_history(source, previous_path)

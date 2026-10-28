@@ -13,7 +13,7 @@ start = src.index("static int backup_one(")
 end = src.index("\nstatic int count_candidates(", start)
 body = src[start:end]
 
-fingerprint = body.index("fingerprint_matches(source, previous_path)")
+fingerprint = body.index("fingerprint_matches(source, previous_path, 1)")
 compare = body.index("files_equal_serial(source, previous_path)")
 unchanged = body.index("stats->unchanged++")
 copy = body.index("mcCardBackupNoEcc(source, staged, NULL)")

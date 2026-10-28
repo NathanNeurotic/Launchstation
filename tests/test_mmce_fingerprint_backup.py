@@ -1,6 +1,7 @@
 """Run the MMCE backup's real fingerprint and sidecar code on host files.
 
-fp_read, card_fingerprint, read_sidecar, write_sidecar and fingerprint_matches
+fp_read, card_fingerprint, read_sidecar, store_sidecar, write_sidecar and
+fingerprint_matches
 are compiled from src/mmce_backup.c with POSIX stand-ins for genOpen & co, and
 linked with the real card viewer. The cards come from tests/mc_fixture.py.
 """
@@ -33,7 +34,7 @@ def extract(signature):
 defs = source[source.index("#define MMCE_FP_TAG "):source.index("static int bcd_to_int(")]
 funcs = "".join(extract(s) for s in (
     "static int fp_read(", "static int card_fingerprint(", "static int sidecar_path(",
-    "static int read_sidecar(", "static void write_sidecar(", "static int fingerprint_matches("))
+    "static int read_sidecar(", "static int store_sidecar(", "static void write_sidecar(", "static int fingerprint_matches("))
 
 harness = r'''
 #include <assert.h>
@@ -66,6 +67,7 @@ static int genRemove(const char *p) { return unlink(p); }
 ''' + defs + funcs + r'''
 int main(int argc, char **argv) {
     u8 fp[MCV_FINGERPRINT_SIZE];
+    int skips = -1;
     const char *cmd = argv[1];
     if (argc < 3) return 2;
     if (!strcmp(cmd, "fp")) {
@@ -76,10 +78,14 @@ int main(int argc, char **argv) {
     } else if (!strcmp(cmd, "seal")) {
         fail_write = argc > 3;
         write_sidecar(argv[2]);
-        printf("sidecar=%d\n", read_sidecar(argv[2], fp));
+        printf("sidecar=%d\n", read_sidecar(argv[2], fp, &skips));
     } else if (!strcmp(cmd, "match")) {
-        int m = fingerprint_matches(argv[2], argv[3]);
-        printf("match=%d max_open=%d\n", m, max_open);
+        int consume = argc > 4 && atoi(argv[4]), m;
+        fail_write = argc > 5;
+        m = fingerprint_matches(argv[2], argv[3], consume);
+        fail_write = 0;
+        if (read_sidecar(argv[3], fp, &skips) < 0) skips = -1;
+        printf("match=%d max_open=%d skips=%d\n", m, max_open, skips);
     }
     return 0;
 }
@@ -125,9 +131,27 @@ print(f"  fingerprint of an 8 MiB card with 41 saves: {reads} block reads ({read
 assert run("match", live, hist)["match"] == "-1"
 assert run("seal", hist)["sidecar"] == "0"
 fp_file = Path(str(hist) + ".FP")
-assert fp_file.stat().st_size == 36 and fp_file.read_bytes()[:4] == b"LSF1"
+assert fp_file.stat().st_size == 37 and fp_file.read_bytes()[:4] == b"LSF2"
 d = run("match", live, hist)
-assert d == {"match": "1", "max_open": "1"}, d
+assert d == {"match": "1", "max_open": "1", "skips": "0"}, d   # a read-only scan uses up nothing
+
+# Same-size rewrite under a stuck clock is invisible to the index, so a match
+# is trusted MMCE_FP_MAX_SKIPS (8) backups in a row, then a full compare is due.
+for i in range(1, 9):
+    d = run("match", live, hist, 1)
+    assert d == {"match": "1", "max_open": "1", "skips": str(i)}, (i, d)
+assert run("match", live, hist, 1) == {"match": "-1", "max_open": "1", "skips": "8"}
+assert run("match", live, hist)["match"] == "-1"            # the pending scan compares too
+assert run("seal", hist)["sidecar"] == "0"                  # full compare said same: count restarts
+assert run("match", live, hist, 1)["skips"] == "1"
+# a count that cannot be stored never skips: the sidecar goes, a full compare runs
+d = run("match", live, hist, 1, "fail")
+assert d["match"] == "-1" and d["skips"] == "-1" and not fp_file.exists(), d
+assert run("seal", hist)["sidecar"] == "0"
+# an LSF1 sidecar from the previous build has no count: not trusted
+fp_file.write_bytes(b"LSF1" + fp_file.read_bytes()[4:36])
+assert run("match", live, hist, 1)["match"] == "-1"
+assert run("seal", hist)["sidecar"] == "0"
 
 # a game start rewrites only the system history: still unchanged
 live.write_bytes(card(history=b"H" * 900, extra=True))  # rewritten in place
@@ -147,7 +171,7 @@ assert run("match", live, ecc_hist)["match"] == "1"
 
 # damaged or foreign sidecars are never trusted
 good = fp_file.read_bytes()
-for bad in (good[:35], good + b"x", b"XXXX" + good[4:], b""):
+for bad in (good[:36], good + b"x", b"XXXX" + good[4:], b""):
     fp_file.write_bytes(bad)
     assert run("match", live, hist)["match"] == "-1", bad[:6]
 fp_file.write_bytes(good)
@@ -168,4 +192,5 @@ assert run("seal", junk)["sidecar"] == "-1"
 assert not Path(str(junk) + ".FP").exists()
 
 print("PASS: MMCE backup fingerprint sidecars: index-only reads, one open file, "
-      "history-only change ignored, damaged sidecars and cards fall back to a full compare")
+      "history-only change ignored, full compare at least every 8 skips, "
+      "damaged sidecars and cards fall back to a full compare")

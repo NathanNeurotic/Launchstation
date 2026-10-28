@@ -60,8 +60,8 @@ static int join_path(char *out, size_t n, const char *a, const char *b) {
 static int files_equal_serial(const char *a, const char *b) {
     (void)a; (void)b; compares++; return comparison;
 }
-static int fingerprint_matches(const char *source, const char *history) {
-    (void)source;
+static int fingerprint_matches(const char *source, const char *history, int consume) {
+    (void)source; assert(consume == 1);
     assert(!strcmp(history,"mass0:/history/card/WLE-old.mcd") ||
            !strcmp(history,"mass0:/history/card/WLE-old.ps2") || strstr(history,"WLE-old"));
     fp_calls++; return fingerprint;

@@ -72,8 +72,11 @@ int mcViewFreeClusters(McView *v, uint32_t *free_clusters, uint32_t *total_clust
  * every directory entry (mode, size, times, first cluster, name), walking every
  * folder. File contents are not read, so a 16 MiB card costs a few hundred KB
  * of reads. Two cards with the same fingerprint have the same files with the
- * same sizes, dates and locations; anything written through mcman changes it.
- * Not covered: writers that rewrite raw pages without touching the index, and
+ * same sizes, dates and locations; anything written through mcman changes it,
+ * as long as the console clock moves between the two writes.
+ * Not covered: a file rewritten in place at the same size with the same
+ * modification time (a stuck or reset console clock), writers that rewrite raw
+ * pages without touching the index, and
  * the contents of B?DATA-SYSTEM (the PS2 rewrites its history file on every game
  * start; only that the folder exists is hashed). Use a full compare when those
  * matter. ECC and no-ECC images of the same card give the same fingerprint.
