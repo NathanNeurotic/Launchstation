@@ -141,7 +141,7 @@ static void dashInputPoll(DashInput *in) {
 """
 if "static int modalEnabledEdge(" in ui:
     code += function(ui, "static int modalEnabledEdge(")
-code += menu + buttons
+code += read("include/list_scroll.h") + menu + buttons
 code += r"""
 static void reset(void) {
     anim_time=bg_time=ui_time=0; bg_calls=ui_calls=renders=preview_calls=0;

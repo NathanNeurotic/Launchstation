@@ -15,6 +15,7 @@ extern u32 paddata;
 
 static u64 last_input_ms;
 static u32 held_prev;
+static u32 text_repeat_armed;
 
 //--------------------------------------------------------------
 // Input
@@ -27,7 +28,7 @@ void dashInputPoll(DashInput *in)
 /* usb_kb_as_pad = 0 leaves the USB keyboard to the caller (text entry). */
 void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 {
-	u32 np;
+	u32 np, repeat;
 	int ret;
 	u32 ok_btn = swapKeys ? PAD_CROSS : PAD_CIRCLE;
 	u32 back_btn = swapKeys ? PAD_CIRCLE : PAD_CROSS;
@@ -46,6 +47,13 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	np = ret ? new_pad & ((PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT |
 	                      PAD_L3_H0 | PAD_L3_H1 | PAD_L3_V0 | PAD_L3_V1 |
 	                      PAD_L2 | PAD_R2) | ~(paddata & held_prev)) : 0;
+	/* Adapted from saildot4k d9f60e5: reuse pad repeat timing only for
+	 * text-entry consumers. A held action cannot reopen a normal dialog. */
+	text_repeat_armed &= paddata;
+	text_repeat_armed |= np & paddata & (ok_btn | back_btn);
+	repeat = ret ? new_pad & (text_repeat_armed | ~paddata) : 0;
+	if (repeat & ok_btn) in->text_repeat |= DASH_IN_OK;
+	if (repeat & back_btn) in->text_repeat |= DASH_IN_BACK;
 	if (paddata != held_prev)
 		last_input_ms = Timer();
 	held_prev = paddata;
@@ -84,7 +92,7 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	if (np & PAD_R3)
 		in->pressed |= DASH_IN_R3;
 	in->any = (in->pressed != 0);
-	if (in->any)
+	if (in->any || in->text_repeat)
 		last_input_ms = Timer();
 	/* Held SELECT turns START into its quick launch key (dash_main.c). */
 	if ((in->pressed & DASH_IN_START) && !(paddata & PAD_SELECT)) {
@@ -110,6 +118,7 @@ void dashInputFlush(void)
 		readpad_noRepeat();
 	}
 	held_prev = paddata;
+	text_repeat_armed = 0;
 	last_input_ms = Timer();
 }
 
@@ -866,10 +875,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			dashInputFlush();
 			return -1;
 		}
-		if (sel < top)
-			top = sel;
-		if (sel >= top + rows)
-			top = sel - rows + 1;
+		top = listCenteredTop(sel, n, rows);
 		if (sel_anim < top || sel_anim >= top + rows)
 			sel_anim = (float)sel;
 		if (preview != NULL) {

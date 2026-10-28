@@ -1574,12 +1574,7 @@ static void toolsDraw(void)
 	int i;
 
 	dashDrawSectionTitle(lx, 68, localizeDashboardText("Tools"), "everything Launchstation can do");
-	if (tsel < ttop + 1)
-		ttop = tsel - 1;
-	if (tsel >= ttop + rows)
-		ttop = tsel - rows + 1;
-	if (ttop < 0)
-		ttop = 0;
+	ttop = listCenteredTop(tsel, NTOOLS, rows);
 	if (tsel_anim < ttop || tsel_anim >= ttop + rows)
 		tsel_anim = (float)tsel;
 

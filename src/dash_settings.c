@@ -3094,10 +3094,7 @@ static void settingsDraw(void)
 	}
 
 	/* keep the focused row inside the visible window */
-	if (item < item_top)
-		item_top = item;
-	if (item >= item_top + ITEM_ROWS)
-		item_top = item - ITEM_ROWS + 1;
+	item_top = listCenteredTop(item, c->n, ITEM_ROWS);
 	if (item_anim < item_top || item_anim >= item_top + ITEM_ROWS)
 		item_anim = (float)item;
 

@@ -581,11 +581,7 @@ static void drawList(void)
 	DashApp *a = selApp();
 	float lx = DASH_SAFE_L, ly = 104, lw = 290;
 
-	top = sel - LIST_ROWS / 2;
-	if (top > norder - LIST_ROWS)
-		top = norder - LIST_ROWS;
-	if (top < 0)
-		top = 0;
+	top = listCenteredTop(sel, norder, LIST_ROWS);
 	if (sel_anim < top || sel_anim >= top + LIST_ROWS)
 		sel_anim = (float)sel;
 

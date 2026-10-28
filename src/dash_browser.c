@@ -153,13 +153,7 @@ static int wrapIndex(int index, int total)
 static void revealSelection(void)
 {
 	int total = fb.dir[0] ? fb.n : fb.ndevs;
-	fb.top = fb.sel - (FB_ROWS - 1) / 2;
-	if (fb.top < 0)
-		fb.top = 0;
-	if (total <= FB_ROWS)
-		fb.top = 0;
-	else if (fb.top > total - FB_ROWS)
-		fb.top = total - FB_ROWS;
+	fb.top = listCenteredTop(fb.sel, total, FB_ROWS);
 	if (fb.sel_anim < fb.top || fb.sel_anim >= fb.top + FB_ROWS)
 		fb.sel_anim = (float)fb.sel;
 }
@@ -819,7 +813,7 @@ static void opRename(void)
 		return;
 	}
 	dashStrCopy(name, f->name, sizeof(name));
-	if (!dashModalKeyboard("New name", name, 36) || name[0] == '\0' || !strcmp(name, f->name))
+	if (!dashModalFilename("New name", name, 36, fb.dir) || name[0] == '\0' || !strcmp(name, f->name))
 		return;
 	if (!prepareOp())
 		return;
@@ -838,7 +832,7 @@ static void opNewFolder(void)
 	int ret;
 
 	name[0] = '\0';
-	if (!dashModalKeyboard("Folder name", name, 36) || name[0] == '\0')
+	if (!dashModalFilename("Folder name", name, 36, fb.dir) || name[0] == '\0')
 		return;
 	if (!prepareOp())
 		return;
@@ -2078,10 +2072,7 @@ static int tsEdit(FilerDateEditor *e)
 		idx = filerDateEditorSync(e);
 		if (idx < 0)
 			idx = 0;
-		if (idx < top)
-			top = idx;
-		if (idx >= top + TS_ROWS)
-			top = idx - TS_ROWS + 1;
+		top = listCenteredTop(idx, e->count, TS_ROWS);
 		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dashVisualUpdate());
 		{
 			float oe = dashEaseOutCubic(open), fx, fy;

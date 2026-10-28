@@ -82,7 +82,7 @@ static int readpad_noRepeat(void) {
     int r=readpad_noKBnoRepeat(); return r&&new_pad?r:simPadKB();
 }
 static u64 last_input_ms;
-static u32 held_prev;
+static u32 held_prev, text_repeat_armed;
 static int dashboard_menus,dashboard_menu_open;
 static void dashDashboardMenu(void) { dashboard_menus++; }
 """
@@ -142,6 +142,17 @@ int main(void) {
     dashboard_menu_open=0;dashInputFlush();
     keys[0]=0;dashInputPollEx(&in,0);keys[0]=PAD_START;
     dashInputPollEx(&in,1);assert(dashboard_menus==2 && !in.any && !in.raw_new);
+    /* Text repeats are separate from one-press actions and disarmed by flush. */
+    keys[0]=0;dashInputPollEx(&in,0);keys[0]=PAD_CROSS;swapKeys=1;
+    dashInputPollEx(&in,0);assert(in.pressed==DASH_IN_OK && in.text_repeat==DASH_IN_OK);
+    now_ms+=600;dashInputPollEx(&in,0);assert(!in.pressed && in.text_repeat==DASH_IN_OK);
+    dashInputFlush();now_ms+=600;dashInputPollEx(&in,0);assert(!in.pressed && !in.text_repeat);
+    keys[0]=0;dashInputPollEx(&in,0);keys[0]=PAD_CIRCLE;
+    dashInputPollEx(&in,0);assert(in.pressed==DASH_IN_BACK && in.text_repeat==DASH_IN_BACK);
+    now_ms+=600;dashInputPollEx(&in,0);assert(!in.pressed && in.text_repeat==DASH_IN_BACK);
+    keys[0]=0;dashInputPollEx(&in,0);keys[0]=PAD_CROSS;swapKeys=0;
+    dashInputPollEx(&in,0);assert(in.pressed==DASH_IN_BACK && in.text_repeat==DASH_IN_BACK);
+    swapKeys=1;dashInputFlush();
     /* Held SELECT keeps START as the quick launch key (SELECT+START). */
     keys[0]=0;dashInputPollEx(&in,0);keys[0]=PAD_SELECT;dashInputPollEx(&in,0);
     keys[0]=PAD_SELECT|PAD_START;dashInputPollEx(&in,0);

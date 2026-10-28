@@ -4,6 +4,8 @@ The `## Rolling` section below is the maintained summary shown on the GitHub [`l
 
 ## Rolling
 
+- **Input and scrolling:** hold-to-repeat Type/Delete without repeating menu actions; filename prompts show the destination and filter unsuitable characters; lists share centered scrolling. Adapted from saildot4k; hardware validation pending.
+
 - **Video and sound safety:** video-mode changes require confirmation within 10 seconds or restore the previous mode and offsets. Sound-effect fallback excludes the music voice. Adapted from saildot4k; hardware validation pending.
 - **Card rename boundaries:** PS2 card names are limited to 31 bytes to prevent receiver truncation and duplicate names; PS1 retains its 20-byte limit. Socket option lengths and optional receive-address outputs are checked locally, and TLS trust errors identify the active CA store.
 
