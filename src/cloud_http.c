@@ -348,11 +348,18 @@ static void tls_verify_error(CloudTls *tls, const char *host, const char *ca_pat
         return;
     }
     if (flags & MBEDTLS_X509_BADCERT_NOT_TRUSTED) {
-        snprintf(error, error_size,
-                 "TLS certificate is not trusted for %.80s; %s", host,
-                 ca_path == NULL || !ca_path[0] ? "update the built-in Google roots or install WLE-CLOUD-CA.PEM" :
-                 strstr(ca_path, "WLE-CLOUD-CA.PEM") ? "update the WLE-CLOUD-CA.PEM override" :
-                 "install the current update CA bundle beside the ELF");
+        /* Name the bundle that was actually loaded: the updater may read it
+         * from the dashboard settings folder rather than beside the ELF. */
+        if (ca_path == NULL || !ca_path[0])
+            snprintf(error, error_size,
+                     "TLS certificate is not trusted for %.80s; update the built-in Google roots or install WLE-CLOUD-CA.PEM",
+                     host);
+        else if (strstr(ca_path, "WLE-CLOUD-CA.PEM"))
+            snprintf(error, error_size,
+                     "TLS certificate is not trusted for %.80s; update the WLE-CLOUD-CA.PEM override", host);
+        else
+            snprintf(error, error_size,
+                     "TLS certificate is not trusted for %.80s; replace the CA bundle at %.100s", host, ca_path);
         return;
     }
 #if !defined(MBEDTLS_X509_REMOVE_INFO)

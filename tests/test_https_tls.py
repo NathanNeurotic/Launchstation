@@ -87,7 +87,7 @@ static void mbedtls_strerror(int code,char *out,size_t cap) {
     snprintf(out,cap,"mock TLS error %d",code);
 }
 static unsigned char *read_file(const char *path,int *size) {
-    assert(!strcmp(path,"WLE-UPDATE-CA.PEM") || !strcmp(path,"mc0:/WLE-CLOUD-CA.PEM"));
+    assert(!strcmp(path,"WLE-UPDATE-CA.PEM") || !strcmp(path,"mc0:/LAUNCHSTATION/WLE-UPDATE-CA.PEM") || !strcmp(path,"mc0:/WLE-CLOUD-CA.PEM"));
     unsigned char *out=malloc(3);assert(out);memcpy(out,"CA",3);*size=2;return out;
 }
 static int builtin_roots;
@@ -187,13 +187,16 @@ int main(void) {
     reset(0,0);
     assert(!tls_open(&tls,"api.github.com","WLE-UPDATE-CA.PEM",error,sizeof(error)));
     assert(required_mode==1 && hostname_set==1 && verifies==1 && !frees);
-    expect_failure(MBEDTLS_X509_BADCERT_NOT_TRUSTED,"CA bundle beside the ELF");
+    expect_failure(MBEDTLS_X509_BADCERT_NOT_TRUSTED,"replace the CA bundle at WLE-UPDATE-CA.PEM");
+    reset(MBEDTLS_ERR_X509_CERT_VERIFY_FAILED,MBEDTLS_X509_BADCERT_NOT_TRUSTED);
+    assert(tls_open(&tls,"api.github.com","mc0:/LAUNCHSTATION/WLE-UPDATE-CA.PEM",error,sizeof(error))<0);
+    assert(strstr(error,"CA bundle at mc0:/LAUNCHSTATION/WLE-UPDATE-CA.PEM"));
     reset(MBEDTLS_ERR_X509_CERT_VERIFY_FAILED,MBEDTLS_X509_BADCERT_NOT_TRUSTED);
     assert(tls_open(&tls,"api.github.com","",error,sizeof(error))<0);
-    assert(strstr(error,"built-in Google roots") && !strstr(error,"beside the ELF"));
+    assert(strstr(error,"built-in Google roots") && !strstr(error,"CA bundle at"));
     reset(MBEDTLS_ERR_X509_CERT_VERIFY_FAILED,MBEDTLS_X509_BADCERT_NOT_TRUSTED);
     assert(tls_open(&tls,"api.github.com","mc0:/WLE-CLOUD-CA.PEM",error,sizeof(error))<0);
-    assert(strstr(error,"WLE-CLOUD-CA.PEM override") && !strstr(error,"beside the ELF"));
+    assert(strstr(error,"WLE-CLOUD-CA.PEM override") && !strstr(error,"CA bundle at"));
     expect_failure(MBEDTLS_X509_BADCERT_EXPIRED,"verify the PS2 date and time");
     expect_failure(MBEDTLS_X509_BADCERT_FUTURE,"verify the PS2 date and time");
     expect_failure(MBEDTLS_X509_BADCERT_CN_MISMATCH,"hostname check failed for api.github.com");
