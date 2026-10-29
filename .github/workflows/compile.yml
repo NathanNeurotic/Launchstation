@@ -470,19 +470,31 @@ jobs:
           fi
           test "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" --jq '.object.sha')" = "${GITHUB_SHA}"
           test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" --jq '.prerelease')" = "false"
-          # Versioned ZIP names change with every build, so remove the previous
-          # builds' app ZIPs (and the old fixed-name ones). Only APP_LAUNCHSTATION
-          # ZIPs are touched, only after publishing succeeded, and a failed delete
-          # only warns; other manually maintained attachments stay.
+          # Versioned ZIP names change with every build, so remove the old
+          # fixed-name ZIPs and the app ZIPs of OLDER builds only: a newer build's
+          # ZIPs and any other manually maintained attachment stay. This runs only
+          # after publishing succeeded, and a failed delete only warns.
           { gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" --jq '.assets[].name' \
               || echo "::warning::could not list release assets; stale ZIPs were left" >&2; } |
             while IFS= read -r name; do
+              stale=0
               case "${name}" in
-                "APP_LAUNCHSTATION-${build}.zip"|"APP_LAUNCHSTATION-DS-${build}.zip") ;;
-                APP_LAUNCHSTATION*.zip)
-                  gh release delete-asset "${tag}" "${name}" --yes \
-                    || echo "::warning::could not remove stale asset ${name}" ;;
+                APP_LAUNCHSTATION.zip|APP_LAUNCHSTATION-DS.zip) stale=1 ;;
+                APP_LAUNCHSTATION-*.zip)
+                  number="${name%.zip}"
+                  number="${number##*-}"
+                  case "${name}" in
+                    "APP_LAUNCHSTATION-${number}.zip"|"APP_LAUNCHSTATION-DS-${number}.zip")
+                      case "${number}" in
+                        ''|*[!0-9]*) ;;
+                        *) [ "${number}" -lt "${build}" ] && stale=1 ;;
+                      esac ;;
+                  esac ;;
               esac
+              if [ "${stale}" = 1 ]; then
+                gh release delete-asset "${tag}" "${name}" --yes \
+                  || echo "::warning::could not remove stale asset ${name}"
+              fi
             done
           echo "Published Launchstation Rolling ${build} (${GITHUB_SHA}) as GitHub Latest."
           echo "Release page date (published_at): $(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" --jq '.published_at')"

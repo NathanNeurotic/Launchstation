@@ -67,7 +67,7 @@
 </ul>
 
 <h2 id="verify">Verify a download</h2>
-<p>GitHub shows a SHA-256 digest for each release asset, and the in-app updater compares against that digest before installing. To check by hand, run <code>sha256sum APP_LAUNCHSTATION-&lt;build&gt;.zip</code> (or <code>shasum -a 256</code>) and compare. The release notes list the build's commit and workflow run.</p>
+<p>GitHub shows a SHA-256 digest for each release asset, and the in-app updater compares against that digest before installing. To check by hand, run <code>sha256sum</code> on the file you downloaded, for example <code>sha256sum APP_LAUNCHSTATION-284.zip</code> (use your build number; <code>shasum -a 256</code> also works), and compare. The release notes list the build's commit and workflow run.</p>
 
 <h2 id="changelog">Rolling changelog summary</h2>
 <ul>
