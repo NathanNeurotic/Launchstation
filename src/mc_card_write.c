@@ -992,6 +992,38 @@ void mcCardBlankIdentity(uint8_t sb[512], uint8_t root[1024], const uint8_t stam
 	}
 }
 
+int mcGameIdValid(const char *id)
+{
+	int i;
+
+	if (id == NULL)
+		return 0;
+	for (i = 0; i < 4; i++)
+		if (id[i] < 'A' || id[i] > 'Z')
+			return 0;
+	if (id[4] != '-')
+		return 0;
+	for (i = 5; i < 10; i++)
+		if (id[i] < '0' || id[i] > '9')
+			return 0;
+	return id[10] == 0;
+}
+
+int mcSaveGameId(const char *save_name, char id[11])
+{
+	char t[11];
+
+	if (save_name == NULL || save_name[0] != 'B' || save_name[1] < 'A' || save_name[1] > 'Z' ||
+	    strlen(save_name) < 12)
+		return 0;
+	memcpy(t, save_name + 2, 10);
+	t[10] = 0;
+	if (!mcGameIdValid(t))
+		return 0;
+	memcpy(id, t, 11);
+	return 1;
+}
+
 int mcCardFormat(const uint8_t like_sb[512], const uint8_t like_root[1024], uint32_t size_mb, McWriteFn write,
                  void *wctx)
 {

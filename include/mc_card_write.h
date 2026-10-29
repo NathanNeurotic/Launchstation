@@ -101,4 +101,13 @@ int mcCardFormat(const uint8_t like_sb[512], const uint8_t like_root[1024], uint
  * year low, year high; console RTC time), or NULL for zero. */
 void mcCardBlankIdentity(uint8_t sb[512], uint8_t root[1024], const uint8_t stamp[8]);
 
+/* 1 when id names a Game ID card the way sd2psXtd-style MMCE devices file
+ * them (MemoryCards/PS2/<id>/<id>-1.mcd): four capitals, '-', five digits. */
+int mcGameIdValid(const char *id);
+
+/* The game a PS2 save folder belongs to, from its name: "BASLUS-21050SAVE"
+ * gives "SLUS-21050". 0 for system folders (BADATA-SYSTEM) and for names
+ * that do not start with a region letter and a serial. */
+int mcSaveGameId(const char *save_name, char id[11]);
+
 #endif
