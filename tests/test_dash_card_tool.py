@@ -492,6 +492,24 @@ lines = run(S, "m2", "c1", env={"NORENAME": "1"})
 assert kind(lines, "MESSAGE|4|Game ID cards made|2 Game ID cards made"), lines
 assert saves("mass:/S-GameID/SLUS-99999/SLUS-99999-1.mcd") == {"BASLUS-99999": whole["BASLUS-99999"]}
 assert not list(host("mass:/S-GameID").glob("*/*.PART"))
+# without rename, a copy that fails is removed; one that cannot be removed keeps its .PART beside it,
+# and the next split treats that game as unfinished, never as already having a card
+shutil.rmtree(host("mass:/S-GameID"))
+w = int(run(S, "m2", "c1", env={"NORENAME": "1"})[-1].split("writes=")[1])
+shutil.rmtree(host("mass:/S-GameID"))
+lines = run(S, "m2", "c1", env={"NORENAME": "1", "FAIL_WRITE_AT": str(w - 1)})
+assert any(l.startswith("MESSAGE|1|Some Game ID cards not made|1 Game ID card made") and " 1 failed (" in l
+           for l in lines), lines
+assert len(list(host("mass:/S-GameID").glob("*/*.mcd"))) == 1 and not list(host("mass:/S-GameID").glob("*/*.PART"))
+shutil.rmtree(host("mass:/S-GameID"))
+lines = run(S, "m2", "c1", env={"NORENAME": "1", "FAIL_WRITE_AT": str(w - 1), "FAIL_REMOVE": "1"})
+assert any("A partly copied card could not be removed; delete that game's folder before splitting again." in l
+           for l in kind(lines, "MESSAGE|1|")), lines
+part = list(host("mass:/S-GameID").glob("*/*.PART"))
+assert len(part) == 2 and all(Path(str(p)[:-5]).exists() for p in part), part   # remove fails for both .PARTs
+lines = run(S, "m2", "c1")
+assert any("2 games skipped: an unfinished .PART from an earlier split is in their folder; delete that folder" in l
+           for l in kind(lines, "MESSAGE|")), lines
 # an unfinished .PART from an interrupted split is never reused or taken as a card
 shutil.rmtree(host("mass:/S-GameID"))
 (host("mass:/S-GameID/SLUS-99999")).mkdir(parents=True)
