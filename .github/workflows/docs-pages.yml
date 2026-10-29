@@ -22,23 +22,32 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the build number below is the commit count
 
       - name: Build documentation
         run: |
           set -euo pipefail
+          # Like the app ZIPs, the docs ZIP name ends with the build number (the
+          # commit count), e.g. Launchstation-Documentation-284.zip. gh-pages is
+          # rebuilt from scratch, so no older docs ZIP lingers there.
+          build="$(git rev-list --count HEAD)"
+          case "${build}" in ''|*[!0-9]*) echo "Invalid build number: ${build}" >&2; exit 1 ;; esac
+          docs_zip="Launchstation-Documentation-${build}.zip"
+          echo "DOCS_ZIP=${docs_zip}" >> "${GITHUB_ENV}"
           python3 docs-site/build.py \
             --out site \
-            --zip Launchstation-Documentation.zip
+            --zip "${docs_zip}"
           mkdir -p site/downloads
-          cp Launchstation-Documentation.zip site/downloads/
-          unzip -t site/downloads/Launchstation-Documentation.zip
+          cp "${docs_zip}" site/downloads/
+          unzip -t "site/downloads/${docs_zip}"
 
       - name: Upload documentation artifact
         uses: actions/upload-artifact@v4
         with:
           name: Launchstation-Documentation
           path: |
-            Launchstation-Documentation.zip
+            ${{ env.DOCS_ZIP }}
             site/
           retention-days: 7
 
