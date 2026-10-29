@@ -31,7 +31,7 @@
 <tr><td>Copy to a new card of another size&hellip;</td><td>Makes a new 8, 16, 32 or 64&nbsp;MB card image holding every save. The source card is only read and no existing file is overwritten. The finished card must list exactly the source&rsquo;s saves, or the new file is removed. MMCE results go to <code>mmceN:/WLE-Resized/</code>, ready for <b>Install as NEW selectable MMCE card&hellip;</b>.</td></tr>
 <tr><td>Split into Game ID cards&hellip;</td><td>Makes one card per game, each holding that game&rsquo;s saves, in the <code>&lt;ID&gt;/&lt;ID&gt;-1.mcd</code> layout MMCE devices use for Game ID cards. See <a href="#gameid-split">Game ID cards</a>.</td></tr>
 </tbody></table>
-<p>Every write follows the same steps:</p>
+<p>Every card write follows the same steps:</p>
 <ol>
 <li>On MMCE, refuse the card the adapter is serving to the console right now. When Launchstation cannot tell which card that is, it writes to none.</li>
 <li>Check the name and free space with the card opened read-only, so a refusal costs nothing.</li>
@@ -68,7 +68,7 @@
 <li><b>Several saves:</b> mark them with <b>Square</b>, then choose <b>Marked saves&hellip;</b>: <b>Copy to a card&hellip;</b> copies them all with a single safety copy of that card; <b>Save as a set&hellip;</b> copies the files into a folder you name; <b>Delete the .psu files&hellip;</b> removes them after a confirmation (cards are not changed, and no safety copy is made of a <code>.psu</code>).</li>
 <li><b>Sets:</b> a folder in the library holding <code>.psu</code> files is a set, such as a starter set of system data and favourite game saves. <b>Apply a set to a card&hellip;</b> lists the sets with their sizes; choose one and a card, confirm, and every save in the set is copied as above. Saving into an existing set adds files and leaves those already there by name as they are.</li>
 <li>Sets are only ever applied when you choose to. Nothing is copied automatically, for example to a new Game ID card.</li>
-<li>A file that is not a valid save is listed as &ldquo;not a usable .psu&rdquo; and can only be deleted. Launchstation&rsquo;s own <code>WLE-</code> folders are not read. Up to 500 files and 64 sets are listed.</li>
+<li>A file that is not a valid save is listed as &ldquo;not a usable .psu&rdquo; and can only be deleted. Launchstation&rsquo;s own <code>WLE-</code> folders are not read. Up to 500 files and 64 sets are listed. A set with files beyond that limit is shown as &ldquo;too many files here to list them all&rdquo; and cannot be applied, so a set is never applied in part.</li>
 </ul>
 <div class="callout amber"><div class="h">Status</div><p><b>Not yet tested on a console.</b></p></div>
 

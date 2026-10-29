@@ -1485,7 +1485,7 @@ static int ctAllBatch(const char *folder, const CtAnyCard *cards, int ncards, co
 	DashMenuItem items[3];
 	char(*safety)[MAX_PATH];
 	char dest[MAX_PATH], dsafety[MAX_PATH], body[640], title[48], first[33] = "", what[64];
-	const char *ro = NULL;
+	const char *ro = NULL, *fail_safety = NULL, *step_safety = NULL;
 	int nmarked = 0, i, c, r, act, move, done = 0, skipped = 0, same = 0, failed = 0, left = 0, first_r = MCV_OK;
 	int from = -1;
 
@@ -1566,16 +1566,22 @@ static int ctAllBatch(const char *folder, const CtAnyCard *cards, int ncards, co
 			same++;
 			continue;
 		}
+		/* step_safety: the safety copy of the card the failing step wrote to */
 		if (act == 2) {
+			step_safety = safety[s->card];
 			r = ctDropSave(cards[s->card].path, s->sv.name, safety[s->card], MAX_PATH);
 		} else {
+			step_safety = NULL;
 			r = ctReadSave(cards[s->card].path, s->sv.name, &data);
 			if (r == MCW_OK) {
+				step_safety = dsafety;
 				r = ctPutSave(dest, &data, dsafety, sizeof(dsafety));
 				mcCardFreeSave(&data);
 			}
-			if (r == MCW_OK && move)
+			if (r == MCW_OK && move) {
+				step_safety = safety[s->card];
 				r = ctDropSave(cards[s->card].path, s->sv.name, safety[s->card], MAX_PATH);
+			}
 		}
 		if (r == MCW_OK) {
 			done++;
@@ -1585,6 +1591,8 @@ static int ctAllBatch(const char *folder, const CtAnyCard *cards, int ncards, co
 			dashStrCopy(first, s->sv.name, sizeof(first));
 			first_r = r;
 		}
+		if (fail_safety == NULL && !ctAllSkippable(r) && step_safety != NULL && step_safety[0])
+			fail_safety = step_safety;
 		if (ctAllSkippable(r))
 			skipped++;
 		else
@@ -1608,7 +1616,8 @@ static int ctAllBatch(const char *folder, const CtAnyCard *cards, int ncards, co
 	if (left)
 		c += snprintf(body + c, sizeof(body) - c, " Stopped there; %d not tried.", left);
 	{
-		const char *keep = dsafety[0] ? dsafety : NULL;
+		/* a failure names the safety copy of the card it happened on */
+		const char *keep = fail_safety != NULL ? fail_safety : dsafety[0] ? dsafety : NULL;
 
 		for (i = 0; keep == NULL && i < ncards; i++)
 			if (safety[i][0])
@@ -1747,6 +1756,7 @@ typedef struct {
 	char folder[MAX_PATH]; /* ends in '/' */
 	char (*sets)[MAX_NAME];
 	int nsets, setcount[CT_LIB_SETS];
+	unsigned char setcut[CT_LIB_SETS]; /* 1 when some of the set's files did not fit in the list */
 	CtPsu *list;
 	int n, more;
 } CtLib;
@@ -1797,11 +1807,6 @@ static int ctLibCmp(const void *a, const void *b)
 	return c != 0 ? c : strcmp(x->rel, y->rel);
 }
 
-static int ctLibSetCmp(const void *a, const void *b)
-{
-	return strcasecmp((const char *)a, (const char *)b);
-}
-
 /* Lists every .psu in lib->folder and in the folders directly inside it
  * (except Launchstation's WLE-* folders), reads each one and sorts them by
  * title. Folders holding at least one .psu are the sets. 0, or -1 without memory. */
@@ -1812,7 +1817,9 @@ static int ctLibScan(CtLib *lib)
 	McSaveData s;
 	const char *why;
 	int fd, i, k, nsub = 0;
+	unsigned char cut[CT_LIB_SETS];
 
+	memset(cut, 0, sizeof(cut));
 	lib->n = lib->nsets = lib->more = 0;
 	for (i = -1; i < nsub; i++) {
 		if (snprintf(dir, sizeof(dir), "%s%s%s", lib->folder, i < 0 ? "" : lib->sets[i], i < 0 ? "" : "/") >=
@@ -1837,6 +1844,8 @@ static int ctLibScan(CtLib *lib)
 				    snprintf(p->rel, sizeof(p->rel), "%s%s%s", i < 0 ? "" : lib->sets[i], i < 0 ? "" : "/",
 				             ent.name) >= (int)sizeof(p->rel)) {
 					lib->more = 1;
+					if (i >= 0)
+						cut[i] = 1;
 				} else {
 					p->set = i;
 					lib->n++;
@@ -1876,9 +1885,22 @@ static int ctLibScan(CtLib *lib)
 		if (lib->list[i].set >= 0)
 			lib->setcount[lib->list[i].set]++;
 	for (k = 0; k < nsub; k++)
-		if (lib->setcount[k])
+		if (lib->setcount[k]) {
+			lib->setcut[lib->nsets] = cut[k];
 			memmove(lib->sets[lib->nsets++], lib->sets[k], MAX_NAME);
-	qsort(lib->sets, (size_t)lib->nsets, MAX_NAME, ctLibSetCmp);
+		}
+	for (k = 1; k < lib->nsets; k++) { /* sort by name, keeping each set's flag with it */
+		char name[MAX_NAME];
+		unsigned char c = lib->setcut[k];
+
+		memcpy(name, lib->sets[k], MAX_NAME);
+		for (i = k; i > 0 && strcasecmp(lib->sets[i - 1], name) > 0; i--) {
+			memcpy(lib->sets[i], lib->sets[i - 1], MAX_NAME);
+			lib->setcut[i] = lib->setcut[i - 1];
+		}
+		memcpy(lib->sets[i], name, MAX_NAME);
+		lib->setcut[i] = c;
+	}
 	for (k = 0; k < lib->nsets; k++)
 		lib->setcount[k] = 0;
 	for (i = 0; i < lib->n; i++) {
@@ -2095,11 +2117,15 @@ static int ctLibApplySet(const CtLib *lib)
 		return 0;
 	}
 	for (k = 0; k < lib->nsets; k++) {
-		snprintf(details[k], sizeof(details[k]), "%d save%s", lib->setcount[k], lib->setcount[k] == 1 ? "" : "s");
+		if (lib->setcut[k])
+			snprintf(details[k], sizeof(details[k]), "too many files here to list them all");
+		else
+			snprintf(details[k], sizeof(details[k]), "%d save%s", lib->setcount[k],
+			         lib->setcount[k] == 1 ? "" : "s");
 		items[k].icon = DI_FOLDER;
 		items[k].label = lib->sets[k];
 		items[k].detail = details[k];
-		items[k].disabled = 0;
+		items[k].disabled = lib->setcut[k]; /* never apply part of a set */
 	}
 	r = dashModalMenu("Apply which set?", "copied to a card; nothing on it is replaced", items, lib->nsets, 0);
 	free(items);

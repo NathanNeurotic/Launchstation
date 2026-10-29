@@ -669,6 +669,22 @@ pick = rows_for("A.mcd: BESLES-12345GAME, 7 KB", "E.mcd: BASLUS-99999, 1 KB", "F
 lines = run("all:mass:/all", "s" + pick, "m0", "m0", "pmass:/all/G.mcd", "c1", env={"FAIL_WRITE_AT": "2"})
 msg = kind(lines, "MESSAGE|1|Not all done|")
 assert msg and " 1 failed. First: " in msg[0] and "Stopped there; 2 not tried." in msg[0], lines
+# a move that fails while changing the source card names that card's safety copy, not the target's
+host("mass:/mv").mkdir()
+for k in range(1, 120):
+    put("mass:/mv/A.mcd", std)
+    blank("mass:/mv/H.mcd")
+    shutil.rmtree(host("mass:/mv/WLE-Safety"), ignore_errors=True)
+    d = [r.split("~")[1] for r in kind(run("all:mass:/mv"), "MENU|All saves|")[0].split("|")[4:]]
+    pick = str(d.index("A.mcd: NOICON, 3 KB") + 1)
+    lines = run("all:mass:/mv", "s" + pick, "m0", "m1", "pmass:/mv/H.mcd", "c1", env={"FAIL_WRITE_AT": str(k)})
+    msg = kind(lines, "MESSAGE|1|Not all done|")
+    if msg and "NOICON" in saves("mass:/mv/H.mcd"):
+        assert "|Safety copy: mass:/mv/WLE-Safety/A-0001.mcd" in msg[0], msg
+        break
+else:
+    raise AssertionError("no write failure landed on the source card")
+shutil.rmtree(host("mass:/mv"))
 # nothing to show
 host("mass:/empty").mkdir()
 lines = run("all:mass:/empty")
@@ -767,6 +783,17 @@ pick = ",".join(str(lib_row(d)) for d in ("BISLPS-00001.psu: BISLPS-00001, 1 KB"
 lines = run("lib:mass:/lib", "s" + pick, "m0", "m0", "pmass:/Y.mcd", "c1", "m-1", env={"FAIL_WRITE_AT": "2"})
 msg = kind(lines, "MESSAGE|1|Not all done|")
 assert msg and " 1 failed. First: " in msg[0] and "Stopped there; " in msg[0], lines
+# a set the 500-file list cannot hold in full is shown but cannot be applied
+host("mass:/big/Zset").mkdir(parents=True)
+one = host("mass:/lib/NOICON.psu").read_bytes()
+for i in range(499):
+    host("mass:/big/N%03d.psu" % i).write_bytes(one)
+for i in range(2):
+    host("mass:/big/Zset/Z%d.psu" % i).write_bytes(one)
+lines = run("lib:mass:/big", "m1", "m-1", "m-1")
+assert kind(lines, "MENU|Save library|500 .psu files, 1 set (list shortened)|"), lines
+assert "|!Zset~too many files here to list them all" in kind(lines, "MENU|Apply which set?|")[0], lines
+shutil.rmtree(host("mass:/big"))
 # nothing here
 host("mass:/nolib").mkdir()
 lines = run("lib:mass:/nolib")
