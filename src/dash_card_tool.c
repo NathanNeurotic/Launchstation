@@ -21,6 +21,7 @@
 #include "mmce_backup.h"
 #include "mmce_card_switch.h"
 #include "dash_card_tool.h"
+#include <libcdvd.h>
 
 #define CT_BLOCK 4096
 #define CT_WAYS 4
@@ -805,6 +806,136 @@ static void ctResize(const char *image)
 		                 dest);
 	}
 	free(names);
+}
+
+static int ctBcd(u8 v)
+{
+	return (v >> 4) * 10 + (v & 0x0F);
+}
+
+/* Card timestamps are console RTC time, as the PS2 itself stores them. */
+static int ctStamp(uint8_t stamp[8])
+{
+	sceCdCLOCK clock;
+	int year;
+
+	memset(&clock, 0, sizeof(clock));
+	if (sceCdReadClock(&clock) == 0 || clock.stat != 0)
+		return 0;
+	year = 2000 + ctBcd(clock.year);
+	stamp[0] = 0;
+	stamp[1] = (uint8_t)ctBcd(clock.second);
+	stamp[2] = (uint8_t)ctBcd(clock.minute);
+	stamp[3] = (uint8_t)ctBcd(clock.hour);
+	stamp[4] = (uint8_t)ctBcd(clock.day);
+	stamp[5] = (uint8_t)ctBcd(clock.month & 0x7F);
+	stamp[6] = (uint8_t)year;
+	stamp[7] = (uint8_t)(year >> 8);
+	return 1;
+}
+
+/* An empty card image made from nothing. Only a new file is written, with
+ * O_EXCL, and it is removed again unless it reads back as an empty card. */
+void dashCardNewBlank(const char *folder)
+{
+	static const char *const sizes[] = {"8 MB", "16 MB", "32 MB", "64 MB"};
+	static uint8_t sb[512], root[1024];
+	char where[MAX_PATH], dest[MAX_PATH], msg[160];
+	uint8_t stamp[8];
+	CardIo io;
+	AppendIo out;
+	uint32_t freec, total;
+	int unit = mmceCardUnit(folder), choice, mb, r, i, made = 0, found = 0, n = 0;
+	size_t len;
+
+	if (!strncmp(folder, "mc", 2) || !strncmp(folder, "vmc", 3)) {
+		dashModalMessage(DI_WARNING, "Choose another folder",
+		                 "A card image does not fit on a memory card. Choose a folder on USB, HDD, MMCE or the network.",
+		                 folder);
+		return;
+	}
+	choice = dashModalChoice("New card size", sizes, 4, 0);
+	if (choice < 0)
+		return;
+	mb = 8 << choice;
+
+	/* Outside MemoryCards/ on MMCE, so the device never serves a half-built
+	 * card; "Install as NEW selectable MMCE card" moves it into place. */
+	if (unit >= 0)
+		snprintf(where, sizeof(where), "mmce%d:/WLE-New/", unit);
+	else {
+		dashStrCopy(where, folder, sizeof(where));
+		len = strlen(where);
+		if (len == 0 || len + 2 >= sizeof(where))
+			return;
+		if (where[len - 1] != '/' && where[len - 1] != ':') {
+			where[len] = '/';
+			where[len + 1] = 0;
+		}
+	}
+	dest[0] = 0;
+	for (i = 1; i < 100; i++) {
+		int w = i == 1 ? snprintf(dest, sizeof(dest), "%sBlank-%dMB.mcd", where, mb) :
+		                 snprintf(dest, sizeof(dest), "%sBlank-%dMB-%d.mcd", where, mb, i);
+		if (w >= (int)sizeof(dest))
+			return;
+		if (!wleExists(dest))
+			break;
+	}
+	if (i == 100) {
+		dashModalMessage(DI_WARNING, "Choose another folder", "This folder already holds 99 blank cards of that size.", where);
+		return;
+	}
+	snprintf(msg, sizeof(msg), "An empty %d MB PS2 card image is made. Nothing else is changed.", mb);
+	if (!dashModalConfirm("Make a blank card?", msg, "Make", 0))
+		return;
+
+	dashLoadingBegin("Making a blank card");
+	if (unit >= 0) {
+		char dir[MAX_PATH];
+
+		dashStrCopy(dir, where, sizeof(dir));
+		dir[strlen(dir) - 1] = 0;
+		genMkdir(dir, fileMode);
+	}
+	mcCardBlankIdentity(sb, root, ctStamp(stamp) ? stamp : NULL);
+	out.fd = genOpen(dest, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL);
+	out.pos = 0;
+	r = out.fd < 0 ? MCV_ERR_IO : MCV_OK;
+	if (r == MCV_OK) {
+		made = 1;
+		dashLoadingStatus("Formatting", 0, 1);
+		r = mcCardFormat(sb, root, (uint32_t)mb, ctAppend, &out);
+		if (genClose(out.fd) < 0 && r == MCV_OK)
+			r = MCV_ERR_IO;
+	}
+	if (r == MCV_OK) { /* reopen read-only: a whole, empty card of the chosen size */
+		r = ctOpen(&io, dest, 0);
+		if (r == MCV_OK) {
+			if (io.size != (s64)mb << 20)
+				r = MCW_ERR_VERIFY;
+			if (r == MCV_OK)
+				r = mcViewFreeClusters(&ct_view, &freec, &total);
+			if (r == MCV_OK) {
+				n = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &found);
+				if (n != 0 || found != 0 || total == 0 || freec + 1u != total)
+					r = MCW_ERR_VERIFY;
+			}
+			ctClose(&io);
+		}
+	}
+	dashLoadingEnd();
+	if (r != MCV_OK) {
+		if (made)
+			genRemove(dest);
+		snprintf(msg, sizeof(msg), "%s%s", r == MCV_ERR_IO ? "The device may be read-only or full. " : ctError(r),
+		         made ? " The unfinished file was removed." : "");
+		dashModalMessage(DI_WARNING, "Blank card not made", msg, dest);
+		return;
+	}
+	snprintf(msg, sizeof(msg), "Formatted and read back: %u KB free.%s", (unsigned)freec,
+	         unit >= 0 ? " To use it, install it with \"Install as NEW selectable MMCE card\"." : "");
+	dashModalMessage(DI_MC, "Blank card made", msg, dest);
 }
 
 static void ctSaveMenu(const char *image, const McViewSave *sv, const char *title, int writable)

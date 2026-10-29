@@ -2303,6 +2303,7 @@ static void actionsMenu(void)
 		F_DELETE,
 		F_RENAME,
 		F_NEWDIR,
+		F_NEW_BLANK_CARD,
 		F_NEWICON,
 		F_SIZE,
 		F_EDIT,
@@ -2378,6 +2379,8 @@ static void actionsMenu(void)
 		ADD(DI_WARNING, "Delete...", fb.nmarked ? marked : NULL, !has_target || !en[DELETE], F_DELETE);
 		ADD(DI_EDIT, "Rename...", NULL, f == NULL || !en[RENAME], F_RENAME);
 		ADD(DI_FOLDER, "New folder...", NULL, !en[NEWDIR], F_NEWDIR);
+		if (en[NEWDIR] && strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
+			ADD(DI_MC, "New blank card...", "empty 8 to 64 MB .mcd", 0, F_NEW_BLANK_CARD);
 		if (en[NEWICON])
 			ADD(DI_IMAGE, "Create folder icon...", "icon.sys", 0, F_NEWICON);
 		ADD(DI_INFO, "Size", NULL, !has_target || !en[GETSIZE], F_SIZE);
@@ -2472,6 +2475,12 @@ static void actionsMenu(void)
 			break;
 		case F_NEWDIR:
 			opNewFolder();
+			break;
+		case F_NEW_BLANK_CARD:
+			if (prepareOp()) {
+				dashCardNewBlank(fb.dir);
+				refresh();
+			}
 			break;
 		case F_NEWICON:
 			opNewIcon();

@@ -38,8 +38,10 @@ with a verified safety copy of the target card in `WLE-Safety/`
 (`mmceN:/WLE-Safety/` on MMCE; the newest 10 are kept). A recovered card of the
 wrong size can be rebuilt with **Copy to a new card of another size...**, which
 writes a new file to `mmceN:/WLE-Resized/` for **Install as NEW selectable MMCE
-card...**. Not yet tested on a console: keep a PC copy of your `MemoryCards`
-folder.
+card...**. To start from an empty card instead, open the folder menu in an
+MMCE folder and choose **New blank card...**: it writes an empty 8-64 MB card to
+`mmceN:/WLE-New/` for the same install step. Not yet tested on a console: keep a
+PC copy of your `MemoryCards` folder.
 
 No existing card or GameID/BootCard backing image is replaced, and no sd2psXtd
 firmware update is needed. If copying or publishing fails, leave that

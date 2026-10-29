@@ -166,6 +166,19 @@ int main(int argc, char **argv)
 		fclose(df);
 		return 0;
 	}
+	if (argc >= 4 && !strcmp(argv[1], "blank")) {
+		static const uint8_t stamp[8] = {0, 56, 34, 12, 29, 10, 0xEA, 0x07}; /* 2026-10-29 12:34:56 */
+		uint8_t sb[512], root[1024];
+		FILE *o = fopen(argv[3], "wb");
+
+		if (!o)
+			return 3;
+		mcCardBlankIdentity(sb, root, argc >= 5 ? stamp : NULL);
+		r = mcCardFormat(sb, root, (uint32_t)atoi(argv[2]), wr, o);
+		fclose(o);
+		printf("r=%d\n", r);
+		return 0;
+	}
 	if (argc >= 5 && !strcmp(argv[1], "format")) {
 		FILE *o;
 

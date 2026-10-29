@@ -40,6 +40,10 @@
 <p>The writer stores the data and folder first, then the card&rsquo;s allocation table, then makes the change visible with one 512-byte page. Host tests cut the power before every single write and check that the card still opens and no other save changed.</p>
 <div class="callout amber"><div class="h">Limits and status</div><p>PCSX2 <code>.ps2</code> cards and saves with sub-folders are read-only here. Nothing is written while a VMC is mounted as <code>vmc0:</code> or <code>vmc1:</code>, because the VMC driver keeps its own copy of the card&rsquo;s tables; unmount it first. Cards with more than 250 saves list the first 250, still accept copies and imports, and cannot be copied to a new size. This is <b>not yet tested on a console</b> or checked against Sony&rsquo;s memory-card driver; keep a PC copy of your cards until it is.</p></div>
 
+<h2 id="blank-card">New blank card</h2>
+<p>In a folder on USB, HDD, MMCE or the network, open the folder menu and choose <b>New blank card&hellip;</b>, then a size: 8, 16, 32 or 64&nbsp;MB. Launchstation writes an empty PS2 card image named <code>Blank-8MB.mcd</code> (or <code>Blank-8MB-2.mcd</code> and so on), formatted with the PS2&rsquo;s standard layout and timestamped from the console clock. It then reopens the file and checks it: the right size, no saves, every cluster but the root free. If anything fails, the unfinished file is removed. It only ever creates a new file. On MMCE the card goes to <code>mmceN:/WLE-New/</code>, outside <code>MemoryCards/</code>, ready for <b>Install as NEW selectable MMCE card&hellip;</b>. The action is not offered on memory cards and VMCs, which are too small to hold a card image.</p>
+<div class="callout amber"><div class="h">Status</div><p><b>Not yet tested on a console.</b> Whether the sd2psx and the PS2 accept the 16 to 64&nbsp;MB layouts is still to be confirmed.</p></div>
+
 <h2 id="card-images">Card image backup and conversion</h2>
 <ul>
 <li><b>Back up .mcd&hellip;</b> &ndash; verified byte-for-byte copy of a card image.</li>

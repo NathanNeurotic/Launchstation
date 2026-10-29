@@ -379,7 +379,44 @@ for k in (1, 3, 40):                                               # a failing d
     assert not host("mass:/R-8MB.mcd").exists(), k
     assert sha(R) == r_before
 
+# New blank card: made from nothing, only ever a new file, removed again on failure
+assert '"New blank card..."' in browser and "dashCardNewBlank(fb.dir)" in browser
+lines = run("blank:mass:/out", "k0", "c1")
+made = host("mass:/out/Blank-8MB.mcd")
+assert any(l.startswith("MESSAGE|4|Blank card made|Formatted and read back: 8134 KB free.") and
+           l.endswith("|mass:/out/Blank-8MB.mcd") for l in lines), lines
+blank_img = made.read_bytes()
+assert len(blank_img) == 8 << 20 and saves("mass:/out/Blank-8MB.mcd") == {}
+ref = fx.Card(8, False)
+rootoff = ref.alloc_offset * 1024
+for e in (rootoff, rootoff + 512):                                  # RTC time, raw as the PS2 stores it
+    assert blank_img[e + 8:e + 16] == bytes([0, 56, 34, 12, 29, 10, 0xEA, 0x07]) == blank_img[e + 0x18:e + 0x20]
+before = sha("mass:/out/Blank-8MB.mcd")
+lines = run("blank:mass:/out", "k3", "c1")                          # a second one never touches the first
+assert host("mass:/out/Blank-64MB.mcd").stat().st_size == 64 << 20
+lines = run("blank:mass:/out/", "k0", "c1", env={"NOCLOCK": "1"})   # trailing slash, no RTC: zero times
+assert any(l.endswith("|mass:/out/Blank-8MB-2.mcd") for l in kind(lines, "MESSAGE|4|Blank card made")), lines
+assert host("mass:/out/Blank-8MB-2.mcd").read_bytes()[rootoff + 8:rootoff + 16] == bytes(8)
+assert sha("mass:/out/Blank-8MB.mcd") == before
+lines = run("blank:mass:/out", "k0")                                # declined: nothing made
+assert not host("mass:/out/Blank-8MB-3.mcd").exists() and not kind(lines, "MESSAGE|")
+lines = run("blank:mass:/out")                                      # size dialog backed out
+assert not host("mass:/out/Blank-8MB-3.mcd").exists()
+lines = run("blank:mmce0:/MemoryCards/Card1", "k1", "c1")           # MMCE: staged outside MemoryCards
+assert host("mmce0:/WLE-New/Blank-16MB.mcd").stat().st_size == 16 << 20
+assert any("Install as NEW selectable MMCE card" in l for l in kind(lines, "MESSAGE|4|Blank card made")), lines
+assert not list(host("mmce0:/MemoryCards/Card1").glob("Blank*"))
+for path in ("mc0:/APPS", "vmc0:/"):                                # cannot fit on a memory card
+    lines = run("blank:" + path)
+    assert any("Choose another folder" in l for l in kind(lines, "MESSAGE|1|")), lines
+for k in (1, 3, 200, 255):                                          # a failing device: the partial file goes
+    lines = run("blank:mass:/out", "k0", "c1", env={"FAIL_WRITE_AT": str(k)})
+    assert any(l.startswith("MESSAGE|1|Blank card not made|") and "unfinished file was removed" in l
+               for l in lines), (k, lines)
+    assert not host("mass:/out/Blank-8MB-3.mcd").exists(), k
+    assert sha("mass:/out/Blank-8MB.mcd") == before
+
 print("Card contents tool: listing, copy, move, delete, .psu round trip, safety copies pruned to ten, "
       "served MMCE card never written, served-card detection by number and content, guarded switch (also to a clone), "
-      "mounted VMC blocks writes, 250+ save cards, copy to a new card size, refusals cost no safety copy, write failures reported, "
+      "mounted VMC blocks writes, 250+ save cards, copy to a new card size, blank cards, refusals cost no safety copy, write failures reported, "
       "one open file at a time: OK")

@@ -94,4 +94,11 @@ int mcCardReadIdentity(McView *v, uint8_t sb[512], uint8_t root[1024]);
 int mcCardFormat(const uint8_t like_sb[512], const uint8_t like_root[1024], uint32_t size_mb, McWriteFn write,
                  void *wctx);
 
+/* Identity for a card made from nothing, to pass to mcCardFormat: a PS2
+ * card (type 2, flags 0x52, 512-byte pages, 16 pages per block, format
+ * 1.2.0.0) whose root holds "." and a hidden "..". stamp is the creation
+ * and modification time in card order (unused, sec, min, hour, day, month,
+ * year low, year high; console RTC time), or NULL for zero. */
+void mcCardBlankIdentity(uint8_t sb[512], uint8_t root[1024], const uint8_t stamp[8]);
+
 #endif

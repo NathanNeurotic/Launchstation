@@ -962,6 +962,36 @@ int mcCardReadIdentity(McView *v, uint8_t sb[512], uint8_t root[1024])
 	return mcViewReadClusterRel(v, 0, root);
 }
 
+void mcCardBlankIdentity(uint8_t sb[512], uint8_t root[1024], const uint8_t stamp[8])
+{
+	static const char magic[] = "Sony PS2 Memory Card Format 1.2.0.0";
+	uint32_t i;
+
+	memset(sb, 0, ENT);
+	memcpy(sb, magic, sizeof(magic) - 1u);
+	wr16(sb + 0x28, ENT);   /* page length */
+	wr16(sb + 0x2A, 2u);    /* pages per cluster */
+	wr16(sb + 0x2C, 16u);   /* pages per erase block */
+	wr16(sb + 0x2E, 0xFF00u);
+	sb[0x150] = 2u;         /* PS2 card */
+	sb[0x151] = 0x52u;      /* as mymc's format() and the PS2: erased flash reads as zero */
+
+	/* "." is rwx, ".." is write/execute and hidden, both 0x0400 directories
+	 * that exist. mcCardFormat fills in the length and clusters. */
+	memset(root, 0, CL);
+	for (i = 0; i < 2u; i++) {
+		uint8_t *e = root + i * ENT;
+
+		wr16(e, i == 0 ? (M_EXISTS | 0x0400u | M_DIR | 0x0007u) : (M_EXISTS | 0x2000u | 0x0400u | M_DIR | 0x0006u));
+		if (stamp) {
+			memcpy(e + 0x08, stamp, 8);
+			memcpy(e + 0x18, stamp, 8);
+		}
+		e[0x40] = '.';
+		e[0x41] = i == 0 ? 0 : '.';
+	}
+}
+
 int mcCardFormat(const uint8_t like_sb[512], const uint8_t like_root[1024], uint32_t size_mb, McWriteFn write,
                  void *wctx)
 {
