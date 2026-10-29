@@ -42,7 +42,7 @@ assert "nathanneurotic.github.io/Launchstation/" in manifest
 assert 'viewBox="0 0 64 64"' in logo
 assert 'aria-label="Launchstation PS2 towers and orbs"' in logo
 # The rolling release publishes the Launchstation-named app packages.
-for asset in ("APP_LAUNCHSTATION.psu", "APP_LAUNCHSTATION.zip",
-              "APP_LAUNCHSTATION-DS.psu", "APP_LAUNCHSTATION-DS.zip"):
+for asset in ("APP_LAUNCHSTATION.psu", '"APP_LAUNCHSTATION-${build}.zip"',
+              "APP_LAUNCHSTATION-DS.psu", '"APP_LAUNCHSTATION-DS-${build}.zip"'):
     assert f"            {asset}\n" in workflow, asset
 assert "About r3LaunchELF_ATTDASH" not in main_info

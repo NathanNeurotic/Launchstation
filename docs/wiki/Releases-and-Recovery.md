@@ -2,7 +2,7 @@
 
 ## Download and select the right package
 
-[Rolling latest](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest) contains four installable packages: `APP_LAUNCHSTATION.zip`, `APP_LAUNCHSTATION.psu`, `APP_LAUNCHSTATION-DS.zip`, `APP_LAUNCHSTATION-DS.psu`, plus loose ELFs: `LAUNCHSTATION.ELF`, `LAUNCHSTATION-DS.ELF`, and `BOOT.ELF` / `BOOT2.ELF` (identical copies of the standard ELF). The DS variant includes the inherited DS34 (PS3/PS4 USB/Bluetooth) controller drivers; use standard packages for ordinary PS2 controllers.
+[Rolling latest](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest) contains four installable packages: `APP_LAUNCHSTATION-<build>.zip`, `APP_LAUNCHSTATION.psu`, `APP_LAUNCHSTATION-DS-<build>.zip`, `APP_LAUNCHSTATION-DS.psu`, plus loose ELFs: `LAUNCHSTATION.ELF`, `LAUNCHSTATION-DS.ELF`, and `BOOT.ELF` / `BOOT2.ELF` (identical copies of the standard ELF). The DS variant includes the inherited DS34 (PS3/PS4 USB/Bluetooth) controller drivers; use standard packages for ordinary PS2 controllers. Every ZIP name ends with the build number (the commit count, for example `APP_LAUNCHSTATION-284.zip`), which the release title and notes also state; the PSUs the in-app updater uses and the loose ELFs keep fixed names.
 
 A standard install folder has `LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.PEM` and `BGM.ADP`. The DS package has `LAUNCHSTATION-DS.ELF` and its own `APP_LAUNCHSTATION-DS` folder. ZIP and PSU contents are identical and the ELFs are packed. Keep customized configuration and sidecar files when upgrading.
 

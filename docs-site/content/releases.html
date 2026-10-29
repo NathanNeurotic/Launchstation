@@ -18,7 +18,7 @@
   </thead>
   <tbody>
     <tr>
-      <td>APP_LAUNCHSTATION.zip</td>
+      <td>APP_LAUNCHSTATION-&lt;build&gt;.zip</td>
       <td>LAUNCHSTATION.ELF</td>
       <td>Extract <code>APP_LAUNCHSTATION/</code> to a supported filesystem.</td>
     </tr>
@@ -28,7 +28,7 @@
       <td>Copy it in the File Browser and use <b>Extract PSU</b> in a memory-card folder to install <code>APP_LAUNCHSTATION/</code>.</td>
     </tr>
     <tr>
-      <td>APP_LAUNCHSTATION-DS.zip</td>
+      <td>APP_LAUNCHSTATION-DS-&lt;build&gt;.zip</td>
       <td>LAUNCHSTATION-DS.ELF</td>
       <td>Extract <code>APP_LAUNCHSTATION-DS/</code> to a supported filesystem.</td>
     </tr>
@@ -54,20 +54,20 @@
     </tr>
   </tbody>
 </table>
-<p>The loose ELF downloads are the same packed executables that are inside the packages; the sidecars (<code>WLE-UPDATE-CA.PEM</code> for HTTPS update checks, <code>BGM.ADP</code> for music) are optional for running but not included with a loose ELF. Each package contains four files: the packed ELF plus <code>title.cfg</code>, <code>WLE-UPDATE-CA.PEM</code> and <code>BGM.ADP</code>. ZIP and PSU payloads match. Take the <b>standard</b> package unless you want PS3/PS4 DualShock USB/Bluetooth support, which the <b>-DS</b> package adds. See <a href="install.html">Install &amp; Update</a>.</p>
+<p>The loose ELF downloads are the same packed executables that are inside the packages; the sidecars (<code>WLE-UPDATE-CA.PEM</code> for HTTPS update checks, <code>BGM.ADP</code> for music) are optional for running but not included with a loose ELF. Each package contains four files: the packed ELF plus <code>title.cfg</code>, <code>WLE-UPDATE-CA.PEM</code> and <code>BGM.ADP</code>. ZIP and PSU payloads match. Every ZIP name ends with the build number (the commit count, for example <code>APP_LAUNCHSTATION-284.zip</code>), so a download always says which build it is. Take the <b>standard</b> package unless you want PS3/PS4 DualShock USB/Bluetooth support, which the <b>-DS</b> package adds. See <a href="install.html">Install &amp; Update</a>.</p>
 
 <h2 id="rolling">How the rolling release works</h2>
 <ul>
-  <li>There is a single moving release, tagged <code>latest</code> and titled "Launchstation Rolling - &lt;date&gt; (&lt;commit&gt;)". It is marked as GitHub's Latest release and is not a pre-release.</li>
+  <li>There is a single moving release, tagged <code>latest</code> and titled "Launchstation Rolling &lt;build&gt; - &lt;date&gt; (&lt;commit&gt;)". It is marked as GitHub's Latest release and is not a pre-release.</li>
   <li>Every push to <code>master</code> runs the full <a href="https://github.com/NathanNeurotic/Launchstation/actions">Automated-Build workflow</a>: host regression tests, standard and DS34 builds with PS2BUILD LLVM/Clang, controller-variant and Clang-only object checks, the embedded loader memory-layout check and ZIP/PSU verification.</li>
   <li>Only after all of that passes are the eight assets (four packages and four ELFs) uploaded, downloaded again and byte-compared, and the <code>latest</code> tag moved to the tested commit. The tag is never moved to a commit that is not a descendant of the previous one, and a build superseded by a newer master commit is skipped.</li>
   <li>Pull requests build and test but never touch the public release.</li>
   <li>A documentation-only change also produces a new rolling build, so a new commit hash does not by itself mean the runtime changed.</li>
-  <li>The in-app updater downloads from this same <code>latest</code> release, so the download URLs stay stable: <code>https://github.com/NathanNeurotic/Launchstation/releases/download/latest/APP_LAUNCHSTATION.psu</code> and the other three names.</li>
+  <li>The in-app updater downloads from this same <code>latest</code> release, so the download URLs stay stable: <code>https://github.com/NathanNeurotic/Launchstation/releases/download/latest/APP_LAUNCHSTATION.psu</code> and the other fixed names (the DS PSU and the four ELFs). The ZIP names change with each build, so link the release page for those; the previous build's ZIPs are removed once a new build is published.</li>
 </ul>
 
 <h2 id="verify">Verify a download</h2>
-<p>GitHub shows a SHA-256 digest for each release asset, and the in-app updater compares against that digest before installing. To check by hand, run <code>sha256sum APP_LAUNCHSTATION.zip</code> (or <code>shasum -a 256</code>) and compare. The release notes list the build's commit and workflow run.</p>
+<p>GitHub shows a SHA-256 digest for each release asset, and the in-app updater compares against that digest before installing. To check by hand, run <code>sha256sum</code> on the file you downloaded, for example <code>sha256sum APP_LAUNCHSTATION-284.zip</code> (use your build number; <code>shasum -a 256</code> also works), and compare. The release notes list the build's commit and workflow run.</p>
 
 <h2 id="changelog">Rolling changelog summary</h2>
 <ul>

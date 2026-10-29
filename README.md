@@ -10,7 +10,7 @@ Repository: <https://github.com/NathanNeurotic/Launchstation> · Documentation: 
 
 ## Quick start
 
-1. Download **`APP_LAUNCHSTATION.zip`** (standard PS2 controllers) or **`APP_LAUNCHSTATION-DS.zip`** (adds PS3/PS4 DualShock USB/Bluetooth support) from the [`latest` release](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest). The matching `.psu` files are the same contents for memory-card installation.
+1. Download **`APP_LAUNCHSTATION-<build>.zip`** (standard PS2 controllers) or **`APP_LAUNCHSTATION-DS-<build>.zip`** (adds PS3/PS4 DualShock USB/Bluetooth support) from the [`latest` release](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest). Every ZIP name ends with the build number, for example `APP_LAUNCHSTATION-284.zip`, and the release title and notes state the same number. The matching `.psu` files are the same contents for memory-card installation.
 2. Extract the `APP_LAUNCHSTATION` folder to a filesystem the console can boot from (memory card, USB, MMCE, MX4SIO, iLink, internal HDD/ATA), or copy the `.psu` in the File Browser and use **Extract PSU** (the PSU paste action) in a memory-card folder to install it.
 3. Start `LAUNCHSTATION.ELF` (or `LAUNCHSTATION-DS.ELF`) from your usual launcher, FreeMcBoot/OPL/exploit entry or file manager. The packaged `title.cfg` is an OPL-style application descriptor (`title=`, `boot=`) so launchers that read it list the app as "Launchstation".
 4. Use **L1/R1** to move between **Home, Files, Tools and Settings**. In Files, pick a device, then a folder.
@@ -34,9 +34,9 @@ Every verified push to `master` publishes four assets to the single moving **`la
 
 | Asset | Contents | Use |
 |---|---|---|
-| `APP_LAUNCHSTATION.zip` | `APP_LAUNCHSTATION/LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.PEM`, `BGM.ADP` | Extract to a filesystem |
+| `APP_LAUNCHSTATION-<build>.zip` | `APP_LAUNCHSTATION/LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.PEM`, `BGM.ADP` | Extract to a filesystem |
 | `APP_LAUNCHSTATION.psu` | Same four files | Copy, then Extract PSU onto a memory card |
-| `APP_LAUNCHSTATION-DS.zip` | `APP_LAUNCHSTATION-DS/LAUNCHSTATION-DS.ELF` + the same three sidecars | DualShock (DS34) variant, filesystem |
+| `APP_LAUNCHSTATION-DS-<build>.zip` | `APP_LAUNCHSTATION-DS/LAUNCHSTATION-DS.ELF` + the same three sidecars | DualShock (DS34) variant, filesystem |
 | `APP_LAUNCHSTATION-DS.psu` | Same four files | DualShock variant, memory card |
 | `LAUNCHSTATION.ELF`, `LAUNCHSTATION-DS.ELF` | The packed ELF alone (standard / DS34) | When you only need the executable |
 | `BOOT.ELF`, `BOOT2.ELF` | Byte-identical copies of the standard `LAUNCHSTATION.ELF` | Boot paths that look for those names |
