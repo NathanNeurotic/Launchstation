@@ -19,6 +19,7 @@
 #include "filer_actions.h"
 #include "filer_copy.h"
 #include "mc_card_export.h"
+#include "mc_card_write.h"
 #include "mmce_backup.h"
 #include "dash_card_tool.h"
 #include "mmce_card_switch.h"
@@ -1682,15 +1683,37 @@ static int mmceSelectableCandidate(int unit, char *folder, int folder_size,
     return 0;
 }
 
-static void opInstallNewMmceCard(void)
+/* The Game ID an image is named after: "SLUS-21050-1.mcd" or "SLUS-21050.mcd"
+ * (the split's <ID>/<ID>-1.mcd). 0 for any other name. */
+static int gameIdFromImageName(const char *path, char id[11])
+{
+    const char *name = strrchr(path, '/');
+    char t[11];
+
+    name = name != NULL ? name + 1 : path;
+    if (strlen(name) < 11 || (name[10] != '.' && strncmp(name + 10, "-1.", 3) != 0))
+        return 0;
+    memcpy(t, name, 10);
+    t[10] = 0;
+    if (!mcGameIdValid(t))
+        return 0;
+    memcpy(id, t, 11);
+    return 1;
+}
+
+/* Install a NEW card without replacing any existing backing file: a
+ * numbered CardN (game_card 0) or the Game ID card the image is named
+ * after (MemoryCards/PS2/<ID>/<ID>-1.mcd, game_card 1). Either way the
+ * whole folder must be absent before it is claimed. */
+static void opInstallMmceCard(int game_card)
 {
     static const char *const slots[] = {
         "MMCE slot 1 (mmce0:)", "MMCE slot 2 (mmce1:)"
     };
     FILEINFO *f;
     char source[MAX_PATH], parent[MAX_PATH], folder[MAX_PATH];
-    char dest[MAX_PATH], stage[MAX_PATH], message[192];
-    int unit, number, pcsx2, fd, prep, result;
+    char dest[MAX_PATH], stage[MAX_PATH], message[256], id[11];
+    int unit, number = 0, pcsx2, fd, prep, result;
 
     if (!fb.files || fb.sel >= fb.n || fb.nmarked)
         return;
@@ -1700,28 +1723,43 @@ static void opInstallNewMmceCard(void)
     pcsx2 = genCmpFileExt(source, "PS2");
     if (!pcsx2 && !genCmpFileExt(source, "MCD"))
         return;
+    if (game_card && !gameIdFromImageName(source, id))
+        return;
 
-    /* Only external snapshots and the known neutral holding area.
-     * Never read a card backing file through this installation action. */
+    /* Only external snapshots and the known neutral holding areas
+     * (recovered snapshots, resized copies, new blank cards and Game ID
+     * splits). Never read a card backing file through this action. */
     if (strncmp(source, "mass", 4) && strncmp(source, "usb", 3) &&
         strncmp(source, "ata", 3) && strncmp(source, "hdd", 3) &&
         strncmp(source, "mmce0:/WLE-Recovered/", 21) &&
-        strncmp(source, "mmce1:/WLE-Recovered/", 21)) {
+        strncmp(source, "mmce1:/WLE-Recovered/", 21) &&
+        strncmp(source, "mmce0:/WLE-Resized/", 19) &&
+        strncmp(source, "mmce1:/WLE-Resized/", 19) &&
+        strncmp(source, "mmce0:/WLE-New/", 15) &&
+        strncmp(source, "mmce1:/WLE-New/", 15) &&
+        strncmp(source, "mmce0:/WLE-GameID/", 18) &&
+        strncmp(source, "mmce1:/WLE-GameID/", 18)) {
         dashModalMessage(DI_WARNING, "Use a recovered snapshot",
-                         "Choose a USB/HDD .mcd/.ps2 or a verified image in WLE-Recovered. Never install from a live card file.",
+                         "Choose a USB/HDD .mcd/.ps2 or an image in WLE-Recovered, WLE-Resized, WLE-New or WLE-GameID. Never install from a live card file.",
                          source);
         return;
     }
-    unit = dashModalChoice("Install a NEW card on which MMCE adapter?",
+    unit = dashModalChoice(game_card ? "Install the Game ID card on which MMCE adapter?" :
+                                       "Install a NEW card on which MMCE adapter?",
                            slots, 2, 0);
     if (unit < 0)
         return;
     if (snprintf(parent, sizeof(parent), "mmce%d:/MemoryCards/PS2", unit) >=
         (int)sizeof(parent))
         return;
-    if (!dashModalConfirm("Create a NEW selectable MMCE card?",
+    if (game_card)
+        snprintf(message, sizeof(message),
+                 "Adds MemoryCards/PS2/%s/%s-1.mcd, which the adapter serves when that game starts. Only when %s has no card yet; nothing is replaced or selected. Do not remove power during installation.",
+                 id, id, id);
+    if (!dashModalConfirm(game_card ? "Install as a Game ID card?" : "Create a NEW selectable MMCE card?",
+                          game_card ? message :
                           "Adds an unused numbered CardN-1.mcd; never replaces an existing card. Selection stays unchanged. Do not remove power during installation.",
-                          "Create new card", 0))
+                          game_card ? "Install" : "Create new card", 0))
         return;
     if (!prepareOp())
         return;
@@ -1750,13 +1788,33 @@ static void opInstallNewMmceCard(void)
     }
     genDclose(fd);
 
-    number = mmceSelectableCandidate(unit, folder, sizeof(folder),
-                                     dest, sizeof(dest), stage, sizeof(stage));
-    if (!number || genMkdir(folder, fileMode) < 0) {
-        dashModalMessage(DI_WARNING, "Cannot reserve unused card number",
-                         "No existing numbered card has been replaced.",
-                         parent);
-        return;
+    if (game_card) {
+        if (snprintf(folder, sizeof(folder), "%s/%s", parent, id) >= (int)sizeof(folder) ||
+            snprintf(dest, sizeof(dest), "%s/%s-1.mcd", folder, id) >= (int)sizeof(dest) ||
+            snprintf(stage, sizeof(stage), "%s.PART", dest) >= (int)sizeof(stage))
+            return;
+        fd = genDopen(folder);
+        if (fd >= 0) {
+            genDclose(fd);
+            dashModalMessage(DI_WARNING, "This game already has a card",
+                             "The adapter already holds a folder for this Game ID. Nothing was replaced; to use this card, install it as a NEW numbered card instead.",
+                             folder);
+            return;
+        }
+        if (wleExists(dest) || wleExists(stage) || genMkdir(folder, fileMode) < 0) {
+            dashModalMessage(DI_WARNING, "Cannot reserve the Game ID folder",
+                             "No existing card has been replaced.", folder);
+            return;
+        }
+    } else {
+        number = mmceSelectableCandidate(unit, folder, sizeof(folder),
+                                         dest, sizeof(dest), stage, sizeof(stage));
+        if (!number || genMkdir(folder, fileMode) < 0) {
+            dashModalMessage(DI_WARNING, "Cannot reserve unused card number",
+                             "No existing numbered card has been replaced.",
+                             parent);
+            return;
+        }
     }
     fd = genDopen(folder);
     if (fd < 0) {
@@ -1766,7 +1824,7 @@ static void opInstallNewMmceCard(void)
         return;
     }
     /* The stock firmware mkdir returns success even for an existing
-     * directory. Refuse a numbered folder containing any prior entry. */
+     * directory. Refuse a card folder containing any prior entry. */
     {
         iox_dirent_t ent;
         int occupied;
@@ -1775,7 +1833,7 @@ static void opInstallNewMmceCard(void)
         genDclose(fd);
         if (occupied) {
             dashModalMessage(DI_WARNING, "Card folder already occupied",
-                             "This CardN folder contains data despite mkdir success; existing card data was left untouched.",
+                             "This card folder contains data despite mkdir success; existing card data was left untouched.",
                              folder);
             return;
         }
@@ -1793,8 +1851,12 @@ static void opInstallNewMmceCard(void)
     if (result == MC_CARD_EXPORT_OK &&
         mmcePublishInactiveSnapshot(stage, dest)) {
         dashLoadingEnd();
-        snprintf(message, sizeof(message),
-                 "New Card%d installed and verified. It is selectable but has NOT been activated.", number);
+        if (game_card)
+            snprintf(message, sizeof(message),
+                     "Game ID card %s installed and verified. The adapter serves it when that game starts.", id);
+        else
+            snprintf(message, sizeof(message),
+                     "New Card%d installed and verified. It is selectable but has NOT been activated.", number);
         dashModalMessage(DI_CHECK, "New MMCE card installed", message, dest);
         return;
     }
@@ -1802,7 +1864,7 @@ static void opInstallNewMmceCard(void)
     /* The new directory is retained intentionally: an ambiguous write
      * must never be retried against a possibly existing backing image. */
     dashModalMessage(DI_WARNING, "New card installation unverified",
-                     "Card folder may contain a partial .PART or .mcd. Do NOT select that card; inspect or back it up before cleanup.",
+                     "Card folder may contain a partial .PART or .mcd. Do NOT select that card or start that game; inspect or back it up before cleanup.",
                      folder);
 }
 
@@ -2292,7 +2354,7 @@ static void actionsMenu(void)
 	int is_elf = 0, has_target = (fb.nmarked > 0 || f != NULL);
 	DashMenuItem items[44];
 	int ids[44], n = 0, r, sw_card, sw_chan;
-	char marked[24], sort_detail[48];
+	char marked[24], sort_detail[48], game_id[11];
 	enum {
 		F_OPEN,
 		F_COPY,
@@ -2303,6 +2365,7 @@ static void actionsMenu(void)
 		F_DELETE,
 		F_RENAME,
 		F_NEWDIR,
+		F_NEW_BLANK_CARD,
 		F_NEWICON,
 		F_SIZE,
 		F_EDIT,
@@ -2323,6 +2386,7 @@ static void actionsMenu(void)
 		F_RECOVER_NEW_MCD,
 		F_IMPORT_TO_MMCE_NEW,
 		F_INSTALL_NEW_MMCE_CARD,
+		F_INSTALL_GAMEID_MMCE_CARD,
 		F_DATES,
 		F_SELALL,
 		F_INVERT,
@@ -2378,6 +2442,8 @@ static void actionsMenu(void)
 		ADD(DI_WARNING, "Delete...", fb.nmarked ? marked : NULL, !has_target || !en[DELETE], F_DELETE);
 		ADD(DI_EDIT, "Rename...", NULL, f == NULL || !en[RENAME], F_RENAME);
 		ADD(DI_FOLDER, "New folder...", NULL, !en[NEWDIR], F_NEWDIR);
+		if (en[NEWDIR] && strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
+			ADD(DI_MC, "New blank card...", "empty 8 to 64 MB .mcd", 0, F_NEW_BLANK_CARD);
 		if (en[NEWICON])
 			ADD(DI_IMAGE, "Create folder icon...", "icon.sys", 0, F_NEWICON);
 		ADD(DI_INFO, "Size", NULL, !has_target || !en[GETSIZE], F_SIZE);
@@ -2424,6 +2490,10 @@ static void actionsMenu(void)
 			ADD(DI_MC, "Install as NEW selectable MMCE card...",
 			    "creates an unused CardN; never replaces or selects existing cards",
 			    0, F_INSTALL_NEW_MMCE_CARD);
+			if (gameIdFromImageName(f->name, game_id))
+				ADD(DI_MC, "Install as MMCE Game ID card...",
+				    "only when that game has no card on the adapter yet",
+				    0, F_INSTALL_GAMEID_MMCE_CARD);
 		}
 		if (en[TIMEMANIP_CUSTOM])
 			ADD(DI_CLOCK, "Folder dates...", "order the saves", 0, F_DATES);
@@ -2472,6 +2542,12 @@ static void actionsMenu(void)
 			break;
 		case F_NEWDIR:
 			opNewFolder();
+			break;
+		case F_NEW_BLANK_CARD:
+			if (prepareOp()) {
+				dashCardNewBlank(fb.dir);
+				refresh();
+			}
 			break;
 		case F_NEWICON:
 			opNewIcon();
@@ -2540,7 +2616,10 @@ static void actionsMenu(void)
 			opImportCardToMmce();
 			break;
 		case F_INSTALL_NEW_MMCE_CARD:
-			opInstallNewMmceCard();
+			opInstallMmceCard(0);
+			break;
+		case F_INSTALL_GAMEID_MMCE_CARD:
+			opInstallMmceCard(1);
 			break;
 		case F_DATES:
 			opTimestamps();

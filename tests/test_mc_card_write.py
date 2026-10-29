@@ -427,8 +427,37 @@ for mb in (16, 32, 64):
     assert {k: sig(v) for k, v in got.items()} == {k: sig(v) for k, v in src_saves.items()}
     out.unlink()
 
+# 12. a blank card made from nothing (no source card to copy identity from)
+blank = tmp / "blank8.mcd"
+assert op("blank", 8, blank)["r"] == "0"
+data = blank.read_bytes()
+ref = fx.Card(8, False)
+dotdot = (ref.alloc_offset * 1024) + 512                            # the root's second entry
+assert data[:dotdot] == blank_ref[:dotdot] and data[dotdot + 2:] == blank_ref[dotdot + 2:]
+assert struct.unpack_from("<H", data, dotdot)[0] == 0xA426           # ".." is hidden, as the PS2 formats it
+assert struct.unpack_from("<H", blank_ref, dotdot)[0] == 0x8427
+assert op("blank", 12, blank)["r"] == "-16" and blank.stat().st_size == 0
+for mb in (8, 16, 32, 64):
+    out = tmp / f"blank{mb}.mcd"
+    assert op("blank", mb, out, "stamp")["r"] == "0"
+    data = out.read_bytes()
+    assert len(data) == mb << 20
+    root_off = fx.Card(mb, False).alloc_offset * 1024
+    for e in (root_off, root_off + 512):                            # creation and modification times
+        assert data[e + 8:e + 16] == data[e + 0x18:e + 0x20] == bytes([0, 56, 34, 12, 29, 10, 0xEA, 0x07])
+    got, free = py_read(data)
+    assert got == {} and free == fx.Card(mb, False).alloc_end - 1, (mb, free)
+    cfree, csaves = c_list(out)
+    assert cfree == free and csaves == {}
+    for n in names:                                                 # a blank card takes saves like any other
+        assert op("copy", src, n, out)["r"] == "0", (mb, n)
+    got, _ = py_read(out.read_bytes())
+    assert {k: sig(v) for k, v in got.items()} == {k: sig(v) for k, v in src_saves.items()}
+    out.unlink()
+
 print(f"Card writer: copy/delete verified by two readers, refusals leave images untouched, "
       f"root growth and slot reuse, cross-links refused, crash-safe at every write "
       f"({n_copy} copy and {n_del} delete crash points), 120-step model run, fuzz, "
       f".psu export/import round trip with {len(bad_cases)} malformed files refused, "
-      f"format 8/16/32/64 MB (8 MB byte-identical to the mymc-constant fixture) and resize by copy: OK")
+      f"format 8/16/32/64 MB (8 MB byte-identical to the mymc-constant fixture), resize by copy, "
+      f"and blank cards made from nothing: OK")

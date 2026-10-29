@@ -29,6 +29,7 @@
 <tr><td>Delete from this card&hellip;</td><td>Removes the save.</td></tr>
 <tr><td>Import .psu&hellip;</td><td>Adds a save from a <code>.psu</code>. The file is fully checked before anything is written.</td></tr>
 <tr><td>Copy to a new card of another size&hellip;</td><td>Makes a new 8, 16, 32 or 64&nbsp;MB card image holding every save. The source card is only read and no existing file is overwritten. The finished card must list exactly the source&rsquo;s saves, or the new file is removed. MMCE results go to <code>mmceN:/WLE-Resized/</code>, ready for <b>Install as NEW selectable MMCE card&hellip;</b>.</td></tr>
+<tr><td>Split into Game ID cards&hellip;</td><td>Makes one card per game, each holding that game&rsquo;s saves, in the <code>&lt;ID&gt;/&lt;ID&gt;-1.mcd</code> layout MMCE devices use for Game ID cards. See <a href="#gameid-split">Game ID cards</a>.</td></tr>
 </tbody></table>
 <p>Every write follows the same steps:</p>
 <ol>
@@ -39,6 +40,21 @@
 </ol>
 <p>The writer stores the data and folder first, then the card&rsquo;s allocation table, then makes the change visible with one 512-byte page. Host tests cut the power before every single write and check that the card still opens and no other save changed.</p>
 <div class="callout amber"><div class="h">Limits and status</div><p>PCSX2 <code>.ps2</code> cards and saves with sub-folders are read-only here. Nothing is written while a VMC is mounted as <code>vmc0:</code> or <code>vmc1:</code>, because the VMC driver keeps its own copy of the card&rsquo;s tables; unmount it first. Cards with more than 250 saves list the first 250, still accept copies and imports, and cannot be copied to a new size. This is <b>not yet tested on a console</b> or checked against Sony&rsquo;s memory-card driver; keep a PC copy of your cards until it is.</p></div>
+
+<h2 id="blank-card">New blank card</h2>
+<p>In a folder on USB, HDD, MMCE or the network, open the folder menu and choose <b>New blank card&hellip;</b>, then a size: 8, 16, 32 or 64&nbsp;MB. Launchstation writes an empty PS2 card image named <code>Blank-8MB.mcd</code> (or <code>Blank-8MB-2.mcd</code> and so on), formatted with the PS2&rsquo;s standard layout and timestamped from the console clock. It then reopens the file and checks it: the right size, no saves, every cluster but the root free. If anything fails, the unfinished file is removed. It only ever creates a new file. On MMCE the card goes to <code>mmceN:/WLE-New/</code>, outside <code>MemoryCards/</code>, ready for <b>Install as NEW selectable MMCE card&hellip;</b>. The action is not offered on memory cards and VMCs, which are too small to hold a card image.</p>
+<div class="callout amber"><div class="h">Status</div><p><b>Not yet tested on a console.</b> Whether the sd2psx and the PS2 accept the 16 to 64&nbsp;MB layouts is still to be confirmed.</p></div>
+
+<h2 id="gameid-split">Game ID cards</h2>
+<p>sd2psXtd-style MMCE devices can give each game its own card: when a game starts, the adapter serves <code>MemoryCards/PS2/&lt;ID&gt;/&lt;ID&gt;-1.mcd</code> for that game&rsquo;s serial, such as <code>SLUS-21050</code>. To move an existing card to that layout, open it with <b>Card contents&hellip;</b> and choose <b>Split into Game ID cards&hellip;</b>.</p>
+<ul>
+<li>The Game ID comes from each save folder&rsquo;s name: <code>BASLUS-21050&hellip;</code> belongs to <code>SLUS-21050</code>. System folders such as <code>BADATA-SYSTEM</code>, PS1 saves and folders not named after a serial are left out and counted in the result.</li>
+<li>Each game gets a new card with the source card&rsquo;s identity. It starts at 8&nbsp;MB and moves up a size only if that game&rsquo;s saves do not fit. Every card is read back and must list exactly that game&rsquo;s saves, or it is removed.</li>
+<li>The source card is only read. A game that already has a card in the output folder is skipped, never replaced.</li>
+<li>On MMCE the cards go to <code>mmceN:/WLE-GameID/&lt;ID&gt;/</code>, outside <code>MemoryCards/</code>. Highlight one and choose <b>Install as MMCE Game ID card&hellip;</b>: it copies the card to <code>MemoryCards/PS2/&lt;ID&gt;/</code>, verifies it and publishes it the same way as <b>Install as NEW selectable MMCE card&hellip;</b>, and only when the adapter has no folder for that game yet. Install before starting the game, because the adapter makes an empty card for a game it has none for.</li>
+<li>Elsewhere the cards go to a <code>&lt;card&gt;-GameID</code> folder next to the source card. Copy each <code>&lt;ID&gt;</code> folder into <code>MemoryCards/PS2/</code> on the adapter&rsquo;s SD card.</li>
+</ul>
+<div class="callout amber"><div class="h">Status</div><p><b>Not yet tested on a console.</b> To confirm: that the adapter serves these cards as described, including for games it files under another disc&rsquo;s serial.</p></div>
 
 <h2 id="card-images">Card image backup and conversion</h2>
 <ul>

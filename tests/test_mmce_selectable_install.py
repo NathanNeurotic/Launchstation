@@ -13,20 +13,22 @@ source = (root / "src/dash_browser.c").read_text(encoding="utf-8")
 workflow = (root / ".github/workflows/compile.yml").read_text(encoding="utf-8")
 
 
-def extract(signature):
-    at = source.index(signature)
-    p = source.index("{", at) + 1
+def extract(signature, text=None):
+    source_text = source if text is None else text
+    at = source_text.index(signature)
+    p = source_text.index("{", at) + 1
     level = 1
     while level:
-        if p >= len(source):
+        if p >= len(source_text):
             raise AssertionError("Unclosed C function " + signature)
-        level += (source[p] == "{") - (source[p] == "}")
+        level += (source_text[p] == "{") - (source_text[p] == "}")
         p += 1
-    return source[at:p] + "\n"
+    return source_text[at:p] + "\n"
 
 
 allocator = extract("static int mmceSelectableCandidate(")
-installer = extract("static void opInstallNewMmceCard(void)")
+installer = extract("static void opInstallMmceCard(int game_card)")
+namer = extract("static int gameIdFromImageName(")
 assert '"mmce%d:/MemoryCards/PS2/Card%d"' in allocator
 assert '"%s/Card%d-1.mcd"' in allocator
 assert '"%s.PART"' in allocator
@@ -44,13 +46,27 @@ assert "mcCardValidateNoEcc(source)" in installer
 assert "prepareTransferDeviceStacks(source, parent)" in installer
 assert "mmce0:/WLE-Recovered/" in installer
 assert "mmce1:/WLE-Recovered/" in installer
+# Resized copies and new blank cards are staged outside MemoryCards for this action.
+for held in ("WLE-Resized/", "WLE-New/", "WLE-GameID/"):
+    for unit in (0, 1):
+        assert f'strncmp(source, "mmce{unit}:/{held}", {len(f"mmce{unit}:/{held}")})' in installer, held
+assert '"mmce%d:/WLE-Resized/"' in (root / "src/dash_card_tool.c").read_text(encoding="utf-8")
+assert '"mmce%d:/WLE-New/"' in (root / "src/dash_card_tool.c").read_text(encoding="utf-8")
+assert '"mmce%d:/WLE-GameID/"' in (root / "src/dash_card_tool.c").read_text(encoding="utf-8")
+# Game ID cards: the whole <ID> folder must be absent, then the same verified publish.
+assert 'snprintf(folder, sizeof(folder), "%s/%s", parent, id)' in installer
+assert '"%s/%s-1.mcd", folder, id' in installer
+at = installer.index('snprintf(folder, sizeof(folder), "%s/%s", parent, id)')
+assert installer.index("genDopen(folder)", at) < installer.index("genMkdir(folder, fileMode)", at)
+assert "This game already has a card" in installer
+assert '"Install as MMCE Game ID card..."' in source and "opInstallMmceCard(1);" in source
 assert "mmce_cmd_set_card" not in installer
 assert "mmce_cmd_set_channel" not in installer
 assert "mmce_cmd_reset" not in installer
 assert "genRemove(" not in installer
 assert "F_INSTALL_NEW_MMCE_CARD" in source
 assert '"Install as NEW selectable MMCE card..."' in source
-assert "opInstallNewMmceCard();" in source
+assert "opInstallMmceCard(0);" in source
 assert "python3 tests/test_mmce_selectable_install.py" in workflow
 
 harness = r"""
@@ -116,6 +132,27 @@ int main(void) {
     puts("PASS: new MMCE selectable cards never reuse an existing numbered directory");
 }
 """
+namer_test = r"""
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+""" + extract("int mcGameIdValid(const char *id)", (root / "src/mc_card_write.c").read_text(encoding="utf-8")) + namer + r"""
+int main(void) {
+    char id[11];
+    assert(gameIdFromImageName("mmce0:/WLE-GameID/SLUS-21050/SLUS-21050-1.mcd", id) && !strcmp(id, "SLUS-21050"));
+    assert(gameIdFromImageName("mass:/SCES-50000.ps2", id) && !strcmp(id, "SCES-50000"));
+    assert(!gameIdFromImageName("mass:/Card1-1.mcd", id));
+    assert(!gameIdFromImageName("mass:/SLUS-2105-1.mcd", id));
+    assert(!gameIdFromImageName("mass:/slus-21050-1.mcd", id));
+    assert(!gameIdFromImageName("mass:/SLUS_21050-1.mcd", id));
+    assert(!gameIdFromImageName("mass:/SLUS-21050X.mcd", id));
+    assert(!gameIdFromImageName("SLUS-2105", id));
+    assert(!gameIdFromImageName("mass:/SLUS-21050-2.mcd", id));      /* channel 2 is not the -1 card */
+    assert(!gameIdFromImageName("mass:/SLUS-21050-backup.mcd", id));
+    assert(!gameIdFromImageName("mass:/SLUS-21050-1", id));
+    puts("PASS: Game ID card names");
+}
+"""
 cc = shutil.which("gcc") or shutil.which("clang")
 assert cc, "C host compiler required"
 with tempfile.TemporaryDirectory(prefix="mmce-selectable-") as tmp:
@@ -124,4 +161,7 @@ with tempfile.TemporaryDirectory(prefix="mmce-selectable-") as tmp:
     c.write_text(harness, encoding="utf-8")
     subprocess.run([cc, "-std=c99", "-Wall", "-Wextra", "-Werror",
                     str(c), "-o", str(exe)], check=True)
+    subprocess.run([str(exe)], check=True)
+    c.write_text(namer_test, encoding="utf-8")
+    subprocess.run([cc, "-std=c99", "-Wall", "-Wextra", "-Werror", str(c), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)

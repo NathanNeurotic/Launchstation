@@ -21,6 +21,7 @@
 #include "mmce_backup.h"
 #include "mmce_card_switch.h"
 #include "dash_card_tool.h"
+#include <libcdvd.h>
 
 #define CT_BLOCK 4096
 #define CT_WAYS 4
@@ -41,7 +42,7 @@ static McView ct_view;
 static McViewSave ct_saves[CT_MAX_SAVES];
 static char ct_titles[CT_MAX_SAVES][96];
 static char ct_details[CT_MAX_SAVES][96];
-static DashMenuItem ct_items[CT_MAX_SAVES + 2];
+static DashMenuItem ct_items[CT_MAX_SAVES + 3];
 
 static int ctRead(void *ctx, uint64_t offset, void *buf, uint32_t len)
 {
@@ -807,6 +808,341 @@ static void ctResize(const char *image)
 	free(names);
 }
 
+typedef struct {
+	char name[33];
+	char id[11];
+} CtGameSave;
+
+/* One new Game ID card at dest holding every save of game id, formatted
+ * with the source card's identity. Removed again unless it reads back with
+ * exactly those saves. */
+static int ctGameCard(const char *image, const char *dest, const uint8_t sb[512], const uint8_t root[1024], int mb,
+                      const CtGameSave *list, int n, const char *id, int *bad)
+{
+	CardIo io;
+	AppendIo out;
+	McSaveData s;
+	int r, i, want = 0, got = 0, k;
+
+	*bad = -1;
+	out.fd = genOpen(dest, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL);
+	out.pos = 0;
+	if (out.fd < 0)
+		return MCV_ERR_IO;
+	r = mcCardFormat(sb, root, (uint32_t)mb, ctAppend, &out);
+	if (genClose(out.fd) < 0 && r == MCV_OK)
+		r = MCV_ERR_IO;
+	for (i = 0; r == MCV_OK && i < n; i++) {
+		if (strcmp(list[i].id, id))
+			continue;
+		want++;
+		r = ctReadSave(image, list[i].name, &s);
+		if (r != MCW_OK) {
+			*bad = i;
+			break;
+		}
+		r = ctOpen(&io, dest, 1);
+		if (r == MCV_OK) {
+			int c;
+
+			r = mcCardWriteSave(&ct_view, ctWrite, &io, &s);
+			c = ctClose(&io);
+			if (r == MCW_OK && c != MCV_OK)
+				r = MCW_ERR_VERIFY;
+		}
+		mcCardFreeSave(&s);
+		if (r != MCV_OK)
+			*bad = i;
+	}
+	if (r == MCV_OK) { /* the finished card lists exactly this game's saves */
+		r = ctOpen(&io, dest, 0);
+		if (r == MCV_OK) {
+			k = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &got);
+			ctClose(&io);
+			if (k != want || got != want)
+				r = MCW_ERR_VERIFY;
+			for (i = 0; r == MCV_OK && i < k; i++) {
+				char sid[11];
+
+				if (!mcSaveGameId(ct_saves[i].name, sid) || strcmp(sid, id))
+					r = MCW_ERR_VERIFY;
+			}
+		}
+	}
+	if (r != MCV_OK)
+		genRemove((char *)dest);
+	return r;
+}
+
+/* One Game ID card per game (<ID>/<ID>-1.mcd, the folder layout sd2psXtd-
+ * style MMCE devices pick by the running game), each holding that game's
+ * saves. The source is only read, and an existing card is never replaced. */
+static void ctSplitGameId(const char *image)
+{
+	static const int sizes[] = {8, 16, 32, 64};
+	static uint8_t sb[512], root[1024];
+	/* where is kept 32 bytes short of MAX_PATH, so dir and dest still fit it */
+	char where[MAX_PATH], dir[MAX_PATH + 16], dest[MAX_PATH + 48], base[48], msg[160], body[512], fail_id[11] = "";
+	const char *name = ctBaseName(image), *dot;
+	CtGameSave *list = NULL;
+	CardIo io;
+	int unit = mmceCardUnit(image), r, n = 0, found = 0, i, j, k, len, bad;
+	int games = 0, other = 0, done = 0, made = 0, present = 0, failed = 0, copied = 0, fail_r = MCV_OK;
+
+	r = ctOpen(&io, image, 0);
+	if (r == MCV_OK) {
+		r = mcCardReadIdentity(&ct_view, sb, root);
+		if (r == MCV_OK) {
+			n = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &found);
+			if (n < 0)
+				r = n;
+		}
+		ctClose(&io);
+	}
+	if (r == MCV_OK && found > n) {
+		dashModalMessage(DI_WARNING, "Cannot split this card",
+		                 "This card holds more saves than this tool can copy at once (250). Move some saves to another card first.",
+		                 image);
+		return;
+	}
+	if (r == MCV_OK && n > 0) {
+		list = malloc((size_t)n * sizeof(*list));
+		if (list == NULL)
+			r = MCW_ERR_NOMEM;
+	}
+	if (r != MCV_OK) {
+		dashModalMessage(DI_WARNING, "Cannot split this card", ctError(r), image);
+		return;
+	}
+	for (i = 0; i < n; i++) {
+		dashStrCopy(list[i].name, ct_saves[i].name, sizeof(list[i].name));
+		if (ct_saves[i].is_ps1 || !mcSaveGameId(list[i].name, list[i].id)) {
+			list[i].id[0] = 0;
+			other++;
+			continue;
+		}
+		for (j = 0; j < i && strcmp(list[j].id, list[i].id); j++)
+			;
+		if (j == i)
+			games++;
+	}
+	if (games == 0) {
+		free(list);
+		dashModalMessage(DI_WARNING, "No game saves to split",
+		                 "No save on this card is named after a game's serial (like BASLUS-21050), so no Game ID card can be made.",
+		                 image);
+		return;
+	}
+
+	/* Outside MemoryCards/ on MMCE, so the device never serves a half-built card. */
+	if (unit >= 0)
+		len = snprintf(where, sizeof(where), "mmce%d:/WLE-GameID/", unit);
+	else {
+		dot = strrchr(name, '.');
+		k = dot != NULL ? (int)(dot - name) : (int)strlen(name);
+		if (k > (int)sizeof(base) - 1)
+			k = sizeof(base) - 1;
+		memcpy(base, name, k);
+		base[k] = 0;
+		len = snprintf(where, sizeof(where), "%.*s%s-GameID/", (int)(name - image), image, base);
+	}
+	if (len >= (int)sizeof(where) - 32) {
+		free(list);
+		return;
+	}
+	snprintf(body, sizeof(body), "%d game%s a Game ID card of %s own, %d save%s in all.%s This card is not changed.",
+	         games, games == 1 ? " gets" : "s each get", games == 1 ? "its" : "their", n - other, n - other == 1 ? "" : "s", other ? " Saves without a game serial are left out." : "");
+	if (!ctStacks(image, where) || !dashModalConfirm("Split into Game ID cards?", body, "Split", 0)) {
+		free(list);
+		return;
+	}
+
+	dashLoadingBegin("Making Game ID cards");
+	dashStrCopy(dir, where, sizeof(dir));
+	dir[strlen(dir) - 1] = 0;
+	genMkdir(dir, fileMode);
+	for (i = 0; i < n; i++) {
+		if (!list[i].id[0])
+			continue;
+		for (j = 0; j < i && strcmp(list[j].id, list[i].id); j++)
+			;
+		if (j < i)
+			continue;
+		dashLoadingStatus(list[i].id, done++, games);
+		snprintf(dir, sizeof(dir), "%s%s", where, list[i].id);
+		snprintf(dest, sizeof(dest), "%s/%s-1.mcd", dir, list[i].id);
+		genMkdir(dir, fileMode);
+		if (wleExists(dest)) {
+			present++;
+			continue;
+		}
+		/* The smallest card the game's saves fit on; 8 MB for nearly all. */
+		for (k = 0; k < 4; k++) {
+			r = ctGameCard(image, dest, sb, root, sizes[k], list, n, list[i].id, &bad);
+			if (r != MCW_ERR_FULL)
+				break;
+		}
+		if (r == MCV_OK) {
+			made++;
+			for (j = i; j < n; j++)
+				copied += !strcmp(list[j].id, list[i].id);
+		} else if (failed++ == 0) {
+			dashStrCopy(fail_id, list[i].id, sizeof(fail_id));
+			fail_r = r;
+		}
+	}
+	dashLoadingEnd();
+	free(list);
+
+	len = snprintf(body, sizeof(body), "%d Game ID card%s made and read back, with %d save%s.", made,
+	               made == 1 ? "" : "s", copied, copied == 1 ? "" : "s");
+	if (present)
+		len += snprintf(body + len, sizeof(body) - len, " %d game%s already had a card there; left as %s.", present,
+		                present == 1 ? "" : "s", present == 1 ? "it was" : "they were");
+	if (failed)
+		len += snprintf(body + len, sizeof(body) - len, " %d failed and %s removed (%s: %s).", failed,
+		                failed == 1 ? "was" : "were", fail_id, ctError(fail_r));
+	if (other)
+		len += snprintf(body + len, sizeof(body) - len, " %d save%s without a game serial %s left out.", other,
+		                other == 1 ? "" : "s", other == 1 ? "was" : "were");
+	if (made)
+		snprintf(body + len, sizeof(body) - len, "%s",
+		         unit >= 0 ? " Install each with \"Install as MMCE Game ID card\"." :
+		                     " Copy each folder into MemoryCards/PS2/ on the MMCE SD card.");
+	snprintf(msg, sizeof(msg), "%s", failed ? "Some Game ID cards not made" : made ? "Game ID cards made" : "No new Game ID card");
+	dashModalMessage(failed || !made ? DI_WARNING : DI_MC, msg, body, where);
+}
+
+static int ctBcd(u8 v)
+{
+	return (v >> 4) * 10 + (v & 0x0F);
+}
+
+/* Card timestamps are console RTC time, as the PS2 itself stores them. */
+static int ctStamp(uint8_t stamp[8])
+{
+	sceCdCLOCK clock;
+	int year;
+
+	memset(&clock, 0, sizeof(clock));
+	if (sceCdReadClock(&clock) == 0 || clock.stat != 0)
+		return 0;
+	year = 2000 + ctBcd(clock.year);
+	stamp[0] = 0;
+	stamp[1] = (uint8_t)ctBcd(clock.second);
+	stamp[2] = (uint8_t)ctBcd(clock.minute);
+	stamp[3] = (uint8_t)ctBcd(clock.hour);
+	stamp[4] = (uint8_t)ctBcd(clock.day);
+	stamp[5] = (uint8_t)ctBcd(clock.month & 0x7F);
+	stamp[6] = (uint8_t)year;
+	stamp[7] = (uint8_t)(year >> 8);
+	return 1;
+}
+
+/* An empty card image made from nothing. Only a new file is written, with
+ * O_EXCL, and it is removed again unless it reads back as an empty card. */
+void dashCardNewBlank(const char *folder)
+{
+	static const char *const sizes[] = {"8 MB", "16 MB", "32 MB", "64 MB"};
+	static uint8_t sb[512], root[1024];
+	char where[MAX_PATH], dest[MAX_PATH], msg[160];
+	uint8_t stamp[8];
+	CardIo io;
+	AppendIo out;
+	uint32_t freec, total;
+	int unit = mmceCardUnit(folder), choice, mb, r, i, made = 0, found = 0, n = 0;
+	size_t len;
+
+	if (!strncmp(folder, "mc", 2) || !strncmp(folder, "vmc", 3)) {
+		dashModalMessage(DI_WARNING, "Choose another folder",
+		                 "A card image does not fit on a memory card. Choose a folder on USB, HDD, MMCE or the network.",
+		                 folder);
+		return;
+	}
+	choice = dashModalChoice("New card size", sizes, 4, 0);
+	if (choice < 0)
+		return;
+	mb = 8 << choice;
+
+	/* Outside MemoryCards/ on MMCE, so the device never serves a half-built
+	 * card; "Install as NEW selectable MMCE card" moves it into place. */
+	if (unit >= 0)
+		snprintf(where, sizeof(where), "mmce%d:/WLE-New/", unit);
+	else {
+		dashStrCopy(where, folder, sizeof(where));
+		len = strlen(where);
+		if (len == 0 || len + 2 >= sizeof(where))
+			return;
+		if (where[len - 1] != '/' && where[len - 1] != ':') {
+			where[len] = '/';
+			where[len + 1] = 0;
+		}
+	}
+	dest[0] = 0;
+	for (i = 1; i < 100; i++) {
+		int w = i == 1 ? snprintf(dest, sizeof(dest), "%sBlank-%dMB.mcd", where, mb) :
+		                 snprintf(dest, sizeof(dest), "%sBlank-%dMB-%d.mcd", where, mb, i);
+		if (w >= (int)sizeof(dest))
+			return;
+		if (!wleExists(dest))
+			break;
+	}
+	if (i == 100) {
+		dashModalMessage(DI_WARNING, "Choose another folder", "This folder already holds 99 blank cards of that size.", where);
+		return;
+	}
+	snprintf(msg, sizeof(msg), "An empty %d MB PS2 card image is made. Nothing else is changed.", mb);
+	if (!dashModalConfirm("Make a blank card?", msg, "Make", 0))
+		return;
+
+	dashLoadingBegin("Making a blank card");
+	if (unit >= 0) {
+		char dir[MAX_PATH];
+
+		dashStrCopy(dir, where, sizeof(dir));
+		dir[strlen(dir) - 1] = 0;
+		genMkdir(dir, fileMode);
+	}
+	mcCardBlankIdentity(sb, root, ctStamp(stamp) ? stamp : NULL);
+	out.fd = genOpen(dest, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL);
+	out.pos = 0;
+	r = out.fd < 0 ? MCV_ERR_IO : MCV_OK;
+	if (r == MCV_OK) {
+		made = 1;
+		dashLoadingStatus("Formatting", 0, 1);
+		r = mcCardFormat(sb, root, (uint32_t)mb, ctAppend, &out);
+		if (genClose(out.fd) < 0 && r == MCV_OK)
+			r = MCV_ERR_IO;
+	}
+	if (r == MCV_OK) { /* reopen read-only: a whole, empty card of the chosen size */
+		r = ctOpen(&io, dest, 0);
+		if (r == MCV_OK) {
+			if (io.size != (s64)mb << 20)
+				r = MCW_ERR_VERIFY;
+			if (r == MCV_OK)
+				r = mcViewFreeClusters(&ct_view, &freec, &total);
+			if (r == MCV_OK) {
+				n = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &found);
+				if (n != 0 || found != 0 || total == 0 || freec + 1u != total)
+					r = MCW_ERR_VERIFY;
+			}
+			ctClose(&io);
+		}
+	}
+	dashLoadingEnd();
+	if (r != MCV_OK) {
+		if (made)
+			genRemove(dest);
+		snprintf(msg, sizeof(msg), "%s%s", r == MCV_ERR_IO ? "The device may be read-only or full. " : ctError(r),
+		         made ? " The unfinished file was removed." : "");
+		dashModalMessage(DI_WARNING, "Blank card not made", msg, dest);
+		return;
+	}
+	snprintf(msg, sizeof(msg), "Formatted and read back: %u KB free.%s", (unsigned)freec,
+	         unit >= 0 ? " To use it, install it with \"Install as NEW selectable MMCE card\"." : "");
+	dashModalMessage(DI_MC, "Blank card made", msg, dest);
+}
+
 static void ctSaveMenu(const char *image, const McViewSave *sv, const char *title, int writable)
 {
 	static const char *const ro = "PCSX2 .ps2 cards are read-only here";
@@ -878,6 +1214,10 @@ void dashCardTool(const char *image)
 		ct_items[1].label = "Copy to a new card of another size...";
 		ct_items[1].detail = "8 to 64 MB; this card is only read";
 		ct_items[1].disabled = 0;
+		ct_items[2].icon = DI_MC;
+		ct_items[2].label = "Split into Game ID cards...";
+		ct_items[2].detail = "one card per game, for MMCE; this card is only read";
+		ct_items[2].disabled = 0;
 		for (i = 0; i < n; i++) {
 			const McViewSave *sv = &ct_saves[i];
 
@@ -888,16 +1228,16 @@ void dashCardTool(const char *image)
 			snprintf(ct_details[i], sizeof(ct_details[i]), "%s%.32s, %u file%s, %u KB", sv->is_ps1 ? "PS1 " : "",
 			         sv->name, (unsigned)sv->files % 10000u, sv->files == 1 ? "" : "s",
 			         (unsigned)((sv->bytes + 1023u) / 1024u) % 1000000u);
-			ct_items[i + 2].icon = DI_MC;
-			ct_items[i + 2].label = ct_titles[i];
-			ct_items[i + 2].detail = ct_details[i];
-			ct_items[i + 2].disabled = 0;
+			ct_items[i + 3].icon = DI_MC;
+			ct_items[i + 3].label = ct_titles[i];
+			ct_items[i + 3].detail = ct_details[i];
+			ct_items[i + 3].disabled = 0;
 		}
 		snprintf(subtitle, sizeof(subtitle), "%d save%s, %u KB free of %u KB%s", found, found == 1 ? "" : "s",
 		         (unsigned)freec, (unsigned)total, found > n ? " (list shortened)" : "");
-		if (sel > n + 1)
-			sel = n + 1;
-		r = dashModalMenu(ctBaseName(path), subtitle, ct_items, n + 2, sel);
+		if (sel > n + 2)
+			sel = n + 2;
+		r = dashModalMenu(ctBaseName(path), subtitle, ct_items, n + 3, sel);
 		if (r < 0 || ct_items[r].disabled)
 			return;
 		sel = r;
@@ -905,11 +1245,13 @@ void dashCardTool(const char *image)
 			ctImportPsu(path);
 		} else if (r == 1) {
 			ctResize(path);
+		} else if (r == 2) {
+			ctSplitGameId(path);
 		} else {
 			char title[96];
-			McViewSave sv = ct_saves[r - 2];
+			McViewSave sv = ct_saves[r - 3];
 
-			dashStrCopy(title, ct_titles[r - 2], sizeof(title));
+			dashStrCopy(title, ct_titles[r - 3], sizeof(title));
 			ctSaveMenu(path, &sv, title, writable);
 		}
 	}

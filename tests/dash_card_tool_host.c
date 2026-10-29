@@ -18,6 +18,7 @@
 #include "mmce_backup.h"
 #include "dash_card_tool.h"
 #include "mmce_card_switch.h"
+#include <libcdvd.h>
 
 static const char *root, *active;
 /* the simulated device: what it serves, what it reports, how long it is busy */
@@ -318,6 +319,16 @@ int mmceCardFingerprint(const char *path, unsigned char out[32])
 	return r == MCV_OK ? 0 : -1;
 }
 
+/* 2026-10-29 12:34:56 in BCD, as the console RTC reports it; NOCLOCK fails the read. */
+int sceCdReadClock(sceCdCLOCK *c)
+{
+	if (getenv("NOCLOCK"))
+		return 0;
+	memset(c, 0, sizeof(*c));
+	c->second = 0x56, c->minute = 0x34, c->hour = 0x12, c->day = 0x29, c->month = 0x10, c->year = 0x26;
+	return 1;
+}
+
 int main(int argc, char **argv)
 {
 	if (argc < 4)
@@ -347,6 +358,8 @@ int main(int argc, char **argv)
 		printf("ISACTIVE|%d\n", mmceCardIsActive(argv[3] + 9));
 	} else if (!strncmp(argv[3], "pick-switch:", 12)) {
 		dashMmceSwitch(argv[3] + 12);
+	} else if (!strncmp(argv[3], "blank:", 6)) {
+		dashCardNewBlank(argv[3] + 6);
 	} else if (!strncmp(argv[3], "served:", 7)) {
 		printf("SERVED|%d\n", mmceCardMaybeServed(argv[3] + 7));
 	} else {
