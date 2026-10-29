@@ -1297,6 +1297,219 @@ void dashCardTool(const char *image)
 	}
 }
 
+/* ---- All saves: every card image in a folder and its direct subfolders ---- */
+
+#define CT_ALL_CARDS 64
+#define CT_ALL_SAVES 1000
+#define CT_ALL_MAX_BYTES 69206016u /* a 64 MB card with ECC spare bytes */
+
+typedef struct {
+	char path[MAX_PATH];
+	int writable;
+} CtAnyCard;
+
+typedef struct {
+	McViewSave sv;
+	int card;
+	char title[96];
+	char key[96]; /* the title shared by every copy of this save, for sorting */
+	char detail[128];
+} CtAnySave;
+
+static int ctAllCandidate(const iox_dirent_t *ent)
+{
+	if (ent->name[0] == '.' || FIO_S_ISDIR(ent->stat.mode) || ent->stat.hisize || ent->stat.size > CT_ALL_MAX_BYTES)
+		return 0;
+	return genCmpFileExt(ent->name, "MCD") || genCmpFileExt(ent->name, "PS2") || genCmpFileExt(ent->name, "VMC") ||
+	       genCmpFileExt(ent->name, "MC2") || genCmpFileExt(ent->name, "BIN");
+}
+
+/* Candidate images in folder (ending in '/') and one level below it, except
+ * in Launchstation's WLE-* folders, in directory order. Folder names are read first: MMCE allows one open handle.
+ * Returns how many were stored; *more is set when some did not fit. */
+static int ctAllScan(const char *folder, CtAnyCard *cards, int *more)
+{
+	char(*subs)[MAX_NAME];
+	char dir[MAX_PATH];
+	iox_dirent_t ent;
+	int fd, nsub = 0, n = 0, i;
+
+	subs = malloc(CT_ALL_CARDS * sizeof(*subs));
+	if (subs == NULL)
+		return -1;
+	for (i = -1; i < nsub; i++) {
+		if (snprintf(dir, sizeof(dir), "%s%s%s", folder, i < 0 ? "" : subs[i], i < 0 ? "" : "/") >=
+		    (int)sizeof(dir))
+			continue;
+		fd = genDopen(dir);
+		if (fd < 0)
+			continue;
+		memset(&ent, 0, sizeof(ent));
+		while (fileXioDread(fd, &ent) > 0) {
+			if (i < 0 && ent.name[0] != '.' && FIO_S_ISDIR(ent.stat.mode)) {
+				if (!strncmp(ent.name, "WLE-", 4))
+					; /* safety copies and other holding areas would repeat every save */
+				else if (nsub < CT_ALL_CARDS)
+					snprintf(subs[nsub++], MAX_NAME, "%s", ent.name);
+				else
+					*more = 1;
+			} else if (ctAllCandidate(&ent)) {
+				size_t dl = strlen(dir), nl = strlen(ent.name);
+
+				if (n < CT_ALL_CARDS && dl + nl < MAX_PATH) {
+					memcpy(cards[n].path, dir, dl);
+					memcpy(cards[n++].path + dl, ent.name, nl + 1);
+				} else {
+					*more = 1;
+				}
+			}
+			memset(&ent, 0, sizeof(ent));
+		}
+		genDclose(fd);
+	}
+	free(subs);
+	return n;
+}
+
+static int ctAllByName(const void *a, const void *b)
+{
+	const CtAnySave *x = a, *y = b;
+	int c = strcmp(x->sv.name, y->sv.name);
+
+	return c != 0 ? c : x->card - y->card;
+}
+
+static int ctAllCmp(const void *a, const void *b)
+{
+	const CtAnySave *x = a, *y = b;
+	int c = strcasecmp(x->key, y->key);
+
+	if (c == 0)
+		c = strcmp(x->sv.name, y->sv.name);
+
+	return c != 0 ? c : x->card - y->card;
+}
+
+/* Reads every card; returns how many saves were stored, sorted by title.
+ * Copies of one save (same folder name) on different cards sort together
+ * under the title any of them carries, even when one has lost its icon.sys. */
+static int ctAllRead(const char *folder, CtAnyCard *cards, int ncards, CtAnySave *list, int *found, int *bad)
+{
+	CardIo io;
+	int c, i, k, n = 0, got;
+
+	*found = *bad = 0;
+	for (c = 0; c < ncards; c++) {
+		dashLoadingStatus(ctBaseName(cards[c].path), c, ncards);
+		cards[c].writable = 0;
+		if (ctOpen(&io, cards[c].path, 0) != MCV_OK) {
+			(*bad)++;
+			continue;
+		}
+		cards[c].writable = ct_view.page_stride == 512u;
+		k = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &got);
+		ctClose(&io);
+		if (k < 0) {
+			(*bad)++;
+			continue;
+		}
+		*found += got;
+		for (i = 0; i < k && n < CT_ALL_SAVES; i++, n++) {
+			CtAnySave *s = &list[n];
+
+			s->sv = ct_saves[i];
+			s->card = c;
+			if (s->sv.has_icon_sys && s->sv.title[0])
+				dashSjisTitle(s->title, sizeof(s->title), (const unsigned char *)s->sv.title);
+			else
+				dashStrCopy(s->title, s->sv.name, sizeof(s->title));
+			snprintf(s->detail, sizeof(s->detail), "%.48s: %s%.32s, %u KB", cards[c].path + strlen(folder),
+			         s->sv.is_ps1 ? "PS1 " : "", s->sv.name, (unsigned)((s->sv.bytes + 1023u) / 1024u) % 1000000u);
+		}
+	}
+	qsort(list, (size_t)n, sizeof(*list), ctAllByName);
+	for (i = 0; i < n; i = k) {
+		int t = i;
+
+		for (k = i; k < n && !strcmp(list[k].sv.name, list[i].sv.name); k++)
+			if (t == i && strcmp(list[k].title, list[k].sv.name))
+				t = k;
+		for (c = i; c < k; c++)
+			dashStrCopy(list[c].key, list[t].title, sizeof(list[c].key));
+	}
+	qsort(list, (size_t)n, sizeof(*list), ctAllCmp);
+	return n;
+}
+
+void dashCardAllSaves(const char *folder)
+{
+	CtAnyCard *cards;
+	CtAnySave *list;
+	DashMenuItem *items;
+	char dir[MAX_PATH], subtitle[128];
+	size_t len;
+	int ncards, n, found, bad, more = 0, i, r, sel = 0;
+
+	dashStrCopy(dir, folder, sizeof(dir));
+	len = strlen(dir);
+	if (len == 0 || len + 2 >= sizeof(dir))
+		return;
+	if (dir[len - 1] != '/' && dir[len - 1] != ':') {
+		dir[len] = '/';
+		dir[len + 1] = 0;
+	}
+	cards = malloc(CT_ALL_CARDS * sizeof(*cards));
+	list = malloc(CT_ALL_SAVES * sizeof(*list));
+	items = malloc(CT_ALL_SAVES * sizeof(*items));
+	if (cards == NULL || list == NULL || items == NULL) {
+		free(cards);
+		free(list);
+		free(items);
+		dashModalMessage(DI_WARNING, "Cannot list saves", ctError(MCW_ERR_NOMEM), dir);
+		return;
+	}
+	for (;;) {
+		dashLoadingBegin("Reading cards");
+		ncards = ctAllScan(dir, cards, &more);
+		n = ncards > 0 ? ctAllRead(dir, cards, ncards, list, &found, &bad) : 0;
+		dashLoadingEnd();
+		if (ncards <= 0 || n == 0) {
+			dashModalMessage(DI_WARNING, "No saves found",
+			                 ncards <= 0 ? "No memory card image (.mcd, .ps2, .vmc, .mc2, .bin) is in this folder or the folders directly inside it." :
+			                               "None of the card images here holds a save.",
+			                 dir);
+			break;
+		}
+		for (i = 0; i < n; i++) {
+			items[i].icon = DI_MC;
+			items[i].label = list[i].title;
+			items[i].detail = list[i].detail;
+			items[i].disabled = 0;
+		}
+		len = (size_t)snprintf(subtitle, sizeof(subtitle), "%d save%s on %d card%s", found, found == 1 ? "" : "s",
+		                       ncards - bad, ncards - bad == 1 ? "" : "s");
+		if (found > n || more)
+			len += (size_t)snprintf(subtitle + len, sizeof(subtitle) - len, " (list shortened)");
+		if (bad)
+			snprintf(subtitle + len, sizeof(subtitle) - len, "; %d file%s not readable as a card", bad,
+			         bad == 1 ? "" : "s");
+		if (sel >= n)
+			sel = n - 1;
+		r = dashModalMenu("All saves", subtitle, items, n, sel);
+		if (r < 0)
+			break;
+		sel = r;
+		{
+			CtAnySave s = list[r];
+
+			ctSaveMenu(cards[s.card].path, &s.sv, s.title, cards[s.card].writable);
+		}
+	}
+	free(cards);
+	free(list);
+	free(items);
+}
+
 static void ctScanProgress(const char *path, int done)
 {
 	dashLoadingStatus(ctBaseName(path), done, done + 1);

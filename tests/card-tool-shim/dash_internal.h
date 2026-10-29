@@ -19,7 +19,7 @@ typedef int64_t s64;
 #define FIO_O_CREAT O_CREAT
 #define FIO_O_TRUNC O_TRUNC
 #define FIO_O_EXCL O_EXCL
-typedef struct { struct { unsigned int mode; } stat; char name[256]; } iox_dirent_t;
+typedef struct { struct { unsigned int mode, size, hisize; } stat; char name[256]; } iox_dirent_t;
 #define FIO_S_ISDIR(m) (((m) & 0x1000) != 0)
 enum { MAX_NAME = 256 };
 enum { DI_WARNING = 1, DI_FILE, DI_CLOSE, DI_MC, DI_PLUS };

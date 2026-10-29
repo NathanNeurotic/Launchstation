@@ -9,6 +9,11 @@ void dashCardTool(const char *image);
  * mmceN:/WLE-New/ until it is installed). Never writes an existing file. */
 void dashCardNewBlank(const char *folder);
 
+/* "All saves here...": the saves of every card image in folder and the
+ * folders directly inside it, sorted by title, each opening the same save
+ * actions as "Card contents..." on its own card. Only reads until one is used. */
+void dashCardAllSaves(const char *folder);
+
 /* MMCE: show which card image the device serves (confirmed by content), and
  * switch to a numbered card with confirmation (src/mmce_card_switch.c). */
 void dashMmceShowActive(int unit);
