@@ -533,7 +533,71 @@ lines = run(S, "m2", "c1", env={"FAIL_WRITE_AT": "3", "FAIL_REMOVE": "1"})
 assert any("An unfinished .PART file could not be removed; delete it before splitting again." in l
            for l in kind(lines, "MESSAGE|1|")), lines
 
+# All saves here: every card in the folder and one level below, sorted by title, source card named
+host("mass:/all/sub").mkdir(parents=True)
+put("mass:/all/A.mcd", std)
+one = fx.Card(8, False)
+one.add_save("BASLUS-99999", {"data.bin": b"q" * 700})
+put("mass:/all/sub/B.mcd", one.finish())
+put("mass:/all/sub/C.ps2", fx.standard_card(8, True)[0])
+host("mass:/all/junk.bin").write_bytes(b"not a card" * 100)
+with open(host("mass:/all/huge.bin"), "wb") as f:                   # too big to be a card: never opened
+    f.truncate(70 * 1024 * 1024)
+host("mass:/all/notes.txt").write_text("x")
+lines = run("all:mass:/all")
+menu = kind(lines, "MENU|All saves|")
+assert len(menu) == 1, lines
+row = menu[0].split("|")
+assert row[2] == "9 saves on 3 cards; 1 file not readable as a card", row[2]
+rows = row[3:]
+assert len(rows) == 9, rows
+titles = [r.split("~")[0] for r in rows]
+# sorted by title; B's copy of BASLUS-99999 has no icon.sys but sorts under the title the other copies carry
+keyed = [titles[i - 1] if titles[i] == "BASLUS-99999" else titles[i] for i in range(len(titles))]
+assert keyed == sorted(keyed, key=lambda t: t.lower().encode("latin-1")), titles
+details = [r.split("~")[1] for r in rows]
+assert sum(d.startswith("A.mcd: ") for d in details) == 4
+assert sum(d.startswith("sub/C.ps2: ") for d in details) == 4
+assert [d for d in details if d.startswith("sub/B.mcd: ")] == ["sub/B.mcd: BASLUS-99999, 1 KB"]
+assert "A.mcd: PS1 BISLPS-00001, 1 KB" in details
+# one game's saves on different cards sit together
+us = [i for i, d in enumerate(details) if "BASLUS-99999" in d]
+assert us == list(range(us[0], us[0] + 3)), details
+# a row opens that card's own save actions: the ECC card cannot be moved from or deleted on
+c_row = next(i for i, d in enumerate(details) if d == "sub/C.ps2: NOICON, 3 KB")
+lines = run("all:mass:/all", "m%d" % c_row)
+save_menu = kind(lines, "MENU|NOICON|")
+assert save_menu and "!Move to another card..." in save_menu[0] and "!Delete from this card..." in save_menu[0], lines
+# copy one save from the list to another card: it lands verified, the list is read again
+blank("mass:/all/D.mcd")
+b_row = details.index("sub/B.mcd: BASLUS-99999, 1 KB")
+a_before = sha("mass:/all/A.mcd")
+lines = run("all:mass:/all", "m%d" % b_row, "m0", "pmass:/all/D.mcd", "c1")
+assert kind(lines, "TOAST|1|Save copied and verified"), lines
+assert saves("mass:/all/D.mcd") == {"BASLUS-99999": saves("mass:/all/sub/B.mcd")["BASLUS-99999"]}
+assert kind(lines, "MENU|All saves|")[1].split("|")[2].startswith("10 saves on 4 cards"), lines  # not WLE-Safety
+assert sha("mass:/all/A.mcd") == a_before
+# one card with more than the 250 saves a single card view lists: every one is a row here
+host("mass:/big").mkdir()
+shutil.copy(host(M), host("mass:/big/M.mcd"))
+lines = run("all:mass:/big")
+row = kind(lines, "MENU|All saves|")[0].split("|")
+assert row[2] == "261 saves on 1 card" and len(row[3:]) == 261, (row[2], len(row[3:]))
+shutil.rmtree(host("mass:/big"))
+# more than 64 folders: the card in a later one is still found
+for i in range(70):
+    host(f"mass:/wide/f{i:02d}").mkdir(parents=True)
+shutil.copy(host("mass:/dup.mcd"), host("mass:/wide/f69/dup.mcd"))
+lines = run("all:mass:/wide")
+assert kind(lines, "MENU|All saves|1 save on 1 card|"), lines
+shutil.rmtree(host("mass:/wide"))
+# nothing to show
+host("mass:/empty").mkdir()
+lines = run("all:mass:/empty")
+assert kind(lines, "MESSAGE|1|No saves found|No memory card image"), lines
+shutil.rmtree(host("mass:/all"))
+
 print("Card contents tool: listing, copy, move, delete, .psu round trip, safety copies pruned to ten, "
       "served MMCE card never written, served-card detection by number and content, guarded switch (also to a clone), "
-      "mounted VMC blocks writes, 250+ save cards, copy to a new card size, Game ID split, blank cards, refusals cost no safety copy, write failures reported, "
+      "mounted VMC blocks writes, 250+ save cards, copy to a new card size, Game ID split, blank cards, all saves across cards (also 250+ saves on one card, 64+ folders), refusals cost no safety copy, write failures reported, "
       "one open file at a time: OK")

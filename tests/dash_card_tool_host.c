@@ -107,7 +107,11 @@ int fileXioDread(int fd, iox_dirent_t *ent)
 	if (!d)
 		return 0;
 	snprintf(ent->name, sizeof(ent->name), "%s", d->d_name);
-	ent->stat.mode = fstatat(dirfd(dirs[fd]), d->d_name, &st, 0) == 0 && S_ISDIR(st.st_mode) ? 0x1000 : 0x2000;
+	if (fstatat(dirfd(dirs[fd]), d->d_name, &st, 0) != 0)
+		memset(&st, 0, sizeof(st));
+	ent->stat.mode = S_ISDIR(st.st_mode) ? 0x1000 : 0x2000;
+	ent->stat.size = (unsigned int)st.st_size;
+	ent->stat.hisize = (unsigned int)((unsigned long long)st.st_size >> 32);
 	return 1;
 }
 int genMkdir(const char *path, int mode)
@@ -375,6 +379,8 @@ int main(int argc, char **argv)
 		printf("ISACTIVE|%d\n", mmceCardIsActive(argv[3] + 9));
 	} else if (!strncmp(argv[3], "pick-switch:", 12)) {
 		dashMmceSwitch(argv[3] + 12);
+	} else if (!strncmp(argv[3], "all:", 4)) {
+		dashCardAllSaves(argv[3] + 4);
 	} else if (!strncmp(argv[3], "blank:", 6)) {
 		dashCardNewBlank(argv[3] + 6);
 	} else if (!strncmp(argv[3], "served:", 7)) {
