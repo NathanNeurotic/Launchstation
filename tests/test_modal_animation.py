@@ -118,8 +118,10 @@ code += function(orbs, "static void osdTime(")
 code += r"""
 static int modalButtons(const char *,const char *,const char *,int,DashColor,
                         const char *,const char *,int,u64);
+static int dash_start_menu_blocked,blocked_polls,open_polls;
 static void dashInputPoll(DashInput *in) {
     int f=++frames[depth];
+    if(dash_start_menu_blocked)blocked_polls++;else open_polls++;
     if(nav_scenario==4)dashboard_pending=1;
     now_ms+=step_ms[(f-1)%3];
     in->pressed=f==4?DASH_IN_BACK:0;
@@ -141,7 +143,9 @@ static void dashInputPoll(DashInput *in) {
 """
 if "static int modalEnabledEdge(" in ui:
     code += function(ui, "static int modalEnabledEdge(")
-code += read("include/list_scroll.h") + menu + buttons
+# Older revisions given as an argument predate include/list_scroll.h.
+scroll_header = read("include/list_scroll.h") if "listCenteredTop(" in menu + buttons else ""
+code += scroll_header + menu + buttons
 code += r"""
 static void reset(void) {
     anim_time=bg_time=ui_time=0; bg_calls=ui_calls=renders=preview_calls=0;
@@ -218,9 +222,13 @@ int main(void) {
     assert(dashModalMenu("interrupted",NULL,items,2,0)==-1 && !renders);
     reset();nav_scenario=4;
     assert(!modalButtons("interrupted","confirm",NULL,0,(DashColor){0},"OK","Cancel",0,0) && !renders);
-    reset();nav_scenario=5;
+    /* Untimed dialogs leave START's Dashboard popup available. */
+    assert(open_polls && !blocked_polls);
+    reset();nav_scenario=5;blocked_polls=open_polls=0;
     assert(!modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",1,now_ms+10000));
     assert(now_ms>=11000 && now_ms<11100);
+    /* Timed previews block it, so the revert deadline keeps running. */
+    assert(blocked_polls && !open_polls && !dash_start_menu_blocked);
     reset();nav_scenario=6;
     assert(modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",1,now_ms+10000));
     reset();nav_scenario=7;

@@ -16,6 +16,9 @@ extern u32 paddata;
 static u64 last_input_ms;
 static u32 held_prev;
 static u32 text_repeat_armed;
+/* Set while a timed confirmation polls: START must not open the Dashboard
+ * popup, whose own input loop would hold off the automatic revert. */
+static int dash_start_menu_blocked;
 
 //--------------------------------------------------------------
 // Input
@@ -103,7 +106,7 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 		if (dashDashboardMenuIsOpen()) {
 			in->pressed = DASH_IN_BACK;
 			in->any = 1;
-		} else {
+		} else if (!dash_start_menu_blocked) {
 			dashDashboardMenu();
 		}
 	}
@@ -1001,7 +1004,9 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 			snprintf(countdown, sizeof(countdown), "Reverting in %u seconds", (unsigned)((deadline - now + 999) / 1000));
 			detail = countdown;
 		}
+		dash_start_menu_blocked = deadline != 0;
 		dashInputPoll(&in);
+		dash_start_menu_blocked = 0;
 		if (deadline && Timer() >= deadline) { dashInputFlush(); return 0; }
 		if (dashDashboardPending())
 			return 0;

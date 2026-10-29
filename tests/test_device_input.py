@@ -83,7 +83,7 @@ static int readpad_noRepeat(void) {
 }
 static u64 last_input_ms;
 static u32 held_prev, text_repeat_armed;
-static int dashboard_menus,dashboard_menu_open;
+static int dashboard_menus,dashboard_menu_open,dash_start_menu_blocked;
 static void dashDashboardMenu(void) { dashboard_menus++; }
 """
 padcode += function(read("src/dash_main.c"), "int dashDashboardMenuIsOpen(")
@@ -135,6 +135,11 @@ int main(void) {
     dashInputPollEx(&in,0);assert(dashboard_menus==1 && !in.any && !in.pressed && !in.raw_new);
     dashboard_menu_open=1;
     now_ms+=600;dashInputPollEx(&in,0);assert(dashboard_menus==1 && !in.any);
+    /* A timed confirmation consumes START without opening the popup. */
+    keys[0]=0;dashInputPollEx(&in,0);dashboard_menu_open=0;
+    keys[0]=PAD_START;dash_start_menu_blocked=1;dashInputPollEx(&in,0);
+    assert(dashboard_menus==1 && !in.any && !in.pressed);
+    dash_start_menu_blocked=0;dashboard_menu_open=1;
     /* Release/repress closes via Back; the chord is consumed so Confirm does not leak. */
     keys[0]=0;dashInputPollEx(&in,0);keys[0]=PAD_START|PAD_CROSS;
     dashInputPollEx(&in,1);
