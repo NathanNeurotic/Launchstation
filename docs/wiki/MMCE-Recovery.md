@@ -42,7 +42,7 @@ card...**. To start from an empty card instead, open the folder menu in an
 MMCE folder and choose **New blank card...**: it writes an empty 8-64 MB card to
 `mmceN:/WLE-New/` for the same install step. To give each game its own card,
 open a card with **Card contents...** and choose **Split into Game ID cards...**:
-it writes one card per game to `mmceN:/WLE-GameID/<ID>/<ID>-1.mcd`, and
+it writes one card per game to `mmceN:/WLE-GameID/<card>/<ID>/<ID>-1.mcd`, and
 **Install as MMCE Game ID card...** copies one into `MemoryCards/PS2/<ID>/`
 only when the adapter has no folder for that game yet. Not yet tested on a
 console: keep a PC copy of your `MemoryCards` folder.

@@ -52,7 +52,7 @@ for held in ("WLE-Resized/", "WLE-New/", "WLE-GameID/"):
         assert f'strncmp(source, "mmce{unit}:/{held}", {len(f"mmce{unit}:/{held}")})' in installer, held
 assert '"mmce%d:/WLE-Resized/"' in (root / "src/dash_card_tool.c").read_text(encoding="utf-8")
 assert '"mmce%d:/WLE-New/"' in (root / "src/dash_card_tool.c").read_text(encoding="utf-8")
-assert '"mmce%d:/WLE-GameID/"' in (root / "src/dash_card_tool.c").read_text(encoding="utf-8")
+assert '"mmce%d:/WLE-GameID/%s/"' in (root / "src/dash_card_tool.c").read_text(encoding="utf-8")
 # Game ID cards: the whole <ID> folder must be absent, then the same verified publish.
 assert 'snprintf(folder, sizeof(folder), "%s/%s", parent, id)' in installer
 assert '"%s/%s-1.mcd", folder, id' in installer
