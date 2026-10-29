@@ -22,7 +22,7 @@ typedef int64_t s64;
 typedef struct { struct { unsigned int mode, size, hisize; } stat; char name[256]; } iox_dirent_t;
 #define FIO_S_ISDIR(m) (((m) & 0x1000) != 0)
 enum { MAX_NAME = 256 };
-enum { DI_WARNING = 1, DI_FILE, DI_CLOSE, DI_MC, DI_PLUS };
+enum { DI_WARNING = 1, DI_FILE, DI_CLOSE, DI_MC, DI_PLUS, DI_CHECK };
 enum { DASH_TOAST_OK = 1, DASH_TOAST_WARN, DASH_TOAST_INFO };
 enum { DASH_PICK_FILE = 0, DASH_PICK_FOLDER, DASH_PICK_LAUNCH };
 typedef struct { int icon; const char *label; const char *detail; int disabled; } DashMenuItem;
@@ -44,6 +44,7 @@ int wleExists(const char *path);
 void dashStrCopy(char *dst, const char *src, int dst_size);
 void dashSjisTitle(char *out, size_t size, const unsigned char *title);
 void dashToast(int kind, const char *msg);
+void dashModalSetMarks(unsigned char *marks);
 int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *items, int n, int initial);
 int dashPickPath(const char *title, const char *start_dir, int mode, const char *ext, char *out, int out_size);
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger);

@@ -7,6 +7,7 @@ pruned to ten, the card the MMCE device is serving is never written, refusals
 cost no safety copy, failures are reported, and no two files are ever open.
 """
 from pathlib import Path
+import atexit
 import hashlib
 import shutil
 import subprocess
@@ -25,6 +26,7 @@ assert "src/dash_card_tool.c" in (root / "ps2.yaml").read_text(encoding="utf-8")
 assert "src/mmce_card_switch.c" in (root / "ps2.yaml").read_text(encoding="utf-8")
 
 tmp = Path(tempfile.mkdtemp(prefix="card-tool-"))
+atexit.register(shutil.rmtree, tmp, ignore_errors=True)   # ~700 MB of card images per run
 tool, lister = tmp / "tool", tmp / "list"
 flags = ["gcc", "-std=gnu99", "-O1", "-g", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
          "-fno-sanitize-recover=all"]
@@ -549,7 +551,8 @@ menu = kind(lines, "MENU|All saves|")
 assert len(menu) == 1, lines
 row = menu[0].split("|")
 assert row[2] == "9 saves on 3 cards; 1 file not readable as a card", row[2]
-rows = row[3:]
+assert row[3] == "Marked saves...~mark saves with Square first", row[3]
+rows = row[4:]                                                   # menu row = list index + 1
 assert len(rows) == 9, rows
 titles = [r.split("~")[0] for r in rows]
 # sorted by title; B's copy of BASLUS-99999 has no icon.sys but sorts under the title the other copies carry
@@ -565,14 +568,14 @@ us = [i for i, d in enumerate(details) if "BASLUS-99999" in d]
 assert us == list(range(us[0], us[0] + 3)), details
 # a row opens that card's own save actions: the ECC card cannot be moved from or deleted on
 c_row = next(i for i, d in enumerate(details) if d == "sub/C.ps2: NOICON, 3 KB")
-lines = run("all:mass:/all", "m%d" % c_row)
+lines = run("all:mass:/all", "m%d" % (c_row + 1))
 save_menu = kind(lines, "MENU|NOICON|")
 assert save_menu and "!Move to another card..." in save_menu[0] and "!Delete from this card..." in save_menu[0], lines
 # copy one save from the list to another card: it lands verified, the list is read again
 blank("mass:/all/D.mcd")
 b_row = details.index("sub/B.mcd: BASLUS-99999, 1 KB")
 a_before = sha("mass:/all/A.mcd")
-lines = run("all:mass:/all", "m%d" % b_row, "m0", "pmass:/all/D.mcd", "c1")
+lines = run("all:mass:/all", "m%d" % (b_row + 1), "m0", "pmass:/all/D.mcd", "c1")
 assert kind(lines, "TOAST|1|Save copied and verified"), lines
 assert saves("mass:/all/D.mcd") == {"BASLUS-99999": saves("mass:/all/sub/B.mcd")["BASLUS-99999"]}
 assert kind(lines, "MENU|All saves|")[1].split("|")[2].startswith("10 saves on 4 cards"), lines  # not WLE-Safety
@@ -582,7 +585,7 @@ host("mass:/big").mkdir()
 shutil.copy(host(M), host("mass:/big/M.mcd"))
 lines = run("all:mass:/big")
 row = kind(lines, "MENU|All saves|")[0].split("|")
-assert row[2] == "261 saves on 1 card" and len(row[3:]) == 261, (row[2], len(row[3:]))
+assert row[2] == "261 saves on 1 card" and len(row[4:]) == 261, (row[2], len(row[4:]))
 shutil.rmtree(host("mass:/big"))
 # more than 64 folders: the card in a later one is still found
 for i in range(70):
@@ -591,6 +594,81 @@ shutil.copy(host("mass:/dup.mcd"), host("mass:/wide/f69/dup.mcd"))
 lines = run("all:mass:/wide")
 assert kind(lines, "MENU|All saves|1 save on 1 card|"), lines
 shutil.rmtree(host("mass:/wide"))
+
+
+# Marked saves: Square marks rows, then one copy, move or delete for all of them
+def all_rows():
+    return [r.split("~")[1] for r in kind(run("all:mass:/all"), "MENU|All saves|")[0].split("|")[4:]]
+
+
+def rows_for(*wanted):
+    d = all_rows()
+    return ",".join(str(d.index(w) + 1) for w in wanted)
+
+
+def safeties(folder, base):
+    return sorted(p.name for p in host(folder).glob(base + "-*.mcd"))
+
+
+lines = run("all:mass:/all", "m0")                                    # nothing marked yet
+assert kind(lines, "TOAST|3|Mark saves with Square first"), lines
+lines = run("all:mass:/all", "s0,1,2", "m-1")                         # the action row cannot be marked
+m = kind(lines, "MENU|All saves|")[0].split("|")
+assert not m[3].startswith("*") and m[4].startswith("*") and m[5].startswith("*"), m[3:6]
+blank("mass:/all/E.mcd")
+pick = rows_for("A.mcd: BESLES-12345GAME, 7 KB", "A.mcd: NOICON, 3 KB", "sub/B.mcd: BASLUS-99999, 1 KB")
+a_before = sha("mass:/all/A.mcd")
+lines = run("all:mass:/all", "s" + pick, "m0", "m0", "pmass:/all/E.mcd", "c1")
+assert kind(lines, "MENU|3 marked saves|"), lines
+assert kind(lines, "CONFIRM|Copy 3 saves?|E.mcd gets one safety copy first."), lines
+assert kind(lines, "MESSAGE|4|Done|3 saves copied and verified.|Safety copy: mass:/all/WLE-Safety/E-0001.mcd"), lines
+assert set(saves("mass:/all/E.mcd")) == {"BESLES-12345GAME", "NOICON", "BASLUS-99999"}
+assert saves("mass:/all/E.mcd")["NOICON"] == saves("mass:/all/A.mcd")["NOICON"]
+assert safeties("mass:/all/WLE-Safety", "E") == ["E-0001.mcd"]           # one safety copy for the whole batch
+assert sha("mass:/all/A.mcd") == a_before
+# again: every save is already there, so each is skipped and nothing is written, not even a safety copy
+pick = rows_for("A.mcd: BESLES-12345GAME, 7 KB", "A.mcd: NOICON, 3 KB")
+e_before = sha("mass:/all/E.mcd")
+lines = run("all:mass:/all", "s" + pick, "m0", "m0", "pmass:/all/E.mcd", "c1")
+assert kind(lines, "MESSAGE|1|Done|Nothing copied. 2 skipped. First: NOICON: A save with this name is already on that card."), lines
+assert sha("mass:/all/E.mcd") == e_before and safeties("mass:/all/WLE-Safety", "E") == ["E-0001.mcd"]
+# a save marked on the target card itself is counted, not copied
+pick = rows_for("E.mcd: NOICON, 3 KB")
+lines = run("all:mass:/all", "s" + pick, "m0", "m0", "pmass:/all/E.mcd", "c1")
+assert kind(lines, "MESSAGE|4|Done|Nothing copied. 1 already on that card."), lines
+# backing out of the action menu keeps the marks
+lines = run("all:mass:/all", "s" + pick, "m0", "m-1", "m-1")
+assert kind(lines, "MENU|All saves|")[1].split("|")[4:].count("*" + "NOICON~E.mcd: NOICON, 3 KB") == 1, lines
+# move: from two cards to a third; each card it leaves gets one safety copy, removed only once verified there
+blank("mass:/all/F.mcd")
+pick = rows_for("A.mcd: NOICON, 3 KB", "sub/B.mcd: BASLUS-99999, 1 KB", "A.mcd: PS1 BISLPS-00001, 1 KB")
+noicon = saves("mass:/all/A.mcd")["NOICON"]
+lines = run("all:mass:/all", "s" + pick, "m0", "m1", "pmass:/all/F.mcd", "c1")
+assert kind(lines, "MESSAGE|4|Done|3 saves moved and verified."), lines
+assert set(saves("mass:/all/F.mcd")) == {"NOICON", "BASLUS-99999", "BISLPS-00001"} and saves("mass:/all/F.mcd")["NOICON"] == noicon
+assert "NOICON" not in saves("mass:/all/A.mcd") and "BISLPS-00001" not in saves("mass:/all/A.mcd")
+assert saves("mass:/all/sub/B.mcd") == {}
+assert safeties("mass:/all/WLE-Safety", "A") == ["A-0001.mcd"] and safeties("mass:/all/sub/WLE-Safety", "B") == ["B-0001.mcd"]
+assert safeties("mass:/all/WLE-Safety", "F") == ["F-0001.mcd"]
+# a marked save on a PCSX2 .ps2 card: copy only
+pick = rows_for("sub/C.ps2: NOICON, 3 KB", "F.mcd: NOICON, 3 KB")
+lines = run("all:mass:/all", "s" + pick, "m0", "m-1", "m-1")
+menu = kind(lines, "MENU|2 marked saves|")[0]
+assert "!Move to another card..." in menu and "!Delete..." in menu, menu
+# delete: one safety copy per card, the served MMCE rules apply as for one save
+pick = rows_for("F.mcd: NOICON, 3 KB", "F.mcd: BASLUS-99999, 1 KB", "E.mcd: NOICON, 3 KB")
+lines = run("all:mass:/all", "s" + pick, "m0", "m2", "c1")
+assert kind(lines, "CONFIRM|Delete 3 saves?|"), lines
+assert kind(lines, "MESSAGE|4|Done|3 saves deleted."), lines
+assert set(saves("mass:/all/F.mcd")) == {"BISLPS-00001"} and "NOICON" not in saves("mass:/all/E.mcd")
+assert safeties("mass:/all/WLE-Safety", "F") == ["F-0001.mcd", "F-0002.mcd"]
+assert safeties("mass:/all/WLE-Safety", "E") == ["E-0001.mcd", "E-0002.mcd"]
+# a write failure stops the batch; what was not tried is counted
+blank("mass:/all/G.mcd")
+pick = rows_for("A.mcd: BESLES-12345GAME, 7 KB", "E.mcd: BASLUS-99999, 1 KB", "F.mcd: PS1 BISLPS-00001, 1 KB")
+lines = run("all:mass:/all", "s" + pick, "m0", "m0", "pmass:/all/G.mcd", "c1", env={"FAIL_WRITE_AT": "2"})
+msg = kind(lines, "MESSAGE|1|Not all done|")
+assert msg and " 1 failed. First: " in msg[0] and "Stopped there; 2 not tried." in msg[0], lines
 # nothing to show
 host("mass:/empty").mkdir()
 lines = run("all:mass:/empty")
@@ -599,5 +677,5 @@ shutil.rmtree(host("mass:/all"))
 
 print("Card contents tool: listing, copy, move, delete, .psu round trip, safety copies pruned to ten, "
       "served MMCE card never written, served-card detection by number and content, guarded switch (also to a clone), "
-      "mounted VMC blocks writes, 250+ save cards, copy to a new card size, Game ID split, blank cards, all saves across cards (also 250+ saves on one card, 64+ folders), refusals cost no safety copy, write failures reported, "
+      "mounted VMC blocks writes, 250+ save cards, copy to a new card size, Game ID split, blank cards, all saves across cards (also 250+ saves on one card, 64+ folders), marked-save batches, refusals cost no safety copy, write failures reported, "
       "one open file at a time: OK")

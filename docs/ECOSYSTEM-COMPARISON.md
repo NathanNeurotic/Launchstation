@@ -28,7 +28,7 @@ card files on USB, MX4SIO or the internal HDD.
 | Browse cloud history | From the Files tab | "Browse cloud history..." (read-only paged view, verified recovery) |
 | Backup by save (per-save versions on Drive) | Yes, optional | **Missing** (code audit 2026-10-26): only whole-card history is uploaded |
 | Memory card manager (browse saves, 3D icons) | Yes, per card and "All saves" view | **Partial**: **Card contents...** opens a card image and lists its saves with titles, file counts, sizes and free space ([Saves](../docs-site/content/saves.html), added in [#226](https://github.com/NathanNeurotic/Launchstation/pull/226)). **All saves here...** lists the saves of every card image in a folder and its subfolders together, sorted by title with each save's card named (#232). No 3D icons |
-| Copy / move / delete saves across cards, multi-select | Yes | **Partial**: **Card contents...** copies, moves and deletes saves inside card images, including MMCE cards the adapter is not serving, one save at a time, with a verified safety copy first and a read-back after (#226); the same actions open from **All saves here...** for saves on any card in a folder (#232). Multi-select copy/cut/paste/delete works on `mc`/`vmc` folders; those copies are checked for short reads/writes, not read back |
+| Copy / move / delete saves across cards, multi-select | Yes | **Partial**: **Card contents...** copies, moves and deletes saves inside card images, including MMCE cards the adapter is not serving, one save at a time, with a verified safety copy first and a read-back after (#226); the same actions open from **All saves here...** for saves on any card in a folder, where **Square** marks several saves for one batch copy, move or delete with one safety copy per card (#232). Multi-select copy/cut/paste/delete works on `mc`/`vmc` folders; those copies are checked for short reads/writes, not read back |
 | The Library (saves kept off cards) | Yes | **Missing** |
 | Templates (default save sets applied to game cards) | Yes | **Missing** |
 | Create / resize / rename / check / delete cards, convert to Game ID | Yes, with a safety copy | **Partial**: copy a card to a new 8-64 MB size, "Install as NEW card", and select a numbered card with **Make this the active MMCE card...** (#226); file-level rename/delete. **New blank card...** in the File Browser makes an empty 8-64 MB card image, and **Split into Game ID cards...** makes one card per game from a card's saves, installed with **Install as MMCE Game ID card...** (#232; pending hardware validation). No card check. Neutrino selects a Game ID card on launch |
@@ -77,8 +77,8 @@ The detailed, verified order is in the [parity plan](plans/2026-10-26-sd2cloud-p
    missing with evidence.
 2. Done in #226: the card image parser, the card contents view, the active-card check, card switching and the
    automatic safety copy before every card write. Next: hardware validation (the console test matrix in #226),
-   then restore previews, which build on the same parser. "All saves" (one save at a time) is in (#232); batch
-   operations over it are next.
+   then restore previews, which build on the same parser. "All saves" and batch copy/move/delete of marked saves are
+   in (#232).
 4. Templates, the Library and per-save backup versions are later work that needs design decisions; they are not
    cheap first steps.
 5. Keep ORBIT-only ideas (RetroAchievements agent, in-game pause menu) as separate proposals; they need a Neutrino

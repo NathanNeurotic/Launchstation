@@ -48,7 +48,16 @@
 <li>Launchstation&rsquo;s own <code>WLE-</code> folders (safety copies, resized, new and Game ID cards) are skipped, so their copies do not repeat every save.</li>
 <li>Files larger than a 64&nbsp;MB card, and files with other extensions, are not opened. A file with a card extension that does not read as a card is counted in the subtitle.</li>
 <li>Up to 64 cards, from up to 256 folders, and 1000 saves are listed, even when one card holds more than 250; a longer list says it was shortened.</li>
-<li>One save at a time: selecting several saves for one batch copy, move or delete is not in yet.</li>
+</ul>
+<h3 id="marked-saves">Several saves at once</h3>
+<p>Press <b>Square</b> on a save to mark it; a check replaces its icon, and <b>Square</b> again unmarks it. Then choose <b>Marked saves&hellip;</b>, the first row, and pick <b>Copy to another card&hellip;</b>, <b>Move to another card&hellip;</b> or <b>Delete&hellip;</b>. Copy and Move ask for the target card image. A confirmation names how many saves are affected before anything is written.</p>
+<ul>
+<li>Each card that changes gets <b>one</b> safety copy for the whole batch, taken before its first write, not one per save.</li>
+<li>Every copied or moved save is read back from the target card; a moved save is removed from its own card only after that check passes.</li>
+<li>A save already on the target card by name, or one that does not fit, is skipped and counted. A save marked on the target card itself is counted as already there.</li>
+<li>Any other failure stops the batch; the summary says how many saves were done, skipped, failed and not tried, and where the safety copy is.</li>
+<li>Move and Delete are unavailable when a marked save is on a PCSX2 <code>.ps2</code> card, which is read-only here. The card an MMCE adapter is serving is refused as for one save.</li>
+<li>Backing out of the action keeps the marks. In long lists, <b>L1</b>/<b>R1</b> move a page at a time.</li>
 </ul>
 <div class="callout amber"><div class="h">Status</div><p><b>Not yet tested on a console.</b></p></div>
 

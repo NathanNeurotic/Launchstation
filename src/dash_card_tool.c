@@ -353,6 +353,16 @@ static int ctPrecheck(const char *image, const McSaveData *s)
 	return r;
 }
 
+/* A verified safety copy of image into safety, unless safety already names
+ * one made for it earlier in the same batch. */
+static int ctSafetyOnce(const char *image, char *safety, int safety_size)
+{
+	if (safety[0])
+		return 0;
+	dashLoadingStatus("Making a safety copy", 0, 1);
+	return ctSafetyCopy(image, safety, safety_size) < 0 ? -1 : 0;
+}
+
 /* Safety copy, write, close, then read the save back through a fresh open. */
 static int ctPutSave(const char *image, const McSaveData *s, char *safety, int safety_size)
 {
@@ -364,8 +374,7 @@ static int ctPutSave(const char *image, const McSaveData *s, char *safety, int s
 	r = ctPrecheck(image, s);
 	if (r != MCV_OK)
 		return r;
-	dashLoadingStatus("Making a safety copy", 0, 1);
-	if (ctSafetyCopy(image, safety, safety_size) < 0)
+	if (ctSafetyOnce(image, safety, safety_size) < 0)
 		return MCV_ERR_IO;
 	dashLoadingStatus("Writing the save", 0, 1);
 	r = ctOpen(&io, image, 1);
@@ -397,8 +406,7 @@ static int ctDropSave(const char *image, const char *name, char *safety, int saf
 	CardIo io;
 	int r, c, n, found;
 
-	dashLoadingStatus("Making a safety copy", 0, 1);
-	if (ctSafetyCopy(image, safety, safety_size) < 0)
+	if (ctSafetyOnce(image, safety, safety_size) < 0)
 		return MCV_ERR_IO;
 	dashLoadingStatus("Deleting the save", 0, 1);
 	r = ctOpen(&io, image, 1);
@@ -1183,7 +1191,8 @@ void dashCardNewBlank(const char *folder)
 	dashModalMessage(DI_MC, "Blank card made", msg, dest);
 }
 
-static void ctSaveMenu(const char *image, const McViewSave *sv, const char *title, int writable)
+/* The actions for one save; -1 when none was chosen. */
+static int ctSaveMenu(const char *image, const McViewSave *sv, const char *title, int writable)
 {
 	static const char *const ro = "PCSX2 .ps2 cards are read-only here";
 	DashMenuItem items[4];
@@ -1209,13 +1218,14 @@ static void ctSaveMenu(const char *image, const McViewSave *sv, const char *titl
 	items[3].disabled = !writable;
 	r = dashModalMenu(title, name, items, 4, 0);
 	if (r < 0 || items[r].disabled)
-		return;
+		return -1;
 	if (r == 0 || r == 1)
 		ctCopy(image, name, r == 1);
 	else if (r == 2)
 		ctExportPsu(image, name);
 	else
 		ctDelete(image, name);
+	return r;
 }
 
 void dashCardTool(const char *image)
@@ -1448,14 +1458,168 @@ static int ctAllRead(const char *folder, CtAnyCard *cards, int ncards, CtAnySave
 	return n;
 }
 
+/* A batch refusal that leaves both cards as they were; the batch goes on. */
+static int ctAllSkippable(int r)
+{
+	return r == MCW_ERR_EXISTS || r == MCW_ERR_FULL || r == MCW_ERR_UNSUPPORTED || r == MCW_ERR_NOT_FOUND;
+}
+
+/* The marked saves copied or moved to one card, or deleted. Every card gets
+ * one verified safety copy before its first change in the batch, and the
+ * batch stops at the first error that is not a plain refusal. 0 when it was
+ * cancelled before anything was read or written. */
+static int ctAllBatch(const char *folder, const CtAnyCard *cards, int ncards, const CtAnySave *list, int n,
+                      const unsigned char *marks)
+{
+	DashMenuItem items[3];
+	char(*safety)[MAX_PATH];
+	char dest[MAX_PATH], dsafety[MAX_PATH], body[640], title[48], first[33] = "", what[64];
+	const char *ro = NULL;
+	int nmarked = 0, i, c, r, act, move, done = 0, skipped = 0, same = 0, failed = 0, left = 0, first_r = MCV_OK;
+	int from = -1;
+
+	for (i = 0; i < n; i++)
+		if (marks[i]) {
+			if (from < 0)
+				from = list[i].card;
+			nmarked++;
+			if (!cards[list[i].card].writable)
+				ro = "a marked save is on a PCSX2 .ps2 card, which is read-only here";
+		}
+	snprintf(title, sizeof(title), "%d marked save%s", nmarked, nmarked == 1 ? "" : "s");
+	items[0].icon = DI_FILE;
+	items[0].label = "Copy to another card...";
+	items[0].detail = "verified; that card gets one safety copy first";
+	items[0].disabled = 0;
+	items[1].icon = DI_CLOSE;
+	items[1].label = "Move to another card...";
+	items[1].detail = ro ? ro : "each removed only after it verifies there";
+	items[1].disabled = ro != NULL;
+	items[2].icon = DI_WARNING;
+	items[2].label = "Delete...";
+	items[2].detail = ro ? ro : "each card gets one safety copy first";
+	items[2].disabled = ro != NULL;
+	act = dashModalMenu(title, NULL, items, 3, 0);
+	if (act < 0 || items[act].disabled)
+		return 0;
+	move = act == 1;
+
+	dest[0] = 0;
+	if (act < 2) {
+		if (!dashPickPath(move ? "Move the marked saves to which card image?" : "Copy the marked saves to which card image?",
+		                  folder, DASH_PICK_FILE, NULL, dest, sizeof(dest)))
+			return 0;
+		if (!ctStacks(cards[from].path, dest) || !ctWritable(dest))
+			return 0;
+	}
+	/* every card that would change must be safe to write, before anything is */
+	if (act > 0)
+		for (c = 0; c < ncards; c++) {
+			for (i = 0; i < n && !(marks[i] && list[i].card == c); i++)
+				;
+			if (i < n && strcmp(cards[c].path, dest) && !ctWritable(cards[c].path))
+				return 0;
+		}
+	if (act == 2)
+		snprintf(body, sizeof(body), "Each card holding a marked save gets one safety copy of the whole card first.");
+	else
+		snprintf(body, sizeof(body),
+		         "%s gets one safety copy first. A save already there by name, or one that does not fit, is skipped.%s",
+		         ctBaseName(dest), move ? " Each save is removed from its card only after it reads back correctly there, and each card it leaves gets one safety copy first." : "");
+	snprintf(what, sizeof(what), "%s %d save%s?", act == 0 ? "Copy" : move ? "Move" : "Delete", nmarked,
+	         nmarked == 1 ? "" : "s");
+	if (!dashModalConfirm(what, body, act == 0 ? "Copy" : move ? "Move" : "Delete", act == 2))
+		return 0;
+	safety = malloc((size_t)ncards * sizeof(*safety));
+	if (safety == NULL) {
+		dashModalMessage(DI_WARNING, "Not done", ctError(MCW_ERR_NOMEM), NULL);
+		return 1;
+	}
+	for (c = 0; c < ncards; c++)
+		safety[c][0] = 0;
+	dsafety[0] = 0;
+
+	dashLoadingBegin(act == 0 ? "Copying saves" : move ? "Moving saves" : "Deleting saves");
+	for (i = 0; i < n; i++) {
+		const CtAnySave *s = &list[i];
+		McSaveData data;
+
+		if (!marks[i])
+			continue;
+		if (failed) {
+			left++;
+			continue;
+		}
+		dashLoadingStatus(s->title, done + skipped + same, nmarked);
+		if (act < 2 && !strcmp(cards[s->card].path, dest)) {
+			same++;
+			continue;
+		}
+		if (act == 2) {
+			r = ctDropSave(cards[s->card].path, s->sv.name, safety[s->card], MAX_PATH);
+		} else {
+			r = ctReadSave(cards[s->card].path, s->sv.name, &data);
+			if (r == MCW_OK) {
+				r = ctPutSave(dest, &data, dsafety, sizeof(dsafety));
+				mcCardFreeSave(&data);
+			}
+			if (r == MCW_OK && move)
+				r = ctDropSave(cards[s->card].path, s->sv.name, safety[s->card], MAX_PATH);
+		}
+		if (r == MCW_OK) {
+			done++;
+			continue;
+		}
+		if (!first[0]) {
+			dashStrCopy(first, s->sv.name, sizeof(first));
+			first_r = r;
+		}
+		if (ctAllSkippable(r))
+			skipped++;
+		else
+			failed++;
+	}
+	dashLoadingEnd();
+
+	if (done)
+		c = snprintf(body, sizeof(body), "%d save%s %s%s.", done, done == 1 ? "" : "s",
+		             act == 0 ? "copied" : move ? "moved" : "deleted", act < 2 ? " and verified" : "");
+	else
+		c = snprintf(body, sizeof(body), "Nothing %s.", act == 0 ? "copied" : move ? "moved" : "deleted");
+	if (same)
+		c += snprintf(body + c, sizeof(body) - c, " %d already on that card.", same);
+	if (skipped)
+		c += snprintf(body + c, sizeof(body) - c, " %d skipped.", skipped);
+	if (failed)
+		c += snprintf(body + c, sizeof(body) - c, " %d failed.", failed);
+	if (skipped || failed)
+		c += snprintf(body + c, sizeof(body) - c, " First: %s: %s", first, ctError(first_r));
+	if (left)
+		c += snprintf(body + c, sizeof(body) - c, " Stopped there; %d not tried.", left);
+	{
+		const char *keep = dsafety[0] ? dsafety : NULL;
+
+		for (i = 0; keep == NULL && i < ncards; i++)
+			if (safety[i][0])
+				keep = safety[i];
+		if (keep != NULL)
+			snprintf(dest, sizeof(dest), "Safety copy: %.1000s", keep);
+		dashModalMessage(failed || skipped ? DI_WARNING : DI_MC, failed ? "Not all done" : "Done", body,
+		                 keep ? dest : NULL);
+	}
+	free(safety);
+	return 1;
+}
+
 void dashCardAllSaves(const char *folder)
 {
 	CtAnyCard *cards;
 	CtAnySave *list;
 	DashMenuItem *items;
-	char dir[MAX_PATH], subtitle[128];
+	unsigned char *marks;
+	char dir[MAX_PATH], subtitle[128], marked[64];
 	size_t len;
-	int ncards, n, found, bad, more = 0, i, r, sel = 0;
+	int ncards, n, found, bad, more = 0, i, r, sel = 0, nm;
 
 	dashStrCopy(dir, folder, sizeof(dir));
 	len = strlen(dir);
@@ -1467,11 +1631,13 @@ void dashCardAllSaves(const char *folder)
 	}
 	cards = malloc(CT_ALL_CARDS * sizeof(*cards));
 	list = malloc(CT_ALL_SAVES * sizeof(*list));
-	items = malloc(CT_ALL_SAVES * sizeof(*items));
-	if (cards == NULL || list == NULL || items == NULL) {
+	items = malloc((CT_ALL_SAVES + 1) * sizeof(*items));
+	marks = malloc(CT_ALL_SAVES + 1);
+	if (cards == NULL || list == NULL || items == NULL || marks == NULL) {
 		free(cards);
 		free(list);
 		free(items);
+		free(marks);
 		dashModalMessage(DI_WARNING, "Cannot list saves", ctError(MCW_ERR_NOMEM), dir);
 		return;
 	}
@@ -1492,11 +1658,18 @@ void dashCardAllSaves(const char *folder)
 			                 dir);
 			break;
 		}
+		/* row 0 acts on the marked saves; saves follow, and Square marks them */
+		items[0].icon = DI_CHECK;
+		items[0].label = "Marked saves...";
+		items[0].detail = marked;
+		items[0].disabled = 0;
+		marks[0] = 2;
 		for (i = 0; i < n; i++) {
-			items[i].icon = DI_MC;
-			items[i].label = list[i].title;
-			items[i].detail = list[i].detail;
-			items[i].disabled = 0;
+			items[i + 1].icon = DI_MC;
+			items[i + 1].label = list[i].title;
+			items[i + 1].detail = list[i].detail;
+			items[i + 1].disabled = 0;
+			marks[i + 1] = 0;
 		}
 		len = (size_t)snprintf(subtitle, sizeof(subtitle), "%d save%s on %d card%s", found, found == 1 ? "" : "s",
 		                       ncards - bad, ncards - bad == 1 ? "" : "s");
@@ -1505,21 +1678,44 @@ void dashCardAllSaves(const char *folder)
 		if (bad)
 			snprintf(subtitle + len, sizeof(subtitle) - len, "; %d file%s not readable as a card", bad,
 			         bad == 1 ? "" : "s");
-		if (sel >= n)
-			sel = n - 1;
-		r = dashModalMenu("All saves", subtitle, items, n, sel);
-		if (r < 0)
-			break;
-		sel = r;
-		{
-			CtAnySave s = list[r];
+		if (sel > n)
+			sel = n;
+		for (;;) { /* until something may have changed the cards */
+			for (i = 1, nm = 0; i <= n; i++)
+				nm += marks[i] == 1;
+			if (nm)
+				snprintf(marked, sizeof(marked), "%d marked: copy, move or delete them", nm);
+			else
+				snprintf(marked, sizeof(marked), "mark saves with Square first");
+			dashModalSetMarks(marks);
+			r = dashModalMenu("All saves", subtitle, items, n + 1, sel);
+			if (r < 0)
+				goto out;
+			sel = r;
+			for (i = 1, nm = 0; i <= n; i++) /* marks change inside the menu */
+				nm += marks[i] == 1;
+			if (r == 0) {
+				if (nm == 0) {
+					dashToast(DASH_TOAST_INFO, "Mark saves with Square first");
+					continue;
+				}
+				if (ctAllBatch(dir, cards, ncards, list, n, marks + 1))
+					break;
+				continue;
+			}
+			{
+				CtAnySave s = list[r - 1];
 
-			ctSaveMenu(cards[s.card].path, &s.sv, s.title, cards[s.card].writable);
+				if (ctSaveMenu(cards[s.card].path, &s.sv, s.title, cards[s.card].writable) >= 0)
+					break;
+			}
 		}
 	}
+out:
 	free(cards);
 	free(list);
 	free(items);
+	free(marks);
 }
 
 static void ctScanProgress(const char *path, int done)
