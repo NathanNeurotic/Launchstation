@@ -233,16 +233,35 @@ int DelayThread(int usec)
 }
 
 void dashToast(int kind, const char *msg) { printf("TOAST|%d|%s\n", kind, msg); }
+static unsigned char *menu_marks;
+void dashModalSetMarks(unsigned char *marks) { menu_marks = marks; }
+
+/* With marks set, an "s<row>,<row>..." entry before the answer presses
+ * Square on those rows (as the real menu, only on enabled rows marked 0/1). */
 int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *items, int n, int initial)
 {
-	const char *a = next('m');
+	unsigned char *marks = menu_marks;
+	const char *a;
 	int i;
 
 	(void)initial;
+	menu_marks = NULL;
+	if (marks != NULL && qpos < nqueue && queue[qpos][0] == 's') {
+		const char *p = next('s');
+
+		while (*p) {
+			i = atoi(p);
+			if (i >= 0 && i < n && !items[i].disabled && marks[i] <= 1)
+				marks[i] = !marks[i];
+			p += strcspn(p, ",");
+			p += *p == ',';
+		}
+	}
+	a = next('m');
 	printf("MENU|%s|%s", title, subtitle);
 	for (i = 0; i < n; i++)
-		printf("|%s%s%s%s", items[i].disabled ? "!" : "", items[i].label, items[i].detail ? "~" : "",
-		       items[i].detail ? items[i].detail : "");
+		printf("|%s%s%s%s%s", marks != NULL && marks[i] == 1 ? "*" : "", items[i].disabled ? "!" : "", items[i].label,
+		       items[i].detail ? "~" : "", items[i].detail ? items[i].detail : "");
 	printf("\n");
 	return a ? atoi(a) : -1;
 }
@@ -261,6 +280,17 @@ int dashPickPath(const char *title, const char *start, int mode, const char *ext
 	if (!a)
 		return 0;
 	snprintf(out, (size_t)size, "%s", a);
+	return 1;
+}
+/* "f<text>" types the name; no entry cancels. */
+int dashModalFilename(const char *title, char *buf, int max_len, const char *directory)
+{
+	const char *a = next('f');
+
+	printf("NAME|%s|%s\n", title, directory);
+	if (!a)
+		return 0;
+	snprintf(buf, (size_t)max_len + 1, "%s", a);
 	return 1;
 }
 int dashModalConfirm(const char *title, const char *body, const char *ok, int danger)
@@ -379,6 +409,8 @@ int main(int argc, char **argv)
 		printf("ISACTIVE|%d\n", mmceCardIsActive(argv[3] + 9));
 	} else if (!strncmp(argv[3], "pick-switch:", 12)) {
 		dashMmceSwitch(argv[3] + 12);
+	} else if (!strncmp(argv[3], "lib:", 4)) {
+		dashCardSaveLibrary(argv[3] + 4);
 	} else if (!strncmp(argv[3], "all:", 4)) {
 		dashCardAllSaves(argv[3] + 4);
 	} else if (!strncmp(argv[3], "blank:", 6)) {

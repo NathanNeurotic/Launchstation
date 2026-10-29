@@ -744,7 +744,8 @@ static void modalPanel(float x, float y, float w, float h, float k)
 	dashRect(x + 18, y + 2, w - 36, 1.5f, edge);
 }
 
-static void modalHintRow(float x, float y, int ok_icon, const char *ok, int back_icon, const char *back)
+/* Returns where a further hint would start. */
+static float modalHintRow(float x, float y, int ok_icon, const char *ok, int back_icon, const char *back)
 {
 	if (ok != NULL) {
 		x += drawButton(x, y, ok_icon, NULL) + 8.0f;
@@ -752,8 +753,9 @@ static void modalHintRow(float x, float y, int ok_icon, const char *ok, int back
 	}
 	if (back != NULL) {
 		x += drawButton(x, y, back_icon, NULL) + 8.0f;
-		dashTextS(x, y + 4.5f, back, DASH_FS_SMALL, DASH_C_TEXT2);
+		x = dashTextS(x, y + 4.5f, back, DASH_FS_SMALL, DASH_C_TEXT2) + 24.0f;
 	}
+	return x;
 }
 
 /* Shared with the other dashboard dialogs (dash_widgets.c). */
@@ -786,6 +788,16 @@ void dashModalSetPreview(void (*fn)(int index))
 	modal_preview = fn;
 }
 
+/* Optional marks for the next dashModalMenu(): Square toggles marks[i]
+ * between 0 and 1 on an enabled row, and a row marked 1 shows a check
+ * instead of its icon. Rows set to any other value cannot be marked. */
+static unsigned char *modal_marks;
+
+void dashModalSetMarks(unsigned char *marks)
+{
+	modal_marks = marks;
+}
+
 /* L2/R2 jump only to actionable rows. Never focus disabled actions,
  * including a disabled initial selection or a menu without usable entries. */
 static int modalEnabledEdge(const DashMenuItem *items, int n, int from_end)
@@ -805,6 +817,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 {
 	int sel = initial, top = 0, i, previewed = -1;
 	void (*preview)(int) = modal_preview;
+	unsigned char *marks = modal_marks;
 	/* Eight subtitled rows left only 3 logical pixels above the popup.
 	 * Keep a full safe margin for rounded corners on 4:3/interlaced TVs. */
 	const int max_rows = 7;
@@ -817,17 +830,20 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 
 	if (items == NULL || n <= 0) {
 		modal_preview = NULL;
+		modal_marks = NULL;
 		return -1;
 	}
 	if (sel < 0 || sel >= n || items[sel].disabled)
 		sel = modalEnabledEdge(items, n, 0);
 	if (sel < 0) {
 		modal_preview = NULL;
+		modal_marks = NULL;
 		return -1;
 	}
 	sel_anim = (float)sel;
 	y = (DASH_VH - h) * 0.5f;
 	modal_preview = NULL;
+	modal_marks = NULL;
 	if (preview != NULL)
 		x = DASH_SAFE_R - w; /* keep the left half of the screen visible */
 	dashInputFlush();
@@ -867,6 +883,23 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 				dashSoundPlay(DASH_SND_CURSOR);
 				sel = last;
 			}
+		}
+		if ((in.pressed & (DASH_IN_L1 | DASH_IN_R1)) && n > rows) { /* a page at a time in long lists */
+			int s = sel + ((in.pressed & DASH_IN_L1) ? -rows : rows), step = (in.pressed & DASH_IN_L1) ? 1 : -1;
+
+			if (s < 0)
+				s = 0;
+			if (s > n - 1)
+				s = n - 1;
+			while (items[s].disabled && s != sel)
+				s += step;
+			if (s != sel)
+				dashSoundPlay(DASH_SND_CURSOR);
+			sel = s;
+		}
+		if ((in.pressed & DASH_IN_FAV) && marks != NULL && !items[sel].disabled && marks[sel] <= 1) {
+			dashSoundPlay(DASH_SND_CURSOR);
+			marks[sel] = !marks[sel];
 		}
 		if ((in.pressed & DASH_IN_OK) && !items[sel].disabled) {
 			dashSoundPlay(DASH_SND_CONFIRM);
@@ -917,7 +950,10 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 				DashColor c = items[i].disabled ? DASH_C_TEXT3 : dashItemColor(i == sel);
 				float tx = x + 28;
 				dashGfxPushAlpha(items[i].disabled ? DASH_DISABLED_ALPHA : 1.0f);
-				if (items[i].icon >= 0) {
+				if (marks != NULL && marks[i] == 1) {
+					dashIcon(DI_CHECK, x + 26, ry + 6, 18, c);
+					tx = x + 54;
+				} else if (items[i].icon >= 0) {
 					dashIcon(items[i].icon, x + 26, ry + 6, 18, c);
 					tx = x + 54;
 				}
@@ -945,7 +981,14 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			}
 			dashGfxScissorReset();
 			dashDrawScrollbar(x + w - 12, ly, rows * row_h - 4, top, rows, n);
-			modalHintRow(x + 24, y + h - 36, dashOkIcon(), "Select", dashBackIcon(), "Back");
+			{
+				float hx = modalHintRow(x + 24, y + h - 36, dashOkIcon(), "Select", dashBackIcon(), "Back");
+
+				if (marks != NULL) {
+					hx += drawButton(hx, y + h - 36, DI_BTN_SQUARE, NULL) + 8.0f;
+					dashTextS(hx, y + h - 36 + 4.5f, "Mark", DASH_FS_SMALL, DASH_C_TEXT2);
+				}
+			}
 		}
 		dashGfxPopOffset();
 		dashGfxPopAlpha();

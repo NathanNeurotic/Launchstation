@@ -31,7 +31,7 @@
 <tr><td>Copy to a new card of another size&hellip;</td><td>Makes a new 8, 16, 32 or 64&nbsp;MB card image holding every save. The source card is only read and no existing file is overwritten. The finished card must list exactly the source&rsquo;s saves, or the new file is removed. MMCE results go to <code>mmceN:/WLE-Resized/</code>, ready for <b>Install as NEW selectable MMCE card&hellip;</b>.</td></tr>
 <tr><td>Split into Game ID cards&hellip;</td><td>Makes one card per game, each holding that game&rsquo;s saves, in the <code>&lt;ID&gt;/&lt;ID&gt;-1.mcd</code> layout MMCE devices use for Game ID cards. See <a href="#gameid-split">Game ID cards</a>.</td></tr>
 </tbody></table>
-<p>Every write follows the same steps:</p>
+<p>Every card write follows the same steps:</p>
 <ol>
 <li>On MMCE, refuse the card the adapter is serving to the console right now. When Launchstation cannot tell which card that is, it writes to none.</li>
 <li>Check the name and free space with the card opened read-only, so a refusal costs nothing.</li>
@@ -48,7 +48,27 @@
 <li>Launchstation&rsquo;s own <code>WLE-</code> folders (safety copies, resized, new and Game ID cards) are skipped, so their copies do not repeat every save.</li>
 <li>Files larger than a 64&nbsp;MB card, and files with other extensions, are not opened. A file with a card extension that does not read as a card is counted in the subtitle.</li>
 <li>Up to 64 cards, from up to 256 folders, and 1000 saves are listed, even when one card holds more than 250; a longer list says it was shortened.</li>
-<li>One save at a time: selecting several saves for one batch copy, move or delete is not in yet.</li>
+</ul>
+<h3 id="marked-saves">Several saves at once</h3>
+<p>Press <b>Square</b> on a save to mark it; a check replaces its icon, and <b>Square</b> again unmarks it. Then choose <b>Marked saves&hellip;</b>, the first row, and pick <b>Copy to another card&hellip;</b>, <b>Move to another card&hellip;</b> or <b>Delete&hellip;</b>. Copy and Move ask for the target card image. A confirmation names how many saves are affected before anything is written.</p>
+<ul>
+<li>Each card that changes gets <b>one</b> safety copy for the whole batch, taken before its first write, not one per save.</li>
+<li>Every copied or moved save is read back from the target card; a moved save is removed from its own card only after that check passes.</li>
+<li>A save already on the target card by name, or one that does not fit, is skipped and counted. A save marked on the target card itself is counted as already there.</li>
+<li>Any other failure stops the batch; the summary says how many saves were done, skipped, failed and not tried, and where the safety copy is.</li>
+<li>Move and Delete are unavailable when a marked save is on a PCSX2 <code>.ps2</code> card, which is read-only here. The card an MMCE adapter is serving is refused as for one save.</li>
+<li>Backing out of the action keeps the marks. In long lists, <b>L1</b>/<b>R1</b> move a page at a time.</li>
+</ul>
+<div class="callout amber"><div class="h">Status</div><p><b>Not yet tested on a console.</b></p></div>
+
+<h2 id="save-library">Save library and sets</h2>
+<p>Saves exported as <code>.psu</code> files can be kept in any folder, away from cards. In that folder, open the folder menu and choose <b>Save library here&hellip;</b>. Launchstation reads every <code>.psu</code> file there and in the folders directly inside it, and lists them by title. Under each title is the file and the save it holds, such as <code>Starter/BASLUS-21050.psu: BASLUS-21050, 120&nbsp;KB</code>. Reading the list changes nothing.</p>
+<ul>
+<li><b>One save:</b> choose it, then <b>Copy to a card&hellip;</b> and pick the card image. The card gets one verified safety copy first, and the save is read back after it is written. A save already on the card by name is skipped, never replaced; so is one that does not fit. The card an MMCE adapter is serving is refused.</li>
+<li><b>Several saves:</b> mark them with <b>Square</b>, then choose <b>Marked saves&hellip;</b>: <b>Copy to a card&hellip;</b> copies them all with a single safety copy of that card; <b>Save as a set&hellip;</b> copies the files into a folder you name; <b>Delete the .psu files&hellip;</b> removes them after a confirmation (cards are not changed, and no safety copy is made of a <code>.psu</code>).</li>
+<li><b>Sets:</b> a folder in the library holding <code>.psu</code> files is a set, such as a starter set of system data and favourite game saves. <b>Apply a set to a card&hellip;</b> lists the sets with their sizes; choose one and a card, confirm, and every save in the set is copied as above. Saving into an existing set adds files and leaves those already there by name as they are.</li>
+<li>Sets are only ever applied when you choose to. Nothing is copied automatically, for example to a new Game ID card.</li>
+<li>A file that is not a valid save is listed as &ldquo;not a usable .psu&rdquo; and can only be deleted. Launchstation&rsquo;s own <code>WLE-</code> folders are not read. Up to 500 files and 64 sets are listed. A set with files beyond that limit is shown as &ldquo;too many files here to list them all&rdquo; and cannot be applied, so a set is never applied in part.</li>
 </ul>
 <div class="callout amber"><div class="h">Status</div><p><b>Not yet tested on a console.</b></p></div>
 

@@ -76,6 +76,8 @@ static int dashOkIcon(void) { return 0; }
 static int dashBackIcon(void) { return 0; }
 static float dashTextWidth(const char *s,float f) { return strlen(s)*f; }
 static void (*modal_preview)(int);
+static unsigned char *modal_marks;
+static void dashModalSetMarks(unsigned char *m) { modal_marks=m; }
 static void preview(int i) { (void)i; preview_calls++; }
 #define DASH_VH 448
 #define DASH_VW 640
@@ -91,10 +93,11 @@ for color in colors:
     code += f"#define {color} ((DashColor){{255,255,255,255}})\n"
 for draw in ("modalBackdrop", "dashGfxPushAlpha", "dashGfxPushOffset", "modalPanel",
              "dashTextS", "dashTextFit", "dashTextScrollTimed", "dashTextScroll", "dashGfxScissor", "dashDrawSelection",
-             "dashIcon", "drawButton", "dashTextRight", "dashGfxScissorReset", "dashDrawScrollbar",
-             "modalHintRow", "dashGfxPopOffset", "dashGfxPopAlpha", "dashGfxBlend",
+             "dashIcon", "dashTextRight", "dashGfxScissorReset", "dashDrawScrollbar",
+             "dashGfxPopOffset", "dashGfxPopAlpha", "dashGfxBlend",
              "dashGlow", "dashTextWrap", "dashPanel", "dashPanelBorder", "dashTextCenter"):
     code += f"#define {draw}(...) ((void)0)\n"
+code += "#define modalHintRow(...) (0.0f)\n#define drawButton(...) (0.0f)\n"
 code += function(gfx, "float dashApproach(")
 code += function(shell, "float dashTime(")
 code += function(shell, "float dashAnimSpeed(")
@@ -128,6 +131,9 @@ static void dashInputPoll(DashInput *in) {
     if(nav_scenario==5)in->pressed=0;
     if(nav_scenario==6)in->pressed=f==1?DASH_IN_LEFT:f==2?DASH_IN_OK:0;
     if(nav_scenario==7) {now_ms+=10001;in->pressed=DASH_IN_OK;}
+    /* 8: Square, Down (over a disabled row), Square, Back. 9: R1, R1, L1, OK. */
+    if(nav_scenario==8)in->pressed=f==1||f==3?DASH_IN_FAV:f==2?DASH_IN_DOWN:f==4?DASH_IN_BACK:0;
+    if(nav_scenario==9)in->pressed=f==1||f==2?DASH_IN_R1:f==3?DASH_IN_L1:f==4?DASH_IN_OK:0;
     if(nav_scenario && nav_scenario<=3 && depth==0) {
         if(f==1)
             in->pressed=nav_scenario==1?DASH_IN_L2:nav_scenario==2?DASH_IN_R2:0;
@@ -152,7 +158,7 @@ static void reset(void) {
     section_anim=fade_in=0;
     now_ms=last_frame_ms=1000; frame_dt=0;
     dashboard_pending=0;
-    depth=nested=nav_scenario=0; memset(frames,0,sizeof(frames)); modal_preview=NULL;
+    depth=nested=nav_scenario=0; memset(frames,0,sizeof(frames)); modal_preview=NULL; modal_marks=NULL;
     dashCfg.anim=100; dashCfg.effects=100;
 }
 static void check(void) {
@@ -233,11 +239,27 @@ int main(void) {
     assert(modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",1,now_ms+10000));
     reset();nav_scenario=7;
     assert(!modalButtons("timed","confirm","",0,(DashColor){0},"Keep","Revert",0,now_ms+10000));
+    /* Square marks enabled rows whose mark is 0 or 1; other values and disabled rows stay. */
+    DashMenuItem markable[]={{0,"a",NULL,0},{0,"b",NULL,1},{0,"c",NULL,0}};
+    unsigned char marks[3]={0,0,2};
+    reset(); nav_scenario=8; dashModalSetMarks(marks);
+    assert(dashModalMenu("marks",NULL,markable,3,0)==-1);
+    assert(marks[0]==1 && marks[1]==0 && marks[2]==2 && modal_marks==NULL);
+    reset(); nav_scenario=8; dashModalSetMarks(marks);   /* Square again unmarks */
+    assert(dashModalMenu("marks",NULL,markable,3,0)==-1 && marks[0]==0 && marks[2]==2);
+    marks[0]=1;
+    reset(); nav_scenario=8;   /* marks are for one menu only */
+    assert(dashModalMenu("no marks",NULL,markable,3,0)==-1 && marks[0]==1);
+    /* L1/R1 page through a long list, landing on enabled rows only. */
+    DashMenuItem many[20];
+    for(int k=0;k<20;k++){many[k].icon=0;many[k].label="row";many[k].detail=NULL;many[k].disabled=k==7;}
+    reset(); nav_scenario=9;   /* 0 -R1-> 6 (7 disabled) -R1-> 13 -L1-> 6 */
+    assert(dashModalMenu("pages",NULL,many,20,0)==6);
     reset(); now_ms+=2000;
     assert(dashVisualUpdate()==0.1f); /* retain the long-stall clamp */
     now_ms=last_frame_ms-1;
     assert(dashVisualUpdate()==0); /* timer reset cannot unsigned-underflow */
-    puts("PASS: ordinary/preview/nested menus, measured timing, RTC interpolation, no double ticks, motion off and stalls");
+    puts("PASS: ordinary/preview/nested menus, Square marks, L1/R1 pages, measured timing, RTC interpolation, no double ticks, motion off and stalls");
 }
 """
 compiler = shutil.which("gcc") or shutil.which("clang")
