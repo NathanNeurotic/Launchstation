@@ -88,6 +88,10 @@ static void gsKit_sync_flip(GSGLOBAL *ptr) { assert(ptr==gsGlobal);sync_count++;
 static void gsKit_queue_exec(GSGLOBAL *ptr) { assert(ptr==gsGlobal);queue_count++; }
 static void gsKit_TexManager_nextFrame(GSGLOBAL *ptr) { assert(ptr==gsGlobal);tex_frames++; }
 static void dashWorkerPump(void) { pump_count++; }
+#define DASH_PROBE_WAIT 5
+static void dashProbeMark(int phase) { (void)phase; }
+static void dashProbeSleep(void) {}
+static void dashProbeFrameEnd(void) {}
 '''
 code+=fn("void dashGfxInit(void)")
 code+=fn("static void waitVsyncSharing(void)")

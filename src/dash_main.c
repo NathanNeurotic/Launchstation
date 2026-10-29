@@ -1215,6 +1215,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		u64 now = Timer();
 		u64 idle_ms;
 
+		dashProbeMark(DASH_PROBE_VISUAL);
 		if (dashGfxCheckScreenChange())
 			dashArtInvalidateVram();
 
@@ -1260,6 +1261,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			globalMenu();
 		if (screens[section]->update)
 			screens[section]->update(dt);
+		dashProbeMark(DASH_PROBE_INPUT);
 
 		/* Results of background work that change what screens point at. */
 		applyScanResult();
@@ -1302,7 +1304,9 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			dashArtStep((int)idle_ms);
 		if (idle_ms > 6000 && dashArtTakeDirty())
 			dashLibSaveCache();
+		dashProbeMark(DASH_PROBE_HOUSE);
 		dashStoreFlush(0);
+		dashProbeMark(DASH_PROBE_FLUSH);
 
 #ifdef DASH_THEME_TOUR
 		/* development only: show every preset for five seconds */
@@ -1322,6 +1326,7 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		dashRenderScene();
 		if (!background_only)
 			quickLaunchDraw();
+		dashProbeMark(DASH_PROBE_DRAW);
 		dashGfxPresent();
 
 		/* first run: short introduction once the dashboard has faded in */

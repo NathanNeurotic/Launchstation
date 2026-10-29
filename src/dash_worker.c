@@ -361,6 +361,7 @@ void dashDrawActivity(void)
 	char s[96];
 	int done, total;
 
+	dashProbeDraw();
 	if (active) {
 		if (act_alpha <= 0.0f)
 			act_visible_since = now;
@@ -400,6 +401,154 @@ void dashDrawActivity(void)
 	}
 	dashGfxPopAlpha();
 }
+
+#ifdef DASH_STALL_PROBE
+//--------------------------------------------------------------
+// Frame-time probe (#198). A "window" lasts while the worker is busy plus
+// one second after, so the frames around a save are all seen. Its worst
+// frame is kept with a per-phase split; frames outside windows are kept
+// only when they exceed 50 ms (synchronous UI-thread work).
+//--------------------------------------------------------------
+typedef struct
+{
+	u32 total;
+	u32 seg[DASH_PROBE_MARKS + 1]; /* last slot: exec + pump, or unmarked */
+	int sleeps;
+	char label[48];
+} ProbeFrame;
+
+static u64 pr_mark[DASH_PROBE_MARKS];
+static u8 pr_marked[DASH_PROBE_MARKS];
+static u64 pr_prev_end;
+static int pr_sleeps;
+static int pr_window;        /* 1 while a window is open */
+static u64 pr_window_start, pr_idle_since;
+static u32 pr_window_base;   /* worst frame in the second before the window */
+static u32 pr_quiet_worst;   /* rolling worst frame outside windows */
+static u64 pr_quiet_reset;
+static char pr_window_label[48];
+static ProbeFrame pr_cur_worst, pr_last_window, pr_last_spike;
+static u32 pr_last_window_len, pr_last_window_base;
+static int pr_windows, pr_spikes;
+
+void dashProbeMark(int phase)
+{
+	if (phase < 0 || phase >= DASH_PROBE_MARKS)
+		return;
+	pr_mark[phase] = Timer();
+	pr_marked[phase] = 1;
+}
+
+void dashProbeSleep(void)
+{
+	pr_sleeps++;
+}
+
+static void probeSplit(ProbeFrame *f, u64 now)
+{
+	u64 last = pr_prev_end;
+	int k;
+
+	memset(f, 0, sizeof(*f));
+	f->total = (u32)(now - pr_prev_end);
+	f->sleeps = pr_sleeps;
+	for (k = 0; k < DASH_PROBE_MARKS; k++) {
+		if (!pr_marked[k] || pr_mark[k] < last)
+			continue;
+		f->seg[k] = (u32)(pr_mark[k] - last);
+		last = pr_mark[k];
+	}
+	f->seg[DASH_PROBE_MARKS] = (u32)(now - last);
+	if (cur_state != CUR_IDLE)
+		dashStrCopy(f->label, cur.label, sizeof(f->label));
+	else
+		dashStrCopy(f->label, "idle", sizeof(f->label));
+}
+
+void dashProbeFrameEnd(void)
+{
+	u64 now = Timer();
+	u32 frame;
+	int busy = dashWorkerBusy();
+	ProbeFrame f;
+
+	if (pr_prev_end == 0) {
+		pr_prev_end = now;
+		return;
+	}
+	frame = (u32)(now - pr_prev_end);
+	if (busy && !pr_window) {
+		pr_window = 1;
+		pr_window_start = now;
+		pr_window_base = pr_quiet_worst;
+		memset(&pr_cur_worst, 0, sizeof(pr_cur_worst));
+		dashStrCopy(pr_window_label, cur.label, sizeof(pr_window_label));
+	}
+	if (pr_window) {
+		if (frame > pr_cur_worst.total) {
+			probeSplit(&f, now);
+			pr_cur_worst = f;
+		}
+		if (busy)
+			pr_idle_since = 0;
+		else if (pr_idle_since == 0)
+			pr_idle_since = now;
+		else if (now - pr_idle_since >= 1000) {
+			pr_window = 0;
+			pr_last_window = pr_cur_worst;
+			if (pr_last_window.label[0] == '\0' || !strcmp(pr_last_window.label, "idle"))
+				dashStrCopy(pr_last_window.label, pr_window_label, sizeof(pr_last_window.label));
+			pr_last_window_len = (u32)(pr_idle_since - pr_window_start);
+			pr_last_window_base = pr_window_base;
+			pr_windows++;
+		}
+	} else {
+		if (now >= pr_quiet_reset) {
+			pr_quiet_worst = 0;
+			pr_quiet_reset = now + 1000;
+		}
+		if (frame > pr_quiet_worst)
+			pr_quiet_worst = frame;
+		if (frame > 50) {
+			probeSplit(&f, now);
+			pr_last_spike = f;
+			pr_spikes++;
+		}
+	}
+	memset(pr_marked, 0, sizeof(pr_marked));
+	pr_sleeps = 0;
+	pr_prev_end = Timer(); /* the probe's own time is not charged to the next frame */
+}
+
+static void probeLine(float y, const char *head, const ProbeFrame *f)
+{
+	char s[160];
+	const u32 *g = f->seg;
+
+	snprintf(s, sizeof(s), "%s %ums [%s]", head, (unsigned)f->total, f->label);
+	dashText(DASH_SAFE_L, y, s, DASH_FS_CAPTION, DASH_C_TEXT);
+	snprintf(s, sizeof(s), "vis %u in %u house %u flush %u draw %u wait %u(%d sl) exec %u",
+	         (unsigned)g[DASH_PROBE_VISUAL], (unsigned)g[DASH_PROBE_INPUT], (unsigned)g[DASH_PROBE_HOUSE],
+	         (unsigned)g[DASH_PROBE_FLUSH], (unsigned)g[DASH_PROBE_DRAW], (unsigned)g[DASH_PROBE_WAIT], f->sleeps,
+	         (unsigned)g[DASH_PROBE_MARKS]);
+	dashText(DASH_SAFE_L, y + 13, s, DASH_FS_CAPTION, DASH_C_TEXT2);
+}
+
+void dashProbeDraw(void)
+{
+	char head[64];
+
+	if (pr_windows > 0) {
+		snprintf(head, sizeof(head), "#%d job %ums base %ums worst", pr_windows,
+		         (unsigned)pr_last_window_len, (unsigned)pr_last_window_base);
+		probeLine(2, head, &pr_last_window);
+	}
+	if (pr_spikes > 0) {
+		snprintf(head, sizeof(head), "spike #%d", pr_spikes);
+		probeLine(30, head, &pr_last_spike);
+	}
+}
+#endif
 //--------------------------------------------------------------
 //End of file: dash_worker.c
 //--------------------------------------------------------------

@@ -418,6 +418,7 @@ targets:
       - HOMEBREW_SIO2MAN
       - ETH
       - WLE_NATIVE_CLOUD
+      - DASH_STALL_PROBE # diagnostic for #198, remove before merging
       - UDPFS
       - TMANIP
       - EXFAT
