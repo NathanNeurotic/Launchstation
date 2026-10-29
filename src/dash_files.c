@@ -341,12 +341,7 @@ static void filesDraw(void)
 
 	dashDrawSectionTitle(lx, 68, localizeDashboardText("Files"), "the complete Launchstation file manager");
 
-	if (fsel < ftop + 1)
-		ftop = fsel - 1;
-	if (fsel >= ftop + rows)
-		ftop = fsel - rows + 1;
-	if (ftop < 0)
-		ftop = 0;
+	ftop = listCenteredTop(fsel, nfentries, rows);
 	if (fsel_anim < ftop || fsel_anim >= ftop + rows)
 		fsel_anim = (float)fsel;
 

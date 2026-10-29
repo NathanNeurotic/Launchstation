@@ -10,6 +10,7 @@
 #define DASH_INTERNAL_H
 
 #include "launchelf.h"
+#include "list_scroll.h"
 #include "main_actions.h"
 #include "dash.h"
 
@@ -791,7 +792,8 @@ enum {
 
 typedef struct
 {
-	u32 pressed; /* includes auto-repeat */
+	u32 pressed; /* navigation repeats; actions are rising-edge only */
+	u32 text_repeat; /* typing/deleting only; never ordinary menu actions */
 	u32 raw_new;
 	int any;
 } DashInput;
@@ -866,6 +868,7 @@ float dashDrawButton(float x, float y, int icon, const char *key);
 /* Native text entry (dash_widgets.c): the user's virtual keyboard layout,
  * USB keyboard typing. Edits `buf` in place; 1 = accepted, 0 = cancelled. */
 int dashModalKeyboard(const char *title, char *buf, int max_len);
+int dashModalFilename(const char *title, char *buf, int max_len, const char *directory);
 /* IPv4 editor for "a.b.c.d" strings; 1 = changed/accepted, 0 = cancelled. */
 int dashModalIp(const char *title, const char *help, char *ip_str, int size);
 
@@ -879,6 +882,7 @@ enum {
 };
 int dashPickPath(const char *title, const char *start_dir, int mode, const char *ext, char *out, int out_size);
 void dashModalSetPreview(void (*fn)(int index)); /* applies to the next dashModalMenu() */
+int dashModalKeepVideo(void);
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger);
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail);
 int dashModalChoice(const char *title, const char *const *options, int n, int current);

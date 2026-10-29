@@ -8,8 +8,34 @@
 #define __PS2IP_RPC_H__
 
 #include <tamtypes.h>
+#ifdef _EE
+/* EE libcglue owns socket/config types. Its sys/socket.h must not be mixed
+ * with the legacy tcpip.h used by IOP. DNS packets embed an IPv4 address;
+ * libcglue only forward-declares that type, so complete its matching tag. */
+#include <sys/socket.h>
+#ifndef LWIP_HDR_IP4_ADDR_H
+struct ip4_addr {
+    u32 addr;
+};
+typedef struct ip4_addr ip4_addr_t;
+typedef struct ip4_addr ip_addr_t;
+#endif
+#else
 #include <tcpip.h>
+#endif
 #include <sys/time.h>
+
+/* Match the embedded IOP stack's default select bitmap without importing
+ * its legacy socket declarations into EE. Honor an active stack config. */
+#ifndef MEMP_NUM_UDP_PCB
+#define MEMP_NUM_UDP_PCB 4
+#endif
+#ifndef MEMP_NUM_TCP_PCB
+#define MEMP_NUM_TCP_PCB 5
+#endif
+#ifndef MEMP_NUM_NETCONN
+#define MEMP_NUM_NETCONN (MEMP_NUM_TCP_PCB + MEMP_NUM_UDP_PCB)
+#endif
 
 #define PS2IP_IRX 0xB0125F2
 
@@ -184,7 +210,8 @@ struct hostent_res
 {
     s16 h_addrtype;
     s16 h_length;
-    ip_addr_t h_addr;
+    /* h_addr is a lwIP macro expanding to h_addr_list[0]. */
+    ip_addr_t address;
 };
 
 typedef struct

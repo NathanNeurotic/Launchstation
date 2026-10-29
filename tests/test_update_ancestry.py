@@ -55,6 +55,9 @@ static int launchstationUpdateCaPath(char *path, int n) {
     return 1;
 }
 static int ensureDashboardIpNetworkReady(void) { return 1; }
+static int dashWorkerAwaitAll(const char *title) { (void)title; return 1; }
+static void filerRootMcPollIdle(void) {}
+static const char *dashboardIpNetworkError(void) { return "network error"; }
 static void dashLoadingBegin(const char *s) { (void)s; }
 static void dashLoadingEnd(void) {}
 static void dashModalMessage(int kind,const char *title,const char *body,const char *detail) {

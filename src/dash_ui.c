@@ -15,6 +15,10 @@ extern u32 paddata;
 
 static u64 last_input_ms;
 static u32 held_prev;
+static u32 text_repeat_armed;
+/* Set while a timed confirmation polls: START must not open the Dashboard
+ * popup, whose own input loop would hold off the automatic revert. */
+static int dash_start_menu_blocked;
 
 //--------------------------------------------------------------
 // Input
@@ -27,7 +31,7 @@ void dashInputPoll(DashInput *in)
 /* usb_kb_as_pad = 0 leaves the USB keyboard to the caller (text entry). */
 void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 {
-	u32 np;
+	u32 np, repeat;
 	int ret;
 	u32 ok_btn = swapKeys ? PAD_CROSS : PAD_CIRCLE;
 	u32 back_btn = swapKeys ? PAD_CIRCLE : PAD_CROSS;
@@ -46,6 +50,13 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	np = ret ? new_pad & ((PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT |
 	                      PAD_L3_H0 | PAD_L3_H1 | PAD_L3_V0 | PAD_L3_V1 |
 	                      PAD_L2 | PAD_R2) | ~(paddata & held_prev)) : 0;
+	/* Adapted from saildot4k d9f60e5: reuse pad repeat timing only for
+	 * text-entry consumers. A held action cannot reopen a normal dialog. */
+	text_repeat_armed &= paddata;
+	text_repeat_armed |= np & paddata & (ok_btn | back_btn);
+	repeat = ret ? new_pad & (text_repeat_armed | ~paddata) : 0;
+	if (repeat & ok_btn) in->text_repeat |= DASH_IN_OK;
+	if (repeat & back_btn) in->text_repeat |= DASH_IN_BACK;
 	if (paddata != held_prev)
 		last_input_ms = Timer();
 	held_prev = paddata;
@@ -84,7 +95,7 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	if (np & PAD_R3)
 		in->pressed |= DASH_IN_R3;
 	in->any = (in->pressed != 0);
-	if (in->any)
+	if (in->any || in->text_repeat)
 		last_input_ms = Timer();
 	/* Held SELECT turns START into its quick launch key (dash_main.c). */
 	if ((in->pressed & DASH_IN_START) && !(paddata & PAD_SELECT)) {
@@ -95,7 +106,7 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 		if (dashDashboardMenuIsOpen()) {
 			in->pressed = DASH_IN_BACK;
 			in->any = 1;
-		} else {
+		} else if (!dash_start_menu_blocked) {
 			dashDashboardMenu();
 		}
 	}
@@ -110,6 +121,7 @@ void dashInputFlush(void)
 		readpad_noRepeat();
 	}
 	held_prev = paddata;
+	text_repeat_armed = 0;
 	last_input_ms = Timer();
 }
 
@@ -866,10 +878,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			dashInputFlush();
 			return -1;
 		}
-		if (sel < top)
-			top = sel;
-		if (sel >= top + rows)
-			top = sel - rows + 1;
+		top = listCenteredTop(sel, n, rows);
 		if (sel_anim < top || sel_anim >= top + rows)
 			sel_anim = (float)sel;
 		if (preview != NULL) {
@@ -963,9 +972,10 @@ int dashModalChoice(const char *title, const char *const *options, int n, int cu
 }
 
 static int modalButtons(const char *title, const char *body, const char *detail, int icon, DashColor icon_col,
-                        const char *ok_label, const char *cancel_label, int default_sel)
+                        const char *ok_label, const char *cancel_label, int default_sel, u64 deadline)
 {
 	int sel = default_sel;
+	char countdown[64];
 	float open = 0.0f, sel_anim = (float)default_sel, title_age = 0.0f;
 	float w = 440.0f, h;
 	float x = (DASH_VW - w) * 0.5f, y;
@@ -988,7 +998,16 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 	dashInputFlush();
 
 	while (1) {
+		if (deadline) {
+			u64 now = Timer();
+			if (now >= deadline) { dashInputFlush(); return 0; }
+			snprintf(countdown, sizeof(countdown), "Reverting in %u seconds", (unsigned)((deadline - now + 999) / 1000));
+			detail = countdown;
+		}
+		dash_start_menu_blocked = deadline != 0;
 		dashInputPoll(&in);
+		dash_start_menu_blocked = 0;
+		if (deadline && Timer() >= deadline) { dashInputFlush(); return 0; }
 		if (dashDashboardPending())
 			return 0;
 		if (cancel_label != NULL && (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
@@ -1073,13 +1092,21 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger)
 {
 	return modalButtons(title, body, NULL, danger ? DI_WARNING : DI_INFO,
-	                    danger ? DASH_C_WARM : DASH_C_ACCENT, ok_label ? ok_label : "OK", "Cancel", danger ? 1 : 0);
+	                    danger ? DASH_C_WARM : DASH_C_ACCENT, ok_label ? ok_label : "OK", "Cancel", danger ? 1 : 0, 0);
+}
+
+/* Timed preview from saildot4k/Launchstation; ordinary confirmations retain
+ * their existing default selection and have no deadline. Timer() is in ms. */
+int dashModalKeepVideo(void)
+{
+	return modalButtons("Keep this video mode?", "Confirm only if the picture is visible and stable.",
+	                    "", DI_INFO, DASH_C_ACCENT, "Keep", "Revert", 1, Timer() + 10000);
 }
 
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail)
 {
 	DashColor c = (icon == DI_WARNING) ? DASH_C_WARM : DASH_C_ACCENT;
-	modalButtons(title, body, detail, icon, c, "OK", NULL, 0);
+	modalButtons(title, body, detail, icon, c, "OK", NULL, 0, 0);
 }
 
 //--------------------------------------------------------------

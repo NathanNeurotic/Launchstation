@@ -454,6 +454,8 @@ void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char 
 		enable[NEWICON] = FALSE;
 		enable[TITLE_CFG] = FALSE;
 	}
+	if (!genCanRenamePath(path))
+		enable[RENAME] = FALSE;
 
 	if (nmarked == 0) {
 		if (!strcmp(file->name, "..")) {

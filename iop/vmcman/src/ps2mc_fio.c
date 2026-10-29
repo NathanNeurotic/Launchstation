@@ -380,14 +380,18 @@ int mcman_setinfo2(int port, int slot, const char *filename, sceMcTblGetDir *inf
 
 	if ((flags & sceMcFileAttrFile) != 0)	{
 		u8 *pfsentry, *pfseend, *mfee;
+		/* A card entry may use all 32 name bytes without a terminator. */
+		char entry_name[sizeof(info->EntryName) + 1];
+		memcpy(entry_name, info->EntryName, sizeof(info->EntryName));
+		entry_name[sizeof(info->EntryName)] = 0;
 
-		if ((!strcmp(".", info->EntryName)) || (!strcmp("..", info->EntryName)))
+		if ((!strcmp(".", entry_name)) || (!strcmp("..", entry_name)))
 			return sceMcResNoEntry;
 
-		if (info->EntryName[0] == 0)
+		if (entry_name[0] == 0)
 			return sceMcResNoEntry;
 
-		r = mcman_chrpos(info->EntryName, '/');
+		r = mcman_chrpos(entry_name, '/');
 		if (r >= 0)
 			return sceMcResNoEntry;
 
@@ -415,7 +419,7 @@ int mcman_setinfo2(int port, int slot, const char *filename, sceMcTblGetDir *inf
 			mfee += 16;
 		} while (pfsentry < pfseend);
 
-		r = mcman_getdirinfo(port, slot, &mfe, info->EntryName, NULL, 1);
+		r = mcman_getdirinfo(port, slot, &mfe, entry_name, NULL, 1);
 		if (r != 1) {
 			if (r < 2) {
 				if (r == 0)

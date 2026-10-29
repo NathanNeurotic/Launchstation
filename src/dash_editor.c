@@ -535,7 +535,7 @@ static int docSaveAs(EdDoc *d)
 		dashStrCopy(name, "NEWFILE.TXT", sizeof(name));
 	if (!dashPickPath("Save in which folder?", dir, DASH_PICK_FOLDER, NULL, dir, sizeof(dir)))
 		return 0;
-	if (!dashModalKeyboard("File name", name, sizeof(name) - 1) || name[0] == '\0')
+	if (!dashModalFilename("File name", name, sizeof(name) - 1, dir) || name[0] == '\0')
 		return 0;
 	if (snprintf(full, sizeof(full), "%s%s", dir, name) >= (int)sizeof(full)) {
 		dashModalMessage(DI_WARNING, "Path too long", "Choose a shorter name or folder.", NULL);
@@ -1127,9 +1127,11 @@ int dashTextEditorEx(const char *path, int create_if_missing)
 				kbMove(-1, 0);
 			if (in.pressed & DASH_IN_RIGHT)
 				kbMove(1, 0);
-			if (in.pressed & DASH_IN_OK)
+			if ((in.pressed & DASH_IN_OK) ||
+			    ((in.text_repeat & DASH_IN_OK) && (kb_act < 0 || kb_act == KA_SPACE ||
+			      kb_act == KA_TAB || kb_act == KA_ENTER || kb_act == KA_BACK)))
 				kbTypeKey(d);
-			if (in.pressed & DASH_IN_BACK)
+			if (in.text_repeat & DASH_IN_BACK)
 				docBackspace(d);
 			if (in.pressed & DASH_IN_FAV)
 				kb_caps = !kb_caps;

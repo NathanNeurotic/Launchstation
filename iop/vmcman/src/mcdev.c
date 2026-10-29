@@ -697,9 +697,10 @@ int mc_rename(MC_IO_FIL_T *f, const char *old, const char *new_)
 		int l;
 
 		l = strlen(new_);
-		if (l < 32) {
+		if (l <= (mcman_devinfos[mcman_mc_port][mcman_mc_slot].cardtype == sceMcTypePS1 ?
+		          20 : (int)sizeof(mctbl.EntryName) - 1)) {
+			memset(&mctbl, 0, sizeof(mctbl));
 			memcpy((void *)mctbl.EntryName, new_, l);
-			mctbl.EntryName[l] = 0;
 			r = McSetFileInfo(mcman_mc_port, mcman_mc_slot, old, &mctbl, sceMcFileAttrFile);
 			r = mcman_ioerrcode(r);
 		}

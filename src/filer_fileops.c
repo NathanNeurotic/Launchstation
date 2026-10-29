@@ -315,6 +315,115 @@ int genGetStat(const char *path, iox_stat_t *stat)
 //------------------------------
 //endfunc genGetStat
 //--------------------------------------------------------------
+int genCanRenamePath(const char *path)
+{
+	return path != NULL && path[0] != '\0' &&
+	       strncmp(path, "cdfs", 4) && strncmp(path, "udpfs", 5);
+}
+
+static int renameCardResult(int result)
+{
+	/* libmc/XFROM completion codes differ from fileXio's negative errno. */
+	switch (result) {
+		case 0: return 0;
+		case -3: return -ENOSPC;
+		case -4: return -ENOENT;
+		case -5: return -EACCES;
+		case -6: return -EEXIST;
+		case -7: return -EMFILE;
+		default: return -EIO;
+	}
+}
+
+int genRenameNoReplace(const char *from, const char *to)
+{
+	char old_path[MAX_PATH], new_path[MAX_PATH];
+	const char *old_leaf, *new_leaf;
+	iox_stat_t source, target;
+	int ret, parent;
+
+	if (from == NULL || to == NULL || !from[0] || !to[0]) return -EINVAL;
+	if (!strncmp(from, "cdfs", 4)) return -EROFS;
+	/* HOST uses a handle ioctl; UDPFS has no rename operation. */
+	if (!strncmp(from, "host", 4) || !genCanRenamePath(from)) return -ENOSYS;
+	if (strlen(from) >= sizeof(old_path) || strlen(to) >= sizeof(new_path)) return -ENAMETOOLONG;
+	if ((!strncmp(from, "cf:", 3) && strlen(from) + 1 >= sizeof(old_path)) ||
+	    (!strncmp(to, "cf:", 3) && strlen(to) + 1 >= sizeof(new_path))) return -ENAMETOOLONG;
+	if (!ensurePathPcCardCfOnline(from) || !ensurePathPcCardCfOnline(to)) return -ENODEV;
+	strcpy(old_path, from);
+	strcpy(new_path, to);
+	normalizePcCardCfPath(old_path, sizeof(old_path));
+	normalizePcCardCfPath(new_path, sizeof(new_path));
+	old_leaf = strrchr(old_path, '/');
+	if (old_leaf == NULL) old_leaf = strchr(old_path, ':');
+	new_leaf = strrchr(new_path, '/');
+	if (new_leaf == NULL) new_leaf = strchr(new_path, ':');
+	if (old_leaf == NULL || new_leaf == NULL || !old_leaf[1] || !new_leaf[1]) return -EINVAL;
+	if (!strcmp(old_leaf + 1, ".") || !strcmp(old_leaf + 1, "..")) return -EINVAL;
+	parent = (int)(old_leaf - old_path + 1);
+	if (new_leaf - new_path + 1 != parent || strncmp(old_path, new_path, parent)) return -EXDEV;
+	new_leaf++;
+	if (!strcmp(new_leaf, ".") || !strcmp(new_leaf, "..") || strpbrk(new_leaf, "\\:")) return -EINVAL;
+	if (strlen(new_leaf) >= MAX_NAME) return -ENAMETOOLONG;
+	if ((!strncmp(old_path, "mc", 2) || !strncmp(old_path, "vmc", 3) || !strncmp(old_path, "xfrom", 5)) &&
+	    strlen(new_leaf) >= sizeof(((sceMcTblGetDir *)0)->EntryName)) return -ENAMETOOLONG;
+	ret = genGetStat(old_path, &source);
+	if (ret < 0) return ret;
+	if (!strcmp(old_path, new_path)) return 0;
+	ret = genGetStat(new_path, &target);
+	if (ret >= 0) return -EEXIST;
+	if (ret != -ENOENT) return ret;
+	if (!strncmp(old_path, "mc", 2)
+#ifdef XFROM
+	    || !strncmp(old_path, "xfrom", 5)
+#endif
+	   ) {
+		sceMcTblGetDir info;
+		int type = 0, port = old_path[2] - '0';
+		const char *relative = strchr(old_path, ':');
+		if (relative == NULL) return -EINVAL;
+		relative++;
+		if (strncmp(old_path, "mc", 2) && *relative == '/') relative++;
+		if (!strncmp(old_path, "mc", 2)) {
+			if (port < 0 || port > 1) return -EINVAL;
+			ensureMemoryCardPortAccessible(port);
+			ret = mcGetInfo(port, 0, &type, NULL, NULL);
+			if (ret < 0 || mcSync(0, NULL, &ret) <= 0) return -EIO;
+		}
+#ifdef XFROM
+		else {
+			ret = xfromGetInfo(0, 0, &type, NULL, NULL);
+			if (ret < 0 || xfromSync(0, NULL, &ret) <= 0) return -EIO;
+		}
+#endif
+		/* A wake-up can report a changed card (-1) with a valid type. */
+		if (ret < -1 || (type != 1 && type != 2)) return -ENODEV;
+		if (type == 1 && strlen(new_leaf) > 20) return -ENAMETOOLONG;
+		memset(&info, 0, sizeof(info));
+		memcpy(info.EntryName, new_leaf, strlen(new_leaf));
+		if (!strncmp(old_path, "mc", 2)) {
+			ret = mcSetFileInfo(port, 0, relative, &info, 0x0010);
+			if (ret < 0 || mcSync(0, NULL, &ret) <= 0) return -EIO;
+		}
+#ifdef XFROM
+		else {
+			ret = xfromSetFileInfo(0, 0, relative, &info, 0x0010);
+			if (ret < 0 || xfromSync(0, NULL, &ret) <= 0) return -EIO;
+		}
+#endif
+		ret = renameCardResult(ret);
+	} else {
+		/* VMCMAN accepts a sibling leaf; other filesystems accept paths. */
+		ret = fileXioRename(old_path, !strncmp(old_path, "vmc", 3) ? new_leaf : new_path);
+	}
+	if (ret < 0) return ret;
+	/* A false/ambiguous success must never discard a recovery copy. */
+	if (genGetStat(old_path, &target) != -ENOENT) return -EIO;
+	ret = genGetStat(new_path, &target);
+	if (ret < 0) return ret;
+	return FIO_S_ISDIR(source.mode) == FIO_S_ISDIR(target.mode) ? 0 : -EIO;
+}
+
 int genMkdir(const char *path, int mode)
 {
 	char mkdir_path[MAX_PATH];

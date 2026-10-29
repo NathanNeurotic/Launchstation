@@ -47,9 +47,25 @@ static void kbDelete(char *buf, int *cur)
 	(*cur)--;
 }
 
+/* Portable filename characters: shared by pad and USB entry. Adapted from
+ * saildot4k's filename prompts without changing free-form text dialogs. */
+static int kbFilenameChar(unsigned char c)
+{
+	return c >= 0x20 && c != 0x7f && strchr("<>:\"/\\|?*", c) == NULL;
+}
+
+static int kbFilenameValid(const char *name, int max_len)
+{
+	size_t n = strlen(name);
+	if (!n || n > (size_t)max_len || !strcmp(name, ".") || !strcmp(name, "..")) return 0;
+	if (name[n - 1] == '.' || name[n - 1] == ' ') return 0;
+	while (*name) if (!kbFilenameChar((unsigned char)*name++)) return 0;
+	return 1;
+}
+
 /* USB keyboard: typed characters and editing keys (same codes as the
  * classic keyboard). Returns 1 = done, -1 = cancel, 0 = keep going. */
-static int kbUsb(char *buf, int max_len, int *cur)
+static int kbUsb(char *buf, int max_len, int *cur, int filename)
 {
 	char key;
 	int len;
@@ -79,13 +95,13 @@ static int kbUsb(char *buf, int max_len, int *cur)
 			kbDelete(buf, cur);
 		else if (key == 0x0a)
 			return 1;
-		else if ((unsigned char)key >= 0x20)
+		else if ((unsigned char)key >= 0x20 && (!filename || kbFilenameChar((unsigned char)key)))
 			kbInsert(buf, max_len, cur, key);
 	}
 	return 0;
 }
 
-int dashModalKeyboard(const char *title, char *buf, int max_len)
+static int modalKeyboard(const char *title, char *buf, int max_len, int filename, const char *directory)
 {
 	const int layout = normalizeVirtualKeyboardLayout(setting->virtual_keyboard_layout);
 	const int first_col = getVirtualKeyboardLayoutFirstColumn(layout);
@@ -106,6 +122,7 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 	if (w < 460.0f)
 		w = 460.0f;
 	h = 70.0f + 44.0f + VKEY_LAYOUT_ROWS * (key_h + gap) + 14.0f + 34.0f + 50.0f;
+	if (directory && directory[0]) h += 24.0f;
 	x = (DASH_VW - w) * 0.5f;
 	y = (DASH_VH - h) * 0.5f;
 	dashStrCopy(orig, buf, sizeof(orig));
@@ -118,7 +135,11 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 		dashInputPollEx(&in, 0);
 		if (dashDashboardPending())
 			break;
-		r = kbUsb(buf, max_len, &cur);
+		r = kbUsb(buf, max_len, &cur, filename);
+		if (r > 0 && filename && !kbFilenameValid(buf, max_len)) {
+			dashToast(DASH_TOAST_WARN, "Choose a valid filename without separators or reserved characters");
+			r = 0;
+		}
 		if (r != 0) {
 			result = (r > 0);
 			break;
@@ -164,11 +185,15 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 		}
 		if (in.pressed & DASH_IN_FAV) /* Square: caps, as on the classic keyboard */
 			caps = !caps;
-		if (in.pressed & DASH_IN_BACK) { /* cancel button deletes, as before */
+		if (in.text_repeat & DASH_IN_BACK) { /* cancel button deletes, as before */
 			kbDelete(buf, &cur);
 			dashSoundPlay(DASH_SND_CANCEL);
 		}
 		if (in.pressed & DASH_IN_SELECT) {
+			if (filename && !kbFilenameValid(buf, max_len)) {
+				dashToast(DASH_TOAST_WARN, "Choose a valid filename");
+				continue;
+			}
 			result = 1;
 			break;
 		}
@@ -176,10 +201,12 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 			result = 0;
 			break;
 		}
-		if (in.pressed & DASH_IN_OK) {
+		if ((in.pressed & DASH_IN_OK) ||
+		    ((in.text_repeat & DASH_IN_OK) && (act < 0 || act == KB_ACT_SPACE || act == KB_ACT_DELETE))) {
 			dashSoundPlay(DASH_SND_CONFIRM);
 			if (act < 0) {
-				if (isVirtualKeyboardLayoutKey(layout, sel))
+				if (isVirtualKeyboardLayoutKey(layout, sel) &&
+				    (!filename || kbFilenameChar((unsigned char)getVirtualKeyboardLayoutChar(layout, sel, caps))))
 					kbInsert(buf, max_len, &cur, getVirtualKeyboardLayoutChar(layout, sel, caps));
 			} else if (act == KB_ACT_CAPS)
 				caps = !caps;
@@ -188,6 +215,10 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 			else if (act == KB_ACT_DELETE)
 				kbDelete(buf, &cur);
 			else {
+				if (act == KB_ACT_DONE && filename && !kbFilenameValid(buf, max_len)) {
+					dashToast(DASH_TOAST_WARN, "Choose a valid filename");
+					continue;
+				}
 				result = (act == KB_ACT_DONE);
 				break;
 			}
@@ -197,7 +228,7 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 		{
 			float oe = dashEaseOutCubic(open);
 			float fx = x + 30, fy = y + 56, fw = w - 60;
-			float gx = x + (w - grid_w) * 0.5f, gy = fy + 48;
+			float gx = x + (w - grid_w) * 0.5f, gy = fy + 48 + (directory && directory[0] ? 24 : 0);
 			int row, col;
 
 			dashRenderScene();
@@ -230,6 +261,9 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 				dashGfxScissorReset();
 			}
 
+			if (directory && directory[0])
+				dashTextFit(fx, fy + 40, fw, directory, DASH_FS_CAPTION, DASH_C_TEXT3);
+
 			/* key grid */
 			for (row = 0; row < VKEY_LAYOUT_ROWS; row++) {
 				for (col = 0; col < ncols; col++) {
@@ -242,6 +276,8 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 						continue;
 					label[0] = getVirtualKeyboardLayoutDisplayChar(layout, idx, caps);
 					label[1] = '\0';
+					int allowed = !filename || kbFilenameChar((unsigned char)getVirtualKeyboardLayoutChar(layout, idx, caps));
+					dashGfxPushAlpha(allowed ? 1.0f : 0.25f);
 					if (focused)
 						dashDrawSelection(kx - 1, ky - 1, key_w + 2, key_h + 2, 8, 1.0f);
 					else
@@ -250,6 +286,7 @@ int dashModalKeyboard(const char *title, char *buf, int max_len)
 						dashTextCenter(kx + key_w * 0.5f, ky + 7, label[0] == '_' ? "_" : "sp", DASH_FS_SMALL, dashItemColor(focused));
 					else
 						dashTextCenter(kx + key_w * 0.5f, ky + 6, label, DASH_FS_BODY, dashItemColor(focused));
+					dashGfxPopAlpha();
 				}
 			}
 
@@ -357,6 +394,16 @@ static void classicProgress(const char *message)
 		classic_progress = 1;
 	}
 	dashLoadingStatus(line, 0, 0);
+}
+
+int dashModalKeyboard(const char *title, char *buf, int max_len)
+{
+	return modalKeyboard(title, buf, max_len, 0, NULL);
+}
+
+int dashModalFilename(const char *title, char *buf, int max_len, const char *directory)
+{
+	return modalKeyboard(title, buf, max_len, 1, directory);
 }
 
 static int classicKeyboard(char *out, int max)
@@ -861,10 +908,7 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 			}
 		}
 
-		if (sel < top)
-			top = sel;
-		if (sel >= top + rows)
-			top = sel - rows + 1;
+		top = listCenteredTop(sel, n_rows, rows);
 		if (sel_anim < top || sel_anim >= top + rows)
 			sel_anim = (float)sel;
 		float dt = dashVisualUpdate();

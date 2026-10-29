@@ -52,7 +52,9 @@ assert "buffSize = 524288;" in copy_c
 
 # Check filer_actions.c 64-bit size and online check in Rename
 assert "((u64)stat.hisize << 32) | (u64)stat.size" in actions_c
-assert "isPcCardCfPath(path) && !isPcCardCfOnline()" in actions_c
+assert "genRenameNoReplace(from, to)" in actions_c
+assert "return filerRenameSiblingOnce(old_path, new_path," in actions_c
+assert "!ensurePathPcCardCfOnline(from)" in fileops_c
 
 # Check filer_browser.c root label mapping, title.cfg, and menu disables
 assert 'if (!strcmp(name, "cf:") || !strcmp(name, "cf0:"))' in browser_c

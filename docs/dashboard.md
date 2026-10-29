@@ -581,3 +581,35 @@ Demand-loaded storage such as the internal APA HDD and iLink/FireWire is
 selectable while its state is `Not checked`. Opening it runs the existing
 lazy loader/probe. Only a device that was explicitly checked and found absent
 is skipped by navigation.
+
+### Video mode confirmation
+
+Changing **Settings > Screen calibration > Video mode** previews the new mode
+and asks **Keep this video mode?**. Select Keep within 10 seconds to accept it.
+Revert is selected initially; Cancel or timeout restores the previous mode and
+screen offsets. Saving Settings is still required to persist an accepted mode.
+
+Sound effects retry only voices 0–22 when their preferred voice is busy; voice
+23 remains reserved for background music. These changes adapt saildot4k's
+Launchstation fixes. Console display resync and audio behavior require hardware
+validation.
+
+### Text entry and list scrolling
+
+Hold Type or Delete to repeat text edits in the on-screen keyboard and editor.
+Caps, Done, Cancel and ordinary menu actions still require a fresh press. A
+screen change clears repeat until the button is released and pressed again.
+
+Rename, New folder and the editor's Save As use filename prompts showing the
+destination directory. Filename-invalid characters are dimmed and cannot be
+entered with the controller or USB keyboard. Empty names, dot entries, and names
+ending in a dot or space cannot be submitted. Free-form text prompts retain
+punctuation. Device-specific name limits still apply when writing.
+
+Lists keep selection near the upper middle of the viewport and clamp at the
+start and end. Applications, Files, Tools, Settings, HDD Manager, modal lists,
+date fields and path pickers use the same scrolling rule. Adapted from
+saildot4k's input and scrolling work; console validation remains pending.
+
+The larger save-management follow-ups are tracked in
+[issue #232](https://github.com/NathanNeurotic/Launchstation/issues/232).

@@ -321,7 +321,7 @@ void dashSoundPlay(int id)
 	static int cursorSlot;
 	static int transSlot;
 	static u64 lastCursorMs;
-	int ch;
+	int ch, i;
 
 	if (!soundAlive() || !dashCfg.sound || id < 0 || id >= DASH_SND_COUNT)
 		return;
@@ -343,9 +343,20 @@ void dashSoundPlay(int id)
 	} else {
 		ch = id; /* any fixed voice < 8; cursor occupies 8..13, transition 14..17 */
 	}
-	if (audsrv_ch_play_adpcm(ch, &samples[id]) < 0) {
-		/* If targeted voice was busy, play on any free SFX voice (#136) */
-		audsrv_ch_play_adpcm(-1, &samples[id]);
+	/* saildot4k's fallback: restore gain before key-on, and never let
+	 * audsrv's automatic allocation choose the reserved music voice.
+	 * An explicit voice replaces whatever is sounding there (audsrv.h), so
+	 * this loop covers a failed RPC or rejected voice, not a busy one. The
+	 * round-robin cursor and transition slots above keep repeats from
+	 * cutting each other off; per-voice busy probes would add an IOP round
+	 * trip per voice on every cursor tick. */
+	audsrv_adpcm_set_volume_and_pan(ch, dashCfg.sound_vol, 0);
+	if (audsrv_ch_play_adpcm(ch, &samples[id]) >= 0) return;
+	for (i = 0; i < SND_SFX_CH_MAX; i++) {
+		int fallback = (18 + i) % SND_SFX_CH_MAX;
+		if (fallback == ch) continue;
+		audsrv_adpcm_set_volume_and_pan(fallback, dashCfg.sound_vol, 0);
+		if (audsrv_ch_play_adpcm(fallback, &samples[id]) >= 0) return;
 	}
 }
 

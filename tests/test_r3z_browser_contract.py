@@ -37,6 +37,7 @@ static int SifExecModuleBuffer(const void *p,int size,int argc,const char *argv,
     (void)p;(void)size;(void)argc;(void)argv;loads++;*ret=load_ok?0:-1;return load_ok?1:-1;
 }
 '''
+code += (root / 'include/list_scroll.h').read_text()
 code += function(browser, 'static int pageIndex(')
 code += function(browser, 'static void revealSelection(')
 code += function(init, 'int consoleHasIlink(void)')

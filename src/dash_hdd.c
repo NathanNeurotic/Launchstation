@@ -1248,10 +1248,7 @@ void dashHddManager(void)
 
 		if (sel >= hm.n)
 			sel = hm.n > 0 ? hm.n - 1 : 0;
-		if (sel < top)
-			top = sel;
-		if (sel >= top + ROWS)
-			top = sel - ROWS + 1;
+		top = listCenteredTop(sel, hm.n, ROWS);
 		if (sel_anim < top || sel_anim >= top + ROWS)
 			sel_anim = (float)sel;
 		/* Keep PFS usage polling as before; HDL title RPCs are explicit
