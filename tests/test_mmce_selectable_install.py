@@ -44,6 +44,12 @@ assert "mcCardValidateNoEcc(source)" in installer
 assert "prepareTransferDeviceStacks(source, parent)" in installer
 assert "mmce0:/WLE-Recovered/" in installer
 assert "mmce1:/WLE-Recovered/" in installer
+# Resized copies and new blank cards are staged outside MemoryCards for this action.
+for held in ("WLE-Resized/", "WLE-New/"):
+    for unit in (0, 1):
+        assert f'strncmp(source, "mmce{unit}:/{held}", {len(f"mmce{unit}:/{held}")})' in installer, held
+assert '"mmce%d:/WLE-Resized/"' in (root / "src/dash_card_tool.c").read_text(encoding="utf-8")
+assert '"mmce%d:/WLE-New/"' in (root / "src/dash_card_tool.c").read_text(encoding="utf-8")
 assert "mmce_cmd_set_card" not in installer
 assert "mmce_cmd_set_channel" not in installer
 assert "mmce_cmd_reset" not in installer

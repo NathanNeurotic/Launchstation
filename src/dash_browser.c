@@ -1701,14 +1701,19 @@ static void opInstallNewMmceCard(void)
     if (!pcsx2 && !genCmpFileExt(source, "MCD"))
         return;
 
-    /* Only external snapshots and the known neutral holding area.
+    /* Only external snapshots and the known neutral holding areas
+     * (recovered snapshots, resized copies and new blank cards).
      * Never read a card backing file through this installation action. */
     if (strncmp(source, "mass", 4) && strncmp(source, "usb", 3) &&
         strncmp(source, "ata", 3) && strncmp(source, "hdd", 3) &&
         strncmp(source, "mmce0:/WLE-Recovered/", 21) &&
-        strncmp(source, "mmce1:/WLE-Recovered/", 21)) {
+        strncmp(source, "mmce1:/WLE-Recovered/", 21) &&
+        strncmp(source, "mmce0:/WLE-Resized/", 19) &&
+        strncmp(source, "mmce1:/WLE-Resized/", 19) &&
+        strncmp(source, "mmce0:/WLE-New/", 15) &&
+        strncmp(source, "mmce1:/WLE-New/", 15)) {
         dashModalMessage(DI_WARNING, "Use a recovered snapshot",
-                         "Choose a USB/HDD .mcd/.ps2 or a verified image in WLE-Recovered. Never install from a live card file.",
+                         "Choose a USB/HDD .mcd/.ps2 or an image in WLE-Recovered, WLE-Resized or WLE-New. Never install from a live card file.",
                          source);
         return;
     }
