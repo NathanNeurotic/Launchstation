@@ -282,6 +282,17 @@ int dashPickPath(const char *title, const char *start, int mode, const char *ext
 	snprintf(out, (size_t)size, "%s", a);
 	return 1;
 }
+/* "f<text>" types the name; no entry cancels. */
+int dashModalFilename(const char *title, char *buf, int max_len, const char *directory)
+{
+	const char *a = next('f');
+
+	printf("NAME|%s|%s\n", title, directory);
+	if (!a)
+		return 0;
+	snprintf(buf, (size_t)max_len + 1, "%s", a);
+	return 1;
+}
 int dashModalConfirm(const char *title, const char *body, const char *ok, int danger)
 {
 	const char *a = next('c');
@@ -398,6 +409,8 @@ int main(int argc, char **argv)
 		printf("ISACTIVE|%d\n", mmceCardIsActive(argv[3] + 9));
 	} else if (!strncmp(argv[3], "pick-switch:", 12)) {
 		dashMmceSwitch(argv[3] + 12);
+	} else if (!strncmp(argv[3], "lib:", 4)) {
+		dashCardSaveLibrary(argv[3] + 4);
 	} else if (!strncmp(argv[3], "all:", 4)) {
 		dashCardAllSaves(argv[3] + 4);
 	} else if (!strncmp(argv[3], "blank:", 6)) {

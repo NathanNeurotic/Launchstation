@@ -61,6 +61,17 @@
 </ul>
 <div class="callout amber"><div class="h">Status</div><p><b>Not yet tested on a console.</b></p></div>
 
+<h2 id="save-library">Save library and sets</h2>
+<p>Saves exported as <code>.psu</code> files can be kept in any folder, away from cards. In that folder, open the folder menu and choose <b>Save library here&hellip;</b>. Launchstation reads every <code>.psu</code> file there and in the folders directly inside it, and lists them by title. Under each title is the file and the save it holds, such as <code>Starter/BASLUS-21050.psu: BASLUS-21050, 120&nbsp;KB</code>. Reading the list changes nothing.</p>
+<ul>
+<li><b>One save:</b> choose it, then <b>Copy to a card&hellip;</b> and pick the card image. The card gets one verified safety copy first, and the save is read back after it is written. A save already on the card by name is skipped, never replaced; so is one that does not fit. The card an MMCE adapter is serving is refused.</li>
+<li><b>Several saves:</b> mark them with <b>Square</b>, then choose <b>Marked saves&hellip;</b>: <b>Copy to a card&hellip;</b> copies them all with a single safety copy of that card; <b>Save as a set&hellip;</b> copies the files into a folder you name; <b>Delete the .psu files&hellip;</b> removes them after a confirmation (cards are not changed, and no safety copy is made of a <code>.psu</code>).</li>
+<li><b>Sets:</b> a folder in the library holding <code>.psu</code> files is a set, such as a starter set of system data and favourite game saves. <b>Apply a set to a card&hellip;</b> lists the sets with their sizes; choose one and a card, confirm, and every save in the set is copied as above. Saving into an existing set adds files and leaves those already there by name as they are.</li>
+<li>Sets are only ever applied when you choose to. Nothing is copied automatically, for example to a new Game ID card.</li>
+<li>A file that is not a valid save is listed as &ldquo;not a usable .psu&rdquo; and can only be deleted. Launchstation&rsquo;s own <code>WLE-</code> folders are not read. Up to 500 files and 64 sets are listed.</li>
+</ul>
+<div class="callout amber"><div class="h">Status</div><p><b>Not yet tested on a console.</b></p></div>
+
 <h2 id="blank-card">New blank card</h2>
 <p>In a folder on USB, HDD, MMCE or the network, open the folder menu and choose <b>New blank card&hellip;</b>, then a size: 8, 16, 32 or 64&nbsp;MB. Launchstation writes an empty PS2 card image named <code>Blank-8MB.mcd</code> (or <code>Blank-8MB-2.mcd</code> and so on), formatted with the PS2&rsquo;s standard layout and timestamped from the console clock. It then reopens the file and checks it: the right size, no saves, every cluster but the root free. If anything fails, the unfinished file is removed. It only ever creates a new file. On MMCE the card goes to <code>mmceN:/WLE-New/</code>, outside <code>MemoryCards/</code>, ready for <b>Install as NEW selectable MMCE card&hellip;</b>. The action is not offered on memory cards and VMCs, which are too small to hold a card image.</p>
 <div class="callout amber"><div class="h">Status</div><p><b>Not yet tested on a console.</b> Whether the sd2psx and the PS2 accept the 16 to 64&nbsp;MB layouts is still to be confirmed.</p></div>

@@ -590,39 +590,31 @@ static void ctExportPsu(const char *image, const char *name)
 		dashModalMessage(DI_WARNING, "Not exported", ctError(r), dest);
 }
 
-static void ctImportPsu(const char *image)
+/* A whole .psu read and checked into s; *why says what is wrong when it is not. */
+static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 {
-	McSaveData s;
-	char psu[MAX_PATH], dir[MAX_PATH], safety[MAX_PATH];
 	u8 *buf;
 	s64 size;
 	u32 done = 0;
 	int fd, n, r;
 
-	safety[0] = 0;
-	dashStrCopy(dir, image, sizeof(dir));
-	dir[ctBaseName(image) - image] = 0;
-	if (!ctWritable(image) || !dashPickPath("Import which .psu?", dir, DASH_PICK_FILE, "PSU", psu, sizeof(psu)))
-		return;
-	if (!ctStacks(psu, image))
-		return;
-
+	memset(s, 0, sizeof(*s));
 	fd = genOpen(psu, FIO_O_RDONLY);
 	if (fd < 0) {
-		dashModalMessage(DI_WARNING, "Not imported", "The .psu could not be opened.", psu);
-		return;
+		*why = "The .psu could not be opened.";
+		return MCV_ERR_IO;
 	}
 	size = genLseek(fd, 0, SEEK_END);
 	if (size <= 0 || size > CT_PSU_MAX || genLseek(fd, 0, SEEK_SET) != 0) {
 		genClose(fd);
-		dashModalMessage(DI_WARNING, "Not imported", "The .psu is empty or larger than any 8 MB card save.", psu);
-		return;
+		*why = "The .psu is empty or larger than any 8 MB card save.";
+		return MCW_ERR_INVALID;
 	}
 	buf = (u8 *)malloc((size_t)size);
 	if (buf == NULL) {
 		genClose(fd);
-		dashModalMessage(DI_WARNING, "Not imported", ctError(MCW_ERR_NOMEM), psu);
-		return;
+		*why = ctError(MCW_ERR_NOMEM);
+		return MCW_ERR_NOMEM;
 	}
 	while (done < (u32)size) {
 		n = genRead(fd, buf + done, (int)((u32)size - done > 65536 ? 65536 : (u32)size - done));
@@ -631,10 +623,29 @@ static void ctImportPsu(const char *image)
 		done += (u32)n;
 	}
 	genClose(fd);
-	r = done == (u32)size ? mcCardSaveFromPsu(buf, (uint32_t)size, &s) : MCV_ERR_IO;
+	r = done == (u32)size ? mcCardSaveFromPsu(buf, (uint32_t)size, s) : MCV_ERR_IO;
 	free(buf);
+	*why = ctError(r);
+	return r;
+}
+
+static void ctImportPsu(const char *image)
+{
+	McSaveData s;
+	char psu[MAX_PATH], dir[MAX_PATH], safety[MAX_PATH];
+	const char *why;
+	int r;
+
+	safety[0] = 0;
+	dashStrCopy(dir, image, sizeof(dir));
+	dir[ctBaseName(image) - image] = 0;
+	if (!ctWritable(image) || !dashPickPath("Import which .psu?", dir, DASH_PICK_FILE, "PSU", psu, sizeof(psu)))
+		return;
+	if (!ctStacks(psu, image))
+		return;
+	r = ctLoadPsu(psu, &s, &why);
 	if (r != MCW_OK) {
-		dashModalMessage(DI_WARNING, "Not imported", ctError(r), psu);
+		dashModalMessage(DI_WARNING, "Not imported", why, psu);
 		return;
 	}
 	if (!dashModalConfirm("Import this save?", "The card gets a safety copy first.", "Import", 0)) {
@@ -1714,6 +1725,541 @@ void dashCardAllSaves(const char *folder)
 out:
 	free(cards);
 	free(list);
+	free(items);
+	free(marks);
+}
+
+/* ---- Save library: the .psu files in a folder; its subfolders are sets ---- */
+
+#define CT_LIB_FILES 500
+#define CT_LIB_SETS 64
+
+typedef struct {
+	char rel[2 * MAX_NAME]; /* path below the library folder: NAME.psu or set/NAME.psu */
+	int set;                /* index into the set names, or -1 at the top level */
+	int ok;                 /* 1 when it reads as a save */
+	McViewSave sv;
+	char title[96];
+	char detail[128];
+} CtPsu;
+
+typedef struct {
+	char folder[MAX_PATH]; /* ends in '/' */
+	char (*sets)[MAX_NAME];
+	int nsets, setcount[CT_LIB_SETS];
+	CtPsu *list;
+	int n, more;
+} CtLib;
+
+/* Name, file count, bytes and icon.sys title of a save, as Card contents lists them. */
+static void ctPsuInfo(const McSaveData *s, McViewSave *sv)
+{
+	uint32_t i;
+
+	memset(sv, 0, sizeof(*sv));
+	memcpy(sv->name, s->entry + 0x40, 32);
+	sv->name[32] = 0;
+	sv->files = s->nfiles;
+	for (i = 0; i < s->nfiles; i++) {
+		const McSaveFile *f = &s->files[i];
+
+		sv->bytes += f->size;
+		if (!sv->has_icon_sys && !strncmp((const char *)f->entry + 0x40, "icon.sys", 32) && f->size >= 260u &&
+		    !memcmp(f->data, "PS2D", 4)) {
+			sv->has_icon_sys = 1;
+			sv->title_break = (uint16_t)(f->data[6] | f->data[7] << 8);
+			memcpy(sv->title, f->data + 192, 68);
+			sv->title[68] = 0;
+			if (sv->title_break > 68u)
+				sv->title_break = 0;
+		}
+	}
+}
+
+/* out = the library folder + rel; -1 (and an empty out) when it does not fit. */
+static int ctLibPath(const CtLib *lib, const char *rel, char *out, size_t size)
+{
+	size_t fl = strlen(lib->folder), rl = strlen(rel);
+
+	out[0] = 0;
+	if (fl + rl >= size)
+		return -1;
+	memcpy(out, lib->folder, fl);
+	memcpy(out + fl, rel, rl + 1);
+	return 0;
+}
+
+static int ctLibCmp(const void *a, const void *b)
+{
+	const CtPsu *x = a, *y = b;
+	int c = strcasecmp(x->title, y->title);
+
+	return c != 0 ? c : strcmp(x->rel, y->rel);
+}
+
+static int ctLibSetCmp(const void *a, const void *b)
+{
+	return strcasecmp((const char *)a, (const char *)b);
+}
+
+/* Lists every .psu in lib->folder and in the folders directly inside it
+ * (except Launchstation's WLE-* folders), reads each one and sorts them by
+ * title. Folders holding at least one .psu are the sets. 0, or -1 without memory. */
+static int ctLibScan(CtLib *lib)
+{
+	char dir[MAX_PATH], path[MAX_PATH];
+	iox_dirent_t ent;
+	McSaveData s;
+	const char *why;
+	int fd, i, k, nsub = 0;
+
+	lib->n = lib->nsets = lib->more = 0;
+	for (i = -1; i < nsub; i++) {
+		if (snprintf(dir, sizeof(dir), "%s%s%s", lib->folder, i < 0 ? "" : lib->sets[i], i < 0 ? "" : "/") >=
+		    (int)sizeof(dir))
+			continue;
+		fd = genDopen(dir);
+		if (fd < 0)
+			continue;
+		memset(&ent, 0, sizeof(ent));
+		while (fileXioDread(fd, &ent) > 0) {
+			if (i < 0 && ent.name[0] != '.' && FIO_S_ISDIR(ent.stat.mode)) {
+				if (strncmp(ent.name, "WLE-", 4) && strlen(ent.name) < MAX_NAME) {
+					if (nsub < CT_LIB_SETS)
+						dashStrCopy(lib->sets[nsub++], ent.name, MAX_NAME);
+					else
+						lib->more = 1;
+				}
+			} else if (ent.name[0] != '.' && !FIO_S_ISDIR(ent.stat.mode) && genCmpFileExt(ent.name, "PSU")) {
+				CtPsu *p = &lib->list[lib->n];
+
+				if (lib->n >= CT_LIB_FILES ||
+				    snprintf(p->rel, sizeof(p->rel), "%s%s%s", i < 0 ? "" : lib->sets[i], i < 0 ? "" : "/",
+				             ent.name) >= (int)sizeof(p->rel)) {
+					lib->more = 1;
+				} else {
+					p->set = i;
+					lib->n++;
+				}
+			}
+			memset(&ent, 0, sizeof(ent));
+		}
+		genDclose(fd);
+	}
+	/* read each file only now: the folder listings above are closed (MMCE allows one open handle) */
+	for (i = 0; i < lib->n; i++) {
+		CtPsu *p = &lib->list[i];
+
+		dashLoadingStatus(p->rel, i, lib->n);
+		p->ok = ctLibPath(lib, p->rel, path, sizeof(path)) == 0 && ctLoadPsu(path, &s, &why) == MCW_OK;
+		if (p->ok) {
+			ctPsuInfo(&s, &p->sv);
+			mcCardFreeSave(&s);
+			if (p->sv.has_icon_sys && p->sv.title[0])
+				dashSjisTitle(p->title, sizeof(p->title), (const unsigned char *)p->sv.title);
+			else
+				dashStrCopy(p->title, p->sv.name, sizeof(p->title));
+			snprintf(p->detail, sizeof(p->detail), "%.48s: %.32s, %u KB", p->rel, p->sv.name,
+			         (unsigned)((p->sv.bytes + 1023u) / 1024u) % 1000000u);
+		} else {
+			memset(&p->sv, 0, sizeof(p->sv));
+			dashStrCopy(p->title, ctBaseName(p->rel), sizeof(p->title));
+			snprintf(p->detail, sizeof(p->detail), "%.48s: not a usable .psu", p->rel);
+		}
+	}
+	qsort(lib->list, (size_t)lib->n, sizeof(*lib->list), ctLibCmp);
+
+	/* the sets: folders with at least one .psu, sorted, renumbered */
+	for (k = 0; k < nsub; k++)
+		lib->setcount[k] = 0;
+	for (i = 0; i < lib->n; i++)
+		if (lib->list[i].set >= 0)
+			lib->setcount[lib->list[i].set]++;
+	for (k = 0; k < nsub; k++)
+		if (lib->setcount[k])
+			memmove(lib->sets[lib->nsets++], lib->sets[k], MAX_NAME);
+	qsort(lib->sets, (size_t)lib->nsets, MAX_NAME, ctLibSetCmp);
+	for (k = 0; k < lib->nsets; k++)
+		lib->setcount[k] = 0;
+	for (i = 0; i < lib->n; i++) {
+		CtPsu *p = &lib->list[i];
+		size_t sl = p->set >= 0 ? (size_t)(strchr(p->rel, '/') - p->rel) : 0;
+
+		if (p->set < 0)
+			continue;
+		for (k = 0; k < lib->nsets && (strlen(lib->sets[k]) != sl || strncmp(lib->sets[k], p->rel, sl)); k++)
+			;
+		p->set = k < lib->nsets ? k : -1;
+		if (p->set >= 0)
+			lib->setcount[k]++;
+	}
+	return 0;
+}
+
+/* Copies the chosen .psu files to one card image: one verified safety copy
+ * of that card first, every save read back, nothing on the card replaced.
+ * A save already there by name, or one that does not fit, is skipped; any
+ * other failure stops. pick[i] selects lib->list[i]. 0 when cancelled. */
+static int ctLibToCard(const CtLib *lib, const unsigned char *pick, const char *what)
+{
+	McSaveData s;
+	char dest[MAX_PATH], safety[MAX_PATH], path[MAX_PATH], body[640], title[64], first[33] = "";
+	const char *why;
+	int i, n = 0, r, done = 0, skipped = 0, failed = 0, left = 0, first_r = MCW_OK, c;
+
+	for (i = 0; i < lib->n; i++)
+		n += pick[i] != 0;
+	if (!dashPickPath(n == 1 ? "Copy the save to which card image?" : "Copy the saves to which card image?",
+	                  lib->folder, DASH_PICK_FILE, NULL, dest, sizeof(dest)))
+		return 0;
+	if (!ctStacks(lib->folder, dest) || !ctWritable(dest))
+		return 0;
+	snprintf(title, sizeof(title), "%s %d save%s?", what, n, n == 1 ? "" : "s");
+	snprintf(body, sizeof(body),
+	         "%s gets one safety copy first. A save already there by name is skipped, never replaced; so is one that does not fit.",
+	         ctBaseName(dest));
+	if (!dashModalConfirm(title, body, "Copy", 0))
+		return 0;
+
+	safety[0] = 0;
+	dashLoadingBegin("Copying saves");
+	for (i = 0; i < lib->n; i++) {
+		const CtPsu *p = &lib->list[i];
+
+		if (!pick[i])
+			continue;
+		if (failed) {
+			left++;
+			continue;
+		}
+		dashLoadingStatus(p->title, done + skipped, n);
+		r = ctLibPath(lib, p->rel, path, sizeof(path)) == 0 ? ctLoadPsu(path, &s, &why) : MCV_ERR_IO;
+		if (r == MCW_OK) {
+			r = ctPutSave(dest, &s, safety, sizeof(safety));
+			mcCardFreeSave(&s);
+		}
+		if (r == MCW_OK) {
+			done++;
+			continue;
+		}
+		if (!first[0]) {
+			dashStrCopy(first, p->ok ? p->sv.name : ctBaseName(p->rel), sizeof(first));
+			first_r = r;
+		}
+		if (r == MCW_ERR_EXISTS || r == MCW_ERR_FULL || r == MCW_ERR_UNSUPPORTED || r == MCW_ERR_INVALID)
+			skipped++;
+		else
+			failed++;
+	}
+	dashLoadingEnd();
+
+	if (done)
+		c = snprintf(body, sizeof(body), "%d save%s copied and verified.", done, done == 1 ? "" : "s");
+	else
+		c = snprintf(body, sizeof(body), "Nothing copied.");
+	if (skipped)
+		c += snprintf(body + c, sizeof(body) - c, " %d skipped.", skipped);
+	if (failed)
+		c += snprintf(body + c, sizeof(body) - c, " %d failed.", failed);
+	if (skipped || failed)
+		c += snprintf(body + c, sizeof(body) - c, " First: %s: %s", first, ctError(first_r));
+	if (left)
+		snprintf(body + c, sizeof(body) - c, " Stopped there; %d not tried.", left);
+	if (safety[0])
+		snprintf(dest, sizeof(dest), "Safety copy: %.1000s", safety);
+	dashModalMessage(failed || skipped ? DI_WARNING : DI_MC, failed ? "Not all done" : "Done", body,
+	                 safety[0] ? dest : NULL);
+	return 1;
+}
+
+/* A set name is one folder name, not starting with '.' or WLE- (those
+ * folders are not read as sets). The filename keyboard filters the rest. */
+static int ctSetNameOk(const char *name)
+{
+	return name[0] && name[0] != '.' && name[0] != ' ' && strncmp(name, "WLE-", 4) && !strpbrk(name, "/\\:");
+}
+
+/* Copies the chosen .psu files into the set folder (made if new). A file of
+ * the same name already in the set is left as it is. 0 when cancelled. */
+static int ctLibSaveSet(const CtLib *lib, const unsigned char *pick)
+{
+	char name[72] = "", dir[MAX_PATH], path[MAX_PATH], from[MAX_PATH], body[256];
+	int i, n = 0, done = 0, same = 0, failed = 0, fd;
+
+	for (i = 0; i < lib->n; i++)
+		n += pick[i] != 0;
+	if (!dashModalFilename("Name of the set", name, 64, lib->folder))
+		return 0;
+	if (!ctSetNameOk(name)) {
+		dashModalMessage(DI_WARNING, "Choose another name", "A set's name cannot start with . or WLE-.", name);
+		return 0;
+	}
+	if (snprintf(dir, sizeof(dir), "%s%s/", lib->folder, name) >= (int)sizeof(dir))
+		return 0;
+	if (!dashModalConfirm(wleExists(dir) ? "Add to this set?" : "Make this set?",
+	                      "The marked .psu files are copied into the set's folder and read back. A file already there by name is left as it is.",
+	                      "Save", 0))
+		return 0;
+	genMkdir(dir, fileMode);
+	fd = genDopen(dir);
+	if (fd < 0) {
+		dashModalMessage(DI_WARNING, "Not done", "The set's folder could not be made.", dir);
+		return 1;
+	}
+	genDclose(fd);
+
+	dashLoadingBegin("Saving the set");
+	for (i = 0; i < lib->n; i++) {
+		const CtPsu *p = &lib->list[i];
+		u8 *buf;
+		s64 size;
+		u32 got = 0;
+		int k;
+
+		if (!pick[i])
+			continue;
+		dashLoadingStatus(p->title, done + same + failed, n);
+		if (snprintf(path, sizeof(path), "%s%s", dir, ctBaseName(p->rel)) >= (int)sizeof(path)) {
+			failed++;
+			continue;
+		}
+		if (wleExists(path)) { /* also the file itself, when marked inside this set */
+			same++;
+			continue;
+		}
+		fd = ctLibPath(lib, p->rel, from, sizeof(from)) == 0 ? genOpen(from, FIO_O_RDONLY) : -1;
+		size = fd >= 0 ? genLseek(fd, 0, SEEK_END) : -1;
+		buf = size > 0 && size <= CT_PSU_MAX && genLseek(fd, 0, SEEK_SET) == 0 ? (u8 *)malloc((size_t)size) : NULL;
+		while (buf != NULL && got < (u32)size && (k = genRead(fd, buf + got, (int)((u32)size - got))) > 0)
+			got += (u32)k;
+		if (fd >= 0)
+			genClose(fd);
+		if (buf != NULL && got == (u32)size && ctWriteFile(path, buf, got) == 0)
+			done++;
+		else
+			failed++;
+		free(buf);
+	}
+	dashLoadingEnd();
+	i = snprintf(body, sizeof(body), "%d file%s copied into %s.", done, done == 1 ? "" : "s", name);
+	if (same)
+		i += snprintf(body + i, sizeof(body) - i, " %d already there.", same);
+	if (failed)
+		snprintf(body + i, sizeof(body) - i, " %d could not be copied.", failed);
+	dashModalMessage(failed ? DI_WARNING : DI_MC, failed ? "Not all done" : "Done", body, dir);
+	return 1;
+}
+
+/* Removes the chosen .psu files, after one confirmation. */
+static int ctLibDelete(const CtLib *lib, const unsigned char *pick)
+{
+	char path[MAX_PATH], title[48], body[160];
+	int i, n = 0, done = 0, failed = 0;
+
+	for (i = 0; i < lib->n; i++)
+		n += pick[i] != 0;
+	snprintf(title, sizeof(title), "Delete %d .psu file%s?", n, n == 1 ? "" : "s");
+	if (!dashModalConfirm(title, "No safety copy is made of a .psu file. Cards are not changed.", "Delete", 1))
+		return 0;
+	for (i = 0; i < lib->n; i++) {
+		if (!pick[i])
+			continue;
+		if (ctLibPath(lib, lib->list[i].rel, path, sizeof(path)) < 0 || genRemove(path) < 0 || wleExists(path))
+			failed++;
+		else
+			done++;
+	}
+	if (failed) {
+		snprintf(body, sizeof(body), "%d deleted, %d could not be deleted.", done, failed);
+		dashModalMessage(DI_WARNING, "Not all done", body, lib->folder);
+	} else {
+		dashToast(DASH_TOAST_OK, n == 1 ? ".psu deleted" : ".psu files deleted");
+	}
+	return 1;
+}
+
+/* One set, chosen from a list, copied to a card. 1 when anything may have changed. */
+static int ctLibApplySet(const CtLib *lib)
+{
+	DashMenuItem *items;
+	unsigned char *pick;
+	char (*details)[48];
+	char what[MAX_NAME + 16];
+	int k, i, r;
+
+	items = malloc((size_t)lib->nsets * sizeof(*items));
+	details = malloc((size_t)lib->nsets * sizeof(*details));
+	if (items == NULL || details == NULL) {
+		free(items);
+		free(details);
+		return 0;
+	}
+	for (k = 0; k < lib->nsets; k++) {
+		snprintf(details[k], sizeof(details[k]), "%d save%s", lib->setcount[k], lib->setcount[k] == 1 ? "" : "s");
+		items[k].icon = DI_FOLDER;
+		items[k].label = lib->sets[k];
+		items[k].detail = details[k];
+		items[k].disabled = 0;
+	}
+	r = dashModalMenu("Apply which set?", "copied to a card; nothing on it is replaced", items, lib->nsets, 0);
+	free(items);
+	free(details);
+	if (r < 0)
+		return 0;
+	pick = malloc((size_t)lib->n);
+	if (pick == NULL)
+		return 0;
+	for (i = 0; i < lib->n; i++)
+		pick[i] = lib->list[i].set == r;
+	snprintf(what, sizeof(what), "Apply set %.64s: copy", lib->sets[r]);
+	r = ctLibToCard(lib, pick, what);
+	free(pick);
+	return r;
+}
+
+/* What to do with one .psu. 1 when anything may have changed. */
+static int ctLibFileMenu(const CtLib *lib, int i)
+{
+	DashMenuItem items[2];
+	unsigned char *pick;
+	int r;
+
+	items[0].icon = DI_FILE;
+	items[0].label = "Copy to a card...";
+	items[0].detail = lib->list[i].ok ? "verified; the card gets a safety copy first" : "not a usable .psu";
+	items[0].disabled = !lib->list[i].ok;
+	items[1].icon = DI_WARNING;
+	items[1].label = "Delete this .psu...";
+	items[1].detail = NULL;
+	items[1].disabled = 0;
+	r = dashModalMenu(lib->list[i].title, lib->list[i].rel, items, 2, items[0].disabled ? 1 : 0);
+	if (r < 0 || items[r].disabled)
+		return 0;
+	pick = calloc((size_t)lib->n, 1);
+	if (pick == NULL)
+		return 0;
+	pick[i] = 1;
+	r = r == 0 ? ctLibToCard(lib, pick, "Copy") : ctLibDelete(lib, pick);
+	free(pick);
+	return r;
+}
+
+void dashCardSaveLibrary(const char *folder)
+{
+	CtLib lib;
+	DashMenuItem *items = NULL;
+	unsigned char *marks = NULL;
+	char subtitle[96], marked[48], sets[48];
+	int r, i, nm, sel = 0, act;
+	size_t len;
+
+	memset(&lib, 0, sizeof(lib));
+	len = strlen(folder);
+	if (len == 0 || len + 2 > sizeof(lib.folder))
+		return;
+	memcpy(lib.folder, folder, len + 1);
+	if (lib.folder[len - 1] != '/')
+		memcpy(lib.folder + len, "/", 2);
+	lib.sets = malloc(CT_LIB_SETS * sizeof(*lib.sets));
+	lib.list = malloc(CT_LIB_FILES * sizeof(*lib.list));
+	items = malloc((CT_LIB_FILES + 2) * sizeof(*items));
+	marks = malloc(CT_LIB_FILES + 2);
+	if (lib.sets == NULL || lib.list == NULL || items == NULL || marks == NULL) {
+		dashModalMessage(DI_WARNING, "Cannot show the saves", ctError(MCW_ERR_NOMEM), folder);
+		goto out;
+	}
+	for (;;) { /* read again after anything that may have changed the files */
+		dashLoadingBegin("Reading .psu files");
+		ctLibScan(&lib);
+		dashLoadingEnd();
+		if (lib.n == 0) {
+			dashModalMessage(DI_MC, "No .psu files here",
+			                 "No .psu save files were found in this folder or the folders directly inside it.",
+			                 lib.folder);
+			break;
+		}
+		/* row 0 acts on the marked files, row 1 applies a set; files follow, and Square marks them */
+		items[0].icon = DI_CHECK;
+		items[0].label = "Marked saves...";
+		items[0].detail = marked;
+		items[0].disabled = 0;
+		items[1].icon = DI_FOLDER;
+		items[1].label = "Apply a set to a card...";
+		if (lib.nsets)
+			snprintf(sets, sizeof(sets), "%d set%s: the folders here with .psu files", lib.nsets,
+			         lib.nsets == 1 ? "" : "s");
+		else
+			snprintf(sets, sizeof(sets), "no sets yet: mark saves, then Save as a set");
+		items[1].detail = sets;
+		items[1].disabled = lib.nsets == 0;
+		marks[0] = marks[1] = 2;
+		for (i = 0; i < lib.n; i++) {
+			items[i + 2].icon = DI_MC;
+			items[i + 2].label = lib.list[i].title;
+			items[i + 2].detail = lib.list[i].detail;
+			items[i + 2].disabled = 0;
+			marks[i + 2] = 0;
+		}
+		snprintf(subtitle, sizeof(subtitle), "%d .psu file%s, %d set%s%s", lib.n, lib.n == 1 ? "" : "s", lib.nsets,
+		         lib.nsets == 1 ? "" : "s", lib.more ? " (list shortened)" : "");
+		if (sel > lib.n + 1)
+			sel = lib.n + 1;
+		for (;;) { /* until something may have changed the files */
+			for (i = 2, nm = 0; i < lib.n + 2; i++)
+				nm += marks[i] == 1;
+			if (nm)
+				snprintf(marked, sizeof(marked), "%d marked: copy, save as a set or delete", nm);
+			else
+				snprintf(marked, sizeof(marked), "mark saves with Square first");
+			dashModalSetMarks(marks);
+			r = dashModalMenu("Save library", subtitle, items, lib.n + 2, sel);
+			if (r < 0)
+				goto out;
+			sel = r;
+			for (i = 2, nm = 0; i < lib.n + 2; i++) /* marks change inside the menu */
+				nm += marks[i] == 1;
+			if (r == 1 || r >= 2) {
+				if (r == 1 ? ctLibApplySet(&lib) : ctLibFileMenu(&lib, r - 2))
+					break;
+				continue;
+			}
+			if (nm == 0) {
+				dashToast(DASH_TOAST_INFO, "Mark saves with Square first");
+				continue;
+			}
+			{
+				DashMenuItem acts[3];
+				char title[48];
+				int bad = 0;
+
+				for (i = 0; i < lib.n; i++)
+					bad += marks[i + 2] == 1 && !lib.list[i].ok;
+				snprintf(title, sizeof(title), "%d marked save%s", nm, nm == 1 ? "" : "s");
+				acts[0].icon = DI_FILE;
+				acts[0].label = "Copy to a card...";
+				acts[0].detail = bad ? "a marked file is not a usable .psu" : "verified; the card gets one safety copy first";
+				acts[0].disabled = bad != 0;
+				acts[1].icon = DI_FOLDER;
+				acts[1].label = "Save as a set...";
+				acts[1].detail = "copies them into a named folder here";
+				acts[1].disabled = 0;
+				acts[2].icon = DI_WARNING;
+				acts[2].label = "Delete the .psu files...";
+				acts[2].detail = "cards are not changed";
+				acts[2].disabled = 0;
+				act = dashModalMenu(title, NULL, acts, 3, bad ? 1 : 0);
+				if (act < 0 || acts[act].disabled)
+					continue;
+				if (act == 0 ? ctLibToCard(&lib, marks + 2, "Copy") :
+				    act == 1 ? ctLibSaveSet(&lib, marks + 2) :
+				               ctLibDelete(&lib, marks + 2))
+					break;
+			}
+		}
+	}
+out:
+	free(lib.sets);
+	free(lib.list);
 	free(items);
 	free(marks);
 }

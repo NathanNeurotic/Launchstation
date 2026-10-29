@@ -14,6 +14,12 @@ void dashCardNewBlank(const char *folder);
  * actions as "Card contents..." on its own card. Only reads until one is used. */
 void dashCardAllSaves(const char *folder);
 
+/* "Save library here...": the .psu saves in folder and the folders directly
+ * inside it, sorted by title. Copies them to a card (one verified safety copy
+ * of that card, nothing on it replaced), saves marked ones as a named set (a
+ * subfolder), applies a set to a card, or deletes .psu files. */
+void dashCardSaveLibrary(const char *folder);
+
 /* MMCE: show which card image the device serves (confirmed by content), and
  * switch to a numbered card with confirmation (src/mmce_card_switch.c). */
 void dashMmceShowActive(int unit);

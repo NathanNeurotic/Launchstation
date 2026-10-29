@@ -29,8 +29,8 @@ card files on USB, MX4SIO or the internal HDD.
 | Backup by save (per-save versions on Drive) | Yes, optional | **Missing** (code audit 2026-10-26): only whole-card history is uploaded |
 | Memory card manager (browse saves, 3D icons) | Yes, per card and "All saves" view | **Partial**: **Card contents...** opens a card image and lists its saves with titles, file counts, sizes and free space ([Saves](../docs-site/content/saves.html), added in [#226](https://github.com/NathanNeurotic/Launchstation/pull/226)). **All saves here...** lists the saves of every card image in a folder and its subfolders together, sorted by title with each save's card named (#232). No 3D icons |
 | Copy / move / delete saves across cards, multi-select | Yes | **Partial**: **Card contents...** copies, moves and deletes saves inside card images, including MMCE cards the adapter is not serving, one save at a time, with a verified safety copy first and a read-back after (#226); the same actions open from **All saves here...** for saves on any card in a folder, where **Square** marks several saves for one batch copy, move or delete with one safety copy per card (#232). Multi-select copy/cut/paste/delete works on `mc`/`vmc` folders; those copies are checked for short reads/writes, not read back |
-| The Library (saves kept off cards) | Yes | **Missing** |
-| Templates (default save sets applied to game cards) | Yes | **Missing** |
+| The Library (saves kept off cards) | Yes | **Yes, folder-based**: **Save library here...** lists the `.psu` saves in a folder and the folders inside it, sorted by title, and copies them to a card (one verified safety copy of that card, nothing on it replaced) or deletes them (#232). The library is any folder you choose; there is no cloud copy of it |
+| Templates (default save sets applied to game cards) | Yes | **Partial**: a set is a named folder of `.psu` files in the library, made with **Save as a set...**; **Apply a set to a card...** copies it to a card you pick after a confirmation, skipping saves already there by name (#232). Sets are never applied automatically, for example to a new Game ID card |
 | Create / resize / rename / check / delete cards, convert to Game ID | Yes, with a safety copy | **Partial**: copy a card to a new 8-64 MB size, "Install as NEW card", and select a numbered card with **Make this the active MMCE card...** (#226); file-level rename/delete. **New blank card...** in the File Browser makes an empty 8-64 MB card image, and **Split into Game ID cards...** makes one card per game from a card's saves, installed with **Install as MMCE Game ID card...** (#232; pending hardware validation). No card check. Neutrino selects a Game ID card on launch |
 | OPL VMC and USB/HDD/MX4SIO card files | Yes | **Partial**: VMC mounting, card-image backup/export, and **Card contents...** on `.mcd`, `.ps2` (read-only), `.bin`, `.vmc` and `.mc2` images are supported; `.zip` is not |
 | Works without an sd2psx | Yes (regular cards, USB/HDD/MX4SIO) | Regular memory cards supported in the file browser |
@@ -79,8 +79,8 @@ The detailed, verified order is in the [parity plan](plans/2026-10-26-sd2cloud-p
    automatic safety copy before every card write. Next: hardware validation (the console test matrix in #226),
    then restore previews, which build on the same parser. "All saves" and batch copy/move/delete of marked saves are
    in (#232).
-4. Templates, the Library and per-save backup versions are later work that needs design decisions; they are not
-   cheap first steps.
+4. A folder-based Library and manually applied sets (templates) are in (#232). Per-save backup versions are later
+   work, and applying a set automatically (for example to a new Game ID card) needs its own decision.
 5. Keep ORBIT-only ideas (RetroAchievements agent, in-game pause menu) as separate proposals; they need a Neutrino
    fork or an in-game agent and are a different risk class.
 6. Do not copy code from either project without settling the licence question above.

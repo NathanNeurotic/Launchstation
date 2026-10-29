@@ -2352,8 +2352,8 @@ static void actionsMenu(void)
 	const char *psu_label;
 	int in_folder = fb.dir[0] && !isMisc(fb.dir);
 	int is_elf = 0, has_target = (fb.nmarked > 0 || f != NULL);
-	DashMenuItem items[48];
-	int ids[48], n = 0, r, sw_card, sw_chan;
+	DashMenuItem items[52];
+	int ids[52], n = 0, r, sw_card, sw_chan;
 	char marked[24], sort_detail[48], game_id[11];
 	enum {
 		F_OPEN,
@@ -2367,6 +2367,7 @@ static void actionsMenu(void)
 		F_NEWDIR,
 		F_NEW_BLANK_CARD,
 		F_ALL_SAVES,
+		F_SAVE_LIBRARY,
 		F_NEWICON,
 		F_SIZE,
 		F_EDIT,
@@ -2447,6 +2448,8 @@ static void actionsMenu(void)
 			ADD(DI_MC, "New blank card...", "empty 8 to 64 MB .mcd", 0, F_NEW_BLANK_CARD);
 		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
 			ADD(DI_MC, "All saves here...", "every card image in this folder and the ones inside it", 0, F_ALL_SAVES);
+		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
+			ADD(DI_FOLDER, "Save library here...", ".psu saves here and in the folders inside it", 0, F_SAVE_LIBRARY);
 		if (en[NEWICON])
 			ADD(DI_IMAGE, "Create folder icon...", "icon.sys", 0, F_NEWICON);
 		ADD(DI_INFO, "Size", NULL, !has_target || !en[GETSIZE], F_SIZE);
@@ -2555,6 +2558,12 @@ static void actionsMenu(void)
 		case F_ALL_SAVES:
 			if (prepareOp()) {
 				dashCardAllSaves(fb.dir);
+				refresh();
+			}
+			break;
+		case F_SAVE_LIBRARY:
+			if (prepareOp()) {
+				dashCardSaveLibrary(fb.dir);
 				refresh();
 			}
 			break;

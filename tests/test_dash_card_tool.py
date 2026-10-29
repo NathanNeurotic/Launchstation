@@ -675,7 +675,105 @@ lines = run("all:mass:/empty")
 assert kind(lines, "MESSAGE|1|No saves found|No memory card image"), lines
 shutil.rmtree(host("mass:/all"))
 
+# Save library: .psu files in a folder, its subfolders as sets
+L = "mass:/L.mcd"
+put(L, std)
+host("mass:/lib/Starter").mkdir(parents=True)
+for row in range(3, 7):                                                  # export all four saves
+    run(L, "m%d" % row, "m2", "pmass:/lib/")
+for n in ("BASLUS-99999", "NOICON"):
+    shutil.copy(host("mass:/lib/%s.psu" % n), host("mass:/lib/Starter/%s.psu" % n))
+host("mass:/lib/bad.psu").write_bytes(b"\x27\x84" + bytes(2000))
+host("mass:/lib/WLE-Safety").mkdir()
+shutil.copy(host("mass:/lib/NOICON.psu"), host("mass:/lib/WLE-Safety/NOICON.psu"))  # never a set
+
+
+def lib_rows():
+    m = kind(run("lib:mass:/lib", "m-1"), "MENU|Save library|")[0].split("|")
+    return m[2], [r.split("~")[1] if "~" in r else r for r in m[3:]]
+
+
+sub, rows = lib_rows()
+assert sub == "7 .psu files, 1 set", sub
+assert rows[0] == "mark saves with Square first" and rows[1] == "1 set: the folders here with .psu files", rows[:2]
+files = rows[2:]
+assert sorted(files) == sorted(["BESLES-12345GAME.psu: BESLES-12345GAME, 7 KB", "BASLUS-99999.psu: BASLUS-99999, 3 KB",
+                                "BISLPS-00001.psu: BISLPS-00001, 1 KB", "NOICON.psu: NOICON, 3 KB",
+                                "Starter/BASLUS-99999.psu: BASLUS-99999, 3 KB", "Starter/NOICON.psu: NOICON, 3 KB",
+                                "bad.psu: not a usable .psu"]), files
+
+
+def lib_row(detail):
+    return lib_rows()[1].index(detail)
+
+
+# one file to a card: one safety copy, read back
+X = "mass:/X.mcd"
+blank(X)
+lines = run("lib:mass:/lib", "m%d" % lib_row("BESLES-12345GAME.psu: BESLES-12345GAME, 7 KB"), "m0", "pmass:/X.mcd", "c1")
+assert kind(lines, "CONFIRM|Copy 1 save?|X.mcd gets one safety copy first."), lines
+assert kind(lines, "MESSAGE|4|Done|1 save copied and verified.|Safety copy: mass:/WLE-Safety/X-0001.mcd"), lines
+assert saves(X)["BESLES-12345GAME"] == saves(L)["BESLES-12345GAME"]
+# a file that is not a save cannot be copied, only deleted
+lines = run("lib:mass:/lib", "m%d" % lib_row("bad.psu: not a usable .psu"), "m-1")
+assert "!Copy to a card..." in kind(lines, "MENU|bad.psu|")[0], lines
+# apply the set: both saves copied, one more safety copy of the card
+lines = run("lib:mass:/lib", "m1", "m0", "pmass:/X.mcd", "c1")
+assert kind(lines, "MENU|Apply which set?|") and "Starter~2 saves" in kind(lines, "MENU|Apply which set?|")[0], lines
+assert kind(lines, "CONFIRM|Apply set Starter: copy 2 saves?|"), lines
+assert kind(lines, "MESSAGE|4|Done|2 saves copied and verified."), lines
+assert set(saves(X)) == {"BESLES-12345GAME", "BASLUS-99999", "NOICON"} and saves(X)["NOICON"] == saves(L)["NOICON"]
+assert safeties("mass:/WLE-Safety", "X") == ["X-0001.mcd", "X-0002.mcd"]
+# again: nothing replaced, nothing written, not even a safety copy
+x_before = sha(X)
+lines = run("lib:mass:/lib", "m1", "m0", "pmass:/X.mcd", "c1")
+assert kind(lines, "MESSAGE|1|Done|Nothing copied. 2 skipped. First: "), lines
+assert sha(X) == x_before and safeties("mass:/WLE-Safety", "X") == ["X-0001.mcd", "X-0002.mcd"]
+# the served MMCE card is refused before anything is written
+snap = sha(C1)
+lines = run("lib:mass:/lib", "m1", "m0", "p" + C1, "m-1", active=C1)
+assert any("This card is in use" in l for l in kind(lines, "MESSAGE|")) and not kind(lines, "CONFIRM|"), lines
+assert sha(C1) == snap
+# nothing marked
+lines = run("lib:mass:/lib", "m0", "m-1")
+assert kind(lines, "TOAST|3|Mark saves with Square first"), lines
+# mark two and save them as a new set; the files are copied byte for byte
+pick = ",".join(str(lib_row(d)) for d in ("BISLPS-00001.psu: BISLPS-00001, 1 KB", "BESLES-12345GAME.psu: BESLES-12345GAME, 7 KB"))
+lines = run("lib:mass:/lib", "s" + pick, "m0", "m1", "fMy Set", "c1")
+assert kind(lines, "MENU|2 marked saves|"), lines
+assert kind(lines, "NAME|Name of the set|mass:/lib/"), lines
+assert kind(lines, "CONFIRM|Make this set?|"), lines
+assert kind(lines, "MESSAGE|4|Done|2 files copied into My Set.|mass:/lib/My Set/"), lines
+for n in ("BISLPS-00001", "BESLES-12345GAME"):
+    assert host("mass:/lib/My Set/%s.psu" % n).read_bytes() == host("mass:/lib/%s.psu" % n).read_bytes()
+assert lib_rows()[0] == "9 .psu files, 2 sets"
+# saving into it again leaves what is there
+pick = ",".join(str(lib_row(d)) for d in ("BISLPS-00001.psu: BISLPS-00001, 1 KB", "BESLES-12345GAME.psu: BESLES-12345GAME, 7 KB"))
+lines = run("lib:mass:/lib", "s" + pick, "m0", "m1", "fMy Set", "c1")
+assert kind(lines, "CONFIRM|Add to this set?|") and kind(lines, "MESSAGE|4|Done|0 files copied into My Set. 2 already there."), lines
+# names that would not be read back as a set are refused
+lines = run("lib:mass:/lib", "s" + pick, "m0", "m1", "fWLE-x", "m-1")
+assert kind(lines, "MESSAGE|1|Choose another name|"), lines
+# a marked file that is not a save: copying is off, deleting works
+bad = str(lib_row("bad.psu: not a usable .psu"))
+lines = run("lib:mass:/lib", "s" + bad, "m0", "m-1", "m-1")
+assert "!Copy to a card..." in kind(lines, "MENU|1 marked save|")[0], lines
+lines = run("lib:mass:/lib", "s" + bad, "m0", "m2", "c1", "m-1")
+assert kind(lines, "CONFIRM|Delete 1 .psu file?|") and kind(lines, "TOAST|1|.psu deleted"), lines
+assert not host("mass:/lib/bad.psu").exists()
+# a card write failure stops the batch and says what was not tried
+blank("mass:/Y.mcd")
+pick = ",".join(str(lib_row(d)) for d in ("BISLPS-00001.psu: BISLPS-00001, 1 KB", "BESLES-12345GAME.psu: BESLES-12345GAME, 7 KB", "NOICON.psu: NOICON, 3 KB"))
+lines = run("lib:mass:/lib", "s" + pick, "m0", "m0", "pmass:/Y.mcd", "c1", "m-1", env={"FAIL_WRITE_AT": "2"})
+msg = kind(lines, "MESSAGE|1|Not all done|")
+assert msg and " 1 failed. First: " in msg[0] and "Stopped there; " in msg[0], lines
+# nothing here
+host("mass:/nolib").mkdir()
+lines = run("lib:mass:/nolib")
+assert kind(lines, "MESSAGE|4|No .psu files here|"), lines
+shutil.rmtree(host("mass:/lib"))
+
 print("Card contents tool: listing, copy, move, delete, .psu round trip, safety copies pruned to ten, "
       "served MMCE card never written, served-card detection by number and content, guarded switch (also to a clone), "
-      "mounted VMC blocks writes, 250+ save cards, copy to a new card size, Game ID split, blank cards, all saves across cards (also 250+ saves on one card, 64+ folders), marked-save batches, refusals cost no safety copy, write failures reported, "
+      "mounted VMC blocks writes, 250+ save cards, copy to a new card size, Game ID split, blank cards, all saves across cards (also 250+ saves on one card, 64+ folders), marked-save batches, .psu library and sets, refusals cost no safety copy, write failures reported, "
       "one open file at a time: OK")
