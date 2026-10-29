@@ -81,6 +81,18 @@ try:
 finally:
     notes.revision_changelog = original_reader
 
+# Every published ZIP name ends with the build number, and the notes say which build.
+versioned = notes.render(repo, revision, previous, 123, changes, digests, "284")
+assert versioned.startswith("**Launchstation build `284`** (`aaaaaaa`)")
+for name in ("APP_LAUNCHSTATION-284.zip", "APP_LAUNCHSTATION-DS-284.zip"):
+    assert f"/releases/download/latest/{name}" in versioned
+    assert f"  {name}\n" in versioned
+for name in ("APP_LAUNCHSTATION.psu", "APP_LAUNCHSTATION-DS.psu", "LAUNCHSTATION.ELF", "BOOT.ELF"):
+    assert f"/releases/download/latest/{name}" in versioned
+assert "/releases/download/latest/APP_LAUNCHSTATION.zip" not in versioned
+assert notes.published_name("APP_LAUNCHSTATION.psu", "284") == "APP_LAUNCHSTATION.psu"
+assert notes.published_name("APP_LAUNCHSTATION.zip", "") == "APP_LAUNCHSTATION.zip"
+
 workflow = (root / ".github/workflows/compile.yml").read_text()
 assert "python3 scripts/release_notes.py" in workflow
 assert 'gh pr list' not in workflow and "git log --format='- %s (%h)'" not in workflow

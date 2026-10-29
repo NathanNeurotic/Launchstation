@@ -355,11 +355,23 @@ jobs:
         run: |
           set -euo pipefail
           tag="latest" # Keep existing website and native-updater download URLs.
+          # Every published ZIP name ends with the build number (the commit count),
+          # e.g. APP_LAUNCHSTATION-284.zip. The PSUs the native updater downloads
+          # and the loose ELFs keep their fixed names.
+          build="$(git rev-list --count HEAD)"
+          case "${build}" in ''|*[!0-9]*) echo "Invalid build number: ${build}" >&2; exit 1 ;; esac
+          for package in APP_LAUNCHSTATION.zip APP_LAUNCHSTATION-DS.zip; do
+            test -s "artifacts/${package}" || {
+              echo "Missing/empty packaged asset: ${package}" >&2
+              exit 1
+            }
+            cp "artifacts/${package}" "artifacts/${package%.zip}-${build}.zip"
+          done
           assets=(
             APP_LAUNCHSTATION.psu
-            APP_LAUNCHSTATION.zip
+            "APP_LAUNCHSTATION-${build}.zip"
             APP_LAUNCHSTATION-DS.psu
-            APP_LAUNCHSTATION-DS.zip
+            "APP_LAUNCHSTATION-DS-${build}.zip"
             LAUNCHSTATION.ELF
             LAUNCHSTATION-DS.ELF
             BOOT.ELF
@@ -392,12 +404,12 @@ jobs:
             fi
           fi
 
-          title="Launchstation Rolling - $(date -u +%Y-%m-%d) (${GITHUB_SHA:0:7})"
+          title="Launchstation Rolling ${build} - $(date -u +%Y-%m-%d) (${GITHUB_SHA:0:7})"
           notes_file="${RUNNER_TEMP}/launchstation-rolling-notes.md"
           python3 scripts/release_notes.py \
             --repo "${GITHUB_REPOSITORY}" --revision "${GITHUB_SHA}" \
             --previous "${previous_sha}" --run-id "${GITHUB_RUN_ID}" \
-            --assets-dir artifacts --output "${notes_file}"
+            --assets-dir artifacts --output "${notes_file}" --version "${build}"
 
           if ! gh release view "${tag}" >/dev/null 2>&1; then
             gh release create "${tag}" --title "${title}" \
@@ -458,5 +470,19 @@ jobs:
           fi
           test "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" --jq '.object.sha')" = "${GITHUB_SHA}"
           test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" --jq '.prerelease')" = "false"
-          echo "Published Launchstation Rolling ${GITHUB_SHA} as GitHub Latest."
+          # Versioned ZIP names change with every build, so remove the previous
+          # builds' app ZIPs (and the old fixed-name ones). Only APP_LAUNCHSTATION
+          # ZIPs are touched, only after publishing succeeded, and a failed delete
+          # only warns; other manually maintained attachments stay.
+          { gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" --jq '.assets[].name' \
+              || echo "::warning::could not list release assets; stale ZIPs were left" >&2; } |
+            while IFS= read -r name; do
+              case "${name}" in
+                "APP_LAUNCHSTATION-${build}.zip"|"APP_LAUNCHSTATION-DS-${build}.zip") ;;
+                APP_LAUNCHSTATION*.zip)
+                  gh release delete-asset "${tag}" "${name}" --yes \
+                    || echo "::warning::could not remove stale asset ${name}" ;;
+              esac
+            done
+          echo "Published Launchstation Rolling ${build} (${GITHUB_SHA}) as GitHub Latest."
           echo "Release page date (published_at): $(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" --jq '.published_at')"

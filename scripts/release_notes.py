@@ -13,6 +13,13 @@ ASSETS = (
 )
 
 
+def published_name(name, version):
+    """Every published ZIP name ends with the build number; PSUs and ELFs keep theirs."""
+    if version and name.endswith(".zip"):
+        return f"{name[:-len('.zip')]}-{version}.zip"
+    return name
+
+
 def markdown(text):
     return re.sub(r"([\\`*_[\]<>])", r"\\\1", text.strip())
 
@@ -70,22 +77,25 @@ def release_changes(repo, revision, previous, log):
     return changes_from_log(log, repo)
 
 
-def render(repo, revision, previous, run_id, changes, digests):
+def render(repo, revision, previous, run_id, changes, digests, version=""):
     base = f"https://github.com/{repo}"
+    names = [published_name(name, version) for name in ASSETS]
     compare = f"{base}/compare/{previous}...{revision}" if previous else f"{base}/commits/{revision}"
     workflow = f"{base}/actions/runs/{run_id}"
     download = f"{base}/releases/download/latest"
     changelog = "\n".join(changes) or "- Rebuild of the current revision; no new changes."
-    hashes = "\n".join(f"{digests[name]}  {name}" for name in ASSETS)
-    return f"""## Downloads
+    hashes = "\n".join(f"{digests[name]}  {published}" for name, published in zip(ASSETS, names))
+    heading = (f"**Launchstation build `{version}`** (`{revision[:7]}`). Every ZIP name ends with this build number.\n\n"
+               if version else "")
+    return f"""{heading}## Downloads
 
 | Version | ZIP | PSU | ELF |
 | --- | --- | --- | --- |
-| Standard | [Download]({download}/{ASSETS[0]}) | [Download]({download}/{ASSETS[1]}) | [Download]({download}/{ASSETS[4]}) |
-| DS34 USB/Bluetooth controllers | [Download]({download}/{ASSETS[2]}) | [Download]({download}/{ASSETS[3]}) | [Download]({download}/{ASSETS[5]}) |
+| Standard | [{names[0]}]({download}/{names[0]}) | [Download]({download}/{names[1]}) | [Download]({download}/{names[4]}) |
+| DS34 USB/Bluetooth controllers | [{names[2]}]({download}/{names[2]}) | [Download]({download}/{names[3]}) | [Download]({download}/{names[5]}) |
 
 Extract the ZIP and launch its ELF, or install the PSU with **PSU Paste**.
-For boot-path installs, [BOOT.ELF]({download}/{ASSETS[6]}) and [BOOT2.ELF]({download}/{ASSETS[7]}) are copies of the standard ELF.
+For boot-path installs, [BOOT.ELF]({download}/{names[6]}) and [BOOT2.ELF]({download}/{names[7]}) are copies of the standard ELF.
 Existing user settings are retained. The built-in updater preserves your controller version.
 
 ## Changelog
@@ -119,7 +129,11 @@ def main():
     parser.add_argument("--run-id", required=True, type=int)
     parser.add_argument("--assets-dir", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--version", default="",
+                        help="build number that ends every published ZIP name, e.g. 284")
     args = parser.parse_args()
+    if args.version and not re.fullmatch(r"[0-9]+", args.version):
+        parser.error("version must be a build number")
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", args.repo):
         parser.error("invalid repository")
     if not re.fullmatch(r"[0-9a-f]{40}", args.revision) or (
@@ -138,7 +152,7 @@ def main():
         with asset.open("rb") as stream:
             digests[name] = hashlib.file_digest(stream, "sha256").hexdigest()
     args.output.write_text(render(args.repo, args.revision, args.previous, args.run_id,
-                                  changes, digests), encoding="utf-8")
+                                  changes, digests, args.version), encoding="utf-8")
 
 
 if __name__ == "__main__":
