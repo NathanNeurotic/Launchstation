@@ -147,6 +147,9 @@ int main(void) {
     assert(!gameIdFromImageName("mass:/SLUS_21050-1.mcd", id));
     assert(!gameIdFromImageName("mass:/SLUS-21050X.mcd", id));
     assert(!gameIdFromImageName("SLUS-2105", id));
+    assert(!gameIdFromImageName("mass:/SLUS-21050-2.mcd", id));      /* channel 2 is not the -1 card */
+    assert(!gameIdFromImageName("mass:/SLUS-21050-backup.mcd", id));
+    assert(!gameIdFromImageName("mass:/SLUS-21050-1", id));
     puts("PASS: Game ID card names");
 }
 """

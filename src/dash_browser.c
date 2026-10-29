@@ -1691,7 +1691,7 @@ static int gameIdFromImageName(const char *path, char id[11])
     char t[11];
 
     name = name != NULL ? name + 1 : path;
-    if (strlen(name) < 11 || (name[10] != '-' && name[10] != '.'))
+    if (strlen(name) < 11 || (name[10] != '.' && strncmp(name + 10, "-1.", 3) != 0))
         return 0;
     memcpy(t, name, 10);
     t[10] = 0;
@@ -1712,7 +1712,7 @@ static void opInstallMmceCard(int game_card)
     };
     FILEINFO *f;
     char source[MAX_PATH], parent[MAX_PATH], folder[MAX_PATH];
-    char dest[MAX_PATH], stage[MAX_PATH], message[192], id[11];
+    char dest[MAX_PATH], stage[MAX_PATH], message[256], id[11];
     int unit, number = 0, pcsx2, fd, prep, result;
 
     if (!fb.files || fb.sel >= fb.n || fb.nmarked)
