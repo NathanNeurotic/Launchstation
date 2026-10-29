@@ -577,6 +577,20 @@ assert kind(lines, "TOAST|1|Save copied and verified"), lines
 assert saves("mass:/all/D.mcd") == {"BASLUS-99999": saves("mass:/all/sub/B.mcd")["BASLUS-99999"]}
 assert kind(lines, "MENU|All saves|")[1].split("|")[2].startswith("10 saves on 4 cards"), lines  # not WLE-Safety
 assert sha("mass:/all/A.mcd") == a_before
+# one card with more than the 250 saves a single card view lists: every one is a row here
+host("mass:/big").mkdir()
+shutil.copy(host(M), host("mass:/big/M.mcd"))
+lines = run("all:mass:/big")
+row = kind(lines, "MENU|All saves|")[0].split("|")
+assert row[2] == "261 saves on 1 card" and len(row[3:]) == 261, (row[2], len(row[3:]))
+shutil.rmtree(host("mass:/big"))
+# more than 64 folders: the card in a later one is still found
+for i in range(70):
+    host(f"mass:/wide/f{i:02d}").mkdir(parents=True)
+shutil.copy(host("mass:/dup.mcd"), host("mass:/wide/f69/dup.mcd"))
+lines = run("all:mass:/wide")
+assert kind(lines, "MENU|All saves|1 save on 1 card|"), lines
+shutil.rmtree(host("mass:/wide"))
 # nothing to show
 host("mass:/empty").mkdir()
 lines = run("all:mass:/empty")
@@ -585,5 +599,5 @@ shutil.rmtree(host("mass:/all"))
 
 print("Card contents tool: listing, copy, move, delete, .psu round trip, safety copies pruned to ten, "
       "served MMCE card never written, served-card detection by number and content, guarded switch (also to a clone), "
-      "mounted VMC blocks writes, 250+ save cards, copy to a new card size, Game ID split, blank cards, all saves across cards, refusals cost no safety copy, write failures reported, "
+      "mounted VMC blocks writes, 250+ save cards, copy to a new card size, Game ID split, blank cards, all saves across cards (also 250+ saves on one card, 64+ folders), refusals cost no safety copy, write failures reported, "
       "one open file at a time: OK")

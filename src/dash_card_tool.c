@@ -1300,6 +1300,7 @@ void dashCardTool(const char *image)
 /* ---- All saves: every card image in a folder and its direct subfolders ---- */
 
 #define CT_ALL_CARDS 64
+#define CT_ALL_SUBS 256 /* folders looked into; the card limit is separate */
 #define CT_ALL_SAVES 1000
 #define CT_ALL_MAX_BYTES 69206016u /* a 64 MB card with ECC spare bytes */
 
@@ -1334,7 +1335,7 @@ static int ctAllScan(const char *folder, CtAnyCard *cards, int *more)
 	iox_dirent_t ent;
 	int fd, nsub = 0, n = 0, i;
 
-	subs = malloc(CT_ALL_CARDS * sizeof(*subs));
+	subs = malloc(CT_ALL_SUBS * sizeof(*subs));
 	if (subs == NULL)
 		return -1;
 	for (i = -1; i < nsub; i++) {
@@ -1349,7 +1350,7 @@ static int ctAllScan(const char *folder, CtAnyCard *cards, int *more)
 			if (i < 0 && ent.name[0] != '.' && FIO_S_ISDIR(ent.stat.mode)) {
 				if (!strncmp(ent.name, "WLE-", 4))
 					; /* safety copies and other holding areas would repeat every save */
-				else if (nsub < CT_ALL_CARDS)
+				else if (nsub < CT_ALL_SUBS)
 					snprintf(subs[nsub++], MAX_NAME, "%s", ent.name);
 				else
 					*more = 1;
@@ -1396,9 +1397,14 @@ static int ctAllCmp(const void *a, const void *b)
 static int ctAllRead(const char *folder, CtAnyCard *cards, int ncards, CtAnySave *list, int *found, int *bad)
 {
 	CardIo io;
+	McViewSave *saves;
 	int c, i, k, n = 0, got;
 
 	*found = *bad = 0;
+	/* not ct_saves: one card may fill the whole list, past the 250 a single card view holds */
+	saves = malloc(CT_ALL_SAVES * sizeof(*saves));
+	if (saves == NULL)
+		return -1;
 	for (c = 0; c < ncards; c++) {
 		dashLoadingStatus(ctBaseName(cards[c].path), c, ncards);
 		cards[c].writable = 0;
@@ -1407,7 +1413,7 @@ static int ctAllRead(const char *folder, CtAnyCard *cards, int ncards, CtAnySave
 			continue;
 		}
 		cards[c].writable = ct_view.page_stride == 512u;
-		k = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &got);
+		k = mcViewListSaves(&ct_view, saves, CT_ALL_SAVES - n, &got);
 		ctClose(&io);
 		if (k < 0) {
 			(*bad)++;
@@ -1417,7 +1423,7 @@ static int ctAllRead(const char *folder, CtAnyCard *cards, int ncards, CtAnySave
 		for (i = 0; i < k && n < CT_ALL_SAVES; i++, n++) {
 			CtAnySave *s = &list[n];
 
-			s->sv = ct_saves[i];
+			s->sv = saves[i];
 			s->card = c;
 			if (s->sv.has_icon_sys && s->sv.title[0])
 				dashSjisTitle(s->title, sizeof(s->title), (const unsigned char *)s->sv.title);
@@ -1427,6 +1433,7 @@ static int ctAllRead(const char *folder, CtAnyCard *cards, int ncards, CtAnySave
 			         s->sv.is_ps1 ? "PS1 " : "", s->sv.name, (unsigned)((s->sv.bytes + 1023u) / 1024u) % 1000000u);
 		}
 	}
+	free(saves);
 	qsort(list, (size_t)n, sizeof(*list), ctAllByName);
 	for (i = 0; i < n; i = k) {
 		int t = i;
@@ -1473,8 +1480,13 @@ void dashCardAllSaves(const char *folder)
 		ncards = ctAllScan(dir, cards, &more);
 		n = ncards > 0 ? ctAllRead(dir, cards, ncards, list, &found, &bad) : 0;
 		dashLoadingEnd();
+		if (n < 0) {
+			dashModalMessage(DI_WARNING, "Cannot list saves", ctError(MCW_ERR_NOMEM), dir);
+			break;
+		}
 		if (ncards <= 0 || n == 0) {
 			dashModalMessage(DI_WARNING, "No saves found",
+			                 more ? "None of the card images read holds a save, but this folder has more folders or cards than this view reads (256 folders, 64 cards). Open a folder further down." :
 			                 ncards <= 0 ? "No memory card image (.mcd, .ps2, .vmc, .mc2, .bin) is in this folder or the folders directly inside it." :
 			                               "None of the card images here holds a save.",
 			                 dir);
