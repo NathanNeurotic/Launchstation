@@ -35,6 +35,7 @@ int genDopen(char *path);
 int genDclose(int fd);
 int genMkdir(const char *path, int mode);
 int genRemove(char *path);
+int genRenameNoReplace(const char *from, const char *to);
 int fileXioDevctl(const char *name, int cmd, void *arg, unsigned int arglen, void *buf, unsigned int buflen);
 int DelayThread(int usec);
 int genCmpFileExt(const char *filename, const char *extension);

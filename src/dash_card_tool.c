@@ -789,15 +789,16 @@ static void ctResize(const char *image)
 	}
 	dashLoadingEnd();
 	if (r != MCV_OK) {
-		if (made)
-			genRemove(dest);
+		const char *gone = !made ? "" :
+		                   genRemove(dest) < 0 ? " The unfinished card could not be removed; delete it." :
+		                                         " The new card was removed.";
+
 		if (r == MCW_ERR_FULL && bad >= 0)
-			snprintf(msg, sizeof(msg), "The saves do not fit in %d MB (stopped at %s). The new card was removed.", mb,
-			         names[bad]);
+			snprintf(msg, sizeof(msg), "The saves do not fit in %d MB (stopped at %s).%s", mb, names[bad], gone);
 		else if (bad >= 0)
-			snprintf(msg, sizeof(msg), "%s (save %s). The new card was removed.", ctError(r), names[bad]);
+			snprintf(msg, sizeof(msg), "%s (save %s).%s", ctError(r), names[bad], gone);
 		else
-			snprintf(msg, sizeof(msg), "%s The new card was removed.", ctError(r));
+			snprintf(msg, sizeof(msg), "%s%s", ctError(r), gone);
 		dashModalMessage(DI_WARNING, "New card not made", msg, dest);
 	} else {
 		dashModalMessage(DI_MC, "New card made",
@@ -813,19 +814,24 @@ typedef struct {
 	char id[11];
 } CtGameSave;
 
-/* One new Game ID card at dest holding every save of game id, formatted
- * with the source card's identity. Removed again unless it reads back with
- * exactly those saves. */
-static int ctGameCard(const char *image, const char *dest, const uint8_t sb[512], const uint8_t root[1024], int mb,
-                      const CtGameSave *list, int n, const char *id, int *bad)
+enum { CT_LEFT_PART = 1, CT_LEFT_CARD = 2 };
+
+/* One new Game ID card holding every save of game id, formatted with the
+ * source card's identity. It is built as stage (dest + ".PART") and only
+ * gets its final name once it reads back with exactly those saves. Where
+ * the device cannot rename, dest is a verified copy and the .PART is removed
+ * only after it, so a dest with a .PART beside it is never a finished card.
+ * *left gets CT_LEFT_PART when a .PART could not be removed and
+ * CT_LEFT_CARD when a partial dest could not be (its .PART is kept). */
+static int ctGameCard(const char *image, const char *stage, const char *dest, const uint8_t sb[512],
+                      const uint8_t root[1024], int mb, const CtGameSave *list, int n, const char *id, int *left)
 {
 	CardIo io;
 	AppendIo out;
 	McSaveData s;
 	int r, i, want = 0, got = 0, k;
 
-	*bad = -1;
-	out.fd = genOpen(dest, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL);
+	out.fd = genOpen(stage, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL);
 	out.pos = 0;
 	if (out.fd < 0)
 		return MCV_ERR_IO;
@@ -837,11 +843,9 @@ static int ctGameCard(const char *image, const char *dest, const uint8_t sb[512]
 			continue;
 		want++;
 		r = ctReadSave(image, list[i].name, &s);
-		if (r != MCW_OK) {
-			*bad = i;
+		if (r != MCW_OK)
 			break;
-		}
-		r = ctOpen(&io, dest, 1);
+		r = ctOpen(&io, stage, 1);
 		if (r == MCV_OK) {
 			int c;
 
@@ -851,11 +855,9 @@ static int ctGameCard(const char *image, const char *dest, const uint8_t sb[512]
 				r = MCW_ERR_VERIFY;
 		}
 		mcCardFreeSave(&s);
-		if (r != MCV_OK)
-			*bad = i;
 	}
 	if (r == MCV_OK) { /* the finished card lists exactly this game's saves */
-		r = ctOpen(&io, dest, 0);
+		r = ctOpen(&io, stage, 0);
 		if (r == MCV_OK) {
 			k = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &got);
 			ctClose(&io);
@@ -869,8 +871,22 @@ static int ctGameCard(const char *image, const char *dest, const uint8_t sb[512]
 			}
 		}
 	}
-	if (r != MCV_OK)
-		genRemove((char *)dest);
+	/* Rename where the device can; otherwise a verified copy (UDPFS and host
+	 * have no rename). Either way an existing dest is never replaced. */
+	if (r == MCV_OK && genRenameNoReplace(stage, dest) < 0) {
+		if (wleExists(dest))
+			r = MCV_ERR_IO;
+		else if (mcCardBackupNoEccNewFile(stage, dest, ctSafetyProgress) != MC_CARD_EXPORT_OK) {
+			r = MCV_ERR_IO;
+			if (wleExists(dest) && genRemove((char *)dest) < 0) {
+				*left |= CT_LEFT_CARD; /* the .PART stays beside it as the marker */
+				return r;
+			}
+		} else if (genRemove((char *)stage) < 0)
+			*left |= CT_LEFT_PART;
+	}
+	if (r != MCV_OK && wleExists(stage) && genRemove((char *)stage) < 0)
+		*left |= CT_LEFT_PART;
 	return r;
 }
 
@@ -882,12 +898,13 @@ static void ctSplitGameId(const char *image)
 	static const int sizes[] = {8, 16, 32, 64};
 	static uint8_t sb[512], root[1024];
 	/* where is kept 32 bytes short of MAX_PATH, so dir and dest still fit it */
-	char where[MAX_PATH], dir[MAX_PATH + 16], dest[MAX_PATH + 48], base[48], msg[160], body[512], fail_id[11] = "";
+	char where[MAX_PATH], dir[MAX_PATH + 16], dest[MAX_PATH + 48], stage[MAX_PATH + 56], base[48], msg[160],
+	    body[640], fail_id[11] = "";
 	const char *name = ctBaseName(image), *dot;
 	CtGameSave *list = NULL;
 	CardIo io;
-	int unit = mmceCardUnit(image), r, n = 0, found = 0, i, j, k, len, bad;
-	int games = 0, other = 0, done = 0, made = 0, present = 0, failed = 0, copied = 0, fail_r = MCV_OK;
+	int unit = mmceCardUnit(image), r, n = 0, found = 0, i, j, k, len, left = 0, stuck;
+	int games = 0, other = 0, done = 0, made = 0, present = 0, stale = 0, failed = 0, copied = 0, fail_r = MCV_OK;
 
 	r = ctOpen(&io, image, 0);
 	if (r == MCV_OK) {
@@ -934,18 +951,19 @@ static void ctSplitGameId(const char *image)
 		return;
 	}
 
-	/* Outside MemoryCards/ on MMCE, so the device never serves a half-built card. */
+	/* One folder per source card, so two cards holding the same game do not
+	 * collide. On MMCE it is outside MemoryCards/, so the device never
+	 * serves a half-built card. */
+	dot = strrchr(name, '.');
+	k = dot != NULL ? (int)(dot - name) : (int)strlen(name);
+	if (k > (int)sizeof(base) - 1)
+		k = sizeof(base) - 1;
+	memcpy(base, name, k);
+	base[k] = 0;
 	if (unit >= 0)
-		len = snprintf(where, sizeof(where), "mmce%d:/WLE-GameID/", unit);
-	else {
-		dot = strrchr(name, '.');
-		k = dot != NULL ? (int)(dot - name) : (int)strlen(name);
-		if (k > (int)sizeof(base) - 1)
-			k = sizeof(base) - 1;
-		memcpy(base, name, k);
-		base[k] = 0;
+		len = snprintf(where, sizeof(where), "mmce%d:/WLE-GameID/%s/", unit, base);
+	else
 		len = snprintf(where, sizeof(where), "%.*s%s-GameID/", (int)(name - image), image, base);
-	}
 	if (len >= (int)sizeof(where) - 32) {
 		free(list);
 		return;
@@ -958,6 +976,10 @@ static void ctSplitGameId(const char *image)
 	}
 
 	dashLoadingBegin("Making Game ID cards");
+	if (unit >= 0) {
+		snprintf(dir, sizeof(dir), "mmce%d:/WLE-GameID", unit);
+		genMkdir(dir, fileMode);
+	}
 	dashStrCopy(dir, where, sizeof(dir));
 	dir[strlen(dir) - 1] = 0;
 	genMkdir(dir, fileMode);
@@ -971,17 +993,25 @@ static void ctSplitGameId(const char *image)
 		dashLoadingStatus(list[i].id, done++, games);
 		snprintf(dir, sizeof(dir), "%s%s", where, list[i].id);
 		snprintf(dest, sizeof(dest), "%s/%s-1.mcd", dir, list[i].id);
+		snprintf(stage, sizeof(stage), "%s.PART", dest);
 		genMkdir(dir, fileMode);
+		if (wleExists(stage)) { /* from an interrupted earlier split, maybe beside a partial copy */
+			stale++;
+			continue;
+		}
 		if (wleExists(dest)) {
 			present++;
 			continue;
 		}
-		/* The smallest card the game's saves fit on; 8 MB for nearly all. */
+		/* The smallest card the game's saves fit on; 8 MB for nearly all.
+		 * A .PART that could not be removed blocks only this game's retries. */
+		stuck = 0;
 		for (k = 0; k < 4; k++) {
-			r = ctGameCard(image, dest, sb, root, sizes[k], list, n, list[i].id, &bad);
-			if (r != MCW_ERR_FULL)
+			r = ctGameCard(image, stage, dest, sb, root, sizes[k], list, n, list[i].id, &stuck);
+			if (r != MCW_ERR_FULL || stuck)
 				break;
 		}
+		left |= stuck;
 		if (r == MCV_OK) {
 			made++;
 			for (j = i; j < n; j++)
@@ -1000,8 +1030,17 @@ static void ctSplitGameId(const char *image)
 		len += snprintf(body + len, sizeof(body) - len, " %d game%s already had a card there; left as %s.", present,
 		                present == 1 ? "" : "s", present == 1 ? "it was" : "they were");
 	if (failed)
-		len += snprintf(body + len, sizeof(body) - len, " %d failed and %s removed (%s: %s).", failed,
-		                failed == 1 ? "was" : "were", fail_id, ctError(fail_r));
+		len += snprintf(body + len, sizeof(body) - len, " %d failed (%s: %s).", failed, fail_id, ctError(fail_r));
+	if (left & CT_LEFT_CARD)
+		len += snprintf(body + len, sizeof(body) - len,
+		                " A partly copied card could not be removed; delete that game's folder before splitting again.");
+	else if (left)
+		len += snprintf(body + len, sizeof(body) - len,
+		                " An unfinished .PART file could not be removed; delete it before splitting again.");
+	if (stale)
+		len += snprintf(body + len, sizeof(body) - len,
+		                " %d game%s skipped: an unfinished .PART from an earlier split is in %s folder; delete that folder to try again.",
+		                stale, stale == 1 ? "" : "s", stale == 1 ? "its" : "their");
 	if (other)
 		len += snprintf(body + len, sizeof(body) - len, " %d save%s without a game serial %s left out.", other,
 		                other == 1 ? "" : "s", other == 1 ? "was" : "were");
@@ -1009,8 +1048,8 @@ static void ctSplitGameId(const char *image)
 		snprintf(body + len, sizeof(body) - len, "%s",
 		         unit >= 0 ? " Install each with \"Install as MMCE Game ID card\"." :
 		                     " Copy each folder into MemoryCards/PS2/ on the MMCE SD card.");
-	snprintf(msg, sizeof(msg), "%s", failed ? "Some Game ID cards not made" : made ? "Game ID cards made" : "No new Game ID card");
-	dashModalMessage(failed || !made ? DI_WARNING : DI_MC, msg, body, where);
+	snprintf(msg, sizeof(msg), "%s", failed || stale ? "Some Game ID cards not made" : made ? "Game ID cards made" : "No new Game ID card");
+	dashModalMessage(failed || stale || !made ? DI_WARNING : DI_MC, msg, body, where);
 }
 
 static int ctBcd(u8 v)
@@ -1131,10 +1170,11 @@ void dashCardNewBlank(const char *folder)
 	}
 	dashLoadingEnd();
 	if (r != MCV_OK) {
-		if (made)
-			genRemove(dest);
-		snprintf(msg, sizeof(msg), "%s%s", r == MCV_ERR_IO ? "The device may be read-only or full. " : ctError(r),
-		         made ? " The unfinished file was removed." : "");
+		const char *gone = !made ? "" :
+		                   genRemove(dest) < 0 ? " The unfinished file could not be removed; delete it." :
+		                                         " The unfinished file was removed.";
+
+		snprintf(msg, sizeof(msg), "%s%s", r == MCV_ERR_IO ? "The device may be read-only or full. " : ctError(r), gone);
 		dashModalMessage(DI_WARNING, "Blank card not made", msg, dest);
 		return;
 	}

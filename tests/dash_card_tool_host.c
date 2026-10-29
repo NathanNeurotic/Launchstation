@@ -4,6 +4,7 @@
  *   mmce0:/x -> <root>/mmce0/x, mass:/x -> <root>/mass/x
  * and mmce0:/__active_card__.mcd opens the image named by ACTIVE.
  *
+ * NORENAME makes rename unsupported and FAIL_REMOVE makes remove fail.
  * Dialog answers come from argv, in order: m<N> menu choice (-1 = Back),
  * p<path> picker result, c<0|1> confirm, k<N> choice. An empty queue answers Back/No.
  * Every dialog is printed, and the harness aborts if two files are ever open
@@ -122,7 +123,23 @@ int genRemove(char *path)
 
 	map(path, p);
 	printf("REMOVE|%s\n", path);
+	if (getenv("FAIL_REMOVE"))
+		return -1;
 	return unlink(p);
+}
+/* NORENAME: a device without rename (UDPFS), so the caller must copy. */
+int genRenameNoReplace(const char *from, const char *to)
+{
+	char a[MAX_PATH], b[MAX_PATH];
+
+	map(from, a);
+	map(to, b);
+	printf("RENAME|%s|%s\n", from, to);
+	if (getenv("NORENAME"))
+		return -38;
+	if (access(b, F_OK) == 0)
+		return -17;
+	return rename(a, b) == 0 ? 0 : -5;
 }
 int genCmpFileExt(const char *name, const char *ext)
 {
