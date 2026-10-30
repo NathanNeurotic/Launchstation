@@ -103,6 +103,9 @@ static int ynDialog(const char *s){(void)s;return cancel_copy?-1:1;}
 static int readpad(void){return cancel_copy;}
 static int DashIsActive(void){return 1;}
 static int DashFileProgress(const char *a,const char *b,u64 r,u64 t){(void)a;(void)b;assert(r<=t);return 1;}
+/* alternate the worker and inline chunk paths; both must behave the same */
+static int transfer_calls;
+static int DashFileTransferChunk(void (*run)(void *),void *arg){if(transfer_calls++&1)return 0;run(arg);return 1;}
 static void nonDialog(char *s){(void)s;}
 static int keyboard(char *s,int n){(void)s;(void)n;return 0;}
 static int isPcCardCfPath(const char *s){(void)s;return 0;}

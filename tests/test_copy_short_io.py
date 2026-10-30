@@ -53,10 +53,16 @@ static void reset(void) {
 '''
 assert 'copyReadChunk' not in source and 'copyWriteChunk' not in source
 # Exercise the exact production dispatch statements, including write suppression.
-a = source.index('bytesRead = ', source.index('copyBuff = (buffIndex'))
-b = source.index('\n#if FILEOP_TRACE', a)
-code += 'static int transfer(int buffSize) {\nchar *copyBuff=(char *)buffer;int in_fd=11,out_fd=22,bytesRead,bytesWritten;\n'
-code += source[a:b] + '\nreturn bytesRead<0?bytesRead:bytesWritten<0?bytesWritten:bytesRead==buffSize&&bytesWritten==buffSize?0:-EIO;\n}\n'
+# The chunk IO runs on the dashboard worker or, as a fallback, inline; both
+# paths call the same copyChunkIo(), so exercising it covers both.
+loop = source[source.index('copyBuff = (buffIndex'):source.index('\n#if FILEOP_TRACE', source.index('copyBuff = (buffIndex'))]
+assert 'DashFileTransferChunk(copyChunkRun, &chunk)' in loop and 'copyChunkIo(&chunk);' in loop
+assert 'bytesRead = chunk.read;' in loop and 'bytesWritten = chunk.written;' in loop
+a = source.index('/* One chunk of a file copy')
+code += source[a:source.index('static void copyChunkIo(', a)] + function('static void copyChunkIo(')
+code += 'static int transfer(int buffSize) {\nCopyChunk c={11,22,buffSize,(char *)buffer,0,0};int bytesRead,bytesWritten;\n'
+code += 'copyChunkIo(&c);bytesRead=c.read;bytesWritten=c.written;\n'
+code += 'return bytesRead<0?bytesRead:bytesWritten<0?bytesWritten:bytesRead==buffSize&&bytesWritten==buffSize?0:-EIO;\n}\n'
 code += r'''
 int main(void) {
  for(int i=0;i<(int)sizeof(input);i++) input[i]=(unsigned char)(i*17+3);
