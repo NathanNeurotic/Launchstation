@@ -2309,12 +2309,19 @@ void dashMmceShowActive(int unit)
 			snprintf(body, sizeof(body), "The device reports card %d, channel %d. %s", a.card, a.channel,
 			         a.by_number ? "The content matches that image." : "The image below matches by content.");
 		else
-			snprintf(body, sizeof(body), "The image below matches the served card by content.");
+			snprintf(body, sizeof(body),
+			         "The device serves a BootCard or Game ID card (no card number). The image below matches it by content.");
 		dashModalMessage(DI_MC, "MMCE card in use", body, a.path);
 	} else if (r == MMCE_SWITCH_DEVICE) {
 		dashModalMessage(DI_WARNING, "MMCE card in use", "The MMCE device did not answer.", NULL);
 	} else {
-		snprintf(body, sizeof(body), "The device reports card %d, channel %d, but %s.", a.card, a.channel,
+		char who[48];
+
+		if (a.card > 0)
+			snprintf(who, sizeof(who), "card %d, channel %d", a.card, a.channel);
+		else
+			snprintf(who, sizeof(who), "a BootCard or Game ID card");
+		snprintf(body, sizeof(body), "The device reports %s, but %s.", who,
 		         a.matches > 1 ? "several card images have the same content" :
 		                         "no card image under MemoryCards/PS2 could be matched by content");
 		dashModalMessage(DI_WARNING, "Not confirmed", body, a.matches > 1 ? a.path : NULL);
@@ -2328,7 +2335,8 @@ void dashMmceSwitch(const char *path)
 
 	if (!mmceCardParsePath(path, &card, &chan)) {
 		dashModalMessage(DI_WARNING, "Cannot switch to this image",
-		                 "Only numbered cards (MemoryCards/PS2/CardN/CardN-C.mcd) can be selected from here.", path);
+		                 "Only numbered cards (MemoryCards/PS2/CardN/CardN-C.mcd) can be selected from here. "
+		                 "BootCard and Game ID cards are chosen on the MMCE device itself.", path);
 		return;
 	}
 	if (mmceCardIsActive(path)) {
@@ -2336,7 +2344,7 @@ void dashMmceSwitch(const char *path)
 		return;
 	}
 	snprintf(body, sizeof(body),
-	         "The console's memory card in MMCE slot %d becomes card %d, channel %d. Games and Launchstation will see that card from now on.",
+	         "The console's memory card in MMCE slot %d becomes card %d, channel %d. A game that sends its Game ID can still switch the device to its own card.",
 	         mmceCardUnit(path) + 1, card, chan);
 	if (!dashModalConfirm("Switch MMCE card?", body, "Switch", 0))
 		return;
@@ -2345,6 +2353,12 @@ void dashMmceSwitch(const char *path)
 	dashLoadingEnd();
 	if (r == MMCE_SWITCH_OK)
 		dashToast(DASH_TOAST_OK, "Card switched and confirmed");
+	else if (r == MMCE_SWITCH_SPECIAL)
+		dashModalMessage(DI_WARNING, "Switch on the device",
+		                 "The MMCE device is serving a BootCard, Game ID or named card (or its card number does not match "
+		                 "what it serves). It cannot be moved to a card number from the console; change to a numbered card "
+		                 "with the device's buttons, then try again. Nothing was sent.",
+		                 path);
 	else
 		dashModalMessage(DI_WARNING, "Switch not confirmed",
 		                 r == MMCE_SWITCH_BUSY ? "The device stayed busy for 15 seconds." :

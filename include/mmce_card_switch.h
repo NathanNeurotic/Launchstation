@@ -17,7 +17,9 @@ enum {
 	MMCE_SWITCH_BUSY = -2,         /* still busy after 15 s */
 	MMCE_SWITCH_UNKNOWN = -3,      /* could not confirm by content */
 	MMCE_SWITCH_NOT_NUMBERED = -4, /* not MemoryCards/PS2/CardN/CardN-C.mcd */
-	MMCE_SWITCH_NOT_CARD = -5      /* the image could not be read as a PS2 card */
+	MMCE_SWITCH_NOT_CARD = -5,     /* the image could not be read as a PS2 card */
+	MMCE_SWITCH_SPECIAL = -6       /* the device serves a BootCard, Game ID or named card
+	                                  * (or one not confirmed by content); nothing sent */
 };
 
 typedef struct {
@@ -42,8 +44,11 @@ int mmceCardIsActive(const char *path);
 /* MMCE_SWITCH_OK with out->path when exactly one image matches the served
  * content; MMCE_SWITCH_UNKNOWN with out->matches 0 or > 1 otherwise. */
 int mmceActiveCard(int unit, MmceActiveCard *out, MmceScanProgress progress);
-/* Selects CardN, channel C; waits while the device is busy; succeeds only
- * when number, channel and content all agree afterwards. */
+/* Selects CardN, channel C, one command at a time, each confirmed by the
+ * device's own report; succeeds only when number, channel and content all
+ * agree afterwards. Refuses (MMCE_SWITCH_SPECIAL) unless the device serves a
+ * numbered card confirmed by content: MMCEMAN cannot leave a BootCard or Game
+ * ID card by number, and a named card's number is not a CardN. */
 int mmceSwitchToCard(const char *path);
 
 #endif

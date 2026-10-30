@@ -295,6 +295,18 @@ assert switch(cards[2], CARD=1, BUSY=40) == (-2, [])               # busy before
 assert switch(cards[2], CARD=1, STALE=1)[0] == -3                  # number never agrees
 assert switch(cards[2], CARD=1, active=cards[1])[0] == -3          # device kept serving Card1
 assert switch(cards[4], CARD=1) == (-4, [])                        # BootCard is not a numbered card
+# the firmware keeps one pending command: SET_CHANNEL waits until GET_CARD
+# shows the SET_CARD was taken, so nothing is replaced
+lines = dev_run("switch:" + cards[3], CARD=1, PENDING=3)
+assert kind(lines, "SWITCH|0") and kind(lines, "SET_") == ["SET_CARD|00000002", "SET_CHANNEL|00000002"], lines
+assert not kind(lines, "LOST|"), lines
+# R3Z3N: MMCEMAN cannot leave a BootCard / Game ID card (reported as card 0)
+# for a card number, so nothing is sent; nor from a named card, whose list
+# position only looks like a card number (content is not CardN/CardN-C.mcd)
+assert switch(cards[2], CARD=0, active=cards[4]) == (-6, [])
+assert switch(cards[3], CARD=2, CHANNEL=1, active=cards[1]) == (-6, [])
+# channel change on the selected card: no SET_CARD (it would reset the channel)
+assert switch(cards[3], CARD=2, CHANNEL=1) == (0, ["SET_CHANNEL|00000002"])
 host(f"{PS2}Card3/Card3-3.mcd").write_bytes(b"x" * 4096)
 assert switch(f"{PS2}Card3/Card3-3.mcd", CARD=1) == (-5, [])
 assert switch("mass:/A.mcd", CARD=1) == (-4, [])
