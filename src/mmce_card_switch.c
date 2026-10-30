@@ -11,6 +11,11 @@
 //covers "served", "the device says it is selected" and "cannot tell".
 //
 //Card layout (sd2psXtd): mmceN:/MemoryCards/PS2/CardN/CardN-C.mcd.
+//Only numbered cards can be selected, and only while the device serves a
+//numbered card: MMCEMAN has no way to select a Game ID card by number, and
+//sd2psx / MemCard PRO2 firmware does not leave a BootCard or Game ID card for
+//a card number and channel (as reported by R3Z3N). SET_CARD_CHANNEL is
+//not used: older sd2psx and MemCard PRO2 firmware do not have it.
 //Behaviour follows the SD2Cloud audit's description; no GPL code was used.
 //--------------------------------------------------------------
 #include "launchelf.h"
@@ -238,12 +243,53 @@ static int waitIdle(int unit)
 	return MMCE_SWITCH_BUSY;
 }
 
+/* The served image is confirmed: number, channel and content all agree and
+ * the device is not in the middle of opening a card. */
+static int servesCard(int unit, int card, int chan, const unsigned char *want)
+{
+	unsigned char got[32], mine[32];
+	char ap[48], p[MAX_PATH];
+	int status = devctl(unit, MMCE_DEVCTL_GET_STATUS, NULL);
+
+	if (status < 0 || (status & 1))
+		return 0;
+	if (devctl(unit, MMCE_DEVCTL_GET_CARD, NULL) != card || devctl(unit, MMCE_DEVCTL_GET_CHANNEL, NULL) != chan)
+		return 0;
+	if (want == NULL) { /* that number's own image */
+		if (snprintf(p, sizeof(p), "mmce%d:/MemoryCards/PS2/Card%d/Card%d-%d.mcd", unit, card, card, chan) >=
+		        (int)sizeof(p) ||
+		    mmceCardFingerprint(p, mine) < 0)
+			return 0;
+		want = mine;
+	}
+	return activePath(unit, ap, sizeof(ap)) && mmceCardFingerprint(ap, got) == 0 && !memcmp(want, got, 32);
+}
+
+/* The firmware keeps one pending command and acts on it later (not while
+ * the console writes, not while a button on the device is held), and
+ * GET_STATUS only says "busy" while a card is being opened. So a SET is
+ * known to have been taken only when GET_CARD / GET_CHANNEL report the new
+ * value; a second SET sent before that can replace the first one. */
+static int waitReported(int unit, int cmd, int want)
+{
+	int poll, v;
+
+	for (poll = 0; poll < MMCE_SWITCH_POLLS; poll++) {
+		v = devctl(unit, cmd, NULL);
+		if (v < 0)
+			return MMCE_SWITCH_DEVICE;
+		if (v == want)
+			return MMCE_SWITCH_OK;
+		DelayThread(1000000);
+	}
+	return MMCE_SWITCH_UNKNOWN;
+}
+
 int mmceSwitchToCard(const char *path)
 {
-	unsigned char want[32], got[32];
-	char ap[48];
+	unsigned char want[32];
 	u32 arg;
-	int unit = mmceCardUnit(path), card, chan, r, n, c;
+	int unit = mmceCardUnit(path), card, chan, r, n, c, poll, sent = 0;
 
 	if (unit < 0 || !mmceCardParsePath(path, &card, &chan))
 		return MMCE_SWITCH_NOT_NUMBERED;
@@ -252,29 +298,49 @@ int mmceSwitchToCard(const char *path)
 	r = waitIdle(unit);
 	if (r != MMCE_SWITCH_OK)
 		return r;
-
-	arg = (0u << 24) | (0u << 16) | (u32)card; /* regular card, by number */
-	if (devctl(unit, MMCE_DEVCTL_SET_CARD, &arg) < 0)
-		return MMCE_SWITCH_DEVICE;
-	r = waitIdle(unit);
-	if (r != MMCE_SWITCH_OK)
-		return r;
+	n = devctl(unit, MMCE_DEVCTL_GET_CARD, NULL);
 	c = devctl(unit, MMCE_DEVCTL_GET_CHANNEL, NULL);
+	if (n < 0 || c < 0)
+		return MMCE_SWITCH_DEVICE;
+	/* Card 0 is a BootCard or a Game ID card. sd2psx, and MemCard PRO2 even
+	 * less, cannot be moved from those to a card number and channel through
+	 * MMCEMAN; that is done on the device itself. A named card reports its
+	 * position in the folder list, which looks like a card number, so the
+	 * reported card must also be CardN/CardN-C.mcd by content. Nothing is
+	 * sent otherwise. */
+	if (n == 0 || !servesCard(unit, n, c, NULL))
+		return MMCE_SWITCH_SPECIAL;
+
+	/* Never SET_CARD to the card already selected: the firmware would reset
+	 * its channel to 1 without switching. */
+	if (n != card) {
+		arg = (0u << 24) | (0u << 16) | (u32)card; /* regular card, by number */
+		if (devctl(unit, MMCE_DEVCTL_SET_CARD, &arg) < 0)
+			return MMCE_SWITCH_DEVICE;
+		sent = 1;
+		r = waitReported(unit, MMCE_DEVCTL_GET_CARD, card);
+		if (r != MMCE_SWITCH_OK)
+			return r;
+		c = devctl(unit, MMCE_DEVCTL_GET_CHANNEL, NULL); /* now channel 1 */
+	}
 	if (c != chan) {
 		arg = (0u << 16) | (u32)chan;
 		if (devctl(unit, MMCE_DEVCTL_SET_CHANNEL, &arg) < 0)
 			return MMCE_SWITCH_DEVICE;
-		r = waitIdle(unit);
+		sent = 1;
+		r = waitReported(unit, MMCE_DEVCTL_GET_CHANNEL, chan);
 		if (r != MMCE_SWITCH_OK)
 			return r;
 	}
 
-	/* Done only when number, channel and content all agree. */
-	n = devctl(unit, MMCE_DEVCTL_GET_CARD, NULL);
-	c = devctl(unit, MMCE_DEVCTL_GET_CHANNEL, NULL);
-	if (n != card || c != chan)
-		return MMCE_SWITCH_UNKNOWN;
-	if (!activePath(unit, ap, sizeof(ap)) || mmceCardFingerprint(ap, got) < 0 || memcmp(want, got, sizeof(want)))
-		return MMCE_SWITCH_UNKNOWN;
-	return MMCE_SWITCH_OK;
+	/* Done only when number, channel and content all agree. The switch
+	 * itself happens a little after the number changes, so keep looking. */
+	for (poll = 0; poll < (sent ? MMCE_SWITCH_POLLS : 1); poll++) {
+		if (servesCard(unit, card, chan, want))
+			return MMCE_SWITCH_OK;
+		if (sent)
+			DelayThread(1000000);
+	}
+	r = devctl(unit, MMCE_DEVCTL_GET_STATUS, NULL);
+	return r >= 0 && (r & 1) ? MMCE_SWITCH_BUSY : MMCE_SWITCH_UNKNOWN;
 }

@@ -62,7 +62,7 @@ int main(void) {
     const int expected[]={1,1,0,0,0,1,1,1};
     for(int i=0;i<8;i++) {
         strcpy(ROMVER_data,roms[i]);console_is_PSX=0;assert(consoleHasIlink()==expected[i]);
-        console_is_PSX=1;assert(consoleHasIlink());
+        console_is_PSX=1;assert(!consoleHasIlink()); /* PSX DESR: camcorder-only i.Link */
     }
     storage_driver_stack_mode=STORAGE_STACK_DEFAULT;
     assert(ensureMmceGameIdControl() && loads==1 && core_calls==1);

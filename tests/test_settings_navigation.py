@@ -45,6 +45,8 @@ static void dashSoundPlay(int s) { assert(s == DASH_SND_CANCEL); }
 static void dashUiFocusPoke(void) {}
 static void dashToolsPrepareMmceStatus(void) {}
 static struct { int sound, bgm, artwork, igr_after; } dashCfg;
+static int console_is_PSX;
+static int consoleHasIlink(void) { return !console_is_PSX; }
 static struct { int font, wallpaper, clock; } dashTheme;
 static struct { int usbkbd_used; char LK_Path[SETTING_LK_COUNT][MAX_PATH]; } config;
 static __typeof__(config) *setting = &config;
@@ -146,6 +148,10 @@ int main(void) {
     for(int k=SETTING_LK_AUTO;k<=SETTING_LK_START;k++) assert(occurrences[S_LK_0+k]==1);
     for(int s=0;s<=S_MISC_COMMANDS;s++) if(s!=S_T_RESETCAT) assert(occurrences[s]<=1);
     assert(occurrences[S_LK_0+SETTING_LK_LEFT]==1 && occurrences[S_LK_0+SETTING_LK_RIGHT]==1);
+    /* PSX DESR: its i.Link port is camcorder-only, so its auto-start is off */
+    { SetItem il={ST_CHOICE,S_DEVA_ILINK,"",""};
+      assert(!itemDisabled(&il)); console_is_PSX=1; assert(itemDisabled(&il));
+      assert(strstr(disabledHelp(&il),"camcorders")); console_is_PSX=0; }
     settingsEnter(); assert(page==P_ROOT && begins==1);
     /* Root shortcuts never interpret a page ID as an overlapping SetId. */
     for(item=0;item<pages[P_ROOT].n;item++) press(DASH_IN_FAV);

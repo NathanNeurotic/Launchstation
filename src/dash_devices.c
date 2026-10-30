@@ -568,6 +568,10 @@ static int safeAutoStartMask(void)
 {
 	int mask = dashCfg.dev_auto;
 
+#ifdef ILINK
+	if (!consoleHasIlink())
+		mask &= ~DASH_DEVA_ILINK; /* e.g. PSX DESR: camcorder-only port */
+#endif
 	/* Defense in depth: these two are mutually exclusive even if some
 	 * caller bypassed settings validation or an old/corrupt config survived.
 	 * Never let the automatic startup walker switch between them mid-pass. */

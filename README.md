@@ -112,7 +112,7 @@ It is fully themeable from the controller: 18 built-in PS2-inspired theme preset
 | `usb:/` (`usbN:`, legacy `mass:`) | FAT/exFAT USB mass storage (BDM) | Always |
 | `mmce0:/` `mmce1:/`[^1] | Multi-purpose memory card emulator: SD2PSX, PSxMemCard Gen2, MemCard PRO 2 | Always |
 | `mx4sio:/`[^1] | SD card interface in a memory-card port | Always |
-| `ilink:/` | IEEE1394 (i.Link/FireWire) storage | Hidden on retail PS2 ROMs 1.70 and newer (SCPH-50000 onward, which lack the port); shown on earlier retail models, PSX and unrecognized consoles |
+| `ilink:/` | IEEE1394 (i.Link/FireWire) storage | Hidden on retail PS2 ROMs 1.70 and newer (SCPH-50000 onward, which lack the port); hidden on PSX (its i.Link port is for Sony camcorders only); shown on earlier retail models and unrecognized consoles |
 | `hdd0:/`[^2] | APA-formatted internal HDD | Hidden on deckard consoles (SCPH-75K+) and PSX; otherwise unit 1 is hidden by default (Settings > Storage & devices) |
 | `ata0:/`[^2] | BDM/exFAT hard drive | Same visibility rules as `hdd0:/` |
 | `cf0:/`[^3] | PC CARD CompactFlash (early Japanese PS2 models) | Retail JP ROMs 0100/0101/0110/0120 (SCPH-10000/15000/18000 family) or when show-all-devices is enabled |

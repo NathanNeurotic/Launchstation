@@ -25,8 +25,11 @@ publishes `mmceN:/MemoryCards/PS2/CardN/CardN-1.mcd` after readback
 verification. The newly installed card is **not** automatically selected.
 Select it with the adapter's buttons, or highlight its `CardN-1.mcd` and choose
 **Make this the active MMCE card...**, which selects it and confirms the switch
-by number, channel and content. **Which MMCE card is in use?** shows the card the
-adapter is serving, confirmed by content.
+by number, channel and content. This only works while the adapter is serving a
+numbered card: from a BootCard, Game ID card or named card it sends nothing and
+asks you to change cards with the adapter's buttons, because the firmware cannot
+be moved off those by card number. **Which MMCE card is in use?** shows the card
+the adapter is serving, confirmed by content.
 
 ## Restore single saves instead of a whole card
 

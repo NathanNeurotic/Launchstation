@@ -24,6 +24,25 @@
 static const char *root, *active;
 /* the simulated device: what it serves, what it reports, how long it is busy */
 static int dev_card = -1, dev_chan = -1, rep_card = -1, rep_chan = -1, busy, stale, devctls;
+/* PENDING=k: like the firmware, one command slot acted on k devctls later;
+ * a second SET before that replaces the first */
+static int pend_cmd, pend_val, pend_wait, pending;
+
+static void applySet(int cmd, u32 a)
+{
+	if (cmd == 4) {
+		dev_card = (int)(a & 0xFFFF);
+		dev_chan = 1;
+		if (!stale)
+			rep_card = dev_card, rep_chan = dev_chan;
+		if (getenv("SWITCH_BUSY"))
+			busy = atoi(getenv("SWITCH_BUSY"));
+	} else {
+		dev_chan = (int)(a & 0xFFFF);
+		if (!stale)
+			rep_chan = dev_chan;
+	}
+}
 static char **queue;
 static int nqueue, qpos, open_files, max_open, writes, fail_write_at = -1;
 int fileMode = 0777;
@@ -197,6 +216,10 @@ int fileXioDevctl(const char *name, int cmd, void *arg, unsigned int arglen, voi
 	devctls++;
 	if (dev_card < 0)
 		return -1;
+	if (pend_cmd && cmd != 4 && cmd != 6 && --pend_wait <= 0) {
+		applySet(pend_cmd, (u32)pend_val);
+		pend_cmd = 0;
+	}
 	switch (cmd) {
 		case 2:
 			if (busy > 0) {
@@ -209,19 +232,14 @@ int fileXioDevctl(const char *name, int cmd, void *arg, unsigned int arglen, voi
 		case 5:
 			return rep_chan;
 		case 4:
-			printf("SET_CARD|%08x\n", a);
-			dev_card = (int)(a & 0xFFFF);
-			dev_chan = 1;
-			if (!stale)
-				rep_card = dev_card, rep_chan = dev_chan;
-			if (getenv("SWITCH_BUSY"))
-				busy = atoi(getenv("SWITCH_BUSY"));
-			return 0;
 		case 6:
-			printf("SET_CHANNEL|%08x\n", a);
-			dev_chan = (int)(a & 0xFFFF);
-			if (!stale)
-				rep_chan = dev_chan;
+			printf("%s|%08x\n", cmd == 4 ? "SET_CARD" : "SET_CHANNEL", a);
+			if (pending) {
+				if (pend_cmd)
+					printf("LOST|%d\n", pend_cmd);
+				pend_cmd = cmd, pend_val = (int)a, pend_wait = pending;
+			} else
+				applySet(cmd, a);
 			return 0;
 	}
 	return -1;
@@ -397,6 +415,7 @@ int main(int argc, char **argv)
 	stale = getenv("STALE") != NULL;
 	vmcMounted[1] = getenv("VMC") != NULL;
 	busy = getenv("BUSY") ? atoi(getenv("BUSY")) : 0;
+	pending = getenv("PENDING") ? atoi(getenv("PENDING")) : 0;
 	queue = argv + 4;
 	nqueue = argc - 4;
 	if (!strncmp(argv[3], "switch:", 7)) {
