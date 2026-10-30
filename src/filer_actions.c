@@ -128,6 +128,26 @@ static int filerIsSystemUpdateFolderName(const char *name)
 	return (region == 'I' || region == 'E' || region == 'A' || region == 'C');
 }
 
+/* System-update folder letters group America and Asia together; China has
+ * its own folder. Keep these warnings tied to the selected folder, not ROMVER. */
+static const char *filerSystemUpdateFolderWarning(const char *name)
+{
+	if (!filerIsSystemUpdateFolderName(name))
+		return NULL;
+
+	switch (name[1]) {
+		case 'I':
+			return LNG(Exploit_Folder_Japan_Warning);
+		case 'A':
+			return LNG(Exploit_Folder_America_Asia_Warning);
+		case 'E':
+			return LNG(Exploit_Folder_Europe_Warning);
+		case 'C':
+			return LNG(Exploit_Folder_China_Warning);
+	}
+	return NULL;
+}
+
 static void filerBuildFullPath(char *out, size_t out_size, const char *path, const FILEINFO *file)
 {
 	if (out == NULL || out_size == 0)
@@ -225,22 +245,24 @@ static int filerConfirmExploitAction(const char *path, const FILEINFO *file, con
 {
 	char folder[40];
 	char msg[256];
+	const char *warning;
 	int protection_type;
 
 	protection_type = filerGetExploitProtectionType(path, file, folder, sizeof(folder));
 	if (protection_type == FILER_EXPLOIT_PROTECT_NONE)
 		return 1;
 
-	if (protection_type == FILER_EXPLOIT_PROTECT_THIS_CONSOLE) {
-		snprintf(msg, sizeof(msg), "%s\n%s\n%s ?",
-		         folder, LNG(Exploit_Folder_This_Console_Warning), action);
-	} else if (protection_type == FILER_EXPLOIT_PROTECT_OTHER_REGION) {
-		snprintf(msg, sizeof(msg), "%s\n%s\n%s ?",
-		         folder, LNG(Exploit_Folder_Other_Region_Warning), action);
-	} else {
-		snprintf(msg, sizeof(msg), "%s\n%s\n%s ?",
-		         folder, LNG(Exploit_Folder_Warning), action);
+	/* The folder this console boots from keeps the strongest warning. Other
+	 * system-update folders name the region they belong to. */
+	if (protection_type == FILER_EXPLOIT_PROTECT_THIS_CONSOLE)
+		warning = LNG(Exploit_Folder_This_Console_Warning);
+	else if ((warning = filerSystemUpdateFolderWarning(folder)) == NULL) {
+		if (protection_type == FILER_EXPLOIT_PROTECT_OTHER_REGION)
+			warning = LNG(Exploit_Folder_Other_Region_Warning);
+		else
+			warning = LNG(Exploit_Folder_Warning);
 	}
+	snprintf(msg, sizeof(msg), "%s\n%s\n%s?", folder, warning, action);
 
 	return ynDialog(msg);
 }

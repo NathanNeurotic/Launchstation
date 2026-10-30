@@ -74,6 +74,12 @@ int ensurePathDeviceStackReady(const char *path)
 {
 	if (path == NULL || path[0] == '\0')
 		return TRUE;
+#ifdef MX4SIO
+	if (isMc1Path(path)) {
+		ensureMemoryCardPortAccessible(1);
+		return isPathDeviceStackLoaded(path); /* a refused reset must fail closed */
+	}
+#endif
 	if (!strncmp(path, "mc", 2) || !strncmp(path, "vmc", 3))
 		return TRUE;
 #ifdef XFROM
