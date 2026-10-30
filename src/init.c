@@ -226,10 +226,14 @@ int isPcCardCfEligible(void)
 int consoleHasIlink(void)
 {
 	int i;
-	/* PSX has the port despite its newer ROM. Retail SCPH-50000 starts
-	 * at ROM 1.70. Keep unknown/non-retail identities visible rather than
+	/* PSX DESR: its i.Link port only talks to Sony DV camcorders; it is
+	 * not usable for file transfer or homebrew storage (R3Z3N), unlike the
+	 * fat PS2 port (gone from SCPH-50000 on). Retail SCPH-50000 starts at
+	 * ROM 1.70. Keep unknown/non-retail identities visible rather than
 	 * loading CDVD or guessing their model while drawing a device list. */
-	if (console_is_PSX || strlen(ROMVER_data) < 6 || ROMVER_data[5] != 'C')
+	if (console_is_PSX)
+		return 0;
+	if (strlen(ROMVER_data) < 6 || ROMVER_data[5] != 'C')
 		return 1;
 	for (i = 0; i < 4; i++)
 		if (ROMVER_data[i] < '0' || ROMVER_data[i] > '9')
@@ -2111,6 +2115,10 @@ int loadIlinkModules(void)
 {
 	int ret, id __attribute__((unused));
 
+	/* A saved ilink: path or auto-start setting carried over to a PSX
+	 * must not load drivers for a camcorder-only port. */
+	if (console_is_PSX)
+		return 0;
 	if (!have_ilinkman || !have_ieee1394_bd)
 		showLoadingModulesMsg("iLink / FireWire");
 

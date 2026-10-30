@@ -16,6 +16,7 @@
 #include "main_title.h"
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 #include "cloud_google.h"
+#include "init.h"
 #endif
 
 enum SetType {
@@ -2861,6 +2862,9 @@ static int itemDisabled(const SetItem *it)
 		case S_T_DATE: return !dashTheme.clock;
 		case S_TIMEOUT: return !setting->LK_Path[SETTING_LK_AUTO][0];
 		case S_IGR_AFTER_APP: return dashCfg.igr_after != DASH_IGR_AFTER_APP;
+#ifdef ILINK
+		case S_DEVA_ILINK: return !consoleHasIlink();
+#endif
 		default: return 0;
 	}
 }
@@ -2882,6 +2886,11 @@ static const char *disabledHelp(const SetItem *it)
 		case S_T_DATE: return "Enable the clock to configure its placement and format.";
 		case S_TIMEOUT: return "Choose an automatic start target before setting its timeout.";
 		case S_IGR_AFTER_APP: return "Set 'After IGR, open' to Application first.";
+#ifdef ILINK
+		case S_DEVA_ILINK:
+			return console_is_PSX ? "The PSX's i.Link port only works with Sony camcorders, not with storage."
+			                      : "This console has no i.Link port.";
+#endif
 		default: return localizeDashboardText(it->help);
 	}
 }
