@@ -932,31 +932,6 @@ void dashDrawActivity(void);
 void dashWorkerParkPoint(void);
 int dashIopParked(void);
 
-/* Diagnostic frame-time probe (#198), built only with DASH_STALL_PROBE.
- * Marks split one main-loop frame into phases; dashGfxPresent closes the
- * frame. The worst frame while background work runs, and any other frame
- * over 50 ms, is drawn top-left with its phase breakdown. */
-enum DashProbePhase {
-	DASH_PROBE_VISUAL = 0, /* dashVisualUpdate (background and UI animation) */
-	DASH_PROBE_INPUT,      /* pad, section input and update */
-	DASH_PROBE_HOUSE,      /* polls, sound maintenance, artwork */
-	DASH_PROBE_FLUSH,      /* dashStoreFlush: building and queueing saves */
-	DASH_PROBE_DRAW,       /* dashRenderScene and quick launch */
-	DASH_PROBE_WAIT,       /* vsync wait in dashGfxPresent */
-	DASH_PROBE_MARKS
-};
-#ifdef DASH_STALL_PROBE
-void dashProbeMark(int phase);
-void dashProbeSleep(void);
-void dashProbeFrameEnd(void);
-void dashProbeDraw(void);
-#else
-#define dashProbeMark(phase) ((void)0)
-#define dashProbeSleep() ((void)0)
-#define dashProbeFrameEnd() ((void)0)
-#define dashProbeDraw() ((void)0)
-#endif
-
 //--------------------------------------------------------------
 // Sections (dash_home.c, dash_apps.c, dash_files.c, dash_tools.c,
 // dash_settings.c) and shell (dash_main.c)

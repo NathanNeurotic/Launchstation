@@ -427,10 +427,8 @@ static void waitVsyncSharing(void)
 {
 	*GS_CSR = *GS_CSR & 8;
 	while (!(*GS_CSR & 8)) {
-		if (dashWorkerIoBusy()) {
-			dashProbeSleep();
+		if (dashWorkerIoBusy())
 			DelayThread(250);
-		}
 	}
 }
 
@@ -457,12 +455,10 @@ void dashGfxPresent(void)
 		flipVsyncSharing();
 	else
 		gsKit_sync_flip(gsGlobal);
-	dashProbeMark(DASH_PROBE_WAIT);
 	gsKit_queue_exec(gsGlobal);
 	gsKit_TexManager_nextFrame(gsGlobal);
 	/* completions are applied between frames, never mid-draw */
 	dashWorkerPump();
-	dashProbeFrameEnd();
 }
 
 void dashGfxRestoreLegacyState(void)
