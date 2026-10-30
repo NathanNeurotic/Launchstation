@@ -26,6 +26,11 @@ void DashStorageProbeStatus(const char *status);
 /* Main-thread file-operation progress. Returns zero in classic mode. */
 int DashFileProgress(const char *action, const char *name, u64 remaining, u64 total);
 void DashFileDeleteProgress(const char *name);
+/* Runs one file-transfer step on the dashboard worker while the progress
+ * overlay keeps drawing. Returns 1 once `run` has finished there, or 0
+ * without calling it (classic mode, no overlay, worker unavailable): the
+ * caller then runs it itself. */
+int DashFileTransferChunk(void (*run)(void *arg), void *arg);
 
 /* Finish dashboard-owned IO/audio before a child ELF that deliberately
  * inherits the live IOP. Returns 0 if the user cancels the bounded wait. */

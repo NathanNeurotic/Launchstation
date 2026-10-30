@@ -1307,6 +1307,22 @@ int DashFileProgress(const char *action, const char *name, u64 remaining, u64 to
 	return 1;
 }
 
+int DashFileTransferChunk(void (*run)(void *arg), void *arg)
+{
+	int id;
+
+	if (!DashIsActive() || dashWorkerOnThread() || !loading_active || !loading_file_operation)
+		return 0;
+	id = dashWorkerSubmit("Copying", 0, run, NULL, arg);
+	if (id < 0)
+		return 0;
+	/* Each frame ends in dashGfxPresent(), which yields to the worker while
+	 * it does IO and pumps its completion. */
+	while (!dashWorkerDone(id))
+		loadingDraw();
+	return 1;
+}
+
 void DashFileDeleteProgress(const char *name)
 {
 	if (!DashIsActive() || dashWorkerOnThread() || !loading_active) return;

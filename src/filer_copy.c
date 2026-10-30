@@ -55,6 +55,33 @@ void filerCopyDiagStage(const char *stage)
 	copy_diag.stage = stage;
 }
 
+/* One chunk of a file copy: a single read, then a single write of exactly
+ * what was read. Short transfers are reported to the caller, never retried. */
+typedef struct
+{
+	int in_fd, out_fd, size;
+	char *buf;
+	int read, written;
+} CopyChunk;
+
+static void copyChunkIo(CopyChunk *c)
+{
+	filerCopyDiagStage("Reading source");
+	c->read = genRead(c->in_fd, c->buf, c->size);
+	c->written = 0;
+	if (c->read == c->size) {
+		filerCopyDiagStage("Writing destination");
+		c->written = genWrite(c->out_fd, c->buf, c->size);
+	}
+}
+
+/* Runs on the dashboard worker: a 128 KB chunk takes seconds on a memory
+ * card, and the progress screen keeps animating meanwhile (#198). */
+static void copyChunkRun(void *arg)
+{
+	copyChunkIo((CopyChunk *)arg);
+}
+
 static int copyDiagFail(int result)
 {
 	/* Preserve a child's actual error when a recursive caller returns -1. */
@@ -434,6 +461,8 @@ int copy(char *outPath, const char *inPath, FILEINFO file, int recurses)
 	u64 size = 0;
 	u64 original_size = 0;
 	int ret = -1, pfsout = -1, pfsin = -1, in_fd = -1, out_fd = -1, buffSize, bytesRead, bytesWritten;
+	int dash_progress = 0;
+	CopyChunk chunk;
 	int buffCount = 1, buffIndex = 0;
 	int dummy;
 	int speed = 0;
@@ -1060,7 +1089,8 @@ non_PSU_RESTORE_init:
 		}
 		strcat(progress, tmp);
 
-		if (!DashFileProgress("Pasting file", file.name, size, original_size)) {
+		dash_progress = DashFileProgress("Pasting file", file.name, size, original_size);
+		if (!dash_progress) {
 			if (PasteProgress_f)
 				nonDialog(NULL);
 			nonDialog(progress);
@@ -1083,13 +1113,14 @@ non_PSU_RESTORE_init:
 			}
 			}
 			copyBuff = (buffIndex == 0) ? buff : buff2;
-			filerCopyDiagStage("Reading source");
-			bytesRead = genRead(in_fd, copyBuff, buffSize);
-			bytesWritten = 0;
-			if (bytesRead == buffSize) {
-				filerCopyDiagStage("Writing destination");
-				bytesWritten = genWrite(out_fd, copyBuff, buffSize);
-			}
+			chunk.in_fd = in_fd;
+			chunk.out_fd = out_fd;
+			chunk.buf = copyBuff;
+			chunk.size = buffSize;
+			if (!dash_progress || !DashFileTransferChunk(copyChunkRun, &chunk))
+				copyChunkIo(&chunk);
+			bytesRead = chunk.read;
+			bytesWritten = chunk.written;
 #if FILEOP_TRACE
 			chunk_remaining_before = size;
 			if (trace_net_copy || trace_vmc_copy) {
