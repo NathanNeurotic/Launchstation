@@ -2,11 +2,11 @@
 
 This is an optional extension for the existing MrRexD-compatible PC workflow. It does **not** replace the existing Command PS2 / PS2 Drive tools, and it is **not** needed for Google Drive: Launchstation uploads to Google Drive on its own (Tools > Google Drive backups, see [docs/NATIVE_CLOUD.md](../../docs/NATIVE_CLOUD.md)). Use the relay when you want a different cloud provider, an rclone crypt/remote you already have, or prefer to keep every credential on the PC.
 
-The relay uses `rclone.exe` on the PC, talks to Launchstation through the same FTP server used by MrRexD's tools, finds the versioned `WLE-MMCE-Backups` history, and copies new history files to any rclone cloud remote. It adds nothing to the PS2 executable.
+The relay uses `rclone.exe` on the PC, talks to Launchstation through the same FTP server used by [MrRexD](https://github.com/oMrRexD)'s tools, finds the versioned `WLE-MMCE-Backups` history, and copies new history files to any rclone cloud remote. It adds nothing to the PS2 executable.
 
 ## Setup
 
-1. Keep using MrRexD's existing PC bundle. Put this `Cloud Relay` folder beside its `PS2 Drive` folder, or pass `-Rclone` with the path to another rclone executable. If neither is found the script looks for `rclone.exe` on `PATH`.
+1. Keep using [MrRexD](https://github.com/oMrRexD)'s existing PC bundle. Put this `Cloud Relay` folder beside its `PS2 Drive` folder, or pass `-Rclone` with the path to another rclone executable. If neither is found the script looks for `rclone.exe` on `PATH`.
 2. Start **Tools > FTP / Remote access** in Launchstation and leave the dashboard open. The PS2 must be reachable at the address you pass with `-Ps2` (default `192.168.1.111`; use the address shown by Launchstation or in Settings > Network).
 3. Configure a cloud remote once:
    `Cloud Relay.bat -Configure`
@@ -25,7 +25,7 @@ You may also pass the history folder itself:
 
 `-BackupRoot "ata0:/Backups/WLE-MMCE-Backups"`
 
-Supported PS2 path families match the existing MrRexD companion conventions: `ataN:`, `massN:`, `usbN:`, `mx4sioN:`, `mmceN:` and `mcN:`.
+Supported PS2 path families match the existing [MrRexD](https://github.com/oMrRexD) companion conventions: `ataN:`, `massN:`, `usbN:`, `mx4sioN:`, `mmceN:` and `mcN:`.
 
 ## Safety
 

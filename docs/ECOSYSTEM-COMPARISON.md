@@ -14,7 +14,7 @@ claim of parity.
 
 ## SD2Cloud
 
-[oMrRexD/sd2cloud](https://github.com/oMrRexD/sd2cloud) by MrRexD, GPL-3.0. A PS2 application that manages and
+[oMrRexD/sd2cloud](https://github.com/oMrRexD/sd2cloud) by [MrRexD](https://github.com/oMrRexD), GPL-3.0. A PS2 application that manages and
 backs up memory cards on the console itself, to Google Drive, with no PC. Works with sd2psx-family cards running
 the sd2psXtd firmware (the PS2 sees them as MMCE), MemCard PRO2, regular memory cards, OPL virtual memory cards and
 card files on USB, MX4SIO or the internal HDD.

@@ -60,7 +60,7 @@ BIOS handling and device-stack policies remain in their existing paths.
 
 PS1 serial normalization follows the conventions verified in
 [OPL's resolver at 9d4ee45](https://github.com/NathanNeurotic/Open-PS2-Loader/blob/9d4ee450c14f3ecaf3ca1b343167dfb7dafcc694/src/retrogem.c)
-and CosmicScale's normalization feedback: uppercase; remove existing separators;
+and [CosmicScale](https://github.com/CosmicScale)'s normalization feedback: uppercase; remove existing separators;
 format ordinary serials as `SLUS_123.45`; reduce `SLUSP` to `SLUS`; and retain
 the `LSP12345.67` layout for LSP serials. The shared PS1 identity parser applies
 these rules to both VCD and CUE/BIN inputs. This does not change generic ELF
