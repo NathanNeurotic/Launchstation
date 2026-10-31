@@ -1947,7 +1947,7 @@ void rebootIopAndReloadCoreStackSilent(void)
 void ensureMemoryCardPortAccessible(int port)
 {
 #ifdef MX4SIO
-	if (port == 1 && (storage_driver_stack_mode == STORAGE_STACK_MX4SIO || mx4sio_driver_running)) {
+	if (port == 1 && !isPathDeviceStackLoaded("mc1:/")) {
 		DPRINTF("Switching from MX4SIO stack to mc1:, resetting IOP\n");
 		resetRuntimeDeviceState(TRUE);
 	}
@@ -1956,6 +1956,8 @@ void ensureMemoryCardPortAccessible(int port)
 #endif
 }
 
+/* MMCE0 and MMCE1 share one owner. Replacing MMCE with MX4SIO (or the
+ * reverse) must finish the IOP reset before either target module is loaded. */
 static int switchStorageDriverStack(int target_mode)
 {
 #if defined(MMCE) || defined(MX4SIO)
@@ -2081,6 +2083,8 @@ int loadMx4sioModules(void)
 {
 	int ret, id __attribute__((unused));
 
+	/* Finish any slot-2 libmc request before MX4SIO installs its SIO2 hooks. */
+	filerRootMcPollIdle();
 	if (!have_mx4sio || storage_driver_stack_mode != STORAGE_STACK_MX4SIO)
 		showLoadingModulesMsg("mx4sio");
 
@@ -2689,8 +2693,12 @@ int isPathDeviceStackLoaded(const char *path)
 {
 	if (path == NULL)
 		return 0;
+#ifdef MX4SIO
+	if (!strncmp(path, "mc1:", 4))
+		return storage_driver_stack_mode != STORAGE_STACK_MX4SIO && !mx4sio_driver_running;
+#endif
 	if (!strncmp(path, "mc", 2))
-		return 1; /* mcman/mcserv are part of the core stack */
+		return 1; /* core mcman/mcserv; mc1 additionally needs a free SIO2 slot */
 #ifdef EXFAT
 	if (!strncmp(path, "mass", 4) && path[4] >= '0' && path[4] <= '9' && path[5] == ':')
 		return have_bdm && have_bdmfs; /* shared namespace, not USB identity */
