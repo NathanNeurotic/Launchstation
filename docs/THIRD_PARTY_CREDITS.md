@@ -100,6 +100,6 @@ These are mentioned or launched through an integration; that does **not** imply 
 ## Further graphics and bootloader references
 
 - [libpng](http://www.libpng.org/pub/png/libpng.html) and [Independent JPEG Group / libjpeg](https://www.ijg.org/): image decoding and library interfaces used by `src/dash_png.c` and `src/dash_jpeg.c`. Preserve the notices applicable to linked versions.
-- [PS2BBL](https://github.com/israpps/PlayStation2-Basic-BootLoader) by [El_isra](https://github.com/israpps) and [PS2BBLE](https://github.com/saildot4k/PlayStation2-Basic-BootLoader-Extended) by R3Z3N: separate bootloader projects referenced within PS2 homebrew history, not the Launchstation exploit installer.
+- [PS2BBL](https://github.com/israpps/PlayStation2-Basic-BootLoader) by [El_isra](https://github.com/israpps) and [PS2BBLE](https://github.com/saildot4k/PlayStation2-Basic-BootLoader-Extended) by [R3Z3N](https://github.com/saildot4k): separate bootloader projects referenced within PS2 homebrew history, not the Launchstation exploit installer.
 - LoadBOOTer: named memory-card exploit installer option in `src/main_exploit_installer.c`. Exact historical source and authorship still require verification; do not attribute it to PS2BBL without evidence.
 - ESR, FreeMcBoot and PSBBN: compatibility targets, boot environments or platform software. References do not establish redistribution of their binaries.
