@@ -257,11 +257,12 @@ static int GetSMBServerReply(int shdrlen, void *spayload, int rhdrlen)
     totalpkt_size = nb_GetSessionMessageLength();
 
     // If rhdrlen is not specified, retrieve the whole packet. Otherwise, retrieve only the headers (caller will retrieve the payload separately).
-    size = (rhdrlen == 0) ? totalpkt_size : rhdrlen;
-    /* The server sets the length: never receive past SMB_buf, or more than the
-     * reply holds. The stream is out of step after this, so the caller's
-     * failure path treats the connection as lost. */
-    if (size <= 0 || size > (int)sizeof(SMB_buf.smb) || size > totalpkt_size)
+    /* Launchstation: the server sets the length. A reply shorter than the
+     * requested header (an error reply to READ_ANDX) is received whole, so the
+     * stream stays in step; the caller checks the returned length. Never
+     * receive past SMB_buf. */
+    size = (rhdrlen == 0 || rhdrlen > totalpkt_size) ? totalpkt_size : rhdrlen;
+    if (size <= 0 || size > (int)sizeof(SMB_buf.smb))
         return -2;
     rcv_size = RecvData(main_socket, (char *)&SMB_buf.smb, size, 3000); // 3s before the packet is considered lost
     if (rcv_size <= 0)
@@ -297,12 +298,16 @@ static int utf16ToAscii(char *out, const char *in, int inbytes)
     char *pOut;
     u16 wchar;
 
-    for (pIn = in, pOut = out, len = 0, bytesProcessed = 0; (inbytes == 0) || (bytesProcessed < inbytes); len++) {
+    /* Launchstation: with a byte count, never read a character (2 bytes, or 4
+     * for a surrogate pair) that does not lie wholly inside it. */
+    for (pIn = in, pOut = out, len = 0, bytesProcessed = 0; (inbytes == 0) || (bytesProcessed + 2 <= inbytes); len++) {
         wchar = pIn[0] | ((u16)pIn[1] << 8);
         if (wchar == '\0')
             break;
 
         if (wchar >= 0xD800 && wchar < 0xDC00) { // Skip surrogate. Replace unsupported character with '?'.
+            if (inbytes != 0 && bytesProcessed + 4 > inbytes)
+                break;
             *pOut = '?';
 
             pIn += 4;
@@ -483,10 +488,10 @@ static int AddPassword(char *Password, int PasswordType, int AuthType, void *Ans
              * a hashed password is refused rather than sent. */
             if (PasswordType != PLAINTEXT_PASSWORD)
                 return -1;
+            /* Launchstation: the whole password is sent (SMB2.CNF allows 31
+             * bytes); upstream cut it to 14, so a longer one was refused. */
             passwordlen = strlen(Password);
-            if (passwordlen > 14)
-                passwordlen = 14;
-            else if (passwordlen == 0)
+            if (passwordlen == 0)
                 passwordlen = 1;
             memcpy(AnsiPassLen, &passwordlen, 2);
             memcpy(Buffer, Password, passwordlen);
@@ -1102,6 +1107,11 @@ int smb_ReadAndX(int UID, int TID, int FID, s64 fileoffset, void *readbuf, int n
     if (r <= 0)
         return -EIO;
 
+    /* Launchstation: a reply shorter than the READ_ANDX header was received
+     * whole and holds no data; the rest of RRsp is not from this reply. */
+    if (r < (int)sizeof(ReadAndXResponse_t))
+        return -EIO;
+
     // check sanity of SMB header
     if (RRsp->smbH.Magic != SMB_MAGIC)
         return -EIO;
@@ -1515,19 +1525,38 @@ int smb_FindFirstNext2(int UID, int TID, char *Path, int cmd, SearchInfo_t *info
     }
 
     FindFirstNext2ResponseParam_t *FFNRspParam;
+    int paramStart, dataStart, nameLen;
 
-    if (cmd == TRANS2_FIND_FIRST2) {
-        FFNRspParam = (FindFirstNext2ResponseParam_t *)&SMB_buf.smb.u8buff[FFNRsp->smbTrans.ParamOffset];
-        info->SID   = FFNRspParam->SearchID;
-    } else
-        FFNRspParam = (FindFirstNext2ResponseParam_t *)&SMB_buf.smb.u8buff[FFNRsp->smbTrans.ParamOffset - 2];
+    /* Launchstation: ParamOffset, DataOffset and FileNameLen come from the
+     * server. The parameters, the entry and its name must lie inside the reply
+     * received (r bytes of SMB_buf.smb), and the name must fit in SearchBuf.
+     * A FIND_NEXT2 reply has no SearchID, so its parameters start 2 bytes
+     * later than the structure. */
+    if (r < (int)sizeof(FindFirstNext2Response_t) || FFNRsp->smbTrans.ParamOffset < sizeof(FindFirstNext2Response_t))
+        return -EIO;
+    paramStart = (int)FFNRsp->smbTrans.ParamOffset - ((cmd == TRANS2_FIND_FIRST2) ? 0 : 2);
+    if (paramStart + (int)sizeof(FindFirstNext2ResponseParam_t) > r)
+        return -EIO;
 
-    FindFirst2ResponseData_t *FFRspData = (FindFirst2ResponseData_t *)&SMB_buf.smb.u8buff[FFNRsp->smbTrans.DataOffset];
+    FFNRspParam = (FindFirstNext2ResponseParam_t *)&SMB_buf.smb.u8buff[paramStart];
+    if (cmd == TRANS2_FIND_FIRST2)
+        info->SID = FFNRspParam->SearchID;
 
     info->EOS = FFNRspParam->EndOfSearch;
 
     if (FFNRspParam->SearchCount == 0)
         return -EINVAL;
+
+    dataStart = (int)FFNRsp->smbTrans.DataOffset;
+    if (dataStart < (int)sizeof(FindFirstNext2Response_t) || dataStart + (int)sizeof(FindFirst2ResponseData_t) > r)
+        return -EIO;
+
+    FindFirst2ResponseData_t *FFRspData = (FindFirst2ResponseData_t *)&SMB_buf.smb.u8buff[dataStart];
+
+    nameLen = (int)FFRspData->FileNameLen;
+    if (FFRspData->FileNameLen > (u32)(r - dataStart - (int)sizeof(FindFirst2ResponseData_t)) ||
+        nameLen > SMB_SEARCH_NAME_MAX)
+        return -EIO;
 
     info->fileInfo.Created        = FFRspData->Created;
     info->fileInfo.LastAccess     = FFRspData->LastAccess;
@@ -1538,7 +1567,7 @@ int smb_FindFirstNext2(int UID, int TID, char *Path, int cmd, SearchInfo_t *info
         info->fileInfo.IsDirectory = 1;
     info->fileInfo.AllocationSize = FFRspData->AllocationSize;
     info->fileInfo.EndOfFile      = FFRspData->EndOfFile;
-    getStringField(info->FileName, FFRspData->FileName, FFRspData->FileNameLen);
+    getStringField(info->FileName, FFRspData->FileName, nameLen);
 
     return 0;
 }

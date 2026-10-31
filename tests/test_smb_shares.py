@@ -241,7 +241,16 @@ assert "ioman_IMPORTS_start" not in imports
 
 # server-supplied lengths are bounded before anything is received or copied
 smb = text("iop/smbman/smb.c")
-assert "size > (int)sizeof(SMB_buf.smb) || size > totalpkt_size)\n        return -2;" in smb
+assert "size = (rhdrlen == 0 || rhdrlen > totalpkt_size) ? totalpkt_size : rhdrlen;" in smb
+assert "if (size <= 0 || size > (int)sizeof(SMB_buf.smb))\n        return -2;" in smb
+assert "if (r < (int)sizeof(ReadAndXResponse_t))\n        return -EIO;" in smb
+assert "paramStart + (int)sizeof(FindFirstNext2ResponseParam_t) > r" in smb
+assert "dataStart + (int)sizeof(FindFirst2ResponseData_t) > r" in smb
+assert "nameLen > SMB_SEARCH_NAME_MAX" in smb
+assert "passwordlen > 14" not in smb  # a PLAINTEXT = 1 password is sent whole
+assert "getStringField(info->FileName, FFRspData->FileName, nameLen);" in smb
+assert "(bytesProcessed + 2 <= inbytes)" in smb and "bytesProcessed + 4 > inbytes" in smb
+assert "#define SMB_SEARCH_NAME_MAX" in text("iop/smbman/smb.h")
 assert "NPRsp->KeyLength != sizeof(server_specs.EncryptionKey)" in smb
 assert "getStringField(server_specs.PrimaryDomainServerName, (char *)&NPRsp->ByteField[NPRsp->KeyLength], name_bytes);" in smb
 assert "if (DataLength < 0 || DataLength > nbytes)" in smb

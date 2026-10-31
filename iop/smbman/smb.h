@@ -313,6 +313,12 @@ typedef struct
     char FileName[];
 } SearchInfo_t;
 
+/* Launchstation: the buffer smb_fio.c passes as a SearchInfo_t, and the
+ * longest name (in bytes, as the server sends it) that fits after the
+ * structure with its terminator. */
+#define SMB_SEARCH_BUF_MAX  4096
+#define SMB_SEARCH_NAME_MAX (SMB_SEARCH_BUF_MAX - (int)sizeof(SearchInfo_t) - 1)
+
 typedef struct
 {
     u32 Magic;

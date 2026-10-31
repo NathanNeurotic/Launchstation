@@ -89,7 +89,7 @@ typedef struct
 #define MAX_FDHANDLES 32
 FHANDLE smbman_fdhandles[MAX_FDHANDLES];
 
-#define SMB_SEARCH_BUF_MAX 4096
+/* SMB_SEARCH_BUF_MAX is in smb.h (Launchstation): smb.c bounds names by it. */
 #define SMB_PATH_MAX       1024
 
 static ShareEntry_t ShareList;

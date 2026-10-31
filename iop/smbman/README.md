@@ -28,11 +28,16 @@ Launchstation changes, each marked "Launchstation" in the source:
 - Server-supplied lengths are bounded (`smb.c`): the NetBIOS reply length
   against `SMB_buf`, the negotiate `KeyLength` (8 bytes for a challenge) and
   domain name against what was received and the destination, and the
-  READ_ANDX `DataOffset`/`DataLength` against `SMB_buf` and the request.
+  READ_ANDX `DataOffset`/`DataLength` against `SMB_buf` and the request
+  (a short error reply is received whole, so the stream stays in step), and
+  the FIND_FIRST2/FIND_NEXT2 `ParamOffset`, `DataOffset` and `FileNameLen`
+  against the reply received and the search buffer. UTF-16 names are never
+  read past their byte count.
 - A server that asks for a clear-text password is refused (`-EACCES`)
   unless the caller passed the clear text itself (`PLAINTEXT_PASSWORD`,
   which Launchstation does only for a share with `PLAINTEXT = 1`); a hashed
-  password is never downgraded to clear text.
+  password is never downgraded to clear text. The clear text is sent whole; upstream cut it to
+  14 bytes.
 - `smb_Disconnect` drains with a 3 s receive timeout, so a dead link does
   not hold the driver lock for minutes.
 - `smb_close` always frees the handle slot (a directory closed before its
