@@ -144,6 +144,12 @@ is current, each save on its newest verified copy is kept as
 `<card>/WLE-Saves/<save>/WLE-<stamp>.psu` when its bytes changed, named after
 the card copy it came from (`src/mmce_save_versions.c`). They are uploaded like
 the card copies, so Drive keeps one game's history apart from the whole card.
+Because there can be many of them, each save folder keeps an `UPLOADED.TXT`
+list of the versions already on Drive (Drive folder id, SHA-256, name). A
+later sync hashes the local file and, when that exact entry is listed, skips
+the check and the Drive lookup. Another account or a recreated Drive folder has
+another id, so it uploads again. A version deleted by hand on Drive is not sent
+again while its entry stays; delete `UPLOADED.TXT` to send it again.
 Sync is copy-only: cloud files are never automatically deleted.
 
 Each uploaded backup carries a private `wle_sha256` Drive `appProperties`

@@ -79,8 +79,9 @@ The detailed, verified order is in the [parity plan](plans/2026-10-26-sd2cloud-p
    automatic safety copy before every card write. Next: hardware validation (the console test matrix in #226),
    then restore previews, which build on the same parser. "All saves" and batch copy/move/delete of marked saves are
    in (#232).
-4. A folder-based Library and manually applied sets (templates) are in (#232). Per-save backup versions are later
-   work, and applying a set automatically (for example to a new Game ID card) needs its own decision.
+4. A folder-based Library, manually applied sets (templates) and per-save backup versions are in (#232; per-save
+   versions are not yet tested on a console). Applying a set automatically (for example to a new Game ID card)
+   needs its own decision.
 5. Keep ORBIT-only ideas (RetroAchievements agent, in-game pause menu) as separate proposals; they need a Neutrino
    fork or an in-game agent and are a different risk class.
 6. Do not copy code from either project without settling the licence question above.

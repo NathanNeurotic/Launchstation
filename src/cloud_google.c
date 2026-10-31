@@ -1266,8 +1266,10 @@ out:
     return ok ? 0 : -1;
 }
 
+/* known_sha256: the file's digest when the caller already has it, else NULL. */
 static int drive_upload_file(GoogleSession *s, const char *parent, const char *name,
-                             const char *local_path, char *error, int error_size)
+                             const char *local_path, const char *known_sha256,
+                             char *error, int error_size)
 {
     char escaped[MAX_NAME * 2], escaped_parent[CLOUD_ID_MAX * 2], body[1280];
     char headers[CLOUD_TOKEN_MAX + 512], sha256[65], remote_id[CLOUD_ID_MAX];
@@ -1290,7 +1292,14 @@ static int drive_upload_file(GoogleSession *s, const char *parent, const char *n
         return -1;
     }
     size = (int)size64;
-    if (hash_open_backup(fd, size, sha256) < 0) {
+    if (known_sha256 != NULL && strlen(known_sha256) == 64) {
+        memcpy(sha256, known_sha256, sizeof(sha256));
+        if (genLseek(fd, 0, SEEK_SET) != 0) {
+            genClose(fd);
+            set_error(error, error_size, "Could not rewind local backup");
+            return -1;
+        }
+    } else if (hash_open_backup(fd, size, sha256) < 0) {
         genClose(fd);
         set_error(error, error_size, "Could not hash local backup");
         return -1;
@@ -1375,6 +1384,104 @@ static int validate_backup_file(const char *name, const char *path)
     return 0;
 }
 
+/* Per-save versions multiply the files a sync walks (saves x versions kept),
+ * and every Drive lookup is its own TLS session. UPLOADED.TXT beside the
+ * versions records "<Drive folder id> <sha256> <name>" for each .psu already
+ * on Drive, so a later sync skips the validation and the lookup for it. The
+ * digest is still taken from the local bytes every time, so a changed file
+ * never matches. Another account or a recreated Drive folder has another id
+ * and uploads again. It is only a cache: missing, torn or too large means
+ * look the file up as before. */
+#define CLOUD_UPLOAD_LEDGER "UPLOADED.TXT"
+#define CLOUD_UPLOAD_LEDGER_MAX (64 * 1024)
+
+static int upload_ledger_line(const char *dir, const char *folder, const char *sha256,
+                              const char *name, char *path, int path_size,
+                              char *line, int line_size)
+{
+    int n;
+
+    if (dir[0] == 0 || snprintf(path, path_size, "%s%s%s", dir,
+                                (dir[strlen(dir) - 1] == '/' ? "" : "/"),
+                                CLOUD_UPLOAD_LEDGER) >= path_size)
+        return -1;
+    n = snprintf(line, line_size, "%s %s %s\n", folder, sha256, name);
+    return n > 0 && n < line_size ? n : -1;
+}
+
+/* 1 when dir's ledger records name with these bytes in this Drive folder. */
+static int upload_ledger_has(const char *dir, const char *folder, const char *sha256,
+                             const char *name)
+{
+    char path[MAX_PATH], want[CLOUD_ID_MAX + 66 + MAX_NAME + 2], *buf;
+    const char *p, *nl;
+    s64 size;
+    int fd, len, found = 0;
+
+    len = upload_ledger_line(dir, folder, sha256, name, path, sizeof(path), want, sizeof(want));
+    if (len < 0 || (fd = genOpen(path, FIO_O_RDONLY)) < 0)
+        return 0;
+    size = genLseek(fd, 0, SEEK_END);
+    if (size <= 0 || size > CLOUD_UPLOAD_LEDGER_MAX || genLseek(fd, 0, SEEK_SET) != 0 ||
+        (buf = malloc((size_t)size + 1)) == NULL) {
+        genClose(fd);
+        return 0;
+    }
+    if (genRead(fd, buf, (int)size) == (int)size) {
+        buf[size] = 0;
+        for (p = buf; (nl = strchr(p, '\n')) != NULL; p = nl + 1) {
+            if (nl - p + 1 == len && !memcmp(p, want, (size_t)len)) {
+                found = 1;
+                break;
+            }
+        }
+    }
+    genClose(fd);
+    free(buf);
+    return found;
+}
+
+/* Best effort: a failed write only costs a Drive lookup next time. */
+static void upload_ledger_add(const char *dir, const char *folder, const char *sha256,
+                              const char *name)
+{
+    char path[MAX_PATH], line[CLOUD_ID_MAX + 66 + MAX_NAME + 2], last = '\n';
+    s64 size;
+    int fd, len;
+
+    len = upload_ledger_line(dir, folder, sha256, name, path, sizeof(path), line, sizeof(line));
+    if (len < 0 || (fd = genOpen(path, FIO_O_RDWR | FIO_O_CREAT)) < 0)
+        return;
+    size = genLseek(fd, 0, SEEK_END);
+    if (size < 0 || size + len + 1 > CLOUD_UPLOAD_LEDGER_MAX ||
+        (size > 0 && (genLseek(fd, size - 1, SEEK_SET) != size - 1 ||
+                      genRead(fd, &last, 1) != 1 || genLseek(fd, 0, SEEK_END) != size))) {
+        genClose(fd);
+        return;
+    }
+    /* a torn last line from a power cut must not swallow this entry */
+    if (last == '\n' || (last = '\n', genWrite(fd, &last, 1) == 1))
+        genWrite(fd, line, len);
+    genClose(fd);
+}
+
+static int hash_local_file(const char *path, char out[65])
+{
+    s64 size;
+    int fd = genOpen(path, FIO_O_RDONLY), r = -1;
+
+    out[0] = 0;
+    if (fd < 0)
+        return -1;
+    size = genLseek(fd, 0, SEEK_END);
+    if (size >= 0 && size <= 0x7fffffffLL)
+        r = hash_open_backup(fd, (int)size, out);
+    genClose(fd);
+    if (r < 0)
+        out[0] = 0;
+    return r;
+}
+
 static int sync_tree(GoogleSession *s, const char *local_dir, const char *remote_parent,
                      int depth, CloudGoogleSyncStats *stats, CloudGoogleProgress progress,
                      int *done, char *error, int error_size)
@@ -1416,10 +1523,21 @@ static int sync_tree(GoogleSession *s, const char *local_dir, const char *remote
                 return -1;
             }
         } else if (is_backup_file(ent.name)) {
+            int psu = genCmpFileExt(ent.name, "PSU");
+            char sha256[65];
+
             stats->files_seen++;
             (*done)++;
             if (progress)
                 progress(ent.name, *done, 0);
+
+            sha256[0] = 0;
+            if (psu && hash_local_file(child, sha256) == 0 &&
+                upload_ledger_has(local_dir, remote_parent, sha256, ent.name)) {
+                stats->skipped++;
+                memset(&ent, 0, sizeof(ent));
+                continue;
+            }
 
             /* Exporters verify newly written backups byte-for-byte, but an
              * abrupt power loss can still leave a truncated final-named file.
@@ -1432,12 +1550,14 @@ static int sync_tree(GoogleSession *s, const char *local_dir, const char *remote
             }
 
             r = drive_upload_file(s, remote_parent, ent.name, child,
-                                  error, error_size);
+                                  sha256[0] ? sha256 : NULL, error, error_size);
             if (r < 0) {
                 stats->failed++;
                 genDclose(fd);
                 return -1;
             }
+            if (sha256[0])
+                upload_ledger_add(local_dir, remote_parent, sha256, ent.name);
             if (r > 0)
                 stats->skipped++;
             else
