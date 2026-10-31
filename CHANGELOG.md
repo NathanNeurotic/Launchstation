@@ -1,3 +1,5 @@
+- **Neutrino SMB nightly:** PS2 ISOs on configured SMB shares launch through the upstream SMB 3.0 backend merged in ps2max32/neutrino #236 (Ronnie Sahlberg/usmb2). The selected share and static network config are handed to the local Neutrino installation; quick boot is omitted so Neutrino resets into its own stack. Port, credential/path length, module and writable-config checks run before cleanup. Host tests cover mapping, escaping and write recovery; console validation pending.
+
 # Launchstation changelog
 
 The `## Rolling` section below is the maintained summary shown on the GitHub [`latest`](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest) release page (`scripts/release_notes.py` reads only its `- ` bullets). Dated sections after it are a condensed history grouped by theme, newest first; PR numbers refer to <https://github.com/NathanNeurotic/Launchstation/pulls>. CI success is not console acceptance: items marked pending hardware validation still need testing on a real PS2.

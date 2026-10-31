@@ -15,12 +15,12 @@
 <tr><td>exFAT / FAT HDD (<code>exFAT HDD</code>)</td><td><code>ata0:</code> <code>ata1:</code></td><td>On demand</td><td>Yes (<code>ata</code>)</td><td>Yes (<code>POPS/</code> folder)</td><td>Yes</td></tr>
 <tr><td>PC CARD CF (<code>PC CARD CF</code>)</td><td><code>cf0:</code> (<code>cf:</code>)</td><td>On demand, early Japanese consoles only</td><td>No</td><td>No</td><td>No</td></tr>
 <tr><td>Network (<code>Network (UDPFS)</code>)</td><td><code>udpfs:</code></td><td>On demand</td><td>Yes (<code>udpfs</code>)</td><td>No</td><td>Yes</td></tr>
-<tr><td>Network shares (<code>Network (SMB)</code>, <code>Network (SMB1)</code>; see <a href="smb.html">SMB</a>)</td><td><code>smb:</code> <code>smb1:</code></td><td>On demand</td><td>No</td><td>No</td><td>No</td></tr>
+<tr><td>Network shares (<code>Network (SMB)</code>, <code>Network (SMB1)</code>; see <a href="smb.html">SMB</a>)</td><td><code>smb:</code> <code>smb1:</code></td><td>On demand</td><td><a href="neutrino.html#smb">Yes, latest nightly SMB 3.0 backend</a> (TCP 445, read-only ISO)</td><td>No</td><td>No</td></tr>
 <tr><td>Disc Drive</td><td><code>cdfs:</code></td><td>Disc state tracked</td><td>Not an image source (use <b>Start disc</b>)</td><td>No</td><td>No</td></tr>
 <tr><td>PSX Flash / PSX DVR HDD</td><td><code>xfrom0:</code> <code>dvr_hdd0:</code></td><td>On demand, DESR only</td><td colspan="3">File management only</td></tr>
 <tr><td>Virtual MC</td><td><code>vmc0:</code> <code>vmc1:</code></td><td>When an image is mounted</td><td colspan="3">Save management only</td></tr>
 </tbody></table>
-<p>&ldquo;No&rdquo; means Launchstation has no route for that combination, not that the hardware is unusable: a Neutrino ISO cannot be started straight from the APA HDD or a memory card because Launchstation passes Neutrino only the backends it names (<code>usb</code>, <code>mx4sio</code>, <code>mmce</code>, <code>ilink</code>, <code>ata</code>, <code>udpfs</code>). Ember and POPStarter rows describe what Launchstation prepares; both still need the external core, and Ember needs your own BIOS.</p>
+<p>&ldquo;No&rdquo; means Launchstation has no route for that combination, not that the hardware is unusable: a Neutrino ISO cannot be started straight from the APA HDD or a memory card because Launchstation passes Neutrino only the backends it names (<code>usb</code>, <code>mx4sio</code>, <code>mmce</code>, <code>ilink</code>, <code>ata</code>, <code>udpfs</code>, <code>smb</code>). Ember and POPStarter rows describe what Launchstation prepares; both still need the external core, and Ember needs your own BIOS.</p>
 
 <h2 id="states">Device states: Ready, Not checked, Absent, Busy</h2>
 <p>A demand-loaded driver cannot know whether hardware is attached until it runs, so Launchstation does not guess.</p>

@@ -9,6 +9,7 @@
 #include "launchelf.h"
 #include "dash_internal.h"
 #include "smb_shares.h"
+#include "neutrino_smb.h"
 #include "smb2man.h"
 #include <ps2smb.h>
 
@@ -27,6 +28,15 @@ static SmbConfig smb_cfg;
 static int smb_cfg_loaded = 0;
 static char smb_cfg_path[MAX_PATH];
 static unsigned int smb_retry_ms[3]; /* by version: last retry of failed shares */
+static void smbReadConfig(void);
+
+int smbSharesNeutrino(const char *path, SmbShare *share, char *dvd,
+                     size_t dvd_size, const char **problem)
+{
+	if (!smb_cfg_loaded)
+		smbReadConfig();
+	return neutrinoSmbResolve(&smb_cfg, path, share, dvd, dvd_size, problem);
+}
 
 /* Same places as IPCONFIG.DAT: beside the launched ELF, then SYS-CONF on
  * the card it was launched from, then on the other card. */

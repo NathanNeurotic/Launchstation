@@ -4,6 +4,7 @@
 #include "neutrino_gameid.h"
 #include "main_gameid.h"
 #include "init.h"
+#include "neutrino_smb.h"
 
 #define NEUTRINO_ISO_PVD_OFFSET (16 * 2048)
 
@@ -126,8 +127,81 @@ static const char *neutrinoBsdForPath(const char *path)
 		return "ata";
 	if (!strncmp(path, "udpfs", 5))
 		return "udpfs";
+#ifdef SMB
+	if (smbPathKind(path) != SMB_PATH_NONE)
+		return "smb";
+#endif
 	return NULL;
 }
+
+#ifdef SMB
+static int smbCoreLocal(const char *path)
+{
+	const char *bsd = neutrinoBsdForPath(path);
+	return !strncmp(path,"mc0:",4) || !strncmp(path,"mc1:",4) ||
+	       (bsd != NULL && strcmp(bsd,"smb") && strcmp(bsd,"udpfs"));
+}
+
+static int smbConfigWrite(const char *path, char *data, int size)
+{
+	int fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
+	int written, closed;
+	if (fd < 0) return 0;
+	written = genWrite(fd,data,size);
+	closed = genClose(fd);
+	return written == size && closed >= 0;
+}
+
+static int prepareSmbConfig(const char *core, const SmbShare *share, char *message, size_t size)
+{
+	static char original[4096], updated[4608], verify[4608];
+	static const char *files[] = {"modules/smb_ioman.irx","modules/smb_fhi.irx","config/bsd-smb.toml"};
+	char path[MAX_PATH];
+	const char *slash = strrchr(core,'/');
+	int prefix, i, fd, length, next, ok = 0;
+	if (!smbCoreLocal(core) || !slash) {
+		setMessage(message,size,"Keep the Neutrino installation on a local device for SMB",NULL);
+		return 0;
+	}
+	prefix = (int)(slash-core)+1;
+	for (i = 0; i < 3; i++) {
+		if (snprintf(path,sizeof(path),"%.*s%s",prefix,core,files[i]) >= (int)sizeof(path) || !fileExists(path)) {
+			setMessage(message,size,"Install the complete latest Neutrino nightly with SMB modules",NULL);
+			return 0;
+		}
+	}
+	fd = genOpen(path,FIO_O_RDONLY);
+	if (fd < 0) goto failed;
+	length = genLseek(fd,0,SEEK_END);
+	if (length <= 0 || length >= (int)sizeof(original) || genLseek(fd,0,SEEK_SET) != 0) {
+		genClose(fd); goto failed;
+	}
+	i = genRead(fd,original,length);
+	genClose(fd);
+	if (i != length) goto failed;
+	original[length] = 0;
+	if (memchr(original,0,length) != NULL) goto failed;
+	/* IPCONFIG.DAT is the static configuration used by the live browser stack. */
+	next = neutrinoSmbConfig(original,share,ip,netmask,gw,updated,sizeof(updated));
+	if (next < 0) goto failed;
+	if (next == length && !memcmp(original,updated,length)) { ok = 1; goto done; }
+	if (smbConfigWrite(path,updated,next)) {
+		fd = genOpen(path,FIO_O_RDONLY);
+		if (fd >= 0) {
+			i = genRead(fd,verify,sizeof(verify));
+			genClose(fd);
+			if (i == next && !memcmp(verify,updated,next)) { ok = 1; goto done; }
+		}
+	}
+	/* A short write aborts the launch and attempts to restore the original. */
+	smbConfigWrite(path,original,length);
+failed:
+	setMessage(message,size,"Neutrino SMB config must be writable and use the stock module args",NULL);
+done:
+	memset(original,0,sizeof(original)); memset(updated,0,sizeof(updated)); memset(verify,0,sizeof(verify));
+	return ok;
+}
+#endif
 
 static int validateIso(const char *path, char *opened_path, size_t opened_size)
 {
@@ -164,7 +238,8 @@ static int buildArgs(const char *bsd, const char *dvd_path, const char *neutrino
 	}
 	slash[1] = '\0';
 
-	n = snprintf(buffer, buffer_size, "-bsd=%s\n-dvd=%s\n-qb\n-cwd=%s\n", bsd, dvd_path, cwd);
+	n = snprintf(buffer, buffer_size, "-bsd=%s\n-dvd=%s\n%s-cwd=%s\n", bsd, dvd_path,
+	             !strcmp(bsd,"smb") ? "" : "-qb\n", cwd);
 	if (n <= 0 || n >= (int)buffer_size) {
 		setMessage(message, message_size, "Neutrino launch arguments are too long", dvd_path);
 		return 0;
@@ -199,6 +274,11 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	char candidate[MAX_PATH];
 	char selected[MAX_PATH], fullpath[MAX_PATH], party[MAX_PATH];
 	char opened_iso[MAX_PATH], args[1400];
+#ifdef SMB
+	SmbShare smb_share;
+	char smb_dvd[132];
+	const char *smb_problem;
+#endif
 	const char *bsd;
 	int exec_kind, ret;
 
@@ -222,6 +302,12 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 		setMessage(message, message_size, "ISO9660 image could not be read", path);
 		return 0;
 	}
+#ifdef SMB
+	if (!strcmp(bsd,"smb") && !smbSharesNeutrino(path,&smb_share,smb_dvd,sizeof(smb_dvd),&smb_problem)) {
+		setMessage(message,message_size,smb_problem,NULL);
+		return 0;
+	}
+#endif
 
 	/* For dashboard profiles, read the bounded ISO Game ID once before
 	 * presenting options. Never mount or switch another storage stack merely
@@ -251,9 +337,13 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	initPopstarterCandidates(&candidates);
 	/* Same deterministic policy used by RiptOPL: explicit path, game device,
 	 * then the two memory-card slots. Only complete Neutrino installs qualify. */
-	if (setting != NULL && setting->neutrino_file[0] != '\0')
+	if (setting != NULL && setting->neutrino_file[0] != '\0'
+#ifdef SMB
+	    && (strcmp(bsd,"smb") || smbCoreLocal(setting->neutrino_file))
+#endif
+	)
 		addCompleteCandidate(&candidates, setting->neutrino_file);
-	if (deviceRootCandidate(path, candidate, sizeof(candidate)))
+	if (strcmp(bsd,"smb") && deviceRootCandidate(path, candidate, sizeof(candidate)))
 		addPopstarterCandidate(&candidates, candidate);
 	if (findCompleteOnRoot("mc0:", candidate, sizeof(candidate)))
 		addPopstarterCandidate(&candidates, candidate);
@@ -270,11 +360,22 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 		setMessage(message, message_size, "Neutrino executable could not be prepared", selected);
 		return 0;
 	}
-	if (!buildArgs(bsd, opened_iso, fullpath, &options, args, sizeof(args), message, message_size))
+	if (!buildArgs(bsd,
+#ifdef SMB
+	               !strcmp(bsd,"smb") ? smb_dvd :
+#endif
+	               opened_iso, fullpath, &options, args, sizeof(args), message, message_size))
 		return 0;
+#ifdef SMB
+	if (!strcmp(bsd,"smb")) {
+		ret = prepareSmbConfig(fullpath,&smb_share,message,message_size);
+		memset(&smb_share,0,sizeof(smb_share));
+		if (!ret) { LaunchArgsClear(); return 0; }
+	}
+#endif
 
-	/* Neutrino consumes the already-mounted device stack. Drain every
-	 * dashboard RPC user and release libpad, but never reset that storage IOP. */
+	/* Keep the core's device mounted for ELF loading. For SMB, omit -qb so
+	 * Neutrino resets the IOP and starts its own ministack/usmb2 session. */
 #ifdef MMCE
 	/* Manager-only control preserves mounts and protects source slots. */
 	if (have_gameid)

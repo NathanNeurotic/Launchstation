@@ -64,6 +64,7 @@ jobs:
           python3 tests/test_feedback_35_82.py
           python3 tests/test_ilink_browser.py
           python3 tests/test_neutrino_iso.py
+          python3 tests/test_neutrino_smb.py
           python3 tests/test_r3z_loader_disable.py
           python3 tests/test_r3z_neutrino_options.py
           python3 tests/test_neutrino_profiles.py

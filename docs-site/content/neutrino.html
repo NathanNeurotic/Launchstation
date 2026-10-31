@@ -37,7 +37,7 @@
 -qb
 -cwd=&lt;neutrino install directory&gt;
 [-gc=&hellip;] [-gsm=&hellip;] [-dbc] [-logo]</code></pre>
-<p><code>-qb</code> is Neutrino&rsquo;s quick-boot. The numeric unit suffix of a path, where present, is accepted by Neutrino&rsquo;s backend detection. Argument text is limited, and an over-long path is refused with &ldquo;Neutrino launch arguments are too long&rdquo;.</p>
+<p><code>-qb</code> is omitted for SMB so Neutrino resets the IOP into its own network stack. For the other supported devices, <code>-qb</code> is Neutrino&rsquo;s quick-boot. The numeric unit suffix of a path, where present, is accepted by Neutrino&rsquo;s backend detection. Argument text is limited, and an over-long path is refused with &ldquo;Neutrino launch arguments are too long&rdquo;.</p>
 
 <h2 id="backends">Supported sources</h2>
 <table><thead><tr><th>Launchstation source</th><th>Neutrino BSD</th></tr></thead><tbody>
@@ -47,6 +47,7 @@
 <tr><td>iLink</td><td><code>ilink</code></td></tr>
 <tr><td>exFAT HDD (<code>ata0:</code>)</td><td><code>ata</code></td></tr>
 <tr><td>UDPFS</td><td><code>udpfs</code></td></tr>
+<tr><td>SMB / SMB1 browser share</td><td><code>smb</code>; SMB 3.0 on port 445 after an IOP reset (see below)</td></tr>
 <tr><td>APA HDD, memory card, PC CARD CF, disc, host</td><td>Not supported: &ldquo;Neutrino ISO launching is not supported from this device&rdquo;</td></tr>
 </tbody></table>
 
@@ -63,7 +64,7 @@
 <p>This conservative policy intentionally differs from upstream R3Z, which initialises MMCE unconditionally.</p>
 
 <h2 id="iop">Keep-IOP hand-off</h2>
-<p>Neutrino consumes the already-mounted backing store. ISO launches therefore drain Launchstation&rsquo;s background I/O, release the controller library and jump to Neutrino on a <b>live</b> IOP. They do <b>not</b> obey <b>Reset IOP before launch</b>, and Launchstation never resets the storage stack on the way out.</p>
+<p>Neutrino consumes the already-mounted backing store. ISO launches therefore drain Launchstation&rsquo;s background I/O, release the controller library and jump to Neutrino on a <b>live</b> IOP. They do <b>not</b> obey <b>Reset IOP before launch</b>. For SMB, Neutrino then resets the IOP itself and reconnects with usmb2; the browser session is not reused.</p>
 
 <h2 id="troubleshooting">If a game does not boot</h2>
 <ol>
@@ -75,3 +76,9 @@
 <li>If the screen is wrong, retry with video mode Original and video compatibility Off.</li>
 <li>Report the exact Launchstation hash, Neutrino version, the device backend and the option set.</li>
 </ol>
+
+<h2 id="smb">SMB games with the latest Neutrino nightly</h2>
+<p>Neutrino's <a href="https://github.com/ps2max32/neutrino/pull/236">SMB backend</a>, by <a href="https://github.com/sahlberg">Ronnie Sahlberg</a>, was merged on 2026-10-31. It uses his <a href="https://github.com/sahlberg/usmb2">usmb2</a> client. Install the <b>whole latest upstream nightly</b>, including <code>modules/smb_ioman.irx</code>, <code>modules/smb_fhi.irx</code> and the stock <code>config/bsd-smb.toml</code>. Keep that folder on a local device (for example <code>mc0:/neutrino/</code> or USB), and select its ELF in Launching settings. A core stored on SMB or UDPFS is refused for this handoff.</p>
+<p>Configure and connect the share in <code>SMB2.CNF</code>, then open a plain ISO from <code>smb:/&lt;NAME&gt;/...</code> or <code>smb1:/...</code>. The server URL must use a dotted IPv4 address and port 445, and the server must offer <b>SMB 3.0</b> without required signing or encryption. The SMB1 browser route can be used only when that same server also offers SMB 3.0: Neutrino always makes a new SMB 3.0 connection. With PS2-Servers, use its <b>SMBv3</b> card on 445, not SMBv1 or the SMBv2 card.</p>
+<p>After Run game, Launchstation writes the console's static IPCONFIG address, mask and gateway, and the selected share's server, credentials and share name into the three stock module argument lists. URL subdirectories become part of the ISO path. It preserves the other configuration lines, escapes TOML strings, skips an unchanged file, verifies a changed file, and attempts to restore the original after a failed write. It refuses missing modules, an unrecognised or unwritable config, non-445 ports, DNS server names and overlong values before cleanup. Cancel writes no Neutrino files.</p>
+<p>Limits: ASCII username/password up to 31 characters each, share name up to 63 bytes, and ISO path within the share up to 127 bytes. The backend is read-only; there are no SMB VMCs or compressed/split image support. The password is stored in plain text in <code>bsd-smb.toml</code>. <b>Host checks cover mapping, configuration and refusal behavior; PS2 gameplay, reconnect after game IOP resets and a second launch remain untested on hardware.</b></p>

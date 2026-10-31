@@ -61,7 +61,8 @@ URL = smb://192.168.0.30/PS2SMB</code></pre>
 <li><b>Browse, copy, rename, make and delete folders</b> inside a share. A listing that fails part-way is an error, not a partial list. File dates and attributes are not set on the server (the SMB2 driver has no way to).</li>
 <li><b>Nothing can be made in <code>smb:/</code> itself</b>: it only lists the connected shares. Rename works inside one share.</li>
 <li><b>Launch an ELF</b> from a share, as from <code>udpfs:</code>. Not yet tested.</li>
-<li><b>Not supported:</b> Neutrino ISOs, POPStarter VCDs and Ember images from a share (none of those cores can read SMB).</li>
+<li><b>PS2 ISO games through Neutrino:</b> install the latest complete upstream nightly on a local device, then open the ISO. Launchstation maps the selected share and credentials from <code>SMB2.CNF</code> into <code>config/bsd-smb.toml</code> and launches <code>-bsd=smb -dvd=smb:&lt;path within the share&gt;</code>. Neutrino resets the IOP and opens its own session. See <a href="neutrino.html#smb">Neutrino SMB</a>.</li>
+<li><b>POPStarter VCDs and Ember images:</b> Launchstation has no SMB handoff for these cores.</li>
 </ul>
 
 <h2 id="stacks">Stack rules</h2>
