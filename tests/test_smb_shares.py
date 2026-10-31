@@ -248,7 +248,7 @@ assert "paramStart + (int)sizeof(FindFirstNext2ResponseParam_t) > r" in smb
 assert "dataStart + (int)sizeof(FindFirst2ResponseData_t) > r" in smb
 assert "nameLen > SMB_SEARCH_NAME_MAX" in smb
 assert "passwordlen > 14" not in smb  # a PLAINTEXT = 1 password is sent whole
-assert "getStringField(info->FileName, FFRspData->FileName, nameLen);" in smb
+assert "if (nameLen == 0)\n        info->FileName[0] = '\\0';\n    else\n        getStringField(info->FileName, FFRspData->FileName, nameLen);" in smb
 assert "(bytesProcessed + 2 <= inbytes)" in smb and "bytesProcessed + 4 > inbytes" in smb
 assert "#define SMB_SEARCH_NAME_MAX" in text("iop/smbman/smb.h")
 assert "NPRsp->KeyLength != sizeof(server_specs.EncryptionKey)" in smb

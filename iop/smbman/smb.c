@@ -1567,7 +1567,12 @@ int smb_FindFirstNext2(int UID, int TID, char *Path, int cmd, SearchInfo_t *info
         info->fileInfo.IsDirectory = 1;
     info->fileInfo.AllocationSize = FFRspData->AllocationSize;
     info->fileInfo.EndOfFile      = FFRspData->EndOfFile;
-    getStringField(info->FileName, FFRspData->FileName, nameLen);
+    /* 0 means "until the terminator" to getStringField: an empty name must
+     * not read on past the reply. */
+    if (nameLen == 0)
+        info->FileName[0] = '\0';
+    else
+        getStringField(info->FileName, FFRspData->FileName, nameLen);
 
     return 0;
 }
