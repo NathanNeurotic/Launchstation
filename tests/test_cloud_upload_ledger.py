@@ -52,6 +52,9 @@ assert 'int psu = genCmpFileExt(ent.name, "PSU");' in sync
 assert "if (psu && hash_local_file(child, sha256) == 0 &&\n" \
        "                upload_ledger_has(local_dir, remote_parent, sha256, ent.name))" in sync
 assert sync.index("upload_ledger_has(") < sync.index("validate_backup_file(")
+# an empty or oversized .psu is refused from its directory size, before it is read
+assert "ent.stat.size > MMCE_SAVE_VERSION_MAX" in sync and "ent.stat.hisize != 0" in sync
+assert sync.index("ent.stat.size > MMCE_SAVE_VERSION_MAX") < sync.index("hash_local_file(")
 assert sync.index("if (r < 0) {") < sync.index("upload_ledger_add(")
 assert "sha256[0] ? sha256 : NULL" in sync
 upload = extract(source, "static int drive_upload_file(")

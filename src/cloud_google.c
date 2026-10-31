@@ -1531,6 +1531,15 @@ static int sync_tree(GoogleSession *s, const char *local_dir, const char *remote
             if (progress)
                 progress(ent.name, *done, 0);
 
+            /* the size the directory reports is enough to refuse an empty or
+             * oversized .psu before reading it; the validator still decides */
+            if (psu && (ent.stat.hisize != 0 || ent.stat.size == 0 ||
+                        ent.stat.size > MMCE_SAVE_VERSION_MAX)) {
+                stats->failed++;
+                memset(&ent, 0, sizeof(ent));
+                continue;
+            }
+
             sha256[0] = 0;
             if (psu && hash_local_file(child, sha256) == 0 &&
                 upload_ledger_has(local_dir, remote_parent, sha256, ent.name)) {
