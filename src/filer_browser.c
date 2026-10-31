@@ -1667,19 +1667,25 @@ int getFilePath(char *out, int cnfmode)
 				/* Unlike udpfs, no IOP reset: the drivers and the shares that
 				 * did connect stay; opening the device again retries the rest. */
 				int smb_version = smbPathKind(path);
-				const char *load_error = smbLoadError(smb_version);
 
+				/* The flag can be left over from an SMB read made elsewhere
+				 * (e.g. a copy's source folder): it only means something
+				 * when the folder being shown is on SMB. */
 				smb_dir_open_failed = 0;
-				if (!isSmbDriverLoaded(smb_version) && load_error[0])
-					snprintf(msg0, sizeof(msg0), "%s", load_error);
-				else
-					smbSharesStatus(smb_version, msg0, sizeof(msg0));
-				browser_pushed = FALSE;
-				if (!smbIsRootPath(path) || smbSharesConnectedCount(smb_version) == 0) {
-					strcpy(cursorEntry, smb_version == SMB_PATH_V1 ? SMB_DEVICE_V1 : SMB_DEVICE_V2);
-					path[0] = '\0';
-					browser_repos = TRUE;
-					browser_nfiles = setFileList(path, ext, files, cnfmode);
+				if (smb_version != SMB_PATH_NONE) {
+					const char *load_error = smbLoadError(smb_version);
+
+					if (!isSmbDriverLoaded(smb_version) && load_error[0])
+						snprintf(msg0, sizeof(msg0), "%s", load_error);
+					else
+						smbSharesStatus(smb_version, msg0, sizeof(msg0));
+					browser_pushed = FALSE;
+					if (!smbIsRootPath(path) || smbSharesConnectedCount(smb_version) == 0) {
+						strcpy(cursorEntry, smb_version == SMB_PATH_V1 ? SMB_DEVICE_V1 : SMB_DEVICE_V2);
+						path[0] = '\0';
+						browser_repos = TRUE;
+						browser_nfiles = setFileList(path, ext, files, cnfmode);
+					}
 				}
 			}
 #endif

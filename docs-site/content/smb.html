@@ -11,6 +11,7 @@
 <h2 id="how">How it works</h2>
 <p>Nothing touches the network until you open the device. The first time, Launchstation starts the network with the address in <code>IPCONFIG.DAT</code>, loads the SMB driver and connects every share for that device in <code>SMB2.CNF</code>. <code>smb:/</code> then lists one folder per connected share, named by its <code>NAME</code>: <code>smb:/PC</code>, <code>smb:/NAS</code>. <code>smb1:/</code> is the top of its one share.</p>
 <p>A share that does not connect is left out of <code>smb:/</code>, and the browser says why (for example <em>PC (line 7): Could not connect: check the address, share, user name and password</em>). Opening the device again tries the failed shares again, at most every 30 seconds, because an unanswered connect can take that long. When no share is connected, <code>SMB2.CNF</code> is read again first, so a corrected file is used without restarting.</p>
+<p>When at least one share connects, the browser and the device card show how many are connected, not which one failed. If a share is missing from <code>smb:/</code>, check its address, share name, user name and password in <code>SMB2.CNF</code>, then open <code>smb:</code> again to retry it. A file corrected while another share is connected is read after a restart.</p>
 
 <h2 id="file">SMB2.CNF</h2>
 <p>Launchstation uses the first <code>SMB2.CNF</code> it finds:</p>
@@ -20,17 +21,18 @@
 <li><code>SYS-CONF/SMB2.CNF</code> on the other memory card.</li>
 </ol>
 <p>That is where <code>IPCONFIG.DAT</code> is looked for too. Each line is <code>KEY = value</code>. Each share is the group of keys that ends with its <code>URL</code>, so <code>URL</code> comes last in each group.</p>
-<table><thead><tr><th>Key</th><th>Value</th><th>Longest</th></tr></thead><tbody>
-<tr><td><code>NAME</code></td><td>The share&rsquo;s folder name in <code>smb:/</code>. Required, unique (in any case), no <code>/ \ : * ? " &lt; &gt; |</code></td><td>31 characters</td></tr>
-<tr><td><code>USERNAME</code></td><td>An account on the server</td><td>31 characters</td></tr>
-<tr><td><code>PASSWORD</code></td><td>That account&rsquo;s password</td><td>31 characters</td></tr>
+<table><thead><tr><th>Key</th><th>Value</th><th>Longest (bytes)</th></tr></thead><tbody>
+<tr><td><code>NAME</code></td><td>The share&rsquo;s folder name in <code>smb:/</code>. Required, unique (in any case), no <code>/ \ : * ? " &lt; &gt; |</code></td><td>31</td></tr>
+<tr><td><code>USERNAME</code></td><td>An account on the server</td><td>31</td></tr>
+<tr><td><code>PASSWORD</code></td><td>That account&rsquo;s password</td><td>31</td></tr>
 <tr><td><code>VERSION</code></td><td><code>2</code> (default: SMB2/SMB3, also <code>3</code>, <code>SMB2</code>, <code>SMB3</code>) or <code>1</code> (SMB1, also <code>SMB1</code>, <code>NT1</code>)</td><td></td></tr>
-<tr><td><code>URL</code></td><td><code>smb://&lt;server&gt;/&lt;share&gt;</code>; for SMB1 <code>smb://&lt;IP address&gt;[:port]/&lt;share&gt;</code></td><td>255 characters</td></tr>
+<tr><td><code>URL</code></td><td><code>smb://&lt;server&gt;/&lt;share&gt;</code>; for SMB1 <code>smb://&lt;IP address&gt;[:port]/&lt;share&gt;</code></td><td>255</td></tr>
 </tbody></table>
 <ul>
 <li>Keys can be in any case. Spaces and tabs around a value are removed, so a password cannot start or end with a space.</li>
 <li>Lines starting with <code>#</code> or <code>;</code> are comments. A line without <code>=</code> is skipped; the rest of the file is still read. Unknown keys are ignored.</li>
-<li>A value that is too long is not cut short: the share is refused, and the browser names the share, its line and the key.</li>
+<li>A value that is too long is not cut short: the share is refused, and the browser names the share, its line and the key. Lengths are in bytes; each ASCII character is one byte.</li>
+<li>If the only <code>VERSION = 1</code> share is refused this way, <b>Network (SMB1)</b> does not appear, so there is nowhere to show the error: correct <code>SMB2.CNF</code> and restart Launchstation, which reads the file at startup.</li>
 <li>Use the server&rsquo;s IP address. SMB1 requires one; for SMB2/SMB3 host names are untested.</li>
 <li>The user name goes in <code>USERNAME</code>, not in the URL. A path after the share name is ignored: the share&rsquo;s folder opens at the top of the share.</li>
 <li>Up to 8 shares are read. Only one SMB1 share can be used, because the SMB1 driver keeps a single connection.</li>
@@ -74,6 +76,7 @@ URL = smb://192.168.0.30/PS2SMB</code></pre>
 <li><b>&ldquo;No SMB2.CNF found&rdquo;.</b> Put the file beside Launchstation or in <code>mc0:/SYS-CONF/</code>, then open the device again.</li>
 <li><b>&ldquo;Could not connect&rdquo;.</b> Check the server&rsquo;s IP address, the share name, the user name and password, that the PS2 is in the server&rsquo;s subnet, and that the server allows SMB2 (Windows: the share is reached with an account that has a password).</li>
 <li><b>SMB1: &ldquo;Server does not speak SMB1&rdquo;</b> or <b>&ldquo;Server did not answer&rdquo;.</b> Windows 10 and later turn SMB1 off; use SMB2 (leave <code>VERSION</code> out) unless the server is really SMB1-only.</li>
+<li><b>SMB1: &ldquo;User name or password refused&rdquo;</b> also appears when the server only accepts clear-text passwords. Launchstation never sends a password in the clear; turn on encrypted passwords on the server (Samba: <code>encrypt passwords = yes</code>).</li>
 <li><b>&ldquo;The SMB driver could not be loaded&rdquo;.</b> The IOP may be short of memory with many other drivers loaded; use Tools &gt; Reboot IOP and open the share first.</li>
 </ol>
 

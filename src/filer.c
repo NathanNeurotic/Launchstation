@@ -1680,8 +1680,10 @@ int readSMB(const char *path, FILEINFO *info, int max)
 			smb_dir_open_failed = 1;
 			return -ENODEV;
 		}
-	} else if (root) {
-		/* opening the device root retries failed shares (rate limited) */
+	} else if (root && !dashWorkerOnThread()) {
+		/* opening the device root retries failed shares (rate limited);
+		 * never on the dashboard worker: the retry rewrites the share table
+		 * the UI thread reads, and blocks on IOP connects */
 		smbSharesConnect(version, 1);
 	}
 	if (version == SMB_PATH_V1 && smbSharesConnectedCount(SMB_PATH_V1) == 0) {

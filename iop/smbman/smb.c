@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <sysclib.h>
 #include <ps2ip.h>
-#include <ioman.h>
+#include <iomanX.h>
 
 #include "smb.h"
 #include "auth.h"
@@ -257,7 +257,12 @@ static int GetSMBServerReply(int shdrlen, void *spayload, int rhdrlen)
     totalpkt_size = nb_GetSessionMessageLength();
 
     // If rhdrlen is not specified, retrieve the whole packet. Otherwise, retrieve only the headers (caller will retrieve the payload separately).
-    size     = (rhdrlen == 0) ? totalpkt_size : rhdrlen;
+    size = (rhdrlen == 0) ? totalpkt_size : rhdrlen;
+    /* The server sets the length: never receive past SMB_buf, or more than the
+     * reply holds. The stream is out of step after this, so the caller's
+     * failure path treats the connection as lost. */
+    if (size <= 0 || size > (int)sizeof(SMB_buf.smb) || size > totalpkt_size)
+        return -2;
     rcv_size = RecvData(main_socket, (char *)&SMB_buf.smb, size, 3000); // 3s before the packet is considered lost
     if (rcv_size <= 0)
         return -2;
@@ -355,7 +360,7 @@ static int getStringField(char *out, const char *in, int inbytes)
 int smb_NegotiateProtocol(u32 *capabilities)
 {
     static char *dialect = "NT LM 0.12";
-    int r, length, retry_count;
+    int r, length, retry_count, available, name_bytes;
     NegotiateProtocolRequest_t *NPR    = &SMB_buf.smb.negotiateProtocolRequest;
     NegotiateProtocolResponse_t *NPRsp = &SMB_buf.smb.negotiateProtocolResponse;
 
@@ -396,12 +401,36 @@ negotiate_retry:
     server_specs.SecurityMode = (NPRsp->SecurityMode & NEGOTIATE_SECURITY_USER_LEVEL) ? SERVER_USER_SECURITY_LEVEL : SERVER_SHARE_SECURITY_LEVEL;
     server_specs.PasswordType = (NPRsp->SecurityMode & NEGOTIATE_SECURITY_CHALLENGE_RESPONSE) ? SERVER_USE_ENCRYPTED_PASSWORD : SERVER_USE_PLAINTEXT_PASSWORD;
 
+    /* KeyLength, ByteCount and the domain name come from the server: bound
+     * them by what was received and by the destination buffers. */
+    available = r - (int)sizeof(NegotiateProtocolResponse_t);
+    if (available > NPRsp->ByteCount)
+        available = NPRsp->ByteCount;
+    if (available < NPRsp->KeyLength)
+        goto negotiate_error;
+    if (server_specs.PasswordType == SERVER_USE_ENCRYPTED_PASSWORD) {
+        if (NPRsp->KeyLength != sizeof(server_specs.EncryptionKey))
+            goto negotiate_error;
+    } else if (NPRsp->KeyLength > sizeof(server_specs.EncryptionKey))
+        goto negotiate_error;
+
     // copy to global to keep needed information for further communication
     server_specs.MaxBufferSize = NPRsp->MaxBufferSize;
     server_specs.MaxMpxCount   = NPRsp->MaxMpxCount;
     server_specs.SessionKey    = NPRsp->SessionKey;
     memcpy(server_specs.EncryptionKey, NPRsp->ByteField, NPRsp->KeyLength);
-    getStringField(server_specs.PrimaryDomainServerName, (char *)&NPRsp->ByteField[NPRsp->KeyLength], 0);
+
+    name_bytes = available - NPRsp->KeyLength;
+    if (server_specs.Capabilities & SERVER_CAP_UNICODE) {
+        if (name_bytes > (int)(sizeof(server_specs.PrimaryDomainServerName) - 1) * 2)
+            name_bytes = (int)(sizeof(server_specs.PrimaryDomainServerName) - 1) * 2;
+        name_bytes &= ~1;
+    } else if (name_bytes > (int)sizeof(server_specs.PrimaryDomainServerName) - 1)
+        name_bytes = (int)sizeof(server_specs.PrimaryDomainServerName) - 1;
+    if (name_bytes > 0)
+        getStringField(server_specs.PrimaryDomainServerName, (char *)&NPRsp->ByteField[NPRsp->KeyLength], name_bytes);
+    else
+        server_specs.PrimaryDomainServerName[0] = '\0';
 
     return 0;
 
@@ -448,14 +477,9 @@ static int AddPassword(char *Password, int PasswordType, int AuthType, void *Ans
             LM_Response(passwordhash, server_specs.EncryptionKey, LMresponse);
             memcpy(Buffer, LMresponse, passwordlen);
         } else if (server_specs.PasswordType == SERVER_USE_PLAINTEXT_PASSWORD) {
-            // It seems that PlainText passwords and Unicode isn't meant to be...
-            passwordlen = strlen(Password);
-            if (passwordlen > 14)
-                passwordlen = 14;
-            else if (passwordlen == 0)
-                passwordlen = 1;
-            memcpy(AnsiPassLen, &passwordlen, 2);
-            memcpy(Buffer, Password, passwordlen);
+            /* Never send the password in clear text: a server (or anyone on
+             * the LAN posing as it) that asks for it would read it. */
+            return -1;
         }
     } else {
         if (server_specs.SecurityMode == SERVER_SHARE_SECURITY_LEVEL) {
@@ -502,6 +526,8 @@ lbl_session_setup:
 
     if (server_specs.SecurityMode == SERVER_USER_SECURITY_LEVEL) {
         passwordlen = AddPassword(Password, PasswordType, AuthType, &SSR->AnsiPasswordLength, &SSR->UnicodePasswordLength, &SSR->ByteField[0]);
+        if (passwordlen < 0)
+            return -EACCES; // the server wants a clear-text password
         offset += passwordlen;
     }
 
@@ -587,8 +613,11 @@ lbl_tree_connect:
     offset = 0;
 
     if (server_specs.SecurityMode == SERVER_SHARE_SECURITY_LEVEL)
+    {
         passwordlen = AddPassword(Password, PasswordType, AuthType, &TCR->PasswordLength, &TCR->PasswordLength, &TCR->ByteField[offset]);
-    else {
+        if (passwordlen < 0)
+            return -EACCES; // the server wants a clear-text password
+    } else {
         passwordlen         = 1;
         TCR->PasswordLength = passwordlen;
     }
@@ -1072,7 +1101,11 @@ int smb_ReadAndX(int UID, int TID, int FID, s64 fileoffset, void *readbuf, int n
         return -EIO;
 
     // Skip any padding bytes.
-    padding = RRsp->DataOffset - sizeof(ReadAndXResponse_t);
+    /* DataOffset and DataLength come from the server: the padding must fit in
+     * SMB_buf after the header, and the data in the caller's buffer. */
+    padding = (int)RRsp->DataOffset - (int)sizeof(ReadAndXResponse_t);
+    if (padding < 0 || padding > (int)(sizeof(SMB_buf.smb) - sizeof(ReadAndXResponse_t)))
+        return -EIO;
     if (padding > 0) {
         r = RecvData(main_socket, (char *)(RRsp + 1), padding, 3000); // 3s before the packet is considered lost
         if (r <= 0)
@@ -1080,6 +1113,8 @@ int smb_ReadAndX(int UID, int TID, int FID, s64 fileoffset, void *readbuf, int n
     }
 
     DataLength = (int)(((u32)RRsp->DataLengthHigh << 16) | RRsp->DataLengthLow);
+    if (DataLength < 0 || DataLength > nbytes)
+        return -EIO;
     if (DataLength > 0) {
         r = RecvData(main_socket, readbuf, DataLength, 3000); // 3s before the packet is considered lost
         if (r <= 0)
@@ -1627,7 +1662,7 @@ int smb_Disconnect(void)
         // Ensure that all data has been received by the other side before closing.
         shutdown(main_socket, SHUT_WR);
         // Wait for the remote end to close the socket, which shall happen after all sent data has been received.
-        while (recv(main_socket, &dummy, sizeof(dummy), 0) > 0)
+        while (RecvTimeout(main_socket, &dummy, sizeof(dummy), 3000) > 0) // a dead link never closes
             ;
 
         lwip_close(main_socket);

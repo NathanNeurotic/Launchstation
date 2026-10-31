@@ -383,24 +383,21 @@ int smb_close(iop_file_t *f)
     FHANDLE *fh = (FHANDLE *)f->privdata;
     int r       = 0;
 
-    if ((UID == -1) || (TID == -1) || (fh->smb_fid == -1))
+    if ((fh == NULL) || (fh->f != f))
         return -EBADF;
 
     smb_io_lock();
 
-    if (fh) {
-        if (fh->mode != O_DIROPEN) {
-            r = smb_Close(UID, TID, fh->smb_fid);
-            if (r != 0) {
-                goto io_unlock;
-            }
-        }
-        memset(fh, 0, sizeof(FHANDLE));
-        fh->smb_fid = -1;
-        r           = 0;
-    }
+    /* A directory handle has no server FID until its first read, and a
+     * failed server close still ends the handle: always free the slot, or
+     * 32 such closes leave every open failing with EMFILE. */
+    if ((fh->mode != O_DIROPEN) && (fh->smb_fid != -1) && (UID != -1) && (TID != -1))
+        r = smb_Close(UID, TID, fh->smb_fid);
 
-io_unlock:
+    memset(fh, 0, sizeof(FHANDLE));
+    fh->smb_fid = -1;
+    f->privdata = NULL;
+
     smb_io_unlock();
 
     return r;
@@ -632,7 +629,7 @@ static void smb_statFiller(const PathInformation_t *info, iox_stat_t *stat)
 //--------------------------------------------------------------
 int smb_dopen(iop_file_t *f, const char *dirname)
 {
-    int r = 0;
+    int r = 0, len;
     PathInformation_t info;
     FHANDLE *fh;
 
@@ -657,16 +654,23 @@ int smb_dopen(iop_file_t *f, const char *dirname)
         goto io_unlock;
     }
 
+    // The search pattern is the path, a backslash if it has none, and "*".
+    len = strlen(path);
+    if ((len == 0) || (len + ((path[len - 1] != '\\') ? 2 : 1) >= (int)sizeof(fh->name))) {
+        r = -ENAMETOOLONG;
+        goto io_unlock;
+    }
+
     fh = smbman_getfilefreeslot();
     if (fh) {
         f->privdata  = fh;
         fh->f        = f;
         fh->mode     = O_DIROPEN;
         fh->filesize = 0;
-        fh->position = 0;
+        fh->position = 0; // for a directory: 1 once the search has ended
 
-        strncpy(fh->name, path, 255);
-        if (fh->name[strlen(fh->name) - 1] != '\\')
+        strcpy(fh->name, path);
+        if (fh->name[len - 1] != '\\')
             strcat(fh->name, "\\");
         strcat(fh->name, "*");
 
@@ -701,9 +705,21 @@ int smb_dread(iop_file_t *f, iox_dirent_t *dirent)
 
     SearchInfo_t *info = (SearchInfo_t *)SearchBuf;
 
+    /* The search is opened with CLOSE_SEARCH_IF_EOS: once the server reports
+     * the end, a further FIND_NEXT2 fails. Remember the end and report 0.
+     * No match at all (-EINVAL, e.g. an empty folder) is also the end. */
+    if (fh->position) {
+        r = 0;
+        goto io_unlock;
+    }
+
     if (fh->smb_fid == -1) {
         r = smb_FindFirstNext2(UID, TID, fh->name, TRANS2_FIND_FIRST2, info);
         if (r < 0) {
+            if (r == -EINVAL) {
+                fh->position = 1;
+                r            = 0;
+            }
             goto io_unlock;
         }
         fh->smb_fid = info->SID;
@@ -712,10 +728,17 @@ int smb_dread(iop_file_t *f, iox_dirent_t *dirent)
         info->SID = fh->smb_fid;
         r         = smb_FindFirstNext2(UID, TID, NULL, TRANS2_FIND_NEXT2, info);
         if (r < 0) {
+            if (r == -EINVAL) {
+                fh->position = 1;
+                r            = 0;
+            }
             goto io_unlock;
         }
         r = 1;
     }
+
+    if (info->EOS)
+        fh->position = 1;
 
     if (r == 1) {
         smb_statFiller(&info->fileInfo, &dirent->stat);

@@ -206,7 +206,11 @@ targets:
       - iop/smbman/md4.c
     include_dirs: [iop/smbman]
     imports_lst: iop/smbman/imports.lst
-    defines: [SMBMAN_SMB1_DEVICE]
+    # register through iomanX (as pccf/mmceman do), not legacy ioman: an
+    # IOP_DT_FSEXT device needs the extended calls (devctl, lseek64 ...)
+    defines:
+      - SMBMAN_SMB1_DEVICE
+      - IOMANX_OLD_NAME_ADDDELDRV=0
     cflags: [-Wall]
     ldflags: ["-lgcc"]
     headers: [intrman, ioman, iomanx, ps2ip-nm, sifman, stdio, sysclib, threadman]

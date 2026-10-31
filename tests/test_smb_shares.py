@@ -227,8 +227,41 @@ smbman = text("iop/smbman/smb_fio.c")
 assert '#define SMBMAN_DEVICE_NAME "smb1"' in smbman and "SMBMAN_DEVICE_NAME," in smbman
 assert "return MODULE_NO_RESIDENT_END;" in text("iop/smbman/smbman.c")
 
+# smbman registers through iomanX (an IOP_DT_FSEXT device needs it)
+imports = text("iop/smbman/imports.lst")
+assert "iomanX_IMPORTS_start\nI_iomanX_AddDrv\nI_iomanX_DelDrv\niomanX_IMPORTS_end" in imports
+assert "ioman_IMPORTS_start" not in imports
+
+# server-supplied lengths are bounded before anything is received or copied
+smb = text("iop/smbman/smb.c")
+assert "size > (int)sizeof(SMB_buf.smb) || size > totalpkt_size)\n        return -2;" in smb
+assert "NPRsp->KeyLength != sizeof(server_specs.EncryptionKey)" in smb
+assert "getStringField(server_specs.PrimaryDomainServerName, (char *)&NPRsp->ByteField[NPRsp->KeyLength], name_bytes);" in smb
+assert "if (DataLength < 0 || DataLength > nbytes)" in smb
+assert "padding < 0 || padding > (int)(sizeof(SMB_buf.smb) - sizeof(ReadAndXResponse_t))" in smb
+assert "RecvTimeout(main_socket, &dummy, sizeof(dummy), 3000)" in smb
+# never a clear-text password
+plain = smb[smb.index("SERVER_USE_PLAINTEXT_PASSWORD) {"):]
+plain = plain[:plain.index("}")]
+assert "return -1;" in plain and "memcpy" not in plain
+
+# every close frees its slot; a listing ends with 0, not an error
+close = smbman[smbman.index("int smb_close(iop_file_t *f)"):]
+close = close[:close.index("\n}\n")]
+assert "goto" not in close and "f->privdata = NULL;" in close
+dread = smbman[smbman.index("int smb_dread(iop_file_t *f"):]
+dread = dread[:dread.index("\n}\n")]
+assert "if (fh->position) {" in dread and dread.count("if (r == -EINVAL) {") == 2 and "if (info->EOS)" in dread
+assert "r = -ENAMETOOLONG;" in smbman
+
+# the dashboard worker never retries shares; a stale failure flag only acts on SMB paths
+filer = text("src/filer.c")
+assert "} else if (root && !dashWorkerOnThread()) {" in filer
+assert "if (smb_version != SMB_PATH_NONE) {" in browser
+
 yaml = text("ps2.yaml")
-assert "defines: [SMBMAN_SMB1_DEVICE]" in yaml and "      - smbman\n" in yaml and "      - SMB\n" in yaml
+assert "      - SMBMAN_SMB1_DEVICE\n      - IOMANX_OLD_NAME_ADDDELDRV=0\n" in yaml
+assert "      - smbman\n" in yaml and "      - SMB\n" in yaml
 assert "src/smb_cnf.c" in yaml and "src/smb_shares.c" in yaml
 assert 'EMBED_FILE(smb2man_irx, "iop/__precompiled/smb2man.irx")' in text("src/embed_blobs.S")
 

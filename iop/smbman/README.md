@@ -22,6 +22,22 @@ Launchstation changes, each marked "Launchstation" in the source:
   registered (`smb_initdev()` fails). Upstream stays resident anyway, so
   the EE, which checks the start result, would take a driver with no
   device for a loaded one.
+- Registration goes through iomanX (`I_iomanX_AddDrv`,
+  `IOMANX_OLD_NAME_ADDDELDRV=0`), not legacy ioman, so the extended calls
+  of this `IOP_DT_FSEXT` device reach it.
+- Server-supplied lengths are bounded (`smb.c`): the NetBIOS reply length
+  against `SMB_buf`, the negotiate `KeyLength` (8 bytes for a challenge) and
+  domain name against what was received and the destination, and the
+  READ_ANDX `DataOffset`/`DataLength` against `SMB_buf` and the request.
+- A server that asks for a clear-text password is refused (`-EACCES`); the
+  password is never sent in the clear.
+- `smb_Disconnect` drains with a 3 s receive timeout, so a dead link does
+  not hold the driver lock for minutes.
+- `smb_close` always frees the handle slot (a directory closed before its
+  first read, or a failed server close, used to leak it), and `smb_dopen`
+  refuses a path too long for the search pattern.
+- `smb_dread` returns 0 at the end of a listing and for an empty folder
+  (upstream returned an error, which fails the whole listing).
 
 Credits: [jimmikaelkael](https://github.com/jimmikaelkael) (smbman), the
 [ps2sdk](https://github.com/ps2dev/ps2sdk) developers, and the
