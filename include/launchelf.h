@@ -377,6 +377,11 @@ int load_vmcman(void);
 int get_vmcman_last_error(void);
 #ifdef ETH
 void load_ps2host(void);
+#ifdef SMB
+int load_smb(int version); /* 1: smb1: (SMB1), 2: smb: (SMB2/SMB3) */
+int isSmbDriverLoaded(int version);
+const char *smbLoadError(void); /* why the last load_smb() failed, or NULL */
+#endif
 #endif
 #ifdef UDPFS
 int load_udpfs(void);
