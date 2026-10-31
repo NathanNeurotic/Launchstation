@@ -69,6 +69,14 @@ int cloudGoogleRecoverSnapshot(const CloudGoogleBrowseItem *snapshot,
                                const char *dest_dir, char *result_path,
                                int result_size, char *error, int error_size);
 
+/* Download one listed per-save version (WLE-*.psu), verify its uploaded
+ * SHA-256 and every .psu entry, then publish it as a NEW RECOVER-CLOUD-###.psu
+ * on USB/HDD, ready for Card contents > Import .psu or Save library here.
+ * Never overwrites local files and never writes to a card. */
+int cloudGoogleRecoverSaveVersion(const CloudGoogleBrowseItem *version,
+                                  const char *dest_dir, char *result_path,
+                                  int result_size, char *error, int error_size);
+
 int cloudGoogleSyncBackupRoot(const char *backup_root, CloudGoogleSyncStats *stats,
                               CloudGoogleProgress progress, char *error, int error_size);
 

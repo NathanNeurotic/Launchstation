@@ -15,6 +15,10 @@ typedef struct {
      *    reading the whole card. 1: always compare every byte, as before.
      *    Fingerprints are still written either way. */
     int verify;
+    /* 1: after a card's history is current, keep each changed save on its
+     *    newest copy as a .psu version in <card history>/WLE-Saves/<save>/
+     *    (mmce_save_versions.h), keep versions per save. 0: cards only. */
+    int per_save;
 } MmceBackupOptions;
 
 typedef struct {
@@ -22,6 +26,8 @@ typedef struct {
     int backed_up;
     int unchanged;
     int failed;
+    int save_versions; /* per_save: new .psu versions written */
+    int save_failed;   /* per_save: saves (or cards) whose version failed */
 } MmceBackupStats;
 
 typedef struct {

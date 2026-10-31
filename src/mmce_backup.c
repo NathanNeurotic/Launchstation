@@ -6,6 +6,7 @@
 #include "mc_card_export.h"
 #include "mc_card_view.h"
 #include "mmce_backup.h"
+#include "mmce_save_versions.h"
 
 extern int fileMode;
 
@@ -715,6 +716,29 @@ static int count_candidates(const char *dir, int depth)
     return count;
 }
 
+/* Per-save versions from the card's newest verified history copy, after
+ * backup_one has made it current. Never touches the card or its history;
+ * a failure here is counted apart and does not fail the card backup. */
+static void save_versions(const char *relative, const char *backup_root,
+                          const MmceBackupOptions *options, MmceBackupStats *stats)
+{
+    MmceSaveVersionStats sv;
+    char dir[MAX_PATH], newest[MAX_NAME], history[MAX_PATH], saves_dir[MAX_PATH];
+
+    if (!options->per_save)
+        return;
+    if (!card_history_dir(backup_root, relative, dir, sizeof(dir)) ||
+        newest_history(dir, options->format, NULL, newest, sizeof(newest)) <= 0 ||
+        !join_path(history, sizeof(history), dir, newest) ||
+        !join_path(saves_dir, sizeof(saves_dir), dir, MMCE_SAVE_VERSIONS_DIR) ||
+        mmceSaveVersionsFromHistory(history, saves_dir, options->keep, &sv) < 0) {
+        stats->save_failed++;
+        return;
+    }
+    stats->save_versions += sv.versioned;
+    stats->save_failed += sv.failed;
+}
+
 static void process_tree(const char *dir, const char *source_root,
                          const char *backup_root, const MmceBackupOptions *options,
                          int depth, MmceBackupStats *stats,
@@ -753,7 +777,8 @@ static void process_tree(const char *dir, const char *source_root,
             relative = child + strlen(source_root);
             while (*relative == '/')
                 relative++;
-            backup_one(child, relative, backup_root, options, NULL, stats);
+            if (backup_one(child, relative, backup_root, options, NULL, stats) == 0)
+                save_versions(relative, backup_root, options, stats);
         }
         memset(&ent, 0, sizeof(ent));
     }
@@ -763,7 +788,7 @@ static void process_tree(const char *dir, const char *source_root,
 int mmceBackupAllCards(int unit, const char *dest_root, const MmceBackupOptions *options,
                        MmceBackupStats *stats, MmceBackupProgress progress)
 {
-    static const MmceBackupOptions defaults = {10, MMCE_BACKUP_FORMAT_MCD, 0};
+    static const MmceBackupOptions defaults = {10, MMCE_BACKUP_FORMAT_MCD, 0, 0};
     char source_root[MAX_PATH], history_root[MAX_PATH], tmp[MAX_PATH], unit_name[16];
     int done = 0;
 
@@ -811,7 +836,7 @@ int mmceBackupCardPath(int unit, const char *source, const char *dest_root,
                        const MmceBackupOptions *options,
                        const char *protect_history, MmceBackupStats *stats)
 {
-    static const MmceBackupOptions defaults = {10, MMCE_BACKUP_FORMAT_MCD, 0};
+    static const MmceBackupOptions defaults = {10, MMCE_BACKUP_FORMAT_MCD, 0, 0};
     char source_root[MAX_PATH], history_root[MAX_PATH], card_dir[MAX_PATH];
     char tmp[MAX_PATH], unit_name[16];
     const char *relative, *p, *protect_name = NULL;
@@ -879,9 +904,13 @@ int mmceBackupCardPath(int unit, const char *source, const char *dest_root,
     {
         /* A pre-restore copy must be byte exact: never skip by fingerprint. */
         MmceBackupOptions exact = *options;
+        int r;
         exact.verify = 1;
-        return backup_one(source, relative, history_root, &exact,
-                          protect_name, stats);
+        r = backup_one(source, relative, history_root, &exact,
+                       protect_name, stats);
+        if (r == 0)
+            save_versions(relative, history_root, &exact, stats);
+        return r;
     }
 reject:
     stats->failed++;
@@ -936,7 +965,7 @@ static void scan_tree(const char *dir, const char *source_root,
 int mmceBackupScanCards(int unit, const char *dest_root, const MmceBackupOptions *options,
                         MmceBackupScanStats *stats, MmceBackupProgress progress)
 {
-    static const MmceBackupOptions defaults = {10, MMCE_BACKUP_FORMAT_MCD, 0};
+    static const MmceBackupOptions defaults = {10, MMCE_BACKUP_FORMAT_MCD, 0, 0};
     char source_root[MAX_PATH], history_root[MAX_PATH], tmp[MAX_PATH], unit_name[16];
     int done = 0;
 

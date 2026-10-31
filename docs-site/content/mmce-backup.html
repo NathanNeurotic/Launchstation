@@ -17,6 +17,26 @@
 <p>The automatic backup after IGR and the status scan decide this from a <b>fingerprint</b> instead of reading the whole card: a SHA-256 of the card&rsquo;s superblock and every directory entry (folders, file sizes, dates and locations, a few hundred KB). Each history copy gets a small <code>&lt;copy&gt;.FP</code> file holding it. History without one is compared in full once and then gets one. The contents of <code>B?DATA-SYSTEM</code> are left out, because the PS2 and OPL rewrite its history file when a game starts, which used to make every played card look changed.</p>
 <p>A fingerprint cannot see a save rewritten in place at the same size while the console clock is stuck or reset, because its date does not change. A match is therefore trusted for at most 8 backups in a row; the next one compares every byte and restarts the count. <b>Back up all MMCE cards</b> (Tools and File Browser) and the safety copy taken before a recovery always compare every byte.</p>
 
+<h2 id="per-save">Per-save versions</h2>
+<p>With <b>Settings &gt; Storage &amp; devices &gt; MMCE backups &gt; Per-save versions</b> on (default <b>Off</b>), every backup also keeps each save on the card as its own <code>.psu</code> file, so one game&rsquo;s history can be kept or restored without the rest of the card:</p>
+<pre class="tree"><code>PS2/Card1/Card1-1/
+├── WLE-20261031-101500.mcd
+└── WLE-Saves/
+    ├── BASLUS-21050SAVE/
+    │   ├── WLE-20261026-174200.psu   named after the card copy it came from
+    │   └── WLE-20261031-101500.psu
+    └── SOURCE.TXT                    the card copy last done without errors</code></pre>
+<ul>
+<li>The saves are taken from the card&rsquo;s newest <em>verified history copy</em>, never from the live MMCE card, so turning this on costs no extra adapter reads.</li>
+<li>A new <code>.psu</code> is kept only when the save&rsquo;s bytes differ from the newest one already in its folder. A card that did not change reads nothing more: <code>SOURCE.TXT</code> already names its copy.</li>
+<li>Each <code>.psu</code> is written as <code>.PART</code>, read back and checked against what was meant, then renamed; an existing file is never replaced. A failure is counted in the summary as <em>saves failed</em> and the next backup tries that card again. The card&rsquo;s own history is not affected.</li>
+<li><b>Backups per card</b> also limits the versions kept <em>per save</em> (0 keeps all); the oldest go first and the newest is never removed.</li>
+<li>The console&rsquo;s own <code>B?DATA-SYSTEM</code> folders, saves that hold sub-folders and saves larger than 8.5 MB are not kept. A save whose name uses characters other than letters, digits, <code>-</code>, <code>_</code> and <code>.</code> gets a folder with those replaced and a short hash added, so two saves never share one.</li>
+<li>To put a version back, open its folder with <b>Save library here&hellip;</b> (File Browser) or use <b>Card contents &gt; Import .psu&hellip;</b> on a card image; both take a verified safety copy of the card first (see <a href="saves.html">Saves</a>).</li>
+<li>With Google Drive linked the <code>WLE-Saves</code> folders are uploaded with the cards, and <b>Browse cloud history&hellip;</b> can download a single version (<a href="cloud.html#browse-recover">Google Drive</a>).</li>
+</ul>
+<p>Not yet tested on a console.</p>
+
 <h2 id="verification">Verification matters</h2>
 <p>A copy only counts after it has been read back and matched. Failures are reported per card (<em>failed</em> in the summary) and automatic steps such as the cloud upload do not run for a card that failed.</p>
 

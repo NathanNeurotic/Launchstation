@@ -389,6 +389,10 @@ int filerPrepareMemoryCardRead(int port)
 		return sceMcResFailDetect;
 	filerRootMcPollIdle();
 	ensureMemoryCardPortAccessible(port);
+	/* Directory workers cannot reset the IOP. Never issue libmc requests
+	 * against slot 2 if the foreground handoff failed or was skipped. */
+	if (port == 1 && !isPathDeviceStackLoaded("mc1:/"))
+		return sceMcResFailDetect;
 	ret = waitMemoryCardReadyForBrowse(port);
 	if (ret != sceMcResSucceed)
 		return ret;
@@ -685,7 +689,7 @@ int filerDirReadNeedsPrep(const char *path)
 	char dev[6];
 	int unit;
 
-	if (path == NULL || path[0] == '\0' || !strncmp(path, "mc", 2) || !strncmp(path, "vmc", 3))
+	if (path == NULL || path[0] == '\0' || !strncmp(path, "vmc", 3))
 		return FALSE;
 	if (!isPathDeviceStackLoaded(path))
 		return TRUE;
@@ -1358,6 +1362,12 @@ int pollRootMemoryCardDevices(void)
 
 	if (Timer() < root_mc_next_poll_time)
 		return FALSE;
+	/* Polling must never reset MX4SIO or send mc1 requests through its
+	 * SIO2 hooks. Explicit browsing performs the foreground stack switch. */
+	if (root_mc_poll_port == 1 && !isPathDeviceStackLoaded("mc1:/")) {
+		root_mc_poll_port = 0;
+		return FALSE;
+	}
 
 	start_ret = mcGetInfo(root_mc_poll_port, 0, &root_mc_poll_type, &root_mc_poll_free, &root_mc_poll_format);
 	if (start_ret == 0)
@@ -2212,6 +2222,13 @@ int filerRootMcPresent(int port, int *type, int *free_kb)
 {
 	if (port < 0 || port > 1)
 		return 0;
+	if (port == 1 && !isPathDeviceStackLoaded("mc1:/")) {
+		if (type != NULL)
+			*type = 0;
+		if (free_kb != NULL)
+			*free_kb = -1;
+		return -2; /* unresolved/selectable until browsing releases MX4SIO */
+	}
 	if (type != NULL)
 		*type = root_mc_known_type[port];
 	if (free_kb != NULL)

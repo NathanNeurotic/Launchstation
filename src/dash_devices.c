@@ -297,7 +297,10 @@ int dashDevicesList(DashDevice *out, int max)
 		snprintf(name, sizeof(name), "mc%d (Slot %d)", port, port + 1);
 		snprintf(mount, sizeof(mount), "mc%d:", port);
 		snprintf(browse, sizeof(browse), "mc%d:/", port);
-		if (present == -2)
+		if (present == -2 && port == 1 && !isPathDeviceStackLoaded("mc1:/"))
+			/* MX4SIO owns slot 2's SIO2 port; opening it resets the IOP first. */
+			d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Used by MX4SIO - open to switch");
+		else if (present == -2)
 			d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Not responding - open to retry");
 		else if (present < 0)
 			d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Checking...");

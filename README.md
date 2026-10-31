@@ -97,7 +97,7 @@ It is fully themeable from the controller: 18 built-in PS2-inspired theme preset
 
 **System**
 - LoadBOOTer memory card exploit installer for retail PS2/PSX and DEX (DTL-HXXXXX), with [custom ELF binding](#bind-an-elf-to-a-memory-card-as-an-exploit-update).
-- PS3/PS4 DualShock USB/Bluetooth support in the DS34 variant (drivers by Alex Parrado).
+- PS3/PS4 DualShock USB/Bluetooth support in the DS34 variant (drivers by [Alex Parrado](https://github.com/parrado)).
 - [Software clock](#software-clock-for-consoles-with-a-dead-cmos-battery) for consoles with a dead CMOS battery.
 - Device entries that cannot exist on the running console are hidden: internal HDD/ATA on deckard and PSX, XFROM and DVR HDD on non-PSX, iLink on consoles without the port (see the device table).
 - On-screen keyboard layouts: QWERTY, DVORAK, AZERTY, QWERTZ, ABNT, ABC.
@@ -347,9 +347,9 @@ This documentation is authored on `master` and generated to `gh-pages` by CI; do
 
 ## Credits & Acknowledgments
 
-**Direct lineage and maintainers:** [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z) by [R3Z3N / Saildot4K](https://github.com/saildot4k); earlier wLaunchELF, uLaunchELF and LaunchELF authors; [johnson-cooper](https://github.com/johnson-cooper), who created and transferred this fork; [NathanNeurotic / Ripto](https://github.com/NathanNeurotic), current maintainer; [techwritescode](https://github.com/techwritescode), TnA, oMrRexD, Zack and FitthFox for collaboration, insight or testing as noted in the detailed credits.
+**Direct lineage and maintainers:** [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z) by R3Z3N / [Saildot4K](https://github.com/saildot4k); earlier wLaunchELF, uLaunchELF and LaunchELF authors; [johnson-cooper](https://github.com/johnson-cooper), who created and transferred this fork; [NathanNeurotic / Ripto](https://github.com/NathanNeurotic), current maintainer; [techwritescode](https://github.com/techwritescode), [TnA](https://github.com/TnA-Plastic), [oMrRexD](https://github.com/oMrRexD), Zack and FitthFox for collaboration, insight or testing as noted in the detailed credits.
 
-**Source/dependency credits:** the [PS2BUILD SDK](https://git.techwritescode.dev/ps2) and its LLVM/Clang toolchain (used to build releases), [PS2SDK/ps2dev](https://github.com/ps2dev/ps2sdk), [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman), [RiptOPL usbd-ra](https://github.com/NathanNeurotic/Open-PS2-Loader), [ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), [libsmb2](https://github.com/sahlberg/libsmb2) by [Ronnie Sahlberg](https://github.com/sahlberg) (`smb:`), inherited DS34 driver authors including Alex Parrado, [Mbed TLS](https://github.com/Mbed-TLS/mbedtls), [libjpeg-turbo](https://libjpeg-turbo.org/), [Xiph.org ogg/vorbis](https://xiph.org/), the PS2BUILD SDK audio package (`audsrv-compat`) and font contributors.
+**Source/dependency credits:** the [PS2BUILD SDK](https://git.techwritescode.dev/ps2) and its LLVM/Clang toolchain (used to build releases), [PS2SDK/ps2dev](https://github.com/ps2dev/ps2sdk), [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman), [RiptOPL usbd-ra](https://github.com/NathanNeurotic/Open-PS2-Loader), [ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), [libsmb2](https://github.com/sahlberg/libsmb2) by [Ronnie Sahlberg](https://github.com/sahlberg) (`smb:`), inherited DS34 driver authors including [Alex Parrado](https://github.com/parrado), [Mbed TLS](https://github.com/Mbed-TLS/mbedtls), [libjpeg-turbo](https://libjpeg-turbo.org/), [Xiph.org ogg/vorbis](https://xiph.org/), the [PS2BUILD SDK](https://git.techwritescode.dev/ps2/ps2build) audio package (`audsrv-compat`) and font contributors.
 
 **PC CARD CompactFlash driver reference:** [mihhru](https://github.com/mihhru) and [PS2CF](https://github.com/mihhru/PS2CF) supplied the early-PS2 CF PIO/ATA foundation and host tests. The driver is integrated into this build; console compatibility is not yet verified on hardware.
 

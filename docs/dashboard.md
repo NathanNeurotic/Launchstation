@@ -590,7 +590,7 @@ Revert is selected initially; Cancel or timeout restores the previous mode and
 screen offsets. Saving Settings is still required to persist an accepted mode.
 
 Sound effects retry only voices 0–22 when their preferred voice is busy; voice
-23 remains reserved for background music. These changes adapt saildot4k's
+23 remains reserved for background music. These changes adapt [saildot4k](https://github.com/saildot4k)'s
 Launchstation fixes. Console display resync and audio behavior require hardware
 validation.
 
@@ -609,7 +609,7 @@ punctuation. Device-specific name limits still apply when writing.
 Lists keep selection near the upper middle of the viewport and clamp at the
 start and end. Applications, Files, Tools, Settings, HDD Manager, modal lists,
 date fields and path pickers use the same scrolling rule. Adapted from
-saildot4k's input and scrolling work; console validation remains pending.
+[saildot4k](https://github.com/saildot4k)'s input and scrolling work; console validation remains pending.
 
 The larger save-management follow-ups are tracked in
 [issue #232](https://github.com/NathanNeurotic/Launchstation/issues/232).

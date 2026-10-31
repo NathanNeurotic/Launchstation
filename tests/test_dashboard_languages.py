@@ -24,7 +24,7 @@ assert all([(n, key) for n, key, _ in entries] ==
 
 # Appended IDs preserve the 468 legacy/external-LNG positions.
 assert tables[0][467][1] == 'New_to_Old'
-assert all(key.startswith('Dashboard_') for _, key, _ in tables[0][468:])
+assert all(key.startswith(('Dashboard_', 'Exploit_Folder_')) for _, key, _ in tables[0][468:])
 formats = re.compile(r'%(?:[-+ #0]*)(?:\d+|\*)?(?:\.(?:\d+|\*))?(?:hh|ll|[hljztL])?[diouxXfFeEgGaAcspn%]')
 def signature(text):
     return [(m[0].count('*'), re.sub(r'^%[-+ #0\d.*]*', '%', m[0]))

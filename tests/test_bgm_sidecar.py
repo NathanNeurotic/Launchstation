@@ -203,6 +203,7 @@ static int have_usbd, have_usb_mass, have_HDD_modules, block_storage_stack_mode;
 static int have_ps2host, have_ps2ip, have_ps2smap, ps2dev9_loaded;
 static int have_Flash_modules, have_DVRP_HDD_modules, have_ata_bd, have_bdmfs;
 static int have_mmce, have_mx4sio, storage_driver_stack_mode, have_udpfs_ioman, have_cdvd;
+static int mx4sio_driver_running;
 static int have_ilinkman, have_ieee1394_bd, have_bdm, pccf_loaded;
 static int isPcCardCfPath(const char *path) { (void)path; return 0; }
 """
@@ -244,6 +245,9 @@ int main(void) {
     have_Flash_modules=have_DVRP_HDD_modules=1;
     assert(isPathDeviceStackLoaded("xfrom0:/") && isPathDeviceStackLoaded("dvr_pfs0:/"));
     assert(!isPathDeviceStackLoaded("unknown:/"));
+    assert(isPathDeviceStackLoaded("mc1:/"));
+    storage_driver_stack_mode=STORAGE_STACK_MX4SIO; assert(!isPathDeviceStackLoaded("mc1:/"));
+    storage_driver_stack_mode=0; mx4sio_driver_running=1; assert(!isPathDeviceStackLoaded("mc1:/"));
     puts("PASS: actual USB/HDD/disc boot folders, writable disc config fallback, active-stack aliases");
 }
 """
