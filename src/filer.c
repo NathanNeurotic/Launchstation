@@ -185,6 +185,9 @@ int host_use_Bsl = 1;  //By default assume that host paths use backslash
 #ifdef UDPFS
 int udpfs_dir_open_failed = 0;
 #endif
+#ifdef SMB
+int smb_dir_open_failed = 0;
+#endif
 u64 written_size;            //Used for pasting progress report
 u64 PasteTime;               //Used for pasting progress report
 
@@ -198,6 +201,9 @@ int USB_mass_scanned = 0;  //0==Not_found_OR_No_Multi 1==found_Multi_mass_once
 int USB_mass_loaded = 0;   //0==none, 1==internal, 2==external
 
 int readGENERIC(const char *path, FILEINFO *info, int max);
+#ifdef SMB
+int dashWorkerOnThread(void); /* dash_internal.h */
+#endif
 
 #define USB_BROWSER_MAX_DRIVES 2
 #define USB_DISCOVERY_ATTEMPTS 3
@@ -1602,20 +1608,16 @@ int readHOST(const char *path, FILEINFO *info, int max)
 	return hostcount;
 }
 #endif
-#ifdef UDPFS
-int readUDPFS(const char *path, FILEINFO *info, int max)
+#if defined(UDPFS) || defined(SMB)
+/* Lists a network folder. Unlike readGENERIC it returns the error of a
+ * failed open or read, so a partial listing is never taken as complete. */
+static int readNetDir(const char *path, FILEINFO *info, int max, int *open_failed)
 {
 	iox_dirent_t dirent;
 	int fd, ret, close_ret, count = 0;
 
-	udpfs_dir_open_failed = 0;
-	ret = initUDPFS();
-	if (ret < 0) {
-		udpfs_dir_open_failed = 1;
-		return ret;
-	}
 	if ((fd = fileXioDopen(path)) < 0) {
-		udpfs_dir_open_failed = 1;
+		*open_failed = 1;
 		return fd;
 	}
 
@@ -1646,6 +1648,51 @@ int readUDPFS(const char *path, FILEINFO *info, int max)
 	if (close_ret < 0) return close_ret;
 	strcpy(info[count].name, "\0");
 	return count;
+}
+#endif
+#ifdef UDPFS
+int readUDPFS(const char *path, FILEINFO *info, int max)
+{
+	int ret;
+
+	udpfs_dir_open_failed = 0;
+	ret = initUDPFS();
+	if (ret < 0) {
+		udpfs_dir_open_failed = 1;
+		return ret;
+	}
+	return readNetDir(path, info, max, &udpfs_dir_open_failed);
+}
+#endif
+#ifdef SMB
+/* smb: (SMB2/SMB3) and smb1: (SMB1). The drivers are loaded on the UI
+ * thread only (filerPrepareDirRead); a dashboard worker listing an
+ * unloaded device gets -ENODEV rather than loading IOP modules itself. */
+int readSMB(const char *path, FILEINFO *info, int max)
+{
+	int version = smbPathKind(path);
+	int root = smbIsRootPath(path);
+	int n;
+
+	smb_dir_open_failed = 0;
+	if (!isSmbDriverLoaded(version)) {
+		if (dashWorkerOnThread() || !load_smb(version)) {
+			smb_dir_open_failed = 1;
+			return -ENODEV;
+		}
+	} else if (root) {
+		/* opening the device root retries failed shares (rate limited) */
+		smbSharesConnect(version, 1);
+	}
+	if (version == SMB_PATH_V1 && smbSharesConnectedCount(SMB_PATH_V1) == 0) {
+		/* smbman has no root of its own: without a share there is nothing */
+		smb_dir_open_failed = 1;
+		return -ENOTCONN;
+	}
+	n = readNetDir(path, info, max, &smb_dir_open_failed);
+	if (root && n == 0 && smbSharesConnectedCount(version) == 0)
+		smb_dir_open_failed = 1;
+	return n;
 }
 #endif
 #endif
@@ -1765,6 +1812,10 @@ int getDir(const char *path, FILEINFO *info)
 #ifdef UDPFS
 	else if (!strncmp(path, "udpfs", 5))
 		n = readUDPFS(path, info, max);
+#endif
+#ifdef SMB
+	else if (smbPathKind(path) != SMB_PATH_NONE)
+		n = readSMB(path, info, max);
 #endif
 #endif
 #ifdef MMCE
@@ -2041,6 +2092,16 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 #ifdef UDPFS
 			strcpy(files[nfiles].name, "udpfs:");
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
+#endif
+#ifdef SMB
+			/* smb1: only when SMB2.CNF has a VERSION = 1 share; reading the
+			 * file touches no network */
+			strcpy(files[nfiles].name, SMB_DEVICE_V2);
+			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
+			if (smbSharesConfigured(SMB_PATH_V1)) {
+				strcpy(files[nfiles].name, SMB_DEVICE_V1);
+				files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
+			}
 #endif
 			if (cnfmode < 2) {
 				//This condition blocks use of MISC pseudo-device for driver path picks.

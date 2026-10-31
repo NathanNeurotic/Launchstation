@@ -22,7 +22,7 @@ extern int vmcMounted[2];
 
 /* Driver residency does not establish that a card, disk or server exists.
  * Cache explicit root checks; never do blocking device IO from drawing. */
-enum { PROBE_HDD, PROBE_ATA, PROBE_PCCF, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1, PROBE_UDPFS };
+enum { PROBE_HDD, PROBE_ATA, PROBE_PCCF, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1, PROBE_UDPFS, PROBE_SMB, PROBE_SMB1 };
 static u32 probe_checked, probe_present;
 static unsigned int probe_reset_generation = (unsigned int)-1;
 
@@ -41,6 +41,10 @@ static int probeIndex(const char *mount)
 	if (!strncmp(mount, "ilink", 5)) return PROBE_ILINK;
 	if (!strncmp(mount, "mmce", 4)) return mount[4] == '1' ? PROBE_MMCE1 : PROBE_MMCE0;
 	if (!strncmp(mount, "udpfs:", 6)) return PROBE_UDPFS;
+#ifdef SMB
+	if (smbPathKind(mount) == SMB_PATH_V1) return PROBE_SMB1;
+	if (smbPathKind(mount) == SMB_PATH_V2) return PROBE_SMB;
+#endif
 	return -1;
 }
 
@@ -388,6 +392,29 @@ int dashDevicesList(DashDevice *out, int max)
 #ifdef UDPFS
 	addStorage(out, &n, max, DI_NETWORK, "Network (UDPFS)", "udpfs:", "udpfs:/", netConfig[0] ? netConfig : "Connected", "UDPFS server not found");
 #endif
+#ifdef SMB
+	{
+		/* Opening one starts the network and connects SMB2.CNF's shares;
+		 * listing them reads no file and no network. smb1: only with a VERSION = 1
+		 * share. */
+		static char smb_ready[2][64], smb_absent[2][96];
+		int v;
+
+		for (v = SMB_PATH_V2; v >= SMB_PATH_V1; v--) {
+			int i = v == SMB_PATH_V1;
+
+			if (v == SMB_PATH_V1 && !smbSharesKnown(SMB_PATH_V1))
+				continue;
+			smbSharesStatus(v, smb_absent[i], sizeof(smb_absent[i]));
+			if (!isSmbDriverLoaded(v) && smbLoadError(v)[0])
+				snprintf(smb_absent[i], sizeof(smb_absent[i]), "%s", smbLoadError(v));
+			snprintf(smb_ready[i], sizeof(smb_ready[i]), "%d share(s) connected", smbSharesConnectedCount(v));
+			addStorage(out, &n, max, DI_NETWORK, v == SMB_PATH_V1 ? "Network (SMB1)" : "Network (SMB)",
+			           v == SMB_PATH_V1 ? SMB_DEVICE_V1 : SMB_DEVICE_V2, v == SMB_PATH_V1 ? "smb1:/" : "smb:/",
+			           smb_ready[i], smb_absent[i]);
+		}
+	}
+#endif
 #ifdef ETH
 	add(out, &n, max, DI_NETWORK, DASH_DEV_PROBE, "Network Host", "host:", "host:/", "PS2Link host");
 #endif
@@ -544,6 +571,17 @@ static int probeMount(const char *m)
 	else if (!strncmp(m, "udpfs", 5)) {
 		ok = load_udpfs();
 		if (ok) ok = probeRoot("udpfs:/", 0);
+	}
+#endif
+#ifdef SMB
+	else if (smbPathKind(m) != SMB_PATH_NONE) {
+		int v = smbPathKind(m);
+
+		ok = isSmbDriverLoaded(v) || load_smb(v);
+		if (ok) {
+			smbSharesConnect(v, 1); /* rate limited */
+			ok = smbSharesConnectedCount(v) > 0;
+		}
 	}
 #endif
 #ifdef XFROM
@@ -706,6 +744,12 @@ void dashDevicesStartForPath(const char *path)
 #ifdef UDPFS
 	else if (!strncmp(path, "udpfs", 5))
 		mount = "udpfs:";
+#endif
+#ifdef SMB
+	else if (smbPathKind(path) == SMB_PATH_V1)
+		mount = SMB_DEVICE_V1;
+	else if (smbPathKind(path) == SMB_PATH_V2)
+		mount = SMB_DEVICE_V2;
 #endif
 	if (mount != NULL)
 		startSync(mount, "Starting devices");

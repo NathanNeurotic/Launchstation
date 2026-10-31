@@ -29,6 +29,12 @@ IMPORT_BIN2C(ps2netfs_irx);
 IMPORT_BIN2C(ps2ftpd_irx);
 #endif
 
+#ifdef SMB
+#include "smb_shares.h"
+IMPORT_BIN2C(smb2man_irx);
+IMPORT_BIN2C(smbman_irx);
+#endif
+
 #ifdef UDPFS
 IMPORT_BIN2C(udpfs_smap_irx);
 IMPORT_BIN2C(udpfs_ministack_irx);
@@ -132,6 +138,11 @@ static u8 have_ps2smap = 0;
 static u8 have_ps2host = 0;
 static u8 have_ps2ip = 0;
 static u8 have_ps2ips = 0;
+#ifdef SMB
+static u8 have_smb2man = 0; /* smb:  SMB2/SMB3 */
+static u8 have_smbman = 0;  /* smb1: SMB1 */
+static const char *smb_load_error[3]; /* by version: why load_smb() failed */
+#endif
 #ifdef ETH
 static const char *dashboard_ip_error = NULL;
 /* The vendored EE socket client (ee_libs/tcpips/ps2ipc.c) is not declared by
@@ -872,6 +883,75 @@ void load_ps2host(void)
 //------------------------------
 //endfunc load_ps2host
 //---------------------------------------------------------------------------
+#ifdef SMB
+/* Starts the network and the driver for smb: (version 2: smb2man.irx) or
+ * smb1: (version 1: smbman.irx), then connects that version's shares from
+ * SMB2.CNF. Nothing touches the network before a device is opened.
+ * A driver whose start routine refused to stay resident (AddDrv failed) is
+ * not running, so only MODULE_RESIDENT_END counts as loaded. */
+int load_smb(int version)
+{
+	int ret, ID;
+	u8 *have = (version == 1) ? &have_smbman : &have_smb2man;
+
+	if (version != 1 && version != 2)
+		return 0;
+	smb_load_error[version] = NULL;
+	if (pcCardCfOwnsBus()) {
+		smb_load_error[version] = "PC CARD CompactFlash is using the network adapter.";
+		return 0;
+	}
+	if (setting != NULL && setting->legacy_net_drivers) {
+		/* smb2man/smbman link against the current PS2IP exports */
+		smb_load_error[version] = "SMB needs the current Ethernet drivers: turn off Legacy Ethernet drivers.";
+		return 0;
+	}
+#if defined(ETH) && defined(UDPFS)
+	if (!switchNetworkStack(NETWORK_STACK_ETH)) {
+		smb_load_error[version] = "The network adapter is busy (UDPFS).";
+		return 0;
+	}
+#endif
+	if (!*have || !have_ps2ip || !have_ps2smap || !ps2dev9_loaded)
+		showLoadingModulesMsg(version == 1 ? "smb1" : "smb");
+
+	ensureCoreIoStackReady();
+	setupPowerOff();
+	getIpConfig();
+	if (!load_ps2ip()) {
+		smb_load_error[version] = "The network stack could not be started.";
+		return 0;
+	}
+	if (!*have) {
+		if (version == 1)
+			ID = SifExecModuleBuffer(smbman_irx, size_smbman_irx, 0, NULL, &ret);
+		else
+			ID = SifExecModuleBuffer(smb2man_irx, size_smb2man_irx, 0, NULL, &ret);
+		DPRINTF(" [%s]: ID=%d, ret=%d\n", version == 1 ? "SMBMAN" : "SMB2MAN", ID, ret);
+		*have = (ID >= 0 && ret == 0);
+		if (!*have) {
+			smb_load_error[version] = "The SMB driver could not be loaded (IOP memory?).";
+			return 0;
+		}
+	}
+	smbSharesConnect(version, 1);
+	return 1;
+}
+
+/* "" when the last load_smb(version) worked */
+const char *smbLoadError(int version)
+{
+	return (version == 1 || version == 2) && smb_load_error[version] != NULL ? smb_load_error[version] : "";
+}
+
+int isSmbDriverLoaded(int version)
+{
+	return ((version == 1) ? have_smbman : have_smb2man) && have_ps2ip && have_ps2smap && ps2dev9_loaded;
+}
+//------------------------------
+//endfunc load_smb
+//---------------------------------------------------------------------------
+#endif
 #endif
 
 #ifdef UDPFS
@@ -2580,6 +2660,11 @@ static void clearIopModuleState(void)
 	have_ps2ip = 0;
 	have_ps2ips = 0;
 	have_ps2netfs = 0;
+#ifdef SMB
+	have_smb2man = 0;
+	have_smbman = 0;
+	smbSharesForget();
+#endif
 #ifdef UDPFS
 	have_udpfs_smap = 0;
 	have_udpfs_ministack = 0;
@@ -2702,6 +2787,10 @@ int isPathDeviceStackLoaded(const char *path)
 #ifdef ETH
 	if (!strncmp(path, "host:", 5))
 		return have_ps2host && have_ps2ip && have_ps2smap && ps2dev9_loaded;
+#ifdef SMB
+	if (smbPathKind(path) != SMB_PATH_NONE)
+		return isSmbDriverLoaded(smbPathKind(path));
+#endif
 #endif
 #ifdef XFROM
 	if (!strncmp(path, "xfrom", 5))

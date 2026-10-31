@@ -97,6 +97,11 @@
           "netboot"
         ],
         [
+          "smb",
+          "Network Shares (SMB)",
+          "netboot"
+        ],
+        [
           "pc-card-cf",
           "PC CARD CompactFlash",
           "hdd"
