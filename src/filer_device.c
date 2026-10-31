@@ -61,7 +61,25 @@ static int isDev9BackedPath(const char *path)
 	        !strncmp(path, "ata", 3) ||
 	        !strncmp(path, "host", 4) ||
 	        !strncmp(path, "udpfs", 5) ||
+#ifdef SMB
+	        smbPathKind(path) != SMB_PATH_NONE ||
+#endif
 	        !strncmp(path, "xfrom", 5));
+}
+
+/* udpfs and smb need different network stacks, and starting one resets
+ * the IOP under the other's open files. */
+static int transferUsesUdpfsAndSmb(const char *src_path, const char *dst_path)
+{
+#if defined(UDPFS) && defined(SMB)
+	return ((src_path != NULL && dst_path != NULL) &&
+	        ((!strncmp(src_path, "udpfs", 5) && smbPathKind(dst_path) != SMB_PATH_NONE) ||
+	         (smbPathKind(src_path) != SMB_PATH_NONE && !strncmp(dst_path, "udpfs", 5))));
+#else
+	(void)src_path;
+	(void)dst_path;
+	return FALSE;
+#endif
 }
 
 static int transferUsesPcCardCfAndDev9(const char *src_path, const char *dst_path)
@@ -131,6 +149,10 @@ int ensurePathDeviceStackReady(const char *path)
 		return load_udpfs();
 	}
 #endif
+#ifdef SMB
+	if (smbPathKind(path) != SMB_PATH_NONE)
+		return isSmbDriverLoaded(smbPathKind(path)) || load_smb(smbPathKind(path));
+#endif
 	return TRUE;
 }
 int prepareTransferDeviceStacks(const char *src_path, const char *dst_path)
@@ -142,6 +164,9 @@ int prepareTransferDeviceStacks(const char *src_path, const char *dst_path)
 		return TRANSFER_STACK_INCOMPATIBLE;
 
 	if (transferUsesPcCardCfAndDev9(src_path, dst_path))
+		return TRANSFER_STACK_INCOMPATIBLE;
+
+	if (transferUsesUdpfsAndSmb(src_path, dst_path))
 		return TRANSFER_STACK_INCOMPATIBLE;
 
 	if (src_storage != TRANSFER_STORAGE_DEFAULT &&

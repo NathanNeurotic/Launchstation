@@ -67,14 +67,18 @@ int smbConfigValidCount(const SmbConfig *cfg, int version);
 /* SMB_PATH_V1 for "smb1:...", SMB_PATH_V2 for "smb:...", else SMB_PATH_NONE.
  * Plain prefix tests on "smb" would take smb1: for smb:. */
 int smbPathKind(const char *path);
+/* "smb:", "smb:/", "smb1:" or "smb1:/": the device itself, where smb: lists
+ * its connected shares and nothing can be written. */
+int smbIsRootPath(const char *path);
 
 #ifdef SMB
 /* PS2 side (smb_shares.c) */
 int smbSharesConfigured(int version);   /* reads SMB2.CNF once; no network */
+int smbSharesKnown(int version);        /* the same, but no IO: 0 until read */
 const char *smbSharesConfigPath(void);  /* "" when no SMB2.CNF was found */
 void smbSharesConnect(int version, int retry_failed);
 int smbSharesConnectedCount(int version);
-void smbSharesStatus(int version, char *out, int out_size);
+void smbSharesStatus(int version, char *out, int out_size); /* no IO */
 void smbSharesForget(void); /* the drivers are gone (IOP reset) */
 #endif
 

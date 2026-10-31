@@ -29,7 +29,7 @@ static unsigned int smb_retry_ms[3]; /* by version: last retry of failed shares 
 
 /* Same places as IPCONFIG.DAT: beside the launched ELF, then SYS-CONF on
  * the card it was launched from, then on the other card. */
-static char *loadConfigText(void)
+static char *smbReadConfigText(void)
 {
 	char path[MAX_PATH];
 	char *text;
@@ -54,9 +54,9 @@ static char *loadConfigText(void)
 	return NULL;
 }
 
-static void loadConfig(void)
+static void smbReadConfig(void)
 {
-	char *text = loadConfigText();
+	char *text = smbReadConfigText();
 	int i;
 
 	smbConfigParse(text, &smb_cfg);
@@ -74,8 +74,13 @@ static void loadConfig(void)
 int smbSharesConfigured(int version)
 {
 	if (!smb_cfg_loaded)
-		loadConfig();
+		smbReadConfig();
 	return smbConfigValidCount(&smb_cfg, version);
+}
+
+int smbSharesKnown(int version)
+{
+	return smb_cfg_loaded ? smbConfigValidCount(&smb_cfg, version) : 0;
 }
 
 const char *smbSharesConfigPath(void)
@@ -179,7 +184,7 @@ void smbSharesConnect(int version, int retry_failed)
 			smb_retry_ms[version] = now;
 	}
 	if (!smb_cfg_loaded || (retry_failed && smbSharesConnectedCount(1) == 0 && smbSharesConnectedCount(2) == 0))
-		loadConfig();
+		smbReadConfig();
 	for (i = 0; i < smb_cfg.count; i++) {
 		SmbShare *sh = &smb_cfg.share[i];
 
@@ -218,8 +223,10 @@ void smbSharesStatus(int version, char *out, int out_size)
 	int i, valid = 0, connected = 0;
 	const SmbShare *first_bad = NULL;
 
-	if (!smb_cfg_loaded)
-		loadConfig();
+	if (!smb_cfg_loaded) {
+		snprintf(out, out_size, "Open to read %s and connect", SMB_CNF_NAME);
+		return;
+	}
 	if (!smb_cfg_path[0]) {
 		snprintf(out, out_size, "No %s found (beside Launchstation or in mc?:/SYS-CONF)", SMB_CNF_NAME);
 		return;
@@ -246,11 +253,20 @@ void smbSharesStatus(int version, char *out, int out_size)
 }
 
 /* The drivers went away with an IOP reset: every share must be connected
- * again, and SMB2.CNF is read again then. */
+ * again. The parsed SMB2.CNF stays, so the device list still knows smb1:. */
 void smbSharesForget(void)
 {
-	smb_cfg_loaded = 0;
-	memset(&smb_cfg, 0, sizeof(smb_cfg));
+	int i;
+
+	for (i = 0; i < smb_cfg.count; i++) {
+		SmbShare *sh = &smb_cfg.share[i];
+
+		if (sh->state == SMB_STATE_INVALID)
+			continue;
+		sh->state = SMB_STATE_UNTRIED;
+		sh->error = 0;
+		sh->problem = NULL;
+	}
 	memset(smb_retry_ms, 0, sizeof(smb_retry_ms));
 }
 //--------------------------------------------------------------

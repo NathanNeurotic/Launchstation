@@ -203,6 +203,12 @@ void dashLibDeviceLabel(const char *path, char *out, int out_size)
 		dashStrCopy(out, "Disc", out_size);
 	else if (!strncmp(path, "udpfs", 5))
 		dashStrCopy(out, "Network (UDPFS)", out_size);
+#ifdef SMB
+	else if (smbPathKind(path) == SMB_PATH_V1)
+		dashStrCopy(out, "Network (SMB1)", out_size);
+	else if (smbPathKind(path) == SMB_PATH_V2)
+		dashStrCopy(out, "Network (SMB)", out_size);
+#endif
 	else if (!strncmp(path, "host", 4))
 		dashStrCopy(out, "Network Host", out_size);
 	else if (!strncmp(path, "xfrom", 5))
@@ -233,6 +239,10 @@ int dashLibDeviceIcon(const char *path)
 		return DI_DISC;
 	if (!strncmp(path, "udpfs", 5) || !strncmp(path, "host", 4))
 		return DI_NETWORK;
+#ifdef SMB
+	if (smbPathKind(path) != SMB_PATH_NONE)
+		return DI_NETWORK;
+#endif
 	if (!strncmp(path, "xfrom", 5) || !strncmp(path, "rom", 3))
 		return DI_CHIP;
 	return DI_FOLDER;

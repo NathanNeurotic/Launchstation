@@ -99,6 +99,10 @@ extern int host_elflist;
 #ifdef UDPFS
 extern int udpfs_dir_open_failed;
 #endif
+#ifdef SMB
+extern int smb_dir_open_failed;
+int readSMB(const char *path, FILEINFO *info, int max);
+#endif
 
 int getDir(const char *path, FILEINFO *info);
 int filerPrepareDirRead(const char *path);

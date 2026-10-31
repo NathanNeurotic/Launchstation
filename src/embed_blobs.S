@@ -68,6 +68,12 @@ EMBED_FILE(exploit_ioprp_img, "exploits/IOPRP_LTS.IMG")
 EMBED_FILE(udpfs_ministack_irx, "iop/__precompiled/udpfs_ministack.irx")
 EMBED_FILE(udpfs_ioman_irx, "iop/__precompiled/udpfs_ioman.irx")
 
+#ifdef SMB
+/* smb: (SMB2/SMB3): smb2man.irx from libsmb2's wLaunchELF branch, prebuilt;
+ * see iop/__precompiled/SMB2MAN.md. smbman (smb1:) is source-built. */
+EMBED_FILE(smb2man_irx, "iop/__precompiled/smb2man.irx")
+#endif
+
 /* MrRexD network-compatibility fallback: ps2sdk v1.0 DEV9/PS2IP. */
 EMBED_FILE(ps2dev9_v10_irx, "iop/__v10/ps2dev9.irx")
 EMBED_FILE(ps2ip_v10_irx, "iop/__v10/ps2ip.irx")

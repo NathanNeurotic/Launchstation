@@ -191,6 +191,26 @@ targets:
     cflags: [-Wall]
     headers: [intrman, ioman, loadcore, ps2ip-nm, sifcmd, stdio, sysclib, threadman]
 
+  # SMB1 client for the smb1: device: OPL's fixed copy of ps2sdk smbman
+  # (iop/smbman/README.md), registered as "smb1" so it sits beside
+  # smb2man.irx (SMB2/SMB3, prebuilt in iop/__precompiled), which owns "smb".
+  - name: smbman
+    type: iop
+    sources:
+      - iop/smbman/smbman.c
+      - iop/smbman/smb_fio.c
+      - iop/smbman/smb.c
+      - iop/smbman/poll.c
+      - iop/smbman/auth.c
+      - iop/smbman/des.c
+      - iop/smbman/md4.c
+    include_dirs: [iop/smbman]
+    imports_lst: iop/smbman/imports.lst
+    defines: [SMBMAN_SMB1_DEVICE]
+    cflags: [-Wall]
+    ldflags: ["-lgcc"]
+    headers: [intrman, ioman, iomanx, ps2ip-nm, sifman, stdio, sysclib, threadman]
+
   # ps2sdk iop/deckard/xparam (not packaged by the SDK suite), homebrew DB.
   - name: xparam
     type: iop
@@ -330,6 +350,8 @@ targets:
       - src/draw_gs.c
       - src/draw_text.c
       - src/filer.c
+      - src/smb_cnf.c
+      - src/smb_shares.c
       - src/filer_device.c
       - src/filer_mount.c
       - src/filer_fileops.c
@@ -419,6 +441,7 @@ targets:
       - ETH
       - WLE_NATIVE_CLOUD
       - UDPFS
+      - SMB
       - TMANIP
       - EXFAT
       - CUSTOM_COLORS
@@ -445,6 +468,7 @@ targets:
       - smap-ps2ip:ps2smap
       - ps2ips_rpc:ps2ips
       - ps2host
+      - smbman
       - netfs:ps2netfs
       - ps2ftpd
       - dev9_poweroff

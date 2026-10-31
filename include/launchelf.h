@@ -78,6 +78,10 @@
 #endif
 #include <libcdvd.h>
 #include <libkbd.h>
+#include "smb_shares.h"
+#if defined(SMB) && !defined(ETH)
+#error "SMB needs ETH (the ps2ip network stack)"
+#endif
 #include <math.h>
 #include <usbhdfsd-common.h>
 #include "hdl_rpc.h"
@@ -380,7 +384,7 @@ void load_ps2host(void);
 #ifdef SMB
 int load_smb(int version); /* 1: smb1: (SMB1), 2: smb: (SMB2/SMB3) */
 int isSmbDriverLoaded(int version);
-const char *smbLoadError(void); /* why the last load_smb() failed, or NULL */
+const char *smbLoadError(int version); /* why the last load_smb() failed, or "" */
 #endif
 #endif
 #ifdef UDPFS

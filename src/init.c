@@ -141,7 +141,7 @@ static u8 have_ps2ips = 0;
 #ifdef SMB
 static u8 have_smb2man = 0; /* smb:  SMB2/SMB3 */
 static u8 have_smbman = 0;  /* smb1: SMB1 */
-static const char *smb_load_error = NULL;
+static const char *smb_load_error[3]; /* by version: why load_smb() failed */
 #endif
 #ifdef ETH
 static const char *dashboard_ip_error = NULL;
@@ -894,19 +894,21 @@ int load_smb(int version)
 	int ret, ID;
 	u8 *have = (version == 1) ? &have_smbman : &have_smb2man;
 
-	smb_load_error = NULL;
+	if (version != 1 && version != 2)
+		return 0;
+	smb_load_error[version] = NULL;
 	if (pcCardCfOwnsBus()) {
-		smb_load_error = "PC CARD CompactFlash is using the network adapter.";
+		smb_load_error[version] = "PC CARD CompactFlash is using the network adapter.";
 		return 0;
 	}
 	if (setting != NULL && setting->legacy_net_drivers) {
 		/* smb2man/smbman link against the current PS2IP exports */
-		smb_load_error = "SMB needs the current Ethernet drivers: turn off Legacy Ethernet drivers.";
+		smb_load_error[version] = "SMB needs the current Ethernet drivers: turn off Legacy Ethernet drivers.";
 		return 0;
 	}
 #if defined(ETH) && defined(UDPFS)
 	if (!switchNetworkStack(NETWORK_STACK_ETH)) {
-		smb_load_error = "The network adapter is busy (UDPFS).";
+		smb_load_error[version] = "The network adapter is busy (UDPFS).";
 		return 0;
 	}
 #endif
@@ -917,7 +919,7 @@ int load_smb(int version)
 	setupPowerOff();
 	getIpConfig();
 	if (!load_ps2ip()) {
-		smb_load_error = "The network stack could not be started.";
+		smb_load_error[version] = "The network stack could not be started.";
 		return 0;
 	}
 	if (!*have) {
@@ -928,7 +930,7 @@ int load_smb(int version)
 		DPRINTF(" [%s]: ID=%d, ret=%d\n", version == 1 ? "SMBMAN" : "SMB2MAN", ID, ret);
 		*have = (ID >= 0 && ret == 0);
 		if (!*have) {
-			smb_load_error = "The SMB driver could not be loaded (IOP memory?).";
+			smb_load_error[version] = "The SMB driver could not be loaded (IOP memory?).";
 			return 0;
 		}
 	}
@@ -936,9 +938,10 @@ int load_smb(int version)
 	return 1;
 }
 
-const char *smbLoadError(void)
+/* "" when the last load_smb(version) worked */
+const char *smbLoadError(int version)
 {
-	return smb_load_error;
+	return (version == 1 || version == 2) && smb_load_error[version] != NULL ? smb_load_error[version] : "";
 }
 
 int isSmbDriverLoaded(int version)

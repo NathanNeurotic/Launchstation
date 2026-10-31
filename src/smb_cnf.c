@@ -74,6 +74,18 @@ int smbPathKind(const char *path)
 	return SMB_PATH_NONE;
 }
 
+int smbIsRootPath(const char *path)
+{
+	int kind = smbPathKind(path);
+
+	if (kind == SMB_PATH_NONE)
+		return 0;
+	path += kind == SMB_PATH_V1 ? 5 : 4;
+	while (*path == '/')
+		path++;
+	return *path == '\0';
+}
+
 static int parseVersion(const char *value)
 {
 	if (sameText(value, "1") || sameText(value, "SMB1") || sameText(value, "NT1"))

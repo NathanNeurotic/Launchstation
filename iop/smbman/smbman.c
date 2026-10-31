@@ -29,7 +29,10 @@ int _start(int argc, char *argv[])
 
     printf("%s version 0x%01x%02x start!\n", MODNAME, VER_MAJOR, VER_MINOR);
 
-    smb_initdev();
+    // Launchstation: a driver that could not register its device must not
+    // stay resident, or the EE takes it for loaded (iop/smbman/README.md).
+    if (smb_initdev() != 0)
+        return MODULE_NO_RESIDENT_END;
 
     return MODULE_RESIDENT_END;
 }

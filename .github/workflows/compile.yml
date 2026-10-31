@@ -40,6 +40,7 @@ jobs:
           python3 tests/test_copy_short_io.py
           python3 tests/test_copy_pipeline.py
           python3 tests/test_udpfs_directory_errors.py
+          python3 tests/test_smb_shares.py
           python3 tests/test_copy_test_pack.py
           python3 tests/test_transfer_stack_preflight.py
           python3 tests/test_transfer_progress.py
