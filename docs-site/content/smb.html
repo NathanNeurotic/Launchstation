@@ -1,0 +1,80 @@
+<h1>Network Shares (SMB)</h1>
+<p class="lead">The <b>Network (SMB)</b> device (<code>smb:</code>) opens shared folders on a Windows PC, a Samba server or a NAS over SMB2 or SMB3. Older servers that only speak SMB1 are opened as <b>Network (SMB1)</b> (<code>smb1:</code>). Shares are listed in a text file, <code>SMB2.CNF</code>. Not yet tested on a console.</p>
+
+<div class="callout info"><div class="h">What you need</div><ul>
+<li>A console with a network adapter (or built-in Ethernet) on the same LAN as the server.</li>
+<li>A shared folder on the server, and an account that can open it.</li>
+<li>An IP address for the PS2 (<b>Settings &gt; Network</b>), and <b>Legacy Ethernet drivers</b> off.</li>
+<li>An <code>SMB2.CNF</code> file (below).</li>
+</ul></div>
+
+<h2 id="how">How it works</h2>
+<p>Nothing touches the network until you open the device. The first time, Launchstation starts the network with the address in <code>IPCONFIG.DAT</code>, loads the SMB driver and connects every share for that device in <code>SMB2.CNF</code>. <code>smb:/</code> then lists one folder per connected share, named by its <code>NAME</code>: <code>smb:/PC</code>, <code>smb:/NAS</code>. <code>smb1:/</code> is the top of its one share.</p>
+<p>A share that does not connect is left out of <code>smb:/</code>, and the browser says why (for example <em>PC (line 7): Could not connect: check the address, share, user name and password</em>). Opening the device again tries the failed shares again, at most every 30 seconds, because an unanswered connect can take that long. When no share is connected, <code>SMB2.CNF</code> is read again first, so a corrected file is used without restarting.</p>
+
+<h2 id="file">SMB2.CNF</h2>
+<p>Launchstation uses the first <code>SMB2.CNF</code> it finds:</p>
+<ol>
+<li>beside the running ELF (for example <code>mc0:/APPS/SMB2.CNF</code> for <code>mc0:/APPS/BOOT.ELF</code>);</li>
+<li><code>SYS-CONF/SMB2.CNF</code> on the memory card Launchstation was started from;</li>
+<li><code>SYS-CONF/SMB2.CNF</code> on the other memory card.</li>
+</ol>
+<p>That is where <code>IPCONFIG.DAT</code> is looked for too. Each line is <code>KEY = value</code>. Each share is the group of keys that ends with its <code>URL</code>, so <code>URL</code> comes last in each group.</p>
+<table><thead><tr><th>Key</th><th>Value</th><th>Longest</th></tr></thead><tbody>
+<tr><td><code>NAME</code></td><td>The share&rsquo;s folder name in <code>smb:/</code>. Required, unique (in any case), no <code>/ \ : * ? " &lt; &gt; |</code></td><td>31 characters</td></tr>
+<tr><td><code>USERNAME</code></td><td>An account on the server</td><td>31 characters</td></tr>
+<tr><td><code>PASSWORD</code></td><td>That account&rsquo;s password</td><td>31 characters</td></tr>
+<tr><td><code>VERSION</code></td><td><code>2</code> (default: SMB2/SMB3, also <code>3</code>, <code>SMB2</code>, <code>SMB3</code>) or <code>1</code> (SMB1, also <code>SMB1</code>, <code>NT1</code>)</td><td></td></tr>
+<tr><td><code>URL</code></td><td><code>smb://&lt;server&gt;/&lt;share&gt;</code>; for SMB1 <code>smb://&lt;IP address&gt;[:port]/&lt;share&gt;</code></td><td>255 characters</td></tr>
+</tbody></table>
+<ul>
+<li>Keys can be in any case. Spaces and tabs around a value are removed, so a password cannot start or end with a space.</li>
+<li>Lines starting with <code>#</code> or <code>;</code> are comments. A line without <code>=</code> is skipped; the rest of the file is still read. Unknown keys are ignored.</li>
+<li>A value that is too long is not cut short: the share is refused, and the browser names the share, its line and the key.</li>
+<li>Use the server&rsquo;s IP address. SMB1 requires one; for SMB2/SMB3 host names are untested.</li>
+<li>The user name goes in <code>USERNAME</code>, not in the URL. A path after the share name is ignored: the share&rsquo;s folder opens at the top of the share.</li>
+<li>Up to 8 shares are read. Only one SMB1 share can be used, because the SMB1 driver keeps a single connection.</li>
+</ul>
+<pre><code># A shared folder "PS2" on a Windows PC, as smb:/PC
+NAME = PC
+USERNAME = player
+PASSWORD = secret
+URL = smb://192.168.0.10/PS2
+
+# The "games" share of a NAS, as smb:/NAS
+NAME = NAS
+USERNAME = ps2
+PASSWORD = n4s-pa55word
+URL = smb://192.168.0.20/games
+
+# An old server that only speaks SMB1, as smb1:/
+NAME = OLDBOX
+VERSION = 1
+URL = smb://192.168.0.30/PS2SMB</code></pre>
+<p><b>Network (SMB1)</b> appears in the device list only when <code>SMB2.CNF</code> has a <code>VERSION = 1</code> share. The file is read once at startup, which reads no network.</p>
+
+<h2 id="use">What you can do</h2>
+<ul>
+<li><b>Browse, copy, rename, make and delete folders</b> inside a share. A listing that fails part-way is an error, not a partial list. File dates and attributes are not set on the server (the SMB2 driver has no way to).</li>
+<li><b>Nothing can be made in <code>smb:/</code> itself</b>: it only lists the connected shares. Rename works inside one share.</li>
+<li><b>Launch an ELF</b> from a share, as from <code>udpfs:</code>. Not yet tested.</li>
+<li><b>Not supported:</b> Neutrino ISOs, POPStarter VCDs and Ember images from a share (none of those cores can read SMB).</li>
+</ul>
+
+<h2 id="stacks">Stack rules</h2>
+<ul>
+<li>SMB uses the same Ethernet stack as FTP, PS2Link and Google Drive, so they can be used together. UDPFS uses a different one: opening SMB after UDPFS (or the other way) resets the IOP, and copying between <code>udpfs:</code> and <code>smb:</code> is refused (&ldquo;Incompatible drivers to perform action&rdquo;).</li>
+<li>SMB uses DEV9: it does not start while PC CARD CF owns the bus, and copying between SMB and PC CARD CF is refused.</li>
+<li>SMB needs the current Ethernet drivers. With <b>Legacy Ethernet drivers</b> on, the device says so and does not start.</li>
+<li>The SMB2 driver uses about 140 KB of IOP memory once loaded.</li>
+</ul>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>&ldquo;No SMB2.CNF found&rdquo;.</b> Put the file beside Launchstation or in <code>mc0:/SYS-CONF/</code>, then open the device again.</li>
+<li><b>&ldquo;Could not connect&rdquo;.</b> Check the server&rsquo;s IP address, the share name, the user name and password, that the PS2 is in the server&rsquo;s subnet, and that the server allows SMB2 (Windows: the share is reached with an account that has a password).</li>
+<li><b>SMB1: &ldquo;Server does not speak SMB1&rdquo;</b> or <b>&ldquo;Server did not answer&rdquo;.</b> Windows 10 and later turn SMB1 off; use SMB2 (leave <code>VERSION</code> out) unless the server is really SMB1-only.</li>
+<li><b>&ldquo;The SMB driver could not be loaded&rdquo;.</b> The IOP may be short of memory with many other drivers loaded; use Tools &gt; Reboot IOP and open the share first.</li>
+</ol>
+
+<p>The <code>smb:</code> device and the <code>SMB2.CNF</code> format come from <a href="https://github.com/sahlberg">Ronnie Sahlberg</a>&rsquo;s work for <a href="https://github.com/saildot4k">saildot4k</a>&rsquo;s upstream launcher, using the SMB2 driver from <a href="https://github.com/sahlberg/libsmb2">libsmb2</a>. SMB1 uses <a href="https://github.com/jimmikaelkael">jimmikaelkael</a>&rsquo;s smbman from <a href="https://github.com/ps2dev/ps2sdk">ps2sdk</a>, with <a href="https://github.com/ps2homebrew/Open-PS2-Loader">Open-PS2-Loader</a>&rsquo;s fixes. See <a href="credits.html">Credits</a>.</p>
