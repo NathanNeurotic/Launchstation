@@ -741,6 +741,12 @@ int smb_dread(iop_file_t *f, iox_dirent_t *dirent)
         fh->position = 1;
 
     if (r == 1) {
+        /* A server that names an entry "" would make the browser open the
+         * same folder again and again. -EIO, not -EINVAL: that is the end. */
+        if (info->FileName[0] == '\0') {
+            r = -EIO;
+            goto io_unlock;
+        }
         smb_statFiller(&info->fileInfo, &dirent->stat);
         strncpy(dirent->name, info->FileName, SMB_NAME_MAX);
     }

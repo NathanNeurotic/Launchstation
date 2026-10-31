@@ -275,6 +275,7 @@ assert "goto" not in close and "f->privdata = NULL;" in close
 dread = smbman[smbman.index("int smb_dread(iop_file_t *f"):]
 dread = dread[:dread.index("\n}\n")]
 assert "if (fh->position) {" in dread and dread.count("if (r == -EINVAL) {") == 2 and "if (info->EOS)" in dread
+assert "if (info->FileName[0] == '\\0') {" in dread and dread.index("r = -EIO;") < dread.index("strncpy(dirent->name")
 assert "r = -ENAMETOOLONG;" in smbman
 
 # the dashboard worker never retries shares; a stale failure flag only acts on SMB paths
