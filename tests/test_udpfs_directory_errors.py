@@ -43,7 +43,7 @@ static int fileXioDread(int fd,iox_dirent_t *out){
 }
 static void clearMcTable(McStat *s){memset(s,0,sizeof(*s));}
 '''
-code += function('static int initUDPFS(' if 'static int initUDPFS(' in source else 'static void initUDPFS(') + '\n' + function('int readUDPFS(')
+code += function('static int initUDPFS(' if 'static int initUDPFS(' in source else 'static void initUDPFS(') + '\n' + function('static int readNetDir(') + '\n' + function('int readUDPFS(')
 code += r'''
 static void reset(void){loaded=1;opens=closes=reads=fail_open_call=fail_close_call=host_error=0;fail_read_at=-1;entries=4;}
 int main(void){

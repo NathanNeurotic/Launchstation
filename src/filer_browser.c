@@ -103,6 +103,12 @@ static const char *getRootDeviceLabel(const char *name)
 	if (!strcmp(name, "udpfs:"))
 		return "udpfs:/";
 #endif
+#ifdef SMB
+	if (!strcmp(name, SMB_DEVICE_V2))
+		return "smb:/";
+	if (!strcmp(name, SMB_DEVICE_V1))
+		return "smb1:/";
+#endif
 	if (!strcmp(name, LNG(MISC)))
 		return "MISC/";
 
@@ -419,6 +425,12 @@ void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char 
 
 	if ((isHddRootPath(path) || !strcmp(path, "dvr_hdd0:/")) || path[0] == 0)  //No menu cmds in partition/device lists
 		menu_disabled = 1;
+#ifdef SMB
+	/* smb:/ lists the connected shares; nothing can be made there. smb1:/
+	 * is the top of its one share and stays writable. */
+	if (smbPathKind(path) == SMB_PATH_V2 && smbIsRootPath(path))
+		write_disabled = 1;
+#endif
 
 	if (menu_disabled) {
 		enable[COPY] = FALSE;
@@ -1648,6 +1660,33 @@ int getFilePath(char *out, int cnfmode)
 				strcpy(cursorEntry, "udpfs:");
 				browser_repos = TRUE;
 				browser_nfiles = setFileList(path, ext, files, cnfmode);
+			}
+#endif
+#ifdef SMB
+			if (smb_dir_open_failed) {
+				/* Unlike udpfs, no IOP reset: the drivers and the shares that
+				 * did connect stay; opening the device again retries the rest. */
+				int smb_version = smbPathKind(path);
+
+				/* The flag can be left over from an SMB read made elsewhere
+				 * (e.g. a copy's source folder): it only means something
+				 * when the folder being shown is on SMB. */
+				smb_dir_open_failed = 0;
+				if (smb_version != SMB_PATH_NONE) {
+					const char *load_error = smbLoadError(smb_version);
+
+					if (!isSmbDriverLoaded(smb_version) && load_error[0])
+						snprintf(msg0, sizeof(msg0), "%s", load_error);
+					else
+						smbSharesStatus(smb_version, msg0, sizeof(msg0));
+					browser_pushed = FALSE;
+					if (!smbIsRootPath(path) || smbSharesConnectedCount(smb_version) == 0) {
+						strcpy(cursorEntry, smb_version == SMB_PATH_V1 ? SMB_DEVICE_V1 : SMB_DEVICE_V2);
+						path[0] = '\0';
+						browser_repos = TRUE;
+						browser_nfiles = setFileList(path, ext, files, cnfmode);
+					}
+				}
 			}
 #endif
 			if (!cnfmode) {  //Calculate free space (unless configuring)

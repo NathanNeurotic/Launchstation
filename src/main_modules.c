@@ -21,6 +21,11 @@ void initializeRuntimeInputModules(enum BOOT_DEVICE boot_device)
 	DPRINTF("Getting IPCONFIG\n");
 	if (boot_device != BOOT_DEVICE_HOST)
 		getIpConfig();
+#ifdef SMB
+	/* Only reads SMB2.CNF, from where IPCONFIG.DAT is read: the device list
+	 * shows smb1: when it has a VERSION = 1 share. No network here. */
+	smbSharesConfigured(SMB_PATH_V1);
+#endif
 
 	WaitTime = Timer();
 #ifdef DS34

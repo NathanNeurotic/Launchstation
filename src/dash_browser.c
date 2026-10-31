@@ -322,7 +322,23 @@ static void listDone(void *arg)
 		 * and highlight now, before the first frame of the parent listing. */
 		revealSelection();
 		fb.sel_anim = (float)fb.sel;
+#ifdef SMB
+		/* say why an smb: or smb1: listing is empty or failed */
+		if (smb_dir_open_failed && smbPathKind(j->path) != SMB_PATH_NONE) {
+			int v = smbPathKind(j->path);
+			char why[96];
+
+			if (!isSmbDriverLoaded(v) && smbLoadError(v)[0])
+				dashStrCopy(why, smbLoadError(v), sizeof(why));
+			else
+				smbSharesStatus(v, why, sizeof(why));
+			dashToast(DASH_TOAST_WARN, why);
+		}
+#endif
 	}
+#ifdef SMB
+	smb_dir_open_failed = 0;
+#endif
 	if (j->quiet_input && browser_usb_jobs > 0) {
 		browser_usb_jobs--;
 		if (browser_usb_jobs == 0)

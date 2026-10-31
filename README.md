@@ -93,7 +93,7 @@ It is fully themeable from the controller: 18 built-in PS2-inspired theme preset
 - Native Google Drive upload and history browsing over HTTPS (Mbed TLS), linked with a code at google.com/device, with no setup files in official builds.
 
 **Network**
-- FTP and PS2Link are in the standard build and start only when requested from Tools > FTP / Remote access (which also accepts staged, resumable ISO transfers from MrRexD-compatible PC tools). The UDPFS client for the [UDPFSD server](https://github.com/pcm720/udpfsd) can be auto-started or opened on demand; Sync PS2 clock from Internet is under Settings > Network.
+- FTP and PS2Link are in the standard build and start only when requested from Tools > FTP / Remote access (which also accepts staged, resumable ISO transfers from MrRexD-compatible PC tools). The UDPFS client for the [UDPFSD server](https://github.com/pcm720/udpfsd) can be auto-started or opened on demand; [SMB network shares](#smb-network-shares) (`smb:` for SMB2/SMB3, `smb1:` for one SMB1 share) start when opened; Sync PS2 clock from Internet is under Settings > Network.
 
 **System**
 - LoadBOOTer memory card exploit installer for retail PS2/PSX and DEX (DTL-HXXXXX), with [custom ELF binding](#bind-an-elf-to-a-memory-card-as-an-exploit-update).
@@ -120,6 +120,7 @@ It is fully themeable from the controller: 18 built-in PS2-inspired theme preset
 | `dvr_hdd0:/` | PSX DESR-XXXX digital video recorder HDD partition | Hidden on non-PSX |
 | `cdfs:/` | CD/DVD file system | Always |
 | `udpfs:/` | Network device used with [pcm720's UDPFSD server](https://github.com/pcm720/udpfsd) | Always |
+| `smb:/` `smb1:/` | SMB2/SMB3 shares (`smb:/<NAME>`) and one SMB1 share, listed in `SMB2.CNF`; see [SMB network shares](#smb-network-shares) | `smb:` always; `smb1:` when `SMB2.CNF` has a `VERSION = 1` share |
 | `host:/` | PS2Link host filesystem | When network support is built (standard release builds) |
 
 Drivers load on demand; **Not checked** means the driver has not been started, not that nothing is connected. USB unit numbers follow attach order, so do not assume `usb0:` is a particular drive.
@@ -148,7 +149,7 @@ ps2build build
 - `scripts/gen_cloud_client.py` embeds Launchstation's Google OAuth client from `WLE_GOOGLE_CLIENT_ID` and `WLE_GOOGLE_CLIENT_SECRET` (set both, or neither). Without them a local build still compiles, but Drive linking needs a custom client in `WLE-CLOUD.CNF`.
 - `scripts/gen_githash.py` stamps the commit hash and date shown in About; `--require-git` fails instead of falling back to `local`.
 - `build_cloud_tls.sh`, `build_jpeg.sh` and `ps2build` all pick the toolchain with the same precedence: `PS2BUILD_TOOLCHAIN`, then `ps2.yaml`. **GCC comparison build:** export `PS2BUILD_TOOLCHAIN=gcc`, run all of the above, and use a separate output directory (`ps2build build -o build-gcc`) so Clang and GCC archives never mix.
-- `ps2.yaml` enables MMCE, MX4SIO, iLink, EXFAT, UDPFS, ETH (FTP/PS2Link, demand-started), DVRP, XFROM, TMANIP, native Google Drive cloud and custom colours; DS34 is off. Ethernet/FTP support is embedded but no network driver is started during normal boot. The ETH profile also builds the vendored `iop/ps2ips_rpc` PS2IP socket server (used by Internet clock sync).
+- `ps2.yaml` enables MMCE, MX4SIO, iLink, EXFAT, UDPFS, ETH (FTP/PS2Link, demand-started), SMB (`smb:`/`smb1:`, demand-started), DVRP, XFROM, TMANIP, native Google Drive cloud and custom colours; DS34 is off. Ethernet/FTP support is embedded but no network driver is started during normal boot. The ETH profile also builds the vendored `iop/ps2ips_rpc` PS2IP socket server (used by Internet clock sync).
 - The PC CARD CF IOP module can also be built on its own with `ps2build build -c iop/pccf/ps2.yaml`.
 
 **DualShock (DS34) variant** (retained wLaunchELF_R3Z drivers and `pad_ds34.c`):
@@ -313,6 +314,26 @@ In **Settings > System**, choose **Set software clock...** and enter the local t
 
 Time spent powered off or unplugged is unknown; a working RTC or an Internet time source (Settings > Network > Sync PS2 clock from Internet) is required for accurate wall time across those intervals. **Use PS2 hardware clock** restores the normal RTC source. Discard restores the previous clock setting along with the rest of the Settings session.
 
+## SMB network shares
+
+`smb:` opens SMB2/SMB3 shares on a Windows PC, Samba server or NAS, each as a folder `smb:/<NAME>`; `smb1:` opens one share on an SMB1-only server. Shares are listed in `SMB2.CNF`, looked for beside the ELF, then in `SYS-CONF/` on the card Launchstation started from, then on the other card (as `IPCONFIG.DAT`). Each share is a group of `KEY = value` lines that ends with its `URL`:
+
+```ini
+NAME = PC
+USERNAME = player
+PASSWORD = secret
+URL = smb://192.168.0.10/PS2
+
+# SMB1-only server, as smb1:/
+NAME = OLDBOX
+VERSION = 1
+URL = smb://192.168.0.30/PS2SMB
+```
+
+`NAME`, `USERNAME` and `PASSWORD` take up to 31 bytes and `URL` up to 255 (one byte per ASCII character); a longer value refuses the share and says why, instead of being cut. An SMB1 share whose server only takes clear-text passwords needs `PLAINTEXT = 1` (off by default: the password is then readable on the network). Keys can be in any case, `#` and `;` start comments, and a line Launchstation cannot read is skipped. Nothing touches the network until a device is opened; then the network starts with `IPCONFIG.DAT`'s address and the shares connect. A share that fails is retried when the device is opened again (at most every 30 s), and the browser shows which share failed and why. `smb:/` itself is read-only. SMB and UDPFS use different network stacks, so copies between them are refused. Full guide: [Network Shares (SMB)](https://nathanneurotic.github.io/Launchstation/smb.html). **Not yet tested on a console.**
+
+The device and the `SMB2.CNF` format come from [Ronnie Sahlberg](https://github.com/sahlberg)'s work in [saildot4k](https://github.com/saildot4k)'s [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z) ([PR #63](https://github.com/saildot4k/wLaunchELF_R3Z/pull/63)), with the SMB2 driver `smb2man.irx` from [libsmb2](https://github.com/sahlberg/libsmb2). SMB1 is [jimmikaelkael](https://github.com/jimmikaelkael)'s smbman from [ps2sdk](https://github.com/ps2dev/ps2sdk), with [Open-PS2-Loader](https://github.com/ps2homebrew/Open-PS2-Loader)'s fixes.
+
 ## More documentation
 
 - [Searchable site and wiki index](https://nathanneurotic.github.io/Launchstation/wiki.html) · [Markdown wiki](docs/wiki/Home.md)
@@ -328,7 +349,7 @@ This documentation is authored on `master` and generated to `gh-pages` by CI; do
 
 **Direct lineage and maintainers:** [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z) by R3Z3N / [Saildot4K](https://github.com/saildot4k); earlier wLaunchELF, uLaunchELF and LaunchELF authors; [johnson-cooper](https://github.com/johnson-cooper), who created and transferred this fork; [NathanNeurotic / Ripto](https://github.com/NathanNeurotic), current maintainer; [techwritescode](https://github.com/techwritescode), [TnA](https://github.com/TnA-Plastic), [oMrRexD](https://github.com/oMrRexD), Zack and FitthFox for collaboration, insight or testing as noted in the detailed credits.
 
-**Source/dependency credits:** the [PS2BUILD SDK](https://git.techwritescode.dev/ps2) and its LLVM/Clang toolchain (used to build releases), [PS2SDK/ps2dev](https://github.com/ps2dev/ps2sdk), [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman), [RiptOPL usbd-ra](https://github.com/NathanNeurotic/Open-PS2-Loader), [ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), inherited DS34 driver authors including [Alex Parrado](https://github.com/parrado), [Mbed TLS](https://github.com/Mbed-TLS/mbedtls), [libjpeg-turbo](https://libjpeg-turbo.org/), [Xiph.org ogg/vorbis](https://xiph.org/), the [PS2BUILD SDK](https://git.techwritescode.dev/ps2/ps2build) audio package (`audsrv-compat`) and font contributors.
+**Source/dependency credits:** the [PS2BUILD SDK](https://git.techwritescode.dev/ps2) and its LLVM/Clang toolchain (used to build releases), [PS2SDK/ps2dev](https://github.com/ps2dev/ps2sdk), [ps2-mmce/mmceman](https://github.com/ps2-mmce/mmceman), [RiptOPL usbd-ra](https://github.com/NathanNeurotic/Open-PS2-Loader), [ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), [libsmb2](https://github.com/sahlberg/libsmb2) by [Ronnie Sahlberg](https://github.com/sahlberg) (`smb:`), inherited DS34 driver authors including [Alex Parrado](https://github.com/parrado), [Mbed TLS](https://github.com/Mbed-TLS/mbedtls), [libjpeg-turbo](https://libjpeg-turbo.org/), [Xiph.org ogg/vorbis](https://xiph.org/), the [PS2BUILD SDK](https://git.techwritescode.dev/ps2/ps2build) audio package (`audsrv-compat`) and font contributors.
 
 **PC CARD CompactFlash driver reference:** [mihhru](https://github.com/mihhru) and [PS2CF](https://github.com/mihhru/PS2CF) supplied the early-PS2 CF PIO/ATA foundation and host tests. The driver is integrated into this build; console compatibility is not yet verified on hardware.
 

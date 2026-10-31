@@ -404,6 +404,15 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 #else
 		goto ELFnotFound;
 #endif
+#ifdef SMB
+	} else if (smbPathKind(path) != SMB_PATH_NONE) {
+		/* as udpfs: the loader reads the ELF while the SMB driver is resident */
+		if (!isSmbDriverLoaded(smbPathKind(path)) && !load_smb(smbPathKind(path)))
+			goto ELFnotFound;
+		party[0] = 0;
+		snprintf(fullpath, sizeof(fullpath), "%s", path);
+		goto CheckELF_fullpath;
+#endif
 	} else if (!stricmp(path, setting->Misc_OSDSYS)) {
 		char arg0[20], arg1[20], arg2[20], arg3[40];
 		char *args[4] = {arg0, arg1, arg2, arg3};
