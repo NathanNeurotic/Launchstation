@@ -678,13 +678,20 @@ static void pickOpen(const char *dir)
 	/* drivers / the HDD partition list for this folder: IOP modules are only ever
 	 * loaded on the UI thread, never by the background worker */
 	if (filerDirReadNeedsPrep(dir)) {
+		int ready;
+
 		if (!dashWorkerAwaitAll("Finishing up")) {
-			pk.loading = 0;
+			pickOpen("");
 			return;
 		}
 		dashLoadingBegin("Starting device");
-		filerPrepareDirRead(dir);
+		ready = filerPrepareDirRead(dir);
 		dashLoadingEnd();
+		if (!ready) {
+			pickOpen("");
+			dashToast(DASH_TOAST_WARN, "Device could not be opened");
+			return;
+		}
 	}
 	j = (PickListJob *)malloc(sizeof(PickListJob));
 	if (j != NULL)
@@ -868,7 +875,7 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 			dashSoundPlay(DASH_SND_CONFIRM);
 			if (pk.dir[0] == '\0') {
 				DashDevice *d = &pk.devs[sel];
-				if (d->state == DASH_DEV_READY)
+				if (d->state == DASH_DEV_READY || (d->icon == DI_MC && d->state == DASH_DEV_BUSY))
 					pickOpen(d->browse);
 				else if (d->state == DASH_DEV_PROBE || d->state == DASH_DEV_ABSENT) {
 					if (d->icon == DI_MC || d->icon == DI_DISC)

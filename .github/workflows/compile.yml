@@ -131,6 +131,8 @@ jobs:
           python3 tests/test_cloud_recovery.py
           python3 tests/test_cloud_menu.py
           python3 tests/test_root_mc_poll.py
+          python3 tests/test_mc1_mx4sio_handoff.py
+          python3 tests/test_exploit_folder_warning.py
           python3 tests/test_pad_icon_order.py
           python3 tests/test_hint_clearance.py
           python3 tests/test_hint_bar_fit.py

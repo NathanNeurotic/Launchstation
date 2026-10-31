@@ -36,6 +36,10 @@ typedef unsigned long long u64;
 static u64 now_ms;
 static u64 Timer(void) { return now_ms; }
 static int fail_port1_start, fail_port1_sync, pending_port = -1;
+static int mx4sio_loaded;
+#include <string.h>
+/* MX4SIO owns slot 2's SIO2 port while it is loaded. */
+static int isPathDeviceStackLoaded(const char *p) { return strcmp(p, "mc1:/") || !mx4sio_loaded; }
 static int mcGetInfo(int port, int slot, int *type, int *free, int *format) {
     (void)slot; (void)format;
     if (port == 1 && fail_port1_start) return -1;
@@ -74,7 +78,19 @@ int main(void) {
     run(40);
     assert(filerRootMcPresent(0, NULL, NULL) == 1);
     assert(filerRootMcPresent(1, NULL, NULL) == 1); /* last known state kept */
-    puts("PASS: an unresponsive memory-card slot cannot starve the other or stay Checking forever");
+    /* MX4SIO ownership keeps even a cached-empty mc1 selectable, without
+     * background libmc traffic or changing the remembered card state. */
+    mx4sio_loaded=1;root_mc_present[1]=0;
+    int type=99,free_kb=99;
+    assert(filerRootMcPresent(1,&type,&free_kb)==-2 && type==0 && free_kb==-1);
+    root_mc_poll_active=0;root_mc_poll_port=1;root_mc_next_poll_time=0;
+    pending_port=-1;
+    pollRootMemoryCardDevices();
+    assert(!root_mc_poll_active && pending_port==-1 && root_mc_poll_port==0);
+    pollRootMemoryCardDevices();assert(root_mc_poll_active && pending_port==0);
+    filerRootMcPollIdle();assert(root_mc_present[1]==0);
+    mx4sio_loaded=0;
+    puts("PASS: an unresponsive memory-card slot cannot starve the other or stay Checking forever; MX4SIO keeps slot 2 out of the poll");
     return 0;
 }
 '''

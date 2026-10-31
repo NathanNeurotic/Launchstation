@@ -49,7 +49,7 @@ This section **supersedes contradictory implementation instructions** from the t
 ## Provenance and scope
 
 - Reproduction reports: [#172](https://github.com/NathanNeurotic/Launchstation/issues/172) iLink missing-device loading stalls procedural backgrounds; [#173](https://github.com/NathanNeurotic/Launchstation/issues/173) MX4SIO missing-device loading stalls; [#174](https://github.com/NathanNeurotic/Launchstation/issues/174) MMCE missing-device loading stalls, resets IOP and leaves sound muted; [#175](https://github.com/NathanNeurotic/Launchstation/issues/175) MMCE activation interferes with subsequent storage activation and produces a raw/debug-looking dialog.
-- Reporter: zackcage6; console: SCPH-30001R; all four reports cite `ec3723f`, the `master` head verified on 2026-10-17.
+- Reporter: [zackcage6](https://github.com/zackcage6); console: SCPH-30001R; all four reports cite `ec3723f`, the `master` head verified on 2026-10-17.
 - Goal: safe, predictable absent-device behavior *without* breaking present MMCE/MX4SIO/iLink devices, PAD, USB (including dual-USB), storage switching, audio, or per-device discovery. No automatic device scanning on render.
 - Exclusions: wholesale driver-stack rewrite, new generic scheduler, speculative timeout changes, and parallel IOP module starts.
 

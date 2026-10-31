@@ -445,11 +445,29 @@ static void openDir(const char *dir, const char *select)
 	/* drivers and the HDD partition list are set up here on the UI thread;
 	 * the worker only reads (it must never load IOP modules) */
 	if (filerDirReadNeedsPrep(dir)) {
-		if (!dashWorkerAwaitAll("Finishing up"))
+		int ready;
+
+		if (!dashWorkerAwaitAll("Finishing up")) {
+			/* Backed out before the device was prepared: show the device
+			 * list rather than a folder that was never read. */
+			char canceled[MAX_PATH];
+			dashStrCopy(canceled, dir, sizeof(canceled));
+			openDir("", canceled);
 			return;
+		}
 		dashLoadingBegin("Starting device");
-		filerPrepareDirRead(dir);
+		ready = filerPrepareDirRead(dir);
 		dashLoadingEnd();
+		/* A refused IOP reset (MX4SIO still owning slot 2) or a driver that
+		 * would not start: show the device list instead of reading the
+		 * folder through the wrong stack. */
+		if (!ready) {
+			char failed[MAX_PATH];
+			dashStrCopy(failed, dir, sizeof(failed));
+			openDir("", failed);
+			dashToast(DASH_TOAST_WARN, "Device could not be opened");
+			return;
+		}
 	}
 	/* the classic browser remembers where it was: "Last folder" in FILES */
 	if (strlen(dir) < MAX_NAME)
