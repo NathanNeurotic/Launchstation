@@ -29,8 +29,10 @@ Launchstation changes, each marked "Launchstation" in the source:
   against `SMB_buf`, the negotiate `KeyLength` (8 bytes for a challenge) and
   domain name against what was received and the destination, and the
   READ_ANDX `DataOffset`/`DataLength` against `SMB_buf` and the request.
-- A server that asks for a clear-text password is refused (`-EACCES`); the
-  password is never sent in the clear.
+- A server that asks for a clear-text password is refused (`-EACCES`)
+  unless the caller passed the clear text itself (`PLAINTEXT_PASSWORD`,
+  which Launchstation does only for a share with `PLAINTEXT = 1`); a hashed
+  password is never downgraded to clear text.
 - `smb_Disconnect` drains with a 3 s receive timeout, so a dead link does
   not hold the driver lock for minutes.
 - `smb_close` always frees the handle slot (a directory closed before its

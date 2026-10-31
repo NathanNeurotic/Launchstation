@@ -40,6 +40,9 @@ typedef struct
 	char password[SMB_CRED_LEN];
 	char url[SMB_URL_LEN];
 	int version; /* 1 or 2 */
+	/* PLAINTEXT = 1: an SMB1 server that asks for a clear-text password
+	 * gets it. Off, smbman refuses such a server. */
+	int plaintext;
 	/* SMB1 only, split out of url: smbman takes them separately. */
 	char server[SMB_SERVER_LEN];
 	int port;

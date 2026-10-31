@@ -6,7 +6,8 @@
 //The syntax is the one of wLaunchELF_R3Z's smb: device (idea and format by
 //Ronnie Sahlberg, wLaunchELF_R3Z PR #63): KEY = value lines, and the URL
 //key closes a share with the keys above it. Launchstation adds VERSION
-//(1 = SMB1 through smbman.irx), takes keys in any case, skips lines it
+//(1 = SMB1 through smbman.irx) and PLAINTEXT (SMB1 only: allow a clear-text
+//password), takes keys in any case, skips lines it
 //cannot read instead of stopping, and rejects a share whose values would
 //not fit the driver instead of cutting them short.
 //--------------------------------------------------------------
@@ -84,6 +85,16 @@ int smbIsRootPath(const char *path)
 	while (*path == '/')
 		path++;
 	return *path == '\0';
+}
+
+/* 1 for 1/yes/on/true, 0 for 0/no/off/false, -1 for anything else */
+static int parseFlag(const char *value)
+{
+	if (sameText(value, "1") || sameText(value, "yes") || sameText(value, "on") || sameText(value, "true"))
+		return 1;
+	if (sameText(value, "0") || sameText(value, "no") || sameText(value, "off") || sameText(value, "false"))
+		return 0;
+	return -1;
 }
 
 static int parseVersion(const char *value)
@@ -199,6 +210,8 @@ static void closeShare(SmbConfig *cfg, SmbShare *sh, const char *pending_problem
 		problem = checkName(cfg, sh);
 	if (problem == NULL && !startsWithText(sh->url, "smb://"))
 		problem = "URL must start with smb://";
+	if (problem == NULL && sh->plaintext && sh->version != 1)
+		problem = "PLAINTEXT works only with VERSION = 1";
 	if (problem == NULL && sh->version == 1) {
 		for (i = 0; i < cfg->count; i++)
 			if (cfg->share[i].state != SMB_STATE_INVALID && cfg->share[i].version == 1)
@@ -279,6 +292,13 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 				cur.version = 2;
 				if (problem == NULL)
 					problem = "VERSION must be 1 (SMB1) or 2 (SMB2/SMB3)";
+			}
+		} else if (sameText(key, "PLAINTEXT")) {
+			cur.plaintext = parseFlag(value);
+			if (cur.plaintext < 0) {
+				cur.plaintext = 0;
+				if (problem == NULL)
+					problem = "PLAINTEXT must be 1 (allow) or 0";
 			}
 		} else if (sameText(key, "URL")) {
 			if (!copyValue(cur.url, sizeof(cur.url), value) && problem == NULL)

@@ -21,6 +21,7 @@
 /* smbman's logon errors are positive codes; this one is ours, for a
  * logon that worked and a share that did not open. */
 #define SMB1_ERR_OPENSHARE (-(SMB_DEVCTL_LOGON_ERR_LOGON + 1))
+#define SMB1_ERR_HASH (-(SMB_DEVCTL_LOGON_ERR_LOGON + 2))
 
 static SmbConfig smb_cfg;
 static int smb_cfg_loaded = 0;
@@ -121,19 +122,25 @@ static int connectSmb1(SmbShare *sh)
 	logon.serverPort = sh->port;
 	snprintf(logon.User, sizeof(logon.User), "%s", sh->username);
 	if (sh->password[0]) {
-		/* As OPL: hashed (LM/NTLM) when smbman can make the hashes, else plain text. */
+		/* Hashed (LM/NTLM) unless the share opts in with PLAINTEXT = 1:
+		 * smbman sends a password in clear text only when it is given the
+		 * clear text (PLAINTEXT_PASSWORD), and still hashes it for a server
+		 * that takes challenge/response. */
 		memset(&passwd, 0, sizeof(passwd));
 		snprintf(passwd.password, sizeof(passwd.password), "%s", sh->password);
-		if (fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_GETPASSWORDHASHES, &passwd, sizeof(passwd), &hashes, sizeof(hashes)) == 0) {
+		if (sh->plaintext) {
+			snprintf(logon.Password, sizeof(logon.Password), "%s", sh->password);
+			logon.PasswordType = PLAINTEXT_PASSWORD;
+			snprintf(openshare.Password, sizeof(openshare.Password), "%s", sh->password);
+			openshare.PasswordType = PLAINTEXT_PASSWORD;
+		} else if (fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_GETPASSWORDHASHES, &passwd, sizeof(passwd), &hashes, sizeof(hashes)) == 0) {
 			memcpy(logon.Password, &hashes, sizeof(hashes));
 			logon.PasswordType = HASHED_PASSWORD;
 			memcpy(openshare.Password, &hashes, sizeof(hashes));
 			openshare.PasswordType = HASHED_PASSWORD;
 		} else {
-			snprintf(logon.Password, sizeof(logon.Password), "%s", sh->password);
-			logon.PasswordType = PLAINTEXT_PASSWORD;
-			snprintf(openshare.Password, sizeof(openshare.Password), "%s", sh->password);
-			openshare.PasswordType = PLAINTEXT_PASSWORD;
+			memset(&passwd, 0, sizeof(passwd));
+			return SMB1_ERR_HASH;
 		}
 		memset(&passwd, 0, sizeof(passwd));
 		memset(&hashes, 0, sizeof(hashes));
@@ -162,8 +169,9 @@ static const char *smb1Problem(int ret)
 	switch (ret) {
 		case -SMB_DEVCTL_LOGON_ERR_CONN: return "Server did not answer";
 		case -SMB_DEVCTL_LOGON_ERR_PROT: return "Server does not speak SMB1";
-		case -SMB_DEVCTL_LOGON_ERR_LOGON: return "User name or password refused";
+		case -SMB_DEVCTL_LOGON_ERR_LOGON: return "User name or password refused (or the server wants a clear-text password: PLAINTEXT = 1)";
 		case SMB1_ERR_OPENSHARE: return "Share refused or not found";
+		case SMB1_ERR_HASH: return "Could not prepare the password";
 		default: return "Could not connect";
 	}
 }

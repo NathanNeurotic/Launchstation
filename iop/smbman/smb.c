@@ -477,9 +477,19 @@ static int AddPassword(char *Password, int PasswordType, int AuthType, void *Ans
             LM_Response(passwordhash, server_specs.EncryptionKey, LMresponse);
             memcpy(Buffer, LMresponse, passwordlen);
         } else if (server_specs.PasswordType == SERVER_USE_PLAINTEXT_PASSWORD) {
-            /* Never send the password in clear text: a server (or anyone on
-             * the LAN posing as it) that asks for it would read it. */
-            return -1;
+            /* A server (or anyone on the LAN posing as it) that asks for the
+             * clear text would read it. Send it only when the caller gave the
+             * clear text itself (Launchstation: the share's PLAINTEXT = 1);
+             * a hashed password is refused rather than sent. */
+            if (PasswordType != PLAINTEXT_PASSWORD)
+                return -1;
+            passwordlen = strlen(Password);
+            if (passwordlen > 14)
+                passwordlen = 14;
+            else if (passwordlen == 0)
+                passwordlen = 1;
+            memcpy(AnsiPassLen, &passwordlen, 2);
+            memcpy(Buffer, Password, passwordlen);
         }
     } else {
         if (server_specs.SecurityMode == SERVER_SHARE_SECURITY_LEVEL) {

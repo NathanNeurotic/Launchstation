@@ -26,6 +26,7 @@
 <tr><td><code>USERNAME</code></td><td>An account on the server</td><td>31</td></tr>
 <tr><td><code>PASSWORD</code></td><td>That account&rsquo;s password</td><td>31</td></tr>
 <tr><td><code>VERSION</code></td><td><code>2</code> (default: SMB2/SMB3, also <code>3</code>, <code>SMB2</code>, <code>SMB3</code>) or <code>1</code> (SMB1, also <code>SMB1</code>, <code>NT1</code>)</td><td></td></tr>
+<tr><td><code>PLAINTEXT</code></td><td>SMB1 only. <code>1</code> lets a server that asks for a clear-text password have it; <code>0</code> (default) refuses such a server. See below.</td><td></td></tr>
 <tr><td><code>URL</code></td><td><code>smb://&lt;server&gt;/&lt;share&gt;</code>; for SMB1 <code>smb://&lt;IP address&gt;[:port]/&lt;share&gt;</code></td><td>255</td></tr>
 </tbody></table>
 <ul>
@@ -76,7 +77,7 @@ URL = smb://192.168.0.30/PS2SMB</code></pre>
 <li><b>&ldquo;No SMB2.CNF found&rdquo;.</b> Put the file beside Launchstation or in <code>mc0:/SYS-CONF/</code>, then open the device again.</li>
 <li><b>&ldquo;Could not connect&rdquo;.</b> Check the server&rsquo;s IP address, the share name, the user name and password, that the PS2 is in the server&rsquo;s subnet, and that the server allows SMB2 (Windows: the share is reached with an account that has a password).</li>
 <li><b>SMB1: &ldquo;Server does not speak SMB1&rdquo;</b> or <b>&ldquo;Server did not answer&rdquo;.</b> Windows 10 and later turn SMB1 off; use SMB2 (leave <code>VERSION</code> out) unless the server is really SMB1-only.</li>
-<li><b>SMB1: &ldquo;User name or password refused&rdquo;</b> also appears when the server only accepts clear-text passwords. Launchstation never sends a password in the clear; turn on encrypted passwords on the server (Samba: <code>encrypt passwords = yes</code>).</li>
+<li><b>SMB1: &ldquo;User name or password refused&rdquo;</b> also appears when the server only accepts clear-text passwords. Launchstation does not send a password in the clear unless the share has <code>PLAINTEXT = 1</code>. Better: turn on encrypted passwords on the server (Samba: <code>encrypt passwords = yes</code>). With <code>PLAINTEXT = 1</code>, anyone on the network who can see the traffic, or pose as the server, can read the password, so use it only on a network you trust and with a password used nowhere else. A server that takes encrypted passwords still gets the encrypted form.</li>
 <li><b>&ldquo;The SMB driver could not be loaded&rdquo;.</b> The IOP may be short of memory with many other drivers loaded; use Tools &gt; Reboot IOP and open the share first.</li>
 </ol>
 

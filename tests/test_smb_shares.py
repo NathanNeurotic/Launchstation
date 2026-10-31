@@ -129,6 +129,13 @@ int main(void)
     assert(share(0)->version == 1 && share(0)->port == 139 && !strcmp(share(0)->share, "PS2SMB"));
     assert(parse("NAME = N\nVERSION = SMB3\nURL = smb://192.168.1.5/s\n") == 1 && share(0)->version == 2);
     expectProblem("NAME = A\nVERSION = 4\nURL = smb://10.0.0.2/s\n", "VERSION must be");
+    /* PLAINTEXT: SMB1 only, off by default, does not leak into the next share */
+    assert(parse("NAME = OLD\nVERSION = 1\nURL = smb://192.168.1.5/PS2SMB\n") == 1 && share(0)->plaintext == 0);
+    assert(parse("NAME = OLD\nVERSION = 1\nPLAINTEXT = yes\nURL = smb://192.168.1.5/PS2SMB\nNAME = B\nURL = smb://10.0.0.3/t\n") == 2);
+    assert(share(0)->plaintext == 1 && share(1)->plaintext == 0);
+    assert(parse("NAME = OLD\nVERSION = 1\nplaintext = 0\nURL = smb://192.168.1.5/PS2SMB\n") == 1 && share(0)->plaintext == 0);
+    expectProblem("NAME = A\nPLAINTEXT = 1\nURL = smb://10.0.0.2/s\n", "only with VERSION = 1");
+    expectProblem("NAME = A\nVERSION = 1\nPLAINTEXT = maybe\nURL = smb://10.0.0.2/s\n", "PLAINTEXT must be");
     /* the version does not leak into the next share */
     assert(parse("NAME = A\nVERSION = 1\nURL = smb://10.0.0.2/s\nNAME = B\nURL = smb://10.0.0.3/t\n") == 2);
     assert(share(0)->version == 1 && share(1)->version == 2);
@@ -241,9 +248,16 @@ assert "if (DataLength < 0 || DataLength > nbytes)" in smb
 assert "padding < 0 || padding > (int)(sizeof(SMB_buf.smb) - sizeof(ReadAndXResponse_t))" in smb
 assert "RecvTimeout(main_socket, &dummy, sizeof(dummy), 3000)" in smb
 # never a clear-text password
+# clear text only when the caller passed the clear text (the share's PLAINTEXT = 1)
 plain = smb[smb.index("SERVER_USE_PLAINTEXT_PASSWORD) {"):]
-plain = plain[:plain.index("}")]
-assert "return -1;" in plain and "memcpy" not in plain
+plain = plain[:plain.index("\n        }")]
+assert "if (PasswordType != PLAINTEXT_PASSWORD)\n                return -1;" in plain
+assert plain.index("return -1;") < plain.index("memcpy")
+shares = text("src/smb_shares.c")
+connect1 = shares[shares.index("static int connectSmb1("):]
+connect1 = connect1[:connect1.index("\n}\n")]
+assert connect1.count("PasswordType = PLAINTEXT_PASSWORD;") == 2 and "if (sh->plaintext) {" in connect1
+assert "return SMB1_ERR_HASH;" in connect1  # no silent fallback to clear text
 
 # every close frees its slot; a listing ends with 0, not an error
 close = smbman[smbman.index("int smb_close(iop_file_t *f)"):]
