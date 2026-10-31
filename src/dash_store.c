@@ -259,6 +259,7 @@ void dashStoreDefaults(void)
 	dashCfg.dev_auto = 0; /* devices start manually; only the boot device is always on */
 	dashCfg.mmce_backup_keep = 10;
 	dashCfg.mmce_backup_format = 0; /* native .mcd */
+	dashCfg.mmce_backup_saves = 0;  /* cards only */
 	dashCfg.igr_auto_backup = 1;
 	dashCfg.igr_cloud_sync = 0;
 	dashCfg.igr_after = DASH_IGR_AFTER_DASHBOARD;
@@ -354,6 +355,8 @@ static int settingsKv(const char *key, char *value, void *user)
 		dashCfg.mmce_backup_keep = clampInt(value, 0, 99, 10);
 	else if (!stricmp(key, "Dash_MMCEBackupFormat"))
 		dashCfg.mmce_backup_format = clampInt(value, 0, 1, 0);
+	else if (!stricmp(key, "Dash_MMCEBackupSaves"))
+		dashCfg.mmce_backup_saves = clampInt(value, 0, 1, 0);
 	else if (!stricmp(key, "Dash_IGRAutoBackup"))
 		dashCfg.igr_auto_backup = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_IGRCloudSync"))
@@ -529,6 +532,7 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                "Dash_DevAuto = %d\r\n"
 	                "Dash_MMCEBackupKeep = %d\r\n"
 	                "Dash_MMCEBackupFormat = %d\r\n"
+	                "Dash_MMCEBackupSaves = %d\r\n"
 	                "Dash_IGRAutoBackup = %d\r\n"
 	                "Dash_IGRCloudSync = %d\r\n"
 	                "Dash_IGRBackupPath = %s\r\n"
@@ -540,7 +544,7 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                c->legacy_theme, c->intro_done, c->software_clock, c->sound, c->sound_vol, c->sound_theme,
 	                c->bgm, c->bgm_vol, c->app_filter, c->files_mode,
 	                c->home_shortcuts, c->icon_backing, c->show_unavailable_devices, c->dev_auto,
-	                c->mmce_backup_keep, c->mmce_backup_format,
+	                c->mmce_backup_keep, c->mmce_backup_format, c->mmce_backup_saves,
 	                c->igr_auto_backup, c->igr_cloud_sync, c->igr_backup_path,
 	                c->igr_after, c->igr_after_path, c->temp_fahrenheit);
 	for (i = 0; i < c->nscan && len < cap - DASH_PATH_MAX - 16; i++)

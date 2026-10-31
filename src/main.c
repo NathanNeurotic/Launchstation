@@ -162,7 +162,7 @@ static int runWleIgrBackup(int argc, char *argv[])
 		for (unit = 0; unit < 2; unit++) {
 			/* verify = 0: cards whose index fingerprint is unchanged are
 			 * skipped without a full read; see mcViewFingerprint. */
-			MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format, 0};
+			MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format, 0, dashCfg.mmce_backup_saves};
 			memset(&one, 0, sizeof(one));
 			if (mmceBackupAllCards(unit, backup_root, &options, &one, NULL) < 0)
 				continue;
@@ -171,6 +171,8 @@ static int runWleIgrBackup(int argc, char *argv[])
 			total.backed_up += one.backed_up;
 			total.unchanged += one.unchanged;
 			total.failed += one.failed;
+			total.save_versions += one.save_versions;
+			total.save_failed += one.save_failed;
 		}
 
 		if (!available)
@@ -179,6 +181,12 @@ static int runWleIgrBackup(int argc, char *argv[])
 			snprintf(mainMsg, sizeof(mainMsg),
 			         "IGR MMCE backup: %d changed, %d unchanged, %d failed (%d cards)",
 			         total.backed_up, total.unchanged, total.failed, total.candidates);
+		if (available && dashCfg.mmce_backup_saves) {
+			int used = strlen(mainMsg);
+			if (used < (int)sizeof(mainMsg) - 1)
+				snprintf(mainMsg + used, sizeof(mainMsg) - used, ", saves: %d new, %d failed",
+				         total.save_versions, total.save_failed);
+		}
 
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 		if (dashCfg.igr_cloud_sync) {

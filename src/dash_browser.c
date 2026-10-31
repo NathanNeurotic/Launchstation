@@ -1190,7 +1190,7 @@ static void opBackupAllMmceCards(void)
 	{
 		/* An explicit backup compares every byte (verify = 1), which also
 		 * catches raw-page writes the IGR fingerprint cannot see. */
-		MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format, 1};
+		MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format, 1, dashCfg.mmce_backup_saves};
 		r = mmceBackupAllCards(unit, folder, &options, &stats, mmceTreeBackupProgress);
 	}
 	dashLoadingEnd();
@@ -1209,7 +1209,12 @@ static void opBackupAllMmceCards(void)
 
 	snprintf(msg, sizeof(msg), "%d changed backed up, %d unchanged, %d failed (%d card images found).",
 	         stats.backed_up, stats.unchanged, stats.failed, stats.candidates);
-	if (stats.failed)
+	if (dashCfg.mmce_backup_saves) {
+		int used = (int)strlen(msg);
+		snprintf(msg + used, sizeof(msg) - used, " Saves: %d new .psu, %d failed.", stats.save_versions,
+		         stats.save_failed);
+	}
+	if (stats.failed || stats.save_failed)
 		dashModalMessage(DI_WARNING, "MMCE backup completed with errors", msg,
 		                 "Verified successful backups were kept; failed card images were not.");
 	else
@@ -1977,7 +1982,7 @@ void dashBrowserRecoverCardPath(const char *source)
 static void opBackupSelectedMmceCard(void)
 {
     MmceBackupStats stats;
-    MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format, 1};
+    MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format, 1, dashCfg.mmce_backup_saves};
     char source[MAX_PATH], folder[MAX_PATH], msg[192];
     int unit = mmceUnitFromPath(fb.dir), prep, r;
     FILEINFO *f;
@@ -2019,6 +2024,10 @@ static void opBackupSelectedMmceCard(void)
     if (r < 0 || stats.failed) {
         dashModalMessage(DI_WARNING, "Card history backup failed",
                          "No MMCE card was changed. Check the card image and destination.",
+                         source);
+    } else if (stats.save_failed) {
+        dashModalMessage(DI_WARNING, "Card backed up; some save versions failed",
+                         "The card's history is current. Saves that could not be kept as .psu versions are tried again next time.",
                          source);
     } else if (stats.unchanged) {
         dashToast(DASH_TOAST_INFO, "Card unchanged; existing verified history retained");

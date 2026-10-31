@@ -9,6 +9,7 @@
 #include "filer_shared.h"
 #include "init.h"
 #include "mc_card_export.h"
+#include "mmce_save_versions.h"
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -825,7 +826,8 @@ static int drive_browse_parse(const char *json, CloudGoogleBrowsePage *page)
             if (e->is_folder ||
                 (!strncmp(e->name, "WLE-", 4) &&
                  (genCmpFileExt(e->name, "MCD") ||
-                  genCmpFileExt(e->name, "PS2"))))
+                  genCmpFileExt(e->name, "PS2") ||
+                  genCmpFileExt(e->name, "PSU"))))
                 page->count++;
             else
                 memset(e, 0, sizeof(*e));
@@ -947,7 +949,8 @@ static int cloud_digest_matches(const unsigned char digest[32], const char *hex)
 
 /* Valid recovered images are created only on a device with standard
  * same-directory rename semantics, never an actively emulated MMCE card. */
-static int cloud_recovery_path(const char *folder, char *result, size_t result_size,
+static int cloud_recovery_path(const char *folder, const char *ext,
+                               char *result, size_t result_size,
                                char *download, size_t download_size,
                                char *stage, size_t stage_size)
 {
@@ -962,8 +965,8 @@ static int cloud_recovery_path(const char *folder, char *result, size_t result_s
     if (len == 0)
         return 0;
     for (i = 1; i <= 999; i++) {
-        n = snprintf(result, result_size, "%s%sRECOVER-CLOUD-%03d.mcd",
-                     folder, folder[len - 1] == ':' || folder[len - 1] == '/' ? "" : "/", i);
+        n = snprintf(result, result_size, "%s%sRECOVER-CLOUD-%03d.%s",
+                     folder, folder[len - 1] == ':' || folder[len - 1] == '/' ? "" : "/", i, ext);
         a = snprintf(stage, stage_size, "%s.PART", result);
         b = snprintf(download, download_size, "%s%sRECOVER-CLOUD-%03d.DOWNLOAD.PART",
                      folder, folder[len - 1] == ':' || folder[len - 1] == '/' ? "" : "/", i);
@@ -998,7 +1001,7 @@ int cloudGoogleRecoverSnapshot(const CloudGoogleBrowseItem *snapshot,
         return -1;
     }
     is_pcsx2 = genCmpFileExt(snapshot->name, "PS2");
-    if (!cloud_recovery_path(dest_dir, result, sizeof(result),
+    if (!cloud_recovery_path(dest_dir, "mcd", result, sizeof(result),
                              download, sizeof(download), stage, sizeof(stage))) {
         set_error(error, error_size,
                   "Choose a writable USB/HDD folder with an unused recovery filename");
@@ -1081,6 +1084,98 @@ fail:
         genClose(fd);
     genRemove(download);
     genRemove(stage);
+    if (result_created)
+        genRemove(result);
+    return -1;
+}
+
+int cloudGoogleRecoverSaveVersion(const CloudGoogleBrowseItem *version,
+                                  const char *dest_dir, char *result_path,
+                                  int result_size, char *error, int error_size)
+{
+    GoogleSession session;
+    char result[MAX_PATH], stage[MAX_PATH], download[MAX_PATH], url[512];
+    unsigned char digest[32];
+    int bytes = 0, fd = -1, r, result_created = 0;
+
+    if (result_path && result_size > 0)
+        result_path[0] = '\0';
+    if (version == NULL || version->is_folder || dest_dir == NULL ||
+        result_path == NULL || result_size <= 0 ||
+        !drive_safe_id(version->id) ||
+        !cloud_valid_digest(version->sha256) ||
+        !genCmpFileExt(version->name, "PSU")) {
+        set_error(error, error_size,
+                  "This item lacks valid save version metadata and cannot be recovered");
+        return -1;
+    }
+    /* The .psu path claims RECOVER-CLOUD-###.psu; the stage name is unused
+     * because a verified download is published as it is. */
+    if (!cloud_recovery_path(dest_dir, "psu", result, sizeof(result),
+                             download, sizeof(download), stage, sizeof(stage))) {
+        set_error(error, error_size,
+                  "Choose a writable USB/HDD folder with an unused recovery filename");
+        return -1;
+    }
+    if (strlen(result) >= (size_t)result_size) {
+        set_error(error, error_size, "Recovery destination path is too long");
+        return -1;
+    }
+    if (!ensurePathDeviceStackReady(dest_dir)) {
+        set_error(error, error_size, "Could not start the recovery storage device");
+        return -1;
+    }
+    if (load_session(&session, 1, error, error_size) < 0)
+        return -1;
+    if (!ensureDashboardIpNetworkReady()) {
+        set_error(error, error_size, "Ethernet is unavailable for Drive recovery");
+        return -1;
+    }
+    if (refresh_access_token(&session, error, error_size) < 0)
+        return -1;
+    r = snprintf(url, sizeof(url),
+                 "https://www.googleapis.com/drive/v3/files/%s?alt=media", version->id);
+    if (r <= 0 || r >= (int)sizeof(url))
+        return -1;
+
+    if (wleExists(result) || wleExists(stage) || wleExists(download)) {
+        set_error(error, error_size, "A recovery filename was claimed; choose another");
+        return -1;
+    }
+    fd = genOpen(download, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
+    if (fd < 0) {
+        set_error(error, error_size, "Could not create staged cloud download");
+        return -1;
+    }
+    r = cloudHttpDownloadGoogleFd(url, session.access_token, fd, session.ca_path,
+                                  MMCE_SAVE_VERSION_MAX, &bytes, digest,
+                                  error, error_size);
+    if (genClose(fd) < 0)
+        r = -1;
+    fd = -1;
+    if (r < 0)
+        goto fail;
+    if (bytes <= 0 || !cloud_digest_matches(digest, version->sha256)) {
+        set_error(error, error_size, "Downloaded save SHA-256 differs from backup history");
+        goto fail;
+    }
+    if (mmceSaveVersionValidate(download) != 0) {
+        set_error(error, error_size, "Downloaded file is not a complete .psu save");
+        goto fail;
+    }
+    if (wleExists(result) || fileXioRename(download, result) < 0) {
+        set_error(error, error_size, "Could not publish the verified .psu");
+        goto fail;
+    }
+    result_created = 1;
+    if (mmceSaveVersionValidate(result) != 0) {
+        set_error(error, error_size, "Published .psu verification failed");
+        goto fail;
+    }
+    snprintf(result_path, result_size, "%s", result);
+    return 0;
+fail:
+    genRemove(download);
     if (result_created)
         genRemove(result);
     return -1;
@@ -1264,7 +1359,8 @@ static int drive_upload_file(GoogleSession *s, const char *parent, const char *n
 static int is_backup_file(const char *name)
 {
     return name != NULL && !strncmp(name, "WLE-", 4) &&
-           (genCmpFileExt(name, "MCD") || genCmpFileExt(name, "PS2"));
+           (genCmpFileExt(name, "MCD") || genCmpFileExt(name, "PS2") ||
+            genCmpFileExt(name, "PSU"));
 }
 
 static int validate_backup_file(const char *name, const char *path)
@@ -1273,6 +1369,9 @@ static int validate_backup_file(const char *name, const char *path)
         return mcCardValidateNoEcc(path) == MC_CARD_EXPORT_OK;
     if (genCmpFileExt(name, "PS2"))
         return mcCardValidatePcsx2(path) == MC_CARD_EXPORT_OK;
+    /* per-save versions (WLE-Saves/<save>/WLE-<stamp>.psu): every entry checked */
+    if (genCmpFileExt(name, "PSU"))
+        return mmceSaveVersionValidate(path) == 0;
     return 0;
 }
 

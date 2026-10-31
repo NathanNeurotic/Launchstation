@@ -611,9 +611,9 @@ static int chooseMmceBackupRoot(char *out, size_t out_size, int change)
 void dashToolsSyncAllMmceCards(void)
 {
 	/* Explicit backup: full compare (verify = 1); IGR uses the fingerprint. */
-	MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format, 1};
+	MmceBackupOptions options = {dashCfg.mmce_backup_keep, dashCfg.mmce_backup_format, 1, dashCfg.mmce_backup_saves};
 	MmceBackupStats total, one;
-	char root[MAX_PATH], summary[384];
+	char root[MAX_PATH], summary[384], saves[80] = "";
 	int unit, any_unit = 0;
 
 	if (!dashWorkerAwaitAll("Finishing backup status check"))
@@ -640,8 +640,13 @@ void dashToolsSyncAllMmceCards(void)
 		total.backed_up += one.backed_up;
 		total.unchanged += one.unchanged;
 		total.failed += one.failed;
+		total.save_versions += one.save_versions;
+		total.save_failed += one.save_failed;
 	}
 	dashLoadingEnd();
+	if (options.per_save)
+		snprintf(saves, sizeof(saves), "\nSaves: %d new .psu version%s, %d failed.", total.save_versions,
+		         total.save_versions == 1 ? "" : "s", total.save_failed);
 
 	if (!any_unit || total.candidates == 0) {
 		dashModalMessage(DI_WARNING, "No MMCE cards found",
@@ -669,8 +674,8 @@ void dashToolsSyncAllMmceCards(void)
 		dashLoadingEnd();
 		if (r < 0) {
 			snprintf(summary, sizeof(summary),
-			         "Local: %d new, %d unchanged, %d failed.\nDrive upload failed: %s",
-			         total.backed_up, total.unchanged, total.failed,
+			         "Local: %d new, %d unchanged, %d failed.%s\nDrive upload failed: %s",
+			         total.backed_up, total.unchanged, total.failed, saves,
 			         cloud_error[0] ? cloud_error : "unknown error");
 			dashModalMessage(DI_WARNING, "Card sync completed locally", summary,
 			                 "Your local backup history was kept.");
@@ -678,11 +683,11 @@ void dashToolsSyncAllMmceCards(void)
 			return;
 		}
 		snprintf(summary, sizeof(summary),
-		         "Local: %d new, %d unchanged, %d failed.\nDrive: %d uploaded, %d already present, %d failed.",
-		         total.backed_up, total.unchanged, total.failed,
+		         "Local: %d new, %d unchanged, %d failed.%s\nDrive: %d uploaded, %d already present, %d failed.",
+		         total.backed_up, total.unchanged, total.failed, saves,
 		         cloud.uploaded, cloud.skipped, cloud.failed);
-		dashModalMessage((total.failed || cloud.failed) ? DI_WARNING : DI_CHECK,
-		                 (total.failed || cloud.failed) ? "Sync all cards completed with errors" : "All cards synchronized",
+		dashModalMessage((total.failed || total.save_failed || cloud.failed) ? DI_WARNING : DI_CHECK,
+		                 (total.failed || total.save_failed || cloud.failed) ? "Sync all cards completed with errors" : "All cards synchronized",
 		                 summary,
 		                 "Only changed local cards create new history. Drive sync is copy-only.");
 		dashToolsRefreshMmceStatus();
@@ -691,11 +696,11 @@ void dashToolsSyncAllMmceCards(void)
 #endif
 
 	snprintf(summary, sizeof(summary),
-	         "%d new backup%s, %d unchanged, %d failed.",
+	         "%d new backup%s, %d unchanged, %d failed.%s",
 	         total.backed_up, total.backed_up == 1 ? "" : "s",
-	         total.unchanged, total.failed);
-	dashModalMessage(total.failed ? DI_WARNING : DI_CHECK,
-	                 total.failed ? "Local card backup completed with errors" : "All cards backed up locally",
+	         total.unchanged, total.failed, saves);
+	dashModalMessage((total.failed || total.save_failed) ? DI_WARNING : DI_CHECK,
+	                 (total.failed || total.save_failed) ? "Local card backup completed with errors" : "All cards backed up locally",
 	                 summary,
 	                 "Link Google Drive to upload this history too.");
 	dashToolsRefreshMmceStatus();
@@ -1173,8 +1178,9 @@ static void cloudBrowseHistory(void)
             items[n].icon = entry->is_folder ? DI_FOLDER : DI_MC;
             items[n].label = names[i];
             items[n].detail = entry->is_folder ? "Browse backup folder" :
-                              (entry->sha256[0] ? "Select to download, verify and recover locally" :
-                               "Missing uploaded SHA-256: inspect only");
+                              !entry->sha256[0] ? "Missing uploaded SHA-256: inspect only" :
+                              genCmpFileExt(entry->name, "PSU") ? "Save version: download a verified .psu" :
+                              "Select to download, verify and recover locally";
             items[n].disabled = 0;
             actions[n++] = i;
         }
@@ -1223,6 +1229,31 @@ static void cloudBrowseHistory(void)
                             dashCfg.igr_backup_path :
                             (LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir),
                             sizeof(folder));
+                if (genCmpFileExt(item->name, "PSU")) {
+                    /* A per-save version: a .psu file, never written to a card here. */
+                    if (!dashPickPath("Download save version to USB / HDD",
+                                      folder, DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
+                        continue;
+                    if (!dashModalConfirm("Download this save version?",
+                                          "The .psu is downloaded, SHA-256 and every entry checked, and saved as a NEW RECOVER-CLOUD file. No card is changed; import it with Card contents > Import .psu.",
+                                          "Download", 0))
+                        continue;
+                    if (!dashWorkerAwaitAll("Finishing device operations"))
+                        continue;
+                    error[0] = result[0] = '\0';
+                    dashLoadingBegin("Downloading and verifying save version");
+                    ok = cloudGoogleRecoverSaveVersion(item, folder, result, sizeof(result),
+                                                       error, sizeof(error));
+                    dashLoadingEnd();
+                    if (ok == 0)
+                        dashModalMessage(DI_CHECK, "Save version downloaded", result,
+                                         "SHA-256 and .psu structure verified. Use Card contents > Import .psu to put it on a card.");
+                    else
+                        dashModalMessage(DI_WARNING, "Save version download failed",
+                                         error[0] ? error : "No .psu was published.",
+                                         "Cards and saved backup history were not changed.");
+                    continue;
+                }
                 if (!dashPickPath("Download snapshot to NEW image on USB / HDD",
                                   folder, DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
                     continue;

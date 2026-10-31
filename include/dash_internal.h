@@ -557,6 +557,7 @@ typedef struct
 	int dev_auto; /* DASH_DEVA_* bitmask: drivers to load at startup */
 	int mmce_backup_keep;   /* 0 = all, otherwise 1..99 */
 	int mmce_backup_format; /* MMCE_BACKUP_FORMAT_* */
+	int mmce_backup_saves;  /* 1 = also keep per-save .psu versions */
 	int igr_auto_backup;    /* run MMCE backup when entered through WLE-IGR */
 	int igr_cloud_sync;     /* upload WLE-MMCE-Backups to Google Drive after IGR */
 	int igr_after;          /* DashIgrAfter */

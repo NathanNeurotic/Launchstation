@@ -104,6 +104,7 @@ enum SetId {
 	S_MMCE_BACKUP_PATH,
 	S_MMCE_BACKUP_KEEP,
 	S_MMCE_BACKUP_FORMAT,
+	S_MMCE_BACKUP_SAVES,
 	S_MMCE_SYNC_ALL,
 	S_MMCE_RECOVER_LOCAL,
 	S_IGR_SYNC_MODE,
@@ -355,6 +356,7 @@ static const SetItem mmce_backup_items[] = {
     {ST_ACTION, S_MMCE_LANGUAGE, "Language", "Open the existing language settings used by file operations and tools."},
     {ST_NUMBER, S_MMCE_BACKUP_KEEP, "Backups per card", "0 keeps every verified version. Otherwise keep the newest 1-99 versions per card."},
     {ST_CHOICE, S_MMCE_BACKUP_FORMAT, "Backup format", "Native .mcd avoids writes when unchanged. PCSX2 .ps2 adds ECC/spare bytes and verifies the converted image."},
+    {ST_CHOICE, S_MMCE_BACKUP_SAVES, "Per-save versions", "Also keep each changed save as a .psu in WLE-Saves beside its card's history, uploaded to Google Drive with the cards. Backups per card limits each save."},
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
     {ST_ACTION, S_GOOGLE_ACCOUNT, "Google account", "Link, relink, sync or disconnect the native Google Drive backup account."},
     {ST_ACTION, S_CHECK_UPDATES, "Check for updates", "Compare with the rolling latest release; a newer build can be downloaded, SHA-256 verified and installed in place."},
@@ -735,6 +737,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return 2;
 		case S_MMCE_BACKUP_FORMAT:
 			*names = mmce_backup_format_names, *cur = dashCfg.mmce_backup_format;
+			return 2;
+		case S_MMCE_BACKUP_SAVES:
+			*cur = dashCfg.mmce_backup_saves;
 			return 2;
 		case S_IGR_SYNC_MODE:
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
@@ -1374,6 +1379,9 @@ static void setChoice(int id, int v)
 		case S_MMCE_BACKUP_FORMAT:
 			dashCfg.mmce_backup_format = v;
 			dashToolsRefreshMmceStatus();
+			break;
+		case S_MMCE_BACKUP_SAVES:
+			dashCfg.mmce_backup_saves = v;
 			break;
 		case S_IGR_SYNC_MODE:
 			if (v <= 0) {

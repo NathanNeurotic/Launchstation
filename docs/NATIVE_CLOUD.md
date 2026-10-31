@@ -132,10 +132,18 @@ reads the Google CA override.
 
 Cloud sync uploads the existing versioned `WLE-MMCE-Backups` tree into a folder
 of the same name in the root of the Drive, mirroring subfolders (at most 16
-levels). Only `WLE-*.mcd` and `WLE-*.ps2` files are considered, so in-progress
-`.PART` files are never uploaded. Before a file is uploaded, Launchstation
-validates its PS2 memory-card header/geometry and exact expected file size;
-interrupted or truncated final-named backups are rejected and counted as failed.
+levels). Only `WLE-*.mcd`, `WLE-*.ps2` and `WLE-*.psu` files are considered, so
+in-progress `.PART` files are never uploaded. Before a file is uploaded,
+Launchstation validates its PS2 memory-card header/geometry and exact expected
+file size; interrupted or truncated final-named backups are rejected and counted
+as failed. A `.psu` is read whole and every entry, name and size is checked.
+
+`.psu` files are the optional **per-save versions** (Settings > Storage &
+devices > MMCE backups > Per-save versions, default Off): after a card's history
+is current, each save on its newest verified copy is kept as
+`<card>/WLE-Saves/<save>/WLE-<stamp>.psu` when its bytes changed, named after
+the card copy it came from (`src/mmce_save_versions.c`). They are uploaded like
+the card copies, so Drive keeps one game's history apart from the whole card.
 Sync is copy-only: cloud files are never automatically deleted.
 
 Each uploaded backup carries a private `wle_sha256` Drive `appProperties`
@@ -163,6 +171,12 @@ its local converted copy (PCSX2 `.ps2` images are converted), then publishes the
 completed image. A failed download or verification cannot publish a final card.
 The bearer token is sent only to `www.googleapis.com`; redirects to verified
 Google content hosts carry no credentials.
+
+A per-save version (`WLE-*.psu`) is recovered the same way, limited to 8.5 MiB,
+and published as a new `RECOVER-CLOUD-###.psu` after its SHA-256 matches and its
+entries are checked (`cloudGoogleRecoverSaveVersion`). It is not converted and
+no card is written: **Card contents > Import .psu** puts it on a card, with a
+safety copy first.
 
 Snapshots without a stored digest can be inspected but not recovered through
 this workflow. Google Drive history is never modified and downloaded backups

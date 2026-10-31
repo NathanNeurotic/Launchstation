@@ -4,7 +4,7 @@ LAUNCHSTATION retains local verified version history for MMCE card images and, o
 
 ## Local recovery
 
-1. Configure the parent folder of `WLE-MMCE-Backups` in Settings → Storage & devices → MMCE backups (Backup folder). The same page sets Backups per card (0 keeps every verified version), Backup format (native `.mcd` or PCSX2 `.ps2`) and Automatic sync (Off, Local, Local + Google Drive).
+1. Configure the parent folder of `WLE-MMCE-Backups` in Settings → Storage & devices → MMCE backups (Backup folder). The same page sets Backups per card (0 keeps every verified version), Backup format (native `.mcd` or PCSX2 `.ps2`), Per-save versions (Off by default; keeps each changed save as a `.psu` in `WLE-Saves/<save>/` beside its card's history, uploaded to Google Drive with the cards) and Automatic sync (Off, Local, Local + Google Drive).
 2. Choose **Recover saved card image...** in Settings or select a completed `.mcd`/`.ps2` snapshot in File Browser.
 3. Select a new USB/HDD destination. LAUNCHSTATION validates the image, writes a distinct `.PART`, reads back/verifies it and publishes `RECOVER-###.mcd` only after success.
 4. Inspect the newly produced file before making any manual card replacement. The current MMCE card is not replaced or activated.

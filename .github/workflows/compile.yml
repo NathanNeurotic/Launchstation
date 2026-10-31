@@ -118,6 +118,7 @@ jobs:
           python3 tests/test_mc_card_export.py
           python3 tests/test_mmce_backup.py
           python3 tests/test_mmce_fingerprint_backup.py
+          python3 tests/test_mmce_save_versions.py
           python3 tests/test_mmce_targeted_safety.py
           python3 tests/test_opl_title_cfg.py
           python3 tests/test_recent_skips_game_images.py
