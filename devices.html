@@ -1,0 +1,174 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Device Support · Launchstation Docs</title>
+<meta name="description" content="Device Support Launchstation treats every storage type as its own device with its own driver stack. Drivers load on demand, so a device card tells you whether Launchstation has checked that device, not merely whether a driver exists. This page is the overview;">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/devices.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Device Support · Launchstation Docs">
+<meta property="og:description" content="Device Support Launchstation treats every storage type as its own device with its own driver stack. Drivers load on demand, so a device card tells you whether Launchstation has checked that device, not merely whether a driver exists. This page is the overview;">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html" class="active"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Device Support</h1>
+<p class="lead">Launchstation treats every storage type as its own device with its own driver stack. Drivers load on demand, so a device card tells you whether Launchstation has <em>checked</em> that device, not merely whether a driver exists. This page is the overview; the per-device pages explain each type in depth.</p>
+
+<div class="callout info"><div class="h">Where devices appear</div><p>Open the <b>Files</b> tab. The default view lists <b>File Browser</b>, <b>Last folder</b>, <b>MISC commands</b> and your bookmarks; the File Browser&rsquo;s root list shows every device the build supports. Press <b>SELECT</b> to switch to the <b>device cards</b>, which show a status line, free space where known, and a coloured status light. Press <b>Triangle</b> on a card for <b>Browse</b>, <b>Detect now</b> / <b>Check again</b>, <b>HDD Manager</b> (internal HDD card), <b>Start disc</b> (disc drive card) and <b>Console information</b>.</p></div><p>Open the <b>Files</b> tab. The default view is a list (File Browser, last folder, bookmarks, then devices). Press <b>SELECT</b> to switch to the device cards, which show a status line, free space where known, and a coloured status light. Press <b>Triangle</b> on a card for <b>Browse</b>, <b>Detect now</b> / <b>Check again</b>, <b>HDD Manager</b> (internal HDD card), <b>Start disc</b> (disc drive card) and <b>Console information</b>.</p></div>
+
+<h2 id="matrix">Storage matrix</h2>
+<p>The first three columns apply to everything Launchstation can open. The last three show which external game core Launchstation can hand an image to from that device (see <a href="neutrino.html">Neutrino</a>, <a href="popstarter.html">POPStarter</a> and <a href="ember.html">Ember</a>).</p>
+<table class="matrix"><thead><tr><th>Device (dashboard name)</th><th>Path form</th><th>Driver starts</th><th>PS2 ISO (Neutrino)</th><th>PS1 VCD (POPStarter)</th><th>PS1 CUE/BIN/EXE (Ember)</th></tr></thead><tbody>
+<tr><td>Memory card (<code>mc0 (Slot 1)</code>, <code>mc1 (Slot 2)</code>)</td><td><code>mc0:</code> <code>mc1:</code></td><td>Always loaded</td><td>No (but a card can hold the Neutrino loader)</td><td>No</td><td>No</td></tr>
+<tr><td>USB (<code>MASS</code>, <code>MASS 0</code>&ndash;<code>MASS 9</code>)</td><td><code>usbN:</code> / <code>massN:</code></td><td>On demand</td><td>Yes (<code>usb</code>)</td><td>Yes (<code>POPS/</code> folder)</td><td>Yes (dedicated USB handoff)</td></tr>
+<tr><td>MMCE (<code>MMCE Slot 1/2</code>)</td><td><code>mmce0:</code> <code>mmce1:</code></td><td>On demand</td><td>Yes (<code>mmce</code>)</td><td>Yes (<code>POPS/</code> folder)</td><td>Yes</td></tr>
+<tr><td>MX4SIO (<code>MX4SIO SD Card</code>)</td><td><code>mx4sio:</code></td><td>On demand</td><td>Yes (<code>mx4sio</code>)</td><td>Yes (<code>POPS/</code> folder)</td><td>Yes</td></tr>
+<tr><td>iLink / FireWire</td><td><code>ilink:</code></td><td>On demand</td><td>Yes (<code>ilink</code>)</td><td>No</td><td>Yes</td></tr>
+<tr><td>Internal HDD, APA (<code>Internal HDD (APA)</code>)</td><td><code>hdd0:</code> <code>hdd1:</code> (<code>pfsN:</code> when mounted)</td><td>On demand</td><td>No</td><td>Yes (POPS partitions)</td><td>Yes (PFS mounted writable)</td></tr>
+<tr><td>exFAT / FAT HDD (<code>exFAT HDD</code>)</td><td><code>ata0:</code> <code>ata1:</code></td><td>On demand</td><td>Yes (<code>ata</code>)</td><td>Yes (<code>POPS/</code> folder)</td><td>Yes</td></tr>
+<tr><td>PC CARD CF (<code>PC CARD CF</code>)</td><td><code>cf0:</code> (<code>cf:</code>)</td><td>On demand, early Japanese consoles only</td><td>No</td><td>No</td><td>No</td></tr>
+<tr><td>Network (<code>Network (UDPFS)</code>)</td><td><code>udpfs:</code></td><td>On demand</td><td>Yes (<code>udpfs</code>)</td><td>No</td><td>Yes</td></tr>
+<tr><td>Disc Drive</td><td><code>cdfs:</code></td><td>Disc state tracked</td><td>Not an image source (use <b>Start disc</b>)</td><td>No</td><td>No</td></tr>
+<tr><td>PSX Flash / PSX DVR HDD</td><td><code>xfrom0:</code> <code>dvr_hdd0:</code></td><td>On demand, DESR only</td><td colspan="3">File management only</td></tr>
+<tr><td>Virtual MC</td><td><code>vmc0:</code> <code>vmc1:</code></td><td>When an image is mounted</td><td colspan="3">Save management only</td></tr>
+</tbody></table>
+<p>&ldquo;No&rdquo; means Launchstation has no route for that combination, not that the hardware is unusable: a Neutrino ISO cannot be started straight from the APA HDD or a memory card because Launchstation passes Neutrino only the backends it names (<code>usb</code>, <code>mx4sio</code>, <code>mmce</code>, <code>ilink</code>, <code>ata</code>, <code>udpfs</code>). Ember and POPStarter rows describe what Launchstation prepares; both still need the external core, and Ember needs your own BIOS.</p>
+
+<h2 id="states">Device states: Ready, Not checked, Absent, Busy</h2>
+<p>A demand-loaded driver cannot know whether hardware is attached until it runs, so Launchstation does not guess.</p>
+<ul>
+<li><b>Ready</b> &ndash; an explicit check succeeded (or the device is the one Launchstation booted from) and its driver is running.</li>
+<li><b>Not checked</b> &ndash; shown dimmed with the status <em>Not connected</em>. This is not a failure: select it and confirm and Launchstation loads the driver and probes the device. The hint line reads &ldquo;opening it will load its driver&rdquo;.</li>
+<li><b>Absent</b> &ndash; a check ran and found nothing (<em>Slot empty</em>, <em>No MMCE storage found</em>, <em>Connect a USB storage device</em>&hellip;). Absent cards are displayed but skipped by focus navigation in the device cards. To try again after connecting hardware, open the device from the File Browser root list (which re-runs its lazy loader).</li>
+<li><b>Busy</b> &ndash; a memory card that is still being checked or did not answer (<em>Checking&hellip;</em>, <em>Not responding &ndash; open to retry</em>). Opening it retries.</li>
+</ul>
+<p>A loaded driver does not prove media is present: driver residency never makes a device Ready on its own. Check results are snapshots, expire after any IOP reset, and are not continuous hot-plug monitoring; use <b>Check again</b> after you attach or remove something. Cached applications on a device that failed its check are hidden from Home until it is Ready again.</p>
+
+<h2 id="autostart">Start devices automatically</h2>
+<p><b>Settings &gt; Storage &amp; devices &gt; Start devices automatically</b> has one switch per family: USB, internal HDD, exFAT HDD, MMCE, MX4SIO, iLink (when the console has the port) and network (UDPFS). All default to <b>off</b>, so a stock boot loads nothing beyond the memory-card services and whatever device the ELF was started from; that boot device is always treated as enabled. Auto-start runs while the loading screen is up, and the application library is refreshed afterward.</p>
+<p><b>MMCE and MX4SIO are mutually exclusive</b> (they both use the memory-card port SIO2 bus). Turning one on turns the other off, and Launchstation refuses to enable one while you are booted from the other. See <a href="#stacks">Stacks that cannot coexist</a>.</p>
+
+<h2 id="hide">Hiding and showing devices</h2>
+<ul>
+<li><b>Show unavailable devices</b> (default On) keeps Not checked and Absent families visible. Off lists only Ready devices and removes the others from both drawing and navigation, so the focus rectangle never lands on a hidden card.</li>
+<li><b>Hide empty memory card slots</b> also hides unused MMCE entries in the File Browser.</li>
+<li><b>Internal HDD / ATA units</b> chooses which of <code>hdd0</code>, <code>hdd1</code>, <code>ata0</code>, <code>ata1</code> appear: Show all, Hide HDD1, Hide HDD0+1, Hide ATA1, Hide ATA0+1, Hide HDD1+ATA1 (default) or Hide all.</li>
+<li><b>Console-based hiding.</b> HDD and ATA are hidden automatically when the ROM version is 2.20 or newer (expansion-bay-less slim consoles). iLink is hidden on retail ROMs from 1.70 onward (SCPH-50000 and later removed the port); it is also hidden on the PSX, whose i.Link port only works with Sony camcorders. Unknown or non-retail ROMs keep it visible. <code>xfrom0:</code> and <code>dvr_hdd0:</code> appear only on a DESR PSX. PC CARD CF appears only on eligible early Japanese consoles. See <a href="special-hardware.html">PSX, Deckard &amp; RetroGem</a>.</li>
+</ul>
+
+<h2 id="safe-mode">Recovery boot: hold SELECT</h2>
+<p>Hold <b>SELECT</b> while Launchstation starts. This sets <em>show every device</em> (ignoring the Hide HDD/ATA choice and the console-model hiding for HDD/ATA, PSX flash/DVR and the PC CARD CF entry; iLink visibility is not overridden) and <em>safe mode</em>: <code>DASHBOARD.CNF</code> is skipped for that boot, so a saved auto-start combination cannot trap you, and PC CARD CF is shown as <em>Disabled in safe mode</em> (or <em>Unsupported console model</em>) and never powered. Saved settings are not changed. A toast confirms &ldquo;Safe mode&rdquo; on the dashboard.</p>
+
+<h2 id="stacks">Stacks that cannot coexist</h2>
+<ul>
+<li><b>MMCE &harr; MX4SIO.</b> Each installs its own SIO2 hooks, so switching from one to the other forces an IOP reset (audio and controller are rebuilt afterward). If the reset is refused, the second driver is not loaded. MX4SIO also occupies memory-card port 2, so opening <code>mc1:</code> while MX4SIO is active resets the IOP back to the normal card stack.</li>
+<li><b>PC CARD CF &harr; DEV9.</b> The CF driver owns the PCMCIA bus and refuses to start if DEV9 (HDD, ATA, network) is resident; DEV9 loaders refuse in turn once CF owns the bus. Only an actual IOP reset releases it.</li>
+<li><b>Copy and move are refused between incompatible pairs</b> with &ldquo;Incompatible drivers to perform action&rdquo;: MMCE &harr; MX4SIO, MX4SIO &harr; <code>mc1:</code>, and PC CARD CF &harr; anything on DEV9 (internal HDD/PFS, exFAT HDD, UDPFS, <code>host:</code>, PSX flash/DVR). Use USB (or another compatible device) as the middle step.</li>
+<li><b>Compatible together:</b> USB, iLink, internal HDD (APA) and exFAT HDD (ATA) can all be resident at once; they share the BDM core where applicable. Network (UDPFS) shares DEV9 with HDD/ATA.</li>
+</ul>
+
+<h2 id="memory-card">Memory cards</h2>
+<p>Slots are always probed in the background and labelled by port (<code>mc0 (Slot 1)</code>, <code>mc1 (Slot 2)</code>). The card shows <em>PS2 memory card</em> or <em>PS1 memory card</em> and free space in MB (against 8 MB for a PS2 card). They are the target for the <a href="exploit-installer.html">exploit installer</a> and the default location for <a href="saves.html">saves</a>. A memory card cannot hold game images, but <code>mc0:/neutrino/</code> or <code>mc1:/neutrino/</code> may hold a complete Neutrino install.</p>
+
+<h2 id="usb">USB</h2>
+<p>USB uses the BDM stack with FAT/exFAT filesystems and up to ten logical units (<code>MASS 0</code>&ndash;<code>MASS 9</code>; each partition is its own unit). The browser shows <code>massN:</code> for what is internally <code>usbN:</code>, and numbering follows attach order &ndash; never assume <code>mass0:</code> is a particular stick, especially with MX4SIO or iLink attached (those also take <code>massN:</code> names from the shared namespace).</p>
+<h3 id="usb-stability">Enumeration and intermittent stalls</h3>
+<p>When the USB stack starts, Launchstation probes at most four times, 0.6 s apart, accepting a second drive that appears late. Each probe is a synchronous PS2 IOP filesystem call: the retry count is bounded, but one call that blocks inside the driver cannot be timed out from the EE. The controller&rsquo;s analog light going out during a stall points to a stuck PAD/SIO2 or IOP session; it does not by itself prove a software reset. Two bus-powered drives can also overload the console&rsquo;s USB supply. Compare behaviour with one drive, a powered hub, and an older build, and do not unplug a drive during writes. The project uses the pre-rewrite <code>usbd</code> host driver (<code>usbd-ra</code>) loaded before BDM because the newer ps2sdk driver was observed to lock the IOP on real consoles; see the <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/USB-STABILITY-AUDIT-2026-10-08.md">USB stability audit</a>, whose freeze report is not yet confirmed fixed on the reporter&rsquo;s console.</p>
+<h3 id="usb-diagnostics">Tools: USB unit diagnostics</h3>
+<p>Use <b>Tools &gt; USB unit diagnostics</b> to inspect the last cached logical-unit mask without any new I/O, or explicitly probe USB unit 0 or 1 one at a time. A manual probe is a synchronous IOP call; a failing driver can still freeze the console. Logical <code>usb0:</code>/<code>usb1:</code> numbers are not physical port numbers.</p>
+
+<h2 id="other-devices">Other device pages</h2>
+<ul>
+<li><a href="mmce.html">MMCE</a> (SD2PSX, MemCard PRO2, PicoMemcard) and <a href="mmce-backup.html">MMCE backup history</a>.</li>
+<li>In-depth pages for <b>Memory Cards</b>, <b>USB Mass Storage</b>, <b>MX4SIO SD Card</b>, <b>Network Storage (UDPFS)</b> and <b>PC CARD CompactFlash</b>, and an overview of <b>Launching Games &amp; Images</b>, sit in the sidebar next to this page.</li>
+<li><a href="hdd.html">Internal HDD</a>, <a href="hdd-manager.html">HDD Manager</a>, <a href="ilink.html">iLink</a>.</li>
+<li><b>exFAT / FAT HDD (<code>ata0:</code>)</b> is a BDM block device and is <em>not</em> APA/PFS. An APA disk appears as <code>hdd0:</code>, a FAT/exFAT disk as <code>ata0:</code>; the two stacks can be loaded together.</li>
+<li><b>Disc Drive (<code>cdfs:</code>).</b> Read-only. The card shows the disc type (No disc, Reading disc&hellip;, PlayStation disc, PlayStation 2 CD/DVD, ESR disc, Audio CD, DVD Video, Unsupported disc). <b>Start disc</b> boots PS2 discs through their <code>SYSTEM.CNF</code> boot file (writing the OSD history entry and applying the console&rsquo;s XPARAM patches), PS1 discs through <code>rom0:PS1DRV</code>, DVD Video through the console&rsquo;s own player (or an updated <code>BREXEC-DVDPLAYER</code> on a memory card), and ESR discs through the configured ESR loader. Audio CDs are not started.</li>
+</ul>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

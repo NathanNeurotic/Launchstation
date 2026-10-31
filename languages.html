@@ -1,0 +1,145 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Languages · Launchstation Docs</title>
+<meta name="description" content="Languages Launchstation ships nine built-in languages and can load an external .LNG file that overrides individual strings. The language applies to dashboard navigation, Settings labels, common actions, file-operation progress and the classic tools. Choosing a">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/languages.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Languages · Launchstation Docs">
+<meta property="og:description" content="Languages Launchstation ships nine built-in languages and can load an external .LNG file that overrides individual strings. The language applies to dashboard navigation, Settings labels, common actions, file-operation progress and the classic tools. Choosing a">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html" class="active"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Languages</h1>
+<p class="lead">Launchstation ships nine built-in languages and can load an external <code>.LNG</code> file that overrides individual strings. The language applies to dashboard navigation, Settings labels, common actions, file-operation progress and the classic tools.</p>
+
+<h2 id="select">Choosing a language</h2>
+<p>Open <b>Settings &gt; System &gt; Language</b> and pick one from the list (names are shown in their own language). The change applies immediately and takes part in the Save/Discard session; the choice is stored as <code>language = ...</code> in <code>LAUNCHELF.CNF</code>.</p>
+<table><thead><tr><th>Language</th><th>Shown as</th><th><code>language =</code> value</th><th>Source file</th></tr></thead><tbody>
+<tr><td>English (default)</td><td>English</td><td><code>english</code></td><td><code>Lang/ENG.LNG</code></td></tr>
+<tr><td>Spanish</td><td>Espanol</td><td><code>spanish</code></td><td><code>Lang/SPA.LNG</code></td></tr>
+<tr><td>French</td><td>Francais</td><td><code>french</code></td><td><code>Lang/FRE.LNG</code></td></tr>
+<tr><td>Italian</td><td>Italiano</td><td><code>italian</code></td><td><code>Lang/ITA.LNG</code></td></tr>
+<tr><td>Polish</td><td>Polski</td><td><code>polish</code></td><td><code>Lang/POL.LNG</code></td></tr>
+<tr><td>Portuguese</td><td>Portugues</td><td><code>portuguese</code></td><td><code>Lang/POR.LNG</code></td></tr>
+<tr><td>Brazilian Portuguese</td><td>Portugues Brasileiro</td><td><code>brazilian</code></td><td><code>Lang/PTBR.LNG</code></td></tr>
+<tr><td>German</td><td>Deutsch</td><td><code>german</code></td><td><code>Lang/GER.LNG</code></td></tr>
+<tr><td>Hungarian</td><td>Magyar</td><td><code>hungarian</code></td><td><code>Lang/HUN.LNG</code></td></tr>
+</tbody></table>
+<p>An omitted, blank or unrecognised value falls back to English. The loader also accepts short forms such as <code>en</code>, <code>eng</code>, <code>br</code> and the numeric index.</p>
+
+<h2 id="scope">What is and is not translated</h2>
+<ul>
+<li><b>Translated:</b> dashboard tab names, Home and Applications labels, Settings groups, options, values and help, common dialog buttons, the file-operation overlay (<i>Pasting file</i>, <i>Remaining size</i>, <i>Completed items N / M</i>) and the classic tool strings.</li>
+<li><b>Never translated:</b> file and folder names, application titles and descriptions, bookmarks, paths, device identifiers and protocol names. <i>Network Host (host:)</i> means files shared by a computer running the PS2Link host service; it is separate from the UDPFS server entry.</li>
+<li>Some extended help and specialist dialogs still use English.</li>
+</ul>
+
+<h2 id="external">External .LNG files</h2>
+<p>Set <b>Settings &gt; System &gt; Language &gt; Language file</b> (<code>LANG_FILE</code>) to a <code>.LNG</code> file. It is loaded on top of the selected built-in language: any string it does not define keeps the built-in text, and existing files remain compatible.</p>
+<pre>// comment lines start with //
+lang(468, Dashboard_Home, "Start")
+lang(469, Dashboard_Applications, "Programs")</pre>
+<ul>
+<li>Each entry is <code>lang(index, Name, "text")</code>. The <b>index</b> (0&ndash;676 in this build) is what matters; the symbolic name is ignored. The built-in files in <code>Lang/</code> list every index.</li>
+<li>Indexes 0&ndash;467 are the original classic strings and are never renumbered; indexes 468&ndash;676 are the dashboard labels (names begin <code>Dashboard_</code>), appended so older external files keep working.</li>
+<li>Escapes: <code>\n</code>, <code>\r</code>, <code>\t</code>, <code>\"</code> and <code>\\</code>. A trailing <code>// comment</code> after the closing parenthesis is allowed.</li>
+<li>A syntax error or an index beyond the table makes the whole file be ignored and the built-in text stays.</li>
+<li>Dashboard strings that contain format conversions (for example <code>%s</code> or <code>%d</code>) are only accepted if the translation uses the same conversions in the same order; otherwise English is used for that string.</li>
+</ul>
+
+<h2 id="matching">How dashboard labels are matched</h2>
+<p>The dashboard looks up each interface label in a sorted table (<code>Lang/DASHBOARD.inc</code>) and replaces it with the current language's string, so changing language or loading an external file never leaves stale text. Only interface labels opt in; text read from the storage (names, metadata, titles) is drawn as it is.</p>
+
+<h2 id="fonts">Characters and fonts</h2>
+<p>The built-in language files are plain ASCII (accented letters are written without accents, which is why the picker shows names such as <i>Espanol</i> and <i>Portugues</i>), so they render with any dashboard font. An external <code>.LNG</code> may use extra characters only if the active font has them: the System font covers the Latin-1 characters used by language files and can be replaced by an external <code>.FNT</code> (<b>Customize theme &gt; Text</b>); arbitrary TTF files are not loaded on the console. Game and save titles stored as Shift-JIS are decoded for display in the File Browser's title modes. See <a href="themes.html#text">Themes</a>.</p>
+
+<p>See also <a href="settings.html#languages">Settings</a> and <a href="configuration.html">Configuration</a>.</p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

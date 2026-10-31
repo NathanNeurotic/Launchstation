@@ -1,0 +1,257 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Settings Reference · Launchstation Docs</title>
+<meta name="description" content="Settings Reference Settings are grouped by purpose, apply as soon as you change them (themes, screen position and sound preview live) and are written only when you Save. One Save/Discard session covers the dashboard, Launchstation&#x27;s classic settings and the ne">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/settings.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Settings Reference · Launchstation Docs">
+<meta property="og:description" content="Settings Reference Settings are grouped by purpose, apply as soon as you change them (themes, screen position and sound preview live) and are written only when you Save. One Save/Discard session covers the dashboard, Launchstation&#x27;s classic settings and the ne">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html" class="active"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Settings Reference</h1>
+<p class="lead">Settings are grouped by purpose, apply as soon as you change them (themes, screen position and sound preview live) and are written only when you Save. One Save/Discard session covers the dashboard, Launchstation's classic settings and the network addresses.</p>
+
+<h2 id="navigation">How Settings works</h2>
+<ul>
+<li>Settings opens at the <b>overview</b> of eight groups plus <b>Built-in commands</b> (which opens the MISC list in the File Browser). Confirm or Right opens a group; Back returns to the previous page with its selection and scroll position intact; at the overview Back returns Home. A breadcrumb shows where a page lives and the top right shows <i>no changes</i>, <i>unsaved changes</i>, <i>saving...</i> or <i>save failed</i>.</li>
+<li>Left/Right changes a choice or number; Confirm opens a list for choices with more than two values. Left goes back on rows that do not use it. L2/R2 jump to the first/last row. <b>Square</b> resets one theme row to its preset value, or edits a launch key's title.</li>
+<li><b>Triangle</b> opens the <b>Changes</b> menu on every page: <i>Save changes</i>, <i>Discard changes</i>, <i>Keep editing</i>. Leaving Settings (L1/R1, START menu, Back at the overview) with unsaved edits asks the same question.</li>
+<li>Unavailable dependent options stay visible; pressing them shows what to enable first (for example Music volume needs Background music).</li>
+<li>Edits compare the current serialized values with the snapshot taken when Settings opened, so returning a control to its original value leaves no false <i>unsaved</i> flag.</li>
+</ul>
+<h3 id="saving">What Save writes</h3>
+<table><thead><tr><th>File</th><th>Content</th><th>Notes</th></tr></thead><tbody>
+<tr><td><code>DASHBOARD.CNF</code></td><td>Dashboard settings, application scan folders, active theme.</td><td>Next to the loaded <code>LAUNCHELF.CNF</code> when that is on a writable device, otherwise in the ELF's folder or <code>mc0:/SYS-CONF/</code>.</td></tr>
+<tr><td><code>LAUNCHELF.CNF</code></td><td>Launch keys, loaders, video mode, language, keyboard, PSU rules, bookmarks and the other classic settings.</td><td>Written only when a classic setting changed, to the configured folder, beside the ELF or a memory card <code>SYS-CONF</code> target.</td></tr>
+<tr><td><code>IPCONFIG.DAT</code></td><td>IP address, netmask and gateway.</td><td>Only when changed.</td></tr>
+</tbody></table>
+<p>An earlier failed automatic or bookmark save is reported as <i>save failed</i> with a <i>Retry failed saves</i> action; it does not turn an untouched visit into a change. <b>Clear recent applications</b> and <b>Refresh library now</b> are immediate: Discard does not undo them. Discard restores the device auto-start <i>preferences</i> but does not unload drivers that have already started. <a href="configuration.html">Configuration</a> describes every file.</p>
+
+<h2 id="groups">All groups at a glance</h2>
+<table><thead><tr><th>Group</th><th>Contents</th></tr></thead><tbody>
+<tr><td><a href="#appearance">Appearance</a></td><td>Theme preset, customization groups, screen calibration, motion, animation, panel transparency, icon backing, theme files and resets.</td></tr>
+<tr><td><a href="#home-apps">Home &amp; applications</a></td><td>Start screen, shortcuts, view, artwork, recents, Application library.</td></tr>
+<tr><td><a href="#sound">Sound</a></td><td>Interface sounds, background music and their volumes.</td></tr>
+<tr><td><a href="#input">Input</a></td><td>Confirm button, on-screen keyboard layout, USB keyboard.</td></tr>
+<tr><td><a href="#launching">Launching</a></td><td>Automatic start &amp; boot, Launch keys, bookmark lock, loaders, IOP reset, Game ID output.</td></tr>
+<tr><td><a href="#devices">Storage &amp; devices</a></td><td>MMCE backups, HDD/ATA visibility, empty slots, unavailable devices, device auto-start.</td></tr>
+<tr><td><a href="#network">Network</a></td><td>IP, netmask, gateway, network write access, legacy drivers, Internet clock sync.</td></tr>
+<tr><td><a href="#system">System</a></td><td>Language, memory card backup files, classic screen settings, clocks, configuration folder, save-as, welcome message.</td></tr>
+</tbody></table>
+
+<h2 id="appearance">Appearance</h2>
+<table><thead><tr><th>Option</th><th>Values</th><th>Default</th></tr></thead><tbody>
+<tr><td>Theme preset</td><td>18 presets; Confirm opens a live preview list.</td><td>OSD Classic</td></tr>
+<tr><td>Customize theme</td><td>Background, Interface colours, Tiles &amp; menus, Text, Icons, Clock, Artwork background. See <a href="themes.html">Themes</a>.</td><td>&mdash;</td></tr>
+<tr><td>Screen calibration</td><td>Video mode (Auto, NTSC, PAL, VGA, 480p, 576p, 576i; 576p is selectable only on PS2 ROM 2.20+ or PSX 1.80J/2.10J and is greyed out elsewhere; a saved 576p that this console cannot drive starts in Auto but stays saved, so a memory card moved between consoles keeps it. 576i is 50 Hz PAL interlaced), Screen position X and Y (within the display mode's own offset range), Reset screen settings.</td><td>Auto, 0, 0</td></tr>
+<tr><td>Background motion</td><td>0&ndash;200% in 10% steps</td><td>100%</td></tr>
+<tr><td>Menu animation</td><td>0&ndash;200% in 10% steps</td><td>100%</td></tr>
+<tr><td>Panel transparency</td><td>0&ndash;100% (0% removes menu panels)</td><td>Preset value</td></tr>
+<tr><td>Control icon backings</td><td>On / Off</td><td>On</td></tr>
+<tr><td>Theme files &amp; resets</td><td>Theme name, Export theme to folder, Load theme from folder, Reset entire theme, Restore default theme.</td><td>&mdash;</td></tr>
+<tr><td>Reset appearance</td><td>Restores screen calibration, motion, animation and OSD Classic.</td><td>&mdash;</td></tr>
+</tbody></table>
+<p>Changing the video mode or position applies immediately. The Customize theme pages are each a group of rows ending with a <i>Reset</i> action; see the <a href="themes.html">Themes</a> page for every option and the <code>theme.cfg</code> keys.</p>
+<h3 id="control-icon-backing">Theme-matched controller button icons</h3>
+<p><b>Control icon backings</b> controls whether face-button and D-pad symbols and quick-action chips receive a theme-derived badge. When disabled, the symbols render without the backing. Symbols are generated from the built-in vector atlas and need no external icon PNGs.</p>
+
+<h2 id="home-apps">Home &amp; applications</h2>
+<table><thead><tr><th>Option</th><th>Values</th><th>Default</th></tr></thead><tbody>
+<tr><td>Start screen</td><td>Home, Applications, Files, Tools, Settings</td><td>Home</td></tr>
+<tr><td>Home quick-launch shortcuts</td><td>On / Off (Applications and Last folder always stay)</td><td>On</td></tr>
+<tr><td>Application view</td><td>Grid, List, Carousel (SELECT also cycles it)</td><td>Grid</td></tr>
+<tr><td>Application artwork</td><td>On / Off</td><td>On</td></tr>
+<tr><td>Recent applications</td><td>0, 4, 8, 12, 16</td><td>8</td></tr>
+<tr><td>Application library</td><td><b>Application folders...</b> (add/remove scan roots, Restore defaults), <b>Refresh at startup</b>, <b>Refresh library now</b></td><td>Roots <code>mc:/APPS/</code>, <code>mc:/BOOT/</code>, <code>mass:/APPS/</code>, <code>mass:/BOOT/</code>; refresh at startup On</td></tr>
+<tr><td>Clear recent applications</td><td>Immediate; applications and favorites are kept</td><td>&mdash;</td></tr>
+</tbody></table>
+
+<h2 id="sound">Sound</h2>
+<table><thead><tr><th>Option</th><th>Values</th><th>Default</th></tr></thead><tbody>
+<tr><td>Interface sounds</td><td>On / Off</td><td>On</td></tr>
+<tr><td>Interface sound volume</td><td>0&ndash;100% in 10% steps (needs Interface sounds)</td><td>80%</td></tr>
+<tr><td>Background music</td><td>On / Off (hardware-looped, independent of interface sounds)</td><td>On</td></tr>
+<tr><td>Music volume</td><td>0&ndash;100% in 10% steps (needs Background music)</td><td>80%</td></tr>
+</tbody></table>
+<p>If the audio driver cannot start, everything stays silent and a toast says why; the dashboard keeps working. Sound effects are embedded; music needs the optional <code>BGM.ADP</code> beside the ELF (see <a href="themes.html#bgm">Themes</a>).</p>
+
+<h2 id="input">Input</h2>
+<table><thead><tr><th>Option</th><th>Values</th><th>Default</th></tr></thead><tbody>
+<tr><td>Confirm button</td><td>Circle or Cross (the other cancels, everywhere)</td><td>Circle</td></tr>
+<tr><td>On-screen keyboard layout</td><td>ABC, QWERTY, Dvorak, AZERTY, QWERTZ, ABNT</td><td>QWERTY</td></tr>
+<tr><td>USB keyboard</td><td>On / Off; sub-rows <i>USB keyboard driver</i> (optional <code>USBKBD.IRX</code>) and <i>Keyboard map</i> (optional <code>.KBD</code>) need it On</td><td>Off</td></tr>
+</tbody></table>
+
+<h2 id="launching">Launching</h2>
+<table><thead><tr><th>Page / option</th><th>Values</th><th>Default</th></tr></thead><tbody>
+<tr><td>Automatic start &amp; boot</td><td><b>Automatic start target</b> (application or command; clear to disable), <b>Startup delay</b> 0&ndash;60 s, <b>Automatic start timeout</b> 0&ndash;99 s (needs a target)</td><td>No target, 1 s, 10 s</td></tr>
+<tr><td>Launch keys</td><td>Circle, Cross, Square, Triangle, L1, R1, L2, R2, L3, R3, START, Left, Right. Each row: <i>Choose target...</i>, <i>Edit title...</i>, <i>Clear target</i> (Square edits the title). SELECT is reserved for configuration; Left/Right are optional.</td><td>Circle = File Browser, Triangle = About, others empty</td></tr>
+<tr><td>Lock shortcuts &amp; bookmarks</td><td>On / Off (prevents editing launch keys and File Browser bookmarks)</td><td>Off</td></tr>
+<tr><td>Disc &amp; PS1 loaders</td><td>ESR loader, OSDSYS program (empty = the console's own), POPStarter ELF, Ember directory, Neutrino ELF; Disable Ember / POPStarter / Neutrino support</td><td>Empty paths; all disable switches Off</td></tr>
+<tr><td>Reset IOP before launch</td><td>On / Off (On gives launched ELFs a clean IOP)</td><td>On</td></tr>
+<tr><td>Game ID output</td><td><b>Game ID launch signal for apps</b> and <b>for discs</b> (RetroGEM-compatible OSD/HDMI adapters)</td><td>Apps Off, discs On</td></tr>
+</tbody></table>
+<p>Launch keys can target any application path or a built-in command (the <code>MISC/...</code> entries). A launch key held at boot, or SELECT + button in the dashboard, starts it; targets also appear as Home chips. See <a href="dashboard.html#launch-keys">Dashboard</a>.</p>
+<h3 id="paths">Path pickers</h3>
+<p>Program and file settings use the native picker with <i>Choose a location...</i> and <i>Clear location</i>. POPStarter and Neutrino have explicit ELF path fields. Ember uses an <b>Ember directory</b>: the folder name and location are arbitrary, but the save-safe umbrella still contains <code>ember.elf</code>, <code>bios.bin</code> and <code>games/&lt;Game&gt;/</code>. When a selected game's own umbrella lacks <code>ember.elf</code>, the configured Ember directory can supply it to that device automatically. VCD remains POPStarter; CUE/BIN/EXE remains Ember. If the Neutrino path is empty, the game device and <code>mc0:</code>/<code>mc1:</code> <code>neutrino/</code> folders are searched.</p>
+<h3 id="gameid-launch">Colored Game ID launch bars</h3>
+<p>Game ID output for ELF/application launches is off by default on new configurations; it remains available in <b>Settings &gt; Launching &gt; Game ID output</b> for RetroGEM-compatible display adapters. Previously saved configurations keep their selected value until changed. The disc signal is on by default.</p>
+
+<h2 id="devices">Storage &amp; devices</h2>
+<table><thead><tr><th>Option</th><th>Values</th><th>Default</th></tr></thead><tbody>
+<tr><td>MMCE backups</td><td>Page described <a href="#mmce-sync-page">below</a></td><td>&mdash;</td></tr>
+<tr><td>Internal HDD / ATA units</td><td>Show all, Hide HDD1, Hide HDD0+1, Hide ATA1, Hide ATA0+1, Hide HDD1+ATA1, Hide all (a recovery boot shows everything)</td><td>Hide HDD1+ATA1</td></tr>
+<tr><td>Hide empty memory card slots</td><td>On / Off (also hides unused MMCE entries)</td><td>Off</td></tr>
+<tr><td>Show unavailable devices</td><td>On / Off</td><td>On</td></tr>
+<tr><td>Start devices automatically</td><td>Auto-start USB storage, internal HDD, exFAT HDD, MMCE SD card, MX4SIO, iLink / FireWire (only in builds with iLink; leave off without a physical i.Link port), network (UDPFS)</td><td>All Off</td></tr>
+</tbody></table>
+<h3 id="unavailable">Unavailable devices</h3>
+<p><b>Show unavailable devices</b> controls whether confirmed-missing devices are displayed. Hidden devices are removed from navigation as well as drawing. Unprobed (<i>Not checked</i>) devices remain actionable.</p>
+<h3 id="autostart">Start devices automatically</h3>
+<p>ON loads that family's drivers when the dashboard starts, so the device is ready and its applications are found by the startup scan. OFF never loads the driver by itself; the Files root can still start it manually, and drivers already loaded stay loaded until the next IOP reboot. The boot device is always on and cannot be switched off. MMCE and MX4SIO are alternate SIO2 storage stacks and cannot both auto-start: if a saved file enables both, the boot device wins, otherwise MMCE.</p>
+
+<h2 id="mmce-sync-page">MMCE backup &amp; sync page</h2>
+<table><thead><tr><th>Option</th><th>Values</th><th>Default</th></tr></thead><tbody>
+<tr><td>Backup folder</td><td>Parent folder for <code>WLE-MMCE-Backups</code>. Existing history stays where it is; reinstall the IGR helper after changing it.</td><td>Not set</td></tr>
+<tr><td>Sync all cards</td><td>Back up every changed MMCE card now; if Google Drive is linked, upload pending history afterwards. Shows <i>Checking...</i>, <i>All synced</i> or the number of images still pending.</td><td>&mdash;</td></tr>
+<tr><td>Recover saved card image...</td><td>Recover a local <code>.mcd</code>/<code>.ps2</code> snapshot as a NEW verified <code>.mcd</code> on USB/HDD</td><td>&mdash;</td></tr>
+<tr><td>Automatic sync</td><td>Off, Local backup, Local + Google Drive (cloud option only in network builds) &mdash; what happens after OPL returns through WLE-IGR</td><td>Local backup</td></tr>
+<tr><td>IGR helper</td><td>Install, update or remove the verified helper. Status: <b>Current</b>, <b>Outdated</b>, <b>Not installed</b> or <b>Partial / mixed</b></td><td>&mdash;</td></tr>
+<tr><td>After IGR, open</td><td>Dashboard, PS2 system menu, Application (then <i>IGR application</i> picks it)</td><td>Dashboard</td></tr>
+<tr><td>Language</td><td>Opens the language settings</td><td>&mdash;</td></tr>
+<tr><td>Backups per card</td><td>0 = keep every verified version, otherwise newest 1&ndash;99</td><td>10</td></tr>
+<tr><td>Backup format</td><td>Native .mcd (no write when unchanged) or PCSX2 .ps2 (adds ECC/spare bytes and verifies the converted image)</td><td>Native .mcd</td></tr>
+<tr><td>Per-save versions</td><td>Also keep each changed save as a <code>.psu</code> in <code>WLE-Saves</code> beside its card&rsquo;s history, uploaded to Google Drive with the cards. <i>Backups per card</i> limits each save. See <a href="mmce-backup.html#per-save">Per-save versions</a></td><td>Off</td></tr>
+<tr><td>Google account</td><td>Link, relink, sync or disconnect the native Drive account</td><td>&mdash;</td></tr>
+<tr><td>Check for updates</td><td>Compare with the rolling release and install in place</td><td>&mdash;</td></tr>
+<tr><td>About Launchstation</td><td>Version, commit, origin, credits</td><td>&mdash;</td></tr>
+</tbody></table>
+<p>The Google account and update rows exist only in network builds with native cloud support. The <b>IGR helper</b> row compares installed helper bytes with the helper this build would install for the current application and backup paths. Entering this page is treated as an explicit request for live MMCE status: if a backup destination is set and MMCE is not already running, the MMCE stack is started on demand before the read-only status scan, even when MMCE auto-start is off. A startup failure is shown instead of leaving the page silently at <code>Not checked</code>. The pending check is read-only: it compares live card images with the newest local history without creating, pruning or deleting backups; PCSX2-format history is compared in memory.</p>
+<h3 id="native-update">Native update install</h3>
+<p><b>Check for updates</b> validates ancestry against the rolling <code>latest</code> release. The updater selects the standard or DS34 <b>PSU package</b> for the running variant, verifies its advertised SHA-256 and contents over trusted HTTPS, stages the verified ELF and replaces the running app's ELF using a <code>.BAK</code> rollback file. The verified four-file PSU can restore <b>missing</b> updater CA and BGM sidecars but never overwrites existing customized sidecars. Interrupted <code>.UPDATE</code>/<code>.PACKAGE</code> staging files are preserved for manual recovery rather than silently truncated. Restart Launchstation to run the new build. Older update clients may need a one-time manual package install.</p>
+<h3 id="cloud-history">MMCE and Drive recovery</h3>
+<p>The MMCE backups page can select a local snapshot for non-destructive recovery. The Google account / Tools cloud menu can browse remote history and recover a SHA-256-qualified snapshot into a <b>new</b> image on USB/HDD. Neither flow automatically replaces a live MMCE card. <a href="mmce-backup.html">Recovery details</a>.</p>
+
+<h2 id="network">Network</h2>
+<table><thead><tr><th>Option</th><th>Values</th><th>Default</th></tr></thead><tbody>
+<tr><td>IP address, Netmask, Gateway</td><td>IPv4 editor (Left/Right pick an octet, Up/Down +/-1, L1/R1 &plusmn;10). Used for FTP, PS2Link and UDPFS.</td><td>From <code>IPCONFIG.DAT</code></td></tr>
+<tr><td>Allow writing over the network</td><td>On / Off (lets <code>host:</code> and <code>udpfs:</code> be written to, not just read)</td><td>Off</td></tr>
+<tr><td>Legacy Ethernet drivers</td><td>On / Off. Use the older DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up; takes effect next time Ethernet/FTP is started.</td><td>Off</td></tr>
+<tr><td>Sync PS2 clock from Internet</td><td>Sends SNTP requests to <code>0.pool.ntp.org</code> (two attempts, 5 s each), adds the time elapsed since the reply, then writes and verifies the hardware RTC. Failures name the step (DNS, connect, timeout, refused...).</td><td>&mdash;</td></tr>
+</tbody></table>
+<p>The write-access and legacy-driver rows appear only in builds with Ethernet/UDPFS support. See <a href="network-services.html">Network services</a>.</p>
+
+<h2 id="system">System</h2>
+<table><thead><tr><th>Option</th><th>Values</th><th>Default</th></tr></thead><tbody>
+<tr><td>Language</td><td>English, Spanish, French, Italian, Polish, Portuguese, Brazilian Portuguese, German, Hungarian; optional external <i>Language file</i> (<code>.LNG</code>)</td><td>English</td></tr>
+<tr><td>Memory card backup files</td><td>PSU: add game ID and title to names; PSU: add date to names; PSU: never overwrite existing files (enabling it also enables dated names; turning dated names off disables it)</td><td>All Off</td></tr>
+<tr><td>Classic screen settings</td><td>Menu frame, Opaque popups, Show launch titles, Hide full ELF paths, File Browser icons, and eight classic colours (Background, Frame, Text, Selected text, Graph 1&ndash;4). These affect legacy classic screens only; dashboard themes have their own controls.</td><td>On, Off, On, On, On</td></tr>
+<tr><td>Set software clock...</td><td>Works without a CMOS battery; enter <code>YYYY-MM-DD HH:MM:SS</code> (2000&ndash;2099). Restarts at the last saved time; save again before power-off to keep elapsed runtime.</td><td>&mdash;</td></tr>
+<tr><td>Use PS2 hardware clock</td><td>Stop the software clock and use the console RTC again</td><td>&mdash;</td></tr>
+<tr><td>PS2 Temperature Units (50K and later)</td><td>Celsius, Fahrenheit. Unit of the temperature shown beside the dashboard clock; hidden when the console has no supported sensor (<code>Dash_TemperatureFahrenheit</code>)</td><td>Celsius</td></tr>
+<tr><td>Set PS2 clock manually...</td><td>Enter <code>YYYY-MM-DD HH:MM:SS</code>; the hardware RTC is written and the readback verified</td><td>&mdash;</td></tr>
+<tr><td>Configuration folder</td><td>Load and save <code>LAUNCHELF.CNF</code> in this folder (<code>CNF_Path</code>)</td><td>Empty</td></tr>
+<tr><td>Save launch &amp; tool settings to...</td><td>Writes <code>LAUNCHELF.CNF</code> immediately to the configured folder, next to the ELF, or to the memory card <code>SYS-CONF</code>; dashboard and network settings are saved separately</td><td>&mdash;</td></tr>
+<tr><td>Show welcome message again</td><td>Re-shows the introduction</td><td>&mdash;</td></tr>
+</tbody></table>
+<h3 id="clock-manual">PS2 clock without a working CMOS battery</h3>
+<p>Use <b>Settings &gt; System &gt; Set PS2 clock manually...</b> and enter <code>YYYY-MM-DD HH:MM:SS</code>. Launchstation validates the date, writes the PS2 RTC and verifies the readback. With a dead clock battery the time may need setting again after power loss. Alternatively use the software clock, which keeps its own time until the next power-off, or <b>Sync PS2 clock from Internet</b> on network builds.</p>
+<h3 id="languages">Languages</h3>
+<p>The nine built-in languages translate dashboard navigation, Settings labels, common actions and file-operation progress. An external <code>.LNG</code> overrides individual strings; missing strings fall back to the selected built-in language. Some extended help and specialist dialogs remain English; filenames, application titles, bookmarks, paths and protocol identifiers keep their original text.</p>
+
+<h2 id="dirty">Unsaved state</h2>
+<p>Settings compare current serialized values with the session snapshot. Touching a control and returning it to the original value does not leave a false dirty flag. Save failures remain visible and can be retried; Discard does not claim a failed write succeeded.</p>
+<h2 id="reset">Reset actions</h2>
+<p>Display/theme reset actions restore known project defaults so you do not have to reverse each visual setting by hand: <b>Reset screen settings</b>, <b>Reset appearance</b>, the per-group <i>Reset</i> rows and the theme file resets.</p>
+<h2 id="home-navigation">Where things live</h2>
+<p>Home includes the Applications library and Last folder shortcut. Files runs the native File Browser directly. Tools holds the classic MISC commands in a popup menu (also reachable from Settings &gt; <i>Built-in commands</i> and from the Files root). Separate Apps and Devices pages no longer exist as tabs; the old internal identifiers are kept only for compatibility.</p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

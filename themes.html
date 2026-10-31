@@ -1,0 +1,247 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Display, Themes &amp; BGM · Launchstation Docs</title>
+<meta name="description" content="Display, Themes &amp; BGM The dashboard is PS2-inspired but fully configurable. One theme holds every visual value (background, colours, selection style, tile shape, corners, font, icons, clock and the app-artwork wallpaper). Pick a built-in preset, change any val">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/themes.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Display, Themes &amp; BGM · Launchstation Docs">
+<meta property="og:description" content="Display, Themes &amp; BGM The dashboard is PS2-inspired but fully configurable. One theme holds every visual value (background, colours, selection style, tile shape, corners, font, icons, clock and the app-artwork wallpaper). Pick a built-in preset, change any val">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html" class="active"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Display, Themes &amp; BGM</h1>
+<p class="lead">The dashboard is PS2-inspired but fully configurable. One theme holds every visual value (background, colours, selection style, tile shape, corners, font, icons, clock and the app-artwork wallpaper). Pick a built-in preset, change any value with the controller, export the result as a theme folder, and load theme folders that you or others made on a PC. Nothing needs recompiling. The File Browser, HDD Manager, Text Editor and dialogs all follow the same active theme.</p>
+
+<h2 id="presets">Built-in themes</h2>
+<p>There are <b>18</b> presets under <b>Settings &gt; Appearance &gt; Theme preset</b>. <b>OSD Classic</b> is the default. Left/Right switches preset immediately; Confirm opens the list, previews each preset as you move, keeps it on Confirm and restores your previous theme (even an edited one) on Back. A preset you have edited shows as <i>Name (edited)</i>.</p>
+<table><thead><tr><th>Preset (id)</th><th>Background</th><th>Look</th></tr></thead><tbody>
+<tr><td><b>OSD Classic</b> (<code>osd</code>) &mdash; default</td><td>System tunnel</td><td>Indigo tunnel like the PS2 system menu backdrop with the clock orbs, OSDSYS highlight blue, accent-bar selection</td></tr>
+<tr><td>Classic Black (<code>black</code>)</td><td>Solid colour</td><td>Plain black; the lightest background. Change its colour for any solid colour</td></tr>
+<tr><td>PS2 Towers (<code>towers</code>)</td><td>PS2 towers</td><td>The opening tower field seen from above in fog, three moving lights; the heaviest background</td></tr>
+<tr><td>PS2 Blue Mist (<code>mist</code>)</td><td>Blue mist</td><td>Midnight blue-to-black gradient with moving translucent mist</td></tr>
+<tr><td>OSD Minimal (<code>minimal</code>)</td><td>Orbit lights</td><td>The main menu's seven orbs on near black; no panels, selection by text colour only</td></tr>
+<tr><td>System Clock (<code>clockring</code>)</td><td>Clock ring</td><td>System Configuration's twelve-rod clock: the ring turns with the seconds, the current hour's rod is lit and fills with the minutes, the orbs fly inside</td></tr>
+<tr><td>Memory Card Grid (<code>mcgrid</code>)</td><td>Memory card grid</td><td>Sparse block grid in thin lines</td></tr>
+<tr><td>Boot Lines (<code>bootlines</code>)</td><td>Boot lines</td><td>Soft light traces crossing a dark screen</td></tr>
+<tr><td>Wireframe Cubes (<code>cubes</code>)</td><td>Wireframe cubes</td><td>Independently rotating blue wireframe cubes drifting in depth</td></tr>
+<tr><td>Data Stream (<code>stream</code>)</td><td>Data stream</td><td>Abstract device activity in thin columns</td></tr>
+<tr><td>Memory Card Blue (<code>mcblue</code>)</td><td>Memory card tiles</td><td>Muted blue-grey with a tiled memory card motif</td></tr>
+<tr><td>Brushed Console (<code>brushed</code>)</td><td>Brushed console</td><td>Charcoal with a fine matte finish</td></tr>
+<tr><td>BIOS Blue (<code>biosblue</code>)</td><td>Gradient</td><td>Clean blue system screen, white text, cyan focus</td></tr>
+<tr><td>Monochrome (<code>mono</code>)</td><td>Solid colour</td><td>Black, white and grey; only the selection has colour</td></tr>
+<tr><td>CRT (<code>crt</code>)</td><td>Gradient + scanlines</td><td>Understated scanlines over the background only</td></tr>
+<tr><td>PSX (<code>psx</code>)</td><td>Ribbons</td><td>Charcoal with silver ribbons</td></tr>
+<tr><td>Crystal (<code>crystal</code>)</td><td>Crystal</td><td>The previous dashboard look: crystal towers, stars, glow, initials tiles</td></tr>
+<tr><td>Disc Error Red (<code>discred</code>)</td><td>Disc error red</td><td>Dark red clouds streaming past, a pulsing flare and rotating glass cubes</td></tr>
+</tbody></table>
+<p>Older saved selections <code>midnight</code> resolve to Blue Mist and <code>lightshow</code> to OSD Classic. Light Streaks and Drift Clouds remain available as custom background types. An unmodified preset is stored by name only, so it follows improvements to that preset in later builds.</p>
+<p>Every background is drawn procedurally from a few GS primitives; none of them uses or needs Sony BIOS data. The PS2-inspired scenes follow behaviour documented by the osdbits OSDSYS reverse-engineering notes (menu tunnel, tower heightfield, illegal-disc clouds, System Configuration clock, colour-swap selection).</p>
+
+<h3 id="orbs">The OSD orbs</h3>
+<p>OSD Classic, OSD Minimal and System Clock draw the PS2 main menu's orbs as the clock they are. Seven orbs, one per weekday, ride one circle whose plane slowly tumbles; their light trails show where the circle has been, so the sphere appears. They follow the console clock: all seven meet in one bright orb at :00, split into two groups at :30, three at :20 and :40, four at :15 and :45, five at :12, :24, :36 and :48, and six at :10 and :50. The sphere is small at the top of the hour and grows as the hour goes by. At 0% background motion the orbs hold still; below 50% the trails are shorter. If the real-time clock stops changing or becomes invalid, the orbs keep moving on the shared visual clock (they do not invent a date or time), and a valid clock tick re-anchors them.</p>
+
+<h2 id="selection">Selection presentation</h2>
+<p><b>Selection style</b> (Customize theme &gt; Tiles &amp; menus): <b>Solid bar</b>, <b>Accent bar</b>, <b>Outline</b> or <b>Text colour</b> (how the PS2 system menus mark the selection). Selected and unselected device cards share one geometry; focus adds emphasis without resizing or reflowing the card. <b>Corners</b> can be Square, Soft or Round and apply to panels, dialogs and list rows; <b>Glow</b> adds soft light behind focused items.</p>
+
+<h2 id="tile-styles">Application tile styles</h2>
+<p><b>Settings &gt; Appearance &gt; Customize theme &gt; Tiles &amp; menus &gt; Tile style.</b> Memory card is the default for every built-in preset (and for old configurations or theme folders without <code>tile_style</code>).</p>
+<ul>
+<li><b>Memory card</b> (<code>memory_card</code>): a narrow PS2 card silhouette with a cut corner, grip ridges and a recessed device label strip. Artwork fits inside the card face.</li>
+<li><b>Rounded</b> (<code>rounded</code>): the rounded rectangular tile, independent of panel corners.</li>
+<li><b>Chamfered</b> (<code>chamfered</code>): an eight-sided tile with clipped corners.</li>
+<li><b>Floating object</b> (<code>floating</code>): artwork or the fallback icon floats above a pool of light with a solid focus marker. The selected icon rises and gently bobs; bobbing stops with reduced/off animation. This is a 2D treatment, not a rotating 3D icon.</li>
+<li><b>Crystal slab</b> (<code>crystal</code>): a faceted block with lit top and shaded side faces.</li>
+</ul>
+<p>Tile style applies to Home and Applications artwork, including fallback icons and initials. Changes preview immediately and take part in the normal Save/Discard session. <b>Reset style</b> restores the preset's values. Exported themes include <code>tile_style</code>; customized dashboard configurations store it as <code>Theme_tile_style</code>.</p>
+
+<h2 id="icon-backing">Icon backing</h2>
+<p><b>Settings &gt; Appearance &gt; Control icon backings</b> (default On) shows or hides theme-derived badges behind face-button and D-pad symbols and behind quick-action chips. Button symbols come from the built-in vector atlas, so no external icon PNGs are needed.</p>
+
+<h2 id="icons">Icons</h2>
+<p>Applications that have artwork keep using it. Others get the <b>Default app icon</b> (Customize theme &gt; Icons): <b>Application</b> (default, a PS2-style program icon on a tile in the theme colours with the device as a badge), <b>Device</b> (the device's icon) or <b>Initials</b> (coloured tile with the app's initials). <b>Icon colour</b> is Text colours, Accent or Monochrome. <b>Custom app icon image...</b> (or <code>app_icon =</code>) uses your own PNG; up to 128x128 is kept and alpha is supported. If the file is missing or broken the built-in icon is used.</p>
+
+<h2 id="text">Fonts and text</h2>
+<p><b>Font</b> is <b>Roboto</b> (default, bundled, three pre-rasterised sizes) or <b>System</b> (Launchstation's own 8x16 font, smoothed; it follows an external <code>.FNT</code> chosen as <i>System font file</i> and covers the Latin-1 characters used by the language files). <b>Text size</b> runs 90% to 115% in 5% steps; <b>Bold</b> and <b>Text shadow</b> are switches. Arbitrary TTF files are not loaded on the console; to change Roboto, regenerate the atlas on a PC with <code>scripts/gen_dash_font.py</code>.</p>
+
+<h2 id="clock">Clock and date</h2>
+<p>The clock (Customize theme &gt; Clock) is <b>Off</b>, <b>Standard</b> (larger time over a small date) or <b>System</b> (light grey, even weight, seconds, date in the console's format, like the PS2 menus). Position is <b>Header</b> or <b>Footer</b> (in the footer it sits left of the button hints and hides itself where hints need the space). <b>Hours</b> is System, 24-hour or 12-hour; <b>Seconds</b> is on or off; <b>Date</b> is System, YYYY/MM/DD, MM/DD/YYYY, DD/MM/YYYY or Off. With Hours and Date on System, the console's own settings are used. The format rows are disabled while the clock is Off. File metadata keeps its seconds independently of the clock setting. For a console with a dead clock battery see <a href="settings.html#clock-manual">Settings</a>.</p>
+
+<h2 id="motion">Motion</h2>
+<ul>
+<li><b>Background motion</b> (Appearance): 0% to 200% in 10% steps, default 100%. 0% freezes the scene; 200% doubles its speed. Lower values use lighter detail where available.</li>
+<li><b>Menu animation</b>: 0% to 200%, default 100%. 0% makes transitions instant; higher values lengthen them.</li>
+<li><b>Panel transparency</b>: 0% removes menu panels and 100% makes them fully opaque (it edits the Panels colour's opacity).</li>
+</ul>
+<p>Top tabs, selection movement, OSD orbs and marquee effects use bounded smooth animation on a measured visual clock. The former fast sinusoidal header overshoot was removed because it could appear as top-of-dashboard video flicker on interlaced displays. Older configurations that stored motion as 0/1/2 load as 0%/50%/100%.</p>
+
+<h2 id="background">Background types</h2>
+<p><b>Customize theme &gt; Background</b> offers 19 types: Solid colour, Gradient, System tunnel, Blue mist, PS2 towers, Disc error red, Orbit lights, Clock ring, Memory card grid, Boot lines, Wireframe cubes, Data stream, Memory card tiles, Brushed console, Ribbons, Crystal, Light streaks, Drift clouds and Wallpaper image. <i>Colour</i> is the solid colour or gradient top (for scenes it tints walls, clouds, lights or grid lines); <i>Second colour</i> is the gradient bottom or the scene's base. <b>Brightness</b> runs 10% to 200%; <b>CRT scanlines</b> adds an understated line pattern over the background only. With the <i>Crystal</i> background, optional PSBBN-style layers <code>THEME/background.png</code>, <code>stars1.png</code> and <code>stars2.png</code> in the dashboard folder are used when present (<code>scripts/prepare_psbbn_theme.py</code> builds them from a texture pack you own; no third-party artwork is embedded).</p>
+
+<h2 id="colours">Colours</h2>
+<p>Customize theme &gt; Interface colours: Text, Secondary text, Muted text, Selected text, Accent, Selection (with opacity), Panels (with opacity; 0 = no panels), Borders (with opacity; hidden when Panels is transparent) and Warnings. A row opens the colour editor drawn beside the live dashboard: Up/Down choose Red, Green, Blue, Opacity or the PS2 quick picks (OSDSYS blue, cyan, menu indigo, clock-rod blue, disc-error red, configuration-title yellow and neutral greys); Left/Right &plusmn;1; L1/R1 (or L2/R2) &plusmn;16; Confirm keeps; Back restores. On confirm the theme is checked and a text colour too close to its background is replaced so the menus stay readable, with a message when this happens.</p>
+
+<h2 id="wallpaper-size">Custom wallpaper: 4:3 aspect ratio</h2>
+<p>Make your wallpaper on a <strong>4:3 canvas</strong>. Use <strong>640 &times; 480 PNG</strong> to preserve detail, or <strong>320 &times; 240</strong> for a smaller, lower-memory image like the starter example. Launchstation preserves aspect ratio, center-crops wider or taller inputs, and fills the screen. The decoder keeps wallpapers inside a <strong>640 &times; 512</strong> box, so a 4:3 source can retain <strong>640 &times; 480</strong> pixels. Smaller sources are not enlarged during decoding. A 640 &times; 480 texture uses about 1.17 MiB of decoded memory, four times the 320 &times; 240 option. This improves image detail at the existing output modes; it does not itself change the video output resolution. The 640 &times; 448 logical UI coordinate system is not the required artwork ratio.</p>
+<figure><img src="https://nathanneurotic.github.io/Launchstation/assets/wallpaper-example.png" alt="Example 320 by 240 pixel Launchstation wallpaper showing a dark blue center composition and safe-margin guides" width="320" height="240" loading="lazy"/><figcaption>Example PNG: 320 &times; 240, exactly 4:3, with illustrative guides. You can use it as a test wallpaper or replace the drawing with your own artwork.</figcaption></figure>
+<p><a href="https://raw.githubusercontent.com/NathanNeurotic/Launchstation/master/docs/theme-example/background.png">Download example background.png</a> &middot; <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/docs/theme-example/theme.cfg">Matching theme.cfg</a> &middot; <a href="https://github.com/NathanNeurotic/Launchstation/tree/master/docs/theme-example">Complete example folder</a></p>
+<h3 id="wallpaper-tips">Format and composition tips</h3>
+<ul>
+<li><strong>Format:</strong> PNG, maximum file size 1.5 MB and source dimensions 2048 &times; 2048. A non-interlaced RGB or indexed 320 &times; 240 PNG is an easy choice. Interlaced PNGs are accepted only up to 256 &times; 256. Grey, palette, RGB, 8- or 16-bit, with or without alpha, all load.</li>
+<li><strong>Safe area:</strong> keep important subject matter away from the extreme edges. CRT overscan and screen centering vary, and dashboard panels or hints may cover parts of the image.</li>
+<li><strong>Contrast:</strong> use a dark or subdued background behind text and adjust theme brightness, panel opacity and text colours if needed.</li>
+<li><strong>Other ratios:</strong> 320 &times; 256 is 5:4, and 320 &times; 224 is 10:7; both are supported inputs but are not the ideal 4:3 canvas. 16:9 sources are cropped horizontally.</li>
+<li><strong>Memory:</strong> theme images (wallpaper and default app icon) share eight cache slots and are loaded once on first use; missing, too-large or broken files are remembered and skipped, and the gradient or built-in icon is drawn instead.</li>
+</ul>
+<h3 id="wallpaper-setup">How to enable one</h3>
+<ol><li>For a single image, open <strong>Settings &gt; Appearance &gt; Customize theme &gt; Background &gt; Wallpaper image...</strong>, then choose a PNG and save your Settings changes. This switches the background type to Wallpaper image.</li>
+<li>To load the example theme, place <code>theme.cfg</code> and <code>background.png</code> together inside a folder under <code>THEMES/</code> next to the Launchstation ELF (or in the dashboard configuration folder). Choose <strong>Settings &gt; Appearance &gt; Theme files &amp; resets &gt; Load theme from folder...</strong>, select that folder and save.</li></ol>
+<p>For a <code>theme.cfg</code> file, <code>background = image</code> and <code>image = background.png</code> select the static wallpaper. The separate <code>wallpaper = focused</code> option uses the artwork of the selected application and is not needed for a custom static image. Missing or invalid wallpaper files fall back to the theme gradient.</p>
+
+<h2 id="app-wallpaper">Application artwork background</h2>
+<p>With <b>Customize theme &gt; Artwork background &gt; App artwork background = Focused app</b> (and <b>Application artwork</b> enabled under Home &amp; applications), the focused application's cover is laid over the background on Home and Applications, cross-faded on focus changes and dimmed by <b>Artwork dimming</b> (0% to 90%, default 65%). It reuses the artwork cache and never loads a file itself; apps without artwork just show the theme background.</p>
+
+<h2 id="theme-folders">Theme folders</h2>
+<pre class="tree"><code>&lt;dashboard folder&gt;/THEMES/
+└── MyTheme/
+    ├── theme.cfg        required
+    ├── background.png   optional (name it anything; see image =)
+    └── app.png          optional default application icon (app_icon =)</code></pre>
+<p><b>Settings &gt; Appearance &gt; Theme files &amp; resets</b> offers <b>Theme name...</b>, <b>Export theme to folder...</b> (writes a complete <code>theme.cfg</code> to the first writable root immediately; this does not save the Settings session), <b>Load theme from folder...</b>, <b>Reset entire theme</b> (back to the preset it started from) and <b>Restore default theme</b> (OSD Classic). Theme folders are looked up first in <code>THEMES/</code> beside the Launchstation ELF, then in <code>THEMES/</code> next to <code>DASHBOARD.CNF</code>. Both are read only from devices whose driver is already running and only when you choose <i>Load</i>, never at startup. The loaded theme is copied into <code>DASHBOARD.CNF</code> so it keeps working if the folder is removed later, except for its images, which are read from the folder. A <code>theme.cfg</code> larger than 16 KB is not read.</p>
+<h3 id="theme-cfg">theme.cfg keys</h3>
+<p>Plain <code>key = value</code> lines; <code>#</code> starts a comment. Every key is optional; missing keys keep the default theme's value (or those of <code>preset =</code>, which should come first), unknown keys are ignored and invalid values are ignored or clamped.</p>
+<table><thead><tr><th>Key</th><th>Values</th></tr></thead><tbody>
+<tr><td><code>name</code>, <code>author</code></td><td>text (up to 31 characters)</td></tr>
+<tr><td><code>preset</code></td><td>a preset id from the table above</td></tr>
+<tr><td><code>background</code></td><td><code>solid gradient tunnel mist towers disc orbit clockring grid lines cubes stream tiles brushed wave crystal streaks clouds image</code></td></tr>
+<tr><td><code>image</code></td><td>wallpaper PNG for <code>background = image</code></td></tr>
+<tr><td><code>background_color</code>, <code>background_color2</code></td><td>colour</td></tr>
+<tr><td><code>brightness</code></td><td>10&ndash;200 (%)</td></tr>
+<tr><td><code>scanlines</code></td><td>0 / 1</td></tr>
+<tr><td><code>text</code>, <code>text_secondary</code>, <code>text_muted</code>, <code>text_selected</code></td><td>colour</td></tr>
+<tr><td><code>accent</code>, <code>accent2</code>, <code>warning</code>, <code>error</code>, <code>success</code></td><td>colour</td></tr>
+<tr><td><code>selection</code>, <code>panel</code>, <code>border</code></td><td>colour with opacity (<code>#RRGGBBAA</code>)</td></tr>
+<tr><td><code>highlight</code></td><td><code>fill</code>, <code>bar</code>, <code>outline</code>, <code>text</code></td></tr>
+<tr><td><code>tile_style</code></td><td><code>memory_card</code> (default), <code>rounded</code>, <code>chamfered</code>, <code>floating</code>, <code>crystal</code></td></tr>
+<tr><td><code>corners</code></td><td><code>square</code>, <code>soft</code>, <code>round</code></td></tr>
+<tr><td><code>glow</code>, <code>bold</code>, <code>text_shadow</code></td><td>0 / 1</td></tr>
+<tr><td><code>font</code></td><td><code>roboto</code>, <code>system</code></td></tr>
+<tr><td><code>font_scale</code></td><td>90&ndash;115 (%)</td></tr>
+<tr><td><code>icon_tint</code></td><td><code>text</code>, <code>accent</code>, <code>mono</code></td></tr>
+<tr><td><code>app_icon_style</code></td><td><code>system</code>, <code>device</code>, <code>monogram</code></td></tr>
+<tr><td><code>app_icon</code></td><td>default application icon PNG</td></tr>
+<tr><td><code>clock</code></td><td><code>off</code>, <code>standard</code>, <code>system</code></td></tr>
+<tr><td><code>clock_position</code></td><td><code>header</code>, <code>footer</code></td></tr>
+<tr><td><code>clock_hours</code></td><td><code>system</code>, <code>24</code>, <code>12</code></td></tr>
+<tr><td><code>clock_seconds</code></td><td>0 / 1</td></tr>
+<tr><td><code>clock_date</code></td><td><code>system</code>, <code>ymd</code>, <code>mdy</code>, <code>dmy</code>, <code>off</code></td></tr>
+<tr><td><code>wallpaper</code></td><td><code>off</code>, <code>focused</code> (app artwork background)</td></tr>
+<tr><td><code>wallpaper_dim</code></td><td>0&ndash;90 (%)</td></tr>
+</tbody></table>
+<p>Colours: <code>#RRGGBB</code>, <code>#RRGGBBAA</code>, <code>RRGGBB</code> or <code>r, g, b[, a]</code> in decimal. Yes/no values also accept <code>on/off</code>, <code>yes/no</code>, <code>true/false</code>; enumerations also accept their number. Image paths without a device (<code>background.png</code>) are relative to the theme folder; full paths such as <code>mass:/THEMES/pic.png</code> work too. The repository's <code>docs/themes.md</code> and the <a href="https://github.com/NathanNeurotic/Launchstation/tree/master/docs/theme-example">example folder</a> carry the complete reference.</p>
+
+<h2 id="persistence">Where the theme is stored</h2>
+<p>The active theme lives in <code>DASHBOARD.CNF</code> as <code>Theme_*</code> keys: <code>Theme_preset = &lt;id&gt;</code> with <code>Theme_custom = 0</code> for an unmodified preset, or <code>Theme_custom = 1</code> plus one <code>Theme_&lt;key&gt;</code> per value for an edited theme. Edits are written about a second after the last button press (and always before an application starts), so adjusting a colour does not write the memory card on every step. Older builds ignore these keys; a <code>DASHBOARD.CNF</code> without them loads OSD Classic. <code>LAUNCHELF.CNF</code> is not touched by theme edits.</p>
+
+<h2 id="bgm">Background music</h2>
+<p><code>BGM.ADP</code> ships in the current rolling ZIP/PSU packages and is optional for standalone ELF installs; put it next to the executable when installing manually. It must be a mono PS-ADPCM file with the <code>APCM</code> header (at most 1 MiB, complete 16-byte blocks, loop-enabled for continuous music), not a renamed Ogg/WAV/MP3. It is read from the folder the ELF booted from. A missing, malformed or unreadable file never prevents the dashboard from booting and is tried once per audio session (turn <b>Background music</b> off and on to retry). The loader waits until background IO is idle and never starts a storage stack just to look for music. Interface sound effects are embedded in the ELF. Both have their own switch and volume (default on, 80%) under <b>Settings &gt; Sound</b>.</p>
+
+<h2 id="website-orbs">Website cursor orbs</h2>
+<p>The GitHub Pages site has a separate top-header cursor-orb toggle. Orbs are on by default on desktop and off by default on mobile/coarse-pointer devices. Your choice is saved locally, and switching off stops the animation loop. This does not change the PS2 dashboard theme.</p>
+
+<h2 id="reset">Restoring defaults</h2>
+<ul>
+<li><b>Square</b> on a theme row resets just that setting to the preset value.</li>
+<li><b>Reset ...</b> at the end of each editor group resets that group only (resetting Tiles &amp; menus does not change panel opacity).</li>
+<li><b>Theme files &amp; resets &gt; Reset entire theme</b> returns to the preset the theme started from; <b>Restore default theme</b> returns to OSD Classic.</li>
+<li><b>Appearance &gt; Reset appearance</b> restores screen calibration, motion, animation and OSD Classic together; <b>Screen calibration &gt; Reset screen settings</b> restores video mode Auto and a centred picture.</li>
+<li>Deleting the <code>Theme_*</code> lines from <code>DASHBOARD.CNF</code> also restores the default.</li>
+</ul>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

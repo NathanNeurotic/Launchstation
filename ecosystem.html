@@ -1,0 +1,114 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SD2Cloud &amp; ORBIT · Launchstation Docs</title>
+<meta name="description" content="SD2Cloud &amp; ORBIT Comparison What two related community PS2 projects do, how Launchstation compares today, and which gaps remain open. Two community PS2 homebrew projects overlap with parts of Launchstation. This page records what each one does, how that compar">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/ecosystem.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SD2Cloud &amp; ORBIT · Launchstation Docs">
+<meta property="og:description" content="SD2Cloud &amp; ORBIT Comparison What two related community PS2 projects do, how Launchstation compares today, and which gaps remain open. Two community PS2 homebrew projects overlap with parts of Launchstation. This page records what each one does, how that compar">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html" class="active"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>SD2Cloud &amp; ORBIT Comparison</h1>
+<p class="lead">What two related community PS2 projects do, how Launchstation compares today, and which gaps remain open.</p>
+<p>Two community PS2 homebrew projects overlap with parts of Launchstation. This page records what each one does, how that compares to Launchstation today, and where the gaps are. It is a documentation and planning aid, not a claim of parity.</p>
+<ul><li>Upstream facts come from each project's public README as read on <b>2026-10-26</b>. Both projects change quickly; recheck before relying on a row.</li><li>"Launchstation" entries come from this repository's own documentation. Where this page says <b>not audited</b>, nobody has compared that feature against the code or tested it on a console.</li><li><b>No source code from either project is incorporated.</b> Both are GPL-3.0; this repository has no single root licence (see <a href="credits.html">THIRD_PARTY_CREDITS.md</a>), so copying their code would need a licence decision first. Launchstation's Google Drive client is original (<a href="cloud.html">NATIVE_CLOUD.md</a>).</li></ul>
+<h2 id="sd2cloud">SD2Cloud</h2>
+<p><a href="https://github.com/oMrRexD/sd2cloud">oMrRexD/sd2cloud</a> by <a href="https://github.com/oMrRexD">MrRexD</a>, GPL-3.0. A PS2 application that manages and backs up memory cards on the console itself, to Google Drive, with no PC. Works with sd2psx-family cards running the sd2psXtd firmware (the PS2 sees them as MMCE), MemCard PRO2, regular memory cards, OPL virtual memory cards and card files on USB, MX4SIO or the internal HDD.</p>
+<table><thead><tr><th>Area</th><th>SD2Cloud</th><th>Launchstation</th></tr></thead><tbody><tr><td>Google Drive sign-in</td><td>Device code or QR code; only files it creates are accessible</td><td>Same flow (OAuth device flow, QR, <code>drive.file</code> scope). <a href="cloud.html">Cloud backup</a></td></tr><tr><td>Sync cards to Drive</td><td>On demand, or automatically on exit from a game via IGR; only changed cards upload</td><td>Back up changed MMCE cards and upload on demand; IGR helper with auto-sync Off / Local / Local + Google Drive</td></tr><tr><td>Backup history</td><td>10 per card by default, restore any, verified before and after write</td><td>Versioned local history with a retention setting; verified recovery from local or cloud history</td></tr><tr><td>Backup format</td><td><code>.mcd</code>, or <code>.ps2</code> (PCSX2)</td><td><code>.mcd</code> or <code>.ps2</code></td></tr><tr><td>Browse cloud history</td><td>From the Files tab</td><td>"Browse cloud history..." (read-only paged view, verified recovery)</td></tr><tr><td>Backup by save (per-save versions on Drive)</td><td>Yes, optional</td><td><b>Present, not yet tested on a console</b> (#232): optional <b>Per-save versions</b> keeps each changed save of every backed-up card as <code>WLE-Saves/&lt;save&gt;/WLE-&lt;stamp&gt;.psu</code>, uploaded with the cards; one version downloads as a verified <code>.psu</code> (<a href="mmce-backup.html#per-save">Per-save versions</a>)</td></tr><tr><td>Memory card manager (browse saves, 3D icons)</td><td>Yes, per card and "All saves" view</td><td><b>Partial</b>: <b>Card contents...</b> opens a card image and lists its saves with titles, file counts, sizes and free space (<a href="saves.html#card-contents">Card contents</a>, added in <a href="https://github.com/NathanNeurotic/Launchstation/pull/226">#226</a>). No 3D icons and no "All saves" view</td></tr><tr><td>Copy / move / delete saves across cards, multi-select</td><td>Yes</td><td><b>Partial</b>: <b>Card contents...</b> copies, moves and deletes saves inside card images, including MMCE cards the adapter is not serving, one save at a time, with a verified safety copy first and a read-back after (#226). Multi-select copy/cut/paste/delete works on <code>mc</code>/<code>vmc</code> folders; those copies are checked for short reads/writes, not read back</td></tr><tr><td>The Library (saves kept off cards)</td><td>Yes</td><td><b>Yes, folder-based, not yet tested on a console</b> (#232): <b>Save library here...</b> lists the <code>.psu</code> saves in a folder and the folders inside it, sorted by title, and copies them to a card (one verified safety copy of that card, nothing on it replaced) or deletes them. The library is any folder you choose; there is no cloud copy of it</td></tr><tr><td>Templates (default save sets applied to game cards)</td><td>Yes</td><td><b>Partial, not yet tested on a console</b> (#232): a set is a named folder of <code>.psu</code> files in the library, made with <b>Save as a set...</b>; <b>Apply a set to a card...</b> copies it to a card you pick after a confirmation, skipping saves already there by name. Sets are never applied automatically, for example to a new Game ID card</td></tr><tr><td>Create / resize / rename / check / delete cards, convert to Game ID</td><td>Yes, with a safety copy</td><td><b>Partial</b>: copy a card to a new 8&ndash;64 MB size, "Install as NEW card", and select a numbered card with <b>Make this the active MMCE card...</b> (#226); file-level rename/delete. <b>New blank card&hellip;</b> makes an empty 8&ndash;64 MB card, and <b>Split into Game ID cards&hellip;</b> makes one card per game from a card&rsquo;s saves, installed with <b>Install as MMCE Game ID card&hellip;</b> (#232; not yet tested on a console). No card check. Neutrino selects a Game ID card on launch</td></tr><tr><td>OPL VMC and USB/HDD/MX4SIO card files</td><td>Yes</td><td><b>Partial</b>: VMC mounting, card-image backup/export, and <b>Card contents...</b> on <code>.mcd</code>, <code>.ps2</code> (read-only), <code>.bin</code>, <code>.vmc</code> and <code>.mc2</code> images are supported; <code>.zip</code> is not</td></tr><tr><td>Works without an sd2psx</td><td>Yes (regular cards, USB/HDD/MX4SIO)</td><td>Regular memory cards supported in the file browser</td></tr><tr><td>MemCard PRO2</td><td>Read/write <code>.mc2</code>; card switch is a preview</td><td><b>Partial</b>: treated as a generic MMCE; <code>.mc2</code> image files open in <b>Card contents...</b> like other no-ECC images (#226, not tested with a MemCard PRO2)</td></tr><tr><td>Self-update</td><td>Stable and Beta channels, SHA-256 verified</td><td>"Check for updates" against the rolling release (no beta stream is published)</td></tr><tr><td>Languages</td><td>6</td><td>9 dashboard tables (some extended help still English)</td></tr><tr><td>Installs a SAS package on the card for IGR</td><td>Yes (<code>APP_SD2CLOUD</code>)</td><td>Own IGR helper install/status in Settings</td></tr></tbody></table>
+<p>The authoritative checklist for closing these gaps is <a href="https://github.com/NathanNeurotic/Launchstation/issues/108">issue #108</a> ("GUI parity: complete on-console SD2Cloud/MMCE management workflows"). <a href="https://github.com/NathanNeurotic/Launchstation/pull/226">#226</a> (merged 2026-10-28) added card contents, safety copies, card resize, the active-card check and card switching, and the IGR fingerprint backup. None of it is tested on a console yet. Rows still marked Partial or Missing remain open. <code>tests/test_sd2cloud_parity.py</code> checks that labels and features are present; the #226 host tests (<code>test_mc_card_write</code>, <code>test_dash_card_tool</code> and others) exercise the card code under simulation, which still does not prove the workflows on hardware.</p>
+<h2 id="orbit">ORBIT</h2>
+<p><a href="https://github.com/danielnuld/ps2-launcher">danielnuld/ps2-launcher</a>, GPL-3.0 (its bundled Neutrino fork is AFL-3.0). A game launcher for a real PS2 that starts games through Neutrino. Companion app <a href="https://github.com/danielnuld/orbit-jellyfin">ORBIT Jellyfin</a> is tracked in <a href="https://github.com/NathanNeurotic/Launchstation/issues/186">issue #186</a>. ORBIT has no Google Drive feature; its "cloud" overlap is network-delivered content (covers, a home game server) and save icons.</p>
+<table><thead><tr><th>Area</th><th>ORBIT</th><th>Launchstation</th></tr></thead><tbody><tr><td>Library views</td><td>Carousel, grid, list; filters All / PS2 / PS1 / Apps</td><td>Grid, list, carousel; application filters</td></tr><tr><td>Covers</td><td>Downloaded by the console over HTTPS, no PC step</td><td>Artwork and covers supported; whether the console downloads them itself is <b>not audited</b></td></tr><tr><td>3D save icons</td><td>Newest save of each game, spinning on the detail card</td><td>Save icon preview support exists; parity <b>not audited</b></td></tr><tr><td>Game sources</td><td>USB, internal HDD (exFAT / HD Loader), MX4SIO, iLink, MMCE, UDPBD, home game server (udpfs)</td><td>USB, HDD, MX4SIO, MMCE, iLink, SMB, UDPFS and more (<a href="devices.html">devices</a>)</td></tr><tr><td>Launch engine</td><td>Neutrino (bundled fork)</td><td>Neutrino, POPStarter, Ember</td></tr><tr><td>Virtual memory cards per game</td><td>Created on first play, on the game's device</td><td>VMC documented; automatic per-game creation <b>not audited</b></td></tr><tr><td>Per-game options</td><td>Video mode, compatibility modes, memory card</td><td>Saved per-game Neutrino profiles</td></tr><tr><td>In-game menu / reset combos</td><td>Hold L1+L2+R1+R2+START+SELECT; restart and power-off combos</td><td>IGR helper and reset; no in-game pause menu</td></tr><tr><td>RetroAchievements on console</td><td>Yes, via an in-game agent and the xeRAbora PC client</td><td>None</td></tr><tr><td>Languages</td><td>Spanish, English</td><td>9 dashboard tables</td></tr><tr><td>Companion apps</td><td>ORBIT Jellyfin</td><td>Any ELF via Applications; see #186</td></tr></tbody></table>
+<h2 id="suggested-order-for-closing-gaps">Suggested order for closing gaps</h2>
+<p>The detailed, verified order is in the <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/docs/plans/2026-10-26-sd2cloud-parity-plan.md">parity plan</a>; in short:</p>
+<ol><li>Finish auditing the remaining rows above against #108's acceptance criteria, recording implemented / partial / missing with evidence.</li><li>Done in <a href="https://github.com/NathanNeurotic/Launchstation/pull/226">#226</a>: the card image parser, the card contents view, the active-card check, card switching and the automatic safety copy before every card write. Next: hardware validation (the console test matrix in #226), then "All saves" and restore previews, which build on the same parser.</li><li>The Library (Save library here) and per-save backup versions are in (#232, not yet tested on a console); templates are later work that needs design decisions.</li><li>Keep ORBIT-only ideas (RetroAchievements agent, in-game pause menu) as separate proposals; they need a Neutrino fork or an in-game agent and are a different risk class.</li><li>Do not copy code from either project without settling the licence question above.</li></ol>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

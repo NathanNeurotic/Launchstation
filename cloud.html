@@ -1,0 +1,122 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Google Drive Cloud · Launchstation Docs</title>
+<meta name="description" content="Native Google Drive Cloud Backup Optional PS2-native OAuth 2.0 device sign-in and HTTPS upload of your MMCE backup history to your own Google Drive, with no PC in the loop. At a glance Opt-in and demand-loaded: nothing touches the network until you open Tools ">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/cloud.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Google Drive Cloud · Launchstation Docs">
+<meta property="og:description" content="Native Google Drive Cloud Backup Optional PS2-native OAuth 2.0 device sign-in and HTTPS upload of your MMCE backup history to your own Google Drive, with no PC in the loop. At a glance Opt-in and demand-loaded: nothing touches the network until you open Tools ">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html" class="active"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Native Google Drive Cloud Backup</h1><p class="lead">Optional PS2-native OAuth 2.0 device sign-in and HTTPS upload of your MMCE backup history to your own Google Drive, with no PC in the loop.</p>
+<div class="callout info"><div class="h">At a glance</div><ul><li>Opt-in and demand-loaded: nothing touches the network until you open Tools &gt; Google Drive backups, run an upload, or enable automatic sync.</li><li>Uses the Ethernet (ETH) stack, so you need a network adapter, a working <a href="network.html#ip">IP configuration</a> and a roughly correct PS2 clock.</li><li>Copy-only: uploads add files to Drive; Launchstation never deletes local or Drive history.</li><li>Needs a build with native cloud support (the official ZIP/PSU packages have it; the legacy Makefile does not).</li></ul></div>
+<h2 id="scope">What it does</h2><p>The feature links a Google account with Google's device authorization flow, stores a refresh token, and uploads missing versions from your local <code>WLE-MMCE-Backups</code> history (the folders created by <a href="mmce-backup.html">MMCE backups</a>) into a <code>WLE-MMCE-Backups</code> folder in the root of your Drive. It requests only the <code>drive.file</code> scope, so it can see just the files and folders it creates, never the rest of your Drive. It never deletes anything.</p>
+<h2 id="link">Linking</h2><ol><li>Open <b>Tools &gt; Google Drive backups</b> and choose <b>Link Google Drive</b>.</li><li>Scan the QR code with a phone, or open the address shown (Google supplies it, normally <code>google.com/device</code>) on any phone or computer, and type the code shown on the PS2.</li><li>Sign in and choose <b>Allow</b>. The PS2 checks with Google at the interval Google requests (it slows down when asked) and shows a confirmation when the account is linked. <b>Back</b> cancels; an unused code expires at Google's time limit (Launchstation assumes 30 minutes if Google does not say).</li></ol><p>No Google Cloud project, setup files or payment details are needed: official builds include Launchstation's own OAuth client (type <i>TVs and Limited Input devices</i>) and the Google Trust Services root certificates. A build compiled without that client (for example a fork or local build) shows <i>This build has no built-in Google client</i> and needs a custom client; see <a href="#advanced">Advanced setup</a>.</p>
+<h2 id="menu">The Google Drive backups menu</h2><table><thead><tr><th>Item</th><th>What it does</th></tr></thead><tbody>
+<tr><td><b>Back up cards &amp; upload</b></td><td>Backs up every changed MMCE card (both slots) into local history, then uploads the history. Asks for a backup folder first if none is saved.</td></tr>
+<tr><td><b>Link / Relink Google Drive</b></td><td>Starts the device sign-in above. Relinking requests a fresh authorization.</td></tr>
+<tr><td><b>Upload existing backups</b></td><td>Uploads history already in the saved backup folder without touching live MMCE cards. Needs a linked account and a saved folder; the IGR helper is not required.</td></tr>
+<tr><td><b>Browse cloud history...</b></td><td>Read-only, paged view (12 entries per page) of the app-created Drive folders and snapshots, with verified recovery. See <a href="#browse-recover">below</a>.</td></tr>
+<tr><td><b>Backup folder...</b></td><td>Chooses the parent folder of <code>WLE-MMCE-Backups</code> and saves it immediately. Changing an existing folder asks for confirmation; Cancel or picking the current folder changes nothing. Reinstall the IGR helper afterwards because it embeds its destination.</td></tr>
+<tr><td><b>Disconnect Google Drive</b> / <b>Clear saved Google token</b></td><td>Deletes the local token files and turns off automatic IGR cloud sync. Drive files are untouched and Google is not contacted; to revoke Launchstation at Google too, remove it under <a href="https://myaccount.google.com/permissions">Google Account &gt; Third-party access</a>.</td></tr>
+<tr><td><b>Advanced setup...</b></td><td>Custom OAuth client and CA bundle overrides.</td></tr></tbody></table><p>The same account actions appear under <b>Settings &gt; Storage &amp; devices &gt; MMCE backups &gt; Google account</b>, beside the backup policy. They use the same native client; there is no second implementation.</p>
+<h2 id="backup-controls">Backup folder and automatic sync</h2><p>In <b>Settings &gt; Storage &amp; devices &gt; MMCE backups</b>, <b>Backup folder</b> is the parent of <code>WLE-MMCE-Backups</code>; it does not move existing history, and you must save Settings before leaving. <b>Automatic sync</b> has three modes: <i>Off</i>, <i>Local backup</i>, and <i>Local + Google Drive</i>. It is off by default, applies only after an OPL game returns through the <a href="igr.html">WLE-IGR helper</a>, and the Drive step runs only after the local backup pass. Drive upload cannot be selected until an account is linked. The sync source cannot be a <code>udpfs:</code> path, because Drive needs the ETH network stack and UDPFS uses the other one. The card status <b>Locally backed up</b> describes local history only, not Drive.</p>
+<h2 id="behavior">What gets uploaded</h2><ul><li><b>Layout:</b> the local tree under <code>WLE-MMCE-Backups</code> is mirrored folder-for-folder (up to 16 levels deep) below a Drive folder of the same name in the Drive root. Only files named <code>WLE-*.mcd</code>, <code>WLE-*.ps2</code> or, with <a href="mmce-backup.html#per-save">per-save versions</a> on, <code>WLE-*.psu</code> are considered; <code>.PART</code> files from interrupted backups are never uploaded.</li><li><b>Validation first:</b> before each file crosses to the cloud its PS2 memory-card header, geometry and exact size are re-checked, so a truncated final-named file from a power loss is rejected and counted as failed. A <code>.psu</code> is read whole and every entry, name and size checked.</li><li><b>Content-aware skip:</b> every upload carries a private Drive <code>appProperties</code> value <code>wle_sha256</code>. A file is skipped only when the same Drive folder already holds an item with the same name <b>and</b> SHA-256. A same-name file with different content is kept as a separate Drive item. Legacy uploads without the property may be uploaded once more, after which syncs are content-aware.</li><li><b>Per-save versions:</b> each <code>WLE-Saves/&lt;save&gt;</code> folder keeps an <code>UPLOADED.TXT</code> list of the versions already on Drive (Drive folder, SHA-256, name). A later sync hashes the local file and skips the check and the Drive lookup when that exact entry is listed, so many small versions do not each cost a network round trip. Another account or a recreated Drive folder uploads again. A version you delete on Drive by hand is not sent again while its entry stays; delete <code>UPLOADED.TXT</code> to send it again.</li><li><b>Same-handle hashing:</b> the local file is hashed and then streamed from the same open file handle, so it cannot be swapped between hashing and upload.</li><li><b>Transport:</b> Drive API v3 with a resumable upload session whose URL must stay on <code>https://www.googleapis.com/</code> before the bearer token is sent. The result screen reports uploaded, already present and failed counts.</li></ul>
+<h2 id="browse-recover">Remote history browsing and verified recovery</h2><p><b>Browse cloud history...</b> shows metadata from the app-created history only. Entries without a stored <code>wle_sha256</code> can be inspected but not used for verified download. Select a completed, digest-qualified <code>.mcd</code> or <code>.ps2</code> snapshot and a destination on USB, mass or HDD (not an MMCE card) to create a separate <code>RECOVER-CLOUD-###.mcd</code> (numbered up to 999). The download is authenticated, limited to 96 MiB and written to a <code>.PART</code> file; its SHA-256 must match the uploaded digest, the card geometry is validated, PCSX2 <code>.ps2</code> images are converted and the converted copy is verified before anything is published. A failed download or check cannot leave a final card. Existing Drive history and active MMCE cards are never changed, and the recovered image is not activated for you.</p><p>A per-save version (<code>WLE-*.psu</code> inside a <code>WLE-Saves</code> folder) is downloaded the same way, limited to 8.5 MB, and published as <code>RECOVER-CLOUD-###.psu</code> once its SHA-256 matches and its entries check out. It is not converted and no card is touched: put it on a card with <b>Card contents &gt; Import .psu&hellip;</b>, which takes a safety copy first. <a href="mmce-backup.html">MMCE recovery and safety matrix</a>.</p>
+<h2 id="sidecars">Cloud sidecars</h2><p>Launchstation keeps these beside <code>DASHBOARD.CNF</code> (the dashboard settings folder, for example <code>mc0:/SYS-CONF/</code>):</p><table><thead><tr><th>File</th><th>Purpose</th></tr></thead><tbody><tr><td><code>WLE-CLOUD.TOK</code></td><td>The refresh token, written after linking as plain text. Anyone who can read your storage can read it, so never share or publish it.</td></tr><tr><td><code>WLE-CLOUD.TOK.NEW</code></td><td>Crash-safe staging copy used only while the token is replaced.</td></tr><tr><td><code>WLE-CLOUD.CNF</code></td><td>Optional (Advanced setup): a custom OAuth client ID and secret that replace the built-in client as a pair. Template: <code>res/WLE-CLOUD.CNF.example</code> (<code>Google_Client_ID</code>, <code>Google_Client_Secret</code>).</td></tr><tr><td><code>WLE-CLOUD-CA.PEM</code></td><td>Optional (Advanced setup): custom trust roots that replace the built-in Google roots for Google connections; the loader accepts at most 256 KiB.</td></tr></tbody></table>
+<h2 id="token">Crash-safe token replacement</h2><p>The new token is first written to <code>WLE-CLOUD.TOK.NEW</code> with an explicit completion marker, read back and compared, and only then written to <code>WLE-CLOUD.TOK</code>; the staging file is removed last. After a power loss, a complete <code>.NEW</code> file is preferred on the next start, and an incomplete one is ignored instead of superseding a valid primary token.</p>
+<h2 id="tls">TLS and entropy</h2><p>HTTPS uses Mbed TLS 3.6.7 over IPv4 on port 443, built from upstream source for the same compiler as the ELF. Certificate and hostname verification are mandatory. Because the PS2SDK random path alone is not trusted, Launchstation mixes it with full-width cycle-counter samples, the RTC, runtime timing, a local counter and DNS/TCP timing through SHA-256 before seeding the CTR-DRBG. This is defense-in-depth, not a claim that the PS2 has a certified hardware random source. Validation uses the PS2 clock, so a badly wrong date can make valid certificates look expired or not yet valid.</p>
+<h2 id="timeouts">Failure behavior</h2><p>TCP connect, TLS handshake, reads and writes use a 15-second no-progress timeout. DNS lookup is the synchronous PS2IP call and is outside that timeout, so bad DNS remains a real-hardware edge case. Link polling tolerates a few transient network errors but treats a Google answer such as <i>access denied</i> or <i>expired</i> as final. Responses are capped at 64 KiB each; large files are streamed, not buffered.</p>
+<h2 id="advanced">Advanced setup (custom client or CA)</h2><p><b>Advanced setup...</b> lets you substitute your own Google Cloud OAuth client (type <i>TVs and Limited Input devices</i>, Drive API enabled, <code>drive.file</code> scope) or your own CA bundle. A custom client ID is used only together with its own secret; the built-in secret is never sent with a custom ID. Google's device flow needs the client secret, so enter both even though the editor does not block an empty one. Changing the client first disconnects the account, because refresh tokens belong to the client that issued them, and turns off automatic Drive sync. <b>Use built-in Launchstation client</b> removes <code>WLE-CLOUD.CNF</code>. A custom CA bundle must be a PEM file containing at least one certificate. Maintainers who build their own binaries should read <a href="developers.html#cloud-client">Building the Google client into a build</a>.</p>
+<h2 id="updates">Update checks (separate from Drive)</h2><p><b>Check for updates</b> (Settings &gt; Storage &amp; devices &gt; MMCE backups) is a different feature that happens to share the HTTPS client. It uses <code>WLE-UPDATE-CA.PEM</code> (found beside the running ELF, or in the dashboard settings folder) as its trust anchor for GitHub, never the Google CA files, and your Google token is not involved. Behavior and verification steps are on <a href="releases.html">Downloads &amp; Releases</a>.</p>
+<h2 id="troubleshooting">Troubleshooting</h2><ul><li><b>Link unavailable / HTTP error right away:</b> confirm the Ethernet link and <a href="network.html#ip">IP settings</a>, then the PS2 date and time (Settings &gt; Network can sync it).</li><li><b>Certificate errors:</b> wrong clock, or a stale custom <code>WLE-CLOUD-CA.PEM</code>. Remove the override to return to the built-in Google roots (valid until 2036).</li><li><b>Sync reports failures:</b> unreadable or truncated backup files are skipped and counted; run a fresh local backup and retry.</li><li><b>Stuck on DNS:</b> there is no DNS setting; test the same network with another network feature and see <a href="troubleshooting.html#cloud">Troubleshooting</a>.</li><li><b>Prefer another provider or keep credentials on the PC?</b> Use the optional <a href="network.html#pc-cloud">PC-side rclone relay</a>.</li></ul>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

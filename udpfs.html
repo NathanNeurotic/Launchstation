@@ -1,0 +1,143 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Network Storage (UDPFS) · Launchstation Docs</title>
+<meta name="description" content="Network Storage (UDPFS) UDPFS exposes a folder on a PC over your local network as the Network (UDPFS) device ( udpfs: ). It is the fastest way to browse PC files, copy things to and from the console, and boot Neutrino ISOs without moving a drive. What you need">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/udpfs.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Network Storage (UDPFS) · Launchstation Docs">
+<meta property="og:description" content="Network Storage (UDPFS) UDPFS exposes a folder on a PC over your local network as the Network (UDPFS) device ( udpfs: ). It is the fastest way to browse PC files, copy things to and from the console, and boot Neutrino ISOs without moving a drive. What you need">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html" class="active"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Network Storage (UDPFS)</h1>
+<p class="lead">UDPFS exposes a folder on a PC over your local network as the <b>Network (UDPFS)</b> device (<code>udpfs:</code>). It is the fastest way to browse PC files, copy things to and from the console, and boot Neutrino ISOs without moving a drive.</p>
+
+<div class="callout info"><div class="h">What you need</div><ul>
+<li>A console with a network adapter (or built-in Ethernet) and a cable to the same LAN as the PC.</li>
+<li>A PC running the <a href="https://github.com/pcm720/udpfsd">UDPFSD</a> server with the folder you want to share.</li>
+<li>An IP address for the PS2 on that network (<b>Settings &gt; Network</b>).</li>
+</ul></div>
+
+<h2 id="setup">Setup</h2>
+<ol>
+<li><b>PC:</b> start UDPFSD with the folder to serve. Allow it through the PC firewall (it uses UDP, so it is local-network only).</li>
+<li><b>PS2:</b> in <b>Settings &gt; Network</b> set the IP address, netmask and gateway (defaults <code>192.168.0.10</code>, <code>255.255.255.0</code>, <code>192.168.0.1</code>). They are stored in <code>IPCONFIG.DAT</code> beside the running ELF, or in <code>mcN:/SYS-CONF/IPCONFIG.DAT</code>. UDPFS is given the IP address; there is no DNS field. Choose an address in the PC&rsquo;s subnet.</li>
+<li>Open <b>Network (UDPFS)</b> in the Files tab. Launchstation loads DEV9, the UDPFS Ethernet driver, a tiny built-in IP stack and the UDPFS filesystem, then opens <code>udpfs:/</code>. When the server answers the card shows the console&rsquo;s network settings; otherwise <em>UDPFS server not found</em> (&ldquo;Check the cable, IP settings and that the UDPFS server is running&rdquo;).</li>
+<li>Optionally enable <b>Settings &gt; Storage &amp; devices &gt; Start devices automatically &gt; Auto-start network (UDPFS)</b> (off by default).</li>
+</ol>
+
+<h2 id="use">What you can do</h2>
+<ul>
+<li><b>Browse and copy.</b> Directory listings come from the server with sizes and dates. A listing that fails part-way is treated as an error rather than a partial list, so a copy never silently skips files.</li>
+<li><b>Writing is off by default.</b> The File Browser&rsquo;s write commands (copy to, delete, rename, new folder, paste) stay disabled on <code>udpfs:</code> and <code>host:</code> until <b>Settings &gt; Network &gt; Allow writing over the network</b> is on. This does not affect FTP.</li>
+<li><b>Neutrino ISOs.</b> Backend <code>udpfs</code>; the ISO is read straight from the PC. The Neutrino ELF can be on the share, a memory card or elsewhere. See <a href="neutrino.html">Neutrino</a>.</li>
+<li><b>Ember.</b> The Ember path check does not exclude UDPFS, but that combination has not been hardware-verified.</li>
+<li><b>HDD header injection.</b> <code>udpfs:/__Headers/&lt;partition&gt;/</code> is one of the header sources for the <a href="hdd-manager.html">HDD Manager</a>.</li>
+<li><b>VMC images.</b> A virtual memory card image on the share can be mounted from the File Browser.</li>
+<li><b>Not supported:</b> POPStarter VCDs from UDPFS. Launching programs straight from the share is not a documented path; copy the program to USB, HDD or a memory card if it will not start.</li>
+</ul>
+
+<h2 id="stacks">Stack rules</h2>
+<ul>
+<li><b>UDPFS and FTP / PS2Link / Google Drive are different Ethernet stacks.</b> Only one can be loaded; switching resets the IOP (see <a href="network.html#stacks">Network &amp; PC Integration</a>). After using FTP or cloud features, opening UDPFS reloads the other stack.</li>
+<li><b>DEV9 sharing.</b> UDPFS, the internal HDD and exFAT HDD all use DEV9 and can be active together. On an early Japanese console the PC CARD CF driver owns the bus instead, and network loaders refuse to start while it does.</li>
+<li><b>Copying between UDPFS and PC CARD CF is refused</b> (&ldquo;Incompatible drivers to perform action&rdquo;).</li>
+<li>The IP address is handed to the UDPFS stack when it loads, so use Tools &gt; Reboot IOP after changing it and then open the device again.</li>
+</ul>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>&ldquo;UDPFS server not found&rdquo;.</b> Verify cable and link lights, the PS2&rsquo;s IP/netmask, that the PC is on the same subnet, and that UDPFSD is running and not blocked by a firewall.</li>
+<li><b>Writes are disabled.</b> Turn on <b>Allow writing over the network</b> (and make sure the server share is writable).</li>
+<li><b>Nothing happens on open.</b> If DEV9 is owned by PC CARD CF, or an earlier stack switch was refused, reboot the IOP from Tools and try again.</li>
+<li><b>Copy to a memory card fails mid-way.</b> The error message includes the driver code. UDPFS can return partial progress before an error; Launchstation handles short reads and stops at the error without claiming success. Report the exact build, server version, and a serial log if available.</li>
+</ol>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

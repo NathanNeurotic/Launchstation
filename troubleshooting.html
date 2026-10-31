@@ -1,0 +1,125 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Troubleshooting · Launchstation Docs</title>
+<meta name="description" content="Troubleshooting Identify the failing layer first: hardware/device, filesystem, Launchstation launch preparation, external core, or the target application/game. Device says Not checked Open it. Not checked is intentionally actionable: the lazy driver has not ye">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/troubleshooting.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Troubleshooting · Launchstation Docs">
+<meta property="og:description" content="Troubleshooting Identify the failing layer first: hardware/device, filesystem, Launchstation launch preparation, external core, or the target application/game. Device says Not checked Open it. Not checked is intentionally actionable: the lazy driver has not ye">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html" class="active"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Troubleshooting</h1><p class="lead">Identify the failing layer first: hardware/device, filesystem, Launchstation launch preparation, external core, or the target application/game.</p>
+<h2 id="not-checked">Device says Not checked</h2><p>Open it. <b>Not checked</b> is intentionally actionable: the lazy driver has not yet established presence. A confirmed <b>Not connected</b> result is different. Entries that cannot exist on your console (for example HDD/ATA on a deckard or PSX, or iLink on consoles without the port) are hidden rather than shown as absent.</p>
+<h2 id="usb">USB path/unit changed</h2><p>Do not assume <code>mass0:</code>. Multiple drives, MX4SIO and attach order can affect unit numbering. Start from the dashboard's <b>USB / MASS</b> device and let the root discovery logic identify what is available. <b>Tools &gt; USB unit diagnostics</b> can show the cached unit mask without I/O; a manual probe is a synchronous IOP call and can freeze a failing console.</p>
+<h2 id="mmce-mx4sio">MMCE and MX4SIO conflict</h2><p>They share the memory-card ports and cannot be active together. Switching between them restarts the IOP drivers. If a card or adapter stops responding after a switch, use <b>Tools &gt; Reboot IOP</b>, then open only the device you need.</p>
+<h2 id="iso">PS2 ISO will not start</h2><ol><li>Browse/read the ISO from the same source device.</li><li>Confirm it is an ISO9660 image.</li><li>Set a Neutrino path explicitly (Settings &gt; Launching &gt; Disc &amp; image loaders) to remove search-order ambiguity.</li><li>Confirm Neutrino has modern <code>config/system.toml</code> or legacy adjacent <code>system.toml</code>.</li><li>Check that the Neutrino switch under <b>Disable Neutrino support</b> is Off.</li><li>Try a known-good ISO on the same backend.</li></ol>
+<h2 id="vcd">PS1 VCD will not start</h2><p>Confirm the VCD is in a supported POPStarter layout, then set POPStarter explicitly. HDD POPS layouts have special argument construction; a raw browser path is not necessarily a valid POPStarter command line.</p>
+<h2 id="ember">PS1 CUE/BIN will not start</h2><p>The image must be under <code>&lt;Ember directory&gt;/games/&lt;Game&gt;/</code>, <code>bios.bin</code> must be supplied by you, and <code>ember.elf</code> must be present or available from the configured Ember directory. See <a href="ember.html">Ember</a>.</p>
+<h2 id="update">Update check or install fails</h2><table><thead><tr><th>Message</th><th>Cause and fix</th></tr></thead><tbody>
+<tr><td>Update check needs the CA bundle</td><td><code>WLE-UPDATE-CA.PEM</code> is missing beside the ELF and in the dashboard settings folder. Install the complete ZIP/PSU package or copy the file next to the ELF.</td></tr>
+<tr><td>Update check unavailable</td><td>The Ethernet stack could not be started. Check the IP settings under Settings &gt; Network, the cable and the adapter. The update check needs a wired network.</td></tr>
+<tr><td>Update check failed</td><td>GitHub could not be reached or returned an unexpected response (shown with the HTTP status). Check the console clock, DNS/gateway and try again later.</td></tr>
+<tr><td>Release is on another commit history / Could not verify update order</td><td>The release is not a verified descendant of your build (a fork, a local build, or GitHub's comparison failed). Nothing was changed; install a complete package manually.</td></tr>
+<tr><td>An earlier ELF .UPDATE or .PACKAGE file remains</td><td>A previous attempt was interrupted. Inspect and delete <code>&lt;name&gt;.ELF.UPDATE</code> / <code>.PACKAGE</code> (and any <code>WLE-UPDATE-CA.PEM.UPDATE</code>, <code>BGM.ADP.UPDATE</code>) yourself; the updater refuses to overwrite them.</td></tr>
+<tr><td>This boot location cannot be updated safely in place</td><td>The ELF was started from an unsupported path (not <code>mc</code>, <code>mass</code>/<code>usb</code>, <code>mmce</code>, <code>mx4sio</code>, <code>ilink</code>, <code>ata</code> or <code>hdd</code>). Install a package manually.</td></tr>
+<tr><td>Downloaded update failed SHA-256 verification</td><td>The download was corrupted or does not match the published digest. The running ELF was not changed; retry.</td></tr>
+</tbody></table>
+<p>After a successful update restart Launchstation. If the new build misbehaves, rename the <code>.ELF.BAK</code> over the ELF to roll back. See <a href="install.html#native">Install &amp; Update</a>.</p>
+<h2 id="clocksync">Clock sync fails</h2><p>The message names the failed step. <i>Socket server (PS2IPS) could not be loaded</i> or <i>Could not connect to the network socket server</i> point at the Ethernet stack; <i>PC CARD CompactFlash is using the network adapter</i> means the CF adapter owns the bus. <i>DNS lookup failed</i>, <i>reply timed out</i> or <i>server refused request</i> are network or server-side: check IP/gateway/DNS and retry. Launchstation sends up to two attempts to <code>0.pool.ntp.org</code> (5 s each).</p>
+<h2 id="cloud">Google Drive link/upload fails</h2><p>Confirm network/IP first, then PS2 clock/time, then any custom OAuth client or CA bundle under Advanced setup. Certificate validation can fail when the RTC is materially wrong (use Settings &gt; Network &gt; Sync PS2 clock from Internet or set the clock). DNS remains synchronous in PS2IP and can behave differently from the later socket timeout path.</p>
+<h2 id="settings">Settings did not stick</h2><p>Settings preview changes immediately but are written only when you choose <b>Save changes</b> (the Settings changes menu). If an earlier save failed the menu offers <b>Retry failed saves</b>. Check that the configuration folder is writable (Settings &gt; System &gt; Configuration folder).</p>
+<h2 id="controller">DualShock controller not recognized</h2><p>Only the <code>-DS</code> package includes the PS3/PS4 USB/Bluetooth drivers. Confirm you started <code>LAUNCHSTATION-DS.ELF</code>. This variant still needs console validation with your controller and concurrent storage; report the controller model and connection type.</p>
+<h2 id="launch-colors">Colored bars before opening ELFs</h2><p>Launchstation can intentionally draw a short Game ID identification signal for compatible video adapters. To disable the colored bars, open <b>Settings &gt; Launching &gt; Game ID output</b> and turn off the application Game ID launch signal. Normal start-up boot-check text is hidden in production builds.</p>
+<h2 id="flicker">Top-of-dashboard flicker</h2><p>The known fast selector oscillation has been removed. If flicker persists, report video mode, display/cable, interlace/progressive mode, theme, and whether the symptom occurs in other screens too.</p>
+<h2 id="build">Build problems</h2><p>Mixing toolchains is the usual cause: Mbed TLS (<code>.cloud-deps/</code>) and libjpeg-turbo (<code>.jpeg-deps/</code>) must be rebuilt after switching between LLVM and GCC (<code>PS2BUILD_TOOLCHAIN</code>), and a GCC-built archive linked into a Clang build fails at link time. Re-run <code>scripts/build_cloud_tls.sh</code> and <code>scripts/build_jpeg.sh</code> with the toolchain you intend to use. See <a href="developers.html">developer notes</a>.</p>
+<h2 id="report">Good bug report</h2><ul><li>Exact commit/build (Tools &gt; About Launchstation) and package or packed ELF SHA-256.</li><li>Variant: standard or <code>-DS</code>.</li><li>Console model and video mode.</li><li>Source device/backend and filesystem.</li><li>Minimal reproduction steps.</li><li>Whether the problem also occurs with the <a href="https://github.com/NathanNeurotic/Launchstation/releases/tag/usb-second-drive-2026-10-08-58d4514">2026-10-08 baseline</a> or a previous <code>.BAK</code>.</li><li>For Neutrino/POPStarter/Ember, external-core version and resolved path.</li></ul>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

@@ -1,0 +1,228 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>File Browser · Launchstation Docs</title>
+<meta name="description" content="File Browser Files is a first-class, persistent dashboard tab built on the native browser. The same engine also opens as a modal from Tools, launch keys and Application options ( Show in File Browser ). It copies, moves, renames and deletes, builds and extract">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/file-browser.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="File Browser · Launchstation Docs">
+<meta property="og:description" content="File Browser Files is a first-class, persistent dashboard tab built on the native browser. The same engine also opens as a modal from Tools, launch keys and Application options ( Show in File Browser ). It copies, moves, renames and deletes, builds and extract">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html" class="active"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>File Browser</h1>
+<p class="lead">Files is a first-class, persistent dashboard tab built on the native browser. The same engine also opens as a modal from Tools, launch keys and Application options (<i>Show in File Browser</i>). It copies, moves, renames and deletes, builds and extracts PSU saves, mounts memory card images, edits folder dates, opens images and text, and launches executables and game images through the shared loader.</p>
+
+<h2 id="tab">The Files tab</h2>
+<ul>
+<li>Files opens straight into the browser inside the dashboard frame; there is no separate landing page. <b>L1/R1</b> switch top-level tabs even from inside a folder. Returning to Files restores the folder and the highlighted entry.</li>
+<li><b>Back</b> goes to the parent folder (and re-selects the folder you came from). At the device root, Back returns to Home. In the modal browser Back at the root closes it.</li>
+<li>Home &gt; <b>Last folder</b> jumps to the most recent folder you opened. It is remembered for the session.</li>
+<li>Folder reads, titles and free-space lookups run on a background worker, so the cursor stays responsive. A <i>Reading folder...</i> spinner shows while a listing is in flight. A folder lists at most 2048 entries.</li>
+<li>The header lane shows the current path, the item count and, on devices that report it, the free space (MB/GB). With a selection it shows <i>N of M selected</i>. A clipboard note (<i>Clipboard: N to copy/move</i>) and a launch-argument note appear when relevant.</li>
+</ul>
+
+<h2 id="controls">Controls</h2>
+<table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody>
+<tr><td>Up / Down</td><td>Move one row (wraps at the ends).</td></tr>
+<tr><td>Left / L2</td><td>Page up (first press goes to the page boundary, then wraps to the last entry).</td></tr>
+<tr><td>Right / R2</td><td>Page down (wraps to the first entry from the end).</td></tr>
+<tr><td>Left stick</td><td>Same as the D-pad.</td></tr>
+<tr><td>Confirm</td><td>Open the folder/device, or open/launch the file (see below).</td></tr>
+<tr><td>Square</td><td>Mark/unmark the entry and move down one row. Not available at the device root or in the MISC list.</td></tr>
+<tr><td>Triangle</td><td>Open the File Browser menu (all operations).</td></tr>
+<tr><td>Back</td><td>Parent folder (device root: Home, or close in the modal).</td></tr>
+<tr><td>L1 / R1</td><td>Previous / next dashboard tab (Files tab only).</td></tr>
+<tr><td>START</td><td>Dashboard menu (also from the image viewer and dialogs; START again closes it).</td></tr>
+</tbody></table>
+<p>A USB keyboard works as a controller wherever a pad does (see <a href="controls.html#keyboard">USB keyboard</a>). There is no mouse support.</p>
+
+<h2 id="root">Device root</h2>
+<p>The root lists the device classes the build supports, each with a status line. Entries can be opened while they say <i>Not checked</i>; opening starts the demand-loaded driver stack and refreshes the state. A device that was explicitly checked and found absent is skipped by navigation. USB discovery never assumes a permanent <code>mass0:</code>; USB units are shown under the public <b>MASS</b> name even though their internal path may be <code>usbN:</code>.</p>
+<table><thead><tr><th>Entry</th><th>Notes</th></tr></thead><tbody>
+<tr><td>mc0 (Slot 1), mc1 (Slot 2)</td><td>Memory cards; PS1 or PS2 card type and free space are shown. An empty slot says <i>Slot empty</i>.</td></tr>
+<tr><td>MASS</td><td>USB mass storage units (FAT32/exFAT drivers). Each detected unit is listed; device state is polled for hot-plug.</td></tr>
+<tr><td>MMCE Slot 1 / 2</td><td>SD2PSX / MemCard PRO2 storage. See <a href="mmce.html">MMCE</a>.</td></tr>
+<tr><td>MX4SIO SD Card</td><td>MX4SIO SD adapter (reported as slot 2).</td></tr>
+<tr><td>iLink / FireWire</td><td>Only in builds with iLink support.</td></tr>
+<tr><td>Internal HDD (APA), exFAT HDD</td><td>Which units appear follows <b>Settings &gt; Storage &amp; devices &gt; Internal HDD / ATA units</b> (default hides HDD1 and ATA1).</td></tr>
+<tr><td>PC CARD CF</td><td>Only on eligible console models; direct launch of executables and game images from it is not supported.</td></tr>
+<tr><td>Disc Drive</td><td>Shows the detected disc type; <i>Insert a disc</i> when empty.</td></tr>
+<tr><td>Network (UDPFS), Network Host</td><td>Network builds. Host means a PS2Link host on a PC. See <a href="network-services.html">Network services</a>.</td></tr>
+<tr><td>PSX Flash, PSX DVR HDD</td><td>PSX/DESR consoles only (or when a recovery boot shows all devices).</td></tr>
+<tr><td>Memory card image 0/1</td><td>Appear while a VMC is mounted.</td></tr>
+<tr><td>Built-in commands</td><td>The classic MISC folder: Start disc, FileBrowser, PS2 Browser, FTP/Remote access, Power off, HDD Manager, Text Editor, Configure, Font viewer, Debug info, About, Build info, OSDSYS, Exploit Installer and Reboot IOP. Confirm runs a command.</td></tr>
+</tbody></table>
+<p>Hide empty memory-card and MMCE slots with <b>Hide empty memory card slots</b>, and hide devices that are confirmed missing with <b>Show unavailable devices = Off</b>; hidden devices are removed from navigation as well as from drawing.</p>
+
+<h2 id="open">What Confirm does with a file</h2>
+<table><thead><tr><th>Type</th><th>Result</th></tr></thead><tbody>
+<tr><td>Folder</td><td>Enter it.</td></tr>
+<tr><td><code>.PNG</code>, <code>.JPG</code>, <code>.JPEG</code></td><td>Native image viewer (below).</td></tr>
+<tr><td><code>.TXT .CHT .CFG .INI .CNF .PBT .JS .LUA .XML .TOML .YAML .YML .ARG</code></td><td><a href="text-editor.html">Text Editor</a>.</td></tr>
+<tr><td><code>.ELF</code>, <code>.XLF</code>, <code>.KELF</code></td><td>Shared launch path. A same-name <code>.arg</code> sidecar or loaded launch arguments are passed along. See <a href="launch-arguments.html">Launch Arguments</a>.</td></tr>
+<tr><td><code>.VCD</code></td><td>POPStarter handoff (<a href="popstarter.html">POPStarter</a>).</td></tr>
+<tr><td><code>.CUE</code>; <code>.BIN</code> or PS1 <code>.EXE</code> inside <code>&lt;umbrella&gt;/games/&lt;Game&gt;/</code></td><td>Ember handoff (<a href="ember.html">Ember</a>). The umbrella folder name is not fixed. Arbitrary <code>.BIN</code>/<code>.EXE</code> files elsewhere are not hijacked.</td></tr>
+<tr><td><code>.ISO</code></td><td>Neutrino PS2 handoff (<a href="neutrino.html">Neutrino</a>).</td></tr>
+<tr><td>Anything else</td><td>A message says Launchstation cannot open it; use the menu to copy, move or rename it.</td></tr>
+</tbody></table>
+<p>The type switches can be turned off individually with <b>Disable Ember / POPStarter / Neutrino support</b> under Settings &gt; Launching &gt; Disc &amp; image loaders.</p>
+
+<h2 id="viewer">Image viewer</h2>
+<p>PNG uses a bounded libpng path (files up to 1.5 MB, 2048x2048; interlaced PNGs only up to 256x256) and JPEG a bounded libjpeg path (up to 4 MB and 8192 pixels per side). Large images are downsampled to the screen when loaded, so the viewer never keeps a full-size image in memory. Files that are damaged, unsupported or over the limits show a message instead of opening.</p>
+<table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody>
+<tr><td>Left / Right</td><td>Previous / next image in the current sorted folder (mixed PNG/JPG/JPEG, wraps at either end). With one image only, a toast says there is no other image.</td></tr>
+<tr><td>Up / Down</td><td>Rotate 90 degrees counter-clockwise / clockwise.</td></tr>
+<tr><td>L2 / R2</td><td>Zoom out / in, 100% to 400% in 15% steps.</td></tr>
+<tr><td>Left stick</td><td>Pan while zoomed.</td></tr>
+<tr><td>Square</td><td>Toggle fullscreen.</td></tr>
+<tr><td>R3</td><td>Start/stop slideshow (default 5 s per image).</td></tr>
+<tr><td>L1 / R1</td><td>Shorter / longer slideshow delay, 1 to 60 seconds. Any button press restarts the countdown.</td></tr>
+<tr><td>SELECT</td><td>Reset zoom, pan and rotation.</td></tr>
+<tr><td>Confirm / Back / Triangle</td><td>Close the viewer.</td></tr>
+</tbody></table>
+
+<h2 id="selection">Selection and the clipboard</h2>
+<p>Square marks entries (marked rows show a green check). Operations apply to the marked set; otherwise to the focused entry. The menu offers <b>Select all</b>, <b>Invert selection</b> and <b>Clear selection</b>. <b>Copy</b> and <b>Cut</b> fill the clipboard (the marks are cleared and a toast reads <i>N items ready to paste/move</i>); <b>Paste here</b> copies or, after Cut, moves. The clipboard is dropped if the IOP is reset, because device paths may no longer be valid. Classic exploit-protection checks still guard sensitive memory-card system folders (renaming, cutting, deleting and pasting there ask first or are refused).</p>
+
+<h2 id="operations">File Browser menu</h2>
+<p>Triangle opens the menu. The offered items follow the classic rules: nothing that writes to a disc or read-only host, and no file operations in the HDD partition list. Unavailable items are greyed. The list is context-dependent:</p>
+<table><thead><tr><th>Item</th><th>Notes</th></tr></thead><tbody>
+<tr><td>Open, Open / start</td><td>Same as Confirm. Direct launch of executables and game images from PC CARD CF is refused (&ldquo;Direct launch unsupported&rdquo;); copy them to another device first.</td></tr>
+<tr><td>Copy, Cut, Paste here</td><td>Cut + paste moves. Paste overwrites directly like the upstream browser; a failed paste shows a readable reason, the stage and the numeric error.</td></tr>
+<tr><td>Paste with new names...</td><td>Asks for a name for each pasted item.</td></tr>
+<tr><td>PSU paste label</td><td>Create a PSU from memory card saves, or extract a PSU into a memory card, depending on where you are. Naming and overwrite rules are under Settings &gt; System &gt; Memory card backup files.</td></tr>
+<tr><td>Delete...</td><td>Confirms ("This cannot be undone"), deletes folders recursively and shows a progress overlay with the current name and <i>Completed items N / M</i>.</td></tr>
+<tr><td>Rename...</td><td>One entry, on-screen keyboard (or USB keyboard). System folders are protected.</td></tr>
+<tr><td>New folder...</td><td>Asks for a name; reports an existing folder.</td></tr>
+<tr><td>Create folder icon...</td><td>Writes <code>icon.sys</code> and <code>icon.icn</code> for a PS2 save folder.</td></tr>
+<tr><td>Size</td><td>Total size of the selection, folders recursively, in MB/GB and bytes.</td></tr>
+<tr><td>Open in Text Editor</td><td>For supported text types.</td></tr>
+<tr><td>Start with arguments...</td><td>For <code>.ELF</code>: opens the sidecar <code>.arg</code> in the editor, then launches with it.</td></tr>
+<tr><td>Create title.cfg</td><td>Writes an OPL-style title file for an ELF.</td></tr>
+<tr><td>Mount as vmc0: / vmc1:</td><td>For <code>.bin</code>, <code>.vmc</code>, <code>.mc2</code>, <code>.ps2</code> images. Mounted images appear in the device list.</td></tr>
+<tr><td>Folder dates...</td><td>On memory card roots and <code>hdd0:/__common</code>: edit dates by hand, order saves A-Z, Z-A or the SAS way, or use the root-safe <b>*Tuna date</b> for an eligible physical memory-card folder.</td></tr>
+<tr><td>MMCE and card-image actions</td><td>Back up all/selected/active MMCE cards, export as PCSX2 <code>.ps2</code>, back up or convert <code>.mcd</code>/<code>.ps2</code>, <b>Recover as new .mcd...</b>, <b>Store NEW snapshot on MMCE...</b>, <b>Install as NEW selectable MMCE card...</b>. None overwrites an active card. See <a href="mmce-backup.html">MMCE backup</a>.</td></tr>
+<tr><td>Card contents...</td><td>On a <code>.mcd</code>, <code>.ps2</code>, <code>.bin</code>, <code>.vmc</code> or <code>.mc2</code> image: list its saves, copy, move, delete or export one as <code>.psu</code>, import a <code>.psu</code>, or copy the whole card to a new size. Every write starts with a verified safety copy. See <a href="saves.html#card-contents">Card contents</a>.</td></tr>
+<tr><td>Which MMCE card is in use? / Make this the active MMCE card...</td><td>In an <code>mmceN:</code> folder: show the card the adapter is serving, confirmed by content, or select a numbered card. See <a href="mmce.html#active-card">MMCE</a>.</td></tr>
+<tr><td>Use as launch arguments / Clear launch arguments</td><td>On a text file: its lines become the arguments of the next ELF you start from the browser. Cleared when you leave the browser.</td></tr>
+<tr><td>Show, Sort by</td><td>Display and sort modes (below).</td></tr>
+<tr><td>Bookmarks...</td><td>The PathPad (below).</td></tr>
+<tr><td>Go to Launchstation's folder, Refresh</td><td>Jump to the folder the ELF was started from; re-read the current folder.</td></tr>
+</tbody></table>
+
+<h2 id="progress">Progress overlay</h2>
+<p>Paste, move and delete use a file-operation overlay: a title (<i>Pasting file</i>, <i>Moving file</i>, <i>Deleting file</i>), the current name on its own full-width row, <i>Remaining size: N MB</i> (copy) or <i>Completed items N / M</i> (delete), and a progress bar. The bar fills completely before the overlay closes. Classic prompts raised by older code (yes/no questions, names) appear as dashboard dialogs.</p>
+
+<h2 id="display-modes">Show: four display modes</h2>
+<p>Choose <b>Triangle &gt; Show</b>. The default is <b>Names and details</b>.</p>
+<table><thead><tr><th>Mode</th><th>Row content</th></tr></thead><tbody>
+<tr><td>File names</td><td>The full row width for the name.</td></tr>
+<tr><td>Names and details</td><td>Name, size and date-time. Size and date-time sit in independent columns with a gutter; seconds are shown and the name width is calculated from the real metadata width.</td></tr>
+<tr><td>Game titles and details</td><td>Save or PSU titles instead of names (falling back to the name), plus size and date-time.</td></tr>
+<tr><td>Game titles</td><td>Titles only, full row width.</td></tr>
+</tbody></table>
+<p>Titles come from PS2 <code>icon.sys</code>, PS1 saves and PSU archives, are decoded as Shift-JIS and respect the title line-break offset. Filenames always stay literal. The choice lasts for the session and is not written to a configuration file.</p>
+
+<h2 id="sorting">Sort by</h2>
+<p>Choose <b>Triangle &gt; Sort by</b>, then a direction. Modes: <b>As stored</b> (device order), <b>Name</b> (default, ascending), <b>Game title</b>, <b>Size</b>, <b>Date-Time</b> and <b>Kind</b> (extension). Ascending/Descending apply to every mode except As stored. <b>Folders always stay first</b>, even in descending order; descending reverses only the order inside the folder and file groups. Ties fall back to the name. The native browser does not move ELF files above other files. HDD partition lists always keep the drive's own order. Date-Time ascending is oldest first.</p>
+
+<h2 id="bookmarks">Bookmarks (PathPad)</h2>
+<p><b>Triangle &gt; Bookmarks...</b> lists up to 30 saved folders. Pick one to jump to it, <b>Bookmark this folder</b>, or <b>Remove a bookmark...</b>. If all 30 slots are used you choose which to replace. Bookmarks are stored in <code>LAUNCHELF.CNF</code> (<code>PathPad[00]</code> to <code>PathPad[29]</code>) and saving them writes that file immediately. <b>Settings &gt; Launching &gt; Lock shortcuts &amp; bookmarks</b> disables editing.</p>
+
+<h2 id="pickers">File and folder pickers</h2>
+<p>Settings (paths, launch-key targets, application folders), the Text Editor (<i>Open...</i>), launch-with-arguments and several tools choose paths with a lighter picker that shows the same device list and reads folders on the background worker, so it never freezes on a slow device. Up/Down move (wrapping), <b>L2/R2</b> jump to the first/last row, Confirm opens a folder or chooses a file, <b>Back</b> goes up one level (cancels at the device root) and <b>Triangle</b> cancels. In a <i>folder</i> picker the first row is <b>Use this folder</b> and <b>START</b> chooses the current folder directly. <b>R3</b> chooses the highlighted file as a <code>uLE:/</code> path relative to Launchstation's own folder (so it follows the program if it moves); elsewhere R3 jumps to that folder.</p>
+
+<h2 id="ember-handoff">Ember handoff</h2>
+<p>USB Ember launches use a clean IOP handoff. Launchstation finishes background I/O and audio, resets the IOP and rebuilds only the USB filesystem stack before starting Ember. It deliberately does not reload its own pad modules because Ember loads the ROM pad modules itself, which avoids the hardware-observed <code>pad init rc=-1</code> conflict. The selected USB game tree is mounted again before Ember starts.</p>
+
+<h2 id="classic">Classic modal browser (legacy)</h2>
+<p>The original wLaunchELF browser code (L1 display/sort menu, R2 PathPad) still exists in the source for compatibility and for a few legacy dialogs. Every entry point in the dashboard (Tools, launch keys, MISC commands, Application options) now opens the native browser described above, so you should not normally encounter it. The older sort and display model it used is documented in <code>docs/FileBrowser sort+display modes.txt</code> for reference.</p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

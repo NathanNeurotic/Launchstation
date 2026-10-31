@@ -1,0 +1,151 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IGR Return &amp; Backup · Launchstation Docs</title>
+<meta name="description" content="IGR Return &amp; Backup OPL’s Exit to (in-game reset) can return to Launchstation through a small helper, WLE-IGR.ELF . On the way back Launchstation can back up every MMCE memory-card image, optionally copy the history to Google Drive, and then continue to the de">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/igr.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="IGR Return &amp; Backup · Launchstation Docs">
+<meta property="og:description" content="IGR Return &amp; Backup OPL’s Exit to (in-game reset) can return to Launchstation through a small helper, WLE-IGR.ELF . On the way back Launchstation can back up every MMCE memory-card image, optionally copy the history to Google Drive, and then continue to the de">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html" class="active"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>IGR Return &amp; Backup</h1>
+<p class="lead">OPL&rsquo;s <em>Exit to</em> (in-game reset) can return to Launchstation through a small helper, <code>WLE-IGR.ELF</code>. On the way back Launchstation can back up every MMCE memory-card image, optionally copy the history to Google Drive, and then continue to the destination you chose.</p>
+
+<h2 id="why">Why a helper is needed</h2>
+<p>OPL starts its Exit-to program in a minimal environment that cannot read the sd2psXtd filesystem or most BDM devices directly. <code>WLE-IGR.ELF</code> is a tiny trampoline: it resets the IOP, loads only the storage family needed for the configured Launchstation path (memory card, MMCE, USB, MX4SIO, iLink, exFAT HDD or internal HDD), waits for that file to appear (up to 24 tries, a quarter second apart), and starts Launchstation with <code>-wle-igr</code> plus the backup folder. If it cannot find Launchstation it exits to the PS2 system menu instead of hanging. The helper is built in and its copy is patched with your paths at install time; it is rewritten and byte-verified after install.</p>
+
+<h2 id="setup">Setting it up</h2>
+<ol>
+<li>Choose a backup folder (<b>Settings &gt; Storage &amp; devices &gt; MMCE backups &gt; Backup folder</b>) or pick one when prompted. It must not be inside an MMCE <code>MemoryCards</code> tree.</li>
+<li>Run <b>Tools &gt; OPL IGR automatic MMCE backup</b> (or <b>MMCE backups &gt; IGR helper</b>) and choose <b>Install / update</b>. Launchstation installs or updates the helper where OPL can launch it and shows the <b>exact path to enter as OPL&rsquo;s Exit-to</b>.</li>
+<li>Set that path in OPL&rsquo;s settings. Re-run the install if you move Launchstation or change the backup folder. <b>Remove helper</b> deletes the helper copies Launchstation manages and leaves existing backups untouched.</li>
+</ol>
+<p>Where the helper goes depends on the device Launchstation was started from:</p>
+<table><thead><tr><th>Launchstation was started from</th><th>Helper is installed to</th><th>Set OPL Exit-to to</th></tr></thead><tbody>
+<tr><td>Memory card <code>mc0:</code> / <code>mc1:</code></td><td><code>mcN:/BOOT/WLE-IGR.ELF</code></td><td>that path</td></tr>
+<tr><td>USB</td><td>Next to the Launchstation ELF</td><td>that path</td></tr>
+<tr><td>MMCE</td><td>Inside <b>every</b> <code>BootCard*.mcd</code> image found under both <code>MemoryCards</code> trees (in the image&rsquo;s <code>/BOOT</code> folder; up to 32 images). A BootCard must exist and be enabled.</td><td><code>mc0:/BOOT/WLE-IGR.ELF</code> for MMCE slot 1, <code>mc1:/BOOT/WLE-IGR.ELF</code> for slot 2</td></tr>
+<tr><td>MX4SIO, iLink, exFAT HDD, internal HDD</td><td>The first writable <b>physical memory card</b> (<code>mc0:</code> then <code>mc1:</code>) as a trampoline that reloads the right drivers</td><td>the shown <code>mcN:/BOOT/WLE-IGR.ELF</code></td></tr>
+<tr><td>Other devices (UDPFS, disc&hellip;)</td><td>Not supported yet</td><td>&mdash;</td></tr>
+</tbody></table>
+<p>The settings page reports the helper as <em>Current</em>, <em>Outdated</em>, <em>Not installed</em> or <em>Partial / mixed</em> by comparing installed bytes with this build&rsquo;s helper and your backup folder.</p>
+
+<h2 id="local">What happens on return</h2>
+<ol>
+<li>OPL exits to the helper; the helper starts Launchstation.</li>
+<li>If <b>Automatic sync</b> is <b>Local backup</b> or <b>Local + Google Drive</b> (default: Local backup), Launchstation starts MMCE and backs up <em>every</em> valid <code>.mcd</code> under both <code>mmce0:/MemoryCards</code> and <code>mmce1:/MemoryCards</code>, not only the active card, because named and GameID cards cannot be reconstructed after the reset. Unchanged cards are skipped, judged by a fingerprint of each card&rsquo;s directory instead of a full read, with a full compare at least every 8 backups; details of the fingerprint, verification, retention and layout are on <a href="mmce-backup.html#unchanged">MMCE Backup History</a>.</li>
+<li>Only for <b>Local + Google Drive</b>, new history is then uploaded (copy-only). This needs an already linked Google account, otherwise the Drive step reports an error. Drive is a second phase and never replaces the local copy.</li>
+<li>Launchstation continues to the <b>After IGR, open</b> choice: <b>Launchstation</b> (dashboard, default), the <b>PS2 system menu</b> (OSDSYS), or an <b>Application</b> you select (its device is started first).</li>
+</ol>
+<p>Only a launch carrying the IGR flag takes this path; a normal boot never runs IGR routing or backups.</p>
+
+<h2 id="after">After-IGR behavior</h2>
+<p>Settings &gt; Storage &amp; devices &gt; MMCE backups has <b>After IGR, open</b> and <b>IGR application</b> (used when the destination is Application). If the chosen application cannot be started, Launchstation stays in the dashboard and shows <em>IGR: could not start device for &hellip;</em> or <em>no after-IGR application selected</em>.</p>
+
+<h2 id="failure">Failure policy</h2>
+<p>Backup and cloud problems are shown as a status message on the dashboard and never block the return:</p>
+<ul>
+<li><em>IGR: automatic MMCE backup disabled</em> &ndash; Automatic sync is Off.</li>
+<li><em>IGR: no MMCE backup destination configured</em> &ndash; choose a Backup folder and reinstall the helper.</li>
+<li><em>IGR: MMCE driver unavailable; backup skipped</em> / <em>no MMCE MemoryCards tree found</em>.</li>
+<li><em>IGR MMCE backup: N changed, N unchanged, N failed (N cards)</em>, followed when applicable by <em>Drive: N uploaded, N present, N failed</em> or the Drive error text.</li>
+</ul>
+<p>The design never reports a failed write or failed cloud step as a success. The helper itself can only fall back to the system menu if it cannot find Launchstation.</p>
+
+<h2 id="limits">Limits and tips</h2>
+<ul>
+<li>IGR backup applies to MMCE cards; if you do not use MMCE the helper is just a return trampoline.</li>
+<li>Use a stable destination (USB or HDD). A backup folder on a device that is not started during IGR will not work; the driver family for that device must be loadable after the reset.</li>
+<li>After updating Launchstation, re-run <b>Install / update</b> if the status reads <em>Outdated</em>.</li>
+<li>Hardware timing between OPL, the adapter and the helper has only been host-tested; report firmware version and boot device if an IGR return does not reach Launchstation.</li>
+</ul>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

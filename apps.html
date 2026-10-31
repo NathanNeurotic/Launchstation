@@ -1,0 +1,189 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Applications · Launchstation Docs</title>
+<meta name="description" content="Applications Library Applications is the full library nested under Home, not an extra top-level tab. Open it with Home &gt; Browse &amp; shortcuts &gt; Applications . It lists the .ELF programs found in your configured application folders, with artwork, descriptions, fa">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/apps.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Applications · Launchstation Docs">
+<meta property="og:description" content="Applications Library Applications is the full library nested under Home, not an extra top-level tab. Open it with Home &gt; Browse &amp; shortcuts &gt; Applications . It lists the .ELF programs found in your configured application folders, with artwork, descriptions, fa">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html" class="active"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Applications Library</h1>
+<p class="lead">Applications is the full library nested under Home, not an extra top-level tab. Open it with <b>Home &gt; Browse &amp; shortcuts &gt; Applications</b>. It lists the <code>.ELF</code> programs found in your configured application folders, with artwork, descriptions, favorites, pins and filters.</p>
+
+<h2 id="views">Views and controls</h2>
+<p><b>SELECT</b> cycles <b>Grid</b>, <b>List</b> and <b>Carousel</b>; the choice is saved (<b>Settings &gt; Home &amp; applications &gt; Application view</b>, default Grid). The small icons next to the title show the active view and the count (for example <i>12 applications</i> or <i>3 shown - Favorites</i>).</p>
+<table><thead><tr><th>View</th><th>Layout</th><th>Navigation</th></tr></thead><tbody>
+<tr><td>Grid</td><td>5 columns of cards, three rows visible, scrollbar on the right.</td><td>D-pad moves one card; Up/Down move a row; L2/R2 move three rows.</td></tr>
+<tr><td>List</td><td>9 compact rows plus a detail card (large artwork, title, device, description or author/version, full path).</td><td>Up/Down one row; Left/L2 and Right/R2 move a page of 9.</td></tr>
+<tr><td>Carousel</td><td>One large focused card with depth, title, description (or device) and a <i>N / total</i> counter.</td><td>Left/Up previous, Right/Down next; L2/R2 move five.</td></tr>
+</tbody></table>
+<table><thead><tr><th>Button</th><th>Action</th></tr></thead><tbody>
+<tr><td>Confirm</td><td>Start the application. With an empty library it starts a scan instead (<i>Scan now</i>).</td></tr>
+<tr><td>Square</td><td>Add/remove Favorite (a toast confirms).</td></tr>
+<tr><td>Triangle</td><td>Library menu: <b>Application options...</b>, <b>Change view</b>, <b>Show: &lt;filter&gt;</b>, <b>Hide from view</b> / <b>Show in view</b>, <b>Refresh library</b>.</td></tr>
+<tr><td>SELECT</td><td>Cycle the view. With nothing to show under a filter, SELECT returns to <b>All</b>; the footer shows <i>All apps</i> whenever another filter is active.</td></tr>
+<tr><td>Back</td><td>Return to Home.</td></tr>
+<tr><td>L1 / R1</td><td>Switch dashboard tab.</td></tr>
+</tbody></table>
+<p>Selections wrap at both ends. Long titles scroll in a bounded marquee. Unfocused tiles keep stable alpha and scissor state, so memory-card-style icons never render half-drawn.</p>
+
+<h2 id="filters">Filters</h2>
+<p>Triangle &gt; <b>Show</b> chooses <b>All</b>, <b>Favorites</b> (favorites and pinned applications), <b>Memory Cards</b>, <b>MASS</b> (USB), <b>HDD</b>, <b>Other devices</b> or <b>All including hidden</b>. The filter is remembered across restarts. Hidden applications (see <a href="#options">options</a>) are left out of every filter except <b>All including hidden</b>, where they appear dimmed. While a scan is running an empty list reads <i>Looking for applications...</i>. Cached applications whose device is not currently mounted are hidden until the device is ready; they stay in the cache and the shortcuts remain stored.</p>
+
+<h2 id="home">Home integration</h2>
+<p>The Home <b>Continue</b> row surfaces pinned, recent and favorite applications (see <a href="dashboard.html#continue">Dashboard</a>). <b>Pin to Home</b> adds an application to the front of that row; <code>pinned = 1</code> in a metadata file does the same.</p>
+
+<h2 id="scope">What is scanned</h2>
+<p>Only configured application folders are scanned. Defaults:</p><pre class="tree"><code>mc:/APPS/
+mc:/BOOT/
+mass:/APPS/
+mass:/BOOT/</code></pre>
+<p>Each root is searched for <code>.ELF</code> files directly inside it and inside each immediate sub-folder (<code>APPS/&lt;folder&gt;/*.ELF</code>), no deeper. Listing goes through the File Browser's directory reader, so every device and driver quirk it handles applies here too. The library holds up to 512 applications and up to 12 scan folders.</p>
+<ul>
+<li><b>At startup</b> only memory cards and devices whose driver is already running are refreshed (<b>Refresh at startup</b>, default On). Nothing else is initialised just for the dashboard.</li>
+<li>A memory card is probed afresh when scanned, as when opening it in Files; with MX4SIO using slot 2, <code>mc1:</code> is skipped by background scans.</li>
+<li><b>Refresh library</b> (Triangle menu, START menu, or Settings) scans every configured folder, starting the drivers it needs first. The search itself runs in the background; a toast reports <i>N applications found</i>.</li>
+<li>Results are cached in <code>DASHLIB.CNF</code> and shown instantly on the next boot. Apps that disappear (device removed) stay usable as shortcuts and fail with a friendly message instead of an error.</li>
+<li>Titles are derived from the file name: a built-in table gives proper names to well-known programs (OPL, Neutrino, uLaunchELF, RetroArch, PS2Ident and more); generic names such as <code>BOOT</code> or <code>MAIN</code> use the parent folder's name; a leading <code>APP_</code> is dropped and underscores become spaces. Metadata <code>title</code> overrides all of this.</li>
+</ul>
+
+<h2 id="manage">Manage scan roots</h2>
+<p>Open <b>Settings &gt; Home &amp; applications &gt; Application library &gt; Application folders...</b>. Each current root is labeled <i>this folder + one subfolder</i>; select one to remove it. <b>Add folder...</b> chooses an exact folder (you are offered an immediate search afterwards) and <b>Restore defaults</b> restores the standard four roots. Changes take part in the Settings Save/Discard session.</p>
+
+<h2 id="options">Application options</h2>
+<p>Triangle on a focused application (Home or Applications) opens its options:</p>
+<table><thead><tr><th>Item</th><th>Effect</th></tr></thead><tbody>
+<tr><td>Start</td><td>Launch through the shared loader.</td></tr>
+<tr><td>Start at boot / Don't start at boot</td><td>Sets (or clears) this application as the <b>Automatic start target</b> from the library, so you do not have to type a path. It starts after the startup timeout with the usual <i>Starting NAME in N</i> banner and any button cancels it. Greyed out with a notice when launch keys are locked. Saved to LAUNCHELF.CNF.</td></tr>
+<tr><td>Start with arguments...</td><td>Opens (or creates) the sidecar <code>&lt;name&gt;.arg</code> in the Text Editor. Choose <b>Launch with these arguments</b> from the editor menu. See <a href="launch-arguments.html">Launch Arguments</a>.</td></tr>
+<tr><td>Add to / Remove from Favorites</td><td>Up to 48 favorites.</td></tr>
+<tr><td>Pin to / Unpin from Home</td><td>Pinned apps lead the Continue row.</td></tr>
+<tr><td>Details</td><td>Location, file, author, version, category, artwork source and metadata path (or <i>none - create ...</i>).</td></tr>
+<tr><td>Show in File Browser</td><td>Opens the app's folder in the Files tab.</td></tr>
+<tr><td>Edit metadata</td><td>Opens the OPL-format <code>title.cfg</code> in the ELF's folder in the Text Editor, creating a starter (<code>title=</code>, <code>boot=</code>) after confirmation if there is none; saving re-reads that one app. An existing <code>&lt;ELFNAME&gt;.cfg</code> is still read and overrides it, but is never created for you.</td></tr>
+<tr><td>Hide from view / Show in view, Remove shortcut</td><td>Hiding keeps the ELF on the device and only removes it from Home and the Applications list (no confirmation); the path is stored as a <code>Hidden</code> line in <code>DASHAPPS.CNF</code>, survives library refreshes and is undone with <b>Show in view</b> (find it under <b>All including hidden</b>). <i>Remove shortcut</i> appears for entries that are not in the library and clears them from Home, Favorites and Recents.</td></tr>
+</tbody></table>
+<p>If a launch fails because the file is missing, a message names the device and, for favorites, pins and recents, offers to remove the shortcut. A file that is not a valid PlayStation 2 executable gets its own message.</p>
+
+<h2 id="metadata">Metadata (optional)</h2>
+<p>Plain <code>key = value</code> text; every key is optional; <code>#</code> starts a comment. Two sources are read, in addition to the ELF itself:</p>
+<ul>
+<li><code>&lt;dir&gt;/&lt;ELFNAME&gt;.cfg</code>, for example <code>OPNPS2LD.cfg</code> beside <code>OPNPS2LD.ELF</code>.</li>
+<li><code>&lt;dir&gt;/title.cfg</code> in OPL application format (<code>title=</code>, <code>boot=</code>); applied only when <code>boot=</code> matches the ELF.</li>
+</ul>
+<pre>title = Open PS2 Loader
+description = Game loader for USB, HDD, SMB and MX4SIO.
+author = ifcaro &amp; contributors
+version = 1.2.0
+category = Loader
+cover = covers/opl.png      # relative to the ELF folder, or a full path
+arg = -some-option          # one argument per line, repeatable
+pinned = 1                  # also show on Home</pre>
+<p>Accepted synonyms: <code>name</code> for title, <code>desc</code> for description, <code>developer</code> for author, <code>genre</code> for category, <code>art</code> and <code>icon</code> for cover, <code>args</code> for arg, <code>favorite</code> for pinned. A classic <code>&lt;ELFNAME&gt;.arg</code> sidecar always wins over metadata <code>arg</code> lines, which are used only when no <code>.arg</code> exists.</p>
+
+<h2 id="presentation">Presentation</h2>
+<p>The library shows metadata and artwork when present. The default tile for an app without artwork is chosen under <b>Settings &gt; Appearance &gt; Customize theme &gt; Icons &gt; Default app icon</b> (Application, Device or Initials). The shape of every tile follows <a href="themes.html#tile-styles">Tile style</a>.</p>
+
+<h2 id="artwork">Artwork &amp; covers</h2>
+<p>Every application gets a <b>default tile</b>. To show your own cover instead, add a PNG in one of the places below. <b>Settings &gt; Home &amp; applications &gt; Application artwork</b> must be On (default On).</p>
+<h3>Image format</h3><ul><li>PNG only (transparency is supported).</li><li>Up to 1.5 MB per file and 2048x2048 source pixels. Images are scaled down to fit 128&times;128 and never enlarged, so square art of 128&times;128 or more looks best. Interlaced PNGs are limited to 256&times;256. At most 40 thumbnails are kept in memory; they are loaded only after the pad has been idle for a moment.</li></ul>
+<h3>Where Launchstation looks</h3><p>For an app at <code>mass:/APPS/OPL/OPNPS2LD.ELF</code>, the first file found wins:</p><ol><li>A <code>cover =</code> line in the app's metadata.</li><li>Beside the ELF: <code>OPNPS2LD.ELF_COV.png</code>, <code>OPNPS2LD_COV.png</code> or <code>OPNPS2LD.png</code>.</li><li>In the app's own folder (not a scan root such as <code>mass:/APPS/</code> itself): <code>cover.png</code> or <code>icon.png</code>.</li><li>Beside the ELF: <code>OPNPS2LD_ICO.png</code> (OPL disc-icon naming).</li><li>An <code>ART</code> folder at the root of the same device, using OPL naming: <code>mass:/ART/OPNPS2LD.ELF_COV.png</code> or <code>mass:/ART/OPNPS2LD_COV.png</code> (the <code>+OPL</code> partition on an internal HDD).</li><li>An <code>ART</code> folder beside <code>DASHBOARD.CNF</code> (the settings folder): <code>OPNPS2LD.ELF_COV.png</code>, <code>OPNPS2LD_COV.png</code> or <code>OPNPS2LD.png</code>. Use this for apps on devices that are not started yet.</li><li>Otherwise the theme's default application icon.</li></ol><p>Covers prepared for OPL's <code>ART</code> folder work as-is. Artwork on a device whose driver is not running is looked up later, when that device is opened.</p>
+<h3>Choosing a cover in metadata</h3><p>Add to the <code>title.cfg</code> beside the ELF (or use <b>Application options &gt; Edit metadata</b>, which creates it):</p><pre>title = Open PS2 Loader
+boot = OPNPS2LD.ELF
+cover = covers/opl.png</pre><p>A relative <code>cover</code> path is resolved from the ELF's folder; a full path such as <code>mc0:/ART/opl.png</code> also works.</p>
+<h3>After adding art</h3><p>Choose <b>Refresh library</b> (Applications menu) or <b>Settings &gt; Home &amp; applications &gt; Application library &gt; Refresh library now</b>. Covers already found are kept, and apps that had none are checked again. Saving from <b>Edit metadata</b> re-reads that one app immediately.</p>
+<p>Artwork can also fill the dashboard background: <b>Settings &gt; Appearance &gt; Customize theme &gt; Artwork background</b> shows the focused app's cover behind Home and Applications. See <a href="themes.html">Themes</a>.</p>
+
+<h2 id="launch">Launching</h2>
+<p>ELFs use the shared loader path: argument sidecars, device loading, KELF/HDD/PSX handling and cleanup before exec. By default the IOP is reset before launch (<b>Settings &gt; Launching &gt; Reset IOP before launch</b>, recommended). Every application launch is added to the recent list (<b>Recent applications</b>); game images (<code>.iso</code>, <code>.bin</code>, <code>.cue</code>, <code>.vcd</code>) are not. Background saves and driver work finish first, with a progress overlay, so nothing is lost when the application takes over.</p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>
