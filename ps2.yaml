@@ -347,6 +347,7 @@ targets:
       - src/dash_card_tool.c
       - src/mmce_card_switch.c
       - src/mmce_backup.c
+      - src/mmce_save_versions.c
       - src/mmce_igr.c
       - src/hdd.c
       - src/hdd_header_injector.c

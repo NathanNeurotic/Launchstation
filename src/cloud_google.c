@@ -9,6 +9,7 @@
 #include "filer_shared.h"
 #include "init.h"
 #include "mc_card_export.h"
+#include "mmce_save_versions.h"
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -825,7 +826,8 @@ static int drive_browse_parse(const char *json, CloudGoogleBrowsePage *page)
             if (e->is_folder ||
                 (!strncmp(e->name, "WLE-", 4) &&
                  (genCmpFileExt(e->name, "MCD") ||
-                  genCmpFileExt(e->name, "PS2"))))
+                  genCmpFileExt(e->name, "PS2") ||
+                  genCmpFileExt(e->name, "PSU"))))
                 page->count++;
             else
                 memset(e, 0, sizeof(*e));
@@ -947,7 +949,8 @@ static int cloud_digest_matches(const unsigned char digest[32], const char *hex)
 
 /* Valid recovered images are created only on a device with standard
  * same-directory rename semantics, never an actively emulated MMCE card. */
-static int cloud_recovery_path(const char *folder, char *result, size_t result_size,
+static int cloud_recovery_path(const char *folder, const char *ext,
+                               char *result, size_t result_size,
                                char *download, size_t download_size,
                                char *stage, size_t stage_size)
 {
@@ -962,8 +965,8 @@ static int cloud_recovery_path(const char *folder, char *result, size_t result_s
     if (len == 0)
         return 0;
     for (i = 1; i <= 999; i++) {
-        n = snprintf(result, result_size, "%s%sRECOVER-CLOUD-%03d.mcd",
-                     folder, folder[len - 1] == ':' || folder[len - 1] == '/' ? "" : "/", i);
+        n = snprintf(result, result_size, "%s%sRECOVER-CLOUD-%03d.%s",
+                     folder, folder[len - 1] == ':' || folder[len - 1] == '/' ? "" : "/", i, ext);
         a = snprintf(stage, stage_size, "%s.PART", result);
         b = snprintf(download, download_size, "%s%sRECOVER-CLOUD-%03d.DOWNLOAD.PART",
                      folder, folder[len - 1] == ':' || folder[len - 1] == '/' ? "" : "/", i);
@@ -998,7 +1001,7 @@ int cloudGoogleRecoverSnapshot(const CloudGoogleBrowseItem *snapshot,
         return -1;
     }
     is_pcsx2 = genCmpFileExt(snapshot->name, "PS2");
-    if (!cloud_recovery_path(dest_dir, result, sizeof(result),
+    if (!cloud_recovery_path(dest_dir, "mcd", result, sizeof(result),
                              download, sizeof(download), stage, sizeof(stage))) {
         set_error(error, error_size,
                   "Choose a writable USB/HDD folder with an unused recovery filename");
@@ -1081,6 +1084,98 @@ fail:
         genClose(fd);
     genRemove(download);
     genRemove(stage);
+    if (result_created)
+        genRemove(result);
+    return -1;
+}
+
+int cloudGoogleRecoverSaveVersion(const CloudGoogleBrowseItem *version,
+                                  const char *dest_dir, char *result_path,
+                                  int result_size, char *error, int error_size)
+{
+    GoogleSession session;
+    char result[MAX_PATH], stage[MAX_PATH], download[MAX_PATH], url[512];
+    unsigned char digest[32];
+    int bytes = 0, fd = -1, r, result_created = 0;
+
+    if (result_path && result_size > 0)
+        result_path[0] = '\0';
+    if (version == NULL || version->is_folder || dest_dir == NULL ||
+        result_path == NULL || result_size <= 0 ||
+        !drive_safe_id(version->id) ||
+        !cloud_valid_digest(version->sha256) ||
+        !genCmpFileExt(version->name, "PSU")) {
+        set_error(error, error_size,
+                  "This item lacks valid save version metadata and cannot be recovered");
+        return -1;
+    }
+    /* The .psu path claims RECOVER-CLOUD-###.psu; the stage name is unused
+     * because a verified download is published as it is. */
+    if (!cloud_recovery_path(dest_dir, "psu", result, sizeof(result),
+                             download, sizeof(download), stage, sizeof(stage))) {
+        set_error(error, error_size,
+                  "Choose a writable USB/HDD folder with an unused recovery filename");
+        return -1;
+    }
+    if (strlen(result) >= (size_t)result_size) {
+        set_error(error, error_size, "Recovery destination path is too long");
+        return -1;
+    }
+    if (!ensurePathDeviceStackReady(dest_dir)) {
+        set_error(error, error_size, "Could not start the recovery storage device");
+        return -1;
+    }
+    if (load_session(&session, 1, error, error_size) < 0)
+        return -1;
+    if (!ensureDashboardIpNetworkReady()) {
+        set_error(error, error_size, "Ethernet is unavailable for Drive recovery");
+        return -1;
+    }
+    if (refresh_access_token(&session, error, error_size) < 0)
+        return -1;
+    r = snprintf(url, sizeof(url),
+                 "https://www.googleapis.com/drive/v3/files/%s?alt=media", version->id);
+    if (r <= 0 || r >= (int)sizeof(url))
+        return -1;
+
+    if (wleExists(result) || wleExists(stage) || wleExists(download)) {
+        set_error(error, error_size, "A recovery filename was claimed; choose another");
+        return -1;
+    }
+    fd = genOpen(download, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
+    if (fd < 0) {
+        set_error(error, error_size, "Could not create staged cloud download");
+        return -1;
+    }
+    r = cloudHttpDownloadGoogleFd(url, session.access_token, fd, session.ca_path,
+                                  MMCE_SAVE_VERSION_MAX, &bytes, digest,
+                                  error, error_size);
+    if (genClose(fd) < 0)
+        r = -1;
+    fd = -1;
+    if (r < 0)
+        goto fail;
+    if (bytes <= 0 || !cloud_digest_matches(digest, version->sha256)) {
+        set_error(error, error_size, "Downloaded save SHA-256 differs from backup history");
+        goto fail;
+    }
+    if (mmceSaveVersionValidate(download) != 0) {
+        set_error(error, error_size, "Downloaded file is not a complete .psu save");
+        goto fail;
+    }
+    if (wleExists(result) || fileXioRename(download, result) < 0) {
+        set_error(error, error_size, "Could not publish the verified .psu");
+        goto fail;
+    }
+    result_created = 1;
+    if (mmceSaveVersionValidate(result) != 0) {
+        set_error(error, error_size, "Published .psu verification failed");
+        goto fail;
+    }
+    snprintf(result_path, result_size, "%s", result);
+    return 0;
+fail:
+    genRemove(download);
     if (result_created)
         genRemove(result);
     return -1;
@@ -1171,8 +1266,10 @@ out:
     return ok ? 0 : -1;
 }
 
+/* known_sha256: the file's digest when the caller already has it, else NULL. */
 static int drive_upload_file(GoogleSession *s, const char *parent, const char *name,
-                             const char *local_path, char *error, int error_size)
+                             const char *local_path, const char *known_sha256,
+                             char *error, int error_size)
 {
     char escaped[MAX_NAME * 2], escaped_parent[CLOUD_ID_MAX * 2], body[1280];
     char headers[CLOUD_TOKEN_MAX + 512], sha256[65], remote_id[CLOUD_ID_MAX];
@@ -1195,7 +1292,14 @@ static int drive_upload_file(GoogleSession *s, const char *parent, const char *n
         return -1;
     }
     size = (int)size64;
-    if (hash_open_backup(fd, size, sha256) < 0) {
+    if (known_sha256 != NULL && strlen(known_sha256) == 64) {
+        memcpy(sha256, known_sha256, sizeof(sha256));
+        if (genLseek(fd, 0, SEEK_SET) != 0) {
+            genClose(fd);
+            set_error(error, error_size, "Could not rewind local backup");
+            return -1;
+        }
+    } else if (hash_open_backup(fd, size, sha256) < 0) {
         genClose(fd);
         set_error(error, error_size, "Could not hash local backup");
         return -1;
@@ -1264,7 +1368,8 @@ static int drive_upload_file(GoogleSession *s, const char *parent, const char *n
 static int is_backup_file(const char *name)
 {
     return name != NULL && !strncmp(name, "WLE-", 4) &&
-           (genCmpFileExt(name, "MCD") || genCmpFileExt(name, "PS2"));
+           (genCmpFileExt(name, "MCD") || genCmpFileExt(name, "PS2") ||
+            genCmpFileExt(name, "PSU"));
 }
 
 static int validate_backup_file(const char *name, const char *path)
@@ -1273,7 +1378,108 @@ static int validate_backup_file(const char *name, const char *path)
         return mcCardValidateNoEcc(path) == MC_CARD_EXPORT_OK;
     if (genCmpFileExt(name, "PS2"))
         return mcCardValidatePcsx2(path) == MC_CARD_EXPORT_OK;
+    /* per-save versions (WLE-Saves/<save>/WLE-<stamp>.psu): every entry checked */
+    if (genCmpFileExt(name, "PSU"))
+        return mmceSaveVersionValidate(path) == 0;
     return 0;
+}
+
+/* Per-save versions multiply the files a sync walks (saves x versions kept),
+ * and every Drive lookup is its own TLS session. UPLOADED.TXT beside the
+ * versions records "<Drive folder id> <sha256> <name>" for each .psu already
+ * on Drive, so a later sync skips the validation and the lookup for it. The
+ * digest is still taken from the local bytes every time, so a changed file
+ * never matches. Another account or a recreated Drive folder has another id
+ * and uploads again. It is only a cache: missing, torn or too large means
+ * look the file up as before. */
+#define CLOUD_UPLOAD_LEDGER "UPLOADED.TXT"
+#define CLOUD_UPLOAD_LEDGER_MAX (64 * 1024)
+
+static int upload_ledger_line(const char *dir, const char *folder, const char *sha256,
+                              const char *name, char *path, int path_size,
+                              char *line, int line_size)
+{
+    int n;
+
+    if (dir[0] == 0 || snprintf(path, path_size, "%s%s%s", dir,
+                                (dir[strlen(dir) - 1] == '/' ? "" : "/"),
+                                CLOUD_UPLOAD_LEDGER) >= path_size)
+        return -1;
+    n = snprintf(line, line_size, "%s %s %s\n", folder, sha256, name);
+    return n > 0 && n < line_size ? n : -1;
+}
+
+/* 1 when dir's ledger records name with these bytes in this Drive folder. */
+static int upload_ledger_has(const char *dir, const char *folder, const char *sha256,
+                             const char *name)
+{
+    char path[MAX_PATH], want[CLOUD_ID_MAX + 66 + MAX_NAME + 2], *buf;
+    const char *p, *nl;
+    s64 size;
+    int fd, len, found = 0;
+
+    len = upload_ledger_line(dir, folder, sha256, name, path, sizeof(path), want, sizeof(want));
+    if (len < 0 || (fd = genOpen(path, FIO_O_RDONLY)) < 0)
+        return 0;
+    size = genLseek(fd, 0, SEEK_END);
+    if (size <= 0 || size > CLOUD_UPLOAD_LEDGER_MAX || genLseek(fd, 0, SEEK_SET) != 0 ||
+        (buf = malloc((size_t)size + 1)) == NULL) {
+        genClose(fd);
+        return 0;
+    }
+    if (genRead(fd, buf, (int)size) == (int)size) {
+        buf[size] = 0;
+        for (p = buf; (nl = strchr(p, '\n')) != NULL; p = nl + 1) {
+            if (nl - p + 1 == len && !memcmp(p, want, (size_t)len)) {
+                found = 1;
+                break;
+            }
+        }
+    }
+    genClose(fd);
+    free(buf);
+    return found;
+}
+
+/* Best effort: a failed write only costs a Drive lookup next time. */
+static void upload_ledger_add(const char *dir, const char *folder, const char *sha256,
+                              const char *name)
+{
+    char path[MAX_PATH], line[CLOUD_ID_MAX + 66 + MAX_NAME + 2], last = '\n';
+    s64 size;
+    int fd, len;
+
+    len = upload_ledger_line(dir, folder, sha256, name, path, sizeof(path), line, sizeof(line));
+    if (len < 0 || (fd = genOpen(path, FIO_O_RDWR | FIO_O_CREAT)) < 0)
+        return;
+    size = genLseek(fd, 0, SEEK_END);
+    if (size < 0 || size + len + 1 > CLOUD_UPLOAD_LEDGER_MAX ||
+        (size > 0 && (genLseek(fd, size - 1, SEEK_SET) != size - 1 ||
+                      genRead(fd, &last, 1) != 1 || genLseek(fd, 0, SEEK_END) != size))) {
+        genClose(fd);
+        return;
+    }
+    /* a torn last line from a power cut must not swallow this entry */
+    if (last == '\n' || (last = '\n', genWrite(fd, &last, 1) == 1))
+        genWrite(fd, line, len);
+    genClose(fd);
+}
+
+static int hash_local_file(const char *path, char out[65])
+{
+    s64 size;
+    int fd = genOpen(path, FIO_O_RDONLY), r = -1;
+
+    out[0] = 0;
+    if (fd < 0)
+        return -1;
+    size = genLseek(fd, 0, SEEK_END);
+    if (size >= 0 && size <= 0x7fffffffLL)
+        r = hash_open_backup(fd, (int)size, out);
+    genClose(fd);
+    if (r < 0)
+        out[0] = 0;
+    return r;
 }
 
 static int sync_tree(GoogleSession *s, const char *local_dir, const char *remote_parent,
@@ -1317,10 +1523,30 @@ static int sync_tree(GoogleSession *s, const char *local_dir, const char *remote
                 return -1;
             }
         } else if (is_backup_file(ent.name)) {
+            int psu = genCmpFileExt(ent.name, "PSU");
+            char sha256[65];
+
             stats->files_seen++;
             (*done)++;
             if (progress)
                 progress(ent.name, *done, 0);
+
+            /* the size the directory reports is enough to refuse an empty or
+             * oversized .psu before reading it; the validator still decides */
+            if (psu && (ent.stat.hisize != 0 || ent.stat.size == 0 ||
+                        ent.stat.size > MMCE_SAVE_VERSION_MAX)) {
+                stats->failed++;
+                memset(&ent, 0, sizeof(ent));
+                continue;
+            }
+
+            sha256[0] = 0;
+            if (psu && hash_local_file(child, sha256) == 0 &&
+                upload_ledger_has(local_dir, remote_parent, sha256, ent.name)) {
+                stats->skipped++;
+                memset(&ent, 0, sizeof(ent));
+                continue;
+            }
 
             /* Exporters verify newly written backups byte-for-byte, but an
              * abrupt power loss can still leave a truncated final-named file.
@@ -1333,12 +1559,14 @@ static int sync_tree(GoogleSession *s, const char *local_dir, const char *remote
             }
 
             r = drive_upload_file(s, remote_parent, ent.name, child,
-                                  error, error_size);
+                                  sha256[0] ? sha256 : NULL, error, error_size);
             if (r < 0) {
                 stats->failed++;
                 genDclose(fd);
                 return -1;
             }
+            if (sha256[0])
+                upload_ledger_add(local_dir, remote_parent, sha256, ent.name);
             if (r > 0)
                 stats->skipped++;
             else

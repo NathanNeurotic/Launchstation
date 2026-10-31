@@ -440,6 +440,7 @@
     {"Pasting...", LANG_Pasting},
     {"Path", LANG_Path},
     {"PathPad", LANG_PathPad},
+    {"Per-save versions", LANG_Dashboard_Per_save_versions},
     {"Picture", LANG_Picture},
     {"Please wait", LANG_Dashboard_Please_wait},
     {"Popups Opaque", LANG_Popups_Opaque},

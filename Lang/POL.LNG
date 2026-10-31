@@ -681,3 +681,4 @@ lang(679, Exploit_Folder_Japan_Warning, "Uwaga: folder exploita dla konsol z Jap
 lang(680, Exploit_Folder_America_Asia_Warning, "Uwaga: folder exploita dla konsol z Ameryki/Azji!")
 lang(681, Exploit_Folder_Europe_Warning, "Uwaga: folder exploita dla konsol z Europy!")
 lang(682, Exploit_Folder_China_Warning, "Uwaga: folder exploita dla konsol z Chin!")
+lang(683, Dashboard_Per_save_versions, "Wersje kazdego zapisu")

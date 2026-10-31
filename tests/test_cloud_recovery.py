@@ -108,8 +108,17 @@ static int genRemove(char *path) {
     deletes++;return 0;
 }
 static int fileXioRename(char *from,char *to) {
-    assert(strstr(from,".mcd.PART") && strstr(to,"RECOVER-CLOUD-"));
+    assert((strstr(from,".mcd.PART") && strstr(to,"RECOVER-CLOUD-") && strstr(to,".mcd")) ||
+           (strstr(from,".DOWNLOAD.PART") && strstr(to,"RECOVER-CLOUD-") && strstr(to,".psu")));
     renames++;return scenario==4 ? -1 : 0;
+}
+#define MMCE_SAVE_VERSION_MAX (8u * 1024u * 1024u + 512u * 1024u)
+static int psu_checks;
+static int mmceSaveVersionValidate(const char *name) {
+    psu_checks++;
+    if(scenario==6 && strstr(name,"DOWNLOAD.PART"))return -1;
+    if(scenario==7 && !strstr(name,"DOWNLOAD.PART"))return -1;
+    return 0;
 }
 static int mcCardValidateNoEcc(const char *name) {
     geometry_checks++;
@@ -151,7 +160,8 @@ static int cloudHttpDownloadGoogleFd(const char *url,const char *token,int fd,
 '''
 c += defs
 for sign in ("static int cloud_valid_digest(", "static int cloud_digest_matches(",
-             "static int cloud_recovery_path(", "int cloudGoogleRecoverSnapshot("):
+             "static int cloud_recovery_path(", "int cloudGoogleRecoverSnapshot(",
+             "int cloudGoogleRecoverSaveVersion("):
     c += extract(source, sign)
 
 c += extract(http, "static int cloud_google_media_host(")
@@ -160,7 +170,7 @@ static CloudGoogleBrowseItem item;
 static char result[1024], error[256];
 static void reset(void) {
     scenario=opens=closes=downloads=copies=imports=renames=deletes=existing=
-    network_ready=geometry_checks=0;
+    network_ready=geometry_checks=psu_checks=0;
     memset(removed,0,sizeof(removed));
     memset(&item,0,sizeof(item));
     strcpy(item.id,"my_file_1");
@@ -215,11 +225,42 @@ int main(void) {
     assert(cloudGoogleRecoverSnapshot(&item,"mass0:/",short_result,sizeof(short_result),
                                       error,sizeof(error))<0);
     assert(!opens);
+    /* per-save .psu versions: published as downloaded, never converted */
+    reset();strcpy(item.name,"WLE-20261031-010000.psu");
+    assert(cloudGoogleRecoverSaveVersion(&item,"mass0:/backup",result,sizeof(result),
+                                         error,sizeof(error))==0);
+    assert(downloads==1 && !copies && !imports && renames==1 && psu_checks==2 && !geometry_checks);
+    assert(!strcmp(result,"mass0:/backup/RECOVER-CLOUD-001.psu") && deletes==0);
+    reset();strcpy(item.name,"WLE-20261031-010000.psu");
+    assert(cloudGoogleRecoverSnapshot(&item,"mass0:/",result,sizeof(result),
+                                      error,sizeof(error))<0 && !downloads);
+    reset();
+    assert(cloudGoogleRecoverSaveVersion(&item,"mass0:/",result,sizeof(result),
+                                         error,sizeof(error))<0 && !downloads);
+    reset();strcpy(item.name,"WLE-1.psu");scenario=2;
+    assert(cloudGoogleRecoverSaveVersion(&item,"mass0:/",result,sizeof(result),
+                                         error,sizeof(error))<0);
+    assert(!renames && deletes==1 && strstr(removed[0],".DOWNLOAD.PART"));
+    reset();strcpy(item.name,"WLE-1.psu");scenario=6;
+    assert(cloudGoogleRecoverSaveVersion(&item,"mass0:/",result,sizeof(result),
+                                         error,sizeof(error))<0);
+    assert(!renames && deletes==1);
+    reset();strcpy(item.name,"WLE-1.psu");scenario=7;
+    assert(cloudGoogleRecoverSaveVersion(&item,"mass0:/",result,sizeof(result),
+                                         error,sizeof(error))<0);
+    assert(renames==1 && deletes==2 && strstr(removed[1],"RECOVER-CLOUD-001.psu") && !result[0]);
+    reset();strcpy(item.name,"WLE-1.psu");scenario=5;
+    assert(cloudGoogleRecoverSaveVersion(&item,"mass0:/",result,sizeof(result),
+                                         error,sizeof(error))<0);
+    assert(!renames && closes==1 && deletes==1);
+    reset();strcpy(item.name,"WLE-1.psu");
+    assert(cloudGoogleRecoverSaveVersion(&item,"mmce0:/MemoryCards",result,sizeof(result),
+                                         error,sizeof(error))<0 && !opens);
     assert(cloud_google_media_host("www.googleapis.com"));
     assert(cloud_google_media_host("download.googleusercontent.com"));
     assert(!cloud_google_media_host("evilgoogleusercontent.com"));
     assert(!cloud_google_media_host("googleusercontent.com.evil.test"));
-    puts("PASS: cloud SHA, card geometry, staged recovery, redirect host scoping and failure cleanup");
+    puts("PASS: cloud SHA, card geometry, .psu versions, staged recovery, redirect host scoping and failure cleanup");
     return 0;
 }
 '''

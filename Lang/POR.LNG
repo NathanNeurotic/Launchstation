@@ -681,3 +681,4 @@ lang(679, Exploit_Folder_Japan_Warning, "Cuidado: pasta de exploit para consolas
 lang(680, Exploit_Folder_America_Asia_Warning, "Cuidado: pasta de exploit para consolas da America/Asia!")
 lang(681, Exploit_Folder_Europe_Warning, "Cuidado: pasta de exploit para consolas da Europa!")
 lang(682, Exploit_Folder_China_Warning, "Cuidado: pasta de exploit para consolas da China!")
+lang(683, Dashboard_Per_save_versions, "Versoes por gravacao")
