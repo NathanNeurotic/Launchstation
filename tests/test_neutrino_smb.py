@@ -74,7 +74,8 @@ int main(void) {
     const char *why;
     parse(&cfg,"NAME=PC\nUSERNAME=player\nPASSWORD=pa\"ss\\word\nURL=smb://10.0.0.2/games/sub\n");
     assert(neutrinoSmbResolve(&cfg,"smb:/PC/DVD/game.iso",&sh,dvd,sizeof(dvd),&why));
-    assert(!strcmp(dvd,"smb:sub/DVD/game.iso") && !strcmp(sh.share,"games") && !strcmp(sh.server,"10.0.0.2"));
+    /* smb2man's pinned driver ignores URL subdirectories; match its browser view. */
+    assert(!strcmp(dvd,"smb:DVD/game.iso") && !strcmp(sh.share,"games") && !strcmp(sh.server,"10.0.0.2"));
     assert(!neutrinoSmbResolve(&cfg,"smb:/OTHER/DVD/game.iso",&sh,dvd,sizeof(dvd),&why));
     strcpy(cfg.share[0].url,"smb://nas/games");
     assert(!neutrinoSmbResolve(&cfg,"smb:/PC/DVD/game.iso",&sh,dvd,sizeof(dvd),&why));

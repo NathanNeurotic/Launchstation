@@ -68,9 +68,9 @@ int neutrinoSmbResolve(const SmbConfig *cfg, const char *path, SmbShare *share,
 	*problem = "Neutrino SMB share or ISO path exceeds the driver limits";
 	if (!length || length > 63) return 0;
 	memcpy(share->share, slash+1, length); share->share[length] = 0;
-	/* libsmb2 URLs may carry a subdirectory below the share. */
-	if (sub && sub[1]) i = snprintf(dvd, dvd_size, "smb:%s/%s", sub+1, relative);
-	else i = snprintf(dvd, dvd_size, "smb:%s", relative);
+	/* smb2man connects url->server/url->share and ignores url->path, as
+	 * smbman does. The browser path already names the ISO within the share. */
+	i = snprintf(dvd, dvd_size, "smb:%s", relative);
 	if (i < 5 || i >= (int)dvd_size || i-4 > 127 || !ascii(dvd)) return 0;
 	*problem = "Neutrino SMB needs ASCII credentials of at most 31 characters";
 	if (strlen(share->username) > 31 || strlen(share->password) > 31 ||
