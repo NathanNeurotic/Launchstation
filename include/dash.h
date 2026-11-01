@@ -35,6 +35,8 @@ int DashFileTransferChunk(void (*run)(void *arg), void *arg);
 /* Finish dashboard-owned IO/audio before a child ELF that deliberately
  * inherits the live IOP. Returns 0 if the user cancels the bounded wait. */
 int DashPrepareKeepIopHandoff(const char *title);
+/* One-second Confirm hold reverses the saved IOP mode for this launch only. */
+int DashChooseElfIopMode(int configured);
 
 /* Path of the MISC pseudo-command that opens the dashboard. */
 const char *DashMiscCommandName(void);

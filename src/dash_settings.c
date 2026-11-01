@@ -234,7 +234,7 @@ static const SetItem appearance_items[] = {
     {ST_PAGE, P_SCREEN, "Screen calibration", "Video mode and picture position for your TV."},
     {ST_CHOICE, S_EFFECTS, "Background motion", "0% freezes backgrounds; 100% is normal; 200% doubles their motion."},
     {ST_CHOICE, S_ANIM, "Menu animation", "0% makes transitions instant; higher values increase movement and transition duration."},
-    {ST_CHOICE, S_T_PANEL_A, "Panel transparency", "0% removes menu panels; 100% makes them fully opaque."},
+    {ST_CHOICE, S_T_PANEL_A, "Panel transparency", "0% makes panels fully opaque; 100% makes them fully transparent."},
     {ST_CHOICE, S_ICON_BACKING, "Control icon backings", "Show or hide backing shapes behind text-style controls and quick actions."},
     {ST_PAGE, P_THEME_MANAGE, "Theme files & resets", "Import, export, rename or reset your theme."},
     {ST_ACTION, S_DISPLAY_THEME_RESET, "Reset appearance", "Restore screen calibration, motion, animation and the OSD Classic theme."},
@@ -866,7 +866,7 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			*cur = dashTheme.glow;
 			return 2;
 		case S_T_PANEL_A:
-			*names = pct_names, *cur = (dashTheme.panel.a * 10 + 127) / 255;
+			*names = pct_names, *cur = ((255 - dashTheme.panel.a) * 10 + 127) / 255;
 			return 11;
 		case S_T_FONT:
 			*names = font_names, *cur = dashTheme.font;
@@ -944,7 +944,7 @@ static int setThemeChoice(int id, int v)
 			t->glow = (u8)v;
 			break;
 		case S_T_PANEL_A:
-			t->panel.a = (u8)(v * 255 / 10);
+			t->panel.a = (u8)((10 - v) * 255 / 10);
 			break;
 		case S_T_FONT:
 			t->font = (u8)v;

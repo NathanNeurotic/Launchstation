@@ -38,11 +38,12 @@ code = r'''
 #define POPSTARTER_OK 0
 #define SEEK_SET 0
 typedef struct { char path[MAX_PATH], title[DASH_TITLE_MAX]; int flags; } DashApp;
-typedef struct { char main_msg[MAX_PATH]; } MainExecuteContext;
+enum { MAIN_ELF_IOP_DEFAULT, MAIN_ELF_IOP_KEEP, MAIN_ELF_IOP_REBOOT };
+typedef struct { char main_msg[MAX_PATH]; int elf_iop_mode; } MainExecuteContext;
 typedef struct { int count; } POPSTARTER_CANDIDATE_LIST;
 typedef struct { int dummy; } NEUTRINO_LAUNCH_OPTIONS;
 typedef struct { char argv[4][32]; } NEUTRINO_OPTION_ARGS;
-typedef struct { int disable_neutrino, cdrom_disable_gameid; char neutrino_file[MAX_PATH]; } Setting;
+typedef struct { int disable_neutrino, cdrom_disable_gameid, reboot_iop_elf_load; char neutrino_file[MAX_PATH]; } Setting;
 static Setting *setting;
 static void *elisaFnt, *External_Lang_Buffer;
 static MainExecuteContext exec_ctx;
@@ -77,6 +78,9 @@ static int genCmpFileExt(const char *p, const char *ext) {
     const char *dot = strrchr(p, '.');
     return dot != NULL && !strcasecmp(dot + 1, ext);
 }
+static int IsPopstarterVcdPath(const char *p) { return genCmpFileExt(p, "VCD"); }
+static int IsEmberGamePath(const char *p) { return genCmpFileExt(p, "BIN") || genCmpFileExt(p, "EXE"); }
+static int DashChooseElfIopMode(int configured) { return configured; }
 static void dashSoundSuspend(void) { muted = 1; suspended++; }
 static void dashSoundShutdown(void) { muted = 1; shutdown_calls++; }
 static void fadeScreenToBlack(void) {}

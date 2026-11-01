@@ -177,10 +177,10 @@ static int download_file(const char *url, const char *path, const char *ca_path,
     return size;
 }
 
-int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *result, int result_size)
+static int install_update_files(const char *parent, const char *leaf,
+                                const char *ca_path, const char *expected_sha256,
+                                char *result, int result_size)
 {
-    const char *boot = wleBootElfPath();
-    char parent[MAX_PATH], leaf[MAX_NAME];
     char stage_leaf[MAX_NAME], backup_leaf[MAX_NAME];
     char stage[MAX_PATH], backup[MAX_PATH];
     char package_leaf[MAX_NAME], package[MAX_PATH];
@@ -192,20 +192,6 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
     int need_ca, need_bgm, staged_ca = 0, staged_bgm = 0;
     int added_ca = 0, added_bgm = 0;
 
-    if (result == NULL || result_size <= 0)
-        return -1;
-    result[0] = '\0';
-
-    if (!supported_boot_path(boot)) {
-        snprintf(result, result_size,
-                 "This boot location cannot be updated safely in place: %.160s",
-                 boot != NULL ? boot : "(unknown)");
-        return -1;
-    }
-    if (!split_parent_leaf(boot, parent, sizeof(parent), leaf, sizeof(leaf))) {
-        snprintf(result, result_size, "Could not resolve the running ELF path.");
-        return -1;
-    }
     if (snprintf(stage_leaf, sizeof(stage_leaf), "%s.UPDATE", leaf) >= (int)sizeof(stage_leaf) ||
         snprintf(backup_leaf, sizeof(backup_leaf), "%s.BAK", leaf) >= (int)sizeof(backup_leaf) ||
         !join_leaf(stage, sizeof(stage), parent, stage_leaf) ||
@@ -213,11 +199,6 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
         snprintf(package_leaf, sizeof(package_leaf), "%s.PACKAGE", leaf) >= (int)sizeof(package_leaf) ||
         !join_leaf(package, sizeof(package), parent, package_leaf)) {
         snprintf(result, result_size, "The running ELF path is too long for a safe staged update.");
-        return -1;
-    }
-
-    if (!ensurePathDeviceStackReady(parent)) {
-        snprintf(result, result_size, "The running ELF device is not writable right now.");
         return -1;
     }
 
@@ -393,4 +374,63 @@ sidecar_publish_failed:
     snprintf(result, result_size,
              "Could not install the missing bundled sidecar. The original ELF and existing sidecars were not changed; any newly added CA may remain.");
     return -1;
+}
+
+int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *result, int result_size)
+{
+    const char *boot = wleBootElfPath();
+    char parent[MAX_PATH], leaf[MAX_NAME];
+    sceMcStDateTime sas_timestamp;
+    char warning[128];
+    int preserve_sas, installed, timestamp_result;
+    size_t prefix, kept;
+
+    if (result == NULL || result_size <= 0)
+        return -1;
+    result[0] = '\0';
+    if (!supported_boot_path(boot)) {
+        snprintf(result, result_size,
+                 "This boot location cannot be updated safely in place: %.160s",
+                 boot != NULL ? boot : "(unknown)");
+        return -1;
+    }
+    if (!split_parent_leaf(boot, parent, sizeof(parent), leaf, sizeof(leaf))) {
+        snprintf(result, result_size, "Could not resolve the running ELF path safely.");
+        return -1;
+    }
+    if (!ensurePathDeviceStackReady(parent)) {
+        snprintf(result, result_size, "The running ELF device is not writable right now.");
+        return -1;
+    }
+    /* Read before the first download/staging write can change the folder date.
+     * Restore after every transaction outcome, including all cleanup/rollback. */
+    preserve_sas = filerCaptureSasTimestamp(parent, &sas_timestamp);
+    if (preserve_sas < 0) {
+        snprintf(result, result_size,
+                 "Could not read the app folder timestamp (error %d). No update files were changed.",
+                 preserve_sas);
+        return -1;
+    }
+    installed = install_update_files(parent, leaf, ca_path, expected_sha256,
+                                     result, result_size);
+    if (preserve_sas > 0) {
+        timestamp_result = filerRestoreSasTimestamp(parent, &sas_timestamp);
+        if (timestamp_result != 0) {
+            snprintf(warning, sizeof(warning),
+                     "Could not restore the app folder SAS date (error %d); run SAS timestamps again.\n",
+                     timestamp_result);
+            /* Keep this warning visible even if the transaction message filled
+             * the caller's buffer; retain as much recovery detail as fits. */
+            prefix = strlen(warning);
+            if (prefix > (size_t)result_size - 1)
+                prefix = result_size - 1;
+            kept = strlen(result);
+            if (kept > (size_t)result_size - prefix - 1)
+                kept = result_size - prefix - 1;
+            memmove(result + prefix, result, kept);
+            memcpy(result, warning, prefix);
+            result[prefix + kept] = '\0';
+        }
+    }
+    return installed;
 }

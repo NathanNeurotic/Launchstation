@@ -14,10 +14,7 @@ def function(src, signature):
     return src[a:src.index("\n}\n", a) + 3]
 
 
-# wiring: the inversion applies to ordinary ELF launches only, once, right after the setting is read
-assert actions.count("mainActionIopInvertHook()") == 1
-assert "x = setting->reboot_iop_elf_load;\n\t\t\tif (mainActionIopInvertHook != NULL && mainActionIopInvertHook())\n\t\t\t\tx = !x;" in actions
-assert "mainActionIopInvertHook = dashIopInvertHook;" in main
+# Hold timing and per-launch mode are covered by test_launch_iop_override.py.
 assert 'detail = setting->reboot_iop_elf_load ? "hold to skip IOP reset" : "hold to reset IOP"' in apps
 assert "ids[n++] = 9;" in apps and "case 9:\n\t\t\ttoggleBootApp(a);" in apps
 
@@ -56,10 +53,7 @@ static char last_msg[128];
 static void dashToast(int kind, const char *m) { toasts++; last_kind = kind; snprintf(last_msg, sizeof(last_msg), "%s", m); }
 static void dashStrCopy(char *d, const char *s, int n) { snprintf(d, n, "%s", s); }
 static int dashSettingsSaveCnf(void) { saves++; return save_result; }
-static int dash_active = 1, pad_ok = 1, swapKeys;
-static u32 paddata;
-static int readpad_no_KB(void) { return pad_ok; }
-''' + function(apps, "static void toggleBootApp(") + function(main, "static int dashIopInvertHook(") + r'''
+''' + function(apps, "static void toggleBootApp(") + r'''
 int main(void) {
     DashApp a = {"mass:/APPS/OPL/OPNPS2LD.ELF", "Open PS2 Loader"};
     DashApp b = {"mc0:/APPS/SMS/SMS.ELF", "SMS"};
@@ -83,14 +77,6 @@ int main(void) {
     toggleBootApp(&a);
     assert(toasts == 0);
 
-    /* hold-confirm detection follows the swap-keys setting */
-    paddata = PAD_CIRCLE; swapKeys = 0; assert(dashIopInvertHook() == 1);
-    paddata = PAD_CROSS;  swapKeys = 0; assert(dashIopInvertHook() == 0);
-    paddata = PAD_CROSS;  swapKeys = 1; assert(dashIopInvertHook() == 1);
-    paddata = PAD_CIRCLE; swapKeys = 1; assert(dashIopInvertHook() == 0);
-    paddata = 0; assert(dashIopInvertHook() == 0);            /* a plain tap: released long before */
-    paddata = PAD_CIRCLE; swapKeys = 0; pad_ok = 0; assert(dashIopInvertHook() == 0);   /* pad not ready */
-    pad_ok = 1; dash_active = 0; assert(dashIopInvertHook() == 0);  /* classic UI launches unchanged */
     puts("ok");
     return 0;
 }

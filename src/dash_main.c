@@ -13,7 +13,6 @@
 #include "init.h"
 
 extern void (*mainActionLaunchHook)(const char *path);
-extern int (*mainActionIopInvertHook)(void);
 
 static MainExecuteContext exec_ctx;
 static int dash_active;
@@ -222,13 +221,44 @@ extern u32 paddata;
 /* Holding the confirm button while an application launches does the opposite of
  * "Reset IOP before launch" for that one launch (Settings > Startup). A plain tap
  * is released long before the launcher decides, so ordinary launches are unchanged. */
-static int dashIopInvertHook(void)
+int DashChooseElfIopMode(int configured)
 {
-	u32 ok_btn = swapKeys ? PAD_CROSS : PAD_CIRCLE;
+	DashInput input;
+	u32 confirm = swapKeys ? PAD_CROSS : PAD_CIRCLE;
+	u64 started, elapsed;
+	int mode = !!configured;
 
-	if (!dash_active || !readpad_no_KB())
-		return 0;
-	return (paddata & ok_btn) != 0;
+	/* Keyboard/automatic launches have no physical held Confirm. Read before
+	 * storage preparation so an ordinary tap need only wait for its release. */
+	if (!dash_active || dashWorkerOnThread() || !(paddata & confirm))
+		return mode;
+	started = Timer();
+	for (;;) {
+		dashWorkerParkPoint();
+		/* A fresh physical sample is required, even if a worker/IOP operation
+		 * delayed us past the threshold. Never infer a hold from stale PAD data. */
+		if (!dashWorkerIoBusy() && !dashIopParked()) {
+			dashInputPollEx(&input, 0);
+			if (!dashIopParked()) {
+				if (!(paddata & confirm))
+					break;
+				elapsed = Timer() - started;
+				if (elapsed >= 1000) {
+					mode = !mode;
+					break;
+				}
+			}
+		}
+		/* A broken/busy input stack must not trap launch preparation forever.
+		 * Keep the saved policy when no usable sample arrives within five seconds. */
+		if (Timer() - started >= 5000)
+			break;
+		/* Keep the current dashboard visible while sampling the hold. */
+		dashVisualUpdate();
+		dashRenderScene();
+		dashGfxPresent();
+	}
+	return mode;
 }
 
 /* Everything the background worker is doing (saves, scans, driver starts)
@@ -495,6 +525,7 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	char path[MAX_PATH];
 	char title[DASH_TITLE_MAX + 16];
 	DashApp copy;
+	MainExecuteContext launch_ctx = exec_ctx;
 
 	if (app == NULL)
 		return;
@@ -521,8 +552,16 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 			LaunchArgsClear();
 			return;
 		}
-	} else if (with_args_prompt == DASH_LAUNCH_PENDING_ARGS) {
-		/* arguments already loaded (Text Editor "Launch with these arguments") */
+	}
+	/* Disc-image loaders own their IOP policy. Ordinary ELF/KELF/XLF paths,
+	 * including ELFs with a nonstandard filename, use this one-launch choice. */
+	if (!IsPopstarterVcdPath(path) && !IsNeutrinoIsoPath(path) &&
+	    !genCmpFileExt(path, "CUE") && !IsEmberGamePath(path)) {
+		int mode = DashChooseElfIopMode(setting->reboot_iop_elf_load);
+		launch_ctx.elf_iop_mode = mode ? MAIN_ELF_IOP_REBOOT : MAIN_ELF_IOP_KEEP;
+	}
+	if (with_args_prompt == 1 || with_args_prompt == DASH_LAUNCH_PENDING_ARGS) {
+		/* arguments already loaded by the editor or its "Use" action */
 	} else if (!settleBackgroundWork("Finishing up")) {
 		return; /* the user backed out while saves/driver work finished */
 	} else if ((copy.flags & DASH_APP_HAS_ARGS) && !argSidecarExists(path)) {
@@ -551,18 +590,14 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	dashLoadingStatus(copy.path, 0, 0);
 	exec_ctx.main_msg[0] = '\0';
 	mainActionLaunchHook = NULL; /* already recorded */
-	/*
-	 * Ordinary ELF launches used to leave audsrv's looping BGM voice alive.
-	 * Mute until the legacy launcher validates the target; final cleanup
-	 * stops audsrv. Neutrino still presents an interactive options menu;
-	 * its committed-launch cleanup stops audio after the user chooses Run.
-	 * A failed validation can restore the existing audio below.
-	 */
+	/* Mute ordinary launches until target validation; final cleanup stops
+	 * audsrv, and a failed launch restores it below. Neutrino opens interactive
+	 * options first: keep audio there until its keep-IOP cleanup after Run game. */
 	if (!IsNeutrinoIsoPath(path))
 		dashSoundSuspend();
 	dashGfxRestoreLegacyState();
 	dashClassicUiInstall(0); /* launch-time prompts stay classic */
-	ExecuteMainAction(path, &exec_ctx);
+	ExecuteMainAction(path, &launch_ctx);
 	/* Only reached when the launch failed. */
 	mainActionLaunchHook = dashLaunchHook;
 	LaunchArgsClear();
@@ -1178,7 +1213,6 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	}
 	DashThemeSetLegacyEnabled(1);
 	mainActionLaunchHook = dashLaunchHook;
-	mainActionIopInvertHook = dashIopInvertHook;
 #ifdef WLE_BOOT_DIAGNOSTICS
 	drawMsg("Boot check 6: dashboard initialized; starting audio");
 #endif

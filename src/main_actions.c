@@ -14,7 +14,6 @@
 /* Optional observer called right before an ELF is handed to the loader
  * (used by the dashboard to maintain its "recent" list). */
 void (*mainActionLaunchHook)(const char *path) = NULL;
-int (*mainActionIopInvertHook)(void) = NULL;
 
 //CleanUpForExec releases uLE stuff preparatory to launching some other application
 //------------------------------
@@ -164,6 +163,15 @@ static void executeBrowserSelection(char *selected_path, const MainExecuteContex
 	}
 }
 
+static int elfLaunchIopMode(const MainExecuteContext *ctx)
+{
+	if (ctx->elf_iop_mode == MAIN_ELF_IOP_KEEP)
+		return 0;
+	if (ctx->elf_iop_mode == MAIN_ELF_IOP_REBOOT)
+		return 1;
+	return DashChooseElfIopMode(setting->reboot_iop_elf_load);
+}
+
 // Execute. Execute an action. May be called recursively.
 // For any path specified, its device must be accessible.
 //------------------------------
@@ -246,7 +254,7 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		if (PrepareMbrLaunchPayload(path, mbr_mem_arg, sizeof(mbr_mem_arg)) < 0)
 			goto ELFnotFound;
 
-		x = setting->reboot_iop_elf_load;
+		x = elfLaunchIopMode(ctx);
 		if (x)
 			CleanUpForExec();
 		else if (!CleanUpForKeepIopExec("Preparing application"))
@@ -677,9 +685,7 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 
 			if (mainActionLaunchHook != NULL)
 				mainActionLaunchHook(path);
-			x = setting->reboot_iop_elf_load;
-			if (mainActionIopInvertHook != NULL && mainActionIopInvertHook())
-				x = !x; /* confirm held at launch: this launch only does the opposite */
+			x = elfLaunchIopMode(ctx);
 			if (x)
 				CleanUpForExec();
 			else if (!CleanUpForKeepIopExec("Preparing application"))

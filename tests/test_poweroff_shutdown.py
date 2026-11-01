@@ -47,9 +47,9 @@ assert "afterMiscCommand();" in run_misc
 
 # Failed validation must preserve the audsrv client and uploaded samples.
 assert "dashSoundShutdown();" not in launch_app
-assert launch_app.index("dashSoundSuspend();") < launch_app.index("ExecuteMainAction(path, &exec_ctx);")
-assert launch_app.index("dashSoundMaintain();") > launch_app.index("ExecuteMainAction(path, &exec_ctx);")
-assert launch_app.index("dashBgmStart();") > launch_app.index("ExecuteMainAction(path, &exec_ctx);")
+assert launch_app.index("dashSoundSuspend();") < launch_app.index("ExecuteMainAction(path, &launch_ctx);")
+assert launch_app.index("dashSoundMaintain();") > launch_app.index("ExecuteMainAction(path, &launch_ctx);")
+assert launch_app.index("dashBgmStart();") > launch_app.index("ExecuteMainAction(path, &launch_ctx);")
 after_misc = body(dash, "static void afterMiscCommand(")
 assert "dashSoundShutdown();" not in after_misc
 assert "dashSoundMaintain();" in after_misc
