@@ -2518,7 +2518,7 @@ static void actionsMenu(void)
 		ADD(DI_EDIT, "Rename...", NULL, f == NULL || !en[RENAME], F_RENAME);
 		ADD(DI_FOLDER, "New folder...", NULL, !en[NEWDIR], F_NEWDIR);
 		if (en[NEWDIR] && strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
-			ADD(DI_MC, "New blank card...", "empty 8 to 64 MB .mcd", 0, F_NEW_BLANK_CARD);
+			ADD(DI_MC, "New blank card...", "empty 1 to 64 MB .mcd", 0, F_NEW_BLANK_CARD);
 		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
 			ADD(DI_MC, "All saves here...", "every card image in this folder and the ones inside it", 0, F_ALL_SAVES);
 		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
