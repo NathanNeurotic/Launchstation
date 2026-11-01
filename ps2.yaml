@@ -404,6 +404,8 @@ targets:
       - src/dash_gfx.c
       - src/dash_font.c
       - src/dash_font_data.c
+      - src/dash_font_emotion_engine.c
+      - src/dash_font_emotion_engine_bold.c
       - src/dash_icons.c
       - src/dash_png.c
       - src/dash_art.c

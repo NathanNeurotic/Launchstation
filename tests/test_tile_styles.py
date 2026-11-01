@@ -106,6 +106,44 @@ int main(void) {
             }
         }
     }
+    /* Font family and Regular/Bold style round-trip independently; Roboto
+     * and System IDs retain their existing meanings. */
+    const char *font_ids[]={"roboto","system","emotion_engine"};
+    assert(DASH_FONT_ROBOTO==0 && DASH_FONT_SYSTEM==1 && DASH_FONT_COUNT==3);
+    for(int font=0;font<DASH_FONT_COUNT;font++) for(int bold=0;bold<2;bold++) {
+        dashTheme.font=font;dashTheme.bold=bold;dashThemeCommit();
+        assert(dashThemeStoreWrite(buf,sizeof(buf))<(int)sizeof(buf));
+        char expected[80];snprintf(expected,sizeof(expected),"Theme_font = %s",font_ids[font]);
+        assert(strstr(buf,expected));
+        snprintf(expected,sizeof(expected),"Theme_bold = %d",bold);assert(strstr(buf,expected));
+        dashThemeStoreBegin();reload(buf,1);dashThemeStoreEnd();
+        assert(dashTheme.font==font && dashTheme.bold==bold);
+        assert(dashThemeSerialize(&dashTheme,buf,sizeof(buf),"")<(int)sizeof(buf));
+        dashThemeLoadPreset(0,&dashTheme);reload(buf,0);dashThemeValidate(&dashTheme);
+        assert(dashTheme.font==font && dashTheme.bold==bold);
+        dashThemeParseKey(&dashTheme,"font","invalid");assert(dashTheme.font==font);
+    }
+    /* The old separate Bold choice takes precedence over its synthetic
+     * weight flag regardless of key order, in both file formats. */
+    const char *legacy_ids[]={"emotion_engine_bold","3","EMOTION_ENGINE_BOLD"};
+    for(int id=0;id<3;id++) for(int order=0;order<2;order++) for(int store=0;store<2;store++) {
+        if(store) { dashThemeStoreBegin();dashThemeStoreKey("Theme_custom","1"); }
+        else dashThemeLoadPreset(0,&dashTheme);
+        for(int key=0;key<2;key++) {
+            int is_font=key==order;
+            const char *name=store ? (is_font?"Theme_font":"Theme_bold") : (is_font?"font":"bold");
+            char value[64];snprintf(value,sizeof(value),"%s",is_font?legacy_ids[id]:"0");
+            assert(store?dashThemeStoreKey(name,value):dashThemeParseKey(&dashTheme,name,value));
+        }
+        if(store) dashThemeStoreEnd();else dashThemeValidate(&dashTheme);
+        assert(dashTheme.font==DASH_FONT_EMOTION_ENGINE && dashTheme.bold==1);
+        assert(dashThemeSerialize(&dashTheme,buf,sizeof(buf),"")<(int)sizeof(buf));
+        assert(strstr(buf,"font = emotion_engine\r\n") && strstr(buf,"bold = 1\r\n"));
+        assert(!strstr(buf,"emotion_engine_bold"));
+        dashThemeLoadPreset(0,&dashTheme);reload(buf,0);dashThemeValidate(&dashTheme);
+        assert(dashTheme.font==DASH_FONT_EMOTION_ENGINE && dashTheme.bold==1);
+    }
+    dashTheme.font=255;dashThemeValidate(&dashTheme);assert(dashTheme.font==DASH_FONT_ROBOTO);
     dashTheme.tile_style = 255; dashThemeValidate(&dashTheme);
     assert(dashTheme.tile_style == DASH_TILE_MEMORY_CARD);
     puts("PASS: all preset defaults, old config, every style round-trip, invalid values, reset/restore, convex silhouettes");

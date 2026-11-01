@@ -206,6 +206,11 @@ static float buttonWidth(int icon, const char *key)
 	return w < 22.0f ? 22.0f : w;
 }
 
+float dashButtonWidth(int icon, const char *key)
+{
+	return buttonWidth(icon, key);
+}
+
 static float drawButton(float x, float y, int icon, const char *key)
 {
 	const float d = 22.0f;

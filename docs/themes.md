@@ -192,6 +192,8 @@ The sample uses `wallpaper = off` so its static background stays visible.
 Arbitrary TTF files are not loaded on the console: a font engine and its
 glyph cache would cost too much memory and time. To use another typeface
 for *Roboto*, regenerate the atlas on a PC with `scripts/gen_dash_font.py`.
+See [font-generation.md](font-generation.md) for source versions, coverage
+checks, Emotion Engine commands and license notices.
 
 ## Application tile styles
 
@@ -320,7 +322,7 @@ clock_position = header
 | `tile_style` | `memory_card` (default), `rounded`, `chamfered`, `floating`, `crystal` |
 | `corners` | `square`, `soft`, `round` |
 | `glow`, `bold`, `text_shadow` | 0 / 1 |
-| `font` | `roboto`, `system` |
+| `font` | `roboto`, `system`, `emotion_engine` |
 | `font_scale` | 90-115 (%) |
 | `icon_tint` | `text`, `accent`, `mono` |
 | `app_icon_style` | `system`, `device`, `monogram` |
@@ -420,3 +422,7 @@ video mode (NTSC/PAL/480p).
 Defining `DASH_THEME_TOUR` (add it to the `wLaunchELF` target's `defines`
 in ps2.yaml) shows every preset for five seconds, which makes checking
 them in an emulator easy. Never ship such a build.
+
+### Optional Emotion Engine family
+
+Font offers Roboto (default), System and Emotion Engine. Style selects Regular/Bold. Emotion Engine uses original regular/bold outlines. See [source, memory and regeneration notes](font-generation.md) and the [license](licenses/Emotion-Engine-LICENSE.txt). Existing Roboto/System theme IDs and defaults are retained.

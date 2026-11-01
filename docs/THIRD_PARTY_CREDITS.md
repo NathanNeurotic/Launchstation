@@ -106,3 +106,9 @@ These are mentioned or launched through an integration; that does **not** imply 
 - [PS2BBL](https://github.com/israpps/PlayStation2-Basic-BootLoader) by [El_isra](https://github.com/israpps) and [PS2BBLE](https://github.com/saildot4k/PlayStation2-Basic-BootLoader-Extended) by [R3Z3N](https://github.com/saildot4k): separate bootloader projects referenced within PS2 homebrew history, not the Launchstation exploit installer.
 - LoadBOOTer: named memory-card exploit installer option in `src/main_exploit_installer.c`. Exact historical source and authorship still require verification; do not attribute it to PS2BBL without evidence.
 - ESR, FreeMcBoot and PSBBN: compatibility targets, boot environments or platform software. References do not establish redistribution of their binaries.
+
+## Optional dashboard font
+
+Emotion Engine Regular/Bold is by **Neale Davidson / Pixel Sagas** ([designer](https://www.pixelsagas.com/)). The generated atlases are embedded in `src/dash_font_emotion_engine*.c`; original TTF files are not redistributed. Preserve the [included license](licenses/Emotion-Engine-LICENSE.txt) and [source/checksum record](font-generation.md). The supplied terms permit embedding and restrict free use to non-commercial use.
+
+Material Design Icons rocket-launch by **Pictogrammers / MDI contributors**, adapted into the action icon atlas. Preserve the [Apache-2.0 notice](licenses/Material-Design-Icons-LICENSE.txt), original `res/icons/rocket-launch.svg` and its source checksum in `src/dash_icons.c`.

@@ -9651,7 +9651,7 @@ static const DashGlyphData face2_glyphs[DASH_FONT_GLYPHS] = {
     {204, 446, 16, 31, 0, 6, 244},
 };
 const DashFaceData dash_font_faces[DASH_FONT_FACES] = {
-    {14, 208, 56, 116, 256, 136, face0_px, face0_glyphs},
-    {20, 300, 80, 168, 256, 224, face1_px, face1_glyphs},
-    {32, 476, 128, 272, 256, 480, face2_px, face2_glyphs},
+    {14, 80, 208, 56, 116, 256, 136, face0_px, face0_glyphs},
+    {20, 88, 300, 80, 168, 256, 224, face1_px, face1_glyphs},
+    {32, 100, 476, 128, 272, 256, 480, face2_px, face2_glyphs},
 };

@@ -9,22 +9,334 @@
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "dash_sound.h"
+#include "editor_private.h"
 #include "init.h"
 
 
 //--------------------------------------------------------------
 // Keyboard
 //--------------------------------------------------------------
-enum {
-	KB_ACT_CAPS = 0,
-	KB_ACT_SPACE,
-	KB_ACT_DELETE,
-	KB_ACT_DONE,
-	KB_ACT_CANCEL,
-	KB_ACT_COUNT
-};
+static int kbFilenameChar(unsigned char c)
+{
+	return c >= 0x20 && c != 0x7f && strchr("<>:\"/\\|?*", c) == NULL;
+}
 
-static const char *const kb_act_names[KB_ACT_COUNT] = {"Caps", "Space", "Delete", "Done", "Cancel"};
+enum { KA_TAB = 0, KA_RETURN, KA_SYMBOLS, KA_COUNT };
+
+#define KB_KEY_H 22.0f
+#define KB_KEY_GAP 3.0f
+#define KB_CHAR_ROWS 4
+#define KB_MIN_COLS 12
+#define KB_SPACE_KEY (KB_CHAR_ROWS * VKEY_LAYOUT_COLS + 4)
+
+static const char *const ka_names[KA_COUNT] = {"Tab", "Return", "Symbols"};
+/* Follow the R3Z editor's extended glyph set, with an ASCII punctuation page
+ * first so every layout can enter the same symbols without changing Caps. */
+static const unsigned char kb_ascii_symbols[] = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+
+static int kbColumnCount(const DashKeyboard *kb)
+{
+	int ncols = getVirtualKeyboardLayoutColumnCount(kb->layout);
+
+	/* Letters and Symbols share the same width and right-side action column. */
+	return ncols < KB_MIN_COLS ? KB_MIN_COLS : ncols;
+}
+
+static int kbSymbolPageSize(const DashKeyboard *kb)
+{
+	return KB_CHAR_ROWS * kbColumnCount(kb);
+}
+
+static int kbSymbolPageCount(const DashKeyboard *kb)
+{
+	int size = kbSymbolPageSize(kb);
+
+	return ((int)sizeof(kb_ascii_symbols) - 1 + EditorSpecialCharCount + size - 1) / size;
+}
+
+static unsigned char kbSymbolChar(const DashKeyboard *kb, int index)
+{
+	int row = index / VKEY_LAYOUT_COLS, col = index % VKEY_LAYOUT_COLS;
+	int cols = kbColumnCount(kb), offset;
+
+	if (index < 0 || row >= KB_CHAR_ROWS || col >= cols || kb->page <= 0)
+		return 0;
+	offset = (kb->page - 1) * kbSymbolPageSize(kb) + row * cols + col;
+	if (offset < (int)sizeof(kb_ascii_symbols) - 1)
+		return kb_ascii_symbols[offset];
+	offset -= (int)sizeof(kb_ascii_symbols) - 1;
+	return offset < EditorSpecialCharCount ? EditorSpecialChars[offset] : 0;
+}
+
+static int kbIsKey(const DashKeyboard *kb, int index)
+{
+	if (index == KB_SPACE_KEY)
+		return 1;
+	if (index < 0 || index >= KB_CHAR_ROWS * VKEY_LAYOUT_COLS)
+		return 0;
+	if (kb->page)
+		return !kb->filename && kbSymbolChar(kb, index) != 0;
+	if (!isVirtualKeyboardLayoutKey(kb->layout, index))
+		return 0;
+	return !kb->filename ||
+	       (isVirtualKeyboardFilenameKey(kb->layout, index) &&
+	        kbFilenameChar((unsigned char)getVirtualKeyboardFilenameChar(kb->layout, index, kb->caps)));
+}
+
+static int kbHasAction(const DashKeyboard *kb, int action)
+{
+	return action >= 0 && action < KA_COUNT && !kb->filename &&
+	       (!kb->single_line || action == KA_SYMBOLS);
+}
+
+static int kbActionRow(int action)
+{
+	static const int rows[KA_COUNT] = {0, 1, KB_CHAR_ROWS};
+
+	return rows[action];
+}
+
+static int kbActionColumn(const DashKeyboard *kb)
+{
+	/* Logical navigation column; side-button pixel spacing is independent. */
+	return getVirtualKeyboardLayoutFirstColumn(kb->layout) + kbColumnCount(kb) + 1;
+}
+
+static int kbSelectInRow(DashKeyboard *kb, int row, int col)
+{
+	int key, a, distance, best_distance = VKEY_LAYOUT_COLS + 2;
+	int best_key = -1, best_action = -1;
+
+	for (key = 0; key < VKEY_LAYOUT_COLS; key++) {
+		if (!kbIsKey(kb, row * VKEY_LAYOUT_COLS + key))
+			continue;
+		distance = abs(key - col);
+		if (distance < best_distance) {
+			best_key = row * VKEY_LAYOUT_COLS + key;
+			best_distance = distance;
+		}
+	}
+	for (a = 0; a < KA_COUNT; a++) {
+		if (!kbHasAction(kb, a) || kbActionRow(a) != row)
+			continue;
+		distance = abs(kbActionColumn(kb) - col);
+		if (distance < best_distance) {
+			best_key = -1;
+			best_action = a;
+			best_distance = distance;
+		}
+	}
+	if (best_key < 0 && best_action < 0)
+		return 0;
+	kb->action = best_action;
+	if (best_key >= 0)
+		kb->selected = best_key;
+	return 1;
+}
+
+static void kbMoveFocus(DashKeyboard *kb, int dx, int dy)
+{
+	int row, col, tries, a;
+
+	if (kb->action >= 0) {
+		row = kbActionRow(kb->action);
+		col = kbActionColumn(kb);
+	} else {
+		if (!kbIsKey(kb, kb->selected))
+			kb->selected = KB_SPACE_KEY;
+		row = kb->selected / VKEY_LAYOUT_COLS;
+		col = kb->selected % VKEY_LAYOUT_COLS;
+	}
+	if (dx) {
+		/* Include the side keys in the same row as their neighbouring letters. */
+		for (tries = 0; tries < VKEY_LAYOUT_COLS + 2; tries++) {
+			col += dx;
+			if (col < -1)
+				col = VKEY_LAYOUT_COLS;
+			if (col > VKEY_LAYOUT_COLS)
+				col = -1;
+			for (a = 0; a < KA_COUNT; a++) {
+				if (kbHasAction(kb, a) && kbActionRow(a) == row && kbActionColumn(kb) == col) {
+					kb->action = a;
+					return;
+				}
+			}
+			if (col >= 0 && col < VKEY_LAYOUT_COLS && kbIsKey(kb, row * VKEY_LAYOUT_COLS + col)) {
+				kb->action = -1;
+				kb->selected = row * VKEY_LAYOUT_COLS + col;
+				return;
+			}
+		}
+	} else if (dy) {
+		for (tries = 0; tries < VKEY_LAYOUT_ROWS; tries++) {
+			row = (row + dy + VKEY_LAYOUT_ROWS) % VKEY_LAYOUT_ROWS;
+			if (kbSelectInRow(kb, row, col))
+				return;
+		}
+	}
+}
+
+void dashKeyboardMove(DashKeyboard *kb, int dx, int dy)
+{
+	int selected = kb->selected, action = kb->action;
+
+	/* Space spans several columns. Reversing the move that entered it
+	 * returns to the actual previous key rather than Space's fixed column. */
+	if (action < 0 && selected == KB_SPACE_KEY &&
+	    dx == -kb->space_dx && dy == -kb->space_dy &&
+	    (kb->space_action >= 0 ? kbHasAction(kb, kb->space_action) :
+	     (kb->space_selected != KB_SPACE_KEY && kbIsKey(kb, kb->space_selected)))) {
+		kb->selected = kb->space_selected;
+		kb->action = kb->space_action;
+		return;
+	}
+	kbMoveFocus(kb, dx, dy);
+	if (kb->action < 0 && kb->selected == KB_SPACE_KEY && (action >= 0 || selected != KB_SPACE_KEY)) {
+		kb->space_selected = selected;
+		kb->space_action = action;
+		kb->space_dx = dx;
+		kb->space_dy = dy;
+	}
+}
+
+void dashKeyboardInit(DashKeyboard *kb, int layout)
+{
+	memset(kb, 0, sizeof(*kb));
+	kb->layout = normalizeVirtualKeyboardLayout(layout);
+	kb->action = -1;
+	kb->space_selected = kb->space_action = -1;
+	kb->selected = getVirtualKeyboardLayoutNextKey(kb->layout,
+	                                               VKEY_LAYOUT_COLS + getVirtualKeyboardLayoutFirstColumn(kb->layout), 0, 0);
+}
+
+/* Return a typed byte, or zero when only the page changes. */
+int dashKeyboardPress(DashKeyboard *kb)
+{
+	if (kb->action < 0) {
+		if (!kbIsKey(kb, kb->selected))
+			return 0;
+		if (kb->selected == KB_SPACE_KEY)
+			return ' ';
+		if (kb->page)
+			return kbSymbolChar(kb, kb->selected);
+		return (unsigned char)(kb->filename ?
+		       getVirtualKeyboardFilenameChar(kb->layout, kb->selected, kb->caps) :
+		       getVirtualKeyboardLayoutChar(kb->layout, kb->selected, kb->caps));
+	}
+	if (!kbHasAction(kb, kb->action))
+		return 0;
+	switch (kb->action) {
+		case KA_TAB: return '\t';
+		case KA_RETURN: return '\n';
+		case KA_SYMBOLS:
+			kb->page = (kb->page + 1) % (kbSymbolPageCount(kb) + 1);
+			kb->selected = KB_SPACE_KEY;
+			kb->space_selected = kb->space_action = -1;
+			break;
+	}
+	return 0;
+}
+
+int dashKeyboardCanRepeat(const DashKeyboard *kb)
+{
+	return kb->action < 0 ? kbIsKey(kb, kb->selected) :
+	       kbHasAction(kb, kb->action) && kb->action != KA_SYMBOLS;
+}
+
+static float kbActionWidth(int action)
+{
+	return action == KA_SYMBOLS ? 90.0f : 60.0f;
+}
+
+static float kbActionX(int action, float center_x)
+{
+	/* Align the side buttons' right edges at a 40px screen inset. The narrower
+	 * Tab/Return keys fit beside even a centered 13-column character grid. */
+	return center_x + DASH_VW * 0.5f - 40.0f - kbActionWidth(action);
+}
+
+static float kbGridOrigin(float center_x, float kw, float gap)
+{
+	/* All native keyboards center column 7 (one-based), independently of
+	 * visible keys, layout width, Caps, Symbols pages and side buttons. */
+	return center_x - 6.0f * (kw + gap) - kw * 0.5f;
+}
+
+float dashKeyboardHeight(void)
+{
+	return VKEY_LAYOUT_ROWS * (KB_KEY_H + KB_KEY_GAP) - KB_KEY_GAP;
+}
+
+static void kbDrawActionSymbol(int action, float cx, float cy, DashColor color)
+{
+	/* Filtered, pixel-aligned atlas glyphs keep the arrowhead arms matched. */
+	int icon = action == KA_TAB ? DI_KEY_TAB : DI_KEY_RETURN;
+	float y = cy - 12.0f + (action == KA_RETURN ? 2.0f : 0.0f);
+
+	dashIcon(icon, cx - 12.0f, y, 24.0f, color);
+}
+
+void dashKeyboardDraw(const DashKeyboard *kb, float center_x, float y0)
+{
+	const int layout = kb->layout;
+	const int first_col = getVirtualKeyboardLayoutFirstColumn(layout);
+	const int ncols = kbColumnCount(kb);
+	const float kw = 30.0f, kh = KB_KEY_H, gap = KB_KEY_GAP;
+	float gx = kbGridOrigin(center_x, kw, gap);
+	int row, col, a;
+
+	for (row = 0; row < VKEY_LAYOUT_ROWS; row++) {
+		for (col = 0; col < ncols; col++) {
+			int idx = row * VKEY_LAYOUT_COLS + first_col + col;
+			float kx = gx + col * (kw + gap), ky = y0 + row * (kh + gap), key_w = kw;
+			char label[2];
+			int on = (kb->action < 0 && idx == kb->selected);
+
+			if (!kbIsKey(kb, idx))
+				continue;
+			if (idx == KB_SPACE_KEY) {
+				/* QWERTY: left edge of C (column 3) to right edge of . (column 9).
+				 * Keep the same physical span for the other keyboard layouts. */
+				kx = gx + (3 - first_col) * (kw + gap);
+				key_w = 6 * (kw + gap) + kw;
+			}
+			if (on)
+				dashDrawSelection(kx - 1, ky - 1, key_w + 2, kh + 2, 6, 1.0f);
+			else
+				dashPanel(kx, ky, key_w, kh, 6, DC(255, 255, 255, 16));
+			if (idx == KB_SPACE_KEY)
+				dashTextCenter(kx + key_w * 0.5f, ky + 2, "Space", DASH_FS_SMALL, dashItemColor(on));
+			else if (kb->page) {
+				/* Share the document's theme font and Bold setting while treating
+				 * 0xFF as a literal character rather than a controller icon prefix. */
+				dashFontMonoByte(kbSymbolChar(kb, idx), kx + key_w * 0.5f - 4,
+				             ky + 4, dashItemColor(on));
+			} else {
+				label[0] = kb->filename ? getVirtualKeyboardFilenameChar(layout, idx, kb->caps) :
+				           getVirtualKeyboardLayoutDisplayChar(layout, idx, kb->caps);
+				label[1] = '\0';
+				dashTextCenter(kx + key_w * 0.5f, ky + 2, label, DASH_FS_SMALL, dashItemColor(on));
+			}
+		}
+	}
+	for (a = 0; a < KA_COUNT; a++) {
+		float aw = kbActionWidth(a);
+		float ay = y0 + kbActionRow(a) * (kh + gap);
+		float ax = kbActionX(a, center_x);
+		int on = (kb->action == a);
+
+		if (!kbHasAction(kb, a))
+			continue;
+		if (on)
+			dashDrawSelection(ax - 1, ay - 1, aw + 2, kh + 2, 6, 1.0f);
+		else
+			dashPanel(ax, ay, aw, kh, 6, DC(255, 255, 255, 18));
+		if (a == KA_SYMBOLS)
+			dashTextCenter(ax + aw * 0.5f, ay + 2, ka_names[a], DASH_FS_SMALL, dashItemColor(on));
+		else
+			kbDrawActionSymbol(a, ax + aw * 0.5f, ay + kh * 0.5f, dashItemColor(on));
+	}
+}
 
 static void kbInsert(char *buf, int max_len, int *cur, char c)
 {
@@ -49,10 +361,7 @@ static void kbDelete(char *buf, int *cur)
 
 /* Portable filename characters: shared by pad and USB entry. Adapted from
  * saildot4k's filename prompts without changing free-form text dialogs. */
-static int kbFilenameChar(unsigned char c)
-{
-	return c >= 0x20 && c != 0x7f && strchr("<>:\"/\\|?*", c) == NULL;
-}
+
 
 static int kbFilenameValid(const char *name, int max_len)
 {
@@ -101,30 +410,51 @@ static int kbUsb(char *buf, int max_len, int *cur, int filename)
 	return 0;
 }
 
+static void kbDrawHints(float center_x, float y, float available_width)
+{
+	DashHint hints[] = {{dashOkIcon(), NULL, "Type"}, {dashBackIcon(), NULL, "Delete"},
+	                    {DI_BTN_SQUARE, NULL, "Caps"}, {DI_BTN_R3, NULL, "Cursor"},
+	                    {-1, "START", "Done"}, {DI_BTN_TRIANGLE, NULL, "Cancel"}};
+	const int count = sizeof(hints) / sizeof(hints[0]);
+	float width = 0.0f, gap, x;
+	/* Font layouts put the x-height center at text_y + 16 * scale.
+	 * Align that reference with the 22px button's center. */
+	const float text_y = y + 11.0f - 16.0f * DASH_FS_SMALL;
+	int i;
+
+	for (i = 0; i < count; i++)
+		width += dashButtonWidth(hints[i].button, hints[i].key) + 4.0f +
+		         dashTextWidth(hints[i].label, DASH_FS_SMALL);
+
+	/* Distribute the spare width between complete icon/label groups. */
+	gap = (available_width - width) / (count - 1);
+	if (gap < 0.0f)
+		gap = 0.0f;
+	x = center_x - (width + gap * (count - 1)) * 0.5f;
+	for (i = 0; i < count; i++) {
+		if (i)
+			x += gap;
+		x += dashDrawButton(x, y, hints[i].button, hints[i].key) + 4.0f;
+		x = dashTextS(x, text_y, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT2);
+	}
+}
+
 static int modalKeyboard(const char *title, char *buf, int max_len, int filename, const char *directory)
 {
-	const int layout = normalizeVirtualKeyboardLayout(setting->virtual_keyboard_layout);
-	const int first_col = getVirtualKeyboardLayoutFirstColumn(layout);
-	const int ncols = getVirtualKeyboardLayoutColumnCount(layout);
-	const float key_w = 32.0f, key_h = 30.0f, gap = 4.0f;
+	const int has_directory = directory != NULL && directory[0] != '\0';
+	const float w = 572.0f, h = has_directory ? 300.0f : 276.0f;
+	const float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
 	char orig[256];
-	int sel = getVirtualKeyboardLayoutNextKey(layout, VKEY_LAYOUT_COLS + first_col, 0, 0);
-	int act = -1; /* >= 0: focus is on the action row */
-	int caps = 0, cur, result = 0;
-	float open = 0.0f;
-	float grid_w = ncols * key_w + (ncols - 1) * gap;
-	float w = grid_w + 60.0f, h;
-	float x, y;
+	DashKeyboard keyboard;
+	int cur, result = 0;
+	float open = 0.0f, title_age = 0.0f;
 	DashInput in;
 
 	if (max_len > (int)sizeof(orig) - 1)
 		max_len = sizeof(orig) - 1;
-	if (w < 460.0f)
-		w = 460.0f;
-	h = 70.0f + 44.0f + VKEY_LAYOUT_ROWS * (key_h + gap) + 14.0f + 34.0f + 50.0f;
-	if (directory && directory[0]) h += 24.0f;
-	x = (DASH_VW - w) * 0.5f;
-	y = (DASH_VH - h) * 0.5f;
+	dashKeyboardInit(&keyboard, setting->virtual_keyboard_layout);
+	keyboard.single_line = 1;
+	keyboard.filename = filename;
 	dashStrCopy(orig, buf, sizeof(orig));
 	cur = strlen(buf);
 	dashInputFlush();
@@ -144,37 +474,21 @@ static int modalKeyboard(const char *title, char *buf, int max_len, int filename
 			result = (r > 0);
 			break;
 		}
-		if (in.pressed & DASH_IN_UP) {
-			if (act >= 0) {
-				act = -1;
-				sel = getVirtualKeyboardLayoutNextKey(layout, (VKEY_LAYOUT_ROWS - 1) * VKEY_LAYOUT_COLS + first_col + (ncols * 3) / 4, 0, 0);
-			} else if (sel >= VKEY_LAYOUT_COLS)
-				sel = getVirtualKeyboardLayoutNextKey(layout, sel, 0, -1);
+		/* Match the editor: D-pad selects keys, right stick moves the caret. */
+		if (in.raw_new & PAD_UP)
+			dashKeyboardMove(&keyboard, 0, -1);
+		if (in.raw_new & PAD_DOWN)
+			dashKeyboardMove(&keyboard, 0, 1);
+		if (in.raw_new & PAD_LEFT)
+			dashKeyboardMove(&keyboard, -1, 0);
+		if (in.raw_new & PAD_RIGHT)
+			dashKeyboardMove(&keyboard, 1, 0);
+		if (in.raw_new & (PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT))
 			dashSoundPlay(DASH_SND_CURSOR);
-		}
-		if (in.pressed & DASH_IN_DOWN) {
-			if (act < 0) {
-				if (sel / VKEY_LAYOUT_COLS >= VKEY_LAYOUT_ROWS - 1)
-					act = KB_ACT_DONE;
-				else
-					sel = getVirtualKeyboardLayoutNextKey(layout, sel, 0, 1);
-			}
-			dashSoundPlay(DASH_SND_CURSOR);
-		}
-		if (in.pressed & DASH_IN_LEFT) {
-			if (act >= 0)
-				act = (act + KB_ACT_COUNT - 1) % KB_ACT_COUNT;
-			else
-				sel = getVirtualKeyboardLayoutNextKey(layout, sel, -1, 0);
-			dashSoundPlay(DASH_SND_CURSOR);
-		}
-		if (in.pressed & DASH_IN_RIGHT) {
-			if (act >= 0)
-				act = (act + 1) % KB_ACT_COUNT;
-			else
-				sel = getVirtualKeyboardLayoutNextKey(layout, sel, 1, 0);
-			dashSoundPlay(DASH_SND_CURSOR);
-		}
+		if ((in.raw_new & PAD_R3_H0) && cur > 0)
+			cur--;
+		if ((in.raw_new & PAD_R3_H1) && cur < (int)strlen(buf))
+			cur++;
 		if (in.pressed & DASH_IN_L1) {
 			if (cur > 0)
 				cur--;
@@ -183,13 +497,18 @@ static int modalKeyboard(const char *title, char *buf, int max_len, int filename
 			if (cur < (int)strlen(buf))
 				cur++;
 		}
-		if (in.pressed & DASH_IN_FAV) /* Square: caps, as on the classic keyboard */
-			caps = !caps;
+		if (in.pressed & DASH_IN_FAV) { /* Square: caps, as on the classic keyboard */
+			keyboard.caps = !keyboard.caps;
+			/* A shifted key can become a hidden path separator. Keep focus visible. */
+			if (keyboard.action < 0 && !kbIsKey(&keyboard, keyboard.selected))
+				kbSelectInRow(&keyboard, keyboard.selected / VKEY_LAYOUT_COLS,
+				              keyboard.selected % VKEY_LAYOUT_COLS);
+		}
 		if (in.text_repeat & DASH_IN_BACK) { /* cancel button deletes, as before */
 			kbDelete(buf, &cur);
 			dashSoundPlay(DASH_SND_CANCEL);
 		}
-		if (in.pressed & DASH_IN_SELECT) {
+		if (in.pressed & DASH_IN_START) {
 			if (filename && !kbFilenameValid(buf, max_len)) {
 				dashToast(DASH_TOAST_WARN, "Choose a valid filename");
 				continue;
@@ -202,34 +521,23 @@ static int modalKeyboard(const char *title, char *buf, int max_len, int filename
 			break;
 		}
 		if ((in.pressed & DASH_IN_OK) ||
-		    ((in.text_repeat & DASH_IN_OK) && (act < 0 || act == KB_ACT_SPACE || act == KB_ACT_DELETE))) {
+		    ((in.text_repeat & DASH_IN_OK) && dashKeyboardCanRepeat(&keyboard))) {
+			int key = dashKeyboardPress(&keyboard);
+
 			dashSoundPlay(DASH_SND_CONFIRM);
-			if (act < 0) {
-				if (isVirtualKeyboardLayoutKey(layout, sel) &&
-				    (!filename || kbFilenameChar((unsigned char)getVirtualKeyboardLayoutChar(layout, sel, caps))))
-					kbInsert(buf, max_len, &cur, getVirtualKeyboardLayoutChar(layout, sel, caps));
-			} else if (act == KB_ACT_CAPS)
-				caps = !caps;
-			else if (act == KB_ACT_SPACE)
-				kbInsert(buf, max_len, &cur, ' ');
-			else if (act == KB_ACT_DELETE)
-				kbDelete(buf, &cur);
-			else {
-				if (act == KB_ACT_DONE && filename && !kbFilenameValid(buf, max_len)) {
-					dashToast(DASH_TOAST_WARN, "Choose a valid filename");
-					continue;
-				}
-				result = (act == KB_ACT_DONE);
-				break;
-			}
+			if (key >= 0x20 && (!filename || kbFilenameChar((unsigned char)key)))
+				kbInsert(buf, max_len, &cur, (char)key);
 		}
 
-		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dashVisualUpdate());
+		{
+			float dt = dashVisualUpdate();
+			title_age += dt;
+			open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
+		}
 		{
 			float oe = dashEaseOutCubic(open);
-			float fx = x + 30, fy = y + 56, fw = w - 60;
-			float gx = x + (w - grid_w) * 0.5f, gy = fy + 48 + (directory && directory[0] ? 24 : 0);
-			int row, col;
+			float fx = x + 30, fy = y + (has_directory ? 80 : 56), fw = w - 60;
+			float gy = fy + 48;
 
 			dashRenderScene();
 			dashModalBackdrop(oe);
@@ -243,87 +551,33 @@ static int modalKeyboard(const char *title, char *buf, int max_len, int filename
 				snprintf(count, sizeof(count), "%d/%d", (int)strlen(buf), max_len);
 				dashTextRight(x + w - 26, y + 22, count, DASH_FS_CAPTION, DASH_C_TEXT3);
 			}
+			if (has_directory)
+				dashTextScrollTimed(x + 30, y + 44, w - 60, directory, DASH_FS_CAPTION, DASH_C_TEXT3, title_age);
 
 			/* text field with a blinking caret */
 			dashPanel(fx, fy, fw, 36, 10, dashColorA(DASH_C_PANEL, 1.0f));
 			dashPanelBorder(fx, fy, fw, 36, 10, dashColorA(DASH_C_ACCENT, 0.5f));
 			{
 				float tx = fx + 12, caret;
-				float before = dashTextWidthN(buf, cur, DASH_FS_BODY);
+				float before = cur * 8.0f;
+				int i;
 				float shift = 0.0f;
 				if (before > fw - 30)
 					shift = before - (fw - 30);
 				dashGfxScissor(fx + 6, fy + 2, fw - 12, 32);
-				dashText(tx - shift, fy + 8, buf, DASH_FS_BODY, DASH_C_TEXT);
+				/* Match the editor's theme font and Bold, including literal 0xFF. */
+				for (i = 0; buf[i]; i++)
+					dashFontMonoByte((unsigned char)buf[i] < 0x20 ? '.' : (unsigned char)buf[i],
+					             tx - shift + i * 8.0f, fy + 11, DASH_C_TEXT);
 				caret = tx - shift + before;
 				if ((Timer() / 400) & 1)
 					dashRect(caret, fy + 8, 2, 20, DASH_C_ACCENT);
 				dashGfxScissorReset();
 			}
 
-			if (directory && directory[0])
-				dashTextFit(fx, fy + 40, fw, directory, DASH_FS_CAPTION, DASH_C_TEXT3);
+			dashKeyboardDraw(&keyboard, DASH_VW * 0.5f, gy);
 
-			/* key grid */
-			for (row = 0; row < VKEY_LAYOUT_ROWS; row++) {
-				for (col = 0; col < ncols; col++) {
-					int idx = row * VKEY_LAYOUT_COLS + first_col + col;
-					float kx = gx + col * (key_w + gap), ky = gy + row * (key_h + gap);
-					char label[2];
-					int focused = (act < 0 && idx == sel);
-
-					if (!isVirtualKeyboardLayoutKey(layout, idx))
-						continue;
-					label[0] = getVirtualKeyboardLayoutDisplayChar(layout, idx, caps);
-					label[1] = '\0';
-					int allowed = !filename || kbFilenameChar((unsigned char)getVirtualKeyboardLayoutChar(layout, idx, caps));
-					dashGfxPushAlpha(allowed ? 1.0f : 0.25f);
-					if (focused)
-						dashDrawSelection(kx - 1, ky - 1, key_w + 2, key_h + 2, 8, 1.0f);
-					else
-						dashPanel(kx, ky, key_w, key_h, 8, DC(255, 255, 255, 16));
-					if (label[0] == ' ' || label[0] == '_')
-						dashTextCenter(kx + key_w * 0.5f, ky + 7, label[0] == '_' ? "_" : "sp", DASH_FS_SMALL, dashItemColor(focused));
-					else
-						dashTextCenter(kx + key_w * 0.5f, ky + 6, label, DASH_FS_BODY, dashItemColor(focused));
-					dashGfxPopAlpha();
-				}
-			}
-
-			/* action row */
-			{
-				float ay = gy + VKEY_LAYOUT_ROWS * (key_h + gap) + 10;
-				float aw = (fw - (KB_ACT_COUNT - 1) * 8.0f) / KB_ACT_COUNT;
-				int a;
-				for (a = 0; a < KB_ACT_COUNT; a++) {
-					float ax = fx + a * (aw + 8.0f);
-					int focused = (act == a);
-					const char *name = (a == KB_ACT_CAPS) ? (caps ? "CAPS" : "Caps") : kb_act_names[a];
-					if (focused)
-						dashDrawSelection(ax, ay, aw, 30, 10, 1.0f);
-					else
-						dashPanel(ax, ay, aw, 30, 10, DC(255, 255, 255, (a == KB_ACT_CAPS && caps) ? 40 : 18));
-					dashTextCenter(ax + aw * 0.5f, ay + 7, name, DASH_FS_SMALL, dashItemColor(focused));
-				}
-			}
-
-			/* hints */
-			{
-				float hx = x + 24, hy = y + h - 36;
-				hx += dashDrawButton(hx, hy, dashOkIcon(), NULL) + 4;
-				hx = dashTextS(hx, hy + 4.5f, "Type", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
-				hx += dashDrawButton(hx, hy, dashBackIcon(), NULL) + 4;
-				hx = dashTextS(hx, hy + 4.5f, localizeDashboardText("Delete"), DASH_FS_SMALL, DASH_C_TEXT2) + 12;
-				hx += dashDrawButton(hx, hy, DI_BTN_SQUARE, NULL) + 4;
-				hx = dashTextS(hx, hy + 4.5f, "Caps", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
-				hx += dashDrawButton(hx, hy, -1, "L1") + 2;
-				hx += dashDrawButton(hx, hy, -1, "R1") + 4;
-				hx = dashTextS(hx, hy + 4.5f, "Move", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
-				hx += dashDrawButton(hx, hy, -1, "SELECT") + 4;
-				hx = dashTextS(hx, hy + 4.5f, "Done", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
-				hx += dashDrawButton(hx, hy, DI_BTN_TRIANGLE, NULL) + 4;
-				dashTextS(hx, hy + 4.5f, localizeDashboardText("Cancel"), DASH_FS_SMALL, DASH_C_TEXT2);
-			}
+			kbDrawHints(x + w * 0.5f, y + h - 36, w - 48);
 			dashGfxPopOffset();
 			dashGfxPopAlpha();
 			dashGfxPresent();

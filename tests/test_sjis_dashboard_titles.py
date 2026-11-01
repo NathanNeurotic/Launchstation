@@ -48,7 +48,8 @@ static u32 font_clut[256];
 static unsigned char data[55016],*elisaFnt;
 static int alloc_fail,font_ready,adds,jp_adds,classic_adds;
 static GSTEXTURE *active_batch;
-static struct {int bold;} dashTheme;
+enum { DASH_FONT_ROBOTO, DASH_FONT_SYSTEM, DASH_FONT_EMOTION_ENGINE };
+static struct {int bold,font;} dashTheme;
 static void *memalign(int a,size_t n){(void)a;return alloc_fail?NULL:malloc(n);}
 static void dashTexInvalidate(GSTEXTURE *t){(void)t;}
 static void gsKit_setup_tbw(GSTEXTURE *t){(void)t;}
@@ -123,6 +124,10 @@ int main(void){
     assert(adds==3 && jp_adds==1 && !active_batch);
     dashTheme.bold=1;adds=jp_adds=0;drawRun(0,0,(unsigned char *)out,NULL,1,color);
     assert(adds==6 && jp_adds==1 && !active_batch);dashTheme.bold=0;
+    dashTheme.font=DASH_FONT_EMOTION_ENGINE;dashTheme.bold=1;adds=jp_adds=0;
+    drawRun(0,0,(unsigned char *)out,NULL,1,color);
+    assert(adds==6 && jp_adds==1 && !active_batch);
+    dashTheme.font=DASH_FONT_ROBOTO;dashTheme.bold=0;
     /* A Latin or pad run ends the Japanese batch; later Japanese resumes it. */
     dashSjisTitle(out,sizeof(out),(const unsigned char *)"\x81\x40" "A" "\x81\x40");
     adds=jp_adds=0;drawRun(0,0,(unsigned char *)out,NULL,1,color);
