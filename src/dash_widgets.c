@@ -1196,13 +1196,20 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 				float ry = ly + (i - top) * row_h;
 				DashColor c = dashItemColor(i == sel);
 				int icon;
-				const char *label, *detail = NULL;
+				const char *label, *detail = NULL, *mount = NULL;
+				char mount_buf[16];
 
 				if (pk.dir[0] == '\0') {
 					DashDevice *d = &pk.devs[i];
 					icon = d->icon;
 					label = d->name;
 					detail = d->status;
+					/* shown as the Devices tab shows it: USB units as massN:/ */
+					if (!strncmp(d->mount, "usb", 3) && d->mount[3] >= '0' && d->mount[3] <= '9' && d->mount[4] == ':') {
+						snprintf(mount_buf, sizeof(mount_buf), "mass%c:/", d->mount[3]);
+						mount = mount_buf;
+					} else
+						mount = d->mount[0] ? d->mount : NULL;
 					if (d->state != DASH_DEV_READY && i != sel)
 						c = DASH_C_TEXT3;
 				} else if (has_use && i == 0) {
@@ -1217,7 +1224,13 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 					label = e->name;
 				}
 				dashIcon(icon, lx + 10, ry + 5, 16, c);
-				dashTextFit(lx + 36, ry + 2.5f, lw - 60 - (detail ? 130 : 0), label, DASH_FS_SMALL, c);
+				{
+					float avail = lw - 60 - (detail ? 130 : 0);
+					float ex = dashTextFit(lx + 36, ry + 2.5f, mount ? avail * 0.55f : avail, label, DASH_FS_SMALL, c);
+					/* the mount path beside the device name, as in the Devices tab */
+					if (mount && ex + 12 < lx + 36 + avail)
+						dashTextFit(ex + 12, ry + 4.5f, lx + 36 + avail - ex - 12, mount, DASH_FS_CAPTION, DASH_C_TEXT3);
+				}
 				if (detail)
 					dashTextRight(lx + lw - 12, ry + 3.5f, detail, DASH_FS_CAPTION, DASH_C_TEXT3);
 			}

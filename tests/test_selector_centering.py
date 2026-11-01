@@ -37,7 +37,7 @@ hr = num(h, r"#define ROW_H ([\d.]+)f") - 3
 lists.append(("HDD Manager", 0, hr, h, r"drawPartName\(LIST_X \+ 30, y \+ ([\d.]+)f", SMALL))
 lists.append(("HDD Manager size", 0, hr, h, r"dashTextRight\(LIST_X \+ LIST_W - 10, y \+ ([\d.]+), a,", CAPTION))
 w = src("dash_widgets.c")
-lists.append(("Folder picker", 0, num(w, r"w = 480\.0f, row_h = ([\d.]+)f") - 3, w, r"dashTextFit\(lx \+ 36, ry \+ ([\d.]+)f, lw - 60", SMALL))
+lists.append(("Folder picker", 0, num(w, r"w = 480\.0f, row_h = ([\d.]+)f") - 3, w, r"dashTextFit\(lx \+ 36, ry \+ ([\d.]+)f, mount \?", SMALL))
 
 for name, top, height, text, pattern, scale in lists:
     ty = num(text, pattern)

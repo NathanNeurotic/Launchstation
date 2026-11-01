@@ -485,6 +485,7 @@ enum DashIcon {
 	DI_NEW_DOCUMENT, /* lined document with a small upper-right plus */
 	DI_KEY_TAB,     /* keyboard right arrow ending at a vertical bar */
 	DI_KEY_RETURN,  /* keyboard bent left arrow; arrowhead centered at y=0 */
+	DI_SHARE,       /* shared folder: folder with a two-node network badge (UDPFS, SMB, host:) */
 	DI_COUNT
 };
 
@@ -515,7 +516,9 @@ enum DashSection {
 	DASH_SEC_DEVICES,
 	DASH_SEC_TOOLS,
 	DASH_SEC_SETTINGS,
-	DASH_SEC_COUNT
+	DASH_SEC_COUNT,
+	/* Start screen only (never a tab): Settings opened on its Launch keys page. */
+	DASH_START_LAUNCH_KEYS = DASH_SEC_COUNT
 };
 
 enum DashView {
@@ -1081,6 +1084,7 @@ void dashFileBrowserTabClose(void);                /* release inactive-tab state
 int dashBrowserPadInputReady(void);              /* global USB fileXio / pad guard */
 void dashFileBrowserTabOpen(const char *start_dir);/* navigate within Files tab */
 int dashSettingsSaveCnf(void);                      /* LAUNCHELF.CNF now */
+void dashSettingsOpenLaunchKeys(void);              /* Start screen: Launch keys */
 /* classic dialogs (ynDialog/nonDialog/keyboard) as dashboard dialogs */
 void dashClassicUiInstall(int on);
 void dashClassicUiDone(void);

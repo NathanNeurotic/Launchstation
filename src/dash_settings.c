@@ -248,7 +248,7 @@ static const SetItem display_items[] = {
 };
 
 static const SetItem dash_items[] = {
-    {ST_CHOICE, S_START, "Start screen", "Initial screen. Applications opens the library under Home directly."},
+    {ST_CHOICE, S_START, "Start screen", "Initial screen. Applications opens the library under Home directly; Launch keys opens Settings on its Launch keys page."},
     {ST_CHOICE, S_HOME_SHORTCUTS, "Home quick-launch shortcuts", "Show configured launch-key shortcuts alongside Applications and Last folder."},
     {ST_CHOICE, S_VIEW, "Application view", "Grid, list or carousel (SELECT also switches it in Home > Applications)."},
     {ST_CHOICE, S_ARTWORK, "Application artwork", "Load cover art for tiles and artwork backgrounds."},
@@ -401,7 +401,7 @@ static const SetItem system_items[] = {
     {ST_ACTION, S_CLOCK_HARDWARE, "Use PS2 hardware clock", "Stop the software clock and use the console RTC again."},
     {ST_ACTION, S_CLOCK_MANUAL, "Set PS2 clock manually...", "Enter the local date and time as YYYY-MM-DD HH:MM:SS; the hardware RTC is written and verified."},
     {ST_CHOICE, S_TEMP_UNITS, "PS2 Temperature Units (50K and later)", "Celsius or Fahrenheit beside the clock. Hidden automatically when the console has no supported temperature sensor."},
-    {ST_PATH, S_CNF_PATH, "Configuration folder", "Load and save LAUNCHELF.CNF in this folder instead of the default places."},
+    {ST_PATH, S_CNF_PATH, "Configuration folder", "Load and save LAUNCHELF.CNF here. Search order: the folder Launchstation started from, then mcN:/SYS-CONF/ (the launch card's slot first, then the other); once loaded, this folder replaces the start folder for every later load and save."},
     {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
     {ST_ACTION, S_INTRO, "Show welcome message again", "Show the introduction the next time the dashboard checks for it."},
 };
@@ -651,13 +651,14 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			*names = pct_names, *cur = dashCfg.bgm_vol / 10;
 			return 11;
 		case S_START: {
-			static const char *const start_names[] = {"Home", "Applications", "Files", "Tools", "Settings"};
+			static const char *const start_names[] = {"Home", "Applications", "Files", "Tools", "Settings", "Launch keys"};
 			*names = start_names;
 			*cur = (dashCfg.start_section == DASH_SEC_APPS) ? 1 :
 			       (dashCfg.start_section == DASH_SEC_FILES || dashCfg.start_section == DASH_SEC_DEVICES) ? 2 :
 			       (dashCfg.start_section == DASH_SEC_TOOLS) ? 3 :
-			       (dashCfg.start_section == DASH_SEC_SETTINGS) ? 4 : 0;
-			return 5;
+			       (dashCfg.start_section == DASH_SEC_SETTINGS) ? 4 :
+			       (dashCfg.start_section == DASH_START_LAUNCH_KEYS) ? 5 : 0;
+			return 6;
 		}
 		case S_FILES_MODE: {
 			static const char *const modes[] = {"Files", "Devices"};
@@ -1344,7 +1345,8 @@ static void setChoice(int id, int v)
 			dashCfg.start_section = (v == 1) ? DASH_SEC_APPS :
 			                        (v == 2) ? DASH_SEC_FILES :
 			                        (v == 3) ? DASH_SEC_TOOLS :
-			                        (v == 4) ? DASH_SEC_SETTINGS : DASH_SEC_HOME;
+			                        (v == 4) ? DASH_SEC_SETTINGS :
+			                        (v == 5) ? DASH_START_LAUNCH_KEYS : DASH_SEC_HOME;
 			break;
 		case S_FILES_MODE:
 			dashCfg.files_mode = v;
@@ -2838,6 +2840,13 @@ static void runAction(int id)
 static const SetItem *curItem(void)
 {
 	return &pages[page].items[item];
+}
+
+/* Start screen "Launch keys": called right after settingsEnter() at boot. */
+void dashSettingsOpenLaunchKeys(void)
+{
+	if (page != P_LKEY)
+		openPage(P_LKEY);
 }
 
 static void settingsEnter(void)
