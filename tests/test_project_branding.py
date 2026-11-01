@@ -15,7 +15,10 @@ issue = (root / ".github/ISSUE_TEMPLATE/issue.yml").read_text(encoding="utf-8")
 readme = (root / "README.md").read_text(encoding="utf-8")
 credits = (root / "src/dash_info.c").read_text(encoding="utf-8")
 
-assert "About Launchstation" in main_info
+assert '"Launchstation %s", ULE_VERSION' in main_info
+version = (root / "include/launchelf.h").read_text(encoding="utf-8")
+assert '"v4.78" ULE_VERSION_DEBUG_SUFFIX' in version
+assert '"v4.78_R3Z"' not in version
 assert '"About Launchstation"' in tools
 assert "Launchstation %s" in draw
 assert "Launchstation cannot open this type of file" in browser
