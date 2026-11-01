@@ -31,6 +31,7 @@ c = r"""
 #define DI_USB 1
 #define DI_NETWORK 2
 #define DI_SDCARD 3
+#define DI_SHARE 4
 #define DI_WARNING 4
 
 typedef struct {

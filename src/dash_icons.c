@@ -260,6 +260,16 @@ static float iconSdf(int id, V2 p)
 			d = U(d, sdBox(p, -0.42f, -0.46f, 0.38f, 0.16f, 0.08f));
 			d = S(d, sdBox(p, 0.0f, -0.24f, 0.72f, 0.04f, 0.0f));
 			break;
+		case DI_SHARE:
+			/* folder body with a notch for the badge, plus two linked nodes */
+			d = sdBox(p, 0.0f, 0.14f, 0.82f, 0.56f, 0.1f);
+			d = U(d, sdBox(p, -0.42f, -0.46f, 0.38f, 0.16f, 0.08f));
+			d = S(d, sdBox(p, 0.0f, -0.24f, 0.72f, 0.04f, 0.0f));
+			d = S(d, sdCircle(p, 0.42f, 0.42f, 0.42f));
+			d = U(d, sdCircle(p, 0.26f, 0.26f, 0.12f));
+			d = U(d, sdCircle(p, 0.66f, 0.62f, 0.12f));
+			d = U(d, sdSeg(p, 0.26f, 0.26f, 0.66f, 0.62f, 0.05f));
+			break;
 		case DI_DEVICES:
 			d = sdBoxOutline(p, 0.0f, -0.36f, 0.78f, 0.28f, 0.1f, T);
 			d = U(d, sdBoxOutline(p, 0.0f, 0.36f, 0.78f, 0.28f, 0.1f, T));

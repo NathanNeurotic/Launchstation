@@ -105,9 +105,12 @@ static void homeRebuild(void)
 		homeAdd(dashLists.recent[i], 2);
 	for (i = 0; i < dashLists.nfav; i++)
 		homeAdd(dashLists.fav[i], 3);
-	/* a small library sample keeps the row useful on first boot */
-	for (i = 0; i < dashAppCount && nhome < 6; i++)
-		homeAdd(dashApps[i].path, 0);
+	/* a small library sample keeps the row useful on first boot; with
+	 * Recent applications set to 0 and nothing pinned or favorite the row
+	 * stays empty, so Home lands on the Applications shortcut instead */
+	if (dashCfg.recent_count > 0 || nhome > 0)
+		for (i = 0; i < dashAppCount && nhome < 6; i++)
+			homeAdd(dashApps[i].path, 0);
 
 	nchips = 0;
 	/* These two navigation shortcuts remain available even when the user

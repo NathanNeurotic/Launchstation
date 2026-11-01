@@ -721,7 +721,7 @@ static const char *pickHeaderSource(void)
 	int n = (int)(sizeof(devs) / sizeof(devs[0])), i, r;
 
 	for (i = 0; i < n; i++) {
-		items[i].icon = !strncmp(devs[i], "usb", 3) ? DI_USB : !strncmp(devs[i], "udpfs", 5) ? DI_NETWORK : DI_SDCARD;
+		items[i].icon = !strncmp(devs[i], "usb", 3) ? DI_USB : !strncmp(devs[i], "udpfs", 5) ? DI_SHARE : DI_SDCARD;
 		items[i].label = devs[i];
 		items[i].detail = "__Headers/";
 		items[i].disabled = 0;
