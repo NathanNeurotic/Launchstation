@@ -193,8 +193,13 @@ static int prepareSmbConfig(const char *core, const SmbShare *share, char *messa
 			if (i == next && !memcmp(verify,updated,next)) { ok = 1; goto done; }
 		}
 	}
-	/* A short write aborts the launch and attempts to restore the original. */
-	smbConfigWrite(path,original,length);
+	/* A short write aborts the launch and attempts to restore the original.
+	 * The file was truncated before the write, so a failed restore leaves it
+	 * empty or partial: say so, instead of the generic message. */
+	if (!smbConfigWrite(path,original,length)) {
+		setMessage(message,size,"Neutrino SMB config could not be restored: copy config/bsd-smb.toml from the nightly again",NULL);
+		goto done;
+	}
 failed:
 	setMessage(message,size,"Neutrino SMB config must be writable and use the stock module args",NULL);
 done:

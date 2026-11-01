@@ -57,7 +57,7 @@ static int genRead(int fd,void *buf,int size) {
 }
 static int genWrite(int fd,void *buf,int size) {
     (void)fd;
-    if(fail_write) { fail_write=0; size/=2; }
+    if(fail_write) { fail_write--; size/=2; }
     memcpy(disk,buf,size); disk[size]=0; return size;
 }
 static void setMessage(char *msg,size_t size,const char *text,const char *path) {
@@ -99,6 +99,12 @@ int main(void) {
     assert(prepareSmbConfig("mass:/neutrino/neutrino.elf",&sh,msg,sizeof(msg)) && writes==1);
     strcpy(disk,stock); fail_write=1;
     assert(!prepareSmbConfig("mc0:/neutrino/neutrino.elf",&sh,msg,sizeof(msg)) && !strcmp(disk,stock));
+    assert(!strstr(msg,"restored"));
+    /* Both the update and the restore come up short: the file is damaged
+     * and the message must say so rather than blame the module args. */
+    strcpy(disk,stock); fail_write=2;
+    assert(!prepareSmbConfig("mc0:/neutrino/neutrino.elf",&sh,msg,sizeof(msg)) && strcmp(disk,stock));
+    assert(strstr(msg,"could not be restored") && strstr(msg,"bsd-smb.toml"));
     missing=1; writes=0;
     assert(!prepareSmbConfig("mass:/neutrino/neutrino.elf",&sh,msg,sizeof(msg)) && !writes); missing=0;
     readonly=1;
