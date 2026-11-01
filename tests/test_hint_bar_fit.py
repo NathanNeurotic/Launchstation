@@ -5,8 +5,9 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 ui = (root / "src/dash_ui.c").read_text(encoding="utf-8")
-a = ui.index("void dashDrawHints(")
-func = ui[a:ui.index("\n}\n", a) + 3]
+a = ui.index("static int hintRank(")                       # the fixed-order helpers and the renderer
+b = ui.index("void dashDrawHints(")
+func = ui[a:ui.index("\n}\n", b) + 3]
 
 code = r'''
 #include <assert.h>
@@ -16,6 +17,8 @@ code = r'''
 #define DASH_SAFE_R 600
 #define DASH_FS_SMALL 0.66f
 #define DASH_C_TEXT 1
+#define DASH_HINTS_MAX 8
+enum { DI_BTN_CROSS = 1, DI_BTN_CIRCLE, DI_BTN_SQUARE, DI_BTN_TRIANGLE, DI_BTN_START, DI_BTN_SELECT };
 typedef struct { int r, g, b, a; } DashColor;
 typedef struct { int button; const char *key; const char *label; } DashHint;
 static struct { DashColor bg2; } dashTheme;
@@ -40,7 +43,8 @@ static float dashTextS(float x, float y, const char *s, float sc, int c) {
 }
 ''' + func + r'''
 static int run(float factor, int n) {
-    DashHint h[5] = {{1, 0, "Start"}, {2, 0, "Favorite"}, {3, 0, "Options"}, {-1, "START", "Menu"}, {-1, "R3", "Show background"}};
+    DashHint h[5] = {{DI_BTN_CROSS, 0, "Start"}, {DI_BTN_SQUARE, 0, "Favorite"}, {DI_BTN_TRIANGLE, 0, "Options"},
+                     {-1, "START", "Menu"}, {-1, "R3", "Show background"}};
     int i;
     font_factor = factor; nfit = 0;
     dashDrawHints(h, n);
