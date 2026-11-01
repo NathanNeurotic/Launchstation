@@ -39,7 +39,11 @@ same app plus the companions.
                             starts PS2 .ISO images through <device>:/neutrino/
                             neutrino.elf on the game's device, mc0:/mc1:/neutrino/,
                             or the Neutrino path set in Settings. ISOs on an SMB
-                            share need this folder on a local device.
+                            share need this folder on a local device AND a
+                            Neutrino build that carries the SMB modules
+                            (modules/smb_ioman.irx, modules/smb_fhi.irx,
+                            config/bsd-smb.toml); KIT-MANIFEST.json says whether
+                            the bundled build has them ("smb": true/false).
   *.url                     PC-side companions: PS2-Servers (UDPFS/SMB/HTTP
                             servers), the Android UDPFS server, the OPL PS1
                             AIO converter, OrbitPS2 Manager and the
@@ -58,8 +62,9 @@ Credits for the bundled externals (none of them is Launchstation's work):
                free launcher. Official release page: the link in
                EMBER/Ember Official Webpage.url (https://github.com/Gageformer/Ember).
   POPStarter   by krHACKen (https://www.psx-place.com/threads/popstarter.19139/).
-  Neutrino     by Rick Gaiser (Maximus32) and contributors
-               (https://github.com/ps2max32/neutrino); its LICENSE file is in neutrino/.
+  Neutrino     by Rick Gaiser (Maximus32) and contributors, AFL-3.0
+               (https://github.com/ps2max32/neutrino); the upstream archive
+               carries no licence file, see the repository.
   BDM Assault  the POPStarter block-device driver pairs (usbd.irx.<mode>):
                original project by israpps, exFAT/UDPFS variants by Okeanos
                (Okeanos86, https://github.com/Okeanos86/BDMAssault); notices in

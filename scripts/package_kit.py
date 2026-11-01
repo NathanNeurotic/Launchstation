@@ -72,14 +72,17 @@ EXTERNAL_REQUIRED = (
     f"POPS/POPSTARTER VERSIONS/{version}/POPSTARTER.ELF"
     for version in ("MAIN", "DEBUG", "USBDELAY", "USBDELAY_DEBUG", "USBDELAY_LONGER_DEBUG"))
 # What Launchstation needs from the Neutrino install: neutrino.elf beside
-# config/system.toml marks a complete install (src/neutrino_iso.c), the bsd
-# configs are the backends it hands -bsd= values for, and the SMB module pair
-# plus its config are what #248's SMB launches require.
+# config/system.toml marks a complete install (src/neutrino_iso.c), and the bsd
+# configs are the backends it hands -bsd= values for. The SMB module pair plus
+# its config are what #248's SMB launches require; upstream's "latest" build
+# does not always carry them (v1.8.0-61 did not), so they are recorded in
+# KIT-MANIFEST.json rather than required.
 NEUTRINO_REQUIRED = (
-    "neutrino.elf", "LICENSE", "config/system.toml",
+    "neutrino.elf", "config/system.toml",
     "config/bsd-usb.toml", "config/bsd-mmce.toml", "config/bsd-ilink.toml", "config/bsd-udpfs.toml",
-    "config/bsd-smb.toml", "modules/smb_ioman.irx", "modules/smb_fhi.irx",
+    "modules/usbmass_bd_mini.irx", "modules/mmceman.irx", "modules/IEEE1394_bd_mini.irx", "modules/udpfs_bd.irx",
 )
+NEUTRINO_SMB = ("config/bsd-smb.toml", "modules/smb_ioman.irx", "modules/smb_fhi.irx")
 SHORTCUT_NAMES = ("PS2-Servers.url", "android-udpfs-server.url", "OPL-PS1-AIO-Converter-GUI.url",
                   "OrbitPS2-Manager.url", "Launchstation-Documentation.url")
 
@@ -396,7 +399,11 @@ def package(app_dir, externals, neutrino, output, revision, epoch, build, manife
             "externals": {"repository": manifest["source"]["repository"], "commit": manifest["source"]["commit"]},
             "neutrino": {"source": neutrino_source.name,
                          "sha256": sha256(neutrino_source.read_bytes()) if neutrino_source.is_file() else None,
-                         "elf_sha256": sha256((neutrino_dir / "neutrino.elf").read_bytes())},
+                         "elf_sha256": sha256((neutrino_dir / "neutrino.elf").read_bytes()),
+                         "version": (neutrino_dir / "version.txt").read_text(encoding="utf-8", errors="replace").strip()
+                         if (neutrino_dir / "version.txt").is_file() else None,
+                         "smb": all((neutrino_dir / name).is_file() and (neutrino_dir / name).stat().st_size
+                                    for name in NEUTRINO_SMB)},
             "files": files,
         }
         (kit / "KIT-MANIFEST.json").write_text(json.dumps(kit_manifest, indent=2) + "\n", encoding="utf-8")
@@ -415,7 +422,8 @@ def package(app_dir, externals, neutrino, output, revision, epoch, build, manife
     verify(output, psu, manifest)
     log(f"Verified {output.name} ({output.stat().st_size} bytes): {APP_FOLDER} app + PSU, "
         f"{sum(1 for k in manifest['files'] if k.startswith('POPS/'))} POPS files, "
-        f"{sum(1 for k in manifest['files'] if k.startswith('EMBER/'))} EMBER files, Neutrino {neutrino_source.name}")
+        f"{sum(1 for k in manifest['files'] if k.startswith('EMBER/'))} EMBER files, Neutrino {neutrino_source.name}"
+        f" ({kit_manifest['neutrino']['version'] or 'no version.txt'}, SMB modules {'present' if kit_manifest['neutrino']['smb'] else 'absent'})")
     return output
 
 
@@ -478,6 +486,9 @@ def verify(archive_path, expected_psu, manifest):
             raise ValueError("KIT-MANIFEST.json app digests mismatch")
         if kit_manifest["externals"] != {"repository": manifest["source"]["repository"], "commit": manifest["source"]["commit"]}:
             raise ValueError("KIT-MANIFEST.json names a different externals pin")
+        if kit_manifest["neutrino"]["smb"] != all(f"neutrino/{name}" in present and archive.getinfo(f"neutrino/{name}").file_size
+                                                  for name in NEUTRINO_SMB):
+            raise ValueError("KIT-MANIFEST.json misreports the Neutrino SMB modules")
 
 
 def main(argv=None):

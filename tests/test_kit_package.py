@@ -101,7 +101,7 @@ with tempfile.TemporaryDirectory(prefix="kit-package-") as tmp:
     apps.package(tmp / "elf", tmp / "elf", tmp / "artifacts", "a" * 40, 1791500000)
 
     def neutrino_tree(folder, drop=()):
-        for name in kit.NEUTRINO_REQUIRED + ("modules/udpbd.irx", "config/bsd-udpbd.toml"):
+        for name in kit.NEUTRINO_REQUIRED + kit.NEUTRINO_SMB + ("modules/udpbd.irx", "config/bsd-udpbd.toml", "version.txt"):
             if name in drop:
                 continue
             (folder / name).parent.mkdir(parents=True, exist_ok=True)
@@ -134,6 +134,7 @@ with tempfile.TemporaryDirectory(prefix="kit-package-") as tmp:
         assert built["build"] == 284 and built["revision"] == "a" * 40
         assert built["externals"] == {"repository": "test/riptopl", "commit": commit}
         assert built["neutrino"]["source"] == "neutrino_1.0.0.zip"
+        assert built["neutrino"]["smb"] is True and built["neutrino"]["version"] == "neutrino:version.txt"
         assert built["app"]["elf_sha256"] == hashlib.sha256(elf).hexdigest()
         assert set(built["files"]) == names - {"KIT-MANIFEST.json"}
         assert all(info.date_time == (2026, 10, 8, 22, 53, 20) for info in archive.infolist()), "deterministic timestamps"
@@ -175,8 +176,13 @@ with tempfile.TemporaryDirectory(prefix="kit-package-") as tmp:
     expect(FileNotFoundError, kit.package, tmp / "artifacts", cache, neutrino, tmp / "bad" / "k.zip",
            "a" * 40, 1791500000, "284", manifest_path, log=lambda *_: None)
     kit.fetch_externals(manifest, cache, source, log=lambda *_: None)
-    expect(ValueError, kit.package, tmp / "artifacts", cache, neutrino_tree(tmp / "no_smb", drop=("modules/smb_fhi.irx",)),
-           tmp / "bad" / "k.zip", "a" * 40, 1791500000, "284", manifest_path, log=lambda *_: None)
+    # Upstream's latest build does not always carry the SMB modules: the kit still builds
+    # and KIT-MANIFEST.json says so, and that record cannot be falsified.
+    no_smb = kit.package(tmp / "artifacts", cache, neutrino_tree(tmp / "no_smb", drop=("modules/smb_fhi.irx", "version.txt")),
+                         tmp / "out5" / "LAUNCHSTATION.zip", "a" * 40, 1791500000, "284", manifest_path, log=lambda *_: None)
+    with zipfile.ZipFile(no_smb) as archive:
+        built = json.loads(archive.read("KIT-MANIFEST.json"))
+        assert built["neutrino"]["smb"] is False and built["neutrino"]["version"] is None
     expect(ValueError, kit.package, tmp / "artifacts", cache, neutrino_tree(tmp / "no_core", drop=("neutrino.elf",)),
            tmp / "bad" / "k.zip", "a" * 40, 1791500000, "284", manifest_path, log=lambda *_: None)
     with zipfile.ZipFile(tmp / "escape.zip", "w") as archive:
@@ -218,6 +224,7 @@ with tempfile.TemporaryDirectory(prefix="kit-package-") as tmp:
     expect(ValueError, kit.verify, doctored(lambda n, d: ("EMBER/bios.bin" if n == "EMBER/LICENSE-BETA.txt" else n, d)), psu, manifest)
     expect(ValueError, kit.verify, doctored(lambda n, d: (n, d.replace(b"284", b"285") if n == "KIT-MANIFEST.json" else d)), psu, manifest)
     expect(ValueError, kit.verify, doctored(lambda n, d: (n.replace("APPS/", "") if n.startswith("APPS/") else n, d)), psu, manifest)
+    expect(ValueError, kit.verify, doctored(lambda n, d: (None if n == "neutrino/modules/smb_fhi.irx" else n, d)), psu, manifest)
     expect(ValueError, kit.verify, doctored(lambda n, d: (n, d + b"\n" if n == "KIT-README.txt" else d)), psu, manifest)
     # The CLI reports a refusal as a non-zero exit, never a traceback.
     result = subprocess.run([sys.executable, str(root / "scripts/package_kit.py"), "--manifest", str(manifest_path),
