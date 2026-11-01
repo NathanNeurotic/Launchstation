@@ -368,6 +368,7 @@ static int nextGlyphs(const unsigned char **s, unsigned int out[2])
 #define DASH_FONT_UNIT 20.0f
 
 static GSTEXTURE face_tex[DASH_FONT_FACES];
+static u32 face_clut[DASH_FONT_FACES][256] __attribute__((aligned(128)));
 static int faces_ready;
 static const DashFaceData *active_faces;
 

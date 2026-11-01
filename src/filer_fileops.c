@@ -328,6 +328,8 @@ static int fatfsStatResult(const char *path, int result)
 	else if (!strncmp(path, "usb", 3)) unit = path + 3;
 	else if (!strncmp(path, "ata", 3)) unit = path + 3;
 	else if (!strncmp(path, "mx4sio", 6)) unit = path + 6;
+	else if (!strncmp(path, "cf", 2)) unit = path + 2;
+	else if (!strncmp(path, "ilink", 5)) unit = path + 5;
 	else return result;
 	while (*unit >= '0' && *unit <= '9') unit++;
 	if (*unit != ':') return result;

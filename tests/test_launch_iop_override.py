@@ -42,6 +42,7 @@ static struct { int reboot_iop_elf_load; } config,*setting=&config;
 static MainExecuteContext exec_ctx;
 static char message[MAX_PATH];
 static int dash_active,swapKeys,worker,loading,frames,begins,ends,polls,parks;
+static int invalid_sample;
 static u32 paddata;
 static u64 tick,release_at,busy_until,parked_until,park_during_poll;
 static int settle_calls,fail_settle,launches,last_mode,editor_result,args_result,args_clears;
@@ -53,12 +54,14 @@ static int dashWorkerOnThread(void) { return worker; }
 static int dashWorkerIoBusy(void) { return tick<busy_until; }
 static int dashIopParked(void) { return tick<parked_until; }
 static void dashWorkerParkPoint(void) { parks++; }
-static void dashInputPollEx(DashInput *in,int keyboard) {
-    (void)in;assert(!keyboard && !dashWorkerIoBusy() && !dashIopParked());polls++;
+static int dashInputPollPhysical(DashInput *in) {
+    (void)in;assert(!dashWorkerIoBusy() && !dashIopParked());polls++;
     if(park_during_poll && tick>=park_during_poll) {
-        parked_until=tick+50;park_during_poll=0;return; /* poll exited before reading PAD */
+        parked_until=tick+50;park_during_poll=0;return 0; /* no physical sample */
     }
+    if(invalid_sample)return 0; /* DS34 can leave stale held bits on failure. */
     paddata=tick<release_at?(swapKeys?PAD_CROSS:PAD_CIRCLE):0;
+    return 1;
 }
 static void dashLoadingBegin(const char *title) { (void)title;loading=1;begins++; }
 static float dashVisualUpdate(void) { return 0.01f; }
@@ -141,7 +144,7 @@ program += r'''
 static void reset(int saved,int mapping,u64 hold) {
     memset(&exec_ctx,0,sizeof(exec_ctx));exec_ctx.main_msg=message;
     config.reboot_iop_elf_load=saved;swapKeys=mapping;
-    dash_active=1;worker=loading=frames=begins=ends=polls=parks=0;
+    dash_active=1;worker=loading=frames=begins=ends=polls=parks=invalid_sample=0;
     settle_calls=fail_settle=launches=last_mode=recent=errors=args_clears=0;
     editor_result=args_result=1;editor_hold=0;
     music_gain=10;effects_gain=60;suspends=shutdowns=run_game=handoff_result=0;
@@ -218,6 +221,10 @@ int main(void) {
     assert(DashChooseElfIopMode(1)==1 && tick==10000 && polls==0);
     reset(0,0,10000);parked_until=100000;
     assert(DashChooseElfIopMode(0)==0 && tick==10000 && polls==0);
+    for(int saved=0;saved<2;saved++) {
+        reset(saved,0,10000);invalid_sample=1;
+        assert(DashChooseElfIopMode(saved)==saved && tick==10000 && polls>0);
+    }
     /* Neutrino cancels before handoff, commits after Run, or backs out while
      * finishing background work. Only a committed handoff shuts audio down. */
     for(int commit=0;commit<3;commit++) {

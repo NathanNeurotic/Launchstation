@@ -816,6 +816,8 @@ typedef struct
 } DashInput;
 
 void dashInputPoll(DashInput *in);
+/* Physical controller sample only; returns validity and suppresses START menus. */
+int dashInputPollPhysical(DashInput *in);
 void dashInputPollEx(DashInput *in, int usb_kb_as_pad);
 void dashInputFlush(void);
 u64 dashInputIdleMs(void);

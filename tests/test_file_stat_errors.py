@@ -66,7 +66,7 @@ int main(void) {
     const char *bdm[]={"usb:/NEW.ELF","usb0:/APP/NEW.ELF","usb1:/NEW.ELF",
         "mass:/NEW.ELF","mass0:/NEW.ELF","mass9:/NEW.ELF",
         "ata:/NEW.ELF","ata0:/NEW.ELF","ata1:/NEW.ELF",
-        "mx4sio:/NEW.ELF","mx4sio0:/NEW.ELF"};
+        "mx4sio:/NEW.ELF","mx4sio0:/NEW.ELF","cf0:/NEW.ELF","ilink:/NEW.ELF","ilink0:/NEW.ELF"};
     for(unsigned i=0;i<sizeof(bdm)/sizeof(*bdm);i++) {
 #ifdef EXFAT
         /* The reported missing USB file must be usable as a new target. */
@@ -95,7 +95,7 @@ int main(void) {
     const char *native[]={"mc0:/NEW.ELF","mc1:/NEW.ELF","vmc0:/NEW.ELF",
         "vmc1:/NEW.ELF","pfs0:/NEW.ELF","hdd0:/__common/NEW.ELF",
         "dvr_pfs0:/NEW.ELF","mmce0:/NEW.ELF","mmce1:/NEW.ELF",
-        "cf0:/NEW.ELF","host:/NEW.ELF","udpfs:/NEW.ELF","cdfs:/NEW.ELF",
+        "host:/NEW.ELF","udpfs:/NEW.ELF","cdfs:/NEW.ELF",
         "xfrom0:/NEW.ELF","usb-backup:/NEW.ELF","massive:/NEW.ELF",
         "atafile:/NEW.ELF","mx4siofile:/NEW.ELF","folder/usb0:/NEW.ELF"};
     for(unsigned i=0;i<sizeof(native)/sizeof(*native);i++) {

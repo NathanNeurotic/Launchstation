@@ -166,6 +166,7 @@ jobs:
           python3 tests/test_file_stat_errors.py
           python3 tests/test_update_sas_timestamps.py
           python3 tests/test_launch_iop_override.py
+          python3 tests/test_physical_hold_input.py
           python3 tests/test_panel_transparency.py
           python3 tests/test_https_tls.py
           python3 tests/test_rename_devices.py

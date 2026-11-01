@@ -19,6 +19,7 @@ static u32 text_repeat_armed;
 /* Set while a timed confirmation polls: START must not open the Dashboard
  * popup, whose own input loop would hold off the automatic revert. */
 static int dash_start_menu_blocked;
+static int physical_sample_valid;
 
 //--------------------------------------------------------------
 // Input
@@ -37,6 +38,7 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	u32 back_btn = swapKeys ? PAD_CIRCLE : PAD_CROSS;
 
 	memset(in, 0, sizeof(*in));
+	physical_sample_valid = 0;
 	dashWorkerParkPoint();
 	if (dashIopParked())
 		return; /* the IOP (and padman with it) is being rebooted */
@@ -45,6 +47,7 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	/* the USB keyboard driver is on the IOP: leave it alone while the
 	 * background worker talks to the IOP */
 	ret = usb_kb_as_pad && !dashWorkerIoBusy() ? readpad() : readpad_no_KB();
+	physical_sample_valid = ret > 0;
 	/* Only navigation repeats. A held action must not reopen/close a menu,
 	 * launch again or toggle a setting after its first press. */
 	np = ret ? new_pad & ((PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT |
@@ -110,6 +113,17 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 			dashDashboardMenu();
 		}
 	}
+}
+
+/* Hold sampling cannot open a nested Dashboard menu, and a failed DS34
+ * read must not validate the previous held-button bits. */
+int dashInputPollPhysical(DashInput *in)
+{
+	int was_blocked = dash_start_menu_blocked;
+	dash_start_menu_blocked = 1;
+	dashInputPollEx(in, 0);
+	dash_start_menu_blocked = was_blocked;
+	return physical_sample_valid;
 }
 
 void dashInputFlush(void)

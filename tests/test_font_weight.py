@@ -8,6 +8,7 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 font = (root / "src/dash_font.c").read_text()
+assert re.search(r'static u32 face_clut\[DASH_FONT_FACES\]\[256\]', font)
 data_header = (root / "include/dash_font_data.h").read_text()
 internal_header = (root / "include/dash_internal.h").read_text()
 data = "\n".join((root / "src" / name).read_text() for name in

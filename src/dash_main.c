@@ -238,8 +238,8 @@ int DashChooseElfIopMode(int configured)
 		/* A fresh physical sample is required, even if a worker/IOP operation
 		 * delayed us past the threshold. Never infer a hold from stale PAD data. */
 		if (!dashWorkerIoBusy() && !dashIopParked()) {
-			dashInputPollEx(&input, 0);
-			if (!dashIopParked()) {
+			int sampled = dashInputPollPhysical(&input);
+			if (sampled && !dashIopParked()) {
 				if (!(paddata & confirm))
 					break;
 				elapsed = Timer() - started;
@@ -322,6 +322,7 @@ static void showActionMessage(void)
 static void runMiscCommand(const char *misc_path)
 {
 	char path[MAX_PATH];
+	MainExecuteContext launch_ctx = exec_ctx;
 	const char *title = "Working";
 	int leaves = 0;
 	int network_command = 0;
@@ -341,6 +342,13 @@ static void runMiscCommand(const char *misc_path)
 	else if (!stricmp(misc_path, setting->Misc_Configure) || !stricmp(misc_path, setting->Misc_Exploit_Installer))
 		return; /* handled natively by dashRunMisc() */
 
+	/* Resolve only ELF/disc launch policies while dashboard graphics are
+	 * still active. OSDSYS, power-off and other commands need no hold wait. */
+	if (!setting->Misc[0] || strnicmp(misc_path, setting->Misc, strlen(setting->Misc)) ||
+	    !stricmp(misc_path, setting->Misc_PS2Disc)) {
+		int mode = DashChooseElfIopMode(setting->reboot_iop_elf_load);
+		launch_ctx.elf_iop_mode = mode ? MAIN_ELF_IOP_REBOOT : MAIN_ELF_IOP_KEEP;
+	}
 	dashStrCopy(path, misc_path, sizeof(path));
 	/* saves, scans and driver work finish first: the command may reboot
 	 * the IOP or leave wLaunchELF */
@@ -375,7 +383,7 @@ static void runMiscCommand(const char *misc_path)
 			dashSoundSuspend();
 		dashGfxRestoreLegacyState();
 	}
-	ExecuteMainAction(path, &exec_ctx);
+	ExecuteMainAction(path, &launch_ctx);
 	/* back here: the command finished, or leaving failed */
 	if (leaves)
 		dashGfxCheckScreenChange();
