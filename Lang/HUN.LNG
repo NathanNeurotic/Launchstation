@@ -683,5 +683,5 @@ lang(681, Exploit_Folder_Europe_Warning, "Figyelem: exploit mappa europai konzol
 lang(682, Exploit_Folder_China_Warning, "Figyelem: exploit mappa kinai konzolokhoz!")
 lang(683, Dashboard_Per_save_versions, "Mentesenkenti verziok")
 
-lang(684, Dashboard_Style, "Stílus")
-lang(685, Dashboard_Regular, "Normál")
+lang(684, Dashboard_Style, "Stilus")
+lang(685, Dashboard_Regular, "Normal")

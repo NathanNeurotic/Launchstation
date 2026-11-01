@@ -18,7 +18,7 @@
 //--------------------------------------------------------------
 static int kbFilenameChar(unsigned char c)
 {
-	return c >= 0x20 && c != 0x7f && strchr("<>:\"/\\|?*", c) == NULL;
+	return isVirtualKeyboardFilenameChar(c);
 }
 
 enum { KA_TAB = 0, KA_RETURN, KA_SYMBOLS, KA_COUNT };
@@ -414,7 +414,7 @@ static void kbDrawHints(float center_x, float y, float available_width)
 {
 	DashHint hints[] = {{dashOkIcon(), NULL, "Type"}, {dashBackIcon(), NULL, "Delete"},
 	                    {DI_BTN_SQUARE, NULL, "Caps"}, {DI_BTN_R3, NULL, "Cursor"},
-	                    {-1, "START", "Done"}, {DI_BTN_TRIANGLE, NULL, "Cancel"}};
+	                    {-1, "SELECT", "Done"}, {DI_BTN_TRIANGLE, NULL, "Cancel"}};
 	const int count = sizeof(hints) / sizeof(hints[0]);
 	float width = 0.0f, gap, x;
 	/* Font layouts put the x-height center at text_y + 16 * scale.
@@ -424,7 +424,7 @@ static void kbDrawHints(float center_x, float y, float available_width)
 
 	for (i = 0; i < count; i++)
 		width += dashButtonWidth(hints[i].button, hints[i].key) + 4.0f +
-		         dashTextWidth(hints[i].label, DASH_FS_SMALL);
+		         dashTextWidth(localizeDashboardText(hints[i].label), DASH_FS_SMALL);
 
 	/* Distribute the spare width between complete icon/label groups. */
 	gap = (available_width - width) / (count - 1);
@@ -435,7 +435,7 @@ static void kbDrawHints(float center_x, float y, float available_width)
 		if (i)
 			x += gap;
 		x += dashDrawButton(x, y, hints[i].button, hints[i].key) + 4.0f;
-		x = dashTextS(x, text_y, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT2);
+		x = dashTextS(x, text_y, localizeDashboardText(hints[i].label), DASH_FS_SMALL, DASH_C_TEXT2);
 	}
 }
 
@@ -508,7 +508,7 @@ static int modalKeyboard(const char *title, char *buf, int max_len, int filename
 			kbDelete(buf, &cur);
 			dashSoundPlay(DASH_SND_CANCEL);
 		}
-		if (in.pressed & DASH_IN_START) {
+		if (in.pressed & DASH_IN_SELECT) {
 			if (filename && !kbFilenameValid(buf, max_len)) {
 				dashToast(DASH_TOAST_WARN, "Choose a valid filename");
 				continue;

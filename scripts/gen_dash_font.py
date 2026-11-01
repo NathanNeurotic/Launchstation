@@ -155,8 +155,8 @@ def main():
                 px, py = places[code]
                 parts.append("    {%d, %d, %d, %d, %d, %d, %d}," % (px, py, img.size[0], img.size[1], ox, oy, int(round(adv * 16))))
         parts.append("};")
-        faces.append("    {%d, %d, %d, %d, %d, %d, %s_px, %s_glyphs}," % (
-            em, int(round(ascent * 16)), int(round(descent * 16)), int(round(xheight * 16)),
+        faces.append("    {%d, %d, %d, %d, %d, %d, %d, %s_px, %s_glyphs}," % (
+            em, int(round(gamma * 100)), int(round(ascent * 16)), int(round(descent * 16)), int(round(xheight * 16)),
             atlas.width, atlas.height, name, name))
         print("em %d: atlas %dx%d" % (em, atlas.width, atlas.height))
     parts.append("const DashFaceData %s[DASH_FONT_FACES] = {" % args.symbol)

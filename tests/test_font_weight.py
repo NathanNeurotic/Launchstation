@@ -17,6 +17,16 @@ generator = ast.parse((root / "scripts/gen_dash_font.py").read_text())
 sizes = next(ast.literal_eval(node.value) for node in generator.body
              if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "SIZES"
                                                     for target in node.targets))
+# Execute the generator's actual face initializer without requiring font tools.
+# Its serialized fields must follow DashFaceData, including alpha_gamma100.
+face_append = next(node for node in ast.walk(generator) if isinstance(node, ast.Call)
+                   and isinstance(node.func, ast.Attribute) and node.func.attr == "append"
+                   and isinstance(node.func.value, ast.Name) and node.func.value.id == "faces")
+for em, gamma in sizes:
+    atlas = type("Atlas", (), {"width": 256, "height": 128})()
+    fields = eval(compile(ast.Expression(face_append.args[0]), "font initializer", "eval"),
+                  dict(em=em, gamma=gamma, ascent=12, descent=3, xheight=8, atlas=atlas, name="face0"))
+    assert fields.strip() == "{%d, %d, 192, 48, 128, 256, 128, face0_px, face0_glyphs}," % (em, round(gamma * 100))
 
 
 def function(signature):

@@ -52,6 +52,7 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	 * launch again or toggle a setting after its first press. */
 	np = ret ? new_pad & ((PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT |
 	                      PAD_L3_H0 | PAD_L3_H1 | PAD_L3_V0 | PAD_L3_V1 |
+	                      PAD_R3_H0 | PAD_R3_H1 | PAD_R3_V0 | PAD_R3_V1 |
 	                      PAD_L2 | PAD_R2) | ~(paddata & held_prev)) : 0;
 	/* Adapted from saildot4k d9f60e5: reuse pad repeat timing only for
 	 * text-entry consumers. A held action cannot reopen a normal dialog. */

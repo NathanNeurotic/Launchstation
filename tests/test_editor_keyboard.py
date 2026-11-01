@@ -225,7 +225,7 @@ float dashButtonWidth(int icon,const char *key);
 static int keyIcon(const char *key) { return key && !strcmp(key,"START")?DI_BTN_START:key && !strcmp(key,"SELECT")?DI_BTN_SELECT:-1; }
 static float dashDrawButton(float x,float y,int icon,const char *key) {
     if(!hint_buttons) {hint_left=x;hint_y=y;}
-    if(hint_buttons==4)assert(key && !strcmp(key,"START"));
+    if(hint_buttons==4)assert(key && !strcmp(key,"SELECT"));
     assert(hint_buttons<6 && y==hint_y);
     hint_button_x[hint_buttons]=x;hint_button_w[hint_buttons]=dashButtonWidth(icon,key);
     hint_buttons++;hint_cursor+=icon==DI_BTN_R3;
@@ -234,6 +234,7 @@ static float dashDrawButton(float x,float y,int icon,const char *key) {
 static int dashOkIcon(void) { return 0; }
 static int dashBackIcon(void) { return 1; }
 static void dashGfxPresent(void) {}
+static const char *localizeDashboardText(const char *text) { return text; }
 '''
 ui = (root / 'src/dash_ui.c').read_text()
 code += function('static float buttonWidth(', ui) + function('float dashButtonWidth(', ui)
@@ -295,7 +296,7 @@ static void checkNamingPaths(void) {
     const char *paths[]={"mc1:/BADATA-SYSTEM/","usb0:/APPS/Utilities/",long_directory,"",NULL};
     for(int bridge=0;bridge<=1;bridge++) {
         for(unsigned i=0;i<sizeof(paths)/sizeof(paths[0]);i++) {
-            naming_directory=paths[i];strcpy(buf,"Folder");planReset();plan(0);plan(DASH_IN_START);
+            naming_directory=paths[i];strcpy(buf,"Folder");planReset();plan(0);plan(DASH_IN_SELECT);
             assert(textDialog(buf,36,1,bridge) && !strcmp(buf,"Folder"));
             strcpy(buf,"Folder");planReset();plan(DASH_IN_OK);plan(DASH_IN_MENU);
             assert(!textDialog(buf,36,1,bridge) && !strcmp(buf,"Folder"));
@@ -322,37 +323,37 @@ static void checkNamingDialogs(void) {
     DashKeyboard saved=editor_keyboard;
     char buf[256];setting->virtual_keyboard_layout=VKEY_LAYOUT_QWERTY;
     DashKeyboard naming_keyboard;dashKeyboardInit(&naming_keyboard,VKEY_LAYOUT_QWERTY);
-    /* START immediately accepts a name without navigating to a Done key. */
-    strcpy(buf,"name");planReset();plan(DASH_IN_START);
+    /* SELECT accepts a name; START remains the global Dashboard escape. */
+    strcpy(buf,"name");planReset();plan(DASH_IN_SELECT);
     assert(nameDialog(buf,255) && next_step==nsteps && !strcmp(buf,"name"));
-    /* SELECT no longer accepts a name; deletion stays on the controller shortcut. */
-    strcpy(buf,"name");planReset();plan(DASH_IN_SELECT);plan(DASH_IN_OK);plan(DASH_IN_START);
+    /* START consumed by the global menu is not delivered to this modal. */
+    strcpy(buf,"name");planReset();plan(0);plan(DASH_IN_OK);plan(DASH_IN_SELECT);
     assert(nameDialog(buf,255) && !strcmp(buf,"nameq"));
-    strcpy(buf,"name");planReset();plan(DASH_IN_BACK);plan(DASH_IN_START);
+    strcpy(buf,"name");planReset();plan(DASH_IN_BACK);plan(DASH_IN_SELECT);
     assert(nameDialog(buf,255) && !strcmp(buf,"nam"));
     /* Caps, cursor movement, buffer limits and cancellation use real input. */
-    strcpy(buf,"ab");planReset();plan(DASH_IN_FAV);plan(DASH_IN_L1);plan(DASH_IN_OK);plan(DASH_IN_R1);plan(DASH_IN_START);
+    strcpy(buf,"ab");planReset();plan(DASH_IN_FAV);plan(DASH_IN_L1);plan(DASH_IN_OK);plan(DASH_IN_R1);plan(DASH_IN_SELECT);
     assert(nameDialog(buf,255) && !strcmp(buf,"aQb"));
     /* Right-stick cursor movement is independent of D-pad key focus. */
     for(int filename=0;filename<=1;filename++) {
         strcpy(buf,"ab");planReset();planRaw(0,PAD_R3_H0);plan(DASH_IN_OK);
-        planRaw(0,PAD_R3_H1);plan(DASH_IN_OK);plan(DASH_IN_START);
+        planRaw(0,PAD_R3_H1);plan(DASH_IN_OK);plan(DASH_IN_SELECT);
         assert(textDialog(buf,255,filename,0) && !strcmp(buf,"aqbq"));
         strcpy(buf,"ab");planReset();planRaw(DASH_IN_RIGHT,PAD_RIGHT|PAD_R3_H0);
-        plan(DASH_IN_OK);plan(DASH_IN_START);
+        plan(DASH_IN_OK);plan(DASH_IN_SELECT);
         assert(textDialog(buf,255,filename,0) && !strcmp(buf,"awb"));
         strcpy(buf,"ab");planReset();
         for(int i=0;i<5;i++)planRaw(0,PAD_R3_H0);
         plan(DASH_IN_OK);
         for(int i=0;i<5;i++)planRaw(0,PAD_R3_H1);
-        plan(DASH_IN_OK);plan(DASH_IN_START);
+        plan(DASH_IN_OK);plan(DASH_IN_SELECT);
         assert(textDialog(buf,255,filename,0) && !strcmp(buf,"qabq"));
         strcpy(buf,"ab");planReset();plan(DASH_IN_R3);
         planRaw(DASH_IN_LEFT,PAD_L3_H0);planRaw(0,PAD_R3_V0|PAD_R3_V1);
-        plan(DASH_IN_OK);plan(DASH_IN_START);
+        plan(DASH_IN_OK);plan(DASH_IN_SELECT);
         assert(textDialog(buf,255,filename,0) && !strcmp(buf,"abq"));
     }
-    buf[0]=0;planReset();plan(DASH_IN_OK);plan(DASH_IN_OK);plan(DASH_IN_OK);plan(DASH_IN_START);
+    buf[0]=0;planReset();plan(DASH_IN_OK);plan(DASH_IN_OK);plan(DASH_IN_OK);plan(DASH_IN_SELECT);
     assert(nameDialog(buf,2) && !strcmp(buf,"qq"));
     strcpy(buf,"original");planReset();plan(DASH_IN_OK);plan(DASH_IN_MENU);
     assert(!nameDialog(buf,255) && !strcmp(buf,"original"));
@@ -360,7 +361,7 @@ static void checkNamingDialogs(void) {
     buf[0]=0;planReset();plan(DASH_IN_UP);plan(DASH_IN_UP);plan(DASH_IN_RIGHT);
     for(int i=0;i<kbSymbolPageCount(&naming_keyboard);i++) plan(DASH_IN_OK);
     plan(DASH_IN_UP);
-    plan(DASH_IN_OK);plan(0);plan(DASH_IN_START);
+    plan(DASH_IN_OK);plan(0);plan(DASH_IN_SELECT);
     assert(textDialog(buf,255,0,0) && (unsigned char)buf[0]==0xff && buf[1]==0 && filename_ff>0);
     /* USB input retains acceptance, cursor editing and cancel/restore behavior. */
     strcpy(buf,"ab");planReset();setting->usbkbd_used=1;
@@ -613,11 +614,11 @@ static void checkTypingRepeat(void) {
         char buf[256]={0};planReset();plan(DASH_IN_OK);
         for(int i=0;i<25;i++)planRepeat(DASH_IN_OK);
         for(int i=0;i<3;i++)planRepeat(DASH_IN_BACK);
-        plan(DASH_IN_START);
+        plan(DASH_IN_SELECT);
         assert(textDialog(buf,8,filename,0) && !strcmp(buf,"qqqqq"));
         strcpy(buf,"abc");planReset();plan(DASH_IN_BACK);
         for(int i=0;i<25;i++)planRepeat(DASH_IN_BACK);
-        plan(filename?DASH_IN_MENU:DASH_IN_START);
+        plan(filename?DASH_IN_MENU:DASH_IN_SELECT);
         if(filename)assert(!textDialog(buf,8,filename,0) && !strcmp(buf,"abc"));
         else assert(textDialog(buf,8,filename,0) && !buf[0]);
     }

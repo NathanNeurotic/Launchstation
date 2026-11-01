@@ -400,8 +400,7 @@ static int edIo(EdIoJob *j, const char *title)
 		free(j);
 		return 0;
 	}
-	/* Opening stays in the editor scene instead of showing device-status popups. */
-	if (dashWorkerAwait(id, j->op == 0 ? NULL : title, 1))
+	if (dashWorkerAwait(id, title, 1))
 		return 1;
 	j->abandoned = 1;
 	return 0;

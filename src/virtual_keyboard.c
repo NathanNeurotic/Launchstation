@@ -215,24 +215,17 @@ int isVirtualKeyboardLayoutKey(int layout, int index)
 
 char getVirtualKeyboardFilenameChar(int layout, int index, int caps)
 {
-    /* Keep '?' and '|' visible in both Caps states without showing separators. */
-    if (getVirtualKeyboardLayoutChar(layout, index, 0) == '?' ||
-        getVirtualKeyboardLayoutChar(layout, index, 1) == '?')
-        return '?';
-    if (getVirtualKeyboardLayoutChar(layout, index, 0) == '|' ||
-        getVirtualKeyboardLayoutChar(layout, index, 1) == '|')
-        return '|';
     return getVirtualKeyboardLayoutChar(layout, index, caps);
 }
 
 int isVirtualKeyboardFilenameChar(unsigned char c)
 {
-    return c != '/' && c != '\\';
+    return c >= 0x20 && c != 0x7f && strchr("<>:\"/\\|?*", c) == NULL;
 }
 
 int isVirtualKeyboardFilenameKey(int layout, int index)
 {
-    /* Hide path separators; '?' and '|' stay fixed in both Caps states. */
+    /* A key must be portable in both Caps states. */
     return isVirtualKeyboardLayoutKey(layout, index) &&
            isVirtualKeyboardFilenameChar((unsigned char)getVirtualKeyboardFilenameChar(layout, index, 0)) &&
            isVirtualKeyboardFilenameChar((unsigned char)getVirtualKeyboardFilenameChar(layout, index, 1));

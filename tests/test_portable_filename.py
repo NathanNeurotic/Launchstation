@@ -28,6 +28,9 @@ static int dashIopParked(void) { return parked; }
 static int ensureUsbKeyboardReady(void) { return 1; }
 static int PS2KbdRead(char *out) { if(usb_i==usb_n)return 0;*out=usb[usb_i++];return 1; }
 '''
+vk = (root / 'src/virtual_keyboard.c').read_text()
+start = vk.index('int isVirtualKeyboardFilenameChar(')
+code += vk[start:vk.index('}', start)+1] + '\n'
 code += (root / 'include/list_scroll.h').read_text()
 for signature in ('static void kbInsert(', 'static void kbDelete(', 'static int kbFilenameChar(',
                   'static int kbFilenameValid(', 'static int kbUsb('):
