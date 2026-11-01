@@ -1,0 +1,173 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Building from Source · Launchstation Docs</title>
+<meta name="description" content="Building from Source Launchstation is built with the PS2BUILD SDK and its LLVM/Clang toolchain. This page reproduces what .github/workflows/compile.yml does, step by step, so a local build matches a release build. Short version # one time: install ps2build, th">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/building.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Building from Source · Launchstation Docs">
+<meta property="og:description" content="Building from Source Launchstation is built with the PS2BUILD SDK and its LLVM/Clang toolchain. This page reproduces what .github/workflows/compile.yml does, step by step, so a local build matches a release build. Short version # one time: install ps2build, th">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="smb.html"><span class="icon icon-netboot"></span>Network Shares (SMB)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html" class="active"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Building from Source</h1><p class="lead">Launchstation is built with the PS2BUILD SDK and its LLVM/Clang toolchain. This page reproduces what <code>.github/workflows/compile.yml</code> does, step by step, so a local build matches a release build.</p>
+<div class="callout info"><div class="h">Short version</div><pre><code># one time: install ps2build, then fetch the SDK and LLVM toolchain
+export PATH="$HOME/.local/share/ps2build:$PATH"
+ps2build update
+ps2build update llvm-toolchain
+
+# every checkout (and again after changing toolchain)
+bash scripts/build_cloud_tls.sh
+bash scripts/build_jpeg.sh
+python3 scripts/gen_cloud_client.py
+python3 scripts/gen_githash.py
+ps2build build</code></pre><p>The release ELF is <code>build/bin/wLaunchELF-packed.elf</code>. <code>ps2build</code> is the only build path; the legacy <code>Makefile</code> build was retired on 2026-10-26.</p></div>
+<h2 id="requirements">Requirements</h2><ul><li><b>Host:</b> Linux (what CI uses). The helper scripts also contain MSYS/Git-Bash path handling for Windows, but only Linux is exercised by CI.</li><li><b>Tools on <code>PATH</code>:</b> <code>bash</code>, <code>curl</code>, <code>tar</code> with bzip2 and gzip, <code>sha256sum</code>, <code>python3</code> 3.11 or newer (only the standard library is used; <code>release_notes.py</code> needs <code>hashlib.file_digest</code>), <code>git</code> and <b>CMake</b> (the dependency scripts call the CMake on your <code>PATH</code>; PS2BUILD only supplies toolchain files). A host <code>gcc</code> or <code>clang</code> is needed to run the test suite.</li><li><b>Network:</b> the first run downloads the SDK, the LLVM toolchain, Mbed TLS and libjpeg-turbo. The two dependency tarballs are SHA-256 pinned in their scripts and cached under <code>.cache/</code>.</li><li><b>Optional:</b> Pillow, only for <code>scripts/gen_dash_font.py</code> and <code>scripts/prepare_psbbn_theme.py</code>.</li></ul>
+<h2 id="sdk">1. Install the PS2BUILD SDK</h2><pre><code>curl -sSfL --retry 8 --retry-delay 5 --retry-all-errors --connect-timeout 20 \
+  https://git.techwritescode.dev/ps2/install/raw/branch/master/install.sh -o install.sh
+sh install.sh
+export PATH="$HOME/.local/share/ps2build:$PATH"</code></pre><p>The installer puts the <code>ps2build</code> executable directly in <code>~/.local/share/ps2build</code> (not in a <code>bin/</code> subfolder) and adds that directory to <code>PATH</code>. The download host occasionally returns transient 5xx errors, which is why CI retries and does not pipe <code>curl</code> into <code>sh</code>. Then bring every component to its latest release and make sure the LLVM toolchain is present:</p><pre><code>ps2build update                  # toolchain, ps2build, sdk-core, sdk-world
+ps2build update llvm-toolchain   # only if the Clang config below is missing
+test -f ~/.local/share/ps2build/llvm-toolchain/ee/bin/mips64r5900el-ps2-elf-clang.cfg
+ps2build version                 # prints ps2build and each SDK component version</code></pre><p>CI always tracks the latest SDK; a local SDK that is older can fail to build. <code>ps2build update --check</code> only reports installed versus available versions. The dependency scripts look for the SDK in <code>$PS2BUILD_ROOT</code> (default <code>~/.local/share/ps2build</code>).</p>
+<h2 id="toolchain">2. Toolchain selection</h2><p><code>ps2.yaml</code> contains <code>toolchain: llvm</code>, so the EE and IOP code is compiled with Clang and linked with LLD against the SDK's <code>packages-llvm</code> libraries. Precedence is the <code>--toolchain</code> flag, then <code>PS2BUILD_TOOLCHAIN</code>, then <code>toolchain:</code> in the project file, then <code>gcc</code>. Every static library linked into a Clang ELF must itself be Clang-built, which is why the next three steps exist.</p>
+<h2 id="deps">3. Third-party libraries and generated headers</h2><pre><code>bash scripts/build_cloud_tls.sh
+bash scripts/build_jpeg.sh
+python3 scripts/gen_cloud_client.py</code></pre><table><thead><tr><th>Script</th><th>What it produces</th></tr></thead><tbody>
+<tr><td><code>build_cloud_tls.sh</code></td><td>Downloads Mbed TLS 3.6.7 (SHA-256 checked), disables the Unix timing and net modules, supplies the millisecond clock and hardware-entropy hook from <code>src/cloud_http.c</code>, and builds <code>libmbedtls.a</code>, <code>libmbedx509.a</code> and <code>libmbedcrypto.a</code> with the active toolchain into <code>.cloud-deps/</code> (untracked).</td></tr>
+<tr><td><code>build_jpeg.sh</code></td><td>Builds libjpeg-turbo 3.1.3 (8-bit, arithmetic coding, memory source/destination, no SIMD) into <code>.jpeg-deps/</code> and installs it as <code>libjpegturbo.a</code>. The SDK's LLVM-tier <code>jpeg</code> archive is GCC-built and is rejected by <code>ld.lld</code> (<i>symbol has invalid binding</i>), so <code>ps2.yaml</code> links <code>-ljpegturbo</code> instead.</td></tr>
+<tr><td><code>gen_cloud_client.py</code></td><td>Writes <code>.cloud-deps/include/wle_cloud_client.h</code>. If both <code>WLE_GOOGLE_CLIENT_ID</code> and <code>WLE_GOOGLE_CLIENT_SECRET</code> are set (see <a href="developers.html#cloud-client">below</a>) they are embedded as the built-in Google OAuth client; if neither is set the header defines nothing and the build has no built-in client. Setting only one, or an ID that does not end in <code>.apps.googleusercontent.com</code>, is an error.</td></tr></tbody></table><p>Both dependency scripts follow the same toolchain precedence as <code>ps2build</code> (they source <code>scripts/ee_toolchain.sh</code>) and record the toolchain in a <code>TOOLCHAIN</code> file inside their output folder. Re-run them whenever you switch toolchains or update the SDK. If <code>.cloud-deps/</code> or <code>.jpeg-deps/</code> is missing, the compile fails on missing headers.</p>
+<h2 id="pccf">4. PC CARD CompactFlash driver check</h2><pre><code>ps2build build -c iop/pccf/ps2.yaml</code></pre><p>Builds the isolated <code>pccf</code> IOP module on its own, the way CI does, to prove the vendored driver still compiles. The main <code>ps2.yaml</code> also builds and embeds it. Its host-side tests are <code>tests/test_pccf.py</code>, <code>test_pccf_owner.py</code> and <code>test_pccf_fs.py</code>.</p>
+<h2 id="build">5. Build Launchstation</h2><pre><code>python3 scripts/gen_githash.py --require-git
+ps2build build</code></pre><p><code>gen_githash.py</code> writes <code>githash.h</code> (untracked) with the 12-character commit and commit date shown in <b>Build information</b> and checked by the updater. <code>--require-git</code> makes it fail outside a Git checkout, as CI does; without it, a tree that is not a Git checkout is stamped <code>local</code>/<code>unknown</code>, and the updater cannot compare such a build with a release. <code>ps2build build</code> then reads <code>ps2.yaml</code>, builds the IOP modules and EE libraries, the embedded loader, the <code>wle_igr</code> helper and the main <code>wLaunchELF</code> target, and writes the output to <code>build/</code>:</p><ul><li><code>build/bin/wLaunchELF-packed.elf</code> is the release ELF (compressed with <code>ps2pack</code>).</li><li><code>build/bin/wLaunchELF.elf</code> is the stripped, unpacked ELF; <code>build/obj/wLaunchELF/wLaunchELF.unstripped.elf</code> is the linked ELF with symbols used by the checks below.</li><li><code>build/bin/*.irx</code> are the source-built IOP modules (<code>udpfs_smap</code>, <code>ps2ips_rpc</code> (vendored PS2IP socket RPC server in <code>iop/ps2ips_rpc/</code>, ETH builds only; the legacy <code>embed.make</code> builds it through its own Makefile), <code>usbd_ra</code>, <code>mmceman</code>, <code>vmcman</code>, <code>ps2ftpd</code>, <code>ps2host</code>, <code>pccf</code>, <code>ata_bd</code> and others); <code>loader.elf</code> and <code>wle_igr.elf</code> are also embedded.</li></ul><p>At the time of writing the packed ELF is about 1.6 MB (unpacked about 4.6 MB). A change to the default feature profile belongs in <code>ps2.yaml</code> (<code>defines:</code>, <code>embed_irx:</code>, <code>libs:</code>); the standard profile is MMCE, MX4SIO, iLink, exFAT, UDPFS plus ETH, DVRP, XFROM, TMANIP and custom colors with native cloud enabled and DS34 off.</p>
+<h2 id="ds34">6. DualShock (DS34) variant</h2><pre><code>python3 scripts/configure_ds34.py
+ps2build build -c .ps2-ds34.yaml -o build-ds34</code></pre><p><code>configure_ds34.py</code> derives <code>.ps2-ds34.yaml</code> (untracked) from <code>ps2.yaml</code> by swapping <code>src/pad.c</code> for <code>src/pad_ds34.c</code>, adding the <code>ds34usb</code>/<code>ds34bt</code> IOP modules and EE libraries and the <code>DS34</code> define, and fails if any anchor in <code>ps2.yaml</code> changed shape. Keep the generated file at the repository root so relative paths still resolve. The result is <code>build-ds34/bin/wLaunchELF-packed.elf</code>. The DS34 build identifies itself as <code>LAUNCHSTATION-DS.ELF</code> in <code>APP_LAUNCHSTATION-DS</code> for the updater.</p>
+<h2 id="verify">7. Verification scripts</h2><p>Set <code>LLVM_BIN</code> to the toolchain's LLVM tools, then run the same checks as CI against the <i>unstripped</i> ELFs:</p><pre><code>export LLVM_BIN="$HOME/.local/share/ps2build/llvm-toolchain/llvm/bin"
+
+# DS34 symbols must be absent from the standard ELF and present in the DS34 ELF
+python3 scripts/check_ds34_build.py "$LLVM_BIN/llvm-nm" \
+  build/obj/wLaunchELF/wLaunchELF.unstripped.elf \
+  build-ds34/obj/wLaunchELF/wLaunchELF.unstripped.elf
+
+# every producer in .comment must be Clang; any "GCC:" entry fails
+python3 scripts/check_toolchain_purity.py "$LLVM_BIN/llvm-readobj" \
+  build/obj/wLaunchELF/wLaunchELF.unstripped.elf \
+  build-ds34/obj/wLaunchELF/wLaunchELF.unstripped.elf \
+  build/obj/loader/loader.unstripped.elf \
+  build/obj/wle_igr/wle_igr.unstripped.elf \
+  build/obj/usbd_ra/usbd_ra.notiopmod.elf \
+  build/obj/mmceman/mmceman.notiopmod.elf
+
+# source-built UDPFS SMAP is embedded and still matches the prebuilt peer ABI
+python3 scripts/check_udpfs_smap.py build build-ds34
+
+# the embedded loader must fit the 0x84000..0xa0000 low-memory window
+sh scripts/check_loader_layout.sh build/obj/loader/loader.unstripped.elf \
+  "$LLVM_BIN/llvm-nm" 0x84000 auto auto 0xa0000</code></pre><p>The layout script arguments are <code>&lt;loader.elf&gt; &lt;nm-tool&gt; &lt;loadaddr&gt; &lt;stackaddr|auto&gt; &lt;stacksize|auto&gt; &lt;low_mem_limit&gt;</code>. CI also prints Mbed TLS archive sizes, the <code>llvm-size</code> sections and the 40 largest symbols so footprint work targets measured contributors.</p>
+<h2 id="package">8. Package the app archives</h2><pre><code>python3 scripts/package_apps.py \
+  --standard build/bin/wLaunchELF-packed.elf \
+  --dualshock build-ds34/bin/wLaunchELF-packed.elf \
+  --output artifacts \
+  --revision "$(git rev-parse HEAD)" \
+  --epoch "$(git show -s --format=%ct HEAD)"
+python3 tests/test_app_packages.py</code></pre><p>This writes <code>APP_LAUNCHSTATION.psu/.zip</code> and <code>APP_LAUNCHSTATION-DS.psu/.zip</code>, plus loose <code>LAUNCHSTATION.ELF</code>, <code>LAUNCHSTATION-DS.ELF</code>, <code>BOOT.ELF</code> and <code>BOOT2.ELF</code> (the last two are copies of the standard ELF). Each contains the ELF, a generated <code>title.cfg</code>, <code>WLE-UPDATE-CA.PEM</code> and <code>BGM.ADP</code> (from <code>res/music.sad</code>), and the script re-reads every archive to confirm that the ZIP and PSU payloads are identical. <code>--revision</code> must be lowercase hexadecimal and <code>--epoch</code> must fall in 2000-2099 (PS2 timestamps). <code>scripts/copy_test_pack.py --output test-fixtures/LS-COPY-TEST.zip</code> creates the deterministic copy-test fixture CI uploads for hardware testers.</p>
+<h2 id="tests">9. Run the tests</h2><pre><code>python3 tests/test_self_update.py        # one test
+for t in tests/test_*.py; do python3 "$t" || echo "FAIL $t"; done</code></pre><p>The tests are plain Python scripts that exit non-zero on failure. Many compile production C sources against stubs with the host <code>gcc</code> or <code>clang</code> and exercise them; others assert on build definitions, workflows and documentation. They need no PS2 tools but must run inside a Git checkout (<code>test_build_identity.py</code> and <code>test_release_notes.py</code> call <code>git</code>). CI runs an explicit list, so a new test must be added to the <i>Test Settings sessions, navigation and theme compatibility</i> step of <code>compile.yml</code> to count. Hardware timing, USB behavior and console quirks are not covered by any of them. See <a href="contributing.html">Contributing &amp; Testing</a>.</p>
+<h2 id="gcc">10. GCC comparison builds</h2><pre><code>export PS2BUILD_TOOLCHAIN=gcc
+bash scripts/build_cloud_tls.sh
+bash scripts/build_jpeg.sh
+python3 scripts/gen_cloud_client.py
+ps2build build -o build-gcc</code></pre><p>Use a separate <code>-o</code> directory. The dependency scripts overwrite <code>.cloud-deps/</code> and <code>.jpeg-deps/</code>, so unset the variable and re-run them before your next LLVM build. GCC output is for comparison only; the purity check does not apply to it and release packages are Clang-built.</p>
+<h2 id="docs">11. Documentation site and wiki</h2><pre><code>python3 docs-site/build.py --out build/docs-site
+python3 docs-site/build.py --out site --zip Launchstation-Documentation.zip</code></pre><p><code>build.py</code> renders every page in <code>docs-site/manifest.json</code> from <code>docs-site/content/&lt;slug&gt;.html</code>, builds the search index and fails on missing pages, broken internal links, unresolved template tokens, missing images and stale upstream branding outside Credits. CI builds it on every run; the <i>Publish Documentation</i> workflow pushes it to <code>gh-pages</code> when <code>docs-site/**</code> changes on <code>master</code>. <i>Synchronize GitHub Wiki</i> runs <code>scripts/sync_github_wiki.py</code> to mirror <code>docs/wiki/*.md</code>, the site pages and <code>docs/THIRD_PARTY_CREDITS.md</code> into the repository wiki without deleting unmanaged pages or force-pushing.</p>
+<h2 id="cloud-session">12. Claude Code cloud sessions</h2><p>The repository ships <code>.claude/settings.json</code> with a <code>SessionStart</code> hook that runs <code>.claude/hooks/session-start.sh</code>. In a Claude Code cloud session (<code>CLAUDE_CODE_REMOTE=true</code>; it does nothing elsewhere) the hook installs the PS2BUILD SDK with the same installer and retry options as CI if <code>ps2build</code> is missing, runs <code>ps2build update</code> and <code>ps2build update llvm-toolchain</code>, and exports <code>PATH</code>, <code>LLVM_BIN</code> and <code>PS2BUILD_TOOLCHAIN=llvm</code> for the session through <code>CLAUDE_ENV_FILE</code>. It honors <code>PS2DEV_INSTALL_DIR</code> as the install location. After it runs, the commands in sections 3 to 9 work unchanged.</p>
+<h2 id="troubleshooting">Troubleshooting a build</h2><ul><li><b><code>ps2build: command not found</code>:</b> add <code>~/.local/share/ps2build</code> to <code>PATH</code>.</li><li><b><code>PS2 EE clang config not found</code>:</b> run <code>ps2build update llvm-toolchain</code>.</li><li><b>Missing <code>mbedtls/ssl.h</code> or <code>jpeglib.h</code>:</b> run the two dependency scripts first.</li><li><b><code>symbol has invalid binding</code> from <code>ld.lld</code>, or a purity failure listing <code>GCC:</code>:</b> a GCC-built archive was linked; rebuild the dependencies with the same toolchain, and do not add <code>jpeg</code> or the GCC-only SDK <code>audsrv</code> package to <code>ps2.yaml</code> (sound uses <code>audsrv-compat</code> and the <code>audio:audsrv</code> driver) (<code>tests/test_llvm_toolchain.py</code> guards this).</li><li><b><code>Expected a Git revision</code> / <code>outside the PS2 timestamp range</code>:</b> pass a lowercase hex <code>--revision</code> and a Unix <code>--epoch</code> in 2000-2099 to <code>package_apps.py</code>.</li><li><b>Update check says the build cannot be compared:</b> it was stamped <code>local</code>; rebuild with <code>--require-git</code> from a real commit.</li></ul>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

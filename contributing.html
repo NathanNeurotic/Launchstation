@@ -1,0 +1,109 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contributing &amp; Testing · Launchstation Docs</title>
+<meta name="description" content="Contributing &amp; Testing How changes get into Launchstation: what to run before opening a pull request, what CI enforces, and what only real hardware can prove. Workflow Fork NathanNeurotic/Launchstation and branch from master . Check existing issues and open a ">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/contributing.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Contributing &amp; Testing · Launchstation Docs">
+<meta property="og:description" content="Contributing &amp; Testing How changes get into Launchstation: what to run before opening a pull request, what CI enforces, and what only real hardware can prove. Workflow Fork NathanNeurotic/Launchstation and branch from master . Check existing issues and open a ">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="smb.html"><span class="icon icon-netboot"></span>Network Shares (SMB)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html" class="active"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Contributing &amp; Testing</h1><p class="lead">How changes get into Launchstation: what to run before opening a pull request, what CI enforces, and what only real hardware can prove.</p>
+<h2 id="workflow">Workflow</h2><ol><li>Fork <a href="https://github.com/NathanNeurotic/Launchstation">NathanNeurotic/Launchstation</a> and branch from <code>master</code>. Check <a href="https://github.com/NathanNeurotic/Launchstation/issues">existing issues</a> and open a draft early for anything large (storage-driver and IOP-lifecycle changes in particular).</li><li><a href="building.html">Build</a> locally with the LLVM toolchain. A change that only compiles with GCC is not releasable.</li><li>Run the affected tests, and the whole suite for anything touching shared code such as <code>init.c</code>, <code>dash_worker.c</code> or the file-copy path.</li><li>Update documentation in the same pull request (see <a href="#docs">below</a>).</li><li>Open a pull request. CI runs on every push and pull request; only a verified push to <code>master</code> can publish the rolling release.</li></ol>
+<h2 id="ci">What CI enforces</h2><p><code>.github/workflows/compile.yml</code> (<i>Automated-Build</i>) runs, in order:</p><ol><li>the explicit list of <code>tests/test_*.py</code> scripts, then the copy-test fixture generator;</li><li>the documentation site build (<code>python3 docs-site/build.py</code>);</li><li>SDK install, <code>ps2build update</code> and the LLVM toolchain check;</li><li>Mbed TLS and libjpeg-turbo builds, the Google client header, the isolated PC CARD CF driver;</li><li>the standard and DS34 builds, then <code>check_ds34_build.py</code>, <code>check_toolchain_purity.py</code>, <code>check_udpfs_smap.py</code> and <code>check_loader_layout.sh</code>;</li><li>packaging with <code>package_apps.py</code> and a second run of the package test; artifacts are uploaded.</li></ol><p>On <code>master</code> pushes, a final step publishes the four packages to the rolling <a href="https://github.com/NathanNeurotic/Launchstation/releases/tag/latest"><code>latest</code> release</a> only if the tests, both builds and every check passed, if <code>master</code> did not move during the build, and if the previous <code>latest</code> commit is an ancestor of the new one (the in-app updater relies on that lineage). It then re-downloads each published asset, compares it byte for byte, and only then moves the tag. Pull requests build review artifacts but never overwrite public downloads.</p>
+<h2 id="tests">Writing and running tests</h2><ul><li>Tests are standalone scripts: <code>python3 tests/test_name.py</code> exits non-zero on failure and normally prints a <code>PASS:</code> line.</li><li>Prefer compiling the <b>production</b> source with small stubs (see <code>test_worker_queue.py</code>, <code>test_copy_pipeline.py</code>, <code>test_pccf.py</code>) over re-implementing logic in the test. The host compiler is <code>gcc</code> or <code>clang</code>.</li><li>Source/workflow-contract tests (<code>test_llvm_toolchain.py</code>, <code>test_rolling_release_workflow.py</code>, <code>test_native_cloud.py</code>, <code>test_self_update.py</code>) read files and assert on them; update them deliberately when you change the contract they protect.</li><li><b>Register new tests:</b> CI runs an explicit list. Add a line to the first step of <code>compile.yml</code>; a test that is not listed does not gate merges.</li><li>Run everything locally with <code>for t in tests/test_*.py; do python3 "$t" || echo "FAIL $t"; done</code> from inside a Git checkout.</li></ul><p>Fixtures live in <code>tests/fixtures</code> and <code>tests/pccf-stubs</code>. Passing host tests do not establish console behavior: USB timing, IOP stalls, DEV9 sharing, display output and external-core handoffs need a console, and release notes say so.</p>
+<h2 id="hardware">Hardware validation</h2><p>When you test on real hardware, report the console model and revision, video mode, boot device and exact ELF commit (shown by <b>Tools &gt; About Launchstation</b>), the storage devices attached and the minimal reproduction steps. Say clearly what you did <i>not</i> test (for example one USB drive but not two). The copy-test fixture (<code>LS-COPY-TEST.zip</code>, produced by <code>scripts/copy_test_pack.py</code> and uploaded by CI as the <i>Launchstation-copy-test</i> artifact) gives deterministic files for verifying copies across devices; <code>--verify</code> checks a returned folder.</p>
+<h2 id="docs">Documentation and attribution</h2><ul><li>User documentation is <code>docs-site/content/*.html</code> plus <code>docs-site/manifest.json</code>; long-form guides are <code>docs/wiki/*.md</code>. Do not edit <code>gh-pages</code> or the GitHub wiki by hand; both are generated.</li><li>Add a bullet to the <code>## Rolling</code> section of <code>CHANGELOG.md</code> for user-visible changes. The rolling release notes are built from that section.</li><li>Pages must match the code: when you change a menu label, file name, default or network behavior, grep <code>docs-site/content</code>, <code>docs/</code> and <code>README.md</code> for it.</li><li>Every external project you vendor, link or mention needs an entry in <a href="credits.html">Credits</a> and <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/docs/THIRD_PARTY_CREDITS.md">docs/THIRD_PARTY_CREDITS.md</a>, with the role (vendored code, compiled dependency, external program, service, or reference) and the license. Keep original file-level notices intact. For vendored source also record upstream URL, base commit, local changes and license in an <code>ORIGIN.md</code> or <code>VENDORED.md</code> beside it (see <code>iop/udpfs_smap/ORIGIN.md</code> and <code>iop/pccf/VENDORED.md</code>).</li><li>There is no root <code>LICENSE</code> file, and the tree contains components under different terms (AFL-2.0, AFL-3.0, MIT, BSD, Apache-2.0 and a restrictive legacy libcdvd license); do not assume one license applies to every file.</li></ul>
+<h2 id="hygiene">Repository hygiene</h2><ul><li>Never commit generated or secret files: <code>githash.h</code>, <code>.cloud-deps/</code>, <code>.jpeg-deps/</code>, <code>.cache/</code>, <code>build*/</code>, <code>.ps2-ds34.yaml</code>, packages and ZIPs (they are in <code>.gitignore</code>), or Google client secrets, token files (<code>WLE-CLOUD.TOK</code>) and MagicGate keys (<code>PS2KEYS.dat</code>).</li><li>The official Google OAuth client comes only from the repository secrets <code>WLE_GOOGLE_CLIENT_ID</code> and <code>WLE_GOOGLE_CLIENT_SECRET</code>; forks build without it.</li><li>Keep changes behavior-neutral when refactoring, and keep new IOP modules lazy-loaded.</li></ul>
+<h2 id="issues">Reporting bugs</h2><p>Use the <a href="https://github.com/NathanNeurotic/Launchstation/issues/new/choose">Launchstation issue form</a>. It asks for the console model, the build commit, the package you installed, the storage and network setup, and the display chain, so complete reports are triaged quickly. Consoles with a modchip installed are a confounder; confirmation on an unmodified console is appreciated. See also <a href="troubleshooting.html#report">Good bug report</a>.</p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

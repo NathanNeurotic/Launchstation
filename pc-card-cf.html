@@ -1,0 +1,153 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PC CARD CompactFlash · Launchstation Docs</title>
+<meta name="description" content="PC CARD CompactFlash Early Japanese PS2 models have a PCMCIA slot. With a CompactFlash card (or an SD card through a CF bridge) in it, Launchstation can browse the card and move files on and off it. This is file management only: programs and games cannot be la">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/pc-card-cf.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="PC CARD CompactFlash · Launchstation Docs">
+<meta property="og:description" content="PC CARD CompactFlash Early Japanese PS2 models have a PCMCIA slot. With a CompactFlash card (or an SD card through a CF bridge) in it, Launchstation can browse the card and move files on and off it. This is file management only: programs and games cannot be la">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="smb.html"><span class="icon icon-netboot"></span>Network Shares (SMB)</a>
+    <a href="pc-card-cf.html" class="active"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>PC CARD CompactFlash</h1>
+<p class="lead">Early Japanese PS2 models have a PCMCIA slot. With a CompactFlash card (or an SD card through a CF bridge) in it, Launchstation can browse the card and move files on and off it. This is file management only: programs and games cannot be launched from it.</p>
+
+<div class="callout amber"><div class="h">Experimental, not hardware-verified</div><p>The driver is adapted from the PS2CF project and passes its host tests, but it has not yet been confirmed on a physical SCPH-10000, 15000 or 18000 with this build. Treat it as test-only, keep backups, and report results with your exact adapter, card and console.</p></div>
+
+<h2 id="eligible">When the device appears</h2>
+<p>The <b>PC CARD CF</b> card (<code>cf0:</code>; <code>cf:</code> is accepted as an alias) is listed only on consoles whose ROM identifies the early Japanese retail family: ROM versions 1.00, 1.01, 1.10 and 1.20 with the Japanese retail region marker. DESR/PSX, development, arcade, later retail and unknown ROMs are not eligible. This is a first hint only: the IOP driver independently checks the hardware family, that no DEV9 driver is resident, that a card is present and that its CIS says it is a fixed (ATA) disk. A LAN PC card or an empty slot is rejected before any ATA command is sent. In the recovery boot (hold <b>SELECT</b>) the card is listed on every console, with the status <em>Unsupported console model</em> or <em>Disabled in safe mode</em>, and is never powered.</p>
+
+<h2 id="hardware">Hardware you need</h2>
+<ul>
+<li>A compatible PCMCIA Type II CompactFlash adapter, or a CF card in one. An SD or microSD card can be used through an SD-to-CF bridge; compatibility depends on the bridge.</li>
+<li>The card needs an MBR partition table with a FAT32 or exFAT volume. Other filesystems show <em>FAT32/exFAT volume not found</em>.</li>
+<li>Capacity is shown on the card (for example <em>3.7 GB capacity</em>). The driver supports LBA28 and LBA48 transfers (covered by host tests with modelled cards); behaviour with real large cards is unverified.</li>
+</ul>
+
+<h2 id="use">How to use it</h2>
+<ol>
+<li>Insert the card, then open <b>PC CARD CF</b> in the Files tab device cards. Launchstation reserves the PC CARD bus, loads the BDM modules and the CF driver, and probes <code>cf0:/</code> for up to two seconds.</li>
+<li>Browse, <b>Copy</b> / <b>Cut</b> / <b>Paste</b>, create folders, rename and delete as on USB. Text files open in the Text Editor. File operations stop with a clear message if the card goes offline.</li>
+<li>To start something you copied, copy it to USB, a memory card or another supported device first.</li>
+</ol>
+<h3 id="states">Status lines</h3>
+<table><thead><tr><th>Status</th><th>Meaning / action</th></tr></thead><tbody>
+<tr><td><em>Not connected</em> (dim)</td><td>Not checked yet; open the card.</td></tr>
+<tr><td><em>Ready (PCMCIA)</em></td><td>Mounted and online.</td></tr>
+<tr><td><em>No compatible CF adapter</em></td><td>The probe ran and found no supported fixed-disk card.</td></tr>
+<tr><td><em>CF card offline or I/O fault</em></td><td>The card was removed or an I/O error latched the driver offline.</td></tr>
+<tr><td><em>PC CARD / DEV9 bus busy</em></td><td>A DEV9 stack (HDD, exFAT HDD, network) is already using the bus. Reset the IOP first.</td></tr>
+<tr><td><em>Unsupported console model</em> / <em>Disabled in safe mode</em></td><td>Shown only in the recovery boot.</td></tr>
+</tbody></table>
+
+<h2 id="limits">Limits</h2>
+<ul>
+<li><b>No launching.</b> ELF/KELF, Neutrino ISOs, POPStarter VCDs, Ember games and <em>Start with arguments</em> are blocked from <code>cf:</code> with &ldquo;Direct launch unsupported&rdquo; or &ldquo;Launching executables or game images directly from PC CARD CF is not supported yet&rdquo;. Virtual memory card mounting from CF is disabled too.</li>
+<li><b>One bus owner.</b> The CF driver owns the PCMCIA/DEV9 bus. It refuses to start if HDD, exFAT HDD, network or UDPFS drivers are resident, and those loaders refuse once CF owns the bus. Only a real IOP reset (Tools &gt; Reboot IOP, or a stack change) releases the reservation.</li>
+<li><b>No safe-remove.</b> The driver can be powered off for reset or launch, but that is not an eject: filesystem state is not flushed for removal and a same-session re-probe is not supported. Do not remove the card while Launchstation is using it; power off or reboot first.</li>
+<li><b>Transfers with DEV9 devices are refused.</b> Copying between CF and internal HDD, exFAT HDD, UDPFS, <code>host:</code> or PSX flash/DVR shows &ldquo;Incompatible drivers to perform action&rdquo;. Use USB or a memory card as the middle step.</li>
+<li><b>Never auto-started</b> and never powered in safe mode.</li>
+<li>Before any ELF launch, reset or Ember hand-off the CF driver is asked to power down; if that request fails the signer, Ember and ELF hand-offs abort rather than continue.</li>
+</ul>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>No PC CARD CF card.</b> Your console is not in the eligible ROM set. Hold SELECT at boot to see it with its reason.</li>
+<li><b>&ldquo;No compatible CF adapter&rdquo;.</b> Re-seat the card, try a different adapter or card, and check it is a fixed-disk (not network) PC card.</li>
+<li><b>&ldquo;PC CARD / DEV9 bus busy&rdquo;.</b> Use Tools &gt; Reboot IOP, then open PC CARD CF before any other DEV9 device.</li>
+<li><b>&ldquo;FAT32/exFAT volume not found&rdquo;.</b> Re-partition with an MBR table and FAT32 or exFAT on a PC.</li>
+<li><b>Odd data after write.</b> Back up first, run a file-system check on a PC, and report the card, adapter and console.</li>
+</ol>
+
+<h2 id="credits">Credits</h2>
+<p>The CF PIO/ATA foundation comes from <a href="https://github.com/mihhru/PS2CF">PS2CF</a> by <a href="https://github.com/mihhru">mihhru</a> (pinned upstream commit recorded in the repository&rsquo;s <code>iop/pccf/VENDORED.md</code>), under the licences listed there.</p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

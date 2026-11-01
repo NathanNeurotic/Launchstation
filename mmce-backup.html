@@ -1,0 +1,191 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MMCE Backups · Launchstation Docs</title>
+<meta name="description" content="MMCE Backup History Versioned, verified backups of your MMCE memory-card images, stored away from the adapter, with optional Google Drive copies and recovery that never overwrites an active card. Set a destination first No backup folder is chosen by default. G">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/mmce-backup.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="MMCE Backups · Launchstation Docs">
+<meta property="og:description" content="MMCE Backup History Versioned, verified backups of your MMCE memory-card images, stored away from the adapter, with optional Google Drive copies and recovery that never overwrites an active card. Set a destination first No backup folder is chosen by default. G">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="smb.html"><span class="icon icon-netboot"></span>Network Shares (SMB)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html" class="active"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>MMCE Backup History</h1>
+<p class="lead">Versioned, verified backups of your MMCE memory-card images, stored away from the adapter, with optional Google Drive copies and recovery that never overwrites an active card.</p>
+
+<div class="callout info"><div class="h">Set a destination first</div><p>No backup folder is chosen by default. Go to <b>Settings &gt; Storage &amp; devices &gt; MMCE backups &gt; Backup folder</b> and pick the <em>parent</em> folder (USB, exFAT HDD, internal HDD&hellip;) in which <code>WLE-MMCE-Backups</code> will be created. Until then the page reads <em>Set destination</em> and automatic IGR backup reports &ldquo;no MMCE backup destination configured&rdquo;. The folder cannot be inside <code>mmceN:/MemoryCards</code>. Changing it leaves old history where it is, and you must reinstall the IGR helper because the path is embedded in it.</p></div>
+
+<h2 id="local">Local history</h2>
+<p>For every card image found under <code>mmce0:/MemoryCards</code> and <code>mmce1:/MemoryCards</code> (numbered, named, GameID and BootCard images, to a depth of twelve folders) Launchstation keeps a history folder:</p>
+<pre class="tree"><code>&lt;backup folder&gt;/WLE-MMCE-Backups/
+└── mmce0/
+    └── PS2/Card1/Card1-1/            one folder per card image
+        ├── WLE-20261026-101500.mcd   one file per kept version
+        └── WLE-20261026-174200.mcd</code></pre>
+<p>Each snapshot is written as <code>&lt;name&gt;.PART</code>, compared back against the source, then published with a same-folder rename. An interrupted copy therefore never looks like a finished <code>.mcd</code>/<code>.ps2</code> history entry and is never uploaded to Drive; an existing <code>.PART</code> is not reused. Retention runs only <em>after</em> a successful publish and never prunes on a failed export, comparison or rename. <b>Backups per card</b> keeps the newest 1&ndash;99 versions (default <b>10</b>); <b>0</b> keeps every version. <b>Backup format</b> is <b>.mcd</b> (native, byte for byte; default) or <b>PCSX2 .ps2</b>, which adds ECC/spare bytes and is verified after conversion.</p>
+
+<h2 id="unchanged">Skip unchanged cards</h2>
+<p>Before adding a history entry Launchstation compares the card with the newest snapshot of the same format. If it is identical, nothing is written and the summary counts it as <em>unchanged</em>. For the native format the comparison happens before any write.</p>
+<p>The automatic backup after IGR and the status scan decide this from a <b>fingerprint</b> instead of reading the whole card: a SHA-256 of the card&rsquo;s superblock and every directory entry (folders, file sizes, dates and locations, a few hundred KB). Each history copy gets a small <code>&lt;copy&gt;.FP</code> file holding it. History without one is compared in full once and then gets one. The contents of <code>B?DATA-SYSTEM</code> are left out, because the PS2 and OPL rewrite its history file when a game starts, which used to make every played card look changed.</p>
+<p>A fingerprint cannot see a save rewritten in place at the same size while the console clock is stuck or reset, because its date does not change. A match is therefore trusted for at most 8 backups in a row; the next one compares every byte and restarts the count. <b>Back up all MMCE cards</b> (Tools and File Browser) and the safety copy taken before a recovery always compare every byte.</p>
+
+<h2 id="per-save">Per-save versions</h2>
+<p>With <b>Settings &gt; Storage &amp; devices &gt; MMCE backups &gt; Per-save versions</b> on (default <b>Off</b>), every backup also keeps each save on the card as its own <code>.psu</code> file, so one game&rsquo;s history can be kept or restored without the rest of the card:</p>
+<pre class="tree"><code>PS2/Card1/Card1-1/
+├── WLE-20261031-101500.mcd
+└── WLE-Saves/
+    ├── BASLUS-21050SAVE/
+    │   ├── WLE-20261026-174200.psu   named after the card copy it came from
+    │   └── WLE-20261031-101500.psu
+    └── SOURCE.TXT                    the card copy last done without errors</code></pre>
+<ul>
+<li>The saves are taken from the card&rsquo;s newest <em>verified history copy</em>, never from the live MMCE card, so turning this on costs no extra adapter reads.</li>
+<li>A new <code>.psu</code> is kept only when the save&rsquo;s bytes differ from the newest one already in its folder. A card that did not change reads nothing more: <code>SOURCE.TXT</code> already names its copy.</li>
+<li>Each <code>.psu</code> is written as <code>.PART</code>, read back and checked against what was meant, then renamed; an existing file is never replaced. A failure is counted in the summary as <em>saves failed</em> and the next backup tries that card again. The card&rsquo;s own history is not affected.</li>
+<li><b>Backups per card</b> also limits the versions kept <em>per save</em> (0 keeps all); the oldest go first and the newest is never removed.</li>
+<li>The console&rsquo;s own <code>B?DATA-SYSTEM</code> folders, saves that hold sub-folders and saves larger than 8.5 MB are not kept. A save whose name uses characters other than letters, digits, <code>-</code>, <code>_</code> and <code>.</code> gets a folder with those replaced and a short hash added, so two saves never share one.</li>
+<li>To put a version back, open its folder with <b>Save library here&hellip;</b> (File Browser) or use <b>Card contents &gt; Import .psu&hellip;</b> on a card image; both take a verified safety copy of the card first (see <a href="saves.html">Saves</a>).</li>
+<li>With Google Drive linked the <code>WLE-Saves</code> folders are uploaded with the cards, and <b>Browse cloud history&hellip;</b> can download a single version (<a href="cloud.html#browse-recover">Google Drive</a>).</li>
+</ul>
+<p>Not yet tested on a console.</p>
+
+<h2 id="verification">Verification matters</h2>
+<p>A copy only counts after it has been read back and matched. Failures are reported per card (<em>failed</em> in the summary) and automatic steps such as the cloud upload do not run for a card that failed.</p>
+
+<h2 id="manual">Manual backups from the File Browser</h2>
+<p>Inside an <code>mmceN:</code> folder the options menu offers <b>Back up all MMCE cards&hellip;</b>, <b>Back up active MMCE card&hellip;</b> (the exact firmware-selected image), <b>Export active MMCE card as PCSX2 .ps2&hellip;</b> and, with a <code>.mcd</code> highlighted, <b>Back up selected MMCE card to history&hellip;</b>. Any <code>.mcd</code> anywhere also offers <b>Back up .mcd&hellip;</b> (verified byte-for-byte copy) and <b>Export as PCSX2 .ps2&hellip;</b>; a <code>.ps2</code> offers <b>Convert to no-ECC .mcd&hellip;</b>. None of them writes to an emulated card.</p>
+<p>The same folder also offers <b>Which MMCE card is in use?</b> and, on a numbered card, <b>Make this the active MMCE card&hellip;</b> (see <a href="mmce.html#active-card">MMCE</a>). To change the saves inside a card image, use <a href="saves.html#card-contents">Card contents</a>; every change there starts with a verified safety copy of the whole card.</p>
+
+<h2 id="sync-all">Sync all cards</h2>
+<p><b>Settings &gt; Storage &amp; devices &gt; MMCE backups &gt; Sync all cards</b> scans both MMCE units, creates history only for changed cards and summarizes new / unchanged / failed. If Google Drive is linked, pending local history is uploaded afterward. The page also shows status rows: cards (<em>Locally backed up</em>, <em>N pending</em>, <em>N scan errors</em>, <em>No cards</em>, <em>MMCE unavailable</em>), the IGR helper (<em>Current</em>, <em>Outdated</em>, <em>Not installed</em>, <em>Partial / mixed</em>) and Google (<em>Linked</em> / <em>Not linked</em>). These are read-only scans.</p>
+
+<h2 id="automatic-sync">Automatic sync modes</h2>
+<p>The single <b>Automatic sync</b> control has three modes: <b>Off</b>, <b>Local backup</b> (default) and <b>Local + Google Drive</b>. It applies when OPL returns through WLE-IGR (see <a href="igr.html">IGR</a>). The Drive mode needs a linked account and stays off until you pick it.</p>
+<h2 id="helper-control">IGR helper control</h2>
+<p>The same page exposes install / update / remove of the verified <code>WLE-IGR.ELF</code> helper (also <b>Tools &gt; OPL IGR automatic MMCE backup</b>) and the <b>After IGR, open</b> destination.</p>
+
+<h2 id="recovery">Non-destructive local recovery</h2>
+<ol>
+<li><b>Recover to a new .mcd.</b> In <b>Settings &gt; Storage &amp; devices &gt; MMCE backups &gt; Recover saved card image&hellip;</b> choose a snapshot from your local history, or highlight a complete <code>.mcd</code>/<code>.ps2</code> in the File Browser and choose <b>Recover as new .mcd&hellip;</b>. Launchstation validates the card image, asks for a USB/HDD folder, writes a <code>.PART</code> file, reads it back and publishes a new <code>RECOVER-###.mcd</code>. Existing files and MMCE cards are never replaced or activated.</li>
+<li><b>Store a NEW snapshot on the adapter.</b> For a local USB/HDD <code>.mcd</code>/<code>.ps2</code>, <b>Store NEW snapshot on MMCE&hellip;</b> creates and verifies <code>mmceN:/WLE-Recovered/RECOVER-###.mcd</code> (staged as <code>.PART</code>; if the adapter&rsquo;s rename fails but the staged file is intact and the final name free, a separate read-back-verified copy is used). The folder is a holding area the adapter does not mount.</li>
+<li><b>Install as a NEW selectable card.</b> <b>Install as NEW selectable MMCE card&hellip;</b> (source: a completed local snapshot or a <code>WLE-Recovered</code> image) selects an entirely unused <code>MemoryCards/PS2/CardN</code> folder, writes and verifies <code>CardN-1.mcd</code>, and leaves card selection unchanged. It never replaces an existing numbered, BootCard or GameID image. If rename is unsupported the verified-copy fallback cannot guarantee power-loss-atomic publication: do not select a failed or interrupted new card until you have inspected that folder.</li>
+</ol>
+<p>All three work on the unchanged sd2psXtd firmware; no custom protocol is involved.</p>
+
+<h2 id="cloud-browser">Browse and recover remote backup history</h2>
+<p>In <b>Tools &gt; Google Drive backups &gt; Browse cloud history&hellip;</b> explore the app-created <code>WLE-MMCE-Backups</code> folder on Google Drive in pages of twelve. Selecting a snapshot that has an uploaded SHA-256 downloads it to a NEW <code>RECOVER-CLOUD-###.mcd</code> on USB/HDD after the complete download&rsquo;s SHA-256 matches and the card image validates (PCSX2 snapshots are converted where needed). Drive history and emulated cards are never modified.</p>
+<h2 id="cloud">Cloud is additive</h2>
+<p>Google Drive upload runs after the verified local backup and is copy-only (it never deletes local or Drive history). A cloud failure does not invalidate the local entry. Setup and privacy: <a href="cloud.html">Native Google Drive Cloud Backup</a>.</p>
+
+<h2 id="safety-matrix">Recovery safety summary</h2>
+<table><thead><tr><th>Action</th><th>Allowed now</th><th>Effect on active MMCE card</th></tr></thead><tbody>
+<tr><td>Browse local history</td><td>Yes</td><td>Read-only</td></tr>
+<tr><td>Browse Drive history</td><td>Yes, linked account</td><td>Read-only</td></tr>
+<tr><td>Recover complete local snapshot to new USB/HDD .mcd</td><td>Yes</td><td>Unchanged</td></tr>
+<tr><td>Recover Drive snapshot (stored SHA-256) to new USB/HDD .mcd</td><td>Yes</td><td>Unchanged</td></tr>
+<tr><td>Store a new file in <code>WLE-Recovered</code> / install a new unused CardN</td><td>Yes</td><td>Unchanged; not activated</td></tr>
+<tr><td>Copy, move, delete or import saves in a card image (<a href="saves.html#card-contents">Card contents</a>)</td><td>Yes, on cards the adapter is not serving</td><td>Refused on the card in use, and on every card when Launchstation cannot tell which one that is</td></tr>
+<tr><td>Copy a card to a new size</td><td>Yes</td><td>Source only read; the new card is a new file in <code>WLE-Resized</code></td></tr>
+<tr><td>Make a blank card (<a href="saves.html#blank-card">New blank card</a>)</td><td>Yes</td><td>Only a new file in <code>WLE-New</code>; not activated</td></tr>
+<tr><td>Split a card into Game ID cards (<a href="saves.html#gameid-split">Game ID cards</a>)</td><td>Yes</td><td>Source only read; new files in <code>WLE-GameID</code></td></tr>
+<tr><td>Install a Game ID card (<b>Install as MMCE Game ID card&hellip;</b>)</td><td>Yes</td><td>Only when that game has no folder in <code>MemoryCards/PS2</code>; never replaces a card</td></tr>
+<tr><td>Select a numbered card (<b>Make this the active MMCE card&hellip;</b>)</td><td>Yes, when you choose it</td><td>Changes which card is in use; does not change any card&rsquo;s contents</td></tr>
+<tr><td>Overwrite the current MMCE card directly</td><td>No</td><td>Intentionally disabled</td></tr>
+</tbody></table>
+<p>Remote entries without the expected saved digest can be inspected but not downloaded through the verified workflow. Incomplete <code>.PART</code> files never count as backups. Step-by-step: <a href="wiki.html">wiki index</a> and the <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/docs/wiki/MMCE-Recovery.md">recovery guide</a>.</p>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>&ldquo;MMCE unavailable&rdquo;.</b> The driver could not start (wrong stack, reset refused, no adapter). Open an MMCE card from Files first.</li>
+<li><b>Cards are backed up again every time.</b> Native <code>.mcd</code> history compares against the newest <em>native</em> snapshot; switching format means the first run in the new format writes a fresh entry.</li>
+<li><b>History folder missing after moving the backup folder.</b> Old history stays in the old folder; move it manually if you want one tree.</li>
+</ol>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

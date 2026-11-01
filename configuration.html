@@ -1,0 +1,195 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Config Files &amp; Paths · Launchstation Docs</title>
+<meta name="description" content="Configuration Files &amp; Paths Classic CNF compatibility is retained while the dashboard, themes and cloud features add their own files. Everything is plain text you can edit on a PC; unknown keys are ignored and missing keys fall back to defaults, so old and new">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/configuration.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Config Files &amp; Paths · Launchstation Docs">
+<meta property="og:description" content="Configuration Files &amp; Paths Classic CNF compatibility is retained while the dashboard, themes and cloud features add their own files. Everything is plain text you can edit on a PC; unknown keys are ignored and missing keys fall back to defaults, so old and new">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="smb.html"><span class="icon icon-netboot"></span>Network Shares (SMB)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html" class="active"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Configuration Files &amp; Paths</h1>
+<p class="lead">Classic CNF compatibility is retained while the dashboard, themes and cloud features add their own files. Everything is plain text you can edit on a PC; unknown keys are ignored and missing keys fall back to defaults, so old and new builds can share files.</p>
+
+<h2 id="files">File overview</h2>
+<table><thead><tr><th>File</th><th>Purpose</th><th>Written by</th></tr></thead><tbody>
+<tr><td><code>LAUNCHELF.CNF</code></td><td>Classic settings: launch keys, loaders, video mode, language, keyboard, PSU rules, bookmarks.</td><td>Settings Save, bookmarks, Save as...</td></tr>
+<tr><td><code>DASHBOARD.CNF</code></td><td>Dashboard settings, application scan folders and the active theme (<code>Theme_*</code>).</td><td>Settings Save, view/filter changes, theme edits</td></tr>
+<tr><td><code>DASHAPPS.CNF</code></td><td>Favorites, pinned, recent and hidden apps (<code>Favorite</code>, <code>Pinned</code>, <code>Recent</code>, <code>Hidden</code> lines).</td><td>Dashboard</td></tr>
+<tr><td><code>DASHLIB.CNF</code></td><td>Cached application library, shown instantly on the next boot.</td><td>Library scans</td></tr>
+<tr><td><code>IPCONFIG.DAT</code></td><td>IP address, netmask and gateway (three space- or line-separated fields).</td><td>Settings &gt; Network</td></tr>
+<tr><td><code>THEMES/&lt;name&gt;/theme.cfg</code></td><td>Exported/shareable themes.</td><td>Export theme to folder</td></tr>
+<tr><td><code>ART/</code></td><td>Optional application covers beside <code>DASHBOARD.CNF</code> (see <a href="apps.html#artwork">Applications</a>).</td><td>You</td></tr>
+<tr><td><code>THEME/background.png, stars1.png, stars2.png</code></td><td>Optional PSBBN layers for the Crystal background.</td><td>You</td></tr>
+<tr><td><code>BGM.ADP</code></td><td>Optional background music beside the ELF.</td><td>Packages / you</td></tr>
+<tr><td><code>&lt;app&gt;.cfg</code>, <code>title.cfg</code>, <code>&lt;app&gt;.arg</code></td><td>Per-application metadata and launch arguments (<a href="apps.html#metadata">Applications</a>, <a href="launch-arguments.html">Launch Arguments</a>).</td><td>You, Edit metadata</td></tr>
+<tr><td><code>WLE-CLOUD.CNF</code>, <code>WLE-UPDATE-CA.PEM</code>, tokens</td><td>Cloud/update client configuration, trust roots and refresh tokens. Kept out of <code>LAUNCHELF.CNF</code> on purpose; see <a href="cloud.html#sidecars">Cloud sidecars</a>.</td><td>Cloud setup, updater</td></tr>
+</tbody></table>
+
+<h2 id="save-locations">Where files are found and saved</h2>
+<h3 id="launchelf-location">LAUNCHELF.CNF</h3>
+<ol>
+<li>At startup <code>LAUNCHELF.CNF</code> is loaded from the folder the ELF was started from.</li>
+<li>If it is not there, <code>mc0:/SYS-CONF/LAUNCHELF.CNF</code> (or <code>mc1:</code>, preferring the slot Launchstation started from) is used.</li>
+<li><b>Configuration folder</b> (<code>CNF_Path</code>, Settings &gt; System) redirects loading and saving to another folder after the IOP reset; this is how HDD or disc installs find a CNF beside the ELF.</li>
+<li>Files larger than 128 KB are rejected. A file without <code>CNF_version</code> is treated as a legacy config.</li>
+</ol>
+<p>A normal Save writes the file back to where it came from when it can; otherwise it falls back to a memory card <code>SYS-CONF</code> folder or the ELF's folder. <b>Settings &gt; System &gt; Save launch &amp; tool settings to...</b> lets you choose explicitly between the configured folder, the folder next to the ELF and the memory card <code>SYS-CONF</code>, and writes immediately. The path used to load the configuration is tracked so the UI can explain where state came from. A recovery boot (hold SELECT) still loads <code>LAUNCHELF.CNF</code> but ignores <code>DASHBOARD.CNF</code>.</p>
+<h3 id="dashboard-location">DASHBOARD.CNF, DASHAPPS.CNF, DASHLIB.CNF</h3>
+<p>The dashboard looks for <code>DASHBOARD.CNF</code> in, in order: the folder <code>LAUNCHELF.CNF</code> was loaded from (if on a writable device), the ELF's folder, then <code>mc0:/SYS-CONF/</code>. The first folder that has the file becomes the &ldquo;dashboard folder&rdquo; used for all dashboard files, <code>THEMES/</code> and <code>ART/</code>. Writable devices are memory cards, USB, HDD, MMCE, MX4SIO, iLink and ATA. Nothing is written from the UI thread: a save marks the file dirty and a background job writes it once the controller has been idle for a moment, so a burst of changes becomes one memory card write. Writes are verified by reading the file back.</p>
+<h3 id="ipconfig-location">IPCONFIG.DAT</h3>
+<p>Loaded from the ELF's folder, otherwise from <code>mc?:/SYS-CONF/</code>. Defaults when none exists: IP <code>192.168.0.10</code>, netmask <code>255.255.255.0</code>, gateway <code>192.168.0.1</code>.</p>
+
+<h2 id="launchelf">LAUNCHELF.CNF keys</h2>
+<p>Lines are <code>name = value</code> and the first line must be <code>CNF_version = 3</code>. The file is rewritten without comments whenever Launchstation saves it. The commented, annotated template is <code>docs/LAUNCHELF.CNF</code> in the repository.</p>
+<table><thead><tr><th>Key</th><th>Meaning</th><th>Default</th></tr></thead><tbody>
+<tr><td><code>LK_&lt;key&gt;_E1</code></td><td>Launch key target. <code>&lt;key&gt;</code> is auto, Circle, Cross, Square, Triangle, L1, R1, L2, R2, L3, R3, Start, Select, Left, Right, ESR or OSDSYS. Value is an application path or a <code>MISC/...</code> command. Left/Right are only used when present.</td><td>Circle = <code>MISC/FileBrowser</code>, Triangle = About</td></tr>
+<tr><td><code>LK_&lt;key&gt;_Title</code></td><td>Display title for a launch key.</td><td>empty</td></tr>
+<tr><td><code>LK_auto_Timer</code></td><td>Seconds before the automatic start runs.</td><td>10</td></tr>
+<tr><td><code>Init_Delay</code></td><td>Startup delay in seconds.</td><td>1</td></tr>
+<tr><td><code>Misc</code>, <code>Misc_*</code></td><td>Names of the built-in MISC device and commands (PS2Disc, FileBrowser, PS2Browser, PS2Net, PS2PowerOff, HddManager, Exploit_Installer, TextEditor, Configure, ShowFont, Debug_Info, About_uLE, Show_Build_Info, OSDSYS, Reboot_IOP).</td><td>language-dependent</td></tr>
+<tr><td><code>GUI_Swap_Keys</code></td><td>0 Circle confirms, 1 Cross confirms.</td><td>0</td></tr>
+<tr><td><code>GUI_Col_1_ABGR</code> &hellip; <code>GUI_Col_8_ABGR</code></td><td>Classic screen colours (hex).</td><td>built-in</td></tr>
+<tr><td><code>TV_mode</code></td><td>0 Auto, 1 NTSC, 2 PAL, 3 VGA, 4 480p, 5 576p, 6 576i. 576p on a console without ROM support loads as Auto.</td><td>0</td></tr>
+<tr><td><code>Screen_Offset_X</code>, <code>Screen_Offset_Y</code></td><td>Picture position relative to the display mode's own offsets.</td><td>0, 0</td></tr>
+<tr><td><code>Menu_Frame</code>, <code>Popup_Opaque</code></td><td>Classic frame and popup style.</td><td>1, 0</td></tr>
+<tr><td><code>Menu_Hide_Paths</code>, <code>Menu_Show_Titles</code></td><td>Classic launch menu path/title display.</td><td>1, 1</td></tr>
+<tr><td><code>REBOOT_IOP_ELFLOAD</code></td><td>Reset the IOP before launching ELFs. Neutrino ISO handoff deliberately does not use it.</td><td>1</td></tr>
+<tr><td><code>VirtualKeyboardLayout</code></td><td><code>abc</code>, <code>qwerty</code>, <code>dvorak</code>, <code>azerty</code>, <code>qwertz</code>, <code>abnt</code>.</td><td>qwerty</td></tr>
+<tr><td><code>USBKBD_USED</code>, <code>USBKBD_FILE</code>, <code>KBDMAP_FILE</code></td><td>USB keyboard on/off, optional driver and key map paths.</td><td>0, empty, empty</td></tr>
+<tr><td><code>Hide_Hdd</code></td><td>0 show all, 1 hide hdd1, 2 hide hdd0+1, 3 hide ata1, 4 hide ata0+1, 5 hide hdd1+ata1, 6 hide all.</td><td>5</td></tr>
+<tr><td><code>Hide_MCMMCE</code></td><td>1 hides memory card/MMCE slots whose card is absent.</td><td>0</td></tr>
+<tr><td><code>PathPad_Lock</code>, <code>PathPad[00]</code>&hellip;<code>PathPad[29]</code></td><td>Lock and entries of the File Browser bookmarks.</td><td>0, empty</td></tr>
+<tr><td><code>CNF_Path</code></td><td>Configuration folder override.</td><td>empty</td></tr>
+<tr><td><code>language</code></td><td><code>english</code>, <code>spanish</code>, <code>french</code>, <code>italian</code>, <code>polish</code>, <code>portuguese</code>, <code>brazilian</code>, <code>german</code>, <code>hungarian</code>.</td><td>english</td></tr>
+<tr><td><code>LANG_FILE</code>, <code>FONT_FILE</code></td><td>External language and font files.</td><td>empty</td></tr>
+<tr><td><code>POPSTARTER_ELF</code></td><td>Preferred POPStarter executable for VCD images.</td><td>empty</td></tr>
+<tr><td><code>EMBER_DIR</code></td><td>Preferred Ember umbrella directory; its <code>ember.elf</code> can be staged into a game device's umbrella when needed.</td><td>empty</td></tr>
+<tr><td><code>NEUTRINO_ELF</code></td><td>Preferred Neutrino executable.</td><td>empty</td></tr>
+<tr><td><code>Disable_EMBER</code>, <code>Disable_POPSTARTER</code>, <code>Disable_NEUTRINO</code></td><td>Refuse that core's automatic launcher.</td><td>0, 0, 0</td></tr>
+<tr><td><code>APP_GameID</code>, <code>CDROM_Disable_GameID</code></td><td>RetroGEM Game ID for ELF launches (default off) and disabling it for disc launches (default 0 = disc Game ID on).</td><td>0, 0</td></tr>
+<tr><td><code>NET_HOSTwrite</code>, <code>NET_LegacyDrivers</code></td><td>Allow writing to <code>host:</code>/<code>udpfs:</code>; use the legacy Ethernet driver pair.</td><td>0, 0</td></tr>
+<tr><td><code>PSU_HugeNames</code>, <code>PSU_DateNames</code>, <code>PSU_NoOverwrite</code></td><td>PSU file-name rules.</td><td>0, 0, 0</td></tr>
+<tr><td><code>FB_NoIcons</code></td><td>1 removes icons in classic file dialogs.</td><td>0</td></tr>
+</tbody></table>
+<p>The legacy keys <code>Init_CDVD_Check</code>, <code>Screen_Interlace</code>, <code>Init_Reset_IOP</code>, <code>USBD_FILE</code>, <code>USBMASS_FILE</code> and <code>Screen_X</code>/<code>Screen_Y</code> are no longer read. <code>Menu_Pages</code> and <code>Menu_Title</code> are accepted and ignored. Older spellings of the Game ID keys (<code>app_gameid</code>, <code>Enable_GameID</code>, <code>cdrom_disable_gameid</code>, <code>Disable_Disc_GameID</code>) are still recognised.</p>
+
+<h2 id="dashboard-keys">DASHBOARD.CNF keys</h2>
+<table><thead><tr><th>Key</th><th>Meaning</th><th>Default</th></tr></thead><tbody>
+<tr><td><code>Dash_StartSection</code></td><td>Startup tab by internal id: 0 Home, 1 Apps (opens the Applications library), 2 Files, 3 Devices (opens Files), 4 Tools, 5 Settings.</td><td>0</td></tr>
+<tr><td><code>Dash_View</code></td><td>0 Grid, 1 List, 2 Carousel.</td><td>0</td></tr>
+<tr><td><code>Dash_AppFilter</code></td><td>0 All, 1 Favorites, 2 Memory Cards, 3 MASS, 4 HDD, 5 Other, 6 All including hidden.</td><td>0</td></tr>
+<tr><td><code>Dash_Effects</code>, <code>Dash_Animations</code></td><td>Background motion and menu animation, 0&ndash;200 (%). Old files with 0/1/2 load as 0/50/100.</td><td>100, 100</td></tr>
+<tr><td><code>Dash_AutoScan</code></td><td>Refresh the library at startup.</td><td>1</td></tr>
+<tr><td><code>Dash_Artwork</code></td><td>Load application artwork.</td><td>1</td></tr>
+<tr><td><code>Dash_RecentCount</code></td><td>Recent applications shown (0&ndash;16; Settings offers 0/4/8/12/16).</td><td>8</td></tr>
+<tr><td><code>Dash_HomeShortcuts</code>, <code>Dash_IconBacking</code>, <code>Dash_ShowUnavailableDevices</code></td><td>Home shortcut chips, control icon backings, show unavailable devices.</td><td>1, 1, 1</td></tr>
+<tr><td><code>Dash_TemperatureFahrenheit</code></td><td>0 Celsius, 1 Fahrenheit for the temperature beside the clock.</td><td>0</td></tr>
+<tr><td><code>Dash_SoundTheme</code></td><td>Interface sound set: 0 = Classic, 1 = PS2-style synthesized tones.</td><td>0</td></tr>
+<tr><td><code>Dash_Sound</code>, <code>Dash_SoundVolume</code>, <code>Dash_BGM</code>, <code>Dash_BGMVolume</code></td><td>Interface sounds and music, 0&ndash;100 volume.</td><td>1, 80, 1, 80</td></tr>
+<tr><td><code>Dash_DevAuto</code></td><td>Auto-start bitmask: 1 USB, 2 HDD, 4 exFAT, 8 MMCE, 16 MX4SIO, 32 UDPFS, 64 iLink.</td><td>0</td></tr>
+<tr><td><code>Dash_MMCEBackupKeep</code>, <code>Dash_MMCEBackupFormat</code></td><td>Versions kept per card (0 = all, max 99); 0 native .mcd, 1 PCSX2 .ps2.</td><td>10, 0</td></tr>
+<tr><td><code>Dash_IGRAutoBackup</code>, <code>Dash_IGRCloudSync</code>, <code>Dash_IGRBackupPath</code>, <code>Dash_IGRAfter</code>, <code>Dash_IGRAfterPath</code></td><td>IGR sync preferences: automatic backup, cloud upload, backup folder, 0 Dashboard / 1 PS2 system menu / 2 Application after IGR, and the application path.</td><td>1, 0, empty, 0, empty</td></tr>
+<tr><td><code>Dash_SoftwareClock</code></td><td>Saved software clock checkpoint (empty = use the hardware clock).</td><td>empty</td></tr>
+<tr><td><code>Dash_IntroDone</code></td><td>Whether the welcome message has been shown.</td><td>0</td></tr>
+<tr><td><code>Dash_Scan</code></td><td>One line per application scan folder (up to 12). The first such line replaces the defaults.</td><td><code>mc:/APPS/</code>, <code>mc:/BOOT/</code>, <code>mass:/APPS/</code>, <code>mass:/BOOT/</code></td></tr>
+<tr><td><code>Theme_*</code></td><td>The active theme (see <a href="themes.html#persistence">Themes</a>).</td><td>OSD Classic</td></tr>
+<tr><td><code>Dash_Enabled</code>, <code>Dash_LegacyTheme</code>, <code>Dash_FilesMode</code></td><td>Retained for compatibility; the dashboard is always enabled.</td><td>&mdash;</td></tr>
+</tbody></table>
+
+<h2 id="device-paths">Device path behavior</h2>
+<p>Launchstation has user-facing paths such as <code>mass:</code>, <code>usb:</code>, <code>hdd0:/partition/</code> and <code>mc:/</code> and resolves them into the concrete driver/mount needed for I/O. <code>mc:/</code> tries both slots; <code>uLE:/</code> paths (chosen with R3 in a picker) are relative to Launchstation's own folder. External-core launch code must distinguish the internal I/O path from the public path syntax the external core expects.</p>
+
+<h2 id="cloud-files">Cloud files are separate</h2>
+<p>OAuth client configuration, trust roots and refresh tokens are deliberately kept out of <code>LAUNCHELF.CNF</code>. See <a href="cloud.html#sidecars">Cloud sidecars</a>.</p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

@@ -1,0 +1,185 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PS2 ISO · Neutrino · Launchstation Docs</title>
+<meta name="description" content="PS2 ISO Launching · Neutrino Open a PS2 .ISO in the File Browser and Launchstation hands it to an external Neutrino installation, with Neutrino’s per-game compatibility and video options one dialog away. External core Neutrino is not embedded in Launchstation.">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/neutrino.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="PS2 ISO · Neutrino · Launchstation Docs">
+<meta property="og:description" content="PS2 ISO Launching · Neutrino Open a PS2 .ISO in the File Browser and Launchstation hands it to an external Neutrino installation, with Neutrino’s per-game compatibility and video options one dialog away. External core Neutrino is not embedded in Launchstation.">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="smb.html"><span class="icon icon-netboot"></span>Network Shares (SMB)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html" class="active"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>PS2 ISO Launching · Neutrino</h1>
+<p class="lead">Open a PS2 <code>.ISO</code> in the File Browser and Launchstation hands it to an external Neutrino installation, with Neutrino&rsquo;s per-game compatibility and video options one dialog away.</p>
+<div class="callout info"><div class="h">External core</div><p>Neutrino is not embedded in Launchstation. Install a compatible Neutrino package separately; Launchstation resolves it, validates the image, builds the command line and keeps the storage stack alive for the hand-off. Neutrino itself decides what games run; Launchstation does not patch its disc drivers.</p></div>
+
+<h2 id="quickstart">Quick start</h2>
+<ol>
+<li>Put a Neutrino install on the game device (USB, MMCE, MX4SIO, iLink, exFAT HDD or UDPFS), or on a memory card: <code>&lt;device&gt;/neutrino/neutrino.elf</code> with its <code>config/system.toml</code> and module folders.</li>
+<li>Put the <code>.ISO</code> anywhere on one of those devices.</li>
+<li>In <b>Files</b>, select the ISO and press OK. Choose options (or just <b>Run game</b>).</li>
+</ol>
+
+<h2 id="search-order">Loader search order</h2>
+<ol class="path-order"><li><b>Explicit path</b> &ndash; <b>Settings &gt; Launching &gt; Disc &amp; image loaders &gt; Neutrino</b>.</li><li><b>The ISO&rsquo;s own device</b> &ndash; <code>/NEUTRINO/neutrino.elf</code>, <code>/neutrino/neutrino.elf</code>, <code>/NEUTRINO/NEUTRINO.ELF</code> and <code>/neutrino/NEUTRINO.ELF</code> at the device root.</li><li><b>mc0:</b> &ndash; the same four forms.</li><li><b>mc1:</b> &ndash; the same four forms.</li></ol>
+<p>Only a <em>usable</em> installation is a candidate (next section). If none qualifies you get &ldquo;Neutrino not found (set its path in Settings)&rdquo;.</p>
+<h2 id="complete">Usable installation</h2>
+<p>A candidate needs a readable ELF (valid ELF header) and either modern <code>config/system.toml</code> or legacy <code>system.toml</code> beside the ELF. Launchstation does not require any particular module-folder generation. The working directory handed to Neutrino is the folder holding <code>neutrino.elf</code>, so a custom path must contain a folder separator.</p>
+
+<h2 id="options">Per-launch compatibility and video options</h2>
+<p>Selecting a valid ISO opens <b>Neutrino launch options</b> (a dashboard dialog, or the classic screen in the classic UI). Use the D-pad to select and change, then <b>Run game</b> or <b>Cancel</b>. Cancel exits before any Neutrino file is touched.</p>
+<table><thead><tr><th>Option</th><th>Choices</th><th>Passed to Neutrino as</th></tr></thead><tbody>
+<tr><td>Game compatibility (independent toggles)</td><td>Fast disc reads (0), Synchronous disc reads (2), Unhook system calls (3), Emulate dual-layer DVD (5), Fix game buffer overrun (7)</td><td><code>-gc=</code> followed by the chosen mode digits, ascending (for all five: <code>-gc=02357</code>). Mode 1 is a dummy in Neutrino and is not offered.</td></tr>
+<tr><td>Video mode</td><td>Original (480i/576i); 240p/288p (auto PAL/NTSC); 480p/576p (auto PAL/NTSC); 1080i width x1, x2 or x3</td><td><code>-gsm=</code> with <code>fp1</code>, <code>fp2</code>, <code>1080ix1</code>, <code>1080ix2</code> or <code>1080ix3</code> (Original adds nothing)</td></tr>
+<tr><td>Video compatibility</td><td>Off, Field flipping 1 (GSM/OPL), 2, 3</td><td>Appended to <code>-gsm</code> as <code>:1</code>/<code>:2</code>/<code>:3</code>; with video mode Original it is sent alone as <code>-gsm=:N</code></td></tr>
+<tr><td>Debug colors</td><td>On / Off</td><td><code>-dbc</code></td></tr>
+<tr><td>PS2 logo</td><td>On / Off</td><td><code>-logo</code></td></tr>
+</tbody></table>
+<p>These are <b>Neutrino command-line options</b>, not changes to Launchstation&rsquo;s own drivers, and they are independent of your global screen calibration. Without a saved profile every launch starts with everything Off / Original. Whether a video mode works depends on your display and Neutrino, not on Launchstation.</p>
+
+<h2 id="profiles">Optional per-game profiles</h2>
+<p>For an ISO with a valid <code>SYSTEM.CNF</code> Game ID such as <code>SLUS_123.45</code>, the dialog shows that ID, loads any saved profile first, and offers <b>Save for this game</b> and <b>Reset this launch</b>. <b>Run game</b> never saves by itself; <b>Reset this launch</b> clears the current choices without deleting the stored profile.</p>
+<p>A profile is two checksum-verified files, <code>NEUT-&lt;GameID&gt;-A.CNF</code> and <code>-B.CNF</code>, in Launchstation&rsquo;s own dashboard settings folder (not beside the ISO and not in <code>LAUNCHELF.CNF</code>). Each save writes the older or invalid slot, so the last valid copy survives an interrupted write; a malformed profile is ignored. Only verified Game IDs can be saved. If the settings location is unavailable, or is a memory card that cannot be touched while an MMCE/MX4SIO stack owns the bus, the profile is simply skipped and the launch proceeds. No ISO, VMC or game data is modified.</p>
+<p>Settings &gt; Launching &gt; Disc &amp; image loaders also has independent <b>Disable Ember / POPStarter / Neutrino support</b> switches (all Off by default); a disabled Neutrino refuses ISOs before reading them.</p>
+
+<h2 id="arguments">Launch arguments</h2>
+<pre><code>-bsd=&lt;backend&gt;
+-dvd=&lt;device:path/to/game.iso&gt;
+-qb
+-cwd=&lt;neutrino install directory&gt;
+[-gc=&hellip;] [-gsm=&hellip;] [-dbc] [-logo]</code></pre>
+<p><code>-qb</code> is omitted for SMB so Neutrino resets the IOP into its own network stack. For the other supported devices, <code>-qb</code> is Neutrino&rsquo;s quick-boot. The numeric unit suffix of a path, where present, is accepted by Neutrino&rsquo;s backend detection. Argument text is limited, and an over-long path is refused with &ldquo;Neutrino launch arguments are too long&rdquo;.</p>
+
+<h2 id="backends">Supported sources</h2>
+<table><thead><tr><th>Launchstation source</th><th>Neutrino BSD</th></tr></thead><tbody>
+<tr><td>USB (<code>usbN:</code>, <code>massN:</code>)</td><td><code>usb</code></td></tr>
+<tr><td>MX4SIO</td><td><code>mx4sio</code></td></tr>
+<tr><td>MMCE</td><td><code>mmce</code></td></tr>
+<tr><td>iLink</td><td><code>ilink</code></td></tr>
+<tr><td>exFAT HDD (<code>ata0:</code>)</td><td><code>ata</code></td></tr>
+<tr><td>UDPFS</td><td><code>udpfs</code></td></tr>
+<tr><td>SMB / SMB1 browser share</td><td><code>smb</code>; SMB 3.0 on port 445 after an IOP reset (see below)</td></tr>
+<tr><td>APA HDD, memory card, PC CARD CF, disc, host</td><td>Not supported: &ldquo;Neutrino ISO launching is not supported from this device&rdquo;</td></tr>
+</tbody></table>
+
+<h2 id="validation">Image validation</h2>
+<p>Launchstation opens the image, reads sector 16 and requires an ISO9660 primary volume descriptor with the <code>CD001</code> signature, otherwise it stops with &ldquo;ISO9660 image could not be read&rdquo;. This proves the file is an ISO9660 image, not that the game will run.</p>
+
+<h2 id="game-id">Game ID, RetroGem and MMCE cards</h2>
+<p>Launchstation reads a valid PS2 title ID such as <code>SLUS_123.45</code> from the ISO&rsquo;s root <code>SYSTEM.CNF</code> <code>BOOT2</code> line (a bounded read; no drivers are loaded or reset for it). It is used three ways:</p>
+<ul>
+<li><b>Profiles</b> (above).</li>
+<li><b>RetroGem display.</b> With <b>Game ID launch signal for discs</b> on, the signal is drawn after cleanup, just before the hand-off. See <a href="special-hardware.html#retrogem">RetroGem Game ID</a>.</li>
+<li><b>MMCE card switch (best effort).</b> If an MMCE manager is already running, or can be started without touching other storage, Launchstation asks responding adapters to switch to that title&rsquo;s card. It skips the slot holding the ISO and the slot holding Neutrino, never switches an ambiguous alias, and never replaces an active or resident MX4SIO stack for this step. A successful request may wait briefly (up to 15 status polls) for the card to report ready. A missing Game ID, an unresponsive card or an error never stops the launch. The RetroGem setting does not disable this step.</li>
+</ul>
+<p>This conservative policy intentionally differs from upstream R3Z, which initialises MMCE unconditionally.</p>
+
+<h2 id="iop">Keep-IOP hand-off</h2>
+<p>Neutrino consumes the already-mounted backing store. ISO launches therefore drain Launchstation&rsquo;s background I/O, release the controller library and jump to Neutrino on a <b>live</b> IOP. They do <b>not</b> obey <b>Reset IOP before launch</b>. For SMB, Neutrino then resets the IOP itself and reconnects with usmb2; the browser session is not reused.</p>
+
+<h2 id="troubleshooting">If a game does not boot</h2>
+<ol>
+<li>Check the message: <em>not found</em> (no usable Neutrino), <em>could not be prepared</em> (the ELF cannot be read/loaded), <em>not supported from this device</em> (APA/mc/CF/disc source), <em>ISO9660 image could not be read</em> (damaged or non-ISO).</li>
+<li>Verify the same ISO can be read in the File Browser from that device.</li>
+<li>Set the Neutrino path explicitly to remove discovery ambiguity.</li>
+<li>Confirm the install has <code>config/system.toml</code> (or a legacy adjacent <code>system.toml</code>) and the module files for your Neutrino version.</li>
+<li>Try a known-good ISO on the same backend, then with all compatibility toggles Off.</li>
+<li>If the screen is wrong, retry with video mode Original and video compatibility Off.</li>
+<li>Report the exact Launchstation hash, Neutrino version, the device backend and the option set.</li>
+</ol>
+
+<h2 id="smb">SMB games with the latest Neutrino nightly</h2>
+<p>Neutrino's <a href="https://github.com/ps2max32/neutrino/pull/236">SMB backend</a>, by <a href="https://github.com/sahlberg">Ronnie Sahlberg</a>, was merged on 2026-10-31. It uses his <a href="https://github.com/sahlberg/usmb2">usmb2</a> client. Install the <b>whole latest upstream nightly</b>, including <code>modules/smb_ioman.irx</code>, <code>modules/smb_fhi.irx</code> and the stock <code>config/bsd-smb.toml</code>. Keep that folder on a local device (for example <code>mc0:/neutrino/</code> or USB), and select its ELF in Launching settings. A core stored on SMB or UDPFS is refused for this handoff.</p>
+<p>Configure and connect the share in <code>SMB2.CNF</code>, then open a plain ISO from <code>smb:/&lt;NAME&gt;/...</code> or <code>smb1:/...</code>. The server URL must use a dotted IPv4 address and port 445, and the server must offer <b>SMB 3.0</b> without required signing or encryption. The SMB1 browser route can be used only when that same server also offers SMB 3.0: Neutrino always makes a new SMB 3.0 connection. With PS2-Servers, use its <b>SMBv3</b> card on 445, not SMBv1 or the SMBv2 card.</p>
+<p>After Run game, Launchstation writes the console's static IPCONFIG address, mask and gateway, and the selected share's server, credentials and share name into the three stock module argument lists. The ISO path is relative to the share; select subfolders in the browser. It preserves the other configuration lines, escapes TOML strings, skips an unchanged file, verifies a changed file, and attempts to restore the original after a failed write. It refuses missing modules, an unrecognised or unwritable config, non-445 ports, DNS server names and overlong values before cleanup. Cancel writes no Neutrino files.</p>
+<p>Limits: username/password up to 31 characters each, share name up to 63 bytes, and ISO path within the share up to 127 bytes; all four must be printable ASCII (accented or other non-ASCII characters are refused before launch). If rewriting <code>bsd-smb.toml</code> fails and the original cannot be put back, the launch is refused with a message to copy that file from the nightly again. The backend is read-only; there are no SMB VMCs or compressed/split image support. The password is stored in plain text in <code>bsd-smb.toml</code>. <b>Host checks cover mapping, configuration and refusal behavior; PS2 gameplay, reconnect after game IOP resets and a second launch remain untested on hardware.</b></p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

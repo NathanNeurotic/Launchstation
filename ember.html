@@ -1,0 +1,149 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PS1 Images · Ember · Launchstation Docs</title>
+<meta name="description" content="PS1 Image Launching · Ember Ember is the second PS1 core beside POPStarter. The two do not compete for a preference: .VCD uses POPStarter, while a .CUE , .BIN or PS1 .EXE inside Ember’s folder layout uses Ember automatically. External core and BIOS Ember is no">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/ember.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="PS1 Images · Ember · Launchstation Docs">
+<meta property="og:description" content="PS1 Image Launching · Ember Ember is the second PS1 core beside POPStarter. The two do not compete for a preference: .VCD uses POPStarter, while a .CUE , .BIN or PS1 .EXE inside Ember’s folder layout uses Ember automatically. External core and BIOS Ember is no">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="smb.html"><span class="icon icon-netboot"></span>Network Shares (SMB)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html" class="active"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>PS1 Image Launching · Ember</h1>
+<p class="lead">Ember is the second PS1 core beside POPStarter. The two do not compete for a preference: <code>.VCD</code> uses POPStarter, while a <code>.CUE</code>, <code>.BIN</code> or PS1 <code>.EXE</code> inside Ember&rsquo;s folder layout uses Ember automatically.</p>
+<div class="callout info"><div class="h">External core and BIOS</div><p>Ember is not embedded in Launchstation, and neither Ember nor a PlayStation BIOS is supplied. Each game&rsquo;s own umbrella folder needs your <code>bios.bin</code> (exactly 512&nbsp;KB). If the umbrella lacks <code>ember.elf</code>, Launchstation can copy the one from your configured <b>Ember directory</b> into it once before launch (<b>Settings &gt; Launching &gt; Disc &amp; image loaders &gt; Ember directory</b>). The BIOS is never copied for you.</p></div>
+
+<h2 id="layout">Save-safe layout</h2>
+<p>The umbrella folder can be named anything and live anywhere on a supported device. Launchstation finds it by looking for the first path component named <code>games</code> (any case): everything before it is the umbrella.</p>
+<pre class="tree"><code>DEVICE:/
+└── MY-EMBER/
+    ├── ember.elf
+    ├── bios.bin
+    └── games/
+        ├── Spyro 2 (Ripto's Rage)/
+        │   ├── game.cue
+        │   ├── track01.bin
+        │   ├── MC1.vmc          created/used by Ember
+        │   └── MC2.vmc          created/used by Ember
+        └── Another Game/
+            └── game.bin</code></pre>
+<p>Select a <code>.CUE</code>, <code>.BIN</code> or PS1 <code>.EXE</code> directly inside the game folder (not in a subfolder). Launchstation derives the bare folder name and passes that to Ember. Do not place another folder called <code>games</code> earlier in the path.</p>
+
+<h2 id="why-layout">Why loose CUE files are refused</h2>
+<p>Ember can resolve looser layouts, but its memory-card path is always composed as <code>games/&lt;argument&gt;/MC1.vmc</code> and <code>MC2.vmc</code>. A loose <code>games/Game.cue</code> can boot while silently making the save path impossible. The browser therefore offers only the folder layout that can both launch and save correctly, and other <code>.BIN</code>/<code>.EXE</code> files are not hijacked by Ember: a launch is attempted only when the path matches this layout.</p>
+
+<h2 id="devices">Which devices work</h2>
+<p>The path check does not name devices, so Ember images on any mounted device can be handed over. Dedicated handling exists for <b>USB</b> (reset and remount, below) and the <b>internal APA HDD</b> (the partition is mounted writable with write-through so saves are written immediately). Other stacks (MMCE, MX4SIO, iLink, exFAT HDD, UDPFS) keep their existing mount for the hand-off; those combinations have not been hardware-verified. PC CARD CF is blocked for all launches, and memory cards are too small for disc images.</p>
+
+<h2 id="argv">Launch contract</h2>
+<p>Ember derives its working directory from target <code>argv[0]</code>, so Launchstation preserves the real live path to <code>ember.elf</code> as <code>argv[0]</code>. The bare game-folder name is the only game argument. Names containing a path separator or a colon, beginning with <code>..</code>, or longer than 180 characters are refused (&ldquo;Ember images must be directly inside &lt;Ember directory&gt;/games/&lt;Game&gt;/&rdquo;).</p>
+
+<h2 id="iop">USB reset and final keep-IOP hand-off</h2>
+<p>Ember requires a working game-device stack when control reaches it. For USB/MASS, Launchstation first finishes background I/O and audio, prepares a clean IOP without its own PADMAN, rediscovers the USB game and <code>ember.elf</code> even if the drive&rsquo;s logical unit number changed, then executes Ember with <b>no further IOP reset</b>. A mismatched or ambiguous remount is refused (the console returns to the system menu rather than launching another drive). For non-USB paths the existing mounted stack is retained. This hand-off ignores the generic <b>Reset IOP before launch</b> preference.</p>
+
+<h2 id="cores">POPStarter and Ember together</h2>
+<table><thead><tr><th>Format/layout</th><th>Launcher</th></tr></thead><tbody><tr><td><code>POPS/*.VCD</code></td><td>POPStarter</td></tr><tr><td><code>MY-EMBER/games/&lt;Game&gt;/*.CUE</code></td><td>Ember</td></tr><tr><td><code>MY-EMBER/games/&lt;Game&gt;/*.BIN</code></td><td>Ember</td></tr><tr><td><code>MY-EMBER/games/&lt;Game&gt;/*.EXE</code></td><td>Ember</td></tr></tbody></table>
+<p><b>Disable Ember support</b> (default Off) refuses Ember launches before any image, BIOS or driver is touched; POPStarter and Neutrino are disabled independently.</p>
+
+<h2 id="gameid">RetroGem Game ID</h2>
+<p>With <b>Game ID launch signal for discs</b> on, a CUE/BIN launch derives the disc&rsquo;s ID the same way a VCD does (the data track&rsquo;s <code>SYSTEM.CNF</code> serial, then the shared PS1 timestamp database, then the file-name fallback) and draws the RetroGem signal after cleanup and, on USB, after the successful remount. A standalone <code>.EXE</code> without a matching same-name CUE gets no ID. Lookup is read-only. No MMCE card switch is sent. Details: <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/docs/EMBER-RETROGEM.md">Ember RetroGem Game ID</a>.</p>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li>Confirm the selected image is directly under <code>&lt;umbrella&gt;/games/&lt;Game&gt;/</code>.</li>
+<li>&ldquo;Ember needs a user-supplied 512 KB bios.bin in this game&rsquo;s umbrella&rdquo;: add the BIOS (exactly 524,288 bytes) next to <code>ember.elf</code>.</li>
+<li>&ldquo;ember.elf is missing; set an Ember directory in Settings&rdquo;: either copy <code>ember.elf</code> into the umbrella or point <b>Ember directory</b> at a folder containing it. If the umbrella already contains a broken <code>ember.elf</code>, Launchstation refuses instead of replacing it.</li>
+<li>&ldquo;Could not stage configured ember.elf&rdquo;: the umbrella device is read-only or full.</li>
+<li>USB hand-off messages: unplug extra drives and retry; if two USB drives are attached, report both.</li>
+<li>Save files not appearing: check that <code>MC1.vmc</code> / <code>MC2.vmc</code> are created inside the game&rsquo;s folder and that the device is writable.</li>
+</ol>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

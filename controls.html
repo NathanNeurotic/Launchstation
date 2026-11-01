@@ -1,0 +1,206 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Controls · Launchstation Docs</title>
+<meta name="description" content="Controls Every screen is driven by the same ten inputs: D-pad (or left stick), Confirm, Cancel, Triangle, Square, L1/R1, L2/R2, START, SELECT and R3. Button labels follow your Confirm button setting, so Circle and Cross swap if you change it. Confirm and cance">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/controls.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Controls · Launchstation Docs">
+<meta property="og:description" content="Controls Every screen is driven by the same ten inputs: D-pad (or left stick), Confirm, Cancel, Triangle, Square, L1/R1, L2/R2, START, SELECT and R3. Button labels follow your Confirm button setting, so Circle and Cross swap if you change it. Confirm and cance">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html" class="active"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="smb.html"><span class="icon icon-netboot"></span>Network Shares (SMB)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Controls</h1>
+<p class="lead">Every screen is driven by the same ten inputs: D-pad (or left stick), Confirm, Cancel, Triangle, Square, L1/R1, L2/R2, START, SELECT and R3. Button labels follow your <b>Confirm button</b> setting, so Circle and Cross swap if you change it.</p>
+
+<h2 id="mapping">Confirm and cancel</h2>
+<p><b>Settings &gt; Input &gt; Confirm button</b> chooses which face button confirms; the other cancels everywhere (default <b>Circle</b> confirms, <b>Cross</b> cancels). Footer hints and dialogs show the right icon automatically. The setting is saved as <code>GUI_Swap_Keys</code>. Both controller ports are read at once and a USB keyboard can be used in parallel.</p>
+<table><thead><tr><th>Input</th><th>General meaning</th></tr></thead><tbody>
+<tr><td>D-pad / left stick</td><td>Navigate. Directions, the left stick and L2/R2 auto-repeat; action buttons never repeat.</td></tr>
+<tr><td>Confirm</td><td>Open, start, select, change.</td></tr>
+<tr><td>Cancel</td><td>Back, close, parent folder.</td></tr>
+<tr><td>Triangle</td><td>Options/menu for the focused item. Also cancels most menus and dialogs.</td></tr>
+<tr><td>Square</td><td>Favorite (applications), mark (browser), select (editor), caps (keyboards), reset one setting (theme rows).</td></tr>
+<tr><td>L1 / R1</td><td>Previous / next tab.</td></tr>
+<tr><td>L2 / R2</td><td>Page or jump to first/last.</td></tr>
+<tr><td>START</td><td>Global dashboard menu.</td></tr>
+<tr><td>SELECT</td><td>Tap: switch application view. Hold: quick-launch overlay.</td></tr>
+<tr><td>R3</td><td>Home: toggle background-only view. Pickers: choose as a <code>uLE:/</code> path.</td></tr>
+</tbody></table>
+
+<h2 id="dashboard">Dashboard (all tabs)</h2>
+<table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody>
+<tr><td>L1 / R1</td><td>Previous / next tab in the order Home, Files, Tools, Settings (wraps). Works inside Files folders and inside Settings pages; leaving Settings with unsaved changes asks first.</td></tr>
+<tr><td>START</td><td>Dashboard menu from any native screen, including the editor, viewers and dialogs: Home, Refresh application library, Settings, Reboot IOP, Power off (the Files tab is on the tab bar). Press START again to close it. Text entry and folder pickers use SELECT for Done / Use this folder; the image viewer slideshow is R3. SELECT + START still follows the START launch key.</td></tr>
+<tr><td>R3 on Home (without SELECT)</td><td>Toggle the background-only display; press R3 again to restore the interface. SELECT + R3 still follows the configured launch key.</td></tr>
+<tr><td>Hold SELECT + a button</td><td>Quick launch: starts the target assigned to that button under <b>Settings &gt; Launching &gt; Launch keys</b>. A short SELECT tap keeps its normal meaning.</td></tr>
+<tr><td>Any button during the automatic start countdown</td><td>Cancels the automatic start.</td></tr>
+<tr><td>Hold SELECT while Launchstation starts</td><td>Recovery boot (saved dashboard settings ignored for the session).</td></tr>
+</tbody></table>
+<p>Opening a menu does not run dashboard input, device polling or library scans behind it, and animated backgrounds keep running behind menus and tools.</p>
+
+<h2 id="home">Home</h2>
+<table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody>
+<tr><td>Up / Down</td><td>Switch between the Continue row and the Browse &amp; shortcuts row.</td></tr>
+<tr><td>Left / Right</td><td>Move in the row (wraps).</td></tr>
+<tr><td>L2 / R2</td><td>First / last entry of the row.</td></tr>
+<tr><td>Confirm</td><td>Start the application / open the chip.</td></tr>
+<tr><td>Square</td><td>Toggle Favorite.</td></tr>
+<tr><td>Triangle</td><td>Application options.</td></tr>
+<tr><td>R3</td><td>Hide/show the interface (background only). Not when SELECT is held.</td></tr>
+<tr><td>Back (inside Applications)</td><td>Return to Home.</td></tr>
+</tbody></table>
+
+<h2 id="applications">Applications</h2>
+<table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody>
+<tr><td>D-pad</td><td>Grid: 2D; List: Up/Down; Carousel: any direction.</td></tr>
+<tr><td>L2 / R2</td><td>Grid: three rows; List: a page (Left/Right do the same); Carousel: five items.</td></tr>
+<tr><td>Confirm / Square / Triangle</td><td>Start / Favorite / library menu (options, view, filter, refresh).</td></tr>
+<tr><td>SELECT</td><td>Cycle Grid, List and Carousel.</td></tr>
+</tbody></table>
+
+<h2 id="tabs">Tools</h2>
+<p>Up/Down move (skipping group headers), <b>L2/R2</b> jump six rows, Confirm runs the entry (some ask first), START opens the menu.</p>
+
+<h2 id="browser">File Browser</h2>
+<table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody>
+<tr><td>Up / Down</td><td>Move one row (wraps).</td></tr>
+<tr><td>Left, Right, L2, R2</td><td>Page up / page down.</td></tr>
+<tr><td>Confirm</td><td>Open a folder, start an ELF/VCD/ISO/CUE, view an image, edit a text file.</td></tr>
+<tr><td>Square</td><td>Mark/unmark and move down.</td></tr>
+<tr><td>Triangle</td><td>File Browser menu (copy, cut, paste, delete, rename, new folder, size, sort, show, bookmarks...).</td></tr>
+<tr><td>Back</td><td>Parent folder; at the device root Home (or close, in the modal).</td></tr>
+</tbody></table>
+<p>Image viewer and menus are described on the <a href="file-browser.html">File Browser</a> page: Left/Right previous/next image, Up/Down rotate, L2/R2 zoom, left stick pan, Square fullscreen, R3 slideshow, L1/R1 slideshow delay, SELECT reset, Confirm/Back/Triangle close.</p>
+
+<h2 id="editor">Text Editor</h2>
+<p>See <a href="text-editor.html#navigation">Text Editor navigation</a>. In short, with the keyboard hidden: D-pad moves, L1/R1 go to line start/end, L2/R2 page, Square selects, Confirm shows the keyboard, SELECT toggles it, Triangle or START opens the menu, Back exits. With the keyboard shown: D-pad picks a key, Confirm types, Back deletes, Square caps, L1/R1 move the cursor left/right, L2/R2 up/down, Triangle or SELECT hides the keyboard.</p>
+
+<h2 id="settings">Settings</h2>
+<table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody>
+<tr><td>Up / Down</td><td>Move between rows (wraps).</td></tr>
+<tr><td>L2 / R2</td><td>First / last row of the page.</td></tr>
+<tr><td>Confirm or Right</td><td>Open a group or page; edit a path, colour, IP or launch key; open the list of a multi-value choice; run an action.</td></tr>
+<tr><td>Left / Right</td><td>Step a choice or a number (screen position, delays, backup count). On other rows Left goes back.</td></tr>
+<tr><td>Square</td><td>Theme rows: reset this one setting to the preset value. Launch-key rows: edit the title.</td></tr>
+<tr><td>Triangle</td><td>The <b>Changes</b> menu: Save changes, Discard changes, Keep editing (available on every page).</td></tr>
+<tr><td>Back</td><td>Up one page, keeping selection and scroll; at the overview it returns to Home (asking about unsaved changes).</td></tr>
+<tr><td>L1 / R1</td><td>Switch tab (same unsaved-changes prompt).</td></tr>
+</tbody></table>
+<p>Rows that depend on another setting stay visible; pressing them shows a toast explaining what to enable first.</p>
+
+<h2 id="dialogs">Menus, choices and dialogs</h2>
+<table><thead><tr><th>Widget</th><th>Controls</th></tr></thead><tbody>
+<tr><td>Menus and choice lists</td><td>Up/Down (wraps, skipping disabled rows), L2/R2 first/last, Confirm select, Back or Triangle close.</td></tr>
+<tr><td>Confirm dialogs</td><td>Left/Right switch buttons, Confirm accepts the highlighted button, Back cancels. Dangerous actions default to Cancel.</td></tr>
+<tr><td>Name keyboard</td><td>D-pad picks a key, Confirm types, Back deletes, Square caps, right stick or L1/R1 moves the caret, SELECT accepts, Triangle cancels, START opens the Dashboard menu. Space is a wide key below the character rows. Filename-invalid keys are disabled; general text prompts also offer Symbols and Tab.</td></tr>
+<tr><td>IPv4 editor</td><td>Left/Right pick an octet, Up/Down +/-1, L1/L2 -10, R1/R2 +10, Confirm or START accept, Back or Triangle cancel.</td></tr>
+<tr><td>Colour editor</td><td>Up/Down choose Red, Green, Blue, Opacity (where offered) or quick picks; Left/Right -1/+1 (quick picks: previous/next colour); L1/L2 -16; R1/R2 +16; Confirm keeps; Back restores.</td></tr>
+<tr><td>Theme preset list</td><td>Moving the cursor previews the preset live; Confirm keeps it, Back restores your previous theme.</td></tr>
+<tr><td>File/folder picker</td><td>Up/Down, L2/R2 first/last, Confirm open/choose, Back up/cancel, Triangle cancel, START use this folder (folder mode), R3 <code>uLE:/</code> path.</td></tr>
+<tr><td>Folder-dates editor</td><td>Left/Right field, Up/Down change, L1/R1 pick the folder to edit, L2/R2 <i>Next to</i>, Confirm or START apply, Back cancels.</td></tr>
+<tr><td>HDD Manager</td><td>Up/Down, L2/R2 page, Confirm or Triangle partition menu, L1 status, R1 load HDL game info, Back close. See <a href="hdd-manager.html">HDD Manager</a>.</td></tr>
+</tbody></table>
+
+<h2 id="keyboard">USB keyboard</h2>
+<p>Enable <b>Settings &gt; Input &gt; USB keyboard</b> (off by default; the setting is <code>USBKBD_USED</code>). Wherever the dashboard expects a controller, the keyboard acts as a virtual gamepad in addition to the real ones, so you can navigate the whole interface. Most buttons have more than one key because keyboards differ:</p>
+<table><thead><tr><th>Pad</th><th>Keys</th><th>Pad</th><th>Keys</th></tr></thead><tbody>
+<tr><td>Up</td><td>Up arrow, <kbd>w</kbd></td><td>Triangle</td><td>Home, <kbd>i</kbd>, Esc</td></tr>
+<tr><td>Down</td><td>Down arrow, <kbd>z</kbd></td><td>Square</td><td>End, <kbd>j</kbd></td></tr>
+<tr><td>Left</td><td>Left arrow, <kbd>a</kbd></td><td>Circle</td><td>Page Up, <kbd>k</kbd></td></tr>
+<tr><td>Right</td><td>Right arrow, <kbd>s</kbd></td><td>Cross</td><td>Page Down, <kbd>m</kbd></td></tr>
+<tr><td>L1</td><td>F1, <kbd>1</kbd></td><td>R1</td><td>F12, <kbd>0</kbd></td></tr>
+<tr><td>L2</td><td>F2, <kbd>2</kbd></td><td>R2</td><td>F11, <kbd>9</kbd></td></tr>
+<tr><td>L3</td><td>F3, <kbd>3</kbd></td><td>R3</td><td>F10, <kbd>8</kbd></td></tr>
+<tr><td>SELECT</td><td>Insert</td><td>START</td><td>Delete</td></tr>
+</tbody></table>
+<p>In addition, <kbd>Enter</kbd> is always <b>Confirm</b> and <kbd>Space</kbd> is always <b>Cancel</b>, whichever way your Confirm button is mapped. While typing a name (rename, new folder, keyboard dialogs) the keyboard types directly: Left/Right/Home/End move the caret, Backspace and Delete erase, <kbd>Enter</kbd> accepts and <kbd>Esc</kbd> cancels. In the Text Editor it types straight into the document. A different USB keyboard driver or key map can be set under Settings &gt; Input &gt; USB keyboard. There is no mouse support. See also <code>docs/keyboard.txt</code> in the repository.</p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>

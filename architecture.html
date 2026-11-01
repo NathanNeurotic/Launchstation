@@ -1,0 +1,124 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Architecture &amp; Repo Layout · Launchstation Docs</title>
+<meta name="description" content="Architecture &amp; Repository Layout Where things live in the repository, how a build turns them into one PS2 ELF, and the runtime rules that keep the console stable. Repository layout Path Contents src/ , include/ The EE application. dash_*.c is the dashboard (ho">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/architecture.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Architecture &amp; Repo Layout · Launchstation Docs">
+<meta property="og:description" content="Architecture &amp; Repository Layout Where things live in the repository, how a build turns them into one PS2 ELF, and the runtime rules that keep the console stable. Repository layout Path Contents src/ , include/ The EE application. dash_*.c is the dashboard (ho">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="smb.html"><span class="icon icon-netboot"></span>Network Shares (SMB)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html" class="active"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Architecture &amp; Repository Layout</h1><p class="lead">Where things live in the repository, how a build turns them into one PS2 ELF, and the runtime rules that keep the console stable.</p>
+<h2 id="layout">Repository layout</h2><table><thead><tr><th>Path</th><th>Contents</th></tr></thead><tbody>
+<tr><td><code>src/</code>, <code>include/</code></td><td>The EE application. <code>dash_*.c</code> is the dashboard (home, apps, files, tools, settings, themes, sound, worker thread, PNG/JPEG viewers, widgets); <code>filer*.c</code> is the File Browser and copy engine; <code>main*.c</code> is boot, MISC command dispatch and info screens; <code>config*.c</code> is classic <code>LAUNCHELF.CNF</code> and network settings; <code>init.c</code> loads and resets IOP driver stacks on demand; <code>cloud_http.c</code>, <code>cloud_google.c</code>, <code>self_update.c</code>, <code>update_psu.c</code> are the native HTTPS, Google Drive and updater code; <code>mmce_backup.c</code>, <code>mmce_igr.c</code>, <code>mc_card_export.c</code> are backup/recovery; <code>neutrino_iso.c</code>, <code>popstarter*.c</code>, <code>ember*.c</code> are the external-core handoffs; <code>remote_control.c</code> and <code>pc_game_receiver.c</code> are the PC file protocols; <code>hdd*.c</code> and <code>hdl_rpc.c</code> are APA/HDL management; <code>pad.c</code>/<code>pad_ds34.c</code> are controller input; <code>embed_blobs.S</code> embeds plain binary payloads.</td></tr>
+<tr><td><code>iop/</code></td><td>IOP (I/O processor) modules. Source-built with <code>ps2.yaml</code> targets: <code>udpfs_smap</code>, <code>ps2ips_rpc</code> (vendored PS2IP socket RPC server used by dashboard network clients such as clock sync), <code>usbd-ra</code>, <code>mmceman</code>, <code>vmcman</code>, <code>ps2hdd_osd</code>, <code>ata_bd</code>, <code>hdl_info</code>, <code>xparam</code>, <code>AllowDVDV</code>, <code>dev9_poweroff</code>, <code>ps2host</code> (PS2Link file I/O), <code>oldlibs/ps2ftpd</code>, <code>pccf</code> (PC CARD CF). Optional <code>ds34usb</code>/<code>ds34bt</code> for the DualShock variant. <code>__precompiled/</code> holds only the UDPFS ministack and ioman peers (embedded) and the defective historical <code>udpfs_smap.irx</code> that the check script verifies is not embedded; every other module is a <code>ps2.yaml</code> target or an SDK package. <code>__v10/</code> holds the PS2SDK v1.0 DEV9/PS2IP fallback pair.</td></tr>
+<tr><td><code>ee_libs/</code></td><td>EE libraries built by <code>ps2.yaml</code> because the SDK does not supply them in a usable form: <code>iopreboot</code> (<code>SifIopRebootBuffer</code>) and <code>hdd</code> (libhdd). Sound uses the SDK <code>audsrv-compat</code> package and the SDK <code>audio</code> driver, not code in this tree.</td></tr>
+<tr><td><code>loader/</code>, <code>igr/</code></td><td>Two small separate ELFs embedded into the main one. <code>loader</code> is the ELF loader linked into the low-memory window <code>0x84000..0xa0000</code>; <code>igr/wle_igr.c</code> is the WLE-IGR trampoline installed for OPL Exit-to returns.</td></tr>
+<tr><td><code>exploits/</code>, <code>res/</code>, <code>Lang/</code></td><td>Embedded payloads: memory-card exploit installer files (<a href="exploit-installer.html">installer</a>); UI sound effects, updater CA, BGM sidecar, button icons and the cloud config template; the nine built-in language tables.</td></tr>
+<tr><td><code>scripts/</code></td><td>Build helpers, CI checks, packaging, release notes, wiki sync and host tools. See <a href="building.html">Building from Source</a>.</td></tr>
+<tr><td><code>tests/</code></td><td>Host-side regression tests (plain Python scripts, many compiling production C against stubs). See <a href="contributing.html">Contributing &amp; Testing</a>.</td></tr>
+<tr><td><code>docs/</code>, <code>docs-site/</code></td><td>Maintainer notes and wiki guides in <code>docs/</code>; the published website source in <code>docs-site/</code> (<code>content/*.html</code>, <code>manifest.json</code>, <code>static/</code>, <code>build.py</code>).</td></tr>
+<tr><td><code>windows/</code>, <code>research/</code>, <code>__Headers/</code></td><td>The optional Windows rclone cloud relay; a non-shipping sd2psXtd restore-transaction reference model; sample APA injection headers.</td></tr>
+<tr><td><code>.github/</code>, <code>.claude/</code></td><td>Workflows (<code>compile.yml</code>, <code>docs-pages.yml</code>, <code>sync-wiki.yml</code>), the issue form, and the Claude cloud-session hook.</td></tr>
+<tr><td><code>ps2.yaml</code>, <code>iop/pccf/ps2.yaml</code></td><td>PS2BUILD project definitions (the only build path).</td></tr></tbody></table>
+<h2 id="build-model">How the build fits together</h2><p><code>ps2.yaml</code> declares IOP targets, EE libraries, the loader, the WLE-IGR helper and the main <code>wLaunchELF</code> target. IOP modules built here, SDK driver packages and the loader/IGR ELFs are listed under <code>embed_irx:</code> and become byte arrays inside the main ELF; plain files are embedded by <code>src/embed_blobs.S</code>. Feature flags (<code>MMCE</code>, <code>MX4SIO</code>, <code>ETH</code>, <code>UDPFS</code>, <code>EXFAT</code>, <code>ILINK</code>, <code>DVRP</code>, <code>XFROM</code>, <code>DS34</code>, <code>WLE_NATIVE_CLOUD</code> and others) are <code>defines:</code> on that target and gate code with <code>#ifdef</code>. The DualShock build is generated from the same file, so the two variants cannot drift. Everything is then packed with <code>ps2pack</code> and wrapped into the ZIP/PSU packages. Full commands are in <a href="building.html">Building from Source</a>.</p>
+<h2 id="runtime">Runtime rules</h2><ul>
+<li><b>One shell.</b> <code>main()</code> performs early boot, input and display initialization, optional IGR backup, then calls <code>DashRun()</code>, which never returns. Settings, the File Browser, HDD Manager, Text Editor and exploit installer are dashboard screens.</li>
+<li><b>Lazy drivers.</b> Embedding a module only places it in the ELF; <code>init.c</code> decides when to load it, and each <code>load_*</code> function checks whether the stack is already resident. Nothing for USB, ATA/HDD, MMCE, MX4SIO, iLink, networking or controllers beyond the pad driver starts until a screen needs it.</li>
+<li><b>Exclusive stacks.</b> Some families cannot coexist (ETH versus UDPFS networking, MMCE versus MX4SIO on the same SIO2 bus, PS2 versus PSX HDD stacks, the PC CARD CF driver versus DEV9). Switching between them normally resets the IOP and clears residency tracking so the next access reloads what it needs (the PSX APA/DVR HDD stacks are the exception: they load without a reset). Neutrino quick-boot reuses the mounted stack; Ember's USB path performs a controlled clean rebuild first.</li>
+<li><b>Background worker.</b> One EE thread (<code>dash_worker.c</code>) runs queued file, memory-card and driver jobs at lower priority; while it runs the UI thread does no I/O of its own, jobs never draw or show dialogs, and completion callbacks run back on the UI thread. Anything that reboots the IOP or launches an ELF first drains the queue. Some USB and device probes are still synchronous IOP calls and can block on failing hardware.</li>
+<li><b>Persistence.</b> The dashboard never edits <code>LAUNCHELF.CNF</code>; it writes <code>DASHBOARD.CNF</code>, <code>DASHAPPS.CNF</code> and <code>DASHLIB.CNF</code> next to the loaded configuration or in <code>mc0:/SYS-CONF/</code>, with explicit Save/Discard semantics.</li>
+<li><b>Safety first for backups.</b> MMCE history is written to <code>.PART</code> files, verified and renamed; recovery produces new files and never overwrites an active card; direct restore stays disabled (<code>research/sd2psxtd</code> is a reference model only and is not linked into any ELF).</li></ul>
+<h2 id="refactor">Refactoring status</h2><p>The oversized legacy files have been split along behavior-neutral lines: <code>main.c</code> into <code>main_actions</code>, <code>main_boot</code>, <code>main_modules</code>, <code>main_menu</code>, <code>main_info_screens</code>, <code>main_gameid</code> and others; <code>filer.c</code> into <code>filer_device</code>, <code>filer_mount</code>, <code>filer_fileops</code>, <code>filer_actions</code>, <code>filer_browser</code>, <code>filer_copy</code>, <code>gui_sort</code>, <code>gui_texteditor</code>, <code>gui_hdd0_format</code> and <code>psu_functions</code>; PSU layout structs are shared via <code>include/psu_types.h</code>. The legacy SMB and classic JPG-viewer subsystems were removed; images are viewed by the dashboard's bounded PNG (<code>dash_png.c</code>) and JPEG (<code>dash_jpeg.c</code>, libjpeg-turbo) decoders. The largest hand-written files now are <code>dash_settings.c</code>, <code>dash_browser.c</code>, <code>init.c</code>, <code>main_exploit_installer.c</code> and <code>filer_browser.c</code> (<code>make stale-audit</code> lists the top ten). Keep each further split behavior-neutral and verify it in an emulator and on real hardware.</p>
+<h2 id="maintenance-docs">Maintainer notes</h2><p>More detail for maintainers lives in <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/docs/architecture-maintenance.md">docs/architecture-maintenance.md</a>, <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/docs/BUILDING.md">docs/BUILDING.md</a>, the dashboard reference <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/docs/dashboard.md">docs/dashboard.md</a> and the dated plans and audits under <code>docs/plans/</code>.</p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>
