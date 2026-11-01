@@ -10,7 +10,7 @@ Repository: <https://github.com/NathanNeurotic/Launchstation> · Documentation: 
 
 ## Quick start
 
-1. Download **`APP_LAUNCHSTATION-<build>.zip`** (standard PS2 controllers) or **`APP_LAUNCHSTATION-DS-<build>.zip`** (adds PS3/PS4 DualShock USB/Bluetooth support) from the [`latest` release](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest). Every ZIP name ends with the build number, for example `APP_LAUNCHSTATION-284.zip`, and the release title and notes state the same number. The matching `.psu` files are the same contents for memory-card installation.
+1. Download **`APP_LAUNCHSTATION-<build>.zip`** (standard PS2 controllers) or **`APP_LAUNCHSTATION-DS-<build>.zip`** (adds PS3/PS4 DualShock USB/Bluetooth support) from the [`latest` release](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest). **`LAUNCHSTATION-<build>.zip`** is the full kit: the standard app plus the POPStarter, Ember and Neutrino folders Launchstation launches games through, laid out like RiptOPL's release ZIP for copying to a game device's root. Every ZIP name ends with the build number, for example `APP_LAUNCHSTATION-284.zip`, and the release title and notes state the same number. The matching `.psu` files are the same contents for memory-card installation.
 2. Extract the `APP_LAUNCHSTATION` folder to a filesystem the console can boot from (memory card, USB, MMCE, MX4SIO, iLink, internal HDD/ATA), or copy the `.psu` in the File Browser and use **Extract PSU** (the PSU paste action) in a memory-card folder to install it.
 3. Start `LAUNCHSTATION.ELF` (or `LAUNCHSTATION-DS.ELF`) from your usual launcher, FreeMcBoot/OPL/exploit entry or file manager. The packaged `title.cfg` is an OPL-style application descriptor (`title=`, `boot=`) so launchers that read it list the app as "Launchstation".
 4. Use **L1/R1** to move between **Home, Files, Tools and Settings**. In Files, pick a device, then a folder.
@@ -30,7 +30,7 @@ The site covers installation, dashboard controls, File Browser, Applications, Te
 
 ## Release packages and updates
 
-Every verified push to `master` publishes four assets to the single moving **`latest`** release (the tag is only ever advanced to a descendant commit):
+Every verified push to `master` publishes the app packages, the loose ELFs and the full kit to the single moving **`latest`** release (the tag is only ever advanced to a descendant commit):
 
 | Asset | Contents | Use |
 |---|---|---|
@@ -40,8 +40,11 @@ Every verified push to `master` publishes four assets to the single moving **`la
 | `APP_LAUNCHSTATION-DS.psu` | Same four files | DualShock variant, memory card |
 | `LAUNCHSTATION.ELF`, `LAUNCHSTATION-DS.ELF` | The packed ELF alone (standard / DS34) | When you only need the executable |
 | `BOOT.ELF`, `BOOT2.ELF` | Byte-identical copies of the standard `LAUNCHSTATION.ELF` | Boot paths that look for those names |
+| `LAUNCHSTATION-<build>.zip` | The full kit: `APPS/APP_LAUNCHSTATION/` + `APP_LAUNCHSTATION.psu`, `POPS/` (POPStarter and companions), `EMBER/` (Ember core), `neutrino/` (latest upstream Neutrino), PC-tool `.url` shortcuts, `KIT-README.txt`, `KIT-MANIFEST.json` | Copy to the root of a game device, like RiptOPL's release ZIP |
 
 Both executables are packed (`ps2pack`). The ELF runs without its sidecars, but `WLE-UPDATE-CA.PEM` is needed for HTTPS update checks and `BGM.ADP` is the optional background music. The two variants share the same settings and optional sidecars.
+
+The full kit's `POPS/` and `EMBER/` folders are the files [RiptOPL](https://github.com/NathanNeurotic/RiptOPL) ships, pinned to one RiptOPL commit in [`ship/kit-externals.json`](ship/kit-externals.json) with the SHA-256 of every file; `scripts/package_kit.py fetch` refuses any byte that differs, and `scripts/package_kit.py refresh-pin --commit <sha>` moves the pin. `neutrino/` is the [ps2max32/neutrino](https://github.com/ps2max32/neutrino) `latest` release downloaded at build time, exactly as RiptOPL bundles it. No PlayStation BIOS or game is included: Ember needs your own 512 KB `bios.bin`. Credits for the bundled externals (Ember by [Gageformer](https://github.com/Gageformer/Ember), POPStarter by krHACKen, Neutrino by [Rick Gaiser](https://github.com/rickgaiser), BDM Assault by israpps and [Okeanos86](https://github.com/Okeanos86/BDMAssault)) are in `KIT-README.txt` and [docs/THIRD_PARTY_CREDITS.md](docs/THIRD_PARTY_CREDITS.md).
 
 **In-app updates.** *Settings > Storage & devices > MMCE backups > Check for updates* (builds with networking and native cloud, which includes the release packages) compares the running commit with the `latest` release using GitHub's commit-comparison API. A release that is not strictly newer, is divergent from your build, or whose ancestry cannot be verified is never offered. For a newer release the updater downloads the PSU matching your variant (standard or DS), checks it against the SHA-256 digest GitHub publishes for that asset, extracts and validates the ELF, and only then replaces the running executable, keeping the previous one as `<name>.ELF.BAK`. From a verified four-file PSU it also adds a **missing** `WLE-UPDATE-CA.PEM` or `BGM.ADP`; existing sidecars, including a custom BGM, are never overwritten. An existing `.UPDATE` or `.PACKAGE` file from an interrupted attempt is not overwritten either: inspect and clear it manually. Supported boot locations are `mc`, `mass`/`usb`, `mmce`, `mx4sio`, `ilink`, `ata` and `hdd` paths. Restart Launchstation to run the new build.
 
@@ -179,7 +182,7 @@ python3 tests/test_project_branding.py
 2. Installs the ps2build SDK and LLVM toolchain; builds Mbed TLS, libjpeg-turbo and the PC CARD CF module.
 3. Builds the standard and DS34 ELFs, then verifies the controller variants in the linked ELFs, that release ELFs contain only Clang-built objects (`scripts/check_toolchain_purity.py`), the UDPFS SMAP ABI, and the embedded loader's low-memory layout.
 4. Packages the four app archives (`scripts/package_apps.py`), re-reads them, and uploads them as a build artifact.
-5. **Only for pushes to `master` and manual dispatch on `master`:** uploads the four assets to the `latest` release, downloads them back to compare bytes, moves the `latest` tag to the tested commit (refused unless the old tag is an ancestor), and marks it as the GitHub Latest release. Pull requests build and test but never publish.
+5. **Only for pushes to `master` and manual dispatch on `master`:** uploads the app packages, loose ELFs and the full kit to the `latest` release, downloads them back to compare bytes, moves the `latest` tag to the tested commit (refused unless the old tag is an ancestor), and marks it as the GitHub Latest release. Pull requests build and test but never publish.
 
 `.github/workflows/docs-pages.yml` rebuilds the site and force-publishes it to `gh-pages` when `docs-site/**` changes. `.github/workflows/sync-wiki.yml` mirrors `docs/wiki/` and the authored site pages into the GitHub Wiki.
 
