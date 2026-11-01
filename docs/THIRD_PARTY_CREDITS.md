@@ -75,7 +75,7 @@ These are mentioned or launched through an integration; that does **not** imply 
 
 | Project | Why LAUNCHSTATION references it |
 | --- | --- |
-| [Neutrino](https://github.com/rickgaiser/neutrino) — [Rick Gaiser](https://github.com/rickgaiser) / contributors | External PS2 ISO loader, quick-boot/backing-store backend |
+| [Neutrino](https://github.com/rickgaiser/neutrino) — [Rick Gaiser](https://github.com/rickgaiser) / contributors | External PS2 ISO loader, quick-boot/backing-store backend; SMB ISO launches use its SMB backend by [Ronnie Sahlberg](https://github.com/sahlberg) ([ps2max32/neutrino PR #236](https://github.com/ps2max32/neutrino/pull/236), [usmb2](https://github.com/sahlberg/usmb2)) |
 | [POPStarter](https://www.psx-place.com/threads/popstarter.19139/) — [krHACKen](https://www.psx-place.com/members/krhacken.98/) | External PS1 VCD launcher |
 | [Ember](https://github.com/Gageformer/Ember) — [Gageformer](https://github.com/Gageformer) | External PS1 core; its beta license limits redistribution/commercial use. See upstream LICENSE-BETA.txt |
 | [PS2Link](https://github.com/ps2dev/ps2link), [PS2Client](https://github.com/ps2dev/ps2client) | Network debugger and PC-side transfer/launch ecosystem; Launchstation embeds only the `host:` server half |
