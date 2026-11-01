@@ -66,9 +66,12 @@ void _libcglue_rtc_update(void)
  *     function is used here, but an undefined reference extracts the newlib
  *     objects before --gc-sections can see they are dead.
  * Defining the symbols here satisfies the references without extracting
- * anything. Every stub is unreferenced in the final link and dropped by
- * --gc-sections (none of printf, snprintf, open, close or lseek survives in
- * the ELF), so no live code path changes. */
+ * anything. The _ps2sdk_fileXio_init/_deinit overrides are live: fileXioInit()
+ * really calls them, and the SDK versions only swap the libcglue file-op table
+ * in and out, which this loader never uses (no newlib descriptor layer is
+ * linked). The printf/snprintf/open/close/lseek stubs are linker-only: nothing
+ * calls them, so --gc-sections drops them (none survives in the ELF). The
+ * loader's own code paths are unchanged. */
 void _ps2sdk_fileXio_init(void)
 {
 }
