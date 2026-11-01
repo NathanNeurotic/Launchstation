@@ -86,7 +86,8 @@ int mcCardSaveFromPsu(const uint8_t *buf, uint32_t len, McSaveData *out);
  * Read them, close that card, then open the new file: one file at a time. */
 int mcCardReadIdentity(McView *v, uint8_t sb[512], uint8_t root[1024]);
 
-/* Writes a complete, empty card image of size_mb (8, 16, 32 or 64) from
+/* Writes a complete, empty card image of size_mb (1, 2, 4, 8, 16, 32 or 64;
+ * the sizes sd2psXtd-style MMCE devices offer) from
  * offset 0 upwards in 32 KiB pieces, so write may append to a new file.
  * Identity bytes (version, card type, flags) and the root's "." and ".."
  * come from the source card; the geometry is computed for the new size the
