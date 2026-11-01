@@ -21,7 +21,8 @@ File Browser: Confirm opens a folder, previews PNG/JPG/JPEG images, starts an EL
 text file in the Text Editor. The image viewer supports sibling-image browsing,
 90-degree rotation, 1x-4x zoom, left-stick panning, fullscreen mode and a
 configurable 1-60 second slideshow (R3 starts/stops it); Square selects; Triangle has copy, cut,
-paste (also with new names), PSU create/extract, delete, rename, new
+paste (also with new names), PSU create/extract, Extract to mc0:/ or mc1:/
+straight from a .psu file, delete, rename, new
 folder, folder icon (icon.sys), size, start with arguments, title.cfg,
 mount as vmc0:/vmc1: (for .bin/.vmc/.mc2/.ps2 images; mounted images
 appear in the device list), the memory card *Tuna date and *Folder

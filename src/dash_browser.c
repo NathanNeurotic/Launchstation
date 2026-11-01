@@ -823,6 +823,82 @@ static void opPaste(int mode)
 	refresh();
 }
 
+/* The .psu files an operation applies to (marked, or the focused one), or 0
+ * when any target is a folder or another kind of file. */
+static int psuTargets(int *idx, int max)
+{
+	int n = targets(idx, max), i;
+
+	for (i = 0; i < n; i++)
+		if (isDir(&fb.files[idx[i]]) || !genCmpFileExt(fb.files[idx[i]].name, "PSU"))
+			return 0;
+	return n;
+}
+
+/* Extracts the focused or marked .psu saves straight onto memory card
+ * port 0 or 1 (A5 in the 2026-11 feedback round, Berion): the same classic
+ * PSU restore as "Extract PSU" after a copy and a visit to mc0:/, without
+ * the trip. The clipboard is borrowed for the restore and put back. */
+static void opExtractPsuTo(int port)
+{
+	static int idx[MAX_ENTRY];
+	int n = psuTargets(idx, MAX_ENTRY), i, saved_n = nclipFiles, saved_cut = browser_cut, type = 0;
+	unsigned int saved_gen = clipIopResetGeneration;
+	char saved_path[MAX_PATH], dest[8], msg[96];
+	FILEINFO *saved = NULL;
+
+	if (n == 0 || port < 0 || port > 1)
+		return;
+	snprintf(dest, sizeof(dest), "mc%d:/", port);
+	if (filerRootMcPresent(port, &type, NULL) <= 0 || type != 2) {
+		dashModalMessage(DI_WARNING, "No PS2 memory card", "Insert a PS2 memory card in that slot and try again.", dest);
+		return;
+	}
+	if (!prepareOp())
+		return;
+	if (filerConfirmExploitModify(dest, NULL) <= 0)
+		return;
+	if (saved_n > 0) {
+		saved = (FILEINFO *)malloc((size_t)saved_n * sizeof(FILEINFO));
+		if (saved != NULL) {
+			memcpy(saved, clipFiles, (size_t)saved_n * sizeof(FILEINFO));
+			dashStrCopy(saved_path, clipPath, MAX_PATH);
+		}
+	}
+	dashStrCopy(clipPath, fb.dir, MAX_PATH);
+	for (i = 0; i < n; i++)
+		clipFiles[i] = fb.files[idx[i]];
+	nclipFiles = n;
+	browser_cut = 0;
+	clipIopResetGeneration = getIopResetGeneration();
+	fb.msg[0] = '\0';
+	dashFileLoadingBegin("Extracting save");
+	filerPsuPasteInto(fb.msg, dest);
+	opDone();
+	if (saved != NULL) { /* the user's own clipboard, as it was */
+		memcpy(clipFiles, saved, (size_t)saved_n * sizeof(FILEINFO));
+		dashStrCopy(clipPath, saved_path, MAX_PATH);
+		nclipFiles = saved_n;
+		browser_cut = saved_cut;
+		clipIopResetGeneration = saved_gen;
+		free(saved);
+	} else {
+		nclipFiles = 0;
+		browser_cut = 0;
+	}
+	if (fb.msg[0]) {
+		showPasteFailure(1);
+		return;
+	}
+	if (n == 1)
+		snprintf(msg, sizeof(msg), "%s extracted to %s", fb.files[idx[0]].name, dest);
+	else
+		snprintf(msg, sizeof(msg), "%d saves extracted to %s", n, dest);
+	dashToast(DASH_TOAST_OK, msg);
+	if (saved == NULL && saved_n > 0)
+		dashToast(DASH_TOAST_INFO, "The clipboard was cleared");
+}
+
 static void opDelete(void)
 {
 	static int idx[MAX_ENTRY];
@@ -2425,8 +2501,8 @@ static void actionsMenu(void)
 	const char *psu_label;
 	int in_folder = fb.dir[0] && !isMisc(fb.dir);
 	int is_elf = 0, has_target = (fb.nmarked > 0 || f != NULL);
-	DashMenuItem items[52];
-	int ids[52], n = 0, r, sw_card, sw_chan;
+	DashMenuItem items[56];
+	int ids[56], n = 0, r, sw_card, sw_chan;
 	char marked[24], sort_detail[48], game_id[11];
 	enum {
 		F_OPEN,
@@ -2435,6 +2511,8 @@ static void actionsMenu(void)
 		F_PASTE,
 		F_PASTE_RENAME,
 		F_PSU,
+		F_PSU_MC0,
+		F_PSU_MC1,
 		F_DELETE,
 		F_RENAME,
 		F_NEWDIR,
@@ -2514,6 +2592,21 @@ static void actionsMenu(void)
 			ADD(DI_PASTE_RENAME, "Paste with new names...", NULL, 0, F_PASTE_RENAME);
 		if (psu_label != NULL && en[PSUPASTE])
 			ADD(DI_MC, psu_label, NULL, 0, F_PSU);
+		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3)) {
+			static int psu_idx[MAX_ENTRY];
+			int npsu = psuTargets(psu_idx, MAX_ENTRY), port;
+
+			/* A .psu goes straight onto a card from here, no copy and no trip
+			 * to mc0:/ (Berion). Rows stay visible, dimmed, with the reason. */
+			for (port = 0; npsu > 0 && port < 2; port++) {
+				int type = 0, present = filerRootMcPresent(port, &type, NULL), ok = present > 0 && type == 2;
+				static const char *const labels[] = {"Extract to mc0:/", "Extract to mc1:/"};
+
+				ADD(DI_MC, labels[port],
+				    ok ? (npsu > 1 ? marked : "straight onto the card") : present > 0 ? "not a PS2 card" : "no card",
+				    !ok, port == 0 ? F_PSU_MC0 : F_PSU_MC1);
+			}
+		}
 		ADD(DI_WARNING, "Delete...", fb.nmarked ? marked : NULL, !has_target || !en[DELETE], F_DELETE);
 		ADD(DI_EDIT, "Rename...", NULL, f == NULL || !en[RENAME], F_RENAME);
 		ADD(DI_FOLDER, "New folder...", NULL, !en[NEWDIR], F_NEWDIR);
@@ -2612,6 +2705,12 @@ static void actionsMenu(void)
 			break;
 		case F_PSU:
 			opPaste(PASTE_PSU);
+			break;
+		case F_PSU_MC0:
+			opExtractPsuTo(0);
+			break;
+		case F_PSU_MC1:
+			opExtractPsuTo(1);
 			break;
 		case F_DELETE:
 			opDelete();
