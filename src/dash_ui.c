@@ -261,13 +261,64 @@ static float drawButton(float x, float y, int icon, const char *key)
 	}
 }
 
-void dashDrawHints(const DashHint *hints, int n)
+/* One fixed order for the footer hints on every screen, whatever each screen
+ * shows (C2 in the 2026-11 feedback round, Berion): Cross, Square, Triangle,
+ * Circle, R1, R2, L1, L2, SELECT, START, then the sticks and anything else in
+ * the order given. Ranked by the physical button, so the confirm button keeps
+ * its place when the region swaps Cross and Circle. */
+static int hintRank(const DashHint *h)
 {
+	static const struct { const char *key; int rank; } keys[] = {
+		{"R1", 4}, {"L1/R1", 4}, {"R2", 5}, {"L2/R2", 5}, {"L1", 6}, {"L2", 7},
+		{"SELECT", 8}, {"START", 9}, {"L3", 10}, {"R3", 11},
+	};
+	int i;
+
+	switch (h->button) {
+	case DI_BTN_CROSS: return 0;
+	case DI_BTN_SQUARE: return 1;
+	case DI_BTN_TRIANGLE: return 2;
+	case DI_BTN_CIRCLE: return 3;
+	case DI_BTN_START: return 9;
+	case DI_BTN_SELECT: return 8;
+	default: break;
+	}
+	if (h->button < 0 && h->key)
+		for (i = 0; i < (int)(sizeof(keys) / sizeof(keys[0])); i++)
+			if (!strcmp(h->key, keys[i].key))
+				return keys[i].rank;
+	return 12; /* d-pad and unknown labels: after everything, in the order given */
+}
+
+/* Stable sort of n hints into hintRank order; order[] receives indices. */
+static void hintOrder(const DashHint *hints, int n, int *order)
+{
+	int i, j;
+
+	for (i = 0; i < n; i++) {
+		int r = hintRank(&hints[i]);
+
+		for (j = i; j > 0 && hintRank(&hints[order[j - 1]]) > r; j--)
+			order[j] = order[j - 1];
+		order[j] = i;
+	}
+}
+
+void dashDrawHints(const DashHint *in_hints, int n)
+{
+	DashHint hints[DASH_HINTS_MAX];
+	int order[DASH_HINTS_MAX];
 	const float gap_max = 24.0f, gap_min = 10.0f, scale_min = 0.5f;
 	float fixed = 0.0f, total, x, labels = 0.0f, gap = gap_max, avail;
 	float fs = DASH_FS_SMALL;
 	float y = 400.0f;
 	int i, pass;
+
+	if (n > DASH_HINTS_MAX)
+		n = DASH_HINTS_MAX;
+	hintOrder(in_hints, n, order);
+	for (i = 0; i < n; i++)
+		hints[i] = in_hints[order[i]];
 
 	/* Measure exactly what the drawing loop below advances by, so every
 	 * screen's hint bar ends at the same right edge whatever its keys are
