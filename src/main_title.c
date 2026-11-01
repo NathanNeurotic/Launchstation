@@ -503,6 +503,29 @@ int menuTitleSoftwareClockActive(void)
 	return active_software_seed[0] != '\0';
 }
 
+/* Write the running software clock into `out` as a new seed and adopt that
+ * text as the active seed WITHOUT re-seeding. Re-seeding from the rounded
+ * text would restart the current second: every settings save lost up to
+ * 999 ms and the next tick came late, which stepped the OSD orbs backwards
+ * (#198). Returns 0, leaving `out` untouched, when no software clock runs. */
+int menuTitleSoftwareClockCheckpoint(char *out, size_t out_size)
+{
+	char seed[sizeof(active_software_seed)];
+	int len;
+
+	updateClock(Timer(), 0, 1, 1);
+	if (out == NULL || !active_software_seed[0] || !title_clock.valid)
+		return 0;
+	len = snprintf(seed, sizeof(seed), "%04d-%02d-%02d %02d:%02d:%02d",
+	               title_clock.year, title_clock.month, title_clock.day,
+	               title_clock.hour, title_clock.minute, title_clock.second);
+	if (len <= 0 || (size_t)len >= sizeof(seed) || (size_t)len >= out_size)
+		return 0;
+	memcpy(out, seed, (size_t)len + 1);
+	memcpy(active_software_seed, seed, (size_t)len + 1);
+	return 1;
+}
+
 static int queryTemperatureCelsius(char *temp_buf, size_t temp_buf_size)
 {
 	unsigned char in_buffer[1];

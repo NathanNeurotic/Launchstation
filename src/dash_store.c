@@ -674,13 +674,10 @@ int dashStoreFlushWait(const char *title)
 
 int dashStoreSaveSettings(void)
 {
-	/* Checkpoint only on an explicit settings save, never write every tick. */
-	if (dashCfg.software_clock[0] && menuTitleSoftwareClockActive()) {
-		int y, m, d, h, min, sec, use12, fmt;
-		if (menuTitleGetClockFields(&y, &m, &d, &h, &min, &sec, &use12, &fmt))
-			snprintf(dashCfg.software_clock, sizeof(dashCfg.software_clock),
-			         "%04d-%02d-%02d %02d:%02d:%02d", y, m, d, h, min, sec);
-	}
+	/* Checkpoint only on an explicit settings save, never write every tick.
+	 * The running clock keeps its sub-second phase (#198). */
+	if (dashCfg.software_clock[0])
+		menuTitleSoftwareClockCheckpoint(dashCfg.software_clock, sizeof(dashCfg.software_clock));
 	persisted = dashCfg;
 	save_dirty[SAVE_SETTINGS] = 1;
 	return 0;

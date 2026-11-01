@@ -12,6 +12,8 @@ int menuTitleUpdateAsync(int force);
 void menuTitleClockSnapshot(void);
 void menuTitleClockRestore(void);
 int menuTitleSoftwareClockActive(void);
+/* Checkpoint the running software clock without restarting its second. */
+int menuTitleSoftwareClockCheckpoint(char *out, size_t out_size);
 void menuTitleGetClockFormat(int *use_12h, int *date_format);
 void menuTitleFormatClockTime(char *dst, size_t dst_size, int hour, int minute, int second, int use_12h);
 void menuTitleFormatClockDate(char *dst, size_t dst_size, int year, int month, int day, int date_format);

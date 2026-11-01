@@ -66,7 +66,8 @@ for sig in ("static int daysInMonth(", "static void advanceClockSeconds(",
             "static int isValidTimestamp(", "static int seedSoftwareClock(", "static int updateClock("):
     c += function(sig)
 c += "int menuTitleUpdateAsync(int force) { return updateClock(tick, force, 1, 1); }\n"
-for sig in ("void menuTitleClockSnapshot(", "void menuTitleClockRestore(", "int menuTitleSoftwareClockActive("):
+for sig in ("void menuTitleClockSnapshot(", "void menuTitleClockRestore(", "int menuTitleSoftwareClockActive(",
+            "int menuTitleSoftwareClockCheckpoint("):
     c += function(sig)
 c += function("int menuTitleGetClockFields(")
 store = (root / "src/dash_store.c").read_text()
@@ -155,6 +156,18 @@ int main(void) {
    assert(!strcmp(actual,expected) && rtc_reads==reads);
   }
  }
+ /* #198: a save adopts the running clock instead of re-seeding it, so the
+  * current second keeps its phase and repeated saves never lose time. */
+ memset(&dashCfg,0,sizeof(dashCfg)); strcpy(dashCfg.software_clock,"2028-06-01 10:00:00");
+ memset(&title_clock,0,sizeof(title_clock)); active_software_seed[0]=0; tick=1000;
+ menuTitleUpdateAsync(1); assert(title_clock.second==0);
+ for (int i=1; i<=20; i++) { tick=(u64)(i*1000+500); dashStoreSaveSettings(); }
+ assert(!strcmp(persisted.software_clock,"2028-06-01 10:00:19"));
+ assert(!strcmp(active_software_seed,persisted.software_clock));
+ tick=21000; menuTitleUpdateAsync(0);
+ assert(title_clock.second==20 && title_clock.last_tick_ms==21000);
+ { char untouched[24]="keep"; active_software_seed[0]=0; dashCfg.software_clock[0]=0;
+   assert(!menuTitleSoftwareClockCheckpoint(untouched,sizeof(untouched)) && !strcmp(untouched,"keep")); }
  /* A minute of unsaved runtime is not added to the checkpoint on power loss. */
  strcpy(dashCfg.software_clock,"2028-06-01 10:00:20");
  active_software_seed[0]=0; tick=0; dashStoreSaveSettings();
@@ -170,4 +183,4 @@ with tempfile.TemporaryDirectory(prefix="software-clock-") as folder:
     exe = path / "clock.exe"
     subprocess.run([shutil.which("gcc") or shutil.which("cc"), "-std=c11", "-Wall", "-Wextra", "-Werror", str(path / "clock.c"), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True, timeout=10)
-print("PASS: software clock ticks, Settings continuity, actual CNF round trips, repeated boots and unsaved-runtime boundary")
+print("PASS: software clock ticks, save keeps sub-second phase (#198), Settings continuity, actual CNF round trips, repeated boots and unsaved-runtime boundary")
