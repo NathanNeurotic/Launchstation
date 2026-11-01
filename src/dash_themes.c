@@ -120,7 +120,10 @@ static const char *const bg_names[DASH_BG_COUNT] = {
 static const char *const hl_ids[DASH_HL_COUNT] = {"fill", "bar", "outline", "text"};
 static const char *const tile_ids[DASH_TILE_COUNT] = {"memory_card", "rounded", "chamfered", "floating", "crystal"};
 static const char *const corner_ids[DASH_CORNER_COUNT] = {"square", "soft", "round"};
-static const char *const font_ids[DASH_FONT_COUNT] = {"roboto", "system"};
+static const char *const font_ids[DASH_FONT_COUNT] = {"roboto", "system", "emotion_engine"};
+/* Previously a separate Font choice. Keep its marker until validation so
+ * a later legacy bold=0 line cannot discard the selected Bold face. */
+enum { FONT_LEGACY_EMOTION_ENGINE_BOLD = 3 };
 static const char *const tint_ids[DASH_ICONS_COUNT] = {"text", "accent", "mono"};
 static const char *const appicon_ids[DASH_APPICON_COUNT] = {"system", "device", "monogram"};
 static const char *const clock_ids[DASH_CLOCK_COUNT] = {"off", "standard", "system"};
@@ -508,7 +511,10 @@ void dashThemeValidate(DashTheme *t)
 	if (t->highlight >= DASH_HL_COUNT)
 		t->highlight = DASH_HL_FILL;
 	t->glow = t->glow ? 1 : 0;
-	if (t->font >= DASH_FONT_COUNT)
+	if (t->font == FONT_LEGACY_EMOTION_ENGINE_BOLD) {
+		t->font = DASH_FONT_EMOTION_ENGINE;
+		t->bold = 1;
+	} else if (t->font >= DASH_FONT_COUNT)
 		t->font = DASH_FONT_ROBOTO;
 	if (t->font_scale == 0)
 		t->font_scale = 100;
@@ -808,6 +814,10 @@ int dashThemeParseKey(DashTheme *t, const char *key, char *value)
 			if (author[0])
 				dashStrCopy(t->author, author, sizeof(t->author));
 		}
+		return 1;
+	}
+	if (!stricmp(key, "font") && (!stricmp(value, "emotion_engine_bold") || !strcmp(value, "3"))) {
+		t->font = FONT_LEGACY_EMOTION_ENGINE_BOLD;
 		return 1;
 	}
 	for (i = 0; i < NKEYS; i++) {

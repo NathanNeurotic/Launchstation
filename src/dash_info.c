@@ -180,6 +180,7 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_GAP, NULL);
 	sheetAdd(&s, SL_MUTED, "Ancestral project: LaunchELF v3.41 by Mirakichi");
 	sheetAdd(&s, SL_MUTED, "Dashboard text: Roboto (Apache License 2.0)");
+	sheetAdd(&s, SL_MUTED, "Emotion Engine Regular/Bold: Pixel Sagas");
 	{
 		char title[64];
 		snprintf(title, sizeof(title), "Launchstation %s", ULE_VERSION);

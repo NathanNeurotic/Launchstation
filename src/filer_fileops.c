@@ -295,6 +295,48 @@ int genRemove(char *path)
 //------------------------------
 //endfunc genRemove
 //--------------------------------------------------------------
+#ifdef EXFAT
+static int fatfsStatResult(const char *path, int result)
+{
+	static const int errors[] = {
+		0,
+		EIO,        /* FR_DISK_ERR */
+		EIO,        /* FR_INT_ERR */
+		ENODEV,     /* FR_NOT_READY */
+		ENOENT,     /* FR_NO_FILE */
+		ENOENT,     /* FR_NO_PATH */
+		ENXIO,      /* FR_INVALID_NAME, or native unresolved-volume ENXIO */
+		EACCES,     /* FR_DENIED */
+		EEXIST,     /* FR_EXIST */
+		EBADF,      /* FR_INVALID_OBJECT */
+		EROFS,      /* FR_WRITE_PROTECTED */
+		ENXIO,      /* FR_INVALID_DRIVE */
+		ENODEV,     /* FR_NOT_ENABLED */
+		ENODEV,     /* FR_NO_FILESYSTEM */
+		EIO,        /* FR_MKFS_ABORTED */
+		ETIMEDOUT,  /* FR_TIMEOUT */
+		EBUSY,      /* FR_LOCKED */
+		ENOMEM,     /* FR_NOT_ENOUGH_CORE */
+		EMFILE,     /* FR_TOO_MANY_OPEN_FILES */
+		EINVAL      /* FR_INVALID_PARAMETER */
+	};
+	const char *unit;
+
+	if (result >= 0 || result <= -(int)(sizeof(errors) / sizeof(errors[0])))
+		return result;
+	if (!strncmp(path, "mass", 4)) unit = path + 4;
+	else if (!strncmp(path, "usb", 3)) unit = path + 3;
+	else if (!strncmp(path, "ata", 3)) unit = path + 3;
+	else if (!strncmp(path, "mx4sio", 6)) unit = path + 6;
+	else if (!strncmp(path, "cf", 2)) unit = path + 2;
+	else if (!strncmp(path, "ilink", 5)) unit = path + 5;
+	else return result;
+	while (*unit >= '0' && *unit <= '9') unit++;
+	if (*unit != ':') return result;
+	return -errors[-result];
+}
+#endif
+
 int genGetStat(const char *path, iox_stat_t *stat)
 {
 	char stat_path[MAX_PATH];
@@ -310,7 +352,11 @@ int genGetStat(const char *path, iox_stat_t *stat)
 	ensurePathMemoryCardAccessible(stat_path);
 	normalizePcCardCfPath(stat_path, sizeof(stat_path));
 	genLimObjName(stat_path, 0);
+#ifdef EXFAT
+	return fatfsStatResult(stat_path, fileXioGetStat(stat_path, stat));
+#else
 	return fileXioGetStat(stat_path, stat);
+#endif
 }
 //------------------------------
 //endfunc genGetStat

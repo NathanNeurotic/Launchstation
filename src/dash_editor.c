@@ -49,7 +49,8 @@ static EdDoc docs[ED_MAX_DOCS];
 static int ndocs, active;
 static char *clip;
 static int clip_len;
-static int kb_shown, kb_sel, kb_act = -1, kb_caps;
+static int kb_shown;
+static DashKeyboard editor_keyboard;
 static int create_missing; /* dashTextEditorEx: a missing file starts a new document */
 
 //--------------------------------------------------------------
@@ -585,72 +586,14 @@ static int confirmDiscard(EdDoc *d)
 //--------------------------------------------------------------
 // Docked keyboard
 //--------------------------------------------------------------
-enum {
-	KA_CAPS = 0,
-	KA_SPACE,
-	KA_TAB,
-	KA_ENTER,
-	KA_BACK,
-	KA_HIDE,
-	KA_COUNT
-};
-
-static const char *const ka_names[KA_COUNT] = {"Caps", "Space", "Tab", "Enter", "Delete", "Hide"};
-
 static void kbTypeKey(EdDoc *d)
 {
-	const int layout = normalizeVirtualKeyboardLayout(setting->virtual_keyboard_layout);
-	char c;
+	int key = dashKeyboardPress(&editor_keyboard);
 
-	if (kb_act < 0) {
-		if (!isVirtualKeyboardLayoutKey(layout, kb_sel))
-			return;
-		c = getVirtualKeyboardLayoutChar(layout, kb_sel, kb_caps);
+	if (key > 0) {
+		char c = (char)key;
 		docInsert(d, &c, 1);
-		return;
 	}
-	switch (kb_act) {
-		case KA_CAPS:
-			kb_caps = !kb_caps;
-			break;
-		case KA_SPACE:
-			docInsert(d, " ", 1);
-			break;
-		case KA_TAB:
-			docInsert(d, "\t", 1);
-			break;
-		case KA_ENTER:
-			docInsert(d, "\n", 1);
-			break;
-		case KA_BACK:
-			docBackspace(d);
-			break;
-		case KA_HIDE:
-			kb_shown = 0;
-			break;
-	}
-}
-
-static void kbMove(int dx, int dy)
-{
-	const int layout = normalizeVirtualKeyboardLayout(setting->virtual_keyboard_layout);
-	const int first_col = getVirtualKeyboardLayoutFirstColumn(layout);
-	const int ncols = getVirtualKeyboardLayoutColumnCount(layout);
-
-	if (kb_act >= 0) {
-		if (dx)
-			kb_act = (kb_act + KA_COUNT + dx) % KA_COUNT;
-		if (dy < 0) {
-			kb_act = -1;
-			kb_sel = getVirtualKeyboardLayoutNextKey(layout, (VKEY_LAYOUT_ROWS - 1) * VKEY_LAYOUT_COLS + first_col + ncols / 2, 0, 0);
-		}
-		return;
-	}
-	if (dy > 0 && kb_sel / VKEY_LAYOUT_COLS >= VKEY_LAYOUT_ROWS - 1) {
-		kb_act = KA_ENTER;
-		return;
-	}
-	kb_sel = getVirtualKeyboardLayoutNextKey(layout, kb_sel, dx, dy);
 }
 
 //--------------------------------------------------------------
@@ -809,19 +752,19 @@ static int editorMenu(EdDoc *d)
 	(items[n].icon = (ic), items[n].label = (lab), items[n].detail = (det), items[n].disabled = (dis), ids[n++] = (id))
 	ADD(DI_CHECK, "Save", d->dirty ? "unsaved" : NULL, 0, M_SAVE);
 	ADD(DI_EDIT, "Save as...", NULL, 0, M_SAVEAS);
-	ADD(DI_PLUS, "New document", NULL, ndocs >= ED_MAX_DOCS, M_NEW);
+	ADD(DI_NEW_DOCUMENT, "New document", NULL, ndocs >= ED_MAX_DOCS, M_NEW);
 	ADD(DI_FOLDER, "Open...", NULL, ndocs >= ED_MAX_DOCS, M_OPEN);
 	if (ndocs > 1)
 		ADD(DI_VIEW_LIST, "Switch document...", NULL, 0, M_SWITCH);
-	ADD(DI_PIN, d->mark >= 0 ? "Stop selecting" : "Start selecting", "Square", 0, M_SELECT);
-	ADD(DI_VIEW_GRID, "Select all", NULL, d->len == 0, M_SELALL);
-	ADD(DI_FILE, "Copy", NULL, !has_sel, M_COPY);
-	ADD(DI_CLOSE, "Cut", NULL, !has_sel, M_CUT);
+	ADD(d->mark >= 0 ? DI_CLEAR_SELECTION : DI_PIN, d->mark >= 0 ? "Stop selecting" : "Start selecting", "Square", 0, M_SELECT);
+	ADD(DI_SELECT_ALL, "Select all", NULL, d->len == 0, M_SELALL);
+	ADD(DI_COPY, "Copy", NULL, !has_sel, M_COPY);
+	ADD(DI_CUT, "Cut", NULL, !has_sel, M_CUT);
 	ADD(DI_PLUS, "Paste", NULL, clip == NULL, M_PASTE);
 	ADD(DI_SETTINGS, "Line endings", eol_names[d->eol], 0, M_EOL);
 	ADD(DI_BTN_UP, "Go to the start", NULL, 0, M_GOTO_TOP);
 	ADD(DI_BTN_DOWN, "Go to the end", NULL, 0, M_GOTO_END);
-	ADD(DI_PLAY, "Launch with these arguments...", NULL, d->len == 0, M_LAUNCH);
+	ADD(DI_LAUNCH_ARGS, "Use as launch arguments", NULL, d->len == 0, M_LAUNCH);
 	ADD(DI_CLOSE, "Close document", NULL, 0, M_CLOSE);
 	ADD(DI_BACK, "Exit Text Editor", NULL, 0, M_EXIT);
 #undef ADD
@@ -833,22 +776,25 @@ static int editorMenu(EdDoc *d)
 // Drawing
 //--------------------------------------------------------------
 #define ED_X 40.0f
-#define ED_Y 58.0f
+#define ED_Y 60.0f
 #define ED_W 560.0f
 #define ED_ROW 17.0f
 #define ED_CW 8.0f
 #define ED_GUTTER 48.0f
-#define KB_H 176.0f
+#define ED_KB_PADDING 6.0f
+#define ED_KB_BOTTOM (DASH_VH - 59.0f)
 
-static u64 gsCol(DashColor c)
+static float keyboardTop(void)
 {
-	return GS_SETREG_RGBAQ(c.r, c.g, c.b, 0x80, 0x00);
+	return ED_KB_BOTTOM - dashKeyboardHeight() - 2 * ED_KB_PADDING;
 }
 
 static int visibleRows(void)
 {
-	float h = (kb_shown ? (DASH_VH - 64 - KB_H) : (DASH_VH - 104)) - ED_Y;
-	return (int)(h / ED_ROW);
+	/* Text panel extends 4px below the last row; leave another 4px gap. */
+	float bottom = kb_shown ? keyboardTop() - 8 : DASH_VH - 70;
+
+	return (int)((bottom - ED_Y) / ED_ROW);
 }
 
 static int visibleCols(void)
@@ -868,15 +814,17 @@ static void scrollToCursor(EdDoc *d, int rows, int cols)
 		d->left = col;
 	if (col >= d->left + cols)
 		d->left = col - cols + 1;
+	/* Fill the expanded viewport when hiding the keyboard near EOF. */
+	if (d->top > d->nlines - rows)
+		d->top = d->nlines - rows;
 	if (d->top < 0)
 		d->top = 0;
 }
 
 static void drawText(EdDoc *d, int rows, int cols)
 {
-	const float sy = dashGfxScaleY();
 	const float tx = ED_X + ED_GUTTER;
-	const u64 fg = gsCol(DASH_C_TEXT), dim = gsCol(DASH_C_TEXT3);
+	const DashColor fg = DASH_C_TEXT, dim = DASH_C_TEXT3;
 	int r, sa = 0, sb = 0, has_sel = selRange(d, &sa, &sb);
 	int cur_line = docLineOf(d, d->cur);
 	float h = rows * ED_ROW + 8;
@@ -913,8 +861,8 @@ static void drawText(EdDoc *d, int rows, int cols)
 			if (col >= d->left + cols)
 				break;
 			if (col >= d->left && ch != '\t' && ch != ' ')
-				dashFontLegacyChar(ch < 0x20 ? '.' : ch, (int)(tx + (col - d->left) * ED_CW),
-				                   (int)((y + 1) * sy), ch < 0x20 ? dim : fg);
+				dashFontMonoByte(ch < 0x20 ? '.' : ch, tx + (col - d->left) * ED_CW,
+				                 y + 1, ch < 0x20 ? dim : fg);
 			col = next;
 		}
 	}
@@ -930,45 +878,12 @@ static void drawText(EdDoc *d, int rows, int cols)
 
 static void drawKeyboard(void)
 {
-	const int layout = normalizeVirtualKeyboardLayout(setting->virtual_keyboard_layout);
-	const int first_col = getVirtualKeyboardLayoutFirstColumn(layout);
-	const int ncols = getVirtualKeyboardLayoutColumnCount(layout);
-	const float kw = 30.0f, kh = 22.0f, gap = 3.0f;
-	float grid_w = ncols * kw + (ncols - 1) * gap;
-	float y0 = DASH_VH - 58 - KB_H + 6, gx = (DASH_VW - grid_w) * 0.5f;
-	int row, col, a;
+	float top = keyboardTop();
 
-	dashDrawPanelBox(ED_X - 6, y0 - 6, ED_W + 12, KB_H - 4, 12);
-	for (row = 0; row < VKEY_LAYOUT_ROWS; row++) {
-		for (col = 0; col < ncols; col++) {
-			int idx = row * VKEY_LAYOUT_COLS + first_col + col;
-			float kx = gx + col * (kw + gap), ky = y0 + row * (kh + gap);
-			char label[2];
-			int on = (kb_act < 0 && idx == kb_sel);
+	dashDrawPanelBox(ED_X - 6, top, ED_W + 12,
+	                 dashKeyboardHeight() + 2 * ED_KB_PADDING, 12);
 
-			if (!isVirtualKeyboardLayoutKey(layout, idx))
-				continue;
-			label[0] = getVirtualKeyboardLayoutDisplayChar(layout, idx, kb_caps);
-			label[1] = '\0';
-			if (on)
-				dashDrawSelection(kx - 1, ky - 1, kw + 2, kh + 2, 6, 1.0f);
-			else
-				dashPanel(kx, ky, kw, kh, 6, DC(255, 255, 255, 16));
-			dashTextCenter(kx + kw * 0.5f, ky + 2, label[0] == ' ' ? "sp" : label, DASH_FS_SMALL, dashItemColor(on));
-		}
-	}
-	{
-		float ay = y0 + VKEY_LAYOUT_ROWS * (kh + gap) + 4, aw = (ED_W - (KA_COUNT - 1) * 6.0f) / KA_COUNT;
-		for (a = 0; a < KA_COUNT; a++) {
-			float ax = ED_X + a * (aw + 6.0f);
-			int on = (kb_act == a);
-			if (on)
-				dashDrawSelection(ax, ay, aw, 24, 8, 1.0f);
-			else
-				dashPanel(ax, ay, aw, 24, 8, DC(255, 255, 255, (a == KA_CAPS && kb_caps) ? 40 : 18));
-			dashTextCenter(ax + aw * 0.5f, ay + 4, (a == KA_CAPS && kb_caps) ? localizeDashboardText("CAPS") : ka_names[a], DASH_FS_SMALL, dashItemColor(on));
-		}
-	}
+	dashKeyboardDraw(&editor_keyboard, DASH_VW * 0.5f, top + ED_KB_PADDING);
 }
 
 /* The editor is the scene while it is open: dialogs draw over it. */
@@ -1048,7 +963,7 @@ static void closeAll(void)
 static int emptyMenu(void)
 {
 	DashMenuItem items[] = {
-	    {DI_PLUS, "New document", NULL, 0},
+	    {DI_NEW_DOCUMENT, "New document", NULL, 0},
 	    {DI_FOLDER, "Open...", NULL, 0},
 	    {DI_BACK, "Exit Text Editor", NULL, 0}};
 	char path[MAX_PATH];
@@ -1078,10 +993,7 @@ int dashTextEditorEx(const char *path, int create_if_missing)
 	ndocs = 0;
 	active = 0;
 	kb_shown = 0;
-	kb_act = -1;
-	kb_caps = 0;
-	kb_sel = getVirtualKeyboardLayoutNextKey(normalizeVirtualKeyboardLayout(setting->virtual_keyboard_layout),
-	                                         VKEY_LAYOUT_COLS + getVirtualKeyboardLayoutFirstColumn(normalizeVirtualKeyboardLayout(setting->virtual_keyboard_layout)), 0, 0);
+	dashKeyboardInit(&editor_keyboard, setting->virtual_keyboard_layout);
 	dashFontInit(); /* the legacy glyph atlas draws the text */
 	dashPushSceneOverride(editorScene);
 	create_missing = create_if_missing;
@@ -1119,22 +1031,31 @@ int dashTextEditorEx(const char *path, int create_if_missing)
 		else if (in.pressed & DASH_IN_SELECT)
 			kb_shown = !kb_shown;
 		else if (kb_shown) {
-			if (in.pressed & DASH_IN_UP)
-				kbMove(0, -1);
-			if (in.pressed & DASH_IN_DOWN)
-				kbMove(0, 1);
-			if (in.pressed & DASH_IN_LEFT)
-				kbMove(-1, 0);
-			if (in.pressed & DASH_IN_RIGHT)
-				kbMove(1, 0);
+			/* D-pad selects keys; the right stick moves the document cursor.
+			 * raw_new keeps these separate from the shared navigation mapping. */
+			if (in.raw_new & PAD_UP)
+				dashKeyboardMove(&editor_keyboard, 0, -1);
+			if (in.raw_new & PAD_DOWN)
+				dashKeyboardMove(&editor_keyboard, 0, 1);
+			if (in.raw_new & PAD_LEFT)
+				dashKeyboardMove(&editor_keyboard, -1, 0);
+			if (in.raw_new & PAD_RIGHT)
+				dashKeyboardMove(&editor_keyboard, 1, 0);
+			if (in.raw_new & PAD_R3_H0)
+				moveCursor(d, d->cur - 1, 0);
+			if (in.raw_new & PAD_R3_H1)
+				moveCursor(d, d->cur + 1, 0);
+			if (in.raw_new & PAD_R3_V0)
+				moveLines(d, -1);
+			if (in.raw_new & PAD_R3_V1)
+				moveLines(d, 1);
 			if ((in.pressed & DASH_IN_OK) ||
-			    ((in.text_repeat & DASH_IN_OK) && (kb_act < 0 || kb_act == KA_SPACE ||
-			      kb_act == KA_TAB || kb_act == KA_ENTER || kb_act == KA_BACK)))
+			    ((in.text_repeat & DASH_IN_OK) && dashKeyboardCanRepeat(&editor_keyboard)))
 				kbTypeKey(d);
 			if (in.text_repeat & DASH_IN_BACK)
 				docBackspace(d);
 			if (in.pressed & DASH_IN_FAV)
-				kb_caps = !kb_caps;
+				editor_keyboard.caps = !editor_keyboard.caps;
 			if (in.pressed & DASH_IN_L1)
 				moveCursor(d, d->cur - 1, 0);
 			if (in.pressed & DASH_IN_R1)

@@ -25,6 +25,7 @@ typedef struct
 typedef struct
 {
 	int em;                        /* pixel size the face was rendered at */
+	int alpha_gamma100;            /* atlas alpha exponent, multiplied by 100 */
 	int ascent16, descent16;       /* 1/16 px */
 	int xheight16;                 /* 1/16 px */
 	int tex_w, tex_h;
@@ -32,6 +33,9 @@ typedef struct
 	const DashGlyphData *glyphs;   /* indexed by code - DASH_FONT_FIRST */
 } DashFaceData;
 
+/* Three sizes per family; only the selected family's textures are resident. */
 extern const DashFaceData dash_font_faces[DASH_FONT_FACES];
+extern const DashFaceData dash_emotion_engine_faces[DASH_FONT_FACES];
+extern const DashFaceData dash_emotion_engine_bold_faces[DASH_FONT_FACES];
 
 #endif

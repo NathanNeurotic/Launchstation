@@ -71,8 +71,9 @@ the colour-swap selection.
   0/1/2 load as 0/50/100%.
 * **Menu animation**: 0-200% in 10% steps (default 100%). 0% makes
   transitions instant; larger values keep transitions moving for longer.
-* **Panel transparency**: 0-100% opacity of the Panels colour (0% removes menu
-  panels).
+* **Panel transparency**: 0-100% transparency of the Panels colour: 0% is
+  fully opaque and 100% removes menu panels. Theme files continue to store
+  the same opacity byte; existing themes keep their appearance.
 * **Control icon backings** (default On): theme-derived badges behind
   face-button and D-pad symbols and quick-action chips.
 * **Theme files & resets** contains import, export, theme name, reset to the
@@ -191,6 +192,8 @@ The sample uses `wallpaper = off` so its static background stays visible.
 Arbitrary TTF files are not loaded on the console: a font engine and its
 glyph cache would cost too much memory and time. To use another typeface
 for *Roboto*, regenerate the atlas on a PC with `scripts/gen_dash_font.py`.
+See [font-generation.md](font-generation.md) for source versions, coverage
+checks, Emotion Engine commands and license notices.
 
 ## Application tile styles
 
@@ -319,7 +322,7 @@ clock_position = header
 | `tile_style` | `memory_card` (default), `rounded`, `chamfered`, `floating`, `crystal` |
 | `corners` | `square`, `soft`, `round` |
 | `glow`, `bold`, `text_shadow` | 0 / 1 |
-| `font` | `roboto`, `system` |
+| `font` | `roboto`, `system`, `emotion_engine` |
 | `font_scale` | 90-115 (%) |
 | `icon_tint` | `text`, `accent`, `mono` |
 | `app_icon_style` | `system`, `device`, `monogram` |
@@ -419,3 +422,7 @@ video mode (NTSC/PAL/480p).
 Defining `DASH_THEME_TOUR` (add it to the `wLaunchELF` target's `defines`
 in ps2.yaml) shows every preset for five seconds, which makes checking
 them in an emulator easy. Never ship such a build.
+
+### Optional Emotion Engine family
+
+Font offers Roboto (default), System and Emotion Engine. Style selects Regular/Bold. Emotion Engine uses original regular/bold outlines. See [source, memory and regeneration notes](font-generation.md) and the [license](licenses/Emotion-Engine-LICENSE.txt). Existing Roboto/System theme IDs and defaults are retained.

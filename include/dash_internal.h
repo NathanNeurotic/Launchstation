@@ -37,6 +37,7 @@
 #define DASH_SHORT_MAX 40
 
 #define DASH_MAX_APPS 512
+#define DASH_SELECT_EXTRA_W 4.0f
 #define DASH_MAX_SCAN 12
 #define DASH_MAX_FAV 48
 #define DASH_MAX_RECENT 16
@@ -141,6 +142,7 @@ enum DashCorner {
 enum DashFontFace {
 	DASH_FONT_ROBOTO = 0, /* smooth proportional (bundled) */
 	DASH_FONT_SYSTEM,     /* wLaunchELF bitmap font / user .fnt (localized glyphs) */
+	DASH_FONT_EMOTION_ENGINE, /* Regular/Bold selected by DashTheme.bold */
 	DASH_FONT_COUNT
 };
 
@@ -405,6 +407,10 @@ void dashTextScroll(float x, float y, float maxw, const char *s, float scale, Da
 void dashTextScrollTimed(float x, float y, float maxw, const char *s, float scale, DashColor c, float age);
 void dashTextScrollCenter(float cx, float y, float maxw, const char *s, float scale, DashColor c);
 int dashTextWrap(float x, float y, float w, int max_lines, const char *s, float scale, DashColor c, float line_h);
+void dashTextWrapScrollTimed(float x, float y, float w, float h, const char *s,
+                             float scale, DashColor c, float line_h, float age);
+void dashFontByte(unsigned char c, float x, float y, DashColor color);
+void dashFontMonoByte(unsigned char c, float x, float y, DashColor color);
 /* Legacy 8px monospace glyph (for the themed classic screens). */
 void dashFontLegacyChar(unsigned int c, int x, int y, u64 gs_color);
 GSTEXTURE *dashFontTexture(void);
@@ -469,7 +475,17 @@ enum DashIcon {
 	DI_RECENT,  /* recently used */
 	DI_IMAGE,   /* wallpaper / picture */
 	DI_DPAD_UD, /* D-pad with up/down highlighted ("scroll") */
-	DI_COUNT    /* the SDF atlas holds 56 icons (7 x 8) and is now full, pad glyphs included */
+	DI_CUT,     /* first small icon in the atlas margin, after the 56 grid icons */
+	DI_COPY,
+	DI_PASTE_RENAME, /* pencil with a small upper-right plus */
+	DI_SELECT_ALL,   /* checkmark with a small upper-left plus */
+	DI_INVERT_SELECTION, /* filled rounded square with a checkmark cutout */
+	DI_CLEAR_SELECTION, /* checkmark with a small upper-left minus */
+	DI_LAUNCH_ARGS, /* rocket-launch: use a text file/buffer as launch arguments */
+	DI_NEW_DOCUMENT, /* lined document with a small upper-right plus */
+	DI_KEY_TAB,     /* keyboard right arrow ending at a vertical bar */
+	DI_KEY_RETURN,  /* keyboard bent left arrow; arrowhead centered at y=0 */
+	DI_COUNT
 };
 
 void dashIconsInit(void);
@@ -800,6 +816,8 @@ typedef struct
 } DashInput;
 
 void dashInputPoll(DashInput *in);
+/* Physical controller sample only; returns validity and suppresses START menus. */
+int dashInputPollPhysical(DashInput *in);
 void dashInputPollEx(DashInput *in, int usb_kb_as_pad);
 void dashInputFlush(void);
 u64 dashInputIdleMs(void);
@@ -865,6 +883,24 @@ void dashModalBackdrop(float k);
 void dashModalPanel(float x, float y, float w, float h, float k);
 void dashModalHintRow(float x, float y, int ok_icon, const char *ok, int back_icon, const char *back);
 float dashDrawButton(float x, float y, int icon, const char *key);
+float dashButtonWidth(int icon, const char *key); /* same sizing without drawing */
+
+/* Shared native keyboard for the editor and single-line naming dialogs. */
+typedef struct
+{
+	int layout, selected, action, caps, page;
+	int space_selected, space_action; /* focus before entering the wide Space key */
+	int space_dx, space_dy; /* reverse this move to return to the previous focus */
+	int single_line; /* text prompts expose only the Symbols action */
+	int filename; /* names hide actions/separators; '?' and '|' ignore Caps */
+} DashKeyboard;
+
+void dashKeyboardInit(DashKeyboard *kb, int layout);
+void dashKeyboardMove(DashKeyboard *kb, int dx, int dy);
+int dashKeyboardPress(DashKeyboard *kb); /* typed byte, or 0 for a page change */
+int dashKeyboardCanRepeat(const DashKeyboard *kb); /* text keys repeat; Symbols is one press */
+float dashKeyboardHeight(void); /* first key top to Space bottom */
+void dashKeyboardDraw(const DashKeyboard *kb, float center_x, float y0);
 
 /* Native text entry (dash_widgets.c): the user's virtual keyboard layout,
  * USB keyboard typing. Edits `buf` in place; 1 = accepted, 0 = cancelled. */
@@ -923,7 +959,8 @@ int dashWorkerIoBusy(void);   /* the worker is doing IO right now: the UI thread
 int dashWorkerQueued(int flags_mask);
 int dashWorkerDone(int id);
 int dashWorkerLastId(void);
-int dashWorkerAwait(int id, const char *title, int cancelable); /* 0 = cancelled */
+/* NULL title waits with the scene visible and no loading popup; 0 = cancelled. */
+int dashWorkerAwait(int id, const char *title, int cancelable);
 int dashWorkerAwaitAll(const char *title);                       /* 0 = cancelled */
 int dashWorkerOnThread(void);
 void dashWorkerStatus(const char *text, int done, int total);   /* worker side */

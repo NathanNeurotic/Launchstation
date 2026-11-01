@@ -23,6 +23,16 @@ def function(signature):
 
 program=r'''
 #include <assert.h>
+#include <string.h>
+#include <errno.h>
+typedef struct { unsigned char raw[8]; } sceMcStDateTime;
+static int capture_result=1,restore_result,captures,restores;
+static int filerCaptureSasTimestamp(const char *p,sceMcStDateTime *t) {
+    (void)p;memset(t,0x6a,sizeof(*t));captures++;return capture_result;
+}
+static int filerRestoreSasTimestamp(const char *p,const sceMcStDateTime *t) {
+    (void)p;assert(t->raw[0]==0x6a);restores++;return restore_result;
+}
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -101,16 +111,19 @@ for sig in [
     "static int join_leaf(",
 ]:
     program+=function(sig)
+program+=function("static int install_update_files(")
 program+=function("int selfUpdateInstall(")
 program+=r'''
 static void reset(void) {
-    count=downloads=sidecar_calls=0;
+    count=downloads=sidecar_calls=captures=restores=restore_result=0;capture_result=1;
     legacy=fail_bgm_stage=fail_bgm_rename=0;
     bad_digest=fail_elf_rename=bad_header=0;
     put(boot);
 }
 static int install(char *msg) {
-    return selfUpdateInstall("settings/legacy-ca.pem","sha256:mock",msg,512);
+    int ret=selfUpdateInstall("settings/legacy-ca.pem","sha256:mock",msg,512);
+    assert(captures==1 && restores==(capture_result>0));
+    return ret;
 }
 int main(void) {
     const char *ca="mc0:/APP_LAUNCHSTATION/WLE-UPDATE-CA.PEM";
@@ -159,6 +172,14 @@ int main(void) {
     assert(install(msg)<0 && has(boot)&&!has(backup)&&!has(ca)&&!has(bgm));
     reset();fail_elf_rename=1;
     assert(install(msg)<0 && !has(boot)&&has(backup)); /* simulated rollback fails too */
+    reset();capture_result=-EIO;
+    assert(install(msg)<0 && downloads==0 && has(boot) && !has(backup));
+    reset();capture_result=0;
+    assert(install(msg)==0 && restores==0);
+    reset();restore_result=-EACCES;
+    assert(install(msg)==0 && strstr(msg,"Could not restore") && has(boot));
+    reset();restore_result=-EIO;bad_digest=1;
+    assert(install(msg)<0 && strstr(msg,"Could not restore") && has(boot));
     puts("PASS: updater refuses to truncate old stages; missing-only sidecars and ELF recover safely");
 }
 '''

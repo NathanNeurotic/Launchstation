@@ -8,6 +8,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
 date = subprocess.check_output(['git', 'show', '-s', '--format=%cs', 'HEAD'], cwd=root, text=True).strip()
+build = subprocess.check_output(['git', 'rev-list', '--count', 'HEAD'], cwd=root, text=True).strip()
 with tempfile.TemporaryDirectory(prefix='build-identity-') as folder:
     output = Path(folder) / 'githash.h'
     output.write_text('#define GIT_HASH "stale-build"\n')
@@ -16,6 +17,7 @@ with tempfile.TemporaryDirectory(prefix='build-identity-') as folder:
     content = output.read_text()
     assert f'#define GIT_HASH "{sha[:12]}"' in content
     assert f'#define ULE_VERDATE "{date}"' in content
+    assert f'#define LAUNCHSTATION_BUILD "{build}"' in content
     timestamp = output.stat().st_mtime_ns
     subprocess.run(args, cwd=folder, check=True)
     assert output.read_text() == content and output.stat().st_mtime_ns == timestamp
@@ -38,3 +40,20 @@ with tempfile.TemporaryDirectory(prefix='archive-identity-') as folder:
     assert result.returncode != 0 and not (archive / 'githash.h').exists()
     subprocess.run([sys.executable, str(script)], check=True, capture_output=True)
     assert '#define GIT_HASH "local"' in (archive / 'githash.h').read_text()
+    assert '#define LAUNCHSTATION_BUILD "local"' in (archive / 'githash.h').read_text()
+
+# A shallow clone must not stamp its truncated count as a release version.
+with tempfile.TemporaryDirectory(prefix='shallow-identity-') as folder:
+    clone = Path(folder) / 'clone'
+    subprocess.run(['git', 'init', str(clone)], check=True, capture_output=True)
+    subprocess.run(['git', '-C', str(clone), '-c', 'user.name=Fixture',
+                    '-c', 'user.email=fixture@example.invalid', 'commit',
+                    '--allow-empty', '-m', 'Shallow boundary'], check=True, capture_output=True)
+    boundary = subprocess.check_output(['git', '-C', str(clone), 'rev-parse', 'HEAD'], text=True).strip()
+    (clone / '.git/shallow').write_text(boundary + '\n', encoding='ascii')
+    (clone / 'scripts').mkdir()
+    shutil.copyfile(root / 'scripts/gen_githash.py', clone / 'scripts/gen_githash.py')
+    result = subprocess.run([sys.executable, str(clone / 'scripts/gen_githash.py'), '--require-git'],
+                            capture_output=True)
+    assert result.returncode != 0 and not (clone / 'githash.h').exists()
+print('PASS: application build number matches release commit count; shallow histories rejected')

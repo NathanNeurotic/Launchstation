@@ -526,18 +526,19 @@ No third-party artwork is embedded in the ELF.
 
 ## Typography
 
-Dashboard text uses Roboto Regular (Copyright 2015 Google Inc., Apache
-License 2.0, see `docs/licenses/Roboto-COPYRIGHT.txt`). It is rendered on the
-host by `scripts/gen_dash_font.py` (4x supersampled) into three PSMT8 alpha
-atlases (14, 20 and 32 px em; 35 + 57 + 123 KB) committed as
-`src/dash_font_data.c`; the PS2 needs no font engine. Sizes run from 12 px
-captions to 28 px titles. Themes can switch the dashboard to that bitmap font as well
-(*System* font, see [themes.md](themes.md#fonts)), scale text from 90 to
-115 % and draw it bold. Regenerate the Roboto atlases with another TTF/OTF:
+Dashboard text defaults to Roboto Regular (Copyright 2015 Google Inc., Apache
+License 2.0, see `docs/licenses/Roboto-COPYRIGHT.txt`). Font choices also include
+System and Emotion Engine by Pixel Sagas. Style offers Regular and Bold. Each smooth font has
+three PSMT8 alpha atlases (14, 20 and 32 px em), generated on a PC by
+`scripts/gen_dash_font.py`; the PS2 needs no font engine. The two Emotion
+Engine styles cover the full printable ASCII/Latin-1 set used by the renderer.
+Emotion Engine uses its original regular/bold faces; Roboto and System use
+the existing extra stroke pass for Bold style. Themes can scale text from
+90 to 115 percent and use the System bitmap font as well.
 
-```
-python scripts/gen_dash_font.py path/to/Font.ttf
-```
+The renderer shares three smooth-font texture slots across families and
+releases old VRAM mappings when switching families or Emotion Engine styles. See [font-generation.md](font-generation.md)
+for regeneration commands, source checksums, license notices and memory sizes.
 
 ## Memory and VRAM budget
 

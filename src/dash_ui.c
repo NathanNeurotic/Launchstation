@@ -19,6 +19,7 @@ static u32 text_repeat_armed;
 /* Set while a timed confirmation polls: START must not open the Dashboard
  * popup, whose own input loop would hold off the automatic revert. */
 static int dash_start_menu_blocked;
+static int physical_sample_valid;
 
 //--------------------------------------------------------------
 // Input
@@ -37,6 +38,7 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	u32 back_btn = swapKeys ? PAD_CIRCLE : PAD_CROSS;
 
 	memset(in, 0, sizeof(*in));
+	physical_sample_valid = 0;
 	dashWorkerParkPoint();
 	if (dashIopParked())
 		return; /* the IOP (and padman with it) is being rebooted */
@@ -45,10 +47,12 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	/* the USB keyboard driver is on the IOP: leave it alone while the
 	 * background worker talks to the IOP */
 	ret = usb_kb_as_pad && !dashWorkerIoBusy() ? readpad() : readpad_no_KB();
+	physical_sample_valid = ret > 0;
 	/* Only navigation repeats. A held action must not reopen/close a menu,
 	 * launch again or toggle a setting after its first press. */
 	np = ret ? new_pad & ((PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT |
 	                      PAD_L3_H0 | PAD_L3_H1 | PAD_L3_V0 | PAD_L3_V1 |
+	                      PAD_R3_H0 | PAD_R3_H1 | PAD_R3_V0 | PAD_R3_V1 |
 	                      PAD_L2 | PAD_R2) | ~(paddata & held_prev)) : 0;
 	/* Adapted from saildot4k d9f60e5: reuse pad repeat timing only for
 	 * text-entry consumers. A held action cannot reopen a normal dialog. */
@@ -110,6 +114,17 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 			dashDashboardMenu();
 		}
 	}
+}
+
+/* Hold sampling cannot open a nested Dashboard menu, and a failed DS34
+ * read must not validate the previous held-button bits. */
+int dashInputPollPhysical(DashInput *in)
+{
+	int was_blocked = dash_start_menu_blocked;
+	dash_start_menu_blocked = 1;
+	dashInputPollEx(in, 0);
+	dash_start_menu_blocked = was_blocked;
+	return physical_sample_valid;
 }
 
 void dashInputFlush(void)
@@ -204,6 +219,11 @@ static float buttonWidth(int icon, const char *key)
 		return 22.0f;
 	w = dashTextWidth(key, DASH_FS_CAPTION) + 14.0f;
 	return w < 22.0f ? 22.0f : w;
+}
+
+float dashButtonWidth(int icon, const char *key)
+{
+	return buttonWidth(icon, key);
 }
 
 static float drawButton(float x, float y, int icon, const char *key)

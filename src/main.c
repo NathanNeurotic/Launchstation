@@ -250,7 +250,7 @@ static void runWleIgrAfter(int requested)
 //------------------------------
 static void Execute(char *pathin)
 {
-	MainExecuteContext exec_ctx;
+	MainExecuteContext exec_ctx = {0};
 
 	exec_ctx.boot_argc = boot_argc;
 	exec_ctx.boot_argv = boot_argv;
@@ -300,7 +300,7 @@ int main(int argc, char *argv[])
 
 	//The dashboard is the only shell; DashRun() does not return.
 	{
-		MainExecuteContext dash_ctx;
+		MainExecuteContext dash_ctx = {0};
 
 		dash_ctx.boot_argc = boot_argc;
 		dash_ctx.boot_argv = boot_argv;

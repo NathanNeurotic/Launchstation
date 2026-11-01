@@ -682,3 +682,6 @@ lang(680, Exploit_Folder_America_Asia_Warning, "Cuidado: carpeta de exploit para
 lang(681, Exploit_Folder_Europe_Warning, "Cuidado: carpeta de exploit para consolas de Europa!")
 lang(682, Exploit_Folder_China_Warning, "Cuidado: carpeta de exploit para consolas de China!")
 lang(683, Dashboard_Per_save_versions, "Versiones por partida")
+
+lang(684, Dashboard_Style, "Estilo")
+lang(685, Dashboard_Regular, "Normal")

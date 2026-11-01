@@ -234,7 +234,7 @@ static const SetItem appearance_items[] = {
     {ST_PAGE, P_SCREEN, "Screen calibration", "Video mode and picture position for your TV."},
     {ST_CHOICE, S_EFFECTS, "Background motion", "0% freezes backgrounds; 100% is normal; 200% doubles their motion."},
     {ST_CHOICE, S_ANIM, "Menu animation", "0% makes transitions instant; higher values increase movement and transition duration."},
-    {ST_CHOICE, S_T_PANEL_A, "Panel transparency", "0% removes menu panels; 100% makes them fully opaque."},
+    {ST_CHOICE, S_T_PANEL_A, "Panel transparency", "0% makes panels fully opaque; 100% makes them fully transparent."},
     {ST_CHOICE, S_ICON_BACKING, "Control icon backings", "Show or hide backing shapes behind text-style controls and quick actions."},
     {ST_PAGE, P_THEME_MANAGE, "Theme files & resets", "Import, export, rename or reset your theme."},
     {ST_ACTION, S_DISPLAY_THEME_RESET, "Reset appearance", "Restore screen calibration, motion, animation and the OSD Classic theme."},
@@ -467,7 +467,7 @@ static const SetItem ttype_items[] = {
     {ST_CHOICE, S_T_FONT, "Font", "System uses the built-in font (or your .fnt) and its accented characters."},
     {ST_PATH, S_FONT_FILE, "System font file", "External .FNT font used when Font is set to System."},
     {ST_CHOICE, S_T_FSCALE, "Text size", "Larger sizes can shorten long names."},
-    {ST_CHOICE, S_T_BOLD, "Bold", "Heavier strokes; easier to read on a CRT."},
+    {ST_CHOICE, S_T_BOLD, "Style", "Regular or Bold. Emotion Engine uses its original font faces."},
     {ST_CHOICE, S_T_SHADOW, "Text shadow", NULL},
     {ST_ACTION, S_T_RESETCAT, "Reset text", "Back to the values of the theme's preset."},
 };
@@ -595,7 +595,8 @@ static const char *const confirm_names[] = {"Circle", "Cross"};
 static const char *const hl_names[] = {"Solid bar", "Accent bar", "Outline", "Text colour"};
 static const char *const tile_names[] = {"Memory card", "Rounded", "Chamfered", "Floating object", "Crystal slab"};
 static const char *const corner_names[] = {"Square", "Soft", "Round"};
-static const char *const font_names[] = {"Roboto", "System"};
+static const char *const font_names[DASH_FONT_COUNT] = {"Roboto", "System", "Emotion Engine"};
+static const char *const font_style_names[] = {"Regular", "Bold"};
 static const char *const fscale_names[] = {"90%", "95%", "100%", "105%", "110%", "115%"};
 static const char *const tint_names[] = {"Text colours", "Accent", "Monochrome"};
 static const char *const appicon_names[] = {"Application", "Device", "Initials"};
@@ -866,7 +867,7 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			*cur = dashTheme.glow;
 			return 2;
 		case S_T_PANEL_A:
-			*names = pct_names, *cur = (dashTheme.panel.a * 10 + 127) / 255;
+			*names = pct_names, *cur = ((255 - dashTheme.panel.a) * 10 + 127) / 255;
 			return 11;
 		case S_T_FONT:
 			*names = font_names, *cur = dashTheme.font;
@@ -875,7 +876,7 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			*names = fscale_names, *cur = (dashTheme.font_scale - 90 + 2) / 5;
 			return 6;
 		case S_T_BOLD:
-			*cur = dashTheme.bold;
+			*names = font_style_names, *cur = dashTheme.bold;
 			return 2;
 		case S_T_SHADOW:
 			*cur = dashTheme.text_shadow;
@@ -944,7 +945,7 @@ static int setThemeChoice(int id, int v)
 			t->glow = (u8)v;
 			break;
 		case S_T_PANEL_A:
-			t->panel.a = (u8)(v * 255 / 10);
+			t->panel.a = (u8)((10 - v) * 255 / 10);
 			break;
 		case S_T_FONT:
 			t->font = (u8)v;

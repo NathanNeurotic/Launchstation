@@ -29,7 +29,10 @@ jobs:
 
       - name: Test Settings sessions, navigation and theme compatibility
         run: |
-          python3 tests/test_input_polish.py
+          python3 tests/test_portable_filename.py
+          python3 tests/test_editor_keyboard.py
+          python3 tests/test_font_weight.py
+          python3 tests/test_browser_sort.py
           python3 tests/test_video_sound_preview.py
           python3 tests/test_display_feedback.py
           python3 tests/test_udpfs_smap_fifo_tail.py
@@ -160,6 +163,11 @@ jobs:
           python3 tests/test_sd2cloud_parity.py
           python3 tests/test_mmce_status_failures.py
           python3 tests/test_self_update.py
+          python3 tests/test_file_stat_errors.py
+          python3 tests/test_update_sas_timestamps.py
+          python3 tests/test_launch_iop_override.py
+          python3 tests/test_physical_hold_input.py
+          python3 tests/test_panel_transparency.py
           python3 tests/test_https_tls.py
           python3 tests/test_rename_devices.py
           python3 tests/test_vmc_rename.py

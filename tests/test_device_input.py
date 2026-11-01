@@ -83,11 +83,12 @@ static int readpad_noRepeat(void) {
 }
 static u64 last_input_ms;
 static u32 held_prev, text_repeat_armed;
-static int dashboard_menus,dashboard_menu_open,dash_start_menu_blocked;
+static int dashboard_menus,dashboard_menu_open,dash_start_menu_blocked,physical_sample_valid;
 static void dashDashboardMenu(void) { dashboard_menus++; }
 """
 padcode += function(read("src/dash_main.c"), "int dashDashboardMenuIsOpen(")
 padcode += function(ui, "void dashInputPollEx(") + function(ui, "void dashInputFlush(")
+padcode += function(ui, "int dashInputPollPhysical(")
 padcode += r"""
 int main(void) {
     DashInput in;
@@ -129,6 +130,13 @@ int main(void) {
     kb=PAD_CROSS; dashInputPollEx(&in,1); assert(in.pressed==DASH_IN_OK);
     busy=1; kb=PAD_CROSS; dashInputPollEx(&in,1); assert(!in.any && kb);
     busy=0; dashInputPollEx(&in,0); assert(!in.any && kb);
+    /* Both right-stick axes retain backend repeat events for caret movement. */
+    kb=0;
+    for(int axis=PAD_R3_V0;axis<=PAD_R3_H1;axis<<=1) {
+        keys[0]=0;dashInputPollEx(&in,0);keys[0]=axis;
+        dashInputPollEx(&in,0);assert(in.raw_new & axis);
+        now_ms+=401;dashInputPollEx(&in,0);assert(in.raw_new & axis);
+    }
     /* START is consumed globally, even with another action held.
      * Holding it never reopens the popup through the repeat path. */
     kb=0;keys[0]=PAD_START|PAD_CROSS;clearPadPressState();held_prev=0;
@@ -171,6 +179,11 @@ int main(void) {
         now_ms+=16; dashInputPollEx(&in,0); assert(!in.any);
     }
     now_ms=6401; dashInputPollEx(&in,0); assert(in.pressed==DASH_IN_DOWN);
+    left_v=0x80;keys[0]=0;dashInputPollEx(&in,0);dashboard_menu_open=0;
+    int menus_before=dashboard_menus;keys[0]=PAD_START|PAD_CROSS;
+    assert(dashInputPollPhysical(&in)>0 && dashboard_menus==menus_before && !dash_start_menu_blocked);
+    good[0]=0;assert(!dashInputPollPhysical(&in));
+    good[0]=-1;assert(!dashInputPollPhysical(&in));good[0]=1;
     puts("PASS: failed/disconnected reads, both ports, flush timing, held actions, navigation, keyboard");
 }
 """
