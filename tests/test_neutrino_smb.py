@@ -39,9 +39,10 @@ code = r'''
 #define FIO_O_TRUNC 4
 static const char *stock = @STOCK@;
 static char disk[8192], ip[16]="10.0.0.7", netmask[16]="255.255.0.0", gw[16]="10.0.0.1";
-static int pos, writes, fail_write, missing, readonly;
+static int pos, writes, write_opens, fail_write, missing, readonly;
 static int genOpen(const char *path, int flags) {
     if (missing && strstr(path,"smb_fhi.irx")) return -1;
+    if (flags) write_opens++;
     if (flags && readonly) return -1;
     pos=0;
     if (flags) { writes++; disk[0]=0; }
@@ -107,8 +108,11 @@ int main(void) {
     assert(strstr(msg,"could not be restored") && strstr(msg,"bsd-smb.toml"));
     missing=1; writes=0;
     assert(!prepareSmbConfig("mass:/neutrino/neutrino.elf",&sh,msg,sizeof(msg)) && !writes); missing=0;
-    readonly=1;
+    /* Read-only media: the write open fails before anything is truncated, so
+     * the file is intact and the generic message applies, not the restore one. */
+    strcpy(disk,stock); readonly=1; write_opens=0;
     assert(!prepareSmbConfig("mass:/neutrino/neutrino.elf",&sh,msg,sizeof(msg))); readonly=0;
+    assert(write_opens==1 && !strcmp(disk,stock) && strstr(msg,"writable") && !strstr(msg,"restored"));
     assert(!prepareSmbConfig("smb:/PC/neutrino/neutrino.elf",&sh,msg,sizeof(msg)));
     assert(!prepareSmbConfig("udpfs:/neutrino/neutrino.elf",&sh,msg,sizeof(msg)));
     parse(&cfg,"NAME=OLD\nVERSION=1\nURL=smb://10.0.0.2/games\n");

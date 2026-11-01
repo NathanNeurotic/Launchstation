@@ -142,11 +142,13 @@ static int smbCoreLocal(const char *path)
 	       (bsd != NULL && strcmp(bsd,"smb") && strcmp(bsd,"udpfs"));
 }
 
+/* 1: written in full; 0: the file was opened (and truncated) but the write
+ * came up short; -1: the file could not be opened, so it is untouched. */
 static int smbConfigWrite(const char *path, char *data, int size)
 {
 	int fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
 	int written, closed;
-	if (fd < 0) return 0;
+	if (fd < 0) return -1;
 	written = genWrite(fd,data,size);
 	closed = genClose(fd);
 	return written == size && closed >= 0;
@@ -185,18 +187,21 @@ static int prepareSmbConfig(const char *core, const SmbShare *share, char *messa
 	next = neutrinoSmbConfig(original,share,ip,netmask,gw,updated,sizeof(updated));
 	if (next < 0) goto failed;
 	if (next == length && !memcmp(original,updated,length)) { ok = 1; goto done; }
-	if (smbConfigWrite(path,updated,next)) {
+	i = smbConfigWrite(path,updated,next);
+	if (i > 0) {
 		fd = genOpen(path,FIO_O_RDONLY);
 		if (fd >= 0) {
 			i = genRead(fd,verify,sizeof(verify));
 			genClose(fd);
 			if (i == next && !memcmp(verify,updated,next)) { ok = 1; goto done; }
 		}
+	} else if (i < 0) {
+		goto failed; /* read-only media: nothing was truncated */
 	}
 	/* A short write aborts the launch and attempts to restore the original.
 	 * The file was truncated before the write, so a failed restore leaves it
 	 * empty or partial: say so, instead of the generic message. */
-	if (!smbConfigWrite(path,original,length)) {
+	if (smbConfigWrite(path,original,length) <= 0) {
 		setMessage(message,size,"Neutrino SMB config could not be restored: copy config/bsd-smb.toml from the nightly again",NULL);
 		goto done;
 	}
