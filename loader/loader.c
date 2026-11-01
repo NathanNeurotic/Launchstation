@@ -12,6 +12,9 @@
 #include "loadfile.h"
 #include "string.h"
 #include "errno.h"
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <elf.h>
 #include <ps2sdkapi.h>
 
@@ -48,6 +51,68 @@ void _libcglue_timezone_update(void)
 
 void _libcglue_rtc_update(void)
 {
+}
+
+/* Keep newlib's stdio and the libcglue file layer out of this loader. It only
+ * calls the raw fileXio RPC client, so it needs none of the newlib file
+ * descriptor layer. Two things used to drag it in anyway, and with it
+ * snprintf/printf, scanf, strerror, mktime and the fio/fileXio newlib glue,
+ * about 40 KiB of a 64 KiB ELF:
+ *   - fileXioInit() calls _ps2sdk_fileXio_init(), whose SDK definition lives
+ *     in the object that also holds the newlib fileXio glue and its
+ *     constructors.
+ *   - libkernel's iopcontrol.o and loadfile.o reference printf/snprintf
+ *     (SifIopReboot) and open/lseek/close (SifExecModuleFile). Neither
+ *     function is used here, but an undefined reference extracts the newlib
+ *     objects before --gc-sections can see they are dead.
+ * Defining the symbols here satisfies the references without extracting
+ * anything. The _ps2sdk_fileXio_init/_deinit overrides are live: fileXioInit()
+ * really calls them, and the SDK versions only swap the libcglue file-op table
+ * in and out, which this loader never uses (no newlib descriptor layer is
+ * linked). The printf/snprintf/open/close/lseek stubs are linker-only: nothing
+ * calls them, so --gc-sections drops them (none survives in the ELF). The
+ * loader's own code paths are unchanged. */
+void _ps2sdk_fileXio_init(void)
+{
+}
+
+void _ps2sdk_fileXio_deinit(void)
+{
+}
+
+int printf(const char *format, ...)
+{
+	(void)format;
+	return 0;
+}
+
+int snprintf(char *str, size_t size, const char *format, ...)
+{
+	(void)str;
+	(void)size;
+	(void)format;
+	return 0;
+}
+
+int open(const char *path, int flags, ...)
+{
+	(void)path;
+	(void)flags;
+	return -1;
+}
+
+int close(int fd)
+{
+	(void)fd;
+	return -1;
+}
+
+off_t lseek(int fd, off_t offset, int whence)
+{
+	(void)fd;
+	(void)offset;
+	(void)whence;
+	return -1;
 }
 
 DISABLE_PATCHED_FUNCTIONS();
