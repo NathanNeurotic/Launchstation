@@ -11,6 +11,7 @@
 #include "dash_sound.h"
 #include "filer_shared.h"
 #include "init.h"
+#include <strings.h>
 
 extern void (*mainActionLaunchHook)(const char *path);
 
@@ -344,7 +345,7 @@ static void runMiscCommand(const char *misc_path)
 
 	/* Resolve only ELF/disc launch policies while dashboard graphics are
 	 * still active. OSDSYS, power-off and other commands need no hold wait. */
-	if (!setting->Misc[0] || strnicmp(misc_path, setting->Misc, strlen(setting->Misc)) ||
+	if (!setting->Misc[0] || strncasecmp(misc_path, setting->Misc, strlen(setting->Misc)) ||
 	    !stricmp(misc_path, setting->Misc_PS2Disc)) {
 		int mode = DashChooseElfIopMode(setting->reboot_iop_elf_load);
 		launch_ctx.elf_iop_mode = mode ? MAIN_ELF_IOP_REBOOT : MAIN_ELF_IOP_KEEP;
