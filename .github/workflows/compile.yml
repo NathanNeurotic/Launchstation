@@ -173,6 +173,7 @@ jobs:
           python3 tests/test_rename_devices.py
           python3 tests/test_vmc_rename.py
           python3 tests/test_app_packages.py
+          python3 tests/test_kit_package.py
           python3 scripts/copy_test_pack.py --output test-fixtures/LS-COPY-TEST.zip
           python3 tests/test_rolling_release_workflow.py
           python3 tests/test_llvm_toolchain.py
@@ -342,6 +343,41 @@ jobs:
           python3 tests/test_app_packages.py
           python3 scripts/copy_test_pack.py --output test-fixtures/LS-COPY-TEST.zip
 
+      # LAUNCHSTATION.zip is the full install kit, laid out like RiptOPL's release ZIP:
+      # the app under APPS/ with its PSU, POPS/ and EMBER/ pinned to one RiptOPL commit
+      # (ship/kit-externals.json, every file SHA-256 checked), the latest upstream Neutrino
+      # and the PC-side shortcuts. The ordinary app packages above are unchanged.
+      - name: Download the latest Neutrino core
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq p7zip-full
+          mkdir -p build/companion
+          for attempt in 1 2 3 4; do
+            if gh release download latest --repo ps2max32/neutrino --dir build/companion --pattern '*.7z' --clobber; then
+              break
+            fi
+            test "${attempt}" -lt 4 || { echo "Could not download the Neutrino release" >&2; exit 1; }
+            sleep $((attempt * 15))
+          done
+          mapfile -t cores < <(find build/companion -maxdepth 1 -name 'neutrino_*.7z' -type f)
+          test "${#cores[@]}" -eq 1 || { echo "Expected one neutrino_*.7z, found ${#cores[@]}" >&2; exit 1; }
+          echo "NEUTRINO_ARCHIVE=${cores[0]}" >> "$GITHUB_ENV"
+
+      - name: Stage the pinned POPS and EMBER externals
+        run: python3 scripts/package_kit.py fetch --cache build/kit-externals
+
+      - name: Package and verify the full install kit
+        run: |
+          python3 scripts/package_kit.py package \
+            --app-dir artifacts --externals build/kit-externals \
+            --neutrino "$NEUTRINO_ARCHIVE" --output artifacts/LAUNCHSTATION.zip \
+            --revision "${GITHUB_SHA}" --epoch "$(git show -s --format=%ct HEAD)" \
+            --build "$(git rev-list --count HEAD)"
+
       - name: Upload copy-test fixtures
         uses: actions/upload-artifact@v4
         with:
@@ -370,11 +406,12 @@ jobs:
           set -euo pipefail
           tag="latest" # Keep existing website and native-updater download URLs.
           # Every published ZIP name ends with the build number (the commit count),
-          # e.g. APP_LAUNCHSTATION-284.zip. The PSUs the native updater downloads
-          # and the loose ELFs keep their fixed names.
+          # e.g. APP_LAUNCHSTATION-284.zip or LAUNCHSTATION-284.zip (the full kit).
+          # The PSUs the native updater downloads and the loose ELFs keep their
+          # fixed names.
           build="$(git rev-list --count HEAD)"
           case "${build}" in ''|*[!0-9]*) echo "Invalid build number: ${build}" >&2; exit 1 ;; esac
-          for package in APP_LAUNCHSTATION.zip APP_LAUNCHSTATION-DS.zip; do
+          for package in APP_LAUNCHSTATION.zip APP_LAUNCHSTATION-DS.zip LAUNCHSTATION.zip; do
             test -s "artifacts/${package}" || {
               echo "Missing/empty packaged asset: ${package}" >&2
               exit 1
@@ -386,6 +423,7 @@ jobs:
             "APP_LAUNCHSTATION-${build}.zip"
             APP_LAUNCHSTATION-DS.psu
             "APP_LAUNCHSTATION-DS-${build}.zip"
+            "LAUNCHSTATION-${build}.zip"
             LAUNCHSTATION.ELF
             LAUNCHSTATION-DS.ELF
             BOOT.ELF
@@ -493,12 +531,12 @@ jobs:
             while IFS= read -r name; do
               stale=0
               case "${name}" in
-                APP_LAUNCHSTATION.zip|APP_LAUNCHSTATION-DS.zip) stale=1 ;;
-                APP_LAUNCHSTATION-*.zip)
+                APP_LAUNCHSTATION.zip|APP_LAUNCHSTATION-DS.zip|LAUNCHSTATION.zip) stale=1 ;;
+                APP_LAUNCHSTATION-*.zip|LAUNCHSTATION-*.zip)
                   number="${name%.zip}"
                   number="${number##*-}"
                   case "${name}" in
-                    "APP_LAUNCHSTATION-${number}.zip"|"APP_LAUNCHSTATION-DS-${number}.zip")
+                    "APP_LAUNCHSTATION-${number}.zip"|"APP_LAUNCHSTATION-DS-${number}.zip"|"LAUNCHSTATION-${number}.zip")
                       case "${number}" in
                         ''|*[!0-9]*) ;;
                         *) [ "${number}" -lt "${build}" ] && stale=1 ;;

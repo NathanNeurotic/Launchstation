@@ -36,8 +36,17 @@ assert publish.index("--draft=true") < publish.index("--draft=false --prerelease
 assert publish.index("gh api --method PATCH") < publish.index("--draft=true")
 for asset in ("APP_LAUNCHSTATION.psu", '"APP_LAUNCHSTATION-${build}.zip"',
               "APP_LAUNCHSTATION-DS.psu", '"APP_LAUNCHSTATION-DS-${build}.zip"',
-              "LAUNCHSTATION.ELF", "LAUNCHSTATION-DS.ELF", "BOOT.ELF", "BOOT2.ELF"):
+              "LAUNCHSTATION.ELF", "LAUNCHSTATION-DS.ELF", "BOOT.ELF", "BOOT2.ELF",
+              '"LAUNCHSTATION-${build}.zip"'):
     assert asset in publish
+# The full kit is built and verified before the publish step, from the same app
+# packages, the pinned externals and the latest Neutrino release.
+assert "python3 tests/test_kit_package.py" in workflow
+assert "scripts/package_kit.py fetch --cache build/kit-externals" in workflow
+assert "scripts/package_kit.py package" in workflow and "--output artifacts/LAUNCHSTATION.zip" in workflow
+assert workflow.index("--output artifacts/LAUNCHSTATION.zip") < workflow.index(marker)
+assert "gh release download latest --repo ps2max32/neutrino" in workflow
+assert "LAUNCHSTATION.zip) stale=1" in publish and '"LAUNCHSTATION-${number}.zip"' in publish
 # Every ZIP name ends with the build number, the notes state it, and the previous
 # build's ZIPs are removed only after the release is published.
 assert 'build="$(git rev-list --count HEAD)"' in publish

@@ -1,0 +1,260 @@
+{
+  "comment": "Kit externals pinned to one RiptOPL commit; regenerate with scripts/package_kit.py refresh-pin.",
+  "source": {
+    "repository": "NathanNeurotic/RiptOPL",
+    "commit": "a2821278b232256e75848af887b068ae3d24499a",
+    "tree": "https://github.com/NathanNeurotic/RiptOPL/tree/a2821278b232256e75848af887b068ae3d24499a"
+  },
+  "files": {
+    "EMBER/Ember Official Webpage.url": {
+      "path": "ship/EMBER/Ember Official Webpage.url",
+      "sha256": "ceda73dde169fc4f683c7babbb11b9c0f3872340d9a6b859078cac1a6d502b31",
+      "size": 120
+    },
+    "EMBER/LICENSE-BETA.txt": {
+      "path": "ship/EMBER/LICENSE-BETA.txt",
+      "sha256": "15ecbb3e77e0624e4c364aa10c92352bdd1017b102eeb53f7c9d6599ec40d522",
+      "size": 5869
+    },
+    "EMBER/ember.elf": {
+      "path": "ship/EMBER/ember.elf",
+      "sha256": "94f8b2576010405e2f7b90c4a1adde073ddaebe2d0aec34e0bc2be7951d34295",
+      "size": 1611956
+    },
+    "EMBER/games/Per-Game-Folder/GAME FILES": {
+      "path": "ship/Example/APP_RIPTOPL-OFFICIALROLLING-VERSION.ZIP/EMBER/games/Per-Game-Folder/GAME FILES",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "EMBER/games/this file can be deleted": {
+      "path": "ship/EMBER/games/this file can be deleted",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "EMBER/you must place a ps1 bios file here for ember to work": {
+      "path": "ship/EMBER/you must place a ps1 bios file here for ember to work",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "POPS/CHEATS.TXT": {
+      "path": "ship/Example/APP_RIPTOPL-OFFICIALROLLING-VERSION.ZIP/POPS/CHEATS.TXT",
+      "sha256": "a7a7fa71de34585f4d59fe668bc0b75d2d2c5350f4a17f6f47247a3ad7e930f4",
+      "size": 5931
+    },
+    "POPS/IGR_BG.TM2": {
+      "path": "ship/Example/APP_RIPTOPL-OFFICIALROLLING-VERSION.ZIP/POPS/IGR_BG.TM2",
+      "sha256": "522821f982fd7962f00642cff508cb49d2c9c60ba4f1016195e2190e5562fdaa",
+      "size": 312064
+    },
+    "POPS/IGR_NO.TM2": {
+      "path": "ship/Example/APP_RIPTOPL-OFFICIALROLLING-VERSION.ZIP/POPS/IGR_NO.TM2",
+      "sha256": "87b14a500b0e0abb61d60af05156e62d5f71c31893ed460efbf2e4fe2eeb14bd",
+      "size": 7612
+    },
+    "POPS/IGR_YES.TM2": {
+      "path": "ship/Example/APP_RIPTOPL-OFFICIALROLLING-VERSION.ZIP/POPS/IGR_YES.TM2",
+      "sha256": "7c6538fb967b479d019fac3a0c1f1c325d109e8b6b9974009a9160c81dec9521",
+      "size": 7612
+    },
+    "POPS/IPCONFIG.DAT": {
+      "path": "ship/POPS/IPCONFIG.DAT",
+      "sha256": "e04a68aa2107131f04bf6000c24f97154782b8631c422a536feb8295609e9d92",
+      "size": 40
+    },
+    "POPS/PATCH_5.BIN": {
+      "path": "ship/POPS/PATCH_5.BIN",
+      "sha256": "55a60ea7e0da08d615e1dcd77c4a8da546603ee4d1a5ff5564259405c0b40d42",
+      "size": 327360
+    },
+    "POPS/POPSTARTER VERSIONS/DEBUG/POPSTARTER.ELF": {
+      "path": "ship/POPS/POPSTARTER VERSIONS/DEBUG/POPSTARTER.ELF",
+      "sha256": "3ec327085eccd62578a453e3deedf3ba35f19cd7d332aedaffdc7926c73876b8",
+      "size": 167700
+    },
+    "POPS/POPSTARTER VERSIONS/MAIN/POPSTARTER.ELF": {
+      "path": "ship/POPS/POPSTARTER VERSIONS/MAIN/POPSTARTER.ELF",
+      "sha256": "734c813e8e8ec2c6729ec5e15dd46ab696e90deeade8d0b2ca3ad03782781aa1",
+      "size": 167700
+    },
+    "POPS/POPSTARTER VERSIONS/USBDELAY/POPSTARTER.ELF": {
+      "path": "ship/POPS/POPSTARTER VERSIONS/USBDELAY/POPSTARTER.ELF",
+      "sha256": "613b16e1823a154d0e468e0a686aad02823fea9d876d91d86131382fa6d42d01",
+      "size": 167700
+    },
+    "POPS/POPSTARTER VERSIONS/USBDELAY_DEBUG/POPSTARTER.ELF": {
+      "path": "ship/POPS/POPSTARTER VERSIONS/USBDELAY_DEBUG/POPSTARTER.ELF",
+      "sha256": "9bab715aa17f39981af2ad68c107b74d79817336bde79afaf72f22e0f6812e0e",
+      "size": 167700
+    },
+    "POPS/POPSTARTER VERSIONS/USBDELAY_LONGER_DEBUG/POPSTARTER.ELF": {
+      "path": "ship/POPS/POPSTARTER VERSIONS/USBDELAY_LONGER_DEBUG/POPSTARTER.ELF",
+      "sha256": "bb697bea1d7ede1a8e4d211442d8bb762fff42372a94f03ccd61a960f4845a18",
+      "size": 167700
+    },
+    "POPS/POPSTARTER.ELF": {
+      "path": "ship/POPS/POPSTARTER.ELF",
+      "sha256": "3ec327085eccd62578a453e3deedf3ba35f19cd7d332aedaffdc7926c73876b8",
+      "size": 167700
+    },
+    "POPS/POPSTARTER.KELF": {
+      "path": "ship/Example/APP_RIPTOPL-OFFICIALROLLING-VERSION.ZIP/POPS/POPSTARTER.KELF",
+      "sha256": "c91fb9a3707a299c072cfa00a650be59d3b3bf4f339aeca0cacdef2870f25892",
+      "size": 167708
+    },
+    "POPS/SMSUTILS.irx": {
+      "path": "ship/POPS/SMSUTILS.irx",
+      "sha256": "91daae46a300138218bfd6a876a1b5012594412b71c2eebf6eadfb70fde38e1b",
+      "size": 1305
+    },
+    "POPS/TROJAN_7.BIN": {
+      "path": "ship/Example/APP_RIPTOPL-OFFICIALROLLING-VERSION.ZIP/POPS/TROJAN_7.BIN",
+      "sha256": "0a491847423521d1894278c6d4664ba5b37f853d5356d14508964859d8ae1840",
+      "size": 836
+    },
+    "POPS/UDPFS-NOTICES/AFL-2.0.txt": {
+      "path": "ship/POPS/UDPFS-NOTICES/AFL-2.0.txt",
+      "sha256": "1ecee940922a6886baccddd9133d17f1ce677d32c5a954fac8e48224f2766fe8",
+      "size": 9005
+    },
+    "POPS/UDPFS-NOTICES/AFL-3.0.txt": {
+      "path": "ship/POPS/UDPFS-NOTICES/AFL-3.0.txt",
+      "sha256": "65b4868007fb11b77aebc617ede4dd61d0806feb13e8e8c2c387640af7843746",
+      "size": 10313
+    },
+    "POPS/UDPFS-NOTICES/LICENSE": {
+      "path": "ship/POPS/UDPFS-NOTICES/LICENSE",
+      "sha256": "1ecee940922a6886baccddd9133d17f1ce677d32c5a954fac8e48224f2766fe8",
+      "size": 9005
+    },
+    "POPS/UDPFS-NOTICES/PROVENANCE.json": {
+      "path": "ship/POPS/UDPFS-NOTICES/PROVENANCE.json",
+      "sha256": "357cf722e5cb7a9417b3c027348f707c69267c46e7d00fdf061b1a2e1421c059",
+      "size": 2318
+    },
+    "POPS/UDPFS-NOTICES/README.md": {
+      "path": "ship/POPS/UDPFS-NOTICES/README.md",
+      "sha256": "afd0e6cdf9153ac105e6a8f5c818368af05204af4210543cdca169a182614404",
+      "size": 1396
+    },
+    "POPS/UDPFS-NOTICES/README_CONFIG.txt": {
+      "path": "ship/POPS/UDPFS-NOTICES/README_CONFIG.txt",
+      "sha256": "46d850fc7180220e7694aabbe5b65f9515f4a783e6148fc487a24236ff32a877",
+      "size": 8837
+    },
+    "POPS/UDPFS-NOTICES/THIRD_PARTY_NOTICES.md": {
+      "path": "ship/POPS/UDPFS-NOTICES/THIRD_PARTY_NOTICES.md",
+      "sha256": "03494e22785546eac7c67e2f042fb0ceadbd751dba95bc1b69dd68fc0c6c5d4e",
+      "size": 2534
+    },
+    "POPS/UDPFS-NOTICES/UPSTREAM-README.md": {
+      "path": "ship/POPS/UDPFS-NOTICES/UPSTREAM-README.md",
+      "sha256": "787c90f8fd71f40985f3b0590ef642a9769e58f171e25613b616db02ddc1f40f",
+      "size": 5884
+    },
+    "POPS/UDPFSCONFIG.DAT": {
+      "path": "ship/POPS/UDPFSCONFIG.DAT",
+      "sha256": "ba174c4ad6e1ba64027c884edea2697bb0b02f88513d275b199a995f57bf7cae",
+      "size": 14
+    },
+    "POPS/del.icn": {
+      "path": "ship/POPS/del.icn",
+      "sha256": "c381028728d8a0212f6c219fe210411d03fb3104f8204608563307c7bfd36e1e",
+      "size": 61740
+    },
+    "POPS/icon.sys": {
+      "path": "ship/POPS/icon.sys",
+      "sha256": "63d235ab174c1997b67d6b884b65246d478fdfa22d5a903967b043258a7dfa63",
+      "size": 964
+    },
+    "POPS/list.icn": {
+      "path": "ship/POPS/list.icn",
+      "sha256": "df374ea77c4f775165ca70ff4efe8548fbd970a1fc5078a6d7b130ee3be93774",
+      "size": 46540
+    },
+    "POPS/poweroff.irx": {
+      "path": "ship/POPS/poweroff.irx",
+      "sha256": "573863a0f9b213b6f53f2eeaf074745b27b9c4d52dfddeaff8f0b112632cb504",
+      "size": 3413
+    },
+    "POPS/ps2dev9.irx": {
+      "path": "ship/POPS/ps2dev9.irx",
+      "sha256": "e2b83bb01a5904b3f4360e23fd7cfc07a2a11eaa413c1808961432dced80119c",
+      "size": 11505
+    },
+    "POPS/ps2ip.irx": {
+      "path": "ship/POPS/ps2ip.irx",
+      "sha256": "1bf99ca297dcca410bccce14b8efa00f5efc536359e3e34be50edf0043c867b9",
+      "size": 109497
+    },
+    "POPS/ps2smap.irx": {
+      "path": "ship/POPS/ps2smap.irx",
+      "sha256": "671fe9e3c5e0e735fb3ea3b81a8ea39898bd0fafbdacbf9ca7fa11fff391df8d",
+      "size": 12605
+    },
+    "POPS/smbman.irx": {
+      "path": "ship/POPS/smbman.irx",
+      "sha256": "000296a2f03073dffd2f87a6f3eae249a1f83c2213ffb0ae25bad67b970ebed0",
+      "size": 44329
+    },
+    "POPS/usbd.irx.ata": {
+      "path": "ship/POPS/usbd.irx.ata",
+      "sha256": "4e1d39365854747117a08f8a8d843937614590ea072cf2b70f6e4c2ebbf3c6ee",
+      "size": 42749
+    },
+    "POPS/usbd.irx.ilink": {
+      "path": "ship/POPS/usbd.irx.ilink",
+      "sha256": "5ea4818ba1cf5207f6d7cadb4c13b5afa88c37c260750c21155b079a8c18f369",
+      "size": 48500
+    },
+    "POPS/usbd.irx.mmce": {
+      "path": "ship/POPS/usbd.irx.mmce",
+      "sha256": "0fed25d9eecdd263d4617ad5c8eeb2c5307c799aa97962b62b40a0e63e3adac8",
+      "size": 11841
+    },
+    "POPS/usbd.irx.mx4sio": {
+      "path": "ship/POPS/usbd.irx.mx4sio",
+      "sha256": "5ea4818ba1cf5207f6d7cadb4c13b5afa88c37c260750c21155b079a8c18f369",
+      "size": 48500
+    },
+    "POPS/usbd.irx.udpfs": {
+      "path": "ship/POPS/usbd.irx.udpfs",
+      "sha256": "24e272996a6ea4af5ef20cb5d89a29aa615d8b828087032e75bc2b05aaac583e",
+      "size": 51029
+    },
+    "POPS/usbd.irx.usbexfat": {
+      "path": "ship/POPS/usbd.irx.usbexfat",
+      "sha256": "5ea4818ba1cf5207f6d7cadb4c13b5afa88c37c260750c21155b079a8c18f369",
+      "size": 48500
+    },
+    "POPS/usbhdfsd.irx.ata": {
+      "path": "ship/POPS/usbhdfsd.irx.ata",
+      "sha256": "1cc865cd09997bd708e9e102c0f0f1f17f352b7844b282fcfa6a00f38609db9c",
+      "size": 21837
+    },
+    "POPS/usbhdfsd.irx.ilink": {
+      "path": "ship/POPS/usbhdfsd.irx.ilink",
+      "sha256": "e7829b6aa81586fe53b10b200f256f7177069aab287d3d028c20b7e043313917",
+      "size": 27129
+    },
+    "POPS/usbhdfsd.irx.mmce": {
+      "path": "ship/POPS/usbhdfsd.irx.mmce",
+      "sha256": "9f7b77848935f0d8e9bd792b997910777352f8d480dc32d99a04e6e8653779ab",
+      "size": 19733
+    },
+    "POPS/usbhdfsd.irx.mx4sio": {
+      "path": "ship/POPS/usbhdfsd.irx.mx4sio",
+      "sha256": "61525fab3b340aaef467eb3a08ce16e35aca98fe742982a7a151c5c7e1ffa00a",
+      "size": 14993
+    },
+    "POPS/usbhdfsd.irx.udpfs": {
+      "path": "ship/POPS/usbhdfsd.irx.udpfs",
+      "sha256": "70a369e47745e7f995fa771edbbfed086727b759fba915a7070c0fbcf061dd34",
+      "size": 34508
+    },
+    "POPS/usbhdfsd.irx.usbexfat": {
+      "path": "ship/POPS/usbhdfsd.irx.usbexfat",
+      "sha256": "70a369e47745e7f995fa771edbbfed086727b759fba915a7070c0fbcf061dd34",
+      "size": 34508
+    }
+  }
+}

@@ -10,6 +10,7 @@ ASSETS = (
     "APP_LAUNCHSTATION.zip", "APP_LAUNCHSTATION.psu",
     "APP_LAUNCHSTATION-DS.zip", "APP_LAUNCHSTATION-DS.psu",
     "LAUNCHSTATION.ELF", "LAUNCHSTATION-DS.ELF", "BOOT.ELF", "BOOT2.ELF",
+    "LAUNCHSTATION.zip",
 )
 
 
@@ -93,8 +94,10 @@ def render(repo, revision, previous, run_id, changes, digests, version=""):
 | --- | --- | --- | --- |
 | Standard | [{names[0]}]({download}/{names[0]}) | [Download]({download}/{names[1]}) | [Download]({download}/{names[4]}) |
 | DS34 USB/Bluetooth controllers | [{names[2]}]({download}/{names[2]}) | [Download]({download}/{names[3]}) | [Download]({download}/{names[5]}) |
+| Full kit: standard app + POPS, Ember, Neutrino | [{names[8]}]({download}/{names[8]}) | included | included |
 
 Extract the ZIP and launch its ELF, or install the PSU with **PSU Paste**.
+The full kit is laid out like RiptOPL's release ZIP (`APPS/APP_LAUNCHSTATION/`, `APP_LAUNCHSTATION.psu`, `POPS/`, `EMBER/`, `neutrino/`): copy it to the root of a game device. Its `KIT-README.txt` explains each folder; no BIOS or game is included.
 For boot-path installs, [BOOT.ELF]({download}/{names[6]}) and [BOOT2.ELF]({download}/{names[7]}) are copies of the standard ELF.
 Existing user settings are retained. The built-in updater preserves your controller version.
 

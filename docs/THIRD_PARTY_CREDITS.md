@@ -71,13 +71,14 @@
 
 ## Independently installed applications and services
 
-These are mentioned or launched through an integration; that does **not** imply their binaries or licenses are included:
+These are mentioned or launched through an integration. Their binaries are **not** part of the app packages or the ELF; the first four below are redistributed unmodified, with their licence files, only inside the optional full kit `LAUNCHSTATION-<build>.zip` (`scripts/package_kit.py`; `POPS/` and `EMBER/` are the files [RiptOPL](https://github.com/NathanNeurotic/RiptOPL) ships, pinned by commit and SHA-256 in `ship/kit-externals.json`; `neutrino/` is the upstream `latest` release downloaded at build time):
 
 | Project | Why LAUNCHSTATION references it |
 | --- | --- |
-| [Neutrino](https://github.com/ps2max32/neutrino) — [Rick Gaiser](https://github.com/rickgaiser) / contributors | External PS2 ISO loader, quick-boot/backing-store backend; SMB ISO launches use its SMB backend by [Ronnie Sahlberg](https://github.com/sahlberg) ([ps2max32/neutrino PR #236](https://github.com/ps2max32/neutrino/pull/236), [usmb2](https://github.com/sahlberg/usmb2)) |
-| [POPStarter](https://www.psx-place.com/threads/popstarter.19139/) — [krHACKen](https://www.psx-place.com/members/krhacken.98/) | External PS1 VCD launcher |
-| [Ember](https://github.com/Gageformer/Ember) — [Gageformer](https://github.com/Gageformer) | External PS1 core; its beta license limits redistribution/commercial use. See upstream LICENSE-BETA.txt |
+| [Neutrino](https://github.com/ps2max32/neutrino) — [Rick Gaiser](https://github.com/rickgaiser) / contributors | External PS2 ISO loader, quick-boot/backing-store backend; the full kit bundles the upstream `latest` release as `neutrino/` with its LICENSE (AFL-3.0); SMB ISO launches use its SMB backend by [Ronnie Sahlberg](https://github.com/sahlberg) ([ps2max32/neutrino PR #236](https://github.com/ps2max32/neutrino/pull/236), [usmb2](https://github.com/sahlberg/usmb2)) |
+| [POPStarter](https://www.psx-place.com/threads/popstarter.19139/) — [krHACKen](https://www.psx-place.com/members/krhacken.98/) | External PS1 VCD launcher; the full kit bundles `POPS/` as RiptOPL ships it (POPSTARTER.ELF and its alternate builds, companions, icons) |
+| [BDM Assault](https://github.com/Okeanos86/BDMAssault) — [israpps](https://github.com/israpps) (original), [Okeanos86](https://github.com/Okeanos86) (exFAT/UDPFS variants) | The `POPS/usbd.irx.<mode>` + `usbhdfsd.irx.<mode>` driver pairs POPStarter loads from `mc?:/POPSTARTER/`, bundled unchanged in the full kit with their notices under `POPS/UDPFS-NOTICES/` |
+| [Ember](https://github.com/Gageformer/Ember) — [Gageformer](https://github.com/Gageformer) | External PS1 core. The full kit bundles the unmodified beta build with its `LICENSE-BETA.txt`, which permits bundling in a free launcher when Ember is credited to Gageformer with a link to its release page (done in `KIT-README.txt`, `EMBER/Ember Official Webpage.url` and here); no BIOS is included |
 | [PS2Link](https://github.com/ps2dev/ps2link), [PS2Client](https://github.com/ps2dev/ps2client) | Network debugger and PC-side transfer/launch ecosystem; Launchstation embeds only the `host:` server half |
 | [UDPFSD](https://github.com/pcm720/udpfsd) — [pcm720](https://github.com/pcm720) | PC-side network filesystem server |
 | [OSDMenu](https://github.com/pcm720/OSDMenu) — [pcm720](https://github.com/pcm720) | KELF launcher and HDD-OSD/PSX references; the embedded loader's low-memory layout follows its approach |
