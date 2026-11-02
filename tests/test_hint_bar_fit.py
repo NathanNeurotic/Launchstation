@@ -18,7 +18,8 @@ code = r'''
 #define DASH_FS_SMALL 0.66f
 #define DASH_C_TEXT 1
 #define DASH_HINTS_MAX 8
-enum { DI_BTN_CROSS = 1, DI_BTN_CIRCLE, DI_BTN_SQUARE, DI_BTN_TRIANGLE, DI_BTN_START, DI_BTN_SELECT };
+enum { DI_BTN_CROSS = 1, DI_BTN_CIRCLE, DI_BTN_SQUARE, DI_BTN_TRIANGLE, DI_BTN_START, DI_BTN_SELECT,
+       DI_BTN_L1, DI_BTN_L2, DI_BTN_L3, DI_BTN_R1, DI_BTN_R2, DI_BTN_R3 };
 typedef struct { int r, g, b, a; } DashColor;
 typedef struct { int button; const char *key; const char *label; } DashHint;
 static struct { DashColor bg2; } dashTheme;
