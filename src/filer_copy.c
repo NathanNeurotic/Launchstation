@@ -118,6 +118,22 @@ void filerCopyDiagFormat(char *out, int size, int result)
 	         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
 }
 
+/* A sum over the names in a listing that does not depend on their order, to
+ * tell whether a folder listed again holds the same entries. */
+static u32 listingSum(const FILEINFO *files, int nfiles)
+{
+	const unsigned char *c;
+	u32 sum = 0, hash;
+	int i;
+
+	for (i = 0; i < nfiles; i++) {
+		for (hash = 2166136261u, c = (const unsigned char *)files[i].name; *c; c++)
+			hash = (hash ^ *c) * 16777619u;  //FNV-1a
+		sum += hash;
+	}
+	return sum;
+}
+
 static int isMemoryCardLikePath(const char *path)
 {
 	return (!strncmp(path, "mc", 2) || !strncmp(path, "vmc", 3)
@@ -474,6 +490,7 @@ int copy(char *outPath, const char *inPath, const FILEINFO *src, int recurses)
 	iox_stat_t iox_stat;
 	char out[MAX_PATH], in[MAX_PATH], tmp[MAX_PATH], *buff = NULL, *buff2 = NULL, *copyBuff;
 	int nfiles, i;
+	u32 listed;
 	u64 size = 0;
 	u64 original_size = 0;
 	int ret = -1, pfsout = -1, pfsin = -1, in_fd = -1, out_fd = -1, buffSize, bytesRead, bytesWritten;
@@ -814,6 +831,18 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 					break;
 				}
 			}  //ends main for loop for all modes other than valid PM_PSU_RESTORE
+			//The source is listed again and must hold just what was copied. A USB
+			//(FAT, exFAT), MMCE or cdfs read that fails ends a listing as if the
+			//folder ended there, and a Move must not delete what that listing missed.
+			if (ret >= 0) {
+				filerCopyDiagStage("Listing source again");
+				listed = listingSum(files, nfiles);
+				i = getDirComplete(in, files, NULL);  //the number of entries now
+				if (i < 0)
+					ret = copyDiagFail(i);
+				else if (i != nfiles || listingSum(files, i) != listed)
+					ret = copyDiagFail(-EIO);
+			}
 		}
 		//folder contents are copied by the recursive call above, with error handling below
 		free(files);

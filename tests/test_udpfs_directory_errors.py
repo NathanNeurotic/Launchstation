@@ -76,6 +76,7 @@ assert 'if (n < 0)\n\t\treturn n;' in function('int getDirComplete(')
 copy_source = (root / 'src/filer_copy.c').read_text()
 assert 'nfiles = getDirComplete(in, files, NULL);' in copy_source
 assert 'if (nfiles < 0)\n\t\t\t\tret = copyDiagFail(nfiles);' in copy_source
+assert 'i = getDirComplete(in, files, NULL);  //the number of entries now\n\t\t\t\tif (i < 0)\n' in copy_source
 actions = (root / 'src/filer_actions.c').read_text()
 delete = actions[actions.index('int delete ('):actions.index('int Rename(')]
 with tempfile.TemporaryDirectory(prefix='udpfs-dir-') as folder:
