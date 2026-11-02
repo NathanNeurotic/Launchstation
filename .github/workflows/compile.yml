@@ -198,6 +198,7 @@ jobs:
           python3 tests/test_cdvd_scmd_buffers.py
           python3 tests/test_sjis_dashboard_titles.py
           python3 tests/test_zack_launch_sizing.py
+          python3 tests/test_new_folder_save_icons.py
 
       - name: Validate documentation site
         run: |
