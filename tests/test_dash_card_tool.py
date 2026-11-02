@@ -10,6 +10,7 @@ from pathlib import Path
 import atexit
 import hashlib
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -34,7 +35,8 @@ subprocess.run(flags + [f"-I{root/'tests/card-tool-shim'}", f"-I{root/'include'}
                         str(root / "tests/dash_card_tool_host.c"), str(root / "src/dash_card_tool.c"),
                         str(root / "src/mmce_card_switch.c"),
                         str(root / "src/mc_card_write.c"), str(root / "src/mc_card_view.c"),
-                        str(root / "src/mc_sha256.c"), "-o", str(tool)], check=True)
+                        str(root / "src/mc_sha256.c"), str(root / "src/mc_save_formats.c"), "-lz", "-o", str(tool)],
+               check=True)
 subprocess.run(flags + [f"-I{root/'include'}", str(root / "tests/mc_card_write_host.c"),
                         str(root / "src/mc_card_write.c"), str(root / "src/mc_card_view.c"),
                         str(root / "src/mc_sha256.c"), "-o", str(lister)], check=True)
@@ -103,7 +105,7 @@ put(A, std)
 lines = run(A)
 menu = kind(lines, "MENU|A.mcd|")[0].split("|")
 assert menu[2].startswith("4 saves, ") and " KB free of " in menu[2], menu[2]
-assert menu[3].startswith("Import .psu...")
+assert menu[3].startswith("Import save...")
 assert menu[4].startswith("Copy to a new card of another size...")
 assert menu[5].startswith("Split into Game ID cards...")
 assert menu[6].startswith("T:Game Slot 1~BESLES-12345GAME, 3 files, ")
@@ -188,13 +190,40 @@ blank(E)
 lines = run(E, "m0", "pmass:/out/BESLES-12345GAME.psu", "c1")
 assert kind(lines, "TOAST|1|Save imported and verified"), lines
 assert saves(E) == saves(B)
-assert kind(lines, "PICK|Import which .psu?|mass:/|0|PSU")
+assert kind(lines, "PICK|Import which save?|mass:/|0|PSU|MCM|MAX|CBS|SPS|XPS|PSV")
 host("mass:/out/bad.psu").write_bytes(b"\x27\x84" + bytes(2000))
 snap = sha(E)
 lines = run(E, "m0", "pmass:/out/bad.psu")
 assert any("not valid" in l for l in kind(lines, "MESSAGE|")) and sha(E) == snap
 lines = run(B, "m3", "m2", "pmass:/out/", "c0")                   # exists: replace declined
 assert not kind(lines, "TOAST|")
+
+# 8b. saves from other tools: a Blaze .mcm imports by its extension and content (the folder is named after
+# the file), and "Convert to .psu" writes a .psu beside it that imports into the same save
+import zlib as _zlib
+_whole = saves(B)["BESLES-12345GAME"] if isinstance(saves(B), dict) else None
+_files = [(b"icon.sys", bytes(range(256)) * 3 + bytes(196)), (b"DATA", bytes((i * 13) & 0xFF for i in range(5000)))]
+_raw = b"".join(n.ljust(32, b"\0") + struct.pack("<L", len(d)) + d for n, d in _files)
+_body = _zlib.compress(_raw, 9)
+host("mass:/out/BASLUS-99999BLZ.mcm").write_bytes(struct.pack("<LL", 8192, 80 + len(_body)) + b"Blaze".ljust(72, b"\0") + _body)
+F = "mass:/F.mcd"
+blank(F)
+lines = run(F, "m0", "pmass:/out/BASLUS-99999BLZ.mcm", "c1")
+assert kind(lines, "TOAST|1|Save imported and verified"), lines
+assert "BASLUS-99999BLZ" in saves(F), saves(F)
+lines = run("convert:mass:/out/BASLUS-99999BLZ.mcm", "c1")
+assert any(l.startswith("MESSAGE|") and "Converted" in l and l.endswith("|mass:/out/BASLUS-99999BLZ.psu") for l in lines), lines
+G = "mass:/G.mcd"
+blank(G)
+lines = run(G, "m0", "pmass:/out/BASLUS-99999BLZ.psu", "c1")
+assert kind(lines, "TOAST|1|Save imported and verified") and saves(G) == saves(F), lines
+lines = run("convert:mass:/out/BASLUS-99999BLZ.mcm", "c1")             # never replaces: -2 suffix
+assert host("mass:/out/BASLUS-99999BLZ-2.psu").read_bytes() == host("mass:/out/BASLUS-99999BLZ.psu").read_bytes()
+lines = run("convert:mass:/out/BASLUS-99999BLZ.mcm", "c0")             # declined: nothing written
+assert not host("mass:/out/BASLUS-99999BLZ-3.psu").exists()
+host("mass:/out/junk.max").write_bytes(b"Ps2PowerSave" + bytes(200))
+lines = run("convert:mass:/out/junk.max")
+assert any(l.startswith("MESSAGE|") and "Not converted" in l for l in lines) and not host("mass:/out/junk.psu").exists(), lines
 
 # 9. safety copies are pruned to the newest ten, and only ours
 host("mass:/WLE-Safety/E-notes.txt").write_text("keep me")
@@ -229,7 +258,7 @@ P = "mass:/P.ps2"
 put(P, fx.standard_card(8, True)[0])
 lines = run(P, "m3")
 menu = kind(lines, "MENU|P.ps2|")[0].split("|")
-assert menu[3].startswith("!Import .psu...") and menu[4].startswith("Copy to a new card")
+assert menu[3].startswith("!Import save...") and menu[4].startswith("Copy to a new card")
 sub = kind(lines, "MENU|T:Game Slot 1|")[0].split("|")
 assert sub[3].startswith("Copy to") and sub[4].startswith("!Move") and sub[5].startswith("Export") \
     and sub[6].startswith("!Delete")
@@ -368,16 +397,16 @@ assert not list((dev / "mass").glob("M-*MB*.mcd"))
 R = "mass:/R.mcd"
 put(R, std)
 r_before = sha(R)
-lines = run(R, "m1", "k1", "c1")
-assert kind(lines, "CHOICE|New card size|4|0|8 MB")
+lines = run(R, "m1", "k4", "c1")
+assert kind(lines, "CHOICE|New card size|7|3|1 MB")        # seven sizes, 1 MB up; default = the source's own size
 assert kind(lines, "MESSAGE|4|New card made|"), lines
 new = "mass:/R-16MB.mcd"
 assert host(new).stat().st_size == 16 << 20 and saves(new) == saves(R) and sha(R) == r_before
-lines = run(R, "m1", "k1", "c1")                                   # never overwrites: -2 suffix
+lines = run(R, "m1", "k4", "c1")                                   # never overwrites: -2 suffix
 assert host("mass:/R-16MB-2.mcd").exists() and kind(lines, "MESSAGE|4|New card made|")
-lines = run(P, "m1", "k3", "c1")                                   # from a PCSX2 .ps2 card
+lines = run(P, "m1", "k6", "c1")                                   # from a PCSX2 .ps2 card
 assert saves("mass:/P-64MB.mcd") == saves(R)
-lines = dev_run(cards[1], "m1", "k0", "c1", CARD=1)                # served card: only read; result outside MemoryCards
+lines = dev_run(cards[1], "m1", "k3", "c1", CARD=1)                # served card: only read; result outside MemoryCards
 assert any(l.startswith("MESSAGE|4|New card made|") and l.endswith("|mmce0:/WLE-Resized/Card1-1-8MB.mcd")
            for l in lines), lines
 assert saves("mmce0:/WLE-Resized/Card1-1-8MB.mcd") == saves(cards[1])
@@ -385,18 +414,18 @@ assert saves("mmce0:/WLE-Resized/Card1-1-8MB.mcd") == saves(cards[1])
 big = fx.Card(16, False)
 big.add_save("HUGE", {"blob": b"\xA5" * (9000 * 1024)})
 put("mass:/H.mcd", big.finish())
-lines = run("mass:/H.mcd", "m1", "k0", "c1")
+lines = run("mass:/H.mcd", "m1", "k3", "c1")
 assert any(l.startswith("MESSAGE|1|New card not made|") and "HUGE" in l for l in lines), lines
 assert not host("mass:/H-8MB.mcd").exists()
 for k in (1, 3, 40):                                               # a failing device mid-way: removed
-    lines = run(R, "m1", "k0", "c1", env={"FAIL_WRITE_AT": str(k)})
+    lines = run(R, "m1", "k3", "c1", env={"FAIL_WRITE_AT": str(k)})
     assert any(l.startswith("MESSAGE|1|New card not made|") for l in lines), (k, lines)
     assert not host("mass:/R-8MB.mcd").exists(), k
     assert sha(R) == r_before
 
 # New blank card: made from nothing, only ever a new file, removed again on failure
 assert '"New blank card..."' in browser and "dashCardNewBlank(fb.dir)" in browser
-lines = run("blank:mass:/out", "k0", "c1")
+lines = run("blank:mass:/out", "k3", "c1")
 made = host("mass:/out/Blank-8MB.mcd")
 assert any(l.startswith("MESSAGE|4|Blank card made|Formatted and read back: 8134 KB free.") and
            l.endswith("|mass:/out/Blank-8MB.mcd") for l in lines), lines
@@ -407,17 +436,26 @@ rootoff = ref.alloc_offset * 1024
 for e in (rootoff, rootoff + 512):                                  # RTC time, raw as the PS2 stores it
     assert blank_img[e + 8:e + 16] == bytes([0, 56, 34, 12, 29, 10, 0xEA, 0x07]) == blank_img[e + 0x18:e + 0x20]
 before = sha("mass:/out/Blank-8MB.mcd")
-lines = run("blank:mass:/out", "k3", "c1")                          # a second one never touches the first
+lines = run("blank:mass:/out", "k6", "c1")                          # a second one never touches the first
 assert host("mass:/out/Blank-64MB.mcd").stat().st_size == 64 << 20
-lines = run("blank:mass:/out/", "k0", "c1", env={"NOCLOCK": "1"})   # trailing slash, no RTC: zero times
+for k, mb in ((0, 1), (1, 2), (2, 4)):                              # the small sizes sd2psXtd offers
+    lines = run("blank:mass:/out", f"k{k}", "c1")
+    small = f"mass:/out/Blank-{mb}MB.mcd"
+    assert host(small).stat().st_size == mb << 20 and saves(small) == {}, lines
+    small_ref = fx.Card(mb, False)
+    assert any(f"Formatted and read back: {small_ref.alloc_end - 1} KB free." in l
+               for l in kind(lines, "MESSAGE|4|Blank card made")), (mb, lines)
+lines = run(R, "m1", "k0", "c1")                                   # a copy down to 1 MB holds the std saves
+assert host("mass:/R-1MB.mcd").stat().st_size == 1 << 20 and saves("mass:/R-1MB.mcd") == saves(R), lines
+lines = run("blank:mass:/out/", "k3", "c1", env={"NOCLOCK": "1"})   # trailing slash, no RTC: zero times
 assert any(l.endswith("|mass:/out/Blank-8MB-2.mcd") for l in kind(lines, "MESSAGE|4|Blank card made")), lines
 assert host("mass:/out/Blank-8MB-2.mcd").read_bytes()[rootoff + 8:rootoff + 16] == bytes(8)
 assert sha("mass:/out/Blank-8MB.mcd") == before
-lines = run("blank:mass:/out", "k0")                                # declined: nothing made
+lines = run("blank:mass:/out", "k3")                                # declined: nothing made
 assert not host("mass:/out/Blank-8MB-3.mcd").exists() and not kind(lines, "MESSAGE|")
 lines = run("blank:mass:/out")                                      # size dialog backed out
 assert not host("mass:/out/Blank-8MB-3.mcd").exists()
-lines = run("blank:mmce0:/MemoryCards/Card1", "k1", "c1")           # MMCE: staged outside MemoryCards
+lines = run("blank:mmce0:/MemoryCards/Card1", "k4", "c1")           # MMCE: staged outside MemoryCards
 assert host("mmce0:/WLE-New/Blank-16MB.mcd").stat().st_size == 16 << 20
 assert any("Install as NEW selectable MMCE card" in l for l in kind(lines, "MESSAGE|4|Blank card made")), lines
 assert not list(host("mmce0:/MemoryCards/Card1").glob("Blank*"))
@@ -425,12 +463,12 @@ for path in ("mc0:/APPS", "vmc0:/"):                                # cannot fit
     lines = run("blank:" + path)
     assert any("Choose another folder" in l for l in kind(lines, "MESSAGE|1|")), lines
 for k in (1, 3, 200, 255):                                          # a failing device: the partial file goes
-    lines = run("blank:mass:/out", "k0", "c1", env={"FAIL_WRITE_AT": str(k)})
+    lines = run("blank:mass:/out", "k3", "c1", env={"FAIL_WRITE_AT": str(k)})
     assert any(l.startswith("MESSAGE|1|Blank card not made|") and "unfinished file was removed" in l
                for l in lines), (k, lines)
     assert not host("mass:/out/Blank-8MB-3.mcd").exists(), k
     assert sha("mass:/out/Blank-8MB.mcd") == before
-lines = run("blank:mass:/out", "k0", "c1", env={"FAIL_WRITE_AT": "3", "FAIL_REMOVE": "1"})
+lines = run("blank:mass:/out", "k3", "c1", env={"FAIL_WRITE_AT": "3", "FAIL_REMOVE": "1"})
 assert any(l.startswith("MESSAGE|1|Blank card not made|") and "could not be removed; delete it" in l for l in lines), lines
 host("mass:/out/Blank-8MB-3.mcd").unlink()
 

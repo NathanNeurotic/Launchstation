@@ -56,6 +56,7 @@ c = c.replace("typedef struct { char software_clock[24]; } ClockConfig;", """
 #define DASH_MAX_RECENT 16
 #define DASH_DEVA_ALL 127
 #define DASH_SEC_COUNT 5
+#define DASH_START_LAUNCH_KEYS DASH_SEC_COUNT
 #define DASH_SEC_HOME 0
 #define DASH_VIEW_COUNT 4
 #define DASH_VIEW_GRID 0
