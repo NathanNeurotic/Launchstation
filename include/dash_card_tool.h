@@ -1,13 +1,30 @@
 #ifndef DASH_CARD_TOOL_H
 #define DASH_CARD_TOOL_H
 
+#include <stdint.h>
+
 /* "Card contents..." for one memory card image: lists its saves and copies,
  * moves, deletes, exports and imports (.psu) them. See src/dash_card_tool.c. */
 void dashCardTool(const char *image);
 
 /* "New blank card...": an empty 8 to 64 MB .mcd in folder (on MMCE, in
- * mmceN:/WLE-New/ until it is installed). Never writes an existing file. */
+ * mmceN:/WLE-New/ until it is installed), or a 128 KB PS1 card. Never writes
+ * an existing file. */
 void dashCardNewBlank(const char *folder);
+
+/* PS1 card images (src/dash_ps1_card.c): 1 when path is a 128 KB image
+ * starting with "MC"; the PS1 "Card contents..." (import .mcs/.psv/.psx/raw,
+ * export .mcs, delete); and a blank 128 KB card in folder. dashCardTool
+ * opens PS1 images here by itself. */
+int dashPs1CardIsImage(const char *path);
+void dashPs1CardTool(const char *image);
+void dashPs1CardNewBlank(const char *folder);
+
+/* Shared with dash_ps1_card.c: a verified safety copy of an image whose
+ * current bytes are in buf, and a new file written and read back (both 0 on
+ * success). */
+int dashCardSafetyCopyBuffer(const char *image, const uint8_t *buf, uint32_t len, char *made, int made_size);
+int dashCardWriteVerified(const char *path, const uint8_t *buf, uint32_t len);
 
 /* "All saves here...": the saves of every card image in folder and the
  * folders directly inside it, sorted by title, each opening the same save

@@ -9,7 +9,9 @@ cost no safety copy, failures are reported, and no two files are ever open.
 from pathlib import Path
 import atexit
 import hashlib
+import random
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -32,6 +34,7 @@ flags = ["gcc", "-std=gnu99", "-O1", "-g", "-Wall", "-Wextra", "-Werror", "-fsan
          "-fno-sanitize-recover=all"]
 subprocess.run(flags + [f"-I{root/'tests/card-tool-shim'}", f"-I{root/'include'}",
                         str(root / "tests/dash_card_tool_host.c"), str(root / "src/dash_card_tool.c"),
+                        str(root / "src/dash_ps1_card.c"), str(root / "src/mc_ps1_card.c"),
                         str(root / "src/mmce_card_switch.c"),
                         str(root / "src/mc_card_write.c"), str(root / "src/mc_card_view.c"),
                         str(root / "src/mc_sha256.c"), "-o", str(tool)], check=True)
@@ -812,7 +815,68 @@ lines = run("lib:mass:/nolib")
 assert kind(lines, "MESSAGE|4|No .psu files here|"), lines
 shutil.rmtree(host("mass:/lib"))
 
+# PS1 card images: Card contents opens the PS1 screen; import, export, delete
+# through the real dialogs, each write behind a verified safety copy
+def ps1_mcs(name, blocks, title):
+    data = bytearray(random.Random(name).randbytes(blocks * 8192))
+    data[0:4] = b"SC\x11" + bytes([blocks])
+    data[4:68] = title.ljust(64, b"\0")
+    f = bytearray(128)
+    struct.pack_into("<IIH", f, 0, 0x51, len(data), 0xFFFF)
+    f[10:10 + len(name)] = name.encode()
+    x = 0
+    for b in f[:127]:
+        x ^= b
+    f[127] = x
+    return bytes(f) + bytes(data)
+
+
+lines = run("blank:mass:/", "k4", "c1")
+assert kind(lines, "CHOICE|New card size|5|0|8 MB") and kind(lines, "MESSAGE|4|Blank PS1 card made|"), lines
+P1 = "mass:/Blank-PS1.mcd"
+assert host(P1).stat().st_size == 131072 and host(P1).read_bytes()[:2] == b"MC"
+lines = run(P1)
+assert kind(lines, "MENU|Blank-PS1.mcd|PS1 card: 0 saves, 15 of 15 blocks free|Import save...~"), lines
+s1 = ps1_mcs("BASLUS-00001PS1", 2, b"PS1 game")
+host("mass:/in.mcs").write_bytes(s1)
+empty = host(P1).read_bytes()
+lines = run(P1, "m0", "pmass:/in.mcs", "c1", "m-1")
+assert kind(lines, "PICK|Import which PS1 save?|mass:/|0|"), lines
+assert kind(lines, "CONFIRM|Import this save?|BASLUS-00001PS1, 2 blocks, from a PS1 single save (.mcs)."), lines
+assert kind(lines, "TOAST|1|Save imported and verified"), lines
+assert host("mass:/WLE-Safety/Blank-PS1-0001.mcd").read_bytes() == empty
+assert "|T:PS1 game~BASLUS-00001PS1, 2 blocks" in kind(lines, "MENU|Blank-PS1.mcd|PS1 card: 1 save, 13 of 15 blocks free")[0], lines
+# the same name again is refused before any safety copy
+before = sha(P1)
+lines = run(P1, "m0", "pmass:/in.mcs", "m-1")
+assert kind(lines, "MESSAGE|1|Not imported|A save with that name is already on this card."), lines
+assert sha(P1) == before and not host("mass:/WLE-Safety/Blank-PS1-0002.mcd").exists()
+# export writes the .mcs next to the card, byte for byte
+lines = run(P1, "m1", "m0", "m-1")
+assert kind(lines, "MESSAGE|4|Exported|"), lines
+assert host("mass:/BASLUS-00001PS1.mcs").read_bytes() == s1 and sha(P1) == before
+# a failed card write is reported with the safety copy, which holds the old card
+full = host(P1).read_bytes()
+for at in ("2", "3"):     # 2: the first card write fails; 3: after 32 KB of it
+    lines = run(P1, "m1", "m1", "c1", "m-1", env={"FAIL_WRITE_AT": at})
+    msg = kind(lines, "MESSAGE|1|Not done|")
+    assert msg and "Restore it from the safety copy" in msg[0] and "Safety copy: mass:/WLE-Safety/Blank-PS1-" in msg[0], lines
+    made = msg[0].split("Safety copy: ")[1]
+    assert host(made).read_bytes() == full
+    host(P1).write_bytes(full)
+# delete, the BIOS way
+lines = run(P1, "m1", "m1", "c1", "m-1")
+assert kind(lines, "CONFIRM|Delete this save?|BASLUS-00001PS1, 2 blocks."), lines
+assert kind(lines, "TOAST|1|Save deleted") and kind(lines, "MENU|Blank-PS1.mcd|PS1 card: 0 saves, 15 of 15 blocks free"), lines
+assert host(P1).read_bytes()[128] == 0xA1
+# "All saves here" leaves PS1 cards to Card contents; a PS2 save picked for a PS1 card is refused
+lines = run(P1, "m0", "pmass:/A.mcd", "m-1")
+assert kind(lines, "MESSAGE|1|Not imported|"), lines
+for p in ("mass:/in.mcs", "mass:/BASLUS-00001PS1.mcs", P1):
+    host(p).unlink()
+shutil.rmtree(host("mass:/WLE-Safety"), ignore_errors=True)
+
 print("Card contents tool: listing, copy, move, delete, .psu round trip, safety copies pruned to ten, "
       "served MMCE card never written, served-card detection by number and content, guarded switch (also to a clone), "
       "mounted VMC blocks writes, 250+ save cards, copy to a new card size, Game ID split, blank cards, all saves across cards (also 250+ saves on one card, 64+ folders), marked-save batches, .psu library and sets, refusals cost no safety copy, write failures reported, "
-      "one open file at a time: OK")
+      "PS1 cards (blank, import, export, delete, failed writes), one open file at a time: OK")

@@ -21,6 +21,7 @@
 #include "mmce_backup.h"
 #include "mmce_card_switch.h"
 #include "dash_card_tool.h"
+#include "mc_ps1_card.h"
 #include <libcdvd.h>
 
 #define CT_BLOCK 4096
@@ -256,8 +257,11 @@ static int ctSafetyNumber(const char *name, const char *base)
 	return genCmpFileExt(name, "MCD") && name[len + 5] == '.' && strlen(name + len + 5) == 4 ? n : -1;
 }
 
-/* Verified copy of the whole image; keeps the newest CT_SAFETY_KEEP. */
-static int ctSafetyCopy(const char *image, char *made, int made_size)
+static int ctWriteFile(const char *path, const uint8_t *buf, uint32_t len);
+
+/* Verified copy of the whole image (or, with buf, of buf, which holds the
+ * image as it is now); keeps the newest CT_SAFETY_KEEP. */
+static int ctSafetyCopyOf(const char *image, const uint8_t *buf, uint32_t buf_len, char *made, int made_size)
 {
 	char folder[MAX_PATH], dir[MAX_PATH], base[48], path[MAX_PATH];
 	const char *name = ctBaseName(image), *dot;
@@ -292,9 +296,14 @@ static int ctSafetyCopy(const char *image, char *made, int made_size)
 		return -1;
 	if (snprintf(made, made_size, "%s%s-%04d.mcd", folder, base, high + 1) >= made_size)
 		return -1;
-	r = mcCardBackupNoEccNewFile(image, made, ctSafetyProgress);
-	if (r != MC_CARD_EXPORT_OK)
-		return -1;
+	if (buf != NULL) {
+		if (wleExists(made) || ctWriteFile(made, buf, buf_len) < 0)
+			return -1;
+	} else {
+		r = mcCardBackupNoEccNewFile(image, made, ctSafetyProgress);
+		if (r != MC_CARD_EXPORT_OK)
+			return -1;
+	}
 
 	/* prune: the oldest numbers go first; the copy just made is the newest */
 	for (guard = 0; guard < 64; guard++) {
@@ -322,6 +331,16 @@ static int ctSafetyCopy(const char *image, char *made, int made_size)
 			break;
 	}
 	return 0;
+}
+
+static int ctSafetyCopy(const char *image, char *made, int made_size)
+{
+	return ctSafetyCopyOf(image, NULL, 0, made, made_size);
+}
+
+int dashCardSafetyCopyBuffer(const char *image, const uint8_t *buf, uint32_t len, char *made, int made_size)
+{
+	return buf != NULL && len ? ctSafetyCopyOf(image, buf, len, made, made_size) : -1;
 }
 
 /* Name not taken and enough free clusters, checked read-only so a refusal
@@ -552,6 +571,11 @@ static int ctWriteFile(const char *path, const uint8_t *buf, uint32_t len)
 	if (!ok)
 		genRemove((char *)path);
 	return ok ? 0 : -1;
+}
+
+int dashCardWriteVerified(const char *path, const uint8_t *buf, uint32_t len)
+{
+	return ctWriteFile(path, buf, len);
 }
 
 static void ctExportPsu(const char *image, const char *name)
@@ -1101,7 +1125,7 @@ static int ctStamp(uint8_t stamp[8])
  * O_EXCL, and it is removed again unless it reads back as an empty card. */
 void dashCardNewBlank(const char *folder)
 {
-	static const char *const sizes[] = {"8 MB", "16 MB", "32 MB", "64 MB"};
+	static const char *const sizes[] = {"8 MB", "16 MB", "32 MB", "64 MB", "128 KB PS1 card"};
 	static uint8_t sb[512], root[1024];
 	char where[MAX_PATH], dest[MAX_PATH], msg[160];
 	uint8_t stamp[8];
@@ -1117,9 +1141,13 @@ void dashCardNewBlank(const char *folder)
 		                 folder);
 		return;
 	}
-	choice = dashModalChoice("New card size", sizes, 4, 0);
+	choice = dashModalChoice("New card size", sizes, 5, 0);
 	if (choice < 0)
 		return;
+	if (choice == 4) {
+		dashPs1CardNewBlank(folder);
+		return;
+	}
 	mb = 8 << choice;
 
 	/* Outside MemoryCards/ on MMCE, so the device never serves a half-built
@@ -1246,6 +1274,10 @@ void dashCardTool(const char *image)
 	uint32_t freec = 0, total = 0;
 	int r, n, found, i, sel = 0, writable;
 
+	if (dashPs1CardIsImage(image)) {
+		dashPs1CardTool(image);
+		return;
+	}
 	dashStrCopy(path, image, sizeof(path));
 	for (;;) {
 		dashLoadingBegin("Reading card");
@@ -1340,7 +1372,8 @@ typedef struct {
 
 static int ctAllCandidate(const iox_dirent_t *ent)
 {
-	if (ent->name[0] == '.' || FIO_S_ISDIR(ent->stat.mode) || ent->stat.hisize || ent->stat.size > CT_ALL_MAX_BYTES)
+	if (ent->name[0] == '.' || FIO_S_ISDIR(ent->stat.mode) || ent->stat.hisize || ent->stat.size > CT_ALL_MAX_BYTES ||
+	    ent->stat.size == PS1_CARD_SIZE) /* PS1 cards open from Card contents, not here */
 		return 0;
 	return genCmpFileExt(ent->name, "MCD") || genCmpFileExt(ent->name, "PS2") || genCmpFileExt(ent->name, "VMC") ||
 	       genCmpFileExt(ent->name, "MC2") || genCmpFileExt(ent->name, "BIN");
