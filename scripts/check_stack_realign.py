@@ -39,6 +39,13 @@ level, up to MAX_RECURSE (16) frames deep, and delete() and getFileSize() once
 per level of the folder tree, on the EE main thread's 128 KB stack. A listing
 of MAX_ENTRY entries is about 900 KB, so each level keeps its listing on the
 heap; a budget catches a listing or other large buffer put back in a frame.
+
+With --max-chain NAME[*COUNT],...=BYTES it adds up the frames of the functions
+of a call chain, COUNT frames for NAME*COUNT, and fails unless every file has
+them all and the total is at most BYTES. For the deepest known way into a
+16-level copy(), from _main through the file browser to the innermost
+listing, that catches a frame that grows anywhere on the way, not only in the
+functions given a budget. The names are not checked to call each other.
 """
 
 import argparse
@@ -268,6 +275,47 @@ def check_frames(functions, budgets):
     return failures, passes
 
 
+def chain_budget(text):
+    names, separator, size = text.partition("=")
+    try:
+        if not names or not separator:
+            raise ValueError
+        chain = []
+        for item in names.split(","):
+            name, star, count = item.partition("*")
+            chain.append((name, int(count) if star else 1))
+            if not name or chain[-1][1] < 1:
+                raise ValueError
+        return chain, int(size, 0)
+    except ValueError:
+        raise argparse.ArgumentTypeError("expected NAME[*COUNT],...=BYTES, got %r" % text)
+
+
+def check_chains(functions, budgets):
+    """Return (failures, passes) as printable lines for each chain budget: the
+    frames of the functions of a call chain, COUNT of them for NAME*COUNT (a
+    function that calls itself), added up."""
+    failures, passes = [], []
+    for chain, budget in budgets:
+        label = " > ".join(name if count == 1 else "%s*%d" % (name, count) for name, count in chain)
+        frames, missing = {}, []
+        for name, _ in chain:
+            sizes = [stack_frame(function) for function in functions if function.name == name]
+            if sizes:
+                frames[name] = max(sizes)
+            elif name not in missing:
+                missing.append(name)
+        if missing:
+            failures.append("%s not found, so the chain %s was not checked" % (", ".join(missing), label))
+            continue
+        total = sum(count * frames[name] for name, count in chain)
+        if total > budget:
+            failures.append("the chain %s takes %d bytes of stack, more than its budget of %d" % (label, total, budget))
+        else:
+            passes.append("chain %s %d <= %d" % (label, total, budget))
+    return failures, passes
+
+
 def scan(path):
     functions = read_functions(path)
     hazards, realigned = [], []
@@ -286,6 +334,10 @@ def main(argv=None):
     parser.add_argument("--max-frame", action="append", default=[], type=frame_budget, metavar="NAME=BYTES",
                         help="also fail unless function NAME is present and its stack frame, with "
                              "%d bytes for a realignment, is at most BYTES" % REALIGN_SLACK)
+    parser.add_argument("--max-chain", action="append", default=[], type=chain_budget,
+                        metavar="NAME[*COUNT],...=BYTES",
+                        help="also fail unless every function of the call chain is present and their "
+                             "frames, COUNT of them for NAME*COUNT, add up to at most BYTES")
     args = parser.parse_args(argv)
     failed = False
     for path in args.elves:
@@ -309,14 +361,15 @@ def main(argv=None):
         else:
             print("PASS %s: %d functions, %d realign $sp, none stores to the stack before realigning"
                   % (path, len(functions), len({name for name, _ in realigned})))
-        if args.max_frame:
+        if args.max_frame or args.max_chain:
             too_big, within = check_frames(functions, args.max_frame)
-            for line in too_big:
+            too_deep, chains_within = check_chains(functions, args.max_chain)
+            for line in too_big + too_deep:
                 print("FAIL %s: %s" % (path, line), file=sys.stderr)
-            if too_big:
+            if too_big or too_deep:
                 failed = True
             else:
-                print("PASS %s: stack frames within budget: %s" % (path, ", ".join(within)))
+                print("PASS %s: stack frames within budget: %s" % (path, ", ".join(within + chains_within)))
     return 1 if failed else 0
 
 

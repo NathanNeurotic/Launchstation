@@ -7,7 +7,8 @@ The fixed prologue, plain frames, callee-saved saves, $fp-relative stores and
 stores through other registers (a body store the delay-slot filler moved
 ahead of the realignment) must pass. Linked, relocatable and stripped files
 are all read. A --max-frame budget counts a function's largest allocation and
-its realignment, and fails for a frame over budget or a missing function.
+its realignment, and fails for a frame over budget or a missing function. A
+--max-chain budget does the same for the sum of a call chain's frames.
 """
 import importlib.util
 from pathlib import Path
@@ -252,8 +253,11 @@ with tempfile.TemporaryDirectory(prefix='stack-realign-') as folder:
     SHRINK_WRAPPED = [beq(4, 0, 4), 0, addiu(SP, SP, -2048), sd(RA, 2040, SP), addiu(SP, SP, 2048)] + RETURN
     # delete() before its listing moved to the heap: a 920000-byte frame, realigned.
     OLD_DELETE = [lui(1, 0xE), i_type(0x0D, 1, 1, 0x09C0), subu(SP, SP, 1), move(FP, SP)] + REALIGN + RETURN
+    # A small frame for an early return, then the body's larger one: the larger counts.
+    TWO_FRAMES = ([addiu(SP, SP, -64), sd(RA, 56, SP), beq(4, 0, 4), addiu(SP, SP, 64)] + RETURN
+                  + [addiu(SP, SP, -3072), sd(RA, 3064, SP), addiu(SP, SP, 3072)] + RETURN)
     frames = [('fixed_copy', FIXED_COPY), ('plain_frame', [addiu(SP, SP, -32), sd(4, 0, SP)] + RETURN),
-              ('shrink_wrapped', SHRINK_WRAPPED), ('old_delete', OLD_DELETE)]
+              ('shrink_wrapped', SHRINK_WRAPPED), ('old_delete', OLD_DELETE), ('two_frames', TWO_FRAMES)]
     (folder / 'frames.elf').write_bytes(elf(frames))
     (folder / 'frames.o').write_bytes(elf(frames, relocatable=True))
     (folder / 'no-delete.elf').write_bytes(elf(frames[:3]))
@@ -263,7 +267,13 @@ with tempfile.TemporaryDirectory(prefix='stack-realign-') as folder:
     for name in ('frames.elf', 'frames.o'):
         measured = {function.name: check.stack_frame(function) for function in check.read_functions(folder / name)}
         assert measured == {'fixed_copy': 0x23C0 + 48, 'plain_frame': 32, 'shrink_wrapped': 2048,
-                            'old_delete': 920000 + 48}, measured
+                            'old_delete': 920000 + 48, 'two_frames': 3072}, measured
+    # Two static functions of one name (in two source files): the larger frame counts.
+    (folder / 'same-name.elf').write_bytes(elf([('twin', [addiu(SP, SP, -32)] + RETURN), ('twin', TWO_FRAMES)]))
+    result = budgets(['same-name.elf'], 'twin=3071')
+    assert result.returncode == 1, result
+    assert 'twin has a 3072-byte stack frame, more than its budget of 3071' in result.stderr, result
+    assert budgets(['same-name.elf'], 'twin=3072').returncode == 0
     result = budgets(['frames.elf', 'frames.o'], 'fixed_copy=9200', 'shrink_wrapped=0x800', 'plain_frame=32')
     assert result.returncode == 0 and not result.stderr, result
     assert result.stdout.count('stack frames within budget: fixed_copy 9200 <= 9200, shrink_wrapped 2048 <= 2048, '
@@ -290,6 +300,43 @@ with tempfile.TemporaryDirectory(prefix='stack-realign-') as folder:
         result = budgets(['frames.elf'], bad)
         assert result.returncode == 2 and 'expected NAME=BYTES' in result.stderr, result
 
+    # --max-chain NAME[*COUNT],...=BYTES adds up a call chain's frames, COUNT of
+    # them for a function that calls itself: here 32 + 2 * 2048 + 3072 = 7200.
+    chains = lambda files, *limits: subprocess.run(
+        [sys.executable, str(script)] + [str(folder / n) for n in files]
+        + [arg for limit in limits for arg in ('--max-chain', limit)], capture_output=True, text=True)
+    result = chains(['frames.elf', 'frames.o'], 'plain_frame,shrink_wrapped*2,two_frames=7200')
+    assert result.returncode == 0 and not result.stderr, result
+    assert result.stdout.count('stack frames within budget: chain plain_frame > shrink_wrapped*2 > two_frames '
+                               '7200 <= 7200') == 2, result
+    result = chains(['frames.elf'], 'plain_frame,shrink_wrapped*2,two_frames=7199')
+    assert result.returncode == 1 and 'within budget' not in result.stdout, result
+    assert ('the chain plain_frame > shrink_wrapped*2 > two_frames takes 7200 bytes of stack, more than its '
+            'budget of 7199') in result.stderr, result
+    # Its frames are the same-named functions' largest, as for --max-frame.
+    assert chains(['same-name.elf'], 'twin*2=6143').returncode == 1
+    assert chains(['same-name.elf'], 'twin*2=6144').returncode == 0
+    # A function missing from a file fails the chain there, and is named once.
+    result = chains(['frames.elf', 'no-delete.elf'], 'plain_frame,old_delete,old_delete=2000000')
+    assert result.returncode == 1, result
+    assert 'chain plain_frame > old_delete > old_delete 1840128 <= 2000000' in result.stdout, result
+    assert result.stderr.strip() == ('FAIL %s: old_delete not found, so the chain plain_frame > old_delete > '
+                                     'old_delete was not checked' % (folder / 'no-delete.elf')), result
+    # Both kinds of budget are checked together, and either fails the file.
+    result = subprocess.run([sys.executable, str(script), str(folder / 'frames.elf'), '--max-frame', 'two_frames=3072',
+                             '--max-chain', 'two_frames*2=6143'], capture_output=True, text=True)
+    assert result.returncode == 1 and 'two_frames*2 takes 6144 bytes' in result.stderr, result
+    result = subprocess.run([sys.executable, str(script), str(folder / 'frames.elf'), '--max-frame', 'two_frames=3071',
+                             '--max-chain', 'two_frames*2=6144'], capture_output=True, text=True)
+    assert result.returncode == 1 and 'two_frames has a 3072-byte stack frame' in result.stderr, result
+    result = subprocess.run([sys.executable, str(script), str(folder / 'frames.elf'), '--max-frame', 'two_frames=3072',
+                             '--max-chain', 'two_frames*2=6144'], capture_output=True, text=True)
+    assert result.returncode == 0 and 'two_frames 3072 <= 3072, chain two_frames*2 6144 <= 6144' in result.stdout
+    for bad in ('plain_frame', '=100', 'plain_frame=big', 'plain_frame*0=100', 'plain_frame*=100',
+                'plain_frame*two=100', 'plain_frame,,two_frames=100', '*2=100'):
+        result = chains(['frames.elf'], bad)
+        assert result.returncode == 2 and 'expected NAME[*COUNT],...=BYTES' in result.stderr, (bad, result)
+
 print('PASS: the shipped copy() prologue and %d other pre-realignment stores fail (through $sp and '
       'every kind of temporary made from it, through $s7 and one made from it, a callee-saved '
       'register stored after the window changed it, and before an `and` in a delay slot); the fixed '
@@ -297,4 +344,7 @@ print('PASS: the shipped copy() prologue and %d other pre-realignment stores fai
       'ahead of a delay-slot `and`, an overwritten temporary, a $s7 the window set), plain and later '
       'spills pass; frames of every allocation form are measured; linked, relocatable and stripped '
       'ELF; a file with no code to check fails; --max-frame fails a frame over its budget (counting '
-      'the realignment and an allocation after an early return) or a missing function' % (len(FLAGGED) - 1))
+      'the realignment, an allocation after an early return, the larger of two allocations and of two '
+      'same-named functions) or a missing function; --max-chain fails a call chain whose frames, '
+      'repeated for NAME*COUNT, add up to more than its budget, or that misses a function'
+      % (len(FLAGGED) - 1))
