@@ -707,10 +707,27 @@ static int ctAppend(void *ctx, uint64_t offset, const void *buf, uint32_t len)
 	return 0;
 }
 
+/* The card sizes offered, in the order of the "New card size" list: the
+ * sizes sd2psXtd-style MMCE devices make, from 1 MB up. mb = 1 << choice. */
+#define CT_SIZES 7
+
+/* The offered size matching a card of total_clusters clusters (1 KB each),
+ * as the default for the size list: the source's own size, or the next size
+ * up for an odd-sized image. 8 MB (3) is the size of a real PS2 card. */
+static int ctSizeChoice(uint32_t total_clusters)
+{
+	int k;
+
+	for (k = 0; k < CT_SIZES - 1; k++)
+		if (total_clusters <= (1024u << k))
+			return k;
+	return CT_SIZES - 1;
+}
+
 /* A new card image of another size holding every save; the source is only read. */
 static void ctResize(const char *image)
 {
-	static const char *const sizes[] = {"8 MB", "16 MB", "32 MB", "64 MB"};
+	static const char *const sizes[] = {"1 MB", "2 MB", "4 MB", "8 MB", "16 MB", "32 MB", "64 MB"};
 	static uint8_t sb[512], root[1024];
 	char folder[MAX_PATH], dir[MAX_PATH], dest[MAX_PATH], base[48], msg[160];
 	char (*names)[33] = NULL;
@@ -718,7 +735,7 @@ static void ctResize(const char *image)
 	CardIo io;
 	AppendIo out;
 	McSaveData s;
-	uint32_t freec, total;
+	uint32_t freec, total, card_clusters = 0;
 	int unit = mmceCardUnit(image), choice, mb, r, n = 0, found = 0, i, len, made = 0, bad = -1;
 
 	r = ctOpen(&io, image, 0);
@@ -727,6 +744,7 @@ static void ctResize(const char *image)
 		if (r == MCV_OK)
 			r = mcViewFreeClusters(&ct_view, &freec, &total);
 		if (r == MCV_OK) {
+			card_clusters = ct_view.clusters_per_card; /* the whole card, not just its allocatable part */
 			n = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &found);
 			if (n < 0)
 				r = n;
@@ -751,12 +769,12 @@ static void ctResize(const char *image)
 		dashModalMessage(DI_WARNING, "Cannot copy this card", ctError(r), image);
 		return;
 	}
-	choice = dashModalChoice("New card size", sizes, 4, total > 33000u ? 3 : total > 16500u ? 2 : total > 8250u ? 1 : 0);
+	choice = dashModalChoice("New card size", sizes, CT_SIZES, ctSizeChoice(card_clusters));
 	if (choice < 0) {
 		free(names);
 		return;
 	}
-	mb = 8 << choice;
+	mb = 1 << choice;
 
 	/* Outside MemoryCards/ on MMCE, so the device never serves a half-built card. */
 	if (unit >= 0)
@@ -1125,7 +1143,7 @@ static int ctStamp(uint8_t stamp[8])
  * O_EXCL, and it is removed again unless it reads back as an empty card. */
 void dashCardNewBlank(const char *folder)
 {
-	static const char *const sizes[] = {"8 MB", "16 MB", "32 MB", "64 MB", "128 KB PS1 card"};
+	static const char *const sizes[] = {"1 MB", "2 MB", "4 MB", "8 MB", "16 MB", "32 MB", "64 MB", "128 KB PS1 card"};
 	static uint8_t sb[512], root[1024];
 	char where[MAX_PATH], dest[MAX_PATH], msg[160];
 	uint8_t stamp[8];
@@ -1141,14 +1159,14 @@ void dashCardNewBlank(const char *folder)
 		                 folder);
 		return;
 	}
-	choice = dashModalChoice("New card size", sizes, 5, 0);
+	choice = dashModalChoice("New card size", sizes, CT_SIZES + 1, 3); /* 8 MB, the size of a real PS2 card */
 	if (choice < 0)
 		return;
-	if (choice == 4) {
+	if (choice == CT_SIZES) {
 		dashPs1CardNewBlank(folder);
 		return;
 	}
-	mb = 8 << choice;
+	mb = 1 << choice;
 
 	/* Outside MemoryCards/ on MMCE, so the device never serves a half-built
 	 * card; "Install as NEW selectable MMCE card" moves it into place. */
