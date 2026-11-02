@@ -66,12 +66,17 @@ void _libcglue_rtc_update(void)
  *     function is used here, but an undefined reference extracts the newlib
  *     objects before --gc-sections can see they are dead.
  * Defining the symbols here satisfies the references without extracting
- * anything. The _ps2sdk_fileXio_init/_deinit overrides are live: fileXioInit()
- * really calls them, and the SDK versions only swap the libcglue file-op table
- * in and out, which this loader never uses (no newlib descriptor layer is
- * linked). The printf/snprintf/open/close/lseek stubs are linker-only: nothing
- * calls them, so --gc-sections drops them (none survives in the ELF). The
- * loader's own code paths are unchanged. */
+ * anything. The loader's own code paths are unchanged.
+ *
+ * The fileXio hooks are live: fileXioInit() and fileXioExit() really call
+ * _ps2sdk_fileXio_init and _deinit. The SDK versions swap the libcglue
+ * file-op table in and out and, in newer ps2sdk, reset the block size that
+ * newlib's stat reports; this loader links neither. Newer upstream ps2sdk
+ * (commit 8745ab1e) also makes fileXioSetRWBufferSize() call
+ * _ps2sdk_fileXio_set_block_size(). Nothing here calls that function, but
+ * sdk-core keeps it in the same object as fileXioInit(), so the reference
+ * alone would extract the SDK hook object and fail the link (duplicate
+ * _ps2sdk_fileXio_init). It is defined here too. */
 void _ps2sdk_fileXio_init(void)
 {
 }
@@ -80,35 +85,55 @@ void _ps2sdk_fileXio_deinit(void)
 {
 }
 
-int printf(const char *format, ...)
+void _ps2sdk_fileXio_set_block_size(int size)
 {
+	(void)size;
+}
+
+/* The five libc stubs below are linker-only: nothing calls them. They live in
+ * a section the linker script discards (/DISCARD/ in loader/linkfile), so
+ * today the build is unchanged. If a later change makes one live -- a printf
+ * here, or a call to SifIopReboot or SifExecModuleFile, which use them -- the
+ * link fails ("relocation refers to a symbol in a discarded section") instead
+ * of silently calling a stub that does nothing. noinline and the empty
+ * volatile asm stop the compiler from inlining or deleting such a call, which
+ * would hide it from the linker. */
+#define LINKER_ONLY __attribute__((noinline, section(".discard.linker_only")))
+
+LINKER_ONLY int printf(const char *format, ...)
+{
+	__asm__ __volatile__("");
 	(void)format;
 	return 0;
 }
 
-int snprintf(char *str, size_t size, const char *format, ...)
+LINKER_ONLY int snprintf(char *str, size_t size, const char *format, ...)
 {
+	__asm__ __volatile__("");
 	(void)str;
 	(void)size;
 	(void)format;
 	return 0;
 }
 
-int open(const char *path, int flags, ...)
+LINKER_ONLY int open(const char *path, int flags, ...)
 {
+	__asm__ __volatile__("");
 	(void)path;
 	(void)flags;
 	return -1;
 }
 
-int close(int fd)
+LINKER_ONLY int close(int fd)
 {
+	__asm__ __volatile__("");
 	(void)fd;
 	return -1;
 }
 
-off_t lseek(int fd, off_t offset, int whence)
+LINKER_ONLY off_t lseek(int fd, off_t offset, int whence)
 {
+	__asm__ __volatile__("");
 	(void)fd;
 	(void)offset;
 	(void)whence;
