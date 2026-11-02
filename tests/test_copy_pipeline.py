@@ -157,8 +157,8 @@ static int delete(const char *p,const FILEINFO *f){char source[MAX_PATH];assert(
 static void markMx4sioDestinationAfterWrite(const char *p){(void)p;}
 static int genCmpFileExt(const char *p,const char *e){(void)p;(void)e;return 0;}
 static int newdir(const char *parent,const char *name){char p[MAX_PATH];snprintf(p,sizeof(p),"%s%s",parent,name);return mkdir(p,0700)?-errno:0;}
-static int getDir(const char *p,FILEINFO *out){
- if(fail_listing)return -EIO;DIR *d=opendir(p);if(!d)return -errno;struct dirent *e;int n=0;
+static int getDirComplete(const char *p,FILEINFO *out,int *more){
+ if(more)*more=0;if(fail_listing)return -EIO;DIR *d=opendir(p);if(!d)return -errno;struct dirent *e;int n=0;
  while((e=readdir(d))){if(!strcmp(e->d_name,".")||!strcmp(e->d_name,".."))continue;assert(n<MAX_ENTRY);memset(&out[n],0,sizeof(out[n]));snprintf(out[n].name,sizeof(out[n].name),"%s",e->d_name);char full[MAX_PATH];snprintf(full,sizeof(full),"%s%s",p,e->d_name);struct stat st;assert(!stat(full,&st));out[n].stats.AttrFile=S_ISDIR(st.st_mode)?sceMcFileAttrSubdir:0;out[n].stats.FileSizeByte=st.st_size;n++;}closedir(d);return n;
 }
 static int unexpected(void){assert(!"PSU branch is outside this ordinary-copy fixture");return -1;}

@@ -168,9 +168,14 @@ static int fileXioDread(int fd,iox_dirent_t *r){struct dirent *e=readdir(dirs[fd
 static int fileXioDclose(int fd){closedir(dirs[fd]);dirs[fd]=0;return 0;}
 static void clearMcTable(sceMcTblGetDir *mcT){memset((void *)mcT,0,sizeof(sceMcTblGetDir));}
 '''
+# The real reader and strict listing behind copy(); only the device dispatch is replaced.
+code += 'static int dir_opened,dir_open_error,dir_read_error;\n'
+code += function(filer, 'static void dirOpenResult(')
 reader = function(filer, 'int readGENERIC(const char *path, FILEINFO *info, int max)\n{')
 code += 'static ' + reader
-code += 'static int getDir(const char *p,FILEINFO *out){return readGENERIC(p,out,MAX_ENTRY-2);}\n'
+code += ('static int listDir(const char *p,FILEINFO *out,int max){'
+         'dir_opened=dir_read_error=0;dir_open_error=-ENODEV;return readGENERIC(p,out,max);}\n')
+code += function(filer, 'int getDirComplete(')
 code += 'static int applyMcInfoToVmcPath(const char *p,const sceMcTblGetDir *s){(void)p;(void)s;return 0;}\n'
 # The real PSU layout and helpers (their includes are replaced by the stubs above).
 code += psu_types[psu_types.index('typedef struct'):psu_types.rindex('#endif')]

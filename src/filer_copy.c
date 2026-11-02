@@ -108,6 +108,7 @@ void filerCopyDiagFormat(char *out, int size, int result)
 		case -ENOMEM: reason = "Not enough memory to complete the transfer."; break;
 		case -EEXIST: reason = "A destination file or folder already exists."; break;
 		case -EISDIR: reason = "The destination name refers to a directory."; break;
+		case -E2BIG: reason = "A source folder holds more than 2046 items, more than a copy can list."; break;
 		default: reason = "The operation failed. Keep the error code and device details below for diagnosis."; break;
 	}
 	snprintf(out, size, "%s (%d)\n%s\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
@@ -797,10 +798,10 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			                                  //--- This has been moved to a later clause.
 		} else {                              //Any other mode than a valid PM_PSU_RESTORE
 			filerCopyDiagStage("Listing source");
-			nfiles = getDir(in, files);
+			nfiles = getDirComplete(in, files, NULL);
 			ret = 0;  //An empty listing succeeds regardless of optional title lookup.
-			//A listing error aborts below. A reader that returns 0 when it cannot
-			//open the folder (readGENERIC, readMC) makes it look empty instead.
+			//A folder that cannot be opened or read to its end, or that holds more
+			//than a listing can, aborts here, so a Move keeps its source.
 			if (nfiles < 0)
 				ret = copyDiagFail(nfiles);
 			for (i = 0; i < nfiles; i++) {

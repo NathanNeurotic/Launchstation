@@ -205,6 +205,26 @@ int readGENERIC(const char *path, FILEINFO *info, int max);
 int dashWorkerOnThread(void); /* dash_internal.h */
 #endif
 
+/* How the listing listDir() is making went, beyond its entries, for
+ * getDirComplete(). The readers record each attempt to open the folder
+ * (dir_opened once any attempt succeeds, else the last attempt's error) and
+ * the error of a read that fails after the folder opened. A browser listing
+ * ignores them: an unreadable folder still shows as empty there. */
+static int dir_opened, dir_open_error, dir_read_error;
+
+static void dirOpenResult(int fd)
+{
+	if (fd >= 0)
+		dir_opened = 1;
+	else
+		dir_open_error = fd;
+}
+
+static void dirReadFailed(int error)
+{
+	dir_read_error = (error < 0) ? error : -EIO;
+}
+
 #define USB_BROWSER_MAX_DRIVES 2
 #define USB_DISCOVERY_ATTEMPTS 3
 #define USB_DISCOVERY_SETTLE_MS 500
@@ -409,9 +429,10 @@ int filerPrepareMemoryCardRead(int port)
 
 int readMC(const char *path, FILEINFO *info, int max)
 {
-	static sceMcTblGetDir mcDir[MAX_ENTRY] __attribute__((aligned(64)));
+	/* max entries besides "." and "..", for the largest max (getDirComplete) */
+	static sceMcTblGetDir mcDir[MAX_ENTRY + 1] __attribute__((aligned(64)));
 	char dir[MAX_PATH];
-	int i, j, port, ret;
+	int i, j, port, ret, limit;
 
 	port = path[2] - '0';
 	if (port < 0 || port > 1)
@@ -425,8 +446,9 @@ int readMC(const char *path, FILEINFO *info, int max)
 
 	strcpy(dir, &path[4]);
 	strcat(dir, "*");
+	limit = (max < MAX_ENTRY - 1) ? max + 2 : MAX_ENTRY + 1;
 	for (i = 0; i < MC_BROWSER_RETRY_COUNT; i++) {
-		mcGetDir(port, 0, dir, 0, MAX_ENTRY - 2, mcDir);
+		mcGetDir(port, 0, dir, 0, limit, mcDir);
 		mcSync(0, NULL, &ret);
 		if (ret >= 0)
 			break;
@@ -436,10 +458,13 @@ int readMC(const char *path, FILEINFO *info, int max)
 			break;
 		DelayThread(MC_BROWSER_RETRY_DELAY_US);
 	}
-	if (ret < 0)
+	if (ret < 0) {
+		dirOpenResult(ret == sceMcResNoEntry ? -ENOENT : -EIO);
 		return 0;
+	}
+	dirOpenResult(0);
 
-	for (i = j = 0; i < ret; i++) {
+	for (i = j = 0; i < ret && j < max; i++) {
 		if (mcDir[i].AttrFile & sceMcFileAttrSubdir &&
 		    (!strcmp((char *)mcDir[i].EntryName, ".") || !strcmp((char *)mcDir[i].EntryName, "..")))
 			continue;  //Skip pseudopaths "." and ".."
@@ -468,7 +493,8 @@ static const char *getXfromRelativePath(const char *path)
 
 int readXFROM(const char *path, FILEINFO *info, int max)
 {
-	static sceMcTblGetDir mcDir[MAX_ENTRY] __attribute__((aligned(64)));
+	/* max entries besides "." and "..", for the largest max (getDirComplete) */
+	static sceMcTblGetDir mcDir[MAX_ENTRY + 1] __attribute__((aligned(64)));
 	char dir[MAX_PATH];
 	int i, j, ret, limit;
 
@@ -487,11 +513,14 @@ int readXFROM(const char *path, FILEINFO *info, int max)
 	dir[sizeof(dir) - 2] = '\0';
 	strcat(dir, "*");
 
-	limit = (max < MAX_ENTRY - 2) ? max : MAX_ENTRY - 2;
+	limit = (max < MAX_ENTRY - 1) ? max + 2 : MAX_ENTRY + 1;
 	xfromGetDir(0, 0, dir, 0, limit, mcDir);
 	xfromSync(0, NULL, &ret);
-	if (ret < 0)
+	if (ret < 0) {
+		dirOpenResult(ret == sceMcResNoEntry ? -ENOENT : -EIO);
 		return 0;
+	}
+	dirOpenResult(0);
 
 	for (i = j = 0; i < ret && j < max; i++) {
 		if (mcDir[i].AttrFile & sceMcFileAttrSubdir &&
@@ -528,8 +557,11 @@ int readCD(const char *path, FILEINFO *info, int max)
 			return 0;
 		}
 	}
-	if ((dd = fileXioDopen(path)) < 0)
+	dd = fileXioDopen(path);
+	dirOpenResult(dd);
+	if (dd < 0)
 		goto exit;  //exit if error opening directory
+	/* cdfs ends a folder with -EPERM, so a failed read looks like its end */
 	while (fileXioDread(dd, &record) > 0) {
 		if ((FIO_S_ISDIR(record.stat.mode)) && (!strcmp(record.name, ".") || !strcmp(record.name, "..")))
 			continue;  //Skip entry if pseudo-folder "." or ".."
@@ -953,13 +985,16 @@ int readVMC(const char *path, FILEINFO *info, int max)
 {
 	iox_dirent_t dirbuf;
 	char dir[MAX_PATH];
-	int i = 0, fd;
+	int i = 0, fd, ret;
 
 	strcpy(dir, path);
-	if ((fd = fileXioDopen(dir)) < 0)
+	fd = fileXioDopen(dir);
+	dirOpenResult(fd);
+	if (fd < 0)
 		return 0;
 
-	while (fileXioDread(fd, &dirbuf) > 0) {
+	/* vmcman ends a folder with 0, so a negative result is a failed read */
+	while ((ret = fileXioDread(fd, &dirbuf)) > 0) {
 		unsigned int vmc_mc_mode = dirbuf.stat.private_0;
 
 		if (!strcmp(dirbuf.name, ".") || !strcmp(dirbuf.name, ".."))
@@ -992,6 +1027,8 @@ int readVMC(const char *path, FILEINFO *info, int max)
 		if (i == max)
 			break;
 	}
+	if (ret < 0)
+		dirReadFailed(ret);
 
 	fileXioDclose(fd);
 
@@ -1030,6 +1067,9 @@ int readHDD(const char *path, FILEINFO *info, int max)
 			strcpy(info[i].name, hddParties[hdd_unit][i]);
 			info[i].stats.AttrFile = MC_ATTR_norm_folder;
 		}
+		/* the partition list stands in for the folder; it is empty when the
+		 * drive could not be read */
+		dirOpenResult(hddNparties[hdd_unit] > 0 ? 0 : -ENODEV);
 		return hddNparties[hdd_unit];
 	}
 
@@ -1039,10 +1079,13 @@ int readHDD(const char *path, FILEINFO *info, int max)
 		return 0;
 	dir[3] = ret + '0';
 
-	if ((fd = fileXioDopen(dir)) < 0)
+	fd = fileXioDopen(dir);
+	dirOpenResult(fd);
+	if (fd < 0)
 		return 0;
 
-	while (fileXioDread(fd, &dirbuf) > 0) {
+	/* pfs ends a folder with 0, so a negative result is a failed read */
+	while ((ret = fileXioDread(fd, &dirbuf)) > 0) {
 		if (dirbuf.stat.mode & FIO_S_IFDIR &&
 		    (!strcmp(dirbuf.name, ".") || !strcmp(dirbuf.name, "..")))
 			continue;  //Skip pseudopaths "." and ".."
@@ -1064,6 +1107,8 @@ int readHDD(const char *path, FILEINFO *info, int max)
 		if (i == max)
 			break;
 	}
+	if (ret < 0)
+		dirReadFailed(ret);
 
 	fileXioDclose(fd);
 
@@ -1095,6 +1140,7 @@ int readHDDDVRP(const char *path, FILEINFO *info, int max)
 			strcpy(info[i].name, dvrParties[i]);
 			info[i].stats.AttrFile = MC_ATTR_norm_folder;
 		}
+		dirOpenResult(ndvrpparties > 0 ? 0 : -ENODEV);
 		return ndvrpparties;
 	}
 
@@ -1104,10 +1150,12 @@ int readHDDDVRP(const char *path, FILEINFO *info, int max)
 		return 0;
 	dir[7] = ret + '0';
 
-	if ((fd = fileXioDopen(dir)) < 0)
+	fd = fileXioDopen(dir);
+	dirOpenResult(fd);
+	if (fd < 0)
 		return 0;
 
-	while (fileXioDread(fd, &dirbuf) > 0) {
+	while ((ret = fileXioDread(fd, &dirbuf)) > 0) {
 		if (dirbuf.stat.mode & FIO_S_IFDIR &&
 		    (!strcmp(dirbuf.name, ".") || !strcmp(dirbuf.name, "..")))
 			continue;  //Skip pseudopaths "." and ".."
@@ -1129,6 +1177,8 @@ int readHDDDVRP(const char *path, FILEINFO *info, int max)
 		if (i == max)
 			break;
 	}
+	if (ret < 0)
+		dirReadFailed(ret);
 
 	fileXioDclose(fd);
 
@@ -1388,8 +1438,12 @@ int readGENERIC(const char *path, FILEINFO *info, int max)
 	iox_dirent_t record;
 	int n = 0, dd = -1;
 
-	if ((dd = fileXioDopen(path)) < 0)
+	dd = fileXioDopen(path);
+	dirOpenResult(dd);
+	if (dd < 0)
 		goto exit;  //exit if error opening directory
+	/* No failed read is recorded: BDM (FAT, exFAT) ends a folder with 0 after
+	 * a read error too, and MMCE ends every folder with -1. */
 	while (fileXioDread(dd, &record) > 0) {
 		if ((FIO_S_ISDIR(record.stat.mode)) && (!strcmp(record.name, ".") || !strcmp(record.name, "..")))
 			continue;  //Skip entry if pseudo-folder "." or ".."
@@ -1549,7 +1603,9 @@ int readHOST(const char *path, FILEINFO *info, int max)
 		char *elflisttxt, elflistchar;
 		char host_next[MAX_PATH];
 
-		if ((hfd = fileXioOpen("host:elflist.txt", FIO_O_RDONLY, 0)) < 0)
+		hfd = fileXioOpen("host:elflist.txt", FIO_O_RDONLY, 0);
+		dirOpenResult(hfd);  //the list stands in for the root folder
+		if (hfd < 0)
 			return 0;
 		if ((size = fileXioLseek(hfd, 0, SEEK_END)) <= 0) {
 			fileXioClose(hfd);
@@ -1586,10 +1642,14 @@ int readHOST(const char *path, FILEINFO *info, int max)
 		return hostcount - 1;
 	}
 
-	if ((hfd = fileXioDopen(makeHostPath(Win_path, host_path))) < 0)
+	hfd = fileXioDopen(makeHostPath(Win_path, host_path));
+	dirOpenResult(hfd);
+	if (hfd < 0)
 		return 0;
 	strcpy(host_path, Win_path);
-	while ((rv = fileXioDread(hfd, &hostcontent))) {
+	/* The host returns 1 per entry and 0 at the end. A negative result (-1
+	 * when the network is down) is a failed read and leaves no new entry. */
+	while ((rv = fileXioDread(hfd, &hostcontent)) > 0) {
 		if (strcmp(hostcontent.name, ".") && strcmp(hostcontent.name, "..")) {
 			size_valid = 1;
 			time_valid = 1;
@@ -1613,6 +1673,8 @@ int readHOST(const char *path, FILEINFO *info, int max)
 				break;
 		}
 	}
+	if (rv < 0)
+		dirReadFailed(rv);
 	fileXioDclose(hfd);
 	strcpy(info[hostcount].name, "\0");
 	return hostcount;
@@ -1630,6 +1692,7 @@ static int readNetDir(const char *path, FILEINFO *info, int max, int *open_faile
 		*open_failed = 1;
 		return fd;
 	}
+	dirOpenResult(fd);
 
 	while ((ret = fileXioDread(fd, &dirent)) > 0) {
 		if (strcmp(dirent.name, ".") && strcmp(dirent.name, "..")) {
@@ -1711,11 +1774,14 @@ int readSMB(const char *path, FILEINFO *info, int max)
 //------------------------------
 //endfunc readHOST/readUDPFS
 //--------------------------------------------------------------
-int getDir(const char *path, FILEINFO *info)
+/* Lists up to max entries of a folder through the reader for its device,
+ * recording for getDirComplete() whether the folder could be read. */
+static int listDir(const char *path, FILEINFO *info, int max)
 {
-	int max = MAX_ENTRY - 2;
 	int n;
 
+	dir_opened = dir_read_error = 0;
+	dir_open_error = -ENODEV;  //until a reader opens the folder or says why not
 	if (!strncmp(path, "mc", 2))
 		n = readMC(path, info, max);
 #ifdef XFROM
@@ -1992,6 +2058,40 @@ int getDir(const char *path, FILEINFO *info)
 	else
 		return 0;
 
+	return n;
+}
+
+/* Lists a folder to show it: a folder that cannot be opened or read shows
+ * what was read (often nothing), and a larger one its first MAX_ENTRY - 2
+ * entries. Network readers return their error instead. */
+int getDir(const char *path, FILEINFO *info)
+{
+	return listDir(path, info, MAX_ENTRY - 2);
+}
+
+/* Lists a folder for a caller that acts on all of it (copy, delete).
+ * Returns the number of entries, or a negative error when the folder
+ * could not be opened, a read failed partway, or it holds more than
+ * MAX_ENTRY - 2 entries (-E2BIG). With 'more', a folder that holds more
+ * returns its first MAX_ENTRY - 1 entries and sets *more instead, for a
+ * caller that removes them and lists again. 'info' holds MAX_ENTRY entries. */
+int getDirComplete(const char *path, FILEINFO *info, int *more)
+{
+	int n = listDir(path, info, MAX_ENTRY - 1);
+
+	if (more != NULL)
+		*more = 0;
+	if (n < 0)
+		return n;
+	if (dir_read_error < 0)
+		return dir_read_error;
+	if (!dir_opened)
+		return dir_open_error;
+	if (n > MAX_ENTRY - 2) {  //a reader stops at max, so there can be more
+		if (more == NULL)
+			return -E2BIG;
+		*more = 1;
+	}
 	return n;
 }
 //--------------------------------------------------------------

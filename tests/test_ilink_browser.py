@@ -18,7 +18,8 @@ def body(source: str, signature: str) -> str:
         pos += 1
     return source[start:pos]
 
-get_dir = body(filer, "int getDir(")
+# getDir() and getDirComplete() both list through this dispatcher.
+get_dir = body(filer, "static int listDir(")
 load_ilink = body(init, "int loadIlinkModules(void)\n{")
 
 # The device model and driver loader already knew about iLink.
@@ -29,7 +30,7 @@ assert "IEEE1394_bd_irx" in load_ilink
 assert "loadBdmCoreModules()" in load_ilink
 
 # Regression: a successful iLink mount must actually reach generic directory
-# enumeration instead of falling through getDir() as an unsupported path.
+# enumeration instead of falling through listDir() as an unsupported path.
 assert '#ifdef ILINK' in get_dir
 assert '!strncmp(path, "ilink", 5)' in get_dir
 assert 'isPathDeviceStackLoaded(path)' in get_dir

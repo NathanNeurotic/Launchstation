@@ -1851,12 +1851,16 @@ void make_title_cfg(const char *path, const FILEINFO *file, char *_msg0)
 //------------------------------
 //endfunc make_title_cfg
 //--------------------------------------------------------------
+/* Deletes a file, or a folder and everything in it. A folder that cannot be
+ * opened or read to its end stops the delete before anything listed in it
+ * is removed; one holding more than a listing can is emptied one listing at
+ * a time. Returns the error that stopped it, or what the device returned. */
 int delete (const char *path, const FILEINFO *file)
 {
 	static char party[MAX_NAME];  //only used before this level recurses
 	FILEINFO *files;
 	char dir[MAX_PATH], hdddir[MAX_PATH];
-	int nfiles, i, ret;
+	int nfiles, i, ret, more;
 
 	if (!ensurePathDeviceStackReady(path))
 		return -1;
@@ -1888,22 +1892,29 @@ int delete (const char *path, const FILEINFO *file)
 	if (file->stats.AttrFile & sceMcFileAttrSubdir) {  //Is the object to delete a folder ?
 		strcat(dir, "/");
 		/* Each level lists on the heap: MAX_ENTRY entries are about 900 KB, far
-		 * more than the stack. */
-		files = (FILEINFO *)memalign(64, MAX_ENTRY * sizeof(FILEINFO));
+		 * more than the stack. The entry past them keeps the first name of the
+		 * previous listing, which a listing after it must no longer hold. */
+		files = (FILEINFO *)memalign(64, (MAX_ENTRY + 1) * sizeof(FILEINFO));
 		if (files == NULL)
 			return -ENOMEM;
-		nfiles = getDir(dir, files);
-		if (nfiles < 0) {
-			free(files);
-			return nfiles;
-		}
-		for (i = 0; i < nfiles; i++) {
-			ret = delete (dir, &files[i]);  //recursively delete contents of folder
-			if (ret < 0) {
+		files[MAX_ENTRY].name[0] = '\0';
+		do {
+			nfiles = getDirComplete(dir, files, &more);
+			if (nfiles > 0 && !strcmp(files[0].name, files[MAX_ENTRY].name))
+				nfiles = -EIO;  //an entry deleted without error is still there
+			if (nfiles < 0) {
 				free(files);
-				return -1;
+				return nfiles;
 			}
-		}
+			strcpy(files[MAX_ENTRY].name, nfiles > 0 ? files[0].name : "");
+			for (i = 0; i < nfiles; i++) {
+				ret = delete (dir, &files[i]);  //recursively delete contents of folder
+				if (ret < 0) {
+					free(files);
+					return ret;
+				}
+			}
+		} while (more);  //a full listing: list what is left
 		free(files);
 		if (!strncmp(dir, "mc", 2)) {
 			ensureMemoryCardPortAccessible(dir[2] - '0');
