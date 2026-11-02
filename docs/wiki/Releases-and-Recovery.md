@@ -2,7 +2,19 @@
 
 ## Download and select the right package
 
-[Rolling latest](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest) contains four installable packages: `APP_LAUNCHSTATION-<build>.zip`, `APP_LAUNCHSTATION.psu`, `APP_LAUNCHSTATION-DS-<build>.zip`, `APP_LAUNCHSTATION-DS.psu`, plus loose ELFs: `LAUNCHSTATION.ELF`, `LAUNCHSTATION-DS.ELF`, and `BOOT.ELF` / `BOOT2.ELF` (identical copies of the standard ELF). The DS variant includes the inherited DS34 (PS3/PS4 USB/Bluetooth) controller drivers; use standard packages for ordinary PS2 controllers. Every ZIP name ends with the build number (the commit count, for example `APP_LAUNCHSTATION-284.zip`), which the release title and notes also state; the PSUs the in-app updater uses and the loose ELFs keep fixed names.
+[Rolling latest](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest) offers these downloads:
+
+| Download | Use |
+| --- | --- |
+| `APP_LAUNCHSTATION-<build>.zip` | Standard PS2 controller build; extract the app folder. |
+| `APP_LAUNCHSTATION.psu` | The same standard app for memory-card installation with **Extract PSU**. |
+| `APP_LAUNCHSTATION-DS-<build>.zip` | Adds inherited DS34 drivers for PS3/PS4 DualShock USB/Bluetooth controllers. |
+| `APP_LAUNCHSTATION-DS.psu` | The same DS34 app for memory-card installation. |
+| `LAUNCHSTATION.ELF`, `LAUNCHSTATION-DS.ELF` | Packed executables without their sidecar files. |
+| `BOOT.ELF`, `BOOT2.ELF` | Byte-identical copies of the standard ELF under alternate boot names. |
+| `LAUNCHSTATION-<build>.zip` | Optional full kit: standard app, POPStarter/Ember/Neutrino loaders and PC-tool shortcuts. |
+
+Every ZIP name ends with the build number (the commit count). The release title and notes state the current app build number; PSUs used by the in-app updater and loose ELFs keep fixed names. **The kit can be older than the apps:** if its upstream download or validation fails, the app release proceeds and keeps the previous kit attached. Check the kit's filename and `KIT-MANIFEST.json` before assuming it matches the release title.
 
 A standard install folder has `LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.PEM` and `BGM.ADP`. The DS package has `LAUNCHSTATION-DS.ELF` and its own `APP_LAUNCHSTATION-DS` folder. ZIP and PSU contents are identical and the ELFs are packed. Keep customized configuration and sidecar files when upgrading.
 
@@ -12,8 +24,8 @@ A standard install folder has `LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.P
 
 1. Host regression tests, the copy-test fixture pack and a documentation-site build.
 2. The standard and DS34 ELFs are built with the PS2BUILD LLVM/Clang toolchain; CI checks the controller variants in the linked ELFs, that release ELFs contain only Clang-built objects, the UDPFS SMAP ABI and the embedded loader's low-memory layout.
-3. The four packages are created by `scripts/package_apps.py` and re-verified.
-4. Only for a push (or manual dispatch) on `master`: the workflow skips builds that `master` has already moved past, refuses to move the `latest` tag unless the previous tagged commit is an ancestor of the new one, uploads the four assets, downloads them again and compares bytes, and then moves the tag, title ("Launchstation Rolling - date (commit)") and release notes, marking it GitHub's Latest, not a pre-release.
+3. The four app packages and four loose ELFs are created by `scripts/package_apps.py` and verified. The full kit is built separately; its failure does not block the app release.
+4. Only for a push (or manual dispatch) on `master`: the workflow skips builds that `master` has already moved past, refuses to move the `latest` tag unless the previous tagged commit is an ancestor of the new one, uploads the app assets and any successfully built kit, downloads them again and compares bytes, and then moves the tag, title (`Launchstation Rolling <build> - <date> (<commit>)`) and release notes, marking it GitHub's Latest, not a pre-release. Older app ZIPs are removed after publication; an older kit is removed only when a replacement kit was published.
 5. Pull requests build and test but never change public downloads.
 
 Release notes come from the `## Rolling` section of [CHANGELOG.md](../../CHANGELOG.md), followed by build and package information. A documentation-only merge therefore also produces a new rolling build without changing runtime source.

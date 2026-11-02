@@ -1,6 +1,8 @@
 # Launchstation documentation index
 
-Status key (as of 2026-10-26):
+This index separates maintained reference material from historical plans and inherited notes. For installation and everyday use, start with the [user manual](https://nathanneurotic.github.io/Launchstation/) or [wiki home](wiki/Home.md).
+
+Status key:
 
 * **Reference** - describes current behaviour; kept up to date with the code.
 * **Policy** - a safety or design rule that is still in force.
@@ -18,7 +20,7 @@ The user-facing manual is the website in `docs-site/` (published at
 | [dashboard.md](dashboard.md) | Reference | The dashboard shell: tabs, Home/Files/Tools/Settings, navigation, settings keys. |
 | [themes.md](themes.md) | Reference | Theme engine, presets, theme folders, wallpaper keys. |
 | [theme-example/](theme-example/README.md) | Reference | A loadable 4:3 wallpaper theme (`theme.cfg`, `background.png`); checked by `tests/test_wallpaper_docs.py`. |
-| [wiki/](wiki/Home.md) | Reference | Markdown guides mirrored to the GitHub wiki: current features, MMCE recovery, releases and recovery, wallpaper sizing. |
+| [wiki/](wiki/Home.md) | Reference | Markdown guides mirrored to the GitHub wiki: current features, MMCE recovery, release packages and rollback, wallpaper sizing. The authored site reference pages are also mirrored by the wiki workflow. |
 | [NATIVE_CLOUD.md](NATIVE_CLOUD.md) | Reference | Native Google Drive backup: design, account linking, history browser, backup controls, behaviour and security. |
 | [ECOSYSTEM-COMPARISON.md](ECOSYSTEM-COMPARISON.md) | Reference | SD2Cloud and ORBIT: what each does, how Launchstation compares, and the open parity gaps (tracked by #108). |
 | [EMBER-RETROGEM.md](EMBER-RETROGEM.md) | Reference | How Ember CUE/BIN/EXE launches derive a Game ID and show the RetroGem signal. |
