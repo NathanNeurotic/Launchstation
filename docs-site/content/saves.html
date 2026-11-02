@@ -27,10 +27,11 @@
 <tr><td>Move to another card&hellip;</td><td>Copies, reads the copy back, and only then deletes the save from this card.</td></tr>
 <tr><td>Export as .psu&hellip;</td><td>Writes the save as a <code>.psu</code> file.</td></tr>
 <tr><td>Delete from this card&hellip;</td><td>Removes the save.</td></tr>
-<tr><td>Import .psu&hellip;</td><td>Adds a save from a <code>.psu</code>. The file is fully checked before anything is written.</td></tr>
+<tr><td>Import save&hellip;</td><td>Adds a save from a <code>.psu</code> or from another tool's export: Blaze Memory Maxx <code>.mcm</code>, Action Replay / GameShark MAX Drive <code>.max</code>, CodeBreaker <code>.cbs</code>, SharkPort / X-Port <code>.sps</code> / <code>.xps</code>, or a PS2 save exported from a PS3 as <code>.psv</code>. The file is fully read and checked before anything is written; a file that is cut short, does not match its own sizes, or holds a PS1 save is refused whole. Formats that store no dates (<code>.mcm</code>, <code>.max</code>) get the console's current time; a <code>.mcm</code> save folder is named after the file, so keep its original name (for example <code>BASLUS-21386TALES.mcm</code>).</td></tr>
 <tr><td>Copy to a new card of another size&hellip;</td><td>Makes a new 8, 16, 32 or 64&nbsp;MB card image holding every save. The source card is only read and no existing file is overwritten. The finished card must list exactly the source&rsquo;s saves, or the new file is removed. MMCE results go to <code>mmceN:/WLE-Resized/</code>, ready for <b>Install as NEW selectable MMCE card&hellip;</b>.</td></tr>
 <tr><td>Split into Game ID cards&hellip;</td><td>Makes one card per game, each holding that game&rsquo;s saves, in the <code>&lt;ID&gt;/&lt;ID&gt;-1.mcd</code> layout MMCE devices use for Game ID cards. See <a href="#gameid-split">Game ID cards</a>.</td></tr>
 </tbody></table>
+<p><b>Convert to .psu&hellip;</b> in the File Browser menu, on a <code>.mcm</code>, <code>.max</code>, <code>.cbs</code>, <code>.sps</code>, <code>.xps</code> or <code>.psv</code> file outside a memory card, writes the same save as a <code>.psu</code> next to it, for tools and emulators that read only <code>.psu</code>. It never replaces a file (a second conversion gets a <code>-2</code> name), and the new file is read back and compared with the source before it is reported as done.</p>
 <p>Every card write follows the same steps:</p>
 <ol>
 <li>On MMCE, refuse the card the adapter is serving to the console right now. When Launchstation cannot tell which card that is, it writes to none.</li>

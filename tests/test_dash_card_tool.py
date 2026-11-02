@@ -10,6 +10,7 @@ from pathlib import Path
 import atexit
 import hashlib
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -34,7 +35,8 @@ subprocess.run(flags + [f"-I{root/'tests/card-tool-shim'}", f"-I{root/'include'}
                         str(root / "tests/dash_card_tool_host.c"), str(root / "src/dash_card_tool.c"),
                         str(root / "src/mmce_card_switch.c"),
                         str(root / "src/mc_card_write.c"), str(root / "src/mc_card_view.c"),
-                        str(root / "src/mc_sha256.c"), "-o", str(tool)], check=True)
+                        str(root / "src/mc_sha256.c"), str(root / "src/mc_save_formats.c"), "-lz", "-o", str(tool)],
+               check=True)
 subprocess.run(flags + [f"-I{root/'include'}", str(root / "tests/mc_card_write_host.c"),
                         str(root / "src/mc_card_write.c"), str(root / "src/mc_card_view.c"),
                         str(root / "src/mc_sha256.c"), "-o", str(lister)], check=True)
@@ -103,7 +105,7 @@ put(A, std)
 lines = run(A)
 menu = kind(lines, "MENU|A.mcd|")[0].split("|")
 assert menu[2].startswith("4 saves, ") and " KB free of " in menu[2], menu[2]
-assert menu[3].startswith("Import .psu...")
+assert menu[3].startswith("Import save...")
 assert menu[4].startswith("Copy to a new card of another size...")
 assert menu[5].startswith("Split into Game ID cards...")
 assert menu[6].startswith("T:Game Slot 1~BESLES-12345GAME, 3 files, ")
@@ -188,13 +190,40 @@ blank(E)
 lines = run(E, "m0", "pmass:/out/BESLES-12345GAME.psu", "c1")
 assert kind(lines, "TOAST|1|Save imported and verified"), lines
 assert saves(E) == saves(B)
-assert kind(lines, "PICK|Import which .psu?|mass:/|0|PSU")
+assert kind(lines, "PICK|Import which save?|mass:/|0|PSU|MCM|MAX|CBS|SPS|XPS|PSV")
 host("mass:/out/bad.psu").write_bytes(b"\x27\x84" + bytes(2000))
 snap = sha(E)
 lines = run(E, "m0", "pmass:/out/bad.psu")
 assert any("not valid" in l for l in kind(lines, "MESSAGE|")) and sha(E) == snap
 lines = run(B, "m3", "m2", "pmass:/out/", "c0")                   # exists: replace declined
 assert not kind(lines, "TOAST|")
+
+# 8b. saves from other tools: a Blaze .mcm imports by its extension and content (the folder is named after
+# the file), and "Convert to .psu" writes a .psu beside it that imports into the same save
+import zlib as _zlib
+_whole = saves(B)["BESLES-12345GAME"] if isinstance(saves(B), dict) else None
+_files = [(b"icon.sys", bytes(range(256)) * 3 + bytes(196)), (b"DATA", bytes((i * 13) & 0xFF for i in range(5000)))]
+_raw = b"".join(n.ljust(32, b"\0") + struct.pack("<L", len(d)) + d for n, d in _files)
+_body = _zlib.compress(_raw, 9)
+host("mass:/out/BASLUS-99999BLZ.mcm").write_bytes(struct.pack("<LL", 8192, 80 + len(_body)) + b"Blaze".ljust(72, b"\0") + _body)
+F = "mass:/F.mcd"
+blank(F)
+lines = run(F, "m0", "pmass:/out/BASLUS-99999BLZ.mcm", "c1")
+assert kind(lines, "TOAST|1|Save imported and verified"), lines
+assert "BASLUS-99999BLZ" in saves(F), saves(F)
+lines = run("convert:mass:/out/BASLUS-99999BLZ.mcm", "c1")
+assert any(l.startswith("MESSAGE|") and "Converted" in l and l.endswith("|mass:/out/BASLUS-99999BLZ.psu") for l in lines), lines
+G = "mass:/G.mcd"
+blank(G)
+lines = run(G, "m0", "pmass:/out/BASLUS-99999BLZ.psu", "c1")
+assert kind(lines, "TOAST|1|Save imported and verified") and saves(G) == saves(F), lines
+lines = run("convert:mass:/out/BASLUS-99999BLZ.mcm", "c1")             # never replaces: -2 suffix
+assert host("mass:/out/BASLUS-99999BLZ-2.psu").read_bytes() == host("mass:/out/BASLUS-99999BLZ.psu").read_bytes()
+lines = run("convert:mass:/out/BASLUS-99999BLZ.mcm", "c0")             # declined: nothing written
+assert not host("mass:/out/BASLUS-99999BLZ-3.psu").exists()
+host("mass:/out/junk.max").write_bytes(b"Ps2PowerSave" + bytes(200))
+lines = run("convert:mass:/out/junk.max")
+assert any(l.startswith("MESSAGE|") and "Not converted" in l for l in lines) and not host("mass:/out/junk.psu").exists(), lines
 
 # 9. safety copies are pruned to the newest ten, and only ours
 host("mass:/WLE-Safety/E-notes.txt").write_text("keep me")
@@ -229,7 +258,7 @@ P = "mass:/P.ps2"
 put(P, fx.standard_card(8, True)[0])
 lines = run(P, "m3")
 menu = kind(lines, "MENU|P.ps2|")[0].split("|")
-assert menu[3].startswith("!Import .psu...") and menu[4].startswith("Copy to a new card")
+assert menu[3].startswith("!Import save...") and menu[4].startswith("Copy to a new card")
 sub = kind(lines, "MENU|T:Game Slot 1|")[0].split("|")
 assert sub[3].startswith("Copy to") and sub[4].startswith("!Move") and sub[5].startswith("Export") \
     and sub[6].startswith("!Delete")
