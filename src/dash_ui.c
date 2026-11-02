@@ -281,6 +281,12 @@ static int hintRank(const DashHint *h)
 	case DI_BTN_CIRCLE: return 3;
 	case DI_BTN_START: return 9;
 	case DI_BTN_SELECT: return 8;
+	case DI_BTN_R1: return 4;
+	case DI_BTN_R2: return 5;
+	case DI_BTN_L1: return 6;
+	case DI_BTN_L2: return 7;
+	case DI_BTN_L3: return 10;
+	case DI_BTN_R3: return 11;
 	default: break;
 	}
 	if (h->button < 0 && h->key)

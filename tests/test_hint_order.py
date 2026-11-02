@@ -24,7 +24,7 @@ code = r'''
 #define DASH_C_TEXT 1
 #define DASH_HINTS_MAX 8
 enum { DI_BTN_CROSS = 1, DI_BTN_CIRCLE, DI_BTN_SQUARE, DI_BTN_TRIANGLE, DI_BTN_UP, DI_BTN_DOWN, DI_BTN_LEFT, DI_BTN_RIGHT,
-       DI_BTN_START, DI_BTN_SELECT };
+       DI_BTN_START, DI_BTN_SELECT, DI_BTN_L1, DI_BTN_L2, DI_BTN_L3, DI_BTN_R1, DI_BTN_R2, DI_BTN_R3 };
 typedef struct { int r, g, b, a; } DashColor;
 typedef struct { int button; const char *key; const char *label; } DashHint;
 static struct { DashColor bg2; } dashTheme;
@@ -76,6 +76,10 @@ int main(void) {
     check(home, 5, "Start,Favorite,Options,Menu,Show background");
     DashHint num[] = {{DI_BTN_LEFT, 0, "Change"}, {DI_BTN_CIRCLE, 0, "Home"}, {DI_BTN_TRIANGLE, 0, "Changes"}, {-1, "START", "Menu"}};
     check(num, 4, "Changes,Home,Menu,Change");
+    /* Shoulder and stick icons rank like their key labels */
+    DashHint icons[] = {{DI_BTN_R3, 0, "R3"}, {DI_BTN_START, 0, "Menu"}, {DI_BTN_L2, 0, "L2"}, {DI_BTN_R1, 0, "R1"},
+                        {DI_BTN_L3, 0, "L3"}, {DI_BTN_L1, 0, "L1"}, {DI_BTN_R2, 0, "R2"}, {DI_BTN_CROSS, 0, "OK"}};
+    check(icons, 8, "OK,R1,R2,L1,L2,Menu,L3,R3");
     /* Equal ranks stay in the order given (stable) */
     DashHint same[] = {{-1, "UNKNOWN", "A"}, {-1, "OTHER", "B"}, {DI_BTN_UP, 0, "C"}};
     check(same, 3, "A,B,C");
