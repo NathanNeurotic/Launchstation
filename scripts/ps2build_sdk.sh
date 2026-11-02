@@ -79,8 +79,9 @@ sha256() { sha256sum "$1" | cut -d' ' -f1; }
 
 api_fetch() { # url file accept: a GitHub API request with the mirror token, which stays off the command line
     # curl sends the Authorization header to api.github.com only, not to the storage host it redirects to.
+    # HTTPS only, redirects included, so the token never travels in cleartext.
     printf 'header = "Authorization: Bearer %s"\n' "$MIRROR_TOKEN" |
-        curl -K - -sSfL --retry 6 --retry-delay 5 --retry-all-errors --connect-timeout 20 --speed-limit 1024 --speed-time 60 \
+        curl -K - -sSfL --proto '=https' --proto-redir '=https' --retry 6 --retry-delay 5 --retry-all-errors --connect-timeout 20 --speed-limit 1024 --speed-time 60 \
             -H "Accept: $3" -H "X-GitHub-Api-Version: 2022-11-28" "$1" -o "$2"
 }
 
