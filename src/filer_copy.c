@@ -82,6 +82,45 @@ static void copyChunkRun(void *arg)
 	copyChunkIo((CopyChunk *)arg);
 }
 
+/* The copy buffer size for a file of 'size' bytes from 'in' to 'out'.
+   Since LaunchELF is single-threaded,
+   using a large block size with a slow device will result in an unresponsive UI.
+   To prevent a loss in performance, these values must each be in a multiple of the device's sector/page size.
+   They must also be in multiples of 64, to prevent FILEIO from doing alignment correction in software. */
+static int copyBufferSize(const char *in, const char *out, u64 size)
+{
+	int buffSize = COPY_BUFFER_FAST_DEFAULT;  //First assume fast-device buffer size
+
+	if (!strncmp(out, "mc", 2) || !strncmp(out, "mass", 4) || !strncmp(out, "vmc", 3) || isPcCardCfPath(out))
+		buffSize = 131072;  //Use  128KB if writing to USB/CF (Flash RAM writes) or MC (pretty slow).
+	                        //VMC contents should use the same size, as VMCs will often be stored on USB
+#ifdef MX4SIO
+	else if (!strncmp(out, "mx4sio", 6))
+		buffSize = 131072;  //Use 128KB when writing to MX4SIO (FAT over SIO2).
+#endif
+	else if (!strncmp(in, "mc", 2))
+		buffSize = 262144;  //Use 256KB if reading from MC (still pretty slow)
+#if defined(ETH) || defined(UDPFS)
+	else if (!strncmp(out, "host", 4))
+		buffSize = 393216;  //Use 384KB if writing to HOST (acceptable)
+#endif
+	else if ((!strncmp(in, "mass", 4)) || (!strncmp(in, "host", 4)) || isPcCardCfPath(in)
+#ifdef MX4SIO
+	         || (!strncmp(in, "mx4sio", 6))
+#endif
+	        )
+		buffSize = 524288;  //Use 512KB reading from USB, CF, or HOST (acceptable)
+
+	if (size < (u64)buffSize)
+		buffSize = (int)size;
+	return buffSize;
+}
+
+/* A PSU restore reserves the copy buffer for its files before it can replace
+ * an existing save, and the files use it instead of allocating their own. */
+static char *psu_restore_buff;
+static int psu_restore_buff_size;
+
 static int copyDiagFail(int result)
 {
 	/* Preserve a child's actual error when a recursive caller returns -1. */
@@ -692,6 +731,25 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			PM_file[recurses + 1] = out_fd;
 			PM_flag[recurses + 1] = PM_PSU_BACKUP;  //Set PSU backup mode for next level
 		} else {  //any other PasteMode than PM_PSU_BACKUP
+			if (PasteMode == PM_PSU_RESTORE && PSU_restart_f) {
+				//The files' copy buffer is reserved before an existing save can be
+				//replaced, so that a restore without that memory leaves it whole.
+				//No file in the .psu is bigger than the .psu, measured here before
+				//going back to its first entry, after the root header.
+				filerCopyDiagStage("Measuring source");
+				size = genLseek(PM_file[recurses + 1], 0, SEEK_END);
+				if ((s64)size < 0 || genLseek(PM_file[recurses + 1], sizeof(psu_header), SEEK_SET) != (s64)sizeof(psu_header)) {
+					ret = copyDiagFail(-EIO);
+					goto folder_exit;
+				}
+				filerCopyDiagStage("Allocating buffer");
+				psu_restore_buff_size = copyBufferSize(in, out, size);
+				psu_restore_buff = (char *)memalign(64, psu_restore_buff_size);
+				if (psu_restore_buff == NULL) {
+					ret = copyDiagFail(-ENOMEM);
+					goto folder_exit;
+				}
+			}
 			filerCopyDiagStage("Creating directory");
 			/* a PSU names its own folder: a restore that would create or replace a
 			 * protected (exploit or system-update) folder asks first, once */
@@ -831,6 +889,8 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		//folder contents are copied by the recursive call above, with error handling below
 		free(files);
 		files = NULL;
+		free(psu_restore_buff);  //reserved only by a PSU restore's folder level
+		psu_restore_buff = NULL;
 		if (ret < 0) {
 			if ((PM_flag[recurses + 1] == PM_PSU_BACKUP) && (PM_file[recurses + 1] >= 0))
 				genClose(PM_file[recurses + 1]);
@@ -911,6 +971,8 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 
 	folder_exit:  //A folder level that stops before its listing is used, returning 'ret'
 		free(files);
+		free(psu_restore_buff);
+		psu_restore_buff = NULL;
 		if (PM_flag[recurses + 1] == PM_PSU_RESTORE && PM_file[recurses + 1] >= 0) {
 			genClose(PM_file[recurses + 1]);  //The PSU that the file branch opened to restore it
 			PM_file[recurses + 1] = -1;
@@ -1014,33 +1076,7 @@ non_PSU_RESTORE_init:
 	copy_diag.total = size;
 	//Here the output file has been opened, indicated by 'out_fd'
 
-	/* Determine the block size. Since LaunchELF is single-threaded,
-       using a large block size with a slow device will result in an unresponsive UI.
-       To prevent a loss in performance, these values must each be in a multiple of the device's sector/page size.
-       They must also be in multiples of 64, to prevent FILEIO from doing alignment correction in software. */
-	buffSize = COPY_BUFFER_FAST_DEFAULT;  //First assume fast-device buffer size
-	if (!strncmp(out, "mc", 2) || !strncmp(out, "mass", 4) || !strncmp(out, "vmc", 3) || isPcCardCfPath(out))
-		buffSize = 131072;  //Use  128KB if writing to USB/CF (Flash RAM writes) or MC (pretty slow).
-	                        //VMC contents should use the same size, as VMCs will often be stored on USB
-#ifdef MX4SIO
-	else if (!strncmp(out, "mx4sio", 6))
-		buffSize = 131072;  //Use 128KB when writing to MX4SIO (FAT over SIO2).
-#endif
-	else if (!strncmp(in, "mc", 2))
-		buffSize = 262144;  //Use 256KB if reading from MC (still pretty slow)
-#if defined(ETH) || defined(UDPFS)
-	else if (!strncmp(out, "host", 4))
-		buffSize = 393216;  //Use 384KB if writing to HOST (acceptable)
-#endif
-	else if ((!strncmp(in, "mass", 4)) || (!strncmp(in, "host", 4)) || isPcCardCfPath(in)
-#ifdef MX4SIO
-	         || (!strncmp(in, "mx4sio", 6))
-#endif
-	        )
-		buffSize = 524288;  //Use 512KB reading from USB, CF, or HOST (acceptable)
-
-	if (size < (u64)buffSize)
-		buffSize = (int)size;
+	buffSize = copyBufferSize(in, out, size);  //Determine the block size
 
 	if (buffSize == 0) {
 #if FILEOP_TRACE
@@ -1054,7 +1090,12 @@ non_PSU_RESTORE_init:
 	}
 
 	filerCopyDiagStage("Allocating buffer");
-	buff = (char *)memalign(64, buffSize);  //Attempt buffer allocation
+	if (PM_flag[recurses] == PM_PSU_RESTORE) {  //the buffer that the folder level reserved
+		buff = psu_restore_buff;
+		if (buffSize > psu_restore_buff_size)  //only for an entry claiming more than its .psu holds
+			buffSize = psu_restore_buff_size;
+	} else
+		buff = (char *)memalign(64, buffSize);  //Attempt buffer allocation
 	if (buff == NULL) {                     //if allocation fails
 		ret = -ENOMEM;
 		if (PM_flag[recurses] != PM_PSU_BACKUP) {  //a PSU backup's .psu is left to its folder level
@@ -1333,7 +1374,8 @@ copy_file_data_done:
 copy_file_exit:
 	copyDiagFail(ret);
 	free(buff2);
-	free(buff);
+	if (buff != psu_restore_buff)  //that one is freed by the folder level that reserved it
+		free(buff);
 copy_file_exit_mem_err:
 	copyDiagFail(ret);
 #if FILEOP_TRACE

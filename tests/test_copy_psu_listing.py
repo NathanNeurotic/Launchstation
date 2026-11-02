@@ -220,7 +220,7 @@ static void put(const char *p,const void *data,int n){int fd=open(p,O_CREAT|O_TR
 static int exists(const char *p){return !access(p,F_OK);}
 static int entries(const char *p){int n=0;DIR *d=opendir(p);struct dirent *e;if(!d)return -1;while((e=readdir(d)))if(strcmp(e->d_name,".")&&strcmp(e->d_name,".."))n++;closedir(d);return n;}
 static int read_all(const char *p,unsigned char *out,int max){int fd=open(p,O_RDONLY);if(fd<0)return -1;int n=read(fd,out,max);close(fd);return n;}
-static int filled(const char *p,int n,int byte){unsigned char b[4096];if(read_all(p,b,sizeof(b))!=n)return 0;for(int i=0;i<n;i++)if(b[i]!=byte)return 0;return 1;}
+static int filled(const char *p,int n,int byte){static unsigned char b[1<<19];if(read_all(p,b,sizeof(b))!=n)return 0;for(int i=0;i<n;i++)if(b[i]!=byte)return 0;return 1;}
 static void clip(const char *path,const char *name,int attr,int mode){
  yn_answer=1;yn_calls=0;cancel_copy=0;fail_alloc_bytes=0;browser_cut=0;generation=clipIopResetGeneration=1;
  writes=write_fail_at=0;alloc_fail_stage=NULL;
@@ -278,6 +278,22 @@ int main(void){
  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);fail_alloc_bytes=sizeof(FILEINFO);paste("mc1:/");
  assert(strstr(message,"Listing source (-12)")&&!exists("mc1:/BASLUS-00001"));
  settled();
+ /* So does no memory for the files' copy buffer, which is taken before any
+  * question too: the old save stays whole, and no folder is created. */
+ clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);alloc_fail_stage="Allocating buffer";paste("mc0:/");
+ settled();
+ assert(says("Allocating buffer (-12)")&&strstr(message,"Not enough memory")&&!yn_calls);
+ assert(exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00001")==3);
+ clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);alloc_fail_stage="Allocating buffer";paste("mc1:/");
+ settled();
+ assert(says("Allocating buffer (-12)")&&!exists("mc1:/BASLUS-00001"));
+ /* A file bigger than that buffer (128 KB to a memory card) restores through it in chunks. */
+ {static unsigned char big[300000+32];int fd=open("mass:/BIG.psu",O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0);
+  psu_entry(fd,0x8427,3,"BIGSAVE");psu_entry(fd,0x8427,0,".");psu_entry(fd,0x8427,0,"..");psu_entry(fd,0x8497,300000,"BIG.BIN");
+  memset(big,'Z',300000);memset(big+300000,0xFF,32);assert(write(fd,big,sizeof(big))==sizeof(big));close(fd);}
+ clip("mass:/","BIG.psu",0x8497,PM_PSU_RESTORE);paste("mc1:/");
+ assert(!message[0]&&filled("mc1:/BIGSAVE/BIG.BIN",300000,'Z'));
+ settled();remove_tree("mc1:/BIGSAVE");
 
  /* An accepted overwrite replaces the old save. */
  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);paste("mc0:/");
