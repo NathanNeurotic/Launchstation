@@ -25,6 +25,10 @@ same app plus the companions.
                             mc?:/POPSTARTER/usbd.irx and usbhdfsd.irx: copy the
                             pair for your device there WITHOUT the .<mode> suffix
                             (RiptOPL and POPSLoader can do this for you).
+                            POPStarter also needs Sony's POPS_IOX.PAK (and
+                            IOPRP.IMG where your POPStarter build asks for it)
+                            beside POPSTARTER.ELF; they are not included and
+                            cannot be redistributed.
                             UDPFS-NOTICES/ carries the UDPFS driver licences.
   EMBER/                    The Ember PS1 core (ember.elf) with its licence and
                             games/ layout. Point Settings > Launching > Disc &
@@ -59,8 +63,10 @@ LAUNCHSTATION.ELF, and no game, BIOS or key is included.
 Credits for the bundled externals (none of them is Launchstation's work):
   Ember        created by Gageformer. Included unmodified and complete with its
                licence (EMBER/LICENSE-BETA.txt), as that licence permits for a
-               free launcher. Official release page: the link in
-               EMBER/Ember Official Webpage.url (https://github.com/Gageformer/Ember).
+               free launcher. Official release page:
+               https://github.com/Gageformer/Ember/releases (project page:
+               https://github.com/Gageformer/Ember, also the link in
+               EMBER/Ember Official Webpage.url).
   POPStarter   by krHACKen (https://www.psx-place.com/threads/popstarter.19139/).
   Neutrino     by Rick Gaiser (Maximus32) and contributors, AFL-3.0
                (https://github.com/ps2max32/neutrino); the upstream archive

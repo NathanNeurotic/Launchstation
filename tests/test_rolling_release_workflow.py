@@ -46,6 +46,23 @@ assert "scripts/package_kit.py fetch --cache build/kit-externals" in workflow
 assert "scripts/package_kit.py package" in workflow and "--output artifacts/LAUNCHSTATION.zip" in workflow
 assert workflow.index("--output artifacts/LAUNCHSTATION.zip") < workflow.index(marker)
 assert "gh release download latest --repo ps2max32/neutrino" in workflow
+# The kit is optional for publication (CodeRabbit #257): an upstream Neutrino outage
+# or a failed kit check must not block the app ZIPs, PSUs and ELFs. Its steps
+# continue on error, the kit joins the assets only when it exists, and older kits
+# are removed only when this build published its own.
+for step in ("id: neutrino", "id: kit_externals", "id: kit"):
+    block = workflow[workflow.index(step):]
+    block = block[:block.index("        run:")]
+    assert "continue-on-error: true" in block, step
+assert "if: steps.neutrino.outcome == 'success'" in workflow
+assert "if: steps.kit_externals.outcome == 'success'" in workflow
+assert "for package in APP_LAUNCHSTATION.zip APP_LAUNCHSTATION-DS.zip; do" in publish
+assert 'if [ -s artifacts/LAUNCHSTATION.zip ]; then' in publish
+assert 'assets+=("LAUNCHSTATION-${build}.zip")' in publish
+assets_block = publish[publish.index("assets=("):publish.index(")", publish.index("assets=("))]
+assert "LAUNCHSTATION-${build}.zip" not in assets_block.replace("APP_LAUNCHSTATION", "")
+assert '[ "${kit_published}" = 1 ] || stale=0' in publish
+assert publish.index("kit_published=0") < publish.index('[ "${kit_published}" = 1 ] || stale=0')
 assert "LAUNCHSTATION.zip) stale=1" in publish and '"LAUNCHSTATION-${number}.zip"' in publish
 # Every ZIP name ends with the build number, the notes state it, and the previous
 # build's ZIPs are removed only after the release is published.

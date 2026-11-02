@@ -12,6 +12,10 @@ ASSETS = (
     "LAUNCHSTATION.ELF", "LAUNCHSTATION-DS.ELF", "BOOT.ELF", "BOOT2.ELF",
     "LAUNCHSTATION.zip",
 )
+# The full kit depends on an upstream download (the latest Neutrino release) and
+# the pinned externals. When it could not be built, the build still publishes
+# every other asset and the notes say the previous kit stays attached.
+OPTIONAL_ASSETS = ("LAUNCHSTATION.zip",)
 
 
 def published_name(name, version):
@@ -85,19 +89,29 @@ def render(repo, revision, previous, run_id, changes, digests, version=""):
     workflow = f"{base}/actions/runs/{run_id}"
     download = f"{base}/releases/download/latest"
     changelog = "\n".join(changes) or "- Rebuild of the current revision; no new changes."
-    hashes = "\n".join(f"{digests[name]}  {published}" for name, published in zip(ASSETS, names))
+    hashes = "\n".join(f"{digests[name]}  {published}" for name, published in zip(ASSETS, names)
+                       if name in digests)
     heading = (f"**Launchstation build `{version}`** (`{revision[:7]}`). Every ZIP name ends with this build number.\n\n"
                if version else "")
+    if "LAUNCHSTATION.zip" in digests:
+        kit_row = f"| Full kit: standard app + POPS, Ember, Neutrino | [{names[8]}]({download}/{names[8]}) | included | included |\n"
+        kit_note = ("The full kit is laid out like RiptOPL's release ZIP (`APPS/APP_LAUNCHSTATION/`, `APP_LAUNCHSTATION.psu`, "
+                    "`POPS/`, `EMBER/`, `neutrino/`): copy it to the root of a game device. Its `KIT-README.txt` explains "
+                    "each folder; no BIOS or game is included.")
+    else:
+        kit_row = ""
+        kit_note = ("The full kit `LAUNCHSTATION-<build>.zip` was not rebuilt for this build (the Neutrino download or the "
+                    "kit check did not succeed); the previous build's kit stays attached below and holds the same POPS, "
+                    "Ember and Neutrino folders with the previous app build.")
     return f"""{heading}## Downloads
 
 | Version | ZIP | PSU | ELF |
 | --- | --- | --- | --- |
 | Standard | [{names[0]}]({download}/{names[0]}) | [Download]({download}/{names[1]}) | [Download]({download}/{names[4]}) |
 | DS34 USB/Bluetooth controllers | [{names[2]}]({download}/{names[2]}) | [Download]({download}/{names[3]}) | [Download]({download}/{names[5]}) |
-| Full kit: standard app + POPS, Ember, Neutrino | [{names[8]}]({download}/{names[8]}) | included | included |
-
+{kit_row}
 Extract the ZIP and launch its ELF, or install the PSU with **PSU Paste**.
-The full kit is laid out like RiptOPL's release ZIP (`APPS/APP_LAUNCHSTATION/`, `APP_LAUNCHSTATION.psu`, `POPS/`, `EMBER/`, `neutrino/`): copy it to the root of a game device. Its `KIT-README.txt` explains each folder; no BIOS or game is included.
+{kit_note}
 For boot-path installs, [BOOT.ELF]({download}/{names[6]}) and [BOOT2.ELF]({download}/{names[7]}) are copies of the standard ELF.
 Existing user settings are retained. The built-in updater preserves your controller version.
 
@@ -151,6 +165,8 @@ def main():
     for name in ASSETS:
         asset = args.assets_dir / name
         if not asset.is_file() or asset.stat().st_size == 0:
+            if name in OPTIONAL_ASSETS:
+                continue
             parser.error(f"missing or empty package: {asset}")
         with asset.open("rb") as stream:
             digests[name] = hashlib.file_digest(stream, "sha256").hexdigest()

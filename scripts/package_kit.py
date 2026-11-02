@@ -316,6 +316,11 @@ def extract_neutrino(source, destination):
                 archive.extractall(destination)
     else:
         raise ValueError(f"unsupported Neutrino source: {source}")
+    # Whatever the source and the extractor, nothing in the staged tree may be a
+    # link: the required-file checks and the kit digests follow links.
+    for path in sorted(destination.rglob("*")):
+        if path.is_symlink():
+            raise ValueError(f"Neutrino archive contains a link: {path.relative_to(destination).as_posix()}")
     for name in NEUTRINO_REQUIRED:
         path = destination / name
         if not path.is_file() or not path.stat().st_size:

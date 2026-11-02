@@ -185,6 +185,35 @@ with tempfile.TemporaryDirectory(prefix="kit-package-") as tmp:
         assert built["neutrino"]["smb"] is False and built["neutrino"]["version"] is None
     expect(ValueError, kit.package, tmp / "artifacts", cache, neutrino_tree(tmp / "no_core", drop=("neutrino.elf",)),
            tmp / "bad" / "k.zip", "a" * 40, 1791500000, "284", manifest_path, log=lambda *_: None)
+    # A link the pre-extraction listing misses is still refused by the scan of the
+    # extracted tree (CodeRabbit #257): build a .7z holding a symlink, then hide it
+    # from the py7zr listing the way a 7z listing without "Symbolic Link" would.
+    try:
+        import py7zr
+    except ImportError:
+        py7zr = None
+    if py7zr is not None and not (shutil.which("7z") or shutil.which("7za") or shutil.which("7zz")):
+        linked = neutrino_tree(tmp / "linked")
+        (linked / "config/secret.toml").symlink_to("system.toml")  # inside the tree, so py7zr extracts it
+        with py7zr.SevenZipFile(tmp / "neutrino_link.7z", "w") as archive:
+            for item in sorted(linked.rglob("*")):
+                if item.is_symlink() or item.is_file():
+                    archive.write(item, item.relative_to(linked).as_posix())
+        original_list = py7zr.SevenZipFile.list
+        def hidden_links(self):
+            entries = original_list(self)
+            for entry in entries:
+                entry.is_symlink = False
+            return entries
+        py7zr.SevenZipFile.list = hidden_links
+        try:
+            expect(ValueError, kit.extract_neutrino, tmp / "neutrino_link.7z", tmp / "linked_out")
+        finally:
+            py7zr.SevenZipFile.list = original_list
+    folder_link = neutrino_tree(tmp / "folder_link")
+    (folder_link / "config/secret.toml").symlink_to("/etc/hostname")
+    expect(ValueError, kit.package, tmp / "artifacts", cache, folder_link,
+           tmp / "bad" / "k.zip", "a" * 40, 1791500000, "284", manifest_path, log=lambda *_: None)
     with zipfile.ZipFile(tmp / "escape.zip", "w") as archive:
         for name in kit.NEUTRINO_REQUIRED:
             archive.writestr(name, b"\x7fELF x")
