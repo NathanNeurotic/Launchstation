@@ -33,7 +33,7 @@ static int dir_calls, dir_fail_on;
 static Socket sockets[MAX_SOCKETS];
 static int next_socket = 30, connect_error;
 static iop_device_t *devices[FS_IOMANX_DEVICES];
-static iop_device_t usb, mass, mc, mmce, pfs, duplicate_usb, ata;
+static iop_device_t usb, mass, mc, mmce, pfs, duplicate_usb, ata, ilink;
 static unsigned char payload[PAYLOAD_SIZE];
 static Node *find(iop_device_t *device, int unit, const char *path)
 {
@@ -434,6 +434,7 @@ static void setup(void)
 	mmce = (iop_device_t){.name = "mmce", .type = IOP_DT_FS | IOP_DT_FSEXT, .ops = &ops};
 	pfs = (iop_device_t){.name = "pfs", .type = IOP_DT_FS | IOP_DT_FSEXT, .ops = &ops};
 	ata = (iop_device_t){.name = "ata", .type = IOP_DT_FS | IOP_DT_FSEXT, .ops = &ops};
+	ilink = (iop_device_t){.name = "ilink", .type = IOP_DT_FS | IOP_DT_FSEXT, .ops = &ops};
 	duplicate_usb = usb;
 	devices[0] = &mass;
 	devices[2] = &usb;
@@ -442,6 +443,7 @@ static void setup(void)
 	devices[6] = &mc;
 	devices[9] = &mmce;
 	devices[14] = &ata;
+	devices[20] = &ilink;
 	devices[31] = &pfs;
 	add(&usb, 0, "/", 1, NULL, 0);
 	add(&usb, 1, "/", 1, NULL, 0);
@@ -455,6 +457,7 @@ static void setup(void)
 	add(&mmce, 1, "/", 1, NULL, 0);
 	add(&pfs, 0, "/", 1, NULL, 0);
 	add(&pfs, 1, "/", 1, NULL, 0);
+	add(&ilink, 0, "/", 1, NULL, 0);
 	add(&pfs, 0, "/file.elf", 0, payload, 7);
 	next_socket = 30;
 	connect_error = 0;
@@ -485,17 +488,20 @@ static void test_paths_and_listing(void)
 	oversized[sizeof(oversized) - 1] = 0;
 	assert(FileSystem_BuildPath(path, "/", oversized) == -ENAMETOOLONG);
 	assert(FileSystem_ScanDevice("usb") == &usb);
+	/* Launchstation browses i.LINK BDM storage as ilink:, so FTP lists it too. */
+	assert(FileSystem_ScanDevice("ilink") == &ilink);
 	assert(!FileSystem_ScanDevice("usb-extra"));
 	assert(!FileSystem_ScanDevice("mass"));
 	assert(!FileSystem_OpenDir(&ctx, "/"));
-	int seen_usb = 0, seen_pfs = 0, count = 0;
+	int seen_usb = 0, seen_pfs = 0, seen_ilink = 0, count = 0;
 	while (FileSystem_ReadDir(&ctx, &info) > 0) {
 		assert(strcmp(info.m_Name, "mass"));
 		seen_usb += !strcmp(info.m_Name, "usb");
 		seen_pfs += !strcmp(info.m_Name, "pfs");
+		seen_ilink += !strcmp(info.m_Name, "ilink");
 		count++;
 	}
-	assert(count == 5 && seen_usb == 1 && seen_pfs == 1);
+	assert(count == 6 && seen_usb == 1 && seen_pfs == 1 && seen_ilink == 1);
 	assert(!FileSystem_OpenDir(&ctx, "/usb"));
 	count = 0;
 	while (FileSystem_ReadDir(&ctx, &info) > 0) {
