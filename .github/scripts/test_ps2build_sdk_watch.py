@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from unittest import mock
 import urllib.error
+import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / ".github/scripts"))
@@ -206,7 +207,7 @@ class WatchTests(unittest.TestCase):
                 raise http_error(request.full_url, 503)
             return io.BytesIO(b'{"tag_name": "v9"}')
 
-        with mock.patch.object(watch.urllib.request, "urlopen", urlopen), mock.patch.object(watch, "sleep") as slept:
+        with mock.patch.object(watch.OPENER, "open", urlopen), mock.patch.object(watch, "sleep") as slept:
             self.assertEqual(watch.latest_official("sdk-core"), "v9")
         self.assertEqual(len(calls), 3)  # one try and two retries, never more
         self.assertEqual([c.args[0] for c in slept.call_args_list], list(watch.RETRY_DELAYS))
@@ -219,10 +220,45 @@ class WatchTests(unittest.TestCase):
             calls.append(request)
             raise http_error(request.full_url, 404)
 
-        with mock.patch.object(watch.urllib.request, "urlopen", missing), mock.patch.object(watch, "sleep"):
+        with mock.patch.object(watch.OPENER, "open", missing), mock.patch.object(watch, "sleep"):
             with self.assertRaises(urllib.error.HTTPError):
                 watch.latest_official("gone")
         self.assertEqual(len(calls), 1)
+
+    def test_the_mirror_token_never_follows_a_redirect_to_another_host(self):
+        # A mirror asset download answers with a redirect to GitHub's storage host.
+        handler = watch.TokenStaysOnHost()
+        asset = "https://api.github.com/repos/NathanNeurotic/ps2build-mirror/releases/assets/1"
+
+        def redirect(to):
+            request = urllib.request.Request(asset, headers={"Authorization": "Bearer t", "User-Agent": "u"})
+            return handler.redirect_request(request, io.BytesIO(), 302, "Found", {}, to)
+
+        storage = redirect("https://release-assets.githubusercontent.com/github-production-release-asset/1?sig=s")
+        self.assertFalse(storage.has_header("Authorization"))
+        self.assertEqual(storage.get_header("User-agent"), "u")
+        self.assertFalse(redirect("https://api.github.com:8443/repos/x").has_header("Authorization"))
+        self.assertEqual(redirect("https://api.github.com/repos/x").get_header("Authorization"), "Bearer t")
+        with self.assertRaises(ValueError):
+            redirect("http://api.github.com/repos/x")  # never from https down to http
+        self.assertIn(watch.TokenStaysOnHost, [type(h) for h in watch.OPENER.handlers])
+
+    def test_the_mirror_token_is_sent_only_over_https(self):
+        opened = []
+
+        def open_url(request, timeout):
+            opened.append(request)
+            return io.BytesIO(b"[]")
+
+        with mock.patch.dict("os.environ", {"PS2BUILD_SDK_MIRROR_TOKEN": "t"}), \
+                mock.patch.object(watch.OPENER, "open", open_url):
+            watch.mirror_get("/repos/o/m/releases")
+            self.assertEqual(opened[0].get_header("Authorization"), "Bearer t")
+            opened.clear()
+            with mock.patch.object(watch, "MIRROR_API", "http://api.github.com"):
+                with self.assertRaises(ValueError):
+                    watch.mirror_get("/repos/o/m/releases")
+        self.assertEqual(opened, [])  # refused before any request
 
     def test_bad_tags_from_the_release_api_are_refused(self):
         with mock.patch.object(watch, "get", return_value=b'{"tag_name": "v1; rm -rf /"}'):

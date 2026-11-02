@@ -109,12 +109,35 @@ def problems(values):
     return found
 
 
+class TokenStaysOnHost(urllib.request.HTTPRedirectHandler):
+    """Follows redirects, but sends the Authorization header only to the host it was meant for.
+
+    urllib copies every header to the redirected request, and a mirror asset download is a redirect to
+    GitHub's storage host, which has no use for the mirror token. A redirect that changes the scheme, the
+    host or the port drops the header, and a redirect from https to anything else is refused."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new is None:
+            return None
+        old, target = urllib.parse.urlsplit(req.full_url), urllib.parse.urlsplit(new.full_url)
+        if old.scheme == "https" and target.scheme != "https":
+            fp.close()
+            raise ValueError(f"{req.full_url}: refusing a redirect from https to {target.scheme or 'no scheme'}")
+        if (target.scheme, target.hostname, target.port) != (old.scheme, old.hostname, old.port):
+            new.remove_header("Authorization")
+        return new
+
+
+OPENER = urllib.request.build_opener(TokenStaysOnHost)
+
+
 def get(url, headers=None):
     """GET url and return the body. Retries a network error, a 429 or a 5xx twice; a 4xx is final."""
     for attempt, delay in enumerate((*RETRY_DELAYS, None)):
         request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, **(headers or {})})
         try:
-            with urllib.request.urlopen(request, timeout=60) as response:
+            with OPENER.open(request, timeout=60) as response:
                 return response.read()
         except urllib.error.HTTPError as error:
             if delay is None or (error.code < 500 and error.code != 429):
@@ -144,6 +167,8 @@ def mirror_get(path, accept="application/vnd.github+json"):
     headers = {"Accept": accept, "X-GitHub-Api-Version": "2022-11-28"}
     token = os.environ.get("PS2BUILD_SDK_MIRROR_TOKEN")
     if token:
+        if urllib.parse.urlsplit(MIRROR_API).scheme != "https":
+            raise ValueError(f"{MIRROR_API} is not an https URL, and the mirror token is sent only over https")
         headers["Authorization"] = "Bearer " + token
     return get(MIRROR_API + path, headers)
 
