@@ -464,7 +464,7 @@ int mcLzariDecode(const uint8_t *src, uint32_t src_len, uint8_t *out, uint32_t o
 
 int mcSaveFromMax(const uint8_t *buf, uint32_t len, const uint8_t stamp[8], McSaveData *out)
 {
-	static const char magic[12] = "Ps2PowerSave";
+	static const char magic[] = "Ps2PowerSave"; /* 12 bytes, no NUL on disk */
 	uint8_t *raw;
 	uint32_t clen, dirlen, length, pos, i;
 	uint64_t total = 0;
