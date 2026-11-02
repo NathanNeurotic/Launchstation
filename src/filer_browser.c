@@ -2141,8 +2141,11 @@ static void submenu_func_GetSize(char *mess, char *path, FILEINFO *files)
 //--------------------------------------------------------------
 static void subfunc_Paste(char *mess, char *path)
 {
+	/* The items that copy() kept at the destination, writing nothing
+	 * (COPY_KEPT_DESTINATION): a Move leaves their sources, still cut. */
+	static char paste_kept[MAX_ENTRY];
 	char tmp[MAX_PATH], tmp1[MAX_PATH];
-	int i, ret = -1, trace_vmc_paste;
+	int i, kept, ret = -1, trace_vmc_paste;
 
 	filerCopyDiagBegin(clipPath, path);
 	written_size = 0;
@@ -2192,10 +2195,13 @@ static void subfunc_Paste(char *mess, char *path)
 			       ret, clipPath, path, clipFiles[i].name, i + 1, nclipFiles, PasteMode, browser_cut);
 			break;
 		}
+		paste_kept[i] = (ret == COPY_KEPT_DESTINATION);
 	}
 	if ((ret >= 0) && browser_cut) {
 		filerCopyDiagBegin(clipPath, path);
 		for (i = 0; i < nclipFiles; i++) {
+			if (paste_kept[i])  //nothing was written for it, so its source is all there is
+				continue;
 			if (filerConfirmExploitDelete(clipPath, &clipFiles[i]) < 0) {
 				ret = -1;
 				break;
@@ -2216,8 +2222,20 @@ finished:
 		filerCopyDiagFormat(mess, MAX_PATH, ret);
 		browser_pushed = FALSE;
 	} else {
-		if (browser_cut)
-			nclipFiles = 0;
+		if (browser_cut) {  //what was moved leaves the clipboard, what was kept stays cut
+			for (i = kept = 0; i < nclipFiles; i++)
+				if (paste_kept[i])
+					clipFiles[kept++] = clipFiles[i];
+			nclipFiles = kept;
+			if (kept) {
+				i = sprintf(mess, "%s", clipFiles[0].name);
+				if (kept > 1)
+					i += sprintf(mess + i, " (and %d more)", kept - 1);
+				sprintf(mess + i, " was not moved\n%s",
+				        PasteMode == PM_PSU_BACKUP ? "A backup with that name already exists." : "It is already at the destination.");
+				browser_pushed = FALSE;
+			}
+		}
 		markMx4sioDestinationAfterWrite(path);
 	}
 	browser_cd = TRUE;

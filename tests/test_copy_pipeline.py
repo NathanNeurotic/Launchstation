@@ -51,6 +51,7 @@ typedef uint8_t u8;typedef uint16_t u16;typedef uint32_t u32;typedef uint64_t u6
 #define PM_PSU_BACKUP 1
 #define PM_PSU_RESTORE 2
 #define PM_RENAME 3
+#define COPY_KEPT_DESTINATION 1
 #define TRANSFER_STACK_READY 0
 #define TRANSFER_STACK_INCOMPATIBLE -2
 #define COPY_BUFFER_FAST_DEFAULT 0x100000

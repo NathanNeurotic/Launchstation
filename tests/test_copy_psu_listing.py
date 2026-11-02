@@ -6,6 +6,8 @@ at the destination. When that allocation fails, an older PSU backup or save
 must be left exactly as it was, and that level creates no folder. Every early
 exit frees the listing, and a PSU restore that stops early closes its PSU. A
 file whose first entry is not a folder is not a PSU and is refused and closed.
+A Move deletes only what was copied: an item that copy() kept at the
+destination (a dated PSU name already taken, or the file itself) stays, cut.
 
 Drivers are replaced by POSIX files; libmc and the IOP are not emulated.
 """
@@ -61,6 +63,7 @@ typedef uint8_t u8;typedef uint16_t u16;typedef uint32_t u32;typedef uint64_t u6
 #define PM_PSU_BACKUP 1
 #define PM_PSU_RESTORE 2
 #define PM_RENAME 3
+#define COPY_KEPT_DESTINATION 1
 #define TRANSFER_STACK_READY 0
 #define TRANSFER_STACK_INCOMPATIBLE -2
 #define COPY_BUFFER_FAST_DEFAULT 0x100000
@@ -134,12 +137,13 @@ static int DashIsActive(void){return 1;}
 static int DashFileProgress(const char *a,const char *b,u64 r,u64 t){(void)a;(void)b;(void)r;(void)t;return 1;}
 static int DashFileTransferChunk(void (*run)(void *),void *arg){run(arg);return 1;}
 static void nonDialog(char *s){(void)s;}
-static int keyboard(char *s,int n){(void)s;(void)n;return 0;}
+/* The new name typed for a pasted item (PM_RENAME), or none. */
+static const char *typed;
+static int keyboard(char *s,int n){(void)n;if(!typed)return 0;strcpy(s,typed);return (int)strlen(s);}
 static int isPcCardCfPath(const char *s){(void)s;return 0;}
 static int isPcCardCfOnline(void){return 1;}
 static void ensureMemoryCardPortAccessible(int p){assert(p==0||p==1);}
 static char *makeHostPath(char *d,char *s){if(d!=s)strcpy(d,s);return d;}
-static void genLimObjName(char *p,int reserve){(void)p;(void)reserve;}
 static int genOpen(const char *p,int flags){int fd=open(p,flags,0600);if(fd<0)return -errno;assert(fd<1024);fd_open[fd]=1;handles++;return fd;}
 static int genClose(int fd){if(fd<0||fd>=1024||!fd_open[fd]){double_closes++;return -EBADF;}fd_open[fd]=0;handles--;return close(fd)?-errno:0;}
 static s64 genLseek(int fd,s64 n,int whence){assert(fd_open[fd]);return lseek(fd,n,whence);}
@@ -202,6 +206,7 @@ code += 'static ' + function(hdd, 'int getHddParty(').replace('int getHddParty('
 code += 'static ' + function(hdd, 'int getHddDVRPParty(').replace('int getHddDVRPParty(', 'int real_getHddDVRPParty(', 1)
 code += 'static ' + function((root / 'src/filer_mount.c').read_text(), 'int getDVRPPartyMountIndex(')
 code += 'static ' + function((root / 'src/filer_fileops.c').read_text(), 'int genCanRenamePath(')
+code += 'static ' + function((root / 'src/filer_fileops.c').read_text(), 'void genLimObjName(')
 reader = function(filer, 'int readGENERIC(const char *path, FILEINFO *info, int max)\n{')
 code += 'static ' + reader
 code += 'static int getDir(const char *p,FILEINFO *out){return readGENERIC(p,out,MAX_ENTRY-2);}\n'
@@ -235,12 +240,13 @@ static int same(const char *p,const void *data,int n){static unsigned char b[819
 static int holds(const char *p,const char *text){return same(p,text,strlen(text));}
 static void clip(const char *path,const char *name,int attr,int mode){
  yn_answer=1;yn_calls=0;cancel_copy=0;fail_alloc_bytes=0;browser_cut=0;generation=clipIopResetGeneration=1;
- writes=write_fail_at=0;alloc_fail_stage=NULL;renames=rename_fail=0;
+ writes=write_fail_at=0;alloc_fail_stage=NULL;renames=rename_fail=0;typed=NULL;
  party_calls=party_fail_at=mount_calls=mount_fail_at=0;memset(mount_slot,0,sizeof(mount_slot));
  protected_folder=0;modify_answer=1;modify_calls=delete_questions=delete_fail=0;
  PasteMode=mode;strcpy(clipPath,path);nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));
  strcpy(clipFiles[0].name,name);clipFiles[0].stats.AttrFile=attr;
 }
+static void add(const char *name,int attr){strcpy(clipFiles[nclipFiles].name,name);clipFiles[nclipFiles++].stats.AttrFile=attr;}
 static void paste(const char *destination){message[0]=0;subfunc_Paste(message,(char *)destination);}
 /* The failure message has this text; when it does not, it is shown. */
 static int says(const char *text){if(strstr(message,text))return 1;fprintf(stderr,"message: %s\n",message);return 0;}
@@ -456,6 +462,27 @@ int main(void){
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("mass:/");
  assert(!message[0]&&read_all("mass:/SAVEDIR_0000-00-00_00-00-00.psu",now,sizeof(now))==4);
  settled();
+ /* Moving the save there (Cut, then Create PSU) writes no backup either, so
+  * the save stays where it was, still cut, and the user is told why. Moved
+  * with other saves, it is the only one left: they are backed up and gone. */
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);browser_cut=1;paste("mass:/");
+ settled();
+ assert(says("SAVEDIR was not moved\nA backup with that name already exists."));
+ assert(entries("mc0:/SAVEDIR")==2&&holds("mass:/SAVEDIR_0000-00-00_00-00-00.psu","kept"));
+ assert(nclipFiles==1&&!strcmp(clipFiles[0].name,"SAVEDIR")&&browser_cut);
+ mkdir("mc0:/FIRST",0700);put("mc0:/FIRST/F.BIN","f",1);mkdir("mc0:/LAST",0700);put("mc0:/LAST/L.BIN","l",1);
+ clip("mc0:/","FIRST",0x8427,PM_PSU_BACKUP);add("SAVEDIR",0x8427);add("LAST",0x8427);browser_cut=1;paste("mass:/");
+ settled();
+ assert(says("SAVEDIR was not moved\n")&&entries("mc0:/SAVEDIR")==2&&nclipFiles==1&&!strcmp(clipFiles[0].name,"SAVEDIR"));
+ assert(!exists("mc0:/FIRST")&&exists("mass:/FIRST_0000-00-00_00-00-00.psu"));
+ assert(!exists("mc0:/LAST")&&exists("mass:/LAST_0000-00-00_00-00-00.psu"));
+ /* With more than one left, the first is named and the others counted. */
+ mkdir("mc0:/FIRST",0700);put("mc0:/FIRST/F.BIN","f",1);
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);add("FIRST",0x8427);browser_cut=1;paste("mass:/");
+ settled();
+ assert(says("SAVEDIR (and 1 more) was not moved\n")&&entries("mc0:/SAVEDIR")==2&&holds("mc0:/FIRST/F.BIN","f"));
+ assert(nclipFiles==2&&!strcmp(clipFiles[1].name,"FIRST"));
+ remove_tree("mc0:/FIRST");
  config.PSU_DateNames=config.PSU_NoOverwrite=0;
  /* A subfolder cannot go into a PSU; the backup stops and frees its listing.
   * A folder named like the save at the destination must not let the
@@ -482,8 +509,28 @@ int main(void){
  clip("udpfs:/","TOP",0x8427,PM_NORMAL);modify_answer=-1;paste("mc1:/");
  assert(strstr(message,"Creating directory (-1)")&&yn_calls==1&&modify_calls==1);
  settled();
+
+ /* A Move onto the file itself writes nothing, so it must not delete it: here
+  * through a new name that names the same file, and through one that does
+  * once it is cut to fit the memory card's 32 characters. */
+ mkdir("mass:/DIR",0700);put("mass:/DIR/M.BIN","m",1);
+ clip("mass:/DIR/","M.BIN",0x8497,PM_RENAME);typed="DIR/M.BIN";browser_cut=1;paste("mass:/");
+ settled();
+ assert(says("M.BIN was not moved\nIt is already at the destination.")&&holds("mass:/DIR/M.BIN","m")&&nclipFiles==1);
+ mkdir("mc1:/D",0700);put("mc1:/D/ABCDEFGHIJKLMNOPQRSTUVWXYZ012345","n",1);
+ clip("mc1:/D/","ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",0x8497,PM_RENAME);typed="D/ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456";
+ browser_cut=1;paste("mc1:/");
+ settled();
+ assert(says("ABCDEFGHIJKLMNOPQRSTUVWXYZ012345 was not moved\nIt is already at the destination."));
+ assert(holds("mc1:/D/ABCDEFGHIJKLMNOPQRSTUVWXYZ012345","n")&&nclipFiles==1);
+ /* So a copy is never mistaken for one: copy() returns 0 for a file it copied,
+  * here to a memory card, after which its result held an attribute request. */
+ clip("udpfs:/TOP/","F.BIN",0x8497,PM_NORMAL);PM_flag[0]=PM_NORMAL;PM_file[0]=-1;
+ assert(copy("mc1:/",clipPath,&clipFiles[0],0)==0&&filled("mc1:/F.BIN",1,'y'));
+ settled();
  puts("PASS: PSU restore and backup, and folder pastes, keep old saves and backups when memory runs out "
-      "or a question is declined, free every listing, close every PSU and refuse files that are not PSUs");
+      "or a question is declined, free every listing, close every PSU and refuse files that are not PSUs, "
+      "and a Move deletes no source that it did not copy");
  return 0;
 }
 '''

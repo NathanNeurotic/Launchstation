@@ -631,7 +631,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 	if (!strcmp(in, out)) {
 		if (PSU_restart_f)  //the first pass found them different: a mapping changed under the open .psu
 			return copyMapFailed(recurses);
-		return 0;  //if in and out are identical our work is done.
+		return COPY_KEPT_DESTINATION;  //in and out are the same: nothing to copy, nor for a Move to delete
 	}
 
 #if FILEOP_TRACE
@@ -717,7 +717,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 				if (0 <= (out_fd = genOpen(tmp, FIO_O_RDONLY))) {  //Name conflict ?
 					genClose(out_fd);
 					out_fd = -1;
-					ret = 0;
+					ret = COPY_KEPT_DESTINATION;  //that backup stays, so a Move keeps the save too
 					goto folder_exit;
 				}
 			}
@@ -1061,7 +1061,7 @@ non_PSU_RESTORE_init:
 			makeHostPath(out, out);
 #endif
 		genLimObjName(out, 0);                                //Limit dest file name
-		if (!strcmp(in, out)) { ret = 0; goto copy_file_exit; }
+		if (!strcmp(in, out)) { ret = COPY_KEPT_DESTINATION; goto copy_file_exit; }
 		filerCopyDiagStage("Opening destination");
 		dummy = genRemove(out);  // Upstream: remove the old file before creating its replacement.
 		out_fd = genOpen(out, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT);
@@ -1371,6 +1371,7 @@ copy_file_data_done:
 			dummy = fileXioChStat(out, &iox_stat, ret);
 		}
 	}
+	ret = 0;  //the file was copied: 'ret' only held the attribute requests above
 
 //The code below is also used for all errors in copying a file,
 //but those cases are distinguished by a negative value in 'ret'
