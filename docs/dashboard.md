@@ -38,7 +38,7 @@ Also in the File Browser menu, as in the classic browser:
   session and is not written to a config file.
 * *Sort by*: type (default: folders, executables, text files, then
   everything else by extension and name), as stored, name, game title,
-  size, date-time or kind, then ascending or descending (Type has no
+  size, date-time or kind, then ascending or descending (As stored and Type have no
   direction). Folders always stay first, and HDD partition lists keep the
   drive's order.
 * *Bookmarks...*: the PathPad. Jump to a bookmarked folder, bookmark the
@@ -575,9 +575,10 @@ such builds.
 
 Detailed rows keep full date/time precision, including seconds. Size and
 date-time are laid out as independent columns so the timestamp does not have
-to be shortened to fit. The dashboard browser can sort by name, game title,
-size, date-time, or kind, in ascending or descending order; folders remain
-grouped first for predictable navigation.
+to be shortened to fit. The dashboard browser can sort by type, as stored, name, game
+title, size, date-time, or kind; all but type and as stored also take
+ascending or descending order. Folders remain grouped first for predictable
+navigation.
 
 Demand-loaded storage such as the internal APA HDD and iLink/FireWire is
 selectable while its state is `Not checked`. Opening it runs the existing

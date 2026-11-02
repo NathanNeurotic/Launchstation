@@ -31,7 +31,7 @@ c = r"""
 #define DI_USB 1
 #define DI_NETWORK 2
 #define DI_SDCARD 3
-#define DI_SHARE 4
+#define DI_SHARE 5
 #define DI_WARNING 4
 
 typedef struct {
@@ -124,7 +124,7 @@ int main(void) {
     DashDevice mmce = {DI_SDCARD, "mmce0:", "MMCE Slot 1", "No MMCE storage found"};
     DashDevice ilink = {DI_SDCARD, "ilink:", "iLink / FireWire", "No iLink storage found"};
     DashDevice usb = {DI_USB, "usb0:", "MASS", "Not connected"};
-    DashDevice udpfs = {DI_NETWORK, "udpfs:", "UDPFS", "Not connected"};
+    DashDevice udpfs = {DI_SHARE, "udpfs:", "UDPFS", "Not connected"};
     DashDevice cf = {DI_SDCARD, "cf0:", "PC CARD CF", "CF card absent"};
     deviceNotFound(&mmce);
     assert(strstr(last_body, "MMCE Slot 1"));
@@ -134,9 +134,13 @@ int main(void) {
     assert(strstr(last_body, "USB storage device"));
     deviceNotFound(&udpfs);
     assert(strstr(last_body, "network share"));
+    assert(strstr(last_body, "UDPFS server"));
+    DashDevice smb = {DI_SHARE, "smb:", "SMB share", "Not connected"};
+    deviceNotFound(&smb);
+    assert(strstr(last_body, "SMB server") && !strstr(last_body, "UDPFS"));
     deviceNotFound(&cf);
     assert(strstr(last_body, "CF card absent"));
-    assert(modal_calls == 5);
+    assert(modal_calls == 6);
 
     assert(startSync("absent", "Checking absent device") == 0);
     assert(startSync("ready", "Checking present device") == 1);

@@ -1204,9 +1204,12 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 					icon = d->icon;
 					label = d->name;
 					detail = d->status;
-					/* shown as the Devices tab shows it: USB units as massN:/ */
-					if (!strncmp(d->mount, "usb", 3) && d->mount[3] >= '0' && d->mount[3] <= '9' && d->mount[4] == ':') {
-						snprintf(mount_buf, sizeof(mount_buf), "mass%c:/", d->mount[3]);
+					/* shown as the Devices tab shows it: USB units as massN:/, the
+					 * aggregate usb: row as mass0:/ */
+					if (d->icon == DI_USB && !strncmp(d->mount, "usb", 3)) {
+						char unit = (d->mount[3] >= '0' && d->mount[3] <= '9' && d->mount[4] == ':') ? d->mount[3] : '0';
+
+						snprintf(mount_buf, sizeof(mount_buf), "mass%c:/", unit);
 						mount = mount_buf;
 					} else
 						mount = d->mount[0] ? d->mount : NULL;

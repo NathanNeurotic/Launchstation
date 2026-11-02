@@ -401,7 +401,7 @@ static const SetItem system_items[] = {
     {ST_ACTION, S_CLOCK_HARDWARE, "Use PS2 hardware clock", "Stop the software clock and use the console RTC again."},
     {ST_ACTION, S_CLOCK_MANUAL, "Set PS2 clock manually...", "Enter the local date and time as YYYY-MM-DD HH:MM:SS; the hardware RTC is written and verified."},
     {ST_CHOICE, S_TEMP_UNITS, "PS2 Temperature Units (50K and later)", "Celsius or Fahrenheit beside the clock. Hidden automatically when the console has no supported temperature sensor."},
-    {ST_PATH, S_CNF_PATH, "Configuration folder", "Load and save LAUNCHELF.CNF here. Search order: the folder Launchstation started from, then mcN:/SYS-CONF/ (the launch card's slot first, then the other); once loaded, this folder replaces the start folder for every later load and save."},
+    {ST_PATH, S_CNF_PATH, "Configuration folder", "Optional save target for LAUNCHELF.CNF. Loading searches the start folder, then mcN:/SYS-CONF/ on the launch card, then the other card."},
     {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
     {ST_ACTION, S_INTRO, "Show welcome message again", "Show the introduction the next time the dashboard checks for it."},
 };

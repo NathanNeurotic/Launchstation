@@ -41,7 +41,8 @@ static void deviceNotFound(const DashDevice *d)
 	if (d->icon == DI_USB)
 		snprintf(body, sizeof(body), "No USB storage device was found. Connect a USB drive and try again.");
 	else if (d->icon == DI_NETWORK || d->icon == DI_SHARE)
-		snprintf(body, sizeof(body), "The network share could not be reached. Check the cable, IP settings and that the UDPFS server is running.");
+		snprintf(body, sizeof(body), "The network share could not be reached. Check the cable, IP settings and that the %s server is running.",
+		         !strncmp(d->mount, "smb", 3) ? "SMB" : "UDPFS");
 	else if (isPcCardCfPath(d->mount))
 		snprintf(body, sizeof(body), "%s: %s", d->name, d->status[0] ? d->status : "CF card not detected or incompatible.");
 	else
