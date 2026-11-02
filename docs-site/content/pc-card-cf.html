@@ -34,7 +34,7 @@
 <li><b>No launching.</b> ELF/KELF, Neutrino ISOs, POPStarter VCDs, Ember games and <em>Start with arguments</em> are blocked from <code>cf:</code> with &ldquo;Direct launch unsupported&rdquo; or &ldquo;Launching executables or game images directly from PC CARD CF is not supported yet&rdquo;. Virtual memory card mounting from CF is disabled too.</li>
 <li><b>One bus owner.</b> The CF driver owns the PCMCIA/DEV9 bus. It refuses to start if HDD, exFAT HDD, network or UDPFS drivers are resident, and those loaders refuse once CF owns the bus. Only a real IOP reset (Tools &gt; Reboot IOP, or a stack change) releases the reservation.</li>
 <li><b>No safe-remove.</b> The driver can be powered off for reset or launch, but that is not an eject: filesystem state is not flushed for removal and a same-session re-probe is not supported. Do not remove the card while Launchstation is using it; power off or reboot first.</li>
-<li><b>Transfers with DEV9 devices are refused.</b> Copying between CF and internal HDD, exFAT HDD, UDPFS, <code>host:</code> or PSX flash/DVR shows &ldquo;Incompatible drivers to perform action&rdquo;. Use USB or a memory card as the middle step.</li>
+<li><b>Transfers with DEV9 devices are refused.</b> Copying between CF and internal HDD, exFAT HDD, SMB, UDPFS, <code>host:</code> or PSX flash/DVR shows &ldquo;Incompatible drivers to perform action&rdquo;. Use USB or a memory card as the middle step.</li>
 <li><b>Never auto-started</b> and never powered in safe mode.</li>
 <li>Before any ELF launch, reset or Ember hand-off the CF driver is asked to power down; if that request fails the signer, Ember and ELF hand-offs abort rather than continue.</li>
 </ul>

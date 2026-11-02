@@ -54,11 +54,12 @@ In file pickers (Settings, launch keys) R3 chooses the highlighted file as
 a `uLE:/` path, relative to Launchstation's own folder, like the classic R3;
 elsewhere R3 opens that folder.
 
-The cursor never waits for the memory card or a slow device: file reads
-and writes (artwork, saves, library scans, folder listings) run on a
-background thread, and a small indicator above the button hints shows
-what is being worked on. Starting a device's drivers happens in the
-foreground behind a short loading overlay.
+File reads and writes (artwork, saves, library scans, folder listings)
+run on a background thread, and a small indicator above the button hints
+shows what is being worked on. Starting a device's drivers happens in the
+foreground behind a short loading overlay, and synchronous device
+initialization and IOP requests can still block on slow or failing
+hardware.
 
 ## Sections
 
