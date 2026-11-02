@@ -43,6 +43,8 @@ jobs:
           python3 tests/test_copy_short_io.py
           python3 tests/test_copy_pipeline.py
           python3 tests/test_udpfs_directory_errors.py
+          python3 tests/test_copy_psu_listing.py
+          python3 tests/test_stack_realign_check.py
           python3 tests/test_smb_shares.py
           python3 tests/test_copy_test_pack.py
           python3 tests/test_transfer_stack_preflight.py
@@ -300,6 +302,14 @@ jobs:
             build/obj/wle_igr/wle_igr.unstripped.elf \
             build/obj/usbd_ra/usbd_ra.notiopmod.elf \
             build/obj/mmceman/mmceman.notiopmod.elf
+
+      - name: Verify no function stores to its stack before realigning it
+        run: |
+          python3 scripts/check_stack_realign.py \
+            build/obj/wLaunchELF/wLaunchELF.unstripped.elf \
+            build-ds34/obj/wLaunchELF/wLaunchELF.unstripped.elf \
+            build/obj/loader/loader.unstripped.elf \
+            build/obj/wle_igr/wle_igr.unstripped.elf
 
       - name: Verify source-built UDPFS SMAP and bundled peer ABI
         run: python3 scripts/check_udpfs_smap.py build build-ds34

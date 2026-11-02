@@ -2186,7 +2186,7 @@ static void subfunc_Paste(char *mess, char *path)
 			printf("[PASTE] item src='%s' dst='%s' name='%s' index=%d/%d attr=0x%x size=%u:%u\n",
 			       clipPath, path, clipFiles[i].name, i + 1, nclipFiles,
 			       clipFiles[i].stats.AttrFile, clipFiles[i].stats.Reserve2, clipFiles[i].stats.FileSizeByte);
-		ret = copy(path, clipPath, clipFiles[i], 0);
+		ret = copy(path, clipPath, &clipFiles[i], 0);
 		if (ret < 0) {
 			printf("[PASTE] copy failed ret=%d src='%s' dst='%s' item='%s' index=%d/%d mode=%d cut=%d\n",
 			       ret, clipPath, path, clipFiles[i].name, i + 1, nclipFiles, PasteMode, browser_cut);

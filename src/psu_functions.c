@@ -124,6 +124,13 @@ int psu_restore_open_root_image(const char *path, FILEINFO *folder_file, int *in
 		genClose(fd);
 		return -1;
 	}
+	/* A PSU starts with its save folder. Anything else (another format renamed
+	 * to .psu, a blank file) would make copy() treat the header as a file to
+	 * open, with this PSU still open. */
+	if (!(psu_head.attr & sceMcFileAttrSubdir)) {
+		genClose(fd);
+		return -1;
+	}
 
 	mc_head->attr = psu_head.attr;
 	*psu_content = psu_head.size;
