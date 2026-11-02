@@ -207,8 +207,8 @@ static void p1Import(const char *path)
 	memcpy(p1_after, p1_before, PS1_CARD_SIZE);
 	r = ps1CardWrite(p1_after, &s);
 	if (r != PS1_OK) {
-		ps1SaveFree(&s);
 		dashModalMessage(DI_WARNING, "Not imported", ps1Error(r), s.name[0] ? s.name : file);
+		ps1SaveFree(&s);
 		return;
 	}
 	snprintf(msg, sizeof(msg), "%s, %d block%s, from a %s. The card gets a safety copy first.", s.name, s.blocks,
@@ -228,6 +228,7 @@ static void p1Export(const char *path, const Ps1CardSave *sv)
 	uint8_t *buf = NULL;
 	uint32_t len = 0;
 	Ps1Save s;
+	char safe[PS1_NAME_MAX + 1];
 	int r, i;
 
 	r = ps1CardRead(p1_before, sv->first, &s);
@@ -237,9 +238,15 @@ static void p1Export(const char *path, const Ps1CardSave *sv)
 	}
 	dashStrCopy(folder, path, sizeof(folder));
 	folder[p1Base(path) - path] = 0;
+	/* the name comes from the card: it may hold any printable ASCII, so path
+	 * separators, characters FAT refuses and a leading dot become '_' and the
+	 * file always lands next to the card */
+	for (i = 0; s.name[i]; i++)
+		safe[i] = (strchr("/\\:*?\"<>|", s.name[i]) != NULL || (i == 0 && s.name[i] == '.')) ? '_' : s.name[i];
+	safe[i] = 0;
 	for (i = 1; i < 100; i++) {
-		int w = i == 1 ? snprintf(dest, sizeof(dest), "%s%s.mcs", folder, s.name) :
-		                 snprintf(dest, sizeof(dest), "%s%s-%d.mcs", folder, s.name, i);
+		int w = i == 1 ? snprintf(dest, sizeof(dest), "%s%s.mcs", folder, safe) :
+		                 snprintf(dest, sizeof(dest), "%s%s-%d.mcs", folder, safe, i);
 		if (w >= (int)sizeof(dest)) {
 			i = 100;
 			break;

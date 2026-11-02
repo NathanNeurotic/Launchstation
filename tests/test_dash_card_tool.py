@@ -849,14 +849,24 @@ assert "|T:PS1 game~BASLUS-00001PS1, 2 blocks" in kind(lines, "MENU|Blank-PS1.mc
 # the same name again is refused before any safety copy
 before = sha(P1)
 lines = run(P1, "m0", "pmass:/in.mcs", "m-1")
-assert kind(lines, "MESSAGE|1|Not imported|A save with that name is already on this card."), lines
+msg = kind(lines, "MESSAGE|1|Not imported|A save with that name is already on this card.")
+assert msg and msg[0].endswith("|BASLUS-00001PS1"), lines      # names the save, not the file
 assert sha(P1) == before and not host("mass:/WLE-Safety/Blank-PS1-0002.mcd").exists()
 # export writes the .mcs next to the card, byte for byte
 lines = run(P1, "m1", "m0", "m-1")
 assert kind(lines, "MESSAGE|4|Exported|"), lines
 assert host("mass:/BASLUS-00001PS1.mcs").read_bytes() == s1 and sha(P1) == before
-# a failed card write is reported with the safety copy, which holds the old card
 full = host(P1).read_bytes()
+# a save name with path characters exports next to the card, never above it
+host("mass:/evil.mcs").write_bytes(ps1_mcs("../a:b*EVIL", 1, b"Evil"))
+assert kind(run(P1, "m0", "pmass:/evil.mcs", "c1", "m-1"), "TOAST|1|Save imported and verified")
+lines = run(P1, "m2", "m0", "m-1")
+assert kind(lines, "MESSAGE|4|Exported|") and "|mass:/_._a_b_EVIL.mcs" in kind(lines, "MESSAGE|4|Exported|")[0], lines
+assert host("mass:/_._a_b_EVIL.mcs").read_bytes()[10:21] == b"../a:b*EVIL" and not list(dev.glob("*EVIL*"))
+host("mass:/_._a_b_EVIL.mcs").unlink()
+host("mass:/evil.mcs").unlink()
+host(P1).write_bytes(full)
+# a failed card write is reported with the safety copy, which holds the old card
 for at in ("2", "3"):     # 2: the first card write fails; 3: after 32 KB of it
     lines = run(P1, "m1", "m1", "c1", "m-1", env={"FAIL_WRITE_AT": at})
     msg = kind(lines, "MESSAGE|1|Not done|")

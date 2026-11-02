@@ -178,6 +178,8 @@ refusals = [
     (write("BASLUS-00009-NAME-TOO-LONG", D), "BASLUS-00009-NAME-TOO-LONG", NAME),
     (write("empty.mcs", mcs("", B)), "empty.mcs", NAME),
     (write("junk.bin", b"\x00" * BLOCK), "junk.bin", INVALID),
+    (write("short54.psx", b"\x01" * 54), "short54.psx", INVALID),   # .psx magic sits at 0x36: never read past the end
+    (write("short55.psx", b"\x01" * 55), "short55.psx", INVALID),
     (write("full.mcs", mcs("BASLUS-00010FULL", save_data(7, b"too big"))), "full.mcs", FULL),
 ]
 for p, hint, want in refusals:

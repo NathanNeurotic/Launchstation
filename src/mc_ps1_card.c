@@ -312,7 +312,7 @@ int ps1SaveFromFile(const uint8_t *buf, uint32_t len, const char *name_hint, Ps1
 				r = ps1NameOk(name) ? PS1_ERR_INVALID : PS1_ERR_NAME;
 			}
 		}
-	} else if (len >= 54u && buf[0x36] == 'S' && buf[0x37] == 'C') {
+	} else if (len >= 56u && buf[0x36] == 'S' && buf[0x37] == 'C') { /* reads bytes 0x36 and 0x37 */
 		fmt = PS1F_PSX;
 		readName(buf, name);
 		r = takeBlocks(buf + 54, len - 54u, name, out);
