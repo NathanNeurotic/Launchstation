@@ -55,6 +55,7 @@ MIRROR_LATEST=${PS2BUILD_SDK_MIRROR_LATEST_URL:-https://github.com/$PS2BUILD_SDK
 # PS2BUILD_SDK_MIRROR_TOKEN set (a token that can read the mirror's contents, from a CI secret) every
 # mirror file comes through the GitHub API instead. Without it the public download links are used.
 MIRROR_TOKEN=${PS2BUILD_SDK_MIRROR_TOKEN:-}
+unset PS2BUILD_SDK_MIRROR_TOKEN # keep it out of the environment of ps2build, curl and the official attempt
 MIRROR_API=${PS2BUILD_SDK_MIRROR_API_URL:-https://api.github.com}
 
 log() { echo "ps2build-sdk: $*"; }
