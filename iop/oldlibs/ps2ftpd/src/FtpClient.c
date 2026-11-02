@@ -195,8 +195,9 @@ void FtpClient_OnCommand(FtpClient *pClient, const char *pString)
 
 		if (result != FTPCMD_RNTO && result != FTPCMD_RNFR)
 			pClient->m_Rename.path[0] = '\0';
-		if (pClient->m_eDataMode != DATAMODE_IDLE && result != FTPCMD_ABOR &&
-		    result != FTPCMD_QUIT && result != FTPCMD_NOOP) {
+		// a transfer waiting for its data socket owns the file context just like a running one
+		if ((pClient->m_eDataMode != DATAMODE_IDLE || pClient->m_eDataAction != DATAACTION_NONE) &&
+		    result != FTPCMD_ABOR && result != FTPCMD_QUIT && result != FTPCMD_NOOP) {
 			FtpClient_Send(pClient, 450, "A data transfer is in progress.");
 			return;
 		}
