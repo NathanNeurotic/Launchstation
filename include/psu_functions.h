@@ -8,9 +8,11 @@ void clear_psu_header(psu_header *psu);
 void pad_psu_header(psu_header *psu);
 /* A backup to the .psu 'path' writes a temporary file beside it (out_fd).
  * Finalize closes it and only then replaces an older .psu with it; discard
- * closes and removes it. Create and finalize return 0 or a negative error. */
+ * closes and removes it. Create and finalize return 0 or a negative error.
+ * A finalize that fails after it removed the older .psu sets *kept: the
+ * temporary file, complete, stays as the only backup of that name. */
 int psu_backup_create_root_image(const char *path, const mcT_header *folder_stats, int *out_fd, int *psu_content);
-int psu_backup_finalize_root_image(int out_fd, const char *path, const mcT_header *folder_stats, int psu_content);
+int psu_backup_finalize_root_image(int out_fd, const char *path, const mcT_header *folder_stats, int psu_content, int *kept);
 void psu_backup_discard_root_image(int out_fd, const char *path);
 int psu_backup_begin_file_entry(int psu_fd, const mcT_header *file_stats, int *psu_pad_size, int *psu_content);
 int psu_backup_write_padding(int psu_fd, int psu_pad_size);

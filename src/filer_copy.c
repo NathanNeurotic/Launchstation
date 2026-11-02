@@ -536,7 +536,7 @@ int copy(char *outPath, const char *inPath, const FILEINFO *src, int recurses)
 	u64 OldTime = 0LL;
 	u64 EtaOldTime = 0LL;
 	mcT_header *mcT_head_p = (mcT_header *)&file.stats;
-	int psu_pad_size = 0, PSU_restart_f = 0;
+	int psu_pad_size = 0, PSU_restart_f = 0, psu_kept = 0;
 	char *cp, *np;
 #if FILEOP_TRACE
 	int trace_net_copy = 0;
@@ -905,9 +905,12 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		//Lots of stuff need to be done here to make PSU operations work properly
 		if (PM_flag[recurses + 1] == PM_PSU_BACKUP) {  //PSU Backup mode folder paste closure
 			filerCopyDiagStage("Finishing PSU");
-			ret = psu_backup_finalize_root_image(PM_file[recurses + 1], tmp, mcT_head_p, PSU_content);
-			if (ret < 0)
+			ret = psu_backup_finalize_root_image(PM_file[recurses + 1], tmp, mcT_head_p, PSU_content, &psu_kept);
+			if (ret < 0) {
+				if (psu_kept)  //the older .psu is gone, and the new one could not take its name
+					filerCopyDiagStage("Replacing PSU, new one kept as .ps~");
 				return copyDiagFail(ret);
+			}
 		} else if (PM_flag[recurses + 1] == PM_NORMAL) {             //Normal mode folder paste closure
 			if (!strncmp(out, "mc", 2)) {                            //Handle folder copied to MC
 				ensureMemoryCardPortAccessible(out[2] - '0');

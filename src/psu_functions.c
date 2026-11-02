@@ -27,10 +27,13 @@ void pad_psu_header(psu_header *psu)
  * that the rename really happened. UDPFS has no rename, host files are
  * renamed only through a handle that genRenameNoReplace() does not use, and
  * any rename can still be refused by its driver: in those cases the older
- * .psu is removed and the finished file copied to its name instead. Only a
- * failure in that last rename or copy leaves no .psu of that name (and no
- * partial one); the save that was backed up is never changed. cdfs is
- * read-only, so a backup there fails when it creates the temporary file. */
+ * .psu is removed and the finished file copied to its name instead. Once
+ * the older .psu is removed, the finished file is the only complete backup
+ * of that name, so a failure in that last rename or copy leaves it as it is,
+ * under the temporary name (and no partial .psu), and says so; the next
+ * backup to that name replaces it like an unfinished one. The save that was
+ * backed up is never changed. cdfs is read-only, so a backup there fails
+ * when it creates the temporary file. */
 #define PSU_COPY_BUFFER 0x20000  //128 KB: a multiple of every device's sector size
 
 static void psu_backup_temp_path(const char *path, char *temp)
@@ -94,8 +97,9 @@ fail:
 	return ret < 0 ? ret : -EIO;
 }
 
-/* Copies the finished file 'from' to the .psu 'to', replacing an older one. */
-static int psu_backup_copy_file(const char *from, const char *to)
+/* Copies the finished file 'from' to the .psu 'to', replacing an older one.
+ * *kept is set once that is removed: then a failure must keep 'from'. */
+static int psu_backup_copy_file(const char *from, const char *to, int *kept)
 {
 	char *buf;
 	int in_fd, out_fd, n, ret = 0;
@@ -108,6 +112,7 @@ static int psu_backup_copy_file(const char *from, const char *to)
 		free(buf);
 		return in_fd;
 	}
+	*kept = 1;
 	genRemove((char *)to);  //the older .psu
 	out_fd = genOpen(to, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT);
 	if (out_fd < 0)
@@ -133,23 +138,25 @@ static int psu_backup_copy_file(const char *from, const char *to)
 	return ret;
 }
 
-/* Replaces the .psu 'path' with the finished file 'temp' (see above). */
-static int psu_backup_publish(char *temp, const char *path)
+/* Replaces the .psu 'path' with the finished file 'temp' (see above), and
+ * sets *kept once a failure must keep 'temp'. */
+static int psu_backup_publish(char *temp, const char *path, int *kept)
 {
 	int ret;
 
 	if (genCanRenamePath(path) && strncmp(path, "host", 4)) {
+		*kept = 1;
 		genRemove((char *)path);  //the older .psu
 		if (genRenameNoReplace(temp, path) >= 0)
 			return 0;
 	}
-	ret = psu_backup_copy_file(temp, path);
+	ret = psu_backup_copy_file(temp, path, kept);
 	if (ret == 0)
 		genRemove(temp);
 	return ret;
 }
 
-int psu_backup_finalize_root_image(int out_fd, const char *path, const mcT_header *folder_stats, int psu_content)
+int psu_backup_finalize_root_image(int out_fd, const char *path, const mcT_header *folder_stats, int psu_content, int *kept)
 {
 	char temp[MAX_PATH];
 	psu_header psu_head;
@@ -171,9 +178,12 @@ int psu_backup_finalize_root_image(int out_fd, const char *path, const mcT_heade
 	if (result == 0 && closed < 0)
 		result = closed;
 	psu_backup_temp_path(path, temp);
+	*kept = 0;
 	if (result == 0)
-		result = psu_backup_publish(temp, path);
-	if (result < 0)
+		result = psu_backup_publish(temp, path, kept);
+	if (result == 0)
+		*kept = 0;
+	else if (!*kept)
 		genRemove(temp);
 	return result;
 }

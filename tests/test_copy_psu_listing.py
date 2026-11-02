@@ -8,7 +8,9 @@ exit frees the listing, and a PSU restore that stops early closes its PSU. A
 file whose first entry is not a folder is not a PSU and is refused and closed.
 A Move deletes only what was copied: an item that copy() kept at the
 destination (a dated PSU name already taken, or the file or folder itself)
-stays, cut.
+stays, cut. A PSU backup replaces an older one only once it is complete, and
+when that replacing fails after the older one is gone, the new one stays under
+its temporary name.
 
 Drivers are replaced by POSIX files; libmc and the IOP are not emulated.
 """
@@ -145,10 +147,15 @@ static int isPcCardCfPath(const char *s){(void)s;return 0;}
 static int isPcCardCfOnline(void){return 1;}
 static void ensureMemoryCardPortAccessible(int p){assert(p==0||p==1);}
 static char *makeHostPath(char *d,char *s){if(d!=s)strcpy(d,s);return d;}
-static int genOpen(const char *p,int flags){int fd=open(p,flags,0600);if(fd<0)return -errno;assert(fd<1024);fd_open[fd]=1;handles++;return fd;}
-static int genClose(int fd){if(fd<0||fd>=1024||!fd_open[fd]){double_closes++;return -EBADF;}fd_open[fd]=0;handles--;return close(fd)?-errno:0;}
+/* Reads from a file whose name ends in read_fail_name fail as on a device
+ * error, and so does the next close of one ending in close_fail_name. */
+static const char *read_fail_name,*close_fail_name;static char fd_name[1024][MAX_PATH];
+static int named(int fd,const char *end){size_t a=strlen(fd_name[fd]),b=end?strlen(end):0;return end&&a>=b&&!strcmp(fd_name[fd]+a-b,end);}
+static int genOpen(const char *p,int flags){int fd=open(p,flags,0600);if(fd<0)return -errno;assert(fd<1024);fd_open[fd]=1;handles++;snprintf(fd_name[fd],MAX_PATH,"%s",p);return fd;}
+static int genClose(int fd){if(fd<0||fd>=1024||!fd_open[fd]){double_closes++;return -EBADF;}fd_open[fd]=0;handles--;
+ if(named(fd,close_fail_name)){close_fail_name=NULL;close(fd);return -EIO;}return close(fd)?-errno:0;}
 static s64 genLseek(int fd,s64 n,int whence){assert(fd_open[fd]);return lseek(fd,n,whence);}
-static int genRead(int fd,void *p,int n){assert(fd_open[fd]);int r=read(fd,p,n);return r<0?-errno:r;}
+static int genRead(int fd,void *p,int n){assert(fd_open[fd]);if(named(fd,read_fail_name))return -EIO;int r=read(fd,p,n);return r<0?-errno:r;}
 static int genWrite(int fd,void *p,int n){assert(fd_open[fd]);if(++writes==write_fail_at)return -ENOSPC;int r=write(fd,p,n);return r<0?-errno:r;}
 static int genRemove(char *p){return unlink(p)?-errno:0;}
 /* Like genRenameNoReplace(): no rename on host or where genCanRenamePath() refuses
@@ -245,6 +252,7 @@ static int holds(const char *p,const char *text){return same(p,text,strlen(text)
 static void clip(const char *path,const char *name,int attr,int mode){
  yn_answer=1;yn_calls=0;cancel_copy=0;fail_alloc_bytes=0;browser_cut=0;generation=clipIopResetGeneration=1;
  writes=write_fail_at=0;alloc_fail_stage=NULL;renames=rename_fail=0;typed=NULL;
+ read_fail_name=close_fail_name=NULL;
  party_calls=party_fail_at=mount_calls=mount_fail_at=0;memset(mount_slot,0,sizeof(mount_slot));
  protected_folder=0;modify_answer=1;modify_calls=delete_questions=delete_fail=0;
  PasteMode=mode;strcpy(clipPath,path);nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));
@@ -254,6 +262,8 @@ static void add(const char *name,int attr){strcpy(clipFiles[nclipFiles].name,nam
 static void paste(const char *destination){message[0]=0;subfunc_Paste(message,(char *)destination);}
 /* The failure message has this text; when it does not, it is shown. */
 static int says(const char *text){if(strstr(message,text))return 1;fprintf(stderr,"message: %s\n",message);return 0;}
+/* There is no failure message; when there is one, it is shown. */
+static int quiet(void){if(!message[0])return 1;fprintf(stderr,"message: %s\n",message);return 0;}
 /* After every paste: no file or directory handle left open or closed twice, no heap block left. */
 #define settled() settled_at(__LINE__)
 static void settled_at(int line){int open_dirs=0;for(int i=0;i<64;i++)open_dirs+=dirs[i]!=NULL;
@@ -438,10 +448,21 @@ int main(void){
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);rename_fail=1;paste("mass:/");
  settled();
  assert(!message[0]&&same("mass:/SAVEDIR.psu",good,size)&&!exists("mass:/SAVEDIR.ps~")&&!renames);
+ /* Once the older one is removed, the new one is the only complete backup of
+  * that name: when it cannot take the name (a refused rename, then no memory
+  * to copy it there), it stays as SAVEDIR.ps~, and the failure says so. The
+  * next backup replaces it, as it replaces an unfinished one. */
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);rename_fail=1;fail_alloc_bytes=PSU_COPY_BUFFER;paste("mass:/");
+ settled();
+ assert(says("Replacing PSU, new one kept as .ps~ (-12)")&&!exists("mass:/SAVEDIR.psu")&&same("mass:/SAVEDIR.ps~",good,size));
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("mass:/");
+ settled();
+ assert(quiet()&&same("mass:/SAVEDIR.psu",good,size)&&!exists("mass:/SAVEDIR.ps~"));
  /* UDPFS cannot rename, so there a complete backup is copied over the older
   * one. A backup that stops, or that has no memory for that copy, keeps the
-  * older one. When the copy itself fails (write 13, after the backup's 12),
-  * no .psu is left, neither the older one nor a partial one. */
+  * older one. When the copy fails once the older one is removed (write 13,
+  * after the backup's 12, or a failed read or close), no partial .psu is
+  * left, and the new backup stays as SAVEDIR.ps~. */
  put("udpfs:/SAVEDIR.psu","older backup",12);
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=5;paste("udpfs:/");
  settled();
@@ -454,7 +475,21 @@ int main(void){
  assert(!message[0]&&same("udpfs:/SAVEDIR.psu",good,size)&&!exists("udpfs:/SAVEDIR.ps~")&&!renames);
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=13;paste("udpfs:/");
  settled();
- assert(says("Finishing PSU (-28)")&&!exists("udpfs:/SAVEDIR.psu")&&!exists("udpfs:/SAVEDIR.ps~"));
+ assert(says("Replacing PSU, new one kept as .ps~ (-28)")&&!exists("udpfs:/SAVEDIR.psu")&&same("udpfs:/SAVEDIR.ps~",good,size));
+ put("udpfs:/SAVEDIR.psu","older backup",12);
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);read_fail_name=".ps~";paste("udpfs:/");
+ settled();
+ assert(says("Replacing PSU, new one kept as .ps~ (-5)")&&!exists("udpfs:/SAVEDIR.psu")&&same("udpfs:/SAVEDIR.ps~",good,size));
+ put("udpfs:/SAVEDIR.psu","older backup",12);
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);close_fail_name=".psu";paste("udpfs:/");
+ settled();
+ assert(says("Replacing PSU, new one kept as .ps~ (-5)")&&!exists("udpfs:/SAVEDIR.psu")&&same("udpfs:/SAVEDIR.ps~",good,size));
+ /* A backup whose own file does not close cleanly is not complete, so the
+  * older one stays. */
+ put("udpfs:/SAVEDIR.psu","older backup",12);
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);close_fail_name=".ps~";paste("udpfs:/");
+ settled();
+ assert(says("Finishing PSU (-5)")&&holds("udpfs:/SAVEDIR.psu","older backup")&&!exists("udpfs:/SAVEDIR.ps~"));
  /* With dated names and no overwriting, an existing name is skipped, and the
   * skip frees the listing. An unfinished backup of that name is not one. */
  config.PSU_DateNames=config.PSU_NoOverwrite=1;
