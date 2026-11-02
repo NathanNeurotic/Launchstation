@@ -963,11 +963,13 @@ non_PSU_RESTORE_init:
 	//It is now time to open the output file, indicated by 'out_fd'
 	//except in the case of a PSU backup, when we must add a header to PSU instead
 	if (PM_flag[recurses] == PM_PSU_BACKUP) {
-		out_fd = PM_file[recurses];
-		if (psu_backup_begin_file_entry(out_fd, mcT_head_p, &psu_pad_size, &PSU_content) < 0) {
+		//The .psu is the folder level's, which closes it once whatever happens here:
+		//every exit below leaves it open (out_fd = -1) instead of closing it
+		if (psu_backup_begin_file_entry(PM_file[recurses], mcT_head_p, &psu_pad_size, &PSU_content) < 0) {
 			ret = -EIO;
 			goto copy_file_exit;
 		}
+		out_fd = PM_file[recurses];
 	} else {            //Any other PasteMode than PM_PSU_BACKUP needs a new output file
 #if defined(ETH) || defined(UDPFS)
 		if (!strncmp(out, "host:/", 6))
@@ -1035,10 +1037,11 @@ non_PSU_RESTORE_init:
 	buff = (char *)memalign(64, buffSize);  //Attempt buffer allocation
 	if (buff == NULL) {                     //if allocation fails
 		ret = -ENOMEM;
-		genClose(out_fd);
-		out_fd = -1;
-		if (PM_flag[recurses] != PM_PSU_BACKUP)
+		if (PM_flag[recurses] != PM_PSU_BACKUP) {  //a PSU backup's .psu is left to its folder level
+			genClose(out_fd);
 			genRemove(out);
+		}
+		out_fd = -1;
 		goto copy_file_exit_mem_err;
 	}
 	if (buffSize == COPY_BUFFER_FAST_DEFAULT) {
@@ -1161,10 +1164,11 @@ non_PSU_RESTORE_init:
 		if (readpad()) {
 #endif
 			if (-1 == ynDialog(LNG(Continue_transfer))) {
-				genClose(out_fd);
-				out_fd = -1;
-				if (PM_flag[recurses] != PM_PSU_BACKUP)
+				if (PM_flag[recurses] != PM_PSU_BACKUP) {  //a PSU backup's .psu is left to its folder level
+					genClose(out_fd);
 					genRemove(out);
+				}
+				out_fd = -1;
 				filerCopyDiagStage("Copy cancelled");
 				ret = -1;             // flag generic error
 				goto copy_file_exit;  // go deal with it
@@ -1193,10 +1197,11 @@ non_PSU_RESTORE_init:
 				       in, out, trace_chunk_index, buffSize, bytesRead, bytesWritten,
 				       (unsigned long long)size);
 #endif
-				genClose(out_fd);
-				out_fd = -1;
-				if (PM_flag[recurses] != PM_PSU_BACKUP)
+				if (PM_flag[recurses] != PM_PSU_BACKUP) {  //a PSU backup's .psu is left to its folder level
+					genClose(out_fd);
 					genRemove(out);
+				}
+				out_fd = -1;
 				ret = bytesRead < 0 ? bytesRead : (bytesWritten < 0 ? bytesWritten : -EIO);
 				goto copy_file_exit;
 			}
@@ -1227,11 +1232,9 @@ copy_file_data_done:
 	//but we also need to copy attributes and timestamps (as yet only for MC)
 	//For PSU backup output padding may be needed, but not output file closure
 	if (PM_flag[recurses] == PM_PSU_BACKUP) {
-		if (psu_backup_write_padding(out_fd, psu_pad_size) < 0) {
+		if (psu_backup_write_padding(out_fd, psu_pad_size) < 0)
 			ret = -EIO;
-			goto copy_file_exit;
-		}
-		out_fd = -1;  //prevent output file closure below
+		out_fd = -1;  //prevent output file closure below: the folder level closes the .psu
 		goto copy_file_exit;
 	}
 

@@ -106,9 +106,12 @@ static int size_valid,time_valid;
 static int yn_answer=1,yn_calls,cancel_copy;
 /* Every file and directory handle and every heap block the copy code takes is tracked. */
 static int fd_open[1024],handles,double_closes;
+/* The Nth write fails as on a full device; allocations fail while copy() is at one stage. */
+static int writes,write_fail_at;static const char *alloc_fail_stage,*const *diag_stage;
 static size_t fail_alloc_bytes;static int allocs_live,bad_frees;static void *live_ptr[256];
 static void *test_memalign(size_t a,size_t n){
  if(fail_alloc_bytes&&n==fail_alloc_bytes)return NULL;
+ if(alloc_fail_stage&&*diag_stage&&!strcmp(*diag_stage,alloc_fail_stage))return NULL;
  void *p=memalign(a,n);assert(p&&((uintptr_t)p%a)==0);assert(allocs_live<256);live_ptr[allocs_live++]=p;return p;
 }
 static void test_free(void *p){
@@ -140,7 +143,7 @@ static int genOpen(const char *p,int flags){int fd=open(p,flags,0600);if(fd<0)re
 static int genClose(int fd){if(fd<0||fd>=1024||!fd_open[fd]){double_closes++;return -EBADF;}fd_open[fd]=0;handles--;return close(fd)?-errno:0;}
 static s64 genLseek(int fd,s64 n,int whence){assert(fd_open[fd]);return lseek(fd,n,whence);}
 static int genRead(int fd,void *p,int n){assert(fd_open[fd]);int r=read(fd,p,n);return r<0?-errno:r;}
-static int genWrite(int fd,void *p,int n){assert(fd_open[fd]);int r=write(fd,p,n);return r<0?-errno:r;}
+static int genWrite(int fd,void *p,int n){assert(fd_open[fd]);if(++writes==write_fail_at)return -ENOSPC;int r=write(fd,p,n);return r<0?-errno:r;}
 static int genRemove(char *p){return unlink(p)?-errno:0;}
 static int mcSetFileInfo(int port,int slot,const char *from,const sceMcTblGetDir *info,int flags){(void)port;(void)slot;(void)from;(void)info;(void)flags;return 0;}
 static int mcSync(int mode,void *c,int *r){(void)mode;(void)c;if(r)*r=0;return 1;}
@@ -187,6 +190,9 @@ for signature in ('static int isMemoryCardLikePath(', 'static int isHddCommonPar
 code += copy[copy.index('int copy('):]
 code += function(browser, 'static int waitForClipboardSourceDevice(')
 code += function(browser, 'static void subfunc_Paste(')
+# A failed check names its line in this file.
+code += '#line %d "%s"' % (Path(__file__).read_text().splitlines().index('static char message[MAX_PATH];') + 1,
+                           Path(__file__).name)
 code += r'''
 static char message[MAX_PATH];
 static void put(const char *p,const void *data,int n){int fd=open(p,O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0);assert(write(fd,data,n)==n);assert(!close(fd));}
@@ -196,14 +202,18 @@ static int read_all(const char *p,unsigned char *out,int max){int fd=open(p,O_RD
 static int filled(const char *p,int n,int byte){unsigned char b[4096];if(read_all(p,b,sizeof(b))!=n)return 0;for(int i=0;i<n;i++)if(b[i]!=byte)return 0;return 1;}
 static void clip(const char *path,const char *name,int attr,int mode){
  yn_answer=1;yn_calls=0;cancel_copy=0;fail_alloc_bytes=0;browser_cut=0;generation=clipIopResetGeneration=1;
+ writes=write_fail_at=0;alloc_fail_stage=NULL;
  protected_folder=0;modify_answer=1;modify_calls=delete_questions=delete_fail=0;
  PasteMode=mode;strcpy(clipPath,path);nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));
  strcpy(clipFiles[0].name,name);clipFiles[0].stats.AttrFile=attr;
 }
 static void paste(const char *destination){message[0]=0;subfunc_Paste(message,(char *)destination);}
 /* After every paste: no file or directory handle left open or closed twice, no heap block left. */
-static void settled(void){for(int i=0;i<64;i++)assert(!dirs[i]);
- assert(!handles);assert(!double_closes);assert(!allocs_live);assert(!bad_frees);}
+#define settled() settled_at(__LINE__)
+static void settled_at(int line){int open_dirs=0;for(int i=0;i<64;i++)open_dirs+=dirs[i]!=NULL;
+ if(open_dirs||handles||double_closes||allocs_live||bad_frees){
+  fprintf(stderr,"%s:%d: not settled: %d directories and %d files open, %d double closes, %d heap blocks, %d bad frees\n",
+          __FILE__,line,open_dirs,handles,double_closes,allocs_live,bad_frees);abort();}}
 /* A PSU: root header, "." and "..", then each file's header and data padded to 1 KB. */
 static void psu_entry(int fd,u16 attr,u32 size,const char *name){psu_header h;memset(&h,0,sizeof(h));h.attr=attr;h.size=size;snprintf((char *)h.name,sizeof(h.name),"%s",name);assert(write(fd,&h,sizeof(h))==sizeof(h));}
 static void make_psu(const char *path,const char *folder,int count){
@@ -215,6 +225,7 @@ static void make_psu(const char *path,const char *folder,int count){
  close(fd);
 }
 int main(void){
+ diag_stage=&copy_diag.stage;
  mkdir("mass:",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);mkdir("udpfs:",0700);
  make_psu("mass:/SAVE.psu","BASLUS-00001",2);
 
@@ -299,6 +310,26 @@ int main(void){
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);fail_alloc_bytes=MAX_ENTRY*sizeof(FILEINFO);paste("mass:/");
  assert(strstr(message,"Listing source (-12)")&&strstr(message,"Not enough memory"));
  assert(read_all("mass:/SAVEDIR.psu",now,sizeof(now))==size&&!memcmp(good,now,size));
+ settled();
+ /* A backup that stops inside a file leaves the .psu to the folder level that
+  * opened it, which closes it once (settled() counts a second close): the
+  * device fills up at the first file's entry header (write 4, after the
+  * three root headers), its data (5) or its padding (6), the user cancels,
+  * or there is no memory for the copy buffer. */
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=4;paste("mass:/");
+ assert(strstr(message,"(-5)"));
+ settled();
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=5;paste("mass:/");
+ assert(strstr(message,"Writing destination (-28)")&&strstr(message,"Not enough free space"));
+ settled();
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=6;paste("mass:/");
+ assert(strstr(message,"Writing destination (-5)"));
+ settled();
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);cancel_copy=1;yn_answer=-1;paste("mass:/");
+ assert(strstr(message,"Copy cancelled (-1)"));
+ settled();
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);alloc_fail_stage="Allocating buffer";paste("mass:/");
+ assert(strstr(message,"Allocating buffer (-12)")&&strstr(message,"Not enough memory"));
  settled();
  /* With dated names and no overwriting, an existing name is skipped, and the
   * skip frees the listing. */
