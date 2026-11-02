@@ -485,6 +485,8 @@ enum DashIcon {
 	DI_NEW_DOCUMENT, /* lined document with a small upper-right plus */
 	DI_KEY_TAB,     /* keyboard right arrow ending at a vertical bar */
 	DI_KEY_RETURN,  /* keyboard bent left arrow; arrowhead centered at y=0 */
+	DI_NEW_FOLDER,  /* folder with a small upper-right plus */
+	DI_SAVE,        /* floppy disk: shutter on top, label below */
 	DI_COUNT
 };
 
