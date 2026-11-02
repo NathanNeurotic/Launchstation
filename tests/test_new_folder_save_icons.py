@@ -50,8 +50,8 @@ with tempfile.TemporaryDirectory() as tmp:
     c = Path(tmp) / "icons.c"
     exe = Path(tmp) / "icons"
     c.write_text(src, encoding="utf-8")
-    subprocess.run(["gcc", "-O1", "-w", "-fsanitize=address,undefined", "-o", str(exe), str(c), "-lm"], check=True)
-    raw = subprocess.run([str(exe)], check=True, capture_output=True).stdout
+    subprocess.run(["gcc", "-O1", "-w", "-fsanitize=address,undefined", "-fno-sanitize-recover=undefined", "-o", str(exe), str(c), "-lm"], check=True)
+    raw = subprocess.run([str(exe)], check=True, stdout=subprocess.PIPE).stdout   # stderr stays visible
 assert len(raw) == 4 * 1024
 folder, new_folder, save, check = (raw[i * 1024:(i + 1) * 1024] for i in range(4))
 
