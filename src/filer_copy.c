@@ -598,9 +598,18 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 	if (file.stats.AttrFile & sceMcFileAttrSubdir) {
 		//Here we have a folder to copy, starting with an attempt to create it
 		//This is where we must act differently for PSU backup, creating a PSU file instead
+		if (PasteMode == PM_PSU_BACKUP && recurses)
+			return copyDiagFail(-1);  //abort, as subfolders are not copied to PSU backups
+		//This level's listing is allocated before anything at the destination is
+		//removed or created, so running out of memory leaves an older PSU backup or
+		//save as it was. A PSU is read one entry at a time, so restoring one needs one.
+		files = (FILEINFO *)memalign(64, ((PasteMode == PM_PSU_RESTORE && PSU_restart_f) ? 1 : MAX_ENTRY) * sizeof(FILEINFO));
+		if (files == NULL) {
+			filerCopyDiagStage("Listing source");
+			ret = copyDiagFail(-ENOMEM);
+			goto folder_exit;
+		}
 		if (PasteMode == PM_PSU_BACKUP) {
-			if (recurses)
-				return copyDiagFail(-1);  //abort, as subfolders are not copied to PSU backups
 			i = strlen(out) - 1;
 			if (out[i] == '/')
 				out[i] = 0;
@@ -650,13 +659,16 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 				if (0 <= (out_fd = genOpen(tmp, FIO_O_RDONLY))) {  //Name conflict ?
 					genClose(out_fd);
 					out_fd = -1;
-					return 0;
+					ret = 0;
+					goto folder_exit;
 				}
 			}
 			//here tmp is the name of an existing file, to be removed before making new one
 			genRemove(tmp);
-			if (psu_backup_create_root_image(tmp, mcT_head_p, &out_fd, &PSU_content) < 0)
-				return copyDiagFail(-1);
+			if (psu_backup_create_root_image(tmp, mcT_head_p, &out_fd, &PSU_content) < 0) {
+				ret = copyDiagFail(-1);
+				goto folder_exit;
+			}
 			PM_file[recurses + 1] = out_fd;
 			PM_flag[recurses + 1] = PM_PSU_BACKUP;  //Set PSU backup mode for next level
 		} else {  //any other PasteMode than PM_PSU_BACKUP
@@ -678,19 +690,24 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 					strcat(progress, LNG(Undefined_Not_a_gamesave));
 				sprintf(tmp, "\n\n%s ?", LNG(Do_you_wish_to_overwrite_it));
 				strcat(progress, tmp);
-				if (ynDialog(progress) < 0)
-					return copyDiagFail(-1);
+				if (ynDialog(progress) < 0) {
+					ret = copyDiagFail(-1);
+					goto folder_exit;
+				}
 				if (PasteMode == PM_PSU_RESTORE) {
-					if (filerConfirmExploitDelete(outPath, &newfile) < 0)
-						return copyDiagFail(-1);
+					if (filerConfirmExploitDelete(outPath, &newfile) < 0) {
+						ret = copyDiagFail(-1);
+						goto folder_exit;
+					}
 					ret = delete (outPath, &newfile);  //Attempt recursive delete
-					if (ret < 0)
-						return copyDiagFail(-1);
-					if (newdir(outPath, newfile.name) < 0)
-						return copyDiagFail(-1);
+					if (ret < 0 || newdir(outPath, newfile.name) < 0) {
+						ret = copyDiagFail(-1);
+						goto folder_exit;
+					}
 				} else if (!filerIsExploitProtectedPath(outPath, NULL) &&
 				           filerConfirmExploitModify(outPath, &newfile) < 0) {
-					return copyDiagFail(-1);
+					ret = copyDiagFail(-1);
+					goto folder_exit;
 				}
 				drawMsg(LNG(Pasting));
 			} else if (ret < 0) {
@@ -699,7 +716,8 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 					printf("[VMC_COPY] mkdir failed outPath='%s' name='%s' out='%s' ret=%d recurse=%d\n",
 					       outPath, newfile.name, out, ret, recurses);
 #endif
-				return copyDiagFail(ret);  //preserve the destination filesystem error
+				ret = copyDiagFail(ret);  //preserve the destination filesystem error
+				goto folder_exit;
 			}
 
 			//Set save folder attributes for __common partition when copying to HDD to make it show up in the HDD-OSD Browser
@@ -724,13 +742,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		strcat(out, "/");                             //Separate dest folder name
 
 		if (PasteMode == PM_PSU_RESTORE && PSU_restart_f) {
-			//A PSU is read one entry at a time, so one heap entry is enough here
-			files = (FILEINFO *)memalign(64, sizeof(FILEINFO));
 			nfiles = PSU_content;
-			if (files == NULL) {
-				nfiles = 0;
-				ret = copyDiagFail(-ENOMEM);
-			}
 			for (i = 0; i < nfiles; i++) {
 				ret = psu_restore_read_file_entry(PM_file[recurses + 1], &files[0], &psu_pad_size);
 				if (ret > 0)  //Dummy/Pseudo folder entry
@@ -769,11 +781,12 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			                                  //--- This has been moved to a later clause.
 		} else {                              //Any other mode than a valid PM_PSU_RESTORE
 			filerCopyDiagStage("Listing source");
-			files = (FILEINFO *)memalign(64, MAX_ENTRY * sizeof(FILEINFO));
-			nfiles = (files != NULL) ? getDir(in, files) : -ENOMEM;
+			nfiles = getDir(in, files);
 			ret = 0;  //An empty listing succeeds regardless of optional title lookup.
+			//A listing error aborts below. A reader that returns 0 when it cannot
+			//open the folder (readGENERIC, readMC) makes it look empty instead.
 			if (nfiles < 0)
-				ret = copyDiagFail(nfiles);  //A failed listing aborts below, never an empty copy.
+				ret = copyDiagFail(nfiles);
 			for (i = 0; i < nfiles; i++) {
 				if ((ret = copy(out, in, &files[i], recurses + 1)) < 0) {
 #if FILEOP_TRACE
@@ -865,6 +878,14 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		}
 		//the return code below is used if there were no errors copying a folder
 		return 0;
+
+	folder_exit:  //A folder level that stops before its listing is used, returning 'ret'
+		free(files);
+		if (PM_flag[recurses + 1] == PM_PSU_RESTORE && PM_file[recurses + 1] >= 0) {
+			genClose(PM_file[recurses + 1]);  //The PSU that the file branch opened to restore it
+			PM_file[recurses + 1] = -1;
+		}
+		return ret;
 	}
 
 	//Here we know that the object to copy is a file, not a folder

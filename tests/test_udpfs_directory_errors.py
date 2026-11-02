@@ -69,7 +69,7 @@ int main(void){
 # the classic browser keeps its parent row and never sorts with a negative count.
 assert 'n = readUDPFS(path, info, max);' in function('int getDir(')
 copy_source = (root / 'src/filer_copy.c').read_text()
-assert 'nfiles = (files != NULL) ? getDir(in, files) : -ENOMEM;' in copy_source
+assert 'nfiles = getDir(in, files);' in copy_source
 assert 'if (nfiles < 0)\n\t\t\t\tret = copyDiagFail(nfiles);' in copy_source
 actions = (root / 'src/filer_actions.c').read_text()
 delete = actions[actions.index('int delete ('):actions.index('int Rename(')]

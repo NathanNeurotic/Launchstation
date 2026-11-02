@@ -12,7 +12,12 @@ A function with a local aligned beyond 16 bytes (FILEINFO embeds libmc's
 A store relative to $sp in that window lands at the address before the
 realignment, while the code after it finds the frame from the realigned $sp.
 Callee-saved registers are fine there: the epilogue does `move $sp,$fp`
-before it reloads them. Anything else is lost. In release builds since #210,
+before it reloads them. Anything else is lost. Stores through $fp use the
+entry frame on both sides and pass. Every other store in the window fails,
+whatever its base: in a function that also uses alloca or a variable-length
+array, Clang reaches the frame through $s7, which it sets up only after the
+realignment, so a spill through $s7 before then writes wherever the caller's
+$s7 points. In release builds since #210,
 the ps2build Clang register scavenger put such a store in copy()
 (src/filer_copy.c): it saved the argument register holding bytes 8-15 of the
 by-value FILEINFO name there and reloaded it from the realigned frame, so a
@@ -175,9 +180,10 @@ def check(function):
             item = words[position]
             op, rs, rt, rd, funct, imm = fields(item)
             store = GPR_STORES.get(op) or FPR_STORES.get(op)
-            if store and (rs == SP or rs in derived):
+            if store and rs != FP:
+                # Only a callee-saved register saved relative to $sp passes.
                 saved = CALLEE_SAVED_FPR if op in FPR_STORES else CALLEE_SAVED
-                if rt not in saved:
+                if rt not in saved or not (rs == SP or rs in derived):
                     register = ("$f%d" if op in FPR_STORES else "$%d") % rt
                     hazards.append(
                         "%s at %#x: %s %s,%d($%d) before `and $sp` at %#x (frame %d bytes)"

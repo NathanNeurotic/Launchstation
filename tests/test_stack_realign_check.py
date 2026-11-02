@@ -31,14 +31,20 @@ def i_type(op, rs, rt, imm):
 
 
 def addiu(rt, rs, imm): return i_type(0x09, rs, rt, imm)
+def daddiu(rt, rs, imm): return i_type(0x19, rs, rt, imm)
 def lui(rt, imm): return i_type(0x0F, 0, rt, imm)
+def beq(rs, rt, offset): return i_type(0x04, rs, rt, offset)
 def sd(rt, offset, base): return i_type(0x3F, base, rt, offset)
+def sq(rt, offset, base): return i_type(0x1F, base, rt, offset)  # R5900 128-bit store
 def sw(rt, offset, base): return i_type(0x2B, base, rt, offset)
 def swc1(ft, offset, base): return i_type(0x39, base, ft, offset)
 def subu(rd, rs, rt): return r_type(rs, rt, rd, 0x23)
+def dsubu(rd, rs, rt): return r_type(rs, rt, rd, 0x2F)
 def addu(rd, rs, rt): return r_type(rs, rt, rd, 0x21)
+def daddu(rd, rs, rt): return r_type(rs, rt, rd, 0x2D)
 def move(rd, rs): return r_type(rs, 0, rd, 0x25)
 def and_(rd, rs, rt): return r_type(rs, rt, rd, 0x24)
+def sll(rd, rt, shift): return r_type(0, rt, rd, 0) | (shift << 6)
 
 
 RETURN = [r_type(RA, 0, 0, 0x08), 0]  # jr $ra; nop
@@ -77,9 +83,34 @@ FUNCTIONS = [
     # A spill after the realignment is ordinary too.
     ('after_realign', [addiu(SP, SP, -128), sd(RA, 120, SP), move(FP, SP)] + REALIGN
      + [sd(4, 0, SP)] + RETURN),
+    # With alloca or a variable-length array Clang reaches the frame through $s7,
+    # set up only after the realignment, so this spill writes through the caller's $s7.
+    ('bp_spill', [addiu(SP, SP, -128), sd(RA, 120, SP), sd(23, 112, SP), move(FP, SP), addiu(1, 0, -64),
+                  sw(7, 0, 23), and_(SP, SP, 1), move(23, SP)] + RETURN),
+    # A 128-bit spill.
+    ('sq_spill', [addiu(SP, SP, -512), sq(7, 0x1A0, SP)] + REALIGN + RETURN),
+    # `and $sp` in a branch delay slot (drainGENERIC and others have it): the
+    # window still runs up to the `and`, past the branch.
+    ('delay_slot', [addiu(SP, SP, -512), sw(7, 0x1A0, SP), addiu(1, 0, -64), sll(16, 4, 0),
+                    beq(16, 0, 2), and_(SP, SP, 1)] + RETURN),
+    # A temporary that held $sp and was then overwritten is no stack address.
+    ('redefined_temp', [addiu(SP, SP, -512), addu(2, SP, 0), lui(2, 0x10), sd(16, 0, 2)] + REALIGN + RETURN),
+    # Callee-saved saves pass through every kind of $sp-derived temporary, as do
+    # callee-saved float registers saved through $sp.
+    ('derived_saves', [lui(1, 1), subu(SP, SP, 1), lui(1, 1), addu(1, SP, 1), sd(16, -8, 1),
+                       move(2, SP), sd(17, 0, 2), addiu(3, SP, 16), sd(18, 0, 3), daddu(4, SP, 0),
+                       sd(19, 8, 4), swc1(20, 32, SP), swc1(22, 36, SP), move(FP, SP)] + REALIGN + RETURN),
+    # Frames allocated by daddiu, dsubu and addu of a negative constant are measured.
+    ('daddiu_frame', [daddiu(SP, SP, -96), sd(RA, 88, SP), move(FP, SP)] + REALIGN + RETURN),
+    ('dsubu_frame', [lui(1, 1), dsubu(SP, SP, 1), move(FP, SP)] + REALIGN + RETURN),
+    ('addu_frame', [lui(1, 0xFFFF), addu(SP, SP, 1), move(FP, SP)] + REALIGN + RETURN),
 ]
 FLAGGED = {'shipped_copy': ('sw $7,416($29)', 0x98), 'derived_spill': ('sd $4,-8($2)', 0x10),
-           'float_spill': ('swc1 $f12,0($29)', 0x8), 'swapped_and': ('sw $5,8($29)', 0x4)}
+           'float_spill': ('swc1 $f12,0($29)', 0x8), 'swapped_and': ('sw $5,8($29)', 0x4),
+           'bp_spill': ('sw $7,0($23)', 0x14), 'sq_spill': ('sq $7,416($29)', 0x4),
+           'delay_slot': ('sw $7,416($29)', 0x4), 'redefined_temp': ('sd $16,0($2)', 0xC)}
+FRAMES = {'shipped_copy': 0xE2600, 'fixed_copy': 0x23C0, 'derived_saves': 0x10000,
+          'daddiu_frame': 96, 'dsubu_frame': 0x10000, 'addu_frame': 0x10000}
 
 
 def elf(functions, relocatable=False, stripped=False, base=0x100000):
@@ -130,8 +161,8 @@ with tempfile.TemporaryDirectory(prefix='stack-realign-') as folder:
         for name, (store, offset) in FLAGGED.items():
             line = '%s at %#x: %s before' % (name, address[name] + offset, store)
             assert any(hazard.startswith(line) for hazard in hazards), (line, hazards)
-        assert ('shipped_copy', 0xE2600) in realigned, realigned  # the 905 KB frame
-        assert ('fixed_copy', 0x23C0) in realigned, realigned
+        for name, size in FRAMES.items():  # shipped_copy is the 905 KB frame
+            assert (name, size) in realigned, (name, realigned)
         assert not any(name == 'plain_frame' for name, _ in realigned)
 
     # A stripped file is scanned as one stream and still fails.
@@ -166,12 +197,19 @@ with tempfile.TemporaryDirectory(prefix='stack-realign-') as folder:
     assert struct.unpack_from('<I', no_code, text_header + 8)[0] == 6  # SHF_ALLOC | SHF_EXECINSTR
     struct.pack_into('<I', no_code, text_header + 8, 2)  # SHF_ALLOC only
     (folder / 'no-code.elf').write_bytes(no_code)
-    for name in ('no-sections.elf', 'no-code.elf'):
-        assert check.scan(folder / name)[0] == [], name
+    # An empty .text whose only function symbol has size 0 is scanned as one
+    # empty stream, which is no code either.
+    (folder / 'empty-code.elf').write_bytes(elf([('empty', [])]))
+    assert [function.words for function in check.scan(folder / 'empty-code.elf')[0]] == [()]
+    for name in ('no-sections.elf', 'no-code.elf', 'empty-code.elf'):
+        if name != 'empty-code.elf':
+            assert check.scan(folder / name)[0] == [], name
         result = run(name)
         assert result.returncode == 1 and 'PASS' not in result.stdout, result
         assert 'no code found, so nothing was checked' in result.stderr, result
 
-print('PASS: the shipped copy() prologue and three other pre-realignment stores fail; '
-      'the fixed prologue, $fp stores, plain and later spills pass; linked, relocatable and stripped ELF; '
-      'a file with no code to check fails')
+print('PASS: the shipped copy() prologue and %d other pre-realignment stores fail (including a '
+      '$s7 base-pointer spill and an `and` in a delay slot); the fixed prologue, callee-saved saves '
+      'through $sp-derived temporaries, $fp stores, plain and later spills pass; frames of every '
+      'allocation form are measured; linked, relocatable and stripped ELF; a file with no code to '
+      'check fails' % (len(FLAGGED) - 1))
