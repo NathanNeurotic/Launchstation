@@ -53,6 +53,7 @@ typedef uint8_t u8;typedef uint16_t u16;typedef uint32_t u32;typedef uint64_t u6
 #define PM_PSU_BACKUP 1
 #define PM_PSU_RESTORE 2
 #define PM_RENAME 3
+#define COPY_KEPT_DESTINATION 1
 #define TRANSFER_STACK_READY 0
 #define TRANSFER_STACK_INCOMPATIBLE -2
 #define COPY_BUFFER_FAST_DEFAULT 0x100000
@@ -190,11 +191,14 @@ static int getDir(const char *p,FILEINFO *out){
  while((e=readdir(d))){if(!strcmp(e->d_name,".")||!strcmp(e->d_name,".."))continue;assert(n<MAX_ENTRY);memset(&out[n],0,sizeof(out[n]));snprintf(out[n].name,sizeof(out[n].name),"%s",e->d_name);char full[MAX_PATH];snprintf(full,sizeof(full),"%s%s",p,e->d_name);struct stat st;assert(!stat(full,&st));out[n].stats.AttrFile=S_ISDIR(st.st_mode)?sceMcFileAttrSubdir:0;out[n].stats.FileSizeByte=st.st_size;n++;}closedir(d);return n;
 }
 static int unexpected(void){assert(!"PSU branch is outside this ordinary-copy fixture");return -1;}
+#define psu_backup_holds_other_save(...) unexpected()
 #define psu_backup_create_root_image(...) unexpected()
 #define psu_backup_finalize_root_image(...) unexpected()
+#define psu_backup_discard_root_image(...) unexpected()
 #define psu_backup_begin_file_entry(...) unexpected()
 #define psu_backup_write_padding(...) unexpected()
 #define psu_restore_read_file_entry(...) unexpected()
+#define psu_restore_check_entries(...) unexpected()
 #define psu_restore_open_root_image(...) unexpected()
 #define psu_restore_apply_entry_stats_to_mc(...) unexpected()
 static int applyMcInfoToVmcPath(const char *p,const sceMcTblGetDir *s){(void)p;(void)s;return 0;}
