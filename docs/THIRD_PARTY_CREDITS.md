@@ -7,7 +7,7 @@
 - **[wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z)** — direct upstream foundation, maintained by R3Z3N / [Saildot4K](https://github.com/saildot4k). Earlier wLaunchELF, uLaunchELF and LaunchELF contributors retain attribution.
 - **[johnson-cooper](https://github.com/johnson-cooper)** — created this fork and handed its maintenance to [NathanNeurotic / Ripto](https://github.com/NathanNeurotic).
 - **[NathanNeurotic / Ripto](https://github.com/NathanNeurotic)** — current maintainer.
-- **[techwritescode](https://github.com/techwritescode)** — development collaboration and the [PS2BUILD SDK](https://git.techwritescode.dev/ps2/ps2build) used to build releases; **[TnA](https://github.com/TnA-Plastic)** — insight and support; **[oMrRexD](https://github.com/oMrRexD)** — remote/FTP PC-side ecosystem reference and collaboration; **[zackcage6](https://github.com/zackcage6) and FitthFox** — dashboard and file browser testing and UX feedback.
+- **[techwritescode](https://github.com/techwritescode)** — development collaboration and the [PS2BUILD SDK](https://git.techwritescode.dev/ps2/ps2build) used to build releases; **[TnA](https://github.com/TnA-Plastic)** — insight and support; **[oMrRexD](https://github.com/oMrRexD)** — remote/FTP PC-side ecosystem reference and collaboration; **[zackcage6](https://github.com/zackcage6) and [Fifthfox](https://github.com/fifthfox)** — dashboard and file browser testing and UX feedback.
 - **[ps2dev community](https://github.com/ps2dev)** — toolchain, driver, graphics and filesystem foundations. Additional contributors retain credit through original source comments, Git history, and upstream notices.
 
 ## How to read the tables
