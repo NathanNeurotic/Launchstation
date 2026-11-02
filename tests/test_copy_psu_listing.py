@@ -326,6 +326,13 @@ int main(void){
  clip("mass:/","BIG.psu",0x8497,PM_PSU_RESTORE);paste("mc1:/");
  assert(!message[0]&&filled("mc1:/BIGSAVE/BIG.BIN",300000,'Z'));
  settled();remove_tree("mc1:/BIGSAVE");
+ /* The files take no buffer of their own, which could fail once the old save
+  * is gone: here only FILE0.BIN's own (100 bytes) would. */
+ clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);fail_alloc_bytes=100;paste("mc0:/");
+ settled();
+ assert(quiet()&&yn_calls==1&&!exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00001")==2);
+ assert(filled("mc0:/BASLUS-00001/FILE0.BIN",100,'A')&&filled("mc0:/BASLUS-00001/FILE1.BIN",101,'B'));
+ put("mc0:/BASLUS-00001/OLD.BIN","old",3);
 
  /* An accepted overwrite replaces the old save. */
  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);paste("mc0:/");
