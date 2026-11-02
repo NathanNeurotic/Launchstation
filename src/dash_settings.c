@@ -2131,7 +2131,7 @@ static int settingsLeave(void)
 	char what[96];
 	int n = 0, r;
 	DashMenuItem items[] = {
-	    {DI_CHECK, "Save changes", NULL, 0},
+	    {DI_SAVE, "Save changes", NULL, 0},
 	    {DI_CLOSE, "Discard changes", NULL, 0},
 	    {DI_BACK, "Keep editing", NULL, 0}};
 
@@ -2919,7 +2919,7 @@ static void settingsMenu(void)
 	int failed = failedSaves();
 	int clock_save = softwareClockCheckpointAvailable();
 	DashMenuItem menu[] = {
-	    {DI_CHECK, !changed && failed ? "Retry failed saves" : !changed && clock_save ? "Save current clock" : "Save changes", "Save settings and current software time", !(changed || failed || clock_save)},
+	    {DI_SAVE, !changed && failed ? "Retry failed saves" : !changed && clock_save ? "Save current clock" : "Save changes", "Save settings and current software time", !(changed || failed || clock_save)},
 	    {DI_CLOSE, "Discard changes", "Undo edits since opening Settings or choosing Save", !changed},
 	    {DI_BACK, "Keep editing", NULL, 0}};
 	int r = dashModalMenu("Settings changes", changed ? "Changes preview immediately" : failed ? "An earlier save failed; retry is optional" : clock_save ? "Save the current clock before restarting" : "No unsaved changes", menu, NITEMS(menu), (changed || failed || clock_save) ? 0 : 2);
