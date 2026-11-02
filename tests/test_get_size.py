@@ -6,7 +6,8 @@ listing is a fixture with the contract the real one keeps
 (tests/test_listing_complete.py runs that), with MAX_ENTRY 16, so a listing
 holds 14 entries. Stats fail the way the devices' do: a udpfsd server may
 answer one only for an open file, ps2client's host: never answers (-5), and a
-memory card file here fails one with -EIO.
+memory card file or an SMB share's file here fails one with -EIO. SMB is
+defined as in the release build, with the real smbPathKind() (src/smb_cnf.c).
 """
 from pathlib import Path
 import shutil
@@ -49,6 +50,8 @@ typedef uint8_t u8;typedef uint16_t u16;typedef uint32_t u32;typedef uint64_t u6
 #define FALSE 0
 #define UDPFS 1
 #define ETH 1
+#define SMB 1
+#include "smb_shares.h"
 #define LNG(x) #x
 #define DPRINTF(...) ((void)0)
 #define sceMcFileAttrSubdir 0x20
@@ -76,7 +79,7 @@ static int genGetStat(const char *p,iox_stat_t *out){
  struct stat st;
  if(!strncmp(p,"udpfs:",6))return -ENOENT;   /* a udpfsd server that stats only open files */
  if(!strncmp(p,"host:",5))return -5;          /* ps2client */
- if(strstr(p,"BAD"))return -EIO;
+ if(strstr(p,"BAD")||!strncmp(p,"smb:",4))return -EIO;
  if(stat(p,&st))return -errno;
  memset(out,0,sizeof(*out));out->size=(u32)st.st_size;out->hisize=(u32)((u64)st.st_size>>32);return 0;
 }
@@ -101,7 +104,9 @@ static int list(const char *p,FILEINFO *out,int max,int *error){
   if(n==max)break;
   char full[MAX_PATH];struct stat st;snprintf(full,sizeof(full),"%s%s",p,names[i]);assert(!stat(full,&st));
   memset(&out[n],0,sizeof(out[n]));snprintf(out[n].name,sizeof(out[n].name),"%s",names[i]);
-  out[n].stats.AttrFile=S_ISDIR(st.st_mode)?sceMcFileAttrSubdir:0;out[n].stats.FileSizeByte=S_ISDIR(st.st_mode)?0:st.st_size;n++;
+  out[n].stats.AttrFile=S_ISDIR(st.st_mode)?sceMcFileAttrSubdir:0;
+  if(!S_ISDIR(st.st_mode)){out[n].stats.FileSizeByte=(u32)st.st_size;out[n].stats.Reserve2=(u32)((u64)st.st_size>>32);}
+  n++;
  }
  for(int i=0;i<count;i++)free(names[i]);
  return n;
@@ -142,7 +147,7 @@ code += function(dash, 'static void opSize(void)\n{')
 code += r'''
 static FILEINFO files[MAX_ENTRY],dash_files[MAX_ENTRY];static u8 dash_marks[MAX_ENTRY];
 static char mess[MAX_PATH];
-static void put(const char *p,int size){int fd=open(p,O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0);assert(!ftruncate(fd,size));assert(!close(fd));}
+static void put(const char *p,off_t size){int fd=open(p,O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0);assert(!ftruncate(fd,size));assert(!close(fd));}
 static void tree(const char *dir,int n,int size){
  char p[MAX_PATH];assert(!mkdir(dir,0700));
  for(int i=0;i<n;i++){snprintf(p,sizeof(p),"%s/F%03d",dir,i);put(p,size);}
@@ -186,6 +191,12 @@ int main(void){
  show("host:/","PC.BIN");measure();
  assert(starts(mess,"SIZE = 4.9KB "));
  assert(modal_icon==DI_INFO&&!strcmp(modal_body,"5000 bytes"));
+ /* An SMB share's file too, here one over 4 GB (sparse): the listing's high word counts. */
+ assert(!mkdir("smb:",0700)&&!mkdir("smb:/PC",0700));
+ put("smb:/PC/DISC.ISO",((off_t)5<<30)+3);
+ show("smb:/PC/","DISC.ISO");measure();
+ assert(starts(mess,"SIZE = 5120.0MB "));
+ assert(modal_icon==DI_INFO&&!strcmp(modal_body,"5.00 GB  (5368709123 bytes)"));
  /* A memory card file whose stat fails was not measured. */
  put("mc0:/A.BIN",64);put("mc0:/BAD.BIN",64);put("mc0:/OK.BIN",64);
  show("mc0:/","BAD.BIN");measure();
@@ -230,7 +241,8 @@ int main(void){
  show("mass0:/","MIX");measure();
  assert(starts(mess,"Size_test_Failed ")&&!strcmp(modal_detail,"error -12"));
  fail_alloc_bytes=0;
- puts("PASS: Get Size uses a network listing's sizes when a stat fails, shows a total missing anything "
+ puts("PASS: Get Size uses a network listing's sizes (host, udpfs, SMB, over 4 GB) when a stat fails, "
+      "shows a total missing anything "
       "(over the listing cap, a folder or stat that failed, no memory) as a lower bound or a failure "
       "in both browsers, and keeps a folder's size only when it is exact");
  return 0;
@@ -243,6 +255,6 @@ with tempfile.TemporaryDirectory(prefix='get-size-') as folder:
     cc = shutil.which('gcc') or shutil.which('cc')
     if not cc:
         raise SystemExit('Host C compiler required')
-    subprocess.run([cc, '-std=gnu99', '-Werror=implicit-function-declaration', str(p / 'test.c'), '-o', str(exe)],
-                   check=True)
+    subprocess.run([cc, '-std=gnu99', '-Werror=implicit-function-declaration', '-I', str(root / 'include'),
+                    str(p / 'test.c'), str(root / 'src/smb_cnf.c'), '-o', str(exe)], check=True)
     subprocess.run([str(exe)], cwd=p, check=True, timeout=60)

@@ -4,8 +4,9 @@ getDirComplete() is the listing copy, delete and Get Size act on: it must
 return an error unless it read the whole folder. getDir() is the browser's
 listing and keeps showing what it could read. Both go through the real
 listDir() dispatcher and the real memory card, generic (BDM, MMCE, PC card),
-CD, VMC, HDD and host readers; only the drivers below them are fakes, with
-the end of folder and error results each driver really returns.
+CD, VMC, HDD, PSX flash, DVR and host readers; only the drivers below them
+are fakes, with the end of folder and error results each driver really
+returns.
 """
 from pathlib import Path
 import re
@@ -42,6 +43,8 @@ enum {MAX_NAME=%(MAX_NAME)d,MAX_PATH=%(MAX_PATH)d,MAX_ENTRY=%(MAX_ENTRY)d,MAX_PA
 #define ETH 1
 #define MMCE 1
 #define MX4SIO 1
+#define XFROM 1
+#define DVRP 1
 #define FALSE 0
 #define DPRINTF(...) ((void)0)
 #define FIO_S_IFMT 0xF000
@@ -160,6 +163,39 @@ static int getHddParty(const char *path,const FILEINFO *file,char *party,char *d
 }
 static int mountParty(const char *party){(void)party;return 0;}
 
+/* PSX: the flash (xfrom:) lists like a memory card, through its own getdir.
+ * The DVR drive: "dvr_hdd0:/PART/DIR/" is read as "dvr_pfs0:/DIR/". */
+static u8 console_is_PSX=1;static int xfrom_result;
+static int loadFlashModules(void){return 1;}
+static int xfromGetInfo(int port,int slot,int *type,int *free,int *format){(void)port;(void)slot;(void)free;(void)format;*type=2;xfrom_result=0;return 0;}
+static int xfromGetDir(int port,int slot,const char *name,unsigned mode,int maxent,sceMcTblGetDir *table){
+ char path[MAX_PATH];size_t n=strlen(name);(void)port;(void)slot;(void)mode;
+ assert(n&&name[n-1]=='*');snprintf(path,sizeof(path),"xfrom:/%%.*s",(int)(n-1),name);
+ assert(maxent>=1&&maxent<=MAX_ENTRY+1); /* readXFROM's table holds MAX_ENTRY + 1 */
+ Folder *f=find(path);
+ if(!f){xfrom_result=sceMcResNoEntry;return 0;}
+ if(f->open_error){xfrom_result=f->open_error;return 0;}
+ int total=f->count+(f->dots?2:0),k;
+ for(k=0;k<total&&k<maxent;k++){
+  unsigned fmode,size;char fname[32];int i=k-(f->dots?2:0);memset(&table[k],0,sizeof(table[k]));
+  if(i<0){strcpy((char *)table[k].EntryName,i==-2?".":"..");table[k].AttrFile=MC_ATTR_norm_folder;continue;}
+  entry(i,fname,&fmode,&size);strcpy((char *)table[k].EntryName,fname);
+  table[k].AttrFile=fmode==FIO_S_IFDIR?MC_ATTR_norm_folder:MC_ATTR_norm_file;table[k].FileSizeByte=size;
+ }
+ xfrom_result=k;return 0;
+}
+static int xfromSync(int mode,int *cmd,int *result){(void)mode;(void)cmd;if(result)*result=xfrom_result;return 1;}
+static int ndvrpparties,dvr_partitions;static char dvrParties[4][MAX_PART_NAME+1];
+static int loadDVRPHddModules(void){return 1;}
+static void setDVRPPartyList(void){
+ ndvrpparties=dvr_partitions;for(int i=0;i<dvr_partitions;i++)sprintf(dvrParties[i],"+DVR%%d",i);
+}
+static int getHddDVRPParty(const char *path,const FILEINFO *file,char *party,char *dir){
+ const char *p=path+10,*slash=strchr(p,'/');(void)file;assert(slash);
+ snprintf(party,MAX_NAME,"%%.*s",(int)(slash-p),p);snprintf(dir,MAX_PATH,"dvr_pfs0:%%s",slash);return 0;
+}
+static int mountDVRPParty(const char *party){(void)party;return 0;}
+
 /* host: (ps2client) */
 static void initHOST(void){}
 static char *makeHostPath(char *out,const char *in){if(out!=in)strcpy(out,in);return out;}
@@ -190,7 +226,8 @@ for signature in ('static void dirOpenResult(', 'static void dirReadFailed(',
                   'static int getHddDeviceFromPath(', 'static int isHddRootPath(', 'static int isAtaPath(',
                   'static const char *canonicalizeAtaPath(', 'static const char *canonicalizePcCardCfPath(',
                   'static int getHddUnitFromDevice(', 'static int isSimpleDeviceRootPath(',
-                  'static int isMx4sioRootPath(', 'static void drainGENERIC('):
+                  'static int isMx4sioRootPath(', 'static void drainGENERIC(',
+                  'static const char *getXfromRelativePath('):
     code += function(signature)
 code += 'int readGENERIC(const char *path, FILEINFO *info, int max);\n'
 for signature in ('static int readGENERICWithFirstOpenRetry(',
@@ -198,6 +235,8 @@ for signature in ('static int readGENERICWithFirstOpenRetry(',
                   'int readCD(const char *path, FILEINFO *info, int max)\n{',
                   'int readVMC(const char *path, FILEINFO *info, int max)\n{',
                   'int readHDD(const char *path, FILEINFO *info, int max)\n{',
+                  'int readXFROM(const char *path, FILEINFO *info, int max)\n{',
+                  'int readHDDDVRP(const char *path, FILEINFO *info, int max)\n{',
                   'int readGENERIC(const char *path, FILEINFO *info, int max)\n{',
                   'int readHOST(const char *path, FILEINFO *info, int max)\n{',
                   'static int listDir(const char *path, FILEINFO *info, int max)\n{',
@@ -285,6 +324,26 @@ int main(void){
  add("mc0:/BAD/",3)->open_error=sceMcResNoFormat;assert(complete("mc0:/BAD/")==-EIO&&browse("mc0:/BAD/")==0);
  mc_ready=sceMcResChangedCard;assert(complete("mc0:/FULL/")==-ENODEV&&browse("mc0:/FULL/")==0);
  mc_ready=sceMcResSucceed;assert(complete("mc0:/FULL/")==CAP);
+ /* PSX flash: a folder lists "." and ".." like a memory card one; its getdir
+  * error is a folder that could not be read, shown empty in the browser */
+ add("xfrom:/FULL/",CAP)->dots=1;add("xfrom:/OVER/",CAP+1)->dots=1;
+ assert(complete("xfrom:/FULL/")==CAP&&listed(CAP)&&browse("xfrom:/FULL/")==CAP&&listed(CAP));
+ assert(complete("xfrom:/OVER/")==-E2BIG);
+ assert(complete_more("xfrom:/OVER/")==CAP+1&&more==1&&listed(CAP+1));
+ assert(complete("xfrom:/GONE/")==-ENOENT&&browse("xfrom:/GONE/")==0);
+ add("xfrom:/BAD/",3)->open_error=sceMcResNoFormat;
+ assert(complete("xfrom:/BAD/")==-EIO&&browse("xfrom:/BAD/")==0);
+ console_is_PSX=0;assert(complete("xfrom:/FULL/")==-ENODEV&&complete("dvr_hdd0:/")==-ENODEV);
+ console_is_PSX=1;
+ /* DVR drive: its partition list stands in for the root, and a folder read
+  * that fails partway is an error, as on the HDD */
+ assert(complete("dvr_hdd0:/")==-ENODEV&&browse("dvr_hdd0:/")==0); /* no partition list */
+ dvr_partitions=2;ndvrpparties=0;assert(complete("dvr_hdd0:/")==2&&!strcmp(info[1].name,"+DVR1"));
+ f=add("dvr_pfs0:/DIR/",9);f->dots=1;f->fail_at=5;f->fail_code=-EIO;
+ assert(complete("dvr_hdd0:/+DVR0/DIR/")==-EIO&&!open_handles);
+ assert(browse("dvr_hdd0:/+DVR0/DIR/")==5&&listed(5));
+ f->fail_at=-1;assert(complete("dvr_hdd0:/+DVR0/DIR/")==9&&listed(9));
+ assert(complete("dvr_hdd0:/+DVR0/GONE/")==-ENOENT&&browse("dvr_hdd0:/+DVR0/GONE/")==0);
  /* a device nothing reads */
  assert(complete("xyz0:/")==-ENODEV&&browse("xyz0:/")==0);
  assert(!open_handles);
