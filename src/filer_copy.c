@@ -90,6 +90,18 @@ static int copyDiagFail(int result)
 	return result;
 }
 
+/* A PSU restore maps its paths twice: for the .psu, then for the folder that
+ * the .psu holds, with the .psu open (PM_file[level + 1]). A mapping that
+ * fails on that second pass closes it, once, before returning. */
+static int copyMapFailed(int level)
+{
+	if (PM_flag[level + 1] == PM_PSU_RESTORE && PM_file[level + 1] >= 0) {
+		genClose(PM_file[level + 1]);
+		PM_file[level + 1] = -1;
+	}
+	return copyDiagFail(-1);
+}
+
 void filerCopyDiagFormat(char *out, int size, int result)
 {
 	int error = copy_diag.error ? copy_diag.error : result;
@@ -531,11 +543,11 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 
 	if (!strncmp(inPath, "hdd", 3)) {
 		if (getHddParty(inPath, &file, inParty, in) < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		/* Re-resolve/mount source partition each copy so stale browser mounts do not break paste/move. */
 		pfsin = mountParty(inParty);
 		if (pfsin < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		in[3] = pfsin + '0';
 #if FILEOP_TRACE
 		printf("[FILEOP] hdd-map src %s:pfs%d:%s recurse=%d\n",
@@ -544,10 +556,10 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 #ifdef DVRP
 	} else if (!strncmp(inPath, "dvr_hdd", 7)) {
 		if (getHddDVRPParty(inPath, &file, inParty, in) < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		pfsin = mountDVRPParty(inParty);
 		if (pfsin < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		in[7] = pfsin + '0';
 #endif
 	} else
@@ -555,11 +567,11 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 
 	if (!strncmp(outPath, "hdd", 3)) {
 		if (getHddParty(outPath, &newfile, outParty, out) < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		/* Re-resolve/mount destination partition each copy so stale browser mounts do not break paste/move. */
 		pfsout = mountParty(outParty);
 		if (pfsout < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		out[3] = pfsout + '0';
 #if FILEOP_TRACE
 		printf("[FILEOP] hdd-map dst %s:pfs%d:%s recurse=%d\n",
@@ -568,17 +580,20 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 #ifdef DVRP
 	} else if (!strncmp(outPath, "dvr_hdd", 7)) {
 		if (getHddDVRPParty(outPath, &newfile, outParty, out) < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		pfsout = mountDVRPParty(outParty);
 		if (pfsout < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		out[7] = pfsout + '0';
 #endif
 	} else
 		sprintf(out, "%s%s", outPath, newfile.name);
 
-	if (!strcmp(in, out))
+	if (!strcmp(in, out)) {
+		if (PSU_restart_f)  //the first pass found them different: a mapping changed under the open .psu
+			return copyMapFailed(recurses);
 		return 0;  //if in and out are identical our work is done.
+	}
 
 #if FILEOP_TRACE
 	trace_net_copy = (!strncmp(in, "host", 4) || !strncmp(in, "udpfs", 5)
@@ -917,6 +932,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		PM_flag[recurses + 1] = PM_PSU_RESTORE;  //Mode flag for recursive entry
 		//The helper above transformed the PSU header into a folder-like FILEINFO entry
 		PSU_restart_f = 1;
+		filerCopyDiagStage("Preparing devices");  //the second pass maps its paths again
 		goto restart_copy;
 	}
 non_PSU_RESTORE_init:

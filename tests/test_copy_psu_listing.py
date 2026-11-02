@@ -53,6 +53,7 @@ typedef uint8_t u8;typedef uint16_t u16;typedef uint32_t u32;typedef uint64_t u6
 #define FILEOP_TRACE 0
 #define UDPFS 1
 #define ETH 1
+#define DVRP 1
 #define GIT_HASH "fixture-head"
 #define TRUE 1
 #define FALSE 0
@@ -149,8 +150,17 @@ static int mcSetFileInfo(int port,int slot,const char *from,const sceMcTblGetDir
 static int mcSync(int mode,void *c,int *r){(void)mode;(void)c;if(r)*r=0;return 1;}
 static int mcGetInfo(int p,int s,int *type,int *a,int *b){(void)p;(void)s;if(type)*type=2;if(a)*a=1000;if(b)*b=1000;return 0;}
 static int fileXioChStat(const char *p,const iox_stat_t *s,int f){(void)p;(void)s;(void)f;return 0;}
-static int getHddParty(const char *p,const FILEINFO *f,char *a,char *b){(void)p;(void)f;(void)a;(void)b;assert(0);return -1;}
-static int mountParty(const char *p){(void)p;assert(0);return -1;}
+/* HDD and DVR partitions are the folders pfsN: and dvr_pfsN: here, mapped by the
+ * real getHddParty() and getHddDVRPParty(). The Nth path lookup or the Nth mount
+ * fails, and the Nth HDD mount can land in another slot (mount_slot[N]). */
+static int party_calls,party_fail_at,mount_calls,mount_fail_at,mount_slot[16];
+static int real_getHddParty(const char *path,const FILEINFO *file,char *party,char *dir);
+static int real_getHddDVRPParty(const char *path,const FILEINFO *file,char *party,char *dir);
+static int getDVRPPartyMountIndex(const char *party);
+static int getHddParty(const char *p,const FILEINFO *f,char *a,char *b){return ++party_calls==party_fail_at?-1:real_getHddParty(p,f,a,b);}
+static int getHddDVRPParty(const char *p,const FILEINFO *f,char *a,char *b){return ++party_calls==party_fail_at?-1:real_getHddDVRPParty(p,f,a,b);}
+static int mountParty(const char *p){(void)p;return ++mount_calls==mount_fail_at?-1:mount_slot[mount_calls%16];}
+static int mountDVRPParty(const char *p){return ++mount_calls==mount_fail_at?-1:getDVRPPartyMountIndex(p);}
 static int fileShowTitles(void){return 0;}
 static int filerGetGameTitle(const char *p,const FILEINFO *f,unsigned char *out){(void)p;(void)f;out[0]=0;return -1;}
 static void transcpy_sjis(char *out,const unsigned char *in){strcpy(out,(const char *)in);}
@@ -164,13 +174,24 @@ static int remove_tree(const char *p){struct stat st;if(lstat(p,&st))return -err
 static int delete(const char *p,const FILEINFO *f){if(delete_fail)return -EIO;char t[MAX_PATH];snprintf(t,sizeof(t),"%s%s",p,f->name);return remove_tree(t);}
 static void markMx4sioDestinationAfterWrite(const char *p){(void)p;}
 static int genCmpFileExt(const char *name,const char *ext){const char *p=strrchr(name,'.');return p!=NULL&&!strcasecmp(p+1,ext);}
-static int newdir(const char *parent,const char *name){char p[MAX_PATH];snprintf(p,sizeof(p),"%s%s",parent,name);return mkdir(p,0700)?-errno:0;}
+/* Like the real newdir(), it maps an HDD or DVR parent to its partition's folder. */
+static int newdir(const char *parent,const char *name){char p[MAX_PATH],party[MAX_NAME];int dvr=!strncmp(parent,"dvr_hdd",7),slot;
+ if(dvr||!strncmp(parent,"hdd",3)){if((dvr?getHddDVRPParty:getHddParty)(parent,NULL,party,p)<0)return -1;
+  if((slot=dvr?mountDVRPParty(party):mountParty(party))<0)return -1;p[dvr?7:3]='0'+slot;strcat(p,name);}
+ else snprintf(p,sizeof(p),"%s%s",parent,name);
+ return mkdir(p,0700)?-errno:0;}
 static DIR *dirs[64];static char dir_path[64][MAX_PATH];
 static int fileXioDopen(const char *p){DIR *d=opendir(p);if(!d)return -errno;for(int i=0;i<64;i++)if(!dirs[i]){dirs[i]=d;snprintf(dir_path[i],MAX_PATH,"%s",p);return i;}assert(0);return -1;}
 static int fileXioDread(int fd,iox_dirent_t *r){struct dirent *e=readdir(dirs[fd]);if(!e)return 0;memset(r,0,sizeof(*r));snprintf(r->name,sizeof(r->name),"%s",e->d_name);char full[MAX_PATH*2];snprintf(full,sizeof(full),"%s%s",dir_path[fd],e->d_name);struct stat st;if(stat(full,&st))return -errno;r->stat.mode=S_ISDIR(st.st_mode)?FIO_S_IFDIR:FIO_S_IFREG;r->stat.size=st.st_size;return 1;}
 static int fileXioDclose(int fd){closedir(dirs[fd]);dirs[fd]=0;return 0;}
 static void clearMcTable(sceMcTblGetDir *mcT){memset((void *)mcT,0,sizeof(sceMcTblGetDir));}
 '''
+# The real HDD and DVR path mapping, under the names that the stubs above wrap.
+hdd = (root / 'src/gui_hdd0_format.c').read_text()
+code += function(hdd, 'static int getHddDeviceFromPath(')
+code += 'static ' + function(hdd, 'int getHddParty(').replace('int getHddParty(', 'int real_getHddParty(', 1)
+code += 'static ' + function(hdd, 'int getHddDVRPParty(').replace('int getHddDVRPParty(', 'int real_getHddDVRPParty(', 1)
+code += 'static ' + function((root / 'src/filer_mount.c').read_text(), 'int getDVRPPartyMountIndex(')
 reader = function(filer, 'int readGENERIC(const char *path, FILEINFO *info, int max)\n{')
 code += 'static ' + reader
 code += 'static int getDir(const char *p,FILEINFO *out){return readGENERIC(p,out,MAX_ENTRY-2);}\n'
@@ -203,6 +224,7 @@ static int filled(const char *p,int n,int byte){unsigned char b[4096];if(read_al
 static void clip(const char *path,const char *name,int attr,int mode){
  yn_answer=1;yn_calls=0;cancel_copy=0;fail_alloc_bytes=0;browser_cut=0;generation=clipIopResetGeneration=1;
  writes=write_fail_at=0;alloc_fail_stage=NULL;
+ party_calls=party_fail_at=mount_calls=mount_fail_at=0;memset(mount_slot,0,sizeof(mount_slot));
  protected_folder=0;modify_answer=1;modify_calls=delete_questions=delete_fail=0;
  PasteMode=mode;strcpy(clipPath,path);nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));
  strcpy(clipFiles[0].name,name);clipFiles[0].stats.AttrFile=attr;
@@ -229,7 +251,9 @@ static void make_psu(const char *path,const char *folder,int count){
 int main(void){
  diag_stage=&copy_diag.stage;
  mkdir("mass:",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);mkdir("udpfs:",0700);
+ mkdir("pfs0:",0700);mkdir("dvr_pfs1:",0700);
  make_psu("mass:/SAVE.psu","BASLUS-00001",2);
+ make_psu("pfs0:/SAVE.psu","BASLUS-00001",2);make_psu("dvr_pfs1:/SAVE.psu","BASLUS-00001",2);
 
  /* A PSU restores into a new folder. */
  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);paste("mc0:/");
@@ -296,6 +320,29 @@ int main(void){
  clip("mass:/","BLANK.psu",0x8497,PM_PSU_RESTORE);paste("mc1:/");
  assert(strstr(message,"Opening source (-1)")&&entries("mc1:")==0);
  settled();
+
+ /* A PSU on the HDD or the DVR restores, and so does one restored to them. */
+ clip("hdd0:/+SAVES/","SAVE.psu",0x8497,PM_PSU_RESTORE);paste("mc1:/");
+ assert(!message[0]&&filled("mc1:/BASLUS-00001/FILE0.BIN",100,'A')&&filled("mc1:/BASLUS-00001/FILE1.BIN",101,'B'));
+ settled();remove_tree("mc1:/BASLUS-00001");
+ clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);paste("dvr_hdd0:/__xdata/");
+ assert(!message[0]&&filled("dvr_pfs1:/BASLUS-00001/FILE1.BIN",101,'B'));
+ settled();remove_tree("dvr_pfs1:/BASLUS-00001");
+ /* A restore maps its partitions twice, the second time with the .psu open.
+  * When the source's or destination's HDD or DVR partition cannot be looked up
+  * or mounted then, the .psu is closed once (settled() counts files left open
+  * and files closed twice) and nothing is restored. */
+ {const char *from[]={"hdd0:/+SAVES/","dvr_hdd0:/__xdata/","mass:/","mass:/"};
+  const char *to[]={"mc1:/","mc1:/","hdd0:/+SAVES/","dvr_hdd0:/__xdata/"};
+  for(int c=0;c<8;c++){
+   clip(from[c/2],"SAVE.psu",0x8497,PM_PSU_RESTORE);*(c&1?&mount_fail_at:&party_fail_at)=2;paste(to[c/2]);
+   settled();
+   assert(says("Preparing devices (-1)")&&entries("mc1:")==0&&entries("pfs0:")==1&&entries("dvr_pfs1:")==1);}}
+ /* So is one whose destination partition is mounted in the source's slot on
+  * the second pass, which makes the two folder paths equal. */
+ clip("hdd0:/+SAVES/","SAVE.psu",0x8497,PM_PSU_RESTORE);mount_slot[2]=1;paste("hdd0:/+OTHER/");
+ settled();
+ assert(says("Preparing devices (-1)")&&entries("pfs0:")==1);
 
  /* PSU backup of a save folder: header, ".", "..", then 512 + 1024 bytes per file. */
  unsigned char good[8192],now[8192];
