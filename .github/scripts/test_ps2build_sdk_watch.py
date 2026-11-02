@@ -438,6 +438,26 @@ exit 0
         # The same issue is the fallback when Actions may not open pull requests.
         self.assertIn("report ", step.split("gh pr create", 1)[1].split("\n          fi\n", 1)[0])
 
+    def test_the_pull_request_lookup_ignores_forks(self):
+        # gh's --head matches the branch name alone, so a fork's pull request from a branch of the same name could
+        # be taken for the proposal's: edited in its place, or named as the reason to leave the branch alone.
+        step = (WORKFLOWS / "ps2build-sdk-watch.yml").read_text().split("- name: Push the new pins", 1)[1]
+        lookup = step[step.index('PR="$(gh pr list'):]
+        lookup = lookup[:lookup.index(')"\n') + 2]
+        self.assertIn('--head "$BRANCH" --base master ', lookup)
+        program = lookup.split("--jq '", 1)[1].split("'", 1)[0]
+        if shutil.which("jq") is None:
+            self.skipTest("jq is not installed")
+
+        def number(prs):
+            return subprocess.run(["jq", "-r", program], input=json.dumps(prs), capture_output=True, text=True,
+                                  check=True).stdout.strip()
+
+        fork, ours = {"number": 7, "isCrossRepository": True}, {"number": 9, "isCrossRepository": False}
+        self.assertEqual(number([fork, ours]), "9")
+        self.assertEqual(number([fork]), "")
+        self.assertEqual(number([]), "")
+
 
 if __name__ == "__main__":
     unittest.main()

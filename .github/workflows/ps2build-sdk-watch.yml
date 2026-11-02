@@ -169,7 +169,10 @@ jobs:
             git fetch -q origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
             OLD="$(git rev-parse "origin/$BRANCH")"
           fi
-          PR="$(gh pr list --repo "$R" --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
+          # The proposal's own pull request. gh's --head matches the branch name alone, and a fork's pull request
+          # can come from a branch of the same name.
+          PR="$(gh pr list --repo "$R" --head "$BRANCH" --base master --state open \
+            --json number,isCrossRepository --jq '[.[] | select(.isCrossRepository == false)][0].number // empty')"
 
           # Without a pull request to show the new pins, an issue does: the lines given, then the proposal.
           report() {
