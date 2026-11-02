@@ -256,9 +256,25 @@ static float iconSdf(int id, V2 p)
 				d = U(d, sdBox(p, (k & 1) ? 0.4f : -0.4f, (k & 2) ? 0.4f : -0.4f, 0.3f, 0.3f, 0.1f));
 			break;
 		case DI_FOLDER:
+		case DI_NEW_FOLDER:
 			d = sdBox(p, 0.0f, 0.14f, 0.82f, 0.56f, 0.1f);
 			d = U(d, sdBox(p, -0.42f, -0.46f, 0.38f, 0.16f, 0.08f));
 			d = S(d, sdBox(p, 0.0f, -0.24f, 0.72f, 0.04f, 0.0f));
+			if (id == DI_NEW_FOLDER) {
+				/* Same badge as New document: clear the corner, then a plus. */
+				d = S(d, sdBox(p, 0.60f, -0.60f, 0.40f, 0.40f, 0.08f));
+				d = U(d, sdSeg(p, 0.36f, -0.60f, 0.84f, -0.60f, 0.085f));
+				d = U(d, sdSeg(p, 0.60f, -0.84f, 0.60f, -0.36f, 0.085f));
+			}
+			break;
+		case DI_SAVE:
+			/* Floppy disk: outlined body with a clipped upper-right corner, a
+			 * filled shutter along the top and an outlined label below. */
+			d = sdBoxOutline(p, 0.0f, 0.0f, 0.74f, 0.74f, 0.08f, T);
+			d = S(d, sdTriP(p, 0.30f, -0.90f, 0.90f, -0.90f, 0.90f, -0.30f));
+			d = U(d, sdSeg(p, 0.40f, -0.74f, 0.74f, -0.40f, T));
+			d = U(d, sdBox(p, -0.06f, -0.54f, 0.30f, 0.22f, 0.02f));
+			d = U(d, sdBoxOutline(p, 0.0f, 0.36f, 0.48f, 0.28f, 0.04f, T));
 			break;
 		case DI_SHARE:
 			/* folder body with a notch for the badge, plus two linked nodes */

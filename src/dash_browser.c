@@ -2614,7 +2614,7 @@ static void actionsMenu(void)
 		}
 		ADD(DI_WARNING, "Delete...", fb.nmarked ? marked : NULL, !has_target || !en[DELETE], F_DELETE);
 		ADD(DI_EDIT, "Rename...", NULL, f == NULL || !en[RENAME], F_RENAME);
-		ADD(DI_FOLDER, "New folder...", NULL, !en[NEWDIR], F_NEWDIR);
+		ADD(DI_NEW_FOLDER, "New folder...", NULL, !en[NEWDIR], F_NEWDIR);
 		if (en[NEWDIR] && strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
 			ADD(DI_MC, "New blank card...", "empty 1 to 64 MB .mcd", 0, F_NEW_BLANK_CARD);
 		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
