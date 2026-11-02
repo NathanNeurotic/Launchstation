@@ -835,6 +835,12 @@ static void test_command_stream(void)
 		   c->m_eDataMode == DATAMODE_IDLE);
 	command(c, "ABOR");
 	assert(reply(10) == 226 && !strstr((char *)sockets[10].output, "426 "));
+	c->m_eDataAction = DATAACTION_RETR; /* opened, still waiting for the PASV/PORT data socket */
+	command(c, "ABOR");
+	assert(reply(10) == 426 && strstr((char *)sockets[10].output, "\r\n226 ") &&
+		   c->m_eDataAction == DATAACTION_NONE);
+	command(c, "LIST /nosuchdevice/");
+	assert(reply(10) == 500 && c->m_eDataAction == DATAACTION_NONE);
 	memset(c->m_kContext.m_Path, 'a', sizeof(c->m_kContext.m_Path) - 1);
 	c->m_kContext.m_Path[0] = '/';
 	c->m_kContext.m_Path[sizeof(c->m_kContext.m_Path) - 1] = 0;

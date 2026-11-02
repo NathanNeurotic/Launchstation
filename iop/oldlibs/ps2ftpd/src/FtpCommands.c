@@ -214,17 +214,14 @@ void FtpClient_OnCmdList(struct FtpClient *pClient, const char *pPath, int iName
 {
 	assert(pClient);
 
-	if (iNamesOnly)
-		pClient->m_eDataAction = DATAACTION_NLST;
-	else
-		pClient->m_eDataAction = DATAACTION_LIST;
-
-	// attempt to open directory
+	// attempt to open directory; only a listing that opened is pending
 
 	if (FileSystem_OpenDir(&pClient->m_kContext, pPath) < 0) {
 		FtpClient_Send(pClient, 500, pClient->m_pMessages[FTPMSG_UNABLE_TO_OPEN_DIRECTORY]);
 		return;
 	}
+
+	pClient->m_eDataAction = iNamesOnly ? DATAACTION_NLST : DATAACTION_LIST;
 
 	FtpClient_HandleDataConnect(pClient);
 }

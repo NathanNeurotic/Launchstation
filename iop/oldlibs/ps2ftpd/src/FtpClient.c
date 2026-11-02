@@ -246,7 +246,7 @@ void FtpClient_OnCommand(FtpClient *pClient, const char *pString)
 
 			case FTPCMD_ABOR: {
 				/* RFC 959: an interrupted transfer gets 426, then 226 for the ABOR itself. */
-				int active = pClient->m_eDataMode != DATAMODE_IDLE;
+				int active = pClient->m_eDataMode != DATAMODE_IDLE || pClient->m_eDataAction != DATAACTION_NONE;
 				FtpClient_OnDataCleanup(pClient);
 				if (active)
 					FtpClient_Send(pClient, 426, "Connection closed; transfer aborted.");
