@@ -10,21 +10,11 @@ fi
 SDK="${PS2DEV_INSTALL_DIR:-$HOME/.local/share/ps2build}"
 cd "${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
-if [ ! -x "$SDK/ps2build" ]; then
-  installer="$(mktemp)"
-  trap 'rm -f "$installer"' EXIT
-  curl -sSfL --retry 8 --retry-delay 5 --retry-all-errors --connect-timeout 20 \
-    https://git.techwritescode.dev/ps2/install/raw/branch/master/install.sh \
-    -o "$installer"
-  sh "$installer"
-fi
+# The SDK CI pins in .github/ps2build-sdk.env, LLVM included, installed by the same script CI uses. An SDK that
+# already holds those versions is left alone, and no session asks git.techwritescode.dev which release is newest.
+# The official host resets HTTP/2 streams under load; ps2build is a Go binary.
+GODEBUG=http2client=0 sh scripts/ps2build_sdk.sh --llvm "$SDK"
 export PATH="$SDK:$PATH"
-
-# Idempotent: refreshes the SDK package set, then ensures the LLVM toolchain.
-ps2build update
-if [ ! -f "$SDK/llvm-toolchain/ee/bin/mips64r5900el-ps2-elf-clang.cfg" ]; then
-  ps2build update llvm-toolchain
-fi
 
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   {
