@@ -2,9 +2,10 @@
 pastes on POSIX fixtures, with the real psu_functions.c and readGENERIC().
 
 Each folder level allocates its listing before it removes or creates anything
-at the destination. Running out of memory must therefore leave an older PSU
-backup or save exactly as it was and create no folder. Every early exit frees
-the listing, and a PSU restore that stops early closes its PSU.
+at the destination. When that allocation fails, an older PSU backup or save
+must be left exactly as it was, and that level creates no folder. Every early
+exit frees the listing, and a PSU restore that stops early closes its PSU. A
+file whose first entry is not a folder is not a PSU and is refused and closed.
 
 Drivers are replaced by POSIX files; libmc and the IOP are not emulated.
 """
@@ -103,7 +104,7 @@ static unsigned clipIopResetGeneration,generation;
 static u64 written_size,PasteTime,clock_ms;
 static int size_valid,time_valid;
 static int yn_answer=1,yn_calls,cancel_copy;
-/* Every handle and every heap block the copy code takes is tracked. */
+/* Every file and directory handle and every heap block the copy code takes is tracked. */
 static int fd_open[1024],handles,double_closes;
 static size_t fail_alloc_bytes;static int allocs_live,bad_frees;static void *live_ptr[256];
 static void *test_memalign(size_t a,size_t n){
@@ -151,12 +152,13 @@ static int fileShowTitles(void){return 0;}
 static int filerGetGameTitle(const char *p,const FILEINFO *f,unsigned char *out){(void)p;(void)f;out[0]=0;return -1;}
 static void transcpy_sjis(char *out,const unsigned char *in){strcpy(out,(const char *)in);}
 /* A protected (exploit or system-update) folder: only a named entry can be one here. */
-static int protected_folder,modify_answer=1,modify_calls,delete_calls;
-static int filerConfirmExploitDelete(const char *p,const FILEINFO *f){(void)p;(void)f;delete_calls++;return 1;}
-static int filerConfirmExploitModify(const char *p,const FILEINFO *f){(void)p;(void)f;modify_calls++;return modify_answer;}
+static int protected_folder,modify_answer=1,modify_calls,delete_questions,delete_fail;
 static int filerIsExploitProtectedPath(const char *p,const FILEINFO *f){(void)p;return f!=NULL&&protected_folder;}
+/* Like filerConfirmExploitAction: only a protected folder asks a question. */
+static int filerConfirmExploitDelete(const char *p,const FILEINFO *f){if(filerIsExploitProtectedPath(p,f))delete_questions++;return 1;}
+static int filerConfirmExploitModify(const char *p,const FILEINFO *f){(void)p;(void)f;modify_calls++;return modify_answer;}
 static int remove_tree(const char *p){struct stat st;if(lstat(p,&st))return -errno;if(S_ISDIR(st.st_mode)){DIR *d=opendir(p);struct dirent *e;while(d&&(e=readdir(d))){if(!strcmp(e->d_name,".")||!strcmp(e->d_name,".."))continue;char c[MAX_PATH];snprintf(c,sizeof(c),"%s/%s",p,e->d_name);remove_tree(c);}if(d)closedir(d);return rmdir(p)?-errno:0;}return unlink(p)?-errno:0;}
-static int delete(const char *p,const FILEINFO *f){char t[MAX_PATH];snprintf(t,sizeof(t),"%s%s",p,f->name);return remove_tree(t);}
+static int delete(const char *p,const FILEINFO *f){if(delete_fail)return -EIO;char t[MAX_PATH];snprintf(t,sizeof(t),"%s%s",p,f->name);return remove_tree(t);}
 static void markMx4sioDestinationAfterWrite(const char *p){(void)p;}
 static int genCmpFileExt(const char *name,const char *ext){const char *p=strrchr(name,'.');return p!=NULL&&!strcasecmp(p+1,ext);}
 static int newdir(const char *parent,const char *name){char p[MAX_PATH];snprintf(p,sizeof(p),"%s%s",parent,name);return mkdir(p,0700)?-errno:0;}
@@ -194,13 +196,14 @@ static int read_all(const char *p,unsigned char *out,int max){int fd=open(p,O_RD
 static int filled(const char *p,int n,int byte){unsigned char b[4096];if(read_all(p,b,sizeof(b))!=n)return 0;for(int i=0;i<n;i++)if(b[i]!=byte)return 0;return 1;}
 static void clip(const char *path,const char *name,int attr,int mode){
  yn_answer=1;yn_calls=0;cancel_copy=0;fail_alloc_bytes=0;browser_cut=0;generation=clipIopResetGeneration=1;
- protected_folder=0;modify_answer=1;modify_calls=delete_calls=0;
+ protected_folder=0;modify_answer=1;modify_calls=delete_questions=delete_fail=0;
  PasteMode=mode;strcpy(clipPath,path);nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));
  strcpy(clipFiles[0].name,name);clipFiles[0].stats.AttrFile=attr;
 }
 static void paste(const char *destination){message[0]=0;subfunc_Paste(message,(char *)destination);}
-/* After every paste: no handle left open or closed twice, no heap block left. */
-static void settled(void){assert(!handles);assert(!double_closes);assert(!allocs_live);assert(!bad_frees);}
+/* After every paste: no file or directory handle left open or closed twice, no heap block left. */
+static void settled(void){for(int i=0;i<64;i++)assert(!dirs[i]);
+ assert(!handles);assert(!double_closes);assert(!allocs_live);assert(!bad_frees);}
 /* A PSU: root header, "." and "..", then each file's header and data padded to 1 KB. */
 static void psu_entry(int fd,u16 attr,u32 size,const char *name){psu_header h;memset(&h,0,sizeof(h));h.attr=attr;h.size=size;snprintf((char *)h.name,sizeof(h.name),"%s",name);assert(write(fd,&h,sizeof(h))==sizeof(h));}
 static void make_psu(const char *path,const char *folder,int count){
@@ -242,25 +245,43 @@ int main(void){
  /* An accepted overwrite replaces the old save. */
  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);paste("mc0:/");
  assert(!message[0]&&yn_calls==1&&!exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00001")==2);
- assert(delete_calls==1&&!modify_calls);
+ assert(!delete_questions&&!modify_calls);
  settled();
 
  /* A PSU whose folder is protected asks once, before anything else; declining
   * keeps the old save, frees the listing and closes the PSU. */
  put("mc0:/BASLUS-00001/OLD.BIN","old",3);
  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);protected_folder=1;modify_answer=-1;paste("mc0:/");
- assert(strstr(message,"Creating directory (-1)")&&modify_calls==1&&!yn_calls&&!delete_calls);
+ assert(strstr(message,"Creating directory (-1)")&&modify_calls==1&&!yn_calls&&!delete_questions);
  assert(exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00001")==3);
  settled();
  /* Accepting it replaces the save without asking the delete question again. */
  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);protected_folder=1;paste("mc0:/");
- assert(!message[0]&&modify_calls==1&&yn_calls==1&&!delete_calls);
+ assert(!message[0]&&modify_calls==1&&yn_calls==1&&!delete_questions);
  assert(!exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00001")==2);
  settled();
 
  /* A destination folder that cannot be created closes the PSU too. */
  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);paste("missing:/");
  assert(strstr(message,"Creating directory (-2)"));
+ settled();
+ /* So does an accepted overwrite whose delete fails; the old save stays. */
+ put("mc0:/BASLUS-00001/OLD.BIN","old",3);
+ clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);delete_fail=1;paste("mc0:/");
+ assert(strstr(message,"Creating directory (-1)")&&yn_calls==1&&exists("mc0:/BASLUS-00001/OLD.BIN"));
+ settled();
+
+ /* A file whose first entry is not a folder is not a PSU (here another format
+  * renamed to .psu, its header naming a file beside it, and a blank file). It
+  * is refused and closed, and nothing is copied. */
+ put("mass:/OTHER.BIN","other",5);
+ {int fd=open("mass:/RENAMED.psu",O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0);psu_entry(fd,0x4643,0,"OTHER.BIN");close(fd);}
+ {unsigned char zero[512];memset(zero,0,sizeof(zero));put("mass:/BLANK.psu",zero,sizeof(zero));}
+ clip("mass:/","RENAMED.psu",0x8497,PM_PSU_RESTORE);paste("mc1:/");
+ assert(strstr(message,"Opening source (-1)")&&!exists("mc1:/OTHER.BIN"));
+ settled();
+ clip("mass:/","BLANK.psu",0x8497,PM_PSU_RESTORE);paste("mc1:/");
+ assert(strstr(message,"Opening source (-1)")&&entries("mc1:")==0);
  settled();
 
  /* PSU backup of a save folder: header, ".", "..", then 512 + 1024 bytes per file. */
@@ -269,6 +290,10 @@ int main(void){
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("mass:/");
  int size=read_all("mass:/SAVEDIR.psu",good,sizeof(good));
  assert(!message[0]&&size==3*512+2*(512+1024));
+ settled();
+ /* A backup whose PSU cannot be created frees its listing. */
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("missing:/");
+ assert(strstr(message,"(-1)")&&!exists("missing:"));
  settled();
  /* No memory for the next backup's listing: the old backup is not removed. */
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);fail_alloc_bytes=MAX_ENTRY*sizeof(FILEINFO);paste("mass:/");
@@ -286,10 +311,12 @@ int main(void){
  assert(!message[0]&&read_all("mass:/SAVEDIR_0000-00-00_00-00-00.psu",now,sizeof(now))==4);
  settled();
  config.PSU_DateNames=config.PSU_NoOverwrite=0;
- /* A subfolder cannot go into a PSU; the backup stops and frees its listing. */
- mkdir("mc0:/SAVEDIR/SUB",0700);
+ /* A subfolder cannot go into a PSU; the backup stops and frees its listing.
+  * A folder named like the save at the destination must not let the
+  * subfolder be written there as a PSU of its own. */
+ mkdir("mc0:/SAVEDIR/SUB",0700);mkdir("mass:/SAVEDIR",0700);
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("mass:/");
- assert(message[0]&&strstr(message,"SUB"));
+ assert(message[0]&&strstr(message,"SUB")&&!exists("mass:/SAVEDIR/SUB.psu"));
  settled();
 
  /* An ordinary folder paste with no memory for its listing creates nothing. */
@@ -304,8 +331,12 @@ int main(void){
  clip("udpfs:/","TOP",0x8427,PM_NORMAL);yn_answer=-1;paste("mc1:/");
  assert(strstr(message,"Creating directory (-1)")&&yn_calls==1);
  settled();
+ /* So does declining the protected-folder question after accepting the overwrite. */
+ clip("udpfs:/","TOP",0x8427,PM_NORMAL);modify_answer=-1;paste("mc1:/");
+ assert(strstr(message,"Creating directory (-1)")&&yn_calls==1&&modify_calls==1);
+ settled();
  puts("PASS: PSU restore and backup, and folder pastes, keep old saves and backups when memory runs out "
-      "or a question is declined, free every listing and close every PSU");
+      "or a question is declined, free every listing, close every PSU and refuse files that are not PSUs");
  return 0;
 }
 '''

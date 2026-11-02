@@ -9,19 +9,24 @@ A function with a local aligned beyond 16 bytes (FILEINFO embeds libmc's
     keep the entry frame    move $fp,$sp
     realign                 and $sp,$sp,$rX          ($rX holds -64)
 
-A store relative to $sp in that window lands at the address before the
-realignment, while the code after it finds the frame from the realigned $sp.
-Callee-saved registers are fine there: the epilogue does `move $sp,$fp`
-before it reloads them. Anything else is lost. Stores through $fp use the
-entry frame on both sides and pass. Every other store in the window fails,
-whatever its base: in a function that also uses alloca or a variable-length
-array, Clang reaches the frame through $s7, which it sets up only after the
-realignment, so a spill through $s7 before then writes wherever the caller's
-$s7 points. In release builds since #210,
-the ps2build Clang register scavenger put such a store in copy()
-(src/filer_copy.c): it saved the argument register holding bytes 8-15 of the
-by-value FILEINFO name there and reloaded it from the realigned frame, so a
-pasted "RIPTOPL.ELF" was opened as "RIPTOPL.".
+A store relative to $sp in that window, or through a register made from $sp
+(lui $1; addu $1,$sp,$1), lands at the address before the realignment, while
+the code after it finds the frame from the realigned $sp. Saving a
+callee-saved register there is fine: the epilogue does `move $sp,$fp` before
+it reloads them. Anything else stored there is lost, including a callee-saved
+register that the window changed first, since that spills the function's own
+value instead of saving the caller's. In a function that also uses alloca or
+a variable-length array, Clang reaches the frame through $s7, which it sets up
+only after the realignment, so every store through $s7 (or a register made
+from it) in the window fails too: it writes wherever the caller's $s7 points.
+Stores through $fp use the entry frame on both sides, and stores through any
+other register do not address this frame (an argument pointer, say, when the
+delay-slot filler moved `and $sp` past the start of the body), so they pass.
+
+In release builds since #210, the ps2build Clang register scavenger put such
+a store in copy() (src/filer_copy.c): it saved the argument register holding
+bytes 8-15 of the by-value FILEINFO name there and reloaded it from the
+realigned frame, so a pasted "RIPTOPL.ELF" was opened as "RIPTOPL.".
 
 This checks every function in the given ELF files, linked or relocatable, and
 exits 1 if any has such a store, or if a file has no code to check (no
@@ -34,10 +39,12 @@ import pathlib
 import struct
 import sys
 
-SP, FP = 29, 30
+SP, FP, BP = 29, 30, 23  # BP: the base pointer Clang uses with alloca, $s7
 CALLEE_SAVED = frozenset(range(16, 24)) | {28, 30, 31}  # $s0-$s7, $gp, $fp, $ra
 CALLEE_SAVED_FPR = frozenset(range(20, 32))  # widest set any MIPS ABI saves
 BIG_FRAME = 0x8000  # offsets past this need a scratch register
+ADDS = (0x20, 0x21, 0x25, 0x2C, 0x2D)  # add, addu, or (move), dadd, daddu
+ADD_IMMEDIATES = (0x08, 0x09, 0x18, 0x19)  # addi, addiu, daddi, daddiu
 
 GPR_STORES = {0x28: "sb", 0x29: "sh", 0x2A: "swl", 0x2B: "sw", 0x2C: "sdl",
               0x2D: "sdr", 0x2E: "swr", 0x3F: "sd", 0x1F: "sq"}  # 0x1F is sq on the R5900
@@ -175,15 +182,22 @@ def check(function):
         if not realigns_sp(word):
             continue
         realignments.append((function.address + 4 * index, size))
-        derived = set()  # temporaries holding $sp plus an offset, e.g. lui $1; addu $1,$sp,$1
+        frame = {SP}  # $sp and temporaries made from it, e.g. lui $1; addu $1,$sp,$1
+        base = {BP}  # the caller's $s7 and temporaries made from it
+        changed = set()  # general registers the window has written
         for position in range(start, index):
             item = words[position]
             op, rs, rt, rd, funct, imm = fields(item)
             store = GPR_STORES.get(op) or FPR_STORES.get(op)
-            if store and rs != FP:
-                # Only a callee-saved register saved relative to $sp passes.
-                saved = CALLEE_SAVED_FPR if op in FPR_STORES else CALLEE_SAVED
-                if rt not in saved or not (rs == SP or rs in derived):
+            if store:
+                if op in FPR_STORES:
+                    # Float registers are not tracked as changed: the register
+                    # scavenger borrows only general ones, and the prologue saves
+                    # float registers before anything uses them.
+                    saves = rt in CALLEE_SAVED_FPR
+                else:
+                    saves = rt in CALLEE_SAVED and rt not in changed
+                if rs in base or (rs in frame and not saves):
                     register = ("$f%d" if op in FPR_STORES else "$%d") % rt
                     hazards.append(
                         "%s at %#x: %s %s,%d($%d) before `and $sp` at %#x (frame %d bytes)"
@@ -191,13 +205,18 @@ def check(function):
                            function.address + 4 * index, size))
                 continue
             target = destination(item)
-            if target is None:
+            if target in (None, 0, SP):
                 continue
-            derived.discard(target)
-            from_sp = ((op == 0 and funct in (0x20, 0x21, 0x25, 0x2C, 0x2D) and SP in (rs, rt))
-                       or (op in (0x08, 0x09, 0x18, 0x19) and rs == SP))
-            if from_sp and target not in (0, SP, FP):
-                derived.add(target)
+            sources = {rs, rt} if op == 0 and funct in ADDS else {rs} if op in ADD_IMMEDIATES else set()
+            from_frame, from_base = bool(sources & frame), bool(sources & base)
+            changed.add(target)
+            frame.discard(target)
+            base.discard(target)
+            if target != FP:  # $fp holds the entry frame, which stays valid
+                if from_frame:
+                    frame.add(target)
+                if from_base:
+                    base.add(target)
     return hazards, realignments
 
 

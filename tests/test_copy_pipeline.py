@@ -284,8 +284,10 @@ int main(void){
  message[0]=0;subfunc_Paste(message,"usb0:/");
  assert(strstr(message,"Listing source (-12)")&&strstr(message,"Not enough memory")&&!handles);
  /* Names longer than 8 and 12 characters reach the device whole, at the top
-  * level and inside a folder (the ps2build Clang prologue bug cut them), and
-  * each folder level lists into its own heap block. */
+  * level and inside a folder, and each folder level lists into its own heap
+  * block. The host compiler does not reproduce the ps2build Clang prologue bug
+  * that cut those names, so this checks the rewrite; the bug itself is caught
+  * by scripts/check_stack_realign.py on the built ELFs in CI. */
  reset();mkdir("udpfs:/A_LONG_FOLDER_NAME",0700);
  put("udpfs:/A_LONG_FOLDER_NAME/RIPTOPL_LONG_NAME.ELF",input,300);put("udpfs:/RIPTOPL.ELF",input,301);
  strcpy(clipFiles[0].name,"RIPTOPL.ELF");clipFiles[0].stats.FileSizeByte=301;

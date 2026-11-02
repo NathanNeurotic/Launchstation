@@ -3,8 +3,10 @@
 The shipped copy() prologue (Launchstation ca04deb, ps2build Clang 24) must
 fail: it stores $7 (a3, bytes 8-15 of the by-value FILEINFO name) to the stack
 just before `and $sp,$sp,$1` realigns it, so the reload reads another slot.
-The fixed prologue, plain frames, $fp-relative stores and callee-saved saves
-must pass. Linked, relocatable and stripped files are all read.
+The fixed prologue, plain frames, callee-saved saves, $fp-relative stores and
+stores through other registers (a body store the delay-slot filler moved
+ahead of the realignment) must pass. Linked, relocatable and stripped files
+are all read.
 """
 import importlib.util
 from pathlib import Path
@@ -50,7 +52,7 @@ def sll(rd, rt, shift): return r_type(0, rt, rd, 0) | (shift << 6)
 RETURN = [r_type(RA, 0, 0, 0x08), 0]  # jr $ra; nop
 REALIGN = [addiu(1, 0, -64), and_(SP, SP, 1)]
 
-# copy() as shipped in ca04deb (load address 0x1889a0 onward is its body).
+# copy() as shipped in ca04deb (its first instruction is at 0x188960).
 SHIPPED_COPY = [
     0x3c01000e, 0x24212600, 0x03a1e823, 0x3c01000e, 0x03a10821, 0xfc3f25f8, 0x3c01000e, 0x03a10821,
     0xfc3e25f0, 0x3c01000e, 0x03a10821, 0xfc3c25e8, 0x3c01000e, 0x03a10821, 0xfc3725e0, 0x3c01000e,
@@ -65,11 +67,24 @@ FIXED_COPY = [
     0xffb32380, 0xffb22378, 0xffb12370, 0xffb02368, 0x03a0f025, 0x2401ffc0, 0x03a1e824, 0x00c00825,
 ] + RETURN
 
+# Clang 24 output: the delay-slot filler moved `and $sp` into the slot of the
+# body's first branch, past `*p = x` (a changed callee-saved register stored
+# through an argument pointer) and a load. Neither touches this frame.
+BODY_STORE = [
+    0x27bdfe00, 0xffbf01f8, 0xffbe01f0, 0xffb301e8, 0xffb201e0, 0xffb101d8, 0xffb001d0, 0x03a0f025,
+    0x2401ffc0, 0x00a08025, 0x00048800, 0x00069000, 0xae300000, 0x8e530000, 0x12600003, 0x03a1e824,
+] + RETURN
+
 FUNCTIONS = [
     ('shipped_copy', SHIPPED_COPY),
     ('fixed_copy', FIXED_COPY),
-    # A spill through a temporary that holds $sp plus an offset.
+    # Spills through temporaries made from $sp: lui/addu with $sp either side,
+    # daddiu, move, daddu, a float through one, one made from another, and one
+    # moved along in place.
     ('derived_spill', [lui(1, 1), subu(SP, SP, 1), lui(2, 1), addu(2, SP, 2), sd(4, -8, 2),
+                       lui(3, 1), addu(3, 3, SP), sd(5, -8, 3), daddiu(12, SP, 16), sd(6, 0, 12),
+                       move(13, SP), sw(7, 0, 13), daddu(14, SP, 0), sw(8, 0, 14), swc1(12, 4, 2),
+                       addiu(15, 12, 8), sd(9, 0, 15), addiu(15, 15, 4), sd(10, 0, 15), swc1(19, 8, SP),
                        move(FP, SP)] + REALIGN + RETURN),
     # A float argument register stored before the realignment.
     ('float_spill', [addiu(SP, SP, -128), sd(RA, 120, SP), swc1(12, 0, SP)] + REALIGN + RETURN),
@@ -94,21 +109,44 @@ FUNCTIONS = [
     ('delay_slot', [addiu(SP, SP, -512), sw(7, 0x1A0, SP), addiu(1, 0, -64), sll(16, 4, 0),
                     beq(16, 0, 2), and_(SP, SP, 1)] + RETURN),
     # A temporary that held $sp and was then overwritten is no stack address.
-    ('redefined_temp', [addiu(SP, SP, -512), addu(2, SP, 0), lui(2, 0x10), sd(16, 0, 2)] + REALIGN + RETURN),
+    ('redefined_temp', [addiu(SP, SP, -512), addu(2, SP, 0), lui(2, 0x10), sd(4, 0, 2)] + REALIGN + RETURN),
     # Callee-saved saves pass through every kind of $sp-derived temporary, as do
     # callee-saved float registers saved through $sp.
     ('derived_saves', [lui(1, 1), subu(SP, SP, 1), lui(1, 1), addu(1, SP, 1), sd(16, -8, 1),
                        move(2, SP), sd(17, 0, 2), addiu(3, SP, 16), sd(18, 0, 3), daddu(4, SP, 0),
-                       sd(19, 8, 4), swc1(20, 32, SP), swc1(22, 36, SP), move(FP, SP)] + REALIGN + RETURN),
+                       sd(19, 8, 4), swc1(20, 32, SP), swc1(24, 36, SP), swc1(30, 40, SP),
+                       swc1(31, 44, SP), move(FP, SP)] + REALIGN + RETURN),
+    # A callee-saved register stored after the window changed it is a spill, not a
+    # save: here $s0 after `sll $16,$4,0`, and $fp after `move $fp,$sp`.
+    ('changed_save', [addiu(SP, SP, -128), sd(RA, 120, SP), sd(FP, 112, SP), sd(16, 104, SP), move(FP, SP),
+                      sll(16, 4, 0), sd(16, 96, SP), sd(FP, 88, SP)] + REALIGN + RETURN),
+    # A temporary made from the caller's $s7 is no safer than $s7 itself.
+    ('bp_derived_spill', [addiu(SP, SP, -128), sd(RA, 120, SP), sd(23, 112, SP), move(FP, SP),
+                          addiu(1, 0, -64), addiu(2, 23, 16), sd(16, 0, 2), and_(SP, SP, 1), move(23, SP)]
+     + RETURN),
+    # Once the window sets $s7 itself (a function with no base pointer using it
+    # for the body), stores through it no longer reach the caller's memory.
+    ('bp_set_first', [addiu(SP, SP, -128), sd(RA, 120, SP), sd(23, 112, SP), move(FP, SP), addiu(1, 0, -64),
+                      sll(23, 4, 0), sw(0, 0, 23)] + [and_(SP, SP, 1)] + RETURN),
+    ('body_store', BODY_STORE),
     # Frames allocated by daddiu, dsubu and addu of a negative constant are measured.
     ('daddiu_frame', [daddiu(SP, SP, -96), sd(RA, 88, SP), move(FP, SP)] + REALIGN + RETURN),
     ('dsubu_frame', [lui(1, 1), dsubu(SP, SP, 1), move(FP, SP)] + REALIGN + RETURN),
     ('addu_frame', [lui(1, 0xFFFF), addu(SP, SP, 1), move(FP, SP)] + REALIGN + RETURN),
 ]
-FLAGGED = {'shipped_copy': ('sw $7,416($29)', 0x98), 'derived_spill': ('sd $4,-8($2)', 0x10),
-           'float_spill': ('swc1 $f12,0($29)', 0x8), 'swapped_and': ('sw $5,8($29)', 0x4),
-           'bp_spill': ('sw $7,0($23)', 0x14), 'sq_spill': ('sq $7,416($29)', 0x4),
-           'delay_slot': ('sw $7,416($29)', 0x4), 'redefined_temp': ('sd $16,0($2)', 0xC)}
+# (function, store, offset in the function) for every store that must fail.
+FLAGGED = [('shipped_copy', 'sw $7,416($29)', 0x98),
+           ('derived_spill', 'sd $4,-8($2)', 0x10), ('derived_spill', 'sd $5,-8($3)', 0x1C),
+           ('derived_spill', 'sd $6,0($12)', 0x24), ('derived_spill', 'sw $7,0($13)', 0x2C),
+           ('derived_spill', 'sw $8,0($14)', 0x34), ('derived_spill', 'swc1 $f12,4($2)', 0x38),
+           ('derived_spill', 'sd $9,0($15)', 0x40), ('derived_spill', 'sd $10,0($15)', 0x48),
+           ('derived_spill', 'swc1 $f19,8($29)', 0x4C),
+           ('float_spill', 'swc1 $f12,0($29)', 0x8), ('swapped_and', 'sw $5,8($29)', 0x4),
+           ('bp_spill', 'sw $7,0($23)', 0x14), ('sq_spill', 'sq $7,416($29)', 0x4),
+           ('delay_slot', 'sw $7,416($29)', 0x4),
+           ('changed_save', 'sd $16,96($29)', 0x18), ('changed_save', 'sd $30,88($29)', 0x1C),
+           ('bp_derived_spill', 'sd $16,0($2)', 0x18)]
+FLAGGED_NAMES = {name for name, _, _ in FLAGGED}
 FRAMES = {'shipped_copy': 0xE2600, 'fixed_copy': 0x23C0, 'derived_saves': 0x10000,
           'daddiu_frame': 96, 'dsubu_frame': 0x10000, 'addu_frame': 0x10000}
 
@@ -158,7 +196,7 @@ with tempfile.TemporaryDirectory(prefix='stack-realign-') as folder:
         assert len(functions) == len(FUNCTIONS), functions
         assert len(hazards) == len(FLAGGED), hazards
         address = starts(FUNCTIONS, relocatable)
-        for name, (store, offset) in FLAGGED.items():
+        for name, store, offset in FLAGGED:
             line = '%s at %#x: %s before' % (name, address[name] + offset, store)
             assert any(hazard.startswith(line) for hazard in hazards), (line, hazards)
         for name, size in FRAMES.items():  # shipped_copy is the 905 KB frame
@@ -173,7 +211,7 @@ with tempfile.TemporaryDirectory(prefix='stack-realign-') as folder:
     assert hazards[0].startswith('<0x100000> at %#x: sw $7,416($29)' % (0x100000 + 0x98)), hazards
 
     # The command line: 1 with any hazard, 0 when every function is clean.
-    clean = [item for item in FUNCTIONS if item[0] not in FLAGGED]
+    clean = [item for item in FUNCTIONS if item[0] not in FLAGGED_NAMES]
     (folder / 'clean.elf').write_bytes(elf(clean))
     (folder / 'broken.elf').write_bytes(elf([('shipped_copy', SHIPPED_COPY)]))
     (folder / 'not-elf.bin').write_bytes(b'not an ELF file')
@@ -208,8 +246,10 @@ with tempfile.TemporaryDirectory(prefix='stack-realign-') as folder:
         assert result.returncode == 1 and 'PASS' not in result.stdout, result
         assert 'no code found, so nothing was checked' in result.stderr, result
 
-print('PASS: the shipped copy() prologue and %d other pre-realignment stores fail (including a '
-      '$s7 base-pointer spill and an `and` in a delay slot); the fixed prologue, callee-saved saves '
-      'through $sp-derived temporaries, $fp stores, plain and later spills pass; frames of every '
-      'allocation form are measured; linked, relocatable and stripped ELF; a file with no code to '
-      'check fails' % (len(FLAGGED) - 1))
+print('PASS: the shipped copy() prologue and %d other pre-realignment stores fail (through $sp and '
+      'every kind of temporary made from it, through $s7 and one made from it, a callee-saved '
+      'register stored after the window changed it, and before an `and` in a delay slot); the fixed '
+      'prologue, callee-saved saves, $fp stores, stores through other registers (Clang\'s body store '
+      'ahead of a delay-slot `and`, an overwritten temporary, a $s7 the window set), plain and later '
+      'spills pass; frames of every allocation form are measured; linked, relocatable and stripped '
+      'ELF; a file with no code to check fails' % (len(FLAGGED) - 1))

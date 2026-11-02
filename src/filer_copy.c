@@ -601,9 +601,10 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		//This is where we must act differently for PSU backup, creating a PSU file instead
 		if (PasteMode == PM_PSU_BACKUP && recurses)
 			return copyDiagFail(-1);  //abort, as subfolders are not copied to PSU backups
-		//This level's listing is allocated before anything at the destination is
-		//removed or created, so running out of memory leaves an older PSU backup or
-		//save as it was. A PSU is read one entry at a time, so restoring one needs one.
+		//This level's listing is allocated before this level removes or creates
+		//anything at the destination, so failing to allocate it leaves an older PSU
+		//backup or save as it was. (Each file's copy buffer is allocated later.)
+		//A PSU is read one entry at a time, so restoring one needs one entry.
 		files = (FILEINFO *)memalign(64, ((PasteMode == PM_PSU_RESTORE && PSU_restart_f) ? 1 : MAX_ENTRY) * sizeof(FILEINFO));
 		if (files == NULL) {
 			filerCopyDiagStage("Listing source");
@@ -906,8 +907,9 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		if (!genCmpFileExt(in, "psu"))
 			goto non_PSU_RESTORE_init;  //if not a PSU file, go do normal pasting
 
+		filerCopyDiagStage("Opening source");
 		if (psu_restore_open_root_image(in, &file, &in_fd, &PSU_content) < 0)
-			return copyDiagFail(-1);
+			return copyDiagFail(-1);  //unreadable, or not a PSU (its first entry must be a folder)
 		PM_file[recurses + 1] = in_fd;           //File descriptor for PSU
 		PM_flag[recurses + 1] = PM_PSU_RESTORE;  //Mode flag for recursive entry
 		//The helper above transformed the PSU header into a folder-like FILEINFO entry
