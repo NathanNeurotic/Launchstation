@@ -831,7 +831,10 @@ static void test_command_stream(void)
 	command(c, "CWD /mc/0");
 	assert(reply(10) == 450 && !strcmp(c->m_kContext.m_Path, "/usb/0/"));
 	command(c, "ABOR");
-	assert(reply(10) == 226 && c->m_eDataMode == DATAMODE_IDLE);
+	assert(reply(10) == 426 && strstr((char *)sockets[10].output, "\r\n226 ") &&
+		   c->m_eDataMode == DATAMODE_IDLE);
+	command(c, "ABOR");
+	assert(reply(10) == 226 && !strstr((char *)sockets[10].output, "426 "));
 	memset(c->m_kContext.m_Path, 'a', sizeof(c->m_kContext.m_Path) - 1);
 	c->m_kContext.m_Path[0] = '/';
 	c->m_kContext.m_Path[sizeof(c->m_kContext.m_Path) - 1] = 0;

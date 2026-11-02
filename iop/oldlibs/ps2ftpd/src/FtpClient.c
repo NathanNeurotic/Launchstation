@@ -149,9 +149,18 @@ void FtpClient_Destroy(FtpClient *pClient)
 	pClient->m_pServer = NULL;
 }
 
+/* Longest reply text: the 257 PWD reply, a quoted FS_PATH_MAX path. The IOP
+ * sprintf has no size limit, so the literal precision below and the buffer
+ * size must stay in step with FS_PATH_MAX; these checks fail the build if not. */
+#define FTP_REPLY_TEXT_MAX 516
+#define FTP_REPLY_BUFFER (FS_PATH_MAX + 128)
+typedef char ftp_reply_text_covers_path[(FTP_REPLY_TEXT_MAX >= FS_PATH_MAX + 4) ? 1 : -1];
+/* 11 digits for an int code, a space, CRLF and the NUL. */
+typedef char ftp_reply_buffer_fits[(FTP_REPLY_BUFFER >= FTP_REPLY_TEXT_MAX + 15) ? 1 : -1];
+
 void FtpClient_Send(FtpClient *pClient, int iReturnCode, const char *pString)
 {
-	char reply[FS_PATH_MAX + 128];
+	char reply[FTP_REPLY_BUFFER];
 	/* Prefix, bounded message and CRLF fit even on the IOP sprintf API. */
 	int length = sprintf(reply, "%d %.516s\r\n", iReturnCode, pString);
 	if (length < 0 || length >= (int)sizeof(reply) ||
@@ -235,10 +244,15 @@ void FtpClient_OnCommand(FtpClient *pClient, const char *pString)
 				FtpClient_Send(pClient, 503, pClient->m_pMessages[FTPMSG_ALREADY_AUTHENTICATED]);
 			} break;
 
-			case FTPCMD_ABOR:
+			case FTPCMD_ABOR: {
+				/* RFC 959: an interrupted transfer gets 426, then 226 for the ABOR itself. */
+				int active = pClient->m_eDataMode != DATAMODE_IDLE;
 				FtpClient_OnDataCleanup(pClient);
-				FtpClient_Send(pClient, 226, pClient->m_pMessages[FTPMSG_COMMAND_SUCCESSFUL]);
-				break;
+				if (active)
+					FtpClient_Send(pClient, 426, "Connection closed; transfer aborted.");
+				if (pClient->m_pServer)
+					FtpClient_Send(pClient, 226, pClient->m_pMessages[FTPMSG_COMMAND_SUCCESSFUL]);
+			} break;
 
 			// PASV
 			case FTPCMD_PASV: {
