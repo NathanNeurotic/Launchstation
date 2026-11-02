@@ -486,6 +486,8 @@ enum DashIcon {
 	DI_KEY_TAB,     /* keyboard right arrow ending at a vertical bar */
 	DI_KEY_RETURN,  /* keyboard bent left arrow; arrowhead centered at y=0 */
 	DI_SHARE,       /* shared folder: folder with a two-node network badge (UDPFS, SMB, host:) */
+	DI_NEW_FOLDER,  /* folder with a small upper-right plus */
+	DI_SAVE,        /* floppy disk: shutter on top, label below */
 	DI_COUNT
 };
 
