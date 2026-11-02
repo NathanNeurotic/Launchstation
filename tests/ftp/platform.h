@@ -30,7 +30,8 @@ typedef struct {
 } sceCdCLOCK;
 int sceCdReadClock(sceCdCLOCK *clock);
 int DelayThread(unsigned int delay);
-int ftp_test_send(int socket, const void *data, int length, int flags);
+/* Match the IOP ps2ip.h lwip_send signature, including its mutable buffer. */
+int ftp_test_send(int socket, void *data, int length, unsigned int flags);
 int ftp_test_recv(int socket, void *data, int length, int flags);
 int ftp_test_disconnect(int socket);
 int ftp_test_select(int count, fd_set *read, fd_set *write, fd_set *except, struct timeval *timeout);

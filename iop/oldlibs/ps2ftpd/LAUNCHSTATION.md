@@ -62,12 +62,19 @@ active, unrelated commands cannot replace its filesystem handle. ABOR closes
 that handle and its data connection.
 
 IOP formatting uses the SDK's imported `sprintf`, with bounded strings and
-buffers sized for the worst-case fields. Do not introduce an unprovided
-`snprintf` or global socket `errno` dependency into this module.
+buffers sized for the worst-case fields. The 64-bit size formatter uses decimal
+place subtraction, avoiding unresolved `__udivdi3`/`__umoddi3` runtime helpers.
+The send helper accepts mutable buffers to match the IOP `lwip_send` signature.
+Do not introduce an unprovided `snprintf` or global socket `errno` dependency
+into this module.
 
 ## Validation
 
-Run `python3 tests/test_ftp_server.py` with a host C compiler. It first compiles the IOP startup branch, including its explicit `loadcore.h`
+Run `python3 tests/test_ftp_server.py` with a host C compiler. On Linux/x86,
+it also compiles the production size formatter as a freestanding 32-bit object
+and rejects external runtime dependencies. Decimal conversion is checked at
+power-of-ten and power-of-two boundaries and against 5000 random values.
+The same test compiles the IOP startup branch, including its explicit `loadcore.h`
 dependency for the module-end constants. It also compiles all five production
 filesystem/command/client/server/message units unchanged,
 using the preserved PS2BUILD ABI headers and mocked drivers/sockets in

@@ -58,26 +58,35 @@ char *itoa(char *in, int val)
 	return in;
 }
 
-// cheap mans larger uitoa
+/* Avoid 64-bit / and %: this IRX does not link their compiler runtime helpers. */
 char *uitoa(char *in, u64 val)
 {
-	char digits[20];
-	int count = 0, index;
-	do {
-		digits[count++] = '0' + val % 10;
-		val /= 10;
-	} while (val);
-	for (index = 0; index < count; index++)
-		in[index] = digits[count - index - 1];
-	in[count] = '\0';
+	static const u64 places[] = {
+		10000000000000000000ULL, 1000000000000000000ULL, 100000000000000000ULL,
+		10000000000000000ULL, 1000000000000000ULL, 100000000000000ULL,
+		10000000000000ULL, 1000000000000ULL, 100000000000ULL,
+		10000000000ULL, 1000000000ULL, 100000000ULL, 10000000ULL,
+		1000000ULL, 100000ULL, 10000ULL, 1000ULL, 100ULL, 10ULL, 1ULL
+	};
+	char *out = in;
+	int index;
+	for (index = 0; index < 20; index++) {
+		char digit = '0';
+		while (val >= places[index]) {
+			val -= places[index];
+			digit++;
+		}
+		if (digit != '0' || out != in || index == 19)
+			*out++ = digit;
+	}
+	*out = '\0';
 	return in;
 }
-
 
 // this shared buffer is used for everything the clients do
 static char buffer[32768];  // fewer round trips per transfer on slow devices such as mmce
 /* Sockets are blocking. Finish each shared-buffer send before another client runs. */
-static int FtpClient_SendAll(int socket, const char *data, int length)
+static int FtpClient_SendAll(int socket, char *data, int length)
 {
 	int offset = 0;
 	while (offset < length) {

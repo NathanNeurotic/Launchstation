@@ -273,7 +273,7 @@ int DelayThread(unsigned int delay)
 	(void)delay;
 	return 0;
 }
-int ftp_test_send(int fd, const void *data, int length, int flags)
+int ftp_test_send(int fd, void *data, int length, unsigned int flags)
 {
 	(void)flags;
 	Socket *s = &sockets[fd];
@@ -724,6 +724,41 @@ static void test_transfers(void)
 	assert(open_count == close_count);
 	puts("PASS: exact upload/download bytes with short I/O, directory sends and network/filesystem failures");
 }
+static void check_decimal(u64 value)
+{
+	char actual[24], expected[24];
+	extern char *uitoa(char *, u64);
+	memset(actual, '~', sizeof(actual));
+	snprintf(expected, sizeof(expected), "%llu", (unsigned long long)value);
+	assert(uitoa(actual, value) == actual);
+	assert(!strcmp(actual, expected));
+	assert(actual[21] == '~');
+}
+static void test_decimal_formatting(void)
+{
+	u64 power = 1, random = 0xa0761d6478bd642fULL;
+	for (int index = 0; index < 20; index++) {
+		check_decimal(power - 1);
+		check_decimal(power);
+		check_decimal(power + 1);
+		if (index < 19)
+			power *= 10;
+	}
+	for (int bits = 1; bits < 64; bits++) {
+		u64 boundary = (u64)1 << bits;
+		check_decimal(boundary - 1);
+		check_decimal(boundary);
+		check_decimal(boundary + 1);
+	}
+	check_decimal(~(u64)0);
+	for (int index = 0; index < 5000; index++) {
+		random ^= random << 13;
+		random ^= random >> 7;
+		random ^= random << 17;
+		check_decimal(random);
+	}
+	puts("PASS: 64-bit decimal boundaries, maximum, 5000 random values and output bounds");
+}
 static void test_resume_and_size(void)
 {
 	setup();
@@ -822,6 +857,7 @@ int main(void)
 	test_hdd_listing();
 	test_renames();
 	test_transfers();
+	test_decimal_formatting();
 	test_resume_and_size();
 	test_command_stream();
 	setup();
