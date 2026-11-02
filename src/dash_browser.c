@@ -2616,7 +2616,7 @@ static void actionsMenu(void)
 		ADD(DI_EDIT, "Rename...", NULL, f == NULL || !en[RENAME], F_RENAME);
 		ADD(DI_NEW_FOLDER, "New folder...", NULL, !en[NEWDIR], F_NEWDIR);
 		if (en[NEWDIR] && strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
-			ADD(DI_MC, "New blank card...", "empty 1 to 64 MB .mcd", 0, F_NEW_BLANK_CARD);
+			ADD(DI_MC, "New blank card...", "empty 1 to 64 MB .mcd, or a PS1 card", 0, F_NEW_BLANK_CARD);
 		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
 			ADD(DI_MC, "All saves here...", "every card image in this folder and the ones inside it", 0, F_ALL_SAVES);
 		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
@@ -2650,8 +2650,9 @@ static void actionsMenu(void)
 			ADD(DI_MC, "Back up active MMCE card...", "reads the exact firmware-selected backing image", 0, F_BACKUP_ACTIVE_MMCE);
 			ADD(DI_MC, "Export active MMCE card as PCSX2 .ps2...", "adds ECC/spare bytes and verifies", 0, F_EXPORT_ACTIVE_MMCE_PS2);
 		}
-		if (f != NULL && !isDir(f) && fb.nmarked == 0 && (genCmpFileExt(f->name, "MCD") || isVmcImage(f->name)))
-			ADD(DI_MC, "Card contents...", "saves: copy, move, delete, .psu", 0, F_CARD_CONTENTS);
+		if (f != NULL && !isDir(f) && fb.nmarked == 0 &&
+		    (genCmpFileExt(f->name, "MCD") || isVmcImage(f->name) || genCmpFileExt(f->name, "MCR") || genCmpFileExt(f->name, "VM1")))
+			ADD(DI_MC, "Card contents...", "PS2 and PS1 saves: copy, import, export, delete", 0, F_CARD_CONTENTS);
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && !genCmpFileExt(f->name, "PSU") &&
 		    (genCmpFileExt(f->name, "MCM") || genCmpFileExt(f->name, "MAX") || genCmpFileExt(f->name, "CBS") ||
 		     genCmpFileExt(f->name, "SPS") || genCmpFileExt(f->name, "XPS") || genCmpFileExt(f->name, "PSV")) &&

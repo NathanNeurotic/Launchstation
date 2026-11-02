@@ -372,6 +372,8 @@ targets:
       - src/mc_card_write.c
       - src/mc_save_formats.c
       - src/dash_card_tool.c
+      - src/mc_ps1_card.c
+      - src/dash_ps1_card.c
       - src/mmce_card_switch.c
       - src/mmce_backup.c
       - src/mmce_save_versions.c
