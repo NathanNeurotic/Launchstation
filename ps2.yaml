@@ -176,7 +176,7 @@ targets:
     include_dirs: [iop/oldlibs/ps2ftpd/src]
     imports_lst: iop/oldlibs/ps2ftpd/src/imports.lst
     cflags: [-Wall, -fno-builtin]
-    headers: [cdvd, iomanx, iopmgr, ps2ip-nm, sifcmd, sifman, stdio, sysclib, threadman]
+    headers: [cdvd, intrman, iomanx, loadcore, ps2ip-nm, sifcmd, sifman, stdio, sysclib, sysmem, threadman]
 
   # PS2Link-compatible host: filesystem server used by the legacy Network
   # command. Like FTP itself, it is embedded but never loaded at boot.
@@ -370,7 +370,10 @@ targets:
       - src/mc_card_view.c
       - src/mc_sha256.c
       - src/mc_card_write.c
+      - src/mc_save_formats.c
       - src/dash_card_tool.c
+      - src/mc_ps1_card.c
+      - src/dash_ps1_card.c
       - src/mmce_card_switch.c
       - src/mmce_backup.c
       - src/mmce_save_versions.c

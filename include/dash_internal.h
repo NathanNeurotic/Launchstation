@@ -486,6 +486,8 @@ enum DashIcon {
 	DI_KEY_TAB,     /* keyboard right arrow ending at a vertical bar */
 	DI_KEY_RETURN,  /* keyboard bent left arrow; arrowhead centered at y=0 */
 	DI_SHARE,       /* shared folder: folder with a two-node network badge (UDPFS, SMB, host:) */
+	DI_NEW_FOLDER,  /* folder with a small upper-right plus */
+	DI_SAVE,        /* floppy disk: shutter on top, label below */
 	DI_COUNT
 };
 
@@ -848,6 +850,10 @@ void dashUiFocusPoke(void); /* call when the selection moves */
 float dashUiFocusPop(void); /* 0.9 -> 1.0 scale spring, 1.0 when animations are off */
 int dashOkIcon(void);
 int dashBackIcon(void);
+/* Draws up to DASH_HINTS_MAX hints in one fixed button order on every
+ * screen (Cross, Square, Triangle, Circle, R1, R2, L1, L2, SELECT, START,
+ * sticks), whatever order and subset the caller passes. */
+#define DASH_HINTS_MAX 8
 void dashDrawHints(const DashHint *hints, int n);
 void dashDrawHeader(int section, float section_anim);
 void dashDrawClock(void);

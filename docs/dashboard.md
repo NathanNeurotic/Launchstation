@@ -21,7 +21,8 @@ File Browser: Confirm opens a folder, previews PNG/JPG/JPEG images, starts an EL
 text file in the Text Editor. The image viewer supports sibling-image browsing,
 90-degree rotation, 1x-4x zoom, left-stick panning, fullscreen mode and a
 configurable 1-60 second slideshow (R3 starts/stops it); Square selects; Triangle has copy, cut,
-paste (also with new names), PSU create/extract, delete, rename, new
+paste (also with new names), PSU create/extract, Extract to mc0:/ or mc1:/
+straight from a .psu file, delete, rename, new
 folder, folder icon (icon.sys), size, start with arguments, title.cfg,
 mount as vmc0:/vmc1: (for .bin/.vmc/.mc2/.ps2 images; mounted images
 appear in the device list), the memory card *Tuna date and *Folder
@@ -53,11 +54,12 @@ In file pickers (Settings, launch keys) R3 chooses the highlighted file as
 a `uLE:/` path, relative to Launchstation's own folder, like the classic R3;
 elsewhere R3 opens that folder.
 
-The cursor never waits for the memory card or a slow device: file reads
-and writes (artwork, saves, library scans, folder listings) run on a
-background thread, and a small indicator above the button hints shows
-what is being worked on. Starting a device's drivers happens in the
-foreground behind a short loading overlay.
+File reads and writes (artwork, saves, library scans, folder listings)
+run on a background thread, and a small indicator above the button hints
+shows what is being worked on. Starting a device's drivers happens in the
+foreground behind a short loading overlay, and synchronous device
+initialization and IOP requests can still block on slow or failing
+hardware.
 
 ## Sections
 

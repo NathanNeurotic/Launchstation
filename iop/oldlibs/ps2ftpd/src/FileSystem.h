@@ -11,15 +11,21 @@
  *
  */
 
-#define FS_IOMAN_DEVICES 16
+/* PS2BUILD's legacy-hook iomanx package exposes 32 sparse device slots. */
 #define FS_IOMANX_DEVICES 32
+#define FS_PATH_MAX 512
+#define FS_PFS_UNITS 4
 
 #ifdef LINUX
 #include <dirent.h>
+#include <stdint.h>
+typedef uint64_t u64;
+typedef int64_t s64;
+typedef uint8_t u8;
+typedef uint16_t u16;
 #else
 
 #include <iomanX.h>
-#include <iopmgr.h>
 
 typedef enum {
 	FS_INVALID,
@@ -36,7 +42,7 @@ typedef enum {
 
 typedef struct FSContext
 {
-	char m_Path[256];
+	char m_Path[FS_PATH_MAX];
 
 #ifndef LINUX
 	FSType m_eType;
@@ -45,9 +51,20 @@ typedef struct FSContext
 #else
 	int m_iFile;
 	DIR *m_pDir;
-	char m_List[256];
+	char m_List[FS_PATH_MAX];
 #endif
 } FSContext;
+
+/* A pending rename belongs to one FTP connection, including its source device. */
+typedef struct FSRename
+{
+	char path[FS_PATH_MAX];
+#ifndef LINUX
+	iop_device_t *device;
+	int unit;
+	unsigned int mount_generation;
+#endif
+} FSRename;
 
 typedef enum {
 	FT_FILE,
@@ -104,14 +121,14 @@ int FileSystem_ReadFile(FSContext *pContext, char *pBuffer, int iSize);
 //! Write data to open file
 int FileSystem_WriteFile(FSContext *pContext, const char *pBuffer, int iSize);
 
-//! Read directory
+//! Read directory: 1 = entry, 0 = end, negative = error.
 int FileSystem_ReadDir(FSContext *pContext, FSFileInfo *pInfo);
 
-//! Close file or directory
-void FileSystem_Close(FSContext *pContext);
+//! Close and clear ownership; return any driver close error.
+int FileSystem_Close(FSContext *pContext);
 
-//! Convert path from unified name to PS2 specific path (no verification of existance)
-void FileSystem_BuildPath(char *pResult, const char *pOriginal, const char *pAdd);
+//! Normalize an absolute/CWD-relative virtual path into an FS_PATH_MAX buffer.
+int FileSystem_BuildPath(char *pResult, const char *pOriginal, const char *pAdd);
 
 //! Change directory
 int FileSystem_ChangeDir(FSContext *pContext, const char *pPath);
@@ -123,23 +140,21 @@ int FileSystem_DeleteFile(FSContext *pContext, const char *pFile);
 int FileSystem_CreateDir(FSContext *pContext, const char *pDir);
 
 //! Get file-size
-int FileSystem_GetFileSize(FSContext *pContext, const char *pFile);
+s64 FileSystem_GetFileSize(FSContext *pContext, const char *pFile);
 
 //! Delete directory
 int FileSystem_DeleteDir(FSContext *pContext, const char *pDir);
 
 //! Rename file or directory
-int FileSystem_Rename(FSContext *pContext, const char *oldName, const char *newName);
+int FileSystem_PrepareRename(FSContext *pContext, const char *name, FSRename *rename);
+int FileSystem_Rename(FSContext *pContext, const FSRename *rename, const char *newName);
 
 #ifndef LINUX
 //! Determine device needed for accessing device & fill context with info
 const char *FileSystem_ClassifyPath(FSContext *pContext, const char *pPath);
 
-//! Get a pointer to device handler
-ModuleInfo_t *FileSystem_GetModule(const char *pDevice);
-
-//! Scan devices & return ops structure if found
-iop_device_t *FileSystem_ScanDevice(const char *pDevice, int iNumDevices, const char *pPath);
+//! Find an exact, supported device name through the exported IOMANX table.
+iop_device_t *FileSystem_ScanDevice(const char *name);
 
 //! Mount device
 int FileSystem_MountDevice(FSContext *pContext, const char *mount_point, const char *mount_file);

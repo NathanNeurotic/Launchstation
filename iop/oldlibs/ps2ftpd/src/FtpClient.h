@@ -120,7 +120,7 @@ typedef struct FtpClient
 	DataMode m_eDataMode;
 	DataAction m_eDataAction;
 	ConnState m_eConnState;
-	int m_uiDataOffset;
+	u64 m_uiDataOffset;
 	s64 m_iRestartMarker;  // 64-bit: files on ata/usb/mmce can be bigger than 2 GB
 
 	FtpClientContainer m_kContainer;
@@ -129,6 +129,7 @@ typedef struct FtpClient
 	char m_CommandBuffer[512];
 
 	FSContext m_kContext;
+	FSRename m_Rename;  // source identity for this connection only
 
 	const char **m_pMessages;
 } FtpClient;

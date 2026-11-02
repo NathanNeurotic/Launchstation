@@ -170,11 +170,23 @@ int genCmpFileExt(const char *name, const char *ext)
 
 	return dot && !strcasecmp(dot + 1, ext);
 }
+/* RACE_CREATE=<path>: another writer makes that file just after it is
+ * checked, so the caller is told the name is free and finds it taken. */
 int wleExists(const char *path)
 {
 	char p[MAX_PATH];
+	const char *race = getenv("RACE_CREATE");
 
 	map(path, p);
+	if (race != NULL && !strcmp(race, path) && access(p, F_OK) != 0) {
+		FILE *f = fopen(p, "wb");
+
+		if (f != NULL) {
+			fputs("OTHER", f);
+			fclose(f);
+		}
+		return 0;
+	}
 	return access(p, F_OK) == 0;
 }
 void dashStrCopy(char *dst, const char *src, int n)
@@ -428,6 +440,8 @@ int main(int argc, char **argv)
 		printf("ISACTIVE|%d\n", mmceCardIsActive(argv[3] + 9));
 	} else if (!strncmp(argv[3], "pick-switch:", 12)) {
 		dashMmceSwitch(argv[3] + 12);
+	} else if (!strncmp(argv[3], "convert:", 8)) {
+		dashCardConvertSave(argv[3] + 8);
 	} else if (!strncmp(argv[3], "lib:", 4)) {
 		dashCardSaveLibrary(argv[3] + 4);
 	} else if (!strncmp(argv[3], "all:", 4)) {

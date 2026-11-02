@@ -45,7 +45,7 @@ static char ip[16]="192.168.0.10", netmask[16]="255.255.255.0", gw[16]="192.168.
 static int preset, custom, swapKeys;
 static int cfg_pending[2], cfg_failed[2], store_failed, store_pending;
 static int modal_calls, modal_result=2, queue_ok=1, queued[3];
-enum { CFG_SAVE_CNF, CFG_SAVE_NET, DI_CHECK, DI_CLOSE, DI_BACK, DASH_TOAST_INFO };
+enum { CFG_SAVE_CNF, CFG_SAVE_NET, DI_CHECK, DI_SAVE, DI_CLOSE, DI_BACK, DASH_TOAST_INFO };
 typedef struct { int icon; const char *label, *detail; int disabled; } DashMenuItem;
 static u64 Timer(void) { static u64 t; return t+=300; }
 static void dashStrCopy(char *d,const char *s,int n) { snprintf(d,n,"%s",s); }
