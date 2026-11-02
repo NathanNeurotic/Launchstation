@@ -711,7 +711,7 @@ static void ctResize(const char *image)
 	CardIo io;
 	AppendIo out;
 	McSaveData s;
-	uint32_t freec, total;
+	uint32_t freec, total, card_clusters = 0;
 	int unit = mmceCardUnit(image), choice, mb, r, n = 0, found = 0, i, len, made = 0, bad = -1;
 
 	r = ctOpen(&io, image, 0);
@@ -720,6 +720,7 @@ static void ctResize(const char *image)
 		if (r == MCV_OK)
 			r = mcViewFreeClusters(&ct_view, &freec, &total);
 		if (r == MCV_OK) {
+			card_clusters = ct_view.clusters_per_card; /* the whole card, not just its allocatable part */
 			n = mcViewListSaves(&ct_view, ct_saves, CT_MAX_SAVES, &found);
 			if (n < 0)
 				r = n;
@@ -744,7 +745,7 @@ static void ctResize(const char *image)
 		dashModalMessage(DI_WARNING, "Cannot copy this card", ctError(r), image);
 		return;
 	}
-	choice = dashModalChoice("New card size", sizes, CT_SIZES, ctSizeChoice(total));
+	choice = dashModalChoice("New card size", sizes, CT_SIZES, ctSizeChoice(card_clusters));
 	if (choice < 0) {
 		free(names);
 		return;
