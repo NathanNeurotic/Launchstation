@@ -146,6 +146,15 @@ static s64 genLseek(int fd,s64 n,int whence){assert(fd_open[fd]);return lseek(fd
 static int genRead(int fd,void *p,int n){assert(fd_open[fd]);int r=read(fd,p,n);return r<0?-errno:r;}
 static int genWrite(int fd,void *p,int n){assert(fd_open[fd]);if(++writes==write_fail_at)return -ENOSPC;int r=write(fd,p,n);return r<0?-errno:r;}
 static int genRemove(char *p){return unlink(p)?-errno:0;}
+/* Like genRenameNoReplace(): no rename on host or where genCanRenamePath() refuses
+ * (the real one, below), none over an existing file, or one the driver refuses. */
+static int renames,rename_fail;
+static int genCanRenamePath(const char *path);
+static int genRenameNoReplace(const char *from,const char *to){
+ if(!strncmp(from,"host",4)||!genCanRenamePath(from))return -ENOSYS;
+ if(rename_fail)return -EIO;
+ if(!access(to,F_OK))return -EEXIST;
+ renames++;return rename(from,to)?-errno:0;}
 static int mcSetFileInfo(int port,int slot,const char *from,const sceMcTblGetDir *info,int flags){(void)port;(void)slot;(void)from;(void)info;(void)flags;return 0;}
 static int mcSync(int mode,void *c,int *r){(void)mode;(void)c;if(r)*r=0;return 1;}
 static int mcGetInfo(int p,int s,int *type,int *a,int *b){(void)p;(void)s;if(type)*type=2;if(a)*a=1000;if(b)*b=1000;return 0;}
@@ -192,6 +201,7 @@ code += function(hdd, 'static int getHddDeviceFromPath(')
 code += 'static ' + function(hdd, 'int getHddParty(').replace('int getHddParty(', 'int real_getHddParty(', 1)
 code += 'static ' + function(hdd, 'int getHddDVRPParty(').replace('int getHddDVRPParty(', 'int real_getHddDVRPParty(', 1)
 code += 'static ' + function((root / 'src/filer_mount.c').read_text(), 'int getDVRPPartyMountIndex(')
+code += 'static ' + function((root / 'src/filer_fileops.c').read_text(), 'int genCanRenamePath(')
 reader = function(filer, 'int readGENERIC(const char *path, FILEINFO *info, int max)\n{')
 code += 'static ' + reader
 code += 'static int getDir(const char *p,FILEINFO *out){return readGENERIC(p,out,MAX_ENTRY-2);}\n'
@@ -221,9 +231,11 @@ static int exists(const char *p){return !access(p,F_OK);}
 static int entries(const char *p){int n=0;DIR *d=opendir(p);struct dirent *e;if(!d)return -1;while((e=readdir(d)))if(strcmp(e->d_name,".")&&strcmp(e->d_name,".."))n++;closedir(d);return n;}
 static int read_all(const char *p,unsigned char *out,int max){int fd=open(p,O_RDONLY);if(fd<0)return -1;int n=read(fd,out,max);close(fd);return n;}
 static int filled(const char *p,int n,int byte){static unsigned char b[1<<19];if(read_all(p,b,sizeof(b))!=n)return 0;for(int i=0;i<n;i++)if(b[i]!=byte)return 0;return 1;}
+static int same(const char *p,const void *data,int n){static unsigned char b[8192];return read_all(p,b,sizeof(b))==n&&!memcmp(b,data,n);}
+static int holds(const char *p,const char *text){return same(p,text,strlen(text));}
 static void clip(const char *path,const char *name,int attr,int mode){
  yn_answer=1;yn_calls=0;cancel_copy=0;fail_alloc_bytes=0;browser_cut=0;generation=clipIopResetGeneration=1;
- writes=write_fail_at=0;alloc_fail_stage=NULL;
+ writes=write_fail_at=0;alloc_fail_stage=NULL;renames=rename_fail=0;
  party_calls=party_fail_at=mount_calls=mount_fail_at=0;memset(mount_slot,0,sizeof(mount_slot));
  protected_folder=0;modify_answer=1;modify_calls=delete_questions=delete_fail=0;
  PasteMode=mode;strcpy(clipPath,path);nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));
@@ -360,16 +372,17 @@ int main(void){
  settled();
  assert(says("Preparing devices (-1)")&&entries("pfs0:")==1);
 
- /* PSU backup of a save folder: header, ".", "..", then 512 + 1024 bytes per file. */
+ /* PSU backup of a save folder: header, ".", "..", then 512 + 1024 bytes per file.
+  * It is written as SAVEDIR.ps~, which becomes SAVEDIR.psu once complete. */
  unsigned char good[8192],now[8192];
  mkdir("mc0:/SAVEDIR",0700);put("mc0:/SAVEDIR/A.BIN","aaaa",4);put("mc0:/SAVEDIR/B.BIN","bbbbbbbb",8);
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("mass:/");
  int size=read_all("mass:/SAVEDIR.psu",good,sizeof(good));
- assert(!message[0]&&size==3*512+2*(512+1024));
+ assert(!message[0]&&size==3*512+2*(512+1024)&&!exists("mass:/SAVEDIR.ps~"));
  settled();
- /* A backup whose PSU cannot be created says so, and frees its listing. */
+ /* A backup whose PSU cannot be created says why, and frees its listing. */
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("missing:/");
- assert(says("Creating PSU (-1)")&&!exists("missing:"));
+ assert(says("Creating PSU (-2)")&&strstr(message,"not found")&&!exists("missing:"));
  settled();
  /* No memory for the next backup's listing: the old backup is not removed. */
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);fail_alloc_bytes=MAX_ENTRY*sizeof(FILEINFO);paste("mass:/");
@@ -380,28 +393,65 @@ int main(void){
   * opened it, which closes it once (settled() counts a second close): the
   * device fills up at the first file's entry header (write 4, after the
   * three root headers), its data (5) or its padding (6), the user cancels,
-  * or there is no memory for the copy buffer. */
+  * or there is no memory for the copy buffer. Each time the older backup
+  * stays as it was, and the unfinished one is removed. */
+ put("mass:/SAVEDIR.psu","older backup",12);
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=4;paste("mass:/");
- assert(says("Writing PSU entry (-5)"));
  settled();
+ assert(says("Writing PSU entry (-5)")&&holds("mass:/SAVEDIR.psu","older backup")&&!exists("mass:/SAVEDIR.ps~"));
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=5;paste("mass:/");
+ settled();
  assert(strstr(message,"Writing destination (-28)")&&strstr(message,"Not enough free space"));
- settled();
+ assert(holds("mass:/SAVEDIR.psu","older backup")&&!exists("mass:/SAVEDIR.ps~"));
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=6;paste("mass:/");
- assert(strstr(message,"Writing destination (-5)"));
  settled();
+ assert(strstr(message,"Writing destination (-5)")&&holds("mass:/SAVEDIR.psu","older backup")&&!exists("mass:/SAVEDIR.ps~"));
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);cancel_copy=1;yn_answer=-1;paste("mass:/");
- assert(strstr(message,"Copy cancelled (-1)"));
  settled();
+ assert(strstr(message,"Copy cancelled (-1)")&&holds("mass:/SAVEDIR.psu","older backup")&&!exists("mass:/SAVEDIR.ps~"));
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);alloc_fail_stage="Allocating buffer";paste("mass:/");
+ settled();
  assert(strstr(message,"Allocating buffer (-12)")&&strstr(message,"Not enough memory"));
+ assert(holds("mass:/SAVEDIR.psu","older backup")&&!exists("mass:/SAVEDIR.ps~"));
+ /* So does one whose last write, the PSU's first header again (write 12), fails. */
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=12;paste("mass:/");
  settled();
- /* With dated names and no overwriting, an existing name is skipped, and the
-  * skip frees the listing. */
- config.PSU_DateNames=config.PSU_NoOverwrite=1;
+ assert(says("Finishing PSU (-28)")&&holds("mass:/SAVEDIR.psu","older backup")&&!exists("mass:/SAVEDIR.ps~"));
+ /* A complete backup replaces the older one, also beside an unfinished one
+  * that a lost backup left, and also where the device refuses the rename
+  * (then the backup is copied to its name). */
+ put("mass:/SAVEDIR.ps~","unfinished",10);
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("mass:/");
- assert(!message[0]&&read_all("mass:/SAVEDIR_0000-00-00_00-00-00.psu",now,sizeof(now))==size);
  settled();
+ assert(!message[0]&&same("mass:/SAVEDIR.psu",good,size)&&!exists("mass:/SAVEDIR.ps~")&&renames==1);
+ put("mass:/SAVEDIR.psu","older backup",12);
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);rename_fail=1;paste("mass:/");
+ settled();
+ assert(!message[0]&&same("mass:/SAVEDIR.psu",good,size)&&!exists("mass:/SAVEDIR.ps~")&&!renames);
+ /* UDPFS cannot rename, so there a complete backup is copied over the older
+  * one. A backup that stops, or that has no memory for that copy, keeps the
+  * older one. When the copy itself fails (write 13, after the backup's 12),
+  * no .psu is left, neither the older one nor a partial one. */
+ put("udpfs:/SAVEDIR.psu","older backup",12);
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=5;paste("udpfs:/");
+ settled();
+ assert(says("Writing destination (-28)")&&holds("udpfs:/SAVEDIR.psu","older backup")&&!exists("udpfs:/SAVEDIR.ps~"));
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);alloc_fail_stage="Finishing PSU";paste("udpfs:/");
+ settled();
+ assert(says("Finishing PSU (-12)")&&holds("udpfs:/SAVEDIR.psu","older backup")&&!exists("udpfs:/SAVEDIR.ps~"));
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("udpfs:/");
+ settled();
+ assert(!message[0]&&same("udpfs:/SAVEDIR.psu",good,size)&&!exists("udpfs:/SAVEDIR.ps~")&&!renames);
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=13;paste("udpfs:/");
+ settled();
+ assert(says("Finishing PSU (-28)")&&!exists("udpfs:/SAVEDIR.psu")&&!exists("udpfs:/SAVEDIR.ps~"));
+ /* With dated names and no overwriting, an existing name is skipped, and the
+  * skip frees the listing. An unfinished backup of that name is not one. */
+ config.PSU_DateNames=config.PSU_NoOverwrite=1;
+ put("mass:/SAVEDIR_0000-00-00_00-00-00.ps~","unfinished",10);
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("mass:/");
+ settled();
+ assert(!message[0]&&same("mass:/SAVEDIR_0000-00-00_00-00-00.psu",good,size)&&!exists("mass:/SAVEDIR_0000-00-00_00-00-00.ps~"));
  put("mass:/SAVEDIR_0000-00-00_00-00-00.psu","kept",4);
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("mass:/");
  assert(!message[0]&&read_all("mass:/SAVEDIR_0000-00-00_00-00-00.psu",now,sizeof(now))==4);
@@ -410,10 +460,11 @@ int main(void){
  /* A subfolder cannot go into a PSU; the backup stops and frees its listing.
   * A folder named like the save at the destination must not let the
   * subfolder be written there as a PSU of its own. */
- mkdir("mc0:/SAVEDIR/SUB",0700);mkdir("mass:/SAVEDIR",0700);
+ mkdir("mc0:/SAVEDIR/SUB",0700);mkdir("mass:/SAVEDIR",0700);put("mass:/SAVEDIR.psu","older backup",12);
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("mass:/");
- assert(says("Adding subfolder to PSU (-1)")&&strstr(message,"\nSUB\n")&&!exists("mass:/SAVEDIR/SUB.psu"));
  settled();
+ assert(says("Adding subfolder to PSU (-1)")&&strstr(message,"\nSUB\n")&&!exists("mass:/SAVEDIR/SUB.psu"));
+ assert(holds("mass:/SAVEDIR.psu","older backup")&&!exists("mass:/SAVEDIR.ps~"));
 
  /* An ordinary folder paste with no memory for its listing creates nothing. */
  mkdir("udpfs:/TOP",0700);put("udpfs:/TOP/F.BIN","y",1);

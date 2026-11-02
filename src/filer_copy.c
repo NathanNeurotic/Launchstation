@@ -721,11 +721,12 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 					goto folder_exit;
 				}
 			}
-			//here tmp is the name of an existing file, to be removed before making new one
+			//here tmp is the name of the .psu, which this level keeps there until it
+			//finalizes it: an older one stays until the new one is complete
 			filerCopyDiagStage("Creating PSU");
-			genRemove(tmp);
-			if (psu_backup_create_root_image(tmp, mcT_head_p, &out_fd, &PSU_content) < 0) {
-				ret = copyDiagFail(-1);
+			ret = psu_backup_create_root_image(tmp, mcT_head_p, &out_fd, &PSU_content);
+			if (ret < 0) {
+				ret = copyDiagFail(ret);
 				goto folder_exit;
 			}
 			PM_file[recurses + 1] = out_fd;
@@ -893,7 +894,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		psu_restore_buff = NULL;
 		if (ret < 0) {
 			if ((PM_flag[recurses + 1] == PM_PSU_BACKUP) && (PM_file[recurses + 1] >= 0))
-				genClose(PM_file[recurses + 1]);
+				psu_backup_discard_root_image(PM_file[recurses + 1], tmp);  //an older .psu stays
 			return copyDiagFail(-1);
 		}
 
@@ -901,8 +902,10 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		//attributes and timestamps, and close the attribute/PSU file if such was used
 		//Lots of stuff need to be done here to make PSU operations work properly
 		if (PM_flag[recurses + 1] == PM_PSU_BACKUP) {  //PSU Backup mode folder paste closure
-			if (psu_backup_finalize_root_image(PM_file[recurses + 1], mcT_head_p, PSU_content) < 0)
-				return copyDiagFail(-1);
+			filerCopyDiagStage("Finishing PSU");
+			ret = psu_backup_finalize_root_image(PM_file[recurses + 1], tmp, mcT_head_p, PSU_content);
+			if (ret < 0)
+				return copyDiagFail(ret);
 		} else if (PM_flag[recurses + 1] == PM_NORMAL) {             //Normal mode folder paste closure
 			if (!strncmp(out, "mc", 2)) {                            //Handle folder copied to MC
 				ensureMemoryCardPortAccessible(out[2] - '0');

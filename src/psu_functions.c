@@ -14,14 +14,54 @@ void pad_psu_header(psu_header *psu)
 	memset((void *)psu, 0xFF, sizeof(psu_header));
 }
 
+/* A PSU backup is written to a temporary file beside the .psu it makes: the
+ * same name with ".ps~" for ".psu", so it fits wherever the .psu fits. An
+ * older .psu of that name is replaced only once the new one is complete and
+ * closed. A backup that stops before then removes the temporary file and
+ * leaves the older .psu as it was, and one left by a backup that never
+ * finished (power lost) is removed by the next backup to that name.
+ *
+ * Replacing: where genCanRenamePath() allows a rename (mass, mx4sio, ata,
+ * PC Card CF, SMB, MMCE, and the HDD and DVR partitions), the older .psu is
+ * removed and the new file renamed to its name; genRenameNoReplace() checks
+ * that the rename really happened. UDPFS has no rename, host files are
+ * renamed only through a handle that genRenameNoReplace() does not use, and
+ * any rename can still be refused by its driver: in those cases the older
+ * .psu is removed and the finished file copied to its name instead. Only a
+ * failure in that last rename or copy leaves no .psu of that name (and no
+ * partial one); the save that was backed up is never changed. cdfs is
+ * read-only, so a backup there fails when it creates the temporary file. */
+#define PSU_COPY_BUFFER 0x20000  //128 KB: a multiple of every device's sector size
+
+static void psu_backup_temp_path(const char *path, char *temp)
+{
+	size_t length = strlen(path);
+
+	memcpy(temp, path, length + 1);
+	if (length)
+		temp[length - 1] = '~';  //"NAME.psu" -> "NAME.ps~"
+}
+
+void psu_backup_discard_root_image(int out_fd, const char *path)
+{
+	char temp[MAX_PATH];
+
+	genClose(out_fd);
+	psu_backup_temp_path(path, temp);
+	genRemove(temp);
+}
+
 int psu_backup_create_root_image(const char *path, const mcT_header *folder_stats, int *out_fd, int *psu_content)
 {
+	char temp[MAX_PATH];
 	psu_header psu_head;
-	int fd;
+	int fd, ret;
 
-	fd = genOpen(path, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT);
+	psu_backup_temp_path(path, temp);
+	genRemove(temp);  //left by a backup that never finished
+	fd = genOpen(temp, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT);
 	if (fd < 0)
-		return -1;
+		return fd;
 
 	clear_psu_header(&psu_head);
 	*psu_content = 2;
@@ -32,7 +72,7 @@ int psu_backup_create_root_image(const char *path, const mcT_header *folder_stat
 	memcpy(psu_head.name, folder_stats->name, sizeof(psu_head.name));
 	psu_head.unknown_1_u16 = folder_stats->unknown_1_u16;
 	psu_head.unknown_2_u64 = folder_stats->unknown_2_u64;
-	if (genWrite(fd, (void *)&psu_head, sizeof(psu_head)) != PSU_HEADER_SIZE)
+	if ((ret = genWrite(fd, (void *)&psu_head, sizeof(psu_head))) != PSU_HEADER_SIZE)
 		goto fail;
 
 	clear_psu_header(&psu_head);
@@ -40,24 +80,80 @@ int psu_backup_create_root_image(const char *path, const mcT_header *folder_stat
 	psu_head.cTime = folder_stats->cTime;
 	psu_head.mTime = folder_stats->mTime;
 	psu_head.name[0] = '.';
-	if (genWrite(fd, (void *)&psu_head, sizeof(psu_head)) != PSU_HEADER_SIZE)
+	if ((ret = genWrite(fd, (void *)&psu_head, sizeof(psu_head))) != PSU_HEADER_SIZE)
 		goto fail;
 	psu_head.name[1] = '.';
-	if (genWrite(fd, (void *)&psu_head, sizeof(psu_head)) != PSU_HEADER_SIZE)
+	if ((ret = genWrite(fd, (void *)&psu_head, sizeof(psu_head))) != PSU_HEADER_SIZE)
 		goto fail;
 
 	*out_fd = fd;
 	return 0;
 
 fail:
-	genClose(fd);
-	return -1;
+	psu_backup_discard_root_image(fd, path);
+	return ret < 0 ? ret : -EIO;
 }
 
-int psu_backup_finalize_root_image(int out_fd, const mcT_header *folder_stats, int psu_content)
+/* Copies the finished file 'from' to the .psu 'to', replacing an older one. */
+static int psu_backup_copy_file(const char *from, const char *to)
 {
+	char *buf;
+	int in_fd, out_fd, n, ret = 0;
+
+	buf = (char *)memalign(64, PSU_COPY_BUFFER);
+	if (buf == NULL)
+		return -ENOMEM;
+	in_fd = genOpen(from, FIO_O_RDONLY);
+	if (in_fd < 0) {
+		free(buf);
+		return in_fd;
+	}
+	genRemove((char *)to);  //the older .psu
+	out_fd = genOpen(to, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT);
+	if (out_fd < 0)
+		ret = out_fd;
+	while (ret == 0) {
+		n = genRead(in_fd, buf, PSU_COPY_BUFFER);
+		if (n <= 0) {
+			ret = n;  //0 at the end of the file
+			break;
+		}
+		ret = genWrite(out_fd, buf, n);
+		ret = (ret == n) ? 0 : (ret < 0 ? ret : -EIO);
+	}
+	if (out_fd >= 0) {
+		n = genClose(out_fd);
+		if (ret == 0 && n < 0)
+			ret = n;
+		if (ret < 0)
+			genRemove((char *)to);  //a partial .psu is not left as a backup
+	}
+	genClose(in_fd);
+	free(buf);
+	return ret;
+}
+
+/* Replaces the .psu 'path' with the finished file 'temp' (see above). */
+static int psu_backup_publish(char *temp, const char *path)
+{
+	int ret;
+
+	if (genCanRenamePath(path) && strncmp(path, "host", 4)) {
+		genRemove((char *)path);  //the older .psu
+		if (genRenameNoReplace(temp, path) >= 0)
+			return 0;
+	}
+	ret = psu_backup_copy_file(temp, path);
+	if (ret == 0)
+		genRemove(temp);
+	return ret;
+}
+
+int psu_backup_finalize_root_image(int out_fd, const char *path, const mcT_header *folder_stats, int psu_content)
+{
+	char temp[MAX_PATH];
 	psu_header psu_head;
-	int result = 0;
+	int result, closed;
 
 	genLseek(out_fd, 0, SEEK_SET);
 	clear_psu_header(&psu_head);
@@ -68,10 +164,17 @@ int psu_backup_finalize_root_image(int out_fd, const mcT_header *folder_stats, i
 	memcpy(psu_head.name, folder_stats->name, sizeof(psu_head.name));
 	psu_head.unknown_1_u16 = folder_stats->unknown_1_u16;
 	psu_head.unknown_2_u64 = folder_stats->unknown_2_u64;
-	if (genWrite(out_fd, (void *)&psu_head, sizeof(psu_head)) != PSU_HEADER_SIZE)
-		result = -1;
+	result = genWrite(out_fd, (void *)&psu_head, sizeof(psu_head));
+	result = (result == PSU_HEADER_SIZE) ? 0 : (result < 0 ? result : -EIO);
 	genLseek(out_fd, 0, SEEK_END);
-	genClose(out_fd);
+	closed = genClose(out_fd);
+	if (result == 0 && closed < 0)
+		result = closed;
+	psu_backup_temp_path(path, temp);
+	if (result == 0)
+		result = psu_backup_publish(temp, path);
+	if (result < 0)
+		genRemove(temp);
 	return result;
 }
 

@@ -164,6 +164,7 @@ static int getDir(const char *p,FILEINFO *out){
 static int unexpected(void){assert(!"PSU branch is outside this ordinary-copy fixture");return -1;}
 #define psu_backup_create_root_image(...) unexpected()
 #define psu_backup_finalize_root_image(...) unexpected()
+#define psu_backup_discard_root_image(...) unexpected()
 #define psu_backup_begin_file_entry(...) unexpected()
 #define psu_backup_write_padding(...) unexpected()
 #define psu_restore_read_file_entry(...) unexpected()
