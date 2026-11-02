@@ -6,7 +6,8 @@ at the destination. When that allocation fails, an older PSU backup or save
 must be left exactly as it was, and that level creates no folder. Every early
 exit frees the listing, and a PSU restore that stops early closes its PSU. A
 file whose first entry is not a folder is not a PSU and is refused and closed,
-and so is a PSU cut short, before it can replace a save. A Move deletes only what was copied: an item that copy() kept at the
+and so is a PSU cut short, or with a name that reaches outside its folder,
+before it can replace a save. A Move deletes only what was copied: an item that copy() kept at the
 destination (a dated PSU name already taken, or the file or folder itself)
 stays, cut. A PSU backup replaces an older one only once it is complete, and
 when that replacing fails after the older one is gone, the new one stays under
@@ -289,6 +290,10 @@ static void make_psu(const char *path,const char *folder,int count){
   int pad=(1024-(length&1023))&1023;memset(b,0xFF,pad);assert(write(fd,b,pad)==pad);}
  close(fd);
 }
+/* A PSU of the save folder 'folder' that holds the file 'name' ("evil"). */
+static void one_file_psu(const char *path,const char *folder,const char *name){int fd=open(path,O_CREAT|O_TRUNC|O_WRONLY,0600);unsigned char b[1024];
+ assert(fd>=0);psu_entry(fd,0x8427,3,folder);psu_entry(fd,0x8427,0,".");psu_entry(fd,0x8427,0,"..");psu_entry(fd,0x8497,4,name);
+ memset(b,0xFF,sizeof(b));memcpy(b,"evil",4);assert(write(fd,b,sizeof(b))==sizeof(b));close(fd);}
 int main(void){
  diag_stage=&copy_diag.stage;
  mkdir("mass:",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);mkdir("udpfs:",0700);
@@ -356,6 +361,23 @@ int main(void){
   settled();
   assert(says("Checking PSU (-1)")&&!yn_calls&&exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00001")==3);
   unlink("mass:/CUT.psu");}
+ /* No name in a .psu reaches outside its folder. A save folder named so is
+  * no PSU: restored into mass:/SAVES/, ".." would be taken for an existing
+  * folder there, and replacing it would delete mass:/. A file named so is
+  * refused before the save is created, such as one that would be written
+  * over mc0:/BOOT.ELF (on FAT a backslash separates folders too). */
+ {const char *bad[]={"..",".","","A/B","../BOOT.ELF","..\\BOOT.ELF"};
+  mkdir("mass:/SAVES",0700);put("mass:/SAVES/KEEP.BIN","keep",4);put("mc0:/BOOT.ELF","boot",4);
+  for(int i=0;i<6;i++){
+   one_file_psu("mass:/BAD.psu",bad[i],"X.BIN");
+   clip("mass:/","BAD.psu",0x8497,PM_PSU_RESTORE);paste("mass:/SAVES/");
+   settled();
+   assert(says("Opening source (-1)")&&!yn_calls&&holds("mass:/SAVES/KEEP.BIN","keep")&&entries("mass:/SAVES")==1);
+   one_file_psu("mass:/BAD.psu","BASLUS-00002",bad[i]);
+   clip("mass:/","BAD.psu",0x8497,PM_PSU_RESTORE);paste("mc0:/");
+   settled();
+   assert(says("Checking PSU (-1)")&&holds("mc0:/BOOT.ELF","boot")&&!exists("mc0:/BASLUS-00002"));}
+  remove_tree("mass:/SAVES");unlink("mass:/BAD.psu");unlink("mc0:/BOOT.ELF");}
 
  /* An accepted overwrite replaces the old save. */
  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);paste("mc0:/");

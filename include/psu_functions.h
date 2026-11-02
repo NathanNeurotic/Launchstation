@@ -23,7 +23,8 @@ int psu_restore_open_root_image(const char *path, FILEINFO *folder_file, int *in
 int psu_restore_read_file_entry(int psu_fd, FILEINFO *file, int *psu_pad_size);
 /* Reads every entry header of the open .psu (of 'size' bytes, with
  * 'psu_content' entries) and returns 0, leaving it at its first entry, when
- * each is whole and none is a subfolder; otherwise a negative error. */
+ * each is whole, none is a subfolder and no file is named outside the save
+ * folder; otherwise a negative error. */
 int psu_restore_check_entries(int psu_fd, int psu_content, s64 size);
 int psu_restore_apply_entry_stats_to_mc(const char *out_dir, const sceMcTblGetDir *stats, int set_mode);
 

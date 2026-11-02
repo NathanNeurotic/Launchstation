@@ -239,6 +239,18 @@ int psu_backup_write_padding(int psu_fd, int psu_pad_size)
 	return 0;
 }
 
+/* A name in a .psu is that of its save folder in the destination, or of a
+ * file in that folder. One that is empty, "." or "..", or that holds a path
+ * separator (on FAT a backslash is one) would name something outside it. */
+static int psu_restore_name_ok(const u8 *name)
+{
+	char leaf[sizeof(((psu_header *)0)->name) + 1];
+
+	memcpy(leaf, name, sizeof(leaf) - 1);
+	leaf[sizeof(leaf) - 1] = 0;
+	return leaf[0] && strcmp(leaf, ".") && strcmp(leaf, "..") && !strpbrk(leaf, "/\\");
+}
+
 int psu_restore_open_root_image(const char *path, FILEINFO *folder_file, int *in_fd, int *psu_content)
 {
 	psu_header psu_head;
@@ -254,8 +266,9 @@ int psu_restore_open_root_image(const char *path, FILEINFO *folder_file, int *in
 	}
 	/* A PSU starts with its save folder. Anything else (another format renamed
 	 * to .psu, a blank file) would make copy() treat the header as a file to
-	 * open, with this PSU still open. */
-	if (!(psu_head.attr & sceMcFileAttrSubdir)) {
+	 * open, with this PSU still open. A folder named outside the destination
+	 * would have the restore replace, so delete, what that name reaches. */
+	if (!(psu_head.attr & sceMcFileAttrSubdir) || !psu_restore_name_ok(psu_head.name)) {
 		genClose(fd);
 		return -1;
 	}
@@ -325,6 +338,8 @@ int psu_restore_check_entries(int psu_fd, int psu_content, s64 size)
 				return -1;  //a subfolder, which a PSU cannot hold
 			continue;       //"." or ".."
 		}
+		if (!psu_restore_name_ok(psu_head.name))
+			return -1;  //a file that would be written outside the save folder
 		if (psu_head.size > size - pos)
 			return -1;  //cut short inside the file's data
 		pos += ((s64)psu_head.size + 0x3FF) & ~(s64)0x3FF;  //its data and padding
