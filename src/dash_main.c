@@ -523,8 +523,13 @@ static void friendlyLaunchError(const DashApp *app, const char *tech)
 		snprintf(body, sizeof(body), "\"%s\" could not be started.", app->title);
 	dashModalMessage(DI_WARNING, not_elf ? "Not an application" : "Application unavailable", body,
 	                 (tech && tech[0]) ? tech : app->path);
-	if (not_found && (dashStoreIsFavorite(app->path) || dashStoreIsPinned(app->path) || (app->flags & DASH_APP_TRANSIENT))) {
-		if (dashModalConfirm("Remove shortcut?", "Remove this application from Home, Favorites and Recent?", localizeDashboardText("Remove"), 0))
+	/* Only a device that is there shows the file is gone: a missing card or
+	 * drive, or a stack that is not running, says nothing about the shortcut.
+	 * A server that does not answer reads as a missing file too, so Cancel is
+	 * preselected. */
+	if (not_found && dashDevicePathReady(app->path) &&
+	    (dashStoreIsFavorite(app->path) || dashStoreIsPinned(app->path) || (app->flags & DASH_APP_TRANSIENT))) {
+		if (dashModalConfirm("Remove shortcut?", "Remove this application from Home, Favorites and Recent?", localizeDashboardText("Remove"), 1))
 			dashStoreRemoveEverywhere(app->path);
 	}
 }
