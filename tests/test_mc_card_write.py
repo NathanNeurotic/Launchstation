@@ -409,8 +409,8 @@ blank_ref = fx.Card(8, False).finish().image()
 assert op("format", src, 8, fmt)["r"] == "0"
 assert fmt.read_bytes() == blank_ref                                # identical to the fixture built from mymc format() constants
 assert op("format", ecc, 8, fmt)["r"] == "0" and fmt.read_bytes() == blank_ref
-assert op("format", src, 12, fmt)["r"] == "-16"
-for mb in (16, 32, 64):
+assert op("format", src, 12, fmt)["r"] == "-16" and op("format", src, 3, fmt)["r"] == "-16"
+for mb in (1, 2, 4, 16, 32, 64):
     out = tmp / f"fmt{mb}.mcd"
     assert op("format", src, mb, out)["r"] == "0"
     data = out.read_bytes()
@@ -437,7 +437,7 @@ assert data[:dotdot] == blank_ref[:dotdot] and data[dotdot + 2:] == blank_ref[do
 assert struct.unpack_from("<H", data, dotdot)[0] == 0xA426           # ".." is hidden, as the PS2 formats it
 assert struct.unpack_from("<H", blank_ref, dotdot)[0] == 0x8427
 assert op("blank", 12, blank)["r"] == "-16" and blank.stat().st_size == 0
-for mb in (8, 16, 32, 64):
+for mb in (1, 2, 4, 8, 16, 32, 64):
     out = tmp / f"blank{mb}.mcd"
     assert op("blank", mb, out, "stamp")["r"] == "0"
     data = out.read_bytes()
@@ -459,5 +459,5 @@ print(f"Card writer: copy/delete verified by two readers, refusals leave images 
       f"root growth and slot reuse, cross-links refused, crash-safe at every write "
       f"({n_copy} copy and {n_del} delete crash points), 120-step model run, fuzz, "
       f".psu export/import round trip with {len(bad_cases)} malformed files refused, "
-      f"format 8/16/32/64 MB (8 MB byte-identical to the mymc-constant fixture), resize by copy, "
+      f"format 1/2/4/8/16/32/64 MB (8 MB byte-identical to the mymc-constant fixture), resize by copy, "
       f"and blank cards made from nothing: OK")

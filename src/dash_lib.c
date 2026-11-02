@@ -238,10 +238,10 @@ int dashLibDeviceIcon(const char *path)
 	if (!strncmp(path, "cdfs", 4) || !strncmp(path, "cdrom", 5))
 		return DI_DISC;
 	if (!strncmp(path, "udpfs", 5) || !strncmp(path, "host", 4))
-		return DI_NETWORK;
+		return DI_SHARE;
 #ifdef SMB
 	if (smbPathKind(path) != SMB_PATH_NONE)
-		return DI_NETWORK;
+		return DI_SHARE;
 #endif
 	if (!strncmp(path, "xfrom", 5) || !strncmp(path, "rom", 3))
 		return DI_CHIP;

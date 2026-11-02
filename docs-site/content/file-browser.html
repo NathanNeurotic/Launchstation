@@ -80,6 +80,7 @@
 <tr><td>Copy, Cut, Paste here</td><td>Cut + paste moves. Paste overwrites directly like the upstream browser; a failed paste shows a readable reason, the stage and the numeric error.</td></tr>
 <tr><td>Paste with new names...</td><td>Asks for a name for each pasted item.</td></tr>
 <tr><td>PSU paste label</td><td>Create a PSU from memory card saves, or extract a PSU into a memory card, depending on where you are. Naming and overwrite rules are under Settings &gt; System &gt; Memory card backup files.</td></tr>
+<tr><td>Extract to mc0:/ and Extract to mc1:/</td><td>On a <code>.psu</code> file (or several marked ones) anywhere but a memory card: extracts the save straight onto that card, no copy and no trip to <code>mc0:/</code>. Dimmed with the reason when the slot is empty or holds a PS1 card. Your clipboard is left as it was.</td></tr>
 <tr><td>Delete...</td><td>Confirms ("This cannot be undone"), deletes folders recursively and shows a progress overlay with the current name and <i>Completed items N / M</i>.</td></tr>
 <tr><td>Rename...</td><td>One entry, on-screen keyboard (or USB keyboard). System folders are protected.</td></tr>
 <tr><td>New folder...</td><td>Asks for a name; reports an existing folder.</td></tr>
@@ -114,7 +115,7 @@
 <p>Titles come from PS2 <code>icon.sys</code>, PS1 saves and PSU archives, are decoded as Shift-JIS and respect the title line-break offset. Filenames always stay literal. The choice lasts for the session and is not written to a configuration file.</p>
 
 <h2 id="sorting">Sort by</h2>
-<p>Choose <b>Triangle &gt; Sort by</b>, then a direction. Modes: <b>As stored</b> (device order), <b>Name</b> (default, ascending), <b>Game title</b>, <b>Size</b>, <b>Date-Time</b> and <b>Kind</b> (extension). Ascending/Descending apply to every mode except As stored. <b>Folders always stay first</b>, even in descending order; descending reverses only the order inside the folder and file groups. Ties fall back to the name. The native browser does not move ELF files above other files. HDD partition lists always keep the drive's own order. Date-Time ascending is oldest first.</p>
+<p>Choose <b>Triangle &gt; Sort by</b>, then, for modes that have one, a direction. Modes: <b>Type</b> (default: folders, executables, text files, then everything else grouped by extension), <b>As stored</b> (device order), <b>Name</b>, <b>Game title</b>, <b>Size</b>, <b>Date-Time</b> and <b>Kind</b> (extension). Ascending/Descending apply to every mode except As stored and Type. <b>Folders always stay first</b>, even in descending order; descending reverses only the order inside the folder and file groups. Ties fall back to the name. The native browser does not move ELF files above other files. HDD partition lists always keep the drive's own order. Date-Time ascending is oldest first.</p>
 
 <h2 id="bookmarks">Bookmarks (PathPad)</h2>
 <p><b>Triangle &gt; Bookmarks...</b> lists up to 30 saved folders. Pick one to jump to it, <b>Bookmark this folder</b>, or <b>Remove a bookmark...</b>. If all 30 slots are used you choose which to replace. Bookmarks are stored in <code>LAUNCHELF.CNF</code> (<code>PathPad[00]</code> to <code>PathPad[29]</code>) and saving them writes that file immediately. <b>Settings &gt; Launching &gt; Lock shortcuts &amp; bookmarks</b> disables editing.</p>

@@ -142,6 +142,7 @@ jobs:
           python3 tests/test_pad_icon_order.py
           python3 tests/test_hint_clearance.py
           python3 tests/test_hint_bar_fit.py
+          python3 tests/test_hint_order.py
           python3 tests/test_launch_options.py
           python3 tests/test_cloud_link_screen.py
           python3 tests/test_project_branding.py
@@ -208,6 +209,8 @@ jobs:
       # restored, else an older cached SDK is updated in place, else it is installed; then it is cached. A
       # mirror fallback older than the latest is never cached under the latest versions.
       - name: Resolve the latest ps2build SDK
+        env:
+          PS2BUILD_SDK_MIRROR_TOKEN: ${{ secrets.PS2BUILD_MIRROR_TOKEN }}
         id: sdk
         run: sh scripts/ps2build_sdk.sh --resolve --llvm "$RUNNER_TEMP/ps2build-sdk.env"
       - name: Restore the ps2build SDK
@@ -220,6 +223,7 @@ jobs:
 
       - name: Install the ps2build SDK
         env:
+          PS2BUILD_SDK_MIRROR_TOKEN: ${{ secrets.PS2BUILD_MIRROR_TOKEN }}
           # The official host resets HTTP/2 streams under load; ps2build is a Go binary.
           GODEBUG: http2client=0
         run: sh scripts/ps2build_sdk.sh --llvm "$HOME/.local/share/ps2build"

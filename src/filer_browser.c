@@ -2154,6 +2154,7 @@ static void subfunc_Paste(char *mess, char *path)
 	if (ret == TRANSFER_STACK_INCOMPATIBLE) {
 		printf("[PASTE] incompatible stacks ret=%d src='%s' dst='%s'\n", ret, clipPath, path);
 		ynDialog("Incompatible drivers to perform action");
+		snprintf(mess, MAX_PATH, "%s", "Incompatible drivers to perform action"); /* callers must not report success */
 		browser_pushed = FALSE;
 		return;
 	}
