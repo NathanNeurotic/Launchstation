@@ -277,53 +277,92 @@ int filerConfirmExploitModify(const char *path, const FILEINFO *file)
 	return filerConfirmExploitAction(path, file, LNG(Modify));
 }
 
-u64 getFileSize(const char *path, const FILEINFO *file)
+/* Network servers report sizes in their listings, but may not answer a stat:
+ * ps2client's host: never does and a udpfsd server may only for an open file. */
+static int sizeFromListingOnStatFailure(const char *path)
 {
+	if (!strncmp(path, "host", 4) || !strncmp(path, "udpfs", 5))
+		return 1;
+#ifdef SMB
+	if (smbPathKind(path) != SMB_PATH_NONE)
+		return 1;
+#endif
+	return 0;
+}
+
+/* Adds the size of a file, or of a folder and everything in it, to *size.
+ * Returns 0 when that is all of it, else *size is only a lower bound: -E2BIG
+ * when a folder held more than a listing can (its first MAX_ENTRY - 1 entries
+ * are counted and the rest of the tree is still measured), or the error of
+ * anything else that could not be measured, which stops the measurement. */
+int getFileSize(const char *path, const FILEINFO *file, u64 *size)
+{
+	static char party[MAX_NAME];  //only used for a file, which does not recurse
 	iox_stat_t stat;
-	u64 size, filesize;
-	FILEINFO files[MAX_ENTRY];
-	char dir[MAX_PATH], party[MAX_NAME];
-	int nfiles, i, ret;
+	FILEINFO *files;
+	char dir[MAX_PATH];
+	int nfiles, i, ret, more, status = 0;
 
 	if (!ensurePathDeviceStackReady(path))
-		return 0;
+		return -ENODEV;
 
 	if (file->stats.AttrFile & sceMcFileAttrSubdir) {  //Folder object to size up
+		/* each level lists on the heap: MAX_ENTRY entries are about 900 KB */
+		files = (FILEINFO *)memalign(64, MAX_ENTRY * sizeof(FILEINFO));
+		if (files == NULL)
+			return -ENOMEM;
 		sprintf(dir, "%s%s/", path, file->name);
-		nfiles = getDir(dir, files);
-		for (i = size = 0; i < nfiles; i++) {
-			filesize = getFileSize(dir, &files[i]);  //recurse for each object in folder
-			if (filesize < 0)
-				return -1;
-			else
-				size += filesize;
+		nfiles = getDirComplete(dir, files, &more);
+		if (nfiles < 0)
+			status = nfiles;
+		else if (more)
+			status = -E2BIG;
+		for (i = 0; i < nfiles; i++) {
+			ret = getFileSize(dir, &files[i], size);  //recurse for each object in folder
+			if (ret == -E2BIG)
+				status = ret;
+			else if (ret < 0) {
+				status = ret;
+				break;
+			}
 		}
-	} else {  //File object to size up
-		if (!strncmp(path, "hdd", 3)) {
-			getHddParty(path, file, party, dir);
-			ret = mountParty(party);
-			if (ret < 0)
-				return 0;
-			dir[3] = ret + '0';
-#ifdef DVRP
-		} else if (!strncmp(path, "dvr_hdd", 7)) {
-			getHddDVRPParty(path, file, party, dir);
-			ret = mountDVRPParty(party);
-			if (ret < 0)
-				return 0;
-			dir[7] = ret + '0';
-#endif
-		} else
-			sprintf(dir, "%s%s", path, file->name);
-#if defined(ETH) || defined(UDPFS)
-		if (!strncmp(dir, "host:/", 6))
-			makeHostPath(dir, dir);
-#endif
-		if (genGetStat(dir, &stat) < 0)
-			return 0;
-		size = ((u64)stat.hisize << 32) | (u64)stat.size;
+		free(files);
+		return status;
 	}
-	return size;
+	//File object to size up
+	if (!strncmp(path, "hdd", 3)) {
+		if (getHddParty(path, file, party, dir) < 0)
+			return -ENOENT;
+		ret = mountParty(party);
+		if (ret < 0)
+			return -ENODEV;
+		dir[3] = ret + '0';
+#ifdef DVRP
+	} else if (!strncmp(path, "dvr_hdd", 7)) {
+		if (getHddDVRPParty(path, file, party, dir) < 0)
+			return -ENOENT;
+		ret = mountDVRPParty(party);
+		if (ret < 0)
+			return -ENODEV;
+		dir[7] = ret + '0';
+#endif
+	} else
+		sprintf(dir, "%s%s", path, file->name);
+#if defined(ETH) || defined(UDPFS)
+	if (!strncmp(dir, "host:/", 6))
+		makeHostPath(dir, dir);
+#endif
+	ret = genGetStat(dir, &stat);
+	if (ret < 0) {
+		/* MC and VMC listings keep the attribute in Reserve2, not the size's
+		 * high word, and a local device that fails a stat has failed */
+		if (!sizeFromListingOnStatFailure(path))
+			return ret;
+		stat.size = file->stats.FileSizeByte;
+		stat.hisize = file->stats.Reserve2;
+	}
+	*size += ((u64)stat.hisize << 32) | (u64)stat.size;
+	return 0;
 }
 //------------------------------
 //endfunc getFileSize
@@ -1850,11 +1889,16 @@ void make_title_cfg(const char *path, const FILEINFO *file, char *_msg0)
 //------------------------------
 //endfunc make_title_cfg
 //--------------------------------------------------------------
+/* Deletes a file, or a folder and everything in it. A folder that cannot be
+ * opened or read to its end stops the delete before anything listed in it
+ * is removed; one holding more than a listing can is emptied one listing at
+ * a time. Returns the error that stopped it, or what the device returned. */
 int delete (const char *path, const FILEINFO *file)
 {
-	FILEINFO files[MAX_ENTRY];
-	char party[MAX_NAME], dir[MAX_PATH], hdddir[MAX_PATH];
-	int nfiles, i, ret;
+	static char party[MAX_NAME];  //only used before this level recurses
+	FILEINFO *files;
+	char dir[MAX_PATH], hdddir[MAX_PATH];
+	int nfiles, i, ret, more;
 
 	if (!ensurePathDeviceStackReady(path))
 		return -1;
@@ -1885,13 +1929,31 @@ int delete (const char *path, const FILEINFO *file)
 #endif
 	if (file->stats.AttrFile & sceMcFileAttrSubdir) {  //Is the object to delete a folder ?
 		strcat(dir, "/");
-		nfiles = getDir(dir, files);
-		if (nfiles < 0) return nfiles;
-		for (i = 0; i < nfiles; i++) {
-			ret = delete (dir, &files[i]);  //recursively delete contents of folder
-			if (ret < 0)
-				return -1;
-		}
+		/* Each level lists on the heap: MAX_ENTRY entries are about 900 KB, far
+		 * more than the stack. The entry past them keeps the first name of the
+		 * previous listing, which a listing after it must no longer hold. */
+		files = (FILEINFO *)memalign(64, (MAX_ENTRY + 1) * sizeof(FILEINFO));
+		if (files == NULL)
+			return -ENOMEM;
+		files[MAX_ENTRY].name[0] = '\0';
+		do {
+			nfiles = getDirComplete(dir, files, &more);
+			if (nfiles > 0 && !strcmp(files[0].name, files[MAX_ENTRY].name))
+				nfiles = -EIO;  //an entry deleted without error is still there
+			if (nfiles < 0) {
+				free(files);
+				return nfiles;
+			}
+			strcpy(files[MAX_ENTRY].name, nfiles > 0 ? files[0].name : "");
+			for (i = 0; i < nfiles; i++) {
+				ret = delete (dir, &files[i]);  //recursively delete contents of folder
+				if (ret < 0) {
+					free(files);
+					return ret;
+				}
+			}
+		} while (more);  //a full listing: list what is left
+		free(files);
 		if (!strncmp(dir, "mc", 2)) {
 			ensureMemoryCardPortAccessible(dir[2] - '0');
 			mcSync(0, NULL, NULL);

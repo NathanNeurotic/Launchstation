@@ -159,6 +159,7 @@ void filerCopyDiagFormat(char *out, int size, int result)
 		case -ENOMEM: reason = "Not enough memory to complete the transfer."; break;
 		case -EEXIST: reason = "A destination file or folder already exists."; break;
 		case -EISDIR: reason = "The destination name refers to a directory."; break;
+		case -E2BIG: reason = "A source folder holds more than 2046 items, more than a copy can list."; break;
 		default: reason = "The operation failed. Keep the error code and device details below for diagnosis."; break;
 	}
 	snprintf(out, size, "%s (%d)\n%s\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
@@ -166,6 +167,22 @@ void filerCopyDiagFormat(char *out, int size, int result)
 	         copy_diag.name, copy_diag.source, copy_diag.destination,
 	         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
 	         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
+}
+
+/* A sum over the names in a listing that does not depend on their order, to
+ * tell whether a folder listed again holds the same entries. */
+static u32 listingSum(const FILEINFO *files, int nfiles)
+{
+	const unsigned char *c;
+	u32 sum = 0, hash;
+	int i;
+
+	for (i = 0; i < nfiles; i++) {
+		for (hash = 2166136261u, c = (const unsigned char *)files[i].name; *c; c++)
+			hash = (hash ^ *c) * 16777619u;  //FNV-1a
+		sum += hash;
+	}
+	return sum;
 }
 
 static int isMemoryCardLikePath(const char *path)
@@ -555,13 +572,19 @@ static int verifyUdpfsCopy(char *path, u64 size)
 //--------------------------------------------------------------
 int copy(char *outPath, const char *inPath, const FILEINFO *src, int recurses)
 {
+	/* Up to MAX_RECURSE levels of this frame nest on the caller's 128 KB stack
+	 * (CI checks its size). These are only used between the recursive calls,
+	 * never across one, so all levels share one copy of each. The paths below
+	 * stay in each level's frame, and so does 'file': a folder's own stats are
+	 * set on its copy after its contents are copied. */
+	static FILEINFO newfile;
+	static char progress[MAX_PATH * 4], inParty[MAX_NAME], outParty[MAX_NAME];
 	FILEINFO file = *src;
-	FILEINFO newfile, *files = NULL;
+	FILEINFO *files = NULL;
 	iox_stat_t iox_stat;
-	char out[MAX_PATH], in[MAX_PATH], tmp[MAX_PATH],
-	    progress[MAX_PATH * 4],
-	    *buff = NULL, *buff2 = NULL, *copyBuff, inParty[MAX_NAME], outParty[MAX_NAME];
+	char out[MAX_PATH], in[MAX_PATH], tmp[MAX_PATH], *buff = NULL, *buff2 = NULL, *copyBuff;
 	int nfiles, i;
+	u32 listed;
 	u64 size = 0;
 	u64 original_size = 0;
 	int ret = -1, pfsout = -1, pfsin = -1, in_fd = -1, out_fd = -1, buffSize, bytesRead, bytesWritten;
@@ -710,6 +733,19 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			filerCopyDiagStage("Listing source");
 			ret = copyDiagFail(-ENOMEM);
 			goto folder_exit;
+		}
+		//The source folder is listed next, also before anything at the destination
+		//changes: a folder that cannot be opened or read to its end, or that holds
+		//more than a listing can, leaves the destination as it was (and a Move its
+		//source). A PSU being restored is read one entry at a time instead.
+		if (!(PasteMode == PM_PSU_RESTORE && PSU_restart_f)) {
+			filerCopyDiagStage("Listing source");
+			sprintf(tmp, "%s%s/", inPath, file.name);
+			nfiles = getDirComplete(tmp, files, NULL);
+			if (nfiles < 0) {
+				ret = copyDiagFail(nfiles);
+				goto folder_exit;
+			}
 		}
 		if (PasteMode == PM_PSU_BACKUP) {
 			i = strlen(out) - 1;
@@ -930,13 +966,8 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			                                  //It has to be done last, as timestamps would change when fixing files
 			                                  //--- This has been moved to a later clause.
 		} else {                              //Any other mode than a valid PM_PSU_RESTORE
-			filerCopyDiagStage("Listing source");
-			nfiles = getDir(in, files);
 			ret = 0;  //An empty listing succeeds regardless of optional title lookup.
-			//A listing error aborts below. A reader that returns 0 when it cannot
-			//open the folder (readGENERIC, readMC) makes it look empty instead.
-			if (nfiles < 0)
-				ret = copyDiagFail(nfiles);
+			//'files' holds the listing made above, before the destination was touched
 			for (i = 0; i < nfiles; i++) {
 				if ((ret = copy(out, in, &files[i], recurses + 1)) < 0) {
 #if FILEOP_TRACE
@@ -947,6 +978,18 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 					break;
 				}
 			}  //ends main for loop for all modes other than valid PM_PSU_RESTORE
+			//The source is listed again and must hold just what was copied. A USB
+			//(FAT, exFAT), MMCE or cdfs read that fails ends a listing as if the
+			//folder ended there, and a Move must not delete what that listing missed.
+			if (ret >= 0) {
+				filerCopyDiagStage("Listing source again");
+				listed = listingSum(files, nfiles);
+				i = getDirComplete(in, files, NULL);  //the number of entries now
+				if (i < 0)
+					ret = copyDiagFail(i);
+				else if (i != nfiles || listingSum(files, i) != listed)
+					ret = copyDiagFail(-EIO);
+			}
 		}
 		//folder contents are copied by the recursive call above, with error handling below
 		free(files);

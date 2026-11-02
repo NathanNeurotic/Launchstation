@@ -3,9 +3,10 @@
 #endif
 int readCD(const char *path, FILEINFO *info, int max)
 {
-	static struct TocEntry TocEntryList[MAX_ENTRY];
+	/* max entries besides "." and "..", for the largest max (getDirComplete) */
+	static struct TocEntry TocEntryList[MAX_ENTRY + 1];
 	char dir[MAX_PATH];
-	int i, j, n;
+	int i, j, n, limit;
 	u64 wait_start;
 
 	if (sceCdGetDiskType() <= SCECdUNKNOWN) {
@@ -24,9 +25,11 @@ int readCD(const char *path, FILEINFO *info, int max)
 
 	strcpy(dir, &path[5]);
 	CDVD_FlushCache();
-	n = CDVD_GetDir(dir, NULL, CDVD_GET_FILES_AND_DIRS, TocEntryList, MAX_ENTRY, dir);
+	limit = (max < MAX_ENTRY - 1) ? max + 2 : MAX_ENTRY + 1;
+	n = CDVD_GetDir(dir, NULL, CDVD_GET_FILES_AND_DIRS, TocEntryList, limit, dir);
+	dirOpenResult(n < 0 ? -EIO : 0);
 
-	for (i = j = 0; i < n; i++) {
+	for (i = j = 0; i < n && j < max; i++) {
 		if (TocEntryList[i].fileProperties & 0x02 &&
 		    (!strcmp(TocEntryList[i].filename, ".") ||
 		     !strcmp(TocEntryList[i].filename, "..")))

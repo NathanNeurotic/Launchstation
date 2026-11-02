@@ -44,6 +44,10 @@ jobs:
           python3 tests/test_copy_pipeline.py
           python3 tests/test_udpfs_directory_errors.py
           python3 tests/test_copy_psu_listing.py
+          python3 tests/test_listing_complete.py
+          python3 tests/test_listing_callers.py
+          python3 tests/test_get_size.py
+          python3 tests/test_file_browser_heap.py
           python3 tests/test_stack_realign_check.py
           python3 tests/test_smb_shares.py
           python3 tests/test_copy_test_pack.py
@@ -313,6 +317,26 @@ jobs:
             build-ds34/obj/wLaunchELF/wLaunchELF.unstripped.elf \
             build/obj/loader/loader.unstripped.elf \
             build/obj/wle_igr/wle_igr.unstripped.elf
+
+      - name: Verify recursive file operations keep small stack frames
+        run: |
+          # The EE main thread has a 128 KB stack. copy() nests up to 16
+          # frames on it, and delete() and getFileSize() one per folder level,
+          # each with its listing (about 900 KB) on the heap. At these budgets
+          # 16 copy() frames take 68 KB.
+          # --max-chain adds up the deepest Paste found in the direct calls:
+          # the dashboard opens the classic browser, which pastes a folder 16
+          # levels deep (the 16th copy() only refuses, so one frame too many),
+          # and the innermost level lists its folder. That chain took 99,792
+          # bytes when this was written. The deepest direct calls below the
+          # innermost copy() take at most 20,320 bytes more than its listing,
+          # so at 104 KB the chain still leaves 4 KB of the stack unused.
+          python3 scripts/check_stack_realign.py \
+            --max-frame copy=4352 --max-frame delete=3072 --max-frame getFileSize=2048 \
+            --max-frame getFilePath=1024 --max-frame browseFilePath=11264 \
+            --max-chain '_main,main,DashRun,runLaunchKey,dashRunMisc,dashLaunchApp,ExecuteMainAction,executeBrowserSelection,getFilePath,browseFilePath,subfunc_Paste,copy*16,getDirComplete,listDir,readHOST=106496' \
+            build/obj/wLaunchELF/wLaunchELF.unstripped.elf \
+            build-ds34/obj/wLaunchELF/wLaunchELF.unstripped.elf
 
       - name: Verify source-built UDPFS SMAP and bundled peer ABI
         run: python3 scripts/check_udpfs_smap.py build build-ds34

@@ -3,7 +3,9 @@
 
 #include "launchelf.h"
 
-u64 getFileSize(const char *path, const FILEINFO *file);
+/* Adds the size of 'file' (with a folder's whole contents) to *size. Returns
+ * 0 when that is exact; when negative, *size is only a lower bound. */
+int getFileSize(const char *path, const FILEINFO *file, u64 *size);
 int filerCanSetCustomTimestamp(const char *path, const FILEINFO *file);
 int filerCanOrganizeFolderTimestamps(const char *path);
 /* Capture returns 1 for an existing SAS date, 0 for ordinary/unsupported, <0 on failure. */

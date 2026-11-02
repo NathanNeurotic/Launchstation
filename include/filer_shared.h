@@ -105,6 +105,9 @@ int readSMB(const char *path, FILEINFO *info, int max);
 #endif
 
 int getDir(const char *path, FILEINFO *info);
+/* For copy, delete and Get Size: an error unless the whole folder was read
+ * (filer.c). 'info' holds MAX_ENTRY entries. */
+int getDirComplete(const char *path, FILEINFO *info, int *more);
 int filerPrepareDirRead(const char *path);
 /* Serialized card handshake; slot 2 may require retiring MX4SIO first. */
 int filerPrepareMemoryCardRead(int port);

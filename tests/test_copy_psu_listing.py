@@ -240,9 +240,14 @@ code += 'static ' + function(hdd, 'int getHddDVRPParty(').replace('int getHddDVR
 code += 'static ' + function((root / 'src/filer_mount.c').read_text(), 'int getDVRPPartyMountIndex(')
 code += 'static ' + function((root / 'src/filer_fileops.c').read_text(), 'int genCanRenamePath(')
 code += 'static ' + function((root / 'src/filer_fileops.c').read_text(), 'void genLimObjName(')
+# The real reader and strict listing behind copy(); only the device dispatch is replaced.
+code += 'static int dir_opened,dir_open_error,dir_read_error;\n'
+code += function(filer, 'static void dirOpenResult(')
 reader = function(filer, 'int readGENERIC(const char *path, FILEINFO *info, int max)\n{')
 code += 'static ' + reader
-code += 'static int getDir(const char *p,FILEINFO *out){return readGENERIC(p,out,MAX_ENTRY-2);}\n'
+code += ('static int listDir(const char *p,FILEINFO *out,int max){'
+         'dir_opened=dir_read_error=0;dir_open_error=-ENODEV;return readGENERIC(p,out,max);}\n')
+code += function(filer, 'int getDirComplete(')
 code += 'static int applyMcInfoToVmcPath(const char *p,const sceMcTblGetDir *s){(void)p;(void)s;return 0;}\n'
 # The real PSU layout and helpers (their includes are replaced by the stubs above).
 code += psu_types[psu_types.index('typedef struct'):psu_types.rindex('#endif')]
