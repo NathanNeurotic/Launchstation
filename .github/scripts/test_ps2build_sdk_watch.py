@@ -290,6 +290,22 @@ class WorkflowTests(unittest.TestCase):
         build = (WORKFLOWS / "compile.yml").read_text()
         self.assertIn("github.ref == 'refs/heads/master'", build.split("Publish rolling release", 1)[1].split("run:", 1)[0])
 
+    def test_someone_elses_commits_keep_the_watch_off_the_branch_and_its_pull_request(self):
+        # The guard runs first, so a branch that already holds the new pins gets no pull request edit either.
+        step = (WORKFLOWS / "ps2build-sdk-watch.yml").read_text().split("PUSHED=no", 1)[1]
+        guard, same_pins = step.index('grep -qvxF "$BOT"'), step.index("already proposes these pins")
+        self.assertLess(guard, same_pins)
+        self.assertIn("exit 0", step[guard:same_pins])
+
+    def test_the_pull_request_waits_for_the_warm_cache(self):
+        # A pull request for pins the cache does not hold yet would send each of its build jobs to the
+        # official server for the new SDK. A failed warm leaves the update for the next run.
+        text = (WORKFLOWS / "ps2build-sdk-watch.yml").read_text()
+        pr = text.split("\n  pr:\n", 1)[1].split("runs-on:", 1)[0]
+        self.assertIn("needs: [check, warm]", pr)
+        for status in ("always()", "cancelled()", "failure()"):
+            self.assertNotIn(status, pr)
+
 
 if __name__ == "__main__":
     unittest.main()

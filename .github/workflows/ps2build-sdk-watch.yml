@@ -12,7 +12,7 @@ name: ps2build SDK Watch
 #   pr     pushes the bumped pin file to the ci/ps2build-sdk-watch branch and opens (or refreshes) a draft pull
 #          request. A push made by GitHub Actions starts no workflow, so it starts Automated-Build on that branch
 #          itself; that build publishes nothing, because it publishes from master only. The watch never merges
-#          anything and never touches a branch someone else has committed to.
+#          anything and leaves a branch someone else has committed to, and its pull request, alone.
 #
 # When "Allow GitHub Actions to create and approve pull requests" is off in the repository settings, it opens an
 # issue with a link that creates the pull request instead.
@@ -100,6 +100,9 @@ jobs:
 
   pr:
     needs: [check, warm]
+    # No status function here, so this job runs only when warm succeeded. That is on purpose: a pull request for
+    # pins the cache does not hold yet would send each of its build jobs to the official server for the new SDK.
+    # A failed warm leaves the update for the next run.
     if: needs.check.outputs.status == 'changed' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
@@ -134,12 +137,13 @@ jobs:
           fi
 
           PUSHED=no
-          if [ -n "$OLD" ] && git show "origin/$BRANCH:.github/ps2build-sdk.env" | cmp -s - .github/ps2build-sdk.env; then
-            echo "$BRANCH already proposes these pins."
-          elif [ -n "$OLD" ] && git log --format=%ae "origin/master..origin/$BRANCH" | grep -qvxF "$BOT"; then
-            # Someone added commits (a fix for the new SDK, say). Never overwrite their work.
+          if [ -n "$OLD" ] && git log --format=%ae "origin/master..origin/$BRANCH" | grep -qvxF "$BOT"; then
+            # Someone added commits (a fix for the new SDK, say). Never overwrite their work, and leave its pull
+            # request alone too, even when the branch already holds these pins.
             echo "::warning::$BRANCH has commits that are not the watch's; leaving it alone. Merge or close its pull request, then run the watch again."
             exit 0
+          elif [ -n "$OLD" ] && git show "origin/$BRANCH:.github/ps2build-sdk.env" | cmp -s - .github/ps2build-sdk.env; then
+            echo "$BRANCH already proposes these pins."
           else
             git config user.name "github-actions[bot]"
             git config user.email "$BOT"
