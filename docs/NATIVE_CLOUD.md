@@ -181,7 +181,7 @@ Google content hosts carry no credentials.
 A per-save version (`WLE-*.psu`) is recovered the same way, limited to 8.5 MiB,
 and published as a new `RECOVER-CLOUD-###.psu` after its SHA-256 matches and its
 entries are checked (`cloudGoogleRecoverSaveVersion`). It is not converted and
-no card is written: **Card contents > Import .psu** puts it on a card, with a
+no card is written: **Card contents > Import save** puts it on a card, with a
 safety copy first.
 
 Snapshots without a stored digest can be inspected but not recovered through

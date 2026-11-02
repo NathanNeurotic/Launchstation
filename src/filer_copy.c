@@ -473,6 +473,7 @@ int copy(char *outPath, const char *inPath, const FILEINFO *src, int recurses)
 	u64 original_size = 0;
 	int ret = -1, pfsout = -1, pfsin = -1, in_fd = -1, out_fd = -1, buffSize, bytesRead, bytesWritten;
 	int dash_progress = 0;
+	int exploit_ok = 0; /* the protected-folder question was already asked */
 	CopyChunk chunk;
 	int buffCount = 1, buffIndex = 0;
 	int dummy;
@@ -673,6 +674,16 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			PM_flag[recurses + 1] = PM_PSU_BACKUP;  //Set PSU backup mode for next level
 		} else {  //any other PasteMode than PM_PSU_BACKUP
 			filerCopyDiagStage("Creating directory");
+			/* a PSU names its own folder: a restore that would create or replace a
+			 * protected (exploit or system-update) folder asks first, once */
+			exploit_ok = 0;
+			if (PasteMode == PM_PSU_RESTORE && filerIsExploitProtectedPath(outPath, &newfile)) {
+				if (filerConfirmExploitModify(outPath, &newfile) < 0) {
+					ret = copyDiagFail(-1);
+					goto folder_exit;
+				}
+				exploit_ok = 1;
+			}
 			ret = newdir(outPath, newfile.name);
 			if (ret == -17) {  //NB: 'newdir' must return -17 for ALL pre-existing folder cases
 				ret = filerGetGameTitle(outPath, &newfile, newfile.title);
@@ -695,7 +706,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 					goto folder_exit;
 				}
 				if (PasteMode == PM_PSU_RESTORE) {
-					if (filerConfirmExploitDelete(outPath, &newfile) < 0) {
+					if (!exploit_ok && filerConfirmExploitDelete(outPath, &newfile) < 0) {
 						ret = copyDiagFail(-1);
 						goto folder_exit;
 					}
