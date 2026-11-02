@@ -68,7 +68,9 @@ int main(void){
 # Bind the negative reader result to its callers: transfer/delete abort, while
 # the classic browser keeps its parent row and never sorts with a negative count.
 assert 'n = readUDPFS(path, info, max);' in function('int getDir(')
-assert 'if (nfiles < 0) return copyDiagFail(nfiles);' in (root / 'src/filer_copy.c').read_text()
+copy_source = (root / 'src/filer_copy.c').read_text()
+assert 'nfiles = (files != NULL) ? getDir(in, files) : -ENOMEM;' in copy_source
+assert 'if (nfiles < 0)\n\t\t\t\tret = copyDiagFail(nfiles);' in copy_source
 actions = (root / 'src/filer_actions.c').read_text()
 delete = actions[actions.index('int delete ('):actions.index('int Rename(')]
 with tempfile.TemporaryDirectory(prefix='udpfs-dir-') as folder:

@@ -446,13 +446,24 @@ finish:
 }
 //--------------------------------------------------------------
 //The function 'copy' below is called to copy a single object,
-//indicated by 'file' from 'inPath' to 'outPath', but this may
+//indicated by 'src' from 'inPath' to 'outPath', but this may
 //be either a single file or a folder. In the latter case the
 //folder contents should also be copied, recursively.
+//
+//'src' is passed by pointer and copied into the local 'file', which
+//copy() may then modify without touching the caller's entry.
+//Each folder level keeps its listing on the heap: MAX_ENTRY entries are
+//about 900 KB, far more than the 128 KB main stack. A frame that big,
+//with FILEINFO's 64-byte alignment, also made the ps2build Clang
+//prologue save a by-value argument register before realigning $sp
+//and reload it after, which lost bytes 8-15 of the source name
+//("RIPTOPL.ELF" became "RIPTOPL."). scripts/check_stack_realign.py
+//fails the build if that prologue pattern appears again.
 //--------------------------------------------------------------
-int copy(char *outPath, const char *inPath, FILEINFO file, int recurses)
+int copy(char *outPath, const char *inPath, const FILEINFO *src, int recurses)
 {
-	FILEINFO newfile, files[MAX_ENTRY];
+	FILEINFO file = *src;
+	FILEINFO newfile, *files = NULL;
 	iox_stat_t iox_stat;
 	char out[MAX_PATH], in[MAX_PATH], tmp[MAX_PATH],
 	    progress[MAX_PATH * 4],
@@ -713,7 +724,13 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		strcat(out, "/");                             //Separate dest folder name
 
 		if (PasteMode == PM_PSU_RESTORE && PSU_restart_f) {
+			//A PSU is read one entry at a time, so one heap entry is enough here
+			files = (FILEINFO *)memalign(64, sizeof(FILEINFO));
 			nfiles = PSU_content;
+			if (files == NULL) {
+				nfiles = 0;
+				ret = copyDiagFail(-ENOMEM);
+			}
 			for (i = 0; i < nfiles; i++) {
 				ret = psu_restore_read_file_entry(PM_file[recurses + 1], &files[0], &psu_pad_size);
 				if (ret > 0)  //Dummy/Pseudo folder entry
@@ -723,7 +740,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 					break;
 				}
 				//Finally we can make the recursive call
-				if ((ret = copy(out, in, files[0], recurses + 1)) < 0) {
+				if ((ret = copy(out, in, &files[0], recurses + 1)) < 0) {
 #if FILEOP_TRACE
 					if (trace_vmc_copy)
 						printf("[VMC_COPY] psu child failed parent_in='%s' parent_out='%s' child='%s' ret=%d recurse=%d\n",
@@ -752,11 +769,13 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			                                  //--- This has been moved to a later clause.
 		} else {                              //Any other mode than a valid PM_PSU_RESTORE
 			filerCopyDiagStage("Listing source");
-			nfiles = getDir(in, files);
-			if (nfiles < 0) return copyDiagFail(nfiles);
+			files = (FILEINFO *)memalign(64, MAX_ENTRY * sizeof(FILEINFO));
+			nfiles = (files != NULL) ? getDir(in, files) : -ENOMEM;
 			ret = 0;  //An empty listing succeeds regardless of optional title lookup.
+			if (nfiles < 0)
+				ret = copyDiagFail(nfiles);  //A failed listing aborts below, never an empty copy.
 			for (i = 0; i < nfiles; i++) {
-				if ((ret = copy(out, in, files[i], recurses + 1)) < 0) {
+				if ((ret = copy(out, in, &files[i], recurses + 1)) < 0) {
 #if FILEOP_TRACE
 					if (trace_vmc_copy)
 						printf("[VMC_COPY] child failed parent_in='%s' parent_out='%s' child='%s' ret=%d recurse=%d\n",
@@ -767,6 +786,8 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			}  //ends main for loop for all modes other than valid PM_PSU_RESTORE
 		}
 		//folder contents are copied by the recursive call above, with error handling below
+		free(files);
+		files = NULL;
 		if (ret < 0) {
 			if ((PM_flag[recurses + 1] == PM_PSU_BACKUP) && (PM_file[recurses + 1] >= 0))
 				genClose(PM_file[recurses + 1]);

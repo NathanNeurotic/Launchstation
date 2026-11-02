@@ -79,7 +79,7 @@ typedef uint8_t u8;typedef uint16_t u16;typedef uint32_t u32;typedef uint64_t u6
 #define LNG(x) #x
 #define DPRINTF(...) ((void)0)
 typedef struct {int Year,Month,Day,Hour,Min,Sec;} Date;
-typedef struct {Date _Create,_Modify;unsigned FileSizeByte,AttrFile,Reserve1,Reserve2;char EntryName[32];} sceMcTblGetDir;
+typedef struct {Date _Create,_Modify;unsigned FileSizeByte,AttrFile,Reserve1,Reserve2;char EntryName[32];} __attribute__((aligned(64))) sceMcTblGetDir; /* as in libmc.h */
 typedef struct {char name[MAX_NAME];unsigned char title[MAX_NAME];sceMcTblGetDir stats;} FILEINFO;
 typedef struct {unsigned mode,attr;char ctime[8],mtime[8],atime[8];} iox_stat_t;
 static struct {int PSU_HugeNames,PSU_DateNames,PSU_NoOverwrite;} config,*setting=&config;
@@ -92,6 +92,16 @@ static u64 written_size,PasteTime,clock_ms;
 static int source_ready=1,load_ok=1,reset_preflight,read_cap=1048576,write_cap=1048576,cancel_copy;
 static int fail_open,fail_rewind,fail_read,fail_write,fail_close,fail_listing,fail_out_open,early_eof,fail_measure;
 static int fd_kind[1024],handles,read_calls,write_calls;
+/* Folder listings come from the heap, aligned like FILEINFO; allocations of
+ * one chosen size can be made to fail. */
+static size_t fail_alloc_bytes;static int listing_allocs,listings_live;static void *listing_ptr[MAX_RECURSE];
+static void *test_memalign(size_t a,size_t n){
+ assert(a>=__alignof__(FILEINFO));if(fail_alloc_bytes&&n==fail_alloc_bytes)return NULL;
+ void *p=memalign(a,n);if(p&&n==MAX_ENTRY*sizeof(FILEINFO)){assert(listings_live<MAX_RECURSE);listing_ptr[listings_live++]=p;listing_allocs++;}return p;
+}
+static void test_free(void *p){for(int i=0;i<listings_live;i++)if(listing_ptr[i]==p){listing_ptr[i]=listing_ptr[--listings_live];break;}free(p);}
+#define memalign test_memalign
+#define free test_free
 static unsigned fd_generation[1024];
 static u64 Timer(void){return ++clock_ms;}
 static unsigned getIopResetGeneration(void){return generation;}
@@ -176,7 +186,7 @@ code+=r'''
 static void put(const char *p,const unsigned char *data,int n){int fd=open(p,O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0);assert(write(fd,data,n)==n);assert(!close(fd));}
 static int matches(const char *p,const unsigned char *data,int n){unsigned char out[70000];int fd=open(p,O_RDONLY);if(fd<0)return 0;int count=read(fd,out,sizeof(out));close(fd);return count==n&&!memcmp(data,out,n);}
 static unsigned char input[65537];
-static void reset(void){assert(!handles);source_ready=load_ok=1;reset_preflight=0;fail_open=fail_rewind=fail_read=fail_write=fail_close=fail_listing=cancel_copy=fail_out_open=early_eof=fail_measure=0;read_calls=write_calls=0;browser_cut=0;browser_cd=0;generation=1;clipIopResetGeneration=1;PasteMode=PM_NORMAL;strcpy(clipPath,"udpfs:/");nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));strcpy(clipFiles[0].name,"BOOT.ELF");clipFiles[0].stats.FileSizeByte=sizeof(input);}
+static void reset(void){assert(!handles&&!listings_live);source_ready=load_ok=1;reset_preflight=0;fail_open=fail_rewind=fail_read=fail_write=fail_close=fail_listing=cancel_copy=fail_out_open=early_eof=fail_measure=0;fail_alloc_bytes=0;listing_allocs=0;read_calls=write_calls=0;browser_cut=0;browser_cd=0;generation=1;clipIopResetGeneration=1;PasteMode=PM_NORMAL;strcpy(clipPath,"udpfs:/");nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));strcpy(clipFiles[0].name,"BOOT.ELF");clipFiles[0].stats.FileSizeByte=sizeof(input);}
 int main(void){
  assert(sizeof(copy_diag)<=128); /* fixed runtime budget, no log allocation */
  mkdir("udpfs:",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);mkdir("usb0:",0700);mkdir("host:",0700);mkdir("mmce0:",0700);mkdir("mmce1:",0700);
@@ -268,12 +278,33 @@ int main(void){
  /* A failed source listing must not report a successful empty folder copy. */
  reset();strcpy(clipFiles[0].name,"NESTED");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;fail_listing=1;
  message[0]=0;subfunc_Paste(message,"mc1:/");assert(strstr(message,"Listing source (-5)"));
+ assert(!handles);
+ /* A folder level that cannot get heap for its listing fails cleanly. */
+ reset();strcpy(clipFiles[0].name,"NESTED");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;fail_alloc_bytes=MAX_ENTRY*sizeof(FILEINFO);
+ message[0]=0;subfunc_Paste(message,"usb0:/");
+ assert(strstr(message,"Listing source (-12)")&&strstr(message,"Not enough memory")&&!handles);
+ /* Names longer than 8 and 12 characters reach the device whole, at the top
+  * level and inside a folder (the ps2build Clang prologue bug cut them), and
+  * each folder level lists into its own heap block. */
+ reset();mkdir("udpfs:/A_LONG_FOLDER_NAME",0700);
+ put("udpfs:/A_LONG_FOLDER_NAME/RIPTOPL_LONG_NAME.ELF",input,300);put("udpfs:/RIPTOPL.ELF",input,301);
+ strcpy(clipFiles[0].name,"RIPTOPL.ELF");clipFiles[0].stats.FileSizeByte=301;
+ strcpy(clipFiles[1].name,"A_LONG_FOLDER_NAME");clipFiles[1].stats.AttrFile=sceMcFileAttrSubdir;nclipFiles=2;
+ message[0]=0;subfunc_Paste(message,"mc1:/");assert(!message[0]&&!handles&&listing_allocs==1);
+ assert(matches("mc1:/RIPTOPL.ELF",input,301)&&matches("mc1:/A_LONG_FOLDER_NAME/RIPTOPL_LONG_NAME.ELF",input,300));
+ /* copy() works on its own copy of each entry, so the clipboard is unchanged. */
+ assert(!strcmp(clipFiles[1].name,"A_LONG_FOLDER_NAME")&&clipFiles[1].stats.AttrFile==sceMcFileAttrSubdir);
+ /* A failure inside the folder names the whole child in the dialog. */
+ reset();strcpy(clipFiles[0].name,"A_LONG_FOLDER_NAME");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;fail_write=1;
+ message[0]=0;subfunc_Paste(message,"usb0:/");
+ assert(strstr(message,"Writing destination (-28)")&&strstr(message,"\nRIPTOPL_LONG_NAME.ELF\n")&&!handles);
  /* An empty folder can be pasted repeatedly even without a game-save title. */
  reset();mkdir("udpfs:/EMPTY",0700);strcpy(clipFiles[0].name,"EMPTY");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;
  for(int attempt=0;attempt<3;attempt++){message[0]=0;subfunc_Paste(message,"mc0:/");assert(!message[0]&&!handles);}
  /* Repeated operations clear prior error state, and formatting is bounded. */
  reset();message[0]=0;subfunc_Paste(message,"mc0:/");assert(!message[0]);
  char bounded[17];memset(bounded,'x',sizeof(bounded));filerCopyDiagFormat(bounded,16,-1);assert(!bounded[15]&&bounded[16]=='x');
+ assert(!listings_live); /* every folder level freed its listing */
  puts("PASS: full paste/copy sequence, both slots, upstream direct overwrite, failures, recursion and bounded diagnostics");
 }
 '''
