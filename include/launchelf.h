@@ -431,7 +431,7 @@ int loadAtaModules(void);
 #endif
 
 /* elf.c */
-int checkELFheader(char *filename);
+int checkELFheader(char *filename); /* kind > 0; -1 not an executable; -2 not opened */
 void RunLoaderElf(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load);
 void RunLoaderElfKeepIOP(char *filename, char *party, const char *selected_path, int exec_kind);
 void RunLoaderElfKeepIOPWithArgv0(char *filename, char *party, const char *child_argv0, int exec_kind);

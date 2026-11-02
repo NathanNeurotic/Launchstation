@@ -437,13 +437,15 @@ static int tryCheckExecPath(const char *path, int *opened_any)
 //--------------------------------------------------------------
 //Start of function code
 //--------------------------------------------------------------
-// checkELFheader Tests for valid ELF file
+// checkELFheader Tests for valid ELF file: returns its kind (> 0), -1 when a
+// file opened but is not an executable, -2 when none opened (missing, or its
+// device is unavailable)
 // Modified version of loader from Independence
 //	(C) 2003 Marcus R. Brown <mrbrown@0xd6.org>
 //--------------------------------------------------------------
 int checkELFheader(char *path)
 {
-	int ret, kind, opened_any, fallback_kind;
+	int ret, kind, opened_any = 0, fallback_kind;
 	char fullpath[MAX_PATH], tmp[MAX_PATH];
 
 	if (path == NULL || path[0] == '\0')
@@ -468,8 +470,6 @@ int checkELFheader(char *path)
 	if (!strncmp(fullpath, "ata", 3))
 		loadAtaModules();
 #endif
-
-	opened_any = 0;
 
 	/* 1) Try raw path first. */
 	kind = tryCheckExecPath(path, &opened_any);
@@ -516,7 +516,7 @@ int checkELFheader(char *path)
 	}
 
 error:
-	return -1;  //return -1 for failed check
+	return opened_any ? -1 : -2;  //not an executable, or nothing opened
 }
 //------------------------------
 //End of func:  int checkELFheader(const char *path)

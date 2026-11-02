@@ -2,7 +2,9 @@
 
 Drivers/RPCs are replaced by bounded file adapters and injected failures. The
 copy orchestration, recursion, direct overwrite and diagnostics are real.
-This does not emulate a UDPFS server, libmc or physical memory cards.
+A udpfs: destination can lose a written file, or keep an old longer one, as a
+UDPFS server that reuses a handle from before an IOP reboot does. This does
+not emulate the UDPFS protocol, libmc or physical memory cards.
 """
 from pathlib import Path
 import shutil
@@ -124,18 +126,45 @@ static void ensureMemoryCardPortAccessible(int p){assert(p==0||p==1);}
 static char *makeHostPath(char *d,char *s){if(d!=s)strcpy(d,s);return d;}
 static void genLimObjName(char *p,int reserve){(void)p;(void)reserve;}
 static int genGetStat(const char *p,iox_stat_t *out){(void)p;(void)out;assert(!"paste must not stat the destination");return -EIO;}
+/* A UDPFS server can give the next write-open of a name a handle it kept from
+ * before an IOP reboot. UDPFS_LOST: the file was removed before the open, so
+ * every write and the close succeed and nothing is left. UDPFS_TAIL: the old
+ * file could not be removed and O_TRUNC is not applied, so a longer old file
+ * keeps its tail. */
+enum {UDPFS_OK,UDPFS_LOST,UDPFS_TAIL};
+static int udpfs_stale,opens,udpfs_read_opens;
+/* PS2-Servers' udpfs_server.py reads a .cso/.ciso/.zso/.ziso/.chd opened by
+ * its own name decompressed when it is a container it can read: the image
+ * (decoded_size bytes, not starting with the container's magic) instead. */
+static int udpfs_decompress,decoded_size;
+static int genCmpFileExt(const char *p,const char *e){const char *d=strrchr(p,'.');return d&&!strcasecmp(d+1,e);}
+static const char *decompressed(const char *p){
+ static const char *const ext[]={"cso","ciso","zso","ziso","chd"};char head[8]={0};int i,fd;
+ for(i=0;i<5&&!genCmpFileExt(p,ext[i]);i++);
+ if(i==5||(fd=open(p,O_RDONLY))<0)return p;
+ i=read(fd,head,sizeof(head));close(fd);
+ if(i<8||(memcmp(head,"CISO",4)&&memcmp(head,"ZISO",4)&&memcmp(head,"MComprHD",8)))return p;
+ unsigned char image[8192]={0};assert(decoded_size<=(int)sizeof(image));
+ fd=open("decoded.img",O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0&&write(fd,image,decoded_size)==decoded_size);close(fd);
+ return "decoded.img";
+}
 static int genOpen(const char *p,int flags){
- if(fail_open&&flags==O_RDONLY&&!strncmp(p,"udpfs:",6))return -ENOENT;
+ int udpfs=!strncmp(p,"udpfs:",6),stale=udpfs&&(flags&O_WRONLY)?udpfs_stale:UDPFS_OK;
+ opens++;if(udpfs&&flags==O_RDONLY)udpfs_read_opens++;
+ if(udpfs&&flags==O_RDONLY&&udpfs_decompress)p=decompressed(p);
+ if(fail_open&&flags==O_RDONLY&&udpfs)return -ENOENT;
  if(fail_out_open&&(flags&O_WRONLY))return -EACCES;
- int fd=open(p,flags,0600);if(fd<0)return -errno;assert(fd<1024);
- fd_kind[fd]=(flags&O_WRONLY)?2:!strncmp(p,"udpfs:",6)?1:3;
+ if(stale)udpfs_stale=UDPFS_OK;
+ int fd=open(p,stale==UDPFS_TAIL?flags&~O_TRUNC:flags,0600);if(fd<0)return -errno;assert(fd<1024);
+ if(stale==UDPFS_LOST)assert(!unlink(p));
+ fd_kind[fd]=(flags&O_WRONLY)?2:udpfs?1:3;
  fd_generation[fd]=generation;handles++;return fd;
 }
 static int genClose(int fd){int kind=fd_kind[fd];assert(kind&&handles>0);fd_kind[fd]=0;handles--;int r=close(fd);return fail_close&&kind==2?-EIO:r;}
 static s64 genLseek(int fd,s64 n,int whence){assert(fd_generation[fd]==generation);if(fail_measure&&whence==SEEK_END)return -EIO;if(fail_rewind&&whence==SEEK_SET)return -EIO;return lseek(fd,n,whence);}
 static int genRead(int fd,void *p,int n){assert(fd_generation[fd]==generation);read_calls++;if(early_eof&&fd_kind[fd]==1)return 0;if(fail_read&&fd_kind[fd]==1)return -ETIMEDOUT;int r=read(fd,p,n>read_cap?read_cap:n);return r<0?-errno:r;}
 static int genWrite(int fd,void *p,int n){assert(fd_generation[fd]==generation);write_calls++;if(fail_write)return -ENOSPC;int r=write(fd,p,n>write_cap?write_cap:n);return r<0?-errno:r;}
-static int genRemove(char *p){return unlink(p)?-errno:0;}
+static int genRemove(char *p){if(udpfs_stale==UDPFS_TAIL&&!strncmp(p,"udpfs:",6))return -EBUSY;return unlink(p)?-errno:0;}
 static int fileXioRename(const char *a,const char *b){assert(!"paste must not require rename");(void)a;(void)b;return -EIO;}
 static int mc_result;
 static int mcSetFileInfo(int port,int slot,const char *from,const sceMcTblGetDir *info,int flags){
@@ -152,10 +181,9 @@ static void transcpy_sjis(char *out,const unsigned char *in){strcpy(out,(const c
 static int filerConfirmExploitDelete(const char *p,const FILEINFO *f){(void)p;(void)f;return 1;}
 static int filerConfirmExploitModify(const char *p,const FILEINFO *f){(void)p;(void)f;return 1;}
 static int filerIsExploitProtectedPath(const char *p,const FILEINFO *f){(void)p;(void)f;return 0;}
-static int move_deletes;
-static int delete(const char *p,const FILEINFO *f){char source[MAX_PATH];assert(!handles);assert(!access("mmce0:/MOVE.BIN",F_OK));snprintf(source,sizeof(source),"%s%s",p,f->name);move_deletes++;return genRemove(source);}
+static int move_deletes;static const char *move_target="mmce0:/MOVE.BIN";
+static int delete(const char *p,const FILEINFO *f){char source[MAX_PATH];assert(!handles);assert(!access(move_target,F_OK));snprintf(source,sizeof(source),"%s%s",p,f->name);move_deletes++;return genRemove(source);}
 static void markMx4sioDestinationAfterWrite(const char *p){(void)p;}
-static int genCmpFileExt(const char *p,const char *e){(void)p;(void)e;return 0;}
 static int newdir(const char *parent,const char *name){char p[MAX_PATH];snprintf(p,sizeof(p),"%s%s",parent,name);return mkdir(p,0700)?-errno:0;}
 static int getDir(const char *p,FILEINFO *out){
  if(fail_listing)return -EIO;DIR *d=opendir(p);if(!d)return -errno;struct dirent *e;int n=0;
@@ -177,7 +205,8 @@ psu=(root/'include/psu_types.h').read_text();code+=psu[psu.index('typedef struct
 a=copy.index('/* One paste context');b=copy.index('static int isMemoryCardLikePath(',a);code+=copy[a:b]
 for sig in ('static int isMemoryCardLikePath(', 'static int isHddCommonParty(',
             'static int calcTransferSpeed(', 'static int calcRemainingTime(',
-            'static int smoothTransferSpeed(', 'static int applyMcInfoToMcPath('):
+            'static int smoothTransferSpeed(', 'static int applyMcInfoToMcPath(',
+            'static int udpfsReadsDecompressed(', 'static int verifyUdpfsCopy('):
     code+=function(copy,sig)
 code+=copy[copy.index('int copy('):]
 code+=function(browser,'static int waitForClipboardSourceDevice(')
@@ -186,7 +215,7 @@ code+=r'''
 static void put(const char *p,const unsigned char *data,int n){int fd=open(p,O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0);assert(write(fd,data,n)==n);assert(!close(fd));}
 static int matches(const char *p,const unsigned char *data,int n){unsigned char out[70000];int fd=open(p,O_RDONLY);if(fd<0)return 0;int count=read(fd,out,sizeof(out));close(fd);return count==n&&!memcmp(data,out,n);}
 static unsigned char input[65537];
-static void reset(void){assert(!handles&&!listings_live);source_ready=load_ok=1;reset_preflight=0;fail_open=fail_rewind=fail_read=fail_write=fail_close=fail_listing=cancel_copy=fail_out_open=early_eof=fail_measure=0;fail_alloc_bytes=0;listing_allocs=0;read_calls=write_calls=0;browser_cut=0;browser_cd=0;generation=1;clipIopResetGeneration=1;PasteMode=PM_NORMAL;strcpy(clipPath,"udpfs:/");nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));strcpy(clipFiles[0].name,"BOOT.ELF");clipFiles[0].stats.FileSizeByte=sizeof(input);}
+static void reset(void){assert(!handles&&!listings_live);source_ready=load_ok=1;reset_preflight=0;fail_open=fail_rewind=fail_read=fail_write=fail_close=fail_listing=cancel_copy=fail_out_open=early_eof=fail_measure=0;fail_alloc_bytes=0;listing_allocs=0;read_calls=write_calls=0;udpfs_stale=UDPFS_OK;udpfs_decompress=decoded_size=0;opens=udpfs_read_opens=0;browser_cut=0;browser_cd=0;generation=1;clipIopResetGeneration=1;PasteMode=PM_NORMAL;strcpy(clipPath,"udpfs:/");nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));strcpy(clipFiles[0].name,"BOOT.ELF");clipFiles[0].stats.FileSizeByte=sizeof(input);}
 int main(void){
  assert(sizeof(copy_diag)<=128); /* fixed runtime budget, no log allocation */
  mkdir("udpfs:",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);mkdir("usb0:",0700);mkdir("host:",0700);mkdir("mmce0:",0700);mkdir("mmce1:",0700);
@@ -271,6 +300,96 @@ int main(void){
  message[0]=0;subfunc_Paste(message,"mmce0:/");
  assert(message[0]&&move_deletes==1&&nclipFiles==1);
  assert(matches("mc0:/MOVE.BIN",input,sizeof(input))&&!handles);
+ /* A udpfs: copy that a stale server handle lost, or wrote over an old longer
+  * file without truncating it, is caught by reading its size back after the
+  * close: the paste fails, a Move keeps its source and a wrong copy is
+  * removed. Zero-byte files are checked too. */
+ const unsigned char longer[300]={0};
+ for(int stale=UDPFS_LOST;stale<=UDPFS_TAIL;stale++)for(int bytes=0;bytes<=257;bytes+=257)for(int cut=0;cut<2;cut++){
+  reset();put("mc0:/LOST.BIN",input,bytes);unlink("udpfs:/LOST.BIN");
+  if(stale==UDPFS_TAIL)put("udpfs:/LOST.BIN",longer,sizeof(longer));
+  strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"LOST.BIN");clipFiles[0].stats.FileSizeByte=bytes;
+  browser_cut=cut;udpfs_stale=stale;int deletes=move_deletes;
+  message[0]=0;subfunc_Paste(message,"udpfs:/");
+  if(!strstr(message,stale==UDPFS_LOST?"Verifying destination (-2)":"Verifying destination (-5)")){
+   fprintf(stderr,"FAIL %s udpfs: copy of %d bytes (%s) was reported as: \"%s\"\n",
+           stale==UDPFS_LOST?"lost":"old longer",bytes,cut?"Move":"Paste",message);
+   return 1;
+  }
+  assert(!handles&&move_deletes==deletes&&nclipFiles==1);
+  assert(matches("mc0:/LOST.BIN",input,bytes)&&access("udpfs:/LOST.BIN",F_OK));
+ }
+ /* The same inside a folder: the Move keeps the whole source folder. */
+ reset();mkdir("mc0:/MOVEDIR",0700);put("mc0:/MOVEDIR/IN.BIN",input,257);
+ strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"MOVEDIR");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;
+ browser_cut=1;udpfs_stale=UDPFS_LOST;int deletes=move_deletes;
+ message[0]=0;subfunc_Paste(message,"udpfs:/");
+ assert(strstr(message,"Verifying destination (-2)")&&strstr(message,"\nIN.BIN\n"));
+ assert(!handles&&move_deletes==deletes&&nclipFiles==1&&matches("mc0:/MOVEDIR/IN.BIN",input,257));
+ assert(access("udpfs:/MOVEDIR/IN.BIN",F_OK));
+ /* A good udpfs: paste opens each file exactly once more than the same paste
+  * to usb0:, read-only, and a Move deletes its source only after that. */
+ mkdir("mc0:/THREE",0700);put("mc0:/THREE/A.BIN",input,sizeof(input));put("mc0:/THREE/B.BIN",input,1);put("mc0:/THREE/C.BIN",input,0);
+ int usb_opens=0;
+ for(int device=0;device<2;device++){
+  const char *dest=device?"udpfs:/":"usb0:/";const int lengths[]={sizeof(input),1,0};
+  reset();strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"THREE");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;
+  message[0]=0;subfunc_Paste(message,(char *)dest);assert(!message[0]&&!handles);
+  for(int i=0;i<3;i++){snprintf(target,sizeof(target),"%sTHREE/%c.BIN",dest,'A'+i);assert(matches(target,input,lengths[i]));}
+  if(!device){usb_opens=opens;assert(usb_opens==2*3&&!udpfs_read_opens);}
+  else if(opens!=usb_opens+3||udpfs_read_opens!=3){
+   fprintf(stderr,"FAIL 3 files pasted to udpfs: took %d opens (%d read-only on udpfs:), %d to usb0:\n",opens,udpfs_read_opens,usb_opens);
+   return 1;
+  }
+ }
+ reset();put("mc0:/MOVED.BIN",input,257);strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"MOVED.BIN");
+ browser_cut=1;move_target="udpfs:/MOVED.BIN";deletes=move_deletes;
+ message[0]=0;subfunc_Paste(message,"udpfs:/");
+ assert(!message[0]&&!handles&&move_deletes==deletes+1&&!nclipFiles&&udpfs_read_opens==1);
+ assert(access("mc0:/MOVED.BIN",F_OK)&&matches("udpfs:/MOVED.BIN",input,257));
+ /* A compressed image that the server reads back decompressed, larger or
+  * smaller than the container, is still the copy: Paste and Move keep it, and
+  * a Move deletes its source after the one read-back. */
+ static const struct {const char *name,*magic;} images[]={
+  {"GAME.cso","CISO"},{"GAME.CSO","CISO"},{"GAME.ciso","CISO"},{"GAME.zso","ZISO"},{"GAME.ziso","ZISO"},{"GAME.chd","MComprHD"}};
+ unsigned char image[900];char source[MAX_PATH];
+ for(unsigned n=0;n<sizeof(images)/sizeof(images[0]);n++)for(int larger=0;larger<2;larger++)for(int cut=0;cut<2;cut++){
+  memcpy(image,input,sizeof(image));memcpy(image,images[n].magic,strlen(images[n].magic));
+  snprintf(source,sizeof(source),"mc0:/%s",images[n].name);put(source,image,sizeof(image));
+  snprintf(target,sizeof(target),"udpfs:/%s",images[n].name);unlink(target);
+  reset();strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,images[n].name);clipFiles[0].stats.FileSizeByte=sizeof(image);
+  browser_cut=cut;move_target=target;udpfs_decompress=1;decoded_size=larger?5000:600;deletes=move_deletes;
+  message[0]=0;subfunc_Paste(message,"udpfs:/");
+  if(message[0]||!matches(target,image,sizeof(image))){
+   fprintf(stderr,"FAIL %s read back decompressed as %d bytes, %s: \"%s\", copy %s\n",images[n].name,decoded_size,
+           cut?"Move":"Paste",message,access(target,F_OK)?"removed":"kept");
+   return 1;
+  }
+  assert(!handles&&udpfs_read_opens==1&&move_deletes==deletes+cut&&nclipFiles==!cut);
+  assert(cut?access(source,F_OK)!=0:matches(source,image,sizeof(image)));
+ }
+ move_target="udpfs:/MOVED.BIN";
+ /* A server that reads the container back as stored still gets the exact
+  * check: an old longer .cso that O_TRUNC never cut fails and is removed. */
+ memcpy(image,input,sizeof(image));memcpy(image,"CISO",4);put("mc0:/GAME.cso",image,sizeof(image));
+ {unsigned char older[1200]={0};memcpy(older,"CISO",4);put("udpfs:/GAME.cso",older,sizeof(older));}
+ reset();strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"GAME.cso");clipFiles[0].stats.FileSizeByte=sizeof(image);
+ browser_cut=1;udpfs_stale=UDPFS_TAIL;deletes=move_deletes;
+ message[0]=0;subfunc_Paste(message,"udpfs:/");
+ if(!strstr(message,"Verifying destination (-5)")){
+  fprintf(stderr,"FAIL old longer GAME.cso on a server that reads it as stored was reported as: \"%s\"\n",message);
+  return 1;
+ }
+ assert(!handles&&move_deletes==deletes&&nclipFiles==1&&matches("mc0:/GAME.cso",image,sizeof(image))&&access("udpfs:/GAME.cso",F_OK));
+ /* A close that failed is not overridden by a size that reads back right. */
+ reset();put("mc0:/CLOSE.BIN",input,257);strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"CLOSE.BIN");clipFiles[0].stats.FileSizeByte=257;
+ browser_cut=1;fail_close=1;deletes=move_deletes;
+ message[0]=0;subfunc_Paste(message,"udpfs:/");
+ if(!strstr(message,"Closing destination (-5)")){
+  fprintf(stderr,"FAIL a udpfs: copy whose close failed was reported as: \"%s\"\n",message);
+  return 1;
+ }
+ assert(!handles&&move_deletes==deletes&&nclipFiles==1&&matches("mc0:/CLOSE.BIN",input,257));
  /* Nested ordinary folders use the same production recursion. */
  reset();mkdir("udpfs:/NESTED",0700);put("udpfs:/NESTED/CHILD.BIN",input,257);
  strcpy(clipFiles[0].name,"NESTED");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;
@@ -307,7 +426,8 @@ int main(void){
  reset();message[0]=0;subfunc_Paste(message,"mc0:/");assert(!message[0]);
  char bounded[17];memset(bounded,'x',sizeof(bounded));filerCopyDiagFormat(bounded,16,-1);assert(!bounded[15]&&bounded[16]=='x');
  assert(!listings_live); /* every folder level freed its listing */
- puts("PASS: full paste/copy sequence, both slots, upstream direct overwrite, failures, recursion and bounded diagnostics");
+ puts("PASS: full paste/copy sequence, both slots, upstream direct overwrite, failures, recursion and bounded diagnostics; "
+      "lost or over-long udpfs: copies fail and keep a Move's source");
 }
 '''
 with tempfile.TemporaryDirectory(prefix='copy-pipeline-') as folder:

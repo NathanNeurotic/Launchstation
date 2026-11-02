@@ -444,6 +444,48 @@ finish:
 		genClose(fd);
 	return ret;
 }
+
+/* PS2-Servers' udpfs_server.py decompresses a .cso, .ciso, .zso, .ziso or
+ * .chd that is opened by its own name and that it can read, so reading one
+ * back gives the image's size and first bytes. A server that returns the file
+ * as stored (udpfsd) returns the container's magic first. */
+static int udpfsReadsDecompressed(int fd, const char *path)
+{
+	static const char *const ext[] = {"cso", "ciso", "zso", "ziso", "chd"};
+	char head[8];
+	int i;
+
+	for (i = 0; i < 5 && !genCmpFileExt(path, ext[i]); i++)
+		;
+	if (i == 5 || genLseek(fd, 0, SEEK_SET) != 0 || genRead(fd, head, sizeof(head)) != sizeof(head))
+		return FALSE;
+	return memcmp(head, "CISO", 4) && memcmp(head, "ZISO", 4) && memcmp(head, "MComprHD", 8);
+}
+
+/* A UDPFS server can keep a handle across an IOP reboot and hand it to the
+ * next open of the same name, and udpfs_ioman's close returns 0 whatever the
+ * server answers. Every write is then acknowledged into a file removed before
+ * the open, or into an old longer one O_TRUNC never cut. Only reading the size
+ * back shows the copy is there before a Move deletes its source. (host: and
+ * smb: open a new server file each time and report a failed close.) */
+static int verifyUdpfsCopy(char *path, u64 size)
+{
+	s64 end;
+	int fd;
+
+	filerCopyDiagStage("Verifying destination");
+	fd = genOpen(path, FIO_O_RDONLY);
+	if (fd < 0)
+		return fd;  //no file there, so nothing to remove
+	end = genLseek(fd, 0, SEEK_END);
+	if (end >= 0 && end != (s64)size && udpfsReadsDecompressed(fd, path))
+		end = (s64)size;  //the copy is there, but its size can only be read decompressed
+	genClose(fd);
+	if (end == (s64)size)
+		return 0;
+	genRemove(path);  //as after a failed chunk, a wrong copy is not kept
+	return end < 0 ? (int)end : -EIO;
+}
 //--------------------------------------------------------------
 //The function 'copy' below is called to copy a single object,
 //indicated by 'src' from 'inPath' to 'outPath', but this may
@@ -823,8 +865,13 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		//attributes and timestamps, and close the attribute/PSU file if such was used
 		//Lots of stuff need to be done here to make PSU operations work properly
 		if (PM_flag[recurses + 1] == PM_PSU_BACKUP) {  //PSU Backup mode folder paste closure
+			//as for a file, a udpfs: .psu is read back before a Move deletes the save
+			s64 psu_size = strncmp(tmp, "udpfs", 5) ? 0 : genLseek(PM_file[recurses + 1], 0, SEEK_CUR);
+
 			if (psu_backup_finalize_root_image(PM_file[recurses + 1], mcT_head_p, PSU_content) < 0)
 				return copyDiagFail(-1);
+			if (!strncmp(tmp, "udpfs", 5) && (ret = verifyUdpfsCopy(tmp, psu_size)) < 0)
+				return copyDiagFail(ret);
 		} else if (PM_flag[recurses + 1] == PM_NORMAL) {             //Normal mode folder paste closure
 			if (!strncmp(out, "mc", 2)) {                            //Handle folder copied to MC
 				ensureMemoryCardPortAccessible(out[2] - '0');
@@ -1247,6 +1294,8 @@ copy_file_data_done:
 		else if ((isPcCardCfPath(out) && !isPcCardCfOnline()) || (isPcCardCfPath(in) && !isPcCardCfOnline()))
 			ret = -EIO;
 		out_fd = -1;  //prevent dual closure attempt
+		if (ret >= 0 && !strncmp(out, "udpfs", 5))
+			ret = verifyUdpfsCopy(out, original_size);
 		if (ret < 0)
 			goto copy_file_exit;
 	}
