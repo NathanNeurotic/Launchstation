@@ -51,6 +51,12 @@ case $PIN in /*) . "$PIN" ;; *) . "./$PIN" ;; esac
 PS2BUILD_SDK_MIRROR=${PS2BUILD_SDK_MIRROR:-NathanNeurotic/ps2build-mirror}
 PS2BUILD_LLVM_TOOLCHAIN=${PS2BUILD_LLVM_TOOLCHAIN:-latest}
 MIRROR_LATEST=${PS2BUILD_SDK_MIRROR_LATEST_URL:-https://github.com/$PS2BUILD_SDK_MIRROR/releases/latest/download}
+# The mirror may be a private repository. Its download links then need a login, so with
+# PS2BUILD_SDK_MIRROR_TOKEN set (a token that can read the mirror's contents, from a CI secret) every
+# mirror file comes through the GitHub API instead. Without it the public download links are used.
+MIRROR_TOKEN=${PS2BUILD_SDK_MIRROR_TOKEN:-}
+unset PS2BUILD_SDK_MIRROR_TOKEN # keep it out of the environment of ps2build, curl and the official attempt
+MIRROR_API=${PS2BUILD_SDK_MIRROR_API_URL:-https://api.github.com}
 
 log() { echo "ps2build-sdk: $*"; }
 
@@ -71,6 +77,45 @@ fetch() { # url file
 }
 
 sha256() { sha256sum "$1" | cut -d' ' -f1; }
+
+api_fetch() { # url file accept: a GitHub API request with the mirror token, which stays off the command line
+    # curl sends the Authorization header to api.github.com only, not to the storage host it redirects to.
+    # HTTPS only, redirects included, so the token never travels in cleartext.
+    printf 'header = "Authorization: Bearer %s"\n' "$MIRROR_TOKEN" |
+        curl -K - -sSfL --proto '=https' --proto-redir '=https' --retry 6 --retry-delay 5 --retry-all-errors --connect-timeout 20 --speed-limit 1024 --speed-time 60 \
+            -H "Accept: $3" -H "X-GitHub-Api-Version: 2022-11-28" "$1" -o "$2"
+}
+
+asset_id() { # name < release JSON -> the id of the one asset with that name
+    if command -v jq >/dev/null 2>&1; then
+        jq -r --arg name "$1" '[.assets[]? | select(.name == $name) | .id] | if length == 1 then .[0] else empty end'
+    else
+        python3 -I -c 'import json, sys
+ids = [a["id"] for a in json.load(sys.stdin).get("assets", []) if a.get("name") == sys.argv[1]]
+print(ids[0] if len(ids) == 1 else "")' "$1"
+    fi | grep -E '^[0-9]+$'
+}
+
+mirror_fetch() { # release (latest or a tag) name file: one file of a ps2build-mirror release
+    if [ -z "$MIRROR_TOKEN" ]; then
+        if [ "$1" = latest ]; then
+            fetch "$MIRROR_LATEST/$2" "$3"
+        else
+            fetch "${PS2BUILD_SDK_MIRROR_URL:-https://github.com/$PS2BUILD_SDK_MIRROR/releases/download/$1}/$2" "$3"
+        fi
+        return
+    fi
+    case $1 in latest) release=latest ;; *) release=tags/$1 ;; esac
+    api_fetch "$MIRROR_API/repos/$PS2BUILD_SDK_MIRROR/releases/$release" "$3.release" application/vnd.github+json || {
+        rm -f "$3.release"
+        log "cannot read ps2build-mirror release $1 (is PS2BUILD_SDK_MIRROR_TOKEN allowed to read $PS2BUILD_SDK_MIRROR?)"
+        return 1
+    }
+    id=$(asset_id "$2" < "$3.release") || id=
+    rm -f "$3.release"
+    [ -n "$id" ] || { log "ps2build-mirror release $1 has no single asset named $2"; return 1; }
+    api_fetch "$MIRROR_API/repos/$PS2BUILD_SDK_MIRROR/releases/assets/$id" "$3" application/octet-stream
+}
 
 # Versions, tags and hashes from the network end up in a pin file that later steps source, so anything
 # but these characters is refused (an empty result, as if the value were missing).
@@ -118,7 +163,7 @@ resolve_official() { # fill in each unpinned version with the newest official re
 
 resolve_mirror() { # the release API is down: the newest mirror release defines the unpinned versions
     pin_tmp=$(mktemp)
-    if ! fetch "$MIRROR_LATEST/pin.env" "$pin_tmp"; then
+    if ! mirror_fetch latest pin.env "$pin_tmp"; then
         rm -f "$pin_tmp"
         return 1
     fi
@@ -138,7 +183,7 @@ resolve_mirror() { # the release API is down: the newest mirror release defines 
     PS2BUILD_SDK_TAG=$(pin_value PS2BUILD_SDK_TAG "$pin_tmp")
     PS2BUILD_SDK_SUMS_SHA256=$(pin_value PS2BUILD_SDK_SUMS_SHA256 "$pin_tmp")
     rm -f "$pin_tmp"
-    [ -n "$PS2BUILD_SDK_TAG" ] && [ -n "$PS2BUILD_SDK_SUMS_SHA256" ] || { log "$MIRROR_LATEST/pin.env is incomplete"; return 1; }
+    [ -n "$PS2BUILD_SDK_TAG" ] && [ -n "$PS2BUILD_SDK_SUMS_SHA256" ] || { log "the newest ps2build-mirror pin.env is incomplete"; return 1; }
     warn "$OFFICIAL's release API is unreachable; using the newest ps2build-mirror release $PS2BUILD_SDK_TAG, which may be older than the latest SDK"
 }
 
@@ -230,7 +275,7 @@ adopt_mirror_pin() { # pin.env of the newest mirror release: install that, and s
     sums=$(pin_value PS2BUILD_SDK_SUMS_SHA256 "$1")
     components=$(pin_value PS2BUILD_COMPONENTS "$1")
     llvm=$(pin_value PS2BUILD_LLVM_TOOLCHAIN "$1")
-    [ -n "$tag" ] && [ -n "$sums" ] && [ -n "$components" ] || { log "$MIRROR_LATEST/pin.env is incomplete"; return 1; }
+    [ -n "$tag" ] && [ -n "$sums" ] && [ -n "$components" ] || { log "the newest ps2build-mirror pin.env is incomplete"; return 1; }
     [ "$LLVM" = 1 ] && components_llvm="$components llvm-toolchain=$llvm" latest_llvm="$PS2BUILD_COMPONENTS llvm-toolchain=$PS2BUILD_LLVM_TOOLCHAIN" \
         || components_llvm=$components latest_llvm=$PS2BUILD_COMPONENTS
     older=$(differences "$components_llvm" "$latest_llvm")
@@ -253,11 +298,10 @@ from_mirror() {
     work=$(mktemp -d)
     trap 'rm -rf "$work"' EXIT
     if [ -z "$PS2BUILD_SDK_TAG" ]; then
-        fetch "$MIRROR_LATEST/pin.env" "$work/pin.env" || { log "cannot download $MIRROR_LATEST/pin.env"; return 1; }
+        mirror_fetch latest pin.env "$work/pin.env" || { log "cannot download the newest ps2build-mirror pin.env"; return 1; }
         adopt_mirror_pin "$work/pin.env" || return 1
     fi
-    base=${PS2BUILD_SDK_MIRROR_URL:-https://github.com/$PS2BUILD_SDK_MIRROR/releases/download/$PS2BUILD_SDK_TAG}
-    fetch "$base/SHA256SUMS" "$work/SHA256SUMS" || { log "cannot download $base/SHA256SUMS"; return 1; }
+    mirror_fetch "$PS2BUILD_SDK_TAG" SHA256SUMS "$work/SHA256SUMS" || { log "cannot download SHA256SUMS of $PS2BUILD_SDK_TAG"; return 1; }
     got=$(sha256 "$work/SHA256SUMS")
     if [ "$got" != "$PS2BUILD_SDK_SUMS_SHA256" ]; then
         echo "error: mirror SHA256SUMS is $got, its pin.env says $PS2BUILD_SDK_SUMS_SHA256" >&2
@@ -270,7 +314,7 @@ from_mirror() {
         name=$(sed -n "s/^[0-9a-f]\{64\}  \(ps2build-sdk-.*-linux-amd64-$part\.tar\.zst\)\$/\1/p" "$work/SHA256SUMS")
         [ -n "$name" ] || { echo "error: SHA256SUMS lists no $part archive" >&2; return 1; }
         log "downloading $name"
-        fetch "$base/$name" "$work/$name" || { log "cannot download $name"; return 1; }
+        mirror_fetch "$PS2BUILD_SDK_TAG" "$name" "$work/$name" || { log "cannot download $name"; return 1; }
         (cd "$work" && grep "  $name\$" SHA256SUMS | sha256sum -c --quiet -) || {
             echo "error: $name does not match SHA256SUMS" >&2
             return 1
