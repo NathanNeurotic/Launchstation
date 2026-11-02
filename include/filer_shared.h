@@ -105,7 +105,7 @@ int readSMB(const char *path, FILEINFO *info, int max);
 #endif
 
 int getDir(const char *path, FILEINFO *info);
-/* For copy and delete: an error unless the whole folder was read
+/* For copy, delete and Get Size: an error unless the whole folder was read
  * (filer.c). 'info' holds MAX_ENTRY entries. */
 int getDirComplete(const char *path, FILEINFO *info, int *more);
 int filerPrepareDirRead(const char *path);

@@ -1,6 +1,6 @@
 """Run the real folder listing (src/filer.c) on fake devices.
 
-getDirComplete() is the listing copy and delete act on: it must
+getDirComplete() is the listing copy, delete and Get Size act on: it must
 return an error unless it read the whole folder. getDir() is the browser's
 listing and keeps showing what it could read. Both go through the real
 listDir() dispatcher and the real memory card, generic (BDM, MMCE), CD, VMC,

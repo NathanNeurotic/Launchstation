@@ -2034,9 +2034,9 @@ int getFilePath(char *out, int cnfmode)
 //--------------------------------------------------------------
 static void submenu_func_GetSize(char *mess, char *path, FILEINFO *files)
 {
-	u64 size;
+	u64 size = 0;
 	u64 entry_size;
-	int ret, i, text_pos, text_inc, sel = -1;
+	int ret, i, text_pos, text_inc, sel = -1, status = 0;
 	char filepath[MAX_PATH];
 
 	/*
@@ -2046,42 +2046,39 @@ static void submenu_func_GetSize(char *mess, char *path, FILEINFO *files)
 */
 
 	drawMsg(LNG(Checking_Size));
-	if (nmarks == 0) {
-		size = getFileSize(path, &files[browser_sel]);
-		sel = browser_sel;  //for stat checking
-		if ((size != (u64)-1) && (files[browser_sel].stats.AttrFile & sceMcFileAttrSubdir)) {
-			files[browser_sel].stats.FileSizeByte = (u32)size;
-			files[browser_sel].stats.Reserve2 = (u32)(size >> 32);
+	/* A size that could not be measured in full is shown as a lower bound
+	 * (">="), and not kept as the folder's size in the listing. */
+	for (i = 0; i < browser_nfiles; i++) {
+		if (nmarks ? !marks[i] : i != browser_sel)
+			continue;  //measure the marked entries, or else the selected one
+		entry_size = 0;
+		ret = getFileSize(path, &files[i], &entry_size);
+		size += entry_size;
+		sel = i;  //for stat checking
+		if (ret == 0 && (files[i].stats.AttrFile & sceMcFileAttrSubdir)) {
+			files[i].stats.FileSizeByte = (u32)entry_size;
+			files[i].stats.Reserve2 = (u32)(entry_size >> 32);
 		}
-	} else {
-		for (i = size = 0; i < browser_nfiles; i++) {
-			if (marks[i]) {
-				entry_size = getFileSize(path, &files[i]);
-				if (entry_size == (u64)-1) {
-					size = (u64)-1;
-					break;
-				}
-				size += entry_size;
-				if (files[i].stats.AttrFile & sceMcFileAttrSubdir) {
-					files[i].stats.FileSizeByte = (u32)entry_size;
-					files[i].stats.Reserve2 = (u32)(entry_size >> 32);
-				}
-				sel = i;  //for stat checking
-			}
+		if (ret < 0) {
+			status = ret;
+			if (ret != -E2BIG)
+				break;  //a device error: the rest would likely fail too
 		}
 	}
-	DPRINTF("size result = %llu\r\n", (unsigned long long)size);
-	if (size == (u64)-1) {
+	DPRINTF("size result = %llu status = %d\r\n", (unsigned long long)size, status);
+	if (status < 0 && size == 0) {
 		strcpy(mess, LNG(Size_test_Failed));
 		text_pos = strlen(mess);
 	} else {
+		const char *relation = (status < 0) ? ">=" : "=";
+
 		text_pos = 0;
 		if (size >= 1024 * 1024)
-			sprintf(mess, "%s = %.1fMB%n", LNG(SIZE), (double)size / 1024 / 1024, &text_inc);
+			sprintf(mess, "%s %s %.1fMB%n", LNG(SIZE), relation, (double)size / 1024 / 1024, &text_inc);
 		else if (size >= 1024)
-			sprintf(mess, "%s = %.1fKB%n", LNG(SIZE), (double)size / 1024, &text_inc);
+			sprintf(mess, "%s %s %.1fKB%n", LNG(SIZE), relation, (double)size / 1024, &text_inc);
 		else
-			sprintf(mess, "%s = %lluB%n", LNG(SIZE), (unsigned long long)size, &text_inc);
+			sprintf(mess, "%s %s %lluB%n", LNG(SIZE), relation, (unsigned long long)size, &text_inc);
 		text_pos += text_inc;
 	}
 

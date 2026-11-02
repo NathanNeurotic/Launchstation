@@ -2069,8 +2069,8 @@ int getDir(const char *path, FILEINFO *info)
 	return listDir(path, info, MAX_ENTRY - 2);
 }
 
-/* Lists a folder for a caller that acts on all of it (copy, delete).
- * Returns the number of entries, or a negative error when the folder
+/* Lists a folder for a caller that acts on all of it (copy, delete, Get
+ * Size). Returns the number of entries, or a negative error when the folder
  * could not be opened, a read failed partway, or it holds more than
  * MAX_ENTRY - 2 entries (-E2BIG). With 'more', a folder that holds more
  * returns its first MAX_ENTRY - 1 entries and sets *more instead, for a

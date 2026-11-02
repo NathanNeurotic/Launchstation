@@ -277,54 +277,92 @@ int filerConfirmExploitModify(const char *path, const FILEINFO *file)
 	return filerConfirmExploitAction(path, file, LNG(Modify));
 }
 
-u64 getFileSize(const char *path, const FILEINFO *file)
+/* Network servers report sizes in their listings, but may not answer a stat:
+ * ps2client's host: never does and a udpfsd server may only for an open file. */
+static int sizeFromListingOnStatFailure(const char *path)
+{
+	if (!strncmp(path, "host", 4) || !strncmp(path, "udpfs", 5))
+		return 1;
+#ifdef SMB
+	if (smbPathKind(path) != SMB_PATH_NONE)
+		return 1;
+#endif
+	return 0;
+}
+
+/* Adds the size of a file, or of a folder and everything in it, to *size.
+ * Returns 0 when that is all of it, else *size is only a lower bound: -E2BIG
+ * when a folder held more than a listing can (its first MAX_ENTRY - 1 entries
+ * are counted and the rest of the tree is still measured), or the error of
+ * anything else that could not be measured, which stops the measurement. */
+int getFileSize(const char *path, const FILEINFO *file, u64 *size)
 {
 	static char party[MAX_NAME];  //only used for a file, which does not recurse
 	iox_stat_t stat;
-	u64 size;
 	FILEINFO *files;
 	char dir[MAX_PATH];
-	int nfiles, i, ret;
+	int nfiles, i, ret, more, status = 0;
 
 	if (!ensurePathDeviceStackReady(path))
-		return 0;
+		return -ENODEV;
 
 	if (file->stats.AttrFile & sceMcFileAttrSubdir) {  //Folder object to size up
 		/* each level lists on the heap: MAX_ENTRY entries are about 900 KB */
 		files = (FILEINFO *)memalign(64, MAX_ENTRY * sizeof(FILEINFO));
 		if (files == NULL)
-			return 0;
+			return -ENOMEM;
 		sprintf(dir, "%s%s/", path, file->name);
-		nfiles = getDir(dir, files);
-		for (i = size = 0; i < nfiles; i++)
-			size += getFileSize(dir, &files[i]);  //recurse for each object in folder
+		nfiles = getDirComplete(dir, files, &more);
+		if (nfiles < 0)
+			status = nfiles;
+		else if (more)
+			status = -E2BIG;
+		for (i = 0; i < nfiles; i++) {
+			ret = getFileSize(dir, &files[i], size);  //recurse for each object in folder
+			if (ret == -E2BIG)
+				status = ret;
+			else if (ret < 0) {
+				status = ret;
+				break;
+			}
+		}
 		free(files);
-	} else {  //File object to size up
-		if (!strncmp(path, "hdd", 3)) {
-			getHddParty(path, file, party, dir);
-			ret = mountParty(party);
-			if (ret < 0)
-				return 0;
-			dir[3] = ret + '0';
-#ifdef DVRP
-		} else if (!strncmp(path, "dvr_hdd", 7)) {
-			getHddDVRPParty(path, file, party, dir);
-			ret = mountDVRPParty(party);
-			if (ret < 0)
-				return 0;
-			dir[7] = ret + '0';
-#endif
-		} else
-			sprintf(dir, "%s%s", path, file->name);
-#if defined(ETH) || defined(UDPFS)
-		if (!strncmp(dir, "host:/", 6))
-			makeHostPath(dir, dir);
-#endif
-		if (genGetStat(dir, &stat) < 0)
-			return 0;
-		size = ((u64)stat.hisize << 32) | (u64)stat.size;
+		return status;
 	}
-	return size;
+	//File object to size up
+	if (!strncmp(path, "hdd", 3)) {
+		if (getHddParty(path, file, party, dir) < 0)
+			return -ENOENT;
+		ret = mountParty(party);
+		if (ret < 0)
+			return -ENODEV;
+		dir[3] = ret + '0';
+#ifdef DVRP
+	} else if (!strncmp(path, "dvr_hdd", 7)) {
+		if (getHddDVRPParty(path, file, party, dir) < 0)
+			return -ENOENT;
+		ret = mountDVRPParty(party);
+		if (ret < 0)
+			return -ENODEV;
+		dir[7] = ret + '0';
+#endif
+	} else
+		sprintf(dir, "%s%s", path, file->name);
+#if defined(ETH) || defined(UDPFS)
+	if (!strncmp(dir, "host:/", 6))
+		makeHostPath(dir, dir);
+#endif
+	ret = genGetStat(dir, &stat);
+	if (ret < 0) {
+		/* MC and VMC listings keep the attribute in Reserve2, not the size's
+		 * high word, and a local device that fails a stat has failed */
+		if (!sizeFromListingOnStatFailure(path))
+			return ret;
+		stat.size = file->stats.FileSizeByte;
+		stat.hisize = file->stats.Reserve2;
+	}
+	*size += ((u64)stat.hisize << 32) | (u64)stat.size;
+	return 0;
 }
 //------------------------------
 //endfunc getFileSize

@@ -999,28 +999,43 @@ static void opNewFolder(void)
 static void opSize(void)
 {
 	static int idx[MAX_ENTRY];
-	int n = targets(idx, MAX_ENTRY), i;
+	int n = targets(idx, MAX_ENTRY), i, ret, status = 0;
 	u64 total = 0;
-	char body[96];
+	const char *title, *at_least;
+	char body[96], detail[40];
 
 	if (n == 0 || !prepareOp())
 		return;
 	dashLoadingBegin("Measuring size");
 	for (i = 0; i < n; i++) {
-		u64 s;
 		dashLoadingStatus(fb.files[idx[i]].name, i, n);
-		s = getFileSize(fb.dir, &fb.files[idx[i]]);
-		if ((s64)s > 0)
-			total += s;
+		ret = getFileSize(fb.dir, &fb.files[idx[i]], &total);
+		if (ret < 0) {
+			status = ret;
+			if (ret != -E2BIG)
+				break;  //a device error: the rest would likely fail too
+		}
 	}
 	opDone();
+	title = n == 1 ? fb.files[idx[0]].name : "Selected items";
+	if (status < 0 && total == 0) {
+		snprintf(detail, sizeof(detail), "error %d", status);
+		dashModalMessage(DI_WARNING, title, "The size could not be measured.", detail);
+		return;
+	}
+	/* a total that is missing something is never shown as exact */
+	at_least = (status < 0) ? "At least " : "";
 	if (total >= (u64)1024 * 1024 * 1024)
-		snprintf(body, sizeof(body), "%.2f GB  (%llu bytes)", (double)total / (1024.0 * 1024.0 * 1024.0), (unsigned long long)total);
+		snprintf(body, sizeof(body), "%s%.2f GB  (%llu bytes)", at_least, (double)total / (1024.0 * 1024.0 * 1024.0), (unsigned long long)total);
 	else if (total >= 1024 * 1024)
-		snprintf(body, sizeof(body), "%.2f MB  (%llu bytes)", (double)total / (1024.0 * 1024.0), (unsigned long long)total);
+		snprintf(body, sizeof(body), "%s%.2f MB  (%llu bytes)", at_least, (double)total / (1024.0 * 1024.0), (unsigned long long)total);
 	else
-		snprintf(body, sizeof(body), "%llu bytes", (unsigned long long)total);
-	dashModalMessage(DI_INFO, n == 1 ? fb.files[idx[0]].name : "Selected items", body, NULL);
+		snprintf(body, sizeof(body), "%s%llu bytes", at_least, (unsigned long long)total);
+	if (status == -E2BIG)
+		snprintf(detail, sizeof(detail), "A folder holds over %d items", MAX_ENTRY - 2);
+	else if (status < 0)
+		snprintf(detail, sizeof(detail), "Stopped by error %d", status);
+	dashModalMessage(status < 0 ? DI_WARNING : DI_INFO, title, body, status < 0 ? detail : NULL);
 }
 
 static void opTitleCfg(void)
