@@ -38,6 +38,11 @@
       <td>Extract it onto a memory card the same way to install <code>APP_LAUNCHSTATION-DS/</code>.</td>
     </tr>
     <tr>
+      <td>LAUNCHSTATION-&lt;build&gt;.zip</td>
+      <td>LAUNCHSTATION.ELF</td>
+      <td>The full kit, laid out like RiptOPL&rsquo;s release ZIP: <code>APPS/APP_LAUNCHSTATION/</code> and <code>APP_LAUNCHSTATION.psu</code> plus <code>POPS/</code> (POPStarter and companions), <code>EMBER/</code> (Ember core), <code>neutrino/</code> (latest upstream Neutrino) and PC-tool shortcuts. Copy it to the root of a game device; see <a href="install.html#kit">the full kit</a>.</td>
+    </tr>
+    <tr>
       <td>LAUNCHSTATION.ELF</td>
       <td>LAUNCHSTATION.ELF</td>
       <td>The standard packed ELF on its own, without the folder or sidecars.</td>
@@ -60,10 +65,10 @@
 <ul>
   <li>There is a single moving release, tagged <code>latest</code> and titled "Launchstation Rolling &lt;build&gt; - &lt;date&gt; (&lt;commit&gt;)". It is marked as GitHub's Latest release and is not a pre-release.</li>
   <li>Every push to <code>master</code> runs the full <a href="https://github.com/NathanNeurotic/Launchstation/actions">Automated-Build workflow</a>: host regression tests, standard and DS34 builds with PS2BUILD LLVM/Clang, controller-variant and Clang-only object checks, the embedded loader memory-layout check and ZIP/PSU verification.</li>
-  <li>Only after all of that passes are the eight assets (four packages and four ELFs) uploaded, downloaded again and byte-compared, and the <code>latest</code> tag moved to the tested commit. The tag is never moved to a commit that is not a descendant of the previous one, and a build superseded by a newer master commit is skipped.</li>
+  <li>Only after all of that passes are the nine assets (four app packages, four ELFs and the full kit) uploaded, downloaded again and byte-compared, and the <code>latest</code> tag moved to the tested commit. The tag is never moved to a commit that is not a descendant of the previous one, and a build superseded by a newer master commit is skipped.</li>
   <li>Pull requests build and test but never touch the public release.</li>
   <li>A documentation-only change also produces a new rolling build, so a new commit hash does not by itself mean the runtime changed.</li>
-  <li>The in-app updater downloads from this same <code>latest</code> release, so the download URLs stay stable: <code>https://github.com/NathanNeurotic/Launchstation/releases/download/latest/APP_LAUNCHSTATION.psu</code> and the other fixed names (the DS PSU and the four ELFs). The ZIP names change with each build, so link the release page for those; the previous build's ZIPs are removed once a new build is published.</li>
+  <li>The in-app updater downloads from this same <code>latest</code> release, so the download URLs stay stable: <code>https://github.com/NathanNeurotic/Launchstation/releases/download/latest/APP_LAUNCHSTATION.psu</code> and the other fixed names (the DS PSU and the four ELFs). The ZIP names, including the full kit&rsquo;s, change with each build, so link the release page for those; the previous build's ZIPs are removed once a new build is published.</li>
 </ul>
 
 <h2 id="verify">Verify a download</h2>

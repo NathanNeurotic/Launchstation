@@ -93,6 +93,28 @@ assert "/releases/download/latest/APP_LAUNCHSTATION.zip" not in versioned
 assert notes.published_name("APP_LAUNCHSTATION.psu", "284") == "APP_LAUNCHSTATION.psu"
 assert notes.published_name("APP_LAUNCHSTATION.zip", "") == "APP_LAUNCHSTATION.zip"
 
+# A build whose kit could not be made still gets notes: no kit row or hash, and a
+# sentence saying the previous kit stays attached. Every other asset stays required.
+assert notes.OPTIONAL_ASSETS == ("LAUNCHSTATION.zip",)
+without_kit = {name: digest for name, digest in digests.items() if name != "LAUNCHSTATION.zip"}
+no_kit = notes.render(repo, revision, previous, 123, changes, without_kit, "284")
+assert "/latest/LAUNCHSTATION-284.zip" not in no_kit and "  LAUNCHSTATION-284.zip" not in no_kit and "was not rebuilt for this build" in no_kit
+assert "APP_LAUNCHSTATION-284.zip" in no_kit
+assert "was not rebuilt" not in versioned and "/releases/download/latest/LAUNCHSTATION-284.zip" in versioned
+with tempfile.TemporaryDirectory(prefix="release-notes-nokit-") as folder:
+    path = Path(folder)
+    for name in notes.ASSETS:
+        if name != "LAUNCHSTATION.zip":
+            (path / name).write_bytes(("fixture:" + name).encode())
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    args = [sys.executable, str(root / "scripts/release_notes.py"), "--repo", repo,
+            "--revision", head, "--previous", head, "--run-id", "123",
+            "--assets-dir", str(path), "--output", str(path / "notes.md"), "--version", "284"]
+    subprocess.run(args, cwd=root, check=True)
+    assert "was not rebuilt for this build" in (path / "notes.md").read_text()
+    (path / "APP_LAUNCHSTATION.psu").unlink()
+    assert subprocess.run(args, cwd=root, capture_output=True).returncode != 0
+
 workflow = (root / ".github/workflows/compile.yml").read_text()
 assert "python3 scripts/release_notes.py" in workflow
 assert 'gh pr list' not in workflow and "git log --format='- %s (%h)'" not in workflow
