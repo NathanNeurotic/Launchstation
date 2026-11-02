@@ -179,6 +179,7 @@ int prepareTransferDeviceStacks(const char *src_path, const char *dst_path)
 {
 	int src_storage = transferStorageGateForPath(src_path);
 	int dst_storage = transferStorageGateForPath(dst_path);
+	unsigned int generation;
 
 	if (transferUsesMx4sioAndMc1(src_path, dst_path))
 		return TRANSFER_STACK_INCOMPATIBLE;
@@ -210,8 +211,19 @@ int prepareTransferDeviceStacks(const char *src_path, const char *dst_path)
 #endif
 	if (!ensurePathDeviceStackReady(src_path))
 		return TRANSFER_STACK_LOAD_FAILED;
+	generation = getIopResetGeneration();
 	if (!ensurePathDeviceStackReady(dst_path))
 		return TRANSFER_STACK_LOAD_FAILED;
+	/* The destination's stack can reboot the IOP (switching network stacks
+	 * does), which unloads the source's drivers: load them again. Another
+	 * reboot then means the two cannot stay loaded together. */
+	if (getIopResetGeneration() != generation) {
+		generation = getIopResetGeneration();
+		if (!ensurePathDeviceStackReady(src_path))
+			return TRANSFER_STACK_LOAD_FAILED;
+		if (getIopResetGeneration() != generation)
+			return TRANSFER_STACK_INCOMPATIBLE;
+	}
 	return TRANSFER_STACK_READY;
 }
 //--------------------------------------------------------------
