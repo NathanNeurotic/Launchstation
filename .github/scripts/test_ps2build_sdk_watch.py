@@ -407,6 +407,24 @@ exit 0
             self.assertEqual(run(fails=names[:1]), (1, names))  # fails, but only after trying every build
             self.assertEqual(run(list_fails="1"), (0, names))  # a run it cannot see counts as missing
 
+    def test_a_branch_left_without_a_pull_request_gets_an_issue(self):
+        # With someone else's commits on the branch and no open pull request (it was closed, or squash-merged with
+        # the branch kept), leaving the branch alone would show the new pins nowhere. So the watch still leaves the
+        # branch alone, and says so in the issue it opens when it cannot open a pull request.
+        step = (WORKFLOWS / "ps2build-sdk-watch.yml").read_text().split("- name: Push the new pins", 1)[1]
+        start = step.index('grep -qvxF "$BOT"')
+        guard = step[start:step.index("already proposes these pins")]
+        self.assertEqual(step.count('PR="$(gh pr list'), 1)
+        self.assertLess(step.index('PR="$(gh pr list'), start)  # known before the guard
+        with_pr, without_pr = guard.split('if [ -n "$PR" ]; then', 1)[1].split("\n            else\n", 1)
+        self.assertNotIn("report ", with_pr)  # their open pull request shows the work
+        self.assertIn("report ", without_pr)
+        self.assertIn("exit 0", without_pr)
+        for change in ("git push", "gh pr edit", "gh pr create", "gh workflow run"):
+            self.assertNotIn(change, guard)
+        # The same issue is the fallback when Actions may not open pull requests.
+        self.assertIn("report ", step.split("gh pr create", 1)[1].split("\n          fi\n", 1)[0])
+
 
 if __name__ == "__main__":
     unittest.main()

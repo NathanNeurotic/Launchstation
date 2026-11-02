@@ -14,7 +14,7 @@ name: ps2build SDK Watch
 #          itself, and a later run starts it if it has not run on the branch head; that build publishes nothing,
 #          because it publishes from master only. The watch proposes nothing when the pins on master changed
 #          after check read them, never merges anything, and leaves a branch someone else has committed to, and
-#          its pull request, alone.
+#          its pull request, alone (with no pull request open, an issue says so).
 #
 # When "Allow GitHub Actions to create and approve pull requests" is off in the repository settings, it opens an
 # issue with a link that creates the pull request instead.
@@ -169,12 +169,32 @@ jobs:
             git fetch -q origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
             OLD="$(git rev-parse "origin/$BRANCH")"
           fi
+          PR="$(gh pr list --repo "$R" --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
+
+          # Without a pull request to show the new pins, an issue does: the lines given, then the proposal.
+          report() {
+            { printf '%s\n' "$@"; echo; cat "$W/body.md"; } > "$W/issue.md"
+            EXISTING="$(gh issue list --repo "$R" --state open --limit 100 --json number,title \
+              --jq "[.[] | select(.title == \"$ISSUE_TITLE\")][0].number // empty")"
+            if [ -n "$EXISTING" ]; then
+              gh issue edit "$EXISTING" --repo "$R" --body-file "$W/issue.md"
+            else
+              gh issue create --repo "$R" --title "$ISSUE_TITLE" --body-file "$W/issue.md"
+            fi
+          }
 
           if [ -n "$OLD" ] && git log --format='%ae%n%ce' "origin/master..origin/$BRANCH" | grep -qvxF "$BOT"; then
             # Someone added commits (a fix for the new SDK, say), or amended the watch's commit, which keeps the
             # watch as its author but not as its committer. Never overwrite their work, and leave its pull request
             # alone too, even when the branch already holds these pins.
-            echo "::warning::$BRANCH has commits that are not the watch's; leaving it alone. Merge or close its pull request, then run the watch again."
+            if [ -n "$PR" ]; then
+              echo "::warning::$BRANCH has commits that are not the watch's; leaving it and #$PR alone. Merge or close #$PR and delete the branch, then run the watch again."
+            else
+              # Its pull request was closed, or squash-merged with the branch kept, so nothing shows the new pins.
+              echo "::warning::$BRANCH has commits that are not the watch's and no open pull request; leaving it alone."
+              report "The ps2build SDK Watch found newer versions, but \`$BRANCH\` has commits that are not the watch's and no open pull request, so it left the branch alone." \
+                "If that work is merged or no longer wanted, delete the branch, and the next run proposes these pins. To keep working on it, open a pull request for it."
+            fi
             exit 0
           elif [ -n "$OLD" ] && git show "origin/$BRANCH:.github/ps2build-sdk.env" | cmp -s - .github/ps2build-sdk.env; then
             echo "$BRANCH already proposes these pins."
@@ -191,7 +211,6 @@ jobs:
           fi
 
           TITLE="$(cat "$W/title")"
-          PR="$(gh pr list --repo "$R" --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
           if [ -n "$PR" ]; then
             gh pr edit "$PR" --repo "$R" --title "$TITLE" --body-file "$W/body.md"
             echo "Refreshed #$PR."
@@ -199,19 +218,8 @@ jobs:
             :
           else
             # Most likely "Allow GitHub Actions to create and approve pull requests" is off. Ask in an issue.
-            {
-              echo "The ps2build SDK Watch pushed new pins to \`$BRANCH\` but could not open the pull request."
-              echo "Open it here: https://github.com/$R/compare/master...$BRANCH?expand=1"
-              echo
-              cat "$W/body.md"
-            } > "$W/issue.md"
-            EXISTING="$(gh issue list --repo "$R" --state open --limit 100 --json number,title \
-              --jq "[.[] | select(.title == \"$ISSUE_TITLE\")][0].number // empty")"
-            if [ -n "$EXISTING" ]; then
-              gh issue edit "$EXISTING" --repo "$R" --body-file "$W/issue.md"
-            else
-              gh issue create --repo "$R" --title "$ISSUE_TITLE" --body-file "$W/issue.md"
-            fi
+            report "The ps2build SDK Watch pushed new pins to \`$BRANCH\` but could not open the pull request." \
+              "Open it here: https://github.com/$R/compare/master...$BRANCH?expand=1"
           fi
 
           # A push made with GITHUB_TOKEN starts no workflow, so the watch starts the builds on its branch itself. A
