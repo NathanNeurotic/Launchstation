@@ -444,6 +444,29 @@ finish:
 		genClose(fd);
 	return ret;
 }
+
+/* A UDPFS server can keep a handle across an IOP reboot and hand it to the
+ * next open of the same name, and udpfs_ioman's close returns 0 whatever the
+ * server answers. Every write is then acknowledged into a file removed before
+ * the open, or into an old longer one O_TRUNC never cut. Only reading the size
+ * back shows the copy is there before a Move deletes its source. (host: and
+ * smb: open a new server file each time and report a failed close.) */
+static int verifyUdpfsCopy(char *path, u64 size)
+{
+	s64 end;
+	int fd;
+
+	filerCopyDiagStage("Verifying destination");
+	fd = genOpen(path, FIO_O_RDONLY);
+	if (fd < 0)
+		return fd;  //no file there, so nothing to remove
+	end = genLseek(fd, 0, SEEK_END);
+	genClose(fd);
+	if (end == (s64)size)
+		return 0;
+	genRemove(path);  //as after a failed chunk, a wrong copy is not kept
+	return end < 0 ? (int)end : -EIO;
+}
 //--------------------------------------------------------------
 //The function 'copy' below is called to copy a single object,
 //indicated by 'src' from 'inPath' to 'outPath', but this may
@@ -1247,6 +1270,8 @@ copy_file_data_done:
 		else if ((isPcCardCfPath(out) && !isPcCardCfOnline()) || (isPcCardCfPath(in) && !isPcCardCfOnline()))
 			ret = -EIO;
 		out_fd = -1;  //prevent dual closure attempt
+		if (ret >= 0 && !strncmp(out, "udpfs", 5))
+			ret = verifyUdpfsCopy(out, original_size);
 		if (ret < 0)
 			goto copy_file_exit;
 	}

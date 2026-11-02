@@ -136,7 +136,9 @@ static int isPcCardCfOnline(void){return 1;}
 static void ensureMemoryCardPortAccessible(int p){assert(p==0||p==1);}
 static char *makeHostPath(char *d,char *s){if(d!=s)strcpy(d,s);return d;}
 static void genLimObjName(char *p,int reserve){(void)p;(void)reserve;}
-static int genOpen(const char *p,int flags){int fd=open(p,flags,0600);if(fd<0)return -errno;assert(fd<1024);fd_open[fd]=1;handles++;return fd;}
+static int udpfs_read_opens;
+static int genOpen(const char *p,int flags){if(flags==O_RDONLY&&!strncmp(p,"udpfs:",6))udpfs_read_opens++;
+ int fd=open(p,flags,0600);if(fd<0)return -errno;assert(fd<1024);fd_open[fd]=1;handles++;return fd;}
 static int genClose(int fd){if(fd<0||fd>=1024||!fd_open[fd]){double_closes++;return -EBADF;}fd_open[fd]=0;handles--;return close(fd)?-errno:0;}
 static s64 genLseek(int fd,s64 n,int whence){assert(fd_open[fd]);return lseek(fd,n,whence);}
 static int genRead(int fd,void *p,int n){assert(fd_open[fd]);int r=read(fd,p,n);return r<0?-errno:r;}
@@ -182,7 +184,8 @@ b = copy.index('static int isMemoryCardLikePath(', a)
 code += copy[a:b]
 for signature in ('static int isMemoryCardLikePath(', 'static int isHddCommonParty(',
                   'static int calcTransferSpeed(', 'static int calcRemainingTime(',
-                  'static int smoothTransferSpeed(', 'static int applyMcInfoToMcPath('):
+                  'static int smoothTransferSpeed(', 'static int applyMcInfoToMcPath(',
+                  'static int verifyUdpfsCopy('):
     code += function(copy, signature)
 code += copy[copy.index('int copy('):]
 code += function(browser, 'static int waitForClipboardSourceDevice(')
@@ -290,6 +293,11 @@ int main(void){
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("mass:/");
  int size=read_all("mass:/SAVEDIR.psu",good,sizeof(good));
  assert(!message[0]&&size==3*512+2*(512+1024));
+ settled();
+ /* A backup into udpfs: is not read back entry by entry, as a udpfs: file
+  * copy is: its entries are parts of the one PSU, not files. */
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);udpfs_read_opens=0;paste("udpfs:/");
+ assert(!message[0]&&read_all("udpfs:/SAVEDIR.psu",now,sizeof(now))==size&&!udpfs_read_opens);
  settled();
  /* A backup whose PSU cannot be created frees its listing. */
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("missing:/");
