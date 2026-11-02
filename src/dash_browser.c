@@ -2535,6 +2535,7 @@ static void actionsMenu(void)
 		F_BACKUP_ACTIVE_MMCE,
 		F_EXPORT_ACTIVE_MMCE_PS2,
 		F_CARD_CONTENTS,
+		F_CONVERT_SAVE,
 		F_MMCE_ACTIVE,
 		F_MMCE_SWITCH,
 		F_BACKUP_MCD,
@@ -2651,6 +2652,11 @@ static void actionsMenu(void)
 		}
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && (genCmpFileExt(f->name, "MCD") || isVmcImage(f->name)))
 			ADD(DI_MC, "Card contents...", "saves: copy, move, delete, .psu", 0, F_CARD_CONTENTS);
+		if (f != NULL && !isDir(f) && fb.nmarked == 0 && !genCmpFileExt(f->name, "PSU") &&
+		    (genCmpFileExt(f->name, "MCM") || genCmpFileExt(f->name, "MAX") || genCmpFileExt(f->name, "CBS") ||
+		     genCmpFileExt(f->name, "SPS") || genCmpFileExt(f->name, "XPS") || genCmpFileExt(f->name, "PSV")) &&
+		    strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
+			ADD(DI_MC, "Convert to .psu...", "Blaze, MAX, CodeBreaker, SharkPort, PS3 save", 0, F_CONVERT_SAVE);
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "MCD")) {
 			ADD(DI_MC, "Back up .mcd...", "verified byte-for-byte copy", 0, F_BACKUP_MCD);
 			ADD(DI_MC, "Export as PCSX2 .ps2...", "adds ECC and verifies the copy", 0, F_EXPORT_PS2);
@@ -2783,6 +2789,12 @@ static void actionsMenu(void)
 		case F_CARD_CONTENTS:
 			if (fullPath(f, path, sizeof(path)) && prepareOp()) {
 				dashCardTool(path);
+				refresh();
+			}
+			break;
+		case F_CONVERT_SAVE:
+			if (fullPath(f, path, sizeof(path)) && prepareOp()) {
+				dashCardConvertSave(path);
 				refresh();
 			}
 			break;
