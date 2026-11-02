@@ -308,7 +308,7 @@ static int settingsKv(const char *key, char *value, void *user)
 	if (!stricmp(key, "Dash_Enabled"))
 		dashCfg.enabled = 1; /* the dashboard is the only shell now */
 	else if (!stricmp(key, "Dash_StartSection"))
-		dashCfg.start_section = clampInt(value, 0, DASH_SEC_COUNT - 1, DASH_SEC_HOME);
+		dashCfg.start_section = clampInt(value, 0, DASH_START_LAUNCH_KEYS, DASH_SEC_HOME);
 	else if (!stricmp(key, "Dash_View"))
 		dashCfg.view = clampInt(value, 0, DASH_VIEW_COUNT - 1, DASH_VIEW_GRID);
 	else if (!stricmp(key, "Dash_Effects"))

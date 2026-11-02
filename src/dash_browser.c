@@ -79,7 +79,7 @@ enum {
 	FB_SORT_TYPE,
 	FB_SORT_COUNT
 };
-static int fb_sort = FB_SORT_NAME;
+static int fb_sort = FB_SORT_TYPE;
 static int fb_sort_desc;
 
 /* The Files tab reuses the native browser engine, but owns no private frame
