@@ -59,35 +59,23 @@
     </tr>
   </tbody>
 </table>
-<p>The loose ELF downloads are the same packed executables that are inside the packages; the sidecars (<code>WLE-UPDATE-CA.PEM</code> for HTTPS update checks, <code>BGM.ADP</code> for music) are optional for running but not included with a loose ELF. Each package contains four files: the packed ELF plus <code>title.cfg</code>, <code>WLE-UPDATE-CA.PEM</code> and <code>BGM.ADP</code>. ZIP and PSU payloads match. Every ZIP name ends with the build number (the commit count, for example <code>APP_LAUNCHSTATION-284.zip</code>), so a download always says which build it is. Take the <b>standard</b> package unless you want PS3/PS4 DualShock USB/Bluetooth support, which the <b>-DS</b> package adds. See <a href="install.html">Install &amp; Update</a>.</p>
+<p>The loose ELF downloads are the same packed executables that are inside the packages; the sidecars (<code>WLE-UPDATE-CA.PEM</code> for HTTPS update checks, <code>BGM.ADP</code> for music) are optional for running but not included with a loose ELF. Each app package contains four files: the packed ELF plus <code>title.cfg</code>, <code>WLE-UPDATE-CA.PEM</code> and <code>BGM.ADP</code>. ZIP and PSU payloads match. Every ZIP name ends with the build number (the commit count, for example <code>APP_LAUNCHSTATION-284.zip</code>), so a download always says which build it is. Take the <b>standard</b> package unless you want PS3/PS4 DualShock USB/Bluetooth support, which the <b>-DS</b> package adds. See <a href="install.html">Install &amp; Update</a>.</p>
 
 <h2 id="rolling">How the rolling release works</h2>
 <ul>
   <li>There is a single moving release, tagged <code>latest</code> and titled "Launchstation Rolling &lt;build&gt; - &lt;date&gt; (&lt;commit&gt;)". It is marked as GitHub's Latest release and is not a pre-release.</li>
   <li>Every push to <code>master</code> runs the full <a href="https://github.com/NathanNeurotic/Launchstation/actions">Automated-Build workflow</a>: host regression tests, standard and DS34 builds with PS2BUILD LLVM/Clang, controller-variant and Clang-only object checks, the embedded loader memory-layout check and ZIP/PSU verification.</li>
-  <li>Only after all of that passes are the nine assets (four app packages, four ELFs and the full kit) uploaded, downloaded again and byte-compared, and the <code>latest</code> tag moved to the tested commit. The tag is never moved to a commit that is not a descendant of the previous one, and a build superseded by a newer master commit is skipped.</li>
+  <li>Only after those required checks pass are the eight app assets (four packages and four ELFs), plus the full kit when its separate build succeeds, uploaded, downloaded again and byte-compared, and the <code>latest</code> tag moved to the tested commit. A failed Neutrino download or kit check skips the new kit without blocking the app release; the previous kit stays attached. Compare its filename build number with the release title and inspect <code>KIT-MANIFEST.json</code>. The tag is never moved to a commit that is not a descendant of the previous one, and a build superseded by a newer master commit is skipped.</li>
   <li>Pull requests build and test but never touch the public release.</li>
   <li>A documentation-only change also produces a new rolling build, so a new commit hash does not by itself mean the runtime changed.</li>
-  <li>The in-app updater downloads from this same <code>latest</code> release, so the download URLs stay stable: <code>https://github.com/NathanNeurotic/Launchstation/releases/download/latest/APP_LAUNCHSTATION.psu</code> and the other fixed names (the DS PSU and the four ELFs). The ZIP names, including the full kit&rsquo;s, change with each build, so link the release page for those; the previous build's ZIPs are removed once a new build is published.</li>
+  <li>The in-app updater downloads from this same <code>latest</code> release, so the download URLs stay stable: <code>https://github.com/NathanNeurotic/Launchstation/releases/download/latest/APP_LAUNCHSTATION.psu</code> and the other fixed names (the DS PSU and the four ELFs). The ZIP names, including the full kit&rsquo;s, change with each build, so link the release page for those; older app ZIPs are removed after publication; an older kit is removed only when a new kit was published.</li>
 </ul>
 
 <h2 id="verify">Verify a download</h2>
 <p>GitHub shows a SHA-256 digest for each release asset, and the in-app updater compares against that digest before installing. To check by hand, run <code>sha256sum</code> on the file you downloaded, for example <code>sha256sum APP_LAUNCHSTATION-284.zip</code> (use your build number; <code>shasum -a 256</code> also works), and compare. The release notes list the build's commit and workflow run.</p>
 
-<h2 id="changelog">Rolling changelog summary</h2>
-<ul>
-  <li><b>Build toolchain:</b> release ELFs are built with the PS2BUILD LLVM/Clang toolchain; CI rejects non-Clang objects in release ELFs.</li>
-  <li><b>R3Z parity:</b> Settings cover the upstream R3Z option families; unified browser navigation; RetroGem Game IDs for Ember CUE/BIN images; PS1 serials normalized like OPL.</li>
-  <li><b>Languages:</b> dashboard navigation, Settings labels, common actions and transfer progress follow the nine built-in languages.</li>
-  <li><b>File operations:</b> ordinary paste follows upstream R3Z direct-overwrite behavior; copy/delete popups show the file name, remaining size and a readable failure reason.</li>
-  <li><b>Navigation:</b> wrap-around list navigation that keeps the selection visible; offscreen carousel cards are skipped.</li>
-  <li><b>Neutrino:</b> menu audio stays active until launch is committed; optional per-game profiles via <b>Save for this game</b>.</li>
-  <li><b>Retained:</b> verified software-clock saves, lazy storage loading, MASS display names, dashboard free-space display and power-off service initialization.</li>
-</ul>
-<p>
-  Full details: <a href="https://github.com/NathanNeurotic/Launchstation/releases/tag/latest">latest release notes</a> ·
-  <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/CHANGELOG.md">CHANGELOG.md</a> (dated history by theme).
-</p>
+<h2 id="changelog">Changes in the current build</h2>
+<p>The <a href="https://github.com/NathanNeurotic/Launchstation/releases/tag/latest">latest release notes</a> are generated from the <code>## Rolling</code> section of <a href="https://github.com/NathanNeurotic/Launchstation/blob/master/CHANGELOG.md">CHANGELOG.md</a>, followed by the build commit, workflow and package information. Read those notes for the current build rather than treating a fixed feature list as a release history. Older dated sections remain in the changelog.</p>
 
 <h2 id="notes">Notes</h2>
 <p>The <code>-DS</code> packages enable inherited PS3/PS4 controller support; standard packages keep the standard PS2 pad driver. CI success and package integrity do not replace real hardware validation. If a new rolling build regresses on your console, keep a known-good baseline (or the <code>.BAK</code> the updater leaves) and report console model, source hash and reproduction steps. The <a href="https://github.com/NathanNeurotic/Launchstation/releases/tag/usb-second-drive-2026-10-08-58d4514">2026-10-08 USB-tested baseline</a> is kept as a separate release.</p>

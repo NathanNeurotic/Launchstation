@@ -5,7 +5,7 @@ This project is organized around two maintenance goals:
 1. Keep runtime behavior stable on real PS2 hardware.
 2. Make feature combinations predictable in CI and local builds.
 
-See [BUILDING.md](BUILDING.md) for the step-by-step build, the
+See [Building from Source](https://nathanneurotic.github.io/Launchstation/building.html) for the step-by-step build, the
 [repository map](#repository-map) below for where things live, and the website
 pages *Architecture & Repository Layout* and *Contributing & Testing* for the
 user-facing versions of these notes.
@@ -20,7 +20,7 @@ user-facing versions of these notes.
 The legacy `Makefile`/`embed.make` build was retired on 2026-10-26; `PS2BUILD_TOOLCHAIN=gcc` gives a GCC comparison build of the same `ps2.yaml`.
 
 The release profile in `ps2.yaml` is: MMCE, MX4SIO, iLink, exFAT (BDM), UDPFS and
-ETH, DVRP, XFROM, TMANIP, custom colors, homebrew SIO2MAN, latest `cdfs` CD/DVD
+ETH with SMB, DVRP, XFROM, TMANIP, custom colors, homebrew SIO2MAN, latest `cdfs` CD/DVD
 module, native cloud; DS34 off. Both network stacks are embedded, and the app
 loads exactly one at a time (switching resets the IOP). Embedding a module does
 not load it; `src/init.c` decides when.
@@ -36,18 +36,21 @@ Workflows in `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
-| `compile.yml` (*Automated-Build*) | push to `master`/`main`, pull requests, manual | Explicit list of host regression tests; docs-site build; PS2BUILD SDK install and LLVM toolchain check; Mbed TLS, libjpeg-turbo, Google client header and isolated CF driver builds; standard and DS34 builds; `check_ds34_build.py`, `check_toolchain_purity.py`, `check_udpfs_smap.py`, `check_loader_layout.sh`; `package_apps.py` and package tests; artifact upload; on `master` only, verified publication of the four packages to the rolling `latest` release |
-| `docs-pages.yml` | push to `master`/`main` touching `docs-site/**` | Builds the site and offline ZIP and force-publishes the generated `gh-pages` branch |
-| `sync-wiki.yml` | push to `master` touching `docs/wiki/**`, `docs-site/content/**`, the manifest or `THIRD_PARTY_CREDITS.md` | Mirrors those into the repository wiki with `scripts/sync_github_wiki.py` (never deletes unmanaged pages, no force-push) |
+| `compile.yml` (*Automated-Build*) | push to `master`/`main`, pull requests, manual | Explicit list of host regression tests; docs-site build; PS2BUILD SDK install and LLVM toolchain check; Mbed TLS, libjpeg-turbo, Google client header, isolated CF driver and isolated `ps2ips_rpc` socket-server builds; standard and DS34 builds; `check_ds34_build.py`, `check_toolchain_purity.py`, `check_udpfs_smap.py`, `check_loader_layout.sh`; `package_apps.py` and package tests; artifact upload; on `master` only, verified publication of app packages and loose ELFs to the rolling `latest` release, plus the full kit when its separate build succeeds |
+| `docs-pages.yml` | push to `master`/`main` touching `docs-site/**` or its workflow, manual dispatch | Builds the site and offline ZIP and force-publishes the generated `gh-pages` branch |
+| `sync-wiki.yml` | push to `master` touching wiki/site sources, the manifest, credits or the sync tooling; manual dispatch; GitHub Wiki edits (`gollum`) | Mirrors those into the repository wiki with `scripts/sync_github_wiki.py` (never deletes unmanaged pages, no force-push) |
 
-A test only gates merges if it is listed in the first step of `compile.yml`;
-a handful of older test scripts under `tests/` are not currently listed, so run
-the whole directory locally before large changes. Two tests
-(`test_build_identity.py`, `test_release_notes.py`) require a Git checkout.
+CI invokes the host test scripts explicitly in `compile.yml`; register new scripts
+there so they participate in the build checks. Run the whole directory locally
+before large changes. Tests such as `test_build_identity.py` and
+`test_release_notes.py` require a Git checkout.
 
 Repository secrets used: `WLE_GOOGLE_CLIENT_ID` and `WLE_GOOGLE_CLIENT_SECRET`
 (embedded into official builds by `scripts/gen_cloud_client.py`) and the
-built-in `GITHUB_TOKEN`.
+built-in `GITHUB_TOKEN`. Private SDK mirrors use `PS2BUILD_MIRROR_TOKEN`, bound to
+`PS2BUILD_SDK_MIRROR_TOKEN` for the installer. A failed full-kit build does not
+block the app release; the previous kit remains attached, so its build number
+may differ from the release title.
 
 ## Repository map
 
@@ -91,7 +94,7 @@ Completed so far:
 
 1. `src/main_fileops.c` owns file/path support helpers (`wleExists`, `uLE_related`, file-type checks).
 2. `src/main_startup.c` owns startup/system parsing helpers (`getIpConfig`, `readSystemCnf`).
-3. Legacy SMB and the old classic JPG-viewer subsystem were removed from the runtime/build paths. Image viewing has since returned as a native dashboard viewer: PNG uses `src/dash_png.c`, while JPG/JPEG uses the bounded `src/dash_jpeg.c` libjpeg-turbo path.
+3. The old classic JPG-viewer subsystem was removed from the runtime/build paths. Image viewing has since returned as a native dashboard viewer: PNG uses `src/dash_png.c`, while JPG/JPEG uses the bounded `src/dash_jpeg.c` libjpeg-turbo path.
 4. `src/filer.c` helper splits now include:
    - `src/filer_device.c`, `src/filer_mount.c`, `src/filer_fileops.c`, `src/filer_actions.c`, `src/filer_browser.c`, `src/filer_copy.c`
    - `src/gui_sort.c` (`cmpFile`, `sort`)
