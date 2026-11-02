@@ -106,6 +106,22 @@ jobs:
         with:
           path: ~/.local/share/ps2build
           key: ps2build-sdk-${{ runner.os }}-llvm-${{ steps.sdk.outputs.key }}
+      - name: Look the new SDK up in the cache
+        # actions/cache/save only warns when its upload fails, and a cache step only warns while the cache service is
+        # unavailable. Without this entry, each build job of the pull request pr opens would ask the official server
+        # for the new SDK. So warm looks the exact key up, with the same path (the cache version hashes it), and the
+        # next step fails unless the cache holds it; the next run tries again.
+        id: sdk-saved
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.local/share/ps2build
+          key: ps2build-sdk-${{ runner.os }}-llvm-${{ steps.sdk.outputs.key }}
+          lookup-only: true
+      - name: Stop unless the cache holds the new SDK
+        if: ${{ steps.sdk-saved.outputs.cache-hit != 'true' }}
+        run: |
+          echo "::error::The cache does not hold the new ps2build SDK (its upload or the cache service failed), and each build job of the pull request would ask the official server for it. The pull request waits for the next run."
+          exit 1
 
   pr:
     needs: [check, warm]

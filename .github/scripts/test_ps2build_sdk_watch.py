@@ -313,6 +313,28 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(len(stale), 2)
         self.assertIn("exit 1", stale[1].split("- name:", 1)[0])
 
+    def test_the_pull_request_waits_until_the_cache_holds_the_new_sdk(self):
+        # actions/cache/save only warns when its upload fails, and a cache step only warns while the cache service is
+        # unavailable. So after saving, warm looks the exact key up and fails unless the cache holds it; each build
+        # job of the pull request would ask the official server for the new SDK otherwise.
+        text = (WORKFLOWS / "ps2build-sdk-watch.yml").read_text()
+        steps = text.split("\n  warm:\n", 1)[1].split("\n  pr:\n", 1)[0].split("\n      - ")
+        save = next(i for i, step in enumerate(steps) if "uses: actions/cache/save@" in step)
+        lookup, gate = steps[save + 1], steps[save + 2]
+
+        def field(step, name):
+            return [line.strip() for line in step.splitlines() if line.strip().startswith(name + ":")]
+
+        self.assertEqual(field(lookup, "uses"), ["uses: actions/cache/restore@v4"])
+        self.assertEqual(field(lookup, "lookup-only"), ["lookup-only: true"])
+        self.assertEqual(field(lookup, "restore-keys"), [])  # the exact key only
+        self.assertEqual(field(lookup, "if"), [])  # after a cache hit too, when nothing was saved
+        for name in ("path", "key"):  # the cache version hashes the path, so it must match as well
+            self.assertEqual(field(lookup, name), field(steps[save], name))
+        lookup_id = field(lookup, "id")[0].split(":", 1)[1].strip()
+        self.assertEqual(field(gate, "if"), ["if: ${{ steps.%s.outputs.cache-hit != 'true' }}" % lookup_id])
+        self.assertIn("exit 1", gate)
+
 
 if __name__ == "__main__":
     unittest.main()
