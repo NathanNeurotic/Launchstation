@@ -12,6 +12,7 @@
 #include "FtpServer.h"
 
 #ifndef LINUX
+#include <loadcore.h>
 #include "irx_imports.h"
 #else
 #include <string.h>

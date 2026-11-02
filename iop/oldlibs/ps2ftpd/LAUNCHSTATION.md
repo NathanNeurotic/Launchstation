@@ -67,8 +67,9 @@ buffers sized for the worst-case fields. Do not introduce an unprovided
 
 ## Validation
 
-Run `python3 tests/test_ftp_server.py` with a host C compiler. It compiles all
-five production filesystem/command/client/server/message units unchanged,
+Run `python3 tests/test_ftp_server.py` with a host C compiler. It first compiles the IOP startup branch, including its explicit `loadcore.h`
+dependency for the module-end constants. It also compiles all five production
+filesystem/command/client/server/message units unchanged,
 using the preserved PS2BUILD ABI headers and mocked drivers/sockets in
 `tests/ftp/`. Fault cases cover short transfers, concurrent clients, directory
 errors, close errors, failed resumes, large sizes and command framing. The
