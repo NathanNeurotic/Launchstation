@@ -6,6 +6,7 @@ at the destination. When that allocation fails, an older PSU backup or save
 must be left exactly as it was, and that level creates no folder. Every early
 exit frees the listing, and a PSU restore that stops early closes its PSU. A
 file whose first entry is not a folder is not a PSU and is refused and closed.
+A PSU backup on udpfs: is read back before Cut + Create PSU deletes the save.
 
 Drivers are replaced by POSIX files; libmc and the IOP are not emulated.
 """
@@ -136,14 +137,25 @@ static int isPcCardCfOnline(void){return 1;}
 static void ensureMemoryCardPortAccessible(int p){assert(p==0||p==1);}
 static char *makeHostPath(char *d,char *s){if(d!=s)strcpy(d,s);return d;}
 static void genLimObjName(char *p,int reserve){(void)p;(void)reserve;}
-static int udpfs_read_opens;
-static int genOpen(const char *p,int flags){if(flags==O_RDONLY&&!strncmp(p,"udpfs:",6))udpfs_read_opens++;
- int fd=open(p,flags,0600);if(fd<0)return -errno;assert(fd<1024);fd_open[fd]=1;handles++;return fd;}
+/* As in test_copy_pipeline.py, a UDPFS server can give the next write-open of
+ * a name a handle it kept from before an IOP reboot. UDPFS_LOST: the file was
+ * removed before the open, so every write and the close succeed and nothing is
+ * left. UDPFS_TAIL: the old file could not be removed and O_TRUNC is not
+ * applied, so a longer old file keeps its tail. */
+enum {UDPFS_OK,UDPFS_LOST,UDPFS_TAIL};
+static int udpfs_read_opens,udpfs_stale;
+static int genOpen(const char *p,int flags){
+ int udpfs=!strncmp(p,"udpfs:",6),stale=udpfs&&(flags&O_WRONLY)?udpfs_stale:UDPFS_OK;
+ if(flags==O_RDONLY&&udpfs)udpfs_read_opens++;
+ if(stale)udpfs_stale=UDPFS_OK;
+ int fd=open(p,stale==UDPFS_TAIL?flags&~O_TRUNC:flags,0600);if(fd<0)return -errno;assert(fd<1024);
+ if(stale==UDPFS_LOST)assert(!unlink(p));
+ fd_open[fd]=1;handles++;return fd;}
 static int genClose(int fd){if(fd<0||fd>=1024||!fd_open[fd]){double_closes++;return -EBADF;}fd_open[fd]=0;handles--;return close(fd)?-errno:0;}
 static s64 genLseek(int fd,s64 n,int whence){assert(fd_open[fd]);return lseek(fd,n,whence);}
 static int genRead(int fd,void *p,int n){assert(fd_open[fd]);int r=read(fd,p,n);return r<0?-errno:r;}
 static int genWrite(int fd,void *p,int n){assert(fd_open[fd]);int r=write(fd,p,n);return r<0?-errno:r;}
-static int genRemove(char *p){return unlink(p)?-errno:0;}
+static int genRemove(char *p){if(udpfs_stale==UDPFS_TAIL&&!strncmp(p,"udpfs:",6))return -EBUSY;return unlink(p)?-errno:0;}
 static int mcSetFileInfo(int port,int slot,const char *from,const sceMcTblGetDir *info,int flags){(void)port;(void)slot;(void)from;(void)info;(void)flags;return 0;}
 static int mcSync(int mode,void *c,int *r){(void)mode;(void)c;if(r)*r=0;return 1;}
 static int mcGetInfo(int p,int s,int *type,int *a,int *b){(void)p;(void)s;if(type)*type=2;if(a)*a=1000;if(b)*b=1000;return 0;}
@@ -294,11 +306,31 @@ int main(void){
  int size=read_all("mass:/SAVEDIR.psu",good,sizeof(good));
  assert(!message[0]&&size==3*512+2*(512+1024));
  settled();
- /* A backup into udpfs: is not read back entry by entry, as a udpfs: file
-  * copy is: its entries are parts of the one PSU, not files. */
+ /* A backup into udpfs: is read back once, as a whole, as a udpfs: file copy
+  * is: its entries are parts of the one PSU, not files. */
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);udpfs_read_opens=0;paste("udpfs:/");
- assert(!message[0]&&read_all("udpfs:/SAVEDIR.psu",now,sizeof(now))==size&&!udpfs_read_opens);
+ assert(!message[0]&&read_all("udpfs:/SAVEDIR.psu",now,sizeof(now))==size&&!memcmp(good,now,size)&&udpfs_read_opens==1);
  settled();
+ /* Cut, then Create PSU, is a Move: the save is deleted after the backup. A
+  * .psu the server lost, or an old longer one it never truncated, fails the
+  * backup, is not kept, and the save stays. */
+ for(int stale=UDPFS_LOST;stale<=UDPFS_TAIL;stale++){
+  const char *expect=stale==UDPFS_LOST?"Verifying destination (-2)":"Verifying destination (-5)";
+  if(stale==UDPFS_TAIL){unsigned char older[8192];memset(older,0x55,sizeof(older));put("udpfs:/SAVEDIR.psu",older,size+1024);}
+  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);browser_cut=1;udpfs_stale=stale;paste("udpfs:/");
+  if(!strstr(message,expect)||entries("mc0:/SAVEDIR")!=2){
+   fprintf(stderr,"FAIL Move of a save into a %s udpfs: .psu: \"%s\", save %s\n",stale==UDPFS_LOST?"lost":"longer old",
+           message,exists("mc0:/SAVEDIR")?"kept":"deleted");
+   return 1;
+  }
+  assert(nclipFiles==1&&filled("mc0:/SAVEDIR/A.BIN",4,'a')&&!exists("udpfs:/SAVEDIR.psu"));
+  settled();
+ }
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);browser_cut=1;udpfs_read_opens=0;paste("udpfs:/");
+ assert(!message[0]&&!nclipFiles&&!exists("mc0:/SAVEDIR")&&udpfs_read_opens==1);
+ assert(read_all("udpfs:/SAVEDIR.psu",now,sizeof(now))==size&&!memcmp(good,now,size));
+ settled();
+ mkdir("mc0:/SAVEDIR",0700);put("mc0:/SAVEDIR/A.BIN","aaaa",4);put("mc0:/SAVEDIR/B.BIN","bbbbbbbb",8);
  /* A backup whose PSU cannot be created frees its listing. */
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("missing:/");
  assert(strstr(message,"(-1)")&&!exists("missing:"));
@@ -344,7 +376,8 @@ int main(void){
  assert(strstr(message,"Creating directory (-1)")&&yn_calls==1&&modify_calls==1);
  settled();
  puts("PASS: PSU restore and backup, and folder pastes, keep old saves and backups when memory runs out "
-      "or a question is declined, free every listing, close every PSU and refuse files that are not PSUs");
+      "or a question is declined, free every listing, close every PSU and refuse files that are not PSUs; "
+      "a lost or over-long udpfs: PSU fails and keeps a Move's save");
  return 0;
 }
 '''

@@ -865,8 +865,13 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		//attributes and timestamps, and close the attribute/PSU file if such was used
 		//Lots of stuff need to be done here to make PSU operations work properly
 		if (PM_flag[recurses + 1] == PM_PSU_BACKUP) {  //PSU Backup mode folder paste closure
+			//as for a file, a udpfs: .psu is read back before a Move deletes the save
+			s64 psu_size = strncmp(tmp, "udpfs", 5) ? 0 : genLseek(PM_file[recurses + 1], 0, SEEK_CUR);
+
 			if (psu_backup_finalize_root_image(PM_file[recurses + 1], mcT_head_p, PSU_content) < 0)
 				return copyDiagFail(-1);
+			if (!strncmp(tmp, "udpfs", 5) && (ret = verifyUdpfsCopy(tmp, psu_size)) < 0)
+				return copyDiagFail(ret);
 		} else if (PM_flag[recurses + 1] == PM_NORMAL) {             //Normal mode folder paste closure
 			if (!strncmp(out, "mc", 2)) {                            //Handle folder copied to MC
 				ensureMemoryCardPortAccessible(out[2] - '0');
