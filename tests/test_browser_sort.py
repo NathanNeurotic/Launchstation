@@ -82,7 +82,7 @@ static FILEINFO entry(const char *name,int folder) {
     return f;
 }
 int main(void) {
-    assert(fb_sort==FB_SORT_NAME && !fb_sort_desc); /* Production startup defaults. */
+    assert(fb_sort==FB_SORT_TYPE && !fb_sort_desc); /* Production startup defaults. */
     /* Four major groups: folders, executables, text, then everything else.
      * Text/other files group extensions before filenames, ignoring case.
      * Game files share the final group; extensionless files lead that group. */
