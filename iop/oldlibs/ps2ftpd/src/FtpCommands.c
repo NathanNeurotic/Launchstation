@@ -39,15 +39,17 @@
 
 // present in FtpClient.c
 extern char *itoa(char *in, int val);
+extern char *uitoa(char *in, u64 val);
 
-static char buffer[512];
+static char buffer[FS_PATH_MAX + 4];
 
 void FtpClient_OnCmdQuit(FtpClient *pClient)
 {
 	assert(pClient);
 
 	FtpClient_Send(pClient, 221, pClient->m_pMessages[FTPMSG_GOODBYE]);
-	FtpServer_OnClientDisconnect(pClient->m_pServer, pClient);
+	if (pClient->m_pServer)
+		FtpServer_OnClientDisconnect(pClient->m_pServer, pClient);
 }
 
 void FtpClient_OnCmdUser(FtpClient *pClient, const char *pUser)
@@ -83,7 +85,8 @@ void FtpClient_OnCmdPass(FtpClient *pClient, const char *pPass)
 
 			pClient->m_iAuthAttempt++;
 			if (pClient->m_iAuthAttempt > 3)
-				FtpServer_OnClientDisconnect(pClient->m_pServer, pClient);
+				if (pClient->m_pServer)
+		FtpServer_OnClientDisconnect(pClient->m_pServer, pClient);
 
 			pClient->m_eAuthState = AUTHSTATE_INVALID;
 		} else
@@ -201,7 +204,7 @@ void FtpClient_OnCmdSyst(FtpClient *pClient)
 	/* UNIX-style LIST format */
 	FtpClient_Send(pClient, 215, "UNIX Type: L8");
 
-	/* MS-style LIST format: To use uncomment this format after commenting out UNIX-style LIST format 
+	/* MS-style LIST format: To use uncomment this format after commenting out UNIX-style LIST format
 		and making changes in FtpClient.c's FtpClient_OnDataWrite
 	FtpClient_Send( pClient, 215, "Windows_NT version 5.0" );
 	*/
@@ -357,37 +360,48 @@ void FtpClient_OnCmdRmd(FtpClient *pClient, const char *pDir)
 
 void FtpClient_OnCmdRnfr(FtpClient *pClient, const char *name)
 {
-	s64 iMarker = pClient->m_iRestartMarker;
+	int result;
 	pClient->m_iRestartMarker = 0;
-
-	// check if file/dir exists that is to be renamed
-	if ((FileSystem_OpenFile(&pClient->m_kContext, name, FM_READ, iMarker)) && (FileSystem_OpenDir(&pClient->m_kContext, name)) < 0)
+	result = FileSystem_PrepareRename(&pClient->m_kContext, name, &pClient->m_Rename);
+	if (result == -ENOSYS)
+		FtpClient_Send(pClient, 502, "Rename is not supported by this filesystem.");
+	else if (result < 0)
 		FtpClient_Send(pClient, 550, pClient->m_pMessages[FTPMSG_COMMAND_FAILED]);
-	else {
-		// get just the name not the path
-		FileSystem_BuildPath(buffer, pClient->m_kContext.m_Path, name);
-		if (NULL != (name = FileSystem_ClassifyPath(&pClient->m_kContext, buffer)))
-			strcpy(buffer, name);
+	else
 		FtpClient_Send(pClient, 350, pClient->m_pMessages[FTPMSG_COMMAND_SUCCESSFUL]);
-	}
 }
+
 
 void FtpClient_OnCmdRnto(FtpClient *pClient, const char *newName)
 {
-	if (FileSystem_Rename(&pClient->m_kContext, buffer, newName) < 0)
+	int result;
+	if (!pClient->m_Rename.path[0]) {
+		FtpClient_Send(pClient, 503, "Send RNFR before RNTO.");
+		return;
+	}
+	result = FileSystem_Rename(&pClient->m_kContext, &pClient->m_Rename, newName);
+	pClient->m_Rename.path[0] = '\0';
+	if (result == -EXDEV)
+		FtpClient_Send(
+			pClient, 550,
+			"Rename source device changed or destination is on another device. Copy then delete instead.");
+	else if (result == -ENOSYS)
+		FtpClient_Send(pClient, 502, "Rename is not supported by this filesystem.");
+	else if (result < 0)
 		FtpClient_Send(pClient, 550, pClient->m_pMessages[FTPMSG_COMMAND_FAILED]);
 	else
 		FtpClient_Send(pClient, 250, pClient->m_pMessages[FTPMSG_COMMAND_SUCCESSFUL]);
 }
 
+
 void FtpClient_OnCmdSize(FtpClient *pClient, const char *pFile)
 {
-	int size = FileSystem_GetFileSize(&(pClient->m_kContext), pFile);
+	s64 size = FileSystem_GetFileSize(&(pClient->m_kContext), pFile);
 
 	if (size < 0)
 		FtpClient_Send(pClient, 550, pClient->m_pMessages[FTPMSG_COULD_NOT_GET_FILESIZE]);
 	else {
-		itoa(buffer, size);
+		uitoa(buffer, (u64)size);
 		FtpClient_Send(pClient, 213, buffer);
 	}
 }

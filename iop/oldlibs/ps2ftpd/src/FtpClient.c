@@ -61,36 +61,33 @@ char *itoa(char *in, int val)
 // cheap mans larger uitoa
 char *uitoa(char *in, u64 val)
 {
-	char *p = in;
-	int has_digits = 0;
-	int i = 19;
-	char c;
-	int j;
-	u64 tmp;
-
+	char digits[20];
+	int count = 0, index;
 	do {
-		i--;
-		tmp = 10;
-		for (j = i; j > 0; j--)
-			tmp *= 10;
-
-		for (c = '0'; val >= tmp; c++) {
-			val -= tmp;
-			has_digits = 1;
-		}
-
-		if (has_digits == 1)
-			*p++ = c;
-	} while (i);
-
-	*p++ = val + '0';
-
+		digits[count++] = '0' + val % 10;
+		val /= 10;
+	} while (val);
+	for (index = 0; index < count; index++)
+		in[index] = digits[count - index - 1];
+	in[count] = '\0';
 	return in;
 }
 
+
 // this shared buffer is used for everything the clients do
 static char buffer[32768];  // fewer round trips per transfer on slow devices such as mmce
-#define BUFFER_OFFSET 4096  // use this if you need to use buffer & push it to FtpClient_Send()
+/* Sockets are blocking. Finish each shared-buffer send before another client runs. */
+static int FtpClient_SendAll(int socket, const char *data, int length)
+{
+	int offset = 0;
+	while (offset < length) {
+		int result = send(socket, data + offset, length - offset, 0);
+		if (result <= 0 || result > length - offset)
+			return -1;
+		offset += result;
+	}
+	return 0;
+}
 
 void FtpClient_Create(FtpClient *pClient, FtpServer *pServer, int iControlSocket)
 {
@@ -135,29 +132,26 @@ void FtpClient_Destroy(FtpClient *pClient)
 	FtpClient_OnDataCleanup(pClient);
 	FileSystem_Destroy(&pClient->m_kContext);
 
-	if (-1 != pClient->m_iControlSocket)
+	if (-1 != pClient->m_iControlSocket) {
 		disconnect(pClient->m_iControlSocket);
+		pClient->m_iControlSocket = -1;
+	}
 
 	pClient->m_pServer = NULL;
 }
 
 void FtpClient_Send(FtpClient *pClient, int iReturnCode, const char *pString)
 {
-	assert(pClient);
-
-	buffer[0] = '\0';
-	itoa(buffer, iReturnCode);
-	strcat(buffer, " ");
-	strcat(buffer, pString);
-	strcat(buffer, "\r\n");
-	//	sprintf(buf,"%d %s\r\n",iReturnCode,pString);
-
-	// TODO: use a sendqueue here & handle in select-phase
-	send(pClient->m_iControlSocket, buffer, strlen(buffer), 0);
-#ifdef BEDUG
-	printf("%08x >> %s", (unsigned int)pClient, buffer);
-#endif
+	char reply[FS_PATH_MAX + 128];
+	/* Prefix, bounded message and CRLF fit even on the IOP sprintf API. */
+	int length = sprintf(reply, "%d %.516s\r\n", iReturnCode, pString);
+	if (length < 0 || length >= (int)sizeof(reply) ||
+		FtpClient_SendAll(pClient->m_iControlSocket, reply, length) < 0) {
+		if (pClient->m_pServer)
+			FtpServer_OnClientDisconnect(pClient->m_pServer, pClient);
+	}
 }
+
 
 void FtpClient_OnConnect(FtpClient *pClient)
 {
@@ -180,6 +174,14 @@ void FtpClient_OnCommand(FtpClient *pClient, const char *pString)
 
 		for (i = 0; *c && i < 4; i++)
 			result = (result << 8) | tolower(*(c++));
+
+		if (result != FTPCMD_RNTO && result != FTPCMD_RNFR)
+			pClient->m_Rename.path[0] = '\0';
+		if (pClient->m_eDataMode != DATAMODE_IDLE && result != FTPCMD_ABOR &&
+		    result != FTPCMD_QUIT && result != FTPCMD_NOOP) {
+			FtpClient_Send(pClient, 450, "A data transfer is in progress.");
+			return;
+		}
 
 		// if user has not logged in, we only allow a small subset of commands
 
@@ -223,6 +225,11 @@ void FtpClient_OnCommand(FtpClient *pClient, const char *pString)
 			case FTPCMD_PASS: {
 				FtpClient_Send(pClient, 503, pClient->m_pMessages[FTPMSG_ALREADY_AUTHENTICATED]);
 			} break;
+
+			case FTPCMD_ABOR:
+				FtpClient_OnDataCleanup(pClient);
+				FtpClient_Send(pClient, 226, pClient->m_pMessages[FTPMSG_COMMAND_SUCCESSFUL]);
+				break;
 
 			// PASV
 			case FTPCMD_PASV: {
@@ -451,7 +458,7 @@ void FtpClient_OnDataConnect(FtpClient *pClient, int *ip, int port)
 
 	memset(&sa, 0, sizeof(sa));
 	sa.sin_family = AF_INET;
-	sa.sin_port = htons(pClient->m_iRemotePort);
+	sa.sin_port = htons(port);
 	sa.sin_addr.s_addr = htonl((ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | (ip[3]));
 
 	if (connect(s, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
@@ -514,279 +521,107 @@ void FtpClient_OnDataConnected(FtpClient *pClient)
 
 void FtpClient_OnDataRead(FtpClient *pClient)
 {
-	assert(pClient);
-
-	switch (pClient->m_eDataAction) {
-		case DATAACTION_APPE:
-		case DATAACTION_STOR: {
-			// read data from socket
-
-			int rv = recv(pClient->m_iDataSocket, buffer, pClient->m_uiDataBufferSize, 0);
-
-			if (rv > 0) {
-				// write data to file
-
-				int sv = FileSystem_WriteFile(&pClient->m_kContext, buffer, rv);
-
-				// write failed? then abort transfer
-
-				if (sv <= 0)
-					FtpClient_OnDataFailed(pClient, pClient->m_pMessages[FTPMSG_LOCAL_WRITE_FAILED]);
-				else
-					pClient->m_uiDataOffset += sv;
-			} else {
-				// connection has been lost, shut down transfer (this will happen when transfer completes)
-
-				FtpClient_OnDataComplete(pClient, 0, NULL);
-			}
-		} break;
-
-		default:
-			FtpClient_OnDataFailed(pClient, NULL);
-			break;
+	int received, offset = 0;
+	if (pClient->m_eDataAction != DATAACTION_STOR && pClient->m_eDataAction != DATAACTION_APPE) {
+		FtpClient_OnDataFailed(pClient, NULL);
+		return;
+	}
+	received = recv(pClient->m_iDataSocket, buffer, pClient->m_uiDataBufferSize, 0);
+	if (received < 0) {
+		FtpClient_OnDataFailed(pClient, pClient->m_pMessages[FTPMSG_TRANSFER_FAILED]);
+		return;
+	}
+	if (!received) {
+		FtpClient_OnDataComplete(pClient, 0, NULL);
+		return;
+	}
+	while (offset < received) {
+		int written = FileSystem_WriteFile(&pClient->m_kContext, buffer + offset, received - offset);
+		if (written <= 0 || written > received - offset) {
+			FtpClient_OnDataFailed(pClient, pClient->m_pMessages[FTPMSG_LOCAL_WRITE_FAILED]);
+			return;
+		}
+		offset += written;
+		pClient->m_uiDataOffset += written;
 	}
 }
+
 
 void FtpClient_OnDataWrite(FtpClient *pClient)
 {
-	assert(pClient);
-
-	switch (pClient->m_eDataAction) {
-		case DATAACTION_RETR: {
-			// read data from file
-
-			int rv = FileSystem_ReadFile(&pClient->m_kContext, buffer, pClient->m_uiDataBufferSize);
-
-			if (-1 == rv) {
-				// if read failed, abort transfer
-
+	if (pClient->m_eDataAction == DATAACTION_RETR) {
+		int received = FileSystem_ReadFile(&pClient->m_kContext, buffer, pClient->m_uiDataBufferSize);
+		if (received < 0 || received > (int)pClient->m_uiDataBufferSize)
+			FtpClient_OnDataFailed(pClient, pClient->m_pMessages[FTPMSG_FAILED_READING_DATA]);
+		else if (!received)
+			FtpClient_OnDataComplete(pClient, 0, NULL);
+		else if (FtpClient_SendAll(pClient->m_iDataSocket, buffer, received) < 0)
+			FtpClient_OnDataFailed(pClient, pClient->m_pMessages[FTPMSG_PREMATURE_CLIENT_DISCONNECT]);
+		else
+			pClient->m_uiDataOffset += received;
+	} else if (pClient->m_eDataAction == DATAACTION_LIST || pClient->m_eDataAction == DATAACTION_NLST) {
+		FSFileInfo info;
+		char line[512];
+		int result = FileSystem_ReadDir(&pClient->m_kContext, &info), length;
+		if (result <= 0) {
+			if (result < 0)
 				FtpClient_OnDataFailed(pClient, pClient->m_pMessages[FTPMSG_FAILED_READING_DATA]);
-				return;
-			}
-
-			if (rv > 0) {
-				// send data to socket
-
-				int sv = send(pClient->m_iDataSocket, buffer, rv, 0);
-
-				// if client closed the connection, shut down transfer
-
-				if (sv <= 0)
-					FtpClient_OnDataFailed(pClient, pClient->m_pMessages[FTPMSG_PREMATURE_CLIENT_DISCONNECT]);
-				else
-					pClient->m_uiDataOffset += sv;
-			} else {
-				// transfer complete, shut down transfer
+			else
 				FtpClient_OnDataComplete(pClient, 0, NULL);
-			}
-		} break;
-
-		case DATAACTION_LIST:
-		case DATAACTION_NLST: {
-			FSFileInfo *pInfo = (FSFileInfo *)(buffer + BUFFER_OFFSET);
-
-			if (FileSystem_ReadDir(&pClient->m_kContext, pInfo) >= 0) {
-				buffer[0] = '\0';
-				if (DATAACTION_LIST == pClient->m_eDataAction) {
-					int i;
-					char size[21] = " ";
-
-					/* UNIX-style LIST format */
-					strcat(buffer, (FT_DIRECTORY == pInfo->m_eType) ? "d" : (FT_LINK == pInfo->m_eType) ? "l" : "-");
-					for (i = 0; i < 9; i++) {
-						if (pInfo->m_iProtection & (1 << (8 - i))) {
-							switch (i % 3) {
-								case 0:
-									strcat(buffer, "r");
-									break;
-								case 1:
-									strcat(buffer, "w");
-									break;
-								case 2:
-									strcat(buffer, "x");
-									break;
-							}
-						} else
-							strcat(buffer, "-");
-					}
-					strcat(buffer, "   1 ps2      ps2 ");
-
-					uitoa(size, pInfo->m_iSize);
-					for (i = 0; (i < 13 - strlen(size)) && (strlen(size) < 14); i++)
-						strcat(buffer, " ");
-					strcat(buffer, size);
-					strcat(buffer, " ");
-
-					// month: changed for proper "MMM DD  YYYY" format
-					switch (pInfo->m_TS.m_iMonth) {
-						case 1:
-							strcat(buffer, "Jan ");
-							break;
-						case 2:
-							strcat(buffer, "Feb ");
-							break;
-						case 3:
-							strcat(buffer, "Mar ");
-							break;
-						case 4:
-							strcat(buffer, "Apr ");
-							break;
-						case 5:
-							strcat(buffer, "May ");
-							break;
-						case 6:
-							strcat(buffer, "Jun ");
-							break;
-						case 7:
-							strcat(buffer, "Jul ");
-							break;
-						case 8:
-							strcat(buffer, "Aug ");
-							break;
-						case 9:
-							strcat(buffer, "Sep ");
-							break;
-						case 10:
-							strcat(buffer, "Oct ");
-							break;
-						case 11:
-							strcat(buffer, "Nov ");
-							break;
-						case 12:
-							strcat(buffer, "Dec ");
-							break;
-						default:
-							strcat(buffer, "Jan ");
-					}
-
-					// day
-					if (pInfo->m_TS.m_iDay < 10)
-						strcat(buffer, " ");
-					itoa(buffer + strlen(buffer), pInfo->m_TS.m_iDay);
-					strcat(buffer, " ");
-
-					if ((pInfo->m_iDaysBetween >= 0) && (pInfo->m_iDaysBetween <= 182)) {
-						// time: used for "MMM DD hh:mm" format
-						if (pInfo->m_TS.m_iHour < 10)
-							strcat(buffer, "0");
-						itoa(buffer + strlen(buffer), pInfo->m_TS.m_iHour);
-						strcat(buffer, ":");
-						if (pInfo->m_TS.m_iMinute < 10)
-							strcat(buffer, "0");
-						itoa(buffer + strlen(buffer), pInfo->m_TS.m_iMinute);
-						strcat(buffer, " ");
-					} else {
-						// year: used for "MMM DD  YYYY" format
-						strcat(buffer, " ");
-						itoa(buffer + strlen(buffer), pInfo->m_TS.m_iYear);
-						strcat(buffer, " ");
-					}
-					// end of UNIX-style LIST format
-
-					/* MS-style LIST format: To use uncomment this format after commenting out UNIX-style LIST format 
-						and making changes to FtpCommands.c's method FtpClient_OnCmdSyst
-					i = pInfo->m_TS.m_iMonth;
-					if( i > 12 )
-						i = 1;
-					if( i < 10 )
-						strcat( buffer, "0" );
-					itoa( buffer + strlen(buffer), i );
-
-					strcat( buffer, "-" );
-					if( pInfo->m_TS.m_iDay < 10 )
-						strcat( buffer, "0" );
-					itoa( buffer + strlen(buffer), pInfo->m_TS.m_iDay );
-
-					strcat( buffer, "-" );
-					if( pInfo->m_TS.m_iYear%100 < 10 )
-						strcat( buffer, "0" );
-					itoa( buffer + strlen(buffer), pInfo->m_TS.m_iYear%100 );
-
-					strcat( buffer, "  " );
-					i = pInfo->m_TS.m_iHour;
-					if( i > 12 )
-						i -= 12;
-					if( i == 0 )
-						i = 12;
-					if( i < 10 )
-						strcat( buffer, "0" );
-					itoa( buffer + strlen(buffer), i );
-
-					strcat( buffer, ":" );
-					if( pInfo->m_TS.m_iMinute < 10 )
-						strcat( buffer, "0" );
-					itoa( buffer + strlen(buffer), pInfo->m_TS.m_iMinute );
-					if( pInfo->m_TS.m_iHour < 12 )
-						strcat( buffer, "AM       " );
-					else
-						strcat( buffer, "PM       " );
-
-					if( FT_DIRECTORY == pInfo->m_eType )
-						strcat( buffer, "<DIR>         " );
-					else
-					{
-						uitoa( size, pInfo->m_iSize );
-						for( i = 0; (i < 14 - strlen(size)) && (strlen(size) < 15); i++ )
-							strcat( buffer, " " );
-						strcat( buffer, size );
-					}
-					strcat( buffer, " " );
-					*/
-					// end of MS-style LIST format
-				}
-				{
-					size_t used = strlen(buffer);
-					size_t room = sizeof(buffer) - used;
-					size_t name_len = 0;
-
-					if (room > 1) {
-						while ((name_len < (room - 1)) && (pInfo->m_Name[name_len] != '\0')) {
-							name_len++;
-						}
-						memcpy(buffer + used, pInfo->m_Name, name_len);
-						used += name_len;
-						buffer[used] = '\0';
-					}
-
-					if (used < (sizeof(buffer) - 1)) {
-						buffer[used++] = '\r';
-						buffer[used] = '\0';
-					}
-					if (used < (sizeof(buffer) - 1)) {
-						buffer[used++] = '\n';
-						buffer[used] = '\0';
-					}
-				}
-				//				sprintf(buffer,"%srwxr-xr-x user group %d Jan 01 00:01 %s\r\n",(FT_DIRECTORY == pInfo->m_eType) ? "d" : "-", pInfo->m_iSize, pInfo->m_Name);
-				send(pClient->m_iDataSocket, buffer, strlen(buffer), 0);
-			} else
-				FtpClient_OnDataComplete(pClient, 0, NULL);
-		} break;
-
-		default:
-			FtpClient_OnDataFailed(pClient, NULL);
-			break;
-	}
+			return;
+		}
+		if (pClient->m_eDataAction == DATAACTION_NLST)
+			length = sprintf(line, "%.255s\r\n", info.m_Name);
+		else {
+			static const char *months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+										   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+			char mode[11], size[21], stamp[48];
+			int index, month = info.m_TS.m_iMonth;
+			mode[0] = info.m_eType == FT_DIRECTORY ? 'd' : info.m_eType == FT_LINK ? 'l' : '-';
+			for (index = 0; index < 9; index++)
+				mode[index + 1] = info.m_iProtection & (1 << (8 - index)) ? "rwx"[index % 3] : '-';
+			mode[10] = '\0';
+			if (month < 1 || month > 12)
+				month = 1;
+			if (info.m_iDaysBetween >= 0 && info.m_iDaysBetween <= 182)
+				sprintf(stamp, "%s %2d %02d:%02d", months[month - 1], info.m_TS.m_iDay, info.m_TS.m_iHour,
+						info.m_TS.m_iMinute);
+			else
+				sprintf(stamp, "%s %2d  %04d", months[month - 1], info.m_TS.m_iDay, info.m_TS.m_iYear);
+			uitoa(size, info.m_iSize);
+			length = sprintf(line, "%s   1 ps2      ps2 %13s %s %.255s\r\n", mode, size, stamp, info.m_Name);
+		}
+		if (length < 0 || length >= (int)sizeof(line) ||
+			FtpClient_SendAll(pClient->m_iDataSocket, line, length) < 0)
+			FtpClient_OnDataFailed(pClient, pClient->m_pMessages[FTPMSG_PREMATURE_CLIENT_DISCONNECT]);
+	} else
+		FtpClient_OnDataFailed(pClient, NULL);
 }
+
 
 void FtpClient_OnDataComplete(FtpClient *pClient, int iReturnCode, const char *pMessage)
 {
 	assert(pClient);
 
+	int closed = FileSystem_Close(&pClient->m_kContext);
+	if (closed < 0 && !iReturnCode) {
+		iReturnCode = 451;
+		pMessage = "Could not finish closing the transferred file.";
+	}
 	if (pMessage && iReturnCode > 0) {
 		FtpClient_Send(pClient, iReturnCode, pMessage);
 	} else {
 		switch (pClient->m_eDataAction) {
-			case DATAACTION_APPE:
-			case DATAACTION_NLST:
-			case DATAACTION_LIST:
-			case DATAACTION_RETR:
-			case DATAACTION_STOR:
-				FtpClient_Send(pClient, 226, pClient->m_pMessages[FTPMSG_COMMAND_SUCCESSFUL]);
-				break;
+		case DATAACTION_APPE:
+		case DATAACTION_NLST:
+		case DATAACTION_LIST:
+		case DATAACTION_RETR:
+		case DATAACTION_STOR:
+			FtpClient_Send(pClient, 226, pClient->m_pMessages[FTPMSG_COMMAND_SUCCESSFUL]);
+			break;
 
-			default:
-				break;
+		default:
+			break;
 		}
 	}
 

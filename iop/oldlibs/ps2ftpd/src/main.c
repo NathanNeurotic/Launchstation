@@ -111,7 +111,8 @@ s32 _start(int argc, char *argv[])
 	mythread.attr = 0x02000000;        // attr
 	mythread.option = 0;               // option
 	mythread.thread = (void *)server;  // entry
-	mythread.stacksize = 0x1000;
+	/* Normalized paths and directory metadata share this stack with driver calls. */
+	mythread.stacksize = 0x2000;
 	mythread.priority = 0x43;  // just above ps2link
 
 	pid = CreateThread(&mythread);
