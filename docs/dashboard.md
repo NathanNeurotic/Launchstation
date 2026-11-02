@@ -37,10 +37,11 @@ Also in the File Browser menu, as in the classic browser:
   the default), game titles and details, and game titles only (the title of
   each save or PSU file; names are the fallback). The choice lasts for the
   session and is not written to a config file.
-* *Sort by*: as stored, name (default), game title, size, date-time or kind,
-  then ascending or descending. Folders always stay first; the native
-  browser does not group ELF files ahead of other files, and HDD partition
-  lists keep the drive's order.
+* *Sort by*: type (default: folders, executables, text files, then
+  everything else by extension and name), as stored, name, game title,
+  size, date-time or kind, then ascending or descending (As stored and Type have no
+  direction). Folders always stay first, and HDD partition lists keep the
+  drive's order.
 * *Bookmarks...*: the PathPad. Jump to a bookmarked folder, bookmark the
   current one or remove one (saved in LAUNCHELF.CNF; *Lock shortcuts & bookmarks*
   under Settings > Launching locks them).
@@ -184,7 +185,7 @@ first/last row. The breadcrumb shows where the page lives.
 | Group | Contents |
 |-------|----------|
 | Appearance | Theme preset, customization groups, screen calibration, motion, animation, panel transparency, control icon backings, theme files and resets. |
-| Home & applications | Start screen (Home, Applications, Files, Tools, Settings), view, artwork, recent count/history and Application library (folders and refresh). |
+| Home & applications | Start screen (Home, Applications, Files, Tools, Settings, Launch keys), view, artwork, recent count/history and Application library (folders and refresh). |
 | Sound | Interface effects, music and their separate volumes. |
 | Input | Confirm button, on-screen keyboard and USB keyboard (driver and map). |
 | Launching | Automatic start & boot, Launch keys, shortcut/bookmark lock, disc/PS1 loaders, IOP reset and game IDs. |
@@ -575,9 +576,10 @@ such builds.
 
 Detailed rows keep full date/time precision, including seconds. Size and
 date-time are laid out as independent columns so the timestamp does not have
-to be shortened to fit. The dashboard browser can sort by name, game title,
-size, date-time, or kind, in ascending or descending order; folders remain
-grouped first for predictable navigation.
+to be shortened to fit. The dashboard browser can sort by type, as stored, name, game
+title, size, date-time, or kind; all but type and as stored also take
+ascending or descending order. Folders remain grouped first for predictable
+navigation.
 
 Demand-loaded storage such as the internal APA HDD and iLink/FireWire is
 selectable while its state is `Not checked`. Opening it runs the existing
