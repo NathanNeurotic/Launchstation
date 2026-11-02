@@ -269,6 +269,19 @@ class WatchTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 watch.latest_official("sdk-core")
 
+    def test_a_mirror_tag_that_is_not_a_release_tag_is_never_pinned(self):
+        # Git allows a tag such as sdk-$(id), and the warm job and every build job source the pin file. So a
+        # mirror tag is pinned only when it is a release tag, as an official one must be.
+        self.newest["sdk-world"] = "v2"
+        for tag in ("sdk-$(id)", "sdk-`id`", "sdk-x;id", "sdk-x|id"):
+            with self.subTest(tag=tag):
+                self.mirror = FakeMirror()
+                self.mirror.add(tag, mirror_pin(tag, "ps2build=v1 sdk-core=v1 sdk-world=v2", "v0.1", "v1", "v1"),
+                                "2026-10-20T00:00:00Z")
+                code, status, env, body = self.run_watch()
+                self.assertEqual((code, status, watch.read_pin(env)["PS2BUILD_SDK_TAG"]), (0, "changed", ""))
+                self.assertNotIn(tag, env + body)
+
 
 class WorkflowTests(unittest.TestCase):
     """The watch warms the same cache the build restores, only on master, and never publishes."""

@@ -195,7 +195,8 @@ def checked_release(repo, release, wanted):
     matches the hash its pin.env names; None otherwise."""
     tag = release.get("tag_name") or ""
     assets = {asset.get("name"): asset.get("id") for asset in release.get("assets", [])}
-    if not tag.startswith("sdk-") or release.get("draft") or release.get("prerelease") \
+    # Build jobs source the pin file this tag goes into, and Git allows a tag such as sdk-$(id).
+    if not tag.startswith("sdk-") or not VERSION.match(tag) or release.get("draft") or release.get("prerelease") \
             or not isinstance(assets.get("pin.env"), int) or not isinstance(assets.get("SHA256SUMS"), int):
         return None
     pin = read_pin(mirror_get(f"/repos/{repo}/releases/assets/{assets['pin.env']}",
