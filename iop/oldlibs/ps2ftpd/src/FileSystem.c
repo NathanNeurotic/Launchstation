@@ -786,6 +786,15 @@ iop_device_t *FileSystem_ScanDevice(const char *name)
 	int index;
 	if (!devices)
 		return NULL;
+	/* mass is left out of the root listing (it repeats usb/ata), but existing
+	 * /mass/N/ bookmarks and the Cloud Relay's massN: mapping still open it. */
+	if (!strcmp(name, "mass")) {
+		for (index = 0; index < FS_IOMANX_DEVICES; index++)
+			if (devices[index] && devices[index]->name && !strcmp(devices[index]->name, "mass") &&
+				(devices[index]->type & (IOP_DT_FS | IOP_DT_BLOCK)))
+				return devices[index];
+		return NULL;
+	}
 	for (index = 0; index < FS_IOMANX_DEVICES; index++) {
 		const char *visible = FileSystem_DeviceName(devices[index]);
 		if (!visible || strcmp(visible, name))

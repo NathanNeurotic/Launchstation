@@ -21,7 +21,7 @@ supported PS2BUILD legacy-hook IOMANX contract; the table is sparse, so a NULL
 entry is not its end. Recheck that capacity when changing the IOMANX package.
 
 FTP exposes `usb`, `ata`, `mx4sio`, `ilink`, `mc`, `mmce`, `hdd` and `pfs` when registered.
-The shared BDM `mass` namespace is not exposed. A non-extended, USB-only legacy
+The shared BDM `mass` namespace is not listed at the root, but `/mass/N/` paths still resolve so old bookmarks and the Cloud Relay keep working. A non-extended, USB-only legacy
 USBMASS driver can be presented as `usb`; it is never used to guess the identity
 of a BDM volume. Duplicate registry entries produce one visible device name.
 Unit probing opens and closes roots, with two MC/MMCE slots and four PFS mounts.

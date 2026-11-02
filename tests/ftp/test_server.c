@@ -491,7 +491,8 @@ static void test_paths_and_listing(void)
 	/* Launchstation browses i.LINK BDM storage as ilink:, so FTP lists it too. */
 	assert(FileSystem_ScanDevice("ilink") == &ilink);
 	assert(!FileSystem_ScanDevice("usb-extra"));
-	assert(!FileSystem_ScanDevice("mass"));
+	/* Hidden from the root listing, but /mass/N/ paths still resolve. */
+	assert(FileSystem_ScanDevice("mass") == &mass);
 	assert(!FileSystem_OpenDir(&ctx, "/"));
 	int seen_usb = 0, seen_pfs = 0, seen_ilink = 0, count = 0;
 	while (FileSystem_ReadDir(&ctx, &info) > 0) {
