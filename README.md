@@ -142,7 +142,7 @@ Use a full Git checkout so the generated build number matches the commit history
 Run from the repository root:
 
 ```sh
-# Install or refresh the SDK components selected by .github/ps2build-sdk.env.
+# Install or refresh the SDK versions pinned in .github/ps2build-sdk.env.
 export PS2BUILD_ROOT="$HOME/.local/share/ps2build"
 sh scripts/ps2build_sdk.sh --llvm "$PS2BUILD_ROOT"
 export PATH="$PS2BUILD_ROOT:$PATH"
@@ -156,7 +156,7 @@ python3 scripts/gen_githash.py --require-git
 ps2build build
 ```
 
-The [SDK installer](scripts/ps2build_sdk.sh) tries the official server and supports a checksum-verified mirror fallback. A private mirror requires read access through `PS2BUILD_SDK_MIRROR_TOKEN`; the official server does not. Rebuild both third-party libraries after changing toolchains or SDK versions.
+The [SDK installer](scripts/ps2build_sdk.sh) installs the pinned versions from the official server, with a checksum-verified [mirror](https://github.com/NathanNeurotic/ps2build-mirror) fallback. A weekly [watch](.github/workflows/ps2build-sdk-watch.yml) proposes new pins as a draft pull request, so builds never ask the server which release is newest. A private mirror requires read access through `PS2BUILD_SDK_MIRROR_TOKEN`; the official server does not. Rebuild both third-party libraries after changing toolchains or SDK versions.
 
 Outputs include `build/bin/wLaunchELF-packed.elf` (release executable), `build/bin/wLaunchELF.elf` and source-built IOP modules. The standard profile enables networking, SMB, native cloud and the storage integrations above; network services generally start on demand. DS34 is a separate variant:
 

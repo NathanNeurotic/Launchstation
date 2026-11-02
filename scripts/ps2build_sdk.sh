@@ -1,20 +1,23 @@
 #!/bin/sh
-# Install the newest ps2build SDK into DEST, from git.techwritescode.dev or, when it is down, our mirror.
+# Install the pinned ps2build SDK into DEST, from git.techwritescode.dev or, when it is down, our mirror.
 #
 # Usage: ps2build_sdk.sh [--llvm] DEST
 #        ps2build_sdk.sh --resolve [--llvm] OUT    (CI, before the cache step: write the versions to OUT)
 #
-# The pin file (PS2BUILD_SDK_PIN, default .github/ps2build-sdk.env) lists the components. A bare name
-# follows the newest official release; name=vX holds that component at vX, to step around a bad upstream
-# release. Each job resolves the versions from the official release API, then installs from:
+# The pin file (PS2BUILD_SDK_PIN, default .github/ps2build-sdk.env) lists the components as name=vX, so
+# resolving them asks no server anything. .github/workflows/ps2build-sdk-watch.yml is what asks the
+# official release API, once a week, and proposes new pins. A bare name (or "latest") still works and
+# follows the newest official release, at the cost of one release-API request per name in every run.
+# The versions are installed from:
 #   1. DEST, when it already holds exactly those versions (an actions/cache restore).
 #   2. The official server, "ps2build update <component> --version <tag>" for each component that differs,
 #      so an older cached SDK only downloads what changed. The whole attempt gets
 #      PS2BUILD_SDK_OFFICIAL_BUDGET seconds (default 900), each component one retry.
-#   3. The newest NathanNeurotic/ps2build-mirror release, when the official install fails. Every file is
-#      checked against that release's SHA256SUMS. When it is older than the official latest, the job says
-#      so and sets PS2BUILD_SDK_STALE=true, so CI does not cache it under the latest versions.
-# When the release API itself is unreachable, the newest mirror release defines the versions.
+#   3. A NathanNeurotic/ps2build-mirror release, when the official install fails: the one the pin file
+#      names (PS2BUILD_SDK_TAG, with the SHA-256 of its SHA256SUMS), else the newest. Every file is
+#      checked against that release's SHA256SUMS. When the newest release does not hold the wanted
+#      versions, the job says so and sets PS2BUILD_SDK_STALE=true, so CI does not cache it under them.
+# When a bare name needs the release API and it is unreachable, the newest mirror release decides.
 # PS2BUILD_SDK_NO_FALLBACK=1 fails instead of using the mirror. On GitHub Actions DEST is added to PATH
 # and PS2BUILD_SDK_SOURCE (cache, official or mirror) to the environment.
 set -eu
@@ -60,20 +63,23 @@ MIRROR_API=${PS2BUILD_SDK_MIRROR_API_URL:-https://api.github.com}
 
 log() { echo "ps2build-sdk: $*"; }
 
+# Sent with every request, so tech can tell ours apart in his logs.
+USER_AGENT="Launchstation-build/1.0 (+https://github.com/NathanNeurotic/Launchstation)"
+
 warn() {
     if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::warning::$*"; else log "warning: $*"; fi
 }
 
-differences() { # "name=version ..." of the mirror and of the latest -> "name mirror (latest latest), ..."
+differences() { # "name=version ..." of the mirror and of the wanted SDK -> "name mirror (wanted X), ..."
     for pair in $2; do
         mirror=$(version_in "${pair%%=*}" "$1" || echo none)
-        [ "$mirror" = "${pair#*=}" ] || printf '%s %s (latest %s) ' "${pair%%=*}" "$mirror" "${pair#*=}"
+        [ "$mirror" = "${pair#*=}" ] || printf '%s %s (wanted %s) ' "${pair%%=*}" "$mirror" "${pair#*=}"
     done
 }
 
 fetch() { # url file
     # --speed-limit: a stalled transfer is aborted (and retried) instead of hanging the job.
-    curl -sSfL --retry 6 --retry-delay 5 --retry-all-errors --connect-timeout 20 --speed-limit 1024 --speed-time 60 "$1" -o "$2"
+    curl -sSfL -A "$USER_AGENT" --retry 6 --retry-delay 5 --retry-all-errors --connect-timeout 20 --speed-limit 1024 --speed-time 60 "$1" -o "$2"
 }
 
 sha256() { sha256sum "$1" | cut -d' ' -f1; }
@@ -82,7 +88,7 @@ api_fetch() { # url file accept: a GitHub API request with the mirror token, whi
     # curl sends the Authorization header to api.github.com only, not to the storage host it redirects to.
     # HTTPS only, redirects included, so the token never travels in cleartext.
     printf 'header = "Authorization: Bearer %s"\n' "$MIRROR_TOKEN" |
-        curl -K - -sSfL --proto '=https' --proto-redir '=https' --retry 6 --retry-delay 5 --retry-all-errors --connect-timeout 20 --speed-limit 1024 --speed-time 60 \
+        curl -K - -sSfL -A "$USER_AGENT" --proto '=https' --proto-redir '=https' --retry 6 --retry-delay 5 --retry-all-errors --connect-timeout 20 --speed-limit 1024 --speed-time 60 \
             -H "Accept: $3" -H "X-GitHub-Api-Version: 2022-11-28" "$1" -o "$2"
 }
 
@@ -135,7 +141,7 @@ version_of() { version_in "$1" "$PS2BUILD_COMPONENTS"; }
 extra_var() { echo "$1" | tr 'a-z-' 'A-Z_'; } # ogg -> OGG, read as OGG_VERSION
 
 latest_tag() { # repository -> its newest official release tag
-    curl -sSfL --retry 3 --retry-delay 5 --retry-all-errors --connect-timeout 20 --max-time 60 \
+    curl -sSfL -A "$USER_AGENT" --retry 3 --retry-delay 5 --retry-all-errors --connect-timeout 20 --max-time 60 \
         "$OFFICIAL/api/v1/repos/ps2/$1/releases/latest" | sed -n 's/.*"tag_name":"\([^"]*\)".*/\1/p' | head -n 1 | grep -E '^[A-Za-z0-9._+-]+$'
 }
 
@@ -270,7 +276,7 @@ reset_dest() { # never delete something that is not an SDK install
     mkdir -p "$DEST"
 }
 
-adopt_mirror_pin() { # pin.env of the newest mirror release: install that, and say so when it is older
+adopt_mirror_pin() { # pin.env of the newest mirror release: install that, and say so when it differs
     tag=$(pin_value PS2BUILD_SDK_TAG "$1")
     sums=$(pin_value PS2BUILD_SDK_SUMS_SHA256 "$1")
     components=$(pin_value PS2BUILD_COMPONENTS "$1")
@@ -281,7 +287,7 @@ adopt_mirror_pin() { # pin.env of the newest mirror release: install that, and s
     older=$(differences "$components_llvm" "$latest_llvm")
     if [ -n "$older" ]; then
         STALE=1
-        warn "the newest ps2build-mirror release $tag is older than the latest SDK: ${older% }"
+        warn "the newest ps2build-mirror release $tag does not hold the wanted SDK: ${older% }"
     fi
     PS2BUILD_SDK_TAG=$tag PS2BUILD_SDK_SUMS_SHA256=$sums PS2BUILD_COMPONENTS=$components PS2BUILD_LLVM_TOOLCHAIN=$llvm
     for name in $PS2BUILD_EXTRAS; do
@@ -404,5 +410,5 @@ if [ -n "${GITHUB_ENV:-}" ]; then
     [ "$STALE" = 1 ] && echo "PS2BUILD_SDK_STALE=true" >> "$GITHUB_ENV"
 fi
 if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
-    echo "ps2build SDK from **$source**: \`$PS2BUILD_COMPONENTS\`$([ "$STALE" = 1 ] && echo " (older than the latest official release)")" >> "$GITHUB_STEP_SUMMARY"
+    echo "ps2build SDK from **$source**: \`$PS2BUILD_COMPONENTS\`$([ "$STALE" = 1 ] && echo " (not the wanted versions)")" >> "$GITHUB_STEP_SUMMARY"
 fi
