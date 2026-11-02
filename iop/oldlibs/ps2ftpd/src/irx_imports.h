@@ -22,8 +22,6 @@
 #include <sysclib.h>
 #include <sysmem.h>
 #include <thbase.h>
-#include <ioman_mod.h>
-#include <iopmgr.h>
 
 #define getsockopt lwip_getsockopt
 #define setsockopt lwip_setsockopt

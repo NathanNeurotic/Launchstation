@@ -194,6 +194,8 @@ int FtpServer_HandleEvents(FtpServer *pServer)
 	FtpServer_ClientEndTraverse;
 
 	res = select(hs + 1, &r, &w, NULL, NULL);
+	if (res <= 0)
+		return res;
 
 	// process server
 
@@ -226,42 +228,31 @@ int FtpServer_HandleEvents(FtpServer *pServer)
 		// data is available to read on the controlsocket
 		// TODO: handle OOB data for transfer breaks
 		if (FD_ISSET(pClient->m_iControlSocket, &r)) {
-			int rv = recv(pClient->m_iControlSocket,
-			              pClient->m_CommandBuffer + pClient->m_iCommandOffset,
-			              sizeof(pClient->m_CommandBuffer) - pClient->m_iCommandOffset, 0);
-
-			if (rv > 0) {
-				char *rofs;
-				char *nofs;
-
-				pClient->m_CommandBuffer[pClient->m_iCommandOffset + rv] = '\0';
-
-				rofs = strchr(pClient->m_CommandBuffer + pClient->m_iCommandOffset, '\r');
-				nofs = strchr(pClient->m_CommandBuffer + pClient->m_iCommandOffset, '\n');
-
-				pClient->m_iCommandOffset += rv;
-
-				if (nofs) {
-					int cmdlen = rofs ? (rofs - pClient->m_CommandBuffer) : (nofs - pClient->m_CommandBuffer);
-
-					// extract commandline
-
-					pClient->m_CommandBuffer[cmdlen] = '\0';
-
-// execute command
-
-#ifdef DEBUG
-					printf("%08x << %s\r\n", (unsigned int)pClient, pClient->m_CommandBuffer);
-#endif
+			int room = sizeof(pClient->m_CommandBuffer) - pClient->m_iCommandOffset - 1;
+			int received = recv(pClient->m_iControlSocket,
+			                    pClient->m_CommandBuffer + pClient->m_iCommandOffset, room, 0);
+			if (received > 0) {
+				char *end;
+				pClient->m_iCommandOffset += received;
+				pClient->m_CommandBuffer[pClient->m_iCommandOffset] = '\0';
+				/* TCP can split one command or coalesce several commands in a read. */
+				while ((end = strchr(pClient->m_CommandBuffer, '\n')) != NULL) {
+					int consumed = end - pClient->m_CommandBuffer + 1;
+					int length = consumed - 1;
+					if (length && pClient->m_CommandBuffer[length - 1] == '\r') length--;
+					pClient->m_CommandBuffer[length] = '\0';
 					FtpClient_OnCommand(pClient, pClient->m_CommandBuffer);
-
-					// get remaining data (safe even if client has disconnected, as it is never freed)
-
-					memcpy(pClient->m_CommandBuffer, nofs + 1, sizeof(pClient->m_CommandBuffer) - ((nofs + 1) - pClient->m_CommandBuffer));
-					pClient->m_iCommandOffset -= (nofs + 1) - pClient->m_CommandBuffer;
+					if (!pClient->m_pServer) break;
+					pClient->m_iCommandOffset -= consumed;
+					memmove(pClient->m_CommandBuffer, pClient->m_CommandBuffer + consumed,
+					        pClient->m_iCommandOffset + 1);
+				}
+				if (pClient->m_pServer && pClient->m_iCommandOffset == (int)sizeof(pClient->m_CommandBuffer) - 1) {
+					FtpClient_Send(pClient, 500, "Command line is too long.");
+					if (pClient->m_pServer) FtpServer_OnClientDisconnect(pServer, pClient);
 				}
 			} else
-				FtpServer_OnClientDisconnect(pServer, pClient);  // :FIXME: use a preallocated ringbuffer in the server shared between clients?
+				FtpServer_OnClientDisconnect(pServer, pClient);
 		}
 
 		// handle client data transfers
@@ -355,6 +346,7 @@ FtpClient *FtpServer_OnClientConnect(FtpServer *pServer, int iSocket)
 void FtpServer_OnClientDisconnect(FtpServer *pServer, FtpClient *pClient)
 {
 	assert(pServer && pClient);
+	(void)pServer;
 
 #ifdef DEBUG
 	printf("ps2ftpd: disconnected client %08x\n", (unsigned int)pClient);
