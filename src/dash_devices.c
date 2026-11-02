@@ -393,7 +393,7 @@ int dashDevicesList(DashDevice *out, int max)
 	}
 
 #ifdef UDPFS
-	addStorage(out, &n, max, DI_NETWORK, "Network (UDPFS)", "udpfs:", "udpfs:/", netConfig[0] ? netConfig : "Connected", "UDPFS server not found");
+	addStorage(out, &n, max, DI_SHARE, "Network (UDPFS)", "udpfs:", "udpfs:/", netConfig[0] ? netConfig : "Connected", "UDPFS server not found");
 #endif
 #ifdef SMB
 	{
@@ -412,14 +412,14 @@ int dashDevicesList(DashDevice *out, int max)
 			if (!isSmbDriverLoaded(v) && smbLoadError(v)[0])
 				snprintf(smb_absent[i], sizeof(smb_absent[i]), "%s", smbLoadError(v));
 			snprintf(smb_ready[i], sizeof(smb_ready[i]), "%d share(s) connected", smbSharesConnectedCount(v));
-			addStorage(out, &n, max, DI_NETWORK, v == SMB_PATH_V1 ? "Network (SMB1)" : "Network (SMB)",
+			addStorage(out, &n, max, DI_SHARE, v == SMB_PATH_V1 ? "Network (SMB1)" : "Network (SMB)",
 			           v == SMB_PATH_V1 ? SMB_DEVICE_V1 : SMB_DEVICE_V2, v == SMB_PATH_V1 ? "smb1:/" : "smb:/",
 			           smb_ready[i], smb_absent[i]);
 		}
 	}
 #endif
 #ifdef ETH
-	add(out, &n, max, DI_NETWORK, DASH_DEV_PROBE, "Network Host", "host:", "host:/", "PS2Link host");
+	add(out, &n, max, DI_SHARE, DASH_DEV_PROBE, "Network Host", "host:", "host:/", "PS2Link host");
 #endif
 #ifdef XFROM
 	if (console_is_PSX || boot_show_all_devices)
