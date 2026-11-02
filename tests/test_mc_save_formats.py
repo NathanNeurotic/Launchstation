@@ -6,8 +6,10 @@ Each fixture is built here from the format description (Ross Ridge's public-doma
 the .psu that comes out is parsed independently and must hold the same files, names, modes and
 times. Malformed files are refused whole. A real Blaze export is also run when BLAZE_MCM_SAMPLE
 names one (it is not committed: it holds someone else's binaries)."""
+import atexit
 from pathlib import Path
 import os
+import shutil
 import struct
 import subprocess
 import sys
@@ -19,6 +21,7 @@ workflow = (root / ".github/workflows/compile.yml").read_text(encoding="utf-8")
 assert "python3 tests/test_mc_save_formats.py" in workflow
 assert "src/mc_save_formats.c" in (root / "ps2.yaml").read_text(encoding="utf-8")
 tmp = Path(tempfile.mkdtemp(prefix="mc-formats-"))
+atexit.register(shutil.rmtree, tmp, ignore_errors=True)
 exe = tmp / "f"
 subprocess.run(["gcc", "-std=c99", "-O1", "-g", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
                 "-fno-sanitize-recover=all", f"-I{root/'include'}", str(root / "tests/mc_save_formats_host.c"),

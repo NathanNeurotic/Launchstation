@@ -5,6 +5,7 @@ fingerprint_matches
 are compiled from src/mmce_backup.c with POSIX stand-ins for genOpen & co, and
 linked with the real card viewer. The cards come from tests/mc_fixture.py.
 """
+import atexit
 from pathlib import Path
 import shutil
 import struct
@@ -94,6 +95,7 @@ int main(int argc, char **argv) {
 cc = shutil.which("gcc") or shutil.which("clang")
 assert cc, "Host C compiler required"
 tmp = Path(tempfile.mkdtemp(prefix="mmce-fp-"))
+atexit.register(shutil.rmtree, tmp, ignore_errors=True)
 exe = tmp / "fp"
 (tmp / "h.c").write_text(harness, encoding="utf-8")
 subprocess.run([cc, "-std=gnu99", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",

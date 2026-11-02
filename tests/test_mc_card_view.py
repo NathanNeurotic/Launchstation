@@ -1,5 +1,7 @@
 """Card viewer: valid cards (no-ECC, ECC, 16 MB) and hostile images."""
+import atexit
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -9,6 +11,7 @@ import mc_fixture as fx
 
 root = Path(__file__).resolve().parents[1]
 tmp = Path(tempfile.mkdtemp())
+atexit.register(shutil.rmtree, tmp, ignore_errors=True)
 exe = tmp / "host"
 subprocess.run(["gcc", "-std=c99", "-O1", "-g", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
                 "-fno-sanitize-recover=all", f"-I{root/'include'}", str(root / "tests/mc_card_view_host.c"),

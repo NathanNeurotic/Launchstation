@@ -9,6 +9,7 @@ the device "unplugged" before write k, for every k. The card must still open,
 every other save must be byte-identical, and the new save must be either
 absent or complete. Lost clusters are allowed; anything else is a failure.
 """
+import atexit
 from pathlib import Path
 import hashlib
 import random
@@ -25,6 +26,7 @@ root = Path(__file__).resolve().parents[1]
 workflow = (root / ".github/workflows/compile.yml").read_text(encoding="utf-8")
 assert "python3 tests/test_mc_card_write.py" in workflow
 tmp = Path(tempfile.mkdtemp(prefix="mc-write-"))
+atexit.register(shutil.rmtree, tmp, ignore_errors=True)
 exe = tmp / "w"
 subprocess.run(["gcc", "-std=c99", "-O1", "-g", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
                 "-fno-sanitize-recover=all", f"-I{root/'include'}", str(root / "tests/mc_card_write_host.c"),
