@@ -1189,6 +1189,8 @@ static void firstInit(void)
 		section = DASH_SEC_HOME;
 	else if (section == DASH_SEC_DEVICES)
 		section = DASH_SEC_FILES;
+	else if (section == DASH_START_LAUNCH_KEYS)
+		section = DASH_SEC_SETTINGS; /* the Launch keys page is opened in DashRun */
 	else if (section < 0 || section >= DASH_SEC_COUNT)
 		section = DASH_SEC_HOME;
 	dash_inited = 1;
@@ -1241,6 +1243,8 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	if (section == DASH_SEC_HOME && dashCfg.start_section == DASH_SEC_APPS) {
 		dashHomeOpenApplications();
 		dashAppsShowAll();
+	} else if (section == DASH_SEC_SETTINGS && dashCfg.start_section == DASH_START_LAUNCH_KEYS) {
+		dashSettingsOpenLaunchKeys();
 	}
 	dashInputFlush();
 	/* Include the initial Files/Devices entry in startup presentation.

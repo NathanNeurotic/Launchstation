@@ -42,7 +42,7 @@ with a verified safety copy of the target card in `WLE-Safety/`
 wrong size can be rebuilt with **Copy to a new card of another size...**, which
 writes a new file to `mmceN:/WLE-Resized/` for **Install as NEW selectable MMCE
 card...**. To start from an empty card instead, open the folder menu in an
-MMCE folder and choose **New blank card...**: it writes an empty 8-64 MB card to
+MMCE folder and choose **New blank card...**: it writes an empty 1-64 MB card to
 `mmceN:/WLE-New/` for the same install step. To give each game its own card,
 open a card with **Card contents...** and choose **Split into Game ID cards...**:
 it writes one card per game to `mmceN:/WLE-GameID/<card>/<ID>/<ID>-1.mcd`, and

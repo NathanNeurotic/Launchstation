@@ -1033,7 +1033,8 @@ int mcCardFormat(const uint8_t like_sb[512], const uint8_t like_root[1024], uint
 	uint32_t c, i, k, fill;
 	int r = MCV_OK;
 
-	if (!like_sb || !like_root || !write || (size_mb != 8u && size_mb != 16u && size_mb != 32u && size_mb != 64u))
+	if (!like_sb || !like_root || !write || (size_mb != 1u && size_mb != 2u && size_mb != 4u && size_mb != 8u && size_mb != 16u && size_mb != 32u &&
+	     size_mb != 64u))
 		return MCW_ERR_INVALID;
 	memcpy(sb, like_sb, ENT);
 	memcpy(root, like_root, CL);
