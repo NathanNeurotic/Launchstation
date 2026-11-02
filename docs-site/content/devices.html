@@ -51,7 +51,7 @@
 <ul>
 <li><b>MMCE &harr; MX4SIO.</b> Each installs its own SIO2 hooks, so switching from one to the other forces an IOP reset (audio and controller are rebuilt afterward). If the reset is refused, the second driver is not loaded. MX4SIO also occupies memory-card port 2, so opening <code>mc1:</code> while MX4SIO is active resets the IOP back to the normal card stack.</li>
 <li><b>PC CARD CF &harr; DEV9.</b> The CF driver owns the PCMCIA bus and refuses to start if DEV9 (HDD, ATA, network) is resident; DEV9 loaders refuse in turn once CF owns the bus. Only an actual IOP reset releases it.</li>
-<li><b>Copy and move are refused between incompatible pairs</b> with &ldquo;Incompatible drivers to perform action&rdquo;: MMCE &harr; MX4SIO, MX4SIO &harr; <code>mc1:</code>, and PC CARD CF &harr; anything on DEV9 (internal HDD/PFS, exFAT HDD, UDPFS, <code>host:</code>, PSX flash/DVR). Use USB (or another compatible device) as the middle step.</li>
+<li><b>Copy and move are refused between incompatible pairs</b> with &ldquo;Incompatible drivers to perform action&rdquo;: MMCE &harr; MX4SIO, MX4SIO &harr; <code>mc1:</code>, PC CARD CF &harr; anything on DEV9 (internal HDD/PFS, exFAT HDD, UDPFS, <code>host:</code>, PSX flash/DVR), and UDPFS &harr; <code>host:</code> or SMB (each side needs its own Ethernet stack, and loading one unloads the other). These are refused before either driver is loaded. Use USB (or another compatible device) as the middle step.</li>
 <li><b>Compatible together:</b> USB, iLink, internal HDD (APA) and exFAT HDD (ATA) can all be resident at once; they share the BDM core where applicable. Network (UDPFS) shares DEV9 with HDD/ATA.</li>
 </ul>
 
