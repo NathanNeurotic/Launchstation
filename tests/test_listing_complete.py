@@ -3,9 +3,9 @@
 getDirComplete() is the listing copy, delete and Get Size act on: it must
 return an error unless it read the whole folder. getDir() is the browser's
 listing and keeps showing what it could read. Both go through the real
-listDir() dispatcher and the real memory card, generic (BDM, MMCE), CD, VMC,
-HDD and host readers; only the drivers below them are fakes, with the end of
-folder and error results each driver really returns.
+listDir() dispatcher and the real memory card, generic (BDM, MMCE, PC card),
+CD, VMC, HDD and host readers; only the drivers below them are fakes, with
+the end of folder and error results each driver really returns.
 """
 from pathlib import Path
 import re
@@ -174,10 +174,12 @@ static void uLE_cdStop(void){}
 static int mapUsbPathToFatFsPath(const char *p,char *out){(void)p;(void)out;return -1;}
 static void scanUsbMassDevices(int force){(void)force;}
 static void scan_USB_mass(void){}
-static int isPcCardCfPath(const char *p){(void)p;return 0;}
+static int isPcCardCfPath(const char *p){return !strncmp(p,"cf",2)&&p[2]>='0'&&p[2]<='9'&&p[3]==':';}
 static int isPathDeviceStackLoaded(const char *p){(void)p;return 1;}
-static int loadPcCardCfModules(void){return 0;}
-static int isPcCardCfOnline(void){return 0;}
+static int loadPcCardCfModules(void){return 1;}
+/* The PC card answers this many more checks online, then is offline (-1: stays online). */
+static int cf_online=-1;
+static int isPcCardCfOnline(void){if(cf_online<0)return 1;if(!cf_online)return 0;cf_online--;return 1;}
 static u8 mx4sio_driver_running=1;static int discard_next_mx4sio_root_listing;
 static int loadMx4sioModules(void){return 1;}
 '''
@@ -245,6 +247,13 @@ int main(void){
  add("mmce0:/DIR/",7)->end_code=-1;add("cdfs:/DIR/",7)->end_code=-EPERM;
  assert(complete("mmce0:/DIR/")==7&&listed(7));
  assert(complete("cdfs:/DIR/")==7&&listed(7));
+ /* PC card CF: an ATA error latches the card offline, and FAT then ends the read
+  * early with no error, so a card offline after the read was cut short */
+ add("cf0:/DIR/",5);assert(complete("cf0:/DIR/")==5&&listed(5));
+ cf_online=1;assert(complete("cf0:/DIR/")==-ENODEV&&!open_handles);
+ cf_online=1;assert(browse("cf0:/DIR/")==0); /* the browser still shows it empty */
+ cf_online=0;assert(complete("cf0:/DIR/")==-ENODEV&&browse("cf0:/DIR/")==0); /* offline before it */
+ cf_online=-1;assert(complete("cf0:/DIR/")==5&&listed(5));
  /* VMC, PFS and host end a folder with 0, so their negative result is a failed read */
  Folder *f=add("vmc0:/DIR/",9);f->dots=1;f->fail_at=4;f->fail_code=-EIO;
  assert(complete("vmc0:/DIR/")==-EIO&&!open_handles);

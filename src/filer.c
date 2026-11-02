@@ -2050,8 +2050,12 @@ static int listDir(const char *path, FILEINFO *info, int max)
 		if (!isPcCardCfOnline())
 			return 0;
 		n = readGENERICWithFirstOpenRetry(read_path, info, max, 2000);
-		if (!isPcCardCfOnline())
+		if (!isPcCardCfOnline()) {
+			/* the card went offline during the read: FAT ends that read early
+			 * with no error, so the listing may be cut short */
+			dirReadFailed(-ENODEV);
 			return 0;
+		}
 	}
 	else if (!strncmp(path, "vmc", 3))
 		n = readVMC(path, info, max);
