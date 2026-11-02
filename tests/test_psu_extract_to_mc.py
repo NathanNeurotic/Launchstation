@@ -32,6 +32,27 @@ assert "clipIopResetGeneration = saved_gen;" in op and "browser_cut = saved_cut;
 assert "browser_cut = 0;" in op[:op.index("filerPsuPasteInto")]          # a restore is a copy, never a move
 assert op.index("opDone();") < op.index("showPasteFailure(1)")
 assert '"The clipboard was cleared"' in op                               # the one case it cannot be put back
+# ...and that notice also shows when the restore failed
+fail = op[op.index("if (fb.msg[0]) {"):]
+fail = fail[:fail.index("return;")]
+assert "clipboard_lost" in fail and '"The clipboard was cleared"' in fail
+assert op.index("clipboard_lost = (saved == NULL && saved_n > 0)") < op.index("free(saved);")
+
+# the restore itself: the folder the PSU names is checked before it is created or replaced
+copy = (root / "src/filer_copy.c").read_text(encoding="utf-8")
+blk = copy[copy.index('filerCopyDiagStage("Creating directory");'):]
+blk = blk[:blk.index("drawMsg(LNG(Pasting));")]
+assert blk.index("PasteMode == PM_PSU_RESTORE && filerIsExploitProtectedPath(outPath, &newfile)") \
+    < blk.index("filerConfirmExploitModify(outPath, &newfile) < 0") < blk.index("ret = newdir(outPath, newfile.name);")
+over = blk[blk.index("if (PasteMode == PM_PSU_RESTORE) {"):]
+assert "!exploit_ok && filerConfirmExploitDelete(outPath, &newfile) < 0" in over       # overwrite still asks, once
+assert over.index("filerConfirmExploitDelete") < over.index("delete (outPath, &newfile)") < over.index("newdir(outPath, newfile.name)")
+
+# a paste refused for incompatible drivers reports failure, so no caller toasts success
+fb_src = (root / "src/filer_browser.c").read_text(encoding="utf-8")
+inc = fb_src[fb_src.index("if (ret == TRANSFER_STACK_INCOMPATIBLE) {"):]
+inc = inc[:inc.index("return;")]
+assert "snprintf(mess, MAX_PATH," in inc
 # menu capacity grew with the two new rows
 assert re.search(r"DashMenuItem items\[(\d+)\];\n\tint ids\[\1\],", src).group(1) == "56"
 assert "Extract to mc0:/" in (root / "docs-site/content/file-browser.html").read_text(encoding="utf-8")

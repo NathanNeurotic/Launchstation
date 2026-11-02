@@ -846,6 +846,7 @@ static void opExtractPsuTo(int port)
 	unsigned int saved_gen = clipIopResetGeneration;
 	char saved_path[MAX_PATH], dest[8], msg[96];
 	FILEINFO *saved = NULL;
+	int clipboard_lost;
 
 	if (n == 0 || port < 0 || port > 1)
 		return;
@@ -875,6 +876,7 @@ static void opExtractPsuTo(int port)
 	dashFileLoadingBegin("Extracting save");
 	filerPsuPasteInto(fb.msg, dest);
 	opDone();
+	clipboard_lost = (saved == NULL && saved_n > 0); /* the backup could not be made */
 	if (saved != NULL) { /* the user's own clipboard, as it was */
 		memcpy(clipFiles, saved, (size_t)saved_n * sizeof(FILEINFO));
 		dashStrCopy(clipPath, saved_path, MAX_PATH);
@@ -888,6 +890,8 @@ static void opExtractPsuTo(int port)
 	}
 	if (fb.msg[0]) {
 		showPasteFailure(1);
+		if (clipboard_lost)
+			dashToast(DASH_TOAST_INFO, "The clipboard was cleared");
 		return;
 	}
 	if (n == 1)
@@ -895,7 +899,7 @@ static void opExtractPsuTo(int port)
 	else
 		snprintf(msg, sizeof(msg), "%d saves extracted to %s", n, dest);
 	dashToast(DASH_TOAST_OK, msg);
-	if (saved == NULL && saved_n > 0)
+	if (clipboard_lost)
 		dashToast(DASH_TOAST_INFO, "The clipboard was cleared");
 }
 
