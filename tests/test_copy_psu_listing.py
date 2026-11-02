@@ -150,9 +150,11 @@ static int mountParty(const char *p){(void)p;assert(0);return -1;}
 static int fileShowTitles(void){return 0;}
 static int filerGetGameTitle(const char *p,const FILEINFO *f,unsigned char *out){(void)p;(void)f;out[0]=0;return -1;}
 static void transcpy_sjis(char *out,const unsigned char *in){strcpy(out,(const char *)in);}
-static int filerConfirmExploitDelete(const char *p,const FILEINFO *f){(void)p;(void)f;return 1;}
-static int filerConfirmExploitModify(const char *p,const FILEINFO *f){(void)p;(void)f;return 1;}
-static int filerIsExploitProtectedPath(const char *p,const FILEINFO *f){(void)p;(void)f;return 0;}
+/* A protected (exploit or system-update) folder: only a named entry can be one here. */
+static int protected_folder,modify_answer=1,modify_calls,delete_calls;
+static int filerConfirmExploitDelete(const char *p,const FILEINFO *f){(void)p;(void)f;delete_calls++;return 1;}
+static int filerConfirmExploitModify(const char *p,const FILEINFO *f){(void)p;(void)f;modify_calls++;return modify_answer;}
+static int filerIsExploitProtectedPath(const char *p,const FILEINFO *f){(void)p;return f!=NULL&&protected_folder;}
 static int remove_tree(const char *p){struct stat st;if(lstat(p,&st))return -errno;if(S_ISDIR(st.st_mode)){DIR *d=opendir(p);struct dirent *e;while(d&&(e=readdir(d))){if(!strcmp(e->d_name,".")||!strcmp(e->d_name,".."))continue;char c[MAX_PATH];snprintf(c,sizeof(c),"%s/%s",p,e->d_name);remove_tree(c);}if(d)closedir(d);return rmdir(p)?-errno:0;}return unlink(p)?-errno:0;}
 static int delete(const char *p,const FILEINFO *f){char t[MAX_PATH];snprintf(t,sizeof(t),"%s%s",p,f->name);return remove_tree(t);}
 static void markMx4sioDestinationAfterWrite(const char *p){(void)p;}
@@ -192,6 +194,7 @@ static int read_all(const char *p,unsigned char *out,int max){int fd=open(p,O_RD
 static int filled(const char *p,int n,int byte){unsigned char b[4096];if(read_all(p,b,sizeof(b))!=n)return 0;for(int i=0;i<n;i++)if(b[i]!=byte)return 0;return 1;}
 static void clip(const char *path,const char *name,int attr,int mode){
  yn_answer=1;yn_calls=0;cancel_copy=0;fail_alloc_bytes=0;browser_cut=0;generation=clipIopResetGeneration=1;
+ protected_folder=0;modify_answer=1;modify_calls=delete_calls=0;
  PasteMode=mode;strcpy(clipPath,path);nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));
  strcpy(clipFiles[0].name,name);clipFiles[0].stats.AttrFile=attr;
 }
@@ -239,6 +242,20 @@ int main(void){
  /* An accepted overwrite replaces the old save. */
  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);paste("mc0:/");
  assert(!message[0]&&yn_calls==1&&!exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00001")==2);
+ assert(delete_calls==1&&!modify_calls);
+ settled();
+
+ /* A PSU whose folder is protected asks once, before anything else; declining
+  * keeps the old save, frees the listing and closes the PSU. */
+ put("mc0:/BASLUS-00001/OLD.BIN","old",3);
+ clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);protected_folder=1;modify_answer=-1;paste("mc0:/");
+ assert(strstr(message,"Creating directory (-1)")&&modify_calls==1&&!yn_calls&&!delete_calls);
+ assert(exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00001")==3);
+ settled();
+ /* Accepting it replaces the save without asking the delete question again. */
+ clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);protected_folder=1;paste("mc0:/");
+ assert(!message[0]&&modify_calls==1&&yn_calls==1&&!delete_calls);
+ assert(!exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00001")==2);
  settled();
 
  /* A destination folder that cannot be created closes the PSU too. */
@@ -287,7 +304,8 @@ int main(void){
  clip("udpfs:/","TOP",0x8427,PM_NORMAL);yn_answer=-1;paste("mc1:/");
  assert(strstr(message,"Creating directory (-1)")&&yn_calls==1);
  settled();
- puts("PASS: PSU restore and backup, and folder pastes, keep old saves and backups when memory runs out, free every listing and close every PSU");
+ puts("PASS: PSU restore and backup, and folder pastes, keep old saves and backups when memory runs out "
+      "or a question is declined, free every listing and close every PSU");
  return 0;
 }
 '''
