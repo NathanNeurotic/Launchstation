@@ -599,8 +599,10 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 	if (file.stats.AttrFile & sceMcFileAttrSubdir) {
 		//Here we have a folder to copy, starting with an attempt to create it
 		//This is where we must act differently for PSU backup, creating a PSU file instead
-		if (PasteMode == PM_PSU_BACKUP && recurses)
+		if (PasteMode == PM_PSU_BACKUP && recurses) {
+			filerCopyDiagStage("Adding subfolder to PSU");
 			return copyDiagFail(-1);  //abort, as subfolders are not copied to PSU backups
+		}
 		//This level's listing is allocated before this level removes or creates
 		//anything at the destination, so failing to allocate it leaves an older PSU
 		//backup or save as it was. (Each file's copy buffer is allocated later.)
@@ -666,6 +668,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 				}
 			}
 			//here tmp is the name of an existing file, to be removed before making new one
+			filerCopyDiagStage("Creating PSU");
 			genRemove(tmp);
 			if (psu_backup_create_root_image(tmp, mcT_head_p, &out_fd, &PSU_content) < 0) {
 				ret = copyDiagFail(-1);
@@ -965,6 +968,7 @@ non_PSU_RESTORE_init:
 	if (PM_flag[recurses] == PM_PSU_BACKUP) {
 		//The .psu is the folder level's, which closes it once whatever happens here:
 		//every exit below leaves it open (out_fd = -1) instead of closing it
+		filerCopyDiagStage("Writing PSU entry");
 		if (psu_backup_begin_file_entry(PM_file[recurses], mcT_head_p, &psu_pad_size, &PSU_content) < 0) {
 			ret = -EIO;
 			goto copy_file_exit;

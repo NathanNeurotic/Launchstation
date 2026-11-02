@@ -208,6 +208,8 @@ static void clip(const char *path,const char *name,int attr,int mode){
  strcpy(clipFiles[0].name,name);clipFiles[0].stats.AttrFile=attr;
 }
 static void paste(const char *destination){message[0]=0;subfunc_Paste(message,(char *)destination);}
+/* The failure message has this text; when it does not, it is shown. */
+static int says(const char *text){if(strstr(message,text))return 1;fprintf(stderr,"message: %s\n",message);return 0;}
 /* After every paste: no file or directory handle left open or closed twice, no heap block left. */
 #define settled() settled_at(__LINE__)
 static void settled_at(int line){int open_dirs=0;for(int i=0;i<64;i++)open_dirs+=dirs[i]!=NULL;
@@ -302,9 +304,9 @@ int main(void){
  int size=read_all("mass:/SAVEDIR.psu",good,sizeof(good));
  assert(!message[0]&&size==3*512+2*(512+1024));
  settled();
- /* A backup whose PSU cannot be created frees its listing. */
+ /* A backup whose PSU cannot be created says so, and frees its listing. */
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("missing:/");
- assert(strstr(message,"(-1)")&&!exists("missing:"));
+ assert(says("Creating PSU (-1)")&&!exists("missing:"));
  settled();
  /* No memory for the next backup's listing: the old backup is not removed. */
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);fail_alloc_bytes=MAX_ENTRY*sizeof(FILEINFO);paste("mass:/");
@@ -317,7 +319,7 @@ int main(void){
   * three root headers), its data (5) or its padding (6), the user cancels,
   * or there is no memory for the copy buffer. */
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=4;paste("mass:/");
- assert(strstr(message,"(-5)"));
+ assert(says("Writing PSU entry (-5)"));
  settled();
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=5;paste("mass:/");
  assert(strstr(message,"Writing destination (-28)")&&strstr(message,"Not enough free space"));
@@ -347,7 +349,7 @@ int main(void){
   * subfolder be written there as a PSU of its own. */
  mkdir("mc0:/SAVEDIR/SUB",0700);mkdir("mass:/SAVEDIR",0700);
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("mass:/");
- assert(message[0]&&strstr(message,"SUB")&&!exists("mass:/SAVEDIR/SUB.psu"));
+ assert(says("Adding subfolder to PSU (-1)")&&strstr(message,"\nSUB\n")&&!exists("mass:/SAVEDIR/SUB.psu"));
  settled();
 
  /* An ordinary folder paste with no memory for its listing creates nothing. */
