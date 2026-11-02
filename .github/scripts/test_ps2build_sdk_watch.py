@@ -294,6 +294,8 @@ class WorkflowTests(unittest.TestCase):
         # The guard runs first, so a branch that already holds the new pins gets no pull request edit either.
         step = (WORKFLOWS / "ps2build-sdk-watch.yml").read_text().split("PUSHED=no", 1)[1]
         guard, same_pins = step.index('grep -qvxF "$BOT"'), step.index("already proposes these pins")
+        guard_line = next(line for line in step.splitlines() if 'grep -qvxF "$BOT"' in line)
+        self.assertIn("--format='%ae%n%ce'", guard_line)  # an amended commit keeps the watch as its author
         self.assertLess(guard, same_pins)
         self.assertIn("exit 0", step[guard:same_pins])
 
@@ -305,6 +307,11 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn("needs: [check, warm]", pr)
         for status in ("always()", "cancelled()", "failure()"):
             self.assertNotIn(status, pr)
+        # warm fails when the installer fell back to an older mirror SDK, which it does not cache.
+        warm = text.split("\n  warm:\n", 1)[1].split("\n  pr:\n", 1)[0]
+        stale = warm.split("if: ${{ env.PS2BUILD_SDK_STALE == 'true' }}", 1)
+        self.assertEqual(len(stale), 2)
+        self.assertIn("exit 1", stale[1].split("- name:", 1)[0])
 
 
 if __name__ == "__main__":

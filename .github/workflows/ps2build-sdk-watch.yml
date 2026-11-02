@@ -91,6 +91,15 @@ jobs:
           # The official host resets HTTP/2 streams under load; ps2build is a Go binary.
           GODEBUG: http2client=0
         run: sh scripts/ps2build_sdk.sh --llvm "$HOME/.local/share/ps2build"
+      - name: Stop unless the new SDK was installed
+        # When the official install fails, the installer takes the newest ps2build-mirror release. If that release
+        # lacks the new versions, it sets PS2BUILD_SDK_STALE and nothing is cached under the new pins. Failing here
+        # keeps pr from opening a pull request whose build jobs would each ask the official server again; the next
+        # run tries again.
+        if: ${{ env.PS2BUILD_SDK_STALE == 'true' }}
+        run: |
+          echo "::error::The new ps2build SDK could not be installed (the official install failed, and no ps2build-mirror release holds these versions yet), so it is not cached. The pull request waits for the next run."
+          exit 1
       - name: Cache the ps2build SDK
         if: ${{ steps.sdk-cache.outputs.cache-hit != 'true' && env.PS2BUILD_SDK_STALE != 'true' }}
         uses: actions/cache/save@v4
@@ -137,9 +146,10 @@ jobs:
           fi
 
           PUSHED=no
-          if [ -n "$OLD" ] && git log --format=%ae "origin/master..origin/$BRANCH" | grep -qvxF "$BOT"; then
-            # Someone added commits (a fix for the new SDK, say). Never overwrite their work, and leave its pull
-            # request alone too, even when the branch already holds these pins.
+          if [ -n "$OLD" ] && git log --format='%ae%n%ce' "origin/master..origin/$BRANCH" | grep -qvxF "$BOT"; then
+            # Someone added commits (a fix for the new SDK, say), or amended the watch's commit, which keeps the
+            # watch as its author but not as its committer. Never overwrite their work, and leave its pull request
+            # alone too, even when the branch already holds these pins.
             echo "::warning::$BRANCH has commits that are not the watch's; leaving it alone. Merge or close its pull request, then run the watch again."
             exit 0
           elif [ -n "$OLD" ] && git show "origin/$BRANCH:.github/ps2build-sdk.env" | cmp -s - .github/ps2build-sdk.env; then
