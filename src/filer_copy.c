@@ -633,6 +633,19 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			ret = copyDiagFail(-ENOMEM);
 			goto folder_exit;
 		}
+		//The source folder is listed next, also before anything at the destination
+		//changes: a folder that cannot be opened or read to its end, or that holds
+		//more than a listing can, leaves the destination as it was (and a Move its
+		//source). A PSU being restored is read one entry at a time instead.
+		if (!(PasteMode == PM_PSU_RESTORE && PSU_restart_f)) {
+			filerCopyDiagStage("Listing source");
+			sprintf(tmp, "%s%s/", inPath, file.name);
+			nfiles = getDirComplete(tmp, files, NULL);
+			if (nfiles < 0) {
+				ret = copyDiagFail(nfiles);
+				goto folder_exit;
+			}
+		}
 		if (PasteMode == PM_PSU_BACKUP) {
 			i = strlen(out) - 1;
 			if (out[i] == '/')
@@ -814,13 +827,8 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			                                  //It has to be done last, as timestamps would change when fixing files
 			                                  //--- This has been moved to a later clause.
 		} else {                              //Any other mode than a valid PM_PSU_RESTORE
-			filerCopyDiagStage("Listing source");
-			nfiles = getDirComplete(in, files, NULL);
 			ret = 0;  //An empty listing succeeds regardless of optional title lookup.
-			//A folder that cannot be opened or read to its end, or that holds more
-			//than a listing can, aborts here, so a Move keeps its source.
-			if (nfiles < 0)
-				ret = copyDiagFail(nfiles);
+			//'files' holds the listing made above, before the destination was touched
 			for (i = 0; i < nfiles; i++) {
 				if ((ret = copy(out, in, &files[i], recurses + 1)) < 0) {
 #if FILEOP_TRACE

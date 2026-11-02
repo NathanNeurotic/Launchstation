@@ -234,14 +234,15 @@ static int count(const char *dir){
 static FILEINFO folder(const char *name){FILEINFO f;memset(&f,0,sizeof(f));strcpy(f.name,name);f.stats.AttrFile=sceMcFileAttrSubdir;return f;}
 static void swap_file(void){put("usb0:/SWAP/NEW");assert(!unlink("usb0:/SWAP/F000"));}
 static void unplug_late(void){fault("usb0:/LATE/",-ENODEV,-1,0,1);}
-static char message[MAX_PATH];
-/* Pastes (or with cut, moves) one folder from usb0:/ into mmce0:/. */
-static void paste(const char *name,int cut){
+static char message[MAX_PATH];static int paste_mode=PM_NORMAL;
+/* Pastes (or with cut, moves) one folder from usb0:/ into dest. */
+static void paste_into(const char *name,int cut,const char *dest){
  assert(!handles&&!listings_live);
- strcpy(clipPath,"usb0:/");nclipFiles=1;clipFiles[0]=folder(name);browser_cut=cut;PasteMode=PM_NORMAL;
- message[0]=0;subfunc_Paste(message,"mmce0:/");
+ strcpy(clipPath,"usb0:/");nclipFiles=1;clipFiles[0]=folder(name);browser_cut=cut;PasteMode=paste_mode;
+ message[0]=0;subfunc_Paste(message,(char *)dest);
  assert(!handles&&!listings_live); /* every file closed and every listing freed */
 }
+static void paste(const char *name,int cut){paste_into(name,cut,"mmce0:/");}
 static int remove_folder(const char *name){
  FILEINFO f=folder(name);assert(!listings_live);
  int ret=delete("usb0:/",&f);
@@ -255,19 +256,23 @@ int main(void){
  assert(strstr(message,"Listing source (-13)"));
  paste("LOCKED",1);
  assert(strstr(message,"Listing source (-13)")&&count("usb0:/LOCKED")==3&&nclipFiles==1); /* Move keeps its source */
+ assert(count("mmce0:/LOCKED")==-1); /* listed before anything is made at the destination */
+ /* A PSU backup of it keeps an older backup, which is replaced only after the listing. */
+ put("mmce0:/LOCKED.psu");paste_mode=PM_PSU_BACKUP;paste("LOCKED",0);paste_mode=PM_NORMAL;
+ assert(strstr(message,"Listing source (-13)")&&!access("mmce0:/LOCKED.psu",F_OK));
  nfaults=0;
  /* A listing that fails partway is not taken as the whole folder. Here only the
   * first listing fails, so a Move that went on would delete what it never copied. */
  tree("usb0:/PART",5);fault("usb0:/PART/",0,2,-EIO,1);
  paste("PART",1);
  assert(strstr(message,"Listing source (-5)")&&count("usb0:/PART")==5&&nclipFiles==1);
- assert(count("mmce0:/PART")<=0);
+ assert(count("mmce0:/PART")==-1);
  nfaults=0;
  /* A folder over the listing cap is refused, not cut to its first 14 entries. */
  tree("usb0:/BIG",MAX_ENTRY-1);
  paste("BIG",1);
  assert(strstr(message,"Listing source (-7)")&&strstr(message,"more than 2046 items"));
- assert(count("usb0:/BIG")==MAX_ENTRY-1&&count("mmce0:/BIG")<=0&&nclipFiles==1);
+ assert(count("usb0:/BIG")==MAX_ENTRY-1&&count("mmce0:/BIG")==-1&&nclipFiles==1);
  /* USB (FAT, exFAT) ends a listing early with no error when a read fails, which
   * looks like the end of the folder. Listed again after its contents are copied,
   * the folder holds more, so the Move stops and keeps all of its source. */
@@ -275,6 +280,12 @@ int main(void){
  paste("QUIET",1);
  assert(strstr(message,"Listing source again (-5)")&&count("usb0:/QUIET")==5&&nclipFiles==1);
  assert(count("mmce0:/QUIET")==2); /* what the short listing held was copied */
+ /* A folder pasted into itself is listed before its copy is made in it: listed
+  * again, it holds that copy too, so a Move stops instead of deleting both. */
+ tree("usb0:/SELF",3);
+ paste_into("SELF",1,"usb0:/SELF/");
+ assert(strstr(message,"Listing source again (-5)")&&nclipFiles==1);
+ assert(count("usb0:/SELF")==4&&count("usb0:/SELF/SELF")==3);
  /* A file replaced by another while the folder is copied leaves as many entries,
   * but not the same ones, so a Move keeps the new file it never copied. */
  tree("usb0:/SWAP",3);strcpy(hook_at,"usb0:/SWAP/F002");hook=swap_file;
@@ -315,7 +326,7 @@ int main(void){
  for(int i=0;i<MAX_ENTRY;i++){snprintf(p,sizeof(p),"usb0:/STUCK/A_STICKY%02d",i);put(p);}
  assert(remove_folder("STUCK")==-EIO&&count("usb0:/STUCK")==MAX_ENTRY+3); /* listed after them, F000-F002 stay */
  puts("PASS: Paste and Move refuse a source folder that does not open, fails partway or is over the "
-      "listing cap, or that holds other entries when listed again after its "
+      "listing cap before touching the destination, or that holds other entries when listed again after its "
       "contents are copied, keeping a Move's source; "
       "Delete stops on those before removing anything listed, "
       "empties a folder of any size, returns the error that stopped it and frees every listing");
