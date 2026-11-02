@@ -17,6 +17,7 @@
 #include "filer_shared.h"
 #include "mc_card_view.h"
 #include "mc_card_write.h"
+#include "mc_save_formats.h"
 #include "mc_card_export.h"
 #include "mmce_backup.h"
 #include "mmce_card_switch.h"
@@ -590,7 +591,14 @@ static void ctExportPsu(const char *image, const char *name)
 		dashModalMessage(DI_WARNING, "Not exported", ctError(r), dest);
 }
 
-/* A whole .psu read and checked into s; *why says what is wrong when it is not. */
+static int ctStamp(uint8_t stamp[8]);
+
+/* The extensions Import save... and Convert to .psu accept, for the picker. */
+#define CT_SAVE_EXTS "PSU|MCM|MAX|CBS|SPS|XPS|PSV"
+
+/* A whole .psu read and checked into s; *why says what is wrong when it is not.
+ * Any other save format (.mcm, .max, .cbs, .sps/.xps, .psv) is read too, by
+ * its extension and content; a .psu always goes through the .psu reader. */
 static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 {
 	u8 *buf;
@@ -601,13 +609,13 @@ static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 	memset(s, 0, sizeof(*s));
 	fd = genOpen(psu, FIO_O_RDONLY);
 	if (fd < 0) {
-		*why = "The .psu could not be opened.";
+		*why = "The save file could not be opened.";
 		return MCV_ERR_IO;
 	}
 	size = genLseek(fd, 0, SEEK_END);
 	if (size <= 0 || size > CT_PSU_MAX || genLseek(fd, 0, SEEK_SET) != 0) {
 		genClose(fd);
-		*why = "The .psu is empty or larger than any 8 MB card save.";
+		*why = "The save file is empty or larger than any 8 MB card save.";
 		return MCW_ERR_INVALID;
 	}
 	buf = (u8 *)malloc((size_t)size);
@@ -623,10 +631,107 @@ static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 		done += (u32)n;
 	}
 	genClose(fd);
-	r = done == (u32)size ? mcCardSaveFromPsu(buf, (uint32_t)size, s) : MCV_ERR_IO;
+	if (done != (u32)size)
+		r = MCV_ERR_IO;
+	else if (genCmpFileExt(psu, "PSU"))
+		r = mcCardSaveFromPsu(buf, (uint32_t)size, s);
+	else {
+		const char *base = ctBaseName(psu), *dot = strrchr(base, '.');
+		char name[33];
+		uint8_t stamp[8];
+		size_t nlen = dot ? (size_t)(dot - base) : strlen(base);
+		int format = MCSF_UNKNOWN;
+
+		if (nlen > 32)
+			nlen = 32;
+		memcpy(name, base, nlen);
+		name[nlen] = 0;
+		r = mcSaveFormatRead(buf, (uint32_t)size, dot ? dot + 1 : NULL, name, ctStamp(stamp) ? stamp : NULL, s, &format);
+		/* save type 2 is PS2; anything else is a PS1 save. A PS2 .psv can also be
+		 * refused for a sub-folder, which keeps the generic message below. */
+		if (r == MCW_ERR_UNSUPPORTED && format == MCSF_PSV && size >= 0x40 &&
+		    (buf[0x3C] | buf[0x3D] << 8 | buf[0x3E] << 16 | (uint32_t)buf[0x3F] << 24) != 2u) {
+			free(buf);
+			*why = "This .psv holds a PS1 save. Only PS2 saves can go onto a PS2 card.";
+			return r;
+		}
+		if (r == MCW_ERR_INVALID && format == MCSF_UNKNOWN) {
+			free(buf);
+			*why = "This file is not a save in a format Launchstation reads (.psu, .mcm, .max, .cbs, .sps, .xps, .psv).";
+			return r;
+		}
+	}
 	free(buf);
 	*why = ctError(r);
 	return r;
+}
+
+/* "Convert to .psu": a save in another tool's format (.mcm, .max, .cbs,
+ * .sps/.xps, .psv) written as a .psu beside it, named after the save folder.
+ * Never replaces a file (a -2.. suffix instead); the result is read back and
+ * must parse into the same save. */
+void dashCardConvertSave(const char *path)
+{
+	McSaveData s, back;
+	uint8_t *buf = NULL;
+	uint32_t len = 0;
+	char folder[MAX_PATH], dest[MAX_PATH], name[33], msg[160];
+	const char *why;
+	int r, i;
+
+	if (genCmpFileExt(path, "PSU"))
+		return;
+	r = ctLoadPsu(path, &s, &why);
+	if (r != MCW_OK) {
+		dashModalMessage(DI_WARNING, "Not converted", why, path);
+		return;
+	}
+	memcpy(name, s.entry + 0x40, 32);
+	name[32] = 0;
+	dashStrCopy(folder, path, sizeof(folder));
+	folder[ctBaseName(path) - path] = 0;
+	dest[0] = 0;
+	for (i = 1; i < 100; i++) {
+		int w = i == 1 ? snprintf(dest, sizeof(dest), "%s%s.psu", folder, name) :
+		                 snprintf(dest, sizeof(dest), "%s%s-%d.psu", folder, name, i);
+		if (w >= (int)sizeof(dest)) {
+			i = 100;
+			break;
+		}
+		if (!wleExists(dest))
+			break;
+	}
+	if (i == 100) {
+		mcCardFreeSave(&s);
+		dashModalMessage(DI_WARNING, "Not converted", "No free .psu name next to this file.", path);
+		return;
+	}
+	snprintf(msg, sizeof(msg), "%.32s, %u file%s. A new .psu is written next to it; this file is not changed.", name,
+	         (unsigned)s.nfiles, s.nfiles == 1 ? "" : "s");
+	if (!dashModalConfirm("Convert to .psu?", msg, "Convert", 0)) {
+		mcCardFreeSave(&s);
+		return;
+	}
+	dashLoadingBegin("Converting save");
+	r = mcCardSaveToPsu(&s, &buf, &len);
+	if (r == MCW_OK && ctWriteFile(dest, buf, len) < 0)
+		r = MCV_ERR_IO;
+	if (r == MCW_OK) { /* the bytes on disk read back as the same save */
+		r = mcCardSaveFromPsu(buf, len, &back);
+		if (r == MCW_OK) {
+			r = mcCardSameSave(&s, &back) ? MCW_OK : MCW_ERR_VERIFY;
+			mcCardFreeSave(&back);
+		}
+		if (r != MCW_OK)
+			genRemove(dest);
+	}
+	free(buf);
+	mcCardFreeSave(&s);
+	dashLoadingEnd();
+	if (r == MCW_OK)
+		dashModalMessage(DI_MC, "Converted", "Written and read back. Put it on a card with Extract PSU or Card contents.", dest);
+	else
+		dashModalMessage(DI_WARNING, "Not converted", ctError(r), dest);
 }
 
 static void ctImportPsu(const char *image)
@@ -639,7 +744,7 @@ static void ctImportPsu(const char *image)
 	safety[0] = 0;
 	dashStrCopy(dir, image, sizeof(dir));
 	dir[ctBaseName(image) - image] = 0;
-	if (!ctWritable(image) || !dashPickPath("Import which .psu?", dir, DASH_PICK_FILE, "PSU", psu, sizeof(psu)))
+	if (!ctWritable(image) || !dashPickPath("Import which save?", dir, DASH_PICK_FILE, CT_SAVE_EXTS, psu, sizeof(psu)))
 		return;
 	if (!ctStacks(psu, image))
 		return;
@@ -1286,7 +1391,7 @@ void dashCardTool(const char *image)
 		}
 
 		ct_items[0].icon = DI_PLUS;
-		ct_items[0].label = "Import .psu...";
+		ct_items[0].label = "Import save...";
 		ct_items[0].detail = writable ? "the card gets a safety copy first" : "PCSX2 .ps2 cards are read-only here";
 		ct_items[0].disabled = !writable;
 		ct_items[1].icon = DI_MC;

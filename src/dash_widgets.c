@@ -863,6 +863,28 @@ static void pickListRun(void *arg)
 	j->n = getDir(j->path, j->files);
 }
 
+/* ext is one extension ("PSU") or several separated by '|' ("PSU|MCM|MAX"). */
+static int pickExtOk(const char *name, const char *ext)
+{
+	char one[8];
+	const char *p = ext;
+
+	while (*p) {
+		size_t n = strcspn(p, "|");
+
+		if (n > 0 && n < sizeof(one)) {
+			memcpy(one, p, n);
+			one[n] = 0;
+			if (genCmpFileExt(name, one))
+				return 1;
+		}
+		p += n;
+		if (*p == '|')
+			p++;
+	}
+	return 0;
+}
+
 static void pickListDone(void *arg)
 {
 	PickListJob *j = (PickListJob *)arg;
@@ -876,7 +898,7 @@ static void pickListDone(void *arg)
 
 			if (f->name[0] == '\0' || !strcmp(f->name, ".") || !strcmp(f->name, ".."))
 				continue;
-			if (!is_dir && (pk.mode == DASH_PICK_FOLDER || (pk.ext != NULL && !genCmpFileExt(f->name, pk.ext))))
+			if (!is_dir && (pk.mode == DASH_PICK_FOLDER || (pk.ext != NULL && !pickExtOk(f->name, pk.ext))))
 				continue;
 			if (!is_dir && pk.mode == DASH_PICK_LAUNCH && !genCmpFileExt(f->name, "ELF"))
 				continue;

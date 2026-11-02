@@ -370,6 +370,7 @@ targets:
       - src/mc_card_view.c
       - src/mc_sha256.c
       - src/mc_card_write.c
+      - src/mc_save_formats.c
       - src/dash_card_tool.c
       - src/mmce_card_switch.c
       - src/mmce_backup.c
