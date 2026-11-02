@@ -284,7 +284,20 @@ int main(void){
  for(int i=0;i<count;i++)for(unsigned j=0;j<sizeof(ignored)/sizeof(ignored[0]);j++)if(devices[i].dev==ignored[j]){
   reset();misreport[devices[i].dev]=1;snprintf(path,MAX_PATH,"%sBOOT.ELF",devices[i].dir);launch(path);
   if(message[0]||!launched[0]){fprintf(stderr,"FAIL misreported load %s: \"%s\"\n",path,message);failures++;}
+  /* A file that opened there is not an executable; its drivers are not blamed. */
+  reset();misreport[devices[i].dev]=1;snprintf(path,MAX_PATH,"%sNOTES.TXT",devices[i].dir);
+  snprintf(want,MAX_PATH,"This file isn't an ELF: %s.",path);launch(path);expect("misreported load, not an executable",path,want);
  }
+ /* OSDSYS started from its launch key path: a missing file is named by that
+  * path, not by the launch before it. */
+ static const char *const osdsys[]={"mass:/OSDSYS.ELF","mc:/BOOT/OSDSYS.ELF"};
+ settings.LK_Flag[SETTING_LK_OSDSYS]=1;
+ for(unsigned i=0;i<sizeof(osdsys)/sizeof(osdsys[0]);i++){
+  reset();launch("mass:/OTHER.ELF");
+  snprintf(settings.LK_Path[SETTING_LK_OSDSYS],MAX_PATH,"%s",osdsys[i]);snprintf(want,MAX_PATH,"%s is Not Found.",osdsys[i]);
+  launch(settings.Misc_OSDSYS);expect("missing OSDSYS",osdsys[i],want);
+ }
+ settings.LK_Flag[SETTING_LK_OSDSYS]=0;
  /* checkELFheader() itself: missing, device down, not executable, ELF. */
  reset();running[D_UDPFS]=1;fail[D_MMCE]=1;
  char missing[]="udpfs:/MISSING.ELF",notes[]="udpfs:/NOTES.TXT",boot[]="udpfs:/BOOT.ELF",offline[]="mmce0:/BOOT.ELF";
@@ -293,7 +306,7 @@ int main(void){
   fprintf(stderr,"FAIL checkELFheader: missing %d, device down %d, text %d, ELF %d; expected -2, -2, -1, 1\n",got[0],got[1],got[2],got[3]);failures++;
  }
  if(failures)return 1;
- printf("PASS: %d devices: drivers that do not load are named, missing files are not found, "
+ printf("PASS: %d devices: drivers that do not load are named, missing files (OSDSYS's too) are not found, "
         "other files are not executables, and every working launch starts\n",count);
  return 0;
 }
