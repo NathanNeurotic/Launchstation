@@ -6,7 +6,8 @@ just before `and $sp,$sp,$1` realigns it, so the reload reads another slot.
 The fixed prologue, plain frames, callee-saved saves, $fp-relative stores and
 stores through other registers (a body store the delay-slot filler moved
 ahead of the realignment) must pass. Linked, relocatable and stripped files
-are all read.
+are all read. A --max-frame budget counts a function's largest allocation and
+its realignment, and fails for a frame over budget or a missing function.
 """
 import importlib.util
 from pathlib import Path
@@ -246,10 +247,54 @@ with tempfile.TemporaryDirectory(prefix='stack-realign-') as folder:
         assert result.returncode == 1 and 'PASS' not in result.stdout, result
         assert 'no code found, so nothing was checked' in result.stderr, result
 
+    # --max-frame NAME=BYTES: a function's frame is its largest allocation,
+    # plus 48 bytes when it realigns $sp, and must be within budget in every file.
+    SHRINK_WRAPPED = [beq(4, 0, 4), 0, addiu(SP, SP, -2048), sd(RA, 2040, SP), addiu(SP, SP, 2048)] + RETURN
+    # delete() before its listing moved to the heap: a 920000-byte frame, realigned.
+    OLD_DELETE = [lui(1, 0xE), i_type(0x0D, 1, 1, 0x09C0), subu(SP, SP, 1), move(FP, SP)] + REALIGN + RETURN
+    frames = [('fixed_copy', FIXED_COPY), ('plain_frame', [addiu(SP, SP, -32), sd(4, 0, SP)] + RETURN),
+              ('shrink_wrapped', SHRINK_WRAPPED), ('old_delete', OLD_DELETE)]
+    (folder / 'frames.elf').write_bytes(elf(frames))
+    (folder / 'frames.o').write_bytes(elf(frames, relocatable=True))
+    (folder / 'no-delete.elf').write_bytes(elf(frames[:3]))
+    budgets = lambda files, *limits: subprocess.run(
+        [sys.executable, str(script)] + [str(folder / n) for n in files]
+        + [arg for limit in limits for arg in ('--max-frame', limit)], capture_output=True, text=True)
+    for name in ('frames.elf', 'frames.o'):
+        measured = {function.name: check.stack_frame(function) for function in check.read_functions(folder / name)}
+        assert measured == {'fixed_copy': 0x23C0 + 48, 'plain_frame': 32, 'shrink_wrapped': 2048,
+                            'old_delete': 920000 + 48}, measured
+    result = budgets(['frames.elf', 'frames.o'], 'fixed_copy=9200', 'shrink_wrapped=0x800', 'plain_frame=32')
+    assert result.returncode == 0 and not result.stderr, result
+    assert result.stdout.count('stack frames within budget: fixed_copy 9200 <= 9200, shrink_wrapped 2048 <= 2048, '
+                               'plain_frame 32 <= 32') == 2, result
+    result = budgets(['frames.elf'], 'fixed_copy=9199', 'old_delete=4096', 'missing=100', 'plain_frame=64')
+    assert result.returncode == 1 and 'within budget' not in result.stdout, result
+    assert 'fixed_copy has a 9200-byte stack frame, more than its budget of 9199' in result.stderr, result
+    assert 'old_delete has a 920048-byte stack frame, more than its budget of 4096' in result.stderr, result
+    assert 'missing not found, so its frame was not checked' in result.stderr, result
+    assert 'plain_frame' not in result.stderr, result
+    # Every file must have the function: one without it fails, the other still passes.
+    result = budgets(['frames.elf', 'no-delete.elf'], 'old_delete=1000000')
+    assert result.returncode == 1, result
+    assert 'PASS %s: stack frames within budget: old_delete 920048 <= 1000000' % (folder / 'frames.elf') in result.stdout
+    assert result.stderr.strip() == 'FAIL %s: old_delete not found, so its frame was not checked' % (
+        folder / 'no-delete.elf'), result
+    # Both checks run on every file: a store before a realignment in one file
+    # skips neither its budgets nor another file's.
+    result = budgets(['clean.elf', 'broken.elf'], 'fixed_copy=9200')
+    assert result.returncode == 1 and 'shipped_copy at' in result.stderr, result
+    assert 'PASS %s: stack frames within budget: fixed_copy 9200 <= 9200' % (folder / 'clean.elf') in result.stdout
+    assert 'FAIL %s: fixed_copy not found' % (folder / 'broken.elf') in result.stderr, result
+    for bad in ('fixed_copy', '=100', 'fixed_copy=big'):
+        result = budgets(['frames.elf'], bad)
+        assert result.returncode == 2 and 'expected NAME=BYTES' in result.stderr, result
+
 print('PASS: the shipped copy() prologue and %d other pre-realignment stores fail (through $sp and '
       'every kind of temporary made from it, through $s7 and one made from it, a callee-saved '
       'register stored after the window changed it, and before an `and` in a delay slot); the fixed '
       'prologue, callee-saved saves, $fp stores, stores through other registers (Clang\'s body store '
       'ahead of a delay-slot `and`, an overwritten temporary, a $s7 the window set), plain and later '
       'spills pass; frames of every allocation form are measured; linked, relocatable and stripped '
-      'ELF; a file with no code to check fails' % (len(FLAGGED) - 1))
+      'ELF; a file with no code to check fails; --max-frame fails a frame over its budget (counting '
+      'the realignment and an allocation after an early return) or a missing function' % (len(FLAGGED) - 1))

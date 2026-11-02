@@ -44,6 +44,7 @@ jobs:
           python3 tests/test_copy_pipeline.py
           python3 tests/test_udpfs_directory_errors.py
           python3 tests/test_copy_psu_listing.py
+          python3 tests/test_file_browser_heap.py
           python3 tests/test_stack_realign_check.py
           python3 tests/test_smb_shares.py
           python3 tests/test_copy_test_pack.py
@@ -309,6 +310,19 @@ jobs:
             build-ds34/obj/wLaunchELF/wLaunchELF.unstripped.elf \
             build/obj/loader/loader.unstripped.elf \
             build/obj/wle_igr/wle_igr.unstripped.elf
+
+      - name: Verify recursive file operations keep small stack frames
+        run: |
+          # The EE main thread has a 128 KB stack. copy() nests up to 16
+          # frames on it, and delete() and getFileSize() one per folder level,
+          # each with its listing (about 900 KB) on the heap. At these budgets
+          # 16 copy() frames take 68 KB, which leaves room for the browsers
+          # above them and the calls below them.
+          python3 scripts/check_stack_realign.py \
+            --max-frame copy=4352 --max-frame delete=3072 --max-frame getFileSize=2048 \
+            --max-frame getFilePath=1024 --max-frame browseFilePath=11264 \
+            build/obj/wLaunchELF/wLaunchELF.unstripped.elf \
+            build-ds34/obj/wLaunchELF/wLaunchELF.unstripped.elf
 
       - name: Verify source-built UDPFS SMAP and bundled peer ABI
         run: python3 scripts/check_udpfs_smap.py build build-ds34

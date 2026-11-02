@@ -279,25 +279,26 @@ int filerConfirmExploitModify(const char *path, const FILEINFO *file)
 
 u64 getFileSize(const char *path, const FILEINFO *file)
 {
+	static char party[MAX_NAME];  //only used for a file, which does not recurse
 	iox_stat_t stat;
-	u64 size, filesize;
-	FILEINFO files[MAX_ENTRY];
-	char dir[MAX_PATH], party[MAX_NAME];
+	u64 size;
+	FILEINFO *files;
+	char dir[MAX_PATH];
 	int nfiles, i, ret;
 
 	if (!ensurePathDeviceStackReady(path))
 		return 0;
 
 	if (file->stats.AttrFile & sceMcFileAttrSubdir) {  //Folder object to size up
+		/* each level lists on the heap: MAX_ENTRY entries are about 900 KB */
+		files = (FILEINFO *)memalign(64, MAX_ENTRY * sizeof(FILEINFO));
+		if (files == NULL)
+			return 0;
 		sprintf(dir, "%s%s/", path, file->name);
 		nfiles = getDir(dir, files);
-		for (i = size = 0; i < nfiles; i++) {
-			filesize = getFileSize(dir, &files[i]);  //recurse for each object in folder
-			if (filesize < 0)
-				return -1;
-			else
-				size += filesize;
-		}
+		for (i = size = 0; i < nfiles; i++)
+			size += getFileSize(dir, &files[i]);  //recurse for each object in folder
+		free(files);
 	} else {  //File object to size up
 		if (!strncmp(path, "hdd", 3)) {
 			getHddParty(path, file, party, dir);
@@ -1852,8 +1853,9 @@ void make_title_cfg(const char *path, const FILEINFO *file, char *_msg0)
 //--------------------------------------------------------------
 int delete (const char *path, const FILEINFO *file)
 {
-	FILEINFO files[MAX_ENTRY];
-	char party[MAX_NAME], dir[MAX_PATH], hdddir[MAX_PATH];
+	static char party[MAX_NAME];  //only used before this level recurses
+	FILEINFO *files;
+	char dir[MAX_PATH], hdddir[MAX_PATH];
 	int nfiles, i, ret;
 
 	if (!ensurePathDeviceStackReady(path))
@@ -1885,13 +1887,24 @@ int delete (const char *path, const FILEINFO *file)
 #endif
 	if (file->stats.AttrFile & sceMcFileAttrSubdir) {  //Is the object to delete a folder ?
 		strcat(dir, "/");
+		/* Each level lists on the heap: MAX_ENTRY entries are about 900 KB, far
+		 * more than the stack. */
+		files = (FILEINFO *)memalign(64, MAX_ENTRY * sizeof(FILEINFO));
+		if (files == NULL)
+			return -ENOMEM;
 		nfiles = getDir(dir, files);
-		if (nfiles < 0) return nfiles;
+		if (nfiles < 0) {
+			free(files);
+			return nfiles;
+		}
 		for (i = 0; i < nfiles; i++) {
 			ret = delete (dir, &files[i]);  //recursively delete contents of folder
-			if (ret < 0)
+			if (ret < 0) {
+				free(files);
 				return -1;
+			}
 		}
+		free(files);
 		if (!strncmp(dir, "mc", 2)) {
 			ensureMemoryCardPortAccessible(dir[2] - '0');
 			mcSync(0, NULL, NULL);

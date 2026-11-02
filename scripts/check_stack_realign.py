@@ -32,6 +32,13 @@ This checks every function in the given ELF files, linked or relocatable, and
 exits 1 if any has such a store, or if a file has no code to check (no
 executable section, or no section headers at all). It needs no toolchain: it
 decodes the ELF and the few MIPS instructions involved itself.
+
+With --max-frame NAME=BYTES it also fails unless every file has a function
+NAME whose stack frame is at most BYTES. copy() calls itself once per folder
+level, up to MAX_RECURSE (16) frames deep, and delete() and getFileSize() once
+per level of the folder tree, on the EE main thread's 128 KB stack. A listing
+of MAX_ENTRY entries is about 900 KB, so each level keeps its listing on the
+heap; a budget catches a listing or other large buffer put back in a frame.
 """
 
 import argparse
@@ -53,6 +60,9 @@ FPR_STORES = {0x39: "swc1", 0x3D: "sdc1"}
 WRITES_RT = {0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x18, 0x19,  # ALU immediate
              0x1A, 0x1B, 0x1E, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26,  # loads
              0x27, 0x37}
+
+# `and $sp` with -64 after a 16-byte aligned allocation lowers $sp by up to 48 bytes.
+REALIGN_SLACK = 48
 
 SHT_PROGBITS, SHT_SYMTAB = 1, 2
 SHF_EXECINSTR = 0x4
@@ -220,6 +230,44 @@ def check(function):
     return hazards, realignments
 
 
+def stack_frame(function):
+    """The most stack the function's own frame takes: its largest allocation,
+    wherever it is (shrink-wrapping can put it after an early return), plus
+    REALIGN_SLACK if it realigns $sp."""
+    constants, size, realigns = {}, 0, False
+    for index, word in enumerate(function.words):
+        allocated = frame_size(function.words, index, constants)
+        if allocated is not None:
+            size = max(size, allocated)
+        track_constant(word, constants)
+        realigns = realigns or realigns_sp(word)
+    return size + (REALIGN_SLACK if realigns else 0)
+
+
+def frame_budget(text):
+    name, separator, size = text.partition("=")
+    try:
+        if not name or not separator:
+            raise ValueError
+        return name, int(size, 0)
+    except ValueError:
+        raise argparse.ArgumentTypeError("expected NAME=BYTES, got %r" % text)
+
+
+def check_frames(functions, budgets):
+    """Return (failures, passes) as printable lines for each NAME=BYTES budget."""
+    failures, passes = [], []
+    for name, budget in budgets:
+        frames = [stack_frame(function) for function in functions if function.name == name]
+        if not frames:
+            failures.append("%s not found, so its frame was not checked" % name)
+        elif max(frames) > budget:
+            failures.append("%s has a %d-byte stack frame, more than its budget of %d" % (name, max(frames), budget))
+        else:
+            passes.append("%s %d <= %d" % (name, max(frames), budget))
+    return failures, passes
+
+
 def scan(path):
     functions = read_functions(path)
     hazards, realigned = [], []
@@ -235,6 +283,9 @@ def scan(path):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("elves", nargs="+", type=pathlib.Path)
+    parser.add_argument("--max-frame", action="append", default=[], type=frame_budget, metavar="NAME=BYTES",
+                        help="also fail unless function NAME is present and its stack frame, with "
+                             "%d bytes for a realignment, is at most BYTES" % REALIGN_SLACK)
     args = parser.parse_args(argv)
     failed = False
     for path in args.elves:
@@ -258,6 +309,14 @@ def main(argv=None):
         else:
             print("PASS %s: %d functions, %d realign $sp, none stores to the stack before realigning"
                   % (path, len(functions), len({name for name, _ in realigned})))
+        if args.max_frame:
+            too_big, within = check_frames(functions, args.max_frame)
+            for line in too_big:
+                print("FAIL %s: %s" % (path, line), file=sys.stderr)
+            if too_big:
+                failed = True
+            else:
+                print("PASS %s: stack frames within budget: %s" % (path, ", ".join(within)))
     return 1 if failed else 0
 
 

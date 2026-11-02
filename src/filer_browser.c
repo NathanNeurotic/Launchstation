@@ -1081,7 +1081,7 @@ static void formatBrowserTimestamp(char *dst, size_t dst_size, const PS2TIME *ti
 	snprintf(dst, dst_size, "%s %s", time_text, date_text);
 }
 
-int getFilePath(char *out, int cnfmode)
+static int browseFilePath(char *out, int cnfmode, FILEINFO *files)
 {
 	char path[MAX_PATH], cursorEntry[MAX_PATH],
 	    msg0[MAX_PATH], msg1[MAX_PATH],
@@ -1091,7 +1091,6 @@ int getFilePath(char *out, int cnfmode)
 	char device_dvdver[CONSOLE_INFO_LINE_MAX_LEN];
 	const unsigned char *mcTitle;
 	u64 color;
-	FILEINFO files[MAX_ENTRY];
 	int top = 0, rows;
 	int x, y, y0, y1, list_end_y;
 	int i, j, ret, rv = -1;  //NB: rv is for return value of this function
@@ -2013,6 +2012,21 @@ int getFilePath(char *out, int cnfmode)
 	if (rv <= 0)
 		LaunchArgsClear();
 	unmountAll();
+	return rv;
+}
+
+int getFilePath(char *out, int cnfmode)
+{
+	/* The listing is on the heap: MAX_ENTRY entries are about 900 KB, far
+	 * more than the 128 KB stack. Each call has its own, as the text editor
+	 * opened from this browser can open another browser. */
+	FILEINFO *files = (FILEINFO *)memalign(64, MAX_ENTRY * sizeof(FILEINFO));
+	int rv;
+
+	if (files == NULL)
+		return -1;  //as if left without choosing anything
+	rv = browseFilePath(out, cnfmode, files);
+	free(files);
 	return rv;
 }
 //------------------------------

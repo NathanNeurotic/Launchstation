@@ -462,12 +462,16 @@ finish:
 //--------------------------------------------------------------
 int copy(char *outPath, const char *inPath, const FILEINFO *src, int recurses)
 {
+	/* Up to MAX_RECURSE levels of this frame nest on the caller's 128 KB stack
+	 * (CI checks its size). These are only used between the recursive calls,
+	 * never across one, so all levels share one copy of each. The paths below
+	 * stay in each level's frame. */
+	static FILEINFO newfile;
+	static char progress[MAX_PATH * 4], inParty[MAX_NAME], outParty[MAX_NAME];
 	FILEINFO file = *src;
-	FILEINFO newfile, *files = NULL;
+	FILEINFO *files = NULL;
 	iox_stat_t iox_stat;
-	char out[MAX_PATH], in[MAX_PATH], tmp[MAX_PATH],
-	    progress[MAX_PATH * 4],
-	    *buff = NULL, *buff2 = NULL, *copyBuff, inParty[MAX_NAME], outParty[MAX_NAME];
+	char out[MAX_PATH], in[MAX_PATH], tmp[MAX_PATH], *buff = NULL, *buff2 = NULL, *copyBuff;
 	int nfiles, i;
 	u64 size = 0;
 	u64 original_size = 0;

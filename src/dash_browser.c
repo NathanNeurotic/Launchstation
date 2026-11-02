@@ -993,9 +993,9 @@ static void opNewFolder(void)
 		openDir(fb.dir, name);
 }
 
-/* getFileSize() recurses with a MAX_ENTRY listing on the stack and may
- * start drivers, so it runs here on the UI thread (big stack), not on the
- * worker */
+/* getFileSize() may start drivers, which only the UI thread may do, so it
+ * runs here and not on the worker. Each folder level it lists is on the heap;
+ * its recursion keeps only paths on the stack. */
 static void opSize(void)
 {
 	static int idx[MAX_ENTRY];
