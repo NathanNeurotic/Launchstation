@@ -536,7 +536,7 @@ int copy(char *outPath, const char *inPath, const FILEINFO *src, int recurses)
 	u64 OldTime = 0LL;
 	u64 EtaOldTime = 0LL;
 	mcT_header *mcT_head_p = (mcT_header *)&file.stats;
-	int psu_pad_size = 0, PSU_restart_f = 0, psu_kept = 0;
+	int psu_pad_size = 0, PSU_restart_f = 0, psu_huge = 0, psu_kept = 0;
 	char *cp, *np;
 #if FILEOP_TRACE
 	int trace_net_copy = 0;
@@ -673,15 +673,17 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			i = strlen(out) - 1;
 			if (out[i] == '/')
 				out[i] = 0;
+			psu_huge = setting->PSU_HugeNames;
+		psu_backup_name:  //named again, after the folder too, when its title is another save's
 			strcpy(tmp, out);
 			np = tmp + strlen(tmp) - strlen(file.name);  //np = start of the pure filename
 			cp = tmp + strlen(tmp);                      //cp = end of the pure filename
-			if (!setting->PSU_HugeNames)
+			if (!psu_huge)
 				cp = np;  //cp = start of the pure filename
 
-			if (fileShowTitles() || setting->PSU_HugeNames) {  //at request, use game title
+			if (fileShowTitles() || psu_huge) {  //at request, use game title
 				ret = filerGetGameTitle(inPath, &file, file.title);
-				if ((ret == 0) && file.title[0] && setting->PSU_HugeNames) {
+				if ((ret == 0) && file.title[0] && psu_huge) {
 					*cp++ = '_';
 					*cp = '\0';
 				}
@@ -715,6 +717,14 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			if (!strncmp(tmp, "host:/", 6))
 				makeHostPath(tmp, tmp);
 #endif
+			//Saves of one game share a name taken from their title alone. A backup of
+			//another save (or a file that is no PSU) of that name stays, and this one
+			//is named after its folder too, as PSU_HugeNames names it: replacing that
+			//backup would lose the other save after a Move
+			if (!psu_huge && fileShowTitles() && file.title[0] && psu_backup_holds_other_save(tmp, mcT_head_p)) {
+				psu_huge = 1;
+				goto psu_backup_name;
+			}
 			if (setting->PSU_DateNames && setting->PSU_NoOverwrite) {
 				if (0 <= (out_fd = genOpen(tmp, FIO_O_RDONLY))) {  //Name conflict ?
 					genClose(out_fd);

@@ -54,6 +54,21 @@ void psu_backup_discard_root_image(int out_fd, const char *path)
 	genRemove(temp);
 }
 
+int psu_backup_holds_other_save(const char *path, const mcT_header *folder_stats)
+{
+	psu_header psu_head;
+	int fd, other;
+
+	fd = genOpen(path, FIO_O_RDONLY);
+	if (fd < 0)
+		return 0;  //nothing there
+	other = genRead(fd, (void *)&psu_head, sizeof(psu_head)) != PSU_HEADER_SIZE ||
+	        !(psu_head.attr & sceMcFileAttrSubdir) ||
+	        strncmp((const char *)psu_head.name, (const char *)folder_stats->name, sizeof(psu_head.name));
+	genClose(fd);
+	return other;
+}
+
 int psu_backup_create_root_image(const char *path, const mcT_header *folder_stats, int *out_fd, int *psu_content)
 {
 	char temp[MAX_PATH];

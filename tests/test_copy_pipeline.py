@@ -163,6 +163,7 @@ static int getDir(const char *p,FILEINFO *out){
  while((e=readdir(d))){if(!strcmp(e->d_name,".")||!strcmp(e->d_name,".."))continue;assert(n<MAX_ENTRY);memset(&out[n],0,sizeof(out[n]));snprintf(out[n].name,sizeof(out[n].name),"%s",e->d_name);char full[MAX_PATH];snprintf(full,sizeof(full),"%s%s",p,e->d_name);struct stat st;assert(!stat(full,&st));out[n].stats.AttrFile=S_ISDIR(st.st_mode)?sceMcFileAttrSubdir:0;out[n].stats.FileSizeByte=st.st_size;n++;}closedir(d);return n;
 }
 static int unexpected(void){assert(!"PSU branch is outside this ordinary-copy fixture");return -1;}
+#define psu_backup_holds_other_save(...) unexpected()
 #define psu_backup_create_root_image(...) unexpected()
 #define psu_backup_finalize_root_image(...) unexpected()
 #define psu_backup_discard_root_image(...) unexpected()

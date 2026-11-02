@@ -10,7 +10,8 @@ A Move deletes only what was copied: an item that copy() kept at the
 destination (a dated PSU name already taken, or the file or folder itself)
 stays, cut. A PSU backup replaces an older one only once it is complete, and
 when that replacing fails after the older one is gone, the new one stays under
-its temporary name.
+its temporary name. A backup named after a game title alone never replaces
+another save's backup.
 
 Drivers are replaced by POSIX files; libmc and the IOP are not emulated.
 """
@@ -182,8 +183,10 @@ static int getHddParty(const char *p,const FILEINFO *f,char *a,char *b){return +
 static int getHddDVRPParty(const char *p,const FILEINFO *f,char *a,char *b){return ++party_calls==party_fail_at?-1:real_getHddDVRPParty(p,f,a,b);}
 static int mountParty(const char *p){(void)p;return ++mount_calls==mount_fail_at?-1:mount_slot[mount_calls%16];}
 static int mountDVRPParty(const char *p){return ++mount_calls==mount_fail_at?-1:getDVRPPartyMountIndex(p);}
-static int fileShowTitles(void){return 0;}
-static int filerGetGameTitle(const char *p,const FILEINFO *f,unsigned char *out){(void)p;(void)f;out[0]=0;return -1;}
+/* With game titles shown (show_titles), every save has the title game_title. */
+static int show_titles;static const char *game_title;
+static int fileShowTitles(void){return show_titles;}
+static int filerGetGameTitle(const char *p,const FILEINFO *f,unsigned char *out){(void)p;(void)f;if(!game_title){out[0]=0;return -1;}strcpy((char *)out,game_title);return 0;}
 static void transcpy_sjis(char *out,const unsigned char *in){strcpy(out,(const char *)in);}
 /* A protected (exploit or system-update) folder: only a named entry can be one here. */
 static int protected_folder,modify_answer=1,modify_calls,delete_questions,delete_fail;
@@ -249,16 +252,22 @@ static int read_all(const char *p,unsigned char *out,int max){int fd=open(p,O_RD
 static int filled(const char *p,int n,int byte){static unsigned char b[1<<19];if(read_all(p,b,sizeof(b))!=n)return 0;for(int i=0;i<n;i++)if(b[i]!=byte)return 0;return 1;}
 static int same(const char *p,const void *data,int n){static unsigned char b[8192];return read_all(p,b,sizeof(b))==n&&!memcmp(b,data,n);}
 static int holds(const char *p,const char *text){return same(p,text,strlen(text));}
+/* A PSU whose first header names the save folder 'folder', and that holds 'text'. */
+static int backs_up(const char *p,const char *folder,const char *text){static unsigned char b[8192];psu_header h;int n=read_all(p,b,sizeof(b)),i,t=strlen(text);
+ if(n<(int)sizeof(h))return 0;memcpy(&h,b,sizeof(h));if(strncmp((char *)h.name,folder,sizeof(h.name)))return 0;
+ for(i=0;i+t<=n;i++)if(!memcmp(b+i,text,t))return 1;return 0;}
+static void add(const char *name,int attr);
 static void clip(const char *path,const char *name,int attr,int mode){
  yn_answer=1;yn_calls=0;cancel_copy=0;fail_alloc_bytes=0;browser_cut=0;generation=clipIopResetGeneration=1;
  writes=write_fail_at=0;alloc_fail_stage=NULL;renames=rename_fail=0;typed=NULL;
- read_fail_name=close_fail_name=NULL;
+ read_fail_name=close_fail_name=NULL;show_titles=0;game_title=NULL;
  party_calls=party_fail_at=mount_calls=mount_fail_at=0;memset(mount_slot,0,sizeof(mount_slot));
  protected_folder=0;modify_answer=1;modify_calls=delete_questions=delete_fail=0;
- PasteMode=mode;strcpy(clipPath,path);nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));
- strcpy(clipFiles[0].name,name);clipFiles[0].stats.AttrFile=attr;
+ PasteMode=mode;strcpy(clipPath,path);nclipFiles=0;memset(clipFiles,0,sizeof(clipFiles));add(name,attr);
 }
-static void add(const char *name,int attr){strcpy(clipFiles[nclipFiles].name,name);clipFiles[nclipFiles++].stats.AttrFile=attr;}
+/* A clipboard entry as a listing makes it, its mcTable entry naming it too. */
+static void add(const char *name,int attr){FILEINFO *f=&clipFiles[nclipFiles++];
+ strcpy(f->name,name);f->stats.AttrFile=attr;snprintf((char *)f->stats.EntryName,sizeof(f->stats.EntryName),"%.31s",name);}
 static void paste(const char *destination){message[0]=0;subfunc_Paste(message,(char *)destination);}
 /* The failure message has this text; when it does not, it is shown. */
 static int says(const char *text){if(strstr(message,text))return 1;fprintf(stderr,"message: %s\n",message);return 0;}
@@ -530,6 +539,25 @@ int main(void){
  assert(nclipFiles==2&&!strcmp(clipFiles[1].name,"FIRST"));
  remove_tree("mc0:/FIRST");
  config.PSU_DateNames=config.PSU_NoOverwrite=0;
+ /* With game titles shown, a PSU is named after its save's title alone, so
+  * two saves of one game get one name. The second must not replace the
+  * first's backup (a Move would then lose the first save): it is named after
+  * its folder too, as PSU_HugeNames names it. A save backed up again still
+  * replaces its own backup, and a file there that is no PSU is kept too. */
+ mkdir("mc0:/SAVE1",0700);put("mc0:/SAVE1/ONE.BIN","one",3);mkdir("mc0:/SAVE2",0700);put("mc0:/SAVE2/TWO.BIN","two",3);
+ clip("mc0:/","SAVE1",0x8427,PM_PSU_BACKUP);add("SAVE2",0x8427);show_titles=1;game_title="SAME GAME";browser_cut=1;paste("mass:/");
+ settled();
+ assert(quiet()&&backs_up("mass:/SAME GAME.psu","SAVE1","ONE.BIN")&&backs_up("mass:/SAVE2_SAME GAME.psu","SAVE2","TWO.BIN"));
+ assert(!exists("mc0:/SAVE1")&&!exists("mc0:/SAVE2")&&!nclipFiles);
+ mkdir("mc0:/SAVE1",0700);put("mc0:/SAVE1/ONE.BIN","one again",9);
+ clip("mc0:/","SAVE1",0x8427,PM_PSU_BACKUP);show_titles=1;game_title="SAME GAME";paste("mass:/");
+ settled();
+ assert(quiet()&&backs_up("mass:/SAME GAME.psu","SAVE1","one again")&&!exists("mass:/SAVE1_SAME GAME.psu"));
+ put("mass:/OTHER GAME.psu","notes",5);
+ clip("mc0:/","SAVE1",0x8427,PM_PSU_BACKUP);show_titles=1;game_title="OTHER GAME";paste("mass:/");
+ settled();
+ assert(quiet()&&holds("mass:/OTHER GAME.psu","notes")&&backs_up("mass:/SAVE1_OTHER GAME.psu","SAVE1","one again"));
+ remove_tree("mc0:/SAVE1");
  /* A subfolder cannot go into a PSU; the backup stops and frees its listing.
   * A folder named like the save at the destination must not let the
   * subfolder be written there as a PSU of its own. */

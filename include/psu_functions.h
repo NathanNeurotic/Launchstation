@@ -6,6 +6,9 @@
 
 void clear_psu_header(psu_header *psu);
 void pad_psu_header(psu_header *psu);
+/* Whether 'path' holds a file that is not a PSU backup of the save folder
+ * 'folder_stats': another save's backup, or no PSU at all. */
+int psu_backup_holds_other_save(const char *path, const mcT_header *folder_stats);
 /* A backup to the .psu 'path' writes a temporary file beside it (out_fd).
  * Finalize closes it and only then replaces an older .psu with it; discard
  * closes and removes it. Create and finalize return 0 or a negative error.

@@ -58,7 +58,8 @@ with tempfile.TemporaryDirectory(prefix="r3z-classic-modes-") as td:
 assert "int file_show = FILE_SHOW_NAME_DETAILS;" in listing
 assert "if (fileShowTitles() || (file_sort == 2))" in listing
 assert "t = fileShowTitles();" in sort
-assert "if (fileShowTitles() || setting->PSU_HugeNames)" in copy
+assert "psu_huge = setting->PSU_HugeNames;" in copy
+assert "if (fileShowTitles() || psu_huge)" in copy
 
 for snippet in (
     "file_show = (file_show == FILE_SHOW_NAME) ? FILE_SHOW_NAME_DETAILS : FILE_SHOW_NAME;",
