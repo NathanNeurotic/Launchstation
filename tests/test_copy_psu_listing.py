@@ -7,7 +7,8 @@ must be left exactly as it was, and that level creates no folder. Every early
 exit frees the listing, and a PSU restore that stops early closes its PSU. A
 file whose first entry is not a folder is not a PSU and is refused and closed.
 A Move deletes only what was copied: an item that copy() kept at the
-destination (a dated PSU name already taken, or the file itself) stays, cut.
+destination (a dated PSU name already taken, or the file or folder itself)
+stays, cut.
 
 Drivers are replaced by POSIX files; libmc and the IOP are not emulated.
 """
@@ -187,11 +188,14 @@ static int remove_tree(const char *p){struct stat st;if(lstat(p,&st))return -err
 static int delete(const char *p,const FILEINFO *f){if(delete_fail)return -EIO;char t[MAX_PATH];snprintf(t,sizeof(t),"%s%s",p,f->name);return remove_tree(t);}
 static void markMx4sioDestinationAfterWrite(const char *p){(void)p;}
 static int genCmpFileExt(const char *name,const char *ext){const char *p=strrchr(name,'.');return p!=NULL&&!strcasecmp(p+1,ext);}
-/* Like the real newdir(), it maps an HDD or DVR parent to its partition's folder. */
+/* Like the real newdir(), it maps an HDD or DVR parent to its partition's folder,
+ * and cuts the new name as genLimObjName() does (on a VMC to 32 characters). */
+static void genLimObjName(char *uLE_path,int reserve);
 static int newdir(const char *parent,const char *name){char p[MAX_PATH],party[MAX_NAME];int dvr=!strncmp(parent,"dvr_hdd",7),slot;
  if(dvr||!strncmp(parent,"hdd",3)){if((dvr?getHddDVRPParty:getHddParty)(parent,NULL,party,p)<0)return -1;
   if((slot=dvr?mountDVRPParty(party):mountParty(party))<0)return -1;p[dvr?7:3]='0'+slot;strcat(p,name);}
  else snprintf(p,sizeof(p),"%s%s",parent,name);
+ if(strncmp(parent,"mc",2))genLimObjName(p,0);  /* a memory card's own limit is left to mcman */
  return mkdir(p,0700)?-errno:0;}
 static DIR *dirs[64];static char dir_path[64][MAX_PATH];
 static int fileXioDopen(const char *p){DIR *d=opendir(p);if(!d)return -errno;for(int i=0;i<64;i++)if(!dirs[i]){dirs[i]=d;snprintf(dir_path[i],MAX_PATH,"%s",p);return i;}assert(0);return -1;}
@@ -523,6 +527,17 @@ int main(void){
  settled();
  assert(says("ABCDEFGHIJKLMNOPQRSTUVWXYZ012345 was not moved\nIt is already at the destination."));
  assert(holds("mc1:/D/ABCDEFGHIJKLMNOPQRSTUVWXYZ012345","n")&&nclipFiles==1);
+ /* Nor a folder, whose files would each be at the destination already while
+  * the folder itself was deleted: here a VMC folder whose new name names it
+  * once cut to 32 characters, as newdir() cuts it there (so the paste would
+  * ask to merge into that "existing" folder). */
+ mkdir("vmc0:",0700);mkdir("vmc0:/E",0700);mkdir("vmc0:/E/ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",0700);
+ put("vmc0:/E/ABCDEFGHIJKLMNOPQRSTUVWXYZ012345/F.BIN","f",1);
+ clip("vmc0:/E/","ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",0x8427,PM_RENAME);typed="E/ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456";
+ browser_cut=1;paste("vmc0:/");
+ settled();
+ assert(says("ABCDEFGHIJKLMNOPQRSTUVWXYZ012345 was not moved\nIt is already at the destination.")&&!yn_calls);
+ assert(holds("vmc0:/E/ABCDEFGHIJKLMNOPQRSTUVWXYZ012345/F.BIN","f")&&nclipFiles==1);
  /* So a copy is never mistaken for one: copy() returns 0 for a file it copied,
   * here to a memory card, after which its result held an attribute request. */
  clip("udpfs:/TOP/","F.BIN",0x8497,PM_NORMAL);PM_flag[0]=PM_NORMAL;PM_file[0]=-1;

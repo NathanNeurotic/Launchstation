@@ -628,7 +628,9 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 	} else
 		sprintf(out, "%s%s", outPath, newfile.name);
 
-	if (!strcmp(in, out)) {
+	strcpy(tmp, out);
+	genLimObjName(tmp, 0);  //the name it gets there: a new name can name the source once cut to fit
+	if (!strcmp(in, out) || !strcmp(in, tmp)) {
 		if (PSU_restart_f)  //the first pass found them different: a mapping changed under the open .psu
 			return copyMapFailed(recurses);
 		return COPY_KEPT_DESTINATION;  //in and out are the same: nothing to copy, nor for a Move to delete
