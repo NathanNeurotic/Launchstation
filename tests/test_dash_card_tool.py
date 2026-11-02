@@ -903,6 +903,21 @@ assert host("mass:/_._a_b_EVIL.mcs").read_bytes()[10:21] == b"../a:b*EVIL" and n
 host("mass:/_._a_b_EVIL.mcs").unlink()
 host("mass:/evil.mcs").unlink()
 host(P1).write_bytes(full)
+# a name that is not plain ASCII (a card's name field can hold any bytes) is
+# not exported, and the dialog gives that reason, not a file-name problem
+odd = bytearray(full)
+odd[128 + 10 + 12] = 0x82                       # BASLUS-00001PS1 -> BASLUS-00001\x82S1
+x = 0
+for b in odd[128:255]:
+    x ^= b
+odd[255] = x
+host("mass:/Odd-PS1.mcd").write_bytes(bytes(odd))
+files = sorted(p.name for p in host("mass:/").iterdir())
+lines = run("mass:/Odd-PS1.mcd", "m1", "m0", "m-1")
+msg = kind(lines, "MESSAGE|1|Not exported|The save name must be 1 to 20 plain ASCII characters.")
+assert msg and msg[0].endswith("|BASLUS-00001\x82S1"), lines
+assert sorted(p.name for p in host("mass:/").iterdir()) == files and host("mass:/Odd-PS1.mcd").read_bytes() == odd
+host("mass:/Odd-PS1.mcd").unlink()
 # a failed card write is reported with the safety copy, which holds the old card
 for at in ("2", "3"):     # 2: the first card write fails; 3: after 32 KB of it
     lines = run(P1, "m1", "m1", "c1", "m-1", env={"FAIL_WRITE_AT": at})

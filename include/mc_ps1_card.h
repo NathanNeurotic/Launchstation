@@ -109,7 +109,8 @@ int ps1NameOk(const char *name);
  * Ps1SaveFormat read. */
 int ps1SaveFromFile(const uint8_t *buf, uint32_t len, const char *name_hint, Ps1Save *out, int *format);
 
-/* A save as .mcs bytes (directory frame + blocks); free *out with free(). */
+/* A save as .mcs bytes (directory frame + blocks); free *out with free().
+ * PS1_ERR_NAME when the name is not 1 to 20 plain ASCII characters. */
 int ps1SaveToMcs(const Ps1Save *s, uint8_t **out, uint32_t *len);
 
 void ps1SaveFree(Ps1Save *s);

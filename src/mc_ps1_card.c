@@ -329,8 +329,10 @@ int ps1SaveToMcs(const Ps1Save *s, uint8_t **out, uint32_t *len)
 	uint32_t n;
 	uint8_t *b;
 
-	if (!out || !len || !validSave(s))
+	if (!out || !len || !s || !s->data || s->blocks < 1 || s->blocks > PS1_BLOCKS)
 		return PS1_ERR_INVALID;
+	if (!ps1NameOk(s->name)) /* a card's name field can hold any bytes */
+		return PS1_ERR_NAME;
 	n = FRAME + (uint32_t)s->blocks * PS1_BLOCK;
 	b = (uint8_t *)calloc(1, n);
 	if (!b)

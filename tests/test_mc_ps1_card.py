@@ -194,6 +194,14 @@ out = tmp / "out.mcs"
 assert kv("export", card, 1, out)["r"] == "0"
 assert out.read_bytes() == mcs("BASLUS-00001AAAA", A)
 assert kv("export", card, 2, out)["r"] == str(DAMAGED)   # a middle block is not a save
+# a card's name field can hold any bytes: a name that is not plain ASCII is
+# refused as a name (not as a bad save) and nothing is written
+odd = bytearray(card.read_bytes())
+odd[FRAME + 10 + 12] = 0x82                     # BASLUS-00001AAAA -> BASLUS-00001\x82AAA
+odd[FRAME + 127] = xor(odd[FRAME:2 * FRAME])
+h = out.read_bytes()
+assert kv("export", write("odd.mcd", bytes(odd)), 1, out)["r"] == str(NAME)
+assert out.read_bytes() == h
 
 # --- delete the BIOS way, then reuse the freed blocks in a fragmented chain
 other = {n: s for n, s in py_card(card)[0].items() if n != "BASLUS-00001AAAA"}

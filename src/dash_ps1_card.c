@@ -236,14 +236,22 @@ static void p1Export(const char *path, const Ps1CardSave *sv)
 		dashModalMessage(DI_WARNING, "Not exported", ps1Error(r), sv->name);
 		return;
 	}
+	/* build the .mcs first: it refuses a name that is not plain ASCII (a card
+	 * can hold any bytes there), before any file name is made from it */
+	r = ps1SaveToMcs(&s, &buf, &len);
+	if (r != PS1_OK) {
+		ps1SaveFree(&s);
+		dashModalMessage(DI_WARNING, "Not exported", ps1Error(r), sv->name);
+		return;
+	}
 	dashStrCopy(folder, path, sizeof(folder));
 	folder[p1Base(path) - path] = 0;
-	/* the name comes from the card: it may hold any printable ASCII, so path
-	 * separators, characters FAT refuses and a leading dot become '_' and the
-	 * file always lands next to the card */
+	/* the name is printable ASCII now, but path separators, characters FAT
+	 * refuses and a leading dot become '_' so the file lands next to the card */
 	for (i = 0; s.name[i]; i++)
 		safe[i] = (strchr("/\\:*?\"<>|", s.name[i]) != NULL || (i == 0 && s.name[i] == '.')) ? '_' : s.name[i];
 	safe[i] = 0;
+	ps1SaveFree(&s);
 	for (i = 1; i < 100; i++) {
 		int w = i == 1 ? snprintf(dest, sizeof(dest), "%s%s.mcs", folder, safe) :
 		                 snprintf(dest, sizeof(dest), "%s%s-%d.mcs", folder, safe, i);
@@ -254,12 +262,11 @@ static void p1Export(const char *path, const Ps1CardSave *sv)
 		if (!wleExists(dest))
 			break;
 	}
-	if (i == 100 || ps1SaveToMcs(&s, &buf, &len) != PS1_OK) {
-		ps1SaveFree(&s);
-		dashModalMessage(DI_WARNING, "Not exported", "No free .mcs name next to the card, or not enough memory.", folder);
+	if (i == 100) {
+		free(buf);
+		dashModalMessage(DI_WARNING, "Not exported", "No free .mcs name next to the card.", folder);
 		return;
 	}
-	ps1SaveFree(&s);
 	dashLoadingBegin("Exporting save");
 	r = dashCardWriteVerified(dest, buf, len);
 	dashLoadingEnd();
