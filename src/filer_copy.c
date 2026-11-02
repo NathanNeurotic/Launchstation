@@ -482,7 +482,8 @@ int copy(char *outPath, const char *inPath, const FILEINFO *src, int recurses)
 	/* Up to MAX_RECURSE levels of this frame nest on the caller's 128 KB stack
 	 * (CI checks its size). These are only used between the recursive calls,
 	 * never across one, so all levels share one copy of each. The paths below
-	 * stay in each level's frame. */
+	 * stay in each level's frame, and so does 'file': a folder's own stats are
+	 * set on its copy after its contents are copied. */
 	static FILEINFO newfile;
 	static char progress[MAX_PATH * 4], inParty[MAX_NAME], outParty[MAX_NAME];
 	FILEINFO file = *src;

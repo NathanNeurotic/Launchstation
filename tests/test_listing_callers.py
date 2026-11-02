@@ -143,7 +143,12 @@ static int mcSetFileInfo(int port,int slot,const char *from,const sceMcTblGetDir
 static int mcSync(int mode,void *c,int *r){(void)mode;(void)c;if(r)*r=0;return 1;}
 static int mcGetInfo(int p,int s,int *type,int *a,int *b){(void)p;(void)s;(void)type;(void)a;(void)b;return 0;}
 static int mcDelete(int port,int slot,const char *p){(void)port;(void)slot;(void)p;assert(!"no memory card here");return 0;}
-static int fileXioChStat(const char *p,const iox_stat_t *s,int f){(void)p;(void)s;(void)f;return 0;}
+/* The stats copy() sets on a destination, newest last. */
+static struct {char path[MAX_PATH];int year,flags;} chstats[64];static int nchstats;
+static int fileXioChStat(const char *p,const iox_stat_t *s,int f){
+ assert(nchstats<64);snprintf(chstats[nchstats].path,MAX_PATH,"%s",p);
+ memcpy(&chstats[nchstats].year,s->ctime,sizeof(int));chstats[nchstats++].flags=f;return 0;
+}
 static int getHddParty(const char *p,const FILEINFO *f,char *a,char *b){(void)p;(void)f;(void)a;(void)b;assert(0);return -1;}
 static int mountParty(const char *p){(void)p;assert(0);return -1;}
 static int fileShowTitles(void){return 0;}
@@ -234,11 +239,12 @@ static int count(const char *dir){
 static FILEINFO folder(const char *name){FILEINFO f;memset(&f,0,sizeof(f));strcpy(f.name,name);f.stats.AttrFile=sceMcFileAttrSubdir;return f;}
 static void swap_file(void){put("usb0:/SWAP/NEW");assert(!unlink("usb0:/SWAP/F000"));}
 static void unplug_late(void){fault("usb0:/LATE/",-ENODEV,-1,0,1);}
-static char message[MAX_PATH];static int paste_mode=PM_NORMAL;
+static char message[MAX_PATH];static int clip_year,paste_mode=PM_NORMAL;
 /* Pastes (or with cut, moves) one folder from usb0:/ into dest. */
 static void paste_into(const char *name,int cut,const char *dest){
  assert(!handles&&!listings_live);
  strcpy(clipPath,"usb0:/");nclipFiles=1;clipFiles[0]=folder(name);browser_cut=cut;PasteMode=paste_mode;
+ clipFiles[0].stats._Create.Year=clip_year;
  message[0]=0;subfunc_Paste(message,(char *)dest);
  assert(!handles&&!listings_live); /* every file closed and every listing freed */
 }
@@ -295,6 +301,13 @@ int main(void){
  tree("usb0:/LATE",2);strcpy(hook_at,"usb0:/LATE/F001");hook=unplug_late;
  paste("LATE",1);
  assert(strstr(message,"Listing source again (-19)")&&count("usb0:/LATE")==2&&nclipFiles==1&&!hook_at[0]);
+ /* A folder takes its own creation time once its contents are copied, so the
+  * contents' copies must not change the stats it was copied with. */
+ tree("usb0:/STAMP",2);tree("usb0:/STAMP/SUB",1);
+ clip_year=2001;nchstats=0;paste("STAMP",0);clip_year=0;
+ assert(!message[0]&&count("mmce0:/STAMP")==3&&count("mmce0:/STAMP/SUB")==1);
+ assert(nchstats==2&&!strcmp(chstats[1].path,"mmce0:/STAMP/")&&chstats[1].year==2001);
+ assert(chstats[1].flags==(FIO_CST_CT|FIO_CST_AT|FIO_CST_MT)&&!strcmp(chstats[0].path,"mmce0:/STAMP/SUB/"));
  /* A folder that fills a listing exactly, and an empty folder, still move. */
  tree("usb0:/FULL",MAX_ENTRY-4);assert(!mkdir("usb0:/FULL/EMPTY",0700));
  tree("usb0:/FULL/SUB",4);
@@ -327,7 +340,7 @@ int main(void){
  assert(remove_folder("STUCK")==-EIO&&count("usb0:/STUCK")==MAX_ENTRY+3); /* listed after them, F000-F002 stay */
  puts("PASS: Paste and Move refuse a source folder that does not open, fails partway or is over the "
       "listing cap before touching the destination, or that holds other entries when listed again after its "
-      "contents are copied, keeping a Move's source; "
+      "contents are copied, keeping a Move's source; a folder keeps its own stats; "
       "Delete stops on those before removing anything listed, "
       "empties a folder of any size, returns the error that stopped it and frees every listing");
  return 0;
