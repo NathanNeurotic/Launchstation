@@ -19,8 +19,9 @@ by-value FILEINFO name there and reloaded it from the realigned frame, so a
 pasted "RIPTOPL.ELF" was opened as "RIPTOPL.".
 
 This checks every function in the given ELF files, linked or relocatable, and
-exits 1 if any has such a store. It needs no toolchain: it decodes the ELF
-and the few MIPS instructions involved itself.
+exits 1 if any has such a store, or if a file has no code to check (no
+executable section, or no section headers at all). It needs no toolchain: it
+decodes the ELF and the few MIPS instructions involved itself.
 """
 
 import argparse
@@ -224,7 +225,10 @@ def main(argv=None):
         if big:
             print("note %s: realigned frames of 32 KB or more: %s" % (
                 path, ", ".join("%s (%d KB)" % (name, size // 1024) for size, name in big)))
-        if hazards:
+        if not any(function.words for function in functions):
+            print("FAIL %s: no code found, so nothing was checked" % path, file=sys.stderr)
+            failed = True
+        elif hazards:
             failed = True
         else:
             print("PASS %s: %d functions, %d realign $sp, none stores to the stack before realigning"

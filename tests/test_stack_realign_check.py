@@ -156,5 +156,22 @@ with tempfile.TemporaryDirectory(prefix='stack-realign-') as folder:
     result = run('not-elf.bin')
     assert result.returncode == 1 and 'not a 32-bit little-endian ELF file' in result.stderr, result
 
+    # A file with nothing to check fails instead of passing: no section headers at all
+    # (e_shnum = 0), or a .text section that is not executable.
+    no_sections = bytearray(elf(clean))
+    struct.pack_into('<HH', no_sections, 48, 0, 0)
+    (folder / 'no-sections.elf').write_bytes(no_sections)
+    no_code = bytearray(elf(clean))
+    text_header = struct.unpack_from('<I', no_code, 32)[0] + 40  # e_shoff, then section 1 (.text)
+    assert struct.unpack_from('<I', no_code, text_header + 8)[0] == 6  # SHF_ALLOC | SHF_EXECINSTR
+    struct.pack_into('<I', no_code, text_header + 8, 2)  # SHF_ALLOC only
+    (folder / 'no-code.elf').write_bytes(no_code)
+    for name in ('no-sections.elf', 'no-code.elf'):
+        assert check.scan(folder / name)[0] == [], name
+        result = run(name)
+        assert result.returncode == 1 and 'PASS' not in result.stdout, result
+        assert 'no code found, so nothing was checked' in result.stderr, result
+
 print('PASS: the shipped copy() prologue and three other pre-realignment stores fail; '
-      'the fixed prologue, $fp stores, plain and later spills pass; linked, relocatable and stripped ELF')
+      'the fixed prologue, $fp stores, plain and later spills pass; linked, relocatable and stripped ELF; '
+      'a file with no code to check fails')
