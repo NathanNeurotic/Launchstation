@@ -307,6 +307,31 @@ int psu_restore_read_file_entry(int psu_fd, FILEINFO *file, int *psu_pad_size)
 	return 0;
 }
 
+int psu_restore_check_entries(int psu_fd, int psu_content, s64 size)
+{
+	psu_header psu_head;
+	s64 pos = sizeof(psu_head);  //the first entry, after the root header
+	int i, n;
+
+	for (i = 0; i < psu_content; i++) {
+		if (genLseek(psu_fd, pos, SEEK_SET) != pos)
+			return -1;
+		n = genRead(psu_fd, (void *)&psu_head, sizeof(psu_head));
+		if (n != PSU_HEADER_SIZE)
+			return n < 0 ? n : -1;  //cut short inside a header
+		pos += sizeof(psu_head);
+		if (psu_head.attr & sceMcFileAttrSubdir) {
+			if (psu_head.size)
+				return -1;  //a subfolder, which a PSU cannot hold
+			continue;       //"." or ".."
+		}
+		if (psu_head.size > size - pos)
+			return -1;  //cut short inside the file's data
+		pos += ((s64)psu_head.size + 0x3FF) & ~(s64)0x3FF;  //its data and padding
+	}
+	return genLseek(psu_fd, sizeof(psu_head), SEEK_SET) == (s64)sizeof(psu_head) ? 0 : -1;
+}
+
 int psu_restore_apply_entry_stats_to_mc(const char *out_dir, const sceMcTblGetDir *stats, int set_mode)
 {
 	char path[MAX_PATH];

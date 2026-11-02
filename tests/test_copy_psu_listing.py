@@ -5,8 +5,8 @@ Each folder level allocates its listing before it removes or creates anything
 at the destination. When that allocation fails, an older PSU backup or save
 must be left exactly as it was, and that level creates no folder. Every early
 exit frees the listing, and a PSU restore that stops early closes its PSU. A
-file whose first entry is not a folder is not a PSU and is refused and closed.
-A Move deletes only what was copied: an item that copy() kept at the
+file whose first entry is not a folder is not a PSU and is refused and closed,
+and so is a PSU cut short, before it can replace a save. A Move deletes only what was copied: an item that copy() kept at the
 destination (a dated PSU name already taken, or the file or folder itself)
 stays, cut. A PSU backup replaces an older one only once it is complete, and
 when that replacing fails after the older one is gone, the new one stays under
@@ -342,6 +342,20 @@ int main(void){
  assert(quiet()&&yn_calls==1&&!exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00001")==2);
  assert(filled("mc0:/BASLUS-00001/FILE0.BIN",100,'A')&&filled("mc0:/BASLUS-00001/FILE1.BIN",101,'B'));
  put("mc0:/BASLUS-00001/OLD.BIN","old",3);
+ /* A .psu cut short (in a file's data, or in an entry's header), or holding a
+  * subfolder, is refused before it asks to overwrite the save, which stays. */
+ {static unsigned char b[8192];const int cut[]={3*512+(512+1024)+512+50,3*512+(512+1024)+100};
+  assert(read_all("mass:/SAVE.psu",b,sizeof(b))==3*512+2*(512+1024));
+  for(int c=0;c<2;c++){put("mass:/CUT.psu",b,cut[c]);
+   clip("mass:/","CUT.psu",0x8497,PM_PSU_RESTORE);paste("mc0:/");
+   settled();
+   assert(says("Checking PSU (-1)")&&!yn_calls&&exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00001")==3);}
+  int fd=open("mass:/CUT.psu",O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0);
+  psu_entry(fd,0x8427,3,"BASLUS-00001");psu_entry(fd,0x8427,0,".");psu_entry(fd,0x8427,0,"..");psu_entry(fd,0x8427,1,"SUB");close(fd);
+  clip("mass:/","CUT.psu",0x8497,PM_PSU_RESTORE);paste("mc0:/");
+  settled();
+  assert(says("Checking PSU (-1)")&&!yn_calls&&exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00001")==3);
+  unlink("mass:/CUT.psu");}
 
  /* An accepted overwrite replaces the old save. */
  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);paste("mc0:/");

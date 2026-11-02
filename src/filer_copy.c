@@ -747,12 +747,19 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			if (PasteMode == PM_PSU_RESTORE && PSU_restart_f) {
 				//The files' copy buffer is reserved before an existing save can be
 				//replaced, so that a restore without that memory leaves it whole.
-				//No file in the .psu is bigger than the .psu, measured here before
-				//going back to its first entry, after the root header.
+				//No file in the .psu is bigger than the .psu, measured here.
 				filerCopyDiagStage("Measuring source");
 				size = genLseek(PM_file[recurses + 1], 0, SEEK_END);
-				if ((s64)size < 0 || genLseek(PM_file[recurses + 1], sizeof(psu_header), SEEK_SET) != (s64)sizeof(psu_header)) {
+				if ((s64)size < 0) {
 					ret = copyDiagFail(-EIO);
+					goto folder_exit;
+				}
+				//Each entry is checked before then too, so that a .psu cut short
+				//leaves it whole; the .psu is then back at its first entry.
+				filerCopyDiagStage("Checking PSU");
+				ret = psu_restore_check_entries(PM_file[recurses + 1], PSU_content, size);
+				if (ret < 0) {
+					ret = copyDiagFail(ret);
 					goto folder_exit;
 				}
 				filerCopyDiagStage("Allocating buffer");
