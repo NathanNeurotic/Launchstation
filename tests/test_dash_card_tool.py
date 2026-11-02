@@ -918,6 +918,39 @@ msg = kind(lines, "MESSAGE|1|Not exported|The save name must be 1 to 20 plain AS
 assert msg and msg[0].endswith("|BASLUS-00001\x82S1"), lines
 assert sorted(p.name for p in host("mass:/").iterdir()) == files and host("mass:/Odd-PS1.mcd").read_bytes() == odd
 host("mass:/Odd-PS1.mcd").unlink()
+# a file made at the chosen name after it was checked (another writer on a
+# share) is never overwritten: the export and the safety copy fail instead
+race = "mass:/BASLUS-00001PS1-2.mcs"       # the first name is taken by the export above
+lines = run(P1, "m1", "m0", "m-1", env={"RACE_CREATE": race})
+msg = kind(lines, "MESSAGE|1|Not exported|The .mcs could not be written.")
+assert msg and msg[0].endswith("|" + race), lines
+assert host(race).read_bytes() == b"OTHER" and host(P1).read_bytes() == full
+host(race).unlink()
+race = "mass:/WLE-Safety/Blank-PS1-%04d.mcd" % (1 + max(int(p.stem[-4:]) for p in host("mass:/WLE-Safety").glob("Blank-PS1-*.mcd")))
+lines = run(P1, "m1", "m1", "c1", "m-1", env={"RACE_CREATE": race})
+assert kind(lines, "MESSAGE|1|Not done|The safety copy could not be made, so the card was not changed."), lines
+assert host(race).read_bytes() == b"OTHER" and host(P1).read_bytes() == full
+host(race).unlink()
+# a save whose blocks do not add up (here a second save links into the block
+# BASLUS-00001PS1 ends in) is listed with a warning; export and delete are off
+link = bytearray(full)
+f = bytearray(128)
+struct.pack_into("<IIH", f, 0, 0x51, 2 * 8192, 1)   # block 3 starts a save that links to block 2
+f[10:26] = b"BASLUS-00002LINK"
+for b in f[:127]:
+    f[127] ^= b
+link[3 * 128:4 * 128] = f
+host("mass:/Link-PS1.mcd").write_bytes(bytes(link))
+files = sorted(p.name for p in host("mass:/").iterdir())
+lines = run("mass:/Link-PS1.mcd", "m1", "m0", "m1", "m1", "m2", "m0", "m-1")
+listed = kind(lines, "MENU|Link-PS1.mcd|PS1 card: 2 saves, 12 of 15 blocks free|")
+assert listed and "~BASLUS-00001PS1, blocks do not add up|" in listed[0], lines
+assert listed[0].endswith("|BASLUS-00002LINK~BASLUS-00002LINK, blocks do not add up"), lines
+off = "|!Export as .mcs...~its blocks do not add up|!Delete from this card...~its blocks do not add up"
+assert len([l for l in lines if l.startswith("MENU|") and l.endswith(off)]) == 3, lines
+assert not kind(lines, "CONFIRM|") and not kind(lines, "MESSAGE|") and not kind(lines, "TOAST|"), lines
+assert sorted(p.name for p in host("mass:/").iterdir()) == files and host("mass:/Link-PS1.mcd").read_bytes() == link
+host("mass:/Link-PS1.mcd").unlink()
 # a failed card write is reported with the safety copy, which holds the old card
 for at in ("2", "3"):     # 2: the first card write fails; 3: after 32 KB of it
     lines = run(P1, "m1", "m1", "c1", "m-1", env={"FAIL_WRITE_AT": at})

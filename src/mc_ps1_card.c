@@ -111,13 +111,15 @@ int ps1CardFreeBlocks(const uint8_t *card)
 	return n;
 }
 
-/* Follows the links from a first block; fills chain[] (blocks, 1-based) and
- * returns the count, or -1 when a link leaves the card, loops, or lands on a
- * frame that is not a middle or last block. */
-static int chainOf(const uint8_t *card, int first, int chain[PS1_BLOCKS])
+/* Follows the links from a first block. chain[] gets the blocks reached
+ * (1-based) and *reached their count, also when the links break; returns
+ * the count, or -1 when a link leaves the card, loops, or lands on a frame
+ * that is not a middle or last block. */
+static int walkChain(const uint8_t *card, int first, int chain[PS1_BLOCKS], int *reached)
 {
 	int n = 0, b = first, seen = 0;
 
+	*reached = 0;
 	if (first < 1 || first > PS1_BLOCKS || rd32(dirFrame(card, first)) != ST_FIRST)
 		return -1;
 	for (;;) {
@@ -127,6 +129,7 @@ static int chainOf(const uint8_t *card, int first, int chain[PS1_BLOCKS])
 			return -1;
 		seen |= 1 << b;
 		chain[n++] = b;
+		*reached = n;
 		next = rd16(dirFrame(card, b) + 8);
 		if (next == NO_LINK)
 			return rd32(dirFrame(card, b)) == (n == 1 ? ST_FIRST : ST_LAST) ? n : -1;
@@ -140,6 +143,33 @@ static int chainOf(const uint8_t *card, int first, int chain[PS1_BLOCKS])
 				return -1;
 		}
 	}
+}
+
+/* A save's blocks (as walkChain), or -1 when the save is damaged: besides
+ * broken links, when another first block's links reach one of its blocks
+ * too (deleting either save would free a block the other still uses), or
+ * when its size field is not its block count times 8 KB. The BIOS reads up
+ * to that size, and when it reads the directory it keeps only the blocks
+ * the size covers, so a later save can take the rest (see buInit in
+ * PCSX-Redux's OpenBIOS, a reimplementation of the retail BIOS). */
+static int chainOf(const uint8_t *card, int first, int chain[PS1_BLOCKS])
+{
+	int other[PS1_BLOCKS], n, i, k, reached, mine = 0;
+
+	n = walkChain(card, first, chain, &reached);
+	if (n < 0 || rd32(dirFrame(card, first) + 4) != (uint32_t)n * PS1_BLOCK)
+		return -1;
+	for (i = 0; i < n; i++)
+		mine |= 1 << chain[i];
+	for (i = 1; i <= PS1_BLOCKS; i++) {
+		if (i == first)
+			continue;
+		walkChain(card, i, other, &reached);
+		for (k = 0; k < reached; k++)
+			if (mine & (1 << other[k]))
+				return -1;
+	}
+	return n;
 }
 
 int ps1CardList(const uint8_t *card, Ps1CardSave *out, int max)
@@ -246,11 +276,18 @@ int ps1CardDelete(uint8_t *card, int first)
 
 /* ------------------------------------------------------------ single saves */
 
+/* Every PS1 save's first block starts "SC" (the BIOS writes that); "sc"
+ * was seen on one game's save, so either case is taken. */
+static int scMagic(const uint8_t *p)
+{
+	return (p[0] == 'S' || p[0] == 's') && (p[1] == 'C' || p[1] == 'c');
+}
+
 static int takeBlocks(const uint8_t *data, uint32_t len, const char *name, Ps1Save *out)
 {
 	if (len == 0 || len % PS1_BLOCK || len / PS1_BLOCK > PS1_BLOCKS)
 		return PS1_ERR_INVALID;
-	if (data[0] != 'S' || data[1] != 'C') /* every PS1 save's first block */
+	if (!scMagic(data))
 		return PS1_ERR_INVALID;
 	if (!ps1NameOk(name))
 		return PS1_ERR_NAME;
@@ -286,7 +323,7 @@ int ps1SaveFromFile(const uint8_t *buf, uint32_t len, const char *name_hint, Ps1
 		fmt = PS1F_MCS;
 		readName(buf + 0x0A, name);
 		r = takeBlocks(buf + FRAME, len - FRAME, name, out);
-	} else if (len >= 2 && (buf[0] == 'S' || buf[0] == 's') && (buf[1] == 'C' || buf[1] == 'c')) {
+	} else if (len >= 2 && scMagic(buf)) {
 		const char *base = name_hint ? name_hint : "";
 		const char *dot = strrchr(base, '.');
 		size_t n = dot ? (size_t)(dot - base) : strlen(base);
@@ -297,7 +334,6 @@ int ps1SaveFromFile(const uint8_t *buf, uint32_t len, const char *name_hint, Ps1
 		} else {
 			memcpy(name, base, n);
 			name[n] = 0;
-			/* "sc" was seen on one game's save; the BIOS itself writes "SC" */
 			if (len % PS1_BLOCK == 0 && len && len / PS1_BLOCK <= PS1_BLOCKS && ps1NameOk(name)) {
 				out->data = (uint8_t *)malloc(len);
 				if (!out->data) {
@@ -312,7 +348,7 @@ int ps1SaveFromFile(const uint8_t *buf, uint32_t len, const char *name_hint, Ps1
 				r = ps1NameOk(name) ? PS1_ERR_INVALID : PS1_ERR_NAME;
 			}
 		}
-	} else if (len >= 56u && buf[0x36] == 'S' && buf[0x37] == 'C') { /* reads bytes 0x36 and 0x37 */
+	} else if (len >= 56u && scMagic(buf + 0x36)) { /* reads bytes 0x36 and 0x37 */
 		fmt = PS1F_PSX;
 		readName(buf, name);
 		r = takeBlocks(buf + 54, len - 54u, name, out);
@@ -388,7 +424,7 @@ const char *ps1Error(int r)
 		case PS1_ERR_EXISTS:
 			return "A save with that name is already on this card. Delete it first.";
 		case PS1_ERR_DAMAGED:
-			return "This save's block links are broken, so it cannot be read safely.";
+			return "This save's blocks do not add up (a broken or shared link, or a wrong size), so it cannot be read safely.";
 		case PS1_ERR_NOMEM:
 			return "Not enough memory.";
 		case PS1_ERR_NAME:

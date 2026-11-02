@@ -258,7 +258,7 @@ static int ctSafetyNumber(const char *name, const char *base)
 	return genCmpFileExt(name, "MCD") && name[len + 5] == '.' && strlen(name + len + 5) == 4 ? n : -1;
 }
 
-static int ctWriteFile(const char *path, const uint8_t *buf, uint32_t len);
+static int ctWriteFileAs(const char *path, const uint8_t *buf, uint32_t len, int fresh);
 
 /* Verified copy of the whole image (or, with buf, of buf, which holds the
  * image as it is now); keeps the newest CT_SAFETY_KEEP. */
@@ -298,7 +298,7 @@ static int ctSafetyCopyOf(const char *image, const uint8_t *buf, uint32_t buf_le
 	if (snprintf(made, made_size, "%s%s-%04d.mcd", folder, base, high + 1) >= made_size)
 		return -1;
 	if (buf != NULL) {
-		if (wleExists(made) || ctWriteFile(made, buf, buf_len) < 0)
+		if (wleExists(made) || ctWriteFileAs(made, buf, buf_len, 1) < 0)
 			return -1;
 	} else {
 		r = mcCardBackupNoEccNewFile(image, made, ctSafetyProgress);
@@ -541,13 +541,16 @@ static void ctDelete(const char *image, const char *name)
 	ctDone(r, "Save deleted", safety, image);
 }
 
-static int ctWriteFile(const char *path, const uint8_t *buf, uint32_t len)
+/* buf written to path and read back; a file that does not read back is
+ * removed. fresh: only a new file is made (O_EXCL), so a file that appears
+ * at path after the caller checked it is never truncated or removed. */
+static int ctWriteFileAs(const char *path, const uint8_t *buf, uint32_t len, int fresh)
 {
 	static u8 back[CT_BLOCK] __attribute__((aligned(64)));
 	u32 done = 0;
 	int fd, n, ok = 1;
 
-	fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
+	fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | (fresh ? FIO_O_EXCL : FIO_O_TRUNC));
 	if (fd < 0)
 		return -1;
 	while (ok && done < len) {
@@ -574,9 +577,14 @@ static int ctWriteFile(const char *path, const uint8_t *buf, uint32_t len)
 	return ok ? 0 : -1;
 }
 
+static int ctWriteFile(const char *path, const uint8_t *buf, uint32_t len)
+{
+	return ctWriteFileAs(path, buf, len, 0);
+}
+
 int dashCardWriteVerified(const char *path, const uint8_t *buf, uint32_t len)
 {
-	return ctWriteFile(path, buf, len);
+	return ctWriteFileAs(path, buf, len, 1);
 }
 
 static void ctExportPsu(const char *image, const char *name)

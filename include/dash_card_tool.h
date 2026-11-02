@@ -23,7 +23,8 @@ void dashPs1CardNewBlank(const char *folder);
 
 /* Shared with dash_ps1_card.c: a verified safety copy of an image whose
  * current bytes are in buf, and a new file written and read back (both 0 on
- * success). */
+ * success). Both only ever create a new file (O_EXCL): a file that appears at
+ * that name after the caller checked it is left alone and the call fails. */
 int dashCardSafetyCopyBuffer(const char *image, const uint8_t *buf, uint32_t len, char *made, int made_size);
 int dashCardWriteVerified(const char *path, const uint8_t *buf, uint32_t len);
 

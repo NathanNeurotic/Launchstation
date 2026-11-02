@@ -50,7 +50,7 @@ enum Ps1Result {
 	PS1_ERR_UNSUPPORTED = -3, /* recognised, but not a PS1 save (a PS2 .psv) */
 	PS1_ERR_FULL = -4,       /* not enough free blocks */
 	PS1_ERR_EXISTS = -5,     /* a save with that name is already on the card */
-	PS1_ERR_DAMAGED = -6,    /* a save whose block links are broken */
+	PS1_ERR_DAMAGED = -6,    /* a save whose blocks do not add up (see damaged) */
 	PS1_ERR_NOMEM = -7,
 	PS1_ERR_NAME = -8        /* a save name the BIOS would not accept */
 };
@@ -66,7 +66,9 @@ enum Ps1SaveFormat {
 typedef struct {
 	int first;              /* directory frame / block number, 1..15 */
 	int blocks;             /* blocks the save uses (from its links) */
-	int damaged;            /* links broken: shown, never read or written */
+	int damaged;            /* a link broken or shared with another save, or a size
+	                         * field that is not blocks * 8 KB: shown, never read
+	                         * or written */
 	char name[PS1_NAME_MAX + 1];
 	unsigned char title[65]; /* Shift-JIS title from the first block, NUL ended */
 } Ps1CardSave;

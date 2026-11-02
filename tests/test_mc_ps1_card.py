@@ -235,6 +235,61 @@ for img, first, name in ((bad, 4, "BESLES-00002BBBB"), (loop, 5, "BISLPS-00003CC
     assert kv("delete", p, first)["r"] == str(DAMAGED)
     assert sha(p) == h
 
+# --- blocks that do not add up with links that look fine: two saves sharing a
+# block (deleting one would free a block the other still uses), or a size field
+# that is not the linked blocks times 8 KB (the BIOS keeps only the blocks the
+# size covers, and reads up to it). Both saves are damaged; the rest still work.
+good = card.read_bytes()
+assert all(r[2] == 0 for r in c_list(card)[1].values())
+
+
+def patch(img, blk, link=None, size=None):
+    """Directory frame of 1-based block blk: link it to another 1-based block, or set its size field."""
+    f = blk * FRAME
+    if link is not None:
+        struct.pack_into("<H", img, f + 8, link - 1)
+    if size is not None:
+        struct.pack_into("<I", img, f + 4, size)
+    img[f + 127] = xor(img[f:f + FRAME])
+
+
+shared = bytearray(good)          # BESLES (block 4) also ends in BISLPS's last block 6, size to match
+patch(shared, 4, link=6, size=2 * BLOCK)
+reach = bytearray(good)           # BASLUS-00004DDDD (block 7) links into EEEE's last block 9 but keeps
+patch(reach, 7, link=9)           # its one-block size: damaged itself, and EEEE shares a block with it
+sizes = bytearray(good)           # size fields that disagree with the links, either way
+patch(sizes, 7, size=2 * BLOCK)   # DDDD: one block linked, two declared
+patch(sizes, 5, size=BLOCK)       # BISLPS: two blocks linked, one declared
+for img, damaged in ((shared, {"BESLES-00002BBBB", "BISLPS-00003CCCC"}),
+                     (reach, {"BASLUS-00004DDDD", "BASLUS-00005EEEE"}),
+                     (sizes, {"BASLUS-00004DDDD", "BISLPS-00003CCCC"})):
+    p = write("odd-links.mcd", bytes(img))
+    rows = c_list(p)[1]
+    assert {n for n, r in rows.items() if r[2]} == damaged, rows
+    h = sha(p)
+    for n in damaged:
+        assert kv("export", p, rows[n][0], out)["r"] == str(DAMAGED), n
+        assert kv("delete", p, rows[n][0])["r"] == str(DAMAGED), n
+        assert sha(p) == h, n
+    assert kv("export", p, 1, out)["r"] == "0" and out.read_bytes() == mcs("BASLUS-00011FFFF", F)
+    assert kv("delete", p, 1)["r"] == "0"
+    assert p.read_bytes()[4 * FRAME:10 * FRAME] == bytes(img[4 * FRAME:10 * FRAME])   # their frames untouched
+
+# --- "sc" (seen on one game's save) is read from every format, so a raw save
+# exported as .mcs imports again
+L = bytearray(save_data(1, b"lower case"))
+L[0:2] = b"sc"
+L = bytes(L)
+for fname, body, fmt in (("l.mcs", mcs("BASLUS-00012LLLL", L), MCS), ("l.psv", psv_ps1("BASLUS-00012LLLL", L), PSV),
+                         ("l.psx", psx("BASLUS-00012LLLL", L), PSX), ("BASLUS-00012LLLL", L, RAW)):
+    got = kv("parse", write(fname, body), fname)
+    assert got == {"r": "0", "fmt": str(fmt), "name": "BASLUS-00012LLLL", "blocks": "1"}, (fname, got)
+lc = tmp / "lc.mcd"
+assert kv("format", lc)["r"] == "0" and kv("import", lc, tmp / "BASLUS-00012LLLL", "BASLUS-00012LLLL")["r"] == "0"
+assert kv("export", lc, 1, out)["r"] == "0" and out.read_bytes() == mcs("BASLUS-00012LLLL", L)
+assert kv("format", lc)["r"] == "0" and kv("import", lc, out, "out.mcs") == {"r": "0", "fmt": str(MCS)}
+assert py_card(lc)[0]["BASLUS-00012LLLL"][1:] == ([1], L)
+
 # --- the card UI: PS1 images open their own tool, every write is verified
 ui = (root / "src/dash_ps1_card.c").read_text(encoding="utf-8")
 tool = (root / "src/dash_card_tool.c").read_text(encoding="utf-8")

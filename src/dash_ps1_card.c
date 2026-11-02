@@ -306,11 +306,11 @@ static void p1SaveMenu(const char *path, const Ps1CardSave *sv, const char *titl
 
 	it[0].icon = DI_MC;
 	it[0].label = "Export as .mcs...";
-	it[0].detail = sv->damaged ? "block links are broken" : "next to the card; the card is only read";
+	it[0].detail = sv->damaged ? "its blocks do not add up" : "next to the card; the card is only read";
 	it[0].disabled = sv->damaged;
 	it[1].icon = DI_WARNING;
 	it[1].label = "Delete from this card...";
-	it[1].detail = sv->damaged ? "block links are broken" : "safety copy of the card first";
+	it[1].detail = sv->damaged ? "its blocks do not add up" : "safety copy of the card first";
 	it[1].disabled = sv->damaged;
 	r = dashModalMenu(title, sv->name, it, 2, 0);
 	if (r == 0 && !it[0].disabled)
@@ -346,7 +346,7 @@ void dashPs1CardTool(const char *image)
 			else
 				dashStrCopy(p1_titles[i], sv->name, sizeof(p1_titles[i]));
 			if (sv->damaged)
-				snprintf(p1_details[i], sizeof(p1_details[i]), "%s, block links broken", sv->name);
+				snprintf(p1_details[i], sizeof(p1_details[i]), "%s, blocks do not add up", sv->name);
 			else
 				snprintf(p1_details[i], sizeof(p1_details[i]), "%s, %d block%s", sv->name, sv->blocks,
 				         sv->blocks == 1 ? "" : "s");
