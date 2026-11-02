@@ -11,8 +11,10 @@ name: ps2build SDK Watch
 #          is downloaded. The pull request and later master builds then restore it.
 #   pr     pushes the bumped pin file to the ci/ps2build-sdk-watch branch and opens (or refreshes) a draft pull
 #          request. A push made by GitHub Actions starts no workflow, so it starts Automated-Build on that branch
-#          itself; that build publishes nothing, because it publishes from master only. The watch never merges
-#          anything and leaves a branch someone else has committed to, and its pull request, alone.
+#          itself, and a later run starts it if it has not run on the branch head; that build publishes nothing,
+#          because it publishes from master only. The watch proposes nothing when the pins on master changed
+#          after check read them, never merges anything, and leaves a branch someone else has committed to, and
+#          its pull request, alone.
 #
 # When "Allow GitHub Actions to create and approve pull requests" is off in the repository settings, it opens an
 # issue with a link that creates the pull request instead.
@@ -140,6 +142,7 @@ jobs:
       BRANCH: ci/ps2build-sdk-watch
       BOT: 41898282+github-actions[bot]@users.noreply.github.com
       ISSUE_TITLE: ps2build SDK update ready
+      CHECKED: ${{ github.sha }}  # the commit check read the pins at; github.sha is the same in every job of a run
     steps:
       - uses: actions/checkout@v4
         with:
@@ -154,6 +157,12 @@ jobs:
           set -eu
           W="$RUNNER_TEMP/watch"
           R="$GITHUB_REPOSITORY"
+          if ! git diff --quiet "$CHECKED" HEAD -- .github/ps2build-sdk.env; then
+            # check read the pins at $CHECKED. Copying its pin file over newer pins would undo that change (a
+            # hold, say), so this run proposes nothing, and the next run starts from the new pins.
+            echo "::warning::.github/ps2build-sdk.env changed on master after this run read it, so it proposes nothing. The next run starts from the new pins."
+            exit 0
+          fi
           cp "$W/ps2build-sdk.env" .github/ps2build-sdk.env
           OLD=
           if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null; then
@@ -161,7 +170,6 @@ jobs:
             OLD="$(git rev-parse "origin/$BRANCH")"
           fi
 
-          PUSHED=no
           if [ -n "$OLD" ] && git log --format='%ae%n%ce' "origin/master..origin/$BRANCH" | grep -qvxF "$BOT"; then
             # Someone added commits (a fix for the new SDK, say), or amended the watch's commit, which keeps the
             # watch as its author but not as its committer. Never overwrite their work, and leave its pull request
@@ -170,6 +178,7 @@ jobs:
             exit 0
           elif [ -n "$OLD" ] && git show "origin/$BRANCH:.github/ps2build-sdk.env" | cmp -s - .github/ps2build-sdk.env; then
             echo "$BRANCH already proposes these pins."
+            HEAD_SHA="$OLD"
           else
             git config user.name "github-actions[bot]"
             git config user.email "$BOT"
@@ -178,7 +187,7 @@ jobs:
             git commit -q -F "$W/commit.txt"
             # The branch belongs to the watch: each run proposes the newest pins on top of master.
             git push --force-with-lease="refs/heads/$BRANCH:$OLD" origin "HEAD:refs/heads/$BRANCH"
-            PUSHED=yes
+            HEAD_SHA="$(git rev-parse HEAD)"
           fi
 
           TITLE="$(cat "$W/title")"
@@ -205,6 +214,21 @@ jobs:
             fi
           fi
 
-          if [ "$PUSHED" = yes ]; then
-            gh workflow run compile.yml --repo "$R" --ref "$BRANCH"
+          # A push made with GITHUB_TOKEN starts no workflow, so the watch starts the builds on its branch itself. A
+          # later run starts each one that has no run on the branch head yet (its dispatch failed, say); every one
+          # is tried before the step fails.
+          FAILED=
+          dispatch() {
+            RUNS="$(gh run list --repo "$R" --workflow "$1" --commit "$HEAD_SHA" --limit 1 \
+              --json databaseId --jq length)" || RUNS=
+            if [ "$RUNS" = 1 ]; then
+              echo "$1 already ran on $BRANCH."
+            elif ! gh workflow run "$@" --repo "$R" --ref "$BRANCH"; then
+              FAILED="$FAILED $1"
+            fi
+          }
+          dispatch compile.yml
+          if [ -n "$FAILED" ]; then
+            echo "::error::Could not start$FAILED on $BRANCH. The next run starts whatever has not run there."
+            exit 1
           fi

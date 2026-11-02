@@ -2,9 +2,13 @@
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 from unittest import mock
 import urllib.error
@@ -282,7 +286,8 @@ class WorkflowTests(unittest.TestCase):
 
     def test_the_watch_never_publishes_and_pushes_only_its_own_branch(self):
         text = (WORKFLOWS / "ps2build-sdk-watch.yml").read_text()
-        self.assertIn('gh workflow run compile.yml --repo "$R" --ref "$BRANCH"', text)
+        self.assertIn('gh workflow run "$@" --repo "$R" --ref "$BRANCH"', text)
+        self.assertIn("\n          dispatch compile.yml\n", text)
         self.assertNotIn("HEAD:master", text)
         self.assertIn("github.ref == 'refs/heads/master'", text)
         self.assertIn("--draft", text)
@@ -292,7 +297,7 @@ class WorkflowTests(unittest.TestCase):
 
     def test_someone_elses_commits_keep_the_watch_off_the_branch_and_its_pull_request(self):
         # The guard runs first, so a branch that already holds the new pins gets no pull request edit either.
-        step = (WORKFLOWS / "ps2build-sdk-watch.yml").read_text().split("PUSHED=no", 1)[1]
+        step = (WORKFLOWS / "ps2build-sdk-watch.yml").read_text().split("- name: Push the new pins", 1)[1]
         guard, same_pins = step.index('grep -qvxF "$BOT"'), step.index("already proposes these pins")
         guard_line = next(line for line in step.splitlines() if 'grep -qvxF "$BOT"' in line)
         self.assertIn("--format='%ae%n%ce'", guard_line)  # an amended commit keeps the watch as its author
@@ -334,6 +339,73 @@ class WorkflowTests(unittest.TestCase):
         lookup_id = field(lookup, "id")[0].split(":", 1)[1].strip()
         self.assertEqual(field(gate, "if"), ["if: ${{ steps.%s.outputs.cache-hit != 'true' }}" % lookup_id])
         self.assertIn("exit 1", gate)
+
+    def test_the_proposal_stops_when_the_pins_changed_after_the_check(self):
+        # check reads the pins at github.sha, the same commit in every job of a run. pr checks out the newest
+        # master and copies check's pin file over it, which would undo a change to the pins made in between (a
+        # hold, say). So pr proposes nothing then, and the next run starts from the new pins.
+        text = (WORKFLOWS / "ps2build-sdk-watch.yml").read_text()
+        check = text.split("\n  check:\n", 1)[1].split("\n  warm:\n", 1)[0]
+        pr = text.split("\n  pr:\n", 1)[1]
+        self.assertEqual([line for line in check.splitlines() if line.strip().startswith("ref:")], [])
+        self.assertIn("\n      CHECKED: ${{ github.sha }}", pr)
+        guard = pr.index('if ! git diff --quiet "$CHECKED" HEAD -- .github/ps2build-sdk.env; then')
+        copy = pr.index('cp "$W/ps2build-sdk.env" .github/ps2build-sdk.env')
+        self.assertLess(guard, copy)
+        self.assertIn("exit 0", pr[guard:copy])
+
+    @unittest.skipIf(os.name != "posix" or not shutil.which("bash"), "runs the workflow step with bash and a fake gh")
+    def test_each_run_starts_the_builds_the_proposal_has_not_run(self):
+        # A push made with GITHUB_TOKEN starts no workflow, so the watch starts the builds on its branch. A dispatch
+        # that failed was never retried once the branch held the pins, so each run starts every build that has no
+        # run on the branch head yet, and tries them all before it fails.
+        step = (WORKFLOWS / "ps2build-sdk-watch.yml").read_text().split("- name: Push the new pins", 1)[1]
+        script = textwrap.dedent(step.split("run: |\n", 1)[1])
+        self.assertNotIn("PUSHED", script)  # not only the run that pushed
+        self.assertIn('HEAD_SHA="$OLD"', script.split("already proposes these pins", 1)[1].split("\nelse\n", 1)[0])
+        self.assertIn('HEAD_SHA="$(git rev-parse HEAD)"', script.split("git push --force-with-lease", 1)[1])
+        block = script[script.index("\nFAILED=\n"):]
+        names = [line.split()[1] for line in block.splitlines() if line.startswith("dispatch ")]
+        self.assertTrue(names)
+        fake_gh = """#!/bin/sh
+echo "$*" >> "$LOG"
+if [ "$1 $2" = "run list" ]; then
+  [ -z "$LIST_FAILS" ] || exit 1
+  while [ $# -gt 0 ]; do
+    if [ "$1" = --workflow ]; then workflow="$2"; fi
+    shift
+  done
+  if grep -qxF "$workflow" "$RAN"; then echo 1; else echo 0; fi
+elif [ "$1 $2" = "workflow run" ]; then
+  for name in $FAILS; do
+    if [ "$name" = "$3" ]; then exit 1; fi
+  done
+fi
+exit 0
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "gh").write_text(fake_gh)
+            (root / "gh").chmod(0o755)
+
+            def run(ran=(), fails=(), list_fails=""):
+                (root / "ran").write_text("".join(name + "\n" for name in ran))
+                (root / "log").write_text("")
+                env = {**os.environ, "PATH": f"{root}{os.pathsep}{os.environ['PATH']}", "R": "o/r", "BRANCH": "b",
+                       "HEAD_SHA": "abc123", "RAN": str(root / "ran"), "LOG": str(root / "log"),
+                       "FAILS": " ".join(fails), "LIST_FAILS": list_fails}
+                code = subprocess.run(["bash", "-eu", "-c", block], env=env, capture_output=True).returncode
+                calls = (root / "log").read_text().splitlines()
+                for call in calls:
+                    if call.startswith("run list "):
+                        self.assertIn("--commit abc123", call)  # runs on the branch head only
+                return code, [call.split()[2] for call in calls if call.startswith("workflow run ")]
+
+            self.assertEqual(run(), (0, names))  # after a push, every build starts
+            self.assertEqual(run(ran=names), (0, []))  # a later run, with every build run on the branch head
+            self.assertEqual(run(ran=names[:1]), (0, names[1:]))  # starts only the missing ones
+            self.assertEqual(run(fails=names[:1]), (1, names))  # fails, but only after trying every build
+            self.assertEqual(run(list_fails="1"), (0, names))  # a run it cannot see counts as missing
 
 
 if __name__ == "__main__":
