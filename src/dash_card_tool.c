@@ -647,7 +647,10 @@ static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 		memcpy(name, base, nlen);
 		name[nlen] = 0;
 		r = mcSaveFormatRead(buf, (uint32_t)size, dot ? dot + 1 : NULL, name, ctStamp(stamp) ? stamp : NULL, s, &format);
-		if (r == MCW_ERR_UNSUPPORTED && format == MCSF_PSV) {
+		/* save type 2 is PS2; anything else is a PS1 save. A PS2 .psv can also be
+		 * refused for a sub-folder, which keeps the generic message below. */
+		if (r == MCW_ERR_UNSUPPORTED && format == MCSF_PSV && size >= 0x40 &&
+		    (buf[0x3C] | buf[0x3D] << 8 | buf[0x3E] << 16 | (uint32_t)buf[0x3F] << 24) != 2u) {
 			free(buf);
 			*why = "This .psv holds a PS1 save. Only PS2 saves can go onto a PS2 card.";
 			return r;

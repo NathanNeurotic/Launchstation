@@ -511,6 +511,8 @@ int mcSaveFromMax(const uint8_t *buf, uint32_t len, const uint8_t stamp[8], McSa
 		}
 		pos += 36u + size;
 		pos = ((pos + 8u + 15u) & ~15u) - 8u; /* each record ends 8 bytes before a 16-byte boundary */
+		if (pos > length)
+			pos = length; /* the last record's padding may be missing; never step past the data */
 	}
 	free(raw);
 	return MCW_OK;
