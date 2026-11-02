@@ -4,7 +4,8 @@
 #include <stdint.h>
 
 /* "Card contents..." for one memory card image: lists its saves and copies,
- * moves, deletes, exports and imports (.psu) them. See src/dash_card_tool.c. */
+ * moves, deletes, exports (.psu) and imports (.psu and the formats in
+ * mc_save_formats.h) them. See src/dash_card_tool.c. */
 void dashCardTool(const char *image);
 
 /* "New blank card...": an empty 8 to 64 MB .mcd in folder (on MMCE, in
@@ -36,6 +37,11 @@ void dashCardAllSaves(const char *folder);
  * of that card, nothing on it replaced), saves marked ones as a named set (a
  * subfolder), applies a set to a card, or deletes .psu files. */
 void dashCardSaveLibrary(const char *folder);
+
+/* "Convert to .psu": a save exported by another tool (Blaze .mcm, MAX Drive
+ * .max, CodeBreaker .cbs, SharkPort/X-Port .sps/.xps, PS3 .psv) written as a
+ * new .psu beside it, read back and checked. The source is only read. */
+void dashCardConvertSave(const char *path);
 
 /* MMCE: show which card image the device serves (confirmed by content), and
  * switch to a numbered card with confirmation (src/mmce_card_switch.c). */
