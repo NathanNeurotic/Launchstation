@@ -185,7 +185,7 @@ code += copy[a:b]
 for signature in ('static int isMemoryCardLikePath(', 'static int isHddCommonParty(',
                   'static int calcTransferSpeed(', 'static int calcRemainingTime(',
                   'static int smoothTransferSpeed(', 'static int applyMcInfoToMcPath(',
-                  'static int verifyUdpfsCopy('):
+                  'static int udpfsReadsDecompressed(', 'static int verifyUdpfsCopy('):
     code += function(copy, signature)
 code += copy[copy.index('int copy('):]
 code += function(browser, 'static int waitForClipboardSourceDevice(')

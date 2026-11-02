@@ -133,9 +133,25 @@ static int genGetStat(const char *p,iox_stat_t *out){(void)p;(void)out;assert(!"
  * keeps its tail. */
 enum {UDPFS_OK,UDPFS_LOST,UDPFS_TAIL};
 static int udpfs_stale,opens,udpfs_read_opens;
+/* PS2-Servers' udpfs_server.py reads a .cso/.ciso/.zso/.ziso/.chd opened by
+ * its own name decompressed when it is a container it can read: the image
+ * (decoded_size bytes, not starting with the container's magic) instead. */
+static int udpfs_decompress,decoded_size;
+static int genCmpFileExt(const char *p,const char *e){const char *d=strrchr(p,'.');return d&&!strcasecmp(d+1,e);}
+static const char *decompressed(const char *p){
+ static const char *const ext[]={"cso","ciso","zso","ziso","chd"};char head[8]={0};int i,fd;
+ for(i=0;i<5&&!genCmpFileExt(p,ext[i]);i++);
+ if(i==5||(fd=open(p,O_RDONLY))<0)return p;
+ i=read(fd,head,sizeof(head));close(fd);
+ if(i<8||(memcmp(head,"CISO",4)&&memcmp(head,"ZISO",4)&&memcmp(head,"MComprHD",8)))return p;
+ unsigned char image[8192]={0};assert(decoded_size<=(int)sizeof(image));
+ fd=open("decoded.img",O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0&&write(fd,image,decoded_size)==decoded_size);close(fd);
+ return "decoded.img";
+}
 static int genOpen(const char *p,int flags){
  int udpfs=!strncmp(p,"udpfs:",6),stale=udpfs&&(flags&O_WRONLY)?udpfs_stale:UDPFS_OK;
  opens++;if(udpfs&&flags==O_RDONLY)udpfs_read_opens++;
+ if(udpfs&&flags==O_RDONLY&&udpfs_decompress)p=decompressed(p);
  if(fail_open&&flags==O_RDONLY&&udpfs)return -ENOENT;
  if(fail_out_open&&(flags&O_WRONLY))return -EACCES;
  if(stale)udpfs_stale=UDPFS_OK;
@@ -168,7 +184,6 @@ static int filerIsExploitProtectedPath(const char *p,const FILEINFO *f){(void)p;
 static int move_deletes;static const char *move_target="mmce0:/MOVE.BIN";
 static int delete(const char *p,const FILEINFO *f){char source[MAX_PATH];assert(!handles);assert(!access(move_target,F_OK));snprintf(source,sizeof(source),"%s%s",p,f->name);move_deletes++;return genRemove(source);}
 static void markMx4sioDestinationAfterWrite(const char *p){(void)p;}
-static int genCmpFileExt(const char *p,const char *e){(void)p;(void)e;return 0;}
 static int newdir(const char *parent,const char *name){char p[MAX_PATH];snprintf(p,sizeof(p),"%s%s",parent,name);return mkdir(p,0700)?-errno:0;}
 static int getDir(const char *p,FILEINFO *out){
  if(fail_listing)return -EIO;DIR *d=opendir(p);if(!d)return -errno;struct dirent *e;int n=0;
@@ -191,7 +206,7 @@ a=copy.index('/* One paste context');b=copy.index('static int isMemoryCardLikePa
 for sig in ('static int isMemoryCardLikePath(', 'static int isHddCommonParty(',
             'static int calcTransferSpeed(', 'static int calcRemainingTime(',
             'static int smoothTransferSpeed(', 'static int applyMcInfoToMcPath(',
-            'static int verifyUdpfsCopy('):
+            'static int udpfsReadsDecompressed(', 'static int verifyUdpfsCopy('):
     code+=function(copy,sig)
 code+=copy[copy.index('int copy('):]
 code+=function(browser,'static int waitForClipboardSourceDevice(')
@@ -200,7 +215,7 @@ code+=r'''
 static void put(const char *p,const unsigned char *data,int n){int fd=open(p,O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0);assert(write(fd,data,n)==n);assert(!close(fd));}
 static int matches(const char *p,const unsigned char *data,int n){unsigned char out[70000];int fd=open(p,O_RDONLY);if(fd<0)return 0;int count=read(fd,out,sizeof(out));close(fd);return count==n&&!memcmp(data,out,n);}
 static unsigned char input[65537];
-static void reset(void){assert(!handles&&!listings_live);source_ready=load_ok=1;reset_preflight=0;fail_open=fail_rewind=fail_read=fail_write=fail_close=fail_listing=cancel_copy=fail_out_open=early_eof=fail_measure=0;fail_alloc_bytes=0;listing_allocs=0;read_calls=write_calls=0;udpfs_stale=UDPFS_OK;opens=udpfs_read_opens=0;browser_cut=0;browser_cd=0;generation=1;clipIopResetGeneration=1;PasteMode=PM_NORMAL;strcpy(clipPath,"udpfs:/");nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));strcpy(clipFiles[0].name,"BOOT.ELF");clipFiles[0].stats.FileSizeByte=sizeof(input);}
+static void reset(void){assert(!handles&&!listings_live);source_ready=load_ok=1;reset_preflight=0;fail_open=fail_rewind=fail_read=fail_write=fail_close=fail_listing=cancel_copy=fail_out_open=early_eof=fail_measure=0;fail_alloc_bytes=0;listing_allocs=0;read_calls=write_calls=0;udpfs_stale=UDPFS_OK;udpfs_decompress=decoded_size=0;opens=udpfs_read_opens=0;browser_cut=0;browser_cd=0;generation=1;clipIopResetGeneration=1;PasteMode=PM_NORMAL;strcpy(clipPath,"udpfs:/");nclipFiles=1;memset(clipFiles,0,sizeof(clipFiles));strcpy(clipFiles[0].name,"BOOT.ELF");clipFiles[0].stats.FileSizeByte=sizeof(input);}
 int main(void){
  assert(sizeof(copy_diag)<=128); /* fixed runtime budget, no log allocation */
  mkdir("udpfs:",0700);mkdir("mc0:",0700);mkdir("mc1:",0700);mkdir("usb0:",0700);mkdir("host:",0700);mkdir("mmce0:",0700);mkdir("mmce1:",0700);
@@ -332,6 +347,49 @@ int main(void){
  message[0]=0;subfunc_Paste(message,"udpfs:/");
  assert(!message[0]&&!handles&&move_deletes==deletes+1&&!nclipFiles&&udpfs_read_opens==1);
  assert(access("mc0:/MOVED.BIN",F_OK)&&matches("udpfs:/MOVED.BIN",input,257));
+ /* A compressed image that the server reads back decompressed, larger or
+  * smaller than the container, is still the copy: Paste and Move keep it, and
+  * a Move deletes its source after the one read-back. */
+ static const struct {const char *name,*magic;} images[]={
+  {"GAME.cso","CISO"},{"GAME.CSO","CISO"},{"GAME.ciso","CISO"},{"GAME.zso","ZISO"},{"GAME.ziso","ZISO"},{"GAME.chd","MComprHD"}};
+ unsigned char image[900];char source[MAX_PATH];
+ for(unsigned n=0;n<sizeof(images)/sizeof(images[0]);n++)for(int larger=0;larger<2;larger++)for(int cut=0;cut<2;cut++){
+  memcpy(image,input,sizeof(image));memcpy(image,images[n].magic,strlen(images[n].magic));
+  snprintf(source,sizeof(source),"mc0:/%s",images[n].name);put(source,image,sizeof(image));
+  snprintf(target,sizeof(target),"udpfs:/%s",images[n].name);unlink(target);
+  reset();strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,images[n].name);clipFiles[0].stats.FileSizeByte=sizeof(image);
+  browser_cut=cut;move_target=target;udpfs_decompress=1;decoded_size=larger?5000:600;deletes=move_deletes;
+  message[0]=0;subfunc_Paste(message,"udpfs:/");
+  if(message[0]||!matches(target,image,sizeof(image))){
+   fprintf(stderr,"FAIL %s read back decompressed as %d bytes, %s: \"%s\", copy %s\n",images[n].name,decoded_size,
+           cut?"Move":"Paste",message,access(target,F_OK)?"removed":"kept");
+   return 1;
+  }
+  assert(!handles&&udpfs_read_opens==1&&move_deletes==deletes+cut&&nclipFiles==!cut);
+  assert(cut?access(source,F_OK)!=0:matches(source,image,sizeof(image)));
+ }
+ move_target="udpfs:/MOVED.BIN";
+ /* A server that reads the container back as stored still gets the exact
+  * check: an old longer .cso that O_TRUNC never cut fails and is removed. */
+ memcpy(image,input,sizeof(image));memcpy(image,"CISO",4);put("mc0:/GAME.cso",image,sizeof(image));
+ {unsigned char older[1200]={0};memcpy(older,"CISO",4);put("udpfs:/GAME.cso",older,sizeof(older));}
+ reset();strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"GAME.cso");clipFiles[0].stats.FileSizeByte=sizeof(image);
+ browser_cut=1;udpfs_stale=UDPFS_TAIL;deletes=move_deletes;
+ message[0]=0;subfunc_Paste(message,"udpfs:/");
+ if(!strstr(message,"Verifying destination (-5)")){
+  fprintf(stderr,"FAIL old longer GAME.cso on a server that reads it as stored was reported as: \"%s\"\n",message);
+  return 1;
+ }
+ assert(!handles&&move_deletes==deletes&&nclipFiles==1&&matches("mc0:/GAME.cso",image,sizeof(image))&&access("udpfs:/GAME.cso",F_OK));
+ /* A close that failed is not overridden by a size that reads back right. */
+ reset();put("mc0:/CLOSE.BIN",input,257);strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"CLOSE.BIN");clipFiles[0].stats.FileSizeByte=257;
+ browser_cut=1;fail_close=1;deletes=move_deletes;
+ message[0]=0;subfunc_Paste(message,"udpfs:/");
+ if(!strstr(message,"Closing destination (-5)")){
+  fprintf(stderr,"FAIL a udpfs: copy whose close failed was reported as: \"%s\"\n",message);
+  return 1;
+ }
+ assert(!handles&&move_deletes==deletes&&nclipFiles==1&&matches("mc0:/CLOSE.BIN",input,257));
  /* Nested ordinary folders use the same production recursion. */
  reset();mkdir("udpfs:/NESTED",0700);put("udpfs:/NESTED/CHILD.BIN",input,257);
  strcpy(clipFiles[0].name,"NESTED");clipFiles[0].stats.AttrFile=sceMcFileAttrSubdir;

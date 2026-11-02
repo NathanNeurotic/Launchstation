@@ -445,6 +445,23 @@ finish:
 	return ret;
 }
 
+/* PS2-Servers' udpfs_server.py decompresses a .cso, .ciso, .zso, .ziso or
+ * .chd that is opened by its own name and that it can read, so reading one
+ * back gives the image's size and first bytes. A server that returns the file
+ * as stored (udpfsd) returns the container's magic first. */
+static int udpfsReadsDecompressed(int fd, const char *path)
+{
+	static const char *const ext[] = {"cso", "ciso", "zso", "ziso", "chd"};
+	char head[8];
+	int i;
+
+	for (i = 0; i < 5 && !genCmpFileExt(path, ext[i]); i++)
+		;
+	if (i == 5 || genLseek(fd, 0, SEEK_SET) != 0 || genRead(fd, head, sizeof(head)) != sizeof(head))
+		return FALSE;
+	return memcmp(head, "CISO", 4) && memcmp(head, "ZISO", 4) && memcmp(head, "MComprHD", 8);
+}
+
 /* A UDPFS server can keep a handle across an IOP reboot and hand it to the
  * next open of the same name, and udpfs_ioman's close returns 0 whatever the
  * server answers. Every write is then acknowledged into a file removed before
@@ -461,6 +478,8 @@ static int verifyUdpfsCopy(char *path, u64 size)
 	if (fd < 0)
 		return fd;  //no file there, so nothing to remove
 	end = genLseek(fd, 0, SEEK_END);
+	if (end >= 0 && end != (s64)size && udpfsReadsDecompressed(fd, path))
+		end = (s64)size;  //the copy is there, but its size can only be read decompressed
 	genClose(fd);
 	if (end == (s64)size)
 		return 0;
