@@ -910,12 +910,12 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			filerCopyDiagStage("Listing source");
 			sprintf(tmp, "%s%s/", inPath, file.name);
 			nfiles = getDirComplete(tmp, files, NULL);
-			if (move_manifest.enabled && !filerDirReadComplete())
-				move_manifest.error = -ENOTSUP;
 			if (nfiles < 0) {
 				ret = copyDiagFail(nfiles);
 				goto folder_exit;
 			}
+			if (move_manifest.enabled && !filerDirReadComplete())
+				move_manifest.error = -ENOTSUP;
 		}
 		if (PasteMode == PM_PSU_BACKUP) {
 			i = strlen(out) - 1;
@@ -1155,12 +1155,12 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 				filerCopyDiagStage("Listing source again");
 				listed = listingSum(files, nfiles);
 				i = getDirComplete(in, files, NULL);  //the number of entries now
-				if (move_manifest.enabled && !filerDirReadComplete())
-					move_manifest.error = -ENOTSUP;
 				if (i < 0)
 					ret = copyDiagFail(i);
 				else if (i != nfiles || listingSum(files, i) != listed)
 					ret = copyDiagFail(-EIO);
+				if (move_manifest.enabled && !filerDirReadComplete())
+					move_manifest.error = -ENOTSUP;
 			}
 		}
 		//folder contents are copied by the recursive call above, with error handling below
