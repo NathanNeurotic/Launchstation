@@ -174,7 +174,8 @@ static int genOpen(const char *p,int flags){
  fd_open[fd]=1;handles++;snprintf(fd_name[fd],MAX_PATH,"%s",p);return fd;}
 static int genClose(int fd){if(fd<0||fd>=1024||!fd_open[fd]){double_closes++;return -EBADF;}fd_open[fd]=0;handles--;
  if(named(fd,close_fail_name)){close_fail_name=NULL;close(fd);return -EIO;}return close(fd)?-errno:0;}
-static s64 genLseek(int fd,s64 n,int whence){assert(fd_open[fd]);return lseek(fd,n,whence);}
+static int lseek_fail_udpfs;
+static s64 genLseek(int fd,s64 n,int whence){assert(fd_open[fd]);if(lseek_fail_udpfs&&whence==SEEK_CUR&&!strncmp(fd_name[fd],"udpfs:",6))return -EIO;return lseek(fd,n,whence);}
 static int genRead(int fd,void *p,int n){assert(fd_open[fd]);if(named(fd,read_fail_name))return -EIO;int r=read(fd,p,n);return r<0?-errno:r;}
 static int genWrite(int fd,void *p,int n){assert(fd_open[fd]);if(++writes==write_fail_at)return -ENOSPC;int r=write(fd,p,n);return r<0?-errno:r;}
 static int genRemove(char *p){if(udpfs_stale_for(p)==UDPFS_TAIL)return -EBUSY;return unlink(p)?-errno:0;}
@@ -284,7 +285,7 @@ static int backs_up(const char *p,const char *folder,const char *text){static un
 static void add(const char *name,int attr);
 static void clip(const char *path,const char *name,int attr,int mode){
  yn_answer=1;yn_calls=0;cancel_copy=0;fail_alloc_bytes=0;browser_cut=0;generation=clipIopResetGeneration=1;
- writes=write_fail_at=0;alloc_fail_stage=NULL;renames=rename_fail=0;typed=NULL;
+ lseek_fail_udpfs=0; writes=write_fail_at=0;alloc_fail_stage=NULL;renames=rename_fail=0;typed=NULL;
  read_fail_name=close_fail_name=NULL;show_titles=0;game_title=NULL;udpfs_stale=UDPFS_OK;udpfs_stale_name=NULL;
  party_calls=party_fail_at=mount_calls=mount_fail_at=0;memset(mount_slot,0,sizeof(mount_slot));
  protected_folder=0;modify_answer=1;modify_calls=delete_questions=delete_fail=0;
@@ -583,6 +584,13 @@ int main(void){
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);alloc_fail_stage="Finishing PSU";paste("udpfs:/");
  settled();
  assert(says("Finishing PSU (-12)")&&holds("udpfs:/SAVEDIR.psu","older backup")&&!exists("udpfs:/SAVEDIR.ps~"));
+ /* A size that cannot be measured leaves nothing to read the published .psu
+  * back against: the backup stops before it is published, and the older one
+  * and the Move's source stay. */
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);browser_cut=1;lseek_fail_udpfs=1;paste("udpfs:/");
+ settled();lseek_fail_udpfs=0;
+ assert(says("Measuring PSU (-5)")&&holds("udpfs:/SAVEDIR.psu","older backup")&&!exists("udpfs:/SAVEDIR.ps~"));
+ assert(nclipFiles==1&&filled("mc0:/SAVEDIR/A.BIN",4,'a'));browser_cut=0;
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("udpfs:/");
  settled();
  assert(!message[0]&&same("udpfs:/SAVEDIR.psu",good,size)&&!exists("udpfs:/SAVEDIR.ps~")&&!renames);

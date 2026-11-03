@@ -260,8 +260,10 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 			fullpath[2] = '1';
 			if ((t = checkELFheader(fullpath)) > 0)
 				goto ELFchecked;
-			if (first == -1 && t != -1)  //a file that opened is not missing because mc1: has none
+			if (first == -1 && t != -1) {  //a file that opened is not missing because mc1: has none
 				t = -1;
+				fullpath[2] = '0';  //and the message names the card it opened on
+			}
 			goto ELFnotFound;
 		}
 
