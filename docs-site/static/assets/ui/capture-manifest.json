@@ -1,17 +1,340 @@
 {
-  "status": "Initial capture checkpoint; full showcase in progress",
+  "captured_on": "2026-11-03",
   "build": 974,
-  "revision": "97318e5870b59ce32cae19312ed60415752ae9b3",
+  "source_revision": "97318e5870b59ce32cae19312ed60415752ae9b3",
   "elf_sha256": "874a1e47faa9f2f39614ab026f9a482bb0280bad219b2c4ef8556443580df638",
   "emulator": "RIPPCSX2 2.9.96-rippcsx2.2",
-  "capture_mode": "Auto NTSC 4:3, unmodified native emulator PNG 640x480",
-  "captured_on": "2026-11-03",
-  "scope": "Dashboard menu rendering only, no console or gameplay acceptance",
-  "input_steps": "wait:25,shot,cross,wait:4,shot,select,wait:3,shot",
-  "asset": {
-    "file": "home-osd-classic-initial.png",
-    "bytes": 132747,
-    "sha256": "894172cedc33bceb3630d36c83a081626714a3ca2c7fe0a7f9a2f967d8f0bcc6"
-  },
-  "limitations": "The initial Home capture has an empty Continue row. The staged folder-card application fixture was not read successfully and needs correction before the showcase."
+  "emulator_sha256": "10caa1405cb4b18495ff765a92693a9b26dcc7221335635ade38b4c83e6a6b85",
+  "display": "Auto NTSC 4:3; native PNG 640x480; standard definition",
+  "scope": "Authentic UI captures; seven non-bootable sample applications. No gameplay or physical hardware acceptance.",
+  "takes": [
+    {
+      "id": "osd",
+      "name": "OSD Classic",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103111759.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103111800.mp4"
+      ]
+    },
+    {
+      "id": "black",
+      "name": "Classic Black",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103111827.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103111829.mp4"
+      ]
+    },
+    {
+      "id": "towers",
+      "name": "PS2 Towers",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103111855.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103111857.mp4"
+      ]
+    },
+    {
+      "id": "mist",
+      "name": "PS2 Blue Mist",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103111924.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103111925.mp4"
+      ]
+    },
+    {
+      "id": "minimal",
+      "name": "OSD Minimal",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103111952.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103111953.mp4"
+      ]
+    },
+    {
+      "id": "clockring",
+      "name": "System Clock",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103112020.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112022.mp4"
+      ]
+    },
+    {
+      "id": "mcgrid",
+      "name": "Memory Card Grid",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103112048.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112050.mp4"
+      ]
+    },
+    {
+      "id": "bootlines",
+      "name": "Boot Lines",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103112116.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112118.mp4"
+      ]
+    },
+    {
+      "id": "cubes",
+      "name": "Wireframe Cubes",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103112145.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112146.mp4"
+      ]
+    },
+    {
+      "id": "stream",
+      "name": "Data Stream",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103112213.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112214.mp4"
+      ]
+    },
+    {
+      "id": "mcblue",
+      "name": "Memory Card Blue",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103112241.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112243.mp4"
+      ]
+    },
+    {
+      "id": "brushed",
+      "name": "Brushed Console",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103112310.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112311.mp4"
+      ]
+    },
+    {
+      "id": "biosblue",
+      "name": "BIOS Blue",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103112338.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112339.mp4"
+      ]
+    },
+    {
+      "id": "mono",
+      "name": "Monochrome",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103112406.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112408.mp4"
+      ]
+    },
+    {
+      "id": "crt",
+      "name": "CRT",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103112434.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112436.mp4"
+      ]
+    },
+    {
+      "id": "psx",
+      "name": "PSX",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103112502.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112504.mp4"
+      ]
+    },
+    {
+      "id": "crystal",
+      "name": "Crystal",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103112531.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112532.mp4"
+      ]
+    },
+    {
+      "id": "discred",
+      "name": "Disc Error Red",
+      "steps": "wait:17,shot,rec,wait:4,rec,wait:2",
+      "exit_code": 0,
+      "shots": [
+        "SYS-CONF [_]_SYS-CONF_20261103112559.png"
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112600.mp4"
+      ]
+    }
+  ],
+  "processing": "Unmodified PNGs. Theme tour: first 3 seconds of each take, straight cuts, 640x480 20fps H264. Highlights: 4 seconds each of six takes. GIF 480x360 6fps/128 colors.",
+  "artwork_sources": [
+    "https://github.com/NathanNeurotic/RiptOPL/blob/rebuild/main/docs/assets/riptopl.png",
+    "https://github.com/NathanNeurotic/Launchstation/blob/97318e5870b59ce32cae19312ed60415752ae9b3/docs-site/static/assets/launchstation-logo.avif"
+  ],
+  "assets": [
+    {
+      "file": "theme-biosblue.png",
+      "bytes": 79108,
+      "sha256": "0662f73a4597a7a375e4eac50ae12225216f49963a8cf4975d448d68d6eab528"
+    },
+    {
+      "file": "theme-black.png",
+      "bytes": 79182,
+      "sha256": "e13960263103b7eb16f270282efecd98bfe674a1fbddc1c07b083997031336fb"
+    },
+    {
+      "file": "theme-bootlines.png",
+      "bytes": 79847,
+      "sha256": "8fe04201098b091988dbcc8b99851fa8e08526b1c4e8b85159d327ba32e7460b"
+    },
+    {
+      "file": "theme-brushed.png",
+      "bytes": 150497,
+      "sha256": "7a7e7acc82a494069fdadcf3db99986b20c13dfb989dd500c8661091c69e90ec"
+    },
+    {
+      "file": "theme-clockring.png",
+      "bytes": 118183,
+      "sha256": "82ff9aecfc6e1712a820a6d60907944c6c2562117bef91150e8ab21c7a93cd42"
+    },
+    {
+      "file": "theme-crt.png",
+      "bytes": 78674,
+      "sha256": "8ec09e987277e0b9be8dac461c3eb8c87fff42af9cf83cb938657b041cc05490"
+    },
+    {
+      "file": "theme-crystal.png",
+      "bytes": 131710,
+      "sha256": "bd079b707a3a594bcd2d4b62d8ffafb7f42e8c48d503178c194868b86af8eed0"
+    },
+    {
+      "file": "theme-cubes.png",
+      "bytes": 93402,
+      "sha256": "f0fa37d47a26c69125999c984cf35651256629606f93b4f401d6343f5e11801f"
+    },
+    {
+      "file": "theme-discred.png",
+      "bytes": 129791,
+      "sha256": "3196dced6addbf10baac2a60c6428de6cc30674bc8a1f827f65cb39f932396bd"
+    },
+    {
+      "file": "theme-highlights.gif",
+      "bytes": 4885148,
+      "sha256": "ac34e8393761f6a2766d6c0b1b3da578701cf41e4d018f805a0b1332e8238694"
+    },
+    {
+      "file": "theme-highlights.mp4",
+      "bytes": 597007,
+      "sha256": "2fff6664021d16bf0894ef9f2deb6ace0c7d68a63b0da60acaabe4419f5b5608"
+    },
+    {
+      "file": "theme-mcblue.png",
+      "bytes": 87006,
+      "sha256": "00f7cce2ea6ddce4ee4cff424c2e445c1b0fd77f2463419e5a0b761cc6718a0e"
+    },
+    {
+      "file": "theme-mcgrid.png",
+      "bytes": 82238,
+      "sha256": "8cf478f420c902462f0526d3f89fe508928bcef375d190f65473662a2595b6dc"
+    },
+    {
+      "file": "theme-minimal.png",
+      "bytes": 85827,
+      "sha256": "4143af1647ccb9c86c6202ae5dd1907903c5204bacc00e9ad4d5f412fe973beb"
+    },
+    {
+      "file": "theme-mist.png",
+      "bytes": 103577,
+      "sha256": "6324ced005ecdff399e669bdd14dfb16e8bd1d222d6fd49d8144b24e8293f274"
+    },
+    {
+      "file": "theme-mono.png",
+      "bytes": 74720,
+      "sha256": "ef96e755c6de9009ed81987e63c6d4403962f4eba1a7fca042e53b474b2c54b0"
+    },
+    {
+      "file": "theme-osd.png",
+      "bytes": 136599,
+      "sha256": "f6a03e0815fdc521ebc2ed0ec180bb8cd08a86a027753e8e9017a541d91825a1"
+    },
+    {
+      "file": "theme-psx.png",
+      "bytes": 94879,
+      "sha256": "23e70e44440f9900536d2e3c9e65aa5d26d493e65013ad18749f80cfb27a3094"
+    },
+    {
+      "file": "theme-stream.png",
+      "bytes": 82184,
+      "sha256": "98e8982209a058742e87b169711ebcb640aa5459dec78230c773a025ca8c87cc"
+    },
+    {
+      "file": "theme-tour.mp4",
+      "bytes": 1095595,
+      "sha256": "a977f9aa204930d61e169aec8054d2153cbcebfdc46c0b21393f046e0551c925"
+    },
+    {
+      "file": "theme-towers.png",
+      "bytes": 197823,
+      "sha256": "f3b0edc3ca2432ff35d3ba9ec03675809f769972e8c00a78088e60c677ebd1ba"
+    }
+  ]
 }

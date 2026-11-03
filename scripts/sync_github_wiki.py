@@ -18,8 +18,8 @@ from urllib.parse import urlsplit
 MANAGED = re.compile(
     r"\A<!-- LAUNCHSTATION-WIKI-SYNC source=([^\s]+) sha256=([a-f0-9]{64}) -->\n\n"
 )
-MARKDOWN_LINK = re.compile(r"(?<!!)(\[[^\]]+\]\()([^\)\s]+)(\))")
-HTML_LINK = re.compile(r'(\bhref=")([^"]+)(")')
+MARKDOWN_LINK = re.compile(r"(\[[^\]]+\]\()([^\)\s]+)(\))")
+HTML_LINK = re.compile(r'(\b(?:href|src|poster)=")([^"]+)(")')
 SKIP_HTML = {"index", "wiki"}
 WIKI_ALIASES = {"index": "Home", "wiki": "Home", "credits": "Credits"}
 
@@ -39,6 +39,8 @@ def render_link(target: str, source: Path, repo: str, commit: str) -> str:
     path, separator, fragment = target.partition("#")
     if not path:
         return target
+    if path.startswith("assets/"):
+        return f"https://raw.githubusercontent.com/{repo}/{commit}/docs-site/static/{path}"
     if path.endswith(".html"):
         return wiki_slug(path.rsplit("/", 1)[-1]) + (separator + fragment if separator else "")
     if path.endswith(".md"):
@@ -56,6 +58,8 @@ def render_link(target: str, source: Path, repo: str, commit: str) -> str:
         repo_path = posixpath.normpath(posixpath.join(source.parent.as_posix(), path))
         if repo_path.startswith("../"):
             raise ValueError(f"Invalid relative source link: {target} in {source}")
+        if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".mp4"}:
+            return f"https://raw.githubusercontent.com/{repo}/{commit}/{repo_path}"
         return f"https://github.com/{repo}/blob/{commit}/{repo_path}" + (
             separator + fragment if separator else ""
         )
