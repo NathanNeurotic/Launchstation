@@ -17,6 +17,25 @@
 - [Testing and reporting problems](#testing-and-reporting-problems)
 - [Credits and licenses](#credits-and-licenses)
 
+## See Launchstation
+
+![OSD Classic Home with a populated sample application library](docs-site/static/assets/ui/theme-osd.png)
+
+**18 built-in themes, one dashboard.** Captured from released build 974 in RIPPCSX2.
+The sample applications are non-bootable placeholders; no gameplay is shown.
+
+[All themes and screenshots](https://nathanneurotic.github.io/Launchstation/ui-captures.html) |
+[Capture notes](docs/UI-CAPTURES.md).
+
+<details>
+<summary>Watch the animated themes (24-second GIF)</summary>
+
+![OSD Classic, PS2 Towers, System Clock, Wireframe Cubes, PSX and Disc Error Red in motion](docs-site/static/assets/ui/theme-highlights.gif)
+
+[Full 54-second MP4 tour](docs-site/static/assets/ui/theme-tour.mp4).
+
+</details>
+
 ## Install and update
 
 Launchstation needs a console that can already run homebrew, through an existing launcher or exploit. Copying the app to a card or drive does not install a boot exploit.

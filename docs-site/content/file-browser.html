@@ -2,6 +2,7 @@
 <p class="lead">Files is a first-class, persistent dashboard tab built on the native browser. Tools &gt; File Browser and launch keys open the Files tab; Application options &gt; <i>Show in File Browser</i> switches to Files and opens that application's folder. It copies, moves, renames and deletes, builds and extracts PSU saves, mounts memory card images, edits folder dates, opens images and text, and launches executables and game images through the shared loader.</p>
 
 <h2 id="tab">The Files tab</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/files-folder.png"><img src="assets/ui/files-folder.png" width="640" height="480" loading="lazy" decoding="async" alt="Populated USB documentation folder"></a><figcaption>Populated USB documentation folder</figcaption></figure></div>
 <ul>
 <li>Files opens straight into the browser inside the dashboard frame; there is no separate landing page. <b>L1/R1</b> switch top-level tabs even from inside a folder. Returning to Files restores the folder and the highlighted entry.</li>
 <li><b>Back</b> goes to the parent folder (and re-selects the folder you came from). At the device root, Back returns to Home. In the modal browser Back at the root closes it.</li>
@@ -26,6 +27,7 @@
 <p>A USB keyboard works as a controller wherever a pad does (see <a href="controls.html#keyboard">USB keyboard</a>). There is no mouse support.</p>
 
 <h2 id="root">Device root</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/files-devices.png"><img src="assets/ui/files-devices.png" width="640" height="480" loading="lazy" decoding="async" alt="Files device list"></a><figcaption>Files device list</figcaption></figure></div>
 <p>The root lists the device classes the build supports, each with a status line. Entries can be opened while they say <i>Not checked</i>; opening starts the demand-loaded driver stack and refreshes the state. A device that was explicitly checked and found absent is skipped by navigation. USB discovery never assumes a permanent <code>mass0:</code>; USB units are shown under the public <b>MASS</b> name even though their internal path may be <code>usbN:</code>.</p>
 <table><thead><tr><th>Entry</th><th>Notes</th></tr></thead><tbody>
 <tr><td>mc0 (Slot 1), mc1 (Slot 2)</td><td>Memory cards; PS1 or PS2 card type and free space are shown. An empty slot says <i>Slot empty</i>.</td></tr>
@@ -58,6 +60,7 @@
 <p>The type switches can be turned off individually with <b>Disable Ember / POPStarter / Neutrino support</b> under Settings &gt; Launching &gt; Disc &amp; image loaders.</p>
 
 <h2 id="viewer">Image viewer</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/image-viewer.png"><img src="assets/ui/image-viewer.png" width="640" height="480" loading="lazy" decoding="async" alt="Image viewer showing the supplied wallpaper example"></a><figcaption>Image viewer showing the supplied wallpaper example</figcaption></figure></div>
 <p>PNG uses a bounded libpng path (files up to 1.5 MB, 2048x2048; interlaced PNGs only up to 256x256) and JPEG a bounded libjpeg path (up to 4 MB and 8192 pixels per side). Large images are downsampled to the screen when loaded, so the viewer never keeps a full-size image in memory. Files that are damaged, unsupported or over the limits show a message instead of opening.</p>
 <table><thead><tr><th>Control</th><th>Action</th></tr></thead><tbody>
 <tr><td>Left / Right</td><td>Previous / next image in the current sorted folder (mixed PNG/JPG/JPEG, wraps at either end). With one image only, a toast says there is no other image.</td></tr>
@@ -75,6 +78,7 @@
 <p>Square marks entries (marked rows show a green check). Operations apply to the marked set; otherwise to the focused entry. The menu offers <b>Select all</b>, <b>Invert selection</b> and <b>Clear selection</b>. <b>Copy</b> and <b>Cut</b> fill the clipboard (the marks are cleared and a toast reads <i>N items ready to paste/move</i>); <b>Paste here</b> copies or, after Cut, moves. The clipboard is dropped if the IOP is reset, because device paths may no longer be valid. Classic exploit-protection checks still guard sensitive memory-card system folders (renaming, cutting, deleting and pasting there ask first or are refused).</p>
 
 <h2 id="operations">File Browser menu</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/files-context.png"><img src="assets/ui/files-context.png" width="640" height="480" loading="lazy" decoding="async" alt="File operations menu"></a><figcaption>File operations menu</figcaption></figure></div>
 <p>Triangle opens the menu. The offered items follow the classic rules: nothing that writes to a disc or read-only host, and no file operations in the HDD partition list. Unavailable items are greyed. The list is context-dependent:</p>
 <table><thead><tr><th>Item</th><th>Notes</th></tr></thead><tbody>
 <tr><td>Open, Open / start</td><td>Same as Confirm. Direct launch of executables and game images from PC CARD CF is refused (&ldquo;Direct launch unsupported&rdquo;); copy them to another device first.</td></tr>

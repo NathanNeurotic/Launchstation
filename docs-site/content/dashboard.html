@@ -22,6 +22,7 @@
 <p>The startup tab is configurable (<b>Settings &gt; Home &amp; applications &gt; Start screen</b>: Home, Applications, Files, Tools, Settings or Launch keys; default Home). <b>Applications</b> opens the library under Home showing every application (the saved filter is not changed). <b>Launch keys</b> opens Settings on its Launch keys page. Older saved values for the retired Devices page map to Files; no favorites or metadata are rewritten.</p>
 
 <h2 id="home">Home</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/theme-osd.png"><img src="assets/ui/theme-osd.png" width="640" height="480" loading="lazy" decoding="async" alt="OSD Classic: blue lights form a ring behind cyan application tiles on a dark violet background"></a><figcaption>OSD Classic Home with populated sample applications</figcaption></figure></div>
 <p>Home has two rows. Up/Down moves between them (an empty row is skipped), Left/Right moves within a row and wraps around, and <b>L2</b>/<b>R2</b> jump to the first/last entry.</p>
 <h3 id="continue">Continue row</h3>
 <p>Up to 24 tiles, in this order: pinned applications (including apps whose metadata says <code>pinned = 1</code>), then recent applications (as many as <b>Recent applications</b> allows: 0, 4, 8, 12 or 16; default 8), then favorites. If that leaves fewer than six tiles, the first applications of the library fill the row so a fresh install is not empty; with <b>Recent applications</b> set to 0 and nothing pinned or favorite, the row stays empty and Home lands on the Applications shortcut. Stored shortcuts whose device is not currently mounted are kept but hidden until the device returns. Pins and favorites show a small badge; recents do not.</p>
@@ -40,13 +41,16 @@
 <p><b>R3</b> on Home hides the interface so you can see the animated background; the footer keeps a single <i>R3 Show interface</i> hint. Press R3 again to restore. SELECT+R3 is still the R3 launch key. The hidden state is never saved across launches.</p>
 
 <h2 id="apps">Applications library</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/apps-list.png"><img src="assets/ui/apps-list.png" width="640" height="480" loading="lazy" decoding="async" alt="Applications List with the selected app description"></a><figcaption>Applications List with the selected app description</figcaption></figure></div>
 <p>Home &gt; Applications shows the library as <b>Grid</b> (5 columns), <b>List</b> (9 rows plus a detail panel) or <b>Carousel</b> (depth carousel). <b>SELECT</b> cycles the view (saved), Triangle opens the library menu (application options, change view, filter, refresh) and Square toggles Favorite. The filter is one of <b>All, Favorites</b> (favorites and pinned), <b>Memory Cards, MASS, HDD</b>, <b>Other devices</b> or <b>All including hidden</b>, and is remembered. Hidden entries appear only with All including hidden. Full details, artwork rules and metadata are on the <a href="apps.html">Applications</a> page.</p>
 
 <h2 id="files">Files</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/files-folder.png"><img src="assets/ui/files-folder.png" width="640" height="480" loading="lazy" decoding="async" alt="Populated USB documentation folder"></a><figcaption>Populated USB documentation folder</figcaption></figure></div>
 <p>Files is a persistent tab. Tools &gt; File Browser is a shortcut to it; file pickers and other modal browser entry points use the same engine. At the device root you select a device; devices that need a driver start when you open them (<b>Not checked</b> is not the same as absent). <b>Back</b> goes to the parent folder; at the device root it returns to Home. <b>L1/R1</b> still switch tabs while you are inside a folder. The device root also carries a <b>Built-in commands</b> entry (the classic MISC folder). Everything about browsing, copy/move/delete, sorting and the image viewer is on the <a href="file-browser.html">File Browser</a> page.</p>
 <p>USB directory reads are asynchronous. After a tab change, input stays guarded until any outstanding USB read has finished and the pad state has been re-armed, so a tab switch can never poll the controller during an active fileXio read.</p>
 
 <h2 id="tools">Tools</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/tools-essentials.png"><img src="assets/ui/tools-essentials.png" width="640" height="480" loading="lazy" decoding="async" alt="Tools essentials"></a><figcaption>Tools essentials</figcaption></figure></div>
 <p>Tools is a grouped list with a detail card for the focused entry (Up/Down, <b>L2/R2</b> jump six rows, Confirm runs it). A small coloured dot marks entries with a safety note (amber, shown in the card) or entries that leave Launchstation or change console state (red; these always ask for confirmation first).</p>
 <table><thead><tr><th>Group</th><th>Entry</th><th>What it does</th></tr></thead><tbody>
 <tr><td rowspan="6">Essentials</td><td>File Browser</td><td>Opens the Files tab.</td></tr>

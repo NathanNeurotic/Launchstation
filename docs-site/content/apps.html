@@ -2,6 +2,7 @@
 <p class="lead">Applications is the full library nested under Home, not an extra top-level tab. Open it with <b>Home &gt; Browse &amp; shortcuts &gt; Applications</b>. It lists the <code>.ELF</code> programs found in your configured application folders, with artwork, descriptions, favorites, pins and filters.</p>
 
 <h2 id="views">Views and controls</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/apps-grid.png"><img src="assets/ui/apps-grid.png" width="640" height="480" loading="lazy" decoding="async" alt="Applications Grid with favorites and artwork"></a><figcaption>Applications Grid with favorites and artwork</figcaption></figure><figure><a href="assets/ui/apps-list.png"><img src="assets/ui/apps-list.png" width="640" height="480" loading="lazy" decoding="async" alt="Applications List with the selected app description"></a><figcaption>Applications List with the selected app description</figcaption></figure><figure><a href="assets/ui/apps-carousel.png"><img src="assets/ui/apps-carousel.png" width="640" height="480" loading="lazy" decoding="async" alt="Applications Carousel"></a><figcaption>Applications Carousel</figcaption></figure></div>
 <p><b>SELECT</b> cycles <b>Grid</b>, <b>List</b> and <b>Carousel</b>; the choice is saved (<b>Settings &gt; Home &amp; applications &gt; Application view</b>, default Grid). The small icons next to the title show the active view and the count (for example <i>12 applications</i> or <i>3 shown - Favorites</i>).</p>
 <table><thead><tr><th>View</th><th>Layout</th><th>Navigation</th></tr></thead><tbody>
 <tr><td>Grid</td><td>5 columns of cards, three rows visible, scrollbar on the right.</td><td>D-pad moves one card; Up/Down move a row; L2/R2 move three rows.</td></tr>
@@ -42,6 +43,7 @@ mass:/BOOT/</code></pre>
 <p>Open <b>Settings &gt; Home &amp; applications &gt; Application library &gt; Application folders...</b>. Each current root is labeled <i>this folder + one subfolder</i>; select one to remove it. <b>Add folder...</b> chooses an exact folder (you are offered an immediate search afterwards) and <b>Restore defaults</b> restores the standard four roots. Changes take part in the Settings Save/Discard session.</p>
 
 <h2 id="options">Application options</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/app-options.png"><img src="assets/ui/app-options.png" width="640" height="480" loading="lazy" decoding="async" alt="Per-application options"></a><figcaption>Per-application options</figcaption></figure></div>
 <p>Triangle on a focused application (Home or Applications) opens its options:</p>
 <table><thead><tr><th>Item</th><th>Effect</th></tr></thead><tbody>
 <tr><td>Start</td><td>Launch through the shared loader.</td></tr>
@@ -57,6 +59,7 @@ mass:/BOOT/</code></pre>
 <p>If a launch fails because the file is missing, a message names the device and the path launched. For favorites, pins and recents it then offers to remove the shortcut, but only when the device is there and its drivers are running (a card or drive that is not inserted says nothing about the file), and with <b>Cancel</b> preselected, since a network server that does not answer also reads as a missing file. When the device's drivers could not be loaded the details say so instead (for example &ldquo;UDPFS drivers could not be loaded.&rdquo;), and no removal is offered. A file that opens but is not a valid PlayStation 2 executable gets its own message.</p>
 
 <h2 id="metadata">Metadata (optional)</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/app-details.png"><img src="assets/ui/app-details.png" width="640" height="480" loading="lazy" decoding="async" alt="Application details and metadata source"></a><figcaption>Application details and metadata source</figcaption></figure></div>
 <p>Plain <code>key = value</code> text; every key is optional; <code>#</code> starts a comment. Two sources are read, in addition to the ELF itself:</p>
 <ul>
 <li><code>&lt;dir&gt;/&lt;ELFNAME&gt;.cfg</code>, for example <code>OPNPS2LD.cfg</code> beside <code>OPNPS2LD.ELF</code>.</li>

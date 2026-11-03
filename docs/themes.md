@@ -58,6 +58,8 @@ the colour-swap selection.
 
 ## Settings
 
+![Appearance controls and theme preset selection](../docs-site/static/assets/ui/appearance.png)
+
 **Settings > Appearance**
 
 * **Theme preset**: Left/Right switches presets immediately. Press the confirm
@@ -103,6 +105,8 @@ format controls are unavailable while the clock is off; artwork-background
 controls explain their artwork-loading dependency when unavailable.
 
 ### Colour editor
+
+![Colour editor with RGB sliders and palette](../docs-site/static/assets/ui/colour-editor.png)
 
 Any colour row opens the colour editor, drawn next to the live dashboard:
 

@@ -4,6 +4,13 @@
 
 This is the maintained Markdown guide collection stored in the repository. An automated sync publishes these guides and the authored website reference pages to the standalone GitHub Wiki when the Wiki repository is initialized and the publish workflow succeeds. GitHub Pages continues to build from `docs-site/content/` independently.
 
+## See the dashboard
+
+![OSD Classic Home with pinned sample applications](../../docs-site/static/assets/ui/theme-osd.png)
+
+[All 18 themes and feature captures](https://nathanneurotic.github.io/Launchstation/ui-captures.html), captured in RIPPCSX2 using
+non-bootable sample files. [Theme tour MP4](../../docs-site/static/assets/ui/theme-tour.mp4).
+
 ## Read by task
 
 1. [Current interface and features](Current-Features.md) — four-tab dashboard, Home/Applications, Files, Tools, Settings, device discovery, core handoffs, backups and languages.

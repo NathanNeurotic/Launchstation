@@ -1,7 +1,10 @@
 <h1>Display, Themes &amp; BGM</h1>
 <p class="lead">The dashboard is PS2-inspired but fully configurable. One theme holds every visual value (background, colours, selection style, tile shape, corners, font, icons, clock and the app-artwork wallpaper). Pick a built-in preset, change any value with the controller, export the result as a theme folder, and load theme folders that you or others made on a PC. Nothing needs recompiling. The File Browser, HDD Manager, Text Editor and dialogs all follow the same active theme.</p>
 
+<p><a href="ui-captures.html#themes">Compare screenshots of all 18 presets</a>, or <a href="ui-captures.html#motion">watch their animated backgrounds</a>.</p>
+<div class="ui-gallery"><figure><a href="assets/ui/theme-towers.png"><img src="assets/ui/theme-towers.png" width="640" height="480" loading="lazy" decoding="async" alt="PS2 Towers: grey rectangular towers radiate into the distance behind the application row"></a><figcaption>PS2 Towers preset</figcaption></figure><figure><a href="assets/ui/theme-clockring.png"><img src="assets/ui/theme-clockring.png" width="640" height="480" loading="lazy" decoding="async" alt="System Clock: a large radial clock pattern and blue light ring on a violet background"></a><figcaption>System Clock preset</figcaption></figure></div>
 <h2 id="presets">Built-in themes</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/theme-picker.png"><img src="assets/ui/theme-picker.png" width="640" height="480" loading="lazy" decoding="async" alt="Live theme preset picker"></a><figcaption>Live theme preset picker</figcaption></figure></div>
 <p>There are <b>18</b> presets under <b>Settings &gt; Appearance &gt; Theme preset</b>. <b>OSD Classic</b> is the default. Left/Right switches preset immediately; Confirm opens the list, previews each preset as you move, keeps it on Confirm and restores your previous theme (even an edited one) on Back. A preset you have edited shows as <i>Name (edited)</i>.</p>
 <table><thead><tr><th>Preset (id)</th><th>Background</th><th>Look</th></tr></thead><tbody>
 <tr><td><b>OSD Classic</b> (<code>osd</code>) &mdash; default</td><td>System tunnel</td><td>Indigo tunnel like the PS2 system menu backdrop with the clock orbs, OSDSYS highlight blue, accent-bar selection</td></tr>
@@ -33,6 +36,7 @@
 <p><b>Selection style</b> (Customize theme &gt; Tiles &amp; menus): <b>Solid bar</b>, <b>Accent bar</b>, <b>Outline</b> or <b>Text colour</b> (how the PS2 system menus mark the selection). Selected and unselected device cards share one geometry; focus adds emphasis without resizing or reflowing the card. <b>Corners</b> can be Square, Soft or Round and apply to panels, dialogs and list rows; <b>Glow</b> adds soft light behind focused items.</p>
 
 <h2 id="tile-styles">Application tile styles</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/theme-tiles.png"><img src="assets/ui/theme-tiles.png" width="640" height="480" loading="lazy" decoding="async" alt="Tiles and menu styling"></a><figcaption>Tiles and menu styling</figcaption></figure></div>
 <p><b>Settings &gt; Appearance &gt; Customize theme &gt; Tiles &amp; menus &gt; Tile style.</b> Memory card is the default for every built-in preset (and for old configurations or theme folders without <code>tile_style</code>).</p>
 <ul>
 <li><b>Memory card</b> (<code>memory_card</code>): a narrow PS2 card silhouette with a cut corner, grip ridges and a recessed device label strip. Artwork fits inside the card face.</li>
@@ -50,9 +54,11 @@
 <p>Applications that have artwork keep using it. Others get the <b>Default app icon</b> (Customize theme &gt; Icons): <b>Application</b> (default, a PS2-style program icon on a tile in the theme colours with the device as a badge), <b>Device</b> (the device's icon) or <b>Initials</b> (coloured tile with the app's initials). <b>Icon colour</b> is Text colours, Accent or Monochrome. <b>Custom app icon image...</b> (or <code>app_icon =</code>) uses your own PNG; up to 128x128 is kept and alpha is supported. If the file is missing or broken the built-in icon is used.</p>
 
 <h2 id="text">Fonts and text</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/theme-text.png"><img src="assets/ui/theme-text.png" width="640" height="480" loading="lazy" decoding="async" alt="Font and text controls"></a><figcaption>Font and text controls</figcaption></figure></div>
 <p><b>Font</b> is <b>Roboto</b> (default, bundled, three pre-rasterised sizes) or <b>System</b> (Launchstation's own 8x16 font, smoothed; it follows an external <code>.FNT</code> chosen as <i>System font file</i> and covers the Latin-1 characters used by the language files). <b>Text size</b> runs 90% to 115% in 5% steps; <b>Bold</b> and <b>Text shadow</b> are switches. Arbitrary TTF files are not loaded on the console; to change Roboto, regenerate the atlas on a PC with <code>scripts/gen_dash_font.py</code>.</p>
 
 <h2 id="clock">Clock and date</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/theme-clock.png"><img src="assets/ui/theme-clock.png" width="640" height="480" loading="lazy" decoding="async" alt="Clock and date controls"></a><figcaption>Clock and date controls</figcaption></figure></div>
 <p>The clock (Customize theme &gt; Clock) is <b>Off</b>, <b>Standard</b> (larger time over a small date) or <b>System</b> (light grey, even weight, seconds, date in the console's format, like the PS2 menus). Position is <b>Header</b> or <b>Footer</b> (in the footer it sits left of the button hints and hides itself where hints need the space). <b>Hours</b> is System, 24-hour or 12-hour; <b>Seconds</b> is on or off; <b>Date</b> is System, YYYY/MM/DD, MM/DD/YYYY, DD/MM/YYYY or Off. With Hours and Date on System, the console's own settings are used. The format rows are disabled while the clock is Off. File metadata keeps its seconds independently of the clock setting. For a console with a dead clock battery see <a href="settings.html#clock-manual">Settings</a>.</p>
 
 <h2 id="motion">Motion</h2>
@@ -64,9 +70,11 @@
 <p>Top tabs, selection movement, OSD orbs and marquee effects use bounded smooth animation on a measured visual clock. The former fast sinusoidal header overshoot was removed because it could appear as top-of-dashboard video flicker on interlaced displays. Older configurations that stored motion as 0/1/2 load as 0%/50%/100%.</p>
 
 <h2 id="background">Background types</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/theme-background.png"><img src="assets/ui/theme-background.png" width="640" height="480" loading="lazy" decoding="async" alt="Background, brightness and wallpaper controls"></a><figcaption>Background, brightness and wallpaper controls</figcaption></figure></div>
 <p><b>Customize theme &gt; Background</b> offers 19 types: Solid colour, Gradient, System tunnel, Blue mist, PS2 towers, Disc error red, Orbit lights, Clock ring, Memory card grid, Boot lines, Wireframe cubes, Data stream, Memory card tiles, Brushed console, Ribbons, Crystal, Light streaks, Drift clouds and Wallpaper image. <i>Colour</i> is the solid colour or gradient top (for scenes it tints walls, clouds, lights or grid lines); <i>Second colour</i> is the gradient bottom or the scene's base. <b>Brightness</b> runs 10% to 200%; <b>CRT scanlines</b> adds an understated line pattern over the background only. With the <i>Crystal</i> background, optional PSBBN-style layers <code>THEME/background.png</code>, <code>stars1.png</code> and <code>stars2.png</code> in the dashboard folder are used when present (<code>scripts/prepare_psbbn_theme.py</code> builds them from a texture pack you own; no third-party artwork is embedded).</p>
 
 <h2 id="colours">Colours</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/colour-editor.png"><img src="assets/ui/colour-editor.png" width="640" height="480" loading="lazy" decoding="async" alt="Colour editor with RGB channels and palette"></a><figcaption>Colour editor with RGB channels and palette</figcaption></figure></div>
 <p>Customize theme &gt; Interface colours: Text, Secondary text, Muted text, Selected text, Accent, Selection (with opacity), Panels (with opacity; 0 = no panels), Borders (with opacity; hidden when Panels is transparent) and Warnings. A row opens the colour editor drawn beside the live dashboard: Up/Down choose Red, Green, Blue, Opacity or the PS2 quick picks (OSDSYS blue, cyan, menu indigo, clock-rod blue, disc-error red, configuration-title yellow and neutral greys); Left/Right &plusmn;1; L1/R1 (or L2/R2) &plusmn;16; Confirm keeps; Back restores. On confirm the theme is checked and a text colour too close to its background is replaced so the menus stay readable, with a message when this happens.</p>
 
 <h2 id="wallpaper-size">Custom wallpaper: 4:3 aspect ratio</h2>
@@ -87,6 +95,7 @@
 <p>For a <code>theme.cfg</code> file, <code>background = image</code> and <code>image = background.png</code> select the static wallpaper. The separate <code>wallpaper = focused</code> option uses the artwork of the selected application and is not needed for a custom static image. Missing or invalid wallpaper files fall back to the theme gradient.</p>
 
 <h2 id="app-wallpaper">Application artwork background</h2>
+<div class="ui-gallery"><figure><a href="assets/ui/theme-wallpaper.png"><img src="assets/ui/theme-wallpaper.png" width="640" height="480" loading="lazy" decoding="async" alt="Focused application artwork background"></a><figcaption>Focused application artwork background</figcaption></figure></div>
 <p>With <b>Customize theme &gt; Artwork background &gt; App artwork background = Focused app</b> (and <b>Application artwork</b> enabled under Home &amp; applications), the focused application's cover is laid over the background on Home and Applications, cross-faded on focus changes and dimmed by <b>Artwork dimming</b> (0% to 90%, default 65%). It reuses the artwork cache and never loads a file itself; apps without artwork just show the theme background.</p>
 
 <h2 id="theme-folders">Theme folders</h2>

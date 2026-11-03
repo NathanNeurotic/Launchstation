@@ -1893,3 +1893,12 @@ pre.tree{white-space:pre;overflow:auto;line-height:1.55}
   .topbar-btn.orb-toggle .orb-toggle-symbol { display: inline; }
   .topbar-btn.orb-toggle .orb-toggle-label { display: none; }
 }
+
+/* Authentic interface captures: whole frames, optional motion, responsive galleries. */
+.ui-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin: 22px 0; }
+.ui-gallery figure { margin: 0; min-width: 0; }
+.ui-capture { max-width: 640px; margin: 24px auto; }
+.ui-gallery img, .ui-capture img, .ui-video { display: block; width: 100%; height: auto; border: 1px solid var(--line2); }
+.ui-gallery figcaption, .ui-capture figcaption { color: var(--ink2); font-size: .9em; margin-top: 8px; line-height: 1.5; }
+.ui-video { max-width: 640px; margin: 20px auto; }
+@media (max-width: 680px) { .ui-gallery { grid-template-columns: 1fr; } }

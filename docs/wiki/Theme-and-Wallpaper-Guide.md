@@ -12,6 +12,8 @@ upscaled during decoding.
 [Matching `theme.cfg`](https://github.com/NathanNeurotic/Launchstation/blob/master/docs/theme-example/theme.cfg) ·
 [Full example folder](https://github.com/NathanNeurotic/Launchstation/tree/master/docs/theme-example)
 
+![Background and wallpaper controls in the theme editor](../../docs-site/static/assets/ui/theme-background.png)
+
 ## What Launchstation actually draws
 
 - **Aspect ratio:** the renderer takes the centered **4:3** region of

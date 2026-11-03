@@ -37,6 +37,11 @@
       "name": "Interface",
       "pages": [
         [
+          "ui-captures",
+          "Screenshots & Theme Gallery",
+          "book"
+        ],
+        [
           "dashboard",
           "Dashboard",
           "home"
