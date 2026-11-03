@@ -148,6 +148,7 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--version", default="",
                         help="build number that ends every published ZIP name, e.g. 284")
+    parser.add_argument("--omit-kit", action="store_true", help="The optional kit was omitted from this publish retry")
     args = parser.parse_args()
     if args.version and not re.fullmatch(r"[0-9]+", args.version):
         parser.error("version must be a build number")
@@ -163,6 +164,8 @@ def main():
     changes = release_changes(args.repo, args.revision, args.previous, log)
     digests = {}
     for name in ASSETS:
+        if args.omit_kit and name == "LAUNCHSTATION.zip":
+            continue
         asset = args.assets_dir / name
         if not asset.is_file() or asset.stat().st_size == 0:
             if name in OPTIONAL_ASSETS:
