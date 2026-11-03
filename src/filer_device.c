@@ -82,6 +82,20 @@ static int transferUsesUdpfsAndSmb(const char *src_path, const char *dst_path)
 #endif
 }
 
+/* The same for host:, which runs on the Ethernet stack as smb: does. */
+static int transferUsesUdpfsAndHost(const char *src_path, const char *dst_path)
+{
+#if defined(UDPFS) && defined(ETH)
+	return ((src_path != NULL && dst_path != NULL) &&
+	        ((!strncmp(src_path, "udpfs", 5) && !strncmp(dst_path, "host", 4)) ||
+	         (!strncmp(src_path, "host", 4) && !strncmp(dst_path, "udpfs", 5))));
+#else
+	(void)src_path;
+	(void)dst_path;
+	return FALSE;
+#endif
+}
+
 static int transferUsesPcCardCfAndDev9(const char *src_path, const char *dst_path)
 {
 	return ((isPcCardCfPath(src_path) && isDev9BackedPath(dst_path)) ||
@@ -165,6 +179,7 @@ int prepareTransferDeviceStacks(const char *src_path, const char *dst_path)
 {
 	int src_storage = transferStorageGateForPath(src_path);
 	int dst_storage = transferStorageGateForPath(dst_path);
+	unsigned int generation;
 
 	if (transferUsesMx4sioAndMc1(src_path, dst_path))
 		return TRANSFER_STACK_INCOMPATIBLE;
@@ -173,6 +188,9 @@ int prepareTransferDeviceStacks(const char *src_path, const char *dst_path)
 		return TRANSFER_STACK_INCOMPATIBLE;
 
 	if (transferUsesUdpfsAndSmb(src_path, dst_path))
+		return TRANSFER_STACK_INCOMPATIBLE;
+
+	if (transferUsesUdpfsAndHost(src_path, dst_path))
 		return TRANSFER_STACK_INCOMPATIBLE;
 
 	if (src_storage != TRANSFER_STORAGE_DEFAULT &&
@@ -193,8 +211,19 @@ int prepareTransferDeviceStacks(const char *src_path, const char *dst_path)
 #endif
 	if (!ensurePathDeviceStackReady(src_path))
 		return TRANSFER_STACK_LOAD_FAILED;
+	generation = getIopResetGeneration();
 	if (!ensurePathDeviceStackReady(dst_path))
 		return TRANSFER_STACK_LOAD_FAILED;
+	/* The destination's stack can reboot the IOP (switching network stacks
+	 * does), which unloads the source's drivers: load them again. Another
+	 * reboot then means the two cannot stay loaded together. */
+	if (getIopResetGeneration() != generation) {
+		generation = getIopResetGeneration();
+		if (!ensurePathDeviceStackReady(src_path))
+			return TRANSFER_STACK_LOAD_FAILED;
+		if (getIopResetGeneration() != generation)
+			return TRANSFER_STACK_INCOMPATIBLE;
+	}
 	return TRANSFER_STACK_READY;
 }
 //--------------------------------------------------------------

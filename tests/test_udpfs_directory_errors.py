@@ -42,16 +42,20 @@ static int fileXioDread(int fd,iox_dirent_t *out){
  out->stat.mode=reads==3?FIO_S_IFDIR:0;out->stat.size=37;reads++;return 1;
 }
 static void clearMcTable(McStat *s){memset(s,0,sizeof(*s));}
+static int dir_opened,dir_open_error; /* what getDirComplete() reads, from filer.c */
 '''
+code += function('static void dirOpenResult(') + '\n'
 code += function('static int initUDPFS(' if 'static int initUDPFS(' in source else 'static void initUDPFS(') + '\n' + function('static int readNetDir(') + '\n' + function('int readUDPFS(')
 code += r'''
-static void reset(void){loaded=1;opens=closes=reads=fail_open_call=fail_close_call=host_error=0;fail_read_at=-1;entries=4;}
+static void reset(void){loaded=1;opens=closes=reads=fail_open_call=fail_close_call=host_error=0;fail_read_at=-1;entries=4;dir_opened=0;dir_open_error=-ENODEV;}
 int main(void){
  FILEINFO info[6];
  reset();assert(readUDPFS("udpfs:/folder/",info,4)==2);
  assert(!strcmp(info[0].name,"BOOT.ELF")&&info[0].stats.FileSizeByte==37);
  assert(!strcmp(info[1].name,"NESTED")&&info[1].stats.AttrFile==MC_ATTR_norm_folder);
  assert(opens==2&&closes==2&&!host_error&&!udpfs_dir_open_failed&&host_ready&&!host_elflist);
+ assert(dir_opened); /* getDirComplete() takes the listing as read */
+ reset();fail_open_call=2;readUDPFS("udpfs:/folder/",info,4);assert(!dir_opened);
  reset();entries=0;assert(!readUDPFS("udpfs:/folder/",info,4));assert(closes==2);
  reset();fail_open_call=1;assert(readUDPFS("udpfs:/folder/",info,4)==-ENOENT);assert(!closes&&udpfs_dir_open_failed);
  reset();fail_open_call=2;assert(readUDPFS("udpfs:/folder/",info,4)==-ENOENT);assert(closes==1&&udpfs_dir_open_failed);
@@ -67,10 +71,12 @@ int main(void){
 '''
 # Bind the negative reader result to its callers: transfer/delete abort, while
 # the classic browser keeps its parent row and never sorts with a negative count.
-assert 'n = readUDPFS(path, info, max);' in function('int getDir(')
+assert 'n = readUDPFS(path, info, max);' in function('static int listDir(')
+assert 'if (n < 0)\n\t\treturn n;' in function('int getDirComplete(')
 copy_source = (root / 'src/filer_copy.c').read_text()
-assert 'nfiles = getDir(in, files);' in copy_source
-assert 'if (nfiles < 0)\n\t\t\t\tret = copyDiagFail(nfiles);' in copy_source
+assert ('nfiles = getDirComplete(tmp, files, NULL);\n\t\t\tif (nfiles < 0) {\n\t\t\t\tret = copyDiagFail(nfiles);\n'
+        '\t\t\t\tgoto folder_exit;') in copy_source
+assert 'i = getDirComplete(in, files, NULL);  //the number of entries now\n\t\t\t\tif (i < 0)\n' in copy_source
 actions = (root / 'src/filer_actions.c').read_text()
 delete = actions[actions.index('int delete ('):actions.index('int Rename(')]
 with tempfile.TemporaryDirectory(prefix='udpfs-dir-') as folder:
@@ -83,4 +89,5 @@ with tempfile.TemporaryDirectory(prefix='udpfs-dir-') as folder:
     subprocess.run([cc, '-std=c99', '-Wall', '-Wextra', '-Werror', str(path / 'test.c'), '-o', str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
 assert 'nfiles = getDir(path, &files[1]);\n\t\tif (nfiles < 0) nfiles = 0;\n\t\tnfiles++;' in source
-assert 'nfiles = getDir(dir, files);\n\t\tif (nfiles < 0) return nfiles;' in delete
+assert 'nfiles = getDirComplete(dir, files, &more);' in delete
+assert 'if (nfiles < 0) {\n\t\t\t\tfree(files);\n\t\t\t\treturn nfiles;' in delete

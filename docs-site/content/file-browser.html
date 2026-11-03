@@ -86,7 +86,7 @@
 <tr><td>Rename...</td><td>One entry, on-screen keyboard (or USB keyboard). System folders are protected.</td></tr>
 <tr><td>New folder...</td><td>Asks for a name; reports an existing folder.</td></tr>
 <tr><td>Create folder icon...</td><td>Writes <code>icon.sys</code> and <code>icon.icn</code> for a PS2 save folder.</td></tr>
-<tr><td>Size</td><td>Total size of the selection, folders recursively, in MB/GB and bytes.</td></tr>
+<tr><td>Size</td><td>Total size of the selection, folders recursively, in MB/GB and bytes. A total that could not be finished (a folder that did not open or read to its end, more than 2046 items in one folder, a device that dropped out) is shown as a lower bound: <i>SIZE &gt;= ...</i> in the classic browser, <i>At least ...</i> with the reason on the dashboard. When nothing could be measured it reports a failure instead of 0.</td></tr>
 <tr><td>Open in Text Editor</td><td>For supported text types.</td></tr>
 <tr><td>Start with arguments...</td><td>For <code>.ELF</code>: opens the sidecar <code>.arg</code> in the editor, then launches with it.</td></tr>
 <tr><td>Create title.cfg</td><td>Writes an OPL-style title file for an ELF.</td></tr>

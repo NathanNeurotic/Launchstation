@@ -82,12 +82,63 @@ static void copyChunkRun(void *arg)
 	copyChunkIo((CopyChunk *)arg);
 }
 
+/* The copy buffer size for a file of 'size' bytes from 'in' to 'out'.
+   Since LaunchELF is single-threaded,
+   using a large block size with a slow device will result in an unresponsive UI.
+   To prevent a loss in performance, these values must each be in a multiple of the device's sector/page size.
+   They must also be in multiples of 64, to prevent FILEIO from doing alignment correction in software. */
+static int copyBufferSize(const char *in, const char *out, u64 size)
+{
+	int buffSize = COPY_BUFFER_FAST_DEFAULT;  //First assume fast-device buffer size
+
+	if (!strncmp(out, "mc", 2) || !strncmp(out, "mass", 4) || !strncmp(out, "vmc", 3) || isPcCardCfPath(out))
+		buffSize = 131072;  //Use  128KB if writing to USB/CF (Flash RAM writes) or MC (pretty slow).
+	                        //VMC contents should use the same size, as VMCs will often be stored on USB
+#ifdef MX4SIO
+	else if (!strncmp(out, "mx4sio", 6))
+		buffSize = 131072;  //Use 128KB when writing to MX4SIO (FAT over SIO2).
+#endif
+	else if (!strncmp(in, "mc", 2))
+		buffSize = 262144;  //Use 256KB if reading from MC (still pretty slow)
+#if defined(ETH) || defined(UDPFS)
+	else if (!strncmp(out, "host", 4))
+		buffSize = 393216;  //Use 384KB if writing to HOST (acceptable)
+#endif
+	else if ((!strncmp(in, "mass", 4)) || (!strncmp(in, "host", 4)) || isPcCardCfPath(in)
+#ifdef MX4SIO
+	         || (!strncmp(in, "mx4sio", 6))
+#endif
+	        )
+		buffSize = 524288;  //Use 512KB reading from USB, CF, or HOST (acceptable)
+
+	if (size < (u64)buffSize)
+		buffSize = (int)size;
+	return buffSize;
+}
+
+/* A PSU restore reserves the copy buffer for its files before it can replace
+ * an existing save, and the files use it instead of allocating their own. */
+static char *psu_restore_buff;
+static int psu_restore_buff_size;
+
 static int copyDiagFail(int result)
 {
 	/* Preserve a child's actual error when a recursive caller returns -1. */
 	if (!copy_diag.error && result < 0)
 		copy_diag.error = result;
 	return result;
+}
+
+/* A PSU restore maps its paths twice: for the .psu, then for the folder that
+ * the .psu holds, with the .psu open (PM_file[level + 1]). A mapping that
+ * fails on that second pass closes it, once, before returning. */
+static int copyMapFailed(int level)
+{
+	if (PM_flag[level + 1] == PM_PSU_RESTORE && PM_file[level + 1] >= 0) {
+		genClose(PM_file[level + 1]);
+		PM_file[level + 1] = -1;
+	}
+	return copyDiagFail(-1);
 }
 
 void filerCopyDiagFormat(char *out, int size, int result)
@@ -108,6 +159,7 @@ void filerCopyDiagFormat(char *out, int size, int result)
 		case -ENOMEM: reason = "Not enough memory to complete the transfer."; break;
 		case -EEXIST: reason = "A destination file or folder already exists."; break;
 		case -EISDIR: reason = "The destination name refers to a directory."; break;
+		case -E2BIG: reason = "A source folder holds more than 2046 items, more than a copy can list."; break;
 		default: reason = "The operation failed. Keep the error code and device details below for diagnosis."; break;
 	}
 	snprintf(out, size, "%s (%d)\n%s\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
@@ -115,6 +167,22 @@ void filerCopyDiagFormat(char *out, int size, int result)
 	         copy_diag.name, copy_diag.source, copy_diag.destination,
 	         (unsigned long long)copy_diag.done, (unsigned long long)copy_diag.total,
 	         copy_diag.generation, getIopResetGeneration(), GIT_HASH);
+}
+
+/* A sum over the names in a listing that does not depend on their order, to
+ * tell whether a folder listed again holds the same entries. */
+static u32 listingSum(const FILEINFO *files, int nfiles)
+{
+	const unsigned char *c;
+	u32 sum = 0, hash;
+	int i;
+
+	for (i = 0; i < nfiles; i++) {
+		for (hash = 2166136261u, c = (const unsigned char *)files[i].name; *c; c++)
+			hash = (hash ^ *c) * 16777619u;  //FNV-1a
+		sum += hash;
+	}
+	return sum;
 }
 
 static int isMemoryCardLikePath(const char *path)
@@ -444,6 +512,59 @@ finish:
 		genClose(fd);
 	return ret;
 }
+
+/* PS2-Servers' udpfs_server.py decompresses a .cso, .ciso, .zso, .ziso or
+ * .chd that is opened by its own name and that it can read, so reading one
+ * back gives the image's size and first bytes. A server that returns the file
+ * as stored (udpfsd) returns the container's magic first. */
+static int udpfsReadsDecompressed(int fd, const char *path, const char *src)
+{
+	static const char *const ext[] = {"cso", "ciso", "zso", "ziso", "chd"};
+	char head[8];
+	int i, sfd, n;
+
+	for (i = 0; i < 5 && !genCmpFileExt(path, ext[i]); i++)
+		;
+	if (i == 5 || src == NULL)
+		return FALSE;
+	/* Only a real container is decompressed by the server: a file that merely
+	 * carries the name is stored as is, and a longer stale tail at the destination
+	 * would then pass for a decompressed image. */
+	if ((sfd = genOpen((char *)src, FIO_O_RDONLY)) < 0)
+		return FALSE;
+	n = genRead(sfd, head, sizeof(head));
+	genClose(sfd);
+	if (n != sizeof(head) || (memcmp(head, "CISO", 4) && memcmp(head, "ZISO", 4) && memcmp(head, "MComprHD", 8)))
+		return FALSE;
+	if (genLseek(fd, 0, SEEK_SET) != 0 || genRead(fd, head, sizeof(head)) != sizeof(head))
+		return FALSE;
+	return memcmp(head, "CISO", 4) && memcmp(head, "ZISO", 4) && memcmp(head, "MComprHD", 8);
+}
+
+/* A UDPFS server can keep a handle across an IOP reboot and hand it to the
+ * next open of the same name, and udpfs_ioman's close returns 0 whatever the
+ * server answers. Every write is then acknowledged into a file removed before
+ * the open, or into an old longer one O_TRUNC never cut. Only reading the size
+ * back shows the copy is there before a Move deletes its source. (host: and
+ * smb: open a new server file each time and report a failed close.) */
+static int verifyUdpfsCopy(char *path, u64 size, const char *src)
+{
+	s64 end;
+	int fd;
+
+	filerCopyDiagStage("Verifying destination");
+	fd = genOpen(path, FIO_O_RDONLY);
+	if (fd < 0)
+		return fd;  //no file there, so nothing to remove
+	end = genLseek(fd, 0, SEEK_END);
+	if (end >= 0 && end != (s64)size && udpfsReadsDecompressed(fd, path, src))
+		end = (s64)size;  //the copy is there, but its size can only be read decompressed
+	genClose(fd);
+	if (end == (s64)size)
+		return 0;
+	genRemove(path);  //as after a failed chunk, a wrong copy is not kept
+	return end < 0 ? (int)end : -EIO;
+}
 //--------------------------------------------------------------
 //The function 'copy' below is called to copy a single object,
 //indicated by 'src' from 'inPath' to 'outPath', but this may
@@ -462,13 +583,19 @@ finish:
 //--------------------------------------------------------------
 int copy(char *outPath, const char *inPath, const FILEINFO *src, int recurses)
 {
+	/* Up to MAX_RECURSE levels of this frame nest on the caller's 128 KB stack
+	 * (CI checks its size). These are only used between the recursive calls,
+	 * never across one, so all levels share one copy of each. The paths below
+	 * stay in each level's frame, and so does 'file': a folder's own stats are
+	 * set on its copy after its contents are copied. */
+	static FILEINFO newfile;
+	static char progress[MAX_PATH * 4], inParty[MAX_NAME], outParty[MAX_NAME];
 	FILEINFO file = *src;
-	FILEINFO newfile, *files = NULL;
+	FILEINFO *files = NULL;
 	iox_stat_t iox_stat;
-	char out[MAX_PATH], in[MAX_PATH], tmp[MAX_PATH],
-	    progress[MAX_PATH * 4],
-	    *buff = NULL, *buff2 = NULL, *copyBuff, inParty[MAX_NAME], outParty[MAX_NAME];
+	char out[MAX_PATH], in[MAX_PATH], tmp[MAX_PATH], *buff = NULL, *buff2 = NULL, *copyBuff;
 	int nfiles, i;
+	u32 listed;
 	u64 size = 0;
 	u64 original_size = 0;
 	int ret = -1, pfsout = -1, pfsin = -1, in_fd = -1, out_fd = -1, buffSize, bytesRead, bytesWritten;
@@ -485,7 +612,7 @@ int copy(char *outPath, const char *inPath, const FILEINFO *src, int recurses)
 	u64 OldTime = 0LL;
 	u64 EtaOldTime = 0LL;
 	mcT_header *mcT_head_p = (mcT_header *)&file.stats;
-	int psu_pad_size = 0, PSU_restart_f = 0;
+	int psu_pad_size = 0, PSU_restart_f = 0, psu_huge = 0, psu_kept = 0;
 	char *cp, *np;
 #if FILEOP_TRACE
 	int trace_net_copy = 0;
@@ -531,11 +658,11 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 
 	if (!strncmp(inPath, "hdd", 3)) {
 		if (getHddParty(inPath, &file, inParty, in) < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		/* Re-resolve/mount source partition each copy so stale browser mounts do not break paste/move. */
 		pfsin = mountParty(inParty);
 		if (pfsin < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		in[3] = pfsin + '0';
 #if FILEOP_TRACE
 		printf("[FILEOP] hdd-map src %s:pfs%d:%s recurse=%d\n",
@@ -544,10 +671,10 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 #ifdef DVRP
 	} else if (!strncmp(inPath, "dvr_hdd", 7)) {
 		if (getHddDVRPParty(inPath, &file, inParty, in) < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		pfsin = mountDVRPParty(inParty);
 		if (pfsin < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		in[7] = pfsin + '0';
 #endif
 	} else
@@ -555,11 +682,11 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 
 	if (!strncmp(outPath, "hdd", 3)) {
 		if (getHddParty(outPath, &newfile, outParty, out) < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		/* Re-resolve/mount destination partition each copy so stale browser mounts do not break paste/move. */
 		pfsout = mountParty(outParty);
 		if (pfsout < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		out[3] = pfsout + '0';
 #if FILEOP_TRACE
 		printf("[FILEOP] hdd-map dst %s:pfs%d:%s recurse=%d\n",
@@ -568,17 +695,22 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 #ifdef DVRP
 	} else if (!strncmp(outPath, "dvr_hdd", 7)) {
 		if (getHddDVRPParty(outPath, &newfile, outParty, out) < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		pfsout = mountDVRPParty(outParty);
 		if (pfsout < 0)
-			return copyDiagFail(-1);
+			return copyMapFailed(recurses);
 		out[7] = pfsout + '0';
 #endif
 	} else
 		sprintf(out, "%s%s", outPath, newfile.name);
 
-	if (!strcmp(in, out))
-		return 0;  //if in and out are identical our work is done.
+	strcpy(tmp, out);
+	genLimObjName(tmp, 0);  //the name it gets there: a new name can name the source once cut to fit
+	if (!strcmp(in, out) || !strcmp(in, tmp)) {
+		if (PSU_restart_f)  //the first pass found them different: a mapping changed under the open .psu
+			return copyMapFailed(recurses);
+		return COPY_KEPT_DESTINATION;  //in and out are the same: nothing to copy, nor for a Move to delete
+	}
 
 #if FILEOP_TRACE
 	trace_net_copy = (!strncmp(in, "host", 4) || !strncmp(in, "udpfs", 5)
@@ -599,8 +731,10 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 	if (file.stats.AttrFile & sceMcFileAttrSubdir) {
 		//Here we have a folder to copy, starting with an attempt to create it
 		//This is where we must act differently for PSU backup, creating a PSU file instead
-		if (PasteMode == PM_PSU_BACKUP && recurses)
+		if (PasteMode == PM_PSU_BACKUP && recurses) {
+			filerCopyDiagStage("Adding subfolder to PSU");
 			return copyDiagFail(-1);  //abort, as subfolders are not copied to PSU backups
+		}
 		//This level's listing is allocated before this level removes or creates
 		//anything at the destination, so failing to allocate it leaves an older PSU
 		//backup or save as it was. (Each file's copy buffer is allocated later.)
@@ -611,19 +745,34 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			ret = copyDiagFail(-ENOMEM);
 			goto folder_exit;
 		}
+		//The source folder is listed next, also before anything at the destination
+		//changes: a folder that cannot be opened or read to its end, or that holds
+		//more than a listing can, leaves the destination as it was (and a Move its
+		//source). A PSU being restored is read one entry at a time instead.
+		if (!(PasteMode == PM_PSU_RESTORE && PSU_restart_f)) {
+			filerCopyDiagStage("Listing source");
+			sprintf(tmp, "%s%s/", inPath, file.name);
+			nfiles = getDirComplete(tmp, files, NULL);
+			if (nfiles < 0) {
+				ret = copyDiagFail(nfiles);
+				goto folder_exit;
+			}
+		}
 		if (PasteMode == PM_PSU_BACKUP) {
 			i = strlen(out) - 1;
 			if (out[i] == '/')
 				out[i] = 0;
+			psu_huge = setting->PSU_HugeNames;
+		psu_backup_name:  //named again, after the folder too, when its title is another save's
 			strcpy(tmp, out);
 			np = tmp + strlen(tmp) - strlen(file.name);  //np = start of the pure filename
 			cp = tmp + strlen(tmp);                      //cp = end of the pure filename
-			if (!setting->PSU_HugeNames)
+			if (!psu_huge)
 				cp = np;  //cp = start of the pure filename
 
-			if (fileShowTitles() || setting->PSU_HugeNames) {  //at request, use game title
+			if (fileShowTitles() || psu_huge) {  //at request, use game title
 				ret = filerGetGameTitle(inPath, &file, file.title);
-				if ((ret == 0) && file.title[0] && setting->PSU_HugeNames) {
+				if ((ret == 0) && file.title[0] && psu_huge) {
 					*cp++ = '_';
 					*cp = '\0';
 				}
@@ -657,23 +806,59 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			if (!strncmp(tmp, "host:/", 6))
 				makeHostPath(tmp, tmp);
 #endif
+			//Saves of one game share a name taken from their title alone. A backup of
+			//another save (or a file that is no PSU) of that name stays, and this one
+			//is named after its folder too, as PSU_HugeNames names it: replacing that
+			//backup would lose the other save after a Move
+			if (!psu_huge && fileShowTitles() && file.title[0] && psu_backup_holds_other_save(tmp, mcT_head_p)) {
+				psu_huge = 1;
+				goto psu_backup_name;
+			}
 			if (setting->PSU_DateNames && setting->PSU_NoOverwrite) {
 				if (0 <= (out_fd = genOpen(tmp, FIO_O_RDONLY))) {  //Name conflict ?
 					genClose(out_fd);
 					out_fd = -1;
-					ret = 0;
+					ret = COPY_KEPT_DESTINATION;  //that backup stays, so a Move keeps the save too
 					goto folder_exit;
 				}
 			}
-			//here tmp is the name of an existing file, to be removed before making new one
-			genRemove(tmp);
-			if (psu_backup_create_root_image(tmp, mcT_head_p, &out_fd, &PSU_content) < 0) {
-				ret = copyDiagFail(-1);
+			//here tmp is the name of the .psu, which this level keeps there until it
+			//finalizes it: an older one stays until the new one is complete
+			filerCopyDiagStage("Creating PSU");
+			ret = psu_backup_create_root_image(tmp, mcT_head_p, &out_fd, &PSU_content);
+			if (ret < 0) {
+				ret = copyDiagFail(ret);
 				goto folder_exit;
 			}
 			PM_file[recurses + 1] = out_fd;
 			PM_flag[recurses + 1] = PM_PSU_BACKUP;  //Set PSU backup mode for next level
 		} else {  //any other PasteMode than PM_PSU_BACKUP
+			if (PasteMode == PM_PSU_RESTORE && PSU_restart_f) {
+				//The files' copy buffer is reserved before an existing save can be
+				//replaced, so that a restore without that memory leaves it whole.
+				//No file in the .psu is bigger than the .psu, measured here.
+				filerCopyDiagStage("Measuring source");
+				size = genLseek(PM_file[recurses + 1], 0, SEEK_END);
+				if ((s64)size < 0) {
+					ret = copyDiagFail(-EIO);
+					goto folder_exit;
+				}
+				//Each entry is checked before then too, so that a .psu cut short
+				//leaves it whole; the .psu is then back at its first entry.
+				filerCopyDiagStage("Checking PSU");
+				ret = psu_restore_check_entries(PM_file[recurses + 1], PSU_content, size);
+				if (ret < 0) {
+					ret = copyDiagFail(ret);
+					goto folder_exit;
+				}
+				filerCopyDiagStage("Allocating buffer");
+				psu_restore_buff_size = copyBufferSize(in, out, size);
+				psu_restore_buff = (char *)memalign(64, psu_restore_buff_size);
+				if (psu_restore_buff == NULL) {
+					ret = copyDiagFail(-ENOMEM);
+					goto folder_exit;
+				}
+			}
 			filerCopyDiagStage("Creating directory");
 			/* a PSU names its own folder: a restore that would create or replace a
 			 * protected (exploit or system-update) folder asks first, once */
@@ -792,13 +977,8 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			                                  //It has to be done last, as timestamps would change when fixing files
 			                                  //--- This has been moved to a later clause.
 		} else {                              //Any other mode than a valid PM_PSU_RESTORE
-			filerCopyDiagStage("Listing source");
-			nfiles = getDir(in, files);
 			ret = 0;  //An empty listing succeeds regardless of optional title lookup.
-			//A listing error aborts below. A reader that returns 0 when it cannot
-			//open the folder (readGENERIC, readMC) makes it look empty instead.
-			if (nfiles < 0)
-				ret = copyDiagFail(nfiles);
+			//'files' holds the listing made above, before the destination was touched
 			for (i = 0; i < nfiles; i++) {
 				if ((ret = copy(out, in, &files[i], recurses + 1)) < 0) {
 #if FILEOP_TRACE
@@ -809,13 +989,27 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 					break;
 				}
 			}  //ends main for loop for all modes other than valid PM_PSU_RESTORE
+			//The source is listed again and must hold just what was copied. A USB
+			//(FAT, exFAT), MMCE or cdfs read that fails ends a listing as if the
+			//folder ended there, and a Move must not delete what that listing missed.
+			if (ret >= 0) {
+				filerCopyDiagStage("Listing source again");
+				listed = listingSum(files, nfiles);
+				i = getDirComplete(in, files, NULL);  //the number of entries now
+				if (i < 0)
+					ret = copyDiagFail(i);
+				else if (i != nfiles || listingSum(files, i) != listed)
+					ret = copyDiagFail(-EIO);
+			}
 		}
 		//folder contents are copied by the recursive call above, with error handling below
 		free(files);
 		files = NULL;
+		free(psu_restore_buff);  //reserved only by a PSU restore's folder level
+		psu_restore_buff = NULL;
 		if (ret < 0) {
 			if ((PM_flag[recurses + 1] == PM_PSU_BACKUP) && (PM_file[recurses + 1] >= 0))
-				genClose(PM_file[recurses + 1]);
+				psu_backup_discard_root_image(PM_file[recurses + 1], tmp);  //an older .psu stays
 			return copyDiagFail(-1);
 		}
 
@@ -823,8 +1017,28 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		//attributes and timestamps, and close the attribute/PSU file if such was used
 		//Lots of stuff need to be done here to make PSU operations work properly
 		if (PM_flag[recurses + 1] == PM_PSU_BACKUP) {  //PSU Backup mode folder paste closure
-			if (psu_backup_finalize_root_image(PM_file[recurses + 1], mcT_head_p, PSU_content) < 0)
-				return copyDiagFail(-1);
+			//as for a file, a udpfs: .psu is read back before a Move deletes the save:
+			//the bytes written are measured before it is finished and published (copied
+			//to its name, as udpfs: cannot rename), and the published .psu is read back
+			s64 psu_size = strncmp(tmp, "udpfs", 5) ? 0 : genLseek(PM_file[recurses + 1], 0, SEEK_CUR);
+
+			if (psu_size < 0) {  //no size to read the published .psu back against: the older one stays
+				filerCopyDiagStage("Measuring PSU");
+				psu_backup_discard_root_image(PM_file[recurses + 1], tmp);
+				return copyDiagFail((int)psu_size);
+			}
+			filerCopyDiagStage("Finishing PSU");
+			ret = psu_backup_finalize_root_image(PM_file[recurses + 1], tmp, mcT_head_p, PSU_content, &psu_kept);
+			if (ret < 0) {
+				if (psu_kept)  //the older .psu is gone, and the new one could not take its name
+					filerCopyDiagStage("Replacing PSU, new one kept as .ps~");
+				return copyDiagFail(ret);
+			}
+			if (!strncmp(tmp, "udpfs", 5) && (ret = verifyUdpfsCopy(tmp, psu_size, NULL)) < 0) {
+				psu_backup_settle(tmp, 0);  //the older .psu is put back
+				return copyDiagFail(ret);
+			}
+			psu_backup_settle(tmp, 1);
 		} else if (PM_flag[recurses + 1] == PM_NORMAL) {             //Normal mode folder paste closure
 			if (!strncmp(out, "mc", 2)) {                            //Handle folder copied to MC
 				ensureMemoryCardPortAccessible(out[2] - '0');
@@ -893,6 +1107,8 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 
 	folder_exit:  //A folder level that stops before its listing is used, returning 'ret'
 		free(files);
+		free(psu_restore_buff);
+		psu_restore_buff = NULL;
 		if (PM_flag[recurses + 1] == PM_PSU_RESTORE && PM_file[recurses + 1] >= 0) {
 			genClose(PM_file[recurses + 1]);  //The PSU that the file branch opened to restore it
 			PM_file[recurses + 1] = -1;
@@ -914,6 +1130,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 		PM_flag[recurses + 1] = PM_PSU_RESTORE;  //Mode flag for recursive entry
 		//The helper above transformed the PSU header into a folder-like FILEINFO entry
 		PSU_restart_f = 1;
+		filerCopyDiagStage("Preparing devices");  //the second pass maps its paths again
 		goto restart_copy;
 	}
 non_PSU_RESTORE_init:
@@ -963,18 +1180,21 @@ non_PSU_RESTORE_init:
 	//It is now time to open the output file, indicated by 'out_fd'
 	//except in the case of a PSU backup, when we must add a header to PSU instead
 	if (PM_flag[recurses] == PM_PSU_BACKUP) {
-		out_fd = PM_file[recurses];
-		if (psu_backup_begin_file_entry(out_fd, mcT_head_p, &psu_pad_size, &PSU_content) < 0) {
+		//The .psu is the folder level's, which closes it once whatever happens here:
+		//every exit below leaves it open (out_fd = -1) instead of closing it
+		filerCopyDiagStage("Writing PSU entry");
+		if (psu_backup_begin_file_entry(PM_file[recurses], mcT_head_p, &psu_pad_size, &PSU_content) < 0) {
 			ret = -EIO;
 			goto copy_file_exit;
 		}
+		out_fd = PM_file[recurses];
 	} else {            //Any other PasteMode than PM_PSU_BACKUP needs a new output file
 #if defined(ETH) || defined(UDPFS)
 		if (!strncmp(out, "host:/", 6))
 			makeHostPath(out, out);
 #endif
 		genLimObjName(out, 0);                                //Limit dest file name
-		if (!strcmp(in, out)) { ret = 0; goto copy_file_exit; }
+		if (!strcmp(in, out)) { ret = COPY_KEPT_DESTINATION; goto copy_file_exit; }
 		filerCopyDiagStage("Opening destination");
 		dummy = genRemove(out);  // Upstream: remove the old file before creating its replacement.
 		out_fd = genOpen(out, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT);
@@ -992,33 +1212,7 @@ non_PSU_RESTORE_init:
 	copy_diag.total = size;
 	//Here the output file has been opened, indicated by 'out_fd'
 
-	/* Determine the block size. Since LaunchELF is single-threaded,
-       using a large block size with a slow device will result in an unresponsive UI.
-       To prevent a loss in performance, these values must each be in a multiple of the device's sector/page size.
-       They must also be in multiples of 64, to prevent FILEIO from doing alignment correction in software. */
-	buffSize = COPY_BUFFER_FAST_DEFAULT;  //First assume fast-device buffer size
-	if (!strncmp(out, "mc", 2) || !strncmp(out, "mass", 4) || !strncmp(out, "vmc", 3) || isPcCardCfPath(out))
-		buffSize = 131072;  //Use  128KB if writing to USB/CF (Flash RAM writes) or MC (pretty slow).
-	                        //VMC contents should use the same size, as VMCs will often be stored on USB
-#ifdef MX4SIO
-	else if (!strncmp(out, "mx4sio", 6))
-		buffSize = 131072;  //Use 128KB when writing to MX4SIO (FAT over SIO2).
-#endif
-	else if (!strncmp(in, "mc", 2))
-		buffSize = 262144;  //Use 256KB if reading from MC (still pretty slow)
-#if defined(ETH) || defined(UDPFS)
-	else if (!strncmp(out, "host", 4))
-		buffSize = 393216;  //Use 384KB if writing to HOST (acceptable)
-#endif
-	else if ((!strncmp(in, "mass", 4)) || (!strncmp(in, "host", 4)) || isPcCardCfPath(in)
-#ifdef MX4SIO
-	         || (!strncmp(in, "mx4sio", 6))
-#endif
-	        )
-		buffSize = 524288;  //Use 512KB reading from USB, CF, or HOST (acceptable)
-
-	if (size < (u64)buffSize)
-		buffSize = (int)size;
+	buffSize = copyBufferSize(in, out, size);  //Determine the block size
 
 	if (buffSize == 0) {
 #if FILEOP_TRACE
@@ -1032,13 +1226,19 @@ non_PSU_RESTORE_init:
 	}
 
 	filerCopyDiagStage("Allocating buffer");
-	buff = (char *)memalign(64, buffSize);  //Attempt buffer allocation
+	if (PM_flag[recurses] == PM_PSU_RESTORE) {  //the buffer that the folder level reserved
+		buff = psu_restore_buff;
+		if (buffSize > psu_restore_buff_size)  //only for an entry claiming more than its .psu holds
+			buffSize = psu_restore_buff_size;
+	} else
+		buff = (char *)memalign(64, buffSize);  //Attempt buffer allocation
 	if (buff == NULL) {                     //if allocation fails
 		ret = -ENOMEM;
-		genClose(out_fd);
-		out_fd = -1;
-		if (PM_flag[recurses] != PM_PSU_BACKUP)
+		if (PM_flag[recurses] != PM_PSU_BACKUP) {  //a PSU backup's .psu is left to its folder level
+			genClose(out_fd);
 			genRemove(out);
+		}
+		out_fd = -1;
 		goto copy_file_exit_mem_err;
 	}
 	if (buffSize == COPY_BUFFER_FAST_DEFAULT) {
@@ -1161,10 +1361,11 @@ non_PSU_RESTORE_init:
 		if (readpad()) {
 #endif
 			if (-1 == ynDialog(LNG(Continue_transfer))) {
-				genClose(out_fd);
-				out_fd = -1;
-				if (PM_flag[recurses] != PM_PSU_BACKUP)
+				if (PM_flag[recurses] != PM_PSU_BACKUP) {  //a PSU backup's .psu is left to its folder level
+					genClose(out_fd);
 					genRemove(out);
+				}
+				out_fd = -1;
 				filerCopyDiagStage("Copy cancelled");
 				ret = -1;             // flag generic error
 				goto copy_file_exit;  // go deal with it
@@ -1193,10 +1394,11 @@ non_PSU_RESTORE_init:
 				       in, out, trace_chunk_index, buffSize, bytesRead, bytesWritten,
 				       (unsigned long long)size);
 #endif
-				genClose(out_fd);
-				out_fd = -1;
-				if (PM_flag[recurses] != PM_PSU_BACKUP)
+				if (PM_flag[recurses] != PM_PSU_BACKUP) {  //a PSU backup's .psu is left to its folder level
+					genClose(out_fd);
 					genRemove(out);
+				}
+				out_fd = -1;
 				ret = bytesRead < 0 ? bytesRead : (bytesWritten < 0 ? bytesWritten : -EIO);
 				goto copy_file_exit;
 			}
@@ -1227,11 +1429,9 @@ copy_file_data_done:
 	//but we also need to copy attributes and timestamps (as yet only for MC)
 	//For PSU backup output padding may be needed, but not output file closure
 	if (PM_flag[recurses] == PM_PSU_BACKUP) {
-		if (psu_backup_write_padding(out_fd, psu_pad_size) < 0) {
+		if (psu_backup_write_padding(out_fd, psu_pad_size) < 0)
 			ret = -EIO;
-			goto copy_file_exit;
-		}
-		out_fd = -1;  //prevent output file closure below
+		out_fd = -1;  //prevent output file closure below: the folder level closes the .psu
 		goto copy_file_exit;
 	}
 
@@ -1247,6 +1447,8 @@ copy_file_data_done:
 		else if ((isPcCardCfPath(out) && !isPcCardCfOnline()) || (isPcCardCfPath(in) && !isPcCardCfOnline()))
 			ret = -EIO;
 		out_fd = -1;  //prevent dual closure attempt
+		if (ret >= 0 && !strncmp(out, "udpfs", 5))
+			ret = verifyUdpfsCopy(out, original_size, in);
 		if (ret < 0)
 			goto copy_file_exit;
 	}
@@ -1304,13 +1506,15 @@ copy_file_data_done:
 			dummy = fileXioChStat(out, &iox_stat, ret);
 		}
 	}
+	ret = 0;  //the file was copied: 'ret' only held the attribute requests above
 
 //The code below is also used for all errors in copying a file,
 //but those cases are distinguished by a negative value in 'ret'
 copy_file_exit:
 	copyDiagFail(ret);
 	free(buff2);
-	free(buff);
+	if (buff != psu_restore_buff)  //that one is freed by the folder level that reserved it
+		free(buff);
 copy_file_exit_mem_err:
 	copyDiagFail(ret);
 #if FILEOP_TRACE

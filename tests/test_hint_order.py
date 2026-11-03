@@ -1,7 +1,9 @@
 """Footer hints keep one button order on every screen: Cross, Square, Triangle, Circle,
 R1, R2, L1, L2, SELECT, START, sticks (C2 of the 2026-11 feedback round, Berion), whatever
 order and subset a screen passes to dashDrawHints."""
+import atexit
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 
@@ -88,6 +90,7 @@ int main(void) {
 }
 '''
 d = Path(tempfile.mkdtemp())
+atexit.register(shutil.rmtree, d, ignore_errors=True)
 (d / "t.c").write_text(code)
 subprocess.run(["gcc", "-std=gnu99", "-Wall", "-Wextra", "-Werror", "-o", str(d / "t"), str(d / "t.c")], check=True)
 out = subprocess.run([str(d / "t")], capture_output=True, text=True, check=True)

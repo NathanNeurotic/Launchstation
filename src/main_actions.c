@@ -172,6 +172,23 @@ static int elfLaunchIopMode(const MainExecuteContext *ctx)
 	return DashChooseElfIopMode(setting->reboot_iop_elf_load);
 }
 
+/* A launch whose device drivers did not load says so, never that the file is
+ * not found: the dashboard then offers to remove a shortcut that still works. */
+static void setDriversNotLoadedMsg(char *msg, const char *path, const char *device)
+{
+#ifdef SMB
+	int smb = smbPathKind(path);
+
+	if (smb != SMB_PATH_NONE && smbLoadError(smb)[0]) {
+		snprintf(msg, MAX_PATH, "%s", smbLoadError(smb));
+		return;
+	}
+#else
+	(void)path;
+#endif
+	snprintf(msg, MAX_PATH, "%s drivers could not be loaded.", device);
+}
+
 // Execute. Execute an action. May be called recursively.
 // For any path specified, its device must be accessible.
 //------------------------------
@@ -182,6 +199,7 @@ void ExecuteMainAction(char *pathin, const MainExecuteContext *ctx)
 	static char fullpath[MAX_PATH];
 	static char party[MAX_PATH];
 	char *p;
+	const char *no_drivers = NULL;  //device whose drivers failed to load
 	int x, t = 0;
 	char dvdpl_path[] = "mc0:/BREXEC-DVDPLAYER/dvdplayer.elf";
 	int dvdpl_update;
@@ -202,6 +220,7 @@ void ExecuteMainAction(char *pathin, const MainExecuteContext *ctx)
 		LaunchArgsClear();
 
 Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
+	strcpy(fullpath, path);  //a failure names this path until a branch sets fullpath
 
 	if (isPcCardCfPath(path)) {
 		LaunchArgsClear();
@@ -236,8 +255,17 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		strcat(fullpath, path + 3);
 		if ((t = checkELFheader(fullpath)) > 0)
 			goto ELFchecked;
-		fullpath[2] = '1';
-		goto CheckELF_fullpath;
+		{
+			int first = t;  //-1: mc0: opened the file and it is no ELF
+			fullpath[2] = '1';
+			if ((t = checkELFheader(fullpath)) > 0)
+				goto ELFchecked;
+			if (first == -1 && t != -1) {  //a file that opened is not missing because mc1: has none
+				t = -1;
+				fullpath[2] = '0';  //and the message names the card it opened on
+			}
+			goto ELFnotFound;
+		}
 
 	} else if (!strncmp(path, "vmc", 3)) {
 		x = path[3] - '0';
@@ -265,7 +293,8 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 	}
 #endif
 	else if (isHddLaunchPath(path)) {
-		loadHddModules();
+		if (!loadHddModules())
+			no_drivers = "HDD";
 		if ((t = checkELFheader(path)) <= 0)
 			goto ELFnotFound;
 		//coming here means the ELF is fine
@@ -278,7 +307,8 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 #ifdef DVRP
 		if (!console_is_PSX)
 			goto ELFnotFound;
-		loadDVRPHddModules();
+		if (!loadDVRPHddModules())
+			no_drivers = "DVR HDD";
 		if ((t = checkELFheader(path)) <= 0)
 			goto ELFnotFound;
 		//coming here means the ELF is fine
@@ -299,8 +329,10 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 #ifdef XFROM
 		if (!console_is_PSX)
 			goto ELFnotFound;
-		if (!loadFlashModules())
+		if (!loadFlashModules()) {
+			no_drivers = "XFROM";
 			goto ELFnotFound;
+		}
 		if ((t = checkELFheader(path)) <= 0)
 			goto ELFnotFound;
 		strcpy(fullpath, path);
@@ -310,8 +342,10 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 #endif
 	} else if (!strncmp(path, "mx4sio", 6)) {
 #ifdef MX4SIO
-		if (!mx4sio_driver_running && !loadMx4sioModules())
+		if (!mx4sio_driver_running && !loadMx4sioModules()) {
+			no_drivers = "MX4SIO";
 			goto ELFnotFound;
+		}
 		if ((t = checkELFheader(path)) <= 0)
 			goto ELFnotFound;
 		party[0] = 0;
@@ -322,8 +356,10 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 #endif
 	} else if (!strncmp(path, "ilink", 5)) {
 #ifdef ILINK
-		if (!loadIlinkModules())
+		if (!loadIlinkModules()) {
+			no_drivers = "iLink";
 			goto ELFnotFound;
+		}
 		if ((t = checkELFheader(path)) <= 0)
 			goto ELFnotFound;
 		party[0] = 0;
@@ -334,7 +370,8 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 #endif
 	} else if (!strncmp(path, "mmce", 4)) {
 #ifdef MMCE
-		loadMmceModules();
+		if (!loadMmceModules())
+			no_drivers = "MMCE";
 		if ((t = checkELFheader(path)) <= 0)
 			goto ELFnotFound;
 		strcpy(fullpath, path);
@@ -358,7 +395,8 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		char *pathSep;
 
 #ifdef EXFAT
-		loadAtaModules();
+		if (!loadAtaModules())
+			no_drivers = "ATA";
 #endif
 		if ((t = checkELFheader(path)) <= 0)
 			goto ELFnotFound;
@@ -392,6 +430,8 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 	} else if (!strncmp(path, "host:", 5)) {
 #ifdef ETH
 		initHOST();
+		if (!isPathDeviceStackLoaded(path))
+			no_drivers = "Host";
 		party[0] = 0;
 		strcpy(fullpath, "host:");
 		if (path[5] == '/')
@@ -405,7 +445,8 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 #endif
 	} else if (!strncmp(path, "udpfs:", 6)) {
 #ifdef UDPFS
-		load_udpfs();
+		if (!load_udpfs())
+			no_drivers = "UDPFS";
 		party[0] = 0;
 		snprintf(fullpath, sizeof(fullpath), "%s", path);
 		goto CheckELF_fullpath;
@@ -415,8 +456,10 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 #ifdef SMB
 	} else if (smbPathKind(path) != SMB_PATH_NONE) {
 		/* as udpfs: the loader reads the ELF while the SMB driver is resident */
-		if (!isSmbDriverLoaded(smbPathKind(path)) && !load_smb(smbPathKind(path)))
+		if (!isSmbDriverLoaded(smbPathKind(path)) && !load_smb(smbPathKind(path))) {
+			no_drivers = "SMB";
 			goto ELFnotFound;
+		}
 		party[0] = 0;
 		snprintf(fullpath, sizeof(fullpath), "%s", path);
 		goto CheckELF_fullpath;
@@ -435,9 +478,9 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		fd = genOpen(path, FIO_O_RDONLY);
 		if (fd >= 0)
 			goto close_fd_and_launch_OSDSYS;
+		strcpy(fullpath, path);
 		if (strncmp(path, "mc:", 3) != 0)
 			goto ELFnotFound;
-		strcpy(fullpath, path);
 		path[2] = '0';
 		strcpy(path + 3, fullpath + 2);
 		fd = genOpen(path, FIO_O_RDONLY);
@@ -698,10 +741,12 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		t = 0;
 	ELFnotFound:
 		LaunchArgsClear();
-		if (t == 0)
-			sprintf(ctx->main_msg, "%s %s.", fullpath, LNG(is_Not_Found));
-		else
+		if (t == -1 || t > 0)  //it opened, so it is not missing
 			sprintf(ctx->main_msg, "%s: %s.", LNG(This_file_isnt_an_ELF), fullpath);
+		else if (no_drivers != NULL)  //it could not be opened
+			setDriversNotLoadedMsg(ctx->main_msg, path, no_drivers);
+		else
+			sprintf(ctx->main_msg, "%s %s.", fullpath, LNG(is_Not_Found));
 		return;
 	}
 }

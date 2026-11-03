@@ -41,10 +41,10 @@ Workflows in `.github/workflows/`:
 | `sync-wiki.yml` | push to `master` touching wiki/site sources, the manifest, credits or the sync tooling; manual dispatch; GitHub Wiki edits (`gollum`) | Mirrors those into the repository wiki with `scripts/sync_github_wiki.py` (never deletes unmanaged pages, no force-push) |
 
 CI invokes the host test scripts explicitly in `compile.yml`; register new scripts
-there so they participate in the build checks. Not every script under `tests/` is
-listed (for example `test_psu_extract_to_mc.py`), so run the whole directory
-locally before large changes. Tests such as `test_build_identity.py` and
-`test_release_notes.py` require a Git checkout.
+there so they participate in the build checks. Every `tests/test_*.py` script is
+listed there; still run the whole directory locally before large changes. Tests
+such as `test_build_identity.py` and `test_release_notes.py` require a Git
+checkout.
 
 Repository secrets used: `WLE_GOOGLE_CLIENT_ID` and `WLE_GOOGLE_CLIENT_SECRET`
 (embedded into official builds by `scripts/gen_cloud_client.py`) and the

@@ -7,9 +7,11 @@ Python reader below that follows the PS1 BIOS layout on its own: frame 0
 0-based block numbers, 0xFFFF at the end. Refusals must leave the card file
 byte-identical.
 """
+import atexit
 from pathlib import Path
 import hashlib
 import random
+import shutil
 import struct
 import subprocess
 import tempfile
@@ -18,6 +20,7 @@ root = Path(__file__).resolve().parents[1]
 workflow = (root / ".github/workflows/compile.yml").read_text(encoding="utf-8")
 assert "python3 tests/test_mc_ps1_card.py" in workflow
 tmp = Path(tempfile.mkdtemp(prefix="ps1card-"))
+atexit.register(shutil.rmtree, tmp, ignore_errors=True)
 exe = tmp / "p"
 subprocess.run(["gcc", "-std=c99", "-O1", "-g", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
                 "-fno-sanitize-recover=all", f"-I{root/'include'}", str(root / "tests/mc_ps1_card_host.c"),

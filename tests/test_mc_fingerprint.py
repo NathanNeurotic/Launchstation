@@ -6,9 +6,11 @@ same when only B?DATA-SYSTEM's contents change (the PS2 rewrites its history
 file on every game start), agree between ECC and no-ECC images, and never
 crash on damaged images.
 """
+import atexit
 from pathlib import Path
 import hashlib
 import random
+import shutil
 import struct
 import subprocess
 import sys
@@ -21,6 +23,7 @@ root = Path(__file__).resolve().parents[1]
 workflow = (root / ".github/workflows/compile.yml").read_text(encoding="utf-8")
 assert "python3 tests/test_mc_fingerprint.py" in workflow
 tmp = Path(tempfile.mkdtemp())
+atexit.register(shutil.rmtree, tmp, ignore_errors=True)
 exe = tmp / "fp"
 subprocess.run(["gcc", "-std=c99", "-O1", "-g", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
                 "-fno-sanitize-recover=all", f"-I{root/'include'}", str(root / "tests/mc_fingerprint_host.c"),

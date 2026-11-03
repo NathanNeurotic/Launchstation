@@ -105,6 +105,9 @@ int readSMB(const char *path, FILEINFO *info, int max);
 #endif
 
 int getDir(const char *path, FILEINFO *info);
+/* For copy, delete and Get Size: an error unless the whole folder was read
+ * (filer.c). 'info' holds MAX_ENTRY entries. */
+int getDirComplete(const char *path, FILEINFO *info, int *more);
 int filerPrepareDirRead(const char *path);
 /* Serialized card handshake; slot 2 may require retiring MX4SIO first. */
 int filerPrepareMemoryCardRead(int port);
@@ -113,6 +116,11 @@ void discardNextMx4sioRootListing(const char *path);
 int ensurePathDeviceStackReady(const char *path);
 void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char enable[NUM_MENU]);
 int prepareTransferDeviceStacks(const char *src_path, const char *dst_path);
+/* copy() returns 0 when it copied, a negative error, or COPY_KEPT_DESTINATION
+ * when it kept what was already at the destination and wrote nothing: a PSU
+ * backup whose dated name is taken (PSU_NoOverwrite), or a destination that
+ * is the source itself. A Move must not delete the source of such an item. */
+#define COPY_KEPT_DESTINATION 1
 int copy(char *outPath, const char *inPath, const FILEINFO *src, int recurses);
 
 #endif

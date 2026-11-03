@@ -431,7 +431,7 @@ int loadAtaModules(void);
 #endif
 
 /* elf.c */
-int checkELFheader(char *filename);
+int checkELFheader(char *filename); /* kind > 0; -1 not an executable; -2 not opened */
 void RunLoaderElf(char *filename, char *party, const char *selected_path, int exec_kind, int reboot_iop_elf_load);
 void RunLoaderElfKeepIOP(char *filename, char *party, const char *selected_path, int exec_kind);
 void RunLoaderElfKeepIOPWithArgv0(char *filename, char *party, const char *child_argv0, int exec_kind);
@@ -585,6 +585,7 @@ void nonDialog(char *message);
 int keyboard(char *out, int max);
 void filerPasteInto(char *mess, char *path);
 void filerPasteModeInto(char *mess, char *path, int rename);
+int filerPasteKeptCount(void);  //items the last paste kept at the destination (its message is then a note)
 void filerPsuPasteInto(char *mess, char *path);
 const char *filerPsuPasteLabel(const char *path);
 int filerMountVmc(const char *path, const FILEINFO *file, int slot, char *msg, int msg_size);

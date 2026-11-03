@@ -17,7 +17,7 @@
 
 <h2 id="use">What you can do</h2>
 <ul>
-<li><b>Browse and copy.</b> Directory listings come from the server with sizes and dates. A listing that fails part-way is treated as an error rather than a partial list, so a copy never silently skips files.</li>
+<li><b>Browse and copy.</b> Directory listings come from the server with sizes and dates. A listing that fails part-way is treated as an error rather than a partial list, so a copy never silently skips files. The UDPFS driver reports every close as successful, so each file pasted to <code>udpfs:</code>, and each finished <code>.psu</code> backup written there, is opened again and its size compared with what was written; a missing or wrong-sized copy fails at <em>Verifying destination</em> and a Move (or Cut, then Create PSU) keeps its source. A <code>.cso</code>/<code>.ciso</code>/<code>.zso</code>/<code>.ziso</code>/<code>.chd</code> image that the server reads back decompressed is accepted. <b>Get Size</b> takes a file's size from the listing when the server does not answer a stat.</li>
 <li><b>Writing is off by default.</b> The File Browser&rsquo;s write commands (copy to, delete, rename, new folder, paste) stay disabled on <code>udpfs:</code> and <code>host:</code> until <b>Settings &gt; Network &gt; Allow writing over the network</b> is on. This does not affect FTP.</li>
 <li><b>Neutrino ISOs.</b> Backend <code>udpfs</code>; the ISO is read straight from the PC. The Neutrino ELF can be on the share, a memory card or elsewhere. See <a href="neutrino.html">Neutrino</a>.</li>
 <li><b>Ember.</b> The Ember path check does not exclude UDPFS, but that combination has not been hardware-verified.</li>
@@ -30,7 +30,7 @@
 <ul>
 <li><b>UDPFS and FTP / PS2Link / Google Drive are different Ethernet stacks.</b> Only one can be loaded; switching resets the IOP (see <a href="network.html#stacks">Network &amp; PC Integration</a>). After using FTP or cloud features, opening UDPFS reloads the other stack.</li>
 <li><b>DEV9 sharing.</b> UDPFS, the internal HDD and exFAT HDD all use DEV9 and can be active together. On an early Japanese console the PC CARD CF driver owns the bus instead, and network loaders refuse to start while it does.</li>
-<li><b>Copying between UDPFS and PC CARD CF is refused</b> (&ldquo;Incompatible drivers to perform action&rdquo;).</li>
+<li><b>Copying between UDPFS and <code>host:</code>, SMB or PC CARD CF is refused</b> (&ldquo;Incompatible drivers to perform action&rdquo;) before either driver is loaded. <code>host:</code> and SMB run on the other Ethernet stack.</li>
 <li>The IP address is handed to the UDPFS stack when it loads, so use Tools &gt; Reboot IOP after changing it and then open the device again.</li>
 </ul>
 
