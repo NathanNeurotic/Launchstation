@@ -1,0 +1,245 @@
+name: ps2build SDK Watch
+
+# The build installs the ps2build SDK pinned in .github/ps2build-sdk.env, so it never asks git.techwritescode.dev
+# which release is newest (unpinned, that was 9 release-API requests per build). This watch asks instead, once a
+# week. RiptOPL and ssb-decomp-re carry the same watch.
+#
+#   check  .github/scripts/ps2build_sdk_watch.py: one request per pinned name (none for PS2BUILD_SDK_HOLD), plus a
+#          look through the private NathanNeurotic/ps2build-mirror for the release that holds exactly the newest
+#          versions. Nothing newer: the run ends here.
+#   warm   installs the new SDK (LLVM) once and caches it on master, on top of the cached SDK so only what changed
+#          is downloaded. The pull request and later master builds then restore it.
+#   pr     pushes the bumped pin file to the ci/ps2build-sdk-watch branch and opens (or refreshes) a draft pull
+#          request. A push made by GitHub Actions starts no workflow, so it starts Automated-Build on that branch
+#          itself, and a later run starts it if it has not run on the branch head; that build publishes nothing,
+#          because it publishes from master only. The watch proposes nothing when the pins on master changed
+#          after check read them, never merges anything, and leaves a branch someone else has committed to, and
+#          its pull request, alone (with no pull request open, an issue says so).
+#
+# When "Allow GitHub Actions to create and approve pull requests" is off in the repository settings, it opens an
+# issue with a link that creates the pull request instead.
+
+on:
+  schedule:
+    # Mondays 16:17 UTC (8:17 AM Pacific standard time). Off the hour to dodge the cron backlog.
+    - cron: "17 16 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ps2build-sdk-watch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.repository == 'NathanNeurotic/Launchstation'
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.watch.outputs.status }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compare the pinned SDK with the newest official releases
+        id: watch
+        env:
+          PS2BUILD_SDK_MIRROR_TOKEN: ${{ secrets.PS2BUILD_MIRROR_TOKEN }}
+        run: |
+          set -eu
+          python3 .github/scripts/ps2build_sdk_watch.py --out "$RUNNER_TEMP/watch"
+          STATUS="$(cat "$RUNNER_TEMP/watch/status")"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          if [ "$STATUS" = changed ]; then
+            cat "$RUNNER_TEMP/watch/body.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: steps.watch.outputs.status == 'changed'
+        with:
+          name: ps2build-sdk-watch
+          path: ${{ runner.temp }}/watch/
+          retention-days: 7
+
+  warm:
+    needs: check
+    # The cache is only shared with every branch when it is saved from master.
+    if: needs.check.outputs.status == 'changed' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: ps2build-sdk-watch
+          path: ${{ runner.temp }}/watch
+      - name: Take the new pins
+        run: cp "$RUNNER_TEMP/watch/ps2build-sdk.env" .github/ps2build-sdk.env
+      # The same steps as compile.yml, so the cached SDK is the one the build would have installed.
+      - name: Resolve the pinned ps2build SDK
+        id: sdk
+        run: sh scripts/ps2build_sdk.sh --resolve --llvm "$RUNNER_TEMP/ps2build-sdk.env"
+      - name: Restore the ps2build SDK
+        id: sdk-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.local/share/ps2build
+          key: ps2build-sdk-${{ runner.os }}-llvm-${{ steps.sdk.outputs.key }}
+          restore-keys: ps2build-sdk-${{ runner.os }}-llvm-
+      - name: Install the ps2build SDK
+        env:
+          PS2BUILD_SDK_MIRROR_TOKEN: ${{ secrets.PS2BUILD_MIRROR_TOKEN }}
+          # The official host resets HTTP/2 streams under load; ps2build is a Go binary.
+          GODEBUG: http2client=0
+        run: sh scripts/ps2build_sdk.sh --llvm "$HOME/.local/share/ps2build"
+      - name: Stop unless the new SDK was installed
+        # When the official install fails, the installer takes the newest ps2build-mirror release. If that release
+        # lacks the new versions, it sets PS2BUILD_SDK_STALE and nothing is cached under the new pins. Failing here
+        # keeps pr from opening a pull request whose build jobs would each ask the official server again; the next
+        # run tries again.
+        if: ${{ env.PS2BUILD_SDK_STALE == 'true' }}
+        run: |
+          echo "::error::The new ps2build SDK could not be installed (the official install failed, and no ps2build-mirror release holds these versions yet), so it is not cached. The pull request waits for the next run."
+          exit 1
+      - name: Cache the ps2build SDK
+        if: ${{ steps.sdk-cache.outputs.cache-hit != 'true' && env.PS2BUILD_SDK_STALE != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.local/share/ps2build
+          key: ps2build-sdk-${{ runner.os }}-llvm-${{ steps.sdk.outputs.key }}
+      - name: Look the new SDK up in the cache
+        # actions/cache/save only warns when its upload fails, and a cache step only warns while the cache service is
+        # unavailable. Without this entry, each build job of the pull request pr opens would ask the official server
+        # for the new SDK. So warm looks the exact key up, with the same path (the cache version hashes it), and the
+        # next step fails unless the cache holds it; the next run tries again.
+        id: sdk-saved
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.local/share/ps2build
+          key: ps2build-sdk-${{ runner.os }}-llvm-${{ steps.sdk.outputs.key }}
+          lookup-only: true
+      - name: Stop unless the cache holds the new SDK
+        if: ${{ steps.sdk-saved.outputs.cache-hit != 'true' }}
+        run: |
+          echo "::error::The cache does not hold the new ps2build SDK (its upload or the cache service failed), and each build job of the pull request would ask the official server for it. The pull request waits for the next run."
+          exit 1
+
+  pr:
+    needs: [check, warm]
+    # No status function here, so this job runs only when warm succeeded. That is on purpose: a pull request for
+    # pins the cache does not hold yet would send each of its build jobs to the official server for the new SDK.
+    # A failed warm leaves the update for the next run.
+    if: needs.check.outputs.status == 'changed' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # push the ci/ps2build-sdk-watch branch
+      pull-requests: write  # open or refresh the draft pull request
+      issues: write         # the fallback when Actions may not open pull requests
+      actions: write        # start Automated-Build on that branch
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BRANCH: ci/ps2build-sdk-watch
+      BOT: 41898282+github-actions[bot]@users.noreply.github.com
+      ISSUE_TITLE: ps2build SDK update ready
+      CHECKED: ${{ github.sha }}  # the commit check read the pins at; github.sha is the same in every job of a run
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: ps2build-sdk-watch
+          path: ${{ runner.temp }}/watch
+      - name: Push the new pins and open or refresh the draft pull request
+        run: |
+          set -eu
+          W="$RUNNER_TEMP/watch"
+          R="$GITHUB_REPOSITORY"
+          if ! git diff --quiet "$CHECKED" HEAD -- .github/ps2build-sdk.env; then
+            # check read the pins at $CHECKED. Copying its pin file over newer pins would undo that change (a
+            # hold, say), so this run proposes nothing, and the next run starts from the new pins.
+            echo "::warning::.github/ps2build-sdk.env changed on master after this run read it, so it proposes nothing. The next run starts from the new pins."
+            exit 0
+          fi
+          cp "$W/ps2build-sdk.env" .github/ps2build-sdk.env
+          OLD=
+          if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null; then
+            git fetch -q origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+            OLD="$(git rev-parse "origin/$BRANCH")"
+          fi
+          # The proposal's own pull request. gh's --head matches the branch name alone, and a fork's pull request
+          # can come from a branch of the same name.
+          PR="$(gh pr list --repo "$R" --head "$BRANCH" --base master --state open \
+            --json number,isCrossRepository --jq '[.[] | select(.isCrossRepository == false)][0].number // empty')"
+
+          # Without a pull request to show the new pins, an issue does: the lines given, then the proposal.
+          report() {
+            { printf '%s\n' "$@"; echo; cat "$W/body.md"; } > "$W/issue.md"
+            EXISTING="$(gh issue list --repo "$R" --state open --limit 100 --json number,title \
+              --jq "[.[] | select(.title == \"$ISSUE_TITLE\")][0].number // empty")"
+            if [ -n "$EXISTING" ]; then
+              gh issue edit "$EXISTING" --repo "$R" --body-file "$W/issue.md"
+            else
+              gh issue create --repo "$R" --title "$ISSUE_TITLE" --body-file "$W/issue.md"
+            fi
+          }
+
+          if [ -n "$OLD" ] && git log --format='%ae%n%ce' "origin/master..origin/$BRANCH" | grep -qvxF "$BOT"; then
+            # Someone added commits (a fix for the new SDK, say), or amended the watch's commit, which keeps the
+            # watch as its author but not as its committer. Never overwrite their work, and leave its pull request
+            # alone too, even when the branch already holds these pins.
+            if [ -n "$PR" ]; then
+              echo "::warning::$BRANCH has commits that are not the watch's; leaving it and #$PR alone. Merge or close #$PR and delete the branch, then run the watch again."
+            else
+              # Its pull request was closed, or squash-merged with the branch kept, so nothing shows the new pins.
+              echo "::warning::$BRANCH has commits that are not the watch's and no open pull request; leaving it alone."
+              report "The ps2build SDK Watch found newer versions, but \`$BRANCH\` has commits that are not the watch's and no open pull request, so it left the branch alone." \
+                "If that work is merged or no longer wanted, delete the branch, and the next run proposes these pins. To keep working on it, open a pull request for it."
+            fi
+            exit 0
+          elif [ -n "$OLD" ] && git show "origin/$BRANCH:.github/ps2build-sdk.env" | cmp -s - .github/ps2build-sdk.env; then
+            echo "$BRANCH already proposes these pins."
+            HEAD_SHA="$OLD"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "$BOT"
+            git checkout -q -B "$BRANCH" origin/master
+            git add .github/ps2build-sdk.env
+            git commit -q -F "$W/commit.txt"
+            # The branch belongs to the watch: each run proposes the newest pins on top of master.
+            git push --force-with-lease="refs/heads/$BRANCH:$OLD" origin "HEAD:refs/heads/$BRANCH"
+            HEAD_SHA="$(git rev-parse HEAD)"
+          fi
+
+          TITLE="$(cat "$W/title")"
+          if [ -n "$PR" ]; then
+            gh pr edit "$PR" --repo "$R" --title "$TITLE" --body-file "$W/body.md"
+            echo "Refreshed #$PR."
+          elif gh pr create --repo "$R" --draft --base master --head "$BRANCH" --title "$TITLE" --body-file "$W/body.md"; then
+            :
+          else
+            # Most likely "Allow GitHub Actions to create and approve pull requests" is off. Ask in an issue.
+            report "The ps2build SDK Watch pushed new pins to \`$BRANCH\` but could not open the pull request." \
+              "Open it here: https://github.com/$R/compare/master...$BRANCH?expand=1"
+          fi
+
+          # A push made with GITHUB_TOKEN starts no workflow, so the watch starts the builds on its branch itself. A
+          # later run starts each one that has no run on the branch head yet (its dispatch failed, say); every one
+          # is tried before the step fails.
+          FAILED=
+          dispatch() {
+            RUNS="$(gh run list --repo "$R" --workflow "$1" --commit "$HEAD_SHA" --limit 1 \
+              --json databaseId --jq length)" || RUNS=
+            if [ "$RUNS" = 1 ]; then
+              echo "$1 already ran on $BRANCH."
+            elif ! gh workflow run "$@" --repo "$R" --ref "$BRANCH"; then
+              FAILED="$FAILED $1"
+            fi
+          }
+          dispatch compile.yml
+          if [ -n "$FAILED" ]; then
+            echo "::error::Could not start$FAILED on $BRANCH. The next run starts whatever has not run there."
+            exit 1
+          fi
