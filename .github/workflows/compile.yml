@@ -549,6 +549,55 @@ jobs:
             --previous "${previous_sha}" --run-id "${GITHUB_RUN_ID}" \
             --assets-dir artifacts --output "${notes_file}" --version "${build}"
 
+          # Immutable archive (sd2cloud-style stable-release retention):
+          # complete and verify it BEFORE changing any live 'latest' asset.
+          # It is deliberately a pre-release so the existing updater and
+          # public latest URLs still select the moving release.
+          archive_tag="build-${build}"
+          archive_notes="${RUNNER_TEMP}/launchstation-archive-notes.md"
+          {
+            printf 'Verified Launchstation build %s (%s).\\n\\n' "${build}" "${GITHUB_SHA}"
+            printf 'This build is retained for recovery; the moving [latest release](https://github.com/%s/releases/tag/latest) remains the default channel.\\n\\n' "${GITHUB_REPOSITORY}"
+            printf 'The artifacts below were validated before the rolling release was updated. The full kit is present only when this build produced it.\\n\\n'
+            printf '\`\`\`text\\n'
+            for asset in "${assets[@]}"; do
+              sha256sum "artifacts/${asset}" | sed 's#artifacts/##'
+            done
+            printf '\`\`\`\\n'
+          } > "${archive_notes}"
+          if gh release view "${archive_tag}" >/dev/null 2>&1; then
+            # A repeated run may only reuse the EXACT same immutable commit.
+            test "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${archive_tag}" --jq '.object.sha')" = "${GITHUB_SHA}" || {
+              echo "Archive tag ${archive_tag} does not match this build; refusing publication." >&2
+              exit 1
+            }
+          else
+            archive_uploads=()
+            for asset in "${assets[@]}"; do archive_uploads+=("artifacts/${asset}"); done
+            gh release create "${archive_tag}" "${archive_uploads[@]}" \
+              --title "Launchstation Build ${build} (${GITHUB_SHA:0:7})" \
+              --notes-file "${archive_notes}" --target "${GITHUB_SHA}" \
+              --prerelease --latest=false
+          fi
+          # GitHub computes the SHA-256 asset digest. Compare those remote
+          # digests and byte sizes with the tested build WITHOUT downloading
+          # (downloads done by CI would inflate the public count).
+          for asset in "${assets[@]}"; do
+            remote_size="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${archive_tag}" \
+              --jq ".assets[] | select(.name == \"${asset}\") | .size")"
+            remote_digest="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${archive_tag}" \
+              --jq ".assets[] | select(.name == \"${asset}\") | .digest")"
+            expected_size="$(stat -c '%s' "artifacts/${asset}")"
+            expected_digest="sha256:$(sha256sum "artifacts/${asset}" | cut -d' ' -f1)"
+            if [ "${remote_size}" != "${expected_size}" ] || [ "${remote_digest}" != "${expected_digest}" ]; then
+              echo "Archive integrity failure for ${asset}: size ${remote_size}/${expected_size}, digest ${remote_digest}/${expected_digest}. Refusing to modify latest." >&2
+              exit 1
+            fi
+          done
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${archive_tag}" --jq '.prerelease')" = true
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${archive_tag}" --jq '.draft')" = false
+          echo "Verified immutable archive ${archive_tag} before moving latest."
+
           if ! gh release view "${tag}" >/dev/null 2>&1; then
             gh release create "${tag}" --title "${title}" \
               --notes-file "${notes_file}" --target "${GITHUB_SHA}" --latest
