@@ -14,7 +14,7 @@
 [![DS34](https://img.shields.io/badge/Download-DS34-skyblue)](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest)
 [![Full Kit](https://img.shields.io/badge/Download-Full%20Kit-skyblue)](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest)
 
-[![License](https://img.shields.io/github/license/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=opensourceinitiative&label=License)](LICENSE)
+[![License: MULTI](https://img.shields.io/badge/License-MULTI-skyblue?style=flat&labelColor=navy&logo=opensourceinitiative)](docs/THIRD_PARTY_CREDITS.md)
 ![Platform](https://img.shields.io/badge/Platform-PlayStation%202-skyblue?style=flat&labelColor=navy)
 ![SDK](https://img.shields.io/badge/SDK-ps2build-skyblue?style=flat&labelColor=navy)
 ![Compiler](https://img.shields.io/badge/Toolchain-LLVM%2FClang-skyblue?style=flat&labelColor=navy)
