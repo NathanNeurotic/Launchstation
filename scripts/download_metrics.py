@@ -58,6 +58,14 @@ def observed_assets(repo):
     found = {}
     for page in range(1, 101):
         releases = api(repo, "GET", f"/releases?per_page=100&page={page}")
+        if page == 1:
+            # Fetch the fixed tag explicitly too: drafts may be omitted from
+            # a release listing even when the authenticated caller can view
+            # the release by its tag. Failure to observe latest must fail
+            # closed before any --clobber in the publishing workflow.
+            latest = api(repo, "GET", "/releases/tags/latest", missing=True)
+            if latest is not None and not any(r["id"] == latest["id"] for r in releases):
+                releases.insert(0, latest)
         for release in releases:
             # The moving latest can be left in draft after an interrupted
             # publication. Its assets still have counts we MUST preserve.
