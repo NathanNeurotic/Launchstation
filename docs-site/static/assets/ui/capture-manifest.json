@@ -1,0 +1,17 @@
+{
+  "status": "Initial capture checkpoint; full showcase in progress",
+  "build": 974,
+  "revision": "97318e5870b59ce32cae19312ed60415752ae9b3",
+  "elf_sha256": "874a1e47faa9f2f39614ab026f9a482bb0280bad219b2c4ef8556443580df638",
+  "emulator": "RIPPCSX2 2.9.96-rippcsx2.2",
+  "capture_mode": "Auto NTSC 4:3, unmodified native emulator PNG 640x480",
+  "captured_on": "2026-11-03",
+  "scope": "Dashboard menu rendering only, no console or gameplay acceptance",
+  "input_steps": "wait:25,shot,cross,wait:4,shot,select,wait:3,shot",
+  "asset": {
+    "file": "home-osd-classic-initial.png",
+    "bytes": 132747,
+    "sha256": "894172cedc33bceb3630d36c83a081626714a3ca2c7fe0a7f9a2f967d8f0bcc6"
+  },
+  "limitations": "The initial Home capture has an empty Continue row. The staged folder-card application fixture was not read successfully and needs correction before the showcase."
+}
