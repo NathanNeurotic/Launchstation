@@ -28,7 +28,7 @@ def function(signature):
 # The browser itself keeps no listing in its frame.
 browse = function('static int browseFilePath(char *out, int cnfmode, FILEINFO *files)\n{')
 assert not re.search(r'\bFILEINFO\s+\w+\s*\[', browse), 'a FILEINFO array is back in browseFilePath()'
-assert re.search(r'\bFILEINFO\s+\w+\s*\[', function('static void submenu_func_GetSize(')) is None
+assert re.search(r'\bFILEINFO\s+\w+\s*\[', function('static void submenu_func_GetSize(char *mess, char *path, FILEINFO *files)\n{')) is None
 
 code = r'''
 #include <assert.h>

@@ -255,8 +255,15 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		strcat(fullpath, path + 3);
 		if ((t = checkELFheader(fullpath)) > 0)
 			goto ELFchecked;
-		fullpath[2] = '1';
-		goto CheckELF_fullpath;
+		{
+			int first = t;  //-1: mc0: opened the file and it is no ELF
+			fullpath[2] = '1';
+			if ((t = checkELFheader(fullpath)) > 0)
+				goto ELFchecked;
+			if (first == -1 && t != -1)  //a file that opened is not missing because mc1: has none
+				t = -1;
+			goto ELFnotFound;
+		}
 
 	} else if (!strncmp(path, "vmc", 3)) {
 		x = path[3] - '0';

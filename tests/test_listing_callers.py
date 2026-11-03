@@ -97,7 +97,7 @@ typedef struct {unsigned mode,attr;char ctime[8],mtime[8],atime[8];} iox_stat_t;
 static struct {int PSU_HugeNames,PSU_DateNames,PSU_NoOverwrite;} config,*setting=&config;
 static int PSU_content;
 static int PM_flag[MAX_RECURSE],PM_file[MAX_RECURSE],PasteMode,PasteProgress_f,mctype_PSx;
-static int nclipFiles,browser_cut,browser_pushed,browser_cd;
+static int nclipFiles,browser_cut,browser_pushed,browser_cd,paste_kept_count;
 static FILEINFO clipFiles[MAX_ENTRY];static char clipPath[MAX_PATH];
 static unsigned clipIopResetGeneration=1,generation=1;
 static u64 written_size,PasteTime,clock_ms;

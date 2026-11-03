@@ -585,6 +585,7 @@ void nonDialog(char *message);
 int keyboard(char *out, int max);
 void filerPasteInto(char *mess, char *path);
 void filerPasteModeInto(char *mess, char *path, int rename);
+int filerPasteKeptCount(void);  //items the last paste kept at the destination (its message is then a note)
 void filerPsuPasteInto(char *mess, char *path);
 const char *filerPsuPasteLabel(const char *path);
 int filerMountVmc(const char *path, const FILEINFO *file, int slot, char *msg, int msg_size);

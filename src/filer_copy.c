@@ -1011,6 +1011,11 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			//to its name, as udpfs: cannot rename), and the published .psu is read back
 			s64 psu_size = strncmp(tmp, "udpfs", 5) ? 0 : genLseek(PM_file[recurses + 1], 0, SEEK_CUR);
 
+			if (psu_size < 0) {  //no size to read the published .psu back against: the older one stays
+				filerCopyDiagStage("Measuring PSU");
+				psu_backup_discard_root_image(PM_file[recurses + 1], tmp);
+				return copyDiagFail((int)psu_size);
+			}
 			filerCopyDiagStage("Finishing PSU");
 			ret = psu_backup_finalize_root_image(PM_file[recurses + 1], tmp, mcT_head_p, PSU_content, &psu_kept);
 			if (ret < 0) {

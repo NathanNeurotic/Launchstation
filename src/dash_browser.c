@@ -816,7 +816,9 @@ static void opPaste(int mode)
 	else
 		filerPasteModeInto(fb.msg, fb.dir, mode == PASTE_RENAME);
 	opDone();
-	if (fb.msg[0]) /* the classic paste only leaves a message when it failed */
+	if (fb.msg[0] && filerPasteKeptCount() > 0) /* a Move kept items already at the destination: a note */
+		dashModalMessage(DI_INFO, localizeDashboardText("Not moved"), fb.msg, NULL);
+	else if (fb.msg[0]) /* otherwise the classic paste only leaves a message when it failed */
 		showPasteFailure(psu);
 	else
 		dashToast(DASH_TOAST_OK, browser_cut ? "Moved" : "Pasted");

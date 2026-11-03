@@ -2150,6 +2150,13 @@ static void submenu_func_GetSize(char *mess, char *path, FILEINFO *files)
 //------------------------------
 //endfunc submenu_func_GetSize
 //--------------------------------------------------------------
+static int paste_kept_count;  //items the last paste kept at the destination: a note, not a failure
+
+int filerPasteKeptCount(void)
+{
+	return paste_kept_count;
+}
+
 static void subfunc_Paste(char *mess, char *path)
 {
 	/* The items that copy() kept at the destination, writing nothing
@@ -2158,6 +2165,7 @@ static void subfunc_Paste(char *mess, char *path)
 	char tmp[MAX_PATH], tmp1[MAX_PATH];
 	int i, kept, ret = -1, trace_vmc_paste;
 
+	paste_kept_count = 0;
 	filerCopyDiagBegin(clipPath, path);
 	written_size = 0;
 	PasteTime = Timer();  //Note initial pasting time
@@ -2245,6 +2253,7 @@ finished:
 				sprintf(mess + i, " was not moved\n%s",
 				        PasteMode == PM_PSU_BACKUP ? "A backup with that name already exists." : "It is already at the destination.");
 				browser_pushed = FALSE;
+				paste_kept_count = kept;
 			}
 		}
 		markMx4sioDestinationAfterWrite(path);

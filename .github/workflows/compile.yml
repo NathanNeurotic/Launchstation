@@ -327,7 +327,8 @@ jobs:
           # frames on it, and delete() and getFileSize() one per folder level,
           # each with its listing (about 900 KB) on the heap. At these budgets
           # 16 copy() frames take 68 KB.
-          # --max-chain adds up the deepest Paste found in the direct calls:
+          # --max-chain adds up the deepest Paste found in the direct calls (once for
+          # a host: listing and once for a udpfs: one, which lists through readNetDir):
           # the dashboard opens the classic browser, which pastes a folder 16
           # levels deep (the 16th copy() only refuses, so one frame too many),
           # and the innermost level lists its folder. That chain took 99,792
@@ -338,6 +339,7 @@ jobs:
             --max-frame copy=4352 --max-frame delete=3072 --max-frame getFileSize=2048 \
             --max-frame getFilePath=1024 --max-frame browseFilePath=11264 \
             --max-chain '_main,main,DashRun,runLaunchKey,dashRunMisc,dashLaunchApp,ExecuteMainAction,executeBrowserSelection,getFilePath,browseFilePath,subfunc_Paste,copy*16,getDirComplete,listDir,readHOST=106496' \
+            --max-chain '_main,main,DashRun,runLaunchKey,dashRunMisc,dashLaunchApp,ExecuteMainAction,executeBrowserSelection,getFilePath,browseFilePath,subfunc_Paste,copy*16,getDirComplete,listDir,readUDPFS,readNetDir=106496' \
             build/obj/wLaunchELF/wLaunchELF.unstripped.elf \
             build-ds34/obj/wLaunchELF/wLaunchELF.unstripped.elf
 

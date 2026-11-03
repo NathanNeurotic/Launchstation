@@ -311,7 +311,10 @@ int getFileSize(const char *path, const FILEINFO *file, u64 *size)
 		files = (FILEINFO *)memalign(64, MAX_ENTRY * sizeof(FILEINFO));
 		if (files == NULL)
 			return -ENOMEM;
-		sprintf(dir, "%s%s/", path, file->name);
+		if (snprintf(dir, sizeof(dir), "%s%s/", path, file->name) >= (int)sizeof(dir)) {
+			free(files);
+			return -ENAMETOOLONG;
+		}
 		nfiles = getDirComplete(dir, files, &more);
 		if (nfiles < 0)
 			status = nfiles;
@@ -346,8 +349,8 @@ int getFileSize(const char *path, const FILEINFO *file, u64 *size)
 			return -ENODEV;
 		dir[7] = ret + '0';
 #endif
-	} else
-		sprintf(dir, "%s%s", path, file->name);
+	} else if (snprintf(dir, sizeof(dir), "%s%s", path, file->name) >= (int)sizeof(dir))
+		return -ENAMETOOLONG;
 #if defined(ETH) || defined(UDPFS)
 	if (!strncmp(dir, "host:/", 6))
 		makeHostPath(dir, dir);
@@ -1921,7 +1924,8 @@ int delete (const char *path, const FILEINFO *file)
 		hdddir[7] = ret + '0';
 #endif
 	}
-	sprintf(dir, "%s%s", path, file->name);
+	if (snprintf(dir, sizeof(dir), "%s%s", path, file->name) >= (int)sizeof(dir))
+		return -ENAMETOOLONG;
 	genLimObjName(dir, 0);
 #if defined(ETH) || defined(UDPFS)
 	if (!strncmp(dir, "host:/", 6))
