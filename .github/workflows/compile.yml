@@ -188,6 +188,7 @@ jobs:
           python3 tests/test_app_packages.py
           python3 tests/test_kit_package.py
           python3 scripts/copy_test_pack.py --output test-fixtures/LS-COPY-TEST.zip
+          python3 tests/test_cloud_tls_paths.py
           python3 tests/test_download_metrics.py
           python3 tests/test_rolling_release_workflow.py
           python3 tests/test_llvm_toolchain.py
