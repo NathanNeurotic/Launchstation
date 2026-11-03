@@ -82,7 +82,7 @@ def release_changes(repo, revision, previous, log):
     return changes_from_log(log, repo)
 
 
-def render(repo, revision, previous, run_id, changes, digests, version=""):
+def render(repo, revision, previous, run_id, changes, digests, version="", omit_kit=False):
     base = f"https://github.com/{repo}"
     names = [published_name(name, version) for name in ASSETS]
     compare = f"{base}/compare/{previous}...{revision}" if previous else f"{base}/commits/{revision}"
@@ -100,9 +100,14 @@ def render(repo, revision, previous, run_id, changes, digests, version=""):
                     "each folder; no BIOS or game is included.")
     else:
         kit_row = ""
-        kit_note = ("The full kit `LAUNCHSTATION-<build>.zip` was not rebuilt for this build (the Neutrino download or the "
-                    "kit check did not succeed); the previous build's kit stays attached below and holds the same POPS, "
-                    "Ember and Neutrino folders with the previous app build.")
+        if omit_kit:
+            kit_note = ("The optional full kit for this build was omitted on a publication retry because the first "
+                        "archived build had no matching kit. The previous rolling-release kit remains attached; "
+                        "the standard/DS34 app packages are unaffected.")
+        else:
+            kit_note = ("The full kit `LAUNCHSTATION-<build>.zip` was not rebuilt for this build (the Neutrino download or the "
+                        "kit check did not succeed); the previous build's kit stays attached below and holds the same POPS, "
+                        "Ember and Neutrino folders with the previous app build.")
     return f"""{heading}## Downloads
 
 | Version | ZIP | PSU | ELF |
@@ -174,7 +179,7 @@ def main():
         with asset.open("rb") as stream:
             digests[name] = hashlib.file_digest(stream, "sha256").hexdigest()
     args.output.write_text(render(args.repo, args.revision, args.previous, args.run_id,
-                                  changes, digests, args.version), encoding="utf-8")
+                                  changes, digests, args.version, args.omit_kit), encoding="utf-8")
 
 
 if __name__ == "__main__":
