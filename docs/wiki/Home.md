@@ -8,7 +8,7 @@ This is the maintained Markdown guide collection stored in the repository. An au
 
 ![OSD Classic Home with pinned sample applications](../../docs-site/static/assets/ui/theme-osd.png)
 
-[All 18 themes and feature captures](ui-captures.html), captured in RIPPCSX2 using
+[All 18 themes and feature captures](https://nathanneurotic.github.io/Launchstation/ui-captures.html), captured in RIPPCSX2 using
 non-bootable sample files. [Theme tour MP4](../../docs-site/static/assets/ui/theme-tour.mp4).
 
 ## Read by task
