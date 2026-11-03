@@ -59,7 +59,9 @@ def observed_assets(repo):
     for page in range(1, 101):
         releases = api(repo, "GET", f"/releases?per_page=100&page={page}")
         for release in releases:
-            if release["draft"]:
+            # The moving latest can be left in draft after an interrupted
+            # publication. Its assets still have counts we MUST preserve.
+            if release["draft"] and release["tag_name"] != "latest":
                 continue
             rid = release["id"]
             for apage in range(1, 101):
@@ -110,17 +112,6 @@ def branch_exists(repo, branch):
     return api(repo, "GET", f"/git/ref/heads/{quote(branch, safe='')}", missing=True) is not None
 
 
-def ensure_branch(repo, branch, base):
-    if branch_exists(repo, branch):
-        return
-    initial = api(repo, "GET", f"/git/ref/heads/{quote(base, safe='')}")
-    try:
-        api(repo, "POST", "/git/refs", {"ref": f"refs/heads/{branch}", "sha": initial["object"]["sha"]})
-    except ApiError as error:
-        if error.status != 422 or not branch_exists(repo, branch):
-            raise
-
-
 def read(repo, branch):
     path = f"/contents/metrics/downloads.json?ref={quote(branch, safe='')}"
     data = api(repo, "GET", path, missing=True)
@@ -131,11 +122,16 @@ def read(repo, branch):
 
 def snapshot(repo, branch, base):
     # Call BEFORE clobber or deletion: a failed snapshot blocks release edits.
+    # Never recreate the branch or seed ledger on a publish retry: a missing
+    # history is a data-loss emergency, not a fresh counter.
+    if not branch_exists(repo, branch):
+        raise RuntimeError(f"Metrics branch {branch} is missing; restore the ledger before publishing")
     current = observed_assets(repo)
-    ensure_branch(repo, branch, base)
     now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     for attempt in range(6):
         previous, sha = read(repo, branch)
+        if previous is None:
+            raise RuntimeError("Metrics ledger is missing; restore its saved history before publishing")
         ledger, changed = merge(previous, current, now)
         if not changed:
             print(f"Tracked downloads: {ledger['total_downloads']} (unchanged)")
