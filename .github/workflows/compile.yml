@@ -188,6 +188,7 @@ jobs:
           python3 tests/test_app_packages.py
           python3 tests/test_kit_package.py
           python3 scripts/copy_test_pack.py --output test-fixtures/LS-COPY-TEST.zip
+          python3 tests/test_download_metrics.py
           python3 tests/test_rolling_release_workflow.py
           python3 tests/test_llvm_toolchain.py
           python3 .github/scripts/test_ps2build_sdk_watch.py
@@ -557,7 +558,11 @@ jobs:
           # existing download links and the updater continue to resolve.
           upload_paths=()
           for asset in "${assets[@]}"; do upload_paths+=("artifacts/${asset}"); done
-          gh release upload "${tag}" "${upload_paths[@]}" --clobber
+          # Persist per-asset download counts before --clobber removes the old
+          # IDs. A failed snapshot MUST block publication or those counters
+          # become unrecoverable. The metrics branch does not trigger a build.
+          python3 scripts/download_metrics.py --repo "${GITHUB_REPOSITORY}"
+                    gh release upload "${tag}" "${upload_paths[@]}" --clobber
 
           # Validate that every public asset has the exact packaged byte size
           # before moving the tag or claiming a successful release. Keep any
