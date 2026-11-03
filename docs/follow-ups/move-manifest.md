@@ -1,50 +1,42 @@
-# Move: delete only what the copy confirmed (task for an implementing agent)
+# Move: delete only confirmed copies
 
-Status: not started. NOT TESTED on hardware. Everything below was found by reading the code and CodeRabbit's review of #269; none of it was run on a console.
+Implemented on the draft PR branch; not merged. NOT TESTED on hardware.
 
-## The problem
+Move records source paths and stat metadata during Copy. Cleanup is permitted
+only after the full selection copied and required verification passed. It
+preflights every recorded source, then removes those files and nonempty-safe
+directories in reverse traversal order. It never invokes recursive Delete.
+Kept destinations are removed from the manifest and keep their cut source.
 
-`subfunc_Paste` (src/filer_browser.c) implements Move as Copy, then `delete()` (src/filer_actions.c, around line 1900) on the source. `delete()` lists the source folder again with `getDirComplete` and removes whatever that listing returns, batch after batch, until a listing says nothing more.
+A reader with ambiguous end-of-directory (including BDM FAT/exFAT and MMCE)
+cannot authorize a folder Move. Copy may complete, but Move reports that the
+entire source selection was kept. Repeating the same partial listing does
+not establish completeness. Ordinary Copy and explicit Delete retain their
+existing behavior. A PSU restore records its source archive, not the entries
+read from inside it.
 
-On FAT, exFAT and MMCE the directory readers return only a count and cannot report a transient read failure. So:
+The manifest is allocated only during Move, grows from 4 KiB, and stops at
+256 KiB. Capacity/allocation failures keep the source. Stat failure or changed
+available metadata also stops cleanup. New children survive because directory
+removal is nonrecursive. Deletion is not transactional: a failure after it
+begins can leave some verified entries moved and others retained. Metadata
+checks do not provide filesystem locking against concurrent external writers.
 
-1. Copy lists the source and the listing is cut short (a flaky read, not an error the reader can report).
-2. Copy's own recheck lists it again and is cut short the same way, so the two agree.
-3. The copy finishes with the partial set.
-4. `delete()` lists the folder a third time, this time complete, and removes every entry it finds, including entries Copy never copied.
+Validation:
+- Existing copy pipeline, listing callers, PSU backup/restore, complete listing,
+  short-I/O and Get Size host suites pass.
+- The new manifest suite passes with address/undefined-behavior sanitizers:
+  changed/unseen entries, reverse traversal, unknown completeness, kept entries,
+  allocation/cap failure and deletion failure. Peak manifest: 262144 bytes.
+- Repeated identical short-listing integration keeps all five source files.
+- Pinned local SDK: ps2build v2026.10.15, LLVM v0.3.11,
+  sdk-core v2026.10.13.1, sdk-world v2026.10.28.
+- Default LLVM target build passes after building the pinned Mbed TLS 3.6.7 and
+  libjpeg-turbo 3.1.3 dependencies with that same LLVM SDK.
+- Linked stack guard passes: Copy frame 4144/4352 bytes; HOST deepest checked
+  chain 99792/106496, UDPFS 97152/106496. No invalid stack-realignment stores.
+- Final-head CI and CodeRabbit review are separate gates.
 
-Result: files that were never copied are deleted from the source. Before #269 `delete()` stopped after one listing; the multi-batch loop added there widens the reach.
-
-Rare (needs the same short read twice, then a full one), but it is data loss, so the fix is a design change, not a patch.
-
-## What to build
-
-Move records what the copy confirmed and deletes only that.
-
-- While `copy()` handles a folder, collect the source entries it actually copied and verified (path or name plus identity: size, and the modification time where the device gives one).
-- After the whole copy succeeds, Move deletes exactly those entries, files first and then their folders. It does not list the source to decide what to delete.
-- If the copy cannot show it saw every entry (the listing reports an error, hits the entry limit, or the device cannot say), Move leaves the source untouched and returns an error that names the step. A folder is removed only when it is empty after its confirmed entries are gone.
-- An entry that was in the source but is not in the manifest (new or unseen) stays, and the Move reports that something was left behind.
-- Keep the existing guarantees: a udpfs: Move deletes nothing until the read-back passes (`verifyUdpfsCopy`), a kept destination (`COPY_KEPT_DESTINATION`, `paste_kept`) keeps its source, and a PSU backup Move still deletes the save only after the published `.psu` is accepted (`psu_backup_settle`).
-- The manifest has to fit in memory without the 900 KB stack frames the stack guard forbids: allocate it on the heap, bounded, and fail closed (source kept) if it cannot.
-
-## Where to look
-
-- `src/filer_browser.c`: `subfunc_Paste` (Move loop, `paste_kept`, `paste_kept_count`).
-- `src/filer_actions.c`: `delete()` and its `getDirComplete` loop.
-- `src/filer_copy.c`: `copy()` (where entries are copied; where a manifest would be filled).
-- `src/filer.c`: `getDirComplete`, `getDir` and the per-device readers (which can and cannot report errors).
-- Tests: `tests/test_copy_psu_listing.py`, `tests/test_listing_callers.py`, `tests/test_copy_pipeline.py`, `tests/test_get_size.py`. They extract the real functions and run them on POSIX fixtures; extend them rather than adding stubs.
-
-## How to know it works
-
-1. A new host test: a source folder whose second and third listings differ (the copy sees a partial folder twice, then a full listing at delete time). Move must leave every entry that was not copied, and must fail or report it, not return success.
-2. A new host test: a source with a new file added after the copy listing. That file survives the Move.
-3. The existing tests still pass (`python3 tests/<name>.py`, all registered in `.github/workflows/compile.yml`).
-4. CI's stack guard still passes (`scripts/check_stack_realign.py` with the `--max-frame` and `--max-chain` entries in `compile.yml`): no big new stack buffers.
-5. State clearly that it is NOT TESTED on hardware unless a console run was done.
-
-## Rules for the PR
-
-- Base: `master`. Squash-merge only after green CI on the exact head, a clean CodeRabbit review, and the owner's explicit OK.
-- No Claude or AI attribution lines in commits or the PR.
+A safe console acceptance uses disposable source/destination copies on each
+backend, never the only copy of a save. It must verify retained source content,
+destination read-back, incomplete-Move messaging and ordinary Copy/Delete.

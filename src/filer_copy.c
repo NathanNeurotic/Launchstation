@@ -118,6 +118,157 @@ static int copyBufferSize(const char *in, const char *out, u64 size)
 
 /* A PSU restore reserves the copy buffer for its files before it can replace
  * an existing save, and the files use it instead of allocating their own. */
+/* A Move records prospective source removals during Copy. They become eligible
+ * only after every copy and verification succeeded. No listing authorizes a
+ * removal here. Records precede their children, so reverse order is postorder. */
+#define MOVE_MANIFEST_LIMIT (256 * 1024)
+typedef struct {
+	u32 span, previous, size, hisize, mode;
+	u8 ctime[8], mtime[8];
+	char path[];
+} MoveEntry;
+
+static struct {
+	char *data;
+	unsigned int used, capacity, last;
+	int enabled, error;
+} move_manifest;
+
+void filerMoveEnd(void)
+{
+	free(move_manifest.data);
+	memset(&move_manifest, 0, sizeof(move_manifest));
+}
+
+void filerMoveBegin(int enabled)
+{
+	filerMoveEnd();
+	move_manifest.enabled = enabled;
+}
+
+unsigned int filerMoveMark(void)
+{
+	return move_manifest.used;
+}
+
+void filerMoveRewind(unsigned int mark)
+{
+	while (move_manifest.used > mark) {
+		MoveEntry *entry = (MoveEntry *)(move_manifest.data + move_manifest.last);
+		move_manifest.used = move_manifest.last;
+		move_manifest.last = entry->previous;
+	}
+}
+
+static int moveSourceStat(const char *path, char *resolved, iox_stat_t *stat)
+{
+	if (genFixPath(path, resolved) < 0)
+		return -ENODEV;
+	return genGetStat(resolved, stat);
+}
+
+static int moveRecord(const char *parent, const char *name)
+{
+	char path[MAX_PATH], resolved[MAX_PATH], *data;
+	iox_stat_t stat;
+	unsigned int span, capacity;
+	MoveEntry *entry;
+	int ret;
+
+	if (!move_manifest.enabled)
+		return 0;
+	if (snprintf(path, sizeof(path), "%s%s", parent, name) >= (int)sizeof(path))
+		return -ENAMETOOLONG;
+	ret = moveSourceStat(path, resolved, &stat);
+	if (ret < 0)
+		return ret;
+	span = (sizeof(MoveEntry) + strlen(path) + 1 + 3) & ~3U;
+	if (span > MOVE_MANIFEST_LIMIT - move_manifest.used)
+		return -ENOMEM;
+	if (move_manifest.used + span > move_manifest.capacity) {
+		capacity = move_manifest.capacity ? move_manifest.capacity * 2 : 4096;
+		while (capacity < move_manifest.used + span)
+			capacity *= 2;
+		if (capacity > MOVE_MANIFEST_LIMIT)
+			capacity = MOVE_MANIFEST_LIMIT;
+		data = realloc(move_manifest.data, capacity);
+		if (data == NULL)
+			return -ENOMEM;
+		move_manifest.data = data;
+		move_manifest.capacity = capacity;
+	}
+	entry = (MoveEntry *)(move_manifest.data + move_manifest.used);
+	entry->span = span;
+	entry->previous = move_manifest.last;
+	entry->size = stat.size;
+	entry->hisize = stat.hisize;
+	entry->mode = stat.mode;
+	memcpy(entry->ctime, stat.ctime, 8);
+	memcpy(entry->mtime, stat.mtime, 8);
+	strcpy(entry->path, path);
+	move_manifest.last = move_manifest.used;
+	move_manifest.used += span;
+	return 0;
+}
+
+static int moveEntryMatches(const MoveEntry *entry, const iox_stat_t *stat, int deleting)
+{
+	if (stat->mode != entry->mode)
+		return 0;
+	/* Removing children changes their directory's size/timestamps. Preflight
+	 * checked them before any deletion; rmdir, not recursion, checks emptiness. */
+	if (deleting && FIO_S_ISDIR(entry->mode))
+		return 1;
+	return (FIO_S_ISDIR(entry->mode) || (stat->size == entry->size && stat->hisize == entry->hisize)) &&
+	       !memcmp(stat->ctime, entry->ctime, 8) && !memcmp(stat->mtime, entry->mtime, 8);
+}
+
+int filerMoveFinish(void)
+{
+	unsigned int offset;
+	char resolved[MAX_PATH];
+	iox_stat_t stat;
+	MoveEntry *entry;
+	int ret;
+
+	if (move_manifest.error) {
+		filerCopyDiagStage("Source kept: directory completeness unknown");
+		return move_manifest.error;
+	}
+	filerCopyDiagStage("Checking move source unchanged");
+	for (offset = 0; offset < move_manifest.used; offset += entry->span) {
+		entry = (MoveEntry *)(move_manifest.data + offset);
+		ret = moveSourceStat(entry->path, resolved, &stat);
+		if (ret < 0 || !moveEntryMatches(entry, &stat, 0))
+			return ret < 0 ? ret : -EIO;
+	}
+	filerCopyDiagStage("Deleting confirmed move entries");
+	for (offset = move_manifest.used; offset;) {
+		entry = (MoveEntry *)(move_manifest.data + move_manifest.last);
+		ret = moveSourceStat(entry->path, resolved, &stat);
+		if (ret < 0 || !moveEntryMatches(entry, &stat, 1))
+			return ret < 0 ? ret : -EIO;
+		if (!strncmp(resolved, "mc", 2)) {
+			ensureMemoryCardPortAccessible(resolved[2] - '0');
+			ret = mcDelete(resolved[2] - '0', 0, resolved + 4);
+			if (ret >= 0)
+				mcSync(0, NULL, &ret);
+		} else if (FIO_S_ISDIR(entry->mode))
+			ret = genRmdir(resolved);
+		else
+			ret = genRemove(resolved);
+		if (ret < 0)
+			return ret;
+		/* A driver can claim success without removing the entry. */
+		ret = genGetStat(resolved, &stat);
+		if (ret != -ENOENT)
+			return ret < 0 ? ret : -EIO;
+		offset = move_manifest.last;
+		move_manifest.last = entry->previous;
+	}
+	return 0;
+}
+
 static char *psu_restore_buff;
 static int psu_restore_buff_size;
 
@@ -160,6 +311,7 @@ void filerCopyDiagFormat(char *out, int size, int result)
 		case -EEXIST: reason = "A destination file or folder already exists."; break;
 		case -EISDIR: reason = "The destination name refers to a directory."; break;
 		case -E2BIG: reason = "A source folder holds more than 2046 items, more than a copy can list."; break;
+		case -ENOTSUP: reason = "Copy completed, but this directory reader cannot prove completeness. The source was kept."; break;
 		default: reason = "The operation failed. Keep the error code and device details below for diagnosis."; break;
 	}
 	snprintf(out, size, "%s (%d)\n%s\n%.39s\n%s -> %s\n%llu/%llu B\nIOP %u>%u; %.12s",
@@ -724,6 +876,11 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 #endif
 
 	//Here 'in' and 'out' are complete pathnames for the object to copy
+	if (PasteMode != PM_PSU_RESTORE || (recurses == 0 && !PSU_restart_f)) {
+		filerCopyDiagStage("Recording move source");
+		if ((ret = moveRecord(inPath, src->name)) < 0)
+			return copyDiagFail(ret);
+	}
 	//patched to contain appropriate 'pfs' refs where args used 'hdd'
 	//The physical device specifiers remain in 'inPath' and 'outPath'
 
@@ -753,6 +910,8 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 			filerCopyDiagStage("Listing source");
 			sprintf(tmp, "%s%s/", inPath, file.name);
 			nfiles = getDirComplete(tmp, files, NULL);
+			if (move_manifest.enabled && !filerDirReadComplete())
+				move_manifest.error = -ENOTSUP;
 			if (nfiles < 0) {
 				ret = copyDiagFail(nfiles);
 				goto folder_exit;
@@ -996,6 +1155,8 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 				filerCopyDiagStage("Listing source again");
 				listed = listingSum(files, nfiles);
 				i = getDirComplete(in, files, NULL);  //the number of entries now
+				if (move_manifest.enabled && !filerDirReadComplete())
+					move_manifest.error = -ENOTSUP;
 				if (i < 0)
 					ret = copyDiagFail(i);
 				else if (i != nfiles || listingSum(files, i) != listed)

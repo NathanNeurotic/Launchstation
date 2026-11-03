@@ -211,6 +211,12 @@ int dashWorkerOnThread(void); /* dash_internal.h */
  * the error of a read that fails after the folder opened. A browser listing
  * ignores them: an unreadable folder still shows as empty there. */
 static int dir_opened, dir_open_error, dir_read_error;
+static int dir_complete;
+
+int filerDirReadComplete(void)
+{
+	return dir_complete;
+}
 
 static void dirOpenResult(int fd)
 {
@@ -1445,6 +1451,7 @@ int readGENERIC(const char *path, FILEINFO *info, int max)
 {
 	iox_dirent_t record;
 	int n = 0, dd = -1;
+	dir_complete = 0;  //These drivers cannot distinguish a short read from EOF.
 
 	dd = fileXioDopen(path);
 	dirOpenResult(dd);
@@ -1789,6 +1796,7 @@ static int listDir(const char *path, FILEINFO *info, int max)
 	int n;
 
 	dir_opened = dir_read_error = 0;
+	dir_complete = 1;
 	dir_open_error = -ENODEV;  //until a reader opens the folder or says why not
 	if (!strncmp(path, "mc", 2))
 		n = readMC(path, info, max);
@@ -1887,6 +1895,7 @@ static int listDir(const char *path, FILEINFO *info, int max)
 #endif
 	}
 	else if (!strncmp(path, "cdfs", 4)) {
+		dir_complete = 0;
 		loadCdModules();
 		n = readCD(path, info, max);
 	}
@@ -2090,6 +2099,8 @@ int getDir(const char *path, FILEINFO *info)
 int getDirComplete(const char *path, FILEINFO *info, int *more)
 {
 	int n = listDir(path, info, MAX_ENTRY - 1);
+	if (n < 0 || dir_read_error < 0 || !dir_opened || n > MAX_ENTRY - 2)
+		dir_complete = 0;
 
 	if (more != NULL)
 		*more = 0;

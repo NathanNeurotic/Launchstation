@@ -221,7 +221,7 @@ static int loadMx4sioModules(void){return 1;}
 '''
 code %= limits
 start = filer.index('static int dir_opened, dir_open_error, dir_read_error;')
-code += filer[start:filer.index('\n', start) + 1]
+code += filer[start:filer.index('\n', start) + 1] + 'static int dir_complete;\n'
 for signature in ('static void dirOpenResult(', 'static void dirReadFailed(',
                   'static int getHddDeviceFromPath(', 'static int isHddRootPath(', 'static int isAtaPath(',
                   'static const char *canonicalizeAtaPath(', 'static const char *canonicalizePcCardCfPath(',
@@ -260,7 +260,7 @@ int main(void){
   * only an open failure can be seen. */
  add("mass0:/FULL/",CAP);add("mass0:/OVER/",CAP+1);add("mass0:/HUGE/",5000);add("mass0:/EMPTY/",0);
  add("mass0:/",3)->fail_opens=1;add("mass0:/LATE/",3)->fail_opens=1;
- assert(complete("mass0:/FULL/")==CAP&&listed(CAP));
+ assert(complete("mass0:/FULL/")==CAP&&listed(CAP)&&!dir_complete);
  assert(complete_more("mass0:/FULL/")==CAP&&more==0);
  assert(browse("mass0:/FULL/")==CAP&&listed(CAP));
  /* one entry over the cap: an error, or with 'more' MAX_ENTRY - 1 entries to act on first */
@@ -284,7 +284,7 @@ int main(void){
  assert(complete("mx4sio:/GONE/")==-ENOENT&&!open_handles);
  /* MMCE ends every folder with -1, and cdfs with -EPERM: both are the end, not an error */
  add("mmce0:/DIR/",7)->end_code=-1;add("cdfs:/DIR/",7)->end_code=-EPERM;
- assert(complete("mmce0:/DIR/")==7&&listed(7));
+ assert(complete("mmce0:/DIR/")==7&&listed(7)&&!dir_complete);
  assert(complete("cdfs:/DIR/")==7&&listed(7));
  /* PC card CF: an ATA error latches the card offline, and FAT then ends the read
   * early with no error, so a card offline after the read was cut short */
@@ -315,7 +315,7 @@ int main(void){
  assert(complete("host:/GONE/")==-ENOENT&&browse("host:/GONE/")==0);
  /* Memory card: a subfolder lists "." and ".." too, so the table must hold two more */
  add("mc0:/FULL/",CAP)->dots=1;add("mc0:/OVER/",CAP+1)->dots=1;add("mc1:/",CAP+1);
- assert(complete("mc0:/FULL/")==CAP&&listed(CAP)&&mc_maxent==MAX_ENTRY+1);
+ assert(complete("mc0:/FULL/")==CAP&&listed(CAP)&&mc_maxent==MAX_ENTRY+1&&dir_complete);
  assert(browse("mc0:/FULL/")==CAP&&listed(CAP)&&mc_maxent==CAP+2);
  assert(complete("mc0:/OVER/")==-E2BIG);
  assert(complete_more("mc0:/OVER/")==CAP+1&&more==1&&listed(CAP+1));

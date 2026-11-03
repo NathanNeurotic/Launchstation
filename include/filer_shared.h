@@ -108,6 +108,8 @@ int getDir(const char *path, FILEINFO *info);
 /* For copy, delete and Get Size: an error unless the whole folder was read
  * (filer.c). 'info' holds MAX_ENTRY entries. */
 int getDirComplete(const char *path, FILEINFO *info, int *more);
+/* Whether the last complete-listing attempt can prove EOF, not merely return a count. */
+int filerDirReadComplete(void);
 int filerPrepareDirRead(const char *path);
 /* Serialized card handshake; slot 2 may require retiring MX4SIO first. */
 int filerPrepareMemoryCardRead(int port);
