@@ -27,4 +27,35 @@ except ValueError:
     pass
 else:
     raise AssertionError("Unexpected schema must be rejected")
+
+# A draft latest missing from the listing must still be sampled via its tag.
+def stub_api(repo, method, path, **kwargs):
+    if path.startswith("/releases?"):
+        return []
+    if path == "/releases/tags/latest":
+        return {"id": 42, "draft": True, "tag_name": "latest"}
+    if path.startswith("/releases/42/assets?"):
+        return [{"id": 901, "download_count": 12, "name": "standard.psu"}]
+    raise AssertionError(path)
+metrics.api = stub_api
+assert metrics.observed_assets("owner/repo")["901"]["downloads"] == 12
+
+# A missing tracking branch or ledger is NOT an excuse to reset counts.
+metrics.branch_exists = lambda repo, branch: False
+try:
+    metrics.snapshot("owner/repo", "download-metrics", "master")
+except RuntimeError as error:
+    assert "missing" in str(error)
+else:
+    raise AssertionError("Missing metrics branch should prevent publication")
+metrics.branch_exists = lambda repo, branch: True
+metrics.observed_assets = lambda repo: {}
+metrics.read = lambda repo, branch: (None, None)
+try:
+    metrics.snapshot("owner/repo", "download-metrics", "master")
+except RuntimeError as error:
+    assert "missing" in str(error)
+else:
+    raise AssertionError("Missing ledger should prevent publication")
+
 print("download-metrics tests passed")
