@@ -1034,8 +1034,11 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 					filerCopyDiagStage("Replacing PSU, new one kept as .ps~");
 				return copyDiagFail(ret);
 			}
-			if (!strncmp(tmp, "udpfs", 5) && (ret = verifyUdpfsCopy(tmp, psu_size, NULL)) < 0)
+			if (!strncmp(tmp, "udpfs", 5) && (ret = verifyUdpfsCopy(tmp, psu_size, NULL)) < 0) {
+				psu_backup_settle(tmp, 0);  //the older .psu is put back
 				return copyDiagFail(ret);
+			}
+			psu_backup_settle(tmp, 1);
 		} else if (PM_flag[recurses + 1] == PM_NORMAL) {             //Normal mode folder paste closure
 			if (!strncmp(out, "mc", 2)) {                            //Handle folder copied to MC
 				ensureMemoryCardPortAccessible(out[2] - '0');

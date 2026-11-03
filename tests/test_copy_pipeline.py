@@ -197,6 +197,7 @@ static int unexpected(void){assert(!"PSU branch is outside this ordinary-copy fi
 #define psu_backup_discard_root_image(...) unexpected()
 #define psu_backup_begin_file_entry(...) unexpected()
 #define psu_backup_write_padding(...) unexpected()
+#define psu_backup_settle(...) unexpected()
 #define psu_restore_read_file_entry(...) unexpected()
 #define psu_restore_check_entries(...) unexpected()
 #define psu_restore_open_root_image(...) unexpected()

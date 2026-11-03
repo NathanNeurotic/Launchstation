@@ -167,7 +167,7 @@ static int udpfs_read_opens,udpfs_stale;static const char *udpfs_stale_name;stat
 static int udpfs_stale_for(const char *p){return !strncmp(p,"udpfs:",6)&&(!udpfs_stale_name||ends(p,udpfs_stale_name))?udpfs_stale:UDPFS_OK;}
 static int genOpen(const char *p,int flags){
  int udpfs=!strncmp(p,"udpfs:",6),stale=(flags&O_WRONLY)?udpfs_stale_for(p):UDPFS_OK;
- if(flags==O_RDONLY&&udpfs){udpfs_read_opens++;snprintf(udpfs_last_read,MAX_PATH,"%s",p);}
+ if(flags==O_RDONLY&&udpfs){if(p[strlen(p)-1]!='~'){udpfs_read_opens++;snprintf(udpfs_last_read,MAX_PATH,"%s",p);}}
  if(stale)udpfs_stale=UDPFS_OK;
  int fd=open(p,stale==UDPFS_TAIL?flags&~O_TRUNC:flags,0600);if(fd<0)return -errno;assert(fd<1024);
  if(stale==UDPFS_LOST)assert(!unlink(p));
@@ -489,8 +489,8 @@ int main(void){
   * backup's size is measured before it is finished, and the published .psu is
   * read back, so a server that loses SAVEDIR.ps~ or SAVEDIR.psu, or keeps an
   * old longer one's tail, fails the backup and the save stays. A lost .ps~
-  * cannot be copied to its name, so the older .psu stays; after that, no
-  * wrong .psu is kept. */
+  * cannot be copied to its name, so the older .psu stays; after that, the older .psu
+  * is put back, and with none there no wrong .psu is kept. */
  {static const struct {const char *name;int stale;const char *older,*expect;} c[]={
    {".ps~",UDPFS_LOST,"udpfs:/SAVEDIR.psu","Finishing PSU (-2)"},
    {".ps~",UDPFS_TAIL,"udpfs:/SAVEDIR.ps~","Verifying destination (-5)"},
@@ -498,6 +498,7 @@ int main(void){
    {".psu",UDPFS_TAIL,"udpfs:/SAVEDIR.psu","Verifying destination (-5)"}};
   unsigned char older[8192];memset(older,0x55,sizeof(older));
   for(int i=0;i<4;i++){
+   unlink("udpfs:/SAVEDIR.psu");unlink("udpfs:/SAVEDIR.ps~");
    put(c[i].older,older,size+1024);
    clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);browser_cut=1;udpfs_stale=c[i].stale;udpfs_stale_name=c[i].name;paste("udpfs:/");
    if(!strstr(message,c[i].expect)||entries("mc0:/SAVEDIR")!=2){
@@ -506,12 +507,22 @@ int main(void){
     return 1;
    }
    assert(nclipFiles==1&&filled("mc0:/SAVEDIR/A.BIN",4,'a')&&!exists("udpfs:/SAVEDIR.ps~"));
-   assert(i?!exists("udpfs:/SAVEDIR.psu"):filled("udpfs:/SAVEDIR.psu",size+1024,0x55));
+   /* An older .psu that was there is put back when the new one is not accepted;
+    * with none there, no wrong .psu is kept. Nothing is left set aside. */
+   assert(i==1?!exists("udpfs:/SAVEDIR.psu"):filled("udpfs:/SAVEDIR.psu",size+1024,0x55));
+   assert(!exists("udpfs:/SAVEDIR.p~~"));
    settled();
   }}
+ unlink("udpfs:/SAVEDIR.psu");
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);browser_cut=1;udpfs_read_opens=0;paste("udpfs:/");
  assert(!message[0]&&!nclipFiles&&!exists("mc0:/SAVEDIR")&&udpfs_read_opens==2&&!strcmp(udpfs_last_read,"udpfs:/SAVEDIR.psu"));
  assert(read_all("udpfs:/SAVEDIR.psu",now,sizeof(now))==size&&!memcmp(good,now,size));
+ /* An older .psu is replaced once the new one reads back: set aside while it is
+  * written, then removed, so nothing is left behind. */
+ settled();{unsigned char older_psu[8192];memset(older_psu,0x55,sizeof(older_psu));put("udpfs:/SAVEDIR.psu",older_psu,size+1024);}
+ mkdir("mc0:/SAVEDIR",0700);put("mc0:/SAVEDIR/A.BIN","aaaa",4);put("mc0:/SAVEDIR/B.BIN","bbbbbbbb",8);
+ clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);paste("udpfs:/");
+ assert(!message[0]&&read_all("udpfs:/SAVEDIR.psu",now,sizeof(now))==size&&!memcmp(good,now,size)&&!exists("udpfs:/SAVEDIR.p~~")&&!exists("udpfs:/SAVEDIR.ps~"));
  settled();
  mkdir("mc0:/SAVEDIR",0700);put("mc0:/SAVEDIR/A.BIN","aaaa",4);put("mc0:/SAVEDIR/B.BIN","bbbbbbbb",8);
  /* A backup whose PSU cannot be created says why, and frees its listing. */
@@ -596,15 +607,12 @@ int main(void){
  assert(!message[0]&&same("udpfs:/SAVEDIR.psu",good,size)&&!exists("udpfs:/SAVEDIR.ps~")&&!renames);
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);write_fail_at=13;paste("udpfs:/");
  settled();
- assert(says("Replacing PSU, new one kept as .ps~ (-28)")&&!exists("udpfs:/SAVEDIR.psu")&&same("udpfs:/SAVEDIR.ps~",good,size));
+ /* A write that fails while the new .psu is written puts the older one back. */
+ assert(says("Finishing PSU (-28)")&&same("udpfs:/SAVEDIR.psu",good,size)&&!exists("udpfs:/SAVEDIR.ps~")&&!exists("udpfs:/SAVEDIR.p~~"));
  put("udpfs:/SAVEDIR.psu","older backup",12);
  clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);read_fail_name=".ps~";paste("udpfs:/");
  settled();
- assert(says("Replacing PSU, new one kept as .ps~ (-5)")&&!exists("udpfs:/SAVEDIR.psu")&&same("udpfs:/SAVEDIR.ps~",good,size));
- put("udpfs:/SAVEDIR.psu","older backup",12);
- clip("mc0:/","SAVEDIR",0x8427,PM_PSU_BACKUP);close_fail_name=".psu";paste("udpfs:/");
- settled();
- assert(says("Replacing PSU, new one kept as .ps~ (-5)")&&!exists("udpfs:/SAVEDIR.psu")&&same("udpfs:/SAVEDIR.ps~",good,size));
+ assert(says("Finishing PSU (-5)")&&holds("udpfs:/SAVEDIR.psu","older backup")&&!exists("udpfs:/SAVEDIR.ps~")&&!exists("udpfs:/SAVEDIR.p~~"));
  /* A backup whose own file does not close cleanly is not complete, so the
   * older one stays. */
  put("udpfs:/SAVEDIR.psu","older backup",12);

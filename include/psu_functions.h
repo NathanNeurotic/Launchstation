@@ -17,6 +17,7 @@ int psu_backup_holds_other_save(const char *path, const mcT_header *folder_stats
 int psu_backup_create_root_image(const char *path, const mcT_header *folder_stats, int *out_fd, int *psu_content);
 int psu_backup_finalize_root_image(int out_fd, const char *path, const mcT_header *folder_stats, int psu_content, int *kept);
 void psu_backup_discard_root_image(int out_fd, const char *path);
+void psu_backup_settle(const char *path, int accepted);
 int psu_backup_begin_file_entry(int psu_fd, const mcT_header *file_stats, int *psu_pad_size, int *psu_content);
 int psu_backup_write_padding(int psu_fd, int psu_pad_size);
 int psu_restore_open_root_image(const char *path, FILEINFO *folder_file, int *in_fd, int *psu_content);

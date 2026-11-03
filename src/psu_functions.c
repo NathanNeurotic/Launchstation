@@ -112,9 +112,19 @@ fail:
 	return ret < 0 ? ret : -EIO;
 }
 
-/* Copies the finished file 'from' to the .psu 'to', replacing an older one.
- * *kept is set once that is removed: then a failure must keep 'from'. */
-static int psu_backup_copy_file(const char *from, const char *to, int *kept)
+/* "NAME.psu" -> "NAME.p~~": where the older .psu waits while its replacement is
+ * written and, on udpfs:, read back. */
+static void psu_backup_aside_path(const char *path, char *aside)
+{
+	size_t length = strlen(path);
+
+	memcpy(aside, path, length + 1);
+	if (length >= 2)
+		aside[length - 1] = aside[length - 2] = '~';
+}
+
+/* Copies the file 'from' to 'to'. A partial 'to' is not left behind. */
+static int psu_backup_copy_bytes(const char *from, const char *to)
 {
 	char *buf;
 	int in_fd, out_fd, n, ret = 0;
@@ -127,8 +137,6 @@ static int psu_backup_copy_file(const char *from, const char *to, int *kept)
 		free(buf);
 		return in_fd;
 	}
-	*kept = 1;
-	genRemove((char *)to);  //the older .psu
 	out_fd = genOpen(to, FIO_O_WRONLY | FIO_O_TRUNC | FIO_O_CREAT);
 	if (out_fd < 0)
 		ret = out_fd;
@@ -146,11 +154,60 @@ static int psu_backup_copy_file(const char *from, const char *to, int *kept)
 		if (ret == 0 && n < 0)
 			ret = n;
 		if (ret < 0)
-			genRemove((char *)to);  //a partial .psu is not left as a backup
+			genRemove((char *)to);  //a partial file is not left behind
 	}
 	genClose(in_fd);
 	free(buf);
 	return ret;
+}
+
+/* Copies the finished file 'from' to the .psu 'to'. A .psu already there is
+ * first copied aside and put back if the copy fails; psu_backup_settle removes
+ * it once the new one is accepted. *kept is set while the older one is gone and
+ * not back: then a failure must keep 'from'. */
+static int psu_backup_copy_file(const char *from, const char *to, int *kept)
+{
+	char aside[MAX_PATH];
+	int fd, had_older, ret;
+
+	if ((fd = genOpen(from, FIO_O_RDONLY)) < 0)
+		return fd;
+	genClose(fd);
+	psu_backup_aside_path(to, aside);
+	genRemove(aside);  //left by a backup that never finished
+	if ((fd = genOpen((char *)to, FIO_O_RDONLY)) >= 0) {
+		genClose(fd);
+		had_older = 1;
+		if ((ret = psu_backup_copy_bytes(to, aside)) < 0)
+			return ret;  //the older .psu stays where it is
+	} else
+		had_older = 0;
+	*kept = 1;
+	genRemove((char *)to);  //the older .psu
+	ret = psu_backup_copy_bytes(from, to);
+	if (ret < 0 && had_older && psu_backup_copy_bytes(aside, to) == 0) {
+		genRemove(aside);
+		*kept = 0;  //the older .psu is back
+	}
+	return ret;
+}
+
+void psu_backup_settle(const char *path, int accepted)
+{
+	char aside[MAX_PATH];
+	int fd;
+
+	psu_backup_aside_path(path, aside);
+	if ((fd = genOpen(aside, FIO_O_RDONLY)) < 0)
+		return;  //no older .psu was set aside
+	genClose(fd);
+	if (accepted) {
+		genRemove(aside);
+		return;
+	}
+	genRemove((char *)path);  //the unaccepted copy
+	if (psu_backup_copy_bytes(aside, path) == 0)
+		genRemove(aside);  //else it stays, named .p~~
 }
 
 /* Replaces the .psu 'path' with the finished file 'temp' (see above), and
