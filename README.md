@@ -25,6 +25,7 @@
 ![Last commit](https://img.shields.io/github/last-commit/NathanNeurotic/Launchstation/master?style=flat&labelColor=navy&color=skyblue&logo=git&label=Last%20Commit)
 ![Monthly commits](https://img.shields.io/github/commit-activity/m/NathanNeurotic/Launchstation/master?style=flat&labelColor=navy&color=skyblue&logo=github&label=Commits%2FMonth)
 ![Contributors](https://img.shields.io/github/contributors/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=github&label=Contributors)
+[![Tracked Downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FNathanNeurotic%2FLaunchstation%2Fdownload-metrics%2Fmetrics%2Fdownloads.json&query=%24.total_downloads&label=Tracked%20Downloads&color=skyblue&labelColor=navy&logo=github&style=flat)](https://github.com/NathanNeurotic/Launchstation/blob/download-metrics/metrics/downloads.json)
 [![Current release downloads](https://img.shields.io/github/downloads/NathanNeurotic/Launchstation/latest/total?style=flat&labelColor=navy&color=skyblue&logo=github&label=Current%20Release%20Downloads)](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest)
 [![Open issues](https://img.shields.io/github/issues/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=github&label=Open%20Issues)](https://github.com/NathanNeurotic/Launchstation/issues)
 [![Stars](https://img.shields.io/github/stars/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=github&label=Stars)](https://github.com/NathanNeurotic/Launchstation/stargazers)
@@ -38,7 +39,7 @@
 [![Wiki](https://img.shields.io/badge/Wiki-User%20Guides-skyblue?style=flat&labelColor=navy)](https://github.com/NathanNeurotic/Launchstation/wiki)
 [![Changelog](https://img.shields.io/badge/Changelog-Rolling-skyblue?style=flat&labelColor=navy)](CHANGELOG.md)
 
-> **Download metric:** *Current Release Downloads* counts surviving assets attached to GitHub's moving `latest` release. This is **not an all-time download total**: the rolling publisher replaces fixed-name assets and removes older ZIPs, so GitHub loses their prior per-asset download counts. See [releases and recovery](docs/wiki/Releases-and-Recovery.md).
+> **Download metrics:** *Tracked Downloads* comes from our [persistent per-asset ledger](https://github.com/NathanNeurotic/Launchstation/blob/download-metrics/metrics/downloads.json) (tracking began **2026-11-03**). It preserves observed counts before rolling assets are replaced, but cannot recover older deleted assets or guarantee downloads between snapshots. *Current Release Downloads* counts only the surviving assets on the moving `latest` release. Neither number is a verified all-time unique-user count. See [releases and recovery](docs/wiki/Releases-and-Recovery.md) and [tracking PR #273](https://github.com/NathanNeurotic/Launchstation/pull/273).
 
 [Download](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest) · [User manual](https://nathanneurotic.github.io/Launchstation/) · [Wiki](docs/wiki/Home.md) · [Changelog](CHANGELOG.md) · [Report an issue](https://github.com/NathanNeurotic/Launchstation/issues)
 
