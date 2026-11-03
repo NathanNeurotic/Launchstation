@@ -6,6 +6,40 @@
 
 **Launchstation** is a PlayStation 2 dashboard, file manager and homebrew launcher based on [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z). Browse devices, launch applications and game images, manage saves and card images, and back up MMCE cards locally or to [Google Drive](https://nathanneurotic.github.io/Launchstation/cloud.html) through a controller-driven interface.
 
+## Downloads and project status
+
+[![Build](https://github.com/NathanNeurotic/Launchstation/actions/workflows/compile.yml/badge.svg?branch=master)](https://github.com/NathanNeurotic/Launchstation/actions/workflows/compile.yml)
+[![Rolling Release](https://img.shields.io/badge/Release-Rolling-skyblue)](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest)
+[![Standard](https://img.shields.io/badge/Download-Standard-skyblue)](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest)
+[![DS34](https://img.shields.io/badge/Download-DS34-skyblue)](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest)
+[![Full Kit](https://img.shields.io/badge/Download-Full%20Kit-skyblue)](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest)
+
+[![License](https://img.shields.io/github/license/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=opensourceinitiative&label=License)](LICENSE)
+![Platform](https://img.shields.io/badge/Platform-PlayStation%202-skyblue?style=flat&labelColor=navy)
+![SDK](https://img.shields.io/badge/SDK-ps2build-skyblue?style=flat&labelColor=navy)
+![Compiler](https://img.shields.io/badge/Toolchain-LLVM%2FClang-skyblue?style=flat&labelColor=navy)
+![Languages](https://img.shields.io/badge/Languages-9-skyblue?style=flat&labelColor=navy)
+![Themes](https://img.shields.io/badge/Themes-18-skyblue?style=flat&labelColor=navy)
+![Repo size](https://img.shields.io/github/repo-size/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=github&label=Repo%20Size)
+
+![Last commit](https://img.shields.io/github/last-commit/NathanNeurotic/Launchstation/master?style=flat&labelColor=navy&color=skyblue&logo=git&label=Last%20Commit)
+![Monthly commits](https://img.shields.io/github/commit-activity/m/NathanNeurotic/Launchstation/master?style=flat&labelColor=navy&color=skyblue&logo=github&label=Commits%2FMonth)
+![Contributors](https://img.shields.io/github/contributors/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=github&label=Contributors)
+[![Current release downloads](https://img.shields.io/github/downloads/NathanNeurotic/Launchstation/latest/total?style=flat&labelColor=navy&color=skyblue&logo=github&label=Current%20Release%20Downloads)](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest)
+[![Open issues](https://img.shields.io/github/issues/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=github&label=Open%20Issues)](https://github.com/NathanNeurotic/Launchstation/issues)
+[![Stars](https://img.shields.io/github/stars/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=github&label=Stars)](https://github.com/NathanNeurotic/Launchstation/stargazers)
+
+![Storage](https://img.shields.io/badge/Storage-USB%20%C2%B7%20MMCE%20%C2%B7%20MX4SIO%20%C2%B7%20ATA%20%C2%B7%20iLink-2ea043?style=flat&labelColor=0b3d18)
+![Network](https://img.shields.io/badge/Network-SMB%20%C2%B7%20UDPFS%20%C2%B7%20FTP%20%C2%B7%20PS2Link-2ea043?style=flat&labelColor=0b3d18)
+![PS2/PS1](https://img.shields.io/badge/Game%20Loaders-Neutrino%20%C2%B7%20POPStarter%20%C2%B7%20Ember-2ea043?style=flat&labelColor=0b3d18)
+
+[![Discord](https://img.shields.io/discord/1275875800318476381?style=flat&logo=discord)](https://tinyurl.com/PS2SPACE)
+[![Documentation](https://img.shields.io/badge/Documentation-Launchstation-skyblue?style=flat&logo=githubpages&logoColor=white&labelColor=navy)](https://nathanneurotic.github.io/Launchstation/)
+[![Wiki](https://img.shields.io/badge/Wiki-User%20Guides-skyblue?style=flat&labelColor=navy)](https://github.com/NathanNeurotic/Launchstation/wiki)
+[![Changelog](https://img.shields.io/badge/Changelog-Rolling-skyblue?style=flat&labelColor=navy)](CHANGELOG.md)
+
+> **Download metric:** *Current Release Downloads* counts surviving assets attached to GitHub's moving `latest` release. This is **not an all-time download total**: the rolling publisher replaces fixed-name assets and removes older ZIPs, so GitHub loses their prior per-asset download counts. See [releases and recovery](docs/wiki/Releases-and-Recovery.md).
+
 [Download](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest) · [User manual](https://nathanneurotic.github.io/Launchstation/) · [Wiki](docs/wiki/Home.md) · [Changelog](CHANGELOG.md) · [Report an issue](https://github.com/NathanNeurotic/Launchstation/issues)
 
 - [Install and update](#install-and-update)
