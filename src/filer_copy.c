@@ -517,15 +517,26 @@ finish:
  * .chd that is opened by its own name and that it can read, so reading one
  * back gives the image's size and first bytes. A server that returns the file
  * as stored (udpfsd) returns the container's magic first. */
-static int udpfsReadsDecompressed(int fd, const char *path)
+static int udpfsReadsDecompressed(int fd, const char *path, const char *src)
 {
 	static const char *const ext[] = {"cso", "ciso", "zso", "ziso", "chd"};
 	char head[8];
-	int i;
+	int i, sfd, n;
 
 	for (i = 0; i < 5 && !genCmpFileExt(path, ext[i]); i++)
 		;
-	if (i == 5 || genLseek(fd, 0, SEEK_SET) != 0 || genRead(fd, head, sizeof(head)) != sizeof(head))
+	if (i == 5 || src == NULL)
+		return FALSE;
+	/* Only a real container is decompressed by the server: a file that merely
+	 * carries the name is stored as is, and a longer stale tail at the destination
+	 * would then pass for a decompressed image. */
+	if ((sfd = genOpen((char *)src, FIO_O_RDONLY)) < 0)
+		return FALSE;
+	n = genRead(sfd, head, sizeof(head));
+	genClose(sfd);
+	if (n != sizeof(head) || (memcmp(head, "CISO", 4) && memcmp(head, "ZISO", 4) && memcmp(head, "MComprHD", 8)))
+		return FALSE;
+	if (genLseek(fd, 0, SEEK_SET) != 0 || genRead(fd, head, sizeof(head)) != sizeof(head))
 		return FALSE;
 	return memcmp(head, "CISO", 4) && memcmp(head, "ZISO", 4) && memcmp(head, "MComprHD", 8);
 }
@@ -536,7 +547,7 @@ static int udpfsReadsDecompressed(int fd, const char *path)
  * the open, or into an old longer one O_TRUNC never cut. Only reading the size
  * back shows the copy is there before a Move deletes its source. (host: and
  * smb: open a new server file each time and report a failed close.) */
-static int verifyUdpfsCopy(char *path, u64 size)
+static int verifyUdpfsCopy(char *path, u64 size, const char *src)
 {
 	s64 end;
 	int fd;
@@ -546,7 +557,7 @@ static int verifyUdpfsCopy(char *path, u64 size)
 	if (fd < 0)
 		return fd;  //no file there, so nothing to remove
 	end = genLseek(fd, 0, SEEK_END);
-	if (end >= 0 && end != (s64)size && udpfsReadsDecompressed(fd, path))
+	if (end >= 0 && end != (s64)size && udpfsReadsDecompressed(fd, path, src))
 		end = (s64)size;  //the copy is there, but its size can only be read decompressed
 	genClose(fd);
 	if (end == (s64)size)
@@ -1023,7 +1034,7 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 					filerCopyDiagStage("Replacing PSU, new one kept as .ps~");
 				return copyDiagFail(ret);
 			}
-			if (!strncmp(tmp, "udpfs", 5) && (ret = verifyUdpfsCopy(tmp, psu_size)) < 0)
+			if (!strncmp(tmp, "udpfs", 5) && (ret = verifyUdpfsCopy(tmp, psu_size, NULL)) < 0)
 				return copyDiagFail(ret);
 		} else if (PM_flag[recurses + 1] == PM_NORMAL) {             //Normal mode folder paste closure
 			if (!strncmp(out, "mc", 2)) {                            //Handle folder copied to MC
@@ -1434,7 +1445,7 @@ copy_file_data_done:
 			ret = -EIO;
 		out_fd = -1;  //prevent dual closure attempt
 		if (ret >= 0 && !strncmp(out, "udpfs", 5))
-			ret = verifyUdpfsCopy(out, original_size);
+			ret = verifyUdpfsCopy(out, original_size, in);
 		if (ret < 0)
 			goto copy_file_exit;
 	}

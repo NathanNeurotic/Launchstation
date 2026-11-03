@@ -385,6 +385,18 @@ int main(void){
   return 1;
  }
  assert(!handles&&move_deletes==deletes&&nclipFiles==1&&matches("mc0:/GAME.cso",image,sizeof(image))&&access("udpfs:/GAME.cso",F_OK));
+ /* A file that only carries the .cso name is stored as is: the container size
+  * exception does not apply, so the stale longer tail fails and keeps the source. */
+ put("mc0:/GAME.cso",input,sizeof(image));
+ {unsigned char older[1200]={0};memcpy(older,"CISO",4);put("udpfs:/GAME.cso",older,sizeof(older));}
+ reset();strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"GAME.cso");clipFiles[0].stats.FileSizeByte=sizeof(image);
+ browser_cut=1;udpfs_stale=UDPFS_TAIL;udpfs_decompress=1;deletes=move_deletes;
+ message[0]=0;subfunc_Paste(message,"udpfs:/");
+ if(!strstr(message,"Verifying destination (-5)")){
+  fprintf(stderr,"FAIL a non-container GAME.cso over a longer old one was reported as: \"%s\"\n",message);
+  return 1;
+ }
+ assert(!handles&&move_deletes==deletes&&nclipFiles==1&&matches("mc0:/GAME.cso",input,sizeof(image)));
  /* A close that failed is not overridden by a size that reads back right. */
  reset();put("mc0:/CLOSE.BIN",input,257);strcpy(clipPath,"mc0:/");strcpy(clipFiles[0].name,"CLOSE.BIN");clipFiles[0].stats.FileSizeByte=257;
  browser_cut=1;fail_close=1;deletes=move_deletes;

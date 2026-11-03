@@ -298,6 +298,14 @@ int main(void){
   launch(settings.Misc_OSDSYS);expect("missing OSDSYS",osdsys[i],want);
  }
  settings.LK_Flag[SETTING_LK_OSDSYS]=0;
+ /* mc: tries mc0: then mc1:. A file that opened on one card but is no ELF is not
+  * "Not Found" because the other card has none, and the message names the card
+  * it opened on; one found on neither is Not Found at mc1:. */
+ reset();put("mc0:/NOTES.TXT",F_TEXT);snprintf(want,MAX_PATH,"This file isn't an ELF: mc0:/NOTES.TXT.");
+ launch("mc:/NOTES.TXT");expect("mc0: text, mc1: has none","mc:/NOTES.TXT",want);
+ reset();put("mc1:/NOTES.TXT",F_TEXT);snprintf(want,MAX_PATH,"This file isn't an ELF: mc1:/NOTES.TXT.");
+ launch("mc:/NOTES.TXT");expect("mc1: text, mc0: has none","mc:/NOTES.TXT",want);
+ reset();launch("mc:/NOWHERE.ELF");expect("on neither card","mc:/NOWHERE.ELF","mc1:/NOWHERE.ELF is Not Found.");
  /* checkELFheader() itself: missing, device down, not executable, ELF. */
  reset();running[D_UDPFS]=1;fail[D_MMCE]=1;
  char missing[]="udpfs:/MISSING.ELF",notes[]="udpfs:/NOTES.TXT",boot[]="udpfs:/BOOT.ELF",offline[]="mmce0:/BOOT.ELF";
