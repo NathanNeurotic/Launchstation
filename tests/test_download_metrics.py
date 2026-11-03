@@ -58,4 +58,41 @@ except RuntimeError as error:
 else:
     raise AssertionError("Missing ledger should prevent publication")
 
+
+# If another snapshot writes first, reread its ledger and merge *both* new IDs.
+initial = {
+    "schema": 1, "tracking_since": "2026-11-03", "updated_at": "2026-11-03",
+    "total_downloads": 5,
+    "assets": {"101": {"downloads": 5, "name": "a.zip", "release": "latest"}},
+}
+competing = {
+    "schema": 1, "tracking_since": "2026-11-03", "updated_at": "2026-11-03",
+    "total_downloads": 9,
+    "assets": {
+        **initial["assets"],
+        "102": {"downloads": 4, "name": "b.zip", "release": "latest"},
+    },
+}
+reads = iter([(initial, "sha-before"), (competing, "sha-after")])
+writes = []
+metrics.branch_exists = lambda repo, branch: True
+metrics.observed_assets = lambda repo: {
+    "103": {"downloads": 3, "name": "c.zip", "release": "latest"}
+}
+metrics.read = lambda repo, branch: next(reads)
+metrics.time.sleep = lambda seconds: None
+def conflicting_write(repo, method, path, payload=None, **kwargs):
+    assert method == "PUT"
+    writes.append(payload)
+    if len(writes) == 1:
+        raise metrics.ApiError(409, "concurrent update")
+    return {}
+metrics.api = conflicting_write
+metrics.snapshot("owner/repo", "download-metrics", "master")
+assert len(writes) == 2
+merged = __import__("json").loads(__import__("base64").b64decode(writes[-1]["content"]))
+assert merged["total_downloads"] == 12
+assert set(merged["assets"]) == {"101", "102", "103"}
+assert writes[1]["sha"] == "sha-after"
+
 print("download-metrics tests passed")
