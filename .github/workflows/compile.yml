@@ -613,25 +613,18 @@ jobs:
           python3 scripts/download_metrics.py --repo "${GITHUB_REPOSITORY}"
                     gh release upload "${tag}" "${upload_paths[@]}" --clobber
 
-          # Validate that every public asset has the exact packaged byte size
-          # before moving the tag or claiming a successful release. Keep any
-          # unrelated manually maintained attachments intact.
-          verify_dir="${RUNNER_TEMP}/launchstation-published-assets"
-          mkdir -p "${verify_dir}"
+          # Verify the exact uploaded bytes via GitHub's SERVER-COMPUTED SHA-256
+          # digest and size. Do not download our own release assets for CI:
+          # that increments GitHub's public download_count and pollutes metrics.
           for asset in "${assets[@]}"; do
             expected="$(stat -c '%s' "artifacts/${asset}")"
             actual="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
               --jq ".assets[] | select(.name == \"${asset}\") | .size")"
-            if [ "${expected}" != "${actual}" ]; then
-              echo "Release asset size verification failed: ${asset}, local=${expected}, remote=${actual}" >&2
-              exit 1
-            fi
-            # Download the actual published bytes; a matching length alone
-            # does not prove an upload was intact or from this build.
-            gh release download "${tag}" --pattern "${asset}" \
-              --dir "${verify_dir}" --clobber
-            if ! cmp -s "artifacts/${asset}" "${verify_dir}/${asset}"; then
-              echo "Release asset content differs from the compiled package: ${asset}" >&2
+            expected_digest="sha256:$(sha256sum "artifacts/${asset}" | cut -d' ' -f1)"
+            actual_digest="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
+              --jq ".assets[] | select(.name == \"${asset}\") | .digest")"
+            if [ "${expected}" != "${actual}" ] || [ "${expected_digest}" != "${actual_digest}" ]; then
+              echo "Release asset verification failed: ${asset}, size ${actual}/${expected}, digest ${actual_digest}/${expected_digest}" >&2
               exit 1
             fi
           done
