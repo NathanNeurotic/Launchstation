@@ -28,6 +28,9 @@ assert 'gh release create "${archive_tag}"' in publish
 assert '--prerelease --latest=false' in publish
 assert 'remote_digest=' in publish
 assert 'expected_digest=' in publish
+assert 'actual_digest=' in publish
+assert 'gh release download "${tag}"' not in publish
+assert 'gh release download "${archive_tag}"' not in publish
 assert 'Refusing to modify latest.' in publish
 assert publish.index('gh release create "${archive_tag}"') < publish.index('gh release upload "${tag}"')
 assert publish.index('remote_digest=') < publish.index('gh release upload "${tag}"')
