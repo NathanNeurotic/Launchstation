@@ -556,14 +556,14 @@ jobs:
           archive_tag="build-${build}"
           archive_notes="${RUNNER_TEMP}/launchstation-archive-notes.md"
           {
-            printf 'Verified Launchstation build %s (%s).\\n\\n' "${build}" "${GITHUB_SHA}"
-            printf 'This build is retained for recovery; the moving [latest release](https://github.com/%s/releases/tag/latest) remains the default channel.\\n\\n' "${GITHUB_REPOSITORY}"
-            printf 'The artifacts below were validated before the rolling release was updated. The full kit is present only when this build produced it.\\n\\n'
-            printf '\`\`\`text\\n'
+            printf 'Verified Launchstation build %s (%s).\n\n' "${build}" "${GITHUB_SHA}"
+            printf 'This build is retained for recovery; the moving [latest release](https://github.com/%s/releases/tag/latest) remains the default channel.\n\n' "${GITHUB_REPOSITORY}"
+            printf 'The artifacts below were validated before the rolling release was updated. The full kit is present only when this build produced it.\n\n'
+            printf '```text\n'
             for asset in "${assets[@]}"; do
               sha256sum "artifacts/${asset}" | sed 's#artifacts/##'
             done
-            printf '\`\`\`\\n'
+            printf '```\n'
           } > "${archive_notes}"
           if gh release view "${archive_tag}" >/dev/null 2>&1; then
             # A repeated run may only reuse the EXACT same immutable commit.
