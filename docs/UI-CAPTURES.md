@@ -6,6 +6,13 @@ real captures of released build 974 in RIPPCSX2, not drawn UI mockups.
 
 ![OSD Classic dashboard with sample applications](../docs-site/static/assets/ui/theme-osd.png)
 
+## Read by task
+
+Screenshots are integrated beside the relevant instructions in the dashboard,
+Applications, File Browser, Text Editor, themes, Settings, cloud, MMCE backup and
+Neutrino guides. The visual gallery is a supplementary index of all captures.
+It also includes real application-view navigation in MP4 and GIF form.
+
 ## Identity and scope
 
 Build 974 is revision `97318e5870b59ce32cae19312ed60415752ae9b3`. The capture

@@ -63,6 +63,8 @@ hardware.
 
 ## Sections
 
+![Home dashboard with pinned sample applications](../docs-site/static/assets/ui/theme-osd.png)
+
 The four top-level tabs are **HOME, FILES, TOOLS, SETTINGS**. Unlike the
 earlier modal browser shortcut, **FILES is now a full dashboard section**.
 Its file list is drawn inside the ordinary dashboard frame with the section

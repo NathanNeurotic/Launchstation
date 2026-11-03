@@ -232,6 +232,171 @@
   ],
   "assets": [
     {
+      "file": "about.png",
+      "bytes": 99857,
+      "sha256": "88c69ff3e75009787c7ad52a71a00aa896678e00d57e5c3e13c4e9558d12e139"
+    },
+    {
+      "file": "app-details.png",
+      "bytes": 99609,
+      "sha256": "e278063a3acc79f85fb9274b31d34e521de86c9fe939c5f663bab33692da52ed"
+    },
+    {
+      "file": "app-options.png",
+      "bytes": 79795,
+      "sha256": "78653fc811a4d9f715ebbd8d3e10f4c3594f6387869dfded0b4be2028c3ce8e8"
+    },
+    {
+      "file": "appearance.png",
+      "bytes": 140949,
+      "sha256": "0c22937e04838f3f31df81c13bc8237a7667347c8785a9134397e7e58293fe91"
+    },
+    {
+      "file": "application-views.gif",
+      "bytes": 2894342,
+      "sha256": "28c1d6d8df04972a428e86e6fc3c663ecb26fb586d5138de97b5d5a10c6edcad"
+    },
+    {
+      "file": "application-views.mp4",
+      "bytes": 337371,
+      "sha256": "21dfc73fef63a97c149076a356c0186a15e1e5d17ccd1bcdfbab6fcc3a5b434b"
+    },
+    {
+      "file": "apps-carousel.png",
+      "bytes": 117096,
+      "sha256": "a4943163928a234ccbd198ede49e5a5b65c6483dbdeeea3b27741720bf7cec27"
+    },
+    {
+      "file": "apps-grid.png",
+      "bytes": 111110,
+      "sha256": "876a1fce657b2c79e374f5b4eacecce9fa4991df47667c78cd556be32a6b01ed"
+    },
+    {
+      "file": "apps-list.png",
+      "bytes": 124894,
+      "sha256": "b9263823b106838ea69afde0c5abebcc5ca45bb5441e1f09b0454475b0635b18"
+    },
+    {
+      "file": "apps-menu.png",
+      "bytes": 76597,
+      "sha256": "e0cc0a6ecc756eb90bc8c80efbcfd8719a16f20238f908c18f72771882e5d3dd"
+    },
+    {
+      "file": "build-information.png",
+      "bytes": 86435,
+      "sha256": "b8a008cc5f33dccec7241b92ef77dbb1bad881988e5d0efeb05bd7720bc0f2fa"
+    },
+    {
+      "file": "cloud-backups.png",
+      "bytes": 123708,
+      "sha256": "e6fb00aa6eb8eac4ba6731c0fa6b01806d5d34292a6339be7f60b7a20e493cd0"
+    },
+    {
+      "file": "colour-editor.png",
+      "bytes": 130828,
+      "sha256": "148342c6ef70b7b22ceb86879a3b6d55b7684d013ed93311f939da3b81ddcd3a"
+    },
+    {
+      "file": "files-context.png",
+      "bytes": 74513,
+      "sha256": "0a35e833d695a0e3bb43ff541e7ebcae3f881ccab5259a0ac78a935bb2d040bf"
+    },
+    {
+      "file": "files-devices.png",
+      "bytes": 125972,
+      "sha256": "ed9a4706bdc9316b67bb3bbf41153861c77d3ecc38c373fe72505e05a2cbec65"
+    },
+    {
+      "file": "files-folder.png",
+      "bytes": 114759,
+      "sha256": "ab33e25dea5cbcd6dc89dee3d89623faaae3cdf66deea97ae8a0c3ac7e620871"
+    },
+    {
+      "file": "files-usb-root.png",
+      "bytes": 86630,
+      "sha256": "4536555a2e609acc6eebe72ff791c5e0dfcb930f172732b47f70ea4653a6f046"
+    },
+    {
+      "file": "image-loaders.png",
+      "bytes": 139904,
+      "sha256": "c98cb8f63419e376906aa972b543274e348c9da3523229a894ea1e7b10273f45"
+    },
+    {
+      "file": "image-viewer.png",
+      "bytes": 66707,
+      "sha256": "f2182c5d8c451740a0b1ba3504a4edd2b20d08d3a38788b268259d72e5ebb9f4"
+    },
+    {
+      "file": "misc-commands.png",
+      "bytes": 81656,
+      "sha256": "b49afcb0d6d3358f57ecb207c283f5a68808793f819de9b2c3194f673b083463"
+    },
+    {
+      "file": "mmce-backup-settings.png",
+      "bytes": 158474,
+      "sha256": "6f3d462a9ef96cdb21dcb4abfa61854e059b84578b297ca778038e88d846b192"
+    },
+    {
+      "file": "settings-applications.png",
+      "bytes": 154004,
+      "sha256": "5cb0d701b3c4d38f42f4a81bcc1d409dc935109f57f73ce88fbf6e92cf76995c"
+    },
+    {
+      "file": "settings-input.png",
+      "bytes": 122801,
+      "sha256": "5b8ce15a8b1b815d5c4e867e14a1ed74f88cb07abf9855e897383ce1ccc35884"
+    },
+    {
+      "file": "settings-launching.png",
+      "bytes": 139703,
+      "sha256": "bfa95ad22058740de4cedb1e797a5624314f4d68a26f2e4e4c374fa0684d94f2"
+    },
+    {
+      "file": "settings-network.png",
+      "bytes": 145143,
+      "sha256": "717e391056a9e6bb3b3db5dd6d276d5ed128d37bcd135e0ec1e61c9ee1cbd5cf"
+    },
+    {
+      "file": "settings-overview.png",
+      "bytes": 119929,
+      "sha256": "b56487005923a3013cb51b3d9f4c03ae44d225e6eb5eb4357868245f975cc2da"
+    },
+    {
+      "file": "settings-sound.png",
+      "bytes": 128128,
+      "sha256": "f745dfd7f04ce7bd542e851b03fcde780f641d9474fa2699f7aa2c847a9b7d34"
+    },
+    {
+      "file": "settings-storage.png",
+      "bytes": 143350,
+      "sha256": "989083d5fa73b42a9ce0f519d82bd01a0f352d510fb42880d2f286d710356813"
+    },
+    {
+      "file": "settings-system.png",
+      "bytes": 146776,
+      "sha256": "95a56b7ad645ee148be48855db08378a02d51aa0d5187adbc161223bcf4ba162"
+    },
+    {
+      "file": "system-information.png",
+      "bytes": 108231,
+      "sha256": "7986aa0bc945c2f53cb42d0aae47193ce7fdaa0e2ea2c97e7ce2b973fa3ad103"
+    },
+    {
+      "file": "text-editor-menu.png",
+      "bytes": 68410,
+      "sha256": "cacb3647a149f43ba5f749068635b7332b3c163232a5e81e62718e2b011e5753"
+    },
+    {
+      "file": "text-editor.png",
+      "bytes": 124423,
+      "sha256": "f305b4bddf244f8ce3409c75df5a9e1fb9c9ea72a09adcad93a35d368ab20083"
+    },
+    {
+      "file": "theme-background.png",
+      "bytes": 140594,
+      "sha256": "3ed3286018938fac6da9be495c6d65941bd1df59ed0f22ce27d80b28a76583cc"
+    },
+    {
       "file": "theme-biosblue.png",
       "bytes": 79108,
       "sha256": "0662f73a4597a7a375e4eac50ae12225216f49963a8cf4975d448d68d6eab528"
@@ -252,9 +417,19 @@
       "sha256": "7a7e7acc82a494069fdadcf3db99986b20c13dfb989dd500c8661091c69e90ec"
     },
     {
+      "file": "theme-clock.png",
+      "bytes": 130104,
+      "sha256": "2406a28b2255e83bb886836b804a2026938f6a5d082363408030c713e7cf7d33"
+    },
+    {
       "file": "theme-clockring.png",
       "bytes": 118183,
       "sha256": "82ff9aecfc6e1712a820a6d60907944c6c2562117bef91150e8ab21c7a93cd42"
+    },
+    {
+      "file": "theme-colours.png",
+      "bytes": 145271,
+      "sha256": "3d6362560a4a049d1e3ee1369a22ea27e70b704948200b5d383339c88390cb43"
     },
     {
       "file": "theme-crt.png",
@@ -272,6 +447,11 @@
       "sha256": "f0fa37d47a26c69125999c984cf35651256629606f93b4f401d6343f5e11801f"
     },
     {
+      "file": "theme-customize.png",
+      "bytes": 123027,
+      "sha256": "17037c079d31ac52e353206e463ef400311206dc5a8d8ed9f0aef3cd70f4b9a4"
+    },
+    {
       "file": "theme-discred.png",
       "bytes": 129791,
       "sha256": "3196dced6addbf10baac2a60c6428de6cc30674bc8a1f827f65cb39f932396bd"
@@ -285,6 +465,11 @@
       "file": "theme-highlights.mp4",
       "bytes": 597007,
       "sha256": "2fff6664021d16bf0894ef9f2deb6ace0c7d68a63b0da60acaabe4419f5b5608"
+    },
+    {
+      "file": "theme-icons.png",
+      "bytes": 115389,
+      "sha256": "0c632fe262b1bfb24d0174f910a5df943df9653b2e0cd97f9e4d86f6ecf6faba"
     },
     {
       "file": "theme-mcblue.png",
@@ -317,6 +502,11 @@
       "sha256": "f6a03e0815fdc521ebc2ed0ec180bb8cd08a86a027753e8e9017a541d91825a1"
     },
     {
+      "file": "theme-picker.png",
+      "bytes": 110955,
+      "sha256": "5baf5d952b03398afe0733c708074b3d4aa335b129ba16d7af66c4ea7c57652d"
+    },
+    {
       "file": "theme-psx.png",
       "bytes": 94879,
       "sha256": "23e70e44440f9900536d2e3c9e65aa5d26d493e65013ad18749f80cfb27a3094"
@@ -327,6 +517,16 @@
       "sha256": "98e8982209a058742e87b169711ebcb640aa5459dec78230c773a025ca8c87cc"
     },
     {
+      "file": "theme-text.png",
+      "bytes": 132909,
+      "sha256": "babaa0ca2368b7fb6c202c77fc9af01ae37ed20424bdb3728d4266770ffa0093"
+    },
+    {
+      "file": "theme-tiles.png",
+      "bytes": 130872,
+      "sha256": "4be8c0ef21d9314d9035d3b741b0d676213a94655fbc12d8bf5a6a96fb3fda36"
+    },
+    {
       "file": "theme-tour.mp4",
       "bytes": 1095595,
       "sha256": "a977f9aa204930d61e169aec8054d2153cbcebfdc46c0b21393f046e0551c925"
@@ -335,6 +535,270 @@
       "file": "theme-towers.png",
       "bytes": 197823,
       "sha256": "f3b0edc3ca2432ff35d3ba9ec03675809f769972e8c00a78088e60c677ebd1ba"
+    },
+    {
+      "file": "theme-wallpaper.png",
+      "bytes": 130677,
+      "sha256": "b000795bf2864a9372c7f058fc6d3c09d2e600e9c8964484192d2df45b1cd5f0"
+    },
+    {
+      "file": "tools-essentials.png",
+      "bytes": 149256,
+      "sha256": "f9c6024f9ce5a3768085721d969090cda2864cf01dac8ec869178885d284c58f"
+    },
+    {
+      "file": "tools-storage.png",
+      "bytes": 142068,
+      "sha256": "7dfda25e58a019261e1fa18d1bc6c4dd4342fc4c2e9df35780165abcb7fe9178"
+    },
+    {
+      "file": "usb-diagnostics.png",
+      "bytes": 99269,
+      "sha256": "21e25fab0b9e2d89a72448f2a93459f86ab30d67d5acd59d9aee962dce4160a2"
     }
-  ]
+  ],
+  "feature_takes": [
+    {
+      "name": "applications",
+      "steps": "wait:17,right,right,right,right,right,wait:3,shot,rec,right,wait:1,left,wait:1,select,wait:3,shot,select,wait:3,shot,rec,triangle,wait:2,shot,circle,wait:2,shot,down,down,down,down,circle,wait:3,shot",
+      "start_section": 1,
+      "view": 0,
+      "captures": [
+        {
+          "label": "apps-grid",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112717.png"
+        },
+        {
+          "label": "apps-list",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112725.png"
+        },
+        {
+          "label": "apps-carousel",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112729.png"
+        },
+        {
+          "label": "apps-menu",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112733.png"
+        },
+        {
+          "label": "app-options",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112737.png"
+        },
+        {
+          "label": "app-details",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112743.png"
+        }
+      ],
+      "videos": [
+        "SYS-CONF [_]_SYS-CONF_20261103112718.mp4"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "settings",
+      "steps": "wait:17,shot,circle,wait:2,shot,circle,wait:2,shot,cross,wait:2,down,circle,wait:2,shot,circle,wait:2,shot,cross,wait:2,down,circle,wait:2,shot,circle,wait:2,shot,cross,wait:2,cross,wait:2,down,circle,wait:2,shot,cross,wait:2,down,circle,wait:2,shot,cross,wait:2,down,circle,wait:2,shot,cross,wait:2,down,circle,wait:2,shot,cross,wait:2,down,circle,wait:2,shot,cross,wait:2,cross,wait:2,cross,wait:2,down,circle,wait:2,shot,cross,wait:2,down,circle,wait:2,shot,cross,wait:2,down,circle,wait:2,shot,cross,wait:2,down,circle,wait:2,shot,cross,wait:2,down,circle,wait:2,shot,cross,wait:2,down,circle,wait:2,shot,cross,wait:2,down,circle,wait:2,shot,cross,wait:2",
+      "start_section": 5,
+      "view": 0,
+      "captures": [
+        {
+          "label": "settings-overview",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112804.png"
+        },
+        {
+          "label": "appearance",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112808.png"
+        },
+        {
+          "label": "theme-picker",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112812.png"
+        },
+        {
+          "label": "theme-customize",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112818.png"
+        },
+        {
+          "label": "theme-background",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112822.png"
+        },
+        {
+          "label": "theme-colours",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112828.png"
+        },
+        {
+          "label": "colour-editor",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112832.png"
+        },
+        {
+          "label": "theme-tiles",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112841.png"
+        },
+        {
+          "label": "theme-text",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112847.png"
+        },
+        {
+          "label": "theme-icons",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112853.png"
+        },
+        {
+          "label": "theme-clock",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112900.png"
+        },
+        {
+          "label": "theme-wallpaper",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112906.png"
+        },
+        {
+          "label": "settings-applications",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112917.png"
+        },
+        {
+          "label": "settings-sound",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112923.png"
+        },
+        {
+          "label": "settings-input",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112930.png"
+        },
+        {
+          "label": "settings-launching",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112936.png"
+        },
+        {
+          "label": "settings-storage",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112943.png"
+        },
+        {
+          "label": "settings-network",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112949.png"
+        },
+        {
+          "label": "settings-system",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103112955.png"
+        }
+      ],
+      "videos": [],
+      "exit_code": 0
+    },
+    {
+      "name": "tools-overview",
+      "steps": "wait:17,shot,down,down,down,down,down,down,wait:2,shot",
+      "start_section": 4,
+      "view": 0,
+      "captures": [
+        {
+          "label": "tools-essentials",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103113019.png"
+        },
+        {
+          "label": "tools-storage",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103113024.png"
+        }
+      ],
+      "videos": [],
+      "exit_code": 0
+    },
+    {
+      "name": "tool-dialogs",
+      "steps": "wait:17,down,down,down,down,down,down,circle,wait:2,shot,cross,wait:2,down,circle,wait:2,shot,cross,wait:2,down,down,down,down,down,down,down,circle,wait:3,shot,cross,wait:2,down,circle,wait:3,shot,cross,wait:2,down,circle,wait:2,shot,cross,wait:2,down,down,circle,wait:2,shot",
+      "start_section": 4,
+      "view": 0,
+      "captures": [
+        {
+          "label": "misc-commands",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103113230.png"
+        },
+        {
+          "label": "usb-diagnostics",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103113237.png"
+        },
+        {
+          "label": "cloud-backups",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103113246.png"
+        },
+        {
+          "label": "system-information",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103113253.png"
+        },
+        {
+          "label": "build-information",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103113259.png"
+        },
+        {
+          "label": "about",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103113306.png"
+        }
+      ],
+      "videos": [],
+      "exit_code": 0
+    },
+    {
+      "name": "loaders-backups",
+      "steps": "wait:17,down,down,down,down,circle,wait:2,down,down,down,circle,wait:2,shot,cross,wait:2,cross,wait:2,down,circle,wait:2,circle,wait:2,shot",
+      "start_section": 5,
+      "view": 0,
+      "captures": [
+        {
+          "label": "image-loaders",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103113334.png"
+        },
+        {
+          "label": "mmce-backup-settings",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103113345.png"
+        }
+      ],
+      "videos": [],
+      "exit_code": 0
+    },
+    {
+      "name": "files-root",
+      "steps": "wait:20,shot",
+      "start_section": 2,
+      "view": 0,
+      "captures": [
+        {
+          "label": "files-devices",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103113843.png"
+        }
+      ],
+      "videos": [],
+      "exit_code": 0
+    },
+    {
+      "name": "file-tools-complete",
+      "steps": "wait:22,down,down,circle,wait:5,shot,circle,wait:3,shot,down,down,triangle,wait:2,shot,cross,wait:2,down,circle,wait:3,shot,triangle,wait:2,shot,cross,wait:2,cross,wait:2,down,circle,wait:3,shot",
+      "start_section": 2,
+      "view": 0,
+      "captures": [
+        {
+          "label": "files-usb-root",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103114116.png"
+        },
+        {
+          "label": "files-folder",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103114121.png"
+        },
+        {
+          "label": "files-context",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103114125.png"
+        },
+        {
+          "label": "text-editor",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103114132.png"
+        },
+        {
+          "label": "text-editor-menu",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103114136.png"
+        },
+        {
+          "label": "image-viewer",
+          "shot": "SYS-CONF [_]_SYS-CONF_20261103114146.png"
+        }
+      ],
+      "videos": [],
+      "exit_code": 0
+    }
+  ],
+  "feature_processing": "Unmodified native 640x480 PNGs. Application navigation 640x480 20fps silent H264; GIF 480x360 6fps/128 colors.",
+  "fixture_notes": "Application metadata is demonstrative; files are nonbootable. USB is a 128MiB FAT32 regular-file disk image. The Files/editor/viewer captures use only staged documentation samples. Network values are example defaults and cloud is not linked."
 }
