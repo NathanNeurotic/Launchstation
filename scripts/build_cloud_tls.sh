@@ -36,7 +36,27 @@ python3 "${src}/scripts/config.py" -f "${src}/include/mbedtls/mbedtls_config.h" 
 python3 "${src}/scripts/config.py" -f "${src}/include/mbedtls/mbedtls_config.h" unset MBEDTLS_NET_C
 python3 "${src}/scripts/config.py" -f "${src}/include/mbedtls/mbedtls_config.h" set MBEDTLS_PLATFORM_MS_TIME_ALT
 
-cmake -S "${src}" -B "${build}"     -DCMAKE_SYSTEM_NAME=Generic     -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY     -DCMAKE_C_COMPILER="$(native_path "${cc}")"     -DCMAKE_AR="$(native_path "${ar}")"     -DCMAKE_RANLIB="$(native_path "${ranlib}")"     -DCMAKE_INSTALL_PREFIX="${out}"     -DENABLE_PROGRAMS=OFF     -DENABLE_TESTING=OFF     -DBUILD_SHARED_LIBS=OFF     -DMBEDTLS_FATAL_WARNINGS=OFF     -DCMAKE_BUILD_TYPE=MinSizeRel     -DCMAKE_C_FLAGS="${target_flags}-G0 -Os -ffunction-sections -fdata-sections -DMBEDTLS_NO_PLATFORM_ENTROPY -DMBEDTLS_ENTROPY_HARDWARE_ALT"
+# A build retry extracts Mbed TLS under another mktemp root. With MBEDTLS_DEBUG_C,
+# active debug macros can embed __FILE__ in object code, changing the final
+# Launchstation ELF even when the Git commit and source archive are identical.
+# Map BOTH source and generated build paths to a stable virtual prefix. GCC and
+# Clang support -ffile-prefix-map (including the __FILE__ macro expansion).
+# Never suppress archive digest validation to paper over non-reproducible input.
+mbedtls_path_map="-ffile-prefix-map=$(native_path "${work}")=/mbedtls-build"
+
+cmake -S "${src}" -B "${build}" \
+    -DCMAKE_SYSTEM_NAME=Generic \
+    -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
+    -DCMAKE_C_COMPILER="$(native_path "${cc}")" \
+    -DCMAKE_AR="$(native_path "${ar}")" \
+    -DCMAKE_RANLIB="$(native_path "${ranlib}")" \
+    -DCMAKE_INSTALL_PREFIX="${out}" \
+    -DENABLE_PROGRAMS=OFF \
+    -DENABLE_TESTING=OFF \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DMBEDTLS_FATAL_WARNINGS=OFF \
+    -DCMAKE_BUILD_TYPE=MinSizeRel \
+    -DCMAKE_C_FLAGS="${target_flags}-G0 -Os -ffunction-sections -fdata-sections ${mbedtls_path_map} -DMBEDTLS_NO_PLATFORM_ENTROPY -DMBEDTLS_ENTROPY_HARDWARE_ALT"
 
 cmake --build "${build}" --parallel
 cmake --install "${build}"
