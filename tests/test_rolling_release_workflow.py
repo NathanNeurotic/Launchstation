@@ -22,6 +22,15 @@ assert ("if: (github.event_name == 'push' || github.event_name == "
 assert "contains(github.event.head_commit.message" not in workflow
 assert 'tag="latest"' in publish  # Preserve native updater/website URLs.
 assert "gh release upload" in publish
+# Preserve a verified, build-numbered archive before mutating rolling assets.
+assert 'archive_tag="build-${build}"' in publish
+assert 'gh release create "${archive_tag}"' in publish
+assert '--prerelease --latest=false' in publish
+assert 'remote_digest=' in publish
+assert 'expected_digest=' in publish
+assert 'Refusing to modify latest.' in publish
+assert publish.index('gh release create "${archive_tag}"') < publish.index('gh release upload "${tag}"')
+assert publish.index('remote_digest=') < publish.index('gh release upload "${tag}"')
 assert "gh release edit" in publish
 assert "--draft=false --prerelease=false --latest" in publish
 assert "git merge-base --is-ancestor" in publish
