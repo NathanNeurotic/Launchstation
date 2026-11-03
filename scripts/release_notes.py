@@ -128,7 +128,7 @@ Device and display behavior still require console validation; a passing build do
 
 Built from [{revision[:7]}]({base}/tree/{revision}). [Build checks]({workflow}) passed:
 host regressions, documentation, standard/DS34 builds, controller variants,
-loader memory layout and app-package verification. Published packages are downloaded and compared with the build outputs before the rolling tag moves.
+loader memory layout and app-package verification. GitHub-computed SHA-256 digests and asset sizes are checked against the built files before the rolling tag moves; CI does not inflate download counts by downloading its own assets.
 
 ```text
 {hashes}
