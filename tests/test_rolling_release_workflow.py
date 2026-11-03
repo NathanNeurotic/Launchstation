@@ -28,6 +28,11 @@ assert 'gh release create "${archive_tag}"' in publish
 assert '--prerelease --latest=false' in publish
 assert 'remote_digest=' in publish
 assert 'expected_digest=' in publish
+assert "unset 'assets[-1]'" in publish
+assert '--omit-kit' in publish
+assert 'old_kit_digest=' in publish
+assert 'git/ref/tags/${archive_tag}' in publish
+assert publish.count('git/ref/tags/${archive_tag}') >= 3
 assert 'actual_digest=' in publish
 assert 'gh release download "${tag}"' not in publish
 assert 'gh release download "${archive_tag}"' not in publish
