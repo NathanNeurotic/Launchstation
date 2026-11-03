@@ -30,6 +30,8 @@ A standard install folder has `LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.P
 
 Release notes come from the `## Rolling` section of [CHANGELOG.md](../../CHANGELOG.md), followed by build and package information. A documentation-only merge therefore also produces a new rolling build without changing runtime source.
 
+**Retry behavior:** If a previous attempt archived a build without its optional full kit (or with an earlier external dependency), a retry keeps that archive immutable and publishes the core app only. The previous kit on `latest` remains available. Release notes explicitly say when the new optional kit was skipped. An archive-tag mismatch or a core app digest mismatch still blocks publication.
+
 **Recovery archive:** Open [build-numbered archives](https://github.com/NathanNeurotic/Launchstation/releases) and select a `build-<build>` pre-release to retrieve files from a previous publication, even after the moving `latest` release has replaced its ZIPs. These archives are not the default update channel. A partial archive from a failed publishing attempt may need inspection and manual repair before retry; the workflow will not silently overwrite a mismatched archive.
 
 ## Download count tracking
