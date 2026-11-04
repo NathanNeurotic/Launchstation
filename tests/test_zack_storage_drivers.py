@@ -96,12 +96,15 @@ c += r"""
 #define NETWORK_STACK_NONE 0
 #define NETWORK_STACK_ETH 1
 #define NETWORK_STACK_UDPFS 2
-static int network_stack_mode;
+#define BLOCK_STACK_NONE 0
+#define BLOCK_STACK_HDD 1
+#define BLOCK_STACK_ATA 2
+static int network_stack_mode, block_storage_stack_mode;
 static int storage_driver_stack_mode, reset_allowed, resets;
 static void resetRuntimeDeviceState(int status) {
     assert(status == TRUE);
     resets++;
-    if (reset_allowed) { storage_driver_stack_mode = STORAGE_STACK_DEFAULT; network_stack_mode = NETWORK_STACK_NONE; }
+    if (reset_allowed) { storage_driver_stack_mode = STORAGE_STACK_DEFAULT; network_stack_mode = NETWORK_STACK_NONE; block_storage_stack_mode = BLOCK_STACK_NONE; }
 }
 static const char *mmce_product_ids[] = {"Unknown", "SD2PSX", "MemCard PRO2", "PicoMemcard+", "PicoMemcardZero"};
 static int ping_calls, ping_success_at, reset_commands, selected_port;
@@ -113,6 +116,7 @@ static int mmce_cmd_reset(void) { reset_commands++; return 0; }
 """
 c += function("src/init.c", "static int switchStorageDriverStack(int target_mode)\n{")
 c += function("src/init.c", "static int switchNetworkStack(int target_mode)\n{")
+c += function("src/init.c", "static int switchBlockStorageStack(int target_mode)\n{")
 mmce = (root / "iop/mmceman/src/mmceman.c").read_text()
 import re
 attempts = re.search(r"^#define MMCE_PING_ATTEMPTS (\d+)$", mmce, re.M).group(1)
@@ -170,6 +174,17 @@ int main(void) {
     reset_allowed = 1;
     assert(switchNetworkStack(NETWORK_STACK_UDPFS) == 1);
     assert(network_stack_mode == NETWORK_STACK_UDPFS && resets == before + 2);
+    block_storage_stack_mode = BLOCK_STACK_NONE;
+    before = resets;
+    assert(switchBlockStorageStack(BLOCK_STACK_HDD) == 1 && resets == before);
+    block_storage_stack_mode = BLOCK_STACK_HDD;
+    assert(switchBlockStorageStack(BLOCK_STACK_HDD) == 1 && resets == before);
+    reset_allowed = 0;
+    assert(switchBlockStorageStack(BLOCK_STACK_ATA) == 0);
+    assert(block_storage_stack_mode == BLOCK_STACK_HDD && resets == before + 1);
+    reset_allowed = 1;
+    assert(switchBlockStorageStack(BLOCK_STACK_ATA) == 1);
+    assert(block_storage_stack_mode == BLOCK_STACK_NONE && resets == before + 2);
     for (int port = 2; port <= 3; port++) {
         ping_calls = reset_commands = ping_success_at = 0;
         mmce_init(port);
@@ -181,7 +196,7 @@ int main(void) {
             assert(ping_calls == success && reset_commands == 1);
         }
     }
-    puts("PASS: startup/modal, refused stack transitions and MMCE retry outcomes");
+    puts("PASS: startup/modal, refused storage/network/block stack transitions and MMCE retry outcomes");
     return 0;
 }
 """

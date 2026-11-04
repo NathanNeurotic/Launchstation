@@ -1,5 +1,7 @@
 #include "launchelf.h"
 #include "init.h"
+#include "ftp_session.h"
+#include "main_startup.h"
 #include "dash_sound.h"
 #include "pccf_control.h"
 #include <unistd.h>
@@ -355,7 +357,7 @@ static void resetUsbMassRuntimeState(void);
 static void resetDriverStackLoadTracking(void);
 static void resetRuntimeDeviceState(int show_status);
 static int switchStorageDriverStack(int target_mode);
-static void switchBlockStorageStack(int target_mode);
+static int switchBlockStorageStack(int target_mode);
 #if defined(ETH) && defined(UDPFS)
 static int switchNetworkStack(int target_mode);
 #endif
@@ -644,10 +646,10 @@ static int load_ps2hdd_stack(int with_ata_bd)
 	                       "-n"
 	                       "\0"
 	                       "20";
-	/* Allow up to four simultaneously mounted PFS partitions. */
+	/* Four browser/VMC slots plus four independently owned FTP slots. */
 	static char pfsarg[] = "-m"
 	                       "\0"
-	                       "4"
+	                       "8"
 	                       "\0"
 	                       "-o"
 	                       "\0"
@@ -1123,13 +1125,22 @@ static void load_ps2ftpd(void)
 
 	arg_p = "-anonymous";
 	arglen = strlen(arg_p);
+	/* Share the file browser's hardware gate, independently of Hide HDD
+	 * settings: the IOP then rejects hdd/ata paths even if a driver got
+	 * registered anyway. Ported from saildot4k/Launchstation 7b2c2cd. */
+	if (shouldHideHddAtaDevices()) {
+		arg_p = "-anonymous\0-no-hdd";
+		arglen = sizeof("-anonymous\0-no-hdd");
+	}
 
 	if (!load_ps2ip())
 		return;
 	if (!have_ps2ftpd) {
+		filerRootMcPollIdle();
 		ID = SifExecModuleBuffer(ps2ftpd_irx, size_ps2ftpd_irx, arglen, arg_p, &ret);
 		DPRINTF(" [PS2FTPD]: ID=%d, ret=%d\n", ID, ret);
-		have_ps2ftpd = (ID >= 0 && ret >= 0);
+		/* MODULE_NO_RESIDENT_END (1): startup failed and the module was unloaded. */
+		have_ps2ftpd = (ID >= 0 && ret == 0);
 	}
 }
 #endif
@@ -1973,6 +1984,12 @@ static void resetRuntimeDeviceState(int show_status)
 		DPRINTF("IOP reset refused on this thread\n");
 		return;
 	}
+#ifdef ETH
+    if (have_ps2ftpd && !ftpSessionShutdown()) {
+        DPRINTF("IOP reset refused: FTP did not finish closing files\n");
+        return;
+    }
+#endif
 	/* A dashboard root-card presence poll uses asynchronous libmc RPC on
 	 * the same SIO2/PADMAN IOP session. Drain it before closing PAD ports
 	 * or restarting the IOP, otherwise a pending mcGetInfo may outlive
@@ -2058,10 +2075,10 @@ static int switchStorageDriverStack(int target_mode)
 	return 1;
 }
 
-static void switchBlockStorageStack(int target_mode)
+static int switchBlockStorageStack(int target_mode)
 {
 	if ((block_storage_stack_mode & target_mode) == target_mode)
-		return;
+		return 1;
 
 #ifdef EXFAT
 	/*
@@ -2069,14 +2086,18 @@ static void switchBlockStorageStack(int target_mode)
 	 * Only force a reset for genuinely incompatible future stacks.
 	 */
 	if ((block_storage_stack_mode | target_mode) == (BLOCK_STACK_HDD | BLOCK_STACK_ATA)) {
-		return;
+		return 1;
 	}
 #endif
 
 	if (block_storage_stack_mode != BLOCK_STACK_NONE) {
 		DPRINTF("Switching block storage stack (%d -> %d), resetting IOP\n", block_storage_stack_mode, target_mode);
 		resetRuntimeDeviceState(TRUE);
+		/* A refused reset leaves the old block storage stack resident. */
+		if (block_storage_stack_mode != BLOCK_STACK_NONE)
+			return 0;
 	}
+	return 1;
 }
 
 #if defined(ETH) && defined(UDPFS)
@@ -2316,7 +2337,8 @@ int loadAtaModules(void)
 	if (needs_feedback)
 		showLoadingModulesMsg("ata");
 
-	switchBlockStorageStack(BLOCK_STACK_ATA);
+	if (!switchBlockStorageStack(BLOCK_STACK_ATA))
+		return 0;
 	ensureCoreIoStackReady();
 	setupPowerOff();
 	loadAtaBlockDriver();
@@ -2438,7 +2460,8 @@ int loadHddModules(void)
 	if ((block_storage_stack_mode & BLOCK_STACK_HDD) && have_HDD_modules)
 		return 1;
 
-	switchBlockStorageStack(BLOCK_STACK_HDD);
+	if (!switchBlockStorageStack(BLOCK_STACK_HDD))
+		return 0;
 	ensureCoreIoStackReady();
 	if (!have_HDD_modules) {
 		showLoadingModulesMsg("hdd");
@@ -2511,7 +2534,22 @@ int loadDVRPHddModules(void)
 #ifdef ETH
 void loadNetModules(void)
 {
-	if (pcCardCfOwnsBus()) return;
+    dashboard_ip_error = "PC CARD CompactFlash is using the network adapter.";
+    if (pcCardCfOwnsBus()) return;
+    dashboard_ip_error = NULL;
+    if (!have_ps2ftpd) {
+        getIpConfig();
+        if (!shouldHideHddAtaDevices()) {
+#ifdef EXFAT
+            loadAtaModules();
+#endif
+            loadHddModules();
+        }
+        loadUsbModules();
+#ifdef ILINK
+        if (consoleHasIlink()) loadIlinkModules();
+#endif
+    }
 	ensureCoreIoStackReady();
 	if (!have_NetModules) {
 		showLoadingModulesMsg("ps2net");
@@ -2527,7 +2565,14 @@ void loadNetModules(void)
 
 int isFtpNetworkReady(void)
 {
-	return have_NetModules && have_ps2ftpd && have_ps2ip && have_ps2smap && ps2dev9_loaded;
+	return !ftpSessionStopped() && have_NetModules && have_ps2ftpd && have_ps2ip && have_ps2smap && ps2dev9_loaded;
+}
+
+int isFtpServerRunning(void)
+{
+	/* Module residency also covers STOPPED-but-not-yet-reset and a STOP that
+	 * timed out, when the IOP thread may still be touching MCMAN. */
+	return have_ps2ftpd;
 }
 
 /* Give a cold stack a resolver. Static IPCONFIG.DAT only holds IP, netmask

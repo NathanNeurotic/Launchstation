@@ -11,6 +11,7 @@
  */
 
 #include "FileSystem.h"
+#include "FtpControl.h"
 #include <errno.h>
 
 #ifndef LINUX
@@ -38,13 +39,106 @@
 extern char *itoa(char *in, int val);
 
 #ifndef LINUX
-/* Mounting a different partition invalidates a previously accepted PFS rename. */
 static unsigned int pfs_mount_generation[FS_PFS_UNITS];
+static struct {
+	char partition[40];
+	unsigned int references;
+} mounts[FS_PFS_UNITS];
+
+/* 0 when the EE started the module with -no-hdd (console policy hides HDD/ATA). */
+static int hdd_enabled = 1;
+
+void FileSystem_SetHddEnabled(int enabled)
+{
+	hdd_enabled = enabled != 0;
+}
+
+void FileSystem_ResetMounts(void)
+{
+	memset(mounts, 0, sizeof(mounts));
+	memset(pfs_mount_generation, 0, sizeof(pfs_mount_generation));
+}
+
+static int partitionAllowed(iop_device_t *hdd, int unit, const char *name)
+{
+	iop_file_t file;
+	iox_stat_t stat;
+	size_t length = strlen(name);
+	if (!length || length > 32 || !strcmp(name, ".") || !strcmp(name, "..") || strchr(name, ':'))
+		return 0;
+	if (!strncmp(name, "PP.", 3) && length >= 4 && !strcmp(name + length - 4, ".PCB"))
+		return 0;
+	memset(&file, 0, sizeof(file));
+	file.device = hdd;
+	file.unit = unit;
+	memset(&stat, 0, sizeof(stat));
+	return hdd->ops->getstat(&file, name, &stat) >= 0 && stat.mode == 0x0100 && stat.attr == 0;
+}
+
+/* Open handles pin mounts. Reuse a partition across clients; never remount a
+ * slot while another transfer/directory operation holds a reference. */
+static int acquirePartition(FSContext *ctx, const char *partition)
+{
+	iop_device_t *pfs = FileSystem_ScanDevice("pfs");
+	iop_file_t file;
+	int slot = -1;
+	char source[40];
+	if (!pfs || !(pfs->type & IOP_DT_FSEXT) || !pfs->ops->mount || !pfs->ops->umount)
+		return -ENODEV;
+	for (int i = 0; i < FS_PFS_UNITS; i++) {
+		if (!strcmp(mounts[i].partition, partition)) {
+			slot = i;
+			break;
+		}
+		if (!mounts[i].references && slot < 0)
+			slot = i;
+	}
+	if (slot < 0)
+		return -EBUSY;
+	memset(&file, 0, sizeof(file));
+	file.device = pfs;
+	file.unit = slot + FS_PFS_BASE;
+	if (strcmp(mounts[slot].partition, partition)) {
+		if (mounts[slot].partition[0] && pfs->ops->umount(&file, "") < 0)
+			return -EBUSY;
+		mounts[slot].partition[0] = '\0';
+		strcpy(source, partition);
+		if (pfs->ops->mount(&file, "", source, 0, NULL, 0) < 0)
+			return -EIO;
+		strcpy(mounts[slot].partition, partition);
+		pfs_mount_generation[slot]++;
+	}
+	mounts[slot].references++;
+	ctx->m_iMount = slot;
+	ctx->m_kFile.device = pfs;
+	ctx->m_kFile.unit = slot + FS_PFS_BASE;
+	return 0;
+}
+void FileSystem_UnmountAll(void)
+{
+	iop_device_t *pfs = FileSystem_ScanDevice("pfs");
+	if (!pfs)
+		return;
+	for (int i = 0; i < FS_PFS_UNITS; i++)
+		if (mounts[i].partition[0] && !mounts[i].references) {
+			iop_file_t file;
+			memset(&file, 0, sizeof(file));
+			file.device = pfs;
+			file.unit = i + FS_PFS_BASE;
+			int result = pfs->ops->umount(&file, "");
+			if (result >= 0) {
+				mounts[i].partition[0] = '\0';
+				pfs_mount_generation[i]++;
+			} else
+				FtpControl_Error(result);
+		}
+}
+
 
 static const char *FileSystem_DeviceName(const iop_device_t *device)
 {
 	const char *name;
-	if (!device || !device->name || !(device->type & (IOP_DT_FS | IOP_DT_BLOCK)))
+	if (!device || !device->name || !device->ops || !(device->type & (IOP_DT_FS | IOP_DT_BLOCK)))
 		return NULL;
 	name = device->name;
 	/* Non-extended USBMASS is USB-only. BDM massN can also refer to ATA. */
@@ -68,6 +162,7 @@ void FileSystem_Create(FSContext *pContext)
 
 #ifndef LINUX
 	pContext->m_eType = FS_INVALID;
+	pContext->m_iMount = -1;
 	memset(&(pContext->m_kFile), 0, sizeof(pContext->m_kFile));
 	pContext->m_iOpen = 0;
 #else
@@ -110,8 +205,10 @@ int FileSystem_OpenFile(FSContext *pContext, const char *pFile, FileMode eMode, 
 	return 0;
 #else
 	pFile = FileSystem_ClassifyPath(pContext, buffer);
-	if (!pFile || pContext->m_eType != FS_IODEVICE)
+	if (!pFile || pContext->m_eType != FS_IODEVICE || !strcmp(pContext->m_kFile.device->name, "hdd") || !strcmp(pFile, "/")) {
+		FileSystem_Close(pContext);
 		return -ENODEV;
+	}
 	pContext->m_kFile.mode = flags;
 	result = pContext->m_kFile.device->ops->open(&pContext->m_kFile, pFile, flags,
 												 !strcmp(pContext->m_kFile.device->name, "pfs") ? 0777 : 0);
@@ -186,7 +283,7 @@ int FileSystem_OpenDir(FSContext *pContext, const char *pDir)
 			break;
 	}
 
-	pContext->m_eType = FS_INVALID;
+	FileSystem_Close(pContext);
 	return -1;
 #endif
 }
@@ -341,6 +438,8 @@ int FileSystem_ReadDir(FSContext *pContext, FSFileInfo *pInfo)
 			while (pContext->m_kFile.unit < limit) {
 				iop_file_t probe = pContext->m_kFile;
 				int unit = pContext->m_kFile.unit++;
+				if (!strcmp(device->name, "pfs"))
+					probe.unit = unit + FS_PFS_BASE;
 				if (strcmp(device->name, "hdd")) {
 					probe.privdata = NULL;
 					probe.mode = O_DIROPEN;
@@ -426,61 +525,34 @@ int FileSystem_DeleteFile(FSContext *pContext, const char *pFile)
 {
 	if (FileSystem_BuildPath(buffer, pContext->m_Path, pFile) < 0)
 		return -ENAMETOOLONG;
-
 #ifdef LINUX
 	return -1;
 #else
-
-	if (NULL == (pFile = FileSystem_ClassifyPath(pContext, buffer)))
-		return -1;
-
-	switch (pContext->m_eType) {
-		case FS_IODEVICE: {
-			if (!pContext->m_kFile.device)
-				break;
-
-			return pContext->m_kFile.device->ops->remove((&pContext->m_kFile), pFile);
-		} break;
-
-		default:
-			return -1;
-	}
-
-	return -1;
+	int result = -EACCES;
+	pFile = FileSystem_ClassifyPath(pContext, buffer);
+	if (pFile && pContext->m_eType == FS_IODEVICE && !pContext->m_iRoot &&
+		strcmp(pContext->m_kFile.device->name, "hdd"))
+		result = pContext->m_kFile.device->ops->remove(&pContext->m_kFile, pFile);
+	FileSystem_Close(pContext);
+	return result;
 #endif
 }
 
 int FileSystem_CreateDir(FSContext *pContext, const char *pDir)
 {
-	#ifndef LINUX
-	int fileMode = 0;
-#endif
 	if (FileSystem_BuildPath(buffer, pContext->m_Path, pDir) < 0)
 		return -ENAMETOOLONG;
-
 #ifdef LINUX
 	return -1;
 #else
-	if (NULL == (pDir = FileSystem_ClassifyPath(pContext, buffer)))
-		return -1;
-
-	switch (pContext->m_eType) {
-		case FS_IODEVICE: {
-			if (!pContext->m_kFile.device)
-				break;
-
-			// check if hdd, then set permissions to 511
-			if (!strcmp(pContext->m_kFile.device->name, "pfs"))
-				fileMode = 511;
-
-			return pContext->m_kFile.device->ops->mkdir(&(pContext->m_kFile), pDir, fileMode);
-		} break;
-
-		default:
-			return -1;
-	}
-
-	return -1;
+	int result = -EACCES;
+	pDir = FileSystem_ClassifyPath(pContext, buffer);
+	if (pDir && pContext->m_eType == FS_IODEVICE && !pContext->m_iRoot &&
+		strcmp(pContext->m_kFile.device->name, "hdd"))
+		result = pContext->m_kFile.device->ops->mkdir(
+			&pContext->m_kFile, pDir, !strcmp(pContext->m_kFile.device->name, "pfs") ? 0777 : 0);
+	FileSystem_Close(pContext);
+	return result;
 #endif
 }
 
@@ -488,25 +560,16 @@ int FileSystem_DeleteDir(FSContext *pContext, const char *pDir)
 {
 	if (FileSystem_BuildPath(buffer, pContext->m_Path, pDir) < 0)
 		return -ENAMETOOLONG;
-
 #ifdef LINUX
 	return -1;
 #else
-	if (NULL == (pDir = FileSystem_ClassifyPath(pContext, buffer)))
-		return -1;
-
-	switch (pContext->m_eType) {
-		case FS_IODEVICE: {
-			if (!pContext->m_kFile.device)
-				break;
-			return pContext->m_kFile.device->ops->rmdir(&(pContext->m_kFile), pDir);
-		} break;
-
-		default:
-			return -1;
-	}
-
-	return -1;
+	int result = -EACCES;
+	pDir = FileSystem_ClassifyPath(pContext, buffer);
+	if (pDir && pContext->m_eType == FS_IODEVICE && !pContext->m_iRoot &&
+		strcmp(pContext->m_kFile.device->name, "hdd"))
+		result = pContext->m_kFile.device->ops->rmdir(&pContext->m_kFile, pDir);
+	FileSystem_Close(pContext);
+	return result;
 #endif
 }
 
@@ -522,14 +585,14 @@ int FileSystem_PrepareRename(FSContext *pContext, const char *name, FSRename *re
 		result = FileSystem_OpenDir(pContext, rename->path);
 #ifndef LINUX
 	if (result >= 0 &&
-		(pContext->m_eType != FS_IODEVICE || !(pContext->m_kFile.device->type & IOP_DT_FSEXT) ||
-		 !pContext->m_kFile.device->ops->rename))
+		(pContext->m_eType != FS_IODEVICE || pContext->m_iRoot ||
+		 !(pContext->m_kFile.device->type & IOP_DT_FSEXT) || !pContext->m_kFile.device->ops->rename))
 		result = -ENOSYS;
 	if (result >= 0) {
 		rename->device = pContext->m_kFile.device;
 		rename->unit = pContext->m_kFile.unit;
-		if (!strcmp(rename->device->name, "pfs") && rename->unit < FS_PFS_UNITS)
-			rename->mount_generation = pfs_mount_generation[rename->unit];
+		if (!strcmp(rename->device->name, "pfs") && rename->unit >= FS_PFS_BASE && rename->unit < FS_PFS_BASE + FS_PFS_UNITS)
+			rename->mount_generation = pfs_mount_generation[rename->unit - FS_PFS_BASE];
 	}
 #endif
 	FileSystem_Close(pContext);
@@ -538,7 +601,15 @@ int FileSystem_PrepareRename(FSContext *pContext, const char *name, FSRename *re
 	return result;
 }
 
-int FileSystem_Rename(FSContext *pContext, const FSRename *rename, const char *newName)
+#ifndef LINUX
+static int renameMountChanged(const FSRename *rename)
+{
+	return !strcmp(rename->device->name, "pfs") && rename->unit >= FS_PFS_BASE && rename->unit < FS_PFS_BASE + FS_PFS_UNITS &&
+		rename->mount_generation != pfs_mount_generation[rename->unit - FS_PFS_BASE];
+}
+#endif
+
+static int renamePath(FSContext *pContext, const FSRename *rename, const char *newName)
 {
 	char destination[FS_PATH_MAX];
 	int result = FileSystem_BuildPath(destination, pContext->m_Path, newName);
@@ -557,8 +628,7 @@ int FileSystem_Rename(FSContext *pContext, const FSRename *rename, const char *n
 	const char *relative;
 	if (!rename->device)
 		return -EINVAL;
-	if (!strcmp(rename->device->name, "pfs") && rename->unit < FS_PFS_UNITS &&
-		rename->mount_generation != pfs_mount_generation[rename->unit])
+	if (renameMountChanged(rename))
 		return -EXDEV;
 	relative = FileSystem_ClassifyPath(pContext, rename->path);
 	if (!relative || pContext->m_eType != FS_IODEVICE || pContext->m_kFile.device != rename->device ||
@@ -568,7 +638,7 @@ int FileSystem_Rename(FSContext *pContext, const FSRename *rename, const char *n
 	relative = FileSystem_ClassifyPath(pContext, destination);
 	if (!relative || pContext->m_eType != FS_IODEVICE)
 		return -ENODEV;
-	if (pContext->m_kFile.device != rename->device || pContext->m_kFile.unit != rename->unit)
+	if (pContext->m_kFile.device != rename->device || pContext->m_kFile.unit != rename->unit || renameMountChanged(rename))
 		return -EXDEV;
 	if (!strcmp(source, "/") || !strcmp(relative, "/"))
 		return -EINVAL;
@@ -576,6 +646,13 @@ int FileSystem_Rename(FSContext *pContext, const FSRename *rename, const char *n
 		return -ENOSYS;
 	return rename->device->ops->rename(&pContext->m_kFile, source, relative);
 #endif
+}
+
+int FileSystem_Rename(FSContext *context, const FSRename *source, const char *destination)
+{
+	int result = renamePath(context, source, destination);
+	FileSystem_Close(context);
+	return result;
 }
 
 
@@ -601,10 +678,17 @@ int FileSystem_Close(FSContext *pContext)
 		else
 			result = pContext->m_kFile.device->ops->close(&pContext->m_kFile);
 	}
+	if (pContext->m_iMount >= 0) {
+		mounts[pContext->m_iMount].references--;
+		pContext->m_iMount = -1;
+	}
+	pContext->m_iRoot = 1;
 	pContext->m_eType = FS_INVALID;
 	memset(&pContext->m_kFile, 0, sizeof(pContext->m_kFile));
 	pContext->m_iOpen = 0;
 #endif
+	if (result < 0)
+		FtpControl_Error(result);
 	return result < 0 ? result : 0;
 }
 
@@ -674,24 +758,7 @@ int FileSystem_ChangeDir(FSContext *pContext, const char *pPath)
 	result = FileSystem_BuildPath(path, pContext->m_Path, pPath);
 	if (result < 0)
 		return result;
-#ifndef LINUX
-	/* Auto-mount APA partitions at the reserved FTP PFS0 mount point. */
-	if (!strncmp(path, "/hdd/0/", 7)) {
-		const char *end = strchr(path + 7, '/');
-		char mount[40]; // hdd: plus a 32-byte APA partition identifier
-		size_t length = end ? (size_t)(end - (path + 7)) : strlen(path + 7);
-		if (!length || length + 6 >= sizeof(mount))
-			return -EINVAL;
-		memcpy(mount, "hdd:", 4);
-		memcpy(mount + 4, path + 7, length);
-		mount[4 + length] = '\0';
-		FileSystem_UnmountDevice(&candidate, "/pfs/0/");
-		if (FileSystem_MountDevice(&candidate, "/pfs/0/", mount) < 0)
-			return -EIO;
-		if (FileSystem_BuildPath(path, "/pfs/0/", end ? end + 1 : "") < 0)
-			return -ENAMETOOLONG;
-	}
-#endif
+
 	result = FileSystem_OpenDir(&candidate, path);
 	FileSystem_Close(&candidate);
 	if (result < 0)
@@ -755,6 +822,10 @@ const char *FileSystem_ClassifyPath(FSContext *pContext, const char *pPath)
 		return NULL;
 	memcpy(name, cursor, length);
 	name[length] = '\0';
+	/* Consoles started with -no-hdd reject the HDD/ATA families even if a
+	 * driver got registered anyway. */
+	if (!hdd_enabled && (!strcmp(name, "hdd") || !strcmp(name, "ata")))
+		return NULL;
 	pContext->m_kFile.device = FileSystem_ScanDevice(name);
 	if (!pContext->m_kFile.device)
 		return NULL;
@@ -773,7 +844,27 @@ const char *FileSystem_ClassifyPath(FSContext *pContext, const char *pPath)
 		return NULL;
 	pContext->m_kFile.unit = unit;
 	pContext->m_eType = FS_IODEVICE;
-	strcpy(buffer, *cursor ? cursor : "/");
+	if (!strcmp(name, "hdd") && *cursor && cursor[1]) {
+        char partition[33], source[40];
+        const char *leaf = strchr(cursor + 1, '/');
+        length = leaf ? (size_t)(leaf - cursor - 1) : strlen(cursor + 1);
+        if (length > 32 || unit > 1) return NULL;
+        memcpy(partition, cursor + 1, length);
+        partition[length] = '\0';
+        if (!partitionAllowed(pContext->m_kFile.device, unit, partition)) return NULL;
+        sprintf(source, "hdd%d:%s", unit, partition);
+        if (acquirePartition(pContext, source) < 0) return NULL;
+        strcpy(buffer, leaf ? leaf : "/");
+    } else {
+        if (!strcmp(name, "pfs")) {
+            if (unit >= FS_PFS_UNITS) return NULL;
+            pContext->m_iMount = unit;
+            mounts[unit].references++;
+            pContext->m_kFile.unit = unit + FS_PFS_BASE;
+        }
+        strcpy(buffer, *cursor ? cursor : "/");
+    }
+    pContext->m_iRoot = !strcmp(buffer, "/");
 	return buffer;
 }
 
@@ -804,108 +895,6 @@ iop_device_t *FileSystem_ScanDevice(const char *name)
 		legacy_usb = devices[index];
 	}
 	return legacy_usb;
-}
-
-//! Mount device
-int FileSystem_MountDevice(FSContext *pContext, const char *mount_point, const char *mount_file)
-{
-	if (!mount_point || !mount_file)
-		return -1;
-
-	if (NULL == (mount_point = FileSystem_ClassifyPath(pContext, mount_point)))
-		return -1;
-
-	if ((FS_IODEVICE != pContext->m_eType) || (NULL == pContext->m_kFile.device))
-		return -1;
-
-	if ((pContext->m_kFile.device->type & 0xf0000000) != IOP_DT_FSEXT) {
-#ifdef DEBUG
-		printf("ps2ftpd: device fs is not extended.\n");
-#endif
-		pContext->m_eType = FS_INVALID;
-		return -1;
-	}
-
-	if (pContext->m_kFile.device->ops->mount(&(pContext->m_kFile), mount_point, mount_file, 0, NULL, 0) < 0) {
-#ifdef DEBUG
-		printf("ps2ftpd: device-mount failed.\n");
-#endif
-		pContext->m_eType = FS_INVALID;
-		return -1;
-	}
-
-	DelayThread(100);
-
-	if (!strcmp(pContext->m_kFile.device->name, "pfs") && pContext->m_kFile.unit < FS_PFS_UNITS)
-		pfs_mount_generation[pContext->m_kFile.unit]++;
-	pContext->m_eType = FS_INVALID;
-	return 0;
-}
-
-//! Unmount device
-int FileSystem_UnmountDevice(FSContext *pContext, const char *mount_point)
-{
-	if (!mount_point)
-		return -1;
-
-	if (NULL == (mount_point = FileSystem_ClassifyPath(pContext, mount_point)))
-		return -1;
-
-	if ((FS_IODEVICE != pContext->m_eType) || (NULL == pContext->m_kFile.device))
-		return -1;
-
-	if ((pContext->m_kFile.device->type & 0xf0000000) != IOP_DT_FSEXT) {
-#ifdef DEBUG
-		printf("ps2ftpd: device fs is not extended.\n");
-#endif
-		pContext->m_eType = FS_INVALID;
-		return -1;
-	}
-
-	if (pContext->m_kFile.device->ops->umount(&(pContext->m_kFile), mount_point) < 0) {
-#ifdef DEBUG
-		printf("ps2ftpd: device-unmount failed.\n");
-#endif
-		pContext->m_eType = FS_INVALID;
-		return -1;
-	}
-
-	if (!strcmp(pContext->m_kFile.device->name, "pfs") && pContext->m_kFile.unit < FS_PFS_UNITS)
-		pfs_mount_generation[pContext->m_kFile.unit]++;
-	pContext->m_eType = FS_INVALID;
-	return 0;
-}
-
-//! Synchronize device
-int FileSystem_SyncDevice(FSContext *pContext, const char *devname)
-{
-	if (!devname)
-		return -1;
-
-	if (NULL == (devname = FileSystem_ClassifyPath(pContext, devname)))
-		return -1;
-
-	if ((FS_IODEVICE != pContext->m_eType) || (NULL == pContext->m_kFile.device))
-		return -1;
-
-	if ((pContext->m_kFile.device->type & 0xf0000000) != IOP_DT_FSEXT) {
-#ifdef DEBUG
-		printf("ps2ftpd: device fs is not extended.\n");
-#endif
-		pContext->m_eType = FS_INVALID;
-		return -1;
-	}
-
-	if (pContext->m_kFile.device->ops->sync(&(pContext->m_kFile), devname, 0) < 0) {
-#ifdef DEBUG
-		printf("ps2ftpd: device-sync failed.\n");
-#endif
-		pContext->m_eType = FS_INVALID;
-		return -1;
-	}
-
-	pContext->m_eType = FS_INVALID;
-	return 0;
 }
 
 int getPs2Time(ps2time *tm)

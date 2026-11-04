@@ -46,6 +46,8 @@ static struct Config *setting = &config;
 static int ps2dev9_loaded, have_ps2dev9, ps2dev9_variant, have_ata_bd;
 static int cf_owned, allow_reset, resets, bdm_live, bdm_ok, bdm_calls, ata_calls, dev9_calls, settle_calls;
 static int module_id=1, module_result;
+static int hide_hdd, mc_idle_calls, ftpd_arglen;
+static const char *ftpd_args;
 static int pcCardCfOwnsBus(void) { return cf_owned; }
 static int switchNetworkStack(int mode) { assert(mode==NETWORK_STACK_ETH); return network_allowed; }
 static void showLoadingModulesMsg(const char *name) { (void)name; }
@@ -70,9 +72,12 @@ static int SifExecModuleBuffer(const void *module, int size, int len, const void
     if (module==ata_bd_irx) { ata_calls++; if (!bdm_live) return -1; }
     else if (module==ps2dev9_irx || module==ps2dev9_v10_irx) dev9_calls++;
     else network_calls++;
+    if (module==ps2ftpd_irx) { ftpd_args=args; ftpd_arglen=len; }
     *ret=module_result; return module_id;
 }
 static void pauseAfterAtaBlockDriverLoad(void) { settle_calls++; }
+static int shouldHideHddAtaDevices(void) { return hide_hdd; }
+static void filerRootMcPollIdle(void) { mc_idle_calls++; }
 '''
 for name in ("load_ps2dev9", "loadAtaBlockDriver", "load_ps2ip", "load_ps2host",
              "load_ps2ftpd", "load_ps2netfs", "ensureDashboardIpNetworkReady", "loadFlashModules"):
@@ -128,12 +133,27 @@ int main(void) {
     assert(dev9_calls==1 && network_calls==3 && client_calls==1 && have_ps2ips);
     load_ps2host(); load_ps2ftpd(); load_ps2netfs();
     assert(network_calls==6 && have_ps2host && have_ps2ftpd && have_ps2netfs);
+    assert(mc_idle_calls==1 && ftpd_arglen==(int)strlen("-anonymous"));
+    assert(!strcmp(ftpd_args, "-anonymous"));
+    /* Hidden HDD/ATA passes -no-hdd as a second IOP argument. */
+    reset(); hide_hdd=1; mc_idle_calls=0; assert(ensureDashboardIpNetworkReady());
+    load_ps2ftpd();
+    assert(have_ps2ftpd && mc_idle_calls==1);
+    assert(ftpd_arglen==(int)sizeof("-anonymous\0-no-hdd"));
+    assert(!strcmp(ftpd_args, "-anonymous") && !strcmp(ftpd_args + sizeof("-anonymous"), "-no-hdd"));
+    hide_hdd=0;
+    /* A ps2ftpd whose start failed (MODULE_NO_RESIDENT_END) was unloaded: it never gates IOP resets. */
+    reset(); assert(ensureDashboardIpNetworkReady());
+    module_result=1; load_ps2ftpd();
+    assert(!have_ps2ftpd);
+    module_result=0; load_ps2ftpd();
+    assert(have_ps2ftpd);
     /* XFROM boot registers power-off even if DEV9 rejects initialization. */
     reset(); console_is_PSX=1; module_id=-1;
     assert(!loadFlashModules() && power_calls==1 && !flash_calls);
     reset(); console_is_PSX=1;
     assert(loadFlashModules() && power_calls==1 && flash_calls==1);
-    puts("PASS: refused DEV9/IP transitions, BDM ordering, dependent services, XFROM power-off and CF ownership");
+    puts("PASS: refused DEV9/IP transitions, BDM ordering, dependent services, failed FTP start, XFROM power-off and CF ownership");
 }
 '''
 with tempfile.TemporaryDirectory(prefix="dev9-transition-") as folder:

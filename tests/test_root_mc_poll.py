@@ -37,11 +37,14 @@ static u64 now_ms;
 static u64 Timer(void) { return now_ms; }
 static int fail_port1_start, fail_port1_sync, pending_port = -1;
 static int mx4sio_loaded;
+#define ETH 1
+static int ftp_running, info_calls;
+static int isFtpServerRunning(void) { return ftp_running; }
 #include <string.h>
 /* MX4SIO owns slot 2's SIO2 port while it is loaded. */
 static int isPathDeviceStackLoaded(const char *p) { return strcmp(p, "mc1:/") || !mx4sio_loaded; }
 static int mcGetInfo(int port, int slot, int *type, int *free, int *format) {
-    (void)slot; (void)format;
+    (void)slot; (void)format; info_calls++;
     if (port == 1 && fail_port1_start) return -1;
     *type = 2; *free = 4096; pending_port = port; return 0;
 }
@@ -90,6 +93,20 @@ int main(void) {
     pollRootMemoryCardDevices();assert(root_mc_poll_active && pending_port==0);
     filerRootMcPollIdle();assert(root_mc_present[1]==0);
     mx4sio_loaded=0;
+    /* FTP and MCSERV share MCMAN state. Cached presence stays available, but
+     * no background get-info RPC starts while FTP is resident. */
+    ftp_running=1;int info_before=info_calls;
+    run(40);
+    assert(info_calls==info_before && pending_port==-1 && !root_mc_poll_active);
+    assert(filerRootMcPresent(0,NULL,NULL)==1);
+    /* A request already pending may finish; it must not spawn another one. */
+    root_mc_poll_active=1;root_mc_poll_port=0;pending_port=0;
+    pollRootMemoryCardDevices();
+    assert(!root_mc_poll_active && pending_port==-1 && info_calls==info_before);
+    run(8);assert(info_calls==info_before);
+    ftp_running=0;run(4);assert(info_calls>info_before);
+    filerRootMcPollIdle();
+    puts("PASS: FTP pauses background MCMAN RPCs, preserves presence and resumes after shutdown");
     puts("PASS: an unresponsive memory-card slot cannot starve the other or stay Checking forever; MX4SIO keeps slot 2 out of the poll");
     return 0;
 }

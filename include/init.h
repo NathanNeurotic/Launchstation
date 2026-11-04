@@ -62,6 +62,8 @@ int prepareEmberUsbHandoffIop(const char *ember_path, const char *game_image,
 #ifdef ETH
 void loadNetModules(void);
 int isFtpNetworkReady(void);
+/* Resident FTP reaches MCMAN independently of the dashboard's MCSERV client. */
+int isFtpServerRunning(void);
 int ensureDashboardIpNetworkReady(void);
 const char *dashboardIpNetworkError(void);
 #endif

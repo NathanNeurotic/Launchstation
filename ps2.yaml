@@ -167,13 +167,14 @@ targets:
   - name: ps2ftpd
     type: iop
     sources:
+      - iop/oldlibs/ps2ftpd/src/FtpControl.c
       - iop/oldlibs/ps2ftpd/src/main.c
       - iop/oldlibs/ps2ftpd/src/FileSystem.c
       - iop/oldlibs/ps2ftpd/src/FtpServer.c
       - iop/oldlibs/ps2ftpd/src/FtpClient.c
       - iop/oldlibs/ps2ftpd/src/FtpCommands.c
       - iop/oldlibs/ps2ftpd/src/FtpMessages.c
-    include_dirs: [iop/oldlibs/ps2ftpd/src]
+    include_dirs: [iop/oldlibs/ps2ftpd/src, include]
     imports_lst: iop/oldlibs/ps2ftpd/src/imports.lst
     cflags: [-Wall, -fno-builtin]
     headers: [cdvd, intrman, iomanx, loadcore, ps2ip-nm, sifcmd, sifman, stdio, sysclib, sysmem, threadman]
@@ -403,6 +404,8 @@ targets:
       - src/makeicon.c
       - src/chkesr.c
       - src/pad.c
+      - src/dash_ftp.c
+      - src/ftp_session.c
       - src/dash_main.c
       - src/dash_clock_sync.c
       - src/dash_gfx.c

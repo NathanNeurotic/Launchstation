@@ -36,6 +36,7 @@
 #endif
 
 #include <errno.h>
+#include "FtpControl.h"
 
 #define MAX_CLIENTS 4
 
@@ -238,6 +239,9 @@ void FtpClient_OnCommand(FtpClient *pClient, const char *pString)
 
 			return;
 		}
+
+		if (result != FTPCMD_USER && result != FTPCMD_PASS)
+			FtpControl_Operation(pString);
 
 		switch (result) {
 			case FTPCMD_USER:

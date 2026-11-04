@@ -105,6 +105,8 @@ jobs:
           python3 tests/test_dev9_transition.py
           python3 tests/test_ftp_server.py
           python3 tests/test_ftp_network.py
+          python3 tests/test_ftp_session.py
+          python3 tests/test_dash_ftp.py
           python3 tests/test_ps2ips_rpc.py
           python3 tests/test_dashboard_pending_loops.py
           python3 tests/test_mmce_presence_probe.py

@@ -10,6 +10,7 @@
  */
 
 #include "FtpServer.h"
+#include "FtpControl.h"
 
 #ifndef LINUX
 #include <loadcore.h>
@@ -35,6 +36,11 @@ int process_args(FtpServer *pServer, int argc, char *argv[])
 		} else if (!strcmp("-anonymous", argv[i])) {
 			// enable anonymous logins
 			FtpServer_SetAnonymous(pServer, 1);
+#ifndef LINUX
+		} else if (!strcmp("-no-hdd", argv[i])) {
+			// console policy hides HDD/ATA: reject those device families
+			FileSystem_SetHddEnabled(0);
+#endif
 		} else if (!strcmp("-user", argv[i])) {
 			// set new username
 
@@ -67,10 +73,13 @@ int server(void *argv)
 {
 	// run server
 
-	while (FtpServer_IsRunning(&srv))
+	while (FtpServer_IsRunning(&srv) && !FtpControl_Stopping())
 		FtpServer_HandleEvents(&srv);
 
 	FtpServer_Destroy(&srv);
+	FileSystem_UnmountAll();
+	FtpControl_Stopped();
+	ExitDeleteThread();
 	return 0;
 }
 
@@ -118,16 +127,28 @@ s32 _start(int argc, char *argv[])
 
 	pid = CreateThread(&mythread);
 
-	if (pid > 0) {
-		if ((i = StartThread(pid, NULL)) < 0) {
-			FtpServer_Destroy(&srv);
-			printf("ps2ftpd: StartThread failed (%d)\n", i);
-			return MODULE_NO_RESIDENT_END;
-		}
-	} else {
+	if (pid <= 0) {
 		FtpServer_Destroy(&srv);
 		printf("ps2ftpd: CreateThread failed (%d)\n", pid);
 		return MODULE_NO_RESIDENT_END;
+	}
+
+	// report resident only once the EE can bind the control RPC
+
+	FileSystem_ResetMounts();
+	if ((i = FtpControl_Init(&srv)) < 0) {
+		DeleteThread(pid);
+		FtpServer_Destroy(&srv);
+		printf("ps2ftpd: control RPC failed (%d)\n", i);
+		return MODULE_NO_RESIDENT_END;
+	}
+
+	if ((i = StartThread(pid, NULL)) < 0) {
+		// the control RPC keeps the module resident and reports STOPPED
+		DeleteThread(pid);
+		FtpServer_Destroy(&srv);
+		FtpControl_Stopped();
+		printf("ps2ftpd: StartThread failed (%d)\n", i);
 	}
 
 	return MODULE_RESIDENT_END;

@@ -33,6 +33,7 @@
 #include "FtpServer.h"
 
 #include <errno.h>
+#include "FtpControl.h"
 
 void FtpServer_Create(FtpServer *pServer)
 {
@@ -193,7 +194,10 @@ int FtpServer_HandleEvents(FtpServer *pServer)
 	}
 	FtpServer_ClientEndTraverse;
 
-	res = select(hs + 1, &r, &w, NULL, NULL);
+	struct timeval timeout = {0, 100000}; /* wake an idle server so the owner observes STOP */
+	res = select(hs + 1, &r, &w, NULL, &timeout);
+	if (FtpControl_Stopping())
+		return 0;
 	if (res <= 0)
 		return res;
 

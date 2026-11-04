@@ -26,7 +26,7 @@ with tempfile.TemporaryDirectory(prefix="launchstation-ftp-network-") as tmp:
         "-std=gnu11", "-DLINUX", "-Wall", "-Wextra", "-Werror", "-fno-builtin",
         *[str(source / name) for name in
           ("FileSystem.c", "FtpClient.c", "FtpCommands.c", "FtpServer.c", "FtpMessages.c", "main.c")],
-        "-o", str(exe),
+        "-I", str(root / "include"), "-o", str(exe),
     ], check=True)
     storage = work / "storage"
     storage.mkdir()

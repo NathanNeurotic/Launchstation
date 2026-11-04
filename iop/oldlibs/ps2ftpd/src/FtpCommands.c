@@ -217,7 +217,7 @@ void FtpClient_OnCmdList(struct FtpClient *pClient, const char *pPath, int iName
 	// attempt to open directory; only a listing that opened is pending
 
 	if (FileSystem_OpenDir(&pClient->m_kContext, pPath) < 0) {
-		FtpClient_Send(pClient, 500, pClient->m_pMessages[FTPMSG_UNABLE_TO_OPEN_DIRECTORY]);
+		FtpClient_Send(pClient, 550, pClient->m_pMessages[FTPMSG_UNABLE_TO_OPEN_DIRECTORY]);
 		return;
 	}
 
@@ -420,50 +420,6 @@ void FtpClient_OnCmdSite(FtpClient *pClient, const char *pCmd)
 			result = (result << 8) | tolower(*(c++));
 
 		switch (result) {
-#ifndef LINUX
-			// SITE MNT <device> <file>
-			case SITECMD_MNT: {
-				char *mount_point;
-				char *mount_file;
-
-				// get mount point
-				mount_point = strtok(NULL, " ");
-				if (!mount_point || !strlen(mount_point)) {
-					FtpClient_Send(pClient, 500, pClient->m_pMessages[FTPMSG_REQUIRES_PARAMETERS]);
-					break;
-				}
-
-				// get mount source
-				mount_file = strtok(NULL, "");
-				if (!mount_file || !strlen(mount_file)) {
-					FtpClient_Send(pClient, 500, pClient->m_pMessages[FTPMSG_REQUIRES_PARAMETERS]);
-					break;
-				}
-
-				FtpClient_OnSiteMount(pClient, mount_point, mount_file);
-			} break;
-
-			// SITE UMNT <device>
-			case SITECMD_UMNT: {
-				char *mount_point = strtok(NULL, "");
-
-				if (mount_point)
-					FtpClient_OnSiteUmount(pClient, mount_point);
-				else
-					FtpClient_Send(pClient, 500, pClient->m_pMessages[FTPMSG_REQUIRES_PARAMETERS]);
-			} break;
-
-			// SITE SYNC <device>
-			case SITECMD_SYNC: {
-				char *devname = strtok(NULL, "");
-
-				if (devname)
-					FtpClient_OnSiteSync(pClient, devname);
-				else
-					FtpClient_Send(pClient, 500, pClient->m_pMessages[FTPMSG_REQUIRES_PARAMETERS]);
-			} break;
-#endif
-
 			default: {
 				FtpClient_Send(pClient, 500, pClient->m_pMessages[FTPMSG_NOT_SUPPORTED]);
 			} break;
@@ -471,35 +427,3 @@ void FtpClient_OnCmdSite(FtpClient *pClient, const char *pCmd)
 	} else
 		FtpClient_Send(pClient, 500, pClient->m_pMessages[FTPMSG_NOT_UNDERSTOOD]);
 }
-
-#ifndef LINUX
-void FtpClient_OnSiteMount(struct FtpClient *pClient, const char *pMountPoint, const char *pMountFile)
-{
-	// mount filesystem
-
-	if (FileSystem_MountDevice(&(pClient->m_kContext), pMountPoint, pMountFile) < 0)
-		FtpClient_Send(pClient, 550, pClient->m_pMessages[FTPMSG_COMMAND_FAILED]);
-	else
-		FtpClient_Send(pClient, 214, pClient->m_pMessages[FTPMSG_COMMAND_SUCCESSFUL]);
-}
-
-void FtpClient_OnSiteUmount(struct FtpClient *pClient, const char *pMountPoint)
-{
-	// unmount filesystem
-
-	if (FileSystem_UnmountDevice(&(pClient->m_kContext), pMountPoint) < 0)
-		FtpClient_Send(pClient, 550, pClient->m_pMessages[FTPMSG_COMMAND_FAILED]);
-	else
-		FtpClient_Send(pClient, 214, pClient->m_pMessages[FTPMSG_COMMAND_SUCCESSFUL]);
-}
-
-void FtpClient_OnSiteSync(struct FtpClient *pClient, const char *pDeviceName)
-{
-	// sync data with filesystem
-
-	if (FileSystem_SyncDevice(&(pClient->m_kContext), pDeviceName) < 0)
-		FtpClient_Send(pClient, 550, pClient->m_pMessages[FTPMSG_COMMAND_FAILED]);
-	else
-		FtpClient_Send(pClient, 214, pClient->m_pMessages[FTPMSG_COMMAND_SUCCESSFUL]);
-}
-#endif
