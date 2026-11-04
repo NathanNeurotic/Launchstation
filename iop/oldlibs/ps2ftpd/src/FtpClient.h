@@ -91,13 +91,6 @@ enum {
 	//FTPCMD_HELP = FCOMMAND('h','e','l','p'),
 };
 
-enum {
-	SITECMD_MNT = FCOMMAND(0, 'm', 'n', 't'),
-	SITECMD_UMNT = FCOMMAND('u', 'm', 'n', 't'),
-	SITECMD_SYNC = FCOMMAND('s', 'y', 'n', 'c'),
-	SITECMD_HELP = FCOMMAND('h', 'e', 'l', 'p'),
-};
-
 typedef struct FtpClientContainer
 {
 	struct FtpClient *m_pClient;
@@ -165,9 +158,6 @@ void FtpClient_OnCmdRest(FtpClient *pClient, s64 iMarker);
 void FtpClient_OnCmdSize(FtpClient *pClient, const char *pFile);
 void FtpClient_OnCmdFeat(FtpClient *pClient);
 
-void FtpClient_OnSiteMount(FtpClient *pClient, const char *pMountPoint, const char *pMountFile);
-void FtpClient_OnSiteUmount(FtpClient *pClient, const char *pMountPoint);
-void FtpClient_OnSiteSync(FtpClient *pClient, const char *pDeviceName);
 void FtpClient_OnDataConnect(FtpClient *pClient, int *ip, int port);
 void FtpClient_OnDataConnected(FtpClient *pClient);
 void FtpClient_OnDataRead(FtpClient *pClient);

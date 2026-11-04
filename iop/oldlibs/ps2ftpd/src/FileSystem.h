@@ -154,6 +154,8 @@ int FileSystem_PrepareRename(FSContext *pContext, const char *name, FSRename *re
 int FileSystem_Rename(FSContext *pContext, const FSRename *rename, const char *newName);
 
 #ifndef LINUX
+/* Set once from the module arguments, before the FTP thread starts. */
+void FileSystem_SetHddEnabled(int enabled);
 void FileSystem_ResetMounts(void);
 void FileSystem_UnmountAll(void);
 
@@ -162,15 +164,6 @@ const char *FileSystem_ClassifyPath(FSContext *pContext, const char *pPath);
 
 //! Find an exact, supported device name through the exported IOMANX table.
 iop_device_t *FileSystem_ScanDevice(const char *name);
-
-//! Mount device
-int FileSystem_MountDevice(FSContext *pContext, const char *mount_point, const char *mount_file);
-
-//! Unmount device
-int FileSystem_UnmountDevice(FSContext *pContext, const char *mount_point);
-
-//! Sync device
-int FileSystem_SyncDevice(FSContext *pContext, const char *devname);
 
 //! Get current ps2 system time
 int getPs2Time(ps2time *tm);

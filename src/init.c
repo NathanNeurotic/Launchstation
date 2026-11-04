@@ -1125,6 +1125,13 @@ static void load_ps2ftpd(void)
 
 	arg_p = "-anonymous";
 	arglen = strlen(arg_p);
+	/* Share the file browser's hardware gate, independently of Hide HDD
+	 * settings: the IOP then rejects hdd/ata paths even if a driver got
+	 * registered anyway. Ported from saildot4k/Launchstation 7b2c2cd. */
+	if (shouldHideHddAtaDevices()) {
+		arg_p = "-anonymous\0-no-hdd";
+		arglen = sizeof("-anonymous\0-no-hdd");
+	}
 
 	if (!load_ps2ip())
 		return;

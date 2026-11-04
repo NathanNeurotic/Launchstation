@@ -45,6 +45,14 @@ static struct {
 	unsigned int references;
 } mounts[FS_PFS_UNITS];
 
+/* 0 when the EE started the module with -no-hdd (console policy hides HDD/ATA). */
+static int hdd_enabled = 1;
+
+void FileSystem_SetHddEnabled(int enabled)
+{
+	hdd_enabled = enabled != 0;
+}
+
 void FileSystem_ResetMounts(void)
 {
 	memset(mounts, 0, sizeof(mounts));
@@ -805,6 +813,10 @@ const char *FileSystem_ClassifyPath(FSContext *pContext, const char *pPath)
 		return NULL;
 	memcpy(name, cursor, length);
 	name[length] = '\0';
+	/* Consoles started with -no-hdd reject the HDD/ATA families even if a
+	 * driver got registered anyway. */
+	if (!hdd_enabled && (!strcmp(name, "hdd") || !strcmp(name, "ata")))
+		return NULL;
 	pContext->m_kFile.device = FileSystem_ScanDevice(name);
 	if (!pContext->m_kFile.device)
 		return NULL;
@@ -874,127 +886,6 @@ iop_device_t *FileSystem_ScanDevice(const char *name)
 		legacy_usb = devices[index];
 	}
 	return legacy_usb;
-}
-
-//! Mount device
-int FileSystem_MountDevice(FSContext *pContext, const char *mount_point, const char *mount_file)
-{
-	if (!mount_point || !mount_file)
-		return -1;
-
-	if (NULL == (mount_point = FileSystem_ClassifyPath(pContext, mount_point)))
-		return -1;
-
-	if ((FS_IODEVICE != pContext->m_eType) || (NULL == pContext->m_kFile.device))
-		return -1;
-
-	if (!strcmp(pContext->m_kFile.device->name, "pfs") &&
-        mounts[pContext->m_iMount].references > 1) {
-        FileSystem_Close(pContext);
-        return -EBUSY;
-    }
-	if ((pContext->m_kFile.device->type & 0xf0000000) != IOP_DT_FSEXT) {
-#ifdef DEBUG
-		printf("ps2ftpd: device fs is not extended.\n");
-#endif
-		FileSystem_Close(pContext);
-		return -1;
-	}
-
-	if (pContext->m_kFile.device->ops->mount(&(pContext->m_kFile), mount_point, mount_file, 0, NULL, 0) < 0) {
-#ifdef DEBUG
-		printf("ps2ftpd: device-mount failed.\n");
-#endif
-		FileSystem_Close(pContext);
-		return -1;
-	}
-
-	DelayThread(100);
-
-	if (!strcmp(pContext->m_kFile.device->name, "pfs") && pContext->m_kFile.unit >= FS_PFS_BASE && pContext->m_kFile.unit < FS_PFS_BASE + FS_PFS_UNITS)
-		{
-        int slot = pContext->m_kFile.unit - FS_PFS_BASE;
-        pfs_mount_generation[slot]++;
-        strncpy(mounts[slot].partition, mount_file, sizeof(mounts[slot].partition) - 1);
-        mounts[slot].partition[sizeof(mounts[slot].partition) - 1] = '\0';
-    }
-	FileSystem_Close(pContext);
-	return 0;
-}
-
-//! Unmount device
-int FileSystem_UnmountDevice(FSContext *pContext, const char *mount_point)
-{
-	if (!mount_point)
-		return -1;
-
-	if (NULL == (mount_point = FileSystem_ClassifyPath(pContext, mount_point)))
-		return -1;
-
-	if ((FS_IODEVICE != pContext->m_eType) || (NULL == pContext->m_kFile.device))
-		return -1;
-
-	if (!strcmp(pContext->m_kFile.device->name, "pfs") &&
-        mounts[pContext->m_iMount].references > 1) {
-        FileSystem_Close(pContext);
-        return -EBUSY;
-    }
-	if ((pContext->m_kFile.device->type & 0xf0000000) != IOP_DT_FSEXT) {
-#ifdef DEBUG
-		printf("ps2ftpd: device fs is not extended.\n");
-#endif
-		FileSystem_Close(pContext);
-		return -1;
-	}
-
-	if (pContext->m_kFile.device->ops->umount(&(pContext->m_kFile), mount_point) < 0) {
-#ifdef DEBUG
-		printf("ps2ftpd: device-unmount failed.\n");
-#endif
-		FileSystem_Close(pContext);
-		return -1;
-	}
-
-	if (!strcmp(pContext->m_kFile.device->name, "pfs") && pContext->m_kFile.unit >= FS_PFS_BASE && pContext->m_kFile.unit < FS_PFS_BASE + FS_PFS_UNITS)
-		{
-        int slot = pContext->m_kFile.unit - FS_PFS_BASE;
-        pfs_mount_generation[slot]++;
-        mounts[slot].partition[0] = '\0';
-    }
-	FileSystem_Close(pContext);
-	return 0;
-}
-
-//! Synchronize device
-int FileSystem_SyncDevice(FSContext *pContext, const char *devname)
-{
-	if (!devname)
-		return -1;
-
-	if (NULL == (devname = FileSystem_ClassifyPath(pContext, devname)))
-		return -1;
-
-	if ((FS_IODEVICE != pContext->m_eType) || (NULL == pContext->m_kFile.device))
-		return -1;
-
-	if ((pContext->m_kFile.device->type & 0xf0000000) != IOP_DT_FSEXT) {
-#ifdef DEBUG
-		printf("ps2ftpd: device fs is not extended.\n");
-#endif
-		FileSystem_Close(pContext);
-		return -1;
-	}
-
-	if (pContext->m_kFile.device->ops->sync(&(pContext->m_kFile), devname, 0) < 0) {
-#ifdef DEBUG
-		printf("ps2ftpd: device-sync failed.\n");
-#endif
-		FileSystem_Close(pContext);
-		return -1;
-	}
-
-	FileSystem_Close(pContext);
-	return 0;
 }
 
 int getPs2Time(ps2time *tm)

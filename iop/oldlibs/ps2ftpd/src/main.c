@@ -36,6 +36,11 @@ int process_args(FtpServer *pServer, int argc, char *argv[])
 		} else if (!strcmp("-anonymous", argv[i])) {
 			// enable anonymous logins
 			FtpServer_SetAnonymous(pServer, 1);
+#ifndef LINUX
+		} else if (!strcmp("-no-hdd", argv[i])) {
+			// console policy hides HDD/ATA: reject those device families
+			FileSystem_SetHddEnabled(0);
+#endif
 		} else if (!strcmp("-user", argv[i])) {
 			// set new username
 

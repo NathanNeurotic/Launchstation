@@ -26,6 +26,12 @@ USBMASS driver can be presented as `usb`; it is never used to guess the identity
 of a BDM volume. Duplicate registry entries produce one visible device name.
 Unit probing opens and closes roots, with two MC/MMCE slots and four PFS mounts.
 
+When the console policy hides HDD/ATA hardware, the EE loads the module with
+`-no-hdd` and the IOP then rejects `hdd` and `ata` paths even if a driver got
+registered anyway. Remote SITE mount management is unsupported: the virtual
+HDD namespace owns its PFS mounts, so no client command can remount a
+partition underneath another connection.
+
 `FileSystem_BuildPath()` accepts absolute or CWD-relative virtual paths, resolves
 `.` and `..`, and rejects overflow. Its output buffer must hold `FS_PATH_MAX`
 bytes. `FileSystem_ClassifyPath()` selects an exact device name and decimal
@@ -79,7 +85,8 @@ dependency for the module-end constants. It also compiles all five production
 filesystem/command/client/server/message units unchanged,
 using the preserved PS2BUILD ABI headers and mocked drivers/sockets in
 `tests/ftp/`. Fault cases cover short transfers, concurrent clients, directory
-errors, close errors, failed resumes, large sizes and command framing. The
+errors, close errors, failed resumes, large sizes, command framing, the
+`-no-hdd` device gate and the rejection of SITE mount management. The
 normal CI host-test step runs it before both target builds.
 `tests/test_ftp_network.py` also builds the POSIX backend and checks two real
 loopback clients, passive/active transfers, resume and command pipelining.

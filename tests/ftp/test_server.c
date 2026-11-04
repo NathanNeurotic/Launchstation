@@ -441,6 +441,7 @@ static void command(FtpClient *c, const char *text)
 static void setup(void)
 {
 	FileSystem_ResetMounts();
+	FileSystem_SetHddEnabled(1);
 	FtpControl_Init(NULL);
 	for (int i = 0; i < node_count; i++) {
 		free(nodes[i].data);
@@ -600,6 +601,38 @@ static void test_hdd_listing(void)
 	assert(open_count == close_count);
 	puts("PASS: HDD partition filtering terminates on errors and CWD auto-mounts PFS0");
 }
+static void test_hdd_gate(void)
+{
+	setup();
+	iop_device_t hdd = {.name = "hdd", .type = IOP_DT_FS | IOP_DT_FSEXT, .ops = &ops};
+	devices[16] = &hdd;
+	add(&hdd, 0, "/", 1, NULL, 0);
+	add(&hdd, 0, "/__common", 1, NULL, 0);
+	FtpServer s;
+	FtpServer_Create(&s);
+	/* -no-hdd: hdd/ata paths are rejected even though the driver registered. */
+	FileSystem_SetHddEnabled(0);
+	FtpClient *c = client(&s, 10, "/usb/0");
+	command(c, "CWD /hdd/0");
+	assert(reply(10) == 550);
+	command(c, "CWD /ata/0");
+	assert(reply(10) == 550);
+	command(c, "SIZE /hdd/0/__common/x.elf");
+	assert(reply(10) == 550);
+	command(c, "CWD /mc/0");
+	assert(reply(10) == 250);
+	/* SITE mount management is unsupported regardless of the hdd gate. */
+	command(c, "SITE MNT /pfs/0 hdd0:__common");
+	assert(reply(10) == 500);
+	command(c, "SITE UMNT /pfs/0");
+	assert(reply(10) == 500);
+	FileSystem_SetHddEnabled(1);
+	command(c, "CWD /hdd/0");
+	assert(reply(10) == 250);
+	FtpServer_Destroy(&s);
+	assert(open_count == close_count);
+	puts("PASS: -no-hdd rejects HDD/ATA paths and SITE mount management is unsupported");
+}
 static void test_renames(void)
 {
 	setup();
@@ -643,16 +676,41 @@ static void test_renames(void)
 	assert(reply(10) == 350);
 	command(a, "RNTO new-folder");
 	assert(reply(10) == 250 && find(&usb, 0, "/new-folder"));
-	command(a, "CWD /pfs/0");
-	command(a, "RNFR file.elf");
+	/* Mount generations without SITE: a slot remounted to another partition
+	 * between RNFR and RNTO rejects the stale rename; remounting an
+	 * unrelated slot keeps the pending rename valid. */
+	iop_device_t hdd = {.name = "hdd", .type = IOP_DT_FS | IOP_DT_FSEXT, .ops = &ops};
+	devices[16] = &hdd;
+	add(&hdd, 0, "/PART.A", 1, NULL, 0);
+	add(&hdd, 0, "/PART.B", 1, NULL, 0);
+	add(&hdd, 0, "/PART.C", 1, NULL, 0);
+	add(&pfs, 4, "/", 1, NULL, 0);
+	add(&pfs, 4, "/move.elf", 0, payload, 7);
+	add(&pfs, 5, "/", 1, NULL, 0);
+	command(a, "CWD /hdd/0/PART.A");
+	assert(reply(10) == 250);
+	command(a, "RNFR move.elf");
 	assert(reply(10) == 350);
-	assert(!FileSystem_UnmountDevice(&b->m_kContext, "/pfs/0"));
-	command(a, "RNTO stale.elf");
-	assert(reply(10) == 550 && find(&pfs, 0, "/file.elf"));
-	command(a, "RNFR file.elf");
-	assert(!FileSystem_UnmountDevice(&b->m_kContext, "/pfs/1"));
-	command(a, "RNTO valid.elf");
-	assert(reply(10) == 250 && find(&pfs, 0, "/valid.elf"));
+	/* One-shot commands release their mount references, so slot 0 is free and
+	 * b's different partition remounts it, bumping the mount generation. */
+	command(b, "CWD /hdd/0/PART.B");
+	assert(reply(11) == 250);
+	command(a, "RNTO /hdd/0/PART.A/stale.elf");
+	assert(reply(10) == 550 && find(&pfs, 4, "/move.elf"));
+	command(a, "RNFR /hdd/0/PART.B/move.elf");
+	assert(reply(10) == 350);
+	/* An open directory pins slot 0, so mounting another partition takes an
+	 * unrelated slot and leaves the pending rename valid. */
+	FSContext pin;
+	FileSystem_Create(&pin);
+	assert(!FileSystem_OpenDir(&pin, "/hdd/0/PART.B"));
+	FSContext tmp;
+	FileSystem_Create(&tmp);
+	assert(!FileSystem_ChangeDir(&tmp, "/hdd/0/PART.C"));
+	FileSystem_Close(&tmp);
+	command(a, "RNTO /hdd/0/PART.B/renamed.elf");
+	assert(reply(10) == 250 && find(&pfs, 4, "/renamed.elf"));
+	FileSystem_Close(&pin);
 	FtpServer_Destroy(&s);
 	assert(open_count == close_count);
 	puts("PASS: interleaved rename sources, sequencing, folders, cross-device rejection and PFS mount "
@@ -936,6 +994,7 @@ int main(void)
 		payload[i] = (unsigned char)(i * 17 + i / 251);
 	test_paths_and_listing();
 	test_hdd_listing();
+	test_hdd_gate();
 	test_renames();
 	test_transfers();
 	test_decimal_formatting();
