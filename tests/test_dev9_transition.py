@@ -142,12 +142,18 @@ int main(void) {
     assert(ftpd_arglen==(int)sizeof("-anonymous\0-no-hdd"));
     assert(!strcmp(ftpd_args, "-anonymous") && !strcmp(ftpd_args + sizeof("-anonymous"), "-no-hdd"));
     hide_hdd=0;
+    /* A ps2ftpd whose start failed (MODULE_NO_RESIDENT_END) was unloaded: it never gates IOP resets. */
+    reset(); assert(ensureDashboardIpNetworkReady());
+    module_result=1; load_ps2ftpd();
+    assert(!have_ps2ftpd);
+    module_result=0; load_ps2ftpd();
+    assert(have_ps2ftpd);
     /* XFROM boot registers power-off even if DEV9 rejects initialization. */
     reset(); console_is_PSX=1; module_id=-1;
     assert(!loadFlashModules() && power_calls==1 && !flash_calls);
     reset(); console_is_PSX=1;
     assert(loadFlashModules() && power_calls==1 && flash_calls==1);
-    puts("PASS: refused DEV9/IP transitions, BDM ordering, dependent services, XFROM power-off and CF ownership");
+    puts("PASS: refused DEV9/IP transitions, BDM ordering, dependent services, failed FTP start, XFROM power-off and CF ownership");
 }
 '''
 with tempfile.TemporaryDirectory(prefix="dev9-transition-") as folder:

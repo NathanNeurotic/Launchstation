@@ -73,10 +73,8 @@ int server(void *argv)
 {
 	// run server
 
-	FileSystem_ResetMounts();
-	if (FtpControl_Init(&srv) >= 0)
-		while (FtpServer_IsRunning(&srv) && !FtpControl_Stopping())
-			FtpServer_HandleEvents(&srv);
+	while (FtpServer_IsRunning(&srv) && !FtpControl_Stopping())
+		FtpServer_HandleEvents(&srv);
 
 	FtpServer_Destroy(&srv);
 	FileSystem_UnmountAll();
@@ -129,16 +127,28 @@ s32 _start(int argc, char *argv[])
 
 	pid = CreateThread(&mythread);
 
-	if (pid > 0) {
-		if ((i = StartThread(pid, NULL)) < 0) {
-			FtpServer_Destroy(&srv);
-			printf("ps2ftpd: StartThread failed (%d)\n", i);
-			return MODULE_NO_RESIDENT_END;
-		}
-	} else {
+	if (pid <= 0) {
 		FtpServer_Destroy(&srv);
 		printf("ps2ftpd: CreateThread failed (%d)\n", pid);
 		return MODULE_NO_RESIDENT_END;
+	}
+
+	// report resident only once the EE can bind the control RPC
+
+	FileSystem_ResetMounts();
+	if ((i = FtpControl_Init(&srv)) < 0) {
+		DeleteThread(pid);
+		FtpServer_Destroy(&srv);
+		printf("ps2ftpd: control RPC failed (%d)\n", i);
+		return MODULE_NO_RESIDENT_END;
+	}
+
+	if ((i = StartThread(pid, NULL)) < 0) {
+		// the control RPC keeps the module resident and reports STOPPED
+		DeleteThread(pid);
+		FtpServer_Destroy(&srv);
+		FtpControl_Stopped();
+		printf("ps2ftpd: StartThread failed (%d)\n", i);
 	}
 
 	return MODULE_RESIDENT_END;

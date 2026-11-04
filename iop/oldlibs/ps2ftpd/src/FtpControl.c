@@ -77,11 +77,13 @@ void FtpControl_Error(int error)
 static SifRpcDataQueue_t queue;
 static SifRpcServerData_t rpc;
 static unsigned char rpc_buffer[sizeof(LsFtpStatus)] __attribute__((aligned(64)));
+static volatile int registered;
 static void control_thread(void *arg)
 {
 	(void)arg;
 	sceSifSetRpcQueue(&queue, GetThreadId());
 	sceSifRegisterRpc(&rpc, LS_FTP_RPC_ID, FtpControl_Exchange, rpc_buffer, NULL, NULL, &queue);
+	registered = 1;
 	sceSifRpcLoop(&queue);
 }
 #endif
@@ -106,6 +108,9 @@ int FtpControl_Init(FtpServer *owner)
 		DeleteThread(id);
 		return -EIO;
 	}
+	/* The EE binds as soon as the module reports resident. */
+	while (!registered)
+		DelayThread(1000);
 #endif
 	return 0;
 }

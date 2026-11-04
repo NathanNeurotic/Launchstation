@@ -45,6 +45,9 @@ int DashFtpServer(void)
     if (!dashWorkerAwaitAll("Preparing FTP Server")) return 0;
     filerRootMcPollIdle();
     dashLoadingBegin("Starting FTP Server");
+    /* A STOP that timed out may have finished since: drop the stopped module and start again. */
+    if (isFtpServerRunning() && ftpSessionQuery(&status) && status.state == LS_FTP_STOPPED)
+        rebootIopAndReloadCoreStackSilent();
     loadNetModules();
     if (!isFtpNetworkReady()) {
         dashLoadingEnd();
@@ -56,7 +59,10 @@ int DashFtpServer(void)
     while (isFtpNetworkReady()) {
         DashInput input;
         if (!ftpSessionQuery(&status)) { ok = 0; break; }
-        if (status.state == LS_FTP_STOPPED) break;
+        if (status.state == LS_FTP_STOPPED) {
+            rebootIopAndReloadCoreStackSilent();
+            break;
+        }
         ftpFrame(&status, 0);
         dashInputPoll(&input);
         /* Back returns with FTP running. Normal dashboard remote/ISO polling resumes. */
