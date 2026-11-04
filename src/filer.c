@@ -1410,6 +1410,14 @@ int pollRootMemoryCardDevices(void)
 		return changed;
 	}
 
+#ifdef ETH
+	/* FTP's filesystem calls and MCSERV share MCMAN's card/cache state, and
+	 * FTP keeps running behind the dashboard. A request already in flight may
+	 * finish above; start no new one while FTP is resident. Presence stays
+	 * cached. From saildot4k/Launchstation 7b2c2cd. */
+	if (isFtpServerRunning())
+		return FALSE;
+#endif
 	if (Timer() < root_mc_next_poll_time)
 		return FALSE;
 	/* Polling must never reset MX4SIO or send mc1 requests through its

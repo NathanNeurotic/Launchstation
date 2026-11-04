@@ -206,10 +206,7 @@ void FtpClient_OnCommand(FtpClient *pClient, const char *pString)
 		// if user has not logged in, we only allow a small subset of commands
 
 		if (pClient->m_eAuthState != AUTHSTATE_VALID) {
-			if (result != FTPCMD_USER && result != FTPCMD_PASS)
-			FtpControl_Operation(pString);
-
-		switch (result) {
+			switch (result) {
 				// USER <name>
 				case FTPCMD_USER: {
 					char *user = strtok(NULL, "");
@@ -242,6 +239,9 @@ void FtpClient_OnCommand(FtpClient *pClient, const char *pString)
 
 			return;
 		}
+
+		if (result != FTPCMD_USER && result != FTPCMD_PASS)
+			FtpControl_Operation(pString);
 
 		switch (result) {
 			case FTPCMD_USER:

@@ -33,6 +33,8 @@ static int write_cap, read_cap, write_error, read_error, dir_error, close_error,
 static int dir_calls, dir_fail_on;
 static Socket sockets[MAX_SOCKETS];
 static int next_socket = 30, connect_error;
+static int select_calls, select_bounded;
+static struct timeval select_timeout;
 static iop_device_t *devices[FS_IOMANX_DEVICES];
 static iop_device_t usb, mass, mc, mmce, pfs, duplicate_usb, ata, ilink;
 static unsigned char payload[PAYLOAD_SIZE];
@@ -53,9 +55,10 @@ int lwip_shutdown(int fd, int how)
 	sockets[fd].read_error = ECONNRESET;
 	return 0;
 }
+/* Nodes keep physical units, so EE-owned PFS slots (0..FS_PFS_BASE-1) stay
+ * distinct from FTP-owned ones; add() treats a low pfs unit as an FTP slot. */
 static Node *find(iop_device_t *device, int unit, const char *path)
 {
-	if (!strcmp(device->name, "pfs") && unit >= FS_PFS_BASE) unit -= FS_PFS_BASE;
 	for (int i = 0; i < node_count; i++)
 		if (nodes[i].device == device && nodes[i].unit == unit && !strcmp(nodes[i].path, path))
 			return &nodes[i];
@@ -67,7 +70,7 @@ static Node *add(iop_device_t *device, int unit, const char *path, int dir, cons
 	Node *n = &nodes[node_count++];
 	memset(n, 0, sizeof(*n));
 	n->device = device;
-	n->unit = !strcmp(device->name, "pfs") && unit >= FS_PFS_BASE ? unit - FS_PFS_BASE : unit;
+	n->unit = !strcmp(device->name, "pfs") && unit < FS_PFS_BASE ? unit + FS_PFS_BASE : unit;
 	n->dir = dir;
 	strcpy(n->path, path);
 	n->data = calloc(PAYLOAD_SIZE + 1024, 1);
@@ -343,7 +346,10 @@ int ftp_test_disconnect(int fd)
 int ftp_test_select(int count, fd_set *r, fd_set *w, fd_set *e, struct timeval *t)
 {
 	(void)e;
-	(void)t;
+	select_calls++;
+	select_bounded = t != NULL;
+	if (t)
+		select_timeout = *t;
 	int ready = 0;
 	for (int fd = 0; fd < count; fd++) {
 		if (FD_ISSET(fd, r)) {
@@ -932,7 +938,7 @@ static void test_command_stream(void)
 	assert(reply(10) == 426 && strstr((char *)sockets[10].output, "\r\n226 ") &&
 		   c->m_eDataAction == DATAACTION_NONE);
 	command(c, "LIST /nosuchdevice/");
-	assert(reply(10) == 500 && c->m_eDataAction == DATAACTION_NONE);
+	assert(reply(10) == 550 && c->m_eDataAction == DATAACTION_NONE);
 	memset(c->m_kContext.m_Path, 'a', sizeof(c->m_kContext.m_Path) - 1);
 	c->m_kContext.m_Path[0] = '/';
 	c->m_kContext.m_Path[sizeof(c->m_kContext.m_Path) - 1] = 0;
@@ -987,6 +993,77 @@ static void test_cooperative_stop(void)
 	assert(st->state == LS_FTP_STOPPED);
 	puts("PASS: cooperative STOP shuts down live transfer sockets and closes every file");
 }
+static void test_idle_stop(void)
+{
+	setup();
+	FtpServer s;
+	FtpServer_Create(&s);
+	FtpControl_Init(&s);
+	LsFtpStatus *st = FtpControl_Exchange(LS_FTP_STOP, NULL, 0);
+	assert(st->state == LS_FTP_STOPPING && st->clients == 0);
+	/* No client socket to shut down: only a bounded select lets the owner loop
+	 * re-check FtpControl_Stopping() instead of waiting for a connection. */
+	select_calls = select_bounded = 0;
+	assert(FtpServer_HandleEvents(&s) == 0);
+	assert(select_calls == 1 && select_bounded);
+	assert(select_timeout.tv_sec == 0 && select_timeout.tv_usec > 0 && select_timeout.tv_usec <= 200000);
+	assert(FtpControl_Stopping());
+	FtpServer_Destroy(&s);
+	FtpControl_Stopped();
+	st = FtpControl_Exchange(LS_FTP_STATUS, NULL, 0);
+	assert(st->state == LS_FTP_STOPPED);
+	puts("PASS: STOP with no connected clients wakes the bounded server loop");
+}
+static void test_status_operation(void)
+{
+	setup();
+	FtpServer s;
+	FtpServer_Create(&s);
+	FtpClient *c = FtpServer_OnClientConnect(&s, 10);
+	assert(c);
+	command(c, "CWD /usb/0");
+	assert(reply(10) != 250);
+	LsFtpStatus *st = FtpControl_Exchange(LS_FTP_STATUS, NULL, 0);
+	assert(!st->operation[0]); /* rejected pre-login commands are not operations */
+	c->m_eAuthState = AUTHSTATE_VALID;
+	assert(FileSystem_ChangeDir(&c->m_kContext, "/usb/0") == 0);
+	command(c, "SIZE file.elf");
+	assert(reply(10) == 213);
+	st = FtpControl_Exchange(LS_FTP_STATUS, NULL, 0);
+	assert(!strcmp(st->operation, "SIZE file.elf"));
+	command(c, "PASS secret");
+	assert(reply(10) == 503);
+	st = FtpControl_Exchange(LS_FTP_STATUS, NULL, 0);
+	assert(!strcmp(st->operation, "SIZE file.elf")); /* credentials are never recorded */
+	FtpServer_Destroy(&s);
+	puts("PASS: status reports authenticated operations and never records credentials");
+}
+static void test_pfs_slots(void)
+{
+	setup();
+	add(&pfs, 0, "/", 1, NULL, 0)->unit = 2; /* an EE-owned PFS slot */
+	FSContext ctx;
+	FSFileInfo info;
+	FileSystem_Create(&ctx);
+	assert(!FileSystem_OpenDir(&ctx, "/pfs"));
+	assert(FileSystem_ReadDir(&ctx, &info) == 1 && !strcmp(info.m_Name, "0"));
+	assert(FileSystem_ReadDir(&ctx, &info) == 1 && !strcmp(info.m_Name, "1"));
+	assert(FileSystem_ReadDir(&ctx, &info) == 0);
+	FileSystem_Close(&ctx);
+	assert(open_count == close_count);
+	iop_device_t hdd = {.name = "hdd", .type = IOP_DT_FS | IOP_DT_FSEXT, .ops = &ops};
+	devices[16] = &hdd;
+	add(&hdd, 0, "/", 1, NULL, 0);
+	add(&hdd, 0, "/__common", 1, NULL, 0);
+	FtpServer s;
+	FtpServer_Create(&s);
+	FtpClient *c = client(&s, 10, "/hdd/0/__common");
+	command(c, "LIST missing");
+	assert(reply(10) == 550 && c->m_kContext.m_iMount == -1 && c->m_eDataAction == DATAACTION_NONE);
+	FtpServer_Destroy(&s);
+	assert(open_count == close_count);
+	puts("PASS: root PFS listing probes FTP-owned slots and a failed LIST releases its mount");
+}
 
 int main(void)
 {
@@ -1001,6 +1078,9 @@ int main(void)
 	test_resume_and_size();
 	test_command_stream();
 	test_cooperative_stop();
+	test_idle_stop();
+	test_status_operation();
+	test_pfs_slots();
 	setup();
 	for (int i = 0; i < node_count; i++) {
 		free(nodes[i].data);

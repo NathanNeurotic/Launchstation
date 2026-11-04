@@ -217,7 +217,7 @@ void FtpClient_OnCmdList(struct FtpClient *pClient, const char *pPath, int iName
 	// attempt to open directory; only a listing that opened is pending
 
 	if (FileSystem_OpenDir(&pClient->m_kContext, pPath) < 0) {
-		FtpClient_Send(pClient, 500, pClient->m_pMessages[FTPMSG_UNABLE_TO_OPEN_DIRECTORY]);
+		FtpClient_Send(pClient, 550, pClient->m_pMessages[FTPMSG_UNABLE_TO_OPEN_DIRECTORY]);
 		return;
 	}
 

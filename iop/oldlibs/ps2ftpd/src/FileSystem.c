@@ -138,7 +138,7 @@ void FileSystem_UnmountAll(void)
 static const char *FileSystem_DeviceName(const iop_device_t *device)
 {
 	const char *name;
-	if (!device || !device->name || !(device->type & (IOP_DT_FS | IOP_DT_BLOCK)))
+	if (!device || !device->name || !device->ops || !(device->type & (IOP_DT_FS | IOP_DT_BLOCK)))
 		return NULL;
 	name = device->name;
 	/* Non-extended USBMASS is USB-only. BDM massN can also refer to ATA. */
@@ -283,7 +283,7 @@ int FileSystem_OpenDir(FSContext *pContext, const char *pDir)
 			break;
 	}
 
-	pContext->m_eType = FS_INVALID;
+	FileSystem_Close(pContext);
 	return -1;
 #endif
 }
@@ -438,6 +438,8 @@ int FileSystem_ReadDir(FSContext *pContext, FSFileInfo *pInfo)
 			while (pContext->m_kFile.unit < limit) {
 				iop_file_t probe = pContext->m_kFile;
 				int unit = pContext->m_kFile.unit++;
+				if (!strcmp(device->name, "pfs"))
+					probe.unit = unit + FS_PFS_BASE;
 				if (strcmp(device->name, "hdd")) {
 					probe.privdata = NULL;
 					probe.mode = O_DIROPEN;

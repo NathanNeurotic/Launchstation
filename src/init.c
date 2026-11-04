@@ -2527,7 +2527,9 @@ int loadDVRPHddModules(void)
 #ifdef ETH
 void loadNetModules(void)
 {
+    dashboard_ip_error = "PC CARD CompactFlash is using the network adapter.";
     if (pcCardCfOwnsBus()) return;
+    dashboard_ip_error = NULL;
     if (!have_ps2ftpd) {
         getIpConfig();
         if (!shouldHideHddAtaDevices()) {
@@ -2557,6 +2559,13 @@ void loadNetModules(void)
 int isFtpNetworkReady(void)
 {
 	return !ftpSessionStopped() && have_NetModules && have_ps2ftpd && have_ps2ip && have_ps2smap && ps2dev9_loaded;
+}
+
+int isFtpServerRunning(void)
+{
+	/* Module residency also covers STOPPED-but-not-yet-reset and a STOP that
+	 * timed out, when the IOP thread may still be touching MCMAN. */
+	return have_ps2ftpd;
 }
 
 /* Give a cold stack a resolver. Static IPCONFIG.DAT only holds IP, netmask

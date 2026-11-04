@@ -46,6 +46,11 @@ int DashFtpServer(void)
     filerRootMcPollIdle();
     dashLoadingBegin("Starting FTP Server");
     loadNetModules();
+    if (!isFtpNetworkReady()) {
+        dashLoadingEnd();
+        dashModalMessage(DI_WARNING, "FTP Server", dashboardIpNetworkError(), NULL);
+        return 0;
+    }
     memset(&status, 0, sizeof(status));
     dashInputFlush();
     while (isFtpNetworkReady()) {
