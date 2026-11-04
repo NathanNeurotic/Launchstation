@@ -187,6 +187,13 @@ static void metadata(iox_stat_t *s, Node *n)
 }
 static int drv_stat(iop_file_t *f, const char *name, iox_stat_t *s)
 {
+	char path[258];
+	/* Partition probes (partitionAllowed) ask for the bare partition name,
+	 * e.g. "__common", while nodes are keyed path-style: "/__common". */
+	if (!strcmp(f->device->name, "hdd") && name[0] != '/') {
+		snprintf(path, sizeof(path), "/%s", name);
+		name = path;
+	}
 	Node *n = find(f->device, f->unit, name);
 	if (!n)
 		return -ENOENT;
