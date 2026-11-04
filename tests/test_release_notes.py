@@ -100,6 +100,9 @@ without_kit = {name: digest for name, digest in digests.items() if name != "LAUN
 no_kit = notes.render(repo, revision, previous, 123, changes, without_kit, "284")
 assert "/latest/LAUNCHSTATION-284.zip" not in no_kit and "  LAUNCHSTATION-284.zip" not in no_kit and "was not rebuilt for this build" in no_kit
 assert "APP_LAUNCHSTATION-284.zip" in no_kit
+retry_omit = notes.render(repo, revision, previous, 123, changes, without_kit, "284", omit_kit=True)
+assert "was omitted on a publication retry" in retry_omit
+assert "was not rebuilt for this build" not in retry_omit
 assert "was not rebuilt" not in versioned and "/releases/download/latest/LAUNCHSTATION-284.zip" in versioned
 with tempfile.TemporaryDirectory(prefix="release-notes-nokit-") as folder:
     path = Path(folder)

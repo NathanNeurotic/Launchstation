@@ -22,6 +22,37 @@ assert ("if: (github.event_name == 'push' || github.event_name == "
 assert "contains(github.event.head_commit.message" not in workflow
 assert 'tag="latest"' in publish  # Preserve native updater/website URLs.
 assert "gh release upload" in publish
+# Preserve a verified, build-numbered archive before mutating rolling assets.
+assert 'archive_tag="build-${build}"' in publish
+assert 'gh release create "${archive_tag}"' in publish
+assert '--prerelease --latest=false' in publish
+assert 'remote_digest=' in publish
+assert 'expected_digest=' in publish
+assert '|| kept_assets+=("${asset}")' in publish
+assert '--omit-kit' in publish
+assert 'old_kit_digest=' in publish
+assert 'git/ref/tags/${archive_tag}' in publish
+# Archive tag comparisons resolve annotated tags to their commit first.
+assert "git/ref/tags/$1" in publish
+assert 'git/tags/${sha}' in publish
+assert '.object.type + " " + .object.sha' in publish
+assert publish.count('tag_commit "${archive_tag}"') >= 3
+assert 'actual_digest=' in publish
+assert 'gh release download "${tag}"' not in publish
+assert 'gh release download "${archive_tag}"' not in publish
+assert 'Refusing to modify latest.' in publish
+assert publish.index('gh release create "${archive_tag}"') < publish.index('gh release upload "${tag}"')
+assert publish.index('remote_digest=') < publish.index('gh release upload "${tag}"')
+assert publish.index('scripts/download_metrics.py') < publish.index('gh release upload "${tag}"')
+# A missing latest is created only after the snapshot, never before it.
+assert publish.index('scripts/download_metrics.py') < publish.index('gh release create "${tag}"')
+# A mismatched or missing archive asset must stop publication before upload.
+assert 'is missing asset' in publish
+mismatch = publish.index('Archive integrity failure')
+assert 'exit 1' in publish[mismatch:publish.index('gh release upload "${tag}"')]
+# The optional kit is filtered out of the asset list by name before the
+# upload paths are filled, regardless of its position in the array.
+assert publish.index('assets=("${kept_assets[@]}")') < publish.index('upload_paths=()')
 assert "gh release edit" in publish
 assert "--draft=false --prerelease=false --latest" in publish
 assert "git merge-base --is-ancestor" in publish

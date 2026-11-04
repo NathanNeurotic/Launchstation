@@ -82,7 +82,7 @@ def release_changes(repo, revision, previous, log):
     return changes_from_log(log, repo)
 
 
-def render(repo, revision, previous, run_id, changes, digests, version=""):
+def render(repo, revision, previous, run_id, changes, digests, version="", omit_kit=False):
     base = f"https://github.com/{repo}"
     names = [published_name(name, version) for name in ASSETS]
     compare = f"{base}/compare/{previous}...{revision}" if previous else f"{base}/commits/{revision}"
@@ -100,9 +100,14 @@ def render(repo, revision, previous, run_id, changes, digests, version=""):
                     "each folder; no BIOS or game is included.")
     else:
         kit_row = ""
-        kit_note = ("The full kit `LAUNCHSTATION-<build>.zip` was not rebuilt for this build (the Neutrino download or the "
-                    "kit check did not succeed); the previous build's kit stays attached below and holds the same POPS, "
-                    "Ember and Neutrino folders with the previous app build.")
+        if omit_kit:
+            kit_note = ("The optional full kit for this build was omitted on a publication retry because the first "
+                        "archived build had no matching kit. The previous rolling-release kit remains attached; "
+                        "the standard/DS34 app packages are unaffected.")
+        else:
+            kit_note = ("The full kit `LAUNCHSTATION-<build>.zip` was not rebuilt for this build (the Neutrino download or the "
+                        "kit check did not succeed); the previous build's kit stays attached below and holds the same POPS, "
+                        "Ember and Neutrino folders with the previous app build.")
     return f"""{heading}## Downloads
 
 | Version | ZIP | PSU | ELF |
@@ -128,7 +133,7 @@ Device and display behavior still require console validation; a passing build do
 
 Built from [{revision[:7]}]({base}/tree/{revision}). [Build checks]({workflow}) passed:
 host regressions, documentation, standard/DS34 builds, controller variants,
-loader memory layout and app-package verification. Published packages are downloaded and compared with the build outputs before the rolling tag moves.
+loader memory layout and app-package verification. GitHub-computed SHA-256 digests and asset sizes are checked against the built files before the rolling tag moves; CI does not inflate download counts by downloading its own assets.
 
 ```text
 {hashes}
@@ -148,6 +153,7 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--version", default="",
                         help="build number that ends every published ZIP name, e.g. 284")
+    parser.add_argument("--omit-kit", action="store_true", help="The optional kit was omitted from this publish retry")
     args = parser.parse_args()
     if args.version and not re.fullmatch(r"[0-9]+", args.version):
         parser.error("version must be a build number")
@@ -163,6 +169,8 @@ def main():
     changes = release_changes(args.repo, args.revision, args.previous, log)
     digests = {}
     for name in ASSETS:
+        if args.omit_kit and name == "LAUNCHSTATION.zip":
+            continue
         asset = args.assets_dir / name
         if not asset.is_file() or asset.stat().st_size == 0:
             if name in OPTIONAL_ASSETS:
@@ -171,7 +179,7 @@ def main():
         with asset.open("rb") as stream:
             digests[name] = hashlib.file_digest(stream, "sha256").hexdigest()
     args.output.write_text(render(args.repo, args.revision, args.previous, args.run_id,
-                                  changes, digests, args.version), encoding="utf-8")
+                                  changes, digests, args.version, args.omit_kit), encoding="utf-8")
 
 
 if __name__ == "__main__":
