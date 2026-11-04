@@ -677,13 +677,13 @@ static void applyScanResult(void)
 // FTP -> UDPFS, streams into the HDD staging directory, writes the result,
 // then restores FTP. Only HOME polls it, and only after remote access is on.
 //--------------------------------------------------------------
-static void pollPcGameReceiver(void)
+static void pollPcGameReceiverImpl(void)
 {
 #if defined(ETH) && defined(UDPFS) && defined(EXFAT)
 	char msg[MAX_PATH];
 	int r;
 
-	if (section != DASH_SEC_HOME || boot_phase || dashWorkerIoBusy() || dashIopParked() || !isFtpNetworkReady())
+	if (boot_phase || dashWorkerIoBusy() || dashIopParked() || !isFtpNetworkReady())
 		return;
 
 	r = pcGameReceiverPoll(msg, sizeof(msg));
@@ -707,14 +707,14 @@ static void pollPcGameReceiver(void)
 // HOME after FTP has explicitly been started; no network or HDD work occurs
 // during ordinary dashboard boot.
 //--------------------------------------------------------------
-static void pollRemotePcCommand(void)
+static void pollRemotePcCommandImpl(void)
 {
 #ifdef ETH
 	char path[MAX_PATH], msg[128];
 	DashApp tmp;
 	int r;
 
-	if (section != DASH_SEC_HOME || boot_phase || dashWorkerIoBusy() || dashIopParked() || !isFtpNetworkReady())
+	if (boot_phase || dashWorkerIoBusy() || dashIopParked() || !isFtpNetworkReady())
 		return;
 
 	r = remoteCommandPoll(path, sizeof(path), msg, sizeof(msg));
@@ -738,12 +738,31 @@ static void pollRemotePcCommand(void)
 #endif
 }
 
-/* Also used by the FTP status panel: retain remote commands and ISO reception. */
+/* The main dashboard loop polls remote commands and the PC game receiver on
+ * HOME only; keep that ordinary-operation restriction as wrappers. */
+static void pollPcGameReceiver(void)
+{
+	if (section != DASH_SEC_HOME)
+		return;
+	pollPcGameReceiverImpl();
+}
+
+static void pollRemotePcCommand(void)
+{
+	if (section != DASH_SEC_HOME)
+		return;
+	pollRemotePcCommandImpl();
+}
+
+/* Also used by the FTP status panel: retain remote commands and ISO reception.
+ * The panel is modal -- the section loop is suspended while it runs -- so the
+ * HOME gate would silently disable exactly the polling this call exists to
+ * keep alive whenever FTP was opened over another section. Poll ungated. */
 int dashFtpPollRemote(void)
 {
     unsigned int generation = getIopResetGeneration();
-    pollPcGameReceiver();
-    pollRemotePcCommand();
+    pollPcGameReceiverImpl();
+    pollRemotePcCommandImpl();
     return generation != getIopResetGeneration() || dashDashboardPending();
 }
 
