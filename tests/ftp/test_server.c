@@ -899,6 +899,37 @@ static void test_command_stream(void)
 	FtpServer_Destroy(&s);
 	puts("PASS: combined/split command streams, transfer guards, oversized commands and control failures");
 }
+static void test_cooperative_stop(void)
+{
+	setup();
+	FtpServer s;
+	FtpServer_Create(&s);
+	FtpControl_Init(&s);
+	FtpClient *c = client(&s, 10, "/usb/0");
+	assert(!FileSystem_OpenFile(&c->m_kContext, "upload.bin", FM_WRITE, 0));
+	start_data(c, 20, DATAACTION_STOR);
+	memcpy(sockets[20].input, payload, 4096);
+	sockets[20].size = 4096;
+	FtpClient_OnDataRead(c);
+	assert(c->m_iDataSocket >= 0); /* transfer still open mid-stream */
+
+	LsFtpStatus *st = FtpControl_Exchange(LS_FTP_STOP, NULL, 0);
+	assert(st->state == LS_FTP_STOPPING);
+	assert(st->clients == 1 && st->transfers == 1);
+	/* STOP shut down both sockets: the next driver call fails fast instead of
+	 * blocking the owner thread on a hung transfer. */
+	assert(sockets[10].read_error == ECONNRESET && sockets[20].read_error == ECONNRESET);
+	FtpClient_OnDataRead(c);
+	assert(c->m_iDataSocket < 0);
+	FtpServer_Destroy(&s);
+	FileSystem_UnmountAll();
+	assert(open_count == close_count); /* every opened file closed on the way down */
+	FtpControl_Stopped();
+	st = FtpControl_Exchange(LS_FTP_STATUS, NULL, 0);
+	assert(st->state == LS_FTP_STOPPED);
+	puts("PASS: cooperative STOP shuts down live transfer sockets and closes every file");
+}
+
 int main(void)
 {
 	for (int i = 0; i < PAYLOAD_SIZE; i++)
@@ -910,6 +941,7 @@ int main(void)
 	test_decimal_formatting();
 	test_resume_and_size();
 	test_command_stream();
+	test_cooperative_stop();
 	setup();
 	for (int i = 0; i < node_count; i++) {
 		free(nodes[i].data);
