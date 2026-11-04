@@ -32,7 +32,11 @@ assert "unset 'assets[-1]'" in publish
 assert '--omit-kit' in publish
 assert 'old_kit_digest=' in publish
 assert 'git/ref/tags/${archive_tag}' in publish
-assert publish.count('git/ref/tags/${archive_tag}') >= 3
+# Archive tag comparisons resolve annotated tags to their commit first.
+assert "git/ref/tags/$1" in publish
+assert 'git/tags/${sha}' in publish
+assert '.object.type + " " + .object.sha' in publish
+assert publish.count('tag_commit "${archive_tag}"') >= 3
 assert 'actual_digest=' in publish
 assert 'gh release download "${tag}"' not in publish
 assert 'gh release download "${archive_tag}"' not in publish
@@ -42,6 +46,12 @@ assert publish.index('remote_digest=') < publish.index('gh release upload "${tag
 assert publish.index('scripts/download_metrics.py') < publish.index('gh release upload "${tag}"')
 # A missing latest is created only after the snapshot, never before it.
 assert publish.index('scripts/download_metrics.py') < publish.index('gh release create "${tag}"')
+# A mismatched or missing archive asset must stop publication before upload.
+assert 'is missing asset' in publish
+mismatch = publish.index('Archive integrity failure')
+assert 'exit 1' in publish[mismatch:publish.index('gh release upload "${tag}"')]
+# The optional kit leaves the asset list before the upload paths are filled.
+assert publish.index("unset 'assets[-1]'") < publish.index('upload_paths=()')
 assert "gh release edit" in publish
 assert "--draft=false --prerelease=false --latest" in publish
 assert "git merge-base --is-ancestor" in publish

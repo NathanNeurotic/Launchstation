@@ -555,10 +555,23 @@ jobs:
           # It is deliberately a pre-release so the existing updater and
           # public latest URLs still select the moving release.
           archive_tag="build-${build}"
+          # gh release create leaves a lightweight tag, but a tag recreated by
+          # hand could be annotated: its ref then points at the tag object, not
+          # the commit. Resolve tag objects so a valid archive is never rejected.
+          tag_commit() {
+            local pair type sha
+            pair="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/$1" --jq '.object.type + " " + .object.sha')"
+            type="${pair%% *}"
+            sha="${pair##* }"
+            if [ "${type}" = "tag" ]; then
+              sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${sha}" --jq '.object.sha')"
+            fi
+            printf '%s' "${sha}"
+          }
           # A tag left behind by a failed archive attempt must never point to
           # another commit: --target does not move an existing Git tag.
           if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${archive_tag}" >/dev/null 2>&1; then
-            test "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${archive_tag}" --jq '.object.sha')" = "${GITHUB_SHA}" || {
+            test "$(tag_commit "${archive_tag}")" = "${GITHUB_SHA}" || {
               echo "Archive tag ${archive_tag} is bound to a different commit." >&2
               exit 1
             }
@@ -578,7 +591,7 @@ jobs:
           if gh release view "${archive_tag}" >/dev/null 2>&1; then
             archive_existing=1
             # A repeated run may only reuse the EXACT same immutable commit.
-            test "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${archive_tag}" --jq '.object.sha')" = "${GITHUB_SHA}" || {
+            test "$(tag_commit "${archive_tag}")" = "${GITHUB_SHA}" || {
               echo "Archive tag ${archive_tag} does not match this build; refusing publication." >&2
               exit 1
             }
@@ -611,7 +624,7 @@ jobs:
           fi
           # Verify the archive tag again AFTER create: an existing tag
           # never moves just because gh release create was given --target.
-          test "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${archive_tag}" --jq '.object.sha')" = "${GITHUB_SHA}" || {
+          test "$(tag_commit "${archive_tag}")" = "${GITHUB_SHA}" || {
             echo "Archive tag ${archive_tag} does not match ${GITHUB_SHA}; refusing publication." >&2
             exit 1
           }

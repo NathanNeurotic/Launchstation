@@ -45,7 +45,11 @@ python3 "${src}/scripts/config.py" -f "${src}/include/mbedtls/mbedtls_config.h" 
 # The flag string is split by the shell that runs each compile rule, so the
 # mapped path must be single-quoted WITHIN CMAKE_C_FLAGS: quoting only the
 # outer -D argument still lets the shell split a TMPDIR containing spaces.
-mbedtls_path_map="-ffile-prefix-map='$(native_path "${work}")'=/mbedtls-build"
+# An apostrophe in the path would terminate that quoting, so close-escape-
+# reopen every quote the POSIX way before embedding.
+map_src="$(native_path "${work}")"
+map_src_escaped="${map_src//\'/\'\\\'\'}"
+mbedtls_path_map="-ffile-prefix-map='${map_src_escaped}'=/mbedtls-build"
 
 cmake -S "${src}" -B "${build}" \
     -DCMAKE_SYSTEM_NAME=Generic \
