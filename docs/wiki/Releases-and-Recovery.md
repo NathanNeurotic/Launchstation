@@ -43,7 +43,7 @@ The [Tracked Downloads ledger](https://github.com/NathanNeurotic/Launchstation/b
 - A scheduled workflow samples surviving release assets every three hours and can be run manually.
 - Publication takes a **mandatory snapshot before any upload with --clobber**. If the snapshot fails, publication stops rather than knowingly discarding counts.
 - The ledger merges concurrent snapshots by asset ID, keeping historical IDs and never decreasing recorded counts.
-- The badge is a **tracked total since 2026-11-03**, not a lifetime total. Assets deleted before the first snapshot are irrecoverable, and downloads occurring between the last observation and deletion may be missed.
+- The badge is a **tracked ledger total first observed on 2026-11-03**, not a lifetime total and not the live count of the assets currently attached to `latest`: the first snapshot already includes each asset's pre-existing GitHub count, and the ledger keeps historical asset IDs after their assets are deleted. Assets deleted before the first snapshot are irrecoverable, and downloads occurring between the last observation and deletion may be missed.
 - Metrics updates do not trigger application builds or modify the native updater's fixed `latest` URLs. Stable releases can be preserved separately without replacing this contract.
 
 If a metrics API outage blocks publishing, restore its access or rerun the snapshot; do not bypass the snapshot just to force a release.
