@@ -185,6 +185,7 @@ static int BootDiscType,cdmode;static char SystemCnf_BOOT[MAX_PATH],SystemCnf_BO
 #define executeBrowserSelection(a,b) ((void)0)
 #define ExecOSD(a,b) ((void)0)
 #define loadNetModules() ((void)0)
+#define DashFtpServer() 0
 #define setupPowerOff() ((void)0)
 #define isPowerOffReady() 1
 #define closeAllAndPoweroff() ((void)0)
