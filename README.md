@@ -227,7 +227,7 @@ For a GCC comparison build, set `PS2BUILD_TOOLCHAIN=gcc`, rebuild the third-part
 
 [package_apps.py](scripts/package_apps.py) produces four installable archives and four loose ELFs from the standard and DS34 builds. Its local ZIP filenames are `APP_LAUNCHSTATION.zip` and `APP_LAUNCHSTATION-DS.zip`; release CI adds the build-number suffix. The optional full kit uses [package_kit.py](scripts/package_kit.py) and the checksum pins in [ship/kit-externals.json](ship/kit-externals.json).
 
-[Automated-Build](.github/workflows/compile.yml) runs host regression tests, builds the documentation and both controller variants, independently builds the PC CARD CF and PS2IP RPC modules, and checks toolchain purity, controller symbols, UDPFS SMAP compatibility and loader memory layout. Pull requests build and test. Publication to `latest` is restricted to eligible `master` pushes/manual runs, checks that `master` has not advanced, verifies ancestry and downloads the uploaded app assets to compare bytes. A kit failure can leave the previous kit attached.
+[Automated-Build](.github/workflows/compile.yml) runs host regression tests, builds the documentation and both controller variants, independently builds the PC CARD CF and PS2IP RPC modules, and checks toolchain purity, controller symbols, UDPFS SMAP compatibility and loader memory layout. Pull requests build and test. Publication to `latest` is restricted to eligible `master` pushes/manual runs, checks that `master` has not advanced, verifies ancestry, and confirms each uploaded app asset against its GitHub-computed SHA-256 digest and byte size without downloading it (CI downloads would inflate the public count). A kit failure can leave the previous kit attached.
 
 ## Documentation
 
