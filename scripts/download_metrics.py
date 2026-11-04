@@ -44,14 +44,44 @@ def api(repo, method, path, payload=None, missing=False):
         except HTTPError as error:
             if missing and error.code == 404:
                 return None
-            if error.code in (429, 500, 502, 503, 504) and attempt < 3:
-                time.sleep(attempt + 1)
+            detail = error.read().decode("utf-8", "replace")[:250]
+            retry_after = error.headers.get("Retry-After") if error.headers else None
+            limited = error.code == 403 and (
+                retry_after is not None
+                or error.headers.get("x-ratelimit-remaining") == "0"
+                or "rate limit" in detail.lower()
+            )
+            if (error.code in (429, 500, 502, 503, 504) or limited) and attempt < 3:
+                try:
+                    delay = min(max(int(retry_after), 0), 30) if retry_after else attempt + 1
+                except ValueError:
+                    delay = attempt + 1
+                time.sleep(delay)
                 continue
-            raise ApiError(error.code, error.read().decode("utf-8", "replace")[:250]) from error
+            raise ApiError(error.code, detail) from error
         except (URLError, TimeoutError):
             if attempt == 3:
                 raise
             time.sleep(attempt + 1)
+
+
+def release_assets(repo, release):
+    # Release objects embed their asset list; trust it unless it is exactly
+    # page-sized, which may be a truncated first page needing confirmation.
+    inline = release.get("assets") or []
+    if not inline or len(inline) % 100 != 0:
+        return inline
+    assets = list(inline)
+    seen = {int(asset["id"]) for asset in assets}
+    for apage in range(2, 101):
+        page = api(repo, "GET", f"/releases/{release['id']}/assets?per_page=100&page={apage}")
+        for asset in page:
+            if int(asset["id"]) not in seen:
+                seen.add(int(asset["id"]))
+                assets.append(asset)
+        if len(page) < 100:
+            return assets
+    raise RuntimeError("Unbounded asset pages")
 
 
 def observed_assets(repo):
@@ -59,10 +89,11 @@ def observed_assets(repo):
     for page in range(1, 101):
         releases = api(repo, "GET", f"/releases?per_page=100&page={page}")
         if page == 1:
-            # Fetch the fixed tag explicitly too: drafts may be omitted from
-            # a release listing even when the authenticated caller can view
-            # the release by its tag. Failure to observe latest must fail
-            # closed before any --clobber in the publishing workflow.
+            # The listing includes drafts for the authenticated token, while
+            # the by-tag endpoint serves published releases only. Probe the
+            # tag anyway as cheap insurance so an unlisted published latest
+            # is still sampled; a missing latest must fail closed before any
+            # --clobber in the publishing workflow.
             latest = api(repo, "GET", "/releases/tags/latest", missing=True)
             if latest is not None and not any(r["id"] == latest["id"] for r in releases):
                 releases.insert(0, latest)
@@ -71,21 +102,14 @@ def observed_assets(repo):
             # publication. Its assets still have counts we MUST preserve.
             if release["draft"] and release["tag_name"] != "latest":
                 continue
-            rid = release["id"]
-            for apage in range(1, 101):
-                assets = api(repo, "GET", f"/releases/{rid}/assets?per_page=100&page={apage}")
-                for asset in assets:
-                    key = str(int(asset["id"]))
-                    count = int(asset["download_count"])
-                    if count < 0:
-                        raise ValueError("Negative asset download count")
-                    value = {"downloads": count, "name": asset["name"], "release": release["tag_name"]}
-                    if key not in found or count > found[key]["downloads"]:
-                        found[key] = value
-                if len(assets) < 100:
-                    break
-            else:
-                raise RuntimeError("Unbounded asset pages")
+            for asset in release_assets(repo, release):
+                key = str(int(asset["id"]))
+                count = int(asset["download_count"])
+                if count < 0:
+                    raise ValueError("Negative asset download count")
+                value = {"downloads": count, "name": asset["name"], "release": release["tag_name"]}
+                if key not in found or count > found[key]["downloads"]:
+                    found[key] = value
         if len(releases) < 100:
             return found
     raise RuntimeError("Unbounded release pages")
@@ -125,7 +149,13 @@ def read(repo, branch):
     data = api(repo, "GET", path, missing=True)
     if data is None:
         return None, None
-    return json.loads(base64.b64decode(data["content"]).decode()), data["sha"]
+    # The contents API omits file content once a file exceeds 1 MB. Fetch the
+    # blob by the sha the response still returns (blobs serve up to 100 MB) so
+    # a growing ledger can never block publication by failing closed forever.
+    encoded = data.get("content")
+    if not encoded:
+        encoded = api(repo, "GET", f"/git/blobs/{data['sha']}")["content"]
+    return json.loads(base64.b64decode(encoded).decode()), data["sha"]
 
 
 def snapshot(repo, branch, base):

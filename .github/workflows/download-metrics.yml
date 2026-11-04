@@ -5,8 +5,7 @@ on:
     - cron: '17 */3 * * *'
   workflow_dispatch:
 
-permissions:
-  contents: write
+permissions: {}
 
 concurrency:
   group: launchstation-download-metrics-snapshot
@@ -15,10 +14,13 @@ concurrency:
 jobs:
   snapshot:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           ref: master
+          persist-credentials: false
       - name: Verify download-ledger invariants
         run: python3 tests/test_download_metrics.py
       - name: Preserve release asset download counts
