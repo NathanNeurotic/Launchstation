@@ -738,6 +738,15 @@ static void pollRemotePcCommand(void)
 #endif
 }
 
+/* Also used by the FTP status panel: retain remote commands and ISO reception. */
+int dashFtpPollRemote(void)
+{
+    unsigned int generation = getIopResetGeneration();
+    pollPcGameReceiver();
+    pollRemotePcCommand();
+    return generation != getIopResetGeneration() || dashDashboardPending();
+}
+
 //--------------------------------------------------------------
 // Global (START) menu
 //--------------------------------------------------------------

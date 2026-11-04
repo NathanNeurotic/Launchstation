@@ -11,4 +11,8 @@ typedef struct {
 } iop_thread_t;
 int CreateThread(iop_thread_t *thread);
 int StartThread(int thread, void *argument);
+int DeleteThread(int thread);
+void ExitDeleteThread(void);
+int GetThreadId(void);
+#define TH_C 0x02000000
 #endif

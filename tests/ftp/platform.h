@@ -55,4 +55,7 @@ int ftp_test_setsockopt(int socket, int level, int opt, const void *value, sockl
 #define getsockname ftp_test_getsockname
 #define getsockopt ftp_test_getsockopt
 #define setsockopt ftp_test_setsockopt
+int CpuSuspendIntr(int *state);
+int CpuResumeIntr(int state);
+int lwip_shutdown(int socket,int how);
 #endif

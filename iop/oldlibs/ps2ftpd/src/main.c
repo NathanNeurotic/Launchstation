@@ -10,6 +10,7 @@
  */
 
 #include "FtpServer.h"
+#include "FtpControl.h"
 
 #ifndef LINUX
 #include <loadcore.h>
@@ -67,10 +68,15 @@ int server(void *argv)
 {
 	// run server
 
-	while (FtpServer_IsRunning(&srv))
-		FtpServer_HandleEvents(&srv);
+	FileSystem_ResetMounts();
+	if (FtpControl_Init(&srv) >= 0)
+		while (FtpServer_IsRunning(&srv) && !FtpControl_Stopping())
+			FtpServer_HandleEvents(&srv);
 
 	FtpServer_Destroy(&srv);
+	FileSystem_UnmountAll();
+	FtpControl_Stopped();
+	ExitDeleteThread();
 	return 0;
 }
 

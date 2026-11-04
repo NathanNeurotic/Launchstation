@@ -1,5 +1,7 @@
 #include "launchelf.h"
 #include "init.h"
+#include "ftp_session.h"
+#include "main_startup.h"
 #include "dash_sound.h"
 #include "pccf_control.h"
 #include <unistd.h>
@@ -644,10 +646,10 @@ static int load_ps2hdd_stack(int with_ata_bd)
 	                       "-n"
 	                       "\0"
 	                       "20";
-	/* Allow up to four simultaneously mounted PFS partitions. */
+	/* Four browser/VMC slots plus four independently owned FTP slots. */
 	static char pfsarg[] = "-m"
 	                       "\0"
-	                       "4"
+	                       "8"
 	                       "\0"
 	                       "-o"
 	                       "\0"
@@ -1127,6 +1129,7 @@ static void load_ps2ftpd(void)
 	if (!load_ps2ip())
 		return;
 	if (!have_ps2ftpd) {
+		filerRootMcPollIdle();
 		ID = SifExecModuleBuffer(ps2ftpd_irx, size_ps2ftpd_irx, arglen, arg_p, &ret);
 		DPRINTF(" [PS2FTPD]: ID=%d, ret=%d\n", ID, ret);
 		have_ps2ftpd = (ID >= 0 && ret >= 0);
@@ -1973,6 +1976,12 @@ static void resetRuntimeDeviceState(int show_status)
 		DPRINTF("IOP reset refused on this thread\n");
 		return;
 	}
+#ifdef ETH
+    if (have_ps2ftpd && !ftpSessionShutdown()) {
+        DPRINTF("IOP reset refused: FTP did not finish closing files\n");
+        return;
+    }
+#endif
 	/* A dashboard root-card presence poll uses asynchronous libmc RPC on
 	 * the same SIO2/PADMAN IOP session. Drain it before closing PAD ports
 	 * or restarting the IOP, otherwise a pending mcGetInfo may outlive
@@ -2511,7 +2520,20 @@ int loadDVRPHddModules(void)
 #ifdef ETH
 void loadNetModules(void)
 {
-	if (pcCardCfOwnsBus()) return;
+    if (pcCardCfOwnsBus()) return;
+    if (!have_ps2ftpd) {
+        getIpConfig();
+        if (!shouldHideHddAtaDevices()) {
+#ifdef EXFAT
+            loadAtaModules();
+#endif
+            loadHddModules();
+        }
+        loadUsbModules();
+#ifdef ILINK
+        if (consoleHasIlink()) loadIlinkModules();
+#endif
+    }
 	ensureCoreIoStackReady();
 	if (!have_NetModules) {
 		showLoadingModulesMsg("ps2net");
@@ -2527,7 +2549,7 @@ void loadNetModules(void)
 
 int isFtpNetworkReady(void)
 {
-	return have_NetModules && have_ps2ftpd && have_ps2ip && have_ps2smap && ps2dev9_loaded;
+	return !ftpSessionStopped() && have_NetModules && have_ps2ftpd && have_ps2ip && have_ps2smap && ps2dev9_loaded;
 }
 
 /* Give a cold stack a resolver. Static IPCONFIG.DAT only holds IP, netmask

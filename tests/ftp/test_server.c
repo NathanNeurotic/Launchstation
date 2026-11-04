@@ -2,6 +2,7 @@
 #include "FtpClient.h"
 #include "FtpMessages.h"
 #include "FtpServer.h"
+#include "FtpControl.h"
 #include <assert.h>
 #define MAX_NODES 64
 #define PAYLOAD_SIZE 100003
@@ -35,8 +36,26 @@ static int next_socket = 30, connect_error;
 static iop_device_t *devices[FS_IOMANX_DEVICES];
 static iop_device_t usb, mass, mc, mmce, pfs, duplicate_usb, ata, ilink;
 static unsigned char payload[PAYLOAD_SIZE];
+int CpuSuspendIntr(int *state)
+{
+	*state = 0;
+	return 0;
+}
+int CpuResumeIntr(int state)
+{
+	(void)state;
+	return 0;
+}
+int lwip_shutdown(int fd, int how)
+{
+	(void)how;
+	sockets[fd].write_error = EPIPE;
+	sockets[fd].read_error = ECONNRESET;
+	return 0;
+}
 static Node *find(iop_device_t *device, int unit, const char *path)
 {
+	if (!strcmp(device->name, "pfs") && unit >= FS_PFS_BASE) unit -= FS_PFS_BASE;
 	for (int i = 0; i < node_count; i++)
 		if (nodes[i].device == device && nodes[i].unit == unit && !strcmp(nodes[i].path, path))
 			return &nodes[i];
@@ -48,7 +67,7 @@ static Node *add(iop_device_t *device, int unit, const char *path, int dir, cons
 	Node *n = &nodes[node_count++];
 	memset(n, 0, sizeof(*n));
 	n->device = device;
-	n->unit = unit;
+	n->unit = !strcmp(device->name, "pfs") && unit >= FS_PFS_BASE ? unit - FS_PFS_BASE : unit;
 	n->dir = dir;
 	strcpy(n->path, path);
 	n->data = calloc(PAYLOAD_SIZE + 1024, 1);
@@ -414,6 +433,8 @@ static void command(FtpClient *c, const char *text)
 }
 static void setup(void)
 {
+	FileSystem_ResetMounts();
+	FtpControl_Init(NULL);
 	for (int i = 0; i < node_count; i++) {
 		free(nodes[i].data);
 	}
@@ -567,7 +588,7 @@ static void test_hdd_listing(void)
 	assert(FileSystem_ReadDir(&ctx, &info) == 1 && !strcmp(info.m_Name, "__common"));
 	assert(FileSystem_ReadDir(&ctx, &info) == 0);
 	assert(!FileSystem_ChangeDir(&ctx, "/hdd/0/__common/"));
-	assert(!strcmp(ctx.m_Path, "/pfs/0/"));
+	assert(!strcmp(ctx.m_Path, "/hdd/0/__common/"));
 	FileSystem_Close(&ctx);
 	assert(open_count == close_count);
 	puts("PASS: HDD partition filtering terminates on errors and CWD auto-mounts PFS0");

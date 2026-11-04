@@ -33,6 +33,7 @@
 #include "FtpServer.h"
 
 #include <errno.h>
+#include "FtpControl.h"
 
 void FtpServer_Create(FtpServer *pServer)
 {

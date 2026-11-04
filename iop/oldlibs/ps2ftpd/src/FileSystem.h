@@ -15,6 +15,8 @@
 #define FS_IOMANX_DEVICES 32
 #define FS_PATH_MAX 512
 #define FS_PFS_UNITS 4
+/* PFS0..3 belong to the EE browser; FTP virtual units map to PFS4..7. */
+#define FS_PFS_BASE 4
 
 #ifdef LINUX
 #include <dirent.h>
@@ -46,6 +48,8 @@ typedef struct FSContext
 
 #ifndef LINUX
 	FSType m_eType;
+	int m_iMount;
+	int m_iRoot;
 	iop_file_t m_kFile;
 	int m_iOpen;  // m_kFile holds a file/dir that was really opened, so it may be closed
 #else
@@ -150,6 +154,9 @@ int FileSystem_PrepareRename(FSContext *pContext, const char *name, FSRename *re
 int FileSystem_Rename(FSContext *pContext, const FSRename *rename, const char *newName);
 
 #ifndef LINUX
+void FileSystem_ResetMounts(void);
+void FileSystem_UnmountAll(void);
+
 //! Determine device needed for accessing device & fill context with info
 const char *FileSystem_ClassifyPath(FSContext *pContext, const char *pPath);
 

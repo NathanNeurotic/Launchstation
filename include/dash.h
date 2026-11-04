@@ -19,6 +19,8 @@ int DashIsEnabled(void);
 
 /* Non-zero while DashRun() is on the call stack (guards re-entry). */
 int DashIsActive(void);
+int DashFtpServer(void);
+int dashFtpPollRemote(void);
 
 /* Publish the next blocking storage operation before entering its RPC.
  * Worker callers only update status; UI callers draw an existing overlay. */

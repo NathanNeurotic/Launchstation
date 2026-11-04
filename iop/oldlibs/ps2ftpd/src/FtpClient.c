@@ -36,6 +36,7 @@
 #endif
 
 #include <errno.h>
+#include "FtpControl.h"
 
 #define MAX_CLIENTS 4
 
@@ -205,7 +206,10 @@ void FtpClient_OnCommand(FtpClient *pClient, const char *pString)
 		// if user has not logged in, we only allow a small subset of commands
 
 		if (pClient->m_eAuthState != AUTHSTATE_VALID) {
-			switch (result) {
+			if (result != FTPCMD_USER && result != FTPCMD_PASS)
+			FtpControl_Operation(pString);
+
+		switch (result) {
 				// USER <name>
 				case FTPCMD_USER: {
 					char *user = strtok(NULL, "");
