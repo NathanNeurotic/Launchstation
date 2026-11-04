@@ -1,0 +1,32 @@
+name: Track Launchstation Downloads
+
+on:
+  schedule:
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: launchstation-download-metrics-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    # Writes the ledger commit to the download-metrics branch; keep write
+    # scoped to this only job so future jobs cannot inherit it.
+    permissions:
+      contents: write
+    steps:
+      # Pinned because this job holds contents: write.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: master
+          persist-credentials: false
+      - name: Verify download-ledger invariants
+        run: python3 tests/test_download_metrics.py
+      - name: Preserve release asset download counts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/download_metrics.py --repo "$GITHUB_REPOSITORY"

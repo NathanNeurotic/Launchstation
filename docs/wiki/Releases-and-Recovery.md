@@ -30,6 +30,20 @@ A standard install folder has `LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.P
 
 Release notes come from the `## Rolling` section of [CHANGELOG.md](../../CHANGELOG.md), followed by build and package information. A documentation-only merge therefore also produces a new rolling build without changing runtime source.
 
+## Download count tracking
+
+The GitHub `latest` release replaces fixed-name ELFs/PSUs and removes older ZIP assets. GitHub counts downloads **per asset ID**, and deleting an asset erases that count from the public release API. Earlier deleted assets cannot be reconstructed.
+
+The [Tracked Downloads ledger](https://github.com/NathanNeurotic/Launchstation/blob/download-metrics/metrics/downloads.json) persists the **highest observed count per asset ID** on a dedicated `download-metrics` branch (not `master`):
+
+- A scheduled workflow samples surviving release assets every three hours and can be run manually.
+- Publication takes a **mandatory snapshot before any upload with --clobber**. If the snapshot fails, publication stops rather than knowingly discarding counts.
+- The ledger merges concurrent snapshots by asset ID, keeping historical IDs and never decreasing recorded counts.
+- The badge is a **tracked total since 2026-11-03**, not a lifetime total. Assets deleted before the first snapshot are irrecoverable, and downloads occurring between the last observation and deletion may be missed.
+- Metrics updates do not trigger application builds or modify the native updater's fixed `latest` URLs. Stable releases can be preserved separately without replacing this contract.
+
+If a metrics API outage blocks publishing, restore its access or rerun the snapshot; do not bypass the snapshot just to force a release.
+
 ## Native updater
 
 Open **Settings → Storage & devices → MMCE backups → Check for updates** (needs a configured wired network and `WLE-UPDATE-CA.PEM` beside the ELF or in the dashboard settings folder).
