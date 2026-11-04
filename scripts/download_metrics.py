@@ -22,14 +22,51 @@ class ApiError(Exception):
         super().__init__(f"GitHub HTTP {status}: {detail}")
 
 
-def api(repo, method, path, payload=None, missing=False):
+# Tests patch this seam only: never assign to time.sleep itself, which is the
+# shared standard-library module object.
+_sleep = time.sleep
+
+
+def _rate_limited(error, detail):
+    if error.code != 403:
+        return False
+    headers = error.headers
+    return bool(
+        (headers is not None and headers.get("Retry-After") is not None)
+        or (headers is not None and headers.get("x-ratelimit-remaining") == "0")
+        or "rate limit" in detail.lower()
+    )
+
+
+def _retry_delay(error, attempt):
+    headers = error.headers
+    retry_after = headers.get("Retry-After") if headers else None
+    if retry_after:
+        try:
+            return min(max(int(retry_after), 0), 30)
+        except ValueError:
+            pass
+    if headers is not None and headers.get("x-ratelimit-remaining") == "0":
+        try:
+            # An exhausted primary limit must wait for its reset; bound the
+            # wait so a far-future reset fails the job instead of stalling it.
+            return min(max(int(headers.get("x-ratelimit-reset")) - int(time.time()), 1), 120)
+        except (TypeError, ValueError):
+            pass
+    if error.code == 403:
+        # Secondary limit without guidance: back off well beyond burst delays.
+        return 15 * (attempt + 1)
+    return attempt + 1
+
+
+def api(repo, method, path, payload=None, missing=False, accept="application/vnd.github+json"):
     token = os.getenv("GH_TOKEN") or os.getenv("GITHUB_TOKEN")
     if not token:
         raise RuntimeError("GitHub token missing")
     body = None if payload is None else json.dumps(payload).encode()
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
+        "Accept": accept,
         "X-GitHub-Api-Version": "2022-11-28",
         "User-Agent": "Launchstation-download-metrics",
     }
@@ -45,24 +82,14 @@ def api(repo, method, path, payload=None, missing=False):
             if missing and error.code == 404:
                 return None
             detail = error.read().decode("utf-8", "replace")[:250]
-            retry_after = error.headers.get("Retry-After") if error.headers else None
-            limited = error.code == 403 and (
-                retry_after is not None
-                or error.headers.get("x-ratelimit-remaining") == "0"
-                or "rate limit" in detail.lower()
-            )
-            if (error.code in (429, 500, 502, 503, 504) or limited) and attempt < 3:
-                try:
-                    delay = min(max(int(retry_after), 0), 30) if retry_after else attempt + 1
-                except ValueError:
-                    delay = attempt + 1
-                time.sleep(delay)
+            if (error.code in (429, 500, 502, 503, 504) or _rate_limited(error, detail)) and attempt < 3:
+                _sleep(_retry_delay(error, attempt))
                 continue
             raise ApiError(error.code, detail) from error
         except (URLError, TimeoutError):
             if attempt == 3:
                 raise
-            time.sleep(attempt + 1)
+            _sleep(attempt + 1)
 
 
 def release_assets(repo, release):
@@ -146,7 +173,9 @@ def branch_exists(repo, branch):
 
 def read(repo, branch):
     path = f"/contents/metrics/downloads.json?ref={quote(branch, safe='')}"
-    data = api(repo, "GET", path, missing=True)
+    # The object media type keeps this endpoint defined past the default 1 MB
+    # inline-content limit; if content is still absent, fall back to the blob.
+    data = api(repo, "GET", path, missing=True, accept="application/vnd.github.object+json")
     if data is None:
         return None, None
     # The contents API omits file content once a file exceeds 1 MB. Fetch the
@@ -188,7 +217,7 @@ def snapshot(repo, branch, base):
         except ApiError as error:
             if error.status not in (409, 422) or attempt == 5:
                 raise
-            time.sleep(1)
+            _sleep(1)
     raise RuntimeError("Could not commit snapshot")
 
 

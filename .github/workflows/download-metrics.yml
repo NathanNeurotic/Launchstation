@@ -14,10 +14,13 @@ concurrency:
 jobs:
   snapshot:
     runs-on: ubuntu-latest
+    # Writes the ledger commit to the download-metrics branch; keep write
+    # scoped to this only job so future jobs cannot inherit it.
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      # Pinned because this job holds contents: write.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: master
           persist-credentials: false

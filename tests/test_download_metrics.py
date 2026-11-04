@@ -4,6 +4,7 @@ import importlib.util
 import io
 import json
 import os
+import time
 from pathlib import Path
 from urllib.error import HTTPError
 
@@ -93,9 +94,22 @@ metrics.api = stub_blob
 previous, sha = metrics.read("owner/repo", "download-metrics")
 assert previous == ledger_json and sha == "blobsha"
 
-# A 403 carrying a rate-limit signal is retried like a 429.
+# The ledger read requests the object media type, which the contents endpoint
+# supports beyond the default 1 MB inline-content limit.
+seen_accept = []
+def stub_accept(repo, method, path, **kwargs):
+    seen_accept.append(kwargs.get("accept"))
+    return {"content": base64.b64encode(json.dumps(ledger_json).encode()).decode(), "sha": "s1"}
+metrics.api = stub_accept
+previous, sha = metrics.read("owner/repo", "download-metrics")
+assert seen_accept == ["application/vnd.github.object+json"] and previous == ledger_json
+
+# A 403 carrying a rate-limit signal is retried like a 429, honoring
+# Retry-After and an exhausted primary limit's reset time.
 os.environ.setdefault("GH_TOKEN", "test-token")
 attempts = []
+delays = []
+metrics._sleep = delays.append
 class _FakeResponse:
     def __enter__(self):
         return self
@@ -112,7 +126,21 @@ def flaky_urlopen(request, timeout):
 metrics.urlopen = flaky_urlopen
 metrics.api = real_api
 assert metrics.api("owner/repo", "GET", "/rate-limit-probe") == {"ok": True}
-assert len(attempts) == 2
+assert len(attempts) == 2 and delays == [0]
+
+attempts.clear()
+delays.clear()
+reset = str(int(time.time()) + 2)
+def limited_urlopen(request, timeout):
+    attempts.append(request.full_url)
+    if len(attempts) == 1:
+        raise HTTPError(request.full_url, 403, "Forbidden",
+                        {"x-ratelimit-remaining": "0", "x-ratelimit-reset": reset},
+                        io.BytesIO(b'{"message": "API rate limit exceeded"}'))
+    return _FakeResponse()
+metrics.urlopen = limited_urlopen
+assert metrics.api("owner/repo", "GET", "/reset-probe") == {"ok": True}
+assert len(attempts) == 2 and 1 <= delays[0] <= 3
 
 # A missing tracking branch or ledger is NOT an excuse to reset counts.
 metrics.branch_exists = lambda repo, branch: False
@@ -154,7 +182,7 @@ metrics.observed_assets = lambda repo: {
     "103": {"downloads": 3, "name": "c.zip", "release": "latest"}
 }
 metrics.read = lambda repo, branch: next(reads)
-metrics.time.sleep = lambda seconds: None
+metrics._sleep = lambda seconds: None
 def conflicting_write(repo, method, path, payload=None, **kwargs):
     assert method == "PUT"
     writes.append(payload)
