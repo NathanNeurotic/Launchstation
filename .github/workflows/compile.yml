@@ -613,7 +613,11 @@ jobs:
             current_kit_digest="sha256:$(sha256sum "artifacts/${kit_asset}" | cut -d' ' -f1)"
             if [ "${old_kit_digest}" != "${current_kit_digest}" ]; then
               echo "::warning::Optional kit differs from immutable archive (or was absent); retaining existing rolling kit and publishing core apps only."
-              unset 'assets[-1]' # The optional full kit is always appended last.
+              kept_assets=()
+              for asset in "${assets[@]}"; do
+                [ "${asset}" = "${kit_asset}" ] || kept_assets+=("${asset}")
+              done
+              assets=("${kept_assets[@]}")
               kit_published=0
               python3 scripts/release_notes.py \
                 --repo "${GITHUB_REPOSITORY}" --revision "${GITHUB_SHA}" \

@@ -28,7 +28,7 @@ assert 'gh release create "${archive_tag}"' in publish
 assert '--prerelease --latest=false' in publish
 assert 'remote_digest=' in publish
 assert 'expected_digest=' in publish
-assert "unset 'assets[-1]'" in publish
+assert '|| kept_assets+=("${asset}")' in publish
 assert '--omit-kit' in publish
 assert 'old_kit_digest=' in publish
 assert 'git/ref/tags/${archive_tag}' in publish
@@ -50,8 +50,9 @@ assert publish.index('scripts/download_metrics.py') < publish.index('gh release 
 assert 'is missing asset' in publish
 mismatch = publish.index('Archive integrity failure')
 assert 'exit 1' in publish[mismatch:publish.index('gh release upload "${tag}"')]
-# The optional kit leaves the asset list before the upload paths are filled.
-assert publish.index("unset 'assets[-1]'") < publish.index('upload_paths=()')
+# The optional kit is filtered out of the asset list by name before the
+# upload paths are filled, regardless of its position in the array.
+assert publish.index('assets=("${kept_assets[@]}")') < publish.index('upload_paths=()')
 assert "gh release edit" in publish
 assert "--draft=false --prerelease=false --latest" in publish
 assert "git merge-base --is-ancestor" in publish
