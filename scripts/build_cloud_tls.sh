@@ -42,7 +42,10 @@ python3 "${src}/scripts/config.py" -f "${src}/include/mbedtls/mbedtls_config.h" 
 # Map BOTH source and generated build paths to a stable virtual prefix. GCC and
 # Clang support -ffile-prefix-map (including the __FILE__ macro expansion).
 # Never suppress archive digest validation to paper over non-reproducible input.
-mbedtls_path_map="-ffile-prefix-map=$(native_path "${work}")=/mbedtls-build"
+# The flag string is split by the shell that runs each compile rule, so the
+# mapped path must be single-quoted WITHIN CMAKE_C_FLAGS: quoting only the
+# outer -D argument still lets the shell split a TMPDIR containing spaces.
+mbedtls_path_map="-ffile-prefix-map='$(native_path "${work}")'=/mbedtls-build"
 
 cmake -S "${src}" -B "${build}" \
     -DCMAKE_SYSTEM_NAME=Generic \

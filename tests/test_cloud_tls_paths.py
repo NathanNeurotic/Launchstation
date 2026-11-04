@@ -13,7 +13,7 @@ root = Path(__file__).resolve().parents[1]
 script = (root / "scripts/build_cloud_tls.sh").read_text()
 
 # Guard the actual CMake flag, not just a stray documentation comment.
-assert 'mbedtls_path_map="-ffile-prefix-map=$(native_path "${work}")=/mbedtls-build"' in script
+assert "mbedtls_path_map=\"-ffile-prefix-map='$(native_path \"${work}\")'=/mbedtls-build\"" in script
 assert '-DCMAKE_C_FLAGS="${target_flags}' in script
 assert "${mbedtls_path_map}" in script.split("-DCMAKE_C_FLAGS=", 1)[1].split("\n", 1)[0]
 assert 'work="$(mktemp -d)"' in script
@@ -45,5 +45,20 @@ with tempfile.TemporaryDirectory(prefix="tls-file-prefix-test-") as folder:
     assert objects[0] == objects[1], "File-prefix mapping did not stabilize compiled objects"
     assert b"/mbedtls-build/mbedtls-3.6.7/library/ssl_tls.c" in objects[0]
     assert folder.encode() not in objects[0]
+
+    # Mirror the CMake path: the flags string is re-split by a shell, so the
+    # embedded quoting must keep a space-containing build root one argument.
+    spaced_root = Path(folder) / "work path"
+    spaced = spaced_root / "mbedtls-3.6.7" / "library"
+    spaced.mkdir(parents=True)
+    spaced_source = spaced / "ssl_tls.c"
+    spaced_source.write_text("const char *tls_file_name(void) { return __FILE__; }\n")
+    spaced_obj = spaced / "mapped.o"
+    subprocess.run(
+        f'"{compiler}" -g0 -Os -ffile-prefix-map=\'{spaced_root}\'=/mbedtls-build'
+        f' -c "{spaced_source}" -o "{spaced_obj}"',
+        shell=True, check=True)
+    assert b"/mbedtls-build/mbedtls-3.6.7/library/ssl_tls.c" in spaced_obj.read_bytes()
+    assert str(spaced_root).encode() not in spaced_obj.read_bytes()
 
 print("PASS: Mbed TLS CMake path-map wiring and reproducible __FILE__ objects")

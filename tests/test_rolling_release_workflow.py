@@ -39,6 +39,9 @@ assert 'gh release download "${archive_tag}"' not in publish
 assert 'Refusing to modify latest.' in publish
 assert publish.index('gh release create "${archive_tag}"') < publish.index('gh release upload "${tag}"')
 assert publish.index('remote_digest=') < publish.index('gh release upload "${tag}"')
+assert publish.index('scripts/download_metrics.py') < publish.index('gh release upload "${tag}"')
+# A missing latest is created only after the snapshot, never before it.
+assert publish.index('scripts/download_metrics.py') < publish.index('gh release create "${tag}"')
 assert "gh release edit" in publish
 assert "--draft=false --prerelease=false --latest" in publish
 assert "git merge-base --is-ancestor" in publish
