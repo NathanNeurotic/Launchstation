@@ -601,6 +601,14 @@ int FileSystem_PrepareRename(FSContext *pContext, const char *name, FSRename *re
 	return result;
 }
 
+#ifndef LINUX
+static int renameMountChanged(const FSRename *rename)
+{
+	return !strcmp(rename->device->name, "pfs") && rename->unit >= FS_PFS_BASE && rename->unit < FS_PFS_BASE + FS_PFS_UNITS &&
+		rename->mount_generation != pfs_mount_generation[rename->unit - FS_PFS_BASE];
+}
+#endif
+
 static int renamePath(FSContext *pContext, const FSRename *rename, const char *newName)
 {
 	char destination[FS_PATH_MAX];
@@ -620,8 +628,7 @@ static int renamePath(FSContext *pContext, const FSRename *rename, const char *n
 	const char *relative;
 	if (!rename->device)
 		return -EINVAL;
-	if (!strcmp(rename->device->name, "pfs") && rename->unit >= FS_PFS_BASE && rename->unit < FS_PFS_BASE + FS_PFS_UNITS &&
-		rename->mount_generation != pfs_mount_generation[rename->unit - FS_PFS_BASE])
+	if (renameMountChanged(rename))
 		return -EXDEV;
 	relative = FileSystem_ClassifyPath(pContext, rename->path);
 	if (!relative || pContext->m_eType != FS_IODEVICE || pContext->m_kFile.device != rename->device ||
@@ -631,7 +638,7 @@ static int renamePath(FSContext *pContext, const FSRename *rename, const char *n
 	relative = FileSystem_ClassifyPath(pContext, destination);
 	if (!relative || pContext->m_eType != FS_IODEVICE)
 		return -ENODEV;
-	if (pContext->m_kFile.device != rename->device || pContext->m_kFile.unit != rename->unit)
+	if (pContext->m_kFile.device != rename->device || pContext->m_kFile.unit != rename->unit || renameMountChanged(rename))
 		return -EXDEV;
 	if (!strcmp(source, "/") || !strcmp(relative, "/"))
 		return -EINVAL;

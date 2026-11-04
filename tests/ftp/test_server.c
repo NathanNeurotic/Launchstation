@@ -722,6 +722,29 @@ static void test_renames(void)
 	puts("PASS: interleaved rename sources, sequencing, folders, cross-device rejection and PFS mount "
 		 "generations");
 }
+static void test_rename_partition_remount(void)
+{
+	setup();
+	iop_device_t hdd = {.name = "hdd", .type = IOP_DT_FS | IOP_DT_FSEXT, .ops = &ops};
+	devices[16] = &hdd;
+	add(&hdd, 0, "/PART.A", 1, NULL, 0);
+	add(&hdd, 0, "/PART.B", 1, NULL, 0);
+	add(&pfs, 4, "/same.elf", 0, payload, 7);
+	FtpServer s;
+	FtpServer_Create(&s);
+	FtpClient *c = client(&s, 10, "/hdd/0/PART.A");
+	command(c, "RNFR same.elf");
+	assert(reply(10) == 350);
+	/* Classifying PART.B drops the source reference, so the first free slot is
+	 * PART.A's own and gets remounted to PART.B: the source path would then
+	 * name PART.B's same.elf. */
+	command(c, "RNTO /hdd/0/PART.B/moved.elf");
+	assert(reply(10) == 550 && rename_calls == 0);
+	assert(find(&pfs, 4, "/same.elf") && !find(&pfs, 4, "/moved.elf"));
+	FtpServer_Destroy(&s);
+	assert(open_count == close_count);
+	puts("PASS: a rename whose source slot is remounted for the destination partition is rejected");
+}
 static void start_data(FtpClient *c, int fd, DataAction action)
 {
 	c->m_iDataSocket = fd;
@@ -1073,6 +1096,7 @@ int main(void)
 	test_hdd_listing();
 	test_hdd_gate();
 	test_renames();
+	test_rename_partition_remount();
 	test_transfers();
 	test_decimal_formatting();
 	test_resume_and_size();
