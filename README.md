@@ -6,6 +6,41 @@
 
 **Launchstation** is a PlayStation 2 dashboard, file manager and homebrew launcher based on [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z). Browse devices, launch applications and game images, manage saves and card images, and back up MMCE cards locally or to [Google Drive](https://nathanneurotic.github.io/Launchstation/cloud.html) through a controller-driven interface.
 
+## Downloads and project status
+
+[![Build](https://github.com/NathanNeurotic/Launchstation/actions/workflows/compile.yml/badge.svg?branch=master)](https://github.com/NathanNeurotic/Launchstation/actions/workflows/compile.yml)
+[![Rolling Release](https://img.shields.io/badge/Release-Rolling-skyblue)](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest)
+[![Standard](https://img.shields.io/badge/Download-Standard-skyblue)](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest)
+[![DS34](https://img.shields.io/badge/Download-DS34-skyblue)](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest)
+[![Full Kit](https://img.shields.io/badge/Download-Full%20Kit-skyblue)](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest)
+
+[![License: MULTI](https://img.shields.io/badge/License-MULTI-skyblue?style=flat&labelColor=navy&logo=opensourceinitiative)](docs/THIRD_PARTY_CREDITS.md)
+![Platform](https://img.shields.io/badge/Platform-PlayStation%202-skyblue?style=flat&labelColor=navy)
+![SDK](https://img.shields.io/badge/SDK-ps2build-skyblue?style=flat&labelColor=navy)
+![Compiler](https://img.shields.io/badge/Toolchain-LLVM%2FClang-skyblue?style=flat&labelColor=navy)
+![Languages](https://img.shields.io/badge/Languages-9-skyblue?style=flat&labelColor=navy)
+![Themes](https://img.shields.io/badge/Themes-18-skyblue?style=flat&labelColor=navy)
+![Repo size](https://img.shields.io/github/repo-size/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=github&label=Repo%20Size)
+
+![Last commit](https://img.shields.io/github/last-commit/NathanNeurotic/Launchstation/master?style=flat&labelColor=navy&color=skyblue&logo=git&label=Last%20Commit)
+![Monthly commits](https://img.shields.io/github/commit-activity/m/NathanNeurotic/Launchstation/master?style=flat&labelColor=navy&color=skyblue&logo=github&label=Commits%2FMonth)
+![Contributors](https://img.shields.io/github/contributors/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=github&label=Contributors)
+[![Tracked Downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FNathanNeurotic%2FLaunchstation%2Fdownload-metrics%2Fmetrics%2Fdownloads.json&query=%24.total_downloads&label=Tracked%20Downloads&color=skyblue&labelColor=navy&logo=github&style=flat)](https://github.com/NathanNeurotic/Launchstation/blob/download-metrics/metrics/downloads.json)
+[![Current release downloads](https://img.shields.io/github/downloads/NathanNeurotic/Launchstation/latest/total?style=flat&labelColor=navy&color=skyblue&logo=github&label=Current%20Release%20Downloads)](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest)
+[![Open issues](https://img.shields.io/github/issues/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=github&label=Open%20Issues)](https://github.com/NathanNeurotic/Launchstation/issues)
+[![Stars](https://img.shields.io/github/stars/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=github&label=Stars)](https://github.com/NathanNeurotic/Launchstation/stargazers)
+
+![Storage](https://img.shields.io/badge/Storage-USB%20%C2%B7%20MMCE%20%C2%B7%20MX4SIO%20%C2%B7%20ATA%20%C2%B7%20iLink-2ea043?style=flat&labelColor=0b3d18)
+![Network](https://img.shields.io/badge/Network-SMB%20%C2%B7%20UDPFS%20%C2%B7%20FTP%20%C2%B7%20PS2Link-2ea043?style=flat&labelColor=0b3d18)
+![PS2/PS1](https://img.shields.io/badge/Game%20Loaders-Neutrino%20%C2%B7%20POPStarter%20%C2%B7%20Ember-2ea043?style=flat&labelColor=0b3d18)
+
+[![Discord](https://img.shields.io/discord/1275875800318476381?style=flat&logo=discord)](https://tinyurl.com/PS2SPACE)
+[![Documentation](https://img.shields.io/badge/Documentation-Launchstation-skyblue?style=flat&logo=githubpages&logoColor=white&labelColor=navy)](https://nathanneurotic.github.io/Launchstation/)
+[![Wiki](https://img.shields.io/badge/Wiki-User%20Guides-skyblue?style=flat&labelColor=navy)](https://github.com/NathanNeurotic/Launchstation/wiki)
+[![Changelog](https://img.shields.io/badge/Changelog-Rolling-skyblue?style=flat&labelColor=navy)](CHANGELOG.md)
+
+> **Download metrics:** *Tracked Downloads* comes from our [persistent per-asset ledger](https://github.com/NathanNeurotic/Launchstation/blob/download-metrics/metrics/downloads.json) (tracking began **2026-11-03**). It preserves observed counts before rolling assets are replaced, but cannot recover older deleted assets or guarantee downloads between snapshots. *Current Release Downloads* counts only the surviving assets on the moving `latest` release. Neither number is a verified all-time unique-user count. See [releases and recovery](docs/wiki/Releases-and-Recovery.md) and [tracking PR #273](https://github.com/NathanNeurotic/Launchstation/pull/273).
+
 [Download](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest) · [User manual](https://nathanneurotic.github.io/Launchstation/) · [Wiki](docs/wiki/Home.md) · [Changelog](CHANGELOG.md) · [Report an issue](https://github.com/NathanNeurotic/Launchstation/issues)
 
 - [Install and update](#install-and-update)
@@ -192,7 +227,7 @@ For a GCC comparison build, set `PS2BUILD_TOOLCHAIN=gcc`, rebuild the third-part
 
 [package_apps.py](scripts/package_apps.py) produces four installable archives and four loose ELFs from the standard and DS34 builds. Its local ZIP filenames are `APP_LAUNCHSTATION.zip` and `APP_LAUNCHSTATION-DS.zip`; release CI adds the build-number suffix. The optional full kit uses [package_kit.py](scripts/package_kit.py) and the checksum pins in [ship/kit-externals.json](ship/kit-externals.json).
 
-[Automated-Build](.github/workflows/compile.yml) runs host regression tests, builds the documentation and both controller variants, independently builds the PC CARD CF and PS2IP RPC modules, and checks toolchain purity, controller symbols, UDPFS SMAP compatibility and loader memory layout. Pull requests build and test. Publication to `latest` is restricted to eligible `master` pushes/manual runs, checks that `master` has not advanced, verifies ancestry and downloads the uploaded app assets to compare bytes. A kit failure can leave the previous kit attached.
+[Automated-Build](.github/workflows/compile.yml) runs host regression tests, builds the documentation and both controller variants, independently builds the PC CARD CF and PS2IP RPC modules, and checks toolchain purity, controller symbols, UDPFS SMAP compatibility and loader memory layout. Pull requests build and test. Publication to `latest` is restricted to eligible `master` pushes/manual runs, checks that `master` has not advanced, verifies ancestry, and confirms each uploaded app asset against its GitHub-computed SHA-256 digest and byte size without downloading it (CI downloads would inflate the public count). A kit failure can leave the previous kit attached.
 
 ## Documentation
 
