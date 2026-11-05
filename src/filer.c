@@ -1623,17 +1623,28 @@ int readHOST(const char *path, FILEINFO *info, int max)
 		if (hfd < 0)
 			return 0;
 		if ((size = fileXioLseek(hfd, 0, SEEK_END)) <= 0) {
+			if (size < 0)
+				dirReadFailed(size);
 			fileXioClose(hfd);
 			return 0;
 		}
-		elflisttxt = (char *)memalign(64, size);
-		fileXioLseek(hfd, 0, SEEK_SET);
-		fileXioRead(hfd, elflisttxt, size);
+		if ((elflisttxt = (char *)memalign(64, size)) == NULL) {
+			dirReadFailed(-ENOMEM);
+			fileXioClose(hfd);
+			return 0;
+		}
+		if ((rv = fileXioLseek(hfd, 0, SEEK_SET)) >= 0)
+			rv = fileXioRead(hfd, elflisttxt, size);
 		fileXioClose(hfd);
+		if (rv != size) {  //a failed seek or read, or a short read
+			dirReadFailed(rv);
+			free(elflisttxt);
+			return 0;
+		}
 		contentptr = 0;
 		for (rv = 0; rv <= size; rv++) {
-			elflistchar = elflisttxt[rv];
-			if ((elflistchar == 0x0a) || (rv == size)) {
+			elflistchar = (rv < size) ? elflisttxt[rv] : 0x0a;  //the end of the list ends its last line
+			if (elflistchar == 0x0a) {
 				host_next[contentptr] = 0;
 				snprintf(host_path, sizeof(host_path), "host:%.*s", (int)(sizeof(host_path) - sizeof("host:")), host_next);
 				clearMcTable(&info[hostcount].stats);
