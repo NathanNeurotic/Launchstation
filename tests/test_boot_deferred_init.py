@@ -27,8 +27,9 @@ assert "dashBgmStart" not in pre_loop
 assert "dashSoundPlay(DASH_SND_BOOT)" not in pre_loop
 
 # one deferred step, gated on the fade like the first-run welcome and on an idle
-# worker: identity reads use CDVD RPC and audio loads IOP modules
-step = re.search(r"if \(boot_init_pending && fade_in > 0\.95f && !dashWorkerIoBusy\(\) && !dashIopParked\(\)\) \{(.*?)\n\t\t\}", loop, re.S)
+# worker: identity reads use CDVD RPC and audio loads IOP modules; it must not
+# eat into the auto-start countdown, which is the only time input can cancel
+step = re.search(r"if \(boot_init_pending && boot_phase != 2 && fade_in > 0\.95f && !dashWorkerIoBusy\(\) && !dashIopParked\(\)\) \{(.*?)\n\t\t\}", loop, re.S)
 assert step, "deferred boot step missing"
 body = step.group(1)
 assert "boot_init_pending = 0;" in body
