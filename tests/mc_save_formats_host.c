@@ -97,5 +97,9 @@ int main(int argc, char **argv)
 		free(in);
 		return 0;
 	}
+	if (argc >= 3 && !strcmp(argv[1], "blazepath")) {
+		printf("blaze=%d\n", mcSaveFormatBlazePath(argv[2]));
+		return 0;
+	}
 	return 2;
 }

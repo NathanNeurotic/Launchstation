@@ -1,4 +1,4 @@
-"""Save formats other tools export (Blaze .mcm, MAX Drive .max, CodeBreaker .cbs, SharkPort/X-Port
+"""Save formats other tools export (Blaze MCM folder files / .mcm, MAX Drive .max, CodeBreaker .cbs, SharkPort/X-Port
 .sps/.xps, PS3 .psv) read into the card writer's save structure and written out as .psu.
 
 Each fixture is built here from the format description (Ross Ridge's public-domain mymc for
@@ -115,6 +115,21 @@ assert conv(tmp / "over.mcm", "X", "mcm")[0]["r"] == "-16"           # record lo
 dup = make_mcm(FOLDER, [(b"same", b"1"), (b"same", b"2")])
 (tmp / "dup.mcm").write_bytes(dup)
 assert conv(tmp / "dup.mcm", "X", "mcm")[0]["r"] == "-16"            # duplicate names
+
+# Blaze itself writes the file with no extension into a folder called MCM on the card, named exactly
+# after the save folder (Berion). Such a path is a Blaze save whatever the name looks like; a .psu is not.
+for p in ("mc0:/MCM/BASLUS-21386TALES", "mass:/mcm/BESLES-50468.SAV", "hdd0:/__common/saves/MCM/X", "vmc0:/MCM/a"):
+    assert run("blazepath", p)["blaze"] == "1", p
+for p in ("mass:/BASLUS-21386TALES", "mass:/MCM/save.psu", "mass:/MCMX/save", "mass:/x/MCM", "mc0:/MCM/",
+          "mass:/MCM", "mass:/sub/MCM/", "mass:/MCM//", "MCM", ""):
+    assert run("blazepath", p)["blaze"] == "0", p
+blz = tmp / "MCM" / "BASLUS-21050SAVE"
+blz.parent.mkdir(exist_ok=True)
+blz.write_bytes(make_mcm(FOLDER, FILES))
+r, out = conv(blz, "BASLUS-21050SAVE", "mcm")                        # the loader passes the whole file name
+assert r["r"] == "0", r
+check(out, FOLDER, FILES, times=(STAMP, STAMP))
+assert run("detect", blz)["format"] == "2"                           # no extension at all still detects
 
 sample = os.environ.get("BLAZE_MCM_SAMPLE")
 if sample and Path(sample).exists():

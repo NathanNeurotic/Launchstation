@@ -39,9 +39,11 @@ void dashCardAllSaves(const char *folder);
  * subfolder), applies a set to a card, or deletes .psu files. */
 void dashCardSaveLibrary(const char *folder);
 
-/* "Convert to .psu": a save exported by another tool (Blaze .mcm, MAX Drive
- * .max, CodeBreaker .cbs, SharkPort/X-Port .sps/.xps, PS3 .psv) written as a
- * new .psu beside it, read back and checked. The source is only read. */
+/* "Convert to .psu": a save exported by another tool (Blaze, from an MCM
+ * folder or as .mcm; MAX Drive .max, CodeBreaker .cbs, SharkPort/X-Port
+ * .sps/.xps, PS3 .psv) written as a new .psu beside it, or in a folder the
+ * user picks when the source is on a memory card, read back and checked. The
+ * source is only read. */
 void dashCardConvertSave(const char *path);
 
 /* MMCE: show which card image the device serves (confirmed by content), and

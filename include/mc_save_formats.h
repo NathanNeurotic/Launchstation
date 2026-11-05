@@ -6,10 +6,13 @@
 //
 //  .psu       EMS / uLaunchELF: the save's directory entries and data as on
 //             the card (mc_card_write.c reads these; here only detected).
-//  .mcm       Blaze Memory Maxx: 80-byte header, zlib stream of
+//  MCM/       Blaze Memory Maxx: 80-byte header, zlib stream of
 //             [32-byte name][u32 size][data] records; no attributes or
-//             times, so defaults are made up. The save folder's name is the
-//             file's name without its extension.
+//             times, so defaults are made up. Blaze keeps each save in the
+//             card's MCM folder as a file with no extension named after the
+//             save folder (mc0:/MCM/BASLUS-21386TALES); the same data also
+//             circulates renamed to .mcm. The folder name is not stored, so
+//             it comes from the file's name.
 //  .max       Action Replay / GameShark MAX Drive: "Ps2PowerSave" header,
 //             LZARI-compressed [u32 size][32-byte name][data] records padded
 //             so each record ends 8 bytes before a 16-byte boundary; the
@@ -46,9 +49,10 @@ enum McSaveFormat {
 };
 
 /* The format of a whole file in memory. ext_hint is the file's extension
- * (any case, with or without the dot) or NULL; it decides .mcm, which has no
- * magic number, and breaks ties for a .psu whose header happens to look like
- * something else. */
+ * (any case, with or without the dot), "mcm" for a file in a Blaze MCM
+ * folder, or NULL; it decides Blaze's format, which has no magic number,
+ * and breaks ties for a .psu whose header happens to look like something
+ * else. */
 int mcSaveFormatDetect(const uint8_t *buf, uint32_t len, const char *ext_hint);
 
 /* Lowercase extension and a short name for a format, for labels. */
@@ -59,13 +63,19 @@ const char *mcSaveFormatName(int format);
  * this file can read, .psu included. */
 int mcSaveFormatKnownExt(const char *ext);
 
+/* 1 when path names a file inside a folder called MCM (any case) that is not
+ * a .psu: where Blaze keeps its saves, which have no extension. Only looks
+ * at the name; mcSaveFormatDetect still checks the contents. */
+int mcSaveFormatBlazePath(const char *path);
+
 /* Reads a save of any known format into out (free with mcCardFreeSave).
- * name_hint is the file's base name without extension (for .mcm, which does
- * not store the folder name) or NULL. stamp is the console time in card
- * order (see mcCardBlankIdentity), or NULL for zero, used where the format
- * stores no times. *format receives the McSaveFormat read, or MCSF_UNKNOWN.
- * Returns MCW_OK, MCW_ERR_INVALID, MCW_ERR_UNSUPPORTED (a format that is
- * recognised but cannot be read, such as a PS1 .psv) or MCW_ERR_NOMEM. */
+ * name_hint is the save folder name (for Blaze files, which do not store
+ * it: the file's name, minus any .mcm extension) or NULL. stamp is the
+ * console time in card order (see mcCardBlankIdentity), or NULL for zero,
+ * used where the format stores no times. *format receives the McSaveFormat
+ * read, or MCSF_UNKNOWN. Returns MCW_OK, MCW_ERR_INVALID, MCW_ERR_UNSUPPORTED
+ * (a format that is recognised but cannot be read, such as a PS1 .psv) or
+ * MCW_ERR_NOMEM. */
 int mcSaveFormatRead(const uint8_t *buf, uint32_t len, const char *ext_hint, const char *name_hint,
                      const uint8_t stamp[8], McSaveData *out, int *format);
 

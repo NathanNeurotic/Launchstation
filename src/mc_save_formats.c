@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 //File name:   mc_save_formats.c
-//Readers for the single-save formats other tools export (.mcm, .max, .cbs,
-//.sps/.xps, .psv) into McSaveData. See include/mc_save_formats.h.
+//Readers for the single-save formats other tools export (Blaze MCM, .max,
+//.cbs, .sps/.xps, .psv) into McSaveData. See include/mc_save_formats.h.
 //--------------------------------------------------------------
 #include <stdlib.h>
 #include <string.h>
@@ -211,7 +211,7 @@ static int inflateAll(const uint8_t *src, uint32_t src_len, uint32_t want, uint8
 	return MCW_OK;
 }
 
-/* ------------------------------------------------------------ Blaze .mcm */
+/* ---------------------------------------------------- Blaze Memory Maxx */
 
 int mcSaveFromMcm(const uint8_t *buf, uint32_t len, const char *folder_name, const uint8_t stamp[8], McSaveData *out)
 {
@@ -752,6 +752,31 @@ static int extIs(const char *ext, const char *want)
 	return ext[i] == 0;
 }
 
+int mcSaveFormatBlazePath(const char *path)
+{
+	const char *p, *slash = NULL, *prev = NULL, *dot = NULL;
+
+	if (!path)
+		return 0;
+	for (p = path; *p; p++) {
+		if (*p == '/' || *p == ':') {
+			prev = slash;
+			slash = p;
+			dot = NULL;
+		} else if (*p == '.') {
+			dot = p;
+		}
+	}
+	if (!slash || *slash != '/' || slash[1] == 0)
+		return 0;
+	if (dot && extIs(dot + 1, "psu"))
+		return 0;
+	p = prev ? prev + 1 : path;
+	if (slash - p != 3)
+		return 0;
+	return (p[0] == 'M' || p[0] == 'm') && (p[1] == 'C' || p[1] == 'c') && (p[2] == 'M' || p[2] == 'm');
+}
+
 int mcSaveFormatKnownExt(const char *ext)
 {
 	return extIs(ext, "psu") || extIs(ext, "mcm") || extIs(ext, "max") || extIs(ext, "cbs") || extIs(ext, "sps") ||
@@ -775,7 +800,7 @@ const char *mcSaveFormatName(int format)
 {
 	switch (format) {
 	case MCSF_PSU: return "EMS / uLaunchELF .psu";
-	case MCSF_MCM: return "Blaze Memory Maxx .mcm";
+	case MCSF_MCM: return "Blaze (MCM folder / .mcm)";
 	case MCSF_MAX: return "MAX Drive .max";
 	case MCSF_CBS: return "CodeBreaker .cbs";
 	case MCSF_SPS: return "SharkPort / X-Port .sps";
@@ -796,8 +821,9 @@ int mcSaveFormatDetect(const uint8_t *buf, uint32_t len, const char *ext_hint)
 		return MCSF_CBS;
 	if (memcmp(buf, "\0VSP", 4) == 0)
 		return MCSF_PSV;
-	/* .mcm has no magic: the header's second word is the file's own size
-	 * and a zlib stream starts at 80. The extension confirms it. */
+	/* Blaze has no magic: the header's second word is the file's own size
+	 * and a zlib stream starts at 80. The hint confirms it; the real files
+	 * have no extension (see mcSaveFormatBlazePath), so NULL also passes. */
 	if (len > 82u && rd32(buf + 4) == len && buf[80] == 0x78 && (buf[81] == 0x9C || buf[81] == 0xDA || buf[81] == 0x01 ||
 	                                                              buf[81] == 0x5E))
 		if (extIs(ext_hint, "mcm") || !ext_hint)
