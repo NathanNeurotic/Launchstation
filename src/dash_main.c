@@ -1401,10 +1401,10 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			quickLaunchDraw();
 		dashGfxPresent();
 
-		/* after the first frame is on screen and never inside the auto-start
-		 * countdown; CDVD RPC and module loads must not overlap worker IOP
-		 * file work */
-		if (boot_init_pending && boot_phase != 2 && fade_in > 0.95f && !dashWorkerIoBusy() && !dashIopParked()) {
+		/* after the first frame is on screen and the boot delay/countdown
+		 * (held-key sample, cancel input) is over; CDVD RPC and module loads
+		 * must not overlap worker IOP file work */
+		if (boot_init_pending && !boot_phase && fade_in > 0.95f && !dashWorkerIoBusy() && !dashIopParked()) {
 			boot_init_pending = 0;
 			dashConsoleIdentityInit();
 			dashSoundInit();
