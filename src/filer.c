@@ -824,6 +824,40 @@ void invalidatePartitionCaches(void)
 //------------------------------
 //endfunc genLimObjName
 //--------------------------------------------------------------
+/* loadUsbModules returns as soon as the drivers link; a target on a stick
+ * that has not enumerated yet needs one bounded wait so the open that
+ * follows does not fail outright (the pre-#277 code hid this behind fixed
+ * boot settles). Once any scan has run, the unit table is authoritative and
+ * discovery belongs to the browser/dashboard rescans. Each unit gets the
+ * wait once, so a genuinely absent stick fails fast afterwards. */
+static int usb_target_waited;
+
+static void waitUsbTargetReady(const char *gen_path)
+{
+	char root[12];
+	const char *colon;
+	int devlen, unit;
+
+	if (!USB_mass_loaded || USB_mass_scanned)
+		return;
+	colon = strchr(gen_path, ':');
+	if (colon == NULL || colon == gen_path)
+		return;
+	unit = colon[-1] - '0';
+	if (unit < 0 || unit > 9)
+		return; /* an unnumbered alias maps nowhere waitable */
+	if (usb_target_waited & (1 << unit))
+		return;
+	usb_target_waited |= 1 << unit;
+	devlen = colon - gen_path + 1;
+	if (devlen + 2 > (int)sizeof(root))
+		return;
+	memcpy(root, gen_path, devlen);
+	root[devlen] = '/';
+	root[devlen + 1] = '\0';
+	waitForUsbMassPath(root);
+}
+
 int genFixPath(const char *inp_path, char *gen_path)
 {
 	char uLE_path[MAX_PATH], loc_path[MAX_PATH], ata_path[MAX_PATH], hdd_device[6], party[MAX_NAME], *p;
@@ -856,6 +890,7 @@ int genFixPath(const char *inp_path, char *gen_path)
 			fatfs_sep = strchr(gen_path, '/');
 			if (fatfs_sep && (fatfs_sep - gen_path < 7) && fatfs_sep[-1] == ':')
 				strcpy(gen_path + (fatfs_sep - gen_path), fatfs_sep + 1);
+			waitUsbTargetReady(gen_path);
 		}
 		//end of clause for using a USB alias path
 
@@ -869,11 +904,13 @@ int genFixPath(const char *inp_path, char *gen_path)
 			pathSep = strchr(gen_path, '/');
 			if (pathSep && (pathSep - gen_path < 7) && pathSep[-1] == ':')
 				strcpy(gen_path + (pathSep - gen_path), pathSep + 1);
+			waitUsbTargetReady(gen_path);
 		}
 #else
 		loadUsbModules();
 		if (pathSep && (pathSep - uLE_path < 7) && pathSep[-1] == ':')
 			strcpy(gen_path + (pathSep - uLE_path), pathSep + 1);
+		waitUsbTargetReady(gen_path);
 #endif
 		//end of clause for using a USB mass: path
 

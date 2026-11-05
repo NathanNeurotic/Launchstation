@@ -1498,23 +1498,33 @@ static void loadUsbDModule(void)
 //------------------------------
 //endfunc loadUsbDModule
 //---------------------------------------------------------------------------
-static void waitForUsbMassEnumerate(void)
+/* Bounded poll until a USB/mass path answers: enumeration runs on the IOP
+ * once USBMASS_BD links, so a stick that already enumerated for the loader
+ * answers in a fraction of the old fixed waits. */
+void waitForUsbMassPath(const char *path)
 {
 	u64 deadline;
 	iox_stat_t chk_stat;
 
+	deadline = Timer() + USB_MASS_ENUM_TIMEOUT_MS;
+	while (Timer() < deadline) {
+		if (fileXioGetStat(path, &chk_stat) >= 0)
+			break;
+		DelayThread(USB_MASS_ENUM_POLL_MS * 1000);
+	}
+}
+//------------------------------
+//endfunc waitForUsbMassPath
+//---------------------------------------------------------------------------
+static void waitForUsbMassEnumerate(void)
+{
 	/* Only a USB boot waits: the stick enumerated moments ago for the loader,
 	 * and loadConfig reads it right after this returns. Probe the boot path
 	 * itself so a slower second stick is not skipped behind a faster usb0.
 	 * USB activation after boot is covered by the browser/dashboard retries. */
 	if (strncmp(LaunchElfDir, "usb", 3) && strncmp(LaunchElfDir, "mass", 4))
 		return;
-	deadline = Timer() + USB_MASS_ENUM_TIMEOUT_MS;
-	while (Timer() < deadline) {
-		if (fileXioGetStat(LaunchElfDir, &chk_stat) >= 0)
-			break;
-		DelayThread(USB_MASS_ENUM_POLL_MS * 1000);
-	}
+	waitForUsbMassPath(LaunchElfDir);
 }
 //------------------------------
 //endfunc waitForUsbMassEnumerate
@@ -2061,6 +2071,19 @@ void ensureMemoryCardPortAccessible(int port)
 	}
 #else
 	(void)port;
+#endif
+}
+
+/* An mc1: read while another stack (MX4SIO) owns slot 2 needs an IOP reset,
+ * which is refused where it is unsafe (the dashboard worker). Config
+ * discovery uses this to leave its cache cold for a later UI-thread retry
+ * instead of recording a read that never ran. */
+int mc1AccessRefused(void)
+{
+#ifdef MX4SIO
+	return !isPathDeviceStackLoaded("mc1:/") && iopResetBlocked != NULL && iopResetBlocked();
+#else
+	return 0;
 #endif
 }
 

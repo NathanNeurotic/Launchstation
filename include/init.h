@@ -30,6 +30,11 @@ void closeAllAndPoweroff(void);
 void startKbd(void);
 void ensureCoreIoStackReady(void);
 void ensureMemoryCardPortAccessible(int port);
+/* Nonzero when an mc1: read right now would need an IOP stack switch that is
+ * refused on this thread (the dashboard worker): the read will fail. */
+int mc1AccessRefused(void);
+/* Bounded poll (50ms steps, 2s cap) until a USB/mass path answers a stat. */
+void waitForUsbMassPath(const char *path);
 void rebootIopAndReloadCoreStack(void);
 void rebootIopAndReloadCoreStackSilent(void);
 int loadSecrSifModule(void);
