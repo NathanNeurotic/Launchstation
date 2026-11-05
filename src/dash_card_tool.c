@@ -672,9 +672,10 @@ static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 		r = mcCardSaveFromPsu(buf, (uint32_t)size, s);
 	else {
 		/* Blaze names the file after the save folder, dots included, so a
-		 * file in an MCM folder keeps its whole name and is read as Blaze. */
+		 * file in an MCM folder keeps its whole name and is read as Blaze;
+		 * only a copy renamed to .mcm loses that suffix. */
 		int blaze = mcSaveFormatBlazePath(psu);
-		const char *base = ctBaseName(psu), *dot = blaze ? NULL : strrchr(base, '.');
+		const char *base = ctBaseName(psu), *dot = blaze && !genCmpFileExt(base, "MCM") ? NULL : strrchr(base, '.');
 		const char *ext = blaze ? "mcm" : dot ? dot + 1 : NULL;
 		char name[33];
 		uint8_t stamp[8];

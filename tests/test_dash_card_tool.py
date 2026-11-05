@@ -235,13 +235,16 @@ host("mass:/MCM").mkdir()
 host("mass:/MCM/BASLUS-77777BLZ").write_bytes(_blaze)
 host("mass:/MCM/BESLES-50468.SAV").write_bytes(_blaze)
 host("mass:/MCM/junk").write_bytes(bytes(100))
+host("mass:/MCM/BASLUS-88888BLZ.mcm").write_bytes(_blaze)
 H = "mass:/H.mcd"
 blank(H)
 lines = run(H, "m0", "pmass:/MCM/BASLUS-77777BLZ", "c1")
 assert kind(lines, "TOAST|1|Save imported and verified"), lines
 lines = run(H, "m0", "pmass:/MCM/BESLES-50468.SAV", "c1")
 assert kind(lines, "TOAST|1|Save imported and verified"), lines
-assert "BASLUS-77777BLZ" in saves(H) and "BESLES-50468.SAV" in saves(H), saves(H)
+lines = run(H, "m0", "pmass:/MCM/BASLUS-88888BLZ.mcm", "c1")             # a renamed copy still drops .mcm
+assert kind(lines, "TOAST|1|Save imported and verified"), lines
+assert "BASLUS-77777BLZ" in saves(H) and "BESLES-50468.SAV" in saves(H) and "BASLUS-88888BLZ" in saves(H), saves(H)
 assert saves(H)["BASLUS-77777BLZ"] == saves(F)["BASLUS-99999BLZ"]
 snap = sha(H)
 lines = run(H, "m0", "pmass:/MCM/junk")
