@@ -182,6 +182,12 @@ enum DashClockPos {
 	DASH_CLOCKPOS_COUNT
 };
 
+enum DashTabs {
+	DASH_TABS_SHOWN = 0,
+	DASH_TABS_HIDDEN, /* no top bar; L1/R1 still switch sections */
+	DASH_TABS_COUNT
+};
+
 enum DashClockHours {
 	DASH_HOURS_SYSTEM = 0, /* console setting */
 	DASH_HOURS_24,
@@ -229,6 +235,8 @@ typedef struct
 	u8 icon_tint, app_icon_style;
 	/* clock */
 	u8 clock, clock_pos, clock_hours, clock_seconds, clock_date;
+	/* header */
+	u8 tabs;
 	/* app-aware wallpaper */
 	u8 wallpaper, wall_dim; /* wall_dim: 0..90 % */
 } DashTheme;

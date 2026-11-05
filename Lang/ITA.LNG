@@ -685,3 +685,6 @@ lang(683, Dashboard_Per_save_versions, "Versioni per salvataggio")
 
 lang(684, Dashboard_Style, "Stile")
 lang(685, Dashboard_Regular, "Normale")
+lang(686, Dashboard_Section_tabs, "Schede di sezione")
+lang(687, Dashboard_Shown, "Visibili")
+lang(688, Dashboard_Hidden, "Nascoste")

@@ -167,6 +167,7 @@ enum SetId {
 	S_T_CORNER,
 	S_T_TILE,
 	S_T_GLOW,
+	S_T_TABS,
 	S_T_PANEL_A,
 	S_T_FONT,
 	S_T_FSCALE,
@@ -461,6 +462,7 @@ static const SetItem tstyle_items[] = {
     {ST_CHOICE, S_T_TILE, "Tile style", "Application tiles: memory card, rounded, chamfered, floating object or crystal slab."},
     {ST_CHOICE, S_T_CORNER, "Corners", NULL},
     {ST_CHOICE, S_T_GLOW, "Glow", "Soft light behind focused items."},
+    {ST_CHOICE, S_T_TABS, "Section tabs", "Hidden removes the top bar. L1 and R1 still switch sections."},
     {ST_ACTION, S_T_RESETCAT, "Reset style", "Back to the values of the theme's preset."},
 };
 static const SetItem ttype_items[] = {
@@ -602,6 +604,7 @@ static const char *const tint_names[] = {"Text colours", "Accent", "Monochrome"}
 static const char *const appicon_names[] = {"Application", "Device", "Initials"};
 static const char *const clock_names[] = {"Off", "Standard", "System"};
 static const char *const clockpos_names[] = {"Header", "Footer"};
+static const char *const tabs_names[] = {"Shown", "Hidden"};
 static const char *const hours_names[] = {"System", "24-hour", "12-hour"};
 static const char *const date_names[] = {"System", "YYYY/MM/DD", "MM/DD/YYYY", "DD/MM/YYYY", "Off"};
 static const char *const wall_names[] = {"Off", "Focused app"};
@@ -867,6 +870,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_T_GLOW:
 			*cur = dashTheme.glow;
 			return 2;
+		case S_T_TABS:
+			*names = tabs_names, *cur = dashTheme.tabs;
+			return DASH_TABS_COUNT;
 		case S_T_PANEL_A:
 			*names = pct_names, *cur = ((255 - dashTheme.panel.a) * 10 + 127) / 255;
 			return 11;
@@ -944,6 +950,9 @@ static int setThemeChoice(int id, int v)
 			break;
 		case S_T_GLOW:
 			t->glow = (u8)v;
+			break;
+		case S_T_TABS:
+			t->tabs = (u8)v;
 			break;
 		case S_T_PANEL_A:
 			t->panel.a = (u8)((10 - v) * 255 / 10);
@@ -2586,6 +2595,7 @@ static int resetThemeSetting(int id)
 		case S_T_CORNER: t->corner = p.corner; break;
 		case S_T_TILE: t->tile_style = p.tile_style; break;
 		case S_T_GLOW: t->glow = p.glow; break;
+		case S_T_TABS: t->tabs = p.tabs; break;
 		case S_T_PANEL_A: t->panel.a = p.panel.a; break;
 		case S_T_FONT: t->font = p.font; break;
 		case S_T_FSCALE: t->font_scale = p.font_scale; break;
