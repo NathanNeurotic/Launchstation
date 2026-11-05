@@ -99,6 +99,14 @@ const char *smbSharesConfigPath(void)
 	return smb_cfg_path;
 }
 
+int smbSharesSnapshot(SmbConfig *out)
+{
+	if (!smb_cfg_loaded)
+		smbReadConfig();
+	*out = smb_cfg;
+	return smb_cfg.count;
+}
+
 static int connectSmb2(SmbShare *sh)
 {
 	smb2Connect_in_t in;

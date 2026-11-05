@@ -333,6 +333,189 @@ int smbConfigValidCount(const SmbConfig *cfg, int version)
 			n++;
 	return n;
 }
+
+/* ---- editing: compose one block, splice it into the file's text ---------- */
+
+/* 1-based line offsets of the given 1-based line in nul-terminated text:
+ * returns the offset of its first byte. */
+static int lineOffset(const char *text, int line_no)
+{
+	const char *p = text;
+	int n = 1;
+
+	while (n < line_no && *p) {
+		if (*p == '\n')
+			n++;
+		p++;
+	}
+	return (int)(p - text);
+}
+
+/* Does this raw line hold KEY = value (not a comment, not blank)? */
+static int lineIsKey(const char *line)
+{
+	const char *eq;
+
+	while (*line == ' ' || *line == '\t')
+		line++;
+	if (*line == '\0' || *line == '#' || *line == ';' || *line == '\r' || *line == '\n')
+		return 0;
+	eq = strchr(line, '=');
+	return eq != NULL;
+}
+
+int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
+                     const char *username, const char *password,
+                     const char *ip, int port, const char *share, int plaintext)
+{
+	int n = 0, url_len;
+
+	if (out_size < 1 || name == NULL || name[0] == '\0' || strlen(name) >= SMB_NAME_LEN)
+		return -1;
+	if (kind != 1 && kind != 2 && kind != 3)
+		return -1;
+	if (ip == NULL || !isIpv4(ip))
+		return -1;
+	if (port < 1 || port > 65535)
+		return -1;
+	if (share == NULL || share[0] == '\0')
+		return -1;
+	if (username != NULL && strlen(username) >= SMB_CRED_LEN)
+		return -1;
+	if (password != NULL && strlen(password) >= SMB_CRED_LEN)
+		return -1;
+
+	/* Every snprintf is bounds-checked before the next one: a truncated
+	 * write must not leave n past out_size for the following call. */
+	url_len = snprintf(out, out_size, "NAME = %s\n", name);
+	if (url_len < 0 || url_len >= out_size)
+		return -1;
+	n = url_len;
+	if (kind != 2) {
+		url_len = snprintf(out + n, out_size - n, "VERSION = %d\n", kind);
+		if (url_len < 0 || url_len >= out_size - n)
+			return -1;
+		n += url_len;
+	}
+	if (username != NULL && username[0] != '\0') {
+		url_len = snprintf(out + n, out_size - n, "USERNAME = %s\n", username);
+		if (url_len < 0 || url_len >= out_size - n)
+			return -1;
+		n += url_len;
+		url_len = snprintf(out + n, out_size - n, "PASSWORD = %s\n",
+		                   password != NULL ? password : "");
+		if (url_len < 0 || url_len >= out_size - n)
+			return -1;
+		n += url_len;
+	}
+	if (kind == 1 && plaintext) {
+		url_len = snprintf(out + n, out_size - n, "PLAINTEXT = 1\n");
+		if (url_len < 0 || url_len >= out_size - n)
+			return -1;
+		n += url_len;
+	}
+	url_len = snprintf(out + n, out_size - n, "URL = smb://%s", ip);
+	if (url_len < 0 || url_len >= out_size - n)
+		return -1;
+	n += url_len;
+	if (port != 445) {
+		url_len = snprintf(out + n, out_size - n, ":%d", port);
+		if (url_len < 0 || url_len >= out_size - n)
+			return -1;
+		n += url_len;
+	}
+	url_len = snprintf(out + n, out_size - n, "/%s\n", share);
+	if (url_len < 0 || url_len >= out_size - n || n + url_len >= SMB_URL_LEN)
+		return -1;
+	return n + url_len;
+}
+
+int smbCnfUpsertText(const char *text, const char *orig_name,
+                     const char *block_text, char *out, int out_size, char *work, int work_size)
+{
+	SmbConfig cfg;
+	int text_len, target = -1, prev_end = 0, start_line, end_line;
+	int start_off, end_off, block_len, i;
+
+	if (out_size < 1 || work_size < 1)
+		return -1;
+	out[0] = '\0';
+	if (text == NULL)
+		text = "";
+	text_len = strlen(text);
+	if (text_len >= work_size)
+		return -1;
+	memcpy(work, text, text_len + 1);
+	smbConfigParse(work, &cfg);
+
+	if (orig_name != NULL && orig_name[0] != '\0') {
+		for (i = 0; i < cfg.count; i++)
+			if (sameText(cfg.share[i].name, orig_name)) {
+				target = i;
+				break;
+			}
+	}
+
+	if (target < 0) {
+		/* Append: block_text is required. Separate from what is there. */
+		if (block_text == NULL || block_text[0] == '\0')
+			return -1;
+		block_len = strlen(block_text);
+		if (text_len + (text_len > 0 && text[text_len - 1] != '\n' ? 1 : 0) + block_len >= out_size)
+			return -1;
+		i = 0;
+		memcpy(out, text, text_len);
+		i = text_len;
+		if (i > 0 && out[i - 1] != '\n')
+			out[i++] = '\n';
+		memcpy(out + i, block_text, block_len + 1);
+		return i + block_len;
+	}
+
+	/* Replace or remove the target's own lines: from the first key line after
+	 * the previous block's URL to this block's URL line. Comments above the
+	 * first key line stay. */
+	end_line = cfg.share[target].line;
+	if (end_line <= 0)
+		return -1;
+	if (target > 0)
+		prev_end = cfg.share[target - 1].line;
+	start_line = end_line;
+	{
+		int line = prev_end + 1, off = lineOffset(text, line);
+		while (line < end_line) {
+			int len = strcspn(text + off, "\r\n");
+			char probe[128];
+			int is_key, copy = len < (int)sizeof(probe) - 1 ? len : (int)sizeof(probe) - 1;
+
+			memcpy(probe, text + off, copy);
+			probe[copy] = '\0';
+			is_key = lineIsKey(probe);
+			if (is_key) {
+				start_line = line;
+				break;
+			}
+			line++;
+			off += len + (text[off + len] == '\r' && text[off + len + 1] == '\n' ? 2 : 1);
+		}
+	}
+	start_off = lineOffset(text, start_line);
+	end_off = lineOffset(text, end_line);
+	while (text[end_off] && text[end_off] != '\n' && text[end_off] != '\r')
+		end_off++;
+	if (text[end_off] == '\r' && text[end_off + 1] == '\n')
+		end_off += 2;
+	else if (text[end_off] == '\n')
+		end_off++;
+
+	block_len = block_text != NULL ? strlen(block_text) : 0;
+	if (start_off + block_len + (text_len - end_off) >= out_size)
+		return -1;
+	memcpy(out, text, start_off);
+	memcpy(out + start_off, block_text != NULL ? block_text : "", block_len);
+	memcpy(out + start_off + block_len, text + end_off, text_len - end_off + 1);
+	return start_off + block_len + text_len - end_off;
+}
 //--------------------------------------------------------------
 //End of file: smb_cnf.c
 //--------------------------------------------------------------
