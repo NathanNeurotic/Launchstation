@@ -16,7 +16,7 @@
 
 Every ZIP name ends with the build number (the commit count). The release title and notes state the current app build number; PSUs used by the in-app updater and loose ELFs keep fixed names. **The kit can be older than the apps:** if its upstream download or validation fails, the app release proceeds and keeps the previous kit attached. Check the kit's filename and `KIT-MANIFEST.json` before assuming it matches the release title.
 
-A standard install folder has `LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.PEM` and `BGM.ADP`. The DS package has `LAUNCHSTATION-DS.ELF` and its own `APP_LAUNCHSTATION-DS` folder. ZIP and PSU contents are identical and the ELFs are packed. Keep customized configuration and sidecar files when upgrading.
+A standard install folder has `LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.PEM`, `BGM.ADP`, `icon.sys`, `list.icn`, `copy.icn` and `del.icn`. The DS package has `LAUNCHSTATION-DS.ELF` and its own `APP_LAUNCHSTATION-DS` folder. ZIP and PSU contents are identical and the ELFs are packed. Keep customized configuration and sidecar files when upgrading.
 
 ## How the rolling release is published
 
@@ -55,7 +55,7 @@ Open **Settings → Storage & devices → MMCE backups → Check for updates** (
 - It reads the `latest` release and the SHA-256 digest GitHub publishes for the package matching the running variant (standard or DS).
 - It asks GitHub to compare the running commit with the release commit. Only a verified descendant is offered; identical or older builds report "no newer release", and divergent, local or unverifiable builds are blocked with an explanation.
 - After confirmation it downloads the PSU over trusted HTTPS, verifies the digest, extracts the packed ELF and validates it as a PS2 ELF, then stages the replacement.
-- It can install **missing** `WLE-UPDATE-CA.PEM` and `BGM.ADP` from a verified four-file PSU; existing custom sidecars remain untouched. A legacy two-file PSU updates only the ELF.
+- It can install **missing** `WLE-UPDATE-CA.PEM` and `BGM.ADP` from a verified four- or eight-file PSU; existing custom sidecars remain untouched. A legacy two-file PSU updates only the ELF.
 - The old ELF becomes `<name>.ELF.BAK` before the replacement is renamed into place; if that final rename fails the original is restored. Restart to execute the installed build.
 - It supports ELFs started from `mc`, `mass`/`usb`, `mmce`, `mx4sio`, `ilink`, `ata` and `hdd` paths.
 

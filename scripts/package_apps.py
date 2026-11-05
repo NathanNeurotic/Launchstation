@@ -2,7 +2,7 @@
 
 PSU records/padding follow RiptOPL's package_release_app.py and PSUManager:
 512-byte root/dot/dotdot/file records, with file payloads padded to 1024 bytes.
-ZIPs and PSUs contain the same four direct app files, under the same folder name.
+ZIPs and PSUs contain the same eight direct app files, under the same folder name.
 """
 import argparse
 import datetime
@@ -20,6 +20,7 @@ LOOSE_ELFS = (("LAUNCHSTATION.ELF", 0), ("LAUNCHSTATION-DS.ELF", 1),
               ("BOOT.ELF", 0), ("BOOT2.ELF", 0))
 
 ASSET_ROOT = Path(__file__).resolve().parents[1] / "res"
+MEMORY_CARD_SIDECARS = ("icon.sys", "list.icn", "copy.icn", "del.icn")
 
 
 def bundled_sidecars():
@@ -32,7 +33,19 @@ def bundled_sidecars():
         raise ValueError("The updater CA bundle is missing or incomplete")
     if not 32 <= len(bgm) <= 1024 * 1024 or len(bgm) % 16 or bgm[:8] != b"APCM\x01\x01\x01\x00":
         raise ValueError("The BGM asset is not a valid PS2 ADPCM sidecar")
-    return {"WLE-UPDATE-CA.PEM": ca, "BGM.ADP": bgm}
+    sidecars = {"WLE-UPDATE-CA.PEM": ca, "BGM.ADP": bgm}
+    for name in MEMORY_CARD_SIDECARS:
+        payload = (ASSET_ROOT / "memory-card" / name).read_bytes()
+        if not payload:
+            raise ValueError(f"The memory-card sidecar is empty: {name}")
+        sidecars[name] = payload
+    icon_sys = sidecars["icon.sys"]
+    if len(icon_sys) != 964 or icon_sys[:4] != b"PS2D":
+        raise ValueError("The memory-card icon.sys is invalid")
+    for offset, name in zip((0x104, 0x144, 0x184), MEMORY_CARD_SIDECARS[1:]):
+        if icon_sys[offset:offset + 64].split(b"\0", 1)[0] != name.encode("ascii"):
+            raise ValueError(f"icon.sys does not reference {name}")
+    return sidecars
 
 
 def record(name, size, mode, date):
@@ -110,7 +123,7 @@ def package(standard, dualshock, output, revision, epoch):
         with zipfile.ZipFile(output / (folder + ".zip")) as archive:
             assert archive.testzip() is None
             assert {name.split("/", 1)[1]: archive.read(name) for name in archive.namelist()} == members
-        print(f"Verified {folder}.psu/.zip: {elf_name}, title.cfg, updater CA, and BGM.ADP")
+        print(f"Verified {folder}.psu/.zip: {elf_name}, title.cfg, updater CA, BGM.ADP, and memory-card icons")
     for name, variant in LOOSE_ELFS:
         (output / name).write_bytes(elfs[variant])
         assert (output / name).read_bytes() == elfs[variant]

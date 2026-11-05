@@ -53,7 +53,7 @@ typedef unsigned char u8;
 #define DI_SETTINGS 7
 typedef struct { char path[DASH_PATH_MAX]; int flags; } DashApp;
 typedef struct { char pin[8][DASH_PATH_MAX], recent[8][DASH_PATH_MAX], fav[8][DASH_PATH_MAX]; int npin, nrecent, nfav; } Lists;
-typedef struct { char LK_Path[SETTING_LK_BTN_COUNT][DASH_PATH_MAX]; char LK_Title[SETTING_LK_BTN_COUNT][DASH_TITLE_MAX]; int LK_Flag[SETTING_LK_BTN_COUNT]; } Setting;
+typedef struct { char LK_Path[SETTING_LK_BTN_COUNT][DASH_PATH_MAX]; char LK_Title[SETTING_LK_BTN_COUNT][DASH_TITLE_MAX]; int LK_Flag[SETTING_LK_BTN_COUNT]; char Misc_FileBrowser[DASH_PATH_MAX]; } Setting;
 static Lists dashLists;
 static struct { int recent_count; int home_shortcuts; } dashCfg = {8,1};
 static Setting setting_data;
@@ -101,6 +101,22 @@ int main(void) {
     homeRebuild();
     assert(nchips == 2);
     LastDir[0] = '\0';
+    homeRebuild();
+    assert(nchips == 1);
+    /* FileBrowser stays bound as a launch key without duplicating Files on Home. */
+    dashCfg.home_shortcuts = 1;
+    dashStrCopy(setting->Misc_FileBrowser, "MISC/FileBrowser", DASH_PATH_MAX);
+    dashStrCopy(setting->LK_Path[SETTING_LK_LEFT], "MISC/FileBrowser", DASH_PATH_MAX);
+    dashStrCopy(setting->LK_Title[SETTING_LK_LEFT], "My files", DASH_TITLE_MAX);
+    setting->LK_Flag[SETTING_LK_LEFT] = 1;
+    homeRebuild();
+    assert(nchips == 1);
+    assert(!strcmp(setting->LK_Path[SETTING_LK_LEFT], "MISC/FileBrowser"));
+    dashStrCopy(setting->LK_Path[SETTING_LK_RIGHT], "MISC/PS2Browser", DASH_PATH_MAX);
+    setting->LK_Flag[SETTING_LK_RIGHT] = 1;
+    homeRebuild();
+    assert(nchips == 2);
+    dashStrCopy(setting->LK_Path[SETTING_LK_RIGHT], "MISC/FileBrowser", DASH_PATH_MAX);
     homeRebuild();
     assert(nchips == 1);
     return 0;
