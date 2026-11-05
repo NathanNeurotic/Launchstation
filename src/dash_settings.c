@@ -380,11 +380,12 @@ static struct {
 	char orig[SMB_NAME_LEN]; /* NAME of the picked share; "" = a new one */
 	char name[SMB_NAME_LEN];
 	int kind; /* 1, 2 or 3, as smbCnfBuildBlock */
-	char host[80]; /* IPv4 or host name from the URL */
+	char host[80]; /* IPv4 from the URL (host names are edit-as-text only) */
 	int port;      /* 0 = the 445 default */
 	char folder[64];
 	char user[SMB_CRED_LEN];
 	char pass[SMB_CRED_LEN];
+	int plaintext; /* SMB1 clear-text password allowance, kept across edits */
 	int pick; /* 0 = New share, else snapshot share index + 1 */
 	SmbConfig snap;
 } smbed;
@@ -438,6 +439,10 @@ static int smbedSplitUrl(const char *url, char *host, int host_size, int *port,
 	host[len] = '\0';
 	rest = slash + 1;
 	len = strcspn(rest, "/");
+	/* Only one path segment fits the folder field; a deeper path
+	   (smb://host/share/sub) is edited as text so it is not cut short. */
+	if (rest[len] == '/' && rest[len + 1] != '\0')
+		return 0;
 	if (len <= 0 || len >= folder_size)
 		return 0;
 	memcpy(folder, rest, len);
@@ -462,12 +467,14 @@ static void smbedLoadPick(void)
 		memset(smbed.folder, 0, sizeof(smbed.folder));
 		memset(smbed.user, 0, sizeof(smbed.user));
 		memset(smbed.pass, 0, sizeof(smbed.pass));
+		smbed.plaintext = 0;
 		return;
 	}
 	sh = &smbed.snap.share[smbed.pick - 1];
 	dashStrCopy(smbed.orig, sh->name, sizeof(smbed.orig));
 	dashStrCopy(smbed.name, sh->name, sizeof(smbed.name));
 	smbed.kind = sh->version;
+	smbed.plaintext = sh->plaintext;
 	dashStrCopy(smbed.user, sh->username, sizeof(smbed.user));
 	dashStrCopy(smbed.pass, sh->password, sizeof(smbed.pass));
 	if (!smbedSplitUrl(sh->url, smbed.host, sizeof(smbed.host), &smbed.port,
@@ -490,30 +497,43 @@ static int smbedWriteFile(const char *block)
 
 	smbedConfigPath(path, sizeof(path));
 	text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL);
+	if (text == NULL) {
+		/* Only a missing file may be created: one that exists but could
+		   not be read (too large, read error) must not be replaced by a
+		   file holding just the new block. */
+		fd = genOpen(path, FIO_O_RDONLY);
+		if (fd >= 0) {
+			genClose(fd);
+			return -4;
+		}
+	}
 	len = smbCnfUpsertText(text != NULL ? text : "", smbed.orig, block,
 	                       out, sizeof(out), work, sizeof(work));
 	if (text != NULL)
 		free(text);
 	if (len < 0)
 		return -1;
-	/* The whole file must still parse and this share must be one it accepts:
-	   a duplicate NAME or a broken URL is reported from here, not at boot. */
+	/* The whole file must still parse and this share must be one it
+	   accepts: a duplicate NAME or a broken URL is reported from here,
+	   not at boot. A delete is validated by absence instead. */
 	memcpy(work, out, len + 1);
 	{
 		SmbConfig cfg;
-		int i, valid;
+		int i, found = 0, valid = 0;
 
 		smbConfigParse(work, &cfg);
-		valid = 0;
 		for (i = 0; i < cfg.count; i++)
 			if (strcmp(cfg.share[i].name, smbed.name) == 0) {
-				if (cfg.share[i].state == SMB_STATE_INVALID)
-					valid = 0; /* a duplicate NAME marks the new copy invalid */
-				else
+				found = 1;
+				if (cfg.share[i].state != SMB_STATE_INVALID)
 					valid = 1;
 			}
-		if (!valid)
-			return -2;
+		if (block != NULL) {
+			if (!valid)
+				return -2;
+		} else if (found) {
+			return -2; /* the delete left a (duplicate, invalid) share */
+		}
 	}
 	fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
 	if (fd < 0)
@@ -531,17 +551,23 @@ static int smbedWriteFile(const char *block)
 static void smbedSave(void)
 {
 	char block[512];
-	int n, r;
+	int n, r, i;
 
 	n = smbCnfBuildBlock(block, sizeof(block), smbed.name, smbed.kind,
 	                     smbed.user, smbed.pass, smbed.host,
-	                     smbed.port > 0 ? smbed.port : 445, smbed.folder);
+	                     smbed.port > 0 ? smbed.port : 445, smbed.folder, smbed.plaintext);
 	if (n < 0) {
 		dashModalMessage(DI_WARNING, "Share not saved",
-		                 "A field is empty or too long, or the address or port is not valid.", NULL);
+		                 "A field is empty or too long, or the IPv4 address or port is not valid. "
+		                 "Shares whose address is a name, or whose URL has a deeper path, are edited as text.", NULL);
 		return;
 	}
 	r = smbedWriteFile(block);
+	if (r == -4) {
+		dashModalMessage(DI_WARNING, "Share not saved",
+		                 "The existing SMB2.CNF could not be read; it was left untouched. Edit it as text.", NULL);
+		return;
+	}
 	if (r == -1) {
 		dashModalMessage(DI_WARNING, "Share not saved",
 		                 "SMB2.CNF is full or a limit was hit; edit the file as text instead.", NULL);
@@ -558,8 +584,16 @@ static void smbedSave(void)
 	}
 	dashStrCopy(smbed.orig, smbed.name, sizeof(smbed.orig));
 	smbSharesSnapshot(&smbed.snap);
+	/* Point the picker at the saved share: the next Save replaces it, and
+	   Delete enables, instead of silently appending a second copy. */
+	for (i = 0; i < smbed.snap.count; i++)
+		if (strcmp(smbed.snap.share[i].name, smbed.name) == 0) {
+			smbed.pick = i + 1;
+			break;
+		}
 	dashModalMessage(DI_CHECK, "Share saved",
-	                 "The smb:/ list reloads SMB2.CNF when it opens; open smb:/ in Files to connect.", block);
+	                 "The smb:/ list (smb1:/ for an SMB1 share) reloads SMB2.CNF when it opens; "
+	                 "open it in Files to connect.", block);
 }
 
 static void smbedDelete(void)
@@ -3057,18 +3091,19 @@ static void runAction(int id)
 			               "At most 31 characters, without / \\ : * ? \" < > |.");
 			break;
 		case S_SMBED_IP:
-			smbedEditField("Server address (IP or name)", smbed.host, sizeof(smbed.host),
-			               "At most 79 characters.");
+			smbedEditField("Server address (IPv4, as the server's card shows it)", smbed.host, sizeof(smbed.host),
+			               "At most 79 characters. A server named by words instead of an address is edited as text.");
 			break;
 		case S_SMBED_PORT: {
 			char buf[8];
 			snprintf(buf, sizeof(buf), "%d", smbed.port > 0 ? smbed.port : 445);
 			if (dashModalKeyboard("TCP port (445 is the default)", buf, sizeof(buf))) {
-				int p = atoi(buf);
-				if (p < 0 || p > 65535)
-					dashModalMessage(DI_WARNING, "Port not changed", "Use 0 for the default 445, or 1-65535.", NULL);
+				char *end;
+				long p = strtol(buf, &end, 10);
+				if (end == buf || *end != '\0' || p < 0 || p > 65535)
+					dashModalMessage(DI_WARNING, "Port not changed", "Use digits only: 0 for the default 445, or 1-65535.", NULL);
 				else
-					smbed.port = p == 445 ? 0 : p;
+					smbed.port = p == 445 ? 0 : (int)p;
 			}
 			break;
 		}
@@ -3104,20 +3139,21 @@ static void runAction(int id)
 			    "#   omitted) and goes here only, never on the NAME line.\n"
 			    "#\n"
 			    "# PS2-Servers: its SMBv2/SMBv3 card shows IP, Port, Share, User and\n"
-			    "# Password -- copy them into a block like these.\n"
+			    "# Password -- copy them into a block like these. The card's default\n"
+			    "# port is 1025 (445 when its Take port 445 option is on).\n"
 			    "# SMBv2 card with a user and password:\n"
 			    "# NAME = PC\n"
 			    "# USERNAME = player\n"
 			    "# PASSWORD = secret\n"
-			    "# URL = smb://192.168.1.100/games\n"
+			    "# URL = smb://192.168.1.100:1025/games\n"
 			    "#\n"
 			    "# SMBv2 card with no password ticked (its User, blank Password):\n"
 			    "# NAME = PC\n"
 			    "# USERNAME = guest\n"
 			    "# PASSWORD =\n"
-			    "# URL = smb://192.168.1.100/games\n"
+			    "# URL = smb://192.168.1.100:1025/games\n"
 			    "#\n"
-			    "# SMBv3 card (port 445); VERSION = 3 marks it:\n"
+			    "# SMBv3 card (port 445, its Take port 445 option); VERSION = 3:\n"
 			    "# NAME = NGCARD\n"
 			    "# VERSION = 3\n"
 			    "# USERNAME = player\n"
@@ -3498,7 +3534,7 @@ static const char *actionStatus(int id)
 		case S_SMBED_IP:
 			return smbed.host[0] ? smbed.host : "required";
 		case S_SMBED_PORT: {
-			static char port[8];
+			static char port[16];
 			if (smbed.port > 0)
 				snprintf(port, sizeof(port), "%d", smbed.port);
 			else

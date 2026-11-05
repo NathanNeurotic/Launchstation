@@ -29,7 +29,7 @@ save = settings.split("static void smbedSave(void)", 1)[1].split("\n}\n", 1)[0]
 assert "smbCnfBuildBlock(" in save and "smbedWriteFile(block)" in save
 write = settings.split("static int smbedWriteFile(const char *block)", 1)[1].split("\n}\n", 1)[0]
 assert "smbCnfUpsertText(" in write
-assert write.index("smbConfigParse(") < write.index("genOpen("), "whole file re-validated before writing"
+assert write.index("smbConfigParse(") < write.index("FIO_O_WRONLY"), "whole file re-validated before writing"
 assert "smbSharesReload();" in write
 
 # the text-editor row keeps the template seeding and reloads afterwards

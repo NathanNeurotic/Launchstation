@@ -69,12 +69,13 @@ int smbConfigValidCount(const SmbConfig *cfg, int version);
 
 /* Compose the KEY = value lines for one share, in canonical order
  * (NAME, VERSION for kinds 1/3, USERNAME/PASSWORD when a user is set,
- * URL). kind 2 = SMB2, 3 = SMB3 (same driver, marked), 1 = SMB1. A 445 port
- * is left out of the URL. Returns the length, or -1 when a value breaks a
+ * PLAINTEXT for a kind-1 share that allows clear-text passwords, URL).
+ * kind 2 = SMB2, 3 = SMB3 (same driver, marked), 1 = SMB1. A 445 port is
+ * left out of the URL. Returns the length, or -1 when a value breaks a
  * limit the parser enforces. */
 int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
                      const char *username, const char *password,
-                     const char *ip, int port, const char *share);
+                     const char *ip, int port, const char *share, int plaintext);
 
 /* Splice block_text (newline-terminated, from smbCnfBuildBlock) into the
  * file text: the block named orig_name is replaced; an empty or unknown

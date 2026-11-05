@@ -52,7 +52,7 @@ int main(void)
 
     /* ---- build ---- */
     n = smbCnfBuildBlock(block, sizeof(block), "PC", 2, "player", "secret",
-                         "192.168.1.100", 445, "games");
+                         "192.168.1.100", 445, "games", 0);
     check(n > 0, "build SMB2 block");
     check(strcmp(block,
                  "NAME = PC\n"
@@ -62,26 +62,38 @@ int main(void)
     check(strstr(block, ":445") == NULL, "445 port omitted");
 
     n = smbCnfBuildBlock(block, sizeof(block), "NG", 3, "player", "s",
-                         "192.168.1.100", 1445, "games");
+                         "192.168.1.100", 1445, "games", 0);
     check(n > 0 && strstr(block, "VERSION = 3\n") != NULL &&
           strstr(block, "URL = smb://192.168.1.100:1445/games") != NULL,
           "SMB3 block keeps a non-445 port");
 
     n = smbCnfBuildBlock(block, sizeof(block), "OLD", 1, NULL, NULL,
-                         "192.168.0.30", 445, "PS2SMB");
+                         "192.168.0.30", 445, "PS2SMB", 0);
     check(n > 0 && strstr(block, "VERSION = 1\n") != NULL &&
           strstr(block, "USERNAME") == NULL, "SMB1 block has VERSION only");
 
+    n = smbCnfBuildBlock(block, sizeof(block), "OLD", 1, "u", "p",
+                         "192.168.0.30", 445, "PS2SMB", 1);
+    check(n > 0 && strstr(block, "PASSWORD = p\nPLAINTEXT = 1\n") != NULL &&
+          strstr(block, "URL =") != NULL, "SMB1 PLAINTEXT kept in the block");
+
+    {
+        char tiny[10];
+        n = smbCnfBuildBlock(tiny, sizeof(tiny), "PC", 3, "player", "secret",
+                             "192.168.1.100", 1445, "games", 0);
+        check(n < 0, "tiny buffer refused, no out-of-bounds chain");
+    }
+
     n = smbCnfBuildBlock(block, sizeof(block), "PC", 2, "player", "secret",
-                         "not.an.ip", 445, "games");
+                         "not.an.ip", 445, "games", 0);
     check(n < 0, "bad IP refused");
     n = smbCnfBuildBlock(block, sizeof(block), "PC", 2, "player", "secret",
-                         "192.168.1.100", 0, "games");
+                         "192.168.1.100", 0, "games", 0);
     check(n < 0, "port 0 refused");
 
     /* ---- append to an empty and a commented file ---- */
     n = smbCnfBuildBlock(block, sizeof(block), "PC", 2, "player", "secret",
-                         "192.168.1.100", 445, "games");
+                         "192.168.1.100", 445, "games", 0);
     len = upsert("", NULL, block, out, sizeof(out), work, sizeof(work));
     check(len == n && strcmp(out, block) == 0, "append into empty file");
 
@@ -111,7 +123,7 @@ int main(void)
         char repl[512];
 
         smbCnfBuildBlock(repl, sizeof(repl), "TWO", 3, "u2", "p2",
-                         "10.0.0.9", 1445, "y2");
+                         "10.0.0.9", 1445, "y2", 0);
         len = upsert(file, "TWO", repl, out, sizeof(out), work, sizeof(work));
         check(len > 0, "replace middle share");
         check(strstr(out, "# header comment\nNAME = ONE\n") != NULL, "first block kept");
@@ -133,7 +145,7 @@ int main(void)
 
         /* rename = replace under the old name with a new NAME line */
         smbCnfBuildBlock(repl, sizeof(repl), "DOS", 2, NULL, NULL,
-                         "10.0.0.9", 445, "y2");
+                         "10.0.0.9", 445, "y2", 0);
         len = upsert(file, "TWO", repl, out, sizeof(out), work, sizeof(work));
         check(len > 0 && strstr(out, "NAME = DOS\nURL = smb://10.0.0.9/y2") != NULL &&
               strstr(out, "NAME = TWO") == NULL, "rename via replace");
@@ -143,7 +155,7 @@ int main(void)
     /* ---- bounds ---- */
     {
         const char *file = "NAME = A\nURL = smb://1.1.1.1/a\n";
-        smbCnfBuildBlock(block, sizeof(block), "B", 2, NULL, NULL, "2.2.2.2", 445, "b");
+        smbCnfBuildBlock(block, sizeof(block), "B", 2, NULL, NULL, "2.2.2.2", 445, "b", 0);
         len = upsert(file, NULL, block, out, 8, work, sizeof(work));
         check(len < 0, "small out buffer refused");
         len = upsert(file, "A", block, out, sizeof(out), work, 4);

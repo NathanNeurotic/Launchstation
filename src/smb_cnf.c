@@ -366,7 +366,7 @@ static int lineIsKey(const char *line)
 
 int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
                      const char *username, const char *password,
-                     const char *ip, int port, const char *share)
+                     const char *ip, int port, const char *share, int plaintext)
 {
 	int n = 0, url_len;
 
@@ -385,26 +385,47 @@ int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
 	if (password != NULL && strlen(password) >= SMB_CRED_LEN)
 		return -1;
 
-	n = snprintf(out, out_size, "NAME = %s\n", name);
-	if (kind != 2)
-		n += snprintf(out + n, out_size - n, "VERSION = %d\n", kind);
+	/* Every snprintf is bounds-checked before the next one: a truncated
+	 * write must not leave n past out_size for the following call. */
+	url_len = snprintf(out, out_size, "NAME = %s\n", name);
+	if (url_len < 0 || url_len >= out_size)
+		return -1;
+	n = url_len;
+	if (kind != 2) {
+		url_len = snprintf(out + n, out_size - n, "VERSION = %d\n", kind);
+		if (url_len < 0 || url_len >= out_size - n)
+			return -1;
+		n += url_len;
+	}
 	if (username != NULL && username[0] != '\0') {
-		n += snprintf(out + n, out_size - n, "USERNAME = %s\n", username);
-		n += snprintf(out + n, out_size - n, "PASSWORD = %s\n",
-		              password != NULL ? password : "");
+		url_len = snprintf(out + n, out_size - n, "USERNAME = %s\n", username);
+		if (url_len < 0 || url_len >= out_size - n)
+			return -1;
+		n += url_len;
+		url_len = snprintf(out + n, out_size - n, "PASSWORD = %s\n",
+		                   password != NULL ? password : "");
+		if (url_len < 0 || url_len >= out_size - n)
+			return -1;
+		n += url_len;
+	}
+	if (kind == 1 && plaintext) {
+		url_len = snprintf(out + n, out_size - n, "PLAINTEXT = 1\n");
+		if (url_len < 0 || url_len >= out_size - n)
+			return -1;
+		n += url_len;
 	}
 	url_len = snprintf(out + n, out_size - n, "URL = smb://%s", ip);
-	if (url_len < 0 || n + url_len >= out_size)
+	if (url_len < 0 || url_len >= out_size - n)
 		return -1;
 	n += url_len;
 	if (port != 445) {
 		url_len = snprintf(out + n, out_size - n, ":%d", port);
-		if (url_len < 0 || n + url_len >= out_size)
+		if (url_len < 0 || url_len >= out_size - n)
 			return -1;
 		n += url_len;
 	}
 	url_len = snprintf(out + n, out_size - n, "/%s\n", share);
-	if (url_len < 0 || n + url_len >= out_size || n + url_len >= SMB_URL_LEN)
+	if (url_len < 0 || url_len >= out_size - n || n + url_len >= SMB_URL_LEN)
 		return -1;
 	return n + url_len;
 }
