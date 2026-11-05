@@ -30,6 +30,7 @@ icons = sorted(set(re.findall(r"\bDI_\w+", settings)))
 code = "#include <assert.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n"
 code += "#define ETH 1\n#define WLE_NATIVE_CLOUD 1\n#define UDPFS 1\n#define ILINK 1\n#define SMB 1\n#define MAX_PATH 1024\n#define DASH_FONT_SYSTEM 1\n"
 code += "static void dashToolsPrepareMmceStatus(void);\n"
+code += "static void getIpConfig(void) {}\n"
 code += "enum { " + ", ".join(icons) + " };\n"
 code += classic[classic.index("enum SETTING_LK {"):classic.index("};", classic.index("enum SETTING_LK {")) + 2]
 code += "enum { " + classic[classic.index("COLOR_BACKGR"):classic.index("};", classic.index("COLOR_BACKGR")) + 2]

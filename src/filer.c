@@ -1236,7 +1236,12 @@ static void scanUsbMassDevices(int force)
 
 	if ((USB_mass_max_drives < 1)
 	    || (!force && ((USB_mass_max_drives < 2)  //No need for dynamic lists with only one drive
-	                  || (USB_mass_scanned && ((Timer() - USB_mass_scan_time) < 5000)))))
+	                  /* Freshness skip applies only once every browsable unit is
+	                   * known: with a drive missing, entry re-probes so a late
+	                   * or hot-plugged second stick shows up without a manual
+	                   * refresh (prepareUsbRootBrowse no longer waits for it). */
+	                  || (USB_mass_scanned && USB_mass_ix[0] && USB_mass_ix[1]
+	                      && ((Timer() - USB_mass_scan_time) < 5000)))))
 		return;
 
 	max_drives = USB_mass_max_drives;

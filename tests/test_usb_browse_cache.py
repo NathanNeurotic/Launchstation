@@ -1,7 +1,10 @@
 """Execute Launchstation's generic-USB-root selection against mocked mount timing.
 
 The fast path must avoid duplicate synchronous root stat probes only when
-both mounts were just verified; late, absent, and stale media still rescan.
+both mounts were just verified. One mounted unit opens the root without
+waiting for a second drive (#277 boot time): late arrivals are left for the
+entry rescan, which is no longer freshness-blocked while a drive is missing.
+Absent and stale media still rescan with the full attempt window.
 No real IOP or USB timeout is simulated.
 """
 from pathlib import Path
@@ -74,18 +77,22 @@ int main(void) {
     USB_mass_scan_time=now_ms+500;
     present_at_start=3;
     assert(prepareUsbRootBrowse()==0 && scans==1);
-    /* With only one unit cached, keep the full late-second-device window. */
+    /* With only one unit mounted, open the root immediately: a late second
+     * drive is found by the next entry's rescan instead of a boot wait. */
     clear_state();
     USB_mass_scanned=1;USB_mass_ix[0]='0';USB_mass_scan_time=now_ms;
     present_at_start=1;late_second_at=11000;
-    assert(prepareUsbRootBrowse()==0 && scans==3 && waits==2);
+    assert(prepareUsbRootBrowse()==0 && scans==1 && waits==0);
+    assert(USB_mass_ix[1]==0);
+    now_ms=11000;
+    assert(prepareUsbRootBrowse()==0 && scans==2 && waits==0);
     assert(USB_mass_ix[1]=='1');
     clear_state();
     present_at_start=1;
-    assert(prepareUsbRootBrowse()==0 && scans==3 && waits==2);
+    assert(prepareUsbRootBrowse()==0 && scans==1 && waits==0);
     clear_state();
     present_at_start=2;
-    assert(prepareUsbRootBrowse()==1 && scans==3 && waits==2);
+    assert(prepareUsbRootBrowse()==1 && scans==1 && waits==0);
     clear_state();
     assert(prepareUsbRootBrowse()==-1 && scans==3 && waits==2);
     /* A stale two-drive cache must not mask an actual disconnect. */
@@ -93,7 +100,7 @@ int main(void) {
     USB_mass_scanned=1;USB_mass_ix[0]='0';USB_mass_ix[1]='1';
     USB_mass_scan_time=now_ms-1000;
     assert(prepareUsbRootBrowse()==-1 && scans==3 && waits==2);
-    puts("PASS: fresh two-drive root reuse; stale, single, delayed and missing drives rescan");
+    puts("PASS: fresh two-drive root reuse; single drive opens without waiting, late/absent/stale rescan");
 }
 '''
 compiler=shutil.which("gcc") or shutil.which("clang")
