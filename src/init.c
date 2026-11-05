@@ -1985,10 +1985,10 @@ static void resetRuntimeDeviceState(int show_status)
 		return;
 	}
 #ifdef ETH
-    if (have_ps2ftpd && !ftpSessionShutdown()) {
-        DPRINTF("IOP reset refused: FTP did not finish closing files\n");
-        return;
-    }
+	if (have_ps2ftpd && !ftpSessionShutdown()) {
+		DPRINTF("IOP reset refused: FTP did not finish closing files\n");
+		return;
+	}
 #endif
 	/* A dashboard root-card presence poll uses asynchronous libmc RPC on
 	 * the same SIO2/PADMAN IOP session. Drain it before closing PAD ports
@@ -2534,22 +2534,22 @@ int loadDVRPHddModules(void)
 #ifdef ETH
 void loadNetModules(void)
 {
-    dashboard_ip_error = "PC CARD CompactFlash is using the network adapter.";
-    if (pcCardCfOwnsBus()) return;
-    dashboard_ip_error = NULL;
-    if (!have_ps2ftpd) {
-        getIpConfig();
-        if (!shouldHideHddAtaDevices()) {
+	dashboard_ip_error = "PC CARD CompactFlash is using the network adapter.";
+	if (pcCardCfOwnsBus()) return;
+	dashboard_ip_error = NULL;
+	if (!have_ps2ftpd) {
+		getIpConfig();
+		if (!shouldHideHddAtaDevices()) {
 #ifdef EXFAT
-            loadAtaModules();
+			loadAtaModules();
 #endif
-            loadHddModules();
-        }
-        loadUsbModules();
+			loadHddModules();
+		}
+		loadUsbModules();
 #ifdef ILINK
-        if (consoleHasIlink()) loadIlinkModules();
+		if (consoleHasIlink()) loadIlinkModules();
 #endif
-    }
+	}
 	ensureCoreIoStackReady();
 	if (!have_NetModules) {
 		showLoadingModulesMsg("ps2net");

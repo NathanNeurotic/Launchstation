@@ -213,6 +213,28 @@ int main(void)
 	assert(ftpSessionStopped() == 0);
 	printf("PASS: IOP reset generation rebinds and clears state\n");
 
+	/* A STOP that never lands wedges every later exchange. Abandoning the
+	 * session issues no RPC into the in-flight packet, lets shutdown pass so
+	 * the IOP reset gate opens, and the reset itself rebinds cleanly. */
+	reset_fixture();
+	assert(ftpSessionQuery(&status) == 1);
+	call_stalls = 1;
+	assert(ftpSessionShutdown() == 0); /* STOP times out */
+	assert(call_calls == 2 && rpc_in_flight);
+	assert(ftpSessionShutdown() == 0); /* still wedged */
+	assert(call_calls == 2);
+	ftpSessionAbandon();
+	assert(ftpSessionStopped() == 1);
+	assert(ftpSessionShutdown() == 1);
+	assert(call_calls == 2 && rpc_in_flight); /* nothing reused the stuck packet */
+	iop_generation++;                          /* the forced reset */
+	call_stalls = 0;
+	rpc_in_flight = 0;
+	assert(ftpSessionStopped() == 0);
+	assert(ftpSessionQuery(&status) == 1);
+	assert(bind_calls == 2 && call_calls == 3);
+	printf("PASS: abandoning a wedged session opens the reset gate without reusing DMA state\n");
+
 	printf("ftp-session tests passed\n");
 	return 0;
 }
