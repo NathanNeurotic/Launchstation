@@ -685,4 +685,6 @@ lang(683, Dashboard_Per_save_versions, "Versoes por save")
 
 lang(684, Dashboard_Style, "Estilo")
 lang(685, Dashboard_Regular, "Normal")
-lang(686, Dashboard_Section_tabs, "Abas de seção")
+lang(686, Dashboard_Section_tabs, "Abas de secao")
+lang(687, Dashboard_Shown, "Visiveis")
+lang(688, Dashboard_Hidden, "Ocultas")

@@ -685,4 +685,6 @@ lang(683, Dashboard_Per_save_versions, "Versoes por gravacao")
 
 lang(684, Dashboard_Style, "Estilo")
 lang(685, Dashboard_Regular, "Normal")
-lang(686, Dashboard_Section_tabs, "Separadores de secção")
+lang(686, Dashboard_Section_tabs, "Separadores de seccao")
+lang(687, Dashboard_Shown, "Visiveis")
+lang(688, Dashboard_Hidden, "Ocultos")
