@@ -2164,7 +2164,9 @@ static void subfunc_Paste(char *mess, char *path)
 	static char paste_kept[MAX_ENTRY];
 	char tmp[MAX_PATH], tmp1[MAX_PATH];
 	int i, kept, ret = -1, trace_vmc_paste;
+	unsigned int move_mark;
 
+	filerMoveBegin(browser_cut);
 	paste_kept_count = 0;
 	filerCopyDiagBegin(clipPath, path);
 	written_size = 0;
@@ -2178,6 +2180,7 @@ static void subfunc_Paste(char *mess, char *path)
 		ynDialog("Incompatible drivers to perform action");
 		snprintf(mess, MAX_PATH, "%s", "Incompatible drivers to perform action"); /* callers must not report success */
 		browser_pushed = FALSE;
+		filerMoveEnd();
 		return;
 	}
 	if (ret < 0) {
@@ -2208,6 +2211,7 @@ static void subfunc_Paste(char *mess, char *path)
 			printf("[PASTE] item src='%s' dst='%s' name='%s' index=%d/%d attr=0x%x size=%u:%u\n",
 			       clipPath, path, clipFiles[i].name, i + 1, nclipFiles,
 			       clipFiles[i].stats.AttrFile, clipFiles[i].stats.Reserve2, clipFiles[i].stats.FileSizeByte);
+		move_mark = filerMoveMark();
 		ret = copy(path, clipPath, &clipFiles[i], 0);
 		if (ret < 0) {
 			printf("[PASTE] copy failed ret=%d src='%s' dst='%s' item='%s' index=%d/%d mode=%d cut=%d\n",
@@ -2215,6 +2219,8 @@ static void subfunc_Paste(char *mess, char *path)
 			break;
 		}
 		paste_kept[i] = (ret == COPY_KEPT_DESTINATION);
+		if (paste_kept[i])
+			filerMoveRewind(move_mark);
 	}
 	if ((ret >= 0) && browser_cut) {
 		filerCopyDiagBegin(clipPath, path);
@@ -2225,16 +2231,15 @@ static void subfunc_Paste(char *mess, char *path)
 				ret = -1;
 				break;
 			}
-			filerCopyDiagStage("Deleting move source");
-			ret = delete (clipPath, &clipFiles[i]);
-			if (ret < 0)
-				break;
 		}
+		if (ret >= 0)
+			ret = filerMoveFinish();
 	}
 
 //	unmountAll(); //disabled to avoid interference with VMC implementation
 
 finished:
+	filerMoveEnd();
 	if (ret < 0) {
 		printf("[PASTE] failed ret=%d src='%s' dst='%s' mode=%d cut=%d\n",
 		       ret, clipPath, path, PasteMode, browser_cut);

@@ -211,6 +211,12 @@ int dashWorkerOnThread(void); /* dash_internal.h */
  * the error of a read that fails after the folder opened. A browser listing
  * ignores them: an unreadable folder still shows as empty there. */
 static int dir_opened, dir_open_error, dir_read_error;
+static int dir_complete;
+
+int filerDirReadComplete(void)
+{
+	return dir_complete;
+}
 
 static void dirOpenResult(int fd)
 {
@@ -1445,6 +1451,7 @@ int readGENERIC(const char *path, FILEINFO *info, int max)
 {
 	iox_dirent_t record;
 	int n = 0, dd = -1;
+	dir_complete = 0;  //These drivers cannot distinguish a short read from EOF.
 
 	dd = fileXioDopen(path);
 	dirOpenResult(dd);
@@ -1616,17 +1623,28 @@ int readHOST(const char *path, FILEINFO *info, int max)
 		if (hfd < 0)
 			return 0;
 		if ((size = fileXioLseek(hfd, 0, SEEK_END)) <= 0) {
+			if (size < 0)
+				dirReadFailed(size);
 			fileXioClose(hfd);
 			return 0;
 		}
-		elflisttxt = (char *)memalign(64, size);
-		fileXioLseek(hfd, 0, SEEK_SET);
-		fileXioRead(hfd, elflisttxt, size);
+		if ((elflisttxt = (char *)memalign(64, size)) == NULL) {
+			dirReadFailed(-ENOMEM);
+			fileXioClose(hfd);
+			return 0;
+		}
+		if ((rv = fileXioLseek(hfd, 0, SEEK_SET)) >= 0)
+			rv = fileXioRead(hfd, elflisttxt, size);
 		fileXioClose(hfd);
+		if (rv != size) {  //a failed seek or read, or a short read
+			dirReadFailed(rv);
+			free(elflisttxt);
+			return 0;
+		}
 		contentptr = 0;
 		for (rv = 0; rv <= size; rv++) {
-			elflistchar = elflisttxt[rv];
-			if ((elflistchar == 0x0a) || (rv == size)) {
+			elflistchar = (rv < size) ? elflisttxt[rv] : 0x0a;  //the end of the list ends its last line
+			if (elflistchar == 0x0a) {
 				host_next[contentptr] = 0;
 				snprintf(host_path, sizeof(host_path), "host:%.*s", (int)(sizeof(host_path) - sizeof("host:")), host_next);
 				clearMcTable(&info[hostcount].stats);
@@ -1789,6 +1807,7 @@ static int listDir(const char *path, FILEINFO *info, int max)
 	int n;
 
 	dir_opened = dir_read_error = 0;
+	dir_complete = 1;
 	dir_open_error = -ENODEV;  //until a reader opens the folder or says why not
 	if (!strncmp(path, "mc", 2))
 		n = readMC(path, info, max);
@@ -1887,6 +1906,7 @@ static int listDir(const char *path, FILEINFO *info, int max)
 #endif
 	}
 	else if (!strncmp(path, "cdfs", 4)) {
+		dir_complete = 0;
 		loadCdModules();
 		n = readCD(path, info, max);
 	}
@@ -2090,6 +2110,8 @@ int getDir(const char *path, FILEINFO *info)
 int getDirComplete(const char *path, FILEINFO *info, int *more)
 {
 	int n = listDir(path, info, MAX_ENTRY - 1);
+	if (n < 0 || dir_read_error < 0 || !dir_opened || n > MAX_ENTRY - 2)
+		dir_complete = 0;
 
 	if (more != NULL)
 		*more = 0;
