@@ -38,14 +38,26 @@ static int query_script[4], query_count, queries, query_ok;
 static unsigned int presses[4];
 static int press_index, resident, stopped, network_ready, shutdown_ok;
 static int reboots, net_loads, modals, shutdowns, frames;
+static int confirms, confirm_answer, abandons;
+static char confirm_body[200];
 
 static void reset(void) {
     memset(query_script, 0, sizeof(query_script));
     memset(presses, 0, sizeof(presses));
     query_count = queries = press_index = resident = stopped = 0;
     reboots = net_loads = modals = shutdowns = frames = 0;
+    confirms = confirm_answer = abandons = 0;
+    confirm_body[0] = '\0';
     query_ok = network_ready = shutdown_ok = 1;
 }
+static int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger) {
+    (void)title; (void)ok_label;
+    assert(danger);
+    confirms++;
+    snprintf(confirm_body, sizeof(confirm_body), "%s", body);
+    return confirm_answer;
+}
+static void ftpSessionAbandon(void) { abandons++; stopped = 1; }
 static int dashWorkerAwaitAll(const char *status) { (void)status; return 1; }
 static void filerRootMcPollIdle(void) {}
 static void dashLoadingBegin(const char *status) { (void)status; }
@@ -81,6 +93,7 @@ static void dashInputPoll(DashInput *input) { input->pressed = presses[press_ind
 static int dashFtpPollRemote(void) { return 0; }
 static void DelayThread(int usec) { (void)usec; }
 """
+c += function("src/dash_ftp.c", "static int ftpUnresponsive(const char *what)\n{")
 c += function("src/dash_ftp.c", "int DashFtpServer(void)\n{")
 c += r"""
 int main(void) {
@@ -113,21 +126,38 @@ int main(void) {
     assert(DashFtpServer() == 1);
     assert(shutdowns == 1 && reboots == 1 && modals == 0);
 
-    /* A Stop that times out never resets the IOP over open files. */
+    /* A Stop that times out asks first; declined, the IOP is never reset over open files. */
     reset();
     shutdown_ok = 0;
     presses[0] = DASH_IN_OK;
     assert(DashFtpServer() == 0);
-    assert(shutdowns == 1 && reboots == 0 && modals == 1 && resident);
+    assert(shutdowns == 1 && confirms == 1 && abandons == 0 && reboots == 0 && modals == 1 && resident);
+    assert(strstr(confirm_body, "respond to Stop") != NULL);
 
-    /* An unanswered control RPC is reported, not reset over. */
+    /* Confirmed, the stuck session is abandoned and the IOP reset exactly once. */
+    reset();
+    shutdown_ok = 0;
+    confirm_answer = 1;
+    presses[0] = DASH_IN_OK;
+    assert(DashFtpServer() == 1);
+    assert(shutdowns == 1 && confirms == 1 && abandons == 1 && reboots == 1 && modals == 0 && !resident);
+
+    /* An unanswered status request takes the same route, worded for the query. */
     reset();
     resident = 1;
     query_ok = 0;
     assert(DashFtpServer() == 0);
-    assert(reboots == 0 && modals == 1 && resident);
+    assert(confirms == 1 && abandons == 0 && reboots == 0 && modals == 1 && resident);
+    assert(strstr(confirm_body, "respond to a status request") != NULL);
 
-    puts("PASS: FTP screen resets a stopped module, keeps a running one and never resets over an unanswered stop");
+    reset();
+    resident = 1;
+    query_ok = 0;
+    confirm_answer = 1;
+    assert(DashFtpServer() == 1);
+    assert(confirms == 1 && abandons == 1 && reboots == 1 && modals == 0 && !resident);
+
+    puts("PASS: FTP screen resets a stopped module, keeps a running one and only resets over an unanswered control RPC when confirmed");
     return 0;
 }
 """

@@ -11,7 +11,8 @@ Host-tested only. NOT TESTED on a real PS2 or emulator.
 - Compatible ATA/HDD/USB/iLINK drivers are prepared before networking; the PC CARD CompactFlash bus guard and the console HDD/ATA gate (`-no-hdd`) are honored.
 - IOP `FtpControl` status/cooperative-stop service and an EE `ftp_session.c` client using NOWAIT RPC with bounded waits.
 - FTP panel with Stop and Back/Keep running. Remote commands are polled from the panel regardless of section. A network startup failure shows a modal instead of returning silently.
-- Idle Stop is bounded: `select` uses a 100 ms timeout and checks the stopping flag. If the control thread does not answer, shutdown gives up after a bounded wait (about 1 s of status polling, each RPC itself capped at 1 s) with "FTP control did not respond. The IOP was not reset over open files."
+- Idle Stop is bounded: `select` uses a 100 ms timeout and checks the stopping flag. If the control thread does not answer, shutdown gives up after a bounded wait (about 1 s of status polling, each RPC itself capped at 1 s).
+- An unanswered control RPC (status query or Stop) is not a dead end: the panel asks "FTP control did not respond ... Reset the IOP anyway?" Confirming calls `ftpSessionAbandon()` (drops the stuck pending exchange and marks the session stopped so `resetRuntimeDeviceState()` no longer refuses) and resets the IOP; declining keeps FTP loaded with "The IOP was not reset over open files." Without this, a single timed-out NOWAIT RPC left `pending` set forever and wedged every later Stop and stack switch.
 - Background memory-card polling pauses while the FTP server is resident and resumes after shutdown.
 - SITE mount management was removed (replies 500).
 
@@ -25,3 +26,4 @@ Host-tested only. NOT TESTED on a real PS2 or emulator.
 - Native LLVM ps2build not run locally; CI GCC ps2build is the compile evidence.
 - IOP heap not measured. Source-derived estimate: PFS `-m 4` to `-m 8` adds four `pfs_mount_t` (324 bytes each, about 1.3 KB); the FTP control thread adds a 4 KiB stack. `-n 40` and `-o 10` are unchanged.
 - A full trace of every IOP reset, app handoff and poweroff path against a resident FTP server is still recommended.
+- The wedged-RPC path (control thread stops answering, user confirms the forced reset) is covered only by `tests/test_dash_ftp.py` and `tests/ftp-ee/test_session.c`, not on a console.

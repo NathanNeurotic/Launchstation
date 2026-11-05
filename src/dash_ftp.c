@@ -20,67 +20,93 @@ static void ftpFrame(const LsFtpStatus *status, int stopping)
 	snprintf(line, sizeof(line), "IP address: %s    Port: 21", ip);
 	dashTextFit(x + 24, y + 65, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT);
 	snprintf(line, sizeof(line), "Connected clients: %d    Active transfers: %d", status->clients,
-			 status->transfers);
+	         status->transfers);
 	dashTextFit(x + 24, y + 93, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);
 	dashTextFit(x + 24, y + 125, w - 48,
-				status->operation[0] ? status->operation : "Waiting for a connection", DASH_FS_SMALL,
-				DASH_C_TEXT2);
+	            status->operation[0] ? status->operation : "Waiting for a connection", DASH_FS_SMALL,
+	            DASH_C_TEXT2);
 	if (status->transfers) {
 		u64 bytes = ((u64)status->bytes_high << 32) | status->bytes_low;
 		snprintf(line, sizeof(line), "Transferred: %llu KB", (unsigned long long)(bytes / 1024));
 		dashTextFit(x + 24, y + 150, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);
 	}
 	dashTextFit(x + 24, y + 181, w - 48,
-				stopping ? "Closing files and connections..." : "Back returns to Launchstation with FTP running.",
-				DASH_FS_SMALL, DASH_C_TEXT3);
+	            stopping ? "Closing files and connections..." : "Back returns to Launchstation with FTP running.",
+	            DASH_FS_SMALL, DASH_C_TEXT3);
 	if (!stopping)
 		dashModalHintRow(x + 24, y + h - 42, dashOkIcon(), "Stop FTP", dashBackIcon(), "Keep running");
 	dashGfxPresent();
 }
 
+/* The control RPC went unanswered. Only the user may decide that files still
+ * open over FTP are expendable; otherwise the IOP keeps them open. */
+static int ftpUnresponsive(const char *what)
+{
+	char body[200];
+	snprintf(body, sizeof(body),
+	         "FTP control did not respond to %s. Reset the IOP anyway? Files still open over FTP may be left incomplete.",
+	         what);
+	if (!dashModalConfirm("FTP Server", body, "Reset", 1)) {
+		dashModalMessage(DI_WARNING, "FTP Server", "The IOP was not reset over open files. FTP stays loaded.", NULL);
+		return 0;
+	}
+	ftpSessionAbandon();
+	rebootIopAndReloadCoreStackSilent();
+	return 1;
+}
+
 int DashFtpServer(void)
 {
-    LsFtpStatus status;
-    int ok = 1;
-    if (!dashWorkerAwaitAll("Preparing FTP Server")) return 0;
-    filerRootMcPollIdle();
-    dashLoadingBegin("Starting FTP Server");
-    /* A STOP that timed out may have finished since: drop the stopped module and start again. */
-    if (isFtpServerRunning() && ftpSessionQuery(&status) && status.state == LS_FTP_STOPPED)
-        rebootIopAndReloadCoreStackSilent();
-    loadNetModules();
-    if (!isFtpNetworkReady()) {
-        dashLoadingEnd();
-        dashModalMessage(DI_WARNING, "FTP Server", dashboardIpNetworkError(), NULL);
-        return 0;
-    }
-    memset(&status, 0, sizeof(status));
-    dashInputFlush();
-    while (isFtpNetworkReady()) {
-        DashInput input;
-        if (!ftpSessionQuery(&status)) { ok = 0; break; }
-        if (status.state == LS_FTP_STOPPED) {
-            rebootIopAndReloadCoreStackSilent();
-            break;
-        }
-        ftpFrame(&status, 0);
-        dashInputPoll(&input);
-        /* Back returns with FTP running. Normal dashboard remote/ISO polling resumes. */
-        if (input.pressed & DASH_IN_BACK) break;
-        if (input.pressed & DASH_IN_OK) {
-            ftpFrame(&status, 1);
-            ok = ftpSessionShutdown();
-            if (ok) rebootIopAndReloadCoreStackSilent();
-            break;
-        }
-        if (dashFtpPollRemote()) break;
-        DelayThread(100000);
-    }
-    dashLoadingEnd();
-    dashInputFlush();
-    if (!ok) dashModalMessage(DI_WARNING, "FTP Server",
-        "FTP control did not respond. The IOP was not reset over open files.", NULL);
-    return ok;
+	LsFtpStatus status;
+	const char *unanswered = NULL;
+	int ok = 1;
+	if (!dashWorkerAwaitAll("Preparing FTP Server"))
+		return 0;
+	filerRootMcPollIdle();
+	dashLoadingBegin("Starting FTP Server");
+	/* A STOP that timed out may have finished since: drop the stopped module and start again. */
+	if (isFtpServerRunning() && ftpSessionQuery(&status) && status.state == LS_FTP_STOPPED)
+		rebootIopAndReloadCoreStackSilent();
+	loadNetModules();
+	if (!isFtpNetworkReady()) {
+		dashLoadingEnd();
+		dashModalMessage(DI_WARNING, "FTP Server", dashboardIpNetworkError(), NULL);
+		return 0;
+	}
+	memset(&status, 0, sizeof(status));
+	dashInputFlush();
+	while (isFtpNetworkReady()) {
+		DashInput input;
+		if (!ftpSessionQuery(&status)) {
+			unanswered = "a status request";
+			break;
+		}
+		if (status.state == LS_FTP_STOPPED) {
+			rebootIopAndReloadCoreStackSilent();
+			break;
+		}
+		ftpFrame(&status, 0);
+		dashInputPoll(&input);
+		/* Back returns with FTP running. Normal dashboard remote/ISO polling resumes. */
+		if (input.pressed & DASH_IN_BACK)
+			break;
+		if (input.pressed & DASH_IN_OK) {
+			ftpFrame(&status, 1);
+			if (ftpSessionShutdown())
+				rebootIopAndReloadCoreStackSilent();
+			else
+				unanswered = "Stop";
+			break;
+		}
+		if (dashFtpPollRemote())
+			break;
+		DelayThread(100000);
+	}
+	dashLoadingEnd();
+	dashInputFlush();
+	if (unanswered)
+		ok = ftpUnresponsive(unanswered);
+	return ok;
 }
 #else
 int DashFtpServer(void) { return 0; }
