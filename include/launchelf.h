@@ -608,6 +608,13 @@ int genClose(int fd);
 int genDopen(char *path);
 int genDclose(int fd);
 int genGetStat(const char *path, iox_stat_t *stat);
+/* fileXioGetStat with a real deadline: GETSTAT goes over a private NOWAIT
+ * RPC client that is polled with a timeout, so a wedged slot fails the
+ * probe instead of freezing the console in a synchronous RPC. A timed-out
+ * channel fails fast (a late answer heals it) until the next IOP reset
+ * rebinds it. Returns the stat result, or -1 on error/timeout. */
+#define FILEXIO_STAT_TIMEOUT_MS 750
+int fileXioGetStatBounded(const char *path, iox_stat_t *stat_out, int timeout_ms);
 int genCanRenamePath(const char *path);
 /* Physical sibling paths; no device loading, overwrite or name truncation. */
 int genRenameNoReplace(const char *from, const char *to);
