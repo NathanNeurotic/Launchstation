@@ -536,6 +536,7 @@
     {"Second colour", LANG_Dashboard_Second_colour},
     {"Secondary text", LANG_Dashboard_Secondary_text},
     {"Seconds", LANG_Dashboard_Seconds},
+    {"Section tabs", LANG_Dashboard_Section_tabs},
     {"Sel", LANG_Sel},
     {"Select", LANG_Select},
     {"Select A File For Editing", LANG_Select_A_File_For_Editing},

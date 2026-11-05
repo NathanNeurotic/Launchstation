@@ -336,6 +336,7 @@ clock_position = header
 | `clock_hours` | `system`, `24`, `12` |
 | `clock_seconds` | 0 / 1 |
 | `clock_date` | `system`, `ymd`, `mdy`, `dmy`, `off` |
+| `tabs` | `shown`, `hidden` (hides the top bar; L1/R1 still switch sections) |
 | `wallpaper` | `off`, `focused` (app artwork background) |
 | `wallpaper_dim` | 0-90 (%) |
 
