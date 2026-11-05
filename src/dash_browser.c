@@ -3255,6 +3255,21 @@ static void browserTabDraw(void)
 		browserDrawBody();
 }
 
+/* A background job that changes what the root lists (the boot-time network
+ * config read adding smb1:) can finish after the root was built. Rebuild a
+ * visible root in place; anywhere else the next openDir builds it fresh. */
+void dashBrowserRefreshRoot(void)
+{
+	char keep[MAX_NAME];
+
+	if (fb.files == NULL || fb.dir[0] != '\0' || fb.loading)
+		return;
+	keep[0] = '\0';
+	if (fb.sel < fb.ndevs)
+		dashStrCopy(keep, fb.devs[fb.sel].browse, sizeof(keep));
+	openDir("", keep[0] ? keep : NULL);
+}
+
 void dashFileBrowserTabClose(void)
 {
 	if (!fb_tab_active)

@@ -27,9 +27,13 @@ assert "dashBgmStart" not in pre_loop
 assert "dashSoundPlay(DASH_SND_BOOT)" not in pre_loop
 
 # one deferred step, gated on the fade like the first-run welcome and on an idle
-# worker: identity reads use CDVD RPC and audio loads IOP modules; it must not
-# eat into the boot delay (held-key sample) or the auto-start countdown (cancel)
-step = re.search(r"if \(boot_init_pending && !boot_phase && fade_in > 0\.95f && !dashWorkerIoBusy\(\) && !dashIopParked\(\)\) \{(.*?)\n\t\t\}", loop, re.S)
+# worker: identity reads use CDVD RPC and audio loads IOP modules. It may run
+# during the Init_Delay window (boot_phase 1 already holds all input, so the
+# freeze overlaps a dead window instead of landing right at interactivity), but
+# never during the auto-start countdown (boot_phase 2), whose cancel input must
+# stay responsive. The held-key sample at the end of Init_Delay can land a
+# freeze-duration later; a held key is still held then.
+step = re.search(r"if \(boot_init_pending && boot_phase != 2 && fade_in > 0\.95f && !dashWorkerIoBusy\(\) && !dashIopParked\(\)\) \{(.*?)\n\t\t\}", loop, re.S)
 assert step, "deferred boot step missing"
 body = step.group(1)
 assert "boot_init_pending = 0;" in body

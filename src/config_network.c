@@ -2,6 +2,7 @@
 // File name:   config_network.c
 //---------------------------------------------------------------------------
 #include "config_private.h"
+#include "dash.h"
 #include <stdlib.h>
 
 //---------------------------------------------------------------------------
@@ -159,6 +160,7 @@ void Config_Network(void)
 	event = 1;  //event = initial entry
 	s = CONFIG_NET_FIRST;
 	l = 1;
+	dashEnsureIpConfig();  //cached; the boot warm job usually beats entry here
 	ipdata = BuildOctets(ip, netmask, gw);
 	configBuildSaveTargets(save_override_path, sizeof(save_override_path),
 	                       save_cwd_path, sizeof(save_cwd_path),

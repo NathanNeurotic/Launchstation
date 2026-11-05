@@ -11,6 +11,7 @@
 #include "smb_shares.h"
 #include "neutrino_smb.h"
 #include "smb2man.h"
+#include "init.h"
 #include <ps2smb.h>
 
 #define SMB_CNF_NAME     "SMB2.CNF"
@@ -26,6 +27,9 @@
 
 static SmbConfig smb_cfg;
 static int smb_cfg_loaded = 0;
+/* Preferred mc1: was refused on the last read (MX4SIO owns the bus): explicit
+ * readers re-read so the preferred file can still win once mc1: is loaded. */
+static int smb_cfg_mc1_pending = 0;
 static char smb_cfg_path[MAX_PATH];
 static unsigned int smb_retry_ms[3]; /* by version: last retry of failed shares */
 static void smbReadConfig(void);
@@ -33,19 +37,20 @@ static void smbReadConfig(void);
 int smbSharesNeutrino(const char *path, SmbShare *share, char *dvd,
                      size_t dvd_size, const char **problem)
 {
-	if (!smb_cfg_loaded)
+	if (!smb_cfg_loaded || smb_cfg_mc1_pending)
 		smbReadConfig();
 	return neutrinoSmbResolve(&smb_cfg, path, share, dvd, dvd_size, problem);
 }
 
 /* Same places as IPCONFIG.DAT: beside the launched ELF, then SYS-CONF on
  * the card it was launched from, then on the other card. */
-static char *smbReadConfigText(void)
+static char *smbReadConfigText(int *mc1_refused)
 {
 	char path[MAX_PATH];
 	char *text;
 	int port, i;
 
+	*mc1_refused = 0;
 	smb_cfg_path[0] = '\0';
 	if (strlen(LaunchElfDir) + sizeof(SMB_CNF_NAME) <= sizeof(path)) {
 		snprintf(path, sizeof(path), "%s%s", LaunchElfDir, SMB_CNF_NAME);
@@ -56,6 +61,12 @@ static char *smbReadConfigText(void)
 	}
 	port = !strncmp(LaunchElfDir, "mc1", 3);
 	for (i = 0; i < 2; i++, port ^= 1) {
+		if (port == 1 && mc1AccessRefused()) {
+			/* MX4SIO owns slot 2 and implicit discovery never switches
+			 * stacks: leave the file unread rather than caching its absence. */
+			*mc1_refused = 1;
+			continue;
+		}
 		snprintf(path, sizeof(path), "mc%d:/SYS-CONF/%s", port, SMB_CNF_NAME);
 		if ((text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL)) != NULL) {
 			snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", path);
@@ -65,14 +76,60 @@ static char *smbReadConfigText(void)
 	return NULL;
 }
 
+static unsigned int smb_cfg_text_hash;
+
+static unsigned int smbTextHash(const char *text)
+{
+	unsigned int hash = 2166136261u;
+
+	if (text == NULL)
+		return 0;
+	while (*text) {
+		hash ^= (unsigned char)*text++;
+		hash *= 16777619u;
+	}
+	return hash;
+}
+
 static void smbReadConfig(void)
 {
-	char *text = smbReadConfigText();
-	int i;
+	char *text, previous_path[MAX_PATH];
+	unsigned int text_hash;
+	int mc1_refused, i;
 
+	snprintf(previous_path, sizeof(previous_path), "%s", smb_cfg_path);
+	text = smbReadConfigText(&mc1_refused);
+	text_hash = smbTextHash(text);
+	/* An unchanged fallback must not reset connected shares or failed-share
+	 * backoff while the preferred card is still unavailable. */
+	if (mc1_refused && smb_cfg_loaded && smb_cfg_mc1_pending &&
+	    text_hash == smb_cfg_text_hash && !strcmp(previous_path, smb_cfg_path)) {
+		free(text);
+		return;
+	}
+	/* A changed pending config may reuse a share name. Retire the old driver
+	 * sessions before parsing it so -EEXIST cannot alias the old connection. */
+	if (smb_cfg_mc1_pending &&
+	    (text_hash != smb_cfg_text_hash || strcmp(previous_path, smb_cfg_path))) {
+		if (smbSharesConnectedCount(SMB_PATH_V2) > 0 &&
+		    fileXioDevctl(SMB_DEVICE_V2, SMB2_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0) < 0) {
+			snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", previous_path);
+			free(text);
+			return;
+		}
+		if (smbSharesConnectedCount(SMB_PATH_V1) > 0)
+			fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_LOGOFF, NULL, 0, NULL, 0);
+	}
 	smbConfigParse(text, &smb_cfg);
 	free(text);
-	smb_cfg_loaded = 1;
+	smb_cfg_text_hash = text_hash;
+	/* A refused slot-2 stack switch must not freeze the result — not even a
+	 * lower-priority mc0: hit — into the session cache: a later call, once
+	 * the mc1: stack is loaded, can still find the preferred file there.
+	 * But a fallback file that was read stays visible: loaded tracks a
+	 * usable parse, pending tracks the outstanding retry. */
+	smb_cfg_loaded = !mc1_refused || smb_cfg_path[0];
+	smb_cfg_mc1_pending = mc1_refused;
 	DPRINTF(" [SMB]: %s: %d share(s), dropped=%d unfinished=%d\n",
 	        smb_cfg_path[0] ? smb_cfg_path : "no " SMB_CNF_NAME,
 	        smb_cfg.count, smb_cfg.dropped, smb_cfg.unfinished);
@@ -84,7 +141,7 @@ static void smbReadConfig(void)
 
 int smbSharesConfigured(int version)
 {
-	if (!smb_cfg_loaded)
+	if (!smb_cfg_loaded || smb_cfg_mc1_pending)
 		smbReadConfig();
 	return smbConfigValidCount(&smb_cfg, version);
 }
@@ -101,7 +158,7 @@ const char *smbSharesConfigPath(void)
 
 int smbSharesSnapshot(SmbConfig *out)
 {
-	if (!smb_cfg_loaded)
+	if (!smb_cfg_loaded || smb_cfg_mc1_pending)
 		smbReadConfig();
 	*out = smb_cfg;
 	return smb_cfg.count;
@@ -209,7 +266,7 @@ void smbSharesConnect(int version, int retry_failed)
 		else
 			smb_retry_ms[version] = now;
 	}
-	if (!smb_cfg_loaded || (retry_failed && smbSharesConnectedCount(1) == 0 && smbSharesConnectedCount(2) == 0))
+	if (!smb_cfg_loaded || smb_cfg_mc1_pending || (retry_failed && smbSharesConnectedCount(1) == 0 && smbSharesConnectedCount(2) == 0))
 		smbReadConfig();
 	for (i = 0; i < smb_cfg.count; i++) {
 		SmbShare *sh = &smb_cfg.share[i];
@@ -305,6 +362,7 @@ void smbSharesReload(void)
 		fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_LOGOFF, NULL, 0, NULL, 0);
 	smbSharesForget();
 	smb_cfg_loaded = 0;
+	smb_cfg_mc1_pending = 0;
 }
 //--------------------------------------------------------------
 //End of file: smb_shares.c

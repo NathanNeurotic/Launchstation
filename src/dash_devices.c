@@ -86,6 +86,29 @@ static int storageState(const char *mount)
  * the snapshot has stayed unchanged for a settling period; all boot-time
  * mount transitions are folded into the baseline silently. */
 #define DEV_HOTPLUG_SETTLE_MS 2000
+
+/* A second USB stick can enumerate after the boot probe's short acceptance
+ * window. While the hotplug baseline is still settling, let the worker
+ * refresh the cached drive mask (paced, non-blocking) so the stick joins
+ * the baseline; once hotplug is armed, probe-on-open keeps its contract. */
+#define DEV_USB_RESCAN_MS 500
+static u64 usb_rescan_next;
+static int usb_rescan_changed;
+
+static void usbMaskRescanJob(void *arg)
+{
+	int before = filerUsbDriveMask();
+	(void)arg;
+	filerUsbRefreshDriveMask();
+	usb_rescan_changed = filerUsbDriveMask() != before;
+}
+
+static void usbMaskRescanDone(void *arg)
+{
+	(void)arg;
+	if (usb_rescan_changed)
+		dashBrowserRefreshRoot();
+}
 static u32 dev_snapshot = 0xFFFFFFFFu;
 static u64 dev_snapshot_changed_ms;
 static int dev_hotplug_armed;
@@ -110,6 +133,7 @@ void dashDevicesResetBaseline(void)
 	dev_snapshot = 0xFFFFFFFFu;
 	dev_snapshot_changed_ms = Timer();
 	dev_hotplug_armed = 0;
+	usb_rescan_next = 0;
 }
 
 void dashDevicesPoll(void)
@@ -149,6 +173,11 @@ void dashDevicesPoll(void)
 			dashSoundPlay(DASH_SND_DISCONNECT);
 		dev_snapshot = now;
 		view_changed = 1;
+	}
+	if (!dev_hotplug_armed && filerUsbDriversLoaded() && (filerUsbDriveMask() & 3) != 3 &&
+	    Timer() >= usb_rescan_next && !dashWorkerQueued(DASH_JOB_DEVICE)) {
+		usb_rescan_next = Timer() + DEV_USB_RESCAN_MS;
+		dashWorkerSubmit("usb rescan", DASH_JOB_DEVICE, usbMaskRescanJob, usbMaskRescanDone, NULL);
 	}
 	if (view_changed)
 		dashAppsRebuildView();
@@ -501,9 +530,10 @@ static int probeUsbMediaAnimated(void)
 	for (attempt = 0; attempt < DASH_USB_PROBE_ATTEMPTS; attempt++) {
 		if (dashLoadingActive())
 			dashLoadingStatus("Checking USB media...", attempt + 1, DASH_USB_PROBE_ATTEMPTS);
-		/* USB filesystem RPCs are synchronous; a retry delay cannot rescue
-		 * a single wedged fileXioGetStat. Do not probe an absent second slot
-		 * twenty times merely because only one drive is connected. */
+		/* USB root stats go through fileXioGetStatBounded: a wedged slot
+		 * fails fast instead of hanging the whole probe on one RPC. Do not
+		 * probe an absent second slot twenty times merely because only one
+		 * drive is connected. */
 		mask = filerUsbRefreshDriveMask();
 		if ((mask & 3) == 3)
 			return 1;

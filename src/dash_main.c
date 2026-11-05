@@ -11,6 +11,9 @@
 #include "dash_sound.h"
 #include "filer_shared.h"
 #include "init.h"
+#ifdef SMB
+#include "smb_shares.h"
+#endif
 #include <strings.h>
 
 extern void (*mainActionLaunchHook)(const char *path);
@@ -1170,6 +1173,55 @@ void dashRenderScene(void)
 //--------------------------------------------------------------
 // Entry
 //--------------------------------------------------------------
+/* IPCONFIG.DAT / SMB2.CNF reads (with mc?:/SYS-CONF fallbacks) warm the
+ * network display strings and the smb1: device entry. They probe both memory
+ * cards when no file sits beside the ELF, so they run on the worker instead
+ * of blocking boot (they used to run in initializeRuntimeInputModules). */
+static void dashNetConfigWarmJob(void *arg)
+{
+	(void)arg;
+	getIpConfig();
+#ifdef SMB
+	smbSharesConfigured(SMB_PATH_V1);
+#endif
+}
+
+/* Runs on the UI thread once the reads above are cached: a Files root that
+ * was already built now learns whether smb1: exists. */
+static void dashNetConfigWarmDone(void *arg)
+{
+	(void)arg;
+	dashBrowserRefreshRoot();
+}
+
+static void dashIpConfigJob(void *arg)
+{
+	(void)arg;
+	getIpConfig();
+}
+
+/* getIpConfig probes both memory cards when no IPCONFIG.DAT sits beside the
+ * ELF, so it must not run on the UI thread while the worker owns IO (see
+ * dashWorkerIoBusy). Queue behind the busy worker and await instead; the
+ * scene stays visible and quick reads never raise a loading popup. */
+void dashEnsureIpConfig(void)
+{
+	int job;
+
+	if (dashWorkerOnThread()) {
+		getIpConfig();
+		return;
+	}
+	if (dashWorkerIoBusy()) {
+		job = dashWorkerSubmit("ip config", DASH_JOB_DEVICE, dashIpConfigJob, NULL, NULL);
+		if (job > 0)
+			dashWorkerAwait(job, NULL, 0);
+		return; /* a full queue leaves the cache cold rather than racing the worker */
+	}
+	if (!dashIopParked())
+		getIpConfig();
+}
+
 static void firstInit(void)
 {
 	dashStoreInit();
@@ -1195,6 +1247,9 @@ static void firstInit(void)
 		dashRescanLibrary(0);
 	} else
 		dashDevicesAutoStart();
+	/* Queued after the auto-start driver loads above: those run on the UI
+	 * thread and must not overlap worker IO. */
+	dashWorkerSubmit("net config", DASH_JOB_DEVICE, dashNetConfigWarmJob, dashNetConfigWarmDone, NULL);
 #ifdef DASH_AUTOTEST
 	/* development-only sample library (see include/dash_autotest.h) */
 	{
@@ -1401,10 +1456,12 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			quickLaunchDraw();
 		dashGfxPresent();
 
-		/* after the first frame is on screen and the boot delay/countdown
-		 * (held-key sample, cancel input) is over; CDVD RPC and module loads
-		 * must not overlap worker IOP file work */
-		if (boot_init_pending && !boot_phase && fade_in > 0.95f && !dashWorkerIoBusy() && !dashIopParked()) {
+		/* after the first frame is on screen: run during the Init_Delay window
+		 * (boot_phase 1 holds all input anyway) instead of freezing the UI right
+		 * when it becomes interactive; still deferred past the auto-launch
+		 * countdown (boot_phase 2), whose cancel input must stay responsive.
+		 * CDVD RPC and module loads must not overlap worker IOP file work */
+		if (boot_init_pending && boot_phase != 2 && fade_in > 0.95f && !dashWorkerIoBusy() && !dashIopParked()) {
 			boot_init_pending = 0;
 			dashConsoleIdentityInit();
 			dashSoundInit();

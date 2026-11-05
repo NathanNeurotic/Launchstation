@@ -18,14 +18,11 @@ void validateConfiguredCnfPath(void)
 void initializeRuntimeInputModules(enum BOOT_DEVICE boot_device)
 {
 	//It's time to load and init drivers
-	DPRINTF("Getting IPCONFIG\n");
-	if (boot_device != BOOT_DEVICE_HOST)
-		getIpConfig();
-#ifdef SMB
-	/* Only reads SMB2.CNF, from where IPCONFIG.DAT is read: the device list
-	 * shows smb1: when it has a VERSION = 1 share. No network here. */
-	smbSharesConfigured(SMB_PATH_V1);
-#endif
+	/* IPCONFIG.DAT / SMB2.CNF are no longer read here: their mc?:/SYS-CONF
+	 * fallbacks probe both memory cards synchronously. A dashboard worker job
+	 * warms them once the UI is up (dashNetConfigWarmJob); a HOST boot already
+	 * read IPCONFIG.DAT in bringUpBootNetworkStack. */
+	(void)boot_device;
 
 	WaitTime = Timer();
 #ifdef DS34

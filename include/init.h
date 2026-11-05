@@ -30,6 +30,12 @@ void closeAllAndPoweroff(void);
 void startKbd(void);
 void ensureCoreIoStackReady(void);
 void ensureMemoryCardPortAccessible(int port);
+/* Nonzero when an mc1: read right now would need an IOP stack switch away
+ * from a live MX4SIO stack; implicit config discovery treats that as
+ * refused on every thread. */
+int mc1AccessRefused(void);
+/* Bounded poll (50ms steps, 2s cap) until a USB/mass path answers a stat. */
+void waitForUsbMassPath(const char *path);
 void rebootIopAndReloadCoreStack(void);
 void rebootIopAndReloadCoreStackSilent(void);
 int loadSecrSifModule(void);

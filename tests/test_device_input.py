@@ -275,6 +275,13 @@ static void dashSoundPlay(int i) { (void)i; }
 static void dashAppsRebuildView(void) {}
 static void dashStrCopy(char *d,const char *s,int n) { snprintf(d,n,"%s",s); }
 static int dashWorkerAwaitAll(const char *t) { (void)t; return 1; }
+typedef void (*DashJobFn)(void *arg);
+enum { DASH_JOB_DEVICE=1<<4 };
+static int dashWorkerQueued(int m) { (void)m; return 0; }
+static int dashWorkerSubmit(const char *l,int f,DashJobFn r,DashJobFn d,void *a) {
+    (void)l;(void)f;(void)r;(void)d;(void)a; return -1;
+}
+static void dashBrowserRefreshRoot(void) {}
 static int startup_quiet;
 static int isStartupDriverStatusQuiet(void) { return startup_quiet; }
 static void setStartupDriverStatusQuiet(int quiet) { startup_quiet = quiet; }

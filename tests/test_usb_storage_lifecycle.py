@@ -59,8 +59,7 @@ static void loadUsbDModule(void) {
     if (!have_usbd) trackLoad('U');
     have_usbd = !failed_usbd;
 }
-static void waitForUsbMassBdmfsSettle(void) {}
-static void delay(int n) { (void)n; }
+static void waitForUsbMassEnumerate(void) {}
 static int reopenPadPorts(void) { pad_restarts++; return 1; }
 static int loadAtaModules(void) { return 1; }
 static int loadHddModules(void) { return 1; }

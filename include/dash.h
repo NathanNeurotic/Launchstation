@@ -25,6 +25,9 @@ int dashFtpPollRemote(void);
 /* Publish the next blocking storage operation before entering its RPC.
  * Worker callers only update status; UI callers draw an existing overlay. */
 void DashStorageProbeStatus(const char *status);
+/* Nonzero while the dashboard worker owns IO (classic mode: always 0, so
+ * classic callers may do their own IO). UI-thread code must not do IO then. */
+int dashWorkerIoBusy(void);
 /* Main-thread file-operation progress. Returns zero in classic mode. */
 int DashFileProgress(const char *action, const char *name, u64 remaining, u64 total);
 void DashFileDeleteProgress(const char *name);
@@ -33,6 +36,11 @@ void DashFileDeleteProgress(const char *name);
  * without calling it (classic mode, no overlay, worker unavailable): the
  * caller then runs it itself. */
 int DashFileTransferChunk(void (*run)(void *arg), void *arg);
+
+/* Loads IPCONFIG.DAT (cached afterwards) without violating worker IO
+ * exclusion: direct when the worker is idle, queued and awaited while the
+ * worker owns IO, skipped while the IOP is parked. Safe from any thread. */
+void dashEnsureIpConfig(void);
 
 /* Finish dashboard-owned IO/audio before a child ELF that deliberately
  * inherits the live IOP. Returns 0 if the user cancels the bounded wait. */

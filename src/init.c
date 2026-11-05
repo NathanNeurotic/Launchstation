@@ -121,7 +121,8 @@ static u8 have_filexio_ready = 0;
 static u8 have_mc_rpc_ready = 0;
 static unsigned int iop_reset_generation = 0;
 
-#define USB_MASS_BDMFS_SETTLE_MS 1000
+#define USB_MASS_ENUM_POLL_MS 50
+#define USB_MASS_ENUM_TIMEOUT_MS 2000
 #define OHCI_REG_BASE 0xbf801600
 #define OHCI_HC_CONTROL (OHCI_REG_BASE + 0x04)
 #define OHCI_HC_COMMAND_STATUS (OHCI_REG_BASE + 0x08)
@@ -319,7 +320,9 @@ extern int uLE_cdmode;
 extern u8 mx4sio_driver_running;
 #endif
 
+#ifndef EXFAT
 static void delay(int count);
+#endif
 static void initsbv_patches(void);
 static int load_ps2dev9(void);
 static void prepareDev9Poweroff(void);
@@ -343,7 +346,7 @@ static void loadBasicModules(void);
 static int loadExternalFile(char *argPath, void **fileBaseP, int *fileSizeP);
 static int loadExternalModule(char *modPath, void *defBase, int defSize);
 static void loadUsbDModule(void);
-static void waitForUsbMassBdmfsSettle(void);
+static void waitForUsbMassEnumerate(void);
 static void loadKbdModules(void);
 static int pathUsesUsbMass(const char *path);
 void loadUsbModules(void);
@@ -399,6 +402,7 @@ void closeKeyboardIfOpened(void)
 	}
 }
 
+#ifndef EXFAT
 static void delay(int count)
 {
 	int i;
@@ -411,6 +415,7 @@ static void delay(int count)
 }
 //------------------------------
 //endfunc delay
+#endif
 //---------------------------------------------------------------------------
 static void initsbv_patches(void)
 {
@@ -1493,18 +1498,127 @@ static void loadUsbDModule(void)
 //------------------------------
 //endfunc loadUsbDModule
 //---------------------------------------------------------------------------
-static void waitForUsbMassBdmfsSettle(void)
-{
-	u64 ready_time;
+/* fileXioGetStat with a real deadline. The library call waits inside the
+ * RPC forever when a wedged slot never answers, freezing the console; this
+ * issues the same GETSTAT through a private RPC client with
+ * SIF_RPC_M_NOWAIT and polls it with a timeout instead. The DMA storage is
+ * static so a timed-out call can still finish into it later: fxstat_pending
+ * then heals on the late answer, while a truly wedged IOP server fails fast
+ * until the next IOP reset rebinds the client. The library's own client
+ * state (block mode, completion sema) is never touched. */
+#define FXIO_STAT_BIND_MS 1000
 
-	ready_time = Timer() + USB_MASS_BDMFS_SETTLE_MS;
-	/* Yield while BDMFS registers its device. The old one-second EE busy loop
-	 * starved useful work and could make USB bring-up less deterministic. */
-	while (Timer() < ready_time)
-		DelayThread(1000);
+static SifRpcClientData_t fxstat_cd __attribute__((aligned(64)));
+static struct fxio_getstat_packet fxstat_pkt __attribute__((aligned(64)));
+static unsigned int fxstat_ret[16] __attribute__((aligned(64)));
+static iox_stat_t fxstat_stat;
+static unsigned int fxstat_generation;
+static int fxstat_bound, fxstat_pending;
+static int fxstat_lock = -1;
+
+static int fxstatBind(void)
+{
+	u64 deadline;
+
+	memset(&fxstat_cd, 0, sizeof(fxstat_cd));
+	if (SifBindRpc(&fxstat_cd, FILEXIO_IRX, SIF_RPC_M_NOWAIT) < 0)
+		return 0;
+	fxstat_pending = 1; /* the bind rendezvous completes on this client too */
+	deadline = Timer() + FXIO_STAT_BIND_MS;
+	while (Timer() < deadline && SifCheckStatRpc(&fxstat_cd))
+		DelayThread(10000);
+	if (SifCheckStatRpc(&fxstat_cd))
+		return 0; /* bind left pending: the heal-or-fail-fast rule applies */
+	fxstat_pending = 0;
+	if (fxstat_cd.server == NULL)
+		return 0;
+	fxstat_bound = 1;
+	return 1;
 }
 //------------------------------
-//endfunc waitForUsbMassBdmfsSettle
+//endfunc fxstatBind
+//---------------------------------------------------------------------------
+int fileXioGetStatBounded(const char *path, iox_stat_t *stat_out, int timeout_ms)
+{
+	u64 deadline;
+	int rv = -1;
+
+	if (fxstat_lock < 0)
+		return -1; /* Reset() creates the lock before any USB access exists */
+	WaitSema(fxstat_lock);
+	if (fxstat_generation != getIopResetGeneration()) {
+		memset(&fxstat_cd, 0, sizeof(fxstat_cd));
+		fxstat_bound = fxstat_pending = 0;
+		fxstat_generation = getIopResetGeneration();
+	}
+	/* Never issue over a call that can still complete: a late answer heals
+	 * the latch, a wedged one fails fast until the next IOP reset. */
+	if (fxstat_pending) {
+		if (SifCheckStatRpc(&fxstat_cd)) {
+			rv = -2; /* channel wedged: no point polling it again */
+			goto out;
+		}
+		fxstat_pending = 0;
+	}
+	if (!fxstat_bound && !fxstatBind())
+		goto out;
+	snprintf(fxstat_pkt.pathname, sizeof(fxstat_pkt.pathname), "%s", path);
+	fxstat_pkt.stat = &fxstat_stat;
+	sceSifWriteBackDCache(&fxstat_stat, sizeof(fxstat_stat));
+	if (SifCallRpc(&fxstat_cd, FILEXIO_GETSTAT, SIF_RPC_M_NOWAIT,
+	               &fxstat_pkt, sizeof(fxstat_pkt), fxstat_ret, 4, NULL, NULL) < 0)
+		goto out;
+	fxstat_pending = 1;
+	deadline = Timer() + timeout_ms;
+	while (Timer() < deadline && SifCheckStatRpc(&fxstat_cd))
+		DelayThread(10000);
+	if (SifCheckStatRpc(&fxstat_cd))
+		goto out; /* wedged or slow: pending stays set, the next call decides */
+	fxstat_pending = 0;
+	rv = *(int *)UNCACHED_SEG(&fxstat_ret[0]);
+	if (rv >= 0 && stat_out != NULL)
+		memcpy(stat_out, (void *)UNCACHED_SEG(&fxstat_stat), sizeof(fxstat_stat));
+out:
+	SignalSema(fxstat_lock);
+	return rv;
+}
+//------------------------------
+//endfunc fileXioGetStatBounded
+//---------------------------------------------------------------------------
+/* Bounded poll until a USB/mass path answers: enumeration runs on the IOP
+ * once USBMASS_BD links, so a stick that already enumerated for the loader
+ * answers in a fraction of the old fixed waits. Each stat has its own
+ * timeout, so a wedged slot spends one bounded probe instead of hanging
+ * here (or being polled pointlessly for the rest of the deadline). */
+void waitForUsbMassPath(const char *path)
+{
+	u64 deadline;
+	iox_stat_t chk_stat;
+	int stat_result;
+
+	deadline = Timer() + USB_MASS_ENUM_TIMEOUT_MS;
+	while (Timer() < deadline) {
+		stat_result = fileXioGetStatBounded(path, &chk_stat, FILEXIO_STAT_TIMEOUT_MS);
+		if (stat_result >= 0 || stat_result == -2)
+			break;
+		DelayThread(USB_MASS_ENUM_POLL_MS * 1000);
+	}
+}
+//------------------------------
+//endfunc waitForUsbMassPath
+//---------------------------------------------------------------------------
+static void waitForUsbMassEnumerate(void)
+{
+	/* Only a USB boot waits: the stick enumerated moments ago for the loader,
+	 * and loadConfig reads it right after this returns. Probe the boot path
+	 * itself so a slower second stick is not skipped behind a faster usb0.
+	 * USB activation after boot is covered by the browser/dashboard retries. */
+	if (strncmp(LaunchElfDir, "usb", 3) && strncmp(LaunchElfDir, "mass", 4))
+		return;
+	waitForUsbMassPath(LaunchElfDir);
+}
+//------------------------------
+//endfunc waitForUsbMassEnumerate
 //---------------------------------------------------------------------------
 static int pathUsesUsbMass(const char *path)
 {
@@ -1588,8 +1702,6 @@ void loadUsbModules(void)
 			ID = SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, &ret);
 			DPRINTF(" [BDMFS_FATFS] ID=%d, ret=%d\n", ID, ret);
 			have_bdmfs = (ID >= 0 && ret >= 0);
-			if (have_bdmfs)
-				waitForUsbMassBdmfsSettle();
 		}
 		if (!have_bdmfs)
 			loaded_ok = 0;
@@ -1601,7 +1713,7 @@ void loadUsbModules(void)
 				loaded_ok = 0;
 		}
 		if (loaded_ok) {
-			delay(3);
+			waitForUsbMassEnumerate();
 			USB_mass_loaded = 1;
 			have_usb_mass = 1;
 		}
@@ -2050,6 +2162,20 @@ void ensureMemoryCardPortAccessible(int port)
 	}
 #else
 	(void)port;
+#endif
+}
+
+/* An mc1: read while MX4SIO owns slot 2 needs an IOP reset that tears the
+ * MX4SIO stack down. Implicit config discovery never makes that switch on
+ * any thread (opening a settings page must not evict the user's MX4SIO):
+ * it leaves its cache cold until an explicit browse to mc1: loads that
+ * stack and a later call can read the file. */
+int mc1AccessRefused(void)
+{
+#ifdef MX4SIO
+	return !isPathDeviceStackLoaded("mc1:/");
+#else
+	return 0;
 #endif
 }
 
@@ -2791,6 +2917,17 @@ void Reset()
 	initsbv_patches();
 
 	clearIopModuleState();
+
+	/* EE-side lock for the bounded stat probe; created here, before any
+	 * USB access, so first use is never a race between threads. */
+	if (fxstat_lock < 0) {
+		ee_sema_t sp;
+
+		sp.init_count = 1;
+		sp.max_count = 1;
+		sp.option = 0;
+		fxstat_lock = CreateSema(&sp);
+	}
 
 #ifdef POWERPC_UART
 int i, d;

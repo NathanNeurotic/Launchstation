@@ -230,6 +230,17 @@ listing = devices[devices.index("int dashDevicesList("):]
 listing = listing[:listing.index("\n}\n")]
 assert "smbSharesKnown(SMB_PATH_V1)" in listing and "smbSharesConfigured" not in listing
 
+# a refused mc1: (MX4SIO owns the bus) keeps the retry pending, but a fallback
+# SMB2.CNF that was read (mc0:/SYS-CONF) must stay visible to smbSharesKnown
+shares = text("src/smb_shares.c")
+read_config = shares[shares.index("static void smbReadConfig(void)\n{"):]
+read_config = read_config[:read_config.index("\n}\n")]
+assert "smb_cfg_loaded = !mc1_refused || smb_cfg_path[0];" in read_config
+assert "smb_cfg_mc1_pending = mc1_refused;" in read_config
+configured = shares[shares.index("int smbSharesConfigured(int version)\n{"):]
+configured = configured[:configured.index("\n}\n")]
+assert "smb_cfg_mc1_pending" in configured
+
 smbman = text("iop/smbman/smb_fio.c")
 assert '#define SMBMAN_DEVICE_NAME "smb1"' in smbman and "SMBMAN_DEVICE_NAME," in smbman
 assert "return MODULE_NO_RESIDENT_END;" in text("iop/smbman/smbman.c")

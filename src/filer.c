@@ -824,6 +824,47 @@ void invalidatePartitionCaches(void)
 //------------------------------
 //endfunc genLimObjName
 //--------------------------------------------------------------
+/* loadUsbModules returns as soon as the drivers link; a target on a stick
+ * that has not enumerated yet needs one bounded wait so the open that
+ * follows does not fail outright (the pre-#277 code hid this behind fixed
+ * boot settles). Once any scan has run, the unit table is authoritative and
+ * discovery belongs to the browser/dashboard rescans. Each unit gets the
+ * wait once per IOP session, so a genuinely absent stick fails fast
+ * afterwards; an IOP reset re-enumerates everything, so the mask is keyed
+ * to the reset generation and each unit earns its wait again. */
+static int usb_target_waited;
+static unsigned int usb_target_waited_gen;
+
+static void waitUsbTargetReady(const char *gen_path)
+{
+	char root[12];
+	const char *colon;
+	int devlen, unit;
+
+	if (!USB_mass_loaded || USB_mass_scanned)
+		return;
+	colon = strchr(gen_path, ':');
+	if (colon == NULL || colon == gen_path)
+		return;
+	unit = colon[-1] - '0';
+	if (unit < 0 || unit > 9)
+		return; /* an unnumbered alias maps nowhere waitable */
+	if (usb_target_waited_gen != getIopResetGeneration()) {
+		usb_target_waited = 0;
+		usb_target_waited_gen = getIopResetGeneration();
+	}
+	if (usb_target_waited & (1 << unit))
+		return;
+	usb_target_waited |= 1 << unit;
+	devlen = colon - gen_path + 1;
+	if (devlen + 2 > (int)sizeof(root))
+		return;
+	memcpy(root, gen_path, devlen);
+	root[devlen] = '/';
+	root[devlen + 1] = '\0';
+	waitForUsbMassPath(root);
+}
+
 int genFixPath(const char *inp_path, char *gen_path)
 {
 	char uLE_path[MAX_PATH], loc_path[MAX_PATH], ata_path[MAX_PATH], hdd_device[6], party[MAX_NAME], *p;
@@ -856,6 +897,7 @@ int genFixPath(const char *inp_path, char *gen_path)
 			fatfs_sep = strchr(gen_path, '/');
 			if (fatfs_sep && (fatfs_sep - gen_path < 7) && fatfs_sep[-1] == ':')
 				strcpy(gen_path + (fatfs_sep - gen_path), fatfs_sep + 1);
+			waitUsbTargetReady(gen_path);
 		}
 		//end of clause for using a USB alias path
 
@@ -869,11 +911,13 @@ int genFixPath(const char *inp_path, char *gen_path)
 			pathSep = strchr(gen_path, '/');
 			if (pathSep && (pathSep - gen_path < 7) && pathSep[-1] == ':')
 				strcpy(gen_path + (pathSep - gen_path), pathSep + 1);
+			waitUsbTargetReady(gen_path);
 		}
 #else
 		loadUsbModules();
 		if (pathSep && (pathSep - uLE_path < 7) && pathSep[-1] == ':')
 			strcpy(gen_path + (pathSep - uLE_path), pathSep + 1);
+		waitUsbTargetReady(gen_path);
 #endif
 		//end of clause for using a USB mass: path
 
@@ -1236,7 +1280,12 @@ static void scanUsbMassDevices(int force)
 
 	if ((USB_mass_max_drives < 1)
 	    || (!force && ((USB_mass_max_drives < 2)  //No need for dynamic lists with only one drive
-	                  || (USB_mass_scanned && ((Timer() - USB_mass_scan_time) < 5000)))))
+	                  /* Freshness skip applies only once every browsable unit is
+	                   * known: with a drive missing, entry re-probes so a late
+	                   * or hot-plugged second stick shows up without a manual
+	                   * refresh (prepareUsbRootBrowse no longer waits for it). */
+	                  || (USB_mass_scanned && USB_mass_ix[0] && USB_mass_ix[1]
+	                      && ((Timer() - USB_mass_scan_time) < 5000)))))
 		return;
 
 	max_drives = USB_mass_max_drives;
@@ -1253,7 +1302,7 @@ static void scanUsbMassDevices(int force)
 		snprintf(probe_status, sizeof(probe_status), "Checking USB root %s", usb_path);
 		DashStorageProbeStatus(probe_status);
 		DPRINTF("[USB probe] begin %s\n", usb_path);
-		stat_result = fileXioGetStat(usb_path, &chk_stat);
+		stat_result = fileXioGetStatBounded(usb_path, &chk_stat, FILEXIO_STAT_TIMEOUT_MS);
 		DPRINTF("[USB probe] end %s result=%d\n", usb_path, stat_result);
 		snprintf(probe_status, sizeof(probe_status), "USB root %s returned %d", usb_path, stat_result);
 		DashStorageProbeStatus(probe_status);
@@ -1286,7 +1335,7 @@ int prepareUsbRootBrowse(void)
 
 	/* A completed two-drive probe already validated both mounts. When the
 	 * dashboard immediately opens the generic USB root, don't issue another
-	 * pair of synchronous fileXioGetStat RPCs just to repeat that discovery.
+	 * pair of fileXioGetStat probes just to repeat that discovery.
 	 * Keep this fast path short-lived: hotplug and stale mounts still probe. */
 	if (USB_mass_scanned && USB_mass_ix[0] && USB_mass_ix[1] &&
 	    now >= USB_mass_scan_time &&
@@ -1303,7 +1352,10 @@ int prepareUsbRootBrowse(void)
 				break;
 			}
 		}
-		if ((USB_mass_ix[0] && USB_mass_ix[1]) || attempt == USB_DISCOVERY_ATTEMPTS - 1)
+		/* One mounted unit is enough to open the USB root. A second drive is
+		 * picked up by the regular refresh on entry instead of costing every
+		 * single-drive boot two extra settle rounds. */
+		if (first_unit >= 0 || attempt == USB_DISCOVERY_ATTEMPTS - 1)
 			break;
 		waitUsbDiscoverySettle();
 	}
@@ -2240,11 +2292,13 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 #endif
 #ifdef SMB
-			/* smb1: only when SMB2.CNF has a VERSION = 1 share; reading the
-			 * file touches no network */
+			/* smb1: only when SMB2.CNF has a VERSION = 1 share; the read
+			 * touches no network but probes the memory cards, so while the
+			 * dashboard worker owns IO only the cached flag is safe */
 			strcpy(files[nfiles].name, SMB_DEVICE_V2);
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
-			if (smbSharesConfigured(SMB_PATH_V1)) {
+			if (dashWorkerIoBusy() ? smbSharesKnown(SMB_PATH_V1)
+			                       : smbSharesConfigured(SMB_PATH_V1)) {
 				strcpy(files[nfiles].name, SMB_DEVICE_V1);
 				files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 			}
