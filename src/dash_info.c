@@ -332,7 +332,8 @@ void dashConsoleSummaryText(char *out, size_t out_size)
 	else
 		snprintf(rom, sizeof(rom), "ROM: unavailable");
 	snprintf(out, out_size, "%s | %s | %s | %s", identity, region, rom,
-	         cached_console_info.dvd[0] ? cached_console_info.dvd : "DVD: unavailable");
+	         cached_console_info.dvd[0] ? cached_console_info.dvd :
+	         console_identity_initialized ? "DVD: unavailable" : "DVD: ...");
 }
 
 void dashShowSystemInfo(void)
