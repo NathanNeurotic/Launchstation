@@ -67,6 +67,25 @@ typedef struct
 int smbConfigParse(char *text, SmbConfig *cfg);
 int smbConfigValidCount(const SmbConfig *cfg, int version);
 
+/* Compose the KEY = value lines for one share, in canonical order
+ * (NAME, VERSION for kinds 1/3, USERNAME/PASSWORD when a user is set,
+ * URL). kind 2 = SMB2, 3 = SMB3 (same driver, marked), 1 = SMB1. A 445 port
+ * is left out of the URL. Returns the length, or -1 when a value breaks a
+ * limit the parser enforces. */
+int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
+                     const char *username, const char *password,
+                     const char *ip, int port, const char *share);
+
+/* Splice block_text (newline-terminated, from smbCnfBuildBlock) into the
+ * file text: the block named orig_name is replaced; an empty or unknown
+ * orig_name appends. block_text NULL removes the block instead. Lines
+ * outside the block's own key lines (comments, blank lines, other blocks)
+ * are kept byte for byte. text is read-only; work/work_size is scratch for
+ * the parse (work_size > strlen(text)). Returns the new length in out, or
+ * -1 when a limit is broken or out_size is too small. */
+int smbCnfUpsertText(const char *text, const char *orig_name,
+                     const char *block_text, char *out, int out_size, char *work, int work_size);
+
 /* SMB_PATH_V1 for "smb1:...", SMB_PATH_V2 for "smb:...", else SMB_PATH_NONE.
  * Plain prefix tests on "smb" would take smb1: for smb:. */
 int smbPathKind(const char *path);
@@ -79,6 +98,10 @@ int smbIsRootPath(const char *path);
 int smbSharesConfigured(int version);   /* reads SMB2.CNF once; no network */
 int smbSharesKnown(int version);        /* the same, but no IO: 0 until read */
 const char *smbSharesConfigPath(void);  /* "" when no SMB2.CNF was found */
+/* Copy of the last read SMB2.CNF parse (forcing a read first). Returns the
+ * recorded share count, valid or not, in file order. */
+int smbSharesSnapshot(SmbConfig *out);
+#define SMB_CNF_MAX_SIZE 16384            /* as smb_shares.c reads the file */
 void smbSharesConnect(int version, int retry_failed);
 int smbSharesConnectedCount(int version);
 void smbSharesStatus(int version, char *out, int out_size); /* no IO */

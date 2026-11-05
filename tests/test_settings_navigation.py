@@ -27,12 +27,32 @@ def function(source, signature):
 
 declarations = settings[settings.index("enum SetType"):settings.index("/* Unsaved-changes session:")]
 icons = sorted(set(re.findall(r"\bDI_\w+", settings)))
-code = "#include <assert.h>\n#include <stdio.h>\n#include <string.h>\n"
+code = "#include <assert.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n"
 code += "#define ETH 1\n#define WLE_NATIVE_CLOUD 1\n#define UDPFS 1\n#define ILINK 1\n#define SMB 1\n#define MAX_PATH 1024\n#define DASH_FONT_SYSTEM 1\n"
 code += "static void dashToolsPrepareMmceStatus(void);\n"
 code += "enum { " + ", ".join(icons) + " };\n"
 code += classic[classic.index("enum SETTING_LK {"):classic.index("};", classic.index("enum SETTING_LK {")) + 2]
 code += "enum { " + classic[classic.index("COLOR_BACKGR"):classic.index("};", classic.index("COLOR_BACKGR")) + 2]
+code += '\n#include "smb_shares.h"\n'
+code += r"""
+enum { FIO_O_RDONLY, FIO_O_WRONLY, FIO_O_CREAT, FIO_O_TRUNC };
+static void dashStrCopy(char *d, const char *s, int n) { (void)n; strcpy(d, s); }
+static int dashModalKeyboard(const char *t, char *b, int n) { (void)t; (void)b; (void)n; return 0; }
+static void dashModalMessage(int icon, const char *t, const char *m, const char *x) {
+    (void)icon; (void)t; (void)m; (void)x;
+}
+static void configBuildSysconfPath(char *p, int n, const char *f) { (void)n; strcpy(p, f); }
+static void configEnsureSysconfDir(const char *p) { (void)p; }
+static char *dashLoadTextFile(const char *p, int max, int *len) { (void)p; (void)max; (void)len; return 0; }
+static int genOpen(const char *p, int m) { (void)p; (void)m; return -1; }
+static int genWrite(int fd, void *b, int n) { (void)fd; (void)b; return n; }
+static void genClose(int fd) { (void)fd; }
+static void dashTextEditor(const char *p) { (void)p; }
+int smbSharesSnapshot(SmbConfig *out) { memset(out, 0, sizeof(*out)); return 0; }
+void smbSharesReload(void) {}
+int smbSharesConfigured(int v) { (void)v; return 0; }
+const char *smbSharesConfigPath(void) { return ""; }
+"""
 code += declarations
 input_start = header.rfind("enum {", 0, header.index("DASH_IN_UP"))
 code += header[input_start:header.index("void dashInputPoll(")]
@@ -114,7 +134,7 @@ S_INIT_DELAY S_TIMEOUT S_CNF_PATH S_LANG_FILE S_FONT_FILE S_ESR_PATH
 S_OSDSYS_PATH S_POPS_PATH S_EMBER_DIR S_NEUTRINO_PATH S_HIDE_HDD S_HIDE_MC S_REBOOT_ELF S_DEVA_USB
 S_DEVA_HDD S_DEVA_ATA S_DEVA_MMCE S_DEVA_MX4SIO S_DEVA_ILINK S_DEVA_UDPFS
 S_MMCE_BACKUP_PATH S_MMCE_BACKUP_KEEP S_MMCE_BACKUP_FORMAT S_MMCE_SYNC_ALL S_IGR_SYNC_MODE S_IGR_HELPER S_IGR_AFTER S_IGR_AFTER_APP S_MMCE_LANGUAGE S_GOOGLE_ACCOUNT S_CHECK_UPDATES S_ABOUT_PROJECT S_NET_IP
-S_NET_NM S_NET_GW S_HOSTWRITE S_NET_LEGACY S_SMB_SHARES S_LANGUAGE S_GAMEID S_GAMEID_DISC
+S_NET_NM S_NET_GW S_HOSTWRITE S_NET_LEGACY S_SMBED_PICK S_SMBED_NAME S_SMBED_KIND S_SMBED_IP S_SMBED_PORT S_SMBED_FOLDER S_SMBED_USER S_SMBED_PASS S_SMBED_SAVE S_SMBED_DELETE S_SMBED_TEXT S_LANGUAGE S_GAMEID S_GAMEID_DISC
 S_PSU_HUGE S_PSU_DATE S_PSU_NOOVER S_SAVE_AS S_T_PRESET S_T_LOAD S_T_SAVE
 S_T_DEFAULT S_T_BG S_T_BG1 S_T_BG2 S_T_BRIGHT S_T_SCAN S_T_IMAGE
 S_T_TEXT S_T_TEXT2 S_T_TEXT3 S_T_SELTEXT S_T_ACCENT S_T_SELECT S_T_PANEL
@@ -210,5 +230,6 @@ with tempfile.TemporaryDirectory(prefix="wle-settings-") as tmp:
     source = Path(tmp) / "settings.c"
     exe = Path(tmp) / "settings.exe"
     source.write_text("#define localizeDashboardText(s) (s)\n" + code)
-    subprocess.run([compiler, "-std=gnu11", str(source), "-o", str(exe)], check=True)
+    subprocess.run([compiler, "-std=gnu11", "-I", str(root / "include"),
+                    str(source), str(root / "src" / "smb_cnf.c"), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
