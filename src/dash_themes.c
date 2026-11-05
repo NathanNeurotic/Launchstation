@@ -128,6 +128,7 @@ static const char *const tint_ids[DASH_ICONS_COUNT] = {"text", "accent", "mono"}
 static const char *const appicon_ids[DASH_APPICON_COUNT] = {"system", "device", "monogram"};
 static const char *const clock_ids[DASH_CLOCK_COUNT] = {"off", "standard", "system"};
 static const char *const clockpos_ids[DASH_CLOCKPOS_COUNT] = {"header", "footer"};
+static const char *const tabs_ids[DASH_TABS_COUNT] = {"shown", "hidden"};
 static const char *const hours_ids[DASH_HOURS_COUNT] = {"system", "24", "12"};
 static const char *const date_ids[DASH_DATE_COUNT] = {"system", "ymd", "mdy", "dmy", "off"};
 static const char *const wall_ids[DASH_WALL_COUNT] = {"off", "focused"};
@@ -222,6 +223,7 @@ static void base(DashTheme *t)
 	t->clock_hours = DASH_HOURS_SYSTEM;
 	t->clock_seconds = 1;
 	t->clock_date = DASH_DATE_SYSTEM;
+	t->tabs = DASH_TABS_SHOWN;
 	t->wallpaper = DASH_WALL_OFF;
 	t->wall_dim = 65;
 }
@@ -534,6 +536,8 @@ void dashThemeValidate(DashTheme *t)
 	t->clock_seconds = t->clock_seconds ? 1 : 0;
 	if (t->clock_date >= DASH_DATE_COUNT)
 		t->clock_date = DASH_DATE_SYSTEM;
+	if (t->tabs >= DASH_TABS_COUNT)
+		t->tabs = DASH_TABS_SHOWN;
 	if (t->wallpaper >= DASH_WALL_COUNT)
 		t->wallpaper = DASH_WALL_OFF;
 	t->wall_dim = clampU8(t->wall_dim, 0, 90);
@@ -791,6 +795,7 @@ static const ThemeKey keys[] = {
     {"clock_hours", K_ENUM, OFS(clock_hours), hours_ids, DASH_HOURS_COUNT, 0},
     {"clock_seconds", K_BOOL, OFS(clock_seconds), NULL, 0, 0},
     {"clock_date", K_ENUM, OFS(clock_date), date_ids, DASH_DATE_COUNT, 0},
+    {"tabs", K_ENUM, OFS(tabs), tabs_ids, DASH_TABS_COUNT, 0},
     {"wallpaper", K_ENUM, OFS(wallpaper), wall_ids, DASH_WALL_COUNT, 0},
     {"wallpaper_dim", K_INT, OFS(wall_dim), NULL, 0, 0},
 };
@@ -1239,6 +1244,7 @@ void dashThemeResetGroup(int group)
 			t->tile_style = p.tile_style;
 			t->highlight = p.highlight;
 			t->glow = p.glow;
+			t->tabs = p.tabs;
 			break;
 		case DASH_TG_TYPE:
 			t->font = p.font;

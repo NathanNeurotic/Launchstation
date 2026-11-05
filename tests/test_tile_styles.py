@@ -146,6 +146,28 @@ int main(void) {
     dashTheme.font=255;dashThemeValidate(&dashTheme);assert(dashTheme.font==DASH_FONT_ROBOTO);
     dashTheme.tile_style = 255; dashThemeValidate(&dashTheme);
     assert(dashTheme.tile_style == DASH_TILE_MEMORY_CARD);
+    /* Section tabs: default shown, round-trips, clamps, resets with Style. */
+    for (int p = 0; p < dashThemePresetCount(); p++) {
+        dashThemeLoadPreset(p, &dashTheme);
+        assert(dashTheme.tabs == DASH_TABS_SHOWN);
+    }
+    dashThemeStoreBegin();dashThemeStoreKey("Theme_custom","1");dashThemeStoreEnd();
+    assert(dashTheme.tabs==DASH_TABS_SHOWN);
+    dashTheme.tabs=DASH_TABS_HIDDEN;dashThemeCommit();saved=dashTheme;
+    assert(dashThemeStoreWrite(buf,sizeof(buf))<(int)sizeof(buf));
+    assert(strstr(buf,"Theme_tabs = hidden"));
+    dashThemeStoreBegin();reload(buf,1);dashThemeStoreEnd();
+    assert(dashTheme.tabs==DASH_TABS_HIDDEN);
+    assert(dashThemeSerialize(&dashTheme,buf,sizeof(buf),"")<(int)sizeof(buf));
+    dashThemeLoadPreset(0,&dashTheme);assert(dashTheme.tabs==DASH_TABS_SHOWN);
+    reload(buf,0);assert(dashTheme.tabs==DASH_TABS_HIDDEN);
+    dashThemeParseKey(&dashTheme,"tabs","invalid");dashThemeParseKey(&dashTheme,"tabs","7");
+    dashThemeValidate(&dashTheme);assert(dashTheme.tabs==DASH_TABS_HIDDEN);
+    dashTheme.tabs=7;dashThemeValidate(&dashTheme);assert(dashTheme.tabs==DASH_TABS_SHOWN);
+    dashTheme.tabs=DASH_TABS_HIDDEN;dashTheme.panel.a=73;
+    dashThemeResetGroup(DASH_TG_STYLE);
+    assert(dashTheme.tabs==DASH_TABS_SHOWN && dashTheme.panel.a==73);
+    dashThemeRestore(&saved,0,1);assert(dashTheme.tabs==DASH_TABS_HIDDEN);
     puts("PASS: all preset defaults, old config, every style round-trip, invalid values, reset/restore, convex silhouettes");
 }
 """
