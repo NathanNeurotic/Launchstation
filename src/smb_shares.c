@@ -107,6 +107,19 @@ static void smbReadConfig(void)
 		free(text);
 		return;
 	}
+	/* A changed pending config may reuse a share name. Retire the old driver
+	 * sessions before parsing it so -EEXIST cannot alias the old connection. */
+	if (smb_cfg_mc1_pending &&
+	    (text_hash != smb_cfg_text_hash || strcmp(previous_path, smb_cfg_path))) {
+		if (smbSharesConnectedCount(SMB_PATH_V2) > 0 &&
+		    fileXioDevctl(SMB_DEVICE_V2, SMB2_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0) < 0) {
+			snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", previous_path);
+			free(text);
+			return;
+		}
+		if (smbSharesConnectedCount(SMB_PATH_V1) > 0)
+			fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_LOGOFF, NULL, 0, NULL, 0);
+	}
 	smbConfigParse(text, &smb_cfg);
 	free(text);
 	smb_cfg_text_hash = text_hash;

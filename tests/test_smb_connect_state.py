@@ -24,9 +24,11 @@ code = r'''
 #include <stdlib.h>
 #include <string.h>
 #include "smb_shares.h"
+#include "smb2man.h"
 
 #define MAX_PATH 1024
 #define SMB_RETRY_MS 30000
+#define SMB_DEVCTL_LOGOFF 0xC0DE0003
 #define DPRINTF(...) ((void)0)
 static SmbConfig smb_cfg;
 static int smb_cfg_loaded, smb_cfg_mc1_pending;
@@ -37,6 +39,7 @@ static void smbReadConfig(void);
 static unsigned int now;
 static const char *config_text;
 static int mc1_refused, preferred, read_calls, connect_calls, connect_result;
+static int disconnect_calls, disconnect_result;
 
 static char *smbReadConfigText(int *refused)
 {
@@ -49,6 +52,14 @@ static char *smbReadConfigText(int *refused)
 
 static int connectSmb1(SmbShare *sh) { (void)sh; connect_calls++; return connect_result; }
 static int connectSmb2(SmbShare *sh) { (void)sh; connect_calls++; return connect_result; }
+static int fileXioDevctl(const char *device, int cmd, void *arg, unsigned int arglen,
+                         void *buf, unsigned int buflen)
+{
+    (void)arg; (void)arglen; (void)buf; (void)buflen;
+    assert(!strcmp(device, SMB_DEVICE_V2) && cmd == (int)SMB2_DEVCTL_DISCONNECT_ALL);
+    disconnect_calls++;
+    return disconnect_result;
+}
 static const char *smb1Problem(int ret) { (void)ret; return "mock SMB1 failure"; }
 static unsigned int Timer(void) { return now; }
 '''
@@ -69,10 +80,13 @@ static void reset_case(void)
     preferred = 0;
     read_calls = connect_calls = 0;
     connect_result = 0;
+    disconnect_calls = 0;
+    disconnect_result = 0;
 }
 
 int main(void)
 {
+    assert(fileXioDevctl != NULL);
     reset_case();
     smbSharesConnect(2, 1);
     assert(read_calls == 1 && connect_calls == 1);
@@ -104,6 +118,22 @@ int main(void)
     smbSharesConnect(2, 1);
     assert(read_calls == 2 && !smb_cfg_mc1_pending);
     assert(!strcmp(smb_cfg_path, "mc1:/SYS-CONF/SMB2.CNF"));
+
+    reset_case();
+    smbSharesConnect(2, 1);
+    config_text = "NAME=A\nURL=smb://10.0.0.3/t\n";
+    smbSharesConnect(2, 1);
+    assert(disconnect_calls == 1 && connect_calls == 2);
+    assert(!strcmp(smb_cfg.share[0].url, "smb://10.0.0.3/t"));
+
+    reset_case();
+    smbSharesConnect(2, 1);
+    disconnect_result = -1;
+    config_text = "NAME=A\nURL=smb://10.0.0.3/t\n";
+    smbSharesConnect(2, 1);
+    assert(disconnect_calls == 1 && connect_calls == 1);
+    assert(!strcmp(smb_cfg.share[0].url, "smb://10.0.0.2/s"));
+    assert(smb_cfg.share[0].state == SMB_STATE_CONNECTED);
 
     puts("PASS: SMB fallback preserves connection/retry state and reloads changes");
     return 0;
