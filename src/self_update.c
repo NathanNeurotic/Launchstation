@@ -268,7 +268,7 @@ static int install_update_files(const char *parent, const char *leaf,
         return -1;
     }
 
-    /* The verified four-file PSU can initialize missing runtime sidecars.
+    /* Verified four- and eight-file PSUs can initialize missing runtime sidecars.
      * Never overwrite existing CA/BGM assets; they may be user customized.
      * A verified legacy two-file PSU simply has no sidecars to stage. */
     if (need_ca) {

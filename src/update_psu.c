@@ -1,4 +1,4 @@
-// Extract the selected ELF from verified legacy (2-file) or sidecar-complete (4-file) app PSUs.
+// Extract the selected ELF from verified legacy (2-file), sidecar (4-file), or icon-complete (8-file) app PSUs.
 #include "launchelf.h"
 #include "self_update.h"
 
@@ -38,10 +38,10 @@ int selfUpdateExtractPsu(const char *package, const char *stage, int size)
         genLseek(input, 0, SEEK_SET) != 0 || !read_exact(input, directories, 1536))
         goto done;
     entries = (int)psu32(directories + 4);
-    /* A root entry counts itself, "." and ".." plus 2 or 4 files.
+    /* A root entry counts itself, "." and ".." plus 2, 4 or 8 files.
      * Preserve compatibility with older packages during migration. */
     if (!record_is(directories, 0x8027, SELF_UPDATE_FOLDER) ||
-        (entries != 4 && entries != 6) ||
+        (entries != 4 && entries != 6 && entries != 10) ||
         !record_is(directories + 512, 0x8027, ".") ||
         !record_is(directories + 1024, 0x8027, ".."))
         goto done;
@@ -89,21 +89,37 @@ int selfUpdateExtractPsu(const char *package, const char *stage, int size)
             elf_size = length;
         } else if (record_is(entry, 0x8017, "title.cfg") && !(seen & 2) && length <= 4096) {
             seen |= 2;
-        } else if (entries == 6 &&
+        } else if ((entries == 6 || entries == 10) &&
                    record_is(entry, 0x8017, "WLE-UPDATE-CA.PEM") &&
                    !(seen & 4) && length <= 32768) {
             seen |= 4;
-        } else if (entries == 6 &&
+        } else if ((entries == 6 || entries == 10) &&
                    record_is(entry, 0x8017, "BGM.ADP") &&
                    !(seen & 8) && length >= 32 && length <= 1024 * 1024 &&
                    !(length & 15)) {
             seen |= 8;
+        } else if (entries == 10 &&
+                   record_is(entry, 0x8017, "icon.sys") &&
+                   !(seen & 16) && length == 964) {
+            seen |= 16;
+        } else if (entries == 10 &&
+                   record_is(entry, 0x8017, "list.icn") &&
+                   !(seen & 32) && length >= 20 && length <= 1024 * 1024) {
+            seen |= 32;
+        } else if (entries == 10 &&
+                   record_is(entry, 0x8017, "copy.icn") &&
+                   !(seen & 64) && length >= 20 && length <= 1024 * 1024) {
+            seen |= 64;
+        } else if (entries == 10 &&
+                   record_is(entry, 0x8017, "del.icn") &&
+                   !(seen & 128) && length >= 20 && length <= 1024 * 1024) {
+            seen |= 128;
         } else {
             goto done;
         }
         position += padded;
     }
-    if (seen == (entries == 6 ? 15 : 3) && position == size) {
+    if (seen == (entries == 10 ? 255 : entries == 6 ? 15 : 3) && position == size) {
         if (genClose(input) < 0)
             goto remove_stage;
         return elf_size;
@@ -153,8 +169,29 @@ int selfUpdateExtractPsuSidecar(const char *package, const char *name,
         result = 0; /* compatible, older package without sidecars */
         goto done;
     }
-    if (entries != 6)
+    if (entries != 6 && entries != 10)
         goto done;
+
+    /* Validate the whole archive before returning an early record. Sidecars
+     * are no longer necessarily the last files in the package. */
+    for (i = 0; i < entries - 2; i++) {
+        unsigned int padded;
+        if (position > size - 512 ||
+            genLseek(input, position, SEEK_SET) != position ||
+            !read_exact(input, entry, sizeof(entry)))
+            goto done;
+        position += 512;
+        length = psu32(entry + 4);
+        if (length == 0 || length > (unsigned int)(size - position))
+            goto done;
+        padded = (length + 1023u) & ~1023u;
+        if (padded > (unsigned int)(size - position))
+            goto done;
+        position += padded;
+    }
+    if (position != size)
+        goto done;
+    position = 1536;
 
     for (i = 0; i < entries - 2; i++) {
         unsigned int padded;

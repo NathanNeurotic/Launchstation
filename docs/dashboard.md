@@ -78,7 +78,9 @@ HOME includes both Continue and the entire application library. Use the
 the full library (Grid, List, Carousel, filters, favorites/pins and refresh).
 Back returns to Home. ("APPS" elsewhere in this file means that nested
 Home > Applications library.) The Home **Last folder** chip refreshes when Home
-becomes active, without device-readiness probes during Files I/O.
+becomes active, without device-readiness probes during Files I/O. Other enabled
+launch-key targets appear as chips, except **FileBrowser**, which remains
+available through **Files** and its configured launch key.
 
 Within Files, **Back** moves to the parent folder. Back from the device
 root returns to Home, but Files remains available as a regular tab. The file

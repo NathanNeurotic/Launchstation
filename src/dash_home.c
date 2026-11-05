@@ -124,6 +124,8 @@ static void homeRebuild(void)
 
 		if (!p[0] || ((i == SETTING_LK_LEFT || i == SETTING_LK_RIGHT) && !setting->LK_Flag[i]))
 			continue;
+		if (!stricmp(p, setting->Misc_FileBrowser))
+			continue;
 		if (setting->LK_Title[i][0])
 			dashStrCopy(name, setting->LK_Title[i], sizeof(name));
 		else if (strchr(p, ':') != NULL)
@@ -218,8 +220,8 @@ static void activateChip(const Chip *c)
 				dashLaunchApp(a, 0);
 			} else
 				dashRunMisc(p);
-			/* File Browser shortcuts now start the Files tab's asynchronous
-			 * listing. Do not poll Home device state after leaving Home. */
+			/* Miscellaneous commands can leave Home. Do not poll Home device state
+			 * after the section changes. */
 			if (dashCurrentSection() == DASH_SEC_HOME)
 				homeRebuild();
 			break;

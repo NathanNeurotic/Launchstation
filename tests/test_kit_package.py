@@ -121,11 +121,15 @@ with tempfile.TemporaryDirectory(prefix="kit-package-") as tmp:
         names = set(archive.namelist())
         assert {"APPS/APP_LAUNCHSTATION/LAUNCHSTATION.ELF", "APPS/APP_LAUNCHSTATION/title.cfg",
                 "APPS/APP_LAUNCHSTATION/WLE-UPDATE-CA.PEM", "APPS/APP_LAUNCHSTATION/BGM.ADP",
+                "APPS/APP_LAUNCHSTATION/icon.sys", "APPS/APP_LAUNCHSTATION/list.icn",
+                "APPS/APP_LAUNCHSTATION/copy.icn", "APPS/APP_LAUNCHSTATION/del.icn",
                 "APP_LAUNCHSTATION.psu", "POPS/POPSTARTER.ELF", "POPS/CHEATS.TXT", "EMBER/ember.elf",
                 "EMBER/games/Per-Game-Folder/GAME FILES", "neutrino/neutrino.elf", "neutrino/config/bsd-smb.toml",
                 "PS2-Servers.url", "KIT-README.txt", "KIT-MANIFEST.json"} <= names
         assert not any(name.startswith("APP_LAUNCHSTATION/") or "-DS" in name for name in names)
         assert archive.read("APPS/APP_LAUNCHSTATION/LAUNCHSTATION.ELF") == elf
+        for filename in ("icon.sys", "list.icn", "copy.icn", "del.icn"):
+            assert archive.read("APPS/APP_LAUNCHSTATION/" + filename) == (root / "res/memory-card" / filename).read_bytes()
         assert archive.read("APP_LAUNCHSTATION.psu") == psu
         assert archive.read("POPS/POPSTARTER.ELF") == payloads["ship/POPS/POPSTARTER.ELF"]
         assert archive.read("neutrino/modules/smb_fhi.irx") == b"neutrino:modules/smb_fhi.irx"

@@ -86,7 +86,7 @@ Launchstation needs a console that can already run homebrew, through an existing
 
 | Download | Contents / use |
 | --- | --- |
-| `APP_LAUNCHSTATION-<build>.zip` | Standard app folder: `LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.PEM`, `BGM.ADP`. |
+| `APP_LAUNCHSTATION-<build>.zip` | Standard app folder: `LAUNCHSTATION.ELF`, `title.cfg`, `WLE-UPDATE-CA.PEM`, `BGM.ADP`, `icon.sys`, `list.icn`, `copy.icn`, `del.icn`. |
 | `APP_LAUNCHSTATION-DS-<build>.zip` | DS34 app folder with `LAUNCHSTATION-DS.ELF` and the same companion files. |
 | `APP_LAUNCHSTATION.psu` / `APP_LAUNCHSTATION-DS.psu` | The corresponding app folder in memory-card PSU format. |
 | `LAUNCHSTATION.ELF` / `LAUNCHSTATION-DS.ELF` | Packed executables on their own. |

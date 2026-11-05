@@ -40,7 +40,8 @@ KIT_README = ROOT / "ship" / "KIT-README.txt"
 KIT_NAME = "LAUNCHSTATION.zip"
 APP_FOLDER = "APP_LAUNCHSTATION"
 ELF_NAME = "LAUNCHSTATION.ELF"
-APP_MEMBERS = (ELF_NAME, "title.cfg", "WLE-UPDATE-CA.PEM", "BGM.ADP")
+APP_MEMBERS = (ELF_NAME, "title.cfg", "WLE-UPDATE-CA.PEM", "BGM.ADP",
+               "icon.sys", "list.icn", "copy.icn", "del.icn")
 RAW_URL = "https://raw.githubusercontent.com/{repository}/{commit}/{path}"
 TREES_URL = "https://api.github.com/repos/{repository}/git/trees/{commit}?recursive=1"
 USER_AGENT = "Launchstation-kit-packager"
@@ -348,7 +349,7 @@ def package(app_dir, externals, neutrino, output, revision, epoch, build, manife
     psu = (app_dir / f"{APP_FOLDER}.psu").read_bytes()
     folder, members = packages.inspect_psu(psu)
     if folder != APP_FOLDER or tuple(sorted(members)) != tuple(sorted(APP_MEMBERS)):
-        raise ValueError(f"{APP_FOLDER}.psu does not hold the four-file app package")
+        raise ValueError(f"{APP_FOLDER}.psu does not hold the eight-file app package")
     with zipfile.ZipFile(app_dir / f"{APP_FOLDER}.zip") as archive:
         zipped = {tuple(safe_relative(name).split("/", 1)): archive.read(name) for name in archive.namelist()}
     if set(zipped) != {(APP_FOLDER, name) for name in APP_MEMBERS} \
@@ -471,7 +472,7 @@ def verify(archive_path, expected_psu, manifest):
         app_prefix = f"APPS/{APP_FOLDER}/"
         app_files = {name[len(app_prefix):]: archive.read(name) for name in present if name.startswith(app_prefix)}
         if set(app_files) != set(APP_MEMBERS):
-            raise ValueError(f"APPS/{APP_FOLDER} must hold exactly the four app files, found {sorted(app_files)}")
+            raise ValueError(f"APPS/{APP_FOLDER} must hold exactly the eight app files, found {sorted(app_files)}")
         psu = archive.read(f"{APP_FOLDER}.psu")
         if psu != expected_psu:
             raise ValueError("the kit PSU differs from the published PSU")

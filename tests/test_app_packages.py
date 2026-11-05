@@ -61,20 +61,23 @@ int main(int argc,char **argv) {
 ''')
     for index, (folder, name, _) in enumerate(p.VARIANTS):
         archive = (tmp / "out" / (folder + ".psu")).read_bytes()
+        memory_card_files = ("icon.sys", "list.icn", "copy.icn", "del.icn")
+        expected_members = {name, "title.cfg", "WLE-UPDATE-CA.PEM", "BGM.ADP"}.union(memory_card_files)
         with zipfile.ZipFile(tmp / "out" / (folder + ".zip")) as z:
-            assert set(z.namelist()) == {
-                folder + "/" + filename for filename in
-                (name, "title.cfg", "WLE-UPDATE-CA.PEM", "BGM.ADP")
-            }
+            assert set(z.namelist()) == {folder + "/" + filename for filename in expected_members}
             assert z.read(folder + "/WLE-UPDATE-CA.PEM") == (root / "res/WLE-UPDATE-CA.PEM").read_bytes()
             assert z.read(folder + "/BGM.ADP") == (root / "res/music.sad").read_bytes()
             assert z.read(folder + "/" + name) == elf
             assert ("boot=" + name + "\n").encode() in z.read(folder + "/title.cfg")
+            for filename in memory_card_files:
+                assert z.read(folder + "/" + filename) == (root / "res/memory-card" / filename).read_bytes()
         packaged_folder, packaged_members = p.inspect_psu(archive)
         assert packaged_folder == folder
-        assert set(packaged_members) == {name, "title.cfg", "WLE-UPDATE-CA.PEM", "BGM.ADP"}
+        assert set(packaged_members) == expected_members
         assert packaged_members["WLE-UPDATE-CA.PEM"] == (root / "res/WLE-UPDATE-CA.PEM").read_bytes()
         assert packaged_members["BGM.ADP"] == (root / "res/music.sad").read_bytes()
+        for filename in memory_card_files:
+            assert packaged_members[filename] == (root / "res/memory-card" / filename).read_bytes()
         binary = tmp / ("parser" + str(index) + ".exe")
         subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror",
                         "-Wno-unused-parameter", "-I" + str(tmp), "-I" + str(root / "include"),
@@ -123,12 +126,19 @@ int main(int argc,char **argv) {
         bad = bytearray(archive); bad[1600:1600+448] = b"x" * 448; check(bad)
         check((tmp / "out" / (p.VARIANTS[1-index][0] + ".psu")).read_bytes())
         date = bytes(8)
-        # Legacy two-file packages continue to work after the parser upgrade.
+        # Legacy two-file and previous four-file packages remain installable.
         check(p.make_psu(folder, {"title.cfg": b"boot=x\n", name: bytes(elf)}, date), True)
         check_sidecar(p.make_psu(folder, {"title.cfg": b"boot=x\n", name: bytes(elf)}, date),
                       "WLE-UPDATE-CA.PEM", 0)
         check_sidecar(p.make_psu(folder, {"title.cfg": b"boot=x\n", name: bytes(elf)}, date),
                       "BGM.ADP", 0)
+        legacy_four = p.make_psu(folder, {
+            "title.cfg": b"boot=x\n", name: bytes(elf),
+            "WLE-UPDATE-CA.PEM": (root / "res/WLE-UPDATE-CA.PEM").read_bytes(),
+            "BGM.ADP": (root / "res/music.sad").read_bytes()}, date)
+        check(legacy_four, True)
+        check_sidecar(legacy_four, "WLE-UPDATE-CA.PEM", (root / "res/WLE-UPDATE-CA.PEM").read_bytes())
+        check_sidecar(legacy_four, "BGM.ADP", (root / "res/music.sad").read_bytes())
         check(p.make_psu(folder, {name: bytes(elf), "wrong.cfg": b"x"}, date))
         # A partly bundled package, duplicate/unknown sidecar or corrupt record
         # must never result in an installed ELF.
