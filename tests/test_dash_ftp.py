@@ -36,7 +36,7 @@ typedef struct { unsigned int pressed; } DashInput;
 
 static int query_script[4], query_count, queries, query_ok;
 static unsigned int presses[4];
-static int press_index, resident, stopped, network_ready, shutdown_ok;
+static int press_index, resident, stopped, network_ready, shutdown_ok, stop_answers;
 static int reboots, net_loads, modals, shutdowns, frames;
 static int confirms, confirm_answer, abandons;
 static char confirm_body[200];
@@ -48,7 +48,7 @@ static void reset(void) {
     reboots = net_loads = modals = shutdowns = frames = 0;
     confirms = confirm_answer = abandons = 0;
     confirm_body[0] = '\0';
-    query_ok = network_ready = shutdown_ok = 1;
+    query_ok = network_ready = shutdown_ok = stop_answers = 1;
 }
 static int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger) {
     (void)title; (void)ok_label;
@@ -84,6 +84,8 @@ static int ftpSessionShutdown(void) {
     shutdowns++;
     if (shutdown_ok)
         stopped = 1;
+    else
+        query_ok = stop_answers; /* an unanswered Stop leaves every later RPC unanswered too */
     return shutdown_ok;
 }
 static void rebootIopAndReloadCoreStackSilent(void) { reboots++; resident = stopped = 0; }
@@ -126,9 +128,16 @@ int main(void) {
     assert(DashFtpServer() == 1);
     assert(shutdowns == 1 && reboots == 1 && modals == 0);
 
-    /* A Stop that times out asks first; declined, the IOP is never reset over open files. */
+    /* Stop timed out but the server still answers: it is closing files, so no reset is offered. */
     reset();
     shutdown_ok = 0;
+    presses[0] = DASH_IN_OK;
+    assert(DashFtpServer() == 0);
+    assert(shutdowns == 1 && confirms == 0 && abandons == 0 && reboots == 0 && modals == 1 && resident);
+
+    /* An unanswered Stop asks first; declined, the IOP is never reset over open files. */
+    reset();
+    shutdown_ok = stop_answers = 0;
     presses[0] = DASH_IN_OK;
     assert(DashFtpServer() == 0);
     assert(shutdowns == 1 && confirms == 1 && abandons == 0 && reboots == 0 && modals == 1 && resident);
@@ -136,7 +145,7 @@ int main(void) {
 
     /* Confirmed, the stuck session is abandoned and the IOP reset exactly once. */
     reset();
-    shutdown_ok = 0;
+    shutdown_ok = stop_answers = 0;
     confirm_answer = 1;
     presses[0] = DASH_IN_OK;
     assert(DashFtpServer() == 1);
@@ -157,7 +166,7 @@ int main(void) {
     assert(DashFtpServer() == 1);
     assert(confirms == 1 && abandons == 1 && reboots == 1 && modals == 0 && !resident);
 
-    puts("PASS: FTP screen resets a stopped module, keeps a running one and only resets over an unanswered control RPC when confirmed");
+    puts("PASS: FTP screen resets a stopped module, keeps a running or slow-stopping one and only resets over an unanswered control RPC when confirmed");
     return 0;
 }
 """

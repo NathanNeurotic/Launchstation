@@ -59,7 +59,7 @@ int DashFtpServer(void)
 {
 	LsFtpStatus status;
 	const char *unanswered = NULL;
-	int ok = 1;
+	int closing = 0, ok = 1;
 	if (!dashWorkerAwaitAll("Preparing FTP Server"))
 		return 0;
 	filerRootMcPollIdle();
@@ -94,6 +94,8 @@ int DashFtpServer(void)
 			ftpFrame(&status, 1);
 			if (ftpSessionShutdown())
 				rebootIopAndReloadCoreStackSilent();
+			else if (ftpSessionQuery(&status))
+				closing = 1; /* still answering: slow to close files, not stuck */
 			else
 				unanswered = "Stop";
 			break;
@@ -104,8 +106,13 @@ int DashFtpServer(void)
 	}
 	dashLoadingEnd();
 	dashInputFlush();
-	if (unanswered)
+	if (closing) {
+		dashModalMessage(DI_WARNING, "FTP Server", "FTP is still closing files and connections. Stop it again in a moment.",
+		                 NULL);
+		ok = 0;
+	} else if (unanswered) {
 		ok = ftpUnresponsive(unanswered);
+	}
 	return ok;
 }
 #else
