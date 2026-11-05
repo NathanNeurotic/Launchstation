@@ -35,6 +35,12 @@ static void dashLoadingFrame(const char *s,int d,int t) {
 }
 '''
 c += function("src/dash_ui.c", "void DashStorageProbeStatus(")
+# #286: USB probes must use the deadline-bounded stat so a wedged slot fails
+# fast instead of freezing the console inside a synchronous RPC.
+scanner_body = function("src/filer.c", "static void scanUsbMassDevices(int force)\n{")
+assert "fileXioGetStatBounded(" in scanner_body and "fileXioGetStat(" not in scanner_body
+wait_body = function("src/init.c", "void waitForUsbMassPath(const char *path)\n{")
+assert "fileXioGetStatBounded(" in wait_body and "fileXioGetStat(" not in wait_body
 c += r'''
 #define EXFAT 1
 #define DPRINTF(...) ((void)0)
@@ -53,6 +59,11 @@ static int fileXioGetStat(const char *p,iox_stat_t *s) {
     assert(!strcmp(last,expected)); /* already presented before entry */
     assert(drains == stats/2 + 1); /* pending libmc was drained before scan */
     stats++; return p[3]=='0' ? 0 : -19;
+}
+#define FILEXIO_STAT_TIMEOUT_MS 750
+static int fileXioGetStatBounded(const char *p,iox_stat_t *s,int t) {
+    (void)t;
+    return fileXioGetStat(p,s);
 }
 '''
 c += function("src/filer.c", "static void scanUsbMassDevices(int force)\n{")

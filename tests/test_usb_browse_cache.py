@@ -154,6 +154,11 @@ static int fileXioGetStat(const char *path, iox_stat_t *st) {
     assert(!strcmp(path,expected));
     return (present & (1<<stat_calls++)) ? 0 : -1;
 }
+#define FILEXIO_STAT_TIMEOUT_MS 750
+static int fileXioGetStatBounded(const char *p, iox_stat_t *s, int t) {
+    (void)t;
+    return fileXioGetStat(p, s);
+}
 '''
 scanner+=extract("static void scanUsbMassDevices(int force)\n{")
 scanner+=extract("void scan_USB_mass(void)\n{")

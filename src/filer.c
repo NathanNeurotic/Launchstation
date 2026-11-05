@@ -1302,7 +1302,7 @@ static void scanUsbMassDevices(int force)
 		snprintf(probe_status, sizeof(probe_status), "Checking USB root %s", usb_path);
 		DashStorageProbeStatus(probe_status);
 		DPRINTF("[USB probe] begin %s\n", usb_path);
-		stat_result = fileXioGetStat(usb_path, &chk_stat);
+		stat_result = fileXioGetStatBounded(usb_path, &chk_stat, FILEXIO_STAT_TIMEOUT_MS);
 		DPRINTF("[USB probe] end %s result=%d\n", usb_path, stat_result);
 		snprintf(probe_status, sizeof(probe_status), "USB root %s returned %d", usb_path, stat_result);
 		DashStorageProbeStatus(probe_status);
@@ -1335,7 +1335,7 @@ int prepareUsbRootBrowse(void)
 
 	/* A completed two-drive probe already validated both mounts. When the
 	 * dashboard immediately opens the generic USB root, don't issue another
-	 * pair of synchronous fileXioGetStat RPCs just to repeat that discovery.
+	 * pair of fileXioGetStat probes just to repeat that discovery.
 	 * Keep this fast path short-lived: hotplug and stale mounts still probe. */
 	if (USB_mass_scanned && USB_mass_ix[0] && USB_mass_ix[1] &&
 	    now >= USB_mass_scan_time &&

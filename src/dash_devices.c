@@ -530,9 +530,10 @@ static int probeUsbMediaAnimated(void)
 	for (attempt = 0; attempt < DASH_USB_PROBE_ATTEMPTS; attempt++) {
 		if (dashLoadingActive())
 			dashLoadingStatus("Checking USB media...", attempt + 1, DASH_USB_PROBE_ATTEMPTS);
-		/* USB filesystem RPCs are synchronous; a retry delay cannot rescue
-		 * a single wedged fileXioGetStat. Do not probe an absent second slot
-		 * twenty times merely because only one drive is connected. */
+		/* USB root stats go through fileXioGetStatBounded: a wedged slot
+		 * fails fast instead of hanging the whole probe on one RPC. Do not
+		 * probe an absent second slot twenty times merely because only one
+		 * drive is connected. */
 		mask = filerUsbRefreshDriveMask();
 		if ((mask & 3) == 3)
 			return 1;

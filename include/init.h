@@ -1,6 +1,8 @@
 #ifndef INIT_H
 #define INIT_H
 
+#include <iox_stat.h>
+
 void setInitPhaseComplete(void);
 /* Presentation only: independent of IOP/PAD initialization lifetime. */
 int isStartupDriverStatusQuiet(void);
@@ -30,11 +32,19 @@ void closeAllAndPoweroff(void);
 void startKbd(void);
 void ensureCoreIoStackReady(void);
 void ensureMemoryCardPortAccessible(int port);
-/* Nonzero when an mc1: read right now would need an IOP stack switch that is
- * refused on this thread (the dashboard worker): the read will fail. */
+/* Nonzero when an mc1: read right now would need an IOP stack switch away
+ * from a live MX4SIO stack; implicit config discovery treats that as
+ * refused on every thread. */
 int mc1AccessRefused(void);
 /* Bounded poll (50ms steps, 2s cap) until a USB/mass path answers a stat. */
 void waitForUsbMassPath(const char *path);
+/* fileXioGetStat with a real deadline: GETSTAT goes over a private NOWAIT
+ * RPC client that is polled with a timeout, so a wedged slot fails the
+ * probe instead of freezing the console in a synchronous RPC. A timed-out
+ * channel fails fast (a late answer heals it) until the next IOP reset
+ * rebinds it. Returns the stat result, or -1 on error/timeout. */
+#define FILEXIO_STAT_TIMEOUT_MS 750
+int fileXioGetStatBounded(const char *path, iox_stat_t *stat_out, int timeout_ms);
 void rebootIopAndReloadCoreStack(void);
 void rebootIopAndReloadCoreStackSilent(void);
 int loadSecrSifModule(void);
