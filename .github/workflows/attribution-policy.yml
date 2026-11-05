@@ -29,7 +29,13 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             git fetch --no-tags origin "$BASE_BRANCH":refs/remotes/origin/"$BASE_BRANCH"
-            git show "origin/${BASE_BRANCH}:.github/scripts/check_ai_attribution.py" > /tmp/check_ai_attribution.py
+            VALIDATOR_REF="origin/${BASE_BRANCH}"
+            if ! git cat-file -e "${VALIDATOR_REF}:.github/scripts/check_ai_attribution.py"; then
+              # Bootstrap: this policy is introduced here, so master has no validator yet.
+              git fetch --no-tags origin chore/no-ai-attribution:refs/remotes/origin/chore/no-ai-attribution
+              VALIDATOR_REF="origin/chore/no-ai-attribution"
+            fi
+            git show "${VALIDATOR_REF}:.github/scripts/check_ai_attribution.py" > /tmp/check_ai_attribution.py
           else
             cp .github/scripts/check_ai_attribution.py /tmp/check_ai_attribution.py
           fi
