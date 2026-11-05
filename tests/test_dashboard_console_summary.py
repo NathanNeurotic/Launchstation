@@ -32,8 +32,9 @@ assert "GetConsoleModelName(ROMVER_data, cached_console_info.model" in init
 assert "GetConsoleDvdVersion(cached_console_info.dvd" in init
 main = (ROOT / "src/dash_main.c").read_text()
 first = main.split("static void firstInit(void)", 1)[1]
-# Identity is cached before the dashboard worker can run IOP-side file work.
-assert first.index("dashConsoleIdentityInit();") < first.index("dashWorkerInit();")
+# Identity is read after the fade-in, only while the worker does no IOP-side file work
+# (tests/test_boot_deferred_init.py); never during first-frame initialization.
+assert "dashConsoleIdentityInit();" not in first.split("void DashRun(", 1)[0]
 
 assert "dashConsoleSummaryText(console, sizeof(console));" in home
 assert "dashConsoleSummaryText(console, sizeof(console));" in devices
