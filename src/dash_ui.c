@@ -509,6 +509,10 @@ void dashDrawHeader(int section, float section_anim)
 	int i;
 
 	(void)section_anim;
+	if (dashTheme.tabs == DASH_TABS_HIDDEN) {
+		dashDrawClock(); /* its own setting; only the bar goes away */
+		return;
+	}
 	if (tab_anim_x < 0.0f)
 		tab_anim_x = target_x;
 	/* Keep the header selector on one monotonic path. The previous 16 Hz
