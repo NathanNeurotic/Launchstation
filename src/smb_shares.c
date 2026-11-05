@@ -287,6 +287,17 @@ void smbSharesForget(void)
 	}
 	memset(smb_retry_ms, 0, sizeof(smb_retry_ms));
 }
+
+/* smb2man keeps the shares it already holds (the next connect answers
+ * -EEXIST, which connectSmb2() counts as connected); smbman has a single
+ * session, so log it off for the new credentials. */
+void smbSharesReload(void)
+{
+	if (isSmbDriverLoaded(SMB_PATH_V1) && smbSharesConnectedCount(SMB_PATH_V1) > 0)
+		fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_LOGOFF, NULL, 0, NULL, 0);
+	smbSharesForget();
+	smb_cfg_loaded = 0;
+}
 //--------------------------------------------------------------
 //End of file: smb_shares.c
 //--------------------------------------------------------------

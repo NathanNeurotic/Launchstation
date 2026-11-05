@@ -18,6 +18,9 @@
 #include "cloud_google.h"
 #include "init.h"
 #endif
+#ifdef SMB
+#include "smb_shares.h"
+#endif
 
 enum SetType {
 	ST_CHOICE = 0,
@@ -124,6 +127,7 @@ enum SetId {
 	S_NET_GW,
 	S_HOSTWRITE,
 	S_NET_LEGACY,
+	S_SMB_SHARES,
 	S_CLOCK_MANUAL,
 	S_CLOCK_SOFTWARE,
 	S_CLOCK_HARDWARE,
@@ -225,7 +229,7 @@ static const SetItem root_items[] = {
     {ST_PAGE, P_LAUNCH, "Launching", "Automatic start, button shortcuts, loaders and compatibility."},
     {ST_PAGE, P_DEVICES, "Storage & devices", "Device visibility and which devices start automatically."},
     {ST_PAGE, P_NETWORK, "Network", "Console address and network write access."},
-    {ST_PAGE, P_SYSTEM, "System", "Language, save-file options and configuration locations."},
+    {ST_PAGE, P_SYSTEM, "System", "Language, save-file options, configuration locations, updates and About."},
     {ST_ACTION, S_MISC_COMMANDS, "Built-in commands", "Open MISC, including configuration and system tools."},
 };
 
@@ -360,9 +364,7 @@ static const SetItem mmce_backup_items[] = {
     {ST_CHOICE, S_MMCE_BACKUP_SAVES, "Per-save versions", "Also keep each changed save as a .psu in WLE-Saves beside its card's history, uploaded to Google Drive with the cards. Backups per card limits each save."},
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
     {ST_ACTION, S_GOOGLE_ACCOUNT, "Google account", "Link, relink, sync or disconnect the native Google Drive backup account."},
-    {ST_ACTION, S_CHECK_UPDATES, "Check for updates", "Compare with the rolling latest release; a newer build can be downloaded, SHA-256 verified and installed in place."},
 #endif
-    {ST_ACTION, S_ABOUT_PROJECT, "About Launchstation", "Version, commit, project origin, upstream credits and contributors."},
 };
 
 static const SetItem net_items[] = {
@@ -375,6 +377,9 @@ static const SetItem net_items[] = {
 #ifdef ETH
     {ST_CHOICE, S_NET_LEGACY, "Legacy Ethernet drivers", "Use MrRexD's ps2sdk v1.0 DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up. Takes effect the next time Ethernet/FTP is started."},
     {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query multiple Internet time sources, require agreement, then write and verify the PS2 hardware RTC."},
+#endif
+#ifdef SMB
+    {ST_ACTION, S_SMB_SHARES, "SMB shares (SMB2.CNF)", "Edit the shares smb:/ and smb1:/ connect to (NAME, USERNAME, PASSWORD, VERSION, URL lines). Open smb:/ in Files afterwards to connect."},
 #endif
 };
 
@@ -405,6 +410,10 @@ static const SetItem system_items[] = {
     {ST_PATH, S_CNF_PATH, "Configuration folder", "Optional save target for LAUNCHELF.CNF. Loading searches the start folder, then mcN:/SYS-CONF/ on the launch card, then the other card."},
     {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
     {ST_ACTION, S_INTRO, "Show welcome message again", "Show the introduction the next time the dashboard checks for it."},
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+    {ST_ACTION, S_CHECK_UPDATES, "Check for updates", "Compare with the rolling latest release; a newer build can be downloaded, SHA-256 verified and installed in place."},
+#endif
+    {ST_ACTION, S_ABOUT_PROJECT, "About Launchstation", "Version, commit, project origin, upstream credits and contributors."},
 };
 
 /* These are persisted upstream settings, independent of dashboard themes. */
@@ -428,7 +437,7 @@ static const SetItem classic_items[] = {
 static const SetItem theme_items[] = {
     {ST_PAGE, P_THEME_BG, "Background", "Scene, colours, brightness, scanlines and wallpaper image."},
     {ST_PAGE, P_THEME_COLORS, "Interface colours", "Text, selection, accent, panels and borders."},
-    {ST_PAGE, P_THEME_STYLE, "Tiles & menus", "Application tile shape, selection style, corners and glow."},
+    {ST_PAGE, P_THEME_STYLE, "Tiles & menus", "Application tile shape, selection style, corners, glow and the section tabs."},
     {ST_PAGE, P_THEME_TEXT, "Text", "Font, size, weight and shadow."},
     {ST_PAGE, P_THEME_ICONS, "Icons", "Icon colours and artwork-free application icons."},
     {ST_PAGE, P_THEME_CLOCK, "Clock", "Position, time format, seconds and date."},
@@ -462,7 +471,7 @@ static const SetItem tstyle_items[] = {
     {ST_CHOICE, S_T_TILE, "Tile style", "Application tiles: memory card, rounded, chamfered, floating object or crystal slab."},
     {ST_CHOICE, S_T_CORNER, "Corners", NULL},
     {ST_CHOICE, S_T_GLOW, "Glow", "Soft light behind focused items."},
-    {ST_CHOICE, S_T_TABS, "Section tabs", "Hidden removes the top bar. L1 and R1 still switch sections."},
+    {ST_CHOICE, S_T_TABS, "Section tabs", "Shown or Hidden. Hidden removes the top bar; L1 and R1 still switch sections."},
     {ST_ACTION, S_T_RESETCAT, "Reset style", "Back to the values of the theme's preset."},
 };
 static const SetItem ttype_items[] = {
@@ -518,15 +527,15 @@ static const SetPage pages[P_COUNT] = {
     [P_GAMEID] = PAGE("Game ID output", DI_APP, "Identification for compatible OSD/HDMI adapters.", gameid_items),
     [P_DEVICES] = PAGE("Storage & devices", DI_DEVICES, "Visible devices and driver startup preferences.", device_items),
     [P_AUTOSTART] = PAGE("Start devices automatically", DI_DEVICES, "Drivers start immediately when enabled. Discard restores preferences, not driver state.", autostart_items),
-    [P_MMCE_BACKUP] = PAGE("MMCE backup & sync", DI_MC, "Backup, cloud, IGR return and maintenance controls in one place.", mmce_backup_items),
+    [P_MMCE_BACKUP] = PAGE("MMCE backup & sync", DI_MC, "Backup, cloud and IGR return controls in one place.", mmce_backup_items),
     [P_NETWORK] = PAGE("Network", DI_NETWORK, "Console address for FTP, PS2Link and UDPFS.", net_items),
-    [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules and settings locations.", system_items),
+    [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules, settings locations, updates and About.", system_items),
     [P_CLASSIC] = PAGE("Classic screen settings", DI_SETTINGS, "These settings affect classic screens; dashboard themes have their own controls.", classic_items),
     [P_LANGUAGE] = PAGE("Language", DI_TEXT, "Some extended help remains in English.", language_items),
     [P_PSU] = PAGE("Memory card backup files", DI_MC, "Naming and overwrite behavior when creating PSU backups.", psu_items),
     [P_THEME_BG] = PAGE("Background", DI_IMAGE, "Scene, brightness and static wallpaper.", tbg_items),
     [P_THEME_COLORS] = PAGE("Interface colours", DI_PALETTE, "Colours and opacity for text, focus and panels.", tcol_items),
-    [P_THEME_STYLE] = PAGE("Tiles & menus", DI_VIEW_GRID, "Tile silhouettes and menu selection styling.", tstyle_items),
+    [P_THEME_STYLE] = PAGE("Tiles & menus", DI_VIEW_GRID, "Tile silhouettes, menu selection styling and the section tabs.", tstyle_items),
     [P_THEME_TEXT] = PAGE("Text", DI_TEXT, "Font and readability. System can use your external font file.", ttype_items),
     [P_THEME_ICONS] = PAGE("Icons", DI_APPS, "Fallback icons for applications without artwork.", ticon_items),
     [P_THEME_CLOCK] = PAGE("Clock", DI_CLOCK, "Clock placement and date/time format.", tclock_items),
@@ -2767,6 +2776,37 @@ static void runAction(int id)
 		case S_ABOUT_PROJECT:
 			dashShowAbout();
 			break;
+#ifdef SMB
+		case S_SMB_SHARES: {
+			static const char smb_template[] =
+			    "# One share per block; URL ends a block. Lines starting with # are ignored.\n"
+			    "# Remove the # from a block to use it.\n\n"
+			    "# A folder shared as PS2 on a PC, reached as smb:/PC\n"
+			    "# NAME = PC\n# USERNAME = player\n# PASSWORD = secret\n# URL = smb://192.168.0.10/PS2\n\n"
+			    "# An SMB1-only server, reached as smb1:/\n"
+			    "# NAME = OLDBOX\n# VERSION = 1\n# URL = smb://192.168.0.30/PS2SMB\n";
+			char path[MAX_PATH];
+			int fd;
+			smbSharesConfigured(SMB_PATH_V2); /* reads the file; no network */
+			if (smbSharesConfigPath()[0])
+				dashStrCopy(path, smbSharesConfigPath(), sizeof(path));
+			else {
+				configBuildSysconfPath(path, sizeof(path), "SMB2.CNF");
+				configEnsureSysconfDir(path);
+				/* A file that was unreadable (too large, card inserted later) is
+				 * still there: never replace one with the template. */
+				if ((fd = genOpen(path, FIO_O_RDONLY)) >= 0)
+					genClose(fd);
+				else if ((fd = genOpen(path, FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC)) >= 0) {
+					genWrite(fd, (void *)smb_template, sizeof(smb_template) - 1);
+					genClose(fd);
+				}
+			}
+			dashTextEditor(path);
+			smbSharesReload();
+			break;
+		}
+#endif
 		case S_MISC_COMMANDS:
 			dashOpenBrowser(setting->Misc);
 			break;
@@ -3094,6 +3134,16 @@ static const char *actionStatus(int id)
 			return dashToolsGoogleStatus();
 		case S_CHECK_UPDATES:
 			return "Check now";
+#endif
+#ifdef SMB
+		case S_SMB_SHARES: {
+			static char n[24];
+			int shares = smbSharesConfigured(SMB_PATH_V2) + smbSharesConfigured(SMB_PATH_V1);
+			if (!smbSharesConfigPath()[0])
+				return "Not configured";
+			snprintf(n, sizeof(n), "%d share(s)", shares);
+			return n;
+		}
 #endif
 		default:
 			return NULL;

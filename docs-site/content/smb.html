@@ -5,13 +5,13 @@
 <li>A console with a network adapter (or built-in Ethernet) on the same LAN as the server.</li>
 <li>A shared folder on the server, and an account that can open it.</li>
 <li>An IP address for the PS2 (<b>Settings &gt; Network</b>), and <b>Legacy Ethernet drivers</b> off.</li>
-<li>An <code>SMB2.CNF</code> file (below).</li>
+<li>An <code>SMB2.CNF</code> file (below). <b>Settings &gt; Network &gt; SMB shares</b> opens it in the text editor, creating an example file in <code>SYS-CONF</code> when there is none.</li>
 </ul></div>
 
 <h2 id="how">How it works</h2>
 <p>Nothing touches the network until you open the device. The first time, Launchstation starts the network with the address in <code>IPCONFIG.DAT</code>, loads the SMB driver and connects every share for that device in <code>SMB2.CNF</code>. <code>smb:/</code> then lists one folder per connected share, named by its <code>NAME</code>: <code>smb:/PC</code>, <code>smb:/NAS</code>. <code>smb1:/</code> is the top of its one share.</p>
 <p>A share that does not connect is left out of <code>smb:/</code>, and the browser says why (for example <em>PC (line 7): Could not connect: check the address, share, user name and password</em>). Opening the device again tries the failed shares again, at most every 30 seconds, because an unanswered connect can take that long. When no share is connected, <code>SMB2.CNF</code> is read again first, so a corrected file is used without restarting.</p>
-<p>When at least one share connects, the browser and the device card show how many are connected, not which one failed. If a share is missing from <code>smb:/</code>, check its address, share name, user name and password in <code>SMB2.CNF</code>, then open <code>smb:</code> again to retry it. A file corrected while another share is connected is read after a restart.</p>
+<p>When at least one share connects, the browser and the device card show how many are connected, not which one failed. If a share is missing from <code>smb:/</code>, check its address, share name, user name and password in <code>SMB2.CNF</code>, then open <code>smb:</code> again to retry it. A file changed on a PC while another share is connected is read again after a restart, or after opening it once through <b>Settings &gt; Network</b>; either way a share that is already connected keeps its old address and credentials until the console restarts.</p>
 
 <h2 id="file">SMB2.CNF</h2>
 <p>Launchstation uses the first <code>SMB2.CNF</code> it finds:</p>

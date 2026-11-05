@@ -121,10 +121,8 @@
 <tr><td>Backup format</td><td>Native .mcd (no write when unchanged) or PCSX2 .ps2 (adds ECC/spare bytes and verifies the converted image)</td><td>Native .mcd</td></tr>
 <tr><td>Per-save versions</td><td>Also keep each changed save as a <code>.psu</code> in <code>WLE-Saves</code> beside its card&rsquo;s history, uploaded to Google Drive with the cards. <i>Backups per card</i> limits each save. See <a href="mmce-backup.html#per-save">Per-save versions</a></td><td>Off</td></tr>
 <tr><td>Google account</td><td>Link, relink, sync or disconnect the native Drive account</td><td>&mdash;</td></tr>
-<tr><td>Check for updates</td><td>Compare with the rolling release and install in place</td><td>&mdash;</td></tr>
-<tr><td>About Launchstation</td><td>Version, commit, origin, credits</td><td>&mdash;</td></tr>
 </tbody></table>
-<p>The Google account and update rows exist only in network builds with native cloud support. The <b>IGR helper</b> row compares installed helper bytes with the helper this build would install for the current application and backup paths. Entering this page is treated as an explicit request for live MMCE status: if a backup destination is set and MMCE is not already running, the MMCE stack is started on demand before the read-only status scan, even when MMCE auto-start is off. A startup failure is shown instead of leaving the page silently at <code>Not checked</code>. The pending check is read-only: it compares live card images with the newest local history without creating, pruning or deleting backups; PCSX2-format history is compared in memory.</p>
+<p>The Google account row exists only in network builds with native cloud support. The <b>IGR helper</b> row compares installed helper bytes with the helper this build would install for the current application and backup paths. Entering this page is treated as an explicit request for live MMCE status: if a backup destination is set and MMCE is not already running, the MMCE stack is started on demand before the read-only status scan, even when MMCE auto-start is off. A startup failure is shown instead of leaving the page silently at <code>Not checked</code>. The pending check is read-only: it compares live card images with the newest local history without creating, pruning or deleting backups; PCSX2-format history is compared in memory.</p>
 <h3 id="native-update">Native update install</h3>
 <p><b>Check for updates</b> validates ancestry against the rolling <code>latest</code> release. The updater selects the standard or DS34 <b>PSU package</b> for the running variant, verifies its advertised SHA-256 and contents over trusted HTTPS, stages the verified ELF and replaces the running app's ELF using a <code>.BAK</code> rollback file. The verified four-file PSU can restore <b>missing</b> updater CA and BGM sidecars but never overwrites existing customized sidecars. Interrupted <code>.UPDATE</code>/<code>.PACKAGE</code> staging files are preserved for manual recovery rather than silently truncated. Restart Launchstation to run the new build. Older update clients may need a one-time manual package install.</p>
 <h3 id="cloud-history">MMCE and Drive recovery</h3>
@@ -137,6 +135,7 @@
 <tr><td>Allow writing over the network</td><td>On / Off (lets <code>host:</code> and <code>udpfs:</code> be written to, not just read)</td><td>Off</td></tr>
 <tr><td>Legacy Ethernet drivers</td><td>On / Off. Use the older DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up; takes effect next time Ethernet/FTP is started.</td><td>Off</td></tr>
 <tr><td>Sync PS2 clock from Internet</td><td>Sends SNTP requests to <code>0.pool.ntp.org</code> (two attempts, 5 s each), adds the time elapsed since the reply, then writes and verifies the hardware RTC. Failures name the step (DNS, connect, timeout, refused...).</td><td>&mdash;</td></tr>
+<tr><td>SMB shares (SMB2.CNF)</td><td>Opens <a href="smb.html#file"><code>SMB2.CNF</code></a> in the text editor, creating an example file in <code>SYS-CONF</code> when there is none. The share list is re-read when the editor closes; the status shows how many shares the file defines.</td><td>&mdash;</td></tr>
 </tbody></table>
 <p>The write-access and legacy-driver rows appear only in builds with Ethernet/UDPFS support. See <a href="network-services.html">Network services</a>.</p>
 
@@ -153,6 +152,8 @@
 <tr><td>Configuration folder</td><td>Load and save <code>LAUNCHELF.CNF</code> in this folder (<code>CNF_Path</code>)</td><td>Empty</td></tr>
 <tr><td>Save launch &amp; tool settings to...</td><td>Writes <code>LAUNCHELF.CNF</code> immediately to the configured folder, next to the ELF, or to the memory card <code>SYS-CONF</code>; dashboard and network settings are saved separately</td><td>&mdash;</td></tr>
 <tr><td>Show welcome message again</td><td>Re-shows the introduction</td><td>&mdash;</td></tr>
+<tr><td>Check for updates</td><td>Compare with the rolling release and install in place (network builds with native cloud support; see <a href="#native-update">Native update install</a>)</td><td>&mdash;</td></tr>
+<tr><td>About Launchstation</td><td>Version, commit, origin, credits</td><td>&mdash;</td></tr>
 </tbody></table>
 <h3 id="clock-manual">PS2 clock without a working CMOS battery</h3>
 <p>Use <b>Settings &gt; System &gt; Set PS2 clock manually...</b> and enter <code>YYYY-MM-DD HH:MM:SS</code>. Launchstation validates the date, writes the PS2 RTC and verifies the readback. With a dead clock battery the time may need setting again after power loss. Alternatively use the software clock, which keeps its own time until the next power-off, or <b>Sync PS2 clock from Internet</b> on network builds.</p>

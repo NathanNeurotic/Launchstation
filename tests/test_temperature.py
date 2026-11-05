@@ -45,7 +45,7 @@ for name in ("static int queryTemperatureCelsius(", "static int updateTemp(", "i
 code += header[header.index("enum DashClockMode"):header.index("enum DashWallMode")]
 code += r'''
 static struct { int temp_fahrenheit; } dashCfg;
-static struct { int clock,clock_pos,clock_hours,clock_seconds,clock_date; } dashTheme;
+static struct { int clock,clock_pos,clock_hours,clock_seconds,clock_date,tabs; } dashTheme;
 static int clock_valid=1;
 static int menuTitleGetClockFields(int *y,int *mo,int *d,int *h,int *mi,int *s,int *u,int *fmt) {
     *y=2026;*mo=10;*d=25;*h=23;*mi=59;*s=58;*u=0;*fmt=0;return clock_valid;
@@ -136,6 +136,10 @@ int main(void) {
         assert(drawn[0].x>=clock_left-0.01f && fabsf(drawn[0].x+dashTextWidth(drawn[0].text,drawn[0].scale)-DASH_SAFE_R)<0.01f);
         assert(strstr(drawn[0].text,"  104.0\260F"));
     }
+    /* No tab bar: the text keeps its size and may start left of the bar. */
+    dashTheme.tabs=DASH_TABS_HIDDEN;dashTheme.clock=DASH_CLOCK_STANDARD;draws=0;dashDrawClock();
+    assert(draws==2 && drawn[0].scale==DASH_FS_LABEL && drawn[0].x<clock_left);
+    dashTheme.tabs=DASH_TABS_SHOWN;
     dashTheme.clock_pos=DASH_CLOCKPOS_FOOTER;
     float width=footerClockWidth(time,sizeof(time),date,sizeof(date));
     draws=0;drawFooterClock(400,time,date);assert(draws==2);
