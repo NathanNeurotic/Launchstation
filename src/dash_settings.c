@@ -843,6 +843,8 @@ static void openPage(int next)
 	item_anim = 0.0f;
 	if (next == P_MMCE_BACKUP)
 		dashToolsPrepareMmceStatus();
+	if (next == P_NETWORK)
+		getIpConfig(); /* cached; first call reads IPCONFIG.DAT incl. mc fallback */
 }
 
 static void backPage(void)

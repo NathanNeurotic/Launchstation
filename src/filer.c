@@ -1303,7 +1303,10 @@ int prepareUsbRootBrowse(void)
 				break;
 			}
 		}
-		if ((USB_mass_ix[0] && USB_mass_ix[1]) || attempt == USB_DISCOVERY_ATTEMPTS - 1)
+		/* One mounted unit is enough to open the USB root. A second drive is
+		 * picked up by the regular refresh on entry instead of costing every
+		 * single-drive boot two extra settle rounds. */
+		if (first_unit >= 0 || attempt == USB_DISCOVERY_ATTEMPTS - 1)
 			break;
 		waitUsbDiscoverySettle();
 	}

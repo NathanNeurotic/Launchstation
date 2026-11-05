@@ -159,6 +159,7 @@ void Config_Network(void)
 	event = 1;  //event = initial entry
 	s = CONFIG_NET_FIRST;
 	l = 1;
+	getIpConfig();  //cached; boot no longer warms it, so first entry loads it
 	ipdata = BuildOctets(ip, netmask, gw);
 	configBuildSaveTargets(save_override_path, sizeof(save_override_path),
 	                       save_cwd_path, sizeof(save_cwd_path),

@@ -121,7 +121,8 @@ static u8 have_filexio_ready = 0;
 static u8 have_mc_rpc_ready = 0;
 static unsigned int iop_reset_generation = 0;
 
-#define USB_MASS_BDMFS_SETTLE_MS 1000
+#define USB_MASS_ENUM_POLL_MS 50
+#define USB_MASS_ENUM_TIMEOUT_MS 2000
 #define OHCI_REG_BASE 0xbf801600
 #define OHCI_HC_CONTROL (OHCI_REG_BASE + 0x04)
 #define OHCI_HC_COMMAND_STATUS (OHCI_REG_BASE + 0x08)
@@ -319,7 +320,9 @@ extern int uLE_cdmode;
 extern u8 mx4sio_driver_running;
 #endif
 
+#ifndef EXFAT
 static void delay(int count);
+#endif
 static void initsbv_patches(void);
 static int load_ps2dev9(void);
 static void prepareDev9Poweroff(void);
@@ -343,7 +346,7 @@ static void loadBasicModules(void);
 static int loadExternalFile(char *argPath, void **fileBaseP, int *fileSizeP);
 static int loadExternalModule(char *modPath, void *defBase, int defSize);
 static void loadUsbDModule(void);
-static void waitForUsbMassBdmfsSettle(void);
+static void waitForUsbMassEnumerate(void);
 static void loadKbdModules(void);
 static int pathUsesUsbMass(const char *path);
 void loadUsbModules(void);
@@ -399,6 +402,7 @@ void closeKeyboardIfOpened(void)
 	}
 }
 
+#ifndef EXFAT
 static void delay(int count)
 {
 	int i;
@@ -411,6 +415,7 @@ static void delay(int count)
 }
 //------------------------------
 //endfunc delay
+#endif
 //---------------------------------------------------------------------------
 static void initsbv_patches(void)
 {
@@ -1493,15 +1498,21 @@ static void loadUsbDModule(void)
 //------------------------------
 //endfunc loadUsbDModule
 //---------------------------------------------------------------------------
-static void waitForUsbMassBdmfsSettle(void)
+static void waitForUsbMassEnumerate(void)
 {
-	u64 ready_time;
+	u64 deadline;
+	iox_stat_t chk_stat;
 
-	ready_time = Timer() + USB_MASS_BDMFS_SETTLE_MS;
-	/* Yield while BDMFS registers its device. The old one-second EE busy loop
-	 * starved useful work and could make USB bring-up less deterministic. */
-	while (Timer() < ready_time)
-		DelayThread(1000);
+	/* Enumeration continues on the IOP once USBMASS_BD links. Poll for the
+	 * first mounted unit instead of a fixed settle: a stick that already
+	 * enumerated for the loader comes back in a fraction of the old fixed
+	 * waits, while an absent or slow stick is still bounded by the timeout. */
+	deadline = Timer() + USB_MASS_ENUM_TIMEOUT_MS;
+	while (Timer() < deadline) {
+		if (fileXioGetStat("usb0:/", &chk_stat) >= 0)
+			break;
+		DelayThread(USB_MASS_ENUM_POLL_MS * 1000);
+	}
 }
 //------------------------------
 //endfunc waitForUsbMassBdmfsSettle
@@ -1588,8 +1599,6 @@ void loadUsbModules(void)
 			ID = SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, &ret);
 			DPRINTF(" [BDMFS_FATFS] ID=%d, ret=%d\n", ID, ret);
 			have_bdmfs = (ID >= 0 && ret >= 0);
-			if (have_bdmfs)
-				waitForUsbMassBdmfsSettle();
 		}
 		if (!have_bdmfs)
 			loaded_ok = 0;
@@ -1601,7 +1610,7 @@ void loadUsbModules(void)
 				loaded_ok = 0;
 		}
 		if (loaded_ok) {
-			delay(3);
+			waitForUsbMassEnumerate();
 			USB_mass_loaded = 1;
 			have_usb_mass = 1;
 		}
