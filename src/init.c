@@ -1503,19 +1503,21 @@ static void waitForUsbMassEnumerate(void)
 	u64 deadline;
 	iox_stat_t chk_stat;
 
-	/* Enumeration continues on the IOP once USBMASS_BD links. Poll for the
-	 * first mounted unit instead of a fixed settle: a stick that already
-	 * enumerated for the loader comes back in a fraction of the old fixed
-	 * waits, while an absent or slow stick is still bounded by the timeout. */
+	/* Only a USB boot waits: the stick enumerated moments ago for the loader,
+	 * and loadConfig reads it right after this returns. Probe the boot path
+	 * itself so a slower second stick is not skipped behind a faster usb0.
+	 * USB activation after boot is covered by the browser/dashboard retries. */
+	if (strncmp(LaunchElfDir, "usb", 3) && strncmp(LaunchElfDir, "mass", 4))
+		return;
 	deadline = Timer() + USB_MASS_ENUM_TIMEOUT_MS;
 	while (Timer() < deadline) {
-		if (fileXioGetStat("usb0:/", &chk_stat) >= 0)
+		if (fileXioGetStat(LaunchElfDir, &chk_stat) >= 0)
 			break;
 		DelayThread(USB_MASS_ENUM_POLL_MS * 1000);
 	}
 }
 //------------------------------
-//endfunc waitForUsbMassBdmfsSettle
+//endfunc waitForUsbMassEnumerate
 //---------------------------------------------------------------------------
 static int pathUsesUsbMass(const char *path)
 {

@@ -844,7 +844,7 @@ static void openPage(int next)
 	if (next == P_MMCE_BACKUP)
 		dashToolsPrepareMmceStatus();
 	if (next == P_NETWORK)
-		getIpConfig(); /* cached; first call reads IPCONFIG.DAT incl. mc fallback */
+		dashEnsureIpConfig(); /* cached; serialized against worker IO */
 }
 
 static void backPage(void)
@@ -3295,6 +3295,10 @@ static void settingsEnter(void)
 		page_depth = item = item_top = 0;
 		item_anim = 0.0f;
 	}
+	/* The snapshot must see the saved IP settings, not the compile-time
+	 * defaults the globals hold until the boot warm job runs: a defaults
+	 * snapshot would later read as dirty and Discard would lose the file. */
+	dashEnsureIpConfig();
 	sessionBegin();
 }
 

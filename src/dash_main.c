@@ -1186,6 +1186,42 @@ static void dashNetConfigWarmJob(void *arg)
 #endif
 }
 
+/* Runs on the UI thread once the reads above are cached: a Files root that
+ * was already built now learns whether smb1: exists. */
+static void dashNetConfigWarmDone(void *arg)
+{
+	(void)arg;
+	dashBrowserRefreshRoot();
+}
+
+static void dashIpConfigJob(void *arg)
+{
+	(void)arg;
+	getIpConfig();
+}
+
+/* getIpConfig probes both memory cards when no IPCONFIG.DAT sits beside the
+ * ELF, so it must not run on the UI thread while the worker owns IO (see
+ * dashWorkerIoBusy). Queue behind the busy worker and await instead; the
+ * scene stays visible and quick reads never raise a loading popup. */
+void dashEnsureIpConfig(void)
+{
+	int job;
+
+	if (dashWorkerOnThread()) {
+		getIpConfig();
+		return;
+	}
+	if (dashWorkerIoBusy()) {
+		job = dashWorkerSubmit("ip config", DASH_JOB_DEVICE, dashIpConfigJob, NULL, NULL);
+		if (job > 0)
+			dashWorkerAwait(job, NULL, 0);
+		return; /* a full queue leaves the cache cold rather than racing the worker */
+	}
+	if (!dashIopParked())
+		getIpConfig();
+}
+
 static void firstInit(void)
 {
 	dashStoreInit();
@@ -1213,7 +1249,7 @@ static void firstInit(void)
 		dashDevicesAutoStart();
 	/* Queued after the auto-start driver loads above: those run on the UI
 	 * thread and must not overlap worker IO. */
-	dashWorkerSubmit("net config", DASH_JOB_DEVICE, dashNetConfigWarmJob, NULL, NULL);
+	dashWorkerSubmit("net config", DASH_JOB_DEVICE, dashNetConfigWarmJob, dashNetConfigWarmDone, NULL);
 #ifdef DASH_AUTOTEST
 	/* development-only sample library (see include/dash_autotest.h) */
 	{

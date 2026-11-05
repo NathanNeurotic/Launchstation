@@ -2248,11 +2248,13 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 #endif
 #ifdef SMB
-			/* smb1: only when SMB2.CNF has a VERSION = 1 share; reading the
-			 * file touches no network */
+			/* smb1: only when SMB2.CNF has a VERSION = 1 share; the read
+			 * touches no network but probes the memory cards, so while the
+			 * dashboard worker owns IO only the cached flag is safe */
 			strcpy(files[nfiles].name, SMB_DEVICE_V2);
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
-			if (smbSharesConfigured(SMB_PATH_V1)) {
+			if (dashWorkerIoBusy() ? smbSharesKnown(SMB_PATH_V1)
+			                       : smbSharesConfigured(SMB_PATH_V1)) {
 				strcpy(files[nfiles].name, SMB_DEVICE_V1);
 				files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 			}
