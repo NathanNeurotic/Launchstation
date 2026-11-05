@@ -379,7 +379,7 @@ static const SetItem net_items[] = {
     {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query multiple Internet time sources, require agreement, then write and verify the PS2 hardware RTC."},
 #endif
 #ifdef SMB
-    {ST_ACTION, S_SMB_SHARES, "SMB shares (SMB2.CNF)", "Edit the shares smb:/ and smb1:/ connect to (NAME, USERNAME, PASSWORD, VERSION, URL lines). Open smb:/ in Files afterwards to connect."},
+    {ST_ACTION, S_SMB_SHARES, "SMB shares (SMB2.CNF)", "Edit the shares smb:/ and smb1:/ connect to: one block per server (NAME, USERNAME, PASSWORD, VERSION, URL = smb://IP[:port]/share). The file's top shows blocks for every PS2-Servers card. Open smb:/ in Files afterwards to connect."},
 #endif
 };
 
@@ -2779,12 +2779,48 @@ static void runAction(int id)
 #ifdef SMB
 		case S_SMB_SHARES: {
 			static const char smb_template[] =
-			    "# One share per block; URL ends a block. Lines starting with # are ignored.\n"
-			    "# Remove the # from a block to use it.\n\n"
-			    "# A folder shared as PS2 on a PC, reached as smb:/PC\n"
-			    "# NAME = PC\n# USERNAME = player\n# PASSWORD = secret\n# URL = smb://192.168.0.10/PS2\n\n"
-			    "# An SMB1-only server, reached as smb1:/\n"
-			    "# NAME = OLDBOX\n# VERSION = 1\n# URL = smb://192.168.0.30/PS2SMB\n";
+			    "# One share per block; the URL line ends a block. Lines starting with #\n"
+			    "# are ignored -- remove the # from a block's lines to use that block.\n"
+			    "#\n"
+			    "# NAME  the label the file browser shows for this share (smb:/NAME).\n"
+			    "# USERNAME / PASSWORD  exactly as the server lists them (31 characters\n"
+			    "#   each). PASSWORD = with nothing after it is a blank password.\n"
+			    "# VERSION  optional: 1 = an SMB1-only server (opens via smb1:/);\n"
+			    "#   2 or 3 = the smb: driver. Use 3 to mark a server set to SMB 3 only.\n"
+			    "# URL  smb://<IP address>[:port]/<share>. The port is optional (445 when\n"
+			    "#   omitted) and goes here only, never on the NAME line.\n"
+			    "#\n"
+			    "# PS2-Servers: its SMBv2/SMBv3 card shows IP, Port, Share, User and\n"
+			    "# Password -- copy them into a block like these.\n"
+			    "# SMBv2 card with a user and password:\n"
+			    "# NAME = PC\n"
+			    "# USERNAME = player\n"
+			    "# PASSWORD = secret\n"
+			    "# URL = smb://192.168.1.100/games\n"
+			    "#\n"
+			    "# SMBv2 card with no password ticked (its User, blank Password):\n"
+			    "# NAME = PC\n"
+			    "# USERNAME = guest\n"
+			    "# PASSWORD =\n"
+			    "# URL = smb://192.168.1.100/games\n"
+			    "#\n"
+			    "# SMBv3 card (port 445); VERSION = 3 marks it:\n"
+			    "# NAME = NGCARD\n"
+			    "# VERSION = 3\n"
+			    "# USERNAME = player\n"
+			    "# PASSWORD = secret\n"
+			    "# URL = smb://192.168.1.100:445/games\n"
+			    "#\n"
+			    "# PS2-Servers on Linux/macOS on a private port (its card shows the port):\n"
+			    "# NAME = LINUX\n"
+			    "# USERNAME = player\n"
+			    "# PASSWORD = secret\n"
+			    "# URL = smb://192.168.1.100:1445/games\n"
+			    "#\n"
+			    "# An SMB1-only server (PS2-Servers' SMBv1 card), opened via smb1:/:\n"
+			    "# NAME = OLDBOX\n"
+			    "# VERSION = 1\n"
+			    "# URL = smb://192.168.0.30/PS2SMB\n";
 			char path[MAX_PATH];
 			int fd;
 			smbSharesConfigured(SMB_PATH_V2); /* reads the file; no network */
