@@ -194,7 +194,7 @@ first/last row. The breadcrumb shows where the page lives.
 | Launching | Automatic start & boot, Launch keys, shortcut/bookmark lock, disc/PS1 loaders, IOP reset and game IDs. |
 | Storage & devices | MMCE backups, HDD/ATA visibility, empty slots, unavailable devices and device auto-start preferences. |
 | Network | IP address, netmask, gateway and network write access. |
-| System | Language, memory card backup-file rules, classic screen settings, software/hardware clock, temperature units (50K and later; shown beside the header clock), configuration folder, alternate launch/tool settings save location and welcome message. |
+| System | Language, memory card backup-file rules, classic screen settings, software/hardware clock, temperature units (50K and later; shown beside the header clock), configuration folder, alternate launch/tool settings save location, welcome message, Check for updates and About Launchstation. |
 
 Unavailable dependent options remain visible with help explaining what to
 enable first. Path rows open a Choose/Clear dialog. Launch-key rows open

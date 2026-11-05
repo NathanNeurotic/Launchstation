@@ -225,7 +225,7 @@ static const SetItem root_items[] = {
     {ST_PAGE, P_LAUNCH, "Launching", "Automatic start, button shortcuts, loaders and compatibility."},
     {ST_PAGE, P_DEVICES, "Storage & devices", "Device visibility and which devices start automatically."},
     {ST_PAGE, P_NETWORK, "Network", "Console address and network write access."},
-    {ST_PAGE, P_SYSTEM, "System", "Language, save-file options and configuration locations."},
+    {ST_PAGE, P_SYSTEM, "System", "Language, save-file options, configuration locations, updates and About."},
     {ST_ACTION, S_MISC_COMMANDS, "Built-in commands", "Open MISC, including configuration and system tools."},
 };
 
@@ -360,9 +360,7 @@ static const SetItem mmce_backup_items[] = {
     {ST_CHOICE, S_MMCE_BACKUP_SAVES, "Per-save versions", "Also keep each changed save as a .psu in WLE-Saves beside its card's history, uploaded to Google Drive with the cards. Backups per card limits each save."},
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
     {ST_ACTION, S_GOOGLE_ACCOUNT, "Google account", "Link, relink, sync or disconnect the native Google Drive backup account."},
-    {ST_ACTION, S_CHECK_UPDATES, "Check for updates", "Compare with the rolling latest release; a newer build can be downloaded, SHA-256 verified and installed in place."},
 #endif
-    {ST_ACTION, S_ABOUT_PROJECT, "About Launchstation", "Version, commit, project origin, upstream credits and contributors."},
 };
 
 static const SetItem net_items[] = {
@@ -405,6 +403,10 @@ static const SetItem system_items[] = {
     {ST_PATH, S_CNF_PATH, "Configuration folder", "Optional save target for LAUNCHELF.CNF. Loading searches the start folder, then mcN:/SYS-CONF/ on the launch card, then the other card."},
     {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
     {ST_ACTION, S_INTRO, "Show welcome message again", "Show the introduction the next time the dashboard checks for it."},
+#if defined(ETH) && defined(WLE_NATIVE_CLOUD)
+    {ST_ACTION, S_CHECK_UPDATES, "Check for updates", "Compare with the rolling latest release; a newer build can be downloaded, SHA-256 verified and installed in place."},
+#endif
+    {ST_ACTION, S_ABOUT_PROJECT, "About Launchstation", "Version, commit, project origin, upstream credits and contributors."},
 };
 
 /* These are persisted upstream settings, independent of dashboard themes. */
@@ -518,9 +520,9 @@ static const SetPage pages[P_COUNT] = {
     [P_GAMEID] = PAGE("Game ID output", DI_APP, "Identification for compatible OSD/HDMI adapters.", gameid_items),
     [P_DEVICES] = PAGE("Storage & devices", DI_DEVICES, "Visible devices and driver startup preferences.", device_items),
     [P_AUTOSTART] = PAGE("Start devices automatically", DI_DEVICES, "Drivers start immediately when enabled. Discard restores preferences, not driver state.", autostart_items),
-    [P_MMCE_BACKUP] = PAGE("MMCE backup & sync", DI_MC, "Backup, cloud, IGR return and maintenance controls in one place.", mmce_backup_items),
+    [P_MMCE_BACKUP] = PAGE("MMCE backup & sync", DI_MC, "Backup, cloud and IGR return controls in one place.", mmce_backup_items),
     [P_NETWORK] = PAGE("Network", DI_NETWORK, "Console address for FTP, PS2Link and UDPFS.", net_items),
-    [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules and settings locations.", system_items),
+    [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules, settings locations, updates and About.", system_items),
     [P_CLASSIC] = PAGE("Classic screen settings", DI_SETTINGS, "These settings affect classic screens; dashboard themes have their own controls.", classic_items),
     [P_LANGUAGE] = PAGE("Language", DI_TEXT, "Some extended help remains in English.", language_items),
     [P_PSU] = PAGE("Memory card backup files", DI_MC, "Naming and overwrite behavior when creating PSU backups.", psu_items),

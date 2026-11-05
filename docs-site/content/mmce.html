@@ -35,5 +35,5 @@
 <li><b>&ldquo;No MMCE storage found&rdquo; but the adapter works as a memory card.</b> The SD card may be missing or unreadable, or the firmware does not provide the filesystem commands. Update the adapter firmware.</li>
 <li><b>Slot 2 card missing after using MX4SIO.</b> MX4SIO owns memory-card port 2 while its stack is active. Opening <code>mc1:</code> or an MMCE slot makes Launchstation reset the IOP back to the card stack, after which the slot is probed again.</li>
 <li><b>Stalls when loading.</b> The driver startup handshake is synchronous; an absent adapter can pause drawing for a moment (about 0.8&nbsp;s nominal with both slots empty). Report firmware version, slot and whether audio recovered.</li>
-<li><b>Backups say &ldquo;Set destination&rdquo;.</b> Choose a backup folder first (Settings &gt; Storage &amp; devices &gt; MMCE backups). It cannot be inside <code>mmceN:/MemoryCards</code>.</li>
+<li><b>Backups say &ldquo;Set destination&rdquo;.</b> Choose a backup folder first (Settings &gt; System). It cannot be inside <code>mmceN:/MemoryCards</code>.</li>
 </ol>
