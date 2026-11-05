@@ -84,7 +84,7 @@ typedef uint8_t u8;typedef uint16_t u16;typedef uint32_t u32;typedef uint64_t u6
 typedef struct {int Year,Month,Day,Hour,Min,Sec;} Date;
 typedef struct {Date _Create,_Modify;unsigned FileSizeByte,AttrFile,Reserve1,Reserve2;char EntryName[32];} __attribute__((aligned(64))) sceMcTblGetDir; /* as in libmc.h */
 typedef struct {char name[MAX_NAME];unsigned char title[MAX_NAME];sceMcTblGetDir stats;} FILEINFO;
-typedef struct {unsigned mode,attr;char ctime[8],mtime[8],atime[8];} iox_stat_t;
+typedef struct {unsigned mode,attr,size,hisize;char ctime[8],mtime[8],atime[8];} iox_stat_t;
 static struct {int PSU_HugeNames,PSU_DateNames,PSU_NoOverwrite;} config,*setting=&config;
 static int PSU_content;
 static int PM_flag[MAX_RECURSE],PM_file[MAX_RECURSE],PasteMode,PasteProgress_f,mctype_PSx;
@@ -126,7 +126,11 @@ static int isPcCardCfOnline(void){return 1;}
 static void ensureMemoryCardPortAccessible(int p){assert(p==0||p==1);}
 static char *makeHostPath(char *d,char *s){if(d!=s)strcpy(d,s);return d;}
 static void genLimObjName(char *p,int reserve){(void)p;(void)reserve;}
-static int genGetStat(const char *p,iox_stat_t *out){(void)p;(void)out;assert(!"paste must not stat the destination");return -EIO;}
+/* This POSIX adapter reports reliable EOF; ambiguous-driver behavior has a separate regression. */
+static int move_listing_trusted=1;
+static int filerDirReadComplete(void){return move_listing_trusted;}
+static int genFixPath(const char *p,char *out){strcpy(out,p);return 0;}
+static int genGetStat(const char *p,iox_stat_t *out){struct stat st;if(stat(p,&st))return -errno;memset(out,0,sizeof(*out));out->mode=st.st_mode;out->size=(u32)st.st_size;out->hisize=(u64)st.st_size>>32;return 0;}
 /* A UDPFS server can give the next write-open of a name a handle it kept from
  * before an IOP reboot. UDPFS_LOST: the file was removed before the open, so
  * every write and the close succeed and nothing is left. UDPFS_TAIL: the old
@@ -165,9 +169,12 @@ static int genClose(int fd){int kind=fd_kind[fd];assert(kind&&handles>0);fd_kind
 static s64 genLseek(int fd,s64 n,int whence){assert(fd_generation[fd]==generation);if(fail_measure&&whence==SEEK_END)return -EIO;if(fail_rewind&&whence==SEEK_SET)return -EIO;return lseek(fd,n,whence);}
 static int genRead(int fd,void *p,int n){assert(fd_generation[fd]==generation);read_calls++;if(early_eof&&fd_kind[fd]==1)return 0;if(fail_read&&fd_kind[fd]==1)return -ETIMEDOUT;int r=read(fd,p,n>read_cap?read_cap:n);return r<0?-errno:r;}
 static int genWrite(int fd,void *p,int n){assert(fd_generation[fd]==generation);write_calls++;if(fail_write)return -ENOSPC;int r=write(fd,p,n>write_cap?write_cap:n);return r<0?-errno:r;}
-static int genRemove(char *p){if(udpfs_stale==UDPFS_TAIL&&!strncmp(p,"udpfs:",6))return -EBUSY;return unlink(p)?-errno:0;}
+static int genRmdir(char *p){return rmdir(p)?-errno:0;}
+static int move_deletes;
+static int genRemove(char *p){if(browser_cut&&!strncmp(p,clipPath,strlen(clipPath)))move_deletes++;if(udpfs_stale==UDPFS_TAIL&&!strncmp(p,"udpfs:",6))return -EBUSY;return unlink(p)?-errno:0;}
 static int fileXioRename(const char *a,const char *b){assert(!"paste must not require rename");(void)a;(void)b;return -EIO;}
 static int mc_result;
+static int mcDelete(int port,int slot,const char *p){char full[MAX_PATH];(void)slot;snprintf(full,sizeof(full),"mc%d:%s",port,p);struct stat st;int r=stat(full,&st)?-errno:S_ISDIR(st.st_mode)?rmdir(full):unlink(full);mc_result=r<0?-errno:0;if(r==0&&browser_cut)move_deletes++;return 0;}
 static int mcSetFileInfo(int port,int slot,const char *from,const sceMcTblGetDir *info,int flags){
  (void)slot;if(flags==0x10){char a[MAX_PATH],b[MAX_PATH];snprintf(a,sizeof(a),"mc%d:/%s",port,from);strcpy(b,a);char *leaf=strrchr(b,'/');assert(leaf);snprintf(leaf+1,sizeof(b)-(leaf+1-b),"%.32s",info->EntryName);mc_result=fileXioRename(a,b);}else mc_result=0;return 0;
 }
@@ -182,7 +189,7 @@ static void transcpy_sjis(char *out,const unsigned char *in){strcpy(out,(const c
 static int filerConfirmExploitDelete(const char *p,const FILEINFO *f){(void)p;(void)f;return 1;}
 static int filerConfirmExploitModify(const char *p,const FILEINFO *f){(void)p;(void)f;return 1;}
 static int filerIsExploitProtectedPath(const char *p,const FILEINFO *f){(void)p;(void)f;return 0;}
-static int move_deletes;static const char *move_target="mmce0:/MOVE.BIN";
+static const char *move_target="mmce0:/MOVE.BIN";
 static int delete(const char *p,const FILEINFO *f){char source[MAX_PATH];assert(!handles);assert(!access(move_target,F_OK));snprintf(source,sizeof(source),"%s%s",p,f->name);move_deletes++;return genRemove(source);}
 static void markMx4sioDestinationAfterWrite(const char *p){(void)p;}
 static int newdir(const char *parent,const char *name){char p[MAX_PATH];snprintf(p,sizeof(p),"%s%s",parent,name);return mkdir(p,0700)?-errno:0;}

@@ -129,6 +129,15 @@ static void test_free(void *p){
  for(int i=0;i<allocs_live;i++)if(live_ptr[i]==p){live_ptr[i]=live_ptr[--allocs_live];free(p);return;}
  bad_frees++; /* a double free or a foreign pointer: never hand it to libc */
 }
+static void *test_realloc(void *old,size_t n){
+ if(fail_alloc_bytes&&n==fail_alloc_bytes)return NULL;
+ if(alloc_fail_stage&&*diag_stage&&!strcmp(*diag_stage,alloc_fail_stage))return NULL;
+ int i;for(i=0;i<allocs_live&&live_ptr[i]!=old;i++);
+ void *p=realloc(old,n);if(!p)return NULL;
+ if(old){assert(i<allocs_live);live_ptr[i]=p;}else{assert(allocs_live<256);live_ptr[allocs_live++]=p;}
+ return p;
+}
+#define realloc test_realloc
 #define memalign test_memalign
 #define free test_free
 static u64 Timer(void){return ++clock_ms;}
@@ -165,6 +174,11 @@ static int named(int fd,const char *end){return ends(fd_name[fd],end);}
 enum {UDPFS_OK,UDPFS_LOST,UDPFS_TAIL};
 static int udpfs_read_opens,udpfs_stale;static const char *udpfs_stale_name;static char udpfs_last_read[MAX_PATH];
 static int udpfs_stale_for(const char *p){return !strncmp(p,"udpfs:",6)&&(!udpfs_stale_name||ends(p,udpfs_stale_name))?udpfs_stale:UDPFS_OK;}
+/* This POSIX adapter reports reliable EOF; ambiguous-driver behavior has a separate regression. */
+static int move_listing_trusted=1;
+static int filerDirReadComplete(void){return move_listing_trusted;}
+static int genFixPath(const char *p,char *out){strcpy(out,p);return 0;}
+static int genGetStat(const char *p,iox_stat_t *out){struct stat st;if(stat(p,&st))return -errno;memset(out,0,sizeof(*out));out->mode=st.st_mode;out->size=(u32)st.st_size;out->hisize=(u64)st.st_size>>32;return 0;}
 static int genOpen(const char *p,int flags){
  int udpfs=!strncmp(p,"udpfs:",6),stale=(flags&O_WRONLY)?udpfs_stale_for(p):UDPFS_OK;
  if(flags==O_RDONLY&&udpfs){if(p[strlen(p)-1]!='~'){udpfs_read_opens++;snprintf(udpfs_last_read,MAX_PATH,"%s",p);}}
@@ -178,6 +192,7 @@ static int lseek_fail_udpfs;
 static s64 genLseek(int fd,s64 n,int whence){assert(fd_open[fd]);if(lseek_fail_udpfs&&whence==SEEK_CUR&&!strncmp(fd_name[fd],"udpfs:",6))return -EIO;return lseek(fd,n,whence);}
 static int genRead(int fd,void *p,int n){assert(fd_open[fd]);if(named(fd,read_fail_name))return -EIO;int r=read(fd,p,n);return r<0?-errno:r;}
 static int genWrite(int fd,void *p,int n){assert(fd_open[fd]);if(++writes==write_fail_at)return -ENOSPC;int r=write(fd,p,n);return r<0?-errno:r;}
+static int genRmdir(char *p){return rmdir(p)?-errno:0;}
 static int genRemove(char *p){if(udpfs_stale_for(p)==UDPFS_TAIL)return -EBUSY;return unlink(p)?-errno:0;}
 /* Like genRenameNoReplace(): no rename on host or where genCanRenamePath() refuses
  * (the real one, below), none over an existing file, or one the driver refuses. */
@@ -188,6 +203,7 @@ static int genRenameNoReplace(const char *from,const char *to){
  if(rename_fail)return -EIO;
  if(!access(to,F_OK))return -EEXIST;
  renames++;return rename(from,to)?-errno:0;}
+static int mcDelete(int port,int slot,const char *p){char full[MAX_PATH];(void)slot;snprintf(full,sizeof(full),"mc%d:%s",port,p);struct stat st;int r=stat(full,&st)?-errno:S_ISDIR(st.st_mode)?rmdir(full):unlink(full);(void)r;return 0;}
 static int mcSetFileInfo(int port,int slot,const char *from,const sceMcTblGetDir *info,int flags){(void)port;(void)slot;(void)from;(void)info;(void)flags;return 0;}
 static int mcSync(int mode,void *c,int *r){(void)mode;(void)c;if(r)*r=0;return 1;}
 static int mcGetInfo(int p,int s,int *type,int *a,int *b){(void)p;(void)s;if(type)*type=2;if(a)*a=1000;if(b)*b=1000;return 0;}
@@ -242,7 +258,7 @@ code += 'static ' + function((root / 'src/filer_mount.c').read_text(), 'int getD
 code += 'static ' + function((root / 'src/filer_fileops.c').read_text(), 'int genCanRenamePath(')
 code += 'static ' + function((root / 'src/filer_fileops.c').read_text(), 'void genLimObjName(')
 # The real reader and strict listing behind copy(); only the device dispatch is replaced.
-code += 'static int dir_opened,dir_open_error,dir_read_error;\n'
+code += 'static int dir_opened,dir_open_error,dir_read_error,dir_complete;\n'
 code += function(filer, 'static void dirOpenResult(')
 reader = function(filer, 'int readGENERIC(const char *path, FILEINFO *info, int max)\n{')
 code += 'static ' + reader

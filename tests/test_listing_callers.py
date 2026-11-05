@@ -87,13 +87,14 @@ typedef uint8_t u8;typedef uint16_t u16;typedef uint32_t u32;typedef uint64_t u6
 #define FIO_CST_CT 2
 #define FIO_CST_AT 4
 #define FIO_CST_MT 8
+#define FIO_S_ISDIR S_ISDIR
 #define LNG(x) #x
 #define DPRINTF(...) ((void)0)
 /* libmc.h layout, which a PSU backup reads its headers from (mcT_header) */
 typedef struct {u8 Resv2,Sec,Min,Hour,Day,Month;u16 Year;} sceMcStDateTime;
 typedef struct {sceMcStDateTime _Create,_Modify;u32 FileSizeByte;u16 AttrFile,Reserve1;u32 Reserve2,PdaAplNo;unsigned char EntryName[32];} __attribute__((aligned(64))) sceMcTblGetDir;
 typedef struct {char name[MAX_NAME];unsigned char title[32*2+2];sceMcTblGetDir stats;} FILEINFO;
-typedef struct {unsigned mode,attr;char ctime[8],mtime[8],atime[8];} iox_stat_t;
+typedef struct {unsigned mode,attr,size,hisize;char ctime[8],mtime[8],atime[8];} iox_stat_t;
 static struct {int PSU_HugeNames,PSU_DateNames,PSU_NoOverwrite;} config,*setting=&config;
 static int PSU_content;
 static int PM_flag[MAX_RECURSE],PM_file[MAX_RECURSE],PasteMode,PasteProgress_f,mctype_PSx;
@@ -131,7 +132,11 @@ static int ensurePathDeviceStackReady(const char *p){(void)p;return 1;}
 static void ensureMemoryCardPortAccessible(int p){(void)p;assert(!"no memory card here");}
 static char *makeHostPath(char *d,char *s){if(d!=s)strcpy(d,s);return d;}
 static void genLimObjName(char *p,int reserve){(void)p;(void)reserve;}
-static int genGetStat(const char *p,iox_stat_t *out){(void)p;(void)out;assert(!"paste must not stat the destination");return -EIO;}
+/* This POSIX adapter reports reliable EOF; ambiguous-driver behavior has a separate regression. */
+static int move_listing_trusted=1;
+static int filerDirReadComplete(void){return move_listing_trusted;}
+static int genFixPath(const char *p,char *out){strcpy(out,p);return 0;}
+static int genGetStat(const char *p,iox_stat_t *out){struct stat st;if(stat(p,&st))return -errno;memset(out,0,sizeof(*out));out->mode=st.st_mode;out->size=(u32)st.st_size;out->hisize=(u64)st.st_size>>32;return 0;}
 /* Runs once, when a chosen file is opened while its folder is copied (with
  * hook_read_only, only when it is opened to be read). */
 static char hook_at[MAX_PATH];static void (*hook)(void);static int hook_read_only,udpfs_read_opens;
@@ -195,7 +200,7 @@ static int list(const char *p,FILEINFO *out,int max,int *error){
  for(int i=0;i<nfaults;i++)if(!strcmp(faults[i].path,p)){
   if(faults[i].open_error)*error=faults[i].open_error;
   fail_after=faults[i].fail_after;fail_code=faults[i].fail_code;
-  if(faults[i].once)faults[i]=faults[--nfaults];
+  if(faults[i].once&&!--faults[i].once)faults[i]=faults[--nfaults];
   break;
  }
  if(*error)return 0;
@@ -333,6 +338,13 @@ int main(void){
  paste("BIG",1);
  assert(strstr(message,"Listing source (-7)")&&strstr(message,"more than 2046 items"));
  assert(count("usb0:/BIG")==MAX_ENTRY-1&&count("mmce0:/BIG")==-1&&nclipFiles==1);
+ /* Two identical short listings, then a fuller potential delete listing:
+  * Copy succeeds with two files, but ambiguous EOF retains ALL five sources. */
+ tree("usb0:/TWICE",5);fault("usb0:/TWICE/",0,2,0,2);move_listing_trusted=0;
+ paste("TWICE",1);move_listing_trusted=1;
+ assert(strstr(message,"directory completeness unknown")&&count("usb0:/TWICE")==5&&nclipFiles==1);
+ assert(count("mmce0:/TWICE")==2);
+ nfaults=0;
  /* USB (FAT, exFAT) ends a listing early with no error when a read fails, which
   * looks like the end of the folder. Listed again after its contents are copied,
   * the folder holds more, so the Move stops and keeps all of its source. */

@@ -118,10 +118,22 @@ static int fileXioDread(int fd,iox_dirent_t *out){
  handles[fd-3].position++;return 1;
 }
 static int fileXioDclose(int fd){assert(fd>=3&&fd<11&&handles[fd-3].folder);handles[fd-3].folder=NULL;open_handles--;return 0;}
-static int fileXioOpen(const char *p,int f,int m){(void)p;(void)f;(void)m;assert(!"elflist.txt is not used here");return -ENOENT;}
-static int fileXioClose(int fd){(void)fd;return 0;}
-static int fileXioLseek(int fd,int o,int w){(void)fd;(void)o;(void)w;return -EIO;}
-static int fileXioRead(int fd,void *p,int n){(void)fd;(void)p;(void)n;return -EIO;}
+/* host:elflist.txt, the list that stands in for the host: root: its content
+ * (NULL: there is none), an error each seek or the read returns instead, and
+ * how many bytes short the read comes up. Only host: paths are opened as files. */
+static const char *elflist;static int elflist_end_error,elflist_set_error,elflist_read_error,elflist_short,elflist_open;
+static int fileXioOpen(const char *p,int f,int m){(void)f;(void)m;assert(!strncmp(p,"host:",5));
+ if(!elflist||strcmp(p,"host:elflist.txt"))return -ENOENT;
+ elflist_open++;return 20;}
+static int fileXioClose(int fd){assert(fd==20&&elflist_open);elflist_open--;return 0;}
+static int fileXioLseek(int fd,int o,int w){assert(fd==20&&!o);
+ if(w==SEEK_END)return elflist_end_error?elflist_end_error:(int)strlen(elflist);
+ assert(w==SEEK_SET);return elflist_set_error;}
+static int fileXioRead(int fd,void *p,int n){assert(fd==20);if(elflist_read_error)return elflist_read_error;
+ int len=(int)strlen(elflist);if(n>len)n=len;n-=elflist_short;memcpy(p,elflist,n);return n;}
+static int memalign_fail;
+static void *test_memalign(size_t a,size_t n){return memalign_fail?NULL:memalign(a,n);}
+#define memalign test_memalign
 
 /* Memory card: mcGetDir lists "." and ".." first in a subfolder and returns
  * through mcSync the count it put in the table, or a libmc error. */
@@ -221,7 +233,7 @@ static int loadMx4sioModules(void){return 1;}
 '''
 code %= limits
 start = filer.index('static int dir_opened, dir_open_error, dir_read_error;')
-code += filer[start:filer.index('\n', start) + 1]
+code += filer[start:filer.index('\n', start) + 1] + 'static int dir_complete;\n'
 for signature in ('static void dirOpenResult(', 'static void dirReadFailed(',
                   'static int getHddDeviceFromPath(', 'static int isHddRootPath(', 'static int isAtaPath(',
                   'static const char *canonicalizeAtaPath(', 'static const char *canonicalizePcCardCfPath(',
@@ -260,7 +272,7 @@ int main(void){
   * only an open failure can be seen. */
  add("mass0:/FULL/",CAP);add("mass0:/OVER/",CAP+1);add("mass0:/HUGE/",5000);add("mass0:/EMPTY/",0);
  add("mass0:/",3)->fail_opens=1;add("mass0:/LATE/",3)->fail_opens=1;
- assert(complete("mass0:/FULL/")==CAP&&listed(CAP));
+ assert(complete("mass0:/FULL/")==CAP&&listed(CAP)&&!dir_complete);
  assert(complete_more("mass0:/FULL/")==CAP&&more==0);
  assert(browse("mass0:/FULL/")==CAP&&listed(CAP));
  /* one entry over the cap: an error, or with 'more' MAX_ENTRY - 1 entries to act on first */
@@ -284,7 +296,7 @@ int main(void){
  assert(complete("mx4sio:/GONE/")==-ENOENT&&!open_handles);
  /* MMCE ends every folder with -1, and cdfs with -EPERM: both are the end, not an error */
  add("mmce0:/DIR/",7)->end_code=-1;add("cdfs:/DIR/",7)->end_code=-EPERM;
- assert(complete("mmce0:/DIR/")==7&&listed(7));
+ assert(complete("mmce0:/DIR/")==7&&listed(7)&&!dir_complete);
  assert(complete("cdfs:/DIR/")==7&&listed(7));
  /* PC card CF: an ATA error latches the card offline, and FAT then ends the read
   * early with no error, so a card offline after the read was cut short */
@@ -313,9 +325,21 @@ int main(void){
  add("host:OVER/",CAP+1);assert(complete("host:/OVER/")==-E2BIG);
  assert(complete_more("host:/OVER/")==CAP+1&&more==1&&listed(CAP+1));
  assert(complete("host:/GONE/")==-ENOENT&&browse("host:/GONE/")==0);
+ /* host:elflist.txt lists the root, one name a line; a failed seek or read, a
+  * short read or no memory for it is a root that was not read */
+ add("host:",0);add("host:A",0);add("host:B",0);host_elflist=1;elflist="A\r\nB\n";
+ assert(complete("host:/")==2&&!strcmp(info[0].name,"A")&&!strcmp(info[1].name,"B")&&dir_complete);
+ elflist_end_error=-EIO;assert(complete("host:/")==-EIO&&!dir_complete&&browse("host:/")==0);
+ elflist_end_error=0;elflist_set_error=-EIO;assert(complete("host:/")==-EIO&&!dir_complete);
+ elflist_set_error=0;elflist_short=2;assert(complete("host:/")==-EIO&&!dir_complete&&browse("host:/")==0);
+ elflist_short=0;elflist_read_error=-EIO;assert(complete("host:/")==-EIO);
+ elflist_read_error=0;memalign_fail=1;assert(complete("host:/")==-ENOMEM&&!dir_complete);
+ memalign_fail=0;assert(complete("host:/")==2&&dir_complete);
+ elflist="";assert(complete("host:/")==0&&dir_complete); /* an empty list is an empty root */
+ assert(!elflist_open&&!open_handles);host_elflist=0;elflist=NULL;
  /* Memory card: a subfolder lists "." and ".." too, so the table must hold two more */
  add("mc0:/FULL/",CAP)->dots=1;add("mc0:/OVER/",CAP+1)->dots=1;add("mc1:/",CAP+1);
- assert(complete("mc0:/FULL/")==CAP&&listed(CAP)&&mc_maxent==MAX_ENTRY+1);
+ assert(complete("mc0:/FULL/")==CAP&&listed(CAP)&&mc_maxent==MAX_ENTRY+1&&dir_complete);
  assert(browse("mc0:/FULL/")==CAP&&listed(CAP)&&mc_maxent==CAP+2);
  assert(complete("mc0:/OVER/")==-E2BIG);
  assert(complete_more("mc0:/OVER/")==CAP+1&&more==1&&listed(CAP+1));
