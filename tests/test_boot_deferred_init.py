@@ -34,6 +34,9 @@ body = step.group(1)
 assert "boot_init_pending = 0;" in body
 assert body.index("dashConsoleIdentityInit()") < body.index("dashSoundInit()") < body.index("dashBgmStart()")
 assert "dashSoundPlay(DASH_SND_BOOT)" in body
+# with animations off the fade snaps to 1.0 on the first update, so the step
+# must sit after the frame present or it still delays the first frame
+assert loop.index("dashGfxPresent();") < step.start()
 
 # the maintenance pass would otherwise start audio on the first frame by itself
 assert "if (!boot_init_pending)\n\t\t\tdashSoundMaintain();" in loop

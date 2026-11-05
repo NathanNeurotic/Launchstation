@@ -1372,15 +1372,6 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			}
 		}
 		idle_ms = dashInputIdleMs();
-		/* CDVD RPC and module loads must not overlap worker IOP file work */
-		if (boot_init_pending && fade_in > 0.95f && !dashWorkerIoBusy() && !dashIopParked()) {
-			boot_init_pending = 0;
-			dashConsoleIdentityInit();
-			dashSoundInit();
-			dashBgmStart();
-			if (from_boot)
-				dashSoundPlay(DASH_SND_BOOT);
-		}
 		if (!boot_init_pending)
 			dashSoundMaintain();
 		dashThemeSavePending((int)idle_ms);
@@ -1409,6 +1400,17 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 		if (!background_only)
 			quickLaunchDraw();
 		dashGfxPresent();
+
+		/* after the first frame is on screen; CDVD RPC and module loads must
+		 * not overlap worker IOP file work */
+		if (boot_init_pending && fade_in > 0.95f && !dashWorkerIoBusy() && !dashIopParked()) {
+			boot_init_pending = 0;
+			dashConsoleIdentityInit();
+			dashSoundInit();
+			dashBgmStart();
+			if (from_boot)
+				dashSoundPlay(DASH_SND_BOOT);
+		}
 
 		/* first run: short introduction once the dashboard has faded in */
 		if (!dashCfg.intro_done && boot_phase != 1 && fade_in > 0.95f) {
