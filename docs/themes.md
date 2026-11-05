@@ -92,7 +92,7 @@ puts that group back to the values of the preset the theme started from.
 |-------|---------|
 | Background | Background type (19, see `background` below), Colour, Second colour, Brightness (10-200 %), CRT scanlines, Wallpaper image... (choosing one switches the type to Wallpaper image) |
 | Interface colours | Text, Secondary text, Muted text, Selected text, Accent, Selection (with opacity), Panels (with opacity), Borders (with opacity), Warnings |
-| Tiles & menus | Tile style (memory card, rounded, chamfered, floating object, crystal slab), Selection style (solid bar, accent bar, outline, text colour), Corners (square, soft, round), Glow |
+| Tiles & menus | Tile style (memory card, rounded, chamfered, floating object, crystal slab), Selection style (solid bar, accent bar, outline, text colour), Corners (square, soft, round), Glow, Section tabs (shown, hidden) |
 | Text | Font (Roboto, System), external System font file, Text size (90-115 %), Bold, Text shadow |
 | Icons | Icon colour (text colours, accent, monochrome), Default app icon (application, device, initials), Custom app icon image... (up to 128x128) |
 | Clock | Clock (off, standard, system), Position (header, footer), Hours (system, 24-hour, 12-hour), Seconds, Date (system, YYYY/MM/DD, MM/DD/YYYY, DD/MM/YYYY, off) |

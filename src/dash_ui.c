@@ -456,8 +456,10 @@ void dashDrawClock(void)
 	clockText(t, sizeof(t), d, sizeof(d));
 	/* Shrink a long time+temperature string rather than overlap the tabs. */
 	scale = dashTheme.clock == DASH_CLOCK_SYSTEM ? DASH_FS_BODY : DASH_FS_LABEL;
-	available = DASH_SAFE_R - (HEADER_TAB_X + HEADER_TAB_W * dashVisibleSectionCount() + HEADER_TAB_PAD +
-	                           HEADER_ICON_GAP + HEADER_ICON_SIZE + 8.0f);
+	available = DASH_SAFE_R - DASH_PANE_L;
+	if (dashTheme.tabs != DASH_TABS_HIDDEN)
+		available = DASH_SAFE_R - (HEADER_TAB_X + HEADER_TAB_W * dashVisibleSectionCount() + HEADER_TAB_PAD +
+		                           HEADER_ICON_GAP + HEADER_ICON_SIZE + 8.0f);
 	width = dashTextWidth(t, scale);
 	if (width > available && available > 0.0f)
 		scale *= available / width;
