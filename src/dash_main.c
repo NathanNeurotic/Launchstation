@@ -28,6 +28,7 @@ static int background_only;
 static float anim_time;
 static float fade_in;
 static int autoprobe_pending;
+static int boot_init_pending; /* console identity and audio wait for the fade-in */
 static u64 last_frame_ms;
 static float frame_dt;
 
@@ -1181,7 +1182,6 @@ static void firstInit(void)
 	clearScreenToBlack();
 	dashFontInit();
 	dashIconsInit();
-	dashConsoleIdentityInit();
 	dashWorkerInit();
 	if (boot_safe_mode)
 		dashToast(DASH_TOAST_WARN,
@@ -1258,15 +1258,11 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 	DashThemeSetLegacyEnabled(1);
 	mainActionLaunchHook = dashLaunchHook;
 #ifdef WLE_BOOT_DIAGNOSTICS
-	drawMsg("Boot check 6: dashboard initialized; starting audio");
+	drawMsg("Boot check 6: dashboard initialized");
 #endif
-	dashSoundInit();
-	dashBgmStart();
-#ifdef WLE_BOOT_DIAGNOSTICS
-	drawMsg("Boot check 7: audio startup returned");
-#endif
-	if (from_boot)
-		dashSoundPlay(DASH_SND_BOOT);
+	/* Nothing on the first screen needs the console identity (ADDDRV +
+	 * MECHACON polling) or the audio driver: both run once the fade is done. */
+	boot_init_pending = 1;
 
 	section_anim = 1.0f;
 	fade_in = 0.0f;
@@ -1376,7 +1372,17 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 			}
 		}
 		idle_ms = dashInputIdleMs();
-		dashSoundMaintain();
+		/* CDVD RPC and module loads must not overlap worker IOP file work */
+		if (boot_init_pending && fade_in > 0.95f && !dashWorkerIoBusy() && !dashIopParked()) {
+			boot_init_pending = 0;
+			dashConsoleIdentityInit();
+			dashSoundInit();
+			dashBgmStart();
+			if (from_boot)
+				dashSoundPlay(DASH_SND_BOOT);
+		}
+		if (!boot_init_pending)
+			dashSoundMaintain();
 		dashThemeSavePending((int)idle_ms);
 		if (!boot_phase)
 			dashArtStep((int)idle_ms);
