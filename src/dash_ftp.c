@@ -92,12 +92,14 @@ int DashFtpServer(void)
 			break;
 		if (input.pressed & DASH_IN_OK) {
 			ftpFrame(&status, 1);
-			if (ftpSessionShutdown())
-				rebootIopAndReloadCoreStackSilent();
-			else if (ftpSessionQuery(&status))
-				closing = 1; /* still answering: slow to close files, not stuck */
-			else
+			/* A bounded Stop that ran out of time may still be answering (slow to
+			 * close files) or may have finished just after the last poll. */
+			if (!ftpSessionShutdown() && !ftpSessionQuery(&status))
 				unanswered = "Stop";
+			else if (ftpSessionStopped())
+				rebootIopAndReloadCoreStackSilent();
+			else
+				closing = 1;
 			break;
 		}
 		if (dashFtpPollRemote())

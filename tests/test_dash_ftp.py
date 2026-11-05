@@ -58,6 +58,7 @@ static int dashModalConfirm(const char *title, const char *body, const char *ok_
     return confirm_answer;
 }
 static void ftpSessionAbandon(void) { abandons++; stopped = 1; }
+static int ftpSessionStopped(void) { return stopped; }
 static int dashWorkerAwaitAll(const char *status) { (void)status; return 1; }
 static void filerRootMcPollIdle(void) {}
 static void dashLoadingBegin(const char *status) { (void)status; }
@@ -134,6 +135,16 @@ int main(void) {
     presses[0] = DASH_IN_OK;
     assert(DashFtpServer() == 0);
     assert(shutdowns == 1 && confirms == 0 && abandons == 0 && reboots == 0 && modals == 1 && resident);
+
+    /* Stop ran out of time but finished right after: the follow-up query sees STOPPED and resets. */
+    reset();
+    shutdown_ok = 0;
+    query_script[0] = LS_FTP_RUNNING;
+    query_script[1] = LS_FTP_STOPPED;
+    query_count = 2;
+    presses[0] = DASH_IN_OK;
+    assert(DashFtpServer() == 1);
+    assert(shutdowns == 1 && queries == 2 && confirms == 0 && reboots == 1 && modals == 0 && !resident);
 
     /* An unanswered Stop asks first; declined, the IOP is never reset over open files. */
     reset();
