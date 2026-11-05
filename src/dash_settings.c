@@ -2780,8 +2780,9 @@ static void runAction(int id)
 		case S_SMB_SHARES: {
 			static const char smb_template[] =
 			    "# One share per block; URL ends a block. Lines starting with # are ignored.\n"
+			    "# Remove the # from a block to use it.\n\n"
 			    "# A folder shared as PS2 on a PC, reached as smb:/PC\n"
-			    "NAME = PC\nUSERNAME = player\nPASSWORD = secret\nURL = smb://192.168.0.10/PS2\n\n"
+			    "# NAME = PC\n# USERNAME = player\n# PASSWORD = secret\n# URL = smb://192.168.0.10/PS2\n\n"
 			    "# An SMB1-only server, reached as smb1:/\n"
 			    "# NAME = OLDBOX\n# VERSION = 1\n# URL = smb://192.168.0.30/PS2SMB\n";
 			char path[MAX_PATH];
@@ -2792,7 +2793,11 @@ static void runAction(int id)
 			else {
 				configBuildSysconfPath(path, sizeof(path), "SMB2.CNF");
 				configEnsureSysconfDir(path);
-				if ((fd = genOpen(path, FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC)) >= 0) {
+				/* A file that was unreadable (too large, card inserted later) is
+				 * still there: never replace one with the template. */
+				if ((fd = genOpen(path, FIO_O_RDONLY)) >= 0)
+					genClose(fd);
+				else if ((fd = genOpen(path, FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC)) >= 0) {
 					genWrite(fd, (void *)smb_template, sizeof(smb_template) - 1);
 					genClose(fd);
 				}

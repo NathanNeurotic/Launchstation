@@ -28,8 +28,12 @@ template = re.search(r'smb_template\[\] =\s*((?:\s*"(?:[^"\\]|\\.)*"\s*)+);', se
 assert template, "no SMB2.CNF template"
 text = "".join(eval(part) for part in re.findall(r'"(?:[^"\\]|\\.)*"', template.group(1)))
 assert text.count("URL = ") >= 1 and "NAME = " in text and "VERSION = 1" in text
-assert all(line.startswith(("#", "NAME", "USERNAME", "PASSWORD", "URL", "VERSION")) or not line.strip()
-           for line in text.splitlines()), text
+# every example is commented out: a fresh file defines no share and connects nowhere
+assert all(line.startswith("#") or not line.strip() for line in text.splitlines()), text
+
+# the template only goes into a file that does not exist yet
+create = case.split("smb_template[] =", 1)[1]
+assert create.index("FIO_O_RDONLY") < create.index("FIO_O_TRUNC")
 
 # reload forgets the parse, so the next smb:/ open reads the edited file
 assert "void smbSharesReload(void);" in header
