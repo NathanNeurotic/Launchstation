@@ -515,6 +515,7 @@
     {"SAS Timestamps", LANG_SAS_Timestamps},
     {"SIZE", LANG_SIZE},
     {"SKIN SETTINGS", LANG_SKIN_SETTINGS},
+    {"SMB shares (SMB2.CNF)", LANG_Dashboard_SMB_shares_SMB2_CNF},
     {"SPACE", LANG_SPACE},
     {"SPECIAL", LANG_SPECIAL},
     {"STARTUP", LANG_STARTUP},

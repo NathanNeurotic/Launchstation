@@ -18,6 +18,9 @@
 #include "cloud_google.h"
 #include "init.h"
 #endif
+#ifdef SMB
+#include "smb_shares.h"
+#endif
 
 enum SetType {
 	ST_CHOICE = 0,
@@ -124,6 +127,7 @@ enum SetId {
 	S_NET_GW,
 	S_HOSTWRITE,
 	S_NET_LEGACY,
+	S_SMB_SHARES,
 	S_CLOCK_MANUAL,
 	S_CLOCK_SOFTWARE,
 	S_CLOCK_HARDWARE,
@@ -374,6 +378,9 @@ static const SetItem net_items[] = {
     {ST_CHOICE, S_NET_LEGACY, "Legacy Ethernet drivers", "Use MrRexD's ps2sdk v1.0 DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up. Takes effect the next time Ethernet/FTP is started."},
     {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query multiple Internet time sources, require agreement, then write and verify the PS2 hardware RTC."},
 #endif
+#ifdef SMB
+    {ST_ACTION, S_SMB_SHARES, "SMB shares (SMB2.CNF)", "Edit the shares smb:/ and smb1:/ connect to (NAME, USERNAME, PASSWORD, VERSION, URL lines). Open smb:/ in Files afterwards to connect."},
+#endif
 };
 
 static const SetItem language_items[] = {
@@ -430,7 +437,7 @@ static const SetItem classic_items[] = {
 static const SetItem theme_items[] = {
     {ST_PAGE, P_THEME_BG, "Background", "Scene, colours, brightness, scanlines and wallpaper image."},
     {ST_PAGE, P_THEME_COLORS, "Interface colours", "Text, selection, accent, panels and borders."},
-    {ST_PAGE, P_THEME_STYLE, "Tiles & menus", "Application tile shape, selection style, corners and glow."},
+    {ST_PAGE, P_THEME_STYLE, "Tiles & menus", "Application tile shape, selection style, corners, glow and the section tabs."},
     {ST_PAGE, P_THEME_TEXT, "Text", "Font, size, weight and shadow."},
     {ST_PAGE, P_THEME_ICONS, "Icons", "Icon colours and artwork-free application icons."},
     {ST_PAGE, P_THEME_CLOCK, "Clock", "Position, time format, seconds and date."},
@@ -464,7 +471,7 @@ static const SetItem tstyle_items[] = {
     {ST_CHOICE, S_T_TILE, "Tile style", "Application tiles: memory card, rounded, chamfered, floating object or crystal slab."},
     {ST_CHOICE, S_T_CORNER, "Corners", NULL},
     {ST_CHOICE, S_T_GLOW, "Glow", "Soft light behind focused items."},
-    {ST_CHOICE, S_T_TABS, "Section tabs", "Hidden removes the top bar. L1 and R1 still switch sections."},
+    {ST_CHOICE, S_T_TABS, "Section tabs", "Shown or Hidden. Hidden removes the top bar; L1 and R1 still switch sections."},
     {ST_ACTION, S_T_RESETCAT, "Reset style", "Back to the values of the theme's preset."},
 };
 static const SetItem ttype_items[] = {
@@ -528,7 +535,7 @@ static const SetPage pages[P_COUNT] = {
     [P_PSU] = PAGE("Memory card backup files", DI_MC, "Naming and overwrite behavior when creating PSU backups.", psu_items),
     [P_THEME_BG] = PAGE("Background", DI_IMAGE, "Scene, brightness and static wallpaper.", tbg_items),
     [P_THEME_COLORS] = PAGE("Interface colours", DI_PALETTE, "Colours and opacity for text, focus and panels.", tcol_items),
-    [P_THEME_STYLE] = PAGE("Tiles & menus", DI_VIEW_GRID, "Tile silhouettes and menu selection styling.", tstyle_items),
+    [P_THEME_STYLE] = PAGE("Tiles & menus", DI_VIEW_GRID, "Tile silhouettes, menu selection styling and the section tabs.", tstyle_items),
     [P_THEME_TEXT] = PAGE("Text", DI_TEXT, "Font and readability. System can use your external font file.", ttype_items),
     [P_THEME_ICONS] = PAGE("Icons", DI_APPS, "Fallback icons for applications without artwork.", ticon_items),
     [P_THEME_CLOCK] = PAGE("Clock", DI_CLOCK, "Clock placement and date/time format.", tclock_items),
@@ -2769,6 +2776,32 @@ static void runAction(int id)
 		case S_ABOUT_PROJECT:
 			dashShowAbout();
 			break;
+#ifdef SMB
+		case S_SMB_SHARES: {
+			static const char smb_template[] =
+			    "# One share per block; URL ends a block. Lines starting with # are ignored.\n"
+			    "# A folder shared as PS2 on a PC, reached as smb:/PC\n"
+			    "NAME = PC\nUSERNAME = player\nPASSWORD = secret\nURL = smb://192.168.0.10/PS2\n\n"
+			    "# An SMB1-only server, reached as smb1:/\n"
+			    "# NAME = OLDBOX\n# VERSION = 1\n# URL = smb://192.168.0.30/PS2SMB\n";
+			char path[MAX_PATH];
+			int fd;
+			smbSharesConfigured(SMB_PATH_V2); /* reads the file; no network */
+			if (smbSharesConfigPath()[0])
+				dashStrCopy(path, smbSharesConfigPath(), sizeof(path));
+			else {
+				configBuildSysconfPath(path, sizeof(path), "SMB2.CNF");
+				configEnsureSysconfDir(path);
+				if ((fd = genOpen(path, FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC)) >= 0) {
+					genWrite(fd, (void *)smb_template, sizeof(smb_template) - 1);
+					genClose(fd);
+				}
+			}
+			dashTextEditor(path);
+			smbSharesReload();
+			break;
+		}
+#endif
 		case S_MISC_COMMANDS:
 			dashOpenBrowser(setting->Misc);
 			break;
@@ -3096,6 +3129,16 @@ static const char *actionStatus(int id)
 			return dashToolsGoogleStatus();
 		case S_CHECK_UPDATES:
 			return "Check now";
+#endif
+#ifdef SMB
+		case S_SMB_SHARES: {
+			static char n[24];
+			int shares = smbSharesConfigured(SMB_PATH_V2) + smbSharesConfigured(SMB_PATH_V1);
+			if (!smbSharesConfigPath()[0])
+				return "Not configured";
+			snprintf(n, sizeof(n), "%d share(s)", shares);
+			return n;
+		}
 #endif
 		default:
 			return NULL;
