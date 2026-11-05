@@ -3,6 +3,7 @@ import argparse
 import json
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 AI_TERMS = r"(?:claude|chatgpt|codex|openai|anthropic|kimi|copilot|gemini|deepseek|qwen|coderabbit|cursor|windsurf|antigravity|devin|aider|opencode)"
@@ -13,7 +14,7 @@ PATTERNS = (
     ),
     (
         "AI generation notice",
-        re.compile(r"(?im)^\s*(?:🤖\s*)?generated with\b.*\b" + AI_TERMS + r"\b"),
+        re.compile(r"(?im)^\s*(?:🤖\s*)?generated with\b.*\b(?:ai|" + AI_TERMS + r")\b"),
     ),
     ("Claude session trailer", re.compile(r"(?im)^\s*claude-session\s*:")),
     (
@@ -61,7 +62,10 @@ def check_sources(text_files, json_files, log_files):
             artifact_count += 1
             violations.extend(find_violations(message, f"commit {sha}"))
     for filename in log_files:
-        fields = read_text(filename).split("\x00")
+        contents = read_text(filename)
+        if not contents:
+            continue
+        fields = contents.split("\x00")
         if len(fields) < 2:
             raise ValueError(f"Expected NUL-delimited commit records in {filename}")
         for index in range(0, len(fields) - 1, 2):
@@ -75,6 +79,20 @@ def check_sources(text_files, json_files, log_files):
 
 
 def self_test():
+    with tempfile.TemporaryDirectory() as temp:
+        empty = Path(temp) / "empty.log"
+        empty.write_bytes(b"")
+        violations, artifact_count = check_sources([], [], [empty])
+        if violations or artifact_count:
+            raise AssertionError("An empty pushed-commit log was not accepted as zero commits")
+        malformed = Path(temp) / "malformed.log"
+        malformed.write_bytes(b"not-a-NUL-delimited-record")
+        try:
+            check_sources([], [], [malformed])
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("A malformed non-empty commit log was accepted")
     clean = (
         "fix: correct README typo",
         "Co-authored-by: Jane Doe <jane@example.com>",
@@ -84,6 +102,7 @@ def self_test():
         "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
         "co-authored-by: ChatGPT <chatgpt@openai.com>",
         "Co-authored-by: Codex <codex@openai.com>",
+        "Generated with AI",
         "Generated with [Claude Code](https://claude.com/claude-code)",
         "🤖 Generated with ChatGPT",
         "Claude-Session: https://claude.ai/code/session_123",
@@ -99,7 +118,7 @@ def self_test():
     for text in rejected:
         if not find_violations(text, "rejection self-test"):
             raise AssertionError(f"Attribution was accepted: {text}")
-    print(f"Attribution validator self-test passed ({len(clean) + len(rejected)} cases).")
+    print(f"Attribution validator self-test passed ({len(clean) + len(rejected) + 2} cases).")
 
 
 def main():

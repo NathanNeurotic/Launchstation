@@ -76,14 +76,40 @@ static char *smbReadConfigText(int *mc1_refused)
 	return NULL;
 }
 
+static unsigned int smb_cfg_text_hash;
+
+static unsigned int smbTextHash(const char *text)
+{
+	unsigned int hash = 2166136261u;
+
+	if (text == NULL)
+		return 0;
+	while (*text) {
+		hash ^= (unsigned char)*text++;
+		hash *= 16777619u;
+	}
+	return hash;
+}
+
 static void smbReadConfig(void)
 {
-	char *text;
+	char *text, previous_path[MAX_PATH];
+	unsigned int text_hash;
 	int mc1_refused, i;
 
+	snprintf(previous_path, sizeof(previous_path), "%s", smb_cfg_path);
 	text = smbReadConfigText(&mc1_refused);
+	text_hash = smbTextHash(text);
+	/* An unchanged fallback must not reset connected shares or failed-share
+	 * backoff while the preferred card is still unavailable. */
+	if (mc1_refused && smb_cfg_loaded && smb_cfg_mc1_pending &&
+	    text_hash == smb_cfg_text_hash && !strcmp(previous_path, smb_cfg_path)) {
+		free(text);
+		return;
+	}
 	smbConfigParse(text, &smb_cfg);
 	free(text);
+	smb_cfg_text_hash = text_hash;
 	/* A refused slot-2 stack switch must not freeze the result — not even a
 	 * lower-priority mc0: hit — into the session cache: a later call, once
 	 * the mc1: stack is loaded, can still find the preferred file there.
