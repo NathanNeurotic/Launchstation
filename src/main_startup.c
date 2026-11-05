@@ -102,9 +102,10 @@ void getIpConfig(void)
 
 		for (port_ix = 0; port_ix < 2 && fd < 0; port_ix++) {
 			if (ports_to_try[port_ix] == 1 && mc1AccessRefused()) {
-				/* MX4SIO owns slot 2 and the stack switch is refused on this
-				 * thread: keep the cache cold so a later UI-thread call
-				 * reads the file instead of caching defaults. */
+				/* MX4SIO owns slot 2 and implicit discovery never switches
+				 * stacks: keep the cache cold so a later call, once the
+				 * mc1: stack is loaded, reads the file instead of caching
+				 * defaults. */
 				mc1_refused = 1;
 				continue;
 			}
@@ -136,10 +137,13 @@ void getIpConfig(void)
 		snprintf(gw, sizeof(gw), "%.15s", buf + i);
 	}
 
-	if (fd >= 0 || !mc1_refused)
+	if (!mc1_refused)
 		updateIpConfigRuntimeState();
 	else
-		refreshIpConfigRuntimeState(); /* defaults shown; the mc1: read is retried later */
+		/* A lower-priority hit (mc0:/SYS-CONF) is shown but not frozen into
+		 * the cache: a later call, once mc1: is loaded, can still find the
+		 * preferred file there. */
+		refreshIpConfigRuntimeState();
 }
 
 //scanSystemCnf will check for a standard variable of a SYSTEM.CNF file

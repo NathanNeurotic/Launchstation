@@ -829,8 +829,11 @@ void invalidatePartitionCaches(void)
  * follows does not fail outright (the pre-#277 code hid this behind fixed
  * boot settles). Once any scan has run, the unit table is authoritative and
  * discovery belongs to the browser/dashboard rescans. Each unit gets the
- * wait once, so a genuinely absent stick fails fast afterwards. */
+ * wait once per IOP session, so a genuinely absent stick fails fast
+ * afterwards; an IOP reset re-enumerates everything, so the mask is keyed
+ * to the reset generation and each unit earns its wait again. */
 static int usb_target_waited;
+static unsigned int usb_target_waited_gen;
 
 static void waitUsbTargetReady(const char *gen_path)
 {
@@ -846,6 +849,10 @@ static void waitUsbTargetReady(const char *gen_path)
 	unit = colon[-1] - '0';
 	if (unit < 0 || unit > 9)
 		return; /* an unnumbered alias maps nowhere waitable */
+	if (usb_target_waited_gen != getIopResetGeneration()) {
+		usb_target_waited = 0;
+		usb_target_waited_gen = getIopResetGeneration();
+	}
 	if (usb_target_waited & (1 << unit))
 		return;
 	usb_target_waited |= 1 << unit;

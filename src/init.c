@@ -2074,14 +2074,15 @@ void ensureMemoryCardPortAccessible(int port)
 #endif
 }
 
-/* An mc1: read while another stack (MX4SIO) owns slot 2 needs an IOP reset,
- * which is refused where it is unsafe (the dashboard worker). Config
- * discovery uses this to leave its cache cold for a later UI-thread retry
- * instead of recording a read that never ran. */
+/* An mc1: read while MX4SIO owns slot 2 needs an IOP reset that tears the
+ * MX4SIO stack down. Implicit config discovery never makes that switch on
+ * any thread (opening a settings page must not evict the user's MX4SIO):
+ * it leaves its cache cold until an explicit browse to mc1: loads that
+ * stack and a later call can read the file. */
 int mc1AccessRefused(void)
 {
 #ifdef MX4SIO
-	return !isPathDeviceStackLoaded("mc1:/") && iopResetBlocked != NULL && iopResetBlocked();
+	return !isPathDeviceStackLoaded("mc1:/");
 #else
 	return 0;
 #endif

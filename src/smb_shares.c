@@ -59,8 +59,8 @@ static char *smbReadConfigText(int *mc1_refused)
 	port = !strncmp(LaunchElfDir, "mc1", 3);
 	for (i = 0; i < 2; i++, port ^= 1) {
 		if (port == 1 && mc1AccessRefused()) {
-			/* MX4SIO owns slot 2 and the stack switch is refused on this
-			 * thread: leave the file unread rather than caching its absence. */
+			/* MX4SIO owns slot 2 and implicit discovery never switches
+			 * stacks: leave the file unread rather than caching its absence. */
 			*mc1_refused = 1;
 			continue;
 		}
@@ -81,9 +81,10 @@ static void smbReadConfig(void)
 	text = smbReadConfigText(&mc1_refused);
 	smbConfigParse(text, &smb_cfg);
 	free(text);
-	/* A refused slot-2 stack switch must not freeze "no SMB2.CNF" into the
-	 * session cache: a later UI-thread call can still find it on mc1:. */
-	smb_cfg_loaded = !mc1_refused || smb_cfg_path[0] != '\0';
+	/* A refused slot-2 stack switch must not freeze the result — not even a
+	 * lower-priority mc0: hit — into the session cache: a later call, once
+	 * the mc1: stack is loaded, can still find the preferred file there. */
+	smb_cfg_loaded = !mc1_refused;
 	DPRINTF(" [SMB]: %s: %d share(s), dropped=%d unfinished=%d\n",
 	        smb_cfg_path[0] ? smb_cfg_path : "no " SMB_CNF_NAME,
 	        smb_cfg.count, smb_cfg.dropped, smb_cfg.unfinished);
