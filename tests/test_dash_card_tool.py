@@ -192,7 +192,7 @@ blank(E)
 lines = run(E, "m0", "pmass:/out/BESLES-12345GAME.psu", "c1")
 assert kind(lines, "TOAST|1|Save imported and verified"), lines
 assert saves(E) == saves(B)
-assert kind(lines, "PICK|Import which save?|mass:/|0|PSU|MCM|MAX|CBS|SPS|XPS|PSV")
+assert kind(lines, "PICK|Import which save?|mass:/|0|PSU|MCM/|MCM|MAX|CBS|SPS|XPS|PSV")
 host("mass:/out/bad.psu").write_bytes(b"\x27\x84" + bytes(2000))
 snap = sha(E)
 lines = run(E, "m0", "pmass:/out/bad.psu")
@@ -226,6 +226,45 @@ assert not host("mass:/out/BASLUS-99999BLZ-3.psu").exists()
 host("mass:/out/junk.max").write_bytes(b"Ps2PowerSave" + bytes(200))
 lines = run("convert:mass:/out/junk.max")
 assert any(l.startswith("MESSAGE|") and "Not converted" in l for l in lines) and not host("mass:/out/junk.psu").exists(), lines
+
+# 8c. Blaze itself keeps saves in the card's MCM folder as files with no extension named after the save
+# folder (Berion): those import with their whole name (dots included), the picker admits them through the
+# "MCM/" token, and "Convert to .psu" from a card asks where to write instead of writing onto the card
+_blaze = struct.pack("<LL", 8192, 80 + len(_body)) + b"Blaze".ljust(72, b"\0") + _body
+host("mass:/MCM").mkdir()
+host("mass:/MCM/BASLUS-77777BLZ").write_bytes(_blaze)
+host("mass:/MCM/BESLES-50468.SAV").write_bytes(_blaze)
+host("mass:/MCM/junk").write_bytes(bytes(100))
+host("mass:/MCM/BASLUS-88888BLZ.mcm").write_bytes(_blaze)
+H = "mass:/H.mcd"
+blank(H)
+lines = run(H, "m0", "pmass:/MCM/BASLUS-77777BLZ", "c1")
+assert kind(lines, "TOAST|1|Save imported and verified"), lines
+lines = run(H, "m0", "pmass:/MCM/BESLES-50468.SAV", "c1")
+assert kind(lines, "TOAST|1|Save imported and verified"), lines
+lines = run(H, "m0", "pmass:/MCM/BASLUS-88888BLZ.mcm", "c1")             # a renamed copy still drops .mcm
+assert kind(lines, "TOAST|1|Save imported and verified"), lines
+assert "BASLUS-77777BLZ" in saves(H) and "BESLES-50468.SAV" in saves(H) and "BASLUS-88888BLZ" in saves(H), saves(H)
+assert saves(H)["BASLUS-77777BLZ"] == saves(F)["BASLUS-99999BLZ"]
+snap = sha(H)
+lines = run(H, "m0", "pmass:/MCM/junk")
+assert any("MCM folder" in l for l in kind(lines, "MESSAGE|")) and sha(H) == snap, lines
+lines = run("convert:mass:/MCM/BASLUS-77777BLZ", "c1")                 # off a card: beside the file
+assert not kind(lines, "PICK|"), lines
+assert any(l.startswith("MESSAGE|") and "Converted" in l and l.endswith("|mass:/MCM/BASLUS-77777BLZ.psu") for l in lines), lines
+(dev / "mc0/MCM").mkdir(parents=True)
+host("mc0:/MCM/BASLUS-77777BLZ").write_bytes(_blaze)
+lines = run("convert:mc0:/MCM/BASLUS-77777BLZ", "pmass:/out/", "c1")  # on a card: pick a folder
+assert kind(lines, "PICK|Write the .psu to|mass:/|1|"), lines
+assert any("chosen folder" in l for l in kind(lines, "CONFIRM|Convert to .psu?|")), lines
+assert any(l.startswith("MESSAGE|") and "Converted" in l and l.endswith("|mass:/out/BASLUS-77777BLZ.psu") for l in lines), lines
+lines = run("convert:mc0:/MCM/BASLUS-77777BLZ")                        # pick declined: nothing written
+assert not kind(lines, "CONFIRM|") and not host("mass:/out/BASLUS-77777BLZ-2.psu").exists()
+assert not host("mc0:/MCM/BASLUS-77777BLZ.psu").exists()
+I = "mass:/I.mcd"
+blank(I)
+lines = run(I, "m0", "pmass:/out/BASLUS-77777BLZ.psu", "c1")
+assert kind(lines, "TOAST|1|Save imported and verified") and saves(I)["BASLUS-77777BLZ"] == saves(H)["BASLUS-77777BLZ"], lines
 
 # 9. safety copies are pruned to the newest ten, and only ours
 host("mass:/WLE-Safety/E-notes.txt").write_text("keep me")

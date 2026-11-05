@@ -625,12 +625,15 @@ static void ctExportPsu(const char *image, const char *name)
 
 static int ctStamp(uint8_t stamp[8]);
 
-/* The extensions Import save... and Convert to .psu accept, for the picker. */
-#define CT_SAVE_EXTS "PSU|MCM|MAX|CBS|SPS|XPS|PSV"
+/* What Import save... and Convert to .psu accept, for the picker: these
+ * extensions, plus every file in a folder called MCM, where Blaze keeps its
+ * saves without an extension (see pickExtOk). */
+#define CT_SAVE_EXTS "PSU|MCM/|MCM|MAX|CBS|SPS|XPS|PSV"
 
 /* A whole .psu read and checked into s; *why says what is wrong when it is not.
- * Any other save format (.mcm, .max, .cbs, .sps/.xps, .psv) is read too, by
- * its extension and content; a .psu always goes through the .psu reader. */
+ * Any other save format (.max, .cbs, .sps/.xps, .psv, .mcm) is read too, by
+ * its extension and content, as is an extensionless Blaze save in an MCM
+ * folder; a .psu always goes through the .psu reader. */
 static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 {
 	u8 *buf;
@@ -668,7 +671,12 @@ static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 	else if (genCmpFileExt(psu, "PSU"))
 		r = mcCardSaveFromPsu(buf, (uint32_t)size, s);
 	else {
-		const char *base = ctBaseName(psu), *dot = strrchr(base, '.');
+		/* Blaze names the file after the save folder, dots included, so a
+		 * file in an MCM folder keeps its whole name and is read as Blaze;
+		 * only a copy renamed to .mcm loses that suffix. */
+		int blaze = mcSaveFormatBlazePath(psu);
+		const char *base = ctBaseName(psu), *dot = blaze && !genCmpFileExt(base, "MCM") ? NULL : strrchr(base, '.');
+		const char *ext = blaze ? "mcm" : dot ? dot + 1 : NULL;
 		char name[33];
 		uint8_t stamp[8];
 		size_t nlen = dot ? (size_t)(dot - base) : strlen(base);
@@ -678,7 +686,7 @@ static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 			nlen = 32;
 		memcpy(name, base, nlen);
 		name[nlen] = 0;
-		r = mcSaveFormatRead(buf, (uint32_t)size, dot ? dot + 1 : NULL, name, ctStamp(stamp) ? stamp : NULL, s, &format);
+		r = mcSaveFormatRead(buf, (uint32_t)size, ext, name, ctStamp(stamp) ? stamp : NULL, s, &format);
 		/* save type 2 is PS2; anything else is a PS1 save. A PS2 .psv can also be
 		 * refused for a sub-folder, which keeps the generic message below. */
 		if (r == MCW_ERR_UNSUPPORTED && format == MCSF_PSV && size >= 0x40 &&
@@ -689,7 +697,7 @@ static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 		}
 		if (r == MCW_ERR_INVALID && format == MCSF_UNKNOWN) {
 			free(buf);
-			*why = "This file is not a save in a format Launchstation reads (.psu, .mcm, .max, .cbs, .sps, .xps, .psv).";
+			*why = "This file is not a save in a format Launchstation reads (.psu, .max, .cbs, .sps, .xps, .psv, .mcm or a Blaze MCM folder).";
 			return r;
 		}
 	}
@@ -698,10 +706,12 @@ static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 	return r;
 }
 
-/* "Convert to .psu": a save in another tool's format (.mcm, .max, .cbs,
- * .sps/.xps, .psv) written as a .psu beside it, named after the save folder.
- * Never replaces a file (a -2.. suffix instead); the result is read back and
- * must parse into the same save. */
+/* "Convert to .psu": a save in another tool's format (Blaze MCM, .max, .cbs,
+ * .sps/.xps, .psv) written as a .psu named after the save folder, beside the
+ * source, or in a folder the user picks when the source is on a memory card
+ * (mc/vmc), where Blaze leaves its files and a .psu does not belong. Never
+ * replaces a file (a -2.. suffix instead); the result is read back and must
+ * parse into the same save. */
 void dashCardConvertSave(const char *path)
 {
 	McSaveData s, back;
@@ -709,7 +719,7 @@ void dashCardConvertSave(const char *path)
 	uint32_t len = 0;
 	char folder[MAX_PATH], dest[MAX_PATH], name[33], msg[160];
 	const char *why;
-	int r, i;
+	int r, i, on_card;
 
 	if (genCmpFileExt(path, "PSU"))
 		return;
@@ -720,8 +730,16 @@ void dashCardConvertSave(const char *path)
 	}
 	memcpy(name, s.entry + 0x40, 32);
 	name[32] = 0;
-	dashStrCopy(folder, path, sizeof(folder));
-	folder[ctBaseName(path) - path] = 0;
+	on_card = strncmp(path, "mc", 2) == 0 || strncmp(path, "vmc", 3) == 0;
+	if (on_card) {
+		if (!dashPickPath("Write the .psu to", "mass:/", DASH_PICK_FOLDER, NULL, folder, sizeof(folder))) {
+			mcCardFreeSave(&s);
+			return;
+		}
+	} else {
+		dashStrCopy(folder, path, sizeof(folder));
+		folder[ctBaseName(path) - path] = 0;
+	}
 	dest[0] = 0;
 	for (i = 1; i < 100; i++) {
 		int w = i == 1 ? snprintf(dest, sizeof(dest), "%s%s.psu", folder, name) :
@@ -735,11 +753,11 @@ void dashCardConvertSave(const char *path)
 	}
 	if (i == 100) {
 		mcCardFreeSave(&s);
-		dashModalMessage(DI_WARNING, "Not converted", "No free .psu name next to this file.", path);
+		dashModalMessage(DI_WARNING, "Not converted", on_card ? "No free .psu name in that folder." : "No free .psu name next to this file.", path);
 		return;
 	}
-	snprintf(msg, sizeof(msg), "%.32s, %u file%s. A new .psu is written next to it; this file is not changed.", name,
-	         (unsigned)s.nfiles, s.nfiles == 1 ? "" : "s");
+	snprintf(msg, sizeof(msg), "%.32s, %u file%s. A new .psu is written %s; this file is not changed.", name,
+	         (unsigned)s.nfiles, s.nfiles == 1 ? "" : "s", on_card ? "to the chosen folder" : "next to it");
 	if (!dashModalConfirm("Convert to .psu?", msg, "Convert", 0)) {
 		mcCardFreeSave(&s);
 		return;

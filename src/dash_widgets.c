@@ -863,8 +863,34 @@ static void pickListRun(void *arg)
 	j->n = getDir(j->path, j->files);
 }
 
-/* ext is one extension ("PSU") or several separated by '|' ("PSU|MCM|MAX"). */
-static int pickExtOk(const char *name, const char *ext)
+/* 1 when the last folder of dir (any case) is name (upper case): "mass:/MCM/"
+ * and "mc0:/mcm" match "MCM". */
+static int pickLastDirIs(const char *dir, const char *name)
+{
+	size_t end = strlen(dir), start, n = strlen(name), i;
+
+	while (end > 0 && dir[end - 1] == '/')
+		end--;
+	start = end;
+	while (start > 0 && dir[start - 1] != '/' && dir[start - 1] != ':')
+		start--;
+	if (end - start != n)
+		return 0;
+	for (i = 0; i < n; i++) {
+		char c = dir[start + i];
+
+		if (c >= 'a' && c <= 'z')
+			c = (char)(c - 'a' + 'A');
+		if (c != name[i])
+			return 0;
+	}
+	return 1;
+}
+
+/* ext is one extension ("PSU") or several separated by '|' ("PSU|MCM|MAX").
+ * A token ending in '/' ("MCM/") instead admits every file in a folder of
+ * that name, for files kept without an extension; dir is the listed folder. */
+static int pickExtOk(const char *dir, const char *name, const char *ext)
 {
 	char one[8];
 	const char *p = ext;
@@ -872,7 +898,12 @@ static int pickExtOk(const char *name, const char *ext)
 	while (*p) {
 		size_t n = strcspn(p, "|");
 
-		if (n > 0 && n < sizeof(one)) {
+		if (n > 1 && n < sizeof(one) && p[n - 1] == '/') {
+			memcpy(one, p, n - 1);
+			one[n - 1] = 0;
+			if (pickLastDirIs(dir, one))
+				return 1;
+		} else if (n > 0 && n < sizeof(one)) {
 			memcpy(one, p, n);
 			one[n] = 0;
 			if (genCmpFileExt(name, one))
@@ -898,7 +929,7 @@ static void pickListDone(void *arg)
 
 			if (f->name[0] == '\0' || !strcmp(f->name, ".") || !strcmp(f->name, ".."))
 				continue;
-			if (!is_dir && (pk.mode == DASH_PICK_FOLDER || (pk.ext != NULL && !pickExtOk(f->name, pk.ext))))
+			if (!is_dir && (pk.mode == DASH_PICK_FOLDER || (pk.ext != NULL && !pickExtOk(j->path, f->name, pk.ext))))
 				continue;
 			if (!is_dir && pk.mode == DASH_PICK_LAUNCH && !genCmpFileExt(f->name, "ELF"))
 				continue;

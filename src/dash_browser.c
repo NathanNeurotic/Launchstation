@@ -20,6 +20,7 @@
 #include "filer_copy.h"
 #include "mc_card_export.h"
 #include "mc_card_write.h"
+#include "mc_save_formats.h"
 #include "mmce_backup.h"
 #include "dash_card_tool.h"
 #include "mmce_card_switch.h"
@@ -2670,11 +2671,14 @@ static void actionsMenu(void)
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 &&
 		    (genCmpFileExt(f->name, "MCD") || isVmcImage(f->name) || genCmpFileExt(f->name, "MCR") || genCmpFileExt(f->name, "VM1")))
 			ADD(DI_MC, "Card contents...", "PS2 and PS1 saves: copy, import, export, delete", 0, F_CARD_CONTENTS);
+		/* Other tools' save files by extension off the cards, plus Blaze's
+		 * extensionless files in a card's (or any) MCM folder. */
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && !genCmpFileExt(f->name, "PSU") &&
-		    (genCmpFileExt(f->name, "MCM") || genCmpFileExt(f->name, "MAX") || genCmpFileExt(f->name, "CBS") ||
-		     genCmpFileExt(f->name, "SPS") || genCmpFileExt(f->name, "XPS") || genCmpFileExt(f->name, "PSV")) &&
-		    strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
-			ADD(DI_MC, "Convert to .psu...", "Blaze, MAX, CodeBreaker, SharkPort, PS3 save", 0, F_CONVERT_SAVE);
+		    (((genCmpFileExt(f->name, "MCM") || genCmpFileExt(f->name, "MAX") || genCmpFileExt(f->name, "CBS") ||
+		       genCmpFileExt(f->name, "SPS") || genCmpFileExt(f->name, "XPS") || genCmpFileExt(f->name, "PSV")) &&
+		      strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3)) ||
+		     (fullPath(f, path, sizeof(path)) && mcSaveFormatBlazePath(path))))
+			ADD(DI_MC, "Convert to .psu...", "Blaze (MCM folder), MAX, CodeBreaker, SharkPort, PS3 save", 0, F_CONVERT_SAVE);
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "MCD")) {
 			ADD(DI_MC, "Back up .mcd...", "verified byte-for-byte copy", 0, F_BACKUP_MCD);
 			ADD(DI_MC, "Export as PCSX2 .ps2...", "adds ECC and verifies the copy", 0, F_EXPORT_PS2);
