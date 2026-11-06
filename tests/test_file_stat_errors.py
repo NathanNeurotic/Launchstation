@@ -53,6 +53,7 @@ for signature in ('static void ensurePathMemoryCardAccessible(',
     code += function(signature)
 if 'static int fatfsStatResult(' in source:
     code += '#ifdef EXFAT\n' + function('static int fatfsStatResult(') + '#endif\n'
+code += function('static int mcStatResult(')
 code += function('int genGetStat(')
 code += r'''
 static int check(const char *path,int reply) {
@@ -106,6 +107,21 @@ int main(void) {
         assert(check(native[i],0)==0);
     }
     assert(mc_access==5); /* MC1 gate still precedes each stat call. */
+    /* PS2SDK MCMAN's getstat2 leaks positive 1/2 for missing paths.
+     * Only real MC ports normalize these; a positive status on another
+     * filesystem must not be reclassified as a missing file. */
+    for(int port=0;port<2;port++) {
+        char path[32];snprintf(path,sizeof(path),"mc%d:/NEW.ELF",port);
+        assert(check(path,1)==-ENOENT);
+        assert(check(path,2)==-ENOENT);
+        assert(check(path,3)==-EACCES);
+        assert(check(path,4)==-EIO);
+        assert(check(path,0)==0);
+        assert(check(path,-EIO)==-EIO);
+    }
+    assert(check("vmc0:/NEW.ELF",1)==1);
+    assert(check("mmce0:/NEW.ELF",1)==1);
+    assert(check("usb0:/NEW.ELF",1)==1);
     assert(check("cf:/NEW.ELF",0)==0 && !strcmp(received,"cf0:/NEW.ELF"));
     iox_stat_t stat;int before=rpcs;
     cf_online=0;assert(genGetStat("cf0:/NEW.ELF",&stat)==-ENODEV && rpcs==before);
