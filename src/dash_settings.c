@@ -592,8 +592,7 @@ static void smbedSave(void)
 			break;
 		}
 	dashModalMessage(DI_CHECK, "Share saved",
-	                 "The smb:/ list (smb1:/ for an SMB1 share) reloads SMB2.CNF when it opens; "
-	                 "open it in Files to connect.", block);
+	                 "Open Files > smb:/ for SMB2/3 or smb1:/ for SMB1. The SMB2/3 list shows only shares that connect.", block);
 }
 
 static void smbedDelete(void)
@@ -628,14 +627,14 @@ static void smbedEditField(const char *title, char *buf, int size, const char *e
 
 static const SetItem smb_items[] = {
 	{ST_CHOICE, S_SMBED_PICK, "Share", "New share, or one already in SMB2.CNF."},
-	{ST_ACTION, S_SMBED_NAME, "Name shown in Files", "Label under smb:/. Example: PS2 Games. Use a unique name; avoid / \\ : * ? \" < > |."},
+	{ST_ACTION, S_SMBED_NAME, "Name shown in Files", "SMB2/3 label under smb:/. SMB1 uses smb1:/ without this label. Example: PS2 Games. Use a unique name; avoid / \\ : * ? \" < > |."},
 	{ST_CHOICE, S_SMBED_KIND, "Server type", "Match the server: PS2-Servers SMBv2 supports up to 2.1; SMBv3 up to 3.0.2. SMB1 is legacy and opens via smb1:/."},
 	{ST_ACTION, S_SMBED_IP, "Server address", "IPv4 address of the server. Example: 192.168.1.20. Host names are edited in SMB2.CNF as text."},
 	{ST_ACTION, S_SMBED_PORT, "Port", "TCP port from server settings. Examples: 445 standard, 1445 PS2-Servers SMB2/3, or 1025 its Desktop SMB1."},
 	{ST_ACTION, S_SMBED_FOLDER, "Share name", "The exported SMB share on the server. Example: games (PS2-Servers default)."},
 	{ST_ACTION, S_SMBED_USER, "Username", "Account name on the server. Example: ps2 for SMB2/3 or guest for SMB1 on PS2-Servers."},
 	{ST_ACTION, S_SMBED_PASS, "Password", "Password for that server account. Leave blank only if the server allows no-password access; saved in SMB2.CNF as plain text."},
-	{ST_ACTION, S_SMBED_SAVE, "Save share", "Writes this share to SMB2.CNF. Then open Files > smb:/ to connect."},
+	{ST_ACTION, S_SMBED_SAVE, "Save share", "Writes this share to SMB2.CNF. Open Files > smb:/ for SMB2/3 or smb1:/ for SMB1."},
 	{ST_ACTION, S_SMBED_DELETE, "Delete share", "Removes the picked share's block from SMB2.CNF."},
 	{ST_ACTION, S_SMBED_TEXT, "Edit SMB2.CNF as text", "Use the file editor for host names, deeper paths, or options this page does not cover."},
 };
@@ -653,7 +652,7 @@ static const SetItem net_items[] = {
     {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query multiple Internet time sources, require agreement, then write and verify the PS2 hardware RTC."},
 #endif
 #ifdef SMB
-    {ST_PAGE, P_SMB, "SMB shares", "Add saved server shares for Files. smb:/ lists these entries; it does not scan the network."},
+    {ST_PAGE, P_SMB, "SMB shares", "Add saved shares. smb:/ lists connected SMB2/3 shares; smb1:/ opens SMB1. Neither scans the network."},
 #endif
 };
 
@@ -804,7 +803,7 @@ static const SetPage pages[P_COUNT] = {
     [P_MMCE_BACKUP] = PAGE("MMCE backup & sync", DI_MC, "Backup, cloud and IGR return controls in one place.", mmce_backup_items),
     [P_NETWORK] = PAGE("Network", DI_NETWORK, "Console address for FTP, PS2Link and UDPFS.", net_items),
 #ifdef SMB
-    [P_SMB] = PAGE("SMB shares", DI_NETWORK, "One block per server in SMB2.CNF. Files lists saved shares; it does not scan the network.", smb_items),
+    [P_SMB] = PAGE("SMB shares", DI_NETWORK, "One block per share in SMB2.CNF. smb:/ lists connected SMB2/3 shares; smb1:/ opens SMB1. Neither scans the network.", smb_items),
 #endif
     [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules, settings locations, updates and About.", system_items),
     [P_CLASSIC] = PAGE("Classic screen settings", DI_SETTINGS, "These settings affect classic screens; dashboard themes have their own controls.", classic_items),
@@ -3132,37 +3131,38 @@ static void runAction(int id)
 			    "# One share per block; the URL line ends a block. Lines starting with #\n"
 			    "# are ignored -- remove the # from a block's lines to use that block.\n"
 			    "#\n"
-			    "# NAME  the label the file browser shows for this share (smb:/NAME).\n"
+			    "# NAME  the label shown for SMB2/3 (smb:/NAME). SMB1 opens via\n"
+			    "# smb1:/ without a label.\n"
 			    "# USERNAME / PASSWORD  exactly as the server lists them (31 characters\n"
 			    "#   each). PASSWORD = with nothing after it is a blank password.\n"
 			    "# VERSION  optional: 1 = an SMB1-only server (opens via smb1:/);\n"
-			    "#   2 or 3 = the smb: driver. Use 3 to mark a server set to SMB 3 only.\n"
+			    "#   2 or 3 = the smb: driver. Use 3 to mark a server that supports SMB3.\n"
 			    "# URL  smb://<IP address>[:port]/<share>. The port is optional (445 when\n"
 			    "#   omitted) and goes here only, never on the NAME line.\n"
 			    "#\n"
 			    "# PS2-Servers: its SMBv2/SMBv3 card shows IP, Port, Share, User and\n"
 			    "# Password -- copy them into a block like these. The card's default\n"
-			    "# port is 1025 (445 when its Take port 445 option is on).\n"
+			    "# port is 1445 (445 when its Take port 445 option is on).\n"
 			    "# SMBv2 card with a user and password:\n"
 			    "# NAME = PC\n"
 			    "# USERNAME = player\n"
 			    "# PASSWORD = secret\n"
-			    "# URL = smb://192.168.1.100:1025/games\n"
+			    "# URL = smb://192.168.1.100:1445/games\n"
 			    "#\n"
-			    "# SMBv2 card with no password ticked (its User, blank Password):\n"
+			    "# SMBv2 card with No password enabled (default User, blank Password):\n"
 			    "# NAME = PC\n"
-			    "# USERNAME = guest\n"
+			    "# USERNAME = ps2\n"
 			    "# PASSWORD =\n"
-			    "# URL = smb://192.168.1.100:1025/games\n"
+			    "# URL = smb://192.168.1.100:1445/games\n"
 			    "#\n"
-			    "# SMBv3 card (port 445, its Take port 445 option); VERSION = 3:\n"
+			    "# SMBv3 card (default 1445; 445 with Take port 445); VERSION = 3:\n"
 			    "# NAME = NGCARD\n"
 			    "# VERSION = 3\n"
 			    "# USERNAME = player\n"
 			    "# PASSWORD = secret\n"
 			    "# URL = smb://192.168.1.100:445/games\n"
 			    "#\n"
-			    "# PS2-Servers on Linux/macOS on a private port (its card shows the port):\n"
+			    "# PS2-Servers on Linux/macOS (use the port shown by its card):\n"
 			    "# NAME = LINUX\n"
 			    "# USERNAME = player\n"
 			    "# PASSWORD = secret\n"
