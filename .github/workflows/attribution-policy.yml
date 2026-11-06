@@ -75,7 +75,7 @@ jobs:
             git fetch origin "$DEFAULT_BRANCH":refs/remotes/origin/"$DEFAULT_BRANCH"
             BEFORE=$(git merge-base "origin/${DEFAULT_BRANCH}" "$AFTER" || true)
           fi
-          if [ "$BEFORE" = "$AFTER" ]; then
+          if [ "$BEFORE" = "$AFTER" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
             BEFORE=""
           fi
           if [ -z "$BEFORE" ]; then
