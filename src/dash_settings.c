@@ -636,7 +636,7 @@ static void smbedSave(void)
 		return;
 	}
 	dashModalMessage(DI_CHECK, "Share saved",
-	                 "Open Files > smb:/ for SMB2/3 or smb1:/ for SMB1. The SMB2/3 list shows only shares that connect.", block);
+	                 "Open Files > smb:/ for SMB2/3 or smb1:/ for SMB1. The SMB2/3 list shows only shares that connect.", smbed.name);
 }
 
 static void smbedDelete(void)
