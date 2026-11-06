@@ -15,6 +15,7 @@ SET "DESC" "PlayStation 2 file manager, launcher and device toolkit."
 SET "ELF" "@ELF@"
 SET "SAS" "@SAS@"
 # Comment out 1 of the 2 lines below. If app is in non-mc:/$SAS$ comment out the second, if in non-mc:/APPS/$SAS$ comment out the first
+# For non-mc:/$SAS$, also uncomment the first line.
 # SET "SAS_NON_MC" "$SAS$"
 SET "SAS_NON_MC" "APPS/$SAS$"
 #

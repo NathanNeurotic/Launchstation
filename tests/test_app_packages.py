@@ -81,6 +81,7 @@ int main(int argc,char **argv) {
         assert 'SET "DESC" "PlayStation 2 file manager, launcher and device toolkit."' in pbt
         assert 'SET "SAS_NON_MC" "APPS/$SAS$"' in pbt
         assert "If app is in non-mc:/$SAS$ comment out the second" in pbt
+        assert "For non-mc:/$SAS$, also uncomment the first line." in pbt
         assert "if in non-mc:/APPS/$SAS$ comment out the first" in pbt
         install_cleanup = pbt[pbt.index(":INSTALL_TO_MC"):pbt.index(":REMOVE")]
         assert "RRM" not in install_cleanup
