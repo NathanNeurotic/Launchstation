@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-06T03:22:06+00:00",
+  "updated_at": "2026-11-06T04:09:55+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 522,
+  "total_downloads": 542,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -1266,7 +1266,7 @@
       "release": "latest"
     },
     "715732122": {
-      "downloads": 0,
+      "downloads": 1,
       "name": "APP_LAUNCHSTATION-DS.psu",
       "release": "build-1090"
     },
@@ -1311,37 +1311,37 @@
       "release": "build-1090"
     },
     "715732707": {
-      "downloads": 0,
+      "downloads": 5,
       "name": "APP_LAUNCHSTATION-DS-1090.zip",
       "release": "latest"
     },
     "715732709": {
-      "downloads": 0,
+      "downloads": 3,
       "name": "APP_LAUNCHSTATION-1090.zip",
       "release": "latest"
     },
     "715732723": {
-      "downloads": 0,
+      "downloads": 3,
       "name": "LAUNCHSTATION.ELF",
       "release": "latest"
     },
     "715732724": {
-      "downloads": 0,
+      "downloads": 3,
       "name": "APP_LAUNCHSTATION.psu",
       "release": "latest"
     },
     "715732726": {
-      "downloads": 0,
+      "downloads": 2,
       "name": "APP_LAUNCHSTATION-DS.psu",
       "release": "latest"
     },
     "715732752": {
-      "downloads": 0,
+      "downloads": 1,
       "name": "LAUNCHSTATION-1090.zip",
       "release": "latest"
     },
     "715732753": {
-      "downloads": 0,
+      "downloads": 2,
       "name": "LAUNCHSTATION-DS.ELF",
       "release": "latest"
     },
@@ -1354,6 +1354,51 @@
       "downloads": 0,
       "name": "BOOT2.ELF",
       "release": "latest"
+    },
+    "715859032": {
+      "downloads": 0,
+      "name": "APP_LAUNCHSTATION-DS.psu",
+      "release": "build-1095"
+    },
+    "715859033": {
+      "downloads": 0,
+      "name": "APP_LAUNCHSTATION.psu",
+      "release": "build-1095"
+    },
+    "715859034": {
+      "downloads": 0,
+      "name": "APP_LAUNCHSTATION-DS-1095.zip",
+      "release": "build-1095"
+    },
+    "715859035": {
+      "downloads": 0,
+      "name": "LAUNCHSTATION.ELF",
+      "release": "build-1095"
+    },
+    "715859036": {
+      "downloads": 0,
+      "name": "APP_LAUNCHSTATION-1095.zip",
+      "release": "build-1095"
+    },
+    "715859061": {
+      "downloads": 0,
+      "name": "LAUNCHSTATION-DS.ELF",
+      "release": "build-1095"
+    },
+    "715859062": {
+      "downloads": 0,
+      "name": "BOOT.ELF",
+      "release": "build-1095"
+    },
+    "715859067": {
+      "downloads": 0,
+      "name": "BOOT2.ELF",
+      "release": "build-1095"
+    },
+    "715859068": {
+      "downloads": 0,
+      "name": "LAUNCHSTATION-1095.zip",
+      "release": "build-1095"
     }
   }
 }
