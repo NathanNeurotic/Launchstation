@@ -9,11 +9,53 @@ source = (root / "src/dash_browser.c").read_text(encoding="utf-8")
 
 
 def function(signature):
+    """Extract one C function while ignoring braces in strings and comments."""
     begin = source.index(signature)
     pos = source.index("{", begin) + 1
     depth = 1
+    state = "code"
+    escaped = False
     while depth:
-        depth += (source[pos] == "{") - (source[pos] == "}")
+        if pos >= len(source):
+            raise AssertionError(f"unclosed C function: {signature}")
+        char = source[pos]
+        next_char = source[pos + 1] if pos + 1 < len(source) else ""
+
+        if state == "string":
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                state = "code"
+        elif state == "character":
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == "'":
+                state = "code"
+        elif state == "line comment":
+            if char == "\n":
+                state = "code"
+        elif state == "block comment":
+            if char == "*" and next_char == "/":
+                state = "code"
+                pos += 1
+        elif char == '"':
+            state = "string"
+        elif char == "'":
+            state = "character"
+        elif char == "/" and next_char == "/":
+            state = "line comment"
+            pos += 1
+        elif char == "/" and next_char == "*":
+            state = "block comment"
+            pos += 1
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
         pos += 1
     return source[begin:pos] + "\n"
 
@@ -21,10 +63,12 @@ def function(signature):
 helper = function("static void smbStatusMessage(int version, char *out, int out_size)\n{")
 activation = function("static void activate(void)\n{")
 list_done = function("static void listDone(void *arg)\n{")
-assert "smbStatusMessage(smbPathKind(path), why, sizeof(why))" in activation
-assert activation.index("smbStatusMessage(smbPathKind(path)") < activation.index(
-    'dashToast(DASH_TOAST_WARN, "Device not found")'
-)
+generic_toast = activation.index('dashToast(DASH_TOAST_WARN, "Device not found")')
+smb_gate = activation.rfind("#ifdef SMB", 0, generic_toast)
+smb_failure = activation[smb_gate:generic_toast]
+assert "smbPathKind(path)" in smb_failure and "SMB_PATH_NONE" in smb_failure
+assert "smbStatusMessage" in smb_failure and "dashToast(DASH_TOAST_WARN, why)" in smb_failure
+assert "return;" in smb_failure
 assert "smbStatusMessage(v, why, sizeof(why))" in list_done
 
 c = r"""
@@ -84,6 +128,8 @@ with tempfile.TemporaryDirectory(prefix="smb-browser-failure-") as tmp:
     c_file = Path(tmp) / "test.c"
     exe = Path(tmp) / "test"
     c_file.write_text(c, encoding="utf-8")
+    # The compiler is selected from PATH and builds only the fixed harness above.
     subprocess.run([compiler, "-std=c11", "-Wall", "-Wextra", "-Werror",
-                    str(c_file), "-o", str(exe)], check=True)
-    subprocess.run([str(exe)], check=True, timeout=10)
+                    str(c_file), "-o", str(exe)], check=True)  # noqa: S603
+    # Run only the executable produced in this temporary directory.
+    subprocess.run([str(exe)], check=True, timeout=10)  # noqa: S603
