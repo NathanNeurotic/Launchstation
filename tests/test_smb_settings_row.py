@@ -24,13 +24,17 @@ assert "[P_SMB] = PAGE(" in settings
 enter = settings.split('it->type == ST_PAGE && (in->pressed & (DASH_IN_OK | DASH_IN_RIGHT))', 1)[1]
 assert "smbedLoadPick();" in enter.split("openPage(it->id);", 1)[0]
 
-# Save writes through the upsert core, re-validates the whole file, then reloads
+# The selected block is merged independently into CWD and SYS-CONF,
+# preserving unrelated entries; both are validated before either is written.
 save = settings.split("static void smbedSave(void)", 1)[1].split("\n}\n", 1)[0]
 assert "smbCnfBuildBlock(" in save and "smbedWriteFile(block)" in save
+prep = settings.split("static int smbedBuildTarget(", 1)[1].split("\n}\n", 1)[0]
 write = settings.split("static int smbedWriteFile(const char *block)", 1)[1].split("\n}\n", 1)[0]
-assert "smbCnfUpsertText(" in write
-assert write.index("smbConfigParse(") < write.index("FIO_O_WRONLY"), "whole file re-validated before writing"
-assert "smbSharesReload();" in write
+assert prep.index("smbCnfUpsertText(") < prep.index("smbConfigParse(work, &cfg);", prep.index("smbCnfUpsertText("))
+assert "configAppendPathFile(paths[0]" in write and "configBuildSysconfPath(paths[1]" in write
+assert write.index("smbedBuildTarget(") < write.index("dashWriteFile("), "preflight must precede writes"
+assert "if (!smbSharesReload())" in write
+assert "smbed_saved_mask == 3" in write
 
 # the text-editor row keeps the template seeding and reloads afterwards
 case = settings.split("case S_SMBED_TEXT:", 1)[1].split("break;", 1)[0]
@@ -61,8 +65,10 @@ assert "int smbCnfBuildBlock(" in cnf and "int smbCnfUpsertText(" in cnf
 assert "int smbCnfUpsertText(" in header and "int smbCnfBuildBlock(" in header
 
 # reload forgets the parse, so the next smb:/ open reads the edited file
-assert "void smbSharesReload(void);" in header
-reload = shares.split("void smbSharesReload(void)", 1)[1].split("\n}\n", 1)[0]
-assert "smb_cfg_loaded = 0;" in reload
+assert "int smbSharesReload(void);" in header
+reload = shares.split("int smbSharesReload(void)", 1)[1].split("\n}\n", 1)[0]
+assert "SMB2_DEVCTL_DISCONNECT_ALL" in reload
+assert reload.index("SMB2_DEVCTL_DISCONNECT_ALL") < reload.index("smb_cfg_loaded = 0;")
+assert "return 0;" in reload and "return 1;" in reload
 
 print("PASS: Settings > Network > SMB shares edits SMB2.CNF by GUI or text, and reloads it")
