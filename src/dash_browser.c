@@ -322,7 +322,7 @@ static void selectName(const char *name)
 }
 
 #ifdef SMB
-/* Keep SMB probe and listing failures actionable in the Files browser. */
+/** Format the actionable reason an SMB device probe or listing failed. */
 static void smbStatusMessage(int version, char *out, int out_size)
 {
 	if (!isSmbDriverLoaded(version)) {
@@ -338,6 +338,7 @@ static void smbStatusMessage(int version, char *out, int out_size)
 }
 #endif
 
+/** Finish a folder listing and report SMB root-list failures to the user. */
 static void listDone(void *arg)
 {
 	FbListJob *j = (FbListJob *)arg;
@@ -619,6 +620,7 @@ static void launchPath(const char *path, int with_args)
 	fb.args_loaded = LaunchArgsPending(); /* only still set when the start failed */
 }
 
+/** Activate the selected device or file, reporting SMB probe failures. */
 static void activate(void)
 {
 	char path[MAX_PATH];
@@ -647,9 +649,10 @@ static void activate(void)
 			if (!dashDevicePathReady(path)) {
 				openDir("", path); /* the list shows the new state */
 #ifdef SMB
-				if (smbPathKind(path) != SMB_PATH_NONE) {
+				int smb_version = smbPathKind(path);
+				if (smb_version != SMB_PATH_NONE) {
 					char why[96];
-					smbStatusMessage(smbPathKind(path), why, sizeof(why));
+					smbStatusMessage(smb_version, why, sizeof(why));
 					dashToast(DASH_TOAST_WARN, why);
 					return;
 				}
