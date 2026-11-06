@@ -71,10 +71,10 @@ assert "if (smb_version != SMB_PATH_NONE) {" in smb_failure
 assert "smbStatusMessage" in smb_failure
 assert "dashToast(DASH_TOAST_WARN, why)" in smb_failure
 assert "return;" in smb_failure
-assert "smb_dir_open_failed" in list_done
-assert "smbPathKind(j->path) != SMB_PATH_NONE" in list_done
-assert "smbStatusMessage(v, why, sizeof(why))" in list_done
-assert "dashToast(DASH_TOAST_WARN, why)" in list_done
+assert "if (smb_dir_open_failed && smbPathKind(j->path) != SMB_PATH_NONE) {" in list_done
+listing_message = list_done.index("smbStatusMessage(v, why, sizeof(why))")
+listing_toast = list_done.index("dashToast(DASH_TOAST_WARN, why)")
+assert listing_message < listing_toast
 
 c = r"""
 #include <assert.h>
