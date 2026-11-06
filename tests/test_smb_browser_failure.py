@@ -17,7 +17,7 @@ def function(signature):
     escaped = False
     while depth:
         if pos >= len(source):
-            raise AssertionError(f"unclosed C function: {signature}")
+            raise AssertionError
         char = source[pos]
         next_char = source[pos + 1] if pos + 1 < len(source) else ""
 
@@ -66,8 +66,10 @@ list_done = function("static void listDone(void *arg)\n{")
 generic_toast = activation.index('dashToast(DASH_TOAST_WARN, "Device not found")')
 smb_gate = activation.rfind("#ifdef SMB", 0, generic_toast)
 smb_failure = activation[smb_gate:generic_toast]
-assert "smbPathKind(path)" in smb_failure and "SMB_PATH_NONE" in smb_failure
-assert "smbStatusMessage" in smb_failure and "dashToast(DASH_TOAST_WARN, why)" in smb_failure
+assert "smbPathKind(path)" in smb_failure
+assert "if (smb_version != SMB_PATH_NONE) {" in smb_failure
+assert "smbStatusMessage" in smb_failure
+assert "dashToast(DASH_TOAST_WARN, why)" in smb_failure
 assert "return;" in smb_failure
 assert "smbStatusMessage(v, why, sizeof(why))" in list_done
 
@@ -129,7 +131,8 @@ with tempfile.TemporaryDirectory(prefix="smb-browser-failure-") as tmp:
     exe = Path(tmp) / "test"
     c_file.write_text(c, encoding="utf-8")
     # The compiler is selected from PATH and builds only the fixed harness above.
-    subprocess.run([compiler, "-std=c11", "-Wall", "-Wextra", "-Werror",
-                    str(c_file), "-o", str(exe)], check=True)  # noqa: S603
+    subprocess.run(  # noqa: S603
+        [compiler, "-std=c11", "-Wall", "-Wextra", "-Werror",
+         str(c_file), "-o", str(exe)], check=True)
     # Run only the executable produced in this temporary directory.
     subprocess.run([str(exe)], check=True, timeout=10)  # noqa: S603
