@@ -14,7 +14,7 @@ SET "AUTHOR" "github.com/nathanneurotic/"
 SET "DESC" "PlayStation 2 file manager, launcher and device toolkit."
 SET "ELF" "@ELF@"
 SET "SAS" "@SAS@"
-# Comment out 1 of the 2 lines below. If app is in non-mc:/$SAS$ comment out the first, if in non-mc:/APPS/$SAS$ comment out the second
+# Comment out 1 of the 2 lines below. If app is in non-mc:/$SAS$ comment out the second, if in non-mc:/APPS/$SAS$ comment out the first
 # SET "SAS_NON_MC" "$SAS$"
 SET "SAS_NON_MC" "APPS/$SAS$"
 #
@@ -52,10 +52,10 @@ RETURN -1
         ENDIF
 
 :INSTALL_TO_MC
+    # A failed copy must never delete an existing installation.
     IF FAIL COPY "$PWD$" "$ARG2$:/$SAS$"
         ECHO "Failed installing $TITLE$"
         MESSAGE "Failed installing $TITLE$"
-        RRM "$ARG2$:/$SAS$"
         RETURN -1
     ENDIF
     EXIT 0
@@ -64,7 +64,6 @@ RETURN -1
     IF FAIL COPY "$PWD$" "$ARG2$:/$SAS_NON_MC$"
         ECHO "Failed installing $TITLE$"
         MESSAGE "Failed installing $TITLE$"
-        RRM "$ARG2$:/$SAS_NON_MC$"
         RETURN -1
     ENDIF
     EXIT 0
