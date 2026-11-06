@@ -390,16 +390,6 @@ static struct {
 	SmbConfig snap;
 } smbed;
 
-static void smbedConfigPath(char *path, int size)
-{
-	if (smbSharesConfigPath()[0])
-		dashStrCopy(path, smbSharesConfigPath(), size);
-	else {
-		configBuildSysconfPath(path, size, "SMB2.CNF");
-		configEnsureSysconfDir(path);
-	}
-}
-
 /* smb://<host>[:port]/<folder> back into the draft fields. */
 static int smbedSplitUrl(const char *url, char *host, int host_size, int *port,
                          char *folder, int folder_size)
@@ -619,19 +609,32 @@ static void smbedSave(void)
 		                 "The file would not accept this share (a NAME may already be in use).", NULL);
 		return;
 	}
-	if (r != 0) {
+	if (r == -6) {
+		dashModalMessage(DI_WARNING, "Share saved; restart needed",
+		                 "SMB2.CNF was written, but the old SMB connection could not be disconnected. Restart Launchstation to apply the changed share.", NULL);
+		return;
+	}
+	if (r != 0 && r != -5) {
 		dashModalMessage(DI_WARNING, "Share not saved", "SMB2.CNF could not be written.", NULL);
 		return;
 	}
-	dashStrCopy(smbed.orig, smbed.name, sizeof(smbed.orig));
 	smbSharesSnapshot(&smbed.snap);
 	/* Point the picker at the saved share: the next Save replaces it, and
 	   Delete enables, instead of silently appending a second copy. */
 	for (i = 0; i < smbed.snap.count; i++)
 		if (strcmp(smbed.snap.share[i].name, smbed.name) == 0) {
 			smbed.pick = i + 1;
+			dashStrCopy(smbed.orig, smbed.name, sizeof(smbed.orig));
 			break;
 		}
+	if (r == -5) {
+		dashModalMessage(DI_WARNING, "Share saved in one location",
+		                 (smbed_saved_mask & 1) ?
+		                 "CWD saved; SYS-CONF could not be written. Check memory card space/access." :
+		                 "SYS-CONF saved; CWD could not be written. An older CWD copy may still take priority.",
+		                 NULL);
+		return;
+	}
 	dashModalMessage(DI_CHECK, "Share saved",
 	                 "Open Files > smb:/ for SMB2/3 or smb1:/ for SMB1. The SMB2/3 list shows only shares that connect.", block);
 }
@@ -644,7 +647,11 @@ static void smbedDelete(void)
 		return;
 	r = smbedWriteFile(NULL);
 	if (r != 0) {
-		dashModalMessage(DI_WARNING, "Share not deleted", "SMB2.CNF could not be written.", NULL);
+		dashModalMessage(DI_WARNING, r == -5 ? "Share deleted in one location" :
+		                 r == -6 ? "Share deleted; restart needed" : "Share not deleted",
+		                 r == -5 ? "The two SMB2.CNF locations could not both be updated; a stale share may remain." :
+		                 r == -6 ? "Saved configuration could not retire old SMB sessions. Restart Launchstation." :
+		                 "SMB2.CNF could not be written.", NULL);
 		return;
 	}
 	smbed.pick = 0;
@@ -3231,7 +3238,9 @@ static void runAction(int id)
 				}
 			}
 			dashTextEditor(path);
-			smbSharesReload();
+			if (!smbSharesReload())
+				dashModalMessage(DI_WARNING, "Restart required",
+				                 "The old SMB connections could not be closed. Restart Launchstation to use the edited configuration.", NULL);
 			break;
 		}
 #endif
