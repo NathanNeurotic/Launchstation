@@ -120,7 +120,7 @@ with tempfile.TemporaryDirectory(prefix="kit-package-") as tmp:
     with zipfile.ZipFile(output) as archive:
         names = set(archive.namelist())
         assert {"APPS/APP_LAUNCHSTATION/LAUNCHSTATION.ELF", "APPS/APP_LAUNCHSTATION/title.cfg",
-                "APPS/APP_LAUNCHSTATION/WLE-UPDATE-CA.PEM", "APPS/APP_LAUNCHSTATION/BGM.ADP",
+                "APPS/APP_LAUNCHSTATION/APPINFO.PBT", "APPS/APP_LAUNCHSTATION/WLE-UPDATE-CA.PEM", "APPS/APP_LAUNCHSTATION/BGM.ADP",
                 "APPS/APP_LAUNCHSTATION/icon.sys", "APPS/APP_LAUNCHSTATION/list.icn",
                 "APPS/APP_LAUNCHSTATION/copy.icn", "APPS/APP_LAUNCHSTATION/del.icn",
                 "APP_LAUNCHSTATION.psu", "POPS/POPSTARTER.ELF", "POPS/CHEATS.TXT", "EMBER/ember.elf",

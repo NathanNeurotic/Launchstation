@@ -2,7 +2,7 @@
 
 PSU records/padding follow RiptOPL's package_release_app.py and PSUManager:
 512-byte root/dot/dotdot/file records, with file payloads padded to 1024 bytes.
-ZIPs and PSUs contain the same eight direct app files, under the same folder name.
+ZIPs and PSUs contain the same nine direct app files, under the same folder name.
 """
 import argparse
 import datetime
@@ -21,6 +21,14 @@ LOOSE_ELFS = (("LAUNCHSTATION.ELF", 0), ("LAUNCHSTATION-DS.ELF", 1),
 
 ASSET_ROOT = Path(__file__).resolve().parents[1] / "res"
 MEMORY_CARD_SIDECARS = ("icon.sys", "list.icn", "copy.icn", "del.icn")
+
+
+def appinfo_pbt(title, elf_name, folder, revision):
+    text = (ASSET_ROOT / "APPINFO.PBT").read_text(encoding="utf-8")
+    for marker, value in (("@TITLE@", title), ("@VERSION@", revision[:8]),
+                          ("@ELF@", elf_name), ("@SAS@", folder)):
+        text = text.replace(marker, value)
+    return text.encode("utf-8")
 
 
 def bundled_sidecars():
@@ -110,7 +118,8 @@ def package(standard, dualshock, output, revision, epoch):
                "Developer=github.com/nathanneurotic/\nGenre=Homebrew\n"
                "Description=PlayStation 2 file manager, launcher and device toolkit.\n"
                "PlayersText=1\nSource=github.com/nathanneurotic/Launchstation/\n").encode()
-        members = {elf_name: elf, "title.cfg": cfg, **bundled_sidecars()}
+        members = {elf_name: elf, "title.cfg": cfg, "APPINFO.PBT": appinfo_pbt(title, elf_name, folder, revision),
+                   **bundled_sidecars()}
         psu = make_psu(folder, members, date)
         assert inspect_psu(psu) == (folder, members)
         (output / (folder + ".psu")).write_bytes(psu)
@@ -123,7 +132,7 @@ def package(standard, dualshock, output, revision, epoch):
         with zipfile.ZipFile(output / (folder + ".zip")) as archive:
             assert archive.testzip() is None
             assert {name.split("/", 1)[1]: archive.read(name) for name in archive.namelist()} == members
-        print(f"Verified {folder}.psu/.zip: {elf_name}, title.cfg, updater CA, BGM.ADP, and memory-card icons")
+        print(f"Verified {folder}.psu/.zip: {elf_name}, title.cfg, APPINFO.PBT, updater CA, BGM.ADP, and memory-card icons")
     for name, variant in LOOSE_ELFS:
         (output / name).write_bytes(elfs[variant])
         assert (output / name).read_bytes() == elfs[variant]

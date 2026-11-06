@@ -59,10 +59,10 @@ int main(int argc,char **argv) {
     return 0;
 }
 ''')
-    for index, (folder, name, _) in enumerate(p.VARIANTS):
+    for index, (folder, name, title) in enumerate(p.VARIANTS):
         archive = (tmp / "out" / (folder + ".psu")).read_bytes()
         memory_card_files = ("icon.sys", "list.icn", "copy.icn", "del.icn")
-        expected_members = {name, "title.cfg", "WLE-UPDATE-CA.PEM", "BGM.ADP"}.union(memory_card_files)
+        expected_members = {name, "title.cfg", "APPINFO.PBT", "WLE-UPDATE-CA.PEM", "BGM.ADP"}.union(memory_card_files)
         with zipfile.ZipFile(tmp / "out" / (folder + ".zip")) as z:
             assert set(z.namelist()) == {folder + "/" + filename for filename in expected_members}
             assert z.read(folder + "/WLE-UPDATE-CA.PEM") == (root / "res/WLE-UPDATE-CA.PEM").read_bytes()
@@ -74,6 +74,17 @@ int main(int argc,char **argv) {
         packaged_folder, packaged_members = p.inspect_psu(archive)
         assert packaged_folder == folder
         assert set(packaged_members) == expected_members
+        pbt = packaged_members["APPINFO.PBT"].decode("utf-8")
+        for key, value in (("TITLE", title), ("VERSION", "aaaaaaaa"), ("ELF", name), ("SAS", folder)):
+            assert f'SET "{key}" "{value}"' in pbt
+        assert 'SET "AUTHOR" "github.com/nathanneurotic/"' in pbt
+        assert 'SET "DESC" "PlayStation 2 file manager, launcher and device toolkit."' in pbt
+        assert 'SET "SAS_NON_MC" "APPS/$SAS$"' in pbt
+        assert "If app is in non-mc:/$SAS$ comment out the second" in pbt
+        assert "For non-mc:/$SAS$, also uncomment the first line." in pbt
+        assert "if in non-mc:/APPS/$SAS$ comment out the first" in pbt
+        install_cleanup = pbt[pbt.index(":INSTALL_TO_MC"):pbt.index(":REMOVE")]
+        assert "RRM" not in install_cleanup
         assert packaged_members["WLE-UPDATE-CA.PEM"] == (root / "res/WLE-UPDATE-CA.PEM").read_bytes()
         assert packaged_members["BGM.ADP"] == (root / "res/music.sad").read_bytes()
         for filename in memory_card_files:
