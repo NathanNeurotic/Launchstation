@@ -68,6 +68,10 @@ jobs:
           if [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
             BEFORE=""
           fi
+          REWIND=false
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "$AFTER" ] && git merge-base --is-ancestor "$AFTER" "$BEFORE"; then
+            REWIND=true
+          fi
           if [ -n "$BEFORE" ] && ! git merge-base --is-ancestor "$BEFORE" "$AFTER"; then
             BEFORE=$(git merge-base "$BEFORE" "$AFTER" || true)
           fi
@@ -75,7 +79,7 @@ jobs:
             git fetch origin "$DEFAULT_BRANCH":refs/remotes/origin/"$DEFAULT_BRANCH"
             BEFORE=$(git merge-base "origin/${DEFAULT_BRANCH}" "$AFTER" || true)
           fi
-          if [ "$BEFORE" = "$AFTER" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+          if [ "$BEFORE" = "$AFTER" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ] && [ "$REWIND" != true ]; then
             BEFORE=""
           fi
           if [ -z "$BEFORE" ]; then
