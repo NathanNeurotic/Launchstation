@@ -628,16 +628,16 @@ static void smbedEditField(const char *title, char *buf, int size, const char *e
 
 static const SetItem smb_items[] = {
 	{ST_CHOICE, S_SMBED_PICK, "Share", "New share, or one already in SMB2.CNF."},
-	{ST_ACTION, S_SMBED_NAME, "Name shown in Files", "The smb:/NAME label: letters, digits, spaces; not / \\ : * ? \" < > |, and not another share's name."},
-	{ST_CHOICE, S_SMBED_KIND, "Server type", "SMB2: an SMB2 server (PS2-Servers' SMBv2 card). SMB3: a server set to SMB 3 only (its SMBv3 card, port 445). SMB1: an old server (its SMBv1 card), opened via smb1:/."},
-	{ST_ACTION, S_SMBED_IP, "Server address", "The PC's address, as PS2-Servers' card shows it under LAN IP."},
-	{ST_ACTION, S_SMBED_PORT, "Port", "TCP port the server listens on; 445 is the default. A PS2-Servers card on Windows serves 445 (its Take port 445 option); on Linux/macOS it shows the port to type."},
-	{ST_ACTION, S_SMBED_FOLDER, "Share name", "The share on the server; PS2-Servers' default is 'games'."},
-	{ST_ACTION, S_SMBED_USER, "Username", "As the server lists it; blank when the share needs no logon (use the server's guest user, e.g. 'guest')."},
-	{ST_ACTION, S_SMBED_PASS, "Password", "Blank for a no-password share."},
-	{ST_ACTION, S_SMBED_SAVE, "Save share", "Writes this block into SMB2.CNF, replacing the picked share (or appending it), and reloads the list."},
+	{ST_ACTION, S_SMBED_NAME, "Name shown in Files", "Label under smb:/. Example: PS2 Games. Use a unique name; avoid / \\ : * ? \" < > |."},
+	{ST_CHOICE, S_SMBED_KIND, "Server type", "SMB2: server allows SMB2. SMB3: server is SMB3-only (e.g. PS2-Servers SMBv3). SMB1 is legacy and opens via smb1:/."},
+	{ST_ACTION, S_SMBED_IP, "Server address", "IPv4 address of the server. Example: 192.168.1.20. Host names are edited in SMB2.CNF as text."},
+	{ST_ACTION, S_SMBED_PORT, "Port", "TCP port from server settings. Example: 445 (default) or 1025 (PS2-Servers default)."},
+	{ST_ACTION, S_SMBED_FOLDER, "Share name", "The exported SMB share on the server. Example: games (PS2-Servers default)."},
+	{ST_ACTION, S_SMBED_USER, "Username", "Account name set on the server. Example: guest. Leave blank only if guest access needs no username."},
+	{ST_ACTION, S_SMBED_PASS, "Password", "Password for that server account. Leave blank only for a blank-password share; saved in SMB2.CNF."},
+	{ST_ACTION, S_SMBED_SAVE, "Save share", "Writes this share to SMB2.CNF. Then open Files > smb:/ to connect."},
 	{ST_ACTION, S_SMBED_DELETE, "Delete share", "Removes the picked share's block from SMB2.CNF."},
-	{ST_ACTION, S_SMBED_TEXT, "Edit SMB2.CNF as text", "The raw file in the text editor, for anything this page does not cover."},
+	{ST_ACTION, S_SMBED_TEXT, "Edit SMB2.CNF as text", "Use the file editor for host names, deeper paths, or options this page does not cover."},
 };
 #endif /* SMB */
 
@@ -653,7 +653,7 @@ static const SetItem net_items[] = {
     {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query multiple Internet time sources, require agreement, then write and verify the PS2 hardware RTC."},
 #endif
 #ifdef SMB
-    {ST_PAGE, P_SMB, "SMB shares", "Add or edit the servers smb:/ and smb1:/ connect to, without hand-editing SMB2.CNF. The page writes one block per share; PS2-Servers' cards show exactly what to type."},
+    {ST_PAGE, P_SMB, "SMB shares", "Add saved server shares for Files. smb:/ lists these entries; it does not scan the network."},
 #endif
 };
 
@@ -804,7 +804,7 @@ static const SetPage pages[P_COUNT] = {
     [P_MMCE_BACKUP] = PAGE("MMCE backup & sync", DI_MC, "Backup, cloud and IGR return controls in one place.", mmce_backup_items),
     [P_NETWORK] = PAGE("Network", DI_NETWORK, "Console address for FTP, PS2Link and UDPFS.", net_items),
 #ifdef SMB
-    [P_SMB] = PAGE("SMB shares", DI_NETWORK, "One block per server, written into SMB2.CNF; smb:/ and smb1:/ read it when they open.", smb_items),
+    [P_SMB] = PAGE("SMB shares", DI_NETWORK, "One block per server in SMB2.CNF. Files lists saved shares; it does not scan the network.", smb_items),
 #endif
     [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules, settings locations, updates and About.", system_items),
     [P_CLASSIC] = PAGE("Classic screen settings", DI_SETTINGS, "These settings affect classic screens; dashboard themes have their own controls.", classic_items),
@@ -3089,17 +3089,17 @@ static void runAction(int id)
 			break;
 #ifdef SMB
 		case S_SMBED_NAME:
-			smbedEditField("Name shown in Files (smb:/NAME)", smbed.name, sizeof(smbed.name),
+			smbedEditField("Files label (e.g. PS2 Games)", smbed.name, sizeof(smbed.name),
 			               "At most 31 characters, without / \\ : * ? \" < > |.");
 			break;
 		case S_SMBED_IP:
-			smbedEditField("Server address (IPv4, as the server's card shows it)", smbed.host, sizeof(smbed.host),
+			smbedEditField("Server IPv4 (e.g. 192.168.1.20)", smbed.host, sizeof(smbed.host),
 			               "At most 79 characters. A server named by words instead of an address is edited as text.");
 			break;
 		case S_SMBED_PORT: {
 			char buf[8];
 			snprintf(buf, sizeof(buf), "%d", smbed.port > 0 ? smbed.port : 445);
-			if (dashModalKeyboard("TCP port (445 is the default)", buf, sizeof(buf))) {
+			if (dashModalKeyboard("TCP port (445 default; e.g. 1025)", buf, sizeof(buf))) {
 				char *end;
 				long p = strtol(buf, &end, 10);
 				if (end == buf || *end != '\0' || p < 0 || p > 65535)
@@ -3110,15 +3110,15 @@ static void runAction(int id)
 			break;
 		}
 		case S_SMBED_FOLDER:
-			smbedEditField("Share name on the server", smbed.folder, sizeof(smbed.folder),
+			smbedEditField("Share on server (e.g. games)", smbed.folder, sizeof(smbed.folder),
 			               "At most 63 characters.");
 			break;
 		case S_SMBED_USER:
-			smbedEditField("Username (blank: guest / none)", smbed.user, sizeof(smbed.user),
+			smbedEditField("Username (e.g. guest)", smbed.user, sizeof(smbed.user),
 			               "At most 31 characters.");
 			break;
 		case S_SMBED_PASS:
-			smbedEditField("Password (blank for a no-password share)", smbed.pass, sizeof(smbed.pass),
+			smbedEditField("Server account password (blank if none)", smbed.pass, sizeof(smbed.pass),
 			               "At most 31 characters.");
 			break;
 		case S_SMBED_SAVE:
@@ -3534,11 +3534,11 @@ static const char *actionStatus(int id)
 		case S_SMBED_PICK:
 			return smbed.pick == 0 ? "New share" : smbed.orig;
 		case S_SMBED_NAME:
-			return smbed.name[0] ? smbed.name : "required";
+			return smbed.name[0] ? smbed.name : "e.g. PS2 Games";
 		case S_SMBED_KIND:
 			return smbed.kind == 1 ? "SMB1 (opens via smb1:/)" : smbed.kind == 3 ? "SMB3" : "SMB2";
 		case S_SMBED_IP:
-			return smbed.host[0] ? smbed.host : "required";
+			return smbed.host[0] ? smbed.host : "e.g. 192.168.1.20";
 		case S_SMBED_PORT: {
 			static char port[16];
 			if (smbed.port > 0)
@@ -3548,9 +3548,9 @@ static const char *actionStatus(int id)
 			return port;
 		}
 		case S_SMBED_FOLDER:
-			return smbed.folder[0] ? smbed.folder : "required";
+			return smbed.folder[0] ? smbed.folder : "e.g. games";
 		case S_SMBED_USER:
-			return smbed.user[0] ? smbed.user : "guest / none";
+			return smbed.user[0] ? smbed.user : "e.g. guest or blank";
 		case S_SMBED_PASS:
 			return smbed.pass[0] ? "set (hidden)" : "blank";
 		case S_SMBED_SAVE:
