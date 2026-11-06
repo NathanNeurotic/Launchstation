@@ -1,20 +1,21 @@
 # Building from Source
 
-Launchstation is built with the PS2BUILD SDK and its LLVM/Clang toolchain. This guide reproduces what `.github/workflows/compile.yml` does, step by step, so a local build matches a release build.
+Launchstation is built with the [PS2BUILD SDK](https://ps2build.dev/) and its LLVM/Clang toolchain. This guide reproduces what `.github/workflows/compile.yml` does, step by step, so a local build matches a release build.
 
 **Short version**
 
 ```
-# one time: install ps2build, then fetch the SDK and LLVM toolchain
-export PATH="$HOME/.local/share/ps2build:$PATH"
-ps2build update
-ps2build update llvm-toolchain
+# from the repository root: install or refresh the CI-selected SDK
+export PS2BUILD_ROOT="$HOME/.local/share/ps2build"
+sh scripts/ps2build_sdk.sh --llvm "$PS2BUILD_ROOT"
+export PATH="$PS2BUILD_ROOT:$PATH"
+export PS2BUILD_TOOLCHAIN=llvm
 
 # every checkout (and again after changing toolchain)
 bash scripts/build_cloud_tls.sh
 bash scripts/build_jpeg.sh
 python3 scripts/gen_cloud_client.py
-python3 scripts/gen_githash.py
+python3 scripts/gen_githash.py --require-git
 ps2build build
 ```
 
@@ -23,29 +24,27 @@ The release ELF is `build/bin/wLaunchELF-packed.elf`. `ps2build` is the only bui
 ## Requirements
 
 - **Host:** Linux (what CI uses). The helper scripts also contain MSYS/Git-Bash path handling for Windows, but only Linux is exercised by CI.
-- **Tools on `PATH`:** `bash`, `curl`, `tar` with bzip2 and gzip, `sha256sum`, `python3` 3.11 or newer (only the standard library is used; `release_notes.py` needs `hashlib.file_digest`), `git` and **CMake** (the dependency scripts call the CMake on your `PATH`; PS2BUILD only supplies toolchain files). A host `gcc` or `clang` is needed to run the test suite.
+- **Tools on `PATH`:** `bash`, `curl`, `tar` with bzip2, gzip and Zstandard (`zstd`, used by the SDK mirror fallback), `sha256sum`, `python3` 3.11 or newer (only the standard library is used; `release_notes.py` needs `hashlib.file_digest`), `git`, **CMake** and **Make** (the dependency scripts call plain `cmake`; its default Linux generator uses Unix Makefiles). A host `gcc` or `clang` and **NumPy** (`python3 -m pip install --user numpy`, as CI does; `tests/test_sfx_ps2.py` imports it) are needed to run the test suite.
 - **Network:** the first run downloads the SDK, the LLVM toolchain, Mbed TLS and libjpeg-turbo. The two dependency tarballs are SHA-256 pinned in their scripts and cached under `.cache/`.
 - **Optional:** Pillow, only for `scripts/gen_dash_font.py` and `scripts/prepare_psbbn_theme.py`.
 
 ## 1. Install the PS2BUILD SDK
 
-```
-curl -sSfL --retry 8 --retry-delay 5 --retry-all-errors --connect-timeout 20 \
-  https://git.techwritescode.dev/ps2/install/raw/branch/master/install.sh -o install.sh
-sh install.sh
-export PATH="$HOME/.local/share/ps2build:$PATH"
-```
-
-The installer puts the `ps2build` executable directly in `~/.local/share/ps2build` (not in a `bin/` subfolder) and adds that directory to `PATH`. The download host occasionally returns transient 5xx errors, which is why CI retries and does not pipe `curl` into `sh`. Then bring every component to its latest release and make sure the LLVM toolchain is present:
+Run the repository's SDK installer from the checkout root. It installs the exact versions pinned in `.github/ps2build-sdk.env`: it reuses an exact installed version and updates only components that differ, and it does not ask the release server which version is newest. Once a week `.github/workflows/ps2build-sdk-watch.yml` asks, and opens a draft pull request when new releases need new pins. This is the installer used by CI:
 
 ```
-ps2build update                  # toolchain, ps2build, sdk-core, sdk-world
-ps2build update llvm-toolchain   # only if the Clang config below is missing
-test -f ~/.local/share/ps2build/llvm-toolchain/ee/bin/mips64r5900el-ps2-elf-clang.cfg
-ps2build version                 # prints ps2build and each SDK component version
+export PS2BUILD_ROOT="$HOME/.local/share/ps2build"
+sh scripts/ps2build_sdk.sh --llvm "$PS2BUILD_ROOT"
+export PATH="$PS2BUILD_ROOT:$PATH"
+export PS2BUILD_TOOLCHAIN=llvm
+
+test -f "$PS2BUILD_ROOT/llvm-toolchain/ee/bin/mips64r5900el-ps2-elf-clang.cfg"
+ps2build version
 ```
 
-CI always tracks the latest SDK; a local SDK that is older can fail to build. `ps2build update --check` only reports installed versus available versions. The dependency scripts look for the SDK in `$PS2BUILD_ROOT` (default `~/.local/share/ps2build`).
+The `ps2build` executable lives directly in the SDK directory, not in a `bin/` subfolder. Keep `PS2BUILD_ROOT` set if you choose a different destination: the dependency scripts use it to find the compiler. Run the installer again after SDK pins change or when refreshing a development environment.
+
+If `git.techwritescode.dev` is unavailable, the installer falls back to the `NathanNeurotic/ps2build-mirror` release pinned as `PS2BUILD_SDK_TAG` and verifies its files against that release's SHA-256 manifest, whose own hash is pinned as `PS2BUILD_SDK_SUMS_SHA256`. With no release pinned, it takes the newest mirror release and the manifest hash listed in that release's `pin.env`, and warns if that release does not hold the pinned SDK. A private mirror requires a token with read access supplied as `PS2BUILD_SDK_MIRROR_TOKEN` (CI binds its `PS2BUILD_MIRROR_TOKEN` secret to that name). Without mirror access, restore the official host or obtain authorized mirror access; do not bypass download verification.
 
 ## 2. Toolchain selection
 
@@ -176,12 +175,12 @@ python3 docs-site/build.py --out site --zip Launchstation-Documentation.zip
 
 ## 12. Claude Code cloud sessions
 
-The repository ships `.claude/settings.json` with a `SessionStart` hook that runs `.claude/hooks/session-start.sh`. In a Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`; it does nothing elsewhere) the hook installs the PS2BUILD SDK with the same installer and retry options as CI if `ps2build` is missing, runs `ps2build update` and `ps2build update llvm-toolchain`, and exports `PATH`, `LLVM_BIN` and `PS2BUILD_TOOLCHAIN=llvm` for the session through `CLAUDE_ENV_FILE`. It honors `PS2DEV_INSTALL_DIR` as the install location. After it runs, the commands in sections 3 to 9 work unchanged.
+The repository ships `.claude/settings.json` with a `SessionStart` hook that runs `.claude/hooks/session-start.sh`. In a Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`; it does nothing elsewhere) the hook installs the PS2BUILD SDK with the same installer and retry options as CI if `ps2build` is missing, runs `sh scripts/ps2build_sdk.sh --llvm "$PS2BUILD_ROOT"` to install the pinned components, and exports `PATH`, `LLVM_BIN` and `PS2BUILD_TOOLCHAIN=llvm` for the session through `CLAUDE_ENV_FILE`. It honors `PS2DEV_INSTALL_DIR` as the install location. After it runs, the commands in sections 3 to 9 work unchanged.
 
 ## Troubleshooting a build
 
 - **`ps2build: command not found`:** add `~/.local/share/ps2build` to `PATH`.
-- **`PS2 EE clang config not found`:** run `ps2build update llvm-toolchain`.
+- **`PS2 EE clang config not found`:** run `sh scripts/ps2build_sdk.sh --llvm "$PS2BUILD_ROOT"` to install the pinned LLVM component.
 - **Missing `mbedtls/ssl.h` or `jpeglib.h`:** run the two dependency scripts first.
 - **`symbol has invalid binding` from `ld.lld`, or a purity failure listing `GCC:`:** a GCC-built archive was linked; rebuild the dependencies with the same toolchain, and do not add `jpeg` or the GCC-only SDK `audsrv` package to `ps2.yaml` (sound uses `audsrv-compat` and the `audio:audsrv` driver) (`tests/test_llvm_toolchain.py` guards this).
 - **`Expected a Git revision` / `outside the PS2 timestamp range`:** pass a lowercase hex `--revision` and a Unix `--epoch` in 2000-2099 to `package_apps.py`.

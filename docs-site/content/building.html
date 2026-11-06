@@ -1,4 +1,4 @@
-<h1>Building from Source</h1><p class="lead">Launchstation is built with the PS2BUILD SDK and its LLVM/Clang toolchain. This page reproduces what <code>.github/workflows/compile.yml</code> does, step by step, so you can reproduce the build procedure locally. CI also embeds its configured Google OAuth client; local builds need not do so.</p>
+<h1>Building from Source</h1><p class="lead">Launchstation is built with the <a href="https://ps2build.dev/">PS2BUILD SDK</a> and its LLVM/Clang toolchain. This page reproduces what <code>.github/workflows/compile.yml</code> does, step by step, so you can reproduce the build procedure locally. CI also embeds its configured Google OAuth client; local builds need not do so.</p>
 <div class="callout info"><div class="h">Short version</div><pre><code># from the repository root: install or refresh the CI-selected SDK
 export PS2BUILD_ROOT="$HOME/.local/share/ps2build"
 sh scripts/ps2build_sdk.sh --llvm "$PS2BUILD_ROOT"
