@@ -107,7 +107,7 @@ void smbSharesConnect(int version, int retry_failed);
 int smbSharesConnectedCount(int version);
 void smbSharesStatus(int version, char *out, int out_size); /* no IO */
 void smbSharesForget(void); /* the drivers are gone (IOP reset) */
-void smbSharesReload(void); /* SMB2.CNF was edited: read it again next time */
+int smbSharesReload(void); /* 1 when old sessions were retired; 0 on disconnect failure */
 #endif
 
 #endif
