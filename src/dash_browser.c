@@ -321,6 +321,23 @@ static void selectName(const char *name)
 		}
 }
 
+#ifdef SMB
+/* Keep SMB probe and listing failures actionable in the Files browser. */
+static void smbStatusMessage(int version, char *out, int out_size)
+{
+	if (!isSmbDriverLoaded(version)) {
+		const char *error = smbLoadError(version);
+
+		if (error[0])
+			dashStrCopy(out, error, out_size);
+		else
+			dashStrCopy(out, "SMB driver is not ready; reopen this device to retry.", out_size);
+		return;
+	}
+	smbSharesStatus(version, out, out_size);
+}
+#endif
+
 static void listDone(void *arg)
 {
 	FbListJob *j = (FbListJob *)arg;
@@ -359,10 +376,7 @@ static void listDone(void *arg)
 			int v = smbPathKind(j->path);
 			char why[96];
 
-			if (!isSmbDriverLoaded(v) && smbLoadError(v)[0])
-				dashStrCopy(why, smbLoadError(v), sizeof(why));
-			else
-				smbSharesStatus(v, why, sizeof(why));
+			smbStatusMessage(v, why, sizeof(why));
 			dashToast(DASH_TOAST_WARN, why);
 		}
 #endif
@@ -632,6 +646,14 @@ static void activate(void)
 				return;
 			if (!dashDevicePathReady(path)) {
 				openDir("", path); /* the list shows the new state */
+#ifdef SMB
+				if (smbPathKind(path) != SMB_PATH_NONE) {
+					char why[96];
+					smbStatusMessage(smbPathKind(path), why, sizeof(why));
+					dashToast(DASH_TOAST_WARN, why);
+					return;
+				}
+#endif
 				dashToast(DASH_TOAST_WARN, "Device not found");
 				return;
 			}
