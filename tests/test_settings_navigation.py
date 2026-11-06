@@ -50,7 +50,7 @@ static int genWrite(int fd, void *b, int n) { (void)fd; (void)b; return n; }
 static void genClose(int fd) { (void)fd; }
 static void dashTextEditor(const char *p) { (void)p; }
 int smbSharesSnapshot(SmbConfig *out) { memset(out, 0, sizeof(*out)); return 0; }
-void smbSharesReload(void) {}
+int smbSharesReload(void) { return 1; }
 int smbSharesConfigured(int v) { (void)v; return 0; }
 const char *smbSharesConfigPath(void) { return ""; }
 """
