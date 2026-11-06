@@ -487,65 +487,106 @@ static void smbedLoadPick(void)
 	}
 }
 
-static int smbedWriteFile(const char *block)
+/* Save the selected share to both lookup locations. Each target keeps its own
+ * unrelated shares and comments; a secondary copy must never be truncated just
+ * because it differs from the one the application loaded. */
+static int smbedBuildTarget(const char *path, const char *block, char *out, char *work)
 {
-	char path[MAX_PATH];
-	static char out[SMB_CNF_MAX_SIZE + 512];
-	static char work[SMB_CNF_MAX_SIZE + 512];
-	char *text;
-	int len, fd;
+	char *text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL);
+	SmbConfig cfg;
+	int fd, len, i, matches = 0, valid = 0;
 
-	smbedConfigPath(path, sizeof(path));
-	text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL);
 	if (text == NULL) {
-		/* Only a missing file may be created: one that exists but could
-		   not be read (too large, read error) must not be replaced by a
-		   file holding just the new block. */
+		/* A large/unreadable existing file must not be replaced by one block. */
 		fd = genOpen(path, FIO_O_RDONLY);
 		if (fd >= 0) {
 			genClose(fd);
 			return -4;
 		}
 	}
-	len = smbCnfUpsertText(text != NULL ? text : "", smbed.orig, block,
-	                       out, sizeof(out), work, sizeof(work));
-	if (text != NULL)
-		free(text);
-	if (len < 0)
-		return -1;
-	/* The whole file must still parse and this share must be one it
-	   accepts: a duplicate NAME or a broken URL is reported from here,
-	   not at boot. A delete is validated by absence instead. */
-	memcpy(work, out, len + 1);
-	{
-		SmbConfig cfg;
-		int i, found = 0, valid = 0;
-
+	if (block == NULL) {
+		/* Deleting a share that never existed in the other location is a
+		 * no-op, not an invitation to replace the other file. */
+		snprintf(work, SMB_CNF_MAX_SIZE + 512, "%s", text != NULL ? text : "");
 		smbConfigParse(work, &cfg);
 		for (i = 0; i < cfg.count; i++)
-			if (strcmp(cfg.share[i].name, smbed.name) == 0) {
-				found = 1;
-				if (cfg.share[i].state != SMB_STATE_INVALID)
-					valid = 1;
-			}
-		if (block != NULL) {
-			if (!valid)
-				return -2;
-		} else if (found) {
-			return -2; /* the delete left a (duplicate, invalid) share */
+			if (!stricmp(cfg.share[i].name, smbed.orig))
+				matches++;
+		if (matches == 0) {
+			len = text != NULL ? (int)strlen(text) : 0;
+			memcpy(out, text != NULL ? text : "", len + 1);
+			free(text);
+			return len;
 		}
 	}
-	fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
-	if (fd < 0)
-		return -3;
-	if (genWrite(fd, out, len) != len) {
-		genClose(fd);
-		return -3;
+	len = smbCnfUpsertText(text != NULL ? text : "", smbed.orig, block,
+	                       out, SMB_CNF_MAX_SIZE + 512, work, SMB_CNF_MAX_SIZE + 512);
+	free(text);
+	if (len < 0)
+		return -1;
+	memcpy(work, out, len + 1);
+	smbConfigParse(work, &cfg);
+	matches = 0;
+	for (i = 0; i < cfg.count; i++)
+		if (!stricmp(cfg.share[i].name, block != NULL ? smbed.name : smbed.orig)) {
+			matches++;
+			if (cfg.share[i].state != SMB_STATE_INVALID)
+				valid++;
+		}
+	/* Also reject duplicates in an independently edited mirror. */
+	if (block != NULL ? (matches != 1 || valid != 1) : matches != 0)
+		return -2;
+	return len;
+}
+
+static int smbed_saved_mask; /* 1: CWD, 2: SYS-CONF */
+static int smbedWriteFile(const char *block)
+{
+	char paths[2][MAX_PATH];
+	static char out[2][SMB_CNF_MAX_SIZE + 512];
+	static char work[SMB_CNF_MAX_SIZE + 512];
+	int len[2], same, cwd_enabled, i, wrote = 0;
+	const char *loaded = smbSharesConfigPath();
+
+	smbed_saved_mask = 0;
+	configAppendPathFile(paths[0], sizeof(paths[0]), LaunchElfDir, "SMB2.CNF");
+	configBuildSysconfPath(paths[1], sizeof(paths[1]), "SMB2.CNF");
+	/* Keep editing the same SYS-CONF card that was actually read; it may
+	 * differ from the default when the other card was preferred/available. */
+	if (!strncmp(loaded, "mc0:/SYS-CONF/", 14) ||
+	    !strncmp(loaded, "mc1:/SYS-CONF/", 14))
+		dashStrCopy(paths[1], loaded, sizeof(paths[1]));
+	cwd_enabled = LaunchElfDir[0] != '\0' &&
+	              strncmp(LaunchElfDir, "cdfs", 4) &&
+	              strncmp(LaunchElfDir, "cdrom", 5) &&
+	              strncmp(LaunchElfDir, "udpfs", 5);
+	same = cwd_enabled && !strcmp(paths[0], paths[1]);
+	/* Preflight both targets before changing either. In particular, refuse
+	 * to overwrite a secondary file that cannot be read or validated. */
+	for (i = 0; i < 2; i++) {
+		if (i == 0 && !cwd_enabled) continue;
+		if (i == 1 && same) continue;
+		len[i] = smbedBuildTarget(paths[i], block, out[i], work);
+		if (len[i] < 0) return len[i];
 	}
-	genClose(fd);
-	smbSharesReload();
+	if (same) len[1] = len[0];
+	/* Commit the fallback first and the higher-precedence CWD copy last.
+	 * Each write is verified by dashWriteFile (including close/readback). */
+	for (i = 1; i >= 0; i--) {
+		if (i == 0 && !cwd_enabled) continue;
+		if (i == 1 && same) continue;
+		configEnsureSysconfDir(paths[i]);
+		if (dashWriteFile(paths[i], out[i], len[i]) == 0) {
+			smbed_saved_mask |= i == 0 ? 1 : 2;
+			wrote++;
+		}
+	}
+	if (same && (smbed_saved_mask & 1)) smbed_saved_mask |= 2;
+	if (!wrote) return -3;
+	/* Reconnection must not silently keep the previous SMB2 session. */
+	if (!smbSharesReload()) return -6;
 	smbSharesSnapshot(&smbed.snap);
-	return 0;
+	return (smbed_saved_mask == 3) ? 0 : -5;
 }
 
 static void smbedSave(void)
