@@ -337,9 +337,25 @@ static int fatfsStatResult(const char *path, int result)
 }
 #endif
 
+/* PS2SDK mcman_getstat2 can return positive 1 (missing final component)
+ * or 2 (missing path component) from mcman_cachedirentry. Its mc_getstat
+ * wrapper passes these positive codes through unchanged. Treating >= 0
+ * as existence made new names on mc0:/ and mc1:/ appear occupied and broke
+ * no-replace rename. Do not change other device/error conventions. */
+static int mcStatResult(const char *path, int result)
+{
+	if ((!strncmp(path, "mc0:", 4) || !strncmp(path, "mc1:", 4)) && result > 0) {
+		if (result == 1 || result == 2) return -ENOENT;
+		if (result == 3) return -EACCES; /* hidden/denied directory entry */
+		return -EIO; /* unknown positive reply must not imply absence */
+	}
+	return result;
+}
+
 int genGetStat(const char *path, iox_stat_t *stat)
 {
 	char stat_path[MAX_PATH];
+	int ret;
 
 	if (path == NULL || path[0] == '\0' || stat == NULL)
 		return -1;
@@ -352,10 +368,11 @@ int genGetStat(const char *path, iox_stat_t *stat)
 	ensurePathMemoryCardAccessible(stat_path);
 	normalizePcCardCfPath(stat_path, sizeof(stat_path));
 	genLimObjName(stat_path, 0);
+	ret = mcStatResult(stat_path, fileXioGetStat(stat_path, stat));
 #ifdef EXFAT
-	return fatfsStatResult(stat_path, fileXioGetStat(stat_path, stat));
+	return fatfsStatResult(stat_path, ret);
 #else
-	return fileXioGetStat(stat_path, stat);
+	return ret;
 #endif
 }
 //------------------------------
