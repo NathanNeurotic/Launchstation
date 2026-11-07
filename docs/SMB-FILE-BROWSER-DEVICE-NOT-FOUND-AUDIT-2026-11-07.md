@@ -353,7 +353,56 @@ which one caused a particular hardware SMB mount failure:
   SMB3-only negotiation.
 
 An independent draft implementation PR, [#306](https://github.com/NathanNeurotic/Launchstation/pull/306),
-addresses the narrowly scoped per-version disconnect, `-EEXIST` fail-closed,
-IOP-error cleanup and missing CI test execution. CWD/SYS-CONF persistence,
-server compatibility, protocol timeouts and physical-console read/write tests
-remain separately actionable and are **not** claimed fixed by that PR.
+addresses per-version disconnect, `-EEXIST` fail-closed, IOP-error cleanup
+and missing host-test CI execution. The further source-level configuration
+integrity fixes below were requested after this original investigation.
+Server compatibility, protocol timeouts and physical-console read/write tests
+remain unverified.
+
+## 7. Independent Nemotron audit adjudication and implementation follow-up
+
+The external report supplied on 2026-11-07 is a **preliminary plan**, not
+demonstrated PS2 hardware validation. Its useful, source-verified findings and
+their disposition are recorded here so subsequent agents do not repeat
+superseded claims:
+
+- **Accepted — CR-only multi-share data loss (SMB-001):** The parser recognizes
+  bare CR separators, while the original `lineOffset` counted only LF and
+  the splice also failed to consume a lone trailing CR. PR #306 corrects both
+  boundary cases in `src/smb_cnf.c` (`a75ca25`) and executes first/middle
+  replacement and first-block removal tests across CR-only, LF, CRLF and mixed
+  endings (`adea564`). All unaffected later blocks must be byte-identical.
+- **Accepted — independent CWD/SYS-CONF saves (SMB-004):** The original GUI
+  wrote the whole primary text onto an existing SYS-CONF copy without checking
+  that write. PR #306 now preflights the secondary content, applies a
+  share-specific edit separately rather than replacing unrelated shares,
+  initializes a missing SYS-CONF file from the validated primary on save,
+  checks each `dashWriteFile` result, and distinguishes an unreadable
+  secondary (no files changed) from a failed secondary after primary commit
+  (partial save). See `8291bc1`, `bda8652`, host save test
+  `tests/test_smb_save_integrity.py`, and the CI workflow.
+- **Already addressed — SMB2 `-EEXIST` (SMB-002):** PR #306 returns the driver
+  error instead of treating the old share NAME as successful connection;
+  its host test extracts the actual production `connectSmb2` and checks the
+  explicit failed state/error/message (`03c785f`).
+- **Already addressed — asymmetric disconnect (SMB-003):** The successfully
+  disconnected driver's EE states are reset even if the other driver returns
+  an error. The failed driver's session status is *uncertain*, not proof it was
+  disconnected; retaining its cached CONNECTED state is deliberate until
+  device truth is known. Tests cover both permutations (`03c785f`).
+- **Rejected as automatic fixes:** Moving SMB connection into another thread
+  contradicts the present driver-preparation/worker-idle contract without
+  evidence of thread safety. Adding a blanket disconnect-and-retry button
+  could destroy an active transfer. Changing MX4SIO ownership checks on
+  speculation risks a slot-2 bus reset. These require targeted hardware/driver
+  evidence before implementation.
+
+**Remaining limits:** `smbCnfUpsertText` still discards annotations embedded
+*inside* the edited share's key-to-URL span; that must be preserved or rejected
+with clear user-facing guidance, not described as lossless. Dual-device writes
+are neither atomic nor rollback-safe if a write is interrupted. The preferred
+SYS-CONF copy is not equivalent to synchronizing every possible memory-card
+slot and CWD location. Driver compatibility, timeouts, active-transfer safety,
+partial file reads, and real SMB1/2/3 hardware file operations still need
+separate verification. Green CI must not be represented as proof of those
+properties.
