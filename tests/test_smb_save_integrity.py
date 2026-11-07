@@ -32,6 +32,11 @@ static int primary_stat_error, mirror_stat_error;
 static int primary_write_error, mirror_write_error;
 static int primary_writes, mirror_writes, reloads, reload_ok;
 
+static void dashStrCopy(char *out, const char *value, int size)
+{
+    assert(size > 0);
+    snprintf(out, (size_t)size, "%s", value);
+}
 static void smbedConfigPath(char *out, int n) { snprintf(out, n, "%s", PRIMARY); }
 static void configBuildSysconfPath(char *out, int n, const char *file)
 {
