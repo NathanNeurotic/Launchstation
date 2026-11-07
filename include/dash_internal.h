@@ -581,6 +581,7 @@ typedef struct
 	int files_mode;              /* 0 = Files list, 1 = Devices cards */
 	int home_shortcuts;          /* HOME quick-launch row */
 	int icon_backing;            /* control/quick-action backing shapes */
+	int disabled_tabs;           /* bitmask of disabled DASH_SEC_* tabs */
 	int temp_fahrenheit;         /* 0 = Celsius, 1 = Fahrenheit */
 	int show_unavailable_devices;/* include disconnected/probe-only device cards */
 	int dev_auto; /* DASH_DEVA_* bitmask: drivers to load at startup */
@@ -605,6 +606,7 @@ typedef struct
 #define DASH_DEVA_UDPFS  (1 << 5)
 #define DASH_DEVA_ILINK  (1 << 6)
 #define DASH_DEVA_ALL    0x7F
+#define DASH_TAB_MASK    ((1 << DASH_SEC_HOME) | (1 << DASH_SEC_FILES) | (1 << DASH_SEC_TOOLS) | (1 << DASH_SEC_SETTINGS))
 
 extern DashSettings dashCfg;
 

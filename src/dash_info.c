@@ -174,6 +174,8 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_TEXT, "Polo35, radad, Drakonite, sincro");
 	sheetAdd(&s, SL_TEXT, "kthu, Slam-Tilt, chip, pixel, Hermes, PCM720");
 	sheetAdd(&s, SL_TEXT, "and others in the PS2Dev community");
+	sheetAdd(&s, SL_HEAD, "Testers");
+	sheetAdd(&s, SL_TEXT, "zackcage6, Fifthfox");
 	sheetAdd(&s, SL_HEAD, "Releases");
 	sheetAdd(&s, SL_TEXT, "github.com/ps2homebrew/wLaunchELF/releases");
 	sheetAdd(&s, SL_TEXT, "github.com/NathanNeurotic/Launchstation/releases");

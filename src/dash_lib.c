@@ -16,6 +16,7 @@
 //      cover/art, arg (repeatable, one argument per line), pinned.
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "filer_shared.h"
 #include "main_startup.h"
 #include "init.h"
 
@@ -688,15 +689,17 @@ static void scanAddElf(ScanCtx *sc, const char *dir, const char *name)
 	sc->nfresh++;
 }
 
-static void scanDir(ScanCtx *sc, const char *dir, int depth)
+static int scanDir(ScanCtx *sc, const char *dir, int depth)
 {
 	char subdirs[SCAN_MAX_SUBDIRS][MAX_NAME];
-	int nsub = 0, n, i;
+	int nsub = 0, n, i, more = 0;
 	char status[DASH_PATH_MAX + 32];
 
 	snprintf(status, sizeof(status), "%s", dir);
 	dashWorkerStatus(status, sc->dirs_done, sc->dirs_total);
-	n = getDir(dir, sc->files);
+	n = getDirComplete(dir, sc->files, &more);
+	if (depth == 0 && n < 0)
+		return 0;
 	for (i = 0; i < n && i < MAX_ENTRY - 2; i++) {
 		FILEINFO *f = &sc->files[i];
 
@@ -713,6 +716,7 @@ static void scanDir(ScanCtx *sc, const char *dir, int depth)
 		if (snprintf(sub, sizeof(sub), "%s%s/", dir, subdirs[i]) < DASH_PATH_MAX - 16)
 			scanDir(sc, sub, depth + 1);
 	}
+	return 1;
 }
 
 /* Devices whose driver stack is already running can be listed at boot
@@ -788,8 +792,8 @@ static void scanRun(void *arg)
 		if (!strncmp(j->dirs[i], "mc", 2) &&
 		    filerPrepareMemoryCardRead(j->dirs[i][2] - '0') != 0)
 			continue;
-		scanDir(sc, j->dirs[i], 0);
-		dashStrCopy(scanned[nscanned++], j->dirs[i], DASH_PATH_MAX);
+		if (scanDir(sc, j->dirs[i], 0))
+			dashStrCopy(scanned[nscanned++], j->dirs[i], DASH_PATH_MAX);
 	}
 
 	/* Keep cached entries that live on locations we did not look at
