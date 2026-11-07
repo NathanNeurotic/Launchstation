@@ -508,3 +508,59 @@ actual SMB2/3 connect, IOP lifetime, dialect negotiation, directory reads or
 file transfers have passed physical PS2 testing. Recheck current PR #306
 Actions, outstanding review threads and any concurrently landed changes before
 approving a merge.
+
+## 11. Adversarial follow-up: integrity boundaries, fallback precedence, and MX4SIO
+
+Additional source-level defects discovered after the initial review and addressed
+on draft [#306](https://github.com/NathanNeurotic/Launchstation/pull/306):
+
+- **Oversized output after a nominally valid save:** The editor's allocation
+  and splice capacity were 512 bytes larger than the `SMB_CNF_MAX_SIZE`
+  limit enforced by the runtime reader. It could save a valid-looking new
+  SMB2.CNF that the reader would subsequently refuse. The editor now checks
+  **both** proposed primary and secondary sizes before writing either file;
+  the executable save harness tests rejection for each target.
+- **Embedded NUL bytes hiding later shares:** The disk loader returns a length
+  and NUL-terminates its buffer, but `strlen`-based parsing/upserts otherwise
+  see only the prefix preceding an embedded zero byte. Primary and secondary
+  preflight now examine the **entire loaded byte count** and reject NUL-bearing
+  files before any save. The runtime lookup applies the same check before
+  connecting to a potentially misleading share.
+- **Unintended fallback to a different share:** When an existing CWD file
+  failed to load (oversize, short read, embedded NUL or other I/O error), the
+  runtime previously treated it as absent and tried another memory-card copy.
+  `smbReadConfigText` now distinguishes genuine `-ENOENT` from an existing
+  unreadable candidate, preserves the failed path for diagnostics, and refuses
+  lower-priority fallback. An existing zero-byte file is authoritative, not
+  permission to choose a different share. The new
+  `tests/test_smb_config_lookup.py` exercises these cases using production
+  reader-selection functions.
+- **Implicit mc1 probe could force an MX4SIO stack reset:** The generic
+  SYS-CONF preference helper probes `mc1:` with `genOpen`; in MX4SIO builds
+  this can reach `ensureMemoryCardPortAccessible(1)` and
+  `resetRuntimeDeviceState(TRUE)`. The SMB editor now uses a guarded target
+  selection helper, choosing safe `mc0:` when `mc1AccessRefused()` reports
+  active MX4SIO ownership, and refuses implicit `mc1:` reads in that state.
+  The test harness checks that the probing helper is not invoked under the
+  guard. This does not alter deliberate user-directed slot switching.
+- **Selected share changed after GUI selection:** The preflight had compared
+  a primary share against the mirror but not against the selected snapshot
+  presented to the user. It now checks the on-disk primary against the
+  original selected connection, including its retained SMB3 label, before
+  overwriting either file; a stale selection is rejected with no writes.
+- **64-bit file-size narrowing:** `dashLoadTextFile` cast the 64-bit
+  `genLseek` result to `int` before enforcing the size limit. A very large
+  size could wrap into a plausible short length. It now validates the full
+  length first, with a regression that reports a size over 4 GiB and asserts
+  that subsequent shares are not discarded.
+
+These are source and host-test protections, **not hardware verification**.
+A missing or unplugged memory card may return a platform-specific error rather
+than `-ENOENT`; verify fallback behavior on real PS2 hardware before treating
+all errno interpretations as authoritative. Also test that an existing empty
+SMB2.CNF suppresses lower-priority fallback, that SMB1/SMB2/SMB3 select the
+*intended* host/share, and that dual-target saves do not reset the IOP with
+USB/MX4SIO/MMCE active. Cross-device writes remain non-atomic, and power loss
+during an underlying truncate can still damage a file. Verify the **latest**
+#306 CI and CodeRabbit threads at merge time rather than assuming earlier
+green commits cover subsequent changes.
