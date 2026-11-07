@@ -148,8 +148,8 @@ int main(void)
     /* A partial disconnect must never leave the successful dialect marked
      * CONNECTED when its IOP session has already been closed. */
     reset_case();
-    config_text = "NAME=A\\nURL=smb://10.0.0.2/s\\n"
-                  "NAME=OLD\\nVERSION=1\\nURL=smb://10.0.0.2/legacy\\n";
+    config_text = "NAME=A\nURL=smb://10.0.0.2/s\n"
+                  "NAME=OLD\nVERSION=1\nURL=smb://10.0.0.2/legacy\n";
     smbSharesConnect(2, 1);
     smbSharesConnect(1, 1);
     assert(smbSharesConnectedCount(2) == 1 && smbSharesConnectedCount(1) == 1);
@@ -162,8 +162,8 @@ int main(void)
       assert(connect_calls == before + 1 && smbSharesConnectedCount(1) == 1); }
 
     reset_case();
-    config_text = "NAME=A\\nURL=smb://10.0.0.2/s\\n"
-                  "NAME=OLD\\nVERSION=1\\nURL=smb://10.0.0.2/legacy\\n";
+    config_text = "NAME=A\nURL=smb://10.0.0.2/s\n"
+                  "NAME=OLD\nVERSION=1\nURL=smb://10.0.0.2/legacy\n";
     smbSharesConnect(2, 1);
     smbSharesConnect(1, 1);
     disconnect1_result = -1;
