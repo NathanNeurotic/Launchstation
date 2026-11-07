@@ -31,8 +31,12 @@ assert "smbCnfBuildBlock(" in save and "smbedWriteFile(block)" in save
 assert ", smbed.name);" in save and ", block);" not in save
 write = settings.split("static int smbedWriteFile(const char *block)", 1)[1].split("\n}\n", 1)[0]
 assert "malloc(SMB_CNF_MAX_SIZE + 512)" in write and "static char" not in write
-assert write.index("smbCnfUpsertText(") < write.index("smbConfigParse(work, &cfg);")
-assert write.index("smbConfigParse(work, &cfg);") < write.index("dashWriteFile(path, out, len)")
+# Parse the original share identity before editing; validate the resulting
+# primary and independently preflight SYS-CONF before writing either file.
+assert write.index("smbedReadText(path") < write.index("smbConfigParse(work, &cfg);")
+assert write.index("smbConfigParse(work, &cfg);") < write.index("smbCnfUpsertText(")
+assert write.index("smbCnfUpsertText(") < write.index("smbConfigParse(work, &cfg);", write.index("smbCnfUpsertText("))
+assert write.index("smbedReadText(sysconf") < write.index("dashWriteFile(path, out, len)")
 assert "configBuildSysconfPath(sysconf" in write
 assert "smbSharesReload()" in write
 
