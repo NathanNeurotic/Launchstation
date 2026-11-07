@@ -149,6 +149,27 @@ int main(void)
     assert(strstr(primary, "NAME = ONE") != NULL);
     assert(strstr(mirror, "NAME = ONE") != NULL);
 
+    /* A same-NAME secondary pointing at a different share is not a mirror. */
+    init();
+    strcpy(mirror, "NAME = OTHER\nURL = smb://10.0.0.7/other\n"
+                   "NAME = ONE\nURL = smb://10.0.0.8/different\n");
+    ret = smbedWriteFile(changed);
+    assert(ret == -10 && primary_writes == 0 && mirror_writes == 0);
+    ret = smbedWriteFile(NULL);
+    assert(ret == -10 && primary_writes == 0 && mirror_writes == 0);
+
+    /* A same-NAME, same-URL share with different credentials is not identical. */
+    init();
+    strcpy(mirror, "NAME = ONE\nUSERNAME = outsider\nURL = smb://10.0.0.1/old\n");
+    ret = smbedWriteFile(changed);
+    assert(ret == -10 && primary_writes == 0 && mirror_writes == 0);
+
+    /* A stale primary selection may not silently append a replacement. */
+    init();
+    strcpy(smbed.orig, "MISSING");
+    ret = smbedWriteFile(changed);
+    assert(ret == -9 && primary_writes == 0 && mirror_writes == 0);
+
     /* A mirrored rename that would introduce duplicate NAME must fail closed. */
     init();
     strcpy(smbed.name, "OTHER");
