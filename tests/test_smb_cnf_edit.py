@@ -200,10 +200,10 @@ int main(void)
     /* A BOM belongs at file start, never to a retained obsolete share field. */
     {
         const char *files[] = {
-            "\\xEF\\xBB\\xBFNAME = ONE\\nUSERNAME = olduser\\nPASSWORD = stale_secret\\nURL = smb://10.0.0.1/old\\n"
-            "NAME = TWO\\nURL = smb://10.0.0.2/keep\\n",
-            "\\xEF\\xBB\\xBFPASSWORD = stale_secret\\nNAME = ONE\\nUSERNAME = olduser\\nURL = smb://10.0.0.1/old\\n"
-            "NAME = TWO\\nURL = smb://10.0.0.2/keep\\n"
+            "\xEF\xBB\xBFNAME = ONE\nUSERNAME = olduser\nPASSWORD = stale_secret\nURL = smb://10.0.0.1/old\n"
+            "NAME = TWO\nURL = smb://10.0.0.2/keep\n",
+            "\xEF\xBB\xBFPASSWORD = stale_secret\nNAME = ONE\nUSERNAME = olduser\nURL = smb://10.0.0.1/old\n"
+            "NAME = TWO\nURL = smb://10.0.0.2/keep\n"
         };
         char repl[512];
         check(smbCnfBuildBlock(repl, sizeof(repl), "ONE", 2, "newuser", "new_secret",
@@ -213,17 +213,17 @@ int main(void)
             check(len > 0 && (unsigned char)out[0] == 0xEF &&
                   (unsigned char)out[1] == 0xBB && (unsigned char)out[2] == 0xBF,
                   "BOM stays at file start after edit");
-            check(len > 0 && strstr(out + 3, "\\xEF\\xBB\\xBF") == NULL &&
+            check(len > 0 && strstr(out + 3, "\xEF\xBB\xBF") == NULL &&
                   strstr(out, "stale_secret") == NULL &&
                   strstr(out, "olduser") == NULL,
                   "BOM edit removes all old credentials and embedded BOMs");
-            check(len > 0 && strstr(out, "NAME = TWO\\nURL = smb://10.0.0.2/keep\\n") != NULL,
+            check(len > 0 && strstr(out, "NAME = TWO\nURL = smb://10.0.0.2/keep\n") != NULL,
                   "BOM edit preserves later share");
             if (len > 0) checkParses("BOM edit parses", out, 2);
             len = upsert(files[j], "ONE", NULL, out, sizeof(out), work, sizeof(work));
             check(len > 0 && (unsigned char)out[0] == 0xEF &&
                   strstr(out, "NAME = ONE") == NULL &&
-                  strstr(out, "NAME = TWO\\nURL = smb://10.0.0.2/keep\\n") != NULL,
+                  strstr(out, "NAME = TWO\nURL = smb://10.0.0.2/keep\n") != NULL,
                   "BOM delete preserves header and later share");
             if (len > 0) checkParses("BOM delete parses", out, 1);
         }
