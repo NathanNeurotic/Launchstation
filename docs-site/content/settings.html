@@ -134,7 +134,7 @@
 <tr><td>IP address, Netmask, Gateway</td><td>IPv4 editor (Left/Right pick an octet, Up/Down +/-1, L1/R1 &plusmn;10). Used for FTP, PS2Link and UDPFS.</td><td>From <code>IPCONFIG.DAT</code></td></tr>
 <tr><td>Allow writing over the network</td><td>On / Off (lets <code>host:</code> and <code>udpfs:</code> be written to, not just read)</td><td>Off</td></tr>
 <tr><td>Legacy Ethernet drivers</td><td>On / Off. Use the older DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up; takes effect next time Ethernet/FTP is started.</td><td>Off</td></tr>
-<tr><td>Sync PS2 clock from Internet</td><td>Sends SNTP requests to <code>0.pool.ntp.org</code> (two attempts, 5 s each), adds the time elapsed since the reply, then writes and verifies the hardware RTC. Failures name the step (DNS, connect, timeout, refused...).</td><td>&mdash;</td></tr>
+<tr><td>Sync PS2 clock from Internet</td><td>Sends SNTP requests to <code>0.pool.ntp.org</code> (two attempts, 5 s each), adds the time elapsed since the reply, then writes and verifies the hardware RTC. Requires valid, saved IP/netmask/gateway settings; failures name the step (DNS, connect, timeout, refused...).</td><td>&mdash;</td></tr>
 <tr><td>SMB shares (SMB2.CNF)</td><td>Opens <a href="smb.html#file"><code>SMB2.CNF</code></a> in the text editor, creating an example file in <code>SYS-CONF</code> when there is none. The share list is re-read when the editor closes; the status shows how many shares the file defines.</td><td>&mdash;</td></tr>
 </tbody></table>
 <p>The write-access and legacy-driver rows appear only in builds with Ethernet/UDPFS support. See <a href="network-services.html">Network services</a>.</p>
