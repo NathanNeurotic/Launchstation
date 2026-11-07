@@ -638,6 +638,16 @@ static void smbedSave(void)
 		                 "The file would not accept this share (a NAME may already be in use).", NULL);
 		return;
 	}
+	if (r == -7) {
+		dashModalMessage(DI_WARNING, "Share not saved",
+		                 "The SYS-CONF copy could not be read or safely updated. Neither configuration was changed.", NULL);
+		return;
+	}
+	if (r == -8) {
+		dashModalMessage(DI_WARNING, "Share partly saved",
+		                 "The primary SMB2.CNF was saved, but the SYS-CONF copy failed. Verify both locations before restarting.", NULL);
+		return;
+	}
 	if (r == -6) {
 		dashModalMessage(DI_WARNING, "Share saved; restart needed",
 		                 "SMB2.CNF was written, but the old SMB connection could not be disconnected. Restart Launchstation to apply the changed share.", NULL);
@@ -668,10 +678,17 @@ static void smbedDelete(void)
 		return;
 	r = smbedWriteFile(NULL);
 	if (r != 0) {
-		dashModalMessage(DI_WARNING,
-		                 r == -6 ? "Share deleted; restart needed" : "Share not deleted",
-		                 r == -6 ? "Saved configuration could not retire old SMB sessions. Restart Launchstation." :
-		                 "SMB2.CNF could not be written.", NULL);
+		if (r == -8)
+			dashModalMessage(DI_WARNING, "Share partly deleted",
+			                 "The primary SMB2.CNF was updated but SYS-CONF failed. Verify both files before restarting.", NULL);
+		else if (r == -7)
+			dashModalMessage(DI_WARNING, "Share not deleted",
+			                 "The SYS-CONF copy could not be read or safely updated. Neither file was changed.", NULL);
+		else
+			dashModalMessage(DI_WARNING,
+			                 r == -6 ? "Share deleted; restart needed" : "Share not deleted",
+			                 r == -6 ? "Saved configuration could not retire old SMB sessions. Restart Launchstation." :
+			                 "SMB2.CNF could not be written.", NULL);
 		return;
 	}
 	smbed.pick = 0;
