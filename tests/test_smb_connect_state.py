@@ -42,6 +42,7 @@ static const char *config_text;
 static int mc1_refused, preferred, read_calls, connect_calls, connect_result;
 static int disconnect_calls, disconnect1_calls, disconnect2_calls;
 static int disconnect1_result, disconnect2_result;
+static char last_connect_url[SMB_URL_LEN];
 
 static char *smbReadConfigText(int *refused)
 {
@@ -52,8 +53,18 @@ static char *smbReadConfigText(int *refused)
     return config_text != NULL ? strdup(config_text) : NULL;
 }
 
-static int connectSmb1(SmbShare *sh) { (void)sh; connect_calls++; return connect_result; }
-static int connectSmb2(SmbShare *sh) { (void)sh; connect_calls++; return connect_result; }
+static int connectSmb1(SmbShare *sh)
+{
+    snprintf(last_connect_url, sizeof(last_connect_url), "%s", sh->url);
+    connect_calls++;
+    return connect_result;
+}
+static int connectSmb2(SmbShare *sh)
+{
+    snprintf(last_connect_url, sizeof(last_connect_url), "%s", sh->url);
+    connect_calls++;
+    return connect_result;
+}
 static int isSmbDriverLoaded(int version) { return version == SMB_PATH_V1 || version == SMB_PATH_V2; }
 static int fileXioDevctl(const char *device, int cmd, void *arg, unsigned int arglen,
                          void *buf, unsigned int buflen)
@@ -92,6 +103,7 @@ static void reset_case(void)
     connect_result = 0;
     disconnect_calls = disconnect1_calls = disconnect2_calls = 0;
     disconnect1_result = disconnect2_result = 0;
+    last_connect_url[0] = '\0';
 }
 
 int main(void)
@@ -153,25 +165,42 @@ int main(void)
     smbSharesConnect(2, 1);
     smbSharesConnect(1, 1);
     assert(smbSharesConnectedCount(2) == 1 && smbSharesConnectedCount(1) == 1);
+    /* A changed on-disk config must not leak into active state after a
+     * partial disconnect failure; reconnect uses the original URL. */
+    config_text = "NAME=A\nURL=smb://10.0.0.3/t\n"
+                  "NAME=OLD\nVERSION=1\nURL=smb://10.0.0.3/newlegacy\n";
     disconnect2_result = -1;
     assert(!smbSharesReload());
+    assert(!strcmp(smb_cfg.share[0].url, "smb://10.0.0.2/s"));
+    assert(!strcmp(smb_cfg.share[1].url, "smb://10.0.0.2/legacy"));
     assert(disconnect1_calls == 1 && disconnect2_calls == 1);
     assert(smbSharesConnectedCount(1) == 0 && smbSharesConnectedCount(2) == 1);
     { int before = connect_calls;
       smbSharesConnect(1, 0);
       assert(connect_calls == before + 1 && smbSharesConnectedCount(1) == 1); }
+    assert(!strcmp(last_connect_url, "smb://10.0.0.2/legacy"));
+    assert(!strcmp(smb_cfg.share[0].url, "smb://10.0.0.2/s"));
+    assert(!strcmp(smb_cfg.share[1].url, "smb://10.0.0.2/legacy"));
 
     reset_case();
     config_text = "NAME=A\nURL=smb://10.0.0.2/s\n"
                   "NAME=OLD\nVERSION=1\nURL=smb://10.0.0.2/legacy\n";
     smbSharesConnect(2, 1);
     smbSharesConnect(1, 1);
+    assert(smbSharesConnectedCount(2) == 1 && smbSharesConnectedCount(1) == 1);
+    config_text = "NAME=A\nURL=smb://10.0.0.3/t\n"
+                  "NAME=OLD\nVERSION=1\nURL=smb://10.0.0.3/newlegacy\n";
     disconnect1_result = -1;
     assert(!smbSharesReload());
+    assert(!strcmp(smb_cfg.share[0].url, "smb://10.0.0.2/s"));
+    assert(!strcmp(smb_cfg.share[1].url, "smb://10.0.0.2/legacy"));
     assert(smbSharesConnectedCount(2) == 0 && smbSharesConnectedCount(1) == 1);
     { int before = connect_calls;
       smbSharesConnect(2, 0);
       assert(connect_calls == before + 1 && smbSharesConnectedCount(2) == 1); }
+    assert(!strcmp(last_connect_url, "smb://10.0.0.2/s"));
+    assert(!strcmp(smb_cfg.share[0].url, "smb://10.0.0.2/s"));
+    assert(!strcmp(smb_cfg.share[1].url, "smb://10.0.0.2/legacy"));
 
     puts("PASS: SMB fallback and partial disconnect keep EE and IOP state synchronized");
     return 0;
