@@ -66,7 +66,7 @@ assert all(line.startswith("#") or not line.strip() for line in text.splitlines(
 # the template only goes into a file that does not exist yet
 create = case.split("smb_template[] =", 1)[1]
 # A read failure cannot justify truncation; creation is stat-guarded and verified.
-seed = settings.split("static int smbedSeedTemplateIfAbsent(", 1)[1].split("\\n}\\n", 1)[0]
+seed = settings.split("static int smbedSeedTemplateIfAbsent(", 1)[1].split("\n}\n", 1)[0]
 assert "genGetStat(path, &st) != -ENOENT" in seed
 assert "dashWriteFile(path, template_text, size)" in seed
 assert "smbedSeedTemplateIfAbsent(path, smb_template" in create
