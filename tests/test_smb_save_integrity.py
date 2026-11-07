@@ -487,6 +487,7 @@ with tempfile.TemporaryDirectory(prefix="smb-save-integrity-") as tmp:
     exe = Path(tmp) / "test_smb_save_integrity"
     src.write_text(code)
     subprocess.run([compiler, "-std=gnu99", "-Wall", "-Wextra", "-Werror", "-DSMB",
+                    "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
                     "-I", str(root / "include"), str(src), str(root / "src/smb_cnf.c"),
                     "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True, timeout=5)
