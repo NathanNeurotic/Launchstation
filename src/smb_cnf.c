@@ -249,6 +249,7 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 	memset(cfg, 0, sizeof(*cfg));
 	memset(&cur, 0, sizeof(cur));
 	cur.version = 2;
+	cur.config_version = 2;
 	if (text == NULL)
 		return 0;
 	/* a UTF-8 BOM, as Windows Notepad may write */
@@ -288,8 +289,14 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 				problem = "PASSWORD is longer than 31 characters";
 		} else if (sameText(key, "VERSION")) {
 			cur.version = parseVersion(value);
+			/* The IOP driver negotiates SMB2/3; retain the declared marker
+			 * for the GUI to avoid silently rewriting VERSION = 3 as 2. */
+			cur.config_version = cur.version == 2 &&
+			                     (sameText(value, "3") || sameText(value, "SMB3"))
+			                         ? 3 : cur.version;
 			if (cur.version == 0) {
 				cur.version = 2;
+				cur.config_version = 2;
 				if (problem == NULL)
 					problem = "VERSION must be 1 (SMB1) or 2 (SMB2/SMB3)";
 			}
@@ -307,6 +314,7 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 			closeShare(cfg, &cur, problem);
 			memset(&cur, 0, sizeof(cur));
 			cur.version = 2;
+			cur.config_version = 2;
 			problem = NULL;
 			has_keys = 0;
 			continue;
