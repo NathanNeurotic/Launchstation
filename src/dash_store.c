@@ -135,7 +135,8 @@ char *dashLoadTextFile(const char *path, int max_size, int *out_len)
 		total += rd;
 	}
 	genClose(fd);
-	if (total <= 0) {
+	/* A short read is not a complete file: never return truncated config. */
+	if (total != size) {
 		free(buf);
 		return NULL;
 	}
@@ -157,7 +158,8 @@ int dashWriteFile(const char *path, const void *data, int size)
 	fd = genOpen(fixed, FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC);
 	if (fd < 0)
 		return -1;
-	wr = genWrite(fd, (void *)data, size);
+	/* Some PS2 devices reject a zero-length write; truncate then verify EOF. */
+	wr = size > 0 ? genWrite(fd, (void *)data, size) : 0;
 	closed = genClose(fd);
 	if (wr != size || closed < 0) return -1;
 	fd = genOpen(fixed, FIO_O_RDONLY);
