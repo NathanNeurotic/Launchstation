@@ -344,7 +344,12 @@ static int lineOffset(const char *text, int line_no)
 	int n = 1;
 
 	while (n < line_no && *p) {
-		if (*p == '\n')
+		/* Match smbConfigParse: CR, LF and CRLF each end one line. */
+		if (*p == '\r') {
+			n++;
+			if (p[1] == '\n')
+				p++;
+		} else if (*p == '\n')
 			n++;
 		p++;
 	}
@@ -503,9 +508,11 @@ int smbCnfUpsertText(const char *text, const char *orig_name,
 	end_off = lineOffset(text, end_line);
 	while (text[end_off] && text[end_off] != '\n' && text[end_off] != '\r')
 		end_off++;
-	if (text[end_off] == '\r' && text[end_off + 1] == '\n')
-		end_off += 2;
-	else if (text[end_off] == '\n')
+	if (text[end_off] == '\r') {
+		end_off++;
+		if (text[end_off] == '\n')
+			end_off++;
+	} else if (text[end_off] == '\n')
 		end_off++;
 
 	block_len = block_text != NULL ? strlen(block_text) : 0;
