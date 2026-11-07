@@ -746,7 +746,20 @@ static void smbedSave(void)
 	}
 	if (r == -8) {
 		dashModalMessage(DI_WARNING, "Share partly saved",
-		                 "The primary SMB2.CNF was saved, but the SYS-CONF copy failed. Verify both locations before restarting.", NULL);
+		                 "The primary was saved, but SYS-CONF could not be verified. Check both copies and the old mirror NAME; GUI writes are paused until restart.",
+		                 smbed.partial_mirror_name);
+		return;
+	}
+	if (r == -9 || r == -10) {
+		dashModalMessage(DI_WARNING, "Share not saved",
+		                 r == -10 ? "The same NAME identifies a different connection in SYS-CONF. Neither file was changed; edit explicitly as text." :
+		                            "The selected share is missing or ambiguous in the primary file. Reload or edit it as text.", NULL);
+		return;
+	}
+	if (r == -11 || r == -12) {
+		dashModalMessage(DI_WARNING, "Verify SMB2.CNF copies",
+		                 r == -11 ? "The primary write could not be verified and may be incomplete. Inspect it before restarting; GUI writes are paused." :
+		                            "A previous write may have left CWD and SYS-CONF inconsistent. Check both files and restart before GUI edits.", NULL);
 		return;
 	}
 	if (r == -6) {
@@ -781,7 +794,15 @@ static void smbedDelete(void)
 	if (r != 0) {
 		if (r == -8)
 			dashModalMessage(DI_WARNING, "Share partly deleted",
-			                 "The primary SMB2.CNF was updated but SYS-CONF failed. Verify both files before restarting.", NULL);
+			                 "The primary was changed but SYS-CONF could not be verified. Check both copies and the old mirror NAME; GUI writes are paused.",
+			                 smbed.partial_mirror_name);
+		else if (r == -9 || r == -10)
+			dashModalMessage(DI_WARNING, "Share not deleted",
+			                 r == -10 ? "Same NAME identifies a different connection in SYS-CONF. Neither file was changed." :
+			                            "The selected share is missing or ambiguous in the primary file.", NULL);
+		else if (r == -11 || r == -12)
+			dashModalMessage(DI_WARNING, "Verify SMB2.CNF copies",
+			                 "A write may be incomplete, or the files diverged. Inspect both files and restart before GUI edits.", NULL);
 		else if (r == -7)
 			dashModalMessage(DI_WARNING, "Share not deleted",
 			                 "The SYS-CONF copy could not be read or safely updated. Neither file was changed.", NULL);
