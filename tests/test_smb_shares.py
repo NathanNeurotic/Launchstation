@@ -127,7 +127,14 @@ int main(void)
     assert(smbConfigValidCount(&cfg, 1) == 1 && smbConfigValidCount(&cfg, 2) == 0);
     assert(parse("NAME = OLD\nVERSION = nt1\nURL = smb://192.168.1.5:139//PS2SMB/ignored\n") == 1);
     assert(share(0)->version == 1 && share(0)->port == 139 && !strcmp(share(0)->share, "PS2SMB"));
-    assert(parse("NAME = N\nVERSION = SMB3\nURL = smb://192.168.1.5/s\n") == 1 && share(0)->version == 2);
+    assert(parse("NAME = N\nVERSION = SMB3\nURL = smb://192.168.1.5/s\n") == 1 &&
+           share(0)->version == 2 && share(0)->config_version == 3);
+    assert(parse("NAME = N\nVERSION = 3\nURL = smb://192.168.1.5/s\n") == 1 &&
+           share(0)->version == 2 && share(0)->config_version == 3);
+    assert(parse("NAME = N\nVERSION = 2\nURL = smb://192.168.1.5/s\n") == 1 &&
+           share(0)->version == 2 && share(0)->config_version == 2);
+    assert(parse("NAME = N\nURL = smb://192.168.1.5/s\n") == 1 &&
+           share(0)->config_version == 2);
     expectProblem("NAME = A\nVERSION = 4\nURL = smb://10.0.0.2/s\n", "VERSION must be");
     /* PLAINTEXT: SMB1 only, off by default, does not leak into the next share */
     assert(parse("NAME = OLD\nVERSION = 1\nURL = smb://192.168.1.5/PS2SMB\n") == 1 && share(0)->plaintext == 0);
