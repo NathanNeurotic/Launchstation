@@ -492,7 +492,7 @@ static int smbedWriteFile(const char *block)
 	char path[MAX_PATH], sysconf[MAX_PATH];
 	char *out, *work, *text = NULL, *mirror = NULL;
 	SmbConfig cfg;
-	int len, mirror_len = 0, fd, i, matches = 0, valid = 0, ret = -3;
+	int len, mirror_len = 0, mirror_write = 0, fd, i, matches = 0, valid = 0, ret = -3;
 
 	out = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
 	work = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
@@ -550,6 +550,7 @@ static int smbedWriteFile(const char *block)
 					goto out_free;
 				memcpy(mirror, out, len + 1);
 				mirror_len = len;
+				mirror_write = 1;
 			}
 		} else {
 			mirror = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
@@ -572,6 +573,7 @@ static int smbedWriteFile(const char *block)
 				ret = -7;
 				goto out_free;
 			}
+			mirror_write = 1; /* Even zero bytes must clear a deleted final share. */
 			memcpy(work, mirror, mirror_len + 1);
 			smbConfigParse(work, &cfg);
 			matches = valid = 0;
@@ -592,7 +594,7 @@ mirror_ready:
 	text = NULL;
 	if (dashWriteFile(path, out, len) < 0)
 		goto out_free;
-	if (mirror_len > 0 && dashWriteFile(sysconf, mirror, mirror_len) < 0) {
+	if (mirror_write && dashWriteFile(sysconf, mirror, mirror_len) < 0) {
 		/* Primary is already committed. Never report an all-or-nothing save. */
 		smbSharesReload();
 		ret = -8;
