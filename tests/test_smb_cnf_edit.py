@@ -152,6 +152,51 @@ int main(void)
         checkParses("rename", out, 3);
     }
 
+    /* ---- preserve annotations within edited blocks, not just above them ---- */
+    {
+        const char *file =
+            "NAME = ONE\r\n"
+            "# keep this annotation in its share\r\n"
+            "USERNAME = player\r\n"
+            "; another annotation\n"
+            "FUTURE_OPTION = do-not-discard\n"
+            "URL = smb://10.0.0.1/old\r\n"
+            "NAME = TWO\nURL = smb://10.0.0.2/keep\n";
+        char repl[512];
+        smbCnfBuildBlock(repl, sizeof(repl), "ONE", 2, "new", "pw",
+                         "10.0.0.9", 445, "new", 0);
+        len = upsert(file, "ONE", repl, out, sizeof(out), work, sizeof(work));
+        check(len > 0 && strstr(out, "# keep this annotation in its share\r\n") != NULL &&
+              strstr(out, "; another annotation\n") != NULL &&
+              strstr(out, "FUTURE_OPTION = do-not-discard\n") != NULL &&
+              strstr(out, "NAME = TWO\nURL = smb://10.0.0.2/keep\n") != NULL,
+              "edit retains all in-block comments, unknown keys and later shares");
+        check(strstr(out, "# keep this annotation") <
+              strstr(out, "URL = smb://10.0.0.9/new"),
+              "notes remain within edited block before URL");
+        checkParses("annotated edit", out, 2);
+        len = upsert(file, "ONE", NULL, out, sizeof(out), work, sizeof(work));
+        check(len >= 0 && strstr(out, "# keep this annotation in its share\r\n") != NULL &&
+              strstr(out, "; another annotation\n") != NULL &&
+              strstr(out, "FUTURE_OPTION") == NULL &&
+              strstr(out, "NAME = ONE") == NULL &&
+              strstr(out, "NAME = TWO\nURL = smb://10.0.0.2/keep\n") != NULL,
+              "deletion retains notes but removes deleted share extension keys");
+        checkParses("annotated deletion", out, 1);
+    }
+    {
+        char invalid[512];
+        check(smbCnfBuildBlock(invalid, sizeof(invalid), "OK\nURL = smb://bad/x", 2,
+                               "user", "secret", "1.1.1.1", 445, "s", 0) < 0,
+              "reject newline injection in NAME");
+        check(smbCnfBuildBlock(invalid, sizeof(invalid), "OK", 2,
+                               "user", "pw\rURL = smb://bad/x", "1.1.1.1", 445, "s", 0) < 0,
+              "reject newline injection in PASSWORD");
+        check(smbCnfBuildBlock(invalid, sizeof(invalid), "OK", 2,
+                               "user", "secret", "1.1.1.1", 445, "s\nNAME = BAD", 0) < 0,
+              "reject newline injection in share name");
+    }
+
     /* ---- line endings: splicing must not eat the neighbouring shares ---- */
     {
         const char *files[] = {
