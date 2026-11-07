@@ -39,6 +39,9 @@ assert write.index("smbCnfUpsertText(") < write.index("smbConfigParse(work, &cfg
 assert write.index("smbedReadText(sysconf") < write.index("dashWriteFile(path, out, len)")
 assert "smbedBuildSysconfPath(sysconf" in write
 assert "smbSharesReload()" in write
+assert "smbed.partial_pending = 1;" in write
+assert "smbed.kind = sh->config_version" in settings
+assert "sh->config_version != original_config_version" in write
 
 # the text-editor row keeps the template seeding and reloads afterwards
 case = settings.split("case S_SMBED_TEXT:", 1)[1].split("break;", 1)[0]
