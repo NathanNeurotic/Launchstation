@@ -480,6 +480,9 @@ int smbCnfUpsertText(const char *text, const char *orig_name,
 		return -1;
 	memcpy(work, text, text_len + 1);
 	smbConfigParse(work, &cfg);
+	/* The parser cannot identify and safely splice shares beyond its cap. */
+	if (cfg.dropped)
+		return -1;
 
 	if (orig_name != NULL && orig_name[0] != '\0') {
 		for (i = 0; i < cfg.count; i++)
@@ -490,6 +493,10 @@ int smbCnfUpsertText(const char *text, const char *orig_name,
 	}
 
 	if (target < 0) {
+		/* Trailing unfinished fields could become part of an appended share.
+		 * Refuse implicit merging rather than quietly changing credentials. */
+		if (cfg.unfinished)
+			return -1;
 		/* Append: block_text is required. Separate from what is there. */
 		if (block_text == NULL || block_text[0] == '\0')
 			return -1;
