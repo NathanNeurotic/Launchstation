@@ -631,6 +631,7 @@ static int smbedWriteFile(const char *block)
 	}
 	memcpy(work, out, len + 1);
 	smbConfigParse(work, &cfg);
+	matches = valid = 0; /* The selected-snapshot preflight counted separately. */
 	for (i = 0; i < cfg.count; i++)
 		if (!stricmp(cfg.share[i].name, block != NULL ? smbed.name : smbed.orig)) {
 			matches++;
