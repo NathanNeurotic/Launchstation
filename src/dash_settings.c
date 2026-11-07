@@ -515,6 +515,9 @@ static int smbedWriteFile(const char *block)
 	char path[MAX_PATH], sysconf[MAX_PATH];
 	char *out, *work, *text = NULL, *mirror = NULL;
 	SmbConfig cfg;
+	char original_url[SMB_URL_LEN] = "", original_user[SMB_CRED_LEN] = "";
+	char original_password[SMB_CRED_LEN] = "";
+	int original_version = 0, original_plaintext = 0, orig_matches = 0;
 	int len, mirror_len = 0, mirror_write = 0, read_result, i, matches = 0, valid = 0, ret = -3;
 
 	out = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
@@ -526,6 +529,30 @@ static int smbedWriteFile(const char *block)
 	if (read_result < 0 || (read_result == 0 && smbed.orig[0])) {
 		ret = -4;
 		goto out_free;
+	}
+	/* Keep the identity of the *original* primary share before replacing
+	 * it; an independently configured mirror must not be overwritten merely
+	 * because it happens to use the same display NAME. */
+	if (smbed.orig[0]) {
+		memcpy(work, text, strlen(text) + 1);
+		smbConfigParse(work, &cfg);
+		for (i = 0; i < cfg.count; i++) {
+			const SmbShare *sh = &cfg.share[i];
+			if (stricmp(sh->name, smbed.orig))
+				continue;
+			orig_matches++;
+			if (sh->state == SMB_STATE_INVALID)
+				break;
+			dashStrCopy(original_url, sh->url, sizeof(original_url));
+			dashStrCopy(original_user, sh->username, sizeof(original_user));
+			dashStrCopy(original_password, sh->password, sizeof(original_password));
+			original_version = sh->version;
+			original_plaintext = sh->plaintext;
+		}
+		if (orig_matches != 1 || i < cfg.count) {
+			ret = -9; /* Stale/ambiguous selection. */
+			goto out_free;
+		}
 	}
 	len = smbCnfUpsertText(text != NULL ? text : "", smbed.orig, block,
 	                       out, SMB_CNF_MAX_SIZE + 512, work, SMB_CNF_MAX_SIZE + 512);
@@ -569,6 +596,30 @@ static int smbedWriteFile(const char *block)
 				mirror_write = 1;
 			}
 		} else {
+			/* Validate the secondary's existing NAME against the original
+			 * primary connection, including credentials and version. */
+			memcpy(work, text, strlen(text) + 1);
+			smbConfigParse(work, &cfg);
+			matches = 0;
+			for (i = 0; i < cfg.count && smbed.orig[0]; i++) {
+				const SmbShare *sh = &cfg.share[i];
+				if (stricmp(sh->name, smbed.orig))
+					continue;
+				matches++;
+				if (sh->state == SMB_STATE_INVALID ||
+				    strcmp(sh->url, original_url) ||
+				    strcmp(sh->username, original_user) ||
+				    strcmp(sh->password, original_password) ||
+				    sh->version != original_version ||
+				    sh->plaintext != original_plaintext) {
+					ret = -10; /* Same name, different connection: do not overwrite. */
+					goto out_free;
+				}
+			}
+			if (matches > 1) {
+				ret = -10;
+				goto out_free;
+			}
 			mirror = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
 			if (mirror == NULL)
 				goto out_free;
@@ -623,6 +674,7 @@ out_free:
 	free(mirror);
 	free(out);
 	free(work);
+	memset(original_password, 0, sizeof(original_password));
 	return ret;
 }
 
