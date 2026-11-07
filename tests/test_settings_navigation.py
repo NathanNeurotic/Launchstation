@@ -46,6 +46,7 @@ static void dashModalMessage(int icon, const char *t, const char *m, const char 
 }
 static char LaunchElfDir[] = "mc0:/APPS/";
 static void configAppendPathFile(char *p, size_t n, const char *dir, const char *file) { snprintf(p, n, "%s%s", dir, file); }
+static int mc1AccessRefused(void) { return 0; }
 static void configBuildSysconfPath(char *p, int n, const char *f) { (void)n; strcpy(p, f); }
 static void configEnsureSysconfDir(const char *p) { (void)p; }
 static char *dashLoadTextFile(const char *p, int max, int *len) { (void)p; (void)max; (void)len; return 0; }
