@@ -65,7 +65,12 @@ assert all(line.startswith("#") or not line.strip() for line in text.splitlines(
 
 # the template only goes into a file that does not exist yet
 create = case.split("smb_template[] =", 1)[1]
-assert create.index("FIO_O_RDONLY") < create.index("FIO_O_TRUNC")
+# A read failure cannot justify truncation; creation is stat-guarded and verified.
+seed = settings.split("static int smbedSeedTemplateIfAbsent(", 1)[1].split("\\n}\\n", 1)[0]
+assert "genGetStat(path, &st) != -ENOENT" in seed
+assert "dashWriteFile(path, template_text, size)" in seed
+assert "smbedSeedTemplateIfAbsent(path, smb_template" in create
+assert "FIO_O_TRUNC" not in create
 
 # the upsert core exists in the host-tested text file and is declared in the header
 assert "int smbCnfBuildBlock(" in cnf and "int smbCnfUpsertText(" in cnf
