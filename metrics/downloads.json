@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-07T03:20:33+00:00",
+  "updated_at": "2026-11-07T04:19:07+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 626,
+  "total_downloads": 632,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -1496,7 +1496,7 @@
       "release": "latest"
     },
     "718102085": {
-      "downloads": 8,
+      "downloads": 10,
       "name": "APP_LAUNCHSTATION-1099.zip",
       "release": "latest"
     },
@@ -1506,12 +1506,12 @@
       "release": "latest"
     },
     "718102099": {
-      "downloads": 1,
+      "downloads": 3,
       "name": "APP_LAUNCHSTATION.psu",
       "release": "latest"
     },
     "718102103": {
-      "downloads": 4,
+      "downloads": 6,
       "name": "LAUNCHSTATION.ELF",
       "release": "latest"
     },
@@ -1534,6 +1534,51 @@
       "downloads": 1,
       "name": "BOOT2.ELF",
       "release": "latest"
+    },
+    "719579731": {
+      "downloads": 0,
+      "name": "LAUNCHSTATION.ELF",
+      "release": "build-1100"
+    },
+    "719579733": {
+      "downloads": 0,
+      "name": "APP_LAUNCHSTATION-DS.psu",
+      "release": "build-1100"
+    },
+    "719579734": {
+      "downloads": 0,
+      "name": "APP_LAUNCHSTATION-DS-1100.zip",
+      "release": "build-1100"
+    },
+    "719579736": {
+      "downloads": 0,
+      "name": "APP_LAUNCHSTATION.psu",
+      "release": "build-1100"
+    },
+    "719579740": {
+      "downloads": 0,
+      "name": "APP_LAUNCHSTATION-1100.zip",
+      "release": "build-1100"
+    },
+    "719579781": {
+      "downloads": 0,
+      "name": "LAUNCHSTATION-DS.ELF",
+      "release": "build-1100"
+    },
+    "719579783": {
+      "downloads": 0,
+      "name": "BOOT.ELF",
+      "release": "build-1100"
+    },
+    "719579786": {
+      "downloads": 0,
+      "name": "BOOT2.ELF",
+      "release": "build-1100"
+    },
+    "719579787": {
+      "downloads": 0,
+      "name": "LAUNCHSTATION-1100.zip",
+      "release": "build-1100"
     }
   }
 }
