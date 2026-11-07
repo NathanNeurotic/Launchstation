@@ -156,6 +156,14 @@ int main(void)
     assert(ret == 0 && mirror_writes == 0);
     assert(strstr(mirror, "NAME = OTHER"));
 
+    /* Deleting the last mirrored share must truncate to zero bytes, not skip. */
+    init();
+    strcpy(primary, "NAME = ONE\nURL = smb://10.0.0.1/old\n");
+    strcpy(mirror, "NAME = ONE\nURL = smb://10.0.0.1/old\n");
+    ret = smbedWriteFile(NULL);
+    assert(ret == 0 && primary_writes == 1 && mirror_writes == 1);
+    assert(primary_exists && mirror_exists && !primary[0] && !mirror[0]);
+
     init();
     primary_read_error = 1;
     ret = smbedWriteFile(changed);
