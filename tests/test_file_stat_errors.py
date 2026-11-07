@@ -44,7 +44,7 @@ static char *makeHostPath(char *out,char *in) { if(out!=in)strcpy(out,in);return
 static void genLimObjName(char *path,int reserve) { (void)path;assert(!reserve); }
 static int fileXioGetStat(const char *path,iox_stat_t *stat) {
     rpcs++;snprintf(received,sizeof(received),"%s",path);
-    if(status>=0) { stat->mode=0x1234;stat->size=65537; }
+    if(status==0) { stat->mode=0x1234;stat->size=65537; }
     return status;
 }
 '''
@@ -53,13 +53,14 @@ for signature in ('static void ensurePathMemoryCardAccessible(',
     code += function(signature)
 if 'static int fatfsStatResult(' in source:
     code += '#ifdef EXFAT\n' + function('static int fatfsStatResult(') + '#endif\n'
+code += function('static int mcStatResult(')
 code += function('int genGetStat(')
 code += r'''
 static int check(const char *path,int reply) {
     iox_stat_t stat={0xa5a5,0x5a5a};status=reply;int before=rpcs;
     int result=genGetStat(path,&stat);assert(rpcs==before+1);
-    if(reply<0)assert(stat.mode==0xa5a5 && stat.size==0x5a5a);
-    else assert(stat.mode==0x1234 && stat.size==65537);
+    if(reply!=0)assert(stat.mode==0xa5a5 && stat.size==0x5a5a);
+    else if(reply==0)assert(stat.mode==0x1234 && stat.size==65537);
     return result;
 }
 int main(void) {
@@ -106,6 +107,21 @@ int main(void) {
         assert(check(native[i],0)==0);
     }
     assert(mc_access==5); /* MC1 gate still precedes each stat call. */
+    /* PS2SDK MCMAN's getstat2 leaks positive 1/2 for missing paths.
+     * Only real MC ports normalize these; a positive status on another
+     * filesystem must not be reclassified as a missing file. */
+    for(int port=0;port<2;port++) {
+        char path[32];snprintf(path,sizeof(path),"mc%d:/NEW.ELF",port);
+        assert(check(path,1)==-ENOENT);
+        assert(check(path,2)==-ENOENT);
+        assert(check(path,3)==-EACCES);
+        assert(check(path,4)==-EIO);
+        assert(check(path,0)==0);
+        assert(check(path,-EIO)==-EIO);
+    }
+    assert(check("vmc0:/NEW.ELF",1)==1);
+    assert(check("mmce0:/NEW.ELF",1)==1);
+    assert(check("usb0:/NEW.ELF",1)==1);
     assert(check("cf:/NEW.ELF",0)==0 && !strcmp(received,"cf0:/NEW.ELF"));
     iox_stat_t stat;int before=rpcs;
     cf_online=0;assert(genGetStat("cf0:/NEW.ELF",&stat)==-ENODEV && rpcs==before);

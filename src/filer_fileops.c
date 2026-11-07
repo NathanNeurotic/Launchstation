@@ -337,9 +337,30 @@ static int fatfsStatResult(const char *path, int result)
 }
 #endif
 
+/**
+ * Normalize positive PS2SDK MCMAN getstat return codes on mc0:/ and mc1:/.
+ * mcman_getstat2 calls mcman_cachedirentry(..., 0) with flags=0, which returns
+ * positive 1 (missing final entry) or 2 (missing parent directory component)
+ * before populating iox_stat_t, and mc_getstat passes those positive codes
+ * through unchanged.
+ */
+static int mcStatResult(const char *path, int result)
+{
+	if ((!strncmp(path, "mc0:", 4) || !strncmp(path, "mc1:", 4)) && result > 0) {
+		if (result == 1 || result == 2) return -ENOENT;
+		if (result == 3) return -EACCES; /* hidden/denied directory entry */
+		return -EIO; /* unknown positive reply must not imply absence */
+	}
+	return result;
+}
+
+/**
+ * Query path metadata via fileXioGetStat with device-specific path and error normalization.
+ */
 int genGetStat(const char *path, iox_stat_t *stat)
 {
 	char stat_path[MAX_PATH];
+	int ret;
 
 	if (path == NULL || path[0] == '\0' || stat == NULL)
 		return -1;
@@ -352,10 +373,11 @@ int genGetStat(const char *path, iox_stat_t *stat)
 	ensurePathMemoryCardAccessible(stat_path);
 	normalizePcCardCfPath(stat_path, sizeof(stat_path));
 	genLimObjName(stat_path, 0);
+	ret = mcStatResult(stat_path, fileXioGetStat(stat_path, stat));
 #ifdef EXFAT
-	return fatfsStatResult(stat_path, fileXioGetStat(stat_path, stat));
+	return fatfsStatResult(stat_path, ret);
 #else
-	return fileXioGetStat(stat_path, stat);
+	return ret;
 #endif
 }
 //------------------------------
