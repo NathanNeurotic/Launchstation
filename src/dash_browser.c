@@ -527,6 +527,14 @@ static void openDir(const char *dir, const char *select)
 			char failed[MAX_PATH];
 			dashStrCopy(failed, dir, sizeof(failed));
 			openDir("", failed);
+#ifdef SMB
+			if (smbPathKind(failed) != SMB_PATH_NONE) {
+				char why[96];
+				smbStatusMessage(smbPathKind(failed), why, sizeof(why));
+				dashToast(DASH_TOAST_WARN, why);
+				return;
+			}
+#endif
 			dashToast(DASH_TOAST_WARN, "Device could not be opened");
 			return;
 		}
