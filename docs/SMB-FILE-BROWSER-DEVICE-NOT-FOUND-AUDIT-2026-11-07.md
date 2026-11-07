@@ -474,3 +474,37 @@ that the PS2 filesystem handles truncation correctly.
 These changes are source-level mitigation and regression coverage, **not**
 proof of physical PS2 device reliability or SMB connectivity. Verify latest
 Actions results before considering the branch ready.
+
+## 10. Further independent scrutiny: editor state, dialect label and template safety
+
+Another source-level review identified additional correctness hazards, each
+requiring a focused regression in draft PR #306:
+
+- **An embedded NUL hides later shares:** `smbedReadText` must compare the
+  complete loaded byte count with the C-string view before allowing either
+  primary or SYS-CONF writes. The follow-up also checks candidate precedence:
+  an unreadable, oversized, short-read, or NUL-containing high-priority CWD
+  configuration is not permission to use a different fallback share.
+- **A verified save with an unretired driver is still a failed transition:**
+  if `smbSharesReload` returns false after a successful CWD/SYS-CONF write,
+  old driver connections and the GUI's selected share may disagree with disk.
+  The editor now blocks another Save/Delete until restart, instead of
+  allowing stale-identity operations. This is distinct from a failed disk write.
+- **`VERSION = 3` should survive GUI edits:** the SMB2/3 driver continues to
+  negotiate dialect 2 or 3 normally, but `SmbShare` now records the original
+  configured label separately from the driver-family version. Editing a
+  version-3 share must not silently rewrite its file as `VERSION = 2`; a
+  same-NAME mirror with a different declared label is treated as a conflict.
+- **Text-editor template creation is a potential truncate/data-loss path:**
+  a failed `genOpen(..., FIO_O_RDONLY)` alone does not establish the file is
+  missing. The `S_SMBED_TEXT` action originally attempted `FIO_O_TRUNC`
+  after that failure. A mounted-but-unreadable file could be destroyed before
+  the text editor opens. Template creation now requires an exact `-ENOENT`
+  from `genGetStat`, then uses the verified `dashWriteFile` implementation.
+  Any other stat outcome leaves existing credentials and shares untouched.
+
+These are narrow data-integrity/representation fixes. They do not claim that
+actual SMB2/3 connect, IOP lifetime, dialect negotiation, directory reads or
+file transfers have passed physical PS2 testing. Recheck current PR #306
+Actions, outstanding review threads and any concurrently landed changes before
+approving a merge.
