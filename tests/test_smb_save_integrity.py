@@ -9,10 +9,15 @@ source = (root / "src/dash_settings.c").read_text()
 start = source.index("static int smbedReadText(const char *path, char **text)\n{")
 end = source.index("\n}\n\nstatic void smbedSave(void)", start) + 2
 save_function = source[start:end]
+store_source = (root / "src/dash_store.c").read_text()
+load_start = store_source.index("char *dashLoadTextFile(const char *path, int max_size, int *out_len)\n{")
+load_end = store_source.index("\n}\n\nint dashWriteFile(", load_start) + 2
+loader_function = store_source[load_start:load_end]
 
 code = r'''
 #include <assert.h>
 #include <errno.h>
+#include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +34,7 @@ static struct { char orig[SMB_NAME_LEN]; char name[SMB_NAME_LEN]; int pick, part
 static char primary[4096], mirror[4096];
 static int primary_exists, mirror_exists, primary_read_error, mirror_read_error;
 static int primary_stat_error, mirror_stat_error;
+static int primary_read_limit, mirror_read_limit;
 static int primary_write_error, mirror_write_error;
 static int primary_writes, mirror_writes, reloads, reload_ok;
 
@@ -43,16 +49,46 @@ static void configBuildSysconfPath(char *out, int n, const char *file)
     assert(!strcmp(file, "SMB2.CNF"));
     snprintf(out, n, "%s", MIRROR);
 }
-static char *dashLoadTextFile(const char *path, int cap, int *len)
+/* Exercise the production loader, including short positive reads and premature EOF. */
+static int read_offset;
+static int genFixPath(const char *path, char *fixed)
 {
-    int is_primary = !strcmp(path, PRIMARY);
-    const char *value = is_primary ? primary : mirror;
-    int exists = is_primary ? primary_exists : mirror_exists;
-    int read_error = is_primary ? primary_read_error : mirror_read_error;
-    (void)len;
-    return exists && !read_error && strlen(value) > 0 &&
-           strlen(value) <= (size_t)cap ? strdup(value) : NULL;
+    snprintf(fixed, MAX_PATH, "%s", path);
+    return 0;
 }
+static int genOpen(const char *path, int flags)
+{
+    int first = !strcmp(path, PRIMARY);
+    assert(flags == FIO_O_RDONLY);
+    if (!(first ? primary_exists : mirror_exists) ||
+        (first ? primary_read_error : mirror_read_error))
+        return -ENOENT;
+    read_offset = 0;
+    return first ? 1 : 2;
+}
+static int genLseek(int fd, int amount, int whence)
+{
+    int size = (int)strlen(fd == 1 ? primary : mirror);
+    if (whence == SEEK_END) read_offset = size + amount;
+    else if (whence == SEEK_SET) read_offset = amount;
+    else assert(0);
+    return read_offset;
+}
+static int genRead(int fd, void *buf, int size)
+{
+    const char *src = fd == 1 ? primary : mirror;
+    int limit = fd == 1 ? primary_read_limit : mirror_read_limit;
+    int remaining = (int)strlen(src) - read_offset;
+    if (limit >= 0 && limit - read_offset < remaining)
+        remaining = limit - read_offset;
+    if (remaining <= 0) return 0;
+    if (size > remaining) size = remaining;
+    if (size > 7) size = 7;
+    memcpy(buf, src + read_offset, (size_t)size);
+    read_offset += size;
+    return size;
+}
+static int genClose(int fd) { (void)fd; return 0; }
 static int genGetStat(const char *path, iox_stat_t *st)
 {
     int is_primary = !strcmp(path, PRIMARY);
@@ -82,7 +118,7 @@ static int dashWriteFile(const char *path, const void *data, int n)
 int smbSharesReload(void) { reloads++; return reload_ok; }
 int smbSharesSnapshot(SmbConfig *out) { memset(out, 0, sizeof(*out)); return 0; }
 '''
-code += save_function
+code += loader_function + '\n' + save_function
 code += r'''
 static void init(void)
 {
@@ -93,6 +129,7 @@ static void init(void)
     primary_exists = mirror_exists = reload_ok = 1;
     primary_read_error = mirror_read_error = 0;
     primary_stat_error = mirror_stat_error = 0;
+    primary_read_limit = mirror_read_limit = -1;
     primary_write_error = mirror_write_error = 0;
     primary_writes = mirror_writes = reloads = 0;
     strcpy(smbed.orig, "ONE");
@@ -147,6 +184,20 @@ int main(void)
     primary_read_error = primary_stat_error = 1;
     ret = smbedWriteFile(changed);
     assert(ret == -4 && primary_writes == 0 && mirror_writes == 0);
+
+    /* A partial primary read must never overwrite its unseen later share. */
+    init();
+    primary_read_limit = (int)(strstr(primary, "NAME = TWO") - primary);
+    ret = smbedWriteFile(changed);
+    assert(ret == -4 && primary_writes == 0 && mirror_writes == 0 && reloads == 0);
+    assert(strstr(primary, "NAME = TWO") != NULL);
+
+    /* A partial mirror read must refuse the primary write during preflight. */
+    init();
+    mirror_read_limit = (int)(strstr(mirror, "NAME = ONE") - mirror);
+    ret = smbedWriteFile(changed);
+    assert(ret == -7 && primary_writes == 0 && mirror_writes == 0 && reloads == 0);
+    assert(strstr(mirror, "NAME = ONE") != NULL);
 
     /* A real zero-byte existing file can accept a new share. */
     init();
