@@ -390,6 +390,16 @@ static struct {
 	SmbConfig snap;
 } smbed;
 
+static void smbedConfigPath(char *path, int size)
+{
+	if (smbSharesConfigPath()[0])
+		dashStrCopy(path, smbSharesConfigPath(), size);
+	else {
+		configBuildSysconfPath(path, size, "SMB2.CNF");
+		configEnsureSysconfDir(path);
+	}
+}
+
 /* smb://<host>[:port]/<folder> back into the draft fields. */
 static int smbedSplitUrl(const char *url, char *host, int host_size, int *port,
                          char *folder, int folder_size)
@@ -477,106 +487,67 @@ static void smbedLoadPick(void)
 	}
 }
 
-/* Save the selected share to both lookup locations. Each target keeps its own
- * unrelated shares and comments; a secondary copy must never be truncated just
- * because it differs from the one the application loaded. */
-static int smbedBuildTarget(const char *path, const char *block, char *out, char *work)
+static int smbedWriteFile(const char *block)
 {
-	char *text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL);
+	char path[MAX_PATH], sysconf[MAX_PATH];
+	char *out, *work, *text;
 	SmbConfig cfg;
-	int fd, len, i, matches = 0, valid = 0;
+	int len, fd, i, matches = 0, valid = 0, ret = -3;
 
+	out = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
+	work = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
+	if (out == NULL || work == NULL) {
+		free(out);
+		free(work);
+		return -3;
+	}
+	smbedConfigPath(path, sizeof(path));
+	text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL);
 	if (text == NULL) {
-		/* A large/unreadable existing file must not be replaced by one block. */
+		/* Only a missing file may be created: one that exists but could
+		   not be read (too large, read error) must not be replaced by a
+		   file holding just the new block. */
 		fd = genOpen(path, FIO_O_RDONLY);
 		if (fd >= 0) {
 			genClose(fd);
-			return -4;
-		}
-	}
-	if (block == NULL) {
-		/* Deleting a share that never existed in the other location is a
-		 * no-op, not an invitation to replace the other file. */
-		snprintf(work, SMB_CNF_MAX_SIZE + 512, "%s", text != NULL ? text : "");
-		smbConfigParse(work, &cfg);
-		for (i = 0; i < cfg.count; i++)
-			if (!stricmp(cfg.share[i].name, smbed.orig))
-				matches++;
-		if (matches == 0) {
-			len = text != NULL ? (int)strlen(text) : 0;
-			memcpy(out, text != NULL ? text : "", len + 1);
-			free(text);
-			return len;
+			ret = -4;
+			goto out_free;
 		}
 	}
 	len = smbCnfUpsertText(text != NULL ? text : "", smbed.orig, block,
 	                       out, SMB_CNF_MAX_SIZE + 512, work, SMB_CNF_MAX_SIZE + 512);
 	free(text);
-	if (len < 0)
-		return -1;
+	if (len < 0) {
+		ret = -1;
+		goto out_free;
+	}
 	memcpy(work, out, len + 1);
 	smbConfigParse(work, &cfg);
-	matches = 0;
 	for (i = 0; i < cfg.count; i++)
 		if (!stricmp(cfg.share[i].name, block != NULL ? smbed.name : smbed.orig)) {
 			matches++;
 			if (cfg.share[i].state != SMB_STATE_INVALID)
 				valid++;
 		}
-	/* Also reject duplicates in an independently edited mirror. */
-	if (block != NULL ? (matches != 1 || valid != 1) : matches != 0)
-		return -2;
-	return len;
-}
-
-static int smbed_saved_mask; /* 1: CWD, 2: SYS-CONF */
-static int smbedWriteFile(const char *block)
-{
-	char paths[2][MAX_PATH];
-	static char out[2][SMB_CNF_MAX_SIZE + 512];
-	static char work[SMB_CNF_MAX_SIZE + 512];
-	int len[2], same, cwd_enabled, i, wrote = 0;
-	const char *loaded = smbSharesConfigPath();
-
-	smbed_saved_mask = 0;
-	configAppendPathFile(paths[0], sizeof(paths[0]), LaunchElfDir, "SMB2.CNF");
-	configBuildSysconfPath(paths[1], sizeof(paths[1]), "SMB2.CNF");
-	/* Keep editing the same SYS-CONF card that was actually read; it may
-	 * differ from the default when the other card was preferred/available. */
-	if (!strncmp(loaded, "mc0:/SYS-CONF/", 14) ||
-	    !strncmp(loaded, "mc1:/SYS-CONF/", 14))
-		dashStrCopy(paths[1], loaded, sizeof(paths[1]));
-	cwd_enabled = LaunchElfDir[0] != '\0' &&
-	              strncmp(LaunchElfDir, "cdfs", 4) &&
-	              strncmp(LaunchElfDir, "cdrom", 5) &&
-	              strncmp(LaunchElfDir, "udpfs", 5);
-	same = cwd_enabled && !strcmp(paths[0], paths[1]);
-	/* Preflight both targets before changing either. In particular, refuse
-	 * to overwrite a secondary file that cannot be read or validated. */
-	for (i = 0; i < 2; i++) {
-		if (i == 0 && !cwd_enabled) continue;
-		if (i == 1 && same) continue;
-		len[i] = smbedBuildTarget(paths[i], block, out[i], work);
-		if (len[i] < 0) return len[i];
+	if (block != NULL ? (matches != 1 || valid != 1) : matches != 0) {
+		ret = -2;
+		goto out_free;
 	}
-	if (same) len[1] = len[0];
-	/* Commit the fallback first and the higher-precedence CWD copy last.
-	 * Each write is verified by dashWriteFile (including close/readback). */
-	for (i = 1; i >= 0; i--) {
-		if (i == 0 && !cwd_enabled) continue;
-		if (i == 1 && same) continue;
-		configEnsureSysconfDir(paths[i]);
-		if (dashWriteFile(paths[i], out[i], len[i]) == 0) {
-			smbed_saved_mask |= i == 0 ? 1 : 2;
-			wrote++;
-		}
+	if (dashWriteFile(path, out, len) < 0)
+		goto out_free;
+	/* When the primary file lives beside the ELF, also update an existing
+	 * SYS-CONF copy so neither lookup location retains stale share entries. */
+	configBuildSysconfPath(sysconf, sizeof(sysconf), "SMB2.CNF");
+	if (strcmp(path, sysconf) != 0 && (fd = genOpen(sysconf, FIO_O_RDONLY)) >= 0) {
+		genClose(fd);
+		dashWriteFile(sysconf, out, len);
 	}
-	if (same && (smbed_saved_mask & 1)) smbed_saved_mask |= 2;
-	if (!wrote) return -3;
-	/* Reconnection must not silently keep the previous SMB2 session. */
-	if (!smbSharesReload()) return -6;
+	ret = smbSharesReload() ? 0 : -6;
 	smbSharesSnapshot(&smbed.snap);
-	return (smbed_saved_mask == 3) ? 0 : -5;
+out_free:
+	free(out);
+	free(work);
+	return ret;
 }
 
 static void smbedSave(void)
@@ -614,7 +585,7 @@ static void smbedSave(void)
 		                 "SMB2.CNF was written, but the old SMB connection could not be disconnected. Restart Launchstation to apply the changed share.", NULL);
 		return;
 	}
-	if (r != 0 && r != -5) {
+	if (r != 0) {
 		dashModalMessage(DI_WARNING, "Share not saved", "SMB2.CNF could not be written.", NULL);
 		return;
 	}
@@ -627,14 +598,6 @@ static void smbedSave(void)
 			dashStrCopy(smbed.orig, smbed.name, sizeof(smbed.orig));
 			break;
 		}
-	if (r == -5) {
-		dashModalMessage(DI_WARNING, "Share saved in one location",
-		                 (smbed_saved_mask & 1) ?
-		                 "CWD saved; SYS-CONF could not be written. Check memory card space/access." :
-		                 "SYS-CONF saved; CWD could not be written. An older CWD copy may still take priority.",
-		                 NULL);
-		return;
-	}
 	dashModalMessage(DI_CHECK, "Share saved",
 	                 "Open Files > smb:/ for SMB2/3 or smb1:/ for SMB1. The SMB2/3 list shows only shares that connect.", smbed.name);
 }
@@ -647,9 +610,8 @@ static void smbedDelete(void)
 		return;
 	r = smbedWriteFile(NULL);
 	if (r != 0) {
-		dashModalMessage(DI_WARNING, r == -5 ? "Share deleted in one location" :
+		dashModalMessage(DI_WARNING,
 		                 r == -6 ? "Share deleted; restart needed" : "Share not deleted",
-		                 r == -5 ? "The two SMB2.CNF locations could not both be updated; a stale share may remain." :
 		                 r == -6 ? "Saved configuration could not retire old SMB sessions. Restart Launchstation." :
 		                 "SMB2.CNF could not be written.", NULL);
 		return;

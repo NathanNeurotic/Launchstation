@@ -91,6 +91,21 @@ static unsigned int smbTextHash(const char *text)
 	return hash;
 }
 
+static int smbDisconnectAllSessions(void)
+{
+	int ret2 = 0, ret1 = 0;
+
+	if (isSmbDriverLoaded(SMB_PATH_V2) && smbSharesConnectedCount(SMB_PATH_V2) > 0)
+		ret2 = fileXioDevctl(SMB_DEVICE_V2, SMB2_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0);
+	if (isSmbDriverLoaded(SMB_PATH_V1) && smbSharesConnectedCount(SMB_PATH_V1) > 0)
+		ret1 = fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_LOGOFF, NULL, 0, NULL, 0);
+	if (ret2 < 0 || ret1 < 0) {
+		DPRINTF(" [SMB]: config reload refused: SMB2 disconnect=%d SMB1 logoff=%d\n", ret2, ret1);
+		return 0;
+	}
+	return 1;
+}
+
 static void smbReadConfig(void)
 {
 	char *text, previous_path[MAX_PATH];
@@ -110,15 +125,11 @@ static void smbReadConfig(void)
 	/* A changed pending config may reuse a share name. Retire the old driver
 	 * sessions before parsing it so -EEXIST cannot alias the old connection. */
 	if (smb_cfg_mc1_pending &&
-	    (text_hash != smb_cfg_text_hash || strcmp(previous_path, smb_cfg_path))) {
-		if (smbSharesConnectedCount(SMB_PATH_V2) > 0 &&
-		    fileXioDevctl(SMB_DEVICE_V2, SMB2_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0) < 0) {
-			snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", previous_path);
-			free(text);
-			return;
-		}
-		if (smbSharesConnectedCount(SMB_PATH_V1) > 0)
-			fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_LOGOFF, NULL, 0, NULL, 0);
+	    (text_hash != smb_cfg_text_hash || strcmp(previous_path, smb_cfg_path)) &&
+	    !smbDisconnectAllSessions()) {
+		snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", previous_path);
+		free(text);
+		return;
 	}
 	smbConfigParse(text, &smb_cfg);
 	free(text);
@@ -358,17 +369,8 @@ void smbSharesForget(void)
  * which can silently retain the former host, share and credentials. */
 int smbSharesReload(void)
 {
-	int ret2 = 0, ret1 = 0;
-
-	if (isSmbDriverLoaded(SMB_PATH_V2) && smbSharesConnectedCount(SMB_PATH_V2) > 0)
-		ret2 = fileXioDevctl(SMB_DEVICE_V2, SMB2_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0);
-	if (isSmbDriverLoaded(SMB_PATH_V1) && smbSharesConnectedCount(SMB_PATH_V1) > 0)
-		ret1 = fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_LOGOFF, NULL, 0, NULL, 0);
-	if (ret2 < 0 || ret1 < 0) {
-		/* Do not mark an old connection reusable under new credentials. */
-		DPRINTF(" [SMB]: config reload refused: SMB2 disconnect=%d SMB1 logoff=%d\\n", ret2, ret1);
+	if (!smbDisconnectAllSessions())
 		return 0;
-	}
 	smbSharesForget();
 	smb_cfg_loaded = 0;
 	smb_cfg_mc1_pending = 0;
