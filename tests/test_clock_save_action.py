@@ -34,11 +34,12 @@ static int dashStoreSettingsFailed(void){return failed;}
 static int __attribute__((unused)) failedSaves(void){return failed||unrelated_failed;}
 static void dashModalMessage(int icon,const char *title,const char *body,const char *path){assert(title&&body&&!path);last_icon=icon;}
 static int corrupt,fail_write_close,fail_read_close,short_write,read_error,opens,open_error;
+static int reject_zero_write,write_calls;
 static int genFixPath(const char *p,char *out){strcpy(out,p);return 0;}
 static void configEnsureSysconfDir(const char *p){(void)p;}
 static int genOpen(const char *p,int flags){opens++;return opens==open_error?-1:open(p,flags,0600);}
 static int genClose(int fd){int r=close(fd);return (opens==1&&fail_write_close)||(opens==2&&fail_read_close)?-1:r;}
-static int genWrite(int fd,void *data,int n){return write(fd,data,short_write?n-1:n);}
+static int genWrite(int fd,void *data,int n){write_calls++;if(n==0&&reject_zero_write)return -1;return write(fd,data,short_write?n-1:n);}
 static int genRead(int fd,void *data,int n){
  if(read_error)return -1;
  int r=read(fd,data,n>7?7:n);if(corrupt&&r>0)((char*)data)[0]^=1;return r;
@@ -70,7 +71,17 @@ int main(void){
   if(scenario==7)open_error=2;
   assert((dashWriteFile("DASHBOARD.CNF",data,sizeof(data)-1)==0)==(scenario==0));
  }
- puts("PASS: clock save confirmation, exact seconds, cancellation, failed saves and settings readback/close failures");
+ /* Last-share deletion must truncate, verify EOF and avoid unsupported zero-byte genWrite. */
+ opens=corrupt=short_write=read_error=fail_write_close=fail_read_close=open_error=0;
+ assert(dashWriteFile("DASHBOARD.CNF","old",3)==0);
+ opens=write_calls=0;reject_zero_write=1;
+ assert(dashWriteFile("DASHBOARD.CNF","",0)==0 && write_calls==0);
+ FILE *empty=fopen("DASHBOARD.CNF","rb");
+ assert(empty!=NULL && fseek(empty,0,SEEK_END)==0 && ftell(empty)==0);
+ fclose(empty);
+ opens=0;read_error=1;
+ assert(dashWriteFile("DASHBOARD.CNF","",0)<0 && write_calls==0);
+ puts("PASS: clock save confirmation, readback failures and verified zero-byte truncation");
 }
 '''
 with tempfile.TemporaryDirectory(prefix='clock-save-') as folder:
