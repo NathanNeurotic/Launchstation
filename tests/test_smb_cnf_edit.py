@@ -251,6 +251,27 @@ int main(void)
         }
     }
 
+    /* Refuse edits when the parser has silently dropped overflowing shares. */
+    {
+        char file[4096];
+        int size = 0;
+        for (int i = 0; i < SMB_SHARE_MAX + 1; i++)
+            size += snprintf(file + size, sizeof(file) - size,
+                             "NAME = P%d\nURL = smb://1.1.1.%d/share\n", i, i + 1);
+        smbCnfBuildBlock(block, sizeof(block), "P0", 2, NULL, NULL,
+                         "2.2.2.2", 445, "new", 0);
+        len = upsert(file, "P0", block, out, sizeof(out), work, sizeof(work));
+        check(len < 0, "share-limit overflow refused without silent loss");
+    }
+    {
+        const char *file = "NAME = ONE\nURL = smb://1.1.1.1/one\n"
+                           "USERNAME = orphan\n";
+        smbCnfBuildBlock(block, sizeof(block), "TWO", 2, NULL, NULL,
+                         "2.2.2.2", 445, "two", 0);
+        len = upsert(file, NULL, block, out, sizeof(out), work, sizeof(work));
+        check(len < 0, "unfinished trailing block cannot bleed into appended share");
+    }
+
     /* ---- bounds ---- */
     {
         const char *file = "NAME = A\nURL = smb://1.1.1.1/a\n";
