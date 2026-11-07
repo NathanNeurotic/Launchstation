@@ -487,27 +487,45 @@ static void smbedLoadPick(void)
 	}
 }
 
+/* Distinguish absent from unreadable/oversized, and accept an empty file
+ * after the final share is removed. The GUI must fail closed on IO errors. */
+static int smbedReadText(const char *path, char **text)
+{
+	iox_stat_t st;
+	int result;
+
+	*text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL);
+	if (*text != NULL)
+		return 1;
+	result = genGetStat(path, &st);
+	if (result == -ENOENT)
+		return 0;
+	if (result < 0 || st.size != 0 || st.hisize != 0)
+		return -1;
+	/* dashLoadTextFile reports zero-byte files as NULL. */
+	*text = (char *)malloc(1);
+	if (*text == NULL)
+		return -1;
+	(*text)[0] = '\0';
+	return 1;
+}
+
 static int smbedWriteFile(const char *block)
 {
 	char path[MAX_PATH], sysconf[MAX_PATH];
 	char *out, *work, *text = NULL, *mirror = NULL;
 	SmbConfig cfg;
-	int len, mirror_len = 0, mirror_write = 0, fd, i, matches = 0, valid = 0, ret = -3;
+	int len, mirror_len = 0, mirror_write = 0, read_result, i, matches = 0, valid = 0, ret = -3;
 
 	out = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
 	work = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
 	if (out == NULL || work == NULL)
 		goto out_free;
 	smbedConfigPath(path, sizeof(path));
-	text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL);
-	if (text == NULL) {
-		/* An existing unreadable file must never be replaced with one share. */
-		fd = genOpen(path, FIO_O_RDONLY);
-		if (fd >= 0) {
-			genClose(fd);
-			ret = -4;
-			goto out_free;
-		}
+	read_result = smbedReadText(path, &text);
+	if (read_result < 0 || (read_result == 0 && smbed.orig[0])) {
+		ret = -4;
+		goto out_free;
 	}
 	len = smbCnfUpsertText(text != NULL ? text : "", smbed.orig, block,
 	                       out, SMB_CNF_MAX_SIZE + 512, work, SMB_CNF_MAX_SIZE + 512);
@@ -534,14 +552,12 @@ static int smbedWriteFile(const char *block)
 	 * Never mirror the entire CWD config over someone's unrelated shares. */
 	configBuildSysconfPath(sysconf, sizeof(sysconf), "SMB2.CNF");
 	if (strcmp(path, sysconf) != 0) {
-		text = dashLoadTextFile(sysconf, SMB_CNF_MAX_SIZE, NULL);
-		if (text == NULL) {
-			fd = genOpen(sysconf, FIO_O_RDONLY);
-			if (fd >= 0) {
-				genClose(fd);
-				ret = -7; /* Unreadable mirror; neither file written. */
-				goto out_free;
-			}
+		read_result = smbedReadText(sysconf, &text);
+		if (read_result < 0) {
+			ret = -7; /* Unreadable mirror; neither file written. */
+			goto out_free;
+		}
+		if (read_result == 0) {
 			/* First mirror: seed from the validated primary, not an empty
 			 * share list. Deletion must not create an empty new mirror. */
 			if (block != NULL) {
