@@ -90,17 +90,17 @@ static char *smbReadConfigText(int *mc1_refused)
 			/* Explicit size check and copy avoid any truncated CWD candidate. */
 			memcpy(path, LaunchElfDir, dir_len);
 			memcpy(path + dir_len, SMB_CNF_NAME, sizeof(SMB_CNF_NAME));
-		/* A CWD on mc1 must also obey the MX4SIO stack guard. */
-		if (!strncmp(path, "mc1:", 4) && mc1AccessRefused())
-			*mc1_refused = 1;
-		else {
-			candidate = smbLoadConfigCandidate(path, &text);
-			if (candidate != 0) {
-				snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", path);
-				smb_cfg_read_error = candidate < 0;
-				return text;
+			/* A CWD on mc1 must also obey the MX4SIO stack guard. */
+			if (!strncmp(path, "mc1:", 4) && mc1AccessRefused())
+				*mc1_refused = 1;
+			else {
+				candidate = smbLoadConfigCandidate(path, &text);
+				if (candidate != 0) {
+					snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", path);
+					smb_cfg_read_error = candidate < 0;
+					return text;
+				}
 			}
-		}
 		}
 	}
 	port = !strncmp(LaunchElfDir, "mc1", 3);
