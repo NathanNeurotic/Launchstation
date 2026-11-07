@@ -297,12 +297,12 @@ which one caused a particular hardware SMB mount failure:
 - **P0 / persistence:** the GUI editor must not report a complete CWD/SYS-CONF
   save after a missing or failed mirror. A safe repair preflights both intended
   targets, preserves each destination's unrelated share entries and comments,
-  verifies writes, and explicitly reports partial results. The current
-  `smbCnfUpsertText` preserves text **outside** a targeted share's key-to-URL
-  span, but **deletes comments embedded inside that span** on edit/delete.
-  Therefore it is not yet a fully comment-preserving primitive: either make
-  edits preserve those in-block comment lines (and regression-test that
-  behavior) or explicitly warn users before a potentially destructive edit.
+  verifies writes, and explicitly reports partial results. At the audited
+  `master` baseline, `smbCnfUpsertText` preserved text **outside** the
+  target key-to-URL span but discarded comments within that span. The #306
+  follow-up now retains inline notes and unknown extension keys on edits
+  (and notes on deletion) with host tests. These statements distinguish the
+  original finding from the follow-up fix.
   **CR-only line endings are a separate data-loss risk:** `smbConfigParse`
   recognizes bare `\\r` as a line separator, but `lineOffset` in the
   same source counts only `\\n`. For a CR-only file with multiple shares,
@@ -314,8 +314,9 @@ which one caused a particular hardware SMB mount failure:
   edit the first and middle share, then remove one, verifying that all
   unrelated shares, their URLs, and their comments remain intact; verify the
   same with CRLF/LF/mixed endings and compare the full before/after text.
-  Preserve the original file on failed validation. Until this is fixed,
-  never claim editing is safe for CR-only files.
+  Preserve the original file on failed validation. The #306 follow-up now
+  addresses the CR-only offset issue; complete hardware write safety is
+  still a separate requirement.
   Do not silently use the helper to promise lossless updates. Copying the
   entire primary text over another existing file could also lose the other
   file's separately configured shares and annotations.
@@ -374,13 +375,18 @@ superseded claims:
   endings (`adea564`). All unaffected later blocks must be byte-identical.
 - **Accepted — independent CWD/SYS-CONF saves (SMB-004):** The original GUI
   wrote the whole primary text onto an existing SYS-CONF copy without checking
-  that write. PR #306 now preflights the secondary content, applies a
-  share-specific edit separately rather than replacing unrelated shares,
-  initializes a missing SYS-CONF file from the validated primary on save,
-  checks each `dashWriteFile` result, and distinguishes an unreadable
-  secondary (no files changed) from a failed secondary after primary commit
-  (partial save). See `8291bc1`, `bda8652`, host save test
-  `tests/test_smb_save_integrity.py`, and the CI workflow.
+  that write. PR #306 now independently preflights each target, avoids
+  overwriting unrelated share blocks, validates matching existing connections
+  by URL, credentials, and dialect (not NAME alone), and treats a different
+  same-name share as a conflict. A missing secondary is created from validated
+  primary content, while an existing zero-byte file can be edited safely.
+  A failed read plus a failed stat is treated as an error, **not** evidence
+  that a file is missing; a lone deleted share produces a verified zero-byte
+  secondary write rather than skipping it. Unverified primary or secondary
+  writes are reported distinctly; after an uncertain/partial write the GUI
+  locks further edits until manual reconciliation and restart. See #306
+  `src/dash_settings.c`, `tests/test_smb_save_integrity.py`, and its CI
+  workflow. These are per-file checks, not an atomic two-device transaction.
 - **Already addressed — SMB2 `-EEXIST` (SMB-002):** PR #306 returns the driver
   error instead of treating the old share NAME as successful connection;
   its host test extracts the actual production `connectSmb2` and checks the
@@ -397,12 +403,45 @@ superseded claims:
   speculation risks a slot-2 bus reset. These require targeted hardware/driver
   evidence before implementation.
 
-**Remaining limits:** `smbCnfUpsertText` still discards annotations embedded
-*inside* the edited share's key-to-URL span; that must be preserved or rejected
-with clear user-facing guidance, not described as lossless. Dual-device writes
-are neither atomic nor rollback-safe if a write is interrupted. The preferred
-SYS-CONF copy is not equivalent to synchronizing every possible memory-card
-slot and CWD location. Driver compatibility, timeouts, active-transfer safety,
-partial file reads, and real SMB1/2/3 hardware file operations still need
-separate verification. Green CI must not be represented as proof of those
-properties.
+**Remaining limits:** The source now preserves in-block annotations on edits,
+but their position relative to canonical key lines may change; unknown
+extension keys are removed when their share is deliberately deleted.
+Cross-device writes cannot be atomic and a power loss during `FIO_O_TRUNC`
+may still damage a file before verification; conservative error handling
+cannot eliminate that risk. The preferred SYS-CONF copy is not a blanket sync
+of every memory-card slot and CWD location. Incomplete files, in-flight
+transfers, hardware SMB dialect negotiation, timeouts, IOP memory pressure,
+and real SMB1/2/3 read/write/rename/delete remain hardware acceptance work.
+Green host/build CI is not hardware proof.
+
+## 8. CodeRabbit follow-up: same-name collision and zero-length mirror
+
+A subsequent review of #305/#306 uncovered three **valid** edge cases in the
+original #306 persistence follow-up:
+
+1. **A same-NAME, different-destination mirror is not the same connection.**
+   The new preflight checks the source share and rejects secondary entries
+   whose URL, credentials, dialect or plaintext setting differ. This guards
+   against silently overwriting or deleting an independently configured share.
+   See the dedicated mismatch tests in `test_smb_save_integrity.py`.
+2. **Deleting the final secondary share yields a zero-byte file.** An explicit
+   write decision is now independent of resulting length; the mirror is
+   truncated and verified even when that length is zero. A deliberately
+   absent mirror is still not created on deletion.
+3. **An unreadable target is not necessarily absent.** A stat distinguishes
+   missing from existing-empty and unreadable/oversized; ambiguous errors
+   abort before primary modification. A primary write that cannot be
+   verified is marked uncertain rather than described as untouched.
+
+The separate CodeRabbit comment about **partial-save picker state** was also
+valid: a failed mirror write can leave a renamed primary and an old mirror.
+The follow-up records the old mirror NAME, updates the primary edit identity
+when possible, and blocks further GUI writes until explicit inspection and
+restart rather than naively retrying a stale rename. A failed driver reload
+must not be mistaken for a successful cache refresh.
+
+These fixes are included in the draft #306 branch; review its actual HEAD and
+CI rather than treating this audit document as evidence of hardware success.
+The important outstanding design limitation is still non-atomic file writes
+under interruption, not a reason to introduce unsafe global disconnections
+or unverified background network initialization.
