@@ -66,8 +66,8 @@ static int dashWriteFile(const char *path, const void *data, int n)
     else mirror_exists = 1;
     return 0;
 }
-static int smbSharesReload(void) { reloads++; return reload_ok; }
-static int smbSharesSnapshot(SmbConfig *out) { memset(out, 0, sizeof(*out)); return 0; }
+int smbSharesReload(void) { reloads++; return reload_ok; }
+int smbSharesSnapshot(SmbConfig *out) { memset(out, 0, sizeof(*out)); return 0; }
 '''
 code += save_function
 code += r'''
