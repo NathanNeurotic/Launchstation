@@ -540,6 +540,11 @@ int smbCnfUpsertText(const char *text, const char *orig_name,
 		}
 	}
 	start_off = lineOffset(text, start_line);
+	/* The parser skips a file BOM; preserve it as a prefix, not as a
+	 * stale unknown field spliced into the edited first share. */
+	if (start_off == 0 && (unsigned char)text[0] == 0xEF &&
+	    (unsigned char)text[1] == 0xBB && (unsigned char)text[2] == 0xBF)
+		start_off = 3;
 	end_off = lineOffset(text, end_line);
 	while (text[end_off] && text[end_off] != '\n' && text[end_off] != '\r')
 		end_off++;
