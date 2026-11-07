@@ -31,6 +31,7 @@ static int smb_cfg_loaded = 0;
  * readers re-read so the preferred file can still win once mc1: is loaded. */
 static int smb_cfg_mc1_pending = 0;
 static char smb_cfg_path[MAX_PATH];
+static int smb_cfg_read_error; /* highest-priority config exists but cannot be read */
 static unsigned int smb_retry_ms[3]; /* by version: last retry of failed shares */
 static void smbReadConfig(void);
 
@@ -42,21 +43,59 @@ int smbSharesNeutrino(const char *path, SmbShare *share, char *dvd,
 	return neutrinoSmbResolve(&smb_cfg, path, share, dvd, dvd_size, problem);
 }
 
+/* A candidate is absent only on ENOENT. Never fall back to a different
+ * server/share when an existing higher-priority SMB2.CNF is unreadable,
+ * oversized, truncated, or contains embedded NUL bytes. */
+static int smbLoadConfigCandidate(const char *path, char **text)
+{
+	int len = 0, stat_result;
+	iox_stat_t st;
+
+	*text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, &len);
+	if (*text != NULL) {
+		if (memchr(*text, '\0', len) == NULL)
+			return 1;
+		free(*text);
+		*text = NULL;
+		return -1;
+	}
+	stat_result = genGetStat(path, &st);
+	if (stat_result == -ENOENT)
+		return 0;
+	if (stat_result == 0 && st.size == 0 && st.hisize == 0) {
+		/* Zero bytes is a valid, intentionally empty highest-priority file. */
+		*text = (char *)malloc(1);
+		if (*text != NULL) {
+			(*text)[0] = '\0';
+			return 1;
+		}
+	}
+	return -1;
+}
+
 /* Same places as IPCONFIG.DAT: beside the launched ELF, then SYS-CONF on
  * the card it was launched from, then on the other card. */
 static char *smbReadConfigText(int *mc1_refused)
 {
 	char path[MAX_PATH];
-	char *text;
-	int port, i;
+	char *text = NULL;
+	int port, i, candidate;
 
 	*mc1_refused = 0;
 	smb_cfg_path[0] = '\0';
+	smb_cfg_read_error = 0;
 	if (strlen(LaunchElfDir) + sizeof(SMB_CNF_NAME) <= sizeof(path)) {
 		snprintf(path, sizeof(path), "%s%s", LaunchElfDir, SMB_CNF_NAME);
-		if ((text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL)) != NULL) {
-			snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", path);
-			return text;
+		/* A CWD on mc1 must also obey the MX4SIO stack guard. */
+		if (!strncmp(path, "mc1:", 4) && mc1AccessRefused())
+			*mc1_refused = 1;
+		else {
+			candidate = smbLoadConfigCandidate(path, &text);
+			if (candidate != 0) {
+				snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", path);
+				smb_cfg_read_error = candidate < 0;
+				return text;
+			}
 		}
 	}
 	port = !strncmp(LaunchElfDir, "mc1", 3);
@@ -68,8 +107,10 @@ static char *smbReadConfigText(int *mc1_refused)
 			continue;
 		}
 		snprintf(path, sizeof(path), "mc%d:/SYS-CONF/%s", port, SMB_CNF_NAME);
-		if ((text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL)) != NULL) {
+		candidate = smbLoadConfigCandidate(path, &text);
+		if (candidate != 0) {
 			snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", path);
+			smb_cfg_read_error = candidate < 0;
 			return text;
 		}
 	}
@@ -348,6 +389,10 @@ void smbSharesStatus(int version, char *out, int out_size)
 	}
 	if (!smb_cfg_path[0]) {
 		snprintf(out, out_size, "No %s found (beside Launchstation or in mc?:/SYS-CONF)", SMB_CNF_NAME);
+		return;
+	}
+	if (smb_cfg_read_error) {
+		snprintf(out, out_size, "Cannot read %s: unreadable, oversized or corrupt; refusing fallback", smb_cfg_path);
 		return;
 	}
 	for (i = 0; i < smb_cfg.count; i++) {
