@@ -31,7 +31,8 @@ typedef struct { unsigned int size, hisize; } iox_stat_t;
 #define MIRROR "mc0:/SYS-CONF/SMB2.CNF"
 
 static struct { char orig[SMB_NAME_LEN]; char name[SMB_NAME_LEN]; int pick, partial_pending; char partial_mirror_name[SMB_NAME_LEN]; SmbConfig snap; } smbed;
-static char primary[4096], mirror[4096];
+static char primary[SMB_CNF_MAX_SIZE + 2048], mirror[SMB_CNF_MAX_SIZE + 2048];
+static int primary_length = -1, mirror_length = -1;
 static int primary_exists, mirror_exists, primary_read_error, mirror_read_error;
 static int primary_stat_error, mirror_stat_error;
 static int primary_read_limit, mirror_read_limit;
@@ -68,7 +69,8 @@ static int genOpen(const char *path, int flags)
 }
 static int genLseek(int fd, int amount, int whence)
 {
-    int size = (int)strlen(fd == 1 ? primary : mirror);
+    int size = fd == 1 ? (primary_length >= 0 ? primary_length : (int)strlen(primary))
+                       : (mirror_length >= 0 ? mirror_length : (int)strlen(mirror));
     if (whence == SEEK_END) read_offset = size + amount;
     else if (whence == SEEK_SET) read_offset = amount;
     else assert(0);
@@ -78,7 +80,9 @@ static int genRead(int fd, void *buf, int size)
 {
     const char *src = fd == 1 ? primary : mirror;
     int limit = fd == 1 ? primary_read_limit : mirror_read_limit;
-    int remaining = (int)strlen(src) - read_offset;
+    int actual = fd == 1 ? (primary_length >= 0 ? primary_length : (int)strlen(primary))
+                         : (mirror_length >= 0 ? mirror_length : (int)strlen(mirror));
+    int remaining = actual - read_offset;
     if (limit >= 0 && limit - read_offset < remaining)
         remaining = limit - read_offset;
     if (remaining <= 0) return 0;
@@ -96,7 +100,8 @@ static int genGetStat(const char *path, iox_stat_t *st)
     int failed = is_primary ? primary_stat_error : mirror_stat_error;
     if (failed) return -EIO;
     if (!exists) return -ENOENT;
-    st->size = (unsigned int)strlen(is_primary ? primary : mirror);
+    st->size = (unsigned int)(is_primary ? (primary_length >= 0 ? primary_length : (int)strlen(primary))
+                                       : (mirror_length >= 0 ? mirror_length : (int)strlen(mirror)));
     st->hisize = 0;
     return 0;
 }
@@ -104,15 +109,15 @@ static int dashWriteFile(const char *path, const void *data, int n)
 {
     int is_primary = !strcmp(path, PRIMARY);
     char *dst = is_primary ? primary : mirror;
-    assert(n >= 0 && n < 4096);
+    assert(n >= 0 && n < (int)sizeof(primary));
     if (is_primary) primary_writes++;
     else mirror_writes++;
     if (is_primary ? primary_write_error : mirror_write_error)
         return -1;
     memcpy(dst, data, n);
     dst[n] = '\0';
-    if (is_primary) primary_exists = 1;
-    else mirror_exists = 1;
+    if (is_primary) { primary_exists = 1; primary_length = n; }
+    else { mirror_exists = 1; mirror_length = n; }
     return 0;
 }
 int smbSharesReload(void) { reloads++; return reload_ok; }
@@ -128,6 +133,7 @@ static void init(void)
                    "NAME = ONE\nURL = smb://10.0.0.1/old\n");
     primary_exists = mirror_exists = reload_ok = 1;
     primary_read_error = mirror_read_error = 0;
+    primary_length = mirror_length = -1;
     primary_stat_error = mirror_stat_error = 0;
     primary_read_limit = mirror_read_limit = -1;
     primary_write_error = mirror_write_error = 0;
@@ -137,6 +143,16 @@ static void init(void)
     smbed.pick = 1;
     smbed.partial_pending = 0;
     smbed.partial_mirror_name[0] = '\0';
+}
+
+static void extend_with_comment(char *path, int desired_length)
+{
+    int n = (int)strlen(path);
+    assert(desired_length < (int)sizeof(primary) && desired_length > n + 2);
+    path[n++] = '#';
+    while (n < desired_length - 1) path[n++] = 'x';
+    path[n++] = '\n';
+    path[n] = '\0';
 }
 
 int main(void)
@@ -207,6 +223,50 @@ int main(void)
     assert(ret == 0 && primary_writes == 1 && mirror_writes == 1);
     assert(strstr(primary, "NAME = ONE") != NULL);
     assert(strstr(mirror, "NAME = ONE") != NULL);
+
+    /* A NUL hides later shares from strlen() and must reject all writes. */
+    init();
+    {
+        int n = (int)strlen(primary);
+        const char hidden[] = "NAME = HIDDEN\nURL = smb://10.0.0.3/hidden\n";
+        memcpy(primary + n + 1, hidden, sizeof(hidden));
+        primary_length = n + 1 + (int)strlen(hidden);
+        primary[n] = '\0';
+    }
+    ret = smbedWriteFile(changed);
+    assert(ret == -4 && primary_writes == 0 && mirror_writes == 0);
+    init();
+    {
+        int n = (int)strlen(mirror);
+        const char hidden[] = "NAME = HIDDEN\nURL = smb://10.0.0.3/hidden\n";
+        memcpy(mirror + n + 1, hidden, sizeof(hidden));
+        mirror_length = n + 1 + (int)strlen(hidden);
+        mirror[n] = '\0';
+    }
+    ret = smbedWriteFile(changed);
+    assert(ret == -7 && primary_writes == 0 && mirror_writes == 0);
+
+    /* A save must not exceed the loader's 16-KiB maximum, even when the
+     * upsert's scratch buffer could hold the resulting larger text. */
+    init();
+    smbed.orig[0] = '\0';
+    strcpy(smbed.name, "THREE");
+    assert(smbCnfBuildBlock(changed, sizeof(changed), "THREE", 2, NULL, NULL,
+                            "10.0.0.9", 445, "new", 0) > 0);
+    extend_with_comment(primary, SMB_CNF_MAX_SIZE - 8);
+    ret = smbedWriteFile(changed);
+    assert(ret == -1 && primary_writes == 0 && mirror_writes == 0);
+
+    init();
+    smbed.orig[0] = '\0';
+    strcpy(smbed.name, "THREE");
+    extend_with_comment(mirror, SMB_CNF_MAX_SIZE - 8);
+    ret = smbedWriteFile(changed);
+    assert(ret == -7 && primary_writes == 0 && mirror_writes == 0);
+    assert(strstr(mirror, "NAME = ONE") != NULL);
+
+    assert(smbCnfBuildBlock(changed, sizeof(changed), "ONE", 2, NULL, NULL,
+                            "10.0.0.9", 445, "new", 0) > 0);
 
     /* A same-NAME secondary pointing at a different share is not a mirror. */
     init();
