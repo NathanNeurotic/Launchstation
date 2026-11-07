@@ -609,6 +609,7 @@ static int smbedWriteFile(const char *block)
 			    strcmp(picked->username, original_user) ||
 			    strcmp(picked->password, original_password) ||
 			    picked->version != original_version ||
+			    picked->config_version != original_config_version ||
 			    picked->plaintext != original_plaintext) {
 				ret = -9; /* Selected share changed since it was displayed. */
 				goto out_free;
