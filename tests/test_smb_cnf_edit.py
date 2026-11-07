@@ -152,6 +152,60 @@ int main(void)
         checkParses("rename", out, 3);
     }
 
+    /* ---- line endings: splicing must not eat the neighbouring shares ---- */
+    {
+        const char *files[] = {
+            "# header\rNAME = ONE\rURL = smb://10.0.0.1/a\r"
+            "# second\rNAME = TWO\rURL = smb://10.0.0.2/b\r"
+            "# third\rNAME = THREE\rURL = smb://10.0.0.3/c\r",
+            "# header\nNAME = ONE\nURL = smb://10.0.0.1/a\n"
+            "# second\nNAME = TWO\nURL = smb://10.0.0.2/b\n"
+            "# third\nNAME = THREE\nURL = smb://10.0.0.3/c\n",
+            "# header\r\nNAME = ONE\r\nURL = smb://10.0.0.1/a\r\n"
+            "# second\r\nNAME = TWO\r\nURL = smb://10.0.0.2/b\r\n"
+            "# third\r\nNAME = THREE\r\nURL = smb://10.0.0.3/c\r\n",
+            "# header\rNAME = ONE\nURL = smb://10.0.0.1/a\r\n"
+            "# second\rNAME = TWO\r\nURL = smb://10.0.0.2/b\n"
+            "# third\nNAME = THREE\rURL = smb://10.0.0.3/c\r"
+        };
+        for (int j = 0; j < (int)(sizeof(files) / sizeof(files[0])); j++) {
+            const char *file = files[j];
+            const char *second = strstr(file, "# second");
+            const char *third = strstr(file, "# third");
+            char repl[512];
+            checkParses("line endings: original parses", file, 3);
+
+            smbCnfBuildBlock(repl, sizeof(repl), "ONE", 2, NULL, NULL,
+                             "10.0.0.9", 445, "new", 0);
+            len = upsert(file, "ONE", repl, out, sizeof(out), work, sizeof(work));
+            check(len > 0 && strstr(out, "smb://10.0.0.9/new") != NULL,
+                  "line endings: edit first");
+            check(len > 0 && strstr(out, "# second") != NULL &&
+                  strcmp(strstr(out, "# second"), second) == 0,
+                  "line endings: all later shares byte-identical");
+            if (len > 0)
+                checkParses("line endings: edited first parses", out, 3);
+
+            smbCnfBuildBlock(repl, sizeof(repl), "TWO", 2, NULL, NULL,
+                             "10.0.0.8", 445, "changed", 0);
+            len = upsert(file, "TWO", repl, out, sizeof(out), work, sizeof(work));
+            check(len > 0 && strstr(out, "smb://10.0.0.8/changed") != NULL &&
+                  strstr(out, "# third") != NULL &&
+                  strcmp(strstr(out, "# third"), third) == 0,
+                  "line endings: edit middle preserves third");
+            if (len > 0)
+                checkParses("line endings: edited middle parses", out, 3);
+
+            len = upsert(file, "ONE", NULL, out, sizeof(out), work, sizeof(work));
+            check(len > 0 && strstr(out, "NAME = ONE") == NULL &&
+                  strstr(out, "# second") != NULL &&
+                  strcmp(strstr(out, "# second"), second) == 0,
+                  "line endings: remove first preserves later shares");
+            if (len > 0)
+                checkParses("line endings: removed first parses", out, 2);
+        }
+    }
+
     /* ---- bounds ---- */
     {
         const char *file = "NAME = A\nURL = smb://1.1.1.1/a\n";
