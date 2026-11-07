@@ -307,6 +307,15 @@ int main(void)
     ret = smbedWriteFile(changed);
     assert(ret == -10 && primary_writes == 0 && mirror_writes == 0);
 
+    /* Editing a same-NAME mirror with a different declared SMB dialect
+     * marker must not silently replace that file's choice. */
+    init();
+    strcpy(primary, "NAME = ONE\nVERSION = 3\nURL = smb://10.0.0.1/old\n"
+                    "NAME = TWO\nURL = smb://10.0.0.2/two\n");
+    strcpy(mirror, "NAME = ONE\nVERSION = 2\nURL = smb://10.0.0.1/old\n");
+    ret = smbedWriteFile(changed);
+    assert(ret == -10 && primary_writes == 0 && mirror_writes == 0);
+
     /* A stale primary selection may not silently append a replacement. */
     init();
     strcpy(smbed.orig, "MISSING");
@@ -341,6 +350,24 @@ int main(void)
     assert(smbed.partial_pending);
     ret = smbedWriteFile(changed);
     assert(ret == -12 && primary_writes == 1 && mirror_writes == 0);
+
+    /* Both files can be written even though the old IOP connection
+     * refuses to retire. A subsequent edit or delete must remain locked. */
+    init();
+    reload_ok = 0;
+    ret = smbedWriteFile(changed);
+    assert(ret == -6 && smbed.partial_pending);
+    assert(primary_writes == 1 && mirror_writes == 1 && reloads == 1);
+    assert(strstr(primary, "smb://10.0.0.9/new") != NULL);
+    ret = smbedWriteFile(changed);
+    assert(ret == -12 && primary_writes == 1 && mirror_writes == 1);
+    init();
+    reload_ok = 0;
+    ret = smbedWriteFile(NULL);
+    assert(ret == -6 && smbed.partial_pending);
+    assert(primary_writes == 1 && mirror_writes == 1 && reloads == 1);
+    ret = smbedWriteFile(NULL);
+    assert(ret == -12 && primary_writes == 1 && mirror_writes == 1);
 
     /* After partial rename, retain old mirror identity and lock GUI writes. */
     init();
