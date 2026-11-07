@@ -357,6 +357,14 @@ int main(void)
     init();
     strcpy(primary, "NAME = ONE\nVERSION = 3\nURL = smb://10.0.0.1/old\n"
                     "NAME = TWO\nURL = smb://10.0.0.2/two\n");
+    /* The selected GUI snapshot must reflect the *primary* VERSION=3
+     * before the independent mirror differs. Otherwise the earlier stale-
+     * selection safeguard correctly rejects this as a primary edit (-9). */
+    {
+        char selected[SMB_CNF_MAX_SIZE + 2048];
+        memcpy(selected, primary, strlen(primary) + 1);
+        smbConfigParse(selected, &smbed.snap);
+    }
     strcpy(mirror, "NAME = ONE\nVERSION = 2\nURL = smb://10.0.0.1/old\n");
     ret = smbedWriteFile(changed);
     assert(ret == -10 && primary_writes == 0 && mirror_writes == 0);
