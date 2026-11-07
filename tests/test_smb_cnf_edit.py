@@ -91,6 +91,24 @@ int main(void)
                          "192.168.1.100", 0, "games", 0);
     check(n < 0, "port 0 refused");
 
+    /* A saved password must not vanish merely because the username is blank. */
+    {
+        char parsed[512];
+        SmbConfig parsed_cfg;
+        n = smbCnfBuildBlock(block, sizeof(block), "PONLY", 2, "", "passwordOnly",
+                             "10.0.0.7", 445, "share", 0);
+        check(n > 0 && strstr(block, "PASSWORD = passwordOnly\n") != NULL &&
+              strstr(block, "USERNAME =") == NULL,
+              "password-only GUI block retains the password");
+        if (n > 0) {
+            strcpy(parsed, block);
+            check(smbConfigParse(parsed, &parsed_cfg) == 1 &&
+                  !strcmp(parsed_cfg.share[0].password, "passwordOnly") &&
+                  !strcmp(parsed_cfg.share[0].username, ""),
+                  "password-only block round trips through production parser");
+        }
+    }
+
     /* ---- append to an empty and a commented file ---- */
     n = smbCnfBuildBlock(block, sizeof(block), "PC", 2, "player", "secret",
                          "192.168.1.100", 445, "games", 0);
