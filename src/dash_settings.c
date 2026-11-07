@@ -535,6 +535,18 @@ static int smbedReadText(const char *path, char **text)
 	return 1;
 }
 
+/* Only a confirmed missing SMB2.CNF may receive the example template.
+ * A failed read is not proof of absence: truncating an unreadable existing
+ * file would destroy saved shares and credentials. */
+static int smbedSeedTemplateIfAbsent(const char *path, const char *template_text, int size)
+{
+	iox_stat_t st;
+
+	if (genGetStat(path, &st) != -ENOENT)
+		return 0;
+	return dashWriteFile(path, template_text, size);
+}
+
 static int smbedWriteFile(const char *block)
 {
 	char path[MAX_PATH], sysconf[MAX_PATH];
@@ -3438,21 +3450,18 @@ static void runAction(int id)
 			    "# VERSION = 1\n"
 			    "# URL = smb://192.168.0.30/PS2SMB\n";
 			char path[MAX_PATH];
-			int fd;
 			smbSharesConfigured(SMB_PATH_V2); /* reads the file; no network */
 			if (smbSharesConfigPath()[0])
 				dashStrCopy(path, smbSharesConfigPath(), sizeof(path));
 			else {
 				smbedBuildSysconfPath(path, sizeof(path));
 				configEnsureSysconfDir(path);
-				/* A file that was unreadable (too large, card inserted later) is
-				 * still there: never replace one with the template. */
-				if ((fd = genOpen(path, FIO_O_RDONLY)) >= 0)
-					genClose(fd);
-				else if ((fd = genOpen(path, FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC)) >= 0) {
-					genWrite(fd, (void *)smb_template, sizeof(smb_template) - 1);
-					genClose(fd);
-				}
+				/* Only ENOENT permits seeding. An unreadable or oversized
+				 * existing file must never be truncated by opening the editor. */
+				if (smbedSeedTemplateIfAbsent(path, smb_template,
+				                              sizeof(smb_template) - 1) < 0)
+					dashModalMessage(DI_WARNING, "SMB template not saved",
+					                 "Could not create and verify SMB2.CNF; check storage before editing.", NULL);
 			}
 			dashTextEditor(path);
 			if (!smbSharesReload())
