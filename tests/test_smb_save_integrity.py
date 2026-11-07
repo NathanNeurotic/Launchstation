@@ -347,9 +347,9 @@ int main(void)
     init();
     strcpy(mirror, "NAME = ONE\nUSERNAME = outsider\nURL = smb://10.0.0.1/old\n");
     ret = smbedWriteFile(changed);
-    if (ret != -10 || primary_writes || mirror_writes)
-        fprintf(stderr, "same-name credentials: ret=%d primary_writes=%d mirror_writes=%d\n",
-                ret, primary_writes, mirror_writes);
+    fprintf(stderr, "TEST same-name credentials: ret=%d primary_writes=%d mirror_writes=%d\n",
+            ret, primary_writes, mirror_writes);
+    fflush(stderr);
     assert(ret == -10 && primary_writes == 0 && mirror_writes == 0);
 
     /* Editing a same-NAME mirror with a different declared SMB dialect
