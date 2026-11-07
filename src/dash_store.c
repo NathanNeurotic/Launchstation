@@ -106,6 +106,7 @@ char *dashLoadTextFile(const char *path, int max_size, int *out_len)
 {
 	char fixed[MAX_PATH];
 	int fd, size, rd, total;
+	long long full_size;
 	char *buf;
 
 	if (out_len != NULL)
@@ -117,11 +118,14 @@ char *dashLoadTextFile(const char *path, int max_size, int *out_len)
 	fd = genOpen(fixed, FIO_O_RDONLY);
 	if (fd < 0)
 		return NULL;
-	size = (int)genLseek(fd, 0, SEEK_END);
-	if (size <= 0 || size > max_size || genLseek(fd, 0, SEEK_SET) < 0) {
+	full_size = genLseek(fd, 0, SEEK_END);
+	/* Check the full 64-bit file size before narrowing: a >4 GiB file
+	 * could otherwise wrap to a small positive length and be truncated. */
+	if (full_size <= 0 || full_size > max_size || genLseek(fd, 0, SEEK_SET) < 0) {
 		genClose(fd);
 		return NULL;
 	}
+	size = (int)full_size;
 	buf = (char *)memalign(64, size + 1);
 	if (buf == NULL) {
 		genClose(fd);
