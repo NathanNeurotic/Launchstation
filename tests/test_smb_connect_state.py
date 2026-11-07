@@ -59,17 +59,21 @@ static int connectSmb1(SmbShare *sh)
     connect_calls++;
     return connect_result;
 }
-static int connectSmb2(SmbShare *sh)
-{
-    snprintf(last_connect_url, sizeof(last_connect_url), "%s", sh->url);
-    connect_calls++;
-    return connect_result;
-}
+/* SMB2 uses the production connectSmb2 implementation extracted below. */
 static int isSmbDriverLoaded(int version) { return version == SMB_PATH_V1 || version == SMB_PATH_V2; }
 static int fileXioDevctl(const char *device, int cmd, void *arg, unsigned int arglen,
                          void *buf, unsigned int buflen)
 {
-    (void)arg; (void)arglen; (void)buf; (void)buflen;
+    (void)buf;
+    if (!strcmp(device, SMB_DEVICE_V2) && cmd == (int)SMB2_DEVCTL_CONNECT) {
+        const smb2Connect_in_t *in = arg;
+        assert(in != NULL && arglen == sizeof(*in) &&
+               buflen == sizeof(smb2Connect_out_t));
+        snprintf(last_connect_url, sizeof(last_connect_url), "%s", in->url);
+        connect_calls++;
+        return connect_result;
+    }
+    (void)arg; (void)arglen; (void)buflen;
     disconnect_calls++;
     if (!strcmp(device, SMB_DEVICE_V2) && cmd == (int)SMB2_DEVCTL_DISCONNECT_ALL) {
         disconnect2_calls++;
@@ -82,6 +86,7 @@ static int fileXioDevctl(const char *device, int cmd, void *arg, unsigned int ar
 static const char *smb1Problem(int ret) { (void)ret; return "mock SMB1 failure"; }
 static unsigned int Timer(void) { return now; }
 '''
+code += function("static int connectSmb2(SmbShare *sh)\n{")
 code += source[source.index("static unsigned int smb_cfg_text_hash;"):source.index("static void smbReadConfig(void)\n{")]
 code += function("static void smbReadConfig(void)\n{")
 code += function("void smbSharesConnect(int version, int retry_failed)\n{")
@@ -116,6 +121,20 @@ int main(void)
     smbSharesConnect(2, 1);
     assert(smb_cfg.share[0].state == SMB_STATE_CONNECTED);
     assert(connect_calls == 1);
+
+    /* The actual SMB2 devctl wrapper must never mask -EEXIST as success:
+     * NAME could belong to a different, still-connected share. */
+    reset_case();
+    connect_result = -EEXIST;
+    smbSharesConnect(2, 1);
+    assert(connect_calls == 1);
+    assert(!strcmp(last_connect_url, "smb://10.0.0.2/s"));
+    assert(smbSharesConnectedCount(2) == 0);
+    assert(smb_cfg.share[0].state == SMB_STATE_FAILED);
+    assert(smb_cfg.share[0].error == -EEXIST);
+    assert(smb_cfg.share[0].problem != NULL);
+    assert(!strcmp(smb_cfg.share[0].problem,
+                   "Share NAME is still in use by an old SMB session; restart Launchstation"));
 
     reset_case();
     connect_result = -1;
@@ -192,6 +211,7 @@ int main(void)
                   "NAME=OLD\nVERSION=1\nURL=smb://10.0.0.3/newlegacy\n";
     disconnect1_result = -1;
     assert(!smbSharesReload());
+    assert(disconnect1_calls == 1 && disconnect2_calls == 1);
     assert(!strcmp(smb_cfg.share[0].url, "smb://10.0.0.2/s"));
     assert(!strcmp(smb_cfg.share[1].url, "smb://10.0.0.2/legacy"));
     assert(smbSharesConnectedCount(2) == 0 && smbSharesConnectedCount(1) == 1);
