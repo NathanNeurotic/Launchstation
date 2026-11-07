@@ -387,6 +387,8 @@ static struct {
 	char pass[SMB_CRED_LEN];
 	int plaintext; /* SMB1 clear-text password allowance, kept across edits */
 	int pick; /* 0 = New share, else snapshot share index + 1 */
+	int partial_pending; /* A write may have left CWD/SYS-CONF out of sync. */
+	char partial_mirror_name[SMB_NAME_LEN]; /* Name before a partial rename/delete. */
 	SmbConfig snap;
 } smbed;
 
@@ -520,6 +522,10 @@ static int smbedWriteFile(const char *block)
 	int original_version = 0, original_plaintext = 0, orig_matches = 0;
 	int len, mirror_len = 0, mirror_write = 0, read_result, i, matches = 0, valid = 0, ret = -3;
 
+	/* A failed commit needs explicit inspection; another GUI edit could
+	 * turn a partial rename into duplicate shares or discard the old NAME. */
+	if (smbed.partial_pending)
+		return -12;
 	out = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
 	work = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
 	if (out == NULL || work == NULL)
@@ -659,11 +665,36 @@ static int smbedWriteFile(const char *block)
 mirror_ready:
 	free(text);
 	text = NULL;
-	if (dashWriteFile(path, out, len) < 0)
+	if (dashWriteFile(path, out, len) < 0) {
+		/* FIO_O_TRUNC may have changed the file before verification failed. */
+		smbed.partial_pending = 1;
+		dashStrCopy(smbed.partial_mirror_name, smbed.orig,
+		            sizeof(smbed.partial_mirror_name));
+		ret = -11;
 		goto out_free;
+	}
 	if (mirror_write && dashWriteFile(sysconf, mirror, mirror_len) < 0) {
-		/* Primary is already committed. Never report an all-or-nothing save. */
-		smbSharesReload();
+		/* A secondary failure follows a verified primary write. Preserve
+		 * the old secondary name and disable further GUI writes until the
+		 * copies have been reconciled manually. */
+		dashStrCopy(smbed.partial_mirror_name, smbed.orig,
+		            sizeof(smbed.partial_mirror_name));
+		smbed.partial_pending = 1;
+		if (block != NULL)
+			dashStrCopy(smbed.orig, smbed.name, sizeof(smbed.orig));
+		else {
+			smbed.orig[0] = '\0';
+			smbed.pick = 0;
+		}
+		if (smbSharesReload()) {
+			smbSharesSnapshot(&smbed.snap);
+			if (block != NULL)
+				for (i = 0; i < smbed.snap.count; i++)
+					if (!stricmp(smbed.snap.share[i].name, smbed.name)) {
+						smbed.pick = i + 1;
+						break;
+					}
+		}
 		ret = -8;
 		goto out_free;
 	}
