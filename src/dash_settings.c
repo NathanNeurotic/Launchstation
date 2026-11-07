@@ -16,6 +16,8 @@
 #include "main_title.h"
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 #include "cloud_google.h"
+#endif
+#ifdef ETH
 #include "init.h"
 #endif
 #ifdef SMB
@@ -2091,6 +2093,31 @@ static int validIpv4(const char *s)
 	return 1;
 }
 
+/* A usable IPv4 netmask has a contiguous run of ones followed by zeros. */
+static int validNetmask(const char *s)
+{
+	unsigned a, b, c, d;
+	unsigned mask;
+	char extra = ' ';
+	int scanned;
+
+	if (s == NULL || s[0] == ' ')
+		return 0;
+	scanned = sscanf(s, "%u.%u.%u.%u%c", &a, &b, &c, &d, &extra);
+	if (scanned != 4 || extra != ' ')
+		return 0;
+	if (a > 255U || b > 255U || c > 255U || d > 255U)
+		return 0;
+	mask = (a << 24) | (b << 16) | (c << 8) | d;
+	if (mask == 0U || mask == ~0U)
+		return 0;
+	while (mask & 0x80000000U)
+		mask <<= 1;
+	while ((mask & 0x80000000U) == 0 && mask != 0U)
+		mask <<= 1;
+	return mask == 0U;
+}
+
 /* Preflight for Settings -> Network -> Sync PS2 clock. This is called only from
  * the explicit action path; it must not start or reset the network stack. */
 static int ipNetworkSettingsReadyForClockSync(char *message, size_t size)
@@ -2108,7 +2135,7 @@ static int ipNetworkSettingsReadyForClockSync(char *message, size_t size)
 			snprintf(message, size, "PC CARD CompactFlash is using the network adapter. Remove it or use another network device, then retry.");
 		return 0;
 	}
-	if (!validIpv4(ip) || !validIpv4(netmask) || !validIpv4(gw)) {
+	if (!validIpv4(ip) || !validIpv4(netmask) || !validIpv4(gw) || !validNetmask(netmask)) {
 		if (message != NULL && size > 0)
 			snprintf(message, size, "IP address, netmask or gateway is incomplete or invalid. Correct Settings > Network and retry.");
 		return 0;
