@@ -6,12 +6,13 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 source = (root / "src/dash_settings.c").read_text()
-start = source.index("static int smbedWriteFile(const char *block)\n{")
+start = source.index("static int smbedReadText(const char *path, char **text)\n{")
 end = source.index("\n}\n\nstatic void smbedSave(void)", start) + 2
 save_function = source[start:end]
 
 code = r'''
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,12 +21,14 @@ code = r'''
 #define MAX_PATH 1024
 #define FIO_O_RDONLY 1
 #define stricmp strcasecmp
+typedef struct { unsigned int size, hisize; } iox_stat_t;
 #define PRIMARY "mass:/SMB2.CNF"
 #define MIRROR "mc0:/SYS-CONF/SMB2.CNF"
 
 static struct { char orig[SMB_NAME_LEN]; char name[SMB_NAME_LEN]; SmbConfig snap; } smbed;
 static char primary[4096], mirror[4096];
 static int primary_exists, mirror_exists, primary_read_error, mirror_read_error;
+static int primary_stat_error, mirror_stat_error;
 static int primary_write_error, mirror_write_error;
 static int primary_writes, mirror_writes, reloads, reload_ok;
 
@@ -45,12 +48,17 @@ static char *dashLoadTextFile(const char *path, int cap, int *len)
     return exists && !read_error && strlen(value) > 0 &&
            strlen(value) <= (size_t)cap ? strdup(value) : NULL;
 }
-static int genOpen(const char *path, int flags)
+static int genGetStat(const char *path, iox_stat_t *st)
 {
-    assert(flags == FIO_O_RDONLY);
-    return (!strcmp(path, PRIMARY) ? primary_exists : mirror_exists) ? 3 : -1;
+    int is_primary = !strcmp(path, PRIMARY);
+    int exists = is_primary ? primary_exists : mirror_exists;
+    int failed = is_primary ? primary_stat_error : mirror_stat_error;
+    if (failed) return -EIO;
+    if (!exists) return -ENOENT;
+    st->size = (unsigned int)strlen(is_primary ? primary : mirror);
+    st->hisize = 0;
+    return 0;
 }
-static int genClose(int fd) { assert(fd == 3); return 0; }
 static int dashWriteFile(const char *path, const void *data, int n)
 {
     int is_primary = !strcmp(path, PRIMARY);
@@ -79,6 +87,7 @@ static void init(void)
                    "NAME = ONE\nURL = smb://10.0.0.1/old\n");
     primary_exists = mirror_exists = reload_ok = 1;
     primary_read_error = mirror_read_error = 0;
+    primary_stat_error = mirror_stat_error = 0;
     primary_write_error = mirror_write_error = 0;
     primary_writes = mirror_writes = reloads = 0;
     strcpy(smbed.orig, "ONE");
@@ -120,6 +129,25 @@ int main(void)
     mirror_read_error = 1;
     ret = smbedWriteFile(changed);
     assert(ret == -7 && primary_writes == 0 && mirror_writes == 0 && reloads == 0);
+
+    /* A failed stat after failed read is not evidence a file is absent. */
+    init();
+    mirror_read_error = mirror_stat_error = 1;
+    ret = smbedWriteFile(changed);
+    assert(ret == -7 && primary_writes == 0 && mirror_writes == 0);
+    init();
+    primary_read_error = primary_stat_error = 1;
+    ret = smbedWriteFile(changed);
+    assert(ret == -4 && primary_writes == 0 && mirror_writes == 0);
+
+    /* A real zero-byte existing file can accept a new share. */
+    init();
+    primary[0] = mirror[0] = '\0';
+    smbed.orig[0] = '\0';
+    ret = smbedWriteFile(changed);
+    assert(ret == 0 && primary_writes == 1 && mirror_writes == 1);
+    assert(strstr(primary, "NAME = ONE") != NULL);
+    assert(strstr(mirror, "NAME = ONE") != NULL);
 
     /* A mirrored rename that would introduce duplicate NAME must fail closed. */
     init();
