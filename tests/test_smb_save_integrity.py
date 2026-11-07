@@ -6,6 +6,9 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 source = (root / "src/dash_settings.c").read_text()
+helper_start = source.index("static void smbedBuildSysconfPath(char *path, int size)\n{")
+helper_end = source.index("\n}\n\nstatic void smbedConfigPath(", helper_start) + 2
+target_helper = source[helper_start:helper_end]
 start = source.index("static int smbedReadText(const char *path, char **text)\n{")
 end = source.index("\n}\n\nstatic void smbedSave(void)", start) + 2
 save_function = source[start:end]
@@ -44,9 +47,15 @@ static void dashStrCopy(char *out, const char *value, int size)
     assert(size > 0);
     snprintf(out, (size_t)size, "%s", value);
 }
+static int mx4sio_owns_slot2, ordinary_sysconf_probes;
+static int mc1AccessRefused(void) { return mx4sio_owns_slot2; }
 static void smbedConfigPath(char *out, int n) { snprintf(out, n, "%s", PRIMARY); }
 static void configBuildSysconfPath(char *out, int n, const char *file)
 {
+    /* This mock represents the generic helper probing both card slots.
+     * It must not run if the SMB-specific guard says slot 2 is owned. */
+    assert(!mx4sio_owns_slot2);
+    ordinary_sysconf_probes++;
     assert(!strcmp(file, "SMB2.CNF"));
     snprintf(out, n, "%s", MIRROR);
 }
@@ -123,7 +132,7 @@ static int dashWriteFile(const char *path, const void *data, int n)
 int smbSharesReload(void) { reloads++; return reload_ok; }
 int smbSharesSnapshot(SmbConfig *out) { memset(out, 0, sizeof(*out)); return 0; }
 '''
-code += loader_function + '\n' + save_function
+code += target_helper + '\n' + loader_function + '\n' + save_function
 code += r'''
 static void init(void)
 {
@@ -134,6 +143,7 @@ static void init(void)
     primary_exists = mirror_exists = reload_ok = 1;
     primary_read_error = mirror_read_error = 0;
     primary_length = mirror_length = -1;
+    mx4sio_owns_slot2 = ordinary_sysconf_probes = 0;
     primary_stat_error = mirror_stat_error = 0;
     primary_read_limit = mirror_read_limit = -1;
     primary_write_error = mirror_write_error = 0;
@@ -223,6 +233,20 @@ int main(void)
     assert(ret == 0 && primary_writes == 1 && mirror_writes == 1);
     assert(strstr(primary, "NAME = ONE") != NULL);
     assert(strstr(mirror, "NAME = ONE") != NULL);
+
+    /* Selecting an automatic SYS-CONF mirror may not probe mc1 or reset the
+     * IOP while MX4SIO owns slot 2. Neither may an implicit mc1 read. */
+    init();
+    mx4sio_owns_slot2 = 1;
+    {
+        char target[MAX_PATH], *data = NULL;
+        smbedBuildSysconfPath(target, sizeof(target));
+        assert(!strcmp(target, MIRROR) && ordinary_sysconf_probes == 0);
+        assert(smbedReadText("mc1:/SYS-CONF/SMB2.CNF", &data) < 0 && !data);
+    }
+    ret = smbedWriteFile(changed);
+    assert(ret == 0 && ordinary_sysconf_probes == 0);
+    assert(primary_writes == 1 && mirror_writes == 1);
 
     /* A NUL hides later shares from strlen() and must reject all writes. */
     init();
