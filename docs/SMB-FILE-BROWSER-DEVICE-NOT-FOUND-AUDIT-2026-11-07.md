@@ -47,8 +47,7 @@ detail in some paths and does not show the share/device state directly.
 - The dashboard can retry with `smbSharesStatus` only because it rereads
   config independently, but the readiness path does not expose this.
 
-### C. Driver connection failure has two independent reasons that are not
-   distinguished to the user
+### C. Driver connection failure has two independent reasons that are not distinguished to the user
 
 - `load_smb` (`src/init.c:899-946`) fails before share connection for several
   environment reasons:
@@ -66,7 +65,8 @@ detail in some paths and does not show the share/device state directly.
 ### D. Config file discovery is fragile and has multiple precedence rules
 
 - `smbReadConfigText` (`src/smb_shares.c:47-76`) tries `LaunchElfDir + "SMB2.CNF"`,
-  then `mc1`, then `mc0` (swapping starting slot), and skips an mc1 read when
+  then the `SYS-CONF` file on `mc1` followed by `mc0` when `LaunchElfDir` starts
+  with `mc1`. Otherwise it tries `mc0` followed by `mc1`, skipping `mc1` when
   `mc1AccessRefused()`.
 - A config saved manually or by another tool in a place not covered by those
   rules is invisible, even though the UI "configured correctly".
@@ -74,11 +74,14 @@ detail in some paths and does not show the share/device state directly.
   recent `#297`) creates confusion about which file won.
 - `smbReadConfig` keeps a pending mc1 state:
   - `smb_cfg_loaded = !mc1_refused || smb_cfg_path[0]` (line 131).
-  - `smbSharesKnown(v)` (`src/smb_shares.c:149-151`) returns 0 while pending.
-  - Dashboard V1 entry is therefore hidden/missing on first pass:
-    `src/dash_devices.c:438` uses `smbSharesKnown(SMB_PATH_V1)`.
-    Warm-up calls `smbSharesConfigured` for V1 only:
-    `src/dash_main.c:1185`, while V2 is never warmed at startup.
+  - `smbSharesKnown(v)` (`src/smb_shares.c:149-151`) may return a cached count
+    while mc1 is pending if an mc0 fallback was loaded; it returns 0 when no
+    config has been loaded.
+  - Dashboard V1 builds its entry with `smbSharesKnown(SMB_PATH_V1)`
+    (`src/dash_devices.c:438`). Boot warm-up calls `smbSharesConfigured` for V1
+    (`src/dash_main.c:1185`), which parses the shared `SMB2.CNF` for both
+    versions and merely reports a V1-specific count. V2's displayed state still
+    depends on cached counts and later connection state.
 - mc1 pending logic can preserve a fallback mc0 file while also retaining the
   pending flag, making the "configured file" ambiguous.
 
@@ -165,7 +168,9 @@ reports partial failures, but the underlying operation is still complex:
 4. Separate config discovery errors from network errors:
    - Distinguish "No SMB2.CNF found" from "SMB2.CNF has no valid share".
    - Report the file path that was read.
-5. Remove 30-second suppression from explicit user-initiated Open; retain backoff
+5. Remove 30-second suppression from explicit user-initiated Open, but add a
+   responsive retry path that avoids blocking the UI during SMB2 connection
+   attempts (keeping driver/IOP startup on its required thread); retain backoff
    only for asynchronous retries.
 6. Make reload atomic with error reporting; never leave a failed reload looking
    successful.
@@ -181,6 +186,8 @@ reports partial failures, but the underlying operation is still complex:
   with driver load success/failure and share connect success/failure.
 - Integration test for config file discovery precedence and multi-file mirror.
 - Integration test for reload after editing a share within 30 seconds.
+- Integration test for a failed SMB2 disconnect followed by a successful SMB1
+  logoff, including a later SMB1 connection attempt.
 - Hardware smoke test: loaded driver but disconnected share should not read
   "Device not found" without the specific SMB status.
 
@@ -197,23 +204,29 @@ reports partial failures, but the underlying operation is still complex:
 
 ### J. GUI config save can commit one location but not the other
 
-- `smbedWriteFile` (`src/dash_settings.c:490-551`) reads only the first config path
+- `smbedWriteFile` (`src/dash_settings.c:490-551`) reads the first config path
   (`smbedConfigPath`, line 504) and writes there first (line 536).
-- SYS-CONF is written only if it already exists (`genOpen` succeeds, line 541).
-- If the first write succeeds and the second mirror fails, the PS2 can later read a
-  stale `SMB2.CNF` from either location.
-- There is no rollback or atomic update across the two locations.
-- In particular, if CWD has a readable file but SYS-CONF has an older readable
-  file, `smbSharesReload()` may load one while `smbedWriteFile` has updated only
-  the other before the mirror step takes place.
+- SYS-CONF is mirrored only if it already exists (`genOpen` succeeds, line 541),
+  and `dashWriteFile` on line 543 is not checked.
+- If the first write succeeds while the SYS-CONF mirror fails, `smbSharesReload()`
+  can still succeed on line 545, so `smbedWriteFile` returns 0 even though another
+  location retains stale share entries.
+- There is no rollback or atomic update across CWD and SYS-CONF. If CWD has a
+  readable file but SYS-CONF has an older readable file, `smbSharesReload()` may
+  load one while `smbedWriteFile` has updated only the other before the mirror
+  step takes place.
 
 ### K. `smbSharesReload()` treats a single failed disconnect as total failure
 
-- `smbSharesDisconnectAllSessions` (`src/smb_shares.c:94-107`) returns 0 if either
+- `smbDisconnectAllSessions` (`src/smb_shares.c:94-107`) returns 0 if either
   V1 or V2 devctl returns an error, even when the program-level intent was to
-  retire sessions before reparsing.
+  retire sessions before reparsing. In the specific mismatch case, V2 disconnect
+  can fail while V1 logoff succeeds, but cached V1/V2 states both remain
+  `CONNECTED` despite V1's session being closed.
 - Consequently `smbSharesReload()` (`src/smb_shares.c:370-378`) refuses to
-  forget state and reload config (`ret = -6` path in settings).
+  forget state and reload config (`ret = -6` path in settings). Later connection
+  attempts can skip SMB1 because its stale state says `CONNECTED`, leaving it
+  unavailable until a restart.
 - Once this happens, the PS2 keeps using old shares until a manual reset,
   even though `SMB2.CNF` on disk may already have been updated.
 
