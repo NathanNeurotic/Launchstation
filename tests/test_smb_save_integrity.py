@@ -298,6 +298,29 @@ int main(void)
     assert(smbCnfBuildBlock(changed, sizeof(changed), "ONE", 2, NULL, NULL,
                             "10.0.0.9", 445, "new", 0) > 0);
 
+    /* The text editor may seed its example file only if stat proves the
+     * target does not exist. Failed read/stat must not clobber credentials. */
+    init();
+    primary_read_error = 1;
+    ret = smbedSeedTemplateIfAbsent(PRIMARY, "# template\n", 11);
+    assert(ret == 0 && primary_writes == 0);
+    assert(strstr(primary, "NAME = ONE") != NULL);
+    init();
+    primary_stat_error = 1;
+    ret = smbedSeedTemplateIfAbsent(PRIMARY, "# template\n", 11);
+    assert(ret == 0 && primary_writes == 0);
+    assert(strstr(primary, "NAME = ONE") != NULL);
+    init();
+    primary_exists = 0;
+    ret = smbedSeedTemplateIfAbsent(PRIMARY, "# template\n", 11);
+    assert(ret == 0 && primary_writes == 1 && primary_exists);
+    assert(strcmp(primary, "# template\n") == 0);
+    init();
+    primary_exists = 0;
+    primary_write_error = 1;
+    ret = smbedSeedTemplateIfAbsent(PRIMARY, "# template\n", 11);
+    assert(ret < 0 && primary_writes == 1);
+
     /* A same-NAME secondary pointing at a different share is not a mirror. */
     init();
     strcpy(mirror, "NAME = OTHER\nURL = smb://10.0.0.7/other\n"
