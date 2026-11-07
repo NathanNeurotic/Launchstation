@@ -36,6 +36,7 @@ typedef struct { unsigned int size, hisize; } iox_stat_t;
 static struct { char orig[SMB_NAME_LEN]; char name[SMB_NAME_LEN]; int pick, partial_pending; char partial_mirror_name[SMB_NAME_LEN]; SmbConfig snap; } smbed;
 static char primary[SMB_CNF_MAX_SIZE + 2048], mirror[SMB_CNF_MAX_SIZE + 2048];
 static int primary_length = -1, mirror_length = -1;
+static long long primary_reported_size = -1;
 static int primary_exists, mirror_exists, primary_read_error, mirror_read_error;
 static int primary_stat_error, mirror_stat_error;
 static int primary_read_limit, mirror_read_limit;
@@ -76,11 +77,14 @@ static int genOpen(const char *path, int flags)
     read_offset = 0;
     return first ? 1 : 2;
 }
-static int genLseek(int fd, int amount, int whence)
+static long long genLseek(int fd, int amount, int whence)
 {
     int size = fd == 1 ? (primary_length >= 0 ? primary_length : (int)strlen(primary))
                        : (mirror_length >= 0 ? mirror_length : (int)strlen(mirror));
-    if (whence == SEEK_END) read_offset = size + amount;
+    if (whence == SEEK_END) {
+        read_offset = size + amount;
+        if (fd == 1 && primary_reported_size >= 0) return primary_reported_size;
+    }
     else if (whence == SEEK_SET) read_offset = amount;
     else assert(0);
     return read_offset;
@@ -111,7 +115,8 @@ static int genGetStat(const char *path, iox_stat_t *st)
     if (!exists) return -ENOENT;
     st->size = (unsigned int)(is_primary ? (primary_length >= 0 ? primary_length : (int)strlen(primary))
                                        : (mirror_length >= 0 ? mirror_length : (int)strlen(mirror)));
-    st->hisize = 0;
+    st->hisize = is_primary && primary_reported_size > 0
+               ? (unsigned int)((unsigned long long)primary_reported_size >> 32) : 0;
     return 0;
 }
 static int dashWriteFile(const char *path, const void *data, int n)
@@ -143,6 +148,7 @@ static void init(void)
     primary_exists = mirror_exists = reload_ok = 1;
     primary_read_error = mirror_read_error = 0;
     primary_length = mirror_length = -1;
+    primary_reported_size = -1;
     mx4sio_owns_slot2 = ordinary_sysconf_probes = 0;
     primary_stat_error = mirror_stat_error = 0;
     primary_read_limit = mirror_read_limit = -1;
@@ -253,6 +259,13 @@ int main(void)
     ret = smbedWriteFile(changed);
     assert(ret == 0 && ordinary_sysconf_probes == 0);
     assert(primary_writes == 1 && mirror_writes == 1);
+
+    /* 64-bit seek values must not wrap into a convincing short text file. */
+    init();
+    primary_reported_size = (1LL << 32) + 63;
+    ret = smbedWriteFile(changed);
+    assert(ret == -4 && primary_writes == 0 && mirror_writes == 0);
+    assert(strstr(primary, "NAME = TWO") != NULL);
 
     /* A NUL hides later shares from strlen() and must reject all writes. */
     init();
