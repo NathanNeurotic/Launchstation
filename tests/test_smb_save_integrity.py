@@ -153,6 +153,12 @@ static void init(void)
     smbed.pick = 1;
     smbed.partial_pending = 0;
     smbed.partial_mirror_name[0] = '\0';
+    /* The real editor populates this snapshot when the user picks a share. */
+    {
+        char copy[SMB_CNF_MAX_SIZE + 2048];
+        memcpy(copy, primary, strlen(primary) + 1);
+        smbConfigParse(copy, &smbed.snap);
+    }
 }
 
 static void extend_with_comment(char *path, int desired_length)
@@ -315,6 +321,16 @@ int main(void)
     strcpy(mirror, "NAME = ONE\nVERSION = 2\nURL = smb://10.0.0.1/old\n");
     ret = smbedWriteFile(changed);
     assert(ret == -10 && primary_writes == 0 && mirror_writes == 0);
+
+    /* A valid on-disk share may have been edited by a second editor after
+     * it was selected in the GUI; do not overwrite the newer credentials. */
+    init();
+    strcpy(primary, "# primary\nNAME = ONE\nUSERNAME = somebody_else\n"
+                    "URL = smb://10.0.0.1/old\nNAME = TWO\n"
+                    "URL = smb://10.0.0.2/two\n");
+    ret = smbedWriteFile(changed);
+    assert(ret == -9 && primary_writes == 0 && mirror_writes == 0);
+    assert(strstr(primary, "USERNAME = somebody_else") != NULL);
 
     /* A stale primary selection may not silently append a replacement. */
     init();
