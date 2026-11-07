@@ -487,7 +487,7 @@ static void smbedLoadPick(void)
 	sh = &smbed.snap.share[smbed.pick - 1];
 	dashStrCopy(smbed.orig, sh->name, sizeof(smbed.orig));
 	dashStrCopy(smbed.name, sh->name, sizeof(smbed.name));
-	smbed.kind = sh->version;
+	smbed.kind = sh->config_version ? sh->config_version : sh->version;
 	smbed.plaintext = sh->plaintext;
 	dashStrCopy(smbed.user, sh->username, sizeof(smbed.user));
 	dashStrCopy(smbed.pass, sh->password, sizeof(smbed.pass));
@@ -542,7 +542,7 @@ static int smbedWriteFile(const char *block)
 	SmbConfig cfg;
 	char original_url[SMB_URL_LEN] = "", original_user[SMB_CRED_LEN] = "";
 	char original_password[SMB_CRED_LEN] = "";
-	int original_version = 0, original_plaintext = 0, orig_matches = 0;
+	int original_version = 0, original_config_version = 0, original_plaintext = 0, orig_matches = 0;
 	int len, mirror_len = 0, mirror_write = 0, read_result, i, matches = 0, valid = 0, ret = -3;
 
 	/* A failed commit needs explicit inspection; another GUI edit could
@@ -576,6 +576,7 @@ static int smbedWriteFile(const char *block)
 			dashStrCopy(original_user, sh->username, sizeof(original_user));
 			dashStrCopy(original_password, sh->password, sizeof(original_password));
 			original_version = sh->version;
+			original_config_version = sh->config_version;
 			original_plaintext = sh->plaintext;
 		}
 		if (orig_matches != 1 || i < cfg.count) {
@@ -641,6 +642,7 @@ static int smbedWriteFile(const char *block)
 				    strcmp(sh->username, original_user) ||
 				    strcmp(sh->password, original_password) ||
 				    sh->version != original_version ||
+				    sh->config_version != original_config_version ||
 				    sh->plaintext != original_plaintext) {
 					ret = -10; /* Same name, different connection: do not overwrite. */
 					goto out_free;
@@ -722,8 +724,17 @@ mirror_ready:
 		ret = -8;
 		goto out_free;
 	}
-	ret = smbSharesReload() ? 0 : -6;
-	smbSharesSnapshot(&smbed.snap);
+	if (smbSharesReload()) {
+		smbSharesSnapshot(&smbed.snap);
+		ret = 0;
+	} else {
+		/* Disk writes succeeded, but a live driver still uses stale session
+		 * identity. No further GUI mutations until restart/reconciliation. */
+		smbed.partial_pending = 1;
+		dashStrCopy(smbed.partial_mirror_name, smbed.orig,
+		            sizeof(smbed.partial_mirror_name));
+		ret = -6;
+	}
 out_free:
 	free(text);
 	free(mirror);
@@ -788,7 +799,7 @@ static void smbedSave(void)
 	}
 	if (r == -6) {
 		dashModalMessage(DI_WARNING, "Share saved; restart needed",
-		                 "SMB2.CNF was written, but the old SMB connection could not be disconnected. Restart Launchstation to apply the changed share.", NULL);
+		                 "SMB2.CNF was written, but the old SMB connection could not be disconnected. GUI edits are paused; restart Launchstation to apply the changed share.", NULL);
 		return;
 	}
 	if (r != 0) {
@@ -833,7 +844,7 @@ static void smbedDelete(void)
 		else
 			dashModalMessage(DI_WARNING,
 			                 r == -6 ? "Share deleted; restart needed" : "Share not deleted",
-			                 r == -6 ? "Saved configuration could not retire old SMB sessions. Restart Launchstation." :
+			                 r == -6 ? "Saved configuration could not retire old SMB sessions. GUI edits are paused; restart Launchstation." :
 			                 "SMB2.CNF could not be written.", NULL);
 		return;
 	}
