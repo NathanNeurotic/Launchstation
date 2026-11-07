@@ -650,7 +650,7 @@ static const SetItem net_items[] = {
 #endif
 #ifdef ETH
     {ST_CHOICE, S_NET_LEGACY, "Legacy Ethernet drivers", "Use MrRexD's ps2sdk v1.0 DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up. Takes effect the next time Ethernet/FTP is started."},
-    {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query multiple Internet time sources, require agreement, then write and verify the PS2 hardware RTC."},
+    {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query 0.pool.ntp.org and write and verify the PS2 hardware RTC. Requires saved network settings."},
 #endif
 #ifdef SMB
     {ST_PAGE, P_SMB, "SMB shares", "Add or edit the servers smb:/ and smb1:/ connect to, without hand-editing SMB2.CNF. The page writes one block per share; PS2-Servers' cards show exactly what to type."},
@@ -2073,6 +2073,55 @@ static char *ipField(int id)
 	return (id == S_NET_IP) ? ip : (id == S_NET_NM) ? netmask : gw;
 }
 
+/* Validate a complete dotted-quad string without relying on sscanf accepting
+ * trailing text or implausibly large octets. */
+static int validIpv4(const char *s)
+{
+	unsigned a, b, c, d;
+	char extra = '\0';
+	int scanned;
+
+	if (s == NULL || s[0] == '\0')
+		return 0;
+	scanned = sscanf(s, "%u.%u.%u.%u%c", &a, &b, &c, &d, &extra);
+	if (scanned != 4 || extra != '\0')
+		return 0;
+	if (a > 255U || b > 255U || c > 255U || d > 255U)
+		return 0;
+	return 1;
+}
+
+/* Preflight for Settings -> Network -> Sync PS2 clock. This is called only from
+ * the explicit action path; it must not start or reset the network stack. */
+static int ipNetworkSettingsReadyForClockSync(char *message, size_t size)
+{
+	if (message != NULL && size > 0)
+		message[0] = '\0';
+
+	if (net_dirty) {
+		if (message != NULL && size > 0)
+			snprintf(message, size, "Save your network settings first, then retry clock synchronization.");
+		return 0;
+	}
+	if (pcCardCfOwnsBus()) {
+		if (message != NULL && size > 0)
+			snprintf(message, size, "PC CARD CompactFlash is using the network adapter. Remove it or use another network device, then retry.");
+		return 0;
+	}
+	if (!validIpv4(ip) || !validIpv4(netmask) || !validIpv4(gw)) {
+		if (message != NULL && size > 0)
+			snprintf(message, size, "IP address, netmask or gateway is incomplete or invalid. Correct Settings > Network and retry.");
+		return 0;
+	}
+	if (!strcmp(ip, "0.0.0.0") || !strcmp(gw, "0.0.0.0") ||
+	    !strcmp(netmask, "0.0.0.0") || !strcmp(netmask, "255.255.255.255")) {
+		if (message != NULL && size > 0)
+			snprintf(message, size, "IP address, gateway or netmask is not usable. Configure Settings > Network and retry.");
+		return 0;
+	}
+	return 1;
+}
+
 static void editIp(const SetItem *it)
 {
 	char buf[16];
@@ -3245,8 +3294,14 @@ static void runAction(int id)
 		}
 #ifdef ETH
 		case S_CLOCK_SYNC: {
+			char message[256];
 			char result[160];
 			int ok;
+
+			if (!ipNetworkSettingsReadyForClockSync(message, sizeof(message))) {
+				dashModalMessage(DI_WARNING, "Clock synchronization unavailable", message, NULL);
+				break;
+			}
 			dashLoadingBegin("Synchronizing PS2 clock");
 			ok = dashClockSyncInternet(result, sizeof(result));
 			dashLoadingEnd();
