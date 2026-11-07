@@ -20,6 +20,7 @@
 #endif
 #ifdef SMB
 #include "smb_shares.h"
+#include "init.h" /* mc1AccessRefused: check stack ownership without switching it */
 #endif
 
 enum SetType {
