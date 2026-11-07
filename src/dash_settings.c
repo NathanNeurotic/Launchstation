@@ -489,12 +489,18 @@ static void smbedLoadPick(void)
 
 static int smbedWriteFile(const char *block)
 {
-	char path[MAX_PATH];
-	static char out[SMB_CNF_MAX_SIZE + 512];
-	static char work[SMB_CNF_MAX_SIZE + 512];
-	char *text;
-	int len, fd;
+	char path[MAX_PATH], sysconf[MAX_PATH];
+	char *out, *work, *text;
+	SmbConfig cfg;
+	int len, fd, i, matches = 0, valid = 0, ret = -3;
 
+	out = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
+	work = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
+	if (out == NULL || work == NULL) {
+		free(out);
+		free(work);
+		return -3;
+	}
 	smbedConfigPath(path, sizeof(path));
 	text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL);
 	if (text == NULL) {
@@ -504,48 +510,44 @@ static int smbedWriteFile(const char *block)
 		fd = genOpen(path, FIO_O_RDONLY);
 		if (fd >= 0) {
 			genClose(fd);
-			return -4;
+			ret = -4;
+			goto out_free;
 		}
 	}
 	len = smbCnfUpsertText(text != NULL ? text : "", smbed.orig, block,
-	                       out, sizeof(out), work, sizeof(work));
-	if (text != NULL)
-		free(text);
-	if (len < 0)
-		return -1;
-	/* The whole file must still parse and this share must be one it
-	   accepts: a duplicate NAME or a broken URL is reported from here,
-	   not at boot. A delete is validated by absence instead. */
+	                       out, SMB_CNF_MAX_SIZE + 512, work, SMB_CNF_MAX_SIZE + 512);
+	free(text);
+	if (len < 0) {
+		ret = -1;
+		goto out_free;
+	}
 	memcpy(work, out, len + 1);
-	{
-		SmbConfig cfg;
-		int i, found = 0, valid = 0;
-
-		smbConfigParse(work, &cfg);
-		for (i = 0; i < cfg.count; i++)
-			if (strcmp(cfg.share[i].name, smbed.name) == 0) {
-				found = 1;
-				if (cfg.share[i].state != SMB_STATE_INVALID)
-					valid = 1;
-			}
-		if (block != NULL) {
-			if (!valid)
-				return -2;
-		} else if (found) {
-			return -2; /* the delete left a (duplicate, invalid) share */
+	smbConfigParse(work, &cfg);
+	for (i = 0; i < cfg.count; i++)
+		if (!stricmp(cfg.share[i].name, block != NULL ? smbed.name : smbed.orig)) {
+			matches++;
+			if (cfg.share[i].state != SMB_STATE_INVALID)
+				valid++;
 		}
+	if (block != NULL ? (matches != 1 || valid != 1) : matches != 0) {
+		ret = -2;
+		goto out_free;
 	}
-	fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
-	if (fd < 0)
-		return -3;
-	if (genWrite(fd, out, len) != len) {
+	if (dashWriteFile(path, out, len) < 0)
+		goto out_free;
+	/* When the primary file lives beside the ELF, also update an existing
+	 * SYS-CONF copy so neither lookup location retains stale share entries. */
+	configBuildSysconfPath(sysconf, sizeof(sysconf), "SMB2.CNF");
+	if (strcmp(path, sysconf) != 0 && (fd = genOpen(sysconf, FIO_O_RDONLY)) >= 0) {
 		genClose(fd);
-		return -3;
+		dashWriteFile(sysconf, out, len);
 	}
-	genClose(fd);
-	smbSharesReload();
+	ret = smbSharesReload() ? 0 : -6;
 	smbSharesSnapshot(&smbed.snap);
-	return 0;
+out_free:
+	free(out);
+	free(work);
+	return ret;
 }
 
 static void smbedSave(void)
@@ -578,21 +580,26 @@ static void smbedSave(void)
 		                 "The file would not accept this share (a NAME may already be in use).", NULL);
 		return;
 	}
+	if (r == -6) {
+		dashModalMessage(DI_WARNING, "Share saved; restart needed",
+		                 "SMB2.CNF was written, but the old SMB connection could not be disconnected. Restart Launchstation to apply the changed share.", NULL);
+		return;
+	}
 	if (r != 0) {
 		dashModalMessage(DI_WARNING, "Share not saved", "SMB2.CNF could not be written.", NULL);
 		return;
 	}
-	dashStrCopy(smbed.orig, smbed.name, sizeof(smbed.orig));
 	smbSharesSnapshot(&smbed.snap);
 	/* Point the picker at the saved share: the next Save replaces it, and
 	   Delete enables, instead of silently appending a second copy. */
 	for (i = 0; i < smbed.snap.count; i++)
 		if (strcmp(smbed.snap.share[i].name, smbed.name) == 0) {
 			smbed.pick = i + 1;
+			dashStrCopy(smbed.orig, smbed.name, sizeof(smbed.orig));
 			break;
 		}
 	dashModalMessage(DI_CHECK, "Share saved",
-	                 "Open Files > smb:/ for SMB2/3 or smb1:/ for SMB1. The SMB2/3 list shows only shares that connect.", block);
+	                 "Open Files > smb:/ for SMB2/3 or smb1:/ for SMB1. The SMB2/3 list shows only shares that connect.", smbed.name);
 }
 
 static void smbedDelete(void)
@@ -603,7 +610,10 @@ static void smbedDelete(void)
 		return;
 	r = smbedWriteFile(NULL);
 	if (r != 0) {
-		dashModalMessage(DI_WARNING, "Share not deleted", "SMB2.CNF could not be written.", NULL);
+		dashModalMessage(DI_WARNING,
+		                 r == -6 ? "Share deleted; restart needed" : "Share not deleted",
+		                 r == -6 ? "Saved configuration could not retire old SMB sessions. Restart Launchstation." :
+		                 "SMB2.CNF could not be written.", NULL);
 		return;
 	}
 	smbed.pick = 0;
@@ -3190,7 +3200,9 @@ static void runAction(int id)
 				}
 			}
 			dashTextEditor(path);
-			smbSharesReload();
+			if (!smbSharesReload())
+				dashModalMessage(DI_WARNING, "Restart required",
+				                 "The old SMB connections could not be closed. Restart Launchstation to use the edited configuration.", NULL);
 			break;
 		}
 #endif

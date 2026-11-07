@@ -289,9 +289,11 @@ assert "if (fh->position) {" in dread and dread.count("if (r == -EINVAL) {") == 
 assert "if (info->FileName[0] == '\\0') {" in dread and dread.index("r = -EIO;") < dread.index("strncpy(dirent->name")
 assert "r = -ENAMETOOLONG;" in smbman
 
-# the dashboard worker never retries shares; a stale failure flag only acts on SMB paths
+# the dashboard worker never retries shares; UI-thread prep reconnects when 0 shares are connected
 filer = text("src/filer.c")
 assert "} else if (root && !dashWorkerOnThread()) {" in filer
+assert "if (smbIsRootPath(path) && smbSharesConnectedCount(smbPathKind(path)) == 0)" in filer
+assert "smbSharesConnect(smbPathKind(path), 1);" in filer
 assert "if (smb_version != SMB_PATH_NONE) {" in browser
 
 yaml = text("ps2.yaml")

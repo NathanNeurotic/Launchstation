@@ -731,6 +731,10 @@ int filerDirReadNeedsPrep(const char *path)
 		return FALSE;
 	if (!isPathDeviceStackLoaded(path))
 		return TRUE;
+#ifdef SMB
+	if (smbIsRootPath(path) && smbSharesConnectedCount(smbPathKind(path)) == 0)
+		return TRUE;
+#endif
 	if (!strncmp(path, "hdd", 3) && getHddDeviceFromPath(path, dev) >= 0 &&
 	    (unit = getHddUnitFromDevice(dev)) >= 0 && hddNparties[unit] == 0)
 		return TRUE;
@@ -747,6 +751,10 @@ int filerPrepareDirRead(const char *path)
 		return TRUE;
 	if (!ensurePathDeviceStackReady(path))
 		return FALSE;
+#ifdef SMB
+	if (smbIsRootPath(path) && smbSharesConnectedCount(smbPathKind(path)) == 0)
+		smbSharesConnect(smbPathKind(path), 1);
+#endif
 	if (!strncmp(path, "hdd", 3) && getHddDeviceFromPath(path, dev) >= 0 &&
 	    (unit = getHddUnitFromDevice(dev)) >= 0 && hddNparties[unit] == 0)
 		setPartyListForDevice(dev);
