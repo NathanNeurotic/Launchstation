@@ -37,13 +37,13 @@ assert write.index("smbedReadText(path") < write.index("smbConfigParse(work, &cf
 assert write.index("smbConfigParse(work, &cfg);") < write.index("smbCnfUpsertText(")
 assert write.index("smbCnfUpsertText(") < write.index("smbConfigParse(work, &cfg);", write.index("smbCnfUpsertText("))
 assert write.index("smbedReadText(sysconf") < write.index("dashWriteFile(path, out, len)")
-assert "configBuildSysconfPath(sysconf" in write
+assert "smbedBuildSysconfPath(sysconf" in write
 assert "smbSharesReload()" in write
 
 # the text-editor row keeps the template seeding and reloads afterwards
 case = settings.split("case S_SMBED_TEXT:", 1)[1].split("break;", 1)[0]
 assert "smbSharesConfigured(" in case
-assert "configBuildSysconfPath(" in case and "configEnsureSysconfDir(" in case
+assert "smbedBuildSysconfPath(" in case and "configEnsureSysconfDir(" in case
 assert "dashTextEditor(" in case
 assert case.index("dashTextEditor(") < case.index("smbSharesReload()")
 
