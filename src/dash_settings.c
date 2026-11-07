@@ -392,12 +392,23 @@ static struct {
 	SmbConfig snap;
 } smbed;
 
+/* Picking an automatic save target must never switch away from MX4SIO's
+ * slot-2 stack. Normal configBuildSysconfPath probes both mc slots through
+ * genOpen(), which may reset the IOP merely to test mc1: existence. */
+static void smbedBuildSysconfPath(char *path, int size)
+{
+	if (mc1AccessRefused())
+		snprintf(path, size, "mc0:/SYS-CONF/SMB2.CNF");
+	else
+		configBuildSysconfPath(path, size, "SMB2.CNF");
+}
+
 static void smbedConfigPath(char *path, int size)
 {
 	if (smbSharesConfigPath()[0])
 		dashStrCopy(path, smbSharesConfigPath(), size);
 	else {
-		configBuildSysconfPath(path, size, "SMB2.CNF");
+		smbedBuildSysconfPath(path, size);
 		configEnsureSysconfDir(path);
 	}
 }
@@ -496,6 +507,9 @@ static int smbedReadText(const char *path, char **text)
 	iox_stat_t st;
 	int result, length = 0;
 
+	/* Do not trigger an MX4SIO-to-mc1 IOP reset during implicit editor IO. */
+	if (!strncmp(path, "mc1:", 4) && mc1AccessRefused())
+		return -1;
 	*text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, &length);
 	if (*text != NULL) {
 		/* The editor uses C string offsets. Embedded NUL would silently
@@ -592,7 +606,7 @@ static int smbedWriteFile(const char *block)
 
 	/* Preflight an independent SYS-CONF file before writing either target.
 	 * Never mirror the entire CWD config over someone's unrelated shares. */
-	configBuildSysconfPath(sysconf, sizeof(sysconf), "SMB2.CNF");
+	smbedBuildSysconfPath(sysconf, sizeof(sysconf));
 	if (strcmp(path, sysconf) != 0) {
 		read_result = smbedReadText(sysconf, &text);
 		if (read_result < 0) {
@@ -3394,7 +3408,7 @@ static void runAction(int id)
 			if (smbSharesConfigPath()[0])
 				dashStrCopy(path, smbSharesConfigPath(), sizeof(path));
 			else {
-				configBuildSysconfPath(path, sizeof(path), "SMB2.CNF");
+				smbedBuildSysconfPath(path, sizeof(path));
 				configEnsureSysconfDir(path);
 				/* A file that was unreadable (too large, card inserted later) is
 				 * still there: never replace one with the template. */
