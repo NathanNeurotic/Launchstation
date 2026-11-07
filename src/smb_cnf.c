@@ -369,13 +369,41 @@ static int lineIsKey(const char *line)
 	return eq != NULL;
 }
 
+/* The GUI replaces only canonical share fields. Keep user annotations and
+ * unknown extension keys when modifying a share; do not reinterpret them. */
+static int lineIsManagedKey(const char *line, int len)
+{
+	const char *start = line, *eq;
+	char key[16];
+	int key_len;
+
+	while (start < line + len && (*start == ' ' || *start == '\t'))
+		start++;
+	if (start >= line + len || *start == '#' || *start == ';')
+		return 0;
+	eq = memchr(start, '=', line + len - start);
+	if (eq == NULL)
+		return 0;
+	while (eq > start && (eq[-1] == ' ' || eq[-1] == '\t'))
+		eq--;
+	key_len = (int)(eq - start);
+	if (key_len <= 0 || key_len >= (int)sizeof(key))
+		return 0;
+	memcpy(key, start, key_len);
+	key[key_len] = '\0';
+	return sameText(key, "NAME") || sameText(key, "USERNAME") ||
+	       sameText(key, "PASSWORD") || sameText(key, "VERSION") ||
+	       sameText(key, "PLAINTEXT") || sameText(key, "URL");
+}
+
 int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
                      const char *username, const char *password,
                      const char *ip, int port, const char *share, int plaintext)
 {
 	int n = 0, url_len;
 
-	if (out_size < 1 || name == NULL || name[0] == '\0' || strlen(name) >= SMB_NAME_LEN)
+	if (out_size < 1 || name == NULL || name[0] == '\0' || strlen(name) >= SMB_NAME_LEN ||
+	    strpbrk(name, "\r\n") != NULL)
 		return -1;
 	if (kind != 1 && kind != 2 && kind != 3)
 		return -1;
@@ -383,11 +411,11 @@ int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
 		return -1;
 	if (port < 1 || port > 65535)
 		return -1;
-	if (share == NULL || share[0] == '\0')
+	if (share == NULL || share[0] == '\0' || strpbrk(share, "\r\n") != NULL)
 		return -1;
-	if (username != NULL && strlen(username) >= SMB_CRED_LEN)
+	if (username != NULL && (strlen(username) >= SMB_CRED_LEN || strpbrk(username, "\r\n")))
 		return -1;
-	if (password != NULL && strlen(password) >= SMB_CRED_LEN)
+	if (password != NULL && (strlen(password) >= SMB_CRED_LEN || strpbrk(password, "\r\n")))
 		return -1;
 
 	/* Every snprintf is bounds-checked before the next one: a truncated
@@ -440,7 +468,7 @@ int smbCnfUpsertText(const char *text, const char *orig_name,
 {
 	SmbConfig cfg;
 	int text_len, target = -1, prev_end = 0, start_line, end_line;
-	int start_off, end_off, block_len, i;
+	int start_off, end_off, block_len, kept_len = 0, url_prefix_len = 0, i, off, at;
 
 	if (out_size < 1 || work_size < 1)
 		return -1;
@@ -516,12 +544,69 @@ int smbCnfUpsertText(const char *text, const char *orig_name,
 		end_off++;
 
 	block_len = block_text != NULL ? strlen(block_text) : 0;
-	if (start_off + block_len + (text_len - end_off) >= out_size)
+	if (block_text != NULL) {
+		/* smbCnfBuildBlock ends in a URL line. Place retained notes before
+		 * that URL, so the parser still associates them with this share. */
+		const char *url_line = block_text, *p;
+		for (p = block_text; *p; p++)
+			if (*p == '\n' && p[1] != '\0')
+				url_line = p + 1;
+		if (!startsWithText(url_line, "URL = "))
+			return -1;
+		url_prefix_len = (int)(url_line - block_text);
+	}
+	/* Preserve in-block comments and blanks even for a deletion. Keep
+	 * unknown extension fields on edits, but remove them with their share. */
+	for (off = start_off; off < end_off; ) {
+		int len = strcspn(text + off, "\r\n"), end = off + len;
+		int keep;
+		char probe[128];
+		int copy = len < (int)sizeof(probe) - 1 ? len : (int)sizeof(probe) - 1;
+		memcpy(probe, text + off, copy);
+		probe[copy] = '\0';
+		keep = !lineIsManagedKey(text + off, len) &&
+		       (block_text != NULL || !lineIsKey(probe));
+		if (text[end] == '\r' && text[end + 1] == '\n')
+			end += 2;
+		else if (text[end] == '\r' || text[end] == '\n')
+			end++;
+		if (keep)
+			kept_len += end - off;
+		off = end;
+	}
+	if (start_off + block_len + kept_len + (text_len - end_off) >= out_size)
 		return -1;
 	memcpy(out, text, start_off);
-	memcpy(out + start_off, block_text != NULL ? block_text : "", block_len);
-	memcpy(out + start_off + block_len, text + end_off, text_len - end_off + 1);
-	return start_off + block_len + text_len - end_off;
+	at = start_off;
+	if (block_text != NULL) {
+		memcpy(out + at, block_text, url_prefix_len);
+		at += url_prefix_len;
+	}
+	for (off = start_off; off < end_off; ) {
+		int len = strcspn(text + off, "\r\n"), end = off + len;
+		int keep;
+		char probe[128];
+		int copy = len < (int)sizeof(probe) - 1 ? len : (int)sizeof(probe) - 1;
+		memcpy(probe, text + off, copy);
+		probe[copy] = '\0';
+		keep = !lineIsManagedKey(text + off, len) &&
+		       (block_text != NULL || !lineIsKey(probe));
+		if (text[end] == '\r' && text[end + 1] == '\n')
+			end += 2;
+		else if (text[end] == '\r' || text[end] == '\n')
+			end++;
+		if (keep) {
+			memcpy(out + at, text + off, end - off);
+			at += end - off;
+		}
+		off = end;
+	}
+	if (block_text != NULL) {
+		memcpy(out + at, block_text + url_prefix_len, block_len - url_prefix_len);
+		at += block_len - url_prefix_len;
+	}
+	memcpy(out + at, text + end_off, text_len - end_off + 1);
+	return at + text_len - end_off;
 }
 //--------------------------------------------------------------
 //End of file: smb_cnf.c
