@@ -44,7 +44,7 @@ static char *makeHostPath(char *out,char *in) { if(out!=in)strcpy(out,in);return
 static void genLimObjName(char *path,int reserve) { (void)path;assert(!reserve); }
 static int fileXioGetStat(const char *path,iox_stat_t *stat) {
     rpcs++;snprintf(received,sizeof(received),"%s",path);
-    if(status>=0) { stat->mode=0x1234;stat->size=65537; }
+    if(status==0) { stat->mode=0x1234;stat->size=65537; }
     return status;
 }
 '''
@@ -59,8 +59,8 @@ code += r'''
 static int check(const char *path,int reply) {
     iox_stat_t stat={0xa5a5,0x5a5a};status=reply;int before=rpcs;
     int result=genGetStat(path,&stat);assert(rpcs==before+1);
-    if(reply<0)assert(stat.mode==0xa5a5 && stat.size==0x5a5a);
-    else assert(stat.mode==0x1234 && stat.size==65537);
+    if(reply!=0)assert(stat.mode==0xa5a5 && stat.size==0x5a5a);
+    else if(reply==0)assert(stat.mode==0x1234 && stat.size==65537);
     return result;
 }
 int main(void) {
