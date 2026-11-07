@@ -2077,8 +2077,7 @@ static char *ipField(int id)
 
 /* Validate a complete dotted-quad string without relying on sscanf accepting
  * trailing text or implausibly large octets. */
-/**
- * Validate a complete, well-formed dotted-quad IPv4 address.
+/** @brief Validate a complete, well-formed dotted-quad IPv4 address.
  *
  * Returns 1 when the string contains exactly four octets in the range 0..255
  * and no trailing text; otherwise returns 0.
@@ -2100,8 +2099,7 @@ static int validIpv4(const char *s)
 }
 
 /* A usable IPv4 netmask has a contiguous run of ones followed by zeros. */
-/**
- * Validate an IPv4 netmask with a contiguous run of 1 bits followed by zeros.
+/** @brief Validate an IPv4 netmask with a contiguous run of 1 bits followed by zeros.
  *
  * Returns 1 for a standard prefix-length mask, otherwise 0.
  */
@@ -2131,8 +2129,7 @@ static int validNetmask(const char *s)
 
 /* Preflight for Settings -> Network -> Sync PS2 clock. This is called only from
  * the explicit action path; it must not start or reset the network stack. */
-/**
- * Check whether the current network settings are sufficient for Internet clock
+/** @brief Check whether the current network settings are sufficient for Internet clock
  * sync. On failure, write a human-readable reason to message and return 0.
  *
  * This does not load, reset, or touch the Ethernet stack.
@@ -3095,8 +3092,7 @@ static void runThemeAction(int id)
 	}
 }
 
-/**
- * Execute one Settings action row.
+/** @brief Execute one Settings action row.
  *
  * Dispatches setting actions such as clock synchronization. Network-dependent
  * actions first perform their preflight checks here where applicable.
