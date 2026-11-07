@@ -25,7 +25,7 @@ typedef struct { unsigned int size, hisize; } iox_stat_t;
 #define PRIMARY "mass:/SMB2.CNF"
 #define MIRROR "mc0:/SYS-CONF/SMB2.CNF"
 
-static struct { char orig[SMB_NAME_LEN]; char name[SMB_NAME_LEN]; SmbConfig snap; } smbed;
+static struct { char orig[SMB_NAME_LEN]; char name[SMB_NAME_LEN]; int pick, partial_pending; char partial_mirror_name[SMB_NAME_LEN]; SmbConfig snap; } smbed;
 static char primary[4096], mirror[4096];
 static int primary_exists, mirror_exists, primary_read_error, mirror_read_error;
 static int primary_stat_error, mirror_stat_error;
@@ -92,6 +92,9 @@ static void init(void)
     primary_writes = mirror_writes = reloads = 0;
     strcpy(smbed.orig, "ONE");
     strcpy(smbed.name, "ONE");
+    smbed.pick = 1;
+    smbed.partial_pending = 0;
+    smbed.partial_mirror_name[0] = '\0';
 }
 
 int main(void)
@@ -186,11 +189,35 @@ int main(void)
     assert(ret == -8 && primary_writes == 1 && mirror_writes == 1 && reloads == 1);
     assert(strstr(primary, "smb://10.0.0.9/new") != NULL);
     assert(strstr(mirror, "smb://10.0.0.1/old") != NULL);
+    assert(smbed.partial_pending && !strcmp(smbed.orig, "ONE"));
+    assert(!strcmp(smbed.partial_mirror_name, "ONE"));
+    ret = smbedWriteFile(changed);
+    assert(ret == -12 && primary_writes == 1 && mirror_writes == 1);
 
     init();
     primary_write_error = 1;
     ret = smbedWriteFile(changed);
-    assert(ret == -3 && primary_writes == 1 && mirror_writes == 0 && reloads == 0);
+    assert(ret == -11 && primary_writes == 1 && mirror_writes == 0 && reloads == 0);
+    assert(smbed.partial_pending);
+    ret = smbedWriteFile(changed);
+    assert(ret == -12 && primary_writes == 1 && mirror_writes == 0);
+
+    /* After partial rename, retain old mirror identity and lock GUI writes. */
+    init();
+    strcpy(smbed.name, "RENAMED");
+    assert(smbCnfBuildBlock(changed, sizeof(changed), "RENAMED", 2, NULL, NULL,
+                            "10.0.0.9", 445, "new", 0) > 0);
+    mirror_write_error = 1;
+    ret = smbedWriteFile(changed);
+    assert(ret == -8 && !strcmp(smbed.orig, "RENAMED"));
+    assert(!strcmp(smbed.partial_mirror_name, "ONE") && smbed.partial_pending);
+    assert(strstr(primary, "NAME = RENAMED") != NULL);
+    assert(strstr(mirror, "NAME = ONE") != NULL);
+    ret = smbedWriteFile(changed);
+    assert(ret == -12 && primary_writes == 1 && mirror_writes == 1);
+
+    assert(smbCnfBuildBlock(changed, sizeof(changed), "ONE", 2, NULL, NULL,
+                            "10.0.0.9", 445, "new", 0) > 0);
 
     /* Delete does not create a missing mirror or modify unrelated entries. */
     init();
