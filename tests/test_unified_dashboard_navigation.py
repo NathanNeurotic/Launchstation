@@ -40,6 +40,9 @@ code=String = r'''
 typedef struct { void (*enter)(void); } DashScreen;
 enum { DASH_SEC_HOME=0, DASH_SEC_APPS, DASH_SEC_FILES, DASH_SEC_DEVICES,
        DASH_SEC_TOOLS, DASH_SEC_SETTINGS, DASH_SEC_COUNT };
+#define DASH_TAB_MASK ((1 << DASH_SEC_HOME) | (1 << DASH_SEC_FILES) | (1 << DASH_SEC_TOOLS) | (1 << DASH_SEC_SETTINGS))
+typedef struct { int disabled_tabs; } MockDashCfg;
+static MockDashCfg dashCfg;
 enum { DASH_SND_TRANSITION=1 };
 static int section = DASH_SEC_HOME,prev_section=DASH_SEC_HOME;
 static float section_anim=1.0f;
@@ -55,6 +58,7 @@ static const DashScreen *const screens[DASH_SEC_COUNT] = {
 };
 '''
 code+=defs
+code+=function(main,"static int sectionTabEnabled(")
 for fn in ("int dashVisibleSectionCount(void)","int dashVisibleSectionAt(int index)",
            "int dashVisibleSectionIndex(int s)","int dashAdjacentSection(int s, int direction)",
            "void dashSwitchSection(int s)"):
@@ -96,6 +100,14 @@ int main(void) {
     assert(section==DASH_SEC_SETTINGS && enter_count==5);
     dashSwitchSection(DASH_SEC_SETTINGS);
     assert(enter_count==5);
+    /* Disabling tabs (issue #278) */
+    dashCfg.disabled_tabs = (1 << DASH_SEC_TOOLS);
+    assert(dashVisibleSectionCount() == 3);
+    assert(dashVisibleSectionAt(0) == DASH_SEC_HOME);
+    assert(dashVisibleSectionAt(1) == DASH_SEC_FILES);
+    assert(dashVisibleSectionAt(2) == DASH_SEC_SETTINGS);
+    assert(dashAdjacentSection(DASH_SEC_FILES, +1) == DASH_SEC_SETTINGS);
+    dashCfg.disabled_tabs = 0;
     puts("PASS: unified Home, Files as real tab, shoulder cycling, cancel and cleanup");
 }
 '''

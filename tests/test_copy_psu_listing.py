@@ -260,6 +260,7 @@ code += 'static ' + function((root / 'src/filer_fileops.c').read_text(), 'void g
 # The real reader and strict listing behind copy(); only the device dispatch is replaced.
 code += 'static int dir_opened,dir_open_error,dir_read_error,dir_complete;\n'
 code += function(filer, 'static void dirOpenResult(')
+code += function(filer, 'static void dirReadFailed(')
 reader = function(filer, 'int readGENERIC(const char *path, FILEINFO *info, int max)\n{')
 code += 'static ' + reader
 code += ('static int listDir(const char *p,FILEINFO *out,int max){'

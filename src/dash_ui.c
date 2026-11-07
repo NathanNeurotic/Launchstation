@@ -1245,6 +1245,7 @@ static char loading_remaining[64];
 static float loading_fraction;
 static int loading_done, loading_total;
 static u64 loading_last_draw;
+static u64 loading_begin_ms;
 static float loading_open;
 static int loading_cancel;
 static int loading_file_operation;
@@ -1260,7 +1261,11 @@ static void loadingDraw(void)
 	float h = loading_file_operation ? (loading_cancel ? 210.0f : 174.0f) : loading_remaining[0] ? 158.0f : loading_cancel ? 150.0f : 128.0f;
 	float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
 	float bar_y = y + (loading_file_operation ? 142.0f : loading_remaining[0] ? 126.0f : 102.0f);
-	float dt = dashVisualUpdate();
+	float dt;
+
+	if (isStartupDriverStatusQuiet() && Timer() < loading_begin_ms + 400)
+		return;
+	dt = dashVisualUpdate();
 
 	loading_open = dashApproach(loading_open, 1.0f, 12.0f, dt);
 	dashRenderScene();
@@ -1313,7 +1318,10 @@ static void loadingBegin(const char *title, int file_operation)
 	loading_remaining[0] = '\0';
 	loading_fraction = 0.0f;
 	loading_done = loading_total = 0;
-	loadingDraw();
+	loading_begin_ms = Timer();
+	loading_last_draw = loading_begin_ms;
+	if (!isStartupDriverStatusQuiet())
+		loadingDraw();
 }
 
 void dashLoadingBegin(const char *title)

@@ -340,6 +340,8 @@ static int readGENERICWithFirstOpenRetry(const char *path, FILEINFO *info, int m
 
 	wait_start = Timer();
 	while (Timer() < wait_start + wait_budget_ms) {
+		if (isPcCardCfPath(path) && !isPcCardCfOnline())
+			break;
 		dd = fileXioDopen(path);
 		if (dd >= 0) {
 			fileXioDclose(dd);
@@ -1510,16 +1512,16 @@ int pollRootMemoryCardDevices(void)
 int readGENERIC(const char *path, FILEINFO *info, int max)
 {
 	iox_dirent_t record;
-	int n = 0, dd = -1;
+	int n = 0, dd = -1, read_ret = 0;
 	dir_complete = 0;  //These drivers cannot distinguish a short read from EOF.
 
 	dd = fileXioDopen(path);
 	dirOpenResult(dd);
 	if (dd < 0)
 		goto exit;  //exit if error opening directory
-	/* No failed read is recorded: BDM (FAT, exFAT) ends a folder with 0 after
-	 * a read error too, and MMCE ends every folder with -1. */
-	while (fileXioDread(dd, &record) > 0) {
+	/* BDM (FAT, exFAT) ends a folder with 0, while MMCE ends every folder
+	 * with -1. Record negative dread results on non-MMCE paths as read errors. */
+	while ((read_ret = fileXioDread(dd, &record)) > 0) {
 		if ((FIO_S_ISDIR(record.stat.mode)) && (!strcmp(record.name, ".") || !strcmp(record.name, "..")))
 			continue;  //Skip entry if pseudo-folder "." or ".."
 
@@ -1542,6 +1544,8 @@ int readGENERIC(const char *path, FILEINFO *info, int max)
 		if (n == max)
 			break;
 	}  //ends while
+	if (read_ret < 0 && strncmp(path, "mmce", 4) != 0)
+		dirReadFailed(read_ret);
 	size_valid = 1;
 	time_valid = 1;
 

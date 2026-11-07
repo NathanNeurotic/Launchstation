@@ -525,17 +525,21 @@ static int probeMmceRoot(const char *path)
 
 static int probeUsbMediaAnimated(void)
 {
+	int quiet = isStartupDriverStatusQuiet();
+	int fast_boot_probe = quiet && dashBootDeviceBit() != DASH_DEVA_USB;
+	int attempts = fast_boot_probe ? 2 : DASH_USB_PROBE_ATTEMPTS;
+	int delay_us = fast_boot_probe ? 250000 : DASH_USB_PROBE_DELAY_US;
 	int attempt, mask = 0, first_seen = -1;
 
-	for (attempt = 0; attempt < DASH_USB_PROBE_ATTEMPTS; attempt++) {
+	for (attempt = 0; attempt < attempts; attempt++) {
 		if (dashLoadingActive())
-			dashLoadingStatus("Checking USB media...", attempt + 1, DASH_USB_PROBE_ATTEMPTS);
+			dashLoadingStatus("Checking USB media...", attempt + 1, attempts);
 		/* USB root stats go through fileXioGetStatBounded: a wedged slot
 		 * fails fast instead of hanging the whole probe on one RPC. Do not
 		 * probe an absent second slot twenty times merely because only one
 		 * drive is connected. */
 		mask = filerUsbRefreshDriveMask();
-		if ((mask & 3) == 3)
+		if ((mask & 3) == 3 || (mask && quiet))
 			return 1;
 		if (mask) {
 			/* Preserve the older 1.8-second late-mount acceptance window,
@@ -547,13 +551,13 @@ static int probeUsbMediaAnimated(void)
 			else if (attempt - first_seen >= 2)
 				return 1;
 		}
-		if (attempt == DASH_USB_PROBE_ATTEMPTS - 1)
+		if (attempt == attempts - 1)
 			break;
 
 		if (dashLoadingActive())
 			dashLoadingFrame("Waiting for USB storage...", attempt + 1,
-			                 DASH_USB_PROBE_ATTEMPTS);
-		DelayThread(DASH_USB_PROBE_DELAY_US);
+			                 attempts);
+		DelayThread(delay_us);
 	}
 	return mask != 0;
 }
