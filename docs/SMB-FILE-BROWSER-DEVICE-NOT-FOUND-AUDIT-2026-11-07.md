@@ -296,10 +296,16 @@ which one caused a particular hardware SMB mount failure:
   fails. Keep a failed/uncertain version fail-closed and abort config replacement.
 - **P0 / persistence:** the GUI editor must not report a complete CWD/SYS-CONF
   save after a missing or failed mirror. A safe repair preflights both intended
-  targets, edits each existing text with `smbCnfUpsertText` to preserve its
-  independent comments and unrelated shares, verifies writes, and explicitly
-  reports partial results. Copying the entire primary text over another
-  existing file could lose a user's separate shares.
+  targets, preserves each destination's unrelated share entries and comments,
+  verifies writes, and explicitly reports partial results. The current
+  `smbCnfUpsertText` preserves text **outside** a targeted share's key-to-URL
+  span, but **deletes comments embedded inside that span** on edit/delete.
+  Therefore it is not yet a fully comment-preserving primitive: either make
+  edits preserve those in-block comment lines (and regression-test that
+  behavior) or explicitly warn users before a potentially destructive edit.
+  Do not silently use the helper to promise lossless updates. Copying the
+  entire primary text over another existing file could also lose the other
+  file's separately configured shares and annotations.
 - **P1 / connection identity:** `connectSmb2` previously converted
   `-EEXIST` into success with no proof that the driver's NAME corresponds to
   the current host/share/credentials. Prefer a clearly reported failure over
@@ -310,11 +316,21 @@ which one caused a particular hardware SMB mount failure:
   newer File Browser. `dash_files.c` still has a generic failed-network modal.
   Reuse the existing status/cause formatter rather than create an independent
   SMB status architecture.
-- **P1 / actual mount proof:** record the configured IP, **TCP port**, share
-  name and dialect, whether the driver loaded, whether a CONNECT devctl was
-  issued, its exact return code, the first `smb:/NAME` directory result, and
-  matching server-side logs. Confirm the selected export—not another Windows
-  share. Test on PS2 hardware with normal and memory-constrained driver sets.
+- **P1 / actual mount proof:** record the effective config path, configured
+  IP, **TCP port**, share name and dialect; IOP driver load ID/result; all
+  version-specific connection devctl return values; the first directory
+  probe's result; and matching server-side logs. Validate the exact requested
+  export—not another Windows share. Use these **different** paths/operations:
+  - **SMB1 / `VERSION = 1`:** load `smbman.irx`; call
+    `SMB_DEVCTL_LOGON` followed by `SMB_DEVCTL_OPENSHARE`; then probe
+    `smb1:/`. Neither `smb:/NAME` nor SMB2 CONNECT proves SMB1 worked.
+  - **SMB2/3 / `VERSION = 2` or `3`:** load `smb2man.irx`; issue
+    `SMB2_DEVCTL_CONNECT` for the configured `NAME` and URL; probe
+    `smb:/NAME/`. These VERSION values share one negotiating driver; a
+    successful devctl alone is not proof that the directory is accessible.
+  Test both on physical PS2 hardware with normal and constrained IOP memory
+  budgets. Record the server's chosen dialect and share separately; avoid
+  logging passwords.
 - **Do not conflate APIs:** `load_smb` returning success means the IOP driver
   loaded; `smbSharesConnectedCount` and the probe determine usable shares.
   Changing `load_smb` to fail whenever credentials are rejected would mix
