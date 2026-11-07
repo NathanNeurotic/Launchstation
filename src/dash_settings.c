@@ -583,6 +583,29 @@ static int smbedWriteFile(const char *block)
 			ret = -9; /* Stale/ambiguous selection. */
 			goto out_free;
 		}
+		/* Another editor may have changed the selected share since it was
+		 * loaded into the GUI. Compare against that snapshot as well as the
+		 * independent SYS-CONF mirror before allowing any replacement. */
+		matches = 0;
+		for (i = 0; i < smbed.snap.count; i++) {
+			const SmbShare *picked = &smbed.snap.share[i];
+			if (stricmp(picked->name, smbed.orig))
+				continue;
+			matches++;
+			if (picked->state == SMB_STATE_INVALID ||
+			    strcmp(picked->url, original_url) ||
+			    strcmp(picked->username, original_user) ||
+			    strcmp(picked->password, original_password) ||
+			    picked->version != original_version ||
+			    picked->plaintext != original_plaintext) {
+				ret = -9; /* Selected share changed since it was displayed. */
+				goto out_free;
+			}
+		}
+		if (matches != 1) {
+			ret = -9;
+			goto out_free;
+		}
 	}
 	len = smbCnfUpsertText(text != NULL ? text : "", smbed.orig, block,
 	                       out, SMB_CNF_MAX_SIZE + 512, work, SMB_CNF_MAX_SIZE + 512);
