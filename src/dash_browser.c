@@ -321,6 +321,24 @@ static void selectName(const char *name)
 		}
 }
 
+#ifdef SMB
+/** Format the actionable reason an SMB device probe or listing failed. */
+static void smbStatusMessage(int version, char *out, int out_size)
+{
+	if (!isSmbDriverLoaded(version)) {
+		const char *error = smbLoadError(version);
+
+		if (error[0])
+			dashStrCopy(out, error, out_size);
+		else
+			dashStrCopy(out, "SMB driver is not ready; reopen this device to retry.", out_size);
+		return;
+	}
+	smbSharesStatus(version, out, out_size);
+}
+#endif
+
+/** Finish a folder listing and report SMB root-list failures to the user. */
 static void listDone(void *arg)
 {
 	FbListJob *j = (FbListJob *)arg;
@@ -359,10 +377,7 @@ static void listDone(void *arg)
 			int v = smbPathKind(j->path);
 			char why[96];
 
-			if (!isSmbDriverLoaded(v) && smbLoadError(v)[0])
-				dashStrCopy(why, smbLoadError(v), sizeof(why));
-			else
-				smbSharesStatus(v, why, sizeof(why));
+			smbStatusMessage(v, why, sizeof(why));
 			dashToast(DASH_TOAST_WARN, why);
 		}
 #endif
@@ -512,6 +527,14 @@ static void openDir(const char *dir, const char *select)
 			char failed[MAX_PATH];
 			dashStrCopy(failed, dir, sizeof(failed));
 			openDir("", failed);
+#ifdef SMB
+			if (smbPathKind(failed) != SMB_PATH_NONE) {
+				char why[96];
+				smbStatusMessage(smbPathKind(failed), why, sizeof(why));
+				dashToast(DASH_TOAST_WARN, why);
+				return;
+			}
+#endif
 			dashToast(DASH_TOAST_WARN, "Device could not be opened");
 			return;
 		}
@@ -605,6 +628,7 @@ static void launchPath(const char *path, int with_args)
 	fb.args_loaded = LaunchArgsPending(); /* only still set when the start failed */
 }
 
+/** Activate the selected device or file, reporting SMB probe failures. */
 static void activate(void)
 {
 	char path[MAX_PATH];
@@ -632,6 +656,15 @@ static void activate(void)
 				return;
 			if (!dashDevicePathReady(path)) {
 				openDir("", path); /* the list shows the new state */
+#ifdef SMB
+				int smb_version = smbPathKind(path);
+				if (smb_version != SMB_PATH_NONE) {
+					char why[96];
+					smbStatusMessage(smb_version, why, sizeof(why));
+					dashToast(DASH_TOAST_WARN, why);
+					return;
+				}
+#endif
 				dashToast(DASH_TOAST_WARN, "Device not found");
 				return;
 			}
