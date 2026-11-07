@@ -445,3 +445,32 @@ CI rather than treating this audit document as evidence of hardware success.
 The important outstanding design limitation is still non-atomic file writes
 under interruption, not a reason to introduce unsafe global disconnections
 or unverified background network initialization.
+
+## 9. Additional review: incomplete reads, BOM and verified empty-file writes
+
+The pre-fix `dashLoadTextFile` in `src/dash_store.c` accepted
+`total > 0` after its read loop, even when `total < size`. That can return
+a truncated SMB2.CNF which still parses the edited share but silently omits
+later entries. Saving this partial view can erase those later shares. PR #306
+now rejects `total != size` (returning NULL); its save-integrity harness
+extracts the production loader and injects premature EOF independently for
+CWD and SYS-CONF, requiring a refusal before **either** write. This avoids
+a global protocol-state workaround; a failed file read stays a failed read.
+
+Separately, `smbConfigParse` intentionally ignores a leading UTF-8 BOM,
+but the text editor previously treated that prefix as part of a managed key.
+Editing the first share could leave a stale, BOM-prefixed NAME or PASSWORD
+among the new fields. PR #306 moves the splice start just past the original
+three-byte BOM, preserving it only at file start, and adds first-share tests
+including stale-credential removal and preservation of subsequent shares.
+
+Finally, deleting the only share from a mirror requires an actual verified
+zero-byte truncation. The production `dashWriteFile` already checks EOF
+after writing; PR #306 avoids invoking a potentially unsupported
+`genWrite(..., 0)` and verifies the empty result through the real function
+in the host file-I/O test. The simplified save mock alone is not evidence
+that the PS2 filesystem handles truncation correctly.
+
+These changes are source-level mitigation and regression coverage, **not**
+proof of physical PS2 device reliability or SMB connectivity. Verify latest
+Actions results before considering the branch ready.
