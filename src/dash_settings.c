@@ -490,23 +490,18 @@ static void smbedLoadPick(void)
 static int smbedWriteFile(const char *block)
 {
 	char path[MAX_PATH], sysconf[MAX_PATH];
-	char *out, *work, *text;
+	char *out, *work, *text = NULL, *mirror = NULL;
 	SmbConfig cfg;
-	int len, fd, i, matches = 0, valid = 0, ret = -3;
+	int len, mirror_len = 0, fd, i, matches = 0, valid = 0, ret = -3;
 
 	out = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
 	work = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
-	if (out == NULL || work == NULL) {
-		free(out);
-		free(work);
-		return -3;
-	}
+	if (out == NULL || work == NULL)
+		goto out_free;
 	smbedConfigPath(path, sizeof(path));
 	text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL);
 	if (text == NULL) {
-		/* Only a missing file may be created: one that exists but could
-		   not be read (too large, read error) must not be replaced by a
-		   file holding just the new block. */
+		/* An existing unreadable file must never be replaced with one share. */
 		fd = genOpen(path, FIO_O_RDONLY);
 		if (fd >= 0) {
 			genClose(fd);
@@ -517,6 +512,7 @@ static int smbedWriteFile(const char *block)
 	len = smbCnfUpsertText(text != NULL ? text : "", smbed.orig, block,
 	                       out, SMB_CNF_MAX_SIZE + 512, work, SMB_CNF_MAX_SIZE + 512);
 	free(text);
+	text = NULL;
 	if (len < 0) {
 		ret = -1;
 		goto out_free;
@@ -533,18 +529,80 @@ static int smbedWriteFile(const char *block)
 		ret = -2;
 		goto out_free;
 	}
+
+	/* Preflight an independent SYS-CONF file before writing either target.
+	 * Never mirror the entire CWD config over someone's unrelated shares. */
+	configBuildSysconfPath(sysconf, sizeof(sysconf), "SMB2.CNF");
+	if (strcmp(path, sysconf) != 0) {
+		text = dashLoadTextFile(sysconf, SMB_CNF_MAX_SIZE, NULL);
+		if (text == NULL) {
+			fd = genOpen(sysconf, FIO_O_RDONLY);
+			if (fd >= 0) {
+				genClose(fd);
+				ret = -7; /* Unreadable mirror; neither file written. */
+				goto out_free;
+			}
+			/* First mirror: seed from the validated primary, not an empty
+			 * share list. Deletion must not create an empty new mirror. */
+			if (block != NULL) {
+				mirror = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
+				if (mirror == NULL)
+					goto out_free;
+				memcpy(mirror, out, len + 1);
+				mirror_len = len;
+			}
+		} else {
+			mirror = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
+			if (mirror == NULL)
+				goto out_free;
+			if (block == NULL) {
+				/* A share absent from this independent file is a no-op. */
+				memcpy(work, text, strlen(text) + 1);
+				smbConfigParse(work, &cfg);
+				for (i = 0; i < cfg.count; i++)
+					if (!stricmp(cfg.share[i].name, smbed.orig))
+						break;
+				if (i == cfg.count)
+					goto mirror_ready;
+			}
+			mirror_len = smbCnfUpsertText(text, smbed.orig, block,
+			                               mirror, SMB_CNF_MAX_SIZE + 512,
+			                               work, SMB_CNF_MAX_SIZE + 512);
+			if (mirror_len < 0) {
+				ret = -7;
+				goto out_free;
+			}
+			memcpy(work, mirror, mirror_len + 1);
+			smbConfigParse(work, &cfg);
+			matches = valid = 0;
+			for (i = 0; i < cfg.count; i++)
+				if (!stricmp(cfg.share[i].name, block != NULL ? smbed.name : smbed.orig)) {
+					matches++;
+					if (cfg.share[i].state != SMB_STATE_INVALID)
+						valid++;
+				}
+			if (block != NULL ? (matches != 1 || valid != 1) : matches != 0) {
+				ret = -7;
+				goto out_free;
+			}
+		}
+	}
+mirror_ready:
+	free(text);
+	text = NULL;
 	if (dashWriteFile(path, out, len) < 0)
 		goto out_free;
-	/* When the primary file lives beside the ELF, also update an existing
-	 * SYS-CONF copy so neither lookup location retains stale share entries. */
-	configBuildSysconfPath(sysconf, sizeof(sysconf), "SMB2.CNF");
-	if (strcmp(path, sysconf) != 0 && (fd = genOpen(sysconf, FIO_O_RDONLY)) >= 0) {
-		genClose(fd);
-		dashWriteFile(sysconf, out, len);
+	if (mirror_len > 0 && dashWriteFile(sysconf, mirror, mirror_len) < 0) {
+		/* Primary is already committed. Never report an all-or-nothing save. */
+		smbSharesReload();
+		ret = -8;
+		goto out_free;
 	}
 	ret = smbSharesReload() ? 0 : -6;
 	smbSharesSnapshot(&smbed.snap);
 out_free:
+	free(text);
+	free(mirror);
 	free(out);
 	free(work);
 	return ret;
