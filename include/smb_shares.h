@@ -39,7 +39,8 @@ typedef struct
 	char username[SMB_CRED_LEN];
 	char password[SMB_CRED_LEN];
 	char url[SMB_URL_LEN];
-	int version; /* 1 or 2 */
+	int version; /* 1 = SMB1, 2 = shared SMB2/SMB3 driver */
+	int config_version; /* original VERSION label: 1/2/3, not a forced dialect */
 	/* PLAINTEXT = 1: an SMB1 server that asks for a clear-text password
 	 * gets it. Off, smbman refuses such a server. */
 	int plaintext;
