@@ -20,6 +20,7 @@ def function(signature):
 
 code = r'''
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,7 +40,8 @@ static void smbReadConfig(void);
 static unsigned int now;
 static const char *config_text;
 static int mc1_refused, preferred, read_calls, connect_calls, connect_result;
-static int disconnect_calls, disconnect_result;
+static int disconnect_calls, disconnect1_calls, disconnect2_calls;
+static int disconnect1_result, disconnect2_result;
 
 static char *smbReadConfigText(int *refused)
 {
@@ -52,13 +54,19 @@ static char *smbReadConfigText(int *refused)
 
 static int connectSmb1(SmbShare *sh) { (void)sh; connect_calls++; return connect_result; }
 static int connectSmb2(SmbShare *sh) { (void)sh; connect_calls++; return connect_result; }
+static int isSmbDriverLoaded(int version) { return version == SMB_PATH_V1 || version == SMB_PATH_V2; }
 static int fileXioDevctl(const char *device, int cmd, void *arg, unsigned int arglen,
                          void *buf, unsigned int buflen)
 {
     (void)arg; (void)arglen; (void)buf; (void)buflen;
-    assert(!strcmp(device, SMB_DEVICE_V2) && cmd == (int)SMB2_DEVCTL_DISCONNECT_ALL);
     disconnect_calls++;
-    return disconnect_result;
+    if (!strcmp(device, SMB_DEVICE_V2) && cmd == (int)SMB2_DEVCTL_DISCONNECT_ALL) {
+        disconnect2_calls++;
+        return disconnect2_result;
+    }
+    assert(!strcmp(device, SMB_DEVICE_V1) && cmd == (int)SMB_DEVCTL_LOGOFF);
+    disconnect1_calls++;
+    return disconnect1_result;
 }
 static const char *smb1Problem(int ret) { (void)ret; return "mock SMB1 failure"; }
 static unsigned int Timer(void) { return now; }
@@ -67,6 +75,8 @@ code += source[source.index("static unsigned int smb_cfg_text_hash;"):source.ind
 code += function("static void smbReadConfig(void)\n{")
 code += function("void smbSharesConnect(int version, int retry_failed)\n{")
 code += function("int smbSharesConnectedCount(int version)\n{")
+code += function("void smbSharesForget(void)\n{")
+code += function("int smbSharesReload(void)\n{")
 code += r'''
 static void reset_case(void)
 {
@@ -80,8 +90,8 @@ static void reset_case(void)
     preferred = 0;
     read_calls = connect_calls = 0;
     connect_result = 0;
-    disconnect_calls = 0;
-    disconnect_result = 0;
+    disconnect_calls = disconnect1_calls = disconnect2_calls = 0;
+    disconnect1_result = disconnect2_result = 0;
 }
 
 int main(void)
@@ -128,14 +138,42 @@ int main(void)
 
     reset_case();
     smbSharesConnect(2, 1);
-    disconnect_result = -1;
+    disconnect2_result = -1;
     config_text = "NAME=A\nURL=smb://10.0.0.3/t\n";
     smbSharesConnect(2, 1);
     assert(disconnect_calls == 1 && connect_calls == 1);
     assert(!strcmp(smb_cfg.share[0].url, "smb://10.0.0.2/s"));
     assert(smb_cfg.share[0].state == SMB_STATE_CONNECTED);
 
-    puts("PASS: SMB fallback preserves connection/retry state and reloads changes");
+    /* A partial disconnect must never leave the successful dialect marked
+     * CONNECTED when its IOP session has already been closed. */
+    reset_case();
+    config_text = "NAME=A\nURL=smb://10.0.0.2/s\n"
+                  "NAME=OLD\nVERSION=1\nURL=smb://10.0.0.2/legacy\n";
+    smbSharesConnect(2, 1);
+    smbSharesConnect(1, 1);
+    assert(smbSharesConnectedCount(2) == 1 && smbSharesConnectedCount(1) == 1);
+    disconnect2_result = -1;
+    assert(!smbSharesReload());
+    assert(disconnect1_calls == 1 && disconnect2_calls == 1);
+    assert(smbSharesConnectedCount(1) == 0 && smbSharesConnectedCount(2) == 1);
+    { int before = connect_calls;
+      smbSharesConnect(1, 0);
+      assert(connect_calls == before + 1 && smbSharesConnectedCount(1) == 1); }
+
+    reset_case();
+    config_text = "NAME=A\nURL=smb://10.0.0.2/s\n"
+                  "NAME=OLD\nVERSION=1\nURL=smb://10.0.0.2/legacy\n";
+    smbSharesConnect(2, 1);
+    smbSharesConnect(1, 1);
+    disconnect1_result = -1;
+    assert(!smbSharesReload());
+    assert(smbSharesConnectedCount(2) == 0 && smbSharesConnectedCount(1) == 1);
+    { int before = connect_calls;
+      smbSharesConnect(2, 0);
+      assert(connect_calls == before + 1 && smbSharesConnectedCount(2) == 1); }
+
+    puts("PASS: SMB fallback and partial disconnect keep EE and IOP state synchronized");
     return 0;
 }
 '''

@@ -91,14 +91,37 @@ static unsigned int smbTextHash(const char *text)
 	return hash;
 }
 
+/* Keep EE share status in step with each IOP driver independently. */
+static void smbForgetVersion(int version)
+{
+	int i;
+
+	for (i = 0; i < smb_cfg.count; i++) {
+		SmbShare *sh = &smb_cfg.share[i];
+
+		if (sh->version != version || sh->state == SMB_STATE_INVALID)
+			continue;
+		sh->state = SMB_STATE_UNTRIED;
+		sh->error = 0;
+		sh->problem = NULL;
+	}
+	smb_retry_ms[version] = 0;
+}
+
 static int smbDisconnectAllSessions(void)
 {
 	int ret2 = 0, ret1 = 0;
 
-	if (isSmbDriverLoaded(SMB_PATH_V2) && smbSharesConnectedCount(SMB_PATH_V2) > 0)
+	if (isSmbDriverLoaded(SMB_PATH_V2) && smbSharesConnectedCount(SMB_PATH_V2) > 0) {
 		ret2 = fileXioDevctl(SMB_DEVICE_V2, SMB2_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0);
-	if (isSmbDriverLoaded(SMB_PATH_V1) && smbSharesConnectedCount(SMB_PATH_V1) > 0)
+		if (ret2 >= 0)
+			smbForgetVersion(SMB_PATH_V2);
+	}
+	if (isSmbDriverLoaded(SMB_PATH_V1) && smbSharesConnectedCount(SMB_PATH_V1) > 0) {
 		ret1 = fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_LOGOFF, NULL, 0, NULL, 0);
+		if (ret1 >= 0)
+			smbForgetVersion(SMB_PATH_V1);
+	}
 	if (ret2 < 0 || ret1 < 0) {
 		DPRINTF(" [SMB]: config reload refused: SMB2 disconnect=%d SMB1 logoff=%d\n", ret2, ret1);
 		return 0;
@@ -189,8 +212,9 @@ static int connectSmb2(SmbShare *sh)
 	memcpy(in.url, sh->url, sizeof(in.url));
 	ret = fileXioDevctl(SMB_DEVICE_V2, SMB2_DEVCTL_CONNECT, &in, sizeof(in), &out, sizeof(out));
 	memset(&in, 0, sizeof(in)); /* no password left on the stack */
-	/* -EEXIST: the driver already has it, from before a reset of our state */
-	return ret == -EEXIST ? 0 : ret;
+	/* An existing NAME could point at an old host/share. Do not treat it as
+	 * proof that the new URL and credentials were applied. */
+	return ret;
 }
 
 /* smbman serves one share: log on to the server, then open the share. */
@@ -294,6 +318,7 @@ void smbSharesConnect(int version, int retry_failed)
 		} else {
 			sh->state = SMB_STATE_FAILED;
 			sh->problem = version == 1 ? smb1Problem(ret)
+			                           : ret == -EEXIST ? "Share NAME is still in use by an old SMB session; restart Launchstation"
 			                           : "Could not connect: check the address, share, user name and password";
 		}
 		DPRINTF(" [SMB%d]: %s as %s%s, ret=%d\n", version, sh->url,
@@ -350,18 +375,8 @@ void smbSharesStatus(int version, char *out, int out_size)
  * again. The parsed SMB2.CNF stays, so the device list still knows smb1:. */
 void smbSharesForget(void)
 {
-	int i;
-
-	for (i = 0; i < smb_cfg.count; i++) {
-		SmbShare *sh = &smb_cfg.share[i];
-
-		if (sh->state == SMB_STATE_INVALID)
-			continue;
-		sh->state = SMB_STATE_UNTRIED;
-		sh->error = 0;
-		sh->problem = NULL;
-	}
-	memset(smb_retry_ms, 0, sizeof(smb_retry_ms));
+	smbForgetVersion(SMB_PATH_V1);
+	smbForgetVersion(SMB_PATH_V2);
 }
 
 /* A config edit must retire driver sessions before the same share label

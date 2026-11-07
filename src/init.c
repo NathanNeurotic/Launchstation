@@ -2838,6 +2838,8 @@ static void clearIopModuleState(void)
 #ifdef SMB
 	have_smb2man = 0;
 	have_smbman = 0;
+	smb_load_error[SMB_PATH_V1] = NULL;
+	smb_load_error[SMB_PATH_V2] = NULL;
 	smbSharesForget();
 #endif
 #ifdef UDPFS
