@@ -129,10 +129,12 @@ reports partial failures, but the underlying operation is still complex:
 
 ### H. Host test fragility around recently added helper
 
-- `tests/test_smb_connect_state.py` extracts `smbSharesConnect` but not the
-  newly added static helper `smbDisconnectAllSessions`. Current source calls
-  `isSmbDriverLoaded` from that helper, which the test mock does not declare.
-  The test therefore fails to compile against `0814f5f`.
+- `tests/test_smb_connect_state.py` extracts `smbDisconnectAllSessions` along
+  with the SMB connection functions, but its mock omits `isSmbDriverLoaded`.
+  With `-Werror`, that missing declaration breaks host compilation against
+  `0814f5f`. The mock also only understands SMB2 disconnects, not SMB1 logoff.
+  Neither this test nor `test_smb_cnf_edit.py` was in the main CI workflow at
+  the audited revision; passing CI did not exercise them.
 - Host compile also requires `-fsanitize=...`, which is unavailable with the
   MinGW GCC present in this environment. Several SMB tests cannot be executed
   here even if they are conceptually correct.
@@ -148,8 +150,9 @@ reports partial failures, but the underlying operation is still complex:
   - non-IO `smbSharesKnown`
   - status probes
   This split makes behavior timing-dependent and hard to reason about.
-- Warm-up only initializes V1 (`src/dash_main.c:1185`); V2 relies on later
-  access, so "configured" state appears asynchronously.
+- The boot warm-up calls `smbSharesConfigured(SMB_PATH_V1)`, which parses the
+  shared `SMB2.CNF` for **both** versions; only the returned count is V1-only.
+  An unfinished or refused-card read can still leave cached state pending.
 - Device-less progress/toast state is mixed with File Browser state; the generic
   "Device not found" fallback remains a catch-all.
 
@@ -158,9 +161,9 @@ reports partial failures, but the underlying operation is still complex:
 1. Change File Browser to always show the specific failure reason for SMB before
    the generic fallback. Recent `smbStatusMessage` is a start, but it should be
    the only path for SMB device activation.
-2. Make an explicit SMB device state enum: `unconfigured`, `driver unavailable`,
-   `configured but disconnected`, `connected`, `failed`, with `problem`.
-   Replace the present/absent bit for SMB.
+2. Reuse existing `SMB_STATE_*`, driver-load errors, and probe results for
+   precise feedback. Do not add another five-state SMB model unless a specific
+   unrecoverable state proves the existing information insufficient.
 3. Add deterministic config-first validation before talking to IOP:
    - If zero configured shares, report that exactly.
    - If driver cannot load, report the specific environment reason.
@@ -168,13 +171,15 @@ reports partial failures, but the underlying operation is still complex:
 4. Separate config discovery errors from network errors:
    - Distinguish "No SMB2.CNF found" from "SMB2.CNF has no valid share".
    - Report the file path that was read.
-5. Remove 30-second suppression from explicit user-initiated Open, but add a
-   responsive retry path that avoids blocking the UI during SMB2 connection
-   attempts (keeping driver/IOP startup on its required thread); retain backoff
-   only for asynchronous retries.
-6. Make reload atomic with error reporting; never leave a failed reload looking
-   successful.
-7. Warm both SMB versions at startup or make the UI clearly "not read yet".
+5. Measure and bound the underlying SMB2 connect timeout first: the existing
+   driver can wait about 30 seconds **per failed share**. Preserve driver/IOP
+   startup on its required thread, avoid unbounded UI waits, and only change
+   explicit retry backoff once the transport has a safe bounded contract.
+6. Preflight destination files, preserve unrelated share entries/comments, then
+   write and verify each location independently. Report partial failures and
+   required restarts; do **not** claim cross-device atomicity.
+7. Retain one boot-time configuration parse for both versions; distinguish
+   actual unread/pending state from an empty configuration without extra I/O.
 8. Allow DNS hostnames or reject them with a precise message instead of a false
    config parse failure.
 9. Fix host tests/mocks to track newly added helpers and run them in CI with a
@@ -211,10 +216,11 @@ reports partial failures, but the underlying operation is still complex:
 - If the first write succeeds while the SYS-CONF mirror fails, `smbSharesReload()`
   can still succeed on line 545, so `smbedWriteFile` returns 0 even though another
   location retains stale share entries.
-- There is no rollback or atomic update across CWD and SYS-CONF. If CWD has a
-  readable file but SYS-CONF has an older readable file, `smbSharesReload()` may
-  load one while `smbedWriteFile` has updated only the other before the mirror
-  step takes place.
+- There is no rollback or atomic update across CWD and SYS-CONF. The actual
+  order is: write primary, attempt existing SYS-CONF mirror, reload, snapshot.
+  The mirror attempt is unchecked, so a partial write can still be reported
+  as fully successful. Neither destination is created simply to satisfy a
+  two-location synchronization guarantee.
 
 ### K. `smbSharesReload()` treats a single failed disconnect as total failure
 
@@ -246,10 +252,10 @@ reports partial failures, but the underlying operation is still complex:
 - Device list code correctly avoids filesystem IO by calling `smbSharesKnown`
   instead of `smbSharesConfigured` (`src/smb_shares.c:149-151` and
   `src/dash_devices.c:438`).
-- But warming at boot only reads V1 (`src/dash_main.c:1185`), not V2.
-- V2 device entries therefore remain in an unknown/read-not-done state until a
-  path is opened, which is indistinguishable from "no shares configured" in
-  some UI states.
+- The warm-up invokes a V1-specific count but parses all configured versions.
+  After it completes, V2 can use cached counts; it is **not** universally
+  waiting for a second parse. A refused/pending memory card may still require
+  a later read, so zero cached shares is not definitive.
 - `smbSharesKnown` can return 0 while a config file did (or will) exist, so UI
   tests based on it cannot prove that the user's config is wrong.
 
@@ -279,3 +285,46 @@ reports partial failures, but the underlying operation is still complex:
 
 - Only the report file should be untracked.
 - No source files were modified.
+
+## 6. Second-pass validation and minimal implementation handoff
+
+Confirmed against `master` at `0814f5f`; these source defects do not prove
+which one caused a particular hardware SMB mount failure:
+
+- **P0 / session-state correctness:** `smbDisconnectAllSessions` must clear the
+  successfully disconnected version's cached states even if the other version
+  fails. Keep a failed/uncertain version fail-closed and abort config replacement.
+- **P0 / persistence:** the GUI editor must not report a complete CWD/SYS-CONF
+  save after a missing or failed mirror. A safe repair preflights both intended
+  targets, edits each existing text with `smbCnfUpsertText` to preserve its
+  independent comments and unrelated shares, verifies writes, and explicitly
+  reports partial results. Copying the entire primary text over another
+  existing file could lose a user's separate shares.
+- **P1 / connection identity:** `connectSmb2` previously converted
+  `-EEXIST` into success with no proof that the driver's NAME corresponds to
+  the current host/share/credentials. Prefer a clearly reported failure over
+  falsely claiming a connection to the edited destination.
+- **P1 / IOP state:** `clearIopModuleState` forgets loaded drivers but did not
+  clear `smb_load_error[]`. The stale error must be reset with the IOP state.
+- **P1 / browser status:** #300 already handles SMB-specific failures in the
+  newer File Browser. `dash_files.c` still has a generic failed-network modal.
+  Reuse the existing status/cause formatter rather than create an independent
+  SMB status architecture.
+- **P1 / actual mount proof:** record the configured IP, **TCP port**, share
+  name and dialect, whether the driver loaded, whether a CONNECT devctl was
+  issued, its exact return code, the first `smb:/NAME` directory result, and
+  matching server-side logs. Confirm the selected export—not another Windows
+  share. Test on PS2 hardware with normal and memory-constrained driver sets.
+- **Do not conflate APIs:** `load_smb` returning success means the IOP driver
+  loaded; `smbSharesConnectedCount` and the probe determine usable shares.
+  Changing `load_smb` to fail whenever credentials are rejected would mix
+  driver lifecycle with connection state and invite unnecessary reload attempts.
+- **Do not conflate dialect selection:** `VERSION = 2` and `VERSION = 3`
+  both use the same negotiated SMB2/3 driver; 3 is a label, not a forced
+  SMB3-only negotiation.
+
+An independent draft implementation PR, [#306](https://github.com/NathanNeurotic/Launchstation/pull/306),
+addresses the narrowly scoped per-version disconnect, `-EEXIST` fail-closed,
+IOP-error cleanup and missing CI test execution. CWD/SYS-CONF persistence,
+server compatibility, protocol timeouts and physical-console read/write tests
+remain separately actionable and are **not** claimed fixed by that PR.
