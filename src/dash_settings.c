@@ -494,11 +494,19 @@ static void smbedLoadPick(void)
 static int smbedReadText(const char *path, char **text)
 {
 	iox_stat_t st;
-	int result;
+	int result, length = 0;
 
-	*text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL);
-	if (*text != NULL)
+	*text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, &length);
+	if (*text != NULL) {
+		/* The editor uses C string offsets. Embedded NUL would silently
+		 * hide all bytes after it and destroy later shares on Save. */
+		if (memchr(*text, '\0', length) != NULL) {
+			free(*text);
+			*text = NULL;
+			return -1;
+		}
 		return 1;
+	}
 	result = genGetStat(path, &st);
 	if (result == -ENOENT)
 		return 0;
@@ -564,7 +572,8 @@ static int smbedWriteFile(const char *block)
 	                       out, SMB_CNF_MAX_SIZE + 512, work, SMB_CNF_MAX_SIZE + 512);
 	free(text);
 	text = NULL;
-	if (len < 0) {
+	if (len < 0 || len > SMB_CNF_MAX_SIZE) {
+		/* Never save a file our own SMB config loader would reject. */
 		ret = -1;
 		goto out_free;
 	}
@@ -642,7 +651,7 @@ static int smbedWriteFile(const char *block)
 			mirror_len = smbCnfUpsertText(text, smbed.orig, block,
 			                               mirror, SMB_CNF_MAX_SIZE + 512,
 			                               work, SMB_CNF_MAX_SIZE + 512);
-			if (mirror_len < 0) {
+			if (mirror_len < 0 || mirror_len > SMB_CNF_MAX_SIZE) {
 				ret = -7;
 				goto out_free;
 			}
