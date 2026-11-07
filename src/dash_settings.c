@@ -3095,6 +3095,12 @@ static void runThemeAction(int id)
 	}
 }
 
+/**
+ * Execute one Settings action row.
+ *
+ * Dispatches setting actions such as clock synchronization. Network-dependent
+ * actions first perform their preflight checks here where applicable.
+ */
 static void runAction(int id)
 {
 	if (id >= S_T_PRESET && id <= S_T_RESETCAT) {
