@@ -303,6 +303,19 @@ which one caused a particular hardware SMB mount failure:
   Therefore it is not yet a fully comment-preserving primitive: either make
   edits preserve those in-block comment lines (and regression-test that
   behavior) or explicitly warn users before a potentially destructive edit.
+  **CR-only line endings are a separate data-loss risk:** `smbConfigParse`
+  recognizes bare `\\r` as a line separator, but `lineOffset` in the
+  same source counts only `\\n`. For a CR-only file with multiple shares,
+  editing an early share can compute an end offset at EOF and silently remove
+  subsequent share blocks. Checking only the edited share after a write is
+  insufficient. A follow-up fix must make offsets recognize CR, LF, and CRLF
+  consistently with the parser, or reject unsupported line endings *before*
+  any write. Add a regression fixture with **at least three CR-only shares**:
+  edit the first and middle share, then remove one, verifying that all
+  unrelated shares, their URLs, and their comments remain intact; verify the
+  same with CRLF/LF/mixed endings and compare the full before/after text.
+  Preserve the original file on failed validation. Until this is fixed,
+  never claim editing is safe for CR-only files.
   Do not silently use the helper to promise lossless updates. Copying the
   entire primary text over another existing file could also lose the other
   file's separately configured shares and annotations.
