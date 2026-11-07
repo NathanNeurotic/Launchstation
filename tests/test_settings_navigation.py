@@ -27,7 +27,7 @@ def function(source, signature):
 
 declarations = settings[settings.index("enum SetType"):settings.index("/* Unsaved-changes session:")]
 icons = sorted(set(re.findall(r"\bDI_\w+", settings)))
-code = "#include <assert.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <strings.h>\n#define stricmp strcasecmp\n"
+code = "#include <assert.h>\n#include <errno.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <strings.h>\n#define stricmp strcasecmp\n"
 code += "#define ETH 1\n#define WLE_NATIVE_CLOUD 1\n#define UDPFS 1\n#define ILINK 1\n#define SMB 1\n#define MAX_PATH 1024\n#define DASH_FONT_SYSTEM 1\n"
 code += "static void dashToolsPrepareMmceStatus(void);\n"
 code += "static void dashEnsureIpConfig(void) {}\n"
@@ -37,6 +37,8 @@ code += "enum { " + classic[classic.index("COLOR_BACKGR"):classic.index("};", cl
 code += '\n#include "smb_shares.h"\n'
 code += r"""
 enum { FIO_O_RDONLY, FIO_O_WRONLY, FIO_O_CREAT, FIO_O_TRUNC };
+typedef struct { unsigned int size, hisize; } iox_stat_t;
+static int genGetStat(const char *path, iox_stat_t *st) { (void)path; (void)st; return -ENOENT; }
 static void dashStrCopy(char *d, const char *s, int n) { (void)n; strcpy(d, s); }
 static int dashModalKeyboard(const char *t, char *b, int n) { (void)t; (void)b; (void)n; return 0; }
 static void dashModalMessage(int icon, const char *t, const char *m, const char *x) {
