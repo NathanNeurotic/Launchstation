@@ -602,14 +602,19 @@ static void stopUsbMassForPoweroff(void)
 static int load_ps2ip(void)
 {
 	int ret, ID __attribute__((unused));
+	dashboard_ip_error = "PC CARD CompactFlash is using the network adapter.";
 	if (pcCardCfOwnsBus()) return 0;
+	dashboard_ip_error = NULL;
 
 #if defined(ETH) && defined(UDPFS)
-	if (!switchNetworkStack(NETWORK_STACK_ETH))
+	if (!switchNetworkStack(NETWORK_STACK_ETH)) {
+		dashboard_ip_error = "Ethernet stack switch was refused (UDPFS still active).";
 		return 0;
+	}
 #endif
 	if (!load_ps2dev9()) {
 		DPRINTF(" [NET]: skipping PS2IP/SMAP because DEV9 failed to initialize\n");
+		dashboard_ip_error = "DEV9 Ethernet adapter could not be initialized.";
 		return 0;
 	}
 
@@ -625,14 +630,18 @@ static int load_ps2ip(void)
 		        ps2dev9_variant == DEV9_VARIANT_PS2SDK_V10 ? " v1.0" : "",
 		        ID, ret);
 		have_ps2ip = (ID >= 0 && ret >= 0);
-		if (!have_ps2ip)
+		if (!have_ps2ip) {
+			dashboard_ip_error = "PS2IP network module could not be loaded.";
 			return 0;
+		}
 	}
 	if (!have_ps2smap) {
 		ID = SifExecModuleBuffer(ps2smap_irx, size_ps2smap_irx,
 		                    if_conf_len, &if_conf[0], &ret);
 		DPRINTF(" [SMAP]: ID=%d, ret=%d\n", ID, ret);
 		have_ps2smap = (ID >= 0 && ret >= 0);
+		if (!have_ps2smap)
+			dashboard_ip_error = "SMAP Ethernet module could not be initialized.";
 	}
 	return have_ps2ip && have_ps2smap;
 }
@@ -926,7 +935,8 @@ int load_smb(int version)
 	setupPowerOff();
 	getIpConfig();
 	if (!load_ps2ip()) {
-		smb_load_error[version] = "The network stack could not be started.";
+		smb_load_error[version] = dashboard_ip_error != NULL
+		                        ? dashboard_ip_error : "The network stack could not be started.";
 		return 0;
 	}
 	if (!*have) {
