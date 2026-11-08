@@ -12,7 +12,7 @@ root = Path(__file__).resolve().parents[1]
 src = (root / "src/dash_devices.c").read_text()
 # This probe optimization relies on the production loader doing the initial
 # connection. Fail the test if that cross-file contract changes.
-loader = (root / "src/init.c").read_text().split("int load_smb(int version)", 1)[1].split("\\n}", 1)[0]
+loader = (root / "src/init.c").read_text().split("int load_smb(int version)", 1)[1].split("\n}", 1)[0]
 assert "smbSharesConnect(version, 1);" in loader
 start = src.index("\telse if (smbPathKind(m) != SMB_PATH_NONE) {")
 end = src.index("\n\t}\n#endif", start) + len("\n\t}")
