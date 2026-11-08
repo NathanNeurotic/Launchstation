@@ -207,6 +207,7 @@ static void smbReadConfig(void)
 	    (text_hash != smb_cfg_text_hash || strcmp(previous_path, smb_cfg_path)) &&
 	    !smbDisconnectAllSessions()) {
 		snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", previous_path);
+		smb_cfg_read_error = previous_read_error;
 		free(text);
 		return;
 	}

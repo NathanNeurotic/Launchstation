@@ -29,6 +29,7 @@ code = r'''
 
 #define MAX_PATH 1024
 #define SMB_RETRY_MS 30000
+#define SMB_CNF_NAME "SMB2.CNF"
 #define SMB_DEVCTL_LOGOFF 0xC0DE0003
 #define DPRINTF(...) ((void)0)
 static SmbConfig smb_cfg;
@@ -40,6 +41,7 @@ static void smbReadConfig(void);
 static unsigned int now;
 static const char *config_text;
 static int mc1_refused, preferred, read_calls, connect_calls, connect_result;
+static int reader_error;
 static int disconnect_calls, disconnect1_calls, disconnect2_calls;
 static int disconnect1_result, disconnect2_result;
 static char last_connect_url[SMB_URL_LEN];
@@ -48,9 +50,10 @@ static char *smbReadConfigText(int *refused)
 {
     read_calls++;
     *refused = mc1_refused;
+    smb_cfg_read_error = reader_error;
     snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s",
              preferred ? "mc1:/SYS-CONF/SMB2.CNF" : "mc0:/SYS-CONF/SMB2.CNF");
-    return config_text != NULL ? strdup(config_text) : NULL;
+    return reader_error || config_text == NULL ? NULL : strdup(config_text);
 }
 
 static int connectSmb1(SmbShare *sh)
@@ -91,6 +94,7 @@ code += source[source.index("static unsigned int smb_cfg_text_hash;"):source.ind
 code += function("static void smbReadConfig(void)\n{")
 code += function("void smbSharesConnect(int version, int retry_failed)\n{")
 code += function("int smbSharesConnectedCount(int version)\n{")
+code += function("void smbSharesStatus(int version, char *out, int out_size)\n{")
 code += function("void smbSharesForget(void)\n{")
 code += function("int smbSharesReload(void)\n{")
 code += r'''
@@ -106,7 +110,7 @@ static void reset_case(void)
     now = 1000;
     config_text = "NAME=A\nURL=smb://10.0.0.2/s\n";
     mc1_refused = 1;
-    preferred = 0;
+    preferred = reader_error = 0;
     read_calls = connect_calls = 0;
     connect_result = 0;
     disconnect_calls = disconnect1_calls = disconnect2_calls = 0;
@@ -202,6 +206,33 @@ int main(void)
     assert(disconnect_calls == 1 && connect_calls == 1);
     assert(!strcmp(smb_cfg.share[0].url, "smb://10.0.0.2/s"));
     assert(smb_cfg.share[0].state == SMB_STATE_CONNECTED);
+
+    /* An inaccessible higher-priority config must not corrupt the status
+     * of a still-connected fallback if the driver refuses to disconnect.
+     * This exercises the actual production status formatter too. */
+    reset_case();
+    smbSharesConnect(2, 1);
+    preferred = 1;
+    mc1_refused = 0;
+    reader_error = 1;
+    disconnect2_result = -EIO;
+    smbSharesConnect(2, 1);
+    assert(read_calls == 2 && disconnect2_calls == 1);
+    assert(smb_cfg_read_error == 0);
+    assert(!strcmp(smb_cfg_path, "mc0:/SYS-CONF/SMB2.CNF"));
+    assert(smbSharesConnectedCount(2) == 1 && smb_cfg_mc1_pending);
+    { char status[180];
+      smbSharesStatus(2, status, sizeof(status));
+      assert(!strcmp(status, "1 of 1 share(s) connected")); }
+    /* Once disconnection succeeds, choose the new preferred config. */
+    reader_error = 0;
+    config_text = "NAME=A\nURL=smb://10.0.0.3/t\n";
+    disconnect2_result = 0;
+    smbSharesConnect(2, 1);
+    assert(disconnect2_calls == 2 && smbSharesConnectedCount(2) == 1);
+    assert(!strcmp(smb_cfg_path, "mc1:/SYS-CONF/SMB2.CNF"));
+    assert(!strcmp(smb_cfg.share[0].url, "smb://10.0.0.3/t"));
+    assert(!smb_cfg_read_error && !smb_cfg_mc1_pending);
 
     /* A partial disconnect must never leave the successful dialect marked
      * CONNECTED when its IOP session has already been closed. */
