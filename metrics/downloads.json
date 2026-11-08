@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-07T21:19:38+00:00",
+  "updated_at": "2026-11-08T00:41:32+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 708,
+  "total_downloads": 714,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -1716,12 +1716,12 @@
       "release": "latest"
     },
     "719619318": {
-      "downloads": 0,
+      "downloads": 1,
       "name": "APP_LAUNCHSTATION-1103.zip",
       "release": "build-1103"
     },
     "719619320": {
-      "downloads": 0,
+      "downloads": 1,
       "name": "LAUNCHSTATION.ELF",
       "release": "build-1103"
     },
@@ -1791,7 +1791,7 @@
       "release": "latest"
     },
     "719619796": {
-      "downloads": 25,
+      "downloads": 29,
       "name": "LAUNCHSTATION-1103.zip",
       "release": "latest"
     },
