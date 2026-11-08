@@ -10,11 +10,19 @@ needs recompiling.
 The native File Browser, HDD Manager, Text Editor and dialogs follow the
 same active theme.
 
-## Built-in themes
+## Built-in theme presets
 
-There are 18 presets (`Settings > Appearance > Theme preset`); OSD Classic is
-the default. A matching user-facing guide is on the documentation site
-(<https://nathanneurotic.github.io/Launchstation/themes.html>).
+Launchstation includes **18 selectable theme presets** in the executable.
+Find them at **Settings > Appearance > Theme preset**; **OSD Classic** is
+the default. The count comes from the 18 entries in `presets[]` in
+`src/dash_themes.c` (`P_COUNT`), which is also what the Settings picker
+uses. These are complete, preconfigured dashboard looks, **not 18
+separate installed `theme.cfg` folders**. Some presets share background
+types but use different colours or menu styling. You can still edit one,
+export it, or load additional user-created themes from `THEMES/`.
+
+The 18 preset previews are in the [interface gallery](https://nathanneurotic.github.io/Launchstation/ui-captures.html#themes).
+A matching user-facing guide is on the [documentation site](https://nathanneurotic.github.io/Launchstation/themes.html).
 
 | Theme | Background | Look |
 |-------|------------|------|
@@ -293,7 +301,7 @@ values are ignored or clamped.
 # My theme
 name = Night Blue
 author = me
-preset = midnight            # start from a built-in preset (put it first)
+preset = mist                # start from a built-in preset (put it first)
 background = towers
 background_color = #9694BE
 background_color2 = #284CAA
@@ -351,7 +359,7 @@ Preset ids: `osd`, `black`, `towers`, `mist`, `minimal`, `clockring`,
 `mcgrid`, `bootlines`, `cubes`, `stream`, `mcblue`, `brushed`, `biosblue`,
 `mono`, `crt`, `psx`, `crystal`, `discred`. Older saved `midnight`
 selections resolve to Blue Mist; older `lightshow` selections resolve to OSD Classic.
-Light Streaks remains available as a custom background type.
+Light Streaks and Drift Clouds remain available as custom background types.
 
 A complete example is in [theme-example/theme.cfg](theme-example/theme.cfg).
 
