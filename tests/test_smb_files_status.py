@@ -20,7 +20,12 @@ code = r"""
 #include <string.h>
 enum { DI_USB=1, DI_NETWORK=2, DI_SHARE=3, DI_WARNING=4 };
 enum { SMB_PATH_NONE=0, SMB_PATH_V1=1, SMB_PATH_V2=2 };
-typedef struct { int icon; char name[64], mount[16], status[96]; } DashDevice;
+/* Mirror the real DashDevice field sizes: avoid spurious host warnings. */
+typedef struct {
+    int icon, state;
+    char name[32], mount[24], browse[24], status[48], detail[48];
+    float fill;
+} DashDevice;
 static int loaded, status_calls, last_version;
 static const char *error_message = "";
 static char last_title[64], last_body[160];
