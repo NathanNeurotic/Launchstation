@@ -365,16 +365,19 @@ static int lineOffset(const char *text, int line_no)
 }
 
 /* Does this raw line hold KEY = value (not a comment, not blank)? */
-static int lineIsKey(const char *line)
+static int lineIsKey(const char *line, int len)
 {
-	const char *eq;
+	const char *end = line + len;
 
-	while (*line == ' ' || *line == '\t')
+	/* A UTF-8 BOM belongs to the file, not the first key. */
+	if (len >= 3 && (unsigned char)line[0] == 0xEF &&
+	    (unsigned char)line[1] == 0xBB && (unsigned char)line[2] == 0xBF)
+		line += 3;
+	while (line < end && (*line == ' ' || *line == '\t'))
 		line++;
-	if (*line == '\0' || *line == '#' || *line == ';' || *line == '\r' || *line == '\n')
+	if (line == end || *line == '#' || *line == ';')
 		return 0;
-	eq = strchr(line, '=');
-	return eq != NULL;
+	return memchr(line, '=', end - line) != NULL;
 }
 
 /* The GUI replaces only canonical share fields. Keep user annotations and
@@ -538,12 +541,7 @@ int smbCnfUpsertText(const char *text, const char *orig_name,
 		int line = prev_end + 1, off = lineOffset(text, line);
 		while (line < end_line) {
 			int len = strcspn(text + off, "\r\n");
-			char probe[128];
-			int is_key, copy = len < (int)sizeof(probe) - 1 ? len : (int)sizeof(probe) - 1;
-
-			memcpy(probe, text + off, copy);
-			probe[copy] = '\0';
-			is_key = lineIsKey(probe);
+			int is_key = lineIsKey(text + off, len);
 			if (is_key) {
 				start_line = line;
 				break;
@@ -585,12 +583,8 @@ int smbCnfUpsertText(const char *text, const char *orig_name,
 	for (off = start_off; off < end_off; ) {
 		int len = strcspn(text + off, "\r\n"), end = off + len;
 		int keep;
-		char probe[128];
-		int copy = len < (int)sizeof(probe) - 1 ? len : (int)sizeof(probe) - 1;
-		memcpy(probe, text + off, copy);
-		probe[copy] = '\0';
 		keep = !lineIsManagedKey(text + off, len) &&
-		       (block_text != NULL || !lineIsKey(probe));
+		       (block_text != NULL || !lineIsKey(text + off, len));
 		if (text[end] == '\r' && text[end + 1] == '\n')
 			end += 2;
 		else if (text[end] == '\r' || text[end] == '\n')
@@ -610,12 +604,8 @@ int smbCnfUpsertText(const char *text, const char *orig_name,
 	for (off = start_off; off < end_off; ) {
 		int len = strcspn(text + off, "\r\n"), end = off + len;
 		int keep;
-		char probe[128];
-		int copy = len < (int)sizeof(probe) - 1 ? len : (int)sizeof(probe) - 1;
-		memcpy(probe, text + off, copy);
-		probe[copy] = '\0';
 		keep = !lineIsManagedKey(text + off, len) &&
-		       (block_text != NULL || !lineIsKey(probe));
+		       (block_text != NULL || !lineIsKey(text + off, len));
 		if (text[end] == '\r' && text[end + 1] == '\n')
 			end += 2;
 		else if (text[end] == '\r' || text[end] == '\n')

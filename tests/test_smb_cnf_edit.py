@@ -322,6 +322,26 @@ int main(void)
         check(len < 0, "unfinished trailing block cannot bleed into appended share");
     }
 
+    /* Regression: the first managed key is beyond the old 127-byte probe.
+     * A stale password before NAME must not survive clearing credentials. */
+    {
+        char file[2048];
+        int pos = snprintf(file, sizeof(file), "\xEF\xBB\xBF# note\n");
+        memset(file + pos, ' ', 150);
+        pos += 150;
+        pos += snprintf(file + pos, sizeof(file) - pos,
+                        "PASSWORD = oldsecret\nNAME = A\nURL = smb://1.1.1.1/a\n");
+        smbCnfBuildBlock(block, sizeof(block), "A", 2, NULL, NULL,
+                         "1.1.1.1", 445, "a", 0);
+        len = upsert(file, "A", block, out, sizeof(out), work, sizeof(work));
+        check(len >= 0 && strstr(out, "oldsecret") == NULL,
+              "long padded first PASSWORD removed when clearing credentials");
+        check(len >= 0 && !memcmp(out, "\xEF\xBB\xBF# note\n", 10),
+              "BOM and leading comment retained");
+        if (len >= 0)
+            checkParses("long padded key edit remains valid", out, 1);
+    }
+
     /* ---- bounds ---- */
     {
         const char *file = "NAME = A\nURL = smb://1.1.1.1/a\n";
