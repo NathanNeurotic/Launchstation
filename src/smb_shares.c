@@ -123,6 +123,8 @@ static char *smbReadConfigText(int *mc1_refused)
 }
 
 static unsigned int smb_cfg_text_hash;
+/* An -EEXIST means the IOP may still own NAME even if the EE marks it FAILED. */
+static int smb2_session_uncertain;
 
 static unsigned int smbTextHash(const char *text)
 {
@@ -152,13 +154,16 @@ static void smbForgetVersion(int version)
 		sh->problem = NULL;
 	}
 	smb_retry_ms[version] = 0;
+	if (version == SMB_PATH_V2)
+		smb2_session_uncertain = 0;
 }
 
 static int smbDisconnectAllSessions(void)
 {
 	int ret2 = 0, ret1 = 0;
 
-	if (isSmbDriverLoaded(SMB_PATH_V2) && smbSharesConnectedCount(SMB_PATH_V2) > 0) {
+	if (isSmbDriverLoaded(SMB_PATH_V2) &&
+	    (smbSharesConnectedCount(SMB_PATH_V2) > 0 || smb2_session_uncertain)) {
 		ret2 = fileXioDevctl(SMB_DEVICE_V2, SMB2_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0);
 		if (ret2 >= 0)
 			smbForgetVersion(SMB_PATH_V2);
@@ -179,15 +184,20 @@ static void smbReadConfig(void)
 {
 	char *text, previous_path[MAX_PATH];
 	unsigned int text_hash;
-	int mc1_refused, i;
+	int mc1_refused, i, previous_read_error = smb_cfg_read_error;
 
 	snprintf(previous_path, sizeof(previous_path), "%s", smb_cfg_path);
 	text = smbReadConfigText(&mc1_refused);
 	text_hash = smbTextHash(text);
 	/* An unchanged fallback must not reset connected shares or failed-share
 	 * backoff while the preferred card is still unavailable. */
-	if (mc1_refused && smb_cfg_loaded && smb_cfg_mc1_pending &&
-	    text_hash == smb_cfg_text_hash && !strcmp(previous_path, smb_cfg_path)) {
+	if (smb_cfg_loaded && smb_cfg_mc1_pending &&
+	    text_hash == smb_cfg_text_hash && !strcmp(previous_path, smb_cfg_path) &&
+	    previous_read_error == smb_cfg_read_error) {
+		/* A previously refused mc1 may now be accessible, yet discovery
+		 * still chooses the identical fallback. Preserve live IOP sessions
+		 * and their EE state; only the outstanding retry flag changes. */
+		smb_cfg_mc1_pending = mc1_refused;
 		free(text);
 		return;
 	}
@@ -363,6 +373,8 @@ void smbSharesConnect(int version, int retry_failed)
 			sh->problem = NULL;
 		} else {
 			sh->state = SMB_STATE_FAILED;
+			if (version == SMB_PATH_V2 && ret == -EEXIST)
+				smb2_session_uncertain = 1;
 			sh->problem = version == 1 ? smb1Problem(ret)
 			                           : ret == -EEXIST ? "Share NAME is still in use by an old SMB session; restart Launchstation"
 			                           : "Could not connect: check the address, share, user name and password";

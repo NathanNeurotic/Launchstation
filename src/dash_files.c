@@ -11,6 +11,9 @@
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "init.h"
+#ifdef SMB
+#include "smb_shares.h"
+#endif
 
 extern char PathPad[30][MAX_PATH];
 extern char LastDir[MAX_NAME];
@@ -40,6 +43,18 @@ static void deviceNotFound(const DashDevice *d)
 
 	if (d->icon == DI_USB)
 		snprintf(body, sizeof(body), "No USB storage device was found. Connect a USB drive and try again.");
+#ifdef SMB
+	else if (smbPathKind(d->mount) != SMB_PATH_NONE) {
+		int version = smbPathKind(d->mount);
+		const char *load_error = smbLoadError(version);
+		/* Match the browser's actionable SMB diagnostics, without doing IO
+		 * or treating an unloaded driver as a credentials failure. */
+		if (!isSmbDriverLoaded(version) && load_error[0])
+			snprintf(body, sizeof(body), "%s", load_error);
+		else
+			smbSharesStatus(version, body, sizeof(body));
+	}
+#endif
 	else if (d->icon == DI_NETWORK || d->icon == DI_SHARE)
 		snprintf(body, sizeof(body), "The network share could not be reached. Check the cable, IP settings and that the %s server is running.",
 		         !strncmp(d->mount, "smb", 3) ? "SMB" : "UDPFS");

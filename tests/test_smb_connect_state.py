@@ -32,7 +32,7 @@ code = r'''
 #define SMB_DEVCTL_LOGOFF 0xC0DE0003
 #define DPRINTF(...) ((void)0)
 static SmbConfig smb_cfg;
-static int smb_cfg_loaded, smb_cfg_mc1_pending;
+static int smb_cfg_loaded, smb_cfg_mc1_pending, smb_cfg_read_error;
 static char smb_cfg_path[MAX_PATH];
 static unsigned int smb_retry_ms[3];
 static void smbReadConfig(void);
@@ -100,6 +100,9 @@ static void reset_case(void)
     smb_cfg_loaded = smb_cfg_mc1_pending = 0;
     smb_cfg_path[0] = '\0';
     memset(smb_retry_ms, 0, sizeof(smb_retry_ms));
+    smb_cfg_text_hash = 0;
+    smb_cfg_read_error = 0;
+    smb2_session_uncertain = 0;
     now = 1000;
     config_text = "NAME=A\nURL=smb://10.0.0.2/s\n";
     mc1_refused = 1;
@@ -124,6 +127,17 @@ int main(void)
 
     /* The actual SMB2 devctl wrapper must never mask -EEXIST as success:
      * NAME could belong to a different, still-connected share. */
+    /* mc1 becomes available but still has no SMB2.CNF. Do not parse the
+     * same fallback anew and lose the connected session to -EEXIST. */
+    reset_case();
+    smbSharesConnect(2, 1);
+    assert(smbSharesConnectedCount(2) == 1 && smb_cfg_mc1_pending);
+    mc1_refused = 0;
+    smbSharesConnect(2, 1);
+    assert(read_calls == 2 && connect_calls == 1 && disconnect_calls == 0);
+    assert(!smb_cfg_mc1_pending && smbSharesConnectedCount(2) == 1);
+    assert(smb_cfg.share[0].state == SMB_STATE_CONNECTED);
+
     reset_case();
     connect_result = -EEXIST;
     smbSharesConnect(2, 1);
@@ -135,6 +149,19 @@ int main(void)
     assert(smb_cfg.share[0].problem != NULL);
     assert(!strcmp(smb_cfg.share[0].problem,
                    "Share NAME is still in use by an old SMB session; restart Launchstation"));
+    /* A failed -EEXIST connection can leave an IOP session unknown to EE
+     * ConnectedCount. Reload must explicitly retire it before replacing NAME. */
+    config_text = "NAME=A\nURL=smb://10.0.0.3/new\n";
+    disconnect2_result = -EIO;
+    assert(!smbSharesReload() && disconnect2_calls == 1);
+    assert(smb2_session_uncertain && smb_cfg_loaded);
+    disconnect2_result = 0;
+    assert(smbSharesReload() && disconnect2_calls == 2);
+    assert(!smb2_session_uncertain && !smb_cfg_loaded);
+    connect_result = 0;
+    smbSharesConnect(2, 1);
+    assert(connect_calls == 2 && smbSharesConnectedCount(2) == 1);
+    assert(!strcmp(last_connect_url, "smb://10.0.0.3/new"));
 
     reset_case();
     connect_result = -1;
