@@ -16,6 +16,8 @@
 #include "main_title.h"
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 #include "cloud_google.h"
+#endif
+#ifdef ETH
 #include "init.h"
 #endif
 #ifdef SMB
@@ -928,7 +930,7 @@ static const SetItem net_items[] = {
 #endif
 #ifdef ETH
     {ST_CHOICE, S_NET_LEGACY, "Legacy Ethernet drivers", "Use MrRexD's ps2sdk v1.0 DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up. Takes effect the next time Ethernet/FTP is started."},
-    {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query multiple Internet time sources, require agreement, then write and verify the PS2 hardware RTC."},
+    {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query 0.pool.ntp.org and write and verify the PS2 hardware RTC. Requires saved network settings."},
 #endif
 #ifdef SMB
     {ST_PAGE, P_SMB, "SMB shares", "Add saved shares. smb:/ lists connected SMB2/3 shares; smb1:/ opens SMB1. Neither scans the network."},
@@ -2351,6 +2353,94 @@ static char *ipField(int id)
 	return (id == S_NET_IP) ? ip : (id == S_NET_NM) ? netmask : gw;
 }
 
+/* Validate a complete dotted-quad string without relying on sscanf accepting
+ * trailing text or implausibly large octets. */
+/** @brief Validate a complete, well-formed dotted-quad IPv4 address.
+ *
+ * Returns 1 when the string contains exactly four octets in the range 0..255
+ * and no trailing text; otherwise returns 0.
+ */
+static int validIpv4(const char *s)
+{
+	unsigned a, b, c, d;
+	char extra = '\0';
+	int scanned;
+
+	if (s == NULL || s[0] == '\0')
+		return 0;
+	scanned = sscanf(s, "%u.%u.%u.%u%c", &a, &b, &c, &d, &extra);
+	if (scanned != 4 || extra != '\0')
+		return 0;
+	if (a > 255U || b > 255U || c > 255U || d > 255U)
+		return 0;
+	return 1;
+}
+
+/* A usable IPv4 netmask has a contiguous run of ones followed by zeros. */
+/** @brief Validate an IPv4 netmask with a contiguous run of 1 bits followed by zeros.
+ *
+ * Returns 1 for a standard prefix-length mask, otherwise 0.
+ */
+static int validNetmask(const char *s)
+{
+	unsigned a, b, c, d;
+	unsigned mask;
+	char extra = '\0';
+	int scanned;
+
+	if (s == NULL || s[0] == '\0')
+		return 0;
+	scanned = sscanf(s, "%u.%u.%u.%u%c", &a, &b, &c, &d, &extra);
+	if (scanned != 4 || extra != '\0')
+		return 0;
+	if (a > 255U || b > 255U || c > 255U || d > 255U)
+		return 0;
+	mask = (a << 24) | (b << 16) | (c << 8) | d;
+	if (mask == 0U || mask == ~0U)
+		return 0;
+	while (mask & 0x80000000U)
+		mask <<= 1;
+	while ((mask & 0x80000000U) == 0 && mask != 0U)
+		mask <<= 1;
+	return mask == 0U;
+}
+
+/* Preflight for Settings -> Network -> Sync PS2 clock. This is called only from
+ * the explicit action path; it must not start or reset the network stack. */
+/** @brief Check whether the current network settings are sufficient for Internet clock
+ * sync. On failure, write a human-readable reason to message and return 0.
+ *
+ * This does not load, reset, or touch the Ethernet stack.
+ */
+static int ipNetworkSettingsReadyForClockSync(char *message, size_t size)
+{
+	if (message != NULL && size > 0)
+		message[0] = '\0';
+
+	if (net_dirty) {
+		if (message != NULL && size > 0)
+			snprintf(message, size, "Save your network settings first, then retry clock synchronization.");
+		return 0;
+	}
+	if (pcCardCfOwnsBus()) {
+		if (message != NULL && size > 0)
+			snprintf(message, size, "PC CARD CompactFlash is using the network adapter. Remove it or use another network device, then retry.");
+		return 0;
+	}
+	if (!validIpv4(ip) || !validIpv4(netmask) || !validIpv4(gw) || !validNetmask(netmask)) {
+		if (message != NULL && size > 0)
+			snprintf(message, size, "IP address, netmask or gateway is incomplete or invalid. Correct Settings > Network and retry.");
+		return 0;
+	}
+	if (!strcmp(ip, "0.0.0.0") || !strcmp(gw, "0.0.0.0") ||
+	    !strcmp(netmask, "0.0.0.0") || !strcmp(netmask, "255.255.255.255")) {
+		if (message != NULL && size > 0)
+			snprintf(message, size, "IP address, gateway or netmask is not usable. Configure Settings > Network and retry.");
+		return 0;
+	}
+	return 1;
+}
+
 static void editIp(const SetItem *it)
 {
 	char buf[16];
@@ -3280,6 +3370,11 @@ static void runThemeAction(int id)
 	}
 }
 
+/** @brief Execute one Settings action row.
+ *
+ * Dispatches setting actions such as clock synchronization. Network-dependent
+ * actions first perform their preflight checks here where applicable.
+ */
 static void runAction(int id)
 {
 	if (id >= S_T_PRESET && id <= S_T_RESETCAT) {
@@ -3523,8 +3618,14 @@ static void runAction(int id)
 		}
 #ifdef ETH
 		case S_CLOCK_SYNC: {
+			char message[256];
 			char result[160];
 			int ok;
+
+			if (!ipNetworkSettingsReadyForClockSync(message, sizeof(message))) {
+				dashModalMessage(DI_WARNING, "Clock synchronization unavailable", message, NULL);
+				break;
+			}
 			dashLoadingBegin("Synchronizing PS2 clock");
 			ok = dashClockSyncInternet(result, sizeof(result));
 			dashLoadingEnd();
