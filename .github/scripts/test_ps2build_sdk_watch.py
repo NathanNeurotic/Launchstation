@@ -244,7 +244,7 @@ class WatchTests(unittest.TestCase):
 
     def test_an_unreadable_manifest_or_an_empty_tag_falls_back_to_the_release_api(self):
         for manifest_body in (b"not json", b'{"components": {"sdk-core": {"tag": ""}}}',
-                              b'{"components": {"sdk-core": {"tag": 5}}}'):
+                              b'{"components": {"sdk-core": {"tag": 5}}}', b'{"components": {"sdk-core": {"tag": "v1;id"}}}'):
             calls = []
 
             def urlopen(request, timeout, body=manifest_body):

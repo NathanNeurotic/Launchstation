@@ -164,9 +164,9 @@ def manifest():
     if not _MANIFEST:
         try:
             components = json.loads(get(MANIFEST_URL)).get("components") or {}
-            # A component without a tag counts as absent, so it is asked of the release API, as the installer does.
+            # A component without a valid tag counts as absent, so it is asked of the release API, as the installer does.
             tags = {name: entry["tag"] for name, entry in components.items()
-                    if isinstance(entry, dict) and isinstance(entry.get("tag"), str) and entry["tag"]}
+                    if isinstance(entry, dict) and isinstance(entry.get("tag"), str) and VERSION.match(entry["tag"])}
         except (OSError, ValueError, AttributeError) as error:  # unreachable, or not the manifest's JSON shape
             print(f"{MANIFEST_URL}: {error}; asking the release API for every component instead", flush=True)
             tags = {}
