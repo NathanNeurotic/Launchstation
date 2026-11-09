@@ -388,7 +388,8 @@ class WorkflowTests(unittest.TestCase):
 
     def test_a_mirror_drill_never_publishes_and_never_cancels_a_publishing_run(self):
         build = (WORKFLOWS / "compile.yml").read_text()
-        self.assertIn("&& !inputs.mirror-drill", build)
+        publish = build.split("Publish rolling release", 1)[1].split("run:", 1)[0]
+        self.assertIn("&& !inputs.mirror-drill", publish)
         self.assertIn("${{ github.event.pull_request.number || github.ref }}${{ inputs.mirror-drill && '-drill' || '' }}",
                       build)
 
