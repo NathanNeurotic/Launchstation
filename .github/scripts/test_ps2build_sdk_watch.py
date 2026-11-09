@@ -276,7 +276,9 @@ class WatchTests(unittest.TestCase):
                 self.assertEqual(result.returncode, status, result.stdout + result.stderr)
                 self.assertEqual((tmp / "out.env").exists(), line is not None)
                 if line is not None:
-                    subprocess.run(["sh", "-c", ". ./out.env"], cwd=tmp, env=env, capture_output=True, timeout=30)
+                    sourced = subprocess.run(["sh", "-c", ". ./out.env"], cwd=tmp, env=env, capture_output=True,
+                                             text=True, timeout=30)
+                    self.assertEqual(sourced.returncode, 0, sourced.stdout + sourced.stderr)
                     self.assertIn(line, (tmp / "out.env").read_text())
                 self.assertFalse((tmp / "PWNED").exists())
 
