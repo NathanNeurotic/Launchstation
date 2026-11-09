@@ -2,6 +2,11 @@ name: Automated-Build
 
 on:
   workflow_dispatch:
+    inputs:
+      mirror-drill:
+        description: Install without the SDK cache and with the official host unreachable, to prove the mirror fallback
+        type: boolean
+        default: false
   push:
     branches: [master, main]
   pull_request:
@@ -11,7 +16,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # A mirror drill never publishes, so it gets its own group: it must not cancel a publishing run on master.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}${{ inputs.mirror-drill && '-drill' || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -227,8 +233,8 @@ jobs:
 
       # The ps2build SDK pinned in .github/ps2build-sdk.env (bumped by ps2build-sdk-watch.yml once a week):
       # resolving it makes no network call. The SDK cached under those versions is restored, else an older
-      # cached SDK is updated in place, else it is installed: from git.techwritescode.dev, or when that fails
-      # from the pinned NathanNeurotic/ps2build-mirror release. Then it is cached. A mirror fallback that does
+      # cached SDK is updated in place, else it is installed: from the official GitHub releases, or when they fail
+      # from the pinned NathanNeurotic/old-ps2build-mirror release. Then it is cached. A mirror fallback that does
       # not hold the pinned versions is never cached under them.
       - name: Resolve the pinned ps2build SDK
         env:
@@ -236,6 +242,7 @@ jobs:
         id: sdk
         run: sh scripts/ps2build_sdk.sh --resolve --llvm "$RUNNER_TEMP/ps2build-sdk.env"
       - name: Restore the ps2build SDK
+        if: ${{ !inputs.mirror-drill }}
         id: sdk-cache
         uses: actions/cache/restore@v4
         with:
@@ -248,9 +255,11 @@ jobs:
           PS2BUILD_SDK_MIRROR_TOKEN: ${{ secrets.PS2BUILD_MIRROR_TOKEN }}
           # The official host resets HTTP/2 streams under load; ps2build is a Go binary.
           GODEBUG: http2client=0
+          # The drill sends the CLI download to a closed port, so the official attempt fails and the mirror installs.
+          PS2BUILD_SDK_OFFICIAL_URL: ${{ inputs.mirror-drill && 'https://127.0.0.1:9' || '' }}
         run: sh scripts/ps2build_sdk.sh --llvm "$HOME/.local/share/ps2build"
       - name: Cache the ps2build SDK
-        if: ${{ steps.sdk-cache.outputs.cache-hit != 'true' && env.PS2BUILD_SDK_STALE != 'true' }}
+        if: ${{ !inputs.mirror-drill && steps.sdk-cache.outputs.cache-hit != 'true' && env.PS2BUILD_SDK_STALE != 'true' }}
         uses: actions/cache/save@v4
         with:
           path: ~/.local/share/ps2build
@@ -481,7 +490,7 @@ jobs:
       - name: Publish rolling release from verified master build
         # Each merge (including squash merges) creates a push to master.
         # PRs build review artifacts but must never overwrite public downloads.
-        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master' && !inputs.mirror-drill
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

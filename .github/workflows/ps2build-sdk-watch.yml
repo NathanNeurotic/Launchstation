@@ -1,11 +1,11 @@
 name: ps2build SDK Watch
 
-# The build installs the ps2build SDK pinned in .github/ps2build-sdk.env, so it never asks git.techwritescode.dev
-# which release is newest (unpinned, that was 9 release-API requests per build). This watch asks instead, once a
+# The build installs the ps2build SDK pinned in .github/ps2build-sdk.env, so it never asks the official ps2build
+# releases (github.com/ps2build) which release is newest (unpinned, that was 9 release-API requests per build). This watch asks instead, once a
 # week. RiptOPL and ssb-decomp-re carry the same watch.
 #
-#   check  .github/scripts/ps2build_sdk_watch.py: one request per pinned name (none for PS2BUILD_SDK_HOLD), plus a
-#          look through the private NathanNeurotic/ps2build-mirror for the release that holds exactly the newest
+#   check  .github/scripts/ps2build_sdk_watch.py: ps2build's release manifest (nothing for PS2BUILD_SDK_HOLD), plus a
+#          look through the private NathanNeurotic/old-ps2build-mirror for the release that holds exactly the newest
 #          versions. Nothing newer: the run ends here.
 #   warm   installs the new SDK (LLVM) once and caches it on master, on top of the cached SDK so only what changed
 #          is downloaded. The pull request and later master builds then restore it.
