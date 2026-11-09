@@ -489,7 +489,7 @@ jobs:
       - name: Publish rolling release from verified master build
         # Each merge (including squash merges) creates a push to master.
         # PRs build review artifacts but must never overwrite public downloads.
-        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master' && !inputs.mirror-drill
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
