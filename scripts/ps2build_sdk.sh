@@ -209,7 +209,13 @@ resolve_mirror() { # the release API is down: the newest mirror release defines 
     for name in $PS2BUILD_EXTRAS; do
         var=$(extra_var "$name")_VERSION
         eval "version=\${$var:-latest}"
-        [ "$version" = latest ] && eval "$var=\$(pin_value $var \"\$pin_tmp\")"
+        [ "$version" = latest ] || continue
+        if [ -n "$PS2BUILD_EXTRAS_TAG" ]; then # the SDK mirror cannot say what the separate extras release holds
+            log "$var is unpinned, and the extras come from $PS2BUILD_EXTRAS_TAG; pin it"
+            rm -f "$pin_tmp"
+            return 1
+        fi
+        eval "$var=\$(pin_value $var \"\$pin_tmp\")"
     done
     PS2BUILD_SDK_TAG=$(pin_value PS2BUILD_SDK_TAG "$pin_tmp")
     PS2BUILD_SDK_SUMS_SHA256=$(pin_value PS2BUILD_SDK_SUMS_SHA256 "$pin_tmp")
@@ -317,10 +323,12 @@ adopt_mirror_pin() { # pin.env of the newest mirror release: install that, and s
         warn "the newest ps2build-mirror release $tag does not hold the wanted SDK: ${older% }"
     fi
     PS2BUILD_SDK_TAG=$tag PS2BUILD_SDK_SUMS_SHA256=$sums PS2BUILD_COMPONENTS=$components PS2BUILD_LLVM_TOOLCHAIN=$llvm
-    for name in $PS2BUILD_EXTRAS; do
-        var=$(extra_var "$name")_VERSION
-        eval "$var=\$(pin_value $var \"\$1\")"
-    done
+    if [ -z "$PS2BUILD_EXTRAS_TAG" ]; then # with a separate extras release, the extras keep their own pins
+        for name in $PS2BUILD_EXTRAS; do
+            var=$(extra_var "$name")_VERSION
+            eval "$var=\$(pin_value $var \"\$1\")"
+        done
+    fi
     # Later steps (the ogg/vorbis packages) then take the same release.
     if [ "$PS2BUILD_SDK_RESOLVED" = 1 ]; then
         write_pin "$PIN"

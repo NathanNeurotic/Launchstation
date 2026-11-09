@@ -242,15 +242,20 @@ class WatchTests(unittest.TestCase):
             self.assertEqual((watch.latest_official("sdk-core"), watch.latest_official("toolchain")), ("v7", "v8"))
         self.assertEqual(calls, [watch.MANIFEST_URL])
 
-    def test_a_mirror_pin_value_with_spaces_is_never_run(self):
-        """With the release API down, the newest mirror pin.env defines the versions. A value there that holds a
-        command is refused, so the resolved pin file never runs it when a later step sources it."""
+    def test_with_the_release_api_down_the_newest_mirror_pin_is_read_safely(self):
+        """With the release API down, the newest mirror pin.env defines the unpinned versions. A value there that
+        holds a command is refused, so the resolved pin file never runs it when a later step sources it. With a
+        separate extras release, an unpinned extra fails resolution and a pinned one keeps its version."""
         installer = ROOT / "scripts/ps2build_sdk.sh"
+        extras_tag = 'PS2BUILD_EXTRAS="ogg"\nPS2BUILD_EXTRAS_TAG=extras-x\n'
         cases = (
-            ("tag", 'PS2BUILD_SDK_TAG="sdk-x touch PWNED"\n', "", 1),
-            ("extra", "PS2BUILD_SDK_TAG=sdk-x\nOGG_VERSION=v1 touch PWNED\n", 'PS2BUILD_EXTRAS="ogg"\n', 0),
+            ("tag", 'PS2BUILD_SDK_TAG="sdk-x touch PWNED"\n', "", 1, None),
+            ("extra", "PS2BUILD_SDK_TAG=sdk-x\nOGG_VERSION=v1 touch PWNED\n", 'PS2BUILD_EXTRAS="ogg"\n', 0, "OGG_VERSION=\n"),
+            ("unpinned extra, extras tag", "PS2BUILD_SDK_TAG=sdk-x\nOGG_VERSION=v1\n", extras_tag, 1, None),
+            ("pinned extra, extras tag", "PS2BUILD_SDK_TAG=sdk-x\nOGG_VERSION=v1\n", extras_tag + "OGG_VERSION=v9\n", 0,
+             "OGG_VERSION=v9\n"),
         )
-        for label, mirror_pin, extras, status in cases:
+        for label, mirror_pin, extras, status, line in cases:
             with self.subTest(label), tempfile.TemporaryDirectory() as d:
                 tmp = Path(d)
                 (tmp / "manifest.json").write_text('{"components": {}}')
@@ -269,9 +274,10 @@ class WatchTests(unittest.TestCase):
                 result = subprocess.run(["sh", str(installer), "--resolve", str(tmp / "out.env")], cwd=tmp, env=env,
                                         capture_output=True, text=True, timeout=180)
                 self.assertEqual(result.returncode, status, result.stdout + result.stderr)
-                if (tmp / "out.env").exists():
+                self.assertEqual((tmp / "out.env").exists(), line is not None)
+                if line is not None:
                     subprocess.run(["sh", "-c", ". ./out.env"], cwd=tmp, env=env, capture_output=True, timeout=30)
-                    self.assertIn("OGG_VERSION=\n", (tmp / "out.env").read_text())
+                    self.assertIn(line, (tmp / "out.env").read_text())
                 self.assertFalse((tmp / "PWNED").exists())
 
     def test_an_unreadable_manifest_or_an_empty_tag_falls_back_to_the_release_api(self):
