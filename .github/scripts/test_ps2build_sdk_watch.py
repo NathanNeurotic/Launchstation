@@ -242,6 +242,21 @@ class WatchTests(unittest.TestCase):
             self.assertEqual((watch.latest_official("sdk-core"), watch.latest_official("toolchain")), ("v7", "v8"))
         self.assertEqual(calls, [watch.MANIFEST_URL])
 
+    def test_an_unreadable_manifest_or_an_empty_tag_falls_back_to_the_release_api(self):
+        for manifest_body in (b"not json", b'{"components": {"sdk-core": {"tag": ""}}}'):
+            calls = []
+
+            def urlopen(request, timeout, body=manifest_body):
+                calls.append(request.full_url)
+                if request.full_url == watch.MANIFEST_URL:
+                    return io.BytesIO(body)
+                return io.BytesIO(b'{"tag_name": "v9"}')
+
+            with self.subTest(manifest=manifest_body), mock.patch.object(watch.OPENER, "open", urlopen), \
+                    mock.patch.object(watch, "_MANIFEST", []), mock.patch("builtins.print"):
+                self.assertEqual(watch.latest_official("sdk-core"), "v9")
+                self.assertEqual(calls, [watch.MANIFEST_URL, f"{watch.OFFICIAL_API}/sdk-core/releases/latest"])
+
     def test_an_extra_package_without_official_releases_keeps_its_pin(self):
         # ps2build/ogg and ps2build/vorbis publish tags but no releases; the mirror provides the packages.
         self.newest["ogg"] = http_error("https://api.github.com/repos/ps2build/ogg/releases/latest", 404)

@@ -162,8 +162,14 @@ _MANIFEST = []  # ps2build's manifest, read once per run
 def manifest():
     """{component: tag} from ps2build's latest.json, which is what upstream calls "latest"."""
     if not _MANIFEST:
-        components = json.loads(get(MANIFEST_URL)).get("components") or {}
-        _MANIFEST.append({name: entry.get("tag") or "" for name, entry in components.items()})
+        try:
+            components = json.loads(get(MANIFEST_URL)).get("components") or {}
+            # A component without a tag counts as absent, so it is asked of the release API, as the installer does.
+            tags = {name: entry["tag"] for name, entry in components.items() if isinstance(entry, dict) and entry.get("tag")}
+        except (OSError, ValueError, AttributeError) as error:  # unreachable, or not the manifest's JSON shape
+            print(f"{MANIFEST_URL}: {error}; asking the release API for every component instead", flush=True)
+            tags = {}
+        _MANIFEST.append(tags)
     return _MANIFEST[0]
 
 
