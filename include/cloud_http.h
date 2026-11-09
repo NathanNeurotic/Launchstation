@@ -3,7 +3,11 @@
 
 #include <stddef.h>
 
-#define CLOUD_HTTP_BODY_MAX (64 * 1024)
+/* Largest JSON body a request keeps in memory (the buffer exists only while a
+ * request runs). The update check reads GitHub's release JSON, and that holds
+ * the full release notes: 62,972 bytes for build 1104 (2026-11-09), so the old
+ * 64 KiB cap left 2.5 KiB before every update check would fail. */
+#define CLOUD_HTTP_BODY_MAX (256 * 1024)
 #define CLOUD_HTTP_LOCATION_MAX 2048
 
 typedef struct {
