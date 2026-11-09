@@ -210,7 +210,7 @@ python3 scripts/gen_githash.py --require-git
 ps2build build
 ```
 
-The [SDK installer](scripts/ps2build_sdk.sh) installs the pinned versions from the official server, with a checksum-verified [mirror](https://github.com/NathanNeurotic/ps2build-mirror) fallback. A weekly [watch](.github/workflows/ps2build-sdk-watch.yml) proposes new pins as a draft pull request, so builds never ask the server which release is newest. A private mirror requires read access through `PS2BUILD_SDK_MIRROR_TOKEN`; the official server does not. Rebuild both third-party libraries after changing toolchains or SDK versions.
+The [SDK installer](scripts/ps2build_sdk.sh) installs the pinned versions from the official [ps2build GitHub releases](https://github.com/ps2build), with a checksum-verified private [mirror](https://github.com/NathanNeurotic/old-ps2build-mirror) fallback. A weekly [watch](.github/workflows/ps2build-sdk-watch.yml) proposes new pins as a draft pull request, so builds never ask the server which release is newest. A private mirror requires read access through `PS2BUILD_SDK_MIRROR_TOKEN`; the official server does not. Rebuild both third-party libraries after changing toolchains or SDK versions.
 
 Outputs include `build/bin/wLaunchELF-packed.elf` (release executable), `build/bin/wLaunchELF.elf` and source-built IOP modules. The standard profile enables networking, SMB, native cloud and the storage integrations above; network services generally start on demand. DS34 is a separate variant:
 

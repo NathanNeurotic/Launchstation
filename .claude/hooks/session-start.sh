@@ -11,7 +11,7 @@ SDK="${PS2DEV_INSTALL_DIR:-$HOME/.local/share/ps2build}"
 cd "${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
 # The SDK CI pins in .github/ps2build-sdk.env, LLVM included, installed by the same script CI uses. An SDK that
-# already holds those versions is left alone, and no session asks git.techwritescode.dev which release is newest.
+# already holds those versions is left alone, and no session asks the official releases which release is newest.
 # The official host resets HTTP/2 streams under load; ps2build is a Go binary.
 GODEBUG=http2client=0 sh scripts/ps2build_sdk.sh --llvm "$SDK"
 export PATH="$SDK:$PATH"

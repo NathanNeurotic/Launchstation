@@ -227,8 +227,8 @@ jobs:
 
       # The ps2build SDK pinned in .github/ps2build-sdk.env (bumped by ps2build-sdk-watch.yml once a week):
       # resolving it makes no network call. The SDK cached under those versions is restored, else an older
-      # cached SDK is updated in place, else it is installed: from git.techwritescode.dev, or when that fails
-      # from the pinned NathanNeurotic/ps2build-mirror release. Then it is cached. A mirror fallback that does
+      # cached SDK is updated in place, else it is installed: from the official GitHub releases, or when they fail
+      # from the pinned NathanNeurotic/old-ps2build-mirror release. Then it is cached. A mirror fallback that does
       # not hold the pinned versions is never cached under them.
       - name: Resolve the pinned ps2build SDK
         env:

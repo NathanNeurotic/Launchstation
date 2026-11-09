@@ -1,5 +1,6 @@
 #!/bin/sh
-# Install the pinned ps2build SDK into DEST, from git.techwritescode.dev or, when it is down, our mirror.
+# Install the pinned ps2build SDK into DEST from the official GitHub releases (github.com/ps2build) or, when
+# they fail, from our private mirror.
 #
 # Usage: ps2build_sdk.sh [--llvm] DEST
 #        ps2build_sdk.sh --resolve [--llvm] OUT    (CI, before the cache step: write the versions to OUT)
@@ -7,13 +8,13 @@
 # The pin file (PS2BUILD_SDK_PIN, default .github/ps2build-sdk.env) lists the components as name=vX, so
 # resolving them asks no server anything. .github/workflows/ps2build-sdk-watch.yml is what asks the
 # official release API, once a week, and proposes new pins. A bare name (or "latest") still works and
-# follows the newest official release, at the cost of one release-API request per name in every run.
+# follows the newest official release (from ps2build's manifest, else the release API) in every run.
 # The versions are installed from:
 #   1. DEST, when it already holds exactly those versions (an actions/cache restore).
-#   2. The official server, "ps2build update <component> --version <tag>" for each component that differs,
+#   2. The official GitHub releases, "ps2build update <component> --version <tag>" for each component that differs,
 #      so an older cached SDK only downloads what changed. The whole attempt gets
 #      PS2BUILD_SDK_OFFICIAL_BUDGET seconds (default 900), each component one retry.
-#   3. A NathanNeurotic/ps2build-mirror release, when the official install fails: the one the pin file
+#   3. A NathanNeurotic/old-ps2build-mirror release, when the official install fails: the one the pin file
 #      names (PS2BUILD_SDK_TAG, with the SHA-256 of its SHA256SUMS), else the newest. Every file is
 #      checked against that release's SHA256SUMS. When the newest release does not hold the wanted
 #      versions, the job says so and sets PS2BUILD_SDK_STALE=true, so CI does not cache it under them.
@@ -42,16 +43,19 @@ done
 [ $# -eq 1 ] || usage
 DEST=$1
 PIN=${PS2BUILD_SDK_PIN:-.github/ps2build-sdk.env}
-OFFICIAL=${PS2BUILD_SDK_OFFICIAL_URL:-https://git.techwritescode.dev}
+OFFICIAL=${PS2BUILD_SDK_OFFICIAL_URL:-https://github.com/ps2build}
+OFFICIAL_API=${PS2BUILD_SDK_OFFICIAL_API_URL:-https://api.github.com/repos/ps2build}
+MANIFEST_URL=${PS2BUILD_SDK_MANIFEST_URL:-https://raw.githubusercontent.com/ps2build/manifest/main/latest.json}
+MANIFEST_FILE=
 STALE=0
 
 [ -f "$PIN" ] || { echo "error: pin file $PIN not found" >&2; exit 2; }
 PS2BUILD_SDK_MIRROR= PS2BUILD_SDK_TAG= PS2BUILD_SDK_SUMS_SHA256= PS2BUILD_COMPONENTS= PS2BUILD_LLVM_TOOLCHAIN=
-PS2BUILD_EXTRAS= PS2BUILD_SDK_RESOLVED=
+PS2BUILD_EXTRAS= PS2BUILD_EXTRAS_TAG= PS2BUILD_EXTRAS_SUMS_SHA256= PS2BUILD_SDK_RESOLVED=
 # shellcheck disable=SC1090
 case $PIN in /*) . "$PIN" ;; *) . "./$PIN" ;; esac
 [ -n "$PS2BUILD_COMPONENTS" ] || { echo "error: $PIN sets no PS2BUILD_COMPONENTS" >&2; exit 2; }
-PS2BUILD_SDK_MIRROR=${PS2BUILD_SDK_MIRROR:-NathanNeurotic/ps2build-mirror}
+PS2BUILD_SDK_MIRROR=${PS2BUILD_SDK_MIRROR:-NathanNeurotic/old-ps2build-mirror}
 PS2BUILD_LLVM_TOOLCHAIN=${PS2BUILD_LLVM_TOOLCHAIN:-latest}
 MIRROR_LATEST=${PS2BUILD_SDK_MIRROR_LATEST_URL:-https://github.com/$PS2BUILD_SDK_MIRROR/releases/latest/download}
 # The mirror may be a private repository. Its download links then need a login, so with
@@ -63,7 +67,7 @@ MIRROR_API=${PS2BUILD_SDK_MIRROR_API_URL:-https://api.github.com}
 
 log() { echo "ps2build-sdk: $*"; }
 
-# Sent with every request, so tech can tell ours apart in his logs.
+# Sent with every request, so upstream can tell ours apart.
 USER_AGENT="Launchstation-build/1.0 (+https://github.com/NathanNeurotic/Launchstation)"
 
 warn() {
@@ -140,12 +144,29 @@ version_of() { version_in "$1" "$PS2BUILD_COMPONENTS"; }
 
 extra_var() { echo "$1" | tr 'a-z-' 'A-Z_'; } # ogg -> OGG, read as OGG_VERSION
 
-latest_tag() { # repository -> its newest official release tag
+latest_tag() { # repository -> its newest official release tag; ps2build's manifest first
+    if [ -n "$MANIFEST_FILE" ] && [ -s "$MANIFEST_FILE" ]; then
+        tag=$(python3 -I -c 'import json,sys,re
+tag=json.load(open(sys.argv[2])).get("components",{}).get(sys.argv[1],{}).get("tag","")
+if not re.fullmatch(r"[A-Za-z0-9._+-]+",tag): sys.exit(1)
+print(tag)' "$1" "$MANIFEST_FILE") && { printf '%s\n' "$tag"; return 0; }
+    fi
     curl -sSfL -A "$USER_AGENT" --retry 3 --retry-delay 5 --retry-all-errors --connect-timeout 20 --max-time 60 \
-        "$OFFICIAL/api/v1/repos/ps2/$1/releases/latest" | sed -n 's/.*"tag_name":"\([^"]*\)".*/\1/p' | head -n 1 | grep -E '^[A-Za-z0-9._+-]+$'
+        "$OFFICIAL_API/$1/releases/latest" | python3 -I -c 'import json,sys,re
+tag=json.load(sys.stdin).get("tag_name","")
+if not re.fullmatch(r"[A-Za-z0-9._+-]+",tag): sys.exit(1)
+print(tag)'
 }
 
 resolve_official() { # fill in each unpinned version with the newest official release
+    lookup=0 # a fully pinned file asks nobody anything
+    for entry in $PS2BUILD_COMPONENTS; do case $entry in *=*) ;; *) lookup=1 ;; esac; done
+    [ "$PS2BUILD_LLVM_TOOLCHAIN" = latest ] && lookup=1
+    for name in $PS2BUILD_EXTRAS; do eval "[ \"\${$(extra_var "$name")_VERSION:-latest}\" = latest ]" && lookup=1; done
+    if [ "$lookup" = 1 ]; then
+        MANIFEST_FILE=$(mktemp)
+        fetch "$MANIFEST_URL" "$MANIFEST_FILE" || { rm -f "$MANIFEST_FILE"; MANIFEST_FILE=; warn "cannot fetch ps2build's release manifest; asking the release API instead"; }
+    fi
     resolved=
     for entry in $PS2BUILD_COMPONENTS; do
         case $entry in *=*) ;; *) entry="$entry=$(latest_tag "$entry")" || return 1 ;; esac
@@ -165,6 +186,8 @@ resolve_official() { # fill in each unpinned version with the newest official re
     PS2BUILD_COMPONENTS=$resolved
     PS2BUILD_LLVM_TOOLCHAIN=$llvm_version
     for assignment in $extras; do eval "$assignment"; done
+    [ -z "$MANIFEST_FILE" ] || rm -f "$MANIFEST_FILE"
+    MANIFEST_FILE=
 }
 
 resolve_mirror() { # the release API is down: the newest mirror release defines the unpinned versions
@@ -203,6 +226,8 @@ write_pin() { # the resolved versions, in the pin format later steps read
         echo "PS2BUILD_COMPONENTS=\"$PS2BUILD_COMPONENTS\""
         echo "PS2BUILD_LLVM_TOOLCHAIN=$PS2BUILD_LLVM_TOOLCHAIN"
         echo "PS2BUILD_EXTRAS=\"$PS2BUILD_EXTRAS\""
+        echo "PS2BUILD_EXTRAS_TAG=$PS2BUILD_EXTRAS_TAG"
+        echo "PS2BUILD_EXTRAS_SUMS_SHA256=$PS2BUILD_EXTRAS_SUMS_SHA256"
         for name in $PS2BUILD_EXTRAS; do
             var=$(extra_var "$name")_VERSION
             eval "echo \"$var=\${$var}\""
@@ -225,7 +250,7 @@ fi
 if [ "$MODE" = resolve ]; then
     write_pin "$DEST"
     # The key covers what lands in DEST: the components, llvm-toolchain for --llvm, and the extra packages.
-    key=$(grep -v '^PS2BUILD_SDK_\(TAG\|SUMS_SHA256\)=' "$DEST" | { if [ "$LLVM" = 1 ]; then cat; else grep -v '^PS2BUILD_LLVM_TOOLCHAIN='; fi; } \
+    key=$(grep -v '^PS2BUILD_\(SDK\|EXTRAS\)_\(TAG\|SUMS_SHA256\)=' "$DEST" | { if [ "$LLVM" = 1 ]; then cat; else grep -v '^PS2BUILD_LLVM_TOOLCHAIN='; fi; } \
         | sha256sum | cut -c1-16)
     log "versions: $PS2BUILD_COMPONENTS$([ "$LLVM" = 1 ] && echo " llvm-toolchain=$PS2BUILD_LLVM_TOOLCHAIN")"
     if [ -n "${GITHUB_ENV:-}" ]; then
@@ -351,7 +376,7 @@ from_official() {
     version=$(version_of ps2build)
     if ! "$DEST/ps2build" --version 2>/dev/null | grep -qx "ps2build $version"; then
         log "downloading ps2build $version from $OFFICIAL"
-        fetch "$OFFICIAL/ps2/ps2build/releases/download/$version/ps2build-$version-linux-amd64" "$DEST/ps2build.new" || return 1
+        fetch "$OFFICIAL/ps2build/releases/download/$version/ps2build-$version-linux-amd64" "$DEST/ps2build.new" || return 1
         chmod +x "$DEST/ps2build.new"
         mv -f "$DEST/ps2build.new" "$DEST/ps2build"
     fi
