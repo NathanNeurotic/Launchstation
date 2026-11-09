@@ -250,7 +250,7 @@ fi
 if [ "$MODE" = resolve ]; then
     write_pin "$DEST"
     # The key covers what lands in DEST: the components, llvm-toolchain for --llvm, and the extra packages.
-    key=$(grep -v '^PS2BUILD_\(SDK\|EXTRAS\)_\(TAG\|SUMS_SHA256\)=' "$DEST" | { if [ "$LLVM" = 1 ]; then cat; else grep -v '^PS2BUILD_LLVM_TOOLCHAIN='; fi; } \
+    key=$(grep -v '^PS2BUILD_SDK_\(TAG\|SUMS_SHA256\)=' "$DEST" | { if [ "$LLVM" = 1 ]; then cat; else grep -v '^PS2BUILD_LLVM_TOOLCHAIN='; fi; } \
         | sha256sum | cut -c1-16)
     log "versions: $PS2BUILD_COMPONENTS$([ "$LLVM" = 1 ] && echo " llvm-toolchain=$PS2BUILD_LLVM_TOOLCHAIN")"
     if [ -n "${GITHUB_ENV:-}" ]; then
