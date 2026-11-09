@@ -245,12 +245,16 @@ class WatchTests(unittest.TestCase):
     def test_with_the_release_api_down_the_newest_mirror_pin_is_read_safely(self):
         """With the release API down, the newest mirror pin.env defines the unpinned versions. A value there that
         holds a command is refused, so the resolved pin file never runs it when a later step sources it. With a
-        separate extras release, an unpinned extra fails resolution and a pinned one keeps its version."""
+        separate extras release, an unpinned extra fails resolution and a pinned one keeps its version. An unpinned
+        version the mirror cannot give fails resolution too, since an empty one would be read as "latest"."""
         installer = ROOT / "scripts/ps2build_sdk.sh"
         extras_tag = 'PS2BUILD_EXTRAS="ogg"\nPS2BUILD_EXTRAS_TAG=extras-x\n'
         cases = (
             ("tag", 'PS2BUILD_SDK_TAG="sdk-x touch PWNED"\n', "", 1, None),
-            ("extra", "PS2BUILD_SDK_TAG=sdk-x\nOGG_VERSION=v1 touch PWNED\n", 'PS2BUILD_EXTRAS="ogg"\n', 0, "OGG_VERSION=\n"),
+            ("extra", "PS2BUILD_SDK_TAG=sdk-x\nOGG_VERSION=v1 touch PWNED\n", 'PS2BUILD_EXTRAS="ogg"\n', 1, None),
+            ("llvm", "PS2BUILD_SDK_TAG=sdk-x\nPS2BUILD_LLVM_TOOLCHAIN=v1 touch PWNED\n", "PS2BUILD_LLVM_TOOLCHAIN=latest\n", 1,
+             None),
+            ("unpinned extra", "PS2BUILD_SDK_TAG=sdk-x\nOGG_VERSION=v1\n", 'PS2BUILD_EXTRAS="ogg"\n', 0, "OGG_VERSION=v1\n"),
             ("unpinned extra, extras tag", "PS2BUILD_SDK_TAG=sdk-x\nOGG_VERSION=v1\n", extras_tag, 1, None),
             ("pinned extra, extras tag", "PS2BUILD_SDK_TAG=sdk-x\nOGG_VERSION=v1\n", extras_tag + "OGG_VERSION=v9\n", 0,
              "OGG_VERSION=v9\n"),
@@ -260,9 +264,11 @@ class WatchTests(unittest.TestCase):
                 tmp = Path(d)
                 (tmp / "manifest.json").write_text('{"components": {}}')
                 (tmp / "latest").mkdir()
+                # pin_value skips refused lines, so a case that sets the LLVM line must be the only one.
+                llvm = "" if "PS2BUILD_LLVM_TOOLCHAIN=" in mirror_pin else "PS2BUILD_LLVM_TOOLCHAIN=v1\n"
                 (tmp / "latest" / "pin.env").write_text(
                     mirror_pin + "PS2BUILD_SDK_SUMS_SHA256=" + "0" * 64 + "\n"
-                    'PS2BUILD_COMPONENTS="ps2build=v1 toolchain=v1"\nPS2BUILD_LLVM_TOOLCHAIN=v1\n')
+                    'PS2BUILD_COMPONENTS="ps2build=v1 toolchain=v1"\n' + llvm)
                 (tmp / "pin.env").write_text('PS2BUILD_COMPONENTS="ps2build toolchain"\nPS2BUILD_LLVM_TOOLCHAIN=v1\n' + extras)
                 env = {k: v for k, v in os.environ.items() if not k.startswith(("PS2BUILD_", "GITHUB_"))}
                 env.update({

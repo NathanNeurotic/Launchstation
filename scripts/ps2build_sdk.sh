@@ -135,6 +135,13 @@ pin_value() { # name file -> the value a pin.env assigns, without quotes
     sed -n "s/^$1=\"\{0,1\}\([$chars]*\)\"\{0,1\}\$/\1/p" "$2" | head -n 1
 }
 
+# A version taken from a mirror pin.env must be there: an empty one would be read as "latest" later.
+mirror_value() { # name file -> the value, or fail when it is missing or refused
+    value=$(pin_value "$1" "$2")
+    [ -n "$value" ] || { log "the newest ps2build-mirror pin.env has no valid $1" >&2; return 1; }
+    echo "$value"
+}
+
 version_in() { # component "name=version ..." -> version
     for pair in $2; do
         [ "${pair%%=*}" = "$1" ] && { echo "${pair#*=}"; return 0; }
@@ -205,7 +212,9 @@ resolve_mirror() { # the release API is down: the newest mirror release defines 
         resolved="$resolved${resolved:+ }$entry"
     done
     PS2BUILD_COMPONENTS=$resolved
-    [ "$PS2BUILD_LLVM_TOOLCHAIN" = latest ] && PS2BUILD_LLVM_TOOLCHAIN=$(pin_value PS2BUILD_LLVM_TOOLCHAIN "$pin_tmp")
+    if [ "$PS2BUILD_LLVM_TOOLCHAIN" = latest ]; then
+        PS2BUILD_LLVM_TOOLCHAIN=$(mirror_value PS2BUILD_LLVM_TOOLCHAIN "$pin_tmp") || { rm -f "$pin_tmp"; return 1; }
+    fi
     for name in $PS2BUILD_EXTRAS; do
         var=$(extra_var "$name")_VERSION
         eval "version=\${$var:-latest}"
@@ -215,7 +224,7 @@ resolve_mirror() { # the release API is down: the newest mirror release defines 
             rm -f "$pin_tmp"
             return 1
         fi
-        eval "$var=\$(pin_value $var \"\$pin_tmp\")"
+        eval "$var=\$(mirror_value $var \"\$pin_tmp\")" || { rm -f "$pin_tmp"; return 1; }
     done
     PS2BUILD_SDK_TAG=$(pin_value PS2BUILD_SDK_TAG "$pin_tmp")
     PS2BUILD_SDK_SUMS_SHA256=$(pin_value PS2BUILD_SDK_SUMS_SHA256 "$pin_tmp")
@@ -314,7 +323,8 @@ adopt_mirror_pin() { # pin.env of the newest mirror release: install that, and s
     sums=$(pin_value PS2BUILD_SDK_SUMS_SHA256 "$1")
     components=$(pin_value PS2BUILD_COMPONENTS "$1")
     llvm=$(pin_value PS2BUILD_LLVM_TOOLCHAIN "$1")
-    [ -n "$tag" ] && [ -n "$sums" ] && [ -n "$components" ] || { log "the newest ps2build-mirror pin.env is incomplete"; return 1; }
+    [ -n "$tag" ] && [ -n "$sums" ] && [ -n "$components" ] && { [ "$LLVM" = 0 ] || [ -n "$llvm" ]; } \
+        || { log "the newest ps2build-mirror pin.env is incomplete"; return 1; }
     [ "$LLVM" = 1 ] && components_llvm="$components llvm-toolchain=$llvm" latest_llvm="$PS2BUILD_COMPONENTS llvm-toolchain=$PS2BUILD_LLVM_TOOLCHAIN" \
         || components_llvm=$components latest_llvm=$PS2BUILD_COMPONENTS
     older=$(differences "$components_llvm" "$latest_llvm")
@@ -326,7 +336,7 @@ adopt_mirror_pin() { # pin.env of the newest mirror release: install that, and s
     if [ -z "$PS2BUILD_EXTRAS_TAG" ]; then # with a separate extras release, the extras keep their own pins
         for name in $PS2BUILD_EXTRAS; do
             var=$(extra_var "$name")_VERSION
-            eval "$var=\$(pin_value $var \"\$1\")"
+            eval "$var=\$(mirror_value $var \"\$1\")" || return 1
         done
     fi
     # Later steps (the ogg/vorbis packages) then take the same release.
