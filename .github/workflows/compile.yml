@@ -2,6 +2,11 @@ name: Automated-Build
 
 on:
   workflow_dispatch:
+    inputs:
+      mirror-drill:
+        description: Install without the SDK cache and with the official host unreachable, to prove the mirror fallback
+        type: boolean
+        default: false
   push:
     branches: [master, main]
   pull_request:
@@ -236,6 +241,7 @@ jobs:
         id: sdk
         run: sh scripts/ps2build_sdk.sh --resolve --llvm "$RUNNER_TEMP/ps2build-sdk.env"
       - name: Restore the ps2build SDK
+        if: ${{ !inputs.mirror-drill }}
         id: sdk-cache
         uses: actions/cache/restore@v4
         with:
@@ -248,9 +254,11 @@ jobs:
           PS2BUILD_SDK_MIRROR_TOKEN: ${{ secrets.PS2BUILD_MIRROR_TOKEN }}
           # The official host resets HTTP/2 streams under load; ps2build is a Go binary.
           GODEBUG: http2client=0
+          # The drill sends the CLI download to a closed port, so the official attempt fails and the mirror installs.
+          PS2BUILD_SDK_OFFICIAL_URL: ${{ inputs.mirror-drill && 'https://127.0.0.1:9' || '' }}
         run: sh scripts/ps2build_sdk.sh --llvm "$HOME/.local/share/ps2build"
       - name: Cache the ps2build SDK
-        if: ${{ steps.sdk-cache.outputs.cache-hit != 'true' && env.PS2BUILD_SDK_STALE != 'true' }}
+        if: ${{ !inputs.mirror-drill && steps.sdk-cache.outputs.cache-hit != 'true' && env.PS2BUILD_SDK_STALE != 'true' }}
         uses: actions/cache/save@v4
         with:
           path: ~/.local/share/ps2build
