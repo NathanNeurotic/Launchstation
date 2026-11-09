@@ -195,6 +195,7 @@ jobs:
           python3 tests/test_physical_hold_input.py
           python3 tests/test_panel_transparency.py
           python3 tests/test_https_tls.py
+          python3 tests/test_http_body_cap.py
           python3 tests/test_rename_devices.py
           python3 tests/test_vmc_rename.py
           python3 tests/test_app_packages.py
