@@ -16,7 +16,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # A mirror drill never publishes, so it gets its own group: it must not cancel a publishing run on master.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}${{ inputs.mirror-drill && '-drill' || '' }}
   cancel-in-progress: true
 
 jobs:

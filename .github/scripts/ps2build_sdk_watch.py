@@ -52,7 +52,7 @@ MANIFEST_URL = os.environ.get("PS2BUILD_SDK_MANIFEST_URL") or \
 MIRROR_API = os.environ.get("PS2BUILD_SDK_MIRROR_API_URL") or "https://api.github.com"
 # The identifier our SDK downloads send too, so upstream can tell our requests apart.
 USER_AGENT = f"{PROJECT}-build/1.0 (ps2build SDK Watch; +{PROJECT_URL})"
-VERSION = re.compile(r"^[A-Za-z0-9._+-]+$")  # what tools/ps2build_sdk.sh accepts from the release API
+VERSION = re.compile(r"[A-Za-z0-9._+-]+")  # what tools/ps2build_sdk.sh accepts from the release API
 ASSIGNMENT = re.compile(r"^([A-Z][A-Z0-9_]*)=(.*)$")
 RETRY_DELAYS = (10, 30)  # one try plus two retries, never more
 MIRROR_PAGES = 5         # releases listed newest first, 100 a page (the mirror also holds source backups)
@@ -101,14 +101,14 @@ def problems(values):
     """Why a pin file would make build jobs ask the release API, or install a mismatched fallback."""
     found = [f"{name} is not pinned to a release" for name, version in entries(values) if unpinned(version)]
     for name, version in entries(values):
-        if not unpinned(version) and not VERSION.match(version):
+        if not unpinned(version) and not VERSION.fullmatch(version):
             found.append(f"{name}={version} is not a release tag")
     tag, sums = values.get("PS2BUILD_SDK_TAG", ""), values.get("PS2BUILD_SDK_SUMS_SHA256", "")
     if bool(tag) != bool(sums):
         found.append("PS2BUILD_SDK_TAG and PS2BUILD_SDK_SUMS_SHA256 must be set together, or both left empty")
     if sums and not re.fullmatch(r"[0-9a-f]{64}", sums):
         found.append("PS2BUILD_SDK_SUMS_SHA256 is not a SHA-256")
-    if tag and not VERSION.match(tag):
+    if tag and not VERSION.fullmatch(tag):
         found.append("PS2BUILD_SDK_TAG is not a release tag")
     return found
 
@@ -166,7 +166,7 @@ def manifest():
             components = json.loads(get(MANIFEST_URL)).get("components") or {}
             # A component without a valid tag counts as absent, so it is asked of the release API, as the installer does.
             tags = {name: entry["tag"] for name, entry in components.items()
-                    if isinstance(entry, dict) and isinstance(entry.get("tag"), str) and VERSION.match(entry["tag"])}
+                    if isinstance(entry, dict) and isinstance(entry.get("tag"), str) and VERSION.fullmatch(entry["tag"])}
         except (OSError, ValueError, AttributeError) as error:  # unreachable, or not the manifest's JSON shape
             print(f"{MANIFEST_URL}: {error}; asking the release API for every component instead", flush=True)
             tags = {}
@@ -181,7 +181,7 @@ def latest_official(name):
         body = get(f"{OFFICIAL_API}/{urllib.parse.quote(name, safe='')}/releases/latest",
                    {"Accept": "application/vnd.github+json"})
         tag = json.loads(body).get("tag_name") or ""
-    if not VERSION.match(tag):
+    if not VERSION.fullmatch(tag):
         raise ValueError(f"the newest official {name} release has an unexpected tag {tag!r}")
     return tag
 
@@ -229,7 +229,7 @@ def checked_release(repo, release, wanted):
     tag = release.get("tag_name") or ""
     assets = {asset.get("name"): asset.get("id") for asset in release.get("assets", [])}
     # Build jobs source the pin file this tag goes into, and Git allows a tag such as sdk-$(id).
-    if not tag.startswith("sdk-") or not VERSION.match(tag) or release.get("draft") or release.get("prerelease") \
+    if not tag.startswith("sdk-") or not VERSION.fullmatch(tag) or release.get("draft") or release.get("prerelease") \
             or not isinstance(assets.get("pin.env"), int) or not isinstance(assets.get("SHA256SUMS"), int):
         return None
     pin = read_pin(mirror_get(f"/repos/{repo}/releases/assets/{assets['pin.env']}",

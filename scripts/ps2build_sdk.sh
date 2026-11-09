@@ -127,10 +127,12 @@ mirror_fetch() { # release (latest or a tag) name file: one file of a ps2build-m
     api_fetch "$MIRROR_API/repos/$PS2BUILD_SDK_MIRROR/releases/assets/$id" "$3" application/octet-stream
 }
 
-# Versions, tags and hashes from the network end up in a pin file that later steps source, so anything
-# but these characters is refused (an empty result, as if the value were missing).
+# Versions, tags and hashes from the network end up in a pin file that later steps source, and some are
+# split into words and evaluated, so anything but these characters is refused (an empty result, as if the
+# value were missing). Only PS2BUILD_COMPONENTS ("name=version ...") may hold spaces and "=".
 pin_value() { # name file -> the value a pin.env assigns, without quotes
-    sed -n "s/^$1=\"\{0,1\}\([A-Za-z0-9._+= -]*\)\"\{0,1\}\$/\1/p" "$2" | head -n 1
+    case $1 in PS2BUILD_COMPONENTS) chars='A-Za-z0-9._+= -' ;; *) chars='A-Za-z0-9._+-' ;; esac
+    sed -n "s/^$1=\"\{0,1\}\([$chars]*\)\"\{0,1\}\$/\1/p" "$2" | head -n 1
 }
 
 version_in() { # component "name=version ..." -> version

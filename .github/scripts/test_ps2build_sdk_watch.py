@@ -242,9 +242,42 @@ class WatchTests(unittest.TestCase):
             self.assertEqual((watch.latest_official("sdk-core"), watch.latest_official("toolchain")), ("v7", "v8"))
         self.assertEqual(calls, [watch.MANIFEST_URL])
 
+    def test_a_mirror_pin_value_with_spaces_is_never_run(self):
+        """With the release API down, the newest mirror pin.env defines the versions. A value there that holds a
+        command is refused, so the resolved pin file never runs it when a later step sources it."""
+        installer = ROOT / "scripts/ps2build_sdk.sh"
+        cases = (
+            ("tag", 'PS2BUILD_SDK_TAG="sdk-x touch PWNED"\n', "", 1),
+            ("extra", "PS2BUILD_SDK_TAG=sdk-x\nOGG_VERSION=v1 touch PWNED\n", 'PS2BUILD_EXTRAS="ogg"\n', 0),
+        )
+        for label, mirror_pin, extras, status in cases:
+            with self.subTest(label), tempfile.TemporaryDirectory() as d:
+                tmp = Path(d)
+                (tmp / "manifest.json").write_text('{"components": {}}')
+                (tmp / "latest").mkdir()
+                (tmp / "latest" / "pin.env").write_text(
+                    mirror_pin + "PS2BUILD_SDK_SUMS_SHA256=" + "0" * 64 + "\n"
+                    'PS2BUILD_COMPONENTS="ps2build=v1 toolchain=v1"\nPS2BUILD_LLVM_TOOLCHAIN=v1\n')
+                (tmp / "pin.env").write_text('PS2BUILD_COMPONENTS="ps2build toolchain"\nPS2BUILD_LLVM_TOOLCHAIN=v1\n' + extras)
+                env = {k: v for k, v in os.environ.items() if not k.startswith(("PS2BUILD_", "GITHUB_"))}
+                env.update({
+                    "PS2BUILD_SDK_PIN": str(tmp / "pin.env"),
+                    "PS2BUILD_SDK_MANIFEST_URL": (tmp / "manifest.json").as_uri(),
+                    "PS2BUILD_SDK_OFFICIAL_API_URL": (tmp / "no-api").as_uri(),
+                    "PS2BUILD_SDK_MIRROR_LATEST_URL": (tmp / "latest").as_uri(),
+                })
+                result = subprocess.run(["sh", str(installer), "--resolve", str(tmp / "out.env")], cwd=tmp, env=env,
+                                        capture_output=True, text=True, timeout=180)
+                self.assertEqual(result.returncode, status, result.stdout + result.stderr)
+                if (tmp / "out.env").exists():
+                    subprocess.run(["sh", "-c", ". ./out.env"], cwd=tmp, env=env, capture_output=True, timeout=30)
+                    self.assertIn("OGG_VERSION=\n", (tmp / "out.env").read_text())
+                self.assertFalse((tmp / "PWNED").exists())
+
     def test_an_unreadable_manifest_or_an_empty_tag_falls_back_to_the_release_api(self):
         for manifest_body in (b"not json", b'{"components": {"sdk-core": {"tag": ""}}}',
-                              b'{"components": {"sdk-core": {"tag": 5}}}', b'{"components": {"sdk-core": {"tag": "v1;id"}}}'):
+                              b'{"components": {"sdk-core": {"tag": 5}}}', b'{"components": {"sdk-core": {"tag": "v1;id"}}}',
+                              b'{"components": {"sdk-core": {"tag": "v1\\n"}}}'):
             calls = []
 
             def urlopen(request, timeout, body=manifest_body):
@@ -346,6 +379,12 @@ class WorkflowTests(unittest.TestCase):
             self.assertIn(key, text)
         self.assertIn("workflow_dispatch:", build)  # the watch starts it on its branch
         self.assertNotIn("PS2BUILD_SDK_PIN:", build)
+
+    def test_a_mirror_drill_never_publishes_and_never_cancels_a_publishing_run(self):
+        build = (WORKFLOWS / "compile.yml").read_text()
+        self.assertIn("&& !inputs.mirror-drill", build)
+        self.assertIn("${{ github.event.pull_request.number || github.ref }}${{ inputs.mirror-drill && '-drill' || '' }}",
+                      build)
 
     def test_the_watch_never_publishes_and_pushes_only_its_own_branch(self):
         text = (WORKFLOWS / "ps2build-sdk-watch.yml").read_text()
