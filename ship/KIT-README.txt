@@ -49,6 +49,11 @@ same app plus the companions.
                             (modules/smb_ioman.irx, modules/smb_fhi.irx,
                             config/bsd-smb.toml); KIT-MANIFEST.json says whether
                             the bundled build has them ("smb": true/false).
+                            Its i.LINK pair (modules/iLinkman.irx,
+                            modules/IEEE1394_bd_mini.irx) is RiptOPL's fixed
+                            build, as in RiptOPL's own kit: the stock driver
+                            gives up on an i.LINK drive after Neutrino's IOP
+                            reset.
   *.url                     PC-side companions: PS2-Servers (UDPFS/SMB/HTTP
                             servers), the Android UDPFS server, the OPL PS1
                             AIO converter, OrbitPS2 Manager and the
