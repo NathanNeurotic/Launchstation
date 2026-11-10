@@ -3161,16 +3161,25 @@ static int editClockDateTime(const char *title, int fields[6])
 }
 
 #ifdef ETH
-/* Parse a complete dotted-quad (four octets 0..255, no trailing text). */
+/* Parse exactly four digit-only octets 0..255 joined by dots. No sscanf:
+ * %u takes signs and spaces, and an overlong field is undefined. */
 static int parseIpv4(const char *s, unsigned *out)
 {
-	unsigned a, b, c, d;
-	char extra;
+	unsigned addr = 0, v;
+	int i;
 
-	if (sscanf(s, "%u.%u.%u.%u%c", &a, &b, &c, &d, &extra) != 4 ||
-	    a > 255U || b > 255U || c > 255U || d > 255U)
-		return 0;
-	*out = (a << 24) | (b << 16) | (c << 8) | d;
+	for (i = 0; i < 4; i++) {
+		if (*s < '0' || *s > '9')
+			return 0;
+		v = 0;
+		while (*s >= '0' && *s <= '9')
+			if ((v = v * 10U + (unsigned)(*s++ - '0')) > 255U)
+				return 0;
+		addr = (addr << 8) | v;
+		if (*s++ != (i < 3 ? '.' : '\0'))
+			return 0;
+	}
+	*out = addr;
 	return 1;
 }
 
