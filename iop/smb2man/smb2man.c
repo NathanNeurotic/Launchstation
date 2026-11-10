@@ -1132,10 +1132,12 @@ static int smb2man_dopen(iop_file_t *f, const char *dirname)
         return -EINVAL;
 
     if (smb2man_is_root(dirname)) {
-        // The connected names: no server handle and no listing buffer.
-        d = malloc(offsetof(struct smb2man_dir, data));
-        if (d == NULL)
+        // The connected names: no server handle and no listing buffer, so only the head of the
+        // struct is allocated (through a void *, which GCC's -Walloc-size accepts).
+        void *head = malloc(offsetof(struct smb2man_dir, data));
+        if (head == NULL)
             return -ENOMEM;
+        d = head;
         d->share = -1;
         d->off = 0;
         f->privdata = d;
