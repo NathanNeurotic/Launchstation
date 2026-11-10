@@ -939,6 +939,14 @@ host("mass:/gba.srm").write_bytes(junk)
 lines = run("mass:/gba.srm")
 assert not kind(lines, "MENU|gba.srm|PS1 card") and kind(lines, "MESSAGE|"), lines
 assert host("mass:/gba.srm").read_bytes() == junk
+# a valid header with one bad directory frame (1..15) is refused too
+for frame in range(1, 16):
+    bad = bytearray(host(P1).read_bytes())
+    bad[frame * 128 + 127] ^= 1
+    host("mass:/gba.srm").write_bytes(bad)
+    lines = run("mass:/gba.srm")
+    assert not kind(lines, "MENU|gba.srm|PS1 card") and kind(lines, "MESSAGE|"), (frame, lines)
+    assert host("mass:/gba.srm").read_bytes() == bad
 host("mass:/ra.srm").unlink(); host("mass:/gba.srm").unlink()
 s1 = ps1_mcs("BASLUS-00001PS1", 2, b"PS1 game")
 host("mass:/in.mcs").write_bytes(s1)
