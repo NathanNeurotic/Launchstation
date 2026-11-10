@@ -483,6 +483,16 @@ static int docNew(void)
 	return 1;
 }
 
+/* the File Browser's rule: host: and udpfs: are written only when the Network setting allows it */
+static int edNetWriteOff(const char *path)
+{
+	if ((!strncmp(path, "host", 4) || !strncmp(path, "udpfs", 5)) && !setting->HOSTwrite) {
+		dashModalMessage(DI_WARNING, "Writing is off", "Host and UDPFS writing is off in the Network settings.", path);
+		return 1;
+	}
+	return 0;
+}
+
 static int docWrite(EdDoc *d, const char *path)
 {
 	EdIoJob *j;
@@ -492,6 +502,8 @@ static int docWrite(EdDoc *d, const char *path)
 		dashModalMessage(DI_WARNING, "Read-only device", "Discs cannot be written. Use \"Save as\" to choose another place.", NULL);
 		return 0;
 	}
+	if (edNetWriteOff(path))
+		return 0;
 	j = (EdIoJob *)malloc(sizeof(EdIoJob));
 	if (j == NULL)
 		return 0;
@@ -1321,7 +1333,7 @@ static int hexSave(void)
 		dashModalMessage(DI_WARNING, "Read-only device", "Discs cannot be written.", NULL);
 		return 0;
 	}
-	if (filerConfirmExploitModify(hx_path, NULL) <= 0) /* the File Browser's system-folder warning */
+	if (edNetWriteOff(hx_path) || filerConfirmExploitModify(hx_path, NULL) <= 0) /* the File Browser's system-folder warning */
 		return 0;
 	j = (EdIoJob *)calloc(1, sizeof(EdIoJob));
 	if (j == NULL || (j->text = (char *)malloc(hx_len)) == NULL) {
@@ -1346,7 +1358,7 @@ static int hexSave(void)
 	}
 	free(j);
 	if (!ok) {
-		dashModalMessage(DI_WARNING, "File not saved", "The file could not be written, or reads back different. The device may be read-only or full.", hx_path);
+		dashModalMessage(DI_WARNING, "File not saved", "The write failed or reads back different, so the file may be partly changed. The device may be read-only or full.", hx_path);
 		return 0;
 	}
 	hx_dirty = 0;

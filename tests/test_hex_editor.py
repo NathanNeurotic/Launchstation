@@ -63,7 +63,7 @@ enum { DASH_JOB_VISIBLE = 1, DASH_SND_CANCEL = 0 };
 #define DASH_C_TEXT3 4
 #define DASH_FS_LABEL 1.0f
 #define DASH_FS_CAPTION 0.8f
-static struct { int usbkbd_used; } settings, *setting = &settings;
+static struct { int usbkbd_used, HOSTwrite; } settings, *setting = &settings;
 
 /* scripted input: one DashInput per frame, then menu answers */
 static const unsigned *script; static int step;
@@ -133,7 +133,7 @@ static int dashBackIcon(void) { return 0; }
 static void dashDrawHints(const DashHint *h, int n) { (void)h; (void)n; }
 static void dashDrawToasts(void) {}
 static void dashDrawActivity(void) {}
-''' + source[io_start:io_end] + source[menu_start:menu_end] + source[hex_start:hex_end] + r'''
+''' + source[io_start:io_end] + function("static int edNetWriteOff(const char *path)") + source[menu_start:menu_end] + source[hex_start:hex_end] + r'''
 
 static void put(const char *p, const unsigned char *b, int n) { FILE *f = fopen(p, "wb"); fwrite(b, 1, n, f); fclose(f); }
 static int get(const char *p, unsigned char *b, int n) { FILE *f = fopen(p, "rb"); int r = (int)fread(b, 1, n, f); fclose(f); return r; }
@@ -287,6 +287,15 @@ int main(int argc, char **argv)
 	hx_path = "cdfs:/X.BIN";
 	hx_buf = data; hx_len = 4;
 	assert(hexSave() == 0 && strstr(last_message, "Read-only device"));
+
+	/* host: and udpfs: follow the Network setting, as in the File Browser */
+	hx_path = "host:/X.BIN"; exploit_asks = 0;
+	assert(hexSave() == 0 && strstr(last_message, "Writing is off") && exploit_asks == 0);
+	hx_path = "udpfs:/X.BIN";
+	assert(hexSave() == 0 && strstr(last_message, "Writing is off"));
+	settings.HOSTwrite = 1;
+	assert(hexSave() == 0 && strstr(last_message, "File not saved") && exploit_asks == 1);
+	settings.HOSTwrite = 0;
 	puts("hex editor ok");
 	return 0;
 }
