@@ -438,7 +438,10 @@ int filerPrepareMemoryCardRead(int port)
 	 * against slot 2 if the foreground handoff failed or was skipped. */
 	if (port == 1 && !isPathDeviceStackLoaded("mc1:/"))
 		return sceMcResFailDetect;
-	ensureCoreIoStackReady(); /* retries a memory card RPC start that failed */
+	/* Retry a failed card RPC start, but only on the UI thread: the
+	 * library-scan worker must never load IOP modules, so it skips the card. */
+	if (!isMemoryCardRpcReady() && !dashWorkerOnThread())
+		ensureCoreIoStackReady();
 	if (!isMemoryCardRpcReady())
 		return sceMcResFailDetect;
 	ret = waitMemoryCardReadyForBrowse(port);
@@ -751,6 +754,8 @@ int filerDirReadNeedsPrep(const char *path)
 
 	if (path == NULL || path[0] == '\0' || !strncmp(path, "vmc", 3))
 		return FALSE;
+	if (!strncmp(path, "mc", 2) && !isMemoryCardRpcReady())
+		return TRUE; /* the card RPC start failed: retry it on the UI thread */
 	if (!isPathDeviceStackLoaded(path))
 		return TRUE;
 #ifdef SMB
@@ -771,6 +776,8 @@ int filerPrepareDirRead(const char *path)
 
 	if (!filerDirReadNeedsPrep(path))
 		return TRUE;
+	if (!strncmp(path, "mc", 2) && !isMemoryCardRpcReady())
+		ensureCoreIoStackReady(); /* retries a failed card RPC start */
 	if (!ensurePathDeviceStackReady(path))
 		return FALSE;
 #ifdef SMB
