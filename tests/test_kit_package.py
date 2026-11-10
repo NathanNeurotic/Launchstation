@@ -267,10 +267,29 @@ with tempfile.TemporaryDirectory(prefix="kit-package-") as tmp:
     expect(ValueError, kit.verify, doctored(lambda n, d: (n.replace("APPS/", "") if n.startswith("APPS/") else n, d)), psu, manifest)
     expect(ValueError, kit.verify, doctored(lambda n, d: (None if n == "neutrino/modules/smb_fhi.irx" else n, d)), psu, manifest)
     expect(ValueError, kit.verify, doctored(lambda n, d: (n, d + b"\n" if n == "KIT-README.txt" else d)), psu, manifest)
-    # A kit carrying Neutrino's stock i.LINK driver, or none, is refused.
-    expect(ValueError, kit.verify, doctored(lambda n, d: (n, b"stock" if n == "neutrino/modules/IEEE1394_bd_mini.irx" else d)), psu, manifest)
+    # A kit carrying Neutrino's stock i.LINK driver, or none, is refused. The swapped module's
+    # KIT-MANIFEST.json digest is updated too, so only the i.LINK pin can catch it.
+    def swapped(module, replace):
+        with zipfile.ZipFile(output) as src:
+            data = replace(src.read(module))
+        def edit(n, d):
+            if n == module:
+                return n, data
+            if n == "KIT-MANIFEST.json":
+                listed = json.loads(d)
+                listed["files"][module] = hashlib.sha256(data).hexdigest()
+                return n, json.dumps(listed).encode()
+            return n, d
+        return doctored(edit)
+    for module, replace in (("neutrino/modules/IEEE1394_bd_mini.irx", lambda d: b"stock"),
+                            ("neutrino/modules/iLinkman.irx", lambda d: d + b"x")):
+        try:
+            kit.verify(swapped(module, replace), psu, manifest)
+        except ValueError as error:
+            assert "fixed build" in str(error), error
+        else:
+            raise AssertionError(f"verify accepted a changed {module}")
     expect(ValueError, kit.verify, doctored(lambda n, d: (None if n == "neutrino/modules/iLinkman.irx" else n, d)), psu, manifest)
-    expect(ValueError, kit.verify, doctored(lambda n, d: (n, d + b"x" if n == "neutrino/modules/iLinkman.irx" else d)), psu, manifest)
     expect(ValueError, kit.verify, doctored(lambda n, d: (None if n == "neutrino/ILINK-LICENSE.txt" else n, d)), psu, manifest)
     # An upstream build that stopped shipping the manager bsd-ilink.toml loads is refused.
     expect(ValueError, kit.package, tmp / "artifacts", cache, neutrino_tree(tmp / "no_ilink", drop=("modules/iLinkman.irx",)),
