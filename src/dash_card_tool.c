@@ -1736,7 +1736,7 @@ static void ctAllExport(const char *folder, const CtAnyCard *cards, const CtAnyS
 			r = ctSaveAs(&s, fmt, &buf, &len);
 			mcCardFreeSave(&s);
 		}
-		if (r == MCW_OK && ctWriteFile(dest, buf, len) < 0)
+		if (r == MCW_OK && ctWriteFileAs(dest, buf, len, 1) < 0) /* never over a file made since the check */
 			r = MCV_ERR_IO;
 		free(buf);
 		if (r == MCW_OK) {

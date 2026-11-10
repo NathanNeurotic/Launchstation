@@ -729,7 +729,7 @@ assert kind(lines, "CONFIRM|Export %d saves?|" % len(rows)), lines
 names = [r.split(": ", 1)[1].rsplit(", ", 1)[0].replace("PS1 ", "") for r in rows]
 unique = sorted(set(names))
 msg = kind(lines, "MESSAGE|")[0]
-assert ("|Exported|%d saves written and verified." % len(unique)) in msg or ("|%d saves written and verified." % len(unique)) in msg, (msg, unique)
+assert msg.startswith(f"MESSAGE|4|Exported|{len(unique)} saves written and verified."), (msg, unique)
 if len(unique) < len(names):
     assert "%d already there, kept." % (len(names) - len(unique)) in msg, msg
 assert sorted(p.stem for p in host("mass:/exp").glob("*.psu")) == unique
