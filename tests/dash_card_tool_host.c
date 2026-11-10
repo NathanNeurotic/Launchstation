@@ -442,7 +442,7 @@ int main(int argc, char **argv)
 		dashMmceSwitch(argv[3] + 12);
 	} else if (!strncmp(argv[3], "importmany:", 11)) { /* importmany:dir/|name|name... */
 		static char spec[4096];
-		const char *names[64];
+		const char *names[64] = {0};
 		char *p, *dir;
 		int n = 0;
 

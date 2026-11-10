@@ -296,6 +296,10 @@ k_snap = sha(K)
 lines = run(mix, "p" + K, "c1")                                          # all there already: nothing written
 assert any("Nothing imported. 3 skipped. First: BESLES-12345GAME.psu: A save with this name" in l for l in kind(lines, "MESSAGE|")), lines
 assert sha(K) == k_snap and not host("mass:/WLE-Safety/K-0002.mcd").exists()
+lines = run("importmany:mass:/out/|gone.psu|BESLES-12345GAME.psu", "p" + K, "c1")   # a read failure stops the batch
+msg = kind(lines, "MESSAGE|")
+assert msg and "Nothing imported. 1 failed. First: gone.psu: The save file could not be opened." in msg[0] and "Stopped there; 1 not tried." in msg[0], lines
+assert sha(K) == k_snap
 lines = run(mix, "p" + K, "c0")                                          # declined
 assert not kind(lines, "MESSAGE|") and sha(K) == k_snap
 lines = run(mix, "pmass:/out/junk.max")                                  # not a card image: nothing written

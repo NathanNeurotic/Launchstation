@@ -1739,7 +1739,7 @@ void dashCardImportMany(const char *dir, const char *const *names, int n)
 				r = ctPutSave(img, &s, safety, sizeof(safety));
 				mcCardFreeSave(&s);
 				why = NULL;
-			} else if (r != MCW_ERR_NOMEM) {
+			} else if (r != MCW_ERR_NOMEM && r != MCV_ERR_IO) {
 				r = MCW_ERR_UNSUPPORTED; /* not a save we read: skipped */
 			}
 		}
@@ -1758,8 +1758,10 @@ void dashCardImportMany(const char *dir, const char *const *names, int n)
 			failed++;
 	}
 	dashLoadingEnd();
-	c = snprintf(body, sizeof(body), done ? "%d save%s imported and verified." : "Nothing imported.", done,
-	             done == 1 ? "" : "s");
+	if (done)
+		c = snprintf(body, sizeof(body), "%d save%s imported and verified.", done, done == 1 ? "" : "s");
+	else
+		c = snprintf(body, sizeof(body), "Nothing imported.");
 	if (skipped)
 		c += snprintf(body + c, sizeof(body) - c, " %d skipped.", skipped);
 	if (failed)
