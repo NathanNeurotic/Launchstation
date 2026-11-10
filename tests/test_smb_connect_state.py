@@ -20,6 +20,7 @@ def function(signature):
 
 code = r'''
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -136,6 +137,20 @@ int main(void)
     assert(disconnect_calls == 1 && connect_calls == 1);
     assert(!strcmp(smb_cfg.share[0].url, "smb://10.0.0.2/s"));
     assert(smb_cfg.share[0].state == SMB_STATE_CONNECTED);
+
+    /* -EEXIST is not success: the old session may own NAME, so the next
+     * changed config disconnects even though no share counts as connected. */
+    reset_case();
+    connect_result = -EEXIST;
+    smbSharesConnect(2, 1);
+    assert(smb_cfg.share[0].state == SMB_STATE_FAILED && smb2_session_uncertain);
+    connect_result = 0;
+    now += SMB_RETRY_MS;
+    config_text = "NAME=A\nURL=smb://10.0.0.3/t\n";
+    smbSharesConnect(2, 1);
+    assert(disconnect_calls == 1 && !smb2_session_uncertain);
+    assert(smb_cfg.share[0].state == SMB_STATE_CONNECTED);
+    assert(!strcmp(smb_cfg.share[0].url, "smb://10.0.0.3/t"));
 
     puts("PASS: SMB fallback preserves connection/retry state and reloads changes");
     return 0;

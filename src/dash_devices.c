@@ -635,11 +635,13 @@ static int probeMount(const char *m)
 	else if (smbPathKind(m) != SMB_PATH_NONE) {
 		int v = smbPathKind(m);
 
-		ok = isSmbDriverLoaded(v) || load_smb(v);
-		if (ok) {
+		/* load_smb() already connects every share; a second pass would
+		 * cost a dead server a second connect timeout. */
+		if (isSmbDriverLoaded(v))
 			smbSharesConnect(v, 1); /* rate limited */
-			ok = smbSharesConnectedCount(v) > 0;
-		}
+		else
+			load_smb(v);
+		ok = isSmbDriverLoaded(v) && smbSharesConnectedCount(v) > 0;
 	}
 #endif
 #ifdef XFROM
