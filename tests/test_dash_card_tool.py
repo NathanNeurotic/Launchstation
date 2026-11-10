@@ -347,8 +347,60 @@ assert not kind(lines, "MESSAGE|") and sha(K) == k_snap
 lines = run(mix, "pmass:/out/junk.max")                                  # not a card image: nothing written
 assert any(l.startswith("MESSAGE|") for l in lines) and not kind(lines, "CONFIRM|"), lines
 
+# 8e. the same mixed set straight onto the real card in mc0:/mc1: (a folder here): each save a new
+# folder, every file read back, then each file's and the folder's own entry set; nothing replaced
+def mc_save(port, name):
+    d = dev / f"mc{port}" / name
+    return tuple(sorted(f"{p.name}:{p.stat().st_size}:{hashlib.sha256(p.read_bytes()).hexdigest()[:16]}"
+                        for p in d.iterdir()))
+
+
+def mc_tree(port):
+    d = dev / f"mc{port}"
+    return sorted((str(p.relative_to(d)), p.is_dir() or hashlib.sha256(p.read_bytes()).hexdigest()) for p in d.rglob("*"))
+
+
+mcmix = mix.replace("importmany:", "importmc0:")
+lines = run(mcmix, "c1")
+assert not kind(lines, "PICK|") and kind(lines, "CONFIRM|Import 3 saves?|Each save is written to mc0:/ as a new folder"), lines
+msg = kind(lines, "MESSAGE|")[0]
+assert "|Done|2 saves imported and verified. 1 skipped. First: junk.max: " in msg and "Safety copy" not in msg, msg
+assert mc_save(0, "BESLES-12345GAME") == saves(B)["BESLES-12345GAME"] and mc_save(0, "BASLUS-99999BLZ") == saves(F)["BASLUS-99999BLZ"]
+si = kind(lines, "SETINFO|")
+for save, card in (("BESLES-12345GAME", B), ("BASLUS-99999BLZ", F)):
+    mine = [l.split("|")[1] for l in si if l.split("|")[1].startswith(f"mc0:/{save}")]
+    assert mine[-1] == f"mc0:/{save}" and len(mine) == len(saves(card)[save]) + 1, si   # files first, the folder last
+    assert all(int(l.split("|")[2], 16) & 0x8000 for l in si), si                      # modes as on a card
+assert kind(lines, "MCFREE|0") and not kind(lines, "REMOVE|") and not kind(lines, "RMDIR|"), lines
+tree = mc_tree(0)
+lines = run(mcmix, "c1")                                                 # all there already: nothing touched
+assert any("Nothing imported. 3 skipped. First: BESLES-12345GAME.psu: A save with this name" in l for l in kind(lines, "MESSAGE|")), lines
+assert mc_tree(0) == tree and not kind(lines, "SETINFO|")
+(dev / "mc1").mkdir()
+mc1mix = mix.replace("importmany:", "importmc1:")
+lines = run(mc1mix, "c1", env={"MC_FREE": "3"})                         # does not fit: skipped, nothing made
+assert any("Nothing imported. 3 skipped. First: BESLES-12345GAME.psu: " in l for l in kind(lines, "MESSAGE|")), lines
+assert mc_tree(1) == []
+lines = run(mc1mix, "c1", env={"MC_FREE": "-1"})                        # no PS2 card there: stops, says so
+msg = kind(lines, "MESSAGE|")
+assert msg and "Nothing imported. 1 failed. First: BESLES-12345GAME.psu: The memory card could not be read or written." in msg[0] and "2 not tried" in msg[0], lines
+assert mc_tree(1) == []
+lines = run(mc1mix, "c1", env={"FAIL_SETINFO": "BASLUS-99999BLZ/"})      # the second save fails half way: it is removed
+msg = kind(lines, "MESSAGE|")
+assert msg and "1 save imported and verified. 1 failed. First: BASLUS-99999BLZ.mcm: Writing it failed or it read back different; what was written was removed." in msg[0] and "1 not tried" in msg[0], lines
+assert kind(lines, "RMDIR|mc1:/BASLUS-99999BLZ") and mc_tree(1) == [p for p in mc_tree(0) if p[0].startswith("BESLES-12345GAME")]
+lines = run(mc1mix.replace("|junk.max", ""), "c1", env={"FAIL_WRITE_AT": "1"})   # a file write fails: same, nothing left
+msg = kind(lines, "MESSAGE|")
+assert msg and "Nothing imported. 1 skipped. 1 failed." in msg[0] and kind(lines, "RMDIR|mc1:/BASLUS-99999BLZ"), lines
+assert not (dev / "mc1/BASLUS-99999BLZ").exists()
+tree = mc_tree(1)
+lines = run(mc1mix, "c0")                                                # declined
+assert not kind(lines, "MESSAGE|") and not kind(lines, "MCFREE|") and mc_tree(1) == tree
+
 _br = (root / "src/dash_browser.c").read_text(encoding="utf-8")
-assert "dashCardImportMany(fb.dir, names, m);" in _br and "mcSaveFormatKnownExt(dot)" in _br   # marked files only, by extension
+assert "dashCardImportMany(fb.dir, names, m, -1);" in _br and "dashCardImportMany(fb.dir, names, n, port);" in _br
+assert "nsav ? (port == 0 ? F_SAVES_MC0 : F_SAVES_MC1)" in _br and "filerConfirmExploitModify(dest, NULL) <= 0" in _br
+assert "mcSaveFormatKnownExt(dot)" in _br   # marked files only, by extension
 
 # 9. safety copies are pruned to the newest ten, and only ours
 host("mass:/WLE-Safety/E-notes.txt").write_text("keep me")

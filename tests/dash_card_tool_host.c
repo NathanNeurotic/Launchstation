@@ -150,6 +150,42 @@ int genRemove(char *path)
 		return -1;
 	return unlink(p);
 }
+int genRmdir(char *path)
+{
+	char p[MAX_PATH];
+
+	map(path, p);
+	printf("RMDIR|%s\n", path);
+	return rmdir(p);
+}
+/* the real card in mc0:/mc1: (a folder here). MC_FREE=<clusters> (default
+ * 8000, -1 = no PS2 card); FAIL_SETINFO=<text>: setting the entry of a path
+ * containing it fails. Every set entry is printed with its mode and times. */
+int filerMcFreeClusters(int port)
+{
+	const char *f = getenv("MC_FREE");
+
+	printf("MCFREE|%d\n", port);
+	return f ? atoi(f) : 8000;
+}
+int filerMcSetEntry(const char *path, const unsigned char *e)
+{
+	const char *fail = getenv("FAIL_SETINFO");
+	int i;
+
+	if (open_files) {
+		fprintf(stderr, "setinfo with a file open: %s\n", path);
+		abort();
+	}
+	printf("SETINFO|%s|%04x|", path, e[0] | (e[1] << 8));
+	for (i = 8; i < 16; i++)
+		printf("%02x", e[i]);
+	printf("|");
+	for (i = 0x18; i < 0x20; i++)
+		printf("%02x", e[i]);
+	printf("\n");
+	return fail && strstr(path, fail) ? -1 : 0;
+}
 /* NORENAME: a device without rename (UDPFS), so the caller must copy. */
 int genRenameNoReplace(const char *from, const char *to)
 {
@@ -442,13 +478,14 @@ int main(int argc, char **argv)
 		dashMmceSwitch(argv[3] + 12);
 	} else if (!strncmp(argv[3], "ps1conv:", 8)) {
 		dashPs1SaveConvert(argv[3] + 8);
-	} else if (!strncmp(argv[3], "importmany:", 11)) { /* importmany:dir/|name|name... */
+	} else if (!strncmp(argv[3], "importmany:", 11) || !strncmp(argv[3], "importmc", 8)) {
+		/* importmany:dir/|name|name... into a picked image; importmc<N>:dir/|name... onto mc<N>: */
 		static char spec[4096];
 		const char *names[64] = {0};
 		char *p, *dir;
-		int n = 0;
+		int n = 0, port = argv[3][7] == 'c' ? argv[3][8] - '0' : -1;
 
-		snprintf(spec, sizeof(spec), "%s", argv[3] + 11);
+		snprintf(spec, sizeof(spec), "%s", strchr(argv[3], ':') + 1);
 		dir = spec;
 		p = strchr(spec, '|');
 		while (p != NULL && n < 64) {
@@ -456,7 +493,7 @@ int main(int argc, char **argv)
 			names[n++] = p;
 			p = strchr(p, '|');
 		}
-		dashCardImportMany(dir, names, n);
+		dashCardImportMany(dir, names, n, port);
 	} else if (!strncmp(argv[3], "convert:", 8)) {
 		dashCardConvertSave(argv[3] + 8);
 	} else if (!strncmp(argv[3], "lib:", 4)) {

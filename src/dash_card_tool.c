@@ -1711,12 +1711,55 @@ static int ctAllSkippable(int r)
 	return r == MCW_ERR_EXISTS || r == MCW_ERR_FULL || r == MCW_ERR_UNSUPPORTED || r == MCW_ERR_NOT_FOUND;
 }
 
-/* wLaunchELF_R3Z's "Extract saves..." of a mixed set, into a card image:
- * the n save files names[] in dir (any format Import save... reads, mixed)
- * imported in one go. The card gets one verified safety copy before the
- * first change; a file that is not a PS2 save, a name already on the card or
- * a save that does not fit is skipped, and any other error stops it. */
-void dashCardImportMany(const char *dir, const char *const *names, int n)
+/* One save written onto the real card in mc<port>: as a new folder, file by
+ * file, each read back, then given the entries' modes, times and attributes.
+ * Nothing there is replaced; on any failure what it made is removed. */
+static int ctPutSaveMc(int port, const McSaveData *s)
+{
+	char dir[48], path[96];
+	uint32_t i, made = 0;
+	int freec, fd, ok = 1;
+
+	if (!mcCardNameOk(s->entry + 0x40))
+		return MCW_ERR_INVALID;
+	for (i = 0; i < s->nfiles; i++)
+		if (!mcCardNameOk(s->files[i].entry + 0x40))
+			return MCW_ERR_INVALID;
+	snprintf(dir, sizeof(dir), "mc%d:/%.31s", port, (const char *)s->entry + 0x40);
+	if ((freec = filerMcFreeClusters(port)) < 0)
+		return MCV_ERR_IO;
+	if ((fd = genDopen(dir)) >= 0 || wleExists(dir)) {
+		if (fd >= 0)
+			genDclose(fd);
+		return MCW_ERR_EXISTS;
+	}
+	if ((uint32_t)freec < mcCardSaveClusters(s) + 1u) /* + the root folder may grow */
+		return MCW_ERR_FULL;
+	if (genMkdir(dir, fileMode) < 0)
+		return MCV_ERR_IO;
+	for (i = 0; ok && i < s->nfiles; i++) {
+		snprintf(path, sizeof(path), "%s/%.31s", dir, (const char *)s->files[i].entry + 0x40);
+		ok = ctWriteFileAs(path, s->files[i].data, s->files[i].size, 1) == 0; /* removes a failed one */
+		made += ok;
+		ok = ok && filerMcSetEntry(path, s->files[i].entry) >= 0;
+	}
+	if (ok && filerMcSetEntry(dir, s->entry) >= 0)
+		return MCW_OK;
+	while (made-- > 0) {
+		snprintf(path, sizeof(path), "%s/%.31s", dir, (const char *)s->files[made].entry + 0x40);
+		genRemove(path);
+	}
+	genRmdir(dir);
+	return MCW_ERR_VERIFY;
+}
+
+/* wLaunchELF_R3Z's "Extract saves..." of a mixed set: the n save files
+ * names[] in dir (any format Import save... reads, mixed) imported in one
+ * go, into a card image (port < 0: one verified safety copy of it before the
+ * first change) or onto the real card in mc<port>:. A file that is not a PS2
+ * save, a name already on the card or a save that does not fit is skipped,
+ * and any other error stops it. */
+void dashCardImportMany(const char *dir, const char *const *names, int n, int port)
 {
 	McSaveData s;
 	CardIo io;
@@ -1724,28 +1767,33 @@ void dashCardImportMany(const char *dir, const char *const *names, int n)
 	const char *why, *first_why = NULL;
 	int i, r, c, done = 0, skipped = 0, failed = 0, left = 0, first_r = MCW_OK;
 
-	if (n <= 0 || names == NULL ||
-	    !dashPickPath("Import the saves into which card image?", dir, DASH_PICK_FILE, NULL, img, sizeof(img)))
+	if (n <= 0 || names == NULL)
 		return;
-	if (dashPs1CardIsImage(img)) {
+	if (port >= 0) {
+		snprintf(img, sizeof(img), "mc%d:/", port);
+		snprintf(body, sizeof(body), "Each save is written to %.6s as a new folder and read back. A file that is not a PS2 save, a save already there by name, or one that does not fit is skipped, never replaced.", img);
+	} else if (!dashPickPath("Import the saves into which card image?", dir, DASH_PICK_FILE, NULL, img, sizeof(img))) {
+		return;
+	} else if (dashPs1CardIsImage(img)) {
 		dashModalMessage(DI_WARNING, "That is a PS1 card", "These are PS2 saves. Pick a PS2 card image.", img);
 		return;
+	} else {
+		if (!ctStacks(dir, img) || !ctWritable(img))
+			return;
+		r = ctOpen(&io, img, 1); /* opens read/write: a card that cannot be written is refused before anything is asked */
+		if (r == MCV_OK) {
+			if (ct_view.page_stride != 512u)
+				r = MCW_ERR_UNSUPPORTED; /* PCSX2 .ps2: read-only here */
+			ctClose(&io);
+		}
+		if (r != MCV_OK) {
+			dashModalMessage(DI_WARNING, "Cannot use this card", ctError(r), img);
+			return;
+		}
+		snprintf(body, sizeof(body),
+		         "%s gets one safety copy first. A file that is not a PS2 save, a save already there by name, or one that does not fit is skipped.",
+		         ctBaseName(img));
 	}
-	if (!ctStacks(dir, img) || !ctWritable(img))
-		return;
-	r = ctOpen(&io, img, 1); /* opens read/write: a card that cannot be written is refused before anything is asked */
-	if (r == MCV_OK) {
-		if (ct_view.page_stride != 512u)
-			r = MCW_ERR_UNSUPPORTED; /* PCSX2 .ps2: read-only here */
-		ctClose(&io);
-	}
-	if (r != MCV_OK) {
-		dashModalMessage(DI_WARNING, "Cannot use this card", ctError(r), img);
-		return;
-	}
-	snprintf(body, sizeof(body),
-	         "%s gets one safety copy first. A file that is not a PS2 save, a save already there by name, or one that does not fit is skipped.",
-	         ctBaseName(img));
 	snprintf(src, sizeof(src), "Import %d save%s?", n, n == 1 ? "" : "s");
 	if (!dashModalConfirm(src, body, "Import", 0))
 		return;
@@ -1764,9 +1812,11 @@ void dashCardImportMany(const char *dir, const char *const *names, int n)
 		} else {
 			r = ctLoadPsu(src, &s, &why);
 			if (r == MCW_OK) {
-				r = ctPutSave(img, &s, safety, sizeof(safety));
+				r = port >= 0 ? ctPutSaveMc(port, &s) : ctPutSave(img, &s, safety, sizeof(safety));
 				mcCardFreeSave(&s);
-				why = r == MCV_ERR_IO && !safety[0] ? "Nothing was written: the card could not be read or its safety copy made." : NULL;
+				why = r == MCV_ERR_IO && port < 0 && !safety[0] ? "Nothing was written: the card could not be read or its safety copy made." :
+				      r == MCV_ERR_IO ? "The memory card could not be read or written." :
+				      r == MCW_ERR_VERIFY && port >= 0 ? "Writing it failed or it read back different; what was written was removed." : NULL;
 			} else if (r != MCW_ERR_NOMEM && r != MCV_ERR_IO) {
 				r = MCW_ERR_UNSUPPORTED; /* not a save we read: skipped */
 			}

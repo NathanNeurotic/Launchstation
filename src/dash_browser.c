@@ -986,6 +986,33 @@ static void opExtractPsuTo(int port)
 		dashToast(DASH_TOAST_INFO, "The clipboard was cleared");
 }
 
+/* Marked save files of any format Import save... reads, mixed, straight
+ * onto the PS2 card in mc<port>: (wLaunchELF_R3Z's "Extract saves..."). */
+static void opImportSavesTo(int port)
+{
+	static int idx[MAX_ENTRY];
+	const char **names;
+	char dest[8];
+	int n = saveFileTargets(idx, MAX_ENTRY), k, type = 0;
+
+	snprintf(dest, sizeof(dest), "mc%d:/", port);
+	if (n == 0 || filerRootMcPresent(port, &type, NULL) <= 0 || type != 2) {
+		dashModalMessage(DI_WARNING, "No PS2 memory card", "Insert a PS2 memory card in that slot and try again.", dest);
+		return;
+	}
+	if (!prepareOp() || filerConfirmExploitModify(dest, NULL) <= 0)
+		return;
+	if ((names = (const char **)malloc((size_t)n * sizeof(*names))) == NULL) {
+		dashModalMessage(DI_WARNING, "Not enough memory", "The selection is too large.", NULL);
+		return;
+	}
+	for (k = 0; k < n; k++)
+		names[k] = fb.files[idx[k]].name;
+	dashCardImportMany(fb.dir, names, n, port);
+	free(names);
+	refresh();
+}
+
 static void opDelete(void)
 {
 	static int idx[MAX_ENTRY];
@@ -2615,6 +2642,8 @@ static void actionsMenu(void)
 		F_PASTE_RENAME,
 		F_PSU,
 		F_PSU_MC0,
+		F_SAVES_MC0,
+		F_SAVES_MC1,
 		F_PSU_MC1,
 		F_IMPORT_SAVES,
 		F_DELETE,
@@ -2702,17 +2731,18 @@ static void actionsMenu(void)
 			ADD(DI_MC, psu_label, NULL, 0, F_PSU);
 		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3)) {
 			static int psu_idx[MAX_ENTRY];
-			int npsu = psuTargets(psu_idx, MAX_ENTRY), port;
+			int npsu = psuTargets(psu_idx, MAX_ENTRY), nsav = npsu ? 0 : saveFileTargets(psu_idx, MAX_ENTRY), port;
 
 			/* A .psu goes straight onto a card from here, no copy and no trip
-			 * to mc0:/ (Berion). Rows stay visible, dimmed, with the reason. */
-			for (port = 0; npsu > 0 && port < 2; port++) {
+			 * to mc0:/ (Berion); marked saves of other or mixed formats too.
+			 * Rows stay visible, dimmed, with the reason. */
+			for (port = 0; npsu + nsav > 0 && port < 2; port++) {
 				int type = 0, present = filerRootMcPresent(port, &type, NULL), ok = present > 0 && type == 2;
 				static const char *const labels[] = {"Extract to mc0:/", "Extract to mc1:/"};
 
 				ADD(DI_MC, labels[port],
-				    ok ? (npsu > 1 ? marked : "straight onto the card") : present > 0 ? "not a PS2 card" : "no card",
-				    !ok, port == 0 ? F_PSU_MC0 : F_PSU_MC1);
+				    ok ? (npsu > 1 || nsav ? marked : "straight onto the card") : present > 0 ? "not a PS2 card" : "no card",
+				    !ok, nsav ? (port == 0 ? F_SAVES_MC0 : F_SAVES_MC1) : port == 0 ? F_PSU_MC0 : F_PSU_MC1);
 			}
 		}
 		{
@@ -2857,6 +2887,10 @@ static void actionsMenu(void)
 		case F_PSU_MC1:
 			opExtractPsuTo(1);
 			break;
+		case F_SAVES_MC0:
+		case F_SAVES_MC1:
+			opImportSavesTo(ids[r] == F_SAVES_MC1);
+			break;
 		case F_DELETE:
 			opDelete();
 			break;
@@ -2958,7 +2992,7 @@ static void actionsMenu(void)
 			for (k = 0; k < m; k++)
 				names[k] = fb.files[sv_idx[k]].name;
 			if (prepareOp())
-				dashCardImportMany(fb.dir, names, m);
+				dashCardImportMany(fb.dir, names, m, -1);
 			free(names);
 			refresh();
 			break;
