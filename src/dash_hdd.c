@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 //File name:   dash_hdd.c
-//Native dashboard HDD Manager. Replaces the classic hddManager() whenever
-//the dashboard runs MISC/HddManager (Tools, Devices, launch keys).
+//The HDD Manager. Every way in (Tools, Devices, launch keys, MISC/HddManager)
+//opens this screen; wLaunchELF's classic HddManager screen is gone.
 //
 //* The partition list is read by the background worker; PFS usage is
 //  probed while browsing. HDL titles load only on explicit R1/details
@@ -20,7 +20,59 @@
 
 #define SECTORS_PER_MB 2048
 #define HDD_MB 1048576
-#define MAX_PART_MB (128 * 1024) /* 128 GB, as the classic manager */
+#define MAX_PART_MB (128 * 1024) /* 128 GB, as wLaunchELF's HddManager */
+
+/* HDIOC_STATUS codes and what they mean */
+typedef struct
+{
+	int Code;
+	const char *ShortText;
+	const char *InfoText;
+} HDDSTATUSINFO;
+
+static const HDDSTATUSINFO HddStatusInfo[] = {
+	{3, "NO HDD", "No suitable HDD was detected by the HDD driver.\nCheck the drive, adapter, power, DEV9, or ATA stack."},
+	{2, "LOCKED", "The HDD was detected, but the driver could not\ncomplete the unlock/usability check."},
+	{1, "NO APA", "The HDD is usable, but no APA format was found.\nFormat the HDD before creating partitions."},
+	{0, "READY", "The HDD is detected, usable, and APA formatted."},
+	{-1, "EPERM", "Operation not permitted.\nThe HDD driver refused the status operation."},
+	{-2, "ENOENT", "The HDD device/path was not found.\nhdd0: may not be registered by the driver."},
+	{-3, "ESRCH", "A required service or RPC target was not found.\nHDD modules may not be running correctly."},
+	{-5, "EIO", "I/O error while querying the HDD.\nCheck the drive, adapter, cabling, and power."},
+	{-6, "ENXIO", "No such device or address.\nThe HDD hardware may be missing or unreachable."},
+	{-11, "EAGAIN", "The HDD resource is temporarily unavailable.\nRetry after the HDD stack settles."},
+	{-12, "ENOMEM", "Out of memory while querying HDD status.\nSystem or module memory may be exhausted."},
+	{-13, "EACCES", "Access denied while querying HDD status.\nThe device or driver state refused access."},
+	{-16, "EBUSY", "The HDD/device resource is busy.\nAnother operation or mount may be holding it."},
+	{-19, "ENODEV", "No such device.\nHDD driver/device registration may be missing."},
+};
+
+static const HDDSTATUSINFO *GetHddStatusInfo(int status)
+{
+	int i;
+
+	for (i = 0; i < (int)(sizeof(HddStatusInfo) / sizeof(HddStatusInfo[0])); i++) {
+		if (HddStatusInfo[i].Code == status)
+			return &HddStatusInfo[i];
+	}
+
+	return NULL;
+}
+
+static const char *hddStatusShortText(int status)
+{
+	const HDDSTATUSINFO *info = GetHddStatusInfo(status);
+
+	return (info != NULL) ? info->ShortText : "UNKNOWN";
+}
+
+static const char *hddStatusInfoText(int status)
+{
+	const HDDSTATUSINFO *info = GetHddStatusInfo(status);
+
+	return (info != NULL) ? info->InfoText : "No specific HDD status description is available for this code.";
+}
+
 
 enum {
 	HP_PFS = 0, /* PFS partition: normal file access */

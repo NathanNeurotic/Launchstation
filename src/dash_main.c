@@ -434,7 +434,7 @@ void dashRunMisc(const char *misc_path)
 		return;
 	}
 	if (!stricmp(misc_path, setting->Misc_HddManager)) {
-		/* PSX too: like the classic one it manages hdd0: (no formatting) */
+		/* PSX too: it manages hdd0: (no formatting) */
 		dashHddManager();
 		return;
 	}
