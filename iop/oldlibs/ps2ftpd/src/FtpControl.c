@@ -8,18 +8,35 @@
 #include <errno.h>
 static FtpServer *server;
 static volatile int state, last_error;
-static char operation[128];
+static LsFtpCommand history[LS_FTP_HISTORY_COUNT];
 static LsFtpStatus reply __attribute__((aligned(64)));
 int FtpControl_Stopping(void)
 {
 	return state != LS_FTP_RUNNING;
 }
+static unsigned char bcd(unsigned char v)
+{
+	return (v >> 4) * 10 + (v & 15);
+}
 void FtpControl_Operation(const char *text)
 {
+	LsFtpCommand entry;
+	sceCdCLOCK clock;
 	int intr;
+	memset(&entry, 0, sizeof(entry));
+	strncpy(entry.text, text, sizeof(entry.text) - 1);
+	/* The clock read can yield: take it before the short critical section. */
+	if (sceCdReadClock(&clock) && !clock.stat) {
+		entry.year = bcd(clock.year);
+		entry.month = bcd(clock.month & 0x1f);
+		entry.day = bcd(clock.day);
+		entry.hour = bcd(clock.hour);
+		entry.minute = bcd(clock.minute);
+		entry.second = bcd(clock.second);
+	}
 	CpuSuspendIntr(&intr);
-	strncpy(operation, text, sizeof(operation) - 1);
-	operation[sizeof(operation) - 1] = '\0';
+	memmove(&history[1], &history[0], sizeof(history) - sizeof(history[0]));
+	history[0] = entry;
 	CpuResumeIntr(intr);
 }
 void *FtpControl_Exchange(int command, void *data, int size)
@@ -34,13 +51,18 @@ void *FtpControl_Exchange(int command, void *data, int size)
 	reply.version = LS_FTP_PROTOCOL_VERSION;
 	reply.state = state;
 	reply.error = last_error;
-	memcpy(reply.operation, operation, sizeof(operation));
+	memcpy(reply.history, history, sizeof(history));
 	if (server)
 		for (int i = 0; i < MAX_CLIENTS; i++) {
 			FtpClient *client = &server->m_kClientArray[i];
+			int j;
 			if (!client->m_pServer)
 				continue;
-			reply.clients++;
+			for (j = 0; j < i; j++) /* one machine may open several connections */
+				if (server->m_kClientArray[j].m_pServer &&
+				    server->m_kClientArray[j].m_uiPeerAddress == client->m_uiPeerAddress)
+					break;
+			reply.clients += j == i;
 			if (client->m_eDataMode != DATAMODE_IDLE) {
 				u64 bytes = ((u64)reply.bytes_high << 32) | reply.bytes_low;
 				reply.transfers++;
@@ -92,7 +114,7 @@ int FtpControl_Init(FtpServer *owner)
 	server = owner;
 	state = LS_FTP_RUNNING;
 	last_error = 0;
-	operation[0] = '\0';
+	memset(history, 0, sizeof(history));
 #ifndef FTP_CONTROL_TEST
 	iop_thread_t thread;
 	int id;
