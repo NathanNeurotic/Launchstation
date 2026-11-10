@@ -7,6 +7,7 @@
 #include "mc_sha256.h"
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <mbedtls/aes.h>
 #include <mbedtls/md.h>
 
@@ -461,8 +462,8 @@ int mcSaveToZip(const McSaveData *s, uint8_t **out, uint32_t *len)
 		/* a crafted card's "..", "a/b" or control bytes must not leave the folder on unzip */
 		if (!mcCardNameOk(f ? f->entry + 0x40 : s->entry + 0x40))
 			return MCW_ERR_INVALID;
-		for (at = 1; f && at < i; at++) /* two entries with one name: unzip keeps one */
-			if (!strncmp((const char *)s->files[at - 1].entry + 0x40, (const char *)f->entry + 0x40, 32))
+		for (at = 1; f && at < i; at++) /* one name twice, in any case: unzip on Windows keeps one */
+			if (!strncasecmp((const char *)s->files[at - 1].entry + 0x40, (const char *)f->entry + 0x40, 32))
 				return MCW_ERR_INVALID;
 		n += zipHead(NULL, 0, folder, f, s, 0, 0) + zipHead(NULL, 1, folder, f, s, 0, 0) + (f ? f->size : 0);
 	}

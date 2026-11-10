@@ -184,6 +184,7 @@ for stamp, want in (([58, 59, 23, 31, 12], (2026, 12, 31, 23, 59, 58)), ([0, 0, 
 assert run("zipname", tmp / "s.psu", "BASLUS-21386TALES", "icon2.sys") == {"r": "0"}
 # two files with one name: unzip would keep only one, so the zip is refused
 assert run("zipname", tmp / "s.psu", "BASLUS-21386TALES", "list.ico") == {"r": "-16"}
+assert run("zipname", tmp / "s.psu", "BASLUS-21386TALES", "LIST.ICO") == {"r": "-16"}
 for bad in (("..", "list.ico"), (".", "list.ico"), ("A\\B", "list.ico"), ("OK", ".."), ("OK", "a/b"), ("OK", "c\x01"), ("", "x")):
     assert run("zipname", tmp / "s.psu", *bad) == {"r": "-16"}, bad
 
