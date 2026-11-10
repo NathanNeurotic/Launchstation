@@ -939,12 +939,30 @@ def ps1_mcs(name, blocks, title):
 
 lines = run("blank:mass:/", "k7", "k0", "c1", "m-1")
 assert kind(lines, "CHOICE|New card size|8|3|1 MB") and kind(lines, "CHOICE|New PS1 card|10|0|Blank-PS1.mcd"), lines
-assert kind(lines, "TOAST|1|PS1 card made and read back: 15 blocks free"), lines
+assert kind(lines, "TOAST|1|PS1 card made and read back: 15 of 15 blocks free"), lines
 assert kind(lines, "MENU|Blank-PS1.mcd|PS1 card: 0 saves, 15 of 15 blocks free|Import save...~"), lines   # opens on it
 P1 = "mass:/Blank-PS1.mcd"
 assert host(P1).stat().st_size == 131072 and host(P1).read_bytes()[:2] == b"MC"
 lines = run(P1)
 assert kind(lines, "MENU|Blank-PS1.mcd|PS1 card: 0 saves, 15 of 15 blocks free|Import save...~"), lines
+# a RetroArch .srm is the same raw card and opens the same; another core's 128 KB .srm that
+# only starts "MC" by chance fails the directory checks and is never opened as a PS1 card
+host("mass:/ra.srm").write_bytes(host(P1).read_bytes())
+assert kind(run("mass:/ra.srm"), "MENU|ra.srm|PS1 card: 0 saves, 15 of 15 blocks free|"), "srm"
+junk = b"MC" + random.Random(7).randbytes(131070)
+host("mass:/gba.srm").write_bytes(junk)
+lines = run("mass:/gba.srm")
+assert not kind(lines, "MENU|gba.srm|PS1 card") and kind(lines, "MESSAGE|"), lines
+assert host("mass:/gba.srm").read_bytes() == junk
+# a valid header with one bad directory frame (1..15) is refused too
+for frame in range(1, 16):
+    bad = bytearray(host(P1).read_bytes())
+    bad[frame * 128 + 127] ^= 1
+    host("mass:/gba.srm").write_bytes(bad)
+    lines = run("mass:/gba.srm")
+    assert not kind(lines, "MENU|gba.srm|PS1 card") and kind(lines, "MESSAGE|"), (frame, lines)
+    assert host("mass:/gba.srm").read_bytes() == bad
+host("mass:/ra.srm").unlink(); host("mass:/gba.srm").unlink()
 s1 = ps1_mcs("BASLUS-00001PS1", 2, b"PS1 game")
 host("mass:/in.mcs").write_bytes(s1)
 empty = host(P1).read_bytes()
@@ -954,6 +972,14 @@ assert kind(lines, "CONFIRM|Import this save?|BASLUS-00001PS1, 2 blocks, from a 
 assert kind(lines, "TOAST|1|Save imported and verified"), lines
 assert host("mass:/WLE-Safety/Blank-PS1-0001.mcd").read_bytes() == empty
 assert "|T:PS1 game~BASLUS-00001PS1, 2 blocks" in kind(lines, "MENU|Blank-PS1.mcd|PS1 card: 1 save, 13 of 15 blocks free")[0], lines
+# a save imports into a RetroArch .srm too: safety copy of the old bytes, then it reopens with the save
+host("mass:/ra.srm").write_bytes(empty)
+lines = run("mass:/ra.srm", "m0", "pmass:/in.mcs", "c1", "m-1")
+assert kind(lines, "TOAST|1|Save imported and verified"), lines
+assert host("mass:/WLE-Safety/ra-0001.mcd").read_bytes() == empty     # same raw card, .mcd name
+assert host("mass:/ra.srm").stat().st_size == 131072
+assert "|T:PS1 game~BASLUS-00001PS1, 2 blocks" in kind(run("mass:/ra.srm"), "MENU|ra.srm|PS1 card: 1 save, 13 of 15 blocks free")[0]
+host("mass:/ra.srm").unlink(); host("mass:/WLE-Safety/ra-0001.mcd").unlink()
 # the same name again is refused before any safety copy
 before = sha(P1)
 lines = run(P1, "m0", "pmass:/in.mcs", "m-1")
@@ -973,6 +999,46 @@ assert kind(lines, "MESSAGE|4|Exported|") and "|mass:/_._a_b_EVIL.mcs" in kind(l
 assert host("mass:/_._a_b_EVIL.mcs").read_bytes()[10:21] == b"../a:b*EVIL" and not list(dev.glob("*EVIL*"))
 host("mass:/_._a_b_EVIL.mcs").unlink()
 host("mass:/evil.mcs").unlink()
+# a PS1 card from several marked saves in one step (wLaunchELF_R3Z's
+# "Create archive"): every save is read and placed before anything is written
+host("mass:/p1from").mkdir()
+two = ps1_mcs("BASLUS-00002PS1", 3, b"Two")
+host("mass:/p1from/a.mcs").write_bytes(s1)
+host("mass:/p1from/b.mcs").write_bytes(two)
+lines = run("ps1from:mass:/p1from|a.mcs|b.mcs", "k3", "c1", "m-1")
+assert kind(lines, "CHOICE|PS1 card from these saves|10|0|PS1-Saves.mcd: raw card"), lines
+assert kind(lines, "CONFIRM|Make a new PS1 card?|2 saves, 10 of 15 blocks free."), lines
+assert kind(lines, "TOAST|1|PS1 card made and read back: 10 of 15 blocks free"), lines
+assert kind(lines, "MENU|MC1.vmc|PS1 card: 2 saves, 10 of 15 blocks free"), lines   # Ember's name, opened on it
+card = host("mass:/p1from/MC1.vmc").read_bytes()
+assert len(card) == 131072 and card[:2] == b"MC"
+assert card[8192:8192 + 2 * 8192] == s1[128:] and card[3 * 8192:6 * 8192] == two[128:]
+# the fixed name is never replaced or suffixed
+assert kind(run("ps1from:mass:/p1from|a.mcs", "k3", "c1"), "MESSAGE|1|Not made|A file with this name is already in this folder."), lines
+assert host("mass:/p1from/MC1.vmc").read_bytes() == card
+# a save that is not one, or that does not fit, stops it before any file is made
+host("mass:/p1from/junk").write_bytes(b"not a save")
+lines = run("ps1from:mass:/p1from|a.mcs|junk", "k0")
+assert kind(lines, "MESSAGE|1|Not imported|") and not kind(lines, "CONFIRM|"), lines
+host("mass:/p1from/big.mcs").write_bytes(ps1_mcs("BASLUS-00003PS1", 13, b"Big"))
+lines = run("ps1from:mass:/p1from|b.mcs|big.mcs", "k1")
+assert kind(lines, "MESSAGE|1|Not imported|") and not kind(lines, "CONFIRM|"), lines
+lines = run("ps1from:mass:/p1from|a.mcs|a.mcs", "k0")                  # the same save twice
+assert kind(lines, "MESSAGE|1|Not imported|A save with that name is already on this card."), lines
+assert sorted(p.name for p in host("mass:/p1from").iterdir()) == ["MC1.vmc", "a.mcs", "b.mcs", "big.mcs", "junk"]
+# declined: nothing written; a plain image takes the PS1-Saves name
+assert not kind(run("ps1from:mass:/p1from|a.mcs", "k0", "c0"), "TOAST|"), lines
+assert not host("mass:/p1from/PS1-Saves.mcd").exists()
+assert kind(run("ps1from:mass:/p1from|a.mcs", "k0", "c1", "m-1"), "TOAST|1|PS1 card made and read back: 13 of 15 blocks free")
+assert host("mass:/p1from/PS1-Saves.mcd").read_bytes()[8192:3 * 8192] == s1[128:]
+# a path that does not fit says so; more than a card's 15 saves is refused outright
+lines = run("ps1from:mass:/p1from|" + "x" * 1100, "k0")
+assert kind(lines, "MESSAGE|1|Not imported|The path is too long.|"), lines
+assert not kind(run("ps1from:mass:/p1from" + "|a.mcs" * 16), "CHOICE|"), lines
+shutil.rmtree(host("mass:/p1from"))
+browser_ps1 = browser[browser.index("static int ps1SaveTargets"):]
+assert '"PS1 card from these saves..."' in browser and "dashPs1CardNew(fb.dir, names, m)" in browser
+assert "fb.nmarked > 0 ? targets(idx, max) : 0" in browser_ps1     # marked files only, never the focused one alone
 host(P1).write_bytes(full)
 # a name that is not plain ASCII (a card's name field can hold any bytes) is
 # not exported, and the dialog gives that reason, not a file-name problem

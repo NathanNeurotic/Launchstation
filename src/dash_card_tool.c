@@ -1332,7 +1332,7 @@ void dashCardNewBlank(const char *folder)
 	if (choice < 0)
 		return;
 	if (choice == CT_SIZES) {
-		dashPs1CardNewBlank(folder);
+		dashPs1CardNew(folder, NULL, 0);
 		return;
 	}
 	mb = 1 << choice;

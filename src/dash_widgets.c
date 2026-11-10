@@ -1191,7 +1191,7 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 						pk.starting = 1;
 						pk.start_done = 0;
 						dashStrCopy(pk.start_dir, d->browse, sizeof(pk.start_dir));
-						if (dashDevicesStart(d, pickStartDone, NULL) < 0)
+						if (dashDevicesStart(d, pickStartDone, NULL) != 0)
 							pk.starting = 0;
 					}
 				}
