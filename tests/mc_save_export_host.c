@@ -96,6 +96,21 @@ int main(int argc, char **argv)
 			mcCardFreeSave(&s);
 		}
 		printf("r=%d\n", r);
+	} else if (argc == 4 && !strcmp(argv[1], "zip")) { /* zip <in.psu> <out.zip> */
+		McSaveData s;
+
+		in = slurp(argv[2], &len);
+		r = mcCardSaveFromPsu(in, len, &s);
+		free(in);
+		if (r == MCW_OK) {
+			r = mcSaveToZip(&s, &out, &olen);
+			if (r == MCW_OK) {
+				spit(argv[3], out, olen);
+				free(out);
+			}
+			mcCardFreeSave(&s);
+		}
+		printf("r=%d\n", r);
 	} else if (argc == 6 && !strcmp(argv[1], "seal")) {
 		uint8_t *head = NULL;
 		uint32_t hlen = 0;

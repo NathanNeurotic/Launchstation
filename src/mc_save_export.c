@@ -366,3 +366,132 @@ const char *ps1CardKindName(int kind)
 
 	return kind >= PS1C_RAW && kind <= PS1C_MCX ? name[kind] : "unknown";
 }
+
+/* ------------------------------------------------------------ .zip */
+
+/* CRC-32 (zip's, reflected 0xEDB88320) four bits at a time: 64 bytes of
+ * table instead of zlib's 8 KB ones. */
+static uint32_t zipCrc(const uint8_t *p, uint32_t n)
+{
+	static const uint32_t t[16] = {0x00000000, 0x1DB71064, 0x3B6E20C8, 0x26D930AC, 0x76DC4190, 0x6B6B51F4,
+	                               0x4DB26158, 0x5005713C, 0xEDB88320, 0xF00F9344, 0xD6D6A3E8, 0xCB61B38C,
+	                               0x9B64C2B0, 0x86D3D2D4, 0xA00AE278, 0xBDBDF21C};
+	uint32_t c = 0xFFFFFFFFu;
+
+	while (n--) {
+		c ^= *p++;
+		c = (c >> 4) ^ t[c & 15];
+		c = (c >> 4) ^ t[c & 15];
+	}
+	return ~c;
+}
+
+/* A card time (sec, min, hour, day, month, year at 1..7) as DOS time and date. */
+static void zipTime(uint8_t *p, const uint8_t *t)
+{
+	uint32_t y = (uint32_t)t[6] | ((uint32_t)t[7] << 8);
+
+	if (y < 1980u || y > 2107u || !t[4] || !t[5]) {
+		wr32(p, 0x00210000u); /* 1980-01-01 00:00 */
+		return;
+	}
+	wr32(p, ((uint32_t)t[3] << 11) | ((uint32_t)t[2] << 5) | (t[1] >> 1) |
+	            ((((y - 1980u) << 9) | ((uint32_t)t[5] << 5) | t[4]) << 16));
+}
+
+static uint32_t zipNameLen(const uint8_t *name)
+{
+	uint32_t n = 0;
+
+	while (n < 32u && name[n])
+		n++;
+	return n;
+}
+
+/* One zip header: local (cd = 0) or central (cd = 1), for "folder/" (f NULL)
+ * or "folder/name". Returns its length; p NULL only measures. */
+static uint32_t zipHead(uint8_t *p, int cd, const char *folder, const McSaveFile *f, const McSaveData *s,
+                        uint32_t crc, uint32_t at)
+{
+	uint32_t fl = zipNameLen((const uint8_t *)folder), nl = f ? zipNameLen(f->entry + 0x40) : 0;
+	uint32_t h = cd ? 46u : 30u, size = f ? f->size : 0;
+	uint8_t *q;
+
+	if (!p)
+		return h + fl + 1u + nl;
+	memset(p, 0, h);
+	wr32(p, cd ? 0x02014B50u : 0x04034B50u);
+	q = p + (cd ? 6 : 4);
+	q[0] = 10; /* version needed: stored */
+	if (cd)
+		p[4] = 20;
+	/* the same fields from here on in both: flags, method 0, time, CRC, sizes, name length */
+	zipTime(q + 6, (f ? f->entry : s->entry) + 0x18);
+	wr32(q + 10, crc);
+	wr32(q + 14, size);
+	wr32(q + 18, size);
+	q[22] = (uint8_t)(fl + 1u + nl);
+	if (cd) {
+		p[38] = f ? 0x00 : 0x10; /* MS-DOS directory attribute */
+		wr32(p + 42, at);
+	}
+	memcpy(p + h, folder, fl);
+	p[h + fl] = '/';
+	if (nl)
+		memcpy(p + h + fl + 1u, f->entry + 0x40, nl);
+	return h + fl + 1u + nl;
+}
+
+int mcSaveToZip(const McSaveData *s, uint8_t **out, uint32_t *len)
+{
+	char folder[33];
+	uint64_t n = 22;
+	uint32_t i, at, *crc, *off;
+	uint8_t *p;
+
+	if (!s || !out || !len || (s->nfiles && !s->files) || s->nfiles > 0xFFFEu)
+		return MCW_ERR_INVALID;
+	*out = NULL;
+	*len = 0;
+	memcpy(folder, s->entry + 0x40, 32);
+	folder[32] = 0;
+	for (i = 0; i <= s->nfiles; i++) {
+		const McSaveFile *f = i ? &s->files[i - 1] : NULL;
+
+		n += zipHead(NULL, 0, folder, f, s, 0, 0) + zipHead(NULL, 1, folder, f, s, 0, 0) + (f ? f->size : 0);
+	}
+	if (n > 0x7FFFFFFFu)
+		return MCW_ERR_INVALID;
+	p = (uint8_t *)malloc((size_t)n);
+	crc = (uint32_t *)malloc((s->nfiles + 1u) * 2u * sizeof(uint32_t));
+	if (!p || !crc) {
+		free(p);
+		free(crc);
+		return MCW_ERR_NOMEM;
+	}
+	off = crc + s->nfiles + 1u;
+	for (i = 0, at = 0; i <= s->nfiles; i++) { /* the folder, then its files */
+		const McSaveFile *f = i ? &s->files[i - 1] : NULL;
+
+		crc[i] = f && f->size ? zipCrc(f->data, f->size) : 0;
+		off[i] = at;
+		at += zipHead(p + at, 0, folder, f, s, crc[i], 0);
+		if (f && f->size) {
+			memcpy(p + at, f->data, f->size);
+			at += f->size;
+		}
+	}
+	n = at; /* the central directory starts here */
+	for (i = 0; i <= s->nfiles; i++)
+		at += zipHead(p + at, 1, folder, i ? &s->files[i - 1] : NULL, s, crc[i], off[i]);
+	free(crc);
+	memset(p + at, 0, 22);
+	wr32(p + at, 0x06054B50u);
+	p[at + 8] = p[at + 10] = (uint8_t)(s->nfiles + 1u);
+	p[at + 9] = p[at + 11] = (uint8_t)((s->nfiles + 1u) >> 8);
+	wr32(p + at + 12, at - (uint32_t)n);
+	wr32(p + at + 16, (uint32_t)n);
+	*out = p;
+	*len = at + 22u;
+	return MCW_OK;
+}

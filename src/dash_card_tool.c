@@ -589,14 +589,17 @@ int dashCardWriteVerified(const char *path, const uint8_t *buf, uint32_t len)
 }
 
 /* A save as .psu (fmt 0), as a signed .psv a PS3 takes (1, named the way
- * it looks for it) or as a CodeBreaker .cbs (2). */
+ * it looks for it), as a CodeBreaker .cbs (2) or as a .zip of its folder
+ * for a PC (3). */
 static int ctSaveAs(const McSaveData *s, int fmt, uint8_t **buf, uint32_t *len)
 {
-	return fmt == 1 ? mcSaveToPsv(s, buf, len) : fmt ? mcSaveToCbs(s, buf, len) : mcCardSaveToPsu(s, buf, len);
+	return fmt == 1 ? mcSaveToPsv(s, buf, len) : fmt == 2 ? mcSaveToCbs(s, buf, len) :
+	       fmt ? mcSaveToZip(s, buf, len) : mcCardSaveToPsu(s, buf, len);
 }
 
-static const char *const ct_save_as[] = {".psu: uLaunchELF / EMS", ".psv: PS3, signed", ".cbs: CodeBreaker"};
-static const char *const ct_ext[] = {"psu", "psv", "cbs"};
+static const char *const ct_save_as[] = {".psu: uLaunchELF / EMS", ".psv: PS3, signed", ".cbs: CodeBreaker",
+                                         ".zip: the folder, for a PC"};
+static const char *const ct_ext[] = {"psu", "psv", "cbs", "zip"};
 
 static void ctExportPsu(const char *image, const char *name)
 {
@@ -604,7 +607,7 @@ static void ctExportPsu(const char *image, const char *name)
 	uint8_t *buf = NULL;
 	uint32_t len = 0;
 	char folder[MAX_PATH], dest[MAX_PATH], file[80], title[32];
-	int r, fmt = dashModalChoice("Export as", ct_save_as, 3, 0);
+	int r, fmt = dashModalChoice("Export as", ct_save_as, 4, 0);
 
 	if (fmt < 0)
 		return;
@@ -744,7 +747,7 @@ void dashCardConvertSave(const char *path)
 	int r, i, on_card, fmt, psv;
 	static const uint8_t no_stamp[8];
 
-	fmt = dashModalChoice("Convert to", ct_save_as, 3, genCmpFileExt(path, "PSU"));
+	fmt = dashModalChoice("Convert to", ct_save_as, 4, genCmpFileExt(path, "PSU"));
 	if (fmt < 0)
 		return;
 	psv = fmt == 1;
@@ -799,7 +802,7 @@ void dashCardConvertSave(const char *path)
 	r = ctSaveAs(&s, fmt, &buf, &len);
 	if (r == MCW_OK && ctWriteFile(dest, buf, len) < 0)
 		r = MCV_ERR_IO;
-	if (r == MCW_OK) { /* the bytes on disk read back as the same save */
+	if (r == MCW_OK && fmt != 3) { /* the bytes on disk read back as the same save (a .zip has no reader) */
 		r = psv ? mcSaveFromPsv(buf, len, &back) :
 		    fmt ? mcSaveFromCbs(buf, len, no_stamp, &back) : mcCardSaveFromPsu(buf, len, &back);
 		if (r == MCW_OK) {
@@ -815,6 +818,7 @@ void dashCardConvertSave(const char *path)
 	if (r == MCW_OK)
 		dashModalMessage(DI_MC, "Converted",
 		                 psv ? "Written and read back. Copy it to a PS3's USB stick under PS3/EXPORT/PSV." :
+		                 fmt == 3 ? "Written and checked. Unzip it on a PC; card attributes are not kept." :
 		                 fmt ? "Written and read back. Load it with CodeBreaker or Card contents > Import save." :
 		                       "Written and read back. Put it on a card with Extract PSU or Card contents.",
 		                 dest);
@@ -1435,7 +1439,7 @@ static int ctSaveMenu(const char *image, const McViewSave *sv, const char *title
 	items[1].detail = writable ? "removed here only after it verifies there" : ro;
 	items[1].disabled = !writable;
 	items[2].icon = DI_MC;
-	items[2].label = "Export as .psu, .psv or .cbs...";
+	items[2].label = "Export as .psu, .psv, .cbs or .zip...";
 	items[2].detail = NULL;
 	items[2].disabled = 0;
 	items[3].icon = DI_WARNING;

@@ -83,6 +83,11 @@ int ps1SaveToPsx(const Ps1Save *s, uint8_t **out, uint32_t *len);
 /* A PS2 save as a signed .psv; free *out with free(). MCW_OK or an MCW_ERR. */
 int mcSaveToPsv(const McSaveData *s, uint8_t **out, uint32_t *len);
 
+/* A PS2 save as a .zip of its folder and files, stored (uncompressed), for a
+ * PC: the folder's and files' times become DOS times; the card attributes are
+ * not kept. Free *out with free(). MCW_OK or an MCW_ERR. */
+int mcSaveToZip(const McSaveData *s, uint8_t **out, uint32_t *len);
+
 /* The file name a PS3 looks for: the first 12 characters of the save name,
  * the rest as hex, then ".PSV". out needs 2 * 32 + 5 bytes. */
 void mcPsvFileName(char *out, uint32_t size, const char *name);

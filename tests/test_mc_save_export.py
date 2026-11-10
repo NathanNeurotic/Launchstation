@@ -152,6 +152,23 @@ assert struct.unpack_from("<II", v, 0x78) == (len(files) + 2, 0x8427)
 assert v[0x80:0xA0].rstrip(b"\0") == b"BASLUS-21386TALES"
 assert v[0x1C:0x30] == signature(v, 0x08, 0x1C, False)
 
+# ---- PS2 .zip: read by Python's own zipfile (CRCs checked), the folder first, data and DOS times kept
+import zipfile
+assert run("zip", tmp / "s.psu", tmp / "s.zip") == {"r": "0"}
+with zipfile.ZipFile(tmp / "s.zip") as z:
+    assert z.testzip() is None
+    infos = z.infolist()
+    assert [i.filename for i in infos] == ["BASLUS-21386TALES/"] + ["BASLUS-21386TALES/" + n for n, _ in files]
+    assert infos[0].is_dir() and all(i.compress_type == zipfile.ZIP_STORED for i in infos)
+    assert infos[0].date_time == (2026, 5, 6, 7, 8, 8)                  # the folder's modified time, seconds even
+    assert all(i.date_time == (1980, 1, 1, 0, 0, 0) for i in infos[1:])  # these test times are not real dates
+    for n, d in files:
+        assert z.read("BASLUS-21386TALES/" + n) == d
+(tmp / "e.psu").write_bytes(psu("EMPTYSAVE", [])[0])
+assert run("zip", tmp / "e.psu", tmp / "e.zip") == {"r": "0"}
+with zipfile.ZipFile(tmp / "e.zip") as z:
+    assert z.namelist() == ["EMPTYSAVE/"]
+
 assert run("name", "BASLUS-21386TALES") == {"name": "BASLUS-21386" + b"TALES".hex().upper() + ".PSV"}
 assert run("name", "BASCUS-9416") == {"name": "BASCUS-9416.PSV"}
 
