@@ -296,6 +296,49 @@ blank(I)
 lines = run(I, "m0", "pmass:/out/BASLUS-77777BLZ.psu", "c1")
 assert kind(lines, "TOAST|1|Save imported and verified") and saves(I)["BASLUS-77777BLZ"] == saves(H)["BASLUS-77777BLZ"], lines
 
+# 8d. several marked save files of mixed formats into one card image (wLaunchELF_R3Z's "Extract saves..."):
+# one safety copy, a file that is not a save is skipped with its reason, the rest go in
+K = "mass:/K.mcd"
+blank(K)
+k_before = host(K).read_bytes()
+mix = "importmany:mass:/out/|BESLES-12345GAME.psu|BASLUS-99999BLZ.mcm|junk.max"
+lines = run(mix, "p" + K, "c1")
+assert kind(lines, "PICK|Import the saves into which card image?|mass:/out/|0|"), lines
+assert kind(lines, "CONFIRM|Import 3 saves?|K.mcd gets one safety copy first."), lines
+msg = kind(lines, "MESSAGE|")[0]
+assert "|Done|2 saves imported and verified. 1 skipped. First: junk.max: " in msg and msg.endswith("|Safety copy: mass:/WLE-Safety/K-0001.mcd"), msg
+assert host("mass:/WLE-Safety/K-0001.mcd").read_bytes() == k_before   # the safety copy is the card before the import
+assert saves(K)["BESLES-12345GAME"] == saves(B)["BESLES-12345GAME"] and saves(K)["BASLUS-99999BLZ"] == saves(F)["BASLUS-99999BLZ"]
+k_snap = sha(K)
+lines = run(mix, "p" + K, "c1")                                          # all there already: nothing written
+assert any("Nothing imported. 3 skipped. First: BESLES-12345GAME.psu: A save with this name" in l for l in kind(lines, "MESSAGE|")), lines
+assert sha(K) == k_snap and not host("mass:/WLE-Safety/K-0002.mcd").exists()
+lines = run("importmany:mass:/out/|gone.psu|BESLES-12345GAME.psu", "p" + K, "c1")   # a read failure stops the batch
+msg = kind(lines, "MESSAGE|")
+assert msg and "Nothing imported. 1 failed. First: gone.psu: The save file could not be opened." in msg[0] and "Stopped there; 1 not tried." in msg[0], lines
+assert sha(K) == k_snap
+K3 = "mass:/K3.mcd"                                                     # a hard error after one import: that one stays
+blank(K3)
+lines = run("importmany:mass:/out/|BESLES-12345GAME.psu|gone.psu|BASLUS-99999BLZ.mcm", "p" + K3, "c1")
+msg = kind(lines, "MESSAGE|")
+assert msg and "1 save imported and verified. 1 failed. First: gone.psu: The save file could not be opened." in msg[0] and "Stopped there; 1 not tried." in msg[0], lines
+assert saves(K3) == {"BESLES-12345GAME": saves(B)["BESLES-12345GAME"]}
+K2 = "mass:/K2.mcd"
+blank(K2)
+k2_snap = sha(K2)
+lines = run(mix, "p" + K2, "c1", env={"FAIL_WRITE_AT": "0"})             # the safety copy fails: card untouched, said so
+msg = kind(lines, "MESSAGE|")
+assert msg and "Nothing imported. 1 failed. First: BESLES-12345GAME.psu: Nothing was written: the card could not be read or its safety copy made." in msg[0], lines
+assert "Safety copy:" not in msg[0], lines
+assert sha(K2) == k2_snap
+lines = run(mix, "p" + K, "c0")                                          # declined
+assert not kind(lines, "MESSAGE|") and sha(K) == k_snap
+lines = run(mix, "pmass:/out/junk.max")                                  # not a card image: nothing written
+assert any(l.startswith("MESSAGE|") for l in lines) and not kind(lines, "CONFIRM|"), lines
+
+_br = (root / "src/dash_browser.c").read_text(encoding="utf-8")
+assert "dashCardImportMany(fb.dir, names, m);" in _br and "mcSaveFormatKnownExt(dot)" in _br   # marked files only, by extension
+
 # 9. safety copies are pruned to the newest ten, and only ours
 host("mass:/WLE-Safety/E-notes.txt").write_text("keep me")
 host("mass:/WLE-Safety/Other-0001.mcd").write_bytes(b"keep")
@@ -327,6 +370,10 @@ for k in range(1, 9):                                              # copy: 1 saf
 # 11. PCSX2 .ps2 cards: view and export only
 P = "mass:/P.ps2"
 put(P, fx.standard_card(8, True)[0])
+p_snap = sha(P)
+lines = run(mix, "p" + P)                                                # batch import refuses it before asking
+assert kind(lines, "MESSAGE|1|Cannot use this card|Saves with sub-folders, and PCSX2 .ps2 cards, can only be read here.") \
+    and not kind(lines, "CONFIRM|") and sha(P) == p_snap, lines
 lines = run(P, "m3")
 menu = kind(lines, "MENU|P.ps2|")[0].split("|")
 assert menu[3].startswith("!Import save...") and menu[4].startswith("Copy to a new card")
@@ -831,7 +878,9 @@ for k in range(1, 120):
     pick = str(d.index("A.mcd: NOICON, 3 KB") + 1)
     lines = run("all:mass:/mv", "s" + pick, "m0", "m1", "pmass:/mv/H.mcd", "c1", env={"FAIL_WRITE_AT": str(k)})
     msg = kind(lines, "MESSAGE|1|Not all done|")
-    if msg and "NOICON" in saves("mass:/mv/H.mcd"):
+    if msg and "SAFETY|mass:/mv/WLE-Safety/A-0001.mcd|1" not in lines:
+        assert "A-0001" not in msg[0], msg                               # a safety copy that failed is never named
+    elif msg and "NOICON" in saves("mass:/mv/H.mcd"):
         assert "|Safety copy: mass:/mv/WLE-Safety/A-0001.mcd" in msg[0], msg
         break
 else:
