@@ -461,6 +461,17 @@ int main(int argc, char **argv)
 		dashCardSaveLibrary(argv[3] + 4);
 	} else if (!strncmp(argv[3], "all:", 4)) {
 		dashCardAllSaves(argv[3] + 4);
+	} else if (!strncmp(argv[3], "ps1from:", 8)) {
+		/* ps1from:folder|name|name...: a PS1 card from the marked saves */
+		const char *names[16];
+		char *q = argv[3] + 8;
+		int k = 0;
+
+		while ((q = strchr(q, '|')) != NULL && k < 16) {
+			*q++ = 0;
+			names[k++] = q;
+		}
+		dashPs1CardNew(argv[3] + 8, names, k);
 	} else if (!strncmp(argv[3], "blank:", 6)) {
 		dashCardNewBlank(argv[3] + 6);
 	} else if (!strncmp(argv[3], "served:", 7)) {
