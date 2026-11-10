@@ -1,0 +1,202 @@
+USMB2
+=====
+micro-SMB2   A tiny SMB2 implementation targeting Z80 and other tiny platforms.
+
+USMB2 strives to be as small as possible and to even be viable for 8-bitters.
+
+It is a modular build where the basic minimal configuration is to just being able to access
+and read from files as 'Guest' but where additional features can be selectivly enabled.
+
+-DUSMB2_FEATURE_WRITE adds support to open/create files for writing and pwrite() to write to them.
+
+-DUSMB2_FEATURE_OPENDIR adds support to opendir()/readdir() so you can scan directory content.
+
+-DUSMB2_FEATURE_UNICODE adds unicode support for share and file names.
+
+-DUSMB2_FEATURE_CLOSE add support for SMB2_CLOSE.
+
+-DUSMB2_FEATURE_STAT adds usmb2_stat() to get the size, times and attributes of a file or directory.
+
+-DUSMB2_FEATURE_MKDIR adds usmb2_mkdir() to create directories.
+
+-DUSMB2_FEATURE_UNLINK adds usmb2_unlink() and usmb2_rmdir() to delete files and directories.
+
+-DUSMB2_FEATURE_RENAME adds usmb2_rename() to rename and move files and directories.
+
+-DUSMB2_FEATURE_TINY_TCP talks to the server through the tiny TCP/IP stack in z80/ instead
+of the sockets API.
+
+-DUSMB2_FEATURE_REASSEMBLY, with the tiny stack, collects replies that take several TCP
+segments in a buffer of USMB2_REASSEMBLY_SIZE bytes, by default enough for a 2 kbyte READ.
+
+-DUSMB2_FEATURE_NTLM adds NTLMSSP/NTLMv2 user/password authentication. This adds a lot of code and
+basically doubles the size of the client.
+This feature currently adds 2658bytes of code when compiled for x86_64.
+
+
+
+At the time of writing, code size when compiled for for x86_64 is approximately
+(without authentication support):
+1318 bytes: basic support  I.e. map a share, open files for reading.
+1513 bytes: basic support + file write support.
+1785 bytes: basic support + file write support + opendir()/readdir() support.
+2367 bytes: basic support + file write support + opendir()/readdir() + unicode support.
+
+USMB2 context is 560 bytes in size on x86_64.
+Each open file handle uses 16 bytes.
+Each open directory handle uses 16 + 256 bytes.
+
+
+Modules
+=======
+
+USMB2 is modular where you can pick what features you want.
+By by default there is no authentication and no write support.
+
+Authentication
+--------------
+To enable NTLMSSP authentication with NTLMv2, compile with
+-DUSMB2_FEATURE_NTLM
+
+Write support
+-------------
+To enable support to open files with O_RDWR an to write to files, compile
+with -DUSMB2_FEATURE_WRITE
+
+opendir support
+---------------
+To enable opendir()/readdir() support, compile with -DUSMB2_FEATURE_OPENDIR.
+
+unicode support
+---------------
+To enable unicode support, compile with -DUSMB2_FEATURE_UNICODE.
+If not enabled all filenames better be 7-bit ASCII.
+
+close support
+-------------
+Support for SMB2_CLOSE and closing file handles also on the server is enabled with
+-DUSMB2_FEATURE_CLOSE.
+By default usmb2 will just free the handle and leak the open handle server-side.
+This option implements the SMB2_CLOSE command to close it also on the server.
+This results in 98 additional bytes of program code when compiled on x86_64.
+Short-lived applications typically would not need this feature as the handles will
+be reaped server-side anyway when the session is terminated.
+
+stat support
+------------
+usmb2_stat() returns the [MS-FSCC] 2.4.29 FileNetworkOpenInformation of a file or directory:
+times, size and attributes. Enable with -DUSMB2_FEATURE_STAT.
+This also enables USMB2_FEATURE_CLOSE, and adds 114 bytes on top of it on x86_64.
+
+mkdir support
+-------------
+usmb2_mkdir() creates a directory, and fails if it already exists. Enable with -DUSMB2_FEATURE_MKDIR.
+This also enables USMB2_FEATURE_CLOSE, and adds 118 bytes on top of it on x86_64.
+
+unlink support
+--------------
+usmb2_unlink() deletes a file and usmb2_rmdir() an empty directory. Enable with -DUSMB2_FEATURE_UNLINK.
+The file is opened with DELETE_ON_CLOSE and closed. A server may report success for a directory
+that is not empty, and leave it there.
+This also enables USMB2_FEATURE_CLOSE, and adds 113 bytes on top of it on x86_64.
+
+rename support
+--------------
+usmb2_rename() renames or moves a file or directory within the share. The new name is a path
+from the root of the share, and must not exist. Enable with -DUSMB2_FEATURE_RENAME.
+This also enables USMB2_FEATURE_CLOSE, and adds 253 bytes on top of it on x86_64.
+
+
+Tiny TCP/IP stack
+=================
+The tiny TCP/IP stack in z80/ (from https://github.com/sahlberg/z80-tcpip) replaces the
+sockets API when usmb2 is built with -DUSMB2_FEATURE_TINY_TCP, which Z80 builds always are.
+It has a single connection and one buffer for both directions, and every SMB2 reply must fit
+in a single TCP segment, unless usmb2 is built with -DUSMB2_FEATURE_REASSEMBLY.
+The program sets up the connection with tcp_connect() and hands it to usmb2 in usmb2_tcp
+before calling usmb2_init_context(), which then does not use its ip argument. See
+z80/smb2-cat.c.
+
+Below the IP layer is z80/slip.c, SLIP on the Spectrum Interface 1 serial port. On a Linux
+host z80/raw.c takes its place and uses raw sockets: z80/smb2-cat-host.c is an example, built
+with make -C z80 smb2-cat-host.
+On the PS2 IOP z80/ps2smap.c sends and receives ethernet frames through Neutrino's smap.irx
+and ministack.irx (https://github.com/ps2max32/neutrino), without an IOP TCP/IP stack.
+
+
+LWIP
+====
+The code in usmb2.c uses read()/write() to access the socket. Platforms that use special function
+to do this may need changes.
+For example PS2 IOP LWIP afaik requires the use of lwip_send()/lwip_recv() instead.
+
+#define write(a,b,c) lwip_send(a,b,c,0)
+#define read(a,b,c) lwip_recv(a,b,c,0)
+
+
+PS2 IOP
+=======
+make -f Makefile.ps2iop, with PS2SDK set, builds usmb2man.irx: an iomanX driver for the PS2 IOP
+that provides the smb: device. It is 15 KB, and 14 KB once loaded.
+
+It has the same devctl interface as libsmb2's smb2man.irx, in ps2smb2.h:
+SMB2_DEVCTL_CONNECT connects to the share in smb://<ip-address>/<share> as the directory
+smb:/<name>, and SMB2_DEVCTL_DISCONNECT_ALL disconnects all of them.
+
+The shares support open, read, write and lseek, directory listing, getstat, mkdir, rmdir,
+remove and rename. Each of these needs the usmb2 feature it uses: without USMB2_FEATURE_WRITE,
+USMB2_FEATURE_STAT, USMB2_FEATURE_MKDIR, USMB2_FEATURE_UNLINK or USMB2_FEATURE_RENAME the
+operation fails.
+-DHAVE_TIMESTAMPS gives the files their dates, to the minute and right from 2000 to 2080.
+Without it every file is from 2000-01-01 00:00.
+With only -DUSMB2_FEATURE_OPENDIR -DUSMB2_FEATURE_NTLM the driver is read-only, has no
+timestamps, and is 12 KB.
+Limits:
+- The server is an IP address.
+- SMB 3.0 without signing or encryption: a share that requires either does not connect.
+- Paths are shorter than 128 characters.
+- There is no chdir.
+
+
+See ps2-ubms2-cat.c for a linux example on how to use to map a share and read a file.
+
+
+
+If using it without NTLM support you need to configure the server to allow
+Guest access. On samba you would do this something like:
+
+-- smb.conf snippet begin --
+[global]
+        workgroup = SAMBA
+        max protocol = SMB3
+        min protocol = CORE
+        ntlm auth = yes
+        null passwords = yes
+        lanman auth = yes
+        strict sync = no
+        keepalive = 0
+        security = user
+        passdb backend = tdbsam
+        usershare allow guests = yes
+        name resolve order = lmhosts bcast host wins
+        log level = 0
+        guest ok = yes
+        guest account = nobody
+        map to guest = Bad User
+
+[SNAP-1]
+        path = /data/SNAP-1
+        available = yes
+        read only = no
+        browsable = yes
+        writable = yes
+-- smb.conf snippet end --
+
+
+Z80
+===
+The z80 subdirectory for slip and a tcp/ip stack for Z80
+as well as how to build a usmb2 client application for a
+Spectrum48k. 
+This is now obsolete and the TCPIP stack has now been broken out into
+a separate project: https://github.com/sahlberg/z80-tcpip

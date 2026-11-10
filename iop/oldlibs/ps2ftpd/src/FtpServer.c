@@ -221,7 +221,7 @@ int FtpServer_HandleEvents(FtpServer *pServer)
 			       (addr >> 24) & 0xff, (addr >> 16) & 0xff, (addr >> 8) & 0xff, addr & 0xff,
 			       port);
 #endif
-			FtpServer_OnClientConnect(pServer, s);
+			FtpServer_OnClientConnect(pServer, s, sa.sin_addr.s_addr);
 		}
 	}
 
@@ -304,7 +304,7 @@ int FtpServer_HandleEvents(FtpServer *pServer)
 	return res;
 }
 
-FtpClient *FtpServer_OnClientConnect(FtpServer *pServer, int iSocket)
+FtpClient *FtpServer_OnClientConnect(FtpServer *pServer, int iSocket, unsigned int peer_address)
 {
 	FtpClient *pClient;
 	int i;
@@ -331,6 +331,7 @@ FtpClient *FtpServer_OnClientConnect(FtpServer *pServer, int iSocket)
 	}
 
 	FtpClient_Create(pClient, pServer, iSocket);
+	pClient->m_uiPeerAddress = peer_address;
 
 	// attach to server list
 

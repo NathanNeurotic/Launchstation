@@ -69,25 +69,50 @@ int dashCurrentSection(void)
 	return section;
 }
 
+static int sectionTabEnabled(int s)
+{
+	int mask = dashCfg.disabled_tabs & DASH_TAB_MASK;
+	if (mask == DASH_TAB_MASK)
+		mask = 0;
+	return !(mask & (1 << s));
+}
+
 int dashVisibleSectionCount(void)
 {
-	return DASH_VISIBLE_SEC_COUNT;
+	int i, n = 0;
+	for (i = 0; i < DASH_VISIBLE_SEC_COUNT; i++)
+		if (sectionTabEnabled(visible_sections[i]))
+			n++;
+	return n > 0 ? n : DASH_VISIBLE_SEC_COUNT;
 }
 
 int dashVisibleSectionAt(int index)
 {
+	int i, n = 0, last = visible_sections[0];
 	if (index < 0) index = 0;
-	if (index >= DASH_VISIBLE_SEC_COUNT) index = DASH_VISIBLE_SEC_COUNT - 1;
-	return visible_sections[index];
+	for (i = 0; i < DASH_VISIBLE_SEC_COUNT; i++) {
+		if (sectionTabEnabled(visible_sections[i])) {
+			last = visible_sections[i];
+			if (n == index)
+				return last;
+			n++;
+		}
+	}
+	return (n > 0) ? last : visible_sections[index < DASH_VISIBLE_SEC_COUNT ? index : DASH_VISIBLE_SEC_COUNT - 1];
 }
 
 int dashVisibleSectionIndex(int s)
 {
-	int i;
+	int i, n = 0;
 	if (s == DASH_SEC_DEVICES) s = DASH_SEC_FILES;
 	if (s == DASH_SEC_APPS) s = DASH_SEC_HOME;
-	for (i = 0; i < DASH_VISIBLE_SEC_COUNT; i++)
-		if (visible_sections[i] == s) return i;
+	for (i = 0; i < DASH_VISIBLE_SEC_COUNT; i++) {
+		if (!sectionTabEnabled(visible_sections[i]))
+			continue;
+		if (visible_sections[i] == s)
+			return n;
+		n++;
+	}
 	return 0;
 }
 
@@ -99,10 +124,11 @@ const char *dashVisibleSectionName(int index)
 int dashAdjacentSection(int s, int direction)
 {
 	/* All four tabs now have real section state, including the File Browser. */
+	int count = dashVisibleSectionCount();
 	int i = dashVisibleSectionIndex(s) + direction;
-	if (i < 0) i = DASH_VISIBLE_SEC_COUNT - 1;
-	if (i >= DASH_VISIBLE_SEC_COUNT) i = 0;
-	return visible_sections[i];
+	if (i < 0) i = count - 1;
+	if (i >= count) i = 0;
+	return dashVisibleSectionAt(i);
 }
 
 float dashTime(void)
@@ -408,7 +434,7 @@ void dashRunMisc(const char *misc_path)
 		return;
 	}
 	if (!stricmp(misc_path, setting->Misc_HddManager)) {
-		/* PSX too: like the classic one it manages hdd0: (no formatting) */
+		/* PSX too: it manages hdd0: (no formatting) */
 		dashHddManager();
 		return;
 	}
@@ -1281,6 +1307,8 @@ static void firstInit(void)
 		section = DASH_SEC_SETTINGS; /* the Launch keys page is opened in DashRun */
 	else if (section < 0 || section >= DASH_SEC_COUNT)
 		section = DASH_SEC_HOME;
+	if (!sectionTabEnabled(section) && dashCfg.start_section != DASH_START_LAUNCH_KEYS)
+		section = dashVisibleSectionAt(0);
 	dash_inited = 1;
 }
 

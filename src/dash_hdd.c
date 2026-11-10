@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 //File name:   dash_hdd.c
-//Native dashboard HDD Manager. Replaces the classic hddManager() whenever
-//the dashboard runs MISC/HddManager (Tools, Devices, launch keys).
+//The HDD Manager. Every way in (Tools, Devices, launch keys, MISC/HddManager)
+//opens this screen; wLaunchELF's classic HddManager screen is gone.
 //
 //* The partition list is read by the background worker; PFS usage is
 //  probed while browsing. HDL titles load only on explicit R1/details
@@ -20,7 +20,59 @@
 
 #define SECTORS_PER_MB 2048
 #define HDD_MB 1048576
-#define MAX_PART_MB (128 * 1024) /* 128 GB, as the classic manager */
+#define MAX_PART_MB (128 * 1024) /* 128 GB, as wLaunchELF's HddManager */
+
+/* HDIOC_STATUS codes and what they mean */
+typedef struct
+{
+	int Code;
+	const char *ShortText;
+	const char *InfoText;
+} HDDSTATUSINFO;
+
+static const HDDSTATUSINFO HddStatusInfo[] = {
+	{3, "NO HDD", "No suitable HDD was detected by the HDD driver.\nCheck the drive, adapter, power, DEV9, or ATA stack."},
+	{2, "LOCKED", "The HDD was detected, but the driver could not\ncomplete the unlock/usability check."},
+	{1, "NO APA", "The HDD is usable, but no APA format was found.\nFormat the HDD before creating partitions."},
+	{0, "READY", "The HDD is detected, usable, and APA formatted."},
+	{-1, "EPERM", "Operation not permitted.\nThe HDD driver refused the status operation."},
+	{-2, "ENOENT", "The HDD device/path was not found.\nhdd0: may not be registered by the driver."},
+	{-3, "ESRCH", "A required service or RPC target was not found.\nHDD modules may not be running correctly."},
+	{-5, "EIO", "I/O error while querying the HDD.\nCheck the drive, adapter, cabling, and power."},
+	{-6, "ENXIO", "No such device or address.\nThe HDD hardware may be missing or unreachable."},
+	{-11, "EAGAIN", "The HDD resource is temporarily unavailable.\nRetry after the HDD stack settles."},
+	{-12, "ENOMEM", "Out of memory while querying HDD status.\nSystem or module memory may be exhausted."},
+	{-13, "EACCES", "Access denied while querying HDD status.\nThe device or driver state refused access."},
+	{-16, "EBUSY", "The HDD/device resource is busy.\nAnother operation or mount may be holding it."},
+	{-19, "ENODEV", "No such device.\nHDD driver/device registration may be missing."},
+};
+
+static const HDDSTATUSINFO *GetHddStatusInfo(int status)
+{
+	int i;
+
+	for (i = 0; i < (int)(sizeof(HddStatusInfo) / sizeof(HddStatusInfo[0])); i++) {
+		if (HddStatusInfo[i].Code == status)
+			return &HddStatusInfo[i];
+	}
+
+	return NULL;
+}
+
+static const char *hddStatusShortText(int status)
+{
+	const HDDSTATUSINFO *info = GetHddStatusInfo(status);
+
+	return (info != NULL) ? info->ShortText : "UNKNOWN";
+}
+
+static const char *hddStatusInfoText(int status)
+{
+	const HDDSTATUSINFO *info = GetHddStatusInfo(status);
+
+	return (info != NULL) ? info->InfoText : "No specific HDD status description is available for this code.";
+}
+
 
 enum {
 	HP_PFS = 0, /* PFS partition: normal file access */
@@ -548,6 +600,13 @@ static void afterChange(void)
 	scan();
 }
 
+/* names starting with "__" belong to the system and PSBBN */
+static int confirmReservedName(const char *name)
+{
+	return strncmp(name, "__", 2) ||
+	       dashModalConfirm("System partition name", "Names starting with \"__\" are reserved for the system and for PSBBN. Create it anyway?", localizeDashboardText("Create"), 1);
+}
+
 static void actCreate(void)
 {
 	char name[MAX_PART_NAME + 1], unique[MAX_PART_NAME + 1], body[160];
@@ -557,8 +616,7 @@ static void actCreate(void)
 	name[0] = '\0';
 	if (!dashModalKeyboard("New partition name", name, MAX_PART_NAME - 3) || name[0] == '\0')
 		return;
-	if (!strncmp(name, "__", 2) &&
-	    !dashModalConfirm("System partition name", "Names starting with \"__\" are reserved for the system and for PSBBN. Create it anyway?", localizeDashboardText("Create"), 1))
+	if (!confirmReservedName(name))
 		return;
 	max_mb = hm.free_mb < MAX_PART_MB ? (int)hm.free_mb : MAX_PART_MB;
 	if (max_mb < 128) {
@@ -764,7 +822,7 @@ static void injectOne(HddPart *p, const char *src)
 static void injectMatching(const char *src, int create_missing)
 {
 	HddJob *list = jobNew(HOP_LIST_HEADERS);
-	int injected = 0, created = 0, skipped = 0, failed = 0, stopped = 0, i;
+	int injected = 0, created = 0, skipped = 0, failed = 0, pfs_failed = 0, stopped = 0, i;
 	char body[240];
 
 	if (list == NULL)
@@ -816,6 +874,10 @@ static void injectMatching(const char *src, int create_missing)
 				stopped = 1;
 				break;
 			}
+			if (!confirmReservedName(name)) {
+				skipped++;
+				continue;
+			}
 			size = pickSize("Partition size", 128, hm.free_mb < MAX_PART_MB ? (int)hm.free_mb : MAX_PART_MB, 128);
 			if (size <= 0) {
 				stopped = 1;
@@ -848,15 +910,17 @@ static void injectMatching(const char *src, int create_missing)
 			stopped = 1;
 			break;
 		}
-		if (j->ret >= 0)
+		if (j->ret >= 0) {
 			injected++;
-		else
+			if (j->pfs_error < 0)
+				pfs_failed++;
+		} else
 			failed++;
 		hddJobFree(j);
 	}
-	snprintf(body, sizeof(body), "Injected: %d   Created: %d   Skipped: %d   Failed: %d%s",
-	         injected, created, skipped, failed, stopped ? "   (stopped)" : "");
-	dashModalMessage(failed ? DI_WARNING : DI_CHECK, "Header injection finished", body,
+	snprintf(body, sizeof(body), "Injected: %d   Created: %d   Skipped: %d   Failed: %d   PFS copy failed: %d%s",
+	         injected, created, skipped, failed, pfs_failed, stopped ? "   (stopped)" : "");
+	dashModalMessage((failed || pfs_failed) ? DI_WARNING : DI_CHECK, "Header injection finished", body,
 	                 list->invalid ? "Some header folders were incomplete and were ignored." : NULL);
 	hddJobFree(list);
 	if (created)

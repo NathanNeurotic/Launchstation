@@ -142,6 +142,7 @@ static void *test_realloc(void *old,size_t n){
 #define free test_free
 static u64 Timer(void){return ++clock_ms;}
 static unsigned getIopResetGeneration(void){return generation;}
+static int setFileXioTransferWide(int w){(void)w;return 0;}
 static int prepareTransferDeviceStacks(const char *a,const char *b){(void)a;(void)b;return TRANSFER_STACK_READY;}
 static int clipboardSourceDeviceReady(void){return 1;}
 static void waitUntilTimer(u64 end){clock_ms=end;}
@@ -260,6 +261,7 @@ code += 'static ' + function((root / 'src/filer_fileops.c').read_text(), 'void g
 # The real reader and strict listing behind copy(); only the device dispatch is replaced.
 code += 'static int dir_opened,dir_open_error,dir_read_error,dir_complete;\n'
 code += function(filer, 'static void dirOpenResult(')
+code += function(filer, 'static void dirReadFailed(')
 reader = function(filer, 'int readGENERIC(const char *path, FILEINFO *info, int max)\n{')
 code += 'static ' + reader
 code += ('static int listDir(const char *p,FILEINFO *out,int max){'

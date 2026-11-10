@@ -345,6 +345,11 @@ static int settingsKv(const char *key, char *value, void *user)
 		dashCfg.home_shortcuts = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_IconBacking"))
 		dashCfg.icon_backing = clampInt(value, 0, 1, 1);
+	else if (!stricmp(key, "Dash_Disabled_Tabs")) {
+		dashCfg.disabled_tabs = clampInt(value, 0, DASH_TAB_MASK, 0) & DASH_TAB_MASK;
+		if (dashCfg.disabled_tabs == DASH_TAB_MASK)
+			dashCfg.disabled_tabs = 0;
+	}
 	else if (!stricmp(key, "Dash_TemperatureFahrenheit"))
 		dashCfg.temp_fahrenheit = clampInt(value, 0, 1, 0);
 	else if (!stricmp(key, "Dash_ShowUnavailableDevices"))
@@ -528,6 +533,7 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                "Dash_FilesMode = %d\r\n"
 	                "Dash_HomeShortcuts = %d\r\n"
 	                "Dash_IconBacking = %d\r\n"
+	                "Dash_Disabled_Tabs = %d\r\n"
 	                "Dash_ShowUnavailableDevices = %d\r\n"
 	                "Dash_DevAuto = %d\r\n"
 	                "Dash_MMCEBackupKeep = %d\r\n"
@@ -543,7 +549,7 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	                c->anim, c->autoscan, c->artwork, c->recent_count,
 	                c->legacy_theme, c->intro_done, c->software_clock, c->sound, c->sound_vol, c->sound_theme,
 	                c->bgm, c->bgm_vol, c->app_filter, c->files_mode,
-	                c->home_shortcuts, c->icon_backing, c->show_unavailable_devices, c->dev_auto,
+	                c->home_shortcuts, c->icon_backing, c->disabled_tabs & DASH_TAB_MASK, c->show_unavailable_devices, c->dev_auto,
 	                c->mmce_backup_keep, c->mmce_backup_format, c->mmce_backup_saves,
 	                c->igr_auto_backup, c->igr_cloud_sync, c->igr_backup_path,
 	                c->igr_after, c->igr_after_path, c->temp_fahrenheit);
@@ -587,6 +593,8 @@ static void saveRun(void *arg)
 	SaveJob *j = (SaveJob *)arg;
 
 	j->ret = dashWriteFile(j->path, j->buf, j->len);
+	if (j->ret == 0 && j->kind == SAVE_SETTINGS)
+		configStampMcFolderIcon();
 }
 
 static void saveDone(void *arg)

@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 //File name:   smb_shares.c
 //SMB network shares on the PS2 side: finds and reads SMB2.CNF, connects its
-//shares through smb2man.irx (smb:, SMB2/SMB3) and smbman.irx (smb1:, SMB1),
+//shares through smb2man (smb:, SMB2/SMB3) and smbman (smb1:, SMB1),
 //and keeps what happened to each share for the browser to show.
 //
 //init.c loads the drivers (load_smb()); this file only talks to them.
@@ -17,7 +17,7 @@
 #define SMB_CNF_NAME     "SMB2.CNF"
 #define SMB_CNF_MAX_SIZE 16384
 /* A failed share is tried again when its device is opened, but not sooner
- * than this: each try can wait for libsmb2's 30 s timeout. */
+ * than this: each try can wait for smb2man's 5 s connect timeout. */
 #define SMB_RETRY_MS 30000
 
 /* smbman's logon errors are positive codes; this one is ours, for a
@@ -91,6 +91,21 @@ static unsigned int smbTextHash(const char *text)
 	return hash;
 }
 
+static int smbDisconnectAllSessions(void)
+{
+	int ret2 = 0, ret1 = 0;
+
+	if (isSmbDriverLoaded(SMB_PATH_V2) && smbSharesConnectedCount(SMB_PATH_V2) > 0)
+		ret2 = fileXioDevctl(SMB_DEVICE_V2, SMB2_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0);
+	if (isSmbDriverLoaded(SMB_PATH_V1) && smbSharesConnectedCount(SMB_PATH_V1) > 0)
+		ret1 = fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_LOGOFF, NULL, 0, NULL, 0);
+	if (ret2 < 0 || ret1 < 0) {
+		DPRINTF(" [SMB]: config reload refused: SMB2 disconnect=%d SMB1 logoff=%d\n", ret2, ret1);
+		return 0;
+	}
+	return 1;
+}
+
 static void smbReadConfig(void)
 {
 	char *text, previous_path[MAX_PATH];
@@ -110,15 +125,11 @@ static void smbReadConfig(void)
 	/* A changed pending config may reuse a share name. Retire the old driver
 	 * sessions before parsing it so -EEXIST cannot alias the old connection. */
 	if (smb_cfg_mc1_pending &&
-	    (text_hash != smb_cfg_text_hash || strcmp(previous_path, smb_cfg_path))) {
-		if (smbSharesConnectedCount(SMB_PATH_V2) > 0 &&
-		    fileXioDevctl(SMB_DEVICE_V2, SMB2_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0) < 0) {
-			snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", previous_path);
-			free(text);
-			return;
-		}
-		if (smbSharesConnectedCount(SMB_PATH_V1) > 0)
-			fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_LOGOFF, NULL, 0, NULL, 0);
+	    (text_hash != smb_cfg_text_hash || strcmp(previous_path, smb_cfg_path)) &&
+	    !smbDisconnectAllSessions()) {
+		snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", previous_path);
+		free(text);
+		return;
 	}
 	smbConfigParse(text, &smb_cfg);
 	free(text);
@@ -251,6 +262,21 @@ static const char *smb1Problem(int ret)
 	}
 }
 
+static const char *smb2Problem(int ret)
+{
+	switch (-ret) {
+		case SMB2_CONNECT_ERR_URL: return "URL needs smb://<IP address>[:port]/<share>";
+		case SMB2_CONNECT_ERR_CONN: return "Server did not answer";
+		case SMB2_CONNECT_ERR_PROT: return "Server speaks no SMB 2.0.2 to 3.0.2 (SMB 3.1.1 only?)";
+		case SMB2_CONNECT_ERR_SIGNING: return "Server requires SMB3 signing: allow SMB2 or optional signing";
+		case SMB2_CONNECT_ERR_LOGON: return "User name or password refused";
+		case SMB2_CONNECT_ERR_SHARE: return "Share refused or not found";
+		case SMB2_CONNECT_ERR_FULL: return "Too many shares connected";
+		case SMB2_CONNECT_ERR_MEMORY: return "Not enough IOP memory for the share";
+		default: return "Could not connect";
+	}
+}
+
 /* Connects the valid shares of one version that are not connected yet.
  * retry_failed also tries the failed ones again, at most every
  * SMB_RETRY_MS. With no share connected, SMB2.CNF is read again first, so
@@ -282,8 +308,7 @@ void smbSharesConnect(int version, int retry_failed)
 			sh->problem = NULL;
 		} else {
 			sh->state = SMB_STATE_FAILED;
-			sh->problem = version == 1 ? smb1Problem(ret)
-			                           : "Could not connect: check the address, share, user name and password";
+			sh->problem = version == 1 ? smb1Problem(ret) : smb2Problem(ret);
 		}
 		DPRINTF(" [SMB%d]: %s as %s%s, ret=%d\n", version, sh->url,
 		        version == 1 ? SMB_DEVICE_V1 "/" : SMB_DEVICE_V2 "/", version == 1 ? "" : sh->name, ret);
@@ -353,16 +378,17 @@ void smbSharesForget(void)
 	memset(smb_retry_ms, 0, sizeof(smb_retry_ms));
 }
 
-/* smb2man keeps the shares it already holds (the next connect answers
- * -EEXIST, which connectSmb2() counts as connected); smbman has a single
- * session, so log it off for the new credentials. */
-void smbSharesReload(void)
+/* A config edit must retire driver sessions before the same share label
+ * is connected again. Otherwise smb2man returns -EEXIST for the old session,
+ * which can silently retain the former host, share and credentials. */
+int smbSharesReload(void)
 {
-	if (isSmbDriverLoaded(SMB_PATH_V1) && smbSharesConnectedCount(SMB_PATH_V1) > 0)
-		fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_LOGOFF, NULL, 0, NULL, 0);
+	if (!smbDisconnectAllSessions())
+		return 0;
 	smbSharesForget();
 	smb_cfg_loaded = 0;
 	smb_cfg_mc1_pending = 0;
+	return 1;
 }
 //--------------------------------------------------------------
 //End of file: smb_shares.c

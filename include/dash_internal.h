@@ -237,6 +237,7 @@ typedef struct
 	u8 clock, clock_pos, clock_hours, clock_seconds, clock_date;
 	/* header */
 	u8 tabs;
+	u8 console_info; /* console summary line at the top of HOME */
 	/* app-aware wallpaper */
 	u8 wallpaper, wall_dim; /* wall_dim: 0..90 % */
 } DashTheme;
@@ -581,6 +582,7 @@ typedef struct
 	int files_mode;              /* 0 = Files list, 1 = Devices cards */
 	int home_shortcuts;          /* HOME quick-launch row */
 	int icon_backing;            /* control/quick-action backing shapes */
+	int disabled_tabs;           /* bitmask of disabled DASH_SEC_* tabs */
 	int temp_fahrenheit;         /* 0 = Celsius, 1 = Fahrenheit */
 	int show_unavailable_devices;/* include disconnected/probe-only device cards */
 	int dev_auto; /* DASH_DEVA_* bitmask: drivers to load at startup */
@@ -605,6 +607,7 @@ typedef struct
 #define DASH_DEVA_UDPFS  (1 << 5)
 #define DASH_DEVA_ILINK  (1 << 6)
 #define DASH_DEVA_ALL    0x7F
+#define DASH_TAB_MASK    ((1 << DASH_SEC_HOME) | (1 << DASH_SEC_FILES) | (1 << DASH_SEC_TOOLS) | (1 << DASH_SEC_SETTINGS))
 
 extern DashSettings dashCfg;
 
@@ -788,10 +791,11 @@ void dashDevicesAutoProbe(void);
 void dashDevicesResetBaseline(void);
 int dashBootDeviceBit(void);
 int dashDevicesList(DashDevice *out, int max);
+void dashDevicesRefreshMemoryCards(DashDevice *devs, int count); /* cached poll, no I/O */
 /* Starts a device's drivers (UI thread, loading overlay); `cb` is called
  * with ok = device usable. -1 = the user backed out of the wait. */
 typedef void (*DashProbeDone)(const char *mount, int ok, void *user);
-int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user);
+int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user); /* -1 user backed out; 1 refused and already explained; cb not called for either */
 void dashDevicesAutoStart(void);                 /* auto-start devices that are off */
 void dashDevicesStartForPath(const char *path);  /* driver for a path's device */
 const char *dashDiscStatus(void);
@@ -937,6 +941,7 @@ enum {
 int dashPickPath(const char *title, const char *start_dir, int mode, const char *ext, char *out, int out_size);
 void dashModalSetPreview(void (*fn)(int index)); /* applies to the next dashModalMenu() */
 void dashModalSetMarks(unsigned char *marks);    /* next dashModalMenu(): Square toggles 0/1; other values fixed */
+void dashModalSetEdit(int (*edit)(int index, int direction, void *arg), void *arg); /* next dashModalMenu(): Left/Right/Confirm change rows in place */
 int dashModalKeepVideo(void);
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger);
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail);
@@ -1050,6 +1055,8 @@ void dashPopSceneOverride(void);
  * file does not exist yet (e.g. an application's .arg sidecar). */
 int dashTextEditor(const char *path);
 int dashTextEditorEx(const char *path, int create_if_missing);
+/* Hex Editor (dash_editor.c): overwrite bytes of a file up to 512 KB; saves are read back and compared. */
+void dashHexEditor(const char *path);
 float dashTime(void);
 /* Visual-only tick, once before each dashboard/modal frame. No input or IO. */
 float dashVisualUpdate(void);
@@ -1065,8 +1072,6 @@ float dashSectionAnim(void); /* 0..1 section-transition clock */
 #define DASH_LAUNCH_PENDING_ARGS 2
 void dashLaunchApp(DashApp *app, int with_args_prompt);
 void dashRunMisc(const char *misc_path);
-/* Native HDD Manager (dash_hdd.c) */
-void dashHddManager(void);
 /* Native information screens (dash_info.c) */
 void dashShowAbout(void);
 void dashShowBuildInfo(void);
@@ -1109,6 +1114,7 @@ void dashRescanLibrary(int interactive);
 int dashClockSetManual(int year, int month, int day, int hour, int minute, int second,
                        char *result, int result_size);
 int dashClockSyncInternet(char *result, int result_size);
+int dashClockDaysInMonth(int year, int month); /* 0 for a month outside 1-12 */
 const MainExecuteContext *dashExecContext(void);
 const char *dashOkLabelKey(void);
 

@@ -499,7 +499,7 @@ static void setup(void)
 }
 static FtpClient *client(FtpServer *server, int fd, const char *cwd)
 {
-	FtpClient *c = FtpServer_OnClientConnect(server, fd);
+	FtpClient *c = FtpServer_OnClientConnect(server, fd, 0x0100a8c0u);
 	assert(c);
 	c->m_eAuthState = AUTHSTATE_VALID;
 	assert(FileSystem_ChangeDir(&c->m_kContext, cwd) == 0);
@@ -1042,22 +1042,40 @@ static void test_status_operation(void)
 	setup();
 	FtpServer s;
 	FtpServer_Create(&s);
-	FtpClient *c = FtpServer_OnClientConnect(&s, 10);
+	FtpControl_Init(&s);
+	FtpClient *c = FtpServer_OnClientConnect(&s, 10, 0x0100a8c0u);
 	assert(c);
 	command(c, "CWD /usb/0");
 	assert(reply(10) != 250);
 	LsFtpStatus *st = FtpControl_Exchange(LS_FTP_STATUS, NULL, 0);
-	assert(!st->operation[0]); /* rejected pre-login commands are not operations */
+	assert(!st->history[0].text[0]); /* rejected pre-login commands are not operations */
 	c->m_eAuthState = AUTHSTATE_VALID;
 	assert(FileSystem_ChangeDir(&c->m_kContext, "/usb/0") == 0);
 	command(c, "SIZE file.elf");
 	assert(reply(10) == 213);
 	st = FtpControl_Exchange(LS_FTP_STATUS, NULL, 0);
-	assert(!strcmp(st->operation, "SIZE file.elf"));
+	assert(!strcmp(st->history[0].text, "SIZE file.elf") && !st->history[1].text[0]);
+	/* the stub clock (2026-10-31 00:00:00 JST) is decoded from BCD */
+	assert(st->history[0].year == 26 && st->history[0].month == 10 && st->history[0].day == 31);
+	assert(st->clients == 1);
+	command(c, "NOOP");
+	command(c, "SYST");
+	command(c, "PWD");
+	st = FtpControl_Exchange(LS_FTP_STATUS, NULL, 0);
+	assert(!strcmp(st->history[0].text, "PWD") && !strcmp(st->history[1].text, "SYST") &&
+	       !strcmp(st->history[2].text, "NOOP")); /* newest first, three kept */
+	/* a second connection from the same machine is still one client */
+	FtpClient *c2 = FtpServer_OnClientConnect(&s, 11, 0x0100a8c0u);
+	assert(c2);
+	st = FtpControl_Exchange(LS_FTP_STATUS, NULL, 0);
+	assert(st->clients == 1);
+	assert(FtpServer_OnClientConnect(&s, 12, 0x0200a8c0u)); /* another machine */
+	st = FtpControl_Exchange(LS_FTP_STATUS, NULL, 0);
+	assert(st->clients == 2);
 	command(c, "PASS secret");
 	assert(reply(10) == 503);
 	st = FtpControl_Exchange(LS_FTP_STATUS, NULL, 0);
-	assert(!strcmp(st->operation, "SIZE file.elf")); /* credentials are never recorded */
+	assert(!strcmp(st->history[0].text, "PWD")); /* credentials are never recorded */
 	FtpServer_Destroy(&s);
 	puts("PASS: status reports authenticated operations and never records credentials");
 }

@@ -311,34 +311,35 @@ static void addStorage(DashDevice *out, int *n, int max, int icon,
 	    state == DASH_DEV_READY ? ready : state == DASH_DEV_ABSENT ? absent : "Not connected");
 }
 
-int dashDevicesList(DashDevice *out, int max)
+/* Memory-card rows from the cached poll, without card I/O. Views that keep
+ * their device list open (browser, folder picker) call it to stay current.
+ * From saildot4k/Launchstation 9372a47. */
+void dashDevicesRefreshMemoryCards(DashDevice *devs, int count)
 {
-	int n = 0, port, i;
-	DashDevice *d;
+	int i;
 
-	for (port = 0; port < 2; port++) {
-		int type = 0, free_kb = -1;
-		int present = filerRootMcPresent(port, &type, &free_kb);
-		char name[32], mount[8], browse[8];
+	for (i = 0; i < count; i++) {
+		DashDevice *d = &devs[i];
+		int port, type = 0, free_kb = -1, present;
+		const char *status;
 
-		/* PS2 port 0 is mc0 (physical slot 1); port 1 is mc1 (slot 2).
-		 * Keep the label and actual filesystem mount tied to the same port. */
-		snprintf(name, sizeof(name), "mc%d (Slot %d)", port, port + 1);
-		snprintf(mount, sizeof(mount), "mc%d:", port);
-		snprintf(browse, sizeof(browse), "mc%d:/", port);
+		if (d->icon != DI_MC || strncmp(d->mount, "mc", 2) || (d->mount[2] != '0' && d->mount[2] != '1') || d->mount[3] != ':')
+			continue;
+		port = d->mount[2] - '0';
+		present = filerRootMcPresent(port, &type, &free_kb);
+		d->detail[0] = '\0';
+		d->fill = -1.0f;
+		d->state = present < 0 ? DASH_DEV_BUSY : present ? DASH_DEV_READY : DASH_DEV_ABSENT;
 		if (present == -2 && port == 1 && !isPathDeviceStackLoaded("mc1:/"))
 			/* MX4SIO owns slot 2's SIO2 port; opening it resets the IOP first. */
-			d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Used by MX4SIO - open to switch");
-		else if (present == -2)
-			d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Not responding - open to retry");
+			status = "Used by MX4SIO - open to switch";
 		else if (present < 0)
-			d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Checking...");
-		else if (present == 0)
-			d = add(out, &n, max, DI_MC, DASH_DEV_ABSENT, name, mount, browse, "Slot empty");
+			status = present == -2 ? "Not responding - open to retry" : "Checking...";
+		else if (!present)
+			status = "Slot empty";
 		else {
-			d = add(out, &n, max, DI_MC, DASH_DEV_READY, name, mount, browse,
-			        type == 1 ? "PS1 memory card" : "PS2 memory card");
-			if (d != NULL && free_kb >= 0) {
+			status = type == 1 ? "PS1 memory card" : "PS2 memory card";
+			if (free_kb >= 0) {
 				if (type == 2 && free_kb <= 8 * 1024) {
 					snprintf(d->detail, sizeof(d->detail), "%.2f MB free of 8 MB", free_kb / 1024.0f);
 					d->fill = 1.0f - free_kb / 8192.0f;
@@ -346,6 +347,26 @@ int dashDevicesList(DashDevice *out, int max)
 					snprintf(d->detail, sizeof(d->detail), "%.2f MB free", free_kb / 1024.0f);
 			}
 		}
+		dashStrCopy(d->status, localizeDashboardText(status), sizeof(d->status));
+	}
+}
+
+int dashDevicesList(DashDevice *out, int max)
+{
+	int n = 0, port, i;
+	DashDevice *d;
+
+	for (port = 0; port < 2; port++) {
+		char name[32], mount[8], browse[8];
+
+		/* PS2 port 0 is mc0 (physical slot 1); port 1 is mc1 (slot 2).
+		 * Keep the label and actual filesystem mount tied to the same port. */
+		snprintf(name, sizeof(name), "mc%d (Slot %d)", port, port + 1);
+		snprintf(mount, sizeof(mount), "mc%d:", port);
+		snprintf(browse, sizeof(browse), "mc%d:/", port);
+		d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Checking...");
+		if (d != NULL)
+			dashDevicesRefreshMemoryCards(d, 1);
 	}
 
 	if (isUsbMassStackLoaded()) {
@@ -422,7 +443,7 @@ int dashDevicesList(DashDevice *out, int max)
 	}
 
 #ifdef UDPFS
-	addStorage(out, &n, max, DI_SHARE, "Network (UDPFS)", "udpfs:", "udpfs:/", netConfig[0] ? netConfig : "Connected", "UDPFS server not found");
+	addStorage(out, &n, max, DI_SHARE, "Network (UDPFS)", "udpfs:", "udpfs:/", netConfig[0] ? netConfig : "Connected", "UDPFS server not found - open to retry");
 #endif
 #ifdef SMB
 	{
@@ -525,17 +546,21 @@ static int probeMmceRoot(const char *path)
 
 static int probeUsbMediaAnimated(void)
 {
+	int quiet = isStartupDriverStatusQuiet();
+	int fast_boot_probe = quiet && dashBootDeviceBit() != DASH_DEVA_USB;
+	int attempts = fast_boot_probe ? 2 : DASH_USB_PROBE_ATTEMPTS;
+	int delay_us = fast_boot_probe ? 250000 : DASH_USB_PROBE_DELAY_US;
 	int attempt, mask = 0, first_seen = -1;
 
-	for (attempt = 0; attempt < DASH_USB_PROBE_ATTEMPTS; attempt++) {
+	for (attempt = 0; attempt < attempts; attempt++) {
 		if (dashLoadingActive())
-			dashLoadingStatus("Checking USB media...", attempt + 1, DASH_USB_PROBE_ATTEMPTS);
+			dashLoadingStatus("Checking USB media...", attempt + 1, attempts);
 		/* USB root stats go through fileXioGetStatBounded: a wedged slot
 		 * fails fast instead of hanging the whole probe on one RPC. Do not
 		 * probe an absent second slot twenty times merely because only one
 		 * drive is connected. */
 		mask = filerUsbRefreshDriveMask();
-		if ((mask & 3) == 3)
+		if ((mask & 3) == 3 || (mask && quiet))
 			return 1;
 		if (mask) {
 			/* Preserve the older 1.8-second late-mount acceptance window,
@@ -547,13 +572,13 @@ static int probeUsbMediaAnimated(void)
 			else if (attempt - first_seen >= 2)
 				return 1;
 		}
-		if (attempt == DASH_USB_PROBE_ATTEMPTS - 1)
+		if (attempt == attempts - 1)
 			break;
 
 		if (dashLoadingActive())
 			dashLoadingFrame("Waiting for USB storage...", attempt + 1,
-			                 DASH_USB_PROBE_ATTEMPTS);
-		DelayThread(DASH_USB_PROBE_DELAY_US);
+			                 attempts);
+		DelayThread(delay_us);
 	}
 	return mask != 0;
 }
@@ -702,6 +727,27 @@ int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user)
 	int ok;
 
 	snprintf(title, sizeof(title), "Starting %s", dev->name);
+#ifdef UDPFS
+	/* Opening a failed UDPFS row retries it. The failed discovery stays
+	 * latched in the resident stack, so a server started since needs a fresh
+	 * IOP, as the classic browser does. Only this explicit open resets. */
+	if (!strcmp(dev->mount, "udpfs:") && storageState(dev->mount) == DASH_DEV_ABSENT) {
+		if (!dashWorkerAwaitAll("Finishing up"))
+			return -1;
+		dashLoadingBegin(title);
+		unsigned int generation = getIopResetGeneration();
+
+		dashLoadingFrame("Restarting the network...", 0, 0);
+		reloadUdpfsModules();
+		dashLoadingEnd();
+		if (getIopResetGeneration() == generation) {
+			/* The reset was refused (FTP still closing files): the old
+			 * discovery result stands, so do not probe it again. */
+			dashToast(DASH_TOAST_WARN, "Could not restart the network. Stop FTP and try again.");
+			return 1;
+		}
+	}
+#endif
 	ok = startSync(dev->mount, title);
 	if (ok < 0)
 		return -1;

@@ -16,8 +16,6 @@
 #include "main_title.h"
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
 #include "cloud_google.h"
-#endif
-#ifdef ETH
 #include "init.h"
 #endif
 #ifdef SMB
@@ -61,6 +59,9 @@ enum SetId {
 	S_FILES_MODE,
 	S_VIEW,
 	S_HOME_SHORTCUTS,
+	S_TAB_HOME,
+	S_TAB_FILES,
+	S_TAB_TOOLS,
 	S_ICON_BACKING,
 	S_ARTWORK,
 	S_RECENT,
@@ -177,6 +178,7 @@ enum SetId {
 	S_T_TILE,
 	S_T_GLOW,
 	S_T_TABS,
+	S_T_CONSOLE,
 	S_T_PANEL_A,
 	S_T_FONT,
 	S_T_FSCALE,
@@ -260,6 +262,9 @@ static const SetItem display_items[] = {
 
 static const SetItem dash_items[] = {
     {ST_CHOICE, S_START, "Start screen", "Initial screen. Applications opens the library under Home directly; Launch keys opens Settings on its Launch keys page."},
+    {ST_CHOICE, S_TAB_HOME, "Home tab", "Off removes HOME from the tabs and from L1/R1. Settings always stays. Saved as Dash_Disabled_Tabs."},
+    {ST_CHOICE, S_TAB_FILES, "Files tab", "Off removes FILES from the tabs and from L1/R1. Settings always stays. Saved as Dash_Disabled_Tabs."},
+    {ST_CHOICE, S_TAB_TOOLS, "Tools tab", "Off removes TOOLS from the tabs and from L1/R1. Settings always stays. Saved as Dash_Disabled_Tabs."},
     {ST_CHOICE, S_HOME_SHORTCUTS, "Home quick-launch shortcuts", "Show configured launch-key shortcuts alongside Applications and Last folder."},
     {ST_CHOICE, S_VIEW, "Application view", "Grid, list or carousel (SELECT also switches it in Home > Applications)."},
     {ST_CHOICE, S_ARTWORK, "Application artwork", "Load cover art for tiles and artwork backgrounds."},
@@ -491,12 +496,18 @@ static void smbedLoadPick(void)
 
 static int smbedWriteFile(const char *block)
 {
-	char path[MAX_PATH];
-	static char out[SMB_CNF_MAX_SIZE + 512];
-	static char work[SMB_CNF_MAX_SIZE + 512];
-	char *text;
-	int len, fd;
+	char path[MAX_PATH], sysconf[MAX_PATH];
+	char *out, *work, *text;
+	SmbConfig cfg;
+	int len, fd, i, matches = 0, valid = 0, ret = -3;
 
+	out = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
+	work = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
+	if (out == NULL || work == NULL) {
+		free(out);
+		free(work);
+		return -3;
+	}
 	smbedConfigPath(path, sizeof(path));
 	text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL);
 	if (text == NULL) {
@@ -506,48 +517,44 @@ static int smbedWriteFile(const char *block)
 		fd = genOpen(path, FIO_O_RDONLY);
 		if (fd >= 0) {
 			genClose(fd);
-			return -4;
+			ret = -4;
+			goto out_free;
 		}
 	}
 	len = smbCnfUpsertText(text != NULL ? text : "", smbed.orig, block,
-	                       out, sizeof(out), work, sizeof(work));
-	if (text != NULL)
-		free(text);
-	if (len < 0)
-		return -1;
-	/* The whole file must still parse and this share must be one it
-	   accepts: a duplicate NAME or a broken URL is reported from here,
-	   not at boot. A delete is validated by absence instead. */
+	                       out, SMB_CNF_MAX_SIZE + 512, work, SMB_CNF_MAX_SIZE + 512);
+	free(text);
+	if (len < 0) {
+		ret = -1;
+		goto out_free;
+	}
 	memcpy(work, out, len + 1);
-	{
-		SmbConfig cfg;
-		int i, found = 0, valid = 0;
-
-		smbConfigParse(work, &cfg);
-		for (i = 0; i < cfg.count; i++)
-			if (strcmp(cfg.share[i].name, smbed.name) == 0) {
-				found = 1;
-				if (cfg.share[i].state != SMB_STATE_INVALID)
-					valid = 1;
-			}
-		if (block != NULL) {
-			if (!valid)
-				return -2;
-		} else if (found) {
-			return -2; /* the delete left a (duplicate, invalid) share */
+	smbConfigParse(work, &cfg);
+	for (i = 0; i < cfg.count; i++)
+		if (!stricmp(cfg.share[i].name, block != NULL ? smbed.name : smbed.orig)) {
+			matches++;
+			if (cfg.share[i].state != SMB_STATE_INVALID)
+				valid++;
 		}
+	if (block != NULL ? (matches != 1 || valid != 1) : matches != 0) {
+		ret = -2;
+		goto out_free;
 	}
-	fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
-	if (fd < 0)
-		return -3;
-	if (genWrite(fd, out, len) != len) {
+	if (dashWriteFile(path, out, len) < 0)
+		goto out_free;
+	/* When the primary file lives beside the ELF, also update an existing
+	 * SYS-CONF copy so neither lookup location retains stale share entries. */
+	configBuildSysconfPath(sysconf, sizeof(sysconf), "SMB2.CNF");
+	if (strcmp(path, sysconf) != 0 && (fd = genOpen(sysconf, FIO_O_RDONLY)) >= 0) {
 		genClose(fd);
-		return -3;
+		dashWriteFile(sysconf, out, len);
 	}
-	genClose(fd);
-	smbSharesReload();
+	ret = smbSharesReload() ? 0 : -6;
 	smbSharesSnapshot(&smbed.snap);
-	return 0;
+out_free:
+	free(out);
+	free(work);
+	return ret;
 }
 
 static void smbedSave(void)
@@ -580,22 +587,26 @@ static void smbedSave(void)
 		                 "The file would not accept this share (a NAME may already be in use).", NULL);
 		return;
 	}
+	if (r == -6) {
+		dashModalMessage(DI_WARNING, "Share saved; restart needed",
+		                 "SMB2.CNF was written, but the old SMB connection could not be disconnected. Restart Launchstation to apply the changed share.", NULL);
+		return;
+	}
 	if (r != 0) {
 		dashModalMessage(DI_WARNING, "Share not saved", "SMB2.CNF could not be written.", NULL);
 		return;
 	}
-	dashStrCopy(smbed.orig, smbed.name, sizeof(smbed.orig));
 	smbSharesSnapshot(&smbed.snap);
 	/* Point the picker at the saved share: the next Save replaces it, and
 	   Delete enables, instead of silently appending a second copy. */
 	for (i = 0; i < smbed.snap.count; i++)
 		if (strcmp(smbed.snap.share[i].name, smbed.name) == 0) {
 			smbed.pick = i + 1;
+			dashStrCopy(smbed.orig, smbed.name, sizeof(smbed.orig));
 			break;
 		}
 	dashModalMessage(DI_CHECK, "Share saved",
-	                 "The smb:/ list (smb1:/ for an SMB1 share) reloads SMB2.CNF when it opens; "
-	                 "open it in Files to connect.", block);
+	                 "Open Files > smb:/ for SMB2/3 or smb1:/ for SMB1. The SMB2/3 list shows only shares that connect.", smbed.name);
 }
 
 static void smbedDelete(void)
@@ -606,7 +617,10 @@ static void smbedDelete(void)
 		return;
 	r = smbedWriteFile(NULL);
 	if (r != 0) {
-		dashModalMessage(DI_WARNING, "Share not deleted", "SMB2.CNF could not be written.", NULL);
+		dashModalMessage(DI_WARNING,
+		                 r == -6 ? "Share deleted; restart needed" : "Share not deleted",
+		                 r == -6 ? "Saved configuration could not retire old SMB sessions. Restart Launchstation." :
+		                 "SMB2.CNF could not be written.", NULL);
 		return;
 	}
 	smbed.pick = 0;
@@ -630,16 +644,16 @@ static void smbedEditField(const char *title, char *buf, int size, const char *e
 
 static const SetItem smb_items[] = {
 	{ST_CHOICE, S_SMBED_PICK, "Share", "New share, or one already in SMB2.CNF."},
-	{ST_ACTION, S_SMBED_NAME, "Name shown in Files", "The smb:/NAME label: letters, digits, spaces; not / \\ : * ? \" < > |, and not another share's name."},
-	{ST_CHOICE, S_SMBED_KIND, "Server type", "SMB2: an SMB2 server (PS2-Servers' SMBv2 card). SMB3: a server set to SMB 3 only (its SMBv3 card, port 445). SMB1: an old server (its SMBv1 card), opened via smb1:/."},
-	{ST_ACTION, S_SMBED_IP, "Server address", "The PC's address, as PS2-Servers' card shows it under LAN IP."},
-	{ST_ACTION, S_SMBED_PORT, "Port", "TCP port the server listens on; 445 is the default. A PS2-Servers card on Windows serves 445 (its Take port 445 option); on Linux/macOS it shows the port to type."},
-	{ST_ACTION, S_SMBED_FOLDER, "Share name", "The share on the server; PS2-Servers' default is 'games'."},
-	{ST_ACTION, S_SMBED_USER, "Username", "As the server lists it; blank when the share needs no logon (use the server's guest user, e.g. 'guest')."},
-	{ST_ACTION, S_SMBED_PASS, "Password", "Blank for a no-password share."},
-	{ST_ACTION, S_SMBED_SAVE, "Save share", "Writes this block into SMB2.CNF, replacing the picked share (or appending it), and reloads the list."},
+	{ST_ACTION, S_SMBED_NAME, "Name shown in Files", "SMB2/3 label under smb:/. SMB1 uses smb1:/ without this label. Example: PS2 Games. Use a unique name; avoid / \\ : * ? \" < > |."},
+	{ST_CHOICE, S_SMBED_KIND, "Server type", "Match the server: PS2-Servers SMBv2 supports up to 2.1; SMBv3 up to 3.0.2. SMB1 is legacy and opens via smb1:/."},
+	{ST_ACTION, S_SMBED_IP, "Server address", "IPv4 address of the server. Example: 192.168.1.20. Host names are edited in SMB2.CNF as text."},
+	{ST_ACTION, S_SMBED_PORT, "Port", "TCP port from server settings. Examples: 445 standard, 1445 PS2-Servers SMB2/3, or 1025 its Desktop SMB1."},
+	{ST_ACTION, S_SMBED_FOLDER, "Share name", "The exported SMB share on the server. Example: games (PS2-Servers default)."},
+	{ST_ACTION, S_SMBED_USER, "Username", "Account name on the server. Example: ps2 for SMB2/3 or guest for SMB1 on PS2-Servers."},
+	{ST_ACTION, S_SMBED_PASS, "Password", "Password for that server account. Leave blank only if the server allows no-password access; saved in SMB2.CNF as plain text."},
+	{ST_ACTION, S_SMBED_SAVE, "Save share", "Writes this share to SMB2.CNF. Open Files > smb:/ for SMB2/3 or smb1:/ for SMB1."},
 	{ST_ACTION, S_SMBED_DELETE, "Delete share", "Removes the picked share's block from SMB2.CNF."},
-	{ST_ACTION, S_SMBED_TEXT, "Edit SMB2.CNF as text", "The raw file in the text editor, for anything this page does not cover."},
+	{ST_ACTION, S_SMBED_TEXT, "Edit SMB2.CNF as text", "Use the file editor for host names, deeper paths, or options this page does not cover."},
 };
 #endif /* SMB */
 
@@ -655,7 +669,7 @@ static const SetItem net_items[] = {
     {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query 0.pool.ntp.org and write and verify the PS2 hardware RTC. Requires saved network settings."},
 #endif
 #ifdef SMB
-    {ST_PAGE, P_SMB, "SMB shares", "Add or edit the servers smb:/ and smb1:/ connect to, without hand-editing SMB2.CNF. The page writes one block per share; PS2-Servers' cards show exactly what to type."},
+    {ST_PAGE, P_SMB, "SMB shares", "Add saved shares. smb:/ lists connected SMB2/3 shares; smb1:/ opens SMB1. Neither scans the network."},
 #endif
 };
 
@@ -681,7 +695,7 @@ static const SetItem system_items[] = {
     {ST_PAGE, P_CLASSIC, "Classic screen settings", "Appearance of classic dialogs and the legacy launch menu."},
     {ST_ACTION, S_CLOCK_SOFTWARE, "Set software clock...", "Works without a CMOS battery. Restarts at the last saved time; save again before power-off to retain elapsed runtime."},
     {ST_ACTION, S_CLOCK_HARDWARE, "Use PS2 hardware clock", "Stop the software clock and use the console RTC again."},
-    {ST_ACTION, S_CLOCK_MANUAL, "Set PS2 clock manually...", "Enter the local date and time as YYYY-MM-DD HH:MM:SS; the hardware RTC is written and verified."},
+    {ST_ACTION, S_CLOCK_MANUAL, "Set PS2 clock manually...", "Pick each field with Left/Right and change it with Up/Down; the hardware RTC is written and verified."},
     {ST_CHOICE, S_TEMP_UNITS, "PS2 Temperature Units (50K and later)", "Celsius or Fahrenheit beside the clock. Hidden automatically when the console has no supported temperature sensor."},
     {ST_PATH, S_CNF_PATH, "Configuration folder", "Optional save target for LAUNCHELF.CNF. Loading searches the start folder, then mcN:/SYS-CONF/ on the launch card, then the other card."},
     {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
@@ -748,6 +762,7 @@ static const SetItem tstyle_items[] = {
     {ST_CHOICE, S_T_CORNER, "Corners", NULL},
     {ST_CHOICE, S_T_GLOW, "Glow", "Soft light behind focused items."},
     {ST_CHOICE, S_T_TABS, "Section tabs", "Shown or Hidden. Hidden removes the top bar; L1 and R1 still switch sections."},
+    {ST_CHOICE, S_T_CONSOLE, "Console info on HOME", "The console model, ROM and region line at the top of HOME. System information keeps the full details."},
     {ST_ACTION, S_T_RESETCAT, "Reset style", "Back to the values of the theme's preset."},
 };
 static const SetItem ttype_items[] = {
@@ -806,7 +821,7 @@ static const SetPage pages[P_COUNT] = {
     [P_MMCE_BACKUP] = PAGE("MMCE backup & sync", DI_MC, "Backup, cloud and IGR return controls in one place.", mmce_backup_items),
     [P_NETWORK] = PAGE("Network", DI_NETWORK, "Console address for FTP, PS2Link and UDPFS.", net_items),
 #ifdef SMB
-    [P_SMB] = PAGE("SMB shares", DI_NETWORK, "One block per server, written into SMB2.CNF; smb:/ and smb1:/ read it when they open.", smb_items),
+    [P_SMB] = PAGE("SMB shares", DI_NETWORK, "One block per share in SMB2.CNF. smb:/ lists connected SMB2/3 shares; smb1:/ opens SMB1. Neither scans the network.", smb_items),
 #endif
     [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules, settings locations, updates and About.", system_items),
     [P_CLASSIC] = PAGE("Classic screen settings", DI_SETTINGS, "These settings affect classic screens; dashboard themes have their own controls.", classic_items),
@@ -907,6 +922,12 @@ static void themeChanged(void)
 	dash_dirty = 1;
 }
 
+/* Dash_Disabled_Tabs bit for the Home/Files/Tools tab rows (issue #278). */
+static int tabSettingBit(int id)
+{
+	return 1 << (id == S_TAB_HOME ? DASH_SEC_HOME : id == S_TAB_FILES ? DASH_SEC_FILES : DASH_SEC_TOOLS);
+}
+
 /* Returns number of options and the current index for a CHOICE item. */
 static int choiceInfo(int id, int *cur, const char *const **names, const char **single)
 {
@@ -979,6 +1000,11 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		}
 		case S_HOME_SHORTCUTS:
 			*cur = dashCfg.home_shortcuts;
+			return 2;
+		case S_TAB_HOME:
+		case S_TAB_FILES:
+		case S_TAB_TOOLS:
+			*cur = !(dashCfg.disabled_tabs & tabSettingBit(id));
 			return 2;
 		case S_TEMP_UNITS: {
 			static const char *const units[] = {"Celsius", "Fahrenheit"};
@@ -1182,6 +1208,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_T_TABS:
 			*names = tabs_names, *cur = dashTheme.tabs;
 			return DASH_TABS_COUNT;
+		case S_T_CONSOLE:
+			*cur = dashTheme.console_info;
+			return 2;
 		case S_T_PANEL_A:
 			*names = pct_names, *cur = ((255 - dashTheme.panel.a) * 10 + 127) / 255;
 			return 11;
@@ -1262,6 +1291,9 @@ static int setThemeChoice(int id, int v)
 			break;
 		case S_T_TABS:
 			t->tabs = (u8)v;
+			break;
+		case S_T_CONSOLE:
+			t->console_info = (u8)v;
 			break;
 		case S_T_PANEL_A:
 			t->panel.a = (u8)((10 - v) * 255 / 10);
@@ -1673,6 +1705,14 @@ static void setChoice(int id, int v)
 			dashCfg.home_shortcuts = v;
 			dashHomeRebuild();
 			break;
+		case S_TAB_HOME:
+		case S_TAB_FILES:
+		case S_TAB_TOOLS:
+			/* The menu never hides Settings, so it cannot lock itself out. */
+			dashCfg.disabled_tabs &= ~((1 << DASH_SEC_SETTINGS) | tabSettingBit(id));
+			if (!v)
+				dashCfg.disabled_tabs |= tabSettingBit(id);
+			break;
 		case S_TEMP_UNITS:
 			dashCfg.temp_fahrenheit = v;
 			break;
@@ -2075,89 +2115,34 @@ static char *ipField(int id)
 	return (id == S_NET_IP) ? ip : (id == S_NET_NM) ? netmask : gw;
 }
 
-/* Validate a complete dotted-quad string without relying on sscanf accepting
- * trailing text or implausibly large octets. */
-/** @brief Validate a complete, well-formed dotted-quad IPv4 address.
- *
- * Returns 1 when the string contains exactly four octets in the range 0..255
- * and no trailing text; otherwise returns 0.
- */
-static int validIpv4(const char *s)
+/* Parse a complete dotted-quad (four octets 0..255, no trailing text). */
+static int parseIpv4(const char *s, unsigned *out)
 {
 	unsigned a, b, c, d;
-	char extra = '\0';
-	int scanned;
+	char extra;
 
-	if (s == NULL || s[0] == '\0')
+	if (sscanf(s, "%u.%u.%u.%u%c", &a, &b, &c, &d, &extra) != 4 ||
+	    a > 255U || b > 255U || c > 255U || d > 255U)
 		return 0;
-	scanned = sscanf(s, "%u.%u.%u.%u%c", &a, &b, &c, &d, &extra);
-	if (scanned != 4 || extra != '\0')
-		return 0;
-	if (a > 255U || b > 255U || c > 255U || d > 255U)
-		return 0;
+	*out = (a << 24) | (b << 16) | (c << 8) | d;
 	return 1;
 }
 
-/* A usable IPv4 netmask has a contiguous run of ones followed by zeros. */
-/** @brief Validate an IPv4 netmask with a contiguous run of 1 bits followed by zeros.
- *
- * Returns 1 for a standard prefix-length mask, otherwise 0.
- */
-static int validNetmask(const char *s)
+/* Settings -> Network -> Sync PS2 clock preflight. The sync reloads
+ * IPCONFIG.DAT, so unsaved edits would be ignored; reject them and unusable
+ * static values here. Does not touch the network stack. 1 = ready. */
+static int clockSyncSettingsReady(const char **why)
 {
-	unsigned a, b, c, d;
-	unsigned mask;
-	char extra = ' ';
-	int scanned;
-
-	if (s == NULL || s[0] == ' ')
-		return 0;
-	scanned = sscanf(s, "%u.%u.%u.%u%c", &a, &b, &c, &d, &extra);
-	if (scanned != 4 || extra != ' ')
-		return 0;
-	if (a > 255U || b > 255U || c > 255U || d > 255U)
-		return 0;
-	mask = (a << 24) | (b << 16) | (c << 8) | d;
-	if (mask == 0U || mask == ~0U)
-		return 0;
-	while (mask & 0x80000000U)
-		mask <<= 1;
-	while ((mask & 0x80000000U) == 0 && mask != 0U)
-		mask <<= 1;
-	return mask == 0U;
-}
-
-/* Preflight for Settings -> Network -> Sync PS2 clock. This is called only from
- * the explicit action path; it must not start or reset the network stack. */
-/** @brief Check whether the current network settings are sufficient for Internet clock
- * sync. On failure, write a human-readable reason to message and return 0.
- *
- * This does not load, reset, or touch the Ethernet stack.
- */
-static int ipNetworkSettingsReadyForClockSync(char *message, size_t size)
-{
-	if (message != NULL && size > 0)
-		message[0] = '\0';
+	unsigned a, m, g;
 
 	if (net_dirty) {
-		if (message != NULL && size > 0)
-			snprintf(message, size, "Save your network settings first, then retry clock synchronization.");
+		*why = "Save your network settings first, then retry clock synchronization.";
 		return 0;
 	}
-	if (pcCardCfOwnsBus()) {
-		if (message != NULL && size > 0)
-			snprintf(message, size, "PC CARD CompactFlash is using the network adapter. Remove it or use another network device, then retry.");
-		return 0;
-	}
-	if (!validIpv4(ip) || !validIpv4(netmask) || !validIpv4(gw) || !validNetmask(netmask)) {
-		if (message != NULL && size > 0)
-			snprintf(message, size, "IP address, netmask or gateway is incomplete or invalid. Correct Settings > Network and retry.");
-		return 0;
-	}
-	if (!strcmp(ip, "0.0.0.0") || !strcmp(gw, "0.0.0.0") ||
-	    !strcmp(netmask, "0.0.0.0") || !strcmp(netmask, "255.255.255.255")) {
-		if (message != NULL && size > 0)
-			snprintf(message, size, "IP address, gateway or netmask is not usable. Configure Settings > Network and retry.");
+	/* A netmask must be a contiguous run of ones: ~m + 1 is a power of two. */
+	if (!parseIpv4(ip, &a) || !parseIpv4(netmask, &m) || !parseIpv4(gw, &g) ||
+	    !a || !g || !m || !~m || (~m & (~m + 1U))) {
+		*why = "IP address, netmask or gateway is missing or invalid. Correct Settings > Network and retry.";
 		return 0;
 	}
 	return 1;
@@ -2264,6 +2249,8 @@ static void cfgSaveRun(void *arg)
 		configRefreshSaveTargetForWrite(j->target, j->path, sizeof(j->path), j->file, j->loaded);
 	j->ret = j->kind == CFG_SAVE_NET ? configWriteNetworkSnapshot(j->path, j->text)
 	                                  : dashWriteFile(j->path, j->text, j->len);
+	if (j->ret == 0 && j->kind != CFG_SAVE_NET)
+		configStampMcFolderIcon();
 }
 
 static void cfgSaveDone(void *arg)
@@ -3006,6 +2993,7 @@ static int resetThemeSetting(int id)
 		case S_T_TILE: t->tile_style = p.tile_style; break;
 		case S_T_GLOW: t->glow = p.glow; break;
 		case S_T_TABS: t->tabs = p.tabs; break;
+		case S_T_CONSOLE: t->console_info = p.console_info; break;
 		case S_T_PANEL_A: t->panel.a = p.panel.a; break;
 		case S_T_FONT: t->font = p.font; break;
 		case S_T_FSCALE: t->font_scale = p.font_scale; break;
@@ -3092,11 +3080,119 @@ static void runThemeAction(int id)
 	}
 }
 
-/** @brief Execute one Settings action row.
- *
- * Dispatches setting actions such as clock synchronization. Network-dependent
- * actions first perform their preflight checks here where applicable.
- */
+/* Date and time as six boxed fields, like the IP editor: Left/Right picks a
+ * field, Up/Down changes it by one, L1/R1 by ten, wrapping inside its range.
+ * The day is kept valid for the month and year. 1 = Confirm, with the result
+ * in fields[] (year, month, day, hour, minute, second); 0 = Back. */
+static int editClockDateTime(const char *title, int fields[6])
+{
+	static const char *const labels[] = {"Year", "Month", "Day", "Hour", "Minute", "Second"};
+	static const int low[] = {2000, 1, 1, 0, 0, 0};
+	int high[] = {2099, 12, 31, 23, 59, 59};
+	int value[6], sel = 0, i, accepted = 0;
+	float open = 0.0f, sel_anim = 0.0f;
+	const float w = 528.0f, h = 268.0f, bw = 64.0f, gap = 16.0f;
+	const float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
+	const float bx0 = x + (w - (6 * bw + 5 * gap)) * 0.5f, by = y + 120.0f;
+	DashInput in;
+
+	for (i = 0; i < 6; i++) {
+		if (i == 2)
+			high[2] = dashClockDaysInMonth(value[0], value[1]);
+		value[i] = fields[i] < low[i] ? low[i] : fields[i] > high[i] ? high[i] : fields[i];
+	}
+	dashInputFlush();
+	while (1) {
+		int step = 0;
+		float dt, oe;
+
+		dashInputPoll(&in);
+		if (in.pressed & (DASH_IN_BACK | DASH_IN_MENU))
+			break;
+		if (in.pressed & DASH_IN_OK) {
+			accepted = 1;
+			break;
+		}
+		if (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT)) {
+			int next = (sel + ((in.pressed & DASH_IN_LEFT) ? 5 : 1)) % 6;
+
+			if ((sel == 0 && next == 5) || (sel == 5 && next == 0))
+				sel_anim = (float)next;  //wrapping jumps instead of sliding across
+			sel = next;
+			dashSoundPlay(DASH_SND_CURSOR);
+		}
+		if (in.pressed & DASH_IN_UP)
+			step = 1;
+		if (in.pressed & DASH_IN_DOWN)
+			step = -1;
+		if (in.pressed & (DASH_IN_R1 | DASH_IN_R2))
+			step = 10;
+		if (in.pressed & (DASH_IN_L1 | DASH_IN_L2))
+			step = -10;
+		if (step) {
+			int range = high[sel] - low[sel] + 1;
+
+			value[sel] = low[sel] + ((value[sel] - low[sel] + step) % range + range) % range;
+			high[2] = dashClockDaysInMonth(value[0], value[1]);
+			if (value[2] > high[2])
+				value[2] = high[2];
+			dashSoundPlay(DASH_SND_CURSOR);
+		}
+		dt = dashVisualUpdate();
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
+		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), dt);
+		oe = dashEaseOutCubic(open);
+		dashRenderScene();
+		dashModalBackdrop(oe);
+		dashGfxPushAlpha(oe);
+		dashGfxPushOffset(0, 18.0f * (1.0f - oe));
+		dashModalPanel(x, y, w, h, oe);
+		dashIcon(DI_CLOCK, x + 24, y + 18, 22, DASH_C_ACCENT);
+		dashTextS(x + 56, y + 18, title, DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextFit(x + 24, y + 48, w - 48, "Local date and time (24-hour clock, 2000-2099)", DASH_FS_CAPTION, DASH_C_TEXT3);
+		dashDrawSelection(bx0 + sel_anim * (bw + gap), by, bw, 44, 10, 1.0f);
+		for (i = 0; i < 6; i++) {
+			char num[8];
+			float bx = bx0 + i * (bw + gap);
+
+			dashTextCenter(bx + bw * 0.5f, by - 46, labels[i], DASH_FS_CAPTION, DASH_C_TEXT3);
+			if (i != sel)
+				dashPanel(bx, by, bw, 44, 10, DC(255, 255, 255, 16));
+			snprintf(num, sizeof(num), i == 0 ? "%04d" : "%02d", value[i]);
+			dashTextCenter(bx + bw * 0.5f, by + 10, num, DASH_FS_LABEL, dashItemColor(i == sel));
+			if (i < 5 && i != 2)
+				dashTextCenter(bx + bw + gap * 0.5f, by + 10, i < 2 ? "-" : ":", DASH_FS_LABEL, DASH_C_TEXT2);
+			if (i == sel) {
+				dashTextCenter(bx + bw * 0.5f, by - 20, "+", DASH_FS_BODY, DASH_C_ACCENT);
+				dashTextCenter(bx + bw * 0.5f, by + 48, "-", DASH_FS_BODY, DASH_C_ACCENT);
+			}
+		}
+		{
+			float hx = x + 24, hy = y + h - 68;
+
+			hx += dashDrawButton(hx, hy, DI_BTN_LEFT, NULL) + 12;
+			hx += dashDrawButton(hx, hy, DI_BTN_RIGHT, NULL) + 4;
+			hx = dashTextS(hx, hy + 4.5f, "Select field", DASH_FS_SMALL, DASH_C_TEXT2) + 20;
+			hx += dashDrawButton(hx, hy, DI_BTN_UP, NULL) + 12;
+			hx += dashDrawButton(hx, hy, DI_BTN_DOWN, NULL) + 4;
+			dashTextS(hx, hy + 4.5f, "Change", DASH_FS_SMALL, DASH_C_TEXT2);
+			hx = x + 24, hy = y + h - 36;
+			hx += dashDrawButton(hx, hy, -1, "L1") + 2;
+			hx += dashDrawButton(hx, hy, -1, "R1") + 4;
+			hx = dashTextS(hx, hy + 4.5f, "10", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
+			dashModalHintRow(hx, hy, dashOkIcon(), "Apply", dashBackIcon(), "Cancel");
+		}
+		dashGfxPopOffset();
+		dashGfxPopAlpha();
+		dashGfxPresent();
+	}
+	if (accepted)
+		memcpy(fields, value, sizeof(value));
+	dashSoundPlay(accepted ? DASH_SND_CONFIRM : DASH_SND_CANCEL);
+	dashInputFlush();
+	return accepted;
+}
+
 static void runAction(int id)
 {
 	if (id >= S_T_PRESET && id <= S_T_RESETCAT) {
@@ -3184,17 +3280,17 @@ static void runAction(int id)
 			break;
 #ifdef SMB
 		case S_SMBED_NAME:
-			smbedEditField("Name shown in Files (smb:/NAME)", smbed.name, sizeof(smbed.name),
+			smbedEditField("Files label (e.g. PS2 Games)", smbed.name, sizeof(smbed.name),
 			               "At most 31 characters, without / \\ : * ? \" < > |.");
 			break;
 		case S_SMBED_IP:
-			smbedEditField("Server address (IPv4, as the server's card shows it)", smbed.host, sizeof(smbed.host),
+			smbedEditField("Server IPv4 (e.g. 192.168.1.20)", smbed.host, sizeof(smbed.host),
 			               "At most 79 characters. A server named by words instead of an address is edited as text.");
 			break;
 		case S_SMBED_PORT: {
 			char buf[8];
 			snprintf(buf, sizeof(buf), "%d", smbed.port > 0 ? smbed.port : 445);
-			if (dashModalKeyboard("TCP port (445 is the default)", buf, sizeof(buf))) {
+			if (dashModalKeyboard("TCP port (445 default; e.g. 1445 or 1025)", buf, sizeof(buf))) {
 				char *end;
 				long p = strtol(buf, &end, 10);
 				if (end == buf || *end != '\0' || p < 0 || p > 65535)
@@ -3205,15 +3301,15 @@ static void runAction(int id)
 			break;
 		}
 		case S_SMBED_FOLDER:
-			smbedEditField("Share name on the server", smbed.folder, sizeof(smbed.folder),
+			smbedEditField("Share on server (e.g. games)", smbed.folder, sizeof(smbed.folder),
 			               "At most 63 characters.");
 			break;
 		case S_SMBED_USER:
-			smbedEditField("Username (blank: guest / none)", smbed.user, sizeof(smbed.user),
+			smbedEditField("Username (e.g. ps2 or guest)", smbed.user, sizeof(smbed.user),
 			               "At most 31 characters.");
 			break;
 		case S_SMBED_PASS:
-			smbedEditField("Password (blank for a no-password share)", smbed.pass, sizeof(smbed.pass),
+			smbedEditField("Password (blank for an open share)", smbed.pass, sizeof(smbed.pass),
 			               "At most 31 characters.");
 			break;
 		case S_SMBED_SAVE:
@@ -3227,37 +3323,38 @@ static void runAction(int id)
 			    "# One share per block; the URL line ends a block. Lines starting with #\n"
 			    "# are ignored -- remove the # from a block's lines to use that block.\n"
 			    "#\n"
-			    "# NAME  the label the file browser shows for this share (smb:/NAME).\n"
+			    "# NAME  the label shown for SMB2/3 (smb:/NAME). SMB1 opens via\n"
+			    "# smb1:/ without a label.\n"
 			    "# USERNAME / PASSWORD  exactly as the server lists them (31 characters\n"
 			    "#   each). PASSWORD = with nothing after it is a blank password.\n"
 			    "# VERSION  optional: 1 = an SMB1-only server (opens via smb1:/);\n"
-			    "#   2 or 3 = the smb: driver. Use 3 to mark a server set to SMB 3 only.\n"
+			    "#   2 or 3 = the smb: driver. Use 3 to mark a server that supports SMB3.\n"
 			    "# URL  smb://<IP address>[:port]/<share>. The port is optional (445 when\n"
 			    "#   omitted) and goes here only, never on the NAME line.\n"
 			    "#\n"
 			    "# PS2-Servers: its SMBv2/SMBv3 card shows IP, Port, Share, User and\n"
 			    "# Password -- copy them into a block like these. The card's default\n"
-			    "# port is 1025 (445 when its Take port 445 option is on).\n"
+			    "# port is 1445 (445 when its Take port 445 option is on).\n"
 			    "# SMBv2 card with a user and password:\n"
 			    "# NAME = PC\n"
 			    "# USERNAME = player\n"
 			    "# PASSWORD = secret\n"
-			    "# URL = smb://192.168.1.100:1025/games\n"
+			    "# URL = smb://192.168.1.100:1445/games\n"
 			    "#\n"
-			    "# SMBv2 card with no password ticked (its User, blank Password):\n"
+			    "# SMBv2 card with No password enabled (default User, blank Password):\n"
 			    "# NAME = PC\n"
-			    "# USERNAME = guest\n"
+			    "# USERNAME = ps2\n"
 			    "# PASSWORD =\n"
-			    "# URL = smb://192.168.1.100:1025/games\n"
+			    "# URL = smb://192.168.1.100:1445/games\n"
 			    "#\n"
-			    "# SMBv3 card (port 445, its Take port 445 option); VERSION = 3:\n"
+			    "# SMBv3 card (default 1445; 445 with Take port 445); VERSION = 3:\n"
 			    "# NAME = NGCARD\n"
 			    "# VERSION = 3\n"
 			    "# USERNAME = player\n"
 			    "# PASSWORD = secret\n"
 			    "# URL = smb://192.168.1.100:445/games\n"
 			    "#\n"
-			    "# PS2-Servers on Linux/macOS on a private port (its card shows the port):\n"
+			    "# PS2-Servers on Linux/macOS (use the port shown by its card):\n"
 			    "# NAME = LINUX\n"
 			    "# USERNAME = player\n"
 			    "# PASSWORD = secret\n"
@@ -3285,7 +3382,9 @@ static void runAction(int id)
 				}
 			}
 			dashTextEditor(path);
-			smbSharesReload();
+			if (!smbSharesReload())
+				dashModalMessage(DI_WARNING, "Restart required",
+				                 "The old SMB connections could not be closed. Restart Launchstation to use the edited configuration.", NULL);
 			break;
 		}
 #endif
@@ -3300,39 +3399,19 @@ static void runAction(int id)
 		case S_CLOCK_MANUAL: {
 			char input[24];
 			char result[160];
-			int year, month, day, hour, minute, second;
+			int f[6] = {2000, 1, 1, 0, 0, 0};
 			int use12, datefmt;
 			int ok;
 
-			if (menuTitleGetClockFields(&year, &month, &day, &hour, &minute, &second,
-			                            &use12, &datefmt))
-				snprintf(input, sizeof(input), "%04d-%02d-%02d %02d:%02d:%02d",
-				         year, month, day, hour, minute, second);
-			else
-				snprintf(input, sizeof(input), "2000-01-01 00:00:00");
-
-			if (!dashModalKeyboard(id == S_CLOCK_SOFTWARE ? "Set software clock: YYYY-MM-DD HH:MM:SS" : "Set PS2 clock: YYYY-MM-DD HH:MM:SS", input, sizeof(input)))
+			menuTitleGetClockFields(&f[0], &f[1], &f[2], &f[3], &f[4], &f[5], &use12, &datefmt);
+			if (!editClockDateTime(id == S_CLOCK_SOFTWARE ? "Set software clock" : "Set PS2 clock", f))
 				break;
-			if (sscanf(input, "%4d-%2d-%2d %2d:%2d:%2d",
-			           &year, &month, &day, &hour, &minute, &second) != 6) {
-				dashModalMessage(DI_WARNING, "Invalid date / time",
-				                 "Use YYYY-MM-DD HH:MM:SS, for example 2026-10-07 15:30:00.", input);
-				break;
-			}
+			snprintf(input, sizeof(input), "%04d-%02d-%02d %02d:%02d:%02d", f[0], f[1], f[2], f[3], f[4], f[5]);
 			if (id == S_CLOCK_SOFTWARE) {
-				int days = 0;
-				static const int mdays[] = {31,28,31,30,31,30,31,31,30,31,30,31};
-				if (month >= 1 && month <= 12)
-					days = mdays[month - 1] + (month == 2 && (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)));
-				if (year < 2000 || year > 2099 || day < 1 || day > days || hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
-					dashModalMessage(DI_WARNING, "Invalid date / time", "Enter a valid date from 2000 to 2099 and a 24-hour time.", NULL);
-					break;
-				}
-				snprintf(input, sizeof(input), "%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
 				settingsSaveSoftwareClock(input);
 				break;
 			}
-			ok = dashClockSetManual(year, month, day, hour, minute, second, result, sizeof(result));
+			ok = dashClockSetManual(f[0], f[1], f[2], f[3], f[4], f[5], result, sizeof(result));
 			dashModalMessage(ok ? DI_CHECK : DI_WARNING,
 			                 ok ? "PS2 clock updated" : "Clock update failed",
 			                 result, input);
@@ -3340,12 +3419,12 @@ static void runAction(int id)
 		}
 #ifdef ETH
 		case S_CLOCK_SYNC: {
-			char message[256];
+			const char *why;
 			char result[160];
 			int ok;
 
-			if (!ipNetworkSettingsReadyForClockSync(message, sizeof(message))) {
-				dashModalMessage(DI_WARNING, "Clock synchronization unavailable", message, NULL);
+			if (!clockSyncSettingsReady(&why)) {
+				dashModalMessage(DI_WARNING, "Clock synchronization unavailable", why, NULL);
 				break;
 			}
 			dashLoadingBegin("Synchronizing PS2 clock");
@@ -3635,11 +3714,11 @@ static const char *actionStatus(int id)
 		case S_SMBED_PICK:
 			return smbed.pick == 0 ? "New share" : smbed.orig;
 		case S_SMBED_NAME:
-			return smbed.name[0] ? smbed.name : "required";
+			return smbed.name[0] ? smbed.name : "e.g. PS2 Games";
 		case S_SMBED_KIND:
 			return smbed.kind == 1 ? "SMB1 (opens via smb1:/)" : smbed.kind == 3 ? "SMB3" : "SMB2";
 		case S_SMBED_IP:
-			return smbed.host[0] ? smbed.host : "required";
+			return smbed.host[0] ? smbed.host : "e.g. 192.168.1.20";
 		case S_SMBED_PORT: {
 			static char port[16];
 			if (smbed.port > 0)
@@ -3649,9 +3728,9 @@ static const char *actionStatus(int id)
 			return port;
 		}
 		case S_SMBED_FOLDER:
-			return smbed.folder[0] ? smbed.folder : "required";
+			return smbed.folder[0] ? smbed.folder : "e.g. games";
 		case S_SMBED_USER:
-			return smbed.user[0] ? smbed.user : "guest / none";
+			return smbed.user[0] ? smbed.user : "e.g. ps2 / guest";
 		case S_SMBED_PASS:
 			return smbed.pass[0] ? "set (hidden)" : "blank";
 		case S_SMBED_SAVE:

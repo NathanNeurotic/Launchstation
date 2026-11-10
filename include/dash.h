@@ -19,6 +19,8 @@ int DashIsEnabled(void);
 
 /* Non-zero while DashRun() is on the call stack (guards re-entry). */
 int DashIsActive(void);
+/* The HDD Manager (dash_hdd.c). Needs the dashboard running. */
+void dashHddManager(void);
 int DashFtpServer(void);
 int dashFtpPollRemote(void);
 

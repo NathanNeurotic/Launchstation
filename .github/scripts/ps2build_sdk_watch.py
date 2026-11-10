@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """ps2build SDK Watch: compare the pinned ps2build SDK with the newest official releases.
 
-.github/ps2build-sdk.env pins every version of the SDK, so build jobs never ask git.techwritescode.dev
-which release is newest. Unpinned, every build job asked once per package, 9 to 11 requests; with RiptOPL's
-~70 jobs per push that came to 20k to 70k requests a day on tech's server. This script is now the only
-place that asks.
-.github/workflows/ps2build-sdk-watch.yml runs it once a week: one request for each pinned name (the SDK
-components, llvm-toolchain and the extra packages) and none for the names in PS2BUILD_SDK_HOLD.
+.github/ps2build-sdk.env pins every version of the SDK, so build jobs never ask the official ps2build
+releases (github.com/ps2build) which release is newest. Unpinned, every build job asked once per package,
+9 to 11 requests per job and ~70 jobs per push. This script is now the only place that asks.
+.github/workflows/ps2build-sdk-watch.yml runs it once a week: one read of ps2build's release manifest for
+the SDK components and llvm-toolchain, one release-API request for each name the manifest lacks (the extra
+packages), and none for the names in PS2BUILD_SDK_HOLD. An extra package with no official GitHub release
+(ogg and vorbis publish tags only) keeps its pin; the mirror provides it.
 
 When something is newer, it writes the bumped pin file and the pull request that proposes it. It also
-pins the NathanNeurotic/ps2build-mirror release that holds exactly the new versions (its tag, and the
+pins the NathanNeurotic/old-ps2build-mirror release that holds exactly the new versions (its tag, and the
 SHA-256 of its SHA256SUMS), so the mirror fallback installs the same SDK as the official server. When the
 mirror has no such release yet, both are left empty: the fallback then takes the newest mirror release,
 and a later run pins the matching one once it exists.
@@ -44,13 +45,16 @@ WARMED = "once (LLVM, the toolchain Launchstation builds with)"
 
 ROOT = Path(__file__).resolve().parents[2]
 PIN = ROOT / ".github/ps2build-sdk.env"
-OFFICIAL = os.environ.get("PS2BUILD_SDK_OFFICIAL_URL") or "https://git.techwritescode.dev"
+OFFICIAL = os.environ.get("PS2BUILD_SDK_OFFICIAL_URL") or "https://github.com/ps2build"
+OFFICIAL_API = os.environ.get("PS2BUILD_SDK_OFFICIAL_API_URL") or "https://api.github.com/repos/ps2build"
+MANIFEST_URL = os.environ.get("PS2BUILD_SDK_MANIFEST_URL") or \
+    "https://raw.githubusercontent.com/ps2build/manifest/main/latest.json"
 MIRROR_API = os.environ.get("PS2BUILD_SDK_MIRROR_API_URL") or "https://api.github.com"
-# The identifier our SDK downloads send too, so tech can tell our requests apart in his logs.
+# The identifier our SDK downloads send too, so upstream can tell our requests apart.
 USER_AGENT = f"{PROJECT}-build/1.0 (ps2build SDK Watch; +{PROJECT_URL})"
-VERSION = re.compile(r"^[A-Za-z0-9._+-]+$")  # what tools/ps2build_sdk.sh accepts from the release API
+VERSION = re.compile(r"[A-Za-z0-9._+-]+")  # what tools/ps2build_sdk.sh accepts from the release API
 ASSIGNMENT = re.compile(r"^([A-Z][A-Z0-9_]*)=(.*)$")
-RETRY_DELAYS = (10, 30)  # one try plus two retries, never more: this runs against someone else's server
+RETRY_DELAYS = (10, 30)  # one try plus two retries, never more
 MIRROR_PAGES = 5         # releases listed newest first, 100 a page (the mirror also holds source backups)
 MIRROR_CANDIDATES = 10   # SDK releases whose pin.env is read before giving up
 
@@ -97,14 +101,14 @@ def problems(values):
     """Why a pin file would make build jobs ask the release API, or install a mismatched fallback."""
     found = [f"{name} is not pinned to a release" for name, version in entries(values) if unpinned(version)]
     for name, version in entries(values):
-        if not unpinned(version) and not VERSION.match(version):
+        if not unpinned(version) and not VERSION.fullmatch(version):
             found.append(f"{name}={version} is not a release tag")
     tag, sums = values.get("PS2BUILD_SDK_TAG", ""), values.get("PS2BUILD_SDK_SUMS_SHA256", "")
     if bool(tag) != bool(sums):
         found.append("PS2BUILD_SDK_TAG and PS2BUILD_SDK_SUMS_SHA256 must be set together, or both left empty")
     if sums and not re.fullmatch(r"[0-9a-f]{64}", sums):
         found.append("PS2BUILD_SDK_SUMS_SHA256 is not a SHA-256")
-    if tag and not VERSION.match(tag):
+    if tag and not VERSION.fullmatch(tag):
         found.append("PS2BUILD_SDK_TAG is not a release tag")
     return found
 
@@ -152,12 +156,32 @@ def get(url, headers=None):
     raise AssertionError("unreachable")
 
 
+_MANIFEST = []  # ps2build's manifest, read once per run
+
+
+def manifest():
+    """{component: tag} from ps2build's latest.json, which is what upstream calls "latest"."""
+    if not _MANIFEST:
+        try:
+            components = json.loads(get(MANIFEST_URL)).get("components") or {}
+            # A component without a valid tag counts as absent, so it is asked of the release API, as the installer does.
+            tags = {name: entry["tag"] for name, entry in components.items()
+                    if isinstance(entry, dict) and isinstance(entry.get("tag"), str) and VERSION.fullmatch(entry["tag"])}
+        except (OSError, ValueError, AttributeError) as error:  # unreachable, or not the manifest's JSON shape
+            print(f"{MANIFEST_URL}: {error}; asking the release API for every component instead", flush=True)
+            tags = {}
+        _MANIFEST.append(tags)
+    return _MANIFEST[0]
+
+
 def latest_official(name):
-    """The tag of the newest official release of ps2/<name>."""
-    body = get(f"{OFFICIAL}/api/v1/repos/ps2/{urllib.parse.quote(name, safe='')}/releases/latest",
-               {"Accept": "application/json"})
-    tag = json.loads(body).get("tag_name") or ""
-    if not VERSION.match(tag):
+    """The tag of the newest official release of ps2build/<name>: the manifest's, else the release API's."""
+    tag = manifest().get(name)
+    if tag is None:
+        body = get(f"{OFFICIAL_API}/{urllib.parse.quote(name, safe='')}/releases/latest",
+                   {"Accept": "application/vnd.github+json"})
+        tag = json.loads(body).get("tag_name") or ""
+    if not VERSION.fullmatch(tag):
         raise ValueError(f"the newest official {name} release has an unexpected tag {tag!r}")
     return tag
 
@@ -190,13 +214,22 @@ def holds_exactly(pin, wanted):
                for name, version in wanted.items())
 
 
+def sdk_only(wanted, values):
+    """The wanted versions the SDK's mirror release must hold: all of them, or without the extra packages when
+    PS2BUILD_EXTRAS_TAG pins a separate mirror release for those."""
+    if not values.get("PS2BUILD_EXTRAS_TAG"):
+        return wanted
+    extras = set(values.get("PS2BUILD_EXTRAS", "").split())
+    return {name: version for name, version in wanted.items() if name not in extras}
+
+
 def checked_release(repo, release, wanted):
     """(tag, sums) when this mirror release holds exactly the wanted versions and its SHA256SUMS
     matches the hash its pin.env names; None otherwise."""
     tag = release.get("tag_name") or ""
     assets = {asset.get("name"): asset.get("id") for asset in release.get("assets", [])}
     # Build jobs source the pin file this tag goes into, and Git allows a tag such as sdk-$(id).
-    if not tag.startswith("sdk-") or not VERSION.match(tag) or release.get("draft") or release.get("prerelease") \
+    if not tag.startswith("sdk-") or not VERSION.fullmatch(tag) or release.get("draft") or release.get("prerelease") \
             or not isinstance(assets.get("pin.env"), int) or not isinstance(assets.get("SHA256SUMS"), int):
         return None
     pin = read_pin(mirror_get(f"/repos/{repo}/releases/assets/{assets['pin.env']}",
@@ -267,7 +300,7 @@ def rewrite(text, updates):
 
 
 def release_link(name, tag):
-    return f"{OFFICIAL}/ps2/{urllib.parse.quote(name, safe='')}/releases/tag/{urllib.parse.quote(tag, safe='')}"
+    return f"{OFFICIAL}/{urllib.parse.quote(name, safe='')}/releases/tag/{urllib.parse.quote(tag, safe='')}"
 
 
 def describe(changes, holds, mirror, mirror_note):
@@ -294,8 +327,7 @@ def describe(changes, holds, mirror, mirror_note):
         "- read the upstream release notes linked above.",
         "",
         f"The watch already installed and cached this SDK on {DEFAULT_BRANCH}, {WARMED}, so the checks here and on "
-        f"{DEFAULT_BRANCH} after the merge restore it from the GitHub cache instead of downloading it from "
-        "git.techwritescode.dev again.",
+        f"{DEFAULT_BRANCH} after the merge restore it from the GitHub cache instead of downloading it again.",
         "",
         f"To stay on a release, add its name to `PS2BUILD_SDK_HOLD` in `.github/ps2build-sdk.env` on {DEFAULT_BRANCH}: "
         "the next run leaves it alone. Closing this pull request without that makes the next run propose the "
@@ -335,8 +367,18 @@ def main(argv=None):
     args.out.mkdir(parents=True, exist_ok=True)
     status = args.out / "status"
 
+    extra_names = set(values.get("PS2BUILD_EXTRAS", "").split())
     try:
-        newest = {name: latest_official(name) for name, _ in pinned if name not in holds}
+        newest = {}
+        for name, version in pinned:
+            if name in holds:
+                continue
+            try:
+                newest[name] = latest_official(name)
+            except urllib.error.HTTPError as error:
+                if error.code != 404 or name not in extra_names or unpinned(version):
+                    raise
+                print(f"{name}: no official GitHub release; keeping {version} (the mirror provides it)", flush=True)
     except urllib.error.HTTPError as error:
         if error.code >= 500 or error.code == 429:
             print(f"::warning::{OFFICIAL} answered HTTP {error.code}; trying again next run.")
@@ -356,10 +398,10 @@ def main(argv=None):
         if name in wanted and unpinned(wanted[name]):
             print(f"warning: {name} is held but not pinned, so every build job asks the release API for it", flush=True)
 
-    repo = values.get("PS2BUILD_SDK_MIRROR") or "NathanNeurotic/ps2build-mirror"
+    repo = values.get("PS2BUILD_SDK_MIRROR") or "NathanNeurotic/old-ps2build-mirror"
     tag, sums = values.get("PS2BUILD_SDK_TAG", ""), values.get("PS2BUILD_SDK_SUMS_SHA256", "")
     try:
-        mirror = mirror_release(repo, wanted, tag)
+        mirror = mirror_release(repo, sdk_only(wanted, values), tag)
     except (OSError, ValueError) as error:
         print(f"warning: could not read the {repo} releases ({error})", flush=True)
         mirror, looked = None, False

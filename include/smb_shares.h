@@ -4,7 +4,7 @@
 //--------------------------------------------------------------
 // SMB network shares: SMB2.CNF and the smb: / smb1: devices.
 //
-//   smb:/<NAME>/...  SMB2/SMB3 shares, through libsmb2's smb2man.irx
+//   smb:/<NAME>/...  SMB2/SMB3 shares, through smb2man (iop/smb2man, usmb2)
 //   smb1:/...        one SMB1 (NT1) share, through smbman.irx
 //
 // smb_cnf.c only parses text and is compiled on the host by
@@ -107,7 +107,7 @@ void smbSharesConnect(int version, int retry_failed);
 int smbSharesConnectedCount(int version);
 void smbSharesStatus(int version, char *out, int out_size); /* no IO */
 void smbSharesForget(void); /* the drivers are gone (IOP reset) */
-void smbSharesReload(void); /* SMB2.CNF was edited: read it again next time */
+int smbSharesReload(void); /* 1 when old sessions were retired; 0 on disconnect failure */
 #endif
 
 #endif

@@ -122,12 +122,21 @@ static int mutate(const char *from,const char *to){
  if(case_applied_error&&!strcasecmp(from,to)&&strcmp(from,to))return -case_applied_error;
  return mutation_calls==applied_error_at?-EIO:0;
 }
+static int mcStatResult(const char *path,int result);
+static int mc_missing_codes;
 static int genGetStat(const char *p,iox_stat_t *out){
  if(!strncmp(p,"host",4))return -ENOSYS;
  if(stat_error&&strstr(p,"/NEW.BIN"))return -stat_error;
  if(case_stat_error&&strstr(p,"/old.bin"))return -case_stat_error;
  if(!strncmp(p,"mmce",4)&&strlen(strchr(p,':')+1)>254)return -ENAMETOOLONG;
- char path[MAX_PATH];physical(p,path);resolve_case(path);struct stat s;if(stat(path,&s))return -errno;out->mode=s.st_mode;return 0;
+ char path[MAX_PATH];physical(p,path);resolve_case(path);struct stat s;
+ if(stat(path,&s)){
+  if(errno==ENOENT && (!strncmp(p,"mc0:",4)||!strncmp(p,"mc1:",4))){
+   mc_missing_codes++;return mcStatResult(p,1);
+  }
+  return -errno;
+ }
+ out->mode=s.st_mode;return 0;
 }
 static int open_handle(const char *p,int directory){
  char path[MAX_PATH];physical(p,path);resolve_case(path);int fd=open(path,O_RDONLY|(directory?O_DIRECTORY:0));
@@ -218,7 +227,7 @@ code += function(filer, 'char *makeHostPath(').replace('char *makeHostPath(', 's
 for sig in ('static int getHddDeviceFromPath(', 'int getHddParty(', 'int getHddDVRPParty('):
     code += function(hdd, sig).replace('int getHddParty(', 'static int getHddParty(').replace('int getHddDVRPParty(', 'static int getHddDVRPParty(')
 for sig in ('static int ensurePathPcCardCfOnline(', 'static void normalizePcCardCfPath(',
-            'int genCanRenamePath(', 'static int renameCardResult(', 'int genRenameNoReplace('):
+            'static int mcStatResult(', 'int genCanRenamePath(', 'static int renameCardResult(', 'int genRenameNoReplace('):
     code += function(fileops, sig)
 for sig in ('static int filerPathConflictType(', 'static int filerPathExistsForConflict('):
     code += function(actions, sig)
@@ -479,6 +488,7 @@ int main(void){
   assert(too_long?(!rename_calls&&!access(old,F_OK)&&access(to,F_OK)<0):(!access(to,F_OK)&&access(old,F_OK)<0));
   remove_entry(old);remove_entry(to);operations++;
  }
+ assert(mc_missing_codes>0); /* MC tests exercised positive missing-path statuses. */
  printf("PASS: %d host rename cases across 24 device/alias paths: native-only rename, unsupported case changes, case-sensitive coexistence, metadata, conflicts, driver/directory/RPC failures and name/path limits\n",operations);
 }
 '''

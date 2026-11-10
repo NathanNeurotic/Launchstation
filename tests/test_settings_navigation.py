@@ -27,7 +27,7 @@ def function(source, signature):
 
 declarations = settings[settings.index("enum SetType"):settings.index("/* Unsaved-changes session:")]
 icons = sorted(set(re.findall(r"\bDI_\w+", settings)))
-code = "#include <assert.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n"
+code = "#include <assert.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <strings.h>\n#define stricmp strcasecmp\n"
 code += "#define ETH 1\n#define WLE_NATIVE_CLOUD 1\n#define UDPFS 1\n#define ILINK 1\n#define SMB 1\n#define MAX_PATH 1024\n#define DASH_FONT_SYSTEM 1\n"
 code += "static void dashToolsPrepareMmceStatus(void);\n"
 code += "static void dashEnsureIpConfig(void) {}\n"
@@ -42,15 +42,18 @@ static int dashModalKeyboard(const char *t, char *b, int n) { (void)t; (void)b; 
 static void dashModalMessage(int icon, const char *t, const char *m, const char *x) {
     (void)icon; (void)t; (void)m; (void)x;
 }
+static char LaunchElfDir[] = "mc0:/APPS/";
+static void configAppendPathFile(char *p, size_t n, const char *dir, const char *file) { snprintf(p, n, "%s%s", dir, file); }
 static void configBuildSysconfPath(char *p, int n, const char *f) { (void)n; strcpy(p, f); }
 static void configEnsureSysconfDir(const char *p) { (void)p; }
 static char *dashLoadTextFile(const char *p, int max, int *len) { (void)p; (void)max; (void)len; return 0; }
 static int genOpen(const char *p, int m) { (void)p; (void)m; return -1; }
 static int genWrite(int fd, void *b, int n) { (void)fd; (void)b; return n; }
 static void genClose(int fd) { (void)fd; }
+static int dashWriteFile(const char *path, const void *data, int size) { (void)path; (void)data; (void)size; return 0; }
 static void dashTextEditor(const char *p) { (void)p; }
 int smbSharesSnapshot(SmbConfig *out) { memset(out, 0, sizeof(*out)); return 0; }
-void smbSharesReload(void) {}
+int smbSharesReload(void) { return 1; }
 int smbSharesConfigured(int v) { (void)v; return 0; }
 const char *smbSharesConfigPath(void) { return ""; }
 """

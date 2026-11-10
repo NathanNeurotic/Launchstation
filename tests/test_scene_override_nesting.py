@@ -23,8 +23,9 @@ for name in ("dash_browser.c", "dash_editor.c", "dash_hdd.c", "dash_exploit.c"):
     assert "dashSetSceneOverride" not in source, name
     pushes = len(re.findall(r"dashPushSceneOverride\(\w+Scene\);", source))
     pops = source.count("dashPopSceneOverride();")
-    assert pushes == 1, (name, pushes)
-    assert pops >= 1, (name, pops)
+    # dash_editor.c holds two tools: the Text Editor and the Hex Editor
+    assert pushes == (2 if name == "dash_editor.c" else 1), (name, pushes)
+    assert pops >= pushes, (name, pops)
 
 # The HDD Manager's early exit after a failed scan must pop too.
 hdd = (root / "src/dash_hdd.c").read_text(encoding="utf-8")

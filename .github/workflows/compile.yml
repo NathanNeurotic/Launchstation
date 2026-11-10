@@ -2,6 +2,11 @@ name: Automated-Build
 
 on:
   workflow_dispatch:
+    inputs:
+      mirror-drill:
+        description: Install without the SDK cache and with the official host unreachable, to prove the mirror fallback
+        type: boolean
+        default: false
   push:
     branches: [master, main]
   pull_request:
@@ -11,7 +16,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # A mirror drill never publishes, so it gets its own group: it must not cancel a publishing run on master.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}${{ inputs.mirror-drill && '-drill' || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -24,15 +30,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install sound-theme test dependency
-        run: python3 -m pip install --user numpy
+      - name: Install host test dependencies
+        run: |
+          python3 -m pip install --user numpy cryptography
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libmbedtls-dev
+
+      # The smb: driver (iop/smb2man) built for the host under ASan/UBSan and driven against Samba.
+      - name: "Test the smb: driver against Samba (tests/smb2man_live)"
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq samba smbclient >/dev/null
+          sudo sh tests/smb2man_live/run.sh
 
       - name: Test Settings sessions, navigation and theme compatibility
         run: |
           python3 tests/test_portable_filename.py
           python3 tests/test_editor_keyboard.py
+          python3 tests/test_hex_editor.py
+          python3 tests/test_mc_folder_icon.py
           python3 tests/test_font_weight.py
           python3 tests/test_browser_sort.py
+          python3 tests/test_r3z_browser_wins.py
+          python3 tests/test_udpfs_retry.py
           python3 tests/test_video_sound_preview.py
           python3 tests/test_display_feedback.py
           python3 tests/test_udpfs_smap_fifo_tail.py
@@ -51,6 +71,9 @@ jobs:
           python3 tests/test_file_browser_heap.py
           python3 tests/test_stack_realign_check.py
           python3 tests/test_smb_shares.py
+          python3 tests/test_smb_browser_failure.py
+          python3 tests/test_smb_connect_state.py
+          python3 tests/test_network_load_result.py
           python3 tests/test_copy_test_pack.py
           python3 tests/test_transfer_stack_preflight.py
           python3 tests/test_transfer_progress.py
@@ -60,6 +83,7 @@ jobs:
           python3 tests/test_dashboard_languages.py
           python3 tests/test_build_identity.py
           python3 tests/test_clock_save_action.py
+          python3 tests/test_clock_field_editor.py
           python3 tests/test_clock_sync.py
           python3 tests/test_storage_probe_frames.py
           python3 tests/test_mmce_bus_restore.py
@@ -130,7 +154,9 @@ jobs:
           python3 tests/test_mc_fingerprint.py
           python3 tests/test_mc_card_write.py
           python3 tests/test_mc_ps1_card.py
+          python3 tests/test_ps1_card_rediscovery.py
           python3 tests/test_mc_save_formats.py
+          python3 tests/test_mc_save_export.py
           python3 tests/test_dash_card_tool.py
           python3 tests/test_psu_extract_to_mc.py
           python3 tests/test_poweroff_shutdown.py
@@ -159,6 +185,8 @@ jobs:
           python3 tests/test_launch_options.py
           python3 tests/test_cloud_link_screen.py
           python3 tests/test_project_branding.py
+          python3 tests/test_maintained_documentation.py
+          python3 tests/test_wiki_capture_media.py
           python3 tests/test_console_region.py
           python3 tests/test_dashboard_console_summary.py
           python3 tests/test_selector_centering.py
@@ -186,6 +214,7 @@ jobs:
           python3 tests/test_physical_hold_input.py
           python3 tests/test_panel_transparency.py
           python3 tests/test_https_tls.py
+          python3 tests/test_http_body_cap.py
           python3 tests/test_rename_devices.py
           python3 tests/test_vmc_rename.py
           python3 tests/test_app_packages.py
@@ -224,8 +253,8 @@ jobs:
 
       # The ps2build SDK pinned in .github/ps2build-sdk.env (bumped by ps2build-sdk-watch.yml once a week):
       # resolving it makes no network call. The SDK cached under those versions is restored, else an older
-      # cached SDK is updated in place, else it is installed: from git.techwritescode.dev, or when that fails
-      # from the pinned NathanNeurotic/ps2build-mirror release. Then it is cached. A mirror fallback that does
+      # cached SDK is updated in place, else it is installed: from the official GitHub releases, or when they fail
+      # from the pinned NathanNeurotic/old-ps2build-mirror release. Then it is cached. A mirror fallback that does
       # not hold the pinned versions is never cached under them.
       - name: Resolve the pinned ps2build SDK
         env:
@@ -233,6 +262,7 @@ jobs:
         id: sdk
         run: sh scripts/ps2build_sdk.sh --resolve --llvm "$RUNNER_TEMP/ps2build-sdk.env"
       - name: Restore the ps2build SDK
+        if: ${{ !inputs.mirror-drill }}
         id: sdk-cache
         uses: actions/cache/restore@v4
         with:
@@ -245,9 +275,11 @@ jobs:
           PS2BUILD_SDK_MIRROR_TOKEN: ${{ secrets.PS2BUILD_MIRROR_TOKEN }}
           # The official host resets HTTP/2 streams under load; ps2build is a Go binary.
           GODEBUG: http2client=0
+          # The drill sends the CLI download to a closed port, so the official attempt fails and the mirror installs.
+          PS2BUILD_SDK_OFFICIAL_URL: ${{ inputs.mirror-drill && 'https://127.0.0.1:9' || '' }}
         run: sh scripts/ps2build_sdk.sh --llvm "$HOME/.local/share/ps2build"
       - name: Cache the ps2build SDK
-        if: ${{ steps.sdk-cache.outputs.cache-hit != 'true' && env.PS2BUILD_SDK_STALE != 'true' }}
+        if: ${{ !inputs.mirror-drill && steps.sdk-cache.outputs.cache-hit != 'true' && env.PS2BUILD_SDK_STALE != 'true' }}
         uses: actions/cache/save@v4
         with:
           path: ~/.local/share/ps2build
@@ -478,7 +510,7 @@ jobs:
       - name: Publish rolling release from verified master build
         # Each merge (including squash merges) creates a push to master.
         # PRs build review artifacts but must never overwrite public downloads.
-        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master' && !inputs.mirror-drill
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

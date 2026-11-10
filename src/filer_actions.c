@@ -395,8 +395,31 @@ enum {
 #define SAS_TIMESTAMP_BASE 40
 #define TIMESTAMP_ORGANIZE_SECONDS_BETWEEN_FOLDERS 60
 
-static FILEINFO timestamp_folders[MAX_ENTRY];
-static sceMcStDateTime timestamp_original[MAX_ENTRY];
+/* Folder lists of the date editors, allocated only while one is open. */
+static FILEINFO *timestamp_folders;
+static sceMcStDateTime *timestamp_original;
+
+static int timestampListsAlloc(char *message)
+{
+	timestamp_folders = (FILEINFO *)malloc(sizeof(FILEINFO) * MAX_ENTRY);
+	timestamp_original = (sceMcStDateTime *)malloc(sizeof(sceMcStDateTime) * MAX_ENTRY);
+	if (timestamp_folders != NULL && timestamp_original != NULL)
+		return 1;
+	free(timestamp_folders);
+	free(timestamp_original);
+	timestamp_folders = NULL;
+	timestamp_original = NULL;
+	snprintf(message, MAX_PATH, "Not enough memory to load folders.");
+	return 0;
+}
+
+static void timestampListsFree(void)
+{
+	free(timestamp_folders);
+	free(timestamp_original);
+	timestamp_folders = NULL;
+	timestamp_original = NULL;
+}
 
 static int isMemoryCardRootPath(const char *path)
 {
@@ -1254,7 +1277,7 @@ static int time_manip(const char *path, const FILEINFO *file, char *message)
 	return result == 0 ? 1 : -1;
 }
 
-int time_manip_custom(const char *path, const FILEINFO *file, char *message)
+static int time_manip_custom_run(const char *path, const FILEINFO *file, char *message)
 {
 	FILEINFO selected_file;
 	const PS2TIME *current_timestamp;
@@ -1365,6 +1388,17 @@ int time_manip_custom(const char *path, const FILEINFO *file, char *message)
 
 	snprintf(message, MAX_PATH, "%d folder timestamp(s) updated.", updated);
 	return 1;
+}
+
+int time_manip_custom(const char *path, const FILEINFO *file, char *message)
+{
+	int ret;
+
+	if (!timestampListsAlloc(message))
+		return -1;
+	ret = time_manip_custom_run(path, file, message);
+	timestampListsFree();
+	return ret;
 }
 
 static int selectTimestampOrganizationMode(int allow_tuna)
@@ -1763,7 +1797,7 @@ int filerRestoreSasTimestamp(const char *folder, const sceMcStDateTime *timestam
 	return setHddCommonFolderTimestamp(parent, &file, timestamp, message);
 }
 
-static int time_manip_automatic(const char *path, int mode, char *message)
+static int time_manip_automatic_run(const char *path, int mode, char *message)
 {
 	static int indexes[MAX_ENTRY];
 	sceMcStDateTime timestamp;
@@ -1849,6 +1883,17 @@ static int time_manip_automatic(const char *path, int mode, char *message)
 
 	snprintf(message, MAX_PATH, "%d folder timestamp(s) updated.", updated);
 	return 1;
+}
+
+static int time_manip_automatic(const char *path, int mode, char *message)
+{
+	int ret;
+
+	if (!timestampListsAlloc(message))
+		return -1;
+	ret = time_manip_automatic_run(path, mode, message);
+	timestampListsFree();
+	return ret;
 }
 
 int time_manip_organize(const char *path, const FILEINFO *file, char *message)

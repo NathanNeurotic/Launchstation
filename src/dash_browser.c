@@ -321,6 +321,24 @@ static void selectName(const char *name)
 		}
 }
 
+#ifdef SMB
+/** Format the actionable reason an SMB device probe or listing failed. */
+static void smbStatusMessage(int version, char *out, int out_size)
+{
+	if (!isSmbDriverLoaded(version)) {
+		const char *error = smbLoadError(version);
+
+		if (error[0])
+			dashStrCopy(out, error, out_size);
+		else
+			dashStrCopy(out, "SMB driver is not ready; reopen this device to retry.", out_size);
+		return;
+	}
+	smbSharesStatus(version, out, out_size);
+}
+#endif
+
+/** Finish a folder listing and report SMB root-list failures to the user. */
 static void listDone(void *arg)
 {
 	FbListJob *j = (FbListJob *)arg;
@@ -359,10 +377,7 @@ static void listDone(void *arg)
 			int v = smbPathKind(j->path);
 			char why[96];
 
-			if (!isSmbDriverLoaded(v) && smbLoadError(v)[0])
-				dashStrCopy(why, smbLoadError(v), sizeof(why));
-			else
-				smbSharesStatus(v, why, sizeof(why));
+			smbStatusMessage(v, why, sizeof(why));
 			dashToast(DASH_TOAST_WARN, why);
 		}
 #endif
@@ -512,6 +527,14 @@ static void openDir(const char *dir, const char *select)
 			char failed[MAX_PATH];
 			dashStrCopy(failed, dir, sizeof(failed));
 			openDir("", failed);
+#ifdef SMB
+			if (smbPathKind(failed) != SMB_PATH_NONE) {
+				char why[96];
+				smbStatusMessage(smbPathKind(failed), why, sizeof(why));
+				dashToast(DASH_TOAST_WARN, why);
+				return;
+			}
+#endif
 			dashToast(DASH_TOAST_WARN, "Device could not be opened");
 			return;
 		}
@@ -605,6 +628,7 @@ static void launchPath(const char *path, int with_args)
 	fb.args_loaded = LaunchArgsPending(); /* only still set when the start failed */
 }
 
+/** Activate the selected device or file, reporting SMB probe failures. */
 static void activate(void)
 {
 	char path[MAX_PATH];
@@ -628,10 +652,19 @@ static void activate(void)
 		if (d->state == DASH_DEV_PROBE || d->state == DASH_DEV_ABSENT) {
 			int mask, unit;
 
-			if (dashDevicesStart(d, NULL, NULL) < 0)
+			if (dashDevicesStart(d, NULL, NULL) != 0)
 				return;
 			if (!dashDevicePathReady(path)) {
 				openDir("", path); /* the list shows the new state */
+#ifdef SMB
+				int smb_version = smbPathKind(path);
+				if (smb_version != SMB_PATH_NONE) {
+					char why[96];
+					smbStatusMessage(smb_version, why, sizeof(why));
+					dashToast(DASH_TOAST_WARN, why);
+					return;
+				}
+#endif
 				dashToast(DASH_TOAST_WARN, "Device not found");
 				return;
 			}
@@ -758,6 +791,10 @@ static void opCopy(int cut)
 			    filerConfirmExploitModify(fb.dir, &fb.files[idx[i]]) < 0)
 				return;
 	}
+	if (!clipReserve(n)) {
+		dashModalMessage(DI_WARNING, "Not enough memory", "The clipboard cannot hold this selection.", NULL);
+		return;
+	}
 	dashStrCopy(clipPath, fb.dir, MAX_PATH);
 	for (i = 0; i < n; i++)
 		clipFiles[i] = fb.files[idx[i]];
@@ -838,6 +875,45 @@ static int psuTargets(int *idx, int max)
 	return n;
 }
 
+/* The marked files, when every one is a PS2 save file Import save... reads
+ * (by extension, or any file in a Blaze MCM folder); 0 otherwise. Content
+ * is checked when the import runs. */
+static int saveFileTargets(int *idx, int max)
+{
+	char path[MAX_PATH];
+	int n = fb.nmarked > 0 ? targets(idx, max) : 0, i;
+	const char *dot;
+
+	for (i = 0; i < n; i++) {
+		const FILEINFO *e = &fb.files[idx[i]];
+
+		dot = strrchr(e->name, '.');
+		if (isDir(e) || !((dot != NULL && mcSaveFormatKnownExt(dot)) ||
+		                  (fullPath(e, path, sizeof(path)) && mcSaveFormatBlazePath(path))))
+			return 0;
+	}
+	return n;
+}
+
+/* The marked PS1 save files (.mcs, .psv, .psx, .ps1, .mcb, .pda or raw,
+ * which has no extension), at most a card's 15; 0 when any is not one. */
+static int ps1SaveTargets(int *idx, int max)
+{
+	static const char *const exts[] = {"MCS", "PSV", "PSX", "PS1", "MCB", "PDA"};
+	int n = fb.nmarked > 0 ? targets(idx, max) : 0, i, j, ok;
+
+	for (i = 0; i < n; i++) {
+		const char *name = fb.files[idx[i]].name;
+
+		ok = !isDir(&fb.files[idx[i]]) && strchr(name, '.') == NULL;
+		for (j = 0; j < 6 && !ok; j++)
+			ok = genCmpFileExt(name, exts[j]);
+		if (!ok)
+			return 0;
+	}
+	return n;
+}
+
 /* Extracts the focused or marked .psu saves straight onto memory card
  * port 0 or 1 (A5 in the 2026-11 feedback round, Berion): the same classic
  * PSU restore as "Extract PSU" after a copy and a visit to mc0:/, without
@@ -856,6 +932,10 @@ static void opExtractPsuTo(int port)
 	snprintf(dest, sizeof(dest), "mc%d:/", port);
 	if (filerRootMcPresent(port, &type, NULL) <= 0 || type != 2) {
 		dashModalMessage(DI_WARNING, "No PS2 memory card", "Insert a PS2 memory card in that slot and try again.", dest);
+		return;
+	}
+	if (!clipReserve(n)) {
+		dashModalMessage(DI_WARNING, "Not enough memory", "The clipboard cannot hold this selection.", NULL);
 		return;
 	}
 	if (!prepareOp())
@@ -904,6 +984,33 @@ static void opExtractPsuTo(int port)
 	dashToast(DASH_TOAST_OK, msg);
 	if (clipboard_lost)
 		dashToast(DASH_TOAST_INFO, "The clipboard was cleared");
+}
+
+/* Marked save files of any format Import save... reads, mixed, straight
+ * onto the PS2 card in mc<port>: (wLaunchELF_R3Z's "Extract saves..."). */
+static void opImportSavesTo(int port)
+{
+	static int idx[MAX_ENTRY];
+	const char **names;
+	char dest[8];
+	int n = saveFileTargets(idx, MAX_ENTRY), k, type = 0;
+
+	snprintf(dest, sizeof(dest), "mc%d:/", port);
+	if (n == 0 || filerRootMcPresent(port, &type, NULL) <= 0 || type != 2) {
+		dashModalMessage(DI_WARNING, "No PS2 memory card", "Insert a PS2 memory card in that slot and try again.", dest);
+		return;
+	}
+	if (!prepareOp() || filerConfirmExploitModify(dest, NULL) <= 0)
+		return;
+	if ((names = (const char **)malloc((size_t)n * sizeof(*names))) == NULL) {
+		dashModalMessage(DI_WARNING, "Not enough memory", "The selection is too large.", NULL);
+		return;
+	}
+	for (k = 0; k < n; k++)
+		names[k] = fb.files[idx[k]].name;
+	dashCardImportMany(fb.dir, names, n, port);
+	free(names);
+	refresh();
 }
 
 static void opDelete(void)
@@ -2524,8 +2631,9 @@ static void actionsMenu(void)
 	int in_folder = fb.dir[0] && !isMisc(fb.dir);
 	int is_elf = 0, has_target = (fb.nmarked > 0 || f != NULL);
 	DashMenuItem items[56];
-	int ids[56], n = 0, r, sw_card, sw_chan;
+	int ids[56], n = 0, r, sw_card, sw_chan, ps1_type = 0;
 	char marked[24], sort_detail[48], game_id[11];
+	int ps1_idx[16];
 	enum {
 		F_OPEN,
 		F_COPY,
@@ -2534,16 +2642,21 @@ static void actionsMenu(void)
 		F_PASTE_RENAME,
 		F_PSU,
 		F_PSU_MC0,
+		F_SAVES_MC0,
+		F_SAVES_MC1,
 		F_PSU_MC1,
+		F_IMPORT_SAVES,
 		F_DELETE,
 		F_RENAME,
 		F_NEWDIR,
 		F_NEW_BLANK_CARD,
+		F_PS1_CARD_FROM,
 		F_ALL_SAVES,
 		F_SAVE_LIBRARY,
 		F_NEWICON,
 		F_SIZE,
 		F_EDIT,
+		F_HEX,
 		F_ARGS,
 		F_TITLECFG,
 		F_VMC0,
@@ -2554,6 +2667,7 @@ static void actionsMenu(void)
 		F_EXPORT_ACTIVE_MMCE_PS2,
 		F_CARD_CONTENTS,
 		F_CONVERT_SAVE,
+		F_CONVERT_PS1,
 		F_MMCE_ACTIVE,
 		F_MMCE_SWITCH,
 		F_BACKUP_MCD,
@@ -2617,24 +2731,35 @@ static void actionsMenu(void)
 			ADD(DI_MC, psu_label, NULL, 0, F_PSU);
 		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3)) {
 			static int psu_idx[MAX_ENTRY];
-			int npsu = psuTargets(psu_idx, MAX_ENTRY), port;
+			int npsu = psuTargets(psu_idx, MAX_ENTRY), nsav = npsu ? 0 : saveFileTargets(psu_idx, MAX_ENTRY), port;
 
 			/* A .psu goes straight onto a card from here, no copy and no trip
-			 * to mc0:/ (Berion). Rows stay visible, dimmed, with the reason. */
-			for (port = 0; npsu > 0 && port < 2; port++) {
+			 * to mc0:/ (Berion); marked saves of other or mixed formats too.
+			 * Rows stay visible, dimmed, with the reason. */
+			for (port = 0; npsu + nsav > 0 && port < 2; port++) {
 				int type = 0, present = filerRootMcPresent(port, &type, NULL), ok = present > 0 && type == 2;
 				static const char *const labels[] = {"Extract to mc0:/", "Extract to mc1:/"};
 
 				ADD(DI_MC, labels[port],
-				    ok ? (npsu > 1 ? marked : "straight onto the card") : present > 0 ? "not a PS2 card" : "no card",
-				    !ok, port == 0 ? F_PSU_MC0 : F_PSU_MC1);
+				    ok ? (npsu > 1 || nsav ? marked : "straight onto the card") : present > 0 ? "not a PS2 card" : "no card",
+				    !ok, nsav ? (port == 0 ? F_SAVES_MC0 : F_SAVES_MC1) : port == 0 ? F_PSU_MC0 : F_PSU_MC1);
 			}
+		}
+		{
+			static int sv_idx[MAX_ENTRY];
+
+			if (saveFileTargets(sv_idx, MAX_ENTRY) > 0)
+				ADD(DI_PLUS, "Import into a card image...", ".psu, .max, .cbs, .sps, .xps, .psv, Blaze; mixed", 0,
+				    F_IMPORT_SAVES);
 		}
 		ADD(DI_WARNING, "Delete...", fb.nmarked ? marked : NULL, !has_target || !en[DELETE], F_DELETE);
 		ADD(DI_EDIT, "Rename...", NULL, f == NULL || !en[RENAME], F_RENAME);
 		ADD(DI_NEW_FOLDER, "New folder...", NULL, !en[NEWDIR], F_NEWDIR);
 		if (en[NEWDIR] && strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
 			ADD(DI_MC, "New blank card...", "empty 1 to 64 MB .mcd, or a PS1 card", 0, F_NEW_BLANK_CARD);
+		if (en[NEWDIR] && strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3) && ps1SaveTargets(ps1_idx, 16) > 0)
+			ADD(DI_MC, "PS1 card from these saves...", fb.nmarked > 15 ? "a card holds 15 at most" : "Ember, POPStarter or any PS1 card",
+			    fb.nmarked > 15, F_PS1_CARD_FROM);
 		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
 			ADD(DI_MC, "All saves here...", "every card image in this folder and the ones inside it", 0, F_ALL_SAVES);
 		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
@@ -2644,6 +2769,9 @@ static void actionsMenu(void)
 		ADD(DI_INFO, "Size", NULL, !has_target || !en[GETSIZE], F_SIZE);
 		if (f != NULL && !isDir(f) && en[OPEN_TEXTEDITOR])
 			ADD(DI_TEXT, "Open in Text Editor", NULL, 0, F_EDIT);
+		/* any file, .elf/.icn/.sys too; not the built-in commands or an offline PC card */
+		if (f != NULL && !isDir(f) && !isMisc(fb.dir) && (!isPcCardCfPath(fb.dir) || isPcCardCfOnline()))
+			ADD(DI_EDIT, "Open in Hex Editor", "change bytes, up to 512 KB", 0, F_HEX);
 		if (is_elf) {
 			int args_disabled = isPcCardCfPath(fb.dir) ? 1 : 0;
 			ADD(DI_EDIT, "Start with arguments...", args_disabled ? "Direct launch unsupported" : NULL,
@@ -2669,16 +2797,31 @@ static void actionsMenu(void)
 			ADD(DI_MC, "Export active MMCE card as PCSX2 .ps2...", "adds ECC/spare bytes and verifies", 0, F_EXPORT_ACTIVE_MMCE_PS2);
 		}
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 &&
-		    (genCmpFileExt(f->name, "MCD") || isVmcImage(f->name) || genCmpFileExt(f->name, "MCR") || genCmpFileExt(f->name, "VM1")))
+		    (genCmpFileExt(f->name, "MCD") || isVmcImage(f->name) || genCmpFileExt(f->name, "MCR") || genCmpFileExt(f->name, "VM1") ||
+		     genCmpFileExt(f->name, "GME") || genCmpFileExt(f->name, "VGS") || genCmpFileExt(f->name, "MEM") ||
+		     genCmpFileExt(f->name, "VMP") || genCmpFileExt(f->name, "MCX") || genCmpFileExt(f->name, "SRM")))
 			ADD(DI_MC, "Card contents...", "PS2 and PS1 saves: copy, import, export, delete", 0, F_CARD_CONTENTS);
 		/* Other tools' save files by extension off the cards, plus Blaze's
 		 * extensionless files in a card's (or any) MCM folder. */
-		if (f != NULL && !isDir(f) && fb.nmarked == 0 && !genCmpFileExt(f->name, "PSU") &&
+		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "PSU") && strncmp(fb.dir, "mc", 2) &&
+		    strncmp(fb.dir, "vmc", 3))
+			ADD(DI_MC, "Convert to .psv, .cbs or .zip...", "PS3, CodeBreaker or a PC folder, written next to it", 0, F_CONVERT_SAVE);
+		else if (f != NULL && !isDir(f) && fb.nmarked == 0 && !genCmpFileExt(f->name, "PSU") &&
 		    (((genCmpFileExt(f->name, "MCM") || genCmpFileExt(f->name, "MAX") || genCmpFileExt(f->name, "CBS") ||
 		       genCmpFileExt(f->name, "SPS") || genCmpFileExt(f->name, "XPS") || genCmpFileExt(f->name, "PSV")) &&
 		      strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3)) ||
 		     (fullPath(f, path, sizeof(path)) && mcSaveFormatBlazePath(path))))
-			ADD(DI_MC, "Convert to .psu...", "Blaze (MCM folder), MAX, CodeBreaker, SharkPort, PS3 save", 0, F_CONVERT_SAVE);
+			ADD(DI_MC, "Convert to .psu, .psv, .cbs or .zip...",
+			    "Blaze (MCM folder), MAX, CodeBreaker, SharkPort, PS3 save", 0, F_CONVERT_SAVE);
+		/* PS1 single saves by extension, and every save on a real PS1 card,
+		 * which lists each one as a raw file */
+		if (f != NULL && !isDir(f) && fb.nmarked == 0 &&
+		    ((strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3) &&
+		      (genCmpFileExt(f->name, "MCS") || genCmpFileExt(f->name, "PS1") || genCmpFileExt(f->name, "MCB") ||
+		       genCmpFileExt(f->name, "PDA") || genCmpFileExt(f->name, "PSX"))) ||
+		     (!strncmp(fb.dir, "mc", 2) && fb.dir[3] == ':' && fb.dir[4] == '/' && !fb.dir[5] &&
+		      filerRootMcPresent(fb.dir[2] - '0', &ps1_type, NULL) > 0 && ps1_type == 1)))
+			ADD(DI_MC, "Convert to .mcs, .psv, .psx or raw...", "PS1 save; the original is only read", 0, F_CONVERT_PS1);
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "MCD")) {
 			ADD(DI_MC, "Back up .mcd...", "verified byte-for-byte copy", 0, F_BACKUP_MCD);
 			ADD(DI_MC, "Export as PCSX2 .ps2...", "adds ECC and verifies the copy", 0, F_EXPORT_PS2);
@@ -2744,6 +2887,10 @@ static void actionsMenu(void)
 		case F_PSU_MC1:
 			opExtractPsuTo(1);
 			break;
+		case F_SAVES_MC0:
+		case F_SAVES_MC1:
+			opImportSavesTo(ids[r] == F_SAVES_MC1);
+			break;
 		case F_DELETE:
 			opDelete();
 			break;
@@ -2756,6 +2903,18 @@ static void actionsMenu(void)
 		case F_NEW_BLANK_CARD:
 			if (prepareOp()) {
 				dashCardNewBlank(fb.dir);
+				refresh();
+			}
+			break;
+		case F_PS1_CARD_FROM:
+			if (prepareOp()) {
+				const char *names[15];
+				int k, m = ps1SaveTargets(ps1_idx, 15);
+
+				for (k = 0; k < m; k++)
+					names[k] = fb.files[ps1_idx[k]].name;
+				if (m > 0)
+					dashPs1CardNew(fb.dir, names, m);
 				refresh();
 			}
 			break;
@@ -2780,6 +2939,12 @@ static void actionsMenu(void)
 		case F_EDIT:
 			if (fullPath(f, path, sizeof(path))) {
 				dashOpenTextEditor(path);
+				refresh();
+			}
+			break;
+		case F_HEX:
+			if (fullPath(f, path, sizeof(path))) {
+				dashHexEditor(path);
 				refresh();
 			}
 			break;
@@ -2814,9 +2979,33 @@ static void actionsMenu(void)
 				refresh();
 			}
 			break;
+		case F_IMPORT_SAVES: {
+			static int sv_idx[MAX_ENTRY];
+			int m = saveFileTargets(sv_idx, MAX_ENTRY), k;
+			const char **names = m > 0 ? (const char **)malloc((size_t)m * sizeof(*names)) : NULL;
+
+			if (names == NULL) {
+				if (m > 0)
+					dashModalMessage(DI_WARNING, "Not enough memory", "The selection is too large.", NULL);
+				break;
+			}
+			for (k = 0; k < m; k++)
+				names[k] = fb.files[sv_idx[k]].name;
+			if (prepareOp())
+				dashCardImportMany(fb.dir, names, m, -1);
+			free(names);
+			refresh();
+			break;
+		}
 		case F_CONVERT_SAVE:
 			if (fullPath(f, path, sizeof(path)) && prepareOp()) {
 				dashCardConvertSave(path);
+				refresh();
+			}
+			break;
+		case F_CONVERT_PS1:
+			if (fullPath(f, path, sizeof(path)) && prepareOp()) {
+				dashPs1SaveConvert(path);
 				refresh();
 			}
 			break;
@@ -2983,7 +3172,9 @@ static void browserDrawBody(void)
 		char space[24];
 
 		space[0] = '\0';
-		if (fb.free_valid)
+		if (fb.free_valid == 2) /* PS1 card: 15 blocks of 8 KB */
+			snprintf(space, sizeof(space), "%d/15 blocks", (int)(fb.free_bytes / 8192));
+		else if (fb.free_valid)
 			fmtBytes(space, sizeof(space), fb.free_bytes);
 		if (fb.nmarked)
 			snprintf(info, sizeof(info), "%d of %d selected", fb.nmarked, fb.n);
@@ -3169,11 +3360,23 @@ static void browserSnapshotPad(void)
 	}
 }
 
+/* The device list stays open: keep its memory-card rows current. Runs every
+ * frame (standalone loop, or the Files tab's update), not only on input. */
+static void browserRefreshRootCards(void)
+{
+	if (fb.files != NULL && !fb.dir[0] && !fb.loading && !dashWorkerIoBusy() && !dashIopParked()) {
+		pollRootMemoryCardDevices();
+		dashDevicesRefreshMemoryCards(fb.devs, fb.ndevs);
+	}
+}
+
 static void browserProcessInput(const DashInput *in, int *running)
 {
 	int total, prev;
 	if (fb.files == NULL)
 		return;
+	if (running)
+		browserRefreshRootCards();
 	total = fb.dir[0] ? fb.n : fb.ndevs;
 	prev = fb.sel;
 	if (!fb.loading) {
@@ -3245,6 +3448,7 @@ static void browserTabUpdate(float dt)
 {
 	if (!fb_tab_active)
 		return;
+	browserRefreshRootCards();
 	browserSnapshotPad();
 	fb.sel_anim = dashApproach(fb.sel_anim, (float)fb.sel, 22.0f * dashAnimSpeed(), dt);
 }

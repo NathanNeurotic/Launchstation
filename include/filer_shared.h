@@ -91,7 +91,8 @@ extern char cnfmode_extL[CNFMODE_CNT][4];
 extern char clipPath[MAX_PATH];
 extern char LastDir[MAX_NAME];
 extern char marks[MAX_ENTRY];
-extern FILEINFO clipFiles[MAX_ENTRY];
+extern FILEINFO *clipFiles; /* nclipFiles entries; grown by clipReserve() */
+int clipReserve(int count);
 
 #if defined(ETH) || defined(UDPFS)
 extern int host_elflist;
@@ -118,6 +119,10 @@ void discardNextMx4sioRootListing(const char *path);
 int ensurePathDeviceStackReady(const char *path);
 void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char enable[NUM_MENU]);
 int prepareTransferDeviceStacks(const char *src_path, const char *dst_path);
+/* mc0:/mc1: for a save written file by file: free 1 KB clusters now (<0:
+ * no formatted PS2 card), and a card entry's mode, times and attribute */
+int filerMcFreeClusters(int port);
+int filerMcSetEntry(const char *path, const unsigned char *entry);
 /* copy() returns 0 when it copied, a negative error, or COPY_KEPT_DESTINATION
  * when it kept what was already at the destination and wrote nothing: a PSU
  * backup whose dated name is taken (PSU_NoOverwrite), or a destination that

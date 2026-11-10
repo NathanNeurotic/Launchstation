@@ -6,13 +6,13 @@ import re
 root = Path(__file__).resolve().parents[1]
 src = (root / "src/dash_browser.c").read_text(encoding="utf-8")
 
-# the rows: one per port, on .psu targets only, never inside a card, dimmed with a reason
-rows = src[src.index("for (port = 0; npsu > 0 && port < 2; port++) {"):]
+# the rows: one per port, on .psu targets (or marked saves of other formats, see test_dash_card_tool.py), never inside a card, dimmed with a reason
+rows = src[src.index("for (port = 0; npsu + nsav > 0 && port < 2; port++) {"):]
 rows = rows[:rows.index("}\n\t\t}\n")]
 assert 'strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3)' in src[src.index("int npsu = psuTargets") - 200:src.index("int npsu = psuTargets")]
 assert "filerRootMcPresent(port, &type, NULL)" in rows and "type == 2" in rows
 assert 'labels[] = {"Extract to mc0:/", "Extract to mc1:/"}' in rows
-assert '"not a PS2 card" : "no card"' in rows and "!ok, port == 0 ? F_PSU_MC0 : F_PSU_MC1" in rows
+assert '"not a PS2 card" : "no card"' in rows and "!ok, nsav ? (port == 0 ? F_SAVES_MC0 : F_SAVES_MC1) : port == 0 ? F_PSU_MC0 : F_PSU_MC1" in rows
 assert "case F_PSU_MC0:\n\t\t\topExtractPsuTo(0);" in src and "case F_PSU_MC1:\n\t\t\topExtractPsuTo(1);" in src
 
 # only .psu files qualify, folders and other files never do

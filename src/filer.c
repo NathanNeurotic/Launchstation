@@ -133,7 +133,24 @@ static int hddNparties[2] = {0, 0};
 static char dvrParties[MAX_PARTITIONS][MAX_PART_NAME + 1];
 #endif
 char clipPath[MAX_PATH], LastDir[MAX_NAME], marks[MAX_ENTRY];
-FILEINFO clipFiles[MAX_ENTRY];
+FILEINFO *clipFiles;
+static int clipCapacity;
+
+/* The clipboard is allocated on first copy and grows to the largest selection
+ * copied so far. Returns 0, leaving the clipboard unchanged, when memory is short. */
+int clipReserve(int count)
+{
+	FILEINFO *grown;
+
+	if (count <= clipCapacity)
+		return 1;
+	grown = (FILEINFO *)realloc(clipFiles, (size_t)count * sizeof(FILEINFO));
+	if (grown == NULL)
+		return 0;
+	clipFiles = grown;
+	clipCapacity = count;
+	return 1;
+}
 int fileMode = FIO_S_IRUSR | FIO_S_IWUSR | FIO_S_IXUSR | FIO_S_IRGRP | FIO_S_IWGRP | FIO_S_IXGRP | FIO_S_IROTH | FIO_S_IWOTH | FIO_S_IXOTH;
 
 #ifdef ULE_DEBUG_BUILD
@@ -340,6 +357,8 @@ static int readGENERICWithFirstOpenRetry(const char *path, FILEINFO *info, int m
 
 	wait_start = Timer();
 	while (Timer() < wait_start + wait_budget_ms) {
+		if (isPcCardCfPath(path) && !isPcCardCfOnline())
+			break;
 		dd = fileXioDopen(path);
 		if (dd >= 0) {
 			fileXioDclose(dd);
@@ -419,6 +438,12 @@ int filerPrepareMemoryCardRead(int port)
 	 * against slot 2 if the foreground handoff failed or was skipped. */
 	if (port == 1 && !isPathDeviceStackLoaded("mc1:/"))
 		return sceMcResFailDetect;
+	/* Retry a failed card RPC start, but only on the UI thread: the
+	 * library-scan worker must never load IOP modules, so it skips the card. */
+	if (!isMemoryCardRpcReady() && !dashWorkerOnThread())
+		ensureCoreIoStackReady();
+	if (!isMemoryCardRpcReady())
+		return sceMcResFailDetect;
 	ret = waitMemoryCardReadyForBrowse(port);
 	if (ret != sceMcResSucceed)
 		return ret;
@@ -431,6 +456,22 @@ int filerPrepareMemoryCardRead(int port)
 	root_mc_failures[port] = 0;
 	root_mc_known_type[port] = mctype_PSx;
 	return sceMcResSucceed;
+}
+
+/* Free 1 KB clusters on the formatted PS2 card in mc<port>:, asked now
+ * (not the root poll's cached value); <0 when there is none. */
+int filerMcFreeClusters(int port)
+{
+	int type = 0, freec = 0, fmt = 0, ret = sceMcResFailDetect;
+
+	if (filerPrepareMemoryCardRead(port) != sceMcResSucceed)
+		return -1;
+	if (mcGetInfo(port, 0, &type, &freec, &fmt) < 0)
+		return -1;
+	mcSync(0, NULL, &ret);
+	if ((ret != sceMcResSucceed && ret != sceMcResChangedCard) || type != sceMcTypePS2 || !fmt)
+		return -1;
+	return freec;
 }
 
 int readMC(const char *path, FILEINFO *info, int max)
@@ -729,8 +770,14 @@ int filerDirReadNeedsPrep(const char *path)
 
 	if (path == NULL || path[0] == '\0' || !strncmp(path, "vmc", 3))
 		return FALSE;
+	if (!strncmp(path, "mc", 2) && !isMemoryCardRpcReady())
+		return TRUE; /* the card RPC start failed: retry it on the UI thread */
 	if (!isPathDeviceStackLoaded(path))
 		return TRUE;
+#ifdef SMB
+	if (smbIsRootPath(path) && smbSharesConnectedCount(smbPathKind(path)) == 0)
+		return TRUE;
+#endif
 	if (!strncmp(path, "hdd", 3) && getHddDeviceFromPath(path, dev) >= 0 &&
 	    (unit = getHddUnitFromDevice(dev)) >= 0 && hddNparties[unit] == 0)
 		return TRUE;
@@ -745,8 +792,17 @@ int filerPrepareDirRead(const char *path)
 
 	if (!filerDirReadNeedsPrep(path))
 		return TRUE;
+	if (!strncmp(path, "mc", 2) && !isMemoryCardRpcReady()) {
+		ensureCoreIoStackReady(); /* retries a failed card RPC start */
+		if (!isMemoryCardRpcReady())
+			return FALSE;
+	}
 	if (!ensurePathDeviceStackReady(path))
 		return FALSE;
+#ifdef SMB
+	if (smbIsRootPath(path) && smbSharesConnectedCount(smbPathKind(path)) == 0)
+		smbSharesConnect(smbPathKind(path), 1);
+#endif
 	if (!strncmp(path, "hdd", 3) && getHddDeviceFromPath(path, dev) >= 0 &&
 	    (unit = getHddUnitFromDevice(dev)) >= 0 && hddNparties[unit] == 0)
 		setPartyListForDevice(dev);
@@ -1478,6 +1534,10 @@ int pollRootMemoryCardDevices(void)
 #endif
 	if (Timer() < root_mc_next_poll_time)
 		return FALSE;
+	/* Never poll through an unbound card client. Opening a card retries the
+	 * start; presence stays as last known meanwhile. */
+	if (!isMemoryCardRpcReady())
+		return FALSE;
 	/* Polling must never reset MX4SIO or send mc1 requests through its
 	 * SIO2 hooks. Explicit browsing performs the foreground stack switch. */
 	if (root_mc_poll_port == 1 && !isPathDeviceStackLoaded("mc1:/")) {
@@ -1502,16 +1562,16 @@ int pollRootMemoryCardDevices(void)
 int readGENERIC(const char *path, FILEINFO *info, int max)
 {
 	iox_dirent_t record;
-	int n = 0, dd = -1;
+	int n = 0, dd = -1, read_ret = 0;
 	dir_complete = 0;  //These drivers cannot distinguish a short read from EOF.
 
 	dd = fileXioDopen(path);
 	dirOpenResult(dd);
 	if (dd < 0)
 		goto exit;  //exit if error opening directory
-	/* No failed read is recorded: BDM (FAT, exFAT) ends a folder with 0 after
-	 * a read error too, and MMCE ends every folder with -1. */
-	while (fileXioDread(dd, &record) > 0) {
+	/* BDM (FAT, exFAT) ends a folder with 0, while MMCE ends every folder
+	 * with -1. Record negative dread results on non-MMCE paths as read errors. */
+	while ((read_ret = fileXioDread(dd, &record)) > 0) {
 		if ((FIO_S_ISDIR(record.stat.mode)) && (!strcmp(record.name, ".") || !strcmp(record.name, "..")))
 			continue;  //Skip entry if pseudo-folder "." or ".."
 
@@ -1534,6 +1594,8 @@ int readGENERIC(const char *path, FILEINFO *info, int max)
 		if (n == max)
 			break;
 	}  //ends while
+	if (read_ret < 0 && strncmp(path, "mmce", 4) != 0)
+		dirReadFailed(read_ret);
 	size_valid = 1;
 	time_valid = 1;
 
