@@ -1,7 +1,7 @@
 # Launchstation interface captures
 
 The [visual gallery](https://nathanneurotic.github.io/Launchstation/ui-captures.html)
-shows all 18 built-in themes using the same populated sample library. These are
+shows all 18 built-in theme presets using the same populated sample library. These are
 real captures of released build 974 in RIPPCSX2, not drawn UI mockups.
 
 ![OSD Classic dashboard with sample applications](../docs-site/static/assets/ui/theme-osd.png)

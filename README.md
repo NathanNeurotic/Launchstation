@@ -19,7 +19,7 @@
 ![SDK](https://img.shields.io/badge/SDK-ps2build-skyblue?style=flat&labelColor=navy)
 ![Compiler](https://img.shields.io/badge/Toolchain-LLVM%2FClang-skyblue?style=flat&labelColor=navy)
 ![Languages](https://img.shields.io/badge/Languages-9-skyblue?style=flat&labelColor=navy)
-![Themes](https://img.shields.io/badge/Themes-18-skyblue?style=flat&labelColor=navy)
+![Themes](https://img.shields.io/badge/Theme%20presets-18-skyblue?style=flat&labelColor=navy)
 ![Repo size](https://img.shields.io/github/repo-size/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=github&label=Repo%20Size)
 
 ![Last commit](https://img.shields.io/github/last-commit/NathanNeurotic/Launchstation/master?style=flat&labelColor=navy&color=skyblue&logo=git&label=Last%20Commit)
@@ -56,7 +56,7 @@
 
 ![OSD Classic Home with a populated sample application library](docs-site/static/assets/ui/theme-osd.png)
 
-**18 built-in themes, one dashboard.** Captured from released build 974 in RIPPCSX2.
+**18 built-in theme presets, one dashboard.** These selectable looks are compiled into Launchstation, not separate theme files you have to install. Captured from released build 974 in RIPPCSX2.
 The sample applications are non-bootable placeholders; no gameplay is shown.
 
 [All themes and screenshots](https://nathanneurotic.github.io/Launchstation/ui-captures.html) |
@@ -161,7 +161,7 @@ See [MMCE recovery](docs/wiki/MMCE-Recovery.md), [MMCE backups](https://nathanne
 
 - FTP, [PS2Link](https://github.com/ps2dev/ps2link) and compatible remote ISO transfers start from **Tools → FTP / Remote access**. UDPFS and SMB shares open through Files; network stacks start on demand. Transfers between SMB and UDPFS, or SMB and PC CARD CF, are refused because their device stacks cannot coexist.
 - Configure SMB2/SMB3 shares and an optional SMB1 share in `SMB2.CNF`; see [Network shares (SMB)](https://nathanneurotic.github.io/Launchstation/smb.html). SMB and Neutrino SMB support remain pending console validation.
-- Choose from 18 built-in theme presets, custom colors, wallpapers, fonts ([Roboto](https://fonts.google.com/specimen/Roboto), System or [Emotion Engine](docs/font-generation.md)), clocks, icons, Classic/PS2-style sound effects and shareable theme folders. See [Themes](docs/themes.md) and the [wallpaper guide](docs/wiki/Theme-and-Wallpaper-Guide.md).
+- Choose from 18 built-in theme presets (no extra theme pack required), custom colors, wallpapers, fonts ([Roboto](https://fonts.google.com/specimen/Roboto), System or [Emotion Engine](docs/font-generation.md)), clocks, icons, Classic/PS2-style sound effects and shareable theme folders. See [Themes](docs/themes.md) and the [wallpaper guide](docs/wiki/Theme-and-Wallpaper-Guide.md).
 - Use English, Spanish, Italian, French, German, Polish, Portuguese, Brazilian Portuguese or Hungarian, with optional external `.LNG` overrides. Some extended help remains English; filenames and metadata retain their original text.
 - Set a **software clock** under Settings → System or sync the PS2 clock from the Internet under Settings → Network. A saved software-clock checkpoint resumes on restart but cannot account for time spent powered off.
 - Install a supported memory-card boot exploit or bind a custom ELF using your own signing material; see the [exploit installer guide](https://nathanneurotic.github.io/Launchstation/exploit-installer.html) for console restrictions and `PS2KEYS.dat` requirements.
