@@ -389,7 +389,7 @@ static int manualLeap(int year)
 	return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
 }
 
-static int manualDaysInMonth(int year, int month)
+int dashClockDaysInMonth(int year, int month)
 {
 	static const u8 days[] = {31,28,31,30,31,30,31,31,30,31,30,31};
 
@@ -406,7 +406,7 @@ static s64 manualSerialSeconds(int year, int month, int day, int hour, int minut
 	for (y = 2000; y < year; y++)
 		days += manualLeap(y) ? 366 : 365;
 	for (m = 1; m < month; m++)
-		days += manualDaysInMonth(year, m);
+		days += dashClockDaysInMonth(year, m);
 	days += day - 1;
 	return days * 86400 + hour * 3600 + minute * 60 + second;
 }
@@ -423,7 +423,7 @@ int dashClockSetManual(int year, int month, int day, int hour, int minute, int s
 	if (result != NULL && result_size > 0)
 		result[0] = '\0';
 	if (year < 2000 || year > 2099 || month < 1 || month > 12 ||
-	    day < 1 || day > manualDaysInMonth(year, month) ||
+	    day < 1 || day > dashClockDaysInMonth(year, month) ||
 	    hour < 0 || hour > 23 || minute < 0 || minute > 59 ||
 	    second < 0 || second > 59) {
 		if (result) snprintf(result, result_size, "Use YYYY-MM-DD HH:MM:SS with a valid date and 24-hour time.");

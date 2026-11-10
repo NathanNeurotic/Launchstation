@@ -695,7 +695,7 @@ static const SetItem system_items[] = {
     {ST_PAGE, P_CLASSIC, "Classic screen settings", "Appearance of classic dialogs and the legacy launch menu."},
     {ST_ACTION, S_CLOCK_SOFTWARE, "Set software clock...", "Works without a CMOS battery. Restarts at the last saved time; save again before power-off to retain elapsed runtime."},
     {ST_ACTION, S_CLOCK_HARDWARE, "Use PS2 hardware clock", "Stop the software clock and use the console RTC again."},
-    {ST_ACTION, S_CLOCK_MANUAL, "Set PS2 clock manually...", "Enter the local date and time as YYYY-MM-DD HH:MM:SS; the hardware RTC is written and verified."},
+    {ST_ACTION, S_CLOCK_MANUAL, "Set PS2 clock manually...", "Pick each field with Left/Right and change it with Up/Down; the hardware RTC is written and verified."},
     {ST_CHOICE, S_TEMP_UNITS, "PS2 Temperature Units (50K and later)", "Celsius or Fahrenheit beside the clock. Hidden automatically when the console has no supported temperature sensor."},
     {ST_PATH, S_CNF_PATH, "Configuration folder", "Optional save target for LAUNCHELF.CNF. Loading searches the start folder, then mcN:/SYS-CONF/ on the launch card, then the other card."},
     {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
@@ -3045,6 +3045,119 @@ static void runThemeAction(int id)
 	}
 }
 
+/* Date and time as six boxed fields, like the IP editor: Left/Right picks a
+ * field, Up/Down changes it by one, L1/R1 by ten, wrapping inside its range.
+ * The day is kept valid for the month and year. 1 = Confirm, with the result
+ * in fields[] (year, month, day, hour, minute, second); 0 = Back. */
+static int editClockDateTime(const char *title, int fields[6])
+{
+	static const char *const labels[] = {"Year", "Month", "Day", "Hour", "Minute", "Second"};
+	static const int low[] = {2000, 1, 1, 0, 0, 0};
+	int high[] = {2099, 12, 31, 23, 59, 59};
+	int value[6], sel = 0, i, accepted = 0;
+	float open = 0.0f, sel_anim = 0.0f;
+	const float w = 528.0f, h = 268.0f, bw = 64.0f, gap = 16.0f;
+	const float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
+	const float bx0 = x + (w - (6 * bw + 5 * gap)) * 0.5f, by = y + 120.0f;
+	DashInput in;
+
+	for (i = 0; i < 6; i++) {
+		if (i == 2)
+			high[2] = dashClockDaysInMonth(value[0], value[1]);
+		value[i] = fields[i] < low[i] ? low[i] : fields[i] > high[i] ? high[i] : fields[i];
+	}
+	dashInputFlush();
+	while (1) {
+		int step = 0;
+		float dt, oe;
+
+		dashInputPoll(&in);
+		if (in.pressed & (DASH_IN_BACK | DASH_IN_MENU))
+			break;
+		if (in.pressed & DASH_IN_OK) {
+			accepted = 1;
+			break;
+		}
+		if (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT)) {
+			int next = (sel + ((in.pressed & DASH_IN_LEFT) ? 5 : 1)) % 6;
+
+			if ((sel == 0 && next == 5) || (sel == 5 && next == 0))
+				sel_anim = (float)next;  //wrapping jumps instead of sliding across
+			sel = next;
+			dashSoundPlay(DASH_SND_CURSOR);
+		}
+		if (in.pressed & DASH_IN_UP)
+			step = 1;
+		if (in.pressed & DASH_IN_DOWN)
+			step = -1;
+		if (in.pressed & (DASH_IN_R1 | DASH_IN_R2))
+			step = 10;
+		if (in.pressed & (DASH_IN_L1 | DASH_IN_L2))
+			step = -10;
+		if (step) {
+			int range = high[sel] - low[sel] + 1;
+
+			value[sel] = low[sel] + ((value[sel] - low[sel] + step) % range + range) % range;
+			high[2] = dashClockDaysInMonth(value[0], value[1]);
+			if (value[2] > high[2])
+				value[2] = high[2];
+			dashSoundPlay(DASH_SND_CURSOR);
+		}
+		dt = dashVisualUpdate();
+		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
+		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), dt);
+		oe = dashEaseOutCubic(open);
+		dashRenderScene();
+		dashModalBackdrop(oe);
+		dashGfxPushAlpha(oe);
+		dashGfxPushOffset(0, 18.0f * (1.0f - oe));
+		dashModalPanel(x, y, w, h, oe);
+		dashIcon(DI_CLOCK, x + 24, y + 18, 22, DASH_C_ACCENT);
+		dashTextS(x + 56, y + 18, title, DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextFit(x + 24, y + 48, w - 48, "Local date and time (24-hour clock, 2000-2099)", DASH_FS_CAPTION, DASH_C_TEXT3);
+		dashDrawSelection(bx0 + sel_anim * (bw + gap), by, bw, 44, 10, 1.0f);
+		for (i = 0; i < 6; i++) {
+			char num[8];
+			float bx = bx0 + i * (bw + gap);
+
+			dashTextCenter(bx + bw * 0.5f, by - 46, labels[i], DASH_FS_CAPTION, DASH_C_TEXT3);
+			if (i != sel)
+				dashPanel(bx, by, bw, 44, 10, DC(255, 255, 255, 16));
+			snprintf(num, sizeof(num), i == 0 ? "%04d" : "%02d", value[i]);
+			dashTextCenter(bx + bw * 0.5f, by + 10, num, DASH_FS_LABEL, dashItemColor(i == sel));
+			if (i < 5 && i != 2)
+				dashTextCenter(bx + bw + gap * 0.5f, by + 10, i < 2 ? "-" : ":", DASH_FS_LABEL, DASH_C_TEXT2);
+			if (i == sel) {
+				dashTextCenter(bx + bw * 0.5f, by - 20, "+", DASH_FS_BODY, DASH_C_ACCENT);
+				dashTextCenter(bx + bw * 0.5f, by + 48, "-", DASH_FS_BODY, DASH_C_ACCENT);
+			}
+		}
+		{
+			float hx = x + 24, hy = y + h - 68;
+
+			hx += dashDrawButton(hx, hy, DI_BTN_LEFT, NULL) + 12;
+			hx += dashDrawButton(hx, hy, DI_BTN_RIGHT, NULL) + 4;
+			hx = dashTextS(hx, hy + 4.5f, "Select field", DASH_FS_SMALL, DASH_C_TEXT2) + 20;
+			hx += dashDrawButton(hx, hy, DI_BTN_UP, NULL) + 12;
+			hx += dashDrawButton(hx, hy, DI_BTN_DOWN, NULL) + 4;
+			dashTextS(hx, hy + 4.5f, "Change", DASH_FS_SMALL, DASH_C_TEXT2);
+			hx = x + 24, hy = y + h - 36;
+			hx += dashDrawButton(hx, hy, -1, "L1") + 2;
+			hx += dashDrawButton(hx, hy, -1, "R1") + 4;
+			hx = dashTextS(hx, hy + 4.5f, "10", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
+			dashModalHintRow(hx, hy, dashOkIcon(), "Apply", dashBackIcon(), "Cancel");
+		}
+		dashGfxPopOffset();
+		dashGfxPopAlpha();
+		dashGfxPresent();
+	}
+	if (accepted)
+		memcpy(fields, value, sizeof(value));
+	dashSoundPlay(accepted ? DASH_SND_CONFIRM : DASH_SND_CANCEL);
+	dashInputFlush();
+	return accepted;
+}
+
 static void runAction(int id)
 {
 	if (id >= S_T_PRESET && id <= S_T_RESETCAT) {
@@ -3251,39 +3364,19 @@ static void runAction(int id)
 		case S_CLOCK_MANUAL: {
 			char input[24];
 			char result[160];
-			int year, month, day, hour, minute, second;
+			int f[6] = {2000, 1, 1, 0, 0, 0};
 			int use12, datefmt;
 			int ok;
 
-			if (menuTitleGetClockFields(&year, &month, &day, &hour, &minute, &second,
-			                            &use12, &datefmt))
-				snprintf(input, sizeof(input), "%04d-%02d-%02d %02d:%02d:%02d",
-				         year, month, day, hour, minute, second);
-			else
-				snprintf(input, sizeof(input), "2000-01-01 00:00:00");
-
-			if (!dashModalKeyboard(id == S_CLOCK_SOFTWARE ? "Set software clock: YYYY-MM-DD HH:MM:SS" : "Set PS2 clock: YYYY-MM-DD HH:MM:SS", input, sizeof(input)))
+			menuTitleGetClockFields(&f[0], &f[1], &f[2], &f[3], &f[4], &f[5], &use12, &datefmt);
+			if (!editClockDateTime(id == S_CLOCK_SOFTWARE ? "Set software clock" : "Set PS2 clock", f))
 				break;
-			if (sscanf(input, "%4d-%2d-%2d %2d:%2d:%2d",
-			           &year, &month, &day, &hour, &minute, &second) != 6) {
-				dashModalMessage(DI_WARNING, "Invalid date / time",
-				                 "Use YYYY-MM-DD HH:MM:SS, for example 2026-10-07 15:30:00.", input);
-				break;
-			}
+			snprintf(input, sizeof(input), "%04d-%02d-%02d %02d:%02d:%02d", f[0], f[1], f[2], f[3], f[4], f[5]);
 			if (id == S_CLOCK_SOFTWARE) {
-				int days = 0;
-				static const int mdays[] = {31,28,31,30,31,30,31,31,30,31,30,31};
-				if (month >= 1 && month <= 12)
-					days = mdays[month - 1] + (month == 2 && (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)));
-				if (year < 2000 || year > 2099 || day < 1 || day > days || hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
-					dashModalMessage(DI_WARNING, "Invalid date / time", "Enter a valid date from 2000 to 2099 and a 24-hour time.", NULL);
-					break;
-				}
-				snprintf(input, sizeof(input), "%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
 				settingsSaveSoftwareClock(input);
 				break;
 			}
-			ok = dashClockSetManual(year, month, day, hour, minute, second, result, sizeof(result));
+			ok = dashClockSetManual(f[0], f[1], f[2], f[3], f[4], f[5], result, sizeof(result));
 			dashModalMessage(ok ? DI_CHECK : DI_WARNING,
 			                 ok ? "PS2 clock updated" : "Clock update failed",
 			                 result, input);
