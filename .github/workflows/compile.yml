@@ -34,7 +34,7 @@ jobs:
         run: python3 -m pip install --user numpy
 
       # The smb: driver (iop/smb2man) built for the host under ASan/UBSan and driven against Samba.
-      - name: Test the smb: driver against Samba (tests/smb2man_live)
+      - name: "Test the smb: driver against Samba (tests/smb2man_live)"
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq samba smbclient >/dev/null

@@ -9,7 +9,7 @@ is opened.
 | Protocol | [usmb2](https://github.com/sahlberg/usmb2) by [Ronnie Sahlberg](https://github.com/sahlberg), MIT ([usmb2/LICENSE](usmb2/LICENSE)), commit `7171d08`, with [RiptOPL](https://github.com/NathanNeurotic/Open-PS2-Loader)'s patch ([usmb2/riptopl.patch](usmb2/riptopl.patch), described in [usmb2/VENDORED.txt](usmb2/VENDORED.txt)) |
 | Front end | `smb2man.c`: RiptOPL's `modules/network/smb2man/smb2man.c` (rebuild/main `9b8fea0`, AFL-3.0), one session made one per share, behind the interface of the libsmb2 driver it replaced |
 | Signing | `smb2auth.c/.h`: RiptOPL's `modules/iopcore/cdvdman/smb2auth.c` (AFL-3.0), unchanged |
-| `imports.lst`, `linkfile`, `ps2iop-compat.h` | RiptOPL's, `imports.lst` trimmed to what this driver calls |
+| `imports.lst`, `irx_imports.h`, `linkfile`, `ps2iop-compat.h` | RiptOPL's, `imports.lst` and `irx_imports.h` trimmed to what this driver calls |
 | Interface | [`include/smb2man.h`](../../include/smb2man.h): `SMB2_DEVCTL_CONNECT` (`smb2Connect_in_t`: name, user, password, URL) and `SMB2_DEVCTL_DISCONNECT_ALL`, as libsmb2's `lib/ps2/ps2smb2.h` |
 
 The files under `usmb2/`, `smb2auth.c/.h`, `linkfile` and `ps2iop-compat.h` are byte for byte
