@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 //File name:   smb_shares.c
 //SMB network shares on the PS2 side: finds and reads SMB2.CNF, connects its
-//shares through smb2man.irx (smb:, SMB2/SMB3) and smbman.irx (smb1:, SMB1),
+//shares through smb2man (smb:, SMB2/SMB3) and smbman (smb1:, SMB1),
 //and keeps what happened to each share for the browser to show.
 //
 //init.c loads the drivers (load_smb()); this file only talks to them.
@@ -17,7 +17,7 @@
 #define SMB_CNF_NAME     "SMB2.CNF"
 #define SMB_CNF_MAX_SIZE 16384
 /* A failed share is tried again when its device is opened, but not sooner
- * than this: each try can wait for libsmb2's 30 s timeout. */
+ * than this: each try can wait for smb2man's 5 s connect timeout. */
 #define SMB_RETRY_MS 30000
 
 /* smbman's logon errors are positive codes; this one is ours, for a
@@ -262,6 +262,21 @@ static const char *smb1Problem(int ret)
 	}
 }
 
+static const char *smb2Problem(int ret)
+{
+	switch (-ret) {
+		case SMB2_CONNECT_ERR_URL: return "URL needs smb://<IP address>[:port]/<share>";
+		case SMB2_CONNECT_ERR_CONN: return "Server did not answer";
+		case SMB2_CONNECT_ERR_PROT: return "Server speaks no SMB 2.0.2 to 3.0.2 (SMB 3.1.1 only?)";
+		case SMB2_CONNECT_ERR_SIGNING: return "Server requires SMB3 signing: allow SMB2 or optional signing";
+		case SMB2_CONNECT_ERR_LOGON: return "User name or password refused";
+		case SMB2_CONNECT_ERR_SHARE: return "Share refused or not found";
+		case SMB2_CONNECT_ERR_FULL: return "Too many shares connected";
+		case SMB2_CONNECT_ERR_MEMORY: return "Not enough IOP memory for the share";
+		default: return "Could not connect";
+	}
+}
+
 /* Connects the valid shares of one version that are not connected yet.
  * retry_failed also tries the failed ones again, at most every
  * SMB_RETRY_MS. With no share connected, SMB2.CNF is read again first, so
@@ -293,8 +308,7 @@ void smbSharesConnect(int version, int retry_failed)
 			sh->problem = NULL;
 		} else {
 			sh->state = SMB_STATE_FAILED;
-			sh->problem = version == 1 ? smb1Problem(ret)
-			                           : "Could not connect: check the address, share, user name and password";
+			sh->problem = version == 1 ? smb1Problem(ret) : smb2Problem(ret);
 		}
 		DPRINTF(" [SMB%d]: %s as %s%s, ret=%d\n", version, sh->url,
 		        version == 1 ? SMB_DEVICE_V1 "/" : SMB_DEVICE_V2 "/", version == 1 ? "" : sh->name, ret);

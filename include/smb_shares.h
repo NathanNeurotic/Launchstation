@@ -4,7 +4,7 @@
 //--------------------------------------------------------------
 // SMB network shares: SMB2.CNF and the smb: / smb1: devices.
 //
-//   smb:/<NAME>/...  SMB2/SMB3 shares, through libsmb2's smb2man.irx
+//   smb:/<NAME>/...  SMB2/SMB3 shares, through smb2man (iop/smb2man, usmb2)
 //   smb1:/...        one SMB1 (NT1) share, through smbman.irx
 //
 // smb_cnf.c only parses text and is compiled on the host by
