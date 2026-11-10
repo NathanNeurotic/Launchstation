@@ -128,6 +128,12 @@ with tempfile.TemporaryDirectory(prefix="kit-package-") as tmp:
                 "PS2-Servers.url", "KIT-README.txt", "KIT-MANIFEST.json"} <= names
         assert not any(name.startswith("APP_LAUNCHSTATION/") or "-DS" in name for name in names)
         assert archive.read("APPS/APP_LAUNCHSTATION/LAUNCHSTATION.ELF") == elf
+        # The upstream i.LINK pair is replaced by RiptOPL's fixed builds, byte for byte.
+        for name, digest in kit.NEUTRINO_ILINK.items():
+            ours = (kit.NEUTRINO_ILINK_DIR / name.rsplit("/", 1)[1]).read_bytes()
+            assert hashlib.sha256(ours).hexdigest() == digest and len(ours) > 4096, name
+            assert archive.read("neutrino/" + name) == ours, name
+            assert json.loads(archive.read("KIT-MANIFEST.json"))["neutrino"]["ilink"][name] == digest
         for filename in ("icon.sys", "list.icn", "copy.icn", "del.icn"):
             assert archive.read("APPS/APP_LAUNCHSTATION/" + filename) == (root / "res/memory-card" / filename).read_bytes()
         assert archive.read("APP_LAUNCHSTATION.psu") == psu
@@ -259,6 +265,12 @@ with tempfile.TemporaryDirectory(prefix="kit-package-") as tmp:
     expect(ValueError, kit.verify, doctored(lambda n, d: (n.replace("APPS/", "") if n.startswith("APPS/") else n, d)), psu, manifest)
     expect(ValueError, kit.verify, doctored(lambda n, d: (None if n == "neutrino/modules/smb_fhi.irx" else n, d)), psu, manifest)
     expect(ValueError, kit.verify, doctored(lambda n, d: (n, d + b"\n" if n == "KIT-README.txt" else d)), psu, manifest)
+    # A kit carrying Neutrino's stock i.LINK driver, or none, is refused.
+    expect(ValueError, kit.verify, doctored(lambda n, d: (n, b"stock" if n == "neutrino/modules/IEEE1394_bd_mini.irx" else d)), psu, manifest)
+    expect(ValueError, kit.verify, doctored(lambda n, d: (None if n == "neutrino/modules/iLinkman.irx" else n, d)), psu, manifest)
+    # An upstream build that stopped shipping the manager bsd-ilink.toml loads is refused.
+    expect(ValueError, kit.package, tmp / "artifacts", cache, neutrino_tree(tmp / "no_ilink", drop=("modules/iLinkman.irx",)),
+           tmp / "bad" / "k.zip", "a" * 40, 1791500000, "284", manifest_path, log=lambda *_: None)
     # The CLI reports a refusal as a non-zero exit, never a traceback.
     result = subprocess.run([sys.executable, str(root / "scripts/package_kit.py"), "--manifest", str(manifest_path),
                              "verify", "--kit", str(tmp / "doctored.zip"), "--psu", str(tmp / "artifacts/APP_LAUNCHSTATION.psu")],

@@ -4,7 +4,8 @@
 The kit mirrors the layout of RiptOPL's release ZIP: the installable app under
 APPS/APP_LAUNCHSTATION/ with its memory-card PSU beside it, POPS/ (POPStarter and
 its companions), EMBER/ (the Ember PS1 core), neutrino/ (the latest upstream
-Neutrino build) and the PC-side .url shortcuts. Launchstation launches VCDs
+Neutrino build, with RiptOPL's fixed i.LINK pair from ship/neutrino-ilink/ in
+place of its stock one) and the PC-side .url shortcuts. Launchstation launches VCDs
 through <device>/POPS/POPSTARTER.ELF, Ember from an Ember directory holding
 ember.elf and games/, and PS2 ISOs through <device>/neutrino/neutrino.elf, so the
 kit is complete when copied to the root of a game device.
@@ -81,8 +82,17 @@ EXTERNAL_REQUIRED = (
 NEUTRINO_REQUIRED = (
     "neutrino.elf", "config/system.toml",
     "config/bsd-usb.toml", "config/bsd-mmce.toml", "config/bsd-ilink.toml", "config/bsd-udpfs.toml",
-    "modules/usbmass_bd_mini.irx", "modules/mmceman.irx", "modules/IEEE1394_bd_mini.irx", "modules/udpfs_bd.irx",
+    "modules/usbmass_bd_mini.irx", "modules/mmceman.irx", "modules/IEEE1394_bd_mini.irx", "modules/iLinkman.irx",
+    "modules/udpfs_bd.irx",
 )
+# bsd-ilink.toml's pair, replaced by RiptOPL's fixed builds as RiptOPL's own kit does
+# (ship/neutrino-ilink/README.txt): the stock driver gives up on the login the drive
+# still holds after Neutrino's IOP reset. Pinned by SHA-256.
+NEUTRINO_ILINK_DIR = ROOT / "ship" / "neutrino-ilink"
+NEUTRINO_ILINK = {
+    "modules/iLinkman.irx": "1b0b27ea7f65b550dafac38a38c806f0e84227b244300701f41c69c8afb85ffc",
+    "modules/IEEE1394_bd_mini.irx": "958325d36a10cc6c4d33db60c9bee522085df9b5f88054eeae4b21f8245d9beb",
+}
 NEUTRINO_SMB = ("config/bsd-smb.toml", "modules/smb_ioman.irx", "modules/smb_fhi.irx")
 SHORTCUT_NAMES = ("PS2-Servers.url", "android-udpfs-server.url", "OPL-PS1-AIO-Converter-GUI.url",
                   "OrbitPS2-Manager.url", "Launchstation-Documentation.url")
@@ -386,6 +396,11 @@ def package(app_dir, externals, neutrino, output, revision, epoch, build, manife
         neutrino_dir = kit / "neutrino"
         extract_neutrino(neutrino, neutrino_dir)
         neutrino_source = Path(neutrino)
+        for name, digest in NEUTRINO_ILINK.items():
+            ours = (NEUTRINO_ILINK_DIR / PurePosixPath(name).name).read_bytes()
+            if sha256(ours) != digest:
+                raise ValueError(f"ship/neutrino-ilink/{PurePosixPath(name).name} differs from its pin")
+            (neutrino_dir / name).write_bytes(ours)  # upstream's copy is required, so this replaces it
         for name in SHORTCUT_NAMES:
             shortcut = SHORTCUTS / name
             text = shortcut.read_text(encoding="ascii").replace("\r\n", "\n")
@@ -408,6 +423,7 @@ def package(app_dir, externals, neutrino, output, revision, epoch, build, manife
                          "elf_sha256": sha256((neutrino_dir / "neutrino.elf").read_bytes()),
                          "version": (neutrino_dir / "version.txt").read_text(encoding="utf-8", errors="replace").strip()
                          if (neutrino_dir / "version.txt").is_file() else None,
+                         "ilink": dict(NEUTRINO_ILINK),
                          "smb": all((neutrino_dir / name).is_file() and (neutrino_dir / name).stat().st_size
                                     for name in NEUTRINO_SMB)},
             "files": files,
@@ -492,6 +508,9 @@ def verify(archive_path, expected_psu, manifest):
             raise ValueError("KIT-MANIFEST.json app digests mismatch")
         if kit_manifest["externals"] != {"repository": manifest["source"]["repository"], "commit": manifest["source"]["commit"]}:
             raise ValueError("KIT-MANIFEST.json names a different externals pin")
+        for name, digest in NEUTRINO_ILINK.items():
+            if sha256(archive.read(f"neutrino/{name}")) != digest or kit_manifest["neutrino"].get("ilink", {}).get(name) != digest:
+                raise ValueError(f"neutrino/{name} is not RiptOPL's fixed build")
         if kit_manifest["neutrino"]["smb"] != all(f"neutrino/{name}" in present and archive.getinfo(f"neutrino/{name}").file_size
                                                   for name in NEUTRINO_SMB):
             raise ValueError("KIT-MANIFEST.json misreports the Neutrino SMB modules")
