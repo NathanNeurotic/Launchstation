@@ -600,6 +600,13 @@ static void afterChange(void)
 	scan();
 }
 
+/* names starting with "__" belong to the system and PSBBN */
+static int confirmReservedName(const char *name)
+{
+	return strncmp(name, "__", 2) ||
+	       dashModalConfirm("System partition name", "Names starting with \"__\" are reserved for the system and for PSBBN. Create it anyway?", localizeDashboardText("Create"), 1);
+}
+
 static void actCreate(void)
 {
 	char name[MAX_PART_NAME + 1], unique[MAX_PART_NAME + 1], body[160];
@@ -609,8 +616,7 @@ static void actCreate(void)
 	name[0] = '\0';
 	if (!dashModalKeyboard("New partition name", name, MAX_PART_NAME - 3) || name[0] == '\0')
 		return;
-	if (!strncmp(name, "__", 2) &&
-	    !dashModalConfirm("System partition name", "Names starting with \"__\" are reserved for the system and for PSBBN. Create it anyway?", localizeDashboardText("Create"), 1))
+	if (!confirmReservedName(name))
 		return;
 	max_mb = hm.free_mb < MAX_PART_MB ? (int)hm.free_mb : MAX_PART_MB;
 	if (max_mb < 128) {
@@ -816,7 +822,7 @@ static void injectOne(HddPart *p, const char *src)
 static void injectMatching(const char *src, int create_missing)
 {
 	HddJob *list = jobNew(HOP_LIST_HEADERS);
-	int injected = 0, created = 0, skipped = 0, failed = 0, stopped = 0, i;
+	int injected = 0, created = 0, skipped = 0, failed = 0, pfs_failed = 0, stopped = 0, i;
 	char body[240];
 
 	if (list == NULL)
@@ -868,6 +874,10 @@ static void injectMatching(const char *src, int create_missing)
 				stopped = 1;
 				break;
 			}
+			if (!confirmReservedName(name)) {
+				skipped++;
+				continue;
+			}
 			size = pickSize("Partition size", 128, hm.free_mb < MAX_PART_MB ? (int)hm.free_mb : MAX_PART_MB, 128);
 			if (size <= 0) {
 				stopped = 1;
@@ -900,15 +910,17 @@ static void injectMatching(const char *src, int create_missing)
 			stopped = 1;
 			break;
 		}
-		if (j->ret >= 0)
+		if (j->ret >= 0) {
 			injected++;
-		else
+			if (j->pfs_error < 0)
+				pfs_failed++;
+		} else
 			failed++;
 		hddJobFree(j);
 	}
-	snprintf(body, sizeof(body), "Injected: %d   Created: %d   Skipped: %d   Failed: %d%s",
-	         injected, created, skipped, failed, stopped ? "   (stopped)" : "");
-	dashModalMessage(failed ? DI_WARNING : DI_CHECK, "Header injection finished", body,
+	snprintf(body, sizeof(body), "Injected: %d   Created: %d   Skipped: %d   Failed: %d   PFS copy failed: %d%s",
+	         injected, created, skipped, failed, pfs_failed, stopped ? "   (stopped)" : "");
+	dashModalMessage((failed || pfs_failed) ? DI_WARNING : DI_CHECK, "Header injection finished", body,
 	                 list->invalid ? "Some header folders were incomplete and were ignored." : NULL);
 	hddJobFree(list);
 	if (created)
