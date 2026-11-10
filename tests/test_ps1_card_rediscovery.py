@@ -40,8 +40,13 @@ def check_driver_target():
     assert "defines: [BUILDING_XMCMAN]" in target
     assert "BUILDING_VMCMAN" not in target and "SIO2MAN_V2" not in target
     main = yaml[yaml.index("- name: wLaunchELF\n"):]
-    assert "- mcman_physical:mcman" in main
-    assert re.search(r"^\s+- mcman\s*$", main, re.M) is None, "main ELF still embeds the SDK mcman"
+    # Its own embed name: the IGR helper embeds the SDK mcman as mcman_irx, and two
+    # targets asking for the same embed name share one generated blob (the SDK one).
+    assert re.search(r"^\s+- mcman_physical\s*$", main, re.M), "main ELF must embed mcman_physical"
+    assert re.search(r"^\s+- (\w+:)?mcman\s*$", main, re.M) is None, "main ELF still embeds an mcman_irx"
+    init = read("src/init.c")
+    assert "IMPORT_BIN2C(mcman_physical_irx);" in init and "IMPORT_BIN2C(mcman_irx);" not in init
+    assert init.count("mcman_physical_irx, size_mcman_physical_irx") == 2
     # The exported library keeps the SDK name and version MCSERV binds to.
     assert "DECLARE_EXPORT_TABLE(mcman, 2, 3)" in read("iop/vmcman/src/exports.tab")
 

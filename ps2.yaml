@@ -550,7 +550,7 @@ targets:
       # with MINI_DRIVER and USE_GP_REGISTER=0. Avoids the post-2024-09-04
       # USBD rewrite that drops controller/SIO2 and freezes IOP on real hardware.
       - usbd_ra:usbd
-      - mcman_physical:mcman
+      - mcman_physical
       - mcserv
       - cdfs:cdvd
       - xparam
