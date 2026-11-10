@@ -235,6 +235,10 @@ static int loadAtaModules(void) { return load(S_ATA); }
 static int loadMx4sioModules(void) { usb_snapshot_valid=0; return load(S_MX); }
 static int loadMmceModules(void) { return load(S_MMCE0|S_MMCE1); }
 static int load_udpfs(void) { return load(S_UDPFS); }
+#define DASH_TOAST_WARN 1
+static int refuse_reset, toasts;
+static void dashToast(int k, const char *m) { (void)k; (void)m; toasts++; }
+static int reloadUdpfsModules(void) { if (refuse_reset) return load(S_UDPFS); reset_generation++; resident=0; usb_loaded=0; usb_snapshot_valid=0; return load(S_UDPFS); }
 #define MMCE_CMD_PING 1
 static int fileXioDevctl(const char *p,int cmd,void *arg,int len,void *out,int size) {
     assert(cmd==MMCE_CMD_PING && !arg && len==0 && !out && size==0);
@@ -350,7 +354,15 @@ int main(void) {
     media=S_MMCE1; probe("mmce1:");
     assert(result && state("mmce1:")==DASH_DEV_READY && state("mmce0:")==DASH_DEV_ABSENT);
     media=63;
-    for(int i=0;i<6;i++) { probe(mounts[i]); assert(result && state(mounts[i])==DASH_DEV_READY); }
+    /* A refused reset (FTP still closing files) stops the UDPFS retry. */
+    { unsigned int g=reset_generation; DashDevice d={0}; strcpy(d.mount,"udpfs:"); strcpy(d.name,"test");
+      refuse_reset=1; toasts=0; result=-7;
+      assert(dashDevicesStart(&d,done,NULL)==1 && result==-7 && toasts==1 && reset_generation==g && state("udpfs:")==DASH_DEV_ABSENT); refuse_reset=0; }
+    for(int i=0;i<6;i++) {
+        unsigned int retry_gen=reset_generation;
+        probe(mounts[i]); assert(result && state(mounts[i])==DASH_DEV_READY);
+        if(!strcmp(mounts[i],"udpfs:")) assert(reset_generation==retry_gen+1);
+    }
     assert(closes>0); /* fd zero and empty roots are valid */
     reset_generation++; resident=0;
     for(int i=0;i<6;i++) assert(state(mounts[i])==DASH_DEV_PROBE);

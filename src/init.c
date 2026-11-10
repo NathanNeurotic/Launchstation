@@ -1287,13 +1287,19 @@ void ensureCoreIoStackReady(void)
 	}
 
 	if (!have_mc_rpc_ready) {
-		DPRINTF("Initializing mc rpc\n");
+		int ret;
+
+		/* A failed attempt is not latched: the next card access retries.
+		 * mcInit refuses to rebind a client that is already bound, so drop
+		 * any EE-side binding first (no IOP call; no poll runs while unready). */
+		mcReset();
 #ifdef HOMEBREW_SIO2MAN
-		mcInit(MC_TYPE_XMC);
+		ret = mcInit(MC_TYPE_XMC);
 #else
-		mcInit(MC_TYPE_MC);
+		ret = mcInit(MC_TYPE_MC);
 #endif
-		have_mc_rpc_ready = 1;
+		DPRINTF("Initializing mc rpc: %d\n", ret);
+		have_mc_rpc_ready = ret >= 0;
 	}
 
 	load_vmcman_module();
@@ -2201,6 +2207,11 @@ void rebootIopAndReloadCoreStack(void)
 void rebootIopAndReloadCoreStackSilent(void)
 {
 	resetRuntimeDeviceState(FALSE);
+}
+
+int isMemoryCardRpcReady(void)
+{
+	return have_mc_rpc_ready;
 }
 
 void ensureMemoryCardPortAccessible(int port)
