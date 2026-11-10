@@ -54,7 +54,8 @@ wallpaper = off
 
 The **`background` / `image`** settings are for the static background. Add
 `preset = towers` (or any other built-in preset id) first if you want the rest
-of the theme to start from one of the 18 built-in looks; every key is optional.
+of the theme to start from one of the 18 built-in presets; every key is optional.
+These presets ship with the executable and are not `THEMES/` folders.
 The separate **`wallpaper = focused`** setting overlays the selected
 application's cover artwork, if enabled, and isn't required for a static PNG.
 

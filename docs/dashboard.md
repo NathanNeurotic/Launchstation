@@ -279,7 +279,7 @@ separate from the UDPFS server entry.
 
 ## Themes
 
-Settings > Appearance chooses among 18 built-in themes (OSD Classic, PS2
+Settings > Appearance chooses among 18 built-in theme presets (OSD Classic, PS2
 Towers, Disc Error Red, System Clock and more) and opens the theme editor,
 where the background, every colour, selection style, corners, font, text
 size, icons, clock and app-artwork wallpaper can be changed with the
