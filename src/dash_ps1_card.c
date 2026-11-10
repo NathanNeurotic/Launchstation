@@ -534,6 +534,8 @@ void dashPs1CardNew(const char *folder, const char *const *names, int n)
 	int c, i, fmt;
 	Ps1Save s;
 
+	if (n < 0 || n > PS1_BLOCKS || (n > 0 && names == NULL))
+		return;
 	dashStrCopy(base, folder, sizeof(base));
 	len = strlen(base);
 	if (len == 0 || len + 2 >= sizeof(base))
@@ -550,10 +552,14 @@ void dashPs1CardNew(const char *folder, const char *const *names, int n)
 	if (c < 0)
 		return;
 	ps1CardFormat(p1_after);
-	for (i = 0; i < n; i++)
-		if (snprintf(dest, sizeof(dest), "%s%s", base, names[i]) >= (int)sizeof(dest) || !p1ReadSave(dest, &s, &fmt) ||
-		    !p1Put(p1_after, &s, dest))
+	for (i = 0; i < n; i++) {
+		if (snprintf(dest, sizeof(dest), "%s%s", base, names[i]) >= (int)sizeof(dest)) {
+			dashModalMessage(DI_WARNING, "Not imported", "The path is too long.", names[i]);
 			return;
+		}
+		if (!p1ReadSave(dest, &s, &fmt) || !p1Put(p1_after, &s, dest))
+			return;
+	}
 	if (n > 0)
 		snprintf(msg, sizeof(msg), "%d save%s, %d of 15 blocks free. The saves themselves are not changed.", n,
 		         n == 1 ? "" : "s", ps1CardFreeBlocks(p1_after));

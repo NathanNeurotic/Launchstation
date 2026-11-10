@@ -990,6 +990,10 @@ assert not kind(run("ps1from:mass:/p1from|a.mcs", "k0", "c0"), "TOAST|"), lines
 assert not host("mass:/p1from/PS1-Saves.mcd").exists()
 assert kind(run("ps1from:mass:/p1from|a.mcs", "k0", "c1", "m-1"), "TOAST|1|PS1 card made and read back: 13 of 15 blocks free")
 assert host("mass:/p1from/PS1-Saves.mcd").read_bytes()[8192:3 * 8192] == s1[128:]
+# a path that does not fit says so; more than a card's 15 saves is refused outright
+lines = run("ps1from:mass:/p1from|" + "x" * 1100, "k0")
+assert kind(lines, "MESSAGE|1|Not imported|The path is too long.|"), lines
+assert not kind(run("ps1from:mass:/p1from" + "|a.mcs" * 16), "CHOICE|"), lines
 shutil.rmtree(host("mass:/p1from"))
 browser_ps1 = browser[browser.index("static int ps1SaveTargets"):]
 assert '"PS1 card from these saves..."' in browser and "dashPs1CardNew(fb.dir, names, m)" in browser
