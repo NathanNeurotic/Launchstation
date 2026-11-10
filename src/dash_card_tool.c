@@ -1721,7 +1721,7 @@ void dashCardImportMany(const char *dir, const char *const *names, int n)
 	}
 	if (!ctStacks(dir, img) || !ctWritable(img))
 		return;
-	r = ctOpen(&io, img, 0); /* a writable card at all, before anything is asked */
+	r = ctOpen(&io, img, 1); /* opens read/write: a card that cannot be written is refused before anything is asked */
 	if (r == MCV_OK) {
 		if (ct_view.page_stride != 512u)
 			r = MCW_ERR_UNSUPPORTED; /* PCSX2 .ps2: read-only here */
