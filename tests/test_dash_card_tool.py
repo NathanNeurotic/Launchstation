@@ -672,7 +672,7 @@ menu = kind(lines, "MENU|All saves|")
 assert len(menu) == 1, lines
 row = menu[0].split("|")
 assert row[2] == "9 saves on 3 cards; 1 file not readable as a card", row[2]
-assert row[3] == "Marked saves...~mark saves with Square first", row[3]
+assert row[3] == "Marked saves...~none marked: export all, or mark with Square", row[3]
 rows = row[4:]                                                   # menu row = list index + 1
 assert len(rows) == 9, rows
 titles = [r.split("~")[0] for r in rows]
@@ -731,8 +731,39 @@ def safeties(folder, base):
     return sorted(p.name for p in host(folder).glob(base + "-*.mcd"))
 
 
-lines = run("all:mass:/all", "m0")                                    # nothing marked yet
-assert kind(lines, "TOAST|3|Mark saves with Square first"), lines
+rows = all_rows()
+lines = run("all:mass:/all", "m0", "m-1")                             # nothing marked: only export, of every save
+menu = kind(lines, "MENU|All %d saves|" % len(rows))[0]
+assert "!Copy to another card..." in menu and "!Move to another card..." in menu and "!Delete..." in menu, menu
+assert "|Export as .psu or .psv...~" in menu, menu
+# export all as .psu into one folder: the cards are only read; the same save on two cards is written once
+host("mass:/exp").mkdir()
+before = {p: sha(p) for p in ("mass:/all/A.mcd", "mass:/all/sub/B.mcd")}
+lines = run("all:mass:/all", "m0", "m3", "k0", "pmass:/exp/", "c1")
+assert kind(lines, "CONFIRM|Export %d saves?|" % len(rows)), lines
+names = [r.split(": ", 1)[1].rsplit(", ", 1)[0].replace("PS1 ", "") for r in rows]
+unique = sorted(set(names))
+msg = kind(lines, "MESSAGE|")[0]
+assert msg.startswith(f"MESSAGE|4|Exported|{len(unique)} saves written and verified."), (msg, unique)
+if len(unique) < len(names):
+    assert "%d already there, kept." % (len(names) - len(unique)) in msg, msg
+assert sorted(p.stem for p in host("mass:/exp").glob("*.psu")) == unique
+assert {p: sha(p) for p in before} == before
+G0 = "mass:/G0.mcd"
+blank(G0)
+lines = run(G0, "m0", "pmass:/exp/NOICON.psu", "c1")                   # an exported .psu imports as the same save
+assert kind(lines, "TOAST|1|Save imported and verified") and saves(G0)["NOICON"] == saves("mass:/all/A.mcd")["NOICON"]
+# marked ones as signed .psv; a run into a folder that has them keeps them
+pick = rows_for("A.mcd: BESLES-12345GAME, 7 KB", "A.mcd: NOICON, 3 KB")
+lines = run("all:mass:/all", "s" + pick, "m0", "m3", "k1", "pmass:/exp/", "c1")
+assert kind(lines, "MENU|2 marked saves|") and kind(lines, "MESSAGE|4|Exported|2 saves written and verified.|mass:/exp/"), lines
+psv = host("mass:/exp/BESLES-12345" + b"GAME".hex().upper() + ".PSV").read_bytes()
+assert psv[:4] == b"\0VSP"
+lines = run("all:mass:/all", "s" + pick, "m0", "m3", "k1", "pmass:/exp/", "c1")
+assert kind(lines, "MESSAGE|4|Exported|0 saves written and verified. 2 already there, kept.|mass:/exp/"), lines
+lines = run("all:mass:/all", "s" + pick, "m0", "m3", "k1", "pmass:/exp/", "c0")   # declined: nothing read or written
+assert kind(lines, "CONFIRM|Export 2 saves?|") and not kind(lines, "MESSAGE|"), lines
+shutil.rmtree(host("mass:/exp"))
 lines = run("all:mass:/all", "s0,1,2", "m-1")                         # the action row cannot be marked
 m = kind(lines, "MENU|All saves|")[0].split("|")
 assert not m[3].startswith("*") and m[4].startswith("*") and m[5].startswith("*"), m[3:6]
