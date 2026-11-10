@@ -39,6 +39,7 @@ jobs:
           python3 tests/test_editor_keyboard.py
           python3 tests/test_font_weight.py
           python3 tests/test_browser_sort.py
+          python3 tests/test_r3z_browser_wins.py
           python3 tests/test_video_sound_preview.py
           python3 tests/test_display_feedback.py
           python3 tests/test_udpfs_smap_fifo_tail.py
