@@ -440,6 +440,8 @@ int main(int argc, char **argv)
 		printf("ISACTIVE|%d\n", mmceCardIsActive(argv[3] + 9));
 	} else if (!strncmp(argv[3], "pick-switch:", 12)) {
 		dashMmceSwitch(argv[3] + 12);
+	} else if (!strncmp(argv[3], "ps1conv:", 8)) {
+		dashPs1SaveConvert(argv[3] + 8);
 	} else if (!strncmp(argv[3], "importmany:", 11)) { /* importmany:dir/|name|name... */
 		static char spec[4096];
 		const char *names[64] = {0};

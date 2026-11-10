@@ -254,8 +254,9 @@ assert host("mass:/out/BASLUS-99999BLZ-2.psu").read_bytes() == host("mass:/out/B
 lines = run("convert:mass:/out/BASLUS-99999BLZ.mcm", "k0", "c0")       # declined: nothing written
 assert not host("mass:/out/BASLUS-99999BLZ-3.psu").exists()
 host("mass:/out/junk.max").write_bytes(b"Ps2PowerSave" + bytes(200))
-lines = run("convert:mass:/out/junk.max", "k0")
+lines = run("convert:mass:/out/junk.max")                                   # refused before a format is asked
 assert any(l.startswith("MESSAGE|") and "Not converted" in l for l in lines) and not host("mass:/out/junk.psu").exists(), lines
+assert not kind(lines, "CHOICE|"), lines
 
 # 8c. Blaze itself keeps saves in the card's MCM folder as files with no extension named after the save
 # folder (Berion): those import with their whole name (dots included), the picker admits them through the
@@ -1209,7 +1210,7 @@ for k, path, body in (("k1", PSV, None), ("k2", "mass:/BASLUS-00001PS1.psx", b"B
     assert data == body if body else data[:4] == b"\0VSP" and data[0x3C] == 1 and data[0x84:] == s1[128:], path
     if k != "k2":                                                         # the PS3 and raw names are exact
         lines = run(S0, "m2", "m0", k, "m-1")
-        assert kind(lines, "MESSAGE|1|Not exported|A file with this name is already next to the card."), lines
+        assert kind(lines, "MESSAGE|1|Not exported|A file with this name is already in that folder."), lines
 assert host(S0).read_bytes() == card
 for k, ext, size in (("k1", "gme", 3904 + 131072), ("k2", "vgs", 64 + 131072), ("k3", "vmp", 128 + 131072),
                      ("k4", "mcx", 128 + 131072 + 32)):
@@ -1231,6 +1232,50 @@ lines = run("mass:/SLOT0.mcx", "m1", "k0", "m-1")                         # back
 assert kind(lines, "MESSAGE|4|Copy saved|") and host("mass:/SLOT0.mcd").read_bytes() == card, lines
 lines = run("blank:mass:/", "k7", "k8", "c1", "m-1")                      # a new container card
 assert kind(lines, "MENU|Blank-PS1.vmp|PS1 card (PSP / Vita .vmp): 0 saves, 15 of 15 blocks free|"), lines
+# a PS1 save file converted without a card: the same bytes as the card's own exports; the source is only read
+host("mass:/pc").mkdir()
+shutil.copy(host("mass:/in.mcs"), host("mass:/pc/in.mcs"))
+for k, name, want in (("k1", PSV.split("/")[-1], host(PSV).read_bytes()), ("k2", "BASLUS-00001PS1.psx", host("mass:/BASLUS-00001PS1.psx").read_bytes()),
+                      ("k3", "BASLUS-00001PS1", s1[128:]), ("k0", "BASLUS-00001PS1.mcs", s1)):
+    lines = run("ps1conv:mass:/pc/in.mcs", k)
+    assert kind(lines, "CHOICE|Convert to|4|1|.mcs: PS1 single save"), lines                # a .mcs offers .psv first
+    assert kind(lines, "MESSAGE|4|Exported|Written and read back. The original was not changed.|mass:/pc/" + name), lines
+    assert host("mass:/pc/" + name).read_bytes() == want, name
+assert host("mass:/pc/in.mcs").read_bytes() == s1
+lines = run("ps1conv:mass:/pc/BASLUS-00001PS1.psx", "k0")                  # .psx back to .mcs: a -2 name, same bytes
+assert kind(lines, "CHOICE|Convert to|4|0|") and host("mass:/pc/BASLUS-00001PS1-2.mcs").read_bytes() == s1, lines
+lines = run("ps1conv:mass:/pc/" + PSV.split("/")[-1], "k1")              # the PS3 name is exact: never replaced
+assert kind(lines, "MESSAGE|1|Not exported|A file with this name is already in that folder."), lines
+lines = run("convert:mass:/pc/" + PSV.split("/")[-1], "k2")              # Convert on a PS1 .psv goes the PS1 way
+assert kind(lines, "CHOICE|Convert to|4|0|.mcs: PS1 single save") and host("mass:/pc/BASLUS-00001PS1-2.psx").exists(), lines
+assert len(kind(lines, "CHOICE|")) == 1, lines                            # asked once, only the PS1 formats
+(dev / "mc0").mkdir(exist_ok=True)
+host("mc0:/BASLUS-00001PS1").write_bytes(s1[128:])                      # a save on a real PS1 card is a raw file
+lines = run("ps1conv:mc0:/BASLUS-00001PS1", "k0", "pmass:/pc/")
+assert kind(lines, "PICK|Write the PS1 save to|mass:/|1|"), lines
+assert host("mass:/pc/BASLUS-00001PS1-3.mcs").read_bytes()[128:] == s1[128:], lines
+lines = run("ps1conv:mc0:/BASLUS-00001PS1", "k0")                       # pick declined: nothing written
+assert not host("mass:/pc/BASLUS-00001PS1-4.mcs").exists()
+host("mass:/pc/dot.mcs").write_bytes(ps1_mcs("BASLUS-00001.V2", 2, b"PS1 game"))  # raw reads back without ".V2"
+lines = run("ps1conv:mass:/pc/dot.mcs", "k3")
+assert kind(lines, "MESSAGE|1|Not exported|This save's name cannot be kept as raw. Use .mcs or .psx.|BASLUS-00001.V2"), lines
+assert not host("mass:/pc/BASLUS-00001.V2").exists()
+host("mass:/pc/sl.mcs").write_bytes(ps1_mcs("BASLUS-00001/ALT", 2, b"PS1 game"))  # '/' would become '_' in a raw name
+lines = run("ps1conv:mass:/pc/sl.mcs", "k3")
+assert kind(lines, "MESSAGE|1|Not exported|This save's name cannot be kept as raw. Use .mcs or .psx.|BASLUS-00001/ALT"), lines
+assert not host("mass:/pc/BASLUS-00001_ALT").exists()
+lines = run("ps1conv:mass:/pc/dot.mcs", "k2")                             # .psx keeps the name: allowed
+assert host("mass:/pc/BASLUS-00001.V2.psx").exists(), lines
+host("mc0:/BASLUS-00001.V2").write_bytes(s1[128:])                       # a dotted name on a real card is the whole name
+lines = run("ps1conv:mc0:/BASLUS-00001.V2", "k0", "pmass:/pc/")
+assert host("mass:/pc/BASLUS-00001.V2.mcs").read_bytes()[0x0A:0x0A + 16] == b"BASLUS-00001.V2\0", lines
+host("mass:/pc/junk.mcs").write_bytes(b"MC" + bytes(300))
+lines = run("ps1conv:mass:/pc/junk.mcs")
+assert kind(lines, "MESSAGE|1|Not converted|") and not kind(lines, "CHOICE|"), lines
+host("mc0:/BASLUS-00001PS1").unlink()
+shutil.rmtree(host("mass:/pc"))
+_br = (root / "src/dash_browser.c").read_text(encoding="utf-8")
+assert 'filerRootMcPresent(fb.dir[2] - \'0\', &ps1_type, NULL) > 0 && ps1_type == 1' in _br and "dashPs1SaveConvert(path);" in _br
 for p in ("mass:/in.mcs", S0, PSV, "mass:/BASLUS-00001PS1.psx", "mass:/BASLUS-00001PS1", "mass:/SLOT0.mcd",
           "mass:/Blank-PS1.vmp", *("mass:/SLOT0." + e for e in ("gme", "vgs", "vmp", "mcx"))):
     host(p).unlink()

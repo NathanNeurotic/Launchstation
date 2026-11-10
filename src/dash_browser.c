@@ -2604,7 +2604,7 @@ static void actionsMenu(void)
 	int in_folder = fb.dir[0] && !isMisc(fb.dir);
 	int is_elf = 0, has_target = (fb.nmarked > 0 || f != NULL);
 	DashMenuItem items[56];
-	int ids[56], n = 0, r, sw_card, sw_chan;
+	int ids[56], n = 0, r, sw_card, sw_chan, ps1_type = 0;
 	char marked[24], sort_detail[48], game_id[11];
 	int ps1_idx[16];
 	enum {
@@ -2637,6 +2637,7 @@ static void actionsMenu(void)
 		F_EXPORT_ACTIVE_MMCE_PS2,
 		F_CARD_CONTENTS,
 		F_CONVERT_SAVE,
+		F_CONVERT_PS1,
 		F_MMCE_ACTIVE,
 		F_MMCE_SWITCH,
 		F_BACKUP_MCD,
@@ -2778,6 +2779,15 @@ static void actionsMenu(void)
 		     (fullPath(f, path, sizeof(path)) && mcSaveFormatBlazePath(path))))
 			ADD(DI_MC, "Convert to .psu, .psv or .cbs...",
 			    "Blaze (MCM folder), MAX, CodeBreaker, SharkPort, PS3 save", 0, F_CONVERT_SAVE);
+		/* PS1 single saves by extension, and every save on a real PS1 card,
+		 * which lists each one as a raw file */
+		if (f != NULL && !isDir(f) && fb.nmarked == 0 &&
+		    ((strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3) &&
+		      (genCmpFileExt(f->name, "MCS") || genCmpFileExt(f->name, "PS1") || genCmpFileExt(f->name, "MCB") ||
+		       genCmpFileExt(f->name, "PDA") || genCmpFileExt(f->name, "PSX"))) ||
+		     (!strncmp(fb.dir, "mc", 2) && fb.dir[3] == ':' && fb.dir[4] == '/' && !fb.dir[5] &&
+		      filerRootMcPresent(fb.dir[2] - '0', &ps1_type, NULL) > 0 && ps1_type == 1)))
+			ADD(DI_MC, "Convert to .mcs, .psv, .psx or raw...", "PS1 save; the original is only read", 0, F_CONVERT_PS1);
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "MCD")) {
 			ADD(DI_MC, "Back up .mcd...", "verified byte-for-byte copy", 0, F_BACKUP_MCD);
 			ADD(DI_MC, "Export as PCSX2 .ps2...", "adds ECC and verifies the copy", 0, F_EXPORT_PS2);
@@ -2946,6 +2956,12 @@ static void actionsMenu(void)
 		case F_CONVERT_SAVE:
 			if (fullPath(f, path, sizeof(path)) && prepareOp()) {
 				dashCardConvertSave(path);
+				refresh();
+			}
+			break;
+		case F_CONVERT_PS1:
+			if (fullPath(f, path, sizeof(path)) && prepareOp()) {
+				dashPs1SaveConvert(path);
 				refresh();
 			}
 			break;
