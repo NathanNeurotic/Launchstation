@@ -122,7 +122,9 @@ def check_live_rows():
         src = read(rel)
         block = src[src.index(guard):]
         block = block[:block.index("}")]
-        assert "pollRootMemoryCardDevices();" in block and "dashDevicesRefreshMemoryCards(" in block, rel
+        assert "pollRootMemoryCardDevices();" in block, rel
+        assert "dashDevicesRefreshMemoryCards(" in block, rel
+        assert block.index("pollRootMemoryCardDevices();") < block.index("dashDevicesRefreshMemoryCards("), rel
     # The Files tab gets input only on frames with a press: its update refreshes the rows.
     browser = read("src/dash_browser.c")
     tab = browser[browser.index("static void browserTabUpdate("):]
