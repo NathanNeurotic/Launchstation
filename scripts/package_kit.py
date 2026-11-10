@@ -93,6 +93,8 @@ NEUTRINO_ILINK = {
     "modules/iLinkman.irx": "1b0b27ea7f65b550dafac38a38c806f0e84227b244300701f41c69c8afb85ffc",
     "modules/IEEE1394_bd_mini.irx": "958325d36a10cc6c4d33db60c9bee522085df9b5f88054eeae4b21f8245d9beb",
 }
+# Their provenance and AFL-2.0 licence travel with them in the kit.
+NEUTRINO_ILINK_NOTICES = {"ILINK-README.txt": "README.txt", "ILINK-LICENSE.txt": "LICENSE"}
 NEUTRINO_SMB = ("config/bsd-smb.toml", "modules/smb_ioman.irx", "modules/smb_fhi.irx")
 SHORTCUT_NAMES = ("PS2-Servers.url", "android-udpfs-server.url", "OPL-PS1-AIO-Converter-GUI.url",
                   "OrbitPS2-Manager.url", "Launchstation-Documentation.url")
@@ -401,6 +403,8 @@ def package(app_dir, externals, neutrino, output, revision, epoch, build, manife
             if sha256(ours) != digest:
                 raise ValueError(f"ship/neutrino-ilink/{PurePosixPath(name).name} differs from its pin")
             (neutrino_dir / name).write_bytes(ours)  # upstream's copy is required, so this replaces it
+        for name, source in NEUTRINO_ILINK_NOTICES.items():
+            shutil.copyfile(NEUTRINO_ILINK_DIR / source, neutrino_dir / name)
         for name in SHORTCUT_NAMES:
             shortcut = SHORTCUTS / name
             text = shortcut.read_text(encoding="ascii").replace("\r\n", "\n")
@@ -471,7 +475,7 @@ def verify(archive_path, expected_psu, manifest):
             raise ValueError(f"the app folder must live under APPS/ and only the standard app ships: {misplaced[:4]}")
         required = {f"APPS/{APP_FOLDER}/{name}" for name in APP_MEMBERS}
         required |= {f"{APP_FOLDER}.psu", "KIT-README.txt", "KIT-MANIFEST.json"}
-        required |= {f"neutrino/{name}" for name in NEUTRINO_REQUIRED}
+        required |= {f"neutrino/{name}" for name in NEUTRINO_REQUIRED + tuple(NEUTRINO_ILINK_NOTICES)}
         required |= set(SHORTCUT_NAMES)
         required |= set(manifest["files"])
         missing = sorted(required - present)
