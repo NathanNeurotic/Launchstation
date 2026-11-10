@@ -3030,7 +3030,9 @@ static void browserDrawBody(void)
 		char space[24];
 
 		space[0] = '\0';
-		if (fb.free_valid)
+		if (fb.free_valid == 2) /* PS1 card: 15 blocks of 8 KB */
+			snprintf(space, sizeof(space), "%d/15 blocks", (int)(fb.free_bytes / 8192));
+		else if (fb.free_valid)
 			fmtBytes(space, sizeof(space), fb.free_bytes);
 		if (fb.nmarked)
 			snprintf(info, sizeof(info), "%d of %d selected", fb.nmarked, fb.n);

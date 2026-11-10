@@ -37,6 +37,15 @@ hdd = helper[helper.index('if (!strncmp(path, "hdd", 3)'):helper.index("#ifdef D
 dvr = helper[helper.index('if (!strncmp(path, "dvr_hdd", 7)'):]
 for branch in (hdd, dvr):
     assert "if (zone_free < 0 || zone_size <= 0)" in branch
+# A PS1 card's free space is shown in its 15 blocks, as wLaunchELF_R3Z does,
+# in the classic header (translated) and in the dashboard browser.
+assert "return type == 1 ? 2 : 1;" in helper
+assert "if (vfreeSpace == 2)\n\t\t\t\t\tsprintf(tmp, LNG(Dashboard_PS1_Blocks_Free), (int)(freeSpace / 8192), 15);" in browser
+dash = (root / "src/dash_browser.c").read_text(encoding="utf-8")
+assert 'if (fb.free_valid == 2) /* PS1 card: 15 blocks of 8 KB */\n\t\t\tsnprintf(space, sizeof(space), "%d/15 blocks", (int)(fb.free_bytes / 8192));' in dash
+for lng in sorted((root / "Lang").glob("*.LNG")):
+    line = [l for l in lng.read_text(encoding="utf-8").splitlines() if "PS1_Blocks_Free" in l]
+    assert len(line) == 1 and line[0].startswith("lang(706, Dashboard_PS1_Blocks_Free, ") and line[0].count("%d") == 2 and line[0].count("%") == 2, lng
 # A paste widens the fileXio transfer buffer only after its drivers are ready,
 # and every exit (including a failed one) narrows it back to the SDK default.
 init = (root / "src/init.c").read_text(encoding="utf-8")
