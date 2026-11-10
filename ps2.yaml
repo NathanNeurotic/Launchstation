@@ -326,6 +326,9 @@ targets:
     cflags: [-fdata-sections, -ffunction-sections]
     ldflags:
       - "-Wl,--gc-sections"
+      # lld pads MIPS load segments to 64 KB in the file; the helper is embedded
+      # in Launchstation and written to the card, so keep segments packed.
+      - "-Wl,-z,max-page-size=128"
     libs: [filexio, patches]
     embed_irx:
       - iomanx
