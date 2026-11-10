@@ -301,6 +301,7 @@ yaml = (root / "ps2.yaml").read_text(encoding="utf-8")
 assert "src/mc_ps1_card.c" in yaml and "src/dash_ps1_card.c" in yaml
 assert "if (dashPs1CardIsImage(image)) {" in tool and "dashPs1CardTool(image);" in tool
 assert 'genCmpFileExt(f->name, "MCR") || genCmpFileExt(f->name, "VM1")' in browser
+assert 'genCmpFileExt(f->name, "SRM")))\n\t\t\tADD(DI_MC, "Card contents..."' in browser   # RetroArch PS1 card
 w = ui[ui.index("static int p1Commit("):]
 w = w[:w.index("\n}\n")]
 # order: re-read and compare, safety copy, write, read back

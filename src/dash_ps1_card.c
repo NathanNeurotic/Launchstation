@@ -1,6 +1,6 @@
 //--------------------------------------------------------------
 //File name:   dash_ps1_card.c
-//"Card contents..." for PS1 card images (128 KB .mcd/.mcr/.vm1/.vmc/.bin,
+//"Card contents..." for PS1 card images (128 KB .mcd/.mcr/.vm1/.vmc/.bin/.srm,
 //as POPStarter, sd2psx/MMCE in PS1 mode and PC emulators use them, and the
 //DexDrive .gme, VGS .vgs/.mem, PSP/Vita .vmp and PocketStation iOS .mcx
 //containers): lists the saves, imports .mcs/.ps1/.mcb/.pda, PS1 .psv, .psx
@@ -414,7 +414,7 @@ static int p1MakeNew(char *dest, int size, const char *folder, const char *stem,
 	return ok;
 }
 
-static const char *const p1_kinds[] = {".mcd: raw card (as .mcr .vm1 .vmc)", ".gme: DexDrive", ".vgs: Connectix VGS",
+static const char *const p1_kinds[] = {".mcd: raw card (as .mcr .vm1 .vmc .srm)", ".gme: DexDrive", ".vgs: Connectix VGS",
                                        ".vmp: PSP / Vita, signed", ".mcx: PocketStation for iOS"};
 
 /* The listed card, saved next to it in another (or the same) container. */
