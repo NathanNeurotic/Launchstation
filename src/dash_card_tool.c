@@ -751,7 +751,7 @@ void dashCardConvertSave(const char *path)
 	static const uint8_t no_stamp[8];
 
 	r = ctLoadPsu(path, &s, &why); /* read first: a PS1 .psv is asked only its own formats */
-	if (r != MCW_OK && why == ct_ps1_psv) {
+	if (r != MCW_OK && why == ct_ps1_psv) { /* same object ctLoadPsu set: compared by address */
 		dashPs1SaveConvert(path);
 		return;
 	}
