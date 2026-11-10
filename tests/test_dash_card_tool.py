@@ -395,7 +395,7 @@ assert msg and "Nothing imported. 1 skipped. 1 failed. First: BASLUS-99999BLZ.mc
 assert not (dev / "mc1/BASLUS-99999BLZ").exists()
 lines = run(mc1mix.replace("|junk.max", ""), "c1", env={"FAIL_SETINFO": "BASLUS-99999BLZ/", "FAIL_REMOVE": "1"})
 msg = kind(lines, "MESSAGE|")                                            # the removal fails too: says to delete it
-assert msg and "part of it could not be removed. Delete its folder on the card." in msg[0], lines
+assert msg and "part of it could not be removed. Delete mc1:/BASLUS-99999BLZ on the card." in msg[0], lines
 shutil.rmtree(dev / "mc1/BASLUS-99999BLZ")
 tree = mc_tree(1)
 lines = run(mc1mix, "c0")                                                # declined

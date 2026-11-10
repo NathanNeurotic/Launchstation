@@ -1714,13 +1714,13 @@ static int ctAllSkippable(int r)
 /* One save written onto the real card in mc<port>: as a new folder, file by
  * file, each read back, then given the entries' modes, times and attributes.
  * Nothing there is replaced; on any failure what it made is removed. */
-static int ct_mc_left; /* the last failed ctPutSaveMc could not remove all it made */
+static char ct_mc_left[128]; /* why, when the last failed ctPutSaveMc could not remove all it made */
 
 static int ctPutSaveMc(int port, const McSaveData *s)
 {
 	char dir[48], path[96];
 	uint32_t i, made = 0;
-	int freec, fd, ok = 1;
+	int freec, fd, ok = 1, left = 0;
 
 	if (!mcCardNameOk(s->entry + 0x40))
 		return MCW_ERR_INVALID;
@@ -1747,12 +1747,14 @@ static int ctPutSaveMc(int port, const McSaveData *s)
 	}
 	if (ok && filerMcSetEntry(dir, s->entry) >= 0)
 		return MCW_OK;
-	ct_mc_left = 0;
 	while (made-- > 0) {
 		snprintf(path, sizeof(path), "%s/%.31s", dir, (const char *)s->files[made].entry + 0x40);
-		ct_mc_left |= genRemove(path) < 0;
+		left |= genRemove(path) < 0;
 	}
-	ct_mc_left |= genRmdir(dir) < 0;
+	left |= genRmdir(dir) < 0;
+	ct_mc_left[0] = 0;
+	if (left)
+		snprintf(ct_mc_left, sizeof(ct_mc_left), "Writing it failed, and part of it could not be removed. Delete %s on the card.", dir);
 	return MCW_ERR_VERIFY;
 }
 
@@ -1819,7 +1821,7 @@ void dashCardImportMany(const char *dir, const char *const *names, int n, int po
 				mcCardFreeSave(&s);
 				why = r == MCV_ERR_IO && port < 0 && !safety[0] ? "Nothing was written: the card could not be read or its safety copy made." :
 				      r == MCV_ERR_IO ? "The memory card could not be read or written." :
-				      r == MCW_ERR_VERIFY && port >= 0 ? (ct_mc_left ? "Writing it failed, and part of it could not be removed. Delete its folder on the card." :
+				      r == MCW_ERR_VERIFY && port >= 0 ? (ct_mc_left[0] ? ct_mc_left :
 				                                          "Writing it failed or it read back different; what was written was removed.") : NULL;
 			} else if (r != MCW_ERR_NOMEM && r != MCV_ERR_IO) {
 				r = MCW_ERR_UNSUPPORTED; /* not a save we read: skipped */
