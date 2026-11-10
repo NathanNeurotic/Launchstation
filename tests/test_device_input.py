@@ -355,8 +355,9 @@ int main(void) {
     assert(result && state("mmce1:")==DASH_DEV_READY && state("mmce0:")==DASH_DEV_ABSENT);
     media=63;
     /* A refused reset (FTP still closing files) stops the UDPFS retry. */
-    { unsigned int g=reset_generation; refuse_reset=1; toasts=0; probe("udpfs:");
-      assert(!result && toasts==1 && reset_generation==g && state("udpfs:")==DASH_DEV_ABSENT); refuse_reset=0; }
+    { unsigned int g=reset_generation; DashDevice d={0}; strcpy(d.mount,"udpfs:"); strcpy(d.name,"test");
+      refuse_reset=1; toasts=0; result=-7;
+      assert(dashDevicesStart(&d,done,NULL)==1 && result==-7 && toasts==1 && reset_generation==g && state("udpfs:")==DASH_DEV_ABSENT); refuse_reset=0; }
     for(int i=0;i<6;i++) {
         unsigned int retry_gen=reset_generation;
         probe(mounts[i]); assert(result && state(mounts[i])==DASH_DEV_READY);

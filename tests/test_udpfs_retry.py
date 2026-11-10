@@ -16,7 +16,13 @@ assert retry.index('dashWorkerAwaitAll("Finishing up")') < retry.index("return -
 assert start.index("reloadUdpfsModules();") < start.index("ok = startSync(dev->mount, title);")
 # a refused reset (FTP still closing files) reports it instead of probing again
 refused = retry[retry.index("reloadUdpfsModules();"):]
-assert "if (getIopResetGeneration() == generation) {" in refused and "cb(dev->mount, 0, user);" in refused
+assert "if (getIopResetGeneration() == generation) {" in refused and "return 1;" in refused
+assert "cb(" not in refused[:refused.index("return 1;")]
+# callers keep a refusal (1) apart from out of memory (<0) and a missing server
+assert "int rc = dashDevicesStart(d, pendProbeDone, NULL);\n\tif (rc != 0)\n\t\tpend.active = 0;\n\tif (rc < 0)" in files
+for f in ("dash_browser.c", "dash_widgets.c"):
+    assert "dashDevicesStart(d, " in (root / "src" / f).read_text(encoding="utf-8")
+    assert ", NULL) != 0)" in (root / "src" / f).read_text(encoding="utf-8")
 assert dev.count("reloadUdpfsModules()") == 1  # nowhere else: probeMount keeps load_udpfs()
 probe = dev[dev.index("static int probeMount(const char *m)"):]
 probe = probe[:probe.index("\n}\n")]

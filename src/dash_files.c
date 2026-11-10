@@ -122,10 +122,11 @@ static void startDevice(const DashDevice *d, int browse)
 	pend.section = dashCurrentSection();
 	pend.browse = browse;
 	pend.dev = *d;
-	if (dashDevicesStart(d, pendProbeDone, NULL) < 0) {
+	int rc = dashDevicesStart(d, pendProbeDone, NULL);
+	if (rc != 0)
 		pend.active = 0;
+	if (rc < 0)
 		dashToast(DASH_TOAST_ERROR, "Could not start the device (out of memory)");
-	}
 }
 
 static void openDevice(const DashDevice *d)

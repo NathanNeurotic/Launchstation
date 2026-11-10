@@ -723,9 +723,7 @@ int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user)
 			/* The reset was refused (FTP still closing files): the old
 			 * discovery result stands, so do not probe it again. */
 			dashToast(DASH_TOAST_WARN, "Could not restart the network. Stop FTP and try again.");
-			if (cb != NULL)
-				cb(dev->mount, 0, user);
-			return 0;
+			return 1;
 		}
 	}
 #endif

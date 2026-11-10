@@ -652,7 +652,7 @@ static void activate(void)
 		if (d->state == DASH_DEV_PROBE || d->state == DASH_DEV_ABSENT) {
 			int mask, unit;
 
-			if (dashDevicesStart(d, NULL, NULL) < 0)
+			if (dashDevicesStart(d, NULL, NULL) != 0)
 				return;
 			if (!dashDevicePathReady(path)) {
 				openDir("", path); /* the list shows the new state */
