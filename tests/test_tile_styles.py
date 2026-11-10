@@ -168,6 +168,23 @@ int main(void) {
     dashThemeResetGroup(DASH_TG_STYLE);
     assert(dashTheme.tabs==DASH_TABS_SHOWN && dashTheme.panel.a==73);
     dashThemeRestore(&saved,0,1);assert(dashTheme.tabs==DASH_TABS_HIDDEN);
+    /* Console info line on HOME (issue #293): on in every preset and in
+     * themes without the key, opt-out round-trips, resets with Style. */
+    for (int p = 0; p < dashThemePresetCount(); p++) {
+        dashThemeLoadPreset(p, &dashTheme);
+        assert(dashTheme.console_info == 1);
+    }
+    dashThemeLoadPreset(0,&dashTheme);strcpy(buf,"tabs = hidden\r\n");reload(buf,0);
+    assert(dashTheme.console_info == 1);
+    dashTheme.console_info=0;dashThemeCommit();
+    assert(dashThemeStoreWrite(buf,sizeof(buf))<(int)sizeof(buf));
+    assert(strstr(buf,"Theme_console_info = 0"));
+    dashThemeStoreBegin();reload(buf,1);dashThemeStoreEnd();
+    assert(dashTheme.console_info == 0);
+    assert(dashThemeSerialize(&dashTheme,buf,sizeof(buf),"")<(int)sizeof(buf));
+    dashThemeLoadPreset(0,&dashTheme);reload(buf,0);assert(dashTheme.console_info == 0);
+    dashTheme.console_info=9;dashThemeValidate(&dashTheme);assert(dashTheme.console_info == 1);
+    dashTheme.console_info=0;dashThemeResetGroup(DASH_TG_STYLE);assert(dashTheme.console_info == 1);
     puts("PASS: all preset defaults, old config, every style round-trip, invalid values, reset/restore, convex silhouettes");
 }
 """

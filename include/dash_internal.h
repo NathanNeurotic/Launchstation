@@ -237,6 +237,7 @@ typedef struct
 	u8 clock, clock_pos, clock_hours, clock_seconds, clock_date;
 	/* header */
 	u8 tabs;
+	u8 console_info; /* console summary line at the top of HOME */
 	/* app-aware wallpaper */
 	u8 wallpaper, wall_dim; /* wall_dim: 0..90 % */
 } DashTheme;
