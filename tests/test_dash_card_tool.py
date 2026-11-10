@@ -317,12 +317,19 @@ lines = run("importmany:mass:/out/|gone.psu|BESLES-12345GAME.psu", "p" + K, "c1"
 msg = kind(lines, "MESSAGE|")
 assert msg and "Nothing imported. 1 failed. First: gone.psu: The save file could not be opened." in msg[0] and "Stopped there; 1 not tried." in msg[0], lines
 assert sha(K) == k_snap
+K3 = "mass:/K3.mcd"                                                     # a hard error after one import: that one stays
+blank(K3)
+lines = run("importmany:mass:/out/|BESLES-12345GAME.psu|gone.psu|BASLUS-99999BLZ.mcm", "p" + K3, "c1")
+msg = kind(lines, "MESSAGE|")
+assert msg and "1 save imported and verified. 1 failed. First: gone.psu: The save file could not be opened." in msg[0] and "Stopped there; 1 not tried." in msg[0], lines
+assert saves(K3) == {"BESLES-12345GAME": saves(B)["BESLES-12345GAME"]}
 K2 = "mass:/K2.mcd"
 blank(K2)
 k2_snap = sha(K2)
 lines = run(mix, "p" + K2, "c1", env={"FAIL_WRITE_AT": "0"})             # the safety copy fails: card untouched, said so
 msg = kind(lines, "MESSAGE|")
 assert msg and "Nothing imported. 1 failed. First: BESLES-12345GAME.psu: Nothing was written: the card could not be read or its safety copy made." in msg[0], lines
+assert "Safety copy:" not in msg[0], lines
 assert sha(K2) == k2_snap
 lines = run(mix, "p" + K, "c0")                                          # declined
 assert not kind(lines, "MESSAGE|") and sha(K) == k_snap
@@ -363,6 +370,10 @@ for k in range(1, 9):                                              # copy: 1 saf
 # 11. PCSX2 .ps2 cards: view and export only
 P = "mass:/P.ps2"
 put(P, fx.standard_card(8, True)[0])
+p_snap = sha(P)
+lines = run(mix, "p" + P)                                                # batch import refuses it before asking
+assert kind(lines, "MESSAGE|1|Cannot use this card|Saves with sub-folders, and PCSX2 .ps2 cards, can only be read here.") \
+    and not kind(lines, "CONFIRM|") and sha(P) == p_snap, lines
 lines = run(P, "m3")
 menu = kind(lines, "MENU|P.ps2|")[0].split("|")
 assert menu[3].startswith("!Import save...") and menu[4].startswith("Copy to a new card")
