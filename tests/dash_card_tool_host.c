@@ -442,12 +442,38 @@ int main(int argc, char **argv)
 		dashMmceSwitch(argv[3] + 12);
 	} else if (!strncmp(argv[3], "ps1conv:", 8)) {
 		dashPs1SaveConvert(argv[3] + 8);
+	} else if (!strncmp(argv[3], "importmany:", 11)) { /* importmany:dir/|name|name... */
+		static char spec[4096];
+		const char *names[64] = {0};
+		char *p, *dir;
+		int n = 0;
+
+		snprintf(spec, sizeof(spec), "%s", argv[3] + 11);
+		dir = spec;
+		p = strchr(spec, '|');
+		while (p != NULL && n < 64) {
+			*p++ = 0;
+			names[n++] = p;
+			p = strchr(p, '|');
+		}
+		dashCardImportMany(dir, names, n);
 	} else if (!strncmp(argv[3], "convert:", 8)) {
 		dashCardConvertSave(argv[3] + 8);
 	} else if (!strncmp(argv[3], "lib:", 4)) {
 		dashCardSaveLibrary(argv[3] + 4);
 	} else if (!strncmp(argv[3], "all:", 4)) {
 		dashCardAllSaves(argv[3] + 4);
+	} else if (!strncmp(argv[3], "ps1from:", 8)) {
+		/* ps1from:folder|name|name...: a PS1 card from the marked saves */
+		const char *names[16];
+		char *q = argv[3] + 8;
+		int k = 0;
+
+		while ((q = strchr(q, '|')) != NULL && k < 16) {
+			*q++ = 0;
+			names[k++] = q;
+		}
+		dashPs1CardNew(argv[3] + 8, names, k);
 	} else if (!strncmp(argv[3], "blank:", 6)) {
 		dashCardNewBlank(argv[3] + 6);
 	} else if (!strncmp(argv[3], "served:", 7)) {

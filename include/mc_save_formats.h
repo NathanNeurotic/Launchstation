@@ -20,6 +20,8 @@
 //  .cbs       CodeBreaker: "CFU" header with the folder name, times and
 //             mode, then an RC4-scrambled zlib stream of 64-byte entries
 //             (times, size, mode, name) each followed by its data.
+//             mcSaveToCbs writes one, with the zlib stream as stored
+//             (uncompressed) blocks.
 //  .sps .xps  SharkPort / X-Port: "SharkPortSave" header, three
 //             length-prefixed strings, then 98-byte (or longer) entries with
 //             byte-swapped modes and times, each followed by its data.
@@ -85,6 +87,10 @@ int mcSaveFromMax(const uint8_t *buf, uint32_t len, const uint8_t stamp[8], McSa
 int mcSaveFromCbs(const uint8_t *buf, uint32_t len, const uint8_t stamp[8], McSaveData *out);
 int mcSaveFromSps(const uint8_t *buf, uint32_t len, McSaveData *out);
 int mcSaveFromPsv(const uint8_t *buf, uint32_t len, McSaveData *out);
+
+/* A save as a CodeBreaker .cbs (free *out with free()): MCW_OK, or
+ * MCW_ERR_INVALID for an empty save or one too big for the format. */
+int mcSaveToCbs(const McSaveData *s, uint8_t **out, uint32_t *len);
 
 /* Okumura's LZARI, as MAX Drive saves use it: decodes src into out_len bytes
  * of out. Returns 0, or -1 when the stream runs out or is malformed. */

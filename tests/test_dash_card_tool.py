@@ -196,10 +196,25 @@ v = host("mass:/out/" + PSV2).read_bytes()
 assert v[:4] == b"\0VSP" and v[0x3C] == 2 and v[0x80:0xA0].rstrip(b"\0") == b"BESLES-12345GAME"
 host("mass:/conv").mkdir()
 shutil.copy(psu, host("mass:/conv/BESLES-12345GAME.psu"))
-lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "c1")              # a .psu goes to .psv, no question
+lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "k1", "c1")        # a .psu offers .psv first
+assert kind(lines, "CHOICE|Convert to|3|1"), lines
 assert kind(lines, "CONFIRM|Convert to .psv?|") and host("mass:/conv/" + PSV2).read_bytes() == v, lines
-lines = run("convert:mass:/conv/BESLES-12345GAME.psu")                    # never replaced, never renamed
+lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "k1")              # never replaced, never renamed
 assert kind(lines, "MESSAGE|1|Not converted|A .psv with this save's name is already there"), lines
+# and as a CodeBreaker .cbs: exported from the card, converted from the .psu (same bytes, -2 when taken)
+lines = run(B, "m3", "m2", "k2", "pmass:/out/")
+assert kind(lines, "PICK|Export .cbs to|") and kind(lines, "TOAST|1|.cbs written and verified"), lines
+c = host("mass:/out/BESLES-12345GAME.cbs").read_bytes()
+assert c[:4] == b"CFU\0" and c[0x14:0x34].rstrip(b"\0") == b"BESLES-12345GAME"
+lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "k2", "c1")
+assert kind(lines, "CONFIRM|Convert to .cbs?|") and host("mass:/conv/BESLES-12345GAME.cbs").read_bytes() == c, lines
+lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "k2", "c1")
+assert host("mass:/conv/BESLES-12345GAME-2.cbs").read_bytes() == c, lines
+J = "mass:/J.mcd"
+blank(J)
+lines = run(J, "m0", "pmass:/out/BESLES-12345GAME.cbs", "c1")             # it imports into the same save
+assert kind(lines, "TOAST|1|Save imported and verified") and saves(J) == saves(B), lines
+host("mass:/out/BESLES-12345GAME.cbs").unlink()
 shutil.rmtree(host("mass:/conv"))
 host("mass:/out/" + PSV2).unlink()
 E = "mass:/E.mcd"
@@ -239,8 +254,9 @@ assert host("mass:/out/BASLUS-99999BLZ-2.psu").read_bytes() == host("mass:/out/B
 lines = run("convert:mass:/out/BASLUS-99999BLZ.mcm", "k0", "c0")       # declined: nothing written
 assert not host("mass:/out/BASLUS-99999BLZ-3.psu").exists()
 host("mass:/out/junk.max").write_bytes(b"Ps2PowerSave" + bytes(200))
-lines = run("convert:mass:/out/junk.max", "k0")
+lines = run("convert:mass:/out/junk.max")                                   # refused before a format is asked
 assert any(l.startswith("MESSAGE|") and "Not converted" in l for l in lines) and not host("mass:/out/junk.psu").exists(), lines
+assert not kind(lines, "CHOICE|"), lines
 
 # 8c. Blaze itself keeps saves in the card's MCM folder as files with no extension named after the save
 # folder (Berion): those import with their whole name (dots included), the picker admits them through the
@@ -281,6 +297,49 @@ blank(I)
 lines = run(I, "m0", "pmass:/out/BASLUS-77777BLZ.psu", "c1")
 assert kind(lines, "TOAST|1|Save imported and verified") and saves(I)["BASLUS-77777BLZ"] == saves(H)["BASLUS-77777BLZ"], lines
 
+# 8d. several marked save files of mixed formats into one card image (wLaunchELF_R3Z's "Extract saves..."):
+# one safety copy, a file that is not a save is skipped with its reason, the rest go in
+K = "mass:/K.mcd"
+blank(K)
+k_before = host(K).read_bytes()
+mix = "importmany:mass:/out/|BESLES-12345GAME.psu|BASLUS-99999BLZ.mcm|junk.max"
+lines = run(mix, "p" + K, "c1")
+assert kind(lines, "PICK|Import the saves into which card image?|mass:/out/|0|"), lines
+assert kind(lines, "CONFIRM|Import 3 saves?|K.mcd gets one safety copy first."), lines
+msg = kind(lines, "MESSAGE|")[0]
+assert "|Done|2 saves imported and verified. 1 skipped. First: junk.max: " in msg and msg.endswith("|Safety copy: mass:/WLE-Safety/K-0001.mcd"), msg
+assert host("mass:/WLE-Safety/K-0001.mcd").read_bytes() == k_before   # the safety copy is the card before the import
+assert saves(K)["BESLES-12345GAME"] == saves(B)["BESLES-12345GAME"] and saves(K)["BASLUS-99999BLZ"] == saves(F)["BASLUS-99999BLZ"]
+k_snap = sha(K)
+lines = run(mix, "p" + K, "c1")                                          # all there already: nothing written
+assert any("Nothing imported. 3 skipped. First: BESLES-12345GAME.psu: A save with this name" in l for l in kind(lines, "MESSAGE|")), lines
+assert sha(K) == k_snap and not host("mass:/WLE-Safety/K-0002.mcd").exists()
+lines = run("importmany:mass:/out/|gone.psu|BESLES-12345GAME.psu", "p" + K, "c1")   # a read failure stops the batch
+msg = kind(lines, "MESSAGE|")
+assert msg and "Nothing imported. 1 failed. First: gone.psu: The save file could not be opened." in msg[0] and "Stopped there; 1 not tried." in msg[0], lines
+assert sha(K) == k_snap
+K3 = "mass:/K3.mcd"                                                     # a hard error after one import: that one stays
+blank(K3)
+lines = run("importmany:mass:/out/|BESLES-12345GAME.psu|gone.psu|BASLUS-99999BLZ.mcm", "p" + K3, "c1")
+msg = kind(lines, "MESSAGE|")
+assert msg and "1 save imported and verified. 1 failed. First: gone.psu: The save file could not be opened." in msg[0] and "Stopped there; 1 not tried." in msg[0], lines
+assert saves(K3) == {"BESLES-12345GAME": saves(B)["BESLES-12345GAME"]}
+K2 = "mass:/K2.mcd"
+blank(K2)
+k2_snap = sha(K2)
+lines = run(mix, "p" + K2, "c1", env={"FAIL_WRITE_AT": "0"})             # the safety copy fails: card untouched, said so
+msg = kind(lines, "MESSAGE|")
+assert msg and "Nothing imported. 1 failed. First: BESLES-12345GAME.psu: Nothing was written: the card could not be read or its safety copy made." in msg[0], lines
+assert "Safety copy:" not in msg[0], lines
+assert sha(K2) == k2_snap
+lines = run(mix, "p" + K, "c0")                                          # declined
+assert not kind(lines, "MESSAGE|") and sha(K) == k_snap
+lines = run(mix, "pmass:/out/junk.max")                                  # not a card image: nothing written
+assert any(l.startswith("MESSAGE|") for l in lines) and not kind(lines, "CONFIRM|"), lines
+
+_br = (root / "src/dash_browser.c").read_text(encoding="utf-8")
+assert "dashCardImportMany(fb.dir, names, m);" in _br and "mcSaveFormatKnownExt(dot)" in _br   # marked files only, by extension
+
 # 9. safety copies are pruned to the newest ten, and only ours
 host("mass:/WLE-Safety/E-notes.txt").write_text("keep me")
 host("mass:/WLE-Safety/Other-0001.mcd").write_bytes(b"keep")
@@ -312,6 +371,10 @@ for k in range(1, 9):                                              # copy: 1 saf
 # 11. PCSX2 .ps2 cards: view and export only
 P = "mass:/P.ps2"
 put(P, fx.standard_card(8, True)[0])
+p_snap = sha(P)
+lines = run(mix, "p" + P)                                                # batch import refuses it before asking
+assert kind(lines, "MESSAGE|1|Cannot use this card|Saves with sub-folders, and PCSX2 .ps2 cards, can only be read here.") \
+    and not kind(lines, "CONFIRM|") and sha(P) == p_snap, lines
 lines = run(P, "m3")
 menu = kind(lines, "MENU|P.ps2|")[0].split("|")
 assert menu[3].startswith("!Import save...") and menu[4].startswith("Copy to a new card")
@@ -657,7 +720,7 @@ menu = kind(lines, "MENU|All saves|")
 assert len(menu) == 1, lines
 row = menu[0].split("|")
 assert row[2] == "9 saves on 3 cards; 1 file not readable as a card", row[2]
-assert row[3] == "Marked saves...~mark saves with Square first", row[3]
+assert row[3] == "Marked saves...~none marked: export all, or mark with Square", row[3]
 rows = row[4:]                                                   # menu row = list index + 1
 assert len(rows) == 9, rows
 titles = [r.split("~")[0] for r in rows]
@@ -716,8 +779,39 @@ def safeties(folder, base):
     return sorted(p.name for p in host(folder).glob(base + "-*.mcd"))
 
 
-lines = run("all:mass:/all", "m0")                                    # nothing marked yet
-assert kind(lines, "TOAST|3|Mark saves with Square first"), lines
+rows = all_rows()
+lines = run("all:mass:/all", "m0", "m-1")                             # nothing marked: only export, of every save
+menu = kind(lines, "MENU|All %d saves|" % len(rows))[0]
+assert "!Copy to another card..." in menu and "!Move to another card..." in menu and "!Delete..." in menu, menu
+assert "|Export as .psu or .psv...~" in menu, menu
+# export all as .psu into one folder: the cards are only read; the same save on two cards is written once
+host("mass:/exp").mkdir()
+before = {p: sha(p) for p in ("mass:/all/A.mcd", "mass:/all/sub/B.mcd")}
+lines = run("all:mass:/all", "m0", "m3", "k0", "pmass:/exp/", "c1")
+assert kind(lines, "CONFIRM|Export %d saves?|" % len(rows)), lines
+names = [r.split(": ", 1)[1].rsplit(", ", 1)[0].replace("PS1 ", "") for r in rows]
+unique = sorted(set(names))
+msg = kind(lines, "MESSAGE|")[0]
+assert msg.startswith(f"MESSAGE|4|Exported|{len(unique)} saves written and verified."), (msg, unique)
+if len(unique) < len(names):
+    assert "%d already there, kept." % (len(names) - len(unique)) in msg, msg
+assert sorted(p.stem for p in host("mass:/exp").glob("*.psu")) == unique
+assert {p: sha(p) for p in before} == before
+G0 = "mass:/G0.mcd"
+blank(G0)
+lines = run(G0, "m0", "pmass:/exp/NOICON.psu", "c1")                   # an exported .psu imports as the same save
+assert kind(lines, "TOAST|1|Save imported and verified") and saves(G0)["NOICON"] == saves("mass:/all/A.mcd")["NOICON"]
+# marked ones as signed .psv; a run into a folder that has them keeps them
+pick = rows_for("A.mcd: BESLES-12345GAME, 7 KB", "A.mcd: NOICON, 3 KB")
+lines = run("all:mass:/all", "s" + pick, "m0", "m3", "k1", "pmass:/exp/", "c1")
+assert kind(lines, "MENU|2 marked saves|") and kind(lines, "MESSAGE|4|Exported|2 saves written and verified.|mass:/exp/"), lines
+psv = host("mass:/exp/BESLES-12345" + b"GAME".hex().upper() + ".PSV").read_bytes()
+assert psv[:4] == b"\0VSP"
+lines = run("all:mass:/all", "s" + pick, "m0", "m3", "k1", "pmass:/exp/", "c1")
+assert kind(lines, "MESSAGE|4|Exported|0 saves written and verified. 2 already there, kept.|mass:/exp/"), lines
+lines = run("all:mass:/all", "s" + pick, "m0", "m3", "k1", "pmass:/exp/", "c0")   # declined: nothing read or written
+assert kind(lines, "CONFIRM|Export 2 saves?|") and not kind(lines, "MESSAGE|"), lines
+shutil.rmtree(host("mass:/exp"))
 lines = run("all:mass:/all", "s0,1,2", "m-1")                         # the action row cannot be marked
 m = kind(lines, "MENU|All saves|")[0].split("|")
 assert not m[3].startswith("*") and m[4].startswith("*") and m[5].startswith("*"), m[3:6]
@@ -785,7 +879,9 @@ for k in range(1, 120):
     pick = str(d.index("A.mcd: NOICON, 3 KB") + 1)
     lines = run("all:mass:/mv", "s" + pick, "m0", "m1", "pmass:/mv/H.mcd", "c1", env={"FAIL_WRITE_AT": str(k)})
     msg = kind(lines, "MESSAGE|1|Not all done|")
-    if msg and "NOICON" in saves("mass:/mv/H.mcd"):
+    if msg and "SAFETY|mass:/mv/WLE-Safety/A-0001.mcd|1" not in lines:
+        assert "A-0001" not in msg[0], msg                               # a safety copy that failed is never named
+    elif msg and "NOICON" in saves("mass:/mv/H.mcd"):
         assert "|Safety copy: mass:/mv/WLE-Safety/A-0001.mcd" in msg[0], msg
         break
 else:
@@ -924,12 +1020,30 @@ def ps1_mcs(name, blocks, title):
 
 lines = run("blank:mass:/", "k7", "k0", "c1", "m-1")
 assert kind(lines, "CHOICE|New card size|8|3|1 MB") and kind(lines, "CHOICE|New PS1 card|10|0|Blank-PS1.mcd"), lines
-assert kind(lines, "TOAST|1|PS1 card made and read back: 15 blocks free"), lines
+assert kind(lines, "TOAST|1|PS1 card made and read back: 15 of 15 blocks free"), lines
 assert kind(lines, "MENU|Blank-PS1.mcd|PS1 card: 0 saves, 15 of 15 blocks free|Import save...~"), lines   # opens on it
 P1 = "mass:/Blank-PS1.mcd"
 assert host(P1).stat().st_size == 131072 and host(P1).read_bytes()[:2] == b"MC"
 lines = run(P1)
 assert kind(lines, "MENU|Blank-PS1.mcd|PS1 card: 0 saves, 15 of 15 blocks free|Import save...~"), lines
+# a RetroArch .srm is the same raw card and opens the same; another core's 128 KB .srm that
+# only starts "MC" by chance fails the directory checks and is never opened as a PS1 card
+host("mass:/ra.srm").write_bytes(host(P1).read_bytes())
+assert kind(run("mass:/ra.srm"), "MENU|ra.srm|PS1 card: 0 saves, 15 of 15 blocks free|"), "srm"
+junk = b"MC" + random.Random(7).randbytes(131070)
+host("mass:/gba.srm").write_bytes(junk)
+lines = run("mass:/gba.srm")
+assert not kind(lines, "MENU|gba.srm|PS1 card") and kind(lines, "MESSAGE|"), lines
+assert host("mass:/gba.srm").read_bytes() == junk
+# a valid header with one bad directory frame (1..15) is refused too
+for frame in range(1, 16):
+    bad = bytearray(host(P1).read_bytes())
+    bad[frame * 128 + 127] ^= 1
+    host("mass:/gba.srm").write_bytes(bad)
+    lines = run("mass:/gba.srm")
+    assert not kind(lines, "MENU|gba.srm|PS1 card") and kind(lines, "MESSAGE|"), (frame, lines)
+    assert host("mass:/gba.srm").read_bytes() == bad
+host("mass:/ra.srm").unlink(); host("mass:/gba.srm").unlink()
 s1 = ps1_mcs("BASLUS-00001PS1", 2, b"PS1 game")
 host("mass:/in.mcs").write_bytes(s1)
 empty = host(P1).read_bytes()
@@ -939,6 +1053,14 @@ assert kind(lines, "CONFIRM|Import this save?|BASLUS-00001PS1, 2 blocks, from a 
 assert kind(lines, "TOAST|1|Save imported and verified"), lines
 assert host("mass:/WLE-Safety/Blank-PS1-0001.mcd").read_bytes() == empty
 assert "|T:PS1 game~BASLUS-00001PS1, 2 blocks" in kind(lines, "MENU|Blank-PS1.mcd|PS1 card: 1 save, 13 of 15 blocks free")[0], lines
+# a save imports into a RetroArch .srm too: safety copy of the old bytes, then it reopens with the save
+host("mass:/ra.srm").write_bytes(empty)
+lines = run("mass:/ra.srm", "m0", "pmass:/in.mcs", "c1", "m-1")
+assert kind(lines, "TOAST|1|Save imported and verified"), lines
+assert host("mass:/WLE-Safety/ra-0001.mcd").read_bytes() == empty     # same raw card, .mcd name
+assert host("mass:/ra.srm").stat().st_size == 131072
+assert "|T:PS1 game~BASLUS-00001PS1, 2 blocks" in kind(run("mass:/ra.srm"), "MENU|ra.srm|PS1 card: 1 save, 13 of 15 blocks free")[0]
+host("mass:/ra.srm").unlink(); host("mass:/WLE-Safety/ra-0001.mcd").unlink()
 # the same name again is refused before any safety copy
 before = sha(P1)
 lines = run(P1, "m0", "pmass:/in.mcs", "m-1")
@@ -958,6 +1080,46 @@ assert kind(lines, "MESSAGE|4|Exported|") and "|mass:/_._a_b_EVIL.mcs" in kind(l
 assert host("mass:/_._a_b_EVIL.mcs").read_bytes()[10:21] == b"../a:b*EVIL" and not list(dev.glob("*EVIL*"))
 host("mass:/_._a_b_EVIL.mcs").unlink()
 host("mass:/evil.mcs").unlink()
+# a PS1 card from several marked saves in one step (wLaunchELF_R3Z's
+# "Create archive"): every save is read and placed before anything is written
+host("mass:/p1from").mkdir()
+two = ps1_mcs("BASLUS-00002PS1", 3, b"Two")
+host("mass:/p1from/a.mcs").write_bytes(s1)
+host("mass:/p1from/b.mcs").write_bytes(two)
+lines = run("ps1from:mass:/p1from|a.mcs|b.mcs", "k3", "c1", "m-1")
+assert kind(lines, "CHOICE|PS1 card from these saves|10|0|PS1-Saves.mcd: raw card"), lines
+assert kind(lines, "CONFIRM|Make a new PS1 card?|2 saves, 10 of 15 blocks free."), lines
+assert kind(lines, "TOAST|1|PS1 card made and read back: 10 of 15 blocks free"), lines
+assert kind(lines, "MENU|MC1.vmc|PS1 card: 2 saves, 10 of 15 blocks free"), lines   # Ember's name, opened on it
+card = host("mass:/p1from/MC1.vmc").read_bytes()
+assert len(card) == 131072 and card[:2] == b"MC"
+assert card[8192:8192 + 2 * 8192] == s1[128:] and card[3 * 8192:6 * 8192] == two[128:]
+# the fixed name is never replaced or suffixed
+assert kind(run("ps1from:mass:/p1from|a.mcs", "k3", "c1"), "MESSAGE|1|Not made|A file with this name is already in this folder."), lines
+assert host("mass:/p1from/MC1.vmc").read_bytes() == card
+# a save that is not one, or that does not fit, stops it before any file is made
+host("mass:/p1from/junk").write_bytes(b"not a save")
+lines = run("ps1from:mass:/p1from|a.mcs|junk", "k0")
+assert kind(lines, "MESSAGE|1|Not imported|") and not kind(lines, "CONFIRM|"), lines
+host("mass:/p1from/big.mcs").write_bytes(ps1_mcs("BASLUS-00003PS1", 13, b"Big"))
+lines = run("ps1from:mass:/p1from|b.mcs|big.mcs", "k1")
+assert kind(lines, "MESSAGE|1|Not imported|") and not kind(lines, "CONFIRM|"), lines
+lines = run("ps1from:mass:/p1from|a.mcs|a.mcs", "k0")                  # the same save twice
+assert kind(lines, "MESSAGE|1|Not imported|A save with that name is already on this card."), lines
+assert sorted(p.name for p in host("mass:/p1from").iterdir()) == ["MC1.vmc", "a.mcs", "b.mcs", "big.mcs", "junk"]
+# declined: nothing written; a plain image takes the PS1-Saves name
+assert not kind(run("ps1from:mass:/p1from|a.mcs", "k0", "c0"), "TOAST|"), lines
+assert not host("mass:/p1from/PS1-Saves.mcd").exists()
+assert kind(run("ps1from:mass:/p1from|a.mcs", "k0", "c1", "m-1"), "TOAST|1|PS1 card made and read back: 13 of 15 blocks free")
+assert host("mass:/p1from/PS1-Saves.mcd").read_bytes()[8192:3 * 8192] == s1[128:]
+# a path that does not fit says so; more than a card's 15 saves is refused outright
+lines = run("ps1from:mass:/p1from|" + "x" * 1100, "k0")
+assert kind(lines, "MESSAGE|1|Not imported|The path is too long.|"), lines
+assert not kind(run("ps1from:mass:/p1from" + "|a.mcs" * 16), "CHOICE|"), lines
+shutil.rmtree(host("mass:/p1from"))
+browser_ps1 = browser[browser.index("static int ps1SaveTargets"):]
+assert '"PS1 card from these saves..."' in browser and "dashPs1CardNew(fb.dir, names, m)" in browser
+assert "fb.nmarked > 0 ? targets(idx, max) : 0" in browser_ps1     # marked files only, never the focused one alone
 host(P1).write_bytes(full)
 # a name that is not plain ASCII (a card's name field can hold any bytes) is
 # not exported, and the dialog gives that reason, not a file-name problem
@@ -1086,6 +1248,7 @@ lines = run("ps1conv:mass:/pc/" + PSV.split("/")[-1], "k1")              # the P
 assert kind(lines, "MESSAGE|1|Not exported|A file with this name is already in that folder."), lines
 lines = run("convert:mass:/pc/" + PSV.split("/")[-1], "k2")              # Convert on a PS1 .psv goes the PS1 way
 assert kind(lines, "CHOICE|Convert to|4|0|.mcs: PS1 single save") and host("mass:/pc/BASLUS-00001PS1-2.psx").exists(), lines
+assert len(kind(lines, "CHOICE|")) == 1, lines                            # asked once, only the PS1 formats
 (dev / "mc0").mkdir(exist_ok=True)
 host("mc0:/BASLUS-00001PS1").write_bytes(s1[128:])                      # a save on a real PS1 card is a raw file
 lines = run("ps1conv:mc0:/BASLUS-00001PS1", "k0", "pmass:/pc/")
