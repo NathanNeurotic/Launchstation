@@ -665,7 +665,7 @@ static const SetItem net_items[] = {
     {ST_CHOICE, S_HOSTWRITE, "Allow writing over the network", "Lets host: / udpfs: be written to, not only read."},
 #endif
 #ifdef ETH
-    {ST_CHOICE, S_NET_LEGACY, "Legacy Ethernet drivers", "Use MrRexD's ps2sdk v1.0 DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up. Takes effect the next time Ethernet/FTP is started."},
+    {ST_CHOICE, S_NET_LEGACY, "Legacy Ethernet drivers", "MrRexD's v1.0 DEV9/PS2IP, for when newer drivers load but SMAP never links. Needs LEGACY_DEV9.IRX and LEGACY_PS2IP.IRX beside the ELF."},
     {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query multiple Internet time sources, require agreement, then write and verify the PS2 hardware RTC."},
 #endif
 #ifdef SMB

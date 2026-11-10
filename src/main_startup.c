@@ -686,6 +686,11 @@ void initializeBootDisplayDefaults(void)
 void bringUpBootNetworkStack(enum BOOT_DEVICE boot_device)
 {
 #if defined(ETH) || defined(UDPFS)
+#ifdef ETH
+	/* The config is read now and the boot device is still mounted. */
+	if (setting->legacy_net_drivers)
+		legacyNetDriversReady();
+#endif
 	if (boot_device == BOOT_DEVICE_HOST) {
 		//If booted from a network filesystem device, bring that stack up now.
 		getIpConfig();

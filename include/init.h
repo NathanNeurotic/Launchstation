@@ -42,6 +42,11 @@ void rebootIopAndReloadCoreStackSilent(void);
 int loadSecrSifModule(void);
 int prepareExploitSignerIop(void);
 int isPathDeviceStackLoaded(const char *path);
+#ifdef ETH
+/* Reads LEGACY_DEV9.IRX/LEGACY_PS2IP.IRX from the boot folder once and keeps
+ * them; nonzero when both are in memory. */
+int legacyNetDriversReady(void);
+#endif
 int isUsbMassStackLoaded(void);
 int consoleHasIlink(void);
 #ifdef MMCE

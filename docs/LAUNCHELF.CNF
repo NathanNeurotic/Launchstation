@@ -192,7 +192,9 @@ NET_HOSTwrite = 0
 # ----------------------------------------------------------------------
 # NET_LegacyDrivers selects the ps2sdk v1.0 DEV9/PS2IP pair preserved by
 # oMrRexD. Enable it only on consoles where newer Ethernet drivers load
-# but the SMAP link never comes up.
+# but the SMAP link never comes up. The pair is read from LEGACY_DEV9.IRX
+# and LEGACY_PS2IP.IRX in the folder Launchstation started from (both are
+# in the release ZIP); without them the network does not start.
 # ----------------------------------------------------------------------
 NET_LegacyDrivers = 0
 # ----------------------------------------------------------------------

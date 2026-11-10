@@ -64,7 +64,9 @@ int main(int argc,char **argv) {
         memory_card_files = ("icon.sys", "list.icn", "copy.icn", "del.icn")
         expected_members = {name, "title.cfg", "APPINFO.PBT", "WLE-UPDATE-CA.PEM", "BGM.ADP"}.union(memory_card_files)
         with zipfile.ZipFile(tmp / "out" / (folder + ".zip")) as z:
-            assert set(z.namelist()) == {folder + "/" + filename for filename in expected_members}
+            assert set(z.namelist()) == {folder + "/" + filename for filename in expected_members.union(p.LEGACY_FILES)}
+            for filename, source in p.LEGACY_FILES.items():
+                assert z.read(folder + "/" + filename) == (root / source).read_bytes()
             assert z.read(folder + "/WLE-UPDATE-CA.PEM") == (root / "res/WLE-UPDATE-CA.PEM").read_bytes()
             assert z.read(folder + "/BGM.ADP") == (root / "res/music.sad").read_bytes()
             assert z.read(folder + "/" + name) == elf
@@ -73,6 +75,7 @@ int main(int argc,char **argv) {
                 assert z.read(folder + "/" + filename) == (root / "res/memory-card" / filename).read_bytes()
         packaged_folder, packaged_members = p.inspect_psu(archive)
         assert packaged_folder == folder
+        # The PSU keeps nine files: consoles' updaters accept no other shape.
         assert set(packaged_members) == expected_members
         pbt = packaged_members["APPINFO.PBT"].decode("utf-8")
         for key, value in (("TITLE", title), ("VERSION", "aaaaaaaa"), ("ELF", name), ("SAS", folder)):

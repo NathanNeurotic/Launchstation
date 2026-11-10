@@ -25,8 +25,6 @@ IMPORT_BIN2C(netman_irx);
 IMPORT_BIN2C(smap_netman_irx);
 IMPORT_BIN2C(ps2ip_irx);
 IMPORT_BIN2C(ps2ips_irx);
-IMPORT_BIN2C(ps2dev9_v10_irx);
-IMPORT_BIN2C(ps2ip_v10_irx);
 IMPORT_BIN2C(ps2smap_irx);
 IMPORT_BIN2C(ps2host_irx);
 IMPORT_BIN2C(ps2netfs_irx);
@@ -151,6 +149,13 @@ static const char *smb_load_error[3]; /* by version: why load_smb() failed */
 #endif
 #ifdef ETH
 static const char *dashboard_ip_error = NULL;
+/* "Legacy Ethernet drivers" (MrRexD's fallback): the ps2sdk v1.0 DEV9 and
+ * PS2IP are files beside the ELF, not embedded. Both are read together while
+ * the boot device is mounted and then kept: an IOP reset or a DEV9/UDPFS
+ * switch unmounts that device, and each later legacy DEV9 load needs them. */
+static void *ps2dev9_v10_irx, *ps2ip_v10_irx;
+static int size_ps2dev9_v10_irx, size_ps2ip_v10_irx;
+static char legacy_net_error[160];
 /* The vendored EE socket client (ee_libs/tcpips/ps2ipc.c) is not declared by
  * an installed header. These DNS calls use the same IPv4 ABI as its sockets. */
 typedef struct {
@@ -474,6 +479,37 @@ static void resetUsbHostControllerBeforeIopReset(void)
 	ee_kmode_exit();
 }
 
+#ifdef ETH
+int legacyNetDriversReady(void)
+{
+	const char *dir = LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir;
+	char path[MAX_PATH];
+	void *dev9 = NULL, *ip = NULL;
+	int dev9_size = 0, ip_size = 0;
+
+	if (ps2dev9_v10_irx != NULL)
+		return 1;
+	/* Only a device that is already up: reading must never load a stack,
+	 * since loading HDD/ATA would come back here through DEV9. */
+	if (isPathDeviceStackLoaded(dir)) {
+		filerRootMcPollIdle();
+		if (snprintf(path, sizeof(path), "%sLEGACY_DEV9.IRX", dir) < (int)sizeof(path))
+			loadExternalFile(path, &dev9, &dev9_size);
+		if (dev9 != NULL && snprintf(path, sizeof(path), "%sLEGACY_PS2IP.IRX", dir) < (int)sizeof(path))
+			loadExternalFile(path, &ip, &ip_size);
+		if (ip != NULL) {
+			ps2dev9_v10_irx = dev9, size_ps2dev9_v10_irx = dev9_size;
+			ps2ip_v10_irx = ip, size_ps2ip_v10_irx = ip_size;
+			return 1;
+		}
+		free(dev9);
+	}
+	snprintf(legacy_net_error, sizeof(legacy_net_error),
+	         "Legacy Ethernet drivers: LEGACY_DEV9.IRX and LEGACY_PS2IP.IRX could not be read from %s", dir);
+	return 0;
+}
+#endif
+
 static int load_ps2dev9(void)
 {
 	int ID, rcode;
@@ -483,7 +519,9 @@ static int load_ps2dev9(void)
 	if (pcCardCfOwnsBus()) return 0;
 
 #ifdef ETH
-	if (setting != NULL && setting->legacy_net_drivers) {
+	/* Without the files, HDD and other DEV9 users keep the current DEV9;
+	 * load_ps2ip() refuses the network with legacy_net_error instead. */
+	if (setting != NULL && setting->legacy_net_drivers && legacyNetDriversReady()) {
 		desired_variant = DEV9_VARIANT_PS2SDK_V10;
 		module = ps2dev9_v10_irx;
 		module_size = size_ps2dev9_v10_irx;
@@ -608,6 +646,9 @@ static int load_ps2ip(void)
 	/* Each failure names its stage in dashboard_ip_error, which SMB and the
 	 * dashboard network show; success leaves it untouched. */
 	if (pcCardCfOwnsBus()) return (dashboard_ip_error = "PC CARD CompactFlash is using the network adapter.", 0);
+	/* Before any switch or reset: nothing loads when the files are missing. */
+	if (setting != NULL && setting->legacy_net_drivers && !legacyNetDriversReady())
+		return (dashboard_ip_error = legacy_net_error, 0);
 
 #if defined(ETH) && defined(UDPFS)
 	if (!switchNetworkStack(NETWORK_STACK_ETH)) {
@@ -2283,6 +2324,9 @@ static int switchNetworkStack(int target_mode)
 		return 1;
 
 	if (network_stack_mode != NETWORK_STACK_NONE) {
+		/* A UDPFS boot folder is still mounted here, not after the reset. */
+		if (target_mode == NETWORK_STACK_ETH && setting != NULL && setting->legacy_net_drivers)
+			legacyNetDriversReady();
 		DPRINTF("Switching network stack (%d -> %d), resetting IOP\n", network_stack_mode, target_mode);
 		resetRuntimeDeviceState(TRUE);
 		/* If the reset was refused, old network modules are still resident. */

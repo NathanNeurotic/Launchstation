@@ -131,6 +131,8 @@ with tempfile.TemporaryDirectory(prefix="kit-package-") as tmp:
         for filename in ("icon.sys", "list.icn", "copy.icn", "del.icn"):
             assert archive.read("APPS/APP_LAUNCHSTATION/" + filename) == (root / "res/memory-card" / filename).read_bytes()
         assert archive.read("APP_LAUNCHSTATION.psu") == psu
+        for filename, irx in (("LEGACY_DEV9.IRX", "iop/__v10/ps2dev9.irx"), ("LEGACY_PS2IP.IRX", "iop/__v10/ps2ip.irx")):
+            assert archive.read("APPS/APP_LAUNCHSTATION/" + filename) == (root / irx).read_bytes()
         assert archive.read("POPS/POPSTARTER.ELF") == payloads["ship/POPS/POPSTARTER.ELF"]
         assert archive.read("neutrino/modules/smb_fhi.irx") == b"neutrino:modules/smb_fhi.irx"
         assert archive.read("KIT-README.txt") == kit.KIT_README.read_bytes()

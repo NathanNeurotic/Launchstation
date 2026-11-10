@@ -101,9 +101,12 @@ c += r"""
 #define BLOCK_STACK_ATA 2
 static int network_stack_mode, block_storage_stack_mode;
 static int storage_driver_stack_mode, reset_allowed, resets;
+static struct { int legacy_net_drivers; } config, *setting = &config;
+static int legacy_reads, legacy_reads_at_reset;
+static int legacyNetDriversReady(void) { legacy_reads++; return 1; }
 static void resetRuntimeDeviceState(int status) {
     assert(status == TRUE);
-    resets++;
+    resets++; legacy_reads_at_reset = legacy_reads;
     if (reset_allowed) { storage_driver_stack_mode = STORAGE_STACK_DEFAULT; network_stack_mode = NETWORK_STACK_NONE; block_storage_stack_mode = BLOCK_STACK_NONE; }
 }
 static const char *mmce_product_ids[] = {"Unknown", "SD2PSX", "MemCard PRO2", "PicoMemcard+", "PicoMemcardZero"};
@@ -174,6 +177,12 @@ int main(void) {
     reset_allowed = 1;
     assert(switchNetworkStack(NETWORK_STACK_UDPFS) == 1);
     assert(network_stack_mode == NETWORK_STACK_UDPFS && resets == before + 2);
+    /* UDPFS -> ETH with Legacy ON reads the legacy files before the reset
+     * unmounts a udpfs: boot folder; with Legacy OFF it never reads them. */
+    assert(switchNetworkStack(NETWORK_STACK_ETH) == 1 && !legacy_reads);
+    network_stack_mode = NETWORK_STACK_UDPFS; config.legacy_net_drivers = 1;
+    assert(switchNetworkStack(NETWORK_STACK_ETH) == 1 && legacy_reads == 1 && legacy_reads_at_reset == 1);
+    config.legacy_net_drivers = 0;
     block_storage_stack_mode = BLOCK_STACK_NONE;
     before = resets;
     assert(switchBlockStorageStack(BLOCK_STACK_HDD) == 1 && resets == before);

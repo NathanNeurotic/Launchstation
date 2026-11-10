@@ -42,6 +42,8 @@ APP_FOLDER = "APP_LAUNCHSTATION"
 ELF_NAME = "LAUNCHSTATION.ELF"
 APP_MEMBERS = (ELF_NAME, "title.cfg", "APPINFO.PBT", "WLE-UPDATE-CA.PEM", "BGM.ADP",
                "icon.sys", "list.icn", "copy.icn", "del.icn")
+# Beside the app in the ZIP and APPS folder only (package_apps.LEGACY_FILES).
+LEGACY_MEMBERS = ("LEGACY_DEV9.IRX", "LEGACY_PS2IP.IRX")
 RAW_URL = "https://raw.githubusercontent.com/{repository}/{commit}/{path}"
 TREES_URL = "https://api.github.com/repos/{repository}/git/trees/{commit}?recursive=1"
 USER_AGENT = "Launchstation-kit-packager"
@@ -352,9 +354,10 @@ def package(app_dir, externals, neutrino, output, revision, epoch, build, manife
         raise ValueError(f"{APP_FOLDER}.psu does not hold the nine-file app package")
     with zipfile.ZipFile(app_dir / f"{APP_FOLDER}.zip") as archive:
         zipped = {tuple(safe_relative(name).split("/", 1)): archive.read(name) for name in archive.namelist()}
-    if set(zipped) != {(APP_FOLDER, name) for name in APP_MEMBERS} \
-            or any(zipped[key] != members[key[1]] for key in zipped):
+    if set(zipped) != {(APP_FOLDER, name) for name in APP_MEMBERS + LEGACY_MEMBERS} \
+            or any(zipped[key] != members[key[1]] for key in zipped if key[1] in members):
         raise ValueError(f"{APP_FOLDER}.zip and {APP_FOLDER}.psu differ")
+    legacy = {name: zipped[(APP_FOLDER, name)] for name in LEGACY_MEMBERS}
     elf = members[ELF_NAME]
     if elf[:4] != b"\x7fELF":
         raise ValueError("the packaged app ELF is not an ELF")
@@ -380,8 +383,8 @@ def package(app_dir, externals, neutrino, output, revision, epoch, build, manife
             raise ValueError("a PS1 BIOS must not be redistributed")
         app_folder = kit / "APPS" / APP_FOLDER
         app_folder.mkdir(parents=True)
-        for name in APP_MEMBERS:
-            (app_folder / name).write_bytes(members[name])
+        for name, payload in {**members, **legacy}.items():
+            (app_folder / name).write_bytes(payload)
         (kit / f"{APP_FOLDER}.psu").write_bytes(psu)
         neutrino_dir = kit / "neutrino"
         extract_neutrino(neutrino, neutrino_dir)
@@ -453,7 +456,7 @@ def verify(archive_path, expected_psu, manifest):
         misplaced = sorted(name for name in present if name.startswith(APP_FOLDER + "/") or "/APP_LAUNCHSTATION-DS/" in name)
         if misplaced:
             raise ValueError(f"the app folder must live under APPS/ and only the standard app ships: {misplaced[:4]}")
-        required = {f"APPS/{APP_FOLDER}/{name}" for name in APP_MEMBERS}
+        required = {f"APPS/{APP_FOLDER}/{name}" for name in APP_MEMBERS + LEGACY_MEMBERS}
         required |= {f"{APP_FOLDER}.psu", "KIT-README.txt", "KIT-MANIFEST.json"}
         required |= {f"neutrino/{name}" for name in NEUTRINO_REQUIRED}
         required |= set(SHORTCUT_NAMES)
@@ -471,13 +474,13 @@ def verify(archive_path, expected_psu, manifest):
                 raise ValueError(f"kit external differs from its pin: {kit_path}")
         app_prefix = f"APPS/{APP_FOLDER}/"
         app_files = {name[len(app_prefix):]: archive.read(name) for name in present if name.startswith(app_prefix)}
-        if set(app_files) != set(APP_MEMBERS):
-            raise ValueError(f"APPS/{APP_FOLDER} must hold exactly the nine app files, found {sorted(app_files)}")
+        if set(app_files) != set(APP_MEMBERS + LEGACY_MEMBERS):
+            raise ValueError(f"APPS/{APP_FOLDER} must hold exactly the nine app files and the legacy drivers, found {sorted(app_files)}")
         psu = archive.read(f"{APP_FOLDER}.psu")
         if psu != expected_psu:
             raise ValueError("the kit PSU differs from the published PSU")
         folder, members = packages.inspect_psu(psu)
-        if folder != APP_FOLDER or members != app_files:
+        if folder != APP_FOLDER or members != {k: v for k, v in app_files.items() if k not in LEGACY_MEMBERS}:
             raise ValueError("the kit PSU and its APPS folder differ")
         if archive.read(f"neutrino/neutrino.elf")[:4] != b"\x7fELF" or app_files[ELF_NAME][:4] != b"\x7fELF":
             raise ValueError("a packaged ELF is not an ELF")

@@ -59,6 +59,9 @@ static const char *dashboard_ip_error;
 static const char *smb_load_error[3];
 static struct { int legacy_net_drivers; } settings, *setting = &settings;
 static int pcCardCfOwnsBus(void) { return owner; }
+static int legacy_ready = 1, legacy_reads;
+static char legacy_net_error[] = "Legacy Ethernet drivers: LEGACY_DEV9.IRX and LEGACY_PS2IP.IRX could not be read from mc0:/APPS/";
+static int legacyNetDriversReady(void) { legacy_reads++; return legacy_ready; }
 static int switchNetworkStack(int mode) { assert(mode == NETWORK_STACK_ETH); return stack_ok; }
 static int load_ps2dev9(void) { ps2dev9_loaded = (u8)dev9_ok; return dev9_ok; }
 static int SifExecModuleBuffer(const void *data, int len, int arglen, const void *arg, int *ret) {
@@ -101,7 +104,7 @@ static void reset_state(void) {
     owner = 0; connects = 0;
     stack_ok = dev9_ok = 1;
     ip_mode = smap_mode = 0;
-    settings.legacy_net_drivers = 0;
+    settings.legacy_net_drivers = 0; legacy_ready = 1; legacy_reads = 0;
 }
 static void expect_fail(const char *stage) {
     assert(!load_smb(2));
@@ -140,6 +143,13 @@ int main(void) {
     expect_fail("PS2IP"); assert(!strcmp(order, "v"));
     reset_state(); ps2dev9_variant = DEV9_VARIANT_PS2SDK_V10; smap_mode = 1;
     expect_fail("SMAP"); assert(have_ps2ip && !strcmp(order, "vs+"));
+
+    /* Legacy ON without its files: nothing at all is loaded, and the
+     * message names both files. Legacy OFF never looks for them. */
+    reset_state(); settings.legacy_net_drivers = 1; legacy_ready = 0;
+    assert(!load_ps2ip() && !order[0] && !ps2dev9_loaded && !have_netman);
+    assert(strstr(dashboard_ip_error, "LEGACY_DEV9.IRX") && strstr(dashboard_ip_error, "LEGACY_PS2IP.IRX"));
+    reset_state(); assert(load_ps2ip() && !legacy_reads);
 
     reset_state(); owner = 1; expect_fail("PC CARD");
     reset_state(); stack_ok = 0; expect_fail("UDPFS");

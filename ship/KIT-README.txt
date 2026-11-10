@@ -9,10 +9,12 @@ same app plus the companions.
 
   APPS/APP_LAUNCHSTATION/   Launchstation (LAUNCHSTATION.ELF, title.cfg,
                             APPINFO.PBT, WLE-UPDATE-CA.PEM, BGM.ADP, icon.sys,
-                            list.icn, copy.icn, del.icn) - the standard controller
+                            list.icn, copy.icn, del.icn, plus LEGACY_DEV9.IRX and
+                            LEGACY_PS2IP.IRX for Settings > Network > Legacy
+                            Ethernet drivers) - the standard controller
                             build. The DualShock (DS34) build is published separately
                             as APP_LAUNCHSTATION-DS.
-  APP_LAUNCHSTATION.psu     The same nine files as a memory-card save. Install
+  APP_LAUNCHSTATION.psu     The same nine files (not the two LEGACY_*.IRX) as a memory-card save. Install
                             it with "Extract PSU" (PSU paste) in a memory-card
                             folder from Launchstation or wLaunchELF.
   POPS/                     POPStarter and its companions for PS1 .VCD images.

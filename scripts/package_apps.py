@@ -3,6 +3,8 @@
 PSU records/padding follow RiptOPL's package_release_app.py and PSUManager:
 512-byte root/dot/dotdot/file records, with file payloads padded to 1024 bytes.
 ZIPs and PSUs contain the same nine direct app files, under the same folder name.
+The ZIPs also carry LEGACY_FILES (Settings > Legacy Ethernet drivers). The PSU
+keeps nine files: the self-updater already on consoles accepts no other shape.
 """
 import argparse
 import datetime
@@ -21,6 +23,16 @@ LOOSE_ELFS = (("LAUNCHSTATION.ELF", 0), ("LAUNCHSTATION-DS.ELF", 1),
 
 ASSET_ROOT = Path(__file__).resolve().parents[1] / "res"
 MEMORY_CARD_SIDECARS = ("icon.sys", "list.icn", "copy.icn", "del.icn")
+# ps2sdk v1.0 DEV9/PS2IP, read from the ELF's folder when the setting is on.
+LEGACY_FILES = {"LEGACY_DEV9.IRX": "iop/__v10/ps2dev9.irx", "LEGACY_PS2IP.IRX": "iop/__v10/ps2ip.irx"}
+
+
+def legacy_net_drivers():
+    files = {name: (ASSET_ROOT.parent / source).read_bytes() for name, source in LEGACY_FILES.items()}
+    for name, payload in files.items():
+        if payload[:4] != b"\x7fELF":
+            raise ValueError(f"{name} is not an IRX")
+    return files
 
 
 def appinfo_pbt(title, elf_name, folder, revision):
@@ -123,16 +135,17 @@ def package(standard, dualshock, output, revision, epoch):
         psu = make_psu(folder, members, date)
         assert inspect_psu(psu) == (folder, members)
         (output / (folder + ".psu")).write_bytes(psu)
+        zipped = {**members, **legacy_net_drivers()}
         with zipfile.ZipFile(output / (folder + ".zip"), "w") as archive:
-            for name, payload in members.items():
+            for name, payload in zipped.items():
                 info = zipfile.ZipInfo(folder + "/" + name, instant.timetuple()[:6])
                 info.compress_type = zipfile.ZIP_STORED  # The ELF is already ps2pack compressed.
                 info.external_attr = 0o100644 << 16
                 archive.writestr(info, payload)
         with zipfile.ZipFile(output / (folder + ".zip")) as archive:
             assert archive.testzip() is None
-            assert {name.split("/", 1)[1]: archive.read(name) for name in archive.namelist()} == members
-        print(f"Verified {folder}.psu/.zip: {elf_name}, title.cfg, APPINFO.PBT, updater CA, BGM.ADP, and memory-card icons")
+            assert {name.split("/", 1)[1]: archive.read(name) for name in archive.namelist()} == zipped
+        print(f"Verified {folder}.psu/.zip: {elf_name}, title.cfg, APPINFO.PBT, updater CA, BGM.ADP, and memory-card icons; ZIP also legacy Ethernet drivers")
     for name, variant in LOOSE_ELFS:
         (output / name).write_bytes(elfs[variant])
         assert (output / name).read_bytes() == elfs[variant]

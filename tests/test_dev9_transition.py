@@ -49,6 +49,9 @@ static int module_id=1, module_result;
 static int hide_hdd, mc_idle_calls, ftpd_arglen;
 static const char *ftpd_args;
 static int pcCardCfOwnsBus(void) { return cf_owned; }
+static int legacy_ready = 1;
+static char legacy_net_error[] = "legacy files missing";
+static int legacyNetDriversReady(void) { return legacy_ready; }
 static int switchNetworkStack(int mode) { assert(mode==NETWORK_STACK_ETH); return network_allowed; }
 static void showLoadingModulesMsg(const char *name) { (void)name; }
 static void ensureCoreIoStackReady(void) {}
@@ -89,7 +92,7 @@ static void reset(void) {
     bdm_calls=ata_calls=dev9_calls=settle_calls=module_result=0;
     ps2dev9_variant=DEV9_VARIANT_NONE; allow_reset=bdm_ok=module_id=1;
     have_netman=have_ps2ips=have_ps2ip=have_ps2smap=have_ps2host=have_ps2ftpd=have_ps2netfs=network_calls=client_calls=0;
-    network_allowed=1;
+    network_allowed=1; legacy_ready=1;
     console_is_PSX=have_Flash_modules=xfromserv_loaded=power_calls=flash_calls=0;
 }
 int main(void) {
@@ -112,6 +115,13 @@ int main(void) {
     assert(ps2dev9_variant==DEV9_VARIANT_PS2SDK_V10 && bdm_live);
     assert(loadAtaBlockDriver());
     assert(resets==1 && dev9_calls==1 && ata_calls==1 && settle_calls==1);
+    /* Legacy ON without its files: ATA/HDD keep the current DEV9, no reset. */
+    reset(); config.legacy_net_drivers=1; legacy_ready=0; bdm_live=1;
+    assert(loadAtaBlockDriver() && !resets && ps2dev9_variant==DEV9_VARIANT_CURRENT);
+    /* ...and the network refuses before touching DEV9 or resetting. */
+    reset(); have_ps2dev9=ps2dev9_loaded=1; ps2dev9_variant=DEV9_VARIANT_CURRENT;
+    config.legacy_net_drivers=1; legacy_ready=0;
+    assert(!ensureDashboardIpNetworkReady() && !resets && !network_calls && !dev9_calls);
     /* CF ownership, module rejection and BDM failure stop dependent loads. */
     reset(); cf_owned=1; assert(!loadAtaBlockDriver());
     assert(!dev9_calls && !bdm_calls && !ata_calls);
