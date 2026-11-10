@@ -2702,16 +2702,22 @@ static void actionsMenu(void)
 			ADD(DI_MC, "Export active MMCE card as PCSX2 .ps2...", "adds ECC/spare bytes and verifies", 0, F_EXPORT_ACTIVE_MMCE_PS2);
 		}
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 &&
-		    (genCmpFileExt(f->name, "MCD") || isVmcImage(f->name) || genCmpFileExt(f->name, "MCR") || genCmpFileExt(f->name, "VM1")))
+		    (genCmpFileExt(f->name, "MCD") || isVmcImage(f->name) || genCmpFileExt(f->name, "MCR") || genCmpFileExt(f->name, "VM1") ||
+		     genCmpFileExt(f->name, "GME") || genCmpFileExt(f->name, "VGS") || genCmpFileExt(f->name, "MEM") ||
+		     genCmpFileExt(f->name, "VMP") || genCmpFileExt(f->name, "MCX")))
 			ADD(DI_MC, "Card contents...", "PS2 and PS1 saves: copy, import, export, delete", 0, F_CARD_CONTENTS);
 		/* Other tools' save files by extension off the cards, plus Blaze's
 		 * extensionless files in a card's (or any) MCM folder. */
-		if (f != NULL && !isDir(f) && fb.nmarked == 0 && !genCmpFileExt(f->name, "PSU") &&
+		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "PSU") && strncmp(fb.dir, "mc", 2) &&
+		    strncmp(fb.dir, "vmc", 3))
+			ADD(DI_MC, "Convert to .psv...", "signed PS3 save, written next to it", 0, F_CONVERT_SAVE);
+		else if (f != NULL && !isDir(f) && fb.nmarked == 0 && !genCmpFileExt(f->name, "PSU") &&
 		    (((genCmpFileExt(f->name, "MCM") || genCmpFileExt(f->name, "MAX") || genCmpFileExt(f->name, "CBS") ||
 		       genCmpFileExt(f->name, "SPS") || genCmpFileExt(f->name, "XPS") || genCmpFileExt(f->name, "PSV")) &&
 		      strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3)) ||
 		     (fullPath(f, path, sizeof(path)) && mcSaveFormatBlazePath(path))))
-			ADD(DI_MC, "Convert to .psu...", "Blaze (MCM folder), MAX, CodeBreaker, SharkPort, PS3 save", 0, F_CONVERT_SAVE);
+			ADD(DI_MC, genCmpFileExt(f->name, "PSV") ? "Convert to .psu..." : "Convert to .psu or .psv...",
+			    "Blaze (MCM folder), MAX, CodeBreaker, SharkPort, PS3 save", 0, F_CONVERT_SAVE);
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "MCD")) {
 			ADD(DI_MC, "Back up .mcd...", "verified byte-for-byte copy", 0, F_BACKUP_MCD);
 			ADD(DI_MC, "Export as PCSX2 .ps2...", "adds ECC and verifies the copy", 0, F_EXPORT_PS2);
