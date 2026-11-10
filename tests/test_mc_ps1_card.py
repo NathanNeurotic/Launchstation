@@ -305,7 +305,7 @@ w = ui[ui.index("static int p1Commit("):]
 w = w[:w.index("\n}\n")]
 # order: re-read and compare, safety copy, write, read back
 assert w.index("memcmp(now, before, PS1_CARD_SIZE)") < \
-    w.index("p1Safety(path, before") < w.index("p1WriteAll(path, after)") < w.index("memcmp(now, after, PS1_CARD_SIZE)")
+    w.index("p1Safety(path, before") < w.index("p1WriteAll(path, p1_kind, after, p1_head)") < w.index("memcmp(now, after, PS1_CARD_SIZE)")
 assert "FIO_O_TRUNC" not in w                       # never truncates the card it rewrites
 assert 'dashPickPath("Import which PS1 save?", dir, DASH_PICK_FILE, NULL, file, sizeof(file))' in ui   # raw saves have no extension
 assert "ent->stat.size == PS1_CARD_SIZE" in tool                                      # "All saves" skips PS1 cards
