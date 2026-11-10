@@ -434,9 +434,12 @@ static void homeDraw(void)
 	float y0 = 236, cw = HOME_TILE;
 	char console[160];
 
-	/* ROMVER is already populated at boot; no CDVD/IOP query during draw. */
-	dashConsoleSummaryText(console, sizeof(console));
-	dashTextFit(DASH_SAFE_L, 60, DASH_SAFE_R - DASH_SAFE_L, console, DASH_FS_CAPTION, DASH_C_TEXT3);
+	/* ROMVER is already populated at boot; no CDVD/IOP query during draw.
+	 * Themes may opt out with console_info = 0 (issue #293). */
+	if (dashTheme.console_info) {
+		dashConsoleSummaryText(console, sizeof(console));
+		dashTextFit(DASH_SAFE_L, 60, DASH_SAFE_R - DASH_SAFE_L, console, DASH_FS_CAPTION, DASH_C_TEXT3);
+	}
 	drawHero();
 
 	/* Continue row */

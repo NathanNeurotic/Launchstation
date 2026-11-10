@@ -224,6 +224,7 @@ static void base(DashTheme *t)
 	t->clock_seconds = 1;
 	t->clock_date = DASH_DATE_SYSTEM;
 	t->tabs = DASH_TABS_SHOWN;
+	t->console_info = 1;
 	t->wallpaper = DASH_WALL_OFF;
 	t->wall_dim = 65;
 }
@@ -538,6 +539,7 @@ void dashThemeValidate(DashTheme *t)
 		t->clock_date = DASH_DATE_SYSTEM;
 	if (t->tabs >= DASH_TABS_COUNT)
 		t->tabs = DASH_TABS_SHOWN;
+	t->console_info = t->console_info ? 1 : 0;
 	if (t->wallpaper >= DASH_WALL_COUNT)
 		t->wallpaper = DASH_WALL_OFF;
 	t->wall_dim = clampU8(t->wall_dim, 0, 90);
@@ -796,6 +798,7 @@ static const ThemeKey keys[] = {
     {"clock_seconds", K_BOOL, OFS(clock_seconds), NULL, 0, 0},
     {"clock_date", K_ENUM, OFS(clock_date), date_ids, DASH_DATE_COUNT, 0},
     {"tabs", K_ENUM, OFS(tabs), tabs_ids, DASH_TABS_COUNT, 0},
+    {"console_info", K_BOOL, OFS(console_info), NULL, 0, 0},
     {"wallpaper", K_ENUM, OFS(wallpaper), wall_ids, DASH_WALL_COUNT, 0},
     {"wallpaper_dim", K_INT, OFS(wall_dim), NULL, 0, 0},
 };
@@ -1245,6 +1248,7 @@ void dashThemeResetGroup(int group)
 			t->highlight = p.highlight;
 			t->glow = p.glow;
 			t->tabs = p.tabs;
+			t->console_info = p.console_info;
 			break;
 		case DASH_TG_TYPE:
 			t->font = p.font;
