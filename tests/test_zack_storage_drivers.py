@@ -102,8 +102,8 @@ c += r"""
 static int network_stack_mode, block_storage_stack_mode;
 static int storage_driver_stack_mode, reset_allowed, resets;
 static struct { int legacy_net_drivers; } config, *setting = &config;
-static int legacy_reads, legacy_reads_at_reset;
-static int legacyNetDriversReady(void) { legacy_reads++; return 1; }
+static int legacy_reads, legacy_reads_at_reset, legacy_ready = 1;
+static int legacyNetDriversReady(void) { legacy_reads++; return legacy_ready; }
 static void resetRuntimeDeviceState(int status) {
     assert(status == TRUE);
     resets++; legacy_reads_at_reset = legacy_reads;
@@ -182,6 +182,11 @@ int main(void) {
     assert(switchNetworkStack(NETWORK_STACK_ETH) == 1 && !legacy_reads);
     network_stack_mode = NETWORK_STACK_UDPFS; config.legacy_net_drivers = 1;
     assert(switchNetworkStack(NETWORK_STACK_ETH) == 1 && legacy_reads == 1 && legacy_reads_at_reset == 1);
+    /* Legacy ON without the files: refuse before the reset, UDPFS stays up. */
+    network_stack_mode = NETWORK_STACK_UDPFS; legacy_ready = 0; before = resets;
+    assert(switchNetworkStack(NETWORK_STACK_ETH) == 0 && legacy_reads == 2);
+    assert(network_stack_mode == NETWORK_STACK_UDPFS && resets == before);
+    legacy_ready = 1; network_stack_mode = NETWORK_STACK_ETH;
     config.legacy_net_drivers = 0;
     block_storage_stack_mode = BLOCK_STACK_NONE;
     before = resets;
