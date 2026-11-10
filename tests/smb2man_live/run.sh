@@ -29,6 +29,7 @@ cleanup() {
     [ -f "$work/run/smbd.pid" ] && kill "$(cat "$work/run/smbd.pid")" 2>/dev/null || true
     pkill -f -- "--configfile=$work/smb.conf" 2>/dev/null || true
     [ -f "$work/made-jose" ] && userdel 'josé' 2>/dev/null || true
+    [ -f "$work/made-ps2" ] && userdel ps2 2>/dev/null || true
     rm -rf "$work"
 }
 trap cleanup EXIT
@@ -114,7 +115,10 @@ cc $san -Wall -I"$here/inc" -c "$root/iop/smb2man/smb2auth.c" -o "$work/lib/smb2
 cc $san -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Werror -I"$here/inc" -I"$root/iop/smb2man" $feat $alloc \
     -D_start=smb2man_start "$here/drive.c" "$work"/lib/*.o -o "$work/drive"
 
-id ps2 >/dev/null 2>&1 || useradd -M ps2
+if ! id ps2 >/dev/null 2>&1; then
+    useradd -M ps2
+    : >"$work/made-ps2" # removed again on exit
+fi
 printf 'secret\nsecret\n' | smbpasswd -c "$conf" -s -a ps2 >/dev/null 2>&1 || true
 
 fails=0
