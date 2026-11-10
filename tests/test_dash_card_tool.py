@@ -196,10 +196,25 @@ v = host("mass:/out/" + PSV2).read_bytes()
 assert v[:4] == b"\0VSP" and v[0x3C] == 2 and v[0x80:0xA0].rstrip(b"\0") == b"BESLES-12345GAME"
 host("mass:/conv").mkdir()
 shutil.copy(psu, host("mass:/conv/BESLES-12345GAME.psu"))
-lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "c1")              # a .psu goes to .psv, no question
+lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "k1", "c1")        # a .psu offers .psv first
+assert kind(lines, "CHOICE|Convert to|3|1"), lines
 assert kind(lines, "CONFIRM|Convert to .psv?|") and host("mass:/conv/" + PSV2).read_bytes() == v, lines
-lines = run("convert:mass:/conv/BESLES-12345GAME.psu")                    # never replaced, never renamed
+lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "k1")              # never replaced, never renamed
 assert kind(lines, "MESSAGE|1|Not converted|A .psv with this save's name is already there"), lines
+# and as a CodeBreaker .cbs: exported from the card, converted from the .psu (same bytes, -2 when taken)
+lines = run(B, "m3", "m2", "k2", "pmass:/out/")
+assert kind(lines, "PICK|Export .cbs to|") and kind(lines, "TOAST|1|.cbs written and verified"), lines
+c = host("mass:/out/BESLES-12345GAME.cbs").read_bytes()
+assert c[:4] == b"CFU\0" and c[0x14:0x34].rstrip(b"\0") == b"BESLES-12345GAME"
+lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "k2", "c1")
+assert kind(lines, "CONFIRM|Convert to .cbs?|") and host("mass:/conv/BESLES-12345GAME.cbs").read_bytes() == c, lines
+lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "k2", "c1")
+assert host("mass:/conv/BESLES-12345GAME-2.cbs").read_bytes() == c, lines
+J = "mass:/J.mcd"
+blank(J)
+lines = run(J, "m0", "pmass:/out/BESLES-12345GAME.cbs", "c1")             # it imports into the same save
+assert kind(lines, "TOAST|1|Save imported and verified") and saves(J) == saves(B), lines
+host("mass:/out/BESLES-12345GAME.cbs").unlink()
 shutil.rmtree(host("mass:/conv"))
 host("mass:/out/" + PSV2).unlink()
 E = "mass:/E.mcd"

@@ -579,7 +579,9 @@ int mcSaveFromCbs(const uint8_t *buf, uint32_t len, const uint8_t stamp[8], McSa
 		return MCW_ERR_INVALID;
 	dlen = rd32(buf + 0x0C);
 	flen = rd32(buf + 0x10);
-	dirmode = rd32(buf + 0x4C);
+	dirmode = rd32(buf + 0x48); /* as Apollo and Cheat Device; some files carry it at 0x4C */
+	if (!(dirmode & M_DIR))
+		dirmode = rd32(buf + 0x4C);
 	/* flen is the whole file's length in some saves and the body's in others */
 	clen = len - hlen;
 	if (flen != len && flen != clen)
@@ -630,6 +632,96 @@ int mcSaveFromCbs(const uint8_t *buf, uint32_t len, const uint8_t stamp[8], McSa
 bad:
 	free(raw);
 	return fail(out, MCW_ERR_INVALID);
+}
+
+/* The zlib stream as stored blocks: no compressor is linked, and every
+ * reader inflates them (zlib's uncompress, as CodeBreaker, Cheat Device and
+ * Apollo use, and ours). */
+typedef struct {
+	uint8_t *p;
+	uint32_t left, room;
+	uLong adler;
+} CbsOut;
+
+static void cbsPut(CbsOut *o, const uint8_t *src, uint32_t n)
+{
+	o->adler = adler32(o->adler, src, n);
+	while (n) {
+		uint32_t k;
+
+		if (!o->room) {
+			o->room = o->left < 65535u ? o->left : 65535u;
+			o->p[0] = o->left == o->room; /* BFINAL on the last block */
+			wr16(o->p + 1, o->room);
+			wr16(o->p + 3, ~o->room & 0xFFFFu);
+			o->p += 5;
+		}
+		k = n < o->room ? n : o->room;
+		memcpy(o->p, src, k);
+		o->p += k;
+		src += k;
+		n -= k;
+		o->room -= k;
+		o->left -= k;
+	}
+}
+
+int mcSaveToCbs(const McSaveData *s, uint8_t **out, uint32_t *len)
+{
+	uint8_t e[64], *p;
+	uint64_t n = 0;
+	uint32_t i, total;
+	CbsOut o;
+
+	if (!s || !out || !len || !s->nfiles || !s->files || s->nfiles > MAX_FILES)
+		return MCW_ERR_INVALID;
+	*out = NULL;
+	*len = 0;
+	for (i = 0; i < s->nfiles; i++)
+		n += 64u + s->files[i].size;
+	if (n > MAX_INFLATE)
+		return MCW_ERR_INVALID;
+	total = 0x128u + 2u + (uint32_t)n + 5u * (((uint32_t)n + 65534u) / 65535u) + 4u;
+	p = (uint8_t *)calloc(1, total);
+	if (!p)
+		return MCW_ERR_NOMEM;
+	memcpy(p, "CFU", 4);
+	wr32(p + 0x04, 0x1F40u);
+	wr32(p + 0x08, 0x128u);
+	wr32(p + 0x0C, (uint32_t)n);
+	wr32(p + 0x10, total);
+	memcpy(p + 0x14, s->entry + 0x40, 32);
+	memcpy(p + 0x34, s->entry + 0x08, 8);
+	memcpy(p + 0x3C, s->entry + 0x18, 8);
+	wr32(p + 0x48, rd16(s->entry));
+	memcpy(p + 0x5C, s->entry + 0x40, 32); /* the title CodeBreaker lists */
+	p[0x128] = 0x78;
+	p[0x129] = 0x01;
+	o.p = p + 0x12A;
+	o.left = (uint32_t)n;
+	o.room = 0;
+	o.adler = adler32(0, NULL, 0);
+	for (i = 0; i < s->nfiles; i++) {
+		const McSaveFile *f = &s->files[i];
+
+		memset(e, 0, sizeof(e));
+		memcpy(e, f->entry + 0x08, 8);
+		memcpy(e + 8, f->entry + 0x18, 8);
+		wr32(e + 16, f->size);
+		wr32(e + 20, rd16(f->entry));
+		memcpy(e + 32, f->entry + 0x40, 32);
+		cbsPut(&o, e, 64);
+		if (f->size)
+			cbsPut(&o, f->data, f->size);
+	}
+	o.p[0] = (uint8_t)(o.adler >> 24);
+	o.p[1] = (uint8_t)(o.adler >> 16);
+	o.p[2] = (uint8_t)(o.adler >> 8);
+	o.p[3] = (uint8_t)o.adler;
+	cbsRc4(p + 0x128, total - 0x128u);
+	*out = p;
+	*len = total;
+	return MCW_OK;
 }
 
 /* ------------------------------------------------------------ SharkPort / X-Port */
