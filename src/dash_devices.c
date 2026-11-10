@@ -311,34 +311,35 @@ static void addStorage(DashDevice *out, int *n, int max, int icon,
 	    state == DASH_DEV_READY ? ready : state == DASH_DEV_ABSENT ? absent : "Not connected");
 }
 
-int dashDevicesList(DashDevice *out, int max)
+/* Memory-card rows from the cached poll, without card I/O. Views that keep
+ * their device list open (browser, folder picker) call it to stay current.
+ * From saildot4k/Launchstation 9372a47. */
+void dashDevicesRefreshMemoryCards(DashDevice *devs, int count)
 {
-	int n = 0, port, i;
-	DashDevice *d;
+	int i;
 
-	for (port = 0; port < 2; port++) {
-		int type = 0, free_kb = -1;
-		int present = filerRootMcPresent(port, &type, &free_kb);
-		char name[32], mount[8], browse[8];
+	for (i = 0; i < count; i++) {
+		DashDevice *d = &devs[i];
+		int port, type = 0, free_kb = -1, present;
+		const char *status;
 
-		/* PS2 port 0 is mc0 (physical slot 1); port 1 is mc1 (slot 2).
-		 * Keep the label and actual filesystem mount tied to the same port. */
-		snprintf(name, sizeof(name), "mc%d (Slot %d)", port, port + 1);
-		snprintf(mount, sizeof(mount), "mc%d:", port);
-		snprintf(browse, sizeof(browse), "mc%d:/", port);
+		if (d->icon != DI_MC || strncmp(d->mount, "mc", 2) || (d->mount[2] != '0' && d->mount[2] != '1') || d->mount[3] != ':')
+			continue;
+		port = d->mount[2] - '0';
+		present = filerRootMcPresent(port, &type, &free_kb);
+		d->detail[0] = '\0';
+		d->fill = -1.0f;
+		d->state = present < 0 ? DASH_DEV_BUSY : present ? DASH_DEV_READY : DASH_DEV_ABSENT;
 		if (present == -2 && port == 1 && !isPathDeviceStackLoaded("mc1:/"))
 			/* MX4SIO owns slot 2's SIO2 port; opening it resets the IOP first. */
-			d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Used by MX4SIO - open to switch");
-		else if (present == -2)
-			d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Not responding - open to retry");
+			status = "Used by MX4SIO - open to switch";
 		else if (present < 0)
-			d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Checking...");
-		else if (present == 0)
-			d = add(out, &n, max, DI_MC, DASH_DEV_ABSENT, name, mount, browse, "Slot empty");
+			status = present == -2 ? "Not responding - open to retry" : "Checking...";
+		else if (!present)
+			status = "Slot empty";
 		else {
-			d = add(out, &n, max, DI_MC, DASH_DEV_READY, name, mount, browse,
-			        type == 1 ? "PS1 memory card" : "PS2 memory card");
-			if (d != NULL && free_kb >= 0) {
+			status = type == 1 ? "PS1 memory card" : "PS2 memory card";
+			if (free_kb >= 0) {
 				if (type == 2 && free_kb <= 8 * 1024) {
 					snprintf(d->detail, sizeof(d->detail), "%.2f MB free of 8 MB", free_kb / 1024.0f);
 					d->fill = 1.0f - free_kb / 8192.0f;
@@ -346,6 +347,26 @@ int dashDevicesList(DashDevice *out, int max)
 					snprintf(d->detail, sizeof(d->detail), "%.2f MB free", free_kb / 1024.0f);
 			}
 		}
+		dashStrCopy(d->status, localizeDashboardText(status), sizeof(d->status));
+	}
+}
+
+int dashDevicesList(DashDevice *out, int max)
+{
+	int n = 0, port, i;
+	DashDevice *d;
+
+	for (port = 0; port < 2; port++) {
+		char name[32], mount[8], browse[8];
+
+		/* PS2 port 0 is mc0 (physical slot 1); port 1 is mc1 (slot 2).
+		 * Keep the label and actual filesystem mount tied to the same port. */
+		snprintf(name, sizeof(name), "mc%d (Slot %d)", port, port + 1);
+		snprintf(mount, sizeof(mount), "mc%d:", port);
+		snprintf(browse, sizeof(browse), "mc%d:/", port);
+		d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Checking...");
+		if (d != NULL)
+			dashDevicesRefreshMemoryCards(d, 1);
 	}
 
 	if (isUsbMassStackLoaded()) {

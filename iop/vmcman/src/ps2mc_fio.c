@@ -304,9 +304,11 @@ int mcman_dread2(int fd, MC_IO_DRE_T *dirent)
 
 	dirent->stat.attr = fse->attr;
 	dirent->stat.size = fse->length;
+#if MCMAN_ENABLE_EXTENDED_DEV_OPS
 	dirent->stat.private_0 = fse->mode;
 	dirent->stat.private_1 = fse->unused;
 	dirent->stat.private_2 = fse->attr;
+#endif
 	memcpy(dirent->stat.ctime, &fse->created, sizeof(sceMcStDateTime));
 	memcpy(dirent->stat.mtime, &fse->modified, sizeof(sceMcStDateTime));
 
@@ -349,9 +351,11 @@ int mcman_getstat2(int port, int slot, const char *filename, MC_IO_STA_T *stat)
 		stat->mode |= MC_IO_S_FL;
 
 	stat->attr = fse->attr;
+#if MCMAN_ENABLE_EXTENDED_DEV_OPS
 	stat->private_0 = fse->mode;
 	stat->private_1 = fse->unused;
 	stat->private_2 = fse->attr;
+#endif
 
 	if (!(fse->mode & sceMcFileAttrSubdir))
 		stat->size = fse->length;

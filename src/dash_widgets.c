@@ -1115,6 +1115,10 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 		}
 		/* rows: [Use this folder] [Up] entries... ; device list: devices */
 		if (pk.dir[0] == '\0') {
+			if (!pk.loading && !pk.starting && !dashWorkerIoBusy() && !dashIopParked()) {
+				pollRootMemoryCardDevices(); /* keep memory-card rows current */
+				dashDevicesRefreshMemoryCards(pk.devs, pk.ndevs);
+			}
 			n_rows = pk.ndevs;
 			first_entry = 0;
 		} else {

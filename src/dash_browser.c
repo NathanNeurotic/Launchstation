@@ -3300,11 +3300,23 @@ static void browserSnapshotPad(void)
 	}
 }
 
+/* The device list stays open: keep its memory-card rows current. Runs every
+ * frame (standalone loop, or the Files tab's update), not only on input. */
+static void browserRefreshRootCards(void)
+{
+	if (fb.files != NULL && !fb.dir[0] && !fb.loading && !dashWorkerIoBusy() && !dashIopParked()) {
+		pollRootMemoryCardDevices();
+		dashDevicesRefreshMemoryCards(fb.devs, fb.ndevs);
+	}
+}
+
 static void browserProcessInput(const DashInput *in, int *running)
 {
 	int total, prev;
 	if (fb.files == NULL)
 		return;
+	if (running)
+		browserRefreshRootCards();
 	total = fb.dir[0] ? fb.n : fb.ndevs;
 	prev = fb.sel;
 	if (!fb.loading) {
@@ -3376,6 +3388,7 @@ static void browserTabUpdate(float dt)
 {
 	if (!fb_tab_active)
 		return;
+	browserRefreshRootCards();
 	browserSnapshotPad();
 	fb.sel_anim = dashApproach(fb.sel_anim, (float)fb.sel, 22.0f * dashAnimSpeed(), dt);
 }
