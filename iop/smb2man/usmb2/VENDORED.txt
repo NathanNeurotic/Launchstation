@@ -1,0 +1,59 @@
+usmb2 (vendored subset)
+=======================
+
+Upstream:  https://github.com/sahlberg/usmb2 (Ronnie Sahlberg, https://github.com/sahlberg)
+Commit:    7171d08b52f0427f018e23ab0c9282d3b4ca0b6e
+           2026-11-01 "ps2iop-compat: calloc of a failed allocation, strdup one byte too many"
+Licence:   MIT (see LICENSE)
+
+What is here
+- usmb2.c/h, ntlm.c/h, md4c.c, md4.h, hmac-md5.c/h, md5.c/h, unicode.c/h, README, LICENSE.
+- riptopl.patch: the local changes to usmb2.c, usmb2.h, unicode.c and ntlm.c, applied in this copy
+  (git apply -p1 riptopl.patch on a clean upstream checkout):
+  - USMB2_SIZE 1024 (512 upstream), and CREATE's NameLength and FileRenameInformation's
+    FileNameLength written as 16 bits (one byte upstream): names up to 440 bytes, not 127.
+  - username/password 64 bytes each (32 upstream).
+  - usmb2_context.status: the NT status of the last reply, so the driver can map errors.
+  - usmb2_build_request() drops an interim STATUS_PENDING reply ([MS-SMB2] 3.3.4.2) and
+    reads the final one (more than 8 for one request close the socket); upstream returned the
+    interim status and desynchronised.
+  - unicode.c l1() takes an unsigned char: with a signed char every UTF-8 byte >= 0x80 was a
+    left shift of a negative value (undefined behaviour).
+  - usmb2_build_request() checks every socket read and write and returns
+    STATUS_CONNECTION_DISCONNECTED at the first failure, and refuses an SPL shorter than the SMB2
+    header (closing the socket: the stream is out of step); upstream counted on, and a failed
+    read wrapped the remaining length to ~4 GB.
+  - Signing hook: usmb2_context.signing (32 bits, so buf stays aligned: the IOP faults on a
+    misaligned access; smb2man.c asserts it)/session_key, ntlm.c keeps the NTLMv2 session base key,
+    and usmb2_build_request() calls USMB2_SIGN (defined by smb2man.c: HMAC-SHA256, SMB 2.x) on
+    every request after SESSION_SETUP when signing is on, and USMB2_VERIFY_BEGIN/UPDATE/END on
+    every reply to one but ECHO's (CMD_ECHO, 13, added for smb2man's keepalive): a reply without
+    SMB2_FLAGS_SIGNED, whose MessageId is not the request's (a signed reply played back), or whose
+    HMAC over every byte read (file data included) does not match, closes the socket and fails the
+    request. Menu-side I/O is fully verified when signing is on;
+    the in-game reader (cdvdman's smb2.c) verifies nothing. Upstream does not sign.
+  - ntlm.c checks the CHALLENGE's security buffer, TargetName and TargetInfo against the reply
+    (usmb2_context.reply_len), walks TargetInfo only within its length (ending it, as the in-game
+    reader does, where it ends without an EndOfList or before a pair that overruns it or has an
+    odd length), refuses misaligned CHALLENGE offsets (the IOP faults on them), and refuses
+    an AUTHENTICATE that would not fit in buf; usmb2_sessionsetup() fails on that. Upstream trusted
+    the server's offsets and lengths and scanned for the EndOfList without a bound.
+  - TREE_CONNECT's PathLength written as 16 bits; usmb2_init_context() refuses credentials that
+    do not fit. ntlm.c's hashing calls take unsigned bytes (no -Wpointer-sign).
+  - ntlm.c saves the CHALLENGE's Server Challenge before moving TargetInfo, which can land on it
+    when the server puts the security buffer far into the reply.
+  - A READ reply's data is read from its DataOffset ([MS-SMB2] 2.2.20): padding before it goes
+    to buf (and into the signature), not to the caller. A DataOffset outside the frame closes the
+    socket; a DataLength larger than the frame carried or than was asked for fails the read
+    (STATUS_INVALID_NETWORK_RESPONSE). tests/smb2-live/readreply.c covers each case, and a
+    signed padded reply, which verifies, and its padding or data changed after signing, refused.
+  - ntlm.c writes the user name's UTF-16 bytes as two separate stores; upstream read and
+    incremented the index in one unsequenced expression (undefined behaviour, harmless as built).
+
+What is omitted
+- ps2iop-device.c, ps2smb2.h, ps2-usmb2-cat.c: upstream's own PS2 driver (the ps2smb2.h
+  devctls). RiptOPL's front end is ../smb2man.c, which speaks the ps2smb.h devctl interface
+  OPL's network menu already uses, and adds the connect, NEGOTIATE (2.0.2/2.1, then 3.0/3.0.2), ECHO,
+  directory listing and socket timeouts it needs.
+- ps2iop-compat.c/h: replaced by ../ps2iop-compat.h (the allocator lives in smb2man.c).
+- z80/, Makefiles, the capture file.

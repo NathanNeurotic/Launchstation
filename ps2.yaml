@@ -192,9 +192,42 @@ targets:
     cflags: [-Wall]
     headers: [intrman, ioman, loadcore, ps2ip-nm, sifcmd, stdio, sysclib, threadman]
 
+  # SMB2/SMB3 client for the smb: device, up to 8 named shares: usmb2
+  # (Ronnie Sahlberg, MIT) as RiptOPL vendors and patches it, behind
+  # Launchstation's CONNECT/DISCONNECT_ALL devctls (iop/smb2man/README.md).
+  # smb2man.c compiles usmb2.c into itself; the NTLM, hash and UTF-16 helpers
+  # are separate objects, built with the same features. Signing (HMAC-SHA256)
+  # uses smb2auth.c, from RiptOPL's in-game reader.
+  - name: smb2man
+    type: iop
+    sources:
+      - iop/smb2man/smb2man.c
+      - iop/smb2man/usmb2/ntlm.c
+      - iop/smb2man/usmb2/md4c.c
+      - iop/smb2man/usmb2/hmac-md5.c
+      - iop/smb2man/usmb2/md5.c
+      - iop/smb2man/usmb2/unicode.c
+      - iop/smb2man/smb2auth.c
+    include_dirs: [iop/smb2man]
+    imports_lst: iop/smb2man/imports.lst
+    linkfile: iop/smb2man/linkfile
+    defines:
+      - _IOP
+      - SMB2AUTH_SYSCLIB
+      - USMB2_FEATURE_WRITE
+      - USMB2_FEATURE_NTLM
+      - USMB2_FEATURE_UNICODE
+      - USMB2_FEATURE_STAT
+      - USMB2_FEATURE_MKDIR
+      - USMB2_FEATURE_UNLINK
+      - USMB2_FEATURE_RENAME
+    cflags: [-Os, -Wall, -Wno-unused-function, -ffunction-sections, -fdata-sections]
+    ldflags: ["-Wl,--gc-sections", "-Wl,-u,_irx_id", "-lgcc"]
+    headers: [intrman, iomanx, loadcore, ps2ip-nm, stdio, sysclib, sysmem, threadman]
+
   # SMB1 client for the smb1: device: OPL's fixed copy of ps2sdk smbman
   # (iop/smbman/README.md), registered as "smb1" so it sits beside
-  # smb2man.irx (SMB2/SMB3, prebuilt in iop/__precompiled), which owns "smb".
+  # smb2man (SMB2/SMB3, above), which owns "smb".
   - name: smbman
     type: iop
     sources:
@@ -483,6 +516,7 @@ targets:
       - ps2ips_rpc:ps2ips
       - ps2host
       - smbman
+      - smb2man
       - netfs:ps2netfs
       - ps2ftpd
       - dev9_poweroff

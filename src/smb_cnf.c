@@ -130,8 +130,9 @@ static int isIpv4(const char *s)
 	return *s == '\0';
 }
 
-/* smb://<IPv4>[:port]/<share>[/ignored] into server, port and share */
-static const char *splitSmb1Url(SmbShare *sh)
+/* smb://<IPv4>[:port]/<share>[/ignored] into server, port and share. Both
+ * drivers take an IPv4 address only: neither has DNS. */
+static const char *splitSmbUrl(SmbShare *sh)
 {
 	const char *host = sh->url + 6; /* past "smb://", checked by the caller */
 	const char *slash = strchr(host, '/');
@@ -165,11 +166,11 @@ static const char *splitSmb1Url(SmbShare *sh)
 		host_len = (size_t)(colon - host);
 	}
 	if (host_len == 0 || host_len >= sizeof(sh->server))
-		return "SMB1 needs the server's IP address in the URL";
+		return "URL needs the server's IP address, not a name";
 	memcpy(sh->server, host, host_len);
 	sh->server[host_len] = '\0';
 	if (!isIpv4(sh->server))
-		return "SMB1 needs the server's IP address in the URL";
+		return "URL needs the server's IP address, not a name";
 
 	share = slash;
 	while (*share == '/')
@@ -216,17 +217,9 @@ static void closeShare(SmbConfig *cfg, SmbShare *sh, const char *pending_problem
 		for (i = 0; i < cfg->count; i++)
 			if (cfg->share[i].state != SMB_STATE_INVALID && cfg->share[i].version == 1)
 				problem = "Only one SMB1 share can be connected";
-		if (problem == NULL)
-			problem = splitSmb1Url(sh);
 	}
-	if (problem == NULL && sh->version == 2) {
-		/* libsmb2 parses it; only refuse what Launchstation can see is wrong */
-		const char *host = sh->url + 6;
-		if (*host == '\0' || *host == '/')
-			problem = "URL needs smb://<server>/<share>";
-		else if (strchr(host, '/') == NULL || strchr(host, '/')[1] == '\0')
-			problem = "URL needs smb://<server>/<share>";
-	}
+	if (problem == NULL)
+		problem = splitSmbUrl(sh);
 
 	if (cfg->count >= SMB_SHARE_MAX) {
 		cfg->dropped++;
