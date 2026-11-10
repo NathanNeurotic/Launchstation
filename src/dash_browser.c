@@ -2742,13 +2742,13 @@ static void actionsMenu(void)
 		 * extensionless files in a card's (or any) MCM folder. */
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "PSU") && strncmp(fb.dir, "mc", 2) &&
 		    strncmp(fb.dir, "vmc", 3))
-			ADD(DI_MC, "Convert to .psv...", "signed PS3 save, written next to it", 0, F_CONVERT_SAVE);
+			ADD(DI_MC, "Convert to .psv or .cbs...", "signed PS3 save or CodeBreaker, written next to it", 0, F_CONVERT_SAVE);
 		else if (f != NULL && !isDir(f) && fb.nmarked == 0 && !genCmpFileExt(f->name, "PSU") &&
 		    (((genCmpFileExt(f->name, "MCM") || genCmpFileExt(f->name, "MAX") || genCmpFileExt(f->name, "CBS") ||
 		       genCmpFileExt(f->name, "SPS") || genCmpFileExt(f->name, "XPS") || genCmpFileExt(f->name, "PSV")) &&
 		      strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3)) ||
 		     (fullPath(f, path, sizeof(path)) && mcSaveFormatBlazePath(path))))
-			ADD(DI_MC, genCmpFileExt(f->name, "PSV") ? "Convert to .psu..." : "Convert to .psu or .psv...",
+			ADD(DI_MC, "Convert to .psu, .psv or .cbs...",
 			    "Blaze (MCM folder), MAX, CodeBreaker, SharkPort, PS3 save", 0, F_CONVERT_SAVE);
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "MCD")) {
 			ADD(DI_MC, "Back up .mcd...", "verified byte-for-byte copy", 0, F_BACKUP_MCD);
