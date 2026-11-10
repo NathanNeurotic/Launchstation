@@ -16,6 +16,7 @@
 #include "dash_internal.h"
 #include "dash_sound.h"
 #include "init.h"
+#include "filer_actions.h"
 
 #define ED_MAX_DOCS 8
 #define ED_MAX_SIZE (512 * 1024)
@@ -296,7 +297,7 @@ static const char *docName(const EdDoc *d)
 //--------------------------------------------------------------
 typedef struct
 {
-	int op; /* 0 load, 1 save */
+	int op; /* 0 load, 1 save, 2 overwrite an existing file in place */
 	char path[MAX_PATH];
 	char *text;
 	int len;
@@ -313,8 +314,8 @@ static void edIoRun(void *arg)
 	j->ret = -1;
 	if (genFixPath(j->path, fixed) < 0)
 		dashStrCopy(fixed, j->path, sizeof(fixed));
-	if (j->op == 1) {
-		fd = genOpen(fixed, FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC);
+	if (j->op) { /* op 2 never creates or truncates: a failed write leaves the rest of the file */
+		fd = genOpen(fixed, j->op == 2 ? FIO_O_WRONLY : FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC);
 		if (fd >= 0) {
 			if (j->len == 0 || genWrite(fd, j->text, j->len) == j->len)
 				j->ret = 0;
@@ -1310,7 +1311,7 @@ static void hexScene(void)
 	dashDrawActivity();
 }
 
-/* write the whole file, then read it back and compare */
+/* overwrite the file's bytes in place, then read it back and compare */
 static int hexSave(void)
 {
 	EdIoJob *j;
@@ -1320,12 +1321,14 @@ static int hexSave(void)
 		dashModalMessage(DI_WARNING, "Read-only device", "Discs cannot be written.", NULL);
 		return 0;
 	}
+	if (filerConfirmExploitModify(hx_path, NULL) <= 0) /* the File Browser's system-folder warning */
+		return 0;
 	j = (EdIoJob *)calloc(1, sizeof(EdIoJob));
 	if (j == NULL || (j->text = (char *)malloc(hx_len)) == NULL) {
 		free(j);
 		return 0;
 	}
-	j->op = 1;
+	j->op = 2;
 	j->len = hx_len;
 	memcpy(j->text, hx_buf, hx_len);
 	dashStrCopy(j->path, hx_path, sizeof(j->path));
@@ -1388,13 +1391,12 @@ void dashHexEditor(const char *path)
 	hx_len = j->len;
 	free(j);
 	hx_path = path;
-	hx_cur = hx_top = hx_dirty = hx_edit = hx_nib = 0;
+	hx_cur = hx_top = hx_dirty = hx_edit = hx_nib = kb_shown = 0; /* the Text Editor's keyboard may be left up */
 	dashFontInit();
 	dashPushSceneOverride(hexScene);
 	dashInputFlush();
 	while (1) {
 		int rows = visibleRows(), act = -1;
-		unsigned char *b = &hx_buf[hx_cur];
 
 		if (dashDashboardPending()) {
 			if (dashDashboardConfirmLeave(hexLeave))
@@ -1419,8 +1421,8 @@ void dashHexEditor(const char *path)
 		if (hx_edit) {
 			int d = (in.pressed & DASH_IN_UP) ? 1 : (in.pressed & DASH_IN_DOWN) ? -1 :
 			        (in.pressed & DASH_IN_R1) ? 16 : (in.pressed & DASH_IN_L1) ? -16 : 0;
-			if (d) {
-				*b = (unsigned char)(*b + d);
+			if (d) { /* hx_cur, after any key the USB keyboard moved it by */
+				hx_buf[hx_cur] = (unsigned char)(hx_buf[hx_cur] + d);
 				hx_dirty = 1;
 			}
 			if (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))

@@ -21,7 +21,7 @@ def function(signature):
     return source[start:end] + "\n"
 
 
-io_start = source.index("typedef struct\n{\n\tint op; /* 0 load, 1 save */")
+io_start = source.index("typedef struct\n{\n\tint op; /* 0 load, 1 save")
 io_end = source.index("static int docNew(void);")
 menu_start = source.index("/* \"Save changes?\" in the Text Editor")
 menu_end = source.index("static int confirmDiscard(EdDoc *d)")
@@ -107,7 +107,12 @@ static void dashGfxPresent(void) {}
 static int dashWorkerIoBusy(void) { return 0; }
 static int dashIopParked(void) { return 0; }
 static int ensureUsbKeyboardReady(void) { return 1; }
-static int PS2KbdRead(char *k) { (void)k; return 0; }
+/* USB keyboard: the queued keys arrive on the frame after input step kbd_at */
+static const char *kbd_keys; static int kbd_at = -1;
+static int PS2KbdRead(char *k) { if (step != kbd_at || !kbd_keys || !*kbd_keys) return 0; *k = *kbd_keys++; return 1; }
+static int kb_shown;
+static int exploit_answer = 1, exploit_asks;
+static int filerConfirmExploitModify(const char *p, const void *f) { (void)p; (void)f; exploit_asks++; return exploit_answer; }
 static int visibleRows(void) { return 18; }
 static void dashGfxBeginFrame(void) {}
 static void dashBgDraw(void) {}
@@ -218,6 +223,57 @@ int main(int argc, char **argv)
 	}
 	run(path, NULL, NULL);
 	assert(strstr(last_message, "larger than 512 KB"));
+
+	/* USB keyboard: typed digits set a byte; a pad change in the frame the keyboard moved the
+	 * cursor lands on the new byte, not the old one */
+	snprintf(path, sizeof(path), "%s/kbd.bin", argv[1]);
+	put(path, data, 16);
+	settings.usbkbd_used = 1;
+	kbd_keys = "4a"; kbd_at = 1;
+	{
+		static const unsigned k[] = {DASH_IN_DOWN, DASH_IN_MENU, DASH_IN_MENU, 0};
+		static const int a[] = {0, 2};
+		run(path, k, a);
+	}
+	assert(get(path, back, sizeof(back)) == 16 && back[0] == 0x4A && !memcmp(back + 1, data + 1, 15));
+	kbd_keys = "\x1b\x29"; kbd_at = 2;
+	{
+		static const unsigned k[] = {DASH_IN_OK, DASH_IN_UP, DASH_IN_OK, DASH_IN_MENU, DASH_IN_MENU, 0};
+		static const int a[] = {0, 2};
+		run(path, k, a);
+	}
+	assert(get(path, back, sizeof(back)) == 16 && back[0] == 0x4A && back[1] == 2 && back[2] == 2);
+	settings.usbkbd_used = 0; kbd_keys = NULL; kbd_at = -1;
+
+	/* a system folder save asks first; No writes nothing */
+	exploit_answer = 0; exploit_asks = 0;
+	{
+		static const unsigned k[] = {DASH_IN_OK, DASH_IN_UP, DASH_IN_OK, DASH_IN_MENU, DASH_IN_BACK, 0};
+		static const int a[] = {0, 1};
+		run(path, k, a);
+	}
+	assert(exploit_asks == 1 && saves == 0 && get(path, back, sizeof(back)) == 16 && back[0] == 0x4A);
+	exploit_answer = 1;
+
+	/* saving writes in place: it never creates a file that went away, and never cuts one */
+	hx_path = path; hx_buf = data; hx_len = 4;
+	{
+		unsigned char longer[32];
+		memset(longer, 0xEE, sizeof(longer));
+		put(path, longer, sizeof(longer));
+		assert(hexSave() == 0 && strstr(last_message, "File not saved"));
+		assert(get(path, back, sizeof(back)) == 32 && !memcmp(back, data, 4) && back[4] == 0xEE);
+	}
+	snprintf(path, sizeof(path), "%s/gone.bin", argv[1]);
+	hx_path = path;
+	assert(hexSave() == 0 && access(path, F_OK) != 0);
+
+	/* the Text Editor's keyboard left up does not shrink the Hex Editor */
+	kb_shown = 1;
+	snprintf(path, sizeof(path), "%s/save.bin", argv[1]);
+	put(path, data, 8);
+	run(path, (const unsigned[]){DASH_IN_BACK, 0}, (const int[]){-1});
+	assert(kb_shown == 0);
 
 	/* discs are read-only */
 	hx_path = "cdfs:/X.BIN";
