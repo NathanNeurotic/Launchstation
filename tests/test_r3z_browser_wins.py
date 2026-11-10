@@ -1,0 +1,29 @@
+"""Two wLaunchELF_R3Z 4.85 behaviours in the classic browser (saildot4k/wLaunchELF_R3Z#64):
+"LaunchELF with Args" is offered only on text files, and the header shows free space only
+when the device answered (a failed memory card or HDD query used to show a stale or bogus
+size). The header now uses filerFreeSpace(), the checked helper the dashboard already uses."""
+from pathlib import Path
+
+root = Path(__file__).resolve().parents[1]
+src = (root / "src/filer_browser.c").read_text(encoding="utf-8")
+
+assert "enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR] && IsTextEditorFileType(file->name);" in src
+assert "enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR];" not in src
+
+a = src.index("static int browseFilePath(char *out, int cnfmode, FILEINFO *files)")
+pos = src.index("{", a) + 1
+depth = 1
+while depth:
+    depth += (src[pos] == "{") - (src[pos] == "}")
+    pos += 1
+browser = src[a:pos]
+assert "vfreeSpace = filerFreeSpace(path, &freeSpace);" in browser
+# The unchecked copies are gone: every query goes through the helper.
+for unchecked in ("mcGetInfo(path[2] - '0', 0, &mctype_PSx, &mcfreeSpace", "PFSCTL_GET_ZONE_FREE", "vfreeSpace = TRUE;"):
+    assert unchecked not in browser, unchecked
+
+a = src.index("int filerFreeSpace(const char *path, u64 *out)")
+helper = src[a:src.index("\n}\n", a)]
+assert "if (ret < -1)" in helper  # mcGetInfo: 0 same card, -1 new card, below that an error
+assert helper.count("if (zone_free < 0 || zone_size <= 0)") >= 1
+print("ok")

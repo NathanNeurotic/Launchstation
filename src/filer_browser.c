@@ -445,7 +445,8 @@ void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char 
 		enable[TITLE_CFG] = FALSE;
 
 	enable[OPEN_TEXTEDITOR] = canOpenInTextEditor(path, file);
-	enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR];
+	/* Only a text file can hold launch arguments (wLaunchELF_R3Z 4.85). */
+	enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR] && IsTextEditorFileType(file->name);
 
 	if (isPcCardCfPath(path)) {
 		enable[MOUNTVMC0] = FALSE;
@@ -1688,44 +1689,8 @@ static int browseFilePath(char *out, int cnfmode, FILEINFO *files)
 				}
 			}
 #endif
-			if (!cnfmode) {  //Calculate free space (unless configuring)
-				if (!strncmp(path, "mc", 2)) {
-					mcGetInfo(path[2] - '0', 0, &mctype_PSx, &mcfreeSpace, NULL);
-					mcSync(0, NULL, &ret);
-					freeSpace = mcfreeSpace * ((mctype_PSx == 1) ? 8192 : 1024);
-					vfreeSpace = TRUE;
-#ifdef XFROM
-				} else if (!strncmp(path, "xfrom", 5)) {
-					xfromGetInfo(0, 0, &mctype_PSx, &mcfreeSpace, NULL);
-					xfromSync(0, NULL, &ret);
-					freeSpace = mcfreeSpace * ((mctype_PSx == 1) ? 8192 : 1024);
-					vfreeSpace = TRUE;
-#endif
-				} else if (!strncmp(path, "hdd", 3) && !isHddRootPath(path)) {
-					u64 ZoneFree, ZoneSize;
-					char pfs_str[6];
-
-					strcpy(pfs_str, "pfs0:");
-					pfs_str[3] += latestMount;
-					ZoneFree = fileXioDevctl(pfs_str, PFSCTL_GET_ZONE_FREE, NULL, 0, NULL, 0);
-					ZoneSize = fileXioDevctl(pfs_str, PFSCTL_GET_ZONE_SIZE, NULL, 0, NULL, 0);
-					freeSpace = ZoneFree * ZoneSize;
-					vfreeSpace = TRUE;
-#ifdef DVRP
-				} else if (!strncmp(path, "dvr_hdd", 7) && strcmp(path, "dvr_hdd0:/")) {
-					u64 ZoneFree, ZoneSize;
-					char pfs_str[10];
-
-					strcpy(pfs_str, "dvr_pfs0:");
-					pfs_str[7] += latestDVRPMount;
-					ZoneFree = fileXioDevctl(pfs_str, PFSCTL_GET_ZONE_FREE, NULL, 0, NULL, 0);
-					ZoneSize = fileXioDevctl(pfs_str, PFSCTL_GET_ZONE_SIZE, NULL, 0, NULL, 0);
-					//printf("ZoneFree==%d  ZoneSize==%d\r\n", ZoneFree, ZoneSize);
-					freeSpace = ZoneFree * ZoneSize;
-					vfreeSpace = TRUE;
-#endif
-				}
-			}
+			if (!cnfmode)  //Calculate free space (unless configuring); a failed query shows none
+				vfreeSpace = filerFreeSpace(path, &freeSpace);
 			browser_sel = 0;
 			top = 0;
 			if (browser_repos) {
