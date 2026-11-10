@@ -249,7 +249,7 @@ struct smb2man_file
     uint8_t fid[16];
     uint64_t pos, size;
     int share; // index in shares[], or -1 for a free slot
-    int writable;
+    int writable; // 0 read-only, 1 writable, 3 writable in append mode
     unsigned gen; // bumped on every open of this slot; privdata carries it (see smb2man_slot)
 };
 
@@ -814,7 +814,7 @@ static int smb2man_open(iop_file_t *f, const char *filename, int flags, int mode
     free(fid);
     file->size = rd64(&u->buf[48]); // EndOfFile in the CREATE reply
     file->pos = (flags & FIO_O_APPEND) ? file->size : 0;
-    file->writable = writable;
+    file->writable = (writable && (flags & FIO_O_APPEND)) ? 3 : writable;
     file->share = s;
     file->gen = (file->gen + 1) & SMB2MAN_GEN_MASK;
     f->privdata = (void *)(uintptr_t)((unsigned)slot | (file->gen << SMB2MAN_SLOT_BITS));
@@ -924,6 +924,8 @@ static int smb2man_write(iop_file_t *f, void *buffer, int size)
         UNLOCK();
         return -EBADF;
     }
+    if (file->writable & 2) // append: every write goes to the end, whatever lseek did
+        file->pos = file->size;
 
     while (done < size) {
         n = size - done;
