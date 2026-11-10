@@ -111,6 +111,25 @@ int main(int argc, char **argv)
 			mcCardFreeSave(&s);
 		}
 		printf("r=%d\n", r);
+	} else if (argc == 5 && !strcmp(argv[1], "zipname")) { /* zipname <in.psu> <folder> <first file name> */
+		McSaveData s;
+
+		in = slurp(argv[2], &len);
+		r = mcCardSaveFromPsu(in, len, &s);
+		free(in);
+		if (r == MCW_OK) { /* names a crafted card could hold, past the .psu reader's own check */
+			memset(s.entry + 0x40, 0, 32);
+			strncpy((char *)s.entry + 0x40, argv[3], 31);
+			if (s.nfiles) {
+				memset(s.files[0].entry + 0x40, 0, 32);
+				strncpy((char *)s.files[0].entry + 0x40, argv[4], 31);
+			}
+			out = NULL;
+			r = mcSaveToZip(&s, &out, &olen);
+			free(out);
+			mcCardFreeSave(&s);
+		}
+		printf("r=%d\n", r);
 	} else if (argc == 6 && !strcmp(argv[1], "seal")) {
 		uint8_t *head = NULL;
 		uint32_t hlen = 0;

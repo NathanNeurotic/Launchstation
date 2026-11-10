@@ -169,6 +169,22 @@ assert run("zip", tmp / "e.psu", tmp / "e.zip") == {"r": "0"}
 with zipfile.ZipFile(tmp / "e.zip") as z:
     assert z.namelist() == ["EMPTYSAVE/"]
 
+# a card time out of range (hour 24, minute 60, day 32, month 13) falls back to 1980-01-01; the edges are kept
+for stamp, want in (([58, 59, 23, 31, 12], (2026, 12, 31, 23, 59, 58)), ([0, 0, 24, 6, 5], (1980, 1, 1, 0, 0, 0)),
+                    ([0, 60, 7, 6, 5], (1980, 1, 1, 0, 0, 0)), ([0, 0, 7, 32, 5], (1980, 1, 1, 0, 0, 0)),
+                    ([0, 0, 7, 6, 13], (1980, 1, 1, 0, 0, 0))):
+    q = bytearray(p)
+    q[0x19:0x1E] = bytes(stamp)
+    (tmp / "t.psu").write_bytes(q)
+    assert run("zip", tmp / "t.psu", tmp / "t.zip") == {"r": "0"}
+    with zipfile.ZipFile(tmp / "t.zip") as z:
+        assert z.infolist()[0].date_time == want, (stamp, z.infolist()[0].date_time)
+
+# a crafted card name that would leave the folder on unzip is refused
+assert run("zipname", tmp / "s.psu", "BASLUS-21386TALES", "list.ico") == {"r": "0"}
+for bad in (("..", "list.ico"), (".", "list.ico"), ("A\\B", "list.ico"), ("OK", ".."), ("OK", "a/b"), ("OK", "c\x01"), ("", "x")):
+    assert run("zipname", tmp / "s.psu", *bad) == {"r": "-16"}, bad
+
 assert run("name", "BASLUS-21386TALES") == {"name": "BASLUS-21386" + b"TALES".hex().upper() + ".PSV"}
 assert run("name", "BASCUS-9416") == {"name": "BASCUS-9416.PSV"}
 

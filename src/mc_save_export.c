@@ -391,7 +391,7 @@ static void zipTime(uint8_t *p, const uint8_t *t)
 {
 	uint32_t y = (uint32_t)t[6] | ((uint32_t)t[7] << 8);
 
-	if (y < 1980u || y > 2107u || !t[4] || !t[5]) {
+	if (y < 1980u || y > 2107u || t[1] > 59 || t[2] > 59 || t[3] > 23 || !t[4] || t[4] > 31 || !t[5] || t[5] > 12) {
 		wr32(p, 0x00210000u); /* 1980-01-01 00:00 */
 		return;
 	}
@@ -458,6 +458,9 @@ int mcSaveToZip(const McSaveData *s, uint8_t **out, uint32_t *len)
 	for (i = 0; i <= s->nfiles; i++) {
 		const McSaveFile *f = i ? &s->files[i - 1] : NULL;
 
+		/* a crafted card's "..", "a/b" or control bytes must not leave the folder on unzip */
+		if (!mcCardNameOk(f ? f->entry + 0x40 : s->entry + 0x40))
+			return MCW_ERR_INVALID;
 		n += zipHead(NULL, 0, folder, f, s, 0, 0) + zipHead(NULL, 1, folder, f, s, 0, 0) + (f ? f->size : 0);
 	}
 	if (n > 0x7FFFFFFFu)

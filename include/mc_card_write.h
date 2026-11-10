@@ -56,6 +56,9 @@ typedef struct McSaveData {
 int mcCardFindSave(McView *v, const char *name);
 
 /* Reads a whole save (a root folder of files) into memory. Free with mcCardFreeSave. */
+/* 1 when a 32-byte name field holds a usable card name: 1..31 printable
+ * ASCII bytes, not "." or "..", without / \ * or ?. */
+int mcCardNameOk(const uint8_t *name);
 int mcCardReadSave(McView *v, const char *name, McSaveData *out);
 void mcCardFreeSave(McSaveData *s);
 
