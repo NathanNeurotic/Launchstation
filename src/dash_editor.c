@@ -401,7 +401,7 @@ static int edIo(EdIoJob *j, const char *title)
 		free(j);
 		return 0;
 	}
-	if (dashWorkerAwait(id, title, 1))
+	if (dashWorkerAwait(id, title, j->op != 2)) /* a Hex Editor write is waited out, so "Don't save" means it */
 		return 1;
 	j->abandoned = 1;
 	return 0;
@@ -1332,10 +1332,8 @@ static int hexSave(void)
 	j->len = hx_len;
 	memcpy(j->text, hx_buf, hx_len);
 	dashStrCopy(j->path, hx_path, sizeof(j->path));
-	if (!edIo(j, "Saving file")) {
-		dashToast(DASH_TOAST_INFO, "Saving continues in the background");
+	if (!edIo(j, "Saving file"))
 		return 0;
-	}
 	ok = j->ret == 0;
 	free(j->text);
 	j->text = NULL;

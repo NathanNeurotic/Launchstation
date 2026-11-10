@@ -70,7 +70,7 @@ static const unsigned *script; static int step;
 static const int *menu_answers; static int menu_step;
 static const char *typed_offset;
 static char last_message[256], last_toast[128];
-static int frames, saves, menus;
+static int frames, saves, menus, save_cancel;
 
 static int genFixPath(const char *in, char *out) { strcpy(out, in); return 0; }
 static void dashStrCopy(char *d, const char *s, size_t n) { snprintf(d, n, "%s", s); }
@@ -84,7 +84,7 @@ static void (*job_fn)(void *), (*done_fn)(void *); static void *job_arg;
 static int dashWorkerSubmit(const char *t, int f, void (*fn)(void *), void (*done)(void *), void *a)
 { (void)t; (void)f; job_fn = fn; done_fn = done; job_arg = a; return 1; }
 static int dashWorkerAwait(int id, const char *t, int c)
-{ (void)id; (void)c; if (!strcmp(t, "Saving file")) saves++; job_fn(job_arg); done_fn(job_arg); return 1; }
+{ (void)id; if (!strcmp(t, "Saving file")) { saves++; save_cancel |= c; } job_fn(job_arg); done_fn(job_arg); return 1; }
 static void dashToast(int k, const char *s) { (void)k; snprintf(last_toast, sizeof(last_toast), "%s", s); }
 static void dashModalMessage(int i, const char *t, const char *b, const char *d)
 { (void)i; (void)d; snprintf(last_message, sizeof(last_message), "%s|%s", t, b); }
@@ -169,7 +169,7 @@ int main(int argc, char **argv)
 		static const int a[] = {0, 2};
 		run(path, k, a);
 	}
-	assert(saves == 1 && !strcmp(last_toast, "Saved and checked"));
+	assert(saves == 1 && !save_cancel && !strcmp(last_toast, "Saved and checked")); /* Back cannot leave a write running */
 	assert(get(path, back, sizeof(back)) == (int)sizeof(data));
 	assert(back[1] == (unsigned char)(1 + 2 + 16) && !memcmp(back + 2, data + 2, sizeof(data) - 2) && back[0] == 0);
 	assert(hx_buf == NULL && scene == NULL && glyphs > 0);
