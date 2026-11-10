@@ -930,6 +930,16 @@ P1 = "mass:/Blank-PS1.mcd"
 assert host(P1).stat().st_size == 131072 and host(P1).read_bytes()[:2] == b"MC"
 lines = run(P1)
 assert kind(lines, "MENU|Blank-PS1.mcd|PS1 card: 0 saves, 15 of 15 blocks free|Import save...~"), lines
+# a RetroArch .srm is the same raw card and opens the same; another core's 128 KB .srm that
+# only starts "MC" by chance fails the directory checks and is never opened as a PS1 card
+host("mass:/ra.srm").write_bytes(host(P1).read_bytes())
+assert kind(run("mass:/ra.srm"), "MENU|ra.srm|PS1 card: 0 saves, 15 of 15 blocks free|"), "srm"
+junk = b"MC" + random.Random(7).randbytes(131070)
+host("mass:/gba.srm").write_bytes(junk)
+lines = run("mass:/gba.srm")
+assert not kind(lines, "MENU|gba.srm|PS1 card") and kind(lines, "MESSAGE|"), lines
+assert host("mass:/gba.srm").read_bytes() == junk
+host("mass:/ra.srm").unlink(); host("mass:/gba.srm").unlink()
 s1 = ps1_mcs("BASLUS-00001PS1", 2, b"PS1 game")
 host("mass:/in.mcs").write_bytes(s1)
 empty = host(P1).read_bytes()

@@ -76,6 +76,16 @@ int ps1CardIs(const uint8_t *buf, uint32_t len)
 	return buf && len == PS1_CARD_SIZE && buf[0] == 'M' && buf[1] == 'C';
 }
 
+int ps1FrameOk(const uint8_t *frame)
+{
+	uint32_t i;
+	uint8_t x = 0;
+
+	for (i = 0; i < FRAME; i++)
+		x ^= frame[i];
+	return x == 0; /* the check byte makes the whole frame XOR to 0 */
+}
+
 void ps1CardFormat(uint8_t *card)
 {
 	int i;

@@ -83,14 +83,19 @@ static int p1Load(const char *path, uint8_t *raw, uint8_t *head)
 int dashPs1CardIsImage(const char *path)
 {
 	int fd = genOpen(path, FIO_O_RDONLY), ok;
-	uint8_t magic[16];
+	uint8_t head[128];
 	s64 size;
+	int i;
 
 	if (fd < 0)
 		return 0;
 	size = genLseek(fd, 0, SEEK_END);
 	ok = size >= (s64)PS1_CARD_SIZE && size <= (s64)PS1_CARD_FILE_MAX && genLseek(fd, 0, SEEK_SET) == 0 &&
-	     genRead(fd, magic, 16) == 16 && ps1CardKind(magic, (uint32_t)size) >= 0;
+	     genRead(fd, head, sizeof(head)) == (int)sizeof(head) && ps1CardKind(head, (uint32_t)size) >= 0;
+	/* other cores' .srm saves can be 128 KB and start "MC" by chance: there
+	 * every directory frame must check too before the card is written */
+	for (i = 0; ok && genCmpFileExt(path, "SRM") && i <= PS1_BLOCKS; i++)
+		ok = (i == 0 || genRead(fd, head, sizeof(head)) == (int)sizeof(head)) && ps1FrameOk(head);
 	genClose(fd);
 	return ok;
 }
