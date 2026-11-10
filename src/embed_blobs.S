@@ -78,7 +78,6 @@ EMBED_FILE(sfx_confirm_adp, "res/sfx/confirm.adp")
 EMBED_FILE(sfx_cancel_adp, "res/sfx/cancel.adp")
 EMBED_FILE(sfx_transition_adp, "res/sfx/transition.adp")
 EMBED_FILE(sfx_message_adp, "res/sfx/message.adp")
-EMBED_FILE(sfx_boot_adp, "res/sfx/boot.adp")
 EMBED_FILE(sfx_connect_adp, "res/sfx/bd_connect.adp")
 EMBED_FILE(sfx_disconnect_adp, "res/sfx/bd_disconnect.adp")
 

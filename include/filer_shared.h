@@ -91,7 +91,8 @@ extern char cnfmode_extL[CNFMODE_CNT][4];
 extern char clipPath[MAX_PATH];
 extern char LastDir[MAX_NAME];
 extern char marks[MAX_ENTRY];
-extern FILEINFO clipFiles[MAX_ENTRY];
+extern FILEINFO *clipFiles; /* nclipFiles entries; grown by clipReserve() */
+int clipReserve(int count);
 
 #if defined(ETH) || defined(UDPFS)
 extern int host_elflist;

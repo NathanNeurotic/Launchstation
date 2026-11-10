@@ -133,7 +133,24 @@ static int hddNparties[2] = {0, 0};
 static char dvrParties[MAX_PARTITIONS][MAX_PART_NAME + 1];
 #endif
 char clipPath[MAX_PATH], LastDir[MAX_NAME], marks[MAX_ENTRY];
-FILEINFO clipFiles[MAX_ENTRY];
+FILEINFO *clipFiles;
+static int clipCapacity;
+
+/* The clipboard is allocated on first copy and grows to the largest selection
+ * copied so far. Returns 0, leaving the clipboard unchanged, when memory is short. */
+int clipReserve(int count)
+{
+	FILEINFO *grown;
+
+	if (count <= clipCapacity)
+		return 1;
+	grown = (FILEINFO *)realloc(clipFiles, (size_t)count * sizeof(FILEINFO));
+	if (grown == NULL)
+		return 0;
+	clipFiles = grown;
+	clipCapacity = count;
+	return 1;
+}
 int fileMode = FIO_S_IRUSR | FIO_S_IWUSR | FIO_S_IXUSR | FIO_S_IRGRP | FIO_S_IWGRP | FIO_S_IXGRP | FIO_S_IROTH | FIO_S_IWOTH | FIO_S_IXOTH;
 
 #ifdef ULE_DEBUG_BUILD
