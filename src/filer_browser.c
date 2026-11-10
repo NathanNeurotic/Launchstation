@@ -2128,7 +2128,7 @@ static void subfunc_Paste(char *mess, char *path)
 	 * (COPY_KEPT_DESTINATION): a Move leaves their sources, still cut. */
 	static char paste_kept[MAX_ENTRY];
 	char tmp[MAX_PATH], tmp1[MAX_PATH];
-	int i, kept, ret = -1, trace_vmc_paste;
+	int i, kept, ret = -1, trace_vmc_paste, no_buffer;
 	unsigned int move_mark;
 
 	filerMoveBegin(browser_cut);
@@ -2209,10 +2209,7 @@ static void subfunc_Paste(char *mess, char *path)
 //	unmountAll(); //disabled to avoid interference with VMC implementation
 
 finished:
-	if (setFileXioTransferWide(0) < 0 && ret >= 0) {  //the copy is done, but fileXio has no buffer now
-		filerCopyDiagStage("Transfer buffer");
-		ret = -ENOMEM;
-	}
+	no_buffer = setFileXioTransferWide(0) < 0;  //the paste stands either way; only the message changes
 	filerMoveEnd();
 	if (ret < 0) {
 		printf("[PASTE] failed ret=%d src='%s' dst='%s' mode=%d cut=%d\n",
@@ -2236,6 +2233,11 @@ finished:
 			}
 		}
 		markMx4sioDestinationAfterWrite(path);
+		if (no_buffer) {  //done and reconciled, but fileXio has no buffer now
+			filerCopyDiagStage("Transfer buffer");
+			filerCopyDiagFormat(mess, MAX_PATH, -ENOMEM);
+			browser_pushed = FALSE;
+		}
 	}
 	browser_cd = TRUE;
 }

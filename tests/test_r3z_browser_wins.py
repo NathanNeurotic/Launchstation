@@ -47,7 +47,8 @@ paste = src[src.index("static void subfunc_Paste("):]
 paste = paste[:paste.index("//endfunc subfunc_Paste")]
 assert paste.count("setFileXioTransferWide(") == 2
 assert paste.index("waitForClipboardSourceDevice()") < paste.index("if (setFileXioTransferWide(1) < 0) {")
-assert "finished:\n\tif (setFileXioTransferWide(0) < 0 && ret >= 0) {" in paste  # a lost buffer is never reported as done
+assert "finished:\n\tno_buffer = setFileXioTransferWide(0) < 0;" in paste  # a lost buffer is never reported as done...
+assert paste.index("nclipFiles = kept;") < paste.index("if (no_buffer) {")  # ...but moved sources still leave the clipboard
 fail = paste[paste.index("if (setFileXioTransferWide(1) < 0) {"):]
 assert fail.index("ret = -ENOMEM;") < fail.index("goto finished;") < fail.index("for (i = 0; i < nclipFiles; i++)")
 early = paste[:paste.index("if (setFileXioTransferWide(1) < 0) {")]
