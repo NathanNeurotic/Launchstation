@@ -391,8 +391,12 @@ assert msg and "1 save imported and verified. 1 failed. First: BASLUS-99999BLZ.m
 assert kind(lines, "RMDIR|mc1:/BASLUS-99999BLZ") and mc_tree(1) == [p for p in mc_tree(0) if p[0].startswith("BESLES-12345GAME")]
 lines = run(mc1mix.replace("|junk.max", ""), "c1", env={"FAIL_WRITE_AT": "1"})   # a file write fails: same, nothing left
 msg = kind(lines, "MESSAGE|")
-assert msg and "Nothing imported. 1 skipped. 1 failed." in msg[0] and kind(lines, "RMDIR|mc1:/BASLUS-99999BLZ"), lines
+assert msg and "Nothing imported. 1 skipped. 1 failed. First: BASLUS-99999BLZ.mcm: Writing it failed" in msg[0] and kind(lines, "RMDIR|mc1:/BASLUS-99999BLZ"), lines
 assert not (dev / "mc1/BASLUS-99999BLZ").exists()
+lines = run(mc1mix.replace("|junk.max", ""), "c1", env={"FAIL_SETINFO": "BASLUS-99999BLZ/", "FAIL_REMOVE": "1"})
+msg = kind(lines, "MESSAGE|")                                            # the removal fails too: says to delete it
+assert msg and "part of it could not be removed. Delete its folder on the card." in msg[0], lines
+shutil.rmtree(dev / "mc1/BASLUS-99999BLZ")
 tree = mc_tree(1)
 lines = run(mc1mix, "c0")                                                # declined
 assert not kind(lines, "MESSAGE|") and not kind(lines, "MCFREE|") and mc_tree(1) == tree
