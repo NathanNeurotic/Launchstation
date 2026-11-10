@@ -1235,14 +1235,36 @@ static void loadBasicModules(void)
 //------------------------------
 //endfunc loadBasicModules
 //---------------------------------------------------------------------------
+/* fileXio moves each read or write through one IOP buffer of this size, so
+ * the SDK's 16 KB turns a 128 KB copy chunk into eight device requests (eight
+ * SMB/UDPFS round trips). wLaunchELF_R3Z keeps 128 KB for good; a paste
+ * borrows it only while it copies, so module loads see today's IOP heap.
+ * The copy itself runs on the dashboard worker either way, so the animation
+ * is unaffected. The IOP frees the old buffer before allocating the new one
+ * and has none if that fails, so a refused size falls back to a smaller one,
+ * ending at the SDK default. -1 when even that failed: fileXio then has no
+ * buffer, and the caller must not report a copy as done. */
+int setFileXioTransferWide(int wide)
+{
+	static const int sizes[] = {128 * 1024, 64 * 1024, 16 * 1024};
+	int i;
+
+	if (!have_filexio_ready)
+		return 0;
+	for (i = wide ? 0 : 2; i < 3; i++)
+		if (fileXioSetRWBufferSize(sizes[i]) >= 0)
+			return 0;
+	return -1;
+}
+
 void ensureCoreIoStackReady(void)
 {
 	loadBasicModules();
 
 	if (!have_filexio_ready) {
 		fileXioInit();
-		/* Keep the SDK transfer buffer: network, USB and BDM services share
-		 * the IOP heap. Do not reserve a large throughput buffer here. */
+		/* Keep the SDK transfer buffer here: network, USB and BDM services
+		 * share the IOP heap. A paste widens it only while it copies. */
 		have_filexio_ready = 1;
 	}
 
