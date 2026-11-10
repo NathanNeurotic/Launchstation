@@ -3259,6 +3259,11 @@ static void browserProcessInput(const DashInput *in, int *running)
 	int total, prev;
 	if (fb.files == NULL)
 		return;
+	if (!fb.dir[0] && !fb.loading && !dashWorkerIoBusy() && !dashIopParked()) {
+		/* The device list stays open: keep its memory-card rows current. */
+		pollRootMemoryCardDevices();
+		dashDevicesRefreshMemoryCards(fb.devs, fb.ndevs);
+	}
 	total = fb.dir[0] ? fb.n : fb.ndevs;
 	prev = fb.sel;
 	if (!fb.loading) {
