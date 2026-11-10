@@ -8,7 +8,7 @@
 # closed (connected again on the next use, its handles -EBADF), a READ on a dead socket, the 30 s
 # reconnect backoff (clock driven by the harness), each CONNECT refusal (password, share, a host
 # name, bad URL, nothing listening, an address that never answers within the 5 s bound, a ninth
-# share), and DISCONNECT_ALL. Then the dialect and signing cases: signing mandatory on SMB 2.x
+# share), and DISCONNECT_ALL. Then a user name with a Latin-1 letter, the dialect and signing cases: signing mandatory on SMB 2.x
 # (every reply verified), signing off, the server capped at 2.0.2, SMB 3.0-and-up (3.0.2 expected),
 # SMB 3.x with signing mandatory (refused: SIGNING) and 3.1.1 only (refused: PROT).
 #
@@ -140,6 +140,10 @@ printf 'secret\nsecret\n' | smbpasswd -c "$conf" -s -a ps2 >/dev/null
 start_smbd
 run "every case, signing negotiable (2.1)" drive full
 run "dialect 2.1, signing not required (unsigned)" drive dialect=0210,0
+# NTOWFv2 hashes the user name in upper case: a Latin-1 letter must be upper-cased as the server does it
+id 'josé' >/dev/null 2>&1 || useradd -M 'josé' 2>/dev/null || useradd --badname -M 'josé'
+printf 'secret\nsecret\n' | smbpasswd -c "$conf" -s -a 'josé' >/dev/null
+run "user name with a Latin-1 letter (josé)" "$work/drive" dialect=0210,0 "$port" 'josé' secret "$work/share" "$work/other"
 
 write_conf mandatory ""
 start_smbd

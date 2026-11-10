@@ -65,8 +65,14 @@ hmac_md5(struct MD5Context *ctx,
                                               * pass */
 	init_pad(key, key_len, 0x36);
         md5Update(ctx, k_pad, 64);           /* start with inner pad */
+	/* Launchstation: the user name (Latin-1) upper-cased as Windows and Samba do it for
+	 * NTOWFv2, not with toupper(), which leaves a-grave..thorn and y-diaeresis as they are.
+	 * U+00B5 and U+00DF have no single Latin-1 upper case and stay.
+	 */
 	while (text0 && *text0) {
-		uint16_t c = htole16(toupper(*text0++));
+		unsigned b = *text0++;
+		uint16_t c = htole16((b >= 'a' && b <= 'z') || (b >= 0xe0 && b <= 0xfe && b != 0xf7) ? b - 0x20 :
+				     b == 0xff ? 0x178 : b);
 		md5Update(ctx, (uint8_t *)&c, 2);
 	}
 	if (text1) {

@@ -13,7 +13,15 @@ is opened.
 | Interface | [`include/smb2man.h`](../../include/smb2man.h): `SMB2_DEVCTL_CONNECT` (`smb2Connect_in_t`: name, user, password, URL) and `SMB2_DEVCTL_DISCONNECT_ALL`, as libsmb2's `lib/ps2/ps2smb2.h` |
 
 The files under `usmb2/`, `smb2auth.c/.h`, `linkfile` and `ps2iop-compat.h` are byte for byte
-RiptOPL's at `9b8fea0`.
+RiptOPL's at `9b8fea0`, except one Launchstation change in `usmb2/hmac-md5.c`: the user name
+hashed for NTOWFv2 is upper-cased for Latin-1 letters (`é` to `É`, `ÿ` to U+0178), as Windows and
+Samba do, where `toupper()` left them, so a user name with such a letter was refused. RiptOPL has
+the same code.
+
+`usmb2/VENDORED.txt` is RiptOPL's and its paths are RiptOPL's: `tests/smb2-live/readreply.c` is
+RiptOPL's test (this repository's is `tests/smb2man_live/`, which does not cover the READ
+DataOffset cases), and the `ps2smb.h` devctls of OPL's network menu are, here, the ones in
+`include/smb2man.h`.
 
 ## What it does
 
