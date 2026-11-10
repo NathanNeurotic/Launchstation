@@ -497,11 +497,13 @@ int legacyNetDriversReady(void)
 			loadExternalFile(path, &dev9, &dev9_size);
 		if (dev9 != NULL && snprintf(path, sizeof(path), "%sLEGACY_PS2IP.IRX", dir) < (int)sizeof(path))
 			loadExternalFile(path, &ip, &ip_size);
-		if (ip != NULL) {
+		/* A wrong file must not be kept: HDD would then get no DEV9 at all. */
+		if (ip != NULL && dev9_size > 4 && ip_size > 4 && !memcmp(dev9, "\x7f" "ELF", 4) && !memcmp(ip, "\x7f" "ELF", 4)) {
 			ps2dev9_v10_irx = dev9, size_ps2dev9_v10_irx = dev9_size;
 			ps2ip_v10_irx = ip, size_ps2ip_v10_irx = ip_size;
 			return 1;
 		}
+		free(ip);
 		free(dev9);
 	}
 	snprintf(legacy_net_error, sizeof(legacy_net_error),
