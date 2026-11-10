@@ -1110,6 +1110,7 @@ void dashRescanLibrary(int interactive);
 int dashClockSetManual(int year, int month, int day, int hour, int minute, int second,
                        char *result, int result_size);
 int dashClockSyncInternet(char *result, int result_size);
+int dashClockDaysInMonth(int year, int month); /* 0 for a month outside 1-12 */
 const MainExecuteContext *dashExecContext(void);
 const char *dashOkLabelKey(void);
 

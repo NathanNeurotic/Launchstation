@@ -146,10 +146,10 @@
 <tr><td>Language</td><td>English, Spanish, French, Italian, Polish, Portuguese, Brazilian Portuguese, German, Hungarian; optional external <i>Language file</i> (<code>.LNG</code>)</td><td>English</td></tr>
 <tr><td>Memory card backup files</td><td>PSU: add game ID and title to names; PSU: add date to names; PSU: never overwrite existing files (enabling it also enables dated names; turning dated names off disables it)</td><td>All Off</td></tr>
 <tr><td>Classic screen settings</td><td>Menu frame, Opaque popups, Show launch titles, Hide full ELF paths, File Browser icons, and eight classic colours (Background, Frame, Text, Selected text, Graph 1&ndash;4). These affect legacy classic screens only; dashboard themes have their own controls.</td><td>On, Off, On, On, On</td></tr>
-<tr><td>Set software clock...</td><td>Works without a CMOS battery; enter <code>YYYY-MM-DD HH:MM:SS</code> (2000&ndash;2099). Restarts at the last saved time; save again before power-off to keep elapsed runtime.</td><td>&mdash;</td></tr>
+<tr><td>Set software clock...</td><td>Works without a CMOS battery; set the date and time (2000&ndash;2099) field by field. Restarts at the last saved time; save again before power-off to keep elapsed runtime.</td><td>&mdash;</td></tr>
 <tr><td>Use PS2 hardware clock</td><td>Stop the software clock and use the console RTC again</td><td>&mdash;</td></tr>
 <tr><td>PS2 Temperature Units (50K and later)</td><td>Celsius, Fahrenheit. Unit of the temperature shown beside the dashboard clock; hidden when the console has no supported sensor (<code>Dash_TemperatureFahrenheit</code>)</td><td>Celsius</td></tr>
-<tr><td>Set PS2 clock manually...</td><td>Enter <code>YYYY-MM-DD HH:MM:SS</code>; the hardware RTC is written and the readback verified</td><td>&mdash;</td></tr>
+<tr><td>Set PS2 clock manually...</td><td>Set the date and time field by field; the hardware RTC is written and the readback verified</td><td>&mdash;</td></tr>
 <tr><td>Configuration folder</td><td>Load and save <code>LAUNCHELF.CNF</code> in this folder (<code>CNF_Path</code>)</td><td>Empty</td></tr>
 <tr><td>Save launch &amp; tool settings to...</td><td>Writes <code>LAUNCHELF.CNF</code> immediately to the configured folder, next to the ELF, or to the memory card <code>SYS-CONF</code>; dashboard and network settings are saved separately</td><td>&mdash;</td></tr>
 <tr><td>Show welcome message again</td><td>Re-shows the introduction</td><td>&mdash;</td></tr>
@@ -157,7 +157,7 @@
 <tr><td>About Launchstation</td><td>Version, commit, origin, credits</td><td>&mdash;</td></tr>
 </tbody></table>
 <h3 id="clock-manual">PS2 clock without a working CMOS battery</h3>
-<p>Use <b>Settings &gt; System &gt; Set PS2 clock manually...</b> and enter <code>YYYY-MM-DD HH:MM:SS</code>. Launchstation validates the date, writes the PS2 RTC and verifies the readback. With a dead clock battery the time may need setting again after power loss. Alternatively use the software clock, which keeps its own time until the next power-off, or <b>Sync PS2 clock from Internet</b> on network builds.</p>
+<p>Use <b>Settings &gt; System &gt; Set PS2 clock manually...</b> Left/Right picks the year, month, day, hour, minute or second, Up/Down changes it by one and L1/R1 by ten. Launchstation keeps the date valid, writes the PS2 RTC and verifies the readback. With a dead clock battery the time may need setting again after power loss. Alternatively use the software clock, which keeps its own time until the next power-off, or <b>Sync PS2 clock from Internet</b> on network builds.</p>
 <h3 id="languages">Languages</h3>
 <p>The nine built-in languages translate dashboard navigation, Settings labels, common actions and file-operation progress. An external <code>.LNG</code> overrides individual strings; missing strings fall back to the selected built-in language. Some extended help and specialist dialogs remain English; filenames, application titles, bookmarks, paths and protocol identifiers keep their original text.</p>
 
