@@ -19,7 +19,8 @@ refused = retry[retry.index("reloadUdpfsModules();"):]
 assert "if (getIopResetGeneration() == generation) {" in refused and "return 1;" in refused
 assert "cb(" not in refused[:refused.index("return 1;")]
 # callers keep a refusal (1) apart from out of memory (<0) and a missing server
-assert "int rc = dashDevicesStart(d, pendProbeDone, NULL);\n\tif (rc != 0)\n\t\tpend.active = 0;\n\tif (rc < 0)" in files
+assert "if (dashDevicesStart(d, pendProbeDone, NULL) != 0)\n\t\tpend.active = 0;" in files
+assert "(out of memory)" not in files  # -1 only ever means the user backed out
 for f in ("dash_browser.c", "dash_widgets.c"):
     assert "dashDevicesStart(d, " in (root / "src" / f).read_text(encoding="utf-8")
     assert ", NULL) != 0)" in (root / "src" / f).read_text(encoding="utf-8")
