@@ -338,15 +338,16 @@ static int p1Out(const char *folder, Ps1Save *s, int f, const char *done)
 	for (i = 0; s->name[i]; i++)
 		safe[i] = (strchr("/\\:*?\"<>|", s->name[i]) != NULL || (i == 0 && s->name[i] == '.')) ? '_' : s->name[i];
 	safe[i] = 0;
-	ps1SaveFree(s);
 	/* a raw save is named by its file name, read back without the last
 	 * dotted suffix (and FAT trims a trailing space): refuse what would
-	 * come back under another name */
-	if (f == 3 && (strchr(safe, '.') != NULL || (i > 0 && safe[i - 1] == ' '))) {
+	 * come back under another name, including a name changed just above */
+	if (f == 3 && (strcmp(safe, s->name) || strchr(safe, '.') != NULL || (i > 0 && safe[i - 1] == ' '))) {
 		free(buf);
-		dashModalMessage(DI_WARNING, "Not exported", "This save's name cannot be kept as raw. Use .mcs or .psx.", safe);
+		dashModalMessage(DI_WARNING, "Not exported", "This save's name cannot be kept as raw. Use .mcs or .psx.", s->name);
+		ps1SaveFree(s);
 		return -1;
 	}
+	ps1SaveFree(s);
 	if (f == 1)
 		mcPsvFileName(stem, sizeof(stem), safe);
 	else

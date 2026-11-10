@@ -1260,6 +1260,10 @@ host("mass:/pc/dot.mcs").write_bytes(ps1_mcs("BASLUS-00001.V2", 2, b"PS1 game"))
 lines = run("ps1conv:mass:/pc/dot.mcs", "k3")
 assert kind(lines, "MESSAGE|1|Not exported|This save's name cannot be kept as raw. Use .mcs or .psx.|BASLUS-00001.V2"), lines
 assert not host("mass:/pc/BASLUS-00001.V2").exists()
+host("mass:/pc/sl.mcs").write_bytes(ps1_mcs("BASLUS-00001/ALT", 2, b"PS1 game"))  # '/' would become '_' in a raw name
+lines = run("ps1conv:mass:/pc/sl.mcs", "k3")
+assert kind(lines, "MESSAGE|1|Not exported|This save's name cannot be kept as raw. Use .mcs or .psx.|BASLUS-00001/ALT"), lines
+assert not host("mass:/pc/BASLUS-00001_ALT").exists()
 lines = run("ps1conv:mass:/pc/dot.mcs", "k2")                             # .psx keeps the name: allowed
 assert host("mass:/pc/BASLUS-00001.V2.psx").exists(), lines
 host("mass:/pc/junk.mcs").write_bytes(b"MC" + bytes(300))
