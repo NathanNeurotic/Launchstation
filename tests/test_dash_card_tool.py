@@ -317,6 +317,13 @@ lines = run("importmany:mass:/out/|gone.psu|BESLES-12345GAME.psu", "p" + K, "c1"
 msg = kind(lines, "MESSAGE|")
 assert msg and "Nothing imported. 1 failed. First: gone.psu: The save file could not be opened." in msg[0] and "Stopped there; 1 not tried." in msg[0], lines
 assert sha(K) == k_snap
+K2 = "mass:/K2.mcd"
+blank(K2)
+k2_snap = sha(K2)
+lines = run(mix, "p" + K2, "c1", env={"FAIL_WRITE_AT": "0"})             # the safety copy fails: card untouched, said so
+msg = kind(lines, "MESSAGE|")
+assert msg and "Nothing imported. 1 failed. First: BESLES-12345GAME.psu: Nothing was written: the card could not be read or its safety copy made." in msg[0], lines
+assert sha(K2) == k2_snap
 lines = run(mix, "p" + K, "c0")                                          # declined
 assert not kind(lines, "MESSAGE|") and sha(K) == k_snap
 lines = run(mix, "pmass:/out/junk.max")                                  # not a card image: nothing written
@@ -860,7 +867,9 @@ for k in range(1, 120):
     pick = str(d.index("A.mcd: NOICON, 3 KB") + 1)
     lines = run("all:mass:/mv", "s" + pick, "m0", "m1", "pmass:/mv/H.mcd", "c1", env={"FAIL_WRITE_AT": str(k)})
     msg = kind(lines, "MESSAGE|1|Not all done|")
-    if msg and "NOICON" in saves("mass:/mv/H.mcd"):
+    if msg and "SAFETY|mass:/mv/WLE-Safety/A-0001.mcd|1" not in lines:
+        assert "A-0001" not in msg[0], msg                               # a safety copy that failed is never named
+    elif msg and "NOICON" in saves("mass:/mv/H.mcd"):
         assert "|Safety copy: mass:/mv/WLE-Safety/A-0001.mcd" in msg[0], msg
         break
 else:

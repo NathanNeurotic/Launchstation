@@ -381,7 +381,11 @@ static int ctSafetyOnce(const char *image, char *safety, int safety_size)
 	if (safety[0])
 		return 0;
 	dashLoadingStatus("Making a safety copy", 0, 1);
-	return ctSafetyCopy(image, safety, safety_size) < 0 ? -1 : 0;
+	if (ctSafetyCopy(image, safety, safety_size) < 0) {
+		safety[0] = 0; /* no copy: never report one, and the next write tries again */
+		return -1;
+	}
+	return 0;
 }
 
 /* Safety copy, write, close, then read the save back through a fresh open. */
@@ -1747,7 +1751,7 @@ void dashCardImportMany(const char *dir, const char *const *names, int n)
 			if (r == MCW_OK) {
 				r = ctPutSave(img, &s, safety, sizeof(safety));
 				mcCardFreeSave(&s);
-				why = NULL;
+				why = r == MCV_ERR_IO && !safety[0] ? "Nothing was written: the card could not be read or its safety copy made." : NULL;
 			} else if (r != MCW_ERR_NOMEM && r != MCV_ERR_IO) {
 				r = MCW_ERR_UNSUPPORTED; /* not a save we read: skipped */
 			}
