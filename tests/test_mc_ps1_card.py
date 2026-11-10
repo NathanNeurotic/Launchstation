@@ -309,6 +309,6 @@ assert w.index("memcmp(now, before, PS1_CARD_SIZE)") < \
 assert "FIO_O_TRUNC" not in w                       # never truncates the card it rewrites
 assert 'dashPickPath("Import which PS1 save?", dir, DASH_PICK_FILE, NULL, file, sizeof(file))' in ui   # raw saves have no extension
 assert "ent->stat.size == PS1_CARD_SIZE" in tool                                      # "All saves" skips PS1 cards
-assert '"128 KB PS1 card"' in tool and "dashPs1CardNewBlank(folder);" in tool
+assert '"128 KB PS1 card"' in tool and "dashPs1CardNew(folder, NULL, 0);" in tool
 assert "Open a PS1 card image with Card contents and use Import save... there." in tool  # a PS1 .psv refused by a PS2 card points here
 print("PASS: PS1 card images: list, import (.mcs/.psv/.psx/raw), export .mcs, delete; refusals leave the card unchanged")
