@@ -2324,12 +2324,12 @@ static int switchNetworkStack(int target_mode)
 {
 	if (network_stack_mode == target_mode)
 		return 1;
+	/* Read before any reset (a UDPFS boot folder is still mounted here);
+	 * without the files, select nothing and keep the current stack. */
+	if (target_mode == NETWORK_STACK_ETH && setting != NULL && setting->legacy_net_drivers && !legacyNetDriversReady())
+		return 0;
 
 	if (network_stack_mode != NETWORK_STACK_NONE) {
-		/* A UDPFS boot folder is still mounted here, not after the reset:
-		 * without the files, keep the UDPFS session instead of resetting. */
-		if (target_mode == NETWORK_STACK_ETH && setting != NULL && setting->legacy_net_drivers && !legacyNetDriversReady())
-			return 0;
 		DPRINTF("Switching network stack (%d -> %d), resetting IOP\n", network_stack_mode, target_mode);
 		resetRuntimeDeviceState(TRUE);
 		/* If the reset was refused, old network modules are still resident. */

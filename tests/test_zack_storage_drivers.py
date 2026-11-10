@@ -186,6 +186,9 @@ int main(void) {
     network_stack_mode = NETWORK_STACK_UDPFS; legacy_ready = 0; before = resets;
     assert(switchNetworkStack(NETWORK_STACK_ETH) == 0 && legacy_reads == 2);
     assert(network_stack_mode == NETWORK_STACK_UDPFS && resets == before);
+    /* NONE -> ETH without the files selects nothing either. */
+    network_stack_mode = NETWORK_STACK_NONE;
+    assert(switchNetworkStack(NETWORK_STACK_ETH) == 0 && network_stack_mode == NETWORK_STACK_NONE && resets == before);
     legacy_ready = 1; network_stack_mode = NETWORK_STACK_ETH;
     config.legacy_net_drivers = 0;
     block_storage_stack_mode = BLOCK_STACK_NONE;
