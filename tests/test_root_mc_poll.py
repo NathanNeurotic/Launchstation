@@ -110,7 +110,9 @@ int main(void) {
     /* An unbound card client (failed start) is never polled; opening a card
      * retries the start, after which polling resumes. */
     filerRootMcPollIdle();mc_rpc_ready=0;info_before=info_calls;
+    assert(filerRootMcPresent(0,NULL,NULL)==1);
     run(20);assert(info_calls==info_before && !root_mc_poll_active);
+    assert(filerRootMcPresent(0,NULL,NULL)==1);
     mc_rpc_ready=1;run(4);assert(info_calls>info_before);
     filerRootMcPollIdle();
     puts("PASS: an unbound memory card client is not polled until its start succeeds");
