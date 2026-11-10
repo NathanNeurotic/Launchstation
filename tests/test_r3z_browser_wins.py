@@ -2,6 +2,7 @@
 "LaunchELF with Args" is offered only on text files, and the header shows free space only
 when the device answered (a failed memory card or HDD query used to show a stale or bogus
 size). The header now uses filerFreeSpace(), the checked helper the dashboard already uses."""
+import shutil, subprocess, tempfile
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
@@ -54,4 +55,33 @@ fail = paste[paste.index("if (setFileXioTransferWide(1) < 0) {"):]
 assert fail.index("ret = -ENOMEM;") < fail.index("goto finished;") < fail.index("for (i = 0; i < nclipFiles; i++)")
 early = paste[:paste.index("if (setFileXioTransferWide(1) < 0) {")]
 assert early.count("return;") == 1 and "goto finished" in early  # the one early return precedes the widening
+# Run the real helper against a fileXio that refuses chosen sizes.
+harness = r"""
+#include <assert.h>
+#include <string.h>
+static int have_filexio_ready = 1, refuse_from, tried[8], ntried;
+static int fileXioSetRWBufferSize(int n){tried[ntried++] = n;return n >= refuse_from ? -1 : 0;}
+""" + widen + "\n}\n" + r"""
+static void expect(int wide, int refuse, int ret, const int *sizes, int n){
+ ntried = 0; refuse_from = refuse;
+ assert(setFileXioTransferWide(wide) == ret && ntried == n && !memcmp(tried, sizes, n * sizeof(int)));
+}
+int main(void){
+ const int all[] = {131072, 65536, 16384};
+ expect(1, 1 << 30, 0, all, 1);      /* 128 KB granted */
+ expect(1, 131072, 0, all, 2);       /* falls back to 64 KB */
+ expect(1, 65536, 0, all, 3);        /* falls back to 16 KB */
+ expect(1, 16384, -1, all, 3);       /* nothing left: the caller is told */
+ expect(0, 1 << 30, 0, all + 2, 1);  /* narrowing asks only for 16 KB */
+ expect(0, 16384, -1, all + 2, 1);
+ have_filexio_ready = 0; expect(1, 0, 0, all, 0);  /* fileXio not up yet: nothing touched */
+ return 0;
+}
+"""
+cc = shutil.which("gcc") or shutil.which("cc")
+if not cc: raise SystemExit("Host C compiler required")
+with tempfile.TemporaryDirectory(prefix="filexio-wide-") as folder:
+    c = Path(folder) / "t.c"; c.write_text(harness)
+    subprocess.run([cc, "-std=gnu99", "-Wall", "-Werror", str(c), "-o", str(Path(folder) / "t")], check=True)
+    subprocess.run([str(Path(folder) / "t")], check=True, timeout=10)
 print("ok")
