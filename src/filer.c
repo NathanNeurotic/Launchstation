@@ -458,6 +458,22 @@ int filerPrepareMemoryCardRead(int port)
 	return sceMcResSucceed;
 }
 
+/* Free 1 KB clusters on the formatted PS2 card in mc<port>:, asked now
+ * (not the root poll's cached value); <0 when there is none. */
+int filerMcFreeClusters(int port)
+{
+	int type = 0, freec = 0, fmt = 0, ret = sceMcResFailDetect;
+
+	if (filerPrepareMemoryCardRead(port) != sceMcResSucceed)
+		return -1;
+	if (mcGetInfo(port, 0, &type, &freec, &fmt) < 0)
+		return -1;
+	mcSync(0, NULL, &ret);
+	if ((ret != sceMcResSucceed && ret != sceMcResChangedCard) || type != sceMcTypePS2 || !fmt)
+		return -1;
+	return freec;
+}
+
 int readMC(const char *path, FILEINFO *info, int max)
 {
 	/* max entries besides "." and "..", for the largest max (getDirComplete) */
