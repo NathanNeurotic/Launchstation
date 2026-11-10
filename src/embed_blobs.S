@@ -61,6 +61,12 @@ EMBED_FILE(exploit_usa_sys, "exploits/USA.sys")
 EMBED_FILE(exploit_eur_sys, "exploits/EUR.sys")
 EMBED_FILE(exploit_chn_sys, "exploits/CHN.sys")
 EMBED_FILE(exploit_list_icn, "exploits/list.icn")
+
+/* Memory-card browser icon for the app folder, stamped on settings save
+ * (config.c configStampMcFolderIcon). The same files the release packages
+ * ship; copy.icn and del.icn are byte-identical to list.icn. */
+EMBED_FILE(mc_icon_sys, "res/memory-card/icon.sys")
+EMBED_FILE(mc_list_icn, "res/memory-card/list.icn")
 EMBED_FILE(exploit_ioprp_img, "exploits/IOPRP_LTS.IMG")
 
 /* UDPFS SMAP is source-built by ps2.yaml. The unchanged ministack/ioman

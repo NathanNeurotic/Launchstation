@@ -55,6 +55,7 @@ void configFormatSavePathValue(char *dst, size_t dst_size, const char *path, con
 void configAppendPathFile(char *dst, size_t dst_size, const char *dir, const char *filename);
 void configBuildSysconfPath(char *dst, size_t dst_size, const char *filename);
 void configEnsureSysconfDir(const char *path);
+void configStampMcFolderIcon(void);
 
 enum CONFIG_SAVE_TARGET {
 	CONFIG_SAVE_TARGET_CANCEL = -1,
