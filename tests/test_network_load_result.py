@@ -108,6 +108,10 @@ int main(void) {
     reset_state(); stack_ok = 0;
     assert(!load_ps2ip() && strstr(dashboard_ip_error, "UDPFS") != NULL);
 
+    /* success leaves an earlier caller's message alone */
+    reset_state(); dashboard_ip_error = "earlier";
+    assert(load_ps2ip() && !strcmp(dashboard_ip_error, "earlier"));
+
     reset_state();
     assert(load_smb(2) && !strcmp(smbLoadError(2), "") && connects == 1);
     reset_state();

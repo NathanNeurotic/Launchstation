@@ -603,9 +603,8 @@ static int load_ps2ip(void)
 {
 	int ret, ID __attribute__((unused));
 	/* Each failure names its stage in dashboard_ip_error, which SMB and the
-	 * dashboard network show; it is read only after a failure. */
-	dashboard_ip_error = "PC CARD CompactFlash is using the network adapter.";
-	if (pcCardCfOwnsBus()) return 0;
+	 * dashboard network show; success leaves it untouched. */
+	if (pcCardCfOwnsBus()) return (dashboard_ip_error = "PC CARD CompactFlash is using the network adapter.", 0);
 
 #if defined(ETH) && defined(UDPFS)
 	if (!switchNetworkStack(NETWORK_STACK_ETH)) {
