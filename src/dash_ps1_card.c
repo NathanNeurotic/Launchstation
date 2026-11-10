@@ -1,6 +1,6 @@
 //--------------------------------------------------------------
 //File name:   dash_ps1_card.c
-//"Card contents..." for PS1 card images (128 KB .mcd/.mcr/.vm1/.vmc/.bin,
+//"Card contents..." for PS1 card images (128 KB .mcd/.mcr/.vm1/.vmc/.bin/.srm,
 //as POPStarter, sd2psx/MMCE in PS1 mode and PC emulators use them, and the
 //DexDrive .gme, VGS .vgs/.mem, PSP/Vita .vmp and PocketStation iOS .mcx
 //containers): lists the saves, imports .mcs/.ps1/.mcb/.pda, PS1 .psv, .psx
@@ -80,17 +80,33 @@ static int p1Load(const char *path, uint8_t *raw, uint8_t *head)
 	return kind;
 }
 
+/* 1 when exactly n bytes were read, however the device splits them */
+static int p1ReadAll(int fd, uint8_t *b, uint32_t n)
+{
+	int r;
+
+	for (; n; b += r, n -= (uint32_t)r)
+		if ((r = genRead(fd, b, (int)n)) <= 0)
+			return 0;
+	return 1;
+}
+
 int dashPs1CardIsImage(const char *path)
 {
 	int fd = genOpen(path, FIO_O_RDONLY), ok;
-	uint8_t magic[16];
+	uint8_t head[128];
 	s64 size;
+	int i;
 
 	if (fd < 0)
 		return 0;
 	size = genLseek(fd, 0, SEEK_END);
 	ok = size >= (s64)PS1_CARD_SIZE && size <= (s64)PS1_CARD_FILE_MAX && genLseek(fd, 0, SEEK_SET) == 0 &&
-	     genRead(fd, magic, 16) == 16 && ps1CardKind(magic, (uint32_t)size) >= 0;
+	     p1ReadAll(fd, head, sizeof(head)) && ps1CardKind(head, (uint32_t)size) >= 0;
+	/* other cores' .srm saves can be 128 KB and start "MC" by chance: there
+	 * every directory frame must check too before the card is written */
+	for (i = 0; ok && genCmpFileExt(path, "SRM") && i <= PS1_BLOCKS; i++)
+		ok = (i == 0 || p1ReadAll(fd, head, sizeof(head))) && ps1FrameOk(head);
 	genClose(fd);
 	return ok;
 }
@@ -427,7 +443,7 @@ static int p1MakeNew(char *dest, int size, const char *folder, const char *stem,
 	return ok;
 }
 
-static const char *const p1_kinds[] = {".mcd: raw card (as .mcr .vm1 .vmc)", ".gme: DexDrive", ".vgs: Connectix VGS",
+static const char *const p1_kinds[] = {".mcd: raw card (as .mcr .vm1 .vmc .srm)", ".gme: DexDrive", ".vgs: Connectix VGS",
                                        ".vmp: PSP / Vita, signed", ".mcx: PocketStation for iOS"};
 
 /* The listed card, saved next to it in another (or the same) container. */

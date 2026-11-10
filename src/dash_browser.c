@@ -2736,7 +2736,7 @@ static void actionsMenu(void)
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 &&
 		    (genCmpFileExt(f->name, "MCD") || isVmcImage(f->name) || genCmpFileExt(f->name, "MCR") || genCmpFileExt(f->name, "VM1") ||
 		     genCmpFileExt(f->name, "GME") || genCmpFileExt(f->name, "VGS") || genCmpFileExt(f->name, "MEM") ||
-		     genCmpFileExt(f->name, "VMP") || genCmpFileExt(f->name, "MCX")))
+		     genCmpFileExt(f->name, "VMP") || genCmpFileExt(f->name, "MCX") || genCmpFileExt(f->name, "SRM")))
 			ADD(DI_MC, "Card contents...", "PS2 and PS1 saves: copy, import, export, delete", 0, F_CARD_CONTENTS);
 		/* Other tools' save files by extension off the cards, plus Blaze's
 		 * extensionless files in a card's (or any) MCM folder. */
