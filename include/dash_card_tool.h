@@ -20,6 +20,9 @@ void dashCardNewBlank(const char *folder);
 int dashPs1CardIsImage(const char *path);
 void dashPs1CardTool(const char *image);
 void dashPs1CardNewBlank(const char *folder);
+/* One PS1 save file (.mcs, PS1 .psv, .psx or raw, also a save on a real PS1
+ * card) written as another of those formats; the source is only read. */
+void dashPs1SaveConvert(const char *path);
 
 /* Shared with dash_ps1_card.c: a verified safety copy of an image whose
  * current bytes are in buf, and a new file written and read back (both 0 on

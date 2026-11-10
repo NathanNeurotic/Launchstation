@@ -641,6 +641,8 @@ static void ctExportPsu(const char *image, const char *name)
 
 static int ctStamp(uint8_t stamp[8]);
 
+static const char ct_ps1_psv[] = "This .psv holds a PS1 save. Open a PS1 card image with Card contents and use Import save... there.";
+
 /* What Import save... and Convert to .psu accept, for the picker: these
  * extensions, plus every file in a folder called MCM, where Blaze keeps its
  * saves without an extension (see pickExtOk). */
@@ -708,7 +710,7 @@ static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 		if (r == MCW_ERR_UNSUPPORTED && format == MCSF_PSV && size >= 0x40 &&
 		    (buf[0x3C] | buf[0x3D] << 8 | buf[0x3E] << 16 | (uint32_t)buf[0x3F] << 24) != 2u) {
 			free(buf);
-			*why = "This .psv holds a PS1 save. Open a PS1 card image with Card contents and use Import save... there.";
+			*why = ct_ps1_psv;
 			return r;
 		}
 		if (r == MCW_ERR_INVALID && format == MCSF_UNKNOWN) {
@@ -743,6 +745,10 @@ void dashCardConvertSave(const char *path)
 	if (psv < 0)
 		return;
 	r = ctLoadPsu(path, &s, &why);
+	if (r != MCW_OK && why == ct_ps1_psv) { /* a PS1 save: its own formats */
+		dashPs1SaveConvert(path);
+		return;
+	}
 	if (r != MCW_OK) {
 		dashModalMessage(DI_WARNING, "Not converted", why, path);
 		return;
