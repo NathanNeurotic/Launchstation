@@ -2216,6 +2216,8 @@ static void cfgSaveRun(void *arg)
 		configRefreshSaveTargetForWrite(j->target, j->path, sizeof(j->path), j->file, j->loaded);
 	j->ret = j->kind == CFG_SAVE_NET ? configWriteNetworkSnapshot(j->path, j->text)
 	                                  : dashWriteFile(j->path, j->text, j->len);
+	if (j->ret == 0 && j->kind != CFG_SAVE_NET)
+		configStampMcFolderIcon();
 }
 
 static void cfgSaveDone(void *arg)
