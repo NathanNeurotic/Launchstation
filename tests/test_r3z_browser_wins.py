@@ -46,8 +46,9 @@ assert widen.rstrip().endswith("return -1;")  # even 16 KB refused: fileXio has 
 paste = src[src.index("static void subfunc_Paste("):]
 paste = paste[:paste.index("//endfunc subfunc_Paste")]
 assert paste.count("setFileXioTransferWide(") == 2
-assert paste.index("waitForClipboardSourceDevice()") < paste.index("if (setFileXioTransferWide(1) < 0) {")
-assert "finished:\n\tno_buffer = setFileXioTransferWide(0) < 0;" in paste  # a lost buffer is never reported as done...
+assert paste.index("waitForClipboardSourceDevice()") < paste.index("widened = 1;") < paste.index("if (setFileXioTransferWide(1) < 0) {")
+assert paste.count("widened = 1;") == 1  # a paste that never widened leaves the 16 KB buffer alone
+assert "finished:\n\tno_buffer = widened && setFileXioTransferWide(0) < 0;" in paste  # a lost buffer is never reported as done...
 assert paste.index("nclipFiles = kept;") < paste.index("if (no_buffer) {")  # ...but moved sources still leave the clipboard
 fail = paste[paste.index("if (setFileXioTransferWide(1) < 0) {"):]
 assert fail.index("ret = -ENOMEM;") < fail.index("goto finished;") < fail.index("for (i = 0; i < nclipFiles; i++)")

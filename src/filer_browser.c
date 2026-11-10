@@ -2128,7 +2128,7 @@ static void subfunc_Paste(char *mess, char *path)
 	 * (COPY_KEPT_DESTINATION): a Move leaves their sources, still cut. */
 	static char paste_kept[MAX_ENTRY];
 	char tmp[MAX_PATH], tmp1[MAX_PATH];
-	int i, kept, ret = -1, trace_vmc_paste, no_buffer;
+	int i, kept, ret = -1, trace_vmc_paste, widened = 0, no_buffer;
 	unsigned int move_mark;
 
 	filerMoveBegin(browser_cut);
@@ -2162,6 +2162,7 @@ static void subfunc_Paste(char *mess, char *path)
 	if (trace_vmc_paste)
 		printf("[PASTE] start src='%s' dst='%s' items=%d mode=%d cut=%d\n",
 		       clipPath, path, nclipFiles, PasteMode, browser_cut);
+	widened = 1;  //even a refused widen leaves fileXio needing its 16 KB back
 	if (setFileXioTransferWide(1) < 0) {  //drivers are loaded; see init.c
 		filerCopyDiagStage("Transfer buffer");
 		ret = -ENOMEM;
@@ -2209,7 +2210,7 @@ static void subfunc_Paste(char *mess, char *path)
 //	unmountAll(); //disabled to avoid interference with VMC implementation
 
 finished:
-	no_buffer = setFileXioTransferWide(0) < 0;  //the paste stands either way; only the message changes
+	no_buffer = widened && setFileXioTransferWide(0) < 0;  //the paste stands either way; only the message changes
 	filerMoveEnd();
 	if (ret < 0) {
 		printf("[PASTE] failed ret=%d src='%s' dst='%s' mode=%d cut=%d\n",
