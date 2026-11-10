@@ -243,6 +243,14 @@ int main(int argc, char **argv)
 		run(path, k, a);
 	}
 	assert(get(path, back, sizeof(back)) == 16 && back[0] == 0x4A && back[1] == 2 && back[2] == 2);
+	/* at the last byte, typing stays there: "1234" leaves 0x34 */
+	kbd_keys = "1234"; kbd_at = 2;
+	{
+		static const unsigned k[] = {DASH_IN_R1, DASH_IN_MENU, DASH_IN_MENU, 0};
+		static const int a[] = {0, 2};
+		run(path, k, a);
+	}
+	assert(get(path, back, sizeof(back)) == 16 && back[15] == 0x34 && back[14] == 14 && back[1] == 2);
 	settings.usbkbd_used = 0; kbd_keys = NULL; kbd_at = -1;
 
 	/* a system folder save asks first; No writes nothing */
