@@ -14,6 +14,9 @@ assert 'if (!strcmp(dev->mount, "udpfs:") && storageState(dev->mount) == DASH_DE
 # background work is drained first; backing out returns -1 like startSync
 assert retry.index('dashWorkerAwaitAll("Finishing up")') < retry.index("return -1;") < retry.index("reloadUdpfsModules();")
 assert start.index("reloadUdpfsModules();") < start.index("ok = startSync(dev->mount, title);")
+# a refused reset (FTP still closing files) reports it instead of probing again
+refused = retry[retry.index("reloadUdpfsModules();"):]
+assert "if (getIopResetGeneration() == generation) {" in refused and "cb(dev->mount, 0, user);" in refused
 assert dev.count("reloadUdpfsModules()") == 1  # nowhere else: probeMount keeps load_udpfs()
 probe = dev[dev.index("static int probeMount(const char *m)"):]
 probe = probe[:probe.index("\n}\n")]

@@ -714,9 +714,19 @@ int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user)
 		if (!dashWorkerAwaitAll("Finishing up"))
 			return -1;
 		dashLoadingBegin(title);
+		unsigned int generation = getIopResetGeneration();
+
 		dashLoadingFrame("Restarting the network...", 0, 0);
 		reloadUdpfsModules();
 		dashLoadingEnd();
+		if (getIopResetGeneration() == generation) {
+			/* The reset was refused (FTP still closing files): the old
+			 * discovery result stands, so do not probe it again. */
+			dashToast(DASH_TOAST_WARN, "Could not restart the network. Stop FTP and try again.");
+			if (cb != NULL)
+				cb(dev->mount, 0, user);
+			return 0;
+		}
 	}
 #endif
 	ok = startSync(dev->mount, title);
