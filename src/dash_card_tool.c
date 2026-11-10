@@ -797,7 +797,7 @@ void dashCardConvertSave(const char *path)
 	}
 	dashLoadingBegin("Converting save");
 	r = ctSaveAs(&s, fmt, &buf, &len);
-	if (r == MCW_OK && ctWriteFile(dest, buf, len) < 0)
+	if (r == MCW_OK && ctWriteFileAs(dest, buf, len, 1) < 0) /* never over a file made since the check */
 		r = MCV_ERR_IO;
 	if (r == MCW_OK) { /* the bytes on disk read back as the same save */
 		r = psv ? mcSaveFromPsv(buf, len, &back) :
