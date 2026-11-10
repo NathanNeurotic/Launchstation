@@ -602,14 +602,19 @@ static void stopUsbMassForPoweroff(void)
 static int load_ps2ip(void)
 {
 	int ret, ID __attribute__((unused));
-	if (pcCardCfOwnsBus()) return 0;
+	/* Each failure names its stage in dashboard_ip_error, which SMB and the
+	 * dashboard network show; success leaves it untouched. */
+	if (pcCardCfOwnsBus()) return (dashboard_ip_error = "PC CARD CompactFlash is using the network adapter.", 0);
 
 #if defined(ETH) && defined(UDPFS)
-	if (!switchNetworkStack(NETWORK_STACK_ETH))
+	if (!switchNetworkStack(NETWORK_STACK_ETH)) {
+		dashboard_ip_error = "The network adapter is busy (UDPFS).";
 		return 0;
+	}
 #endif
 	if (!load_ps2dev9()) {
 		DPRINTF(" [NET]: skipping PS2IP/SMAP because DEV9 failed to initialize\n");
+		dashboard_ip_error = "The network adapter (DEV9) did not start.";
 		return 0;
 	}
 
@@ -624,15 +629,20 @@ static int load_ps2ip(void)
 		DPRINTF(" [PS2IP%s]: ID=%d, ret=%d\n",
 		        ps2dev9_variant == DEV9_VARIANT_PS2SDK_V10 ? " v1.0" : "",
 		        ID, ret);
-		have_ps2ip = (ID >= 0 && ret >= 0);
-		if (!have_ps2ip)
+		/* MODULE_NO_RESIDENT_END (1): startup failed and the module was unloaded. */
+		have_ps2ip = (ID >= 0 && ret == 0);
+		if (!have_ps2ip) {
+			dashboard_ip_error = "PS2IP did not start.";
 			return 0;
+		}
 	}
 	if (!have_ps2smap) {
 		ID = SifExecModuleBuffer(ps2smap_irx, size_ps2smap_irx,
 		                    if_conf_len, &if_conf[0], &ret);
 		DPRINTF(" [SMAP]: ID=%d, ret=%d\n", ID, ret);
-		have_ps2smap = (ID >= 0 && ret >= 0);
+		have_ps2smap = (ID >= 0 && ret == 0);
+		if (!have_ps2smap)
+			dashboard_ip_error = "The Ethernet driver (SMAP) did not start.";
 	}
 	return have_ps2ip && have_ps2smap;
 }
@@ -926,7 +936,7 @@ int load_smb(int version)
 	setupPowerOff();
 	getIpConfig();
 	if (!load_ps2ip()) {
-		smb_load_error[version] = "The network stack could not be started.";
+		smb_load_error[version] = dashboard_ip_error;
 		return 0;
 	}
 	if (!*have) {
