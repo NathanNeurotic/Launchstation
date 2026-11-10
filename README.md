@@ -113,7 +113,7 @@ See [Releases, updates and recovery](docs/wiki/Releases-and-Recovery.md) for sup
 | --- | --- |
 | **Home** | Continue, pinned/favorite/recent applications, the Applications library, and Last folder. |
 | **Files** | Browse devices and folders; manage files, saves and card images; launch executables and game images. |
-| **Tools** | Text Editor, disc boot, HDD Manager, exploit installer, OPL IGR backup setup, networking, cloud backups and system information. |
+| **Tools** | Text Editor and Hex Editor, disc boot, HDD Manager, exploit installer, OPL IGR backup setup, networking, cloud backups and system information. |
 | **Settings** | Appearance, applications, sound, input, launching, storage, backups, networking and system options. |
 
 **START** opens the Dashboard menu. **SELECT** changes Grid/List/Carousel in the Applications library. In the File Browser, **Triangle** opens actions and **Square** marks items. Confirm/Back follows the configured X/O preference; a fresh configuration defaults to Circle on Japanese and Chinese consoles and to Cross elsewhere. Follow the on-screen hints for each tool.

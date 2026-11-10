@@ -62,3 +62,13 @@
 
 <h2 id="saving">Notes on saving</h2>
 <p>Saving writes the file; failures show <i>File not saved</i> with a hint that the device may be read-only or full. Discs cannot be written (use Save as to choose another place). After editing metadata for an application, that app is re-read automatically. When you leave the editor, its last document's folder becomes the browser's <i>Last folder</i>.</p>
+
+<h2 id="hex-editor">Hex Editor</h2>
+<p>File Browser &gt; Triangle &gt; <b>Open in Hex Editor</b> shows any file up to <b>512 KB</b> as rows of 8 bytes: the offset, the bytes in hex and the same bytes as text. It only changes bytes in place; it does not insert, delete or undo (leave without saving to keep the file as it was).</p>
+<ul>
+<li><b>D-pad</b> moves one byte or one row, <b>L2/R2</b> a page, <b>L1/R1</b> to the first or last byte.</li>
+<li><b>Confirm</b> changes the byte under the cursor: <b>Up/Down</b> add or take 1, <b>R1/L1</b> add or take 16 (wrapping at 00 and FF), <b>Left/Right</b> move on, Confirm or Back finish.</li>
+<li>A USB keyboard types hex digits directly: the first digit sets the high half of the byte, the second the low half, and the cursor moves on.</li>
+<li><b>Triangle</b> opens the menu: <b>Save</b>, <b>Go to offset...</b> (hex, with or without <code>0x</code>) and <b>Exit Hex Editor</b>. Back leaves; with unsaved changes it asks first.</li>
+</ul>
+<p>Save writes the whole file, then reads it back and compares it with what is on screen; only a match shows <i>Saved and checked</i>. Discs cannot be written, and an empty file is not opened.</p>

@@ -2627,6 +2627,7 @@ static void actionsMenu(void)
 		F_NEWICON,
 		F_SIZE,
 		F_EDIT,
+		F_HEX,
 		F_ARGS,
 		F_TITLECFG,
 		F_VMC0,
@@ -2738,6 +2739,9 @@ static void actionsMenu(void)
 		ADD(DI_INFO, "Size", NULL, !has_target || !en[GETSIZE], F_SIZE);
 		if (f != NULL && !isDir(f) && en[OPEN_TEXTEDITOR])
 			ADD(DI_TEXT, "Open in Text Editor", NULL, 0, F_EDIT);
+		/* any file, .elf/.icn/.sys too; not the built-in commands or an offline PC card */
+		if (f != NULL && !isDir(f) && !isMisc(fb.dir) && (!isPcCardCfPath(fb.dir) || isPcCardCfOnline()))
+			ADD(DI_EDIT, "Open in Hex Editor", "change bytes, up to 512 KB", 0, F_HEX);
 		if (is_elf) {
 			int args_disabled = isPcCardCfPath(fb.dir) ? 1 : 0;
 			ADD(DI_EDIT, "Start with arguments...", args_disabled ? "Direct launch unsupported" : NULL,
@@ -2901,6 +2905,12 @@ static void actionsMenu(void)
 		case F_EDIT:
 			if (fullPath(f, path, sizeof(path))) {
 				dashOpenTextEditor(path);
+				refresh();
+			}
+			break;
+		case F_HEX:
+			if (fullPath(f, path, sizeof(path))) {
+				dashHexEditor(path);
 				refresh();
 			}
 			break;
