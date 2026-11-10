@@ -300,12 +300,14 @@ assert kind(lines, "TOAST|1|Save imported and verified") and saves(I)["BASLUS-77
 # one safety copy, a file that is not a save is skipped with its reason, the rest go in
 K = "mass:/K.mcd"
 blank(K)
+k_before = host(K).read_bytes()
 mix = "importmany:mass:/out/|BESLES-12345GAME.psu|BASLUS-99999BLZ.mcm|junk.max"
 lines = run(mix, "p" + K, "c1")
 assert kind(lines, "PICK|Import the saves into which card image?|mass:/out/|0|"), lines
 assert kind(lines, "CONFIRM|Import 3 saves?|K.mcd gets one safety copy first."), lines
 msg = kind(lines, "MESSAGE|")[0]
 assert "|Done|2 saves imported and verified. 1 skipped. First: junk.max: " in msg and msg.endswith("|Safety copy: mass:/WLE-Safety/K-0001.mcd"), msg
+assert host("mass:/WLE-Safety/K-0001.mcd").read_bytes() == k_before   # the safety copy is the card before the import
 assert saves(K)["BESLES-12345GAME"] == saves(B)["BESLES-12345GAME"] and saves(K)["BASLUS-99999BLZ"] == saves(F)["BASLUS-99999BLZ"]
 k_snap = sha(K)
 lines = run(mix, "p" + K, "c1")                                          # all there already: nothing written
