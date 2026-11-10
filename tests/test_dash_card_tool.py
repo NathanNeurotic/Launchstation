@@ -1266,6 +1266,9 @@ assert kind(lines, "MESSAGE|1|Not exported|This save's name cannot be kept as ra
 assert not host("mass:/pc/BASLUS-00001_ALT").exists()
 lines = run("ps1conv:mass:/pc/dot.mcs", "k2")                             # .psx keeps the name: allowed
 assert host("mass:/pc/BASLUS-00001.V2.psx").exists(), lines
+host("mc0:/BASLUS-00001.V2").write_bytes(s1[128:])                       # a dotted name on a real card is the whole name
+lines = run("ps1conv:mc0:/BASLUS-00001.V2", "k0", "pmass:/pc/")
+assert host("mass:/pc/BASLUS-00001.V2.mcs").read_bytes()[0x0A:0x0A + 16] == b"BASLUS-00001.V2\0", lines
 host("mass:/pc/junk.mcs").write_bytes(b"MC" + bytes(300))
 lines = run("ps1conv:mass:/pc/junk.mcs")
 assert kind(lines, "MESSAGE|1|Not converted|") and not kind(lines, "CHOICE|"), lines

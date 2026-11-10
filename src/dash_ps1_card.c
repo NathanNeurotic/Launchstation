@@ -398,11 +398,11 @@ static void p1Export(const char *path, const Ps1CardSave *sv)
  * to the file. The source is only read. */
 void dashPs1SaveConvert(const char *path)
 {
-	char folder[MAX_PATH];
+	char folder[MAX_PATH], hint[MAX_PATH];
 	uint8_t *buf;
 	uint32_t len;
 	Ps1Save s;
-	int r, f, fmt;
+	int r, f, fmt, on_card;
 
 	r = p1ReadFile(path, &buf, &len);
 	if (r < 0) {
@@ -410,7 +410,11 @@ void dashPs1SaveConvert(const char *path)
 		                 r == -2 ? "Too big or empty for a PS1 save." : "The file could not be read.", path);
 		return;
 	}
-	r = ps1SaveFromFile(buf, len, p1Base(path), &s, &fmt);
+	on_card = !strncmp(path, "mc", 2) || !strncmp(path, "vmc", 3);
+	/* a save on a card is named by its whole file name, dots included: the
+	 * reader drops everything from the last dot, so give it an empty one */
+	snprintf(hint, sizeof(hint), on_card ? "%s." : "%s", p1Base(path));
+	r = ps1SaveFromFile(buf, len, hint, &s, &fmt);
 	free(buf);
 	if (r != PS1_OK) {
 		dashModalMessage(DI_WARNING, "Not converted", ps1Error(r), path);
@@ -421,7 +425,7 @@ void dashPs1SaveConvert(const char *path)
 		ps1SaveFree(&s);
 		return;
 	}
-	if (strncmp(path, "mc", 2) && strncmp(path, "vmc", 3)) {
+	if (!on_card) {
 		dashStrCopy(folder, path, sizeof(folder));
 		folder[p1Base(path) - path] = 0;
 	} else if (!dashPickPath("Write the PS1 save to", "mass:/", DASH_PICK_FOLDER, NULL, folder, sizeof(folder))) {
