@@ -666,7 +666,7 @@ static const SetItem net_items[] = {
 #endif
 #ifdef ETH
     {ST_CHOICE, S_NET_LEGACY, "Legacy Ethernet drivers", "Use MrRexD's ps2sdk v1.0 DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up. Takes effect the next time Ethernet/FTP is started."},
-    {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query 0.pool.ntp.org and write and verify the PS2 hardware RTC. Uses the saved network settings."},
+    {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query 0.pool.ntp.org and write and verify the PS2 hardware RTC. Uses the IP settings above; once the network runs, changes need a save and restart."},
 #endif
 #ifdef SMB
     {ST_PAGE, P_SMB, "SMB shares", "Add saved shares. smb:/ lists connected SMB2/3 shares; smb1:/ opens SMB1. Neither scans the network."},
