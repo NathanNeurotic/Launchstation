@@ -1308,7 +1308,7 @@ static int browseFilePath(char *out, int cnfmode, FILEINFO *files)
 								}
 							}
 						}
-						if (!clipReserve(nmarks > 0 ? browser_nfiles : 1)) {
+						if (!clipReserve(nmarks > 0 ? nmarks : 1)) {
 							strcpy(msg0, LNG(Failed));
 							browser_pushed = FALSE;
 							continue;
