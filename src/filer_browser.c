@@ -1964,9 +1964,18 @@ static int browseFilePath(char *out, int cnfmode, FILEINFO *files)
 			}
 			setScrTmp(msg0, msg1);
 			if (vfreeSpace) {
-				if (vfreeSpace == 2)
-					sprintf(tmp, LNG(Dashboard_PS1_Blocks_Free), (int)(freeSpace / 8192), 15);
-				else if (freeSpace >= 1024 * 1024)
+				if (vfreeSpace == 2) {
+					/* An external LNG file may override this format: use it
+					 * only if its sole conversions are the two %d. */
+					const char *f = LNG(Dashboard_PS1_Blocks_Free), *p = f;
+					int n = 0;
+
+					while (n < 3 && (p = strchr(p, '%')) != NULL) {
+						n = p[1] == 'd' ? n + 1 : 3;
+						p += p[1] ? 2 : 1;
+					}
+					snprintf(tmp, sizeof(tmp), n == 2 ? f : "[%d/%d blocks free]", (int)(freeSpace / 8192), 15);
+				} else if (freeSpace >= 1024 * 1024)
 					sprintf(tmp, "[%.1fMB %s]", (double)freeSpace / 1024 / 1024, LNG(free));
 				else if (freeSpace >= 1024)
 					sprintf(tmp, "[%.1fKB %s]", (double)freeSpace / 1024, LNG(free));

@@ -40,12 +40,23 @@ for branch in (hdd, dvr):
 # A PS1 card's free space is shown in its 15 blocks, as wLaunchELF_R3Z does,
 # in the classic header (translated) and in the dashboard browser.
 assert "return type == 1 ? 2 : 1;" in helper
-assert "if (vfreeSpace == 2)\n\t\t\t\t\tsprintf(tmp, LNG(Dashboard_PS1_Blocks_Free), (int)(freeSpace / 8192), 15);" in browser
+assert 'snprintf(tmp, sizeof(tmp), n == 2 ? f : "[%d/%d blocks free]", (int)(freeSpace / 8192), 15);' in browser
+# An override is used only when its sole conversions are two %d (no %n, %s, ...).
+check = browser[browser.index("if (vfreeSpace == 2) {"):browser.index('snprintf(tmp, sizeof(tmp), n == 2 ? f')]
+check = check[check.index("int n = 0;"):]
+harness_fmt = "#include <assert.h>\n#include <string.h>\nstatic int ok(const char *f){const char *p = f;\n" + check + "return n == 2;}\n"
+harness_fmt += r"""int main(void){
+ assert(ok("[%d/%d blocks free]") && ok("[Wolne bloki: %d/%d]"));
+ assert(!ok("[%d blocks]") && !ok("%d/%d/%d") && !ok("%n%d") && !ok("%d/%d %s") && !ok("%d/%d %") && !ok("%%d"));
+ return 0;}
+"""
 dash = (root / "src/dash_browser.c").read_text(encoding="utf-8")
 assert 'if (fb.free_valid == 2) /* PS1 card: 15 blocks of 8 KB */\n\t\t\tsnprintf(space, sizeof(space), "%d/15 blocks", (int)(fb.free_bytes / 8192));' in dash
 for lng in sorted((root / "Lang").glob("*.LNG")):
-    line = [l for l in lng.read_text(encoding="utf-8").splitlines() if "PS1_Blocks_Free" in l]
-    assert len(line) == 1 and line[0].startswith("lang(706, Dashboard_PS1_Blocks_Free, ") and line[0].count("%d") == 2 and line[0].count("%") == 2, lng
+    lines = [x for x in lng.read_text(encoding="utf-8").splitlines() if "PS1_Blocks_Free" in x]
+    assert len(lines) == 1, lng
+    assert lines[0].startswith("lang(706, Dashboard_PS1_Blocks_Free, "), lng
+    assert lines[0].count("%d") == 2 and lines[0].count("%") == 2, lng
 # A paste widens the fileXio transfer buffer only after its drivers are ready,
 # and every exit (including a failed one) narrows it back to the SDK default.
 init = (root / "src/init.c").read_text(encoding="utf-8")
@@ -89,6 +100,10 @@ int main(void){
 """
 cc = shutil.which("gcc") or shutil.which("cc")
 if not cc: raise SystemExit("Host C compiler required")
+with tempfile.TemporaryDirectory(prefix="ps1-blocks-fmt-") as folder:
+    c = Path(folder) / "f.c"; c.write_text(harness_fmt)
+    subprocess.run([cc, "-std=gnu99", "-Wall", "-Werror", str(c), "-o", str(Path(folder) / "f")], check=True)
+    subprocess.run([str(Path(folder) / "f")], check=True, timeout=10)
 with tempfile.TemporaryDirectory(prefix="filexio-wide-") as folder:
     c = Path(folder) / "t.c"; c.write_text(harness)
     subprocess.run([cc, "-std=gnu99", "-Wall", "-Werror", str(c), "-o", str(Path(folder) / "t")], check=True)
