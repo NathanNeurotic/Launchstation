@@ -123,6 +123,10 @@ def check_live_rows():
         block = src[src.index(guard):]
         block = block[:block.index("}")]
         assert "pollRootMemoryCardDevices();" in block and "dashDevicesRefreshMemoryCards(" in block, rel
+    # The Files tab gets input only on frames with a press: its update refreshes the rows.
+    browser = read("src/dash_browser.c")
+    tab = browser[browser.index("static void browserTabUpdate("):]
+    assert "browserRefreshRootCards();" in tab[:tab.index("}")]
     with tempfile.TemporaryDirectory() as tmp:
         c = pathlib.Path(tmp) / "h.c"
         c.write_text(HARNESS.replace("%FUNC%", func), encoding="utf-8")
