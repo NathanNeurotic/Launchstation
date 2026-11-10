@@ -189,7 +189,8 @@ static int BootDiscType,cdmode;static char SystemCnf_BOOT[MAX_PATH],SystemCnf_BO
 #define setupPowerOff() ((void)0)
 #define isPowerOffReady() 1
 #define closeAllAndPoweroff() ((void)0)
-#define hddManager() ((void)0)
+#define dashHddManager() ((void)0)
+#define hddManager() ((void)0) /* revisions before the classic screen was removed */
 #define TextEditor(p) 0
 #define getTextEditorReturnPath(p) ((void)0)
 #define Load_External_Language() ((void)0)

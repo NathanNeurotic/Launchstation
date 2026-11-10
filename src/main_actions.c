@@ -648,7 +648,8 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		closeAllAndPoweroff();
 		return;
 	} else if (!stricmp(path, setting->Misc_HddManager)) {
-		hddManager();
+		if (DashIsActive())
+			dashHddManager();
 		return;
 	} else if (!stricmp(path, setting->Misc_TextEditor)) {
 		t = TextEditor(NULL);
