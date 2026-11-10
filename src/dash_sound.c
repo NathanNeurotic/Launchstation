@@ -25,8 +25,6 @@ extern u8 sfx_transition_adp[];
 extern int size_sfx_transition_adp;
 extern u8 sfx_message_adp[];
 extern int size_sfx_message_adp;
-extern u8 sfx_boot_adp[];
-extern int size_sfx_boot_adp;
 extern u8 sfx_connect_adp[];
 extern int size_sfx_connect_adp;
 extern u8 sfx_disconnect_adp[];
