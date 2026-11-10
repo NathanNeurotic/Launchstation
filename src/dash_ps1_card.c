@@ -1,6 +1,6 @@
 //--------------------------------------------------------------
 //File name:   dash_ps1_card.c
-//"Card contents..." for PS1 card images (128 KB .mcd/.mcr/.vm1/.vmc/.bin,
+//"Card contents..." for PS1 card images (128 KB .mcd/.mcr/.vm1/.vmc/.bin/.srm,
 //as POPStarter, sd2psx/MMCE in PS1 mode and PC emulators use them, and the
 //DexDrive .gme, VGS .vgs/.mem, PSP/Vita .vmp and PocketStation iOS .mcx
 //containers): lists the saves, imports .mcs/.ps1/.mcb/.pda, PS1 .psv, .psx
@@ -80,17 +80,33 @@ static int p1Load(const char *path, uint8_t *raw, uint8_t *head)
 	return kind;
 }
 
+/* 1 when exactly n bytes were read, however the device splits them */
+static int p1ReadAll(int fd, uint8_t *b, uint32_t n)
+{
+	int r;
+
+	for (; n; b += r, n -= (uint32_t)r)
+		if ((r = genRead(fd, b, (int)n)) <= 0)
+			return 0;
+	return 1;
+}
+
 int dashPs1CardIsImage(const char *path)
 {
 	int fd = genOpen(path, FIO_O_RDONLY), ok;
-	uint8_t magic[16];
+	uint8_t head[128];
 	s64 size;
+	int i;
 
 	if (fd < 0)
 		return 0;
 	size = genLseek(fd, 0, SEEK_END);
 	ok = size >= (s64)PS1_CARD_SIZE && size <= (s64)PS1_CARD_FILE_MAX && genLseek(fd, 0, SEEK_SET) == 0 &&
-	     genRead(fd, magic, 16) == 16 && ps1CardKind(magic, (uint32_t)size) >= 0;
+	     p1ReadAll(fd, head, sizeof(head)) && ps1CardKind(head, (uint32_t)size) >= 0;
+	/* other cores' .srm saves can be 128 KB and start "MC" by chance: there
+	 * every directory frame must check too before the card is written */
+	for (i = 0; ok && genCmpFileExt(path, "SRM") && i <= PS1_BLOCKS; i++)
+		ok = (i == 0 || p1ReadAll(fd, head, sizeof(head))) && ps1FrameOk(head);
 	genClose(fd);
 	return ok;
 }
@@ -220,43 +236,56 @@ static int p1ReadFile(const char *path, uint8_t **out, uint32_t *len)
 	return 0;
 }
 
+/* Reads the PS1 save in file into *s (free with ps1SaveFree); 1 when read,
+ * 0 after telling why not. */
+static int p1ReadSave(const char *file, Ps1Save *s, int *fmt)
+{
+	uint8_t *buf;
+	uint32_t len;
+	int r = p1ReadFile(file, &buf, &len);
+
+	if (r < 0) {
+		dashModalMessage(DI_WARNING, "Not imported",
+		                 r == -2 ? "Too big or empty for a PS1 save." : "The file could not be read.", file);
+		return 0;
+	}
+	r = ps1SaveFromFile(buf, len, p1Base(file), s, fmt);
+	free(buf);
+	if (r != PS1_OK) {
+		dashModalMessage(DI_WARNING, "Not imported", ps1Error(r), file);
+		return 0;
+	}
+	return 1;
+}
+
+/* Writes s into card; 1 when it fits, 0 after telling why not. Frees s. */
+static int p1Put(uint8_t *card, Ps1Save *s, const char *file)
+{
+	int r = ps1CardWrite(card, s);
+
+	if (r != PS1_OK)
+		dashModalMessage(DI_WARNING, "Not imported", ps1Error(r), s->name[0] ? s->name : file);
+	ps1SaveFree(s);
+	return r == PS1_OK;
+}
+
 static void p1Import(const char *path)
 {
 	char dir[MAX_PATH], file[MAX_PATH], safety[MAX_PATH], msg[160];
 	const char *why = "";
-	uint8_t *buf;
-	uint32_t len;
 	Ps1Save s;
 	int r, fmt;
 
 	dashStrCopy(dir, path, sizeof(dir));
 	dir[p1Base(path) - path] = 0;
 	/* every file: raw saves have no extension, the reader decides by content */
-	if (!dashPickPath("Import which PS1 save?", dir, DASH_PICK_FILE, NULL, file, sizeof(file)))
+	if (!dashPickPath("Import which PS1 save?", dir, DASH_PICK_FILE, NULL, file, sizeof(file)) ||
+	    !p1ReadSave(file, &s, &fmt))
 		return;
-	r = p1ReadFile(file, &buf, &len);
-	if (r < 0) {
-		dashModalMessage(DI_WARNING, "Not imported",
-		                 r == -2 ? "Too big or empty for a PS1 save." : "The file could not be read.", file);
-		return;
-	}
-	r = ps1SaveFromFile(buf, len, p1Base(file), &s, &fmt);
-	free(buf);
-	if (r != PS1_OK) {
-		dashModalMessage(DI_WARNING, "Not imported", ps1Error(r), file);
-		return;
-	}
-	memcpy(p1_after, p1_before, PS1_CARD_SIZE);
-	r = ps1CardWrite(p1_after, &s);
-	if (r != PS1_OK) {
-		dashModalMessage(DI_WARNING, "Not imported", ps1Error(r), s.name[0] ? s.name : file);
-		ps1SaveFree(&s);
-		return;
-	}
 	snprintf(msg, sizeof(msg), "%s, %d block%s, from a %s. The card gets a safety copy first.", s.name, s.blocks,
 	         s.blocks == 1 ? "" : "s", ps1SaveFormatName(fmt));
-	ps1SaveFree(&s);
-	if (!dashModalConfirm("Import this save?", msg, "Import", 0))
+	memcpy(p1_after, p1_before, PS1_CARD_SIZE);
+	if (!p1Put(p1_after, &s, file) || !dashModalConfirm("Import this save?", msg, "Import", 0))
 		return;
 	dashLoadingBegin("Importing save");
 	r = p1Commit(path, p1_before, p1_after, safety, sizeof(safety), &why);
@@ -283,41 +312,42 @@ static int p1FreeName(char *dest, int size, const char *folder, const char *stem
 	return -1;
 }
 
-static void p1Export(const char *path, const Ps1CardSave *sv)
+static const char *const p1_fmts[] = {".mcs: PS1 single save", ".psv: PS3, signed", ".psx: Action Replay / GameShark",
+                                     "raw: the blocks alone, named after the save"};
+
+/* Writes s (freed here) into folder as format f of p1_fmts, named after the
+ * save, read back; done says where it went. 0 when written. */
+static int p1Out(const char *folder, Ps1Save *s, int f, const char *done)
 {
-	static const char *const fmts[] = {".mcs: PS1 single save", ".psv: PS3, signed", ".psx: Action Replay / GameShark",
-	                                   "raw: the blocks alone, named after the save"};
-	char dest[MAX_PATH], folder[MAX_PATH], safe[PS1_NAME_MAX + 1], stem[2 * PS1_NAME_MAX + 8];
+	char dest[MAX_PATH], safe[PS1_NAME_MAX + 1], stem[2 * PS1_NAME_MAX + 8];
 	uint8_t *buf = NULL;
 	uint32_t len = 0;
-	Ps1Save s;
-	int r, i, f, renamable;
+	int r, i, renamable;
 
-	f = dashModalChoice("Export as", fmts, 4, 0);
-	if (f < 0)
-		return;
-	r = ps1CardRead(p1_before, sv->first, &s);
-	if (r != PS1_OK) {
-		dashModalMessage(DI_WARNING, "Not exported", ps1Error(r), sv->name);
-		return;
-	}
 	/* build the file first: it refuses a name that is not plain ASCII (a card
 	 * can hold any bytes there), before any file name is made from it. A raw
 	 * save is the .psx without its 54-byte header. */
-	r = f == 0 ? ps1SaveToMcs(&s, &buf, &len) : f == 1 ? ps1SaveToPsv(&s, &buf, &len) : ps1SaveToPsx(&s, &buf, &len);
+	r = f == 0 ? ps1SaveToMcs(s, &buf, &len) : f == 1 ? ps1SaveToPsv(s, &buf, &len) : ps1SaveToPsx(s, &buf, &len);
 	if (r != PS1_OK) {
-		ps1SaveFree(&s);
-		dashModalMessage(DI_WARNING, "Not exported", ps1Error(r), sv->name);
-		return;
+		dashModalMessage(DI_WARNING, "Not exported", ps1Error(r), s->name);
+		ps1SaveFree(s);
+		return -1;
 	}
-	dashStrCopy(folder, path, sizeof(folder));
-	folder[p1Base(path) - path] = 0;
 	/* the name is printable ASCII now, but path separators, characters FAT
-	 * refuses and a leading dot become '_' so the file lands next to the card */
-	for (i = 0; s.name[i]; i++)
-		safe[i] = (strchr("/\\:*?\"<>|", s.name[i]) != NULL || (i == 0 && s.name[i] == '.')) ? '_' : s.name[i];
+	 * refuses and a leading dot become '_' so the file lands in folder */
+	for (i = 0; s->name[i]; i++)
+		safe[i] = (strchr("/\\:*?\"<>|", s->name[i]) != NULL || (i == 0 && s->name[i] == '.')) ? '_' : s->name[i];
 	safe[i] = 0;
-	ps1SaveFree(&s);
+	/* a raw save is named by its file name, read back without the last
+	 * dotted suffix (and FAT trims a trailing space): refuse what would
+	 * come back under another name, including a name changed just above */
+	if (f == 3 && (strcmp(safe, s->name) || strchr(safe, '.') != NULL || (i > 0 && safe[i - 1] == ' '))) {
+		free(buf);
+		dashModalMessage(DI_WARNING, "Not exported", "This save's name cannot be kept as raw. Use .mcs or .psx.", s->name);
+		ps1SaveFree(s);
+		return -1;
+	}
+	ps1SaveFree(s);
 	if (f == 1)
 		mcPsvFileName(stem, sizeof(stem), safe);
 	else
@@ -327,18 +357,82 @@ static void p1Export(const char *path, const Ps1CardSave *sv)
 	if (p1FreeName(dest, sizeof(dest), folder, stem, f == 0 ? ".mcs" : f == 2 ? ".psx" : "", renamable) < 0) {
 		free(buf);
 		dashModalMessage(DI_WARNING, "Not exported",
-		                 renamable ? "No free name next to the card." : "A file with this name is already next to the card.",
+		                 renamable ? "No free name in that folder." : "A file with this name is already in that folder.",
 		                 folder);
-		return;
+		return -1;
 	}
 	dashLoadingBegin("Exporting save");
 	r = f == 3 ? dashCardWriteVerified(dest, buf + 54, len - 54u) : dashCardWriteVerified(dest, buf, len);
 	dashLoadingEnd();
 	free(buf);
 	if (r == 0)
-		dashModalMessage(DI_MC, "Exported", "Written and read back. The card was not changed.", dest);
+		dashModalMessage(DI_MC, "Exported", done, dest);
 	else
 		dashModalMessage(DI_WARNING, "Not exported", "The file could not be written. The device may be full or read-only.", dest);
+	return r;
+}
+
+static void p1Export(const char *path, const Ps1CardSave *sv)
+{
+	char folder[MAX_PATH];
+	Ps1Save s;
+	int r, f;
+
+	f = dashModalChoice("Export as", p1_fmts, 4, 0);
+	if (f < 0)
+		return;
+	r = ps1CardRead(p1_before, sv->first, &s);
+	if (r != PS1_OK) {
+		dashModalMessage(DI_WARNING, "Not exported", ps1Error(r), sv->name);
+		return;
+	}
+	dashStrCopy(folder, path, sizeof(folder));
+	folder[p1Base(path) - path] = 0;
+	p1Out(folder, &s, f, "Written and read back. The card was not changed.");
+}
+
+/* "Convert to .mcs / .psv / .psx / raw" for one PS1 save file of any format
+ * Import save... reads, without a card image in between (wLaunchELF_R3Z's
+ * archive from a file). On a memory card (a real PS1 card in mc0:/mc1: lists
+ * each save as a raw file) the user picks the folder; elsewhere it goes next
+ * to the file. The source is only read. */
+void dashPs1SaveConvert(const char *path)
+{
+	char folder[MAX_PATH], hint[MAX_PATH];
+	uint8_t *buf;
+	uint32_t len;
+	Ps1Save s;
+	int r, f, fmt, on_card;
+
+	r = p1ReadFile(path, &buf, &len);
+	if (r < 0) {
+		dashModalMessage(DI_WARNING, "Not converted",
+		                 r == -2 ? "Too big or empty for a PS1 save." : "The file could not be read.", path);
+		return;
+	}
+	on_card = !strncmp(path, "mc", 2) || !strncmp(path, "vmc", 3);
+	/* a save on a card is named by its whole file name, dots included: the
+	 * reader drops everything from the last dot, so give it an empty one */
+	snprintf(hint, sizeof(hint), on_card ? "%s." : "%s", p1Base(path));
+	r = ps1SaveFromFile(buf, len, hint, &s, &fmt);
+	free(buf);
+	if (r != PS1_OK) {
+		dashModalMessage(DI_WARNING, "Not converted", ps1Error(r), path);
+		return;
+	}
+	f = dashModalChoice("Convert to", p1_fmts, 4, fmt == PS1F_MCS); /* a .mcs offers .psv first */
+	if (f < 0) {
+		ps1SaveFree(&s);
+		return;
+	}
+	if (!on_card) {
+		dashStrCopy(folder, path, sizeof(folder));
+		folder[p1Base(path) - path] = 0;
+	} else if (!dashPickPath("Write the PS1 save to", "mass:/", DASH_PICK_FOLDER, NULL, folder, sizeof(folder))) {
+		ps1SaveFree(&s);
+		return;
+	}
+	p1Out(folder, &s, f, "Written and read back. The original was not changed.");
 }
 
 static void p1Delete(const char *path, const Ps1CardSave *sv)
@@ -414,7 +508,7 @@ static int p1MakeNew(char *dest, int size, const char *folder, const char *stem,
 	return ok;
 }
 
-static const char *const p1_kinds[] = {".mcd: raw card (as .mcr .vm1 .vmc)", ".gme: DexDrive", ".vgs: Connectix VGS",
+static const char *const p1_kinds[] = {".mcd: raw card (as .mcr .vm1 .vmc .srm)", ".gme: DexDrive", ".vgs: Connectix VGS",
                                        ".vmp: PSP / Vita, signed", ".mcx: PocketStation for iOS"};
 
 /* The listed card, saved next to it in another (or the same) container. */
@@ -499,24 +593,30 @@ void dashPs1CardTool(const char *image)
 	}
 }
 
-/* A new, empty PS1 card: a plain image, the names POPStarter and Ember look
- * for, or one of the containers; then Card contents opens on it to import
- * saves. The fixed names are never given a -2 suffix. */
-void dashPs1CardNewBlank(const char *folder)
+/* A new PS1 card: a plain image, the names POPStarter and Ember look for,
+ * or one of the containers; then Card contents opens on it. Empty, or
+ * holding the n saves names[] in folder (wLaunchELF_R3Z's "Create archive"
+ * of several saves): each is read and placed in memory first, so a save
+ * that cannot be read or does not fit stops it before anything is written.
+ * The fixed names are never given a -2 suffix. */
+void dashPs1CardNew(const char *folder, const char *const *names, int n)
 {
-	static const char *const opts[] = {
-	    "Blank-PS1.mcd: raw card",    "SLOT0.VMC: POPStarter card 1", "SLOT1.VMC: POPStarter card 2",
-	    "MC1.vmc: Ember card 1",      "MC2.vmc: Ember card 2",        "Blank-PS1.VM1: PS3",
-	    "Blank-PS1.gme: DexDrive",    "Blank-PS1.vgs: Connectix VGS", "Blank-PS1.vmp: PSP / Vita",
-	    "Blank-PS1.mcx: PocketStation for iOS"};
-	static const char *const stems[] = {"Blank-PS1", "SLOT0", "SLOT1", "MC1", "MC2"};
+	static const char *const tails[] = {
+	    ".mcd: raw card",   "SLOT0.VMC: POPStarter card 1", "SLOT1.VMC: POPStarter card 2", "MC1.vmc: Ember card 1",
+	    "MC2.vmc: Ember card 2", ".VM1: PS3", ".gme: DexDrive", ".vgs: Connectix VGS", ".vmp: PSP / Vita",
+	    ".mcx: PocketStation for iOS"};
+	static const char *const stems[] = {NULL, "SLOT0", "SLOT1", "MC1", "MC2"};
 	static const char *const exts[] = {".mcd", ".VMC", ".VMC", ".vmc", ".vmc", ".VM1", ".gme", ".vgs", ".vmp", ".mcx"};
 	static const unsigned char kinds[] = {PS1C_RAW, PS1C_RAW, PS1C_RAW, PS1C_RAW, PS1C_RAW,
 	                                      PS1C_RAW, PS1C_GME, PS1C_VGS, PS1C_VMP, PS1C_MCX};
-	char dest[MAX_PATH], base[MAX_PATH];
+	const char *stem = n > 0 ? "PS1-Saves" : "Blank-PS1", *opts[10];
+	char dest[MAX_PATH], base[MAX_PATH], labels[10][40], msg[96];
 	size_t len;
-	int c;
+	int c, i, fmt;
+	Ps1Save s;
 
+	if (n < 0 || n > PS1_BLOCKS || (n > 0 && names == NULL))
+		return;
 	dashStrCopy(base, folder, sizeof(base));
 	len = strlen(base);
 	if (len == 0 || len + 2 >= sizeof(base))
@@ -525,16 +625,33 @@ void dashPs1CardNewBlank(const char *folder)
 		base[len] = '/';
 		base[len + 1] = 0;
 	}
-	c = dashModalChoice("New PS1 card", opts, 10, 0);
+	for (i = 0; i < 10; i++) {
+		snprintf(labels[i], sizeof(labels[i]), "%s%s", tails[i][0] == '.' ? stem : "", tails[i]);
+		opts[i] = labels[i];
+	}
+	c = dashModalChoice(n > 0 ? "PS1 card from these saves" : "New PS1 card", opts, 10, 0);
 	if (c < 0)
 		return;
-	if (!dashModalConfirm("Make a new PS1 card?", "An empty card is made, then opened to import saves. Nothing else is changed.",
+	ps1CardFormat(p1_after);
+	for (i = 0; i < n; i++) {
+		if (snprintf(dest, sizeof(dest), "%s%s", base, names[i]) >= (int)sizeof(dest)) {
+			dashModalMessage(DI_WARNING, "Not imported", "The path is too long.", names[i]);
+			return;
+		}
+		if (!p1ReadSave(dest, &s, &fmt) || !p1Put(p1_after, &s, dest))
+			return;
+	}
+	if (n > 0)
+		snprintf(msg, sizeof(msg), "%d save%s, %d of 15 blocks free. The saves themselves are not changed.", n,
+		         n == 1 ? "" : "s", ps1CardFreeBlocks(p1_after));
+	if (!dashModalConfirm("Make a new PS1 card?",
+	                      n > 0 ? msg : "An empty card is made, then opened to import saves. Nothing else is changed.",
 	                      "Make", 0))
 		return;
-	ps1CardFormat(p1_after);
-	if (!p1MakeNew(dest, sizeof(dest), base, c < 5 ? stems[c] : "Blank-PS1", exts[c], c == 0 || c >= 5, kinds[c],
+	if (!p1MakeNew(dest, sizeof(dest), base, c < 5 && stems[c] ? stems[c] : stem, exts[c], c == 0 || c >= 5, kinds[c],
 	               p1_after, NULL))
 		return;
-	dashToast(DASH_TOAST_OK, "PS1 card made and read back: 15 blocks free");
+	snprintf(msg, sizeof(msg), "PS1 card made and read back: %d of 15 blocks free", ps1CardFreeBlocks(p1_after));
+	dashToast(DASH_TOAST_OK, msg);
 	dashPs1CardTool(dest);
 }

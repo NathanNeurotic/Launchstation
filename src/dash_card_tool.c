@@ -381,7 +381,11 @@ static int ctSafetyOnce(const char *image, char *safety, int safety_size)
 	if (safety[0])
 		return 0;
 	dashLoadingStatus("Making a safety copy", 0, 1);
-	return ctSafetyCopy(image, safety, safety_size) < 0 ? -1 : 0;
+	if (ctSafetyCopy(image, safety, safety_size) < 0) {
+		safety[0] = 0; /* no copy: never report one, and the next write tries again */
+		return -1;
+	}
+	return 0;
 }
 
 /* Safety copy, write, close, then read the save back through a fresh open. */
@@ -648,6 +652,8 @@ static void ctExportPsu(const char *image, const char *name)
 
 static int ctStamp(uint8_t stamp[8]);
 
+static const char ct_ps1_psv[] = "This .psv holds a PS1 save. Open a PS1 card image with Card contents and use Import save... there.";
+
 /* What Import save... and Convert to .psu accept, for the picker: these
  * extensions, plus every file in a folder called MCM, where Blaze keeps its
  * saves without an extension (see pickExtOk). */
@@ -715,7 +721,7 @@ static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 		if (r == MCW_ERR_UNSUPPORTED && format == MCSF_PSV && size >= 0x40 &&
 		    (buf[0x3C] | buf[0x3D] << 8 | buf[0x3E] << 16 | (uint32_t)buf[0x3F] << 24) != 2u) {
 			free(buf);
-			*why = "This .psv holds a PS1 save. Open a PS1 card image with Card contents and use Import save... there.";
+			*why = ct_ps1_psv;
 			return r;
 		}
 		if (r == MCW_ERR_INVALID && format == MCSF_UNKNOWN) {
@@ -747,15 +753,21 @@ void dashCardConvertSave(const char *path)
 	int r, i, on_card, fmt, psv;
 	static const uint8_t no_stamp[8];
 
-	fmt = dashModalChoice("Convert to", ct_save_as, 4, genCmpFileExt(path, "PSU"));
-	if (fmt < 0)
+	r = ctLoadPsu(path, &s, &why); /* read first: a PS1 .psv is asked only its own formats */
+	if (r != MCW_OK && why == ct_ps1_psv) { /* same object ctLoadPsu set: compared by address */
+		dashPs1SaveConvert(path);
 		return;
-	psv = fmt == 1;
-	r = ctLoadPsu(path, &s, &why);
+	}
 	if (r != MCW_OK) {
 		dashModalMessage(DI_WARNING, "Not converted", why, path);
 		return;
 	}
+	fmt = dashModalChoice("Convert to", ct_save_as, 4, genCmpFileExt(path, "PSU"));
+	if (fmt < 0) {
+		mcCardFreeSave(&s);
+		return;
+	}
+	psv = fmt == 1;
 	memcpy(name, s.entry + 0x40, 32);
 	name[32] = 0;
 	on_card = strncmp(path, "mc", 2) == 0 || strncmp(path, "vmc", 3) == 0;
@@ -1336,7 +1348,7 @@ void dashCardNewBlank(const char *folder)
 	if (choice < 0)
 		return;
 	if (choice == CT_SIZES) {
-		dashPs1CardNewBlank(folder);
+		dashPs1CardNew(folder, NULL, 0);
 		return;
 	}
 	mb = 1 << choice;
@@ -1699,14 +1711,176 @@ static int ctAllSkippable(int r)
 	return r == MCW_ERR_EXISTS || r == MCW_ERR_FULL || r == MCW_ERR_UNSUPPORTED || r == MCW_ERR_NOT_FOUND;
 }
 
+/* wLaunchELF_R3Z's "Extract saves..." of a mixed set, into a card image:
+ * the n save files names[] in dir (any format Import save... reads, mixed)
+ * imported in one go. The card gets one verified safety copy before the
+ * first change; a file that is not a PS2 save, a name already on the card or
+ * a save that does not fit is skipped, and any other error stops it. */
+void dashCardImportMany(const char *dir, const char *const *names, int n)
+{
+	McSaveData s;
+	CardIo io;
+	char img[MAX_PATH], src[MAX_PATH], safety[MAX_PATH], body[640], first[64] = "";
+	const char *why, *first_why = NULL;
+	int i, r, c, done = 0, skipped = 0, failed = 0, left = 0, first_r = MCW_OK;
+
+	if (n <= 0 || names == NULL ||
+	    !dashPickPath("Import the saves into which card image?", dir, DASH_PICK_FILE, NULL, img, sizeof(img)))
+		return;
+	if (dashPs1CardIsImage(img)) {
+		dashModalMessage(DI_WARNING, "That is a PS1 card", "These are PS2 saves. Pick a PS2 card image.", img);
+		return;
+	}
+	if (!ctStacks(dir, img) || !ctWritable(img))
+		return;
+	r = ctOpen(&io, img, 1); /* opens read/write: a card that cannot be written is refused before anything is asked */
+	if (r == MCV_OK) {
+		if (ct_view.page_stride != 512u)
+			r = MCW_ERR_UNSUPPORTED; /* PCSX2 .ps2: read-only here */
+		ctClose(&io);
+	}
+	if (r != MCV_OK) {
+		dashModalMessage(DI_WARNING, "Cannot use this card", ctError(r), img);
+		return;
+	}
+	snprintf(body, sizeof(body),
+	         "%s gets one safety copy first. A file that is not a PS2 save, a save already there by name, or one that does not fit is skipped.",
+	         ctBaseName(img));
+	snprintf(src, sizeof(src), "Import %d save%s?", n, n == 1 ? "" : "s");
+	if (!dashModalConfirm(src, body, "Import", 0))
+		return;
+	safety[0] = 0;
+	dashLoadingBegin("Importing saves");
+	for (i = 0; i < n; i++) {
+		if (failed) {
+			left++;
+			continue;
+		}
+		dashLoadingStatus(names[i], done + skipped, n);
+		why = NULL;
+		if (snprintf(src, sizeof(src), "%s%s", dir, names[i]) >= (int)sizeof(src)) {
+			r = MCW_ERR_UNSUPPORTED;
+			why = "The path is too long.";
+		} else {
+			r = ctLoadPsu(src, &s, &why);
+			if (r == MCW_OK) {
+				r = ctPutSave(img, &s, safety, sizeof(safety));
+				mcCardFreeSave(&s);
+				why = r == MCV_ERR_IO && !safety[0] ? "Nothing was written: the card could not be read or its safety copy made." : NULL;
+			} else if (r != MCW_ERR_NOMEM && r != MCV_ERR_IO) {
+				r = MCW_ERR_UNSUPPORTED; /* not a save we read: skipped */
+			}
+		}
+		if (r == MCW_OK) {
+			done++;
+			continue;
+		}
+		if (!first[0]) {
+			dashStrCopy(first, names[i], sizeof(first));
+			first_r = r;
+			first_why = why;
+		}
+		if (ctAllSkippable(r))
+			skipped++;
+		else
+			failed++;
+	}
+	dashLoadingEnd();
+	if (done)
+		c = snprintf(body, sizeof(body), "%d save%s imported and verified.", done, done == 1 ? "" : "s");
+	else
+		c = snprintf(body, sizeof(body), "Nothing imported.");
+	if (skipped)
+		c += snprintf(body + c, sizeof(body) - c, " %d skipped.", skipped);
+	if (failed)
+		c += snprintf(body + c, sizeof(body) - c, " %d failed.", failed);
+	if (first[0])
+		c += snprintf(body + c, sizeof(body) - c, " First: %s: %s", first, first_why ? first_why : ctError(first_r));
+	if (left)
+		snprintf(body + c, sizeof(body) - c, " Stopped there; %d not tried.", left);
+	if (safety[0])
+		snprintf(src, sizeof(src), "Safety copy: %.1000s", safety);
+	dashModalMessage(failed || skipped ? DI_WARNING : DI_MC, failed ? "Not all done" : "Done", body,
+	                 safety[0] ? src : NULL);
+}
+
 /* The marked saves copied or moved to one card, or deleted. Every card gets
  * one verified safety copy before its first change in the batch, and the
  * batch stops at the first error that is not a plain refusal. 0 when it was
  * cancelled before anything was read or written. */
-static int ctAllBatch(const char *folder, const CtAnyCard *cards, int ncards, const CtAnySave *list, int n,
-                      const unsigned char *marks)
+/* Apollo's "export all / selected saves": each marked save as a new .psu or
+ * .psv in one folder. The cards are only read, so a save that fails is
+ * counted and the rest still go; a file already there is never replaced
+ * (the same save on two cards is exported once). */
+static void ctAllExport(const char *folder, const CtAnyCard *cards, const CtAnySave *list, int n,
+                        const unsigned char *marks, int nmarked)
 {
-	DashMenuItem items[3];
+	McSaveData s;
+	uint8_t *buf;
+	uint32_t len;
+	char out[MAX_PATH], dest[MAX_PATH], file[80], body[160], first[33] = "";
+	int fmt, i, r, done = 0, there = 0, failed = 0, first_r = MCW_OK, c;
+
+	fmt = dashModalChoice("Export as", ct_save_as, 2, 0);
+	if (fmt < 0 || !dashPickPath("Export the saves to", folder, DASH_PICK_FOLDER, NULL, out, sizeof(out)))
+		return;
+	for (i = 0; i < n && !marks[i]; i++)
+		;
+	if (i == n || !ctStacks(cards[list[i].card].path, out))
+		return;
+	snprintf(body, sizeof(body), "Each as a new %s. A file already there by name is kept, not replaced; the cards are only read.",
+	         fmt ? ".psv" : ".psu");
+	snprintf(file, sizeof(file), "Export %d save%s?", nmarked, nmarked == 1 ? "" : "s");
+	if (!dashModalConfirm(file, body, "Export", 0))
+		return;
+	dashLoadingBegin("Exporting saves");
+	for (i = 0; i < n; i++) {
+		if (!marks[i])
+			continue;
+		dashLoadingStatus(list[i].title, done + there + failed, nmarked);
+		if (fmt)
+			mcPsvFileName(file, sizeof(file), list[i].sv.name);
+		else
+			snprintf(file, sizeof(file), "%s.psu", list[i].sv.name);
+		r = snprintf(dest, sizeof(dest), "%s%s", out, file) >= (int)sizeof(dest) ? MCW_ERR_INVALID : MCW_OK;
+		if (r == MCW_OK && wleExists(dest)) {
+			there++;
+			continue;
+		}
+		buf = NULL;
+		if (r == MCW_OK)
+			r = ctReadSave(cards[list[i].card].path, list[i].sv.name, &s);
+		if (r == MCW_OK) {
+			r = ctSaveAs(&s, fmt, &buf, &len);
+			mcCardFreeSave(&s);
+		}
+		if (r == MCW_OK && ctWriteFileAs(dest, buf, len, 1) < 0) /* never over a file made since the check */
+			r = MCV_ERR_IO;
+		free(buf);
+		if (r == MCW_OK) {
+			done++;
+			continue;
+		}
+		if (!failed++) {
+			dashStrCopy(first, list[i].sv.name, sizeof(first));
+			first_r = r;
+		}
+	}
+	dashLoadingEnd();
+	c = snprintf(dest, sizeof(dest), "%d save%s written and verified.", done, done == 1 ? "" : "s");
+	if (there)
+		c += snprintf(dest + c, sizeof(dest) - c, " %d already there, kept.", there);
+	if (failed)
+		snprintf(dest + c, sizeof(dest) - c, " %d failed. First: %s: %s", failed, first, ctError(first_r));
+	dashModalMessage(failed ? DI_WARNING : DI_MC, failed ? "Not all exported" : "Exported", dest, out);
+}
+
+/* all: nothing was marked and marks[] stands for every save; only the
+ * export, which changes no card, is offered then. */
+static int ctAllBatch(const char *folder, const CtAnyCard *cards, int ncards, const CtAnySave *list, int n,
+                      const unsigned char *marks, int all)
+{
+	DashMenuItem items[4];
 	char(*safety)[MAX_PATH];
 	char dest[MAX_PATH], dsafety[MAX_PATH], body[640], title[48], first[33] = "", what[64];
 	const char *ro = NULL, *fail_safety = NULL, *step_safety = NULL;
@@ -1721,11 +1895,13 @@ static int ctAllBatch(const char *folder, const CtAnyCard *cards, int ncards, co
 			if (!cards[list[i].card].writable)
 				ro = "a marked save is on a PCSX2 .ps2 card, which is read-only here";
 		}
-	snprintf(title, sizeof(title), "%d marked save%s", nmarked, nmarked == 1 ? "" : "s");
+	snprintf(title, sizeof(title), all ? "All %d saves" : "%d marked save%s", nmarked, nmarked == 1 ? "" : "s");
+	if (all)
+		ro = "mark saves with Square first";
 	items[0].icon = DI_FILE;
 	items[0].label = "Copy to another card...";
-	items[0].detail = "verified; that card gets one safety copy first";
-	items[0].disabled = 0;
+	items[0].detail = all ? ro : "verified; that card gets one safety copy first";
+	items[0].disabled = all;
 	items[1].icon = DI_CLOSE;
 	items[1].label = "Move to another card...";
 	items[1].detail = ro ? ro : "each removed only after it verifies there";
@@ -1734,9 +1910,17 @@ static int ctAllBatch(const char *folder, const CtAnyCard *cards, int ncards, co
 	items[2].label = "Delete...";
 	items[2].detail = ro ? ro : "each card gets one safety copy first";
 	items[2].disabled = ro != NULL;
-	act = dashModalMenu(title, NULL, items, 3, 0);
+	items[3].icon = DI_MC;
+	items[3].label = "Export as .psu or .psv...";
+	items[3].detail = "into one folder; the cards are only read";
+	items[3].disabled = 0;
+	act = dashModalMenu(title, NULL, items, 4, all ? 3 : 0);
 	if (act < 0 || items[act].disabled)
 		return 0;
+	if (act == 3) {
+		ctAllExport(folder, cards, list, n, marks, nmarked);
+		return 0; /* no card changed */
+	}
 	move = act == 1;
 
 	dest[0] = 0;
@@ -1928,9 +2112,9 @@ void dashCardAllSaves(const char *folder)
 			for (i = 1, nm = 0; i <= n; i++)
 				nm += marks[i] == 1;
 			if (nm)
-				snprintf(marked, sizeof(marked), "%d marked: copy, move or delete them", nm);
+				snprintf(marked, sizeof(marked), "%d marked: copy, move, delete or export", nm);
 			else
-				snprintf(marked, sizeof(marked), "mark saves with Square first");
+				snprintf(marked, sizeof(marked), "none marked: export all, or mark with Square");
 			dashModalSetMarks(marks);
 			r = dashModalMenu("All saves", subtitle, items, n + 1, sel);
 			if (r < 0)
@@ -1939,11 +2123,14 @@ void dashCardAllSaves(const char *folder)
 			for (i = 1, nm = 0; i <= n; i++) /* marks change inside the menu */
 				nm += marks[i] == 1;
 			if (r == 0) {
-				if (nm == 0) {
-					dashToast(DASH_TOAST_INFO, "Mark saves with Square first");
-					continue;
-				}
-				if (ctAllBatch(dir, cards, ncards, list, n, marks + 1))
+				int all = nm == 0, changed;
+
+				if (all)
+					memset(marks + 1, 1, (size_t)n);
+				changed = ctAllBatch(dir, cards, ncards, list, n, marks + 1, all);
+				if (all)
+					memset(marks + 1, 0, (size_t)n);
+				if (changed)
 					break;
 				continue;
 			}

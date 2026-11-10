@@ -22,3 +22,14 @@ Local VMC changes include:
 - Add targeted diagnostics around mount, mkdir, create-file, and backing
   read/write paths.
 - Register a startup marker: `vmcman: wLaunchELF patched VMC build active`.
+
+## Physical memory cards (`mcman_physical`)
+
+The same sources, built with the SDK's own flags (`BUILDING_XMCMAN` only, no
+`BUILDING_VMCMAN`), are embedded as the physical `mcman` in place of the SDK's
+prebuilt one. The exported library stays `mcman` 2.3, so MCSERV and the load
+order are unchanged. The one behaviour change: a PS1 card that stays powered
+across an IOP reset reports no new insertion, while this driver's geometry and
+directory cache were discarded. Detection now reads the card's header and
+directory again whenever the cached state is unknown or belongs to a PS2 card.
+From saildot4k/Launchstation 9372a47.

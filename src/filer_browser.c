@@ -1964,7 +1964,18 @@ static int browseFilePath(char *out, int cnfmode, FILEINFO *files)
 			}
 			setScrTmp(msg0, msg1);
 			if (vfreeSpace) {
-				if (freeSpace >= 1024 * 1024)
+				if (vfreeSpace == 2) {
+					/* An external LNG file may override this format: use it
+					 * only if its sole conversions are the two %d. */
+					const char *f = LNG(Dashboard_PS1_Blocks_Free), *p = f;
+					int n = 0;
+
+					while (n < 3 && (p = strchr(p, '%')) != NULL) {
+						n = p[1] == 'd' ? n + 1 : 3;
+						p += p[1] ? 2 : 1;
+					}
+					snprintf(tmp, sizeof(tmp), n == 2 ? f : "[%d/%d blocks free]", (int)(freeSpace / 8192), 15);
+				} else if (freeSpace >= 1024 * 1024)
 					sprintf(tmp, "[%.1fMB %s]", (double)freeSpace / 1024 / 1024, LNG(free));
 				else if (freeSpace >= 1024)
 					sprintf(tmp, "[%.1fKB %s]", (double)freeSpace / 1024, LNG(free));
@@ -2434,7 +2445,7 @@ int filerCreateFolderIcon(const char *path, const char *title, const char *text,
 /* Free space of the device holding `path`, as the classic browser header
  * shows it (memory cards, xfrom, HDD partitions). Call right after reading
  * the folder: for the HDD it asks the partition that read mounted.
- * 1 = *out is valid. */
+ * Nonzero = *out is valid; 2 = a PS1 card (15 blocks of 8 KB). */
 int filerFreeSpace(const char *path, u64 *out)
 {
 	int type = 0, free_units = 0, ret;
@@ -2446,7 +2457,7 @@ int filerFreeSpace(const char *path, u64 *out)
 		if (ret < -1)
 			return 0;
 		*out = (u64)free_units * ((type == 1) ? 8192 : 1024);
-		return 1;
+		return type == 1 ? 2 : 1; /* 2: PS1 card, shown in blocks */
 	}
 #ifdef XFROM
 	if (!strncmp(path, "xfrom", 5)) {

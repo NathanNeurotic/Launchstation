@@ -83,6 +83,10 @@ typedef struct {
 /* 1 when buf/len is a raw PS1 card image ("MC" frame, 128 KB). */
 int ps1CardIs(const uint8_t *buf, uint32_t len);
 
+/* 1 when a 128-byte header or directory frame carries its XOR check byte,
+ * as every frame of a formatted card does. */
+int ps1FrameOk(const uint8_t *frame);
+
 /* An empty, formatted card in card (PS1_CARD_SIZE bytes). */
 void ps1CardFormat(uint8_t *card);
 

@@ -111,7 +111,7 @@ IMPORT_BIN2C(cdvd_irx);
 IMPORT_BIN2C(xparam_irx);
 IMPORT_BIN2C(ps2kbd_irx);
 IMPORT_BIN2C(hdl_info_irx);
-IMPORT_BIN2C(mcman_irx);
+IMPORT_BIN2C(mcman_physical_irx);
 IMPORT_BIN2C(mcserv_irx);
 IMPORT_BIN2C(allowdvdv_irx);
 
@@ -1233,7 +1233,7 @@ static void loadBasicModules(void)
 	DPRINTF("Hello from EE SIO!\n");
 #endif
 
-	id = SifExecModuleBuffer(mcman_irx, size_mcman_irx, 0, NULL, &ret);  //Home
+	id = SifExecModuleBuffer(mcman_physical_irx, size_mcman_physical_irx, 0, NULL, &ret);  //Home
 	DPRINTF(" [MCMAN]: id=%d ret=%d\n", id, ret);
 	//SifLoadModule("rom0:MCMAN", 0, NULL); //Sony
 	id = SifExecModuleBuffer(mcserv_irx, size_mcserv_irx, 0, NULL, &ret);  //Home
@@ -1287,13 +1287,19 @@ void ensureCoreIoStackReady(void)
 	}
 
 	if (!have_mc_rpc_ready) {
-		DPRINTF("Initializing mc rpc\n");
+		int ret;
+
+		/* A failed attempt is not latched: the next card access retries.
+		 * mcInit refuses to rebind a client that is already bound, so drop
+		 * any EE-side binding first (no IOP call; no poll runs while unready). */
+		mcReset();
 #ifdef HOMEBREW_SIO2MAN
-		mcInit(MC_TYPE_XMC);
+		ret = mcInit(MC_TYPE_XMC);
 #else
-		mcInit(MC_TYPE_MC);
+		ret = mcInit(MC_TYPE_MC);
 #endif
-		have_mc_rpc_ready = 1;
+		DPRINTF("Initializing mc rpc: %d\n", ret);
+		have_mc_rpc_ready = ret >= 0;
 	}
 
 	load_vmcman_module();
@@ -2060,7 +2066,7 @@ int prepareEmberUsbHandoffIop(const char *ember_path, const char *game_image,
 	if (!emberStartIrx("IOMANX", iomanx_irx, size_iomanx_irx) ||
 	    !emberStartIrx("FILEXIO", filexio_irx, size_filexio_irx) ||
 	    !emberStartSio2man() ||
-	    !emberStartIrx("MCMAN", mcman_irx, size_mcman_irx) ||
+	    !emberStartIrx("MCMAN", mcman_physical_irx, size_mcman_physical_irx) ||
 	    !emberStartIrx("MCSERV", mcserv_irx, size_mcserv_irx))
 		return 0;
 #ifdef EXFAT
@@ -2201,6 +2207,11 @@ void rebootIopAndReloadCoreStack(void)
 void rebootIopAndReloadCoreStackSilent(void)
 {
 	resetRuntimeDeviceState(FALSE);
+}
+
+int isMemoryCardRpcReady(void)
+{
+	return have_mc_rpc_ready;
 }
 
 void ensureMemoryCardPortAccessible(int port)

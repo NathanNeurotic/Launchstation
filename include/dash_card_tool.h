@@ -19,7 +19,11 @@ void dashCardNewBlank(const char *folder);
  * opens PS1 images here by itself. */
 int dashPs1CardIsImage(const char *path);
 void dashPs1CardTool(const char *image);
-void dashPs1CardNewBlank(const char *folder);
+/* A new PS1 card, empty (n = 0) or holding the n saves names[] in folder. */
+void dashPs1CardNew(const char *folder, const char *const *names, int n);
+/* One PS1 save file (.mcs, PS1 .psv, .psx or raw, also a save on a real PS1
+ * card) written as another of those formats; the source is only read. */
+void dashPs1SaveConvert(const char *path);
 
 /* Shared with dash_ps1_card.c: a verified safety copy of an image whose
  * current bytes are in buf, and a new file written and read back (both 0 on
@@ -45,6 +49,11 @@ void dashCardSaveLibrary(const char *folder);
  * user picks when the source is on a memory card, read back and checked. The
  * source is only read. */
 void dashCardConvertSave(const char *path);
+
+/* Import the n save files names[] in dir (dir ends in '/' or ':') into a PS2
+ * card image the user picks, with one safety copy of that card first. The
+ * files may mix any formats Import save... reads. */
+void dashCardImportMany(const char *dir, const char *const *names, int n);
 
 /* MMCE: show which card image the device serves (confirmed by content), and
  * switch to a numbered card with confirmation (src/mmce_card_switch.c). */

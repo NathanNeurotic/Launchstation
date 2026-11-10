@@ -1068,10 +1068,16 @@ int mcman_probePS1Card2(int port, int slot)
 		return -12;
 
 	if (mcman_sio2outbufs_PS1PDA[1] == 0) {
-		if (mcdi->cardform > 0)
-			return sceMcResSucceed;
-		else if (mcdi->cardform < 0)
-			return sceMcResNoFormat;
+		if (mcdi->cardtype == sceMcTypePS1 || mcdi->cardtype == sceMcTypePDA) {
+			if (mcdi->cardform > 0)
+				return sceMcResSucceed;
+			if (mcdi->cardform < 0)
+				return sceMcResNoFormat;
+		}
+		/* A PS1 card stays powered across an IOP reset, but this driver's
+		 * geometry and directory cache do not: rebuild them even though the
+		 * card reports no new insertion. */
+		return mcman_probePS1Card(port, slot);
 	}
 	else if (mcman_sio2outbufs_PS1PDA[1] != 8) {
 		return -14;
@@ -1128,10 +1134,18 @@ int mcman_probePS1Card(int port, int slot)
 		return -11;
 
 	if (mcman_sio2outbufs_PS1PDA[1] == 0) {
-		if (mcdi->cardform != 0)
-			return sceMcResSucceed;
-		else
-			return sceMcResNoFormat;
+		if (mcdi->cardtype == sceMcTypePS1 || mcdi->cardtype == sceMcTypePDA) {
+			if (mcdi->cardform > 0)
+				return sceMcResSucceed;
+			if (mcdi->cardform < 0)
+				return sceMcResNoFormat;
+		}
+		/* Unknown after a reset (or cached as a PS2 card): read the header
+		 * and directory again, without another insertion-acknowledge write. */
+		mcman_invhandles(port, slot);
+		mcman_clearcache(port, slot);
+		r = mcman_setPS1devinfos(port, slot);
+		return r == sceMcResSucceed ? sceMcResChangedCard : r;
 	}
 	else if (mcman_sio2outbufs_PS1PDA[1] != 8) {
 		return -12;
