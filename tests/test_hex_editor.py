@@ -229,20 +229,20 @@ int main(int argc, char **argv)
 	snprintf(path, sizeof(path), "%s/kbd.bin", argv[1]);
 	put(path, data, 16);
 	settings.usbkbd_used = 1;
-	kbd_keys = "4a"; kbd_at = 1;
+	kbd_keys = "4a56"; kbd_at = 1; /* the low nibble moves on: 0x4A then 0x56 */
 	{
 		static const unsigned k[] = {DASH_IN_DOWN, DASH_IN_MENU, DASH_IN_MENU, 0};
 		static const int a[] = {0, 2};
 		run(path, k, a);
 	}
-	assert(get(path, back, sizeof(back)) == 16 && back[0] == 0x4A && !memcmp(back + 1, data + 1, 15));
+	assert(get(path, back, sizeof(back)) == 16 && back[0] == 0x4A && back[1] == 0x56 && !memcmp(back + 2, data + 2, 14));
 	kbd_keys = "\x1b\x29"; kbd_at = 2;
 	{
 		static const unsigned k[] = {DASH_IN_OK, DASH_IN_UP, DASH_IN_OK, DASH_IN_MENU, DASH_IN_MENU, 0};
 		static const int a[] = {0, 2};
 		run(path, k, a);
 	}
-	assert(get(path, back, sizeof(back)) == 16 && back[0] == 0x4A && back[1] == 2 && back[2] == 2);
+	assert(get(path, back, sizeof(back)) == 16 && back[0] == 0x4A && back[1] == 0x57 && back[2] == 2);
 	/* at the last byte, typing stays there: "1234" leaves 0x34 */
 	kbd_keys = "1234"; kbd_at = 2;
 	{
@@ -250,7 +250,7 @@ int main(int argc, char **argv)
 		static const int a[] = {0, 2};
 		run(path, k, a);
 	}
-	assert(get(path, back, sizeof(back)) == 16 && back[15] == 0x34 && back[14] == 14 && back[1] == 2);
+	assert(get(path, back, sizeof(back)) == 16 && back[15] == 0x34 && back[14] == 14 && back[1] == 0x57);
 	settings.usbkbd_used = 0; kbd_keys = NULL; kbd_at = -1;
 
 	/* a system folder save asks first; No writes nothing */
