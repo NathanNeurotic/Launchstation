@@ -195,7 +195,8 @@ static int full(const char *dir1, const char *dir2)
               !listed("/A/new", "big.bin"),
           "rename within a share");
     CHECK(OPS->rename(NULL, "/A/new/moved.bin", "/Second/moved.bin") == -EINVAL, "rename across shares: -EINVAL");
-    CHECK(OPS->rmdir(NULL, "/A/new") == -ENOTEMPTY, "rmdir of a full folder: -ENOTEMPTY");
+    r = OPS->rmdir(NULL, "/A/new");
+    CHECK(r == -ENOTEMPTY && listed("/A/new", "moved.bin"), "rmdir of a full folder: -ENOTEMPTY (%d), nothing removed", r);
     CHECK(OPS->remove(NULL, "/A/new/moved.bin") == 0 && OPS->rmdir(NULL, "/A/new") == 0, "remove, rmdir");
     CHECK(OPS->getstat(NULL, "/A/new", &st) == -ENOENT, "gone: -ENOENT");
 

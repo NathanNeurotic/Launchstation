@@ -1357,11 +1357,16 @@ static int smb2man_mkdir(iop_file_t *f, const char *dirname, int mode)
     return rv;
 }
 
-// rmdir and remove: DELETE_ON_CLOSE on a directory or a file.
+/*
+  rmdir and remove: DELETE_ON_CLOSE on a directory or a file. A server takes DELETE_ON_CLOSE on a
+  folder that is not empty and then keeps the folder at CLOSE without an error (Samba does), so
+  an rmdir is checked: a folder still there is -ENOTEMPTY, never a success.
+*/
 static int smb2man_delete(const char *name, int dir)
 {
     char path[MAX_PATH_LEN];
     const char *rest;
+    uint8_t st[56];
     int s, rv;
 
     s = smb2man_lock_path(name, &rest, NULL);
@@ -1372,6 +1377,8 @@ static int smb2man_delete(const char *name, int dir)
     if (rv == 0 && (dir ? usmb2_rmdir(shares[s].u, path) : usmb2_unlink(shares[s].u, path)) != 0) {
         rv = smb2man_errno(shares[s].u, -EIO);
         smb2man_check_session(s);
+    } else if (rv == 0 && dir && usmb2_stat(shares[s].u, path, st) == 0) {
+        rv = -ENOTEMPTY;
     }
 
     UNLOCK();

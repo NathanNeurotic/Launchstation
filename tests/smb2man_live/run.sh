@@ -85,7 +85,7 @@ start_smbd() {
     fi
     smbd -s "$conf" -D || { echo "smbd did not start"; exit 1; }
     i=0
-    until smbclient -s "$conf" -p "$port" //127.0.0.1/PS2SMB -U ps2%secret -m SMB2 -c ls >/dev/null 2>&1; do
+    until smbclient -s "$conf" -p "$port" //127.0.0.1/PS2SMB -U ps2%secret -m SMB3 -c ls >/dev/null 2>&1; do
         i=$((i + 1))
         [ $i -lt 50 ] || { echo "smbd did not come up"; tail -20 "$work/run/log.smbd" 2>/dev/null; exit 1; }
         sleep 0.2
