@@ -391,6 +391,11 @@ _c = bytearray(make_cbs(FOLDER, FILES, dirmode=0))
 struct.pack_into("<L", _c, 0x48, MODE_DIR & ~1)
 (tmp / "m48.cbs").write_bytes(bytes(_c))
 check(conv(tmp / "m48.cbs")[1], FOLDER, FILES, dir_mode=MODE_DIR & ~1)
+# 0x48 empty: the mode comes from 0x4C, as before
+_c = make_cbs(FOLDER, FILES, dirmode=MODE_DIR & ~1)
+assert struct.unpack_from("<L", _c, 0x48)[0] == 0 and struct.unpack_from("<L", _c, 0x4C)[0] == MODE_DIR & ~1
+(tmp / "m4c.cbs").write_bytes(_c)
+check(conv(tmp / "m4c.cbs")[1], FOLDER, FILES, dir_mode=MODE_DIR & ~1)
 
 
 # ---------------------------------------------------------------- writing .cbs
