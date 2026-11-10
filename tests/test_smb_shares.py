@@ -121,6 +121,7 @@ int main(void)
     assert(parse("NAME = A\nURL = SMB://10.0.0.2/share/sub\n") == 1); /* smb2man ignores the rest */
     assert(share(0)->port == 445 && !strcmp(share(0)->share, "share"));
     expectProblem("NAME = A\nURL = smb://nas.local/share\n", "IP address"); /* no DNS in smb2man */
+    expectProblem("NAME = A\nURL = smb://192.168.001.010/share\n", "IP address"); /* inet_addr: octal */
     expectProblem("NAME = A\nURL = smb://10.0.0.2:0/share\n", "port is 0");
 
     /* VERSION */

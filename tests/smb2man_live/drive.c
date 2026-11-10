@@ -170,6 +170,12 @@ static int full(const char *dir1, const char *dir2)
     CHECK(put("/A/new/big.bin", big, sizeof(big)) == (int)sizeof(big), "write 300 KB (several 64 KB WRITEs)");
     snprintf(path, sizeof(path), "%s/new/big.bin", dir1);
     CHECK(stat(path, &hs) == 0 && hs.st_size == (off_t)sizeof(big), "the server has all of it");
+    memset(&f, 0, sizeof(f));
+    CHECK(put("/A/new/app.txt", (const unsigned char *)"abc", 3) == 3 &&
+              OPS->open(&f, "/A/new/app.txt", FIO_O_WRONLY | FIO_O_APPEND, 0) >= 0 && OPS->write(&f, "def", 3) == 3 &&
+              OPS->close(&f) == 0 && get("/A/new/app.txt", back, sizeof(back)) == 6 && !memcmp(back, "abcdef", 6) &&
+              OPS->remove(NULL, "/A/new/app.txt") == 0,
+          "FIO_O_APPEND writes after what is there");
     memset(back, 0, sizeof(back));
     CHECK(get("/G/new/big.bin", back, sizeof(back)) == (int)sizeof(big) && !memcmp(back, big, sizeof(big)),
           "read it back through the guest share, short count at the end of the file");
@@ -286,8 +292,8 @@ static int full(const char *dir1, const char *dir2)
     // ---- disconnect -----------------------------------------------------------------------------
     memset(&f, 0, sizeof(f));
     memset(&d, 0, sizeof(d));
-    OPS->open(&f, "/S5/DVD/TEST.iso", FIO_O_RDONLY, 0);
-    OPS->dopen(&d, "/S5/DVD");
+    CHECK(OPS->open(&f, "/S5/DVD/TEST.iso", FIO_O_RDONLY, 0) >= 0 && OPS->dopen(&d, "/S5/DVD") == 0,
+          "a file and a folder open on S5");
     CHECK(OPS->devctl(NULL, "", SMB2_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0) == 0 && list("/", names, 16) == 0,
           "DISCONNECT_ALL: the root is empty");
     CHECK(OPS->read(&f, back, 1) == -EBADF && OPS->dread(&d, (iox_dirent_t *)back) == -EBADF && OPS->close(&f) == -EBADF,
@@ -317,12 +323,15 @@ int main(int argc, char **argv)
     if (!strcmp(argv[1], "full")) {
         full(argv[5], argv[6]);
     } else if (!strncmp(argv[1], "dialect=", 8)) {
-        unsigned want = (unsigned)strtoul(argv[1] + 8, NULL, 16);
+        char *end;
+        unsigned want = (unsigned)strtoul(argv[1] + 8, &end, 16);
+        int want_signed = (*end == ',') ? atoi(end + 1) : -1; // 1 signed, 0 not, -1 either
         r = connect_url("A", "PS2SMB");
         CHECK(r == 0, "connect (%d)", r);
         if (r == 0) {
-            CHECK(shares[0].dialect == want, "dialect 0x%04x (want 0x%04x), signing %s", shares[0].dialect, want,
-                  shares[0].u->signing ? "on" : "off");
+            CHECK(shares[0].dialect == want && (want_signed < 0 || !!shares[0].u->signing == want_signed),
+                  "dialect 0x%04x (want 0x%04x), signing %s (want %d)", shares[0].dialect, want,
+                  shares[0].u->signing ? "on" : "off", want_signed);
             CHECK(put("/A/dialect.txt", (const unsigned char *)"signed?", 7) == 7 &&
                       get("/A/dialect.txt", buf, sizeof(buf)) == 7 && !memcmp(buf, "signed?", 7) &&
                       OPS->remove(NULL, "/A/dialect.txt") == 0,

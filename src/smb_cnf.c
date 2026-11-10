@@ -119,7 +119,8 @@ static int isIpv4(const char *s)
 			if (++digits > 3)
 				return 0;
 		}
-		if (digits == 0 || value > 255)
+		/* 010 would reach the drivers' inet_addr as octal 8: another host */
+		if (digits == 0 || value > 255 || (digits > 1 && s[-digits] == '0'))
 			return 0;
 		parts++;
 		if (parts < 4) {

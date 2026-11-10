@@ -272,6 +272,7 @@ static const char *smb2Problem(int ret)
 		case SMB2_CONNECT_ERR_LOGON: return "User name or password refused";
 		case SMB2_CONNECT_ERR_SHARE: return "Share refused or not found";
 		case SMB2_CONNECT_ERR_FULL: return "Too many shares connected";
+		case SMB2_CONNECT_ERR_MEMORY: return "Not enough IOP memory for the share";
 		default: return "Could not connect";
 	}
 }

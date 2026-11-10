@@ -813,7 +813,7 @@ static int smb2man_open(iop_file_t *f, const char *filename, int flags, int mode
     memcpy(file->fid, fid, 16);
     free(fid);
     file->size = rd64(&u->buf[48]); // EndOfFile in the CREATE reply
-    file->pos = 0;
+    file->pos = (flags & FIO_O_APPEND) ? file->size : 0;
     file->writable = writable;
     file->share = s;
     file->gen = (file->gen + 1) & SMB2MAN_GEN_MASK;

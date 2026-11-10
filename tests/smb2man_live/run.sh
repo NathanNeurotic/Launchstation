@@ -139,20 +139,20 @@ write_conf auto ""
 printf 'secret\nsecret\n' | smbpasswd -c "$conf" -s -a ps2 >/dev/null
 start_smbd
 run "every case, signing negotiable (2.1)" drive full
-run "dialect 2.1, signing not required (unsigned)" drive dialect=0210
+run "dialect 2.1, signing not required (unsigned)" drive dialect=0210,0
 
 write_conf mandatory ""
 start_smbd
-run "signing mandatory on 2.1: requests signed, every reply verified" drive dialect=0210
+run "signing mandatory on 2.1: requests signed, every reply verified" drive dialect=0210,1
 
 write_conf auto "server max protocol = SMB2_02"
 start_smbd
-run "server capped at 2.0.2" drive dialect=0202
+run "server capped at 2.0.2" drive dialect=0202,0
 
 write_conf auto "server min protocol = SMB3_00
    server max protocol = SMB3_02"
 start_smbd
-run "SMB 3.0 and up: 3.0.2" drive dialect=0302
+run "SMB 3.0 and up: 3.0.2" drive dialect=0302,0
 
 write_conf mandatory "server min protocol = SMB3_00
    server max protocol = SMB3_02"
