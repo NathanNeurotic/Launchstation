@@ -6,7 +6,7 @@ This guide reflects the code on `master`: the four visible tabs in `src/dash_mai
 | --- | --- | --- |
 | **Home** | Continue (pinned, recent, favorites), nested Applications library (Grid/List/Carousel), Last folder and configured launch-key shortcuts | `src/dash_home.c`, `src/dash_apps.c` |
 | **Files** | Direct persistent File Browser, remembered folder and selection across tabs; device roots | `src/dash_browser.c`, `src/dash_files.c`, `src/dash_devices.c` |
-| **Tools** | File Browser shortcut to Files, Text Editor, Start disc, PS1/PS2 image shortcuts, MISC commands, USB unit diagnostics, HDD Manager, memory card exploit installer, OPL IGR setup, PS2 browser, OSDSYS, FTP / Remote access, Google Drive backups, system and build information, Reboot IOP, Power off | `src/dash_tools.c` |
+| **Tools** | File Browser shortcut to Files, Text Editor (and a Hex Editor on any file from the File Browser), Start disc, PS1/PS2 image shortcuts, MISC commands, USB unit diagnostics, HDD Manager, memory card exploit installer, OPL IGR setup, PS2 browser, OSDSYS, FTP / Remote access, Google Drive backups, system and build information, Reboot IOP, Power off | `src/dash_tools.c` |
 | **Settings** | Appearance, Home & applications, Sound, Input, Launching, Storage & devices (with MMCE backups), Network, System | `src/dash_settings.c` |
 
 L1/R1 switches tabs; START opens the Dashboard menu from native screens. SELECT changes Grid/List/Carousel in Home's Applications library. Lists wrap around, and page jumps stop at the boundaries before wrapping.

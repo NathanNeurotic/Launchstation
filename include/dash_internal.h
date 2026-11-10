@@ -1054,6 +1054,8 @@ void dashPopSceneOverride(void);
  * file does not exist yet (e.g. an application's .arg sidecar). */
 int dashTextEditor(const char *path);
 int dashTextEditorEx(const char *path, int create_if_missing);
+/* Hex Editor (dash_editor.c): overwrite bytes of a file up to 512 KB; saves are read back and compared. */
+void dashHexEditor(const char *path);
 float dashTime(void);
 /* Visual-only tick, once before each dashboard/modal frame. No input or IO. */
 float dashVisualUpdate(void);
