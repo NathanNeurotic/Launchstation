@@ -949,6 +949,14 @@ assert kind(lines, "CONFIRM|Import this save?|BASLUS-00001PS1, 2 blocks, from a 
 assert kind(lines, "TOAST|1|Save imported and verified"), lines
 assert host("mass:/WLE-Safety/Blank-PS1-0001.mcd").read_bytes() == empty
 assert "|T:PS1 game~BASLUS-00001PS1, 2 blocks" in kind(lines, "MENU|Blank-PS1.mcd|PS1 card: 1 save, 13 of 15 blocks free")[0], lines
+# a save imports into a RetroArch .srm too: safety copy of the old bytes, then it reopens with the save
+host("mass:/ra.srm").write_bytes(empty)
+lines = run("mass:/ra.srm", "m0", "pmass:/in.mcs", "c1", "m-1")
+assert kind(lines, "TOAST|1|Save imported and verified"), lines
+assert host("mass:/WLE-Safety/ra-0001.mcd").read_bytes() == empty     # same raw card, .mcd name
+assert host("mass:/ra.srm").stat().st_size == 131072
+assert "|T:PS1 game~BASLUS-00001PS1, 2 blocks" in kind(run("mass:/ra.srm"), "MENU|ra.srm|PS1 card: 1 save, 13 of 15 blocks free")[0]
+host("mass:/ra.srm").unlink(); host("mass:/WLE-Safety/ra-0001.mcd").unlink()
 # the same name again is refused before any safety copy
 before = sha(P1)
 lines = run(P1, "m0", "pmass:/in.mcs", "m-1")

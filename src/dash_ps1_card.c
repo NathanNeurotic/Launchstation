@@ -80,6 +80,17 @@ static int p1Load(const char *path, uint8_t *raw, uint8_t *head)
 	return kind;
 }
 
+/* 1 when exactly n bytes were read, however the device splits them */
+static int p1ReadAll(int fd, uint8_t *b, uint32_t n)
+{
+	int r;
+
+	for (; n; b += r, n -= (uint32_t)r)
+		if ((r = genRead(fd, b, (int)n)) <= 0)
+			return 0;
+	return 1;
+}
+
 int dashPs1CardIsImage(const char *path)
 {
 	int fd = genOpen(path, FIO_O_RDONLY), ok;
@@ -91,11 +102,11 @@ int dashPs1CardIsImage(const char *path)
 		return 0;
 	size = genLseek(fd, 0, SEEK_END);
 	ok = size >= (s64)PS1_CARD_SIZE && size <= (s64)PS1_CARD_FILE_MAX && genLseek(fd, 0, SEEK_SET) == 0 &&
-	     genRead(fd, head, sizeof(head)) == (int)sizeof(head) && ps1CardKind(head, (uint32_t)size) >= 0;
+	     p1ReadAll(fd, head, sizeof(head)) && ps1CardKind(head, (uint32_t)size) >= 0;
 	/* other cores' .srm saves can be 128 KB and start "MC" by chance: there
 	 * every directory frame must check too before the card is written */
 	for (i = 0; ok && genCmpFileExt(path, "SRM") && i <= PS1_BLOCKS; i++)
-		ok = (i == 0 || genRead(fd, head, sizeof(head)) == (int)sizeof(head)) && ps1FrameOk(head);
+		ok = (i == 0 || p1ReadAll(fd, head, sizeof(head))) && ps1FrameOk(head);
 	genClose(fd);
 	return ok;
 }
