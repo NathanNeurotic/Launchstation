@@ -53,6 +53,8 @@ static int root_mc_known_free[2],root_mc_failures[2];
 static int waits,cancel_wait,queued,picker_queued,root_returns,picker_roots,quiet,toasts;
 static struct { int loading; } pk;
 static void filerRootMcPollIdle(void) { drains++; }
+static void ensureCoreIoStackReady(void) {}
+static int isMemoryCardRpcReady(void) { return 1; }
 static void resetRuntimeDeviceState(int show) {
     assert(show==TRUE);
     if(worker || refuse_reset) return;

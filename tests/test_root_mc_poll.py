@@ -40,6 +40,8 @@ static int mx4sio_loaded;
 #define ETH 1
 static int ftp_running, info_calls;
 static int isFtpServerRunning(void) { return ftp_running; }
+static int mc_rpc_ready = 1;
+static int isMemoryCardRpcReady(void) { return mc_rpc_ready; }
 #include <string.h>
 /* MX4SIO owns slot 2's SIO2 port while it is loaded. */
 static int isPathDeviceStackLoaded(const char *p) { return strcmp(p, "mc1:/") || !mx4sio_loaded; }
@@ -105,7 +107,13 @@ int main(void) {
     assert(!root_mc_poll_active && pending_port==-1 && info_calls==info_before);
     run(8);assert(info_calls==info_before);
     ftp_running=0;run(4);assert(info_calls>info_before);
+    /* An unbound card client (failed start) is never polled; opening a card
+     * retries the start, after which polling resumes. */
+    filerRootMcPollIdle();mc_rpc_ready=0;info_before=info_calls;
+    run(20);assert(info_calls==info_before && !root_mc_poll_active);
+    mc_rpc_ready=1;run(4);assert(info_calls>info_before);
     filerRootMcPollIdle();
+    puts("PASS: an unbound memory card client is not polled until its start succeeds");
     puts("PASS: FTP pauses background MCMAN RPCs, preserves presence and resumes after shutdown");
     puts("PASS: an unresponsive memory-card slot cannot starve the other or stay Checking forever; MX4SIO keeps slot 2 out of the poll");
     return 0;
