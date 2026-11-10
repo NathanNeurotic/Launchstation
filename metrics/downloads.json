@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-10T08:57:27+00:00",
+  "updated_at": "2026-11-10T09:21:19+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 922,
+  "total_downloads": 929,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -2389,6 +2389,51 @@
       "downloads": 0,
       "name": "LAUNCHSTATION-1110.zip",
       "release": "build-1110"
+    },
+    "730763682": {
+      "downloads": 1,
+      "name": "APP_LAUNCHSTATION-1110.zip",
+      "release": "latest"
+    },
+    "730763683": {
+      "downloads": 1,
+      "name": "APP_LAUNCHSTATION-DS-1110.zip",
+      "release": "latest"
+    },
+    "730763695": {
+      "downloads": 1,
+      "name": "LAUNCHSTATION.ELF",
+      "release": "latest"
+    },
+    "730763696": {
+      "downloads": 1,
+      "name": "APP_LAUNCHSTATION-DS.psu",
+      "release": "latest"
+    },
+    "730763699": {
+      "downloads": 1,
+      "name": "APP_LAUNCHSTATION.psu",
+      "release": "latest"
+    },
+    "730763744": {
+      "downloads": 1,
+      "name": "LAUNCHSTATION-1110.zip",
+      "release": "latest"
+    },
+    "730763745": {
+      "downloads": 0,
+      "name": "BOOT.ELF",
+      "release": "latest"
+    },
+    "730763746": {
+      "downloads": 1,
+      "name": "LAUNCHSTATION-DS.ELF",
+      "release": "latest"
+    },
+    "730763767": {
+      "downloads": 0,
+      "name": "BOOT2.ELF",
+      "release": "latest"
     }
   }
 }
