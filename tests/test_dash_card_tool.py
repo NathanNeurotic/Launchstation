@@ -1256,6 +1256,12 @@ assert kind(lines, "PICK|Write the PS1 save to|mass:/|1|"), lines
 assert host("mass:/pc/BASLUS-00001PS1-3.mcs").read_bytes()[128:] == s1[128:], lines
 lines = run("ps1conv:mc0:/BASLUS-00001PS1", "k0")                       # pick declined: nothing written
 assert not host("mass:/pc/BASLUS-00001PS1-4.mcs").exists()
+host("mass:/pc/dot.mcs").write_bytes(ps1_mcs("BASLUS-00001.V2", 2, b"PS1 game"))  # raw reads back without ".V2"
+lines = run("ps1conv:mass:/pc/dot.mcs", "k3")
+assert kind(lines, "MESSAGE|1|Not exported|This save's name cannot be kept as raw. Use .mcs or .psx.|BASLUS-00001.V2"), lines
+assert not host("mass:/pc/BASLUS-00001.V2").exists()
+lines = run("ps1conv:mass:/pc/dot.mcs", "k2")                             # .psx keeps the name: allowed
+assert host("mass:/pc/BASLUS-00001.V2.psx").exists(), lines
 host("mass:/pc/junk.mcs").write_bytes(b"MC" + bytes(300))
 lines = run("ps1conv:mass:/pc/junk.mcs")
 assert kind(lines, "MESSAGE|1|Not converted|") and not kind(lines, "CHOICE|"), lines
