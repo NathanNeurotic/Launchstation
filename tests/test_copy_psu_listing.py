@@ -142,6 +142,7 @@ static void *test_realloc(void *old,size_t n){
 #define free test_free
 static u64 Timer(void){return ++clock_ms;}
 static unsigned getIopResetGeneration(void){return generation;}
+static void setFileXioTransferWide(int w){(void)w;}
 static int prepareTransferDeviceStacks(const char *a,const char *b){(void)a;(void)b;return TRANSFER_STACK_READY;}
 static int clipboardSourceDeviceReady(void){return 1;}
 static void waitUntilTimer(u64 end){clock_ms=end;}

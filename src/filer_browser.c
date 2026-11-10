@@ -2162,6 +2162,7 @@ static void subfunc_Paste(char *mess, char *path)
 	if (trace_vmc_paste)
 		printf("[PASTE] start src='%s' dst='%s' items=%d mode=%d cut=%d\n",
 		       clipPath, path, nclipFiles, PasteMode, browser_cut);
+	setFileXioTransferWide(1);  //drivers are loaded; see init.c
 
 	for (i = 0; i < nclipFiles; i++) {
 		strcpy(tmp, clipFiles[i].name);
@@ -2204,6 +2205,7 @@ static void subfunc_Paste(char *mess, char *path)
 //	unmountAll(); //disabled to avoid interference with VMC implementation
 
 finished:
+	setFileXioTransferWide(0);
 	filerMoveEnd();
 	if (ret < 0) {
 		printf("[PASTE] failed ret=%d src='%s' dst='%s' mode=%d cut=%d\n",
