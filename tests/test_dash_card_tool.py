@@ -281,6 +281,29 @@ blank(I)
 lines = run(I, "m0", "pmass:/out/BASLUS-77777BLZ.psu", "c1")
 assert kind(lines, "TOAST|1|Save imported and verified") and saves(I)["BASLUS-77777BLZ"] == saves(H)["BASLUS-77777BLZ"], lines
 
+# 8d. several marked save files of mixed formats into one card image (wLaunchELF_R3Z's "Extract saves..."):
+# one safety copy, a file that is not a save is skipped with its reason, the rest go in
+K = "mass:/K.mcd"
+blank(K)
+mix = "importmany:mass:/out/|BESLES-12345GAME.psu|BASLUS-99999BLZ.mcm|junk.max"
+lines = run(mix, "p" + K, "c1")
+assert kind(lines, "PICK|Import the saves into which card image?|mass:/out/|0|"), lines
+assert kind(lines, "CONFIRM|Import 3 saves?|K.mcd gets one safety copy first."), lines
+msg = kind(lines, "MESSAGE|")[0]
+assert "|Done|2 saves imported and verified. 1 skipped. First: junk.max: " in msg and msg.endswith("|Safety copy: mass:/WLE-Safety/K-0001.mcd"), msg
+assert saves(K)["BESLES-12345GAME"] == saves(B)["BESLES-12345GAME"] and saves(K)["BASLUS-99999BLZ"] == saves(F)["BASLUS-99999BLZ"]
+k_snap = sha(K)
+lines = run(mix, "p" + K, "c1")                                          # all there already: nothing written
+assert any("Nothing imported. 3 skipped. First: BESLES-12345GAME.psu: A save with this name" in l for l in kind(lines, "MESSAGE|")), lines
+assert sha(K) == k_snap and not host("mass:/WLE-Safety/K-0002.mcd").exists()
+lines = run(mix, "p" + K, "c0")                                          # declined
+assert not kind(lines, "MESSAGE|") and sha(K) == k_snap
+lines = run(mix, "pmass:/out/junk.max")                                  # not a card image: nothing written
+assert any(l.startswith("MESSAGE|") for l in lines) and not kind(lines, "CONFIRM|"), lines
+
+_br = (root / "src/dash_browser.c").read_text(encoding="utf-8")
+assert "dashCardImportMany(fb.dir, names, m);" in _br and "mcSaveFormatKnownExt(dot)" in _br   # marked files only, by extension
+
 # 9. safety copies are pruned to the newest ten, and only ours
 host("mass:/WLE-Safety/E-notes.txt").write_text("keep me")
 host("mass:/WLE-Safety/Other-0001.mcd").write_bytes(b"keep")

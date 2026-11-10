@@ -46,6 +46,11 @@ void dashCardSaveLibrary(const char *folder);
  * source is only read. */
 void dashCardConvertSave(const char *path);
 
+/* The n save files names[] in dir (dir ends in '/' or ':'), in any format
+ * Import save... reads and mixed, imported into a PS2 card image the user
+ * picks, with one safety copy of that card first. */
+void dashCardImportMany(const char *dir, const char *const *names, int n);
+
 /* MMCE: show which card image the device serves (confirmed by content), and
  * switch to a numbered card with confirmation (src/mmce_card_switch.c). */
 void dashMmceShowActive(int unit);

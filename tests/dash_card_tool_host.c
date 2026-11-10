@@ -440,6 +440,21 @@ int main(int argc, char **argv)
 		printf("ISACTIVE|%d\n", mmceCardIsActive(argv[3] + 9));
 	} else if (!strncmp(argv[3], "pick-switch:", 12)) {
 		dashMmceSwitch(argv[3] + 12);
+	} else if (!strncmp(argv[3], "importmany:", 11)) { /* importmany:dir/|name|name... */
+		static char spec[4096];
+		const char *names[64];
+		char *p, *dir;
+		int n = 0;
+
+		snprintf(spec, sizeof(spec), "%s", argv[3] + 11);
+		dir = spec;
+		p = strchr(spec, '|');
+		while (p != NULL && n < 64) {
+			*p++ = 0;
+			names[n++] = p;
+			p = strchr(p, '|');
+		}
+		dashCardImportMany(dir, names, n);
 	} else if (!strncmp(argv[3], "convert:", 8)) {
 		dashCardConvertSave(argv[3] + 8);
 	} else if (!strncmp(argv[3], "lib:", 4)) {

@@ -875,6 +875,26 @@ static int psuTargets(int *idx, int max)
 	return n;
 }
 
+/* The marked files, when every one is a PS2 save file Import save... reads
+ * (by extension, or any file in a Blaze MCM folder); 0 otherwise. Content
+ * is checked when the import runs. */
+static int saveFileTargets(int *idx, int max)
+{
+	char path[MAX_PATH];
+	int n = fb.nmarked > 0 ? targets(idx, max) : 0, i;
+	const char *dot;
+
+	for (i = 0; i < n; i++) {
+		const FILEINFO *e = &fb.files[idx[i]];
+
+		dot = strrchr(e->name, '.');
+		if (isDir(e) || !((dot != NULL && mcSaveFormatKnownExt(dot)) ||
+		                  (fullPath(e, path, sizeof(path)) && mcSaveFormatBlazePath(path))))
+			return 0;
+	}
+	return n;
+}
+
 /* Extracts the focused or marked .psu saves straight onto memory card
  * port 0 or 1 (A5 in the 2026-11 feedback round, Berion): the same classic
  * PSU restore as "Extract PSU" after a copy and a visit to mc0:/, without
@@ -2576,6 +2596,7 @@ static void actionsMenu(void)
 		F_PSU,
 		F_PSU_MC0,
 		F_PSU_MC1,
+		F_IMPORT_SAVES,
 		F_DELETE,
 		F_RENAME,
 		F_NEWDIR,
@@ -2670,6 +2691,13 @@ static void actionsMenu(void)
 				    ok ? (npsu > 1 ? marked : "straight onto the card") : present > 0 ? "not a PS2 card" : "no card",
 				    !ok, port == 0 ? F_PSU_MC0 : F_PSU_MC1);
 			}
+		}
+		{
+			static int sv_idx[MAX_ENTRY];
+
+			if (saveFileTargets(sv_idx, MAX_ENTRY) > 0)
+				ADD(DI_PLUS, "Import into a card image...", ".psu, .max, .cbs, .sps, .xps, .psv, Blaze; mixed", 0,
+				    F_IMPORT_SAVES);
 		}
 		ADD(DI_WARNING, "Delete...", fb.nmarked ? marked : NULL, !has_target || !en[DELETE], F_DELETE);
 		ADD(DI_EDIT, "Rename...", NULL, f == NULL || !en[RENAME], F_RENAME);
@@ -2861,6 +2889,24 @@ static void actionsMenu(void)
 				refresh();
 			}
 			break;
+		case F_IMPORT_SAVES: {
+			static int sv_idx[MAX_ENTRY];
+			int m = saveFileTargets(sv_idx, MAX_ENTRY), k;
+			const char **names = m > 0 ? (const char **)malloc((size_t)m * sizeof(*names)) : NULL;
+
+			if (names == NULL) {
+				if (m > 0)
+					dashModalMessage(DI_WARNING, "Not enough memory", "The selection is too large.", NULL);
+				break;
+			}
+			for (k = 0; k < m; k++)
+				names[k] = fb.files[sv_idx[k]].name;
+			if (prepareOp())
+				dashCardImportMany(fb.dir, names, m);
+			free(names);
+			refresh();
+			break;
+		}
 		case F_CONVERT_SAVE:
 			if (fullPath(f, path, sizeof(path)) && prepareOp()) {
 				dashCardConvertSave(path);

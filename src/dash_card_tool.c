@@ -1686,6 +1686,94 @@ static int ctAllSkippable(int r)
 	return r == MCW_ERR_EXISTS || r == MCW_ERR_FULL || r == MCW_ERR_UNSUPPORTED || r == MCW_ERR_NOT_FOUND;
 }
 
+/* wLaunchELF_R3Z's "Extract saves..." of a mixed set, into a card image:
+ * the n save files names[] in dir (any format Import save... reads, mixed)
+ * imported in one go. The card gets one verified safety copy before the
+ * first change; a file that is not a PS2 save, a name already on the card or
+ * a save that does not fit is skipped, and any other error stops it. */
+void dashCardImportMany(const char *dir, const char *const *names, int n)
+{
+	McSaveData s;
+	CardIo io;
+	char img[MAX_PATH], src[MAX_PATH], safety[MAX_PATH], body[640], first[64] = "";
+	const char *why, *first_why = NULL;
+	int i, r, c, done = 0, skipped = 0, failed = 0, left = 0, first_r = MCW_OK;
+
+	if (n <= 0 || names == NULL ||
+	    !dashPickPath("Import the saves into which card image?", dir, DASH_PICK_FILE, NULL, img, sizeof(img)))
+		return;
+	if (dashPs1CardIsImage(img)) {
+		dashModalMessage(DI_WARNING, "That is a PS1 card", "These are PS2 saves. Pick a PS2 card image.", img);
+		return;
+	}
+	if (!ctStacks(dir, img) || !ctWritable(img))
+		return;
+	r = ctOpen(&io, img, 0); /* a card at all, before anything is asked */
+	if (r == MCV_OK)
+		ctClose(&io);
+	if (r != MCV_OK) {
+		dashModalMessage(DI_WARNING, "Cannot use this card", ctError(r), img);
+		return;
+	}
+	snprintf(body, sizeof(body),
+	         "%s gets one safety copy first. A file that is not a PS2 save, a save already there by name, or one that does not fit is skipped.",
+	         ctBaseName(img));
+	snprintf(src, sizeof(src), "Import %d save%s?", n, n == 1 ? "" : "s");
+	if (!dashModalConfirm(src, body, "Import", 0))
+		return;
+	safety[0] = 0;
+	dashLoadingBegin("Importing saves");
+	for (i = 0; i < n; i++) {
+		if (failed) {
+			left++;
+			continue;
+		}
+		dashLoadingStatus(names[i], done + skipped, n);
+		why = NULL;
+		if (snprintf(src, sizeof(src), "%s%s", dir, names[i]) >= (int)sizeof(src)) {
+			r = MCW_ERR_UNSUPPORTED;
+			why = "The path is too long.";
+		} else {
+			r = ctLoadPsu(src, &s, &why);
+			if (r == MCW_OK) {
+				r = ctPutSave(img, &s, safety, sizeof(safety));
+				mcCardFreeSave(&s);
+				why = NULL;
+			} else if (r != MCW_ERR_NOMEM) {
+				r = MCW_ERR_UNSUPPORTED; /* not a save we read: skipped */
+			}
+		}
+		if (r == MCW_OK) {
+			done++;
+			continue;
+		}
+		if (!first[0]) {
+			dashStrCopy(first, names[i], sizeof(first));
+			first_r = r;
+			first_why = why;
+		}
+		if (ctAllSkippable(r))
+			skipped++;
+		else
+			failed++;
+	}
+	dashLoadingEnd();
+	c = snprintf(body, sizeof(body), done ? "%d save%s imported and verified." : "Nothing imported.", done,
+	             done == 1 ? "" : "s");
+	if (skipped)
+		c += snprintf(body + c, sizeof(body) - c, " %d skipped.", skipped);
+	if (failed)
+		c += snprintf(body + c, sizeof(body) - c, " %d failed.", failed);
+	if (first[0])
+		c += snprintf(body + c, sizeof(body) - c, " First: %s: %s", first, first_why ? first_why : ctError(first_r));
+	if (left)
+		snprintf(body + c, sizeof(body) - c, " Stopped there; %d not tried.", left);
+	if (safety[0])
+		snprintf(src, sizeof(src), "Safety copy: %.1000s", safety);
+	dashModalMessage(failed || skipped ? DI_WARNING : DI_MC, failed ? "Not all done" : "Done", body,
+	                 safety[0] ? src : NULL);
+}
+
 /* The marked saves copied or moved to one card, or deleted. Every card gets
  * one verified safety copy before its first change in the batch, and the
  * batch stops at the first error that is not a plain refusal. 0 when it was
