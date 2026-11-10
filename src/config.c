@@ -410,11 +410,17 @@ void configStampMcFolderIcon(void)
 		return;
 	if (snprintf(path, sizeof(path), "%sicon.sys", dir) >= (int)sizeof(path))
 		return;
+	/* Stamp only a folder whose icon.sys is known to be absent (-ENOENT) or
+	 * measured short; an open the card refuses for another reason, or a
+	 * size it cannot report, may hide somebody's icon, so leave it. */
 	fd = genOpen(path, FIO_O_RDONLY);
 	if (fd >= 0) {
 		size = genLseek(fd, 0, SEEK_END);
 		genClose(fd);
-	}
+		if (size < 0)
+			return;
+	} else if (fd != -ENOENT)
+		return;
 	if (size >= (s64)size_mc_icon_sys)
 		return;
 	for (i = 0; i < 3; i++)

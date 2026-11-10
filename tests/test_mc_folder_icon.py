@@ -39,6 +39,7 @@ code = r'''
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 typedef long long s64;
 #define MAX_PATH 256
 #define FIO_O_RDONLY 1
@@ -51,22 +52,22 @@ unsigned char mc_icon_sys[964];
 unsigned int size_mc_icon_sys = sizeof(mc_icon_sys);
 unsigned char mc_list_icn[100];
 unsigned int size_mc_list_icn = sizeof(mc_list_icn);
-static int mc1_refused, room = 1 << 20, opens;
+static int mc1_refused, room = 1 << 20, opens, open_error = -ENOENT, seek_fails;
 #define NF 8
 static struct { char path[MAX_PATH]; int size, used; } files[NF];
 static int find(const char *p) { for (int i = 0; i < NF; i++) if (files[i].used && !strcmp(files[i].path, p)) return i; return -1; }
 static int mc1AccessRefused(void) { return mc1_refused; }
 static int genOpen(const char *p, int mode) {
     int i = find(p); opens++;
-    if (!(mode & FIO_O_CREAT)) { if (i < 0) return -1; return i; }
+    if (!(mode & FIO_O_CREAT)) { if (i < 0) return open_error; return i; }
     if (i < 0) { for (i = 0; files[i].used; i++); files[i].used = 1; snprintf(files[i].path, MAX_PATH, "%s", p); }
     if (mode & FIO_O_TRUNC) files[i].size = 0;
     return i;
 }
-static s64 genLseek(int fd, s64 w, int how) { (void)w; (void)how; return files[fd].size; }
+static s64 genLseek(int fd, s64 w, int how) { (void)w; (void)how; return seek_fails ? -EIO : files[fd].size; }
 static int genWrite(int fd, void *b, int n) { (void)b; int w = n < room ? n : room; room -= w; files[fd].size += w; return w; }
 static int genClose(int fd) { (void)fd; return 0; }
-static void reset(const char *dir) { memset(files, 0, sizeof(files)); room = 1 << 20; opens = 0; mc1_refused = 0; snprintf(LaunchElfDir, MAX_PATH, "%s", dir); }
+static void reset(const char *dir) { memset(files, 0, sizeof(files)); room = 1 << 20; opens = 0; mc1_refused = 0; open_error = -ENOENT; seek_fails = 0; snprintf(LaunchElfDir, MAX_PATH, "%s", dir); }
 static int sz(const char *p) { int i = find(p); return i < 0 ? -1 : files[i].size; }
 '''
 code += function(config, "static int configWriteMcIconFile(")
@@ -100,6 +101,17 @@ int main(void) {
     room = 1 << 20; configStampMcFolderIcon();
     assert(sz("mc0:/LS/icon.sys") == 964 && sz("mc0:/LS/list.icn") == 100);
 
+    /* an open refused for any reason but "no such file", or an unmeasurable
+       icon.sys, may be somebody's icon: nothing is written */
+    reset("mc0:/LS/"); open_error = -EACCES; configStampMcFolderIcon();
+    assert(opens == 1 && sz("mc0:/LS/list.icn") == -1);
+    reset("mc0:/LS/"); open_error = -EIO; configStampMcFolderIcon();
+    assert(opens == 1 && sz("mc0:/LS/list.icn") == -1);
+    reset("mc0:/LS/");
+    genOpen("mc0:/LS/icon.sys", FIO_O_CREAT | FIO_O_WRONLY); files[0].size = 10; seek_fails = 1;
+    configStampMcFolderIcon();
+    assert(sz("mc0:/LS/icon.sys") == 10 && sz("mc0:/LS/list.icn") == -1);
+
     /* never the root, a nested folder, SYS-CONF, another device, or mc1 under MX4SIO */
     const char *skip[] = {"mc0:/", "mc0:/APPS/LAUNCHSTATION/", "mc0:/SYS-CONF/", "mc1:/SYS-CONF/",
                           "mmce0:/LS/", "mass:/LS/", "mc2:/LS/", "hdd0:/LS/", ""};
@@ -117,6 +129,7 @@ with tempfile.TemporaryDirectory() as tmp:
     exe = Path(tmp) / "t"
     src.write_text(code, encoding="utf-8")
     cc = shutil.which("cc") or shutil.which("gcc")
+    assert cc, "no C compiler (cc or gcc) found"
     subprocess.run([cc, "-std=c99", "-Wall", "-Werror", "-fsanitize=address,undefined", str(src), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
 print("ok: memory-card folder icon stamp (#287, #301)")
