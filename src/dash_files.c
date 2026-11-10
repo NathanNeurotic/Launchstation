@@ -429,13 +429,17 @@ static int devSelectable(int idx)
 	/* PROBE means "not checked yet", not unavailable. Let the user select it
 	 * so OK can invoke the existing lazy loader. A memory card still being
 	 * checked is selectable too: browsing it makes the slot accessible (e.g.
-	 * switches the IOP away from MX4SIO) and retries. Explicitly absent
-	 * devices remain display-only and are skipped by navigation. */
+	 * switches the IOP away from MX4SIO) and retries. A failed UDPFS check
+	 * stays selectable so opening it retries once the server is started.
+	 * Other explicitly absent devices are skipped by navigation. */
 	if (idx >= 0 && idx < ndevs && isPcCardCfPath(devs[idx].mount)) {
 		return isPcCardCfEligible() && !boot_safe_mode && !isPcCardCfBusBusy();
 	}
 	return idx >= 0 && idx < ndevs &&
 	       (devs[idx].state == DASH_DEV_READY || devs[idx].state == DASH_DEV_PROBE ||
+#ifdef UDPFS
+	        (devs[idx].state == DASH_DEV_ABSENT && !strcmp(devs[idx].mount, "udpfs:")) ||
+#endif
 	        (devs[idx].icon == DI_MC && devs[idx].state == DASH_DEV_BUSY));
 }
 

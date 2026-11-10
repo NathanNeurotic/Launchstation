@@ -235,6 +235,7 @@ static int loadAtaModules(void) { return load(S_ATA); }
 static int loadMx4sioModules(void) { usb_snapshot_valid=0; return load(S_MX); }
 static int loadMmceModules(void) { return load(S_MMCE0|S_MMCE1); }
 static int load_udpfs(void) { return load(S_UDPFS); }
+static int reloadUdpfsModules(void) { reset_generation++; resident=0; usb_loaded=0; usb_snapshot_valid=0; return load(S_UDPFS); }
 #define MMCE_CMD_PING 1
 static int fileXioDevctl(const char *p,int cmd,void *arg,int len,void *out,int size) {
     assert(cmd==MMCE_CMD_PING && !arg && len==0 && !out && size==0);

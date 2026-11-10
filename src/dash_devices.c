@@ -422,7 +422,7 @@ int dashDevicesList(DashDevice *out, int max)
 	}
 
 #ifdef UDPFS
-	addStorage(out, &n, max, DI_SHARE, "Network (UDPFS)", "udpfs:", "udpfs:/", netConfig[0] ? netConfig : "Connected", "UDPFS server not found");
+	addStorage(out, &n, max, DI_SHARE, "Network (UDPFS)", "udpfs:", "udpfs:/", netConfig[0] ? netConfig : "Connected", "UDPFS server not found - open to retry");
 #endif
 #ifdef SMB
 	{
@@ -706,6 +706,19 @@ int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user)
 	int ok;
 
 	snprintf(title, sizeof(title), "Starting %s", dev->name);
+#ifdef UDPFS
+	/* Opening a failed UDPFS row retries it. The failed discovery stays
+	 * latched in the resident stack, so a server started since needs a fresh
+	 * IOP, as the classic browser does. Only this explicit open resets. */
+	if (!strcmp(dev->mount, "udpfs:") && storageState(dev->mount) == DASH_DEV_ABSENT) {
+		if (!dashWorkerAwaitAll("Finishing up"))
+			return -1;
+		dashLoadingBegin(title);
+		dashLoadingFrame("Restarting the network...", 0, 0);
+		reloadUdpfsModules();
+		dashLoadingEnd();
+	}
+#endif
 	ok = startSync(dev->mount, title);
 	if (ok < 0)
 		return -1;
