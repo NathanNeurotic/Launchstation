@@ -924,7 +924,7 @@ static int smb2man_write(iop_file_t *f, void *buffer, int size)
         UNLOCK();
         return -EBADF;
     }
-    if (file->writable & 2) // append: every write goes to the end, whatever lseek did
+    if ((file->writable & 2) && size > 0) // append: every write goes to the end, whatever lseek did
         file->pos = file->size;
 
     while (done < size) {

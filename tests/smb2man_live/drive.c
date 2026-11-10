@@ -173,7 +173,8 @@ static int full(const char *dir1, const char *dir2)
     memset(&f, 0, sizeof(f));
     CHECK(put("/A/new/app.txt", (const unsigned char *)"abc", 3) == 3 &&
               OPS->open(&f, "/A/new/app.txt", FIO_O_WRONLY | FIO_O_APPEND, 0) >= 0 && OPS->write(&f, "def", 3) == 3 &&
-              OPS->lseek(&f, 0, SEEK_SET) == 0 && OPS->write(&f, "ghi", 3) == 3 && OPS->close(&f) == 0 &&
+              OPS->lseek(&f, 0, SEEK_SET) == 0 && OPS->write(&f, "", 0) == 0 && OPS->lseek(&f, 0, SEEK_CUR) == 0 &&
+              OPS->write(&f, "ghi", 3) == 3 && OPS->close(&f) == 0 &&
               get("/A/new/app.txt", back, sizeof(back)) == 9 && !memcmp(back, "abcdefghi", 9) &&
               OPS->remove(NULL, "/A/new/app.txt") == 0,
           "FIO_O_APPEND writes after what is there, even after a seek back");
