@@ -108,7 +108,7 @@ static void test_free(void *p){for(int i=0;i<listings_live;i++)if(listing_ptr[i]
 static unsigned fd_generation[1024];
 static u64 Timer(void){return ++clock_ms;}
 static unsigned getIopResetGeneration(void){return generation;}
-static void setFileXioTransferWide(int w){(void)w;}
+static int setFileXioTransferWide(int w){(void)w;return 0;}
 static int prepareTransferDeviceStacks(const char *a,const char *b){assert(!handles);(void)a;(void)b;if(reset_preflight)generation++;return load_ok?0:-1;}
 static int clipboardSourceDeviceReady(void){return source_ready;}
 static void waitUntilTimer(u64 end){clock_ms=end;}

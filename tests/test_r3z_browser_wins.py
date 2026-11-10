@@ -39,14 +39,17 @@ for branch in (hdd, dvr):
 # A paste widens the fileXio transfer buffer only after its drivers are ready,
 # and every exit (including a failed one) narrows it back to the SDK default.
 init = (root / "src/init.c").read_text(encoding="utf-8")
-widen = init[init.index("void setFileXioTransferWide(int wide)"):]
+widen = init[init.index("int setFileXioTransferWide(int wide)"):]
 widen = widen[:widen.index("\n}\n")]
 assert "{128 * 1024, 64 * 1024, 16 * 1024}" in widen and "for (i = wide ? 0 : 2; i < 3; i++)" in widen
+assert widen.rstrip().endswith("return -1;")  # even 16 KB refused: fileXio has no buffer, the caller is told
 paste = src[src.index("static void subfunc_Paste("):]
 paste = paste[:paste.index("//endfunc subfunc_Paste")]
 assert paste.count("setFileXioTransferWide(") == 2
-assert paste.index("waitForClipboardSourceDevice()") < paste.index("setFileXioTransferWide(1);")
-assert "finished:\n\tsetFileXioTransferWide(0);" in paste
-early = paste[:paste.index("setFileXioTransferWide(1);")]
+assert paste.index("waitForClipboardSourceDevice()") < paste.index("if (setFileXioTransferWide(1) < 0) {")
+assert "finished:\n\tif (setFileXioTransferWide(0) < 0 && ret >= 0) {" in paste  # a lost buffer is never reported as done
+fail = paste[paste.index("if (setFileXioTransferWide(1) < 0) {"):]
+assert fail.index("ret = -ENOMEM;") < fail.index("goto finished;") < fail.index("for (i = 0; i < nclipFiles; i++)")
+early = paste[:paste.index("if (setFileXioTransferWide(1) < 0) {")]
 assert early.count("return;") == 1 and "goto finished" in early  # the one early return precedes the widening
 print("ok")

@@ -114,7 +114,7 @@ static void test_free(void *p){if(p&&malloc_usable_size(p)>=MAX_ENTRY*sizeof(FIL
 #define free test_free
 static u64 Timer(void){return ++clock_ms;}
 static unsigned getIopResetGeneration(void){return generation;}
-static void setFileXioTransferWide(int w){(void)w;}
+static int setFileXioTransferWide(int w){(void)w;return 0;}
 static int prepareTransferDeviceStacks(const char *a,const char *b){(void)a;(void)b;return TRANSFER_STACK_READY;}
 static int clipboardSourceDeviceReady(void){return 1;}
 static void waitUntilTimer(u64 end){clock_ms=end;}
