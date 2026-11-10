@@ -940,6 +940,7 @@ enum {
 int dashPickPath(const char *title, const char *start_dir, int mode, const char *ext, char *out, int out_size);
 void dashModalSetPreview(void (*fn)(int index)); /* applies to the next dashModalMenu() */
 void dashModalSetMarks(unsigned char *marks);    /* next dashModalMenu(): Square toggles 0/1; other values fixed */
+void dashModalSetEdit(int (*edit)(int index, int direction, void *arg), void *arg); /* next dashModalMenu(): Left/Right/Confirm change rows in place */
 int dashModalKeepVideo(void);
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger);
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail);

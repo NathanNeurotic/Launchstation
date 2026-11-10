@@ -881,6 +881,18 @@ void dashModalSetMarks(unsigned char *marks)
 	modal_marks = marks;
 }
 
+/* Rows the next dashModalMenu() changes in place: Left/Right call edit with
+ * -1/+1, Confirm with 0. Nonzero keeps the menu open (the callback may update
+ * the items' details); an unhandled Confirm selects the row as usual. */
+static int (*modal_edit)(int index, int direction, void *arg);
+static void *modal_edit_arg;
+
+void dashModalSetEdit(int (*edit)(int index, int direction, void *arg), void *arg)
+{
+	modal_edit = edit;
+	modal_edit_arg = arg;
+}
+
 /* L2/R2 jump only to actionable rows. Never focus disabled actions,
  * including a disabled initial selection or a menu without usable entries. */
 static int modalEnabledEdge(const DashMenuItem *items, int n, int from_end)
@@ -901,6 +913,8 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 	int sel = initial, top = 0, i, previewed = -1;
 	void (*preview)(int) = modal_preview;
 	unsigned char *marks = modal_marks;
+	int (*edit)(int, int, void *) = modal_edit;
+	void *edit_arg = modal_edit_arg;
 	/* Eight subtitled rows left only 3 logical pixels above the popup.
 	 * Keep a full safe margin for rounded corners on 4:3/interlaced TVs. */
 	const int max_rows = 7;
@@ -914,6 +928,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 	if (items == NULL || n <= 0) {
 		modal_preview = NULL;
 		modal_marks = NULL;
+		modal_edit = NULL;
 		return -1;
 	}
 	if (sel < 0 || sel >= n || items[sel].disabled)
@@ -921,12 +936,14 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 	if (sel < 0) {
 		modal_preview = NULL;
 		modal_marks = NULL;
+		modal_edit = NULL;
 		return -1;
 	}
 	sel_anim = (float)sel;
 	y = (DASH_VH - h) * 0.5f;
 	modal_preview = NULL;
 	modal_marks = NULL;
+	modal_edit = NULL;
 	if (preview != NULL)
 		x = DASH_SAFE_R - w; /* keep the left half of the screen visible */
 	dashInputFlush();
@@ -984,10 +1001,16 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			dashSoundPlay(DASH_SND_CURSOR);
 			marks[sel] = !marks[sel];
 		}
+		if (edit != NULL && !items[sel].disabled && (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT)) &&
+		    !(in.pressed & (DASH_IN_OK | DASH_IN_BACK | DASH_IN_MENU)) &&
+		    edit(sel, (in.pressed & DASH_IN_LEFT) ? -1 : 1, edit_arg))
+			dashSoundPlay(DASH_SND_CURSOR);
 		if ((in.pressed & DASH_IN_OK) && !items[sel].disabled) {
 			dashSoundPlay(DASH_SND_CONFIRM);
-			dashInputFlush();
-			return sel;
+			if (edit == NULL || !edit(sel, 0, edit_arg)) {
+				dashInputFlush();
+				return sel;
+			}
 		}
 		if (in.pressed & (DASH_IN_BACK | DASH_IN_MENU)) {
 			dashSoundPlay(DASH_SND_CANCEL);
@@ -1070,6 +1093,10 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 				if (marks != NULL) {
 					hx += drawButton(hx, y + h - 36, DI_BTN_SQUARE, NULL) + 8.0f;
 					dashTextS(hx, y + h - 36 + 4.5f, "Mark", DASH_FS_SMALL, DASH_C_TEXT2);
+				} else if (edit != NULL) {
+					hx += drawButton(hx, y + h - 36, DI_BTN_LEFT, NULL) + 2.0f;
+					hx += drawButton(hx, y + h - 36, DI_BTN_RIGHT, NULL) + 8.0f;
+					dashTextS(hx, y + h - 36 + 4.5f, "Change", DASH_FS_SMALL, DASH_C_TEXT2);
 				}
 			}
 		}
