@@ -2771,13 +2771,13 @@ static void actionsMenu(void)
 		 * extensionless files in a card's (or any) MCM folder. */
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "PSU") && strncmp(fb.dir, "mc", 2) &&
 		    strncmp(fb.dir, "vmc", 3))
-			ADD(DI_MC, "Convert to .psv or .cbs...", "signed PS3 save or CodeBreaker, written next to it", 0, F_CONVERT_SAVE);
+			ADD(DI_MC, "Convert to .psv, .cbs or .zip...", "PS3, CodeBreaker or a PC folder, written next to it", 0, F_CONVERT_SAVE);
 		else if (f != NULL && !isDir(f) && fb.nmarked == 0 && !genCmpFileExt(f->name, "PSU") &&
 		    (((genCmpFileExt(f->name, "MCM") || genCmpFileExt(f->name, "MAX") || genCmpFileExt(f->name, "CBS") ||
 		       genCmpFileExt(f->name, "SPS") || genCmpFileExt(f->name, "XPS") || genCmpFileExt(f->name, "PSV")) &&
 		      strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3)) ||
 		     (fullPath(f, path, sizeof(path)) && mcSaveFormatBlazePath(path))))
-			ADD(DI_MC, "Convert to .psu, .psv or .cbs...",
+			ADD(DI_MC, "Convert to .psu, .psv, .cbs or .zip...",
 			    "Blaze (MCM folder), MAX, CodeBreaker, SharkPort, PS3 save", 0, F_CONVERT_SAVE);
 		/* PS1 single saves by extension, and every save on a real PS1 card,
 		 * which lists each one as a raw file */

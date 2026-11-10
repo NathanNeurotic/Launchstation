@@ -197,7 +197,7 @@ assert v[:4] == b"\0VSP" and v[0x3C] == 2 and v[0x80:0xA0].rstrip(b"\0") == b"BE
 host("mass:/conv").mkdir()
 shutil.copy(psu, host("mass:/conv/BESLES-12345GAME.psu"))
 lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "k1", "c1")        # a .psu offers .psv first
-assert kind(lines, "CHOICE|Convert to|3|1"), lines
+assert kind(lines, "CHOICE|Convert to|4|1"), lines
 assert kind(lines, "CONFIRM|Convert to .psv?|") and host("mass:/conv/" + PSV2).read_bytes() == v, lines
 lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "k1")              # never replaced, never renamed
 assert kind(lines, "MESSAGE|1|Not converted|A .psv with this save's name is already there"), lines
@@ -215,6 +215,16 @@ blank(J)
 lines = run(J, "m0", "pmass:/out/BESLES-12345GAME.cbs", "c1")             # it imports into the same save
 assert kind(lines, "TOAST|1|Save imported and verified") and saves(J) == saves(B), lines
 host("mass:/out/BESLES-12345GAME.cbs").unlink()
+# and as a .zip of the folder, for a PC: export and Convert give the same archive, which zipfile reads
+import zipfile, io
+lines = run(B, "m3", "m2", "k3", "pmass:/out/")
+assert kind(lines, "PICK|Export .zip to|") and kind(lines, "TOAST|1|.zip written and verified"), lines
+zb = host("mass:/out/BESLES-12345GAME.zip").read_bytes()
+with zipfile.ZipFile(io.BytesIO(zb)) as z:
+    assert z.testzip() is None and z.namelist()[0] == "BESLES-12345GAME/" and len(z.namelist()) > 1
+lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "k3", "c1")
+assert kind(lines, "MESSAGE|4|Converted|Written and checked. Unzip it on a PC") and host("mass:/conv/BESLES-12345GAME.zip").read_bytes() == zb, lines
+host("mass:/out/BESLES-12345GAME.zip").unlink()
 shutil.rmtree(host("mass:/conv"))
 host("mass:/out/" + PSV2).unlink()
 E = "mass:/E.mcd"

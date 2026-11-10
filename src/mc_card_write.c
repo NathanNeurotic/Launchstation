@@ -38,7 +38,7 @@ static void wr32(uint8_t *p, uint32_t v)
 /* A name field is 32 bytes; a usable name is 1..31 printable ASCII bytes,
  * NUL-terminated, not "." or "..", without / \ * or ?. Real saves stay
  * well inside this; anything else is a damaged entry or a hostile .psu. */
-static int nameOk(const uint8_t *name)
+int mcCardNameOk(const uint8_t *name)
 {
 	uint32_t n;
 
@@ -174,7 +174,7 @@ static int saveScanCb(McView *v, uint32_t i, const uint8_t *raw, void *ctx)
 		sc->bad = MCW_ERR_UNSUPPORTED;
 		return MCW_ERR_UNSUPPORTED;
 	}
-	if (!(mode & M_FILE) || !nameOk(raw + 0x40)) {
+	if (!(mode & M_FILE) || !mcCardNameOk(raw + 0x40)) {
 		sc->bad = MCV_ERR_CORRUPT;
 		return MCV_ERR_CORRUPT;
 	}
@@ -458,13 +458,13 @@ static int validSave(const McSaveData *s)
 	uint32_t i, j;
 	uint64_t total = 0;
 
-	if (!s || !nameOk(s->entry + 0x40) || s->nfiles > MAX_ENTRIES - 2u ||
+	if (!s || !mcCardNameOk(s->entry + 0x40) || s->nfiles > MAX_ENTRIES - 2u ||
 	    (s->nfiles > 0 && !s->files))
 		return 0;
 	for (i = 0; i < s->nfiles; i++) {
 		const McSaveFile *f = &s->files[i];
 
-		if (!nameOk(f->entry + 0x40) || (f->size > 0 && !f->data))
+		if (!mcCardNameOk(f->entry + 0x40) || (f->size > 0 && !f->data))
 			return 0;
 		total += f->size;
 		for (j = 0; j < i; j++)
@@ -897,7 +897,7 @@ int mcCardSaveFromPsu(const uint8_t *buf, uint32_t len, McSaveData *out)
 		return MCW_ERR_INVALID;
 	count = rd32(buf + 4);
 	if ((rd16(buf) & (M_EXISTS | M_DIR)) != (M_EXISTS | M_DIR) || (rd16(buf) & M_FILE) ||
-	    !nameOk(buf + 0x40) || count < 2u || count > MAX_ENTRIES)
+	    !mcCardNameOk(buf + 0x40) || count < 2u || count > MAX_ENTRIES)
 		return MCW_ERR_INVALID;
 	for (i = 1; i <= 2; i++) {
 		h = buf + i * ENT;
@@ -928,7 +928,7 @@ int mcCardSaveFromPsu(const uint8_t *buf, uint32_t len, McSaveData *out)
 			return MCW_ERR_UNSUPPORTED;
 		}
 		size = rd32(h + 4);
-		if ((rd16(h) & (M_EXISTS | M_FILE)) != (M_EXISTS | M_FILE) || !nameOk(h + 0x40) ||
+		if ((rd16(h) & (M_EXISTS | M_FILE)) != (M_EXISTS | M_FILE) || !mcCardNameOk(h + 0x40) ||
 		    size > len - pos - ENT)
 			goto bad;
 		padded = (size + CL - 1u) / CL * CL;
