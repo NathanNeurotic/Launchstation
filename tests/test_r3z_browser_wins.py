@@ -9,6 +9,12 @@ src = (root / "src/filer_browser.c").read_text(encoding="utf-8")
 
 assert "enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR] && IsTextEditorFileType(file->name);" in src
 assert "enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR];" not in src
+# Nothing later in filerMenuEnables may switch it back on (only the PC card CF clear).
+menu = src[src.index("void filerMenuEnables("):]
+menu = menu[:menu.index("\n}\n")]
+assert [l.strip() for l in menu.splitlines() if "enable[LAUNCH_ELF_ARGS] =" in l] == [
+    "enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR] && IsTextEditorFileType(file->name);",
+    "enable[LAUNCH_ELF_ARGS] = FALSE;"]
 
 a = src.index("static int browseFilePath(char *out, int cnfmode, FILEINFO *files)")
 pos = src.index("{", a) + 1
@@ -25,5 +31,9 @@ for unchecked in ("mcGetInfo(path[2] - '0', 0, &mctype_PSx, &mcfreeSpace", "PFSC
 a = src.index("int filerFreeSpace(const char *path, u64 *out)")
 helper = src[a:src.index("\n}\n", a)]
 assert "if (ret < -1)" in helper  # mcGetInfo: 0 same card, -1 new card, below that an error
-assert helper.count("if (zone_free < 0 || zone_size <= 0)") >= 1
+assert "if (mcGetInfo(path[2] - '0', 0, &type, &free_units, NULL) < 0)" in helper
+hdd = helper[helper.index('if (!strncmp(path, "hdd", 3)'):helper.index("#ifdef DVRP")]
+dvr = helper[helper.index('if (!strncmp(path, "dvr_hdd", 7)'):]
+for branch in (hdd, dvr):
+    assert "if (zone_free < 0 || zone_size <= 0)" in branch
 print("ok")

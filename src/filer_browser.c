@@ -2423,7 +2423,8 @@ int filerFreeSpace(const char *path, u64 *out)
 	int type = 0, free_units = 0, ret;
 
 	if (!strncmp(path, "mc", 2) && (path[2] == '0' || path[2] == '1')) {
-		mcGetInfo(path[2] - '0', 0, &type, &free_units, NULL);
+		if (mcGetInfo(path[2] - '0', 0, &type, &free_units, NULL) < 0)
+			return 0; /* not started: mcSync would leave ret unset */
 		mcSync(0, NULL, &ret);
 		if (ret < -1)
 			return 0;
