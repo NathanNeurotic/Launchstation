@@ -666,7 +666,7 @@ static const SetItem net_items[] = {
 #endif
 #ifdef ETH
     {ST_CHOICE, S_NET_LEGACY, "Legacy Ethernet drivers", "Use MrRexD's ps2sdk v1.0 DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up. Takes effect the next time Ethernet/FTP is started."},
-    {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query 0.pool.ntp.org and write and verify the PS2 hardware RTC. Requires saved network settings."},
+    {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query 0.pool.ntp.org and write and verify the PS2 hardware RTC. Uses the saved network settings."},
 #endif
 #ifdef SMB
     {ST_PAGE, P_SMB, "SMB shares", "Add saved shares. smb:/ lists connected SMB2/3 shares; smb1:/ opens SMB1. Neither scans the network."},
@@ -3160,51 +3160,6 @@ static int editClockDateTime(const char *title, int fields[6])
 	return accepted;
 }
 
-#ifdef ETH
-/* Parse exactly four digit-only octets 0..255 joined by dots. No sscanf:
- * %u takes signs and spaces, and an overlong field is undefined. */
-static int parseIpv4(const char *s, unsigned *out)
-{
-	unsigned addr = 0, v;
-	int i;
-
-	for (i = 0; i < 4; i++) {
-		if (*s < '0' || *s > '9')
-			return 0;
-		v = 0;
-		while (*s >= '0' && *s <= '9')
-			if ((v = v * 10U + (unsigned)(*s++ - '0')) > 255U)
-				return 0;
-		addr = (addr << 8) | v;
-		if (*s++ != (i < 3 ? '.' : '\0'))
-			return 0;
-	}
-	*out = addr;
-	return 1;
-}
-
-/* Settings -> Network -> Sync PS2 clock preflight. The sync reloads
- * IPCONFIG.DAT, so unsaved edits would be ignored; reject them and unusable
- * static values here. Does not touch the network stack. 1 = ready. */
-static int clockSyncSettingsReady(const char **why)
-{
-	unsigned a, m, g;
-
-	/* A queued IPCONFIG.DAT write clears net_dirty before it lands. */
-	if (net_dirty || cfg_pending[CFG_SAVE_NET] || cfg_failed[CFG_SAVE_NET]) {
-		*why = "Save your network settings first, then retry clock synchronization.";
-		return 0;
-	}
-	/* A netmask must be a contiguous run of ones: ~m + 1 is a power of two. */
-	if (!parseIpv4(ip, &a) || !parseIpv4(netmask, &m) || !parseIpv4(gw, &g) ||
-	    !a || !g || !m || !~m || (~m & (~m + 1U))) {
-		*why = "IP address, netmask or gateway is missing or invalid. Correct Settings > Network and retry.";
-		return 0;
-	}
-	return 1;
-}
-#endif
-
 static void runAction(int id)
 {
 	if (id >= S_T_PRESET && id <= S_T_RESETCAT) {
@@ -3431,14 +3386,8 @@ static void runAction(int id)
 		}
 #ifdef ETH
 		case S_CLOCK_SYNC: {
-			const char *why;
 			char result[160];
 			int ok;
-
-			if (!clockSyncSettingsReady(&why)) {
-				dashModalMessage(DI_WARNING, "Clock synchronization unavailable", why, NULL);
-				break;
-			}
 			dashLoadingBegin("Synchronizing PS2 clock");
 			ok = dashClockSyncInternet(result, sizeof(result));
 			dashLoadingEnd();
