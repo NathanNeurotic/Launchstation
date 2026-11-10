@@ -421,6 +421,22 @@ static int applyMcInfoToMcPath(const char *path, const sceMcTblGetDir *info)
 	return ret;
 }
 
+/* Gives a file or folder on mc0:/mc1: the mode, times and attribute of a
+ * 512-byte card directory entry, as a PSU restore does. */
+int filerMcSetEntry(const char *path, const unsigned char *e)
+{
+	sceMcTblGetDir info;
+
+	memset(&info, 0, sizeof(info));
+	memcpy((void *)&info._Create, e + 8, 8);
+	memcpy((void *)&info._Modify, e + 0x18, 8);
+	info.FileSizeByte = e[4] | (e[5] << 8) | (e[6] << 16) | ((u32)e[7] << 24);
+	info.AttrFile = e[0] | (e[1] << 8);
+	info.Reserve2 = e[0x20] | (e[0x21] << 8) | (e[0x22] << 16) | ((u32)e[0x23] << 24);
+	memcpy(info.EntryName, e + 0x40, 32);
+	return applyMcInfoToMcPath(path, &info);
+}
+
 static void fillVmcStatFromMcInfo(iox_stat_t *stat, const sceMcTblGetDir *info)
 {
 	memset(stat, 0, sizeof(*stat));
