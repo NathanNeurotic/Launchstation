@@ -61,6 +61,7 @@ static int fileXioDevctl(const char *device, int cmd, void *arg, unsigned int ar
     return disconnect_result;
 }
 static const char *smb1Problem(int ret) { (void)ret; return "mock SMB1 failure"; }
+static int isSmbDriverLoaded(int version) { (void)version; return 1; }
 static const char *smb2Problem(int ret) { (void)ret; return "mock SMB2 failure"; }
 static unsigned int Timer(void) { return now; }
 '''
