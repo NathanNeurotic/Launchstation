@@ -47,10 +47,10 @@ typedef long long s64;
 #define FIO_O_CREAT 0x200
 #define FIO_O_TRUNC 0x400
 #define SEEK_END 2
-char LaunchElfDir[MAX_PATH];
-unsigned char mc_icon_sys[964];
+char LaunchElfDir[MAX_PATH], LaunchElfBootDir[MAX_PATH];
+unsigned char mc_icon_sys[@ICON_SYS_SIZE@];
 unsigned int size_mc_icon_sys = sizeof(mc_icon_sys);
-unsigned char mc_list_icn[100];
+unsigned char mc_list_icn[@LIST_ICN_SIZE@];
 unsigned int size_mc_list_icn = sizeof(mc_list_icn);
 static int mc1_refused, room = 1 << 20, opens, open_error = -ENOENT, seek_fails;
 #define NF 8
@@ -67,7 +67,7 @@ static int genOpen(const char *p, int mode) {
 static s64 genLseek(int fd, s64 w, int how) { (void)w; (void)how; return seek_fails ? -EIO : files[fd].size; }
 static int genWrite(int fd, void *b, int n) { (void)b; int w = n < room ? n : room; room -= w; files[fd].size += w; return w; }
 static int genClose(int fd) { (void)fd; return 0; }
-static void reset(const char *dir) { memset(files, 0, sizeof(files)); room = 1 << 20; opens = 0; mc1_refused = 0; open_error = -ENOENT; seek_fails = 0; snprintf(LaunchElfDir, MAX_PATH, "%s", dir); }
+static void reset(const char *dir) { memset(files, 0, sizeof(files)); room = 1 << 20; opens = 0; mc1_refused = 0; open_error = -ENOENT; seek_fails = 0; snprintf(LaunchElfBootDir, MAX_PATH, "%s", dir); snprintf(LaunchElfDir, MAX_PATH, "mc0:/SYS-CONF/"); }
 static int sz(const char *p) { int i = find(p); return i < 0 ? -1 : files[i].size; }
 '''
 code += function(config, "static int configWriteMcIconFile(")
@@ -77,29 +77,31 @@ int main(void) {
     /* an ELF-only top-level folder gets the full set */
     reset("mc0:/LAUNCHSTATION/");
     configStampMcFolderIcon();
-    assert(sz("mc0:/LAUNCHSTATION/icon.sys") == 964);
-    assert(sz("mc0:/LAUNCHSTATION/list.icn") == 100 && sz("mc0:/LAUNCHSTATION/copy.icn") == 100 && sz("mc0:/LAUNCHSTATION/del.icn") == 100);
+    assert(sz("mc0:/LAUNCHSTATION/icon.sys") == @ICON_SYS_SIZE@);
+    assert(sz("mc0:/LAUNCHSTATION/list.icn") == @LIST_ICN_SIZE@ && sz("mc0:/LAUNCHSTATION/copy.icn") == @LIST_ICN_SIZE@ && sz("mc0:/LAUNCHSTATION/del.icn") == @LIST_ICN_SIZE@);
+    /* the ELF's folder, not where the settings went (SYS-CONF or CNF_Path) */
+    assert(sz("mc0:/SYS-CONF/icon.sys") == -1);
     /* the next save only looks */
     opens = 0; configStampMcFolderIcon(); assert(opens == 1);
 
     /* someone's own complete icon is never replaced */
     reset("mc1:/APP_LAUNCHSTATION/");
-    genOpen("mc1:/APP_LAUNCHSTATION/icon.sys", FIO_O_CREAT | FIO_O_WRONLY); files[0].size = 2000;
+    genOpen("mc1:/APP_LAUNCHSTATION/icon.sys", FIO_O_CREAT | FIO_O_WRONLY); files[0].size = @ICON_SYS_SIZE@;
     configStampMcFolderIcon();
-    assert(sz("mc1:/APP_LAUNCHSTATION/icon.sys") == 2000 && sz("mc1:/APP_LAUNCHSTATION/list.icn") == -1);
+    assert(sz("mc1:/APP_LAUNCHSTATION/icon.sys") == @ICON_SYS_SIZE@ && sz("mc1:/APP_LAUNCHSTATION/list.icn") == -1);
 
     /* a short icon.sys (an earlier stamp that ran out of room) is redone */
     reset("mc0:/LS/");
-    genOpen("mc0:/LS/icon.sys", FIO_O_CREAT | FIO_O_WRONLY); files[0].size = 10;
+    genOpen("mc0:/LS/icon.sys", FIO_O_CREAT | FIO_O_WRONLY); files[0].size = @ICON_SYS_SIZE@ - 1;
     configStampMcFolderIcon();
-    assert(sz("mc0:/LS/icon.sys") == 964);
+    assert(sz("mc0:/LS/icon.sys") == @ICON_SYS_SIZE@);
 
     /* a full card: no icon.sys left behind, so the next save retries */
-    reset("mc0:/LS/"); room = 150;
+    reset("mc0:/LS/"); room = @LIST_ICN_SIZE@ + @LIST_ICN_SIZE@ / 2;
     configStampMcFolderIcon();
     assert(sz("mc0:/LS/icon.sys") == -1);
     room = 1 << 20; configStampMcFolderIcon();
-    assert(sz("mc0:/LS/icon.sys") == 964 && sz("mc0:/LS/list.icn") == 100);
+    assert(sz("mc0:/LS/icon.sys") == @ICON_SYS_SIZE@ && sz("mc0:/LS/list.icn") == @LIST_ICN_SIZE@);
 
     /* an open refused for any reason but "no such file", or an unmeasurable
        icon.sys, may be somebody's icon: nothing is written */
@@ -123,6 +125,9 @@ int main(void) {
     return 0;
 }
 '''
+
+code = code.replace("@ICON_SYS_SIZE@", str((icons / "icon.sys").stat().st_size))
+code = code.replace("@LIST_ICN_SIZE@", str(len(listicn)))
 
 with tempfile.TemporaryDirectory() as tmp:
     src = Path(tmp) / "t.c"

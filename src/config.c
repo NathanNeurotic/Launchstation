@@ -396,7 +396,7 @@ static int configWriteMcIconFile(const char *dir, const char *name, const void *
 void configStampMcFolderIcon(void)
 {
 	static const char *const icn[3] = {"list.icn", "copy.icn", "del.icn"};
-	const char *dir = LaunchElfDir, *slash;
+	const char *dir = LaunchElfBootDir, *slash; /* the ELF's folder; LaunchElfDir may be SYS-CONF or CNF_Path */
 	char path[MAX_PATH];
 	s64 size = -1;
 	int fd, i;
