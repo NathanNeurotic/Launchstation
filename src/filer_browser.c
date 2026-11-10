@@ -1308,6 +1308,11 @@ static int browseFilePath(char *out, int cnfmode, FILEINFO *files)
 								}
 							}
 						}
+						if (!clipReserve(nmarks > 0 ? browser_nfiles : 1)) {
+							strcpy(msg0, LNG(Failed));
+							browser_pushed = FALSE;
+							continue;
+						}
 						strcpy(clipPath, path);
 						if (nmarks > 0) {
 							for (i = nclipFiles = 0; i < browser_nfiles; i++)

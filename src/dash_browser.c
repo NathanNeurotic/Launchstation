@@ -791,6 +791,10 @@ static void opCopy(int cut)
 			    filerConfirmExploitModify(fb.dir, &fb.files[idx[i]]) < 0)
 				return;
 	}
+	if (!clipReserve(n)) {
+		dashModalMessage(DI_WARNING, "Not enough memory", "The clipboard cannot hold this selection.", NULL);
+		return;
+	}
 	dashStrCopy(clipPath, fb.dir, MAX_PATH);
 	for (i = 0; i < n; i++)
 		clipFiles[i] = fb.files[idx[i]];
@@ -889,6 +893,10 @@ static void opExtractPsuTo(int port)
 	snprintf(dest, sizeof(dest), "mc%d:/", port);
 	if (filerRootMcPresent(port, &type, NULL) <= 0 || type != 2) {
 		dashModalMessage(DI_WARNING, "No PS2 memory card", "Insert a PS2 memory card in that slot and try again.", dest);
+		return;
+	}
+	if (!clipReserve(n)) {
+		dashModalMessage(DI_WARNING, "Not enough memory", "The clipboard cannot hold this selection.", NULL);
 		return;
 	}
 	if (!prepareOp())
