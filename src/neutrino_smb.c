@@ -1,5 +1,5 @@
 /* Neutrino SMB handoff, targeting ps2max32/neutrino #236 (1bff25b),
- * by Ronnie Sahlberg, using his usmb2 client. The browser's libsmb2 session
+ * by Ronnie Sahlberg, using his usmb2 client. The browser's smb2man session
  * is not inherited: Neutrino reconnects after its own IOP reset. */
 #include <stdio.h>
 #include <string.h>
@@ -50,7 +50,7 @@ int neutrinoSmbResolve(const SmbConfig *cfg, const char *path, SmbShare *share,
 	if (kind == SMB_PATH_V1) relative = name;
 	else relative++;
 	*problem = "Neutrino SMB needs an IPv4 server and TCP port 445";
-	/* Parse independently of libsmb2: its URLs can contain DNS names, ports
+	/* Parse independently of the browser driver: its URLs can contain ports
 	 * and a subdirectory, whereas usmb2 takes a dotted IP and share separately. */
 	if (strncmp(share->url, "smb://", 6)) return 0;
 	host = share->url + 6;

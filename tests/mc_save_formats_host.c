@@ -1,5 +1,5 @@
 /* Host harness for src/mc_save_formats.c: reads a save in any supported
- * format and writes it out as a .psu, or runs the LZARI decoder alone. */
+ * format and writes it out as a .psu or .cbs, or runs the LZARI decoder alone. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -85,6 +85,34 @@ int main(int argc, char **argv)
 			fwrite(psu, 1, psu_len, o);
 			fclose(o);
 			free(psu);
+		}
+		return 0;
+	}
+	/* tocbs <in> <out.cbs>: any format read, written as a CodeBreaker .cbs; prints r=<r> */
+	if (argc >= 4 && !strcmp(argv[1], "tocbs")) {
+		McSaveData s;
+		uint8_t *cbs;
+		uint32_t cbs_len;
+		int format = 0, r;
+
+		in = slurp(argv[2], &len);
+		if (!in)
+			return 3;
+		r = mcSaveFormatRead(in, len, NULL, NULL, NULL, &s, &format);
+		free(in);
+		if (r == MCW_OK) {
+			r = mcSaveToCbs(&s, &cbs, &cbs_len);
+			mcCardFreeSave(&s);
+		}
+		printf("r=%d\n", r);
+		if (r == MCW_OK) {
+			FILE *o = fopen(argv[3], "wb");
+
+			if (!o)
+				return 3;
+			fwrite(cbs, 1, cbs_len, o);
+			fclose(o);
+			free(cbs);
 		}
 		return 0;
 	}

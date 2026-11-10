@@ -61,18 +61,18 @@ EMBED_FILE(exploit_usa_sys, "exploits/USA.sys")
 EMBED_FILE(exploit_eur_sys, "exploits/EUR.sys")
 EMBED_FILE(exploit_chn_sys, "exploits/CHN.sys")
 EMBED_FILE(exploit_list_icn, "exploits/list.icn")
+
+/* Memory-card browser icon for the app folder, stamped on settings save
+ * (config.c configStampMcFolderIcon). The same files the release packages
+ * ship; copy.icn and del.icn are byte-identical to list.icn. */
+EMBED_FILE(mc_icon_sys, "res/memory-card/icon.sys")
+EMBED_FILE(mc_list_icn, "res/memory-card/list.icn")
 EMBED_FILE(exploit_ioprp_img, "exploits/IOPRP_LTS.IMG")
 
 /* UDPFS SMAP is source-built by ps2.yaml. The unchanged ministack/ioman
  * prebuilt modules retain the existing export-table ABI. */
 EMBED_FILE(udpfs_ministack_irx, "iop/__precompiled/udpfs_ministack.irx")
 EMBED_FILE(udpfs_ioman_irx, "iop/__precompiled/udpfs_ioman.irx")
-
-#ifdef SMB
-/* smb: (SMB2/SMB3): smb2man.irx from libsmb2's wLaunchELF branch, prebuilt;
- * see iop/__precompiled/SMB2MAN.md. smbman (smb1:) is source-built. */
-EMBED_FILE(smb2man_irx, "iop/__precompiled/smb2man.irx")
-#endif
 
 /* MrRexD network-compatibility fallback: ps2sdk v1.0 DEV9/PS2IP. */
 EMBED_FILE(ps2dev9_v10_irx, "iop/__v10/ps2dev9.irx")
@@ -84,7 +84,6 @@ EMBED_FILE(sfx_confirm_adp, "res/sfx/confirm.adp")
 EMBED_FILE(sfx_cancel_adp, "res/sfx/cancel.adp")
 EMBED_FILE(sfx_transition_adp, "res/sfx/transition.adp")
 EMBED_FILE(sfx_message_adp, "res/sfx/message.adp")
-EMBED_FILE(sfx_boot_adp, "res/sfx/boot.adp")
 EMBED_FILE(sfx_connect_adp, "res/sfx/bd_connect.adp")
 EMBED_FILE(sfx_disconnect_adp, "res/sfx/bd_disconnect.adp")
 

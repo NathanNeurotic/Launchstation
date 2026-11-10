@@ -301,14 +301,15 @@ yaml = (root / "ps2.yaml").read_text(encoding="utf-8")
 assert "src/mc_ps1_card.c" in yaml and "src/dash_ps1_card.c" in yaml
 assert "if (dashPs1CardIsImage(image)) {" in tool and "dashPs1CardTool(image);" in tool
 assert 'genCmpFileExt(f->name, "MCR") || genCmpFileExt(f->name, "VM1")' in browser
+assert 'genCmpFileExt(f->name, "SRM")))\n\t\t\tADD(DI_MC, "Card contents..."' in browser   # RetroArch PS1 card
 w = ui[ui.index("static int p1Commit("):]
 w = w[:w.index("\n}\n")]
 # order: re-read and compare, safety copy, write, read back
 assert w.index("memcmp(now, before, PS1_CARD_SIZE)") < \
-    w.index("p1Safety(path, before") < w.index("p1WriteAll(path, after)") < w.index("memcmp(now, after, PS1_CARD_SIZE)")
+    w.index("p1Safety(path, before") < w.index("p1WriteAll(path, p1_kind, after, p1_head)") < w.index("memcmp(now, after, PS1_CARD_SIZE)")
 assert "FIO_O_TRUNC" not in w                       # never truncates the card it rewrites
 assert 'dashPickPath("Import which PS1 save?", dir, DASH_PICK_FILE, NULL, file, sizeof(file))' in ui   # raw saves have no extension
 assert "ent->stat.size == PS1_CARD_SIZE" in tool                                      # "All saves" skips PS1 cards
-assert '"128 KB PS1 card"' in tool and "dashPs1CardNewBlank(folder);" in tool
+assert '"128 KB PS1 card"' in tool and "dashPs1CardNew(folder, NULL, 0);" in tool
 assert "Open a PS1 card image with Card contents and use Import save... there." in tool  # a PS1 .psv refused by a PS2 card points here
 print("PASS: PS1 card images: list, import (.mcs/.psv/.psx/raw), export .mcs, delete; refusals leave the card unchanged")

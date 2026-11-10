@@ -365,6 +365,69 @@ void configEnsureSysconfDir(const char *path)
 		mcSync(0, NULL, &ret);
 	}
 }
+/* Memory-card browser icon for the folder Launchstation runs from (#287, #301).
+ * The ELF carries the icon.sys and list.icn the release ZIP/PSU ship in
+ * res/memory-card/; copy.icn and del.icn are the same bytes, so one blob is
+ * written under all three names. Only a top-level mc0:/mc1: folder is
+ * stamped (the browser shows nothing deeper), never the card root or the
+ * shared SYS-CONF folder. icon.sys gates the set: a folder that already has
+ * one at least as long as ours shows its own icon and is left alone. It is
+ * written last and only after every .icn landed whole, so a card that runs
+ * out of room part-way leaves no icon.sys and the next save retries. */
+extern unsigned char mc_icon_sys[];
+extern unsigned int size_mc_icon_sys;
+extern unsigned char mc_list_icn[];
+extern unsigned int size_mc_list_icn;
+
+static int configWriteMcIconFile(const char *dir, const char *name, const void *data, int len)
+{
+	char path[MAX_PATH];
+	int fd, written;
+
+	if (snprintf(path, sizeof(path), "%s%s", dir, name) >= (int)sizeof(path))
+		return 0;
+	fd = genOpen(path, FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC);
+	if (fd < 0)
+		return 0;
+	written = genWrite(fd, (void *)data, len);
+	return genClose(fd) >= 0 && written == len;
+}
+
+void configStampMcFolderIcon(void)
+{
+	static const char *const icn[3] = {"list.icn", "copy.icn", "del.icn"};
+	const char *dir = LaunchElfBootDir, *slash; /* the ELF's folder; LaunchElfDir may be SYS-CONF or CNF_Path */
+	char path[MAX_PATH];
+	s64 size = -1;
+	int fd, i;
+
+	if (strncmp(dir, "mc", 2) || (dir[2] != '0' && dir[2] != '1') || strncmp(dir + 3, ":/", 2))
+		return;
+	slash = strchr(dir + 5, '/');
+	if (slash == NULL || slash == dir + 5 || slash[1] != '\0' || !strcmp(dir + 5, "SYS-CONF/"))
+		return;
+	if (dir[2] == '1' && mc1AccessRefused())
+		return;
+	if (snprintf(path, sizeof(path), "%sicon.sys", dir) >= (int)sizeof(path))
+		return;
+	/* Stamp only a folder whose icon.sys is known to be absent (-ENOENT) or
+	 * measured short; an open the card refuses for another reason, or a
+	 * size it cannot report, may hide somebody's icon, so leave it. */
+	fd = genOpen(path, FIO_O_RDONLY);
+	if (fd >= 0) {
+		size = genLseek(fd, 0, SEEK_END);
+		genClose(fd);
+		if (size < 0)
+			return;
+	} else if (fd != -ENOENT)
+		return;
+	if (size >= (s64)size_mc_icon_sys)
+		return;
+	for (i = 0; i < 3; i++)
+		if (!configWriteMcIconFile(dir, icn[i], mc_list_icn, (int)size_mc_list_icn))
+			return;
+	configWriteMcIconFile(dir, "icon.sys", mc_icon_sys, (int)size_mc_icon_sys);
+}
 //---------------------------------------------------------------------------
 static char *preloadCNFFd(int fd, const char *cnf_path)
 {
@@ -701,6 +764,8 @@ void saveConfigToPath(char *mainMsg, char *CNF, const char *target_path)
 		sprintf(mainMsg, "%s (%s)", LNG(Failed_writing), CNF);
 	genClose(fd);
 	free(tmp);
+	if (ret == CNF_size)
+		configStampMcFolderIcon();
 }
 void saveConfig(char *mainMsg, char *CNF)
 {

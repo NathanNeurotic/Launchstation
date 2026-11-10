@@ -34,10 +34,10 @@ code = r'''
 typedef unsigned char u8;
 static u8 ps2dev9_irx[1], ps2dev9_v10_irx[1], ata_bd_irx[1];
 static int size_ps2dev9_irx=1, size_ps2dev9_v10_irx=1, size_ata_bd_irx=1;
-static u8 ps2ips_irx[1], ps2ip_irx[1], ps2ip_v10_irx[1], ps2smap_irx[1], ps2host_irx[1], ps2ftpd_irx[1], ps2netfs_irx[1];
-static int size_ps2ips_irx=1, size_ps2ip_irx=1, size_ps2ip_v10_irx=1, size_ps2smap_irx=1, size_ps2host_irx=1, size_ps2ftpd_irx=1, size_ps2netfs_irx=1;
+static u8 netman_irx[1], smap_netman_irx[1], ps2ips_irx[1], ps2ip_irx[1], ps2ip_v10_irx[1], ps2smap_irx[1], ps2host_irx[1], ps2ftpd_irx[1], ps2netfs_irx[1];
+static int size_netman_irx=1, size_smap_netman_irx=1, size_ps2ips_irx=1, size_ps2ip_irx=1, size_ps2ip_v10_irx=1, size_ps2smap_irx=1, size_ps2host_irx=1, size_ps2ftpd_irx=1, size_ps2netfs_irx=1;
 static const char *dashboard_ip_error;
-static int have_ps2ips, have_ps2ip, have_ps2smap, have_ps2host, have_ps2ftpd, have_ps2netfs, network_calls;
+static int have_netman, have_ps2ips, have_ps2ip, have_ps2smap, have_ps2host, have_ps2ftpd, have_ps2netfs, network_calls;
 static int network_allowed=1, client_calls, if_conf_len;
 static int console_is_PSX, have_Flash_modules, xfromserv_loaded, power_calls, flash_calls;
 static char if_conf[1];
@@ -62,7 +62,7 @@ static void resetRuntimeDeviceState(int show) {
     assert(show == TRUE); resets++;
     if (allow_reset) {
         have_ps2dev9=ps2dev9_loaded=have_ata_bd=bdm_live=0;
-        have_ps2ips=have_ps2ip=have_ps2smap=have_ps2host=have_ps2ftpd=have_ps2netfs=0;
+        have_netman=have_ps2ips=have_ps2ip=have_ps2smap=have_ps2host=have_ps2ftpd=have_ps2netfs=0;
         ps2dev9_variant=DEV9_VARIANT_NONE;
     }
 }
@@ -88,7 +88,7 @@ static void reset(void) {
     ps2dev9_loaded=have_ps2dev9=have_ata_bd=cf_owned=resets=bdm_live=0;
     bdm_calls=ata_calls=dev9_calls=settle_calls=module_result=0;
     ps2dev9_variant=DEV9_VARIANT_NONE; allow_reset=bdm_ok=module_id=1;
-    have_ps2ips=have_ps2ip=have_ps2smap=have_ps2host=have_ps2ftpd=have_ps2netfs=network_calls=client_calls=0;
+    have_netman=have_ps2ips=have_ps2ip=have_ps2smap=have_ps2host=have_ps2ftpd=have_ps2netfs=network_calls=client_calls=0;
     network_allowed=1;
     console_is_PSX=have_Flash_modules=xfromserv_loaded=power_calls=flash_calls=0;
 }
@@ -130,9 +130,9 @@ int main(void) {
     load_ps2host(); load_ps2ftpd(); load_ps2netfs();
     assert(!ensureDashboardIpNetworkReady() && !network_calls && !dev9_calls && !client_calls);
     reset(); assert(ensureDashboardIpNetworkReady());
-    assert(dev9_calls==1 && network_calls==3 && client_calls==1 && have_ps2ips);
+    assert(dev9_calls==1 && network_calls==4 && client_calls==1 && have_ps2ips);
     load_ps2host(); load_ps2ftpd(); load_ps2netfs();
-    assert(network_calls==6 && have_ps2host && have_ps2ftpd && have_ps2netfs);
+    assert(network_calls==7 && have_ps2host && have_ps2ftpd && have_ps2netfs);
     assert(mc_idle_calls==1 && ftpd_arglen==(int)strlen("-anonymous"));
     assert(!strcmp(ftpd_args, "-anonymous"));
     /* Hidden HDD/ATA passes -no-hdd as a second IOP argument. */

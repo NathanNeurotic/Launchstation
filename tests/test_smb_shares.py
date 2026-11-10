@@ -118,7 +118,11 @@ int main(void)
     expectProblem("NAME = A\nURL = //10.0.0.2/s\n", "smb://");
     expectProblem("NAME = A\nURL = smb://10.0.0.2\n", "<share>");
     expectProblem("NAME = A\nURL = smb://10.0.0.2/\n", "<share>");
-    assert(parse("NAME = A\nURL = SMB://nas.local/share/sub\n") == 1); /* libsmb2 parses the rest */
+    assert(parse("NAME = A\nURL = SMB://10.0.0.2/share/sub\n") == 1); /* smb2man ignores the rest */
+    assert(share(0)->port == 445 && !strcmp(share(0)->share, "share"));
+    expectProblem("NAME = A\nURL = smb://nas.local/share\n", "IP address"); /* no DNS in smb2man */
+    expectProblem("NAME = A\nURL = smb://192.168.001.010/share\n", "IP address"); /* inet_addr: octal */
+    expectProblem("NAME = A\nURL = smb://10.0.0.2:0/share\n", "port is 0");
 
     /* VERSION */
     assert(parse("NAME = OLD\nVERSION = 1\nURL = smb://192.168.1.5/PS2SMB\n") == 1);
@@ -300,6 +304,8 @@ yaml = text("ps2.yaml")
 assert "      - SMBMAN_SMB1_DEVICE\n      - IOMANX_OLD_NAME_ADDDELDRV=0\n" in yaml
 assert "      - smbman\n" in yaml and "      - SMB\n" in yaml
 assert "src/smb_cnf.c" in yaml and "src/smb_shares.c" in yaml
-assert 'EMBED_FILE(smb2man_irx, "iop/__precompiled/smb2man.irx")' in text("src/embed_blobs.S")
+# smb: is the source-built usmb2 driver, embedded from its ps2.yaml target
+assert "smb2man_irx" not in text("src/embed_blobs.S") and "      - smb2man\n" in yaml
+assert "  - name: smb2man\n" in yaml and "iop/smb2man/smb2man.c" in yaml
 
 print("SMB shares: OK")

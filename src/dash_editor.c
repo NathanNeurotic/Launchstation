@@ -16,6 +16,7 @@
 #include "dash_internal.h"
 #include "dash_sound.h"
 #include "init.h"
+#include "filer_actions.h"
 
 #define ED_MAX_DOCS 8
 #define ED_MAX_SIZE (512 * 1024)
@@ -296,7 +297,7 @@ static const char *docName(const EdDoc *d)
 //--------------------------------------------------------------
 typedef struct
 {
-	int op; /* 0 load, 1 save */
+	int op; /* 0 load, 1 save, 2 overwrite an existing file in place */
 	char path[MAX_PATH];
 	char *text;
 	int len;
@@ -313,8 +314,8 @@ static void edIoRun(void *arg)
 	j->ret = -1;
 	if (genFixPath(j->path, fixed) < 0)
 		dashStrCopy(fixed, j->path, sizeof(fixed));
-	if (j->op == 1) {
-		fd = genOpen(fixed, FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC);
+	if (j->op) { /* op 2 never creates or truncates: a failed write leaves the rest of the file */
+		fd = genOpen(fixed, j->op == 2 ? FIO_O_WRONLY : FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC);
 		if (fd >= 0) {
 			if (j->len == 0 || genWrite(fd, j->text, j->len) == j->len)
 				j->ret = 0;
@@ -400,7 +401,7 @@ static int edIo(EdIoJob *j, const char *title)
 		free(j);
 		return 0;
 	}
-	if (dashWorkerAwait(id, title, 1))
+	if (dashWorkerAwait(id, title, j->op != 2)) /* a Hex Editor write is waited out, so "Don't save" means it */
 		return 1;
 	j->abandoned = 1;
 	return 0;
@@ -482,6 +483,16 @@ static int docNew(void)
 	return 1;
 }
 
+/* the File Browser's rule: host: and udpfs: are written only when the Network setting allows it */
+static int edNetWriteOff(const char *path)
+{
+	if ((!strncmp(path, "host", 4) || !strncmp(path, "udpfs", 5)) && !setting->HOSTwrite) {
+		dashModalMessage(DI_WARNING, "Writing is off", "Host and UDPFS writing is off in the Network settings.", path);
+		return 1;
+	}
+	return 0;
+}
+
 static int docWrite(EdDoc *d, const char *path)
 {
 	EdIoJob *j;
@@ -491,6 +502,8 @@ static int docWrite(EdDoc *d, const char *path)
 		dashModalMessage(DI_WARNING, "Read-only device", "Discs cannot be written. Use \"Save as\" to choose another place.", NULL);
 		return 0;
 	}
+	if (edNetWriteOff(path))
+		return 0;
 	j = (EdIoJob *)malloc(sizeof(EdIoJob));
 	if (j == NULL)
 		return 0;
@@ -565,19 +578,21 @@ static void docClose(int i)
 }
 
 /* asks about unsaved changes; 1 = go ahead (saved or discarded) */
+/* "Save changes?" in the Text Editor and the Hex Editor */
+static const DashMenuItem save_menu[] = {
+    {DI_SAVE, "Save", NULL, 0},
+    {DI_CLOSE, "Don't save", NULL, 0},
+    {DI_BACK, "Cancel", NULL, 0}};
+
 static int confirmDiscard(EdDoc *d)
 {
-	DashMenuItem items[] = {
-	    {DI_SAVE, "Save", NULL, 0},
-	    {DI_CLOSE, "Don't save", NULL, 0},
-	    {DI_BACK, "Cancel", NULL, 0}};
 	char sub[96];
 	int r;
 
 	if (!d->dirty)
 		return 1;
 	snprintf(sub, sizeof(sub), "%s has unsaved changes", docName(d));
-	r = dashModalMenu("Save changes?", sub, items, 3, 0);
+	r = dashModalMenu("Save changes?", sub, save_menu, 3, 0);
 	if (r == 0)
 		return docSave(d);
 	return r == 1;
@@ -1191,6 +1206,288 @@ done:
 	dashSoundPlay(DASH_SND_CANCEL);
 	dashInputFlush();
 	return result;
+}
+//--------------------------------------------------------------
+// Hex Editor: overwrite the bytes of any file up to 512 KB. No insert,
+// delete or undo: Exit without saving keeps the file as it was. It shares
+// the Text Editor's worker IO, font and layout.
+//--------------------------------------------------------------
+#define HX_COLS 8
+
+static unsigned char *hx_buf;
+static int hx_len, hx_cur, hx_top, hx_dirty, hx_edit, hx_nib;
+static const char *hx_path;
+
+static int hexDigit(int c)
+{
+	if (c >= '0' && c <= '9')
+		return c - '0';
+	c |= 0x20;
+	return (c >= 'a' && c <= 'f') ? c - 'a' + 10 : -1;
+}
+
+/* "1A2B" or "0x1a2b"; -1 when it is not a hex number */
+static int hexParse(const char *s)
+{
+	int v = 0, n = 0, d;
+
+	if (s[0] == '0' && (s[1] | 0x20) == 'x')
+		s += 2;
+	for (; *s; s++) {
+		if ((d = hexDigit(*s)) < 0 || ++n > 7)
+			return -1;
+		v = v * 16 + d;
+	}
+	return n ? v : -1;
+}
+
+/* a typed digit: high nibble, then low nibble and on to the next byte */
+static void hexType(int d)
+{
+	unsigned char *b = &hx_buf[hx_cur];
+
+	*b = hx_nib ? (*b & 0xF0) | d : (d << 4) | (*b & 0x0F);
+	hx_dirty = 1;
+	if (hx_nib && hx_cur < hx_len - 1)
+		hx_cur++;
+	hx_nib = !hx_nib;
+}
+
+/* "0001A0  41 42 43 44 45 46 47 48  ABCDEFGH"; byte i is at column 8 + 3 * i */
+static void hexRow(char *out, int off)
+{
+	static const char hx[] = "0123456789ABCDEF";
+	int i, n = sprintf(out, "%06X ", off);
+
+	for (i = 0; i < HX_COLS; i++, n += 3) {
+		int k = off + i < hx_len;
+		out[n] = ' ';
+		out[n + 1] = k ? hx[hx_buf[off + i] >> 4] : ' ';
+		out[n + 2] = k ? hx[hx_buf[off + i] & 15] : ' ';
+	}
+	out[n++] = ' ';
+	out[n++] = ' ';
+	for (i = 0; i < HX_COLS && off + i < hx_len; i++) {
+		unsigned char c = hx_buf[off + i];
+		out[n++] = (c < 0x20 || c > 0x7E) ? '.' : c;
+	}
+	out[n] = '\0';
+}
+
+static void hexMove(int to)
+{
+	hx_cur = to < 0 ? 0 : to >= hx_len ? hx_len - 1 : to;
+	hx_nib = 0;
+}
+
+static void hexScene(void)
+{
+	char line[64];
+	int r, i, rows = visibleRows(), cr = hx_cur / HX_COLS - hx_top, cc = hx_cur % HX_COLS;
+
+	dashGfxBeginFrame();
+	dashBgDraw();
+	snprintf(line, sizeof(line), "Offset %06X  |  %d bytes", hx_cur, hx_len);
+	dashIcon(DI_EDIT, ED_X, 20, 22, DASH_C_ACCENT);
+	dashTextFit(ED_X + 30, 20, 300, hx_dirty ? "Hex Editor  *" : "Hex Editor", DASH_FS_LABEL, DASH_C_TEXT);
+	dashTextRight(ED_X + ED_W, 26, line, DASH_FS_CAPTION, DASH_C_TEXT3);
+	dashTextScroll(ED_X + 30, 42, ED_W - 30, hx_path, DASH_FS_CAPTION, DASH_C_TEXT3);
+	dashDrawPanelBox(ED_X - 6, ED_Y - 4, ED_W + 12, rows * ED_ROW + 8, 12);
+	if (cr >= 0 && cr < rows) {
+		float y = ED_Y + cr * ED_ROW;
+		dashRect(ED_X, y, ED_W, ED_ROW, dashColorA(DASH_C_SELECT, 0.25f));
+		dashRect(ED_X + 8 + (8 + 3 * cc + (hx_edit ? 0 : hx_nib)) * ED_CW, y,
+		         (hx_edit || !hx_nib ? 2 : 1) * ED_CW, ED_ROW, dashColorA(hx_edit ? DASH_C_ACCENT : DASH_C_SELECT, 0.9f));
+		dashRect(ED_X + 8 + (33 + cc) * ED_CW, y, ED_CW, ED_ROW, dashColorA(DASH_C_SELECT, 0.9f));
+	}
+	dashSpriteBatchEnd();
+	for (r = 0; r < rows && (hx_top + r) * HX_COLS < hx_len; r++) {
+		hexRow(line, (hx_top + r) * HX_COLS);
+		for (i = 0; line[i]; i++)
+			if (line[i] != ' ')
+				dashFontMonoByte((unsigned char)line[i], ED_X + 8 + i * ED_CW, ED_Y + r * ED_ROW + 1,
+				                 i < 7 ? DASH_C_TEXT3 : DASH_C_TEXT);
+	}
+	if ((hx_len + HX_COLS - 1) / HX_COLS > rows)
+		dashDrawScrollbar(ED_X + ED_W + 10, ED_Y, rows * ED_ROW, hx_top, rows, (hx_len + HX_COLS - 1) / HX_COLS);
+	if (hx_edit) {
+		DashHint h[] = {{-1, "Up/Down", "+1 -1"}, {-1, "L1/R1", "-16 +16"}, {-1, "Left/Right", "Byte"},
+		                {dashOkIcon(), NULL, "Done"}};
+		dashDrawHints(h, 4);
+	} else {
+		DashHint h[] = {{dashOkIcon(), NULL, "Change"}, {-1, "L2/R2", "Page"}, {-1, "L1/R1", "Start/End"},
+		                {DI_BTN_TRIANGLE, NULL, "Options"}, {dashBackIcon(), NULL, "Exit"}};
+		dashDrawHints(h, 5);
+	}
+	dashDrawToasts();
+	dashDrawActivity();
+}
+
+/* overwrite the file's bytes in place, then read it back and compare */
+static int hexSave(void)
+{
+	EdIoJob *j;
+	int ok;
+
+	if (!strncmp(hx_path, "cdfs", 4)) {
+		dashModalMessage(DI_WARNING, "Read-only device", "Discs cannot be written.", NULL);
+		return 0;
+	}
+	if (edNetWriteOff(hx_path) || filerConfirmExploitModify(hx_path, NULL) <= 0) /* the File Browser's system-folder warning */
+		return 0;
+	j = (EdIoJob *)calloc(1, sizeof(EdIoJob));
+	if (j == NULL || (j->text = (char *)malloc(hx_len)) == NULL) {
+		free(j);
+		return 0;
+	}
+	j->op = 2;
+	j->len = hx_len;
+	memcpy(j->text, hx_buf, hx_len);
+	dashStrCopy(j->path, hx_path, sizeof(j->path));
+	if (!edIo(j, "Saving file"))
+		return 0;
+	ok = j->ret == 0;
+	free(j->text);
+	j->text = NULL;
+	j->op = 0;
+	if (ok) {
+		if (!edIo(j, "Checking file"))
+			return 0;
+		ok = j->ret == 0 && j->len == hx_len && !memcmp(j->text, hx_buf, hx_len);
+		free(j->text);
+	}
+	free(j);
+	if (!ok) {
+		dashModalMessage(DI_WARNING, "File not saved", "The write failed or reads back different, so the file may be partly changed. The device may be read-only or full.", hx_path);
+		return 0;
+	}
+	hx_dirty = 0;
+	dashToast(DASH_TOAST_OK, "Saved and checked");
+	return 1;
+}
+
+static int hexLeave(void)
+{
+	int r;
+
+	if (!hx_dirty)
+		return 1;
+	r = dashModalMenu("Save changes?", hx_path, save_menu, 3, 0);
+	return r == 0 ? hexSave() : r == 1;
+}
+
+void dashHexEditor(const char *path)
+{
+	EdIoJob *j = (EdIoJob *)calloc(1, sizeof(EdIoJob));
+	DashInput in;
+	char key, off[12];
+
+	if (j == NULL)
+		return;
+	dashStrCopy(j->path, path, sizeof(j->path));
+	if (!edIo(j, "Opening file"))
+		return;
+	if (j->ret != 0 || j->len == 0) {
+		dashModalMessage(DI_WARNING, "File not opened",
+		                 j->ret == -2 ? "The file is larger than 512 KB, the Hex Editor's limit." :
+		                 j->ret == 0  ? "The file is empty." :
+		                                "The file could not be read. Check that the device is connected.",
+		                 path);
+		free(j->text);
+		free(j);
+		return;
+	}
+	hx_buf = (unsigned char *)j->text;
+	hx_len = j->len;
+	free(j);
+	hx_path = path;
+	hx_cur = hx_top = hx_dirty = hx_edit = hx_nib = kb_shown = 0; /* the Text Editor's keyboard may be left up */
+	dashFontInit();
+	dashPushSceneOverride(hexScene);
+	dashInputFlush();
+	while (1) {
+		int rows = visibleRows(), act = -1;
+
+		if (dashDashboardPending()) {
+			if (dashDashboardConfirmLeave(hexLeave))
+				break;
+			continue;
+		}
+		dashInputPollEx(&in, 0);
+		if (dashDashboardPending())
+			continue;
+		if (setting->usbkbd_used && !dashWorkerIoBusy() && !dashIopParked() && ensureUsbKeyboardReady())
+			while (PS2KbdRead(&key)) {
+				if (key == PS2KBD_ESCAPE_KEY && PS2KbdRead(&key)) {
+					if (key == 0x29 || key == 0x2a)
+						hexMove(hx_cur + (key == 0x29 ? 1 : -1));
+					else if (key == 0x2b || key == 0x2c)
+						hexMove(hx_cur + (key == 0x2b ? HX_COLS : -HX_COLS));
+					else if (key == 0x1b)
+						act = 0;
+				} else if (hexDigit(key) >= 0)
+					hexType(hexDigit(key));
+			}
+		if (hx_edit) {
+			int d = (in.pressed & DASH_IN_UP) ? 1 : (in.pressed & DASH_IN_DOWN) ? -1 :
+			        (in.pressed & DASH_IN_R1) ? 16 : (in.pressed & DASH_IN_L1) ? -16 : 0;
+			if (d) { /* hx_cur, after any key the USB keyboard moved it by */
+				hx_buf[hx_cur] = (unsigned char)(hx_buf[hx_cur] + d);
+				hx_dirty = 1;
+			}
+			if (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))
+				hexMove(hx_cur + ((in.pressed & DASH_IN_RIGHT) ? 1 : -1));
+			if (in.pressed & (DASH_IN_OK | DASH_IN_BACK))
+				hx_edit = 0;
+		} else {
+			if (in.pressed & (DASH_IN_UP | DASH_IN_DOWN))
+				hexMove(hx_cur + ((in.pressed & DASH_IN_DOWN) ? HX_COLS : -HX_COLS));
+			if (in.pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))
+				hexMove(hx_cur + ((in.pressed & DASH_IN_RIGHT) ? 1 : -1));
+			if (in.pressed & (DASH_IN_L2 | DASH_IN_R2))
+				hexMove(hx_cur + ((in.pressed & DASH_IN_R2) ? 1 : -1) * HX_COLS * (rows - 1));
+			if (in.pressed & (DASH_IN_L1 | DASH_IN_R1))
+				hexMove((in.pressed & DASH_IN_R1) ? hx_len - 1 : 0);
+			if (in.pressed & DASH_IN_OK)
+				hx_edit = 1, hx_nib = 0;
+			if (in.pressed & DASH_IN_MENU)
+				act = 0;
+			if ((in.pressed & DASH_IN_BACK) && hexLeave())
+				break;
+		}
+		if (act == 0) {
+			static const DashMenuItem items[] = {
+			    {DI_SAVE, "Save", NULL, 0},
+			    {DI_BTN_DOWN, "Go to offset...", NULL, 0},
+			    {DI_BACK, "Exit Hex Editor", NULL, 0}};
+			int r = dashModalMenu("Hex Editor", hx_path, items, 3, 0);
+			if (r == 0)
+				hexSave();
+			else if (r == 1) {
+				off[0] = '\0';
+				if (dashModalKeyboard("Offset (hex)", off, sizeof(off) - 1)) {
+					int o = hexParse(off);
+					if (o < 0 || o >= hx_len)
+						dashToast(DASH_TOAST_WARN, "Not an offset in this file");
+					else
+						hexMove(o);
+				}
+			} else if (r == 2 && hexLeave())
+				break;
+		}
+		if (hx_cur / HX_COLS < hx_top)
+			hx_top = hx_cur / HX_COLS;
+		if (hx_cur / HX_COLS >= hx_top + rows)
+			hx_top = hx_cur / HX_COLS - rows + 1;
+		dashVisualUpdate();
+		dashRenderScene();
+		dashGfxPresent();
+	}
+	free(hx_buf);
+	hx_buf = NULL;
+	dashPopSceneOverride();
+	dashSoundPlay(DASH_SND_CANCEL);
+	dashInputFlush();
 }
 //--------------------------------------------------------------
 //End of file: dash_editor.c

@@ -445,7 +445,8 @@ void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char 
 		enable[TITLE_CFG] = FALSE;
 
 	enable[OPEN_TEXTEDITOR] = canOpenInTextEditor(path, file);
-	enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR];
+	/* Only a text file can hold launch arguments (wLaunchELF_R3Z 4.85). */
+	enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR] && IsTextEditorFileType(file->name);
 
 	if (isPcCardCfPath(path)) {
 		enable[MOUNTVMC0] = FALSE;
@@ -1307,6 +1308,11 @@ static int browseFilePath(char *out, int cnfmode, FILEINFO *files)
 								}
 							}
 						}
+						if (!clipReserve(nmarks > 0 ? nmarks : 1)) {
+							strcpy(msg0, LNG(Failed));
+							browser_pushed = FALSE;
+							continue;
+						}
 						strcpy(clipPath, path);
 						if (nmarks > 0) {
 							for (i = nclipFiles = 0; i < browser_nfiles; i++)
@@ -1688,44 +1694,8 @@ static int browseFilePath(char *out, int cnfmode, FILEINFO *files)
 				}
 			}
 #endif
-			if (!cnfmode) {  //Calculate free space (unless configuring)
-				if (!strncmp(path, "mc", 2)) {
-					mcGetInfo(path[2] - '0', 0, &mctype_PSx, &mcfreeSpace, NULL);
-					mcSync(0, NULL, &ret);
-					freeSpace = mcfreeSpace * ((mctype_PSx == 1) ? 8192 : 1024);
-					vfreeSpace = TRUE;
-#ifdef XFROM
-				} else if (!strncmp(path, "xfrom", 5)) {
-					xfromGetInfo(0, 0, &mctype_PSx, &mcfreeSpace, NULL);
-					xfromSync(0, NULL, &ret);
-					freeSpace = mcfreeSpace * ((mctype_PSx == 1) ? 8192 : 1024);
-					vfreeSpace = TRUE;
-#endif
-				} else if (!strncmp(path, "hdd", 3) && !isHddRootPath(path)) {
-					u64 ZoneFree, ZoneSize;
-					char pfs_str[6];
-
-					strcpy(pfs_str, "pfs0:");
-					pfs_str[3] += latestMount;
-					ZoneFree = fileXioDevctl(pfs_str, PFSCTL_GET_ZONE_FREE, NULL, 0, NULL, 0);
-					ZoneSize = fileXioDevctl(pfs_str, PFSCTL_GET_ZONE_SIZE, NULL, 0, NULL, 0);
-					freeSpace = ZoneFree * ZoneSize;
-					vfreeSpace = TRUE;
-#ifdef DVRP
-				} else if (!strncmp(path, "dvr_hdd", 7) && strcmp(path, "dvr_hdd0:/")) {
-					u64 ZoneFree, ZoneSize;
-					char pfs_str[10];
-
-					strcpy(pfs_str, "dvr_pfs0:");
-					pfs_str[7] += latestDVRPMount;
-					ZoneFree = fileXioDevctl(pfs_str, PFSCTL_GET_ZONE_FREE, NULL, 0, NULL, 0);
-					ZoneSize = fileXioDevctl(pfs_str, PFSCTL_GET_ZONE_SIZE, NULL, 0, NULL, 0);
-					//printf("ZoneFree==%d  ZoneSize==%d\r\n", ZoneFree, ZoneSize);
-					freeSpace = ZoneFree * ZoneSize;
-					vfreeSpace = TRUE;
-#endif
-				}
-			}
+			if (!cnfmode)  //Calculate free space (unless configuring); a failed query shows none
+				vfreeSpace = filerFreeSpace(path, &freeSpace);
 			browser_sel = 0;
 			top = 0;
 			if (browser_repos) {
@@ -1994,7 +1964,18 @@ static int browseFilePath(char *out, int cnfmode, FILEINFO *files)
 			}
 			setScrTmp(msg0, msg1);
 			if (vfreeSpace) {
-				if (freeSpace >= 1024 * 1024)
+				if (vfreeSpace == 2) {
+					/* An external LNG file may override this format: use it
+					 * only if its sole conversions are the two %d. */
+					const char *f = LNG(Dashboard_PS1_Blocks_Free), *p = f;
+					int n = 0;
+
+					while (n < 3 && (p = strchr(p, '%')) != NULL) {
+						n = p[1] == 'd' ? n + 1 : 3;
+						p += p[1] ? 2 : 1;
+					}
+					snprintf(tmp, sizeof(tmp), n == 2 ? f : "[%d/%d blocks free]", (int)(freeSpace / 8192), 15);
+				} else if (freeSpace >= 1024 * 1024)
 					sprintf(tmp, "[%.1fMB %s]", (double)freeSpace / 1024 / 1024, LNG(free));
 				else if (freeSpace >= 1024)
 					sprintf(tmp, "[%.1fKB %s]", (double)freeSpace / 1024, LNG(free));
@@ -2163,7 +2144,7 @@ static void subfunc_Paste(char *mess, char *path)
 	 * (COPY_KEPT_DESTINATION): a Move leaves their sources, still cut. */
 	static char paste_kept[MAX_ENTRY];
 	char tmp[MAX_PATH], tmp1[MAX_PATH];
-	int i, kept, ret = -1, trace_vmc_paste;
+	int i, kept, ret = -1, trace_vmc_paste, widened = 0, no_buffer;
 	unsigned int move_mark;
 
 	filerMoveBegin(browser_cut);
@@ -2197,6 +2178,12 @@ static void subfunc_Paste(char *mess, char *path)
 	if (trace_vmc_paste)
 		printf("[PASTE] start src='%s' dst='%s' items=%d mode=%d cut=%d\n",
 		       clipPath, path, nclipFiles, PasteMode, browser_cut);
+	widened = 1;  //even a refused widen leaves fileXio needing its 16 KB back
+	if (setFileXioTransferWide(1) < 0) {  //drivers are loaded; see init.c
+		filerCopyDiagStage("Transfer buffer");
+		ret = -ENOMEM;
+		goto finished;
+	}
 
 	for (i = 0; i < nclipFiles; i++) {
 		strcpy(tmp, clipFiles[i].name);
@@ -2239,6 +2226,7 @@ static void subfunc_Paste(char *mess, char *path)
 //	unmountAll(); //disabled to avoid interference with VMC implementation
 
 finished:
+	no_buffer = widened && setFileXioTransferWide(0) < 0;  //the paste stands either way; only the message changes
 	filerMoveEnd();
 	if (ret < 0) {
 		printf("[PASTE] failed ret=%d src='%s' dst='%s' mode=%d cut=%d\n",
@@ -2262,6 +2250,11 @@ finished:
 			}
 		}
 		markMx4sioDestinationAfterWrite(path);
+		if (no_buffer) {  //done and reconciled, but fileXio has no buffer now
+			filerCopyDiagStage("Transfer buffer");
+			filerCopyDiagFormat(mess, MAX_PATH, -ENOMEM);
+			browser_pushed = FALSE;
+		}
 	}
 	browser_cd = TRUE;
 }
@@ -2452,18 +2445,19 @@ int filerCreateFolderIcon(const char *path, const char *title, const char *text,
 /* Free space of the device holding `path`, as the classic browser header
  * shows it (memory cards, xfrom, HDD partitions). Call right after reading
  * the folder: for the HDD it asks the partition that read mounted.
- * 1 = *out is valid. */
+ * Nonzero = *out is valid; 2 = a PS1 card (15 blocks of 8 KB). */
 int filerFreeSpace(const char *path, u64 *out)
 {
 	int type = 0, free_units = 0, ret;
 
 	if (!strncmp(path, "mc", 2) && (path[2] == '0' || path[2] == '1')) {
-		mcGetInfo(path[2] - '0', 0, &type, &free_units, NULL);
+		if (mcGetInfo(path[2] - '0', 0, &type, &free_units, NULL) < 0)
+			return 0; /* not started: mcSync would leave ret unset */
 		mcSync(0, NULL, &ret);
 		if (ret < -1)
 			return 0;
 		*out = (u64)free_units * ((type == 1) ? 8192 : 1024);
-		return 1;
+		return type == 1 ? 2 : 1; /* 2: PS1 card, shown in blocks */
 	}
 #ifdef XFROM
 	if (!strncmp(path, "xfrom", 5)) {

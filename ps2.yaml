@@ -113,6 +113,23 @@ targets:
     cflags: [-Wall]
     headers: [atad, bdm, cdvd, dev9, intrman, iomanx, stdio, sysclib, sysmem, threadman]
 
+  # The physical memory card driver, built from the same vendored sources as
+  # VMCMAN with the SDK's own mcman flags (BUILDING_XMCMAN only), so a PS1
+  # card still powered after an IOP reset is read again (mcsio2.c).
+  - name: mcman_physical
+    type: iop
+    sources:
+      - iop/vmcman/src/main.c
+      - iop/vmcman/src/mcdev.c
+      - iop/vmcman/src/mcsio2.c
+      - iop/vmcman/src/ps2mc_fio.c
+      - iop/vmcman/src/ps1mc_fio.c
+    include_dirs: [iop/vmcman/include, iop/vmcman/src]
+    imports_lst: iop/vmcman/src/imports.lst
+    exports_tab: iop/vmcman/src/exports.tab
+    defines: [BUILDING_XMCMAN]
+    headers: [cdvd, sior, secrman, sio2man, intrman, ioman, iomanx, loadcore, modload, stdio, sysclib, threadman, timrman]
+
   - name: vmcman
     type: iop
     sources:
@@ -192,9 +209,42 @@ targets:
     cflags: [-Wall]
     headers: [intrman, ioman, loadcore, ps2ip-nm, sifcmd, stdio, sysclib, threadman]
 
+  # SMB2/SMB3 client for the smb: device, up to 8 named shares: usmb2
+  # (Ronnie Sahlberg, MIT) as RiptOPL vendors and patches it, behind
+  # Launchstation's CONNECT/DISCONNECT_ALL devctls (iop/smb2man/README.md).
+  # smb2man.c compiles usmb2.c into itself; the NTLM, hash and UTF-16 helpers
+  # are separate objects, built with the same features. Signing (HMAC-SHA256)
+  # uses smb2auth.c, from RiptOPL's in-game reader.
+  - name: smb2man
+    type: iop
+    sources:
+      - iop/smb2man/smb2man.c
+      - iop/smb2man/usmb2/ntlm.c
+      - iop/smb2man/usmb2/md4c.c
+      - iop/smb2man/usmb2/hmac-md5.c
+      - iop/smb2man/usmb2/md5.c
+      - iop/smb2man/usmb2/unicode.c
+      - iop/smb2man/smb2auth.c
+    include_dirs: [iop/smb2man]
+    imports_lst: iop/smb2man/imports.lst
+    linkfile: iop/smb2man/linkfile
+    defines:
+      - _IOP
+      - SMB2AUTH_SYSCLIB
+      - USMB2_FEATURE_WRITE
+      - USMB2_FEATURE_NTLM
+      - USMB2_FEATURE_UNICODE
+      - USMB2_FEATURE_STAT
+      - USMB2_FEATURE_MKDIR
+      - USMB2_FEATURE_UNLINK
+      - USMB2_FEATURE_RENAME
+    cflags: [-Os, -Wall, -Wno-unused-function, -ffunction-sections, -fdata-sections]
+    ldflags: ["-Wl,--gc-sections", "-Wl,-u,_irx_id", "-lgcc"]
+    headers: [intrman, iomanx, loadcore, ps2ip-nm, stdio, sysclib, sysmem, threadman]
+
   # SMB1 client for the smb1: device: OPL's fixed copy of ps2sdk smbman
   # (iop/smbman/README.md), registered as "smb1" so it sits beside
-  # smb2man.irx (SMB2/SMB3, prebuilt in iop/__precompiled), which owns "smb".
+  # smb2man (SMB2/SMB3, above), which owns "smb".
   - name: smbman
     type: iop
     sources:
@@ -293,6 +343,9 @@ targets:
     cflags: [-fdata-sections, -ffunction-sections]
     ldflags:
       - "-Wl,--gc-sections"
+      # lld pads MIPS load segments to 64 KB in the file; the helper is embedded
+      # in Launchstation and written to the card, so keep segments packed.
+      - "-Wl,-z,max-page-size=128"
     libs: [filexio, patches]
     embed_irx:
       - iomanx
@@ -374,12 +427,12 @@ targets:
       - src/mc_save_formats.c
       - src/dash_card_tool.c
       - src/mc_ps1_card.c
+      - src/mc_save_export.c
       - src/dash_ps1_card.c
       - src/mmce_card_switch.c
       - src/mmce_backup.c
       - src/mmce_save_versions.c
       - src/mmce_igr.c
-      - src/hdd.c
       - src/hdd_header_injector.c
       - src/hdl_rpc.c
       - src/editor.c
@@ -478,11 +531,15 @@ targets:
       - iomanx
       - filexio
       - dev9:ps2dev9
+      - netman
+      - smap:smap_netman
       - ps2ip-nm:ps2ip
+      # SMAP's PS2IP build, only for the PS2SDK v1.0 PS2IP (iop/__v10)
       - smap-ps2ip:ps2smap
       - ps2ips_rpc:ps2ips
       - ps2host
       - smbman
+      - smb2man
       - netfs:ps2netfs
       - ps2ftpd
       - dev9_poweroff
@@ -493,7 +550,7 @@ targets:
       # with MINI_DRIVER and USE_GP_REGISTER=0. Avoids the post-2024-09-04
       # USBD rewrite that drops controller/SIO2 and freezes IOP on real hardware.
       - usbd_ra:usbd
-      - mcman
+      - mcman_physical
       - mcserv
       - cdfs:cdvd
       - xparam

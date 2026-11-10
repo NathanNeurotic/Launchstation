@@ -150,6 +150,42 @@ int genRemove(char *path)
 		return -1;
 	return unlink(p);
 }
+int genRmdir(char *path)
+{
+	char p[MAX_PATH];
+
+	map(path, p);
+	printf("RMDIR|%s\n", path);
+	return rmdir(p);
+}
+/* the real card in mc0:/mc1: (a folder here). MC_FREE=<clusters> (default
+ * 8000, -1 = no PS2 card); FAIL_SETINFO=<text>: setting the entry of a path
+ * containing it fails. Every set entry is printed with its mode and times. */
+int filerMcFreeClusters(int port)
+{
+	const char *f = getenv("MC_FREE");
+
+	printf("MCFREE|%d\n", port);
+	return f ? atoi(f) : 8000;
+}
+int filerMcSetEntry(const char *path, const unsigned char *e)
+{
+	const char *fail = getenv("FAIL_SETINFO");
+	int i;
+
+	if (open_files) {
+		fprintf(stderr, "setinfo with a file open: %s\n", path);
+		abort();
+	}
+	printf("SETINFO|%s|%04x|", path, e[0] | (e[1] << 8));
+	for (i = 8; i < 16; i++)
+		printf("%02x", e[i]);
+	printf("|");
+	for (i = 0x18; i < 0x20; i++)
+		printf("%02x", e[i]);
+	printf("\n");
+	return fail && strstr(path, fail) ? -1 : 0;
+}
 /* NORENAME: a device without rename (UDPFS), so the caller must copy. */
 int genRenameNoReplace(const char *from, const char *to)
 {
@@ -440,12 +476,41 @@ int main(int argc, char **argv)
 		printf("ISACTIVE|%d\n", mmceCardIsActive(argv[3] + 9));
 	} else if (!strncmp(argv[3], "pick-switch:", 12)) {
 		dashMmceSwitch(argv[3] + 12);
+	} else if (!strncmp(argv[3], "ps1conv:", 8)) {
+		dashPs1SaveConvert(argv[3] + 8);
+	} else if (!strncmp(argv[3], "importmany:", 11) || !strncmp(argv[3], "importmc", 8)) {
+		/* importmany:dir/|name|name... into a picked image; importmc<N>:dir/|name... onto mc<N>: */
+		static char spec[4096];
+		const char *names[64] = {0};
+		char *p, *dir;
+		int n = 0, port = argv[3][7] == 'c' ? argv[3][8] - '0' : -1;
+
+		snprintf(spec, sizeof(spec), "%s", strchr(argv[3], ':') + 1);
+		dir = spec;
+		p = strchr(spec, '|');
+		while (p != NULL && n < 64) {
+			*p++ = 0;
+			names[n++] = p;
+			p = strchr(p, '|');
+		}
+		dashCardImportMany(dir, names, n, port);
 	} else if (!strncmp(argv[3], "convert:", 8)) {
 		dashCardConvertSave(argv[3] + 8);
 	} else if (!strncmp(argv[3], "lib:", 4)) {
 		dashCardSaveLibrary(argv[3] + 4);
 	} else if (!strncmp(argv[3], "all:", 4)) {
 		dashCardAllSaves(argv[3] + 4);
+	} else if (!strncmp(argv[3], "ps1from:", 8)) {
+		/* ps1from:folder|name|name...: a PS1 card from the marked saves */
+		const char *names[16];
+		char *q = argv[3] + 8;
+		int k = 0;
+
+		while ((q = strchr(q, '|')) != NULL && k < 16) {
+			*q++ = 0;
+			names[k++] = q;
+		}
+		dashPs1CardNew(argv[3] + 8, names, k);
 	} else if (!strncmp(argv[3], "blank:", 6)) {
 		dashCardNewBlank(argv[3] + 6);
 	} else if (!strncmp(argv[3], "served:", 7)) {

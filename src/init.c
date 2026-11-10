@@ -21,6 +21,8 @@ extern void filerRootMcPollIdle(void);
 
 //IRX for togleable features
 #ifdef ETH
+IMPORT_BIN2C(netman_irx);
+IMPORT_BIN2C(smap_netman_irx);
 IMPORT_BIN2C(ps2ip_irx);
 IMPORT_BIN2C(ps2ips_irx);
 IMPORT_BIN2C(ps2dev9_v10_irx);
@@ -109,7 +111,7 @@ IMPORT_BIN2C(cdvd_irx);
 IMPORT_BIN2C(xparam_irx);
 IMPORT_BIN2C(ps2kbd_irx);
 IMPORT_BIN2C(hdl_info_irx);
-IMPORT_BIN2C(mcman_irx);
+IMPORT_BIN2C(mcman_physical_irx);
 IMPORT_BIN2C(mcserv_irx);
 IMPORT_BIN2C(allowdvdv_irx);
 
@@ -137,6 +139,7 @@ static u8 have_ds34 = 0;
 #endif
 static u8 have_usb_mass = 0;
 
+static u8 have_netman = 0;
 static u8 have_ps2smap = 0;
 static u8 have_ps2host = 0;
 static u8 have_ps2ip = 0;
@@ -602,37 +605,62 @@ static void stopUsbMassForPoweroff(void)
 static int load_ps2ip(void)
 {
 	int ret, ID __attribute__((unused));
-	if (pcCardCfOwnsBus()) return 0;
+	/* Each failure names its stage in dashboard_ip_error, which SMB and the
+	 * dashboard network show; success leaves it untouched. */
+	if (pcCardCfOwnsBus()) return (dashboard_ip_error = "PC CARD CompactFlash is using the network adapter.", 0);
 
 #if defined(ETH) && defined(UDPFS)
-	if (!switchNetworkStack(NETWORK_STACK_ETH))
+	if (!switchNetworkStack(NETWORK_STACK_ETH)) {
+		dashboard_ip_error = "The network adapter is busy (UDPFS).";
 		return 0;
+	}
 #endif
 	if (!load_ps2dev9()) {
 		DPRINTF(" [NET]: skipping PS2IP/SMAP because DEV9 failed to initialize\n");
+		dashboard_ip_error = "The network adapter (DEV9) did not start.";
 		return 0;
 	}
 
-	if (!have_ps2ip) {
-		const void *ip_module = ps2ip_irx;
-		int ip_module_size = size_ps2ip_irx;
-		if (ps2dev9_variant == DEV9_VARIANT_PS2SDK_V10) {
-			ip_module = ps2ip_v10_irx;
-			ip_module_size = size_ps2ip_v10_irx;
+	if (ps2dev9_variant == DEV9_VARIANT_PS2SDK_V10) {
+		/* v1.0 PS2IP has no NETMAN: SMAP's PS2IP build feeds it and takes the address. */
+		if (!have_ps2ip) {
+			ID = SifExecModuleBuffer(ps2ip_v10_irx, size_ps2ip_v10_irx, 0, NULL, &ret);
+			DPRINTF(" [PS2IP v1.0]: ID=%d, ret=%d\n", ID, ret);
+			/* MODULE_NO_RESIDENT_END (1): startup failed and the module was unloaded. */
+			have_ps2ip = (ID >= 0 && ret == 0);
+			if (!have_ps2ip)
+				return (dashboard_ip_error = "PS2IP did not start.", 0);
 		}
-		ID = SifExecModuleBuffer(ip_module, ip_module_size, 0, NULL, &ret);
-		DPRINTF(" [PS2IP%s]: ID=%d, ret=%d\n",
-		        ps2dev9_variant == DEV9_VARIANT_PS2SDK_V10 ? " v1.0" : "",
-		        ID, ret);
-		have_ps2ip = (ID >= 0 && ret >= 0);
-		if (!have_ps2ip)
-			return 0;
+		if (!have_ps2smap) {
+			ID = SifExecModuleBuffer(ps2smap_irx, size_ps2smap_irx, if_conf_len, &if_conf[0], &ret);
+			DPRINTF(" [SMAP]: ID=%d, ret=%d\n", ID, ret);
+			have_ps2smap = (ID >= 0 && ret == 0);
+			if (!have_ps2smap)
+				dashboard_ip_error = "The Ethernet driver (SMAP) did not start.";
+		}
+		return have_ps2ip && have_ps2smap;
+	}
+	/* PS2IP is the NETMAN build: NETMAN, then its SMAP, then PS2IP with the address. */
+	if (!have_netman) {
+		ID = SifExecModuleBuffer(netman_irx, size_netman_irx, 0, NULL, &ret);
+		DPRINTF(" [NETMAN]: ID=%d, ret=%d\n", ID, ret);
+		have_netman = (ID >= 0 && ret == 0);
+		if (!have_netman)
+			return (dashboard_ip_error = "The network manager (NETMAN) did not start.", 0);
 	}
 	if (!have_ps2smap) {
-		ID = SifExecModuleBuffer(ps2smap_irx, size_ps2smap_irx,
-		                    if_conf_len, &if_conf[0], &ret);
+		ID = SifExecModuleBuffer(smap_netman_irx, size_smap_netman_irx, 0, NULL, &ret);
 		DPRINTF(" [SMAP]: ID=%d, ret=%d\n", ID, ret);
-		have_ps2smap = (ID >= 0 && ret >= 0);
+		have_ps2smap = (ID >= 0 && ret == 0);
+		if (!have_ps2smap)
+			return (dashboard_ip_error = "The Ethernet driver (SMAP) did not start.", 0);
+	}
+	if (!have_ps2ip) {
+		ID = SifExecModuleBuffer(ps2ip_irx, size_ps2ip_irx, if_conf_len, &if_conf[0], &ret);
+		DPRINTF(" [PS2IP]: ID=%d, ret=%d\n", ID, ret);
+		have_ps2ip = (ID >= 0 && ret == 0);
+		if (!have_ps2ip)
+			dashboard_ip_error = "PS2IP did not start.";
 	}
 	return have_ps2ip && have_ps2smap;
 }
@@ -926,7 +954,7 @@ int load_smb(int version)
 	setupPowerOff();
 	getIpConfig();
 	if (!load_ps2ip()) {
-		smb_load_error[version] = "The network stack could not be started.";
+		smb_load_error[version] = dashboard_ip_error;
 		return 0;
 	}
 	if (!*have) {
@@ -1205,7 +1233,7 @@ static void loadBasicModules(void)
 	DPRINTF("Hello from EE SIO!\n");
 #endif
 
-	id = SifExecModuleBuffer(mcman_irx, size_mcman_irx, 0, NULL, &ret);  //Home
+	id = SifExecModuleBuffer(mcman_physical_irx, size_mcman_physical_irx, 0, NULL, &ret);  //Home
 	DPRINTF(" [MCMAN]: id=%d ret=%d\n", id, ret);
 	//SifLoadModule("rom0:MCMAN", 0, NULL); //Sony
 	id = SifExecModuleBuffer(mcserv_irx, size_mcserv_irx, 0, NULL, &ret);  //Home
@@ -1225,25 +1253,53 @@ static void loadBasicModules(void)
 //------------------------------
 //endfunc loadBasicModules
 //---------------------------------------------------------------------------
+/* fileXio moves each read or write through one IOP buffer of this size, so
+ * the SDK's 16 KB turns a 128 KB copy chunk into eight device requests (eight
+ * SMB/UDPFS round trips). wLaunchELF_R3Z keeps 128 KB for good; a paste
+ * borrows it only while it copies, so module loads see today's IOP heap.
+ * The copy itself runs on the dashboard worker either way, so the animation
+ * is unaffected. The IOP frees the old buffer before allocating the new one
+ * and has none if that fails, so a refused size falls back to a smaller one,
+ * ending at the SDK default. -1 when even that failed: fileXio then has no
+ * buffer, and the caller must not report a copy as done. */
+int setFileXioTransferWide(int wide)
+{
+	static const int sizes[] = {128 * 1024, 64 * 1024, 16 * 1024};
+	int i;
+
+	if (!have_filexio_ready)
+		return 0;
+	for (i = wide ? 0 : 2; i < 3; i++)
+		if (fileXioSetRWBufferSize(sizes[i]) >= 0)
+			return 0;
+	return -1;
+}
+
 void ensureCoreIoStackReady(void)
 {
 	loadBasicModules();
 
 	if (!have_filexio_ready) {
 		fileXioInit();
-		/* Keep the SDK transfer buffer: network, USB and BDM services share
-		 * the IOP heap. Do not reserve a large throughput buffer here. */
+		/* Keep the SDK transfer buffer here: network, USB and BDM services
+		 * share the IOP heap. A paste widens it only while it copies. */
 		have_filexio_ready = 1;
 	}
 
 	if (!have_mc_rpc_ready) {
-		DPRINTF("Initializing mc rpc\n");
+		int ret;
+
+		/* A failed attempt is not latched: the next card access retries.
+		 * mcInit refuses to rebind a client that is already bound, so drop
+		 * any EE-side binding first (no IOP call; no poll runs while unready). */
+		mcReset();
 #ifdef HOMEBREW_SIO2MAN
-		mcInit(MC_TYPE_XMC);
+		ret = mcInit(MC_TYPE_XMC);
 #else
-		mcInit(MC_TYPE_MC);
+		ret = mcInit(MC_TYPE_MC);
 #endif
-		have_mc_rpc_ready = 1;
+		DPRINTF("Initializing mc rpc: %d\n", ret);
+		have_mc_rpc_ready = ret >= 0;
 	}
 
 	load_vmcman_module();
@@ -2010,7 +2066,7 @@ int prepareEmberUsbHandoffIop(const char *ember_path, const char *game_image,
 	if (!emberStartIrx("IOMANX", iomanx_irx, size_iomanx_irx) ||
 	    !emberStartIrx("FILEXIO", filexio_irx, size_filexio_irx) ||
 	    !emberStartSio2man() ||
-	    !emberStartIrx("MCMAN", mcman_irx, size_mcman_irx) ||
+	    !emberStartIrx("MCMAN", mcman_physical_irx, size_mcman_physical_irx) ||
 	    !emberStartIrx("MCSERV", mcserv_irx, size_mcserv_irx))
 		return 0;
 #ifdef EXFAT
@@ -2151,6 +2207,11 @@ void rebootIopAndReloadCoreStack(void)
 void rebootIopAndReloadCoreStackSilent(void)
 {
 	resetRuntimeDeviceState(FALSE);
+}
+
+int isMemoryCardRpcReady(void)
+{
+	return have_mc_rpc_ready;
 }
 
 void ensureMemoryCardPortAccessible(int port)
@@ -2830,6 +2891,7 @@ static void clearIopModuleState(void)
 #ifdef DS34
 	have_ds34 = 0;
 #endif
+	have_netman = 0;
 	have_ps2smap = 0;
 	have_ps2host = 0;
 	have_ps2ip = 0;

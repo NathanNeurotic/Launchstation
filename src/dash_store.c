@@ -593,6 +593,8 @@ static void saveRun(void *arg)
 	SaveJob *j = (SaveJob *)arg;
 
 	j->ret = dashWriteFile(j->path, j->buf, j->len);
+	if (j->ret == 0 && j->kind == SAVE_SETTINGS)
+		configStampMcFolderIcon();
 }
 
 static void saveDone(void *arg)
