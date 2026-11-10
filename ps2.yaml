@@ -515,7 +515,10 @@ targets:
       - iomanx
       - filexio
       - dev9:ps2dev9
+      - netman
+      - smap:smap_netman
       - ps2ip-nm:ps2ip
+      # SMAP's PS2IP build, only for the PS2SDK v1.0 PS2IP (iop/__v10)
       - smap-ps2ip:ps2smap
       - ps2ips_rpc:ps2ips
       - ps2host

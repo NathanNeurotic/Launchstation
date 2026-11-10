@@ -21,6 +21,8 @@ extern void filerRootMcPollIdle(void);
 
 //IRX for togleable features
 #ifdef ETH
+IMPORT_BIN2C(netman_irx);
+IMPORT_BIN2C(smap_netman_irx);
 IMPORT_BIN2C(ps2ip_irx);
 IMPORT_BIN2C(ps2ips_irx);
 IMPORT_BIN2C(ps2dev9_v10_irx);
@@ -137,6 +139,7 @@ static u8 have_ds34 = 0;
 #endif
 static u8 have_usb_mass = 0;
 
+static u8 have_netman = 0;
 static u8 have_ps2smap = 0;
 static u8 have_ps2host = 0;
 static u8 have_ps2ip = 0;
@@ -618,31 +621,46 @@ static int load_ps2ip(void)
 		return 0;
 	}
 
-	if (!have_ps2ip) {
-		const void *ip_module = ps2ip_irx;
-		int ip_module_size = size_ps2ip_irx;
-		if (ps2dev9_variant == DEV9_VARIANT_PS2SDK_V10) {
-			ip_module = ps2ip_v10_irx;
-			ip_module_size = size_ps2ip_v10_irx;
-		}
-		ID = SifExecModuleBuffer(ip_module, ip_module_size, 0, NULL, &ret);
-		DPRINTF(" [PS2IP%s]: ID=%d, ret=%d\n",
-		        ps2dev9_variant == DEV9_VARIANT_PS2SDK_V10 ? " v1.0" : "",
-		        ID, ret);
-		/* MODULE_NO_RESIDENT_END (1): startup failed and the module was unloaded. */
-		have_ps2ip = (ID >= 0 && ret == 0);
+	if (ps2dev9_variant == DEV9_VARIANT_PS2SDK_V10) {
+		/* v1.0 PS2IP has no NETMAN: SMAP's PS2IP build feeds it and takes the address. */
 		if (!have_ps2ip) {
-			dashboard_ip_error = "PS2IP did not start.";
-			return 0;
+			ID = SifExecModuleBuffer(ps2ip_v10_irx, size_ps2ip_v10_irx, 0, NULL, &ret);
+			DPRINTF(" [PS2IP v1.0]: ID=%d, ret=%d\n", ID, ret);
+			/* MODULE_NO_RESIDENT_END (1): startup failed and the module was unloaded. */
+			have_ps2ip = (ID >= 0 && ret == 0);
+			if (!have_ps2ip)
+				return (dashboard_ip_error = "PS2IP did not start.", 0);
 		}
+		if (!have_ps2smap) {
+			ID = SifExecModuleBuffer(ps2smap_irx, size_ps2smap_irx, if_conf_len, &if_conf[0], &ret);
+			DPRINTF(" [SMAP]: ID=%d, ret=%d\n", ID, ret);
+			have_ps2smap = (ID >= 0 && ret == 0);
+			if (!have_ps2smap)
+				dashboard_ip_error = "The Ethernet driver (SMAP) did not start.";
+		}
+		return have_ps2ip && have_ps2smap;
+	}
+	/* PS2IP is the NETMAN build: NETMAN, then its SMAP, then PS2IP with the address. */
+	if (!have_netman) {
+		ID = SifExecModuleBuffer(netman_irx, size_netman_irx, 0, NULL, &ret);
+		DPRINTF(" [NETMAN]: ID=%d, ret=%d\n", ID, ret);
+		have_netman = (ID >= 0 && ret == 0);
+		if (!have_netman)
+			return (dashboard_ip_error = "The network manager (NETMAN) did not start.", 0);
 	}
 	if (!have_ps2smap) {
-		ID = SifExecModuleBuffer(ps2smap_irx, size_ps2smap_irx,
-		                    if_conf_len, &if_conf[0], &ret);
+		ID = SifExecModuleBuffer(smap_netman_irx, size_smap_netman_irx, 0, NULL, &ret);
 		DPRINTF(" [SMAP]: ID=%d, ret=%d\n", ID, ret);
 		have_ps2smap = (ID >= 0 && ret == 0);
 		if (!have_ps2smap)
-			dashboard_ip_error = "The Ethernet driver (SMAP) did not start.";
+			return (dashboard_ip_error = "The Ethernet driver (SMAP) did not start.", 0);
+	}
+	if (!have_ps2ip) {
+		ID = SifExecModuleBuffer(ps2ip_irx, size_ps2ip_irx, if_conf_len, &if_conf[0], &ret);
+		DPRINTF(" [PS2IP]: ID=%d, ret=%d\n", ID, ret);
+		have_ps2ip = (ID >= 0 && ret == 0);
+		if (!have_ps2ip)
+			dashboard_ip_error = "PS2IP did not start.";
 	}
 	return have_ps2ip && have_ps2smap;
 }
@@ -2862,6 +2880,7 @@ static void clearIopModuleState(void)
 #ifdef DS34
 	have_ds34 = 0;
 #endif
+	have_netman = 0;
 	have_ps2smap = 0;
 	have_ps2host = 0;
 	have_ps2ip = 0;
