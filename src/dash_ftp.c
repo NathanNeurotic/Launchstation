@@ -4,12 +4,13 @@
 #include "dash_sound.h"
 #include "ftp_session.h"
 #include "init.h"
+#include "main_title.h"
 #include <delaythread.h>
 
 static void ftpFrame(const LsFtpStatus *status, int stopping)
 {
 	char line[160];
-	const float w = 490, h = 260, x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
+	const float w = 490, h = 320, x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
 	dashVisualUpdate();
 	dashGfxBeginFrame();
 	dashBgDraw();
@@ -22,15 +23,26 @@ static void ftpFrame(const LsFtpStatus *status, int stopping)
 	snprintf(line, sizeof(line), "Connected clients: %d    Active transfers: %d", status->clients,
 	         status->transfers);
 	dashTextFit(x + 24, y + 93, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);
-	dashTextFit(x + 24, y + 125, w - 48,
-	            status->operation[0] ? status->operation : "Waiting for a connection", DASH_FS_SMALL,
-	            DASH_C_TEXT2);
+	if (!status->history[0].text[0])
+		dashTextFit(x + 24, y + 125, w - 48, status->clients ? "Waiting for a command" : "Waiting for a connection",
+		            DASH_FS_SMALL, DASH_C_TEXT2);
+	for (int i = 0; i < LS_FTP_HISTORY_COUNT && status->history[i].text[0]; i++) {
+		const LsFtpCommand *c = &status->history[i];
+		int year = 2000 + c->year, month = c->month, day = c->day, hour = c->hour, minute = c->minute,
+		    second = c->second;
+		/* The PS2 clock is JST: show the console's local time, or no time. */
+		if (month && menuTitleConvertTimestampToLocalTime(&year, &month, &day, &hour, &minute, &second))
+			snprintf(line, sizeof(line), "%02d:%02d:%02d  %s", hour, minute, second, c->text);
+		else
+			snprintf(line, sizeof(line), "--:--:--  %s", c->text);
+		dashTextFit(x + 24, y + 125 + i * 24, w - 48, line, DASH_FS_SMALL, i ? DASH_C_TEXT3 : DASH_C_TEXT2);
+	}
 	if (status->transfers) {
 		u64 bytes = ((u64)status->bytes_high << 32) | status->bytes_low;
 		snprintf(line, sizeof(line), "Transferred: %llu KB", (unsigned long long)(bytes / 1024));
-		dashTextFit(x + 24, y + 150, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);
+		dashTextFit(x + 24, y + 203, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);
 	}
-	dashTextFit(x + 24, y + 181, w - 48,
+	dashTextFit(x + 24, y + 238, w - 48,
 	            stopping ? "Closing files and connections..." : "Back returns to Launchstation with FTP running.",
 	            DASH_FS_SMALL, DASH_C_TEXT3);
 	if (!stopping)

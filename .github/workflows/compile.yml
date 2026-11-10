@@ -51,6 +51,7 @@ jobs:
           python3 tests/test_font_weight.py
           python3 tests/test_browser_sort.py
           python3 tests/test_r3z_browser_wins.py
+          python3 tests/test_udpfs_retry.py
           python3 tests/test_video_sound_preview.py
           python3 tests/test_display_feedback.py
           python3 tests/test_udpfs_smap_fifo_tail.py
@@ -152,6 +153,7 @@ jobs:
           python3 tests/test_mc_fingerprint.py
           python3 tests/test_mc_card_write.py
           python3 tests/test_mc_ps1_card.py
+          python3 tests/test_ps1_card_rediscovery.py
           python3 tests/test_mc_save_formats.py
           python3 tests/test_mc_save_export.py
           python3 tests/test_dash_card_tool.py

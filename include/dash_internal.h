@@ -791,10 +791,11 @@ void dashDevicesAutoProbe(void);
 void dashDevicesResetBaseline(void);
 int dashBootDeviceBit(void);
 int dashDevicesList(DashDevice *out, int max);
+void dashDevicesRefreshMemoryCards(DashDevice *devs, int count); /* cached poll, no I/O */
 /* Starts a device's drivers (UI thread, loading overlay); `cb` is called
  * with ok = device usable. -1 = the user backed out of the wait. */
 typedef void (*DashProbeDone)(const char *mount, int ok, void *user);
-int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user);
+int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user); /* -1 user backed out; 1 refused and already explained; cb not called for either */
 void dashDevicesAutoStart(void);                 /* auto-start devices that are off */
 void dashDevicesStartForPath(const char *path);  /* driver for a path's device */
 const char *dashDiscStatus(void);

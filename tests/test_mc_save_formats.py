@@ -386,6 +386,48 @@ bad[-1] ^= 0xFF
 (tmp / "flip.cbs").write_bytes(bad)
 assert conv(tmp / "flip.cbs")[0]["r"] == "-16"                         # a flipped byte breaks the zlib stream
 assert run("detect", tmp / "t.cbs")["format"] == "4"
+# dirmode where Apollo and Cheat Device keep it (0x48) wins over 0x4C
+_c = bytearray(make_cbs(FOLDER, FILES, dirmode=0))
+struct.pack_into("<L", _c, 0x48, MODE_DIR & ~1)
+(tmp / "m48.cbs").write_bytes(bytes(_c))
+check(conv(tmp / "m48.cbs")[1], FOLDER, FILES, dir_mode=MODE_DIR & ~1)
+# 0x48 empty: the mode comes from 0x4C, as before
+_c = make_cbs(FOLDER, FILES, dirmode=MODE_DIR & ~1)
+assert struct.unpack_from("<L", _c, 0x48)[0] == 0 and struct.unpack_from("<L", _c, 0x4C)[0] == MODE_DIR & ~1
+(tmp / "m4c.cbs").write_bytes(_c)
+check(conv(tmp / "m4c.cbs")[1], FOLDER, FILES, dir_mode=MODE_DIR & ~1)
+
+
+# ---------------------------------------------------------------- writing .cbs
+def py_cbs(data):
+    """Independent .cbs reader: header fields and [(entry, data)], checking every size."""
+    assert data[:4] == b"CFU\0"
+    hlen, dlen, flen = struct.unpack_from("<LLL", data, 8)
+    assert hlen == 0x128 and flen == len(data)
+    body = zlib.decompress(rc4(data[hlen:]))                           # stored blocks are plain zlib
+    assert len(body) == dlen
+    files, pos = [], 0
+    while pos < len(body):
+        size, mode = struct.unpack_from("<LL", body, pos + 16)
+        files.append((body[pos:pos + 64], mode, body[pos + 64:pos + 64 + size]))
+        pos += 64 + size
+    assert pos == len(body)
+    return data[0x14:0x34].rstrip(b"\0"), struct.unpack_from("<L", data, 0x48)[0], data[0x5C:0xA4].rstrip(b"\0"), files
+
+
+(tmp / "src.cbs").write_bytes(make_cbs(FOLDER, FILES))
+assert run("tocbs", tmp / "src.cbs", tmp / "w.cbs")["r"] == "0"
+w = (tmp / "w.cbs").read_bytes()
+name, dmode, title, wf = py_cbs(w)
+assert (name, dmode, title) == (FOLDER, MODE_DIR, FOLDER), (name, dmode, title)
+assert [(e[32:64].rstrip(b"\0"), d) for e, m, d in wf] == FILES and all(m == MODE_FILE for e, m, d in wf)
+assert all(e[:8] == T1 and e[8:16] == T2 for e, m, d in wf) and w[0x34:0x3C] == T1 and w[0x3C:0x44] == T2
+check(conv(tmp / "w.cbs")[1], FOLDER, FILES, times=(T1, T2))           # and our own reader takes it back
+BIG = [(b"icon.sys", bytes(964)), (b"big.dat", bytes((i * 31) & 0xFF for i in range(200000)))]
+(tmp / "big.cbs").write_bytes(make_cbs(FOLDER, BIG))
+assert run("tocbs", tmp / "big.cbs", tmp / "wbig.cbs")["r"] == "0"    # several 64 KB stored blocks
+assert [(e[32:64].rstrip(b"\0"), d) for e, m, d in py_cbs((tmp / "wbig.cbs").read_bytes())[3]] == BIG
+check(conv(tmp / "wbig.cbs")[1], FOLDER, BIG)
 
 
 # ---------------------------------------------------------------- SharkPort / X-Port .sps

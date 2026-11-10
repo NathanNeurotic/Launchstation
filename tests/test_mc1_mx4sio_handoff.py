@@ -53,6 +53,10 @@ static int root_mc_known_free[2],root_mc_failures[2];
 static int waits,cancel_wait,queued,picker_queued,root_returns,picker_roots,quiet,toasts;
 static struct { int loading; } pk;
 static void filerRootMcPollIdle(void) { drains++; }
+static int rpc_down,rpc_starts,rpc_fail;
+static void ensureCoreIoStackReady(void) { assert(!worker); rpc_starts++; rpc_down=rpc_fail; }
+static int isMemoryCardRpcReady(void) { return !rpc_down; }
+static int dashWorkerOnThread(void) { return worker; }
 static void resetRuntimeDeviceState(int show) {
     assert(show==TRUE);
     if(worker || refuse_reset) return;
@@ -155,6 +159,17 @@ int main(void) {
     reset_case(STORAGE_STACK_DEFAULT,0);browse("mc1:/");
     assert(queued==1 && !resets && !waits);
     worker=1;assert(filerPrepareMemoryCardRead(1)==sceMcResSucceed && !resets);
+
+    /* A failed card RPC start is retried on the UI thread only. */
+    reset_case(STORAGE_STACK_DEFAULT,0);rpc_down=1;rpc_starts=0;worker=1;
+    assert(filerDirReadNeedsPrep("mc0:/") && !filerDirReadNeedsPrep("vmc0:/"));
+    assert(filerPrepareMemoryCardRead(0)==sceMcResFailDetect && !rpc_starts && !handshakes);
+    worker=0;assert(filerPrepareMemoryCardRead(0)==sceMcResSucceed && rpc_starts==1 && handshakes==1);
+    assert(filerPrepareMemoryCardRead(0)==sceMcResSucceed && rpc_starts==1);
+    /* A retry that fails again leaves the card unready; the next open retries. */
+    rpc_down=1;rpc_starts=0;rpc_fail=1;
+    assert(!filerPrepareDirRead("mc0:/") && rpc_starts==1 && !isMemoryCardRpcReady() && filerDirReadNeedsPrep("mc0:/"));
+    rpc_fail=0;assert(filerPrepareDirRead("mc0:/") && rpc_starts==2 && isMemoryCardRpcReady());
     puts("PASS: mc1 resets before browser/picker reads; mc0 unchanged, cancel/refused resets safe, workers never probe MX4SIO-owned mc1");
 }
 '''
