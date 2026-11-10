@@ -776,8 +776,11 @@ int filerPrepareDirRead(const char *path)
 
 	if (!filerDirReadNeedsPrep(path))
 		return TRUE;
-	if (!strncmp(path, "mc", 2) && !isMemoryCardRpcReady())
+	if (!strncmp(path, "mc", 2) && !isMemoryCardRpcReady()) {
 		ensureCoreIoStackReady(); /* retries a failed card RPC start */
+		if (!isMemoryCardRpcReady())
+			return FALSE;
+	}
 	if (!ensurePathDeviceStackReady(path))
 		return FALSE;
 #ifdef SMB

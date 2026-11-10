@@ -168,8 +168,8 @@ int main(void) {
     assert(filerPrepareMemoryCardRead(0)==sceMcResSucceed && rpc_starts==1);
     /* A retry that fails again leaves the card unready; the next open retries. */
     rpc_down=1;rpc_starts=0;rpc_fail=1;
-    filerPrepareDirRead("mc0:/");assert(rpc_starts==1 && !isMemoryCardRpcReady() && filerDirReadNeedsPrep("mc0:/"));
-    rpc_fail=0;filerPrepareDirRead("mc0:/");assert(rpc_starts==2 && isMemoryCardRpcReady());
+    assert(!filerPrepareDirRead("mc0:/") && rpc_starts==1 && !isMemoryCardRpcReady() && filerDirReadNeedsPrep("mc0:/"));
+    rpc_fail=0;assert(filerPrepareDirRead("mc0:/") && rpc_starts==2 && isMemoryCardRpcReady());
     puts("PASS: mc1 resets before browser/picker reads; mc0 unchanged, cancel/refused resets safe, workers never probe MX4SIO-owned mc1");
 }
 '''
