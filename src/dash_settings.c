@@ -2115,39 +2115,6 @@ static char *ipField(int id)
 	return (id == S_NET_IP) ? ip : (id == S_NET_NM) ? netmask : gw;
 }
 
-/* Parse a complete dotted-quad (four octets 0..255, no trailing text). */
-static int parseIpv4(const char *s, unsigned *out)
-{
-	unsigned a, b, c, d;
-	char extra;
-
-	if (sscanf(s, "%u.%u.%u.%u%c", &a, &b, &c, &d, &extra) != 4 ||
-	    a > 255U || b > 255U || c > 255U || d > 255U)
-		return 0;
-	*out = (a << 24) | (b << 16) | (c << 8) | d;
-	return 1;
-}
-
-/* Settings -> Network -> Sync PS2 clock preflight. The sync reloads
- * IPCONFIG.DAT, so unsaved edits would be ignored; reject them and unusable
- * static values here. Does not touch the network stack. 1 = ready. */
-static int clockSyncSettingsReady(const char **why)
-{
-	unsigned a, m, g;
-
-	if (net_dirty) {
-		*why = "Save your network settings first, then retry clock synchronization.";
-		return 0;
-	}
-	/* A netmask must be a contiguous run of ones: ~m + 1 is a power of two. */
-	if (!parseIpv4(ip, &a) || !parseIpv4(netmask, &m) || !parseIpv4(gw, &g) ||
-	    !a || !g || !m || !~m || (~m & (~m + 1U))) {
-		*why = "IP address, netmask or gateway is missing or invalid. Correct Settings > Network and retry.";
-		return 0;
-	}
-	return 1;
-}
-
 static void editIp(const SetItem *it)
 {
 	char buf[16];
@@ -3192,6 +3159,42 @@ static int editClockDateTime(const char *title, int fields[6])
 	dashInputFlush();
 	return accepted;
 }
+
+#ifdef ETH
+/* Parse a complete dotted-quad (four octets 0..255, no trailing text). */
+static int parseIpv4(const char *s, unsigned *out)
+{
+	unsigned a, b, c, d;
+	char extra;
+
+	if (sscanf(s, "%u.%u.%u.%u%c", &a, &b, &c, &d, &extra) != 4 ||
+	    a > 255U || b > 255U || c > 255U || d > 255U)
+		return 0;
+	*out = (a << 24) | (b << 16) | (c << 8) | d;
+	return 1;
+}
+
+/* Settings -> Network -> Sync PS2 clock preflight. The sync reloads
+ * IPCONFIG.DAT, so unsaved edits would be ignored; reject them and unusable
+ * static values here. Does not touch the network stack. 1 = ready. */
+static int clockSyncSettingsReady(const char **why)
+{
+	unsigned a, m, g;
+
+	/* A queued IPCONFIG.DAT write clears net_dirty before it lands. */
+	if (net_dirty || cfg_pending[CFG_SAVE_NET] || cfg_failed[CFG_SAVE_NET]) {
+		*why = "Save your network settings first, then retry clock synchronization.";
+		return 0;
+	}
+	/* A netmask must be a contiguous run of ones: ~m + 1 is a power of two. */
+	if (!parseIpv4(ip, &a) || !parseIpv4(netmask, &m) || !parseIpv4(gw, &g) ||
+	    !a || !g || !m || !~m || (~m & (~m + 1U))) {
+		*why = "IP address, netmask or gateway is missing or invalid. Correct Settings > Network and retry.";
+		return 0;
+	}
+	return 1;
+}
+#endif
 
 static void runAction(int id)
 {
