@@ -28,6 +28,7 @@ work=$(mktemp -d)
 cleanup() {
     [ -f "$work/run/smbd.pid" ] && kill "$(cat "$work/run/smbd.pid")" 2>/dev/null || true
     pkill -f -- "--configfile=$work/smb.conf" 2>/dev/null || true
+    [ -f "$work/made-jose" ] && userdel 'josé' 2>/dev/null || true
     rm -rf "$work"
 }
 trap cleanup EXIT
@@ -141,7 +142,10 @@ start_smbd
 run "every case, signing negotiable (2.1)" drive full
 run "dialect 2.1, signing not required (unsigned)" drive dialect=0210,0
 # NTOWFv2 hashes the user name in upper case: a Latin-1 letter must be upper-cased as the server does it
-id 'josé' >/dev/null 2>&1 || useradd -M 'josé' 2>/dev/null || useradd --badname -M 'josé'
+if ! id 'josé' >/dev/null 2>&1; then
+    useradd -M 'josé' 2>/dev/null || useradd --badname -M 'josé'
+    : >"$work/made-jose" # removed again on exit
+fi
 printf 'secret\nsecret\n' | smbpasswd -c "$conf" -s -a 'josé' >/dev/null
 run "user name with a Latin-1 letter (josé)" "$work/drive" dialect=0210,0 "$port" 'josé' secret "$work/share" "$work/other"
 

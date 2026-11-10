@@ -68,7 +68,7 @@ static int connect_share(const char *name, const char *url, const char *u, const
 static int connect_url(const char *name, const char *share)
 {
     char url[128];
-    snprintf(url, sizeof(url), "smb://127.0.0.1:%d/%s/ignored/sub", port, share);
+    snprintf(url, sizeof(url), "smb://127.0.0.1:%d//%s/ignored/sub", port, share);
     return connect_share(name, url, user, password);
 }
 
@@ -150,7 +150,7 @@ static int full(const char *dir1, const char *dir2)
         big[i] = (unsigned char)(i * 7 + 3);
 
     // ---- connect: two shares, a name taken twice, the device root -------------------------
-    CHECK(connect_url("A", "PS2SMB") == 0, "CONNECT A (PS2SMB, a path after the share ignored)");
+    CHECK(connect_url("A", "PS2SMB") == 0, "CONNECT A (PS2SMB, a doubled slash before the share and a path after it ignored)");
     CHECK(connect_url("A", "PS2SMB") == -EEXIST, "CONNECT A again: -EEXIST, the session kept");
     CHECK(connect_url("Second", "OTHER") == 0, "CONNECT Second (OTHER) beside it");
     snprintf(url, sizeof(url), "SMB://127.0.0.1:%d/PS2SMB", port);

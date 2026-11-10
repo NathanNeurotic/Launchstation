@@ -1471,6 +1471,8 @@ static int smb2man_parse_url(struct smb2man_share *sh, const char *url)
     }
     if (*p++ != '/')
         return -1;
+    while (*p == '/') // smb://ip//share, as SMB2.CNF reads it
+        p++;
     for (host = p; *p && *p != '/'; p++)
         ;
     n = (size_t)(p - host);
