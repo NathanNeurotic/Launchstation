@@ -1,5 +1,5 @@
 //--------------------------------------------------------------
-// File name:   main_actions.c
+//File name:   main_actions.c
 //--------------------------------------------------------------
 #include "launchelf.h"
 #include "init.h"
@@ -15,7 +15,7 @@
  * (used by the dashboard to maintain its "recent" list). */
 void (*mainActionLaunchHook)(const char *path) = NULL;
 
-// CleanUpForExec releases uLE stuff preparatory to launching some other application
+//CleanUpForExec releases uLE stuff preparatory to launching some other application
 //------------------------------
 static void cleanUpForExecInternal(int end_pad_rpc)
 {
@@ -78,7 +78,7 @@ int CleanUpForEmberExec(void)
 	return CleanUpForKeepIopExec("Preparing Ember");
 }
 //------------------------------
-// endfunc CleanUpForExec / CleanUpForEmberExec
+//endfunc CleanUpForExec / CleanUpForEmberExec
 //---------------------------------------------------------------------------
 static int isHddLaunchPath(const char *path)
 {
@@ -224,7 +224,7 @@ void ExecuteMainAction(char *pathin, const MainExecuteContext *ctx)
 	static char fullpath[MAX_PATH];
 	static char party[MAX_PATH];
 	char *p;
-	const char *no_drivers = NULL;  // device whose drivers failed to load
+	const char *no_drivers = NULL;  //device whose drivers failed to load
 	int x, t = 0;
 	char dvdpl_path[] = "mc0:/BREXEC-DVDPLAYER/dvdplayer.elf";
 	int dvdpl_update;
@@ -235,7 +235,7 @@ void ExecuteMainAction(char *pathin, const MainExecuteContext *ctx)
 	if (ctx == NULL || pathin == NULL || pathin[0] == 0)
 		return;
 
-	if (!uLE_related(path, pathin))  // 1==uLE_rel 0==missing, -1==other dev
+	if (!uLE_related(path, pathin))  //1==uLE_rel 0==missing, -1==other dev
 		return;
 
 	if (LaunchArgsPending() &&
@@ -244,8 +244,8 @@ void ExecuteMainAction(char *pathin, const MainExecuteContext *ctx)
 	    !genCmpFileExt(path, "XLF"))
 		LaunchArgsClear();
 
-Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
-	strcpy(fullpath, path);  // a failure names this path until a branch sets fullpath
+Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
+	strcpy(fullpath, path);  //a failure names this path until a branch sets fullpath
 
 	if (isPcCardCfPath(path)) {
 		LaunchArgsClear();
@@ -285,9 +285,9 @@ Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
 			fullpath[2] = '1';
 			if ((t = checkELFheader(fullpath)) > 0)
 				goto ELFchecked;
-			if (first == -1 && t != -1) {  // a file that opened is not missing because mc1: has none
+			if (first == -1 && t != -1) {  //a file that opened is not missing because mc1: has none
 				t = -1;
-				fullpath[2] = '0';  // and the message names the card it opened on
+				fullpath[2] = '0';  //and the message names the card it opened on
 			}
 			goto ELFnotFound;
 		}
@@ -322,7 +322,7 @@ Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
 			no_drivers = "HDD";
 		if ((t = checkELFheader(path)) <= 0)
 			goto ELFnotFound;
-		// coming here means the ELF is fine
+		//coming here means the ELF is fine
 		snprintf(party, sizeof(party), "hdd%c:%s", path[3], path + 6);
 		p = strchr(party, '/');
 		snprintf(fullpath, sizeof(fullpath), "pfs0:%s", p);
@@ -336,7 +336,7 @@ Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
 			no_drivers = "DVR HDD";
 		if ((t = checkELFheader(path)) <= 0)
 			goto ELFnotFound;
-		// coming here means the ELF is fine
+		//coming here means the ELF is fine
 		snprintf(party, sizeof(party), "dvr_hdd0:%s", path + 10);
 		p = strchr(party, '/');
 		if (p != NULL) {
@@ -532,11 +532,11 @@ Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
 		drawMsg(LNG(Reading_SYSTEMCNF));
 		party[0] = 0;
 		readSystemCnf();
-		if (BootDiscType == 2) {  // Boot a PS2 disc
+		if (BootDiscType == 2) {  //Boot a PS2 disc
 			strcpy(fullpath, SystemCnf_BOOT2);
 			goto CheckELF_fullpath;
 		}
-		if (BootDiscType == 1) {  // Boot a PS1 disc
+		if (BootDiscType == 1) {  //Boot a PS1 disc
 			char disc_gameid[12];
 			int have_disc_gameid;
 			char *args[2] = {SystemCnf_BOOT, SystemCnf_VER};
@@ -558,7 +558,7 @@ Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
 			if (cdmode == SCECdDVDV) {
 				x = Check_ESR_Disc();
 				DPRINTF("Check_ESR_Disc => %d\n", x);
-				if (x > 0) {  // ESR Disc, so launch ESR
+				if (x > 0) {  //ESR Disc, so launch ESR
 					if (setting->LK_Flag[SETTING_LK_ESR] && setting->LK_Path[SETTING_LK_ESR][0])
 						strcpy(path, setting->LK_Path[SETTING_LK_ESR]);
 					else
@@ -567,7 +567,7 @@ Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
 					goto Recurse_for_ESR;
 				}
 
-				// DVD Video Disc, so launch DVD player
+				//DVD Video Disc, so launch DVD player
 				char arg0[20], arg1[20], arg2[20], arg3[40];
 				char *args[4] = {arg0, arg1, arg2, arg3};
 				char kelf_loader[40];
@@ -585,7 +585,7 @@ Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
 
 				strcpy(MG_region, "ACEJMORU");
 				pos = strlen(arg0) - 1;
-				for (i = 0; i < 9; i++) {  // NB: MG_region[8] is a string terminator
+				for (i = 0; i < 9; i++) {  //NB: MG_region[8] is a string terminator
 					arg0[pos] = MG_region[i];
 					tst = SifLoadModuleEncrypted(arg0 + 3, 0, NULL);
 					if (tst >= 0)
@@ -597,9 +597,9 @@ Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
 					strcpy(&arg2[pos - 3], "ELF");
 				else
 					arg2[pos - 1] = MG_region[i];
-				// At this point all args are ready to use internal DVD player
+				//At this point all args are ready to use internal DVD player
 
-				// We must check for an updated player on MC
+				//We must check for an updated player on MC
 				dvdpl_path[6] = ctx->rough_region;
 				dvdpl_update = 0;
 				for (i = 0; i < 2; i++) {
@@ -611,7 +611,7 @@ Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
 				}
 
 				if ((tst < 0) && (dvdpl_update == 0))
-					goto Fail_PS2Disc;  // We must abort if no working kelf found
+					goto Fail_PS2Disc;  //We must abort if no working kelf found
 
 				if (dvdpl_update) {  // Launch DVD player from memory card
 					strcpy(arg0, "-m rom0:SIO2MAN");
@@ -630,7 +630,7 @@ Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
 				goto Done_PS2Disc;
 			}
 			if (cdmode == SCECdCDDA) {
-				// Fail_CDDA:
+				//Fail_CDDA:
 				sprintf(ctx->main_msg, "CDDA %s", LNG(Failed));
 				goto Done_PS2Disc;
 			}
@@ -699,7 +699,7 @@ Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
 		loadFont(setting->font_file);
 		config(ctx->main_msg, ctx->cnf_path);
 		return;
-		// Next clause is for an optional font test routine
+		//Next clause is for an optional font test routine
 	} else if (!stricmp(path, setting->Misc_ShowFont)) {
 		ShowFont();
 		return;
@@ -733,45 +733,46 @@ Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
 	CheckELF_fullpath:
 		if ((t = checkELFheader(fullpath)) <= 0)
 			goto ELFnotFound;
-	ELFchecked: {
-		int show_launch_gameid = 0;
-		int disc_launch = isLikelyDiscLaunch(path);
-		int have_launch_gameid = 0;
-		char launch_gameid[12];
+	ELFchecked:
+		{
+			int show_launch_gameid = 0;
+			int disc_launch = isLikelyDiscLaunch(path);
+			int have_launch_gameid = 0;
+			char launch_gameid[12];
 
-		if (!LaunchArgsPending() &&
-		    LaunchArgsLoadSidecarForExec(getLaunchArgsSidecarBasePath(path, fullpath), ctx->main_msg, MAX_PATH) < 0)
-			return;
+			if (!LaunchArgsPending() &&
+			    LaunchArgsLoadSidecarForExec(getLaunchArgsSidecarBasePath(path, fullpath), ctx->main_msg, MAX_PATH) < 0)
+				return;
 
-		if (disc_launch) {
-			have_launch_gameid = buildLaunchGameID(fullpath, launch_gameid, sizeof(launch_gameid));
-			if (have_launch_gameid) {
-				updateOSDHistoryFile(launch_gameid);
-				applyXPARAM(launch_gameid);
+			if (disc_launch) {
+				have_launch_gameid = buildLaunchGameID(fullpath, launch_gameid, sizeof(launch_gameid));
+				if (have_launch_gameid) {
+					updateOSDHistoryFile(launch_gameid);
+					applyXPARAM(launch_gameid);
+				}
+				show_launch_gameid = have_launch_gameid && !setting->cdrom_disable_gameid;
+			} else if (setting->app_gameid) {
+				show_launch_gameid = buildLaunchGameID(fullpath, launch_gameid, sizeof(launch_gameid));
 			}
-			show_launch_gameid = have_launch_gameid && !setting->cdrom_disable_gameid;
-		} else if (setting->app_gameid) {
-			show_launch_gameid = buildLaunchGameID(fullpath, launch_gameid, sizeof(launch_gameid));
-		}
 
-		if (mainActionLaunchHook != NULL)
-			mainActionLaunchHook(path);
-		x = elfLaunchIopMode(ctx);
-		if (x)
-			CleanUpForExec();
-		else if (!CleanUpForKeepIopExec("Preparing application"))
-			return;
-		if (show_launch_gameid)
-			displayRetroGemGameID(launch_gameid, 2);
-		RunLoaderElf(fullpath, party, path, t, x);
-	}
-	} else {  // Invalid path
+			if (mainActionLaunchHook != NULL)
+				mainActionLaunchHook(path);
+			x = elfLaunchIopMode(ctx);
+			if (x)
+				CleanUpForExec();
+			else if (!CleanUpForKeepIopExec("Preparing application"))
+				return;
+			if (show_launch_gameid)
+				displayRetroGemGameID(launch_gameid, 2);
+			RunLoaderElf(fullpath, party, path, t, x);
+		}
+	} else {  //Invalid path
 		t = 0;
 	ELFnotFound:
 		LaunchArgsClear();
-		if (t == -1 || t > 0)  // it opened, so it is not missing
+		if (t == -1 || t > 0)  //it opened, so it is not missing
 			sprintf(ctx->main_msg, "%s: %s.", LNG(This_file_isnt_an_ELF), fullpath);
-		else if (no_drivers != NULL)  // it could not be opened
+		else if (no_drivers != NULL)  //it could not be opened
 			setDriversNotLoadedMsg(ctx->main_msg, path, no_drivers);
 		else
 			sprintf(ctx->main_msg, "%s %s.", fullpath, LNG(is_Not_Found));
@@ -779,7 +780,7 @@ Recurse_for_ESR:             // Recurse here for PS2Disc command with ESR disc
 	}
 }
 //------------------------------
-// endfunc ExecuteMainAction
+//endfunc ExecuteMainAction
 //---------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------
