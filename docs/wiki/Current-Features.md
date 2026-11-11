@@ -70,7 +70,7 @@ Every write to a card image starts with a verified copy in `WLE-Safety/`; batch 
 
 - English, Spanish, Italian, French, German, Polish, Portuguese, Brazilian Portuguese and Hungarian (`Lang/`); external `.LNG` files override the same message IDs. Filenames, paths and application metadata keep their original text.
 - 18 built-in theme presets (included in the executable; no separate theme files required), plus custom colors, wallpapers, fonts, icons and clock; separately shareable `THEMES/<name>/theme.cfg` folders. See the [wallpaper guide](Theme-and-Wallpaper-Guide.md).
-- Settings → System → Set software clock keeps a saved checkpoint for consoles with a dead CMOS battery.
+- Settings → System → Set PS2 Clock → Set software clock keeps a saved checkpoint for consoles with a dead CMOS battery.
 
 ## Upstream [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z) integration
 
