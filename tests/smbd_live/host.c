@@ -18,6 +18,11 @@ const char *smbd_user, *smbd_password;
 static const char *root;
 static long long free_limit = -1;
 
+/* MCMAN has three descriptors for files and folders together, shared with the rest of the
+ * console: the stand-in gives the server two, so holding more open fails as it would there. */
+#define CARD_FDS 2
+static int card_fds;
+
 #define MAX_DIRS 32
 static DIR *dirs[MAX_DIRS];
 static char dir_paths[MAX_DIRS][4096];
@@ -51,9 +56,16 @@ int smbd_stat(const char *path, struct smbd_stat *st)
 int smbd_open(const char *path, int write, int create, int trunc)
 {
 	char b[4096];
-	int fd = open(host_path(path, b), (write ? O_RDWR : O_RDONLY) | (create ? O_CREAT | O_EXCL : 0) |
-	                                      (trunc ? O_TRUNC : 0), 0644);
-	return fd < 0 ? -errno : fd;
+	int fd;
+
+	if (card_fds == CARD_FDS)
+		return -EMFILE;
+	fd = open(host_path(path, b), (write ? O_RDWR : O_RDONLY) | (create ? O_CREAT | O_EXCL : 0) |
+	                                  (trunc ? O_TRUNC : 0), 0644);
+	if (fd < 0)
+		return -errno;
+	card_fds++;
+	return fd;
 }
 
 static long long used_bytes(const char *dir)
@@ -103,6 +115,7 @@ int smbd_pwrite(int fd, const void *buf, int len, uint64_t off)
 
 int smbd_close(int fd)
 {
+	card_fds--;
 	return close(fd) < 0 ? -errno : 0;
 }
 
@@ -113,10 +126,11 @@ int smbd_opendir(const char *path)
 
 	for (i = 0; i < MAX_DIRS && dirs[i]; i++)
 		;
-	if (i == MAX_DIRS)
+	if (i == MAX_DIRS || card_fds == CARD_FDS)
 		return -EMFILE;
 	if (!(dirs[i] = opendir(host_path(path, b))))
 		return -errno;
+	card_fds++;
 	snprintf(dir_paths[i], sizeof(dir_paths[i]), "%s", b);
 	return i;
 }
@@ -145,6 +159,7 @@ int smbd_closedir(int fd)
 {
 	closedir(dirs[fd]);
 	dirs[fd] = NULL;
+	card_fds--;
 	return 0;
 }
 
@@ -213,7 +228,7 @@ int main(int argc, char **argv)
 	signal(SIGTERM, on_term);
 	signal(SIGPIPE, SIG_IGN);
 	ret = smbd_serve((uint16_t)atoi(argv[1]));
-	printf("smbd_serve returned %d\n", ret);
+	printf("smbd_serve returned %d, %d card descriptors still open\n", ret, card_fds);
 	fflush(stdout);
-	return ret == 0 ? 0 : 1;
+	return ret == 0 && card_fds == 0 ? 0 : 1;
 }

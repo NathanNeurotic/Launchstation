@@ -27,9 +27,8 @@
 
 struct handle {
 	struct smb2_context *owner;
-	int fd;
-	uint16_t gen;
-	uint8_t used, dir, share, delete_on_close, dir_done, pending;
+	uint16_t gen, dir_pos; /* dir_pos: entries a listing has read so far */
+	uint8_t used, dir, share, write, delete_on_close, dir_done, pending;
 	char path[SMBD_PATH_MAX]; /* full device path, e.g. mc0:/BESLES-12345/icon.sys */
 	/* A directory entry read but not sent: it did not fit the last reply. */
 	char pending_name[SMBD_NAME_MAX];
@@ -187,16 +186,37 @@ static int dir_used(const char *path)
 	return r;
 }
 
+/* MCMAN has three descriptors for every user of the cards together, so an SMB handle holds none
+ * of its own: one card file stays open, for the handle that last read or wrote, and a listing
+ * opens its folder only while it reads it. */
+static int card_fd = -1, card_owner = -1;
+
+static void card_close(void)
+{
+	if (card_fd >= 0)
+		smbd_close(card_fd);
+	card_fd = card_owner = -1;
+}
+
+static int card_fd_of(int i)
+{
+	int r;
+
+	if (card_owner == i)
+		return card_fd;
+	card_close();
+	if ((r = smbd_open(handles[i].path, handles[i].write, 0, 0)) < 0)
+		return r;
+	card_owner = i;
+	return card_fd = r;
+}
+
 static void release(int i)
 {
 	struct handle *h = &handles[i];
 
-	if (h->fd >= 0) {
-		if (h->dir)
-			smbd_closedir(h->fd);
-		else
-			smbd_close(h->fd);
-	}
+	if (card_owner == i || h->delete_on_close) /* nothing open on what is removed */
+		card_close();
 	if (h->delete_on_close && !is_root(h->path)) {
 		if (h->dir)
 			smbd_rmdir(h->path);
@@ -347,7 +367,6 @@ static int create_cmd(struct smb2_server *srvr, struct smb2_context *smb2, struc
 
 	h = &handles[i];
 	memset(h, 0, sizeof(*h));
-	h->fd = -1;
 	if (exists ? st.dir : want_dir) {
 		if (!exists && (ret = smbd_mkdir(path)) < 0)
 			return reply(smb2, SMB2_CREATE, status_of(ret));
@@ -355,10 +374,14 @@ static int create_cmd(struct smb2_server *srvr, struct smb2_context *smb2, struc
 		rep->create_action = exists ? SMB2_FILE_OPENED : SMB2_FILE_CREATED;
 	} else {
 		int trunc = exists && disp != SMB2_FILE_OPEN && disp != SMB2_FILE_OPEN_IF;
-		ret = smbd_open(path, write || !exists || trunc, !exists, trunc);
-		if (ret < 0)
-			return reply(smb2, SMB2_CREATE, status_of(ret));
-		h->fd = ret;
+		h->write = write || !exists || trunc;
+		if (!exists || trunc) { /* an existing file opens at its first read or write */
+			card_close(); /* also when another handle has it open: truncating removes it */
+			if ((ret = smbd_open(path, 1, !exists, trunc)) < 0)
+				return reply(smb2, SMB2_CREATE, status_of(ret));
+			card_fd = ret;
+			card_owner = i;
+		}
 		rep->create_action = !exists ? SMB2_FILE_CREATED : trunc ? SMB2_FILE_OVERWRITTEN : SMB2_FILE_OPENED;
 	}
 	if (smbd_stat(path, &st) < 0) {
@@ -422,10 +445,12 @@ static int read_cmd(struct smb2_server *srvr, struct smb2_context *smb2, struct 
 		return reply(smb2, SMB2_READ, SMB2_STATUS_INVALID_PARAMETER);
 	if (len > SMBD_MAX_IO)
 		len = SMBD_MAX_IO;
+	if ((n = card_fd_of(i)) < 0)
+		return reply(smb2, SMB2_READ, status_of(n));
 	rep->data = malloc(len ? len : 1); /* libsmb2 frees it with the reply */
 	if (!rep->data)
 		return reply(smb2, SMB2_READ, SMB2_STATUS_INSUFFICIENT_RESOURCES);
-	n = smbd_pread(handles[i].fd, rep->data, (int)len, req->offset);
+	n = smbd_pread(card_fd, rep->data, (int)len, req->offset);
 	if (n <= 0) {
 		free(rep->data);
 		rep->data = NULL;
@@ -449,7 +474,9 @@ static int write_cmd(struct smb2_server *srvr, struct smb2_context *smb2, struct
 		rep->count = 0;
 		return 0;
 	}
-	n = smbd_pwrite(handles[i].fd, req->buf, (int)req->length, req->offset);
+	if ((n = card_fd_of(i)) < 0)
+		return reply(smb2, SMB2_WRITE, status_of(n));
+	n = smbd_pwrite(card_fd, req->buf, (int)req->length, req->offset);
 	if (n < 0)
 		return reply(smb2, SMB2_WRITE, status_of(n));
 	if (n == 0) /* nothing written: the card is full */
@@ -517,7 +544,7 @@ static int query_directory_cmd(struct smb2_server *srvr, struct smb2_context *sm
 	struct handle *h;
 	struct smbd_stat st;
 	uint32_t room = req->output_buffer_length, used = 0;
-	int i = lookup(smb2, req->file_id), n = 0, ret;
+	int i = lookup(smb2, req->file_id), n = 0, ret, fd;
 
 	(void)srvr;
 	if (i < 0)
@@ -525,28 +552,25 @@ static int query_directory_cmd(struct smb2_server *srvr, struct smb2_context *sm
 	h = &handles[i];
 	if (!h->dir)
 		return reply(smb2, SMB2_QUERY_DIRECTORY, SMB2_STATUS_INVALID_PARAMETER);
-	if (req->flags & (SMB2_RESTART_SCANS | SMB2_REOPEN)) {
-		if (h->fd >= 0)
-			smbd_closedir(h->fd);
-		h->fd = -1;
-		h->dir_done = h->pending = 0;
-	}
+	if (req->flags & (SMB2_RESTART_SCANS | SMB2_REOPEN))
+		h->dir_pos = h->dir_done = h->pending = 0;
 	if (h->dir_done)
 		return 0; /* empty buffer: STATUS_NO_MORE_FILES */
-	if (h->fd < 0) {
-		if ((ret = smbd_opendir(h->path)) < 0)
-			return reply(smb2, SMB2_QUERY_DIRECTORY, status_of(ret));
-		h->fd = ret;
-	}
+	if ((fd = smbd_opendir(h->path)) < 0) /* reopened for each reply, and skipped to where it was */
+		return reply(smb2, SMB2_QUERY_DIRECTORY, status_of(fd));
+	for (ret = 0; ret < h->dir_pos && smbd_readdir(fd, names[0], SMBD_NAME_MAX, &st) > 0; ret++)
+		;
 	while (n < DIR_BATCH) {
 		uint32_t need;
 		if (h->pending) {
 			strcpy(names[n], h->pending_name);
 			st = h->pending_st;
 			h->pending = 0;
-		} else if (smbd_readdir(h->fd, names[n], SMBD_NAME_MAX, &st) <= 0) {
+		} else if (smbd_readdir(fd, names[n], SMBD_NAME_MAX, &st) <= 0) {
 			h->dir_done = 1;
 			break;
+		} else {
+			h->dir_pos++;
 		}
 		if (!match(req->name, names[n]))
 			continue;
@@ -573,6 +597,7 @@ static int query_directory_cmd(struct smb2_server *srvr, struct smb2_context *sm
 		if (req->flags & SMB2_RETURN_SINGLE_ENTRY)
 			break;
 	}
+	smbd_closedir(fd);
 	if (n == 0 && h->pending)
 		return reply(smb2, SMB2_QUERY_DIRECTORY, SMB2_STATUS_INFO_LENGTH_MISMATCH);
 	rep->output_buffer = (uint8_t *)ent;
@@ -792,6 +817,7 @@ static int set_info_cmd(struct smb2_server *srvr, struct smb2_context *smb2, str
 			return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_NOT_SUPPORTED);
 		return 0;
 	case SMB2_FILE_RENAME_INFORMATION:
+		card_close(); /* nothing open on what moves */
 		return rename_handle(smb2, i, buf, req->buffer_length);
 	}
 	return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_NOT_SUPPORTED);
@@ -827,6 +853,7 @@ void smbd_release_all(void)
 	for (i = 0; i < MAX_HANDLES; i++)
 		if (handles[i].used)
 			release(i);
+	card_close();
 }
 
 /* --- the server ------------------------------------------------------------------------- */

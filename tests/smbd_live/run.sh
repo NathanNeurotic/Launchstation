@@ -6,7 +6,8 @@
 # Checked: every dialect from 2.0.2 to 3.1.1 with signing required, the wrong password, the
 # wrong user and guest refused, unknown shares and IPC$ refused, both shares, a 1 MiB file both
 # ways byte for byte, a 200-file folder listed whole, mkdir/rename/delete/rmdir, rename onto an
-# existing name refused, a non-empty folder kept, a replacing move to another folder refused, ".." kept inside the share, a full card (the
+# existing name refused, a non-empty folder kept, a replacing move to another folder refused, several files
+# open at once with the card's descriptor limit modelled, ".." kept inside the share, a full card (the
 # write fails and the client is told), a third client refused, and Stop (SIGTERM ->
 # smbd_stop()) returning within a second with nothing leaked.
 #
@@ -38,6 +39,7 @@ make -C "$work/lib" -j"$(nproc)" smb2 >"$work/make.log" 2>&1 || { tail -40 "$wor
 cc $san -Wall -Wextra -Werror -DHAVE_CONFIG_H -I"$work/lib" -I"$root/iop/smbd" -I"$lib/include" \
     -I"$lib/include/smb2" -I"$lib/lib" "$here/host.c" "$root/iop/smbd/smbd_fs.c" "$work/lib/lib/libsmb2.a" \
     -o "$work/host"
+cc $san -Wall -Wextra -Werror -I"$lib/include" "$here/client.c" "$work/lib/lib/libsmb2.a" -o "$work/client"
 
 fail=0
 pass() { echo "PASS: $1"; }
@@ -143,6 +145,14 @@ cmp -s "$work/root/mc0/NEWDIR/FAILONCE.BIN" "$work/c.expect" && [ ! -e "$work/ro
 rm "$work/root/mc0/NEWDIR/FAILONCE.BIN"
 smb mc0 "del NEWDIR\\B.BIN; del NEWDIR\\C.BIN; rmdir NEWDIR" >/dev/null || true
 [ ! -e "$work/root/mc0/NEWDIR" ] && pass "delete and rmdir" || bad "delete/rmdir"
+
+printf aaaa >"$work/root/mc0/A.TXT" && printf bbbb >"$work/root/mc0/B.TXT"
+if out=$(ASAN_OPTIONS=detect_leaks=0 "$work/client" "127.0.0.1:$port" ps2 secret 2>&1); then
+    pass "four files open at once, a listing while they are open, within the card's descriptors"
+else
+    bad "files open at once: $out"
+fi
+rm -f "$work/root/mc0/A.TXT" "$work/root/mc0/B.TXT" "$work/root/mc0/C.TXT"
 
 out=$(smb mc0 'get ..\..\host.log '"$work/escaped" 2>&1) || true
 [ ! -f "$work/escaped" ] && pass "\"..\" stays inside the share" || bad "path escaped the share"
