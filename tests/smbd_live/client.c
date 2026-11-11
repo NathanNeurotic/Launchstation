@@ -7,7 +7,8 @@
  *   - open A, open B, open A again, and create C, all held open at once;
  *   - list the share while they are open;
  *   - read A through both of its handles and B, and write C;
- *   - close them all, then read C back.
+ *   - refuse to rename A while it is open, and read both of A's handles after;
+ *   - close them all, rename C to D, then read D back.
  * Prints one line per failure. Exits 0 only if everything held. */
 #include <fcntl.h>
 #include <stdint.h>
@@ -84,6 +85,12 @@ int main(int argc, char **argv)
 		check(smb2_pwrite(smb2, c, (const uint8_t *)"cccc", 4, 0) == 4, "write C", smb2);
 	if (a)
 		check(read_is(smb2, a, "aaaa"), "read A again after the others", smb2);
+	/* Renaming A would leave its other handles naming nothing, so the server refuses. */
+	check(smb2_rename(smb2, "A.TXT", "D.TXT") < 0, "refuse to rename A while it is open", smb2);
+	if (a)
+		check(read_is(smb2, a, "aaaa"), "read A after the refused rename", smb2);
+	if (a2)
+		check(read_is(smb2, a2, "aaaa"), "read A's second handle after the refused rename", smb2);
 
 	if (a)
 		smb2_close(smb2, a);
@@ -94,8 +101,9 @@ int main(int argc, char **argv)
 	if (c)
 		smb2_close(smb2, c);
 
-	c = smb2_open(smb2, "C.TXT", O_RDONLY);
-	check(c != NULL && read_is(smb2, c, "cccc"), "C reads back", smb2);
+	check(smb2_rename(smb2, "C.TXT", "D.TXT") == 0, "rename C once nothing holds it", smb2);
+	c = smb2_open(smb2, "D.TXT", O_RDONLY);
+	check(c != NULL && read_is(smb2, c, "cccc"), "C reads back as D", smb2);
 	if (c)
 		smb2_close(smb2, c);
 

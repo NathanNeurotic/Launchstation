@@ -725,6 +725,23 @@ static uint32_t le32(const uint8_t *p)
 	return p[0] | (p[1] << 8) | (p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
+/* Another handle open on path, or on something under it: a rename would leave it naming nothing. */
+static int in_use(int i, const char *path)
+{
+	const char *a, *b;
+	int j;
+
+	for (j = 0; j < MAX_HANDLES; j++) {
+		if (j == i || !handles[j].used)
+			continue;
+		for (a = path, b = handles[j].path; *a && lower((unsigned char)*a) == lower((unsigned char)*b); a++, b++)
+			;
+		if (!*a && (!*b || *b == '/'))
+			return 1;
+	}
+	return 0;
+}
+
 static int rename_handle(struct smb2_context *smb2, int i, const uint8_t *buf, uint32_t len)
 {
 	struct smbd_stat st;
@@ -758,6 +775,8 @@ static int rename_handle(struct smb2_context *smb2, int i, const uint8_t *buf, u
 		return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_NOT_SAME_DEVICE);
 	if (strlen(b + 1) > SMBD_LEAF_MAX)
 		return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_NAME_TOO_LONG);
+	if (in_use(i, handles[i].path) || (!ieq(to, handles[i].path) && in_use(i, to)))
+		return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_SHARING_VIOLATION);
 	aside[0] = 0;
 	if (!ieq(to, handles[i].path) && smbd_stat(to, &st) == 0) {
 		if (!buf[0] || st.dir) /* ReplaceIfExists; a folder is never replaced */
