@@ -1482,6 +1482,24 @@ void dashLoadingEnd(void)
 	loading_cancel = 0;
 	dashInputFlush();
 }
+
+void DashPause(u32 usec)
+{
+	u64 end;
+
+	/* Only where a popup is already being drawn between steps (as in
+	 * probeRoot): no RPC is in flight during a sleep, so the frame is the
+	 * same one those steps draw. Short sleeps are not worth a frame. */
+	if (usec < 50000 || !loading_active || !DashIsActive() || dashWorkerOnThread()) {
+		DelayThread(usec);
+		return;
+	}
+	end = Timer() + (usec + 999) / 1000 + 1; /* Timer() ticks in whole ms */
+	do {
+		loadingDraw();
+		DelayThread(1000); /* the present already waited for the frame */
+	} while (Timer() < end);
+}
 //--------------------------------------------------------------
 //End of file: dash_ui.c
 //--------------------------------------------------------------

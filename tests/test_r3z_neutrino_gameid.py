@@ -102,6 +102,7 @@ int fileXioDevctl(const char *device, int cmd, void *arg, int arglen, void *out,
     assert(cmd == 2); assert(!settle_pending); polls++; return status_result;
 }
 void DelayThread(int usec) { assert(usec == 1000000); settle_pending = 0; delays++; }
+void DashPause(u32 usec) { DelayThread((int)usec); }
 #define DPRINTF(...) ((void)0)
 """
 code = (

@@ -297,6 +297,10 @@ int DelayThread(int usec)
 	(void)usec;
 	return 0;
 }
+void DashPause(unsigned int usec)
+{
+	(void)usec;
+}
 
 void dashToast(int kind, const char *msg) { printf("TOAST|%d|%s\n", kind, msg); }
 static unsigned char *menu_marks;

@@ -578,7 +578,7 @@ static int probeUsbMediaAnimated(void)
 		if (dashLoadingActive())
 			dashLoadingFrame("Waiting for USB storage...", attempt + 1,
 			                 attempts);
-		DelayThread(delay_us);
+		DashPause(delay_us);
 	}
 	return mask != 0;
 }
