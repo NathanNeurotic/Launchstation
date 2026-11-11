@@ -120,6 +120,11 @@ try:
     full = notes.release_changes(repo, revision, previous, log)
     assert "- Additional merged changes in this rolling build:" in full and changes[0] in full
     assert sum(len(x.encode()) + 1 for x in full) < notes.CHANGELOG_BUDGET + notes.COMMIT_BUDGET + 600
+    # Overflowing commit links point at the revision comparison, where the omitted commits are.
+    many_commits = [f"- [Change {n} " + "z" * 80 + "](https://example.invalid)" for n in range(200)]
+    overflow = notes.bound_changes(many_commits, repo, revision, notes.COMMIT_BUDGET,
+                                   link=f"https://github.com/{repo}/compare/{previous}...{revision}", label="commit history")
+    assert f"/compare/{previous}...{revision}" in overflow[-1] and "/CHANGELOG.md" not in overflow[-1]
     notes.revision_changelog = lambda sha: []
     assert notes.release_changes(repo, revision, previous, log) == changes
 finally:

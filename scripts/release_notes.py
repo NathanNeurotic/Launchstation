@@ -75,16 +75,16 @@ def revision_changelog(revision):
     return rolling_changelog(summary.stdout) if summary.returncode == 0 else []
 
 
-def bound_changes(changes, repo, revision, budget=CHANGELOG_BUDGET):
+def bound_changes(changes, repo, revision, budget=CHANGELOG_BUDGET, link=None, label="full changelog"):
     """Keep the newest entries that fit the byte budget; link the full changelog for the rest."""
     kept, used = [], 0
     for index, line in enumerate(changes):
         used += len(line.encode("utf-8")) + 1
         if used > budget:
-            link = f"https://github.com/{repo}/blob/{revision}/CHANGELOG.md"
+            link = link or f"https://github.com/{repo}/blob/{revision}/CHANGELOG.md"
             while kept and not kept[-1]:
                 kept.pop()
-            return kept + ["", f"- Older entries are in the [full changelog]({link}) ({len(changes) - index} more lines)."]
+            return kept + ["", f"- Older entries are in the [{label}]({link}) ({len(changes) - index} more lines)."]
         kept.append(line)
     return kept
 
@@ -92,8 +92,11 @@ def bound_changes(changes, repo, revision, budget=CHANGELOG_BUDGET):
 def release_changes(repo, revision, previous, log):
     """Rolling summary (budgeted) plus, when it did not change, links to the new commits (budgeted separately)."""
     current = revision_changelog(revision)
+    # Omitted commit entries are reachable through the revision comparison, not CHANGELOG.md.
+    base = f"https://github.com/{repo}"
+    history = f"{base}/compare/{previous}...{revision}" if previous else f"{base}/commits/{revision}"
     if not current:
-        return bound_changes(changes_from_log(log, repo), repo, revision)
+        return bound_changes(changes_from_log(log, repo), repo, revision, link=history, label="commit history")
     summary = bound_changes(current, repo, revision)
     # Keep the public rolling summary visible on every release page.
     # If the summary text did not change but new commits exist, append those
@@ -103,7 +106,8 @@ def release_changes(repo, revision, previous, log):
     commit_changes = changes_from_log(log, repo)
     if commit_changes:
         return (summary + ["", "- Additional merged changes in this rolling build:"]
-                + bound_changes(commit_changes, repo, revision, COMMIT_BUDGET))
+                + bound_changes(commit_changes, repo, revision, COMMIT_BUDGET,
+                                                            link=history, label="commit history"))
     return summary
 
 
