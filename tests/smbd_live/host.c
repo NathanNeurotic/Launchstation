@@ -169,6 +169,12 @@ int smbd_rmdir(const char *path)
 int smbd_rename(const char *from, const char *to)
 {
 	char a[4096], b[4096];
+	static int failed;
+	/* A card error, once, on a rename onto FAILONCE.BIN: run.sh checks the replaced file survives. */
+	if (!failed && !strcmp(strrchr(to, '/') + 1, "FAILONCE.BIN")) {
+		failed = 1;
+		return -EIO;
+	}
 	return rename(host_path(from, a), host_path(to, b)) < 0 ? -errno : 0;
 }
 

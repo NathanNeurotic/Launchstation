@@ -128,6 +128,17 @@ out=$(smb mc0 "rename NEWDIR\\C.BIN OTHER\\B.BIN -f") || true
 echo "$out" | grep -q NOT_SAME_DEVICE && [ "$(cat "$work/root/mc0/OTHER/B.BIN")" = keep ] &&
     pass "replacing move to another folder refused, target kept" || bad "cross-folder replace: $out"
 rm -r "$work/root/mc0/OTHER"
+printf 'keep\n' >"$work/root/mc0/NEWDIR/FAILONCE.BIN"
+out=$(smb mc0 "rename NEWDIR\\C.BIN NEWDIR\\FAILONCE.BIN -f") || true
+[ "$(cat "$work/root/mc0/NEWDIR/FAILONCE.BIN")" = keep ] && [ -f "$work/root/mc0/NEWDIR/C.BIN" ] &&
+    [ ! -e "$work/root/mc0/NEWDIR/SMBD-OLD.TMP" ] &&
+    pass "failed replacing rename puts the target back" || bad "failed replace: $out"
+cp "$work/root/mc0/NEWDIR/C.BIN" "$work/c.expect"
+out=$(smb mc0 "rename NEWDIR\\C.BIN NEWDIR\\FAILONCE.BIN -f") || true
+cmp -s "$work/root/mc0/NEWDIR/FAILONCE.BIN" "$work/c.expect" && [ ! -e "$work/root/mc0/NEWDIR/C.BIN" ] &&
+    [ ! -e "$work/root/mc0/NEWDIR/SMBD-OLD.TMP" ] &&
+    pass "replacing rename" || bad "replace: $out"
+rm "$work/root/mc0/NEWDIR/FAILONCE.BIN"
 smb mc0 "del NEWDIR\\B.BIN; del NEWDIR\\C.BIN; rmdir NEWDIR" >/dev/null || true
 [ ! -e "$work/root/mc0/NEWDIR" ] && pass "delete and rmdir" || bad "delete/rmdir"
 

@@ -703,7 +703,7 @@ static uint32_t le32(const uint8_t *p)
 static int rename_handle(struct smb2_context *smb2, int i, const uint8_t *buf, uint32_t len)
 {
 	struct smbd_stat st;
-	char to[SMBD_PATH_MAX];
+	char to[SMBD_PATH_MAX], aside[SMBD_PATH_MAX];
 	const char *name;
 	uint16_t *wide;
 	uint32_t n;
@@ -733,14 +733,25 @@ static int rename_handle(struct smb2_context *smb2, int i, const uint8_t *buf, u
 		return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_NOT_SAME_DEVICE);
 	if (strlen(b + 1) > SMBD_LEAF_MAX)
 		return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_NAME_TOO_LONG);
+	aside[0] = 0;
 	if (!ieq(to, handles[i].path) && smbd_stat(to, &st) == 0) {
 		if (!buf[0] || st.dir) /* ReplaceIfExists; a folder is never replaced */
 			return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_OBJECT_NAME_COLLISION);
-		if ((ret = smbd_remove(to)) < 0)
+		/* Move the target aside, not away, so a failed rename can put it back. */
+		memcpy(aside, to, b - to);
+		strcpy(aside + (b - to), "/SMBD-OLD.TMP");
+		if (smbd_stat(aside, &st) == 0)
+			return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_OBJECT_NAME_COLLISION);
+		if ((ret = smbd_rename(to, aside)) < 0)
 			return reply(smb2, SMB2_SET_INFO, status_of(ret));
 	}
-	if ((ret = smbd_rename(handles[i].path, to)) < 0)
+	if ((ret = smbd_rename(handles[i].path, to)) < 0) {
+		if (aside[0])
+			smbd_rename(aside, to);
 		return reply(smb2, SMB2_SET_INFO, status_of(ret));
+	}
+	if (aside[0])
+		smbd_remove(aside);
 	strcpy(handles[i].path, to);
 	return 0;
 }
