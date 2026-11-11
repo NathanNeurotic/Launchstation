@@ -7,6 +7,7 @@
 //(swapKeys == 0: Circle confirms, Cross cancels; swapKeys == 1: Cross
 //confirms, Circle cancels), exactly like the classic screens.
 //--------------------------------------------------------------
+#include <time.h>
 #include "dash_internal.h"
 #include "dash_sound.h"
 #include "init.h"
@@ -1485,7 +1486,7 @@ void dashLoadingEnd(void)
 
 void DashPause(u32 usec)
 {
-	u64 end;
+	clock_t start;
 
 	/* Only where a popup is already being drawn between steps (as in
 	 * probeRoot): no RPC is in flight during a sleep, so the frame is the
@@ -1494,11 +1495,13 @@ void DashPause(u32 usec)
 		DelayThread(usec);
 		return;
 	}
-	end = Timer() + (usec + 999) / 1000 + 1; /* Timer() ticks in whole ms */
+	/* clock() counts microseconds and wraps every 2^32 (about 71.6 min,
+	 * and Timer() with it); the unsigned difference stays right across it. */
+	start = clock();
 	do {
 		loadingDraw();
 		DelayThread(1000); /* the present already waited for the frame */
-	} while (Timer() < end);
+	} while ((u32)(clock() - start) < usec);
 }
 //--------------------------------------------------------------
 //End of file: dash_ui.c

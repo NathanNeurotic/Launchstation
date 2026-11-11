@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """DashPause(): a sleep that keeps an open progress popup drawing.
 
-Compiles the real function against a fake clock and checks that it never
-returns early, draws only while a popup is open on the dashboard thread,
+Compiles the real function against a fake 32-bit microsecond clock() (it
+wraps every 2^32 us on the EE) and checks that it never returns early, ends
+across the wrap, draws only while a popup is open on the dashboard thread,
 and keeps short sleeps and the other cases a plain DelayThread.
 """
 from pathlib import Path
@@ -25,19 +26,26 @@ code = r"""
 #include <stdio.h>
 typedef unsigned int u32;
 typedef unsigned long long u64;
+typedef u32 fake_clock_t;
+#define clock_t fake_clock_t
+#define clock fake_clock
 static u64 now_us;
 static int loading_active, active = 1, on_worker, frames, sleeps;
-static u64 Timer(void) { return now_us / 1000; }
+static fake_clock_t fake_clock(void) { return (u32)now_us; } /* wraps like the EE's */
 static int DashIsActive(void) { return active; }
 static int dashWorkerOnThread(void) { return on_worker; }
 static void DelayThread(u32 us) { now_us += us; sleeps++; }
 /* A frame waits for vsync, so it can end anywhere inside the 16.7 ms. */
 static void loadingDraw(void) { frames++; now_us += 16683 - (now_us % 16683); }
 """ + ui[a:b] + r"""
-static void reset(void) { now_us = 123456; frames = sleeps = 0; loading_active = 1; active = 1; on_worker = 0; }
+static u64 base = 123456;
+static void reset(void) { now_us = base; frames = sleeps = 0; loading_active = 1; active = 1; on_worker = 0; }
 int main(void) {
     u32 waits[] = {50000, 250000, 500000, 600000, 1000000};
+    u64 bases[] = {123456, 0xFFFFFFFFull - 300000, 0xFFFFFFFFull - 5}; /* last two cross the wrap */
+    for (unsigned k = 0; k < sizeof(bases) / sizeof(bases[0]); k++)
     for (unsigned i = 0; i < sizeof(waits) / sizeof(waits[0]); i++) {
+        base = bases[k];
         u64 start;
         reset(); start = now_us;
         DashPause(waits[i]);
@@ -45,11 +53,12 @@ int main(void) {
         assert(now_us - start <= waits[i] + 2000 + 16683); /* at most one frame late */
         assert(frames >= (int)(waits[i] / 16683) - 1);    /* kept drawing */
     }
+    base = 123456;
     reset(); loading_active = 0; DashPause(600000); assert(!frames && sleeps == 1 && now_us == 123456 + 600000);
     reset(); active = 0; DashPause(600000); assert(!frames && sleeps == 1);
     reset(); on_worker = 1; DashPause(600000); assert(!frames && sleeps == 1);
     reset(); DashPause(16000); assert(!frames && sleeps == 1 && now_us == 123456 + 16000);
-    puts("PASS: DashPause never returns early, draws only in an open popup on the UI thread");
+    puts("PASS: DashPause never returns early, ends across the clock wrap, draws only in an open popup on the UI thread");
     return 0;
 }
 """
