@@ -16,6 +16,12 @@ ASSETS = (
 # the pinned externals. When it could not be built, the build still publishes
 # every other asset and the notes say the previous kit stays attached.
 OPTIONAL_ASSETS = ("LAUNCHSTATION.zip",)
+# The in-app "Check for updates" downloads this release's JSON through a fixed-size
+# buffer (256 KiB). The body is the only part that grows, so the changelog list is
+# cut to a byte budget (newest entries first; the full file stays in the repo) and the
+# finished body must stay under a hard limit or the build fails before publishing.
+CHANGELOG_BUDGET = 12000
+BODY_LIMIT = 40000
 
 
 def published_name(name, version):
@@ -67,7 +73,25 @@ def revision_changelog(revision):
     return rolling_changelog(summary.stdout) if summary.returncode == 0 else []
 
 
+def bound_changes(changes, repo, revision, budget=CHANGELOG_BUDGET):
+    """Keep the newest entries that fit the byte budget; link the full changelog for the rest."""
+    kept, used = [], 0
+    for index, line in enumerate(changes):
+        used += len(line.encode("utf-8")) + 1
+        if used > budget:
+            link = f"https://github.com/{repo}/blob/{revision}/CHANGELOG.md"
+            while kept and not kept[-1]:
+                kept.pop()
+            return kept + ["", f"- Older entries are in the [full changelog]({link}) ({len(changes) - index} more lines)."]
+        kept.append(line)
+    return kept
+
+
 def release_changes(repo, revision, previous, log):
+    return bound_changes(all_release_changes(repo, revision, previous, log), repo, revision)
+
+
+def all_release_changes(repo, revision, previous, log):
     current = revision_changelog(revision)
     # Keep the public rolling summary visible on every release page.
     # If the summary text did not change but new commits exist, append those
@@ -178,8 +202,12 @@ def main():
             parser.error(f"missing or empty package: {asset}")
         with asset.open("rb") as stream:
             digests[name] = hashlib.file_digest(stream, "sha256").hexdigest()
-    args.output.write_text(render(args.repo, args.revision, args.previous, args.run_id,
-                                  changes, digests, args.version, args.omit_kit), encoding="utf-8")
+    body = render(args.repo, args.revision, args.previous, args.run_id,
+                  changes, digests, args.version, args.omit_kit)
+    size = len(body.encode("utf-8"))
+    if size > BODY_LIMIT:
+        parser.error(f"release notes are {size} bytes, over the {BODY_LIMIT} byte limit the in-app update check relies on")
+    args.output.write_text(body, encoding="utf-8")
 
 
 if __name__ == "__main__":

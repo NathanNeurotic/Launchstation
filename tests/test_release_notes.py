@@ -51,7 +51,7 @@ with tempfile.TemporaryDirectory(prefix="release-notes-") as folder:
     subprocess.run(args, cwd=root, check=True)
     generated = output.read_text()
     summary = subprocess.run(["git", "show", f"{head}:CHANGELOG.md"], cwd=root, capture_output=True, text=True)
-    expected = notes.rolling_changelog(summary.stdout)
+    expected = notes.bound_changes(notes.rolling_changelog(summary.stdout), repo, head)
     if expected:
         assert all(line in generated for line in expected)
         assert "Rebuild of the current revision" not in generated
@@ -61,6 +61,36 @@ with tempfile.TemporaryDirectory(prefix="release-notes-") as folder:
         assert hashlib.sha256((path / name).read_bytes()).hexdigest() in generated
     (path / notes.ASSETS[0]).unlink()
     assert subprocess.run(args, cwd=root, capture_output=True).returncode != 0
+
+# The release body stays bounded however long the Rolling changelog grows: the in-app
+# update check reads this release's JSON into a fixed 256 KiB buffer.
+many = [f"- Entry {n}: " + "x" * 80 for n in range(5000)]
+bounded = notes.bound_changes(many, repo, revision)
+assert bounded[0] == many[0] and many[-1] not in bounded
+assert sum(len(x.encode()) + 1 for x in bounded) < notes.CHANGELOG_BUDGET + 400
+assert f"/blob/{revision}/CHANGELOG.md" in bounded[-1] and "more lines" in bounded[-1]
+assert notes.bound_changes(many[:3], repo, revision) == many[:3]
+big_body = notes.render(repo, revision, previous, 123, bounded, digests, "284")
+assert len(big_body.encode()) < notes.BODY_LIMIT
+rolling = notes.rolling_changelog(Path(root / "CHANGELOG.md").read_text())
+real_body = notes.render(repo, revision, previous, 123, notes.bound_changes(rolling, repo, revision), digests, "9999")
+assert len(real_body.encode()) < notes.BODY_LIMIT
+with tempfile.TemporaryDirectory(prefix="release-notes-big-") as folder:
+    path = Path(folder)
+    for name in notes.ASSETS:
+        (path / name).write_bytes(("fixture:" + name).encode())
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    args = [sys.executable, str(root / "scripts/release_notes.py"), "--repo", repo,
+            "--revision", head, "--previous", head, "--run-id", "123",
+            "--assets-dir", str(path), "--output", str(path / "notes.md")]
+    subprocess.run(args, cwd=root, check=True)
+    assert (path / "notes.md").stat().st_size < notes.BODY_LIMIT
+    saved = notes.BODY_LIMIT
+# The hard limit fails the build instead of publishing an oversized body.
+src = (root / "scripts/release_notes.py").read_text().replace("BODY_LIMIT = 40000", "BODY_LIMIT = 100")
+limited = Path(tempfile.mkdtemp(prefix="release-notes-limit-")) / "rn.py"
+limited.write_text(src)
+assert subprocess.run([sys.executable, str(limited), *args[2:]], cwd=root, capture_output=True).returncode != 0
 
 # Unchanged summaries cannot hide subsequent commits; same-SHA reruns keep them.
 original_reader = notes.revision_changelog

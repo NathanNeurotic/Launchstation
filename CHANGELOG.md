@@ -1,6 +1,6 @@
 # Launchstation changelog
 
-The `## Rolling` section below is the maintained summary shown on the GitHub [`latest`](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest) release page (`scripts/release_notes.py` reads only its `- ` bullets). Dated sections after it are a condensed history grouped by theme, newest first; PR numbers refer to <https://github.com/NathanNeurotic/Launchstation/pulls>. CI success is not console acceptance: items marked pending hardware validation still need testing on a real PS2.
+The `## Rolling` section below is the maintained summary shown on the GitHub [`latest`](https://github.com/NathanNeurotic/Launchstation/releases/tag/latest) release page (`scripts/release_notes.py` reads only its `- ` bullets, newest first, and stops at about 12 KB with a link to this file so the release stays small enough for the in-app update check). Dated sections after it are a condensed history grouped by theme, newest first; PR numbers refer to <https://github.com/NathanNeurotic/Launchstation/pulls>. CI success is not console acceptance: items marked pending hardware validation still need testing on a real PS2.
 
 ## Rolling
 
