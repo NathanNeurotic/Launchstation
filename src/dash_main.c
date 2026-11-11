@@ -116,6 +116,13 @@ int dashVisibleSectionIndex(int s)
 	return 0;
 }
 
+/* Where Circle goes when leaving a tab: the first tab still enabled, which is
+ * HOME unless the Home tab toggle is off (issue #343). */
+int dashBackSection(void)
+{
+	return dashVisibleSectionAt(0);
+}
+
 const char *dashVisibleSectionName(int index)
 {
 	return dashSectionName(dashVisibleSectionAt(index));
@@ -208,6 +215,15 @@ void dashSwitchSection(int s)
 		return;
 	if (!dashConfirmLeave())
 		return;
+	/* Discarding Settings can switch a tab off again after the caller chose it. */
+	if ((s == DASH_SEC_HOME || s == DASH_SEC_FILES || s == DASH_SEC_TOOLS) && !sectionTabEnabled(s)) {
+		s = dashBackSection();
+		if (s == section) {
+			if (section == DASH_SEC_SETTINGS && screens[section]->enter)
+				screens[section]->enter(); /* Discard ended its session; other tabs stay as they are */
+			return;
+		}
+	}
 	/* Trigger feedback before the potentially slow File Browser tab close.
 	 * Confirmation/cancel dialogs still resolve before a transition sound. */
 	dashSoundPlay(DASH_SND_TRANSITION);

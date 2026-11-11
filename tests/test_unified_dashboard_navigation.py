@@ -47,7 +47,8 @@ enum { DASH_SND_TRANSITION=1 };
 static int section = DASH_SEC_HOME,prev_section=DASH_SEC_HOME;
 static float section_anim=1.0f;
 static int section_dir=1, leave_ok=1, enter_count, sound_count, focus_count, tab_closes;
-static int dashConfirmLeave(void) { return leave_ok; }
+static int leave_disable_home, leave_disable_all;
+static int dashConfirmLeave(void) { if (leave_disable_home) dashCfg.disabled_tabs |= (1 << DASH_SEC_HOME); if (leave_disable_all) dashCfg.disabled_tabs |= (1 << DASH_SEC_HOME) | (1 << DASH_SEC_FILES) | (1 << DASH_SEC_TOOLS); return leave_ok; }
 static void dashFileBrowserTabClose(void) { assert(section==DASH_SEC_FILES); tab_closes++; }
 static void dashUiFocusPoke(void) { focus_count++; }
 static void dashSoundPlay(int sound) { assert(sound==DASH_SND_TRANSITION); sound_count++; }
@@ -61,6 +62,7 @@ code+=defs
 code+=function(main,"static int sectionTabEnabled(")
 for fn in ("int dashVisibleSectionCount(void)","int dashVisibleSectionAt(int index)",
            "int dashVisibleSectionIndex(int s)","int dashAdjacentSection(int s, int direction)",
+           "int dashBackSection(void)",
            "void dashSwitchSection(int s)"):
     code+=function(main,fn)
 code+=r'''
@@ -107,6 +109,35 @@ int main(void) {
     assert(dashVisibleSectionAt(1) == DASH_SEC_FILES);
     assert(dashVisibleSectionAt(2) == DASH_SEC_SETTINGS);
     assert(dashAdjacentSection(DASH_SEC_FILES, +1) == DASH_SEC_SETTINGS);
+    dashCfg.disabled_tabs = 0;
+    /* Issue #343: Circle goes to the first enabled tab, and a tab that the
+     * leave dialog switches off again (Discard) is not entered. */
+    assert(dashBackSection() == DASH_SEC_HOME);
+    dashCfg.disabled_tabs = (1 << DASH_SEC_HOME);
+    assert(dashBackSection() == DASH_SEC_FILES);
+    dashCfg.disabled_tabs = 0;
+    assert(section == DASH_SEC_SETTINGS);
+    leave_disable_home = 1;
+    dashSwitchSection(dashBackSection());
+    assert(section == DASH_SEC_FILES);
+    leave_disable_home = 0;
+    dashCfg.disabled_tabs = 0;
+    /* Only Settings left after Discard: stay, and let Settings start a new session. */
+    dashSwitchSection(DASH_SEC_SETTINGS);
+    assert(section == DASH_SEC_SETTINGS);
+    enter_count = 0;
+    leave_disable_all = 1;
+    dashSwitchSection(DASH_SEC_HOME);
+    assert(section == DASH_SEC_SETTINGS && enter_count == 1);
+    leave_disable_all = 0;
+    /* An active Files tab is not entered a second time. */
+    dashCfg.disabled_tabs = 0;
+    dashSwitchSection(DASH_SEC_FILES);
+    assert(section == DASH_SEC_FILES);
+    enter_count = 0;
+    dashCfg.disabled_tabs = (1 << DASH_SEC_HOME);
+    dashSwitchSection(DASH_SEC_HOME);
+    assert(section == DASH_SEC_FILES && enter_count == 0);
     dashCfg.disabled_tabs = 0;
     puts("PASS: unified Home, Files as real tab, shoulder cycling, cancel and cleanup");
 }
