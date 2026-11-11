@@ -24,6 +24,7 @@
 #define SMBD_SHARES 2      /* mc0, mc1 */
 #define SMBD_PATH_MAX 128  /* "mc0:/" + folder + "/" + file, with room to spare */
 #define SMBD_NAME_MAX 64   /* card names are at most 31 bytes */
+#define SMBD_LEAF_MAX 31   /* longest name a card entry holds (sceMcTblGetDir.EntryName) */
 #define SMBD_MAX_IO 65536  /* largest READ/WRITE/transact the server offers */
 #define SMBD_MAX_CLIENTS 2
 
@@ -46,7 +47,7 @@ int smbd_closedir(int fd);
 int smbd_mkdir(const char *path);
 int smbd_remove(const char *path);
 int smbd_rmdir(const char *path);
-int smbd_rename(const char *from, const char *to); /* both in one share */
+int smbd_rename(const char *from, const char *to); /* same folder; smbd_fs.c checks first */
 int smbd_space(int share, uint64_t *total, uint64_t *avail);
 
 extern const char *smbd_user, *smbd_password;

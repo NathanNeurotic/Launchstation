@@ -6,7 +6,7 @@
 # Checked: every dialect from 2.0.2 to 3.1.1 with signing required, the wrong password, the
 # wrong user and guest refused, unknown shares and IPC$ refused, both shares, a 1 MiB file both
 # ways byte for byte, a 200-file folder listed whole, mkdir/rename/delete/rmdir, rename onto an
-# existing name refused, a non-empty folder kept, ".." kept inside the share, a full card (the
+# existing name refused, a non-empty folder kept, a replacing move to another folder refused, ".." kept inside the share, a full card (the
 # write fails and the client is told), a third client refused, and Stop (SIGTERM ->
 # smbd_stop()) returning within a second with nothing leaked.
 #
@@ -121,7 +121,13 @@ out=$(smb mc0 "put $work/big.bin NEWDIR\\C.BIN; rename NEWDIR\\C.BIN NEWDIR\\B.B
 echo "$out" | grep -q OBJECT_NAME_COLLISION && [ -f "$work/root/mc0/NEWDIR/C.BIN" ] &&
     pass "rename onto an existing name refused" || bad "rename collision: $out"
 out=$(smb mc0 "rmdir NEWDIR") || true
-[ -d "$work/root/mc0/NEWDIR" ] && pass "non-empty folder kept" || bad "non-empty rmdir: $out"
+[ -d "$work/root/mc0/NEWDIR" ] && echo "$out" | grep -q DIRECTORY_NOT_EMPTY &&
+    pass "non-empty folder kept, and the client told" || bad "non-empty rmdir: $out"
+mkdir "$work/root/mc0/OTHER" && printf 'keep\n' >"$work/root/mc0/OTHER/B.BIN"
+out=$(smb mc0 "rename NEWDIR\\C.BIN OTHER\\B.BIN -f") || true
+echo "$out" | grep -q NOT_SAME_DEVICE && [ "$(cat "$work/root/mc0/OTHER/B.BIN")" = keep ] &&
+    pass "replacing move to another folder refused, target kept" || bad "cross-folder replace: $out"
+rm -r "$work/root/mc0/OTHER"
 smb mc0 "del NEWDIR\\B.BIN; del NEWDIR\\C.BIN; rmdir NEWDIR" >/dev/null || true
 [ ! -e "$work/root/mc0/NEWDIR" ] && pass "delete and rmdir" || bad "delete/rmdir"
 

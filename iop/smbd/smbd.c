@@ -202,21 +202,16 @@ int smbd_rmdir(const char *path)
 	return r == -EEXIST ? -ENOTEMPTY : r; /* MCMAN's "not empty" */
 }
 
-/* The card renames an entry in place (as mc_rename does for VMCMAN): same folder only. */
+/* The card renames an entry in place (as mc_rename does for VMCMAN). smbd_fs.c has already
+ * refused another folder and a name longer than SMBD_LEAF_MAX. */
 int smbd_rename(const char *from, const char *to)
 {
-	const char *a = strrchr(from, '/'), *b = strrchr(to, '/');
 	sceMcTblGetDir info;
 	int port = from[2] - '0', r;
-
-	if (a - from != b - to || memcmp(from, to, a - from))
-		return -EXDEV;
-	if (strlen(b + 1) >= sizeof(info.EntryName))
-		return -ENAMETOOLONG;
 	if ((r = McDetectCard2(port, 0)) < -1)
 		return mc_errno(r);
 	memset(&info, 0, sizeof(info));
-	strcpy(info.EntryName, b + 1);
+	strcpy(info.EntryName, strrchr(to, '/') + 1);
 	return mc_errno(McSetFileInfo(port, 0, from + 4, &info, sceMcFileAttrFile));
 }
 

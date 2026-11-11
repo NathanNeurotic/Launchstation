@@ -172,6 +172,21 @@ static int lookup(struct smb2_context *smb2, const smb2_file_id id)
 	return i;
 }
 
+/* 1 if the folder holds anything, 0 if it is empty, or a negative errno. */
+static int dir_used(const char *path)
+{
+	char name[SMBD_NAME_MAX];
+	struct smbd_stat st;
+	int fd = smbd_opendir(path), r;
+
+	if (fd < 0)
+		return fd;
+	while ((r = smbd_readdir(fd, name, sizeof(name), &st)) > 0 && (!strcmp(name, ".") || !strcmp(name, "..")))
+		;
+	smbd_closedir(fd);
+	return r;
+}
+
 static void release(int i)
 {
 	struct handle *h = &handles[i];
@@ -326,6 +341,9 @@ static int create_cmd(struct smb2_server *srvr, struct smb2_context *smb2, struc
 		return reply(smb2, SMB2_CREATE, SMB2_STATUS_FILE_IS_A_DIRECTORY);
 	if (exists && !st.dir && want_dir)
 		return reply(smb2, SMB2_CREATE, SMB2_STATUS_NOT_A_DIRECTORY);
+	/* A folder is deleted on close only when empty: say so now, not after a silent failure. */
+	if (exists && st.dir && (req->create_options & SMB2_FILE_DELETE_ON_CLOSE) && (ret = dir_used(path)) != 0)
+		return reply(smb2, SMB2_CREATE, ret > 0 ? SMB2_STATUS_DIRECTORY_NOT_EMPTY : status_of(ret));
 
 	h = &handles[i];
 	memset(h, 0, sizeof(*h));
@@ -689,6 +707,7 @@ static int rename_handle(struct smb2_context *smb2, int i, const uint8_t *buf, u
 	const char *name;
 	uint16_t *wide;
 	uint32_t n;
+	const char *a, *b;
 	int ret;
 
 	if (len < 20 || (n = le32(buf + 16)) > len - 20 || (n & 1))
@@ -707,6 +726,13 @@ static int rename_handle(struct smb2_context *smb2, int i, const uint8_t *buf, u
 		return reply(smb2, SMB2_SET_INFO, status_of(ret));
 	if (is_root(handles[i].path) || is_root(to))
 		return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_ACCESS_DENIED);
+	/* The card renames in place: refuse what smbd_rename() would before a replaced target is gone. */
+	a = strrchr(handles[i].path, '/');
+	b = strrchr(to, '/');
+	if (a - handles[i].path != b - to || memcmp(handles[i].path, to, a - handles[i].path))
+		return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_NOT_SAME_DEVICE);
+	if (strlen(b + 1) > SMBD_LEAF_MAX)
+		return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_NAME_TOO_LONG);
 	if (!ieq(to, handles[i].path) && smbd_stat(to, &st) == 0) {
 		if (!buf[0] || st.dir) /* ReplaceIfExists; a folder is never replaced */
 			return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_OBJECT_NAME_COLLISION);
@@ -739,6 +765,8 @@ static int set_info_cmd(struct smb2_server *srvr, struct smb2_context *smb2, str
 			return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_INVALID_PARAMETER);
 		if (buf[0] && is_root(handles[i].path))
 			return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_ACCESS_DENIED);
+		if (buf[0] && handles[i].dir && (ret = dir_used(handles[i].path)) != 0)
+			return reply(smb2, SMB2_SET_INFO, ret > 0 ? SMB2_STATUS_DIRECTORY_NOT_EMPTY : status_of(ret));
 		handles[i].delete_on_close = buf[0] != 0;
 		return 0;
 	case SMB2_FILE_END_OF_FILE_INFORMATION:

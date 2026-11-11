@@ -22,7 +22,7 @@ static void smbFrame(int status, int stopping)
 	dashTextFit(x + 24, y + 93, w - 48, "User name: ps2    Password: ps2", DASH_FS_SMALL, DASH_C_TEXT);
 	snprintf(line, sizeof(line), "Connected clients: %d", status >> 2);
 	dashTextFit(x + 24, y + 121, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);
-	dashTextFit(x + 24, y + 160, w - 48, "SMB2 or SMB3. Saves on the cards are in use while it runs.", DASH_FS_SMALL,
+	dashTextFit(x + 24, y + 160, w - 48, "This login is the same on every PS2: use a network you trust.", DASH_FS_SMALL,
 	            DASH_C_TEXT3);
 	dashTextFit(x + 24, y + 188, w - 48,
 	            stopping ? "Closing files and connections..." : "Back returns to Launchstation with SMB running.",

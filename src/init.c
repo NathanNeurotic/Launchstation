@@ -2780,7 +2780,8 @@ int startSmbServer(void)
 		filerRootMcPollIdle();
 		ret = fileXioDevctl("smbd:", SMBD_DEVCTL_START, NULL, 0, NULL, 0);
 	}
-	smbd_active = (ret == 0);
+	if (ret == 0)
+		smbd_active = 1; /* a failed request leaves a running server marked running */
 	return ret;
 }
 
