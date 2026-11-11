@@ -694,7 +694,6 @@ char getVirtualKeyboardLayoutDisplayChar(int layout, int index, int caps);
 int isVirtualKeyboardLayoutKey(int layout, int index);
 char getVirtualKeyboardFilenameChar(int layout, int index, int caps);
 int isVirtualKeyboardFilenameChar(unsigned char c);
-int isVirtualKeyboardFilenameKey(int layout, int index);
 int getVirtualKeyboardLayoutNextKey(int layout, int index, int dx, int dy);
 int getVirtualKeyboardEditorLayoutIndex(int editor_index);
 char getVirtualKeyboardEditorChar(int layout, int editor_index, int caps);

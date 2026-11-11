@@ -786,7 +786,7 @@ menu = kind(lines, "MENU|All saves|")
 assert len(menu) == 1, lines
 row = menu[0].split("|")
 assert row[2] == "9 saves on 3 cards; 1 file not readable as a card", row[2]
-assert row[3] == "Marked saves...~none marked: export all, or mark with Square", row[3]
+assert row[3] == "Marked saves...~Square marks saves; with none marked, export all", row[3]
 rows = row[4:]                                                   # menu row = list index + 1
 assert len(rows) == 9, rows
 titles = [r.split("~")[0] for r in rows]
@@ -910,7 +910,7 @@ blank("mass:/all/F.mcd")
 pick = rows_for("A.mcd: NOICON, 3 KB", "sub/B.mcd: BASLUS-99999, 1 KB", "A.mcd: PS1 BISLPS-00001, 1 KB")
 noicon = saves("mass:/all/A.mcd")["NOICON"]
 lines = run("all:mass:/all", "s" + pick, "m0", "m1", "pmass:/all/F.mcd", "c1")
-assert kind(lines, "MESSAGE|4|Done|3 saves moved and verified."), lines
+assert kind(lines, "MESSAGE|4|Done|3 saves moved and verified. 3 cards got a safety copy; one is named below."), lines
 assert set(saves("mass:/all/F.mcd")) == {"NOICON", "BASLUS-99999", "BISLPS-00001"} and saves("mass:/all/F.mcd")["NOICON"] == noicon
 assert "NOICON" not in saves("mass:/all/A.mcd") and "BISLPS-00001" not in saves("mass:/all/A.mcd")
 assert saves("mass:/all/sub/B.mcd") == {}
@@ -979,7 +979,7 @@ def lib_rows():
 
 sub, rows = lib_rows()
 assert sub == "7 .psu files, 1 set", sub
-assert rows[0] == "mark saves with Square first" and rows[1] == "1 set: the folders here with .psu files", rows[:2]
+assert rows[0] == "Square marks saves to copy, save as a set or delete" and rows[1] == "1 set: the folders here with .psu files", rows[:2]
 files = rows[2:]
 assert sorted(files) == sorted(["BESLES-12345GAME.psu: BESLES-12345GAME, 7 KB", "BASLUS-99999.psu: BASLUS-99999, 3 KB",
                                 "BISLPS-00001.psu: BISLPS-00001, 1 KB", "NOICON.psu: NOICON, 3 KB",

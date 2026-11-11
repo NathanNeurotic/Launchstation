@@ -2083,9 +2083,16 @@ static int ctAllBatch(const char *folder, const CtAnyCard *cards, int ncards, co
 		/* a failure names the safety copy of the card it happened on */
 		const char *keep = fail_safety != NULL ? fail_safety : dsafety[0] ? dsafety : NULL;
 
-		for (i = 0; keep == NULL && i < ncards; i++)
-			if (safety[i][0])
-				keep = safety[i];
+		int copies = dsafety[0] != 0;
+
+		for (i = 0; i < ncards; i++)
+			if (safety[i][0]) {
+				copies++;
+				if (keep == NULL)
+					keep = safety[i];
+			}
+		if (copies > 1)
+			snprintf(body + c, sizeof(body) - c, " %d cards got a safety copy; one is named below.", copies);
 		if (keep != NULL)
 			snprintf(dest, sizeof(dest), "Safety copy: %.1000s", keep);
 		dashModalMessage(failed || skipped ? DI_WARNING : DI_MC, failed ? "Not all done" : "Done", body,
@@ -2101,7 +2108,7 @@ void dashCardAllSaves(const char *folder)
 	CtAnySave *list;
 	DashMenuItem *items;
 	unsigned char *marks;
-	char dir[MAX_PATH], subtitle[128], marked[64];
+	char dir[MAX_PATH], subtitle[128];
 	size_t len;
 	int ncards, n, found, bad, more = 0, i, r, sel = 0, nm;
 
@@ -2145,7 +2152,7 @@ void dashCardAllSaves(const char *folder)
 		/* row 0 acts on the marked saves; saves follow, and Square marks them */
 		items[0].icon = DI_CHECK;
 		items[0].label = "Marked saves...";
-		items[0].detail = marked;
+		items[0].detail = "Square marks saves; with none marked, export all";
 		items[0].disabled = 0;
 		marks[0] = 2;
 		for (i = 0; i < n; i++) {
@@ -2165,12 +2172,6 @@ void dashCardAllSaves(const char *folder)
 		if (sel > n)
 			sel = n;
 		for (;;) { /* until something may have changed the cards */
-			for (i = 1, nm = 0; i <= n; i++)
-				nm += marks[i] == 1;
-			if (nm)
-				snprintf(marked, sizeof(marked), "%d marked: copy, move, delete or export", nm);
-			else
-				snprintf(marked, sizeof(marked), "none marked: export all, or mark with Square");
 			dashModalSetMarks(marks);
 			r = dashModalMenu("All saves", subtitle, items, n + 1, sel);
 			if (r < 0)
@@ -2642,7 +2643,7 @@ void dashCardSaveLibrary(const char *folder)
 	CtLib lib;
 	DashMenuItem *items = NULL;
 	unsigned char *marks = NULL;
-	char subtitle[96], marked[48], sets[48];
+	char subtitle[96], sets[48];
 	int r, i, nm, sel = 0, act;
 	size_t len;
 
@@ -2674,7 +2675,7 @@ void dashCardSaveLibrary(const char *folder)
 		/* row 0 acts on the marked files, row 1 applies a set; files follow, and Square marks them */
 		items[0].icon = DI_CHECK;
 		items[0].label = "Marked saves...";
-		items[0].detail = marked;
+		items[0].detail = "Square marks saves to copy, save as a set or delete";
 		items[0].disabled = 0;
 		items[1].icon = DI_FOLDER;
 		items[1].label = "Apply a set to a card...";
@@ -2698,12 +2699,6 @@ void dashCardSaveLibrary(const char *folder)
 		if (sel > lib.n + 1)
 			sel = lib.n + 1;
 		for (;;) { /* until something may have changed the files */
-			for (i = 2, nm = 0; i < lib.n + 2; i++)
-				nm += marks[i] == 1;
-			if (nm)
-				snprintf(marked, sizeof(marked), "%d marked: copy, save as a set or delete", nm);
-			else
-				snprintf(marked, sizeof(marked), "mark saves with Square first");
 			dashModalSetMarks(marks);
 			r = dashModalMenu("Save library", subtitle, items, lib.n + 2, sel);
 			if (r < 0)

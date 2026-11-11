@@ -78,9 +78,9 @@ static int kbIsKey(const DashKeyboard *kb, int index)
 		return !kb->filename && kbSymbolChar(kb, index) != 0;
 	if (!isVirtualKeyboardLayoutKey(kb->layout, index))
 		return 0;
-	return !kb->filename ||
-	       (isVirtualKeyboardFilenameKey(kb->layout, index) &&
-	        kbFilenameChar((unsigned char)getVirtualKeyboardFilenameChar(kb->layout, index, kb->caps)));
+	/* a file name key shows when its character in the current Caps state is
+	 * allowed, so 8 and . stay typeable although * and > are not */
+	return !kb->filename || kbFilenameChar((unsigned char)getVirtualKeyboardFilenameChar(kb->layout, index, kb->caps));
 }
 
 static int kbHasAction(const DashKeyboard *kb, int action)
