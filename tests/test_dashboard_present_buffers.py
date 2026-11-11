@@ -1,10 +1,10 @@
 """Exercise real dashboard frame setup and vsync flip code using host GS mocks.
 
 Single-buffer scanout causes horizontal tearing in animated dashboards.
-Dashboard setup must allocate the second buffer, preserve calibration, and
-invalidate GS texture state. When IO worker is busy, yielding at VBLANK
-must still swap/display the completed front buffer (not the drawing one).
-The classic GS setup is intentionally unchanged.
+setupGS() allocates the second buffer at boot, so entering the dashboard
+must not reset the GS again: each reset is one more TV resync (#277).
+When IO worker is busy, yielding at VBLANK must still swap/display the
+completed front buffer (not the drawing one).
 """
 from pathlib import Path
 import shutil
@@ -24,12 +24,13 @@ def fn(signature):
         pos+=1
     return gfx[start:pos]+"\n"
 
-assert "gsGlobal->DoubleBuffering = GS_SETTING_ON;" in fn("void dashGfxInit(void)")
-assert "gsKit_init_screen(gsGlobal);" in fn("void dashGfxInit(void)")
-assert "gsScreenGeneration++;" in fn("void dashGfxInit(void)")
-assert "gsKit_set_display_offset(gsGlobal, setting->screen_x, setting->screen_y)" in fn("void dashGfxInit(void)")
-assert "gsGlobal->DoubleBuffering = GS_SETTING_OFF;" in classic
-assert "gsGlobal->DoubleBuffering = GS_SETTING_ON;" not in classic
+assert "gsKit_init_screen" not in fn("void dashGfxInit(void)")
+assert "DoubleBuffering" not in fn("void dashGfxInit(void)")
+setup=classic[classic.index("void setupGS(void)"):classic.index("void updateScreenMode(void)")]
+assert "gsGlobal->DoubleBuffering = GS_SETTING_ON;" in setup
+assert setup.index("gsGlobal->DoubleBuffering = GS_SETTING_ON;") < setup.index("gsKit_init_screen(gsGlobal);")
+assert setup.count("gsKit_init_screen(") == 1
+assert "DoubleBuffering = GS_SETTING_OFF" not in classic
 
 code = r'''
 #include <assert.h>
@@ -39,17 +40,14 @@ typedef struct {
     int DoubleBuffering,FirstFrame,ActiveBuffer,Width,PSM;
     uint32_t ScreenBuffer[2];
 } GSGLOBAL;
-typedef struct { int screen_x,screen_y; } Setting;
 #define GS_SETTING_OFF 0
 #define GS_SETTING_ON 1
 static GSGLOBAL g;
 static GSGLOBAL *gsGlobal=&g;
-static Setting config={3,-2};
-static Setting *setting=&config;
 static volatile uint32_t csr=8;
 static volatile uint32_t *GS_CSR=&csr;
 static int gsScreenGeneration, gfx_screen_gen, gfx_ready, bound_generation;
-static int begin_count,glow_count,check_count,init_count,offset_count;
+static int begin_count,glow_count,check_count;
 static int shown_count,shown_base,shown_width,shown_psm,active_count;
 static int queue_count,tex_frames,pump_count,sprite_count,park_count;
 static int sync_count,worker_busy,wait_calls;
@@ -60,18 +58,6 @@ static int dashGfxCheckScreenChange(void) {
     bound_generation=gsScreenGeneration;
     gfx_screen_gen=gsScreenGeneration;
     return 1;
-}
-static void gsKit_init_screen(GSGLOBAL *ptr) {
-    assert(ptr==gsGlobal && ptr->DoubleBuffering==GS_SETTING_ON);
-    init_count++;
-    ptr->ScreenBuffer[0]=0;
-    ptr->ScreenBuffer[1]=0x120000;
-    ptr->Width=640;
-    ptr->PSM=1;
-    ptr->ActiveBuffer=1;
-}
-static void gsKit_set_display_offset(GSGLOBAL *ptr,int x,int y) {
-    assert(ptr==gsGlobal && x==3 && y==-2); offset_count++;
 }
 static void dashSpriteBatchEnd(void) { sprite_count++; }
 static void dashWorkerParkPoint(void) { park_count++; }
@@ -95,13 +81,17 @@ code+=fn("static void flipVsyncSharing(void)")
 code+=fn("void dashGfxPresent(void)")
 code+=r'''
 int main(void) {
-    g.DoubleBuffering=GS_SETTING_OFF;
+    /* State after setupGS(): double buffered, generation 1. */
+    g.DoubleBuffering=GS_SETTING_ON;
+    g.ScreenBuffer[0]=0; g.ScreenBuffer[1]=0x120000;
+    g.Width=640; g.PSM=1; g.ActiveBuffer=1;
+    gsScreenGeneration=1;
     dashGfxInit();
     assert(g.DoubleBuffering==GS_SETTING_ON);
-    assert(init_count==1 && gsScreenGeneration==1 && bound_generation==1);
-    assert(offset_count==1 && begin_count==1 && glow_count==1);
-    dashGfxInit(); /* do not tear down the screen a second time */
-    assert(init_count==1 && gsScreenGeneration==1 && offset_count==1);
+    assert(gsScreenGeneration==1 && bound_generation==1 && check_count==1);
+    assert(begin_count==1 && glow_count==1);
+    dashGfxInit(); /* re-entry rebinds textures, still no GS reset */
+    assert(gsScreenGeneration==1 && check_count==2 && begin_count==1);
 
     /* Worker-active path: completed buffer 1 becomes visible and back
      * buffer 0 receives the next frame, exactly matching gsKit. */
@@ -130,7 +120,7 @@ int main(void) {
     g.FirstFrame=GS_SETTING_ON;worker_busy=1;
     dashGfxPresent();
     assert(sync_count==2 && shown_count==2);
-    puts("PASS: dashboard double buffering, VBLANK front/back swap, texture invalidation, legacy GS isolation");
+    puts("PASS: one GS reset at boot, dashboard double buffering, VBLANK front/back swap, texture invalidation, legacy GS isolation");
 }
 '''
 cc=shutil.which("gcc") or shutil.which("clang")
