@@ -695,8 +695,8 @@ static const SetItem system_items[] = {
     {ST_PAGE, P_PSU, "Memory card backup files", "PSU naming and overwrite rules used by File Browser operations."},
     {ST_ACTION, S_CLOCK, "Set PS2 Clock", "Set the date and time by hand, from the Internet where available, or with the software clock for a dead CMOS battery."},
     {ST_CHOICE, S_TEMP_UNITS, "PS2 Temperature Units (50K and later)", "Celsius or Fahrenheit beside the clock. Hidden automatically when the console has no supported temperature sensor."},
-    {ST_PATH, S_CNF_PATH, "Configuration folder", "Optional save target for LAUNCHELF.CNF. Loading searches the start folder, then mcN:/SYS-CONF/ on the launch card, then the other card."},
-    {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
+    {ST_PATH, S_CNF_PATH, "Configuration folder", "Optional save target for LAUNCHSTATION.CNF. Loading searches the start folder, then mcN:/SYS-CONF/ on the launch card, then the other card."},
+    {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHSTATION.CNF immediately to another location; dashboard and network settings are saved separately."},
     {ST_PAGE, P_CLASSIC, "Classic screen settings", "Appearance of classic dialogs and the legacy launch menu."},
     {ST_ACTION, S_INTRO, "Show welcome message again", "Show the introduction the next time the dashboard checks for it."},
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
@@ -2240,7 +2240,7 @@ static void cfgSaveDone(void *arg)
 
 static int cfgSave(int kind, int target, const char *path);
 
-/* LAUNCHELF.CNF now, where it was loaded from (File Browser bookmarks) */
+/* LAUNCHSTATION.CNF now, where it was loaded from (File Browser bookmarks) */
 int dashSettingsSaveCnf(void)
 {
 	return cfgSave(CFG_SAVE_CNF, -2, NULL);

@@ -1104,7 +1104,7 @@ void dashFileBrowserTabClose(void);                /* release inactive-tab state
 int dashBrowserPadInputReady(void);              /* global USB fileXio / pad guard */
 void dashFileBrowserTabOpen(const char *start_dir);/* navigate within Files tab */
 void dashBrowserRefreshRoot(void);                 /* rebuild a visible device root in place */
-int dashSettingsSaveCnf(void);                      /* LAUNCHELF.CNF now */
+int dashSettingsSaveCnf(void);                      /* LAUNCHSTATION.CNF now */
 void dashSettingsOpenLaunchKeys(void);              /* Start screen: Launch keys */
 /* classic dialogs (ynDialog/nonDialog/keyboard) as dashboard dialogs */
 void dashClassicUiInstall(int on);

@@ -57,8 +57,24 @@ enum BOOT_DEVICE performEarlyBootInitialization(const char *arg0, char *boot_pat
 		cnf_path_buf = local_cnf_path;
 		cnf_path_buf_len = sizeof(local_cnf_path);
 	}
-	snprintf(cnf_path_buf, cnf_path_buf_len, "%s", "LAUNCHELF.CNF");
+	/* Our own file, so other wLaunchELF builds sharing mc?:/SYS-CONF never
+	 * read our translated MISC/ names (#346). With none yet, import an old
+	 * LAUNCHELF.CNF read-only: saves go to the same folder under our name. */
+	snprintf(cnf_path_buf, cnf_path_buf_len, "%s", "LAUNCHSTATION.CNF");
 	local_cnf_error = loadConfig(main_msg, cnf_path_buf);
+	if (local_cnf_error < 0) {
+		char legacy[] = "LAUNCHELF.CNF";
+		char *slash;
+
+		local_cnf_error = loadConfig(main_msg, legacy);
+		slash = strrchr(LoadedConfigPath, '/');
+		if (slash == NULL)
+			slash = strrchr(LoadedConfigPath, ':');
+		if (local_cnf_error == 0 && slash != NULL)
+			snprintf(slash + 1, sizeof(LoadedConfigPath) - (slash + 1 - LoadedConfigPath), "%s", cnf_path_buf);
+		else if (local_cnf_error < 0)
+			sprintf(main_msg, "%s %s", LNG(Failed_To_Load), cnf_path_buf);
+	}
 	if (local_cnf_error < 0) {
 		/* No config loaded: default pad mapping from ROM region.
 		 * ROMVER_data[4] is the region letter.
