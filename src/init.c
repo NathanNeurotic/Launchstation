@@ -31,6 +31,8 @@ IMPORT_BIN2C(ps2smap_irx);
 IMPORT_BIN2C(ps2host_irx);
 IMPORT_BIN2C(ps2netfs_irx);
 IMPORT_BIN2C(ps2ftpd_irx);
+IMPORT_BIN2C(smbd_irx);
+#include "smbd_devctl.h"
 #endif
 
 #ifdef SMB
@@ -168,6 +170,7 @@ static u8 have_udpfs_ioman = 0;
 #endif
 
 static u8 have_ps2ftpd = 0;
+static u8 have_smbd = 0, smbd_active = 0;
 static u8 have_ps2kbd = 0;
 static u8 have_hdl_info = 0;
 
@@ -2755,6 +2758,51 @@ int isFtpNetworkReady(void)
 	return !ftpSessionStopped() && have_NetModules && have_ps2ftpd && have_ps2ip && have_ps2smap && ps2dev9_loaded;
 }
 
+/* The memory card SMB server (iop/smbd): loaded on first Start, then started and stopped
+ * through its devctls. It stays resident when stopped, so FTP and the IOP are left alone.
+ * Returns 0, or a negative errno. */
+int startSmbServer(void)
+{
+	static const char args[] = "ps2\0ps2"; /* user and password, shown on the screen */
+	int id, ret;
+
+	if (!have_smbd) {
+		ensureCoreIoStackReady();
+		getIpConfig();
+		if (!load_ps2ip())
+			return -ENETDOWN;
+		filerRootMcPollIdle();
+		id = SifExecModuleBuffer(smbd_irx, size_smbd_irx, sizeof(args), args, &ret);
+		DPRINTF(" [SMBD]: ID=%d, ret=%d\n", id, ret);
+		have_smbd = (id >= 0 && ret == 0);
+		ret = have_smbd ? 0 : -EIO;
+	} else {
+		filerRootMcPollIdle();
+		ret = fileXioDevctl("smbd:", SMBD_DEVCTL_START, NULL, 0, NULL, 0);
+	}
+	smbd_active = (ret == 0);
+	return ret;
+}
+
+int smbServerStatus(void)
+{
+	return have_smbd ? fileXioDevctl("smbd:", SMBD_DEVCTL_STATUS, NULL, 0, NULL, 0) : 0;
+}
+
+/* 0 once every file and connection is closed; until then the cards stay the server's. */
+int stopSmbServer(void)
+{
+	int ret = have_smbd ? fileXioDevctl("smbd:", SMBD_DEVCTL_STOP, NULL, 0, NULL, 0) : 0;
+	if (ret == 0)
+		smbd_active = 0;
+	return ret;
+}
+
+int isSmbServerRunning(void)
+{
+	return smbd_active;
+}
+
 int isFtpServerRunning(void)
 {
 	/* Module residency also covers STOPPED-but-not-yet-reset and a STOP that
@@ -2910,6 +2958,7 @@ static void clearIopModuleState(void)
 #endif
 	have_vmcman = 0;
 	have_ps2ftpd = 0;
+	have_smbd = smbd_active = 0;
 	have_ps2kbd = 0;
 	have_hdl_info = 0;
 	have_NetModules = 0;

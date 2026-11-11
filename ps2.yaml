@@ -242,6 +242,74 @@ targets:
     ldflags: ["-Wl,--gc-sections", "-Wl,-u,_irx_id", "-lgcc"]
     headers: [intrman, iomanx, loadcore, ps2ip-nm, stdio, sysclib, sysmem, threadman]
 
+  # On-demand SMB2/3 server for mc0/mc1 (issue #249). libsmb2 (Ronnie Sahlberg,
+  # LGPL-2.1) is fetched by scripts/fetch_libsmb2.sh into .smbd-deps/; iop/smbd is ours.
+  - name: smbd
+    type: iop
+    sources:
+      - iop/smbd/smbd.c
+      - iop/smbd/smbd_fs.c
+      - .smbd-deps/libsmb2/lib/aes.c
+      - .smbd-deps/libsmb2/lib/aes_reference.c
+      - .smbd-deps/libsmb2/lib/aes128ccm.c
+      - .smbd-deps/libsmb2/lib/alloc.c
+      - .smbd-deps/libsmb2/lib/asn1-ber.c
+      - .smbd-deps/libsmb2/lib/compat.c
+      - .smbd-deps/libsmb2/lib/errors.c
+      - .smbd-deps/libsmb2/lib/hmac.c
+      - .smbd-deps/libsmb2/lib/hmac-md5.c
+      - .smbd-deps/libsmb2/lib/init.c
+      - .smbd-deps/libsmb2/lib/libsmb2.c
+      - .smbd-deps/libsmb2/lib/md4c.c
+      - .smbd-deps/libsmb2/lib/md5.c
+      - .smbd-deps/libsmb2/lib/ntlmssp.c
+      - .smbd-deps/libsmb2/lib/pdu.c
+      - .smbd-deps/libsmb2/lib/quic.c
+      - .smbd-deps/libsmb2/lib/smbdirect.c
+      - .smbd-deps/libsmb2/lib/sha1.c
+      - .smbd-deps/libsmb2/lib/sha224-256.c
+      - .smbd-deps/libsmb2/lib/sha384-512.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-cancel.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-close.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-create.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-echo.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-error.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-flush.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-ioctl.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-lock.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-logoff.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-negotiate.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-notify-change.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-oplock-break.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-query-directory.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-query-info.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-read.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-session-setup.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-set-info.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-tree-connect.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-tree-disconnect.c
+      - .smbd-deps/libsmb2/lib/smb2-cmd-write.c
+      - .smbd-deps/libsmb2/lib/smb2-data-file-info.c
+      - .smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c
+      - .smbd-deps/libsmb2/lib/smb2-data-security-descriptor.c
+      - .smbd-deps/libsmb2/lib/smb2-data-reparse-point.c
+      - .smbd-deps/libsmb2/lib/smb2-share-enum.c
+      - .smbd-deps/libsmb2/lib/smb3-seal.c
+      - .smbd-deps/libsmb2/lib/smb2-signing.c
+      - .smbd-deps/libsmb2/lib/socket.c
+      - .smbd-deps/libsmb2/lib/spnego-wrapper.c
+      - .smbd-deps/libsmb2/lib/sync.c
+      - .smbd-deps/libsmb2/lib/timestamps.c
+      - .smbd-deps/libsmb2/lib/unicode.c
+      - .smbd-deps/libsmb2/lib/usha.c
+    include_dirs: [iop/smbd, .smbd-deps/libsmb2/include, .smbd-deps/libsmb2/include/smb2, .smbd-deps/libsmb2/lib]
+    imports_lst: iop/smbd/imports.lst
+    linkfile: iop/smbd/linkfile
+    defines: [_IOP, __PS2__, __ps2sdk_iop__, PS2_IOP_PLATFORM, HAVE_CONFIG_H, IOMANX_OLD_NAME_COMPATIBILITY=0, IOMANX_OLD_NAME_ADDDELDRV=0]
+    cflags: [-include, config.h, -Os, -Wno-unused-function, -ffunction-sections, -fdata-sections]
+    ldflags: ["-Wl,--gc-sections", "-Wl,-u,_irx_id", "-lgcc"]
+    headers: [intrman, iomanx, loadcore, mcman, ps2ip-nm, stdio, sysclib, sysmem, threadman]
+
   # SMB1 client for the smb1: device: OPL's fixed copy of ps2sdk smbman
   # (iop/smbman/README.md), registered as "smb1" so it sits beside
   # smb2man (SMB2/SMB3, above), which owns "smb".
@@ -458,6 +526,7 @@ targets:
       - src/chkesr.c
       - src/pad.c
       - src/dash_ftp.c
+      - src/dash_smbd.c
       - src/ftp_session.c
       - src/dash_main.c
       - src/dash_clock_sync.c
@@ -542,6 +611,7 @@ targets:
       - smb2man
       - netfs:ps2netfs
       - ps2ftpd
+      - smbd
       - dev9_poweroff
       - pccf
       - ps2hdd_osd:ps2hdd

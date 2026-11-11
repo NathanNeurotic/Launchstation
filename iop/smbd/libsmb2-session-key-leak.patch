@@ -1,0 +1,14 @@
+diff --git a/lib/libsmb2.c b/lib/libsmb2.c
+index b4efa2f..e799a65 100644
+--- a/lib/libsmb2.c
++++ b/lib/libsmb2.c
+@@ -5346,6 +5346,9 @@ smb2_session_setup_request_cb(struct smb2_context *smb2, int status, void *comma
+                                 more_processing_needed = 0;
+                                 #endif
+                         }
++                        /* Each round of the session setup fetches the key again. */
++                        free(smb2->session_key);
++                        smb2->session_key = NULL;
+                         if (ntlmssp_get_session_key(c_data->auth_data,
+                                                     &smb2->session_key,
+                                                     &smb2->session_key_size) < 0) {
