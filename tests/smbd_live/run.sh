@@ -146,13 +146,15 @@ rm "$work/root/mc0/NEWDIR/FAILONCE.BIN"
 smb mc0 "del NEWDIR\\B.BIN; del NEWDIR\\C.BIN; rmdir NEWDIR" >/dev/null || true
 [ ! -e "$work/root/mc0/NEWDIR" ] && pass "delete and rmdir" || bad "delete/rmdir"
 
-printf aaaa >"$work/root/mc0/A.TXT" && printf bbbb >"$work/root/mc0/B.TXT"
+printf aaaa >"$work/root/mc0/A.TXT" && printf bbbb >"$work/root/mc0/B.TXT" && printf e >"$work/root/mc0/E.TXT"
+mkdir "$work/root/mc0/DIR" && printf ffff >"$work/root/mc0/DIR/F.TXT"
 if out=$(ASAN_OPTIONS=detect_leaks=0 "$work/client" "127.0.0.1:$port" ps2 secret 2>&1); then
     pass "four files open at once, a listing while they are open, within the card's descriptors"
 else
     bad "files open at once: $out"
 fi
-rm -f "$work/root/mc0/A.TXT" "$work/root/mc0/B.TXT" "$work/root/mc0/C.TXT" "$work/root/mc0/D.TXT"
+rm -rf "$work/root/mc0/A.TXT" "$work/root/mc0/B.TXT" "$work/root/mc0/C.TXT" "$work/root/mc0/D.TXT" \
+    "$work/root/mc0/E.TXT" "$work/root/mc0/DIR"
 
 out=$(smb mc0 'get ..\..\host.log '"$work/escaped" 2>&1) || true
 [ ! -f "$work/escaped" ] && pass "\"..\" stays inside the share" || bad "path escaped the share"

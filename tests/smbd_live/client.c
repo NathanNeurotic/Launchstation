@@ -3,11 +3,12 @@
  *
  *   client HOST:PORT USER PASSWORD
  *
- * On share mc0, which holds A.TXT ("aaaa") and B.TXT ("bbbb"):
+ * On share mc0, which holds A.TXT ("aaaa"), B.TXT ("bbbb"), E.TXT and DIR/F.TXT ("ffff"):
  *   - open A, open B, open A again, and create C, all held open at once;
  *   - list the share while they are open;
  *   - read A through both of its handles and B, and write C;
- *   - refuse to rename A while it is open, and read both of A's handles after;
+ *   - refuse to rename A while it is open, E onto B while B is open, and folder DIR while
+ *     DIR/F.TXT is open, reading each held handle after;
  *   - close them all, rename C to D, then read D back.
  * Prints one line per failure. Exits 0 only if everything held. */
 #include <fcntl.h>
@@ -36,10 +37,16 @@ static int read_is(struct smb2_context *smb2, struct smb2fh *fh, const char *wan
 	return n == (int)strlen(want) && !memcmp(buf, want, (size_t)n);
 }
 
+/* Refused because another handle holds what the rename would move or replace. */
+static int rename_refused(struct smb2_context *smb2, const char *from, const char *to)
+{
+	return smb2_rename(smb2, from, to) < 0 && (uint32_t)smb2_get_nterror(smb2) == SMB2_STATUS_SHARING_VIOLATION;
+}
+
 int main(int argc, char **argv)
 {
 	struct smb2_context *smb2;
-	struct smb2fh *a, *b, *a2, *c;
+	struct smb2fh *a, *b, *a2, *c, *f;
 	struct smb2dir *dir;
 	struct smb2dirent *ent;
 	int seen = 0;
@@ -85,12 +92,22 @@ int main(int argc, char **argv)
 		check(smb2_pwrite(smb2, c, (const uint8_t *)"cccc", 4, 0) == 4, "write C", smb2);
 	if (a)
 		check(read_is(smb2, a, "aaaa"), "read A again after the others", smb2);
-	/* Renaming A would leave its other handles naming nothing, so the server refuses. */
-	check(smb2_rename(smb2, "A.TXT", "D.TXT") < 0, "refuse to rename A while it is open", smb2);
+	/* A rename would leave a held handle naming nothing, or naming another file: refused. */
+	check(rename_refused(smb2, "A.TXT", "D.TXT"), "refuse to rename A while it is open", smb2);
 	if (a)
 		check(read_is(smb2, a, "aaaa"), "read A after the refused rename", smb2);
 	if (a2)
 		check(read_is(smb2, a2, "aaaa"), "read A's second handle after the refused rename", smb2);
+	check(rename_refused(smb2, "E.TXT", "B.TXT"), "refuse to rename E onto B while B is open", smb2);
+	if (b)
+		check(read_is(smb2, b, "bbbb"), "read B after the refused rename onto it", smb2);
+	f = smb2_open(smb2, "DIR/F.TXT", O_RDONLY);
+	check(f != NULL, "open F inside DIR", smb2);
+	check(rename_refused(smb2, "DIR", "DIR2"), "refuse to rename DIR while F inside it is open", smb2);
+	if (f) {
+		check(read_is(smb2, f, "ffff"), "read F after the refused folder rename", smb2);
+		smb2_close(smb2, f);
+	}
 
 	if (a)
 		smb2_close(smb2, a);
