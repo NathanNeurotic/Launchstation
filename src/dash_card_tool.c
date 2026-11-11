@@ -735,6 +735,58 @@ static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
 	return r;
 }
 
+/* The new file for save s as format fmt in folder: 0 with dest set, or -1
+ * when no name is free. A .psu, .cbs or .zip gets a -2.. suffix when its
+ * name is taken; a .psv, whose name a PS3 needs exactly, does not. */
+static int ctConvertName(const McSaveData *s, int fmt, const char *folder, char *dest, int size)
+{
+	char name[33], file[80];
+	int i, w;
+
+	memcpy(name, s->entry + 0x40, 32);
+	name[32] = 0;
+	if (fmt == 1) {
+		mcPsvFileName(file, sizeof(file), name);
+		return snprintf(dest, size, "%s%s", folder, file) < size && !wleExists(dest) ? 0 : -1;
+	}
+	for (i = 1; i < 100; i++) {
+		w = i == 1 ? snprintf(dest, size, "%s%s.%s", folder, name, ct_ext[fmt]) :
+		             snprintf(dest, size, "%s%s-%d.%s", folder, name, i, ct_ext[fmt]);
+		if (w >= size)
+			return -1;
+		if (!wleExists(dest))
+			return 0;
+	}
+	return -1;
+}
+
+/* s written to dest as format fmt, never over a file made since the name
+ * was picked, and read back as the same save (a .zip has no reader, so it
+ * is only written). An unfinished or differing file is removed. */
+static int ctConvertWrite(const McSaveData *s, int fmt, char *dest)
+{
+	static const uint8_t no_stamp[8];
+	McSaveData back;
+	uint8_t *buf = NULL;
+	uint32_t len = 0;
+	int r = ctSaveAs(s, fmt, &buf, &len);
+
+	if (r == MCW_OK && ctWriteFileAs(dest, buf, len, 1) < 0)
+		r = MCV_ERR_IO;
+	if (r == MCW_OK && fmt != 3) {
+		r = fmt == 1 ? mcSaveFromPsv(buf, len, &back) :
+		    fmt ? mcSaveFromCbs(buf, len, no_stamp, &back) : mcCardSaveFromPsu(buf, len, &back);
+		if (r == MCW_OK) {
+			r = mcCardSameSave(s, &back) ? MCW_OK : MCW_ERR_VERIFY;
+			mcCardFreeSave(&back);
+		}
+		if (r != MCW_OK)
+			genRemove(dest);
+	}
+	free(buf);
+	return r;
+}
+
 /* "Convert to .psu / .psv / .cbs": a save in any format read here (Blaze
  * MCM, .max, .cbs, .sps/.xps, .psv, .psu) written as a .psu or CodeBreaker
  * .cbs named after the save folder, or as a signed .psv for a PS3, named the
@@ -745,13 +797,10 @@ static int ctLoadPsu(const char *psu, McSaveData *s, const char **why)
  * result is read back and must parse into the same save. */
 void dashCardConvertSave(const char *path)
 {
-	McSaveData s, back;
-	uint8_t *buf = NULL;
-	uint32_t len = 0;
-	char folder[MAX_PATH], dest[MAX_PATH], name[33], file[80], msg[160];
+	McSaveData s;
+	char folder[MAX_PATH], dest[MAX_PATH], file[80], msg[160];
 	const char *why;
-	int r, i, on_card, fmt, psv;
-	static const uint8_t no_stamp[8];
+	int r, on_card, fmt, psv;
 
 	r = ctLoadPsu(path, &s, &why); /* read first: a PS1 .psv is asked only its own formats */
 	if (r != MCW_OK && why == ct_ps1_psv) { /* same object ctLoadPsu set: compared by address */
@@ -768,8 +817,6 @@ void dashCardConvertSave(const char *path)
 		return;
 	}
 	psv = fmt == 1;
-	memcpy(name, s.entry + 0x40, 32);
-	name[32] = 0;
 	on_card = strncmp(path, "mc", 2) == 0 || strncmp(path, "vmc", 3) == 0;
 	if (on_card) {
 		snprintf(msg, sizeof(msg), "Write the .%s to", ct_ext[fmt]);
@@ -781,21 +828,7 @@ void dashCardConvertSave(const char *path)
 		dashStrCopy(folder, path, sizeof(folder));
 		folder[ctBaseName(path) - path] = 0;
 	}
-	if (psv)
-		mcPsvFileName(file, sizeof(file), name);
-	dest[0] = 0;
-	for (i = 1; i < 100; i++) {
-		int w = psv ? snprintf(dest, sizeof(dest), "%s%s", folder, file) :
-		        i == 1 ? snprintf(dest, sizeof(dest), "%s%s.%s", folder, name, ct_ext[fmt]) :
-		                 snprintf(dest, sizeof(dest), "%s%s-%d.%s", folder, name, i, ct_ext[fmt]);
-		if (w >= (int)sizeof(dest) || (psv && wleExists(dest))) {
-			i = 100;
-			break;
-		}
-		if (!wleExists(dest))
-			break;
-	}
-	if (i == 100) {
+	if (ctConvertName(&s, fmt, folder, dest, sizeof(dest)) < 0) {
 		mcCardFreeSave(&s);
 		dashModalMessage(DI_WARNING, "Not converted",
 		                 psv ? "A .psv with this save's name is already there, or the path is too long." :
@@ -803,28 +836,16 @@ void dashCardConvertSave(const char *path)
 		                 path);
 		return;
 	}
-	snprintf(msg, sizeof(msg), "%.32s, %u file%s. A new .%s is written %s; this file is not changed.", name,
-	         (unsigned)s.nfiles, s.nfiles == 1 ? "" : "s", ct_ext[fmt], on_card ? "to the chosen folder" : "next to it");
+	snprintf(msg, sizeof(msg), "%.32s, %u file%s. A new .%s is written %s; this file is not changed.",
+	         (const char *)s.entry + 0x40, (unsigned)s.nfiles, s.nfiles == 1 ? "" : "s", ct_ext[fmt],
+	         on_card ? "to the chosen folder" : "next to it");
 	snprintf(file, sizeof(file), "Convert to .%s?", ct_ext[fmt]);
 	if (!dashModalConfirm(file, msg, "Convert", 0)) {
 		mcCardFreeSave(&s);
 		return;
 	}
 	dashLoadingBegin("Converting save");
-	r = ctSaveAs(&s, fmt, &buf, &len);
-	if (r == MCW_OK && ctWriteFileAs(dest, buf, len, 1) < 0) /* never over a file made since the check */
-		r = MCV_ERR_IO;
-	if (r == MCW_OK && fmt != 3) { /* the bytes on disk read back as the same save (a .zip has no reader) */
-		r = psv ? mcSaveFromPsv(buf, len, &back) :
-		    fmt ? mcSaveFromCbs(buf, len, no_stamp, &back) : mcCardSaveFromPsu(buf, len, &back);
-		if (r == MCW_OK) {
-			r = mcCardSameSave(&s, &back) ? MCW_OK : MCW_ERR_VERIFY;
-			mcCardFreeSave(&back);
-		}
-		if (r != MCW_OK)
-			genRemove(dest);
-	}
-	free(buf);
+	r = ctConvertWrite(&s, fmt, dest);
 	mcCardFreeSave(&s);
 	dashLoadingEnd();
 	if (r == MCW_OK)
@@ -836,6 +857,57 @@ void dashCardConvertSave(const char *path)
 		                 dest);
 	else
 		dashModalMessage(DI_WARNING, "Not converted", ctError(r), dest);
+}
+
+/* dashCardConvertSave for the marked save files `names` in dir: one format
+ * and one confirmation for all (wLaunchELF_R3Z's archive from several
+ * saves), one folder picked when dir is a memory card. A save that fails,
+ * a PS1 .psv among them too, is counted and the rest still go. */
+void dashCardConvertMany(const char *dir, const char *const *names, int n)
+{
+	McSaveData s;
+	char path[MAX_PATH], folder[MAX_PATH], dest[MAX_PATH], first[MAX_PATH] = "", body[MAX_PATH + 160];
+	const char *why, *first_why = NULL;
+	int i, r, fmt, done = 0, failed = 0, on_card = !strncmp(dir, "mc", 2) || !strncmp(dir, "vmc", 3);
+
+	fmt = dashModalChoice("Convert to", ct_save_as, 4, genCmpFileExt(names[0], "PSU"));
+	if (fmt < 0)
+		return;
+	if (!on_card)
+		dashStrCopy(folder, dir, sizeof(folder));
+	else if (snprintf(body, sizeof(body), "Write the .%s files to", ct_ext[fmt]),
+	         !dashPickPath(body, "mass:/", DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
+		return;
+	snprintf(path, sizeof(path), "Convert %d saves to .%s?", n, ct_ext[fmt]);
+	if (!dashModalConfirm(path, "Each as a new file, read back. No file is replaced; the originals are not changed.",
+	                      "Convert", 0))
+		return;
+	dashLoadingBegin("Converting saves");
+	for (i = 0; i < n; i++) {
+		dashLoadingStatus(names[i], i, n);
+		why = ctError(MCW_ERR_INVALID);
+		r = snprintf(path, sizeof(path), "%s%s", dir, names[i]) >= (int)sizeof(path) ? MCW_ERR_INVALID :
+		                                                                              ctLoadPsu(path, &s, &why);
+		if (r == MCW_OK) {
+			if (ctConvertName(&s, fmt, folder, dest, sizeof(dest)) < 0) {
+				r = MCW_ERR_EXISTS;
+				why = fmt == 1 ? "A .psv with this save's name is already there." : "No free name in that folder.";
+			} else if ((r = ctConvertWrite(&s, fmt, dest)) != MCW_OK)
+				why = ctError(r);
+			mcCardFreeSave(&s);
+		}
+		if (r == MCW_OK)
+			done++;
+		else if (!failed++) {
+			dashStrCopy(first, names[i], sizeof(first));
+			first_why = why;
+		}
+	}
+	dashLoadingEnd();
+	r = snprintf(body, sizeof(body), "%d of %d converted. No file was replaced; the originals were not changed.", done, n);
+	if (failed)
+		snprintf(body + r, sizeof(body) - r, " %d not converted. First: %s: %s", failed, first, first_why);
+	dashModalMessage(failed ? DI_WARNING : DI_MC, failed ? "Not all converted" : "Converted", body, folder);
 }
 
 static void ctImportPsu(const char *image)

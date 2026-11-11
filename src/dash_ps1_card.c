@@ -316,10 +316,11 @@ static const char *const p1_fmts[] = {".mcs: PS1 single save", ".psv: PS3, signe
                                      "raw: the blocks alone, named after the save"};
 
 /* Writes s (freed here) into folder as format f of p1_fmts, named after the
- * save, read back; done says where it went. 0 when written. */
-static int p1Out(const char *folder, Ps1Save *s, int f, const char *done)
+ * save, read back. 0 when written, with dest the file; otherwise *why says
+ * why and dest names the save, folder or file it is about. */
+static int p1Write(const char *folder, Ps1Save *s, int f, char *dest, const char **why)
 {
-	char dest[MAX_PATH], safe[PS1_NAME_MAX + 1], stem[2 * PS1_NAME_MAX + 8];
+	char safe[PS1_NAME_MAX + 1], stem[2 * PS1_NAME_MAX + 8];
 	uint8_t *buf = NULL;
 	uint32_t len = 0;
 	int r, i, renamable;
@@ -328,8 +329,9 @@ static int p1Out(const char *folder, Ps1Save *s, int f, const char *done)
 	 * can hold any bytes there), before any file name is made from it. A raw
 	 * save is the .psx without its 54-byte header. */
 	r = f == 0 ? ps1SaveToMcs(s, &buf, &len) : f == 1 ? ps1SaveToPsv(s, &buf, &len) : ps1SaveToPsx(s, &buf, &len);
+	dashStrCopy(dest, s->name, MAX_PATH);
 	if (r != PS1_OK) {
-		dashModalMessage(DI_WARNING, "Not exported", ps1Error(r), s->name);
+		*why = ps1Error(r);
 		ps1SaveFree(s);
 		return -1;
 	}
@@ -343,7 +345,7 @@ static int p1Out(const char *folder, Ps1Save *s, int f, const char *done)
 	 * come back under another name, including a name changed just above */
 	if (f == 3 && (strcmp(safe, s->name) || strchr(safe, '.') != NULL || (i > 0 && safe[i - 1] == ' '))) {
 		free(buf);
-		dashModalMessage(DI_WARNING, "Not exported", "This save's name cannot be kept as raw. Use .mcs or .psx.", s->name);
+		*why = "This save's name cannot be kept as raw. Use .mcs or .psx.";
 		ps1SaveFree(s);
 		return -1;
 	}
@@ -354,21 +356,29 @@ static int p1Out(const char *folder, Ps1Save *s, int f, const char *done)
 		dashStrCopy(stem, safe, sizeof(stem));
 	/* a PS3 finds a .psv, and a raw save is read back, by its exact name */
 	renamable = f == 0 || f == 2;
-	if (p1FreeName(dest, sizeof(dest), folder, stem, f == 0 ? ".mcs" : f == 2 ? ".psx" : "", renamable) < 0) {
+	if (p1FreeName(dest, MAX_PATH, folder, stem, f == 0 ? ".mcs" : f == 2 ? ".psx" : "", renamable) < 0) {
 		free(buf);
-		dashModalMessage(DI_WARNING, "Not exported",
-		                 renamable ? "No free name in that folder." : "A file with this name is already in that folder.",
-		                 folder);
+		*why = renamable ? "No free name in that folder." : "A file with this name is already in that folder.";
+		dashStrCopy(dest, folder, MAX_PATH);
 		return -1;
 	}
-	dashLoadingBegin("Exporting save");
 	r = f == 3 ? dashCardWriteVerified(dest, buf + 54, len - 54u) : dashCardWriteVerified(dest, buf, len);
-	dashLoadingEnd();
 	free(buf);
-	if (r == 0)
-		dashModalMessage(DI_MC, "Exported", done, dest);
-	else
-		dashModalMessage(DI_WARNING, "Not exported", "The file could not be written. The device may be full or read-only.", dest);
+	*why = "The file could not be written. The device may be full or read-only.";
+	return r;
+}
+
+/* p1Write for one save, with its own messages; done says where it went. */
+static int p1Out(const char *folder, Ps1Save *s, int f, const char *done)
+{
+	char dest[MAX_PATH];
+	const char *why;
+	int r;
+
+	dashLoadingBegin("Exporting save");
+	r = p1Write(folder, s, f, dest, &why);
+	dashLoadingEnd();
+	dashModalMessage(r ? DI_WARNING : DI_MC, r ? "Not exported" : "Exported", r ? why : done, dest);
 	return r;
 }
 
@@ -433,6 +443,55 @@ void dashPs1SaveConvert(const char *path)
 		return;
 	}
 	p1Out(folder, &s, f, "Written and read back. The original was not changed.");
+}
+
+/* dashPs1SaveConvert for the marked saves `names` in dir: one format for all
+ * (wLaunchELF_R3Z's archive from several saves), one folder picked when dir
+ * is a memory card. A save that fails is counted and the rest still go; the
+ * sources are only read. */
+void dashPs1SaveConvertMany(const char *dir, const char *const *names, int n)
+{
+	char path[MAX_PATH], folder[MAX_PATH], dest[MAX_PATH], first[MAX_PATH] = "", body[MAX_PATH + 96];
+	const char *why = NULL, *first_why = NULL;
+	uint8_t *buf;
+	uint32_t len;
+	Ps1Save s;
+	int i, r, f, fmt, done = 0, failed = 0, on_card = !strncmp(dir, "mc", 2) || !strncmp(dir, "vmc", 3);
+
+	f = dashModalChoice("Convert to", p1_fmts, 4, genCmpFileExt(names[0], "MCS"));
+	if (f < 0)
+		return;
+	if (!on_card)
+		dashStrCopy(folder, dir, sizeof(folder));
+	else if (!dashPickPath("Write the PS1 saves to", "mass:/", DASH_PICK_FOLDER, NULL, folder, sizeof(folder)))
+		return;
+	dashLoadingBegin("Exporting saves");
+	for (i = 0; i < n; i++) {
+		dashLoadingStatus(names[i], i, n);
+		r = snprintf(path, sizeof(path), "%s%s", dir, names[i]) >= (int)sizeof(path) ? -1 : p1ReadFile(path, &buf, &len);
+		if (r < 0)
+			why = r == -2 ? "Too big or empty for a PS1 save." : "The file could not be read.";
+		else {
+			/* as in dashPs1SaveConvert: a card save's whole name, dots included */
+			snprintf(path, sizeof(path), on_card ? "%s." : "%s", names[i]);
+			r = ps1SaveFromFile(buf, len, path, &s, &fmt);
+			free(buf);
+			why = ps1Error(r);
+			if (r == PS1_OK)
+				r = p1Write(folder, &s, f, dest, &why);
+		}
+		if (r == 0)
+			done++;
+		else if (!failed++) {
+			dashStrCopy(first, names[i], sizeof(first));
+			first_why = why;
+		}
+	}
+	dashLoadingEnd();
+	r = snprintf(body, sizeof(body), "%d of %d written and read back. The originals were not changed.", done, n);
+	if (failed)
+		snprintf(body + r, sizeof(body) - r, " %d not exported. First: %s: %s", failed, first, first_why);
+	dashModalMessage(failed ? DI_WARNING : DI_MC, failed ? "Not all exported" : "Exported", body, folder);
 }
 
 static void p1Delete(const char *path, const Ps1CardSave *sv)

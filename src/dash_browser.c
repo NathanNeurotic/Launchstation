@@ -895,6 +895,22 @@ static int saveFileTargets(int *idx, int max)
 	return n;
 }
 
+/* The marked entries' names for a batch tool, *n of them (free() it), or
+ * NULL when nothing is marked or there is no memory for the list. */
+static const char **markedNames(int *n)
+{
+	const char **names = fb.nmarked > 0 ? (const char **)malloc((size_t)fb.nmarked * sizeof(*names)) : NULL;
+	int i;
+
+	*n = 0;
+	if (names == NULL && fb.nmarked > 0)
+		dashModalMessage(DI_WARNING, "Not enough memory", "The selection is too large.", NULL);
+	for (i = 0; names != NULL && i < fb.n && *n < fb.nmarked; i++)
+		if (fb.mark[i])
+			names[(*n)++] = fb.files[i].name;
+	return names;
+}
+
 /* The marked PS1 save files (.mcs, .psv, .psx, .ps1, .mcb, .pda or raw,
  * which has no extension), at most a card's 15; 0 when any is not one. */
 static int ps1SaveTargets(int *idx, int max)
@@ -2633,7 +2649,8 @@ static void actionsMenu(void)
 	DashMenuItem items[56];
 	int ids[56], n = 0, r, sw_card, sw_chan, ps1_type = 0;
 	char marked[24], sort_detail[48], game_id[11];
-	int ps1_idx[16];
+	int ps1_idx[16], nsave = 0;
+	static int sv_idx[MAX_ENTRY];
 	enum {
 		F_OPEN,
 		F_COPY,
@@ -2745,13 +2762,9 @@ static void actionsMenu(void)
 				    !ok, nsav ? (port == 0 ? F_SAVES_MC0 : F_SAVES_MC1) : port == 0 ? F_PSU_MC0 : F_PSU_MC1);
 			}
 		}
-		{
-			static int sv_idx[MAX_ENTRY];
-
-			if (saveFileTargets(sv_idx, MAX_ENTRY) > 0)
-				ADD(DI_PLUS, "Import into a card image...", ".psu, .max, .cbs, .sps, .xps, .psv, Blaze; mixed", 0,
-				    F_IMPORT_SAVES);
-		}
+		if ((nsave = saveFileTargets(sv_idx, MAX_ENTRY)) > 0)
+			ADD(DI_PLUS, "Import into a card image...", ".psu, .max, .cbs, .sps, .xps, .psv, Blaze; mixed", 0,
+			    F_IMPORT_SAVES);
 		ADD(DI_WARNING, "Delete...", fb.nmarked ? marked : NULL, !has_target || !en[DELETE], F_DELETE);
 		ADD(DI_EDIT, "Rename...", NULL, f == NULL || !en[RENAME], F_RENAME);
 		ADD(DI_NEW_FOLDER, "New folder...", NULL, !en[NEWDIR], F_NEWDIR);
@@ -2813,15 +2826,19 @@ static void actionsMenu(void)
 		     (fullPath(f, path, sizeof(path)) && mcSaveFormatBlazePath(path))))
 			ADD(DI_MC, "Convert to .psu, .psv, .cbs or .zip...",
 			    "Blaze (MCM folder), MAX, CodeBreaker, SharkPort, PS3 save", 0, F_CONVERT_SAVE);
+		else if (nsave > 0) /* marked saves, one file each (wLaunchELF_R3Z's archive from several saves) */
+			ADD(DI_MC, "Convert to .psu, .psv, .cbs or .zip...", marked, 0, F_CONVERT_SAVE);
 		/* PS1 single saves by extension, and every save on a real PS1 card,
-		 * which lists each one as a raw file */
-		if (f != NULL && !isDir(f) && fb.nmarked == 0 &&
+		 * which lists each one as a raw file; marked ones all go the same way */
+		if (((f != NULL && !isDir(f) && fb.nmarked == 0) || fb.nmarked > 0) &&
 		    ((strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3) &&
-		      (genCmpFileExt(f->name, "MCS") || genCmpFileExt(f->name, "PS1") || genCmpFileExt(f->name, "MCB") ||
+		      (fb.nmarked ? ps1SaveTargets(sv_idx, MAX_ENTRY) > 0 :
+		       genCmpFileExt(f->name, "MCS") || genCmpFileExt(f->name, "PS1") || genCmpFileExt(f->name, "MCB") ||
 		       genCmpFileExt(f->name, "PDA") || genCmpFileExt(f->name, "PSX"))) ||
 		     (!strncmp(fb.dir, "mc", 2) && fb.dir[3] == ':' && fb.dir[4] == '/' && !fb.dir[5] &&
 		      filerRootMcPresent(fb.dir[2] - '0', &ps1_type, NULL) > 0 && ps1_type == 1)))
-			ADD(DI_MC, "Convert to .mcs, .psv, .psx or raw...", "PS1 save; the original is only read", 0, F_CONVERT_PS1);
+			ADD(DI_MC, "Convert to .mcs, .psv, .psx or raw...", fb.nmarked ? marked : "PS1 save; the original is only read", 0,
+			    F_CONVERT_PS1);
 		if (f != NULL && !isDir(f) && fb.nmarked == 0 && genCmpFileExt(f->name, "MCD")) {
 			ADD(DI_MC, "Back up .mcd...", "verified byte-for-byte copy", 0, F_BACKUP_MCD);
 			ADD(DI_MC, "Export as PCSX2 .ps2...", "adds ECC and verifies the copy", 0, F_EXPORT_PS2);
@@ -2998,14 +3015,24 @@ static void actionsMenu(void)
 			break;
 		}
 		case F_CONVERT_SAVE:
-			if (fullPath(f, path, sizeof(path)) && prepareOp()) {
-				dashCardConvertSave(path);
-				refresh();
-			}
-			break;
 		case F_CONVERT_PS1:
-			if (fullPath(f, path, sizeof(path)) && prepareOp()) {
-				dashPs1SaveConvert(path);
+			if (fb.nmarked > 0) {
+				int m;
+				const char **names = markedNames(&m);
+
+				if (names != NULL && prepareOp()) {
+					if (ids[r] == F_CONVERT_PS1)
+						dashPs1SaveConvertMany(fb.dir, names, m);
+					else
+						dashCardConvertMany(fb.dir, names, m);
+				}
+				free(names);
+				refresh();
+			} else if (fullPath(f, path, sizeof(path)) && prepareOp()) {
+				if (ids[r] == F_CONVERT_PS1)
+					dashPs1SaveConvert(path);
+				else
+					dashCardConvertSave(path);
 				refresh();
 			}
 			break;

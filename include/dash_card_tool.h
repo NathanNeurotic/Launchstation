@@ -24,6 +24,9 @@ void dashPs1CardNew(const char *folder, const char *const *names, int n);
 /* One PS1 save file (.mcs, PS1 .psv, .psx or raw, also a save on a real PS1
  * card) written as another of those formats; the source is only read. */
 void dashPs1SaveConvert(const char *path);
+/* The same for the n marked saves names[] in dir: one format for all, each
+ * its own file; a save that fails is counted and the rest still go. */
+void dashPs1SaveConvertMany(const char *dir, const char *const *names, int n);
 
 /* Shared with dash_ps1_card.c: a verified safety copy of an image whose
  * current bytes are in buf, and a new file written and read back (both 0 on
@@ -49,6 +52,9 @@ void dashCardSaveLibrary(const char *folder);
  * user picks when the source is on a memory card, read back and checked. The
  * source is only read. */
 void dashCardConvertSave(const char *path);
+/* The same for the n marked save files names[] in dir: one format and one
+ * confirmation for all, each its own file, failures counted. */
+void dashCardConvertMany(const char *dir, const char *const *names, int n);
 
 /* Import the n save files names[] in dir (dir ends in '/' or ':') into a PS2
  * card image the user picks, with one safety copy of that card first
