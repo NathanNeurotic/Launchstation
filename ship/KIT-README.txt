@@ -30,7 +30,12 @@ same app plus the companions.
                             IOPRP.IMG where your POPStarter build asks for it)
                             beside POPSTARTER.ELF; they are not included and
                             cannot be redistributed.
-                            UDPFS-NOTICES/ carries the UDPFS driver licences.
+                            usbd.irx.udpfs is Okeanos' UDPFS Assault 1.0.1 (network
+                            VCDs, .cue + .bin games, PATHMAP.INI); usbhdfsd.irx.ilink
+                            is the i.LINK driver pair's second half. Ember (EMBER/)
+                            does not use these pairs.
+                            UDPFS-NOTICES/ carries the UDPFS driver licences and
+                            Okeanos' own notices, config examples and PATHMAP.INI.
   EMBER/                    The Ember PS1 core (ember.elf) with its licence and
                             games/ layout. Point Settings > Launching > Disc &
                             image loaders > Ember directory at this folder and

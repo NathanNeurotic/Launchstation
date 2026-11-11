@@ -2,8 +2,8 @@
   "comment": "Kit externals pinned to one RiptOPL commit; regenerate with scripts/package_kit.py refresh-pin.",
   "source": {
     "repository": "NathanNeurotic/RiptOPL",
-    "commit": "a2821278b232256e75848af887b068ae3d24499a",
-    "tree": "https://github.com/NathanNeurotic/RiptOPL/tree/a2821278b232256e75848af887b068ae3d24499a"
+    "commit": "4832d22cb0bd76feffc5af625cc30da28c552476",
+    "tree": "https://github.com/NathanNeurotic/RiptOPL/tree/4832d22cb0bd76feffc5af625cc30da28c552476"
   },
   "files": {
     "EMBER/Ember Official Webpage.url": {
@@ -126,30 +126,35 @@
       "sha256": "1ecee940922a6886baccddd9133d17f1ce677d32c5a954fac8e48224f2766fe8",
       "size": 9005
     },
+    "POPS/UDPFS-NOTICES/PATHMAP.INI": {
+      "path": "ship/POPS/UDPFS-NOTICES/PATHMAP.INI",
+      "sha256": "e0cc55bf70f7db94e4351145852f6f1f0aebadbca59717a2cb49770ba64ec237",
+      "size": 114
+    },
     "POPS/UDPFS-NOTICES/PROVENANCE.json": {
       "path": "ship/POPS/UDPFS-NOTICES/PROVENANCE.json",
-      "sha256": "357cf722e5cb7a9417b3c027348f707c69267c46e7d00fdf061b1a2e1421c059",
-      "size": 2318
+      "sha256": "db38e0c893961be45a5646d3154eab20ae87a19e3234ae760e57ac86c8e5749f",
+      "size": 2789
     },
     "POPS/UDPFS-NOTICES/README.md": {
       "path": "ship/POPS/UDPFS-NOTICES/README.md",
-      "sha256": "afd0e6cdf9153ac105e6a8f5c818368af05204af4210543cdca169a182614404",
-      "size": 1396
+      "sha256": "50076b4404458c2f490a478d83f04f43f3a9fa73ce6a4d8aa4b6bb6a983bc06e",
+      "size": 1618
     },
     "POPS/UDPFS-NOTICES/README_CONFIG.txt": {
       "path": "ship/POPS/UDPFS-NOTICES/README_CONFIG.txt",
-      "sha256": "46d850fc7180220e7694aabbe5b65f9515f4a783e6148fc487a24236ff32a877",
-      "size": 8837
+      "sha256": "7e48ebb1a9de4226b401023dc48ef4aeac9faf70cc34256ecce9a33f86005325",
+      "size": 16848
     },
     "POPS/UDPFS-NOTICES/THIRD_PARTY_NOTICES.md": {
       "path": "ship/POPS/UDPFS-NOTICES/THIRD_PARTY_NOTICES.md",
-      "sha256": "03494e22785546eac7c67e2f042fb0ceadbd751dba95bc1b69dd68fc0c6c5d4e",
-      "size": 2534
+      "sha256": "74f3c03bb0d936a98523c66bf03dba9913f648dec5f9dc016a78eabec15c3b94",
+      "size": 2767
     },
     "POPS/UDPFS-NOTICES/UPSTREAM-README.md": {
       "path": "ship/POPS/UDPFS-NOTICES/UPSTREAM-README.md",
-      "sha256": "787c90f8fd71f40985f3b0590ef642a9769e58f171e25613b616db02ddc1f40f",
-      "size": 5884
+      "sha256": "5476ad520c4c9b121c2022bb5582ec968e22429002fc72b29e4f746baa23574b",
+      "size": 6916
     },
     "POPS/UDPFSCONFIG.DAT": {
       "path": "ship/POPS/UDPFSCONFIG.DAT",
@@ -218,8 +223,8 @@
     },
     "POPS/usbd.irx.udpfs": {
       "path": "ship/POPS/usbd.irx.udpfs",
-      "sha256": "24e272996a6ea4af5ef20cb5d89a29aa615d8b828087032e75bc2b05aaac583e",
-      "size": 51029
+      "sha256": "d1d5502454fbc9ca7c1fd039b65bbc143f8b87ffdfc0e275ce13dca4b191a738",
+      "size": 61949
     },
     "POPS/usbd.irx.usbexfat": {
       "path": "ship/POPS/usbd.irx.usbexfat",
@@ -233,8 +238,8 @@
     },
     "POPS/usbhdfsd.irx.ilink": {
       "path": "ship/POPS/usbhdfsd.irx.ilink",
-      "sha256": "e7829b6aa81586fe53b10b200f256f7177069aab287d3d028c20b7e043313917",
-      "size": 27129
+      "sha256": "9cd849ea7f06d72f3ee6015032dfd91d6fcb1332e87d5acde306cb42b5d4313d",
+      "size": 27769
     },
     "POPS/usbhdfsd.irx.mmce": {
       "path": "ship/POPS/usbhdfsd.irx.mmce",
