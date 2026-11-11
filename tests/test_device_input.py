@@ -250,6 +250,7 @@ static int fileXioDopen(const char *p) {
 }
 static void fileXioDclose(int dd) { assert(dd==0); closes++; }
 static void DelayThread(int us) { now_ms+=us/1000; }
+static void DashPause(unsigned us) { DelayThread((int)us); }
 static void pollRootMemoryCardDevices(void) {}
 static void filerRootMcPollIdle(void) {}
 static int filerRootMcPresent(int p,int *t,int *f) {
@@ -402,6 +403,7 @@ static int padGetState(int p,int s) {
 }
 static void padStateInt2String(int s,char *out) { (void)s; out[0]=0; }
 static void DelayThread(int us) { now_ms+=us/1000; }
+static void DashPause(unsigned us) { DelayThread((int)us); }
 """
 waitcode += function(pad, "void waitPadReady(") + function(pad, "void waitAnyPadReady(")
 waitcode += r"""

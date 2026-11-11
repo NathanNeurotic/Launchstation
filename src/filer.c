@@ -1302,7 +1302,7 @@ static void waitUsbDiscoverySettle(void)
 {
 	/* USB enumeration happens on the IOP. Do not burn the EE in a spin loop
 	 * while waiting for the next discovery pass. */
-	DelayThread(USB_DISCOVERY_SETTLE_MS * 1000);
+	DashPause(USB_DISCOVERY_SETTLE_MS * 1000);
 }
 
 static void scanUsbMassDevices(int force)

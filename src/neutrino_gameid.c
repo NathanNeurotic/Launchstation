@@ -3,6 +3,8 @@
 #include "popstarter_internal.h"
 #include "init.h"
 
+void DashPause(u32 usec); /* dash_ui.c; plain DelayThread outside a popup */
+
 #define ISO_SECTOR_SIZE 2048
 #define ISO_PVD_LBA 16
 #define ISO_PVD_SEARCH_SECTORS 32
@@ -248,7 +250,7 @@ void setNeutrinoMmceGameID(const char *gameID, const char *iso_path, const char 
 		for (poll = 0; poll < MMCE_SWITCH_POLLS; poll++) {
 			/* Firmware may acknowledge SET_GAMEID before marking itself busy.
 			 * Wait first (saildot4k/Launchstation 1e911e5). */
-			DelayThread(1000000);
+			DashPause(1000000);
 			status = fileXioDevctl(device, MMCE_CMD_GET_STATUS, NULL, 0, NULL, 0);
 			if (status < 0 || !(status & 1))
 				break;

@@ -39,6 +39,9 @@ void DashFileDeleteProgress(const char *name);
  * without calling it (classic mode, no overlay, worker unavailable): the
  * caller then runs it itself. */
 int DashFileTransferChunk(void (*run)(void *arg), void *arg);
+/* DelayThread(usec) that keeps an open dashboard progress popup moving
+ * (idea: saildot4k). Never returns early; otherwise a plain DelayThread. */
+void DashPause(u32 usec);
 
 /* Loads IPCONFIG.DAT (cached afterwards) without violating worker IO
  * exclusion: direct when the worker is idle, queued and awaited while the
