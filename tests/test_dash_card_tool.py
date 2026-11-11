@@ -253,7 +253,7 @@ lines = run("convmany:mc0:/|a.psu", "k0")                                  # pic
 assert not kind(lines, "CONFIRM|") and not host("mass:/cvm/BESLES-12345GAME-2.psu").exists(), lines
 host("mc0:/a.psu").unlink()
 shutil.rmtree(host("mass:/cvm"))
-assert "dashCardConvertMany(fb.dir, names, m);" in browser and "else if (nsave > 0)" in browser
+assert "dashCardConvertMany(fb.dir, names, m);" in browser and "else if (nsave > 0)" in browser and "names != NULL && m > 0 && prepareOp()" in browser
 shutil.rmtree(host("mass:/conv"))
 host("mass:/out/" + PSV2).unlink()
 E = "mass:/E.mcd"

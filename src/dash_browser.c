@@ -3020,7 +3020,7 @@ static void actionsMenu(void)
 				int m;
 				const char **names = markedNames(&m);
 
-				if (names != NULL && prepareOp()) {
+				if (names != NULL && m > 0 && prepareOp()) {
 					if (ids[r] == F_CONVERT_PS1)
 						dashPs1SaveConvertMany(fb.dir, names, m);
 					else
