@@ -749,8 +749,18 @@ jobs:
             echo "Failed to re-publish ${tag}" >&2
             exit 1
           fi
-          test "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}" --jq '.object.sha')" = "${GITHUB_SHA}"
-          test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" --jq '.prerelease')" = "false"
+          # Read back what was published. GitHub can briefly serve the old
+          # value right after a write, so retry before failing, and name the
+          # check and the value read if it still does not match.
+          for check in "git/ref/tags/${tag} .object.sha ${GITHUB_SHA}" "releases/tags/${tag} .prerelease false"; do
+            set -- ${check}
+            for try in 1 2 3 4 5; do
+              got="$(gh api "repos/${GITHUB_REPOSITORY}/$1" --jq "$2" || true)"
+              [ "${got}" = "$3" ] && break
+              [ "${try}" = 5 ] && { echo "Published ${tag}, but $1 $2 reads '${got}', expected '$3'" >&2; exit 1; }
+              sleep 3
+            done
+          done
           # Versioned ZIP names change with every build, so remove the old
           # fixed-name ZIPs and the app ZIPs of OLDER builds only: a newer build's
           # ZIPs and any other manually maintained attachment stay. This runs only
