@@ -215,6 +215,12 @@ void dashSwitchSection(int s)
 		return;
 	if (!dashConfirmLeave())
 		return;
+	/* Discarding Settings can switch a tab off again after the caller chose it. */
+	if ((s == DASH_SEC_HOME || s == DASH_SEC_FILES || s == DASH_SEC_TOOLS) && !sectionTabEnabled(s)) {
+		s = dashBackSection();
+		if (s == section)
+			return;
+	}
 	/* Trigger feedback before the potentially slow File Browser tab close.
 	 * Confirmation/cancel dialogs still resolve before a transition sound. */
 	dashSoundPlay(DASH_SND_TRANSITION);
