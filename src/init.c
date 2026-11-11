@@ -2784,6 +2784,7 @@ int startSmbServer(void)
 		if (!load_ps2ip())
 			return -ENETDOWN;
 		filerRootMcPollIdle();
+		have_smbd = 1; /* power-off can run mid-load: let it send the stop */
 		id = SifExecModuleBuffer(smbd_irx, size_smbd_irx, sizeof(args), args, &ret);
 		DPRINTF(" [SMBD]: ID=%d, ret=%d\n", id, ret);
 		have_smbd = (id >= 0 && ret == 0);
