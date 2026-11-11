@@ -34,14 +34,14 @@ write = settings.split("static int smbedWriteFile(const char *block)", 1)[1].spl
 assert "malloc(SMB_CNF_MAX_SIZE + 512)" in write and "static char" not in write
 assert "smbSharesBlocks()" in write and "dashWriteFile" not in write and "genOpen" not in write
 assert write.index("smbCnfUpsertText(") < write.index("smbConfigParse(work, &cfg);")
-assert write.index("smbConfigParse(work, &cfg);") < write.index("smbSharesSetBlocks(out)")
-assert write.index("smbSharesSetBlocks(out)") < write.index("saveSharesCnf()") < write.index("smbSharesReload()")
+assert write.index("smbConfigParse(work, &cfg);") < write.index("strdup(out)")
+assert write.index("smbSharesTakeBlocks(old)") < write.index("saveSharesCnf()") < write.index("smbSharesReload()")
 # a failed write puts the old blocks back and reports no success
-assert "smbSharesSetBlocks(old);" in write and "ret = -5;" in write
+assert "free(smbSharesTakeBlocks(old));" in write and "ret = -5;" in write
 # share saves write the committed settings and wait for the write
 helper = settings.split("static int saveSharesCnf(void)\n{", 1)[1].split("\n}\n", 1)[0]
 assert "memcpy(setting, &snap_classic, sizeof(SETTING));" in helper
-assert helper.index("dashSettingsSaveCnf()") < helper.index("dashWorkerAwaitAll(") < helper.index("cfg_failed[CFG_SAVE_CNF]")
+assert helper.index("dashSettingsSaveCnf()") < helper.index('"Saving settings", 0)') < helper.index("cfg_failed[CFG_SAVE_CNF]")
 
 # the text-editor row seeds the blocks (old SMB2.CNF or the template), saves
 # LAUNCHSTATION.CNF, edits it and takes the edited blocks back

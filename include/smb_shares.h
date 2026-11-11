@@ -120,7 +120,8 @@ int smbSharesReload(void); /* 1 when old sessions were retired; 0 on disconnect 
 /* LAUNCHSTATION.CNF's share blocks: taken from the file text when it is
  * loaded, written back after its settings. NULL: none, SMB2.CNF is read. */
 int smbSharesSetSection(const char *cnf_text);
-int smbSharesSetBlocks(const char *blocks); /* the section without its line */
+int smbSharesSetBlocks(const char *blocks);
+char *smbSharesTakeBlocks(char *blocks); /* takes ownership, returns the old blocks */ /* the section without its line */
 const char *smbSharesBlocks(void);
 #endif
 

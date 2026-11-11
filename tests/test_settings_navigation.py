@@ -58,6 +58,7 @@ int smbSharesConfigured(int v) { (void)v; return 0; }
 const char *smbSharesConfigPath(void) { return ""; }
 const char *smbSharesBlocks(void) { return 0; }
 int smbSharesSetBlocks(const char *b) { (void)b; return 1; }
+char *smbSharesTakeBlocks(char *b) { return b; }
 int dashSettingsSaveCnf(void) { return 1; }
 static int saveSharesCnf(void) { return 1; }
 """

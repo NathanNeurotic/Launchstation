@@ -60,6 +60,14 @@ int smbSharesSetSection(const char *cnf_text)
 	return smbSharesSetBlocks(smbCnfSection(cnf_text));
 }
 
+char *smbSharesTakeBlocks(char *blocks)
+{
+	char *old = smb_blocks;
+
+	smb_blocks = blocks;
+	return old;
+}
+
 const char *smbSharesBlocks(void)
 {
 	return smb_blocks;

@@ -529,10 +529,12 @@ static int smbedWriteFile(const char *block)
 		ret = -2;
 		goto out_free;
 	}
-	if ((smbSharesBlocks() != NULL && (old = strdup(smbSharesBlocks())) == NULL) || !smbSharesSetBlocks(out))
+	if ((old = strdup(out)) == NULL)
 		goto out_free;
+	old = smbSharesTakeBlocks(old); /* the old blocks stay ours until the write is done */
 	if (!saveSharesCnf()) {
-		smbSharesSetBlocks(old); /* not written: the shares stay as they were */
+		free(smbSharesTakeBlocks(old)); /* not written: the shares stay as they were */
+		old = NULL;
 		ret = -5;
 	} else
 		ret = smbSharesReload() ? 0 : -6;
@@ -2253,7 +2255,9 @@ static int saveSharesCnf(void)
 		memcpy(setting, cur, sizeof(SETTING));
 		free(cur);
 	}
-	return ok && dashWorkerAwaitAll("Saving settings") && !cfg_failed[CFG_SAVE_CNF];
+	/* not cancelable: the result decides what stays in memory */
+	return ok && (!dashWorkerBusy() || dashWorkerAwait(dashWorkerLastId(), "Saving settings", 0)) &&
+	       !cfg_failed[CFG_SAVE_CNF];
 }
 #endif
 

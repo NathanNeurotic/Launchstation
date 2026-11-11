@@ -630,13 +630,13 @@ static int probeMount(const char *m)
 		ok = isSmbDriverLoaded(v) || load_smb(v);
 		if (ok) {
 			smbSharesConnect(v, 1); /* rate limited */
-			ok = smbSharesConnectedCount(v) > 0;
-		}
-		/* the SMB1 share is a folder of the one SMB device: it alone is enough */
-		if (v == SMB_PATH_V2 && smbSharesV1Name() != NULL &&
-		    (isSmbDriverLoaded(SMB_PATH_V1) || load_smb(SMB_PATH_V1))) {
-			smbSharesConnect(SMB_PATH_V1, 1);
-			ok |= smbSharesConnectedCount(SMB_PATH_V1) > 0;
+			/* the SMB1 share is a folder of the one SMB device: it alone is
+			 * enough, but smb:/ itself still needs smb2man (as everywhere else) */
+			if (v == SMB_PATH_V2 && smbSharesV1Name() != NULL &&
+			    (isSmbDriverLoaded(SMB_PATH_V1) || load_smb(SMB_PATH_V1)))
+				smbSharesConnect(SMB_PATH_V1, 1);
+			ok = smbSharesConnectedCount(v) > 0 ||
+			     (v == SMB_PATH_V2 && smbSharesConnectedCount(SMB_PATH_V1) > 0);
 		}
 	}
 #endif
