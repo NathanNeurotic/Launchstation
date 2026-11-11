@@ -125,7 +125,9 @@ void setupGS(void)
 
 	// Buffer Init
 	gsGlobal->PrimAAEnable = GS_SETTING_ON;
-	gsGlobal->DoubleBuffering = GS_SETTING_OFF;
+	/* Double buffered from the start: the dashboard needs it, and switching
+	 * later meant a second GS reset, one more TV resync during boot (#277). */
+	gsGlobal->DoubleBuffering = GS_SETTING_ON;
 	gsGlobal->ZBuffering = GS_SETTING_OFF;
 
 	// DMAC Init
