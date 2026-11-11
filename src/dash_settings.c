@@ -3583,7 +3583,7 @@ static void settingsInput(const DashInput *in)
 			dashSoundPlay(DASH_SND_CANCEL);
 			backPage();
 		} else
-			dashSwitchSection(DASH_SEC_HOME);
+			dashSwitchSection(dashBackSection());
 	} else if (it->type != ST_PAGE && themeSettingResettable(it->id) && (in->pressed & DASH_IN_FAV)) {
 		if (resetThemeSetting(it->id))
 			dashToast(DASH_TOAST_OK, "Setting reset to preset default");
@@ -3885,7 +3885,8 @@ static void settingsHints(void)
 			h[n].button = DI_BTN_SQUARE, h[n].key = NULL, h[n].label = "Reset", n++;
 		else if (it->type == ST_LKEY)
 			h[n].button = DI_BTN_SQUARE, h[n].key = NULL, h[n].label = "Title", n++;
-		h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = page_depth ? "Back" : "Home", n++;
+		if (page_depth || dashBackSection() != DASH_SEC_SETTINGS)
+			h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = page_depth ? "Back" : dashSectionLabel(dashBackSection()), n++;
 	}
 	h[n].button = DI_BTN_TRIANGLE, h[n].key = NULL, h[n].label = "Changes", n++;
 	h[n].button = -1, h[n].key = "START", h[n].label = "Menu", n++;

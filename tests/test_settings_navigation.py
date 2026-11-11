@@ -62,7 +62,7 @@ input_start = header.rfind("enum {", 0, header.index("DASH_IN_UP"))
 code += header[input_start:header.index("void dashInputPoll(")]
 code = "#include <stdint.h>\ntypedef uint32_t u32;\n" + code
 code += r"""
-enum { DASH_TOAST_INFO, DASH_TOAST_OK, DASH_SEC_HOME };
+enum { DASH_TOAST_INFO, DASH_TOAST_OK, DASH_SEC_HOME, DASH_SEC_FILES };
 enum { DASH_SND_CANCEL };
 enum { DASH_IGR_AFTER_DASHBOARD, DASH_IGR_AFTER_OSDSYS, DASH_IGR_AFTER_APP };
 static void dashSoundPlay(int s) { assert(s == DASH_SND_CANCEL); }
@@ -88,7 +88,9 @@ static int dashModalMenu(const char *t,const char *d,DashMenuItem *m,int n,int s
     return modal_result;
 }
 static void runAction(int id) { if(id==S_SAVE_CLASSIC) saves++; else if(id==S_REVERT) reverts++; }
-static void dashSwitchSection(int s) { assert(s == DASH_SEC_HOME); home++; }
+static int back_section = DASH_SEC_HOME;
+static void dashSwitchSection(int s) { assert(s == back_section); home++; }
+static int dashBackSection(void) { return back_section; }
 static void dashToast(int kind,const char *msg) { (void)kind; assert(msg); toast++; }
 static void colorEditor(const char *name,int id) { (void)name; (void)id; edits++; }
 static void choosePreset(void) { edits++; }
@@ -222,6 +224,7 @@ int main(void) {
     press(DASH_IN_OK);assert(launch_menu_edits==1 && !launch_title_edits);
     press(DASH_IN_FAV);assert(launch_title_edits==1 && launch_menu_edits==1);
     page=P_ROOT; page_depth=0; item=0; press(DASH_IN_BACK); assert(home==1);
+    back_section=DASH_SEC_FILES; press(DASH_IN_BACK); assert(home==2); back_section=DASH_SEC_HOME;
     session=0; page=P_THEME_COLORS; assert(occurrences[S_LK_0+SETTING_LK_LEFT]==1 && occurrences[S_LK_0+SETTING_LK_RIGHT]==1);
     settingsEnter(); assert(page==P_ROOT && begins==2);
     puts("PASS: all pages reachable, baseline controls unique, navigation/scroll, session menu and dependencies");
