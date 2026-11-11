@@ -2,7 +2,7 @@
 //File name:   dash_store.c
 //Dashboard persistence.
 //
-//The dashboard never modifies LAUNCHELF.CNF on its own. Its state lives in
+//The dashboard never modifies LAUNCHSTATION.CNF on its own. Its state lives in
 //separate files next to the loaded configuration (or mc0:/SYS-CONF/):
 //  DASHBOARD.CNF  settings and application scan locations
 //  DASHAPPS.CNF   favorites, pinned/recent apps and hidden paths
@@ -512,7 +512,7 @@ char *dashStoreSettingsText(const DashSettings *c, int *out_len)
 	if (buf == NULL)
 		return NULL;
 	len += snprintf(buf + len, cap - len,
-	                "# Launchstation dashboard settings (LAUNCHELF.CNF is not modified)\r\n"
+	                "# Launchstation dashboard settings (LAUNCHSTATION.CNF is not modified)\r\n"
 	                "Dash_Enabled = %d\r\n"
 	                "Dash_StartSection = %d\r\n"
 	                "Dash_View = %d\r\n"

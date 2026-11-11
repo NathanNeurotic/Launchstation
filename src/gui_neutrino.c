@@ -92,7 +92,7 @@ int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *options, NEUTRINO_OPT
 
 /* Versioned two-slot Neutrino profiles. A save overwrites only the older (or
  * invalid) slot; the newest verified slot remains intact if an I/O write is
- * interrupted. No game image, VMC, or LAUNCHELF.CNF is ever modified. */
+ * interrupted. No game image, VMC, or LAUNCHSTATION.CNF is ever modified. */
 static char active_profile_gameid[NEUTRINO_GAME_ID_SIZE];
 
 static int profileGameIdValid(const char *id)
