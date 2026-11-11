@@ -218,8 +218,11 @@ void dashSwitchSection(int s)
 	/* Discarding Settings can switch a tab off again after the caller chose it. */
 	if ((s == DASH_SEC_HOME || s == DASH_SEC_FILES || s == DASH_SEC_TOOLS) && !sectionTabEnabled(s)) {
 		s = dashBackSection();
-		if (s == section)
+		if (s == section) {
+			if (screens[section]->enter)
+				screens[section]->enter(); /* the leave step ended its session */
 			return;
+		}
 	}
 	/* Trigger feedback before the potentially slow File Browser tab close.
 	 * Confirmation/cancel dialogs still resolve before a transition sound. */
