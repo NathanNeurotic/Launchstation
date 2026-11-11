@@ -24,24 +24,27 @@ assert "[P_SMB] = PAGE(" in settings
 enter = settings.split('it->type == ST_PAGE && (in->pressed & (DASH_IN_OK | DASH_IN_RIGHT))', 1)[1]
 assert "smbedLoadPick();" in enter.split("openPage(it->id);", 1)[0]
 
-# The selected block is merged into SMB2.CNF with heap buffers, validated,
-# written to the primary path (and synced to SYS-CONF if both exist), and reloaded.
+# The selected block is merged into the share blocks (an old SMB2.CNF's on the
+# first save, never writing SMB2.CNF), validated, kept for LAUNCHSTATION.CNF,
+# saved with the settings and reloaded.
 save = settings.split("static void smbedSave(void)", 1)[1].split("\n}\n", 1)[0]
 assert "smbCnfBuildBlock(" in save and "smbedWriteFile(block)" in save
 assert ", smbed.name);" in save and ", block);" not in save
 write = settings.split("static int smbedWriteFile(const char *block)", 1)[1].split("\n}\n", 1)[0]
 assert "malloc(SMB_CNF_MAX_SIZE + 512)" in write and "static char" not in write
+assert "smbSharesBlocks()" in write and "dashWriteFile" not in write and "genOpen" not in write
 assert write.index("smbCnfUpsertText(") < write.index("smbConfigParse(work, &cfg);")
-assert write.index("smbConfigParse(work, &cfg);") < write.index("dashWriteFile(path, out, len)")
-assert "configBuildSysconfPath(sysconf" in write
+assert write.index("smbConfigParse(work, &cfg);") < write.index("smbSharesSetBlocks(out);")
+assert write.index("smbSharesSetBlocks(out);") < write.index("dashSettingsSaveCnf()")
 assert "smbSharesReload()" in write
 
-# the text-editor row keeps the template seeding and reloads afterwards
-case = settings.split("case S_SMBED_TEXT:", 1)[1].split("break;", 1)[0]
-assert "smbSharesConfigured(" in case
-assert "configBuildSysconfPath(" in case and "configEnsureSysconfDir(" in case
-assert "dashTextEditor(" in case
-assert case.index("dashTextEditor(") < case.index("smbSharesReload()")
+# the text-editor row seeds the blocks (old SMB2.CNF or the template), saves
+# LAUNCHSTATION.CNF, edits it and takes the edited blocks back
+case = settings.split("case S_SMBED_TEXT:", 1)[1].split("\t\t\tbreak;\n\t\t}", 1)[0]
+assert "smbSharesConfigured(" in case and "smbSharesSetBlocks(" in case
+assert "genOpen" not in case and "dashWriteFile" not in case
+assert case.index("dashSettingsSaveCnf()") < case.index("dashWorkerAwaitAll(") < case.index("dashTextEditor(LoadedConfigPath)")
+assert case.index("dashTextEditor(") < case.index("smbSharesSetSection(text)") < case.index("smbSharesReload()")
 
 # the status column shows the draft values without network IO
 status = settings.split("static const char *actionStatus(int id)", 1)[1].split("\n}\n", 1)[0]
@@ -56,10 +59,6 @@ assert text.count("URL = ") >= 1 and "NAME = " in text and "VERSION = 1" in text
 # every example is commented out: a fresh file defines no share and connects nowhere
 assert all(line.startswith("#") or not line.strip() for line in text.splitlines()), text
 
-# the template only goes into a file that does not exist yet
-create = case.split("smb_template[] =", 1)[1]
-assert create.index("FIO_O_RDONLY") < create.index("FIO_O_TRUNC")
-
 # the upsert core exists in the host-tested text file and is declared in the header
 assert "int smbCnfBuildBlock(" in cnf and "int smbCnfUpsertText(" in cnf
 assert "int smbCnfUpsertText(" in header and "int smbCnfBuildBlock(" in header
@@ -73,4 +72,13 @@ assert "smbDisconnectAllSessions()" in reload
 assert reload.index("smbDisconnectAllSessions()") < reload.index("smb_cfg_loaded = 0;")
 assert "return 0;" in reload and "return 1;" in reload
 
-print("PASS: Settings > Network > SMB shares edits SMB2.CNF by GUI or text, and reloads it")
+# the memory-card SMB server login sits on the Network page and in LAUNCHSTATION.CNF
+assert re.search(r'#ifdef ETH[^#]*S_SMBD_USER[^#]*S_SMBD_PASS', net), net
+config = (root / "src/config.c").read_text()
+assert '"SMB_Server_User = %s' in config and '"SMB_Server_User")' in config
+# the share blocks are the last thing written, after every setting
+build = config.split("char *configBuildSaveText(int *out_size)", 1)[1].split("\n}\n", 1)[0]
+assert build.index("PathPad[%02d]") < build.index("SMB_CNF_SECTION") < build.index("*out_size = CNF_size;")
+assert "smbSharesSetSection(RAM_p);" in config
+
+print("PASS: Settings > Network > SMB shares edits the shares in LAUNCHSTATION.CNF by GUI or text, and reloads them")

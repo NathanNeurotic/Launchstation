@@ -447,25 +447,17 @@ int dashDevicesList(DashDevice *out, int max)
 #endif
 #ifdef SMB
 	{
-		/* Opening one starts the network and connects SMB2.CNF's shares;
-		 * listing them reads no file and no network. smb1: only with a VERSION = 1
-		 * share. */
-		static char smb_ready[2][64], smb_absent[2][96];
-		int v;
+		/* One row: opening it starts the network and connects the saved
+		 * SMB2/3 shares; an SMB1 share is a folder in it. Listing reads no
+		 * file and no network. */
+		static char smb_ready[32], smb_absent[96];
 
-		for (v = SMB_PATH_V2; v >= SMB_PATH_V1; v--) {
-			int i = v == SMB_PATH_V1;
-
-			if (v == SMB_PATH_V1 && !smbSharesKnown(SMB_PATH_V1))
-				continue;
-			smbSharesStatus(v, smb_absent[i], sizeof(smb_absent[i]));
-			if (!isSmbDriverLoaded(v) && smbLoadError(v)[0])
-				snprintf(smb_absent[i], sizeof(smb_absent[i]), "%s", smbLoadError(v));
-			snprintf(smb_ready[i], sizeof(smb_ready[i]), "%d share(s) connected", smbSharesConnectedCount(v));
-			addStorage(out, &n, max, DI_SHARE, v == SMB_PATH_V1 ? "Network (SMB1)" : "Network (SMB)",
-			           v == SMB_PATH_V1 ? SMB_DEVICE_V1 : SMB_DEVICE_V2, v == SMB_PATH_V1 ? "smb1:/" : "smb:/",
-			           smb_ready[i], smb_absent[i]);
-		}
+		smbSharesStatus(SMB_PATH_V2, smb_absent, sizeof(smb_absent));
+		if (!isSmbDriverLoaded(SMB_PATH_V2) && smbLoadError(SMB_PATH_V2)[0])
+			snprintf(smb_absent, sizeof(smb_absent), "%s", smbLoadError(SMB_PATH_V2));
+		snprintf(smb_ready, sizeof(smb_ready), "%d share(s) connected",
+		         smbSharesConnectedCount(SMB_PATH_V2) + smbSharesConnectedCount(SMB_PATH_V1));
+		addStorage(out, &n, max, DI_SHARE, "Network (SMB)", SMB_DEVICE_V2, "smb:/", smb_ready, smb_absent);
 	}
 #endif
 #ifdef ETH

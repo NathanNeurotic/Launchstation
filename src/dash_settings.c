@@ -134,6 +134,7 @@ enum SetId {
 	S_SMBED_PICK, S_SMBED_NAME, S_SMBED_KIND, S_SMBED_IP, S_SMBED_PORT,
 	S_SMBED_FOLDER, S_SMBED_USER, S_SMBED_PASS, S_SMBED_SAVE, S_SMBED_DELETE,
 	S_SMBED_TEXT,
+	S_SMBD_USER, S_SMBD_PASS,
 	S_CLOCK,
 	S_CLOCK_MANUAL,
 	S_CLOCK_SOFTWARE,
@@ -380,8 +381,9 @@ static const SetItem mmce_backup_items[] = {
 };
 
 #ifdef SMB
-/* ---- SMB share editor: the GUI SMB2.CNF writer -----------------------------
- * The page edits one draft and splices it into SMB2.CNF with smbCnfUpsertText,
+/* ---- SMB share editor ------------------------------------------------------
+ * The page edits one draft and splices it into the share blocks at the end of
+ * LAUNCHSTATION.CNF (an old SMB2.CNF's on the first save) with smbCnfUpsertText,
  * which keeps the rest of the file (comments, other blocks) byte for byte. */
 
 static struct {
@@ -397,16 +399,6 @@ static struct {
 	int pick; /* 0 = New share, else snapshot share index + 1 */
 	SmbConfig snap;
 } smbed;
-
-static void smbedConfigPath(char *path, int size)
-{
-	if (smbSharesConfigPath()[0])
-		dashStrCopy(path, smbSharesConfigPath(), size);
-	else {
-		configBuildSysconfPath(path, size, "SMB2.CNF");
-		configEnsureSysconfDir(path);
-	}
-}
 
 /* smb://<host>[:port]/<folder> back into the draft fields. */
 static int smbedSplitUrl(const char *url, char *host, int host_size, int *port,
@@ -497,35 +489,29 @@ static void smbedLoadPick(void)
 
 static int smbedWriteFile(const char *block)
 {
-	char path[MAX_PATH], sysconf[MAX_PATH];
-	char *out, *work, *text;
+	char *out, *work, *text = NULL;
+	const char *base = smbSharesBlocks();
 	SmbConfig cfg;
-	int len, fd, i, matches = 0, valid = 0, ret = -3;
+	int len, i, matches = 0, valid = 0, ret = -3;
 
 	out = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
 	work = (char *)malloc(SMB_CNF_MAX_SIZE + 512);
-	if (out == NULL || work == NULL) {
-		free(out);
-		free(work);
-		return -3;
-	}
-	smbedConfigPath(path, sizeof(path));
-	text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL);
-	if (text == NULL) {
-		/* Only a missing file may be created: one that exists but could
-		   not be read (too large, read error) must not be replaced by a
-		   file holding just the new block. */
-		fd = genOpen(path, FIO_O_RDONLY);
-		if (fd >= 0) {
-			genClose(fd);
+	if (out == NULL || work == NULL)
+		goto out_free;
+	if (base == NULL) {
+		/* The first save takes an old SMB2.CNF's shares across into
+		   LAUNCHSTATION.CNF. SMB2.CNF itself is never written. */
+		smbSharesConfigured(SMB_PATH_V2);
+		if (smbSharesConfigPath()[0] &&
+		    (text = dashLoadTextFile(smbSharesConfigPath(), SMB_CNF_MAX_SIZE, NULL)) == NULL) {
 			ret = -4;
 			goto out_free;
 		}
+		base = text != NULL ? text : "";
 	}
-	len = smbCnfUpsertText(text != NULL ? text : "", smbed.orig, block,
-	                       out, SMB_CNF_MAX_SIZE + 512, work, SMB_CNF_MAX_SIZE + 512);
+	len = smbCnfUpsertText(base, smbed.orig, block, out, SMB_CNF_MAX_SIZE + 512, work, SMB_CNF_MAX_SIZE + 512);
 	free(text);
-	if (len < 0) {
+	if (len < 0 || len > SMB_CNF_MAX_SIZE) {
 		ret = -1;
 		goto out_free;
 	}
@@ -541,16 +527,8 @@ static int smbedWriteFile(const char *block)
 		ret = -2;
 		goto out_free;
 	}
-	if (dashWriteFile(path, out, len) < 0)
-		goto out_free;
-	/* When the primary file lives beside the ELF, also update an existing
-	 * SYS-CONF copy so neither lookup location retains stale share entries. */
-	configBuildSysconfPath(sysconf, sizeof(sysconf), "SMB2.CNF");
-	if (strcmp(path, sysconf) != 0 && (fd = genOpen(sysconf, FIO_O_RDONLY)) >= 0) {
-		genClose(fd);
-		dashWriteFile(sysconf, out, len);
-	}
-	ret = smbSharesReload() ? 0 : -6;
+	smbSharesSetBlocks(out);
+	ret = !dashSettingsSaveCnf() ? -5 : smbSharesReload() ? 0 : -6;
 	smbSharesSnapshot(&smbed.snap);
 out_free:
 	free(out);
@@ -575,12 +553,12 @@ static void smbedSave(void)
 	r = smbedWriteFile(block);
 	if (r == -4) {
 		dashModalMessage(DI_WARNING, "Share not saved",
-		                 "The existing SMB2.CNF could not be read; it was left untouched. Edit it as text.", NULL);
+		                 "The old SMB2.CNF could not be read; nothing was changed.", NULL);
 		return;
 	}
 	if (r == -1) {
 		dashModalMessage(DI_WARNING, "Share not saved",
-		                 "SMB2.CNF is full or a limit was hit; edit the file as text instead.", NULL);
+		                 "The share list is full or a limit was hit; edit the shares as text instead.", NULL);
 		return;
 	}
 	if (r == -2) {
@@ -590,11 +568,11 @@ static void smbedSave(void)
 	}
 	if (r == -6) {
 		dashModalMessage(DI_WARNING, "Share saved; restart needed",
-		                 "SMB2.CNF was written, but the old SMB connection could not be disconnected. Restart Launchstation to apply the changed share.", NULL);
+		                 "The share was saved, but the old SMB connection could not be disconnected. Restart Launchstation to apply the changed share.", NULL);
 		return;
 	}
 	if (r != 0) {
-		dashModalMessage(DI_WARNING, "Share not saved", "SMB2.CNF could not be written.", NULL);
+		dashModalMessage(DI_WARNING, "Share not saved", "The settings could not be saved.", NULL);
 		return;
 	}
 	smbSharesSnapshot(&smbed.snap);
@@ -607,7 +585,7 @@ static void smbedSave(void)
 			break;
 		}
 	dashModalMessage(DI_CHECK, "Share saved",
-	                 "Open Files > smb:/ for SMB2/3 or smb1:/ for SMB1. The SMB2/3 list shows only shares that connect.", smbed.name);
+	                 "Open Files > Network (SMB). SMB2/3 shares show only once they connect.", smbed.name);
 }
 
 static void smbedDelete(void)
@@ -621,12 +599,12 @@ static void smbedDelete(void)
 		dashModalMessage(DI_WARNING,
 		                 r == -6 ? "Share deleted; restart needed" : "Share not deleted",
 		                 r == -6 ? "Saved configuration could not retire old SMB sessions. Restart Launchstation." :
-		                 "SMB2.CNF could not be written.", NULL);
+		                 "The settings could not be saved.", NULL);
 		return;
 	}
 	smbed.pick = 0;
 	smbedLoadPick();
-	dashModalMessage(DI_CHECK, "Share deleted", "The block was removed from SMB2.CNF.", NULL);
+	dashModalMessage(DI_CHECK, "Share deleted", "The share was removed.", NULL);
 }
 
 static void smbedEditField(const char *title, char *buf, int size, const char *error)
@@ -644,17 +622,17 @@ static void smbedEditField(const char *title, char *buf, int size, const char *e
 }
 
 static const SetItem smb_items[] = {
-	{ST_CHOICE, S_SMBED_PICK, "Share", "New share, or one already in SMB2.CNF."},
-	{ST_ACTION, S_SMBED_NAME, "Name shown in Files", "SMB2/3 label under smb:/. SMB1 uses smb1:/ without this label. Example: PS2 Games. Use a unique name; avoid / \\ : * ? \" < > |."},
-	{ST_CHOICE, S_SMBED_KIND, "Server type", "Match the server: PS2-Servers SMBv2 supports up to 2.1; SMBv3 up to 3.0.2. SMB1 is legacy and opens via smb1:/."},
-	{ST_ACTION, S_SMBED_IP, "Server address", "IPv4 address of the server. Example: 192.168.1.20. Host names are edited in SMB2.CNF as text."},
+	{ST_CHOICE, S_SMBED_PICK, "Share", "New share, or one already saved."},
+	{ST_ACTION, S_SMBED_NAME, "Name shown in Files", "Folder name under Network (SMB). Example: PS2 Games. Use a unique name; avoid / \\ : * ? \" < > |."},
+	{ST_CHOICE, S_SMBED_KIND, "Server type", "Match the server: PS2-Servers SMBv2 supports up to 2.1; SMBv3 up to 3.0.2. SMB1 is legacy; one SMB1 share at most."},
+	{ST_ACTION, S_SMBED_IP, "Server address", "IPv4 address of the server. Example: 192.168.1.20. Host names are edited as text."},
 	{ST_ACTION, S_SMBED_PORT, "Port", "TCP port from server settings. Examples: 445 standard, 1445 PS2-Servers SMB2/3, or 1025 its Desktop SMB1."},
 	{ST_ACTION, S_SMBED_FOLDER, "Share name", "The exported SMB share on the server. Example: games (PS2-Servers default)."},
 	{ST_ACTION, S_SMBED_USER, "Username", "Account name on the server. Example: ps2 for SMB2/3 or guest for SMB1 on PS2-Servers."},
-	{ST_ACTION, S_SMBED_PASS, "Password", "Password for that server account. Leave blank only if the server allows no-password access; saved in SMB2.CNF as plain text."},
-	{ST_ACTION, S_SMBED_SAVE, "Save share", "Writes this share to SMB2.CNF. Open Files > smb:/ for SMB2/3 or smb1:/ for SMB1."},
-	{ST_ACTION, S_SMBED_DELETE, "Delete share", "Removes the picked share's block from SMB2.CNF."},
-	{ST_ACTION, S_SMBED_TEXT, "Edit SMB2.CNF as text", "Use the file editor for host names, deeper paths, or options this page does not cover."},
+	{ST_ACTION, S_SMBED_PASS, "Password", "Password for that server account. Leave blank only if the server allows no-password access; saved in LAUNCHSTATION.CNF as plain text."},
+	{ST_ACTION, S_SMBED_SAVE, "Save share", "Saves this share in LAUNCHSTATION.CNF. Open it in Files > Network (SMB)."},
+	{ST_ACTION, S_SMBED_DELETE, "Delete share", "Removes the picked share."},
+	{ST_ACTION, S_SMBED_TEXT, "Edit shares as text", "Opens LAUNCHSTATION.CNF; the shares are the blocks after its # SMB shares line. For host names, deeper paths and other options."},
 };
 #endif /* SMB */
 
@@ -667,10 +645,12 @@ static const SetItem net_items[] = {
 #endif
 #ifdef ETH
     {ST_CHOICE, S_NET_LEGACY, "Legacy Ethernet drivers", "Use MrRexD's ps2sdk v1.0 DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up. Takes effect the next time Ethernet/FTP is started."},
+    {ST_ACTION, S_SMBD_USER, "SMB server user name", "Login for Tools > SMB server (memory cards). Used from the next Start."},
+    {ST_ACTION, S_SMBD_PASS, "SMB server password", "Login for Tools > SMB server (memory cards). Used from the next Start."},
     {ST_ACTION, S_CLOCK_SYNC, "Sync PS2 clock from Internet", "Query 0.pool.ntp.org and write and verify the PS2 hardware RTC. Uses the IP settings above; once the network runs, changes need a save and restart."},
 #endif
 #ifdef SMB
-    {ST_PAGE, P_SMB, "SMB shares", "Add saved shares. smb:/ lists connected SMB2/3 shares; smb1:/ opens SMB1. Neither scans the network."},
+    {ST_PAGE, P_SMB, "SMB shares", "Saved shares, shown as folders in Files > Network (SMB). Nothing scans the network."},
 #endif
 };
 
@@ -820,7 +800,7 @@ static const SetPage pages[P_COUNT] = {
     [P_MMCE_BACKUP] = PAGE("MMCE backup & sync", DI_MC, "Backup, cloud and IGR return controls in one place.", mmce_backup_items),
     [P_NETWORK] = PAGE("Network", DI_NETWORK, "Console address for FTP, PS2Link and UDPFS.", net_items),
 #ifdef SMB
-    [P_SMB] = PAGE("SMB shares", DI_NETWORK, "One block per share in SMB2.CNF. smb:/ lists connected SMB2/3 shares; smb1:/ opens SMB1. Neither scans the network.", smb_items),
+    [P_SMB] = PAGE("SMB shares", DI_NETWORK, "Saved in LAUNCHSTATION.CNF; an old SMB2.CNF is read until the first save. Each share is a folder in Files > Network (SMB).", smb_items),
 #endif
     [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules, settings locations, updates and About.", system_items),
     [P_CLASSIC] = PAGE("Classic screen settings", DI_SETTINGS, "These settings affect classic screens; dashboard themes have their own controls.", classic_items),
@@ -3244,6 +3224,19 @@ static void runAction(int id)
 		case S_ABOUT_PROJECT:
 			dashShowAbout();
 			break;
+#ifdef ETH
+		case S_SMBD_USER:
+		case S_SMBD_PASS: {
+			char *v = id == S_SMBD_USER ? setting->SMB_Server_User : setting->SMB_Server_Pass, edit[32];
+			dashStrCopy(edit, v, sizeof(edit));
+			if (dashModalKeyboard(id == S_SMBD_USER ? "SMB server user name" : "SMB server password", edit,
+			                      sizeof(edit) - 1) && edit[0] && strcmp(edit, v)) {
+				strcpy(v, edit);
+				classic_dirty = 1;
+			}
+			break;
+		}
+#endif
 #ifdef SMB
 		case S_SMBED_NAME:
 			smbedEditField("Files label (e.g. PS2 Games)", smbed.name, sizeof(smbed.name),
@@ -3330,24 +3323,29 @@ static void runAction(int id)
 			    "# NAME = OLDBOX\n"
 			    "# VERSION = 1\n"
 			    "# URL = smb://192.168.0.30:445/PS2SMB\n";
-			char path[MAX_PATH];
-			int fd;
-			smbSharesConfigured(SMB_PATH_V2); /* reads the file; no network */
-			if (smbSharesConfigPath()[0])
-				dashStrCopy(path, smbSharesConfigPath(), sizeof(path));
-			else {
-				configBuildSysconfPath(path, sizeof(path), "SMB2.CNF");
-				configEnsureSysconfDir(path);
-				/* A file that was unreadable (too large, card inserted later) is
-				 * still there: never replace one with the template. */
-				if ((fd = genOpen(path, FIO_O_RDONLY)) >= 0)
-					genClose(fd);
-				else if ((fd = genOpen(path, FIO_O_CREAT | FIO_O_WRONLY | FIO_O_TRUNC)) >= 0) {
-					genWrite(fd, (void *)smb_template, sizeof(smb_template) - 1);
-					genClose(fd);
+			char *text = NULL;
+			if (smbSharesBlocks() == NULL) {
+				/* An old SMB2.CNF's shares (or the examples) come across; SMB2.CNF is
+				 * never written. One that exists but cannot be read stays untouched. */
+				smbSharesConfigured(SMB_PATH_V2); /* reads the file; no network */
+				if (smbSharesConfigPath()[0] &&
+				    (text = dashLoadTextFile(smbSharesConfigPath(), SMB_CNF_MAX_SIZE, NULL)) == NULL) {
+					dashModalMessage(DI_WARNING, "SMB2.CNF not read", "Its shares were not copied. Try again.", NULL);
+					break;
 				}
+				smbSharesSetBlocks(text != NULL ? text : smb_template);
+				free(text);
 			}
-			dashTextEditor(path);
+			/* The shares are the end of LAUNCHSTATION.CNF: save it, edit it, then
+			 * take the edited blocks back. */
+			if (!dashSettingsSaveCnf() || !dashWorkerAwaitAll("Saving settings") ||
+			    cfg_failed[CFG_SAVE_CNF] || !LoadedConfigPath[0])
+				break;
+			dashTextEditor(LoadedConfigPath);
+			if ((text = dashLoadTextFile(LoadedConfigPath, 128 * 1024, NULL)) != NULL) {
+				smbSharesSetSection(text);
+				free(text);
+			}
 			if (!smbSharesReload())
 				dashModalMessage(DI_WARNING, "Restart required",
 				                 "The old SMB connections could not be closed. Restart Launchstation to use the edited configuration.", NULL);
@@ -3700,7 +3698,7 @@ static const char *actionStatus(int id)
 		case S_SMBED_NAME:
 			return smbed.name[0] ? smbed.name : "e.g. PS2 Games";
 		case S_SMBED_KIND:
-			return smbed.kind == 1 ? "SMB1 (opens via smb1:/)" : smbed.kind == 3 ? "SMB3" : "SMB2";
+			return smbed.kind == 1 ? "SMB1" : smbed.kind == 3 ? "SMB3" : "SMB2";
 		case S_SMBED_IP:
 			return smbed.host[0] ? smbed.host : "e.g. 192.168.1.20";
 		case S_SMBED_PORT: {
@@ -3715,10 +3713,16 @@ static const char *actionStatus(int id)
 			return smbed.folder[0] ? smbed.folder : "e.g. games";
 		case S_SMBED_USER:
 			return smbed.user[0] ? smbed.user : "e.g. ps2 / guest";
+#ifdef ETH
+		case S_SMBD_USER:
+			return setting->SMB_Server_User;
+		case S_SMBD_PASS:
+			return setting->SMB_Server_Pass;
+#endif
 		case S_SMBED_PASS:
 			return smbed.pass[0] ? "set (hidden)" : "blank";
 		case S_SMBED_SAVE:
-			return smbed.pick == 0 ? "append to SMB2.CNF" : "replace this block";
+			return smbed.pick == 0 ? "add a new share" : "replace this block";
 		case S_SMBED_DELETE:
 			return smbed.pick == 0 ? "pick a share first" : NULL;
 #endif

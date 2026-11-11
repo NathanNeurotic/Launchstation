@@ -1905,6 +1905,17 @@ int readSMB(const char *path, FILEINFO *info, int max)
 		return -ENOTCONN;
 	}
 	n = readNetDir(path, info, max, &smb_dir_open_failed);
+	if (root && version == SMB_PATH_V2 && smbSharesV1Name() != NULL) {
+		/* the SMB1 share is a folder of the one SMB device (smb1: underneath) */
+		if (n < 0)
+			n = 0;
+		if (n < max) {
+			memset(&info[n], 0, sizeof(info[n]));
+			snprintf((char *)info[n].name, sizeof(info[n].name), "%s", smbSharesV1Name());
+			info[n++].stats.AttrFile = sceMcFileAttrSubdir;
+		}
+		smb_dir_open_failed = 0;
+	}
 	if (root && n == 0 && smbSharesConnectedCount(version) == 0)
 		smb_dir_open_failed = 1;
 	return n;

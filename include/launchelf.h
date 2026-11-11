@@ -335,6 +335,8 @@ typedef struct
 	int PSU_DateNames;
 	int PSU_NoOverwrite;
 	int FB_NoIcons;
+	char SMB_Server_User[32]; /* memory-card SMB server login; "ps2" by default */
+	char SMB_Server_Pass[32];
 } SETTING;
 
 typedef struct
