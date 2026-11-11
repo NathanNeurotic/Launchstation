@@ -50,10 +50,13 @@ start() { # $1 free KB (optional)
     printf 'icon\n' >"$work/root/mc0/BESLES-12345/icon.sys"
     ASAN_OPTIONS=detect_leaks=1 "$work/host" "$port" "$work/root" ps2 secret ${1:-} >"$work/host.log" 2>&1 &
     pid=$!
-    for _ in 1 2 3 4 5 6 7 8 9 10; do
-        smbclient -N -L //127.0.0.1 -p "$port" >/dev/null 2>&1 && break
+    # Wait until the port answers. smbclient -L -N fails even then (guest is refused), so
+    # look at why it failed; a slow runner can take seconds to start a sanitized server.
+    for _ in $(seq 150); do
+        smbclient -N -L //127.0.0.1 -p "$port" 2>&1 | grep -q CONNECTION_REFUSED || return 0
         sleep 0.2
     done
+    bad "server not listening 30 s after start"
 }
 
 stop() { # SIGTERM is smbd_stop(); the server has to return within a second, cleanly
