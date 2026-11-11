@@ -120,6 +120,27 @@ static const char *getLaunchArgsSidecarBasePath(const char *path, const char *fu
 	return path;
 }
 
+/* LoadBOOTer, the card update our exploit installer writes, ignores
+   BootBrowser and always runs mc0:/BOOT/BOOT.ELF. Recognise it read-only
+   by the path it carries, on the first card OSDSYS would use. */
+static int cardUpdateIsLoadBooter(const char *update_path)
+{
+	char path[MAX_PATH], buf[18];
+	int port, fd, match;
+
+	if (strncmp(update_path, "mc:", 3))
+		return 0;
+	for (port = 0; port < 2; port++) {
+		snprintf(path, sizeof(path), "mc%d%s", port, update_path + 2);
+		if ((fd = genOpen(path, FIO_O_RDONLY)) < 0)
+			continue;
+		match = genLseek(fd, 12440, SEEK_SET) == 12440 && genRead(fd, buf, 18) == 18 && !memcmp(buf, "mc0:/BOOT/BOOT.ELF", 18);
+		genClose(fd);
+		return match;
+	}
+	return 0;
+}
+
 static int isMiscDashboardPath(const char *path)
 {
 	char dash_path[MAX_PATH];
@@ -632,11 +653,13 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		return;
 	} else if (!stricmp(path, setting->Misc_PS2Browser)) {
 		/* BootBrowser alone lets OSDSYS run the memory card update (FMCB,
-		   OSDMenu) first. The Tools "skip card update" entry adds SkipMc. */
+		   OSDMenu) first. The Tools "skip card update" entry adds SkipMc,
+		   and so does a LoadBOOTer card, which would never open the Browser. */
 		char *args[2] = {"BootBrowser", "SkipMc"};
+		int skip_mc = PS2BrowserSkipMc || cardUpdateIsLoadBooter(ctx->default_osdsys_path);
 
 		CleanUpForExec();
-		ExecOSD(1 + PS2BrowserSkipMc, args);
+		ExecOSD(1 + skip_mc, args);
 #ifdef ETH
 	} else if (!stricmp(path, setting->Misc_PS2Net)) {
 		ctx->main_msg[0] = 0;
