@@ -123,11 +123,21 @@ int main(void) {
     leave_disable_home = 0;
     dashCfg.disabled_tabs = 0;
     /* Only Settings left after Discard: stay, and let Settings start a new session. */
+    dashSwitchSection(DASH_SEC_SETTINGS);
+    assert(section == DASH_SEC_SETTINGS);
     enter_count = 0;
     leave_disable_all = 1;
     dashSwitchSection(DASH_SEC_HOME);
     assert(section == DASH_SEC_SETTINGS && enter_count == 1);
     leave_disable_all = 0;
+    /* An active Files tab is not entered a second time. */
+    dashCfg.disabled_tabs = 0;
+    dashSwitchSection(DASH_SEC_FILES);
+    assert(section == DASH_SEC_FILES);
+    enter_count = 0;
+    dashCfg.disabled_tabs = (1 << DASH_SEC_HOME);
+    dashSwitchSection(DASH_SEC_HOME);
+    assert(section == DASH_SEC_FILES && enter_count == 0);
     dashCfg.disabled_tabs = 0;
     puts("PASS: unified Home, Files as real tab, shoulder cycling, cancel and cleanup");
 }

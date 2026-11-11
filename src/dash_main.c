@@ -219,8 +219,8 @@ void dashSwitchSection(int s)
 	if ((s == DASH_SEC_HOME || s == DASH_SEC_FILES || s == DASH_SEC_TOOLS) && !sectionTabEnabled(s)) {
 		s = dashBackSection();
 		if (s == section) {
-			if (screens[section]->enter)
-				screens[section]->enter(); /* the leave step ended its session */
+			if (section == DASH_SEC_SETTINGS && screens[section]->enter)
+				screens[section]->enter(); /* Discard ended its session; other tabs stay as they are */
 			return;
 		}
 	}
