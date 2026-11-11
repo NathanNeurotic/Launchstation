@@ -104,7 +104,7 @@ int main(void)
         smbCnfBuildBlock(repl, sizeof(repl), "TWO", 2, NULL, NULL, "10.0.0.9", 445, "y2", 0);
         len = upsert(cr, "TWO", repl, out, sizeof(out), work, sizeof(work));
         check(len > 0 && strstr(out, "NAME = ONE\rURL = smb://10.0.0.1/x\r") != NULL &&
-              strstr(out, "10.0.0.2") == NULL && strstr(out, "smb://10.0.0.9/y2") != NULL,
+              strstr(out, "10.0.0.2") == NULL && strstr(out, "smb://10.0.0.9:445/y2") != NULL,
               "CR-only file: other share kept, target replaced");
         checkParses("cr-only", out, 2);
     }
