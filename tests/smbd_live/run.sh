@@ -126,11 +126,13 @@ out=$(smb mc0 "rmdir NEWDIR") || true
 mkdir "$work/root/mc0/OTHER" && printf 'keep\n' >"$work/root/mc0/OTHER/B.BIN"
 out=$(smb mc0 "rename NEWDIR\\C.BIN OTHER\\B.BIN -f") || true
 echo "$out" | grep -q NOT_SAME_DEVICE && [ "$(cat "$work/root/mc0/OTHER/B.BIN")" = keep ] &&
+    cmp -s "$work/big.bin" "$work/root/mc0/NEWDIR/C.BIN" &&
     pass "replacing move to another folder refused, target kept" || bad "cross-folder replace: $out"
 rm -r "$work/root/mc0/OTHER"
 printf 'keep\n' >"$work/root/mc0/NEWDIR/FAILONCE.BIN"
 out=$(smb mc0 "rename NEWDIR\\C.BIN NEWDIR\\FAILONCE.BIN -f") || true
-[ "$(cat "$work/root/mc0/NEWDIR/FAILONCE.BIN")" = keep ] && [ -f "$work/root/mc0/NEWDIR/C.BIN" ] &&
+echo "$out" | grep -q NT_STATUS_ && [ "$(cat "$work/root/mc0/NEWDIR/FAILONCE.BIN")" = keep ] &&
+    cmp -s "$work/big.bin" "$work/root/mc0/NEWDIR/C.BIN" &&
     [ ! -e "$work/root/mc0/NEWDIR/SMBD-OLD.TMP" ] &&
     pass "failed replacing rename puts the target back" || bad "failed replace: $out"
 cp "$work/root/mc0/NEWDIR/C.BIN" "$work/c.expect"

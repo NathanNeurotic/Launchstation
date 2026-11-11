@@ -171,6 +171,11 @@ static u8 have_udpfs_ioman = 0;
 
 static u8 have_ps2ftpd = 0;
 static u8 have_smbd = 0, smbd_active = 0;
+/* An IOP reboot ends the SMB server with its card files open: stop it first. */
+static int smbStoppedForReset(void)
+{
+	return !smbd_active || stopSmbServer() == 0;
+}
 static u8 have_ps2kbd = 0;
 static u8 have_hdl_info = 0;
 
@@ -561,6 +566,8 @@ static void idleDev9StorageForPoweroff(void)
 //---------------------------------------------------------------------------
 static void idleDev9StorageBeforeReset(void)
 {
+	if (!smbStoppedForReset()) /* a launch resets anyway: close what can be closed */
+		DPRINTF(" [SMBD]: still closing files before IOP reset\n");
 	if (shutdownPcCardCf() < 0)
 		DPRINTF(" [PCCF]: shutdown failed before IOP reset\n");
 	if (ps2dev9_loaded) {
@@ -815,7 +822,7 @@ int prepareExploitSignerIop(void)
 	return 0;
 #else
 	int ret;
-	if (shutdownPcCardCf() < 0) return 0;
+	if (shutdownPcCardCf() < 0 || !smbStoppedForReset()) return 0;
 
 	if (have_exploit_signer_iop) {
 		ensureCoreIoStackReady();
@@ -2049,7 +2056,7 @@ int prepareEmberUsbHandoffIop(const char *ember_path, const char *game_image,
 	return snprintf(resolved, resolved_size, "%s", ember_path) < (int)resolved_size;
 #else
 	DPRINTF("[EMBER USB] launcHER-style storage reset for %s\n", probe);
-	if (shutdownPcCardCf() < 0) return 0;
+	if (shutdownPcCardCf() < 0 || !smbStoppedForReset()) return 0;
 	fileXioExit();
 	SifLoadFileExit();
 	resetUsbHostControllerBeforeIopReset();
@@ -2161,6 +2168,10 @@ static void resetRuntimeDeviceState(int show_status)
 		return;
 	}
 #endif
+	if (!smbStoppedForReset()) {
+		DPRINTF("IOP reset refused: SMB did not finish closing files\n");
+		return;
+	}
 	/* A dashboard root-card presence poll uses asynchronous libmc RPC on
 	 * the same SIO2/PADMAN IOP session. Drain it before closing PAD ports
 	 * or restarting the IOP, otherwise a pending mcGetInfo may outlive
