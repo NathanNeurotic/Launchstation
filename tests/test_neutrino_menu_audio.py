@@ -84,6 +84,7 @@ static int DashChooseElfIopMode(int configured) { return configured; }
 static void dashSoundSuspend(void) { muted = 1; suspended++; }
 static void dashSoundShutdown(void) { muted = 1; shutdown_calls++; }
 static void fadeScreenToBlack(void) {}
+static int stopSmbServer(void) { return 0; }
 static void DashThemeSetLegacyEnabled(int e) { (void)e; }
 static void clearScreenToBlack(void) {}
 static void padPortClose(int p, int s) { (void)p; (void)s; }

@@ -36,6 +36,7 @@ assert "settleBackgroundWork" in prepare
 assert "filerRootMcPollIdle()" in prepare
 assert "dashSoundShutdown()" in prepare
 assert "cleanUpForExecInternal(1)" in cleanup
+assert internal.index("stopSmbServer();") < internal.index("fadeScreenToBlack();")  # every launch stops SMB first
 assert "padPortClose(1, 0)" in internal
 assert "padPortClose(0, 0)" in internal
 assert "padEnd();" in internal

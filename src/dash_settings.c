@@ -134,6 +134,7 @@ enum SetId {
 	S_SMBED_PICK, S_SMBED_NAME, S_SMBED_KIND, S_SMBED_IP, S_SMBED_PORT,
 	S_SMBED_FOLDER, S_SMBED_USER, S_SMBED_PASS, S_SMBED_SAVE, S_SMBED_DELETE,
 	S_SMBED_TEXT,
+	S_CLOCK,
 	S_CLOCK_MANUAL,
 	S_CLOCK_SOFTWARE,
 	S_CLOCK_HARDWARE,
@@ -692,13 +693,11 @@ static const SetItem psu_items[] = {
 static const SetItem system_items[] = {
     {ST_PAGE, P_LANGUAGE, "Language", "Built-in language and external translations for file operations and tools."},
     {ST_PAGE, P_PSU, "Memory card backup files", "PSU naming and overwrite rules used by File Browser operations."},
-    {ST_PAGE, P_CLASSIC, "Classic screen settings", "Appearance of classic dialogs and the legacy launch menu."},
-    {ST_ACTION, S_CLOCK_SOFTWARE, "Set software clock...", "Works without a CMOS battery. Restarts at the last saved time; save again before power-off to retain elapsed runtime."},
-    {ST_ACTION, S_CLOCK_HARDWARE, "Use PS2 hardware clock", "Stop the software clock and use the console RTC again."},
-    {ST_ACTION, S_CLOCK_MANUAL, "Set PS2 clock manually...", "Pick each field with Left/Right and change it with Up/Down; the hardware RTC is written and verified."},
+    {ST_ACTION, S_CLOCK, "Set PS2 Clock", "Set the date and time by hand, from the Internet where available, or with the software clock for a dead CMOS battery."},
     {ST_CHOICE, S_TEMP_UNITS, "PS2 Temperature Units (50K and later)", "Celsius or Fahrenheit beside the clock. Hidden automatically when the console has no supported temperature sensor."},
     {ST_PATH, S_CNF_PATH, "Configuration folder", "Optional save target for LAUNCHELF.CNF. Loading searches the start folder, then mcN:/SYS-CONF/ on the launch card, then the other card."},
     {ST_ACTION, S_SAVE_AS, "Save launch & tool settings to...", "Writes LAUNCHELF.CNF immediately to another location; dashboard and network settings are saved separately."},
+    {ST_PAGE, P_CLASSIC, "Classic screen settings", "Appearance of classic dialogs and the legacy launch menu."},
     {ST_ACTION, S_INTRO, "Show welcome message again", "Show the introduction the next time the dashboard checks for it."},
 #if defined(ETH) && defined(WLE_NATIVE_CLOUD)
     {ST_ACTION, S_CHECK_UPDATES, "Check for updates", "Compare with the rolling latest release; a newer build can be downloaded, SHA-256 verified and installed in place."},
@@ -3397,6 +3396,30 @@ static void runAction(int id)
 			break;
 		}
 #endif
+		case S_CLOCK: {
+			/* One System row for every clock action; each still runs its own case. */
+			static const int clock_actions[] = {
+			    S_CLOCK_MANUAL,
+#ifdef ETH
+			    S_CLOCK_SYNC,
+#endif
+			    S_CLOCK_SOFTWARE,
+			    S_CLOCK_HARDWARE,
+			};
+			DashMenuItem clock_items[] = {
+			    {DI_CLOCK, localizeDashboardText("Set manually..."), NULL, 0},
+#ifdef ETH
+			    {DI_CLOCK, localizeDashboardText("Sync from Internet"), NULL, 0},
+#endif
+			    {DI_CLOCK, localizeDashboardText("Set software clock..."), NULL, 0},
+			    {DI_CLOCK, localizeDashboardText("Use PS2 hardware clock"), NULL, 0},
+			};
+			int choice = dashModalMenu(localizeDashboardText("Set PS2 Clock"), NULL, clock_items, NITEMS(clock_items), 0);
+
+			if (choice >= 0)
+				runAction(clock_actions[choice]);
+			break;
+		}
 		case S_SAVE_CLASSIC:
 			settingsSaveAction();
 			break;
@@ -3754,7 +3777,7 @@ static void settingsDraw(void)
 			               it->type == ST_PATH ? DI_FOLDER :
 			               it->type == ST_IP ? DI_NETWORK :
 			               it->type == ST_LKEY ? DI_KEY :
-			               it->type == ST_ACTION ? DI_PLAY :
+			               it->type == ST_ACTION ? (it->id == S_SAVE_AS ? DI_SAVE : (it->id == S_CLOCK || it->id == S_CLOCK_SYNC) ? DI_CLOCK : DI_PLAY) :
 			               it->type == ST_INFO ? DI_INFO : DI_SETTINGS;
 			dashIcon(row_icon, ix + 12, y + 7, 15, col);
 		}

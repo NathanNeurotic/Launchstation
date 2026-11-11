@@ -22,6 +22,7 @@ int DashIsActive(void);
 /* The HDD Manager (dash_hdd.c). Needs the dashboard running. */
 void dashHddManager(void);
 int DashFtpServer(void);
+int DashSmbServer(void);
 int dashFtpPollRemote(void);
 
 /* Publish the next blocking storage operation before entering its RPC.
