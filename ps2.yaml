@@ -167,6 +167,24 @@ targets:
     cflags: [-Wall]
     headers: [sio2man, dmacman, intrman, iomanx, loadcore, stdio, sysclib, threadman]
 
+  # MX4SIO: RiptOPL's copy of the SDK driver (iop/mx4sio_bd/ORIGIN.md). Over the SDK copy it
+  # resumes partial transfers at the next sector, counts only accepted write sectors, puts the
+  # caller's buffer back after a write, keeps the CSD response in bounds, and bounces buffers
+  # that are not word aligned (ps2sdk PR 959). Embedded under the SDK name mx4sio_bd.
+  - name: mx4sio_bd_fork
+    type: iop
+    sources:
+      - iop/mx4sio_bd/src/spi_sdcard_crc7.c
+      - iop/mx4sio_bd/src/spi_sdcard_driver.c
+      - iop/mx4sio_bd/src/crc16.c
+      - iop/mx4sio_bd/src/ioplib.c
+      - iop/mx4sio_bd/src/sio2man_hook.c
+      - iop/mx4sio_bd/src/mx4sio.c
+    include_dirs: [iop/mx4sio_bd/src]
+    imports_lst: iop/mx4sio_bd/src/imports.lst
+    libs: [gcc]
+    headers: [bdm, sio2man, dmacman, intrman, loadcore, stdio, sysclib, threadman]
+
   # The SDK ps2ips target is the EE client library, not an embeddable IRX.
   # Build its matching IOP socket RPC server explicitly under a distinct name.
   - name: ps2ips_rpc
@@ -426,7 +444,7 @@ targets:
       - bdm
       - bdmfs_fatfs
       - usbmass_bd
-      - mx4sio_bd
+      - mx4sio_bd_fork:mx4sio_bd
       - iLinkman
       - IEEE1394_bd_mini:IEEE1394_bd
       - dev9:ps2dev9
@@ -636,7 +654,7 @@ targets:
       - pvrdrv:dvrdrv
       - dvrfile
       - mmceman
-      - mx4sio_bd
+      - mx4sio_bd_fork:mx4sio_bd
       - iLinkman
       - IEEE1394_bd_mini:IEEE1394_bd
       - sio2man
