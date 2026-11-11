@@ -179,7 +179,7 @@ hold mc1 3 &
 c2=$!
 sleep 1
 out=$(smb mc0 ls) && bad "third client accepted" || pass "third client refused"
-wait $c1 $c2 || true
+wait $c1 && wait $c2 && pass "both held clients connected" || bad "a held client failed: the limit is below two"
 stop "with clients come and gone"
 
 start
