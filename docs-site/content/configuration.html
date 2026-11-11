@@ -22,7 +22,7 @@
 <li>At startup <code>LAUNCHSTATION.CNF</code> is loaded from the folder the ELF was started from.</li>
 <li>If it is not there, <code>mc0:/SYS-CONF/LAUNCHSTATION.CNF</code> (or <code>mc1:</code>, preferring the slot Launchstation started from) is used.</li>
 <li>If no <code>LAUNCHSTATION.CNF</code> exists in either place, an existing <code>LAUNCHELF.CNF</code> is searched for the same way and its settings are imported. That file is only read, never written: the next Save writes <code>LAUNCHSTATION.CNF</code> to the same folder, so other wLaunchELF builds that share <code>LAUNCHELF.CNF</code> keep their own settings.</li>
-<li><b>Configuration folder</b> (<code>CNF_Path</code>, Settings &gt; System) redirects loading and saving to another folder after the IOP reset; this is how HDD or disc installs find a CNF beside the ELF.</li>
+<li><b>Configuration folder</b> (<code>CNF_Path</code>, Settings &gt; System) is an extra save target. Startup does not load from it; it only searches the places above.</li>
 <li>Files larger than 128 KB are rejected. A file without <code>CNF_version</code> is treated as a legacy config.</li>
 </ol>
 <p>A normal Save writes the file back to where it came from when it can; otherwise it falls back to a memory card <code>SYS-CONF</code> folder or the ELF's folder. <b>Settings &gt; System &gt; Save launch &amp; tool settings to...</b> lets you choose explicitly between the configured folder, the folder next to the ELF and the memory card <code>SYS-CONF</code>, and writes immediately. The path used to load the configuration is tracked so the UI can explain where state came from. A recovery boot (hold SELECT) still loads <code>LAUNCHSTATION.CNF</code> but ignores <code>DASHBOARD.CNF</code>.</p>
