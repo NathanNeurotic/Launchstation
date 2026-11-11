@@ -738,6 +738,8 @@ static int rename_handle(struct smb2_context *smb2, int i, const uint8_t *buf, u
 		if (!buf[0] || st.dir) /* ReplaceIfExists; a folder is never replaced */
 			return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_OBJECT_NAME_COLLISION);
 		/* Move the target aside, not away, so a failed rename can put it back. */
+		if ((size_t)(b - to) + sizeof("/SMBD-OLD.TMP") > sizeof(aside))
+			return reply(smb2, SMB2_SET_INFO, SMB2_STATUS_NAME_TOO_LONG);
 		memcpy(aside, to, b - to);
 		strcpy(aside + (b - to), "/SMBD-OLD.TMP");
 		if (smbd_stat(aside, &st) == 0)
