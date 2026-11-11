@@ -44,11 +44,13 @@ pure_c += r"""
 #define DI_BACK 3
 #define DI_STAR 4
 #define DI_REFRESH 5
+#define DI_SAVE 6
 #define DASH_TOAST_OK 1
 #define DASH_TOAST_WARN 2
 static char active_profile_gameid[12];
 static int profileSave(const char *id, const NEUTRINO_LAUNCH_OPTIONS *o) { (void)id; (void)o; return 1; }
 static void dashToast(int kind, const char *text) { (void)kind; (void)text; }
+static void dashSoundMaintain(void) { }
 typedef struct { int icon; const char *label; const char *detail; int disabled; } DashMenuItem;
 int dashModalMenu(const char *, const char *, const DashMenuItem *, int, int);
 int dashModalChoice(const char *, const char *const *, int, int);
@@ -120,22 +122,22 @@ int main(void) {
     assert(buildNeutrinoOptionArgs(&o, &a) == -1);
     assert(buildNeutrinoOptionArgs(0, &a) == -1);
     assert(buildNeutrinoOptionArgs(&o, 0) == -1);
-    const int run[] = {0,0, 4,0, 5,0, 6,0, 7,0, 8,0, 9,0};
+    const int run[] = {1,0, 5,0, 6,0, 7,0, 8,0, 9,0, 0,0};
     memset(&o, 0, sizeof(o)); script = run; step = 0; choice = 3; opened = 0;
     assert(testDashboard(&o) == 1 && step == 14 && opened == 1); /* every change in one session */
     assert(o.game_compatibility == ((1u << 0) | (1u << 7)));
     assert(o.video_mode == 3 && o.video_compatibility == 3 && o.debug_colors && o.logo);
     /* Left/Right step the two lists (wrapping) and flip switches; the row text follows. */
-    const int lr[] = {5,1, 6,-1, 0,-1, 7,1, 9,1, 10,-1, 5,-1, 5,-1, 5,-1, 5,-1, 9,0};
+    const int lr[] = {6,1, 7,-1, 1,-1, 8,1, 0,1, 10,-1, 6,-1, 6,-1, 6,-1, 6,-1, 0,0};
     script = lr; step = 0; opened = 0;
     assert(testDashboard(&o) == 1 && opened == 1);
     assert(o.video_mode == 0 && o.video_compatibility == 2 && o.game_compatibility == (1u << 7) && !o.debug_colors);
-    assert(!strcmp(shown[0].detail, "Off") && !strcmp(shown[7].detail, "Off"));
-    const int wrap[] = {5,-1, 9,0}; script = wrap; step = 0;
+    assert(!strcmp(shown[1].detail, "Off") && !strcmp(shown[8].detail, "Off"));
+    const int wrap[] = {6,-1, 0,0}; script = wrap; step = 0;
     assert(testDashboard(&o) == 1 && o.video_mode == testVideoCount() - 1);
     const int cancel[] = {0,9}; script = cancel; step = 0;
     assert(testDashboard(&o) == 0);
-    const int submenu_cancel[] = {5,0, 10,0}; script = submenu_cancel; step = 0; choice = -1;
+    const int submenu_cancel[] = {6,0, 10,0}; script = submenu_cancel; step = 0; choice = -1;
     assert(testDashboard(&o) == 0 && o.video_mode == testVideoCount() - 1);
     return 0;
 }
