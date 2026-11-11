@@ -68,7 +68,7 @@ static const Tool tools[] = {
     {TA_MISC, DI_APP, "OSDSYS", "Start the console's OSD (or the OSDSYS path configured in Launchstation).", NULL, 2, MISC(Misc_OSDSYS), NULL},
 #ifdef ETH
     {TA_MISC, DI_NETWORK, "FTP / Remote access", "Start FTP and PS2Link on demand, accept remote commands, and receive staged/resumable ISO transfers from MrRexD-compatible PC tools.", "Network and HDD drivers stay unloaded until you start this tool.", 0, MISC(Misc_PS2Net), NULL},
-    {TA_SMB, DI_NETWORK, "SMB server (memory cards)", "Share both memory cards with a PC over SMB2/SMB3, as \\\\<PS2 IP>\\mc0 and \\\\<PS2 IP>\\mc1.", "The login (ps2 / ps2) is the same on every console: anyone on your network can use it, so run it only on a network you trust.", 0, 0, NULL},
+    {TA_SMB, DI_NETWORK, "SMB server (memory cards)", "Share both memory cards with a PC over SMB2/SMB3, as \\\\<PS2 IP>\\mc0 and \\\\<PS2 IP>\\mc1.", "The login is ps2 / ps2 until you change it in Settings > Network. Run it only on a network you trust.", 0, 0, NULL},
 #ifdef WLE_NATIVE_CLOUD
     {TA_CLOUD, DI_NETWORK, "Google Drive backups", "Link Google Drive and upload missing WLE-MMCE-Backups versions directly from the PS2 over HTTPS.", "Cloud sync is copy-only. It never deletes local or Drive backup history.", 0, 0, NULL},
 #endif

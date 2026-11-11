@@ -1,26 +1,27 @@
 <h1>Network Shares (SMB)</h1>
-<p class="lead">The <b>Network (SMB)</b> device (<code>smb:</code>) opens shared folders on a Windows PC, a Samba server or a NAS over SMB2 or SMB3. Older servers that only speak SMB1 are opened as <b>Network (SMB1)</b> (<code>smb1:</code>). Shares are listed in a text file, <code>SMB2.CNF</code>. Not yet tested on a console.</p>
+<p class="lead">The <b>Network (SMB)</b> device (<code>smb:</code>) opens shared folders on a Windows PC, a Samba server or a NAS over SMB2 or SMB3. An older server that only speaks SMB1 is a folder in the same device (it opens as <code>smb1:/</code>). Shares are saved at the end of Launchstation&rsquo;s own settings file, <code>LAUNCHSTATION.CNF</code>; an old <code>SMB2.CNF</code> is still read until you first save a share. Not yet tested on a console.</p>
 
 <div class="callout info"><div class="h">What you need</div><ul>
 <li>A console with a network adapter (or built-in Ethernet) on the same LAN as the server.</li>
 <li>A shared folder on the server, and an account that can open it.</li>
 <li>An IP address for the PS2 (<b>Settings &gt; Network</b>), and <b>Legacy Ethernet drivers</b> off.</li>
-<li>An <code>SMB2.CNF</code> file (below). <b>Settings &gt; Network &gt; SMB shares</b> opens it in the text editor, creating an example file in <code>SYS-CONF</code> when there is none.</li>
+<li>At least one share, added in <b>Settings &gt; Network &gt; SMB shares</b> (or as text, below).</li>
 </ul></div>
 
 <h2 id="how">How it works</h2>
-<p>Nothing touches the network until you open the device. The first time, Launchstation starts the network with the address in <code>IPCONFIG.DAT</code>, loads the SMB driver and connects every share for that device in <code>SMB2.CNF</code>. <code>smb:/</code> then lists one folder per connected share, named by its <code>NAME</code>: <code>smb:/PC</code>, <code>smb:/NAS</code>. <code>smb1:/</code> is the top of its one share.</p>
-<p>A share that does not connect is left out of <code>smb:/</code>, and the browser says why (for example <em>PC (line 7): Could not connect: check the address, share, user name and password</em>). Opening the device again tries the failed shares again, at most every 30 seconds, because an unanswered connect can take that long. When no share is connected, <code>SMB2.CNF</code> is read again first, so a corrected file is used without restarting.</p>
-<p>When at least one share connects, the browser and the device card show how many are connected, not which one failed. If a share is missing from <code>smb:/</code>, check its address, share name, user name and password in <code>SMB2.CNF</code>, then open <code>smb:</code> again to retry it. A file changed on a PC while another share is connected is read again after a restart, or after opening it once through <b>Settings &gt; Network</b>; either way a share that is already connected keeps its old address and credentials until the console restarts.</p>
+<p>Nothing touches the network until you open the device. The first time, Launchstation starts the network with the address in <code>IPCONFIG.DAT</code>, loads the SMB driver and connects every saved SMB2/SMB3 share. <code>smb:/</code> then lists one folder per connected share, named by its <code>NAME</code>: <code>smb:/PC</code>, <code>smb:/NAS</code>. An SMB1 share is listed there too, by its <code>NAME</code>; opening it goes to <code>smb1:/</code>, the top of that one share, and Back returns to <code>smb:/</code>.</p>
+<p>A share that does not connect is left out of <code>smb:/</code>, and the browser says why (for example <em>PC (line 7): Could not connect: check the address, share, user name and password</em>). Opening the device again tries the failed shares again, at most every 30 seconds, because an unanswered connect can take that long. When no share is connected, the share list is read again first, so a corrected file is used without restarting.</p>
+<p>When at least one share connects, the browser and the device card show how many are connected, not which one failed. If a share is missing from <code>smb:/</code>, check its address, share name, user name and password in <b>Settings &gt; Network &gt; SMB shares</b>, then open <code>smb:</code> again to retry it. A file changed on a PC while another share is connected is read again after a restart, or after opening it once through <b>Settings &gt; Network</b>; either way a share that is already connected keeps its old address and credentials until the console restarts.</p>
 
-<h2 id="file">SMB2.CNF</h2>
-<p>Launchstation uses the first <code>SMB2.CNF</code> it finds:</p>
+<h2 id="file">Where shares are saved</h2>
+<p>The shares are the blocks after a line reading exactly <code># SMB shares</code>, at the end of <code>LAUNCHSTATION.CNF</code>. The share editor writes them there, and <b>Edit shares as text</b> opens that file in the text editor (edit only the blocks after that line; the settings above it are written again from the running Launchstation). <code>SMB2.CNF</code>, which other launchers also read, is never written.</p>
+<p>While <code>LAUNCHSTATION.CNF</code> has no <code># SMB shares</code> line, Launchstation reads the first <code>SMB2.CNF</code> it finds. The first share you save (or the first time you edit the shares as text) copies its shares across:</p>
 <ol>
 <li>beside the running ELF (for example <code>mc0:/APPS/SMB2.CNF</code> for <code>mc0:/APPS/BOOT.ELF</code>);</li>
 <li><code>SYS-CONF/SMB2.CNF</code> on the memory card Launchstation was started from;</li>
 <li><code>SYS-CONF/SMB2.CNF</code> on the other memory card.</li>
 </ol>
-<p>That is where <code>IPCONFIG.DAT</code> is looked for too. Each line is <code>KEY = value</code>. Each share is the group of keys that ends with its <code>URL</code>, so <code>URL</code> comes last in each group.</p>
+<p>That is where <code>IPCONFIG.DAT</code> is looked for too. In both files each line is <code>KEY = value</code>. Each share is the group of keys that ends with its <code>URL</code>, so <code>URL</code> comes last in each group.</p>
 <table><thead><tr><th>Key</th><th>Value</th><th>Longest (bytes)</th></tr></thead><tbody>
 <tr><td><code>NAME</code></td><td>The share&rsquo;s folder name in <code>smb:/</code>. Required, unique (in any case), no <code>/ \ : * ? " &lt; &gt; |</code></td><td>31</td></tr>
 <tr><td><code>USERNAME</code></td><td>An account on the server</td><td>31</td></tr>
@@ -33,7 +34,7 @@
 <li>Keys can be in any case. Spaces and tabs around a value are removed, so a password cannot start or end with a space.</li>
 <li>Lines starting with <code>#</code> or <code>;</code> are comments. A line without <code>=</code> is skipped; the rest of the file is still read. Unknown keys are ignored.</li>
 <li>A value that is too long is not cut short: the share is refused, and the browser names the share, its line and the key. Lengths are in bytes; each ASCII character is one byte.</li>
-<li>If the only <code>VERSION = 1</code> share is refused this way, <b>Network (SMB1)</b> does not appear, so there is nowhere to show the error: correct <code>SMB2.CNF</code> and restart Launchstation, which reads the file at startup.</li>
+<li>If the only <code>VERSION = 1</code> share is refused this way, it is not listed in <code>smb:/</code>: correct it and open the device again.</li>
 <li>Use the server&rsquo;s IP address. SMB1 requires one; for SMB2/SMB3 host names are untested.</li>
 <li>The user name goes in <code>USERNAME</code>, not in the URL. A path after the share name is ignored: the share&rsquo;s folder opens at the top of the share.</li>
 <li>Up to 8 shares are read. Only one SMB1 share can be used, because the SMB1 driver keeps a single connection.</li>
@@ -50,18 +51,18 @@ USERNAME = ps2
 PASSWORD = n4s-pa55word
 URL = smb://192.168.0.20:445/games
 
-# An old server that only speaks SMB1, as smb1:/
+# An old server that only speaks SMB1, as smb:/OLDBOX (smb1:/)
 NAME = OLDBOX
 VERSION = 1
 URL = smb://192.168.0.30:445/PS2SMB</code></pre>
-<p><b>Network (SMB1)</b> appears in the device list only when <code>SMB2.CNF</code> has a <code>VERSION = 1</code> share. The file is read once at startup, which reads no network.</p>
+<p>The shares are read at startup, which reads no network.</p>
 
 <h2 id="use">What you can do</h2>
 <ul>
 <li><b>Browse, copy, rename, make and delete folders</b> inside a share. A listing that fails part-way is an error, not a partial list. File dates and attributes are not set on the server (the SMB2 driver has no way to).</li>
 <li><b>Nothing can be made in <code>smb:/</code> itself</b>: it only lists the connected shares. Rename works inside one share.</li>
 <li><b>Launch an ELF</b> from a share, as from <code>udpfs:</code>. Not yet tested.</li>
-<li><b>PS2 ISO games through Neutrino:</b> install the latest complete upstream nightly on a local device, then open the ISO. Launchstation maps the selected share and credentials from <code>SMB2.CNF</code> into <code>config/bsd-smb.toml</code> and launches <code>-bsd=smb -dvd=smb:&lt;path within the share&gt;</code>. Neutrino resets the IOP and opens its own session. See <a href="neutrino.html#smb">Neutrino SMB</a>.</li>
+<li><b>PS2 ISO games through Neutrino:</b> install the latest complete upstream nightly on a local device, then open the ISO. Launchstation maps the selected share and credentials into <code>config/bsd-smb.toml</code> and launches <code>-bsd=smb -dvd=smb:&lt;path within the share&gt;</code>. Neutrino resets the IOP and opens its own session. See <a href="neutrino.html#smb">Neutrino SMB</a>.</li>
 <li><b>POPStarter VCDs and Ember images:</b> Launchstation has no SMB handoff for these cores.</li>
 </ul>
 
@@ -75,7 +76,7 @@ URL = smb://192.168.0.30:445/PS2SMB</code></pre>
 
 <h2 id="troubleshooting">Troubleshooting</h2>
 <ol>
-<li><b>&ldquo;No SMB2.CNF found&rdquo;.</b> Put the file beside Launchstation or in <code>mc0:/SYS-CONF/</code>, then open the device again.</li>
+<li><b>&ldquo;No shares&rdquo;.</b> Add one in <b>Settings &gt; Network &gt; SMB shares</b>, or put an old <code>SMB2.CNF</code> beside Launchstation or in <code>mc0:/SYS-CONF/</code> and restart.</li>
 <li><b>&ldquo;Could not connect&rdquo;.</b> Check the server&rsquo;s IP address, the share name, the user name and password, that the PS2 is in the server&rsquo;s subnet, and that the server allows SMB2 (Windows: the share is reached with an account that has a password).</li>
 <li><b>SMB1: &ldquo;Server does not speak SMB1&rdquo;</b> or <b>&ldquo;Server did not answer&rdquo;.</b> Windows 10 and later turn SMB1 off; use SMB2 (leave <code>VERSION</code> out) unless the server is really SMB1-only.</li>
 <li><b>SMB1: &ldquo;User name or password refused&rdquo;</b> also appears when the server only accepts clear-text passwords. Launchstation does not send a password in the clear unless the share has <code>PLAINTEXT = 1</code>. Better: turn on encrypted passwords on the server (Samba: <code>encrypt passwords = yes</code>). With <code>PLAINTEXT = 1</code>, anyone on the network who can see the traffic, or pose as the server, can read the password, so use it only on a network you trust and with a password used nowhere else. A server that takes encrypted passwords still gets the encrypted form.</li>

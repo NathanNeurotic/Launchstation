@@ -74,6 +74,7 @@ int isFtpNetworkReady(void);
 int isFtpServerRunning(void);
 /* Memory card SMB server (iop/smbd). Running covers a stop that has not finished. */
 int startSmbServer(void);
+const char *smbServerLogin(void); /* user, then the password after its NUL */
 int smbServerStatus(void);
 int stopSmbServer(void);
 int isSmbServerRunning(void);

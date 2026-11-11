@@ -56,6 +56,11 @@ int smbSharesSnapshot(SmbConfig *out) { memset(out, 0, sizeof(*out)); return 0; 
 int smbSharesReload(void) { return 1; }
 int smbSharesConfigured(int v) { (void)v; return 0; }
 const char *smbSharesConfigPath(void) { return ""; }
+const char *smbSharesBlocks(void) { return 0; }
+int smbSharesSetBlocks(const char *b) { (void)b; return 1; }
+char *smbSharesTakeBlocks(char *b) { return b; }
+int dashSettingsSaveCnf(void) { return 1; }
+static int saveSharesCnf(void) { return 1; }
 """
 code += declarations
 input_start = header.rfind("enum {", 0, header.index("DASH_IN_UP"))

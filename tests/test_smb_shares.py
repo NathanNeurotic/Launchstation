@@ -64,6 +64,11 @@ int main(void)
     assert(smbConfigValidCount(&cfg, 2) == 2 && smbConfigValidCount(&cfg, 1) == 0);
 
     /* keys in any case; trailing spaces and tabs are not part of a password */
+    /* LAUNCHSTATION.CNF: the share blocks follow a "# SMB shares" line of their own */
+    assert(smbCnfSection("CNF_version = 3\r\nNAME = x\r\n") == NULL && smbCnfSection(NULL) == NULL);
+    assert(smbCnfSection("A = 1\r\n# SMB shares more\r\n") == NULL);
+    assert(!strcmp(smbCnfSection("A = 1\r\n# SMB shares\r\nNAME = B\r\n"), "NAME = B\r\n"));
+    assert(!strcmp(smbCnfSection("# SMB shares\nURL = u\n"), "URL = u\n") && !strcmp(smbCnfSection("x\n# SMB shares"), ""));
     assert(parse("name=A\nUserName = u \t\npassword = p  \nurl = smb://10.0.0.2/s\n") == 1);
     assert(!strcmp(share(0)->username, "u") && !strcmp(share(0)->password, "p"));
     /* a password may hold '=' and '#'; only the first '=' splits */
@@ -232,7 +237,17 @@ assert "smbPathKind(path) == SMB_PATH_V2 && smbIsRootPath(path))\n\t\twrite_disa
 devices = text("src/dash_devices.c")
 listing = devices[devices.index("int dashDevicesList("):]
 listing = listing[:listing.index("\n}\n")]
-assert "smbSharesKnown(SMB_PATH_V1)" in listing and "smbSharesConfigured" not in listing
+assert "smbSharesConfigured" not in listing
+# one SMB device: the SMB1 share is a folder of smb:/, not a row of its own
+assert '"Network (SMB1)"' not in listing and listing.count('"Network (SMB)"') == 1
+# the SMB1 share is a folder of smb:/ in the dashboard only; the classic
+# browser keeps its own smb1: root entry
+assert "smbSharesV1Name" not in read_smb
+dash_browser = text("src/dash_browser.c")
+list_run = dash_browser.split("static void listRun(void *arg)", 1)[1].split("\n}\n", 1)[0]
+assert "smbSharesV1Name() != NULL && smbPathKind(j->path) == SMB_PATH_V2 && smbIsRootPath(j->path)" in list_run
+probe = text("src/dash_devices.c")
+assert "(v == SMB_PATH_V2 && smbSharesConnectedCount(SMB_PATH_V1) > 0)" in probe
 
 # a refused mc1: (MX4SIO owns the bus) keeps the retry pending, but a fallback
 # SMB2.CNF that was read (mc0:/SYS-CONF) must stay visible to smbSharesKnown

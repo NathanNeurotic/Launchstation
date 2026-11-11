@@ -2,6 +2,8 @@
  *
  *   SifExecModuleBuffer(smbd_irx, size, len, "USER\0PASSWORD", &ret)
  *
+ * SMBD_DEVCTL_START takes the same "USER\0PASSWORD\0" to change the login of a stopped server.
+ *
  * Serves \\<ip>\mc0 and \\<ip>\mc1 on port 445 from a thread of its own. The "smbd:" device
  * takes the EE's devctls (SMBD_DEVCTL_* in include/smbd_devctl.h): status, stop and start.
  * The module stays resident after a stop, so nothing else on the IOP has to be reset.
@@ -269,7 +271,7 @@ static int dev_devctl(iomanX_iop_file_t *f, const char *name, int cmd, void *arg
 {
 	int i;
 
-	(void)f, (void)name, (void)arg, (void)arglen, (void)buf, (void)buflen;
+	(void)f, (void)name, (void)buf, (void)buflen;
 	switch (cmd) {
 	case SMBD_DEVCTL_STATUS:
 		return running ? 1 | !!smbd_listening() << 1 | smbd_clients << 2 : last_error;
@@ -278,7 +280,11 @@ static int dev_devctl(iomanX_iop_file_t *f, const char *name, int cmd, void *arg
 		for (i = 0; running && i < 30; i++)
 			DelayThread(100000);
 		return running ? -EBUSY : 0;
-	case SMBD_DEVCTL_START:
+	case SMBD_DEVCTL_START: /* arg: "USER\0PASSWORD\0", taken only while stopped */
+		if (!running && arglen > 2 && ((char *)arg)[arglen - 1] == '\0') {
+			strncpy(user, arg, sizeof(user) - 1);
+			strncpy(password, (char *)arg + strlen(arg) + 1, sizeof(password) - 1);
+		}
 		return start();
 	}
 	return -EINVAL;

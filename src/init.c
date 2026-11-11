@@ -2773,11 +2773,17 @@ int isFtpNetworkReady(void)
 /* The memory card SMB server (iop/smbd): loaded on first Start, then started and stopped
  * through its devctls. It stays resident when stopped, so FTP and the IOP are left alone.
  * Returns 0, or a negative errno. */
+static char smbd_login[64]; /* user\0password\0 the running server took */
+
 int startSmbServer(void)
 {
-	static const char args[] = "ps2\0ps2"; /* user and password, shown on the screen */
-	int id, ret;
+	char args[64]; /* user and password (Settings > Network), shown on the screen */
+	int id, ret, len;
 
+	len = strlen(setting->SMB_Server_User) + 1;
+	memcpy(args, setting->SMB_Server_User, len);
+	strcpy(args + len, setting->SMB_Server_Pass);
+	len += strlen(setting->SMB_Server_Pass) + 1;
 	if (!have_smbd) {
 		ensureCoreIoStackReady();
 		getIpConfig();
@@ -2785,17 +2791,24 @@ int startSmbServer(void)
 			return -ENETDOWN;
 		filerRootMcPollIdle();
 		have_smbd = 1; /* power-off can run mid-load: let it send the stop */
-		id = SifExecModuleBuffer(smbd_irx, size_smbd_irx, sizeof(args), args, &ret);
+		id = SifExecModuleBuffer(smbd_irx, size_smbd_irx, len, args, &ret);
 		DPRINTF(" [SMBD]: ID=%d, ret=%d\n", id, ret);
 		have_smbd = (id >= 0 && ret == 0);
 		ret = have_smbd ? 0 : -EIO;
 	} else {
 		filerRootMcPollIdle();
-		ret = fileXioDevctl("smbd:", SMBD_DEVCTL_START, NULL, 0, NULL, 0);
+		ret = fileXioDevctl("smbd:", SMBD_DEVCTL_START, args, len, NULL, 0);
 	}
+	if (ret == 0 && !smbd_active)
+		memcpy(smbd_login, args, len); /* a running server keeps its login */
 	if (ret == 0)
 		smbd_active = 1; /* a failed request leaves a running server marked running */
 	return ret;
+}
+
+const char *smbServerLogin(void)
+{
+	return smbd_login;
 }
 
 int smbServerStatus(void)

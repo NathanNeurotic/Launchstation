@@ -17,6 +17,10 @@
 #define SMB_URL_LEN    256 /* smb2Connect_in_t url */
 #define SMB_SERVER_LEN 16  /* smbLogOn_in_t serverIP: dotted IPv4 */
 
+/* LAUNCHSTATION.CNF keeps the share blocks after this line, at the end of
+ * the file; SMB2.CNF is only read when the line is missing. */
+#define SMB_CNF_SECTION "# SMB shares"
+
 #define SMB_DEVICE_V2 "smb:"
 #define SMB_DEVICE_V1 "smb1:"
 
@@ -87,6 +91,10 @@ int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
 int smbCnfUpsertText(const char *text, const char *orig_name,
                      const char *block_text, char *out, int out_size, char *work, int work_size);
 
+/* The share blocks after the SMB_CNF_SECTION line of text, or NULL when
+ * there is no such line. */
+const char *smbCnfSection(const char *text);
+
 /* SMB_PATH_V1 for "smb1:...", SMB_PATH_V2 for "smb:...", else SMB_PATH_NONE.
  * Plain prefix tests on "smb" would take smb1: for smb:. */
 int smbPathKind(const char *path);
@@ -105,9 +113,16 @@ int smbSharesSnapshot(SmbConfig *out);
 #define SMB_CNF_MAX_SIZE 16384            /* as smb_shares.c reads the file */
 void smbSharesConnect(int version, int retry_failed);
 int smbSharesConnectedCount(int version);
+const char *smbSharesV1Name(void); /* NAME of the SMB1 share listed in smb:/; no IO */
 void smbSharesStatus(int version, char *out, int out_size); /* no IO */
 void smbSharesForget(void); /* the drivers are gone (IOP reset) */
 int smbSharesReload(void); /* 1 when old sessions were retired; 0 on disconnect failure */
+/* LAUNCHSTATION.CNF's share blocks: taken from the file text when it is
+ * loaded, written back after its settings. NULL: none, SMB2.CNF is read. */
+int smbSharesSetSection(const char *cnf_text);
+int smbSharesSetBlocks(const char *blocks);
+char *smbSharesTakeBlocks(char *blocks); /* takes ownership, returns the old blocks */ /* the section without its line */
+const char *smbSharesBlocks(void);
 #endif
 
 #endif

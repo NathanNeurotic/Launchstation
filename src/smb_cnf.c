@@ -64,6 +64,26 @@ static int copyValue(char *dst, int dst_size, const char *src)
 	return 1;
 }
 
+const char *smbCnfSection(const char *text)
+{
+	size_t n = strlen(SMB_CNF_SECTION);
+
+	while (text != NULL && *text) {
+		if (!strncmp(text, SMB_CNF_SECTION, n) && (text[n] == '\r' || text[n] == '\n' || !text[n])) {
+			text += n;
+			if (*text == '\r')
+				text++;
+			if (*text == '\n')
+				text++;
+			return text;
+		}
+		text = strchr(text, '\n');
+		if (text != NULL)
+			text++;
+	}
+	return NULL;
+}
+
 int smbPathKind(const char *path)
 {
 	if (path == NULL)
