@@ -186,7 +186,9 @@ static int connectSmb2(SmbShare *sh)
 	memcpy(in.name, sh->name, sizeof(in.name));
 	memcpy(in.username, sh->username, sizeof(in.username));
 	memcpy(in.password, sh->password, sizeof(in.password));
-	memcpy(in.url, sh->url, sizeof(in.url));
+	/* Always name the port: smb://server:port/share, 445 when SMB2.CNF has none. */
+	if (snprintf(in.url, sizeof(in.url), "smb://%s:%d/%s", sh->server, sh->port, sh->share) >= (int)sizeof(in.url))
+		return -SMB2_CONNECT_ERR_URL;
 	ret = fileXioDevctl(SMB_DEVICE_V2, SMB2_DEVCTL_CONNECT, &in, sizeof(in), &out, sizeof(out));
 	memset(&in, 0, sizeof(in)); /* no password left on the stack */
 	/* -EEXIST: the driver already has it, from before a reset of our state */

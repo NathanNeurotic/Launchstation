@@ -408,16 +408,11 @@ int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
 			return -1;
 		n += url_len;
 	}
-	url_len = snprintf(out + n, out_size - n, "URL = smb://%s", ip);
+	/* The port is always written, 445 included. */
+	url_len = snprintf(out + n, out_size - n, "URL = smb://%s:%d", ip, port);
 	if (url_len < 0 || url_len >= out_size - n)
 		return -1;
 	n += url_len;
-	if (port != 445) {
-		url_len = snprintf(out + n, out_size - n, ":%d", port);
-		if (url_len < 0 || url_len >= out_size - n)
-			return -1;
-		n += url_len;
-	}
 	url_len = snprintf(out + n, out_size - n, "/%s\n", share);
 	if (url_len < 0 || url_len >= out_size - n || n + url_len >= SMB_URL_LEN)
 		return -1;

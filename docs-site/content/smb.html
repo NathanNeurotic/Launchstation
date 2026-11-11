@@ -27,7 +27,7 @@
 <tr><td><code>PASSWORD</code></td><td>That account&rsquo;s password</td><td>31</td></tr>
 <tr><td><code>VERSION</code></td><td><code>2</code> (default: SMB2/SMB3, also <code>3</code>, <code>SMB2</code>, <code>SMB3</code>) or <code>1</code> (SMB1, also <code>SMB1</code>, <code>NT1</code>)</td><td></td></tr>
 <tr><td><code>PLAINTEXT</code></td><td>SMB1 only. <code>1</code> lets a server that asks for a clear-text password have it; <code>0</code> (default) refuses such a server. See below.</td><td></td></tr>
-<tr><td><code>URL</code></td><td><code>smb://&lt;server&gt;/&lt;share&gt;</code>; for SMB1 <code>smb://&lt;IP address&gt;[:port]/&lt;share&gt;</code></td><td>255</td></tr>
+<tr><td><code>URL</code></td><td><code>smb://&lt;IP address&gt;:&lt;port&gt;/&lt;share&gt;</code>; give the port, 445 for most servers</td><td>255</td></tr>
 </tbody></table>
 <ul>
 <li>Keys can be in any case. Spaces and tabs around a value are removed, so a password cannot start or end with a space.</li>
@@ -42,18 +42,18 @@
 NAME = PC
 USERNAME = player
 PASSWORD = secret
-URL = smb://192.168.0.10/PS2
+URL = smb://192.168.0.10:445/PS2
 
 # The "games" share of a NAS, as smb:/NAS
 NAME = NAS
 USERNAME = ps2
 PASSWORD = n4s-pa55word
-URL = smb://192.168.0.20/games
+URL = smb://192.168.0.20:445/games
 
 # An old server that only speaks SMB1, as smb1:/
 NAME = OLDBOX
 VERSION = 1
-URL = smb://192.168.0.30/PS2SMB</code></pre>
+URL = smb://192.168.0.30:445/PS2SMB</code></pre>
 <p><b>Network (SMB1)</b> appears in the device list only when <code>SMB2.CNF</code> has a <code>VERSION = 1</code> share. The file is read once at startup, which reads no network.</p>
 
 <h2 id="use">What you can do</h2>
