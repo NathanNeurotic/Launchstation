@@ -52,7 +52,7 @@ init = (root / "src/init.c").read_text()
 yaml = (root / "ps2.yaml").read_text()
 make = (root / "ps2.yaml").read_text()
 
-assert "Set PS2 clock manually..." in settings
+assert "Set manually..." in settings
 assert "dashClockSetManual" in settings
 assert "Sync PS2 clock from Internet" in settings
 assert "dashClockSyncInternet" in settings

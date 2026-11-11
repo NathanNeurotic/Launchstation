@@ -973,9 +973,12 @@ int mmce_fs_dread(iomanX_iop_file_t *file, iox_dirent_t *dirent)
     }
 
     if (rdbuf[0x4] != 0) {
-        DPRINTF("%s ERROR: Returned %i, Expected 0\n", __func__, rdbuf[0x4]);
+        /* 0 (end of directory), not -1: the card sends this status when its iterator has no next
+         * entry (every completed listing) or the handle is no longer open. Timeouts and garbled
+         * replies above and below stay -1. ps2-mmce/mmceman #11. */
+        DPRINTF("%s: end of directory (status %i)\n", __func__, rdbuf[0x4]);
         mmce_sio2_unlock();
-        return -1;
+        return 0;
     }
 
     //Packet #n + 1: io_stat_t and filename len
@@ -1054,7 +1057,10 @@ int mmce_fs_dread(iomanX_iop_file_t *file, iox_dirent_t *dirent)
 
     mmce_sio2_unlock();
 
-    return rdbuf[0x1]; //itr fd from mmce
+    /* 1, not the card's iterator fd: iomanX reads 0 as end of directory, and the iterator gets the
+     * card's lowest free descriptor, which is 0 if the folder was opened while fd 0 was busy.
+     * ps2-mmce/mmceman #11. */
+    return 1;
 }
 
 int mmce_fs_getstat(iomanX_iop_file_t *file, const char *name, iox_stat_t *stat)

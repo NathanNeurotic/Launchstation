@@ -223,14 +223,6 @@ int isVirtualKeyboardFilenameChar(unsigned char c)
     return c >= 0x20 && c != 0x7f && strchr("<>:\"/\\|?*", c) == NULL;
 }
 
-int isVirtualKeyboardFilenameKey(int layout, int index)
-{
-    /* A key must be portable in both Caps states. */
-    return isVirtualKeyboardLayoutKey(layout, index) &&
-           isVirtualKeyboardFilenameChar((unsigned char)getVirtualKeyboardFilenameChar(layout, index, 0)) &&
-           isVirtualKeyboardFilenameChar((unsigned char)getVirtualKeyboardFilenameChar(layout, index, 1));
-}
-
 static void getVirtualKeyboardLayoutColumnRange(int layout, int *first_col, int *last_col)
 {
     int row;

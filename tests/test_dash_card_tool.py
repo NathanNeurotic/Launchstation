@@ -225,6 +225,35 @@ with zipfile.ZipFile(io.BytesIO(zb)) as z:
 lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "k3", "c1")
 assert kind(lines, "MESSAGE|4|Converted|Written and checked. Unzip it on a PC") and host("mass:/conv/BESLES-12345GAME.zip").read_bytes() == zb, lines
 host("mass:/out/BESLES-12345GAME.zip").unlink()
+# several marked save files at once: the format and the confirmation asked once, each its own file with the
+# bytes a single convert gives, failures counted while the rest still go, nothing replaced, sources only read
+host("mass:/cvm").mkdir()
+pb = psu.read_bytes()
+host("mass:/cvm/a.psu").write_bytes(pb)
+host("mass:/cvm/b.psu").write_bytes(pb)                                  # the same save again
+host("mass:/cvm/junk.max").write_bytes(b"junk" * 40)
+lines = run("convmany:mass:/cvm/|a.psu|junk.max|b.psu", "k1", "c1")
+assert len(kind(lines, "CHOICE|")) == 1 and kind(lines, "CHOICE|Convert to|4|1"), lines        # .psu: .psv first
+assert kind(lines, "CONFIRM|Convert 3 saves to .psv?|"), lines
+assert kind(lines, "MESSAGE|1|Not all converted|1 of 3 converted. No file was replaced; the originals were not changed. "
+                   "2 not converted. First: junk.max: "), lines
+assert host("mass:/cvm/" + PSV2).read_bytes() == v
+lines = run("convmany:mass:/cvm/|a.psu|b.psu", "k2", "c1")               # .cbs: the second gets a -2 name
+assert kind(lines, "MESSAGE|4|Converted|2 of 2 converted."), lines
+assert host("mass:/cvm/BESLES-12345GAME.cbs").read_bytes() == c and host("mass:/cvm/BESLES-12345GAME-2.cbs").read_bytes() == c
+lines = run("convmany:mass:/cvm/|a.psu|b.psu", "k3", "c0")               # declined: nothing written
+assert not kind(lines, "MESSAGE|") and not host("mass:/cvm/BESLES-12345GAME.zip").exists(), lines
+lines = run("convmany:mass:/cvm/|a.psu|b.psu")                           # no format: not even a confirmation
+assert not kind(lines, "CONFIRM|"), lines
+(dev / "mc0").mkdir(exist_ok=True)
+host("mc0:/a.psu").write_bytes(pb)
+lines = run("convmany:mc0:/|a.psu", "k0", "pmass:/cvm/", "c1")             # on a card: one folder picked for all
+assert kind(lines, "PICK|Write the .psu files to|mass:/|1|") and host("mass:/cvm/BESLES-12345GAME.psu").read_bytes() == pb, lines
+lines = run("convmany:mc0:/|a.psu", "k0")                                  # pick declined: nothing written
+assert not kind(lines, "CONFIRM|") and not host("mass:/cvm/BESLES-12345GAME-2.psu").exists(), lines
+host("mc0:/a.psu").unlink()
+shutil.rmtree(host("mass:/cvm"))
+assert "dashCardConvertMany(fb.dir, names, m);" in browser and "else if (nsave > 0)" in browser and "names != NULL && m > 0 && prepareOp()" in browser
 shutil.rmtree(host("mass:/conv"))
 host("mass:/out/" + PSV2).unlink()
 E = "mass:/E.mcd"
@@ -786,7 +815,7 @@ menu = kind(lines, "MENU|All saves|")
 assert len(menu) == 1, lines
 row = menu[0].split("|")
 assert row[2] == "9 saves on 3 cards; 1 file not readable as a card", row[2]
-assert row[3] == "Marked saves...~none marked: export all, or mark with Square", row[3]
+assert row[3] == "Marked saves...~Square marks saves; with none marked, export all", row[3]
 rows = row[4:]                                                   # menu row = list index + 1
 assert len(rows) == 9, rows
 titles = [r.split("~")[0] for r in rows]
@@ -910,7 +939,7 @@ blank("mass:/all/F.mcd")
 pick = rows_for("A.mcd: NOICON, 3 KB", "sub/B.mcd: BASLUS-99999, 1 KB", "A.mcd: PS1 BISLPS-00001, 1 KB")
 noicon = saves("mass:/all/A.mcd")["NOICON"]
 lines = run("all:mass:/all", "s" + pick, "m0", "m1", "pmass:/all/F.mcd", "c1")
-assert kind(lines, "MESSAGE|4|Done|3 saves moved and verified."), lines
+assert kind(lines, "MESSAGE|4|Done|3 saves moved and verified. 3 cards got a safety copy; one is named below."), lines
 assert set(saves("mass:/all/F.mcd")) == {"NOICON", "BASLUS-99999", "BISLPS-00001"} and saves("mass:/all/F.mcd")["NOICON"] == noicon
 assert "NOICON" not in saves("mass:/all/A.mcd") and "BISLPS-00001" not in saves("mass:/all/A.mcd")
 assert saves("mass:/all/sub/B.mcd") == {}
@@ -979,7 +1008,7 @@ def lib_rows():
 
 sub, rows = lib_rows()
 assert sub == "7 .psu files, 1 set", sub
-assert rows[0] == "mark saves with Square first" and rows[1] == "1 set: the folders here with .psu files", rows[:2]
+assert rows[0] == "Square marks saves to copy, save as a set or delete" and rows[1] == "1 set: the folders here with .psu files", rows[:2]
 files = rows[2:]
 assert sorted(files) == sorted(["BESLES-12345GAME.psu: BESLES-12345GAME, 7 KB", "BASLUS-99999.psu: BASLUS-99999, 3 KB",
                                 "BISLPS-00001.psu: BISLPS-00001, 1 KB", "NOICON.psu: NOICON, 3 KB",
@@ -1338,6 +1367,45 @@ assert host("mass:/pc/BASLUS-00001.V2.mcs").read_bytes()[0x0A:0x0A + 16] == b"BA
 host("mass:/pc/junk.mcs").write_bytes(b"MC" + bytes(300))
 lines = run("ps1conv:mass:/pc/junk.mcs")
 assert kind(lines, "MESSAGE|1|Not converted|") and not kind(lines, "CHOICE|"), lines
+# several marked PS1 saves at once: the format asked once, each its own file with the bytes a single convert
+# gives, a bad one counted while the rest still go, the sources only read
+host("mass:/pcm").mkdir()
+a2, b2 = ps1_mcs("BASLUS-00002AAA", 1, b"Game A"), ps1_mcs("BASLUS-00003BBB", 3, b"Game B")
+host("mass:/pcm/a.mcs").write_bytes(a2)
+host("mass:/pcm/b.mcs").write_bytes(b2)
+host("mass:/pcm/junk.mcs").write_bytes(b"MC" + bytes(300))
+lines = run("ps1many:mass:/pcm/|a.mcs|junk.mcs|b.mcs", "k2")
+assert len(kind(lines, "CHOICE|")) == 1 and kind(lines, "CHOICE|Convert to|4|1|"), lines     # .mcs: .psv first
+assert kind(lines, "MESSAGE|1|Not all exported|2 of 3 written and read back. The originals were not changed. "
+                   "1 not exported. First: junk.mcs: "), lines
+assert host("mass:/pcm/BASLUS-00002AAA.psx").read_bytes() == b"BASLUS-00002AAA".ljust(54, b"\0") + a2[128:]
+assert host("mass:/pcm/BASLUS-00003BBB.psx").read_bytes() == b"BASLUS-00003BBB".ljust(54, b"\0") + b2[128:]
+assert host("mass:/pcm/a.mcs").read_bytes() == a2 and host("mass:/pcm/b.mcs").read_bytes() == b2
+host("mass:/pcm/junk.mcs").unlink()
+lines = run("ps1many:mass:/pcm/|a.mcs|b.mcs", "k1")                     # signed .psv: same bytes as one at a time
+assert kind(lines, "MESSAGE|4|Exported|2 of 2 written and read back. The originals were not changed.|mass:/pcm/"), lines
+host("mass:/one").mkdir()
+for src, name in (("a.mcs", "BASLUS-00002" + b"AAA".hex().upper() + ".PSV"), ("b.mcs", "BASLUS-00003" + b"BBB".hex().upper() + ".PSV")):
+    shutil.copy(host("mass:/pcm/" + src), host("mass:/one/" + src))
+    run("ps1conv:mass:/one/" + src, "k1")
+    assert host("mass:/pcm/" + name).read_bytes() == host("mass:/one/" + name).read_bytes(), name
+lines = run("ps1many:mass:/pcm/|a.mcs|b.mcs", "k1")                     # a PS3 name is never replaced
+assert kind(lines, "MESSAGE|1|Not all exported|0 of 2 written and read back. The originals were not changed. 2 not exported. "
+                   "First: a.mcs: A file with this name is already in that folder."), lines
+lines = run("ps1many:mass:/pcm/|a.mcs|b.mcs", "k0")                     # .mcs beside .mcs sources: -2 names
+assert host("mass:/pcm/BASLUS-00002AAA.mcs").read_bytes() == a2 and host("mass:/pcm/BASLUS-00003BBB.mcs").read_bytes() == b2
+lines = run("ps1many:mass:/pcm/|a.mcs|b.mcs")                            # no format: nothing written
+assert not kind(lines, "MESSAGE|") and not host("mass:/pcm/BASLUS-00002AAA-2.mcs").exists(), lines
+# off a real PS1 card: one folder picked for all, dotted card names kept whole
+lines = run("ps1many:mc0:/|BASLUS-00001PS1|BASLUS-00001.V2", "k2", "pmass:/one/")
+assert kind(lines, "PICK|Write the PS1 saves to|mass:/|1|") and kind(lines, "MESSAGE|4|Exported|2 of 2"), lines
+assert host("mass:/one/BASLUS-00001PS1.psx").read_bytes()[54:] == s1[128:]
+assert host("mass:/one/BASLUS-00001.V2.psx").read_bytes()[:16] == b"BASLUS-00001.V2\0"
+lines = run("ps1many:mc0:/|BASLUS-00001PS1", "k2")                       # pick declined: nothing written
+assert not kind(lines, "MESSAGE|") and not host("mass:/one/BASLUS-00001PS1-2.psx").exists(), lines
+shutil.rmtree(host("mass:/pcm"))
+shutil.rmtree(host("mass:/one"))
+assert "dashPs1SaveConvertMany(fb.dir, names, m);" in browser and "ps1SaveTargets(sv_idx, MAX_ENTRY) > 0" in browser
 host("mc0:/BASLUS-00001PS1").unlink()
 shutil.rmtree(host("mass:/pc"))
 _br = (root / "src/dash_browser.c").read_text(encoding="utf-8")
@@ -1350,4 +1418,4 @@ shutil.rmtree(host("mass:/WLE-Safety"), ignore_errors=True)
 print("Card contents tool: listing, copy, move, delete, .psu round trip, safety copies pruned to ten, "
       "served MMCE card never written, served-card detection by number and content, guarded switch (also to a clone), "
       "mounted VMC blocks writes, 250+ save cards, copy to a new card size, Game ID split, blank cards, all saves across cards (also 250+ saves on one card, 64+ folders), marked-save batches, .psu library and sets, refusals cost no safety copy, write failures reported, "
-      "PS1 cards (blank, import, export, delete, failed writes), PS3 .psv/.psx/raw exports, .gme/.vgs/.vmp/.mcx cards, POPStarter card names, one open file at a time: OK")
+      "PS1 cards (blank, import, export, delete, failed writes), PS3 .psv/.psx/raw exports, marked saves converted together, .gme/.vgs/.vmp/.mcx cards, POPStarter card names, one open file at a time: OK")
