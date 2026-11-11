@@ -19,6 +19,8 @@ void (*mainActionLaunchHook)(const char *path) = NULL;
 //------------------------------
 static void cleanUpForExecInternal(int end_pad_rpc)
 {
+	/* The launched ELF (or its loader's IOP reset) must not find the SMB server writing a card. */
+	stopSmbServer();
 	fadeScreenToBlack();
 	dashSoundShutdown(); /* the launch is now committed */
 	DashThemeSetLegacyEnabled(0);

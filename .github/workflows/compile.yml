@@ -43,6 +43,10 @@ jobs:
           sudo apt-get install -y -qq samba smbclient >/dev/null
           sudo sh tests/smb2man_live/run.sh
 
+      # The memory card SMB server (iop/smbd) built for the host under ASan/UBSan, driven by smbclient.
+      - name: "Test the SMB file server with smbclient (tests/smbd_live)"
+        run: sh tests/smbd_live/run.sh
+
       - name: Test Settings sessions, navigation and theme compatibility
         run: |
           python3 tests/test_portable_filename.py
@@ -331,6 +335,7 @@ jobs:
       - name: Build Launchstation with ps2build
         run: |
           python3 scripts/gen_githash.py --require-git
+          sh scripts/fetch_libsmb2.sh
           ps2build build
 
       - name: Build optional DS34 controller variant
