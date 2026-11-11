@@ -38,8 +38,9 @@ static u64 Timer(void) { return now_ms; }
 static int fail_port1_start, fail_port1_sync, pending_port = -1;
 static int mx4sio_loaded;
 #define ETH 1
-static int ftp_running, info_calls;
+static int ftp_running, smb_running, info_calls;
 static int isFtpServerRunning(void) { return ftp_running; }
+static int isSmbServerRunning(void) { return smb_running; }
 static int mc_rpc_ready = 1;
 static int isMemoryCardRpcReady(void) { return mc_rpc_ready; }
 #include <string.h>
@@ -107,6 +108,9 @@ int main(void) {
     assert(!root_mc_poll_active && pending_port==-1 && info_calls==info_before);
     run(8);assert(info_calls==info_before);
     ftp_running=0;run(4);assert(info_calls>info_before);
+    /* The SMB server (iop/smbd) owns the cards the same way until it has stopped. */
+    smb_running=1;info_before=info_calls;run(40);assert(info_calls==info_before);
+    smb_running=0;run(4);assert(info_calls>info_before);
     /* An unbound card client (failed start) is never polled; opening a card
      * retries the start, after which polling resumes. */
     filerRootMcPollIdle();mc_rpc_ready=0;info_before=info_calls;

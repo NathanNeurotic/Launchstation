@@ -1529,7 +1529,7 @@ int pollRootMemoryCardDevices(void)
 	 * FTP keeps running behind the dashboard. A request already in flight may
 	 * finish above; start no new one while FTP is resident. Presence stays
 	 * cached. From saildot4k/Launchstation 7b2c2cd. */
-	if (isFtpServerRunning())
+	if (isFtpServerRunning() || isSmbServerRunning())
 		return FALSE;
 #endif
 	if (Timer() < root_mc_next_poll_time)

@@ -17,7 +17,7 @@
 <p>A candidate needs a readable ELF (valid ELF header) and either modern <code>config/system.toml</code> or legacy <code>system.toml</code> beside the ELF. Launchstation does not require any particular module-folder generation. The working directory handed to Neutrino is the folder holding <code>neutrino.elf</code>, so a custom path must contain a folder separator.</p>
 
 <h2 id="options">Per-launch compatibility and video options</h2>
-<p>Selecting a valid ISO opens <b>Neutrino launch options</b> (a dashboard dialog, or the classic screen in the classic UI). Use the D-pad to select and change, then <b>Run game</b> or <b>Cancel</b>. Cancel exits before any Neutrino file is touched.</p>
+<p>Selecting a valid ISO opens <b>Neutrino launch options</b> (a dashboard dialog, or the classic screen in the classic UI). Use the D-pad to select and change, then <b>Run game</b> (the top row in the dashboard dialog) or <b>Cancel</b>. Cancel exits before any Neutrino file is touched.</p>
 <table><thead><tr><th>Option</th><th>Choices</th><th>Passed to Neutrino as</th></tr></thead><tbody>
 <tr><td>Game compatibility (independent toggles)</td><td>Fast disc reads (0), Synchronous disc reads (2), Unhook system calls (3), Emulate dual-layer DVD (5), Fix game buffer overrun (7)</td><td><code>-gc=</code> followed by the chosen mode digits, ascending (for all five: <code>-gc=02357</code>). Mode 1 is a dummy in Neutrino and is not offered.</td></tr>
 <tr><td>Video mode</td><td>Original (480i/576i); 240p/288p (auto PAL/NTSC); 480p/576p (auto PAL/NTSC); 1080i width x1, x2 or x3</td><td><code>-gsm=</code> with <code>fp1</code>, <code>fp2</code>, <code>1080ix1</code>, <code>1080ix2</code> or <code>1080ix3</code> (Original adds nothing)</td></tr>

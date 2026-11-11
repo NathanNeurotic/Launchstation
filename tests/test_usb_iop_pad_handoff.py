@@ -24,6 +24,7 @@ assert body.index("filerRootMcPollIdle();") < body.index("Reset();")
 assert body.index("padEnd();") < body.index("Reset();") < body.index("setupPad()")
 assert body.index("iopResetNotify(0)") < body.index("dashSoundShutdown();") < body.index("Reset();")
 assert "iopResetBlocked()" in body
+assert body.index("smbStoppedForReset()") < body.index("filerRootMcPollIdle();")
 assert "clearPadPressState()" in body
 
 c = r"""
@@ -35,6 +36,8 @@ static void log_event(int what) { assert(count<32); order[count++]=what; }
 #define TRUE 1
 #define FALSE 0
 static int workerBlock(void) { return blocked; }
+static int smbBusy;
+static int smbStoppedForReset(void) { return !smbBusy; }
 static int (*iopResetBlocked)(void)=workerBlock;
 static void resetNotify(int phase) { log_event(phase?12:2); }
 static void (*iopResetNotify)(int)=resetNotify;
@@ -57,6 +60,10 @@ int main(void) {
     resetRuntimeDeviceState(TRUE);
     assert(count==0); /* background workers cannot destroy the pad IOP */
     blocked=0;
+    smbBusy=1;
+    resetRuntimeDeviceState(TRUE);
+    assert(count==0); /* an SMB server still closing card files refuses the reset */
+    smbBusy=0;
     resetRuntimeDeviceState(TRUE);
     int expected[]={1,2,14,3,4,5,6,7,8,9,10,11,7,13,12};
     assert(count==(int)(sizeof(expected)/sizeof(expected[0])));

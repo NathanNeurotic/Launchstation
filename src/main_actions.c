@@ -19,6 +19,8 @@ void (*mainActionLaunchHook)(const char *path) = NULL;
 //------------------------------
 static void cleanUpForExecInternal(int end_pad_rpc)
 {
+	/* The launched ELF (or its loader's IOP reset) must not find the SMB server writing a card. */
+	stopSmbServer();
 	fadeScreenToBlack();
 	dashSoundShutdown(); /* the launch is now committed */
 	DashThemeSetLegacyEnabled(0);
@@ -48,6 +50,8 @@ static void cleanUpForExecInternal(int end_pad_rpc)
 	ds34bt_reset();
 #endif
 }
+
+int PS2BrowserSkipMc;
 
 void CleanUpForExec(void)
 {
@@ -627,12 +631,12 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		executeBrowserSelection(tmp, ctx);
 		return;
 	} else if (!stricmp(path, setting->Misc_PS2Browser)) {
-		/* SkipMc stops OSDSYS running a memory card system update (such as
-		   an installed exploit) instead of the Browser. */
+		/* BootBrowser alone lets OSDSYS run the memory card update (FMCB,
+		   OSDMenu) first. The Tools "skip card update" entry adds SkipMc. */
 		char *args[2] = {"BootBrowser", "SkipMc"};
 
 		CleanUpForExec();
-		ExecOSD(2, args);
+		ExecOSD(1 + PS2BrowserSkipMc, args);
 #ifdef ETH
 	} else if (!stricmp(path, setting->Misc_PS2Net)) {
 		ctx->main_msg[0] = 0;

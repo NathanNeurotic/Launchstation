@@ -72,6 +72,11 @@ void loadNetModules(void);
 int isFtpNetworkReady(void);
 /* Resident FTP reaches MCMAN independently of the dashboard's MCSERV client. */
 int isFtpServerRunning(void);
+/* Memory card SMB server (iop/smbd). Running covers a stop that has not finished. */
+int startSmbServer(void);
+int smbServerStatus(void);
+int stopSmbServer(void);
+int isSmbServerRunning(void);
 int ensureDashboardIpNetworkReady(void);
 const char *dashboardIpNetworkError(void);
 #endif

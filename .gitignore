@@ -36,6 +36,7 @@ build-ds34/
 # Native cloud build/cache output
 .cloud-deps/
 .cache/cloud-deps/
+.smbd-deps/
 .jpeg-deps/
 .cache/jpeg-deps/
 
