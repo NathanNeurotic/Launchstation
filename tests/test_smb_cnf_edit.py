@@ -58,8 +58,8 @@ int main(void)
                  "NAME = PC\n"
                  "USERNAME = player\n"
                  "PASSWORD = secret\n"
-                 "URL = smb://192.168.1.100/games\n") == 0, "SMB2 block text");
-    check(strstr(block, ":445") == NULL, "445 port omitted");
+                 "URL = smb://192.168.1.100:445/games\n") == 0, "SMB2 block text");
+    check(strstr(block, "100:445/games") != NULL, "445 port written");
 
     n = smbCnfBuildBlock(block, sizeof(block), "NG", 3, "player", "s",
                          "192.168.1.100", 1445, "games", 0);
@@ -147,7 +147,7 @@ int main(void)
         smbCnfBuildBlock(repl, sizeof(repl), "DOS", 2, NULL, NULL,
                          "10.0.0.9", 445, "y2", 0);
         len = upsert(file, "TWO", repl, out, sizeof(out), work, sizeof(work));
-        check(len > 0 && strstr(out, "NAME = DOS\nURL = smb://10.0.0.9/y2") != NULL &&
+        check(len > 0 && strstr(out, "NAME = DOS\nURL = smb://10.0.0.9:445/y2") != NULL &&
               strstr(out, "NAME = TWO") == NULL, "rename via replace");
         checkParses("rename", out, 3);
     }

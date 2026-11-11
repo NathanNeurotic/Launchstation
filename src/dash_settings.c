@@ -3296,8 +3296,8 @@ static void runAction(int id)
 			    "#   each). PASSWORD = with nothing after it is a blank password.\n"
 			    "# VERSION  optional: 1 = an SMB1-only server (opens via smb1:/);\n"
 			    "#   2 or 3 = the smb: driver. Use 3 to mark a server that supports SMB3.\n"
-			    "# URL  smb://<IP address>[:port]/<share>. The port is optional (445 when\n"
-			    "#   omitted) and goes here only, never on the NAME line.\n"
+			    "# URL  smb://<IP address>:<port>/<share>. Give the port (445 for most\n"
+			    "#   servers) here only, never on the NAME line.\n"
 			    "#\n"
 			    "# PS2-Servers: its SMBv2/SMBv3 card shows IP, Port, Share, User and\n"
 			    "# Password -- copy them into a block like these. The card's default\n"
@@ -3330,7 +3330,7 @@ static void runAction(int id)
 			    "# An SMB1-only server (PS2-Servers' SMBv1 card), opened via smb1:/:\n"
 			    "# NAME = OLDBOX\n"
 			    "# VERSION = 1\n"
-			    "# URL = smb://192.168.0.30/PS2SMB\n";
+			    "# URL = smb://192.168.0.30:445/PS2SMB\n";
 			char path[MAX_PATH];
 			int fd;
 			smbSharesConfigured(SMB_PATH_V2); /* reads the file; no network */
