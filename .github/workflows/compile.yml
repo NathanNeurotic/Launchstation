@@ -71,6 +71,7 @@ jobs:
           python3 tests/test_file_browser_heap.py
           python3 tests/test_stack_realign_check.py
           python3 tests/test_smb_shares.py
+          python3 tests/test_smb_explicit_port.py
           python3 tests/test_smb_browser_failure.py
           python3 tests/test_smb_connect_state.py
           python3 tests/test_smb_cnf_edit.py
