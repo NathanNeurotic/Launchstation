@@ -2572,6 +2572,7 @@ void closeAllAndPoweroff(void)
 {
 	/* CF-only stop first; do not load modules from the callback thread. */
 	shutdownPcCardCf();
+	stopSmbServer(); /* close its card files (up to 3 s); power goes off either way */
 	if (ps2dev9_loaded) {
 		int dev9_ret = -1;
 		int retry = 100;
