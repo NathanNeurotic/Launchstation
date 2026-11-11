@@ -28,7 +28,7 @@ assert "gsKit_init_screen" not in fn("void dashGfxInit(void)")
 assert "DoubleBuffering" not in fn("void dashGfxInit(void)")
 setup=classic[classic.index("void setupGS(void)"):classic.index("void updateScreenMode(void)")]
 assert "gsGlobal->DoubleBuffering = GS_SETTING_ON;" in setup
-assert setup.index("GS_SETTING_ON;") < setup.index("gsKit_init_screen(gsGlobal);")
+assert setup.index("gsGlobal->DoubleBuffering = GS_SETTING_ON;") < setup.index("gsKit_init_screen(gsGlobal);")
 assert setup.count("gsKit_init_screen(") == 1
 assert "DoubleBuffering = GS_SETTING_OFF" not in classic
 
