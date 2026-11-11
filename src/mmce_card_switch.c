@@ -22,6 +22,8 @@
 #include "mmce_backup.h"
 #include "mmce_card_switch.h"
 
+void DashPause(u32 usec); /* dash_ui.c; plain DelayThread outside a popup */
+
 #define MMCE_DEVCTL_GET_STATUS 0x2
 #define MMCE_DEVCTL_GET_CARD 0x3
 #define MMCE_DEVCTL_SET_CARD 0x4
@@ -238,7 +240,7 @@ static int waitIdle(int unit)
 			return MMCE_SWITCH_DEVICE;
 		if (!(status & 1))
 			return MMCE_SWITCH_OK;
-		DelayThread(1000000);
+		DashPause(1000000);
 	}
 	return MMCE_SWITCH_BUSY;
 }
@@ -280,7 +282,7 @@ static int waitReported(int unit, int cmd, int want)
 			return MMCE_SWITCH_DEVICE;
 		if (v == want)
 			return MMCE_SWITCH_OK;
-		DelayThread(1000000);
+		DashPause(1000000);
 	}
 	return MMCE_SWITCH_UNKNOWN;
 }
@@ -339,7 +341,7 @@ int mmceSwitchToCard(const char *path)
 		if (servesCard(unit, card, chan, want))
 			return MMCE_SWITCH_OK;
 		if (sent)
-			DelayThread(1000000);
+			DashPause(1000000);
 	}
 	r = devctl(unit, MMCE_DEVCTL_GET_STATUS, NULL);
 	return r >= 0 && (r & 1) ? MMCE_SWITCH_BUSY : MMCE_SWITCH_UNKNOWN;
