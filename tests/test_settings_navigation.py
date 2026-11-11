@@ -89,6 +89,7 @@ static int dashModalMenu(const char *t,const char *d,DashMenuItem *m,int n,int s
 }
 static void runAction(int id) { if(id==S_SAVE_CLASSIC) saves++; else if(id==S_REVERT) reverts++; }
 static void dashSwitchSection(int s) { assert(s == DASH_SEC_HOME); home++; }
+static int dashBackSection(void) { return DASH_SEC_HOME; }
 static void dashToast(int kind,const char *msg) { (void)kind; assert(msg); toast++; }
 static void colorEditor(const char *name,int id) { (void)name; (void)id; edits++; }
 static void choosePreset(void) { edits++; }
