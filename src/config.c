@@ -7,6 +7,9 @@
 #include "init.h"
 #include <stdbool.h>
 #include <stdlib.h>
+#ifdef SMB
+#include "smb_shares.h"
+#endif
 
 
 static const char LK_ID[SETTING_LK_COUNT][10] = {
@@ -532,7 +535,13 @@ char *configBuildSaveText(int *out_size)
 	int i, CNF_size, CNF_step;
 	/* Values are bounded by their source arrays; reserve extra space for
 	 * key names, numeric fields and line endings. */
-	char *tmp = malloc(sizeof(SETTING) + sizeof(PathPad) + 8192);
+#ifdef SMB
+	const char *smb = smbSharesBlocks();
+	int smb_len = smb != NULL ? strlen(smb) : 0;
+#else
+	const int smb_len = 0;
+#endif
+	char *tmp = malloc(sizeof(SETTING) + sizeof(PathPad) + 8192 + smb_len);
 	if (tmp == NULL)
 		return NULL;
 
@@ -693,6 +702,15 @@ char *configBuildSaveText(int *out_size)
 			CNF_size += CNF_step;
 		}  //ends if
 	}      //ends for
+#ifdef ETH
+	CNF_size += sprintf(tmp + CNF_size, "SMB_Server_User = %s\r\nSMB_Server_Password = %s\r\n",
+	                    setting->SMB_Server_User, setting->SMB_Server_Pass);
+#endif
+#ifdef SMB
+	/* Last, so the share keys (NAME, URL...) follow every setting. */
+	if (smb != NULL)
+		CNF_size += sprintf(tmp + CNF_size, SMB_CNF_SECTION "\r\n%s", smb);
+#endif
 
 	*out_size = CNF_size;
 	return tmp;
@@ -812,6 +830,8 @@ void initConfig(void)
 	setting->usbkbd_file[0] = '\0';
 	setting->kbdmap_file[0] = '\0';
 	setting->CNF_Path[0] = '\0';
+	strcpy(setting->SMB_Server_User, "ps2");
+	strcpy(setting->SMB_Server_Pass, "ps2");
 	setting->lang_file[0] = '\0';
 	setting->font_file[0] = '\0';
 	setting->popstarter_file[0] = '\0';
@@ -918,6 +938,9 @@ int loadConfig(char *mainMsg, char *CNF)
 	if ((RAM_p = preloadCNFFd(fd, cnf_path)) == NULL)
 		goto failed_load;
 	CNF_p = RAM_p;
+#ifdef SMB
+	smbSharesSetSection(RAM_p); /* before the parse cuts the text up */
+#endif
 
 	//RA NB: in the code below, the 'LK_' variables have been implemented such that
 	//       any _Ex suffix will be accepted, with identical results. This will need
@@ -1023,6 +1046,12 @@ int loadConfig(char *mainMsg, char *CNF)
 			setting->PathPad_Lock = atoi(value);
 		else if (!strcmp(name, "CNF_Path"))
 			strcpy(setting->CNF_Path, value);
+#ifdef ETH
+		else if (!strcmp(name, "SMB_Server_User") && value[0] && strlen(value) < sizeof(setting->SMB_Server_User))
+			strcpy(setting->SMB_Server_User, value);
+		else if (!strcmp(name, "SMB_Server_Password") && value[0] && strlen(value) < sizeof(setting->SMB_Server_Pass))
+			strcpy(setting->SMB_Server_Pass, value);
+#endif
 		else if (!stricmp(name, "language")) {
 			int language = getBuiltinLanguageByConfigName(value);
 			setting->language = (language >= 0) ? language : DEF_LANGUAGE;

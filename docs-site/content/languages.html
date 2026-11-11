@@ -29,8 +29,8 @@
 lang(468, Dashboard_Home, "Start")
 lang(469, Dashboard_Applications, "Programs")</pre>
 <ul>
-<li>Each entry is <code>lang(index, Name, "text")</code>. The <b>index</b> (0&ndash;709 in this build) is what matters; the symbolic name is ignored. The built-in files in <code>Lang/</code> list every index.</li>
-<li>Indexes 0&ndash;467 are the original classic strings and are never renumbered; indexes 468&ndash;709 are the appended dashboard and warning labels (names begin <code>Dashboard_</code> or <code>Exploit_Folder_</code>), appended so older external files keep working.</li>
+<li>Each entry is <code>lang(index, Name, "text")</code>. The <b>index</b> (0&ndash;711 in this build) is what matters; the symbolic name is ignored. The built-in files in <code>Lang/</code> list every index.</li>
+<li>Indexes 0&ndash;467 are the original classic strings and are never renumbered; indexes 468&ndash;711 are the appended dashboard and warning labels (names begin <code>Dashboard_</code> or <code>Exploit_Folder_</code>), appended so older external files keep working.</li>
 <li>Escapes: <code>\n</code>, <code>\r</code>, <code>\t</code>, <code>\"</code> and <code>\\</code>. A trailing <code>// comment</code> after the closing parenthesis is allowed.</li>
 <li>A syntax error or an index beyond the table makes the whole file be ignored and the built-in text stays.</li>
 <li>Dashboard strings that contain format conversions (for example <code>%s</code> or <code>%d</code>) are only accepted if the translation uses the same conversions in the same order; otherwise English is used for that string.</li>

@@ -19,10 +19,12 @@ static void smbFrame(int status, int stopping)
 	          DASH_FS_LABEL, DASH_C_TEXT);
 	snprintf(line, sizeof(line), "\\\\%s\\mc0    \\\\%s\\mc1", ip, ip);
 	dashTextFit(x + 24, y + 65, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT);
-	dashTextFit(x + 24, y + 93, w - 48, "User name: ps2    Password: ps2", DASH_FS_SMALL, DASH_C_TEXT);
+	snprintf(line, sizeof(line), "User name: %s    Password: %s", smbServerLogin(),
+	         smbServerLogin() + strlen(smbServerLogin()) + 1);
+	dashTextFit(x + 24, y + 93, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT);
 	snprintf(line, sizeof(line), "Connected clients: %d", status >> 2);
 	dashTextFit(x + 24, y + 121, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);
-	dashTextFit(x + 24, y + 160, w - 48, "This login is the same on every PS2: use a network you trust.", DASH_FS_SMALL,
+	dashTextFit(x + 24, y + 160, w - 48, "Change the login in Settings > Network. Use a network you trust.", DASH_FS_SMALL,
 	            DASH_C_TEXT3);
 	dashTextFit(x + 24, y + 188, w - 48,
 	            stopping ? "Closing files and connections..." : "Back returns to Launchstation with SMB running.",

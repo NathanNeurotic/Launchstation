@@ -42,8 +42,40 @@ int smbSharesNeutrino(const char *path, SmbShare *share, char *dvd,
 	return neutrinoSmbResolve(&smb_cfg, path, share, dvd, dvd_size, problem);
 }
 
-/* Same places as IPCONFIG.DAT: beside the launched ELF, then SYS-CONF on
- * the card it was launched from, then on the other card. */
+static char *smb_blocks; /* LAUNCHSTATION.CNF's share blocks; NULL: none */
+
+int smbSharesSetBlocks(const char *blocks)
+{
+	char *copy = NULL;
+
+	if (blocks != NULL && (copy = strdup(blocks)) == NULL)
+		return 0; /* the old blocks stay */
+	free(smb_blocks);
+	smb_blocks = copy;
+	return 1;
+}
+
+int smbSharesSetSection(const char *cnf_text)
+{
+	return smbSharesSetBlocks(smbCnfSection(cnf_text));
+}
+
+char *smbSharesTakeBlocks(char *blocks)
+{
+	char *old = smb_blocks;
+
+	smb_blocks = blocks;
+	return old;
+}
+
+const char *smbSharesBlocks(void)
+{
+	return smb_blocks;
+}
+
+/* LAUNCHSTATION.CNF's blocks when it has them. Otherwise an old SMB2.CNF,
+ * read only, in the same places as IPCONFIG.DAT: beside the launched ELF,
+ * then SYS-CONF on the card it was launched from, then on the other card. */
 static char *smbReadConfigText(int *mc1_refused)
 {
 	char path[MAX_PATH];
@@ -52,6 +84,16 @@ static char *smbReadConfigText(int *mc1_refused)
 
 	*mc1_refused = 0;
 	smb_cfg_path[0] = '\0';
+	if (smb_blocks != NULL && LoadedConfigPath[0] && (strncmp(LoadedConfigPath, "mc1", 3) || !mc1AccessRefused()) &&
+	    (text = dashLoadTextFile(LoadedConfigPath, 128 * 1024, NULL)) != NULL) {
+		/* read again, so a file corrected on a PC is used without restarting */
+		smbSharesSetSection(text);
+		free(text);
+	}
+	if (smb_blocks != NULL) {
+		snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", LoadedConfigPath[0] ? LoadedConfigPath : "Settings");
+		return strdup(smb_blocks);
+	}
 	if (strlen(LaunchElfDir) + sizeof(SMB_CNF_NAME) <= sizeof(path)) {
 		snprintf(path, sizeof(path), "%s%s", LaunchElfDir, SMB_CNF_NAME);
 		if ((text = dashLoadTextFile(path, SMB_CNF_MAX_SIZE, NULL)) != NULL) {
@@ -317,6 +359,16 @@ void smbSharesConnect(int version, int retry_failed)
 	}
 }
 
+const char *smbSharesV1Name(void)
+{
+	int i;
+
+	for (i = 0; smb_cfg_loaded && i < smb_cfg.count; i++)
+		if (smb_cfg.share[i].version == 1 && smb_cfg.share[i].state != SMB_STATE_INVALID)
+			return smb_cfg.share[i].name;
+	return NULL;
+}
+
 int smbSharesConnectedCount(int version)
 {
 	int i, n = 0;
@@ -334,11 +386,11 @@ void smbSharesStatus(int version, char *out, int out_size)
 	const SmbShare *first_bad = NULL;
 
 	if (!smb_cfg_loaded) {
-		snprintf(out, out_size, "Open to read %s and connect", SMB_CNF_NAME);
+		snprintf(out, out_size, "Open to connect the saved shares");
 		return;
 	}
 	if (!smb_cfg_path[0]) {
-		snprintf(out, out_size, "No %s found (beside Launchstation or in mc?:/SYS-CONF)", SMB_CNF_NAME);
+		snprintf(out, out_size, "No shares: add one in Settings > Network > SMB shares");
 		return;
 	}
 	for (i = 0; i < smb_cfg.count; i++) {
