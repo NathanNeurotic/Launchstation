@@ -87,10 +87,18 @@ with tempfile.TemporaryDirectory(prefix="release-notes-big-") as folder:
     assert (path / "notes.md").stat().st_size < notes.BODY_LIMIT
     saved = notes.BODY_LIMIT
 # The hard limit fails the build instead of publishing an oversized body.
-src = (root / "scripts/release_notes.py").read_text().replace("BODY_LIMIT = 40000", "BODY_LIMIT = 100")
-limited = Path(tempfile.mkdtemp(prefix="release-notes-limit-")) / "rn.py"
-limited.write_text(src)
-assert subprocess.run([sys.executable, str(limited), *args[2:]], cwd=root, capture_output=True).returncode != 0
+with tempfile.TemporaryDirectory(prefix="release-notes-limit-") as folder:
+    path = Path(folder)
+    for name in notes.ASSETS:
+        (path / name).write_bytes(("fixture:" + name).encode())
+    limited = path / "rn.py"
+    limited.write_text((root / "scripts/release_notes.py").read_text().replace("BODY_LIMIT = 40000", "BODY_LIMIT = 100"))
+    out = path / "limited-notes.md"
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    result = subprocess.run([sys.executable, str(limited), "--repo", repo, "--revision", head, "--previous", head,
+                             "--run-id", "123", "--assets-dir", str(path), "--output", str(out)],
+                            cwd=root, capture_output=True, text=True, check=False)
+    assert result.returncode != 0 and "100 byte limit" in result.stderr and not out.exists()
 
 # Unchanged summaries cannot hide subsequent commits; same-SHA reruns keep them.
 original_reader = notes.revision_changelog
@@ -106,6 +114,12 @@ try:
     notes.revision_changelog = lambda sha: ["- New summary"] if sha == revision else ["- Old summary"]
     assert notes.release_changes(repo, revision, previous, log) == ["- New summary"]
     assert notes.release_changes(repo, revision, "", log) == ["- New summary"]
+    # A summary that fills its whole budget must not push out the new commit links.
+    filler = [f"- Old entry {n}: " + "y" * 80 for n in range(500)]
+    notes.revision_changelog = lambda sha: filler
+    full = notes.release_changes(repo, revision, previous, log)
+    assert "- Additional merged changes in this rolling build:" in full and changes[0] in full
+    assert sum(len(x.encode()) + 1 for x in full) < notes.CHANGELOG_BUDGET + notes.COMMIT_BUDGET + 600
     notes.revision_changelog = lambda sha: []
     assert notes.release_changes(repo, revision, previous, log) == changes
 finally:

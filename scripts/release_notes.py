@@ -21,7 +21,9 @@ OPTIONAL_ASSETS = ("LAUNCHSTATION.zip",)
 # cut to a byte budget (newest entries first; the full file stays in the repo) and the
 # finished body must stay under a hard limit or the build fails before publishing.
 CHANGELOG_BUDGET = 12000
+COMMIT_BUDGET = 4000
 BODY_LIMIT = 40000
+
 
 
 def published_name(name, version):
@@ -88,22 +90,21 @@ def bound_changes(changes, repo, revision, budget=CHANGELOG_BUDGET):
 
 
 def release_changes(repo, revision, previous, log):
-    return bound_changes(all_release_changes(repo, revision, previous, log), repo, revision)
-
-
-def all_release_changes(repo, revision, previous, log):
+    """Rolling summary (budgeted) plus, when it did not change, links to the new commits (budgeted separately)."""
     current = revision_changelog(revision)
+    if not current:
+        return bound_changes(changes_from_log(log, repo), repo, revision)
+    summary = bound_changes(current, repo, revision)
     # Keep the public rolling summary visible on every release page.
     # If the summary text did not change but new commits exist, append those
-    # commit links so fresh changes are still visible.
-    if current:
-        if not previous or revision == previous or current != revision_changelog(previous):
-            return current
-        commit_changes = changes_from_log(log, repo)
-        if commit_changes:
-            return current + ["", "- Additional merged changes in this rolling build:"] + commit_changes
-        return current
-    return changes_from_log(log, repo)
+    # commit links so fresh changes are still visible even when the summary fills its budget.
+    if not previous or revision == previous or current != revision_changelog(previous):
+        return summary
+    commit_changes = changes_from_log(log, repo)
+    if commit_changes:
+        return (summary + ["", "- Additional merged changes in this rolling build:"]
+                + bound_changes(commit_changes, repo, revision, COMMIT_BUDGET))
+    return summary
 
 
 def render(repo, revision, previous, run_id, changes, digests, version="", omit_kit=False):
