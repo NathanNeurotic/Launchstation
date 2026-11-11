@@ -94,6 +94,7 @@ jobs:
           python3 tests/test_clock_sync.py
           python3 tests/test_storage_probe_frames.py
           python3 tests/test_dash_pause.py
+          python3 tests/test_timer_wrap.py
           python3 tests/test_mmce_bus_restore.py
           python3 tests/test_poweroff_init.py
           python3 tests/test_settings_save_prompt.py

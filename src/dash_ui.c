@@ -1495,8 +1495,8 @@ void DashPause(u32 usec)
 		DelayThread(usec);
 		return;
 	}
-	/* clock() counts microseconds and wraps every 2^32 (about 71.6 min,
-	 * and Timer() with it); the unsigned difference stays right across it. */
+	/* clock() counts microseconds and wraps every 2^32 (about 71.6 min);
+	 * the unsigned difference stays right across it. */
 	start = clock();
 	do {
 		loadingDraw();
