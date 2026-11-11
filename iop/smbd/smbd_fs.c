@@ -52,6 +52,7 @@ static union {
 	struct smb2_file_fs_full_size_info full;
 	struct smb2_file_fs_attribute_info attr;
 	struct smb2_file_fs_device_info device;
+	uint8_t raw[24]; /* classes libsmb2 has no encoder for, already in wire order */
 	struct smb2_file_fs_volume_info volume;
 } info;
 
@@ -614,6 +615,21 @@ static int change_notify_cmd(struct smb2_server *srvr, struct smb2_context *smb2
 	return reply(smb2, SMB2_CHANGE_NOTIFY, SMB2_STATUS_NOT_SUPPORTED);
 }
 
+/* A file's number for Windows (st_ino): the same for every handle on it while its name stays. */
+static uint32_t file_number(const char *path)
+{
+	uint32_t h = 2166136261u; /* FNV-1a, 32-bit: no 64-bit helpers on the IOP */
+
+	while (*path)
+		h = (h ^ (uint32_t)lower((unsigned char)*path++)) * 16777619u;
+	return h;
+}
+
+static void put_le32(uint8_t *p, uint32_t v)
+{
+	p[0] = (uint8_t)v, p[1] = (uint8_t)(v >> 8), p[2] = (uint8_t)(v >> 16), p[3] = (uint8_t)(v >> 24);
+}
+
 static int query_info_cmd(struct smb2_server *srvr, struct smb2_context *smb2,
                           struct smb2_query_info_request *req, struct smb2_query_info_reply *rep)
 {
@@ -655,7 +671,7 @@ static int query_info_cmd(struct smb2_server *srvr, struct smb2_context *smb2,
 			info.all.standard.number_of_links = 1;
 			info.all.standard.delete_pending = handles[i].delete_on_close;
 			info.all.standard.directory = (uint8_t)st.dir;
-			info.all.index_number = (uint64_t)(i + 1);
+			info.all.index_number = file_number(handles[i].path);
 			info.all.access_flags = 0x001f01ff;
 			info.all.name = (const uint8_t *)"";
 			len = sizeof(info.all);
@@ -672,7 +688,25 @@ static int query_info_cmd(struct smb2_server *srvr, struct smb2_context *smb2,
 			info.tag.file_attributes = attributes(&st);
 			len = sizeof(info.tag);
 			break;
+		/* Windows asks for these to stat a file (GetFileInformationByHandle, Python's os.stat). */
+		case SMB2_FILE_INTERNAL_INFORMATION: /* IndexNumber */
+			put_le32(info.raw, file_number(handles[i].path));
+			len = 8;
+			break;
+		case SMB2_FILE_EA_INFORMATION: /* EaSize: none */
+			len = 4;
+			break;
+		case SMB2_FILE_ID_INFORMATION: /* VolumeSerialNumber, then a 128-bit FileId */
+			put_le32(info.raw, 0x50320000u + handles[i].share);
+			put_le32(info.raw + 8, file_number(handles[i].path));
+			len = 24;
+			break;
 		}
+		/* The raw classes are fixed-size: too small a buffer is refused, not cut. */
+		if (req->file_info_class == SMB2_FILE_INTERNAL_INFORMATION ||
+		    req->file_info_class == SMB2_FILE_EA_INFORMATION || req->file_info_class == SMB2_FILE_ID_INFORMATION)
+			if (req->output_buffer_length < (uint32_t)len)
+				return reply(smb2, SMB2_QUERY_INFO, SMB2_STATUS_INFO_LENGTH_MISMATCH);
 	} else if (req->info_type == SMB2_0_INFO_FILESYSTEM) {
 		switch (req->file_info_class) {
 		case SMB2_FILE_FS_SIZE_INFORMATION:

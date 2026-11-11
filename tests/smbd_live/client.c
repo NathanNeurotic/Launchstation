@@ -12,6 +12,7 @@
  *   - close them all, rename C to D, then read D back.
  * Prints one line per failure. Exits 0 only if everything held. */
 #include <fcntl.h>
+#include <poll.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -19,6 +20,7 @@
 
 #include <smb2/smb2.h>
 #include <smb2/libsmb2.h>
+#include <smb2/libsmb2-raw.h>
 
 static int failed;
 
@@ -37,6 +39,55 @@ static int read_is(struct smb2_context *smb2, struct smb2fh *fh, const char *wan
 	return n == (int)strlen(want) && !memcmp(buf, want, (size_t)n);
 }
 
+struct raw_reply {
+	int done, status;
+	uint32_t len;
+	uint8_t buf[32];
+};
+
+static void raw_cb(struct smb2_context *smb2, int status, void *data, void *cb_data)
+{
+	struct raw_reply *r = cb_data;
+	struct smb2_query_info_reply *rep = data;
+
+	r->status = status;
+	if (status == 0 && rep) {
+		r->len = rep->output_buffer_length;
+		memcpy(r->buf, rep->output_buffer, r->len < sizeof(r->buf) ? r->len : sizeof(r->buf));
+		smb2_free_data(smb2, rep->output_buffer);
+	}
+	r->done = 1;
+}
+
+/* A file-info class libsmb2's client has no decoder for, as raw bytes (Windows' stat asks for 6 and 59). */
+static int query_raw(struct smb2_context *smb2, struct smb2fh *fh, uint8_t cls, struct raw_reply *r)
+{
+	struct smb2_query_info_request req;
+	struct smb2_pdu *pdu;
+	struct pollfd pfd;
+
+	memset(&req, 0, sizeof(req));
+	memset(r, 0, sizeof(*r));
+	req.info_type = SMB2_0_INFO_FILE;
+	req.file_info_class = cls;
+	req.output_buffer_length = 4096;
+	memcpy(req.file_id, smb2_get_file_id(fh), SMB2_FD_SIZE);
+	smb2_set_passthrough(smb2, 1);
+	if (!(pdu = smb2_cmd_query_info_async(smb2, &req, raw_cb, r))) {
+		smb2_set_passthrough(smb2, 0);
+		return -1;
+	}
+	smb2_queue_pdu(smb2, pdu);
+	while (!r->done) {
+		pfd.fd = smb2_get_fd(smb2);
+		pfd.events = smb2_which_events(smb2);
+		if (poll(&pfd, 1, 5000) <= 0 || smb2_service(smb2, pfd.revents) < 0)
+			break;
+	}
+	smb2_set_passthrough(smb2, 0);
+	return r->done && r->status == 0 ? 0 : -1;
+}
+
 /* Refused because another handle holds what the rename would move or replace. */
 static int rename_refused(struct smb2_context *smb2, const char *from, const char *to)
 {
@@ -47,6 +98,7 @@ int main(int argc, char **argv)
 {
 	struct smb2_context *smb2;
 	struct smb2fh *a, *b, *a2, *c, *f;
+	struct raw_reply ra, ra2, rb;
 	struct smb2dir *dir;
 	struct smb2dirent *ent;
 	int seen = 0;
@@ -92,6 +144,20 @@ int main(int argc, char **argv)
 		check(smb2_pwrite(smb2, c, (const uint8_t *)"cccc", 4, 0) == 4, "write C", smb2);
 	if (a)
 		check(read_is(smb2, a, "aaaa"), "read A again after the others", smb2);
+	/* What Windows' stat needs: a file number, no EAs, and a file id; one file, one number. */
+	if (a && a2 && b) {
+		check(query_raw(smb2, a, SMB2_FILE_INTERNAL_INFORMATION, &ra) == 0 && ra.len == 8,
+		      "A's file number (FileInternalInformation)", smb2);
+		check(query_raw(smb2, a2, SMB2_FILE_INTERNAL_INFORMATION, &ra2) == 0 && !memcmp(ra.buf, ra2.buf, 8),
+		      "the same number through A's second handle", smb2);
+		check(query_raw(smb2, b, SMB2_FILE_INTERNAL_INFORMATION, &rb) == 0 && memcmp(ra.buf, rb.buf, 8),
+		      "B's number differs from A's", smb2);
+		check(query_raw(smb2, a, SMB2_FILE_EA_INFORMATION, &rb) == 0 && rb.len == 4 && !memcmp(rb.buf, "\0\0\0\0", 4),
+		      "A has no extended attributes (FileEaInformation)", smb2);
+		check(query_raw(smb2, a, SMB2_FILE_ID_INFORMATION, &rb) == 0 && rb.len == 24 && !memcmp(rb.buf + 8, ra.buf, 8),
+		      "A's file id carries its number (FileIdInformation)", smb2);
+	}
+
 	/* A rename would leave a held handle naming nothing, or naming another file: refused. */
 	check(rename_refused(smb2, "A.TXT", "D.TXT"), "refuse to rename A while it is open", smb2);
 	if (a)

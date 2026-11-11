@@ -1,0 +1,14 @@
+diff --git a/lib/smb2-cmd-query-info.c b/lib/smb2-cmd-query-info.c
+index a683064..71e77e6 100644
+--- a/lib/smb2-cmd-query-info.c
++++ b/lib/smb2-cmd-query-info.c
+@@ -311,7 +311,8 @@ smb2_encode_query_info_reply(struct smb2_context *smb2,
+                         smb2_set_error(smb2, "Bad reply for query info");
+                         return -1;
+                 } else if (created_output_buffer_length == 0) {
+-                        if (smb2->passthrough) {
++                        /* No encoder for this class: send the bytes the server wrote as they are. */
++                        if (smb2->passthrough || rep->output_buffer_length) {
+                                 memcpy(buf, rep->output_buffer, rep->output_buffer_length);
+                                 memset(buf + rep->output_buffer_length,
+                                                 0, PAD_TO_64BIT(rep->output_buffer_length) -
