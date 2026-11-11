@@ -296,6 +296,18 @@ static void listRun(void *arg)
 
 	dashWorkerStatus(j->path, 0, 0);
 	j->n = getDir(j->path, j->files);
+#ifdef SMB
+	if (smbSharesV1Name() != NULL && smbPathKind(j->path) == SMB_PATH_V2 && smbIsRootPath(j->path)) {
+		/* the SMB1 share is a folder of the one SMB device; fullPath opens smb1:/ */
+		if (j->n < 0)
+			j->n = 0;
+		if (j->n < MAX_ENTRY) {
+			memset(&j->files[j->n], 0, sizeof(j->files[0]));
+			snprintf((char *)j->files[j->n].name, sizeof(j->files[0].name), "%s", smbSharesV1Name());
+			j->files[j->n++].stats.AttrFile = sceMcFileAttrSubdir;
+		}
+	}
+#endif
 	if (j->titles && j->n > 0)
 		filerEnsureElisaFont();
 	/* right after the read: for the HDD this asks the partition just mounted */
@@ -622,7 +634,7 @@ static void parentOf(const char *dir, char *out, int size, char *child, int chil
 static int fullPath(const FILEINFO *f, char *out, int size)
 {
 #ifdef SMB
-	/* the SMB1 share listed in smb:/ (readSMB) is the smb1: device */
+	/* the SMB1 share listed in smb:/ (listRun) is the smb1: device */
 	const char *v1 = smbSharesV1Name();
 	if (v1 != NULL && smbPathKind(fb.dir) == SMB_PATH_V2 && smbIsRootPath(fb.dir) && !strcmp(f->name, v1))
 		return snprintf(out, size, "%s/", SMB_DEVICE_V1) < size;

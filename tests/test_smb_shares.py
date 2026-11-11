@@ -240,6 +240,14 @@ listing = listing[:listing.index("\n}\n")]
 assert "smbSharesConfigured" not in listing
 # one SMB device: the SMB1 share is a folder of smb:/, not a row of its own
 assert '"Network (SMB1)"' not in listing and listing.count('"Network (SMB)"') == 1
+# the SMB1 share is a folder of smb:/ in the dashboard only; the classic
+# browser keeps its own smb1: root entry
+assert "smbSharesV1Name" not in read_smb
+dash_browser = text("src/dash_browser.c")
+list_run = dash_browser.split("static void listRun(void *arg)", 1)[1].split("\n}\n", 1)[0]
+assert "smbSharesV1Name() != NULL && smbPathKind(j->path) == SMB_PATH_V2 && smbIsRootPath(j->path)" in list_run
+probe = text("src/dash_devices.c")
+assert "ok |= smbSharesConnectedCount(SMB_PATH_V1) > 0;" in probe
 
 # a refused mc1: (MX4SIO owns the bus) keeps the retry pending, but a fallback
 # SMB2.CNF that was read (mc0:/SYS-CONF) must stay visible to smbSharesKnown

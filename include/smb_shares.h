@@ -119,8 +119,8 @@ void smbSharesForget(void); /* the drivers are gone (IOP reset) */
 int smbSharesReload(void); /* 1 when old sessions were retired; 0 on disconnect failure */
 /* LAUNCHSTATION.CNF's share blocks: taken from the file text when it is
  * loaded, written back after its settings. NULL: none, SMB2.CNF is read. */
-void smbSharesSetSection(const char *cnf_text);
-void smbSharesSetBlocks(const char *blocks); /* the section without its line */
+int smbSharesSetSection(const char *cnf_text);
+int smbSharesSetBlocks(const char *blocks); /* the section without its line */
 const char *smbSharesBlocks(void);
 #endif
 

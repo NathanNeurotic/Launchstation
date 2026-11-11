@@ -44,15 +44,20 @@ int smbSharesNeutrino(const char *path, SmbShare *share, char *dvd,
 
 static char *smb_blocks; /* LAUNCHSTATION.CNF's share blocks; NULL: none */
 
-void smbSharesSetBlocks(const char *blocks)
+int smbSharesSetBlocks(const char *blocks)
 {
+	char *copy = NULL;
+
+	if (blocks != NULL && (copy = strdup(blocks)) == NULL)
+		return 0; /* the old blocks stay */
 	free(smb_blocks);
-	smb_blocks = blocks != NULL ? strdup(blocks) : NULL;
+	smb_blocks = copy;
+	return 1;
 }
 
-void smbSharesSetSection(const char *cnf_text)
+int smbSharesSetSection(const char *cnf_text)
 {
-	smbSharesSetBlocks(smbCnfSection(cnf_text));
+	return smbSharesSetBlocks(smbCnfSection(cnf_text));
 }
 
 const char *smbSharesBlocks(void)
@@ -71,6 +76,12 @@ static char *smbReadConfigText(int *mc1_refused)
 
 	*mc1_refused = 0;
 	smb_cfg_path[0] = '\0';
+	if (smb_blocks != NULL && LoadedConfigPath[0] && (strncmp(LoadedConfigPath, "mc1", 3) || !mc1AccessRefused()) &&
+	    (text = dashLoadTextFile(LoadedConfigPath, 128 * 1024, NULL)) != NULL) {
+		/* read again, so a file corrected on a PC is used without restarting */
+		smbSharesSetSection(text);
+		free(text);
+	}
 	if (smb_blocks != NULL) {
 		snprintf(smb_cfg_path, sizeof(smb_cfg_path), "%s", LoadedConfigPath[0] ? LoadedConfigPath : "Settings");
 		return strdup(smb_blocks);

@@ -19,7 +19,8 @@ static void smbFrame(int status, int stopping)
 	          DASH_FS_LABEL, DASH_C_TEXT);
 	snprintf(line, sizeof(line), "\\\\%s\\mc0    \\\\%s\\mc1", ip, ip);
 	dashTextFit(x + 24, y + 65, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT);
-	snprintf(line, sizeof(line), "User name: %s    Password: %s", setting->SMB_Server_User, setting->SMB_Server_Pass);
+	snprintf(line, sizeof(line), "User name: %s    Password: %s", smbServerLogin(),
+	         smbServerLogin() + strlen(smbServerLogin()) + 1);
 	dashTextFit(x + 24, y + 93, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT);
 	snprintf(line, sizeof(line), "Connected clients: %d", status >> 2);
 	dashTextFit(x + 24, y + 121, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);

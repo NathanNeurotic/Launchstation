@@ -2773,6 +2773,8 @@ int isFtpNetworkReady(void)
 /* The memory card SMB server (iop/smbd): loaded on first Start, then started and stopped
  * through its devctls. It stays resident when stopped, so FTP and the IOP are left alone.
  * Returns 0, or a negative errno. */
+static char smbd_login[64]; /* user\0password\0 the running server took */
+
 int startSmbServer(void)
 {
 	char args[64]; /* user and password (Settings > Network), shown on the screen */
@@ -2797,9 +2799,16 @@ int startSmbServer(void)
 		filerRootMcPollIdle();
 		ret = fileXioDevctl("smbd:", SMBD_DEVCTL_START, args, len, NULL, 0);
 	}
+	if (ret == 0 && !smbd_active)
+		memcpy(smbd_login, args, len); /* a running server keeps its login */
 	if (ret == 0)
 		smbd_active = 1; /* a failed request leaves a running server marked running */
 	return ret;
+}
+
+const char *smbServerLogin(void)
+{
+	return smbd_login;
 }
 
 int smbServerStatus(void)

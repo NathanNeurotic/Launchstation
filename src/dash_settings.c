@@ -487,9 +487,11 @@ static void smbedLoadPick(void)
 	}
 }
 
+static int saveSharesCnf(void);
+
 static int smbedWriteFile(const char *block)
 {
-	char *out, *work, *text = NULL;
+	char *out, *work, *text = NULL, *old = NULL;
 	const char *base = smbSharesBlocks();
 	SmbConfig cfg;
 	int len, i, matches = 0, valid = 0, ret = -3;
@@ -527,10 +529,16 @@ static int smbedWriteFile(const char *block)
 		ret = -2;
 		goto out_free;
 	}
-	smbSharesSetBlocks(out);
-	ret = !dashSettingsSaveCnf() ? -5 : smbSharesReload() ? 0 : -6;
+	if ((smbSharesBlocks() != NULL && (old = strdup(smbSharesBlocks())) == NULL) || !smbSharesSetBlocks(out))
+		goto out_free;
+	if (!saveSharesCnf()) {
+		smbSharesSetBlocks(old); /* not written: the shares stay as they were */
+		ret = -5;
+	} else
+		ret = smbSharesReload() ? 0 : -6;
 	smbSharesSnapshot(&smbed.snap);
 out_free:
+	free(old);
 	free(out);
 	free(work);
 	return ret;
@@ -2226,6 +2234,29 @@ int dashSettingsSaveCnf(void)
 	return cfgSave(CFG_SAVE_CNF, -2, NULL);
 }
 
+#ifdef SMB
+/* Share saves are written at once, with the settings as they were when
+ * Settings opened, so Discard still undoes the other edits. Waits for the write. */
+static int saveSharesCnf(void)
+{
+	SETTING *cur = session ? (SETTING *)malloc(sizeof(SETTING)) : NULL;
+	int ok;
+
+	if (session && cur == NULL)
+		return 0;
+	if (cur != NULL) {
+		memcpy(cur, setting, sizeof(SETTING));
+		memcpy(setting, &snap_classic, sizeof(SETTING));
+	}
+	ok = dashSettingsSaveCnf();
+	if (cur != NULL) {
+		memcpy(setting, cur, sizeof(SETTING));
+		free(cur);
+	}
+	return ok && dashWorkerAwaitAll("Saving settings") && !cfg_failed[CFG_SAVE_CNF];
+}
+#endif
+
 static int cfgSave(int kind, int target, const char *path)
 {
 	CfgSaveJob *j = calloc(1, sizeof(CfgSaveJob));
@@ -3338,8 +3369,7 @@ static void runAction(int id)
 			}
 			/* The shares are the end of LAUNCHSTATION.CNF: save it, edit it, then
 			 * take the edited blocks back. */
-			if (!dashSettingsSaveCnf() || !dashWorkerAwaitAll("Saving settings") ||
-			    cfg_failed[CFG_SAVE_CNF] || !LoadedConfigPath[0])
+			if (!saveSharesCnf() || !LoadedConfigPath[0])
 				break;
 			dashTextEditor(LoadedConfigPath);
 			if ((text = dashLoadTextFile(LoadedConfigPath, 128 * 1024, NULL)) != NULL) {
