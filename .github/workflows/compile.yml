@@ -74,6 +74,8 @@ jobs:
           python3 tests/test_smb_explicit_port.py
           python3 tests/test_smb_browser_failure.py
           python3 tests/test_smb_connect_state.py
+          python3 tests/test_smb_cnf_edit.py
+          python3 tests/test_smb_settings_row.py
           python3 tests/test_network_load_result.py
           python3 tests/test_copy_test_pack.py
           python3 tests/test_transfer_stack_preflight.py

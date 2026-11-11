@@ -91,6 +91,24 @@ int main(void)
                          "192.168.1.100", 0, "games", 0);
     check(n < 0, "port 0 refused");
 
+    n = smbCnfBuildBlock(block, sizeof(block), "PC", 2, "", "secret",
+                         "192.168.1.100", 445, "games", 0);
+    check(n > 0 && strstr(block, "USERNAME") == NULL &&
+          strstr(block, "PASSWORD = secret\n") != NULL, "password kept without USERNAME");
+
+    /* ---- CR-only line endings: splice the right block ---- */
+    {
+        const char *cr = "NAME = ONE\rURL = smb://10.0.0.1/x\r\rNAME = TWO\rURL = smb://10.0.0.2/y\r";
+        char repl[512];
+
+        smbCnfBuildBlock(repl, sizeof(repl), "TWO", 2, NULL, NULL, "10.0.0.9", 445, "y2", 0);
+        len = upsert(cr, "TWO", repl, out, sizeof(out), work, sizeof(work));
+        check(len > 0 && strstr(out, "NAME = ONE\rURL = smb://10.0.0.1/x\r") != NULL &&
+              strstr(out, "10.0.0.2") == NULL && strstr(out, "smb://10.0.0.9:445/y2") != NULL,
+              "CR-only file: other share kept, target replaced");
+        checkParses("cr-only", out, 2);
+    }
+
     /* ---- append to an empty and a commented file ---- */
     n = smbCnfBuildBlock(block, sizeof(block), "PC", 2, "player", "secret",
                          "192.168.1.100", 445, "games", 0);

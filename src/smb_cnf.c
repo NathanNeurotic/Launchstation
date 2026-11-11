@@ -338,7 +338,8 @@ static int lineOffset(const char *text, int line_no)
 	int n = 1;
 
 	while (n < line_no && *p) {
-		if (*p == '\n')
+		/* As smbConfigParse: CR, LF and CRLF each end one line. */
+		if (*p == '\n' || (*p == '\r' && p[1] != '\n'))
 			n++;
 		p++;
 	}
@@ -396,6 +397,9 @@ int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
 		if (url_len < 0 || url_len >= out_size - n)
 			return -1;
 		n += url_len;
+	}
+	/* A password without USERNAME is valid: keep it on re-save. */
+	if ((username != NULL && username[0] != '\0') || (password != NULL && password[0] != '\0')) {
 		url_len = snprintf(out + n, out_size - n, "PASSWORD = %s\n",
 		                   password != NULL ? password : "");
 		if (url_len < 0 || url_len >= out_size - n)

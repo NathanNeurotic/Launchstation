@@ -40,6 +40,16 @@ static void deviceNotFound(const DashDevice *d)
 
 	if (d->icon == DI_USB)
 		snprintf(body, sizeof(body), "No USB storage device was found. Connect a USB drive and try again.");
+#ifdef SMB
+	else if (smbPathKind(d->mount) != SMB_PATH_NONE) {
+		int v = smbPathKind(d->mount);
+
+		if (!isSmbDriverLoaded(v) && smbLoadError(v)[0])
+			snprintf(body, sizeof(body), "%s", smbLoadError(v));
+		else
+			smbSharesStatus(v, body, sizeof(body));
+	}
+#endif
 	else if (d->icon == DI_NETWORK || d->icon == DI_SHARE)
 		snprintf(body, sizeof(body), "The network share could not be reached. Check the cable, IP settings and that the %s server is running.",
 		         !strncmp(d->mount, "smb", 3) ? "SMB" : "UDPFS");
