@@ -489,10 +489,11 @@ static void checkFilenameLayouts(void) {
         checkReachability();kb_act=-1;kb_sel=KB_SPACE_KEY;draw();
         assert(label("Space") && !label("Symbols") && !label("/") && !label("\\"));
         assert(!label("?") && !label("|") && !label(":") && !label("*") && !nsymbols);
+        if(layout==VKEY_LAYOUT_QWERTY && !caps) assert(label("8") && label(".") && label(","));
         for(int i=0;i<VKEY_LAYOUT_SIZE;i++) {
             unsigned char c=getVirtualKeyboardFilenameChar(layout,i,caps);
             int allowed=i==KB_SPACE_KEY ||
-                (isVirtualKeyboardFilenameKey(layout,i) && c>=32 && c!=127 && !strchr("<>:\"/\\|?*",c));
+                (isVirtualKeyboardLayoutKey(layout,i) && c>=32 && c!=127 && !strchr("<>:\"/\\|?*",c));
             assert(kbIsKey(&editor_keyboard,i)==allowed);
             kb_sel=i;kb_act=-1;
             assert(dashKeyboardPress(&editor_keyboard)==(allowed?(i==KB_SPACE_KEY?' ':c):0));
