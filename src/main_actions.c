@@ -627,12 +627,10 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		executeBrowserSelection(tmp, ctx);
 		return;
 	} else if (!stricmp(path, setting->Misc_PS2Browser)) {
-		/* SkipMc stops OSDSYS running a memory card system update (such as
-		   an installed exploit) instead of the Browser. */
-		char *args[2] = {"BootBrowser", "SkipMc"};
+		char *args[1] = {"BootBrowser"};
 
 		CleanUpForExec();
-		ExecOSD(2, args);
+		ExecOSD(1, args);
 #ifdef ETH
 	} else if (!stricmp(path, setting->Misc_PS2Net)) {
 		ctx->main_msg[0] = 0;
