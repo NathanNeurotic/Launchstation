@@ -116,6 +116,13 @@ int dashVisibleSectionIndex(int s)
 	return 0;
 }
 
+/* Where Circle goes when leaving a tab: the first tab still enabled, which is
+ * HOME unless the Home tab toggle is off (issue #343). */
+int dashBackSection(void)
+{
+	return dashVisibleSectionAt(0);
+}
+
 const char *dashVisibleSectionName(int index)
 {
 	return dashSectionName(dashVisibleSectionAt(index));

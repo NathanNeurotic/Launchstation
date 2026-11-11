@@ -3281,7 +3281,8 @@ static void browserDrawBody(void)
 		if (fb.dir[0] && !isMisc(fb.dir))
 			h[n].button = DI_BTN_SQUARE, h[n].key = NULL, h[n].label = "Select", n++;
 		h[n].button = DI_BTN_TRIANGLE, h[n].key = NULL, h[n].label = "Menu", n++;
-		h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = fb.dir[0] ? "Up" : (fb_tab_active ? "Home" : "Close"), n++;
+		if (fb.dir[0] || !fb_tab_active || dashBackSection() != DASH_SEC_FILES)
+			h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = fb.dir[0] ? "Up" : (fb_tab_active ? dashSectionLabel(dashBackSection()) : "Close"), n++;
 		dashDrawHints(h, n);
 	}
 	/* Temporary hardware diagnostic for the completed USB listing/input-loss
@@ -3412,7 +3413,7 @@ static void browserProcessInput(const DashInput *in, int *running)
 			if (running != NULL)
 				*running = 0;
 			else {
-				dashSwitchSection(DASH_SEC_HOME);
+				dashSwitchSection(dashBackSection());
 				return;
 			}
 		} else {

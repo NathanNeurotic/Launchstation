@@ -1042,6 +1042,7 @@ int dashDashboardConfirmLeave(int (*leave)(void));
 int dashCurrentSection(void);
 int dashVisibleSectionCount(void);
 int dashVisibleSectionAt(int index);
+int dashBackSection(void);
 int dashVisibleSectionIndex(int section);
 const char *dashVisibleSectionName(int index);
 int dashAdjacentSection(int section, int direction);
