@@ -394,11 +394,9 @@ void scsi_connect(struct scsi_interface *scsi)
             bd->name = scsi->name;
             bd->path = "usb";
             bd->devNr = scsi->devNr;
-            if (scsi_warmup(bd) == 0 && bd->priv != NULL) { // not unplugged during start-up
+            if (scsi_warmup(bd) == 0 && bd->priv != NULL) // not unplugged during start-up
                 bdm_connect_bd(bd);
-                if (bd->priv == NULL) // unplugged while being handed over: its disconnect found nothing to remove
-                    bdm_disconnect_bd(bd);
-            } else
+            else
                 bd->priv = NULL; // start-up failed: no size, leave it out
             break;
         }
