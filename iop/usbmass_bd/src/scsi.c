@@ -190,6 +190,9 @@ static int scsi_warmup(struct block_device *bd)
 
     M_DEBUG("%s\n", __func__);
 
+    if (scsi == NULL) // unplugged before start-up began
+        return -1;
+
     stat = scsi->get_max_lun(scsi);
     M_DEBUG("scsi->get_max_lun %d\n", stat);
 
