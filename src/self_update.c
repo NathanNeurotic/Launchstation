@@ -411,7 +411,8 @@ static int install_update_files(const char *parent, const char *leaf,
     }
 
     snprintf(remove_path, sizeof(remove_path), "%s", backup);
-    rollback_ok = genRemove(remove_path) >= 0 || !wleExists(backup);
+    genRemove(remove_path); /* some drivers report success and keep the entry */
+    rollback_ok = !wleExists(backup);
     snprintf(result, result_size,
              "Update installed and verified (%d bytes). %s%s%s%sRestart Launchstation to run the new build.",
              size,
