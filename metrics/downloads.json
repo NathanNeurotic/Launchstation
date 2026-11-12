@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-12T06:59:04+00:00",
+  "updated_at": "2026-11-12T09:21:19+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 1906,
+  "total_downloads": 1922,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -6171,7 +6171,7 @@
       "release": "latest"
     },
     "737995677": {
-      "downloads": 2,
+      "downloads": 3,
       "name": "APP_LAUNCHSTATION-DS-1155.zip",
       "release": "build-1155"
     },
@@ -6186,7 +6186,7 @@
       "release": "build-1155"
     },
     "737995683": {
-      "downloads": 2,
+      "downloads": 3,
       "name": "APP_LAUNCHSTATION-1155.zip",
       "release": "build-1155"
     },
@@ -6351,7 +6351,7 @@
       "release": "latest"
     },
     "738424901": {
-      "downloads": 0,
+      "downloads": 1,
       "name": "APP_LAUNCHSTATION-1157.zip",
       "release": "build-1157"
     },
@@ -6394,6 +6394,51 @@
       "downloads": 0,
       "name": "LAUNCHSTATION-1157.zip",
       "release": "build-1157"
+    },
+    "738425279": {
+      "downloads": 1,
+      "name": "APP_LAUNCHSTATION-DS-1157.zip",
+      "release": "latest"
+    },
+    "738425282": {
+      "downloads": 3,
+      "name": "APP_LAUNCHSTATION-1157.zip",
+      "release": "latest"
+    },
+    "738425297": {
+      "downloads": 3,
+      "name": "LAUNCHSTATION.ELF",
+      "release": "latest"
+    },
+    "738425299": {
+      "downloads": 1,
+      "name": "APP_LAUNCHSTATION-DS.psu",
+      "release": "latest"
+    },
+    "738425301": {
+      "downloads": 1,
+      "name": "APP_LAUNCHSTATION.psu",
+      "release": "latest"
+    },
+    "738425312": {
+      "downloads": 3,
+      "name": "LAUNCHSTATION-1157.zip",
+      "release": "latest"
+    },
+    "738425318": {
+      "downloads": 0,
+      "name": "BOOT2.ELF",
+      "release": "latest"
+    },
+    "738425321": {
+      "downloads": 1,
+      "name": "LAUNCHSTATION-DS.ELF",
+      "release": "latest"
+    },
+    "738425328": {
+      "downloads": 0,
+      "name": "BOOT.ELF",
+      "release": "latest"
     }
   }
 }
