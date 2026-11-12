@@ -161,6 +161,10 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_TEXT, "to maintain and continue improving");
 	sheetAdd(&s, SL_TEXT, "DS3/DS4 support by Alex Parrado");
 	sheetAdd(&s, SL_TEXT, "Thanks to TnA for all his insight and support");
+	sheetAdd(&s, SL_HEAD, "SMB and NFS network shares");
+	sheetAdd(&s, SL_TEXT, "Ronnie Sahlberg - usmb2 (smb:), unfs4 (nfs:)");
+	sheetAdd(&s, SL_TEXT, "and libsmb2 (SMB server for memory cards)");
+	sheetAdd(&s, SL_TEXT, "github.com/sahlberg");
 	sheetAdd(&s, SL_HEAD, "PC CARD CompactFlash reference");
 	sheetAdd(&s, SL_TEXT, "mihhru - PS2CF");
 	sheetAdd(&s, SL_TEXT, "github.com/mihhru/PS2CF");

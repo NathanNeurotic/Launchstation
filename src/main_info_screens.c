@@ -84,7 +84,7 @@ void Show_About_uLE(void)
 			PrintPos(-1, hpos, "  Polo35, radad, Drakonite, sincro", COLOR_TEXT);
 			PrintPos(-1, hpos, "  kthu, Slam-Tilt, chip, pixel, Hermes, PCM720", COLOR_TEXT);
 			PrintPos(-1, hpos, "  and others in the PS2Dev community", COLOR_TEXT);
-			PrintPos(-1, hpos, " ", COLOR_TEXT);
+			PrintPos(-1, hpos, "SMB/NFS: Ronnie Sahlberg (usmb2, unfs4, libsmb2)", COLOR_TEXT);
 			PrintPos(-1, hpos, "Main release site:", COLOR_TEXT);
 			PrintPos(-1, hpos, "   github.com/ps2homebrew/wLaunchELF/releases", COLOR_TEXT);
 			PrintPos(-1, hpos, "Mod Release site:", COLOR_SELECT);
