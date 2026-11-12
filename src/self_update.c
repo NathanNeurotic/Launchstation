@@ -6,6 +6,7 @@
 #include "filer_shared.h"
 #include "filer_actions.h"
 #include "self_update.h"
+#include "dash.h"
 
 #include <malloc.h>
 #include <ctype.h>
@@ -235,6 +236,7 @@ static int install_update_files(const char *parent, const char *leaf,
     }
 
     error[0] = '\0';
+    DashStorageProbeStatus("Downloading the update from GitHub");
     size = download_file(UPDATE_ELF_URL, package, ca_path, UPDATE_MAX_ELF,
                          actual, error, sizeof(error));
     if (size <= 0) {
@@ -242,6 +244,7 @@ static int install_update_files(const char *parent, const char *leaf,
                  error[0] ? error : "no update data was received");
         return -1;
     }
+    DashStorageProbeStatus("Checking the download (SHA-256)");
     if (memcmp(expected, actual, sizeof(expected)) != 0) {
         snprintf(remove_path, sizeof(remove_path), "%s", package);
         genRemove(remove_path);
@@ -250,6 +253,7 @@ static int install_update_files(const char *parent, const char *leaf,
         return -1;
     }
     package_size = size;
+    DashStorageProbeStatus("Unpacking and checking the new ELF");
     size = selfUpdateExtractPsu(package, stage, package_size);
     if (size <= 0) {
         snprintf(remove_path, sizeof(remove_path), "%s", package);
@@ -271,6 +275,8 @@ static int install_update_files(const char *parent, const char *leaf,
     /* Verified four-, eight- and nine-file PSUs can initialize missing runtime sidecars.
      * Never overwrite existing CA/BGM assets; they may be user customized.
      * A verified legacy two-file PSU simply has no sidecars to stage. */
+    if (need_ca || need_bgm)
+        DashStorageProbeStatus("Adding missing bundled files");
     if (need_ca) {
         sidecar_size = selfUpdateExtractPsuSidecar(package, "WLE-UPDATE-CA.PEM",
                                                    update_ca_stage, package_size);
@@ -306,6 +312,7 @@ static int install_update_files(const char *parent, const char *leaf,
 
     /* Only now, after a complete verified download, touch the current ELF.
      * Keep one recovery copy beside it. */
+    DashStorageProbeStatus("Replacing the ELF (old one kept as .BAK)");
     if (wleExists(backup)) {
         snprintf(remove_path, sizeof(remove_path), "%s", backup);
         if (genRemove(remove_path) < 0 && wleExists(backup)) {

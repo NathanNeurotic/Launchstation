@@ -64,6 +64,7 @@ static int del(const char *p) {
     return -1;
 }
 static int wleExists(const char *p) { return has(p); }
+static void DashStorageProbeStatus(const char *s) { assert(s && s[0]); }
 static int genRemove(const char *p) { return del(p); }
 static const char *wleBootElfPath(void) { return boot; }
 static int ensurePathDeviceStackReady(const char *p) {

@@ -117,10 +117,12 @@ int main(void) {
         updateTemp(10,0);assert(!menuTitleGetTemperatureRaw(&raw));show("23:59:58");
         updateTemp(5010,0);updateTemp(100010,0);assert(sensor_queries==1);
     }
-    /* A transient failure after a supported read hides the value until retry. */
-    resetSensor();updateTemp(10,0);sensor_ok=0;assert(updateTemp(5010,0));
-    assert(!menuTitleGetTemperatureRaw(&raw));sensor_ok=1;updateTemp(10009,0);assert(sensor_queries==2);
-    assert(updateTemp(10010,0) && sensor_queries==3);
+    /* A transient failure after a supported read keeps the last sample until retry. */
+    resetSensor();sensor_raw=40*128;updateTemp(10,0);sensor_ok=0;sensor_raw=45*128;assert(!updateTemp(5010,0));
+    assert(menuTitleGetTemperatureRaw(&raw) && raw==40*128);show("23:59:58  104.0\260F");
+    sensor_ok=1;updateTemp(10009,0);assert(sensor_queries==2);
+    sensor_raw=41*128;assert(updateTemp(10010,0) && sensor_queries==3);
+    assert(menuTitleGetTemperatureRaw(&raw) && raw==41*128);
     updateTemp(1,0);assert(sensor_queries==4); /* timer restart */
     sensor_raw=40*128;updateTemp(2,1);dashCfg.temp_fahrenheit=0;
     dashTheme.clock=DASH_CLOCK_STANDARD;dashTheme.clock_seconds=1;dashTheme.clock_date=DASH_DATE_SYSTEM;
@@ -147,7 +149,7 @@ int main(void) {
     dashTheme.clock=DASH_CLOCK_OFF;draws=0;dashDrawClock();assert(!draws);
     assert(footerClockWidth(time,sizeof(time),date,sizeof(date))==0);
     clock_valid=0;clockText(time,sizeof(time),date,sizeof(date));assert(strstr(time,"--:--:--  104.0\260F") && !date[0]);
-    puts("PASS: R3Z SCMD support/hidden failures, 5-second polling, cached precise C/F conversion, degree/spacing, header clearance and footer sizing");
+    puts("PASS: R3Z SCMD support/hidden failures, last sample kept on a failed read, 5-second polling, cached precise C/F conversion, degree/spacing, header clearance and footer sizing");
 }
 '''
 with tempfile.TemporaryDirectory(prefix="launchstation-temperature-") as folder:
