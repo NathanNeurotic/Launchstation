@@ -149,6 +149,7 @@ jobs:
           python3 tests/test_dashboard_pending_loops.py
           python3 tests/test_mmce_presence_probe.py
           python3 tests/test_usb_probe_status.py
+          python3 tests/test_usb_wait_text.py
           python3 tests/test_usb_unit_diagnostics.py
           python3 tests/test_mc_poll_usb_barrier.py
           python3 tests/test_usb_browse_cache.py

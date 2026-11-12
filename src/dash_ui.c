@@ -1462,6 +1462,15 @@ void dashLoadingFrame(const char *status, int done, int total)
 	loadingDraw();
 }
 
+/* Set while a caller owns the overlay text (the animated USB probe): per-root probe
+ * lines still draw a frame before each RPC, but keep the caller's text and bar. */
+static int probe_status_held;
+
+void dashLoadingHoldProbeStatus(int hold)
+{
+	probe_status_held = hold;
+}
+
 void DashStorageProbeStatus(const char *status)
 {
 	if (!DashIsActive() || isStartupDriverStatusQuiet())
@@ -1472,8 +1481,12 @@ void DashStorageProbeStatus(const char *status)
 	}
 	/* Unlike the throttled status setter, present this before the RPC.
 	 * Never create an overlay in classic code or from a background job. */
-	if (loading_active)
-		dashLoadingFrame(status, 0, 0);
+	if (loading_active) {
+		if (probe_status_held)
+			loadingDraw();
+		else
+			dashLoadingFrame(status, 0, 0);
+	}
 }
 
 void dashLoadingEnd(void)

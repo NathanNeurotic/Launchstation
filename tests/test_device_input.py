@@ -260,6 +260,7 @@ static int filerUsbDriversLoaded(void) { return usb_loaded; }
 static int filerUsbDriveMask(void) { return usb_snapshot_valid?usb_mask:0; }
 static int dashLoadingActive(void) { return 0; }
 static void dashLoadingFrame(const char *s,int d,int n) { (void)s;(void)d;(void)n; }
+static void dashLoadingHoldProbeStatus(int h) { (void)h; }
 static u64 usb_media_ready, usb_second_ready;
 static int usb_scan_calls;
 static int filerUsbRefreshDriveMask(void) {

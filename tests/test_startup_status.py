@@ -38,6 +38,8 @@ static int DashIsActive(void) { return active; }
 static int dashWorkerOnThread(void) { return worker; }
 static void dashWorkerStatus(const char *s,int d,int t) { (void)s;(void)d;(void)t; reports++; }
 static void dashLoadingFrame(const char *s,int d,int t) { (void)s;(void)d;(void)t; frames++; }
+static int probe_status_held;
+static void loadingDraw(void) { frames++; }
 static void dashLoadingStatus(const char *s,int d,int t) { (void)s;(void)d;(void)t; }
 static void dashLoadingBegin(const char *title) { assert(!strcmp(title,"Starting Launchstation")); begins++; }
 static void dashLoadingEnd(void) { ends++; }
