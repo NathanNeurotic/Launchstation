@@ -125,6 +125,7 @@ enum { WANT_CBW, SEND_DATA, SEND_CSW };
 struct drive { int state; u32 tag, left; u8 op; int wrong; };
 static struct drive drives[2];
 static volatile int short_csw_once;  /* drive 0's next status read completes with 0 bytes */
+static volatile int cut_csw_once;    /* drive 0's next status is cut off at 12 bytes */
 static volatile int zlp_once;  /* drive 0 ends its next data phase with a zero-length packet */
 struct xfer { int pipe; u8 *buf; int len; sceUsbdDoneCallback cb; void *arg; int control; };
 static struct xfer queue[64]; static int qhead, qtail;
@@ -170,6 +171,10 @@ static void *usb_thread(void *unused) {
         } else if (d->state == SEND_CSW && x.len == 13 && short_csw_once && d == &drives[0]) {
             short_csw_once = 0;                 /* an empty status read; the real CSW is still to come */
             x.cb(USB_RC_OK, 0, x.arg);
+        } else if (d->state == SEND_CSW && x.len == 13 && cut_csw_once && d == &drives[0]) {
+            cut_csw_once = 0;                   /* 12 bytes of status, then it waits for the next command */
+            d->state = WANT_CBW;
+            x.cb(USB_RC_OK, 12, x.arg);
         } else if (d->state == SEND_CSW && x.len == 13) {
             u32 sig = CSW_TAG, zero = 0;
             memcpy(x.buf, &sig, 4); memcpy(x.buf + 4, &d->tag, 4); memcpy(x.buf + 8, &zero, 4); x.buf[12] = 0;
@@ -213,6 +218,12 @@ static int unplug_cmd(struct scsi_interface *s, const unsigned char *c, unsigned
     return 0;
 }
 static void *offline_startup(void *p) { scsi_connect((struct scsi_interface *)p); return NULL; }
+static int cut_r1;
+static void *cut_read(void *p) {
+    static u8 buf[512]; unsigned char cdb[12] = {READ_10}; (void)p;
+    cut_r1 = usb_queue_cmd(&g_mass_device[0].scsi, cdb, sizeof(cdb), buf, sizeof(buf), 0);
+    return NULL;
+}
 
 int main(void) {
     pthread_t usb, t0, t1, t2; int d, bad = 0; struct timespec until;
@@ -258,6 +269,23 @@ int main(void) {
             bad = 1;
         } else
             printf("ok short status: an empty status read is read again, the drive stays in step\n");
+    }
+
+    {
+        static u8 buf[512]; unsigned char cdb[12] = {READ_10}; int r2; pthread_t t;
+        cut_csw_once = 1;
+        pthread_create(&t, NULL, cut_read, NULL);
+        clock_gettime(CLOCK_REALTIME, &until); until.tv_sec += 10;
+        if (pthread_timedjoin_np(t, NULL, &until)) {
+            printf("FAIL cut status: a read whose status was cut off never finished\n");
+            return 1;
+        }
+        r2 = usb_queue_cmd(&g_mass_device[0].scsi, cdb, sizeof(cdb), buf, sizeof(buf), 0);
+        if (cut_r1 == 0 || r2 != 0 || drives[0].wrong) {
+            printf("FAIL cut status: read returned %d, next read %d, out-of-step commands %d\n", cut_r1, r2, drives[0].wrong);
+            bad = 1;
+        } else
+            printf("ok cut status: a read whose status was cut off fails, the next one works\n");
     }
 
     offline.name = "usb"; offline.get_max_lun = offline_lun; offline.queue_cmd = offline_cmd;

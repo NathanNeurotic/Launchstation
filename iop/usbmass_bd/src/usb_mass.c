@@ -277,8 +277,10 @@ static int usb_bulk_status(mass_dev *dev, csw_packet *csw, unsigned int tag)
     if (ret == USB_RC_OK) {
         WaitSema(cb_data.sema);
         ret = cb_data.returnCode;
-        if (ret == USB_RC_OK && cb_data.returnSize != 13)
-            ret = USB_RC_DATAUNDER; // a short status is not a status: clear the halt and read it again
+        if (ret == USB_RC_OK && cb_data.returnSize == 0)
+            ret = USB_RC_DATAUNDER; // no status yet: clear the halt and read it again
+        else if (ret == USB_RC_OK && cb_data.returnSize != 13)
+            csw->signature = 0; // a cut-off status is invalid: reset recovery, the command fails
 
 #ifdef DEBUG
         if (cb_data.returnSize != 13)

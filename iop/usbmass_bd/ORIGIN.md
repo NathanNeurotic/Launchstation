@@ -36,8 +36,8 @@ Smaller fixes found in review of this copy:
    the command fails if data was still missing.
 7. `usb_mass.c`: unplugging a drive whose start-up failed frees its slot, so it is found again
    when plugged back in.
-8. `usb_mass.c`: a status read (CSW) that returns fewer than 13 bytes is read again instead of
-   being taken as success; the drive stays in step.
+8. `usb_mass.c`: a status read (CSW) that returns no bytes is read again, and one cut off
+   part-way fails the command with reset recovery, instead of either being taken as success.
 9. `scsi.c`: a drive unplugged during start-up stops the start-up instead of using a cleared pointer.
 10. `usb_mass.c`: start-up fails cleanly if the driver's semaphores cannot be created, and frees
     the one that was created.
