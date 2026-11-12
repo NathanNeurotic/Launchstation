@@ -1,0 +1,83 @@
+name: Neutrino Watch
+
+# Keeps the full kit (LAUNCHSTATION-<build>.zip) level with the upstream Neutrino development build.
+#
+# Automated-Build already downloads the newest build of the ps2max32/neutrino "latest" pre-release (the
+# development build, not the stable v1.x tag) every time it runs, but it only runs on a push to master. This
+# watch covers the other half: when upstream publishes a newer Neutrino than the one inside the kit on our
+# "latest" release, it starts Automated-Build on master so the kit is rebuilt without waiting for a commit.
+#
+# Read-only until it acts: it compares the SHA-256 GitHub publishes for upstream's neutrino_*.7z with the one
+# recorded in the published kit's KIT-MANIFEST.json (neutrino.sha256). It dispatches only on a real difference,
+# and not while a build on master is already running (a new run would cancel it).
+# workflow_dispatch the watch for an on-demand check.
+
+on:
+  schedule:
+    # Same ticks as RiptOPL's Neutrino Watch: the 1st, 11th and 21st, 05:41 UTC.
+    - cron: "41 5 1,11,21 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write # dispatch Automated-Build
+
+concurrency:
+  group: neutrino-watch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.repository == 'NathanNeurotic/Launchstation'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NEUTRINO_REPO: ps2max32/neutrino
+    steps:
+      - name: Compare upstream Neutrino against the kit; rebuild if newer
+        run: |
+          set -eu
+          R="$GITHUB_REPOSITORY"
+          # Upstream: the .7z of Neutrino's "latest" development pre-release.
+          UP="$(gh api "repos/$NEUTRINO_REPO/releases/tags/latest" \
+            --jq '[.assets[] | select(.name | test("^neutrino_.*[.]7z$"))][0] | [.name, (.digest // "")] | @tsv' 2>/dev/null || true)"
+          UP_NAME="$(printf '%s' "$UP" | cut -f1)"
+          UP_SHA="$(printf '%s' "$UP" | cut -f2)"
+          UP_SHA="${UP_SHA#sha256:}"
+          echo "upstream Neutrino = [$UP_NAME] [$UP_SHA]"
+          if [ -z "$UP_NAME" ] || [ -z "$UP_SHA" ]; then
+            echo "Could not read upstream Neutrino's build and SHA-256 (transient?); nothing to do."
+            exit 0
+          fi
+          # Ours: the Neutrino recorded in the kit attached to our "latest" release.
+          KIT="$(gh api "repos/$R/releases/tags/latest" \
+            --jq '[.assets[] | select(.name | test("^LAUNCHSTATION-[0-9]+[.]zip$"))] | sort_by(.updated_at) | last // empty | .name' 2>/dev/null || true)"
+          if [ -z "$KIT" ]; then
+            echo "No published kit to compare with; deferring to the next push-to-master build."
+            exit 0
+          fi
+          mkdir -p "$RUNNER_TEMP/kit"
+          gh release download latest --repo "$R" --pattern "$KIT" --dir "$RUNNER_TEMP/kit" --clobber
+          python3 - "$RUNNER_TEMP/kit/$KIT" > "$RUNNER_TEMP/kit/ours" <<'PY'
+          import json, sys, zipfile
+          n = json.loads(zipfile.ZipFile(sys.argv[1]).read("KIT-MANIFEST.json"))["neutrino"]
+          print(n.get("source") or "", n.get("sha256") or "")
+          PY
+          read -r OUR_NAME OUR_SHA < "$RUNNER_TEMP/kit/ours" || true
+          echo "kit $KIT bundles  = [${OUR_NAME:-}] [${OUR_SHA:-}]"
+          if [ -z "${OUR_SHA:-}" ]; then
+            echo "The kit records no Neutrino SHA-256; deferring to the next push-to-master build."
+            exit 0
+          fi
+          if [ "$UP_SHA" = "$OUR_SHA" ]; then
+            echo "The kit already bundles the latest Neutrino. Nothing to do."
+            exit 0
+          fi
+          ACTIVE="$(gh run list --repo "$R" --workflow compile.yml --branch master --limit 20 \
+            --json status --jq '[.[] | select(.status != "completed")] | length')"
+          if [ "$ACTIVE" != 0 ]; then
+            echo "Neutrino changed ($OUR_NAME -> $UP_NAME), but a master build is already running; it re-downloads Neutrino itself or the next tick will retry."
+            exit 0
+          fi
+          echo "Neutrino changed ($OUR_NAME -> $UP_NAME): starting Automated-Build on master to rebundle."
+          gh workflow run compile.yml --repo "$R" --ref master
