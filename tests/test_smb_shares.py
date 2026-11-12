@@ -130,6 +130,13 @@ int main(void)
     expectProblem("NAME = A\nURL = smb://10.0.0.2:0/share\n", "port is 0");
 
     /* VERSION */
+    /* Windows-style \\ip\share reads as smb://ip/share */
+    assert(parse("NAME = W\nURL = \\\\192.168.1.5\\games\n") == 1 && !strcmp(share(0)->url, "smb://192.168.1.5/games")
+           && !strcmp(share(0)->server, "192.168.1.5") && share(0)->port == 445 && !strcmp(share(0)->share, "games"));
+    assert(parse("NAME = W\nURL = \\\\192.168.1.5:1445\\games\\sub\n") == 1 && share(0)->port == 1445
+           && !strcmp(share(0)->share, "games"));
+    expectProblem("NAME = A\nURL = \\\\myhost\\games\n", "IP address");
+    expectProblem("NAME = A\nURL = \\\\192.168.1.5\n", "smb://");
     assert(parse("NAME = OLD\nVERSION = 1\nURL = smb://192.168.1.5/PS2SMB\n") == 1);
     assert(share(0)->version == 1 && !strcmp(share(0)->server, "192.168.1.5"));
     assert(share(0)->port == 445 && !strcmp(share(0)->share, "PS2SMB"));
