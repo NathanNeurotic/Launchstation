@@ -41,8 +41,10 @@ static int read_is(struct smb2_context *smb2, struct smb2fh *fh, const char *wan
 
 struct raw_reply {
 	int done, status;
+	uint8_t type, cls;
 	uint32_t len;
-	uint8_t buf[32];
+	uint8_t buf[128];
+	char stream_name[16];
 };
 
 static void raw_cb(struct smb2_context *smb2, int status, void *data, void *cb_data)
@@ -54,13 +56,20 @@ static void raw_cb(struct smb2_context *smb2, int status, void *data, void *cb_d
 	if (status == 0 && rep) {
 		r->len = rep->output_buffer_length;
 		memcpy(r->buf, rep->output_buffer, r->len < sizeof(r->buf) ? r->len : sizeof(r->buf));
+		/* libsmb2's client decodes FileStreamInformation even in passthrough: keep the name
+		 * before the reply, which holds it, is freed. */
+		if (r->type == SMB2_0_INFO_FILE && r->cls == SMB2_FILE_STREAM_INFORMATION) {
+			const struct smb2_file_stream_info *si = rep->output_buffer;
+			snprintf(r->stream_name, sizeof(r->stream_name), "%s", si->stream_name ? si->stream_name : "");
+		}
 		smb2_free_data(smb2, rep->output_buffer);
 	}
 	r->done = 1;
 }
 
-/* A file-info class libsmb2's client has no decoder for, as raw bytes (Windows' stat asks for 6 and 59). */
-static int query_raw(struct smb2_context *smb2, struct smb2fh *fh, uint8_t cls, struct raw_reply *r)
+/* An info class as raw bytes, for classes libsmb2's client has no decoder for (Windows' stat asks for 6 and 59). */
+static int query_raw_type(struct smb2_context *smb2, struct smb2fh *fh, uint8_t type, uint8_t cls,
+                          struct raw_reply *r)
 {
 	struct smb2_query_info_request req;
 	struct smb2_pdu *pdu;
@@ -68,7 +77,9 @@ static int query_raw(struct smb2_context *smb2, struct smb2fh *fh, uint8_t cls, 
 
 	memset(&req, 0, sizeof(req));
 	memset(r, 0, sizeof(*r));
-	req.info_type = SMB2_0_INFO_FILE;
+	r->type = type;
+	r->cls = cls;
+	req.info_type = type;
 	req.file_info_class = cls;
 	req.output_buffer_length = 4096;
 	memcpy(req.file_id, smb2_get_file_id(fh), SMB2_FD_SIZE);
@@ -86,6 +97,16 @@ static int query_raw(struct smb2_context *smb2, struct smb2fh *fh, uint8_t cls, 
 	}
 	smb2_set_passthrough(smb2, 0);
 	return r->done && r->status == 0 ? 0 : -1;
+}
+
+static int query_raw(struct smb2_context *smb2, struct smb2fh *fh, uint8_t cls, struct raw_reply *r)
+{
+	return query_raw_type(smb2, fh, SMB2_0_INFO_FILE, cls, r);
+}
+
+static uint32_t le32_at(const uint8_t *p)
+{
+	return p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24;
 }
 
 /* Refused because another handle holds what the rename would move or replace. */
@@ -156,6 +177,25 @@ int main(int argc, char **argv)
 		      "A has no extended attributes (FileEaInformation)", smb2);
 		check(query_raw(smb2, a, SMB2_FILE_ID_INFORMATION, &rb) == 0 && rb.len == 24 && !memcmp(rb.buf + 8, ra.buf, 8),
 		      "A's file id carries its number (FileIdInformation)", smb2);
+		/* What Explorer, robocopy and WSL ask for beyond that. */
+		/* Decoded by libsmb2's client, so this is its struct, not the wire bytes. */
+		check(query_raw(smb2, a, SMB2_FILE_STREAM_INFORMATION, &rb) == 0 &&
+		          ((struct smb2_file_stream_info *)rb.buf)->stream_size == 4 &&
+		          ((struct smb2_file_stream_info *)rb.buf)->next_entry_offset == 0 &&
+		          !strcmp(rb.stream_name, "::$DATA"),
+		      "A has one stream, ::$DATA, 4 bytes (FileStreamInformation)", smb2);
+		check(query_raw(smb2, a, 68, &rb) == 0 && rb.len == 72 && !memcmp(rb.buf, ra.buf, 8) &&
+		          le32_at(rb.buf + 48) == 4 && le32_at(rb.buf + 64) == 1 && le32_at(rb.buf + 8) != 0,
+		      "A's FileStatInformation: its number, a time, 4 bytes, one link", smb2);
+		check(query_raw(smb2, a, 70, &rb) == 0 && rb.len == 96 && !memcmp(rb.buf, ra.buf, 8) &&
+		          !memcmp(rb.buf + 72, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 24),
+		      "A's FileStatLxInformation, with no Lx fields marked valid", smb2);
+		check(query_raw(smb2, a, SMB2_FILE_ALTERNATE_NAME_INFORMATION, &rb) < 0 && rb.done &&
+		          (uint32_t)rb.status == SMB2_STATUS_OBJECT_NAME_NOT_FOUND,
+		      "A has no 8.3 name (FileAlternateNameInformation: OBJECT_NAME_NOT_FOUND)", smb2);
+		check(query_raw_type(smb2, a, SMB2_0_INFO_FILESYSTEM, SMB2_FILE_FS_SECTOR_SIZE_INFORMATION, &rb) == 0 &&
+		          rb.len == 28 && le32_at(rb.buf) == 512 && le32_at(rb.buf + 4) == 512 && le32_at(rb.buf + 16) == 3,
+		      "512-byte sectors (FileFsSectorSizeInformation, decoded: the struct is the wire order)", smb2);
 	}
 
 	/* A rename would leave a held handle naming nothing, or naming another file: refused. */

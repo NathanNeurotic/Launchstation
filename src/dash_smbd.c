@@ -3,7 +3,8 @@
 #ifdef ETH
 #include "dash_internal.h"
 #include "init.h"
-#include <delaythread.h>
+
+#define SMB_STATUS_FRAMES 6
 
 static void smbFrame(int status, int stopping)
 {
@@ -36,7 +37,7 @@ static void smbFrame(int status, int stopping)
 
 int DashSmbServer(void)
 {
-	int status;
+	int status, frame;
 	if (!dashWorkerAwaitAll("Preparing SMB Server"))
 		return 0;
 	dashLoadingBegin("Starting SMB Server");
@@ -48,9 +49,12 @@ int DashSmbServer(void)
 		return 0;
 	}
 	dashInputFlush();
-	for (;;) {
+	for (frame = 0;; frame++) {
 		DashInput input;
-		status = smbServerStatus();
+		/* Draw and read the pad every vsync; ask the IOP for its status every 6th frame
+		 * (~10 a second, the old rate). A 100 ms sleep per frame held this screen near 8 FPS. */
+		if (frame % SMB_STATUS_FRAMES == 0)
+			status = smbServerStatus();
 		if (status <= 0) {
 			/* The server thread ended by itself, usually because port 445 could not be opened. */
 			char body[96];
@@ -70,7 +74,6 @@ int DashSmbServer(void)
 				                 "SMB is still closing files and connections. Stop it again in a moment.", NULL);
 			break;
 		}
-		DelayThread(100000);
 	}
 	dashInputFlush();
 	return 1;
