@@ -273,6 +273,23 @@ targets:
     ldflags: ["-Wl,--gc-sections", "-Wl,-u,_irx_id", "-lgcc"]
     headers: [intrman, iomanx, loadcore, ps2ip-nm, stdio, sysclib, sysmem, threadman]
 
+  # NFSv4.0 client for the nfs: device, up to 8 named exports: unfs4
+  # (Ronnie Sahlberg, BSD 2-Clause), the sibling of usmb2, behind CONNECT/DISCONNECT_ALL
+  # devctls shaped as smb2man's (iop/nfsman/README.md). nfsman.c compiles
+  # unfs4.c into itself.
+  - name: nfsman
+    type: iop
+    sources:
+      - iop/nfsman/nfsman.c
+    include_dirs: [iop/nfsman]
+    imports_lst: iop/nfsman/imports.lst
+    linkfile: iop/nfsman/linkfile
+    defines:
+      - _IOP
+    cflags: [-Os, -Wall, -Wno-unused-function, -ffunction-sections, -fdata-sections]
+    ldflags: ["-Wl,--gc-sections", "-Wl,-u,_irx_id", "-lgcc"]
+    headers: [intrman, iomanx, loadcore, ps2ip-nm, stdio, sysclib, sysmem, threadman]
+
   # On-demand SMB2/3 server for mc0/mc1 (issue #249). libsmb2 (Ronnie Sahlberg,
   # LGPL-2.1) is fetched by scripts/fetch_libsmb2.sh into .smbd-deps/; iop/smbd is ours.
   - name: smbd
