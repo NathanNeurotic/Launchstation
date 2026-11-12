@@ -13,6 +13,10 @@
 int selfUpdateExtractPsu(const char *package, const char *stage, int size);
 int selfUpdateExtractPsuSidecar(const char *package, const char *name,
                                 const char *stage, int size);
+/* The same checks on a package already held in RAM. */
+int selfUpdateExtractPsuMem(const unsigned char *package, int size, const char *stage);
+int selfUpdateExtractPsuSidecarMem(const unsigned char *package, int size,
+                                   const char *name, const char *stage);
 
 /* package_bytes: the release asset's size, or 0 when unknown (no space pre-check). */
 int selfUpdateInstall(const char *ca_path, const char *expected_sha256, int package_bytes,

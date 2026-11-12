@@ -7,10 +7,25 @@ static unsigned int psu32(const unsigned char *p)
     return p[0] | ((unsigned int)p[1] << 8) | ((unsigned int)p[2] << 16) | ((unsigned int)p[3] << 24);
 }
 
-static int read_exact(int fd, unsigned char *buf, int size)
+/* A verified package is read from its file or, when the updater had RAM
+ * for it, straight from the download buffer. */
+typedef struct {
+    int fd;
+    const unsigned char *mem;
+    int size, pos;
+} PsuIn;
+
+static int read_exact(PsuIn *in, unsigned char *buf, int size)
 {
+    if (in->mem != NULL) {
+        if (size < 0 || in->pos > in->size - size)
+            return 0;
+        memcpy(buf, in->mem + in->pos, (size_t)size);
+        in->pos += size;
+        return 1;
+    }
     while (size > 0) {
-        int n = genRead(fd, buf, size);
+        int n = genRead(in->fd, buf, size);
         if (n <= 0 || n > size)
             return 0;
         buf += n;
@@ -19,23 +34,41 @@ static int read_exact(int fd, unsigned char *buf, int size)
     return 1;
 }
 
+static int in_seek(PsuIn *in, int position)
+{
+    if (in->mem == NULL)
+        return genLseek(in->fd, position, SEEK_SET);
+    if (position < 0 || position > in->size)
+        return -1;
+    in->pos = position;
+    return position;
+}
+
+/* Open a package file and check its length; the caller closes in->fd. */
+static int in_open(PsuIn *in, const char *package, int size)
+{
+    in->mem = NULL;
+    in->size = size;
+    in->pos = 0;
+    in->fd = genOpen(package, FIO_O_RDONLY);
+    if (in->fd < 0)
+        return 0;
+    return genLseek(in->fd, 0, SEEK_END) == size && genLseek(in->fd, 0, SEEK_SET) == 0;
+}
+
 static int record_is(const unsigned char *record, unsigned int mode, const char *name)
 {
     return (record[0] | ((unsigned int)record[1] << 8)) == mode &&
            memchr(record + 64, 0, 448) != NULL && !strcmp((const char *)record + 64, name);
 }
 
-int selfUpdateExtractPsu(const char *package, const char *stage, int size)
+static int extract_elf(PsuIn *input, const char *stage, int size)
 {
     unsigned char directories[1536], entry[512], buffer[4096];
-    int input = -1, output = -1, position = 1536, seen = 0, elf_size = -1, i, entries;
+    int output = -1, position = 1536, seen = 0, elf_size = -1, i, entries;
     char remove_path[MAX_PATH];
 
-    if (size < 1536 || size > 16 * 1024 * 1024)
-        return -1;
-    input = genOpen(package, FIO_O_RDONLY);
-    if (input < 0 || genLseek(input, 0, SEEK_END) != size ||
-        genLseek(input, 0, SEEK_SET) != 0 || !read_exact(input, directories, 1536))
+    if (!read_exact(input, directories, 1536))
         goto done;
     entries = (int)psu32(directories + 4);
     /* A root entry counts itself, "." and ".." plus 2, 4 or 8 files.
@@ -49,7 +82,7 @@ int selfUpdateExtractPsu(const char *package, const char *stage, int size)
     for (i = 0; i < entries - 2; i++) {
         unsigned int length, padded;
         int is_elf;
-        if (position > size - 512 || genLseek(input, position, SEEK_SET) != position ||
+        if (position > size - 512 || in_seek(input, position) != position ||
             !read_exact(input, entry, 512))
             goto done;
         position += 512;
@@ -123,20 +156,41 @@ int selfUpdateExtractPsu(const char *package, const char *stage, int size)
         }
         position += padded;
     }
-    if (seen == (entries == 11 ? 511 : entries >= 10 ? 255 : entries == 6 ? 15 : 3) && position == size) {
-        if (genClose(input) < 0)
-            goto remove_stage;
+    if (seen == (entries == 11 ? 511 : entries >= 10 ? 255 : entries == 6 ? 15 : 3) && position == size)
         return elf_size;
-    }
 done:
     if (output >= 0)
         genClose(output);
-    if (input >= 0)
-        genClose(input);
-remove_stage:
     snprintf(remove_path, sizeof(remove_path), "%s", stage);
     genRemove(remove_path);
     return -1;
+}
+
+int selfUpdateExtractPsu(const char *package, const char *stage, int size)
+{
+    PsuIn in;
+    int result = -1;
+    char remove_path[MAX_PATH];
+
+    if (size < 1536 || size > 16 * 1024 * 1024)
+        return -1;
+    if (in_open(&in, package, size))
+        result = extract_elf(&in, stage, size);
+    if (in.fd >= 0 && genClose(in.fd) < 0 && result >= 0) {
+        snprintf(remove_path, sizeof(remove_path), "%s", stage);
+        genRemove(remove_path);
+        result = -1;
+    }
+    return result;
+}
+
+int selfUpdateExtractPsuMem(const unsigned char *package, int size, const char *stage)
+{
+    PsuIn in = {-1, package, size, 0};
+
+    if (package == NULL || size < 1536 || size > 16 * 1024 * 1024)
+        return -1;
+    return extract_elf(&in, stage, size);
 }
 
 
@@ -144,25 +198,19 @@ remove_stage:
  * its GitHub SHA-256 and selfUpdateExtractPsu(). Do not call on an unchecked
  * archive or overwrite an existing staging filename. A legacy two-file PSU
  * returns 0 without creating a file. */
-int selfUpdateExtractPsuSidecar(const char *package, const char *name,
-                                const char *stage, int size)
+static int extract_sidecar(PsuIn *input, const char *name, const char *stage, int size)
 {
     unsigned char directories[1536], entry[512], buffer[4096];
-    int input = -1, output = -1, position = 1536, i, entries;
+    int output = -1, position = 1536, i, entries;
     int result = -1, created = 0;
     unsigned int length = 0;
     char remove_path[MAX_PATH];
     int is_ca = name != NULL && !strcmp(name, "WLE-UPDATE-CA.PEM");
     int is_bgm = name != NULL && !strcmp(name, "BGM.ADP");
 
-    if ((!is_ca && !is_bgm) || package == NULL || stage == NULL ||
-        size < 1536 || size > 16 * 1024 * 1024)
+    if ((!is_ca && !is_bgm) || stage == NULL)
         return -1;
-
-    input = genOpen(package, FIO_O_RDONLY);
-    if (input < 0 || genLseek(input, 0, SEEK_END) != size ||
-        genLseek(input, 0, SEEK_SET) != 0 ||
-        !read_exact(input, directories, sizeof(directories)))
+    if (!read_exact(input, directories, sizeof(directories)))
         goto done;
     entries = (int)psu32(directories + 4);
     if (!record_is(directories, 0x8027, SELF_UPDATE_FOLDER) ||
@@ -181,7 +229,7 @@ int selfUpdateExtractPsuSidecar(const char *package, const char *name,
     for (i = 0; i < entries - 2; i++) {
         unsigned int padded;
         if (position > size - 512 ||
-            genLseek(input, position, SEEK_SET) != position ||
+            in_seek(input, position) != position ||
             !read_exact(input, entry, sizeof(entry)))
             goto done;
         position += 512;
@@ -200,7 +248,7 @@ int selfUpdateExtractPsuSidecar(const char *package, const char *name,
     for (i = 0; i < entries - 2; i++) {
         unsigned int padded;
         if (position > size - 512 ||
-            genLseek(input, position, SEEK_SET) != position ||
+            in_seek(input, position) != position ||
             !read_exact(input, entry, sizeof(entry)))
             goto done;
         position += 512;
@@ -251,11 +299,40 @@ int selfUpdateExtractPsuSidecar(const char *package, const char *name,
 done:
     if (output >= 0)
         genClose(output);
-    if (input >= 0 && genClose(input) < 0)
-        result = -1;
     if (result < 0 && created) {
         snprintf(remove_path, sizeof(remove_path), "%s", stage);
         genRemove(remove_path);
     }
     return result;
+}
+
+int selfUpdateExtractPsuSidecar(const char *package, const char *name,
+                                const char *stage, int size)
+{
+    PsuIn in;
+    int result = -1;
+    char remove_path[MAX_PATH];
+
+    if (package == NULL || size < 1536 || size > 16 * 1024 * 1024)
+        return -1;
+    if (in_open(&in, package, size))
+        result = extract_sidecar(&in, name, stage, size);
+    if (in.fd >= 0 && genClose(in.fd) < 0 && result != -1) {
+        if (result > 0) {
+            snprintf(remove_path, sizeof(remove_path), "%s", stage);
+            genRemove(remove_path);
+        }
+        result = -1;
+    }
+    return result;
+}
+
+int selfUpdateExtractPsuSidecarMem(const unsigned char *package, int size,
+                                   const char *name, const char *stage)
+{
+    PsuIn in = {-1, package, size, 0};
+
+    if (package == NULL || size < 1536 || size > 16 * 1024 * 1024)
+        return -1;
+    return extract_sidecar(&in, name, stage, size);
 }

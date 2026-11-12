@@ -35,6 +35,12 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
                         unsigned char digest[32],
                         char *error, int error_size);
 
+/* Same as cloudHttpDownloadFd, but into buf (at most cap bytes). */
+#define CLOUD_HTTP_MEM_FD (-2)
+int cloudHttpDownloadMem(const char *url, unsigned char *buf, int cap,
+                         const char *ca_path, int *out_size,
+                         unsigned char digest[32], char *error, int error_size);
+
 /* Authenticated Drive media stream. Only Google's API host receives the
  * bearer token; redirects may go to verified Google content hosts without
  * credentials. The public updater downloader remains unchanged. */

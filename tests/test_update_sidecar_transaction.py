@@ -106,6 +106,30 @@ static int selfUpdateExtractPsuSidecar(const char *pkg,const char *asset,
     if(fail_bgm_stage && !strcmp(asset,"BGM.ADP"))return -1;
     assert(!has(stage));put(stage);return 128;
 }
+/* RAM path: the package never touches the card. */
+static int ram_ok,ram_downloads;
+static unsigned char ram_token[16];
+static unsigned char *update_ram_buffer(int bytes) { return ram_ok && bytes>0?ram_token:NULL; }
+static void test_free(void *p) { assert(p==NULL || p==ram_token); }
+#define free test_free
+static int download_to_ram(const char *url,unsigned char *buf,int cap,const char *ca,
+                           unsigned char actual[32],char *error,int error_size) {
+    (void)url;(void)ca;(void)error;(void)error_size;
+    assert(buf==ram_token && cap>0);downloads++;ram_downloads++;
+    memset(actual,bad_digest?0:0x5a,32);
+    return 8192;
+}
+static int selfUpdateExtractPsuMem(const unsigned char *pkg,int size,const char *stage) {
+    assert(pkg==ram_token && size==8192);put(stage);return 4096;
+}
+static int selfUpdateExtractPsuSidecarMem(const unsigned char *pkg,int size,
+                                          const char *asset,const char *stage) {
+    assert(pkg==ram_token && size==8192);
+    sidecar_calls++;
+    if(legacy)return 0;
+    if(fail_bgm_stage && !strcmp(asset,"BGM.ADP"))return -1;
+    assert(!has(stage));put(stage);return 128;
+}
 static int checkELFheader(const char *stage) { assert(has(stage));return bad_header?-1:0; }
 static int rename_leaf(const char *p,const char *old,const char *newname) {
     char from[MAX_PATH],to[MAX_PATH];
@@ -132,7 +156,7 @@ static void reset(void) {
     count=downloads=sidecar_calls=captures=restores=restore_result=0;capture_result=1;
     legacy=fail_bgm_stage=fail_bgm_rename=0;
     bad_digest=fail_elf_rename=bad_header=0;
-    free_space=64ULL*1024*1024;package_bytes=2234368;step_count=0;
+    free_space=64ULL*1024*1024;package_bytes=2234368;step_count=0;ram_ok=ram_downloads=0;
     put(boot);
 }
 static int install(char *msg) {
@@ -210,6 +234,16 @@ int main(void) {
     assert(install(msg)==0 && downloads==1 && has(boot));
     reset();package_bytes=0;free_space=0; /* size unknown: no pre-check */
     assert(install(msg)==0 && downloads==1);
+    /* With RAM to spare the card needs room for the unpacked files only. */
+    reset();ram_ok=1;put(backup);free_space=2234368+32*1024;
+    assert(install(msg)==0 && ram_downloads==1 && has(boot) && has(ca) && has(bgm));
+    assert(!has(package_tmp) && !has(elf_tmp) && !has(backup));
+    reset();ram_ok=1;free_space=2234368+32*1024-1;
+    assert(install(msg)<0 && downloads==0 && has(boot) && strstr(msg,"Not enough free space"));
+    reset();ram_ok=1;bad_digest=1;
+    assert(install(msg)<0 && has(boot) && !has(elf_tmp) && !has(ca) && !has(bgm));
+    reset();ram_ok=1;fail_bgm_stage=1;
+    assert(install(msg)<0 && has(boot) && !has(ca_tmp) && !has(bgm_tmp) && !has(elf_tmp));
     reset();capture_result=-EIO;
     assert(install(msg)<0 && downloads==0 && has(boot) && !has(backup));
     reset();capture_result=0;
