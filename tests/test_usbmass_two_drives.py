@@ -44,6 +44,7 @@ int CreateSema(iop_sema_t *s); int WaitSema(int id); int SignalSema(int id); int
 #include "tamtypes.h"
 #define USB_RC_OK 0
 #define USB_RC_STALL 4
+#define USB_RC_DATAUNDER 9
 #define USB_DT_DEVICE 1
 #define USB_DT_CONFIG 2
 #define USB_DT_ENDPOINT 5
@@ -123,6 +124,7 @@ void bdm_disconnect_bd(struct block_device *bd) { (void)bd; }
 enum { WANT_CBW, SEND_DATA, SEND_CSW };
 struct drive { int state; u32 tag, left; u8 op; int wrong; };
 static struct drive drives[2];
+static volatile int short_csw_once;  /* drive 0's next status read completes with 0 bytes */
 static volatile int zlp_once;  /* drive 0 ends its next data phase with a zero-length packet */
 struct xfer { int pipe; u8 *buf; int len; sceUsbdDoneCallback cb; void *arg; int control; };
 static struct xfer queue[64]; static int qhead, qtail;
@@ -165,6 +167,9 @@ static void *usb_thread(void *unused) {
             memset(x.buf, 0xA0 + (x.pipe - 10) / 2, n);
             d->left -= n; if (!d->left) d->state = SEND_CSW;
             x.cb(USB_RC_OK, n, x.arg);
+        } else if (d->state == SEND_CSW && x.len == 13 && short_csw_once && d == &drives[0]) {
+            short_csw_once = 0;                 /* an empty status read; the real CSW is still to come */
+            x.cb(USB_RC_OK, 0, x.arg);
         } else if (d->state == SEND_CSW && x.len == 13) {
             u32 sig = CSW_TAG, zero = 0;
             memcpy(x.buf, &sig, 4); memcpy(x.buf + 4, &d->tag, 4); memcpy(x.buf + 8, &zero, 4); x.buf[12] = 0;
@@ -232,6 +237,18 @@ int main(void) {
             bad = 1;
         } else
             printf("ok short read: a read cut short by a zero-length packet fails, the next one works\n");
+    }
+
+    {
+        static u8 buf[512]; unsigned char cdb[12] = {READ_10}; int r1, r2;
+        short_csw_once = 1;
+        r1 = usb_queue_cmd(&g_mass_device[0].scsi, cdb, sizeof(cdb), buf, sizeof(buf), 0);
+        r2 = usb_queue_cmd(&g_mass_device[0].scsi, cdb, sizeof(cdb), buf, sizeof(buf), 0);
+        if (r1 != 0 || r2 != 0 || drives[0].wrong) {
+            printf("FAIL short status: read with an empty status returned %d, next read %d, out-of-step commands %d\n", r1, r2, drives[0].wrong);
+            bad = 1;
+        } else
+            printf("ok short status: an empty status read is read again, the drive stays in step\n");
     }
 
     offline.name = "usb"; offline.get_max_lun = offline_lun; offline.queue_cmd = offline_cmd;
