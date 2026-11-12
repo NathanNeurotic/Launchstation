@@ -42,7 +42,6 @@ static struct {void *buffer;} samples[DASH_SND_COUNT];
 static int gain_ch=-1,attempts,success=-1;
 static int soundAlive(void) {return 1;}
 static int dashIopParked(void) {return 0;}
-static u64 Timer(void) {return 100;}
 static void audsrv_adpcm_set_volume_and_pan(int ch,int gain,int pan) {
  assert(ch>=0 && ch<23 && gain==60 && !pan);gain_ch=ch;
 }

@@ -292,16 +292,33 @@ int main(void){
   reset();misreport[devices[i].dev]=1;snprintf(path,MAX_PATH,"%sNOTES.TXT",devices[i].dir);
   snprintf(want,MAX_PATH,"This file isn't an ELF: %s.",path);launch(path);expect("misreported load, not an executable",path,want);
  }
- /* OSDSYS started from its launch key path: a missing file is named by that
-  * path, not by the launch before it. */
- static const char *const osdsys[]={"mass:/OSDSYS.ELF","mc:/BOOT/OSDSYS.ELF"};
+ /* OSDSYS started from its launch key path is an ordinary launch: a missing
+  * file is named by that path (mc: by the last card tried, like any mc: path),
+  * not by the launch before it. */
+ static const char *const osdsys[][2]={{"mass:/OSDSYS.ELF","mass:/OSDSYS.ELF"},{"mc:/BOOT/OSDSYS.ELF","mc1:/BOOT/OSDSYS.ELF"}};
  settings.LK_Flag[SETTING_LK_OSDSYS]=1;
  for(unsigned i=0;i<sizeof(osdsys)/sizeof(osdsys[0]);i++){
   reset();launch("mass:/OTHER.ELF");
-  snprintf(settings.LK_Path[SETTING_LK_OSDSYS],MAX_PATH,"%s",osdsys[i]);snprintf(want,MAX_PATH,"%s is Not Found.",osdsys[i]);
-  launch(settings.Misc_OSDSYS);expect("missing OSDSYS",osdsys[i],want);
+  snprintf(settings.LK_Path[SETTING_LK_OSDSYS],MAX_PATH,"%s",osdsys[i][0]);snprintf(want,MAX_PATH,"%s is Not Found.",osdsys[i][1]);
+  launch(settings.Misc_OSDSYS);expect("missing OSDSYS",osdsys[i][0],want);
  }
+ /* A plain ELF chosen as OSDSYS starts through the loader like a browser file,
+  * also from a path far longer than the old 40-byte moduleload argument. */
+ static const char *const osdsys_elf[]={"mass:/OSDSYS.ELF",
+  "mass:/APPS/A-VERY-LONG-FOLDER-NAME-FOR-A-MENU/ANOTHER-LONG-FOLDER/OSDMENU-REPLACEMENT.ELF"};
+ for(unsigned i=0;i<sizeof(osdsys_elf)/sizeof(osdsys_elf[0]);i++){
+  reset();put(osdsys_elf[i],F_ELF);
+  snprintf(settings.LK_Path[SETTING_LK_OSDSYS],MAX_PATH,"%s",osdsys_elf[i]);
+  message[0]=launched[0]=0;{char in[MAX_PATH];snprintf(in,MAX_PATH,"%s",settings.Misc_OSDSYS);ExecuteMainAction(in,&ctx);}
+  if(message[0]||!strstr(launched,strrchr(osdsys_elf[i],'/')+1)){
+   fprintf(stderr,"FAIL OSDSYS ELF %s: \"%s\", launched \"%s\"\n",osdsys_elf[i],message,launched);failures++;
+  }
+ }
+ /* A launch key that is not a device path says so instead of launching. */
+ reset();snprintf(settings.LK_Path[SETTING_LK_OSDSYS],MAX_PATH,"OSDSYS.ELF");
+ launch(settings.Misc_OSDSYS);expect("OSDSYS without a device","OSDSYS.ELF","Choose an executable file for the OSDSYS program.");
  settings.LK_Flag[SETTING_LK_OSDSYS]=0;
+ settings.LK_Path[SETTING_LK_OSDSYS][0]=0;
  /* mc: tries mc0: then mc1:. A file that opened on one card but is no ELF is not
   * "Not Found" because the other card has none, and the message names the card
   * it opened on; one found on neither is Not Found at mc1:. */

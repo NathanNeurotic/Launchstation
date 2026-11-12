@@ -318,7 +318,6 @@ void dashSoundPlay(int id)
 {
 	static int cursorSlot;
 	static int transSlot;
-	static u64 lastCursorMs;
 	int ch, i;
 
 	if (!soundAlive() || !dashCfg.sound || id < 0 || id >= DASH_SND_COUNT)
@@ -328,11 +327,10 @@ void dashSoundPlay(int id)
 	if (samples[id].buffer == NULL)
 		return;
 	if (id == DASH_SND_CURSOR) {
-		u64 now = Timer();
-
-		if (now - lastCursorMs < 45)
-			return; /* OPL: no machine-gun ticks on autorepeat */
-		lastCursorMs = now;
+		/* One tick per move: pad autorepeat already paces scrolling (down to
+		 * 40 ms), and a 45 ms gate here dropped every other tick at full
+		 * speed. The rotating voices keep ticks from cutting each other off.
+		 * From saildot4k/Launchstation's sound audit. */
 		ch = SND_CURSOR_CH_BASE + cursorSlot;
 		cursorSlot = (cursorSlot + 1) % SND_CURSOR_CH_COUNT;
 	} else if (id == DASH_SND_TRANSITION) {
