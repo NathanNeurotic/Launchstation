@@ -132,8 +132,8 @@ enum SetId {
 	S_NET_LEGACY,
 	S_SMB_SHARES,
 	S_SMBED_PICK, S_SMBED_NAME, S_SMBED_KIND, S_SMBED_IP, S_SMBED_PORT,
-	S_SMBED_FOLDER, S_SMBED_USER, S_SMBED_PASS, S_SMBED_SAVE, S_SMBED_DELETE,
-	S_SMBED_TEXT,
+	S_SMBED_FOLDER, S_SMBED_USER, S_SMBED_PASS, S_SMBED_UID, S_SMBED_GID,
+	S_SMBED_SAVE, S_SMBED_DELETE, S_SMBED_TEXT,
 	S_SMBD_USER, S_SMBD_PASS,
 	S_CLOCK,
 	S_CLOCK_MANUAL,
@@ -384,15 +384,20 @@ static const SetItem mmce_backup_items[] = {
 /* ---- SMB share editor ------------------------------------------------------
  * The page edits one draft and splices it into the share blocks at the end of
  * LAUNCHSTATION.CNF (an old SMB2.CNF's on the first save) with smbCnfUpsertText,
- * which keeps the rest of the file (comments, other blocks) byte for byte. */
+ * which keeps the rest of the file (comments, other blocks) byte for byte. An
+ * NFS share is a draft of kind SMBED_NFS, written by nfsCnfBuildBlock. */
+
+#define SMBED_NFS 4 /* the editor's kind for NFS; 1-3 are smbCnfBuildBlock's */
 
 static struct {
 	char orig[SMB_NAME_LEN]; /* NAME of the picked share; "" = a new one */
 	char name[SMB_NAME_LEN];
-	int kind; /* 1, 2 or 3, as smbCnfBuildBlock */
+	int kind; /* 1, 2 or 3, as smbCnfBuildBlock, or SMBED_NFS */
 	char host[80]; /* IPv4 from the URL (host names are edit-as-text only) */
-	int port;      /* 0 = the 445 default */
-	char folder[64];
+	int port;      /* 0 = the default, 445 or NFS's 2049 */
+	char folder[128]; /* the SMB share, or the NFS export path */
+	char uid[12];     /* NFS only: "" = not given (0) */
+	char gid[12];
 	char user[SMB_CRED_LEN];
 	char pass[SMB_CRED_LEN];
 	int plaintext; /* SMB1 clear-text password allowance, kept across edits */
@@ -451,6 +456,27 @@ static int smbedSplitUrl(const char *url, char *host, int host_size, int *port,
 	return 1;
 }
 
+/* An NFS URL's uid= or gid= (key with its '='), or "" */
+static void smbedNfsOption(const char *url, const char *key, char *out, int out_size)
+{
+	const char *q = strchr(url, '?');
+	size_t klen = strlen(key);
+
+	out[0] = '\0';
+	while (q != NULL) {
+		q++;
+		if (!strncmp(q, key, klen)) {
+			int len = strcspn(q + klen, "&");
+			if (len < out_size) {
+				memcpy(out, q + klen, len);
+				out[len] = '\0';
+			}
+			return;
+		}
+		q = strchr(q, '&');
+	}
+}
+
 static void smbedLoadPick(void)
 {
 	const SmbShare *sh;
@@ -467,12 +493,32 @@ static void smbedLoadPick(void)
 		memset(smbed.folder, 0, sizeof(smbed.folder));
 		memset(smbed.user, 0, sizeof(smbed.user));
 		memset(smbed.pass, 0, sizeof(smbed.pass));
+		memset(smbed.uid, 0, sizeof(smbed.uid));
+		memset(smbed.gid, 0, sizeof(smbed.gid));
 		smbed.plaintext = 0;
 		return;
 	}
 	sh = &smbed.snap.share[smbed.pick - 1];
 	dashStrCopy(smbed.orig, sh->name, sizeof(smbed.orig));
 	dashStrCopy(smbed.name, sh->name, sizeof(smbed.name));
+	memset(smbed.uid, 0, sizeof(smbed.uid));
+	memset(smbed.gid, 0, sizeof(smbed.gid));
+	if (sh->version == SMB_PATH_NFS) {
+		/* An invalid NFS share has no fields split out: edited as text. */
+		smbed.kind = SMBED_NFS;
+		smbed.plaintext = 0;
+		memset(smbed.user, 0, sizeof(smbed.user));
+		memset(smbed.pass, 0, sizeof(smbed.pass));
+		dashStrCopy(smbed.host, sh->server, sizeof(smbed.host));
+		smbed.port = sh->port == 2049 ? 0 : sh->port;
+		if (strlen(sh->share) < sizeof(smbed.folder))
+			dashStrCopy(smbed.folder, sh->share, sizeof(smbed.folder));
+		else
+			smbed.folder[0] = '\0';
+		smbedNfsOption(sh->url, "uid=", smbed.uid, sizeof(smbed.uid));
+		smbedNfsOption(sh->url, "gid=", smbed.gid, sizeof(smbed.gid));
+		return;
+	}
 	smbed.kind = sh->version;
 	smbed.plaintext = sh->plaintext;
 	dashStrCopy(smbed.user, sh->username, sizeof(smbed.user));
@@ -551,11 +597,19 @@ static void smbedSave(void)
 	char block[512];
 	int n, r, i;
 
-	n = smbCnfBuildBlock(block, sizeof(block), smbed.name, smbed.kind,
-	                     smbed.user, smbed.pass, smbed.host,
-	                     smbed.port > 0 ? smbed.port : 445, smbed.folder, smbed.plaintext);
+	if (smbed.kind == SMBED_NFS)
+		n = nfsCnfBuildBlock(block, sizeof(block), smbed.name, smbed.host,
+		                     smbed.port > 0 ? smbed.port : 2049, smbed.folder,
+		                     smbed.uid[0] ? atol(smbed.uid) : -1, smbed.gid[0] ? atol(smbed.gid) : -1);
+	else
+		n = smbCnfBuildBlock(block, sizeof(block), smbed.name, smbed.kind,
+		                     smbed.user, smbed.pass, smbed.host,
+		                     smbed.port > 0 ? smbed.port : 445, smbed.folder, smbed.plaintext);
 	if (n < 0) {
 		dashModalMessage(DI_WARNING, "Share not saved",
+		                 smbed.kind == SMBED_NFS ?
+		                 "A field is empty or too long, the IPv4 address or port is not valid, or the export path "
+		                 "does not start with /." :
 		                 "A field is empty or too long, or the IPv4 address or port is not valid. "
 		                 "Shares whose address is a name, or whose URL has a deeper path, are edited as text.", NULL);
 		return;
@@ -595,6 +649,7 @@ static void smbedSave(void)
 			break;
 		}
 	dashModalMessage(DI_CHECK, "Share saved",
+	                 smbed.kind == SMBED_NFS ? "Open Files > Network (NFS). NFS shares show only once they connect." :
 	                 "Open Files > Network (SMB). SMB2/3 shares show only once they connect.", smbed.name);
 }
 
@@ -634,12 +689,14 @@ static void smbedEditField(const char *title, char *buf, int size, const char *e
 static const SetItem smb_items[] = {
 	{ST_CHOICE, S_SMBED_PICK, "Share", "New share, or one already saved."},
 	{ST_ACTION, S_SMBED_NAME, "Name shown in Files", "Folder name under Network (SMB). Example: PS2 Games. Use a unique name; avoid / \\ : * ? \" < > |."},
-	{ST_CHOICE, S_SMBED_KIND, "Server type", "Match the server: PS2-Servers SMBv2 supports up to 2.1; SMBv3 up to 3.0.2. SMB1 is legacy; one SMB1 share at most."},
+	{ST_CHOICE, S_SMBED_KIND, "Server type", "Match the server: PS2-Servers SMBv2 supports up to 2.1; SMBv3 up to 3.0.2. SMB1 is legacy; one SMB1 share at most. NFS is an NFSv4.0 export, shown in Files > Network (NFS)."},
 	{ST_ACTION, S_SMBED_IP, "Server address", "IPv4 address of the server. Example: 192.168.1.20. Host names are edited as text."},
 	{ST_ACTION, S_SMBED_PORT, "Port", "TCP port from server settings. Examples: 445 standard, 1445 PS2-Servers SMB2/3, or 1025 its Desktop SMB1."},
-	{ST_ACTION, S_SMBED_FOLDER, "Share name", "The exported SMB share on the server. Example: games (PS2-Servers default)."},
+	{ST_ACTION, S_SMBED_FOLDER, "Share name", "The exported SMB share on the server. Example: games (PS2-Servers default). For NFS, the export path: e.g. /srv/ps2."},
 	{ST_ACTION, S_SMBED_USER, "Username", "Account name on the server. Example: ps2 for SMB2/3 or guest for SMB1 on PS2-Servers."},
 	{ST_ACTION, S_SMBED_PASS, "Password", "Password for that server account. Leave blank only if the server allows no-password access; saved in LAUNCHSTATION.CNF as plain text."},
+	{ST_ACTION, S_SMBED_UID, "User ID (NFS)", "The uid the PS2 sends to the NFS server. Blank sends 0, which most servers map to their anonymous user."},
+	{ST_ACTION, S_SMBED_GID, "Group ID (NFS)", "The gid the PS2 sends to the NFS server. Blank sends 0."},
 	{ST_ACTION, S_SMBED_SAVE, "Save share", "Saves this share in LAUNCHSTATION.CNF. Open it in Files > Network (SMB)."},
 	{ST_ACTION, S_SMBED_DELETE, "Delete share", "Removes the picked share."},
 	{ST_ACTION, S_SMBED_TEXT, "Edit shares as text", "Opens LAUNCHSTATION.CNF; the shares are the blocks after its # SMB shares line. For host names, deeper paths and other options."},
@@ -940,10 +997,10 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return 2;
 #ifdef SMB
 		case S_SMBED_KIND: {
-			static const char *const smb_kinds[] = { "SMB2", "SMB3", "SMB1" };
+			static const char *const smb_kinds[] = { "SMB2", "SMB3", "SMB1", "NFS" };
 			*names = smb_kinds;
-			*cur = smbed.kind == 3 ? 1 : smbed.kind == 1 ? 2 : 0;
-			return 3;
+			*cur = smbed.kind == SMBED_NFS ? 3 : smbed.kind == 3 ? 1 : smbed.kind == 1 ? 2 : 0;
+			return 4;
 		}
 		case S_SMBED_PICK: {
 			static const char *pick_names[SMB_SHARE_MAX + 1];
@@ -1772,7 +1829,7 @@ static void setChoice(int id, int v)
 			break;
 #ifdef SMB
 		case S_SMBED_KIND:
-			smbed.kind = v == 1 ? 3 : v == 2 ? 1 : 2;
+			smbed.kind = v == 3 ? SMBED_NFS : v == 1 ? 3 : v == 2 ? 1 : 2;
 			dash_changed = 0;
 			break;
 		case S_SMBED_PICK:
@@ -3283,20 +3340,24 @@ static void runAction(int id)
 			break;
 		case S_SMBED_PORT: {
 			char buf[8];
-			snprintf(buf, sizeof(buf), "%d", smbed.port > 0 ? smbed.port : 445);
-			if (dashModalKeyboard("TCP port (445 default; e.g. 1445 or 1025)", buf, sizeof(buf))) {
+			int def = smbed.kind == SMBED_NFS ? 2049 : 445;
+			snprintf(buf, sizeof(buf), "%d", smbed.port > 0 ? smbed.port : def);
+			if (dashModalKeyboard(smbed.kind == SMBED_NFS ? "TCP port (2049 default)" : "TCP port (445 default; e.g. 1445 or 1025)",
+			                      buf, sizeof(buf))) {
 				char *end;
 				long p = strtol(buf, &end, 10);
 				if (end == buf || *end != '\0' || p < 0 || p > 65535)
-					dashModalMessage(DI_WARNING, "Port not changed", "Use digits only: 0 for the default 445, or 1-65535.", NULL);
+					dashModalMessage(DI_WARNING, "Port not changed",
+					                 smbed.kind == SMBED_NFS ? "Use digits only: 0 for the default 2049, or 1-65535." :
+					                 "Use digits only: 0 for the default 445, or 1-65535.", NULL);
 				else
-					smbed.port = p == 445 ? 0 : (int)p;
+					smbed.port = p == def ? 0 : (int)p;
 			}
 			break;
 		}
 		case S_SMBED_FOLDER:
-			smbedEditField("Share on server (e.g. games)", smbed.folder, sizeof(smbed.folder),
-			               "At most 63 characters.");
+			smbedEditField(smbed.kind == SMBED_NFS ? "Export path (e.g. /srv/ps2)" : "Share on server (e.g. games)",
+			               smbed.folder, sizeof(smbed.folder), "At most 127 characters.");
 			break;
 		case S_SMBED_USER:
 			smbedEditField("Username (e.g. ps2 or guest)", smbed.user, sizeof(smbed.user),
@@ -3306,6 +3367,22 @@ static void runAction(int id)
 			smbedEditField("Password (blank for an open share)", smbed.pass, sizeof(smbed.pass),
 			               "At most 31 characters.");
 			break;
+		case S_SMBED_UID:
+		case S_SMBED_GID: {
+			char *idv = id == S_SMBED_UID ? smbed.uid : smbed.gid;
+			char buf[12];
+			int k;
+			dashStrCopy(buf, idv, sizeof(buf));
+			if (dashModalKeyboard(id == S_SMBED_UID ? "NFS user ID (blank for 0)" : "NFS group ID (blank for 0)", buf, sizeof(buf))) {
+				for (k = 0; buf[k] >= '0' && buf[k] <= '9'; k++)
+					;
+				if (buf[k] != '\0' || k > 9)
+					dashModalMessage(DI_WARNING, "Not changed", "Use digits only (at most 9), or leave it blank.", NULL);
+				else
+					dashStrCopy(idv, buf, sizeof(smbed.uid));
+			}
+			break;
+		}
 		case S_SMBED_SAVE:
 			smbedSave();
 			break;
@@ -3357,7 +3434,12 @@ static void runAction(int id)
 			    "# An SMB1-only server (PS2-Servers' SMBv1 card), opened via smb1:/:\n"
 			    "# NAME = OLDBOX\n"
 			    "# VERSION = 1\n"
-			    "# URL = smb://192.168.0.30:445/PS2SMB\n";
+			    "# URL = smb://192.168.0.30:445/PS2SMB\n"
+			    "#\n"
+			    "# An NFS export (NFSv4.0), opened via nfs:/NAME. Only NAME and URL;\n"
+			    "# ?uid=N&gid=N is optional (0 when left out). The port is 2049:\n"
+			    "# NAME = LINUX\n"
+			    "# URL = nfs://192.168.1.100:2049/srv/ps2?uid=1000&gid=1000\n";
 			char *text = NULL;
 			if (smbSharesBlocks() == NULL) {
 				/* An old SMB2.CNF's shares (or the examples) come across; SMB2.CNF is
@@ -3520,6 +3602,12 @@ static int itemDisabled(const SetItem *it)
 #ifdef ILINK
 		case S_DEVA_ILINK: return !consoleHasIlink();
 #endif
+#ifdef SMB
+		case S_SMBED_USER:
+		case S_SMBED_PASS: return smbed.kind == SMBED_NFS;
+		case S_SMBED_UID:
+		case S_SMBED_GID: return smbed.kind != SMBED_NFS;
+#endif
 		default: return 0;
 	}
 }
@@ -3541,6 +3629,12 @@ static const char *disabledHelp(const SetItem *it)
 		case S_T_DATE: return "Enable the clock to configure its placement and format.";
 		case S_TIMEOUT: return "Choose an automatic start target before setting its timeout.";
 		case S_IGR_AFTER_APP: return "Set 'After IGR, open' to Application first.";
+#ifdef SMB
+		case S_SMBED_USER:
+		case S_SMBED_PASS: return "An NFS share has no user name or password: set its user and group IDs.";
+		case S_SMBED_UID:
+		case S_SMBED_GID: return "Only an NFS share has user and group IDs: choose NFS as the Server type.";
+#endif
 #ifdef ILINK
 		case S_DEVA_ILINK:
 			return console_is_PSX ? "The PSX's i.Link port only works with Sony camcorders, not with storage."
@@ -3732,7 +3826,7 @@ static const char *actionStatus(int id)
 		case S_SMBED_NAME:
 			return smbed.name[0] ? smbed.name : "e.g. PS2 Games";
 		case S_SMBED_KIND:
-			return smbed.kind == 1 ? "SMB1" : smbed.kind == 3 ? "SMB3" : "SMB2";
+			return smbed.kind == SMBED_NFS ? "NFS" : smbed.kind == 1 ? "SMB1" : smbed.kind == 3 ? "SMB3" : "SMB2";
 		case S_SMBED_IP:
 			return smbed.host[0] ? smbed.host : "e.g. 192.168.1.20";
 		case S_SMBED_PORT: {
@@ -3740,11 +3834,15 @@ static const char *actionStatus(int id)
 			if (smbed.port > 0)
 				snprintf(port, sizeof(port), "%d", smbed.port);
 			else
-				dashStrCopy(port, "445 (default)", sizeof(port));
+				dashStrCopy(port, smbed.kind == SMBED_NFS ? "2049 (default)" : "445 (default)", sizeof(port));
 			return port;
 		}
 		case S_SMBED_FOLDER:
-			return smbed.folder[0] ? smbed.folder : "e.g. games";
+			return smbed.folder[0] ? smbed.folder : smbed.kind == SMBED_NFS ? "e.g. /srv/ps2" : "e.g. games";
+		case S_SMBED_UID:
+			return smbed.uid[0] ? smbed.uid : "0 (default)";
+		case S_SMBED_GID:
+			return smbed.gid[0] ? smbed.gid : "0 (default)";
 		case S_SMBED_USER:
 			return smbed.user[0] ? smbed.user : "e.g. ps2 / guest";
 #ifdef ETH

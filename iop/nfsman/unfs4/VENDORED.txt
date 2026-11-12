@@ -1,0 +1,15 @@
+unfs4 (vendored)
+================
+
+Upstream:  https://github.com/sahlberg/unfs4 (Ronnie Sahlberg, https://github.com/sahlberg)
+Commit:    9c5f5f5
+           "unfs4: pad filehandles in PUTFH, O_EXCL, check what we read is in the reply"
+Licence:   BSD 2-Clause (see LICENSE)
+
+What is here
+- unfs4.c, unfs4.h and LICENSE, unchanged. ../nfsman.c compiles unfs4.c into itself with read(),
+  write() and close() mapped to its bounded socket calls, and the features it uses defined.
+
+What is omitted
+- unfs4-test.c, host/unfs4-cat-host.c (the tiny TCP/IP build, for Neutrino), the Makefile and
+  the README.

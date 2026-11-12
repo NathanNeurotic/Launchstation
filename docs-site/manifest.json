@@ -107,6 +107,11 @@
           "netboot"
         ],
         [
+          "nfs",
+          "Network Shares (NFS)",
+          "netboot"
+        ],
+        [
           "pc-card-cf",
           "PC CARD CompactFlash",
           "hdd"

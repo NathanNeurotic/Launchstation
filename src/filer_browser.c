@@ -108,6 +108,8 @@ static const char *getRootDeviceLabel(const char *name)
 		return "smb:/";
 	if (!strcmp(name, SMB_DEVICE_V1))
 		return "smb1:/";
+	if (!strcmp(name, SMB_DEVICE_NFS))
+		return "nfs:/";
 #endif
 	if (!strcmp(name, LNG(MISC)))
 		return "MISC/";
@@ -429,6 +431,9 @@ void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char 
 	/* smb:/ lists the connected shares; nothing can be made there. smb1:/
 	 * is the top of its one share and stays writable. */
 	if (smbPathKind(path) == SMB_PATH_V2 && smbIsRootPath(path))
+		write_disabled = 1;
+	/* nfs:/ lists the connected exports, as smb:/ its shares. */
+	if (smbPathKind(path) == SMB_PATH_NFS && smbIsRootPath(path))
 		write_disabled = 1;
 #endif
 
@@ -1686,7 +1691,8 @@ static int browseFilePath(char *out, int cnfmode, FILEINFO *files)
 						smbSharesStatus(smb_version, msg0, sizeof(msg0));
 					browser_pushed = FALSE;
 					if (!smbIsRootPath(path) || smbSharesConnectedCount(smb_version) == 0) {
-						strcpy(cursorEntry, smb_version == SMB_PATH_V1 ? SMB_DEVICE_V1 : SMB_DEVICE_V2);
+						strcpy(cursorEntry, smb_version == SMB_PATH_V1 ? SMB_DEVICE_V1 :
+						                    smb_version == SMB_PATH_NFS ? SMB_DEVICE_NFS : SMB_DEVICE_V2);
 						path[0] = '\0';
 						browser_repos = TRUE;
 						browser_nfiles = setFileList(path, ext, files, cnfmode);

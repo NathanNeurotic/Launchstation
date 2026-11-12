@@ -1878,7 +1878,7 @@ int readUDPFS(const char *path, FILEINFO *info, int max)
 }
 #endif
 #ifdef SMB
-/* smb: (SMB2/SMB3) and smb1: (SMB1). The drivers are loaded on the UI
+/* smb: (SMB2/SMB3), smb1: (SMB1) and nfs: (NFSv4.0). The drivers are loaded on the UI
  * thread only (filerPrepareDirRead); a dashboard worker listing an
  * unloaded device gets -ENODEV rather than loading IOP modules itself. */
 int readSMB(const char *path, FILEINFO *info, int max)
@@ -2362,6 +2362,12 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 			if (dashWorkerIoBusy() ? smbSharesKnown(SMB_PATH_V1)
 			                       : smbSharesConfigured(SMB_PATH_V1)) {
 				strcpy(files[nfiles].name, SMB_DEVICE_V1);
+				files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
+			}
+			/* nfs: only when the config has an NFS share, read the same way */
+			if (dashWorkerIoBusy() ? smbSharesKnown(SMB_PATH_NFS)
+			                       : smbSharesConfigured(SMB_PATH_NFS)) {
+				strcpy(files[nfiles].name, SMB_DEVICE_NFS);
 				files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 			}
 #endif

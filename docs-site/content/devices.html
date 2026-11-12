@@ -16,6 +16,7 @@
 <tr><td>PC CARD CF (<code>PC CARD CF</code>)</td><td><code>cf0:</code> (<code>cf:</code>)</td><td>On demand, early Japanese consoles only</td><td>No</td><td>No</td><td>No</td></tr>
 <tr><td>Network (<code>Network (UDPFS)</code>)</td><td><code>udpfs:</code></td><td>On demand</td><td>Yes (<code>udpfs</code>)</td><td>No</td><td>Yes</td></tr>
 <tr><td>Network shares (<code>Network (SMB)</code>, <code>Network (SMB1)</code>; see <a href="smb.html">SMB</a>)</td><td><code>smb:</code> <code>smb1:</code></td><td>On demand</td><td><a href="neutrino.html#smb">Yes, latest nightly SMB 3.0 backend</a> (TCP 445, read-only ISO)</td><td>No</td><td>No</td></tr>
+<tr><td>NFS shares (<code>Network (NFS)</code>; see <a href="nfs.html">NFS</a>)</td><td><code>nfs:</code></td><td>On demand</td><td>No (Neutrino has no NFS backend yet)</td><td>No</td><td>No</td></tr>
 <tr><td>Disc Drive</td><td><code>cdfs:</code></td><td>Disc state tracked</td><td>Not an image source (use <b>Start disc</b>)</td><td>No</td><td>No</td></tr>
 <tr><td>PSX Flash / PSX DVR HDD</td><td><code>xfrom0:</code> <code>dvr_hdd0:</code></td><td>On demand, DESR only</td><td colspan="3">File management only</td></tr>
 <tr><td>Virtual MC</td><td><code>vmc0:</code> <code>vmc1:</code></td><td>When an image is mounted</td><td colspan="3">Save management only</td></tr>
@@ -51,7 +52,7 @@
 <ul>
 <li><b>MMCE &harr; MX4SIO.</b> Each installs its own SIO2 hooks, so switching from one to the other forces an IOP reset (audio and controller are rebuilt afterward). If the reset is refused, the second driver is not loaded. MX4SIO also occupies memory-card port 2, so opening <code>mc1:</code> while MX4SIO is active resets the IOP back to the normal card stack.</li>
 <li><b>PC CARD CF &harr; DEV9.</b> The CF driver owns the PCMCIA bus and refuses to start if DEV9 (HDD, ATA, network) is resident; DEV9 loaders refuse in turn once CF owns the bus. Only an actual IOP reset releases it.</li>
-<li><b>Copy and move are refused between incompatible pairs</b> with &ldquo;Incompatible drivers to perform action&rdquo;: MMCE &harr; MX4SIO, MX4SIO &harr; <code>mc1:</code>, PC CARD CF &harr; anything on DEV9 (internal HDD/PFS, exFAT HDD, UDPFS, <code>host:</code>, PSX flash/DVR), and UDPFS &harr; <code>host:</code> or SMB (each side needs its own Ethernet stack, and loading one unloads the other). These are refused before either driver is loaded. Use USB (or another compatible device) as the middle step.</li>
+<li><b>Copy and move are refused between incompatible pairs</b> with &ldquo;Incompatible drivers to perform action&rdquo;: MMCE &harr; MX4SIO, MX4SIO &harr; <code>mc1:</code>, PC CARD CF &harr; anything on DEV9 (internal HDD/PFS, exFAT HDD, UDPFS, <code>host:</code>, PSX flash/DVR), and UDPFS &harr; <code>host:</code>, SMB or NFS (each side needs its own Ethernet stack, and loading one unloads the other). These are refused before either driver is loaded. Use USB (or another compatible device) as the middle step.</li>
 <li><b>Compatible together:</b> USB, iLink, internal HDD (APA) and exFAT HDD (ATA) can all be resident at once; they share the BDM core where applicable. Network (UDPFS) shares DEV9 with HDD/ATA.</li>
 </ul>
 
