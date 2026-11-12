@@ -68,8 +68,8 @@ static int dashModalConfirm(const char *title,const char *body,const char *actio
     (void)title;(void)body;(void)action;(void)danger;
     confirmations++; return 1;
 }
-static int selfUpdateInstall(const char *ca,const char *digest,char *result,int cap) {
-    (void)ca;(void)digest;
+static int selfUpdateInstall(const char *ca,const char *digest,int package_bytes,char *result,int cap) {
+    (void)ca;(void)digest;assert(package_bytes==2234368);
     installs++;
     snprintf(result,cap,"installed");
     return 0;
@@ -89,7 +89,7 @@ static int cloudHttpRequest(const char *method,const char *host,const char *path
         out->status=response_status;
     } else {
         assert(strstr(path,"/releases/tags/latest"));
-        snprintf(json,sizeof(json),"{\"target_commitish\":\"%s\",\"assets\":[{\"name\":\"APP_LAUNCHSTATION.psu\",\"digest\":\"sha256:%064d\"}]}",
+        snprintf(json,sizeof(json),"{\"target_commitish\":\"%s\",\"assets\":[{\"name\":\"APP_LAUNCHSTATION.psu\",\"size\": 2234368,\"digest\":\"sha256:%064d\"}]}",
                  release_target,0);
         out->status=200;
     }

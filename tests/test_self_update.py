@@ -52,7 +52,7 @@ assert "sha256sum Launchstation.ELF > Launchstation.ELF.sha256" not in workflow
 assert "artifacts/Launchstation.ELF.sha256#SHA-256" not in workflow
 assert "scripts/package_apps.py" in workflow
 
-print("PASS: native updater verifies GitHub release digests, stages safely, backs up, and rolls back")
+print("PASS: native updater verifies GitHub release digests, stages safely, rolls back during the swap and keeps no .BAK")
 
 update_ca = (root / "res/WLE-UPDATE-CA.PEM").read_text()
 assert update_ca.count("-----BEGIN CERTIFICATE-----") >= 2

@@ -14,6 +14,8 @@ int selfUpdateExtractPsu(const char *package, const char *stage, int size);
 int selfUpdateExtractPsuSidecar(const char *package, const char *name,
                                 const char *stage, int size);
 
-int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *result, int result_size);
+/* package_bytes: the release asset's size, or 0 when unknown (no space pre-check). */
+int selfUpdateInstall(const char *ca_path, const char *expected_sha256, int package_bytes,
+                      char *result, int result_size);
 
 #endif

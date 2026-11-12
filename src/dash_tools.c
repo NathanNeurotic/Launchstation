@@ -743,7 +743,8 @@ static int releaseJsonString(const char *json, const char *key, char *out, int o
 	return 1;
 }
 
-static int releaseAssetDigest(const char *json, const char *asset_name, char *out, int out_size)
+static int releaseAssetDigest(const char *json, const char *asset_name, char *out, int out_size,
+                              int *size_out)
 {
 	const char *p = json;
 	char name[96], digest[96];
@@ -772,6 +773,15 @@ static int releaseAssetDigest(const char *json, const char *asset_name, char *ou
 			return 0;
 
 		snprintf(out, out_size, "%s", digest);
+		/* Optional: lets the installer check free space before downloading. */
+		*size_out = 0;
+		digest_key = strstr(p, "\"size\"");
+		if (digest_key != NULL && (next_name == NULL || digest_key < next_name)) {
+			digest_key += 6;
+			while (*digest_key == ' ' || *digest_key == ':')
+				digest_key++;
+			*size_out = atoi(digest_key);
+		}
 		return 1;
 	}
 
@@ -873,6 +883,7 @@ void dashToolsCheckUpdates(void)
 {
 	CloudHttpResponse response;
 	char ca_path[MAX_PATH], error[192], latest[80], asset_digest[80], body[320];
+	int asset_size = 0;
 	const char headers[] =
 	    "User-Agent: Launchstation-PS2\r\n"
 	    "Accept: application/vnd.github+json\r\n";
@@ -914,7 +925,7 @@ void dashToolsCheckUpdates(void)
 	if (response.status != 200 ||
 	    !releaseJsonString(response.body, "target_commitish", latest, sizeof(latest)) ||
 	    !releaseAssetDigest(response.body, SELF_UPDATE_ASSET,
-	                        asset_digest, sizeof(asset_digest))) {
+	                        asset_digest, sizeof(asset_digest), &asset_size)) {
 		snprintf(body, sizeof(body), "GitHub returned HTTP %d or an unexpected release response.", response.status);
 		cloudHttpResponseFree(&response);
 		dashModalMessage(DI_WARNING, "Update check failed", body, NULL);
@@ -967,14 +978,14 @@ void dashToolsCheckUpdates(void)
 
 		install_result[0] = '\0';
 		dashLoadingBegin("Downloading and verifying Launchstation update");
-		installed = selfUpdateInstall(ca_path, asset_digest, install_result, sizeof(install_result));
+		installed = selfUpdateInstall(ca_path, asset_digest, asset_size, install_result, sizeof(install_result));
 		dashLoadingEnd();
 		dashModalMessage(installed == 0 ? DI_CHECK : DI_WARNING,
 		                 installed == 0 ? "Update installed" : "Update was not installed",
 		                 install_result[0] ? install_result :
 		                     (installed == 0 ? "The update was installed." : "The update failed."),
 		                 installed == 0
-		                     ? "The current session keeps running the old code until you restart. The previous ELF remains beside it as .BAK."
+		                     ? "The current session keeps running the old code until you restart."
 		                     : "The updater stages and verifies the complete download before changing the running ELF.");
 	}
 }

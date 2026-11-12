@@ -40,6 +40,7 @@ static int filerRestoreSasTimestamp(const char *p,const sceMcStDateTime *t) {
 #define MAX_PATH 256
 #define MAX_NAME 128
 #define UPDATE_MAX_ELF (16*1024*1024)
+#define UPDATE_SPACE_MARGIN (32*1024)
 #define UPDATE_ELF_URL "test://latest/APP_LAUNCHSTATION.psu"
 static const char *boot="mc0:/APP_LAUNCHSTATION/LAUNCHSTATION.ELF";
 static const char *parent="mc0:/APP_LAUNCHSTATION/";
@@ -65,6 +66,10 @@ static int del(const char *p) {
 }
 static int wleExists(const char *p) { return has(p); }
 static void DashStorageProbeStatus(const char *s) { assert(s && s[0]); }
+typedef unsigned long long u64;
+static u64 free_space=64ULL*1024*1024;
+static int package_bytes=2234368;
+static int filerFreeSpace(const char *p,u64 *out) { assert(!strcmp(p,parent));*out=free_space;return 1; }
 static int genRemove(const char *p) { return del(p); }
 static const char *wleBootElfPath(void) { return boot; }
 static int ensurePathDeviceStackReady(const char *p) {
@@ -119,10 +124,11 @@ static void reset(void) {
     count=downloads=sidecar_calls=captures=restores=restore_result=0;capture_result=1;
     legacy=fail_bgm_stage=fail_bgm_rename=0;
     bad_digest=fail_elf_rename=bad_header=0;
+    free_space=64ULL*1024*1024;package_bytes=2234368;
     put(boot);
 }
 static int install(char *msg) {
-    int ret=selfUpdateInstall("settings/legacy-ca.pem","sha256:mock",msg,512);
+    int ret=selfUpdateInstall("settings/legacy-ca.pem","sha256:mock",package_bytes,msg,512);
     assert(captures==1 && restores==(capture_result>0));
     return ret;
 }
@@ -137,17 +143,17 @@ int main(void) {
     char msg[512];
     reset();
     assert(install(msg)==0);
-    assert(has(ca)&&has(bgm)&&has(boot)&&has(backup));
+    assert(has(ca)&&has(bgm)&&has(boot)&&!has(backup)); /* no .BAK stays after an install */
     assert(!has(ca_tmp)&&!has(bgm_tmp)&&sidecar_calls==2&&downloads==1);
-    reset();put(ca);put(bgm);
+    reset();put(ca);put(bgm);put(backup); /* a .BAK left by an older build is removed */
     assert(install(msg)==0);
-    assert(has(ca)&&has(bgm)&&sidecar_calls==0&&has(backup));
+    assert(has(ca)&&has(bgm)&&sidecar_calls==0&&has(boot)&&!has(backup));
     reset();put(ca); /* only restore missing music */
     assert(install(msg)==0);
     assert(has(ca)&&has(bgm)&&sidecar_calls==1);
     reset();legacy=1;
     assert(install(msg)==0);
-    assert(!has(ca)&&!has(bgm)&&has(boot)&&has(backup));
+    assert(!has(ca)&&!has(bgm)&&has(boot)&&!has(backup));
     reset();put(ca_tmp);
     assert(install(msg)<0 && downloads==0&&has(boot)&&has(ca_tmp)&&!has(backup));
     /* An interrupted ELF stage/download must not be truncated or removed.
@@ -173,6 +179,14 @@ int main(void) {
     assert(install(msg)<0 && has(boot)&&!has(backup)&&!has(ca)&&!has(bgm));
     reset();fail_elf_rename=1;
     assert(install(msg)<0 && !has(boot)&&has(backup)); /* simulated rollback fails too */
+    /* A nearly full card is refused before any download; an old .BAK is
+     * cleared first to make room, and the installed ELF is untouched. */
+    reset();put(backup);free_space=2*2234368+32*1024-1;
+    assert(install(msg)<0 && downloads==0 && has(boot) && !has(backup) && strstr(msg,"Not enough free space"));
+    reset();free_space=2*2234368+32*1024;
+    assert(install(msg)==0 && downloads==1 && has(boot));
+    reset();package_bytes=0;free_space=0; /* size unknown: no pre-check */
+    assert(install(msg)==0 && downloads==1);
     reset();capture_result=-EIO;
     assert(install(msg)<0 && downloads==0 && has(boot) && !has(backup));
     reset();capture_result=0;

@@ -56,12 +56,13 @@ Open **Settings → Storage & devices → MMCE backups → Check for updates** (
 - It asks GitHub to compare the running commit with the release commit. Only a verified descendant is offered; identical or older builds report "no newer release", and divergent, local or unverifiable builds are blocked with an explanation.
 - After confirmation it downloads the PSU over trusted HTTPS, verifies the digest, extracts the packed ELF and validates it as a PS2 ELF, then stages the replacement.
 - It can install **missing** `WLE-UPDATE-CA.PEM` and `BGM.ADP` from a verified four-, eight- or nine-file PSU; existing custom sidecars remain untouched. A legacy two-file PSU updates only the ELF.
-- The old ELF becomes `<name>.ELF.BAK` before the replacement is renamed into place; if that final rename fails the original is restored. Restart to execute the installed build.
+- Before downloading it deletes any `<name>.ELF.BAK` left by an older build and checks that the app's device has room for the package plus the files unpacked from it (twice the package size, plus 32 KB). If not, it stops and changes nothing; it never loads another device's drivers to look for space.
+- The old ELF is moved aside as `<name>.ELF.BAK` only while the replacement is renamed into place; if that final rename fails the original is restored, and once the new ELF is in place the `.BAK` is deleted. No backup stays on the card. Restart to execute the installed build.
 - It supports ELFs started from `mc`, `mass`/`usb`, `mmce`, `mx4sio`, `ilink`, `ata` and `hdd` paths.
 
 If `.UPDATE` or `.PACKAGE` remains from an interrupted attempt, the updater refuses to overwrite it and changes nothing. Preserve the original ELF and settings, inspect the incomplete staging files and resolve the conflict manually; do not delete them blindly. Old updater versions that expect the retired package format may need one manual new-package install.
 
-To roll back, copy `LAUNCHSTATION.ELF.BAK` (or the DS equivalent) back over the ELF, or install an older package manually.
+To roll back, install an older package manually.
 
 ## Hardware regression recovery
 
