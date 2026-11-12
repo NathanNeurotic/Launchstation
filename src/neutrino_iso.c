@@ -128,7 +128,8 @@ static const char *neutrinoBsdForPath(const char *path)
 	if (!strncmp(path, "udpfs", 5))
 		return "udpfs";
 #ifdef SMB
-	if (smbPathKind(path) != SMB_PATH_NONE)
+	/* nfs: is not handed to Neutrino (yet): it reads as not supported */
+	if (smbPathKind(path) == SMB_PATH_V1 || smbPathKind(path) == SMB_PATH_V2)
 		return "smb";
 #endif
 	return NULL;

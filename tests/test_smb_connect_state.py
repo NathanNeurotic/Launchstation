@@ -25,6 +25,7 @@ code = r'''
 #include <string.h>
 #include "smb_shares.h"
 #include "smb2man.h"
+#include "nfsman.h"
 
 #define MAX_PATH 1024
 #define SMB_RETRY_MS 30000
@@ -33,7 +34,7 @@ code = r'''
 static SmbConfig smb_cfg;
 static int smb_cfg_loaded, smb_cfg_mc1_pending;
 static char smb_cfg_path[MAX_PATH];
-static unsigned int smb_retry_ms[3];
+static unsigned int smb_retry_ms[4];
 static void smbReadConfig(void);
 
 static unsigned int now;
@@ -52,6 +53,7 @@ static char *smbReadConfigText(int *refused)
 
 static int connectSmb1(SmbShare *sh) { (void)sh; connect_calls++; return connect_result; }
 static int connectSmb2(SmbShare *sh) { (void)sh; connect_calls++; return connect_result; }
+static int connectNfs(SmbShare *sh) { (void)sh; connect_calls++; return connect_result; }
 static int fileXioDevctl(const char *device, int cmd, void *arg, unsigned int arglen,
                          void *buf, unsigned int buflen)
 {
@@ -63,6 +65,7 @@ static int fileXioDevctl(const char *device, int cmd, void *arg, unsigned int ar
 static const char *smb1Problem(int ret) { (void)ret; return "mock SMB1 failure"; }
 static int isSmbDriverLoaded(int version) { (void)version; return 1; }
 static const char *smb2Problem(int ret) { (void)ret; return "mock SMB2 failure"; }
+static const char *nfsProblem(int ret) { (void)ret; return "mock NFS failure"; }
 static unsigned int Timer(void) { return now; }
 '''
 code += source[source.index("static unsigned int smb_cfg_text_hash;"):source.index("static void smbReadConfig(void)\n{")]

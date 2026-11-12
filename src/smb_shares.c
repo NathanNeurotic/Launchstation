@@ -1,8 +1,8 @@
 //--------------------------------------------------------------
 //File name:   smb_shares.c
-//SMB network shares on the PS2 side: finds and reads SMB2.CNF, connects its
-//shares through smb2man (smb:, SMB2/SMB3) and smbman (smb1:, SMB1),
-//and keeps what happened to each share for the browser to show.
+//Network shares on the PS2 side: finds and reads SMB2.CNF, connects its
+//shares through smb2man (smb:, SMB2/SMB3), smbman (smb1:, SMB1) and nfsman
+//(nfs:, NFSv4.0), and keeps what happened to each share for the browser to show.
 //
 //init.c loads the drivers (load_smb()); this file only talks to them.
 //--------------------------------------------------------------
@@ -11,6 +11,8 @@
 #include "smb_shares.h"
 #include "neutrino_smb.h"
 #include "smb2man.h"
+#include "nfsman.h"
+#include <time.h>
 #include "init.h"
 #include <ps2smb.h>
 
@@ -31,7 +33,7 @@ static int smb_cfg_loaded = 0;
  * readers re-read so the preferred file can still win once mc1: is loaded. */
 static int smb_cfg_mc1_pending = 0;
 static char smb_cfg_path[MAX_PATH];
-static unsigned int smb_retry_ms[3]; /* by version: last retry of failed shares */
+static unsigned int smb_retry_ms[4]; /* by version: last retry of failed shares */
 static void smbReadConfig(void);
 
 int smbSharesNeutrino(const char *path, SmbShare *share, char *dvd,
@@ -135,14 +137,16 @@ static unsigned int smbTextHash(const char *text)
 
 static int smbDisconnectAllSessions(void)
 {
-	int ret2 = 0, ret1 = 0;
+	int ret2 = 0, ret1 = 0, retn = 0;
 
 	if (isSmbDriverLoaded(SMB_PATH_V2) && smbSharesConnectedCount(SMB_PATH_V2) > 0)
 		ret2 = fileXioDevctl(SMB_DEVICE_V2, SMB2_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0);
 	if (isSmbDriverLoaded(SMB_PATH_V1) && smbSharesConnectedCount(SMB_PATH_V1) > 0)
 		ret1 = fileXioDevctl(SMB_DEVICE_V1, SMB_DEVCTL_LOGOFF, NULL, 0, NULL, 0);
-	if (ret2 < 0 || ret1 < 0) {
-		DPRINTF(" [SMB]: config reload refused: SMB2 disconnect=%d SMB1 logoff=%d\n", ret2, ret1);
+	if (isSmbDriverLoaded(SMB_PATH_NFS) && smbSharesConnectedCount(SMB_PATH_NFS) > 0)
+		retn = fileXioDevctl(SMB_DEVICE_NFS, NFS_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0);
+	if (ret2 < 0 || ret1 < 0 || retn < 0) {
+		DPRINTF(" [SMB]: config reload refused: SMB2 disconnect=%d SMB1 logoff=%d NFS disconnect=%d\n", ret2, ret1, retn);
 		return 0;
 	}
 	return 1;
@@ -235,6 +239,37 @@ static int connectSmb2(SmbShare *sh)
 	memset(&in, 0, sizeof(in)); /* no password left on the stack */
 	/* -EEXIST: the driver already has it, from before a reset of our state */
 	return ret == -EEXIST ? 0 : ret;
+}
+
+/* The URL as the config has it: nfsman reads it the way smb_cnf.c checked it.
+ * The seed lets nfsman start its xids where a session before a reboot did not. */
+static int connectNfs(SmbShare *sh)
+{
+	nfsConnect_in_t in;
+	int ret;
+
+	memset(&in, 0, sizeof(in));
+	memcpy(in.name, sh->name, sizeof(in.name));
+	if (snprintf(in.url, sizeof(in.url), "%s", sh->url) >= (int)sizeof(in.url))
+		return -NFS_CONNECT_ERR_URL;
+	in.seed = (unsigned int)time(NULL);
+	ret = fileXioDevctl(SMB_DEVICE_NFS, NFS_DEVCTL_CONNECT, &in, sizeof(in), NULL, 0);
+	/* -EEXIST: the driver already has it, from before a reset of our state */
+	return ret == -EEXIST ? 0 : ret;
+}
+
+static const char *nfsProblem(int ret)
+{
+	switch (-ret) {
+		case NFS_CONNECT_ERR_URL: return "URL needs nfs://<IP address>[:port]/<export>";
+		case NFS_CONNECT_ERR_CONN: return "Server did not answer on the NFS port";
+		case NFS_CONNECT_ERR_PROT: return "Server does not answer NFSv4.0 (is 4.0 enabled?)";
+		case NFS_CONNECT_ERR_ACCESS: return "The export refused this PS2 (check its client list)";
+		case NFS_CONNECT_ERR_EXPORT: return "No such export on the server";
+		case NFS_CONNECT_ERR_FULL: return "Too many shares connected";
+		case NFS_CONNECT_ERR_MEMORY: return "Not enough IOP memory for the share";
+		default: return "Could not connect";
+	}
 }
 
 /* smbman serves one share: log on to the server, then open the share. */
@@ -336,7 +371,8 @@ void smbSharesConnect(int version, int retry_failed)
 		else
 			smb_retry_ms[version] = now;
 	}
-	if (!smb_cfg_loaded || smb_cfg_mc1_pending || (retry_failed && smbSharesConnectedCount(1) == 0 && smbSharesConnectedCount(2) == 0))
+	if (!smb_cfg_loaded || smb_cfg_mc1_pending ||
+	    (retry_failed && smbSharesConnectedCount(1) == 0 && smbSharesConnectedCount(2) == 0 && smbSharesConnectedCount(3) == 0))
 		smbReadConfig();
 	for (i = 0; i < smb_cfg.count; i++) {
 		SmbShare *sh = &smb_cfg.share[i];
@@ -345,17 +381,18 @@ void smbSharesConnect(int version, int retry_failed)
 			continue;
 		if (sh->state == SMB_STATE_FAILED && !retry_failed)
 			continue;
-		ret = version == 1 ? connectSmb1(sh) : connectSmb2(sh);
+		ret = version == 1 ? connectSmb1(sh) : version == SMB_PATH_NFS ? connectNfs(sh) : connectSmb2(sh);
 		sh->error = ret;
 		if (ret >= 0) {
 			sh->state = SMB_STATE_CONNECTED;
 			sh->problem = NULL;
 		} else {
 			sh->state = SMB_STATE_FAILED;
-			sh->problem = version == 1 ? smb1Problem(ret) : smb2Problem(ret);
+			sh->problem = version == 1 ? smb1Problem(ret) : version == SMB_PATH_NFS ? nfsProblem(ret) : smb2Problem(ret);
 		}
 		DPRINTF(" [SMB%d]: %s as %s%s, ret=%d\n", version, sh->url,
-		        version == 1 ? SMB_DEVICE_V1 "/" : SMB_DEVICE_V2 "/", version == 1 ? "" : sh->name, ret);
+		        version == 1 ? SMB_DEVICE_V1 "/" : version == SMB_PATH_NFS ? SMB_DEVICE_NFS "/" : SMB_DEVICE_V2 "/",
+		        version == 1 ? "" : sh->name, ret);
 	}
 }
 
@@ -409,7 +446,8 @@ void smbSharesStatus(int version, char *out, int out_size)
 		snprintf(out, out_size, "%s (line %d): %s", first_bad->name[0] ? first_bad->name : "share",
 		         first_bad->line, first_bad->problem ? first_bad->problem : "Could not connect");
 	else if (valid == 0)
-		snprintf(out, out_size, "%s has no %s share", smb_cfg_path, version == 1 ? "VERSION = 1" : "SMB2/SMB3");
+		snprintf(out, out_size, "%s has no %s share", smb_cfg_path,
+		         version == 1 ? "VERSION = 1" : version == SMB_PATH_NFS ? "NFS" : "SMB2/SMB3");
 	else
 		snprintf(out, out_size, "%d of %d share(s) connected", connected, valid);
 }

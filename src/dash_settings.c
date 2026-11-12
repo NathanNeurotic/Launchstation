@@ -551,6 +551,11 @@ static void smbedSave(void)
 	char block[512];
 	int n, r, i;
 
+	if (smbed.pick > 0 && smbed.snap.share[smbed.pick - 1].version == SMB_PATH_NFS) {
+		dashModalMessage(DI_WARNING, "Share not saved",
+		                 "This is an NFS share: change it with Edit shares as text.", NULL);
+		return;
+	}
 	n = smbCnfBuildBlock(block, sizeof(block), smbed.name, smbed.kind,
 	                     smbed.user, smbed.pass, smbed.host,
 	                     smbed.port > 0 ? smbed.port : 445, smbed.folder, smbed.plaintext);

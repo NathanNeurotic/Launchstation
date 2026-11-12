@@ -2,10 +2,14 @@
 #define SMB_SHARES_H
 
 //--------------------------------------------------------------
-// SMB network shares: SMB2.CNF and the smb: / smb1: devices.
+// Network shares: SMB2.CNF and the smb: / smb1: / nfs: devices.
 //
 //   smb:/<NAME>/...  SMB2/SMB3 shares, through smb2man (iop/smb2man, usmb2)
 //   smb1:/...        one SMB1 (NT1) share, through smbman.irx
+//   nfs:/<NAME>/...  NFSv4.0 exports, through nfsman (iop/nfsman, unfs4)
+//
+// An NFS share is a NAME and an nfs:// URL among the SMB shares: the URL's
+// scheme says which it is.
 //
 // smb_cnf.c only parses text and is compiled on the host by
 // tests/test_smb_shares.py; smb_shares.c is the PS2 side.
@@ -23,11 +27,13 @@
 
 #define SMB_DEVICE_V2 "smb:"
 #define SMB_DEVICE_V1 "smb1:"
+#define SMB_DEVICE_NFS "nfs:"
 
 enum {
 	SMB_PATH_NONE = 0,
 	SMB_PATH_V1 = 1, /* smb1: */
-	SMB_PATH_V2 = 2  /* smb: */
+	SMB_PATH_V2 = 2, /* smb: */
+	SMB_PATH_NFS = 3 /* nfs: */
 };
 
 enum {
@@ -43,11 +49,12 @@ typedef struct
 	char username[SMB_CRED_LEN];
 	char password[SMB_CRED_LEN];
 	char url[SMB_URL_LEN];
-	int version; /* 1 or 2 */
+	int version; /* SMB_PATH_V1, _V2 or _NFS */
 	/* PLAINTEXT = 1: an SMB1 server that asks for a clear-text password
 	 * gets it. Off, smbman refuses such a server. */
 	int plaintext;
-	/* SMB1 only, split out of url: smbman takes them separately. */
+	/* Split out of url (smbman takes them separately); for NFS, share is
+	 * the export path, from its leading '/'. */
 	char server[SMB_SERVER_LEN];
 	int port;
 	char share[SMB_URL_LEN];
@@ -95,11 +102,13 @@ int smbCnfUpsertText(const char *text, const char *orig_name,
  * there is no such line. */
 const char *smbCnfSection(const char *text);
 
-/* SMB_PATH_V1 for "smb1:...", SMB_PATH_V2 for "smb:...", else SMB_PATH_NONE.
- * Plain prefix tests on "smb" would take smb1: for smb:. */
+/* SMB_PATH_V1 for "smb1:...", SMB_PATH_V2 for "smb:...", SMB_PATH_NFS for
+ * "nfs:...", else SMB_PATH_NONE. Plain prefix tests on "smb" would take
+ * smb1: for smb:. */
 int smbPathKind(const char *path);
-/* "smb:", "smb:/", "smb1:" or "smb1:/": the device itself, where smb: lists
- * its connected shares and nothing can be written. */
+/* "smb:", "smb:/", "smb1:", "smb1:/", "nfs:" or "nfs:/": the device itself,
+ * where smb: and nfs: list their connected shares and nothing can be
+ * written. */
 int smbIsRootPath(const char *path);
 
 #ifdef SMB

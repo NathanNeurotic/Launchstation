@@ -45,18 +45,20 @@ typedef unsigned char u8;
 #define size_ps2smap_irx 1
 #define size_smbman_irx 1
 #define size_smb2man_irx 1
+#define size_nfsman_irx 1
+#define SMB_PATH_NFS 3
 static unsigned char netman_irx[1], smap_netman_irx[1], ps2ip_irx[1], ps2ip_v10_irx[1], ps2smap_irx[1];
-static unsigned char smbman_irx[1], smb2man_irx[1];
+static unsigned char smbman_irx[1], smb2man_irx[1], nfsman_irx[1];
 static unsigned char if_conf[1];
 static int if_conf_len = 1;
-static u8 have_netman, have_ps2ip, have_ps2smap, ps2dev9_loaded, have_smbman, have_smb2man;
+static u8 have_netman, have_ps2ip, have_ps2smap, ps2dev9_loaded, have_smbman, have_smb2man, have_nfsman;
 static int ps2dev9_variant = 1, owner, stack_ok, dev9_ok, connects;
 /* per module: 0 loads, 1 start failed (MODULE_NO_RESIDENT_END), -1 load failed */
 static int ip_mode, smap_mode, netman_mode;
 /* load order: N NETMAN, S NETMAN SMAP, P PS2IP, v v1.0 PS2IP, s PS2IP-build SMAP; + = with the address */
 static char order[32];
 static const char *dashboard_ip_error;
-static const char *smb_load_error[3];
+static const char *smb_load_error[4];
 static struct { int legacy_net_drivers; } settings, *setting = &settings;
 static int pcCardCfOwnsBus(void) { return owner; }
 static int switchNetworkStack(int mode) { assert(mode == NETWORK_STACK_ETH); return stack_ok; }

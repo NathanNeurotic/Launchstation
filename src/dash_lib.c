@@ -209,6 +209,8 @@ void dashLibDeviceLabel(const char *path, char *out, int out_size)
 		dashStrCopy(out, "Network (SMB1)", out_size);
 	else if (smbPathKind(path) == SMB_PATH_V2)
 		dashStrCopy(out, "Network (SMB)", out_size);
+	else if (smbPathKind(path) == SMB_PATH_NFS)
+		dashStrCopy(out, "Network (NFS)", out_size);
 #endif
 	else if (!strncmp(path, "host", 4))
 		dashStrCopy(out, "Network Host", out_size);

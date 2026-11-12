@@ -22,7 +22,7 @@ extern int vmcMounted[2];
 
 /* Driver residency does not establish that a card, disk or server exists.
  * Cache explicit root checks; never do blocking device IO from drawing. */
-enum { PROBE_HDD, PROBE_ATA, PROBE_PCCF, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1, PROBE_UDPFS, PROBE_SMB, PROBE_SMB1 };
+enum { PROBE_HDD, PROBE_ATA, PROBE_PCCF, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1, PROBE_UDPFS, PROBE_SMB, PROBE_SMB1, PROBE_NFS };
 static u32 probe_checked, probe_present;
 static unsigned int probe_reset_generation = (unsigned int)-1;
 
@@ -44,6 +44,7 @@ static int probeIndex(const char *mount)
 #ifdef SMB
 	if (smbPathKind(mount) == SMB_PATH_V1) return PROBE_SMB1;
 	if (smbPathKind(mount) == SMB_PATH_V2) return PROBE_SMB;
+	if (smbPathKind(mount) == SMB_PATH_NFS) return PROBE_NFS;
 #endif
 	return -1;
 }
@@ -459,6 +460,16 @@ int dashDevicesList(DashDevice *out, int max)
 		         smbSharesConnectedCount(SMB_PATH_V2) + smbSharesConnectedCount(SMB_PATH_V1));
 		addStorage(out, &n, max, DI_SHARE, "Network (SMB)", SMB_DEVICE_V2, "smb:/", smb_ready, smb_absent);
 	}
+	/* NFS exports, listed once one is saved (the config is read at boot). */
+	if (smbSharesKnown(SMB_PATH_NFS) > 0) {
+		static char nfs_ready[32], nfs_absent[96];
+
+		smbSharesStatus(SMB_PATH_NFS, nfs_absent, sizeof(nfs_absent));
+		if (!isSmbDriverLoaded(SMB_PATH_NFS) && smbLoadError(SMB_PATH_NFS)[0])
+			snprintf(nfs_absent, sizeof(nfs_absent), "%s", smbLoadError(SMB_PATH_NFS));
+		snprintf(nfs_ready, sizeof(nfs_ready), "%d share(s) connected", smbSharesConnectedCount(SMB_PATH_NFS));
+		addStorage(out, &n, max, DI_SHARE, "Network (NFS)", SMB_DEVICE_NFS, "nfs:/", nfs_ready, nfs_absent);
+	}
 #endif
 #ifdef ETH
 	add(out, &n, max, DI_SHARE, DASH_DEV_PROBE, "Network Host", "host:", "host:/", "PS2Link host");
@@ -827,6 +838,8 @@ void dashDevicesStartForPath(const char *path)
 		mount = SMB_DEVICE_V1;
 	else if (smbPathKind(path) == SMB_PATH_V2)
 		mount = SMB_DEVICE_V2;
+	else if (smbPathKind(path) == SMB_PATH_NFS)
+		mount = SMB_DEVICE_NFS;
 #endif
 	if (mount != NULL)
 		startSync(mount, "Starting devices");

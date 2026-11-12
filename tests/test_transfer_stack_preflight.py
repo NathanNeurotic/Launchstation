@@ -44,7 +44,8 @@ code=r'''
 #define TRANSFER_STACK_INCOMPATIBLE -2
 #define SMB_DEVICE_V2 "smb:"
 #define SMB_DEVICE_V1 "smb1:"
-enum {SMB_PATH_NONE=0,SMB_PATH_V1=1,SMB_PATH_V2=2};
+#define SMB_DEVICE_NFS "nfs:"
+enum {SMB_PATH_NONE=0,SMB_PATH_V1=1,SMB_PATH_V2=2,SMB_PATH_NFS=3};
 enum {NET_NONE,NET_ETH,NET_UDPFS};
 static int mx4sio_driver_running, reset_allowed=1, resets, loads, open_handles;
 static int network,usb,USB_mass_loaded,mmce,host_ready,smb_ready,net_stack;

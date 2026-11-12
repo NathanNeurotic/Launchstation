@@ -657,6 +657,7 @@ targets:
       - ps2host
       - smbman
       - smb2man
+      - nfsman
       - netfs:ps2netfs
       - ps2ftpd
       - smbd

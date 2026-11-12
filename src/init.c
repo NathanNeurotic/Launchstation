@@ -39,6 +39,7 @@ IMPORT_BIN2C(smbd_irx);
 #include "smb_shares.h"
 IMPORT_BIN2C(smb2man_irx);
 IMPORT_BIN2C(smbman_irx);
+IMPORT_BIN2C(nfsman_irx);
 #endif
 
 #ifdef UDPFS
@@ -149,7 +150,8 @@ static u8 have_ps2ips = 0;
 #ifdef SMB
 static u8 have_smb2man = 0; /* smb:  SMB2/SMB3 */
 static u8 have_smbman = 0;  /* smb1: SMB1 */
-static const char *smb_load_error[3]; /* by version: why load_smb() failed */
+static u8 have_nfsman = 0;  /* nfs:  NFSv4.0 */
+static const char *smb_load_error[4]; /* by version: why load_smb() failed */
 #endif
 #ifdef ETH
 static const char *dashboard_ip_error = NULL;
@@ -937,9 +939,9 @@ void load_ps2host(void)
 int load_smb(int version)
 {
 	int ret, ID;
-	u8 *have = (version == 1) ? &have_smbman : &have_smb2man;
+	u8 *have = (version == 1) ? &have_smbman : (version == SMB_PATH_NFS) ? &have_nfsman : &have_smb2man;
 
-	if (version != 1 && version != 2)
+	if (version != 1 && version != 2 && version != SMB_PATH_NFS)
 		return 0;
 	smb_load_error[version] = NULL;
 	if (pcCardCfOwnsBus()) {
@@ -947,8 +949,9 @@ int load_smb(int version)
 		return 0;
 	}
 	if (setting != NULL && setting->legacy_net_drivers) {
-		/* smb2man/smbman link against the current PS2IP exports */
-		smb_load_error[version] = "SMB needs the current Ethernet drivers: turn off Legacy Ethernet drivers.";
+		/* smb2man/smbman/nfsman link against the current PS2IP exports */
+		smb_load_error[version] = version == SMB_PATH_NFS ? "NFS needs the current Ethernet drivers: turn off Legacy Ethernet drivers."
+		                                                  : "SMB needs the current Ethernet drivers: turn off Legacy Ethernet drivers.";
 		return 0;
 	}
 #if defined(ETH) && defined(UDPFS)
@@ -958,7 +961,7 @@ int load_smb(int version)
 	}
 #endif
 	if (!*have || !have_ps2ip || !have_ps2smap || !ps2dev9_loaded)
-		showLoadingModulesMsg(version == 1 ? "smb1" : "smb");
+		showLoadingModulesMsg(version == 1 ? "smb1" : version == SMB_PATH_NFS ? "nfs" : "smb");
 
 	ensureCoreIoStackReady();
 	setupPowerOff();
@@ -970,12 +973,15 @@ int load_smb(int version)
 	if (!*have) {
 		if (version == 1)
 			ID = SifExecModuleBuffer(smbman_irx, size_smbman_irx, 0, NULL, &ret);
+		else if (version == SMB_PATH_NFS)
+			ID = SifExecModuleBuffer(nfsman_irx, size_nfsman_irx, 0, NULL, &ret);
 		else
 			ID = SifExecModuleBuffer(smb2man_irx, size_smb2man_irx, 0, NULL, &ret);
-		DPRINTF(" [%s]: ID=%d, ret=%d\n", version == 1 ? "SMBMAN" : "SMB2MAN", ID, ret);
+		DPRINTF(" [%s]: ID=%d, ret=%d\n", version == 1 ? "SMBMAN" : version == SMB_PATH_NFS ? "NFSMAN" : "SMB2MAN", ID, ret);
 		*have = (ID >= 0 && ret == 0);
 		if (!*have) {
-			smb_load_error[version] = "The SMB driver could not be loaded (IOP memory?).";
+			smb_load_error[version] = version == SMB_PATH_NFS ? "The NFS driver could not be loaded (IOP memory?)."
+			                                                  : "The SMB driver could not be loaded (IOP memory?).";
 			return 0;
 		}
 	}
@@ -986,12 +992,13 @@ int load_smb(int version)
 /* "" when the last load_smb(version) worked */
 const char *smbLoadError(int version)
 {
-	return (version == 1 || version == 2) && smb_load_error[version] != NULL ? smb_load_error[version] : "";
+	return (version == 1 || version == 2 || version == SMB_PATH_NFS) && smb_load_error[version] != NULL ? smb_load_error[version] : "";
 }
 
 int isSmbDriverLoaded(int version)
 {
-	return ((version == 1) ? have_smbman : have_smb2man) && have_ps2ip && have_ps2smap && ps2dev9_loaded;
+	return ((version == 1) ? have_smbman : (version == SMB_PATH_NFS) ? have_nfsman : have_smb2man) &&
+	       have_ps2ip && have_ps2smap && ps2dev9_loaded;
 }
 //------------------------------
 //endfunc load_smb
@@ -2975,7 +2982,8 @@ static void clearIopModuleState(void)
 #ifdef SMB
 	have_smb2man = 0;
 	have_smbman = 0;
-	smb_load_error[SMB_PATH_V1] = smb_load_error[SMB_PATH_V2] = NULL;
+	have_nfsman = 0;
+	smb_load_error[SMB_PATH_V1] = smb_load_error[SMB_PATH_V2] = smb_load_error[SMB_PATH_NFS] = NULL;
 	smbSharesForget();
 #endif
 #ifdef UDPFS

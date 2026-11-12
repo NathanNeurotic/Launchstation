@@ -1,6 +1,6 @@
 //--------------------------------------------------------------
 //File name:   smb_cnf.c
-//SMB2.CNF parser for the smb: and smb1: devices. Text only, no device IO,
+//SMB2.CNF parser for the smb:, smb1: and nfs: devices. Text only, no device IO,
 //so tests/test_smb_shares.py compiles it on the host.
 //
 //The syntax is the one of wLaunchELF_R3Z's smb: device (idea and format by
@@ -92,6 +92,8 @@ int smbPathKind(const char *path)
 		return SMB_PATH_V1;
 	if (!strncmp(path, SMB_DEVICE_V2, 4))
 		return SMB_PATH_V2;
+	if (!strncmp(path, SMB_DEVICE_NFS, 4))
+		return SMB_PATH_NFS;
 	return SMB_PATH_NONE;
 }
 
@@ -206,6 +208,69 @@ static const char *splitSmbUrl(SmbShare *sh)
 	return NULL;
 }
 
+/* nfs://<IPv4>[:port]/<export>[?uid=N&gid=N] into server, port and share
+ * (the export path). nfsman takes an IPv4 address only, as smb2man. */
+static const char *splitNfsUrl(SmbShare *sh)
+{
+	const char *host = sh->url + 6; /* past "nfs://", checked by the caller */
+	const char *slash = strchr(host, '/');
+	const char *colon, *query, *p;
+	size_t host_len, path_len;
+
+	if (slash == NULL || slash == host)
+		return "URL needs nfs://<server>/<export>";
+	host_len = (size_t)(slash - host);
+	colon = memchr(host, ':', host_len);
+	sh->port = 2049;
+	if (colon != NULL) {
+		long port = 0;
+
+		p = colon + 1;
+		if (p == slash)
+			return "URL has an empty port";
+		for (; p < slash; p++) {
+			if (*p < '0' || *p > '9')
+				return "URL port is not a number";
+			port = port * 10 + (*p - '0');
+			if (port > 65535)
+				return "URL port is over 65535";
+		}
+		if (port == 0)
+			return "URL port is 0";
+		sh->port = (int)port;
+		host_len = (size_t)(colon - host);
+	}
+	if (host_len == 0 || host_len >= sizeof(sh->server))
+		return "URL needs the server's IP address, not a name";
+	memcpy(sh->server, host, host_len);
+	sh->server[host_len] = '\0';
+	if (!isIpv4(sh->server))
+		return "URL needs the server's IP address, not a name";
+
+	query = strchr(slash, '?');
+	path_len = query != NULL ? (size_t)(query - slash) : strlen(slash);
+	if (path_len >= sizeof(sh->share))
+		return "URL export path is too long";
+	memcpy(sh->share, slash, path_len);
+	sh->share[path_len] = '\0';
+	/* uid=N and gid=N, the AUTH_SYS credentials, as nfsman reads them */
+	for (p = query; p != NULL && (*p == '?' || *p == '&');) {
+		int digits = 0;
+
+		p++;
+		if (strncmp(p, "uid=", 4) && strncmp(p, "gid=", 4))
+			return "URL options are uid=N and gid=N only";
+		for (p += 4; *p >= '0' && *p <= '9'; p++)
+			if (++digits > 9)
+				return "URL uid or gid is too large";
+		if (digits == 0)
+			return "URL uid or gid is not a number";
+		if (*p != '\0' && *p != '&')
+			return "URL uid or gid is not a number";
+	}
+	return NULL;
+}
+
 static const char *checkName(const SmbConfig *cfg, const SmbShare *sh)
 {
 	int i;
@@ -230,8 +295,16 @@ static void closeShare(SmbConfig *cfg, SmbShare *sh, const char *pending_problem
 
 	if (problem == NULL)
 		problem = checkName(cfg, sh);
+	if (problem == NULL && startsWithText(sh->url, "nfs://")) {
+		if (sh->username[0] || sh->password[0] || sh->plaintext || sh->version == 1)
+			problem = "An NFS share takes NAME and URL only (uid/gid go in the URL)";
+		sh->version = SMB_PATH_NFS;
+		if (problem == NULL)
+			problem = splitNfsUrl(sh);
+		goto record;
+	}
 	if (problem == NULL && !startsWithText(sh->url, "smb://"))
-		problem = "URL must start with smb://";
+		problem = "URL must start with smb:// or nfs://";
 	if (problem == NULL && sh->plaintext && sh->version != 1)
 		problem = "PLAINTEXT works only with VERSION = 1";
 	if (problem == NULL && sh->version == 1) {
@@ -242,6 +315,7 @@ static void closeShare(SmbConfig *cfg, SmbShare *sh, const char *pending_problem
 	if (problem == NULL)
 		problem = splitSmbUrl(sh);
 
+record:
 	if (cfg->count >= SMB_SHARE_MAX) {
 		cfg->dropped++;
 		return;
