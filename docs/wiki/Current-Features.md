@@ -29,7 +29,7 @@ For storage, do not equate `Not checked` with physically absent. Lazy drivers st
 
 ## Devices
 
-Memory cards (`mc0:`/`mc1:`), USB (`usb:`/`usbN:`), MMCE (`mmce0:`/`mmce1:`), MX4SIO, iLink (`ilink:`), internal HDD (`hdd0:`), exFAT ATA (`ata0:`), PC CARD CompactFlash (`cf0:`, early Japanese models), disc (`cdfs:`), UDPFS (`udpfs:`), SMB2/SMB3 shares (`smb:/<NAME>`) and an optional SMB1 share (`smb1:`), PS2Link host (`host:`) and, on PSX, the flash and DVR HDD. Entries that cannot exist on the running console are hidden. MMCE and MX4SIO are mutually exclusive and cause an IOP reset when switched. PC CARD CF is integrated into the device list and file operations but has not been verified on a physical console.
+Memory cards (`mc0:`/`mc1:`), USB (`usb:`/`usbN:`), MMCE (`mmce0:`/`mmce1:`), MX4SIO, iLink (`ilink:`), internal HDD (`hdd0:`), exFAT ATA (`ata0:`), PC CARD CompactFlash (`cf0:`, early Japanese models), disc (`cdfs:`), UDPFS (`udpfs:`), SMB2/SMB3 shares (`smb:/<NAME>`) and an optional SMB1 share (`smb1:`), NFSv4.0 shares (`nfs:/<NAME>`), PS2Link host (`host:`) and, on PSX, the flash and DVR HDD. Entries that cannot exist on the running console are hidden. MMCE and MX4SIO are mutually exclusive and cause an IOP reset when switched. PC CARD CF is integrated into the device list and file operations but has not been verified on a physical console.
 
 ## External game cores
 

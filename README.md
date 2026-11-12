@@ -31,7 +31,7 @@
 [![Stars](https://img.shields.io/github/stars/NathanNeurotic/Launchstation?style=flat&labelColor=navy&color=skyblue&logo=github&label=Stars)](https://github.com/NathanNeurotic/Launchstation/stargazers)
 
 ![Storage](https://img.shields.io/badge/Storage-USB%20%C2%B7%20MMCE%20%C2%B7%20MX4SIO%20%C2%B7%20ATA%20%C2%B7%20iLink-2ea043?style=flat&labelColor=0b3d18)
-![Network](https://img.shields.io/badge/Network-SMB%20%C2%B7%20UDPFS%20%C2%B7%20FTP%20%C2%B7%20PS2Link-2ea043?style=flat&labelColor=0b3d18)
+![Network](https://img.shields.io/badge/Network-SMB%20%C2%B7%20NFS%20%C2%B7%20UDPFS%20%C2%B7%20FTP%20%C2%B7%20PS2Link-2ea043?style=flat&labelColor=0b3d18)
 ![PS2/PS1](https://img.shields.io/badge/Game%20Loaders-Neutrino%20%C2%B7%20POPStarter%20%C2%B7%20Ember-2ea043?style=flat&labelColor=0b3d18)
 
 [![Discord](https://img.shields.io/discord/1275875800318476381?style=flat&logo=discord)](https://tinyurl.com/PS2SPACE)
@@ -161,6 +161,7 @@ See [MMCE recovery](docs/wiki/MMCE-Recovery.md), [MMCE backups](https://nathanne
 
 - FTP, [PS2Link](https://github.com/ps2dev/ps2link) and compatible remote ISO transfers start from **Tools → FTP / Remote access**. UDPFS and SMB shares open through Files; network stacks start on demand. Transfers between SMB and UDPFS, or SMB and PC CARD CF, are refused because their device stacks cannot coexist.
 - Configure SMB2/SMB3 shares and an optional SMB1 share in Settings > Network > SMB shares (saved in `LAUNCHSTATION.CNF`; an old `SMB2.CNF` is still read); see [Network shares (SMB)](https://nathanneurotic.github.io/Launchstation/smb.html). SMB and Neutrino SMB support remain pending console validation.
+- NFSv4.0 exports are NFS shares in the same place (Server type NFS); see [Network shares (NFS)](https://nathanneurotic.github.io/Launchstation/nfs.html). NFS support remains pending console validation.
 - Choose from 18 built-in theme presets (no extra theme pack required), custom colors, wallpapers, fonts ([Roboto](https://fonts.google.com/specimen/Roboto), System or [Emotion Engine](docs/font-generation.md)), clocks, icons, Classic/PS2-style sound effects and shareable theme folders. See [Themes](docs/themes.md) and the [wallpaper guide](docs/wiki/Theme-and-Wallpaper-Guide.md).
 - Use English, Spanish, Italian, French, German, Polish, Portuguese, Brazilian Portuguese or Hungarian, with optional external `.LNG` overrides. Some extended help remains English; filenames and metadata retain their original text.
 - Set a **software clock** under Settings → System or sync the PS2 clock from the Internet under Settings → Network. A saved software-clock checkpoint resumes on restart but cannot account for time spent powered off.
@@ -183,6 +184,7 @@ Device entries depend on the build, console and visibility settings. Listing a t
 | `cdfs:/` | CD/DVD filesystem. |
 | `udpfs:/` | Network storage using [UDPFSD](https://github.com/pcm720/udpfsd). |
 | `smb:/<NAME>`, `smb1:/` | Configured SMB2/SMB3 shares and one optional SMB1 share. |
+| `nfs:/<NAME>` | Configured NFSv4.0 shares. |
 | `host:/` | [PS2Link](https://github.com/ps2dev/ps2link) host filesystem in networking-enabled builds. |
 
 See [Device support](https://nathanneurotic.github.io/Launchstation/devices.html) for probing, firmware requirements and hardware-specific restrictions.
@@ -237,7 +239,7 @@ For a GCC comparison build, set `PS2BUILD_TOOLCHAIN=gcc`, rebuild the third-part
 | Learn the dashboard and settings | [Dashboard reference](docs/dashboard.md) · [Settings manual](https://nathanneurotic.github.io/Launchstation/settings.html) |
 | Set up game loaders | [Neutrino](https://nathanneurotic.github.io/Launchstation/neutrino.html) · [POPStarter](https://nathanneurotic.github.io/Launchstation/popstarter.html) · [Ember](https://nathanneurotic.github.io/Launchstation/ember.html) |
 | Manage saves or recover MMCE backups | [Saves and card images](https://nathanneurotic.github.io/Launchstation/saves.html) · [MMCE recovery](docs/wiki/MMCE-Recovery.md) |
-| Configure networking | [Network setup](https://nathanneurotic.github.io/Launchstation/network.html) · [SMB shares](https://nathanneurotic.github.io/Launchstation/smb.html) |
+| Configure networking | [Network setup](https://nathanneurotic.github.io/Launchstation/network.html) · [SMB shares](https://nathanneurotic.github.io/Launchstation/smb.html) · [NFS shares](https://nathanneurotic.github.io/Launchstation/nfs.html) |
 | Customize the interface | [Themes](docs/themes.md) · [Wallpaper example](docs/wiki/Theme-and-Wallpaper-Guide.md) |
 | Find technical references and credits | [Documentation index](docs/README.md) · [Third-party inventory](docs/THIRD_PARTY_CREDITS.md) |
 
@@ -282,7 +284,7 @@ Launchstation builds on [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF
 
 [johnson-cooper](https://github.com/johnson-cooper) created and transferred this fork; [NathanNeurotic / Ripto](https://github.com/NathanNeurotic) is its current maintainer. Thanks to [techwritescode](https://github.com/techwritescode), [TnA](https://github.com/TnA-Plastic), [oMrRexD](https://github.com/oMrRexD), [Zackcage](https://github.com/zackcage6), [Fifthfox](https://github.com/fifthfox) and the wider [PS2 homebrew community](https://github.com/ps2dev) for collaboration, testing and feedback.
 
-Build and runtime dependencies include [PS2BUILD](https://ps2build.dev/), [PS2SDK/ps2dev](https://github.com/ps2dev/ps2sdk), [mmceman](https://github.com/ps2-mmce/mmceman), [RiptOPL usbd-ra](https://github.com/NathanNeurotic/Open-PS2-Loader), [ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), [Ronnie Sahlberg](https://github.com/sahlberg)'s [usmb2](https://github.com/sahlberg/usmb2), [DS34 drivers](https://github.com/saildot4k/wLaunchELF_R3Z) including work by [Alex Parrado](https://github.com/parrado), [Mbed TLS](https://github.com/Mbed-TLS/mbedtls), [libjpeg-turbo](https://github.com/libjpeg-turbo/libjpeg-turbo), and the [SDK audio package](https://ps2build.dev/). PC CARD CF draws on [PS2CF](https://github.com/mihhru/PS2CF) by [mihhru](https://github.com/mihhru).
+Build and runtime dependencies include [PS2BUILD](https://ps2build.dev/), [PS2SDK/ps2dev](https://github.com/ps2dev/ps2sdk), [mmceman](https://github.com/ps2-mmce/mmceman), [RiptOPL usbd-ra](https://github.com/NathanNeurotic/Open-PS2-Loader), [ps2ftpd](https://github.com/ps2homebrew/ps2ftpd), [Ronnie Sahlberg](https://github.com/sahlberg)'s [usmb2](https://github.com/sahlberg/usmb2) and [unfs4](https://github.com/sahlberg/unfs4), [DS34 drivers](https://github.com/saildot4k/wLaunchELF_R3Z) including work by [Alex Parrado](https://github.com/parrado), [Mbed TLS](https://github.com/Mbed-TLS/mbedtls), [libjpeg-turbo](https://github.com/libjpeg-turbo/libjpeg-turbo), and the [SDK audio package](https://ps2build.dev/). PC CARD CF draws on [PS2CF](https://github.com/mihhru/PS2CF) by [mihhru](https://github.com/mihhru).
 
 External integrations include [Neutrino](https://github.com/ps2max32/neutrino) by [Rick Gaiser](https://github.com/rickgaiser) and contributors, [POPStarter](https://www.psx-place.com/threads/popstarter.19139/) by [krHACKen](https://www.psx-place.com/members/krhacken.98/), [Ember](https://github.com/Gageformer/Ember) by [Gageformer](https://github.com/Gageformer), [BDM Assault](https://github.com/Okeanos86/BDMAssault) by [israpps](https://github.com/israpps) and [Okeanos86](https://github.com/Okeanos86), [PS2Link](https://github.com/ps2dev/ps2link), [UDPFSD](https://github.com/pcm720/udpfsd), [OSDMenu](https://github.com/pcm720/OSDMenu), [KELFTool](https://github.com/xfwcfw/kelftool), [CosmicScale](https://github.com/CosmicScale)'s [HDD-OSD icon generator](https://github.com/CosmicScale/HDD-OSD-Icon-Generator), [RetroGem](https://www.pixelfx.co/hdmi-retro-gem) and [Google Drive](https://developers.google.com/workspace/drive/api/guides/about-sdk). The full kit bundles selected external programs; the app ELF does not embed those game loaders.
 

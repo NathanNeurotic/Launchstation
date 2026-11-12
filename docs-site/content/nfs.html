@@ -1,0 +1,62 @@
+<h1>Network Shares (NFS)</h1>
+<p class="lead">The <b>Network (NFS)</b> device (<code>nfs:</code>) opens NFS exports on a Linux or BSD server or a NAS, over NFSv4.0. NFS shares are saved with the SMB shares, at the end of <code>LAUNCHSTATION.CNF</code>, and edited in the same place. Not yet tested on a console.</p>
+
+<div class="callout info"><div class="h">What you need</div><ul>
+<li>A console with a network adapter (or built-in Ethernet) on the same LAN as the server.</li>
+<li>An export on the server that lets the PS2 in, with NFSv4.0 enabled (on Linux, <code>cat /proc/fs/nfsd/versions</code> lists <code>+4</code> without <code>-4.0</code>).</li>
+<li>An IP address for the PS2 (<b>Settings &gt; Network</b>), and <b>Legacy Ethernet drivers</b> off.</li>
+<li>At least one NFS share, added in <b>Settings &gt; Network &gt; SMB shares</b> with Server type <b>NFS</b> (or as text, below).</li>
+</ul></div>
+
+<h2 id="how">How it works</h2>
+<p><b>Network (NFS)</b> is listed in Files once an NFS share is saved. Nothing touches the network until you open it. The first time, Launchstation starts the network with the address in <code>IPCONFIG.DAT</code>, loads the NFS driver and connects every saved NFS share. <code>nfs:/</code> then lists one folder per connected share, named by its <code>NAME</code>: <code>nfs:/LINUX</code>, <code>nfs:/NAS</code>.</p>
+<p>The driver speaks NFSv4.0 on TCP port 2049: it needs no portmapper and no MOUNT protocol, and reaches the export from the server&rsquo;s root, as <code>mount -t nfs4</code> does. It connects from a port below 1024, so the export does not need the <code>insecure</code> option. A share that does not connect is left out of <code>nfs:/</code> and the browser says why; opening the device again tries it again, at most every 30 seconds.</p>
+<p>The PS2 sends the user and group IDs of the share (0 when not set) as AUTH_SYS credentials. With the usual <code>root_squash</code>, 0 is the server&rsquo;s anonymous user, so files must be readable by everyone, and a folder writable by everyone to copy into it. Set the IDs of a server account instead to read and write as that account.</p>
+<p>A connection the server closes, or that drops, is connected again on the next use, and open files and folders carry on: NFS keeps no state for them on the server.</p>
+
+<h2 id="file">Where shares are saved</h2>
+<p>An NFS share is a block among the SMB shares, after the <code># SMB shares</code> line at the end of <code>LAUNCHSTATION.CNF</code> (see <a href="smb.html#file">SMB shares</a>). The <code>URL</code>&rsquo;s scheme makes it an NFS share. It has two keys:</p>
+<table><thead><tr><th>Key</th><th>Value</th><th>Longest (bytes)</th></tr></thead><tbody>
+<tr><td><code>NAME</code></td><td>The share&rsquo;s folder name in <code>nfs:/</code>. Required, unique among all shares (in any case), no <code>/ \ : * ? " &lt; &gt; |</code></td><td>31</td></tr>
+<tr><td><code>URL</code></td><td><code>nfs://&lt;IP address&gt;[:&lt;port&gt;]/&lt;export path&gt;[?uid=N&amp;gid=N]</code>; the port is 2049 when left out, and the IDs are 0</td><td>255</td></tr>
+</tbody></table>
+<ul>
+<li><code>USERNAME</code>, <code>PASSWORD</code>, <code>PLAINTEXT</code> and <code>VERSION = 1</code> do not apply: an NFS share with one of them is refused, and the browser says so.</li>
+<li>Use the server&rsquo;s IP address: the driver has no DNS.</li>
+<li>The export path is the path the server exports, from its root: <code>/srv/ps2</code> for <code>/srv/ps2  192.168.1.0/24(rw)</code> in <code>/etc/exports</code>. A path below the export opens there.</li>
+<li>Up to 8 shares are read, SMB and NFS together.</li>
+</ul>
+<pre><code># /srv/ps2 on a Linux box, as nfs:/LINUX, reading and writing as uid/gid 1000
+NAME = LINUX
+URL = nfs://192.168.1.100:2049/srv/ps2?uid=1000&amp;gid=1000
+
+# The games folder of a NAS export, as nfs:/NAS, as the anonymous user
+NAME = NAS
+URL = nfs://192.168.1.20/volume1/ps2/games</code></pre>
+
+<h2 id="use">What you can do</h2>
+<ul>
+<li><b>Browse, copy, rename, make and delete folders</b> inside a share. File dates and attributes are not set on the server. Rename works inside one share, and replaces a file of the new name.</li>
+<li><b>Nothing can be made in <code>nfs:/</code> itself</b>: it only lists the connected shares.</li>
+<li><b>Launch an ELF</b> from a share. Not yet tested.</li>
+<li><b>PS2 ISO games through Neutrino</b> are not supported from <code>nfs:</code> yet: Neutrino needs an NFS backing store first.</li>
+</ul>
+
+<h2 id="stacks">Stack rules</h2>
+<ul>
+<li>NFS uses the same Ethernet stack as SMB, FTP, PS2Link and Google Drive, so they can be used together. UDPFS uses a different one: opening NFS after UDPFS (or the other way) resets the IOP, and copying between <code>udpfs:</code> and <code>nfs:</code> is refused.</li>
+<li>NFS uses DEV9: it does not start while PC CARD CF owns the bus, and copying between NFS and PC CARD CF is refused.</li>
+<li>NFS needs the current Ethernet drivers. With <b>Legacy Ethernet drivers</b> on, the device says so and does not start.</li>
+</ul>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>No Network (NFS) in Files.</b> It is listed once an NFS share is saved: add one in <b>Settings &gt; Network &gt; SMB shares</b>.</li>
+<li><b>&ldquo;Server did not answer on the NFS port&rdquo;.</b> Check the server&rsquo;s IP address, that the NFS server runs, and that a firewall lets TCP 2049 in (firewalld: <code>firewall-cmd --add-service=nfs</code>).</li>
+<li><b>&ldquo;Server does not answer NFSv4.0&rdquo;.</b> The server has NFSv4.0 turned off (some distributions now ship with 4.1 and 4.2 only); turn 4.0 on in its NFS configuration. The Windows NFS server does not offer 4.0.</li>
+<li><b>&ldquo;No such export on the server&rdquo;.</b> The export path is not exported: check <code>/etc/exports</code> (<code>exportfs -v</code>).</li>
+<li><b>&ldquo;The export refused this PS2&rdquo;.</b> The PS2&rsquo;s address is not in the export&rsquo;s client list.</li>
+<li><b>Files are listed but cannot be read or written.</b> The IDs the PS2 sends do not have the rights: set the share&rsquo;s User ID and Group ID to those of the files&rsquo; owner, or make the files readable (and a folder writable) by everyone.</li>
+</ol>
+
+<p>The <code>nfs:</code> device uses <a href="https://github.com/sahlberg">Ronnie Sahlberg</a>&rsquo;s <a href="https://github.com/sahlberg/unfs4">unfs4</a>, a minimal NFSv4.0 client and the sibling of the usmb2 SMB client. See <a href="credits.html">Credits</a>.</p>
