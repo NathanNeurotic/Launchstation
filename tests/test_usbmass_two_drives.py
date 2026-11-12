@@ -123,6 +123,7 @@ void bdm_disconnect_bd(struct block_device *bd) { (void)bd; }
 enum { WANT_CBW, SEND_DATA, SEND_CSW };
 struct drive { int state; u32 tag, left; u8 op; int wrong; };
 static struct drive drives[2];
+static volatile int zlp_once;  /* drive 0 ends its next data phase with a zero-length packet */
 struct xfer { int pipe; u8 *buf; int len; sceUsbdDoneCallback cb; void *arg; int control; };
 static struct xfer queue[64]; static int qhead, qtail;
 static pthread_mutex_t qlock = PTHREAD_MUTEX_INITIALIZER;
@@ -156,6 +157,9 @@ static void *usb_thread(void *unused) {
             if (d->op != ((x.pipe - 10) / 2 ? INQUIRY : READ_10)) d->wrong++;
             d->left = len; d->state = len ? SEND_DATA : SEND_CSW;
             x.cb(USB_RC_OK, x.len, x.arg);
+        } else if (d->state == SEND_DATA && zlp_once && d == &drives[0]) {
+            zlp_once = 0; d->state = SEND_CSW;   /* no data, then a CSW that claims success */
+            x.cb(USB_RC_OK, 0, x.arg);
         } else if (d->state == SEND_DATA) {      /* IN: data, marked with the drive */
             int n = x.len < (int)d->left ? x.len : (int)d->left;
             memset(x.buf, 0xA0 + (x.pipe - 10) / 2, n);
@@ -217,6 +221,18 @@ int main(void) {
         bad = 1;
     } else
         printf("ok two drives: %d commands each, no crossed commands\n", ROUNDS);
+
+    {
+        static u8 buf[512]; unsigned char cdb[12] = {READ_10}; int r1, r2;
+        zlp_once = 1;
+        r1 = usb_queue_cmd(&g_mass_device[0].scsi, cdb, sizeof(cdb), buf, sizeof(buf), 0);
+        r2 = usb_queue_cmd(&g_mass_device[0].scsi, cdb, sizeof(cdb), buf, sizeof(buf), 0);
+        if (r1 == 0 || r2 != 0 || drives[0].wrong) {
+            printf("FAIL short read: cut-short read returned %d, next read %d, wrong %d\n", r1, r2, drives[0].wrong);
+            bad = 1;
+        } else
+            printf("ok short read: a read cut short by a zero-length packet fails, the next one works\n");
+    }
 
     offline.name = "usb"; offline.get_max_lun = offline_lun; offline.queue_cmd = offline_cmd;
     pthread_create(&t2, NULL, offline_startup, &offline);
