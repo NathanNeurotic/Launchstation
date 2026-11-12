@@ -40,6 +40,23 @@ static int startsWithText(const char *s, const char *prefix)
 	return 1;
 }
 
+/* A Windows-style \\ip\share[\sub] URL is read as smb://ip/share[/sub]. */
+static int uncToSmbUrl(char *url, size_t size)
+{
+	size_t len = strlen(url), i;
+
+	if (url[0] != '\\' || url[1] != '\\')
+		return 1;
+	if (len + 5 > size) /* 4 more bytes plus the NUL */
+		return 0;
+	memmove(url + 6, url + 2, len - 1); /* tail and NUL */
+	memcpy(url, "smb://", 6);
+	for (i = 6; url[i]; i++)
+		if (url[i] == '\\')
+			url[i] = '/';
+	return 1;
+}
+
 static char *trim(char *s)
 {
 	char *e;
@@ -390,6 +407,8 @@ int smbConfigParse(char *text, SmbConfig *cfg)
 			}
 		} else if (sameText(key, "URL")) {
 			if (!copyValue(cur.url, sizeof(cur.url), value) && problem == NULL)
+				problem = "URL is longer than 255 characters";
+			if (!uncToSmbUrl(cur.url, sizeof(cur.url)) && problem == NULL)
 				problem = "URL is longer than 255 characters";
 			cur.line = line_no;
 			closeShare(cfg, &cur, problem);
