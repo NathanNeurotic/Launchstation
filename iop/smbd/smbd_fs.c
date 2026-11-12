@@ -52,7 +52,9 @@ static union {
 	struct smb2_file_fs_full_size_info full;
 	struct smb2_file_fs_attribute_info attr;
 	struct smb2_file_fs_device_info device;
-	uint8_t raw[24]; /* classes libsmb2 has no encoder for, already in wire order */
+	struct smb2_file_fs_sector_size_info sector;
+	struct smb2_file_stream_info stream;
+	uint8_t raw[96]; /* classes libsmb2 has no encoder for, already in wire order */
 	struct smb2_file_fs_volume_info volume;
 } info;
 
@@ -630,6 +632,38 @@ static void put_le32(uint8_t *p, uint32_t v)
 	p[0] = (uint8_t)v, p[1] = (uint8_t)(v >> 8), p[2] = (uint8_t)(v >> 16), p[3] = (uint8_t)(v >> 24);
 }
 
+/* FileInfoClass numbers libsmb2 does not name (MS-FSCC 2.4). */
+#define SMBD_FILE_STAT_INFORMATION 68
+#define SMBD_FILE_STAT_LX_INFORMATION 70
+
+static int raw_class(int c)
+{
+	return c == SMB2_FILE_INTERNAL_INFORMATION || c == SMB2_FILE_EA_INFORMATION || c == SMB2_FILE_ID_INFORMATION ||
+	       c == SMBD_FILE_STAT_INFORMATION || c == SMBD_FILE_STAT_LX_INFORMATION;
+}
+
+static void put_le64(uint8_t *p, uint64_t v)
+{
+	put_le32(p, (uint32_t)v);
+	put_le32(p + 4, (uint32_t)(v >> 32));
+}
+
+/* FileStatInformation (MS-FSCC 2.4.47), also the first 72 bytes of FileStatLxInformation. */
+static void put_stat(uint8_t *p, const struct smbd_stat *st, const char *path, struct smb2_timeval *ct,
+                     struct smb2_timeval *mt)
+{
+	put_le32(p, file_number(path));            /* FileId */
+	put_le64(p + 8, smb2_timeval_to_win(ct));  /* CreationTime */
+	put_le64(p + 16, smb2_timeval_to_win(mt)); /* LastAccessTime */
+	put_le64(p + 24, smb2_timeval_to_win(mt)); /* LastWriteTime */
+	put_le64(p + 32, smb2_timeval_to_win(mt)); /* ChangeTime */
+	put_le64(p + 40, allocation(st));          /* AllocationSize */
+	put_le64(p + 48, st->dir ? 0 : st->size);  /* EndOfFile */
+	put_le32(p + 56, attributes(st));          /* FileAttributes; ReparseTag at 60 stays 0 */
+	put_le32(p + 64, 1);                       /* NumberOfLinks */
+	put_le32(p + 68, 0x001f01ff);              /* EffectiveAccess, as in FileAllInformation */
+}
+
 static int query_info_cmd(struct smb2_server *srvr, struct smb2_context *smb2,
                           struct smb2_query_info_request *req, struct smb2_query_info_reply *rep)
 {
@@ -701,12 +735,30 @@ static int query_info_cmd(struct smb2_server *srvr, struct smb2_context *smb2,
 			put_le32(info.raw + 8, file_number(handles[i].path));
 			len = 24;
 			break;
+		case SMB2_FILE_ALTERNATE_NAME_INFORMATION:
+			/* No 8.3 names here: the answer NTFS gives with short names turned off. */
+			return reply(smb2, SMB2_QUERY_INFO, SMB2_STATUS_OBJECT_NAME_NOT_FOUND);
+		case SMB2_FILE_STREAM_INFORMATION:
+			/* A file has one stream, the unnamed data stream. Directories stay NOT_SUPPORTED:
+			 * libsmb2's encoder cannot send the empty list NTFS gives for them. */
+			if (st.dir)
+				break;
+			info.stream.stream_size = st.size;
+			info.stream.stream_allocation_size = allocation(&st);
+			info.stream.stream_name = "::$DATA";
+			len = sizeof(info.stream);
+			break;
+		case SMBD_FILE_STAT_INFORMATION:
+		case SMBD_FILE_STAT_LX_INFORMATION:
+			put_stat(info.raw, &st, handles[i].path, &ct, &mt);
+			/* FileStatLxInformation adds LxFlags, uid, gid, mode and device major/minor.
+			 * LxFlags 0 marks all of them as not valid, so the client keeps its defaults. */
+			len = req->file_info_class == SMBD_FILE_STAT_LX_INFORMATION ? 96 : 72;
+			break;
 		}
 		/* The raw classes are fixed-size: too small a buffer is refused, not cut. */
-		if (req->file_info_class == SMB2_FILE_INTERNAL_INFORMATION ||
-		    req->file_info_class == SMB2_FILE_EA_INFORMATION || req->file_info_class == SMB2_FILE_ID_INFORMATION)
-			if (req->output_buffer_length < (uint32_t)len)
-				return reply(smb2, SMB2_QUERY_INFO, SMB2_STATUS_INFO_LENGTH_MISMATCH);
+		if (len && raw_class(req->file_info_class) && req->output_buffer_length < (uint32_t)len)
+			return reply(smb2, SMB2_QUERY_INFO, SMB2_STATUS_INFO_LENGTH_MISMATCH);
 	} else if (req->info_type == SMB2_0_INFO_FILESYSTEM) {
 		switch (req->file_info_class) {
 		case SMB2_FILE_FS_SIZE_INFORMATION:
@@ -744,6 +796,15 @@ static int query_info_cmd(struct smb2_server *srvr, struct smb2_context *smb2,
 			info.volume.volume_serial_number = 0x50320000u + handles[i].share;
 			info.volume.volume_label = (const uint8_t *)"";
 			len = sizeof(info.volume);
+			break;
+		case SMB2_FILE_FS_SECTOR_SIZE_INFORMATION:
+			/* 512-byte sectors, as FileFsSizeInformation reports. */
+			info.sector.logical_bytes_per_sector = 512;
+			info.sector.physical_bytes_per_sector_for_atomicity = 512;
+			info.sector.physical_bytes_per_sector_for_performance = 512;
+			info.sector.file_system_effective_physical_bytes_per_sector_for_atomicity = 512;
+			info.sector.flags = 0x3; /* ALIGNED_DEVICE | PARTITION_ALIGNED_ON_DEVICE */
+			len = sizeof(info.sector);
 			break;
 		}
 	}
