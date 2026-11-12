@@ -50,12 +50,31 @@ with tempfile.TemporaryDirectory(prefix="app-packages-") as tmp:
     (tmp / "main.c").write_text('''
 #include "launchelf.h"
 #include "self_update.h"
+#include <assert.h>
+#include <stdlib.h>
+/* Read a whole file; -1 when it does not exist. */
+static int slurp(const char *path,unsigned char **out) {
+    int fd=open(path,O_RDONLY|O_BINARY),size,got=0;
+    if(fd<0)return -1;
+    size=lseek(fd,0,SEEK_END);lseek(fd,0,SEEK_SET);
+    *out=malloc(size+1);assert(*out);
+    while(got<size){int n=read(fd,*out+got,size-got);assert(n>0);got+=n;}
+    close(fd);return size;
+}
 int main(int argc,char **argv) {
-    int fd=open(argv[1],O_RDONLY), size=lseek(fd,0,SEEK_END); close(fd);
-    if(argc==4)
-        printf("%d",selfUpdateExtractPsuSidecar(argv[1],argv[2],argv[3],size));
-    else
-        printf("%d",selfUpdateExtractPsu(argv[1],argv[2],size));
+    const char *stage=argv[argc-1];
+    unsigned char *package,*from_file=NULL,*from_ram=NULL;
+    int size=slurp(argv[1],&package),r_file,r_ram,n_file,n_ram;
+    /* The file and RAM readers must agree byte for byte, including failures. */
+    r_file=argc==4?selfUpdateExtractPsuSidecar(argv[1],argv[2],stage,size)
+                  :selfUpdateExtractPsu(argv[1],stage,size);
+    n_file=slurp(stage,&from_file);unlink(stage);
+    r_ram=argc==4?selfUpdateExtractPsuSidecarMem(package,size,argv[2],stage)
+                 :selfUpdateExtractPsuMem(package,size,stage);
+    n_ram=slurp(stage,&from_ram);
+    assert(r_file==r_ram && n_file==n_ram);
+    if(n_file>0)assert(!memcmp(from_file,from_ram,n_file));
+    printf("%d",r_file);
     return 0;
 }
 ''')

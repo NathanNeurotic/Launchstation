@@ -830,6 +830,11 @@ typedef struct {
     unsigned long left;
 } CloudChunkDecoder;
 
+/* The updater may stream into RAM instead of a file: fd CLOUD_HTTP_MEM_FD
+ * selects this buffer (bounded by max_bytes). Only the UI-thread updater
+ * uses it; every other download passes a real descriptor. */
+static unsigned char *mem_sink;
+
 static int download_write(int fd, const unsigned char *data, int len,
                           int max_bytes, int *written,
                           mbedtls_sha256_context *sha,
@@ -840,6 +845,10 @@ static int download_write(int fd, const unsigned char *data, int len,
     if (len < 0 || *written > max_bytes - len) {
         set_error(error, error_size, "HTTPS download exceeds the size limit", 0);
         return -1;
+    }
+    if (fd == CLOUD_HTTP_MEM_FD) {
+        memcpy(mem_sink + *written, data, (size_t)len);
+        done = len;
     }
     while (done < len) {
         int r = genWrite(fd, (void *)(data + done), len - done);
@@ -948,7 +957,8 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
     char current[CLOUD_HTTP_LOCATION_MAX];
     int redirect;
 
-    if (url == NULL || fd < 0 || ca_path == NULL || max_bytes <= 0)
+    if (url == NULL || (fd < 0 && !(fd == CLOUD_HTTP_MEM_FD && mem_sink != NULL)) ||
+        ca_path == NULL || max_bytes <= 0)
         return -1;
     if (bearer != NULL &&
         (strncmp(url, "https://www.googleapis.com/drive/v3/files/", 42) != 0 ||
@@ -1128,7 +1138,7 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
             strstr(value, "chunked") != NULL)
             chunked = 1;
 
-        if (genLseek(fd, 0, SEEK_SET) != 0) {
+        if (fd != CLOUD_HTTP_MEM_FD && genLseek(fd, 0, SEEK_SET) != 0) {
             tls_free(&tls);
             free(raw);
             free(io_buf);
@@ -1268,6 +1278,21 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
 {
     return cloudHttpDownloadFdInternal(url, NULL, fd, ca_path, max_bytes,
                                        out_size, digest, error, error_size);
+}
+
+int cloudHttpDownloadMem(const char *url, unsigned char *buf, int cap,
+                         const char *ca_path, int *out_size,
+                         unsigned char digest[32], char *error, int error_size)
+{
+    int r;
+
+    if (buf == NULL || cap <= 0)
+        return -1;
+    mem_sink = buf;
+    r = cloudHttpDownloadFdInternal(url, NULL, CLOUD_HTTP_MEM_FD, ca_path, cap,
+                                    out_size, digest, error, error_size);
+    mem_sink = NULL;
+    return r;
 }
 
 int cloudHttpDownloadGoogleFd(const char *url, const char *bearer_token, int fd,

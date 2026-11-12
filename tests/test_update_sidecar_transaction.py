@@ -40,6 +40,7 @@ static int filerRestoreSasTimestamp(const char *p,const sceMcStDateTime *t) {
 #define MAX_PATH 256
 #define MAX_NAME 128
 #define UPDATE_MAX_ELF (16*1024*1024)
+#define UPDATE_SPACE_MARGIN (32*1024)
 #define UPDATE_ELF_URL "test://latest/APP_LAUNCHSTATION.psu"
 static const char *boot="mc0:/APP_LAUNCHSTATION/LAUNCHSTATION.ELF";
 static const char *parent="mc0:/APP_LAUNCHSTATION/";
@@ -64,6 +65,19 @@ static int del(const char *p) {
     return -1;
 }
 static int wleExists(const char *p) { return has(p); }
+static char steps[16][64];
+static int step_count;
+static void DashStorageProbeStatus(const char *s) {
+    assert(s && s[0] && step_count<16);snprintf(steps[step_count++],64,"%s",s);
+}
+static void expect_steps(const char *const *want,int n) {
+    assert(step_count==n);
+    for(int i=0;i<n;i++)assert(!strcmp(steps[i],want[i]));
+}
+typedef unsigned long long u64;
+static u64 free_space=64ULL*1024*1024;
+static int package_bytes=2234368;
+static int filerFreeSpace(const char *p,u64 *out) { assert(!strcmp(p,parent));*out=free_space;return 1; }
 static int genRemove(const char *p) { return del(p); }
 static const char *wleBootElfPath(void) { return boot; }
 static int ensurePathDeviceStackReady(const char *p) {
@@ -87,6 +101,30 @@ static int selfUpdateExtractPsu(const char *pkg,const char *stage,int size) {
 static int selfUpdateExtractPsuSidecar(const char *pkg,const char *asset,
                                        const char *stage,int size) {
     assert(has(pkg) && size==8192);
+    sidecar_calls++;
+    if(legacy)return 0;
+    if(fail_bgm_stage && !strcmp(asset,"BGM.ADP"))return -1;
+    assert(!has(stage));put(stage);return 128;
+}
+/* RAM path: the package never touches the card. */
+static int ram_ok,ram_downloads;
+static unsigned char ram_token[16];
+static unsigned char *update_ram_buffer(int bytes) { return ram_ok && bytes>0?ram_token:NULL; }
+static void test_free(void *p) { assert(p==NULL || p==ram_token); }
+#define free test_free
+static int download_to_ram(const char *url,unsigned char *buf,int cap,const char *ca,
+                           unsigned char actual[32],char *error,int error_size) {
+    (void)url;(void)ca;(void)error;(void)error_size;
+    assert(buf==ram_token && cap>0);downloads++;ram_downloads++;
+    memset(actual,bad_digest?0:0x5a,32);
+    return 8192;
+}
+static int selfUpdateExtractPsuMem(const unsigned char *pkg,int size,const char *stage) {
+    assert(pkg==ram_token && size==8192);put(stage);return 4096;
+}
+static int selfUpdateExtractPsuSidecarMem(const unsigned char *pkg,int size,
+                                          const char *asset,const char *stage) {
+    assert(pkg==ram_token && size==8192);
     sidecar_calls++;
     if(legacy)return 0;
     if(fail_bgm_stage && !strcmp(asset,"BGM.ADP"))return -1;
@@ -118,10 +156,11 @@ static void reset(void) {
     count=downloads=sidecar_calls=captures=restores=restore_result=0;capture_result=1;
     legacy=fail_bgm_stage=fail_bgm_rename=0;
     bad_digest=fail_elf_rename=bad_header=0;
+    free_space=64ULL*1024*1024;package_bytes=2234368;step_count=0;ram_ok=ram_downloads=0;
     put(boot);
 }
 static int install(char *msg) {
-    int ret=selfUpdateInstall("settings/legacy-ca.pem","sha256:mock",msg,512);
+    int ret=selfUpdateInstall("settings/legacy-ca.pem","sha256:mock",package_bytes,msg,512);
     assert(captures==1 && restores==(capture_result>0));
     return ret;
 }
@@ -136,17 +175,27 @@ int main(void) {
     char msg[512];
     reset();
     assert(install(msg)==0);
-    assert(has(ca)&&has(bgm)&&has(boot)&&has(backup));
+    assert(has(ca)&&has(bgm)&&has(boot)&&!has(backup)); /* no .BAK stays after an install */
+    {
+        static const char *const all[]={"Downloading the update from GitHub","Checking the download (SHA-256)",
+            "Unpacking and checking the new ELF","Adding missing bundled files","Replacing the ELF"};
+        expect_steps(all,5);
+    }
     assert(!has(ca_tmp)&&!has(bgm_tmp)&&sidecar_calls==2&&downloads==1);
-    reset();put(ca);put(bgm);
+    reset();put(ca);put(bgm);put(backup); /* a .BAK left by an older build is removed */
     assert(install(msg)==0);
-    assert(has(ca)&&has(bgm)&&sidecar_calls==0&&has(backup));
+    assert(has(ca)&&has(bgm)&&sidecar_calls==0&&has(boot)&&!has(backup));
+    {
+        static const char *const none_missing[]={"Downloading the update from GitHub","Checking the download (SHA-256)",
+            "Unpacking and checking the new ELF","Replacing the ELF"};
+        expect_steps(none_missing,4);
+    }
     reset();put(ca); /* only restore missing music */
     assert(install(msg)==0);
     assert(has(ca)&&has(bgm)&&sidecar_calls==1);
     reset();legacy=1;
     assert(install(msg)==0);
-    assert(!has(ca)&&!has(bgm)&&has(boot)&&has(backup));
+    assert(!has(ca)&&!has(bgm)&&has(boot)&&!has(backup));
     reset();put(ca_tmp);
     assert(install(msg)<0 && downloads==0&&has(boot)&&has(ca_tmp)&&!has(backup));
     /* An interrupted ELF stage/download must not be truncated or removed.
@@ -168,10 +217,33 @@ int main(void) {
     assert(!has(bgm)&&!has(bgm_tmp)); /* previously absent CA may remain */
     reset();bad_digest=1;
     assert(install(msg)<0 && has(boot)&&!has(backup)&&!has(ca)&&!has(bgm));
+    {
+        static const char *const stop[]={"Downloading the update from GitHub","Checking the download (SHA-256)"};
+        expect_steps(stop,2); /* a bad digest stops before unpacking */
+    }
     reset();bad_header=1;
     assert(install(msg)<0 && has(boot)&&!has(backup)&&!has(ca)&&!has(bgm));
     reset();fail_elf_rename=1;
     assert(install(msg)<0 && !has(boot)&&has(backup)); /* simulated rollback fails too */
+    /* A nearly full card is refused before any download; an old .BAK is
+     * cleared first to make room, and the installed ELF is untouched. */
+    reset();put(backup);free_space=2*2234368+32*1024-1;
+    assert(install(msg)<0 && downloads==0 && has(boot) && !has(backup) && strstr(msg,"Not enough free space"));
+    expect_steps(NULL,0); /* refused before any step starts */
+    reset();free_space=2*2234368+32*1024;
+    assert(install(msg)==0 && downloads==1 && has(boot));
+    reset();package_bytes=0;free_space=0; /* size unknown: no pre-check */
+    assert(install(msg)==0 && downloads==1);
+    /* With RAM to spare the card needs room for the unpacked files only. */
+    reset();ram_ok=1;put(backup);free_space=2234368+32*1024;
+    assert(install(msg)==0 && ram_downloads==1 && has(boot) && has(ca) && has(bgm));
+    assert(!has(package_tmp) && !has(elf_tmp) && !has(backup));
+    reset();ram_ok=1;free_space=2234368+32*1024-1;
+    assert(install(msg)<0 && downloads==0 && has(boot) && strstr(msg,"Not enough free space"));
+    reset();ram_ok=1;bad_digest=1;
+    assert(install(msg)<0 && has(boot) && !has(elf_tmp) && !has(ca) && !has(bgm));
+    reset();ram_ok=1;fail_bgm_stage=1;
+    assert(install(msg)<0 && has(boot) && !has(ca_tmp) && !has(bgm_tmp) && !has(elf_tmp));
     reset();capture_result=-EIO;
     assert(install(msg)<0 && downloads==0 && has(boot) && !has(backup));
     reset();capture_result=0;

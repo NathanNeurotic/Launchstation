@@ -6,12 +6,17 @@
 #include "filer_shared.h"
 #include "filer_actions.h"
 #include "self_update.h"
+#include "dash.h"
 
 #include <malloc.h>
 #include <ctype.h>
 
 #define UPDATE_ELF_URL "https://github.com/NathanNeurotic/Launchstation/releases/download/latest/" SELF_UPDATE_ASSET
 #define UPDATE_MAX_ELF (16 * 1024 * 1024)
+#define UPDATE_SPACE_MARGIN (32 * 1024) /* card cluster rounding and directory entries */
+/* Heap that must stay free beside a RAM download, for TLS, drawing and
+ * whatever else is loaded. Without it the package goes to the card. */
+#define UPDATE_RAM_RESERVE (4 * 1024 * 1024)
 
 static int device_path(const char *path, const char *name, int allow_bare)
 {
@@ -177,8 +182,42 @@ static int download_file(const char *url, const char *path, const char *ca_path,
     return size;
 }
 
+/* Keep the package in RAM only when the heap holds it plus the reserve;
+ * otherwise NULL and the package is written beside the ELF as before. */
+static unsigned char *update_ram_buffer(int package_bytes)
+{
+    unsigned char *buffer;
+    void *spare;
+
+    if (package_bytes <= 0 || package_bytes > UPDATE_MAX_ELF)
+        return NULL;
+    buffer = malloc(package_bytes);
+    if (buffer == NULL)
+        return NULL;
+    spare = malloc(UPDATE_RAM_RESERVE);
+    if (spare == NULL) {
+        free(buffer);
+        return NULL;
+    }
+    free(spare);
+    return buffer;
+}
+
+static int download_to_ram(const char *url, unsigned char *buffer, int cap,
+                           const char *ca_path, unsigned char digest[32],
+                           char *error, int error_size)
+{
+    int size = 0;
+
+    if (cloudHttpDownloadMem(url, buffer, cap, ca_path, &size, digest,
+                             error, error_size) < 0)
+        return -1;
+    return size;
+}
+
 static int install_update_files(const char *parent, const char *leaf,
                                 const char *ca_path, const char *expected_sha256,
+                                int package_bytes, unsigned char *ram,
                                 char *result, int result_size)
 {
     char stage_leaf[MAX_NAME], backup_leaf[MAX_NAME];
@@ -191,6 +230,7 @@ static int install_update_files(const char *parent, const char *leaf,
     int size, package_size, rollback_ok, sidecar_size;
     int need_ca, need_bgm, staged_ca = 0, staged_bgm = 0;
     int added_ca = 0, added_bgm = 0;
+    u64 free_bytes;
 
     if (snprintf(stage_leaf, sizeof(stage_leaf), "%s.UPDATE", leaf) >= (int)sizeof(stage_leaf) ||
         snprintf(backup_leaf, sizeof(backup_leaf), "%s.BAK", leaf) >= (int)sizeof(backup_leaf) ||
@@ -234,14 +274,40 @@ static int install_update_files(const char *parent, const char *leaf,
         return -1;
     }
 
+    /* Memory cards are tight. At its peak the install holds the downloaded
+     * package and the files unpacked from it beside the current ELF: never
+     * more than twice the package, or once when the package stays in RAM.
+     * Remove a .BAK left by an older build first, then refuse before
+     * downloading if that still does not fit. */
+    if (wleExists(backup)) {
+        snprintf(remove_path, sizeof(remove_path), "%s", backup);
+        if (genRemove(remove_path) < 0 && wleExists(backup)) {
+            snprintf(result, result_size,
+                     "Could not remove the old .BAK file. The installed ELF was not changed.");
+            return -1;
+        }
+    }
+    if (package_bytes > 0 && filerFreeSpace(parent, &free_bytes) &&
+        free_bytes < (u64)package_bytes * (ram ? 1 : 2) + UPDATE_SPACE_MARGIN) {
+        snprintf(result, result_size,
+                 "Not enough free space: the update needs about %d KB free here, and %d KB is free. Free some space and try again. The installed ELF was not changed.",
+                 (int)(((u64)package_bytes * (ram ? 1 : 2) + UPDATE_SPACE_MARGIN) / 1024),
+                 (int)(free_bytes / 1024));
+        return -1;
+    }
+
     error[0] = '\0';
-    size = download_file(UPDATE_ELF_URL, package, ca_path, UPDATE_MAX_ELF,
-                         actual, error, sizeof(error));
+    DashStorageProbeStatus("Downloading the update from GitHub");
+    size = ram ? download_to_ram(UPDATE_ELF_URL, ram, package_bytes, ca_path,
+                                 actual, error, sizeof(error))
+               : download_file(UPDATE_ELF_URL, package, ca_path, UPDATE_MAX_ELF,
+                               actual, error, sizeof(error));
     if (size <= 0) {
         snprintf(result, result_size, "Update download failed: %s",
                  error[0] ? error : "no update data was received");
         return -1;
     }
+    DashStorageProbeStatus("Checking the download (SHA-256)");
     if (memcmp(expected, actual, sizeof(expected)) != 0) {
         snprintf(remove_path, sizeof(remove_path), "%s", package);
         genRemove(remove_path);
@@ -250,7 +316,9 @@ static int install_update_files(const char *parent, const char *leaf,
         return -1;
     }
     package_size = size;
-    size = selfUpdateExtractPsu(package, stage, package_size);
+    DashStorageProbeStatus("Unpacking and checking the new ELF");
+    size = ram ? selfUpdateExtractPsuMem(ram, package_size, stage)
+               : selfUpdateExtractPsu(package, stage, package_size);
     if (size <= 0) {
         snprintf(remove_path, sizeof(remove_path), "%s", package);
         genRemove(remove_path);
@@ -271,16 +339,21 @@ static int install_update_files(const char *parent, const char *leaf,
     /* Verified four-, eight- and nine-file PSUs can initialize missing runtime sidecars.
      * Never overwrite existing CA/BGM assets; they may be user customized.
      * A verified legacy two-file PSU simply has no sidecars to stage. */
+    if (need_ca || need_bgm)
+        DashStorageProbeStatus("Adding missing bundled files");
     if (need_ca) {
-        sidecar_size = selfUpdateExtractPsuSidecar(package, "WLE-UPDATE-CA.PEM",
-                                                   update_ca_stage, package_size);
+        sidecar_size = ram ? selfUpdateExtractPsuSidecarMem(ram, package_size, "WLE-UPDATE-CA.PEM",
+                                                            update_ca_stage)
+                           : selfUpdateExtractPsuSidecar(package, "WLE-UPDATE-CA.PEM",
+                                                         update_ca_stage, package_size);
         if (sidecar_size < 0)
             goto sidecar_failed;
         staged_ca = sidecar_size > 0;
     }
     if (need_bgm) {
-        sidecar_size = selfUpdateExtractPsuSidecar(package, "BGM.ADP",
-                                                   bgm_stage, package_size);
+        sidecar_size = ram ? selfUpdateExtractPsuSidecarMem(ram, package_size, "BGM.ADP", bgm_stage)
+                           : selfUpdateExtractPsuSidecar(package, "BGM.ADP",
+                                                         bgm_stage, package_size);
         if (sidecar_size < 0)
             goto sidecar_failed;
         staged_bgm = sidecar_size > 0;
@@ -305,14 +378,17 @@ static int install_update_files(const char *parent, const char *leaf,
     }
 
     /* Only now, after a complete verified download, touch the current ELF.
-     * Keep one recovery copy beside it. */
+     * The old ELF moves aside as .BAK only for the swap, so a failed rename
+     * can put it back; it is deleted once the new ELF is in place. A .BAK
+     * left by an older build is removed here too. */
+    DashStorageProbeStatus("Replacing the ELF");
     if (wleExists(backup)) {
         snprintf(remove_path, sizeof(remove_path), "%s", backup);
         if (genRemove(remove_path) < 0 && wleExists(backup)) {
             snprintf(remove_path, sizeof(remove_path), "%s", stage);
             genRemove(remove_path);
             snprintf(result, result_size,
-                     "Could not replace the previous .BAK recovery copy. The running ELF was not changed.");
+                     "Could not remove the old .BAK file. The running ELF was not changed.");
             return -1;
         }
     }
@@ -321,7 +397,7 @@ static int install_update_files(const char *parent, const char *leaf,
         snprintf(remove_path, sizeof(remove_path), "%s", stage);
         genRemove(remove_path);
         snprintf(result, result_size,
-                 "Could not create the .BAK recovery copy. The running ELF was not changed.");
+                 "Could not move the old ELF aside. The running ELF was not changed.");
         return -1;
     }
 
@@ -334,13 +410,16 @@ static int install_update_files(const char *parent, const char *leaf,
         return -1;
     }
 
+    snprintf(remove_path, sizeof(remove_path), "%s", backup);
+    genRemove(remove_path); /* some drivers report success and keep the entry */
+    rollback_ok = !wleExists(backup);
     snprintf(result, result_size,
-             "Update installed and verified (%d bytes). %s%s%sRecovery copy: %s%s. Restart Launchstation to run the new build.",
+             "Update installed and verified (%d bytes). %s%s%s%sRestart Launchstation to run the new build.",
              size,
              added_ca ? "Installed updater CA. " : "",
              added_bgm ? "Installed BGM. " : "",
              (!added_ca && !added_bgm) ? "Existing sidecars preserved. " : "",
-             parent, backup_leaf);
+             rollback_ok ? "" : "The old ELF .BAK could not be deleted; delete it by hand. ");
     return 0;
 
 sidecar_failed:
@@ -376,13 +455,15 @@ sidecar_publish_failed:
     return -1;
 }
 
-int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *result, int result_size)
+int selfUpdateInstall(const char *ca_path, const char *expected_sha256, int package_bytes,
+                      char *result, int result_size)
 {
     const char *boot = wleBootElfPath();
     char parent[MAX_PATH], leaf[MAX_NAME];
     sceMcStDateTime sas_timestamp;
     char warning[128];
     int preserve_sas, installed, timestamp_result;
+    unsigned char *ram;
     size_t prefix, kept;
 
     if (result == NULL || result_size <= 0)
@@ -411,8 +492,10 @@ int selfUpdateInstall(const char *ca_path, const char *expected_sha256, char *re
                  preserve_sas);
         return -1;
     }
+    ram = update_ram_buffer(package_bytes);
     installed = install_update_files(parent, leaf, ca_path, expected_sha256,
-                                     result, result_size);
+                                     package_bytes, ram, result, result_size);
+    free(ram);
     if (preserve_sas > 0) {
         timestamp_result = filerRestoreSasTimestamp(parent, &sas_timestamp);
         if (timestamp_result != 0) {
