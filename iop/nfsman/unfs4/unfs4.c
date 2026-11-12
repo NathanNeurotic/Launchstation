@@ -339,7 +339,8 @@ static uint8_t *unfs4_cmd_hdr(struct unfs4_context *unfs4)
 /* PUTFH, or PUTROOTFH before unfs4_mount() */
 static uint8_t *put_fh(struct unfs4_context *unfs4, uint8_t *p, const uint8_t *fh)
 {
-        int len = 4 + get32(fh);
+        /* the length, then the handle padded to 4 bytes, as get_fh() keeps it */
+        int len = 4 + ((get32(fh) + 3) & ~3);
 
         if (len == 4) {
                 return put_op(unfs4, p, OP_PUTROOTFH);
@@ -451,12 +452,28 @@ static uint8_t *put_mode(uint8_t *p, uint32_t mode)
 }
 #endif
 
-/* Copies the filehandle at fh in buf, from GETFH, to dst */
-static int get_fh(const uint8_t *fh, uint8_t *dst)
+/*
+ * Whether the n bytes at p in buf came in the reply. A reply that ends
+ * before what we read from it is broken, and what is there is still the
+ * request.
+ */
+static int fits(struct unfs4_context *unfs4, const uint8_t *p, int n)
 {
-        uint32_t len = get32(fh);
+        if (p + n > unfs4->buf + unfs4->len) {
+                unfs4->status = NFS4ERR_SERVERFAULT;
+                return 0;
+        }
+        return 1;
+}
 
-        if (len > UNFS4_MAX_FH) {
+/* Copies the filehandle at fh in buf, from GETFH, to dst */
+static int get_fh(struct unfs4_context *unfs4, const uint8_t *fh, uint8_t *dst)
+{
+        uint32_t len;
+
+        if (!fits(unfs4, fh, 4) || (len = get32(fh)) > UNFS4_MAX_FH ||
+            !fits(unfs4, fh, 4 + ((len + 3) & ~3))) {
+                unfs4->status = NFS4ERR_SERVERFAULT;
                 return -1;
         }
         memcpy(dst, fh, 4 + ((len + 3) & ~3));
@@ -547,7 +564,7 @@ static int unfs4_lookup(struct unfs4_context *unfs4, const char *path, uint8_t *
         if (unfs4_rpc(unfs4, p, NULL, 0, NULL, 0)) {
                 return -1;
         }
-        return get_fh(RES(unfs4, unfs4->nops), fh);
+        return get_fh(unfs4, RES(unfs4, unfs4->nops), fh);
 }
 
 int unfs4_mount(struct unfs4_context *unfs4, const char *path)
@@ -561,7 +578,7 @@ int unfs4_mount(struct unfs4_context *unfs4, const char *path)
  * new one each time and close the file again at once, so that there is no
  * state on the server for a lease to keep alive.
  */
-static uint8_t *unfs4_create(struct unfs4_context *unfs4, const char *name, uint8_t *fh)
+static uint8_t *unfs4_create(struct unfs4_context *unfs4, const char *name, uint8_t *fh, int mode)
 {
         uint8_t *p, clientid[16], stateid[16];
         char id[14] = "unfs4-";
@@ -591,7 +608,8 @@ static uint8_t *unfs4_create(struct unfs4_context *unfs4, const char *name, uint
         p = put32(p, 0x40000000);
         p = put_name(p, "tcp");
         p = put_name(p, "0.0.0.0.0.0");
-        if (unfs4_rpc(unfs4, p + 4, NULL, 0, NULL, 0)) {
+        if (unfs4_rpc(unfs4, p + 4, NULL, 0, NULL, 0) ||
+            !fits(unfs4, RES(unfs4, 1), 16)) {
                 return NULL;
         }
         /* client id and confirm verifier */
@@ -600,7 +618,9 @@ static uint8_t *unfs4_create(struct unfs4_context *unfs4, const char *name, uint
         /*
          * SETCLIENTID_CONFIRM, then OPEN the file in its directory: seqid 0,
          * access READ and WRITE, deny none, owner the client id and the xid,
-         * CREATE UNCHECKED with mode 0644, CLAIM_NULL with the name
+         * CREATE UNCHECKED, or with O_EXCL GUARDED so that the server
+         * refuses a file that is there whoever made it, with mode 0644,
+         * CLAIM_NULL with the name
          */
         p = put_op(unfs4, unfs4_cmd_hdr(unfs4), OP_SETCLIENTID_CONFIRM);
         memcpy(p, clientid, 16);
@@ -611,12 +631,17 @@ static uint8_t *unfs4_create(struct unfs4_context *unfs4, const char *name, uint
         p = put32(p + 20, 4);
         p = put32(p, unfs4->xid);
         p[3] = 1;
+        p[7] = (mode & O_EXCL) != 0;
         p = put_mode(p + 8, 0644);
         p = put_name(p + 4, last);
         if (unfs4_rpc(unfs4, p, NULL, 0, NULL, 0)) {
                 return NULL;
         }
+        /* the stateid, change_info and rflags */
         p = RES(unfs4, unfs4->nops);
+        if (!fits(unfs4, p, 40)) {
+                return NULL;
+        }
         memcpy(stateid, p, 16);
         /* rflags OPEN4_RESULT_CONFIRM: a new owner must confirm the open */
         confirm = p[39] & 2;
@@ -639,7 +664,7 @@ static uint8_t *unfs4_create(struct unfs4_context *unfs4, const char *name, uint
         p = put32(p, 1 + !!confirm);
         memcpy(p, stateid, 16);
         if (unfs4_rpc(unfs4, p + 16, NULL, 0, NULL, 0) ||
-            get_fh(RES(unfs4, n), fh)) {
+            get_fh(unfs4, RES(unfs4, n), fh)) {
                 return NULL;
         }
         return fh;
@@ -655,7 +680,7 @@ uint8_t *unfs4_open(struct unfs4_context *unfs4, const char *name, int mode)
         }
 #ifdef UNFS4_FEATURE_CREATE
         if (mode & O_CREAT) {
-                if (unfs4_create(unfs4, name, fh)) {
+                if (unfs4_create(unfs4, name, fh, mode)) {
                         return fh;
                 }
         } else
@@ -702,7 +727,8 @@ struct unfs4_dirent *unfs4_readdir(struct unfs4_context *unfs4, struct unfs4_dir
                 /* maxcount counts the verifier too */
                 p = put32(p, UNFS4_DIR_SIZE + 8);
                 p = put_attr_request(p);
-                if (unfs4_rpc(unfs4, p, NULL, 0, dir->buf, UNFS4_DIR_SIZE)) {
+                if (unfs4_rpc(unfs4, p, NULL, 0, dir->buf, UNFS4_DIR_SIZE) ||
+                    !fits(unfs4, RES(unfs4, 2), 8)) {
                         return NULL;
                 }
                 memcpy(&dir->cookie[8], RES(unfs4, 2), 8);
@@ -763,7 +789,11 @@ int32_t unfs4_prw(struct unfs4_context *unfs4, int op, uint8_t *fh, uint8_t *rbu
                 return -1;
         }
         /* WRITE: count, READ: eof, then count, at most the data we read */
-        n = get32(RES(unfs4, 2) + ((op == OP_READ) ? 4 : 0));
+        p = RES(unfs4, 2) + ((op == OP_READ) ? 4 : 0);
+        if (!fits(unfs4, p, 4)) {
+                return -1;
+        }
+        n = get32(p);
         if (n > (uint32_t)count || (op == OP_READ && n > (uint32_t)unfs4->inlen)) {
                 unfs4->status = NFS4ERR_SERVERFAULT;
                 return -1;

@@ -4,10 +4,11 @@
 # drive.c compiles the driver into itself and drives its iomanX ops and devctls the way the EE does:
 # two exports connected at once by name, the device root listing them, -EEXIST for a name already
 # connected, each CONNECT refusal (not nfs://, a host name, an unknown option, nothing listening,
-# no such export), mkdir/write/read/seek, O_TRUNC, O_APPEND and O_EXCL, rename (and across exports,
-# refused), the errors of remove/rmdir/open, a 255 byte name and a path that does not fit, a
-# connection the server closed (connected again on the next use, open files still good), the 30 s
-# reconnect backoff (clock driven by the harness), and DISCONNECT_ALL.
+# no such export), mkdir/write/read/seek, O_TRUNC, O_APPEND (through two handles at once) and O_EXCL,
+# rename (and across exports, refused), the errors of remove/rmdir/open, a 255 byte name and a path
+# that does not fit, a connection the server closed (connected again on the next use, open files
+# still good), the 30 s reconnect backoff (clock driven by the harness), and DISCONNECT_ALL (a folder
+# opened before it stays dead when the same name connects again).
 #
 # Built with AddressSanitizer and UBSan; a sanitizer report, a leak included, fails the case.
 #

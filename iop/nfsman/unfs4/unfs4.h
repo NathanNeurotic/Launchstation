@@ -33,6 +33,7 @@
 
 #if defined(Z80)
 #define O_CREAT 0x0100
+#define O_EXCL  0x0800
 #ifndef UNFS4_FEATURE_TINY_TCP
 #define UNFS4_FEATURE_TINY_TCP
 #endif
@@ -168,7 +169,8 @@ struct unfs4_context *unfs4_init_context(uint32_t ip, uint32_t uid, uint32_t gid
 int unfs4_mount(struct unfs4_context *unfs4, const char *path);
 
 /* Opens a file, and with UNFS4_FEATURE_CREATE and O_CREAT in mode creates it
- * if it does not exist. Returns the filehandle, or NULL. There is nothing
+ * if it does not exist. With O_CREAT | O_EXCL the server refuses a file that
+ * exists, NFS4ERR_EXIST. Returns the filehandle, or NULL. There is nothing
  * to close on the server, free() it when done.
  */
 uint8_t *unfs4_open(struct unfs4_context *unfs4, const char *name, int mode);

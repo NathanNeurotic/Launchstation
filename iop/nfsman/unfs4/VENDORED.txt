@@ -2,8 +2,8 @@ unfs4 (vendored)
 ================
 
 Upstream:  https://github.com/sahlberg/unfs4 (Ronnie Sahlberg, https://github.com/sahlberg)
-Commit:    449ba4e
-           "unfs4: bound what the server's replies say against what we received"
+Commit:    9c5f5f5
+           "unfs4: pad filehandles in PUTFH, O_EXCL, check what we read is in the reply"
 Licence:   BSD 2-Clause (see LICENSE)
 
 What is here

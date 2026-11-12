@@ -186,8 +186,18 @@ int main(int argc, char **argv)
               OPS->getstat(NULL, "/A/sub/big.bin", &st) == 0 && st.size == 150 &&
               get("/A/sub/big.bin", back, sizeof(back)) == 150 && !memcmp(back, big, 150),
           "O_APPEND writes at the end");
+    CHECK(OPS->open(&f, "/A/sub/big.bin", FIO_O_RDWR | FIO_O_APPEND, 0) >= 0 &&
+              OPS->open(&f2, "/A/sub/big.bin", FIO_O_RDWR | FIO_O_APPEND, 0) >= 0 &&
+              OPS->write(&f, big + 150, 10) == 10 && OPS->write(&f2, big + 160, 10) == 10 &&
+              OPS->close(&f) == 0 && OPS->close(&f2) == 0 &&
+              get("/A/sub/big.bin", back, sizeof(back)) == 170 && !memcmp(back, big, 170),
+          "O_APPEND through two handles: each write goes to the end the other left");
+    CHECK(put("/A/sub/big.bin", FIO_O_WRONLY | FIO_O_TRUNC, big, 150) == 150, "back to 150 bytes");
     CHECK(OPS->open(&f, "/A/sub/big.bin", FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL, 0644) == -EEXIST,
           "O_EXCL on an existing file: -EEXIST");
+    CHECK(put("/A/sub/excl.bin", FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL, big, 10) == 10 &&
+              OPS->remove(NULL, "/A/sub/excl.bin") == 0,
+          "O_EXCL creates a new file");
     CHECK(OPS->open(&f, "/A/sub/missing", FIO_O_RDONLY, 0) == -ENOENT, "open of a missing file: -ENOENT");
     CHECK(OPS->open(&f, "/A/sub", FIO_O_RDONLY, 0) == -EISDIR, "open of a folder as a file: -EISDIR");
     CHECK(OPS->open(&f, "/Z/x", FIO_O_RDONLY, 0) == -ENOENT, "an unknown export name: -ENOENT");
@@ -244,10 +254,21 @@ int main(int argc, char **argv)
     CHECK(OPS->remove(NULL, "/A/sub/moved.bin") == 0 && OPS->rmdir(NULL, "/A/sub") == 0 && !listed("/A", "sub"),
           "remove and rmdir");
     CHECK(OPS->open(&f2, "/B/", FIO_O_RDONLY, 0) == -EACCES, "the export root is not a file");
-    CHECK(OPS->devctl(NULL, "", NFS_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0) == 0 && !listed("/", "A") &&
-              !listed("/", "B"),
-          "DISCONNECT_ALL: the root is empty");
-    CHECK(OPS->read(&f, back, 16) == -EBADF, "a handle from before DISCONNECT_ALL: -EBADF");
+    {
+        iop_file_t d = {0};
+        iox_dirent_t de;
+
+        CHECK(OPS->dopen(&d, "/A/") >= 0, "open a folder to keep across DISCONNECT_ALL");
+        CHECK(OPS->devctl(NULL, "", NFS_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0) == 0 && !listed("/", "A") &&
+                  !listed("/", "B"),
+              "DISCONNECT_ALL: the root is empty");
+        CHECK(OPS->read(&f, back, 16) == -EBADF, "a handle from before DISCONNECT_ALL: -EBADF");
+        snprintf(url, sizeof(url), "nfs://%s%s", server, export_path);
+        CHECK(connect_export("A", url) == 0 && OPS->dread(&d, &de) == -EBADF,
+              "a folder from before DISCONNECT_ALL, with A connected again in its slot: -EBADF");
+        CHECK(OPS->dclose(&d) == 0 && OPS->devctl(NULL, "", NFS_DEVCTL_DISCONNECT_ALL, NULL, 0, NULL, 0) == 0,
+              "close it, DISCONNECT_ALL");
+    }
 
     printf("%s: %d failures\n", fails ? "FAILED" : "PASSED", fails);
     return fails != 0;
