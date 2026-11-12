@@ -114,9 +114,14 @@ int sceUsbdOpenPipeAligned(int d, UsbEndpointDescriptor *e) { (void)d; (void)e; 
 int sceUsbdClosePipe(int id) { (void)id; return 0; }
 int sceUsbdRegisterLdd(sceUsbdLddOps *d) { (void)d; return 0; }
 int sceUsbdGetDeviceLocation(int d, u8 *p) { (void)d; p[0] = 2; return 0; }
-static int bdm_connects;
-void bdm_connect_bd(struct block_device *bd) { (void)bd; bdm_connects++; }
-void bdm_disconnect_bd(struct block_device *bd) { (void)bd; }
+static int bdm_connects; static struct block_device *bdm_registered; static struct scsi_interface *unplug_in_connect;
+void scsi_disconnect(struct scsi_interface *scsi);
+void bdm_connect_bd(struct block_device *bd) {
+    /* unplugged just before BDM records it: the disconnect finds nothing to remove */
+    if (unplug_in_connect) scsi_disconnect(unplug_in_connect);
+    bdm_connects++; bdm_registered = bd;
+}
+void bdm_disconnect_bd(struct block_device *bd) { if (bdm_registered == bd) bdm_registered = NULL; }
 
 /* --- Two fake bulk-only drives. Pipes: drive d has OUT = 10+2d, IN = 11+2d. ---
  * Transfers complete on a separate "USB" thread after a short delay; the CBW bytes
@@ -203,6 +208,14 @@ static int offline_cmd(struct scsi_interface *s, const unsigned char *c, unsigne
     return c[0] == INQUIRY ? 0 : -1;   /* answers who it is, then fails every command */
 }
 static int offline_lun(struct scsi_interface *s) { (void)s; return 0; }
+/* A healthy 512-byte-sector drive. */
+static int ready_cmd(struct scsi_interface *s, const unsigned char *c, unsigned int cl,
+                     unsigned char *data, unsigned int dl, unsigned int wr) {
+    static const u8 rc10[8] = {0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x02, 0x00};
+    (void)s; (void)cl; (void)wr;
+    if (c[0] == READ_CAPACITY_10) memcpy(data, rc10, dl < 8 ? dl : 8);
+    return 0;
+}
 /* A drive over 2 TiB that is unplugged when asked for its full size (READ CAPACITY 16). */
 static int unplug_cmd(struct scsi_interface *s, const unsigned char *c, unsigned int cl,
                       unsigned char *data, unsigned int dl, unsigned int wr) {
@@ -284,6 +297,20 @@ int main(void) {
             return 1;
         }
         printf("ok unplugged drive: unplugged during start-up, not handed to BDM\n");
+    }
+
+    {
+        struct scsi_interface late = {0}; int i;
+        late.name = "usb"; late.get_max_lun = offline_lun; late.queue_cmd = ready_cmd;
+        unplug_in_connect = &late;
+        scsi_connect(&late);
+        unplug_in_connect = NULL;
+        for (i = 0; i < NUM_DEVICES; i++) if (g_scsi_bd[i].priv == &late) break;
+        if (bdm_connects != 1 || bdm_registered != NULL || i < NUM_DEVICES) {
+            printf("FAIL late unplug: drive unplugged while being handed to BDM is still registered\n");
+            return 1;
+        }
+        printf("ok late unplug: unplugged while being handed to BDM, taken out again\n");
     }
     return bad;
 }
