@@ -952,6 +952,7 @@ void dashLoadingBegin(const char *title);
 void dashFileLoadingBegin(const char *title);
 void dashLoadingStatus(const char *status, int done, int total);
 void dashLoadingFrame(const char *status, int done, int total); /* always draws */
+void dashLoadingHoldProbeStatus(int hold); /* DashStorageProbeStatus keeps the current text */
 void dashLoadingSetCancel(int cancelable); /* shows "Back: keep working in background" */
 void dashLoadingEnd(void);
 int dashLoadingActive(void);

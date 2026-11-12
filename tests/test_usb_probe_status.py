@@ -33,6 +33,9 @@ static void dashWorkerStatus(const char *s,int d,int t) {
 static void dashLoadingFrame(const char *s,int d,int t) {
     (void)d;(void)t; assert(!worker); frames++; snprintf(last,sizeof(last),"%s",s);
 }
+/* The held path redraws the overlay as it is: a frame, but the text stays. */
+static int probe_status_held, held_draws;
+static void loadingDraw(void) { assert(!worker); held_draws++; }
 '''
 c += function("src/dash_ui.c", "void DashStorageProbeStatus(")
 # #286: USB probes must use the deadline-bounded stat so a wedged slot fails
@@ -75,6 +78,12 @@ int main(void) {
     assert(!strcmp(last,"USB root usb1:/ returned -19"));
     worker=1; scanUsbMassDevices(1);
     assert(stats==4 && drains==2 && frames==4 && reports==4);
+    /* Held by the animated USB probe: still one frame before the RPC, but the text stays. */
+    worker=0; probe_status_held=1; snprintf(last,sizeof(last),"Waiting for USB storage... (attempt 2/4)");
+    DashStorageProbeStatus("Checking USB root usb0:/");
+    assert(held_draws==1 && frames==4 && reports==4);
+    assert(!strcmp(last,"Waiting for USB storage... (attempt 2/4)"));
+    probe_status_held=0;
     worker=0; loading_active=0;
     DashStorageProbeStatus("no overlay"); assert(frames==4);
     active=0; worker=1;
