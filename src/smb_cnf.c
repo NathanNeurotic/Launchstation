@@ -517,6 +517,36 @@ int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
 	return n + url_len;
 }
 
+int nfsCnfBuildBlock(char *out, int out_size, const char *name, const char *ip, int port,
+                     const char *path, long uid, long gid)
+{
+	char query[32] = "";
+	int n;
+
+	if (out_size < 1 || name == NULL || name[0] == '\0' || strlen(name) >= SMB_NAME_LEN)
+		return -1;
+	if (ip == NULL || !isIpv4(ip) || port < 1 || port > 65535)
+		return -1;
+	if (path == NULL || path[0] != '/' || strpbrk(path, "?\r\n") != NULL)
+		return -1;
+	if (uid > 999999999 || gid > 999999999)
+		return -1;
+	if (uid >= 0 && gid >= 0)
+		snprintf(query, sizeof(query), "?uid=%ld&gid=%ld", uid, gid);
+	else if (uid >= 0)
+		snprintf(query, sizeof(query), "?uid=%ld", uid);
+	else if (gid >= 0)
+		snprintf(query, sizeof(query), "?gid=%ld", gid);
+	/* The port is always written, as for SMB. */
+	n = snprintf(out, out_size, "NAME = %s\nURL = nfs://%s:%d%s%s\n", name, ip, port, path, query);
+	if (n < 0 || n >= out_size)
+		return -1;
+	/* the URL, without "URL = " and the newline, must fit the parser's 255 */
+	if (n - (int)strlen(name) - 8 - 7 >= SMB_URL_LEN)
+		return -1;
+	return n;
+}
+
 int smbCnfUpsertText(const char *text, const char *orig_name,
                      const char *block_text, char *out, int out_size, char *work, int work_size)
 {

@@ -88,6 +88,13 @@ int smbCnfBuildBlock(char *out, int out_size, const char *name, int kind,
                      const char *username, const char *password,
                      const char *ip, int port, const char *share, int plaintext);
 
+/* The same for an NFS share: NAME and URL = nfs://<ip>:<port><path>, with
+ * ?uid=N&gid=N for the ids that are not negative. path starts with '/'.
+ * Returns the length, or -1 when a value breaks a limit the parser
+ * enforces. */
+int nfsCnfBuildBlock(char *out, int out_size, const char *name, const char *ip, int port,
+                     const char *path, long uid, long gid);
+
 /* Splice block_text (newline-terminated, from smbCnfBuildBlock) into the
  * file text: the block named orig_name is replaced; an empty or unknown
  * orig_name appends. block_text NULL removes the block instead. Lines

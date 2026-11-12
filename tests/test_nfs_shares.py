@@ -93,6 +93,25 @@ int main(void)
     n = smbCnfUpsertText(mixed, "Games", NULL, out, sizeof(out), work, sizeof(work));
     assert(n > 0 && strstr(out, "nfs://192.168.0.30/srv/ps2\n") == NULL && strstr(out, "NAME = PC") != NULL);
 
+    /* the editor's block parses back to the same share */
+    n = nfsCnfBuildBlock(out, sizeof(out), "Games", "192.168.0.30", 2049, "/srv/ps2", 1000, 100);
+    assert(n > 0 && !strcmp(out, "NAME = Games\nURL = nfs://192.168.0.30:2049/srv/ps2?uid=1000&gid=100\n"));
+    assert(parse(out) == 1 && share(0)->version == SMB_PATH_NFS && !strcmp(share(0)->share, "/srv/ps2"));
+    n = nfsCnfBuildBlock(out, sizeof(out), "G", "10.0.0.1", 2050, "/e", -1, 5);
+    assert(n > 0 && strstr(out, "URL = nfs://10.0.0.1:2050/e?gid=5\n") && parse(out) == 1);
+    n = nfsCnfBuildBlock(out, sizeof(out), "G", "10.0.0.1", 2049, "/e", -1, -1);
+    assert(n > 0 && strstr(out, "URL = nfs://10.0.0.1:2049/e\n") && parse(out) == 1);
+    assert(nfsCnfBuildBlock(out, sizeof(out), "G", "nas", 2049, "/e", -1, -1) < 0);
+    assert(nfsCnfBuildBlock(out, sizeof(out), "G", "10.0.0.1", 0, "/e", -1, -1) < 0);
+    assert(nfsCnfBuildBlock(out, sizeof(out), "G", "10.0.0.1", 2049, "e", -1, -1) < 0);
+    assert(nfsCnfBuildBlock(out, sizeof(out), "G", "10.0.0.1", 2049, "/e?x", -1, -1) < 0);
+    assert(nfsCnfBuildBlock(out, sizeof(out), "", "10.0.0.1", 2049, "/e", -1, -1) < 0);
+    assert(nfsCnfBuildBlock(out, sizeof(out), "G", "10.0.0.1", 2049, "/e", 1000000000, -1) < 0);
+    memset(work, 'p', 300);
+    work[0] = '/';
+    work[300] = '\0';
+    assert(nfsCnfBuildBlock(out, sizeof(out), "G", "10.0.0.1", 2049, work, -1, -1) < 0); /* URL over 255 */
+
     /* the device */
     assert(smbPathKind("nfs:/Games/x.iso") == SMB_PATH_NFS && smbPathKind("nfs:") == SMB_PATH_NFS);
     assert(smbPathKind("nfs4:/") == SMB_PATH_NONE && smbPathKind("nf") == SMB_PATH_NONE);
@@ -145,8 +164,16 @@ assert "smbPathKind(path) == SMB_PATH_NFS && smbIsRootPath(path))\n\t\twrite_dis
 neutrino = text("src/neutrino_iso.c")
 assert "smbPathKind(path) == SMB_PATH_V1 || smbPathKind(path) == SMB_PATH_V2)\n\t\treturn \"smb\";" in neutrino
 
-# the share editor writes smb:// blocks: it must not turn an NFS share into one
+# the share editor writes an NFS share with nfsCnfBuildBlock, and loads one as kind NFS
 settings = text("src/dash_settings.c")
-assert "smbed.snap.share[smbed.pick - 1].version == SMB_PATH_NFS" in settings
+save = settings[settings.index("static void smbedSave(void)"):]
+save = save[:save.index("\n}\n")]
+assert "if (smbed.kind == SMBED_NFS)\n\t\tn = nfsCnfBuildBlock(" in save and "smbCnfBuildBlock(" in save
+assert '{ "SMB2", "SMB3", "SMB1", "NFS" }' in settings
+load = settings[settings.index("static void smbedLoadPick(void)"):]
+load = load[:load.index("\n}\n")]
+assert "if (sh->version == SMB_PATH_NFS) {" in load and "smbed.kind = SMBED_NFS;" in load
+for sid in ("S_SMBED_UID", "S_SMBED_GID"):
+    assert f"case {sid}:" in settings, sid
 
 print("NFS shares wiring: OK")
