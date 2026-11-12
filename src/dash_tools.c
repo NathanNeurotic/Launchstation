@@ -63,7 +63,7 @@ static const Tool tools[] = {
     {TA_MISC, DI_MC, "Memory card exploit installer", "Install a memory card system-update exploit for this console, another model or region, or PSX/DESR.", "Writes system folders to the memory card. Follow the on-screen checks carefully.", 1, MISC(Misc_Exploit_Installer), NULL},
     {TA_IGR_SETUP, DI_MC, "OPL IGR automatic MMCE backup", "Set up verified automatic backup of every MMCE card image when OPL exits a game through IGR.", "Installs or updates WLE-IGR.ELF on the required boot medium and tells you the exact OPL Exit-to path.", 0, 0, NULL},
     {TA_HEADER, -1, "SYSTEM", NULL, NULL, 0, 0, NULL},
-    {TA_MISC, DI_APP, "PS2 system browser", "Leave Launchstation and open the console's own Browser. A memory card menu such as FMCB or OSDMenu loads first.", NULL, 2, MISC(Misc_PS2Browser), NULL},
+    {TA_MISC, DI_APP, "PS2 system browser", "Leave Launchstation and open the console's own Browser. A memory card menu such as OSDMenu loads first.", NULL, 2, MISC(Misc_PS2Browser), NULL},
     {TA_PS2BROWSER_SKIPMC, DI_APP, "PS2 system browser (skip card update)", "Open the console's own Browser without running the memory card system update. Use it if the Browser entry opens your card's menu instead.", "Circle in the Browser then shows the console's own two-item menu until the next restart.", 2, MISC(Misc_PS2Browser), NULL},
     {TA_MISC, DI_APP, "OSDSYS", "Start the console's OSD (or the OSDSYS path configured in Launchstation).", NULL, 2, MISC(Misc_OSDSYS), NULL},
 #ifdef ETH
