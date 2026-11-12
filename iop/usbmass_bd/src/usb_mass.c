@@ -277,6 +277,10 @@ static int usb_bulk_status(mass_dev *dev, csw_packet *csw, unsigned int tag)
     if (ret == USB_RC_OK) {
         WaitSema(cb_data.sema);
         ret = cb_data.returnCode;
+        if (ret == USB_RC_OK && cb_data.returnSize == 0)
+            ret = USB_RC_DATAUNDER; // no status yet: clear the halt and read it again
+        else if (ret == USB_RC_OK && cb_data.returnSize != 13)
+            csw->signature = 0; // a cut-off status is invalid: reset recovery, the command fails
 
 #ifdef DEBUG
         if (cb_data.returnSize != 13)
@@ -851,6 +855,14 @@ int usb_mass_init(void)
     usb_mass_update_sema = CreateSema(&sema);
     sema.initial         = 1;
     usb_mass_cmd_sema    = CreateSema(&sema);
+    if (usb_mass_update_sema < 0 || usb_mass_cmd_sema < 0) {
+        M_PRINTF("ERROR: CreateSema failed\n");
+        if (usb_mass_update_sema >= 0)
+            DeleteSema(usb_mass_update_sema);
+        if (usb_mass_cmd_sema >= 0)
+            DeleteSema(usb_mass_cmd_sema);
+        return -1;
+    }
 
     driver.next       = NULL;
     driver.prev       = NULL;

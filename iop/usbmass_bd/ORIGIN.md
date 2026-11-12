@@ -36,6 +36,12 @@ Smaller fixes found in review of this copy:
    the command fails if data was still missing.
 7. `usb_mass.c`: unplugging a drive whose start-up failed frees its slot, so it is found again
    when plugged back in.
+8. `usb_mass.c`: a status read (CSW) that returns no bytes is read again, and one cut off
+   part-way fails the command with reset recovery, instead of either being taken as success.
+9. `scsi.c`: a drive unplugged during start-up stops the start-up instead of using a cleared pointer.
+10. `usb_mass.c`: start-up fails cleanly if the driver's semaphores cannot be created, and frees
+    the one that was created.
+11. `scsi.c`: a drive unplugged during its last start-up step is not handed to BDM.
 
 Host test: `tests/test_usbmass_two_drives.py` runs this source against two fake drives.
 Pass that script sdk-core's `core/usbmass_bd/src` to see the unpatched driver fail (a

@@ -75,6 +75,9 @@ static int scsi_cmd(struct block_device *bd, unsigned char cmd, void *buffer, in
 
     // M_DEBUG("%s\n", __func__);
 
+    if (scsi == NULL) // unplugged during start-up
+        return -1;
+
     comData[0] = cmd;
     comData[4] = cmd_size;
 
@@ -122,6 +125,9 @@ static inline int scsi_cmd_read_capacity16(struct block_device *bd, void *buffer
     struct scsi_interface *scsi = (struct scsi_interface *)bd->priv;
 
     M_DEBUG("%s\n", __func__);
+
+    if (scsi == NULL) // unplugged during start-up
+        return -1;
 
     comData[0] = SERVICE_ACTION_IN;
     comData[1] = 0x10;
@@ -184,6 +190,9 @@ static int scsi_warmup(struct block_device *bd)
 
     M_DEBUG("%s\n", __func__);
 
+    if (scsi == NULL) // unplugged before start-up began
+        return -1;
+
     stat = scsi->get_max_lun(scsi);
     M_DEBUG("scsi->get_max_lun %d\n", stat);
 
@@ -218,7 +227,7 @@ static int scsi_warmup(struct block_device *bd)
             }
         }
 
-        if (++tries >= SCSI_READY_TRIES) {
+        if (++tries >= SCSI_READY_TRIES || bd->priv == NULL) { // gave up, or unplugged
             M_PRINTF("ERROR: drive never became ready\n");
             return -1;
         }
@@ -385,7 +394,7 @@ void scsi_connect(struct scsi_interface *scsi)
             bd->name = scsi->name;
             bd->path = "usb";
             bd->devNr = scsi->devNr;
-            if (scsi_warmup(bd) == 0)
+            if (scsi_warmup(bd) == 0 && bd->priv != NULL) // not unplugged during start-up
                 bdm_connect_bd(bd);
             else
                 bd->priv = NULL; // start-up failed: no size, leave it out

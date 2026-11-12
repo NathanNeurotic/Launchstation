@@ -44,6 +44,7 @@ int CreateSema(iop_sema_t *s); int WaitSema(int id); int SignalSema(int id); int
 #include "tamtypes.h"
 #define USB_RC_OK 0
 #define USB_RC_STALL 4
+#define USB_RC_DATAUNDER 9
 #define USB_DT_DEVICE 1
 #define USB_DT_CONFIG 2
 #define USB_DT_ENDPOINT 5
@@ -123,6 +124,8 @@ void bdm_disconnect_bd(struct block_device *bd) { (void)bd; }
 enum { WANT_CBW, SEND_DATA, SEND_CSW };
 struct drive { int state; u32 tag, left; u8 op; int wrong; };
 static struct drive drives[2];
+static volatile int short_csw_once;  /* drive 0's next status read completes with 0 bytes */
+static volatile int cut_csw_once;    /* drive 0's next status is cut off at 12 bytes */
 static volatile int zlp_once;  /* drive 0 ends its next data phase with a zero-length packet */
 struct xfer { int pipe; u8 *buf; int len; sceUsbdDoneCallback cb; void *arg; int control; };
 static struct xfer queue[64]; static int qhead, qtail;
@@ -165,6 +168,13 @@ static void *usb_thread(void *unused) {
             memset(x.buf, 0xA0 + (x.pipe - 10) / 2, n);
             d->left -= n; if (!d->left) d->state = SEND_CSW;
             x.cb(USB_RC_OK, n, x.arg);
+        } else if (d->state == SEND_CSW && x.len == 13 && short_csw_once && d == &drives[0]) {
+            short_csw_once = 0;                 /* an empty status read; the real CSW is still to come */
+            x.cb(USB_RC_OK, 0, x.arg);
+        } else if (d->state == SEND_CSW && x.len == 13 && cut_csw_once && d == &drives[0]) {
+            cut_csw_once = 0;                   /* 12 bytes of status, then it waits for the next command */
+            d->state = WANT_CBW;
+            x.cb(USB_RC_OK, 12, x.arg);
         } else if (d->state == SEND_CSW && x.len == 13) {
             u32 sig = CSW_TAG, zero = 0;
             memcpy(x.buf, &sig, 4); memcpy(x.buf + 4, &d->tag, 4); memcpy(x.buf + 8, &zero, 4); x.buf[12] = 0;
@@ -198,7 +208,22 @@ static int offline_cmd(struct scsi_interface *s, const unsigned char *c, unsigne
     return c[0] == INQUIRY ? 0 : -1;   /* answers who it is, then fails every command */
 }
 static int offline_lun(struct scsi_interface *s) { (void)s; return 0; }
+/* A drive over 2 TiB that is unplugged when asked for its full size (READ CAPACITY 16). */
+static int unplug_cmd(struct scsi_interface *s, const unsigned char *c, unsigned int cl,
+                      unsigned char *data, unsigned int dl, unsigned int wr) {
+    static const u8 rc10[8] = {0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x02, 0x00};
+    (void)cl; (void)wr;
+    if (c[0] == READ_CAPACITY_10) { memcpy(data, rc10, dl < 8 ? dl : 8); return 0; }
+    if (c[0] == SERVICE_ACTION_IN) { scsi_disconnect(s); return -1; }
+    return 0;
+}
 static void *offline_startup(void *p) { scsi_connect((struct scsi_interface *)p); return NULL; }
+static int cut_r1;
+static void *cut_read(void *p) {
+    static u8 buf[512]; unsigned char cdb[12] = {READ_10}; (void)p;
+    cut_r1 = usb_queue_cmd(&g_mass_device[0].scsi, cdb, sizeof(cdb), buf, sizeof(buf), 0);
+    return NULL;
+}
 
 int main(void) {
     pthread_t usb, t0, t1, t2; int d, bad = 0; struct timespec until;
@@ -234,6 +259,35 @@ int main(void) {
             printf("ok short read: a read cut short by a zero-length packet fails, the next one works\n");
     }
 
+    {
+        static u8 buf[512]; unsigned char cdb[12] = {READ_10}; int r1, r2;
+        short_csw_once = 1;
+        r1 = usb_queue_cmd(&g_mass_device[0].scsi, cdb, sizeof(cdb), buf, sizeof(buf), 0);
+        r2 = usb_queue_cmd(&g_mass_device[0].scsi, cdb, sizeof(cdb), buf, sizeof(buf), 0);
+        if (r1 != 0 || r2 != 0 || drives[0].wrong) {
+            printf("FAIL short status: read with an empty status returned %d, next read %d, out-of-step commands %d\n", r1, r2, drives[0].wrong);
+            bad = 1;
+        } else
+            printf("ok short status: an empty status read is read again, the drive stays in step\n");
+    }
+
+    {
+        static u8 buf[512]; unsigned char cdb[12] = {READ_10}; int r2; pthread_t t;
+        cut_csw_once = 1;
+        pthread_create(&t, NULL, cut_read, NULL);
+        clock_gettime(CLOCK_REALTIME, &until); until.tv_sec += 10;
+        if (pthread_timedjoin_np(t, NULL, &until)) {
+            printf("FAIL cut status: a read whose status was cut off never finished\n");
+            return 1;
+        }
+        r2 = usb_queue_cmd(&g_mass_device[0].scsi, cdb, sizeof(cdb), buf, sizeof(buf), 0);
+        if (cut_r1 == 0 || r2 != 0 || drives[0].wrong) {
+            printf("FAIL cut status: read returned %d, next read %d, out-of-step commands %d\n", cut_r1, r2, drives[0].wrong);
+            bad = 1;
+        } else
+            printf("ok cut status: a read whose status was cut off fails, the next one works\n");
+    }
+
     offline.name = "usb"; offline.get_max_lun = offline_lun; offline.queue_cmd = offline_cmd;
     pthread_create(&t2, NULL, offline_startup, &offline);
     clock_gettime(CLOCK_REALTIME, &until); until.tv_sec += 20;
@@ -247,6 +301,18 @@ int main(void) {
         return 1;
     }
     printf("ok offline drive: start-up gave up after %d waits, not handed to BDM\n", delays);
+
+    {
+        struct scsi_interface gone = {0}; int i;
+        gone.name = "usb"; gone.get_max_lun = offline_lun; gone.queue_cmd = unplug_cmd;
+        scsi_connect(&gone);
+        for (i = 0; i < NUM_DEVICES; i++) if (g_scsi_bd[i].priv == &gone) break;
+        if (bdm_connects != 0 || i < NUM_DEVICES) {
+            printf("FAIL unplugged drive: handed to BDM after it was unplugged during start-up\n");
+            return 1;
+        }
+        printf("ok unplugged drive: unplugged during start-up, not handed to BDM\n");
+    }
     return bad;
 }
 '''
