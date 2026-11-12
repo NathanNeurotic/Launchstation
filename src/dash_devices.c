@@ -554,15 +554,20 @@ static int probeUsbMediaAnimated(void)
 	int attempts = fast_boot_probe ? 2 : DASH_USB_PROBE_ATTEMPTS;
 	int delay_us = fast_boot_probe ? 250000 : DASH_USB_PROBE_DELAY_US;
 	int attempt, mask = 0, first_seen = -1;
+	char waiting[64];
 
 	for (attempt = 0; attempt < attempts; attempt++) {
+		/* After the first miss the text stays on the waiting line through the next probe;
+		 * the per-root "Checking USB root"/"returned -19" lines would flicker between waits. */
 		if (dashLoadingActive())
-			dashLoadingStatus("Checking USB media...", attempt + 1, attempts);
+			dashLoadingStatus(attempt ? waiting : "Checking USB media...", attempt + 1, attempts);
 		/* USB root stats go through fileXioGetStatBounded: a wedged slot
 		 * fails fast instead of hanging the whole probe on one RPC. Do not
 		 * probe an absent second slot twenty times merely because only one
 		 * drive is connected. */
+		dashLoadingHoldProbeStatus(attempt > 0);
 		mask = filerUsbRefreshDriveMask();
+		dashLoadingHoldProbeStatus(0);
 		if ((mask & 3) == 3 || (mask && quiet))
 			return 1;
 		if (mask) {
@@ -578,9 +583,9 @@ static int probeUsbMediaAnimated(void)
 		if (attempt == attempts - 1)
 			break;
 
+		snprintf(waiting, sizeof(waiting), "Waiting for USB storage... (attempt %d/%d)", attempt + 2, attempts);
 		if (dashLoadingActive())
-			dashLoadingFrame("Waiting for USB storage...", attempt + 1,
-			                 attempts);
+			dashLoadingFrame(waiting, attempt + 1, attempts);
 		DashPause(delay_us);
 	}
 	return mask != 0;
