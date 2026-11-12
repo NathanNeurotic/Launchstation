@@ -65,7 +65,15 @@ static int del(const char *p) {
     return -1;
 }
 static int wleExists(const char *p) { return has(p); }
-static void DashStorageProbeStatus(const char *s) { assert(s && s[0]); }
+static char steps[16][64];
+static int step_count;
+static void DashStorageProbeStatus(const char *s) {
+    assert(s && s[0] && step_count<16);snprintf(steps[step_count++],64,"%s",s);
+}
+static void expect_steps(const char *const *want,int n) {
+    assert(step_count==n);
+    for(int i=0;i<n;i++)assert(!strcmp(steps[i],want[i]));
+}
 typedef unsigned long long u64;
 static u64 free_space=64ULL*1024*1024;
 static int package_bytes=2234368;
@@ -124,7 +132,7 @@ static void reset(void) {
     count=downloads=sidecar_calls=captures=restores=restore_result=0;capture_result=1;
     legacy=fail_bgm_stage=fail_bgm_rename=0;
     bad_digest=fail_elf_rename=bad_header=0;
-    free_space=64ULL*1024*1024;package_bytes=2234368;
+    free_space=64ULL*1024*1024;package_bytes=2234368;step_count=0;
     put(boot);
 }
 static int install(char *msg) {
@@ -144,10 +152,20 @@ int main(void) {
     reset();
     assert(install(msg)==0);
     assert(has(ca)&&has(bgm)&&has(boot)&&!has(backup)); /* no .BAK stays after an install */
+    {
+        static const char *const all[]={"Downloading the update from GitHub","Checking the download (SHA-256)",
+            "Unpacking and checking the new ELF","Adding missing bundled files","Replacing the ELF"};
+        expect_steps(all,5);
+    }
     assert(!has(ca_tmp)&&!has(bgm_tmp)&&sidecar_calls==2&&downloads==1);
     reset();put(ca);put(bgm);put(backup); /* a .BAK left by an older build is removed */
     assert(install(msg)==0);
     assert(has(ca)&&has(bgm)&&sidecar_calls==0&&has(boot)&&!has(backup));
+    {
+        static const char *const none_missing[]={"Downloading the update from GitHub","Checking the download (SHA-256)",
+            "Unpacking and checking the new ELF","Replacing the ELF"};
+        expect_steps(none_missing,4);
+    }
     reset();put(ca); /* only restore missing music */
     assert(install(msg)==0);
     assert(has(ca)&&has(bgm)&&sidecar_calls==1);
@@ -175,6 +193,10 @@ int main(void) {
     assert(!has(bgm)&&!has(bgm_tmp)); /* previously absent CA may remain */
     reset();bad_digest=1;
     assert(install(msg)<0 && has(boot)&&!has(backup)&&!has(ca)&&!has(bgm));
+    {
+        static const char *const stop[]={"Downloading the update from GitHub","Checking the download (SHA-256)"};
+        expect_steps(stop,2); /* a bad digest stops before unpacking */
+    }
     reset();bad_header=1;
     assert(install(msg)<0 && has(boot)&&!has(backup)&&!has(ca)&&!has(bgm));
     reset();fail_elf_rename=1;
@@ -183,6 +205,7 @@ int main(void) {
      * cleared first to make room, and the installed ELF is untouched. */
     reset();put(backup);free_space=2*2234368+32*1024-1;
     assert(install(msg)<0 && downloads==0 && has(boot) && !has(backup) && strstr(msg,"Not enough free space"));
+    expect_steps(NULL,0); /* refused before any step starts */
     reset();free_space=2*2234368+32*1024;
     assert(install(msg)==0 && downloads==1 && has(boot));
     reset();package_bytes=0;free_space=0; /* size unknown: no pre-check */
