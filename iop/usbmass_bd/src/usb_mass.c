@@ -855,6 +855,10 @@ int usb_mass_init(void)
     usb_mass_cmd_sema    = CreateSema(&sema);
     if (usb_mass_update_sema < 0 || usb_mass_cmd_sema < 0) {
         M_PRINTF("ERROR: CreateSema failed\n");
+        if (usb_mass_update_sema >= 0)
+            DeleteSema(usb_mass_update_sema);
+        if (usb_mass_cmd_sema >= 0)
+            DeleteSema(usb_mass_cmd_sema);
         return -1;
     }
 

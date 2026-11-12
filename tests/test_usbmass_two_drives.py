@@ -203,6 +203,15 @@ static int offline_cmd(struct scsi_interface *s, const unsigned char *c, unsigne
     return c[0] == INQUIRY ? 0 : -1;   /* answers who it is, then fails every command */
 }
 static int offline_lun(struct scsi_interface *s) { (void)s; return 0; }
+/* A drive over 2 TiB that is unplugged when asked for its full size (READ CAPACITY 16). */
+static int unplug_cmd(struct scsi_interface *s, const unsigned char *c, unsigned int cl,
+                      unsigned char *data, unsigned int dl, unsigned int wr) {
+    static const u8 rc10[8] = {0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x02, 0x00};
+    (void)cl; (void)wr;
+    if (c[0] == READ_CAPACITY_10) { memcpy(data, rc10, dl < 8 ? dl : 8); return 0; }
+    if (c[0] == SERVICE_ACTION_IN) { scsi_disconnect(s); return -1; }
+    return 0;
+}
 static void *offline_startup(void *p) { scsi_connect((struct scsi_interface *)p); return NULL; }
 
 int main(void) {
@@ -264,6 +273,18 @@ int main(void) {
         return 1;
     }
     printf("ok offline drive: start-up gave up after %d waits, not handed to BDM\n", delays);
+
+    {
+        struct scsi_interface gone = {0}; int i;
+        gone.name = "usb"; gone.get_max_lun = offline_lun; gone.queue_cmd = unplug_cmd;
+        scsi_connect(&gone);
+        for (i = 0; i < NUM_DEVICES; i++) if (g_scsi_bd[i].priv == &gone) break;
+        if (bdm_connects != 0 || i < NUM_DEVICES) {
+            printf("FAIL unplugged drive: handed to BDM after it was unplugged during start-up\n");
+            return 1;
+        }
+        printf("ok unplugged drive: unplugged during start-up, not handed to BDM\n");
+    }
     return bad;
 }
 '''
