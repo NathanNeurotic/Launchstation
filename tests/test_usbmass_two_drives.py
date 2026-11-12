@@ -105,8 +105,8 @@ int DeleteSema(int id) { (void)id; return 0; }
 int CreateThread(iop_thread_t *t) { (void)t; return 1; }
 int StartThread(int id, void *arg) { (void)id; (void)arg; return 0; }
 int DeleteThread(int id) { (void)id; return 0; }
-static int delays;
-int DelayThread(int usec) { (void)usec; delays++; sched_yield(); return 0; }
+static int delays, delay_other;
+int DelayThread(int usec) { if (usec != 10000) delay_other++; delays++; sched_yield(); return 0; }
 void *sceUsbdScanStaticDescriptor(int d, void *p, u8 t) { (void)d; (void)p; (void)t; return NULL; }
 int sceUsbdOpenPipe(int d, UsbEndpointDescriptor *e) { (void)d; (void)e; return 0; }
 int sceUsbdOpenPipeAligned(int d, UsbEndpointDescriptor *e) { (void)d; (void)e; return 0; }
@@ -226,7 +226,10 @@ int main(void) {
         return 1;
     }
     if (bdm_connects != 0) { printf("FAIL offline drive: handed to BDM without a size\n"); return 1; }
-    if (delays < 100) { printf("FAIL offline drive: retried without yielding (%d delays)\n", delays); return 1; }
+    if (delays < 100 || delays > 1000 || delay_other) {
+        printf("FAIL offline drive: expected 100..1000 waits of 10 ms, got %d (%d of another length)\n", delays, delay_other);
+        return 1;
+    }
     printf("ok offline drive: start-up gave up after %d waits, not handed to BDM\n", delays);
     return bad;
 }
@@ -243,7 +246,7 @@ with tempfile.TemporaryDirectory(prefix='usbmass-two-drives-') as tmp:
     c = Path(tmp) / 'harness.c'
     exe = Path(tmp) / 'harness'
     c.write_text(harness)
-    subprocess.run([compiler, '-std=gnu2x', '-w', '-I', str(inc), '-I', str(src), '-I', str(src / 'include'),
+    subprocess.run([compiler, '-std=gnu2x', '-D_GNU_SOURCE', '-w', '-I', str(inc), '-I', str(src), '-I', str(src / 'include'),
                     str(c), '-o', str(exe), '-pthread'], check=True)
     result = subprocess.run([str(exe)], timeout=60, capture_output=True, text=True)
     sys.stdout.write(result.stdout)

@@ -27,6 +27,15 @@ Changes, all for two USB drives plugged in at once:
 3. `scsi.c`: a drive whose start-up failed is not handed to BDM. It has no size, and BDM's
    connect message divides by the sector size.
 
+Smaller fixes found in review of this copy:
+
+4. `scsi.c`: a request that starts below the 32-bit LBA limit but ends above it uses
+   READ/WRITE(16), not READ/WRITE(10).
+5. `scsi.c`: a drive that reports a sector size of 0 is left out (the size math divides by it).
+6. `usb_mass.c`: a zero-length packet ends a bulk transfer instead of asking again forever.
+7. `usb_mass.c`: unplugging a drive whose start-up failed frees its slot, so it is found again
+   when plugged back in.
+
 Host test: `tests/test_usbmass_two_drives.py` runs this source against two fake drives.
 Pass that script sdk-core's `core/usbmass_bd/src` to see the unpatched driver fail (a
 command never finishes; the offline drive never gives up).

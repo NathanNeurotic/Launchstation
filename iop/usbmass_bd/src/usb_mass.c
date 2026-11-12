@@ -139,7 +139,8 @@ static void usb_transfer_callback(int resultCode, int bytes, void *arg)
         data->buffer += bytes;
     }
 
-    if ((resultCode == USB_RC_OK) && (data->remaining > 0)) { // OK to continue.
+    // A zero-length packet ends the transfer early; asking again would repeat forever.
+    if ((resultCode == USB_RC_OK) && (data->remaining > 0) && (bytes > 0)) { // OK to continue.
         int ret;
 
         ret = perform_bulk_transfer(data);
@@ -736,6 +737,11 @@ static int usb_mass_disconnect(int devId)
         // Should this move to the thread
         // just like the scsi_connect?
         scsi_disconnect(&dev->scsi);
+    } else if (dev->devId != -1) {
+        // Start-up failed after connect (usb_mass_release cleared the status): free the slot,
+        // or it stays claimed and the drive is refused after it is plugged in again.
+        dev->devId = -1;
+        DeleteSema(dev->ioSema);
     }
 
     return 0;

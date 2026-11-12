@@ -137,7 +137,7 @@ static int scsi_cmd_rw_sector(struct block_device *bd, u64 lba, const void *buff
     DEBUG_U64_2XU32(lba);
     M_DEBUG("scsi_cmd_rw_sector - 0x%08x%08x %p 0x%04x\n", lba_u32[1], lba_u32[0], buffer, sectorCount);
 
-    if (lba <= 0xffffffffull)
+    if (lba + sectorCount <= 0x100000000ull) // the whole request must fit READ/WRITE(10)'s 32-bit LBA
     {
         unsigned char comData[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         comData[0] = write ? WRITE_10 : READ_10;
@@ -234,6 +234,10 @@ static int scsi_warmup(struct block_device *bd)
     bd->sectorCount  = getBI32(&rc10d.last_lba) & 0xffffffff;
     bd->sectorSize   = getBI32(&rc10d.block_length);
     bd->sectorOffset = 0;
+    if (bd->sectorSize == 0) {
+        M_PRINTF("ERROR: drive reported a sector size of 0\n");
+        return -1;
+    }
 
     u64 sectorCount = bd->sectorCount;
     U64_2XU32(sectorCount);
@@ -243,7 +247,7 @@ static int scsi_warmup(struct block_device *bd)
     if (bd->sectorCount == 0xffffffffull)
     {
         memset(&rc16d, 0, sizeof(read_capacity16_data));
-        if (scsi_cmd_read_capacity16(bd, &rc16d, sizeof(read_capacity16_data)) == 0) {
+        if (scsi_cmd_read_capacity16(bd, &rc16d, sizeof(read_capacity16_data)) == 0 && getBI32(&rc16d.block_length) != 0) {
             bd->sectorCount  = ((u64)getBI32(&rc16d.last_lba_msb) << 32) | (getBI32(&rc16d.last_lba_lsb) & 0xffffffff);
             bd->sectorSize   = getBI32(&rc16d.block_length);
             bd->sectorOffset = 0;
