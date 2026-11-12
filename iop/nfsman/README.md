@@ -5,7 +5,7 @@ Up to 8 NFS exports connected at once, each listed as `nfs:/<NAME>/`. Built from
 
 | | |
 |---|---|
-| Protocol | [unfs4](https://github.com/sahlberg/unfs4) by [Ronnie Sahlberg](https://github.com/sahlberg), BSD 2-Clause ([unfs4/LICENSE](unfs4/LICENSE)), commit `3c673fc` ([unfs4/VENDORED.txt](unfs4/VENDORED.txt)), the NFS sibling of usmb2 |
+| Protocol | [unfs4](https://github.com/sahlberg/unfs4) by [Ronnie Sahlberg](https://github.com/sahlberg), BSD 2-Clause ([unfs4/LICENSE](unfs4/LICENSE)), commit `449ba4e` ([unfs4/VENDORED.txt](unfs4/VENDORED.txt)), the NFS sibling of usmb2 |
 | Front end | `nfsman.c`: smb2man's structure (named exports, the device root, the slot generations, the bounded sockets, the reconnect backoff) on unfs4 |
 | `imports.lst`, `irx_imports.h`, `linkfile` | smb2man's, with `lwip_bind` added |
 | Interface | [`include/nfsman.h`](../../include/nfsman.h): `NFS_DEVCTL_CONNECT` (`nfsConnect_in_t`: name, URL, a seed from the EE's clock) and `NFS_DEVCTL_DISCONNECT_ALL`, shaped as smb2man's |

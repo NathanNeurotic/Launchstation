@@ -121,9 +121,8 @@ static int recv_reply_from_socket(uint32_t wanted_xid)
 {
         int rc;
         uint8_t *ptr;
-        uint32_t xid;
+        uint32_t xid, rm;
 #ifdef UNFS4_FEATURE_REASSEMBLY
-        uint32_t rm;
         int len = 0;
 #endif /* UNFS4_FEATURE_REASSEMBLY */
 
@@ -160,6 +159,12 @@ static int recv_reply_from_socket(uint32_t wanted_xid)
         }
         ptr = reasm;
         len = 0;
+#else
+        /* The whole record must be in this segment */
+        memcpy(&rm, ptr, 4);
+        if (rc < 8 || (ntohl(rm) & 0x7fffffff) > (uint32_t)rc - 4) {
+                return -1;
+        }
 #endif /* UNFS4_FEATURE_REASSEMBLY */
         memcpy(&xid, &ptr[4], 4);
         if (ntohl(xid) != wanted_xid) {
@@ -413,14 +418,26 @@ static uint8_t *put_attr_request(uint8_t *p)
         return put32(p, 0x00200000);
 }
 
-/* Takes apart the attributes from put_attr_request(), returns the end */
-static uint8_t *get_attrs(uint8_t *p, struct unfs4_attr *a)
+/* Takes apart the attributes from put_attr_request(), which end before
+ * end, returns where they end, or NULL if they do not fit
+ */
+static uint8_t *get_attrs(uint8_t *p, const uint8_t *end, struct unfs4_attr *a)
 {
-        p += 4 + 4 * get32(p);
+        uint32_t n;
+
+        /* The bitmap, its words, the length of the attributes and them */
+        if (end - p < 8 || (n = get32(p)) > (uint32_t)(end - p - 8) / 4) {
+                return NULL;
+        }
+        p += 4 + 4 * n;
+        n = get32(p);
+        if (n < 20 || n > (uint32_t)(end - p - 4)) {
+                return NULL;
+        }
         a->type = get32(p + 4);
         a->size = get64(p + 8);
         a->mtime = get64(p + 16);
-        return p + 4 + get32(p);
+        return p + 4 + n;
 }
 
 #if defined(UNFS4_FEATURE_MKDIR) || defined(UNFS4_FEATURE_CREATE)
@@ -478,10 +495,24 @@ static uint32_t unfs4_rpc(struct unfs4_context *unfs4, uint8_t *p,
 #endif
 
         read_from_socket(unfs4, b, 4);
-        left = get32(b) & 0x7fffffff;
+        left = get32(b);
+        /*
+         * Our replies are one fragment, the last, and never bigger than buf
+         * and indata. A server that sends something else is broken, and we
+         * would only drain the record, maybe for minutes.
+         */
+        if (!(left & 0x80000000) ||
+            (left &= 0x7fffffff) > sizeof(unfs4->buf) + indatacount) {
+#ifndef UNFS4_FEATURE_TINY_TCP
+                socket_failed(unfs4);
+#endif
+                unfs4->status = UNFS4_ERR_CONN;
+                return -1;
+        }
         /* Leave at least 64 bytes at the end of buf to read the rest to */
         len = read_reply(unfs4, &b[4], indata ? 60 : sizeof(unfs4->buf) - 4 - 64, &left);
-        read_reply(unfs4, indata, indatacount, &left);
+        unfs4->len = 4 + len;
+        unfs4->inlen = read_reply(unfs4, indata, indatacount, &left);
         while (left) {
                 read_reply(unfs4, &b[4 + len], sizeof(unfs4->buf) - 4 - len, &left);
         }
@@ -492,6 +523,11 @@ static uint32_t unfs4_rpc(struct unfs4_context *unfs4, uint8_t *p,
                 return -1;
         }
 #endif
+        /* Up to the COMPOUND status, or the request is still there */
+        if (unfs4->len < R_STATUS + 4) {
+                unfs4->status = NFS4ERR_SERVERFAULT;
+                return -1;
+        }
         /* reply status, accept status and the COMPOUND status */
         unfs4->status = (get32(&b[12]) | get32(&b[24])) ? NFS4ERR_SERVERFAULT : get32(&b[R_STATUS]);
         return get32(&b[12]) | get32(&b[24]) | get32(&b[R_STATUS]);
@@ -650,7 +686,7 @@ struct unfs4_dir *unfs4_opendir(struct unfs4_context *unfs4, const char *name)
  */
 struct unfs4_dirent *unfs4_readdir(struct unfs4_context *unfs4, struct unfs4_dir *dir)
 {
-        uint8_t *p;
+        uint8_t *p, *e, *end;
         uint32_t len;
 
  again:
@@ -671,28 +707,44 @@ struct unfs4_dirent *unfs4_readdir(struct unfs4_context *unfs4, struct unfs4_dir
                 }
                 memcpy(&dir->cookie[8], RES(unfs4, 2), 8);
                 dir->pos = 0;
+                dir->len = unfs4->inlen;
                 dir->have = 1;
         }
         p = &dir->buf[dir->pos];
+        end = &dir->buf[dir->len];
+        /* 1 and the cookie, or 0 and eof */
+        if (end - p < 8) {
+                goto bad;
+        }
         if (!get32(p)) {
                 dir->eof = p[7];
                 dir->have = 0;
                 goto again;
         }
+        if (end - p < 16 || (len = get32(p + 12)) > (uint32_t)(end - p - 16) ||
+            !(e = get_attrs(p + 16 + ((len + 3) & ~3), end, &dir->de.attr))) {
+                goto bad;
+        }
         memcpy(dir->cookie, p + 4, 8);
-        len = get32(p + 12);
         dir->de.name = (char *)p + 16;
-        p = get_attrs(p + 16 + ((len + 3) & ~3), &dir->de.attr);
         /* over the padding or the attributes, which we have read */
         dir->de.name[len] = 0;
-        dir->pos = p - dir->buf;
+        dir->pos = e - dir->buf;
         return &dir->de;
+
+ bad:
+        /* A reply that does not fit what it says: the server is broken */
+        unfs4->status = NFS4ERR_SERVERFAULT;
+        dir->have = 0;
+        dir->eof = 1;
+        return NULL;
 }
 #endif /* UNFS4_FEATURE_OPENDIR */
 
 int32_t unfs4_prw(struct unfs4_context *unfs4, int op, uint8_t *fh, uint8_t *rbuf, uint8_t *wbuf, int count, uint64_t offset)
 {
         uint8_t *p = put_fh(unfs4, unfs4_cmd_hdr(unfs4), fh);
+        uint32_t n;
 
         /* READ or WRITE: the anonymous stateid, all zero, then offset */
         p = put_op(unfs4, p, op) + 16;
@@ -710,8 +762,13 @@ int32_t unfs4_prw(struct unfs4_context *unfs4, int op, uint8_t *fh, uint8_t *rbu
                       rbuf, (op == OP_READ) ? count : 0)) {
                 return -1;
         }
-        /* WRITE: count, READ: eof, then count */
-        return get32(RES(unfs4, 2) + ((op == OP_READ) ? 4 : 0));
+        /* WRITE: count, READ: eof, then count, at most the data we read */
+        n = get32(RES(unfs4, 2) + ((op == OP_READ) ? 4 : 0));
+        if (n > (uint32_t)count || (op == OP_READ && n > (uint32_t)unfs4->inlen)) {
+                unfs4->status = NFS4ERR_SERVERFAULT;
+                return -1;
+        }
+        return n;
 }
 
 /* GETATTR after the operations up to p */
@@ -721,7 +778,10 @@ static int unfs4_getattr(struct unfs4_context *unfs4, uint8_t *p, struct unfs4_a
         if (unfs4_rpc(unfs4, p, NULL, 0, NULL, 0)) {
                 return -1;
         }
-        get_attrs(RES(unfs4, unfs4->nops), a);
+        if (!get_attrs(RES(unfs4, unfs4->nops), unfs4->buf + unfs4->len, a)) {
+                unfs4->status = NFS4ERR_SERVERFAULT;
+                return -1;
+        }
         return 0;
 }
 

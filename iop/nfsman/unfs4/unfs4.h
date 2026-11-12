@@ -108,6 +108,9 @@ struct unfs4_context {
         int nops;
         /* Of the last call: 0, an NFS4ERR_*, or UNFS4_ERR_CONN */
         uint32_t status;
+        /* Of the last call: how much of the reply went to buf and indata */
+        int len;
+        int inlen;
         /* Names this client to the server when it creates a file: the
          * first xid then, so two clients never share a name */
         uint32_t id;
@@ -132,6 +135,7 @@ struct unfs4_dir {
         uint8_t fh[4 + UNFS4_MAX_FH];
         uint8_t cookie[16];     /* where to continue, and the cookie verifier */
         uint16_t pos;           /* the next entry in buf */
+        uint16_t len;           /* the end of the entries in buf */
         uint8_t have;           /* buf holds entries we have not returned */
         uint8_t eof;            /* the server has no more entries */
         struct unfs4_dirent de;

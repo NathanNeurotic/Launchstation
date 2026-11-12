@@ -2,8 +2,8 @@ unfs4 (vendored)
 ================
 
 Upstream:  https://github.com/sahlberg/unfs4 (Ronnie Sahlberg, https://github.com/sahlberg)
-Commit:    3c673fc
-           "unfs4: a client name of its own for each client"
+Commit:    449ba4e
+           "unfs4: bound what the server's replies say against what we received"
 Licence:   BSD 2-Clause (see LICENSE)
 
 What is here

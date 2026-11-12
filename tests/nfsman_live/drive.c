@@ -146,6 +146,13 @@ int main(int argc, char **argv)
     CHECK(connect_export("C", "nfs://server/x") == -NFS_CONNECT_ERR_URL, "a host name: URL");
     CHECK(connect_export("C", "nfs://127.0.0.1/x?user=1") == -NFS_CONNECT_ERR_URL, "an unknown option: URL");
     CHECK(connect_export("C", "nfs://127.0.0.1:1/x") == -NFS_CONNECT_ERR_CONN, "nothing listening: CONN");
+    // uid and gid take 9 digits, as smb_cnf.c and the Settings editor do; nothing wraps
+    CHECK(connect_export("C", "nfs://127.0.0.1:1/x?uid=999999999&gid=500000000") == -NFS_CONNECT_ERR_CONN,
+          "the largest uid and gid parse: CONN");
+    CHECK(connect_export("C", "nfs://127.0.0.1:1/x?uid=1000000000") == -NFS_CONNECT_ERR_URL, "a 10 digit uid: URL");
+    CHECK(connect_export("C", "nfs://127.0.0.1:1/x?uid=4294967296") == -NFS_CONNECT_ERR_URL, "uid 2^32: URL");
+    CHECK(connect_export("C", "nfs://127.0.0.1:1/x?gid=4294967296") == -NFS_CONNECT_ERR_URL, "gid 2^32: URL");
+    CHECK(connect_export("C", "nfs://127.0.0.1:65536/x") == -NFS_CONNECT_ERR_URL, "port 65536: URL");
     snprintf(url, sizeof(url), "nfs://%s%s/no-such-dir-here", server, export_path);
     CHECK(connect_export("C", url) == -NFS_CONNECT_ERR_EXPORT, "no such export: EXPORT");
     CHECK(listed("/", "A") && listed("/", "B") && !listed("/", "C"), "the device root lists A and B only");
