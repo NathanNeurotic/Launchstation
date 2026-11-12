@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-12T04:50:54+00:00",
+  "updated_at": "2026-11-12T06:29:15+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 1885,
+  "total_downloads": 1906,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -6171,7 +6171,7 @@
       "release": "latest"
     },
     "737995677": {
-      "downloads": 0,
+      "downloads": 2,
       "name": "APP_LAUNCHSTATION-DS-1155.zip",
       "release": "build-1155"
     },
@@ -6186,7 +6186,7 @@
       "release": "build-1155"
     },
     "737995683": {
-      "downloads": 0,
+      "downloads": 2,
       "name": "APP_LAUNCHSTATION-1155.zip",
       "release": "build-1155"
     },
@@ -6211,7 +6211,7 @@
       "release": "build-1155"
     },
     "737995739": {
-      "downloads": 0,
+      "downloads": 2,
       "name": "LAUNCHSTATION-1155.zip",
       "release": "build-1155"
     },
@@ -6304,6 +6304,51 @@
       "downloads": 0,
       "name": "LAUNCHSTATION-1156.zip",
       "release": "build-1156"
+    },
+    "738113660": {
+      "downloads": 3,
+      "name": "APP_LAUNCHSTATION-1156.zip",
+      "release": "latest"
+    },
+    "738113674": {
+      "downloads": 1,
+      "name": "APP_LAUNCHSTATION-DS-1156.zip",
+      "release": "latest"
+    },
+    "738113679": {
+      "downloads": 5,
+      "name": "LAUNCHSTATION.ELF",
+      "release": "latest"
+    },
+    "738113680": {
+      "downloads": 1,
+      "name": "APP_LAUNCHSTATION-DS.psu",
+      "release": "latest"
+    },
+    "738113681": {
+      "downloads": 1,
+      "name": "APP_LAUNCHSTATION.psu",
+      "release": "latest"
+    },
+    "738113696": {
+      "downloads": 3,
+      "name": "LAUNCHSTATION-1156.zip",
+      "release": "latest"
+    },
+    "738113705": {
+      "downloads": 1,
+      "name": "LAUNCHSTATION-DS.ELF",
+      "release": "latest"
+    },
+    "738113706": {
+      "downloads": 0,
+      "name": "BOOT.ELF",
+      "release": "latest"
+    },
+    "738113713": {
+      "downloads": 0,
+      "name": "BOOT2.ELF",
+      "release": "latest"
     }
   }
 }
