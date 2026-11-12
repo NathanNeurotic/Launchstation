@@ -423,6 +423,9 @@ static int usb_bulk_transfer(mass_dev *dev, int direction, void *buffer, unsigne
     if (ret != USB_RC_OK) {
         M_DEBUG("ERROR: bulk data transfer %d. Clearing HALT state.\n", ret);
         usb_bulk_clear_halt(dev, direction);
+    } else if (cb_data.remaining > 0) {
+        // A zero-length packet came before all the data: fail, so a part-filled buffer is not used.
+        ret = -EIO;
     }
 
     return ret;

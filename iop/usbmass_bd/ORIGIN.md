@@ -32,7 +32,8 @@ Smaller fixes found in review of this copy:
 4. `scsi.c`: a request that starts below the 32-bit LBA limit but ends above it uses
    READ/WRITE(16), not READ/WRITE(10).
 5. `scsi.c`: a drive that reports a sector size of 0 is left out (the size math divides by it).
-6. `usb_mass.c`: a zero-length packet ends a bulk transfer instead of asking again forever.
+6. `usb_mass.c`: a zero-length packet ends a bulk transfer instead of asking again forever, and
+   the command fails if data was still missing.
 7. `usb_mass.c`: unplugging a drive whose start-up failed frees its slot, so it is found again
    when plugged back in.
 
