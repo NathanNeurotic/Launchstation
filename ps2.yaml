@@ -185,6 +185,19 @@ targets:
     libs: [gcc]
     headers: [bdm, sio2man, dmacman, intrman, loadcore, stdio, sysclib, threadman]
 
+  # sdk-core usbmass_bd with the two-drive fixes (iop/usbmass_bd/ORIGIN.md), embedded under
+  # the SDK name usbmass_bd in place of the sdk-core binary.
+  - name: usbmass_bd_fork
+    type: iop
+    sources:
+      - iop/usbmass_bd/src/main.c
+      - iop/usbmass_bd/src/usb_mass.c
+      - iop/usbmass_bd/src/scsi.c
+    include_dirs: [iop/usbmass_bd/src, iop/usbmass_bd/src/include]
+    imports_lst: iop/usbmass_bd/src/imports.lst
+    libs: [gcc]
+    headers: [bdm, common, loadcore, stdio, sysclib, threadman, usbd]
+
   # The SDK ps2ips target is the EE client library, not an embeddable IRX.
   # Build its matching IOP socket RPC server explicitly under a distinct name.
   - name: ps2ips_rpc
@@ -443,7 +456,7 @@ targets:
       - usbd_ra:usbd
       - bdm
       - bdmfs_fatfs
-      - usbmass_bd
+      - usbmass_bd_fork:usbmass_bd
       - mx4sio_bd_fork:mx4sio_bd
       - iLinkman
       - IEEE1394_bd_mini:IEEE1394_bd
@@ -661,7 +674,7 @@ targets:
       - padman
       - bdm
       - bdmfs_fatfs
-      - usbmass_bd
+      - usbmass_bd_fork:usbmass_bd
       - ata_bd
       - libsd
       # SDK audio driver; "audio:audsrv" names its symbols audsrv_irx/size_audsrv_irx for
