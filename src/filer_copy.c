@@ -1063,6 +1063,12 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 				sprintf(tmp, "\n\n%s ?", LNG(Do_you_wish_to_overwrite_it));
 				strcat(progress, tmp);
 				if (ynDialog(progress) < 0) {
+					/* one of several .psu: skip it and keep its save (as wLaunchELF_R3Z) */
+					if (PasteMode == PM_PSU_RESTORE && nclipFiles > 1 &&
+					    ynDialog("Skip this save and extract the rest?") >= 0) {
+						ret = COPY_KEPT_DESTINATION;
+						goto folder_exit;
+					}
 					ret = copyDiagFail(-1);
 					goto folder_exit;
 				}

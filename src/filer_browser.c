@@ -2250,7 +2250,17 @@ finished:
 				if (kept > 1)
 					i += sprintf(mess + i, " (and %d more)", kept - 1);
 				sprintf(mess + i, " was not moved\n%s",
-				        PasteMode == PM_PSU_BACKUP ? "A backup with that name already exists." : "It is already at the destination.");
+				        PasteMode == PM_PSU_BACKUP ? "A backup with that name already exists." :
+				        PasteMode == PM_PSU_RESTORE ? "It was skipped; the save already there was kept." :
+				                                      "It is already at the destination.");
+				browser_pushed = FALSE;
+				paste_kept_count = kept;
+			}
+		} else if (PasteMode == PM_PSU_RESTORE) {  //saves the user skipped: a note
+			for (i = kept = 0; i < nclipFiles; i++)
+				kept += paste_kept[i];
+			if (kept) {
+				sprintf(mess, "%d save%s skipped\nThe save already there was kept.", kept, kept > 1 ? "s" : "");
 				browser_pushed = FALSE;
 				paste_kept_count = kept;
 			}

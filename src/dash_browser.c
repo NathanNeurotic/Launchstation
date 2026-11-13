@@ -880,7 +880,7 @@ static void opPaste(int mode)
 		filerPasteModeInto(fb.msg, fb.dir, mode == PASTE_RENAME);
 	opDone();
 	if (fb.msg[0] && filerPasteKeptCount() > 0) /* a Move kept items already at the destination: a note */
-		dashModalMessage(DI_INFO, localizeDashboardText("Not moved"), fb.msg, NULL);
+		dashModalMessage(DI_INFO, psu && !browser_cut ? "Skipped" : localizeDashboardText("Not moved"), fb.msg, NULL);
 	else if (fb.msg[0]) /* otherwise the classic paste only leaves a message when it failed */
 		showPasteFailure(psu);
 	else
@@ -1011,6 +1011,12 @@ static void opExtractPsuTo(int port)
 	} else {
 		nclipFiles = 0;
 		browser_cut = 0;
+	}
+	if (fb.msg[0] && filerPasteKeptCount() > 0) { /* saves the user skipped: a note */
+		dashModalMessage(DI_INFO, "Skipped", fb.msg, dest);
+		if (clipboard_lost)
+			dashToast(DASH_TOAST_INFO, "The clipboard was cleared");
+		return;
 	}
 	if (fb.msg[0]) {
 		showPasteFailure(1);

@@ -9,7 +9,8 @@ file whose first entry is not a folder is not a PSU and is refused and closed,
 and so is a PSU cut short, or with a name that reaches outside its folder,
 before it can replace a save. A Move deletes only what was copied: an item that copy() kept at the
 destination (a dated PSU name already taken, or the file or folder itself)
-stays, cut. A PSU backup replaces an older one only once it is complete, and
+stays, cut. Of several PSUs, one whose save exists can be skipped: that
+save and its source stay, and the rest are extracted. A PSU backup replaces an older one only once it is complete, and
 when that replacing fails after the older one is gone, the new one stays under
 its temporary name. A backup named after a game title alone never replaces
 another save's backup. A PSU backup on udpfs: is read back, under its final
@@ -147,7 +148,8 @@ static int prepareTransferDeviceStacks(const char *a,const char *b){(void)a;(voi
 static int clipboardSourceDeviceReady(void){return 1;}
 static void waitUntilTimer(u64 end){clock_ms=end;}
 static void drawMsg(const char *s){(void)s;}
-static int ynDialog(const char *s){(void)s;yn_calls++;return yn_answer;}
+static const int *yn_script; /* answers in turn, else yn_answer */
+static int ynDialog(const char *s){(void)s;yn_calls++;return yn_script?yn_script[yn_calls-1]:yn_answer;}
 static int readpad(void){return cancel_copy;}
 static int DashIsActive(void){return 1;}
 static int DashFileProgress(const char *a,const char *b,u64 r,u64 t){(void)a;(void)b;(void)r;(void)t;return 1;}
@@ -302,7 +304,7 @@ static int backs_up(const char *p,const char *folder,const char *text){static un
  for(i=0;i+t<=n;i++)if(!memcmp(b+i,text,t))return 1;return 0;}
 static void add(const char *name,int attr);
 static void clip(const char *path,const char *name,int attr,int mode){
- yn_answer=1;yn_calls=0;cancel_copy=0;fail_alloc_bytes=0;browser_cut=0;generation=clipIopResetGeneration=1;
+ yn_answer=1;yn_calls=0;yn_script=NULL;cancel_copy=0;fail_alloc_bytes=0;browser_cut=0;generation=clipIopResetGeneration=1;
  lseek_fail_udpfs=0; writes=write_fail_at=0;alloc_fail_stage=NULL;renames=rename_fail=0;typed=NULL;
  read_fail_name=close_fail_name=NULL;show_titles=0;game_title=NULL;udpfs_stale=UDPFS_OK;udpfs_stale_name=NULL;
  party_calls=party_fail_at=mount_calls=mount_fail_at=0;memset(mount_slot,0,sizeof(mount_slot));
@@ -356,6 +358,25 @@ int main(void){
  assert(strstr(message,"Creating directory (-1)")&&yn_calls==1);
  assert(exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00001")==3);
  settled();
+
+ /* One of several PSUs: No, then Skip keeps that save and extracts the rest;
+  * a Move keeps the skipped source cut. No, then No stops there. */
+ make_psu("mass:/NEW.psu","BASLUS-00002",2);
+ {static const int skip[]={-1,1},stop[]={-1,-1};
+  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);add("NEW.psu",0x8497);yn_script=skip;paste("mc0:/");
+  settled();
+  assert(says("1 save skipped\n")&&yn_calls==2&&exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00002")==2);
+  assert(paste_kept_count==1&&nclipFiles==2);
+  remove_tree("mc0:/BASLUS-00002");
+  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);add("NEW.psu",0x8497);yn_script=skip;browser_cut=1;paste("mc0:/");
+  settled();
+  assert(says("SAVE.psu was not moved\nIt was skipped")&&exists("mc0:/BASLUS-00001/OLD.BIN")&&entries("mc0:/BASLUS-00002")==2);
+  assert(nclipFiles==1&&!strcmp(clipFiles[0].name,"SAVE.psu")&&exists("mass:/SAVE.psu")&&!exists("mass:/NEW.psu"));
+  remove_tree("mc0:/BASLUS-00002");make_psu("mass:/NEW.psu","BASLUS-00002",2);
+  clip("mass:/","SAVE.psu",0x8497,PM_PSU_RESTORE);add("NEW.psu",0x8497);yn_script=stop;paste("mc0:/");
+  settled();
+  assert(says("Creating directory (-1)")&&yn_calls==2&&exists("mc0:/BASLUS-00001/OLD.BIN")&&!exists("mc0:/BASLUS-00002"));
+ }
 
  /* No memory for the PSU entry: the restore stops before it asks to overwrite
   * or deletes anything, so the old save stays whole. */
