@@ -374,9 +374,14 @@ static void runMiscCommand(const char *misc_path)
 	int leaves = 0;
 	int network_command = 0;
 
-	if (!stricmp(misc_path, setting->Misc_PS2Disc))
+	if (!stricmp(misc_path, setting->Misc_PS2Disc)) {
+		/* an empty tray: say so before any disc read, which can hang */
+		if (!uLE_cdDiscValid() && cdmode == SCECdNODISC) {
+			dashModalMessage(DI_DISC, "No disc", "Insert a disc to start it.", NULL);
+			return;
+		}
 		title = "Starting the disc", leaves = 1;
-	else if (!stricmp(misc_path, setting->Misc_OSDSYS))
+	} else if (!stricmp(misc_path, setting->Misc_OSDSYS))
 		title = "Starting OSDSYS", leaves = 1;
 	else if (!stricmp(misc_path, setting->Misc_PS2Browser))
 		title = "Opening the PS2 browser", leaves = 1;
