@@ -262,6 +262,7 @@ static int install_update_files(const char *parent, const char *leaf,
     int need_ca, need_bgm, staged_ca = 0, staged_bgm = 0;
     int added_ca = 0, added_bgm = 0;
     u64 free_bytes;
+    FILEINFO staged_info;
 
     if (snprintf(stage_leaf, sizeof(stage_leaf), "%s.UPDATE", leaf) >= (int)sizeof(stage_leaf) ||
         snprintf(backup_leaf, sizeof(backup_leaf), "%s.BAK", leaf) >= (int)sizeof(backup_leaf) ||
@@ -413,6 +414,14 @@ static int install_update_files(const char *parent, const char *leaf,
      * takes its name. If that last rename fails, .UPDATE stays on disk and the
      * message names it. */
     DashStorageProbeStatus("Replacing the ELF");
+    /* Look the staged file up now: a lookup that failed after the ELF was gone would strand the install. */
+    if (!find_file_info(parent, stage_leaf, &staged_info)) {
+        snprintf(remove_path, sizeof(remove_path), "%s", stage);
+        genRemove(remove_path);
+        snprintf(result, result_size,
+                 "The verified update could not be found in the app folder. The running ELF was not changed.");
+        return -1;
+    }
     if (!join_leaf(remove_path, sizeof(remove_path), parent, leaf) ||
         genRemove(remove_path) < 0 || wleExists(remove_path)) {
         snprintf(remove_path, sizeof(remove_path), "%s", stage);
@@ -422,7 +431,7 @@ static int install_update_files(const char *parent, const char *leaf,
         return -1;
     }
 
-    if (rename_leaf(parent, stage_leaf, leaf) < 0) {
+    if (Rename(parent, &staged_info, leaf) < 0) {
         snprintf(result, result_size,
                  "The old ELF was removed but the verified update could not take its place. The new ELF is saved as %s; rename it to %s.",
                  stage_leaf, leaf);

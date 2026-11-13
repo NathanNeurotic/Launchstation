@@ -28,7 +28,7 @@ assert "need_bgm = !wleExists(bgm)" in update
 assert "wleExists(update_ca_stage)" in update and "wleExists(bgm_stage)" in update
 assert "wleExists(package) || wleExists(stage)" in update
 assert update.index("wleExists(package) || wleExists(stage)") < update.index("download_file(UPDATE_ELF_URL")
-assert update.index("checkELFheader(stage)") < update.index('selfUpdateExtractPsuSidecar(package, "WLE-UPDATE-CA.PEM"') < update.index("rename_leaf(parent, stage_leaf, leaf)")
+assert update.index("checkELFheader(stage)") < update.index('selfUpdateExtractPsuSidecar(package, "WLE-UPDATE-CA.PEM"') < update.index("Rename(parent, &staged_info, leaf)")
 assert 'rename_leaf(parent, "WLE-UPDATE-CA.PEM.UPDATE", "WLE-UPDATE-CA.PEM")' in update
 assert 'rename_leaf(parent, "BGM.ADP.UPDATE", "BGM.ADP")' in update
 assert "checkELFheader(stage)" in update
@@ -36,7 +36,7 @@ assert '"%s.BAK"' in update
 assert '"%s.UPDATE"' in update
 assert "memcmp(expected, actual" in update
 assert "rename_leaf(parent, leaf, backup_leaf)" not in update and "rename_leaf(parent, backup_leaf, leaf)" not in update
-assert "rename_leaf(parent, stage_leaf, leaf)" in update
+assert "Rename(parent, &staged_info, leaf)" in update and update.index("find_file_info(parent, stage_leaf, &staged_info)") < update.index("genRemove(remove_path) < 0 || wleExists(remove_path)")
 assert "supported_boot_path" in update
 
 assert '#include "self_update.h"' in tools
@@ -65,4 +65,4 @@ assert '#ifdef DS34' in header
 assert '"APP_LAUNCHSTATION-DS"' in header and '"APP_LAUNCHSTATION"' in header
 assert '"LAUNCHSTATION-DS.ELF"' in header and '"LAUNCHSTATION.ELF"' in header
 assert 'releaseAssetDigest(response.body, SELF_UPDATE_ASSET' in tools
-assert update.index("memcmp(expected, actual") < update.index("selfUpdateExtractPsu(package, stage, package_size)") < update.index("checkELFheader(stage)") < update.index("rename_leaf(parent, stage_leaf, leaf)")
+assert update.index("memcmp(expected, actual") < update.index("selfUpdateExtractPsu(package, stage, package_size)") < update.index("checkELFheader(stage)") < update.index("Rename(parent, &staged_info, leaf)")
