@@ -132,32 +132,35 @@ static const char *getLaunchArgsSidecarBasePath(const char *path, const char *fu
      as RiptOPL PR #406. */
 static int fmcbDropsBrowser(int fd)
 {
-	/* Scan in chunks, keeping each chunk's tail so a key split across two
-	   reads is still found. */
+	/* Line by line, as FMCB parses it: '#' lines are comments, the key must
+	   start the entry, and a later entry wins. A missing key keeps the
+	   installer's default, OFF. */
 	static const char key[] = "OSDSYS_Inner_Browser";
-	const int keep = sizeof(key) + 8;
-	char cnf[512], *p;
-	int have = 0, n, eof = 0;
+	char buf[256], line[48];
+	const char *p;
+	int drops = 1, len = 0, n, i;
+	char c;
 
-	for (;;) {
-		if ((n = genRead(fd, cnf + have, sizeof(cnf) - 1 - have)) > 0)
-			have += n;
-		else
-			eof = 1;
-		cnf[have] = '\0';
-		p = strstr(cnf, key);
-		if (p && (eof || p + keep <= cnf + have)) {
-			p += sizeof(key) - 1;
-			p += strspn(p, " \t=");
-			return *p != '0' && *p != '1';
+	do {
+		n = genRead(fd, buf, sizeof(buf));
+		for (i = 0; i < (n > 0 ? n : 1); i++) {
+			c = n > 0 ? buf[i] : '\n'; /* end of file ends the last line */
+			if (c != '\n' && c != '\r') {
+				if (len < (int)sizeof(line) - 1)
+					line[len++] = c;
+				continue;
+			}
+			line[len] = '\0';
+			p = line + strspn(line, " \t");
+			if (!strncmp(p, key, sizeof(key) - 1) && strchr(" \t=", p[sizeof(key) - 1])) {
+				p += sizeof(key) - 1;
+				p += strspn(p, " \t=");
+				drops = *p != '0' && *p != '1';
+			}
+			len = 0;
 		}
-		if (eof)
-			return 1;
-		if (have > keep) {
-			memmove(cnf, cnf + have - keep, keep);
-			have = keep;
-		}
-	}
+	} while (n > 0);
+	return drops;
 }
 
 static int cardUpdateIgnoresBrowser(const char *update_path)
@@ -176,7 +179,13 @@ static int cardUpdateIgnoresBrowser(const char *update_path)
 		if (!match) {
 			snprintf(path, sizeof(path), "mc%d:/SYS-CONF/FREEMCB.CNF", port);
 			if ((fd = genOpen(path, FIO_O_RDONLY)) >= 0) {
-				match = fmcbDropsBrowser(fd);
+				/* FMCB reads mass:/FREEMCB.CNF before the card's copy (its
+				   loadConfig), so a USB drive's copy decides when there is one. */
+				int usb = genOpen("mass0:/FREEMCB.CNF", FIO_O_RDONLY);
+
+				match = fmcbDropsBrowser(usb >= 0 ? usb : fd);
+				if (usb >= 0)
+					genClose(usb);
 				genClose(fd);
 				for (other = 0; other < 2 && match; other++) {
 					snprintf(path, sizeof(path), "mc%d:/SYS-CONF/OSDMENU.CNF", other);
