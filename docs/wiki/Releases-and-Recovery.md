@@ -54,13 +54,10 @@ Open **Settings → Storage & devices → MMCE backups → Check for updates** (
 
 - It reads the `latest` release and the SHA-256 digest GitHub publishes for the package matching the running variant (standard or DS).
 - It asks GitHub to compare the running commit with the release commit. Only a verified descendant is offered; identical or older builds report "no newer release", and divergent, local or unverifiable builds are blocked with an explanation.
-- After confirmation it downloads the PSU over trusted HTTPS, verifies the digest, extracts the packed ELF and validates it as a PS2 ELF, then stages the replacement.
+- After confirmation it downloads the PSU into RAM over trusted HTTPS, verifies the digest, checks the packed ELF is a PS2 ELF, and only then writes it straight over the running ELF.
 - It can install **missing** `WLE-UPDATE-CA.PEM` and `BGM.ADP` from a verified four-, eight- or nine-file PSU; existing custom sidecars remain untouched. A legacy two-file PSU updates only the ELF.
-- Before downloading it deletes any `<name>.ELF.BAK` left by an older build and checks that the app's device has room for the package plus the files unpacked from it (twice the package size, plus 32 KB). When the PS2 has RAM for the package with 4 MB still free beside it, the package is downloaded into RAM instead and the device only needs the package size plus 32 KB; otherwise it goes beside the ELF as `.PACKAGE`. If not, it stops and the installed ELF is untouched (a leftover `.BAK` is already deleted by then). The check runs only when GitHub reports the package size and the device reports its free space (memory cards and HDD do; USB does not); otherwise it is skipped. It never loads another device's drivers to look for space.
-- The old ELF is moved aside as `<name>.ELF.BAK` only while the replacement is renamed into place; if that final rename fails the original is restored, and once the new ELF is in place the `.BAK` is deleted. No backup stays on the card. Restart to execute the installed build.
-- It supports ELFs started from `mc`, `mass`/`usb`, `mmce`, `mx4sio`, `ilink`, `ata` and `hdd` paths.
-
-If `.UPDATE` or `.PACKAGE` remains from an interrupted attempt, the updater refuses to overwrite it and changes nothing. Preserve the original ELF and settings, inspect the incomplete staging files and resolve the conflict manually; do not delete them blindly. Old updater versions that expect the retired package format may need one manual new-package install.
+- Before writing it deletes any `<name>.ELF.BAK` left by an older build and checks that the device has room for the new ELF's growth over the old one (the old ELF's own space is reused, but any growth must fit in what is free; no second copy is made). It needs the package plus 4 MB of free memory; without that it stops before touching anything. The space check runs only when the device reports its free space (memory cards and HDD do; USB does not). It never loads another device's drivers to look for space.
+- No second file, rename, delete or backup is made. If the write fails part-way the ELF may be damaged: the message gives the step (1 open, 2 write, 3 close) and the error code, and the ELF must be copied to the device again. Restart to execute the installed build.
 
 To roll back, install an older package manually.
 

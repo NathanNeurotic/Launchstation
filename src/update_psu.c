@@ -64,7 +64,7 @@ static int record_is(const unsigned char *record, unsigned int mode, const char 
            memchr(record + 64, 0, 448) != NULL && !strcmp((const char *)record + 64, name);
 }
 
-static int extract_elf(PsuIn *input, const char *stage, int size)
+static int extract_elf(PsuIn *input, const char *stage, int size, int *elf_pos)
 {
     unsigned char directories[1536], entry[512], buffer[4096];
     int output = -1, position = 1536, seen = 0, elf_size = -1, i, entries;
@@ -99,6 +99,14 @@ static int extract_elf(PsuIn *input, const char *stage, int size)
             unsigned int remaining = length;
             if ((seen & 1) || length < 52)
                 goto done;
+            if (stage == NULL) { /* locate only: the caller writes the ELF itself */
+                if (elf_pos != NULL)
+                    *elf_pos = position;
+                seen |= 1;
+                elf_size = length;
+                position += padded;
+                continue;
+            }
             output = genOpen(stage, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
             if (output < 0)
                 goto done;
@@ -165,8 +173,10 @@ static int extract_elf(PsuIn *input, const char *stage, int size)
 done:
     if (output >= 0)
         genClose(output);
-    snprintf(remove_path, sizeof(remove_path), "%s", stage);
-    genRemove(remove_path);
+    if (stage != NULL) {
+        snprintf(remove_path, sizeof(remove_path), "%s", stage);
+        genRemove(remove_path);
+    }
     return -1;
 }
 
@@ -179,7 +189,7 @@ int selfUpdateExtractPsu(const char *package, const char *stage, int size)
     if (size < 1536 || size > 16 * 1024 * 1024)
         return -1;
     if (in_open(&in, package, size))
-        result = extract_elf(&in, stage, size);
+        result = extract_elf(&in, stage, size, NULL);
     if (in.fd >= 0 && genClose(in.fd) < 0 && result >= 0) {
         snprintf(remove_path, sizeof(remove_path), "%s", stage);
         genRemove(remove_path);
@@ -194,7 +204,19 @@ int selfUpdateExtractPsuMem(const unsigned char *package, int size, const char *
 
     if (package == NULL || size < 1536 || size > 16 * 1024 * 1024)
         return -1;
-    return extract_elf(&in, stage, size);
+    return extract_elf(&in, stage, size, NULL);
+}
+
+/* Check a package held in RAM exactly as the extractors do, write nothing, and
+ * return the ELF's length (-1 if the package is not a valid app package).
+ * *offset is where the ELF's bytes start inside the package. */
+int selfUpdateLocatePsuElf(const unsigned char *package, int size, int *offset)
+{
+    PsuIn in = {-1, package, size, 0};
+
+    if (package == NULL || offset == NULL || size < 1536 || size > 16 * 1024 * 1024)
+        return -1;
+    return extract_elf(&in, NULL, size, offset);
 }
 
 

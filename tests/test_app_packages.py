@@ -74,6 +74,11 @@ int main(int argc,char **argv) {
     n_ram=slurp(stage,&from_ram);
     assert(r_file==r_ram && n_file==n_ram);
     if(n_file>0)assert(!memcmp(from_file,from_ram,n_file));
+    if(argc==3){ /* the in-place updater locates the ELF in RAM instead of extracting it */
+        int off=-1,loc=selfUpdateLocatePsuElf(package,size,&off);
+        assert(loc==r_file);
+        if(loc>0)assert(off>0 && off+loc<=size && !memcmp(package+off,from_file,loc));
+    }
     printf("%d",r_file);
     return 0;
 }

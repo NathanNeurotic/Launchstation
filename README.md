@@ -103,7 +103,7 @@ The full kit packages external loaders alongside Launchstation. Its POPStarter/E
 
 Open **Settings → Storage & devices → MMCE backups → Check for updates**. The updater offers only a release verified as newer than the running commit, downloads the matching standard/DS34 PSU, checks its digest and executable, and replaces the running executable. No backup copy is kept. Restart to use the new build.
 
-Missing certificate/music companion files can be added from a verified package; existing files, including custom music, are preserved. An interrupted `.UPDATE` or `.PACKAGE` file requires inspection before retrying. Older updaters may require a one-time manual install of the complete current app package; retain your settings.
+Missing certificate/music companion files can be added from a verified package; existing files, including custom music, are preserved. The update is downloaded into RAM, verified, and written straight over the running ELF (no second file, rename or backup); if that write fails part-way the ELF must be copied to the device again. Older updaters may require a one-time manual install of the complete current app package; retain your settings.
 
 See [Releases, updates and recovery](docs/wiki/Releases-and-Recovery.md) for supported update paths, older-build migration and rollback. Keep a known-good build for your console; `latest` is a rolling release.
 
