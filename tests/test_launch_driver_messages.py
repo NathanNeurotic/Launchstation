@@ -78,6 +78,7 @@ typedef int64_t s64;
 #define LNG_Reading_SYSTEMCNF "Reading SYSTEM.CNF"
 #define LNG_Failed "Failed"
 #define LNG_PS2Disc "PS2Disc"
+#define LNG_No_Disc "No Disc"
 #define LNG_Powering_Off_Console "Powering off"
 
 /* Every device's drivers either load or fail. A device whose drivers are
@@ -323,7 +324,7 @@ int main(void){
  settings.LK_Flag[SETTING_LK_OSDSYS]=0;
  settings.LK_Path[SETTING_LK_OSDSYS][0]=0;
  /* Start disc with an empty drive says so instead of reading it (issue #346). */
- reset();disk_type=SCECdNODISC;launch(settings.Misc_PS2Disc);expect("Start disc, empty drive","MISC/PS2Disc","PS2Disc => No disc");disk_type=0x14;
+ reset();disk_type=SCECdNODISC;launch(settings.Misc_PS2Disc);expect("Start disc, empty drive","MISC/PS2Disc","PS2Disc => No Disc");disk_type=0x14;
  /* mc: tries mc0: then mc1:. A file that opened on one card but is no ELF is not
   * "Not Found" because the other card has none, and the message names the card
   * it opened on; one found on neither is Not Found at mc1:. */
