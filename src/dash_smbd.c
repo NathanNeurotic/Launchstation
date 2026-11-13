@@ -15,7 +15,7 @@ static void smbFrame(int status, int stopping)
 	dashBgDraw();
 	dashModalBackdrop(1.0f);
 	dashModalPanel(x, y, w, h, 1.0f);
-	dashIcon(DI_NETWORK, x + 24, y + 22, 24, DASH_C_ACCENT);
+	dashIcon(DI_SHARE, x + 24, y + 22, 24, DASH_C_ACCENT);
 	dashTextS(x + 60, y + 24, stopping ? "Stopping SMB" : (status & 2) ? "SMB server running" : "Starting SMB",
 	          DASH_FS_LABEL, DASH_C_TEXT);
 	snprintf(line, sizeof(line), "\\\\%s\\mc0    \\\\%s\\mc1", ip, ip);

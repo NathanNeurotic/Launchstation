@@ -4,7 +4,7 @@
 <div class="callout amber"><div class="h">It shares a bus with memory card slot 2 and with MMCE</div><p>While the MX4SIO driver is active, slot 2 belongs to the adapter. Opening <code>mc1:</code> makes Launchstation reset the IOP back to the memory-card stack, and loading MMCE does the same. MMCE and MX4SIO cannot be active together, and transfers between MX4SIO and <code>mc1:</code> or between MX4SIO and MMCE are refused. Slot 1 (<code>mc0:</code>) is unaffected.</p></div>
 
 <h2 id="open">Opening MX4SIO</h2>
-<p>The device card is <b>MX4SIO SD Card</b> (<code>mx4sio:</code>). It starts <em>Not connected</em> (not checked). Selecting it loads the MX4SIO block driver on top of the BDM core, then retries opening <code>mx4sio:/</code> for up to two seconds so a slow SD card can finish mounting. A readable card reads <em>Ready (slot 2)</em>; otherwise <em>No MX4SIO storage found</em>. If an MMCE stack is resident, the IOP is reset first (audio and controller are rebuilt); if that reset is refused the driver is not loaded and the card reports as absent.</p>
+<p>The device card is <b>MX4SIO SD Card Slot 2</b> (<code>mx4sio:</code>). It starts <em>Not connected</em> (not checked). Selecting it loads the MX4SIO block driver on top of the BDM core, then retries opening <code>mx4sio:/</code> for up to two seconds so a slow SD card can finish mounting. A readable card reads <em>Ready (slot 2)</em>; otherwise <em>No MX4SIO storage found</em>. If an MMCE stack is resident, the IOP is reset first (audio and controller are rebuilt); if that reset is refused the driver is not loaded and the card reports as absent.</p>
 <p><b>Settings &gt; Storage &amp; devices &gt; Start devices automatically &gt; Auto-start MX4SIO</b> (off by default) loads it at start. Enabling it turns the MMCE auto-start off, and you cannot enable it while booted from MMCE.</p>
 
 <h2 id="use">Using the card</h2>
@@ -21,7 +21,7 @@
 <h2 id="limits">Limits</h2>
 <ul>
 <li>Not at the same time as MMCE or <code>mc1:</code> (see above). Stack changes reset the IOP, so other device checks are repeated afterwards.</li>
-<li>Numbering: an MX4SIO card can also take a <code>massN:</code> name from the shared BDM namespace; use the <b>MX4SIO SD Card</b> device rather than a remembered number.</li>
+<li>Numbering: an MX4SIO card can also take a <code>massN:</code> name from the shared BDM namespace; use the <b>MX4SIO SD Card Slot 2</b> device rather than a remembered number.</li>
 <li>Adapter and SD card compatibility (speed class, size, firmware) is not catalogued; report the adapter model.</li>
 <li>Loading shows a frame before the blocking driver call and refreshes again when it returns, but cannot animate during a call that stalls.</li>
 </ul>

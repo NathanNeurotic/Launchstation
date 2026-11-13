@@ -16,7 +16,7 @@ static void ftpFrame(const LsFtpStatus *status, int stopping)
 	dashBgDraw();
 	dashModalBackdrop(1.0f);
 	dashModalPanel(x, y, w, h, 1.0f);
-	dashIcon(DI_NETWORK, x + 24, y + 22, 24, DASH_C_ACCENT);
+	dashIcon(DI_SHARE, x + 24, y + 22, 24, DASH_C_ACCENT);
 	dashTextS(x + 60, y + 24, stopping ? "Stopping FTP" : "FTP server running", DASH_FS_LABEL, DASH_C_TEXT);
 	snprintf(line, sizeof(line), "IP address: %s    Port: 21", ip);
 	dashTextFit(x + 24, y + 65, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT);
