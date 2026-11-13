@@ -835,6 +835,8 @@ typedef struct {
  * uses it; every other download passes a real descriptor. */
 static unsigned char *mem_sink;
 
+void (*cloudHttpProgress)(int written, int total);
+
 static int download_write(int fd, const unsigned char *data, int len,
                           int max_bytes, int *written,
                           mbedtls_sha256_context *sha,
@@ -1249,6 +1251,8 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
                 if (content_length >= 0 && written == content_length)
                     complete = 1;
             }
+            if (cloudHttpProgress != NULL)
+                cloudHttpProgress(written, chunked ? -1 : content_length);
         }
 
         if (mbedtls_sha256_finish(&sha, digest != NULL ? digest : (unsigned char [32]){0}) != 0) {

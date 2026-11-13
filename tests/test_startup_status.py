@@ -30,6 +30,7 @@ static int is_early_init=1, startup_driver_status_quiet=1;
 static int draws, frames, reports, begins, ends, probes, rebuilds;
 static int active=1, worker, loading_active=1, needed=1, allowed=1;
 static int loading_done, loading_total;
+static float loading_fraction;
 static char loading_status[128], loading_remaining[64];
 static void dashStrCopy(char *out,const char *s,int size) { snprintf(out,size,"%s",s); }
 static void (*drawMsgOverride)(const char *);

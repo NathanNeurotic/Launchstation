@@ -35,6 +35,10 @@ int cloudHttpDownloadFd(const char *url, int fd, const char *ca_path,
                         unsigned char digest[32],
                         char *error, int error_size);
 
+/* Set by the updater around its download: bytes received so far and the
+ * Content-Length (-1 when the server sent none). NULL otherwise. */
+extern void (*cloudHttpProgress)(int written, int total);
+
 /* Same as cloudHttpDownloadFd, but into buf (at most cap bytes). */
 #define CLOUD_HTTP_MEM_FD (-2)
 int cloudHttpDownloadMem(const char *url, unsigned char *buf, int cap,

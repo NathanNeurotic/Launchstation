@@ -67,7 +67,8 @@ int main(void){
 renderer=source[source.index('static void loadingDraw('):source.index('void dashLoadingBegin(')]
 assert renderer.count('dashVisualUpdate()')==1
 assert '(w - 60) * loading_fraction' in renderer and '* p + 8' not in renderer
-assert 'dashTextFit(x + 84, y + 26' in renderer
+assert 'dashTextFit(tx, y + 26' in renderer
+assert 'if (loading_total <= 0) {' in renderer  # the bar replaces the spinner
 copy=(root/'src/filer_copy.c').read_text()
 assert 'dash_progress = DashFileProgress("Pasting file", file.name, size, original_size);' in copy
 assert 'if (!dash_progress || !DashFileTransferChunk(copyChunkRun, &chunk))' in copy

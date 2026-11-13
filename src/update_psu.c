@@ -15,6 +15,8 @@ typedef struct {
     int size, pos;
 } PsuIn;
 
+void (*selfUpdateWriteProgress)(int written, int total);
+
 static int read_exact(PsuIn *in, unsigned char *buf, int size)
 {
     if (in->mem != NULL) {
@@ -112,6 +114,8 @@ static int extract_elf(PsuIn *input, const char *stage, int size)
                     written += n;
                 }
                 remaining -= count;
+                if (selfUpdateWriteProgress != NULL)
+                    selfUpdateWriteProgress((int)(length - remaining), (int)length);
             }
             if (genClose(output) < 0) {
                 output = -1;

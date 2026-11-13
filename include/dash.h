@@ -28,6 +28,8 @@ int dashFtpPollRemote(void);
 /* Publish the next blocking storage operation before entering its RPC.
  * Worker callers only update status; UI callers draw an existing overlay. */
 void DashStorageProbeStatus(const char *status);
+/* The same with a done/total progress bar (total 0: none). */
+void DashStorageProbeProgress(const char *status, int done, int total);
 /* Nonzero while the dashboard worker owns IO (classic mode: always 0, so
  * classic callers may do their own IO). UI-thread code must not do IO then. */
 int dashWorkerIoBusy(void);

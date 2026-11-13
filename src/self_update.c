@@ -156,6 +156,30 @@ static int parse_expected_sha(const char *text, unsigned char expected[32])
     return 1;
 }
 
+/* The bar under the step text: bytes done of the expected total. */
+static int download_expected;
+
+static void update_progress(const char *step, int done, int total)
+{
+    char line[96];
+
+    if (total > 0)
+        snprintf(line, sizeof(line), "%s: %d / %d KB", step, done / 1024, (total + 1023) / 1024);
+    else
+        snprintf(line, sizeof(line), "%s: %d KB", step, done / 1024);
+    DashStorageProbeProgress(line, total > 0 ? done : 0, total > 0 ? total : 0);
+}
+
+static void download_progress(int done, int total)
+{
+    update_progress("Downloading the update", done, total > 0 ? total : download_expected);
+}
+
+static void write_progress(int done, int total)
+{
+    update_progress("Writing the new ELF", done, total);
+}
+
 static int download_file(const char *url, const char *path, const char *ca_path,
                          int max_bytes, unsigned char digest[32],
                          char *error, int error_size)
@@ -167,8 +191,12 @@ static int download_file(const char *url, const char *path, const char *ca_path,
         snprintf(error, error_size, "Could not create %.160s", path);
         return -1;
     }
+    download_expected = 0;
+    cloudHttpProgress = download_progress;
+    selfUpdateWriteProgress = write_progress;
     r = cloudHttpDownloadFd(url, fd, ca_path, max_bytes, &size,
                             digest, error, error_size);
+    cloudHttpProgress = NULL;
     if (genClose(fd) < 0 && r == 0) {
         snprintf(error, error_size, "Could not finalize %.160s", path);
         r = -1;
@@ -207,12 +235,15 @@ static int download_to_ram(const char *url, unsigned char *buffer, int cap,
                            const char *ca_path, unsigned char digest[32],
                            char *error, int error_size)
 {
-    int size = 0;
+    int size = 0, r;
 
-    if (cloudHttpDownloadMem(url, buffer, cap, ca_path, &size, digest,
-                             error, error_size) < 0)
-        return -1;
-    return size;
+    download_expected = cap;
+    cloudHttpProgress = download_progress;
+    selfUpdateWriteProgress = write_progress;
+    r = cloudHttpDownloadMem(url, buffer, cap, ca_path, &size, digest,
+                             error, error_size);
+    cloudHttpProgress = NULL;
+    return r < 0 ? -1 : size;
 }
 
 static int install_update_files(const char *parent, const char *leaf,
