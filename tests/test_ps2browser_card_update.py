@@ -71,6 +71,8 @@ int main(void) {
     { static const char on[] = "OSDSYS_Inner_Browser = 0\n", off[] = "OSDSYS_Inner_Browser = 2\n";
       add("mc0:/BAEXEC-SYSTEM/osdmain.elf", "x", 1); add("mc0:/SYS-CONF/FREEMCB.CNF", on, sizeof(on) - 1); add("mass0:/FREEMCB.CNF", off, sizeof(off) - 1); bad |= run("FMCB USB copy wins over the card", 1);
       add("mc0:/BAEXEC-SYSTEM/osdmain.elf", "x", 1); add("mc0:/SYS-CONF/FREEMCB.CNF", off, sizeof(off) - 1); add("mass0:/FREEMCB.CNF", on, sizeof(on) - 1); bad |= run("FMCB USB AUTO wins over the card", 0); }
+    { static const char c4[] = "OSDSYS_Inner_Browser                                \t\t= \t 0\n";
+      add("mc0:/BAEXEC-SYSTEM/osdmain.elf", "x", 1); add("mc0:/SYS-CONF/FREEMCB.CNF", c4, sizeof(c4) - 1); bad |= run("FMCB AUTO after long padding", 0); }
     if (!bad) printf("PASS: PS2 system browser adds SkipMc on LoadBOOTer cards and FMCB cards that drop the Browser request, read-only\n");
     return bad;
 }

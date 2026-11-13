@@ -146,7 +146,10 @@ static int fmcbDropsBrowser(int fd)
 		for (i = 0; i < (n > 0 ? n : 1); i++) {
 			c = n > 0 ? buf[i] : '\n'; /* end of file ends the last line */
 			if (c != '\n' && c != '\r') {
-				if (len < (int)sizeof(line) - 1)
+				if (c == '\t')
+					c = ' ';
+				/* Runs of blanks are kept as one, so padding cannot push the value past the buffer. */
+				if (len < (int)sizeof(line) - 1 && !(c == ' ' && len > 0 && line[len - 1] == ' '))
 					line[len++] = c;
 				continue;
 			}
