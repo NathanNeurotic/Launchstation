@@ -64,6 +64,7 @@ typedef int64_t s64;
 #define FIO_O_RDONLY 1
 #define SCECdCDDA 0x13
 #define SCECdDVDV 0x14
+#define SCECdNODISC 0x00
 #define SETTING_LK_OSDSYS 0
 #define SETTING_LK_ESR 1
 #define TEXTEDITOR_RESULT_LAUNCH_ARGS 1
@@ -169,6 +170,8 @@ static int BootDiscType,cdmode;static char SystemCnf_BOOT[MAX_PATH],SystemCnf_BO
 #define LoadExecPS2(a,b,c) ((void)0)
 #define drawMsg(s) ((void)0)
 #define readSystemCnf() ((void)0)
+static int disk_type=0x14;
+#define sceCdGetDiskType() disk_type
 #define buildLaunchGameID(a,b,c) 0
 #define updateOSDHistoryFile(a) ((void)0)
 #define applyXPARAM(a) ((void)0)
@@ -319,6 +322,8 @@ int main(void){
  launch(settings.Misc_OSDSYS);expect("OSDSYS without a device","OSDSYS.ELF","Choose an executable file for the OSDSYS program.");
  settings.LK_Flag[SETTING_LK_OSDSYS]=0;
  settings.LK_Path[SETTING_LK_OSDSYS][0]=0;
+ /* Start disc with an empty drive says so instead of reading it (issue #346). */
+ reset();disk_type=SCECdNODISC;launch(settings.Misc_PS2Disc);expect("Start disc, empty drive","MISC/PS2Disc","PS2Disc => No disc");disk_type=0x14;
  /* mc: tries mc0: then mc1:. A file that opened on one card but is no ELF is not
   * "Not Found" because the other card has none, and the message names the card
   * it opened on; one found on neither is Not Found at mc1:. */
