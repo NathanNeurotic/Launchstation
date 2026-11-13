@@ -2,8 +2,9 @@
 
 The PS2 system browser row adds SkipMc only on cards whose update ignores
 BootBrowser: LoadBOOTer (path at offset 12440) and FMCB (SYS-CONF/FREEMCB.CNF
-on that card, OSDMenu's SYS-CONF/OSDMENU.CNF on neither card). All checks are
-read-only.
+on that card, OSDMenu's SYS-CONF/OSDMENU.CNF on neither card) unless its
+OSDSYS_Inner_Browser is 0 or 1, which pass the Browser request on. All checks
+are read-only.
 """
 import re
 import shutil
@@ -13,8 +14,8 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 src = (root / "src/main_actions.c").read_text(encoding="utf-8")
-m = re.search(r"static int cardUpdateIgnoresBrowser\(const char \*update_path\)\n\{.*?\n\}\n", src, re.S)
-assert m, "cardUpdateIgnoresBrowser not found"
+m = re.search(r"static int fmcbDropsBrowser\(int fd\)\n\{.*?\n\}\n\nstatic int cardUpdateIgnoresBrowser\(const char \*update_path\)\n\{.*?\n\}\n", src, re.S)
+assert m, "fmcbDropsBrowser/cardUpdateIgnoresBrowser not found"
 func = m.group(0)
 assert "FIO_O_WRONLY" not in func and "genWrite" not in func and "genRemove" not in func, "detection must stay read-only"
 
@@ -33,7 +34,13 @@ static int genClose(int fd) { opened--; return 0; }
 static int genLseek(int fd, int off, int w) { if (off > lens[fd]) return -1; pos[fd] = off; return off; }
 static int genRead(int fd, void *b, int n) { int left = lens[fd] - pos[fd]; if (n > left) n = left; memcpy(b, data[fd] + pos[fd], n); pos[fd] += n; return n; }
 FUNC
-static char lb[13896];
+static char lb[13896], cnf[1400];
+static void fmcb(const char *value) {
+    memset(cnf, '#', sizeof(cnf));
+    memcpy(cnf + 500, "\r\nOSDSYS_Inner_Browser = ", 25);
+    memcpy(cnf + 525, value, strlen(value));
+    add("mc0:/BAEXEC-SYSTEM/osdmain.elf", "x", 1); add("mc0:/SYS-CONF/FREEMCB.CNF", cnf, sizeof(cnf));
+}
 static int run(const char *label, int expect) {
     int got = cardUpdateIgnoresBrowser("mc:/BAEXEC-SYSTEM/osdmain.elf");
     if (got != expect || opened != 0 || flagsSeen != FIO_O_RDONLY) { printf("FAIL %s: got %d want %d open=%d flags=%d\n", label, got, expect, opened, flagsSeen); return 1; }
@@ -52,7 +59,21 @@ int main(void) {
     add("mc0:/BAEXEC-SYSTEM/osdmain.elf", "x", 1); add("mc0:/SYS-CONF/FREEMCB.CNF", "", 0); add("mc0:/SYS-CONF/OSDMENU.CNF", "", 0); bad |= run("OSDMenu leftover FREEMCB.CNF", 0);
     add("mc0:/BAEXEC-SYSTEM/osdmain.elf", "x", 1); add("mc0:/SYS-CONF/FREEMCB.CNF", "", 0); add("mc1:/SYS-CONF/OSDMENU.CNF", "", 0); bad |= run("OSDMenu on other card", 0);
     add("mc0:/BAEXEC-SYSTEM/osdmain.elf", "x", 1); add("mc1:/BAEXEC-SYSTEM/osdmain.elf", lb, sizeof(lb)); bad |= run("first card wins", 0);
-    if (!bad) printf("PASS: PS2 system browser adds SkipMc on LoadBOOTer and FMCB cards only, read-only\n");
+    fmcb("0"); bad |= run("FMCB Inner Browser AUTO, key across chunk boundary", 0);
+    fmcb("1"); bad |= run("FMCB Inner Browser ON", 0);
+    fmcb("2"); bad |= run("FMCB Inner Browser OFF", 1);
+    { static const char c1[] = "# OSDSYS_Inner_Browser = 0\r\nOSDSYS_Inner_Browser = 2\r\n";
+      add("mc0:/BAEXEC-SYSTEM/osdmain.elf", "x", 1); add("mc0:/SYS-CONF/FREEMCB.CNF", c1, sizeof(c1) - 1); bad |= run("FMCB commented AUTO is ignored", 1); }
+    { static const char c2[] = "OSDSYS_Inner_Browser = 2\nOSDSYS_Inner_Browser = 0";
+      add("mc0:/BAEXEC-SYSTEM/osdmain.elf", "x", 1); add("mc0:/SYS-CONF/FREEMCB.CNF", c2, sizeof(c2) - 1); bad |= run("FMCB later entry wins, no final newline", 0); }
+    { static const char c3[] = "OSDSYS_Inner_BrowserX = 0\n";
+      add("mc0:/BAEXEC-SYSTEM/osdmain.elf", "x", 1); add("mc0:/SYS-CONF/FREEMCB.CNF", c3, sizeof(c3) - 1); bad |= run("FMCB key must be the full name", 1); }
+    { static const char on[] = "OSDSYS_Inner_Browser = 0\n", off[] = "OSDSYS_Inner_Browser = 2\n";
+      add("mc0:/BAEXEC-SYSTEM/osdmain.elf", "x", 1); add("mc0:/SYS-CONF/FREEMCB.CNF", on, sizeof(on) - 1); add("mass0:/FREEMCB.CNF", off, sizeof(off) - 1); bad |= run("FMCB USB copy wins over the card", 1);
+      add("mc0:/BAEXEC-SYSTEM/osdmain.elf", "x", 1); add("mc0:/SYS-CONF/FREEMCB.CNF", off, sizeof(off) - 1); add("mass0:/FREEMCB.CNF", on, sizeof(on) - 1); bad |= run("FMCB USB AUTO wins over the card", 0); }
+    { static const char c4[] = "OSDSYS_Inner_Browser                                \t\t= \t 0\n";
+      add("mc0:/BAEXEC-SYSTEM/osdmain.elf", "x", 1); add("mc0:/SYS-CONF/FREEMCB.CNF", c4, sizeof(c4) - 1); bad |= run("FMCB AUTO after long padding", 0); }
+    if (!bad) printf("PASS: PS2 system browser adds SkipMc on LoadBOOTer cards and FMCB cards that drop the Browser request, read-only\n");
     return bad;
 }
 '''.replace("FUNC", func)

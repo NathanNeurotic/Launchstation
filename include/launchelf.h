@@ -410,7 +410,7 @@ int uLE_cdDiscValid(void);
 int uLE_cdStop(void);
 int IsSupportedFileType(char *path);
 void CleanUpForExec(void);
-extern int PS2BrowserSkipMc;
+extern int SkipCardUpdate;
 /* Keep-IOP launches must drain dashboard IO/audio and fully release this
  * process's libpad RPC client before another ELF inherits the IOP. */
 int CleanUpForKeepIopExec(const char *title);

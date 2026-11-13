@@ -64,6 +64,7 @@ typedef int64_t s64;
 #define FIO_O_RDONLY 1
 #define SCECdCDDA 0x13
 #define SCECdDVDV 0x14
+#define SCECdNODISC 0x00
 #define SETTING_LK_OSDSYS 0
 #define SETTING_LK_ESR 1
 #define TEXTEDITOR_RESULT_LAUNCH_ARGS 1
@@ -77,6 +78,7 @@ typedef int64_t s64;
 #define LNG_Reading_SYSTEMCNF "Reading SYSTEM.CNF"
 #define LNG_Failed "Failed"
 #define LNG_PS2Disc "PS2Disc"
+#define LNG_No_Disc "No Disc"
 #define LNG_Powering_Off_Console "Powering off"
 
 /* Every device's drivers either load or fail. A device whose drivers are
@@ -168,7 +170,10 @@ static int BootDiscType,cdmode;static char SystemCnf_BOOT[MAX_PATH],SystemCnf_BO
 #define makeHostPath(d,s) ((void)0)
 #define LoadExecPS2(a,b,c) ((void)0)
 #define drawMsg(s) ((void)0)
-#define readSystemCnf() ((void)0)
+static int cnf_reads;
+#define readSystemCnf() ((void)cnf_reads++)
+static int disk_type=0x14;
+#define sceCdGetDiskType() disk_type
 #define buildLaunchGameID(a,b,c) 0
 #define updateOSDHistoryFile(a) ((void)0)
 #define applyXPARAM(a) ((void)0)
@@ -184,7 +189,7 @@ static int BootDiscType,cdmode;static char SystemCnf_BOOT[MAX_PATH],SystemCnf_BO
 #define getFilePath(a,b) ((void)0)
 #define executeBrowserSelection(a,b) ((void)0)
 #define ExecOSD(a,b) ((void)0)
-#define PS2BrowserSkipMc 0
+#define SkipCardUpdate 0
 #define cardUpdateIgnoresBrowser(p) 0
 #define loadNetModules() ((void)0)
 #define DashFtpServer() 0
@@ -319,6 +324,9 @@ int main(void){
  launch(settings.Misc_OSDSYS);expect("OSDSYS without a device","OSDSYS.ELF","Choose an executable file for the OSDSYS program.");
  settings.LK_Flag[SETTING_LK_OSDSYS]=0;
  settings.LK_Path[SETTING_LK_OSDSYS][0]=0;
+ /* Start disc with an empty drive says so instead of reading it (issue #346). */
+ reset();disk_type=SCECdNODISC;cnf_reads=0;launch(settings.Misc_PS2Disc);expect("Start disc, empty drive","MISC/PS2Disc","PS2Disc => No Disc");disk_type=0x14;
+ if(cnf_reads){fprintf(stderr,"FAIL Start disc, empty drive: SYSTEM.CNF was read %d times\n",cnf_reads);failures++;}
  /* mc: tries mc0: then mc1:. A file that opened on one card but is no ELF is not
   * "Not Found" because the other card has none, and the message names the card
   * it opened on; one found on neither is Not Found at mc1:. */
