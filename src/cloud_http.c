@@ -1186,6 +1186,8 @@ static int cloudHttpDownloadFdInternal(const char *url, const char *bearer,
         }
         free(raw);
         raw = NULL;
+        if (cloudHttpProgress != NULL && written > 0)
+            cloudHttpProgress(written, chunked ? -1 : content_length);
 
         while (!complete) {
             r = mbedtls_ssl_read(&tls.ssl, io_buf, CLOUD_HTTP_IO);

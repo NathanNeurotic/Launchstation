@@ -1504,7 +1504,7 @@ void DashStorageProbeProgress(const char *status, int done, int total)
 		dashWorkerStatus(status, done, total);
 		return;
 	}
-	if (loading_active && (done >= total || Timer() - loading_last_draw >= 30))
+	if (loading_active && ((total > 0 && done >= total) || Timer() - loading_last_draw >= 30))
 		dashLoadingFrame(status, done, total);
 }
 
