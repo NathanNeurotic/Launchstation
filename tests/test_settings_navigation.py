@@ -163,7 +163,7 @@ static void visit(int p,int depth) {
     for(int i=0;i<pages[p].n;i++) {
         const SetItem *it=&pages[p].items[i];
         if(it->type==ST_PAGE) visit(it->id,depth+1);
-        else { assert(it->id>=0 && it->id<=S_MISC_COMMANDS); occurrences[it->id]++; }
+        else if(p!=P_NFS) { assert(it->id>=0 && it->id<=S_MISC_COMMANDS); occurrences[it->id]++; } /* the NFS page reuses the share editor's rows */
     }
 }
 static void press(int key) { DashInput in={.pressed=key}; settingsInput(&in); }
