@@ -141,6 +141,13 @@ static int rename_leaf(const char *p,const char *old,const char *newname) {
     if(!has(from) || has(to))return -1;
     del(from);put(to);return 0;
 }
+typedef struct { char path[MAX_PATH]; } FILEINFO;
+static int find_file_info(const char *p,const char *leaf,FILEINFO *out) {
+    snprintf(out->path,sizeof(out->path),"%s%s",p,leaf);return has(out->path);
+}
+static int Rename(const char *p,FILEINFO *f,const char *newname) {
+    return rename_leaf(p,f->path+strlen(p),newname);
+}
 '''
 for sig in [
     "static int device_path(",
@@ -224,7 +231,7 @@ int main(void) {
     reset();bad_header=1;
     assert(install(msg)<0 && has(boot)&&!has(backup)&&!has(ca)&&!has(bgm));
     reset();fail_elf_rename=1;
-    assert(install(msg)<0 && !has(boot)&&has(backup)); /* simulated rollback fails too */
+    assert(install(msg)<0 && !has(boot)&&!has(backup)&&has(elf_tmp)&&strstr(msg,".UPDATE")); /* the verified file stays and is named */
     /* A nearly full card is refused before any download; an old .BAK is
      * cleared first to make room, and the installed ELF is untouched. */
     reset();put(backup);free_space=2*2234368+32*1024-1;

@@ -258,10 +258,11 @@ static int install_update_files(const char *parent, const char *leaf,
     char bgm[MAX_PATH], bgm_stage[MAX_PATH];
     char error[256], remove_path[MAX_PATH];
     unsigned char expected[32], actual[32];
-    int size, package_size, rollback_ok, sidecar_size;
+    int size, package_size, sidecar_size;
     int need_ca, need_bgm, staged_ca = 0, staged_bgm = 0;
     int added_ca = 0, added_bgm = 0;
     u64 free_bytes;
+    FILEINFO staged_info;
 
     if (snprintf(stage_leaf, sizeof(stage_leaf), "%s.UPDATE", leaf) >= (int)sizeof(stage_leaf) ||
         snprintf(backup_leaf, sizeof(backup_leaf), "%s.BAK", leaf) >= (int)sizeof(backup_leaf) ||
@@ -308,7 +309,7 @@ static int install_update_files(const char *parent, const char *leaf,
     /* Memory cards are tight. At its peak the install holds the downloaded
      * package and the files unpacked from it beside the current ELF: never
      * more than twice the package, or once when the package stays in RAM.
-     * Remove a .BAK left by an older build first, then refuse before
+     * Remove a .BAK left by an older build first (none is made any more), then refuse before
      * downloading if that still does not fit. */
     if (wleExists(backup)) {
         snprintf(remove_path, sizeof(remove_path), "%s", backup);
@@ -409,48 +410,40 @@ static int install_update_files(const char *parent, const char *leaf,
     }
 
     /* Only now, after a complete verified download, touch the current ELF.
-     * The old ELF moves aside as .BAK only for the swap, so a failed rename
-     * can put it back; it is deleted once the new ELF is in place. A .BAK
-     * left by an older build is removed here too. */
+     * No backup is kept: the running ELF is removed and the verified .UPDATE
+     * takes its name. If that last rename fails, .UPDATE stays on disk and the
+     * message names it. */
     DashStorageProbeStatus("Replacing the ELF");
-    if (wleExists(backup)) {
-        snprintf(remove_path, sizeof(remove_path), "%s", backup);
-        if (genRemove(remove_path) < 0 && wleExists(backup)) {
-            snprintf(remove_path, sizeof(remove_path), "%s", stage);
-            genRemove(remove_path);
-            snprintf(result, result_size,
-                     "Could not remove the old .BAK file. The running ELF was not changed.");
-            return -1;
-        }
-    }
-
-    if (rename_leaf(parent, leaf, backup_leaf) < 0) {
+    /* Look the staged file up now: a lookup that failed after the ELF was gone would strand the install. */
+    if (!find_file_info(parent, stage_leaf, &staged_info)) {
         snprintf(remove_path, sizeof(remove_path), "%s", stage);
         genRemove(remove_path);
         snprintf(result, result_size,
-                 "Could not move the old ELF aside. The running ELF was not changed.");
+                 "The verified update could not be found in the app folder. The running ELF was not changed.");
         return -1;
     }
-
-    if (rename_leaf(parent, stage_leaf, leaf) < 0) {
-        rollback_ok = rename_leaf(parent, backup_leaf, leaf) >= 0;
+    if (!join_leaf(remove_path, sizeof(remove_path), parent, leaf) ||
+        genRemove(remove_path) < 0 || wleExists(remove_path)) {
+        snprintf(remove_path, sizeof(remove_path), "%s", stage);
+        genRemove(remove_path);
         snprintf(result, result_size,
-                 rollback_ok
-                     ? "Installing the verified update failed; the original ELF was restored."
-                     : "Installing the verified update failed and automatic rollback also failed. Keep the .BAK file and restore it manually.");
+                 "Could not remove the old ELF. The running ELF was not changed.");
         return -1;
     }
 
-    snprintf(remove_path, sizeof(remove_path), "%s", backup);
-    genRemove(remove_path); /* some drivers report success and keep the entry */
-    rollback_ok = !wleExists(backup);
+    if (Rename(parent, &staged_info, leaf) < 0) {
+        snprintf(result, result_size,
+                 "The old ELF was removed but the verified update could not take its place. The new ELF is saved as %s; rename it to %s.",
+                 stage_leaf, leaf);
+        return -1;
+    }
+
     snprintf(result, result_size,
-             "Update installed and verified (%d bytes). %s%s%s%sRestart Launchstation to run the new build.",
+             "Update installed and verified (%d bytes). %s%s%sRestart Launchstation to run the new build.",
              size,
              added_ca ? "Installed updater CA. " : "",
              added_bgm ? "Installed BGM. " : "",
-             (!added_ca && !added_bgm) ? "Existing sidecars preserved. " : "",
-             rollback_ok ? "" : "The old ELF .BAK could not be deleted; delete it by hand. ");
+             (!added_ca && !added_bgm) ? "Existing sidecars preserved. " : "");
     return 0;
 
 sidecar_failed:

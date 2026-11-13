@@ -101,7 +101,7 @@ The full kit packages external loaders alongside Launchstation. Its POPStarter/E
 
 ### In-app updates and rollback
 
-Open **Settings → Storage & devices → MMCE backups → Check for updates**. The updater offers only a release verified as newer than the running commit, downloads the matching standard/DS34 PSU, checks its digest and executable, and keeps the old executable as `<name>.ELF.BAK`. Restart to use the new build.
+Open **Settings → Storage & devices → MMCE backups → Check for updates**. The updater offers only a release verified as newer than the running commit, downloads the matching standard/DS34 PSU, checks its digest and executable, and replaces the running executable. No backup copy is kept. Restart to use the new build.
 
 Missing certificate/music companion files can be added from a verified package; existing files, including custom music, are preserved. An interrupted `.UPDATE` or `.PACKAGE` file requires inspection before retrying. Older updaters may require a one-time manual install of the complete current app package; retain your settings.
 
