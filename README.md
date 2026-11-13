@@ -132,7 +132,7 @@ Storage drivers generally start when needed. **Not checked** means a device has 
 - Launch **PS1 VCDs through [POPStarter](https://www.psx-place.com/threads/popstarter.19139/)**, or **CUE/BIN/EXE images through [Ember](https://github.com/Gageformer/Ember)** under a save-safe `<Ember directory>/games/<Game>/` layout. The selected file format chooses the PS1 loader.
 - Configure or discover external loader paths, independently disable each image loader, and optionally send game IDs to [RetroGem](https://www.pixelfx.co/hdmi-retro-gem) or supported MMCE card-selection paths.
 
-The app packages contain Launchstation; game loaders must be installed separately or supplied by the full kit. Launch support depends on the device and loader. SMB ISO launching uses Neutrino's own SMB backend and needs its complete SMB-capable installation on a local device. Direct executable/game launching from PC CARD CF is unsupported. See [Game launching](https://nathanneurotic.github.io/Launchstation/game-launching.html) for each loader's files, layouts and limitations.
+The app packages contain Launchstation; game loaders must be installed separately or supplied by the full kit. Launch support depends on the device and loader. SMB ISO launching uses Neutrino's own SMB backend and needs its complete SMB-capable installation on a local device; the full kit's Neutrino (upstream's latest development build, v1.8.0-61-g7be8de2 of 2026-08-31) predates that backend, so it cannot launch SMB ISOs yet. Direct executable/game launching from PC CARD CF is unsupported. See [Game launching](https://nathanneurotic.github.io/Launchstation/game-launching.html) for each loader's files, layouts and limitations.
 
 ### Files, saves and card images
 

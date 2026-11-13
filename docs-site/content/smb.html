@@ -28,7 +28,7 @@
 <tr><td><code>PASSWORD</code></td><td>That account&rsquo;s password</td><td>31</td></tr>
 <tr><td><code>VERSION</code></td><td><code>2</code> (default: SMB2/SMB3, also <code>3</code>, <code>SMB2</code>, <code>SMB3</code>) or <code>1</code> (SMB1, also <code>SMB1</code>, <code>NT1</code>)</td><td></td></tr>
 <tr><td><code>PLAINTEXT</code></td><td>SMB1 only. <code>1</code> lets a server that asks for a clear-text password have it; <code>0</code> (default) refuses such a server. See below.</td><td></td></tr>
-<tr><td><code>URL</code></td><td><code>smb://&lt;IP address&gt;:&lt;port&gt;/&lt;share&gt;</code>; give the port, 445 for most servers</td><td>255</td></tr>
+<tr><td><code>URL</code></td><td><code>smb://&lt;IP address&gt;:&lt;port&gt;/&lt;share&gt;</code>; give the port, 445 for most servers. A Windows-style <code>\\&lt;IP address&gt;\&lt;share&gt;</code> (or <code>\\&lt;IP address&gt;:&lt;port&gt;\&lt;share&gt;</code>) is read as the same <code>smb://</code> URL.</td><td>255</td></tr>
 </tbody></table>
 <ul>
 <li>Keys can be in any case. Spaces and tabs around a value are removed, so a password cannot start or end with a space.</li>
@@ -62,7 +62,7 @@ URL = smb://192.168.0.30:445/PS2SMB</code></pre>
 <li><b>Browse, copy, rename, make and delete folders</b> inside a share. A listing that fails part-way is an error, not a partial list. File dates and attributes are not set on the server (the SMB2 driver has no way to).</li>
 <li><b>Nothing can be made in <code>smb:/</code> itself</b>: it only lists the connected shares. Rename works inside one share.</li>
 <li><b>Launch an ELF</b> from a share, as from <code>udpfs:</code>. Not yet tested.</li>
-<li><b>PS2 ISO games through Neutrino:</b> install the latest complete upstream nightly on a local device, then open the ISO. Launchstation maps the selected share and credentials into <code>config/bsd-smb.toml</code> and launches <code>-bsd=smb -dvd=smb:&lt;path within the share&gt;</code>. Neutrino resets the IOP and opens its own session. See <a href="neutrino.html#smb">Neutrino SMB</a>.</li>
+<li><b>PS2 ISO games through Neutrino:</b> install a complete Neutrino built after its SMB backend was merged (2026-10-31) on a local device, then open the ISO. The full kit's Neutrino is older and has no SMB modules yet (see <a href="neutrino.html#smb">Neutrino SMB</a>). Launchstation maps the selected share and credentials into <code>config/bsd-smb.toml</code> and launches <code>-bsd=smb -dvd=smb:&lt;path within the share&gt;</code>. Neutrino resets the IOP and opens its own session. See <a href="neutrino.html#smb">Neutrino SMB</a>.</li>
 <li><b>POPStarter VCDs and Ember images:</b> Launchstation has no SMB handoff for these cores.</li>
 </ul>
 
