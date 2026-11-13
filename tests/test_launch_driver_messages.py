@@ -170,7 +170,8 @@ static int BootDiscType,cdmode;static char SystemCnf_BOOT[MAX_PATH],SystemCnf_BO
 #define makeHostPath(d,s) ((void)0)
 #define LoadExecPS2(a,b,c) ((void)0)
 #define drawMsg(s) ((void)0)
-#define readSystemCnf() ((void)0)
+static int cnf_reads;
+#define readSystemCnf() ((void)cnf_reads++)
 static int disk_type=0x14;
 #define sceCdGetDiskType() disk_type
 #define buildLaunchGameID(a,b,c) 0
@@ -324,7 +325,8 @@ int main(void){
  settings.LK_Flag[SETTING_LK_OSDSYS]=0;
  settings.LK_Path[SETTING_LK_OSDSYS][0]=0;
  /* Start disc with an empty drive says so instead of reading it (issue #346). */
- reset();disk_type=SCECdNODISC;launch(settings.Misc_PS2Disc);expect("Start disc, empty drive","MISC/PS2Disc","PS2Disc => No Disc");disk_type=0x14;
+ reset();disk_type=SCECdNODISC;cnf_reads=0;launch(settings.Misc_PS2Disc);expect("Start disc, empty drive","MISC/PS2Disc","PS2Disc => No Disc");disk_type=0x14;
+ if(cnf_reads){fprintf(stderr,"FAIL Start disc, empty drive: SYSTEM.CNF was read %d times\n",cnf_reads);failures++;}
  /* mc: tries mc0: then mc1:. A file that opened on one card but is no ELF is not
   * "Not Found" because the other card has none, and the message names the card
   * it opened on; one found on neither is Not Found at mc1:. */

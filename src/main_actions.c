@@ -608,7 +608,7 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 	} else if (!stricmp(path, setting->Misc_PS2Disc)) {
 		/* With no disc, the SYSTEM.CNF read below can hang (issue #346). */
 		if (sceCdGetDiskType() == SCECdNODISC) {
-			sprintf(ctx->main_msg, "%s => %s", LNG(PS2Disc), LNG(No_Disc));
+			snprintf(ctx->main_msg, MAX_PATH, "%s => %s", LNG(PS2Disc), LNG(No_Disc));
 			goto Done_PS2Disc;
 		}
 		drawMsg(LNG(Reading_SYSTEMCNF));
