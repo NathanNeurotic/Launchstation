@@ -315,16 +315,8 @@ static int install_update_files(const char *parent, const char *leaf,
         return -1;
     }
 
-    /* Overwriting in place needs room only for the growth over the old ELF. */
     need_ca = !wleExists(update_ca);
     need_bgm = !wleExists(bgm);
-    if (find_file_info(parent, leaf, &old_info) && filerFreeSpace(parent, &free_bytes) &&
-        free_bytes + old_info.stats.FileSizeByte < (u64)size + UPDATE_SPACE_MARGIN) {
-        snprintf(result, result_size,
-                 "Not enough free space: the new ELF is %d KB and the device has %d KB free beside the old one. Free some space and try again. The installed ELF was not changed.",
-                 size / 1024, (int)((free_bytes + old_info.stats.FileSizeByte) / 1024));
-        return -1;
-    }
 
     /* Verified four-, eight- and nine-file PSUs can add missing runtime sidecars.
      * Existing CA/BGM files may be customized and are never touched. The extractor
@@ -342,6 +334,16 @@ static int install_update_files(const char *parent, const char *leaf,
         if (sidecar_size < 0)
             goto sidecar_failed;
         added_bgm = sidecar_size > 0;
+    }
+
+    /* Overwriting in place needs room only for the growth over the old ELF. Checked after the sidecars
+     * are written, so what they used is already gone, and before the running ELF is touched. */
+    if (find_file_info(parent, leaf, &old_info) && filerFreeSpace(parent, &free_bytes) &&
+        free_bytes + old_info.stats.FileSizeByte < (u64)size + UPDATE_SPACE_MARGIN) {
+        snprintf(result, result_size,
+                 "Not enough free space: the new ELF is %d KB and the device has %d KB free beside the old one. Free some space and try again. The running ELF was not changed.",
+                 size / 1024, (int)((free_bytes + old_info.stats.FileSizeByte) / 1024));
+        return -1;
     }
 
     /* Only now, after a complete verified download, touch the running ELF. */

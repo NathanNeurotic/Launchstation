@@ -92,6 +92,7 @@ static int parse_expected_sha(const char *text,unsigned char expected[32]) {
 }
 /* RAM is the only path: a package of 8192 bytes whose ELF is 4096 bytes at offset 2048. */
 static int ram_ok,ram_downloads;
+static u64 sidecar_cost; /* space a written sidecar uses */
 static unsigned char ram_token[8192];
 static unsigned char *update_ram_buffer(int bytes) { return ram_ok && bytes>0?ram_token:NULL; }
 static void test_free(void *p) { assert(p==NULL || p==ram_token); }
@@ -118,7 +119,7 @@ static int selfUpdateExtractPsuSidecarMem(const unsigned char *pkg,int size,
     sidecar_calls++;
     if(legacy)return 0;
     if(fail_bgm_stage && !strcmp(asset,"BGM.ADP"))return -1;
-    assert(!has(dest));put(dest);return 128;
+    assert(!has(dest));put(dest);free_space-=sidecar_cost<free_space?sidecar_cost:free_space;return 128;
 }
 /* The card: opening the ELF's own path must truncate (O_CREAT|O_TRUNC), and nothing else is created. */
 static int fail_open,fail_write_at,fail_close,opens,written,closed;
@@ -158,7 +159,7 @@ program+=function("int selfUpdateInstall(")
 program+=r'''
 static void reset(void) {
     count=downloads=sidecar_calls=captures=restores=restore_result=0;capture_result=1;
-    legacy=fail_bgm_stage=bad_digest=bad_header=bad_locate=0;
+    legacy=fail_bgm_stage=bad_digest=bad_header=bad_locate=0;sidecar_cost=0;
     fail_open=fail_write_at=fail_close=opens=written=closed=0;
     free_space=64ULL*1024*1024;package_bytes=2234368;old_size=2234368;step_count=0;ram_ok=1;ram_downloads=0;
     memset(card,0,sizeof(card));
@@ -228,6 +229,11 @@ int main(void) {
     reset();old_size=1000;free_space=4096+32*1024-1000-1;
     assert(install(msg)<0 && opens==0 && strstr(msg,"Not enough free space"));
     reset();old_size=1000;free_space=4096+32*1024-1000;
+    assert(install(msg)==0 && card_is_new());
+    /* The check counts what the missing sidecars used: it runs after they are written. */
+    reset();old_size=1000;sidecar_cost=40000;free_space=4096+32*1024-1000+40000-1;put(ca);
+    assert(install(msg)<0 && opens==0 && has(boot) && strstr(msg,"Not enough free space"));
+    reset();old_size=1000;sidecar_cost=40000;free_space=4096+32*1024-1000+2*40000;
     assert(install(msg)==0 && card_is_new());
     /* No RAM for the package: refuse before downloading anything. */
     reset();ram_ok=0;
