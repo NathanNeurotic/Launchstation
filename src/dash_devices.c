@@ -387,11 +387,11 @@ int dashDevicesList(DashDevice *out, int max)
 		add(out, &n, max, DI_USB, DASH_DEV_PROBE, "MASS", "usb:", "usb:/", "Not connected");
 
 #ifdef MMCE
-	addStorage(out, &n, max, DI_SDCARD, "MMCE Slot 1", "mmce0:", "mmce0:/", "SD2PSX / MemCard PRO2", "No MMCE storage found");
-	addStorage(out, &n, max, DI_SDCARD, "MMCE Slot 2", "mmce1:", "mmce1:/", "SD2PSX / MemCard PRO2", "No MMCE storage found");
+	addStorage(out, &n, max, DI_MICROSD, "MMCE Slot 1", "mmce0:", "mmce0:/", "SD2PSX / MemCard PRO2", "No MMCE storage found");
+	addStorage(out, &n, max, DI_MICROSD, "MMCE Slot 2", "mmce1:", "mmce1:/", "SD2PSX / MemCard PRO2", "No MMCE storage found");
 #endif
 #ifdef MX4SIO
-	addStorage(out, &n, max, DI_SDCARD, "MX4SIO SD Card", "mx4sio:", "mx4sio:/", "Ready (slot 2)", "No MX4SIO storage found");
+	addStorage(out, &n, max, DI_MICROSD, "MX4SIO SD Card Slot 2", "mx4sio:", "mx4sio:/", "Ready (slot 2)", "No MX4SIO storage found");
 #endif
 #ifdef ILINK
 	if (consoleHasIlink())

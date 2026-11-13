@@ -11,7 +11,7 @@
 #define ICON_SLOT 68
 #define ICON_COLS 7
 #define ICON_TEX_W 512
-#define ICON_TEX_H 544
+#define ICON_TEX_H 576
 #define SELECT_HALF_W 0.68f
 
 /* Header shapes and action icons use the narrow right margin. Keep the
@@ -486,6 +486,26 @@ static float iconSdf(int id, V2 p)
 			d = fabsf(d) - T;
 			for (k = 0; k < 3; k++)
 				d = U(d, sdSeg(p, -0.3f + k * 0.2f, -0.56f, -0.3f + k * 0.2f, -0.3f, 0.045f));
+			break;
+		case DI_MICROSD:
+			{
+				/* Narrow contact end, diagonal shoulder and side latch notch
+				 * (saildot4k's design), kept open to read at small sizes. */
+				static const V2 edge[] = {
+					{-0.42f, -0.80f}, {0.68f, -0.80f}, {0.76f, -0.72f},
+					{0.76f, 0.72f}, {0.68f, 0.80f}, {-0.68f, 0.80f},
+					{-0.76f, 0.72f}, {-0.76f, 0.42f}, {-0.60f, 0.26f},
+					{-0.60f, 0.06f}, {-0.76f, 0.06f}, {-0.76f, -0.20f},
+					{-0.48f, -0.48f}, {-0.48f, -0.74f}
+				};
+				int n = (int)(sizeof(edge) / sizeof(edge[0]));
+				for (k = 0; k < n; k++)
+					d = U(d, sdSeg(p, edge[k].x, edge[k].y, edge[(k + 1) % n].x, edge[(k + 1) % n].y, 0.055f));
+				for (k = 0; k < 4; k++)
+					d = U(d, sdBoxOutline(p, -0.28f + k * 0.28f, -0.56f, 0.075f, 0.16f, 0.025f, 0.035f));
+				d = U(d, sdSeg(p, -0.72f, 0.54f, 0.36f, 0.54f, 0.045f));
+				d = U(d, sdSeg(p, 0.54f, 0.54f, 0.72f, 0.54f, 0.045f));
+			}
 			break;
 		case DI_CHIP:
 			d = sdBoxOutline(p, 0.0f, 0.0f, 0.5f, 0.5f, 0.08f, T);
