@@ -5,7 +5,7 @@
 <li>A console with a network adapter (or built-in Ethernet) on the same LAN as the server.</li>
 <li>An export on the server that lets the PS2 in, with NFSv4.0 enabled (on Linux, <code>cat /proc/fs/nfsd/versions</code> lists <code>+4</code> without <code>-4.0</code>).</li>
 <li>An IP address for the PS2 (<b>Settings &gt; Network</b>), and <b>Legacy Ethernet drivers</b> off.</li>
-<li>At least one NFS share, added in <b>Settings &gt; Network &gt; SMB shares</b> with Server type <b>NFS</b> (or as text, below).</li>
+<li>At least one NFS share, added in <b>Settings &gt; Network &gt; NFS shares</b> (or as text, below).</li>
 </ul></div>
 
 <h2 id="how">How it works</h2>
@@ -51,7 +51,7 @@ URL = nfs://192.168.1.20/volume1/ps2/games</code></pre>
 
 <h2 id="troubleshooting">Troubleshooting</h2>
 <ol>
-<li><b>No Network (NFS) in Files.</b> It is listed once an NFS share is saved: add one in <b>Settings &gt; Network &gt; SMB shares</b>.</li>
+<li><b>No Network (NFS) in Files.</b> It is listed once an NFS share is saved: add one in <b>Settings &gt; Network &gt; NFS shares</b>.</li>
 <li><b>&ldquo;Server did not answer on the NFS port&rdquo;.</b> Check the server&rsquo;s IP address, that the NFS server runs, and that a firewall lets TCP 2049 in (firewalld: <code>firewall-cmd --add-service=nfs</code>).</li>
 <li><b>&ldquo;Server does not answer NFSv4.0&rdquo;.</b> The server has NFSv4.0 turned off (some distributions now ship with 4.1 and 4.2 only); turn 4.0 on in its NFS configuration. The Windows NFS server does not offer 4.0.</li>
 <li><b>&ldquo;No such export on the server&rdquo;.</b> The export path is not exported: check <code>/etc/exports</code> (<code>exportfs -v</code>).</li>

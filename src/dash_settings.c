@@ -224,7 +224,7 @@ enum SetPageId {
 	P_APPS, P_LIBRARY, P_SOUND, P_INPUT, P_KEYBOARD,
 	P_LAUNCH, P_BOOT, P_LKEY, P_LOADERS, P_GAMEID,
 	P_DEVICES, P_AUTOSTART, P_MMCE_BACKUP, P_NETWORK, P_SYSTEM, P_LANGUAGE, P_PSU,
-	P_SMB,
+	P_SMB, P_NFS,
 	/* Keep these in DashThemeGroup order for group resets. */
 	P_THEME_BG, P_THEME_COLORS, P_THEME_STYLE, P_THEME_TEXT,
 	P_THEME_ICONS, P_THEME_CLOCK, P_THEME_WALL, P_THEME_MANAGE,
@@ -402,6 +402,7 @@ static struct {
 	char pass[SMB_CRED_LEN];
 	int plaintext; /* SMB1 clear-text password allowance, kept across edits */
 	int pick; /* 0 = New share, else snapshot share index + 1 */
+	int nfs;  /* the NFS shares page: its picker lists only NFS shares */
 	SmbConfig snap;
 } smbed;
 
@@ -477,17 +478,29 @@ static void smbedNfsOption(const char *url, const char *key, char *out, int out_
 	}
 }
 
+/* The snapshot shares this page lists (SMB or NFS): map[k] is a snapshot index. */
+static int smbedPickList(int *map)
+{
+	int i, n = 0;
+
+	for (i = 0; i < smbed.snap.count && i < SMB_SHARE_MAX; i++)
+		if ((smbed.snap.share[i].version == SMB_PATH_NFS) == smbed.nfs)
+			map[n++] = i;
+	return n;
+}
+
 static void smbedLoadPick(void)
 {
 	const SmbShare *sh;
 
 	smbSharesSnapshot(&smbed.snap);
-	if (smbed.pick < 0 || smbed.pick > smbed.snap.count)
+	if (smbed.pick < 0 || smbed.pick > smbed.snap.count ||
+	    (smbed.pick > 0 && (smbed.snap.share[smbed.pick - 1].version == SMB_PATH_NFS) != smbed.nfs))
 		smbed.pick = 0;
 	if (smbed.pick == 0) {
 		memset(smbed.orig, 0, sizeof(smbed.orig));
 		memset(smbed.name, 0, sizeof(smbed.name));
-		smbed.kind = 2;
+		smbed.kind = smbed.nfs ? SMBED_NFS : 2;
 		memset(smbed.host, 0, sizeof(smbed.host));
 		smbed.port = 0;
 		memset(smbed.folder, 0, sizeof(smbed.folder));
@@ -689,17 +702,29 @@ static void smbedEditField(const char *title, char *buf, int size, const char *e
 static const SetItem smb_items[] = {
 	{ST_CHOICE, S_SMBED_PICK, "Share", "New share, or one already saved."},
 	{ST_ACTION, S_SMBED_NAME, "Name shown in Files", "Folder name under Network (SMB). Example: PS2 Games. Use a unique name; avoid / \\ : * ? \" < > |."},
-	{ST_CHOICE, S_SMBED_KIND, "Server type", "Match the server: PS2-Servers SMBv2 supports up to 2.1; SMBv3 up to 3.0.2. SMB1 is legacy; one SMB1 share at most. NFS is an NFSv4.0 export, shown in Files > Network (NFS)."},
+	{ST_CHOICE, S_SMBED_KIND, "Server type", "Match the server: PS2-Servers SMBv2 supports up to 2.1; SMBv3 up to 3.0.2. SMB1 is legacy; one SMB1 share at most. NFS shares have their own page: Settings > Network > NFS shares."},
 	{ST_ACTION, S_SMBED_IP, "Server address", "IPv4 address of the server. Example: 192.168.1.20. Host names are edited as text."},
 	{ST_ACTION, S_SMBED_PORT, "Port", "TCP port from server settings. Examples: 445 standard, 1445 PS2-Servers SMB2/3, or 1025 its Desktop SMB1."},
-	{ST_ACTION, S_SMBED_FOLDER, "Share name", "The exported SMB share on the server. Example: games (PS2-Servers default). For NFS, the export path: e.g. /srv/ps2."},
+	{ST_ACTION, S_SMBED_FOLDER, "Share name", "The exported SMB share on the server. Example: games (PS2-Servers default)."},
 	{ST_ACTION, S_SMBED_USER, "Username", "Account name on the server. Example: ps2 for SMB2/3 or guest for SMB1 on PS2-Servers."},
 	{ST_ACTION, S_SMBED_PASS, "Password", "Password for that server account. Leave blank only if the server allows no-password access; saved in LAUNCHSTATION.CNF as plain text."},
-	{ST_ACTION, S_SMBED_UID, "User ID (NFS)", "The uid the PS2 sends to the NFS server. Blank sends 0, which most servers map to their anonymous user."},
-	{ST_ACTION, S_SMBED_GID, "Group ID (NFS)", "The gid the PS2 sends to the NFS server. Blank sends 0."},
 	{ST_ACTION, S_SMBED_SAVE, "Save share", "Saves this share in LAUNCHSTATION.CNF. Open it in Files > Network (SMB)."},
 	{ST_ACTION, S_SMBED_DELETE, "Delete share", "Removes the picked share."},
 	{ST_ACTION, S_SMBED_TEXT, "Edit shares as text", "Opens LAUNCHSTATION.CNF; the shares are the blocks after its # SMB shares line. For host names, deeper paths and other options."},
+};
+
+/* The same editor, for NFS shares: the picker lists only those, and a new share is NFS. */
+static const SetItem nfs_items[] = {
+	{ST_CHOICE, S_SMBED_PICK, "Share", "New share, or one already saved."},
+	{ST_ACTION, S_SMBED_NAME, "Name shown in Files", "Folder name under Network (NFS). Example: PS2 Games. Use a unique name; avoid / \\ : * ? \" < > |."},
+	{ST_ACTION, S_SMBED_IP, "Server address", "IPv4 address of the NFS server (NFSv4.0). Example: 192.168.1.20. Host names are edited as text."},
+	{ST_ACTION, S_SMBED_PORT, "Port", "TCP port of the NFS server. 2049 is standard."},
+	{ST_ACTION, S_SMBED_FOLDER, "Export path", "The exported path on the server, starting with /. Example: / or /srv/ps2."},
+	{ST_ACTION, S_SMBED_UID, "User ID (NFS)", "The uid the PS2 sends to the NFS server. Blank sends 0, which most servers map to their anonymous user."},
+	{ST_ACTION, S_SMBED_GID, "Group ID (NFS)", "The gid the PS2 sends to the NFS server. Blank sends 0."},
+	{ST_ACTION, S_SMBED_SAVE, "Save share", "Saves this share in LAUNCHSTATION.CNF. Open it in Files > Network (NFS)."},
+	{ST_ACTION, S_SMBED_DELETE, "Delete share", "Removes the picked share."},
+	{ST_ACTION, S_SMBED_TEXT, "Edit shares as text", "Opens LAUNCHSTATION.CNF; the shares are the blocks after its # SMB shares line, NFS ones included."},
 };
 #endif /* SMB */
 
@@ -718,6 +743,7 @@ static const SetItem net_items[] = {
 #endif
 #ifdef SMB
     {ST_PAGE, P_SMB, "SMB shares", "Saved shares, shown as folders in Files > Network (SMB). Nothing scans the network."},
+    {ST_PAGE, P_NFS, "NFS shares", "Saved NFS exports, shown as folders in Files > Network (NFS). Nothing scans the network."},
 #endif
 };
 
@@ -868,6 +894,7 @@ static const SetPage pages[P_COUNT] = {
     [P_NETWORK] = PAGE("Network", DI_NETWORK, "Console address for FTP, PS2Link and UDPFS.", net_items),
 #ifdef SMB
     [P_SMB] = PAGE("SMB shares", DI_NETWORK, "Saved in LAUNCHSTATION.CNF; an old SMB2.CNF is read until the first save. Each share is a folder in Files > Network (SMB).", smb_items),
+    [P_NFS] = PAGE("NFS shares", DI_NETWORK, "Saved in LAUNCHSTATION.CNF with the SMB shares. Each share is a folder in Files > Network (NFS).", nfs_items),
 #endif
     [P_SYSTEM] = PAGE("System", DI_TOOLS, "Language, backup file rules, settings locations, updates and About.", system_items),
     [P_CLASSIC] = PAGE("Classic screen settings", DI_SETTINGS, "These settings affect classic screens; dashboard themes have their own controls.", classic_items),
@@ -997,21 +1024,24 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return 2;
 #ifdef SMB
 		case S_SMBED_KIND: {
-			static const char *const smb_kinds[] = { "SMB2", "SMB3", "SMB1", "NFS" };
+			static const char *const smb_kinds[] = { "SMB2", "SMB3", "SMB1" };
 			*names = smb_kinds;
-			*cur = smbed.kind == SMBED_NFS ? 3 : smbed.kind == 3 ? 1 : smbed.kind == 1 ? 2 : 0;
-			return 4;
+			*cur = smbed.kind == 3 ? 1 : smbed.kind == 1 ? 2 : 0;
+			return 3;
 		}
 		case S_SMBED_PICK: {
 			static const char *pick_names[SMB_SHARE_MAX + 1];
-			int i;
+			int map[SMB_SHARE_MAX], i, n = smbedPickList(map);
 
 			pick_names[0] = "New share";
-			for (i = 0; i < smbed.snap.count && i < SMB_SHARE_MAX; i++)
-				pick_names[i + 1] = smbed.snap.share[i].name;
+			*cur = 0;
+			for (i = 0; i < n; i++) {
+				pick_names[i + 1] = smbed.snap.share[map[i]].name;
+				if (map[i] + 1 == smbed.pick)
+					*cur = i + 1;
+			}
 			*names = pick_names;
-			*cur = smbed.pick < 0 || smbed.pick > smbed.snap.count ? 0 : smbed.pick;
-			return smbed.snap.count + 1;
+			return n + 1;
 		}
 #endif
 		case S_SOUND:
@@ -1829,16 +1859,19 @@ static void setChoice(int id, int v)
 			break;
 #ifdef SMB
 		case S_SMBED_KIND:
-			smbed.kind = v == 3 ? SMBED_NFS : v == 1 ? 3 : v == 2 ? 1 : 2;
+			smbed.kind = v == 1 ? 3 : v == 2 ? 1 : 2;
 			dash_changed = 0;
 			break;
-		case S_SMBED_PICK:
-			if (v >= 0 && v <= smbed.snap.count && v != smbed.pick) {
-				smbed.pick = v;
+		case S_SMBED_PICK: {
+			int map[SMB_SHARE_MAX], n = smbedPickList(map);
+
+			if (v >= 0 && v <= n && (v == 0 ? 0 : map[v - 1] + 1) != smbed.pick) {
+				smbed.pick = v == 0 ? 0 : map[v - 1] + 1;
 				smbedLoadPick();
 			}
 			dash_changed = 0;
 			break;
+		}
 #endif
 		default:
 			dash_changed = 0;
@@ -3633,7 +3666,7 @@ static const char *disabledHelp(const SetItem *it)
 		case S_SMBED_USER:
 		case S_SMBED_PASS: return "An NFS share has no user name or password: set its user and group IDs.";
 		case S_SMBED_UID:
-		case S_SMBED_GID: return "Only an NFS share has user and group IDs: choose NFS as the Server type.";
+		case S_SMBED_GID: return "Only an NFS share has user and group IDs: add it in Settings > Network > NFS shares.";
 #endif
 #ifdef ILINK
 		case S_DEVA_ILINK:
@@ -3743,8 +3776,13 @@ static void settingsInput(const DashInput *in)
 			dashToast(DASH_TOAST_INFO, disabledHelp(it));
 	} else if (it->type == ST_PAGE && (in->pressed & (DASH_IN_OK | DASH_IN_RIGHT))) {
 #ifdef SMB
-		if (it->id == P_SMB)
+		if (it->id == P_SMB || it->id == P_NFS) {
+			if (smbed.nfs != (it->id == P_NFS)) {
+				smbed.nfs = it->id == P_NFS;
+				smbed.pick = 0; /* a pick from the other page */
+			}
 			smbedLoadPick(); /* fresh snapshot and draft every time the page opens */
+		}
 #endif
 		openPage(it->id);
 	} else if (it->type == ST_COLOR && (in->pressed & DASH_IN_OK)) {

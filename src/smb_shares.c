@@ -427,7 +427,7 @@ void smbSharesStatus(int version, char *out, int out_size)
 		return;
 	}
 	if (!smb_cfg_path[0]) {
-		snprintf(out, out_size, "No shares: add one in Settings > Network > SMB shares");
+		snprintf(out, out_size, "No shares: add one in Settings > Network > %s shares", version == SMB_PATH_NFS ? "NFS" : "SMB");
 		return;
 	}
 	for (i = 0; i < smb_cfg.count; i++) {
