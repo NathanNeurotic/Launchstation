@@ -2269,6 +2269,7 @@ finished:
 		if (no_buffer) {  //done and reconciled, but fileXio has no buffer now
 			filerCopyDiagStage("Transfer buffer");
 			filerCopyDiagFormat(mess, MAX_PATH, -ENOMEM);
+			paste_kept_count = 0;  //the message is now a failure, not a kept/skipped note
 			browser_pushed = FALSE;
 		}
 	}
