@@ -980,11 +980,11 @@ void dashToolsCheckUpdates(void)
 		same = 1;
 
 	if (same) {
-		snprintf(body, sizeof(body), "This build (%s) matches the current latest release.", GIT_HASH);
-		dashModalMessage(DI_CHECK, "Launchstation is up to date", body, NULL);
+		snprintf(body, sizeof(body), "This build (%s) matches the current latest release.\n\nDownload and install it again anyway?", GIT_HASH);
+		if (!dashModalConfirm("Launchstation is up to date", body, "Download anyway", 0))
+			return;
 	} else {
-		char install_result[384];
-		int installed, relation;
+		int relation;
 
 		error[0] = '\0';
 		job.kind = 1;
@@ -992,30 +992,32 @@ void dashToolsCheckUpdates(void)
 		relation = updateRun(&job, "Verifying release is newer");
 		if (relation == UPDATE_RELATION_SAME || relation == UPDATE_RELATION_OLDER) {
 			snprintf(body, sizeof(body),
-			         "Installed: %s\nPublished: %.16s\n\nThe published release is not newer. No update is needed.",
+			         "Installed: %s\nPublished: %.16s\n\nThe published release is not newer. Download and install it anyway?",
 			         GIT_HASH, latest);
-			dashModalMessage(DI_CHECK, "No newer release available", body, NULL);
-			return;
-		}
-		if (relation == UPDATE_RELATION_DIVERGED) {
+			if (!dashModalConfirm("No newer release available", body, "Download anyway", 0))
+				return;
+		} else if (relation == UPDATE_RELATION_DIVERGED) {
 			dashModalMessage(DI_WARNING, "Release is on another commit history",
 			                 "The published release is not a verified descendant of this build. Automatic replacement was blocked.",
 			                 "Use a complete ZIP/PSU package to change builds manually.");
 			return;
-		}
-		if (relation != UPDATE_RELATION_NEWER) {
+		} else if (relation != UPDATE_RELATION_NEWER) {
 			dashModalMessage(DI_WARNING, "Could not verify update order",
 			                 error[0] ? error : "Unable to compare installed and published commits.",
 			                 "No files were changed. Update manually only after checking the release.");
 			return;
+		} else {
+			snprintf(body, sizeof(body),
+			         "Current: %s\nLatest: %.16s\n\nGitHub confirms this release is newer. Download and install the packed ELF?",
+			         GIT_HASH, latest);
+			if (!dashModalConfirm("A newer Launchstation build is available",
+			                      body, "Install update", 0))
+				return;
 		}
-
-		snprintf(body, sizeof(body),
-		         "Current: %s\nLatest: %.16s\n\nGitHub confirms this release is newer. Download and install the packed ELF?",
-		         GIT_HASH, latest);
-		if (!dashModalConfirm("A newer Launchstation build is available",
-		                      body, "Install update", 0))
-			return;
+	}
+	{
+		char install_result[384];
+		int installed;
 
 		install_result[0] = '\0';
 		job.kind = 2;
