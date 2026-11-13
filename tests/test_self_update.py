@@ -43,7 +43,10 @@ assert "supported_boot_path" in update
 assert '#include "self_update.h"' in tools
 assert "releaseAssetDigest" in tools
 assert '"digest"' in tools
-assert "selfUpdateInstall(ca_path, asset_digest" in tools
+assert "selfUpdateInstall(j->ca_path, j->digest, j->size" in tools
+assert "dashWorkerAwait(id, title, 0)" in tools  # the screen keeps drawing
+# Progress is reported for a body that came with the headers, and per read.
+assert http_c.count("cloudHttpProgress(written, chunked ? -1 : content_length)") == 2
 assert '"Install update"' in tools
 assert "SHA-256 verified and installed in place" in settings
 

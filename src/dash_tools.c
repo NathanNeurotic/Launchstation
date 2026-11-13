@@ -880,8 +880,49 @@ static int updateCommitRelation(const char *current, const char *latest,
     return result;
 }
 
+/* Network and card work of the update runs on the dashboard worker, so the
+ * screen keeps drawing (and the bar moving) while it waits. */
+typedef struct {
+	int kind; /* 0 release info, 1 commit order, 2 install */
+	const char *ca_path, *headers, *latest, *digest;
+	int size, ret;
+	CloudHttpResponse *response;
+	char *out;
+	int out_size;
+} UpdateJob;
+
+static void updateJobRun(void *arg)
+{
+	UpdateJob *j = arg;
+
+	if (j->kind == 0)
+		j->ret = cloudHttpRequest("GET", "api.github.com",
+		                          "/repos/NathanNeurotic/Launchstation/releases/tags/latest",
+		                          j->headers, NULL, 0, j->ca_path, j->response,
+		                          j->out, j->out_size);
+	else if (j->kind == 1)
+		j->ret = updateCommitRelation(GIT_HASH, j->latest, j->ca_path, j->headers,
+		                              j->out, j->out_size);
+	else
+		j->ret = selfUpdateInstall(j->ca_path, j->digest, j->size, j->out, j->out_size);
+}
+
+static int updateRun(UpdateJob *j, const char *title)
+{
+	int id = dashWorkerSubmit(title, 0, updateJobRun, NULL, j);
+
+	if (id < 0) { /* worker unavailable: run here as before */
+		dashLoadingBegin(title);
+		updateJobRun(j);
+		dashLoadingEnd();
+	} else
+		dashWorkerAwait(id, title, 0);
+	return j->ret;
+}
+
 void dashToolsCheckUpdates(void)
 {
+	UpdateJob job;
 	CloudHttpResponse response;
 	char ca_path[MAX_PATH], error[192], latest[80], asset_digest[80], body[320];
 	int asset_size = 0;
@@ -910,18 +951,18 @@ void dashToolsCheckUpdates(void)
 	}
 
 	memset(&response, 0, sizeof(response));
+	memset(&job, 0, sizeof(job));
 	error[0] = latest[0] = asset_digest[0] = '\0';
-	dashLoadingBegin("Checking for Launchstation updates");
-	if (cloudHttpRequest("GET", "api.github.com",
-	                     "/repos/NathanNeurotic/Launchstation/releases/tags/latest",
-	                     headers, NULL, 0, ca_path, &response,
-	                     error, sizeof(error)) < 0) {
-		dashLoadingEnd();
+	job.ca_path = ca_path;
+	job.headers = headers;
+	job.response = &response;
+	job.out = error;
+	job.out_size = sizeof(error);
+	if (updateRun(&job, "Checking for Launchstation updates") < 0) {
 		dashModalMessage(DI_WARNING, "Update check failed",
 		                 error[0] ? error : "GitHub could not be reached.", NULL);
 		return;
 	}
-	dashLoadingEnd();
 
 	if (response.status != 200 ||
 	    !releaseJsonString(response.body, "target_commitish", latest, sizeof(latest)) ||
@@ -946,10 +987,9 @@ void dashToolsCheckUpdates(void)
 		int installed, relation;
 
 		error[0] = '\0';
-		dashLoadingBegin("Verifying release is newer");
-		relation = updateCommitRelation(GIT_HASH, latest, ca_path, headers,
-		                                error, sizeof(error));
-		dashLoadingEnd();
+		job.kind = 1;
+		job.latest = latest;
+		relation = updateRun(&job, "Verifying release is newer");
 		if (relation == UPDATE_RELATION_SAME || relation == UPDATE_RELATION_OLDER) {
 			snprintf(body, sizeof(body),
 			         "Installed: %s\nPublished: %.16s\n\nThe published release is not newer. No update is needed.",
@@ -978,9 +1018,12 @@ void dashToolsCheckUpdates(void)
 			return;
 
 		install_result[0] = '\0';
-		dashLoadingBegin("Downloading and verifying Launchstation update");
-		installed = selfUpdateInstall(ca_path, asset_digest, asset_size, install_result, sizeof(install_result));
-		dashLoadingEnd();
+		job.kind = 2;
+		job.digest = asset_digest;
+		job.size = asset_size;
+		job.out = install_result;
+		job.out_size = sizeof(install_result);
+		installed = updateRun(&job, "Downloading and verifying Launchstation update");
 		dashModalMessage(installed == 0 ? DI_CHECK : DI_WARNING,
 		                 installed == 0 ? "Update installed" : "Update was not installed",
 		                 install_result[0] ? install_result :

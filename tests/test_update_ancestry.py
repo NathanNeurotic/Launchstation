@@ -27,6 +27,10 @@ sources = "".join(function(signature) for signature in (
     "static int releaseAssetDigest(",
     "static int updateIsCommitId(",
     "static int updateCommitRelation(",
+)) + src[src.index("typedef struct {\n\tint kind;"):src.index("static void updateJobRun(")] + "".join(
+    function(signature) for signature in (
+    "static void updateJobRun(",
+    "static int updateRun(",
     "void dashToolsCheckUpdates(void)\n{",
 ))
 enums = src[src.index("enum { UPDATE_RELATION_UNKNOWN"):src.index("static int updateIsCommitId(")]
@@ -60,6 +64,13 @@ static void filerRootMcPollIdle(void) {}
 static const char *dashboardIpNetworkError(void) { return "network error"; }
 static void dashLoadingBegin(const char *s) { (void)s; }
 static void dashLoadingEnd(void) {}
+/* The worker runs the job straight away; the wait then returns at once. */
+static int dashWorkerSubmit(const char *l,int f,void (*run)(void *),void (*done)(void *),void *a) {
+    (void)l;(void)f;(void)done;run(a);return 1;
+}
+static int dashWorkerAwait(int id,const char *title,int cancelable) {
+    (void)title;assert(id==1 && !cancelable);return 1;
+}
 static void dashModalMessage(int kind,const char *title,const char *body,const char *detail) {
     (void)kind;(void)body;(void)detail;
     last_title=title;

@@ -15,7 +15,7 @@ issue = (root / ".github/ISSUE_TEMPLATE/issue.yml").read_text(encoding="utf-8")
 readme = (root / "README.md").read_text(encoding="utf-8")
 credits = (root / "src/dash_info.c").read_text(encoding="utf-8")
 
-assert '"Launchstation %s", ULE_VERSION' in main_info
+assert '"Official Launchstation %s", ULE_VERSION' in main_info
 version = (root / "include/launchelf.h").read_text(encoding="utf-8")
 assert '#define ULE_VERSION LAUNCHSTATION_BUILD ULE_VERSION_DEBUG_SUFFIX' in version
 assert 'v4.78' not in version

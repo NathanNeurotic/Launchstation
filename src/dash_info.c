@@ -189,7 +189,7 @@ void dashShowAbout(void)
 	sheetAdd(&s, SL_MUTED, "Emotion Engine Regular/Bold: Pixel Sagas");
 	{
 		char title[64];
-		snprintf(title, sizeof(title), "Launchstation %s", ULE_VERSION);
+		snprintf(title, sizeof(title), "Official Launchstation %s", ULE_VERSION);
 		sheetShow(DI_INFO, title, ULE_VERDATE, &s);
 	}
 }
@@ -287,7 +287,7 @@ void dashShowBuildInfo(void)
 	sheetAdd(&s, SL_MUTED, "github.com/NathanNeurotic/Launchstation/releases");
 	{
 		char sub[64];
-		snprintf(sub, sizeof(sub), "Launchstation %s (%s)", ULE_VERSION, GIT_HASH);
+		snprintf(sub, sizeof(sub), "Official Launchstation %s (%s)", ULE_VERSION, GIT_HASH);
 		sheetShow(DI_CHIP, "Build information", sub, &s);
 	}
 }

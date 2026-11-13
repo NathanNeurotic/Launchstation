@@ -1311,13 +1311,17 @@ static void loadingDraw(void)
 			dashTextFit(x + 24, y + 100, w - 48, line, DASH_FS_SMALL, DASH_C_TEXT2);
 		}
 	} else {
-		dashGfxBlend(DASH_BLEND_ADD);
-		dashDrawSpinner(x + 46, y + 50, 16, DASH_C_ACCENT);
-		dashGfxBlend(DASH_BLEND_NORMAL);
-		dashTextFit(x + 84, y + 26, w - 110, localizeDashboardText(loading_title), DASH_FS_LABEL, DASH_C_TEXT);
-		dashTextFit(x + 84, y + 58, w - 110, loading_status, DASH_FS_SMALL, DASH_C_TEXT2);
+		/* A known amount shows the bar below instead of the spinner. */
+		float tx = loading_total > 0 ? x + 24 : x + 84;
+		if (loading_total <= 0) {
+			dashGfxBlend(DASH_BLEND_ADD);
+			dashDrawSpinner(x + 46, y + 50, 16, DASH_C_ACCENT);
+			dashGfxBlend(DASH_BLEND_NORMAL);
+		}
+		dashTextFit(tx, y + 26, x + w - 26 - tx, localizeDashboardText(loading_title), DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextFit(tx, y + 58, x + w - 26 - tx, loading_status, DASH_FS_SMALL, DASH_C_TEXT2);
 		if (loading_remaining[0])
-			dashTextFit(x + 84, y + 84, w - 110, loading_remaining, DASH_FS_SMALL, DASH_C_TEXT2);
+			dashTextFit(tx, y + 84, x + w - 26 - tx, loading_remaining, DASH_FS_SMALL, DASH_C_TEXT2);
 	}
 	if (loading_total > 0) {
 		float p = dashClampf(loading_done / (float)loading_total, 0.0f, 1.0f);
@@ -1376,6 +1380,9 @@ static void loadingProgress(const char *status, int done, int total)
 	 * Keep branded startup progress, but hide its driver stages and counts. */
 	if (status != NULL || quiet)
 		dashStrCopy(loading_status, quiet ? "" : status, sizeof(loading_status));
+	/* a new bar starts empty instead of shrinking from the last one */
+	if (total != loading_total || done < loading_done)
+		loading_fraction = 0.0f;
 	loading_done = quiet ? 0 : done;
 	loading_total = quiet ? 0 : total;
 }
@@ -1487,6 +1494,18 @@ void DashStorageProbeStatus(const char *status)
 		else
 			dashLoadingFrame(status, 0, 0);
 	}
+}
+
+void DashStorageProbeProgress(const char *status, int done, int total)
+{
+	if (!DashIsActive() || isStartupDriverStatusQuiet())
+		return;
+	if (dashWorkerOnThread()) {
+		dashWorkerStatus(status, done, total);
+		return;
+	}
+	if (loading_active && ((total > 0 && done >= total) || Timer() - loading_last_draw >= 30))
+		dashLoadingFrame(status, done, total);
 }
 
 void dashLoadingEnd(void)
