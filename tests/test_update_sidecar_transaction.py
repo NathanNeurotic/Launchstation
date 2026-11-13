@@ -224,7 +224,7 @@ int main(void) {
     reset();bad_header=1;
     assert(install(msg)<0 && has(boot)&&!has(backup)&&!has(ca)&&!has(bgm));
     reset();fail_elf_rename=1;
-    assert(install(msg)<0 && !has(boot)&&has(backup)); /* simulated rollback fails too */
+    assert(install(msg)<0 && !has(boot)&&!has(backup)&&has(elf_tmp)&&strstr(msg,".UPDATE")); /* the verified file stays and is named */
     /* A nearly full card is refused before any download; an old .BAK is
      * cleared first to make room, and the installed ELF is untouched. */
     reset();put(backup);free_space=2*2234368+32*1024-1;
