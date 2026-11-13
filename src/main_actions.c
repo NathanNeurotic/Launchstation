@@ -51,7 +51,7 @@ static void cleanUpForExecInternal(int end_pad_rpc)
 #endif
 }
 
-int PS2BrowserSkipMc;
+int SkipCardUpdate;
 
 void CleanUpForExec(void)
 {
@@ -126,7 +126,40 @@ static const char *getLaunchArgsSidecarBasePath(const char *path, const char *fu
      mc0:/BOOT/BOOT.ELF; recognise it by the path it carries.
    - FMCB opens its own menu (issue #346): its SYS-CONF/FREEMCB.CNF is on
      that card. If OSDMenu's SYS-CONF/OSDMENU.CNF is on either card, leave
-     it alone (OSDMenu may leave FREEMCB.CNF behind). */
+     it alone (OSDMenu may leave FREEMCB.CNF behind). Since FMCB 1.93,
+     OSDSYS_Inner_Browser = 0 (AUTO) or 1 passes BootBrowser on, keeping
+     FMCB's menu; 2 (every 1.9x installer's default) drops it. Same check
+     as RiptOPL PR #406. */
+static int fmcbDropsBrowser(int fd)
+{
+	/* Scan in chunks, keeping each chunk's tail so a key split across two
+	   reads is still found. */
+	static const char key[] = "OSDSYS_Inner_Browser";
+	const int keep = sizeof(key) + 8;
+	char cnf[512], *p;
+	int have = 0, n, eof = 0;
+
+	for (;;) {
+		if ((n = genRead(fd, cnf + have, sizeof(cnf) - 1 - have)) > 0)
+			have += n;
+		else
+			eof = 1;
+		cnf[have] = '\0';
+		p = strstr(cnf, key);
+		if (p && (eof || p + keep <= cnf + have)) {
+			p += sizeof(key) - 1;
+			p += strspn(p, " \t=");
+			return *p != '0' && *p != '1';
+		}
+		if (eof)
+			return 1;
+		if (have > keep) {
+			memmove(cnf, cnf + have - keep, keep);
+			have = keep;
+		}
+	}
+}
+
 static int cardUpdateIgnoresBrowser(const char *update_path)
 {
 	char path[MAX_PATH], buf[18];
@@ -143,8 +176,8 @@ static int cardUpdateIgnoresBrowser(const char *update_path)
 		if (!match) {
 			snprintf(path, sizeof(path), "mc%d:/SYS-CONF/FREEMCB.CNF", port);
 			if ((fd = genOpen(path, FIO_O_RDONLY)) >= 0) {
+				match = fmcbDropsBrowser(fd);
 				genClose(fd);
-				match = 1;
 				for (other = 0; other < 2 && match; other++) {
 					snprintf(path, sizeof(path), "mc%d:/SYS-CONF/OSDMENU.CNF", other);
 					if ((fd = genOpen(path, FIO_O_RDONLY)) >= 0) {
@@ -256,7 +289,7 @@ void ExecuteMainAction(char *pathin, const MainExecuteContext *ctx)
 	/* A chosen OSDSYS program is an ordinary executable launch (plain ELF or
 	 * KELF, any device), resolved before device dispatch like a browser file.
 	 * From saildot4k/Launchstation ea15d90. */
-	if (!stricmp(pathin, setting->Misc_OSDSYS) &&
+	if (!stricmp(pathin, setting->Misc_OSDSYS) && !SkipCardUpdate &&
 	    setting->LK_Flag[SETTING_LK_OSDSYS] && setting->LK_Path[SETTING_LK_OSDSYS][0]) {
 		pathin = setting->LK_Path[SETTING_LK_OSDSYS];
 		if (strchr(pathin, ':') == NULL) {
@@ -524,6 +557,14 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 		char kelf_loader[40];
 		int fd, argc;
 
+		/* Tools "OSDSYS (skip card update)": the console's own OSDSYS menu.
+		   ROMs before v5 ignore SkipMc and still run the card update. */
+		if (SkipCardUpdate) {
+			char *skip_args[1] = {"SkipMc"};
+
+			CleanUpForExec();
+			ExecOSD(1, skip_args);
+		}
 		/* No override: the native memory-card system-update boot path. */
 		strcpy(path, ctx->default_osdsys_path);
 
@@ -686,9 +727,9 @@ Recurse_for_ESR:  //Recurse here for PS2Disc command with ESR disc
 	} else if (!stricmp(path, setting->Misc_PS2Browser)) {
 		/* BootBrowser alone lets OSDSYS run the memory card update (FMCB,
 		   OSDMenu) first. The Tools "skip card update" entry adds SkipMc,
-		   and so do LoadBOOTer and FMCB cards, which would never open the Browser. */
+		   and so do LoadBOOTer cards and FMCB cards set to drop the request. */
 		char *args[2] = {"BootBrowser", "SkipMc"};
-		int skip_mc = PS2BrowserSkipMc || cardUpdateIgnoresBrowser(ctx->default_osdsys_path);
+		int skip_mc = SkipCardUpdate || cardUpdateIgnoresBrowser(ctx->default_osdsys_path);
 
 		CleanUpForExec();
 		ExecOSD(1 + skip_mc, args);

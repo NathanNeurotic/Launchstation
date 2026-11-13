@@ -188,7 +188,7 @@ static int disk_type=0x14;
 #define getFilePath(a,b) ((void)0)
 #define executeBrowserSelection(a,b) ((void)0)
 #define ExecOSD(a,b) ((void)0)
-#define PS2BrowserSkipMc 0
+#define SkipCardUpdate 0
 #define cardUpdateIgnoresBrowser(p) 0
 #define loadNetModules() ((void)0)
 #define DashFtpServer() 0
