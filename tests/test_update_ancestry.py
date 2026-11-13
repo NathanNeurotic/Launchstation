@@ -53,7 +53,7 @@ typedef struct {
 static char comparison[32] = "ahead";
 static char release_target[80] = "51e1e0c7bc1efcb5b51c6cc9de056ee858694a03";
 static const char *last_title;
-static int requests, compares, confirmations, installs, response_status = 200;
+static int requests, compares, confirmations, installs, response_status = 200, confirm_answer = 1;
 static int launchstationUpdateCaPath(char *path, int n) {
     snprintf(path,n,"ca.pem");
     return 1;
@@ -77,7 +77,7 @@ static void dashModalMessage(int kind,const char *title,const char *body,const c
 }
 static int dashModalConfirm(const char *title,const char *body,const char *action,int danger) {
     (void)title;(void)body;(void)action;(void)danger;
-    confirmations++; return 1;
+    confirmations++; return confirm_answer;
 }
 static int selfUpdateInstall(const char *ca,const char *digest,int package_bytes,char *result,int cap) {
     (void)ca;(void)digest;assert(package_bytes==2234368);
@@ -118,6 +118,7 @@ program += enums + sources
 program += r'''
 static void reset(const char *status,const char *release,int code) {
     requests=compares=confirmations=installs=0;
+    confirm_answer=1;
     last_title=NULL;
     snprintf(comparison,sizeof(comparison),"%s",status);
     snprintf(release_target,sizeof(release_target),"%s",release);
@@ -128,13 +129,17 @@ int main(void) {
     reset("ahead",old,200);
     dashToolsCheckUpdates();
     assert(compares==1 && requests==2 && confirmations==1 && installs==1);
+    /* Not newer: the user is asked, and only a yes downloads it again. */
+    reset("behind",old,200);
+    confirm_answer=0;
+    dashToolsCheckUpdates();
+    assert(compares==1 && confirmations==1 && installs==0);
     reset("behind",old,200);
     dashToolsCheckUpdates();
-    assert(compares==1 && confirmations==0 && installs==0);
-    assert(!strcmp(last_title,"No newer release available"));
+    assert(compares==1 && confirmations==1 && installs==1);
     reset("identical",old,200);
     dashToolsCheckUpdates();
-    assert(compares==1 && confirmations==0 && installs==0);
+    assert(compares==1 && confirmations==1 && installs==1);
     reset("diverged",old,200);
     dashToolsCheckUpdates();
     assert(compares==1 && confirmations==0 && installs==0);
@@ -149,12 +154,15 @@ int main(void) {
     dashToolsCheckUpdates();
     assert(compares==0 && confirmations==0 && installs==0);
     reset("ahead","e70d903c7811a1b95b95771fa6fd813f48f5ecd4",200);
+    confirm_answer=0;
     dashToolsCheckUpdates();
-    assert(compares==0 && confirmations==0 && installs==0);
-    assert(!strcmp(last_title,"Launchstation is up to date"));
+    assert(compares==0 && confirmations==1 && installs==0);
+    reset("ahead","e70d903c7811a1b95b95771fa6fd813f48f5ecd4",200);
+    dashToolsCheckUpdates();
+    assert(compares==0 && confirmations==1 && installs==1);
     assert(!updateIsCommitId("local") && !updateIsCommitId("../malformed"));
     assert(updateIsCommitId("e70d903"));
-    puts("PASS: updater only installs a proven descendant; stale/divergent/unknown builds are blocked");
+    puts("PASS: updater installs a proven descendant, re-downloads a same or older release only when asked, and blocks divergent/unknown builds");
 }
 '''
 compiler=shutil.which("gcc") or shutil.which("clang")
