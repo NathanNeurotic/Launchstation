@@ -1,5 +1,5 @@
 //--------------------------------------------------------------
-// Native staged self-update for Launchstation.
+// Native self-update for Launchstation: download into RAM, verify, overwrite the running ELF in place.
 //--------------------------------------------------------------
 #include "launchelf.h"
 #include "cloud_http.h"
@@ -118,15 +118,6 @@ static int find_file_info(const char *parent, const char *leaf, FILEINFO *out)
     return found;
 }
 
-static int rename_leaf(const char *parent, const char *old_leaf, const char *new_leaf)
-{
-    FILEINFO file;
-
-    if (!find_file_info(parent, old_leaf, &file))
-        return -1;
-    return Rename(parent, &file, new_leaf);
-}
-
 static int hex_nibble(int ch)
 {
     if (ch >= '0' && ch <= '9') return ch - '0';
@@ -180,38 +171,8 @@ static void write_progress(int done, int total)
     update_progress("Writing the new ELF", done, total);
 }
 
-static int download_file(const char *url, const char *path, const char *ca_path,
-                         int max_bytes, unsigned char digest[32],
-                         char *error, int error_size)
-{
-    int fd, size = 0, r;
-
-    fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
-    if (fd < 0) {
-        snprintf(error, error_size, "Could not create %.160s", path);
-        return -1;
-    }
-    download_expected = 0;
-    cloudHttpProgress = download_progress;
-    selfUpdateWriteProgress = write_progress;
-    r = cloudHttpDownloadFd(url, fd, ca_path, max_bytes, &size,
-                            digest, error, error_size);
-    cloudHttpProgress = NULL;
-    if (genClose(fd) < 0 && r == 0) {
-        snprintf(error, error_size, "Could not finalize %.160s", path);
-        r = -1;
-    }
-    if (r < 0) {
-        char remove_path[MAX_PATH];
-        snprintf(remove_path, sizeof(remove_path), "%s", path);
-        genRemove(remove_path);
-        return -1;
-    }
-    return size;
-}
-
-/* Keep the package in RAM only when the heap holds it plus the reserve;
- * otherwise NULL and the package is written beside the ELF as before. */
+/* The package is downloaded into RAM only: it fits when the heap holds it plus
+ * the reserve, otherwise NULL and the update is refused before anything is touched. */
 static unsigned char *update_ram_buffer(int package_bytes)
 {
     unsigned char *buffer;
@@ -246,71 +207,76 @@ static int download_to_ram(const char *url, unsigned char *buffer, int cap,
     return r < 0 ? -1 : size;
 }
 
+static int looks_like_elf(const unsigned char *h, int n)
+{
+    /* 32-bit little-endian MIPS executable */
+    return n >= 20 && h[0] == 0x7F && h[1] == 'E' && h[2] == 'L' && h[3] == 'F' &&
+           h[4] == 1 && h[5] == 1 && h[16] == 2 && h[17] == 0 && h[18] == 8 && h[19] == 0;
+}
+
+/* Write the verified ELF over the running one: the same path, opened with
+ * O_TRUNC, no second file, rename, delete or backup. Returns 0, or the step
+ * (1 open, 2 write, 3 close) with *code set to the error. */
+static int overwrite_elf(const char *path, const unsigned char *data, int size, int *code)
+{
+    int fd, done = 0;
+
+    fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
+    if (fd < 0) {
+        *code = fd;
+        return 1;
+    }
+    while (done < size) {
+        int count = size - done > 16384 ? 16384 : size - done;
+        int n = genWrite(fd, (void *)(data + done), count);
+        if (n <= 0 || n > count) {
+            *code = n < 0 ? n : -ENOSPC;
+            genClose(fd);
+            return 2;
+        }
+        done += n;
+        write_progress(done, size);
+    }
+    if (genClose(fd) < 0) {
+        *code = -EIO;
+        return 3;
+    }
+    return 0;
+}
+
 static int install_update_files(const char *parent, const char *leaf,
                                 const char *ca_path, const char *expected_sha256,
                                 int package_bytes, unsigned char *ram,
                                 char *result, int result_size)
 {
-    char stage_leaf[MAX_NAME], backup_leaf[MAX_NAME];
-    char stage[MAX_PATH], backup[MAX_PATH];
-    char package_leaf[MAX_NAME], package[MAX_PATH];
-    char update_ca[MAX_PATH], update_ca_stage[MAX_PATH];
-    char bgm[MAX_PATH], bgm_stage[MAX_PATH];
+    char elf[MAX_PATH], backup[MAX_PATH];
+    char update_ca[MAX_PATH], bgm[MAX_PATH];
     char error[256], remove_path[MAX_PATH];
     unsigned char expected[32], actual[32];
-    int size, package_size, sidecar_size;
-    int need_ca, need_bgm, staged_ca = 0, staged_bgm = 0;
-    int added_ca = 0, added_bgm = 0;
+    int size, package_size, sidecar_size, elf_pos = 0, step, code = 0;
+    int need_ca, need_bgm, added_ca = 0, added_bgm = 0;
     u64 free_bytes;
-    FILEINFO staged_info;
+    FILEINFO old_info;
 
-    if (snprintf(stage_leaf, sizeof(stage_leaf), "%s.UPDATE", leaf) >= (int)sizeof(stage_leaf) ||
-        snprintf(backup_leaf, sizeof(backup_leaf), "%s.BAK", leaf) >= (int)sizeof(backup_leaf) ||
-        !join_leaf(stage, sizeof(stage), parent, stage_leaf) ||
-        !join_leaf(backup, sizeof(backup), parent, backup_leaf) ||
-        snprintf(package_leaf, sizeof(package_leaf), "%s.PACKAGE", leaf) >= (int)sizeof(package_leaf) ||
-        !join_leaf(package, sizeof(package), parent, package_leaf)) {
-        snprintf(result, result_size, "The running ELF path is too long for a safe staged update.");
+    if (snprintf(backup, sizeof(backup), "%s%s.BAK", parent, leaf) >= (int)sizeof(backup) ||
+        !join_leaf(elf, sizeof(elf), parent, leaf) ||
+        !join_leaf(update_ca, sizeof(update_ca), parent, "WLE-UPDATE-CA.PEM") ||
+        !join_leaf(bgm, sizeof(bgm), parent, "BGM.ADP")) {
+        snprintf(result, result_size, "The app folder path is too long for a safe update.");
         return -1;
     }
-
-    /* Never touch customized sidecars. A .UPDATE collision is an unfinished
-     * earlier attempt: refuse to truncate it and request manual cleanup. */
-    if (!join_leaf(update_ca, sizeof(update_ca), parent, "WLE-UPDATE-CA.PEM") ||
-        !join_leaf(update_ca_stage, sizeof(update_ca_stage), parent, "WLE-UPDATE-CA.PEM.UPDATE") ||
-        !join_leaf(bgm, sizeof(bgm), parent, "BGM.ADP") ||
-        !join_leaf(bgm_stage, sizeof(bgm_stage), parent, "BGM.ADP.UPDATE")) {
-        snprintf(result, result_size, "The app folder path is too long for a safe sidecar update.");
-        return -1;
-    }
-    /* The package download uses O_TRUNC and the ELF extractor does likewise.
-     * Never destroy an unfinished recovery/download file from an earlier
-     * attempt. An existing temporary file requires explicit manual handling. */
-    if (wleExists(package) || wleExists(stage)) {
+    if (ram == NULL) {
         snprintf(result, result_size,
-                 "An earlier ELF .UPDATE or .PACKAGE file remains beside the app. Resolve that file manually before retrying; no files were changed.");
+                 "Not enough free memory to hold the update (it needs the package plus 4 MB). The installed ELF was not changed.");
         return -1;
     }
-    need_ca = !wleExists(update_ca);
-    need_bgm = !wleExists(bgm);
-    if ((need_ca && wleExists(update_ca_stage)) ||
-        (need_bgm && wleExists(bgm_stage))) {
-        snprintf(result, result_size,
-                 "An unfinished CA or BGM .UPDATE file already exists. Clear the stale file manually before updating; no files were changed.");
-        return -1;
-    }
-
     if (!parse_expected_sha(expected_sha256, expected)) {
         snprintf(result, result_size,
                  "GitHub did not provide a valid SHA-256 digest for the app package.");
         return -1;
     }
 
-    /* Memory cards are tight. At its peak the install holds the downloaded
-     * package and the files unpacked from it beside the current ELF: never
-     * more than twice the package, or once when the package stays in RAM.
-     * Remove a .BAK left by an older build first (none is made any more), then refuse before
-     * downloading if that still does not fit. */
+    /* Remove a .BAK left by an older build (none is made any more). */
     if (wleExists(backup)) {
         snprintf(remove_path, sizeof(remove_path), "%s", backup);
         if (genRemove(remove_path) < 0 && wleExists(backup)) {
@@ -319,21 +285,11 @@ static int install_update_files(const char *parent, const char *leaf,
             return -1;
         }
     }
-    if (package_bytes > 0 && filerFreeSpace(parent, &free_bytes) &&
-        free_bytes < (u64)package_bytes * (ram ? 1 : 2) + UPDATE_SPACE_MARGIN) {
-        snprintf(result, result_size,
-                 "Not enough free space: the update needs about %d KB free here, and %d KB is free. Free some space and try again. The installed ELF was not changed.",
-                 (int)(((u64)package_bytes * (ram ? 1 : 2) + UPDATE_SPACE_MARGIN) / 1024),
-                 (int)(free_bytes / 1024));
-        return -1;
-    }
 
     error[0] = '\0';
     DashStorageProbeStatus("Downloading the update from GitHub");
-    size = ram ? download_to_ram(UPDATE_ELF_URL, ram, package_bytes, ca_path,
-                                 actual, error, sizeof(error))
-               : download_file(UPDATE_ELF_URL, package, ca_path, UPDATE_MAX_ELF,
-                               actual, error, sizeof(error));
+    size = download_to_ram(UPDATE_ELF_URL, ram, package_bytes, ca_path,
+                           actual, error, sizeof(error));
     if (size <= 0) {
         snprintf(result, result_size, "Update download failed: %s",
                  error[0] ? error : "no update data was received");
@@ -341,100 +297,60 @@ static int install_update_files(const char *parent, const char *leaf,
     }
     DashStorageProbeStatus("Checking the download (SHA-256)");
     if (memcmp(expected, actual, sizeof(expected)) != 0) {
-        snprintf(remove_path, sizeof(remove_path), "%s", package);
-        genRemove(remove_path);
         snprintf(result, result_size,
                  "Downloaded update failed SHA-256 verification. The running ELF was not changed.");
         return -1;
     }
     package_size = size;
-    DashStorageProbeStatus("Unpacking and checking the new ELF");
-    size = ram ? selfUpdateExtractPsuMem(ram, package_size, stage)
-               : selfUpdateExtractPsu(package, stage, package_size);
+    DashStorageProbeStatus("Checking the new ELF");
+    size = selfUpdateLocatePsuElf(ram, package_size, &elf_pos);
     if (size <= 0) {
-        snprintf(remove_path, sizeof(remove_path), "%s", package);
-        genRemove(remove_path);
         snprintf(result, result_size,
                  "The verified package does not contain the expected app ELF. The running ELF was not changed.");
         return -1;
     }
-    if (checkELFheader(stage) < 0) {
-        snprintf(remove_path, sizeof(remove_path), "%s", package);
-        genRemove(remove_path);
-        snprintf(remove_path, sizeof(remove_path), "%s", stage);
-        genRemove(remove_path);
+    if (!looks_like_elf(ram + elf_pos, size)) {
         snprintf(result, result_size,
                  "Downloaded update is not a valid PlayStation 2 ELF. The running ELF was not changed.");
         return -1;
     }
 
-    /* Verified four-, eight- and nine-file PSUs can initialize missing runtime sidecars.
-     * Never overwrite existing CA/BGM assets; they may be user customized.
-     * A verified legacy two-file PSU simply has no sidecars to stage. */
+    /* Overwriting in place needs room only for the growth over the old ELF. */
+    need_ca = !wleExists(update_ca);
+    need_bgm = !wleExists(bgm);
+    if (find_file_info(parent, leaf, &old_info) && filerFreeSpace(parent, &free_bytes) &&
+        free_bytes + old_info.stats.FileSizeByte < (u64)size + UPDATE_SPACE_MARGIN) {
+        snprintf(result, result_size,
+                 "Not enough free space: the new ELF is %d KB and the device has %d KB free beside the old one. Free some space and try again. The installed ELF was not changed.",
+                 size / 1024, (int)((free_bytes + old_info.stats.FileSizeByte) / 1024));
+        return -1;
+    }
+
+    /* Verified four-, eight- and nine-file PSUs can add missing runtime sidecars.
+     * Existing CA/BGM files may be customized and are never touched. The extractor
+     * deletes a sidecar it could not finish; the running ELF is still untouched. */
     if (need_ca || need_bgm)
         DashStorageProbeStatus("Adding missing bundled files");
     if (need_ca) {
-        sidecar_size = ram ? selfUpdateExtractPsuSidecarMem(ram, package_size, "WLE-UPDATE-CA.PEM",
-                                                            update_ca_stage)
-                           : selfUpdateExtractPsuSidecar(package, "WLE-UPDATE-CA.PEM",
-                                                         update_ca_stage, package_size);
+        sidecar_size = selfUpdateExtractPsuSidecarMem(ram, package_size, "WLE-UPDATE-CA.PEM", update_ca);
         if (sidecar_size < 0)
             goto sidecar_failed;
-        staged_ca = sidecar_size > 0;
+        added_ca = sidecar_size > 0;
     }
     if (need_bgm) {
-        sidecar_size = ram ? selfUpdateExtractPsuSidecarMem(ram, package_size, "BGM.ADP", bgm_stage)
-                           : selfUpdateExtractPsuSidecar(package, "BGM.ADP",
-                                                         bgm_stage, package_size);
+        sidecar_size = selfUpdateExtractPsuSidecarMem(ram, package_size, "BGM.ADP", bgm);
         if (sidecar_size < 0)
             goto sidecar_failed;
-        staged_bgm = sidecar_size > 0;
-    }
-    snprintf(remove_path, sizeof(remove_path), "%s", package);
-    genRemove(remove_path);
-
-    /* Publish newly created files only after all required sidecars are
-     * staged. Existing files are never renamed or replaced. If one commit
-     * fails, the running ELF stays untouched. */
-    if (staged_ca) {
-        if (wleExists(update_ca) ||
-            rename_leaf(parent, "WLE-UPDATE-CA.PEM.UPDATE", "WLE-UPDATE-CA.PEM") < 0)
-            goto sidecar_publish_failed;
-        added_ca = 1;
-    }
-    if (staged_bgm) {
-        if (wleExists(bgm) ||
-            rename_leaf(parent, "BGM.ADP.UPDATE", "BGM.ADP") < 0)
-            goto sidecar_publish_failed;
-        added_bgm = 1;
+        added_bgm = sidecar_size > 0;
     }
 
-    /* Only now, after a complete verified download, touch the current ELF.
-     * No backup is kept: the running ELF is removed and the verified .UPDATE
-     * takes its name. If that last rename fails, .UPDATE stays on disk and the
-     * message names it. */
+    /* Only now, after a complete verified download, touch the running ELF. */
     DashStorageProbeStatus("Replacing the ELF");
-    /* Look the staged file up now: a lookup that failed after the ELF was gone would strand the install. */
-    if (!find_file_info(parent, stage_leaf, &staged_info)) {
-        snprintf(remove_path, sizeof(remove_path), "%s", stage);
-        genRemove(remove_path);
+    step = overwrite_elf(elf, ram + elf_pos, size, &code);
+    if (step) {
         snprintf(result, result_size,
-                 "The verified update could not be found in the app folder. The running ELF was not changed.");
-        return -1;
-    }
-    if (!join_leaf(remove_path, sizeof(remove_path), parent, leaf) ||
-        genRemove(remove_path) < 0 || wleExists(remove_path)) {
-        snprintf(remove_path, sizeof(remove_path), "%s", stage);
-        genRemove(remove_path);
-        snprintf(result, result_size,
-                 "Could not remove the old ELF. The running ELF was not changed.");
-        return -1;
-    }
-
-    if (Rename(parent, &staged_info, leaf) < 0) {
-        snprintf(result, result_size,
-                 "The old ELF was removed but the verified update could not take its place. The new ELF is saved as %s; rename it to %s.",
-                 stage_leaf, leaf);
+                 "Could not finish replacing the ELF (step %d of 3: 1 open, 2 write, 3 close; error %d). %s may be damaged: copy the Launchstation ELF to this device again.",
+                 step, code, leaf);
         return -1;
     }
 
@@ -447,35 +363,8 @@ static int install_update_files(const char *parent, const char *leaf,
     return 0;
 
 sidecar_failed:
-    /* These temporary files are owned by this attempt only. */
-    if (staged_ca) {
-        snprintf(remove_path, sizeof(remove_path), "%s", update_ca_stage);
-        genRemove(remove_path);
-    }
-    snprintf(remove_path, sizeof(remove_path), "%s", package);
-    genRemove(remove_path);
-    snprintf(remove_path, sizeof(remove_path), "%s", stage);
-    genRemove(remove_path);
     snprintf(result, result_size,
-             "Failed to stage verified updater CA or BGM. The running ELF and existing sidecars were not changed.");
-    return -1;
-
-sidecar_publish_failed:
-    if (staged_ca && !added_ca) {
-        snprintf(remove_path, sizeof(remove_path), "%s", update_ca_stage);
-        genRemove(remove_path);
-    }
-    if (staged_bgm && !added_bgm) {
-        snprintf(remove_path, sizeof(remove_path), "%s", bgm_stage);
-        genRemove(remove_path);
-    }
-    /* Already published missing sidecars are harmless and safe to retain;
-     * deleting them during recovery risks removing a file another component
-     * may already have opened. No old file has been replaced. */
-    snprintf(remove_path, sizeof(remove_path), "%s", stage);
-    genRemove(remove_path);
-    snprintf(result, result_size,
-             "Could not install the missing bundled sidecar. The original ELF and existing sidecars were not changed; any newly added CA may remain.");
+             "Failed to add the bundled updater CA or BGM. The running ELF and existing sidecars were not changed.");
     return -1;
 }
 

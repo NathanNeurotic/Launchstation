@@ -10,7 +10,7 @@
 <tr><td>Update check unavailable</td><td>The Ethernet stack could not be started. Check the IP settings under Settings &gt; Network, the cable and the adapter. The update check needs a wired network.</td></tr>
 <tr><td>Update check failed</td><td>GitHub could not be reached or returned an unexpected response (shown with the HTTP status). Check the console clock, DNS/gateway and try again later.</td></tr>
 <tr><td>Release is on another commit history / Could not verify update order</td><td>The release is not a verified descendant of your build (a fork, a local build, or GitHub's comparison failed). Nothing was changed; install a complete package manually.</td></tr>
-<tr><td>An earlier ELF .UPDATE or .PACKAGE file remains</td><td>A previous attempt was interrupted. Inspect and delete <code>&lt;name&gt;.ELF.UPDATE</code> / <code>.PACKAGE</code> (and any <code>WLE-UPDATE-CA.PEM.UPDATE</code>, <code>BGM.ADP.UPDATE</code>) yourself; the updater refuses to overwrite them.</td></tr>
+<tr><td>A <code>.UPDATE</code> or <code>.PACKAGE</code> file sits beside the ELF</td><td>An older updater left it. The current updater ignores it; delete it yourself.</td></tr>
 <tr><td>This boot location cannot be updated safely in place</td><td>The ELF was started from an unsupported path (not <code>mc</code>, <code>mass</code>/<code>usb</code>, <code>mmce</code>, <code>mx4sio</code>, <code>ilink</code>, <code>ata</code> or <code>hdd</code>). Install a package manually.</td></tr>
 <tr><td>Downloaded update failed SHA-256 verification</td><td>The download was corrupted or does not match the published digest. The running ELF was not changed; retry.</td></tr>
 </tbody></table>

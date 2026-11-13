@@ -18,10 +18,12 @@ int selfUpdateExtractPsuMem(const unsigned char *package, int size, const char *
 int selfUpdateExtractPsuSidecarMem(const unsigned char *package, int size,
                                    const char *name, const char *stage);
 
+int selfUpdateLocatePsuElf(const unsigned char *package, int size, int *offset);
+
 /* Called by the PSU extractor after each block of the app ELF it writes. */
 extern void (*selfUpdateWriteProgress)(int written, int total);
 
-/* package_bytes: the release asset's size, or 0 when unknown (no space pre-check). */
+/* package_bytes: the release asset's size; the package is downloaded into RAM, so 0 (unknown) is refused. */
 int selfUpdateInstall(const char *ca_path, const char *expected_sha256, int package_bytes,
                       char *result, int result_size);
 
