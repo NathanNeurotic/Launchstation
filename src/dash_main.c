@@ -252,7 +252,8 @@ int dashConfirmLeave(void)
 //--------------------------------------------------------------
 static void dashMsgHook(const char *msg)
 {
-	dashLoadingStatus(msg, 0, 0);
+	if (dash_active && !isStartupDriverStatusQuiet())
+		dashLoadingStatus(msg, 0, 0);
 }
 
 static void dashLaunchHook(const char *path)
@@ -306,6 +307,14 @@ int DashChooseElfIopMode(int configured)
 		dashGfxPresent();
 	}
 	return mode;
+}
+
+/* After cleanup commits, SDK RPC waits must never redraw settings/fonts
+ * that are about to be released. DashIsActive also gates the wait shim. */
+void DashStopUiForExec(void)
+{
+	dash_active = 0;
+	boot_init_pending = 0;
 }
 
 /* Everything the background worker is doing (saves, scans, driver starts)

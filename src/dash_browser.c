@@ -3204,16 +3204,42 @@ static void fmtSize(char *out, int size, const FILEINFO *f)
 		snprintf(out, size, "%u B", (unsigned)b);
 }
 
+/* Display the public MASS label without changing the path used for I/O. */
+static void browserDisplayPath(const char *path, char *out, int size)
+{
+	if (!strncmp(path, "usb", 3) && path[3] >= '0' && path[3] <= '9' && path[4] == ':')
+		snprintf(out, size, "mass%s", path + 3);
+	else
+		dashStrCopy(out, path, size);
+}
+
+/* Display the saved source, independently of the folder now being browsed.
+ * Keep native HDD/VMC device paths; this formatter must never resolve them. */
+static void clipboardSummary(char *out, int size)
+{
+	char display[MAX_PATH + 2];
+
+	if (nclipFiles <= 0) {
+		out[0] = '\0';
+		return;
+	}
+	browserDisplayPath(clipPath, display, sizeof(display));
+	if (nclipFiles > 1)
+		snprintf(out, size, "Assortment in %s", display);
+	else {
+		size_t len = strlen(display);
+		const char *separator = len && display[len - 1] != '/' && display[len - 1] != ':' ? "/" : "";
+
+		snprintf(out, size, "%s%s%s", display, separator, clipFiles[0].name);
+	}
+}
+
 static void browserDrawBody(void)
 {
 	int i, rows_total = fb.dir[0] ? fb.n : fb.ndevs;
 	char info[64], display_path[MAX_PATH + 2];
 
-	/* Display the public MASS label without changing the path used for I/O. */
-	if (!strncmp(fb.dir, "usb", 3) && fb.dir[3] >= '0' && fb.dir[3] <= '9' && fb.dir[4] == ':')
-		snprintf(display_path, sizeof(display_path), "mass%s", fb.dir + 3);
-	else
-		dashStrCopy(display_path, fb.dir, sizeof(display_path));
+	browserDisplayPath(fb.dir, display_path, sizeof(display_path));
 
 	/* A dashboard tab must not overwrite the shared header or render its
 	 * background a second time; modal callers still get a complete scene. */
@@ -3250,12 +3276,20 @@ static void browserDrawBody(void)
 		else
 			dashText(FB_X, FB_Y + FB_ROWS * FB_ROW_H + 14, info, DASH_FS_CAPTION, DASH_C_ACCENT);
 	}
-	if (nclipFiles > 0) {
-		snprintf(info, sizeof(info), "Clipboard: %d to %s", nclipFiles, browser_cut ? "move" : "copy");
-		if (!fb_tab_active)
-			dashTextRight(FB_X + FB_W, 26, info, DASH_FS_CAPTION, DASH_C_ACCENT);
-		else if (!LaunchArgsPending())
-			dashText(FB_X, FB_Y + FB_ROWS * FB_ROW_H + 14, info, DASH_FS_CAPTION, DASH_C_ACCENT);
+	if (nclipFiles > 0 && (!fb_tab_active || !LaunchArgsPending())) {
+		char clipboard[MAX_PATH + MAX_NAME + 32];
+		float status_y = FB_Y + FB_ROWS * FB_ROW_H + 14;
+		float x = fb_tab_active ? FB_X : FB_X + 200;
+		float y = fb_tab_active ? status_y : 26;
+		float width = fb_tab_active ? FB_W : FB_W - 200;
+		const float icon_size = 16.0f, text_offset = icon_size + 8.0f;
+		float icon_xy[] = {x, y + 16.0f * DASH_FS_CAPTION - icon_size * 0.5f};
+
+		clipboardSummary(clipboard, sizeof(clipboard));
+		/* Explicit-color batching keeps this status icon identical to its text,
+		 * including themes that normally tint icons to accent or monochrome. */
+		dashIconMany(browser_cut ? DI_CUT : DI_COPY, icon_xy, 1, icon_size, DASH_C_ACCENT);
+		dashTextScroll(x + text_offset, y, width - text_offset, clipboard, DASH_FS_CAPTION, DASH_C_ACCENT);
 	}
 
 	dashDrawPanelBox(DASH_PANE_L, FB_Y - 6, DASH_PANE_W, FB_ROWS * FB_ROW_H + 12, 14);

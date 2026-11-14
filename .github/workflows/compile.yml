@@ -262,6 +262,7 @@ jobs:
           python3 tests/test_sjis_dashboard_titles.py
           python3 tests/test_zack_launch_sizing.py
           python3 tests/test_new_folder_save_icons.py
+          python3 tests/test_saildot4k_wins.py
 
       - name: Validate documentation site
         run: |

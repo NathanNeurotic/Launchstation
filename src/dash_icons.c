@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 //File name:   dash_icons.c
 //Dashboard icon set, rasterized once from signed distance functions into
-//one 512x544 PSMT8 alpha atlas (64x64 icons, tinted by vertex colour).
+//one 512x736 PSMT8 alpha atlas (64x64 icons, tinted by vertex colour).
 //The pad glyphs use the same theme-aware SDF atlas as other icons.
 //No additional CT32 pad tile atlas or PNG decoding is needed at startup.
 //--------------------------------------------------------------
@@ -11,7 +11,7 @@
 #define ICON_SLOT 68
 #define ICON_COLS 7
 #define ICON_TEX_W 512
-#define ICON_TEX_H 576
+#define ICON_TEX_H 736
 #define SELECT_HALF_W 0.68f
 
 /* Header shapes and action icons use the narrow right margin. Keep the
@@ -240,6 +240,16 @@ static float rocketLaunchSdf(V2 p)
 	return (winding ? -1.0f : 1.0f) * sqrtf(nearest) / 12.0f;
 }
 
+/* Short circular arc opening right, with rounded ends. */
+static float soundWaveSdf(V2 p, float radius)
+{
+	const float cx = -0.40f, angle = 0.60f;
+	float ex = cx + radius * cosf(angle), ey = radius * sinf(angle);
+	float d = fmaxf2(sdRing(p, cx, 0.0f, radius, T),
+	                     fabsf(p.y) * cosf(angle) - (p.x - cx) * sinf(angle));
+	return U(d, U(sdCircle(p, ex, ey, T), sdCircle(p, ex, -ey, T)));
+}
+
 static float iconSdf(int id, V2 p)
 {
 	float d = 1e9f;
@@ -361,6 +371,38 @@ static float iconSdf(int id, V2 p)
 		case DI_APP:
 			d = U(appHexagonSdf(p), appTriangleSdf(p));
 			break;
+		case DI_SOUND:
+			/* Filled speaker cone and two rounded waves, like the reference. */
+			d = sdBox(p, -0.61f, 0.0f, 0.21f, 0.25f, 0.055f);
+			d = U(d, fmaxf2(sdBox(p, -0.25f, 0.0f, 0.25f, 0.66f, 0.04f),
+			                     (fabsf(p.y) - 0.66f - 0.82f * p.x) * 0.773f));
+			d = U(d, soundWaveSdf(p, 0.86f));
+			d = U(d, soundWaveSdf(p, 1.24f));
+			break;
+		case DI_KEYBOARD:
+			/* Wide wired keyboard; keep key spacing visible at menu sizes. */
+			d = sdBoxOutline(p, 0.0f, 0.18f, 0.82f, 0.42f, 0.075f, 0.055f);
+			d = U(d, sdSeg(p, -0.05f, -0.55f, 0.0f, -0.32f, 0.045f));
+			d = U(d, sdSeg(p, -0.05f, -0.55f, -0.20f, -0.58f, 0.045f));
+			d = U(d, sdSeg(p, -0.20f, -0.58f, -0.22f, -0.72f, 0.045f));
+			d = U(d, sdSeg(p, -0.63f, -0.10f, -0.46f, -0.10f, 0.03f));
+			for (k = 0; k < 3; k++)
+				d = U(d, sdCircle(p, 0.46f + k * 0.12f, -0.10f, 0.03f));
+			for (k = 0; k < 14; k++)
+				d = U(d, sdBox(p, -0.63f + (k % 7) * 0.21f,
+				                       0.08f + (k / 7) * 0.19f, 0.065f, 0.055f, 0.01f));
+			d = U(d, sdBox(p, 0.0f, 0.46f, 0.36f, 0.05f, 0.01f));
+			d = U(d, sdBox(p, -0.57f, 0.46f, 0.13f, 0.05f, 0.01f));
+			d = U(d, sdBox(p, 0.57f, 0.46f, 0.13f, 0.05f, 0.01f));
+			break;
+		case DI_HIDE:
+			/* Eye outline and pupil, interrupted by a rising diagonal slash. */
+			d = fabsf(fmaxf2(sdCircle(p, 0.0f, 0.40f, 0.98f),
+			                       sdCircle(p, 0.0f, -0.40f, 0.98f))) - T;
+			d = U(d, sdRing(p, 0.0f, 0.0f, 0.28f, T));
+			d = S(d, sdSeg(p, -0.72f, 0.72f, 0.72f, -0.72f, 0.17f));
+			d = U(d, sdSeg(p, -0.72f, 0.72f, 0.72f, -0.72f, T));
+			break;
 		case DI_PLAY:
 			d = sdTriP(p, -0.42f, -0.62f, -0.42f, 0.62f, 0.66f, 0.0f) - 0.04f;
 			break;
@@ -432,6 +474,14 @@ static float iconSdf(int id, V2 p)
 			d = sdRing(p, 0.0f, 0.0f, 0.62f, T);
 			d = S(d, sdBox(p, 0.4f, -0.4f, 0.4f, 0.4f, 0.0f));
 			d = U(d, sdTriP(p, 0.18f, -0.9f, 0.18f, -0.34f, 0.62f, -0.62f));
+			break;
+		case DI_UNDO:
+			/* Counterclockwise return arrow with a rounded, open arrowhead. */
+			d = sdRing(p, 0.0f, 0.0f, 0.66f, T);
+			d = S(d, sdBox(p, -0.65f, 0.0f, 0.45f, 0.40f, 0.0f));
+			d = U(d, sdCircle(p, -0.525f, 0.40f, T));
+			d = U(d, sdSeg(p, -0.60f, -0.76f, -0.60f, -0.36f, T));
+			d = U(d, sdSeg(p, -0.60f, -0.36f, -0.20f, -0.36f, T));
 			break;
 		case DI_PIN:
 			d = sdCircle(p, 0.0f, -0.36f, 0.34f);

@@ -377,7 +377,7 @@ static int showDashboardNeutrinoOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 	if (profile_enabled) {
 		items[NEUTRINO_CANCEL].icon = DI_SAVE;
 		items[NEUTRINO_CANCEL].label = "Save for this game";
-		items[NEUTRINO_CANCEL + 1].icon = DI_REFRESH;
+		items[NEUTRINO_CANCEL + 1].icon = DI_UNDO;
 		items[NEUTRINO_CANCEL + 1].label = "Reset this launch";
 	}
 	items[cancel_index].icon = DI_BACK;

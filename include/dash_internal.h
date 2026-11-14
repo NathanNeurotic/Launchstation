@@ -413,6 +413,8 @@ void dashTextCenter(float cx, float y, const char *s, float scale, DashColor c);
 void dashTextRight(float rx, float y, const char *s, float scale, DashColor c);
 float dashTextFit(float x, float y, float maxw, const char *s, float scale, DashColor c);
 void dashTextScroll(float x, float y, float maxw, const char *s, float scale, DashColor c);
+/* A shared 0..1 progress lets related fields scroll and restart together. */
+void dashTextScrollProgress(float x, float y, float maxw, const char *s, float scale, DashColor c, float progress);
 void dashTextScrollTimed(float x, float y, float maxw, const char *s, float scale, DashColor c, float age);
 void dashTextScrollCenter(float cx, float y, float maxw, const char *s, float scale, DashColor c);
 int dashTextWrap(float x, float y, float w, int max_lines, const char *s, float scale, DashColor c, float line_h);
@@ -496,6 +498,10 @@ enum DashIcon {
 	DI_KEY_RETURN,  /* keyboard bent left arrow; arrowhead centered at y=0 */
 	DI_SHARE,       /* shared folder: folder with a two-node network badge (UDPFS, SMB, host:) */
 	DI_MICROSD,     /* notched microSD outline (MMCE, MX4SIO) */
+	DI_SOUND,       /* filled speaker with two sound waves */
+	DI_KEYBOARD,    /* wired keyboard with keys and a space bar */
+	DI_HIDE,        /* crossed-out eye for application visibility */
+	DI_UNDO,        /* counterclockwise arrow for reset actions */
 	DI_NEW_FOLDER,  /* folder with a small upper-right plus */
 	DI_SAVE,        /* floppy disk: shutter on top, label below */
 	DI_COUNT
@@ -837,6 +843,8 @@ void dashInputPoll(DashInput *in);
 /* Physical controller sample only; returns validity and suppresses START menus. */
 int dashInputPollPhysical(DashInput *in);
 void dashInputPollEx(DashInput *in, int usb_kb_as_pad);
+/* Opt-in L1/R1 adjustment repeats, following the pad delay/ramp. */
+u32 dashInputShoulderRepeat(void);
 void dashInputFlush(void);
 u64 dashInputIdleMs(void);
 

@@ -17,6 +17,7 @@ extern u32 paddata;
 static u64 last_input_ms;
 static u32 held_prev;
 static u32 text_repeat_armed;
+static u32 shoulder_repeat_armed, shoulder_repeat;
 /* Set while a timed confirmation polls: START must not open the Dashboard
  * popup, whose own input loop would hold off the automatic revert. */
 static int dash_start_menu_blocked;
@@ -39,6 +40,7 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	u32 back_btn = swapKeys ? PAD_CIRCLE : PAD_CROSS;
 
 	memset(in, 0, sizeof(*in));
+	shoulder_repeat = 0;
 	physical_sample_valid = 0;
 	dashWorkerParkPoint();
 	if (dashIopParked())
@@ -59,7 +61,15 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	 * text-entry consumers. A held action cannot reopen a normal dialog. */
 	text_repeat_armed &= paddata;
 	text_repeat_armed |= np & paddata & (ok_btn | back_btn);
-	repeat = ret ? new_pad & (text_repeat_armed | ~paddata) : 0;
+	/* Value editors can opt into the same repeat ramp for L1/R1. Global
+	 * tab navigation continues to receive only the first shoulder press. */
+	shoulder_repeat_armed &= paddata;
+	shoulder_repeat_armed |= np & paddata & (PAD_L1 | PAD_R1);
+	repeat = ret ? new_pad & (text_repeat_armed | shoulder_repeat_armed | ~paddata) : 0;
+	if (repeat & PAD_L1)
+		shoulder_repeat |= DASH_IN_L1;
+	if (repeat & PAD_R1)
+		shoulder_repeat |= DASH_IN_R1;
 	if (repeat & ok_btn) in->text_repeat |= DASH_IN_OK;
 	if (repeat & back_btn) in->text_repeat |= DASH_IN_BACK;
 	if (paddata != held_prev)
@@ -100,7 +110,7 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	if (np & PAD_R3)
 		in->pressed |= DASH_IN_R3;
 	in->any = (in->pressed != 0);
-	if (in->any || in->text_repeat)
+	if (in->any || in->text_repeat || shoulder_repeat)
 		last_input_ms = Timer();
 	/* Held SELECT turns START into its quick launch key (dash_main.c). */
 	if ((in->pressed & DASH_IN_START) && !(paddata & PAD_SELECT)) {
@@ -115,6 +125,11 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 			dashDashboardMenu();
 		}
 	}
+}
+
+u32 dashInputShoulderRepeat(void)
+{
+	return shoulder_repeat;
 }
 
 /* Hold sampling cannot open a nested Dashboard menu, and a failed DS34
@@ -138,6 +153,7 @@ void dashInputFlush(void)
 	}
 	held_prev = paddata;
 	text_repeat_armed = 0;
+	shoulder_repeat_armed = shoulder_repeat = 0;
 	last_input_ms = Timer();
 }
 

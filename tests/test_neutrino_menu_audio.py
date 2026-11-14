@@ -50,6 +50,7 @@ static MainExecuteContext exec_ctx;
 static void (*mainActionLaunchHook)(const char *);
 static void (*drawMsgOverride)(const char *);
 static int dash_active = 1;
+static int boot_init_pending = 1;
 static int muted, suspended, restored, bgm, calls, commit;
 static int shutdown_calls, pad_ended;
 static jmp_buf launched;
@@ -135,6 +136,7 @@ static void RunLoaderElfKeepIOP(char *f, char *p, const char *s, int k) {
 static void cleanUpFree(void *p) { (void)p; }
 #define free cleanUpFree
 '''
+code += extract_func(dash_src, "void DashStopUiForExec(") + "\n"
 code += extract_func(dash_src, "int DashPrepareKeepIopHandoff(") + "\n"
 code += extract_func(actions_src, "static void cleanUpForExecInternal(") + "\n"
 code += extract_func(actions_src, "int CleanUpForKeepIopExec(") + "\n"
@@ -164,11 +166,14 @@ int main(void) {
     for (int failure = 0; failure <= 1; failure++) {
         commit = -failure;
         dashLaunchApp(&app, 0);
+        assert(dash_active && boot_init_pending);
         assert(!muted && !suspended && !shutdown_calls && restored == failure+1 && bgm == failure+1);
     }
     commit = 1;
     if (!setjmp(launched)) { dashLaunchApp(&app, 0); assert(0); }
+    assert(!dash_active && !boot_init_pending);
     assert(muted && !suspended && shutdown_calls >= 2 && pad_ended == 1 && restored == 2);
+    dash_active = boot_init_pending = 1;
     setting = calloc(1, sizeof(*setting));
     muted = commit = shutdown_calls = pad_ended = 0;
     strcpy(app.path,"usb0:/app.elf");

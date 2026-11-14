@@ -717,6 +717,7 @@ int dashModalIp(const char *title, const char *help, char *ip_str, int size)
 	dashInputFlush();
 	while (1) {
 		int step = 0;
+		u32 shoulders;
 
 		dashInputPoll(&in);
 		if (in.pressed & DASH_IN_LEFT) {
@@ -731,16 +732,14 @@ int dashModalIp(const char *title, const char *help, char *ip_str, int size)
 			step = 1;
 		if (in.pressed & DASH_IN_DOWN)
 			step = -1;
-		if (in.pressed & (DASH_IN_R1 | DASH_IN_R2))
+		shoulders = in.pressed | dashInputShoulderRepeat();
+		if (shoulders & (DASH_IN_R1 | DASH_IN_R2))
 			step = 10;
-		if (in.pressed & (DASH_IN_L1 | DASH_IN_L2))
+		if (shoulders & (DASH_IN_L1 | DASH_IN_L2))
 			step = -10;
 		if (step) {
-			oct[sel] += step;
-			if (oct[sel] < 0)
-				oct[sel] = 0;
-			if (oct[sel] > 255)
-				oct[sel] = 255;
+			/* Wrap only this octet, keeping zero available for addresses and masks. */
+			oct[sel] = (oct[sel] + step + 256) % 256;
 			dashSoundPlay(DASH_SND_CURSOR);
 		}
 		if (in.pressed & DASH_IN_OK) {
