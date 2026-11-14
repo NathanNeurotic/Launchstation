@@ -105,6 +105,7 @@ def render(manifest, slug, meta, fragment):
 <footer>
   <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
   <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+  <p class="prov-inline color-scheme-credit">Color scheme by <a href="https://www.psx-place.com/members/gamerman-5000.192149/">gamerman 5000</a></p>
 </footer>
 <script src="data/search-index.js"></script>
 <script src="assets/app.js"></script>
