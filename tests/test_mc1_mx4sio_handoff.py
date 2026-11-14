@@ -134,6 +134,11 @@ start = widgets.index("\t\t\t\tif (d->state == DASH_DEV_READY")
 end = widgets.index("\t\t\t\telse if (d->state", start)
 code += 'typedef struct {int state,icon;const char *browse;} DashDevice;\n'
 code += 'static void choosePickerDevice(const DashDevice *d) {\n' + widgets[start:end] + '}\n'
+code += 'static int mock_dir_opened;\n'
+code += 'static void dashWorkerStatus(const char *s,int d,int t){(void)s;(void)d;(void)t;}\n'
+code += 'static int getDir(const char *p,FILEINFO *f){(void)p;(void)f;return 0;}\n'
+code += 'static int filerDirOpened(void){return mock_dir_opened;}\n'
+code += function(widgets, 'static void pickListRun(')
 code += function(widgets, 'static void pickListDone(')
 code += r'''
 static void reset_case(int mode,int running) {
@@ -207,9 +212,16 @@ int main(void) {
     for(int port=0;port<2;port++) {
         pk.active=1;pk.gen=4;pk.entries=calloc(PICK_MAX,sizeof(PickEntry));assert(pk.entries);
         pk.loading=1;PickListJob *failed=calloc(1,sizeof(*failed));assert(failed);
-        failed->files=calloc(1,sizeof(FILEINFO));failed->gen=pk.gen;failed->n=-12;
+        failed->files=calloc(1,sizeof(FILEINFO));failed->gen=pk.gen;
         snprintf(failed->path,sizeof(failed->path),"mc%d:/",port);
+        mock_dir_opened=0;pickListRun(failed);assert(failed->n<0);
         int roots_before=picker_roots,warnings_before=toasts;pickListDone(failed);
+        assert(picker_roots==roots_before+1&&toasts==warnings_before+1&&!pk.loading&&!pk.n);
+        pk.loading=1;PickListJob *empty=calloc(1,sizeof(*empty));assert(empty);
+        empty->files=calloc(1,sizeof(FILEINFO));empty->gen=pk.gen;
+        snprintf(empty->path,sizeof(empty->path),"mc%d:/",port);
+        mock_dir_opened=1;pickListRun(empty);assert(empty->n==0);
+        pickListDone(empty);
         assert(picker_roots==roots_before+1&&toasts==warnings_before+1&&!pk.loading&&!pk.n);
         free(pk.entries);pk.entries=NULL;pk.active=0;
     }

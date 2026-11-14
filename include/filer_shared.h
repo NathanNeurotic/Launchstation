@@ -111,6 +111,7 @@ int getDir(const char *path, FILEINFO *info);
 int getDirComplete(const char *path, FILEINFO *info, int *more);
 /* Whether the last complete-listing attempt can prove EOF, not merely return a count. */
 int filerDirReadComplete(void);
+int filerDirOpened(void);
 int filerPrepareDirRead(const char *path);
 /* Serialized card handshake; slot 2 may require retiring MX4SIO first. */
 int filerPrepareMemoryCardRead(int port);

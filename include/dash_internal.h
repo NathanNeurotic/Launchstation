@@ -1144,6 +1144,7 @@ extern int gsScreenGeneration;
 
 /* filer.c accessors used by the device model. */
 int getDir(const char *path, FILEINFO *info);
+int filerDirOpened(void);
 int filerRootMcPresent(int port, int *type, int *free_kb);
 int filerPrepareMemoryCardRead(int port);
 int filerUsbDriveMask(void);

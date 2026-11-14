@@ -296,6 +296,8 @@ static void listRun(void *arg)
 
 	dashWorkerStatus(j->path, 0, 0);
 	j->n = getDir(j->path, j->files);
+	if (j->n == 0 && (!strncmp(j->path, "mc0:", 4) || !strncmp(j->path, "mc1:", 4)) && !filerDirOpened())
+		j->n = -1;
 #ifdef SMB
 	if (smbSharesV1Name() != NULL && smbPathKind(j->path) == SMB_PATH_V2 && smbIsRootPath(j->path)) {
 		/* the SMB1 share is a folder of the one SMB device; fullPath opens smb1:/ */

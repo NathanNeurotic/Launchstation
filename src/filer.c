@@ -235,6 +235,11 @@ int filerDirReadComplete(void)
 	return dir_complete;
 }
 
+int filerDirOpened(void)
+{
+	return dir_opened;
+}
+
 static void dirOpenResult(int fd)
 {
 	if (fd >= 0)

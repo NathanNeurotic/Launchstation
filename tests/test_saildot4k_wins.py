@@ -284,11 +284,14 @@ assert "!fb_tab_active || !LaunchArgsPending()" in browser
 files_src = (root / "src/dash_files.c").read_text(encoding="utf-8")
 open_dev = function(files_src, "static void openDevice(")
 dev_sel = function(files_src, "static int devSelectable(")
-assert "d->icon == DI_MC" in open_dev and "dashOpenBrowser(d->browse);" in open_dev
+assert "d->icon == DI_MC" in open_dev
+assert "dashOpenBrowser(d->browse);" in open_dev
 assert "devs[idx].icon == DI_MC" in dev_sel
 assert "d->icon == DI_MC" in function(browser, "static void activate(")
 assert '(!strncmp(start_dir, "mc0:", 4) || !strncmp(start_dir, "mc1:", 4) || dashDevicePathReady(start_dir))' in function(browser, "static int browserOpenState(")
 widgets_src = (root / "src/dash_widgets.c").read_text(encoding="utf-8")
+assert "!filerDirOpened()" in function(browser, "static void listRun(")
+assert "!filerDirOpened()" in function(widgets_src, "static void pickListRun(")
 assert "Memory card could not be read. Try opening it again." in function(browser, "static void listDone(")
 assert "Memory card could not be read. Try opening it again." in function(widgets_src, "static void pickListDone(")
 filer_src = (root / "src/filer.c").read_text(encoding="utf-8")

@@ -860,6 +860,8 @@ static void pickListRun(void *arg)
 
 	dashWorkerStatus(j->path, 0, 0);
 	j->n = getDir(j->path, j->files);
+	if (j->n == 0 && (!strncmp(j->path, "mc0:", 4) || !strncmp(j->path, "mc1:", 4)) && !filerDirOpened())
+		j->n = -1;
 }
 
 /* 1 when the last folder of dir (any case) is name (upper case): "mass:/MCM/"
