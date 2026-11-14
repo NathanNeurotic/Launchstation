@@ -129,7 +129,9 @@ int main(void) {
 run_c("icons_new", icons_test)
 assert '[P_SOUND] = PAGE("Sound", DI_SOUND,' in settings
 assert '[P_KEYBOARD] = PAGE("USB keyboard", DI_KEYBOARD,' in settings
-assert "S_REBOOT_ELF ? DI_UNDO" in settings and "S_CLEAR_RECENT ? DI_CLOSE" in settings and "S_RESCAN ? DI_REFRESH" in settings
+assert "S_REBOOT_ELF ? DI_UNDO" in settings
+assert "S_CLEAR_RECENT ? DI_CLOSE" in settings
+assert "S_RESCAN ? DI_REFRESH" in settings
 assert apps.count("DI_HIDE") >= 2
 assert "items[NEUTRINO_CANCEL + 1].icon = DI_UNDO;" in neutrino
 
@@ -241,8 +243,10 @@ int main(void) {
     assert(listScrollProgress(&long_app, 180.0f, 180.0f, 2.5f) == 0.0f);
     float mid = listScrollProgress(&long_app, 180.0f, 180.0f, 5.0f);
     assert(mid > 0.0f && mid < 1.0f);
-    float end_dwell = listScrollProgress(&long_app, 180.0f, 180.0f, 20.0f);
-    assert(end_dwell == 1.0f || end_dwell >= 0.0f);
+    float end_dwell = listScrollProgress(&long_app, 180.0f, 180.0f, 7.5f);
+    assert(end_dwell == 1.0f);
+    float restarted = listScrollProgress(&long_app, 180.0f, 180.0f, 10.0f);
+    assert(restarted == 0.0f);
     puts("PASS: synchronized listScrollProgress and dashTextScrollProgress clamp and scissor cleanly");
     return 0;
 }

@@ -25,7 +25,7 @@ static void cleanUpForExecInternal(int end_pad_rpc)
 	dashSoundShutdown(); /* the launch is now committed */
 	DashThemeSetLegacyEnabled(0);
 	clearScreenToBlack();
-	/* Stop dashboard status/loading hooks before releasing settings and fonts. */
+	/* Stop dashboard drawMsg and DashIsActive hooks before releasing settings and fonts. */
 	DashStopUiForExec();
 	free(setting);
 	free(elisaFnt);
