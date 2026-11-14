@@ -25,8 +25,7 @@ static void cleanUpForExecInternal(int end_pad_rpc)
 	dashSoundShutdown(); /* the launch is now committed */
 	DashThemeSetLegacyEnabled(0);
 	clearScreenToBlack();
-	/* PAD/keyboard shutdown still performs RPC. Stop cooperative redraws
-	 * before releasing the settings and fonts those frames would use. */
+	/* Stop dashboard status/loading hooks before releasing settings and fonts. */
 	DashStopUiForExec();
 	free(setting);
 	free(elisaFnt);

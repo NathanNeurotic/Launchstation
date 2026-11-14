@@ -73,8 +73,11 @@ int main(void){
  assert(run(c,f)&&f[0]==2093&&f[4]==9&&f[5]==59);
  /* Held shoulder repeats adjust by 10 without a fresh press. */
  static const unsigned r_keys[]={0,0,DASH_IN_OK};
- static const unsigned r_sh[]={DASH_IN_R1,DASH_IN_L1,0};
- shoulder_script=r_sh;assert(run(r_keys,f)&&f[0]==2093);shoulder_script=NULL;
+ static const unsigned r_up[]={DASH_IN_R1,0,0};
+ static const unsigned r_down[]={DASH_IN_L1,0,0};
+ f[0]=2024;shoulder_script=r_up;assert(run(r_keys,f)&&f[0]==2034);
+ f[0]=2024;shoulder_script=r_down;assert(run(r_keys,f)&&f[0]==2014);shoulder_script=NULL;
+ f[0]=2093;
  /* Second +1 wraps to 0; Left from Year reaches Second. */
  static const unsigned d[]={DASH_IN_LEFT,DASH_IN_UP,DASH_IN_OK};
  assert(run(d,f)&&f[5]==0);

@@ -309,8 +309,8 @@ int DashChooseElfIopMode(int configured)
 	return mode;
 }
 
-/* After cleanup commits, SDK RPC waits must never redraw settings/fonts
- * that are about to be released. DashIsActive also gates the wait shim. */
+/* Once exec cleanup commits, mark the dashboard inactive before freeing
+ * setting/fonts so drawMsgHook and DashIsActive-gated overlays stop drawing. */
 void DashStopUiForExec(void)
 {
 	dash_active = 0;

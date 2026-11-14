@@ -282,12 +282,8 @@ assert "dashIconMany(browser_cut ? DI_CUT : DI_COPY," in browser
 assert "!fb_tab_active || !LaunchArgsPending()" in browser
 
 files_src = (root / "src/dash_files.c").read_text(encoding="utf-8")
-files_update = function(files_src, "static void filesUpdate(")
-dev_update = function(files_src, "static void devUpdate(")
 open_dev = function(files_src, "static void openDevice(")
 dev_sel = function(files_src, "static int devSelectable(")
-assert "dashDevicesRefreshMemoryCards(fdevs, nfdevs);" in files_update
-assert "dashDevicesRefreshMemoryCards(devs, ndevs);" in dev_update
 assert "d->icon == DI_MC" in open_dev and "dashOpenBrowser(d->browse);" in open_dev
 assert "devs[idx].icon == DI_MC" in dev_sel
 assert "d->icon == DI_MC" in function(browser, "static void activate(")

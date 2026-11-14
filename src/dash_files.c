@@ -331,7 +331,6 @@ static void filesUpdate(float dt)
 {
 	static float t;
 
-	dashDevicesRefreshMemoryCards(fdevs, nfdevs);
 	fsel_anim = dashApproach(fsel_anim, (float)fsel, 16.0f * dashAnimSpeed(), dt);
 	t += dt;
 	if (t > 1.0f) {
@@ -577,7 +576,6 @@ static void devUpdate(float dt)
 	static float t;
 	float target;
 
-	dashDevicesRefreshMemoryCards(devs, ndevs);
 	if (dsel >= 0)
 		dsel_anim = dashApproach(dsel_anim, (float)dsel, 14.0f * dashAnimSpeed(), dt);
 	target = (((dsel >= 0 ? dsel : 0) / DEV_COLS) - 1) * DEV_PY;
