@@ -80,7 +80,8 @@ static int dashWorkerIoBusy(void) {return busy;}
 static void dashInputFlush(void) {assert(!busy);flush_count++;}
 static void dashToast(int type,const char *msg) {(void)type;(void)msg;}
 static int isMisc(const char *p) {(void)p;return 0;}
-static int dashDevicePathReady(const char *p) {(void)p;return 1;}
+static int cached_path_ready=1;
+static int dashDevicePathReady(const char *p) {(void)p;return cached_path_ready;}
 static void dashStrCopy(char *dst,const char *src,int n) {
     snprintf(dst,(size_t)n,"%s",src);
 }
@@ -146,6 +147,13 @@ int main(void) {
     assert(!strcmp(opened,""));
     assert(!strcmp(selected,"mc0:/"));
     dashFileBrowserTabClose();
+    cached_path_ready=0;
+    for(int port=0;port<2;port++) {
+        char path[16];snprintf(path,sizeof(path),"mc%d:/",port);
+        assert(browserOpenState(path,NULL));assert(!strcmp(opened,path));browserCloseState();
+    }
+    assert(browserOpenState("usb0:/",NULL));assert(!opened[0]);browserCloseState();
+    puts("PASS: physical card startup paths reach fresh browsing even when cached absent; other unavailable storage still opens root");
     puts("PASS: embedded Files tab state/selection resume, async-generation cleanup, USB input serialization");
 }
 '''

@@ -350,13 +350,24 @@ static void smbStatusMessage(int version, char *out, int out_size)
 }
 #endif
 
-/** Finish a folder listing and report SMB root-list failures to the user. */
+/** Finish a folder listing and report SMB or physical-card failures to the user. */
+static void openDir(const char *dir, const char *select);
+
 static void listDone(void *arg)
 {
 	FbListJob *j = (FbListJob *)arg;
 	int i, o = 0;
 
 	if (!j->abandoned && j->gen == fb.gen && fb.files != NULL) {
+		if (j->n < 0 && (!strncmp(j->path, "mc0:", 4) || !strncmp(j->path, "mc1:", 4))) {
+			char card[8];
+			snprintf(card, sizeof(card), "mc%c:/", j->path[2]);
+			free(j->files);
+			free(j);
+			openDir("", card);
+			dashToast(DASH_TOAST_WARN, "Memory card could not be read. Try opening it again.");
+			return;
+		}
 		for (i = 0; i < j->n && o < MAX_ENTRY; i++) {
 			FILEINFO *f = &j->files[i];
 			if (f->name[0] == '\0' || !strcmp(f->name, ".") || !strcmp(f->name, ".."))
@@ -664,8 +675,9 @@ static void activate(void)
 		if (fb.sel >= fb.ndevs)
 			return;
 		d = &fb.devs[fb.sel];
-		if (d->icon == DI_MC && d->state == DASH_DEV_ABSENT) {
-			dashToast(DASH_TOAST_INFO, "Insert a memory card into this slot");
+		if (d->icon == DI_MC) {
+			dashStrCopy(path, d->browse, sizeof(path));
+			openDir(path, NULL); /* recheck the actual card, even after cached absence */
 			return;
 		}
 		if (d->icon == DI_DISC && d->state != DASH_DEV_READY) {
@@ -3419,7 +3431,8 @@ static int browserOpenState(const char *start_dir, const char *select)
 	}
 	memset(fb.mark, 0, MAX_ENTRY);
 	if (start_dir != NULL && start_dir[0] &&
-	    (isMisc(start_dir) || (strchr(start_dir, ':') && dashDevicePathReady(start_dir))))
+	    (isMisc(start_dir) || (strchr(start_dir, ':') &&
+	     (!strncmp(start_dir, "mc0:", 4) || !strncmp(start_dir, "mc1:", 4) || dashDevicePathReady(start_dir)))))
 		openDir(start_dir, select);
 	else
 		openDir("", select);

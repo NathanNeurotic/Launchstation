@@ -30,6 +30,7 @@ def function(source, signature):
 code = r'''
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #define MX4SIO 1
 #define TRUE 1
@@ -51,11 +52,27 @@ static int USB_mass_loaded,hddNparties[2],worker,jobs,refuse_reset,resets,drains
 static int mctype_PSx,root_mc_polled[2],root_mc_present[2],root_mc_known_type[2];
 static int root_mc_known_free[2],root_mc_failures[2];
 static int waits,cancel_wait,queued,picker_queued,root_returns,picker_roots,quiet,toasts;
-static struct { int loading; } pk;
+#define MAX_NAME 256
+#define PICK_MAX 16
+#define DASH_PICK_FOLDER 1
+#define DASH_PICK_LAUNCH 2
+#define sceMcFileAttrSubdir 0x20
+typedef unsigned char u8;
+typedef struct {char name[MAX_NAME];struct {int AttrFile;}stats;} FILEINFO;
+typedef struct {char name[MAX_NAME];unsigned char dir;} PickEntry;
+typedef struct {int gen,n;char path[MAX_PATH];FILEINFO *files;} PickListJob;
+static struct { int loading,active,gen,n,mode;const char *ext;PickEntry *entries; } pk;
+static int genCmpFileExt(const char *name,const char *extension) {(void)name;(void)extension;return 1;}
+static int pickExtOk(const char *dir,const char *name,const char *ext) {(void)dir;(void)name;(void)ext;return 1;}
+static int pickCmp(const void *a,const void *b) {return strcmp(((const PickEntry*)a)->name,((const PickEntry*)b)->name);}
 static void filerRootMcPollIdle(void) { drains++; }
 static int rpc_down,rpc_starts,rpc_fail;
 static void ensureCoreIoStackReady(void) { assert(!worker); rpc_starts++; rpc_down=rpc_fail; }
 static int isMemoryCardRpcReady(void) { return !rpc_down; }
+static int filerRootMcPresent(int p,void *type,void *free_units) {
+    (void)type;(void)free_units;return root_mc_polled[p]?root_mc_present[p]:-1;
+}
+static int filerPrepareMemoryCardRead(int port);
 static int dashWorkerOnThread(void) { return worker; }
 static void resetRuntimeDeviceState(int show) {
     assert(show==TRUE);
@@ -117,11 +134,13 @@ start = widgets.index("\t\t\t\tif (d->state == DASH_DEV_READY")
 end = widgets.index("\t\t\t\telse if (d->state", start)
 code += 'typedef struct {int state,icon;const char *browse;} DashDevice;\n'
 code += 'static void choosePickerDevice(const DashDevice *d) {\n' + widgets[start:end] + '}\n'
+code += function(widgets, 'static void pickListDone(')
 code += r'''
 static void reset_case(int mode,int running) {
     storage_driver_stack_mode=mode;mx4sio_driver_running=running;
     jobs=1;worker=refuse_reset=resets=drains=handshakes=waits=cancel_wait=0;
     queued=picker_queued=root_returns=picker_roots=quiet=toasts=0;pk.loading=1;
+    root_mc_polled[0]=root_mc_polled[1]=root_mc_present[0]=root_mc_present[1]=1;
 }
 int main(void) {
     for(int mode=0;mode<=1;mode++) {
@@ -132,7 +151,7 @@ int main(void) {
         browse("mc1:/");assert(waits==1 && !jobs && resets==1 && queued==1);
         worker=1;
         assert(filerPrepareMemoryCardRead(1)==sceMcResSucceed);
-        assert(handshakes==1 && resets==1 && isPathDeviceStackLoaded("mc1:/"));
+        assert(handshakes==2 && resets==1 && isPathDeviceStackLoaded("mc1:/"));
         assert(!filerDirReadNeedsPrep("mc1:/"));
     }
     reset_case(STORAGE_STACK_MX4SIO,1);
@@ -170,6 +189,32 @@ int main(void) {
     rpc_down=1;rpc_starts=0;rpc_fail=1;
     assert(!filerPrepareDirRead("mc0:/") && rpc_starts==1 && !isMemoryCardRpcReady() && filerDirReadNeedsPrep("mc0:/"));
     rpc_fail=0;assert(filerPrepareDirRead("mc0:/") && rpc_starts==2 && isMemoryCardRpcReady());
+    /* A stale absence/unknown snapshot requires a fresh foreground handshake.
+     * No reset is needed with the ordinary driver stack already resident. */
+    for(int port=0;port<2;port++)for(int state=0;state<3;state++) {
+        reset_case(STORAGE_STACK_DEFAULT,0);
+        root_mc_polled[port]=state!=2;root_mc_present[port]=state==1;
+        char path[16];snprintf(path,sizeof(path),"mc%d:/",port);
+        if(state==1)continue;
+        assert(filerDirReadNeedsPrep(path));browse(path);
+        assert(waits==1&&handshakes==1&&queued==1&&!resets&&root_mc_present[port]);
+        /* All card rows remain actionable even if the picker kept old state. */
+        for(int cached=0;cached<4;cached++) {
+            const DashDevice card={cached,DI_MC,path};choosePickerDevice(&card);
+            assert(picker_queued>0);
+        }
+    }
+    for(int port=0;port<2;port++) {
+        pk.active=1;pk.gen=4;pk.entries=calloc(PICK_MAX,sizeof(PickEntry));assert(pk.entries);
+        pk.loading=1;PickListJob *failed=calloc(1,sizeof(*failed));assert(failed);
+        failed->files=calloc(1,sizeof(FILEINFO));failed->gen=pk.gen;failed->n=-12;
+        snprintf(failed->path,sizeof(failed->path),"mc%d:/",port);
+        int roots_before=picker_roots,warnings_before=toasts;pickListDone(failed);
+        assert(picker_roots==roots_before+1&&toasts==warnings_before+1&&!pk.loading&&!pk.n);
+        free(pk.entries);pk.entries=NULL;pk.active=0;
+    }
+    puts("PASS: failed physical-card listings return the picker to devices with a read error");
+    puts("PASS: stale absent/unknown card snapshots trigger foreground checks in either slot; picker accepts all cached card states");
     puts("PASS: mc1 resets before browser/picker reads; mc0 unchanged, cancel/refused resets safe, workers never probe MX4SIO-owned mc1");
 }
 '''
