@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-14T00:37:16+00:00",
+  "updated_at": "2026-11-14T03:21:06+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 2297,
+  "total_downloads": 2302,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -8016,12 +8016,12 @@
       "release": "build-1175"
     },
     "745028735": {
-      "downloads": 2,
+      "downloads": 3,
       "name": "APP_LAUNCHSTATION-DS-1175.zip",
       "release": "latest"
     },
     "745028737": {
-      "downloads": 6,
+      "downloads": 10,
       "name": "APP_LAUNCHSTATION-1175.zip",
       "release": "latest"
     },
