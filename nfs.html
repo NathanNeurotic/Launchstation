@@ -1,0 +1,166 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Network Shares (NFS) · Launchstation Docs</title>
+<meta name="description" content="Network Shares (NFS) The Network (NFS) device ( nfs: ) opens NFS exports on a Linux or BSD server or a NAS, over NFSv4.0. NFS shares are saved with the SMB shares, at the end of LAUNCHSTATION.CNF , and edited in the same place. Not yet tested on a console. Wha">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://nathanneurotic.github.io/Launchstation/nfs.html">
+<meta property="og:site_name" content="Launchstation Docs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Network Shares (NFS) · Launchstation Docs">
+<meta property="og:description" content="Network Shares (NFS) The Network (NFS) device ( nfs: ) opens NFS exports on a Linux or BSD server or a NAS, over NFSv4.0. NFS shares are saved with the SMB shares, at the end of LAUNCHSTATION.CNF , and edited in the same place. Not yet tested on a console. Wha">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/style.css">
+</head><body data-base="">
+<header class="topbar">
+  <button class="menu-btn" aria-label="Menu">☰</button>
+  <a class="brand" href="index.html">
+    <img class="brand-logo" src="assets/launchstation-logo.avif" alt="Launchstation" width="116" height="58"></a>
+  <div class="topbar-actions">
+    <button id="orb-toggle" class="topbar-btn orb-toggle" type="button" aria-pressed="false" aria-label="Toggle cursor orbs" title="Toggle cursor orbs"><span class="orb-toggle-symbol" aria-hidden="true">✧</span><span class="orb-toggle-label">Orbs</span></button>
+    <a class="topbar-btn primary" href="releases.html"><span class="icon icon-releases"></span>Downloads</a>
+    <a class="topbar-btn" href="https://github.com/NathanNeurotic/Launchstation" target="_blank" rel="noopener"><span class="icon icon-github"></span>GitHub</a>
+  </div>
+  <div class="search">
+    <span class="ico"></span>
+    <input id="q" type="search" placeholder="Search devices, Neutrino, cloud, settings…  ( / )" autocomplete="off">
+    <kbd>/</kbd>
+    <div id="results"></div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-brand-sub">PLAYSTATION 2 // Launchstation</div>
+    <h4>Start</h4>
+    <a href="index.html"><span class="icon icon-home"></span>Home</a>
+    <a href="getting-started.html"><span class="icon icon-start"></span>Getting Started</a>
+    <a href="install.html"><span class="icon icon-install"></span>Install &amp; Update</a>
+    <a href="releases.html"><span class="icon icon-releases"></span>Downloads &amp; Releases</a>
+    <h4>Interface</h4>
+    <a href="ui-captures.html"><span class="icon icon-book"></span>Screenshots &amp; Theme Gallery</a>
+    <a href="dashboard.html"><span class="icon icon-home"></span>Dashboard</a>
+    <a href="file-browser.html"><span class="icon icon-folder"></span>File Browser</a>
+    <a href="apps.html"><span class="icon icon-apps"></span>Applications</a>
+    <a href="text-editor.html"><span class="icon icon-book"></span>Text Editor</a>
+    <a href="launch-arguments.html"><span class="icon icon-start"></span>Launch Arguments</a>
+    <a href="controls.html"><span class="icon icon-controls"></span>Controls</a>
+    <h4>Storage &amp; Devices</h4>
+    <a href="devices.html"><span class="icon icon-usb"></span>Device Support</a>
+    <a href="memory-card.html"><span class="icon icon-vmc"></span>Memory Cards</a>
+    <a href="usb.html"><span class="icon icon-usb"></span>USB Mass Storage</a>
+    <a href="mx4sio.html"><span class="icon icon-mmce"></span>MX4SIO SD Card</a>
+    <a href="udpfs.html"><span class="icon icon-netboot"></span>Network Storage (UDPFS)</a>
+    <a href="smb.html"><span class="icon icon-netboot"></span>Network Shares (SMB)</a>
+    <a href="nfs.html" class="active"><span class="icon icon-netboot"></span>Network Shares (NFS)</a>
+    <a href="pc-card-cf.html"><span class="icon icon-hdd"></span>PC CARD CompactFlash</a>
+    <a href="hdd.html"><span class="icon icon-hdd"></span>Internal HDD</a>
+    <a href="hdd-manager.html"><span class="icon icon-hdd"></span>HDD Manager &amp; APA Headers</a>
+    <a href="ilink.html"><span class="icon icon-usb"></span>iLink / FireWire</a>
+    <a href="network.html"><span class="icon icon-netboot"></span>Network &amp; PC</a>
+    <a href="mmce.html"><span class="icon icon-mmce"></span>MMCE</a>
+    <a href="saves.html"><span class="icon icon-vmc"></span>Saves, PSU &amp; Timestamps</a>
+    <h4>Game Images</h4>
+    <a href="game-launching.html"><span class="icon icon-play"></span>Launching Games &amp; Images</a>
+    <a href="neutrino.html"><span class="icon icon-neutrino"></span>PS2 ISO · Neutrino</a>
+    <a href="popstarter.html"><span class="icon icon-ps1"></span>PS1 VCD · POPStarter</a>
+    <a href="ember.html"><span class="icon icon-ps1"></span>PS1 Images · Ember</a>
+    <h4>Backups &amp; Cloud</h4>
+    <a href="mmce-backup.html"><span class="icon icon-vmc"></span>MMCE Backups</a>
+    <a href="cloud.html"><span class="icon icon-smb"></span>Google Drive Cloud</a>
+    <a href="igr.html"><span class="icon icon-igr"></span>IGR Return &amp; Backup</a>
+    <a href="ecosystem.html"><span class="icon icon-github"></span>SD2Cloud &amp; ORBIT</a>
+    <h4>Utilities &amp; Hardware</h4>
+    <a href="exploit-installer.html"><span class="icon icon-install"></span>MC Exploit Installer</a>
+    <a href="network-services.html"><span class="icon icon-netboot"></span>FTP, PS2Link &amp; Remote</a>
+    <a href="special-hardware.html"><span class="icon icon-controls"></span>PSX, Deckard &amp; RetroGem</a>
+    <h4>Customize</h4>
+    <a href="settings.html"><span class="icon icon-settings"></span>Settings Reference</a>
+    <a href="configuration.html"><span class="icon icon-settings"></span>Config Files &amp; Paths</a>
+    <a href="themes.html"><span class="icon icon-themes"></span>Display, Themes &amp; BGM</a>
+    <a href="languages.html"><span class="icon icon-languages"></span>Languages</a>
+    <h4>Reference</h4>
+    <a href="wiki.html"><span class="icon icon-book"></span>Wiki &amp; Guide Index</a>
+    <a href="troubleshooting.html"><span class="icon icon-troubleshoot"></span>Troubleshooting</a>
+    <a href="faq.html"><span class="icon icon-book"></span>FAQ</a>
+    <a href="developers.html"><span class="icon icon-fork-gaps"></span>Developer Notes</a>
+    <a href="building.html"><span class="icon icon-install"></span>Building from Source</a>
+    <a href="architecture.html"><span class="icon icon-fork-gaps"></span>Architecture &amp; Repo Layout</a>
+    <a href="contributing.html"><span class="icon icon-github"></span>Contributing &amp; Testing</a>
+    <a href="credits.html"><span class="icon icon-credits"></span>Credits &amp; Licenses</a>
+    <a href="privacy.html"><span class="icon icon-book"></span>Privacy Policy</a>
+  </nav>
+  <main class="content">
+<h1>Network Shares (NFS)</h1>
+<p class="lead">The <b>Network (NFS)</b> device (<code>nfs:</code>) opens NFS exports on a Linux or BSD server or a NAS, over NFSv4.0. NFS shares are saved with the SMB shares, at the end of <code>LAUNCHSTATION.CNF</code>, and edited in the same place. Not yet tested on a console.</p>
+
+<div class="callout info"><div class="h">What you need</div><ul>
+<li>A console with a network adapter (or built-in Ethernet) on the same LAN as the server.</li>
+<li>An export on the server that lets the PS2 in, with NFSv4.0 enabled (on Linux, <code>cat /proc/fs/nfsd/versions</code> lists <code>+4</code> without <code>-4.0</code>).</li>
+<li>An IP address for the PS2 (<b>Settings &gt; Network</b>), and <b>Legacy Ethernet drivers</b> off.</li>
+<li>At least one NFS share, added in <b>Settings &gt; Network &gt; NFS shares</b> (or as text, below).</li>
+</ul></div>
+
+<h2 id="how">How it works</h2>
+<p><b>Network (NFS)</b> is listed in Files once an NFS share is saved. Nothing touches the network until you open it. The first time, Launchstation starts the network with the address in <code>IPCONFIG.DAT</code>, loads the NFS driver and connects every saved NFS share. <code>nfs:/</code> then lists one folder per connected share, named by its <code>NAME</code>: <code>nfs:/LINUX</code>, <code>nfs:/NAS</code>.</p>
+<p>The driver speaks NFSv4.0 on TCP port 2049: it needs no portmapper and no MOUNT protocol, and reaches the export from the server&rsquo;s root, as <code>mount -t nfs4</code> does. It connects from a port below 1024, so the export does not need the <code>insecure</code> option. A share that does not connect is left out of <code>nfs:/</code> and the browser says why; opening the device again tries it again, at most every 30 seconds.</p>
+<p>The PS2 sends the user and group IDs of the share (0 when not set) as AUTH_SYS credentials. With the usual <code>root_squash</code>, 0 is the server&rsquo;s anonymous user, so files must be readable by everyone, and a folder writable by everyone to copy into it. Set the IDs of a server account instead to read and write as that account.</p>
+<p>A connection the server closes, or that drops, is connected again on the next use, and open files and folders carry on: NFS keeps no state for them on the server.</p>
+
+<h2 id="file">Where shares are saved</h2>
+<p>An NFS share is a block among the SMB shares, after the <code># SMB shares</code> line at the end of <code>LAUNCHSTATION.CNF</code> (see <a href="smb.html#file">SMB shares</a>). The <code>URL</code>&rsquo;s scheme makes it an NFS share. It has two keys:</p>
+<table><thead><tr><th>Key</th><th>Value</th><th>Longest (bytes)</th></tr></thead><tbody>
+<tr><td><code>NAME</code></td><td>The share&rsquo;s folder name in <code>nfs:/</code>. Required, unique among all shares (in any case), no <code>/ \ : * ? " &lt; &gt; |</code></td><td>31</td></tr>
+<tr><td><code>URL</code></td><td><code>nfs://&lt;IP address&gt;[:&lt;port&gt;]/&lt;export path&gt;[?uid=N&amp;gid=N]</code>; the port is 2049 when left out, and the IDs are 0</td><td>255</td></tr>
+</tbody></table>
+<ul>
+<li><code>USERNAME</code>, <code>PASSWORD</code>, <code>PLAINTEXT</code> and <code>VERSION = 1</code> do not apply: an NFS share with one of them is refused, and the browser says so.</li>
+<li>Use the server&rsquo;s IP address: the driver has no DNS.</li>
+<li>The export path is the path the server exports, from its root: <code>/srv/ps2</code> for <code>/srv/ps2  192.168.1.0/24(rw)</code> in <code>/etc/exports</code>. A path below the export opens there.</li>
+<li>Up to 8 shares are read, SMB and NFS together.</li>
+</ul>
+<pre><code># /srv/ps2 on a Linux box, as nfs:/LINUX, reading and writing as uid/gid 1000
+NAME = LINUX
+URL = nfs://192.168.1.100:2049/srv/ps2?uid=1000&amp;gid=1000
+
+# The games folder of a NAS export, as nfs:/NAS, as the anonymous user
+NAME = NAS
+URL = nfs://192.168.1.20/volume1/ps2/games</code></pre>
+
+<h2 id="use">What you can do</h2>
+<ul>
+<li><b>Browse, copy, rename, make and delete folders</b> inside a share. File dates and attributes are not set on the server. Rename works inside one share, and replaces a file of the new name.</li>
+<li><b>Nothing can be made in <code>nfs:/</code> itself</b>: it only lists the connected shares.</li>
+<li><b>Launch an ELF</b> from a share. Not yet tested.</li>
+<li><b>PS2 ISO games through Neutrino</b> are not supported from <code>nfs:</code> yet: Neutrino needs an NFS backing store first.</li>
+</ul>
+
+<h2 id="stacks">Stack rules</h2>
+<ul>
+<li>NFS uses the same Ethernet stack as SMB, FTP, PS2Link and Google Drive, so they can be used together. UDPFS uses a different one: opening NFS after UDPFS (or the other way) resets the IOP, and copying between <code>udpfs:</code> and <code>nfs:</code> is refused.</li>
+<li>NFS uses DEV9: it does not start while PC CARD CF owns the bus, and copying between NFS and PC CARD CF is refused.</li>
+<li>NFS needs the current Ethernet drivers. With <b>Legacy Ethernet drivers</b> on, the device says so and does not start.</li>
+</ul>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ol>
+<li><b>No Network (NFS) in Files.</b> It is listed once an NFS share is saved: add one in <b>Settings &gt; Network &gt; NFS shares</b>.</li>
+<li><b>&ldquo;Server did not answer on the NFS port&rdquo;.</b> Check the server&rsquo;s IP address, that the NFS server runs, and that a firewall lets TCP 2049 in (firewalld: <code>firewall-cmd --add-service=nfs</code>).</li>
+<li><b>&ldquo;Server does not answer NFSv4.0&rdquo;.</b> The server has NFSv4.0 turned off (some distributions now ship with 4.1 and 4.2 only); turn 4.0 on in its NFS configuration. The Windows NFS server does not offer 4.0.</li>
+<li><b>&ldquo;No such export on the server&rdquo;.</b> The export path is not exported: check <code>/etc/exports</code> (<code>exportfs -v</code>).</li>
+<li><b>&ldquo;The export refused this PS2&rdquo;.</b> The PS2&rsquo;s address is not in the export&rsquo;s client list.</li>
+<li><b>Files are listed but cannot be read or written.</b> The IDs the PS2 sends do not have the rights: set the share&rsquo;s User ID and Group ID to those of the files&rsquo; owner, or make the files readable (and a folder writable) by everyone.</li>
+</ol>
+
+<p>The <code>nfs:</code> device uses <a href="https://github.com/sahlberg">Ronnie Sahlberg</a>&rsquo;s <a href="https://github.com/sahlberg/unfs4">unfs4</a>, a minimal NFSv4.0 client and the sibling of the usmb2 SMB client. See <a href="credits.html">Credits</a>.</p>
+
+  </main>
+  <aside class="toc"><div class="toc-h">On this page</div><nav id="toc-nav"></nav></aside>
+</div>
+<footer>
+  <p><b>Launchstation Documentation</b> — PlayStation 2 dashboard and file manager maintained by Ripto / NathanNeurotic. This documentation is generated from the same repository as the software.</p>
+  <p class="prov-inline">Launchstation descends from the LaunchELF/uLaunchELF/wLaunchELF family and incorporates work by the wider PS2 homebrew community. See <a href="credits.html">Credits &amp; Licenses</a>.</p>
+  <p class="prov-inline color-scheme-credit">Color scheme by <a href="https://www.psx-place.com/members/gamerman-5000.192149/">gamerman 5000</a></p>
+</footer>
+<script src="data/search-index.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/orbs.js"></script>
+</body></html>
