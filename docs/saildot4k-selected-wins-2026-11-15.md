@@ -49,8 +49,8 @@ They do not merge the fork branches wholesale.
   No direct delete-and-replace workflow or speculative reclaimable-space credit is
   introduced. Explicit replacement of an exported file retains its existing
   truncate behavior and is not an atomic rollback transaction.
-- Empty argument text still reports unusable input; it does not silently clear the
-  pending argument list. Keep Up=start and Down=end. Preserve About/build identity.
+- Empty argument text still reports unusable input and does not launch with an
+  empty list. Argument parsing retains its existing pending-list reset behavior. Keep Up=start and Down=end. Preserve About/build identity.
 - Retain existing deletion, exploit, host-write, SMB and storage-stack safeguards.
   Pure module moves, a new deletion walker, generated site output, merge bookkeeping
   and the canceled lazy-search experiment/revert are not imported.
