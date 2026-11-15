@@ -40,51 +40,10 @@ def run_c(name, source):
 
 
 gfx = (root / "src/dash_gfx.c").read_text(encoding="utf-8")
-assert "tex_ring" not in gfx
-assert "borderCorner(" in gfx
-gfx_test = r"""
-#include <assert.h>
-#include <math.h>
-#include <stdio.h>
-typedef struct { unsigned char r, g, b, a; } DashColor;
-static float g_alpha = 1.0f;
-static int rects, quads, flushes;
-typedef struct { float x0, y0, x1, y1, x2, y2, x3, y3; DashColor c; } Quad;
-static Quad recorded[128];
-static float dashThemeRadius(float r) { return r; }
-static void dashSpriteBatchEnd(void) { flushes++; }
-static void dashRect(float x, float y, float w, float h, DashColor c) {
-    (void)x; (void)y;
-    assert(w >= 0.0f && h >= 0.0f && c.a > 0);
-    rects++;
-}
-static void dashQuadG(float x0, float y0, float x1, float y1,
-                      float x2, float y2, float x3, float y3,
-                      DashColor c0, DashColor c1, DashColor c2, DashColor c3) {
-    assert(c0.a == c1.a && c1.a == c2.a && c2.a == c3.a);
-    recorded[quads++] = (Quad){x0, y0, x1, y1, x2, y2, x3, y3, c0};
-}
-""" + function(gfx, "static void borderCorner(") + function(gfx, "void dashRoundedBorder(") + r"""
-int main(void) {
-    DashColor c = {120, 180, 255, 200};
-    dashRoundedBorder(10, 20, 100, 40, 1.0f, c);
-    assert(rects == 4 && quads == 0 && flushes == 1);
-    rects = quads = flushes = 0;
-    dashRoundedBorder(10, 20, 100, 40, 12.0f, c);
-    assert(rects == 4 && quads == 4 * 12 && flushes == 1);
-    for (int corner = 0; corner < 4; corner++) {
-        for (int i = 1; i < 12; i++) {
-            Quad prev = recorded[corner * 12 + i - 1];
-            Quad cur = recorded[corner * 12 + i];
-            assert(fabsf(prev.x1 - cur.x0) < 1e-4f && fabsf(prev.y1 - cur.y0) < 1e-4f);
-            assert(fabsf(prev.x3 - cur.x2) < 1e-4f && fabsf(prev.y3 - cur.y2) < 1e-4f);
-        }
-    }
-    puts("PASS: rounded border uses procedural borderCorner quads without tex_ring");
-    return 0;
-}
-"""
-run_c("gfx_border", gfx_test)
+# Keep the small textured border from master: four texture draws per border,
+# instead of emitting up to 96 procedural corner quads every frame.
+assert "static GSTEXTURE tex_ring;" in gfx
+assert "panelCorners(&tex_ring" in gfx
 
 hdr = (root / "include/dash_internal.h").read_text(encoding="utf-8")
 icons = (root / "src/dash_icons.c").read_text(encoding="utf-8")
