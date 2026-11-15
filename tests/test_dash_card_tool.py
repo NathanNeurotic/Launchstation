@@ -30,7 +30,7 @@ assert "src/mmce_card_switch.c" in (root / "ps2.yaml").read_text(encoding="utf-8
 tmp = Path(tempfile.mkdtemp(prefix="card-tool-"))
 atexit.register(shutil.rmtree, tmp, ignore_errors=True)   # ~700 MB of card images per run
 tool, lister = tmp / "tool", tmp / "list"
-flags = ["gcc", "-std=gnu99", "-O1", "-g", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
+flags = ["gcc", "-std=gnu99", "-DETH", "-O1", "-g", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
          "-fno-sanitize-recover=all"]
 subprocess.run(flags + [f"-I{root/'tests/card-tool-shim'}", f"-I{root/'include'}",
                         str(root / "tests/dash_card_tool_host.c"), str(root / "src/dash_card_tool.c"),
@@ -1432,3 +1432,48 @@ assert "GUARD" in saves(source) and "GUARD" in saves(dest)
 assert host(source).read_bytes()[where] == raw[where]^1
 assert host(dest).read_bytes().find(payload)>=0
 print("PASS: a source changed during Cut is retained alongside the verified destination")
+host(source).write_bytes(raw)
+blank(dest)
+lines = run(source, "m3", "m1", "p" + dest, "c1",
+            env={"MUTATE_SOURCE": str(where), "MUTATE_BEFORE_DELETE": "1"})
+assert kind(lines, "MESSAGE|1|Source save kept|"), lines
+assert "GUARD" in saves(source) and "GUARD" in saves(dest)
+assert host(source).read_bytes()[where] == raw[where] ^ 1
+assert host(dest).read_bytes().find(payload) >= 0
+print("PASS: a source changed after its safety copy is retained before deletion")
+host(source).write_bytes(raw)
+blank(dest)
+rows = kind(run("all:mass:/"), "MENU|All saves|")[0].split("|")[4:]
+row = next(i + 1 for i, text in enumerate(rows) if "~guard-source.mcd: GUARD," in text)
+lines = run("all:mass:/", "s" + str(row), "m0", "m1", "p" + dest, "c1",
+            env={"MUTATE_SOURCE": str(where), "MUTATE_BEFORE_DELETE": "1"})
+assert kind(lines, "MESSAGE|1|Not all done|"), lines
+assert "GUARD" in saves(source) and "GUARD" in saves(dest)
+assert host(source).read_bytes()[where] == raw[where] ^ 1
+host(source).write_bytes(raw)
+blank(dest)
+lines = run(source, "m3", "m1", "p" + dest, "c1", env={"RESET_BEFORE_DELETE": "1"})
+assert kind(lines, "MESSAGE|1|Source save kept|"), lines
+assert "GUARD" in saves(source) and "GUARD" in saves(dest)
+print("PASS: batch source mutation and a changed IOP generation both prevent deletion")
+for server in ("FTP_ACTIVE", "SMB_ACTIVE"):
+    host(source).write_bytes(raw)
+    blank(dest)
+    lines = run(source, "m3", "m1", "p" + dest, "c1", env={server: "1"})
+    assert kind(lines, "MESSAGE|1|Source save kept|"), lines
+    assert "GUARD" in saves(source) and "GUARD" in saves(dest)
+host(source).write_bytes(raw)
+blank(dest)
+lines = run(source, "m3", "m1", "p" + dest, "c1", env={"FTP_ACTIVE": "1", "FTP_STOPPED": "1"})
+assert kind(lines, "TOAST|1|Save moved and verified"), lines
+assert "GUARD" not in saves(source) and "GUARD" in saves(dest)
+print("PASS: active FTP/SMB retain moved sources; confirmed stopped FTP permits deletion")
+for device in ("host", "udpfs", "smb", "nfs"):
+    (dev / device).mkdir(exist_ok=True)
+    remote = device + ":/source.mcd"
+    host(remote).write_bytes(raw)
+    blank(dest)
+    lines = run(remote, "m3", "m1", "p" + dest, "c1")
+    assert kind(lines, "MESSAGE|1|Source save kept|"), lines
+    assert "GUARD" in saves(remote) and "GUARD" in saves(dest)
+print("PASS: network moves retain the source because fileXio cannot exclude remote writers")

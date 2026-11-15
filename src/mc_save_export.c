@@ -301,7 +301,7 @@ int mcSaveExportStream(const McSaveData *s, int format, const McSaveStreamIo *io
 		if (!mcCardNameOk(f->entry + 0x40) || (f->size && !io->read && !f->data))
 			return MCW_ERR_INVALID;
 		for (j = 0; j < i; j++)
-			if (!memcmp(f->entry + 0x40, s->files[j].entry + 0x40, 32)) return MCW_ERR_INVALID;
+			if (!strncmp((const char *)f->entry + 0x40, (const char *)s->files[j].entry + 0x40, 32)) return MCW_ERR_INVALID;
 		payload += f->size;
 		total += format == MC_STREAM_PSU ? 512 + (((uint64_t)f->size + 1023) & ~(uint64_t)1023) : f->size;
 	}

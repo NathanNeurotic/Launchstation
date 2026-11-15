@@ -40,7 +40,7 @@ code += r'''
 static struct {int sound,sound_vol;} dashCfg={1,60};
 static struct {void *buffer;} samples[DASH_SND_COUNT];
 static int gain_ch=-1,attempts,success=-1;
-static int sound_job_id, sound_closing, sound_boot_pending;
+static int sound_job_id, sound_closing, sound_boot_pending, sound_retry;
 #define DASH_SND_BOOT 5
 static int soundAlive(void) {return 1;}
 static int dashIopParked(void) {return 0;}

@@ -835,6 +835,9 @@ int prepareExploitSignerIop(void)
 		return loadSecrSifModule();
 	}
 
+	/* Completion callbacks can queue more audio after an earlier queue wait.
+	 * Drain with replacement jobs disabled before destroying its RPC server. */
+	dashSoundShutdown();
 #ifdef DS34
 	stopDs34Input();
 #endif

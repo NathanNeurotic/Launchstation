@@ -48,7 +48,7 @@ static audsrv_adpcm_t samples[DASH_SND_COUNT];
 static struct { int sound, sound_vol; } dashCfg = {1, 100};
 static u64 now;
 static u64 Timer(void) { return now; }
-static int sound_job_id, sound_closing, sound_boot_pending;
+static int sound_job_id, sound_closing, sound_boot_pending, sound_retry;
 #define DASH_SND_BOOT 5
 static int soundAlive(void) { return 1; }
 static int dashIopParked(void) { return 0; }

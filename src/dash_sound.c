@@ -209,7 +209,9 @@ static void soundJobDone(void *arg)
 	if (job->warning[0] && !sound_closing) dashToast(DASH_TOAST_WARN, job->warning);
 	if (sound_closing) return;
 	dashSoundApplyVolume();
-	if (!theme_reload_pending) dashBgmStart();
+	/* A queue drain may be waiting for this job's ID. Preparation of a
+	 * newly enabled BGM bus belongs to Maintain in the next dashboard frame. */
+	if (!theme_reload_pending && bgm_loaded) dashBgmStart();
 	if (sound_boot_pending && !theme_reload_pending) {
 		sound_boot_pending = 0;
 		dashSoundPlay(DASH_SND_BOOT);
@@ -310,7 +312,7 @@ void dashSoundPlay(int id)
 	static int transSlot;
 	int ch, i;
 
-	if (sound_job_id || sound_closing) {
+	if (sound_job_id || sound_closing || (!soundAlive() && sound_retry)) {
 		if (id == DASH_SND_BOOT && !sound_closing) sound_boot_pending = 1;
 		return;
 	}

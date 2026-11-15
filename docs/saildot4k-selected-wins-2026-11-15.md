@@ -47,8 +47,13 @@ They do not merge the fork branches wholesale.
   This is not a claim that every save operation now streams.
 - Existing card imports refuse same-name destinations and preflight required space.
   No direct delete-and-replace workflow or speculative reclaimable-space credit is
-  introduced. Explicit replacement of an exported file retains its existing
-  truncate behavior and is not an atomic rollback transaction.
+  introduced. PSU/PS2 PSV replacements stream and verify a new `.PART` before
+  renaming the previous export to `.BAK` and publishing the new file. Failed or
+  unsupported publication retains recovery files; existing `.PART`/`.BAK` files
+  are never overwritten. This is not a power-loss atomic replacement transaction.
+  Moves recheck the source after its safety copy, through the same handle used
+  for deletion. Network sources and sources shared by running FTP/SMB servers
+  are retained because these interfaces cannot exclude concurrent writers.
 - Empty argument text still reports unusable input and does not launch with an
   empty list. Argument parsing retains its existing pending-list reset behavior. Keep Up=start and Down=end. Preserve About/build identity.
 - Retain existing deletion, exploit, host-write, SMB and storage-stack safeguards.
@@ -63,13 +68,16 @@ The host tests execute production functions and the full audio/card modules:
   absent adapters, failed commands/status reads, busy timeouts and protected sources.
 - Audio tests cover queued initialization, exclusive RPC ownership, theme/volume
   changes while queued, optional sidecar/short-I/O failures, generation recovery,
-  rejected submission, separate sound/music buses and shutdown draining.
+  rejected submission, separate sound/music buses, boot requests deferred before
+  job submission, queue-drain boundaries and signer-reset shutdown draining.
 - Independent PSU/PSV layout and HMAC oracles remain separate from the streaming
   encoder. Streaming output also matches the existing buffered encoders.
 - A 5 MiB save exports with a 128 KiB allocation ceiling and one descriptor, including
   short I/O, read/write/close/allocation failures, corrupted readback and source aliases.
 - Full card-tool integration runs under AddressSanitizer/UndefinedBehaviorSanitizer,
-  including a source mutated during a move; its save and the destination copy remain.
+  including sources mutated during destination writes and after the source safety
+  copy; their saves and destination copies remain. Active-server and network-source
+  tests cover refusing deletion when exclusive access cannot be established.
 - Import progress tests cover multiple/empty files, write/read close failures,
   metadata failure, cleanup, space refusal and an existing destination.
 - Browser and traversal tests cover eligible suffixes, CF online/offline, hidden rows,

@@ -46,6 +46,7 @@ static void applySet(int cmd, u32 a)
 }
 static char **queue;
 static int nqueue, qpos, open_files, max_open, writes, fail_write_at = -1;
+static unsigned int generation = 1;
 int fileMode = 0777;
 int vmcMounted[2];
 
@@ -77,7 +78,20 @@ int genOpen(const char *path, int mode)
 	map(path, p);
 	fd = open(p, mode, 0644);
 	if (fd >= 0) {
-		mutate_on_close = getenv("MUTATE_SOURCE") && !strcmp(path,"mass:/guard-dest.mcd") && (mode & O_RDWR);
+        mutate_on_close = getenv("MUTATE_SOURCE") && !getenv("MUTATE_BEFORE_DELETE") && !strcmp(path,"mass:/guard-dest.mcd") && (mode & O_RDWR);
+		if (getenv("MUTATE_SOURCE") && getenv("MUTATE_BEFORE_DELETE") &&
+		    !strcmp(path, "mass:/guard-source.mcd") && (mode & O_RDWR)) {
+			off_t at = (off_t)strtoll(getenv("MUTATE_SOURCE"), NULL, 10);
+			unsigned char b;
+			assert(pread(fd, &b, 1, at) == 1);
+			b ^= 1;
+			assert(pwrite(fd, &b, 1, at) == 1);
+			unsetenv("MUTATE_SOURCE");
+		}
+		if (getenv("RESET_BEFORE_DELETE") && !strcmp(path, "mass:/guard-source.mcd") && (mode & O_RDWR)) {
+			generation++;
+			unsetenv("RESET_BEFORE_DELETE");
+		}
 		if (++open_files > 1) {
 			fprintf(stderr, "two files open at once: %s\n", path);
 			abort();
@@ -153,7 +167,10 @@ int genMkdir(const char *path, int mode)
 }
 int DashFileProgress(const char *a,const char *n,u64 left,u64 total) { (void)a;(void)n;(void)left;(void)total;return 1; }
 int DashFileTransferChunk(void (*run)(void *),void *arg) { run(arg);return 1; }
-unsigned int getIopResetGeneration(void) { return 1; }
+unsigned int getIopResetGeneration(void) { return generation; }
+int isFtpServerRunning(void) { return getenv("FTP_ACTIVE") != NULL; }
+int ftpSessionStopped(void) { return getenv("FTP_STOPPED") != NULL; }
+int isSmbServerRunning(void) { return getenv("SMB_ACTIVE") != NULL; }
 int genFixPath(const char *path, char *out) { snprintf(out, MAX_PATH, "%s", path); return 0; }
 int genRemove(char *path)
 {

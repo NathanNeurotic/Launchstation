@@ -7,7 +7,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
-def run(body):
+def run(body, extra=''):
     source = (ROOT / 'src/dash_sound.c').read_text()
     blobs = re.findall(r'extern u8 (\w+)\[\];', source)
     sizes = re.findall(r'extern int (size_\w+);', source)
@@ -116,8 +116,9 @@ static void reset_sound(void) {
     memset(sidecar,0,sizeof(sidecar));memcpy(sidecar,"APCM",4);sidecar[4]=sidecar[5]=1;
     sidecar[8]=0xb3;sidecar[9]=0x0e;sidecar_size=80;
 }
-int main(void) {
 '''
+    code += extra
+    code += '\nint main(void) {\n'
     code += body
     code += '\nforeign_busy=parked=forbidden_rpc=0;dashSoundShutdown();assert(!handles && !allocations);return 0;\n}\n'
     with tempfile.TemporaryDirectory(prefix='audio-worker-') as folder:
