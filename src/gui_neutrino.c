@@ -363,16 +363,16 @@ static int showDashboardNeutrinoOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 	items[0].icon = DI_PLAY;
 	items[0].label = "Run game";
 	for (i = 0; i < NEUTRINO_COMPAT_COUNT; i++) {
-		items[i + 1].icon = DI_INFO;
+		items[i + 1].icon = DI_SETTINGS;
 		items[i + 1].label = compatibility_options[i].label;
 	}
 	items[NEUTRINO_VIDEO_MODE + 1].icon = DI_SETTINGS;
 	items[NEUTRINO_VIDEO_MODE + 1].label = "Video mode";
 	items[NEUTRINO_VIDEO_COMPATIBILITY + 1].icon = DI_SETTINGS;
 	items[NEUTRINO_VIDEO_COMPATIBILITY + 1].label = "Video compatibility";
-	items[NEUTRINO_DEBUG_COLORS + 1].icon = DI_INFO;
+	items[NEUTRINO_DEBUG_COLORS + 1].icon = DI_SETTINGS;
 	items[NEUTRINO_DEBUG_COLORS + 1].label = "Debug colors";
-	items[NEUTRINO_LOGO + 1].icon = DI_INFO;
+	items[NEUTRINO_LOGO + 1].icon = DI_SETTINGS;
 	items[NEUTRINO_LOGO + 1].label = "PS2 logo";
 	if (profile_enabled) {
 		items[NEUTRINO_CANCEL].icon = DI_SAVE;

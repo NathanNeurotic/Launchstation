@@ -1224,8 +1224,7 @@ static void opTitleCfg(void)
 /* the image extensions offered for "Mount as vmc0:/vmc1:" */
 static int isVmcImage(const char *name)
 {
-	return genCmpFileExt(name, "BIN") || genCmpFileExt(name, "VMC") || genCmpFileExt(name, "MC2") ||
-	       genCmpFileExt(name, "PS2");
+	return filerIsVmcImageName(name);
 }
 
 static void opMountVmc(int slot)

@@ -39,7 +39,7 @@ int editorMenu(void)
 	}
 	if (!Num_Window)
 		enable[WINDOWS] = FALSE;
-	if (!Window[Active_Window][OPENED] || Window[Active_Window][CREATED] || Path[Active_Window][0] == '\0')
+	if (!Window[Active_Window][OPENED])
 		enable[LAUNCH_WITH_ARGS] = FALSE;
 
 	for (Menu_Sel = 0; Menu_Sel < NUM_MENU; Menu_Sel++)

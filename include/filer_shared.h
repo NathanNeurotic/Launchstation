@@ -121,6 +121,8 @@ int pollRootMemoryCardDevices(void);
 void discardNextMx4sioRootListing(const char *path);
 int ensurePathDeviceStackReady(const char *path);
 void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char enable[NUM_MENU]);
+/* Filenames offered to the PS2-only VMCMAN backend; contents are checked on mount. */
+int filerIsVmcImageName(const char *name);
 int prepareTransferDeviceStacks(const char *src_path, const char *dst_path);
 /* mc0:/mc1: for a save written file by file: free 1 KB clusters now (<0:
  * no formatted PS2 card), and a card entry's mode, times and attribute */

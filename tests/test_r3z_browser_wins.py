@@ -10,12 +10,12 @@ src = (root / "src/filer_browser.c").read_text(encoding="utf-8")
 
 assert "enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR] && IsTextEditorFileType(file->name);" in src
 assert "enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR];" not in src
-# Nothing later in filerMenuEnables may switch it back on (only the PC card CF clear).
+# Eligibility follows the online/readability check for PC CARD CF.
 menu = src[src.index("void filerMenuEnables("):]
 menu = menu[:menu.index("\n}\n")]
 assert [l.strip() for l in menu.splitlines() if "enable[LAUNCH_ELF_ARGS] =" in l] == [
-    "enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR] && IsTextEditorFileType(file->name);",
-    "enable[LAUNCH_ELF_ARGS] = FALSE;"]
+    "enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR] && IsTextEditorFileType(file->name);"]
+assert menu.index('if (!isPcCardCfOnline())') < menu.index('enable[LAUNCH_ELF_ARGS] =')
 
 a = src.index("static int browseFilePath(char *out, int cnfmode, FILEINFO *files)")
 pos = src.index("{", a) + 1

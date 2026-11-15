@@ -393,6 +393,23 @@ static int classifyPsuAction(const char *destPath)
 /* Which file operations are allowed on `file` in `path` (read-only
  * devices, partition and device lists, the clipboard...). Shared by the
  * classic menu and the dashboard File Browser. */
+int filerIsVmcImageName(const char *name)
+{
+	static const char *const extensions[] = {"BIN", "VMC", "MC2", "PS2", "MCD", "VM2", "RAW"};
+	unsigned int i;
+	if (name == NULL)
+		return FALSE;
+	for (i = 0; i < sizeof(extensions) / sizeof(extensions[0]); i++)
+		if (genCmpFileExt(name, extensions[i]))
+			return TRUE;
+	return FALSE;
+}
+
+static int menuVisible(int command, const char enable[NUM_MENU])
+{
+	return enable[command] || (command != MOUNTVMC0 && command != MOUNTVMC1 && command != LAUNCH_ELF_ARGS);
+}
+
 void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char enable[NUM_MENU])
 {
 	int menu_disabled = 0;
@@ -450,16 +467,15 @@ void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char 
 		enable[TITLE_CFG] = FALSE;
 
 	enable[OPEN_TEXTEDITOR] = canOpenInTextEditor(path, file);
-	/* Only a text file can hold launch arguments (wLaunchELF_R3Z 4.85). */
-	enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR] && IsTextEditorFileType(file->name);
 
 	if (isPcCardCfPath(path)) {
 		enable[MOUNTVMC0] = FALSE;
 		enable[MOUNTVMC1] = FALSE;
-		enable[LAUNCH_ELF_ARGS] = FALSE;
 		if (!isPcCardCfOnline())
 			enable[OPEN_TEXTEDITOR] = FALSE;
 	}
+	/* Arguments are read as text, not executed from their source device. */
+	enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR] && IsTextEditorFileType(file->name);
 
 
 	if (write_disabled || menu_disabled) {
@@ -489,7 +505,8 @@ void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char 
 		enable[RENAME] = FALSE;
 	}
 
-	if ((file->stats.AttrFile & sceMcFileAttrSubdir) || !strncmp(path, "vmc", 3) || !strncmp(path, "mc", 2)) {
+	if (!filerIsVmcImageName(file->name) || (file->stats.AttrFile & sceMcFileAttrSubdir) ||
+	    !strncmp(path, "vmc", 3) || !strncmp(path, "mc", 2)) {
 		enable[MOUNTVMC0] = FALSE;  //forbid insane VMC mounting
 		enable[MOUNTVMC1] = FALSE;  //forbid insane VMC mounting
 	}
@@ -509,7 +526,7 @@ static int menu(const char *path, FILEINFO *file)
 	u64 color;
 	char enable[NUM_MENU], tmp[80];
 	const char *psu_action_label;
-	int x, y, i, sel;
+	int x, y, i, sel, sel_y;
 	int event, post_event = 0;
 	int psu_action;
 
@@ -538,13 +555,13 @@ static int menu(const char *path, FILEINFO *file)
 	
 
 	int menu_ch_w = menu_len + 1;                                 //Total characters in longest menu string
-	int menu_ch_h = NUM_MENU;                                     //Total number of menu lines
+	filerMenuEnables(path, file, nmarks, enable);
+	int menu_ch_h = 0;
+	for (i = 0; i < NUM_MENU; i++) menu_ch_h += menuVisible(i, enable);
 	int mSprite_Y1 = 64;                                          //Top edge of sprite
 	int mSprite_X2 = SCREEN_WIDTH - 35;                           //Right edge of sprite
 	int mSprite_X1 = mSprite_X2 - (menu_ch_w + 3) * FONT_WIDTH;   //Left edge of sprite
 	int mSprite_Y2 = mSprite_Y1 + (menu_ch_h + 1) * FONT_HEIGHT;  //Bottom edge of sprite
-
-	filerMenuEnables(path, file, nmarks, enable);
 
 	for (sel = 0; sel < NUM_MENU; sel++)  //loop to preselect the first enabled menu entry
 		if (enable[sel] == TRUE)
@@ -588,7 +605,12 @@ static int menu(const char *path, FILEINFO *file)
 			              mSprite_X2, mSprite_Y2);
 			drawFrame(mSprite_X1, mSprite_Y1, mSprite_X2, mSprite_Y2, setting->color[COLOR_FRAME]);
 
+			sel_y = -1;
 			for (i = 0, y = mSprite_Y1 + FONT_HEIGHT / 2; i < NUM_MENU; i++) {
+				if (!menuVisible(i, enable))
+					continue;
+				if (i == sel)
+					sel_y = y;
 				if (i == COPY)
 					strcpy(tmp, LNG(Copy));
 				else if (i == CUT)
@@ -628,8 +650,8 @@ static int menu(const char *path, FILEINFO *file)
 				printXY(tmp, mSprite_X1 + 2 * FONT_WIDTH, y, color, TRUE, 0);
 				y += FONT_HEIGHT;
 			}
-			if (sel < NUM_MENU)
-				drawChar(LEFT_CUR, mSprite_X1 + FONT_WIDTH, mSprite_Y1 + (FONT_HEIGHT / 2 + sel * FONT_HEIGHT), setting->color[COLOR_TEXT]);
+			if (sel_y >= 0)
+				drawChar(LEFT_CUR, mSprite_X1 + FONT_WIDTH, sel_y, setting->color[COLOR_TEXT]);
 
 			//Tooltip section
 			x = SCREEN_MARGIN;

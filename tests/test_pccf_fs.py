@@ -60,7 +60,7 @@ assert "!ensurePathPcCardCfOnline(from)" in fileops_c
 assert 'if (!strcmp(name, "cf:") || !strcmp(name, "cf0:"))' in browser_c
 assert 'return "cf:/";' in browser_c
 assert 'isPcCardCfPath(path)' in browser_c
-assert 'enable[LAUNCH_ELF_ARGS] = FALSE;' in browser_c
+assert 'enable[LAUNCH_ELF_ARGS] = enable[OPEN_TEXTEDITOR] && IsTextEditorFileType(file->name);' in browser_c
 
 # Check dash_lib.c label and icon
 assert 'isPcCardCfPath(path)' in dash_lib_c
