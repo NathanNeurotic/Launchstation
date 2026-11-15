@@ -224,7 +224,7 @@ int prepareNeutrinoGameID(const char *iso_path, char *gameID, size_t gameID_len)
  * No status polling occurs unless a responding MMCE accepts SET_GAMEID.
  * The 15 polls mirror upstream's upper bound for a genuine card switch.
  */
-void setNeutrinoMmceGameID(const char *gameID, const char *iso_path, const char *elf_path)
+int setNeutrinoMmceGameID(const char *gameID, const char *iso_path, const char *elf_path)
 {
 	char device[] = "mmce0:";
 	int port, poll, status;
@@ -234,7 +234,7 @@ void setNeutrinoMmceGameID(const char *gameID, const char *iso_path, const char 
 	    !strncmp(iso_path, "mmce:", 5) || !strncmp(elf_path, "mmce:", 5) ||
 	    !strncmp(elf_path, "mc:", 3) ||
 	    !ensureMmceGameIdControl())
-		return;
+		return 1;
 
 	for (port = 0; port < 2; port++) {
 		device[4] = '0' + port;
@@ -244,18 +244,23 @@ void setNeutrinoMmceGameID(const char *gameID, const char *iso_path, const char 
 		    !strncmp(elf_path, device, 6) ||
 		    !strncmp(elf_path, port == 0 ? "mc0:" : "mc1:", 4))
 			continue;
-		if (fileXioDevctl(device, MMCE_CMD_PING, NULL, 0, NULL, 0) < 0 ||
-		    fileXioDevctl(device, MMCE_CMD_SET_GAMEID, (void *)gameID, NEUTRINO_GAME_ID_SIZE, NULL, 0) < 0)
+		if (fileXioDevctl(device, MMCE_CMD_PING, NULL, 0, NULL, 0) < 0)
 			continue;
+		if (fileXioDevctl(device, MMCE_CMD_SET_GAMEID, (void *)gameID, NEUTRINO_GAME_ID_SIZE, NULL, 0) < 0)
+			return 0;
 		for (poll = 0; poll < MMCE_SWITCH_POLLS; poll++) {
 			/* Firmware may acknowledge SET_GAMEID before marking itself busy.
 			 * Wait first (saildot4k/Launchstation 1e911e5). */
 			DashPause(1000000);
 			status = fileXioDevctl(device, MMCE_CMD_GET_STATUS, NULL, 0, NULL, 0);
-			if (status < 0 || !(status & 1))
+			/* A failed read does not prove the selected card is ready. */
+			if (status >= 0 && !(status & 1))
 				break;
 		}
 		DPRINTF("Neutrino MMCE: %s game=%s polls=%d\n", device, gameID, poll);
+		if (poll == MMCE_SWITCH_POLLS)
+			return 0;
 	}
+	return 1;
 }
 #endif

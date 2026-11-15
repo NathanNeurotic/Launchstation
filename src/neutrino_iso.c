@@ -37,6 +37,8 @@ static int neutrinoElfReadable(const char *path)
 	unsigned char ident[4];
 	int fd, rd;
 
+	if (path == NULL || path[0] == '\0')
+		return 0;
 	fd = openPathForRead(path, NULL, 0);
 	if (fd < 0)
 		return 0;
@@ -281,7 +283,7 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	POPSTARTER_CANDIDATE_LIST candidates;
 	NEUTRINO_LAUNCH_OPTIONS options;
 	char gameID[NEUTRINO_GAME_ID_SIZE];
-	int have_gameid = 0, tried_gameid = 0;
+	int have_gameid = 0, tried_gameid = 0, show_gameid;
 	char candidate[MAX_PATH];
 	char selected[MAX_PATH], fullpath[MAX_PATH], party[MAX_PATH];
 	char opened_iso[MAX_PATH], args[1400];
@@ -291,7 +293,7 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	const char *smb_problem;
 #endif
 	const char *bsd;
-	int exec_kind, ret;
+	int exec_kind, ret, location, found_candidate = 0;
 
 	/* Do not probe the ISO or candidates when the Neutrino route is disabled. */
 	if (setting != NULL && setting->disable_neutrino) {
@@ -345,28 +347,36 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	)
 		have_gameid = prepareNeutrinoGameID(opened_iso, gameID, sizeof(gameID));
 
-	initPopstarterCandidates(&candidates);
-	/* Same deterministic policy used by RiptOPL: explicit path, game device,
-	 * then the two memory-card slots. Only complete Neutrino installs qualify. */
-	if (setting != NULL && setting->neutrino_file[0] != '\0'
+	/* Prepare each location before probing the next. Retain complete-install
+	 * validation and the local-core restriction for SMB games. */
+	ret = POPSTARTER_ERR_OPEN_POPSTARTER;
+	for (location = 0; location < 4; location++) {
+		initPopstarterCandidates(&candidates);
+		if (location == 0 && setting != NULL && setting->neutrino_file[0] != '\0'
 #ifdef SMB
 	    && (strcmp(bsd,"smb") || smbCoreLocal(setting->neutrino_file))
 #endif
-	)
-		addCompleteCandidate(&candidates, setting->neutrino_file);
-	if (strcmp(bsd,"smb") && deviceRootCandidate(path, candidate, sizeof(candidate)))
-		addPopstarterCandidate(&candidates, candidate);
-	if (findCompleteOnRoot("mc0:", candidate, sizeof(candidate)))
-		addPopstarterCandidate(&candidates, candidate);
-	if (findCompleteOnRoot("mc1:", candidate, sizeof(candidate)))
-		addPopstarterCandidate(&candidates, candidate);
+		)
+			addCompleteCandidate(&candidates, setting->neutrino_file);
+		else if (location == 1 && strcmp(bsd,"smb") && deviceRootCandidate(path, candidate, sizeof(candidate)))
+			addPopstarterCandidate(&candidates, candidate);
+		else if (location == 2 && findCompleteOnRoot("mc0:", candidate, sizeof(candidate)))
+			addPopstarterCandidate(&candidates, candidate);
+		else if (location == 3 && findCompleteOnRoot("mc1:", candidate, sizeof(candidate)))
+			addPopstarterCandidate(&candidates, candidate);
+		if (candidates.count == 0)
+			continue;
+		found_candidate = 1;
+		ret = preparePopstarterCandidateLaunch(&candidates, selected, sizeof(selected),
+		                                       fullpath, sizeof(fullpath), party, sizeof(party), &exec_kind);
+		if (ret != POPSTARTER_ERR_OPEN_POPSTARTER)
+			break;
+	}
 
-	if (candidates.count == 0) {
+	if (!found_candidate) {
 		setMessage(message, message_size, "Neutrino not found (set its path in Settings)", NULL);
 		return 0;
 	}
-	ret = preparePopstarterCandidateLaunch(&candidates, selected, sizeof(selected),
-	                                       fullpath, sizeof(fullpath), party, sizeof(party), &exec_kind);
 	if (ret != POPSTARTER_OK) {
 		setMessage(message, message_size, "Neutrino executable could not be prepared", selected);
 		return 0;
@@ -389,12 +399,17 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	 * Neutrino resets the IOP and starts its own ministack/usmb2 session. */
 #ifdef MMCE
 	/* Manager-only control preserves mounts and protects source slots. */
-	if (have_gameid)
-		setNeutrinoMmceGameID(gameID, opened_iso, selected);
+	if (have_gameid && !setNeutrinoMmceGameID(gameID, opened_iso, selected)) {
+		LaunchArgsClear();
+		setMessage(message, message_size, "MMCE game-card switch failed or did not become ready", NULL);
+		return 0;
+	}
 #endif
+	/* Exec cleanup releases setting. Nothing after it may dereference it. */
+	show_gameid = have_gameid && !setting->cdrom_disable_gameid;
 	if (!CleanUpForKeepIopExec("Preparing Neutrino"))
 		return 0;
-	if (have_gameid && !setting->cdrom_disable_gameid)
+	if (show_gameid)
 		displayRetroGemGameID(gameID, 2);
 	RunLoaderElfKeepIOP(fullpath, party, selected, exec_kind);
 	return 1;

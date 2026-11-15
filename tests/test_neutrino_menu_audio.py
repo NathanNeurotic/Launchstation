@@ -36,6 +36,7 @@ code = r'''
 #define NEUTRINO_GAME_ID_SIZE 16
 #define NEUTRINO_ISO_PVD_OFFSET (16 * 2048)
 #define POPSTARTER_OK 0
+#define POPSTARTER_ERR_OPEN_POPSTARTER -1
 #define SEEK_SET 0
 typedef struct { char path[MAX_PATH], title[DASH_TITLE_MAX]; int flags; } DashApp;
 enum { MAIN_ELF_IOP_DEFAULT, MAIN_ELF_IOP_KEEP, MAIN_ELF_IOP_REBOOT };
@@ -52,7 +53,7 @@ static void (*drawMsgOverride)(const char *);
 static int dash_active = 1;
 static int boot_init_pending = 1;
 static int muted, suspended, restored, bgm, calls, commit;
-static int shutdown_calls, pad_ended;
+static int shutdown_calls, pad_ended, card_probes;
 static jmp_buf launched;
 static void dashLaunchHook(const char *p) { (void)p; }
 static void dashMsgHook(const char *p) { (void)p; }
@@ -94,6 +95,7 @@ static void closeKeyboardIfOpened(void) {}
 static void dashGfxRestoreLegacyState(void) {}
 static void dashClassicUiInstall(int n) { (void)n; }
 static int openPathForRead(const char *p, char *o, size_t n) {
+    if (!strncmp(p, "mc", 2)) card_probes++;
     if (o && n) snprintf(o, n, "%s", p);
     return (commit < 0 && (strstr(p, "neutrino.elf") || strstr(p, "NEUTRINO.ELF"))) ? -1 : 1;
 }
@@ -127,13 +129,13 @@ static int preparePopstarterCandidateLaunch(POPSTARTER_CANDIDATE_LIST *c, char *
     *k = 1;
     return POPSTARTER_OK;
 }
-static void displayRetroGemGameID(const char *id, int m) { (void)id; (void)m; }
+static void displayRetroGemGameID(const char *id, int m) { (void)id; (void)m; assert(!setting && !dash_active); }
 static void RunLoaderElfKeepIOP(char *f, char *p, const char *s, int k) {
     (void)f; (void)p; (void)s; (void)k;
     assert(muted && shutdown_calls >= 2 && pad_ended == 1);
     longjmp(launched, 1);
 }
-static void cleanUpFree(void *p) { (void)p; }
+static void cleanUpFree(void *p) { if (p && p == setting) setting = NULL; free(p); }
 #define free cleanUpFree
 '''
 code += extract_func(dash_src, "void DashStopUiForExec(") + "\n"
@@ -170,8 +172,10 @@ int main(void) {
         assert(!muted && !suspended && !shutdown_calls && restored == failure+1 && bgm == failure+1);
     }
     commit = 1;
+    card_probes = 0;
     if (!setjmp(launched)) { dashLaunchApp(&app, 0); assert(0); }
     assert(!dash_active && !boot_init_pending);
+    assert(!card_probes); /* game-device success must never probe a fallback card */
     assert(muted && !suspended && shutdown_calls >= 2 && pad_ended == 1 && restored == 2);
     dash_active = boot_init_pending = 1;
     setting = calloc(1, sizeof(*setting));

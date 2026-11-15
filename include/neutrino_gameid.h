@@ -9,8 +9,9 @@
 int prepareNeutrinoGameID(const char *iso_path, char *gameID, size_t gameID_len);
 
 #ifdef MMCE
-/* Only use a pre-existing MMCE stack; never invalidate the ISO/ELF device. */
-void setNeutrinoMmceGameID(const char *gameID, const char *iso_path, const char *elf_path);
+/* Manager-only control never invalidates the ISO/ELF device. Absent or
+ * protected slots are skipped; 0 means a responding adapter failed to switch. */
+int setNeutrinoMmceGameID(const char *gameID, const char *iso_path, const char *elf_path);
 #endif
 
 #endif

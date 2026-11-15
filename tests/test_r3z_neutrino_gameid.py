@@ -21,7 +21,7 @@ assert "load_udpfs(" not in GAMEID
 assert "showNeutrinoLaunchOptions(&options)" in NEUTRINO
 assert "prepareNeutrinoGameID(opened_iso" in NEUTRINO
 assert "displayRetroGemGameID(gameID, 2);" in NEUTRINO
-assert "setNeutrinoMmceGameID(gameID, opened_iso, selected);" in NEUTRINO
+assert "!setNeutrinoMmceGameID(gameID, opened_iso, selected)" in NEUTRINO
 assert NEUTRINO.index("prepareNeutrinoGameID(opened_iso") < NEUTRINO.index("preparePopstarterCandidateLaunch(&candidates")
 assert NEUTRINO.index("setNeutrinoMmceGameID(gameID") < NEUTRINO.index("CleanUpForKeepIopExec(")
 assert NEUTRINO.index("displayRetroGemGameID(gameID, 2);") > NEUTRINO.index("CleanUpForKeepIopExec(")
@@ -69,7 +69,7 @@ static int stack_present = 0;
 static int control_success = 0;
 static int calls = 0, pings = 0, delays = 0, polls = 0;
 static int settle_pending;
-static int ping_error, set_error, status_result, read_limit, read_error, seek_error;
+static int ping_error, set_error, status_result, read_limit, read_error, seek_error, status_errors;
 static int wle_ascii_tolower(int c) { return c >= 'A' && c <= 'Z' ? c + ('a'-'A') : c; }
 int openPathForRead(const char *path, char *out, size_t out_size) {
     (void)out; (void)out_size;
@@ -99,7 +99,9 @@ int fileXioDevctl(const char *device, int cmd, void *arg, int arglen, void *out,
         assert(arglen == NEUTRINO_GAME_ID_SIZE && !strcmp(arg, "SLUS_123.45"));
         calls++; settle_pending = !set_error; return set_error ? -1 : 0;
     }
-    assert(cmd == 2); assert(!settle_pending); polls++; return status_result;
+    assert(cmd == 2); assert(!settle_pending); polls++;
+    if (status_errors > 0) { status_errors--; return -1; }
+    return status_result;
 }
 void DelayThread(int usec) { assert(usec == 1000000); settle_pending = 0; delays++; }
 void DashPause(u32 usec) { DelayThread((int)usec); }
@@ -160,17 +162,20 @@ int main(int argc, char **argv) {
     assert(!pings && !calls && !polls);
     /* No status waits when absent or when SET_GAMEID was rejected. */
     ping_error = 1;
-    setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF");
+    assert(setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF"));
     assert(pings == 1 && !calls && !polls && !delays);
     ping_error = 0; set_error = 1;
-    setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF");
+    assert(!setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF"));
     assert(calls == 1 && !polls && !delays);
     set_error = 0; status_result = -1;
-    setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF");
-    assert(polls == 1 && delays == 1);
+    assert(!setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF"));
+    assert(polls == 15 && delays == 15);
     status_result = 1; polls = delays = 0;
-    setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF");
+    assert(!setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF"));
     assert(polls == 15 && delays == 15); /* Genuine busy card has a finite bound. */
+    status_result = 0; status_errors = 2; polls = delays = 0;
+    assert(setNeutrinoMmceGameID("SLUS_123.45", "mmce0:/GAME.iso", "mass0:/N.ELF"));
+    assert(polls == 3 && delays == 3); /* failed reads are retried, never readiness */
     return 0;
 }
 """
