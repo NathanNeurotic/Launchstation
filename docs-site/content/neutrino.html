@@ -10,6 +10,8 @@
 <li>In <b>Files</b>, select the ISO and press OK. Choose options (or just <b>Run game</b>).</li>
 </ol>
 
+<p>Search stops after a candidate is prepared successfully, so unused fallback cards are not probed. A responding MMCE adapter that rejects a Game ID switch or fails to become ready stops the launch and reports an error.</p>
+
 <h2 id="search-order">Loader search order</h2>
 <ol class="path-order"><li><b>Explicit path</b> &ndash; <b>Settings &gt; Launching &gt; Disc &amp; image loaders &gt; Neutrino</b>.</li><li><b>The ISO&rsquo;s own device</b> &ndash; <code>/NEUTRINO/neutrino.elf</code>, <code>/neutrino/neutrino.elf</code>, <code>/NEUTRINO/NEUTRINO.ELF</code> and <code>/neutrino/NEUTRINO.ELF</code> at the device root.</li><li><b>mc0:</b> &ndash; the same four forms.</li><li><b>mc1:</b> &ndash; the same four forms.</li></ol>
 <p>Only a <em>usable</em> installation is a candidate (next section). If none qualifies you get &ldquo;Neutrino not found (set its path in Settings)&rdquo;.</p>

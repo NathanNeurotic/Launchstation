@@ -20,7 +20,9 @@
 <p>Ordinary copy, move, rename and delete work on every writable device, with progress, readable errors and (for slow memory-card and VMC operations) small transfer chunks. Replacing an existing file follows the upstream behaviour: the old destination is removed, a new file is created, and the data is copied. If that copy fails after the removal, the old file is not restored, so copy important data elsewhere first. Same-path paste is blocked so a source cannot delete itself. Cut deletes the source only after the copy succeeded. MMCE cannot set timestamps, so that step is skipped after a copy to it.</p>
 
 <h2 id="vmc">Virtual memory cards</h2>
-<p>Highlight a <code>.BIN</code>, <code>.VMC</code>, <code>.MC2</code> or <code>.PS2</code> card image and choose <b>Mount as vmc0:</b> or <b>vmc1:</b>. The mounted card appears as <b>Virtual MC 0/1</b> in the device list and its saves can be copied, deleted or exported with the normal tools. Mounting into a slot replaces whatever was mounted there; the driver is loaded on demand. A VMC image used by Neutrino or POPStarter is managed by those programs, not by this dialog.</p>
+<p>Highlight a <code>.BIN</code>, <code>.VMC</code>, <code>.MC2</code>, <code>.PS2</code>, <code>.MCD</code>, <code>.VM2</code> or <code>.RAW</code> PS2 card image and choose <b>Mount as vmc0:</b> or <b>vmc1:</b>. The mounted card appears as <b>Virtual MC 0/1</b> in the device list and its saves can be copied, deleted or exported with the normal tools. Mounting into a slot replaces whatever was mounted there; the driver is loaded on demand. A VMC image used by Neutrino or POPStarter is managed by those programs, not by this dialog.</p>
+
+<p>Mount actions are hidden when the selected file is not a candidate PS2 card image. The driver checks the contents before mounting; a suffix alone does not establish compatibility. Use Card contents for PS1 card containers.</p>
 
 <h2 id="card-contents">Card contents: saves inside a card image</h2>
 <p>Highlight a <code>.mcd</code>, <code>.ps2</code>, <code>.bin</code>, <code>.vmc</code> or <code>.mc2</code> card image on any device, including an MMCE card, and choose <b>Card contents&hellip;</b>. It lists every save with its <code>icon.sys</code> title (Japanese titles included), file count and size, plus the card&rsquo;s free space. The image does not need to be mounted.</p>
@@ -125,6 +127,8 @@
 <li><code>BXEXEC-OPENTUNA</code>, <code>OPENTUNA</code>, <code>FUNTUNA</code> and <code>FORTUNA</code> (reported as a generic exploit folder).</li>
 </ul>
 <p>In the dashboard File Browser, <b>Delete</b>, <b>Cut</b>, pasting into, creating a folder or icon inside, and similar changes ask for confirmation with a &ldquo;Caution: Exploit folder&rdquo; message. <b>Rename</b> of a protected folder is refused outright (&ldquo;This system folder cannot be renamed from here&rdquo;). The guard exists because a routine rename or delete can turn a bootable exploit card into an unbootable one; a confirmed delete still happens. To install or replace exploits use the <a href="exploit-installer.html">exploit installer</a>.</p>
+
+<p>PSU and PS2 PSV exports from Card contents use bounded payload chunks and read back the completed output. A move between card images checks the source again before deleting it; if it changed or cannot be read, both the source save and the destination copy are kept. Imports onto a physical PS2 card show progress for the current whole save, including verification, and finish only after metadata is restored. Compressed imports still hold decoded input in memory.</p>
 
 <h2 id="troubleshooting">Troubleshooting</h2>
 <ol>
