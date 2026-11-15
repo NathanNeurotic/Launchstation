@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <malloc.h>
+#define stricmp strcasecmp
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -26,6 +28,7 @@ enum { DI_WARNING = 1, DI_FILE, DI_CLOSE, DI_MC, DI_PLUS, DI_CHECK, DI_FOLDER };
 enum { DASH_TOAST_OK = 1, DASH_TOAST_WARN, DASH_TOAST_INFO };
 enum { DASH_PICK_FILE = 0, DASH_PICK_FOLDER, DASH_PICK_LAUNCH };
 typedef struct { int icon; const char *label; const char *detail; int disabled; } DashMenuItem;
+int genFixPath(const char *path, char *out);
 int genOpen(const char *path, int mode);
 s64 genLseek(int fd, s64 where, int how);
 int genRead(int fd, void *buf, int size);
@@ -55,4 +58,6 @@ int dashModalChoice(const char *title, const char *const *options, int n, int cu
 void dashLoadingBegin(const char *title);
 void dashLoadingStatus(const char *status, int done, int total);
 void dashLoadingEnd(void);
+int DashFileProgress(const char *action, const char *name, u64 remaining, u64 total);
+int DashFileTransferChunk(void (*run)(void *), void *arg);
 #endif

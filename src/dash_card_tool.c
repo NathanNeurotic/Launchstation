@@ -15,6 +15,7 @@
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "filer_shared.h"
+#include "init.h"
 #include "mc_card_view.h"
 #include "mc_card_write.h"
 #include "mc_save_formats.h"
@@ -24,6 +25,7 @@
 #include "dash_card_tool.h"
 #include "mc_ps1_card.h"
 #include "mc_save_export.h"
+#include "mc_sha256.h"
 #include <libcdvd.h>
 
 #define CT_BLOCK 4096
@@ -491,9 +493,14 @@ static int ctStacks(const char *a, const char *b)
 	return 0;
 }
 
+static int ctFingerprintMemory(const McSaveData *save, u8 digest[32]);
+static int ctFingerprintImage(const char *image, const char *name, u8 digest[32]);
+
 static void ctCopy(const char *image, const char *name, int move)
 {
 	McSaveData s;
+	u8 before[32], after[32];
+	unsigned int generation;
 	char dest[MAX_PATH], dir[MAX_PATH], safety[MAX_PATH], safety2[MAX_PATH];
 	int r;
 
@@ -518,10 +525,19 @@ static void ctCopy(const char *image, const char *name, int move)
 		return;
 
 	dashLoadingBegin(move ? "Moving save" : "Copying save");
+	generation = getIopResetGeneration();
 	r = ctReadSave(image, name, &s);
 	if (r == MCW_OK) {
-		r = ctPutSave(dest, &s, safety, sizeof(safety));
+		if (move) r = ctFingerprintMemory(&s, before);
+		if (r == MCW_OK) r = ctPutSave(dest, &s, safety, sizeof(safety));
 		mcCardFreeSave(&s);
+	}
+	if (r == MCW_OK && move &&
+	    (ctFingerprintImage(image, name, after) != MCW_OK || memcmp(before, after, sizeof(before)) ||
+	     generation != getIopResetGeneration())) {
+		dashLoadingEnd();
+		dashModalMessage(DI_WARNING, "Source save kept", "The source changed or could not be verified after copying. The destination copy was kept.", dest);
+		return;
 	}
 	if (r == MCW_OK && move)
 		r = ctDropSave(image, name, safety2, sizeof(safety2));
@@ -549,6 +565,20 @@ static void ctDelete(const char *image, const char *name)
 /* buf written to path and read back; a file that does not read back is
  * removed. fresh: only a new file is made (O_EXCL), so a file that appears
  * at path after the caller checked it is never truncated or removed. */
+static struct {
+	int active;
+	u64 done, total;
+	char label[64];
+} ct_save_progress;
+
+static void ctSaveProgressBytes(u32 count)
+{
+	if (!ct_save_progress.active) return;
+	ct_save_progress.done += count;
+	DashFileProgress("Importing save", ct_save_progress.label,
+	                 ct_save_progress.total - ct_save_progress.done, ct_save_progress.total);
+}
+
 static int ctWriteFileAs(const char *path, const uint8_t *buf, uint32_t len, int fresh)
 {
 	static u8 back[CT_BLOCK] __attribute__((aligned(64)));
@@ -560,10 +590,12 @@ static int ctWriteFileAs(const char *path, const uint8_t *buf, uint32_t len, int
 		return -1;
 	while (ok && done < len) {
 		n = genWrite(fd, (void *)(buf + done), (int)(len - done > 65536 ? 65536 : len - done));
-		if (n <= 0)
+		if (n <= 0 || (u32)n > (len - done > 65536 ? 65536 : len - done))
 			ok = 0;
-		else
+		else {
 			done += (u32)n;
+			ctSaveProgressBytes(n);
+		}
 	}
 	if (genClose(fd) < 0)
 		ok = 0;
@@ -572,10 +604,11 @@ static int ctWriteFileAs(const char *path, const uint8_t *buf, uint32_t len, int
 		ok = fd >= 0 && genLseek(fd, 0, SEEK_END) == (s64)len && genLseek(fd, 0, SEEK_SET) == 0;
 		for (done = 0; ok && done < len; done += (u32)n) {
 			n = genRead(fd, back, (int)(len - done > CT_BLOCK ? CT_BLOCK : len - done));
-			ok = n > 0 && !memcmp(back, buf + done, n);
+			ok = n > 0 && (u32)n <= sizeof(back) && (u32)n <= len - done && !memcmp(back, buf + done, n);
+			if (ok) ctSaveProgressBytes(n);
 		}
-		if (fd >= 0)
-			genClose(fd);
+		if (fd >= 0 && genClose(fd) < 0)
+			ok = 0;
 	}
 	if (!ok)
 		genRemove((char *)path);
@@ -599,6 +632,206 @@ static int ctSaveAs(const McSaveData *s, int fmt, uint8_t **buf, uint32_t *len)
 {
 	return fmt == 1 ? mcSaveToPsv(s, buf, len) : fmt == 2 ? mcSaveToCbs(s, buf, len) :
 	       fmt ? mcSaveToZip(s, buf, len) : mcCardSaveToPsu(s, buf, len);
+}
+
+typedef struct CtSaveStream {
+	const McSaveData *save;
+	const char *image, *dest;
+	CardIo *source;
+	uint32_t total, high;
+	int format, verify;
+} CtSaveStream;
+
+typedef struct CtStreamChunk {
+	CtSaveStream *stream;
+	void *data;
+	uint32_t file, offset, size;
+	int reading, result;
+} CtStreamChunk;
+
+/* Never keep source and destination open together: MMCE can allow only one
+ * file descriptor. Reopen each bounded range and check every close. */
+static void ctStreamChunkRun(void *arg)
+{
+	CtStreamChunk *job = arg;
+	CtSaveStream *stream = job->stream;
+	int fd, r, closed;
+	uint32_t done = 0;
+	static u8 back[CT_BLOCK] __attribute__((aligned(64)));
+	job->result = MCV_ERR_IO;
+	if (job->reading) {
+		stream->source->fd = genOpen(stream->image, FIO_O_RDONLY);
+		if (stream->source->fd < 0) return;
+		r = mcCardReadSaveFile(&ct_view, &stream->save->files[job->file], job->offset, job->data, job->size);
+		closed = ctClose(stream->source);
+		job->result = r ? r : closed;
+		return;
+	}
+	fd = genOpen(stream->dest, stream->verify ? FIO_O_RDONLY : FIO_O_WRONLY);
+	if (fd < 0) return;
+	if (genLseek(fd, job->offset, SEEK_SET) != (s64)job->offset) goto done;
+	while (done < job->size) {
+		uint32_t count = job->size - done;
+		if (stream->verify) {
+			uint32_t i;
+			if (count > sizeof(back)) count = sizeof(back);
+			r = genRead(fd, back, count);
+			if (r <= 0 || (uint32_t)r > count) goto done;
+			for (i = 0; i < (uint32_t)r; i++) {
+				/* The initial PSV header has a zero signature. Its final
+				 * signed patch is compared by the separate offset-28 call. */
+				if (stream->format == MC_STREAM_PSV && job->offset == 0 && done + i >= 28 && done + i < 48) continue;
+				if (back[i] != ((const u8 *)job->data)[done + i]) { job->result = MCW_ERR_VERIFY; goto done; }
+			}
+		} else {
+			r = genWrite(fd, (u8 *)job->data + done, count);
+			if (r <= 0 || (uint32_t)r > count) goto done;
+		}
+		done += r;
+	}
+	job->result = MCW_OK;
+done:
+	if (genClose(fd) < 0) job->result = MCV_ERR_IO;
+}
+
+static int ctStreamChunk(CtStreamChunk *job)
+{
+	if (!DashFileTransferChunk(ctStreamChunkRun, job)) ctStreamChunkRun(job);
+	return job->result;
+}
+
+static int ctStreamRead(void *ctx, uint32_t file, uint32_t offset, void *data, uint32_t len)
+{
+	CtSaveStream *stream = ctx;
+	CtStreamChunk job = {stream, data, file, offset, len, 1, MCV_ERR_IO};
+	return ctStreamChunk(&job);
+}
+
+static int ctStreamWrite(void *ctx, uint32_t offset, const void *data, uint32_t len)
+{
+	CtSaveStream *stream = ctx;
+	CtStreamChunk job = {stream, (void *)data, 0, offset, len, 0, MCV_ERR_IO};
+	int r = ctStreamChunk(&job);
+	if (!r && offset + len > stream->high) stream->high = offset + len;
+	if (!r) {
+		u64 total = (u64)stream->total * 2 + 1;
+		u64 done = (stream->verify ? stream->total : 0) + stream->high;
+		DashFileProgress("Exporting save", (const char *)stream->save->entry + 0x40, total - done, total);
+	}
+	return r;
+}
+
+static int ctWriteSaveStream(const McSaveData *save, const char *image, CardIo *source,
+                             int format, const char *dest, int fresh)
+{
+	CtSaveStream stream = {save, image, dest, source, 0, 0, format, 0};
+	McSaveStreamIo io = {image ? ctStreamRead : NULL, NULL, &stream, NULL, 0};
+	uint32_t length;
+	u8 *buffer;
+	int fd, r, i;
+	/* Validate and allocate before a destination can be truncated. */
+	r = mcSaveExportStream(save, format, &io, &stream.total);
+	if (r) return r;
+	buffer = memalign(64, 131072);
+	if (!buffer) return MCW_ERR_NOMEM;
+	DashFileProgress("Exporting save", (const char *)save->entry + 0x40, (u64)stream.total * 2 + 1, (u64)stream.total * 2 + 1);
+	fd = genOpen(dest, FIO_O_WRONLY | FIO_O_CREAT | (fresh ? FIO_O_EXCL : FIO_O_TRUNC));
+	if (fd < 0) { free(buffer); return MCV_ERR_IO; }
+	r = genClose(fd) < 0 ? MCV_ERR_IO : MCW_OK;
+	io.write = ctStreamWrite; io.buffer = buffer; io.buffer_size = 131072;
+	if (!r) r = mcSaveExportStream(save, format, &io, &length);
+	if (!r) {
+		/* Reject a short/extended output before replaying the encoder into
+		 * a comparison sink. The original source is never removed. */
+		fd = genOpen(dest, FIO_O_RDONLY);
+		r = fd < 0 ? MCV_ERR_IO : genLseek(fd, 0, SEEK_END) == (s64)stream.total ? MCW_OK : MCW_ERR_VERIFY;
+		if (fd >= 0 && genClose(fd) < 0) r = MCV_ERR_IO;
+		stream.verify = 1; stream.high = 0;
+		if (source) {
+			for (i = 0; i < CT_WAYS; i++) source->tag[i] = -1;
+			mcViewDropCaches(&ct_view);
+		}
+		if (!r) r = mcSaveExportStream(save, format, &io, &length);
+	}
+	free(buffer);
+	if (r) genRemove((char *)dest);
+	else DashFileProgress("Exporting save", (const char *)save->entry + 0x40, 0, (u64)stream.total * 2 + 1);
+	return r;
+}
+
+static int ctExportStream(const char *image, const char *name, int format, const char *dest, int fresh)
+{
+	McSaveData save;
+	CardIo source;
+	char fixed_source[MAX_PATH], fixed_dest[MAX_PATH];
+	int r, closed;
+	/* Even an image named .psu must never be overwritten by its own export. */
+	if (genFixPath(image, fixed_source) < 0 || genFixPath(dest, fixed_dest) < 0 || !stricmp(fixed_source, fixed_dest))
+		return MCW_ERR_INVALID;
+	r = ctOpen(&source, image, 0);
+	if (r) return r;
+	r = mcCardReadSaveMetadata(&ct_view, name, &save);
+	closed = ctClose(&source);
+	if (!r && closed) r = closed;
+	if (!r) r = ctWriteSaveStream(&save, image, &source, format, dest, fresh);
+	mcCardFreeSave(&save);
+	return r;
+}
+
+typedef struct CtSaveDigest {
+	CtSaveStream source;
+	McSha256 hash;
+} CtSaveDigest;
+
+static int ctDigestRead(void *ctx, uint32_t file, uint32_t offset, void *data, uint32_t len)
+{
+	CtSaveDigest *digest = ctx;
+	return ctStreamRead(&digest->source, file, offset, data, len);
+}
+
+static int ctDigestWrite(void *ctx, uint32_t offset, const void *data, uint32_t len)
+{
+	CtSaveDigest *digest = ctx;
+	(void)offset; /* PSU emits metadata and payload once, in order. */
+	mcSha256Update(&digest->hash, data, len);
+	return MCW_OK;
+}
+
+static int ctFingerprint(const McSaveData *save, const char *image, CardIo *source, u8 out[32])
+{
+	CtSaveDigest digest;
+	McSaveStreamIo io = {image ? ctDigestRead : NULL, ctDigestWrite, &digest, NULL, 65536};
+	uint32_t length;
+	int r;
+	memset(&digest, 0, sizeof(digest));
+	digest.source.save = save; digest.source.image = image; digest.source.source = source;
+	io.buffer = memalign(64, io.buffer_size);
+	if (!io.buffer) return MCW_ERR_NOMEM;
+	mcSha256Init(&digest.hash);
+	r = mcSaveExportStream(save, MC_STREAM_PSU, &io, &length);
+	if (!r) mcSha256Final(&digest.hash, out);
+	free(io.buffer);
+	return r;
+}
+
+static int ctFingerprintMemory(const McSaveData *save, u8 digest[32])
+{
+	return ctFingerprint(save, NULL, NULL, digest);
+}
+
+static int ctFingerprintImage(const char *image, const char *name, u8 digest[32])
+{
+	CardIo source;
+	McSaveData save;
+	int r, closed;
+	r = ctOpen(&source, image, 0);
+	if (r) return r;
+	r = mcCardReadSaveMetadata(&ct_view, name, &save);
+	closed = ctClose(&source);
+	if (!r && closed) r = closed;
+	if (!r) r = ctFingerprint(&save, image, &source, digest);
+	mcCardFreeSave(&save);
+	return r;
 }
 
 static const char *const ct_save_as[] = {".psu: uLaunchELF / EMS", ".psv: PS3, signed", ".cbs: CodeBreaker",
@@ -634,13 +867,16 @@ static void ctExportPsu(const char *image, const char *name)
 	if (!ctStacks(image, dest))
 		return;
 	dashLoadingBegin("Exporting save");
-	r = ctReadSave(image, name, &s);
-	if (r == MCW_OK) {
-		r = ctSaveAs(&s, fmt, &buf, &len);
-		mcCardFreeSave(&s);
+	if (fmt < 2)
+		r = ctExportStream(image, name, fmt, dest, 0);
+	else {
+		r = ctReadSave(image, name, &s);
+		if (r == MCW_OK) {
+			r = ctSaveAs(&s, fmt, &buf, &len);
+			mcCardFreeSave(&s);
+		}
+		if (r == MCW_OK && ctWriteFile(dest, buf, len) < 0) r = MCV_ERR_IO;
 	}
-	if (r == MCW_OK && ctWriteFile(dest, buf, len) < 0)
-		r = MCV_ERR_IO;
 	free(buf);
 	dashLoadingEnd();
 	snprintf(title, sizeof(title), ".%s written and verified", ct_ext[fmt]);
@@ -769,7 +1005,9 @@ static int ctConvertWrite(const McSaveData *s, int fmt, char *dest)
 	McSaveData back;
 	uint8_t *buf = NULL;
 	uint32_t len = 0;
-	int r = ctSaveAs(s, fmt, &buf, &len);
+	int r;
+	if (fmt < 2) return ctWriteSaveStream(s, NULL, NULL, fmt, dest, 1);
+	r = ctSaveAs(s, fmt, &buf, &len);
 
 	if (r == MCW_OK && ctWriteFileAs(dest, buf, len, 1) < 0)
 		r = MCV_ERR_IO;
@@ -1788,7 +2026,7 @@ static int ctAllSkippable(int r)
  * Nothing there is replaced; on any failure what it made is removed. */
 static char ct_mc_left[128]; /* why, when the last failed ctPutSaveMc could not remove all it made */
 
-static int ctPutSaveMc(int port, const McSaveData *s)
+static int ctPutSaveMc(int port, const McSaveData *s, int ordinal, int count)
 {
 	char dir[48], path[96];
 	uint32_t i, made = 0;
@@ -1811,14 +2049,23 @@ static int ctPutSaveMc(int port, const McSaveData *s)
 		return MCW_ERR_FULL;
 	if (genMkdir(dir, fileMode) < 0)
 		return MCV_ERR_IO;
+	ct_save_progress.active = 1;
+	ct_save_progress.done = 0; ct_save_progress.total = 1;
+	for (i = 0; i < s->nfiles; i++) ct_save_progress.total += (u64)s->files[i].size * 2;
+	snprintf(ct_save_progress.label, sizeof(ct_save_progress.label), "%.31s (%d/%d)", (const char *)s->entry + 0x40, ordinal, count);
+	ctSaveProgressBytes(0);
 	for (i = 0; ok && i < s->nfiles; i++) {
 		snprintf(path, sizeof(path), "%s/%.31s", dir, (const char *)s->files[i].entry + 0x40);
 		ok = ctWriteFileAs(path, s->files[i].data, s->files[i].size, 1) == 0; /* removes a failed one */
 		made += ok;
 		ok = ok && filerMcSetEntry(path, s->files[i].entry) >= 0;
 	}
-	if (ok && filerMcSetEntry(dir, s->entry) >= 0)
+	if (ok && filerMcSetEntry(dir, s->entry) >= 0) {
+		ctSaveProgressBytes(1); /* closes, read-backs and all metadata succeeded */
+		ct_save_progress.active = 0;
 		return MCW_OK;
+	}
+	ct_save_progress.active = 0;
 	while (made-- > 0) {
 		snprintf(path, sizeof(path), "%s/%.31s", dir, (const char *)s->files[made].entry + 0x40);
 		left |= genRemove(path) < 0;
@@ -1889,7 +2136,7 @@ void dashCardImportMany(const char *dir, const char *const *names, int n, int po
 		} else {
 			r = ctLoadPsu(src, &s, &why);
 			if (r == MCW_OK) {
-				r = port >= 0 ? ctPutSaveMc(port, &s) : ctPutSave(img, &s, safety, sizeof(safety));
+				r = port >= 0 ? ctPutSaveMc(port, &s, i + 1, n) : ctPutSave(img, &s, safety, sizeof(safety));
 				mcCardFreeSave(&s);
 				why = r == MCV_ERR_IO && port < 0 && !safety[0] ? "Nothing was written: the card could not be read or its safety copy made." :
 				      r == MCV_ERR_IO ? "The memory card could not be read or written." :
@@ -1943,9 +2190,6 @@ void dashCardImportMany(const char *dir, const char *const *names, int n, int po
 static void ctAllExport(const char *folder, const CtAnyCard *cards, const CtAnySave *list, int n,
                         const unsigned char *marks, int nmarked)
 {
-	McSaveData s;
-	uint8_t *buf;
-	uint32_t len;
 	char out[MAX_PATH], dest[MAX_PATH], file[80], body[160], first[33] = "";
 	int fmt, i, r, done = 0, there = 0, failed = 0, first_r = MCW_OK, c;
 
@@ -1975,16 +2219,8 @@ static void ctAllExport(const char *folder, const CtAnyCard *cards, const CtAnyS
 			there++;
 			continue;
 		}
-		buf = NULL;
 		if (r == MCW_OK)
-			r = ctReadSave(cards[list[i].card].path, list[i].sv.name, &s);
-		if (r == MCW_OK) {
-			r = ctSaveAs(&s, fmt, &buf, &len);
-			mcCardFreeSave(&s);
-		}
-		if (r == MCW_OK && ctWriteFileAs(dest, buf, len, 1) < 0) /* never over a file made since the check */
-			r = MCV_ERR_IO;
-		free(buf);
+			r = ctExportStream(cards[list[i].card].path, list[i].sv.name, fmt, dest, 1);
 		if (r == MCW_OK) {
 			done++;
 			continue;
@@ -2090,6 +2326,8 @@ static int ctAllBatch(const char *folder, const CtAnyCard *cards, int ncards, co
 	for (i = 0; i < n; i++) {
 		const CtAnySave *s = &list[i];
 		McSaveData data;
+		u8 before[32], after[32];
+		unsigned int generation = getIopResetGeneration();
 
 		if (!marks[i])
 			continue;
@@ -2111,9 +2349,14 @@ static int ctAllBatch(const char *folder, const CtAnyCard *cards, int ncards, co
 			r = ctReadSave(cards[s->card].path, s->sv.name, &data);
 			if (r == MCW_OK) {
 				step_safety = dsafety;
-				r = ctPutSave(dest, &data, dsafety, sizeof(dsafety));
+				if (move) r = ctFingerprintMemory(&data, before);
+				if (r == MCW_OK) r = ctPutSave(dest, &data, dsafety, sizeof(dsafety));
 				mcCardFreeSave(&data);
 			}
+			if (r == MCW_OK && move &&
+			    (ctFingerprintImage(cards[s->card].path, s->sv.name, after) != MCW_OK ||
+			     memcmp(before, after, sizeof(before)) || generation != getIopResetGeneration()))
+				r = MCW_ERR_VERIFY; /* keep both copies; never delete an unverified source */
 			if (r == MCW_OK && move) {
 				step_safety = safety[s->card];
 				r = ctDropSave(cards[s->card].path, s->sv.name, safety[s->card], MAX_PATH);

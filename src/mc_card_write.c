@@ -153,6 +153,7 @@ static int rootFind(McView *v, const char *name, RootFind *f)
 typedef struct SaveScan {
 	McSaveData *s;
 	uint32_t nfiles;
+	uint32_t capacity;
 	int fill;
 	int bad;
 } SaveScan;
@@ -178,6 +179,8 @@ static int saveScanCb(McView *v, uint32_t i, const uint8_t *raw, void *ctx)
 		sc->bad = MCV_ERR_CORRUPT;
 		return MCV_ERR_CORRUPT;
 	}
+	if (sc->fill && sc->nfiles >= sc->capacity)
+		return MCV_ERR_CORRUPT; /* the directory grew between the two passes */
 	if (sc->fill)
 		memcpy(sc->s->files[sc->nfiles].entry, raw, ENT);
 	sc->nfiles++;
@@ -211,7 +214,7 @@ int mcCardFindSave(McView *v, const char *name)
 	return f.found < 0 ? MCW_ERR_NOT_FOUND : MCW_ERR_EXISTS;
 }
 
-int mcCardReadSave(McView *v, const char *name, McSaveData *out)
+static int readSave(McView *v, const char *name, McSaveData *out, int payload)
 {
 	RootFind f;
 	SaveScan sc;
@@ -243,6 +246,7 @@ int mcCardReadSave(McView *v, const char *name, McSaveData *out)
 		if (!out->files)
 			return MCW_ERR_NOMEM;
 	}
+	sc.capacity = sc.nfiles;
 	sc.nfiles = 0;
 	sc.fill = 1;
 	r = mcViewWalkDir(v, first, count, saveScanCb, &sc);
@@ -262,6 +266,8 @@ int mcCardReadSave(McView *v, const char *name, McSaveData *out)
 			return MCV_ERR_CORRUPT;
 		}
 		fl->size = len;
+		if (!payload)
+			continue;
 		fl->data = (uint8_t *)malloc(len ? len : 1);
 		if (!fl->data) {
 			mcCardFreeSave(out);
@@ -276,6 +282,23 @@ int mcCardReadSave(McView *v, const char *name, McSaveData *out)
 		}
 	}
 	return MCW_OK;
+}
+
+int mcCardReadSave(McView *v, const char *name, McSaveData *out)
+{
+	return readSave(v, name, out, 1);
+}
+
+int mcCardReadSaveMetadata(McView *v, const char *name, McSaveData *out)
+{
+	return readSave(v, name, out, 0);
+}
+
+int mcCardReadSaveFile(McView *v, const McSaveFile *file, uint32_t offset, void *data, uint32_t len)
+{
+	if (!v || !file || offset > file->size || len > file->size - offset || (len && !data))
+		return MCW_ERR_INVALID;
+	return len ? mcViewReadChain(v, rd32(file->entry + 0x10), offset, data, len) : MCW_OK;
 }
 
 uint32_t mcCardSaveClusters(const McSaveData *s)

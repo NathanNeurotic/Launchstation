@@ -60,6 +60,10 @@ int mcCardFindSave(McView *v, const char *name);
  * ASCII bytes, not "." or "..", without / \ * or ?. */
 int mcCardNameOk(const uint8_t *name);
 int mcCardReadSave(McView *v, const char *name, McSaveData *out);
+/* The same validated directory and sizes without allocating payloads. The
+ * entries retain their chain locations; free with mcCardFreeSave as usual. */
+int mcCardReadSaveMetadata(McView *v, const char *name, McSaveData *out);
+int mcCardReadSaveFile(McView *v, const McSaveFile *file, uint32_t offset, void *data, uint32_t len);
 void mcCardFreeSave(McSaveData *s);
 
 /* Clusters a save needs on a card, not counting a new root directory cluster. */

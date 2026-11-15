@@ -52,28 +52,33 @@ static int aes(const uint8_t key[16], int enc, const uint8_t *iv_in, uint8_t *bu
 
 /* HMAC-SHA1 over buf with the 20-byte signature at sig zeroed; the key comes
  * from the 20-byte seed at seed through the PS1 or PS2 key. */
-static int sign(uint8_t *buf, uint32_t len, uint32_t seed, uint32_t sig, int ps1)
+static int signKey(const uint8_t seed[20], int ps1, uint8_t key[32])
 {
-	uint8_t key[32];
 	int i;
 
-	if (len < sig + 20u)
-		return -1;
 	if (ps1) {
-		memcpy(key, buf + seed, 16);
-		memcpy(key + 16, buf + seed, 16);
+		memcpy(key, seed, 16);
+		memcpy(key + 16, seed, 16);
 		if (aes(ps1_key, 0, NULL, key, 16) || aes(ps1_key, 1, NULL, key + 16, 16))
 			return -1;
 		for (i = 0; i < 16; i++)
 			key[i] ^= sign_iv[i];
 		for (i = 0; i < 4; i++)
-			key[16 + i] ^= buf[seed + 16 + i];
+			key[16 + i] ^= seed[16 + i];
 	} else {
-		memset(key, 0, sizeof(key));
-		memcpy(key, buf + seed, 20);
+		memset(key, 0, 32);
+		memcpy(key, seed, 20);
 		if (aes(ps2_key, 0, sign_iv, key, 32))
 			return -1;
 	}
+	return 0;
+}
+
+static int sign(uint8_t *buf, uint32_t len, uint32_t seed, uint32_t sig, int ps1)
+{
+	uint8_t key[32];
+	if (len < sig + 20u || len < seed + 20u || signKey(buf + seed, ps1, key))
+		return -1;
 	memset(buf + sig, 0, 20);
 	return mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA1), key, 20, buf, len, buf + sig) ? -1 : 0;
 }
@@ -241,6 +246,158 @@ int mcSaveToPsv(const McSaveData *s, uint8_t **out, uint32_t *len)
 	*out = p;
 	*len = (uint32_t)n;
 	return MCW_OK;
+}
+
+static int streamRead(const McSaveData *s, const McSaveStreamIo *io, uint32_t file,
+                      uint32_t offset, void *data, uint32_t len)
+{
+	const McSaveFile *f = &s->files[file];
+	if (offset > f->size || len > f->size - offset)
+		return MCW_ERR_INVALID;
+	if (io->read)
+		return io->read(io->ctx, file, offset, data, len);
+	if (len && !f->data)
+		return MCW_ERR_INVALID;
+	if (len) memcpy(data, f->data + offset, len);
+	return MCW_OK;
+}
+
+static int streamWrite(const McSaveStreamIo *io, mbedtls_md_context_t *hash,
+                       uint32_t offset, const void *data, uint32_t len)
+{
+	if (hash && mbedtls_md_hmac_update(hash, data, len))
+		return MCW_ERR_INVALID;
+	return io->write(io->ctx, offset, data, len);
+}
+
+static void streamPsuEntry(uint8_t out[512], const uint8_t entry[512], uint32_t len, int directory)
+{
+	memcpy(out, entry, 512);
+	wr32(out + 4, len);
+	memset(out + 0x10, 0, 8);
+	memset(out + 0x28, 0, 0x18);
+	out[0x5f] = 0;
+	memset(out + 0x60, 0, 512 - 0x60);
+	out[0] |= directory ? 0x20 : 0x10;
+	out[1] |= 0x80;
+}
+
+int mcSaveExportStream(const McSaveData *s, int format, const McSaveStreamIo *io, uint32_t *len)
+{
+	uint8_t header[512] = {0}, icons[452], key[32], signature[20];
+	uint64_t total, payload = 0;
+	uint32_t i, j, pos, off, count, icon_offset = 0;
+	mbedtls_md_context_t signer, *hash = NULL;
+	int r = MCW_OK;
+
+	if (!len) return MCW_ERR_INVALID;
+	*len = 0;
+	if (!s || !io || !mcCardNameOk(s->entry + 0x40) || s->nfiles > 0xfffeu ||
+	    (s->nfiles && !s->files) || (format != MC_STREAM_PSU && format != MC_STREAM_PSV))
+		return MCW_ERR_INVALID;
+	total = format == MC_STREAM_PSU ? 1536 : 160 + (uint64_t)s->nfiles * 60;
+	for (i = 0; i < s->nfiles; i++) {
+		const McSaveFile *f = &s->files[i];
+		if (!mcCardNameOk(f->entry + 0x40) || (f->size && !io->read && !f->data))
+			return MCW_ERR_INVALID;
+		for (j = 0; j < i; j++)
+			if (!memcmp(f->entry + 0x40, s->files[j].entry + 0x40, 32)) return MCW_ERR_INVALID;
+		payload += f->size;
+		total += format == MC_STREAM_PSU ? 512 + (((uint64_t)f->size + 1023) & ~(uint64_t)1023) : f->size;
+	}
+	if (payload > 128ull * 1024 * 1024 || total > 0x7fffffffu) return MCW_ERR_INVALID;
+	*len = (uint32_t)total;
+	if (!io->write) return MCW_OK;
+	if (!io->buffer || !io->buffer_size || io->buffer_size > 0x100000u) return MCW_ERR_INVALID;
+	mbedtls_md_init(&signer);
+	if (format == MC_STREAM_PSV) {
+		psvHeader(header, 2);
+		wr32(header + 0x40, (uint32_t)payload);
+		wr32(header + 0x64, s->nfiles);
+		memcpy(header + 0x68, s->entry + 8, 8);
+		memcpy(header + 0x70, s->entry + 0x18, 8);
+		wr32(header + 0x78, s->nfiles + 2);
+		wr32(header + 0x7c, (uint32_t)s->entry[0] | (uint32_t)s->entry[1] << 8);
+		memcpy(header + 0x80, s->entry + 0x40, 32);
+		pos = 160 + s->nfiles * 60;
+		for (i = 0; i < s->nfiles; i++) {
+			const McSaveFile *f = &s->files[i];
+			if (!strncmp((const char *)f->entry + 0x40, "icon.sys", 32)) {
+				wr32(header + 0x44, pos); wr32(header + 0x48, f->size);
+				if (f->size >= sizeof(icons)) {
+					r = streamRead(s, io, i, 0, icons, sizeof(icons));
+					if (r) goto done;
+					icon_offset = 160 + s->nfiles * 60;
+					for (j = 0; j < s->nfiles; j++) {
+						unsigned k;
+						for (k = 0; k < 3; k++) {
+							const char *name = (const char *)icons + 260 + k * 64;
+							if (memchr(name, 0, 33) && !strncmp(name, (const char *)s->files[j].entry + 0x40, 32)) {
+								wr32(header + 0x4c + k * 8, icon_offset);
+								wr32(header + 0x50 + k * 8, s->files[j].size);
+							}
+						}
+						icon_offset += s->files[j].size;
+					}
+				}
+			}
+			pos += f->size;
+		}
+		if (signKey(header + 8, 0, key) ||
+		    mbedtls_md_setup(&signer, mbedtls_md_info_from_type(MBEDTLS_MD_SHA1), 1) ||
+		    mbedtls_md_hmac_starts(&signer, key, 20)) { r = MCW_ERR_INVALID; goto done; }
+		hash = &signer;
+		r = streamWrite(io, hash, 0, header, 160);
+		pos = 160;
+		icon_offset = 160 + s->nfiles * 60;
+		for (i = 0; !r && i < s->nfiles; i++) {
+			const McSaveFile *f = &s->files[i];
+			memset(header, 0, 60);
+			memcpy(header, f->entry + 8, 8); memcpy(header + 8, f->entry + 0x18, 8);
+			wr32(header + 16, f->size); wr32(header + 20, (uint32_t)f->entry[0] | (uint32_t)f->entry[1] << 8);
+			memcpy(header + 24, f->entry + 0x40, 32);
+			wr32(header + 56, icon_offset);
+			icon_offset += f->size;
+			r = streamWrite(io, hash, pos, header, 60); pos += 60;
+		}
+	} else {
+		pos = 0;
+		for (i = 0; i < 3; i++) {
+			streamPsuEntry(header, i == 0 ? s->entry : i == 1 ? s->dot : s->dotdot, i ? 0 : s->nfiles + 2, 1);
+			if (i) { memset(header + 0x40, 0, 32); header[0x40] = '.'; if (i == 2) header[0x41] = '.'; }
+			r = streamWrite(io, NULL, pos, header, 512); pos += 512;
+			if (r) goto done;
+		}
+	}
+	for (i = 0; !r && i < s->nfiles; i++) {
+		const McSaveFile *f = &s->files[i];
+		if (format == MC_STREAM_PSU) {
+			streamPsuEntry(header, f->entry, f->size, 0);
+			r = streamWrite(io, NULL, pos, header, 512); pos += 512;
+		}
+		for (off = 0; !r && off < f->size; off += count) {
+			count = f->size - off; if (count > io->buffer_size) count = io->buffer_size;
+			r = streamRead(s, io, i, off, io->buffer, count);
+			if (!r) r = streamWrite(io, hash, pos, io->buffer, count);
+			pos += count;
+		}
+		if (!r && format == MC_STREAM_PSU) {
+			uint32_t pad = (1024 - (f->size & 1023)) & 1023;
+			memset(io->buffer, 0xff, io->buffer_size);
+			while (!r && pad) {
+				count = pad > io->buffer_size ? io->buffer_size : pad;
+				r = streamWrite(io, NULL, pos, io->buffer, count); pos += count; pad -= count;
+			}
+		}
+	}
+	if (!r && hash) {
+		if (mbedtls_md_hmac_finish(hash, signature)) r = MCW_ERR_INVALID;
+		else r = io->write(io->ctx, 28, signature, sizeof(signature));
+	}
+	if (!r && pos != *len) r = MCW_ERR_INVALID;
+done:
+	mbedtls_md_free(&signer);
+	return r;
 }
 
 void mcPsvFileName(char *out, uint32_t size, const char *name)

@@ -10,6 +10,54 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
+
+typedef struct StreamFixture {
+	const McSaveData *save;
+	uint8_t *out;
+	uint32_t len;
+	int fail_read, fail_write;
+} StreamFixture;
+
+static int readChunk(void *ctx, uint32_t file, uint32_t off, void *data, uint32_t len)
+{
+	StreamFixture *f = ctx;
+	if (f->fail_read) return MCV_ERR_IO;
+	assert(file < f->save->nfiles && off <= f->save->files[file].size && len <= f->save->files[file].size - off);
+	memcpy(data, f->save->files[file].data + off, len);
+	return 0;
+}
+
+static int writeChunk(void *ctx, uint32_t off, const void *data, uint32_t len)
+{
+	StreamFixture *f = ctx;
+	if (f->fail_write) return MCV_ERR_IO;
+	assert(off <= f->len && len <= f->len - off);
+	memcpy(f->out + off, data, len);
+	return 0;
+}
+
+static void checkStream(const McSaveData *s, const uint8_t *psv, uint32_t psv_len)
+{
+	uint8_t scratch[71], *psu = NULL;
+	uint32_t len, measured;
+	assert(mcCardSaveToPsu(s, &psu, &len) == MCW_OK);
+	for (int fmt = MC_STREAM_PSU; fmt <= MC_STREAM_PSV; fmt++) {
+		StreamFixture f = {s, NULL, fmt ? psv_len : len, 0, 0};
+		McSaveStreamIo io = {readChunk, NULL, &f, scratch, sizeof(scratch)};
+		assert(mcSaveExportStream(s, fmt, &io, &measured) == MCW_OK && measured == f.len);
+		f.out = calloc(1, f.len); assert(f.out);
+		io.write = writeChunk;
+		assert(mcSaveExportStream(s, fmt, &io, &measured) == MCW_OK);
+		assert(!memcmp(f.out, fmt ? psv : psu, f.len));
+		f.fail_read = 1;
+		assert(mcSaveExportStream(s, fmt, &io, &measured) == MCV_ERR_IO);
+		f.fail_read = 0; f.fail_write = 1;
+		assert(mcSaveExportStream(s, fmt, &io, &measured) == MCV_ERR_IO);
+		free(f.out);
+	}
+	free(psu);
+}
 
 static uint8_t *slurp(const char *path, uint32_t *len)
 {
@@ -86,6 +134,7 @@ int main(int argc, char **argv)
 			r = mcSaveToPsv(&s, &out, &olen);
 			if (r == MCW_OK) {
 				McSaveData b;
+				checkStream(&s, out, olen);
 
 				spit(argv[3], out, olen); /* our own reader takes it back as the same save */
 				if (mcSaveFromPsv(out, olen, &b) != MCW_OK || !mcCardSameSave(&s, &b))

@@ -1419,3 +1419,16 @@ print("Card contents tool: listing, copy, move, delete, .psu round trip, safety 
       "served MMCE card never written, served-card detection by number and content, guarded switch (also to a clone), "
       "mounted VMC blocks writes, 250+ save cards, copy to a new card size, Game ID split, blank cards, all saves across cards (also 250+ saves on one card, 64+ folders), marked-save batches, .psu library and sets, refusals cost no safety copy, write failures reported, "
       "PS1 cards (blank, import, export, delete, failed writes), PS3 .psv/.psx/raw exports, marked saves converted together, .gme/.vgs/.vmp/.mcx cards, POPStarter card names, one open file at a time: OK")
+
+# A source changed while the destination was being written must survive Cut.
+source="mass:/guard-source.mcd";dest="mass:/guard-dest.mcd"
+c=fx.Card(8,False);payload=b"SOURCE-SNAPSHOT-GUARD"*101
+c.add_save("GUARD",{"DATA":payload});raw=c.finish().image()
+host(source).write_bytes(raw);blank(dest)
+where=raw.index(payload)
+lines=run(source,"m3","m1","p"+dest,"c1",env={"MUTATE_SOURCE":str(where)})
+assert kind(lines,"MESSAGE|1|Source save kept|"),lines
+assert "GUARD" in saves(source) and "GUARD" in saves(dest)
+assert host(source).read_bytes()[where] == raw[where]^1
+assert host(dest).read_bytes().find(payload)>=0
+print("PASS: a source changed during Cut is retained alongside the verified destination")

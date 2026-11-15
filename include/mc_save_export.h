@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 //File name:   mc_save_export.h
 //Writes saves and PS1 cards in the formats other consoles and tools use,
-//and opens the PS1 card containers below. Everything works on buffers in
+//and opens the PS1 card containers below. Buffered helpers work on buffers in
 //memory; nothing here touches a file.
 //
 //  .psv   PS3 export of a save, signed so a PS3 accepts it:
@@ -82,6 +82,21 @@ int ps1SaveToPsx(const Ps1Save *s, uint8_t **out, uint32_t *len);
 
 /* A PS2 save as a signed .psv; free *out with free(). MCW_OK or an MCW_ERR. */
 int mcSaveToPsv(const McSaveData *s, uint8_t **out, uint32_t *len);
+
+/* Bounded PSU/PSV output. Callbacks complete a range (0 = success) and may
+ * seek backwards for PSV's final signature at offset 28. A NULL read uses
+ * McSaveFile.data; a supplied read also accepts metadata-only saves.
+ * A NULL write validates/measures without emitting an archive. The caller
+ * owns the scratch buffer (1..1 MiB); no payload/archive is allocated here. */
+enum { MC_STREAM_PSU = 0, MC_STREAM_PSV = 1 };
+typedef struct McSaveStreamIo {
+	int (*read)(void *ctx, uint32_t file, uint32_t offset, void *data, uint32_t len);
+	int (*write)(void *ctx, uint32_t offset, const void *data, uint32_t len);
+	void *ctx;
+	uint8_t *buffer;
+	uint32_t buffer_size;
+} McSaveStreamIo;
+int mcSaveExportStream(const McSaveData *s, int format, const McSaveStreamIo *io, uint32_t *len);
 
 /* A PS2 save as a .zip of its folder and files, stored (uncompressed), for a
  * PC: the folder's and files' times become DOS times; the card attributes are

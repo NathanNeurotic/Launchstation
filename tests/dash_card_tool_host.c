@@ -10,6 +10,7 @@
  * Every dialog is printed, and the harness aborts if two files are ever open
  * at once (the MMCE driver allows one). */
 #include <dirent.h>
+#include <assert.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include "dash_internal.h"
@@ -67,6 +68,7 @@ static void map(const char *path, char *out)
 	snprintf(out, MAX_PATH, "%s/%.*s%s", root, (int)(colon - path), path, colon + 1);
 }
 
+static int mutate_on_close;
 int genOpen(const char *path, int mode)
 {
 	char p[MAX_PATH];
@@ -75,6 +77,7 @@ int genOpen(const char *path, int mode)
 	map(path, p);
 	fd = open(p, mode, 0644);
 	if (fd >= 0) {
+		mutate_on_close = getenv("MUTATE_SOURCE") && !strcmp(path,"mass:/guard-dest.mcd") && (mode & O_RDWR);
 		if (++open_files > 1) {
 			fprintf(stderr, "two files open at once: %s\n", path);
 			abort();
@@ -96,7 +99,15 @@ int genWrite(int fd, void *buf, int size)
 int genClose(int fd)
 {
 	open_files--;
-	return close(fd);
+ int result=close(fd);
+ if(mutate_on_close){
+  char p[MAX_PATH];map("mass:/guard-source.mcd",p);
+  int edit=open(p,O_RDWR);assert(edit>=0);
+  off_t at=(off_t)strtoll(getenv("MUTATE_SOURCE"),NULL,10);unsigned char b;
+  assert(pread(edit,&b,1,at)==1);b^=1;assert(pwrite(edit,&b,1,at)==1);assert(!close(edit));
+  unsetenv("MUTATE_SOURCE");mutate_on_close=0;
+ }
+ return result;
 }
 
 static DIR *dirs[8];
@@ -140,6 +151,10 @@ int genMkdir(const char *path, int mode)
 	map(path, p);
 	return mkdir(p, (mode_t)mode);
 }
+int DashFileProgress(const char *a,const char *n,u64 left,u64 total) { (void)a;(void)n;(void)left;(void)total;return 1; }
+int DashFileTransferChunk(void (*run)(void *),void *arg) { run(arg);return 1; }
+unsigned int getIopResetGeneration(void) { return 1; }
+int genFixPath(const char *path, char *out) { snprintf(out, MAX_PATH, "%s", path); return 0; }
 int genRemove(char *path)
 {
 	char p[MAX_PATH];
