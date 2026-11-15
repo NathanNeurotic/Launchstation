@@ -58,6 +58,15 @@ static unsigned int sound_reboot_generation; /* reset epoch when audsrv was star
 static unsigned int sound_tried_generation = (unsigned int)-1; /* last automatic attempt */
 static int sound_retry;
 static int theme_reload_pending;
+static int sound_job_id, sound_closing, sound_boot_pending, sound_volume_pending;
+typedef struct SoundJob {
+	unsigned int generation;
+	int initialize, reset_samples, theme, effects, volume, music, ready;
+	char directory[MAX_PATH], warning[128];
+} SoundJob;
+static SoundJob sound_job;
+static int loadBgmSidecar(const char *dir);
+
 
 
 /* audsrv lives on the IOP: after any IOP reboot the server and the uploaded
@@ -85,9 +94,9 @@ static int soundAlive(void)
 /* Theme 0 is the original set, theme 1 the synthesized "PS2" set. */
 #define SND_THEME_PS2 1
 
-static void *blob_data(int id)
+static void *blob_data(int id, int theme)
 {
-	if (dashCfg.sound_theme == SND_THEME_PS2) {
+	if (theme == SND_THEME_PS2) {
 		switch (id) {
 			case DASH_SND_CURSOR: return sfx2_cursor_adp;
 			case DASH_SND_CONFIRM: return sfx2_confirm_adp;
@@ -111,9 +120,9 @@ static void *blob_data(int id)
 	}
 }
 
-static int blob_size(int id)
+static int blob_size(int id, int theme)
 {
-	if (dashCfg.sound_theme == SND_THEME_PS2) {
+	if (theme == SND_THEME_PS2) {
 		switch (id) {
 			case DASH_SND_CURSOR: return size_sfx2_cursor_adp;
 			case DASH_SND_CONFIRM: return size_sfx2_confirm_adp;
@@ -137,163 +146,142 @@ static int blob_size(int id)
 	}
 }
 
-int dashSoundInit(void)
+/* One job owns audsrv and the permanent sample objects until completion.
+ * Settings may change while it runs; the worker reads only this snapshot. */
+static void soundJobRun(void *arg)
 {
-	int i, r, failed;
-
-	if (sound_ready && soundAlive())
-		return 1;
-	if (sound_ready)
-		dashSoundShutdown(); /* stale after an IOP reboot: forget it */
-	/* the UI thread must not load modules while a background job may */
-	if (dashWorkerIoBusy() || dashIopParked()) {
-		sound_retry = 1; /* dashSoundMaintain() tries again */
-		return 0;
-	}
-	sound_tried_generation = getIopResetGeneration();
-	/* BGM and interface SFX are separate buses; initialize audsrv when
-	 * either one is enabled. */
-	if (!dashCfg.sound && !dashCfg.bgm)
-		return 0;
-	/* audsrv imports sceSd* from the libsd module: it must be resident first */
-	if (SifExecModuleBuffer(libsd_irx, size_libsd_irx, 0, NULL, &r) < 0 || r < 0) {
-		dashToast(DASH_TOAST_WARN, "Sound unavailable: libsd would not start");
-		return 0;
-	}
-	if (SifExecModuleBuffer(audsrv_irx, size_audsrv_irx, 0, NULL, &r) < 0 || r < 0) {
-		dashToast(DASH_TOAST_WARN, "Sound unavailable: audio driver would not start");
-		return 0;
-	}
-	if (audsrv_init() != 0) {
-		dashToast(DASH_TOAST_WARN, "Sound unavailable: audio init failed");
-		return 0;
-	}
-	if (audsrv_adpcm_init() != 0) {
-		audsrv_quit();
-		dashToast(DASH_TOAST_WARN, "Sound unavailable: adpcm init failed");
-		return 0;
-	}
-	failed = 0;
-	for (i = 0; i < DASH_SND_COUNT; i++) {
-		samples[i].buffer = NULL;
-		if (audsrv_load_adpcm(&samples[i], blob_data(i), blob_size(i)) != 0) {
-			samples[i].buffer = NULL; /* sample stays silent */
-			failed++;
+	SoundJob *job = arg;
+	int i, result;
+	if (job->generation != getIopResetGeneration()) return;
+	if (job->initialize) {
+		if (SifExecModuleBuffer(libsd_irx, size_libsd_irx, 0, NULL, &result) < 0 || result < 0) {
+			snprintf(job->warning, sizeof(job->warning), "Sound unavailable: libsd would not start"); return;
+		}
+		if (SifExecModuleBuffer(audsrv_irx, size_audsrv_irx, 0, NULL, &result) < 0 || result < 0) {
+			snprintf(job->warning, sizeof(job->warning), "Sound unavailable: audio driver would not start"); return;
+		}
+		if (audsrv_init() != 0) {
+			snprintf(job->warning, sizeof(job->warning), "Sound unavailable: audio init failed"); return;
 		}
 	}
-	/* Keep SFX preloaded even when their toggle is off so they can be enabled
-	 * later without reinitializing audsrv (BGM may already own the service). */
-	if (dashCfg.sound && failed == DASH_SND_COUNT) {
-		dashToast(DASH_TOAST_WARN, "Sound unavailable: no samples loaded");
-		/* The server is healthy even if its SFX uploads failed. Retain its
-		 * lifetime so BGM can use its independent sample and shutdown can
-		 * release the live RPC client before the next IOP reset. */
-	} else if (dashCfg.sound && failed > 0) {
-		char msg[64];
-
-		snprintf(msg, sizeof(msg), "%d sound effect%s unavailable", failed, failed == 1 ? "" : "s");
-		dashToast(DASH_TOAST_WARN, msg);
-	}
-	/* Channel map and volumes: boot..disconnect on voices 0..7, cursor
-	 * rotating over 8..13, transition rotating over 14..17, general SFX 18..22. */
-	if (dashCfg.sound) {
+	if (job->reset_samples) {
+		int failed = 0;
+		if (audsrv_adpcm_init() != 0) {
+			if (job->initialize) audsrv_quit();
+			snprintf(job->warning, sizeof(job->warning), "Sound unavailable: adpcm init failed"); return;
+		}
+		/* The hard reset also drops the music voice and its old sample ID. */
+		bgm_loaded = bgm_tried = 0; bgm_channel = -1; bgm_sample.buffer = NULL;
+		free(bgm_data); bgm_data = NULL;
+		for (i = 0; i < DASH_SND_COUNT; i++) {
+			samples[i].buffer = NULL;
+			if (audsrv_load_adpcm(&samples[i], blob_data(i, job->theme), blob_size(i, job->theme)) != 0) {
+				samples[i].buffer = NULL; failed++;
+			}
+		}
+		if (job->effects && failed)
+			snprintf(job->warning, sizeof(job->warning), "%d sound effect%s unavailable", failed, failed == 1 ? "" : "s");
 		for (i = 0; i < SND_SFX_CH_MAX; i++)
-			audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound_vol, 0);
+			audsrv_adpcm_set_volume_and_pan(i, job->effects ? job->volume : 0, 0);
 	}
-	sound_reboot_generation = getIopResetGeneration();
-	sound_ready = 1;
-	return 1;
+	job->ready = 1;
+	if (job->music) {
+		bgm_tried = 1;
+		loadBgmSidecar(job->directory);
+	}
 }
 
-/* Switch the effect set while running. audsrv_adpcm_init() is the library's
- * hard reset for ADPCM state (it also drops the music sample), so the effects
- * are uploaded again and the music restarted from its sidecar file. */
+static void soundJobDone(void *arg)
+{
+	SoundJob *job = arg;
+	sound_job_id = 0;
+	if (job->generation != getIopResetGeneration()) {
+		/* Do not contact the destroyed RPC server, even for cleanup. */
+		sound_ready = bgm_loaded = bgm_tried = 0; bgm_channel = -1;
+		bgm_sample.buffer = NULL; free(bgm_data); bgm_data = NULL;
+		return;
+	}
+	if (job->ready) {
+		sound_ready = 1;
+		sound_reboot_generation = job->generation;
+		if (job->reset_samples && job->theme != dashCfg.sound_theme) theme_reload_pending = 1;
+	}
+	if (job->warning[0] && !sound_closing) dashToast(DASH_TOAST_WARN, job->warning);
+	if (sound_closing) return;
+	dashSoundApplyVolume();
+	if (!theme_reload_pending) dashBgmStart();
+	if (sound_boot_pending && !theme_reload_pending) {
+		sound_boot_pending = 0;
+		dashSoundPlay(DASH_SND_BOOT);
+	}
+}
+
+int dashSoundInit(void)
+{
+	if (!sound_job_id && !soundAlive()) sound_retry = 1;
+	dashSoundMaintain();
+	return !sound_job_id && soundAlive();
+}
+
 void dashSoundReloadTheme(void)
 {
-	int i;
-
-	if (!soundAlive())
-		return; /* the next dashSoundInit() uploads the theme that is selected then */
-	if (dashIopParked() || dashWorkerIoBusy()) {
-		theme_reload_pending = 1; /* dashSoundMaintain() applies it once I/O is idle */
-		return;
-	}
-	theme_reload_pending = 0;
-	dashBgmStop();
-	if (audsrv_adpcm_init() != 0) {
-		dashToast(DASH_TOAST_WARN, "Sound theme could not be changed");
-		return;
-	}
-	for (i = 0; i < DASH_SND_COUNT; i++) {
-		samples[i].buffer = NULL;
-		if (audsrv_load_adpcm(&samples[i], blob_data(i), blob_size(i)) != 0)
-			samples[i].buffer = NULL;
-	}
-	dashSoundApplyVolume();
-	bgm_loaded = 0;
-	bgm_tried = 0;
-	bgm_channel = -1;
-	bgm_sample.buffer = NULL;
-	free(bgm_data);
-	bgm_data = NULL;
-	if (dashCfg.bgm)
-		dashBgmStart();
+	if (soundAlive() || sound_job_id) theme_reload_pending = 1;
+	dashSoundMaintain();
 }
 
 void dashSoundMaintain(void)
 {
-	if (!dashCfg.sound && !dashCfg.bgm)
-		return;
-	if (dashWorkerIoBusy() || dashIopParked())
-		return;
-	if (soundAlive()) {
-		if (theme_reload_pending)
-			dashSoundReloadTheme();
-		/* A sidecar read deferred by IO/driver startup is tried when idle.
-		 * Missing/invalid files are attempted once, not on every frame. */
-		if (dashCfg.bgm && bgm_channel < 0 && !bgm_tried)
-			dashBgmStart();
+	const char *dir;
+	int initialize, reset_samples, music;
+	if (sound_closing || sound_job_id || dashWorkerIoBusy() || dashIopParked()) return;
+	if (!dashCfg.sound && !dashCfg.bgm) return;
+	initialize = !soundAlive();
+	if (initialize && sound_tried_generation == getIopResetGeneration() && !sound_retry) return;
+	if (initialize && sound_ready) dashSoundShutdown();
+	reset_samples = initialize || theme_reload_pending;
+	dir = LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir;
+	music = dashCfg.bgm && (reset_samples || (!bgm_loaded && !bgm_tried)) && isPathDeviceStackLoaded(dir);
+	if (!reset_samples && !music) {
+		if (sound_volume_pending) { dashSoundApplyVolume(); dashBgmSetVolume(); }
+		if (dashCfg.bgm && bgm_loaded && bgm_channel < 0) dashBgmStart();
 		return;
 	}
-	/* one automatic attempt per IOP session (a broken driver would
-	 * otherwise be retried every frame), plus retries that were deferred */
-	if (sound_tried_generation == getIopResetGeneration() && !sound_retry)
-		return;
-	sound_tried_generation = getIopResetGeneration();
-	sound_retry = 0;
-	if (dashSoundInit())
-		dashBgmStart();
+	memset(&sound_job, 0, sizeof(sound_job));
+	sound_job.generation = getIopResetGeneration();
+	sound_job.initialize = initialize; sound_job.reset_samples = reset_samples;
+	sound_job.theme = dashCfg.sound_theme; sound_job.effects = dashCfg.sound;
+	sound_job.volume = dashCfg.sound_vol; sound_job.music = music;
+	snprintf(sound_job.directory, sizeof(sound_job.directory), "%s", dir);
+	sound_job_id = dashWorkerSubmit("Preparing audio", 0, soundJobRun, soundJobDone, &sound_job);
+	if (sound_job_id < 0) { sound_job_id = 0; return; } /* retry without blocking the UI */
+	theme_reload_pending = 0;
+	if (initialize) {
+		sound_tried_generation = sound_job.generation;
+		sound_retry = 0;
+	}
 }
 
 void dashSoundShutdown(void)
 {
+	sound_closing = 1; /* a draining job must never enqueue a replacement */
+	if (sound_job_id) dashWorkerAwait(sound_job_id, "Finishing audio", 0);
 	if (soundAlive()) {
-		/*
-		 * BGM is a looping SPU2 ADPCM voice. Merely setting its volume to
-		 * zero and dropping the EE RPC client can leave the IOP/SPU2 voice
-		 * alive across a keep-IOP ExecPS2 handoff. audsrv_adpcm_init() is the
-		 * library's hard reset for ADPCM state: it stops every voice and frees
-		 * the uploaded sample list before audsrv_quit() releases RPC.
-		 */
-		dashBgmStop();
 		audsrv_adpcm_init();
 		audsrv_stop_audio();
 		audsrv_quit();
 	}
-	sound_ready = 0;
-	bgm_loaded = 0;
-	bgm_tried = 0;
-	bgm_channel = -1;
-	bgm_sample.buffer = NULL;
-	free(bgm_data);
-	bgm_data = NULL;
+	sound_ready = bgm_loaded = bgm_tried = 0;
+	sound_boot_pending = sound_volume_pending = theme_reload_pending = 0;
+	bgm_channel = -1; bgm_sample.buffer = NULL;
+	free(bgm_data); bgm_data = NULL;
+	sound_closing = 0;
 }
 
 void dashSoundSuspend(void)
 {
 	int i;
 
-	if (!soundAlive() || dashIopParked())
+	if (sound_job_id || sound_closing || !soundAlive() || dashIopParked())
 		return;
 	/* Keep the RPC client and samples valid until the launch is committed.
 	 * audsrv_quit() destroys client state that audsrv_init() cannot recreate
@@ -308,8 +296,10 @@ void dashSoundApplyVolume(void)
 {
 	int i;
 
-	if (!soundAlive())
-		return;
+	if (sound_job_id || sound_closing || !soundAlive() || dashIopParked()) {
+		sound_volume_pending = 1; return;
+	}
+	sound_volume_pending = 0;
 	for (i = 0; i < SND_SFX_CH_MAX; i++)
 		audsrv_adpcm_set_volume_and_pan(i, dashCfg.sound ? dashCfg.sound_vol : 0, 0);
 }
@@ -320,6 +310,10 @@ void dashSoundPlay(int id)
 	static int transSlot;
 	int ch, i;
 
+	if (sound_job_id || sound_closing) {
+		if (id == DASH_SND_BOOT && !sound_closing) sound_boot_pending = 1;
+		return;
+	}
 	if (!soundAlive() || !dashCfg.sound || id < 0 || id >= DASH_SND_COUNT)
 		return;
 	if (dashIopParked())
@@ -388,16 +382,15 @@ static int prepareBgmLoop(u8 *data, int size)
 	return 1;
 }
 
-static int loadBgmSidecar(void)
+static int loadBgmSidecar(const char *dir)
 {
 	char path[MAX_PATH], fixed[MAX_PATH];
-	const char *dir = LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir;
 	int fd, size, got, n, closed;
 	u8 *data;
 
 	n = snprintf(path, sizeof(path), "%s%sBGM.ADP", dir,
 	             dir[0] && dir[strlen(dir) - 1] != '/' && dir[strlen(dir) - 1] != '\\' && dir[strlen(dir) - 1] != ':' ? "/" : "");
-	if (n < 0 || n >= sizeof(path))
+	if (n < 0 || n >= (int)sizeof(path))
 		return 0;
 	filerRootMcPollIdle();
 	if (genFixPath(path, fixed) < 0)
@@ -448,50 +441,31 @@ static int loadBgmSidecar(void)
 
 void dashBgmSetVolume(void)
 {
-	if (!soundAlive() || bgm_channel < 0 || dashIopParked())
-		return;
+	if (sound_job_id || sound_closing || !soundAlive() || bgm_channel < 0 || dashIopParked()) {
+		sound_volume_pending = 1; return;
+	}
 	audsrv_adpcm_set_volume_and_pan(bgm_channel, dashCfg.bgm ? dashCfg.bgm_vol : 0, 0);
 }
 
 void dashBgmStop(void)
 {
 	bgm_tried = 0; /* an explicit off/on can discover a newly added sidecar */
+	if (sound_job_id) sound_volume_pending = 1;
 	/* audsrv has no per-channel stop API. Keep the looping voice alive but
 	 * muted so re-enabling BGM is instant and does not allocate another voice. */
-	if (soundAlive() && bgm_channel >= 0 && !dashIopParked())
+	if (!sound_job_id && !sound_closing && soundAlive() && bgm_channel >= 0 && !dashIopParked())
 		audsrv_adpcm_set_volume_and_pan(bgm_channel, 0, 0);
 }
 
 void dashBgmStart(void)
 {
 	int ch;
-
-	if (!dashCfg.bgm || dashIopParked() || dashWorkerIoBusy())
-		return;
-	if (!soundAlive() && !dashSoundInit())
-		return;
-
-	/* Already running: section/menu changes only preserve/restore volume. */
-	if (bgm_channel >= 0) {
-		dashBgmSetVolume();
-		return;
-	}
-
-	if (!bgm_loaded) {
-		const char *dir = LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir;
-		/* Use only an already active boot stack. Reading music must not start
-		 * storage drivers or reset the IOP merely to look for an optional file. */
-		if (bgm_tried || !isPathDeviceStackLoaded(dir))
-			return;
-		bgm_tried = 1;
-		if (!loadBgmSidecar())
-			return;
-	}
-
+	if (!dashCfg.bgm || sound_closing || sound_job_id || dashIopParked() || dashWorkerIoBusy()) return;
+	if (!soundAlive() || !bgm_loaded) { dashSoundMaintain(); return; }
+	if (bgm_channel >= 0) { dashBgmSetVolume(); return; }
 	ch = audsrv_ch_play_adpcm(DASH_BGM_CHANNEL, &bgm_sample);
 	if (ch < 0) {
-		dashToast(DASH_TOAST_WARN, "Music unavailable: reserved SPU2 voice busy");
-		return;
+		dashToast(DASH_TOAST_WARN, "Music unavailable: reserved SPU2 voice busy"); return;
 	}
 	bgm_channel = ch;
 	dashBgmSetVolume();

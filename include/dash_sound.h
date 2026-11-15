@@ -18,6 +18,7 @@ enum DashSound {
 	DASH_SND_COUNT
 };
 
+/* Queue preparation on the shared worker; returns whether sound is ready now. */
 int dashSoundInit(void);
 void dashSoundShutdown(void);
 void dashSoundSuspend(void); /* mute while a launch can still return */
