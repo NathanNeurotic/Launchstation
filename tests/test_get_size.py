@@ -241,6 +241,17 @@ int main(void){
  show("mass0:/","MIX");measure();
  assert(starts(mess,"Size_test_Failed ")&&!strcmp(modal_detail,"error -12"));
  fail_alloc_bytes=0;
+ /* Depth, metadata and arithmetic are independently bounded. */
+ tree("mass0:/LIMIT",0,0);char deep[MAX_PATH]="mass0:/LIMIT";
+ for(int i=0;i<18;i++){strcat(deep,"/D");assert(!mkdir(deep,0700));}
+ FILEINFO limited={0};strcpy(limited.name,"LIMIT");limited.stats.AttrFile=sceMcFileAttrSubdir;
+ u64 measured=0;assert(getFileSize("mass0:/",&limited,&measured)==-ELOOP&&!listings_live);
+ strcpy(limited.name,"MIX");SizeWalk budget={0};
+ budget.scratch=memalign(64,MAX_ENTRY*sizeof(FILEINFO));budget.retained=SIZE_TREE_METADATA-1;
+ assert(measureFileSize("mass0:/",&limited,&measured,&budget,0)==-ENOMEM);
+ free(budget.scratch);assert(!listings_live);
+ memset(&limited,0,sizeof(limited));strcpy(limited.name,"ONE");limited.stats.FileSizeByte=1;
+ measured=~(u64)0;assert(getFileSize("udpfs:/",&limited,&measured)==-EOVERFLOW&&measured==~(u64)0);
  puts("PASS: Get Size uses a network listing's sizes (host, udpfs, SMB, over 4 GB) when a stat fails, "
       "shows a total missing anything "
       "(over the listing cap, a folder or stat that failed, no memory) as a lower bound or a failure "

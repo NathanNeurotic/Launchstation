@@ -98,7 +98,7 @@ static Folder *find(const char *path){for(int i=0;i<nfolders;i++)if(!strcmp(fold
 static void entry(int i,char *name,unsigned *mode,unsigned *size){
  sprintf(name,"E%%05d",i);*mode=i%%5==4?FIO_S_IFDIR:FIO_S_IFREG;*size=i%%5==4?0:100+i;
 }
-static struct {Folder *folder;int position;} handles[8];static int open_handles,opens;
+static struct {Folder *folder;int position;} handles[8];static int open_handles,opens,close_error,malformed;
 static int fileXioDopen(const char *path){
  Folder *f=find(path);opens++;
  if(!f)return -ENOENT;
@@ -115,9 +115,10 @@ static int fileXioDread(int fd,iox_dirent_t *out){
  memset(out,0,sizeof(*out));
  if(i<0){strcpy(out->name,i==-2?".":"..");out->stat.mode=FIO_S_IFDIR;}
  else entry(i,out->name,&out->stat.mode,&out->stat.size);
+ if(malformed)memset(out->name,0x58,sizeof(out->name));
  handles[fd-3].position++;return 1;
 }
-static int fileXioDclose(int fd){assert(fd>=3&&fd<11&&handles[fd-3].folder);handles[fd-3].folder=NULL;open_handles--;return 0;}
+static int fileXioDclose(int fd){assert(fd>=3&&fd<11&&handles[fd-3].folder);handles[fd-3].folder=NULL;open_handles--;return close_error;}
 /* host:elflist.txt, the list that stands in for the host: root: its content
  * (NULL: there is none), an error each seek or the read returns instead, and
  * how many bytes short the read comes up. Only host: paths are opened as files. */
@@ -368,6 +369,16 @@ int main(void){
  assert(browse("dvr_hdd0:/+DVR0/DIR/")==5&&listed(5));
  f->fail_at=-1;assert(complete("dvr_hdd0:/+DVR0/DIR/")==9&&listed(9));
  assert(complete("dvr_hdd0:/+DVR0/GONE/")==-ENOENT&&browse("dvr_hdd0:/+DVR0/GONE/")==0);
+ /* Close failures cannot authorize operations; browsing can still show what was read.
+  * A missing terminator must be rejected before strcmp or copying the driver name. */
+ const char *paths[]={"mass0:/FULL/","mmce0:/DIR/","cdfs:/DIR/","vmc0:/OK/",
+ "hdd0:/PART/DIR/","dvr_hdd0:/+DVR0/DIR/","host:/DIR/"};
+ for(unsigned k=0;k<sizeof(paths)/sizeof(paths[0]);k++){
+  close_error=-EIO;assert(complete(paths[k])==-EIO&&!open_handles);
+  assert(browse(paths[k])>0&&!open_handles);close_error=0;
+  malformed=1;assert(complete(paths[k])==-EINVAL&&!open_handles);
+  assert(browse(paths[k])==0&&!open_handles);malformed=0;
+ }
  /* a device nothing reads */
  assert(complete("xyz0:/")==-ENODEV&&browse("xyz0:/")==0);
  assert(!open_handles);

@@ -295,11 +295,23 @@ static int sizeFromListingOnStatFailure(const char *path)
  * when a folder held more than a listing can (its first MAX_ENTRY - 1 entries
  * are counted and the rest of the tree is still measured), or the error of
  * anything else that could not be measured, which stops the measurement. */
-int getFileSize(const char *path, const FILEINFO *file, u64 *size)
+typedef struct SizeChild {
+	char name[MAX_NAME];
+	sceMcTblGetDir stats;
+} SizeChild;
+
+typedef struct SizeWalk {
+	FILEINFO *scratch;
+	size_t retained;
+} SizeWalk;
+
+#define SIZE_TREE_DEPTH 16
+#define SIZE_TREE_METADATA (2u * 1024u * 1024u)
+
+static int measureFileSize(const char *path, const FILEINFO *file, u64 *size, SizeWalk *walk, int depth)
 {
 	static char party[MAX_NAME];  //only used for a file, which does not recurse
 	iox_stat_t stat;
-	FILEINFO *files;
 	char dir[MAX_PATH];
 	int nfiles, i, ret, more, status = 0;
 
@@ -307,21 +319,38 @@ int getFileSize(const char *path, const FILEINFO *file, u64 *size)
 		return -ENODEV;
 
 	if (file->stats.AttrFile & sceMcFileAttrSubdir) {  //Folder object to size up
-		/* each level lists on the heap: MAX_ENTRY entries are about 900 KB */
-		files = (FILEINFO *)memalign(64, MAX_ENTRY * sizeof(FILEINFO));
-		if (files == NULL)
-			return -ENOMEM;
-		if (snprintf(dir, sizeof(dir), "%s%s/", path, file->name) >= (int)sizeof(dir)) {
-			free(files);
+		SizeChild *children;
+		FILEINFO child;
+		size_t bytes;
+		if (depth >= SIZE_TREE_DEPTH) return -ELOOP;
+		if (snprintf(dir, sizeof(dir), "%s%s/", path, file->name) >= (int)sizeof(dir))
 			return -ENAMETOOLONG;
+		if (!walk->scratch) {
+			walk->scratch = memalign(64, MAX_ENTRY * sizeof(FILEINFO));
+			if (!walk->scratch) return -ENOMEM;
+			walk->retained = MAX_ENTRY * sizeof(FILEINFO);
 		}
-		nfiles = getDirComplete(dir, files, &more);
+		nfiles = getDirComplete(dir, walk->scratch, &more);
 		if (nfiles < 0)
-			status = nfiles;
-		else if (more)
-			status = -E2BIG;
+			return nfiles;
+		if (more) status = -E2BIG;
+		bytes = (size_t)nfiles * sizeof(*children);
+		if (walk->retained > SIZE_TREE_METADATA || bytes > SIZE_TREE_METADATA - walk->retained) return -ENOMEM;
+		children = bytes ? memalign(64, bytes) : NULL;
+		if (bytes && !children) return -ENOMEM;
+		walk->retained += bytes;
 		for (i = 0; i < nfiles; i++) {
-			ret = getFileSize(dir, &files[i], size);  //recurse for each object in folder
+			if (!memchr(walk->scratch[i].name, 0, MAX_NAME) || strchr(walk->scratch[i].name, '/') || strchr(walk->scratch[i].name, '\\')) {
+				free(children); walk->retained -= bytes; return -EINVAL;
+			}
+			strcpy(children[i].name, walk->scratch[i].name);
+			children[i].stats = walk->scratch[i].stats;
+		}
+		for (i = 0; i < nfiles; i++) {
+			if (!strcmp(children[i].name, ".") || !strcmp(children[i].name, "..")) continue;
+			memset(&child, 0, sizeof(child));
+			strcpy(child.name, children[i].name); child.stats = children[i].stats;
+			ret = measureFileSize(dir, &child, size, walk, depth + 1);
 			if (ret == -E2BIG)
 				status = ret;
 			else if (ret < 0) {
@@ -329,7 +358,7 @@ int getFileSize(const char *path, const FILEINFO *file, u64 *size)
 				break;
 			}
 		}
-		free(files);
+		free(children); walk->retained -= bytes;
 		return status;
 	}
 	//File object to size up
@@ -364,8 +393,22 @@ int getFileSize(const char *path, const FILEINFO *file, u64 *size)
 		stat.size = file->stats.FileSizeByte;
 		stat.hisize = file->stats.Reserve2;
 	}
-	*size += ((u64)stat.hisize << 32) | (u64)stat.size;
+	{
+		u64 measured = ((u64)stat.hisize << 32) | (u64)stat.size;
+		if (measured > ~(u64)0 - *size) return -EOVERFLOW;
+		*size += measured;
+	}
 	return 0;
+}
+
+int getFileSize(const char *path, const FILEINFO *file, u64 *size)
+{
+	SizeWalk walk = {0};
+	int result;
+	if (!path || !file || !size) return -EINVAL;
+	result = measureFileSize(path, file, size, &walk, 0);
+	free(walk.scratch);
+	return result;
 }
 //------------------------------
 //endfunc getFileSize
