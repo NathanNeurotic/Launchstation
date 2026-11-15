@@ -25,8 +25,9 @@ enum { DASH_IN_UP=1, DASH_IN_DOWN=2, DASH_IN_LEFT=4, DASH_IN_RIGHT=8, DASH_IN_OK
 #define DC(r,g,b,a) 0
 enum { DI_CLOCK, DI_BTN_LEFT, DI_BTN_RIGHT, DI_BTN_UP, DI_BTN_DOWN, DASH_SND_CURSOR, DASH_SND_CONFIRM, DASH_SND_CANCEL,
        DASH_FS_LABEL, DASH_FS_CAPTION, DASH_FS_BODY, DASH_FS_SMALL, DASH_C_TEXT, DASH_C_TEXT2, DASH_C_TEXT3, DASH_C_ACCENT };
-static const unsigned *script; static int frames;
-static void dashInputPoll(DashInput *in){in->pressed=*script++;frames++;}
+static const unsigned *script; static const unsigned *shoulder_script; static unsigned cur_shoulder; static int frames;
+static void dashInputPoll(DashInput *in){in->pressed=*script++;cur_shoulder=shoulder_script?*shoulder_script++:0;frames++;}
+static unsigned dashInputShoulderRepeat(void){return cur_shoulder;}
 static void dashInputFlush(void){}
 static void dashSoundPlay(int s){(void)s;}
 static float dashVisualUpdate(void){return 0.016f;}
@@ -70,6 +71,13 @@ int main(void){
  f[0]=2003;f[4]=59;
  static const unsigned c[]={DASH_IN_L1,DASH_IN_LEFT,DASH_IN_LEFT,DASH_IN_R1,DASH_IN_OK};
  assert(run(c,f)&&f[0]==2093&&f[4]==9&&f[5]==59);
+ /* Held shoulder repeats adjust by 10 without a fresh press. */
+ static const unsigned r_keys[]={0,0,DASH_IN_OK};
+ static const unsigned r_up[]={DASH_IN_R1,0,0};
+ static const unsigned r_down[]={DASH_IN_L1,0,0};
+ f[0]=2024;shoulder_script=r_up;assert(run(r_keys,f)&&f[0]==2034);
+ f[0]=2024;shoulder_script=r_down;assert(run(r_keys,f)&&f[0]==2014);shoulder_script=NULL;
+ f[0]=2093;
  /* Second +1 wraps to 0; Left from Year reaches Second. */
  static const unsigned d[]={DASH_IN_LEFT,DASH_IN_UP,DASH_IN_OK};
  assert(run(d,f)&&f[5]==0);

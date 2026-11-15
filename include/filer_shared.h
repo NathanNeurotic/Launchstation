@@ -111,9 +111,12 @@ int getDir(const char *path, FILEINFO *info);
 int getDirComplete(const char *path, FILEINFO *info, int *more);
 /* Whether the last complete-listing attempt can prove EOF, not merely return a count. */
 int filerDirReadComplete(void);
+int filerDirOpened(void);
 int filerPrepareDirRead(const char *path);
 /* Serialized card handshake; slot 2 may require retiring MX4SIO first. */
 int filerPrepareMemoryCardRead(int port);
+/* Cached physical-card presence: 1 present, 0 absent, negative unresolved. */
+int filerRootMcPresent(int port, int *type, int *free_kb);
 int pollRootMemoryCardDevices(void);
 void discardNextMx4sioRootListing(const char *path);
 int ensurePathDeviceStackReady(const char *path);

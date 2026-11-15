@@ -139,6 +139,6 @@ with tempfile.TemporaryDirectory(prefix="wle-mc-poll-") as tmp:
 # The dashboard must let the user open an unresolved slot: browsing runs
 # ensureMemoryCardPortAccessible(), which switches the IOP away from MX4SIO.
 selectable = function(files, "static int devSelectable(")
-assert "DASH_DEV_BUSY" in selectable and "DI_MC" in selectable
+assert "devs[idx].icon == DI_MC" in selectable
 assert "present == -2" in devices
 print("PASS: unresolved memory-card slots stay selectable from Devices")

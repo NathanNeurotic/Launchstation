@@ -138,8 +138,9 @@ static void startDevice(const DashDevice *d, int browse)
 
 static void openDevice(const DashDevice *d)
 {
-	if (d->state == DASH_DEV_ABSENT && d->icon == DI_MC) {
-		dashModalMessage(DI_MC, d->name, "Insert a memory card into this slot to browse it.", NULL);
+	if (d->icon == DI_MC) {
+		/* Browsing checks the card itself; cached absence may predate reinsertion. */
+		dashOpenBrowser(d->browse);
 		return;
 	}
 	if (d->icon == DI_DISC && d->state != DASH_DEV_READY) {
@@ -436,10 +437,11 @@ static int devSelectable(int idx)
 {
 	/* PROBE means "not checked yet", not unavailable. Let the user select it
 	 * so OK can invoke the existing lazy loader. A memory card still being
-	 * checked is selectable too: browsing it makes the slot accessible (e.g.
-	 * switches the IOP away from MX4SIO) and retries. A failed UDPFS check
-	 * stays selectable so opening it retries once the server is started.
-	 * Other explicitly absent devices are skipped by navigation. */
+	 * checked or cached as absent is selectable too: browsing checks the card
+	 * again and makes the slot accessible (e.g. switches away from MX4SIO).
+	 * A failed UDPFS check stays selectable so opening it retries once the
+	 * server is started. Other explicitly absent devices are skipped by
+	 * navigation. */
 	if (idx >= 0 && idx < ndevs && isPcCardCfPath(devs[idx].mount)) {
 		return isPcCardCfEligible() && !boot_safe_mode && !isPcCardCfBusBusy();
 	}
@@ -448,7 +450,7 @@ static int devSelectable(int idx)
 #ifdef UDPFS
 	        (devs[idx].state == DASH_DEV_ABSENT && !strcmp(devs[idx].mount, "udpfs:")) ||
 #endif
-	        (devs[idx].icon == DI_MC && devs[idx].state == DASH_DEV_BUSY));
+	        devs[idx].icon == DI_MC);
 }
 
 static void devSelectFirst(void)

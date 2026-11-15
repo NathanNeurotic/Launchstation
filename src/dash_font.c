@@ -714,6 +714,23 @@ float dashTextFit(float x, float y, float maxw, const char *str, float scale, Da
 	return dashTextS(x, y, buf, scale, c);
 }
 
+void dashTextScrollProgress(float x, float y, float maxw, const char *str, float scale, DashColor c, float progress)
+{
+	float width, offset;
+
+	if (str == NULL || maxw <= 0.0f)
+		return;
+	width = dashTextWidth(str, scale);
+	if (width <= maxw) {
+		dashTextS(x, y, str, scale, c);
+		return;
+	}
+	offset = (width - maxw) * dashClampf(progress, 0.0f, 1.0f);
+	dashGfxScissorPush(x, y - 2.0f, maxw, dashTextLineH(scale) + 4.0f);
+	dashTextS(x - offset, y, str, scale, c);
+	dashGfxScissorPop();
+}
+
 void dashTextScrollTimed(float x, float y, float maxw, const char *str, float scale, DashColor c, float age)
 {
 	float width, travel, move_time, cycle, phase, u, offset;

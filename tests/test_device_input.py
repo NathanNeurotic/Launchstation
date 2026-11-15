@@ -82,12 +82,12 @@ static int readpad_noRepeat(void) {
     int r=readpad_noKBnoRepeat(); return r&&new_pad?r:simPadKB();
 }
 static u64 last_input_ms;
-static u32 held_prev, text_repeat_armed;
+static u32 held_prev, text_repeat_armed, shoulder_repeat_armed, shoulder_repeat;
 static int dashboard_menus,dashboard_menu_open,dash_start_menu_blocked,physical_sample_valid;
 static void dashDashboardMenu(void) { dashboard_menus++; }
 """
 padcode += function(read("src/dash_main.c"), "int dashDashboardMenuIsOpen(")
-padcode += function(ui, "void dashInputPollEx(") + function(ui, "void dashInputFlush(")
+padcode += function(ui, "void dashInputPollEx(") + function(ui, "u32 dashInputShoulderRepeat(") + function(ui, "void dashInputFlush(")
 padcode += function(ui, "int dashInputPollPhysical(")
 padcode += r"""
 int main(void) {
@@ -184,7 +184,19 @@ int main(void) {
     assert(dashInputPollPhysical(&in)>0 && dashboard_menus==menus_before && !dash_start_menu_blocked);
     good[0]=0;assert(!dashInputPollPhysical(&in));
     good[0]=-1;assert(!dashInputPollPhysical(&in));good[0]=1;
-    puts("PASS: failed/disconnected reads, both ports, flush timing, held actions, navigation, keyboard");
+    /* L1/R1 adjustment repeats follow navigation delay, stay opt-in, and disarm on flush. */
+    for(int d=0;d<2;d++) {
+        u32 pad=d?PAD_R1:PAD_L1, btn=d?DASH_IN_R1:DASH_IN_L1;
+        clearPadPressState(); held_prev=text_repeat_armed=shoulder_repeat_armed=0;
+        now_ms=20000; keys[0]=pad; dashInputPollEx(&in,0);
+        assert(in.pressed==btn && dashInputShoulderRepeat()==btn);
+        now_ms+=100; dashInputPollEx(&in,0); assert(!in.any && !dashInputShoulderRepeat());
+        now_ms+=301; dashInputPollEx(&in,0); assert(!in.any && dashInputShoulderRepeat()==btn);
+        dashInputFlush(); now_ms+=600; dashInputPollEx(&in,0);
+        assert(!in.any && !dashInputShoulderRepeat());
+        keys[0]=0; dashInputPollEx(&in,0);
+    }
+    puts("PASS: failed/disconnected reads, both ports, flush timing, held actions, shoulder repeat, navigation, keyboard");
 }
 """
 

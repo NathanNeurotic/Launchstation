@@ -255,7 +255,7 @@ void dashAppActions(DashApp *a)
 	items[n].icon = DI_FOLDER, items[n].label = "Show in File Browser", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 5;
 	items[n].icon = DI_TEXT, items[n].label = "Edit metadata", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 6;
 	if (in_lib)
-		items[n].icon = DI_CLOSE, items[n].label = dashStoreIsHidden(a->path) ? "Show in view" : "Hide from view", items[n].detail = "file kept", items[n].disabled = 0, ids[n++] = 7;
+		items[n].icon = DI_HIDE, items[n].label = dashStoreIsHidden(a->path) ? "Show in view" : "Hide from view", items[n].detail = "file kept", items[n].disabled = 0, ids[n++] = 7;
 	else
 		items[n].icon = DI_CLOSE, items[n].label = "Remove shortcut", items[n].detail = NULL, items[n].disabled = 0, ids[n++] = 8;
 
@@ -315,7 +315,7 @@ static void appsMenu(void)
 	}
 	items[n].icon = DI_VIEW_GRID + dashCfg.view, items[n].label = localizeDashboardText("Change view"), items[n].detail = NULL, items[n].disabled = 0, n++;
 	items[n].icon = DI_STAR, items[n].label = filt, items[n].detail = NULL, items[n].disabled = 0, n++;
-	items[n].icon = DI_CLOSE, items[n].label = localizeDashboardText(a && dashStoreIsHidden(a->path) ? "Show in view" : "Hide from view"), items[n].detail = NULL, items[n].disabled = a == NULL, n++;
+	items[n].icon = DI_HIDE, items[n].label = localizeDashboardText(a && dashStoreIsHidden(a->path) ? "Show in view" : "Hide from view"), items[n].detail = NULL, items[n].disabled = a == NULL, n++;
 	items[n].icon = DI_REFRESH, items[n].label = localizeDashboardText("Refresh library"), items[n].detail = "scan now", items[n].disabled = 0, n++;
 
 	r = dashModalMenu(localizeDashboardText("Applications"), NULL, items, n, 0);
@@ -575,11 +575,39 @@ static void drawGrid(void)
 	}
 }
 
+/* The selected row, detail title and path share one forward-only cycle.
+ * Size it for the longest overflow so all three reach their ends together. */
+static float listScrollProgress(const DashApp *a, float list_width, float detail_width, float age)
+{
+	const float dwell = 3.0f, speed = 34.0f;
+	float travel, extra, move_time, phase, progress;
+
+	if (a == NULL)
+		return 0.0f;
+	travel = dashTextWidth(a->title, DASH_FS_SMALL) - list_width;
+	extra = dashTextWidth(a->title, DASH_FS_LABEL) - detail_width;
+	if (extra > travel)
+		travel = extra;
+	extra = dashTextWidth(a->path, DASH_FS_CAPTION * 0.9f) - detail_width;
+	if (extra > travel)
+		travel = extra;
+	if (travel <= 0.0f)
+		return 0.0f;
+	move_time = travel / speed;
+	if (move_time < 0.35f)
+		move_time = 0.35f;
+	phase = fmodf(age < 0.0f ? 0.0f : age, dwell * 2.0f + move_time);
+	progress = dashClampf((phase - dwell) / move_time, 0.0f, 1.0f);
+	return progress * progress * (3.0f - 2.0f * progress);
+}
+
 static void drawList(void)
 {
 	int top, i;
 	DashApp *a = selApp();
 	float lx = DASH_SAFE_L, ly = 104, lw = 290;
+	float dx = lx + lw + 24, dy = 98, dw = DASH_PANE_R - dx;
+	float scroll = listScrollProgress(a, lw - 64, dw - 28, dashUiFocusAge());
 
 	top = listCenteredTop(sel, norder, LIST_ROWS);
 	if (sel_anim < top || sel_anim >= top + LIST_ROWS)
@@ -607,7 +635,7 @@ static void drawList(void)
 			dashIcon(dashTheme.app_icon_style == DASH_APPICON_SYSTEM ? DI_EXEC : dashLibDeviceIcon(e->path), lx + 9, y + 5, 18,
 			         dashTheme.app_icon_style == DASH_APPICON_MONOGRAM ? dashColorHue(e->hue, 120, 230, 255) : dashItemColor(on));
 		if (on)
-			dashTextScroll(lx + 38, y + 3, lw - 64, e->title, DASH_FS_SMALL, dashItemColor(1));
+			dashTextScrollProgress(lx + 38, y + 3, lw - 64, e->title, DASH_FS_SMALL, dashItemColor(1), scroll);
 		else
 			dashTextFit(lx + 38, y + 3, lw - 64, e->title, DASH_FS_SMALL, dashItemColor(0));
 		if (dashStoreIsFavorite(e->path))
@@ -618,13 +646,12 @@ static void drawList(void)
 
 	/* detail panel */
 	if (a != NULL) {
-		float dx = lx + lw + 24, dy = 98, dw = DASH_PANE_R - dx;
 		char dev[48];
 
 		dashDrawCard(dx, dy, dw, 290, 16);
 		dashGfxPushAlpha(appOpacity(a));
 		dashDrawAppArt(a, dx + (dw - 132) * 0.5f, dy + 14, 132, 132, 1.0f, 0);
-		dashTextScroll(dx + 14, dy + 156, dw - 28, a->title, DASH_FS_LABEL, DASH_C_TEXT);
+		dashTextScrollProgress(dx + 14, dy + 156, dw - 28, a->title, DASH_FS_LABEL, DASH_C_TEXT, scroll);
 		dashLibDeviceLabel(a->path, dev, sizeof(dev));
 		dashIcon(dashLibDeviceIcon(a->path), dx + 14, dy + 186, 14, DASH_C_ACCENT);
 		dashTextFit(dx + 34, dy + 184, dw - 48, dev, DASH_FS_CAPTION, DASH_C_ACCENT);
@@ -636,7 +663,7 @@ static void drawList(void)
 			if (line[0])
 				dashTextFit(dx + 14, dy + 206, dw - 28, line, DASH_FS_CAPTION, DASH_C_TEXT2);
 		}
-		dashTextScroll(dx + 14, dy + 264, dw - 28, a->path, DASH_FS_CAPTION * 0.9f, DASH_C_TEXT3);
+		dashTextScrollProgress(dx + 14, dy + 264, dw - 28, a->path, DASH_FS_CAPTION * 0.9f, DASH_C_TEXT3, scroll);
 		dashGfxPopAlpha();
 	}
 }

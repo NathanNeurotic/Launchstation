@@ -252,7 +252,8 @@ int dashConfirmLeave(void)
 //--------------------------------------------------------------
 static void dashMsgHook(const char *msg)
 {
-	dashLoadingStatus(msg, 0, 0);
+	if (dash_active && !isStartupDriverStatusQuiet())
+		dashLoadingStatus(msg, 0, 0);
 }
 
 static void dashLaunchHook(const char *path)
@@ -306,6 +307,14 @@ int DashChooseElfIopMode(int configured)
 		dashGfxPresent();
 	}
 	return mode;
+}
+
+/* Once exec cleanup commits, mark the dashboard inactive before freeing
+ * setting/fonts so drawMsgHook and DashIsActive-gated overlays stop drawing. */
+void DashStopUiForExec(void)
+{
+	dash_active = 0;
+	boot_init_pending = 0;
 }
 
 /* Everything the background worker is doing (saves, scans, driver starts)

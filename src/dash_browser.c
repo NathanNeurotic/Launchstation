@@ -296,6 +296,8 @@ static void listRun(void *arg)
 
 	dashWorkerStatus(j->path, 0, 0);
 	j->n = getDir(j->path, j->files);
+	if (j->n == 0 && (!strncmp(j->path, "mc0:", 4) || !strncmp(j->path, "mc1:", 4)) && !filerDirOpened())
+		j->n = -1;
 #ifdef SMB
 	if (smbSharesV1Name() != NULL && smbPathKind(j->path) == SMB_PATH_V2 && smbIsRootPath(j->path)) {
 		/* the SMB1 share is a folder of the one SMB device; fullPath opens smb1:/ */
@@ -350,13 +352,24 @@ static void smbStatusMessage(int version, char *out, int out_size)
 }
 #endif
 
-/** Finish a folder listing and report SMB root-list failures to the user. */
+/** Finish a folder listing and report SMB or physical-card failures to the user. */
+static void openDir(const char *dir, const char *select);
+
 static void listDone(void *arg)
 {
 	FbListJob *j = (FbListJob *)arg;
 	int i, o = 0;
 
 	if (!j->abandoned && j->gen == fb.gen && fb.files != NULL) {
+		if (j->n < 0 && (!strncmp(j->path, "mc0:", 4) || !strncmp(j->path, "mc1:", 4))) {
+			char card[8];
+			snprintf(card, sizeof(card), "mc%c:/", j->path[2]);
+			free(j->files);
+			free(j);
+			openDir("", card);
+			dashToast(DASH_TOAST_WARN, "Memory card could not be read. Try opening it again.");
+			return;
+		}
 		for (i = 0; i < j->n && o < MAX_ENTRY; i++) {
 			FILEINFO *f = &j->files[i];
 			if (f->name[0] == '\0' || !strcmp(f->name, ".") || !strcmp(f->name, ".."))
@@ -664,8 +677,9 @@ static void activate(void)
 		if (fb.sel >= fb.ndevs)
 			return;
 		d = &fb.devs[fb.sel];
-		if (d->icon == DI_MC && d->state == DASH_DEV_ABSENT) {
-			dashToast(DASH_TOAST_INFO, "Insert a memory card into this slot");
+		if (d->icon == DI_MC) {
+			dashStrCopy(path, d->browse, sizeof(path));
+			openDir(path, NULL); /* recheck the actual card, even after cached absence */
 			return;
 		}
 		if (d->icon == DI_DISC && d->state != DASH_DEV_READY) {
@@ -3204,16 +3218,42 @@ static void fmtSize(char *out, int size, const FILEINFO *f)
 		snprintf(out, size, "%u B", (unsigned)b);
 }
 
+/* Display the public MASS label without changing the path used for I/O. */
+static void browserDisplayPath(const char *path, char *out, int size)
+{
+	if (!strncmp(path, "usb", 3) && path[3] >= '0' && path[3] <= '9' && path[4] == ':')
+		snprintf(out, size, "mass%s", path + 3);
+	else
+		dashStrCopy(out, path, size);
+}
+
+/* Display the saved source, independently of the folder now being browsed.
+ * Keep native HDD/VMC device paths; this formatter must never resolve them. */
+static void clipboardSummary(char *out, int size)
+{
+	char display[MAX_PATH + 2];
+
+	if (nclipFiles <= 0) {
+		out[0] = '\0';
+		return;
+	}
+	browserDisplayPath(clipPath, display, sizeof(display));
+	if (nclipFiles > 1)
+		snprintf(out, size, "Assortment in %s", display);
+	else {
+		size_t len = strlen(display);
+		const char *separator = len && display[len - 1] != '/' && display[len - 1] != ':' ? "/" : "";
+
+		snprintf(out, size, "%s%s%s", display, separator, clipFiles[0].name);
+	}
+}
+
 static void browserDrawBody(void)
 {
 	int i, rows_total = fb.dir[0] ? fb.n : fb.ndevs;
 	char info[64], display_path[MAX_PATH + 2];
 
-	/* Display the public MASS label without changing the path used for I/O. */
-	if (!strncmp(fb.dir, "usb", 3) && fb.dir[3] >= '0' && fb.dir[3] <= '9' && fb.dir[4] == ':')
-		snprintf(display_path, sizeof(display_path), "mass%s", fb.dir + 3);
-	else
-		dashStrCopy(display_path, fb.dir, sizeof(display_path));
+	browserDisplayPath(fb.dir, display_path, sizeof(display_path));
 
 	/* A dashboard tab must not overwrite the shared header or render its
 	 * background a second time; modal callers still get a complete scene. */
@@ -3250,12 +3290,20 @@ static void browserDrawBody(void)
 		else
 			dashText(FB_X, FB_Y + FB_ROWS * FB_ROW_H + 14, info, DASH_FS_CAPTION, DASH_C_ACCENT);
 	}
-	if (nclipFiles > 0) {
-		snprintf(info, sizeof(info), "Clipboard: %d to %s", nclipFiles, browser_cut ? "move" : "copy");
-		if (!fb_tab_active)
-			dashTextRight(FB_X + FB_W, 26, info, DASH_FS_CAPTION, DASH_C_ACCENT);
-		else if (!LaunchArgsPending())
-			dashText(FB_X, FB_Y + FB_ROWS * FB_ROW_H + 14, info, DASH_FS_CAPTION, DASH_C_ACCENT);
+	if (nclipFiles > 0 && (!fb_tab_active || !LaunchArgsPending())) {
+		char clipboard[MAX_PATH + MAX_NAME + 32];
+		float status_y = FB_Y + FB_ROWS * FB_ROW_H + 14;
+		float x = fb_tab_active ? FB_X : FB_X + 200;
+		float y = fb_tab_active ? status_y : 26;
+		float width = fb_tab_active ? FB_W : FB_W - 200;
+		const float icon_size = 16.0f, text_offset = icon_size + 8.0f;
+		float icon_xy[] = {x, y + 16.0f * DASH_FS_CAPTION - icon_size * 0.5f};
+
+		clipboardSummary(clipboard, sizeof(clipboard));
+		/* Explicit-color batching keeps this status icon identical to its text,
+		 * including themes that normally tint icons to accent or monochrome. */
+		dashIconMany(browser_cut ? DI_CUT : DI_COPY, icon_xy, 1, icon_size, DASH_C_ACCENT);
+		dashTextScroll(x + text_offset, y, width - text_offset, clipboard, DASH_FS_CAPTION, DASH_C_ACCENT);
 	}
 
 	dashDrawPanelBox(DASH_PANE_L, FB_Y - 6, DASH_PANE_W, FB_ROWS * FB_ROW_H + 12, 14);
@@ -3385,7 +3433,8 @@ static int browserOpenState(const char *start_dir, const char *select)
 	}
 	memset(fb.mark, 0, MAX_ENTRY);
 	if (start_dir != NULL && start_dir[0] &&
-	    (isMisc(start_dir) || (strchr(start_dir, ':') && dashDevicePathReady(start_dir))))
+	    (isMisc(start_dir) || (strchr(start_dir, ':') &&
+	     (!strncmp(start_dir, "mc0:", 4) || !strncmp(start_dir, "mc1:", 4) || dashDevicePathReady(start_dir)))))
 		openDir(start_dir, select);
 	else
 		openDir("", select);

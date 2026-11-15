@@ -717,6 +717,7 @@ int dashModalIp(const char *title, const char *help, char *ip_str, int size)
 	dashInputFlush();
 	while (1) {
 		int step = 0;
+		u32 shoulders;
 
 		dashInputPoll(&in);
 		if (in.pressed & DASH_IN_LEFT) {
@@ -731,16 +732,14 @@ int dashModalIp(const char *title, const char *help, char *ip_str, int size)
 			step = 1;
 		if (in.pressed & DASH_IN_DOWN)
 			step = -1;
-		if (in.pressed & (DASH_IN_R1 | DASH_IN_R2))
+		shoulders = in.pressed | dashInputShoulderRepeat();
+		if (shoulders & (DASH_IN_R1 | DASH_IN_R2))
 			step = 10;
-		if (in.pressed & (DASH_IN_L1 | DASH_IN_L2))
+		if (shoulders & (DASH_IN_L1 | DASH_IN_L2))
 			step = -10;
 		if (step) {
-			oct[sel] += step;
-			if (oct[sel] < 0)
-				oct[sel] = 0;
-			if (oct[sel] > 255)
-				oct[sel] = 255;
+			/* Wrap only this octet, keeping zero available for addresses and masks. */
+			oct[sel] = (oct[sel] + step + 256) % 256;
 			dashSoundPlay(DASH_SND_CURSOR);
 		}
 		if (in.pressed & DASH_IN_OK) {
@@ -861,6 +860,8 @@ static void pickListRun(void *arg)
 
 	dashWorkerStatus(j->path, 0, 0);
 	j->n = getDir(j->path, j->files);
+	if (j->n == 0 && (!strncmp(j->path, "mc0:", 4) || !strncmp(j->path, "mc1:", 4)) && !filerDirOpened())
+		j->n = -1;
 }
 
 /* 1 when the last folder of dir (any case) is name (upper case): "mass:/MCM/"
@@ -916,6 +917,8 @@ static int pickExtOk(const char *dir, const char *name, const char *ext)
 	return 0;
 }
 
+static void pickOpen(const char *dir);
+
 static void pickListDone(void *arg)
 {
 	PickListJob *j = (PickListJob *)arg;
@@ -923,6 +926,13 @@ static void pickListDone(void *arg)
 
 	if (pk.active && j->gen == pk.gen && pk.entries != NULL) {
 		pk.n = 0;
+		if (j->n < 0 && (!strncmp(j->path, "mc0:", 4) || !strncmp(j->path, "mc1:", 4))) {
+			free(j->files);
+			free(j);
+			pickOpen("");
+			dashToast(DASH_TOAST_WARN, "Memory card could not be read. Try opening it again.");
+			return;
+		}
 		for (i = 0; i < j->n && pk.n < PICK_MAX; i++) {
 			FILEINFO *f = &j->files[i];
 			int is_dir = (f->stats.AttrFile & sceMcFileAttrSubdir) != 0;
@@ -1095,7 +1105,8 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 	pk.active = 1;
 	pk.mode = mode;
 	pk.ext = ext;
-	pickOpen((start_dir != NULL && strchr(start_dir, ':') != NULL && dashDevicePathReady(start_dir)) ? start_dir : "");
+	pickOpen((start_dir != NULL && strchr(start_dir, ':') != NULL &&
+	          (!strncmp(start_dir, "mc0:", 4) || !strncmp(start_dir, "mc1:", 4) || dashDevicePathReady(start_dir))) ? start_dir : "");
 	dashInputFlush();
 
 	while (1) {
@@ -1186,7 +1197,7 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 			dashSoundPlay(DASH_SND_CONFIRM);
 			if (pk.dir[0] == '\0') {
 				DashDevice *d = &pk.devs[sel];
-				if (d->state == DASH_DEV_READY || (d->icon == DI_MC && d->state == DASH_DEV_BUSY))
+				if (d->state == DASH_DEV_READY || d->icon == DI_MC)
 					pickOpen(d->browse);
 				else if (d->state == DASH_DEV_PROBE || d->state == DASH_DEV_ABSENT) {
 					if (d->icon == DI_MC || d->icon == DI_DISC)
