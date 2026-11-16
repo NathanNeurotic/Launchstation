@@ -25,15 +25,15 @@ All **61 serialized key families** from upstream config.c and gui_colors.c are m
 | `GUI_Swap_Keys` | `swapKeys` | `S_CONFIRM` | src/pad.c; src/pad_ds34.c; src/dash_ui.c |
 | `Hide_Hdd` | `Hide_Hdd` | `S_HIDE_HDD` | src/filer.c; src/dash_devices.c |
 | `Hide_MCMMCE` | `Hide_MCMMCE` | `S_HIDE_MC` | src/filer.c; src/dash_devices.c |
-| `Init_Delay` | `Init_Delay` | `S_INIT_DELAY` | src/main_boot.c; src/main_menu.c |
+| `Init_Delay` | `Init_Delay` | `S_INIT_DELAY` | src/main_boot.c; src/dash_main.c |
 | `KBDMAP_FILE` | `kbdmap_file` | `S_KBDMAP_FILE` | src/init.c |
 | `LANG_FILE` | `lang_file` | `S_LANG_FILE` | src/lang.c |
-| `LK_%s_E1` | `LK_Path` | `ST_LKEY` | src/main_boot.c; src/main_menu.c; src/dash_home.c |
-| `LK_%s_Title` | `LK_Title` | `ST_LKEY` | src/main_menu.c; src/dash_home.c |
-| `LK_auto_Timer` | `timeout` | `S_TIMEOUT` | src/main_menu.c; src/dash_main.c |
+| `LK_%s_E1` | `LK_Path` | `ST_LKEY` | src/main_boot.c; src/dash_home.c |
+| `LK_%s_Title` | `LK_Title` | `ST_LKEY` | src/dash_home.c |
+| `LK_auto_Timer` | `timeout` | `S_TIMEOUT` | src/dash_main.c |
 | `Menu_Frame` | `Menu_Frame` | `S_MENU_FRAME` | src/draw.c |
-| `Menu_Hide_Paths` | `Hide_Paths` | `S_HIDE_PATHS` | src/main_menu.c |
-| `Menu_Show_Titles` | `Show_Titles` | `S_SHOW_TITLES` | src/main_menu.c |
+| `Menu_Hide_Paths` | `Hide_Paths` | `S_HIDE_PATHS` | none (read only by the removed classic main menu) |
+| `Menu_Show_Titles` | `Show_Titles` | `S_SHOW_TITLES` | none (read only by the removed classic main menu) |
 | `Misc` | `Misc` | `CNF compatibility name` | src/config.c; src/main_actions.c; src/dash_main.c |
 | `Misc_About_uLE` | `Misc_About_uLE` | `CNF compatibility name` | src/config.c; src/main_actions.c; src/dash_main.c |
 | `Misc_Configure` | `Misc_Configure` | `CNF compatibility name` | src/config.c; src/main_actions.c; src/dash_main.c |

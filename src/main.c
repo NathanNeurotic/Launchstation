@@ -5,7 +5,6 @@
 #include "init.h"
 #include "main_actions.h"
 #include "main_boot.h"
-#include "main_menu.h"
 #include "main_modules.h"
 #include "main_startup.h"
 #include "dash.h"
@@ -270,20 +269,14 @@ static void Execute(char *pathin)
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
-	int event, post_event = 0;
 	int igr_requested;
-	char RunPath[MAX_PATH];
-	int nElfs = 0;
 	enum BOOT_DEVICE boot;
 	int CNF_error = -1;  //assume error until CNF correctly loaded
-	MainMenuState menu_state;
 
 	captureBootArguments(argc, argv, &boot_argc, boot_argv, 8);
 	boot = performEarlyBootInitialization((argc > 0) ? argv[0] : NULL, boot_path, sizeof(boot_path), mainMsg, CNF, sizeof(CNF), &CNF_error);
 
-	MainMenuState_Init(&menu_state);
 	initializeRuntimeInputModules(boot);
-	MainMenuState_BeginTimers(&menu_state);
 	initializeRuntimeDisplayModules(CNF_error, mainMsg);
 
 	/* IGR backup runs after normal device/config initialization so the exact
@@ -295,7 +288,6 @@ int main(int argc, char *argv[])
 	//But before we start that, we need to validate CNF_Path
 	validateConfiguredCnfPath();
 
-	RunPath[0] = 0;  //Nothing to run yet
 	cdmode = -1;     //flag unchecked cdmode state
 
 	//The dashboard is the only shell; DashRun() does not return.
@@ -313,63 +305,8 @@ int main(int argc, char *argv[])
 		dash_ctx.rough_region = rough_region;
 		dash_ctx.romver_data = ROMVER_data;
 		DashRun(&dash_ctx, 1);
-		MainMenuMarkActionTaken(&menu_state); //no auto-launch countdown after leaving
 	}
-	event = 1;       //event = initial entry
-	DPRINTF("starting main menu event loop\n");
-	//----- Start of main menu event loop -----
-	while (1) {
-		int DiscType_ix;
-
-		//Background event section
-		uLE_cdStop();              //Test disc state and if needed stop disc (updates cdmode)
-		if (cdmode == old_cdmode)  //if disc detection did not change state
-			goto done_discControl;
-
-		event |= 4;  //event |= disc change detection
-		if (cdmode <= 0)
-			sprintf(mainMsg, "%s ", LNG(No_Disc));
-		else if (cdmode >= 1 && cdmode <= 4)
-			sprintf(mainMsg, "%s == ", LNG(Detecting_Disc));
-		else  //if(cdmode>=5)
-			sprintf(mainMsg, "%s == ", LNG(Stop_Disc));
-
-		DiscType_ix = 0;
-		{
-			int i;
-			for (i = 0; DiscTypes[i].name[0]; i++)
-				if (DiscTypes[i].type == uLE_cdmode)
-					DiscType_ix = i;
-		}
-
-		sprintf(mainMsg + strlen(mainMsg), DiscTypes[DiscType_ix].name);
-		//Comment out the debug output below when not needed
-		/*
-			sprintf(mainMsg+strlen(mainMsg),
-				"  cdmode==%d  uLE_cdmode==%d  type_ix==%d",
-				cdmode, uLE_cdmode, DiscType_ix);
-			//*/
-		done_discControl:
-		MainMenuState_UpdateTimers(&menu_state, &event);
-
-		//Display section
-		if (event || post_event) {  //NB: We need to update two frame buffers per event
-			nElfs = drawMainMenuScreen(&menu_state, mainMsg);
-		}
-		drawScr();
-		post_event = event;
-		event = 0;
-
-		MainMenuHandlePad(&menu_state, nElfs, RunPath, sizeof(RunPath), &event);
-		MainMenuHandleAutoLaunch(&menu_state, RunPath, sizeof(RunPath), &event);
-
-		if (RunPath[0]) {
-			MainMenuMarkActionTaken(&menu_state);
-			Execute(RunPath);
-			RunPath[0] = 0;
-		}
-	}  //ends while(1)
-	   //----- End of main menu event loop -----
+	return 0;
 }
 //------------------------------
 //endfunc main

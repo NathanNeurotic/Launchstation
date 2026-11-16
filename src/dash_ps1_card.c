@@ -19,15 +19,15 @@
 //it serves a PS2 card, never a PS1 image (that check also cannot read a PS1
 //image and would refuse every one).
 //--------------------------------------------------------------
+#include <malloc.h>
 #include "dash_internal.h"
 #include "filer_shared.h"
 #include "mc_ps1_card.h"
 #include "dash_card_tool.h"
 #include "mc_save_export.h"
 
-static uint8_t p1_before[PS1_CARD_SIZE] __attribute__((aligned(64)));
-static uint8_t p1_after[PS1_CARD_SIZE] __attribute__((aligned(64)));
-static uint8_t p1_now[PS1_CARD_SIZE] __attribute__((aligned(64)));
+/* Three card images (before, after, read-back), held only while the tool is open. */
+static uint8_t *p1_before, *p1_after, *p1_now;
 static Ps1CardSave p1_saves[PS1_BLOCKS];
 static char p1_titles[PS1_BLOCKS][96];
 static char p1_details[PS1_BLOCKS][64];
@@ -589,7 +589,7 @@ static void p1CopyAs(const char *path)
 		dashModalMessage(DI_MC, "Copy saved", "Written and read back. This card was not changed.", dest);
 }
 
-void dashPs1CardTool(const char *image)
+static void p1CardTool(const char *image)
 {
 	char path[MAX_PATH], subtitle[128];
 	int n, i, r, sel = 0;
@@ -658,7 +658,7 @@ void dashPs1CardTool(const char *image)
  * of several saves): each is read and placed in memory first, so a save
  * that cannot be read or does not fit stops it before anything is written.
  * The fixed names are never given a -2 suffix. */
-void dashPs1CardNew(const char *folder, const char *const *names, int n)
+static void p1CardNew(const char *folder, const char *const *names, int n)
 {
 	static const char *const tails[] = {
 	    ".mcd: raw card",   "SLOT0.VMC: POPStarter card 1", "SLOT1.VMC: POPStarter card 2", "MC1.vmc: Ember card 1",
@@ -712,5 +712,48 @@ void dashPs1CardNew(const char *folder, const char *const *names, int n)
 		return;
 	snprintf(msg, sizeof(msg), "PS1 card made and read back: %d of 15 blocks free", ps1CardFreeBlocks(p1_after));
 	dashToast(DASH_TOAST_OK, msg);
-	dashPs1CardTool(dest);
+	p1CardTool(dest);
+}
+
+/* 1: buffers taken here, 2: the tool is already open further up the call stack. */
+static int p1Hold(void)
+{
+	if (p1_before != NULL)
+		return 2;
+	p1_before = memalign(64, 3 * PS1_CARD_SIZE);
+	if (p1_before == NULL) {
+		dashModalMessage(DI_WARNING, "PS1 card", "Not enough memory.", NULL);
+		return 0;
+	}
+	p1_after = p1_before + PS1_CARD_SIZE;
+	p1_now = p1_after + PS1_CARD_SIZE;
+	return 1;
+}
+
+static void p1Drop(void)
+{
+	free(p1_before);
+	p1_before = p1_after = p1_now = NULL;
+}
+
+void dashPs1CardTool(const char *image)
+{
+	int held = p1Hold();
+
+	if (!held)
+		return;
+	p1CardTool(image);
+	if (held == 1)
+		p1Drop();
+}
+
+void dashPs1CardNew(const char *folder, const char *const *names, int n)
+{
+	int held = p1Hold();
+
+	if (!held)
+		return;
+	p1CardNew(folder, names, n);
+	if (held == 1)
+		p1Drop();
 }

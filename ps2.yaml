@@ -490,7 +490,6 @@ targets:
       - src/main_actions.c
       - src/main_boot.c
       - src/main_modules.c
-      - src/main_menu.c
       - src/main_title.c
       - src/main_info_screens.c
       - src/main_console_info.c

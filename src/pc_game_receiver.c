@@ -29,7 +29,6 @@ typedef struct
 
 static PcReceiveItem items[PC_RECV_MAX_ITEMS];
 static char request_text[8192];
-static u8 transfer_block[PC_RECV_BLOCK] __attribute__((aligned(64)));
 static u64 next_poll;
 
 static int readRequest(int *count)
@@ -126,7 +125,7 @@ static void showProgress(const PcReceiveItem *item, int index, int count, u64 po
 	drawMsg(text);
 }
 
-static int copyWithResume(PcReceiveItem *item, const char *source, const char *dest, int index, int count)
+static int copyWithResume(PcReceiveItem *item, const char *source, const char *dest, int index, int count, u8 *transfer_block)
 {
 	static char zero;
 	int in = -1, out, got, want, retries = 0;
@@ -216,6 +215,8 @@ static void receiveGames(int count, char *message, int message_size)
 	int restore_mmce = 0, restore_mx4sio = 0;
 	u64 started;
 	int i, r, dd, exists, server = 0, stop = 0, received = 0;
+	u8 *block;
+	int copied;
 
 #ifdef MMCE
 	restore_mmce = isPathDeviceStackLoaded("mmce0:/");
@@ -260,7 +261,11 @@ static void receiveGames(int count, char *message, int message_size)
 			snprintf(stage, sizeof(stage), "%s%.255s", PC_RECV_STAGE, items[i].name);
 			snprintf(source, sizeof(source), "udpfs:/%.255s", items[i].name);
 			started = Timer();
-			r = copyWithResume(&items[i], source, stage, i, count);
+			/* The 256 KB block lives only while a game is being received. */
+			block = memalign(64, PC_RECV_BLOCK);
+			copied = block != NULL;
+			r = copied ? copyWithResume(&items[i], source, stage, i, count, block) : -1;
+			free(block);
 			items[i].seconds = (int)((Timer() - started) / 1000);
 
 			fileSize(stage, &exists);
@@ -274,7 +279,7 @@ static void receiveGames(int count, char *message, int message_size)
 					items[i].state = "FICOU_EM_PS2-RECEBENDO";
 				}
 			} else {
-				if (exists)
+				if (exists && copied) /* a stage this attempt never opened is left alone */
 					fileXioRemove(stage);
 				items[i].state = (r == 1) ? "CANCELADO" : "FALHOU";
 				stop = 1;
