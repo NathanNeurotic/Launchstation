@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-16T00:45:34+00:00",
+  "updated_at": "2026-11-16T03:25:38+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 2576,
+  "total_downloads": 2580,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -8286,7 +8286,7 @@
       "release": "build-1178"
     },
     "749541792": {
-      "downloads": 28,
+      "downloads": 32,
       "name": "APP_LAUNCHSTATION-1178.zip",
       "release": "latest"
     },
