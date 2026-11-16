@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-15T21:19:55+00:00",
+  "updated_at": "2026-11-16T00:45:34+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 2572,
+  "total_downloads": 2576,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -8296,7 +8296,7 @@
       "release": "latest"
     },
     "749541804": {
-      "downloads": 27,
+      "downloads": 29,
       "name": "LAUNCHSTATION.ELF",
       "release": "latest"
     },
@@ -8311,7 +8311,7 @@
       "release": "latest"
     },
     "749541836": {
-      "downloads": 33,
+      "downloads": 35,
       "name": "LAUNCHSTATION-1178.zip",
       "release": "latest"
     },
