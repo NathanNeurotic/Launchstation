@@ -88,3 +88,34 @@ retains its independently pinned SDK. Standard/DS34 builds and linked variant,
 toolchain purity, stack realignment and embedded-loader layout checks are required.
 Host and build evidence does not establish physical PS2, firmware, TV/audio,
 emulator or gameplay acceptance; none was run for this collection.
+
+## Additional branch audit
+
+The follow-up inventory includes `vu0-and-1-usage` at
+`fcb6e2667cb8bb06b1f66f3e27d9afcc1bc5f569`; the other branch heads remain
+those recorded above. Two small browsing fixes from that branch are adapted:
+
+- [f4605ad9](https://github.com/saildot4k/Launchstation/commit/f4605ad9b2906acbf452861d3706a5cc5faeb230):
+  retry transient PS1-card detection errors within the existing four-attempt,
+  100 ms retry window. Failed RPC synchronization cannot reuse a previous
+  result. Directory request-start and synchronization failures remain errors;
+  permanent permission/format failures are not retried. The production-reader
+  ASan/UBSan test covers both slots, retries, exhaustion and failed requests.
+- The directory-reader portion of
+  [7d019bd7](https://github.com/saildot4k/Launchstation/commit/7d019bd7e75c4c05801381dd685f2bf7f57a2c97):
+  reject invalid local MMCE directory handles, clear each returned entry before
+  decoding its bounded name, and treat unknown directory statuses as errors.
+  Existing EOF and iterator-zero handling was already present. Sanitizer
+  coverage also exposed signed left shifts when decoding high-byte metadata;
+  unsigned casts preserve the wire bits without undefined behavior.
+
+The PS1 recovery test fails against the previous implementation. The MMCE
+wire test now checks cleared names, invalid handles, unknown status and high
+metadata bytes under ASan/UBSan. Firmware timing and physical PS1-card opening
+remain hardware acceptance items.
+
+The VU0/VU1 renderer, benchmark/profiling infrastructure and new background
+quality preference are separate graphics work. They are not imported into
+this save/browsing merge-readiness change without measured target performance
+and hardware acceptance. Generated `gh-pages` output and pure code moves also
+remain outside this selection.

@@ -415,17 +415,19 @@ static int waitMemoryCardReadyForBrowse(int port)
 		start_ret = mcGetInfo(port, 0, &mctype_PSx, NULL, NULL);
 		if (start_ret < 0)
 			ret = start_ret;
-		else
-			mcSync(0, NULL, &ret);
+		else if (mcSync(0, NULL, &ret) <= 0)
+			ret = sceMcResFailDetect;
 
 		if (ret == sceMcResSucceed)
 			return sceMcResSucceed;
 		if (ret == sceMcResChangedCard) {
 			if (attempt + 1 == MC_BROWSER_RETRY_COUNT)
 				return sceMcResSucceed;
-		} else
+		} else if (ret != sceMcResFailDetect && ret != sceMcResFailDetect2)
 			break;
-		DelayThread(MC_BROWSER_RETRY_DELAY_US);
+		/* Physical PS1 cards may need another detection pass after insertion or reset. */
+		if (attempt + 1 < MC_BROWSER_RETRY_COUNT)
+			DelayThread(MC_BROWSER_RETRY_DELAY_US);
 	}
 
 	return ret;
@@ -500,14 +502,20 @@ int readMC(const char *path, FILEINFO *info, int max)
 	strcat(dir, "*");
 	limit = (max < MAX_ENTRY - 1) ? max + 2 : MAX_ENTRY + 1;
 	for (i = 0; i < MC_BROWSER_RETRY_COUNT; i++) {
-		mcGetDir(port, 0, dir, 0, limit, mcDir);
-		mcSync(0, NULL, &ret);
+		ret = mcGetDir(port, 0, dir, 0, limit, mcDir);
+		if (ret >= 0 && mcSync(0, NULL, &ret) <= 0)
+			ret = sceMcResFailDetect;
 		if (ret >= 0)
 			break;
-		if (ret != sceMcResChangedCard)
+		if (ret != sceMcResChangedCard && ret != sceMcResFailDetect && ret != sceMcResFailDetect2)
 			break;
-		if (waitMemoryCardReadyForBrowse(port) != sceMcResSucceed)
+		if (i + 1 == MC_BROWSER_RETRY_COUNT)
 			break;
+		int ready_ret = waitMemoryCardReadyForBrowse(port);
+		if (ready_ret != sceMcResSucceed) {
+			ret = ready_ret;
+			break;
+		}
 		DelayThread(MC_BROWSER_RETRY_DELAY_US);
 	}
 	if (ret < 0) {

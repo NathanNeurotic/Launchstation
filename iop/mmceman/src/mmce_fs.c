@@ -942,6 +942,9 @@ int mmce_fs_dread(iomanX_iop_file_t *file, iox_dirent_t *dirent)
     u8 wrbuf[0x5];
     u8 rdbuf[0x2B];
 
+    if (file->privdata == NULL || *(int *)file->privdata < 0 || *(int *)file->privdata >= MMCE_FS_MAX_FD)
+        return -EBADF;
+
     DPRINTF("%s fd: %i\n", __func__, (u8)*(int*)file->privdata);
 
     mmce_fs_update_unit(file->unit);
@@ -973,12 +976,10 @@ int mmce_fs_dread(iomanX_iop_file_t *file, iox_dirent_t *dirent)
     }
 
     if (rdbuf[0x4] != 0) {
-        /* 0 (end of directory), not -1: the card sends this status when its iterator has no next
-         * entry (every completed listing) or the handle is no longer open. Timeouts and garbled
-         * replies above and below stay -1. ps2-mmce/mmceman #11. */
-        DPRINTF("%s: end of directory (status %i)\n", __func__, rdbuf[0x4]);
+        /* Firmware status 1 ends the iterator; unknown statuses are read errors. */
+        DPRINTF("%s: directory status %i\n", __func__, rdbuf[0x4]);
         mmce_sio2_unlock();
-        return 0;
+        return rdbuf[0x4] == 1 ? 0 : -EIO;
     }
 
     //Packet #n + 1: io_stat_t and filename len
@@ -989,18 +990,20 @@ int mmce_fs_dread(iomanX_iop_file_t *file, iox_dirent_t *dirent)
         return -1;
     }
 
+    memset(dirent, 0, sizeof(*dirent));
+
     //Could cast but not sure about alignment?
-    dirent->stat.mode  = rdbuf[0x1] << 24;
+    dirent->stat.mode  = (u32)rdbuf[0x1] << 24;
     dirent->stat.mode |= rdbuf[0x2] << 16;
     dirent->stat.mode |= rdbuf[0x3] << 8;
     dirent->stat.mode |= rdbuf[0x4];
 
-    dirent->stat.attr  = rdbuf[0x5] << 24;
+    dirent->stat.attr  = (u32)rdbuf[0x5] << 24;
     dirent->stat.attr |= rdbuf[0x6] << 16;
     dirent->stat.attr |= rdbuf[0x7] << 8;
     dirent->stat.attr |= rdbuf[0x8];
 
-    dirent->stat.size  = rdbuf[0x9] << 24;
+    dirent->stat.size  = (u32)rdbuf[0x9] << 24;
     dirent->stat.size |= rdbuf[0xA] << 16;
     dirent->stat.size |= rdbuf[0xB] << 8;
     dirent->stat.size |= rdbuf[0xC];
@@ -1032,7 +1035,7 @@ int mmce_fs_dread(iomanX_iop_file_t *file, iox_dirent_t *dirent)
     dirent->stat.mtime[6] = rdbuf[0x23];
     dirent->stat.mtime[7] = rdbuf[0x24];
 
-    dirent->stat.hisize  = rdbuf[0x25] << 24;
+    dirent->stat.hisize  = (u32)rdbuf[0x25] << 24;
     dirent->stat.hisize |= rdbuf[0x26] << 16;
     dirent->stat.hisize |= rdbuf[0x27] << 8;
     dirent->stat.hisize |= rdbuf[0x28];

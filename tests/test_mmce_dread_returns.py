@@ -29,6 +29,8 @@ def extract(signature):
 
 harness = r'''
 #include <assert.h>
+#include <errno.h>
+#define MMCE_FS_MAX_FD 16
 #include <stdio.h>
 #include <string.h>
 typedef unsigned char u8;
@@ -71,12 +73,21 @@ int main(void) {
     iox_dirent_t d;
     static const int entry[] = { STATUS, ACK, ACK, LAST }, zero[] = { 0, 0, 0, 0 }, five[] = { 0, 0, 0, 5 };
     static const int end[] = { STATUS }, one[] = { 1 }, lost[] = { TIMEOUT };
+    memset(&d, 0xa5, sizeof(d));
     wire(4, entry, zero);
     assert(mmce_fs_dread(&f, &d) == 1 && !locked && "an entry whose iterator fd is 0 is still an entry");
+    assert(d.name[0] == 0 && d.name[255] == 0 && "short names must not retain previous entry bytes");
     wire(4, entry, five);
     assert(mmce_fs_dread(&f, &d) == 1 && !locked && "an entry is 1 whatever the iterator fd");
     wire(1, end, one);
     assert(mmce_fs_dread(&f, &d) == 0 && !locked && "end of listing is 0, not an error");
+    static const int bad_status[] = { 2 };
+    wire(1, end, bad_status);
+    assert(mmce_fs_dread(&f, &d) == -EIO && !locked);
+    f.privdata = NULL;
+    assert(mmce_fs_dread(&f, &d) == -EBADF && !locked);
+    f.privdata = &fd;fd = -1;
+    assert(mmce_fs_dread(&f, &d) == -EBADF && !locked);fd = 3;
     wire(1, lost, zero);
     assert(mmce_fs_dread(&f, &d) == -1 && !locked && "a bus timeout stays -1");
     puts("PASS: mmceman dread returns 1 per entry, 0 at the end of a listing, -1 on a bus failure");
@@ -91,5 +102,5 @@ with tempfile.TemporaryDirectory(prefix="mmce-dread-") as td:
     exe = Path(td) / "h"
     src.write_text(harness, encoding="utf-8")
     subprocess.run([cc, "-std=c99", "-Wall", "-Wextra", "-Wno-unused-function",
-                    "-Wno-unused-variable", "-Wno-pointer-sign", str(src), "-o", str(exe)], check=True)
+                    "-Wno-unused-variable", "-Wno-pointer-sign", "-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-fno-pie", "-no-pie", str(src), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)

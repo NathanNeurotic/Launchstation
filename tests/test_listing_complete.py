@@ -61,6 +61,8 @@ enum {MAX_NAME=%(MAX_NAME)d,MAX_PATH=%(MAX_PATH)d,MAX_ENTRY=%(MAX_ENTRY)d,MAX_PA
 #define sceMcResSucceed 0
 #define sceMcResChangedCard -1
 #define sceMcResNoFormat -2
+#define sceMcResFailDetect -12
+#define sceMcResFailDetect2 -13
 #define sceMcResNoEntry -4
 #define MC_BROWSER_RETRY_COUNT 3
 #define MC_BROWSER_RETRY_DELAY_US 1000
