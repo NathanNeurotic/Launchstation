@@ -1007,7 +1007,7 @@ void dashWorkerParkPoint(void);
 int dashIopParked(void);
 
 //--------------------------------------------------------------
-// Sections (dash_home.c, dash_apps.c, dash_files.c, dash_tools.c,
+// Sections (dash_home.c, dash_apps.c, dash_browser.c, dash_tools.c,
 // dash_settings.c) and shell (dash_main.c)
 //--------------------------------------------------------------
 typedef struct
@@ -1023,7 +1023,6 @@ typedef struct
 extern const DashScreen dashHomeScreen;
 extern const DashScreen dashAppsScreen;
 extern const DashScreen dashFilesScreen;
-extern const DashScreen dashDevicesScreen;
 extern const DashScreen dashToolsScreen;
 extern const DashScreen dashSettingsScreen;
 extern const DashScreen dashGamesScreen;
@@ -1133,9 +1132,6 @@ int dashClockSyncInternet(char *result, int result_size);
 int dashClockDaysInMonth(int year, int month); /* 0 for a month outside 1-12 */
 const MainExecuteContext *dashExecContext(void);
 const char *dashOkLabelKey(void);
-
-/* Main loop: finishes a device the user opened while its driver started. */
-void dashFilesPoll(void);
 
 /* Home/Apps shared helpers. */
 int dashAppsVisibleCount(void);

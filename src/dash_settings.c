@@ -56,7 +56,6 @@ enum SetId {
 	S_BGM,
 	S_BGMVOL,
 	S_START,
-	S_FILES_MODE,
 	S_VIEW,
 	S_HOME_SHORTCUTS,
 	S_TAB_HOME,
@@ -150,8 +149,6 @@ enum SetId {
 	S_PSU_DATE,
 	S_PSU_NOOVER,
 	S_FB_ICONS,
-	S_SHOW_TITLES,
-	S_HIDE_PATHS,
 	S_SAVE_CLASSIC,
 	S_SAVE_AS,
 	S_REVERT,
@@ -784,8 +781,6 @@ static const SetItem system_items[] = {
 static const SetItem classic_items[] = {
     {ST_CHOICE, S_MENU_FRAME, "Menu frame", "Draw the frame around classic screens."},
     {ST_CHOICE, S_POPUP_OPAQUE, "Opaque popups", "Use an opaque background for classic popup menus."},
-    {ST_CHOICE, S_SHOW_TITLES, "Show launch titles", "Use custom launch-key titles in the classic launch menu."},
-    {ST_CHOICE, S_HIDE_PATHS, "Hide full ELF paths", "Show only the file name in the classic launch menu."},
     {ST_CHOICE, S_FB_ICONS, "File Browser icons", "Show file and folder icons in classic file-selection dialogs."},
     {ST_COLOR, S_C_COL0 + COLOR_BACKGR, "Background colour", NULL},
     {ST_COLOR, S_C_COL0 + COLOR_FRAME, "Frame colour", NULL},
@@ -1071,11 +1066,6 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			       (dashCfg.start_section == DASH_SEC_GAMES) ? 6 : 0;
 			return 7;
 		}
-		case S_FILES_MODE: {
-			static const char *const modes[] = {"Files", "Devices"};
-			*names = modes, *cur = dashCfg.files_mode;
-			return 2;
-		}
 		case S_HOME_SHORTCUTS:
 			*cur = dashCfg.home_shortcuts;
 			return 2;
@@ -1234,12 +1224,6 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return 2;
 		case S_FB_ICONS:
 			*cur = setting->FB_NoIcons ? 0 : 1;
-			return 2;
-		case S_SHOW_TITLES:
-			*cur = setting->Show_Titles ? 1 : 0;
-			return 2;
-		case S_HIDE_PATHS:
-			*cur = setting->Hide_Paths ? 1 : 0;
 			return 2;
 		case S_T_PRESET: {
 			static const char *pnames[32];
@@ -1778,9 +1762,6 @@ static void setChoice(int id, int v)
 			                        (v == 5) ? DASH_START_LAUNCH_KEYS :
 			                        (v == 6) ? DASH_SEC_GAMES : DASH_SEC_HOME;
 			break;
-		case S_FILES_MODE:
-			dashCfg.files_mode = v;
-			break;
 		case S_HOME_SHORTCUTS:
 			dashCfg.home_shortcuts = v;
 			dashHomeRebuild();
@@ -1954,12 +1935,6 @@ static void setChoice(int id, int v)
 					break;
 				case S_FB_ICONS:
 					setting->FB_NoIcons = !v;
-					break;
-				case S_SHOW_TITLES:
-					setting->Show_Titles = v;
-					break;
-				case S_HIDE_PATHS:
-					setting->Hide_Paths = v;
 					break;
 			}
 			break;

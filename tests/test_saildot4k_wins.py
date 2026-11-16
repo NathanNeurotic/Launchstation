@@ -244,12 +244,6 @@ run_c("clipboard_summary", clip_test)
 assert "dashIconMany(browser_cut ? DI_CUT : DI_COPY," in browser
 assert "!fb_tab_active || !LaunchArgsPending()" in browser
 
-files_src = (root / "src/dash_files.c").read_text(encoding="utf-8")
-open_dev = function(files_src, "static void openDevice(")
-dev_sel = function(files_src, "static int devSelectable(")
-assert "d->icon == DI_MC" in open_dev
-assert "dashOpenBrowser(d->browse);" in open_dev
-assert "devs[idx].icon == DI_MC" in dev_sel
 assert "d->icon == DI_MC" in function(browser, "static void activate(")
 assert '(mcPathUnit(start_dir) >= 0 || dashDevicePathReady(start_dir))' in function(browser, "static int browserOpenState(")
 widgets_src = (root / "src/dash_widgets.c").read_text(encoding="utf-8")

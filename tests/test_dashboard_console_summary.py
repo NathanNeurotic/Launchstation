@@ -4,7 +4,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 info = (ROOT / "src/dash_info.c").read_text()
 home = (ROOT / "src/dash_home.c").read_text()
-devices = (ROOT / "src/dash_files.c").read_text()
 header = (ROOT / "include/dash_internal.h").read_text()
 
 assert "void dashConsoleSummaryText(char *out, size_t out_size);" in header
@@ -37,14 +36,6 @@ first = main.split("static void firstInit(void)", 1)[1]
 assert "dashConsoleIdentityInit();" not in first.split("void DashRun(", 1)[0]
 
 assert "dashConsoleSummaryText(console, sizeof(console));" in home
-assert "dashConsoleSummaryText(console, sizeof(console));" in devices
 assert "GetConsoleModelName(" not in home
-assert "GetConsoleModelName(" not in devices
-assert "char console[160];" in home and "char console[160];" in devices
-dev_input = devices.split("static void devInput(const DashInput *in)", 1)[1].split("static void devUpdate(", 1)[0]
-assert 'items[n].label = "Console information"' in dev_input
-assert "ids[n++] = 4;" in dev_input
-assert "case 4:" in dev_input and "dashShowSystemInfo();" in dev_input
-assert "DashHint h[4];" in devices
-assert "dashDrawHints(h, 4);" in devices
-print("PASS: passive HOME/DEVICES console summary; identity cached once at startup")
+assert "char console[160];" in home
+print("PASS: passive HOME console summary; identity cached once at startup")

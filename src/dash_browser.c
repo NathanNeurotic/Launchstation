@@ -666,6 +666,20 @@ static void launchPath(const char *path, int with_args)
 	fb.args_loaded = LaunchArgsPending(); /* only still set when the start failed */
 }
 
+/* Why a device the user opened is missing: its name and what to check, never
+ * an internal mount ID (from the old Devices view, issues #172-#175). */
+static void deviceNotFoundText(const DashDevice *d, char *body, int size)
+{
+	if (d->icon == DI_USB)
+		snprintf(body, size, "No USB storage device was found. Connect a USB drive and try again.");
+	else if (d->icon == DI_NETWORK || d->icon == DI_SHARE)
+		snprintf(body, size, "%s could not be reached. Check the cable, IP settings and that the server is running.", d->name);
+	else if (isPcCardCfPath(d->mount))
+		snprintf(body, size, "%s: %s", d->name, d->status[0] ? d->status : "CF card not detected or incompatible.");
+	else
+		snprintf(body, size, "%s is not available on this console, or it is not connected.", d->name);
+}
+
 /** Activate the selected device or file, reporting SMB probe failures. */
 static void activate(void)
 {
@@ -690,21 +704,22 @@ static void activate(void)
 		dashStrCopy(path, d->browse, sizeof(path));
 		if (d->state == DASH_DEV_PROBE || d->state == DASH_DEV_ABSENT) {
 			int mask, unit;
+			char why[160];
 
 			if (dashDevicesStart(d, NULL, NULL) != 0)
 				return;
 			if (!dashDevicePathReady(path)) {
+				deviceNotFoundText(d, why, sizeof(why)); /* before openDir rebuilds fb.devs */
 				openDir("", path); /* the list shows the new state */
 #ifdef SMB
 				int smb_version = smbPathKind(path);
 				if (smb_version != SMB_PATH_NONE) {
-					char why[96];
 					smbStatusMessage(smb_version, why, sizeof(why));
 					dashToast(DASH_TOAST_WARN, why);
 					return;
 				}
 #endif
-				dashToast(DASH_TOAST_WARN, "Device not found");
+				dashToast(DASH_TOAST_WARN, why);
 				return;
 			}
 			/* The USB probe has already discovered the units. Open its first

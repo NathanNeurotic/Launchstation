@@ -77,8 +77,8 @@ int main(void){
  assert(!config.LK_Flag[SETTING_LK_RIGHT] && !config.LK_Title[SETTING_LK_RIGHT][0]);
  for(int v=0;v<2;v++){
   setClassic(S_MENU_FRAME,v);setClassic(S_POPUP_OPAQUE,v);
-  setClassic(S_SHOW_TITLES,v);setClassic(S_HIDE_PATHS,v);setClassic(S_FB_ICONS,v);
-  assert(config.Menu_Frame==v && config.Popup_Opaque==v && config.Show_Titles==v && config.Hide_Paths==v && config.FB_NoIcons==!v);
+  setClassic(S_FB_ICONS,v);
+  assert(config.Menu_Frame==v && config.Popup_Opaque==v && config.FB_NoIcons==!v);
  }
  for(int i=0;i<8;i++){classic_col[i]=(DashColor){i+1,i+2,i+3,255};classicColorStore(S_C_COL0+i);}
  assert(classic_dirty);

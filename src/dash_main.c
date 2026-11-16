@@ -40,9 +40,10 @@ static int boot_phase;         /* 0 none, 1 init delay, 2 auto-launch countdown 
 static u64 boot_phase_end;
 static char boot_auto_title[DASH_TITLE_MAX];
 
-/* Index 6 is DASH_START_LAUNCH_KEYS, a start value that opens Settings. */
+/* Index 3 is the old DEVICES section and index 6 DASH_START_LAUNCH_KEYS: start
+ * values that open Files and Settings, never a section of their own. */
 static const DashScreen *const screens[DASH_SEC_COUNT] = {
-    &dashHomeScreen, &dashAppsScreen, &dashFilesScreen, &dashDevicesScreen, &dashToolsScreen, &dashSettingsScreen,
+    &dashHomeScreen, &dashAppsScreen, &dashFilesScreen, &dashFilesScreen, &dashToolsScreen, &dashSettingsScreen,
     &dashSettingsScreen, &dashGamesScreen};
 
 static const char *const section_names[DASH_SEC_COUNT] = {"HOME", "APPS", "FILES", "DEVICES", "TOOLS", "SETTINGS", "SETTINGS", "GAMES"};
@@ -1451,7 +1452,6 @@ void DashRun(const MainExecuteContext *ctx, int from_boot)
 
 		/* Results of background work that change what screens point at. */
 		applyScanResult();
-		dashFilesPoll();
 		/*
 		 * Remote-control and receiver probes touch the network filesystem.
 		 * Polling them every rendered frame was needlessly hammering the IOP

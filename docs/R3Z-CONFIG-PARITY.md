@@ -32,8 +32,8 @@ All **61 serialized key families** from upstream config.c and gui_colors.c are m
 | `LK_%s_Title` | `LK_Title` | `ST_LKEY` | src/dash_home.c |
 | `LK_auto_Timer` | `timeout` | `S_TIMEOUT` | src/dash_main.c |
 | `Menu_Frame` | `Menu_Frame` | `S_MENU_FRAME` | src/draw.c |
-| `Menu_Hide_Paths` | `Hide_Paths` | `S_HIDE_PATHS` | none (read only by the removed classic main menu) |
-| `Menu_Show_Titles` | `Show_Titles` | `S_SHOW_TITLES` | none (read only by the removed classic main menu) |
+| `Menu_Hide_Paths` | `Hide_Paths` | `none (loaded and saved only; its Settings row was removed)` | none (read only by the removed classic main menu) |
+| `Menu_Show_Titles` | `Show_Titles` | `none (loaded and saved only; its Settings row was removed)` | none (read only by the removed classic main menu) |
 | `Misc` | `Misc` | `CNF compatibility name` | src/config.c; src/main_actions.c; src/dash_main.c |
 | `Misc_About_uLE` | `Misc_About_uLE` | `CNF compatibility name` | src/config.c; src/main_actions.c; src/dash_main.c |
 | `Misc_Configure` | `Misc_Configure` | `CNF compatibility name` | src/config.c; src/main_actions.c; src/dash_main.c |
