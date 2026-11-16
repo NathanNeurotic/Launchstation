@@ -297,9 +297,27 @@ int main(void){
  add("mx4sio:/",0);add("mx4sio:/DIR/",3);
  assert(complete("mx4sio:/")==0&&complete("mx4sio:/DIR/")==3&&listed(3));
  assert(complete("mx4sio:/GONE/")==-ENOENT&&!open_handles);
- /* MMCE ends every folder with -1, and cdfs with -EPERM: both are the end, not an error */
- add("mmce0:/DIR/",7)->end_code=-1;add("cdfs:/DIR/",7)->end_code=-EPERM;
- assert(complete("mmce0:/DIR/")==7&&listed(7)&&!dir_complete);
+ /* MMCE status 1 is EOF (0); retain the legacy -1 timeout/reply exemption.
+  * Other explicit driver errors must not authorize an incomplete listing. */
+ Folder *mmce=add("mmce0:/DIR/",7);
+ for(int slot=0;slot<2;slot++) {
+  mmce->path[4]='0'+slot;
+  assert(complete(mmce->path)==7&&listed(7)&&!dir_complete);
+  mmce->end_code=-1;assert(complete(mmce->path)==7&&listed(7));mmce->end_code=0;
+  const int errors[]={-EIO,-EBADF,-EINVAL};
+  for(unsigned i=0;i<sizeof(errors)/sizeof(errors[0]);i++) {
+   for(int at=0;at<=3;at+=3) {
+    mmce->fail_at=at;mmce->fail_code=errors[i];
+    assert(complete(mmce->path)==errors[i]&&!open_handles);
+    assert(browse(mmce->path)==at&&listed(at));
+   }
+  }
+  mmce->fail_at=-1;assert(complete(mmce->path)==7&&listed(7));
+  mmce->count=0;assert(complete(mmce->path)==0&&!open_handles);mmce->count=7;
+ }
+ mmce->path[4]='0';
+ /* cdfs preserves its separate -EPERM end marker. */
+ add("cdfs:/DIR/",7)->end_code=-EPERM;
  assert(complete("cdfs:/DIR/")==7&&listed(7));
  /* PC card CF: an ATA error latches the card offline, and FAT then ends the read
   * early with no error, so a card offline after the read was cut short */

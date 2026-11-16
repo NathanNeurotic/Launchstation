@@ -1615,8 +1615,8 @@ int readGENERIC(const char *path, FILEINFO *info, int max)
 	dirOpenResult(dd);
 	if (dd < 0)
 		goto exit;  //exit if error opening directory
-	/* BDM (FAT, exFAT) ends a folder with 0, while MMCE ends every folder
-	 * with -1. Record negative dread results on non-MMCE paths as read errors. */
+	/* BDM and MMCE end a folder with 0. Preserve MMCE's legacy -1
+	 * timeout/invalid-reply exemption, but report explicit driver errors. */
 	while ((read_ret = fileXioDread(dd, &record)) > 0) {
 		if (!memchr(record.name, 0, sizeof(record.name))) {
 			dirReadFailed(-EINVAL);
@@ -1644,7 +1644,7 @@ int readGENERIC(const char *path, FILEINFO *info, int max)
 		if (n == max)
 			break;
 	}  //ends while
-	if (read_ret < 0 && strncmp(path, "mmce", 4) != 0)
+	if (read_ret < 0 && !(read_ret == -1 && strncmp(path, "mmce", 4) == 0))
 		dirReadFailed(read_ret);
 	size_valid = 1;
 	time_valid = 1;

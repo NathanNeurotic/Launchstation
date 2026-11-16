@@ -114,6 +114,13 @@ wire test now checks cleared names, invalid handles, unknown status and high
 metadata bytes under ASan/UBSan. Firmware timing and physical PS1-card opening
 remain hardware acceptance items.
 
+Review follow-up: `readGENERIC` now propagates explicit MMCE directory errors
+such as `-EIO` and `-EBADF` to complete-list callers. The browser retains the
+entries it already read, while copy/delete/Get Size cannot treat a partial read
+as complete. MMCE EOF is zero; the existing `-1` timeout/reply exemption and
+CD-specific end marker remain. The production-reader regression covers both
+MMCE slots, errors before and after entries, recovery and empty directories.
+
 The VU0/VU1 renderer, benchmark/profiling infrastructure and new background
 quality preference are separate graphics work. They are not imported into
 this save/browsing merge-readiness change without measured target performance
