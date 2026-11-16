@@ -398,7 +398,7 @@ folder as `BGM.ADP`, with these exact names (upper case):
 | `DISCONNECT.ADP` | a device is removed |
 
 Each file must be a mono PS-ADPCM file with the 16-byte `APCM` header that
-ps2sdk's `adpenc` writes (encode without looping), made of whole 16-byte
+ps2sdk's `adpenc` writes (encode without looping: a looping file is refused), made of whole 16-byte
 blocks, at most 256 KB, with a valid SPU2 pitch. A file that is missing, too
 big or in another format (Ogg/WAV/MP3 renamed to `.ADP`) keeps the built-in
 effect, so you can replace only some of them. Effects and music share the
