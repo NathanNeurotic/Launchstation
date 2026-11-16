@@ -1,6 +1,6 @@
 # Claude audit: Launchstation
 
-Status: IN PROGRESS. 2 of 103 reading passes are in; finding IDs are provisional and will be renumbered until this line says COMPLETE.
+Status: IN PROGRESS. 3 of 103 reading passes are in; finding IDs are provisional and will be renumbered until this line says COMPLETE.
 
 - Repository: NathanNeurotic/Launchstation
 - Audited branch: master
@@ -12,8 +12,8 @@ All `path:line` references are pinned to the audited commit above. Each finding 
 
 ## Totals
 
-- Findings in this report: 13
-- Raised by readers: 14. Dropped as wrong or unsupported on re-check: 1. Corrected on re-check: 8. Merged as duplicates: 0.
+- Findings in this report: 13. 7 more raised findings are waiting for their second check and are not shown yet.
+- Raised by readers: 21. Dropped as wrong or unsupported on re-check: 1. Corrected on re-check: 8. Merged as duplicates: 0.
 
 | Category | Count |
 |---|---:|
