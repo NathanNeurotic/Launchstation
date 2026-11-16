@@ -44,4 +44,5 @@ for n in names:
 assert 'res/sfx/' not in S and "sound_theme" not in C
 st = (root / "src/dash_store.c").read_text(encoding="latin-1")
 assert "Dash_SoundTheme" not in st   # an old saved value is skipped like any unknown key
+assert '"Dash_CustomSounds"' in st and "c->custom_sounds" in st
 print("Built-in sound set: OK")

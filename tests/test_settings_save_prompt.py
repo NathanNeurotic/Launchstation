@@ -32,7 +32,7 @@ code = r"""
 #include <stdlib.h>
 #include <string.h>
 typedef uint64_t u64;
-typedef struct { int sound, bgm, recent_count, artwork; char path[64], software_clock[24]; } DashSettings;
+typedef struct { int sound, bgm, recent_count, artwork, custom_sounds; char path[64], software_clock[24]; } DashSettings;
 typedef struct { int color; } DashTheme;
 typedef struct {
     int TV_mode, screen_x, screen_y, language, swapKeys;
@@ -53,8 +53,8 @@ static int dashThemeBasePreset(void) { return preset; }
 static int dashThemeIsCustom(void) { return custom; }
 static int dashStoreSettingsFailed(void) { return store_failed && !store_pending; }
 static char *dashStoreSettingsText(const DashSettings *c,int *len) {
-    char s[256]; *len=snprintf(s,sizeof(s),"%d/%d/%d/%d/%s/%s/%d/%d/%d",
-        c->sound,c->bgm,c->recent_count,c->artwork,c->path,c->software_clock,
+    char s[256]; *len=snprintf(s,sizeof(s),"%d/%d/%d/%d/%d/%s/%s/%d/%d/%d",
+        c->sound,c->bgm,c->recent_count,c->artwork,c->custom_sounds,c->path,c->software_clock,
         dashTheme.color,preset,custom);
     return strdup(s);
 }
@@ -88,6 +88,8 @@ static void dashThemeRestore(const DashTheme *t,int p,int c) { dashTheme=*t; pre
 static void DashThemeSetLegacyEnabled(int e) { (void)e; }
 static void dashSoundInit(void) {}
 static void dashSoundApplyVolume(void) {}
+static int effect_reloads;
+static void dashSoundReloadEffects(void) { effect_reloads++; }
 static void dashBgmStart(void) {}
 static void dashBgmStop(void) {}
 static void dashBgmSetVolume(void) {}
@@ -129,6 +131,11 @@ int main(void) {
     int restores = clock_restores;
     clean(); dashCfg.sound++; modal_result=1;
     assert(settingsLeave()==1 && clock_restores==restores+1);
+    /* Discarding a Custom sounds change must reload the saved choice's effects (and only then). */
+    clean(); effect_reloads=0; dashCfg.custom_sounds=1; modal_result=1;
+    assert(settingsLeave()==1 && dashCfg.custom_sounds==0 && effect_reloads==1);
+    clean(); effect_reloads=0; dashCfg.sound++; modal_result=1;
+    assert(settingsLeave()==1 && effect_reloads==0);
     clean();
     /* An unrelated failed write must not turn an untouched visit into edits. */
     for(int k=0;k<3;k++) {

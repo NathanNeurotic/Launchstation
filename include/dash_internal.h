@@ -581,6 +581,7 @@ typedef struct
 	int intro_done;
 	int sound;
 	int sound_vol;
+	int custom_sounds; /* 1: effects from <name>.ADP beside the boot ELF, built-in when missing */
 	char software_clock[24]; /* optional local seed; resumes saved time without RTC */
 	int bgm;
 	int bgm_vol;

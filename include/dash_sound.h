@@ -23,7 +23,7 @@ void dashSoundShutdown(void);
 void dashSoundSuspend(void); /* mute while a launch can still return */
 void dashSoundPlay(int id);
 void dashSoundApplyVolume(void);
-void dashSoundReloadTheme(void); /* re-upload the effects after dashCfg.sound_theme changes */
+void dashSoundReloadEffects(void); /* re-upload the effects after dashCfg.custom_sounds changes */
 void dashBgmStart(void);
 void dashBgmStop(void);
 void dashBgmSetVolume(void); /* apply dashCfg.bgm_vol to the music bus */

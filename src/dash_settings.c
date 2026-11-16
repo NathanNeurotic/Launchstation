@@ -52,6 +52,7 @@ enum SetId {
 	S_ENABLED,
 	S_SOUND,
 	S_SVOL,
+	S_SCUSTOM,
 	S_BGM,
 	S_BGMVOL,
 	S_START,
@@ -283,6 +284,7 @@ static const SetItem library_items[] = {
 static const SetItem sound_items[] = {
     {ST_CHOICE, S_SOUND, "Interface sounds", "Cursor moves, confirmations and other dashboard sound effects."},
     {ST_CHOICE, S_SVOL, "Interface sound volume", "Volume for dashboard cursor, confirm and notification effects only."},
+    {ST_CHOICE, S_SCUSTOM, "Custom sounds", "Play CURSOR.ADP, CONFIRM.ADP and the other effect files from the Launchstation folder. A missing file keeps its built-in sound."},
     {ST_CHOICE, S_BGM, "Background music", "Hardware-looped dashboard music, independent from interface sounds."},
     {ST_CHOICE, S_BGMVOL, "Music volume", "Volume for background music only."},
 };
@@ -1047,6 +1049,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_SVOL:
 			*names = pct_names, *cur = dashCfg.sound_vol / 10;
 			return 11;
+		case S_SCUSTOM:
+			*cur = dashCfg.custom_sounds;
+			return 2;
 		case S_BGM:
 			*cur = dashCfg.bgm;
 			return 2;
@@ -1704,6 +1709,11 @@ static void setChoice(int id, int v)
 		case S_SVOL:
 			dashCfg.sound_vol = v * 10;
 			dashSoundApplyVolume();
+			break;
+		case S_SCUSTOM:
+			dashCfg.custom_sounds = v;
+			dashSoundReloadEffects();
+			dashSoundPlay(DASH_SND_CONFIRM);
 			break;
 		case S_BGM:
 			dashCfg.bgm = v;
@@ -2558,6 +2568,7 @@ static void settingsRevert(void)
 	if (dash_dirty) {
 		int recent = dashCfg.recent_count != snap_dash.recent_count;
 		int art = dashCfg.artwork != snap_dash.artwork;
+		int custom = dashCfg.custom_sounds != snap_dash.custom_sounds;
 
 		dashCfg = snap_dash;
 		menuTitleClockRestore();
@@ -2565,6 +2576,8 @@ static void settingsRevert(void)
 		DashThemeSetLegacyEnabled(1);
 		if (dashCfg.sound || dashCfg.bgm)
 			dashSoundInit();
+		if (custom)
+			dashSoundReloadEffects(); /* the effects in use are still the discarded choice's */
 		dashSoundApplyVolume();
 		if (dashCfg.bgm)
 			dashBgmStart();
@@ -3607,7 +3620,8 @@ static int itemDisabled(const SetItem *it)
 	if (it->type == ST_PAGE)
 		return 0;
 	switch (it->id) {
-		case S_SVOL: return !dashCfg.sound;
+		case S_SVOL:
+		case S_SCUSTOM: return !dashCfg.sound;
 		case S_BGMVOL: return !dashCfg.bgm;
 		case S_USBKBD_FILE:
 		case S_KBDMAP_FILE: return !setting->usbkbd_used;
@@ -3637,6 +3651,7 @@ static const char *disabledHelp(const SetItem *it)
 {
 	switch (it->id) {
 		case S_SVOL: return "Enable Interface sounds to adjust their volume.";
+		case S_SCUSTOM: return "Enable Interface sounds to use custom sounds.";
 		case S_BGMVOL: return "Enable Background music to adjust its volume.";
 		case S_USBKBD_FILE:
 		case S_KBDMAP_FILE: return "Enable USB keyboard to configure its driver and key map.";

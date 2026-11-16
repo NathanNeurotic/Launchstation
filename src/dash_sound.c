@@ -42,7 +42,18 @@ static int bgm_channel = -1;
 static unsigned int sound_reboot_generation; /* reset epoch when audsrv was started */
 static unsigned int sound_tried_generation = (unsigned int)-1; /* last automatic attempt */
 static int sound_retry;
-static int theme_reload_pending;
+static int reload_pending;
+
+/* Custom sounds: with the setting on, <name> beside the boot ELF replaces that
+ * built-in effect. A file that is missing or not a mono APCM file of at most
+ * SFX_MAX_BYTES keeps the built-in one. */
+#define SFX_MAX_BYTES (256 * 1024)
+static const char *const custom_names[DASH_SND_COUNT] = {
+    "CURSOR.ADP", "CONFIRM.ADP", "CANCEL.ADP", "TRANSITION.ADP",
+    "MESSAGE.ADP", "BOOT.ADP", "CONNECT.ADP", "DISCONNECT.ADP"};
+static u8 *custom_data[DASH_SND_COUNT]; /* kept while uploaded: audsrv uses the address as the sample ID */
+static int custom_pending; /* on, but the boot device was not running yet */
+static u8 *readAdpSidecar(const char *name, int max, int *out_size);
 
 
 /* audsrv lives on the IOP: after any IOP reboot the server and the uploaded
@@ -96,6 +107,44 @@ static int blob_size(int id)
 	}
 }
 
+static void freeCustomSounds(void)
+{
+	int i;
+
+	for (i = 0; i < DASH_SND_COUNT; i++) {
+		free(custom_data[i]);
+		custom_data[i] = NULL;
+	}
+}
+
+/* Upload every effect: the custom file when it was read and accepted, else
+ * the built-in one. Returns how many stay silent. */
+static int uploadSamples(void)
+{
+	const char *dir = LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir;
+	int i, size, failed = 0;
+
+	freeCustomSounds();
+	/* Use only an already active boot stack, as the music does; dashSoundMaintain() retries. */
+	custom_pending = dashCfg.custom_sounds && !isPathDeviceStackLoaded(dir);
+	for (i = 0; i < DASH_SND_COUNT; i++) {
+		samples[i].buffer = NULL;
+		if (dashCfg.custom_sounds && !custom_pending) {
+			custom_data[i] = readAdpSidecar(custom_names[i], SFX_MAX_BYTES, &size);
+			if (custom_data[i] != NULL && audsrv_load_adpcm(&samples[i], custom_data[i], size) == 0)
+				continue;
+			free(custom_data[i]);
+			custom_data[i] = NULL;
+			samples[i].buffer = NULL;
+		}
+		if (audsrv_load_adpcm(&samples[i], blob_data(i), blob_size(i)) != 0) {
+			samples[i].buffer = NULL; /* sample stays silent */
+			failed++;
+		}
+	}
+	return failed;
+}
+
 int dashSoundInit(void)
 {
 	int i, r, failed;
@@ -132,14 +181,7 @@ int dashSoundInit(void)
 		dashToast(DASH_TOAST_WARN, "Sound unavailable: adpcm init failed");
 		return 0;
 	}
-	failed = 0;
-	for (i = 0; i < DASH_SND_COUNT; i++) {
-		samples[i].buffer = NULL;
-		if (audsrv_load_adpcm(&samples[i], blob_data(i), blob_size(i)) != 0) {
-			samples[i].buffer = NULL; /* sample stays silent */
-			failed++;
-		}
-	}
+	failed = uploadSamples();
 	/* Keep SFX preloaded even when their toggle is off so they can be enabled
 	 * later without reinitializing audsrv (BGM may already own the service). */
 	if (dashCfg.sound && failed == DASH_SND_COUNT) {
@@ -164,30 +206,24 @@ int dashSoundInit(void)
 	return 1;
 }
 
-/* Switch the effect set while running. audsrv_adpcm_init() is the library's
+/* Upload the effects again while running (Custom sounds switched). audsrv_adpcm_init() is the library's
  * hard reset for ADPCM state (it also drops the music sample), so the effects
  * are uploaded again and the music restarted from its sidecar file. */
-void dashSoundReloadTheme(void)
+void dashSoundReloadEffects(void)
 {
-	int i;
-
 	if (!soundAlive())
-		return; /* the next dashSoundInit() uploads the theme that is selected then */
+		return; /* the next dashSoundInit() uploads what is selected then */
 	if (dashIopParked() || dashWorkerIoBusy()) {
-		theme_reload_pending = 1; /* dashSoundMaintain() applies it once I/O is idle */
+		reload_pending = 1; /* dashSoundMaintain() applies it once I/O is idle */
 		return;
 	}
-	theme_reload_pending = 0;
+	reload_pending = 0;
 	dashBgmStop();
 	if (audsrv_adpcm_init() != 0) {
-		dashToast(DASH_TOAST_WARN, "Sound theme could not be changed");
+		dashToast(DASH_TOAST_WARN, "Sound effects could not be reloaded");
 		return;
 	}
-	for (i = 0; i < DASH_SND_COUNT; i++) {
-		samples[i].buffer = NULL;
-		if (audsrv_load_adpcm(&samples[i], blob_data(i), blob_size(i)) != 0)
-			samples[i].buffer = NULL;
-	}
+	uploadSamples();
 	dashSoundApplyVolume();
 	bgm_loaded = 0;
 	bgm_tried = 0;
@@ -206,8 +242,9 @@ void dashSoundMaintain(void)
 	if (dashWorkerIoBusy() || dashIopParked())
 		return;
 	if (soundAlive()) {
-		if (theme_reload_pending)
-			dashSoundReloadTheme();
+		if (reload_pending ||
+		    (custom_pending && isPathDeviceStackLoaded(LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir)))
+			dashSoundReloadEffects();
 		/* A sidecar read deferred by IO/driver startup is tried when idle.
 		 * Missing/invalid files are attempted once, not on every frame. */
 		if (dashCfg.bgm && bgm_channel < 0 && !bgm_tried)
@@ -246,6 +283,8 @@ void dashSoundShutdown(void)
 	bgm_sample.buffer = NULL;
 	free(bgm_data);
 	bgm_data = NULL;
+	freeCustomSounds();
+	custom_pending = 0;
 }
 
 void dashSoundSuspend(void)
@@ -347,32 +386,35 @@ static int prepareBgmLoop(u8 *data, int size)
 	return 1;
 }
 
-static int loadBgmSidecar(void)
+/* Read <boot folder>/<name> (BGM.ADP or a custom effect) into a padded buffer.
+ * NULL unless it is a mono APCM file: 16-byte header, whole 16-byte ADPCM
+ * blocks, a valid SPU2 pitch and at most max bytes. */
+static u8 *readAdpSidecar(const char *name, int max, int *out_size)
 {
 	char path[MAX_PATH], fixed[MAX_PATH];
 	const char *dir = LaunchElfBootDir[0] ? LaunchElfBootDir : LaunchElfDir;
 	int fd, size, got, n, closed;
 	u8 *data;
 
-	n = snprintf(path, sizeof(path), "%s%sBGM.ADP", dir,
-	             dir[0] && dir[strlen(dir) - 1] != '/' && dir[strlen(dir) - 1] != '\\' && dir[strlen(dir) - 1] != ':' ? "/" : "");
+	n = snprintf(path, sizeof(path), "%s%s%s", dir,
+	             dir[0] && dir[strlen(dir) - 1] != '/' && dir[strlen(dir) - 1] != '\\' && dir[strlen(dir) - 1] != ':' ? "/" : "", name);
 	if (n < 0 || n >= sizeof(path))
-		return 0;
+		return NULL;
 	filerRootMcPollIdle();
 	if (genFixPath(path, fixed) < 0)
-		return 0;
+		return NULL;
 	fd = genOpen(fixed, FIO_O_RDONLY);
 	if (fd < 0)
-		return 0; /* entirely optional, including on read-only boot devices */
+		return NULL; /* entirely optional, including on read-only boot devices */
 	size = genLseek(fd, 0, SEEK_END);
-	if (size < 32 || size > BGM_MAX_BYTES || (size & 15) || genLseek(fd, 0, SEEK_SET) < 0) {
+	if (size < 32 || size > max || (size & 15) || genLseek(fd, 0, SEEK_SET) < 0) {
 		genClose(fd);
-		return 0;
+		return NULL;
 	}
 	data = memalign(64, size + 64); /* padded for audsrv's DMA transfer */
 	if (data == NULL) {
 		genClose(fd);
-		return 0;
+		return NULL;
 	}
 	memset(data, 0, size + 64);
 	for (got = 0; got < size; got += n) {
@@ -386,8 +428,19 @@ static int loadBgmSidecar(void)
 	    data[5] != 1 || data[6] > 1 || data[7] != 0 ||
 	    *(u32 *)(data + 8) == 0 || *(u32 *)(data + 8) > 0x3fff) {
 		free(data);
-		return 0;
+		return NULL;
 	}
+	*out_size = size;
+	return data;
+}
+
+static int loadBgmSidecar(void)
+{
+	int size;
+	u8 *data = readAdpSidecar("BGM.ADP", BGM_MAX_BYTES, &size);
+
+	if (data == NULL)
+		return 0;
 	/* The soundtrack is a permanent looping voice, unlike one-shot SFX.
 	 * Normalize SPU2 per-frame loop control BEFORE audsrv DMA uploads it. */
 	if (!prepareBgmLoop(data, size)) {

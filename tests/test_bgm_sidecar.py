@@ -41,7 +41,9 @@ typedef struct { void *buffer; } audsrv_adpcm_t;
 #define SND_CURSOR_CH_COUNT 6
 #define FIO_O_RDONLY 1
 #define DASH_TOAST_WARN 1
-static struct { int sound,bgm,bgm_vol,sound_vol,sound_theme; } dashCfg={1,1,80,60,0};
+static struct { int sound,bgm,bgm_vol,sound_vol,custom_sounds; } dashCfg={1,1,80,60,0};
+static int custom_pending;
+static void freeCustomSounds(void) {}
 static audsrv_adpcm_t bgm_sample;
 static int bgm_loaded,bgm_tried,bgm_channel=-1,sound_ready=1;
 static void *bgm_data;
@@ -98,14 +100,14 @@ static void dashToast(int k,const char *s) { (void)k; (void)s; }
 static void dashBgmStart(void);
 static void dashBgmStop(void);
 static void dashSoundShutdown(void);
-static int theme_reload_pending;
-static void dashSoundReloadTheme(void) { theme_reload_pending = 0; }
+static int reload_pending;
+static void dashSoundReloadEffects(void) { reload_pending = 0; }
 static int dashSoundInit(void) {
     if(!soundAlive())dashSoundShutdown(); sound_ready=1;
     sound_reboot_generation=reset_generation; return 1;
 }
 """
-for signature in ("static int prepareBgmLoop(", "static int loadBgmSidecar(", "void dashBgmSetVolume(",
+for signature in ("static int prepareBgmLoop(", "static u8 *readAdpSidecar(const char *name, int max, int *out_size)\n{", "static int loadBgmSidecar(", "void dashBgmSetVolume(",
                   "void dashBgmStop(", "void dashBgmStart(",
                   "void dashSoundShutdown(", "void dashSoundMaintain(",
                   "void dashSoundSuspend(", "void dashSoundApplyVolume("):
