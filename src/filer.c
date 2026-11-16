@@ -1572,7 +1572,7 @@ int pollRootMemoryCardDevices(void)
 	 * SIO2 hooks. Explicit browsing performs the foreground stack switch. */
 	if (!mcUnitAvailable(root_mc_poll_port) ||
 	    (MC_UNIT_PORT(root_mc_poll_port) == 1 && !isPathDeviceStackLoaded("mc1:/"))) {
-		root_mc_poll_port = 0;
+		rootMcPollNext(); /* reach mc2/mc4/mc6 behind a multitap on the other port */
 		return FALSE;
 	}
 
@@ -2589,5 +2589,5 @@ void filerRootMcPollIdle(void)
 	root_mc_present[root_mc_poll_port] = memoryCardResultIndicatesPresent(result);
 	root_mc_known_type[root_mc_poll_port] = root_mc_present[root_mc_poll_port] ? root_mc_poll_type : 0;
 	root_mc_known_free[root_mc_poll_port] = root_mc_present[root_mc_poll_port] ? root_mc_poll_free : -1;
-	root_mc_poll_port = (root_mc_poll_port + 1) & 1;
+	rootMcPollNext();
 }

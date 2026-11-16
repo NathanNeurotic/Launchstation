@@ -14,6 +14,7 @@
  * teardown. Implemented by filer.c even in non-dashboard variants. */
 extern void filerRootMcPollIdle(void);
 int dashWorkerOnThread(void);
+int dashWorkerIoBusy(void);
 
 #ifdef ETH
 #include <ps2ips.h>
@@ -2255,13 +2256,16 @@ int isMemoryCardRpcReady(void)
 /* Open a memory-card port's multitap when one is plugged in, close it when it
  * is gone. A port stays closed without a multitap, so MTAPMAN then sends
  * nothing to that port; slot 2 is never probed while MX4SIO owns it. Runs on
- * the UI thread when the card client starts and when a device list is built. */
+ * the UI thread when the card client starts and when a device list is built,
+ * only while the worker is not doing IO. */
 void mcMultitapRefresh(void)
 {
 #ifdef HOMEBREW_SIO2MAN
 	int port;
 
-	if (!have_mtapman || !have_mc_rpc_ready || dashWorkerOnThread())
+	/* Never overlap the worker's card traffic: its job may still be draining a
+	 * pending libmc request. The next device list retries. */
+	if (!have_mtapman || !have_mc_rpc_ready || dashWorkerOnThread() || dashWorkerIoBusy())
 		return;
 	if (!mtap_bound) {
 		if (mtapInit() != 1)

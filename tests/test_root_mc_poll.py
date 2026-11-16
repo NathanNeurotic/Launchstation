@@ -43,12 +43,15 @@ static int isFtpServerRunning(void) { return ftp_running; }
 static int isSmbServerRunning(void) { return smb_running; }
 static int mc_rpc_ready = 1;
 static int isMemoryCardRpcReady(void) { return mc_rpc_ready; }
-static int mcUnitAvailable(int u) { return u >= 0 && u < 2; }
+static int mtap_open[2], port1_calls, port0_slots;
+static int mcUnitAvailable(int u) { return u >= 0 && u < MC_UNITS && (MC_UNIT_SLOT(u) == 0 || mtap_open[MC_UNIT_PORT(u)]); }
 #include <string.h>
 /* MX4SIO owns slot 2's SIO2 port while it is loaded. */
 static int isPathDeviceStackLoaded(const char *p) { return strcmp(p, "mc1:/") || !mx4sio_loaded; }
 static int mcGetInfo(int port, int slot, int *type, int *free, int *format) {
-    (void)slot; (void)format; info_calls++;
+    (void)format; info_calls++;
+    if (port == 1) port1_calls++;
+    else port0_slots |= 1 << slot;
     if (port == 1 && fail_port1_start) return -1;
     *type = 2; *free = 4096; pending_port = port; return 0;
 }
@@ -97,7 +100,17 @@ int main(void) {
     assert(!root_mc_poll_active && pending_port==-1 && root_mc_poll_port==0);
     pollRootMemoryCardDevices();assert(root_mc_poll_active && pending_port==0);
     filerRootMcPollIdle();assert(root_mc_present[1]==0);
-    mx4sio_loaded=0;
+    /* Behind a multitap on port 0, mc2/mc4/mc6 are port 0 slots 1-3 and are
+     * still polled while MX4SIO keeps port 1 out of the poll. */
+    mtap_open[0]=1;root_mc_poll_port=0;root_mc_next_poll_time=0;port1_calls=0;port0_slots=0;
+    run(40);filerRootMcPollIdle();
+    assert(port1_calls==0 && port0_slots==0xF);
+    assert(root_mc_polled[2] && root_mc_polled[4] && root_mc_polled[6] && !root_mc_polled[3]);
+    assert(filerRootMcPresent(2,NULL,NULL)==1 && filerRootMcPresent(6,NULL,NULL)==1);
+    /* Without MX4SIO, mc1 is polled again; mc3 stays out with no multitap there. */
+    mx4sio_loaded=0;port1_calls=0;run(40);filerRootMcPollIdle();
+    assert(port1_calls>0 && !root_mc_polled[3]);
+    mtap_open[0]=0;
     /* FTP and MCSERV share MCMAN state. Cached presence stays available, but
      * no background get-info RPC starts while FTP is resident. */
     ftp_running=1;int info_before=info_calls;
@@ -123,6 +136,7 @@ int main(void) {
     filerRootMcPollIdle();
     puts("PASS: an unbound memory card client is not polled until its start succeeds");
     puts("PASS: FTP pauses background MCMAN RPCs, preserves presence and resumes after shutdown");
+    puts("PASS: multitap units mc2/mc4/mc6 are polled as port 0 slots 1-3, also while MX4SIO owns port 1");
     puts("PASS: an unresponsive memory-card slot cannot starve the other or stay Checking forever; MX4SIO keeps slot 2 out of the poll");
     return 0;
 }

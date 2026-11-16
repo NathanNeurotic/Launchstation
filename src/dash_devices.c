@@ -143,14 +143,14 @@ void dashDevicesPoll(void)
 	int i, view_changed = 0;
 
 	pollRootMemoryCardDevices();
-	for (i = 0; i < 2; i++)
+	for (i = 0; i < MC_UNITS; i++)
 		if (filerRootMcPresent(i, NULL, NULL) > 0)
 			now |= 1u << i;
 	if (filerUsbDriversLoaded()) {
 		int m = filerUsbDriveMask();
 		for (i = 0; i < 10; i++)
 			if (m & (1 << i))
-				now |= 1u << (2 + i);
+				now |= 1u << (MC_UNITS + i);
 	}
 	if (!dev_hotplug_armed) {
 		u64 ms = Timer();
