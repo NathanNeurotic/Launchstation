@@ -236,7 +236,7 @@ static int neutrinoModuleIsOurs(const char *elf_path, const char *name, const un
 	char path[MAX_PATH];
 	unsigned char buf[512] __attribute__((aligned(64)));
 	const char *slash = strrchr(elf_path, '/');
-	int fd, rd, pos = 0, same = 1;
+	int fd, rd = 0, pos = 0, same = 1;
 
 	if (slash == NULL)
 		slash = strrchr(elf_path, ':');
