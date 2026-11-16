@@ -216,6 +216,7 @@ static void receiveGames(int count, char *message, int message_size)
 	u64 started;
 	int i, r, dd, exists, server = 0, stop = 0, received = 0;
 	u8 *block;
+	int copied;
 
 #ifdef MMCE
 	restore_mmce = isPathDeviceStackLoaded("mmce0:/");
@@ -262,7 +263,8 @@ static void receiveGames(int count, char *message, int message_size)
 			started = Timer();
 			/* The 256 KB block lives only while a game is being received. */
 			block = memalign(64, PC_RECV_BLOCK);
-			r = block ? copyWithResume(&items[i], source, stage, i, count, block) : -1;
+			copied = block != NULL;
+			r = copied ? copyWithResume(&items[i], source, stage, i, count, block) : -1;
 			free(block);
 			items[i].seconds = (int)((Timer() - started) / 1000);
 
@@ -277,7 +279,7 @@ static void receiveGames(int count, char *message, int message_size)
 					items[i].state = "FICOU_EM_PS2-RECEBENDO";
 				}
 			} else {
-				if (exists)
+				if (exists && copied) /* a stage this attempt never opened is left alone */
 					fileXioRemove(stage);
 				items[i].state = (r == 1) ? "CANCELADO" : "FALHOU";
 				stop = 1;
