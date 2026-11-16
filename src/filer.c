@@ -415,17 +415,21 @@ static int waitMemoryCardReadyForBrowse(int port)
 		start_ret = mcGetInfo(port, 0, &mctype_PSx, NULL, NULL);
 		if (start_ret < 0)
 			ret = start_ret;
-		else
-			mcSync(0, NULL, &ret);
+		else if (mcSync(0, NULL, &ret) <= 0)
+			ret = sceMcResFailDetect;
 
 		if (ret == sceMcResSucceed)
 			return sceMcResSucceed;
 		if (ret == sceMcResChangedCard) {
 			if (attempt + 1 == MC_BROWSER_RETRY_COUNT)
 				return sceMcResSucceed;
-		} else
+		} else if (ret != sceMcResFailDetect && ret != sceMcResFailDetect2)
 			break;
-		DelayThread(MC_BROWSER_RETRY_DELAY_US);
+		/* A physical PS1 card can fail detection while it settles after
+		 * insertion or an IOP reset (saildot4k f4605ad9). Retry within the
+		 * same bounded window; format and permission errors stay final. */
+		if (attempt + 1 < MC_BROWSER_RETRY_COUNT)
+			DelayThread(MC_BROWSER_RETRY_DELAY_US);
 	}
 
 	return ret;
@@ -504,10 +508,18 @@ int readMC(const char *path, FILEINFO *info, int max)
 		mcSync(0, NULL, &ret);
 		if (ret >= 0)
 			break;
-		if (ret != sceMcResChangedCard)
+		if (ret != sceMcResChangedCard && ret != sceMcResFailDetect && ret != sceMcResFailDetect2)
 			break;
-		if (waitMemoryCardReadyForBrowse(port) != sceMcResSucceed)
+		if (i + 1 == MC_BROWSER_RETRY_COUNT)
 			break;
+		{
+			int ready_ret = waitMemoryCardReadyForBrowse(port);
+
+			if (ready_ret != sceMcResSucceed) {
+				ret = ready_ret;
+				break;
+			}
+		}
 		DelayThread(MC_BROWSER_RETRY_DELAY_US);
 	}
 	if (ret < 0) {

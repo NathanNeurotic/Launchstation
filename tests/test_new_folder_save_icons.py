@@ -22,8 +22,12 @@ assert names[-3:] == ["DI_NEW_FOLDER", "DI_SAVE", "DI_COUNT"], names[-4:]
 const = {k: int(v) for k, v in re.findall(r"#define (ICON_TEX_H|APP_PART_SIZE) (\d+)", icons)}
 slot = const["APP_PART_SIZE"] + 4
 margin = names.index("DI_COUNT") - names.index("DI_CUT")
-assert 2 * slot + margin * slot <= const["ICON_TEX_H"], margin
-assert "CLIP_ICON_Y + (DI_COUNT - DI_CUT) * APP_PART_SLOT <= ICON_TEX_H" in icons   # compile-time check kept
+grid_bottom = -(-names.index("DI_CUT") // 7) * 68
+column = (const["ICON_TEX_H"] - 2 * slot) // slot          # right margin column
+row = (7 * 68) // slot                                       # strip under the grid
+assert grid_bottom + slot <= const["ICON_TEX_H"], const["ICON_TEX_H"]
+assert margin <= column + row, margin
+assert "DI_COUNT - DI_CUT <= MARGIN_COL_N + MARGIN_ROW_N" in icons   # compile-time check kept
 
 # render iconSdf on the host exactly as the atlas does (32x32 margin tile)
 body = icons[icons.index("typedef struct\n{\n\tfloat x, y;\n} V2;"):icons.index("static inline int clutSwizzle")]

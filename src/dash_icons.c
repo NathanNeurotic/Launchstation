@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 //File name:   dash_icons.c
 //Dashboard icon set, rasterized once from signed distance functions into
-//one 512x736 PSMT8 alpha atlas (64x64 icons, tinted by vertex colour).
+//one 512x580 PSMT8 alpha atlas (64x64 icons, tinted by vertex colour).
 //The pad glyphs use the same theme-aware SDF atlas as other icons.
 //No additional CT32 pad tile atlas or PNG decoding is needed at startup.
 //--------------------------------------------------------------
@@ -11,7 +11,7 @@
 #define ICON_SLOT 68
 #define ICON_COLS 7
 #define ICON_TEX_W 512
-#define ICON_TEX_H 736
+#define ICON_TEX_H 580
 #define SELECT_HALF_W 0.68f
 
 /* Header shapes and action icons use the narrow right margin. Keep the
@@ -20,10 +20,31 @@
 #define APP_PART_SLOT (APP_PART_SIZE + 4)
 #define APP_PART_X (ICON_COLS * ICON_SLOT)
 #define CLIP_ICON_Y (2 * APP_PART_SLOT)
+/* Small icons fill the right margin column first, then continue along the
+ * free strip under the 64px grid, so the atlas does not grow by whole
+ * columns of empty rows. */
+#define GRID_BOTTOM (((DI_CUT + ICON_COLS - 1) / ICON_COLS) * ICON_SLOT)
+#define MARGIN_COL_N ((ICON_TEX_H - CLIP_ICON_Y) / APP_PART_SLOT)
+#define MARGIN_ROW_N (APP_PART_X / APP_PART_SLOT)
 /* Include every margin icon in the compile-time capacity check. */
 typedef char IconAtlasMarginFits[
 	APP_PART_X + APP_PART_SLOT <= ICON_TEX_W &&
-	CLIP_ICON_Y + (DI_COUNT - DI_CUT) * APP_PART_SLOT <= ICON_TEX_H ? 1 : -1];
+	GRID_BOTTOM + APP_PART_SLOT <= ICON_TEX_H &&
+	DI_COUNT - DI_CUT <= MARGIN_COL_N + MARGIN_ROW_N ? 1 : -1];
+
+/* Top-left of a small icon's slot (id >= DI_CUT). */
+static void marginSlot(int id, int *u, int *v)
+{
+	int k = id - DI_CUT;
+
+	if (k < MARGIN_COL_N) {
+		*u = APP_PART_X;
+		*v = CLIP_ICON_Y + k * APP_PART_SLOT;
+	} else {
+		*u = (k - MARGIN_COL_N) * APP_PART_SLOT;
+		*v = GRID_BOTTOM;
+	}
+}
 
 static GSTEXTURE icon_tex;
 static u32 icon_clut[256] __attribute__((aligned(64)));
@@ -760,7 +781,11 @@ static void initClipboardIcons(u8 *mem)
 	int id, x, y;
 
 	for (id = DI_CUT; id < DI_COUNT; id++) {
-		int sy = CLIP_ICON_Y + (id - DI_CUT) * APP_PART_SLOT + 2;
+		int sx, sy;
+
+		marginSlot(id, &sx, &sy);
+		sx += 2;
+		sy += 2;
 
 		for (y = 0; y < APP_PART_SIZE; y++) {
 			for (x = 0; x < APP_PART_SIZE; x++) {
@@ -768,7 +793,7 @@ static void initClipboardIcons(u8 *mem)
 				        (y + 0.5f) / (APP_PART_SIZE * 0.5f) - 1.0f};
 				float a = dashClampf(0.5f - iconSdf(id, p) * (APP_PART_SIZE * 0.5f), 0.0f, 1.0f);
 
-				mem[(sy + y) * ICON_TEX_W + APP_PART_X + x + 2] = (u8)(a * 255.0f + 0.5f);
+				mem[(sy + y) * ICON_TEX_W + sx + x] = (u8)(a * 255.0f + 0.5f);
 			}
 		}
 	}
@@ -852,8 +877,16 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 	if ((id < DI_PAD_BADGE || id > DI_BTN_R3) && !keyboard_symbol)
 		c = dashIconTint(c);
 	slot = id >= DI_CUT ? APP_PART_SLOT : ICON_SLOT;
-	u0 = id >= DI_CUT ? APP_PART_X : (float)((id % ICON_COLS) * ICON_SLOT);
-	v0 = id >= DI_CUT ? CLIP_ICON_Y + (id - DI_CUT) * APP_PART_SLOT : (float)((id / ICON_COLS) * ICON_SLOT);
+	if (id >= DI_CUT) {
+		int mu, mv;
+
+		marginSlot(id, &mu, &mv);
+		u0 = (float)mu;
+		v0 = (float)mv;
+	} else {
+		u0 = (float)((id % ICON_COLS) * ICON_SLOT);
+		v0 = (float)((id / ICON_COLS) * ICON_SLOT);
+	}
 	pad = size * 2.0f / (id >= DI_CUT ? APP_PART_SIZE : ICON_SIZE);
 	if ((id > DI_PAD_BADGE && id <= DI_BTN_R3) || id == DI_DPAD_UD) {
 		/* Preserve colored controller glyphs while letting each theme decide
@@ -951,8 +984,16 @@ void dashIconMany(int id, const float *xy, int n, float size, DashColor c)
 	if (!icons_ready || id < 0 || id >= DI_COUNT || size <= 0.0f || c.a == 0 || n <= 0)
 		return;
 	slot = id >= DI_CUT ? APP_PART_SLOT : ICON_SLOT;
-	u0 = id >= DI_CUT ? APP_PART_X : (float)((id % ICON_COLS) * ICON_SLOT);
-	v0 = id >= DI_CUT ? CLIP_ICON_Y + (id - DI_CUT) * APP_PART_SLOT : (float)((id / ICON_COLS) * ICON_SLOT);
+	if (id >= DI_CUT) {
+		int mu, mv;
+
+		marginSlot(id, &mu, &mv);
+		u0 = (float)mu;
+		v0 = (float)mv;
+	} else {
+		u0 = (float)((id % ICON_COLS) * ICON_SLOT);
+		v0 = (float)((id / ICON_COLS) * ICON_SLOT);
+	}
 	pad = size * 2.0f / (id >= DI_CUT ? APP_PART_SIZE : ICON_SIZE);
 	dashSpriteBatchBegin(&icon_tex, c);
 	for (i = 0; i < n; i++)

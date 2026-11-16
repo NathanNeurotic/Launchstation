@@ -281,7 +281,7 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	POPSTARTER_CANDIDATE_LIST candidates;
 	NEUTRINO_LAUNCH_OPTIONS options;
 	char gameID[NEUTRINO_GAME_ID_SIZE];
-	int have_gameid = 0, tried_gameid = 0;
+	int have_gameid = 0, tried_gameid = 0, show_gameid;
 	char candidate[MAX_PATH];
 	char selected[MAX_PATH], fullpath[MAX_PATH], party[MAX_PATH];
 	char opened_iso[MAX_PATH], args[1400];
@@ -392,9 +392,11 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	if (have_gameid)
 		setNeutrinoMmceGameID(gameID, opened_iso, selected);
 #endif
+	/* Exec cleanup frees setting: read the RetroGEM choice before it. */
+	show_gameid = have_gameid && !setting->cdrom_disable_gameid;
 	if (!CleanUpForKeepIopExec("Preparing Neutrino"))
 		return 0;
-	if (have_gameid && !setting->cdrom_disable_gameid)
+	if (show_gameid)
 		displayRetroGemGameID(gameID, 2);
 	RunLoaderElfKeepIOP(fullpath, party, selected, exec_kind);
 	return 1;
