@@ -368,18 +368,46 @@ back.
 
 The dashboard plays short sound effects through the PS2BUILD SDK `audio`
 driver (via the `audsrv-compat` client): cursor moves, confirm/cancel in dialogs, section switches,
-toasts, the startup boot sound, and device connect/disconnect. They are
-Sony ADP samples embedded in the ELF (no files needed at runtime).
+toasts, the startup boot sound, and device connect/disconnect. There is one
+built-in set, original tones synthesized by `scripts/gen_sfx.py` (not Sony
+samples) and embedded in the ELF, so no files are needed at runtime.
 
 Settings > Sound has *Interface sounds* (the UI effects) and
 *Background music* (the music track), each with its own volume
 (`Dash_Sound` / `Dash_SoundVolume` / `Dash_BGM` / `Dash_BGMVolume` in
 DASHBOARD.CNF, all on at 80% by default). The two switches are independent;
-turning off interface effects keeps enabled music playing. *Sound theme*
-(`Dash_SoundTheme`, 0 = Classic, 1 = PS2) swaps the effect set live; the PS2 set is
-synthesized by `scripts/gen_sfx.py` (original tones, not Sony samples). When the audio driver cannot
+turning off interface effects keeps enabled music playing. When the audio driver cannot
 start, everything stays silent — the dashboard works normally without
 sound (a toast says why).
+
+### Custom sounds
+
+*Custom sounds* (`Dash_CustomSounds`, off by default) replaces built-in effects
+with your own files. Put them in the folder Launchstation runs from, the same
+folder as `BGM.ADP`, with these exact names (upper case):
+
+| File | Plays on |
+|---|---|
+| `CURSOR.ADP` | cursor moves |
+| `CONFIRM.ADP` | confirm |
+| `CANCEL.ADP` | cancel / back |
+| `TRANSITION.ADP` | L1/R1 section switch |
+| `MESSAGE.ADP` | notifications (toasts) |
+| `BOOT.ADP` | startup |
+| `CONNECT.ADP` | a device is plugged in |
+| `DISCONNECT.ADP` | a device is removed |
+
+Each file must be a mono PS-ADPCM file with the 16-byte `APCM` header that
+ps2sdk's `adpenc` writes (encode without looping), made of whole 16-byte
+blocks, at most 256 KB, with a valid SPU2 pitch. A file that is missing, too
+big or in another format (Ogg/WAV/MP3 renamed to `.ADP`) keeps the built-in
+effect, so you can replace only some of them. Effects and music share the
+2 MB of SPU2 sound memory: keep effects short, or the music may not fit.
+Files are read only from an already running boot device; until it runs the
+built-in effects play. They are read when sound starts and when the setting
+is switched on, so after changing a file switch *Custom sounds* off and on.
+The old `Dash_SoundTheme` setting (Classic/PS2) is gone; a saved value is
+ignored.
 
 ## MMCE backup status reliability
 
