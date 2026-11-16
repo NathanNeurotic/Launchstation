@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-16T06:41:55+00:00",
+  "updated_at": "2026-11-16T12:34:30+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 2582,
+  "total_downloads": 2587,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -8311,7 +8311,7 @@
       "release": "latest"
     },
     "749541836": {
-      "downloads": 35,
+      "downloads": 40,
       "name": "LAUNCHSTATION-1178.zip",
       "release": "latest"
     },
