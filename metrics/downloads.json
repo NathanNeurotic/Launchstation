@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-16T03:25:38+00:00",
+  "updated_at": "2026-11-16T06:41:55+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 2580,
+  "total_downloads": 2582,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -8296,7 +8296,7 @@
       "release": "latest"
     },
     "749541804": {
-      "downloads": 29,
+      "downloads": 30,
       "name": "LAUNCHSTATION.ELF",
       "release": "latest"
     },
@@ -8316,7 +8316,7 @@
       "release": "latest"
     },
     "749541848": {
-      "downloads": 8,
+      "downloads": 9,
       "name": "LAUNCHSTATION-DS.ELF",
       "release": "latest"
     },
