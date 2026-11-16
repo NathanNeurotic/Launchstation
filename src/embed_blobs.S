@@ -78,16 +78,7 @@ EMBED_FILE(udpfs_ioman_irx, "iop/__precompiled/udpfs_ioman.irx")
 EMBED_FILE(ps2dev9_v10_irx, "iop/__v10/ps2dev9.irx")
 EMBED_FILE(ps2ip_v10_irx, "iop/__v10/ps2ip.irx")
 
-/* Dashboard UI sounds (Sony ADP, played through the SDK audio driver via audsrv-compat). */
-EMBED_FILE(sfx_cursor_adp, "res/sfx/cursor.adp")
-EMBED_FILE(sfx_confirm_adp, "res/sfx/confirm.adp")
-EMBED_FILE(sfx_cancel_adp, "res/sfx/cancel.adp")
-EMBED_FILE(sfx_transition_adp, "res/sfx/transition.adp")
-EMBED_FILE(sfx_message_adp, "res/sfx/message.adp")
-EMBED_FILE(sfx_connect_adp, "res/sfx/bd_connect.adp")
-EMBED_FILE(sfx_disconnect_adp, "res/sfx/bd_disconnect.adp")
-
-/* Optional "PS2" sound theme: original synthesized effects, see scripts/gen_sfx.py. */
+/* Dashboard UI sounds: original synthesized effects, see scripts/gen_sfx.py. */
 EMBED_FILE(sfx2_cursor_adp, "res/sfx_ps2/cursor.adp")
 EMBED_FILE(sfx2_confirm_adp, "res/sfx_ps2/confirm.adp")
 EMBED_FILE(sfx2_cancel_adp, "res/sfx_ps2/cancel.adp")

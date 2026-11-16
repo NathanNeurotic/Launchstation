@@ -5,8 +5,8 @@ The sounds are original, procedurally generated tones in the style of the
 console's browser: soft glassy partials, short fast-attack blips for input,
 a slow ambient swell for boot.  Nothing is sampled from Sony firmware.
 
-Output: res/sfx_ps2/<name>.adp, mono, 44.1 kHz PS-ADPCM, same container as
-res/sfx/transition.adp (16-byte "APCM" header; flags 1,7 on the final blocks).
+Output: res/sfx_ps2/<name>.adp, mono, 44.1 kHz PS-ADPCM (16-byte "APCM"
+header; flags 1,7 on the final blocks).
 
     python3 scripts/gen_sfx.py            # write the files
     python3 scripts/gen_sfx.py --check    # verify committed files match
