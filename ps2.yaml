@@ -685,8 +685,6 @@ targets:
       - dvrfile
       - mmceman
       - mx4sio_bd_fork:mx4sio_bd
-      - iLinkman
-      - IEEE1394_bd_mini:IEEE1394_bd
       - sio2man
       - padman
       - bdm
