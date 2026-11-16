@@ -1046,6 +1046,8 @@ int mmce_fs_dread(iomanX_iop_file_t *file, iox_dirent_t *dirent)
         mmce_sio2_unlock();
         return -1;
     }
+    /* The length byte is at most 255, so name[256] always has room. */
+    dirent->name[filename_len] = '\0';
 
     //Packet #n + 3: Padding, resevered, and term
     res = mmce_sio2_tx_rx_pio(0x0, 0x3, NULL, rdbuf, &timeout_1s);

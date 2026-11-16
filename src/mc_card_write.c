@@ -153,6 +153,7 @@ static int rootFind(McView *v, const char *name, RootFind *f)
 typedef struct SaveScan {
 	McSaveData *s;
 	uint32_t nfiles;
+	uint32_t capacity;
 	int fill;
 	int bad;
 } SaveScan;
@@ -178,6 +179,8 @@ static int saveScanCb(McView *v, uint32_t i, const uint8_t *raw, void *ctx)
 		sc->bad = MCV_ERR_CORRUPT;
 		return MCV_ERR_CORRUPT;
 	}
+	if (sc->fill && sc->nfiles >= sc->capacity)
+		return MCV_ERR_CORRUPT; /* the folder grew between the two passes */
 	if (sc->fill)
 		memcpy(sc->s->files[sc->nfiles].entry, raw, ENT);
 	sc->nfiles++;
@@ -243,6 +246,7 @@ int mcCardReadSave(McView *v, const char *name, McSaveData *out)
 		if (!out->files)
 			return MCW_ERR_NOMEM;
 	}
+	sc.capacity = sc.nfiles;
 	sc.nfiles = 0;
 	sc.fill = 1;
 	r = mcViewWalkDir(v, first, count, saveScanCb, &sc);
