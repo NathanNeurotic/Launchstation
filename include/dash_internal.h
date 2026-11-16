@@ -791,7 +791,7 @@ typedef struct
 	float fill; /* 0..1 used space, <0 unknown */
 } DashDevice;
 
-#define DASH_MAX_DEVICES 24
+#define DASH_MAX_DEVICES 30 /* 24 plus mc2-mc7 behind two multitaps */
 void dashDevicesInit(void);
 void dashDevicesPoll(void);
 void dashDevicesAutoProbe(void);

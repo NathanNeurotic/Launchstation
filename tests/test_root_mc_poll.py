@@ -43,6 +43,7 @@ static int isFtpServerRunning(void) { return ftp_running; }
 static int isSmbServerRunning(void) { return smb_running; }
 static int mc_rpc_ready = 1;
 static int isMemoryCardRpcReady(void) { return mc_rpc_ready; }
+static int mcUnitAvailable(int u) { return u >= 0 && u < 2; }
 #include <string.h>
 /* MX4SIO owns slot 2's SIO2 port while it is loaded. */
 static int isPathDeviceStackLoaded(const char *p) { return strcmp(p, "mc1:/") || !mx4sio_loaded; }
@@ -61,6 +62,7 @@ static void DashStorageProbeStatus(const char *s) { (void)s; }
 '''
 code += state
 code += function(filer, "static int memoryCardResultIndicatesPresent(")
+code += function(filer, "static void rootMcPollNext(")
 code += function(filer, "static void rootMcPollFailed(")
 code += function(filer, "int pollRootMemoryCardDevices(")
 code += function(filer, "int filerRootMcPresent(")
@@ -133,7 +135,7 @@ with tempfile.TemporaryDirectory(prefix="wle-mc-poll-") as tmp:
     harness = Path(tmp) / "poll.c"
     exe = Path(tmp) / "poll.exe"
     harness.write_text(code, encoding="utf-8")
-    subprocess.run([compiler, "-std=gnu11", str(harness), "-o", str(exe)], check=True)
+    subprocess.run([compiler, "-include", str(root / "include/mc_unit.h"), "-std=gnu11", str(harness), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
 
 # The dashboard must let the user open an unresolved slot: browsing runs

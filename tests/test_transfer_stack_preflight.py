@@ -177,5 +177,5 @@ if len(sys.argv)==1:
     assert copy.index('prepareTransferDeviceStacks(inPath, outPath)')<copy.index('in_fd = genOpen(in, FIO_O_RDONLY);')
 with tempfile.TemporaryDirectory(prefix='transfer-stack-') as folder:
     p=Path(folder);(p/'test.c').write_text(code);exe=p/'test.exe'
-    subprocess.run([shutil.which('gcc'),'-std=c99','-Wall','-Wextra',str(p/'test.c'),'-o',str(exe)],check=True)
+    subprocess.run([shutil.which('gcc'),"-include", str(root / "include/mc_unit.h"), '-std=c99','-Wall','-Wextra',str(p/'test.c'),'-o',str(exe)],check=True)
     subprocess.run([str(exe)],check=True,timeout=10)

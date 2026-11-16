@@ -205,7 +205,7 @@ static int filerGetExploitProtectionType(const char *path, const FILEINFO *file,
 	if (path == NULL)
 		return FILER_EXPLOIT_PROTECT_NONE;
 
-	is_mc = (!strncmp(path, "mc0:", 4) || !strncmp(path, "mc1:", 4));
+	is_mc = mcPathUnit(path) >= 0;
 	is_xfrom = (!strncmp(path, "xfrom:", 6));
 	if (!is_mc && !is_xfrom)
 		return FILER_EXPLOIT_PROTECT_NONE;
@@ -2006,7 +2006,7 @@ int delete (const char *path, const FILEINFO *file)
 		if (!strncmp(dir, "mc", 2)) {
 			ensureMemoryCardPortAccessible(dir[2] - '0');
 			mcSync(0, NULL, NULL);
-			mcDelete(dir[2] - '0', 0, &dir[4]);
+			mcDelete(MC_UNIT_PORT(dir[2] - '0'), MC_UNIT_SLOT(dir[2] - '0'), &dir[4]);
 			mcSync(0, NULL, &ret);
 #ifdef XFROM
 		} else if (!strncmp(dir, "xfrom", 5)) {
@@ -2027,7 +2027,7 @@ int delete (const char *path, const FILEINFO *file)
 		if (!strncmp(path, "mc", 2)) {
 			ensureMemoryCardPortAccessible(path[2] - '0');
 			mcSync(0, NULL, NULL);
-			mcDelete(dir[2] - '0', 0, &dir[4]);
+			mcDelete(MC_UNIT_PORT(dir[2] - '0'), MC_UNIT_SLOT(dir[2] - '0'), &dir[4]);
 			mcSync(0, NULL, &ret);
 #ifdef XFROM
 		} else if (!strncmp(path, "xfrom", 5)) {
@@ -2225,7 +2225,7 @@ int newdir(const char *path, const char *name)
 		sprintf(dir, "%s%s", path + 4, name);
 		genLimObjName(dir, 0);
 		mcSync(0, NULL, NULL);
-		mcMkDir(path[2] - '0', 0, dir);
+		mcMkDir(MC_UNIT_PORT(path[2] - '0'), MC_UNIT_SLOT(path[2] - '0'), dir);
 		mcSync(0, NULL, &ret);
 		if (ret == -4)
 			ret = -EEXIST;  //return fileXio error code for pre-existing folder

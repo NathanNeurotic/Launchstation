@@ -296,7 +296,7 @@ static void listRun(void *arg)
 
 	dashWorkerStatus(j->path, 0, 0);
 	j->n = getDir(j->path, j->files);
-	if (j->n == 0 && (!strncmp(j->path, "mc0:", 4) || !strncmp(j->path, "mc1:", 4)) && !filerDirOpened())
+	if (j->n == 0 && mcPathUnit(j->path) >= 0 && !filerDirOpened())
 		j->n = -1;
 #ifdef SMB
 	if (smbSharesV1Name() != NULL && smbPathKind(j->path) == SMB_PATH_V2 && smbIsRootPath(j->path)) {
@@ -361,7 +361,7 @@ static void listDone(void *arg)
 	int i, o = 0;
 
 	if (!j->abandoned && j->gen == fb.gen && fb.files != NULL) {
-		if (j->n < 0 && (!strncmp(j->path, "mc0:", 4) || !strncmp(j->path, "mc1:", 4))) {
+		if (j->n < 0 && mcPathUnit(j->path) >= 0) {
 			char card[8];
 			snprintf(card, sizeof(card), "mc%c:/", j->path[2]);
 			free(j->files);
@@ -3434,7 +3434,7 @@ static int browserOpenState(const char *start_dir, const char *select)
 	memset(fb.mark, 0, MAX_ENTRY);
 	if (start_dir != NULL && start_dir[0] &&
 	    (isMisc(start_dir) || (strchr(start_dir, ':') &&
-	     (!strncmp(start_dir, "mc0:", 4) || !strncmp(start_dir, "mc1:", 4) || dashDevicePathReady(start_dir)))))
+	     (mcPathUnit(start_dir) >= 0 || dashDevicePathReady(start_dir)))))
 		openDir(start_dir, select);
 	else
 		openDir("", select);

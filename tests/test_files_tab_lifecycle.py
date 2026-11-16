@@ -163,5 +163,5 @@ with tempfile.TemporaryDirectory(prefix="launchstation-files-tab-") as temp:
     source=Path(temp)/"browser.c"
     binary=Path(temp)/"browser"
     source.write_text(code)
-    subprocess.run([cc,"-std=c11","-Wall","-Wextra","-Werror",str(source),"-o",str(binary)],check=True)
+    subprocess.run([cc,"-include", str(root / "include/mc_unit.h"), "-std=c11","-Wall","-Wextra","-Werror",str(source),"-o",str(binary)],check=True)
     subprocess.run([str(binary)],timeout=5,check=True)

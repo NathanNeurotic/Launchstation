@@ -638,7 +638,7 @@ targets:
       # libjpeg-turbo from scripts/build_jpeg.sh, built by the active toolchain.
       - "-L../.jpeg-deps/lib"
     headers: [sior]
-    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, jpegturbo, mc, kbd, mbedtls, mbedx509, mbedcrypto, ps2ips, cglue, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv-compat]
+    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, jpegturbo, mc, kbd, mbedtls, mbedx509, mbedcrypto, ps2ips, cglue, m, cdvd, filexio, patches, poweroff, debug, secr, pad, mtap, audsrv-compat]
     embed_irx:
       - udpfs_smap
       - loader:loader_elf
@@ -689,6 +689,7 @@ targets:
       - IEEE1394_bd_mini:IEEE1394_bd
       - sio2man
       - padman
+      - mtapman
       - bdm
       - bdmfs_fatfs
       - usbmass_bd_fork:usbmass_bd

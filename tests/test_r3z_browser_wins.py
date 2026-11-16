@@ -26,13 +26,13 @@ while depth:
 browser = src[a:pos]
 assert "vfreeSpace = filerFreeSpace(path, &freeSpace);" in browser
 # The unchecked copies are gone: every query goes through the helper.
-for unchecked in ("mcGetInfo(path[2] - '0', 0, &mctype_PSx, &mcfreeSpace", "PFSCTL_GET_ZONE_FREE", "vfreeSpace = TRUE;"):
+for unchecked in ("&mctype_PSx, &mcfreeSpace", "PFSCTL_GET_ZONE_FREE", "vfreeSpace = TRUE;"):
     assert unchecked not in browser, unchecked
 
 a = src.index("int filerFreeSpace(const char *path, u64 *out)")
 helper = src[a:src.index("\n}\n", a)]
 assert "if (ret < -1)" in helper  # mcGetInfo: 0 same card, -1 new card, below that an error
-assert "if (mcGetInfo(path[2] - '0', 0, &type, &free_units, NULL) < 0)" in helper
+assert "if (mcGetInfo(MC_UNIT_PORT(path[2] - '0'), MC_UNIT_SLOT(path[2] - '0'), &type, &free_units, NULL) < 0)" in helper
 hdd = helper[helper.index('if (!strncmp(path, "hdd", 3)'):helper.index("#ifdef DVRP")]
 dvr = helper[helper.index('if (!strncmp(path, "dvr_hdd", 7)'):]
 for branch in (hdd, dvr):

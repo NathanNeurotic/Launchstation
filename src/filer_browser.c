@@ -332,8 +332,7 @@ static int isTitleCfgPathEligible(const char *path, int menu_disabled)
 {
 	return ((!strncmp(path, "mass", 4)) ||
 	        (!strncmp(path, "usb", 3)) ||
-	        (!strncmp(path, "mc0:", 4)) ||
-	        (!strncmp(path, "mc1:", 4)) ||
+	        (mcPathUnit(path) >= 0) ||
 #ifdef MMCE
 	        (!strncmp(path, "mmce", 4)) ||
 #endif
@@ -2108,7 +2107,7 @@ static void submenu_func_GetSize(char *mess, char *path, FILEINFO *files)
 		sprintf(mess + text_pos, " m=%04X %s%n", files[sel].stats.AttrFile, timestamp_text, &text_inc);
 		text_pos += text_inc;
 		if (!strncmp(path, "mc", 2)) {
-			mcGetInfo(path[2] - '0', 0, &mctype_PSx, NULL, NULL);
+			mcGetInfo(MC_UNIT_PORT(path[2] - '0'), MC_UNIT_SLOT(path[2] - '0'), &mctype_PSx, NULL, NULL);
 			mcSync(0, NULL, &ret);
 			sprintf(mess + text_pos, " %s=%d%n", LNG(mctype), mctype_PSx, &text_inc);
 			text_pos += text_inc;
@@ -2467,8 +2466,8 @@ int filerFreeSpace(const char *path, u64 *out)
 {
 	int type = 0, free_units = 0, ret;
 
-	if (!strncmp(path, "mc", 2) && (path[2] == '0' || path[2] == '1')) {
-		if (mcGetInfo(path[2] - '0', 0, &type, &free_units, NULL) < 0)
+	if (mcPathUnit(path) >= 0) {
+		if (mcGetInfo(MC_UNIT_PORT(path[2] - '0'), MC_UNIT_SLOT(path[2] - '0'), &type, &free_units, NULL) < 0)
 			return 0; /* not started: mcSync would leave ret unset */
 		mcSync(0, NULL, &ret);
 		if (ret < -1)

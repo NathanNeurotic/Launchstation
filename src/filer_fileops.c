@@ -13,7 +13,7 @@
 
 static void ensurePathMemoryCardAccessible(const char *path)
 {
-	if (path != NULL && !strncmp(path, "mc1:", 4))
+	if (mcPathUnit(path) >= 0 && MC_UNIT_PORT(mcPathUnit(path)) == 1)
 		ensureMemoryCardPortAccessible(1);
 }
 
@@ -346,7 +346,7 @@ static int fatfsStatResult(const char *path, int result)
  */
 static int mcStatResult(const char *path, int result)
 {
-	if ((!strncmp(path, "mc0:", 4) || !strncmp(path, "mc1:", 4)) && result > 0) {
+	if (mcPathUnit(path) >= 0 && result > 0) {
 		if (result == 1 || result == 2) return -ENOENT;
 		if (result == 3) return -EACCES; /* hidden/denied directory entry */
 		return -EIO; /* unknown positive reply must not imply absence */
@@ -447,15 +447,15 @@ int genRenameNoReplace(const char *from, const char *to)
 #endif
 	   ) {
 		sceMcTblGetDir info;
-		int type = 0, port = old_path[2] - '0';
+		int type = 0, port = mcPathUnit(old_path);
 		const char *relative = strchr(old_path, ':');
 		if (relative == NULL) return -EINVAL;
 		relative++;
 		if (strncmp(old_path, "mc", 2) && *relative == '/') relative++;
 		if (!strncmp(old_path, "mc", 2)) {
-			if (port < 0 || port > 1) return -EINVAL;
+			if (port < 0) return -EINVAL;
 			ensureMemoryCardPortAccessible(port);
-			ret = mcGetInfo(port, 0, &type, NULL, NULL);
+			ret = mcGetInfo(MC_UNIT_PORT(port), MC_UNIT_SLOT(port), &type, NULL, NULL);
 			if (ret < 0 || mcSync(0, NULL, &ret) <= 0) return -EIO;
 		}
 #ifdef XFROM
@@ -470,7 +470,7 @@ int genRenameNoReplace(const char *from, const char *to)
 		memset(&info, 0, sizeof(info));
 		memcpy(info.EntryName, new_leaf, strlen(new_leaf));
 		if (!strncmp(old_path, "mc", 2)) {
-			ret = mcSetFileInfo(port, 0, relative, &info, 0x0010);
+			ret = mcSetFileInfo(MC_UNIT_PORT(port), MC_UNIT_SLOT(port), relative, &info, 0x0010);
 			if (ret < 0 || mcSync(0, NULL, &ret) <= 0) return -EIO;
 		}
 #ifdef XFROM

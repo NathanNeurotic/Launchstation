@@ -164,6 +164,7 @@ static inline size_t wle_strnlen(const char *s, size_t maxlen)
 	#define DPRINTF(format, args...)// strip away printf from consumer builds
 #endif
 
+#include "mc_unit.h"
 #define TRUE 1
 #define FALSE 0
 

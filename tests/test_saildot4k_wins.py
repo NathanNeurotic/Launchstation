@@ -251,15 +251,15 @@ assert "d->icon == DI_MC" in open_dev
 assert "dashOpenBrowser(d->browse);" in open_dev
 assert "devs[idx].icon == DI_MC" in dev_sel
 assert "d->icon == DI_MC" in function(browser, "static void activate(")
-assert '(!strncmp(start_dir, "mc0:", 4) || !strncmp(start_dir, "mc1:", 4) || dashDevicePathReady(start_dir))' in function(browser, "static int browserOpenState(")
+assert '(mcPathUnit(start_dir) >= 0 || dashDevicePathReady(start_dir))' in function(browser, "static int browserOpenState(")
 widgets_src = (root / "src/dash_widgets.c").read_text(encoding="utf-8")
 assert "!filerDirOpened()" in function(browser, "static void listRun(")
 assert "!filerDirOpened()" in function(widgets_src, "static void pickListRun(")
 assert "Memory card could not be read. Try opening it again." in function(browser, "static void listDone(")
 assert "Memory card could not be read. Try opening it again." in function(widgets_src, "static void pickListDone(")
 filer_src = (root / "src/filer.c").read_text(encoding="utf-8")
-assert "filerRootMcPresent(path[2] - '0', NULL, NULL) <= 0" in function(filer_src, "int filerDirReadNeedsPrep(")
-assert "filerPrepareMemoryCardRead(path[2] - '0') == sceMcResSucceed" in function(filer_src, "int filerPrepareDirRead(")
+assert "filerRootMcPresent(mcPathUnit(path), NULL, NULL) <= 0" in function(filer_src, "int filerDirReadNeedsPrep(")
+assert "filerPrepareMemoryCardRead(mcPathUnit(path)) == sceMcResSucceed" in function(filer_src, "int filerPrepareDirRead(")
 
 dash_main = (root / "src/dash_main.c").read_text(encoding="utf-8")
 actions = (root / "src/main_actions.c").read_text(encoding="utf-8")

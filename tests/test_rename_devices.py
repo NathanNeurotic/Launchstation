@@ -503,7 +503,7 @@ with tempfile.TemporaryDirectory(prefix='rename-devices-') as folder:
     (folder / 'test.c').write_text(code)
     cc = shutil.which('gcc') or shutil.which('cc')
     exe = folder / 'test'
-    subprocess.run([cc, '-std=gnu99', '-Wall', '-Wextra', '-Werror', '-Wno-unused-function',
+    subprocess.run([cc, "-include", str(root / "include/mc_unit.h"), '-std=gnu99', '-Wall', '-Wextra', '-Werror', '-Wno-unused-function',
                     '-Wno-unused-variable', '-Wno-misleading-indentation',
                     '-Wno-format-truncation',
                     '-Werror=implicit-function-declaration', str(folder / 'test.c'), '-o', str(exe)], check=True)

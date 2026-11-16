@@ -250,7 +250,7 @@ int filerMoveFinish(void)
 			return ret < 0 ? ret : -EIO;
 		if (!strncmp(resolved, "mc", 2)) {
 			ensureMemoryCardPortAccessible(resolved[2] - '0');
-			ret = mcDelete(resolved[2] - '0', 0, resolved + 4);
+			ret = mcDelete(MC_UNIT_PORT(resolved[2] - '0'), MC_UNIT_SLOT(resolved[2] - '0'), resolved + 4);
 			if (ret >= 0)
 				mcSync(0, NULL, &ret);
 		} else if (FIO_S_ISDIR(entry->mode))
@@ -405,9 +405,9 @@ static int applyMcInfoToMcPath(const char *path, const sceMcTblGetDir *info)
 		return -1;
 
 	ensureMemoryCardPortAccessible(path[2] - '0');
-	mcGetInfo(path[2] - '0', 0, &mctype, &dummy, &dummy);
+	mcGetInfo(MC_UNIT_PORT(path[2] - '0'), MC_UNIT_SLOT(path[2] - '0'), &mctype, &dummy, &dummy);
 	mcSync(0, NULL, &dummy);
-	mcSetFileInfo(path[2] - '0', 0, &path[4], info, MC_SFI);
+	mcSetFileInfo(MC_UNIT_PORT(path[2] - '0'), MC_UNIT_SLOT(path[2] - '0'), &path[4], info, MC_SFI);
 	mcSync(0, NULL, &ret);
 #if FILEOP_TRACE
 	printf("[MC_STAT] setinfo path='%s' attr=0x%x reserve1=0x%x reserve2=0x%x size=%u "
@@ -1237,9 +1237,9 @@ restart_copy:  //restart point for PM_PSU_RESTORE to reprocess modified argument
 				if (ret == MC_SFI)
 					applyMcInfoToMcPath(out, &file.stats);
 				else {
-					mcGetInfo(out[2] - '0', 0, &dummy, &dummy, &dummy);  //Wakeup call
+					mcGetInfo(MC_UNIT_PORT(out[2] - '0'), MC_UNIT_SLOT(out[2] - '0'), &dummy, &dummy, &dummy);  //Wakeup call
 					mcSync(0, NULL, &dummy);
-					mcSetFileInfo(out[2] - '0', 0, &out[4], &file.stats, ret);
+					mcSetFileInfo(MC_UNIT_PORT(out[2] - '0'), MC_UNIT_SLOT(out[2] - '0'), &out[4], &file.stats, ret);
 					mcSync(0, NULL, &dummy);
 				}
 			} else if (!strncmp(out, "vmc", 3)) {               //Handle folder copied to VMC
@@ -1650,10 +1650,10 @@ copy_file_data_done:
 		if (ret == MC_SFI)
 			applyMcInfoToMcPath(out, &file.stats);
 		else {
-			mcGetInfo(out[2] - '0', 0, &mctype_PSx, &dummy, &dummy);  //Wakeup call & MC type check
+			mcGetInfo(MC_UNIT_PORT(out[2] - '0'), MC_UNIT_SLOT(out[2] - '0'), &mctype_PSx, &dummy, &dummy);  //Wakeup call & MC type check
 			mcSync(0, NULL, &dummy);
 			if (mctype_PSx == 2) {                        //if copying to a PS2 MC
-				mcSetFileInfo(out[2] - '0', 0, &out[4], &file.stats, ret);
+				mcSetFileInfo(MC_UNIT_PORT(out[2] - '0'), MC_UNIT_SLOT(out[2] - '0'), &out[4], &file.stats, ret);
 				mcSync(0, NULL, &dummy);
 			}
 		}

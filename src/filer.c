@@ -261,16 +261,16 @@ static void dirReadFailed(int error)
 #define MC_BROWSER_RETRY_COUNT 4
 #define MC_BROWSER_RETRY_DELAY_US 100000
 
-static int root_mc_present[2] = {1, 1};
+static int root_mc_present[MC_UNITS] = {1, 1};
 static int root_mc_poll_active = 0;
 static int root_mc_poll_port = 0;
 static int root_mc_poll_type = 0;
 static int root_mc_poll_free = 0;
 static int root_mc_poll_format = 0;
-static int root_mc_known_type[2] = {0, 0};
-static int root_mc_known_free[2] = {-1, -1};
-static int root_mc_polled[2] = {0, 0};
-static int root_mc_failures[2] = {0, 0};
+static int root_mc_known_type[MC_UNITS];
+static int root_mc_known_free[MC_UNITS] = {-1, -1, -1, -1, -1, -1, -1, -1};
+static int root_mc_polled[MC_UNITS];
+static int root_mc_failures[MC_UNITS];
 static u64 root_mc_next_poll_time = 0;
 static int discard_next_mx4sio_root_listing = 0;
 
@@ -412,7 +412,7 @@ static int waitMemoryCardReadyForBrowse(int port)
 	ret = sceMcResFailDetect;
 	for (attempt = 0; attempt < MC_BROWSER_RETRY_COUNT; attempt++) {
 		mcSync(0, NULL, NULL);
-		start_ret = mcGetInfo(port, 0, &mctype_PSx, NULL, NULL);
+		start_ret = mcGetInfo(MC_UNIT_PORT(port), MC_UNIT_SLOT(port), &mctype_PSx, NULL, NULL);
 		if (start_ret < 0)
 			ret = start_ret;
 		else if (mcSync(0, NULL, &ret) <= 0)
@@ -439,13 +439,13 @@ int filerPrepareMemoryCardRead(int port)
 {
 	int ret;
 
-	if (port < 0 || port > 1)
+	if (!mcUnitAvailable(port))
 		return sceMcResFailDetect;
 	filerRootMcPollIdle();
 	ensureMemoryCardPortAccessible(port);
 	/* Directory workers cannot reset the IOP. Never issue libmc requests
 	 * against slot 2 if the foreground handoff failed or was skipped. */
-	if (port == 1 && !isPathDeviceStackLoaded("mc1:/"))
+	if (MC_UNIT_PORT(port) == 1 && !isPathDeviceStackLoaded("mc1:/"))
 		return sceMcResFailDetect;
 	/* Retry a failed card RPC start, but only on the UI thread: the
 	 * library-scan worker must never load IOP modules, so it skips the card. */
@@ -475,7 +475,7 @@ int filerMcFreeClusters(int port)
 
 	if (filerPrepareMemoryCardRead(port) != sceMcResSucceed)
 		return -1;
-	if (mcGetInfo(port, 0, &type, &freec, &fmt) < 0)
+	if (mcGetInfo(MC_UNIT_PORT(port), MC_UNIT_SLOT(port), &type, &freec, &fmt) < 0)
 		return -1;
 	mcSync(0, NULL, &ret);
 	if ((ret != sceMcResSucceed && ret != sceMcResChangedCard) || type != sceMcTypePS2 || !fmt)
@@ -492,8 +492,8 @@ int readMC(const char *path, FILEINFO *info, int max)
 	char dir[MAX_PATH];
 	int i, j, port, ret, limit;
 
-	port = path[2] - '0';
-	if (port < 0 || port > 1)
+	port = mcPathUnit(path);
+	if (port < 0)
 		return 0;
 	ret = filerPrepareMemoryCardRead(port);
 	if (mctype_PSx == 2)  //PS2 MC ?
@@ -506,7 +506,7 @@ int readMC(const char *path, FILEINFO *info, int max)
 	strcat(dir, "*");
 	limit = (max < MAX_ENTRY - 1) ? max + 2 : MAX_ENTRY + 1;
 	for (i = 0; i < MC_BROWSER_RETRY_COUNT; i++) {
-		mcGetDir(port, 0, dir, 0, limit, mcDir);
+		mcGetDir(MC_UNIT_PORT(port), MC_UNIT_SLOT(port), dir, 0, limit, mcDir);
 		mcSync(0, NULL, &ret);
 		if (ret >= 0)
 			break;
@@ -791,8 +791,8 @@ int filerDirReadNeedsPrep(const char *path)
 		return TRUE; /* the card RPC start failed: retry it on the UI thread */
 	if (!isPathDeviceStackLoaded(path))
 		return TRUE;
-	if ((!strncmp(path, "mc0:", 4) || !strncmp(path, "mc1:", 4)) &&
-	    (!isMemoryCardRpcReady() || filerRootMcPresent(path[2] - '0', NULL, NULL) <= 0))
+	if (mcPathUnit(path) >= 0 &&
+	    (!isMemoryCardRpcReady() || filerRootMcPresent(mcPathUnit(path), NULL, NULL) <= 0))
 		return TRUE;
 #ifdef SMB
 	if (smbIsRootPath(path) && smbSharesConnectedCount(smbPathKind(path)) == 0)
@@ -819,8 +819,8 @@ int filerPrepareDirRead(const char *path)
 	}
 	if (!ensurePathDeviceStackReady(path))
 		return FALSE;
-	if (!strncmp(path, "mc0:", 4) || !strncmp(path, "mc1:", 4))
-		return filerPrepareMemoryCardRead(path[2] - '0') == sceMcResSucceed;
+	if (mcPathUnit(path) >= 0)
+		return filerPrepareMemoryCardRead(mcPathUnit(path)) == sceMcResSucceed;
 #ifdef SMB
 	if (smbIsRootPath(path) && smbSharesConnectedCount(smbPathKind(path)) == 0)
 		smbSharesConnect(smbPathKind(path), 1);
@@ -956,7 +956,7 @@ int genFixPath(const char *inp_path, char *gen_path)
 	strcpy(gen_path, uLE_path);  //Assume no path patching needed
 	pathSep = strchr(uLE_path, '/');
 
-	if (!strncmp(uLE_path, "mc1:", 4)) {
+	if (mcPathUnit(uLE_path) >= 0 && MC_UNIT_PORT(mcPathUnit(uLE_path)) == 1) {
 		ensureMemoryCardPortAccessible(1);
 	} else if (!strncmp(uLE_path, "cdfs", 4)) {  //if using CD or DVD disc path
 		LCDVD_FLUSHCACHE();
@@ -1510,6 +1510,14 @@ static int rootMemoryCardExists(int port)
 	return root_mc_present[port];
 }
 
+/* The next card to poll: mc0 and mc1, plus mc2-mc7 behind an open multitap. */
+static void rootMcPollNext(void)
+{
+	do
+		root_mc_poll_port = (root_mc_poll_port + 1) % MC_UNITS;
+	while (!mcUnitAvailable(root_mc_poll_port));
+}
+
 /* A request with no trustworthy result keeps the slot's last-known state but
  * still moves on to the other slot, so one unresponsive slot (for example
  * slot 2 while the MX4SIO stack owns it) can never starve the other. */
@@ -1517,7 +1525,7 @@ static void rootMcPollFailed(void)
 {
 	if (root_mc_failures[root_mc_poll_port] < ROOT_MC_POLL_FAIL_LIMIT)
 		root_mc_failures[root_mc_poll_port]++;
-	root_mc_poll_port = (root_mc_poll_port + 1) & 1;
+	rootMcPollNext();
 }
 
 int pollRootMemoryCardDevices(void)
@@ -1542,7 +1550,7 @@ int pollRootMemoryCardDevices(void)
 		root_mc_failures[root_mc_poll_port] = 0;
 		root_mc_known_type[root_mc_poll_port] = root_mc_present[root_mc_poll_port] ? root_mc_poll_type : 0;
 		root_mc_known_free[root_mc_poll_port] = root_mc_present[root_mc_poll_port] ? root_mc_poll_free : -1;
-		root_mc_poll_port = (root_mc_poll_port + 1) & 1;
+		rootMcPollNext();
 		return changed;
 	}
 
@@ -1562,12 +1570,14 @@ int pollRootMemoryCardDevices(void)
 		return FALSE;
 	/* Polling must never reset MX4SIO or send mc1 requests through its
 	 * SIO2 hooks. Explicit browsing performs the foreground stack switch. */
-	if (root_mc_poll_port == 1 && !isPathDeviceStackLoaded("mc1:/")) {
+	if (!mcUnitAvailable(root_mc_poll_port) ||
+	    (MC_UNIT_PORT(root_mc_poll_port) == 1 && !isPathDeviceStackLoaded("mc1:/"))) {
 		root_mc_poll_port = 0;
 		return FALSE;
 	}
 
-	start_ret = mcGetInfo(root_mc_poll_port, 0, &root_mc_poll_type, &root_mc_poll_free, &root_mc_poll_format);
+	start_ret = mcGetInfo(MC_UNIT_PORT(root_mc_poll_port), MC_UNIT_SLOT(root_mc_poll_port),
+	                      &root_mc_poll_type, &root_mc_poll_free, &root_mc_poll_format);
 	if (start_ret == 0)
 		root_mc_poll_active = 1;
 	else {
@@ -2498,9 +2508,14 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 //--------------------------------------------------------------
 int filerRootMcPresent(int port, int *type, int *free_kb)
 {
-	if (port < 0 || port > 1)
+	if (!mcUnitAvailable(port)) {
+		if (type != NULL)
+			*type = 0;
+		if (free_kb != NULL)
+			*free_kb = -1;
 		return 0;
-	if (port == 1 && !isPathDeviceStackLoaded("mc1:/")) {
+	}
+	if (MC_UNIT_PORT(port) == 1 && !isPathDeviceStackLoaded("mc1:/")) {
 		if (type != NULL)
 			*type = 0;
 		if (free_kb != NULL)

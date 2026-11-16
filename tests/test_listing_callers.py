@@ -450,6 +450,6 @@ with tempfile.TemporaryDirectory(prefix='listing-callers-') as folder:
     cc = shutil.which('gcc') or shutil.which('cc')
     if not cc:
         raise SystemExit('Host C compiler required')
-    subprocess.run([cc, '-std=gnu99', '-Werror=implicit-function-declaration', str(p / 'test.c'), '-o', str(exe)],
+    subprocess.run([cc, "-include", str(root / "include/mc_unit.h"), '-std=gnu99', '-Werror=implicit-function-declaration', str(p / 'test.c'), '-o', str(exe)],
                    check=True)
     subprocess.run([str(exe)], cwd=p, check=True, timeout=60)

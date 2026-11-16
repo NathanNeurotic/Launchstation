@@ -138,7 +138,7 @@ def check_live_rows():
         c = pathlib.Path(tmp) / "h.c"
         c.write_text(HARNESS.replace("%FUNC%", func), encoding="utf-8")
         exe = pathlib.Path(tmp) / "h"
-        subprocess.run(["gcc", "-std=gnu99", "-Wall", "-Werror", "-fsanitize=address,undefined",
+        subprocess.run(["gcc", "-include", str(ROOT / "include/mc_unit.h"), "-std=gnu99", "-Wall", "-Werror", "-fsanitize=address,undefined",
                         str(c), "-o", str(exe)], check=True)
         subprocess.run([str(exe)], check=True)
 

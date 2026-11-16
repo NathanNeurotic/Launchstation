@@ -32,6 +32,8 @@ void ensureCoreIoStackReady(void);
 int setFileXioTransferWide(int wide);
 int isMemoryCardRpcReady(void); /* the memory card RPC client is bound */
 void ensureMemoryCardPortAccessible(int port);
+void mcMultitapRefresh(void);
+int mcUnitAvailable(int unit);
 /* Nonzero when an mc1: read right now would need an IOP stack switch away
  * from a live MX4SIO stack; implicit config discovery treats that as
  * refused on every thread. */
