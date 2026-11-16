@@ -36,7 +36,7 @@ static int module_calls, init_calls, uploads, quits, hard_resets, stops, bgm_sta
 static int forbidden_rpc, reload_pending;
 typedef unsigned char u8;
 static char LaunchElfBootDir[64] = "mass0:/APPS/", LaunchElfDir[64] = "mc0:/APPS/";
-static int stack_loaded = 1, custom_present[DASH_SND_COUNT], custom_reads, custom_uploads, custom_live;
+static int stack_loaded = 1, custom_present[DASH_SND_COUNT], custom_loops[DASH_SND_COUNT], custom_reads, custom_uploads, custom_live;
 static int isPathDeviceStackLoaded(const char *p) { assert(p == LaunchElfBootDir); return stack_loaded; }
 static unsigned int getIopResetGeneration(void) { return generation; }
 static int dashWorkerIoBusy(void) { return busy; }
@@ -52,8 +52,9 @@ static void audsrv_quit(void) { assert(!forbidden_rpc); quits++; }
 static void *blob_data(int id) { return &samples[id]; }
 static int blob_size(int id) { (void)id; return 16; }
 static int audsrv_load_adpcm(audsrv_adpcm_t *sample, void *p, int size) {
-    assert(!forbidden_rpc && size == 16);
-    if (p != (void *)&samples[sample - samples]) custom_uploads++;
+    int custom = p != (void *)&samples[sample - samples];
+    assert(!forbidden_rpc && size == (custom ? 32 : 16));
+    if (custom) custom_uploads++;
     int fail = uploads++ < sample_failures;
     sample->buffer = fail ? NULL : sample; return fail ? -1 : 0;
 }
@@ -67,7 +68,7 @@ void dashSoundShutdown(void);
 '''
 code += source[source.index("#define SFX_MAX_BYTES"):source.index("static u8 *readAdpSidecar(const char *name, int max, int *out_size);")]
 code += r'''
-static void *tracked(void) { custom_live++; return malloc(16); }
+static u8 *tracked(int loop) { u8 *d = calloc(1, 32); custom_live++; d[6] = loop == 1; d[17] = loop == 2 ? 3 : 1; return d; }
 static void untrack(void *p) { if (p) custom_live--; free(p); }
 static u8 *readAdpSidecar(const char *name, int max, int *out_size) {
     int i;
@@ -76,11 +77,11 @@ static u8 *readAdpSidecar(const char *name, int max, int *out_size) {
         if (name == custom_names[i]) break;
     assert(i < DASH_SND_COUNT); custom_reads++;
     if (!custom_present[i]) return NULL;
-    *out_size = 16; return tracked();
+    *out_size = 32; return tracked(custom_loops[i]);
 }
 #define free untrack
 '''
-for signature in ("static void freeCustomSounds(", "static int uploadSamples("):
+for signature in ("static void freeCustomSounds(", "static int playsOnce(", "static int uploadSamples("):
     code += function(signature)
 for signature in ("static int soundAlive(", "int dashSoundInit(",
                   "void dashSoundShutdown(", "void dashSoundApplyVolume(",
@@ -94,7 +95,7 @@ static void reset(void) {
     module_calls = init_calls = uploads = quits = hard_resets = stops = bgm_starts = warnings = 0;
     dashCfg.sound = dashCfg.bgm = 1; reload_pending = 0; dashCfg.custom_sounds = 0;
     stack_loaded = 1; custom_reads = custom_uploads = 0;
-    for (int i = 0; i < DASH_SND_COUNT; i++) custom_present[i] = 0;
+    for (int i = 0; i < DASH_SND_COUNT; i++) custom_present[i] = custom_loops[i] = 0;
     assert(!custom_live && !custom_pending);
 }
 int main(void) {
@@ -124,6 +125,18 @@ int main(void) {
     /* A rejected upload frees that file and falls back to the built-in effect. */
     reset(); dashCfg.custom_sounds = 1; custom_present[0] = 1; sample_failures = 1; dashSoundMaintain();
     assert(uploads == 9 && custom_uploads == 1 && !custom_live && samples[0].buffer && !warnings);
+    /* A looping file (APCM loop byte, or end block flagged repeat) is refused: built-in effect instead. */
+    reset(); dashCfg.custom_sounds = 1; custom_present[0] = custom_present[1] = 1;
+    custom_loops[0] = 1; custom_loops[1] = 2; dashSoundMaintain();
+    assert(uploads == 8 && !custom_uploads && !custom_live && samples[0].buffer && samples[1].buffer);
+    /* A failed hard reset while files wait for the boot device is not retried every frame. */
+    reset(); dashCfg.custom_sounds = 1; custom_present[1] = 1; stack_loaded = 0; dashSoundMaintain();
+    assert(custom_pending && uploads == 8);
+    stack_loaded = 1; adpcm_failure = 1; dashSoundMaintain();
+    assert(!custom_pending && warnings == 1 && hard_resets == 2);
+    for (int i=0; i<20; i++) dashSoundMaintain();
+    assert(warnings == 1 && hard_resets == 2);
+    adpcm_failure = 0;
     /* Switching off drops the files and uploads only built-in effects. */
     reset(); dashCfg.custom_sounds = 1; custom_present[3] = 1; dashSoundMaintain(); assert(custom_live == 1);
     dashCfg.custom_sounds = 0; dashSoundReloadEffects(); assert(!custom_live && custom_uploads == 1 && uploads == 16);

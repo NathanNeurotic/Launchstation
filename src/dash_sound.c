@@ -117,6 +117,20 @@ static void freeCustomSounds(void)
 	}
 }
 
+/* A custom effect must stop by itself: APCM loop byte off, and the first
+ * block flagged "end" must not also be flagged "repeat". */
+static int playsOnce(const u8 *data, int size)
+{
+	int i;
+
+	if (data[6] != 0)
+		return 0;
+	for (i = 16; i < size; i += 16)
+		if (data[i + 1] & 1)
+			return !(data[i + 1] & 2);
+	return 0;
+}
+
 /* Upload every effect: the custom file when it was read and accepted, else
  * the built-in one. Returns how many stay silent. */
 static int uploadSamples(void)
@@ -131,7 +145,7 @@ static int uploadSamples(void)
 		samples[i].buffer = NULL;
 		if (dashCfg.custom_sounds && !custom_pending) {
 			custom_data[i] = readAdpSidecar(custom_names[i], SFX_MAX_BYTES, &size);
-			if (custom_data[i] != NULL && audsrv_load_adpcm(&samples[i], custom_data[i], size) == 0)
+			if (custom_data[i] != NULL && playsOnce(custom_data[i], size) && audsrv_load_adpcm(&samples[i], custom_data[i], size) == 0)
 				continue;
 			free(custom_data[i]);
 			custom_data[i] = NULL;
@@ -220,6 +234,7 @@ void dashSoundReloadEffects(void)
 	reload_pending = 0;
 	dashBgmStop();
 	if (audsrv_adpcm_init() != 0) {
+		custom_pending = 0; /* no retry every frame; the next switch or boot tries again */
 		dashToast(DASH_TOAST_WARN, "Sound effects could not be reloaded");
 		return;
 	}
