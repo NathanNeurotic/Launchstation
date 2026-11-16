@@ -594,6 +594,7 @@ targets:
       - src/dash_ui.c
       - src/dash_home.c
       - src/dash_apps.c
+      - src/dash_games.c
       - src/dash_files.c
       - src/dash_tools.c
       - src/dash_settings.c

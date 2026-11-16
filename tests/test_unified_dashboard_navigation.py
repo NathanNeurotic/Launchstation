@@ -39,8 +39,8 @@ code=String = r'''
 #include <stdio.h>
 typedef struct { void (*enter)(void); } DashScreen;
 enum { DASH_SEC_HOME=0, DASH_SEC_APPS, DASH_SEC_FILES, DASH_SEC_DEVICES,
-       DASH_SEC_TOOLS, DASH_SEC_SETTINGS, DASH_SEC_COUNT };
-#define DASH_TAB_MASK ((1 << DASH_SEC_HOME) | (1 << DASH_SEC_FILES) | (1 << DASH_SEC_TOOLS) | (1 << DASH_SEC_SETTINGS))
+       DASH_SEC_TOOLS, DASH_SEC_SETTINGS, DASH_START_LAUNCH_KEYS, DASH_SEC_GAMES, DASH_SEC_COUNT };
+#define DASH_TAB_MASK ((1 << DASH_SEC_HOME) | (1 << DASH_SEC_GAMES) | (1 << DASH_SEC_FILES) | (1 << DASH_SEC_TOOLS) | (1 << DASH_SEC_SETTINGS))
 typedef struct { int disabled_tabs; } MockDashCfg;
 static MockDashCfg dashCfg;
 enum { DASH_SND_TRANSITION=1 };
@@ -48,14 +48,14 @@ static int section = DASH_SEC_HOME,prev_section=DASH_SEC_HOME;
 static float section_anim=1.0f;
 static int section_dir=1, leave_ok=1, enter_count, sound_count, focus_count, tab_closes;
 static int leave_disable_home, leave_disable_all;
-static int dashConfirmLeave(void) { if (leave_disable_home) dashCfg.disabled_tabs |= (1 << DASH_SEC_HOME); if (leave_disable_all) dashCfg.disabled_tabs |= (1 << DASH_SEC_HOME) | (1 << DASH_SEC_FILES) | (1 << DASH_SEC_TOOLS); return leave_ok; }
+static int dashConfirmLeave(void) { if (leave_disable_home) dashCfg.disabled_tabs |= (1 << DASH_SEC_HOME); if (leave_disable_all) dashCfg.disabled_tabs |= (1 << DASH_SEC_HOME) | (1 << DASH_SEC_GAMES) | (1 << DASH_SEC_FILES) | (1 << DASH_SEC_TOOLS); return leave_ok; }
 static void dashFileBrowserTabClose(void) { assert(section==DASH_SEC_FILES); tab_closes++; }
 static void dashUiFocusPoke(void) { focus_count++; }
 static void dashSoundPlay(int sound) { assert(sound==DASH_SND_TRANSITION); sound_count++; }
 static void entered(void) { enter_count++; }
 static const DashScreen item = {entered};
 static const DashScreen *const screens[DASH_SEC_COUNT] = {
-    &item,&item,&item,&item,&item,&item
+    &item,&item,&item,&item,&item,&item,&item,&item
 };
 '''
 code+=defs
@@ -67,19 +67,31 @@ for fn in ("int dashVisibleSectionCount(void)","int dashVisibleSectionAt(int ind
     code+=function(main,fn)
 code+=r'''
 int main(void) {
-    assert(dashVisibleSectionCount()==4);
+    assert(dashVisibleSectionCount()==5);
     assert(dashVisibleSectionAt(0)==DASH_SEC_HOME);
-    assert(dashVisibleSectionAt(1)==DASH_SEC_FILES);
-    assert(dashVisibleSectionAt(2)==DASH_SEC_TOOLS);
-    assert(dashVisibleSectionAt(3)==DASH_SEC_SETTINGS);
+    assert(dashVisibleSectionAt(1)==DASH_SEC_GAMES);
+    assert(dashVisibleSectionAt(2)==DASH_SEC_FILES);
+    assert(dashVisibleSectionAt(3)==DASH_SEC_TOOLS);
+    assert(dashVisibleSectionAt(4)==DASH_SEC_SETTINGS);
     assert(dashVisibleSectionIndex(DASH_SEC_APPS)==0);
-    assert(dashVisibleSectionIndex(DASH_SEC_DEVICES)==1);
-    assert(dashAdjacentSection(section,+1)==DASH_SEC_FILES);
+    assert(dashVisibleSectionIndex(DASH_SEC_DEVICES)==2);
+    assert(dashAdjacentSection(section,+1)==DASH_SEC_GAMES);
+    assert(dashAdjacentSection(DASH_SEC_GAMES,+1)==DASH_SEC_FILES);
+    /* GAMES sits second although its value is the highest: the slide follows the tab order. */
+    dashSwitchSection(DASH_SEC_GAMES);
+    assert(section==DASH_SEC_GAMES && section_dir==1);
+    dashSwitchSection(DASH_SEC_HOME);
+    assert(section==DASH_SEC_HOME && section_dir==-1);
+    /* The Launch keys start value opens Settings. */
+    dashSwitchSection(DASH_START_LAUNCH_KEYS);
+    assert(section==DASH_SEC_SETTINGS);
+    dashSwitchSection(DASH_SEC_HOME);
+    enter_count=0; sound_count=0;
     dashSwitchSection(DASH_SEC_FILES);
     assert(section==DASH_SEC_FILES && tab_closes==0);
     assert(enter_count==1 && sound_count==1);
     assert(dashAdjacentSection(section,+1)==DASH_SEC_TOOLS);
-    assert(dashAdjacentSection(section,-1)==DASH_SEC_HOME);
+    assert(dashAdjacentSection(section,-1)==DASH_SEC_GAMES);
     /* Returning to the same tab doesn't open a second browser. */
     dashSwitchSection(DASH_SEC_FILES);
     assert(enter_count==1 && tab_closes==0);
@@ -104,22 +116,25 @@ int main(void) {
     assert(enter_count==5);
     /* Disabling tabs (issue #278) */
     dashCfg.disabled_tabs = (1 << DASH_SEC_TOOLS);
-    assert(dashVisibleSectionCount() == 3);
+    assert(dashVisibleSectionCount() == 4);
     assert(dashVisibleSectionAt(0) == DASH_SEC_HOME);
-    assert(dashVisibleSectionAt(1) == DASH_SEC_FILES);
-    assert(dashVisibleSectionAt(2) == DASH_SEC_SETTINGS);
+    assert(dashVisibleSectionAt(1) == DASH_SEC_GAMES);
+    assert(dashVisibleSectionAt(2) == DASH_SEC_FILES);
+    assert(dashVisibleSectionAt(3) == DASH_SEC_SETTINGS);
     assert(dashAdjacentSection(DASH_SEC_FILES, +1) == DASH_SEC_SETTINGS);
     dashCfg.disabled_tabs = 0;
     /* Issue #343: Circle goes to the first enabled tab, and a tab that the
      * leave dialog switches off again (Discard) is not entered. */
     assert(dashBackSection() == DASH_SEC_HOME);
     dashCfg.disabled_tabs = (1 << DASH_SEC_HOME);
+    assert(dashBackSection() == DASH_SEC_GAMES);
+    dashCfg.disabled_tabs = (1 << DASH_SEC_HOME) | (1 << DASH_SEC_GAMES);
     assert(dashBackSection() == DASH_SEC_FILES);
     dashCfg.disabled_tabs = 0;
     assert(section == DASH_SEC_SETTINGS);
     leave_disable_home = 1;
     dashSwitchSection(dashBackSection());
-    assert(section == DASH_SEC_FILES);
+    assert(section == DASH_SEC_GAMES);
     leave_disable_home = 0;
     dashCfg.disabled_tabs = 0;
     /* Only Settings left after Discard: stay, and let Settings start a new session. */
@@ -135,7 +150,7 @@ int main(void) {
     dashSwitchSection(DASH_SEC_FILES);
     assert(section == DASH_SEC_FILES);
     enter_count = 0;
-    dashCfg.disabled_tabs = (1 << DASH_SEC_HOME);
+    dashCfg.disabled_tabs = (1 << DASH_SEC_HOME) | (1 << DASH_SEC_GAMES);
     dashSwitchSection(DASH_SEC_HOME);
     assert(section == DASH_SEC_FILES && enter_count == 0);
     dashCfg.disabled_tabs = 0;

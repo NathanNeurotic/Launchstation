@@ -14,7 +14,7 @@ for field in ("files_mode","home_shortcuts","icon_backing","show_unavailable_dev
 for key in ("Dash_FilesMode","Dash_HomeShortcuts","Dash_IconBacking","Dash_ShowUnavailableDevices"):
     assert key in store
 
-assert "visible_sections[] = {DASH_SEC_HOME, DASH_SEC_FILES, DASH_SEC_TOOLS, DASH_SEC_SETTINGS}" in main
+assert "visible_sections[] = {DASH_SEC_HOME, DASH_SEC_GAMES, DASH_SEC_FILES, DASH_SEC_TOOLS, DASH_SEC_SETTINGS}" in main
 assert "section == DASH_SEC_FILES" in main and "dashFileBrowserTabClose();" in main
 assert "DASH_SEC_APPS" in main  # older saved section values migrate to Home
 assert "dashAdjacentSection(section, -1)" in main and "dashAdjacentSection(section, 1)" in main

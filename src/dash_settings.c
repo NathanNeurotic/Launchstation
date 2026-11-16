@@ -60,6 +60,7 @@ enum SetId {
 	S_VIEW,
 	S_HOME_SHORTCUTS,
 	S_TAB_HOME,
+	S_TAB_GAMES,
 	S_TAB_FILES,
 	S_TAB_TOOLS,
 	S_ICON_BACKING,
@@ -265,6 +266,7 @@ static const SetItem display_items[] = {
 static const SetItem dash_items[] = {
     {ST_CHOICE, S_START, "Start screen", "Initial screen. Applications opens the library under Home directly; Launch keys opens Settings on its Launch keys page."},
     {ST_CHOICE, S_TAB_HOME, "Home tab", "Off removes HOME from the tabs and from L1/R1. Settings always stays. Saved as Dash_Disabled_Tabs."},
+    {ST_CHOICE, S_TAB_GAMES, "Games tab", "Off removes GAMES from the tabs and from L1/R1. Settings always stays. Saved as Dash_Disabled_Tabs."},
     {ST_CHOICE, S_TAB_FILES, "Files tab", "Off removes FILES from the tabs and from L1/R1. Settings always stays. Saved as Dash_Disabled_Tabs."},
     {ST_CHOICE, S_TAB_TOOLS, "Tools tab", "Off removes TOOLS from the tabs and from L1/R1. Settings always stays. Saved as Dash_Disabled_Tabs."},
     {ST_CHOICE, S_HOME_SHORTCUTS, "Home quick-launch shortcuts", "Show configured launch-key shortcuts alongside Applications and Last folder."},
@@ -994,10 +996,10 @@ static void themeChanged(void)
 	dash_dirty = 1;
 }
 
-/* Dash_Disabled_Tabs bit for the Home/Files/Tools tab rows (issue #278). */
+/* Dash_Disabled_Tabs bit for the Home/Games/Files/Tools tab rows (issue #278). */
 static int tabSettingBit(int id)
 {
-	return 1 << (id == S_TAB_HOME ? DASH_SEC_HOME : id == S_TAB_FILES ? DASH_SEC_FILES : DASH_SEC_TOOLS);
+	return 1 << (id == S_TAB_HOME ? DASH_SEC_HOME : id == S_TAB_GAMES ? DASH_SEC_GAMES : id == S_TAB_FILES ? DASH_SEC_FILES : DASH_SEC_TOOLS);
 }
 
 /* Returns number of options and the current index for a CHOICE item. */
@@ -1059,14 +1061,15 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			*names = pct_names, *cur = dashCfg.bgm_vol / 10;
 			return 11;
 		case S_START: {
-			static const char *const start_names[] = {"Home", "Applications", "Files", "Tools", "Settings", "Launch keys"};
+			static const char *const start_names[] = {"Home", "Applications", "Files", "Tools", "Settings", "Launch keys", "Games"};
 			*names = start_names;
 			*cur = (dashCfg.start_section == DASH_SEC_APPS) ? 1 :
 			       (dashCfg.start_section == DASH_SEC_FILES || dashCfg.start_section == DASH_SEC_DEVICES) ? 2 :
 			       (dashCfg.start_section == DASH_SEC_TOOLS) ? 3 :
 			       (dashCfg.start_section == DASH_SEC_SETTINGS) ? 4 :
-			       (dashCfg.start_section == DASH_START_LAUNCH_KEYS) ? 5 : 0;
-			return 6;
+			       (dashCfg.start_section == DASH_START_LAUNCH_KEYS) ? 5 :
+			       (dashCfg.start_section == DASH_SEC_GAMES) ? 6 : 0;
+			return 7;
 		}
 		case S_FILES_MODE: {
 			static const char *const modes[] = {"Files", "Devices"};
@@ -1077,6 +1080,7 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			*cur = dashCfg.home_shortcuts;
 			return 2;
 		case S_TAB_HOME:
+		case S_TAB_GAMES:
 		case S_TAB_FILES:
 		case S_TAB_TOOLS:
 			*cur = !(dashCfg.disabled_tabs & tabSettingBit(id));
@@ -1771,7 +1775,8 @@ static void setChoice(int id, int v)
 			                        (v == 2) ? DASH_SEC_FILES :
 			                        (v == 3) ? DASH_SEC_TOOLS :
 			                        (v == 4) ? DASH_SEC_SETTINGS :
-			                        (v == 5) ? DASH_START_LAUNCH_KEYS : DASH_SEC_HOME;
+			                        (v == 5) ? DASH_START_LAUNCH_KEYS :
+			                        (v == 6) ? DASH_SEC_GAMES : DASH_SEC_HOME;
 			break;
 		case S_FILES_MODE:
 			dashCfg.files_mode = v;
@@ -1781,6 +1786,7 @@ static void setChoice(int id, int v)
 			dashHomeRebuild();
 			break;
 		case S_TAB_HOME:
+		case S_TAB_GAMES:
 		case S_TAB_FILES:
 		case S_TAB_TOOLS:
 			/* The menu never hides Settings, so it cannot lock itself out. */

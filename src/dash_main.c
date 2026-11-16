@@ -40,12 +40,14 @@ static int boot_phase;         /* 0 none, 1 init delay, 2 auto-launch countdown 
 static u64 boot_phase_end;
 static char boot_auto_title[DASH_TITLE_MAX];
 
+/* Index 6 is DASH_START_LAUNCH_KEYS, a start value that opens Settings. */
 static const DashScreen *const screens[DASH_SEC_COUNT] = {
-    &dashHomeScreen, &dashAppsScreen, &dashFilesScreen, &dashDevicesScreen, &dashToolsScreen, &dashSettingsScreen};
+    &dashHomeScreen, &dashAppsScreen, &dashFilesScreen, &dashDevicesScreen, &dashToolsScreen, &dashSettingsScreen,
+    &dashSettingsScreen, &dashGamesScreen};
 
-static const char *const section_names[DASH_SEC_COUNT] = {"HOME", "APPS", "FILES", "DEVICES", "TOOLS", "SETTINGS"};
-static const int section_icons[DASH_SEC_COUNT] = {DI_HOME, DI_APPS, DI_FOLDER, DI_DEVICES, DI_TOOLS, DI_SETTINGS};
-static const int visible_sections[] = {DASH_SEC_HOME, DASH_SEC_FILES, DASH_SEC_TOOLS, DASH_SEC_SETTINGS};
+static const char *const section_names[DASH_SEC_COUNT] = {"HOME", "APPS", "FILES", "DEVICES", "TOOLS", "SETTINGS", "SETTINGS", "GAMES"};
+static const int section_icons[DASH_SEC_COUNT] = {DI_HOME, DI_APPS, DI_FOLDER, DI_DEVICES, DI_TOOLS, DI_SETTINGS, DI_SETTINGS, DI_DISC};
+static const int visible_sections[] = {DASH_SEC_HOME, DASH_SEC_GAMES, DASH_SEC_FILES, DASH_SEC_TOOLS, DASH_SEC_SETTINGS};
 #define DASH_VISIBLE_SEC_COUNT ((int)(sizeof(visible_sections) / sizeof(visible_sections[0])))
 
 const char *dashSectionName(int s)
@@ -55,7 +57,7 @@ const char *dashSectionName(int s)
 
 const char *dashSectionLabel(int s)
 {
-	static const char *const labels[DASH_SEC_COUNT] = {"Home", "Applications", "Files", "Devices", "Tools", "Settings"};
+	static const char *const labels[DASH_SEC_COUNT] = {"Home", "Applications", "Files", "Devices", "Tools", "Settings", "Settings", "Games"};
 	return (s >= 0 && s < DASH_SEC_COUNT) ? labels[s] : "";
 }
 
@@ -209,6 +211,8 @@ void dashSwitchSection(int s)
 		s = DASH_SEC_HOME; /* legacy callers use Home's library */
 	if (s == DASH_SEC_DEVICES)
 		s = DASH_SEC_FILES;
+	if (s == DASH_START_LAUNCH_KEYS)
+		s = DASH_SEC_SETTINGS;
 	if (s < 0 || s >= DASH_SEC_COUNT)
 		s = DASH_SEC_HOME;
 	if (s == section)
@@ -216,7 +220,7 @@ void dashSwitchSection(int s)
 	if (!dashConfirmLeave())
 		return;
 	/* Discarding Settings can switch a tab off again after the caller chose it. */
-	if ((s == DASH_SEC_HOME || s == DASH_SEC_FILES || s == DASH_SEC_TOOLS) && !sectionTabEnabled(s)) {
+	if (s != DASH_SEC_SETTINGS && !sectionTabEnabled(s)) {
 		s = dashBackSection();
 		if (s == section) {
 			if (section == DASH_SEC_SETTINGS && screens[section]->enter)
@@ -230,7 +234,7 @@ void dashSwitchSection(int s)
 	/* Leave the tab's browser session before another section takes focus. */
 	if (section == DASH_SEC_FILES)
 		dashFileBrowserTabClose();
-	section_dir = (s > section) ? 1 : -1;
+	section_dir = (dashVisibleSectionIndex(s) > dashVisibleSectionIndex(section)) ? 1 : -1;
 	prev_section = section;
 	section = s;
 	section_anim = 0.0f;

@@ -461,6 +461,7 @@ int LaunchEmberGame(const char *path, char *message, size_t message_size);
 
 /* neutrino_iso.c */
 int IsNeutrinoIsoPath(const char *path);
+int IsNeutrinoGameDevice(const char *path);
 int LaunchNeutrinoIso(const char *path, char *message, size_t message_size);
 
 /* draw.c */

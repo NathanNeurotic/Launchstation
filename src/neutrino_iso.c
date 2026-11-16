@@ -135,6 +135,12 @@ static const char *neutrinoBsdForPath(const char *path)
 	return NULL;
 }
 
+/* Neutrino can start an ISO from this device (the GAMES tab lists these). */
+int IsNeutrinoGameDevice(const char *path)
+{
+	return neutrinoBsdForPath(path) != NULL;
+}
+
 #ifdef SMB
 static int smbCoreLocal(const char *path)
 {
