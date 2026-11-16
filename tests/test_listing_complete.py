@@ -244,6 +244,10 @@ for signature in ('static void dirOpenResult(', 'static void dirReadFailed(',
                   'static const char *getXfromRelativePath('):
     code += function(signature)
 code += 'int readGENERIC(const char *path, FILEINFO *info, int max);\n'
+# readMC() and readXFROM() share one file-scope directory table.
+mc_table = 'static sceMcTblGetDir mcDir[MAX_ENTRY + 1] __attribute__((aligned(64)));'
+assert filer.count(mc_table) == 1
+code += mc_table + '\n'
 for signature in ('static int readGENERICWithFirstOpenRetry(',
                   'int readMC(const char *path, FILEINFO *info, int max)\n{',
                   'int readCD(const char *path, FILEINFO *info, int max)\n{',

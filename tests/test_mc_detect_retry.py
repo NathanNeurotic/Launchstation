@@ -13,6 +13,9 @@ filer = (root / "src/filer.c").read_text(encoding="utf-8")
 retries = int(re.search(r"#define MC_BROWSER_RETRY_COUNT (\d+)", filer).group(1))
 
 
+MC_TABLE = "static sceMcTblGetDir mcDir[MAX_ENTRY + 1] __attribute__((aligned(64)));"
+
+
 def function(signature):
     start = filer.index(signature)
     end = filer.index("{", start) + 1
@@ -105,7 +108,9 @@ int main(void){
 """ % {
     "retries": retries,
     "wait": function("static int waitMemoryCardReadyForBrowse(int port)\n{"),
-    "read": function("int readMC(const char *path, FILEINFO *info, int max)\n{"),
+    # readMC() and readXFROM() share one file-scope directory table.
+    "read": filer[filer.index(MC_TABLE):filer.index(MC_TABLE) + len(MC_TABLE)] + "\n" +
+            function("int readMC(const char *path, FILEINFO *info, int max)\n{"),
 }
 
 with tempfile.TemporaryDirectory() as tmp:

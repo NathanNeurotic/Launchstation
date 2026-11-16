@@ -483,10 +483,12 @@ int filerMcFreeClusters(int port)
 	return freec;
 }
 
+/* One directory table for readMC() and readXFROM(): getDir() runs one of them at a time.
+ * Holds max entries besides "." and "..", for the largest max (getDirComplete). */
+static sceMcTblGetDir mcDir[MAX_ENTRY + 1] __attribute__((aligned(64)));
+
 int readMC(const char *path, FILEINFO *info, int max)
 {
-	/* max entries besides "." and "..", for the largest max (getDirComplete) */
-	static sceMcTblGetDir mcDir[MAX_ENTRY + 1] __attribute__((aligned(64)));
 	char dir[MAX_PATH];
 	int i, j, port, ret, limit;
 
@@ -557,8 +559,6 @@ static const char *getXfromRelativePath(const char *path)
 
 int readXFROM(const char *path, FILEINFO *info, int max)
 {
-	/* max entries besides "." and "..", for the largest max (getDirComplete) */
-	static sceMcTblGetDir mcDir[MAX_ENTRY + 1] __attribute__((aligned(64)));
 	char dir[MAX_PATH];
 	int i, j, ret, limit;
 
