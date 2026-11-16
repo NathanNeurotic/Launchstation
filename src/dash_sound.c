@@ -15,21 +15,6 @@ extern u8 audsrv_irx[];
 extern int size_audsrv_irx;
 extern u8 libsd_irx[];
 extern int size_libsd_irx;
-extern u8 sfx_cursor_adp[];
-extern int size_sfx_cursor_adp;
-extern u8 sfx_confirm_adp[];
-extern int size_sfx_confirm_adp;
-extern u8 sfx_cancel_adp[];
-extern int size_sfx_cancel_adp;
-extern u8 sfx_transition_adp[];
-extern int size_sfx_transition_adp;
-extern u8 sfx_message_adp[];
-extern int size_sfx_message_adp;
-extern u8 sfx_connect_adp[];
-extern int size_sfx_connect_adp;
-extern u8 sfx_disconnect_adp[];
-extern int size_sfx_disconnect_adp;
-
 extern u8 sfx2_cursor_adp[];
 extern int size_sfx2_cursor_adp;
 extern u8 sfx2_confirm_adp[];
@@ -82,58 +67,32 @@ static int soundAlive(void)
 #define SND_TRANS_CH_BASE 14
 #define SND_TRANS_CH_COUNT 4
 
-/* Theme 0 is the original set, theme 1 the synthesized "PS2" set. */
-#define SND_THEME_PS2 1
-
+/* The built-in effects (res/sfx_ps2, synthesized by scripts/gen_sfx.py). */
 static void *blob_data(int id)
 {
-	if (dashCfg.sound_theme == SND_THEME_PS2) {
-		switch (id) {
-			case DASH_SND_CURSOR: return sfx2_cursor_adp;
-			case DASH_SND_CONFIRM: return sfx2_confirm_adp;
-			case DASH_SND_CANCEL: return sfx2_cancel_adp;
-			case DASH_SND_TRANSITION: return sfx2_transition_adp;
-			case DASH_SND_MESSAGE: return sfx2_message_adp;
-			case DASH_SND_BOOT: return sfx2_boot_adp;
-			case DASH_SND_CONNECT: return sfx2_bd_connect_adp;
-			default: return sfx2_bd_disconnect_adp;
-		}
-	}
 	switch (id) {
-		case DASH_SND_CURSOR: return sfx_cursor_adp;
-		case DASH_SND_CONFIRM: return sfx_confirm_adp;
-		case DASH_SND_CANCEL: return sfx_cancel_adp;
-		case DASH_SND_TRANSITION: return sfx_transition_adp;
-		case DASH_SND_MESSAGE: return sfx_message_adp;
-		case DASH_SND_BOOT: return sfx_confirm_adp;
-		case DASH_SND_CONNECT: return sfx_connect_adp;
-		default: return sfx_disconnect_adp;
+		case DASH_SND_CURSOR: return sfx2_cursor_adp;
+		case DASH_SND_CONFIRM: return sfx2_confirm_adp;
+		case DASH_SND_CANCEL: return sfx2_cancel_adp;
+		case DASH_SND_TRANSITION: return sfx2_transition_adp;
+		case DASH_SND_MESSAGE: return sfx2_message_adp;
+		case DASH_SND_BOOT: return sfx2_boot_adp;
+		case DASH_SND_CONNECT: return sfx2_bd_connect_adp;
+		default: return sfx2_bd_disconnect_adp;
 	}
 }
 
 static int blob_size(int id)
 {
-	if (dashCfg.sound_theme == SND_THEME_PS2) {
-		switch (id) {
-			case DASH_SND_CURSOR: return size_sfx2_cursor_adp;
-			case DASH_SND_CONFIRM: return size_sfx2_confirm_adp;
-			case DASH_SND_CANCEL: return size_sfx2_cancel_adp;
-			case DASH_SND_TRANSITION: return size_sfx2_transition_adp;
-			case DASH_SND_MESSAGE: return size_sfx2_message_adp;
-			case DASH_SND_BOOT: return size_sfx2_boot_adp;
-			case DASH_SND_CONNECT: return size_sfx2_bd_connect_adp;
-			default: return size_sfx2_bd_disconnect_adp;
-		}
-	}
 	switch (id) {
-		case DASH_SND_CURSOR: return size_sfx_cursor_adp;
-		case DASH_SND_CONFIRM: return size_sfx_confirm_adp;
-		case DASH_SND_CANCEL: return size_sfx_cancel_adp;
-		case DASH_SND_TRANSITION: return size_sfx_transition_adp;
-		case DASH_SND_MESSAGE: return size_sfx_message_adp;
-		case DASH_SND_BOOT: return size_sfx_confirm_adp;
-		case DASH_SND_CONNECT: return size_sfx_connect_adp;
-		default: return size_sfx_disconnect_adp;
+		case DASH_SND_CURSOR: return size_sfx2_cursor_adp;
+		case DASH_SND_CONFIRM: return size_sfx2_confirm_adp;
+		case DASH_SND_CANCEL: return size_sfx2_cancel_adp;
+		case DASH_SND_TRANSITION: return size_sfx2_transition_adp;
+		case DASH_SND_MESSAGE: return size_sfx2_message_adp;
+		case DASH_SND_BOOT: return size_sfx2_boot_adp;
+		case DASH_SND_CONNECT: return size_sfx2_bd_connect_adp;
+		default: return size_sfx2_bd_disconnect_adp;
 	}
 }
 

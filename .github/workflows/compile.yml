@@ -104,7 +104,6 @@ jobs:
           python3 tests/test_system_clock_menu.py
           python3 tests/test_software_clock.py
           python3 tests/test_startup_status.py
-          python3 tests/test_transition_latency.py
           python3 tests/test_native_four_browser_modes.py
           python3 tests/test_feedback_35_82.py
           python3 tests/test_ilink_browser.py

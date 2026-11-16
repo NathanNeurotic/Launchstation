@@ -1,4 +1,4 @@
-"""The synthesized PS2 sound theme: reproducible, well-formed and wired in."""
+"""The built-in (synthesized) sound set: reproducible, well-formed and wired in."""
 import sys
 from pathlib import Path
 
@@ -35,18 +35,13 @@ for n in names:
     limits = {"cursor": 120, "transition": 260, "cancel": 260, "confirm": 350}
     assert dur < limits.get(n, 3200), (n, dur)
 
-# wiring: blobs embedded, theme persisted, setting exposed and reloads live
+# wiring: blobs embedded, and the only set (the old Classic set and Sound theme are gone)
 S = (root / "src/embed_blobs.S").read_text(encoding="latin-1")
 C = (root / "src/dash_sound.c").read_text(encoding="latin-1")
 for n in names:
     assert f'EMBED_FILE(sfx2_{n}_adp, "res/sfx_ps2/{n}.adp")' in S
     assert f"sfx2_{n}_adp" in C
+assert 'res/sfx/' not in S and "sound_theme" not in C
 st = (root / "src/dash_store.c").read_text(encoding="latin-1")
-assert 'dashCfg.sound_theme = 0;' in st and '"Dash_SoundTheme"' in st and "c->sound_theme" in st
-se = (root / "src/dash_settings.c").read_text(encoding="latin-1")
-assert 'sound_theme_names[] = {"Classic", "PS2"}' in se and "dashSoundReloadTheme();" in se
-# Discard changes must put the saved theme's effects back, not only the setting
-rev = se[se.index("static void settingsRevert("):]
-rev = rev[:rev.index("\n}\n")]
-assert "int theme = dashCfg.sound_theme != snap_dash.sound_theme;" in rev and "if (theme)" in rev and "dashSoundReloadTheme();" in rev
-print("PS2 sound theme: OK")
+assert "Dash_SoundTheme" not in st   # an old saved value is skipped like any unknown key
+print("Built-in sound set: OK")
