@@ -335,6 +335,8 @@ static int profileParseText(char *text, NEUTRINO_LAUNCH_OPTIONS *out)
 		end = line + strlen(line);
 		while (end > line && (end[-1] == '\r' || end[-1] == ' ' || end[-1] == '\t'))
 			*--end = '\0';
+		if (complete && line[0] != '\0')
+			return 0; /* $End=1 is the last line: anything after it is not a saved file */
 		eq = strchr(line, '=');
 		if (line[0] == '$' && eq != NULL) {
 			*eq = '\0';
@@ -455,6 +457,8 @@ static int profileSave(const char *id, const NEUTRINO_LAUNCH_OPTIONS *options)
 	 * memory card. */
 	if (!profileDevicePath(id, path, sizeof(path), dir, sizeof(dir)))
 		return 0;
+	if (!strncmp(path, "udpfs", 5) && !setting->HOSTwrite)
+		return 0; /* network writing is off, as in the File Browser */
 	{
 		int wrote = dashWriteFile(path, text, n);
 		if (wrote < 0 && genMkdir(dir, fileMode) >= 0)

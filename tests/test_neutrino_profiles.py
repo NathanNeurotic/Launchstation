@@ -49,6 +49,7 @@ code = r'''
 #define MMCE 1
 static int mx4sio_driver_running, mmce_stack, dev_stack=1, fileMode=0777;
 static char active_profile_path[MAX_PATH];
+static struct { int HOSTwrite; } setting_s = {1}, *setting = &setting_s;
 static const char *dashStoreDir(void) { return "mc0:/SYS-CONF/"; }
 static int isPathDeviceStackLoaded(const char *path) {
     if (!strcmp(path,"mmce0:/")) return mmce_stack;
@@ -135,6 +136,11 @@ int main(void)
     assert(!profileLoad(id,&got));
     strcpy(content[3],"$Compatibility=2\n$NeutrinoVideo=1\n$End=1\n");
     assert(profileLoad(id,&got));
+    /* $End=1 is the last line: settings after it reject the file; blank lines do not. */
+    strcpy(content[3],"$Compatibility=2\n$End=1\n$VMC_0=\n");
+    assert(!profileLoad(id,&got));
+    strcpy(content[3],"$Compatibility=2\n$End=1\n\r\n\n");
+    assert(profileLoad(id,&got));
     /* A bad value invalidates the file; a legacy NTP1 slot is then used. */
     strcpy(content[3],"$NeutrinoVideo=9\n");
     assert(!profileLoad(id,&got));
@@ -178,6 +184,11 @@ int main(void)
     /* Folder cannot be created: the save fails. Nothing goes to the memory card. */
     clear_slots(); dev_no_dir=1; dev_mkdir_fails=1;
     assert(profileSave(id,&a)==0 && !content[3][0] && !content[2][0]);
+    /* A game on UDPFS: no save while network writing is off, as in the File Browser. */
+    clear_slots(); strcpy(active_profile_path,"udpfs:/DVD/Game.iso"); setting->HOSTwrite=0;
+    assert(profileSave(id,&a)==0 && dev_writes==0 && !content[3][0]);
+    setting->HOSTwrite=1;
+    assert(profileSave(id,&a)==1 && !strcmp(last_dev_path,"udpfs:/CFG/NEUT-SLUS_123.45.cfg"));
     /* A device write cut short leaves a file the loader ignores; the save fails, the memory card is untouched. */
     clear_slots(); strcpy(content[2],"$NeutrinoVideo=1\n$End=1\n"); dev_torn=1;
     assert(profileSave(id,&a)==0 && content[3][0] && !strstr(content[3],"$End=1"));
