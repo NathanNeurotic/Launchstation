@@ -16,7 +16,7 @@ icons = (root / "src/dash_icons.c").read_text(encoding="utf-8")
 enum = hdr[hdr.rfind("enum", 0, hdr.index("DI_HOME = 0,")):]
 enum = enum[:enum.index("};") + 2]
 names = [m.group(1) for m in re.finditer(r"^\s*(DI_[A-Z0-9_]+)", enum, re.M)]
-assert names[-3:] == ["DI_NEW_FOLDER", "DI_SAVE", "DI_COUNT"], names[-4:]
+assert names[-4:-1] == ["DI_NEW_FOLDER", "DI_SAVE", "DI_COMPACTFLASH"] and names[-1] == "DI_COUNT", names[-5:]
 
 # atlas margin capacity, with the constants from dash_icons.c
 const = {k: int(v) for k, v in re.findall(r"#define (ICON_TEX_H|APP_PART_SIZE) (\d+)", icons)}

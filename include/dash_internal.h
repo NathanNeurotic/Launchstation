@@ -504,6 +504,7 @@ enum DashIcon {
 	DI_UNDO,        /* counterclockwise arrow for reset actions */
 	DI_NEW_FOLDER,  /* folder with a small upper-right plus */
 	DI_SAVE,        /* floppy disk: shutter on top, label below */
+	DI_COMPACTFLASH, /* wide CF card with an inset connector/label panel (PC Card CF) */
 	DI_COUNT
 };
 

@@ -2335,6 +2335,25 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 		}
 
 #ifdef EXFAT
+		if (allow_usb_devices && (isPcCardCfEligible() || boot_show_all_devices)) {
+			strcpy(files[nfiles].name, "cf:");
+			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
+		}
+#endif
+#ifdef DVRP
+		if (console_is_PSX || boot_show_all_devices) {
+			strcpy(files[nfiles].name, "dvr_hdd0:");
+			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
+		}
+#endif
+#ifdef XFROM
+		if (console_is_PSX || boot_show_all_devices) {
+			strcpy(files[nfiles].name, "xfrom0:");
+			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
+		}
+#endif
+
+#ifdef EXFAT
 		if (allow_usb_devices && shouldShowAtaDevice(0)) {
 			strcpy(files[nfiles].name, "ata0:");
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
@@ -2343,28 +2362,11 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 			strcpy(files[nfiles].name, "ata1:");
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 		}
-		if (allow_usb_devices && (isPcCardCfEligible() || boot_show_all_devices)) {
-			strcpy(files[nfiles].name, "cf:");
-			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
-		}
 #endif
 
 			strcpy(files[nfiles].name, "cdfs:");
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 
-#ifdef XFROM
-			if (console_is_PSX || boot_show_all_devices) {
-				strcpy(files[nfiles].name, "xfrom0:");
-				files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
-			}
-#endif
-
-#ifdef DVRP
-			if (console_is_PSX || boot_show_all_devices) {
-				strcpy(files[nfiles].name, "dvr_hdd0:");
-				files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
-			}
-#endif
 			if (!cnfmode) {
 				//This condition blocks selecting any CONFIG items on PC
 				//or in a virtual memory card

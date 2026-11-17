@@ -407,25 +407,22 @@ int dashDevicesList(DashDevice *out, int max)
 		addStorage(out, &n, max, DI_HDD, "Internal HDD (APA)", "hdd0:", "hdd0:/", "APA partitions", "No browsable APA storage found");
 	}
 #ifdef EXFAT
-	if (filerShowAtaUnit(0) && !console_is_PSX) {
-		addStorage(out, &n, max, DI_HDD, "exFAT HDD", "ata0:", "ata0:/", "Ready", "No exFAT storage found");
-	}
 	if (isPcCardCfEligible() || boot_show_all_devices) {
 		if (!isPcCardCfEligible()) {
-			add(out, &n, max, DI_SDCARD, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "Unsupported console model");
+			add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "Unsupported console model");
 		} else if (boot_safe_mode) {
-			add(out, &n, max, DI_SDCARD, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "Disabled in safe mode");
+			add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "Disabled in safe mode");
 		} else if (isPcCardCfBusBusy()) {
-			add(out, &n, max, DI_SDCARD, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "PC CARD / DEV9 bus busy");
+			add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "PC CARD / DEV9 bus busy");
 		} else if (isPcCardCfLoaded()) {
 			u32 sectors = 0;
 			int st_ret = getPcCardCfCapacitySectors(&sectors);
 			if (st_ret < 0 || sectors == 0) {
-				add(out, &n, max, DI_SDCARD, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "CF card offline or I/O fault");
+				add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "CF card offline or I/O fault");
 			} else if ((probe_checked & (1u << PROBE_PCCF)) && !(probe_present & (1u << PROBE_PCCF))) {
-				add(out, &n, max, DI_SDCARD, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "FAT32/exFAT volume not found");
+				add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "FAT32/exFAT volume not found");
 			} else {
-				DashDevice *cd = add(out, &n, max, DI_SDCARD, DASH_DEV_READY, "PC CARD CF", "cf0:", "cf0:/", "Ready (PCMCIA)");
+				DashDevice *cd = add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_READY, "PC CARD CF", "cf0:", "cf0:/", "Ready (PCMCIA)");
 				if (cd != NULL && sectors > 0) {
 					u64 bytes = (u64)sectors * 512ULL;
 					if (bytes >= (1024ULL * 1024ULL * 1024ULL))
@@ -436,10 +433,23 @@ int dashDevicesList(DashDevice *out, int max)
 			}
 		} else {
 			if (probe_checked & (1u << PROBE_PCCF))
-				add(out, &n, max, DI_SDCARD, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "No compatible CF adapter");
+				add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "No compatible CF adapter");
 			else
-				add(out, &n, max, DI_SDCARD, DASH_DEV_PROBE, "PC CARD CF", "cf0:", "cf0:/", "Not connected");
+				add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_PROBE, "PC CARD CF", "cf0:", "cf0:/", "Not connected");
 		}
+	}
+#endif
+#ifdef DVRP
+	if (console_is_PSX || boot_show_all_devices)
+		add(out, &n, max, DI_HDD, DASH_DEV_PROBE, "PSX DVR HDD", "dvr_hdd0:", "dvr_hdd0:/", "DESR recorder HDD");
+#endif
+#ifdef XFROM
+	if (console_is_PSX || boot_show_all_devices)
+		add(out, &n, max, DI_CHIP, DASH_DEV_PROBE, "PSX Flash", "xfrom0:", "xfrom0:/", "DESR internal flash");
+#endif
+#ifdef EXFAT
+	if (filerShowAtaUnit(0) && !console_is_PSX) {
+		addStorage(out, &n, max, DI_HDD, "exFAT HDD", "ata0:", "ata0:/", "Ready", "No exFAT storage found");
 	}
 #endif
 
@@ -478,14 +488,6 @@ int dashDevicesList(DashDevice *out, int max)
 #endif
 #ifdef ETH
 	add(out, &n, max, DI_SHARE, DASH_DEV_PROBE, "Network Host", "host:", "host:/", "PS2Link host");
-#endif
-#ifdef XFROM
-	if (console_is_PSX || boot_show_all_devices)
-		add(out, &n, max, DI_CHIP, DASH_DEV_PROBE, "PSX Flash", "xfrom0:", "xfrom0:/", "DESR internal flash");
-#endif
-#ifdef DVRP
-	if (console_is_PSX || boot_show_all_devices)
-		add(out, &n, max, DI_HDD, DASH_DEV_PROBE, "PSX DVR HDD", "dvr_hdd0:", "dvr_hdd0:/", "DESR recorder HDD");
 #endif
 	for (i = 0; i < 2; i++) {
 		if (vmcMounted[i]) {
