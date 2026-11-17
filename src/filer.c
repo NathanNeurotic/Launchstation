@@ -627,6 +627,11 @@ int readCD(const char *path, FILEINFO *info, int max)
 		goto exit;  //exit if error opening directory
 	/* cdfs ends a folder with -EPERM, so a failed read looks like its end */
 	while (fileXioDread(dd, &record) > 0) {
+		/* a driver that fills the whole name leaves no terminator */
+		if (!memchr(record.name, 0, sizeof(record.name))) {
+			dirReadFailed(-EINVAL);
+			break;
+		}
 		if ((FIO_S_ISDIR(record.stat.mode)) && (!strcmp(record.name, ".") || !strcmp(record.name, "..")))
 			continue;  //Skip entry if pseudo-folder "." or ".."
 		strcpy(info[n].name, record.name);
@@ -1123,6 +1128,11 @@ int readVMC(const char *path, FILEINFO *info, int max)
 
 	/* vmcman ends a folder with 0, so a negative result is a failed read */
 	while ((ret = fileXioDread(fd, &dirbuf)) > 0) {
+		/* a driver that fills the whole name leaves no terminator */
+		if (!memchr(dirbuf.name, 0, sizeof(dirbuf.name))) {
+			dirReadFailed(-EINVAL);
+			break;
+		}
 		unsigned int vmc_mc_mode = dirbuf.stat.private_0;
 
 		if (!strcmp(dirbuf.name, ".") || !strcmp(dirbuf.name, ".."))
@@ -1214,6 +1224,11 @@ int readHDD(const char *path, FILEINFO *info, int max)
 
 	/* pfs ends a folder with 0, so a negative result is a failed read */
 	while ((ret = fileXioDread(fd, &dirbuf)) > 0) {
+		/* a driver that fills the whole name leaves no terminator */
+		if (!memchr(dirbuf.name, 0, sizeof(dirbuf.name))) {
+			dirReadFailed(-EINVAL);
+			break;
+		}
 		if (dirbuf.stat.mode & FIO_S_IFDIR &&
 		    (!strcmp(dirbuf.name, ".") || !strcmp(dirbuf.name, "..")))
 			continue;  //Skip pseudopaths "." and ".."
@@ -1284,6 +1299,11 @@ int readHDDDVRP(const char *path, FILEINFO *info, int max)
 		return 0;
 
 	while ((ret = fileXioDread(fd, &dirbuf)) > 0) {
+		/* a driver that fills the whole name leaves no terminator */
+		if (!memchr(dirbuf.name, 0, sizeof(dirbuf.name))) {
+			dirReadFailed(-EINVAL);
+			break;
+		}
 		if (dirbuf.stat.mode & FIO_S_IFDIR &&
 		    (!strcmp(dirbuf.name, ".") || !strcmp(dirbuf.name, "..")))
 			continue;  //Skip pseudopaths "." and ".."
@@ -1604,6 +1624,11 @@ int readGENERIC(const char *path, FILEINFO *info, int max)
 	/* BDM (FAT, exFAT) ends a folder with 0, while MMCE ends every folder
 	 * with -1. Record negative dread results on non-MMCE paths as read errors. */
 	while ((read_ret = fileXioDread(dd, &record)) > 0) {
+		/* a driver that fills the whole name leaves no terminator */
+		if (!memchr(record.name, 0, sizeof(record.name))) {
+			dirReadFailed(-EINVAL);
+			break;
+		}
 		if ((FIO_S_ISDIR(record.stat.mode)) && (!strcmp(record.name, ".") || !strcmp(record.name, "..")))
 			continue;  //Skip entry if pseudo-folder "." or ".."
 
@@ -1822,6 +1847,11 @@ int readHOST(const char *path, FILEINFO *info, int max)
 	/* The host returns 1 per entry and 0 at the end. A negative result (-1
 	 * when the network is down) is a failed read and leaves no new entry. */
 	while ((rv = fileXioDread(hfd, &hostcontent)) > 0) {
+		/* a driver that fills the whole name leaves no terminator */
+		if (!memchr(hostcontent.name, 0, sizeof(hostcontent.name))) {
+			dirReadFailed(-EINVAL);
+			break;
+		}
 		if (strcmp(hostcontent.name, ".") && strcmp(hostcontent.name, "..")) {
 			size_valid = 1;
 			time_valid = 1;
@@ -1867,6 +1897,11 @@ static int readNetDir(const char *path, FILEINFO *info, int max, int *open_faile
 	dirOpenResult(fd);
 
 	while ((ret = fileXioDread(fd, &dirent)) > 0) {
+		/* a driver that fills the whole name leaves no terminator */
+		if (!memchr(dirent.name, 0, sizeof(dirent.name))) {
+			ret = -EINVAL;
+			break;
+		}
 		if (strcmp(dirent.name, ".") && strcmp(dirent.name, "..")) {
 			size_valid = 1;
 			time_valid = 1;
