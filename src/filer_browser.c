@@ -1840,7 +1840,9 @@ static int browseFilePath(char *out, int cnfmode, FILEINFO *files)
 						sprintf(size_text, "%5llu%cB", (unsigned long long)size, scale_s[scale]);
 					}
 
-					if (!time_valid || !(top + i))
+					if (isHddRootPath(path) || !strcmp(path, "dvr_hdd0:/"))
+						timestamp_text[0] = 0; /* partitions have no real dates (from saildot4k) */
+					else if (!time_valid || !(top + i))
 						formatBrowserMissingTimestamp(timestamp_text, sizeof(timestamp_text), use_12h, date_format);
 					else
 						formatBrowserTimestamp(timestamp_text, sizeof(timestamp_text), &timestamp, use_12h, date_format);
@@ -1848,7 +1850,8 @@ static int browseFilePath(char *out, int cnfmode, FILEINFO *files)
 					/* Preserve seconds. Shift the columns left and reserve a two-character
 					 * gutter rather than shortening the timestamp to make it fit. */
 					printXY(size_text, x + 4 + details_column * FONT_WIDTH, y, color, TRUE, 0);
-					printXY(timestamp_text, x + 4 + (details_column + 9) * FONT_WIDTH, y, color, TRUE, 0);
+					if (timestamp_text[0])
+						printXY(timestamp_text, x + 4 + (details_column + 9) * FONT_WIDTH, y, color, TRUE, 0);
 				}
 				if (setting->FB_NoIcons) {  //if FileBrowser should not use icons
 					if (marks[top + i])

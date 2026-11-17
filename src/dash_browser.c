@@ -494,7 +494,7 @@ static void openDir(const char *dir, const char *select)
 				memset(d, 0, sizeof(*d));
 				d->icon = DI_MC;
 				d->state = DASH_DEV_READY;
-				snprintf(d->name, sizeof(d->name), "Memory card image %d", v);
+				snprintf(d->name, sizeof(d->name), "Virtual Memory Card (vmc%d:/)", v);
 				snprintf(d->browse, sizeof(d->browse), "vmc%d:/", v);
 				dashStrCopy(d->status, "VMC", sizeof(d->status));
 			}
@@ -951,6 +951,34 @@ static int saveFileTargets(int *idx, int max)
 
 /* The marked entries' names for a batch tool, *n of them (free() it), or
  * NULL when nothing is marked or there is no memory for the list. */
+/* 1 when the clipboard holds only folders: the save folders Create archive takes. */
+static int clipFoldersOnly(void)
+{
+	int i;
+
+	for (i = 0; i < nclipFiles; i++)
+		if (!(clipFiles[i].stats.AttrFile & sceMcFileAttrSubdir))
+			return 0;
+	return nclipFiles > 0;
+}
+
+static void opCreateArchive(void)
+{
+	const char **names = (const char **)malloc((size_t)nclipFiles * sizeof(*names));
+	int i;
+
+	if (names == NULL) {
+		dashModalMessage(DI_WARNING, "Not enough memory", "The clipboard is too large.", NULL);
+		return;
+	}
+	for (i = 0; i < nclipFiles; i++)
+		names[i] = clipFiles[i].name;
+	if (prepareOp())
+		dashCardArchiveFolders(clipPath, names, nclipFiles, fb.dir);
+	free(names);
+	refresh();
+}
+
 static const char **markedNames(int *n)
 {
 	const char **names = fb.nmarked > 0 ? (const char **)malloc((size_t)fb.nmarked * sizeof(*names)) : NULL;
@@ -1488,7 +1516,7 @@ static int mmceUnitFromPath(const char *path)
 	return path[4] - '0';
 }
 
-static void mmceTreeBackupProgress(const char *source, int done, int total)
+static void mmceTreeBackupProgress(const char *source, int done, int total, int permille)
 {
 	char line[112];
 	const char *name = source != NULL ? strrchr(source, '/') : NULL;
@@ -1500,8 +1528,15 @@ static void mmceTreeBackupProgress(const char *source, int done, int total)
 	else
 		name = "card";
 
+	if (total <= 0) {
+		/* still counting the cards: spinner plus the folder being read */
+		snprintf(line, sizeof(line), "Finding MMCE cards: %s", name);
+		dashLoadingStatus(line, 0, 0);
+		return;
+	}
 	snprintf(line, sizeof(line), "MMCE cards %d/%d: %s", done, total, name);
-	dashLoadingStatus(line, done, total > 0 ? total : 1);
+	/* the bar moves through each card, not only between cards */
+	dashLoadingStatus(line, (done > 0 ? done - 1 : 0) * 1000 + permille, total * 1000);
 }
 
 static void opBackupAllMmceCards(void)
@@ -2706,8 +2741,8 @@ static void actionsMenu(void)
 	const char *psu_label;
 	int in_folder = fb.dir[0] && !isMisc(fb.dir);
 	int is_elf = 0, has_target = (fb.nmarked > 0 || f != NULL);
-	DashMenuItem items[56];
-	int ids[56], n = 0, r, sw_card, sw_chan, ps1_type = 0;
+	DashMenuItem items[64];
+	int ids[64], n = 0, r, sw_card, sw_chan, ps1_type = 0;
 	char marked[24], sort_detail[48], game_id[11];
 	int ps1_idx[16], nsave = 0;
 	static int sv_idx[MAX_ENTRY];
@@ -2717,6 +2752,7 @@ static void actionsMenu(void)
 		F_CUT,
 		F_PASTE,
 		F_PASTE_RENAME,
+		F_ARCHIVE,
 		F_PSU,
 		F_PSU_MC0,
 		F_SAVES_MC0,
@@ -2806,6 +2842,10 @@ static void actionsMenu(void)
 			ADD(DI_PASTE_RENAME, "Paste with new names...", NULL, 0, F_PASTE_RENAME);
 		if (psu_label != NULL && en[PSUPASTE])
 			ADD(DI_MC, psu_label, NULL, 0, F_PSU);
+		/* copied save folders, each as its own archive here (saildot4k's Create archive) */
+		if (en[PASTE] && clipFoldersOnly() && strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3))
+			ADD(DI_MC, "Create archive...", nclipFiles > 1 ? "One .psu, .psv, .cbs or .zip per copied save" :
+			                                                 ".psu, .psv, .cbs or .zip of the copied save", 0, F_ARCHIVE);
 		if (strncmp(fb.dir, "mc", 2) && strncmp(fb.dir, "vmc", 3)) {
 			static int psu_idx[MAX_ENTRY];
 			int npsu = psuTargets(psu_idx, MAX_ENTRY), nsav = npsu ? 0 : saveFileTargets(psu_idx, MAX_ENTRY), port;
@@ -2954,6 +2994,9 @@ static void actionsMenu(void)
 			break;
 		case F_PASTE_RENAME:
 			opPaste(PASTE_RENAME);
+			break;
+		case F_ARCHIVE:
+			opCreateArchive();
 			break;
 		case F_PSU:
 			opPaste(PASTE_PSU);
@@ -3401,7 +3444,7 @@ static void browserDrawBody(void)
 		h[n].button = dashOkIcon(), h[n].key = NULL, h[n].label = "Open", n++;
 		if (fb.dir[0] && !isMisc(fb.dir))
 			h[n].button = DI_BTN_SQUARE, h[n].key = NULL, h[n].label = "Select", n++;
-		h[n].button = DI_BTN_TRIANGLE, h[n].key = NULL, h[n].label = "Menu", n++;
+		h[n].button = DI_BTN_TRIANGLE, h[n].key = NULL, h[n].label = "Options", n++;
 		if (fb.dir[0] || !fb_tab_active || dashBackSection() != DASH_SEC_FILES)
 			h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = fb.dir[0] ? "Up" : (fb_tab_active ? dashSectionLabel(dashBackSection()) : "Close"), n++;
 		dashDrawHints(h, n);

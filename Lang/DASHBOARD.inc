@@ -674,6 +674,7 @@
     {"Using %s keys from: %s", LANG_Exploit_Custom_ELF_Keyset},
     {"Valid", LANG_Valid},
     {"Verifying file", LANG_Dashboard_Verifying_file},
+    {"Vibration", LANG_Dashboard_Vibration},
     {"Video mode", LANG_Dashboard_Video_mode},
     {"View", LANG_View},
     {"View SYSTEM.CNF", LANG_View_SYSTEM_CNF},

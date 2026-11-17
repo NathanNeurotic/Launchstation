@@ -73,11 +73,13 @@ static DashApp *dashLibResolve(const char *p, DashApp *tmp) {
     dashStrCopy(tmp->path, p, sizeof(tmp->path)); return tmp;
 }
 static void dashLibPrettyName(const char *p, char *name, int n) { dashStrCopy(name, p, n); }
+static int library_open, opened_apps;
+static void dashHomeOpenApplications(void) { opened_apps++; library_open = 1; row = 1; }
 static void addChip(int kind, int lk, int icon, const char *label, const char *desc) {
     (void)kind; (void)lk; (void)icon; (void)label; (void)desc; nchips++;
 }
 """
-code += function("static int homeHas(") + function("static void homeAdd(") + function("static void homeRebuild(")
+code += function("static int homeHas(") + function("static void homeAdd(") + function("static void homeRebuild(") + function("static void homeEnter(")
 code += r"""
 int main(void) {
     dashAppCount = 3;
@@ -119,6 +121,19 @@ int main(void) {
     dashStrCopy(setting->LK_Path[SETTING_LK_RIGHT], "MISC/FileBrowser", DASH_PATH_MAX);
     homeRebuild();
     assert(nchips == 1);
+    /* Recent applications off with apps to show: Home stays on its row. */
+    dashCfg.recent_count = 0;
+    homeEnter();
+    assert(opened_apps == 0 && nhome > 0);
+    /* Recent applications off and nothing pinned or favorite: Home has no
+     * apps, so it opens the Applications list straight away. */
+    dashLists.nfav = 0;
+    homeEnter();
+    assert(nhome == 0 && opened_apps == 1 && library_open == 1);
+    /* Recents on again: the library sample returns and nothing opens. */
+    dashCfg.recent_count = 8;
+    homeEnter();
+    assert(opened_apps == 1 && nhome > 0 && row == 0);
     return 0;
 }
 """
@@ -132,4 +147,4 @@ with tempfile.TemporaryDirectory() as temp:
     source_path.write_text(code)
     subprocess.run([cc, "-std=c99", "-Wall", "-Wextra", str(source_path), "-o", str(binary_path)], check=True)
     subprocess.run([str(binary_path)], check=True)
-print("Home favorite reorder keeps the selected app")
+print("Home favorite reorder keeps the selected app; Recents off with nothing to show opens Applications")

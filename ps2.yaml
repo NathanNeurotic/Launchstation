@@ -548,6 +548,7 @@ targets:
       - src/mmce_backup.c
       - src/mmce_save_versions.c
       - src/mmce_igr.c
+      - src/hdd_filesystem.c
       - src/hdd_header_injector.c
       - src/hdl_rpc.c
       - src/editor.c
@@ -572,6 +573,7 @@ targets:
       - src/makeicon.c
       - src/chkesr.c
       - src/pad.c
+      - src/pad_rumble.c
       - src/dash_ftp.c
       - src/dash_smbd.c
       - src/ftp_session.c

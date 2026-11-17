@@ -43,6 +43,10 @@ assert "sel = sel > 0 ? sel - 1 : n_rows - 1;" in widgets
 assert "sel = sel < n_rows - 1 ? sel + 1 : 0;" in widgets
 assert "sel = sel > 0 ? sel - 1 : hm.n - 1;" in hdd
 assert "sel = (sel + 1) % hm.n;" in hdd
+# Left/Right page like the File Browser; L2/R2 keep their wrap.
+assert "sel = sel == 0 ? hm.n - 1 : (sel < ROWS ? 0 : sel - ROWS);" in hdd
+assert "sel = sel == hm.n - 1 ? 0 : (sel + ROWS >= hm.n ? hm.n - 1 : sel + ROWS);" in hdd
+assert "sel = (sel + ROWS) % hm.n;" in hdd
 
 # Home row/chip strips now use wrapped movement.
 assert "static int wrapCol(int value, int n)" in home

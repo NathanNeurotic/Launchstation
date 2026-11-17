@@ -166,6 +166,9 @@ static void iopResetHook(int phase)
 void dashWorkerParkPoint(void)
 {
 	if (park_req && !parked) {
+		/* Every caller parks here: stop the motors once, while padman can still
+		 * hear it, before the worker may start the IOP reboot. */
+		padRumbleFlush();
 		parked = 1;
 		SignalSema(sem_parked);
 	} else if (!park_req && parked)

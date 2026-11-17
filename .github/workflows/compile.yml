@@ -54,6 +54,10 @@ jobs:
           python3 tests/test_hex_editor.py
           python3 tests/test_mc_folder_icon.py
           python3 tests/test_font_weight.py
+          python3 tests/test_scanlines.py
+          python3 tests/test_pad_rumble.py
+          python3 tests/test_fresh_install_defaults.py
+          python3 tests/test_panel_corners.py
           python3 tests/test_browser_sort.py
           python3 tests/test_r3z_browser_wins.py
           python3 tests/test_udpfs_retry.py
@@ -68,6 +72,8 @@ jobs:
           python3 tests/test_copy_pipeline.py
           python3 tests/test_move_manifest.py
           python3 tests/test_udpfs_directory_errors.py
+          python3 tests/test_dirent_name_guard.py
+          python3 tests/test_device_labels.py
           python3 tests/test_copy_psu_listing.py
           python3 tests/test_listing_complete.py
           python3 tests/test_listing_callers.py
@@ -125,6 +131,8 @@ jobs:
           python3 tests/test_modal_animation.py
           python3 tests/test_nested_scissor.py
           python3 tests/test_hdd_manager_browse.py
+          python3 tests/test_hdd_manager_mounts.py
+          python3 tests/test_hdd_filesystem.py
           python3 tests/test_zack_oct_2026.py
           python3 tests/test_wallpaper_docs.py
           python3 tests/test_r3z_oct15_backport.py
@@ -213,6 +221,7 @@ jobs:
           python3 tests/test_mmce_handle_release.py
           python3 tests/test_mmce_dread_returns.py
           python3 tests/test_mmce_publish.py
+          python3 tests/test_mmce_backup_progress.py
           python3 tests/test_mmce_recovery.py
           python3 tests/test_mmce_native_import.py
           python3 tests/test_mmce_rename_fallback.py

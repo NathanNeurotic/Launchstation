@@ -154,7 +154,7 @@ assert "NFS_DEVCTL_CONNECT" in shares and "NFS_DEVCTL_DISCONNECT_ALL" in shares
 assert "smb_retry_ms[4]" in shares  # indexed by version, NFS is 3
 
 devices = text("src/dash_devices.c")
-assert '"Network (NFS)", SMB_DEVICE_NFS, "nfs:/"' in devices
+assert '"Network", SMB_DEVICE_NFS, "nfs:/"' in devices
 assert "smbSharesKnown(SMB_PATH_NFS) > 0" in devices  # listed once saved; listing reads nothing
 
 browser = text("src/filer_browser.c")

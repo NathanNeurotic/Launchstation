@@ -37,7 +37,10 @@ typedef struct {
     int failed;
 } MmceBackupScanStats;
 
-typedef void (*MmceBackupProgress)(const char *source, int done, int total);
+/* done/total count cards (done is 1-based, the card in progress); permille is
+ * how far that card is, 0..1000. total 0: the tree is still being counted and
+ * source is the folder being read. */
+typedef void (*MmceBackupProgress)(const char *source, int done, int total, int permille);
 
 int mmceBackupAllCards(int unit, const char *dest_root, const MmceBackupOptions *options,
                        MmceBackupStats *stats, MmceBackupProgress progress);

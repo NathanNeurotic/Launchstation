@@ -504,6 +504,7 @@ enum DashIcon {
 	DI_UNDO,        /* counterclockwise arrow for reset actions */
 	DI_NEW_FOLDER,  /* folder with a small upper-right plus */
 	DI_SAVE,        /* floppy disk: shutter on top, label below */
+	DI_COMPACTFLASH, /* wide CF card with an inset connector/label panel (PC Card CF) */
 	DI_COUNT
 };
 
@@ -584,6 +585,7 @@ typedef struct
 	int sound;
 	int sound_vol;
 	int custom_sounds; /* 1: effects from <name>.ADP beside the boot ELF, built-in when missing */
+	int rumble;        /* 1: controller vibration on cursor moves and decisions (off by default) */
 	char software_clock[24]; /* optional local seed; resumes saved time without RTC */
 	int bgm;
 	int bgm_vol;
@@ -787,7 +789,7 @@ typedef struct
 {
 	int icon;
 	int state;
-	char name[32];
+	char name[48]; /* "Multitap Memory Card Slot 2-B (mc3:/)" */
 	char mount[24];
 	char browse[24];
 	char status[48];
@@ -846,6 +848,9 @@ typedef struct
 void dashInputPoll(DashInput *in);
 /* Physical controller sample only; returns validity and suppresses START menus. */
 int dashInputPollPhysical(DashInput *in);
+/* 1: START reaches the caller instead of opening the Dashboard menu (text
+ * entry uses it for Done). Returns the previous setting, for restoring. */
+int dashInputStartPassthrough(int on);
 void dashInputPollEx(DashInput *in, int usb_kb_as_pad);
 /* Opt-in L1/R1 adjustment repeats, following the pad delay/ramp. */
 u32 dashInputShoulderRepeat(void);

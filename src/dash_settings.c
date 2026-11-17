@@ -72,6 +72,7 @@ enum SetId {
 	S_INTRO,
 	/* controls */
 	S_CONFIRM,
+	S_RUMBLE,
 	S_VKEY,
 	S_USBKBD,
 	S_USBKBD_FILE,
@@ -290,6 +291,7 @@ static const SetItem sound_items[] = {
 
 static const SetItem control_items[] = {
     {ST_CHOICE, S_CONFIRM, "Confirm button", "Which button confirms. The other one cancels (all screens)."},
+    {ST_CHOICE, S_RUMBLE, "Vibration", "Controller vibration on cursor moves and confirmations."},
     {ST_CHOICE, S_VKEY, "On-screen keyboard layout", NULL},
     {ST_PAGE, P_KEYBOARD, "USB keyboard", "Enable a USB keyboard, choose its driver and set its key map."},
 };
@@ -911,7 +913,7 @@ static const SetPage pages[P_COUNT] = {
 #define PAGE_DEPTH 4
 /* Seven rows leave room for the two-line help text above the hint bar
  * (dashDrawHints draws from y = 394); eight pushed it onto the buttons. */
-#define ITEM_ROWS 7
+#define ITEM_ROWS 8
 static int page, item;
 static int item_top;
 static float item_anim;
@@ -1048,6 +1050,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 			return 11;
 		case S_SCUSTOM:
 			*cur = dashCfg.custom_sounds;
+			return 2;
+		case S_RUMBLE:
+			*cur = dashCfg.rumble;
 			return 2;
 		case S_BGM:
 			*cur = dashCfg.bgm;
@@ -1697,6 +1702,11 @@ static void setChoice(int id, int v)
 		case S_SVOL:
 			dashCfg.sound_vol = v * 10;
 			dashSoundApplyVolume();
+			break;
+		case S_RUMBLE:
+			dashCfg.rumble = v;
+			padRumbleEnable(v);
+			padRumbleDecision(); /* a sample of the feel when turned on */
 			break;
 		case S_SCUSTOM:
 			dashCfg.custom_sounds = v;
@@ -2552,6 +2562,7 @@ static void settingsRevert(void)
 		int custom = dashCfg.custom_sounds != snap_dash.custom_sounds;
 
 		dashCfg = snap_dash;
+		padRumbleEnable(dashCfg.rumble);
 		menuTitleClockRestore();
 		dashThemeRestore(&snap_theme, snap_theme_preset, snap_theme_custom);
 		DashThemeSetLegacyEnabled(1);
@@ -3708,6 +3719,49 @@ static void editLaunchMenu(const SetItem *it)
 		editLaunchKey(it, r);
 }
 
+/* Numbers open a one-row popup: Left/Right step the value live, X or Circle
+ * closes it. The list itself keeps Left/Right for paging. */
+typedef struct
+{
+	int id;
+	char text[24];
+} NumberEdit;
+
+static int numberStep(int index, int direction, void *arg)
+{
+	NumberEdit *e = arg;
+	int v, lo, hi;
+
+	(void)index;
+	if (!direction || !numberInfo(e->id, &v, &lo, &hi, e->text, sizeof(e->text)) || v + direction < lo || v + direction > hi)
+		return 0;
+	setNumber(e->id, v + direction);
+	numberInfo(e->id, &v, &lo, &hi, e->text, sizeof(e->text));
+	return 1;
+}
+
+static void editNumber(const SetItem *it)
+{
+	NumberEdit e;
+	DashMenuItem row = {-1, e.text, NULL, 0};
+	int v, lo, hi;
+
+	e.id = it->id;
+	if (!numberInfo(e.id, &v, &lo, &hi, e.text, sizeof(e.text)))
+		return;
+	dashModalSetEdit(numberStep, &e);
+	dashModalMenu(localizeDashboardText(it->label), localizeDashboardText("Left/Right to change"), &row, 1, 0);
+}
+
+/* Left/Right jump a screen of rows (stopping at the ends, then wrapping);
+ * X opens or changes the focused row. */
+static int pageJump(int cur, int total, int dir)
+{
+	if (dir < 0)
+		return cur == 0 ? total - 1 : (cur > ITEM_ROWS ? cur - ITEM_ROWS : 0);
+	return cur == total - 1 ? 0 : (cur + ITEM_ROWS < total - 1 ? cur + ITEM_ROWS : total - 1);
+}
+
 static void settingsInput(const DashInput *in)
 {
 	const SetItem *it;
@@ -3733,6 +3787,13 @@ static void settingsInput(const DashInput *in)
 				dashUiFocusPoke();
 			item = next;
 		}
+	} else if (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT)) {
+		if (total > 0) {
+			int next = pageJump(item, total, (in->pressed & DASH_IN_LEFT) ? -1 : 1);
+			if (next != item)
+				dashUiFocusPoke();
+			item = next;
+		}
 	} else if (in->pressed & DASH_IN_L2) {
 		if (item != 0) {
 			dashUiFocusPoke();
@@ -3752,12 +3813,10 @@ static void settingsInput(const DashInput *in)
 	} else if (it->type != ST_PAGE && themeSettingResettable(it->id) && (in->pressed & DASH_IN_FAV)) {
 		if (resetThemeSetting(it->id))
 			dashToast(DASH_TOAST_OK, "Setting reset to preset default");
-	} else if ((in->pressed & DASH_IN_LEFT) && it->type != ST_CHOICE && it->type != ST_NUMBER) {
-		backPage();
 	} else if (itemDisabled(it)) {
-		if (in->pressed & (DASH_IN_OK | DASH_IN_LEFT | DASH_IN_RIGHT | DASH_IN_FAV))
+		if (in->pressed & (DASH_IN_OK | DASH_IN_FAV))
 			dashToast(DASH_TOAST_INFO, disabledHelp(it));
-	} else if (it->type == ST_PAGE && (in->pressed & (DASH_IN_OK | DASH_IN_RIGHT))) {
+	} else if (it->type == ST_PAGE && (in->pressed & DASH_IN_OK)) {
 #ifdef SMB
 		if (it->id == P_SMB || it->id == P_NFS) {
 			if (smbed.nfs != (it->id == P_NFS)) {
@@ -3772,14 +3831,8 @@ static void settingsInput(const DashInput *in)
 		colorEditor(localizeDashboardText(it->label), it->id);
 	} else if (it->type == ST_CHOICE && it->id == S_T_PRESET && (in->pressed & DASH_IN_OK)) {
 		choosePreset();
-	} else if (it->type == ST_NUMBER && (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
-		int v, lo, hi;
-		char text[24];
-		if (numberInfo(it->id, &v, &lo, &hi, text, sizeof(text))) {
-			v += (in->pressed & DASH_IN_LEFT) ? -1 : 1;
-			if (v >= lo && v <= hi)
-				setNumber(it->id, v);
-		}
+	} else if (it->type == ST_NUMBER && (in->pressed & DASH_IN_OK)) {
+		editNumber(it);
 	} else if (it->type == ST_PATH && (in->pressed & DASH_IN_OK)) {
 		editPathMenu(it);
 	} else if (it->type == ST_IP && (in->pressed & DASH_IN_OK)) {
@@ -3788,17 +3841,12 @@ static void settingsInput(const DashInput *in)
 		editLaunchMenu(it);
 	} else if (it->type == ST_LKEY && (in->pressed & DASH_IN_FAV)) {
 		editLaunchKey(it, 1);
-	} else if (it->type == ST_CHOICE && (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT | DASH_IN_OK))) {
+	} else if (it->type == ST_CHOICE && (in->pressed & DASH_IN_OK)) {
 		const char *const *names;
 		const char *single;
 		int cur, n = choiceInfo(it->id, &cur, &names, &single);
 		if (n > 0) {
-			if (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT)) {
-				int step = (in->pressed & DASH_IN_LEFT) ? n - 1 : 1;
-				do {
-					cur = (cur + step) % n;
-				} while (it->id == S_TVMODE && cur == TV_mode_576P && !is576pSupported());
-			} else if (it->id == S_TVMODE) {
+			if (it->id == S_TVMODE) {
 				int r = chooseVideoMode(localizeDashboardText(it->label), names, n, cur);
 				if (r < 0)
 					return;
@@ -3884,14 +3932,23 @@ static const char *actionStatus(int id)
 	}
 }
 
+/* "Opens" marker for sub-page and action rows: a plain chevron, not the
+ * Play icon that starts applications. */
+static void drawChevron(float x, float y, float s, DashColor c)
+{
+	dashLine(x + s * 0.3f, y, x + s * 0.75f, y + s * 0.5f, 2.0f, c);
+	dashLine(x + s * 0.75f, y + s * 0.5f, x + s * 0.3f, y + s, 2.0f, c);
+}
+
 static void settingsDraw(void)
 {
 	int i;
-	/* Give the breadcrumb a real lane below the L1/R1 tab bar (it ends at
-	 * y=62): ~7 px of clear space above the breadcrumb's capitals (#135). */
-	/* Only the header lanes move; the list keeps ITEM_ROWS rows so its two-line
-	 * help still clears the footer hints. */
-	const float ix = DASH_SAFE_L, iy = 136, irow = 29, iw = DASH_SAFE_R - DASH_SAFE_L;
+	/* Same lanes as the other tabs: title at y=68 under the L1/R1 bar (it ends
+	 * at y=62, #135) and the list panel from y=98, so switching tabs does not
+	 * move the content. The subtitle is the trail of parent pages, or the
+	 * page help at the top level. The two-line item help under the list
+	 * still clears the footer hints (test_hint_clearance.py). */
+	const float ix = DASH_SAFE_L, iy = 104, irow = 29, iw = DASH_SAFE_R - DASH_SAFE_L;
 	const SetPage *c = &pages[page];
 	char trail[192];
 
@@ -3900,10 +3957,14 @@ static void settingsDraw(void)
 		int len = strlen(trail);
 		snprintf(trail + len, sizeof(trail) - len, "%s%s", i ? " > " : "", localizeDashboardText(pages[page_stack[i].page].name));
 	}
-	if (page_depth)
-		dashTextFit(ix, 66, iw - 126, trail, DASH_FS_CAPTION, DASH_C_TEXT3);
-	dashDrawSectionTitle(ix, 82, localizeDashboardText(c->name), NULL);
-	dashTextFit(ix, 112, iw, localizeDashboardText(c->help), DASH_FS_CAPTION, DASH_C_TEXT3);
+	{
+		const char *title = localizeDashboardText(c->name);
+		float tw = dashTextWidth(title, DASH_FS_TITLE) + 12;
+
+		dashDrawSectionTitle(ix, 68, title, NULL);
+		dashTextFit(ix + tw, 77, iw - tw - 126, page_depth ? trail : localizeDashboardText(c->help),
+		            DASH_FS_SMALL, DASH_C_TEXT3);
+	}
 	{
 		int dirty = anyDirtyCached();
 		int pending = cfg_pending[0] || cfg_pending[1] || dashStoreSettingsPending();
@@ -3911,7 +3972,7 @@ static void settingsDraw(void)
 		const char *state = dirty ? "unsaved changes" : pending ? "saving..." : failed ? "save failed" : "no changes";
 		DashColor state_col = (dirty || failed) ? DASH_C_WARM : pending ? DASH_C_ACCENT : DASH_C_TEXT3;
 		/* Dedicated status lane under the header clock/date: never inherits selection text. */
-		dashTextRight(ix + iw, 84, state, DASH_FS_CAPTION, state_col);
+		dashTextRight(ix + iw, 79, state, DASH_FS_CAPTION, state_col);
 	}
 
 	/* keep the focused row inside the visible window */
@@ -3953,7 +4014,7 @@ static void settingsDraw(void)
 		}
 		if (it->type == ST_PAGE) {
 			dashTextFit(ix + 38, y + 4.0f, iw - 70, localizeDashboardText(it->label), DASH_FS_SMALL, col);
-			dashIcon(DI_PLAY, ix + iw - 22, y + 9, 12, DASH_C_TEXT3);
+			drawChevron(ix + iw - 20, y + 8, 12, dashIconTint(DASH_C_TEXT3));
 			dashGfxPopAlpha();
 			continue;
 		}
@@ -3984,10 +4045,6 @@ static void settingsDraw(void)
 				if (vw > maxw)
 					vw = maxw;
 				vx = ix + iw - 20 - vw;
-				if (on && !disabled) {
-					dashIcon(DI_BACK, vx - 22, y + 7, 12, DASH_C_ACCENT);
-					dashIcon(DI_PLAY, ix + iw - 16, y + 8, 10, DASH_C_ACCENT);
-				}
 				if (on)
 					dashTextScroll(vx, y + 4.0f, maxw, (it->id == S_LANGUAGE || it->id == S_T_PRESET ? names[cur] : localizeDashboardText(names[cur])), DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : (n == 2 && names == onoff && cur == 1) ? DASH_C_OK : DASH_C_ACCENT);
 				else
@@ -4023,10 +4080,6 @@ static void settingsDraw(void)
 				if (vw > maxw)
 					vw = maxw;
 				vx = ix + iw - 20 - vw;
-				if (on && !disabled && it->type == ST_NUMBER) {
-					dashIcon(DI_BACK, vx - 22, y + 7, 12, DASH_C_ACCENT);
-					dashIcon(DI_PLAY, ix + iw - 16, y + 8, 10, DASH_C_ACCENT);
-				}
 				if (on)
 					dashTextScroll(vx, y + 4.0f, maxw, v, DASH_FS_SMALL, set && !disabled ? DASH_C_ACCENT : DASH_C_TEXT3);
 				else
@@ -4037,7 +4090,7 @@ static void settingsDraw(void)
 			if (ast != NULL && ast[0] != '\0')
 				dashTextRight(ix + iw - 32, y + 4.0f, ast, DASH_FS_SMALL,
 				              disabled ? DASH_C_TEXT3 : (on ? DASH_C_ACCENT : DASH_C_TEXT2));
-			dashIcon(DI_PLAY, ix + iw - 22, y + 8, 12, DASH_C_TEXT3);
+			drawChevron(ix + iw - 20, y + 8, 12, dashIconTint(DASH_C_TEXT3));
 		}
 		dashGfxPopAlpha();
 	}
@@ -4060,10 +4113,7 @@ static void settingsHints(void)
 
 	{
 		const SetItem *it = curItem();
-		if (it->type == ST_NUMBER)
-			h[n].button = DI_BTN_LEFT, h[n].key = NULL, h[n].label = "Change", n++;
-		else
-			h[n].button = dashOkIcon(), h[n].key = NULL,
+		h[n].button = dashOkIcon(), h[n].key = NULL,
 			h[n].label = (it->type == ST_ACTION || it->type == ST_PAGE) ? "Open" : (it->type == ST_COLOR || it->type == ST_IP) ? "Edit" :
 			             (it->type == ST_PATH || it->type == ST_LKEY) ? "Choose" : "Change", n++;
 		if (it->type != ST_PAGE && themeSettingResettable(it->id))

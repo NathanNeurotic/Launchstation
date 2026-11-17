@@ -246,7 +246,7 @@ listing = devices[devices.index("int dashDevicesList("):]
 listing = listing[:listing.index("\n}\n")]
 assert "smbSharesConfigured" not in listing
 # one SMB device: the SMB1 share is a folder of smb:/, not a row of its own
-assert '"Network (SMB1)"' not in listing and listing.count('"Network (SMB)"') == 1
+assert '"Network (SMB1)"' not in listing and listing.count('"Network", SMB_DEVICE_V2') == 1
 # the SMB1 share is a folder of smb:/ in the dashboard only; the classic
 # browser keeps its own smb1: root entry
 assert "smbSharesV1Name" not in read_smb

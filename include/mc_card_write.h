@@ -82,6 +82,15 @@ int mcCardSameSave(const McSaveData *a, const McSaveData *b);
  * file length, nothing trailing) and returns MCW_ERR_INVALID for anything
  * else, or MCW_ERR_UNSUPPORTED for a save holding sub-folders. */
 uint32_t mcCardPsuSize(const McSaveData *s);
+/* Hands the output on in order, piece by piece; emit returns 0 = ok. The
+ * same bytes as the buffer versions, without a copy of the whole save. */
+typedef int (*McEmitFn)(void *ctx, const uint8_t *buf, uint32_t len);
+typedef struct McEmitBuffer {
+	uint8_t *data;
+	uint32_t size, used;
+} McEmitBuffer;
+int mcEmitToBuffer(void *ctx, const uint8_t *buf, uint32_t len); /* ctx: McEmitBuffer */
+int mcCardEmitPsu(const McSaveData *s, McEmitFn emit, void *ctx);
 int mcCardSaveToPsu(const McSaveData *s, uint8_t **out, uint32_t *len);
 int mcCardSaveFromPsu(const uint8_t *buf, uint32_t len, McSaveData *out);
 

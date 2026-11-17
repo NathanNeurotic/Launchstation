@@ -27,7 +27,7 @@ backup = extract("static int backup_one(")
 
 assert "mmceBackupCardPath" in header
 assert "protect_name, name)" in backup, "new verified snapshot must survive retention"
-assert "mcCardBackupNoEcc(source, staged, NULL)" in backup
+assert "mcCardBackupNoEcc(source, staged, tick_export)" in backup
 assert "fileXioRename(staged, dest)" in backup
 assert backup.index("fileXioRename(staged, dest)") < backup.index("prune_history(")
 assert "memchr(p, '\\\\', len)" in targeted

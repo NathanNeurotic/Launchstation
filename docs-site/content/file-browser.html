@@ -28,20 +28,20 @@
 
 <h2 id="root">Device root</h2>
 <div class="ui-gallery"><figure><a href="assets/ui/files-devices.png"><img src="assets/ui/files-devices.png" width="640" height="480" loading="lazy" decoding="async" alt="Files device list"></a><figcaption>Files device list</figcaption></figure></div>
-<p>The root lists the device classes the build supports, each with a status line. Entries can be opened while they say <i>Not checked</i>; opening starts the demand-loaded driver stack and refreshes the state. A device that was explicitly checked and found absent is skipped by navigation. USB discovery never assumes a permanent <code>mass0:</code>; USB units are shown under the public <b>MASS</b> name even though their internal path may be <code>usbN:</code>.</p>
+<p>The root lists the device classes the build supports, each with a status line. Entries can be opened while they say <i>Not checked</i>; opening starts the demand-loaded driver stack and refreshes the state. A device that was explicitly checked and found absent is skipped by navigation. USB discovery never assumes a permanent <code>mass0:</code>; Each device is named as what it is, then the path it opens, for example <b>USB Mass Storage Port (mass0:/)</b>; USB units show <code>massN:</code> even though their internal path may be <code>usbN:</code>.</p>
 <table><thead><tr><th>Entry</th><th>Notes</th></tr></thead><tbody>
-<tr><td>mc0 (Slot 1), mc1 (Slot 2)</td><td>Memory cards; PS1 or PS2 card type and free space are shown. An empty slot says <i>Slot empty</i>.</td></tr>
-<tr><td>MASS</td><td>USB mass storage units (FAT32/exFAT drivers). Each detected unit is listed; device state is polled for hot-plug.</td></tr>
-<tr><td>MMCE Slot 1 / 2</td><td>SD2PSX / MemCard PRO2 storage. See <a href="mmce.html">MMCE</a>.</td></tr>
-<tr><td>MX4SIO SD Card Slot 2</td><td>MX4SIO SD adapter (reported as slot 2).</td></tr>
-<tr><td>iLink / FireWire</td><td>Requires an iLink build. Hidden on retail PS2 ROM 1.70 and newer (SCPH-50000 onward) and on PSX; earlier retail and unrecognized consoles can show it.</td></tr>
-<tr><td>Internal HDD (APA), exFAT HDD</td><td>Which units appear follows <b>Settings &gt; Storage &amp; devices &gt; Internal HDD / ATA units</b> (default hides HDD1 and ATA1).</td></tr>
-<tr><td>PC CARD CF</td><td>Only on eligible console models; direct launch of executables and game images from it is not supported.</td></tr>
+<tr><td>Memory Card Slot 1 (mc0:/), Memory Card Slot 2 (mc1:/); behind a multitap, Multitap Memory Card Slot 1-B (mc2:/) to 2-D (mc7:/)</td><td>Memory cards; PS1 or PS2 card type and free space are shown. An empty slot says <i>Slot empty</i>.</td></tr>
+<tr><td>USB Mass Storage Port (mass0:/, mass1:/, ...)</td><td>USB mass storage units (FAT32/exFAT drivers). Each detected unit is listed; device state is polled for hot-plug.</td></tr>
+<tr><td>MMCE SD Slot 1 (mmce0:/), MMCE SD Slot 2 (mmce1:/)</td><td>SD2PSX / MemCard PRO2 storage. See <a href="mmce.html">MMCE</a>.</td></tr>
+<tr><td>MX4SIO SD Slot 2 (mx4sio:/)</td><td>MX4SIO SD adapter (reported as slot 2).</td></tr>
+<tr><td>FireWire iLink Port (ilink:/)</td><td>Requires an iLink build. Hidden on retail PS2 ROM 1.70 and newer (SCPH-50000 onward) and on PSX; earlier retail and unrecognized consoles can show it.</td></tr>
+<tr><td>Internal APA HDD (hdd0:/), Internal exFAT HDD (ata0:/)</td><td>Which units appear follows <b>Settings &gt; Storage &amp; devices &gt; Internal HDD / ATA units</b> (default hides HDD1 and ATA1).</td></tr>
+<tr><td>PC Card CompactFlash (cf0:/)</td><td>Only on eligible console models; direct launch of executables and game images from it is not supported.</td></tr>
 <tr><td>Disc Drive</td><td>Shows the detected disc type; <i>Insert a disc</i> when empty.</td></tr>
-<tr><td>SMB shares, SMB1 share</td><td>One <b>Network (SMB)</b> device: <code>smb:/&lt;NAME&gt;</code> opens each saved share; an SMB1 share is listed there too and opens as <code>smb1:/</code>. See <a href="smb.html">SMB shares</a>.</td></tr>
-<tr><td>NFS shares</td><td>One <b>Network (NFS)</b> device, listed once an NFS share is saved: <code>nfs:/&lt;NAME&gt;</code> opens each connected NFSv4.0 share. See <a href="nfs.html">NFS</a>.</td></tr>
-<tr><td>Network (UDPFS), Network Host</td><td>Network builds. Host means a PS2Link host on a PC. See <a href="network-services.html">Network services</a>.</td></tr>
-<tr><td>PSX Flash, PSX DVR HDD</td><td>PSX/DESR consoles only (or when a recovery boot shows all devices).</td></tr>
+<tr><td>SMB shares, SMB1 share</td><td>One <b>Network (smb:/)</b> device: <code>smb:/&lt;NAME&gt;</code> opens each saved share; an SMB1 share is listed there too and opens as <code>smb1:/</code>. See <a href="smb.html">SMB shares</a>.</td></tr>
+<tr><td>NFS shares</td><td>One <b>Network (nfs:/)</b> device, listed once an NFS share is saved: <code>nfs:/&lt;NAME&gt;</code> opens each connected NFSv4.0 share. See <a href="nfs.html">NFS</a>.</td></tr>
+<tr><td>Network (udpfs:/), Network (host:/)</td><td>Network builds. Host means a PS2Link host on a PC. See <a href="network-services.html">Network services</a>.</td></tr>
+<tr><td>PSX Internal Flash (xfrom0:/), PSX DVR HDD (dvr_hdd0:/)</td><td>PSX/DESR consoles only (or when a recovery boot shows all devices).</td></tr>
 <tr><td>Memory card image 0/1</td><td>Appear while a VMC is mounted.</td></tr>
 <tr><td>Built-in commands</td><td>The classic MISC folder: Start disc, FileBrowser, PS2 Browser, FTP/Remote access, Power off, HDD Manager, Text Editor, Configure, Font viewer, Debug info, About, Build info, OSDSYS, Exploit Installer and Reboot IOP. Confirm runs a command.</td></tr>
 </tbody></table>
@@ -85,6 +85,7 @@
 <tr><td>Open, Open / start</td><td>Same as Confirm. Direct launch of executables and game images from PC CARD CF is refused (&ldquo;Direct launch unsupported&rdquo;); copy them to another device first.</td></tr>
 <tr><td>Copy, Cut, Paste here</td><td>Cut + paste moves. Paste overwrites directly like the upstream browser; a failed paste shows a readable reason, the stage and the numeric error.</td></tr>
 <tr><td>Paste with new names...</td><td>Asks for a name for each pasted item.</td></tr>
+<tr><td>Create archive...</td><td>Shown in a folder when the clipboard holds only folders (copied save folders, from a memory card or anywhere else). Each becomes its own <code>.psu</code>, <code>.psv</code> (signed for a PS3), <code>.cbs</code> or <code>.zip</code> here, read back after writing. A folder must hold files only and fit a memory card save; no file is replaced (a taken <code>.psu</code>, <code>.cbs</code> or <code>.zip</code> name gets <code>-2</code>, a taken <code>.psv</code> name is skipped) and the folders are only read. Not offered on a memory card. PS1 saves use <b>Convert to .mcs, .psv, .psx or raw...</b> instead.</td></tr>
 <tr><td>PSU paste label</td><td>Create a PSU from memory card saves, or extract a PSU into a memory card, depending on where you are. Naming and overwrite rules are under Settings &gt; System &gt; Memory card backup files.</td></tr>
 <tr><td>Extract to mc0:/ and Extract to mc1:/</td><td>On a <code>.psu</code> file (or several marked ones) anywhere but a memory card: extracts the save straight onto that card, no copy and no trip to <code>mc0:/</code>. Dimmed with the reason when the slot is empty or holds a PS1 card. Your clipboard is left as it was.</td></tr>
 <tr><td>Delete...</td><td>Confirms ("This cannot be undone"), deletes folders recursively and shows a progress overlay with the current name and <i>Completed items N / M</i>.</td></tr>

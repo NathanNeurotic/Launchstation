@@ -56,6 +56,10 @@ void dashCardConvertSave(const char *path);
  * confirmation for all, each its own file, failures counted. */
 void dashCardConvertMany(const char *dir, const char *const *names, int n);
 
+/* "Create archive": the save folders `names` in dir (copied to the
+ * clipboard), each as its own .psu, .psv, .cbs or .zip in dest_dir. */
+void dashCardArchiveFolders(const char *dir, const char *const *names, int n, const char *dest_dir);
+
 /* Import the n save files names[] in dir (dir ends in '/' or ':') into a PS2
  * card image the user picks, with one safety copy of that card first
  * (port < 0), or onto the real card in mc<port>:, each save a new folder.

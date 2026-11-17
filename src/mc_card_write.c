@@ -847,45 +847,76 @@ uint32_t mcCardPsuSize(const McSaveData *s)
 	return n;
 }
 
-int mcCardSaveToPsu(const McSaveData *s, uint8_t **out, uint32_t *len)
+/* The .psu in order through emit, one piece at a time: entries, each file's
+ * data straight from s, then its 0xFF padding. Nothing the size of the save
+ * is allocated. */
+int mcCardEmitPsu(const McSaveData *s, McEmitFn emit, void *ctx)
 {
-	uint8_t *p, *q;
-	uint32_t i, size;
+	uint8_t q[ENT];
+	uint32_t i, pad;
 
-	if (!s || !out || !len || !validSave(s))
+	if (!s || !emit || !validSave(s))
 		return MCW_ERR_INVALID;
-	size = mcCardPsuSize(s);
-	p = (uint8_t *)malloc(size);
-	if (!p)
-		return MCW_ERR_NOMEM;
-	q = p;
 	psuEntry(q, s->entry, s->nfiles + 2u);
 	wr16(q, rd16(s->entry) | M_EXISTS | M_DIR);
-	q += ENT;
+	if (emit(ctx, q, ENT))
+		return MCV_ERR_IO;
 	psuEntry(q, s->dot, 0);
 	wr16(q, rd16(s->dot) | M_EXISTS | M_DIR);
 	memset(q + 0x40, 0, 32);
 	q[0x40] = '.';
-	q += ENT;
+	if (emit(ctx, q, ENT))
+		return MCV_ERR_IO;
 	psuEntry(q, s->dotdot, 0);
 	wr16(q, rd16(s->dotdot) | M_EXISTS | M_DIR);
 	memset(q + 0x40, 0, 32);
 	q[0x40] = q[0x41] = '.';
-	q += ENT;
+	if (emit(ctx, q, ENT))
+		return MCV_ERR_IO;
 	for (i = 0; i < s->nfiles; i++) {
 		const McSaveFile *f = &s->files[i];
-		uint32_t padded = (f->size + CL - 1u) / CL * CL;
-
 		psuEntry(q, f->entry, f->size);
 		wr16(q, rd16(f->entry) | M_EXISTS | M_FILE);
-		q += ENT;
-		if (f->size)
-			memcpy(q, f->data, f->size);
-		memset(q + f->size, 0xFF, padded - f->size);
-		q += padded;
+		if (emit(ctx, q, ENT) || (f->size && emit(ctx, f->data, f->size)))
+			return MCV_ERR_IO;
+		memset(q, 0xFF, ENT); /* the padding to a whole cluster, at most two pieces */
+		for (pad = (CL - f->size % CL) % CL; pad; pad -= pad > ENT ? ENT : pad)
+			if (emit(ctx, q, pad > ENT ? ENT : pad))
+				return MCV_ERR_IO;
 	}
-	*out = p;
-	*len = size;
+	return MCW_OK;
+}
+
+int mcEmitToBuffer(void *ctx, const uint8_t *buf, uint32_t len)
+{
+	McEmitBuffer *b = (McEmitBuffer *)ctx;
+
+	if (len > b->size - b->used)
+		return -1;
+	memcpy(b->data + b->used, buf, len);
+	b->used += len;
+	return 0;
+}
+
+int mcCardSaveToPsu(const McSaveData *s, uint8_t **out, uint32_t *len)
+{
+	McEmitBuffer b;
+	int r;
+
+	if (!s || !out || !len || !validSave(s))
+		return MCW_ERR_INVALID;
+	b.size = mcCardPsuSize(s);
+	b.used = 0;
+	b.data = (uint8_t *)malloc(b.size);
+	if (!b.data)
+		return MCW_ERR_NOMEM;
+	r = mcCardEmitPsu(s, mcEmitToBuffer, &b);
+	if (r != MCW_OK || b.used != b.size) {
+		free(b.data);
+		return r != MCW_OK ? r : MCW_ERR_INVALID;
+	}
+	*out = b.data;
+	*len = b.size;
 	return MCW_OK;
 }
 

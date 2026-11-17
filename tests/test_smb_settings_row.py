@@ -21,7 +21,7 @@ for sid in ("S_SMBED_PICK", "S_SMBED_NAME", "S_SMBED_KIND", "S_SMBED_IP", "S_SMB
 assert "[P_SMB] = PAGE(" in settings
 
 # opening the page refreshes the draft from the file
-enter = settings.split('it->type == ST_PAGE && (in->pressed & (DASH_IN_OK | DASH_IN_RIGHT))', 1)[1]
+enter = settings.split('it->type == ST_PAGE && (in->pressed & DASH_IN_OK)', 1)[1]
 assert "smbedLoadPick();" in enter.split("openPage(it->id);", 1)[0]
 
 # The selected block is merged into the share blocks (an old SMB2.CNF's on the

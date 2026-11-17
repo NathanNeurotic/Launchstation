@@ -578,6 +578,25 @@ static float iconSdf(int id, V2 p)
 				d = U(d, sdSeg(p, 0.54f, 0.54f, 0.72f, 0.54f, 0.045f));
 			}
 			break;
+		case DI_COMPACTFLASH:
+			{
+				/* Broad CF shell, inset top bay and shouldered face panel
+				 * (saildot4k's design), kept open to read at device-row sizes. */
+				static const V2 panel[] = {
+					{-0.50f, -0.56f}, {0.50f, -0.56f}, {0.58f, -0.48f},
+					{0.58f, -0.08f}, {0.70f, 0.10f}, {0.70f, 0.54f},
+					{0.60f, 0.62f}, {-0.60f, 0.62f}, {-0.70f, 0.54f},
+					{-0.70f, 0.10f}, {-0.58f, -0.08f}, {-0.58f, -0.48f}
+				};
+				int n = (int)(sizeof(panel) / sizeof(panel[0]));
+
+				d = sdBoxOutline(p, 0.0f, 0.02f, 0.86f, 0.76f, 0.055f, 0.055f);
+				for (k = 0; k < n; k++)
+					d = U(d, sdSeg(p, panel[k].x, panel[k].y, panel[(k + 1) % n].x, panel[(k + 1) % n].y, 0.045f));
+				d = U(d, sdBoxOutline(p, 0.0f, -0.31f, 0.42f, 0.16f, 0.02f, 0.04f));
+				d = U(d, sdBoxOutline(p, 0.0f, 0.22f, 0.43f, 0.29f, 0.035f, 0.04f));
+			}
+			break;
 		case DI_CHIP:
 			d = sdBoxOutline(p, 0.0f, 0.0f, 0.5f, 0.5f, 0.08f, T);
 			d = U(d, sdBox(p, 0.0f, 0.0f, 0.22f, 0.22f, 0.03f));

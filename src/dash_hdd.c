@@ -15,6 +15,7 @@
 #include "dash_internal.h"
 #include "dash_sound.h"
 #include "hdd_header_injector.h"
+#include "hdd_filesystem.h"
 #include "hdl_rpc.h"
 #include "init.h"
 
@@ -33,7 +34,7 @@ typedef struct
 static const HDDSTATUSINFO HddStatusInfo[] = {
 	{3, "NO HDD", "No suitable HDD was detected by the HDD driver.\nCheck the drive, adapter, power, DEV9, or ATA stack."},
 	{2, "LOCKED", "The HDD was detected, but the driver could not\ncomplete the unlock/usability check."},
-	{1, "NO APA", "The HDD is usable, but no APA format was found.\nFormat the HDD before creating partitions."},
+	{1, "NO APA", "The HDD is usable, but no APA format was found.\nThe drive may use another filesystem."},
 	{0, "READY", "The HDD is detected, usable, and APA formatted."},
 	{-1, "EPERM", "Operation not permitted.\nThe HDD driver refused the status operation."},
 	{-2, "ENOENT", "The HDD device/path was not found.\nhdd0: may not be registered by the driver."},
@@ -87,7 +88,9 @@ typedef struct
 	u32 raw_mb;
 	int nsub;      /* extra segments (stat.private_0) */
 	int type;
-	int pfs_state; /* 0 unknown, 1 loaded, 2 loading, -1 not mountable */
+	int pfs_state; /* 0 unknown/retry, 1 loaded, 2 loading, -1 failed */
+	int pfs_error;
+	u64 pfs_retry_after;
 	u32 pfs_total, pfs_free;
 	int hdl_state; /* 0 unknown, 1 loaded, -1 failed */
 	GameInfo game;
@@ -97,6 +100,8 @@ static struct
 {
 	int status;
 	int present, formatted;
+	unsigned filesystem;
+	int filesystem_error;
 	u32 size_mb, used_mb, free_mb;
 	int scanned, scanning, overflow;
 	HddPart *parts;
@@ -131,6 +136,8 @@ typedef struct
 	/* scan */
 	HddPart *parts;
 	int n, overflow, status, present, formatted;
+	unsigned filesystem;
+	int filesystem_error;
 	u32 size_mb, used_mb;
 	/* pfs */
 	u32 pfs_total, pfs_free;
@@ -143,6 +150,82 @@ typedef struct
 	int abandoned;
 } HddJob;
 
+/* Keep three recent mounts and reserve one APA handle for partition scans.
+ * The worker changes mounts; cached selections update ages only while it is
+ * idle. Cached usage survives eviction, so revisiting needs no remount. */
+static u32 pfs_mount_used[MOUNT_LIMIT], pfs_mount_clock;
+
+static int pfsMakeRoom(int limit)
+{
+	unsigned tried = 0;
+	int i, count, oldest;
+
+	for (;;) {
+		count = 0;
+		oldest = -1;
+		for (i = 0; i < MOUNT_LIMIT; i++) {
+			if (mountedParty[i][0] == 0)
+				continue;
+			count++;
+			if (i == latestMount || Party_vmcIndex[i] >= 0 || (tried & (1u << i)))
+				continue;
+			if (oldest < 0 || pfs_mount_used[i] < pfs_mount_used[oldest])
+				oldest = i;
+		}
+		if (count <= limit)
+			return 0;
+		if (oldest < 0)
+			return -EBUSY;
+		tried |= 1u << oldest;
+		unmountParty(oldest);
+		/* A failed unmount retains its bookkeeping; try another old mount. */
+	}
+}
+
+static int pfsMountForInfo(const char *dev)
+{
+	int i, ret;
+	char pfs[16];
+
+	for (i = 0; i < MOUNT_LIMIT; i++) {
+		if (!strcmp(mountedParty[i], dev)) {
+			latestMount = i;
+			pfs_mount_used[i] = ++pfs_mount_clock;
+			return i;
+		}
+	}
+	ret = pfsMakeRoom(MOUNT_LIMIT - 2);
+	if (ret < 0)
+		return ret;
+	for (i = 0; i < MOUNT_LIMIT; i++) {
+		if (mountedParty[i][0] == 0)
+			break;
+	}
+	if (i == MOUNT_LIMIT)
+		return -EBUSY;
+	snprintf(pfs, sizeof(pfs), "pfs%d:", i);
+	/* Keep File Browser bookkeeping and access mode, but do not clear other
+	 * mounts when the target itself is invalid or cannot be mounted. */
+	ret = fileXioMount(pfs, dev, FIO_MT_RDWR);
+	if (ret < 0)
+		return ret;
+	dashStrCopy(mountedParty[i], dev, sizeof(mountedParty[i]));
+	latestMount = i;
+	pfs_mount_used[i] = ++pfs_mount_clock;
+	return i;
+}
+
+static int hddReadFormatSector(void *context, uint32_t lba, void *sector)
+{
+	hddAtaTransfer_t transfer __attribute__((aligned(64)));
+
+	memset(&transfer, 0, sizeof(transfer));
+	transfer.lba = lba;
+	transfer.size = 1;
+	return fileXioDevctl((const char *)context, HDIOC_READSECTOR, &transfer,
+	                     sizeof(transfer), sector, 512);
+}
+
 static void scanRun(HddJob *j)
 {
 	iox_dirent_t de;
@@ -153,17 +236,34 @@ static void scanRun(HddJob *j)
 	if (!j->present)
 		return;
 	j->formatted = (hddCheckFormatted() >= 0);
+	if (j->formatted)
+		j->filesystem = HDD_FS_APA;
+	if (j->status == 0 || j->status == 1) {
+		int sectors = fileXioDevctl("hdd0:", HDIOC_TOTALSECTOR, NULL, 0, NULL, 0);
+		/* The capacity is an unsigned sector count carried in a signed RPC
+		 * result. Preserve capacities above 1 TiB without treating errno as size. */
+		if (sectors > 0 || sectors < -4095) {
+			unsigned additional = HDD_FS_UNKNOWN;
+
+			j->size_mb = (u32)sectors / SECTORS_PER_MB;
+			/* APA Jail can contain both APA and FAT/exFAT metadata. Check
+			 * independently and retain the driver-confirmed APA result. */
+			j->filesystem_error = hddProbeFilesystem(hddReadFormatSector, "hdd0:", (u32)sectors, &additional);
+			if (j->filesystem_error == 0)
+				j->filesystem |= additional;
+		} else
+			j->filesystem_error = sectors < 0 ? sectors : -EIO;
+	}
 	if (!j->formatted)
 		return;
-	{
-		int sectors = fileXioDevctl("hdd0:", HDIOC_TOTALSECTOR, NULL, 0, NULL, 0);
-		j->size_mb = (sectors > 0) ? (u32)sectors / SECTORS_PER_MB : 0;
-	}
 	j->parts = (HddPart *)malloc(sizeof(HddPart) * MAX_PARTITIONS);
 	if (j->parts == NULL) {
 		j->ret = -ENOMEM;
 		return;
 	}
+	j->ret = pfsMakeRoom(MOUNT_LIMIT - 1);
+	if (j->ret < 0)
+		return;
 	fd = fileXioDopen("hdd0:");
 	if (fd < 0) {
 		j->ret = fd;
@@ -211,35 +311,25 @@ static void scanRun(HddJob *j)
 
 static void pfsRun(HddJob *j)
 {
-	char dev[48], pfs[8];
-	int fd, i, idx, rv;
-	u32 total = 0;
+	char dev[48], pfs[16];
+	int idx, zfree, zsize;
 
 	snprintf(dev, sizeof(dev), "hdd0:%s", j->a);
-	fd = fileXioOpen(dev, FIO_O_RDONLY, 0);
-	if (fd < 0) {
-		j->ret = -1;
-		return;
-	}
-	for (i = 0; i <= j->nsub; i++) {
-		rv = fileXioIoctl2(fd, HIOCGETSIZE, &i, 4, NULL, 0);
-		if (rv > 0)
-			total += (u32)rv / SECTORS_PER_MB;
-	}
-	fileXioClose(fd);
-	/* the managed mount slots, so the File Browser's bookkeeping stays true */
-	idx = mountParty(dev);
+	idx = pfsMountForInfo(dev);
 	if (idx < 0) {
-		j->ret = -1;
+		j->ret = idx;
 		return;
 	}
 	snprintf(pfs, sizeof(pfs), "pfs%d:", idx);
-	{
-		u32 zfree = (u32)fileXioDevctl(pfs, PDIOC_ZONEFREE, NULL, 0, NULL, 0);
-		u32 zsize = (u32)fileXioDevctl(pfs, PDIOC_ZONESZ, NULL, 0, NULL, 0);
-		j->pfs_free = (u32)((u64)zfree * zsize / HDD_MB);
+	zfree = fileXioDevctl(pfs, PDIOC_ZONEFREE, NULL, 0, NULL, 0);
+	zsize = fileXioDevctl(pfs, PDIOC_ZONESZ, NULL, 0, NULL, 0);
+	if (zfree < 0 || zsize <= 0) {
+		j->ret = zfree < 0 ? zfree : (zsize < 0 ? zsize : -EIO);
+		return;
 	}
-	j->pfs_total = total;
+	j->pfs_free = (u32)((u64)(u32)zfree * (u32)zsize / HDD_MB);
+	/* Total APA size already includes every segment from the scan. Opening
+	 * the raw partition again would fail if PFS already has it mounted. */
 	j->ret = 0;
 }
 
@@ -377,6 +467,8 @@ static int scan(void)
 	hm.status = j->status;
 	hm.present = j->present;
 	hm.formatted = j->formatted;
+	hm.filesystem = j->filesystem;
+	hm.filesystem_error = j->filesystem_error;
 	hm.size_mb = j->size_mb;
 	hm.used_mb = j->used_mb;
 	hm.overflow = j->overflow;
@@ -460,10 +552,18 @@ static void pfsDone(void *arg)
 		if (i >= 0) {
 			if (j->ret == 0) {
 				hm.parts[i].pfs_state = 1;
+				hm.parts[i].pfs_error = 0;
+				hm.parts[i].pfs_retry_after = 0;
 				hm.parts[i].pfs_total = j->pfs_total;
 				hm.parts[i].pfs_free = j->pfs_free;
-			} else
-				hm.parts[i].pfs_state = -1;
+			} else {
+				hm.parts[i].pfs_error = j->ret;
+				if (j->ret == -EBUSY || j->ret == -EMFILE || j->ret == -EAGAIN) {
+					hm.parts[i].pfs_state = 0;
+					hm.parts[i].pfs_retry_after = Timer() + 1000;
+				} else
+					hm.parts[i].pfs_state = -1;
+			}
 		}
 	}
 	if (pfs_job == j)
@@ -476,13 +576,29 @@ static void loadPfsInfo(int i)
 	HddPart *p = &hm.parts[i];
 	HddJob *j;
 
-	if (p->type != HP_PFS || p->pfs_state != 0 || pfs_job != NULL || dashWorkerBusy())
+	if (p->type != HP_PFS || pfs_job != NULL || dashWorkerBusy())
+		return;
+	if (p->pfs_state == 1) {
+		char dev[48];
+		int slot;
+
+		snprintf(dev, sizeof(dev), "hdd0:%s", p->name);
+		for (slot = 0; slot < MOUNT_LIMIT; slot++) {
+			if (!strcmp(mountedParty[slot], dev) && latestMount != slot) {
+				latestMount = slot;
+				pfs_mount_used[slot] = ++pfs_mount_clock;
+				break;
+			}
+		}
+		return;
+	}
+	if (p->pfs_state != 0 || Timer() < p->pfs_retry_after)
 		return;
 	j = jobNew(HOP_PFS);
 	if (j == NULL)
 		return;
 	dashStrCopy(j->a, p->name, sizeof(j->a));
-	j->nsub = p->nsub;
+	j->pfs_total = p->raw_mb;
 	if (dashWorkerSubmit("Reading partition", 0, hddJobRun, pfsDone, j) < 0) {
 		hddJobFree(j);
 		return;
@@ -757,7 +873,20 @@ static void actStatus(void)
 {
 	char body[320], detail[48];
 
-	snprintf(body, sizeof(body), "%s", hddStatusInfoText(hm.status));
+	if ((hm.filesystem & HDD_FS_APA) && (hm.filesystem & (HDD_FS_EXFAT | HDD_FS_FAT32)))
+		snprintf(body, sizeof(body), "This drive contains APA partitions and %s volumes, a hybrid layout used by APA Jail. HDD Manager lists APA partitions. Browse FAT/exFAT files in File Browser.",
+		         hddFilesystemName(hm.filesystem & ~HDD_FS_APA));
+	else if (hm.filesystem == HDD_FS_APA && hm.filesystem_error < 0)
+		snprintf(body, sizeof(body), "APA partitions were detected. Checking for additional exFAT/FAT32 volumes failed (error %d). Refresh to try again.", hm.filesystem_error);
+	else if (hm.filesystem && hm.filesystem != HDD_FS_APA)
+		snprintf(body, sizeof(body), "The internal HDD contains %s volumes. Browse their files in File Browser. HDD Manager manages APA partitions.",
+		         hddFilesystemName(hm.filesystem));
+	else if (hm.status == 1 && hm.filesystem_error < 0)
+		snprintf(body, sizeof(body), "No APA format was found. The filesystem check failed (error %d). Refresh to try again.", hm.filesystem_error);
+	else if (hm.status == 1)
+		snprintf(body, sizeof(body), "No supported filesystem was identified. The drive may be unformatted, use another format, or contain damaged filesystem metadata.");
+	else
+		snprintf(body, sizeof(body), "%s", hddStatusInfoText(hm.status));
 	snprintf(detail, sizeof(detail), "HDIOC_STATUS %d: %s", hm.status, hddStatusShortText(hm.status));
 	dashModalMessage(DI_HDD, "HDD status", body, detail);
 }
@@ -1010,7 +1139,7 @@ static void partitionMenu(void)
 		if (has_cnf)
 			ADD(DI_SETTINGS, "Edit SYSTEM.CNF...", NULL, 0, A_SYSCNF);
 	}
-	ADD(DI_INFO, "HDD status", hddStatusShortText(hm.status), 0, A_STATUS);
+	ADD(DI_INFO, "HDD status", hm.filesystem ? hddFilesystemName(hm.filesystem) : hddStatusShortText(hm.status), 0, A_STATUS);
 	ADD(DI_REFRESH, "Refresh", NULL, 0, A_REFRESH);
 	if (!console_is_PSX && hm.present)
 		ADD(DI_WARNING, "Format HDD...", NULL, 0, A_FORMAT);
@@ -1102,14 +1231,53 @@ static int hdlTitleOffset(const char *name)
 	return 0;
 }
 
+/* Match the Applications list: scroll the selected row and details together,
+ * hold each end for three seconds, then restart at the beginning. */
+static float partNameScrollProgress(const HddPart *p, float age)
+{
+	const float dwell = 3.0f, speed = 34.0f;
+	float travel, extra, move_time, phase, progress;
+
+	if (p == NULL)
+		return 0.0f;
+	travel = dashTextWidth(p->name, DASH_FS_SMALL) - (LIST_W - 110);
+	extra = dashTextWidth(p->name, DASH_FS_LABEL) - (DET_W - 32);
+	if (extra > travel)
+		travel = extra;
+	if (travel <= 0.0f)
+		return 0.0f;
+	move_time = travel / speed;
+	if (move_time < 0.35f)
+		move_time = 0.35f;
+	phase = fmodf(age < 0.0f ? 0.0f : age, dwell * 2.0f + move_time);
+	progress = dashClampf((phase - dwell) / move_time, 0.0f, 1.0f);
+	return progress * progress * (3.0f - 2.0f * progress);
+}
+
 /* The raw APA name (classic browsing, no HDL lookups) with its game-title
- * part highlighted: the ID prefix is dimmed and gives way to the title. */
-static void drawPartName(float x, float y, float maxw, const char *name, DashColor col)
+ * part highlighted: the ID prefix is dimmed and gives way to the title.
+ * Selected names scroll in full; idle rows keep the title visible. */
+static void drawPartName(float x, float y, float maxw, const char *name, DashColor col, int selected, float scroll)
 {
 	char prefix[40];
 	int off = hdlTitleOffset(name);
 	float tw, pw;
 
+	if (selected) {
+		tw = dashTextWidth(name, DASH_FS_SMALL);
+		pw = tw > maxw ? (tw - maxw) * dashClampf(scroll, 0.0f, 1.0f) : 0.0f;
+		dashGfxScissorPush(x, y - 2.0f, maxw, dashTextLineH(DASH_FS_SMALL) + 4.0f);
+		x -= pw;
+		if (off > 0 && off < (int)sizeof(prefix)) {
+			memcpy(prefix, name, off);
+			prefix[off] = '\0';
+			x = dashTextS(x, y, prefix, DASH_FS_SMALL, dashColorA(col, 0.5f));
+			name += off;
+		}
+		dashTextS(x, y, name, DASH_FS_SMALL, col);
+		dashGfxScissorPop();
+		return;
+	}
 	if (off <= 0 || off >= (int)sizeof(prefix)) {
 		dashTextFit(x, y, maxw, name, DASH_FS_SMALL, col);
 		return;
@@ -1145,7 +1313,7 @@ static void usageBar(float x, float y, float w, u32 used, u32 total, DashColor c
 		dashPanel(x, y, w * k < 10 ? 10 : w * k, 10, 5, c);
 }
 
-static void drawDetails(void)
+static void drawDetails(float scroll)
 {
 	float x = DET_X, y = LIST_Y - 6, w = DET_W, h = ROWS * ROW_H + 12;
 	char a[48], b[48], line[96];
@@ -1153,15 +1321,18 @@ static void drawDetails(void)
 
 	dashDrawCard(x, y, w, h, 16);
 	if (hm.n == 0 || sel >= hm.n) {
-		dashTextWrap(x + 16, y + 20, w - 32, 4, hm.formatted ? "No partitions." : "Format the HDD to create partitions.",
-		             DASH_FS_SMALL, DASH_C_TEXT2, 19);
+		if (hm.filesystem && !hm.formatted)
+			snprintf(line, sizeof(line), "%s volumes are accessed in File Browser. HDD Manager manages APA partitions.", hddFilesystemName(hm.filesystem));
+		else
+			snprintf(line, sizeof(line), "%s", hm.formatted ? "No APA partitions." : "No APA partition list is available.");
+		dashTextWrap(x + 16, y + 20, w - 32, 4, line, DASH_FS_SMALL, DASH_C_TEXT2, 19);
 		return;
 	}
 	p = &hm.parts[sel];
 	dashIcon(typeIcon(p), x + w * 0.5f - 24, y + 16, 48, DASH_C_TEXT);
 	/* APA names can be 32 characters (e.g. PP.SLUS-...); unrestricted
 	 * centered text overflowed the 244px details card on 4:3 TVs. */
-	dashTextFit(x + 16, y + 72, w - 32, p->name, DASH_FS_LABEL, DASH_C_TEXT);
+	dashTextScrollProgress(x + 16, y + 72, w - 32, p->name, DASH_FS_LABEL, DASH_C_TEXT, scroll);
 	dashTextFit(x + 16, y + 98, w - 32, typeName(p), DASH_FS_SMALL, DASH_C_ACCENT);
 	fmtMB(a, sizeof(a), p->raw_mb);
 	snprintf(line, sizeof(line), "Size on disk: %s", a);
@@ -1175,9 +1346,10 @@ static void drawDetails(void)
 			usageBar(x + 20, y, w - 40, used, p->pfs_total, DASH_C_ACCENT);
 			snprintf(line, sizeof(line), "%s used, %s free", a, b);
 			dashTextFit(x + 16, y + 18, w - 32, line, DASH_FS_CAPTION, DASH_C_TEXT2);
-		} else if (p->pfs_state == -1)
-			dashTextFit(x + 16, y, w - 32, "Could not be mounted", DASH_FS_CAPTION, DASH_C_WARM);
-		else {
+		} else if (p->pfs_state == -1) {
+			snprintf(line, sizeof(line), "Usage unavailable (error %d)", p->pfs_error);
+			dashTextFit(x + 16, y, w - 32, line, DASH_FS_CAPTION, DASH_C_WARM);
+		} else {
 			dashGfxBlend(DASH_BLEND_ADD);
 			dashDrawSpinner(x + w * 0.5f - 60, y + 8, 6, DASH_C_ACCENT);
 			dashGfxBlend(DASH_BLEND_NORMAL);
@@ -1202,13 +1374,28 @@ static void hddScene(void)
 {
 	char a[32], b[32], c[32], line[128];
 	int i;
+	const HddPart *selected = (hm.n > 0 && sel < hm.n) ? &hm.parts[sel] : NULL;
+	float scroll = partNameScrollProgress(selected, dashUiFocusAge());
+	float title_right;
 
 	dashGfxBeginFrame();
 	dashBgDraw();
 	dashIcon(DI_HDD, 40, 20, 24, DASH_C_ACCENT);
-	dashTextS(72, 20, localizeDashboardText("HDD Manager"), DASH_FS_TITLE, DASH_C_TEXT);
-	snprintf(line, sizeof(line), "Status: %s", hddStatusShortText(hm.status));
-	dashTextRight(DASH_SAFE_R, 26, line, DASH_FS_SMALL, hm.status == 0 ? DASH_C_OK : DASH_C_WARM);
+	title_right = dashTextS(72, 20, localizeDashboardText("HDD Manager"), DASH_FS_TITLE, DASH_C_TEXT);
+	if (hm.filesystem)
+		snprintf(line, sizeof(line), "Format: %s%s", hddFilesystemName(hm.filesystem), hm.filesystem_error < 0 ? " + ?" : "");
+	else
+		snprintf(line, sizeof(line), "Status: %s", hddStatusShortText(hm.status));
+	{
+		float width = dashTextWidth(line, DASH_FS_SMALL);
+		float available = DASH_SAFE_R - title_right - 16;
+
+		if (width > available)
+			width = available;
+		if (width > 0)
+			dashTextFit(DASH_SAFE_R - width, 26, width, line, DASH_FS_SMALL,
+			            hm.filesystem && hm.filesystem_error == 0 ? DASH_C_OK : DASH_C_WARM);
+	}
 
 	if (hm.formatted && hm.size_mb > 0) {
 		fmtMB(a, sizeof(a), hm.used_mb);
@@ -1218,8 +1405,15 @@ static void hddScene(void)
 		snprintf(line, sizeof(line), "%s used  |  %s free  |  %s  |  %d partition%s%s", a, b, c, hm.n, hm.n == 1 ? "" : "s",
 		         hm.overflow ? " (list full)" : "");
 		dashTextFit(40, 78, 560, line, DASH_FS_CAPTION, DASH_C_TEXT2);
-	} else if (hm.scanned)
-		dashText(40, 64, hm.present ? "The HDD is not APA formatted." : "No HDD was found.", DASH_FS_SMALL, DASH_C_WARM);
+	} else if (hm.scanned) {
+		if (hm.filesystem)
+			snprintf(line, sizeof(line), "%s volumes detected. Browse files in File Browser.", hddFilesystemName(hm.filesystem));
+		else if (hm.status == 1)
+			snprintf(line, sizeof(line), "%s", hm.filesystem_error < 0 ? "Filesystem check failed. Refresh to try again." : "Filesystem not recognized; no APA format found.");
+		else
+			snprintf(line, sizeof(line), "%s", hm.present ? "The HDD is not ready for filesystem detection." : "No HDD was found.");
+		dashTextFit(40, 64, 560, line, DASH_FS_SMALL, hm.filesystem ? DASH_C_TEXT2 : DASH_C_WARM);
+	}
 
 	dashDrawPanelBox(LIST_X - 6, LIST_Y - 6, LIST_W + 12, ROWS * ROW_H + 12, 14);
 	if (hm.n > 0) {
@@ -1234,14 +1428,14 @@ static void hddScene(void)
 			const char *label = p->name;
 
 			dashIcon(typeIcon(p), LIST_X + 8, y + 4, 15, p->type == HP_OTHER ? DASH_C_TEXT3 : col);
-			drawPartName(LIST_X + 30, y + 1.5f, LIST_W - 110, label, col);
+			drawPartName(LIST_X + 30, y + 1.5f, LIST_W - 110, label, col, i == sel, scroll);
 			fmtMB(a, sizeof(a), p->raw_mb);
 			dashTextRight(LIST_X + LIST_W - 10, y + 2, a, DASH_FS_CAPTION, DASH_C_TEXT3);
 		}
 		dashGfxScissorReset();
 		dashDrawScrollbar(LIST_X + LIST_W + 8, LIST_Y, ROWS * ROW_H, top, ROWS, hm.n);
 	}
-	drawDetails();
+	drawDetails(scroll);
 	{
 		DashHint h[] = {{dashOkIcon(), NULL, "Actions"}, {-1, "L2/R2", "Page"}, {-1, "L1", "Status"}, {-1, "R1", "Game info"}, {dashBackIcon(), NULL, "Exit"}};
 		dashDrawHints(h, (int)(sizeof(h) / sizeof(h[0])));
@@ -1259,6 +1453,8 @@ void dashHddManager(void)
 	u64 last_move = Timer();
 
 	memset(&hm, 0, sizeof(hm));
+	memset(pfs_mount_used, 0, sizeof(pfs_mount_used));
+	pfs_mount_clock = 0;
 	sel = top = 0;
 	sel_anim = 0.0f;
 	/* the HDD stack loads on the UI thread */
@@ -1273,6 +1469,7 @@ void dashHddManager(void)
 		return;
 	}
 	dashInputFlush();
+	dashUiFocusPoke();
 	while (1) {
 		int prev = sel;
 
@@ -1291,13 +1488,22 @@ void dashHddManager(void)
 			}
 			if (in.pressed & DASH_IN_R2)
 				sel = (sel + ROWS) % hm.n;
+			/* Left/Right page like the File Browser: stop at the first or
+			 * last partition, then wrap on the next press. */
+			if (in.pressed & DASH_IN_LEFT)
+				sel = sel == 0 ? hm.n - 1 : (sel < ROWS ? 0 : sel - ROWS);
+			if (in.pressed & DASH_IN_RIGHT)
+				sel = sel == hm.n - 1 ? 0 : (sel + ROWS >= hm.n ? hm.n - 1 : sel + ROWS);
 		}
 		if (sel != prev) {
 			dashSoundPlay(DASH_SND_CURSOR);
+			dashUiFocusPoke();
 			last_move = Timer();
 		}
-		if (in.pressed & (DASH_IN_OK | DASH_IN_MENU))
+		if (in.pressed & (DASH_IN_OK | DASH_IN_MENU)) {
 			partitionMenu();
+			dashUiFocusPoke();
+		}
 		if (in.pressed & DASH_IN_L1)
 			actStatus();
 		/* Game metadata is deliberately opt-in. Some old HDDs stall when

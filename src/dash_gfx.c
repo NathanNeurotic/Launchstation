@@ -44,8 +44,7 @@ static int g_blend = -1;
 static int gfx_ready;
 static int gfx_screen_gen = -1;
 
-static GSTEXTURE tex_corner;  /* filled AA quarter disc, center at (32,32) */
-static GSTEXTURE tex_ring;    /* 2px quarter ring at radius 16 (in 32x32) */
+static GSTEXTURE tex_corner;  /* filled AA disc, see buildCornerTextures() */
 static GSTEXTURE tex_glow;    /* radial gaussian blob */
 static GSTEXTURE tex_frame;   /* blurred rounded rect for 9-slice glows */
 static GSTEXTURE tex_sparkle; /* 4 point star */
@@ -217,35 +216,36 @@ static inline u32 whiteA(float a)
 	return 0x00808080 | ((u32)ia << 24);
 }
 
+/* Full disc with a margin, so every corner reads its own quadrant with
+ * increasing UVs. The GS samples a texture at each pixel's top-left, not its
+ * centre: one quarter disc drawn mirrored (reversed UVs) sampled the right
+ * and bottom corners one screen pixel further inside the curve than the left
+ * and top ones, so the four corners of a filled panel had different shapes.
+ * panelCorners() shifts every quad by half a pixel; the margin keeps that
+ * shift inside the texture, where gsKit would otherwise clamp the UVs. */
+#define CORNER_TEX    64
+#define CORNER_R      28.0f
+#define CORNER_MARGIN 4.0f
+
 static void buildCornerTextures(void)
 {
-	u32 *corner = allocTexMem(32, 32);
-	u32 *ring = allocTexMem(32, 32);
+	u32 *corner = allocTexMem(CORNER_TEX, CORNER_TEX);
 	int x, y;
 
-	if (corner == NULL || ring == NULL) {
-		free(corner);
-		free(ring);
+	if (corner == NULL)
 		return;
-	}
 
-	for (y = 0; y < 32; y++) {
-		for (x = 0; x < 32; x++) {
-			/* Quarter disc: circle center at the texture's bottom-right. */
-			float dx = 32.0f - (x + 0.5f);
-			float dy = 32.0f - (y + 0.5f);
+	for (y = 0; y < CORNER_TEX; y++) {
+		for (x = 0; x < CORNER_TEX; x++) {
+			float dx = (x + 0.5f) - CORNER_TEX / 2;
+			float dy = (y + 0.5f) - CORNER_TEX / 2;
 			float d = sqrtf(dx * dx + dy * dy);
-			float a = dashClampf(32.0f - d + 0.5f, 0.0f, 1.0f);
-			float ring_a;
+			float a = dashClampf(CORNER_R - d + 0.5f, 0.0f, 1.0f);
 
-			corner[y * 32 + x] = whiteA(a);
-			/* Ring: 2px wide band at radius 32 (scaled r=16 -> 1px) */
-			ring_a = dashClampf(32.0f - d + 0.5f, 0.0f, 1.0f) * dashClampf(d - 28.5f, 0.0f, 1.0f);
-			ring[y * 32 + x] = whiteA(ring_a);
+			corner[y * CORNER_TEX + x] = whiteA(a);
 		}
 	}
-	setupTex(&tex_corner, 32, 32, corner);
-	setupTex(&tex_ring, 32, 32, ring);
+	setupTex(&tex_corner, CORNER_TEX, CORNER_TEX, corner);
 }
 
 static void buildGlowTextures(void)
@@ -364,7 +364,6 @@ void dashGfxShutdown(void)
 	/* Textures stay resident in EE RAM for the life of the program; only the
 	 * VRAM side is dropped (the next bind re-uploads). */
 	dashTexRelease(&tex_corner);
-	dashTexRelease(&tex_ring);
 	dashTexRelease(&tex_glow);
 	dashTexRelease(&tex_frame);
 	dashTexRelease(&tex_sparkle);
@@ -729,15 +728,18 @@ void dashTexDrawFit(GSTEXTURE *tex, float x, float y, float w, float h, DashColo
 static void panelCorners(GSTEXTURE *tex, float x, float y, float w, float h, float r,
                          DashColor top, DashColor bottom)
 {
-	float tw = (float)tex->Width;
+	const float c = CORNER_TEX / 2, lo = c - CORNER_R;
+	float half = 0.5f * CORNER_R / r; /* half a screen pixel, in texels */
 	u64 ct = gsColor(top), cb = gsColor(bottom);
 
 	if (!dashTexBind(tex))
 		return;
-	texQuad(tex, x, y, x + r, y + r, 0, 0, tw, tw, ct);
-	texQuad(tex, x + w - r, y, x + w, y + r, tw, 0, 0, tw, ct);
-	texQuad(tex, x, y + h - r, x + r, y + h, 0, tw, tw, 0, cb);
-	texQuad(tex, x + w - r, y + h - r, x + w, y + h, tw, tw, 0, 0, cb);
+	if (half > CORNER_MARGIN)
+		half = CORNER_MARGIN; /* corners under 3.5 px: barely curved anyway */
+	texQuad(tex, x, y, x + r, y + r, lo + half, lo + half, c + half, c + half, ct);
+	texQuad(tex, x + w - r, y, x + w, y + r, c + half, lo + half, c + CORNER_R + half, c + half, ct);
+	texQuad(tex, x, y + h - r, x + r, y + h, lo + half, c + half, c + half, c + CORNER_R + half, cb);
+	texQuad(tex, x + w - r, y + h - r, x + w, y + h, c + half, c + half, c + CORNER_R + half, c + CORNER_R + half, cb);
 }
 
 void dashPanelGradV(float x, float y, float w, float h, float r, DashColor top, DashColor bottom)
@@ -779,6 +781,36 @@ void dashPanelBorder(float x, float y, float w, float h, float r, DashColor c)
 	dashRoundedBorder(x, y, w, h, dashThemeRadius(r), c);
 }
 
+/* Quarter ring built from quads in logical pixels (saildot4k). A scaled
+ * ring texture drew small-radius corners thinner and fainter than the
+ * straight edges. Adjacent quads share endpoints, so a translucent stroke
+ * blends once. */
+static void borderCorner(float cx, float cy, float r, float t, float sx, float sy, DashColor c)
+{
+	int i, segments = (int)ceilf(r);
+	float inner = r - t;
+	float px = 1.0f, py = 0.0f;
+	float step, cs, sn;
+
+	if (segments < 4)
+		segments = 4;
+	if (segments > 24)
+		segments = 24;
+	step = 1.57079632679f / segments;
+	cs = cosf(step);
+	sn = sinf(step);
+	for (i = 1; i <= segments; i++) {
+		float nx = (i == segments) ? 0.0f : px * cs - py * sn;
+		float ny = (i == segments) ? 1.0f : px * sn + py * cs;
+		dashQuadG(cx + sx * r * px, cy + sy * r * py,
+		          cx + sx * r * nx, cy + sy * r * ny,
+		          cx + sx * inner * px, cy + sy * inner * py,
+		          cx + sx * inner * nx, cy + sy * inner * ny, c, c, c, c);
+		px = nx;
+		py = ny;
+	}
+}
+
 void dashRoundedBorder(float x, float y, float w, float h, float r, DashColor c)
 {
 	float t;
@@ -801,7 +833,7 @@ void dashRoundedBorder(float x, float y, float w, float h, float r, DashColor c)
 		return;
 	}
 	dashSpriteBatchEnd();
-	/* Ring texture band covers the outer 3.5/32 of the corner radius. */
+	/* The curved and straight sections share one width and tint. */
 	t = r * 3.5f / 32.0f;
 	if (t < 2.0f)
 		t = 2.0f;
@@ -809,7 +841,10 @@ void dashRoundedBorder(float x, float y, float w, float h, float r, DashColor c)
 	dashRect(x + r, y + h - t, w - 2 * r, t, c);
 	dashRect(x, y + r, t, h - 2 * r, c);
 	dashRect(x + w - t, y + r, t, h - 2 * r, c);
-	panelCorners(&tex_ring, x, y, w, h, r, c, c);
+	borderCorner(x + r, y + r, r, t, -1.0f, -1.0f, c);
+	borderCorner(x + w - r, y + r, r, t, 1.0f, -1.0f, c);
+	borderCorner(x + r, y + h - r, r, t, -1.0f, 1.0f, c);
+	borderCorner(x + w - r, y + h - r, r, t, 1.0f, 1.0f, c);
 }
 
 void dashGlow(float cx, float cy, float rx, float ry, DashColor c)

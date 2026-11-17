@@ -113,6 +113,8 @@ static int prune_history(const char *dir, int keep, int format,
     prunes++;
     return prune_result;
 }
+static void tick_step(int base, int span) { (void)base; (void)span; }
+static void tick_export(int phase, unsigned long long done, unsigned long long total) { (void)phase; (void)done; (void)total; }
 static void reset(void) {
     previous=0; comparison=0; export_result=0; collision=0;
     rename_result=0; prune_result=0;

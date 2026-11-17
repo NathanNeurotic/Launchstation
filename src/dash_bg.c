@@ -418,20 +418,28 @@ static void drawAppWallpaper(void)
 	}
 }
 
-/* Scanlines used to submit hundreds of rectangles per frame. A tiny
- * repeating texture produces the same alternating dark row in one draw. */
+/* Scanlines used to submit hundreds of rectangles per frame. A small texture
+ * of alternating rows draws them in a few strips. gsKit clamps every UV to
+ * the texture size, so a 2-row texture asked to repeat over the screen was
+ * stretched instead: dark top half, clear bottom half. Each strip maps one
+ * texel row to one framebuffer line, in every video mode. */
+#define SCANLINE_ROWS 32
 static GSTEXTURE scanline_tex;
-static u32 scanline_pixels[4] __attribute__((aligned(128))) = {
-    0x1E000000, 0x1E000000,
-    0x00000000, 0x00000000};
+static u32 scanline_pixels[2 * SCANLINE_ROWS] __attribute__((aligned(128)));
 static int scanline_ready;
 
 static void drawScanlines(void)
 {
+	float sy = dashGfxScaleY(), lines = DASH_VH * sy, top;
+
 	if (!scanline_ready) {
+		int i;
+
+		for (i = 0; i < 2 * SCANLINE_ROWS; i++)
+			scanline_pixels[i] = (i / 2) & 1 ? 0x00000000 : 0x1E000000;
 		memset(&scanline_tex, 0, sizeof(scanline_tex));
 		scanline_tex.Width = 2;
-		scanline_tex.Height = 2;
+		scanline_tex.Height = SCANLINE_ROWS;
 		scanline_tex.PSM = GS_PSM_CT32;
 		scanline_tex.Mem = scanline_pixels;
 		scanline_tex.Filter = GS_FILTER_NEAREST;
@@ -440,11 +448,14 @@ static void drawScanlines(void)
 		SyncDCache(scanline_pixels, (u8 *)scanline_pixels + sizeof(scanline_pixels));
 		scanline_ready = 1;
 	}
-	gsKit_set_clamp(gsGlobal, GS_CMODE_REPEAT);
-	dashTexDrawUV(&scanline_tex, 0, 0, DASH_VW, DASH_VH,
-	              0, 0, 2.0f, DASH_VH * dashGfxScaleY(),
-	              DC(255, 255, 255, 255));
-	gsKit_set_clamp(gsGlobal, GS_CMODE_CLAMP);
+	if (sy <= 0.0f)
+		return;
+	for (top = 0.0f; top < lines; top += SCANLINE_ROWS) {
+		float rows = lines - top < SCANLINE_ROWS ? lines - top : SCANLINE_ROWS;
+
+		dashTexDrawUV(&scanline_tex, 0, top / sy, DASH_VW, rows / sy,
+		              0, 0, 2.0f, rows, DC(255, 255, 255, 255));
+	}
 }
 
 //--------------------------------------------------------------

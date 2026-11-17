@@ -71,6 +71,8 @@ static int padRead(int p,int s,struct padButtonStatus *b) {
 static void dashWorkerParkPoint(void) {}
 static int dashIopParked(void) { return 0; }
 static int dashWorkerIoBusy(void) { return busy; }
+static void padRumbleTick(u32 held) { (void)held; }
+static void padRumbleFlush(void) {}
 static int pad_wait_calls;
 static void waitAnyPadReady(void) { pad_wait_calls++; }
 """
@@ -83,7 +85,7 @@ static int readpad_noRepeat(void) {
 }
 static u64 last_input_ms;
 static u32 held_prev, text_repeat_armed, shoulder_repeat_armed, shoulder_repeat;
-static int dashboard_menus,dashboard_menu_open,dash_start_menu_blocked,physical_sample_valid;
+static int dashboard_menus,dashboard_menu_open,dash_start_menu_blocked,dash_start_passthrough,physical_sample_valid;
 static void dashDashboardMenu(void) { dashboard_menus++; }
 """
 padcode += function(read("src/dash_main.c"), "int dashDashboardMenuIsOpen(")
@@ -155,6 +157,10 @@ int main(void) {
     dashboard_menu_open=0;dashInputFlush();
     keys[0]=0;dashInputPollEx(&in,0);keys[0]=PAD_START;
     dashInputPollEx(&in,1);assert(dashboard_menus==2 && !in.any && !in.raw_new);
+    /* Text entry takes START itself (Done): no menu, the press reaches the caller. */
+    keys[0]=0;dashInputPollEx(&in,0);keys[0]=PAD_START;dash_start_passthrough=1;
+    dashInputPollEx(&in,1);assert(dashboard_menus==2 && (in.pressed & DASH_IN_START));
+    dash_start_passthrough=0;
     /* Text repeats are separate from one-press actions and disarmed by flush. */
     keys[0]=0;dashInputPollEx(&in,0);keys[0]=PAD_CROSS;swapKeys=1;
     dashInputPollEx(&in,0);assert(in.pressed==DASH_IN_OK && in.text_repeat==DASH_IN_OK);

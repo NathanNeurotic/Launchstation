@@ -26,9 +26,10 @@ for name in ("PS2 system browser", "OSDSYS", "Reboot IOP", "Power off"):
     line = next(l for l in tools.splitlines() if f'"{name}",' in l and "TA_MISC" in l)
     assert re.search(r", 2, MISC\(", line), name
 
-# #135: the breadcrumb clears the L1/R1 bar (ends at y=62).
-assert "dashTextFit(ix, 66, iw - 126, trail" in settings
-assert "dashDrawSectionTitle(ix, 82, localizeDashboardText(c->name)" in settings
+# #135: the title and trail clear the L1/R1 bar (ends at y=62), in the same
+# lane as the other tabs' titles.
+assert "dashDrawSectionTitle(ix, 68, title, NULL);" in settings
+assert "page_depth ? trail : localizeDashboardText(c->help)" in settings
 
 # #141: HOME names memory cards like the Files tab.
 assert '"mc0 (Slot 1)"' in lib and '"mc1 (Slot 2)"' in lib

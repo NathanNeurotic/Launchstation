@@ -32,7 +32,7 @@ code = r"""
 #include <stdlib.h>
 #include <string.h>
 typedef uint64_t u64;
-typedef struct { int sound, bgm, recent_count, artwork, custom_sounds; char path[64], software_clock[24]; } DashSettings;
+typedef struct { int sound, bgm, recent_count, artwork, custom_sounds, rumble; char path[64], software_clock[24]; } DashSettings;
 typedef struct { int color; } DashTheme;
 typedef struct {
     int TV_mode, screen_x, screen_y, language, swapKeys;
@@ -53,8 +53,8 @@ static int dashThemeBasePreset(void) { return preset; }
 static int dashThemeIsCustom(void) { return custom; }
 static int dashStoreSettingsFailed(void) { return store_failed && !store_pending; }
 static char *dashStoreSettingsText(const DashSettings *c,int *len) {
-    char s[256]; *len=snprintf(s,sizeof(s),"%d/%d/%d/%d/%d/%s/%s/%d/%d/%d",
-        c->sound,c->bgm,c->recent_count,c->artwork,c->custom_sounds,c->path,c->software_clock,
+    char s[256]; *len=snprintf(s,sizeof(s),"%d/%d/%d/%d/%d/%d/%s/%s/%d/%d/%d",
+        c->sound,c->bgm,c->recent_count,c->artwork,c->custom_sounds,c->rumble,c->path,c->software_clock,
         dashTheme.color,preset,custom);
     return strdup(s);
 }
@@ -79,6 +79,7 @@ static int software_clock_active;
 static int menuTitleSoftwareClockActive(void) { return software_clock_active; }
 static void menuTitleClockSnapshot(void) { clock_snapshots++; }
 static void menuTitleClockRestore(void) { clock_restores++; }
+static int rumble_gate = -1; static void padRumbleEnable(int on) { rumble_gate = on; }
 static void updateScreenMode(void) {}
 static int dashWorkerAwaitAll(const char *s) { (void)s; return 1; }
 static void Set_Language(int l) { (void)l; }
@@ -136,6 +137,9 @@ int main(void) {
     assert(settingsLeave()==1 && dashCfg.custom_sounds==0 && effect_reloads==1);
     clean(); effect_reloads=0; dashCfg.sound++; modal_result=1;
     assert(settingsLeave()==1 && effect_reloads==0);
+    /* Discarding a Vibration change turns the motors' gate back to the saved value. */
+    clean(); rumble_gate=-1; dashCfg.rumble=1; modal_result=1;
+    assert(settingsLeave()==1 && dashCfg.rumble==0 && rumble_gate==0);
     clean();
     /* An unrelated failed write must not turn an untouched visit into edits. */
     for(int k=0;k<3;k++) {

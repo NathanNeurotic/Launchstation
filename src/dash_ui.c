@@ -21,6 +21,7 @@ static u32 shoulder_repeat_armed, shoulder_repeat;
 /* Set while a timed confirmation polls: START must not open the Dashboard
  * popup, whose own input loop would hold off the automatic revert. */
 static int dash_start_menu_blocked;
+static int dash_start_passthrough;
 static int physical_sample_valid;
 
 //--------------------------------------------------------------
@@ -42,7 +43,7 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	memset(in, 0, sizeof(*in));
 	shoulder_repeat = 0;
 	physical_sample_valid = 0;
-	dashWorkerParkPoint();
+	dashWorkerParkPoint(); /* stops the motors first if a worker wants the IOP */
 	if (dashIopParked())
 		return; /* the IOP (and padman with it) is being rebooted */
 	/* readpad checks each port's state and skips unsettled ports. Waiting
@@ -113,7 +114,7 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	if (in->any || in->text_repeat || shoulder_repeat)
 		last_input_ms = Timer();
 	/* Held SELECT turns START into its quick launch key (dash_main.c). */
-	if ((in->pressed & DASH_IN_START) && !(paddata & PAD_SELECT)) {
+	if ((in->pressed & DASH_IN_START) && !(paddata & PAD_SELECT) && !dash_start_passthrough) {
 		/* Consume the entire chord: START cannot also type, accept a dialog
 		 * or trigger another action after the Dashboard popup closes.
 		 * A second press cancels only the open Dashboard through normal Back. */
@@ -125,6 +126,14 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 			dashDashboardMenu();
 		}
 	}
+}
+
+int dashInputStartPassthrough(int on)
+{
+	int was = dash_start_passthrough;
+
+	dash_start_passthrough = on;
+	return was;
 }
 
 u32 dashInputShoulderRepeat(void)

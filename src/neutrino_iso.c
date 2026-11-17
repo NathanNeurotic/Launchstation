@@ -429,7 +429,7 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 	}
 	/* Choosing Cancel still happens before any Neutrino ELF preparation. */
 	if (!(have_gameid ?
-	      showNeutrinoLaunchOptionsForGame(&options, gameID) :
+	      showNeutrinoLaunchOptionsForGame(&options, gameID, path) :
 	      showNeutrinoLaunchOptions(&options))) {
 		if (message != NULL && message_size > 0)
 			message[0] = '\0';

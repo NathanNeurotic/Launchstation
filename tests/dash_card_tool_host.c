@@ -67,11 +67,16 @@ static void map(const char *path, char *out)
 	snprintf(out, MAX_PATH, "%s/%.*s%s", root, (int)(colon - path), path, colon + 1);
 }
 
+static int open_dirs;
 int genOpen(const char *path, int mode)
 {
 	char p[MAX_PATH];
 	int fd;
 
+	if (open_dirs) { /* MMCE: one handle, and a listing is one */
+		fprintf(stderr, "file opened while a listing is open: %s\n", path);
+		abort();
+	}
 	map(path, p);
 	fd = open(p, mode, 0644);
 	if (fd >= 0) {
@@ -110,12 +115,14 @@ int genDopen(char *path)
 		;
 	if (i == 8 || !(dirs[i] = opendir(p)))
 		return -1;
+	open_dirs++;
 	return i;
 }
 int genDclose(int fd)
 {
 	closedir(dirs[fd]);
 	dirs[fd] = NULL;
+	open_dirs--;
 	return 0;
 }
 int fileXioDread(int fd, iox_dirent_t *ent)
@@ -483,7 +490,8 @@ int main(int argc, char **argv)
 	} else if (!strncmp(argv[3], "ps1conv:", 8)) {
 		dashPs1SaveConvert(argv[3] + 8);
 	} else if (!strncmp(argv[3], "importmany:", 11) || !strncmp(argv[3], "importmc", 8) ||
-	           !strncmp(argv[3], "ps1many:", 8) || !strncmp(argv[3], "convmany:", 9)) {
+	           !strncmp(argv[3], "ps1many:", 8) || !strncmp(argv[3], "convmany:", 9) ||
+	           !strncmp(argv[3], "archive:", 8)) {
 		/* importmany:dir/|name|name... into a picked image; importmc<N>:dir/|name... onto mc<N>:;
 		 * ps1many: / convmany: the marked-save Convert of PS1 / PS2 save files */
 		static char spec[4096];
@@ -499,7 +507,9 @@ int main(int argc, char **argv)
 			names[n++] = p;
 			p = strchr(p, '|');
 		}
-		if (argv[3][0] == 'p')
+		if (argv[3][0] == 'a') /* archive:dir/|folder|folder... into mass:/arch/ */
+			dashCardArchiveFolders(dir, names, n, "mass:/arch/");
+		else if (argv[3][0] == 'p')
 			dashPs1SaveConvertMany(dir, names, n);
 		else if (argv[3][0] == 'c')
 			dashCardConvertMany(dir, names, n);

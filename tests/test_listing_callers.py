@@ -104,10 +104,10 @@ static unsigned clipIopResetGeneration=1,generation=1;
 static u64 written_size,PasteTime,clock_ms;
 static int handles;
 /* Folder listings are on the heap; one chosen allocation size can fail. */
-static size_t fail_alloc_bytes;static int listings_live,listing_calls;
+static size_t fail_alloc_bytes;static int listings_live,listings_peak,listing_calls;
 static void *test_memalign(size_t a,size_t n){
  assert(a>=__alignof__(FILEINFO));if(fail_alloc_bytes&&n==fail_alloc_bytes)return NULL;
- void *p=memalign(a,n);if(p&&n>=MAX_ENTRY*sizeof(FILEINFO))listings_live++;return p;
+ void *p=memalign(a,n);if(p&&n>=MAX_ENTRY*sizeof(FILEINFO)&&++listings_live>listings_peak)listings_peak=listings_live;return p;
 }
 static void test_free(void *p){if(p&&malloc_usable_size(p)>=MAX_ENTRY*sizeof(FILEINFO))listings_live--;free(p);}
 #define memalign test_memalign
@@ -250,6 +250,8 @@ for sig in ('static int isMemoryCardLikePath(', 'static int isHddCommonParty(',
 code += copy[copy.index('int copy('):]
 code += function(browser, 'static int waitForClipboardSourceDevice(')
 code += function(browser, 'static void subfunc_Paste(')
+a = actions.index('#define TREE_DEPTH_LIMIT')
+code += actions[a:actions.index('/* Adds the size of a file', a)]  # the shared tree listing delete() uses
 code += function(actions, 'int delete (const char *path, const FILEINFO *file)\n{')
 code += r'''
 static void put(const char *p){int fd=open(p,O_CREAT|O_TRUNC|O_WRONLY,0600);assert(fd>=0);assert(write(fd,p,strlen(p))==(ssize_t)strlen(p));assert(!close(fd));}
@@ -424,10 +426,21 @@ int main(void){
  tree("usb0:/OUTER",0);tree("usb0:/OUTER/INNER",2);fault("usb0:/OUTER/INNER/",-EACCES,-1,0,0);
  assert(remove_folder("OUTER")==-EACCES&&count("usb0:/OUTER/INNER")==2);
  /* With no memory for a listing, nothing is deleted. */
- fail_alloc_bytes=(MAX_ENTRY+1)*sizeof(FILEINFO);
+ fail_alloc_bytes=MAX_ENTRY*sizeof(FILEINFO);
  assert(remove_folder("HALF")==-ENOMEM&&count("usb0:/HALF")==6);
  fail_alloc_bytes=0;
  assert(remove_folder("HALF")==0&&count("usb0:/HALF")==-1);
+ /* Every level of a deep tree shares one full listing (each keeps only a
+  * copy of its own entries), and a tree past TREE_DEPTH_LIMIT is refused
+  * before anything in it is removed. */
+ {char p[MAX_PATH]="usb0:/DEEP";tree(p,2);
+  for(int d=0;d<5;d++){strcat(p,"/D");tree(p,2);}
+  listings_peak=0;assert(remove_folder("DEEP")==0&&count("usb0:/DEEP")==-1&&listings_peak==1);
+  strcpy(p,"usb0:/LOOP");tree(p,0);
+  for(int d=0;d<TREE_DEPTH_LIMIT;d++){strcat(p,"/D");tree(p,0);}
+  assert(remove_folder("LOOP")==-ELOOP&&exists(p));
+  strcpy(p,"usb0:/LOOP");for(int d=0;d<TREE_DEPTH_LIMIT-1;d++)strcat(p,"/D");
+  assert(rmdir(strcat(p,"/D"))==0);assert(remove_folder("LOOP")==0&&count("usb0:/LOOP")==-1);}
  /* Entries the device says it deleted but still lists end the delete with an
   * error instead of listing them again forever. */
  char p[MAX_PATH];tree("usb0:/STUCK",3);

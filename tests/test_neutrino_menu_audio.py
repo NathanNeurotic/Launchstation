@@ -84,6 +84,7 @@ static int IsEmberGamePath(const char *p) { return genCmpFileExt(p, "BIN") || ge
 static int DashChooseElfIopMode(int configured) { return configured; }
 static void dashSoundSuspend(void) { muted = 1; suspended++; }
 static void dashSoundShutdown(void) { muted = 1; shutdown_calls++; }
+static void padRumbleFlush(void) {}
 static void fadeScreenToBlack(void) {}
 static int stopSmbServer(void) { return 0; }
 static void DashThemeSetLegacyEnabled(int e) { (void)e; }
@@ -114,14 +115,14 @@ static void initPopstarterCandidates(POPSTARTER_CANDIDATE_LIST *c) { c->count = 
 static int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *o, NEUTRINO_OPTION_ARGS *a) { (void)o; (void)a; return 0; }
 static int DashIsActive(void) { return 1; }
 static int prepareNeutrinoGameID(const char *p, char *id, size_t n) { (void)p; snprintf(id, n, "SLUS_123.45"); return 1; }
-static int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *o, const char *id) {
-    (void)id;
+static int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *o, const char *id, const char *game_path) {
+    (void)id; (void)game_path;
     memset(o, 0, sizeof(*o));
     /* Menu prompts run while audio is still unmuted. */
     assert(!muted);
     return commit != 0;
 }
-static int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *o) { return showNeutrinoLaunchOptionsForGame(o, ""); }
+static int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *o) { return showNeutrinoLaunchOptionsForGame(o, "", ""); }
 static int preparePopstarterCandidateLaunch(POPSTARTER_CANDIDATE_LIST *c, char *s, size_t sn, char *f, size_t fn, char *p, size_t pn, int *k) {
     (void)c;
     snprintf(s, sn, "usb0:/NEUTRINO/neutrino.elf");
