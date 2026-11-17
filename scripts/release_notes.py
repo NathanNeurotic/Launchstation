@@ -157,6 +157,8 @@ Existing user settings are retained. The built-in updater preserves your control
 
 Device and display behavior still require console validation; a passing build does not establish hardware compatibility.
 
+Official build from NathanNeurotic/Launchstation. Builds from forks are unofficial and unsupported here.
+
 <details>
 <summary>Build verification and SHA-256 checksums</summary>
 

@@ -642,7 +642,8 @@ jobs:
             for asset in "${assets[@]}"; do
               sha256sum "artifacts/${asset}" | sed 's#artifacts/##'
             done
-            printf '```\n'
+            printf '```\n\n'
+            printf 'Official build from NathanNeurotic/Launchstation. Builds from forks are unofficial and unsupported here.\n'
           } > "${archive_notes}"
           archive_existing=0
           if gh release view "${archive_tag}" >/dev/null 2>&1; then
