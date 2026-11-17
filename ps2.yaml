@@ -594,7 +594,7 @@ targets:
       - src/dash_ui.c
       - src/dash_home.c
       - src/dash_apps.c
-      - src/dash_files.c
+      - src/dash_games.c
       - src/dash_tools.c
       - src/dash_settings.c
       - src/dash_theme.c
@@ -638,7 +638,7 @@ targets:
       # libjpeg-turbo from scripts/build_jpeg.sh, built by the active toolchain.
       - "-L../.jpeg-deps/lib"
     headers: [sior]
-    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, jpegturbo, mc, kbd, mbedtls, mbedx509, mbedcrypto, ps2ips, cglue, m, cdvd, filexio, patches, poweroff, debug, secr, pad, audsrv-compat]
+    libs: [iopreboot, hdd_ee, gskit, dmakit, png, z, jpegturbo, mc, kbd, mbedtls, mbedx509, mbedcrypto, ps2ips, cglue, m, cdvd, filexio, patches, poweroff, debug, secr, pad, mtap, audsrv-compat]
     embed_irx:
       - udpfs_smap
       - loader:loader_elf
@@ -685,10 +685,9 @@ targets:
       - dvrfile
       - mmceman
       - mx4sio_bd_fork:mx4sio_bd
-      - iLinkman
-      - IEEE1394_bd_mini:IEEE1394_bd
       - sio2man
       - padman
+      - mtapman
       - bdm
       - bdmfs_fatfs
       - usbmass_bd_fork:usbmass_bd

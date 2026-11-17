@@ -10,7 +10,6 @@ def src(name):
 
 browser = src("dash_browser.c")
 apps = src("dash_apps.c")
-files = src("dash_files.c")
 tools = src("dash_tools.c")
 settings = src("dash_settings.c")
 widgets = src("dash_widgets.c")
@@ -32,12 +31,6 @@ assert "next = (sel + delta) % norder;" in apps
 assert "if (next < 0)" in apps and "next += norder;" in apps
 assert "if (in->pressed & DASH_IN_UP)\n\t\t\tmove(-GRID_COLS);" in apps
 assert "if (in->pressed & DASH_IN_DOWN)\n\t\t\tmove(GRID_COLS);" in apps
-
-# Files list and Devices grid: movement wraps and keeps skipping non-selectable rows.
-assert "if (s < 0)\n\t\t\ts = nfentries - 1;" in files
-assert "else if (s >= nfentries)\n\t\t\ts = 0;" in files
-assert "while (s < 0)\n\t\t\ts += ndevs;" in files
-assert "while (s >= ndevs)\n\t\t\ts -= ndevs;" in files
 
 # Tools and Settings lists wrap at top/bottom.
 assert "if (s < 0)\n\t\t\ts = NTOOLS - 1;" in tools
@@ -62,7 +55,6 @@ print("PASS: dashboard list navigation wraps across file, menu and browser views
 for text, guard, snap in (
     (browser, 'fb.sel_anim < fb.top || fb.sel_anim >= fb.top + FB_ROWS', 'fb.sel_anim = (float)fb.sel;'),
     (apps, 'sel_anim < top || sel_anim >= top + LIST_ROWS', 'sel_anim = (float)sel;'),
-    (files, 'fsel_anim < ftop || fsel_anim >= ftop + rows', 'fsel_anim = (float)fsel;'),
     (tools, 'tsel_anim < ttop || tsel_anim >= ttop + rows', 'tsel_anim = (float)tsel;'),
     (settings, 'item_anim < item_top || item_anim >= item_top + ITEM_ROWS', 'item_anim = (float)item;'),
     (widgets, 'sel_anim < top || sel_anim >= top + rows', 'sel_anim = (float)sel;'),
@@ -70,4 +62,4 @@ for text, guard, snap in (
     (src('dash_ui.c'), 'sel_anim < top || sel_anim >= top + rows', 'sel_anim = (float)sel;'),
 ):
     assert guard in text and snap in text
-print('PASS: wrapped highlight remains in the viewport across eight list/modal controllers')
+print('PASS: wrapped highlight remains in the viewport across seven list/modal controllers')

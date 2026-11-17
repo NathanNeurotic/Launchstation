@@ -6,10 +6,15 @@
 #include "pccf_control.h"
 #include <unistd.h>
 #include <iopcontrol_special.h>
+#ifdef HOMEBREW_SIO2MAN
+#include <libmtap.h>
+#endif
 
 /* The dashboard's asynchronous libmc root poll must finish before IOP/PAD
  * teardown. Implemented by filer.c even in non-dashboard variants. */
 extern void filerRootMcPollIdle(void);
+int dashWorkerOnThread(void);
+int dashWorkerIoBusy(void);
 
 #ifdef ETH
 #include <ps2ips.h>
@@ -68,6 +73,7 @@ IMPORT_BIN2C(IEEE1394_bd_irx);
 #ifdef HOMEBREW_SIO2MAN
 IMPORT_BIN2C(sio2man_irx);
 IMPORT_BIN2C(padman_irx);
+IMPORT_BIN2C(mtapman_irx);
 #endif
 
 #ifdef POWERPC_UART
@@ -124,6 +130,12 @@ static u8 have_HDD_modules = 0;
 static u8 have_basic_modules = 0;
 static u8 have_filexio_ready = 0;
 static u8 have_mc_rpc_ready = 0;
+#ifdef HOMEBREW_SIO2MAN
+/* Multitap: mtapman runs and the EE client is bound; which memory-card
+ * ports (0 = slot 1, 1 = slot 2) have a multitap open. */
+static u8 have_mtapman = 0, mtap_bound = 0;
+static u8 mtap_open[2] = {0, 0};
+#endif
 static unsigned int iop_reset_generation = 0;
 
 #define USB_MASS_ENUM_POLL_MS 50
@@ -1236,6 +1248,10 @@ static void loadBasicModules(void)
 #ifdef HOMEBREW_SIO2MAN
 	id = SifExecModuleBuffer(sio2man_irx, size_sio2man_irx, 0, NULL, &ret);
 	DPRINTF(" [SIO2MAN]: id=%d ret=%d\n", id, ret);
+	/* Switches MCMAN between multitap slots; without it only slot A answers. */
+	id = SifExecModuleBuffer(mtapman_irx, size_mtapman_irx, 0, NULL, &ret);
+	have_mtapman = (id >= 0 && ret == 0);
+	DPRINTF(" [MTAPMAN]: id=%d ret=%d\n", id, ret);
 #else
 	id = SifLoadModule("rom0:SIO2MAN", 0, NULL);
 	DPRINTF(" [rom0:SIO2MAN]: id=%d\n", id);
@@ -1317,6 +1333,8 @@ void ensureCoreIoStackReady(void)
 #endif
 		DPRINTF("Initializing mc rpc: %d\n", ret);
 		have_mc_rpc_ready = ret >= 0;
+		if (have_mc_rpc_ready)
+			mcMultitapRefresh();
 	}
 
 	load_vmcman_module();
@@ -2235,10 +2253,59 @@ int isMemoryCardRpcReady(void)
 	return have_mc_rpc_ready;
 }
 
+/* Open a memory-card port's multitap when one is plugged in, close it when it
+ * is gone. A port stays closed without a multitap, so MTAPMAN then sends
+ * nothing to that port; slot 2 is never probed while MX4SIO owns it. Runs on
+ * the UI thread when the card client starts and when a device list is built,
+ * only while the worker is not doing IO. */
+void mcMultitapRefresh(void)
+{
+#ifdef HOMEBREW_SIO2MAN
+	int port;
+
+	/* Never overlap the worker's card traffic: its job may still be draining a
+	 * pending libmc request. The next device list retries. */
+	if (!have_mtapman || !have_mc_rpc_ready || dashWorkerOnThread() || dashWorkerIoBusy())
+		return;
+	if (!mtap_bound) {
+		if (mtapInit() != 1)
+			return;
+		mtap_bound = 1;
+	}
+	filerRootMcPollIdle();
+	for (port = 0; port < 2; port++) {
+		/* MTAPMAN numbers the memory-card ports 2 and 3. */
+		if (port == 1 && !isPathDeviceStackLoaded("mc1:/"))
+			mtap_open[port] = 0;
+		else if (mtap_open[port])
+			mtap_open[port] = mtapGetConnection(port + 2) == 1;
+		else
+			mtap_open[port] = mtapPortOpen(port + 2) == 1;
+		if (!mtap_open[port])
+			mtapPortClose(port + 2);
+	}
+#endif
+}
+
+/* Nonzero when memory card unit N of "mcN:" can exist now: mc0 and mc1
+ * always, mc2-mc7 only behind an open multitap on port N & 1. */
+int mcUnitAvailable(int unit)
+{
+	if (unit < 0 || unit >= MC_UNITS)
+		return 0;
+	if (MC_UNIT_SLOT(unit) == 0)
+		return 1;
+#ifdef HOMEBREW_SIO2MAN
+	return mtap_open[MC_UNIT_PORT(unit)];
+#else
+	return 0;
+#endif
+}
+
 void ensureMemoryCardPortAccessible(int port)
 {
 #ifdef MX4SIO
-	if (port == 1 && !isPathDeviceStackLoaded("mc1:/")) {
+	if (MC_UNIT_PORT(port) == 1 && !isPathDeviceStackLoaded("mc1:/")) {
 		DPRINTF("Switching from MX4SIO stack to mc1:, resetting IOP\n");
 		resetRuntimeDeviceState(TRUE);
 	}
@@ -2967,6 +3034,10 @@ static void clearIopModuleState(void)
 	have_basic_modules = 0;
 	have_filexio_ready = 0;
 	have_mc_rpc_ready = 0;
+#ifdef HOMEBREW_SIO2MAN
+	have_mtapman = mtap_bound = 0;
+	mtap_open[0] = mtap_open[1] = 0;
+#endif
 	have_cdvd = 0;
 	have_usbd = 0;
 	have_usb_mass = 0;
@@ -3108,7 +3179,7 @@ int isPathDeviceStackLoaded(const char *path)
 	if (path == NULL)
 		return 0;
 #ifdef MX4SIO
-	if (!strncmp(path, "mc1:", 4))
+	if (mcPathUnit(path) >= 0 && MC_UNIT_PORT(mcPathUnit(path)) == 1)
 		return storage_driver_stack_mode != STORAGE_STACK_MX4SIO && !mx4sio_driver_running;
 #endif
 	if (!strncmp(path, "mc", 2))

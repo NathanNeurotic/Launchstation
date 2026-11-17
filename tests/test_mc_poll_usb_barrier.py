@@ -43,6 +43,8 @@ static void DashStorageProbeStatus(const char *text) {
 }
 '''
 program+=function("static int memoryCardResultIndicatesPresent(int ret)\n{")
+program+="#define MC_UNITS 8\nstatic int mcUnitAvailable(int u) { return u >= 0 && u < 2; }\n"
+program+=function("static void rootMcPollNext(void)\n{")
 program+=function("void filerRootMcPollIdle(void)\n{")
 program+=r'''
 int main(void) {

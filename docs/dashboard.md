@@ -65,7 +65,7 @@ hardware.
 
 ![Home dashboard with pinned sample applications](../docs-site/static/assets/ui/theme-osd.png)
 
-The four top-level tabs are **HOME, FILES, TOOLS, SETTINGS**. Unlike the
+The five top-level tabs are **HOME, GAMES, FILES, TOOLS, SETTINGS**. Unlike the
 earlier modal browser shortcut, **FILES is now a full dashboard section**.
 Its file list is drawn inside the ordinary dashboard frame with the section
 selector, L1/R1 shoulder navigation, animated background and status bar still
@@ -99,11 +99,12 @@ the source but no dashboard entry point opens it.
 | Tab | Contents |
 | --- | --- |
 | HOME | Continue carousel, full Applications library shortcut, Last folder, optional launch-key shortcuts. |
+| GAMES | PS2 ISOs from the OPL `DVD` and `CD` folders of running Neutrino devices, with OPL cover art; OK starts Neutrino with the saved per-game options. |
 | FILES | Native File Browser as an actual tab, with shared header and L1/R1 navigation. |
 | TOOLS | MISC commands, storage/device utilities, application and disc launch helpers, information and power commands. |
 | SETTINGS | Appearance, Home & applications, Sound, Input, Launching, Storage & devices, Network and System; unchanged save/discard behavior. |
 
-Startup can now select any of the four tabs, including Files. Older startup
+Startup can now select any of the five tabs, including Files and Games. Older startup
 values pointing to the separate Apps page still open Home, and the old
 Devices page points to Files; no app metadata or favorites are rewritten.
 

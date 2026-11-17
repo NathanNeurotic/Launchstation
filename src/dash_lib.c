@@ -730,7 +730,7 @@ static int cheapToScan(const char *dir)
 	if (!strncmp(dir, "mc", 2)) {
 #ifdef MX4SIO
 		/* A background scan cannot reset the IOP to reclaim slot 2. */
-		if (!strncmp(dir, "mc1:", 4) && isPathDeviceStackLoaded("mx4sio:/"))
+		if (mcPathUnit(dir) >= 0 && MC_UNIT_PORT(mcPathUnit(dir)) == 1 && isPathDeviceStackLoaded("mx4sio:/"))
 			return 0;
 #endif
 		return 1;

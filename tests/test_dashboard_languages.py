@@ -55,7 +55,7 @@ code += function.replace('#include "../Lang/DASHBOARD.inc"', mapping)
 main_source = (root / 'src/dash_main.c').read_text()
 start = main_source.index('const char *dashSectionLabel(')
 end = main_source.index('\n}', start) + 2
-code += '\n#define DASH_SEC_COUNT 6\n' + main_source[start:end] + '\n'
+code += '\n#define DASH_SEC_COUNT 8\n' + main_source[start:end] + '\n'
 assert 'localizeDashboardText(dashSectionLabel(actual))' in (root / 'src/dash_ui.c').read_text()
 code += '''
 int main(void) {
@@ -66,8 +66,8 @@ int main(void) {
         memcpy(Lang_String, tables[language], sizeof(Lang_String));
         const int section_ids[] = {LANG_Dashboard_Home, LANG_Dashboard_Applications,
             LANG_Dashboard_Files, LANG_Dashboard_Devices, LANG_Dashboard_Tools,
-            LANG_Dashboard_Settings};
-        for (int section = 0; section < 6; section++)
+            LANG_Dashboard_Settings, LANG_Dashboard_Settings, LANG_Dashboard_Games};
+        for (int section = 0; section < 8; section++)
             assert(!strcmp(localizeDashboardText(dashSectionLabel(section)),
                 tables[language][section_ids[section]].String));
         assert(!strcmp(localizeDashboardText("Home"),

@@ -13,10 +13,9 @@ import tempfile
 root=Path(__file__).resolve().parents[1]
 browser=(root/"src/dash_browser.c").read_text()
 main=(root/"src/dash_main.c").read_text()
-files=(root/"src/dash_files.c").read_text()
 hdr=(root/"include/dash_internal.h").read_text()
 assert "const DashScreen dashFilesScreen" in browser
-assert "const DashScreen dashFilesScreen" not in files
+assert not (root/"src/dash_files.c").exists()  # the unreachable old Files/Devices view is gone
 assert "if (section == DASH_SEC_FILES)" in main
 assert "dashFileBrowserTabClose();" in main
 assert "dashBrowserPadInputReady()" in main
@@ -163,5 +162,5 @@ with tempfile.TemporaryDirectory(prefix="launchstation-files-tab-") as temp:
     source=Path(temp)/"browser.c"
     binary=Path(temp)/"browser"
     source.write_text(code)
-    subprocess.run([cc,"-std=c11","-Wall","-Wextra","-Werror",str(source),"-o",str(binary)],check=True)
+    subprocess.run([cc,"-include", str(root / "include/mc_unit.h"), "-std=c11","-Wall","-Wextra","-Werror",str(source),"-o",str(binary)],check=True)
     subprocess.run([str(binary)],timeout=5,check=True)

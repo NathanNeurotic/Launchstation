@@ -288,6 +288,73 @@ class WatchTests(unittest.TestCase):
                     self.assertIn(line, (tmp / "out.env").read_text())
                 self.assertFalse((tmp / "PWNED").exists())
 
+    def test_the_mirror_fallback_never_replaces_a_held_release(self):
+        """PS2BUILD_SDK_HOLD keeps a broken upstream release out. When the official install fails and the newest
+        mirror pin.env is taken, a held component (llvm-toolchain v2026.11.11 crashes on libjpeg-turbo) must not be
+        swapped for the mirror's newer one: the mirror install is refused instead."""
+        script = (ROOT / "scripts/ps2build_sdk.sh").read_text(encoding="utf-8").splitlines()
+
+        def shell_function(name):
+            first = next(i for i, line in enumerate(script) if line.startswith(name + "() {"))
+            if script[first].rstrip().endswith("}"):
+                return script[first] + "\n"
+            last = next(i for i in range(first, len(script)) if script[i] == "}")
+            return "\n".join(script[first:last + 1]) + "\n"
+
+        harness = "set -eu\n" + "".join(shell_function(name) for name in (
+            "log", "warn", "pin_value", "version_in", "version_of", "differences", "adopt_mirror_pin")) + (
+            'LLVM=$1 PS2BUILD_SDK_HOLD=$2 PS2BUILD_COMPONENTS="ps2build=v1 toolchain=v1" PS2BUILD_LLVM_TOOLCHAIN=v1\n'
+            "PS2BUILD_EXTRAS= PS2BUILD_EXTRAS_TAG=separate PS2BUILD_SDK_RESOLVED= STALE=0 PIN=unused\n"
+            'adopt_mirror_pin "$3" && echo "adopted $PS2BUILD_COMPONENTS llvm-toolchain=$PS2BUILD_LLVM_TOOLCHAIN"\n')
+        cases = (
+            ("held component differs", "0", "toolchain", "toolchain=v2", 1),
+            ("held component matches", "0", "toolchain", "toolchain=v1", 0),
+            ("held llvm differs", "1", "llvm-toolchain", "toolchain=v1", 1),
+            ("held llvm, SDK built without llvm", "0", "llvm-toolchain", "toolchain=v1", 0),
+            ("nothing held", "1", "", "toolchain=v2", 0),
+        )
+        for label, llvm, hold, mirror_toolchain, status in cases:
+            with self.subTest(label), tempfile.TemporaryDirectory() as d:
+                tmp = Path(d)
+                (tmp / "adopt.sh").write_text(harness)
+                (tmp / "pin.env").write_text(
+                    "PS2BUILD_SDK_TAG=sdk-x\nPS2BUILD_SDK_SUMS_SHA256=" + "0" * 64 + "\n"
+                    'PS2BUILD_COMPONENTS="ps2build=v1 ' + mirror_toolchain + '"\nPS2BUILD_LLVM_TOOLCHAIN=v2\n')
+                env = {k: v for k, v in os.environ.items() if not k.startswith(("PS2BUILD_", "GITHUB_"))}
+                result = subprocess.run(["sh", str(tmp / "adopt.sh"), llvm, hold, str(tmp / "pin.env")], cwd=tmp,
+                                        env=env, capture_output=True, text=True, timeout=30)
+                self.assertEqual(result.returncode, status, result.stdout + result.stderr)
+                if status:
+                    self.assertIn("held at v1", result.stdout)
+                else:
+                    self.assertIn("adopted ps2build=v1 " + mirror_toolchain, result.stdout)
+
+        # CI installs from the pin that --resolve writes, so the hold must survive that step, and only that
+        # pin then decides the mirror fallback. The hold installs nothing, so it is not part of the cache key.
+        with tempfile.TemporaryDirectory() as d:
+            tmp = Path(d)
+            env = {k: v for k, v in os.environ.items() if not k.startswith(("PS2BUILD_", "GITHUB_"))}
+            env["PS2BUILD_SDK_OFFICIAL_API_URL"] = (tmp / "no-api").as_uri()
+            keys = {}
+            for hold in ("", "llvm-toolchain"):
+                (tmp / "pin.env").write_text('PS2BUILD_COMPONENTS="ps2build=v1 toolchain=v1"\nPS2BUILD_LLVM_TOOLCHAIN=v1\n'
+                                             'PS2BUILD_SDK_HOLD="' + hold + '"\n')
+                result = subprocess.run(["sh", str(ROOT / "scripts/ps2build_sdk.sh"), "--resolve", "--llvm",
+                                         str(tmp / "out.env")], cwd=tmp, env=dict(env, PS2BUILD_SDK_PIN=str(tmp / "pin.env")),
+                                        capture_output=True, text=True, timeout=60)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                keys[hold] = result.stdout.splitlines()[-1]
+            self.assertEqual(keys[""], keys["llvm-toolchain"])
+            (tmp / "adopt.sh").write_text(harness.replace("LLVM=$1 PS2BUILD_SDK_HOLD=$2 ", ". ./out.env\nLLVM=$1 ", 1)
+                                          .replace(' PS2BUILD_COMPONENTS="ps2build=v1 toolchain=v1" PS2BUILD_LLVM_TOOLCHAIN=v1\n',
+                                                   "\n", 1))
+            (tmp / "mirror.env").write_text("PS2BUILD_SDK_TAG=sdk-x\nPS2BUILD_SDK_SUMS_SHA256=" + "0" * 64 + "\n"
+                                            'PS2BUILD_COMPONENTS="ps2build=v1 toolchain=v1"\nPS2BUILD_LLVM_TOOLCHAIN=v2\n')
+            result = subprocess.run(["sh", str(tmp / "adopt.sh"), "1", "", str(tmp / "mirror.env")], cwd=tmp, env=env,
+                                    capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("llvm-toolchain v2, held at v1", result.stdout)
+
     def test_an_unreadable_manifest_or_an_empty_tag_falls_back_to_the_release_api(self):
         for manifest_body in (b"not json", b'{"components": {"sdk-core": {"tag": ""}}}',
                               b'{"components": {"sdk-core": {"tag": 5}}}', b'{"components": {"sdk-core": {"tag": "v1;id"}}}',

@@ -74,6 +74,13 @@ EMBED_FILE(exploit_ioprp_img, "exploits/IOPRP_LTS.IMG")
 EMBED_FILE(udpfs_ministack_irx, "iop/__precompiled/udpfs_ministack.irx")
 EMBED_FILE(udpfs_ioman_irx, "iop/__precompiled/udpfs_ioman.irx")
 
+/* i.LINK: RiptOPL's fixed manager + block driver (ship/neutrino-ilink/README.txt), the same bytes the
+ * kit ships in neutrino/modules/. The SDK pair never logs out and gives up its LOGIN after about 0.8 s,
+ * inside the drive's hold on the previous login, and numbers a drive by slot, so after a reset it could
+ * come up as device 1 while Neutrino's in-game driver calls it device 0. */
+EMBED_FILE(iLinkman_irx, "ship/neutrino-ilink/iLinkman.irx")
+EMBED_FILE(IEEE1394_bd_irx, "ship/neutrino-ilink/IEEE1394_bd_mini.irx")
+
 /* MrRexD network-compatibility fallback: ps2sdk v1.0 DEV9/PS2IP. */
 EMBED_FILE(ps2dev9_v10_irx, "iop/__v10/ps2dev9.irx")
 EMBED_FILE(ps2ip_v10_irx, "iop/__v10/ps2ip.irx")

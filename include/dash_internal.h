@@ -534,9 +534,11 @@ enum DashSection {
 	DASH_SEC_DEVICES,
 	DASH_SEC_TOOLS,
 	DASH_SEC_SETTINGS,
-	DASH_SEC_COUNT,
-	/* Start screen only (never a tab): Settings opened on its Launch keys page. */
-	DASH_START_LAUNCH_KEYS = DASH_SEC_COUNT
+	/* Start screen only (never a tab): Settings opened on its Launch keys page.
+	 * It stays 6, the value saved in Dash_StartSection, below GAMES. */
+	DASH_START_LAUNCH_KEYS,
+	DASH_SEC_GAMES,
+	DASH_SEC_COUNT
 };
 
 enum DashView {
@@ -614,7 +616,7 @@ typedef struct
 #define DASH_DEVA_UDPFS  (1 << 5)
 #define DASH_DEVA_ILINK  (1 << 6)
 #define DASH_DEVA_ALL    0x7F
-#define DASH_TAB_MASK    ((1 << DASH_SEC_HOME) | (1 << DASH_SEC_FILES) | (1 << DASH_SEC_TOOLS) | (1 << DASH_SEC_SETTINGS))
+#define DASH_TAB_MASK    ((1 << DASH_SEC_HOME) | (1 << DASH_SEC_GAMES) | (1 << DASH_SEC_FILES) | (1 << DASH_SEC_TOOLS) | (1 << DASH_SEC_SETTINGS))
 
 extern DashSettings dashCfg;
 
@@ -678,7 +680,8 @@ enum DashAppFlags {
 	DASH_APP_MISSING = 1 << 2,
 	DASH_APP_META_PIN = 1 << 3,
 	DASH_APP_TRANSIENT = 1 << 4, /* recent/fav entry not found in library */
-	DASH_APP_ART_DEFERRED = 1 << 5 /* art lookup waits for the device driver */
+	DASH_APP_ART_DEFERRED = 1 << 5, /* art lookup waits for the device driver */
+	DASH_APP_GAME = 1 << 6          /* GAMES entry: ISO path, category holds its game ID */
 };
 
 enum DashArtState {
@@ -748,6 +751,7 @@ int dashArtStep(int input_idle_ms);
 void dashArtForget(const DashApp *app);
 int dashArtTakeDirty(void);
 void dashArtFlushAll(void);
+int dashArtBusy(void); /* an artwork job holds a DashApp pointer */
 void dashArtInvalidateVram(void);
 /* Themed PNG loaded from the dashboard THEME folder (NULL if absent). */
 GSTEXTURE *dashThemeTexture(const char *name, int max_w, int max_h);
@@ -791,7 +795,7 @@ typedef struct
 	float fill; /* 0..1 used space, <0 unknown */
 } DashDevice;
 
-#define DASH_MAX_DEVICES 24
+#define DASH_MAX_DEVICES 30 /* 24 plus mc2-mc7 behind two multitaps */
 void dashDevicesInit(void);
 void dashDevicesPoll(void);
 void dashDevicesAutoProbe(void);
@@ -1003,7 +1007,7 @@ void dashWorkerParkPoint(void);
 int dashIopParked(void);
 
 //--------------------------------------------------------------
-// Sections (dash_home.c, dash_apps.c, dash_files.c, dash_tools.c,
+// Sections (dash_home.c, dash_apps.c, dash_browser.c, dash_tools.c,
 // dash_settings.c) and shell (dash_main.c)
 //--------------------------------------------------------------
 typedef struct
@@ -1019,9 +1023,9 @@ typedef struct
 extern const DashScreen dashHomeScreen;
 extern const DashScreen dashAppsScreen;
 extern const DashScreen dashFilesScreen;
-extern const DashScreen dashDevicesScreen;
 extern const DashScreen dashToolsScreen;
 extern const DashScreen dashSettingsScreen;
+extern const DashScreen dashGamesScreen;
 
 /* MMCE/cloud actions and cached Settings status shared by Tools/Settings. */
 void dashToolsIgrBackupSetup(void);
@@ -1128,9 +1132,6 @@ int dashClockSyncInternet(char *result, int result_size);
 int dashClockDaysInMonth(int year, int month); /* 0 for a month outside 1-12 */
 const MainExecuteContext *dashExecContext(void);
 const char *dashOkLabelKey(void);
-
-/* Main loop: finishes a device the user opened while its driver started. */
-void dashFilesPoll(void);
 
 /* Home/Apps shared helpers. */
 int dashAppsVisibleCount(void);

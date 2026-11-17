@@ -69,6 +69,7 @@ static void filerRootMcPollIdle(void) { drains++; }
 static int rpc_down,rpc_starts,rpc_fail;
 static void ensureCoreIoStackReady(void) { assert(!worker); rpc_starts++; rpc_down=rpc_fail; }
 static int isMemoryCardRpcReady(void) { return !rpc_down; }
+static int mcUnitAvailable(int u) { return u >= 0 && u < 2; }
 static int filerRootMcPresent(int p,void *type,void *free_units) {
     (void)type;(void)free_units;return root_mc_polled[p]?root_mc_present[p]:-1;
 }
@@ -236,5 +237,5 @@ with tempfile.TemporaryDirectory(prefix="launchstation-mc1-mx4sio-") as tmp:
     source = Path(tmp) / "handoff.c"
     executable = Path(tmp) / "handoff"
     source.write_text(code)
-    subprocess.run([compiler,"-std=c99","-Wall","-Wextra","-Werror","-Wno-unused-function",str(source),"-o",str(executable)],check=True)
+    subprocess.run([compiler,"-include", str(root / "include/mc_unit.h"), "-std=c99","-Wall","-Wextra","-Werror","-Wno-unused-function",str(source),"-o",str(executable)],check=True)
     subprocess.run([str(executable)],check=True)

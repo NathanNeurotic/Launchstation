@@ -5,7 +5,6 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 dev = (root / "src/dash_devices.c").read_text(encoding="utf-8")
-files = (root / "src/dash_files.c").read_text(encoding="utf-8")
 
 start = dev[dev.index("int dashDevicesStart(const DashDevice *dev"):]
 start = start[:start.index("\n}\n")]
@@ -19,8 +18,6 @@ refused = retry[retry.index("reloadUdpfsModules();"):]
 assert "if (getIopResetGeneration() == generation) {" in refused and "return 1;" in refused
 assert "cb(" not in refused[:refused.index("return 1;")]
 # callers keep a refusal (1) apart from out of memory (<0) and a missing server
-assert "if (dashDevicesStart(d, pendProbeDone, NULL) != 0)\n\t\tpend.active = 0;" in files
-assert "(out of memory)" not in files  # -1 only ever means the user backed out
 for f in ("dash_browser.c", "dash_widgets.c"):
     assert "dashDevicesStart(d, " in (root / "src" / f).read_text(encoding="utf-8")
     assert ", NULL) != 0)" in (root / "src" / f).read_text(encoding="utf-8")
@@ -30,7 +27,7 @@ probe = probe[:probe.index("\n}\n")]
 assert "ok = load_udpfs();" in probe
 assert '"UDPFS server not found - open to retry");' in dev
 
-sel = files[files.index("static int devSelectable(int idx)"):]
-sel = sel[:sel.index("\n}\n")]
-assert '#ifdef UDPFS\n\t        (devs[idx].state == DASH_DEV_ABSENT && !strcmp(devs[idx].mount, "udpfs:")) ||\n#endif' in sel
+# The File Browser device list has no selectable filter: an absent row opens and retries.
+browser = (root / "src/dash_browser.c").read_text(encoding="utf-8")
+assert "if (d->state == DASH_DEV_PROBE || d->state == DASH_DEV_ABSENT) {" in browser
 print("PASS: a failed UDPFS row stays selectable and only an explicit open retries it with an IOP reset")

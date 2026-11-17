@@ -296,7 +296,7 @@ static void listRun(void *arg)
 
 	dashWorkerStatus(j->path, 0, 0);
 	j->n = getDir(j->path, j->files);
-	if (j->n == 0 && (!strncmp(j->path, "mc0:", 4) || !strncmp(j->path, "mc1:", 4)) && !filerDirOpened())
+	if (j->n == 0 && mcPathUnit(j->path) >= 0 && !filerDirOpened())
 		j->n = -1;
 #ifdef SMB
 	if (smbSharesV1Name() != NULL && smbPathKind(j->path) == SMB_PATH_V2 && smbIsRootPath(j->path)) {
@@ -361,7 +361,7 @@ static void listDone(void *arg)
 	int i, o = 0;
 
 	if (!j->abandoned && j->gen == fb.gen && fb.files != NULL) {
-		if (j->n < 0 && (!strncmp(j->path, "mc0:", 4) || !strncmp(j->path, "mc1:", 4))) {
+		if (j->n < 0 && mcPathUnit(j->path) >= 0) {
 			char card[8];
 			snprintf(card, sizeof(card), "mc%c:/", j->path[2]);
 			free(j->files);
@@ -666,6 +666,20 @@ static void launchPath(const char *path, int with_args)
 	fb.args_loaded = LaunchArgsPending(); /* only still set when the start failed */
 }
 
+/* Why a device the user opened is missing: its name and what to check, never
+ * an internal mount ID (from the old Devices view, issues #172-#175). */
+static void deviceNotFoundText(const DashDevice *d, char *body, int size)
+{
+	if (d->icon == DI_USB)
+		snprintf(body, size, "No USB storage device was found. Connect a USB drive and try again.");
+	else if (d->icon == DI_NETWORK || d->icon == DI_SHARE)
+		snprintf(body, size, "%s could not be reached. Check the cable, IP settings and that the server is running.", d->name);
+	else if (isPcCardCfPath(d->mount))
+		snprintf(body, size, "%s: %s", d->name, d->status[0] ? d->status : "CF card not detected or incompatible.");
+	else
+		snprintf(body, size, "%s is not available on this console, or it is not connected.", d->name);
+}
+
 /** Activate the selected device or file, reporting SMB probe failures. */
 static void activate(void)
 {
@@ -690,21 +704,22 @@ static void activate(void)
 		dashStrCopy(path, d->browse, sizeof(path));
 		if (d->state == DASH_DEV_PROBE || d->state == DASH_DEV_ABSENT) {
 			int mask, unit;
+			char why[160];
 
 			if (dashDevicesStart(d, NULL, NULL) != 0)
 				return;
 			if (!dashDevicePathReady(path)) {
+				deviceNotFoundText(d, why, sizeof(why)); /* before openDir rebuilds fb.devs */
 				openDir("", path); /* the list shows the new state */
 #ifdef SMB
 				int smb_version = smbPathKind(path);
 				if (smb_version != SMB_PATH_NONE) {
-					char why[96];
 					smbStatusMessage(smb_version, why, sizeof(why));
 					dashToast(DASH_TOAST_WARN, why);
 					return;
 				}
 #endif
-				dashToast(DASH_TOAST_WARN, "Device not found");
+				dashToast(DASH_TOAST_WARN, why);
 				return;
 			}
 			/* The USB probe has already discovered the units. Open its first
@@ -3434,7 +3449,7 @@ static int browserOpenState(const char *start_dir, const char *select)
 	memset(fb.mark, 0, MAX_ENTRY);
 	if (start_dir != NULL && start_dir[0] &&
 	    (isMisc(start_dir) || (strchr(start_dir, ':') &&
-	     (!strncmp(start_dir, "mc0:", 4) || !strncmp(start_dir, "mc1:", 4) || dashDevicePathReady(start_dir)))))
+	     (mcPathUnit(start_dir) >= 0 || dashDevicePathReady(start_dir)))))
 		openDir(start_dir, select);
 	else
 		openDir("", select);

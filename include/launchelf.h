@@ -164,6 +164,7 @@ static inline size_t wle_strnlen(const char *s, size_t maxlen)
 	#define DPRINTF(format, args...)// strip away printf from consumer builds
 #endif
 
+#include "mc_unit.h"
 #define TRUE 1
 #define FALSE 0
 
@@ -460,6 +461,7 @@ int LaunchEmberGame(const char *path, char *message, size_t message_size);
 
 /* neutrino_iso.c */
 int IsNeutrinoIsoPath(const char *path);
+int IsNeutrinoGameDevice(const char *path);
 int LaunchNeutrinoIso(const char *path, char *message, size_t message_size);
 
 /* draw.c */

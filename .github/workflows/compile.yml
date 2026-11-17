@@ -182,6 +182,7 @@ jobs:
           python3 tests/test_opl_title_cfg.py
           python3 tests/test_recent_skips_game_images.py
           python3 tests/test_wle_igr.py
+          python3 tests/test_ilink_fixed_pair.py
           python3 tests/test_igr_return_policy.py
           python3 tests/test_cloud_relay.py
           python3 tests/test_native_cloud.py
@@ -263,6 +264,7 @@ jobs:
           python3 tests/test_new_folder_save_icons.py
           python3 tests/test_saildot4k_wins.py
           python3 tests/test_mc_detect_retry.py
+          python3 tests/test_games_tab.py
 
       - name: Validate documentation site
         run: |

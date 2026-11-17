@@ -21,6 +21,8 @@
 //     (OPL ART folder; +OPL partition on the internal HDD)
 //  7. <dashboard dir>/ART/<NAME>.ELF_COV.png, <NAME>_COV.png, <NAME>.png
 //  8. procedural tile (always available)
+//A GAMES entry (an ISO) uses <root>/ART/<GAME ID>_COV.png or .jpg instead,
+//then the dashboard ART folder (gameCandidate).
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "init.h"
@@ -198,6 +200,36 @@ static void deviceRoot(const char *path, char *root, int size)
 	strcat(root, "/");
 }
 
+/* GAMES entries use OPL's cover names, <root>/ART/<GAME ID>_COV.png or .jpg
+ * where <root> holds the DVD and CD folders, then the dashboard ART folder. */
+static int gameCandidate(const DashApp *app, int idx, char *out, int size)
+{
+	static const char *const ext[2] = {"png", "jpg"};
+	const char *p = strrchr(app->path, '/');
+
+	out[0] = '\0';
+	if (idx == 0) {
+		if (app->art[0])
+			dashStrCopy(out, app->art, size);
+		return 1;
+	}
+	if (idx > 4)
+		return 0;
+	if (!app->category[0])
+		return 1; /* no game ID, so no OPL cover name */
+	if (idx > 2) {
+		if (dashStoreDir()[0])
+			snprintf(out, size, "%sART/%s_COV.%s", dashStoreDir(), app->category, ext[idx - 3]);
+		return 1;
+	}
+	if (p != NULL)
+		for (p--; p > app->path && *p != '/'; p--)
+			;
+	if (p != NULL && *p == '/')
+		snprintf(out, size, "%.*sART/%s_COV.%s", (int)(p - app->path) + 1, app->path, app->category, ext[idx - 1]);
+	return 1;
+}
+
 /* Builds candidate #idx; returns 0 when the list is exhausted. */
 static int buildCandidate(const DashApp *app, int idx, char *out, int size)
 {
@@ -207,6 +239,8 @@ static int buildCandidate(const DashApp *app, int idx, char *out, int size)
 	char *dot;
 	int n = (int)(name - app->path);
 
+	if (app->flags & DASH_APP_GAME)
+		return gameCandidate(app, idx, out, size);
 	if (n >= (int)sizeof(dir))
 		return 0;
 	memcpy(dir, app->path, n);
@@ -338,9 +372,16 @@ typedef struct
 
 static ArtJob *art_job; /* at most one in flight */
 
+int dashArtBusy(void)
+{
+	return art_job != NULL;
+}
+
 static int tryDecode(ArtJob *j, const char *path)
 {
-	if (dashPngLoadFile(path, ART_MAX_DIM, ART_MAX_DIM, &j->pixels, &j->w, &j->h) != 0) {
+	/* OPL cover packs ship JPEG as well as PNG. */
+	if ((genCmpFileExt(path, "JPG") ? dashJpegLoadFile(path, ART_MAX_DIM, ART_MAX_DIM, &j->pixels, &j->w, &j->h) :
+	                                  dashPngLoadFile(path, ART_MAX_DIM, ART_MAX_DIM, &j->pixels, &j->w, &j->h)) != 0) {
 		j->pixels = NULL;
 		return 0;
 	}
@@ -394,7 +435,8 @@ static void artDone(void *arg)
 		if (app->art_state != DASH_ART_FOUND || stricmp(app->art, j->art)) {
 			dashStrCopy(app->art, j->art, sizeof(app->art));
 			app->art_state = DASH_ART_FOUND;
-			art_dirty = 1;
+			if (!(app->flags & DASH_APP_GAME)) /* games are not in DASHLIB.CNF */
+				art_dirty = 1;
 		}
 		s = findSlot(app->path);
 		if (s == NULL)
@@ -418,7 +460,7 @@ static void artDone(void *arg)
 	} else if (j->result == ART_R_DEFERRED) {
 		app->flags |= DASH_APP_ART_DEFERRED;
 	} else {
-		if (app->art_state != DASH_ART_NONE)
+		if (app->art_state != DASH_ART_NONE && !(app->flags & DASH_APP_GAME))
 			art_dirty = 1;
 		app->art_state = DASH_ART_NONE;
 		app->art[0] = '\0';

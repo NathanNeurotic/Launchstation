@@ -415,9 +415,9 @@ int psu_restore_apply_entry_stats_to_mc(const char *out_dir, const sceMcTblGetDi
 		return -1;
 
 	ensureMemoryCardPortAccessible(path[2] - '0');
-	mcGetInfo(path[2] - '0', 0, &dummy, &dummy, &dummy);
+	mcGetInfo(MC_UNIT_PORT(path[2] - '0'), MC_UNIT_SLOT(path[2] - '0'), &dummy, &dummy, &dummy);
 	mcSync(0, NULL, &dummy);
-	mcSetFileInfo(path[2] - '0', 0, &path[4], (sceMcTblGetDir *)stats, set_mode);
+	mcSetFileInfo(MC_UNIT_PORT(path[2] - '0'), MC_UNIT_SLOT(path[2] - '0'), &path[4], (sceMcTblGetDir *)stats, set_mode);
 	mcSync(0, NULL, &dummy);
 	return 0;
 }

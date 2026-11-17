@@ -215,6 +215,8 @@ typedef void (*DashProbeDone)(const char *,int,void *);
 static unsigned int reset_generation;
 static int cdmode, uLE_cdmode, vmcMounted[2], console_is_PSX;
 static unsigned int getIopResetGeneration(void) { return reset_generation; }
+static int mcUnitAvailable(int u) { return u >= 0 && u < 2; }
+static void mcMultitapRefresh(void) {}
 static char LaunchElfBootDir[256], LaunchElfDir[256], netConfig[32];
 static struct { int dev_auto; int show_unavailable_devices; } dashCfg = {0,1};
 static int mc_present[2], usb_mask, usb_loaded, resident, media, loads, opens, closes;
@@ -487,7 +489,7 @@ with tempfile.TemporaryDirectory(prefix="wle-device-input-") as tmp:
         exe = Path(tmp) / f"{name}.exe"
         source.write_text("#define localizeDashboardText(s) (s)\n" + code)
         try:
-            subprocess.run([compiler, "-std=gnu11", "-O1", str(source), "-o", str(exe)], check=True)
+            subprocess.run([compiler, "-include", str(root / "include/mc_unit.h"), "-std=gnu11", "-O1", str(source), "-o", str(exe)], check=True)
             subprocess.run([str(exe)], check=True, timeout=5)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
             failures.append(name)

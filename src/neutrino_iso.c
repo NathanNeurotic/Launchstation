@@ -135,6 +135,12 @@ static const char *neutrinoBsdForPath(const char *path)
 	return NULL;
 }
 
+/* Neutrino can start an ISO from this device (the GAMES tab lists these). */
+int IsNeutrinoGameDevice(const char *path)
+{
+	return neutrinoBsdForPath(path) != NULL;
+}
+
 #ifdef SMB
 static int smbCoreLocal(const char *path)
 {
@@ -211,6 +217,72 @@ failed:
 done:
 	memset(original,0,sizeof(original)); memset(updated,0,sizeof(updated)); memset(verify,0,sizeof(verify));
 	return ok;
+}
+#endif
+
+#ifdef ILINK
+/* Launchstation embeds RiptOPL's fixed i.LINK pair (ship/neutrino-ilink, src/embed_blobs.S), the same
+ * bytes the kit puts in neutrino/modules/. Neutrino's in-game environment loads its OWN copies after the
+ * game's IOP reset (config/bsd-ilink.toml). The stock pair never logs out and gives up its LOGIN after
+ * about 0.8 s, inside the drive's hold on the dashboard's login, so a launch boots or black-screens
+ * depending on timing. 1 = this install's file is the fixed build. */
+extern unsigned char iLinkman_irx[];
+extern int size_iLinkman_irx;
+extern unsigned char IEEE1394_bd_irx[];
+extern int size_IEEE1394_bd_irx;
+
+static int neutrinoModuleIsOurs(const char *elf_path, const char *name, const unsigned char *ours, int size)
+{
+	char path[MAX_PATH];
+	unsigned char buf[512] __attribute__((aligned(64)));
+	const char *slash = strrchr(elf_path, '/');
+	int fd, rd = 0, pos = 0, same = 1;
+
+	if (slash == NULL)
+		slash = strrchr(elf_path, ':');
+	if (slash == NULL || snprintf(path, sizeof(path), "%.*smodules/%s", (int)(slash - elf_path) + 1, elf_path, name) >= (int)sizeof(path))
+		return 0;
+	fd = openPathForRead(path, NULL, 0);
+	if (fd < 0)
+		return 0;
+	while (same && (rd = genRead(fd, buf, sizeof(buf))) > 0) {
+		if (pos + rd > size || memcmp(buf, ours + pos, rd))
+			same = 0;
+		pos += rd;
+	}
+	genClose(fd);
+	return same && rd == 0 && pos == size;
+}
+
+static int neutrinoIlinkPairIsOurs(const char *elf_path)
+{
+	return neutrinoModuleIsOurs(elf_path, "iLinkman.irx", iLinkman_irx, size_iLinkman_irx) &&
+	       neutrinoModuleIsOurs(elf_path, "IEEE1394_bd_mini.irx", IEEE1394_bd_irx, size_IEEE1394_bd_irx);
+}
+
+/* Stable: installs with the fixed pair keep their order and go first; the rest follow unchanged. */
+static void preferFixedIlinkPair(POPSTARTER_CANDIDATE_LIST *list)
+{
+	static POPSTARTER_CANDIDATE older[POPSTARTER_MAX_CANDIDATES];
+	int i, fixed = 0, n_older = 0;
+
+	for (i = 0; i < list->count; i++) {
+		/* mc:/ resolves each file on its own (mc0 first, then mc1): pin the card the ELF opens on, so the
+		 * modules checked here, the ELF prepared and the older-driver notice all come from one install. */
+		if (!strncmp(list->entry[i].path, "mc:/", 4)) {
+			char card_path[MAX_PATH];
+			int fd = openPathForRead(list->entry[i].path, card_path, sizeof(card_path));
+			if (fd >= 0) {
+				genClose(fd);
+				snprintf(list->entry[i].path, sizeof(list->entry[i].path), "%s", card_path);
+			}
+		}
+		if (neutrinoIlinkPairIsOurs(list->entry[i].path))
+			list->entry[fixed++] = list->entry[i];
+		else
+			older[n_older++] = list->entry[i];
+	}
+	memcpy(&list->entry[fixed], older, sizeof(older[0]) * n_older);
 }
 #endif
 
@@ -365,6 +437,10 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 		setMessage(message, message_size, "Neutrino not found (set its path in Settings)", NULL);
 		return 0;
 	}
+#ifdef ILINK
+	if (!strcmp(bsd, "ilink"))
+		preferFixedIlinkPair(&candidates);
+#endif
 	ret = preparePopstarterCandidateLaunch(&candidates, selected, sizeof(selected),
 	                                       fullpath, sizeof(fullpath), party, sizeof(party), &exec_kind);
 	if (ret != POPSTARTER_OK) {
@@ -394,6 +470,13 @@ int LaunchNeutrinoIso(const char *path, char *message, size_t message_size)
 #endif
 	/* Exec cleanup frees setting: read the RetroGEM choice before it. */
 	show_gameid = have_gameid && !setting->cdrom_disable_gameid;
+#ifdef ILINK
+	/* Not a gate: an older pair can still boot when the drive's hold has already ended. */
+	if (!strcmp(bsd, "ilink") && !neutrinoIlinkPairIsOurs(selected)) {
+		drawMsg("This Neutrino has an older i.LINK driver: copy neutrino/modules/iLinkman.irx and IEEE1394_bd_mini.irx from the Launchstation kit");
+		DelayThread(3000000);
+	}
+#endif
 	if (!CleanUpForKeepIopExec("Preparing Neutrino"))
 		return 0;
 	if (show_gameid)

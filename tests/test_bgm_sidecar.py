@@ -258,5 +258,5 @@ with tempfile.TemporaryDirectory(prefix="wle-bgm-") as tmp:
         harness = Path(tmp) / f"{name}.c"
         exe = Path(tmp) / f"{name}.exe"
         harness.write_text(harness_code)
-        subprocess.run([compiler, "-std=gnu11", str(harness), "-o", str(exe)], check=True)
+        subprocess.run([compiler, "-include", str(root / "include/mc_unit.h"), "-std=gnu11", str(harness), "-o", str(exe)], check=True)
         subprocess.run([str(exe)], check=True)

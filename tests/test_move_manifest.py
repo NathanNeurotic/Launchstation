@@ -77,6 +77,6 @@ int main(void){
 with tempfile.TemporaryDirectory(prefix='move-manifest-') as folder:
     p = Path(folder)
     (p / 'test.c').write_text(code)
-    subprocess.run([shutil.which('gcc') or 'gcc', '-std=gnu99', '-Wall', '-Wextra', '-Werror',
+    subprocess.run([shutil.which('gcc') or 'gcc', "-include", str(root / "include/mc_unit.h"), '-std=gnu99', '-Wall', '-Wextra', '-Werror',
                     '-fsanitize=address,undefined', str(p / 'test.c'), '-o', str(p / 'test')], check=True)
     subprocess.run([str(p / 'test')], cwd=p, check=True, timeout=30)

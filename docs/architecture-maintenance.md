@@ -113,7 +113,7 @@ Completed so far:
 7. Main startup/menu flow splits now include:
    - `src/main_boot.c` (early boot sequence + argument capture)
    - `src/main_modules.c` (runtime module/font/pad startup + CNF path validation)
-8. The dashboard is split into `dash_*` units (`dash_home`, `dash_apps`, `dash_files`, `dash_tools`, `dash_settings`, `dash_theme`, `dash_worker`, and so on); `dash_main.c` owns the event loop and the PC-command polling.
+8. The dashboard is split into `dash_*` units (`dash_home`, `dash_apps`, `dash_browser`, `dash_tools`, `dash_settings`, `dash_theme`, `dash_worker`, and so on); `dash_main.c` owns the event loop and the PC-command polling.
 
 Candidate next extractions (lowest risk first), each behavior-neutral:
 

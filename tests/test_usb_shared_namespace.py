@@ -94,5 +94,5 @@ with tempfile.TemporaryDirectory(prefix="launchstation-bdm-paths-") as tmp:
     c = Path(tmp) / "identity.c"
     exe = Path(tmp) / "identity"
     c.write_text(program)
-    subprocess.run([compiler, "-std=gnu11", "-Wall", "-Wextra", "-Werror", str(c), "-o", str(exe)], check=True)
+    subprocess.run([compiler, "-include", str(root / "include/mc_unit.h"), "-std=gnu11", "-Wall", "-Wextra", "-Werror", str(c), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True, timeout=5)

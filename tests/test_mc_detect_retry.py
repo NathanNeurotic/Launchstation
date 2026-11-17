@@ -116,7 +116,7 @@ int main(void){
 with tempfile.TemporaryDirectory() as tmp:
     src = Path(tmp) / "t.c"
     src.write_text(code, encoding="utf-8")
-    subprocess.run(["gcc", "-std=gnu99", "-Wall", "-Werror", "-Wno-unused-function",
+    subprocess.run(["gcc", "-include", str(root / "include/mc_unit.h"), "-std=gnu99", "-Wall", "-Werror", "-Wno-unused-function",
                     "-fsanitize=address,undefined", str(src), "-o", str(Path(tmp) / "t")], check=True)
     subprocess.run([str(Path(tmp) / "t")], check=True)
 

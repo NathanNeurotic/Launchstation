@@ -48,13 +48,11 @@ static char last_body[256];
 static int isPcCardCfPath(const char *mount) {
     return !strncmp(mount, "cf", 2);
 }
-static void dashModalMessage(int icon, const char *title,
-                             const char *body, const char *detail) {
-    assert(icon == DI_WARNING);
-    assert(!strcmp(title, "Device not found"));
-    assert(detail == NULL); /* never expose internal mount paths */
-    assert(body && body[0]);
-    snprintf(last_body, sizeof(last_body), "%s", body);
+/* The File Browser reports a missing device by name, never by mount ID. */
+static void deviceNotFoundText(const DashDevice *d, char *body, int size);
+static void deviceNotFound(const DashDevice *d) {
+    deviceNotFoundText(d, last_body, sizeof(last_body));
+    assert(last_body[0] && !strstr(last_body, d->mount));
     modal_calls++;
 }
 static int dashWorkerAwaitAll(const char *status) {
@@ -82,7 +80,7 @@ static void dashLoadingEnd(void) {
 }
 """
 
-c += function("src/dash_files.c", "static void deviceNotFound(const DashDevice *d)\n{")
+c += function("src/dash_browser.c", "static void deviceNotFoundText(const DashDevice *d, char *body, int size)\n{")
 c += function("src/dash_devices.c", "static int startSync(const char *mount, const char *title)\n{")
 
 c += r"""
@@ -137,11 +135,10 @@ int main(void) {
     deviceNotFound(&usb);
     assert(strstr(last_body, "USB storage device"));
     deviceNotFound(&udpfs);
-    assert(strstr(last_body, "network share"));
-    assert(strstr(last_body, "UDPFS server"));
+    assert(strstr(last_body, "UDPFS could not be reached"));
     DashDevice smb = {DI_SHARE, "smb:", "SMB share", "Not connected"};
     deviceNotFound(&smb);
-    assert(strstr(last_body, "SMB server") && !strstr(last_body, "UDPFS"));
+    assert(strstr(last_body, "SMB share could not be reached") && !strstr(last_body, "UDPFS"));
     deviceNotFound(&cf);
     assert(strstr(last_body, "CF card absent"));
     assert(modal_calls == 6);

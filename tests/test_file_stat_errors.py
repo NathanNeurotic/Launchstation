@@ -137,6 +137,6 @@ with tempfile.TemporaryDirectory(prefix='file-stat-errors-') as folder:
     (path / 'test.c').write_text(code)
     for flags in ([], ['-DEXFAT']):
         exe = path / ('bdm' if flags else 'legacy')
-        subprocess.run([cc, '-std=c11', '-Wall', '-Wextra', '-Werror', *flags,
+        subprocess.run([cc, "-include", str(root / "include/mc_unit.h"), '-std=c11', '-Wall', '-Wextra', '-Werror', *flags,
                         str(path / 'test.c'), '-o', str(exe)], check=True)
         subprocess.run([str(exe)], check=True, timeout=10)

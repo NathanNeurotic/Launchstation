@@ -51,7 +51,7 @@ STALE=0
 
 [ -f "$PIN" ] || { echo "error: pin file $PIN not found" >&2; exit 2; }
 PS2BUILD_SDK_MIRROR= PS2BUILD_SDK_TAG= PS2BUILD_SDK_SUMS_SHA256= PS2BUILD_COMPONENTS= PS2BUILD_LLVM_TOOLCHAIN=
-PS2BUILD_EXTRAS= PS2BUILD_EXTRAS_TAG= PS2BUILD_EXTRAS_SUMS_SHA256= PS2BUILD_SDK_RESOLVED=
+PS2BUILD_EXTRAS= PS2BUILD_EXTRAS_TAG= PS2BUILD_EXTRAS_SUMS_SHA256= PS2BUILD_SDK_RESOLVED= PS2BUILD_SDK_HOLD=
 # shellcheck disable=SC1090
 case $PIN in /*) . "$PIN" ;; *) . "./$PIN" ;; esac
 [ -n "$PS2BUILD_COMPONENTS" ] || { echo "error: $PIN sets no PS2BUILD_COMPONENTS" >&2; exit 2; }
@@ -242,6 +242,7 @@ write_pin() { # the resolved versions, in the pin format later steps read
         echo "PS2BUILD_SDK_SUMS_SHA256=$PS2BUILD_SDK_SUMS_SHA256"
         echo "PS2BUILD_COMPONENTS=\"$PS2BUILD_COMPONENTS\""
         echo "PS2BUILD_LLVM_TOOLCHAIN=$PS2BUILD_LLVM_TOOLCHAIN"
+        echo "PS2BUILD_SDK_HOLD=\"$PS2BUILD_SDK_HOLD\"" # the mirror fallback reads it after --resolve
         echo "PS2BUILD_EXTRAS=\"$PS2BUILD_EXTRAS\""
         echo "PS2BUILD_EXTRAS_TAG=$PS2BUILD_EXTRAS_TAG"
         echo "PS2BUILD_EXTRAS_SUMS_SHA256=$PS2BUILD_EXTRAS_SUMS_SHA256"
@@ -266,8 +267,9 @@ fi
 
 if [ "$MODE" = resolve ]; then
     write_pin "$DEST"
-    # The key covers what lands in DEST: the components, llvm-toolchain for --llvm, and the extra packages.
-    key=$(grep -v '^PS2BUILD_SDK_\(TAG\|SUMS_SHA256\)=' "$DEST" | { if [ "$LLVM" = 1 ]; then cat; else grep -v '^PS2BUILD_LLVM_TOOLCHAIN='; fi; } \
+    # The key covers what lands in DEST: the components, llvm-toolchain for --llvm, and the extra packages
+    # (not the hold list, which installs nothing).
+    key=$(grep -v '^PS2BUILD_SDK_\(TAG\|SUMS_SHA256\|HOLD\)=' "$DEST" | { if [ "$LLVM" = 1 ]; then cat; else grep -v '^PS2BUILD_LLVM_TOOLCHAIN='; fi; } \
         | sha256sum | cut -c1-16)
     log "versions: $PS2BUILD_COMPONENTS$([ "$LLVM" = 1 ] && echo " llvm-toolchain=$PS2BUILD_LLVM_TOOLCHAIN")"
     if [ -n "${GITHUB_ENV:-}" ]; then
@@ -325,6 +327,15 @@ adopt_mirror_pin() { # pin.env of the newest mirror release: install that, and s
     llvm=$(pin_value PS2BUILD_LLVM_TOOLCHAIN "$1")
     [ -n "$tag" ] && [ -n "$sums" ] && [ -n "$components" ] && { [ "$LLVM" = 0 ] || [ -n "$llvm" ]; } \
         || { log "the newest ps2build-mirror pin.env is incomplete"; return 1; }
+    for held in ${PS2BUILD_SDK_HOLD:-}; do # a held release is never swapped for the mirror's
+        if [ "$held" = llvm-toolchain ]; then
+            [ "$LLVM" = 1 ] || continue
+            mine=$PS2BUILD_LLVM_TOOLCHAIN theirs=$llvm
+        else
+            mine=$(version_of "$held" || true) theirs=$(version_in "$held" "$components" || true)
+        fi
+        [ "$mine" = "$theirs" ] || { log "the newest ps2build-mirror release $tag has $held ${theirs:-none}, held at ${mine:-none}"; return 1; }
+    done
     [ "$LLVM" = 1 ] && components_llvm="$components llvm-toolchain=$llvm" latest_llvm="$PS2BUILD_COMPONENTS llvm-toolchain=$PS2BUILD_LLVM_TOOLCHAIN" \
         || components_llvm=$components latest_llvm=$PS2BUILD_COMPONENTS
     older=$(differences "$components_llvm" "$latest_llvm")

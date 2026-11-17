@@ -5,7 +5,6 @@ store=(root/"src/dash_store.c").read_text()
 settings=(root/"src/dash_settings.c").read_text()
 main=(root/"src/dash_main.c").read_text()
 ui=(root/"src/dash_ui.c").read_text()
-files=(root/"src/dash_files.c").read_text()
 devices=(root/"src/dash_devices.c").read_text()
 home=(root/"src/dash_home.c").read_text()
 
@@ -14,30 +13,25 @@ for field in ("files_mode","home_shortcuts","icon_backing","show_unavailable_dev
 for key in ("Dash_FilesMode","Dash_HomeShortcuts","Dash_IconBacking","Dash_ShowUnavailableDevices"):
     assert key in store
 
-assert "visible_sections[] = {DASH_SEC_HOME, DASH_SEC_FILES, DASH_SEC_TOOLS, DASH_SEC_SETTINGS}" in main
+assert "visible_sections[] = {DASH_SEC_HOME, DASH_SEC_GAMES, DASH_SEC_FILES, DASH_SEC_TOOLS, DASH_SEC_SETTINGS}" in main
 assert "section == DASH_SEC_FILES" in main and "dashFileBrowserTabClose();" in main
 assert "DASH_SEC_APPS" in main  # older saved section values migrate to Home
 assert "dashAdjacentSection(section, -1)" in main and "dashAdjacentSection(section, 1)" in main
 assert "dashVisibleSectionCount()" in ui and "tab_w * vcount" in ui
 
-assert "dashOpenBrowser(LastDir)" in files or "LastDir" in home
+assert "LastDir" in home
 assert '"Applications"' in home and '"Last folder"' in home
 assert "dashAppsScreen.input(in)" in home
 assert "dashAppsScreen.draw()" in home
 assert "showMiscCommands();" in (root/"src/dash_tools.c").read_text()
-assert "dashCfg.files_mode = !dashCfg.files_mode" in files
-assert "const DashScreen dashDevicesScreen = {storageEnter" in files
 assert "const DashScreen dashFilesScreen" in (root/"src/dash_browser.c").read_text()
 assert '"MASS"' in devices
 assert '"MASS Storage"' in (root/"src/dash_lib.c").read_text()
 assert '"USB Storage"' not in (root/"src/dash_lib.c").read_text()
 assert '"MASS (USB)"' not in devices
-assert "mass%d:/" in files  # keep path labels in device panels and picker
-assert "No USB storage device was found." in files
-assert 'dashModalMessage(DI_WARNING, "Device not found", body, NULL);' in files  # no raw mount IDs in errors
+assert '"No USB storage device was found"' in (root/"src/dash_browser.c").read_text()
 assert "Not connected" in devices
 assert "out[i].state == DASH_DEV_READY" in devices
-assert "devs[idx].state == DASH_DEV_READY" in files
 
 assert "Panel transparency" in settings
 assert "Control icon backings" in settings

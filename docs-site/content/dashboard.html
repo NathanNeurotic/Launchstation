@@ -1,5 +1,5 @@
 <h1>Dashboard</h1>
-<p class="lead">Launchstation is a single dashboard shell with four top-level tabs: <b>Home</b>, <b>Files</b>, <b>Tools</b> and <b>Settings</b>. The application library lives under Home, Files is the real native File Browser, and every former classic screen (Settings, HDD Manager, Text Editor, exploit installer, information screens, file pickers and dialogs) is drawn inside the same frame.</p>
+<p class="lead">Launchstation is a single dashboard shell with five top-level tabs: <b>Home</b>, <b>Games</b>, <b>Files</b>, <b>Tools</b> and <b>Settings</b>. The application library lives under Home, Files is the real native File Browser, and every former classic screen (Settings, HDD Manager, Text Editor, exploit installer, information screens, file pickers and dialogs) is drawn inside the same frame.</p>
 
 <div class="callout info"><div class="h">What was verified</div>This page is written against the current source (<code>dash_main.c</code>, <code>dash_home.c</code>, <code>dash_apps.c</code>, <code>dash_tools.c</code>, <code>dash_settings.c</code>). Behaviour that depends on a particular console, TV or storage device cannot be proven from the source and is called out as such. See <a href="controls.html">Controls</a> for every button, <a href="settings.html">Settings</a> for every option and <a href="configuration.html">Configuration</a> for the files the dashboard writes.</div>
 
@@ -12,14 +12,15 @@
 <li><b>Loading overlay:</b> starting a device's drivers, launching an application and long file operations run behind a modal overlay with a status line and, for file operations, a progress bar.</li>
 </ul>
 
-<h2 id="tabs">The four tabs</h2>
+<h2 id="tabs">The five tabs</h2>
 <table><thead><tr><th>Tab</th><th>What it holds</th></tr></thead><tbody>
 <tr><td><b>Home</b></td><td>Hero panel for the focused item, the <b>Continue</b> row (pinned, recent and favorite applications) and the <b>Browse &amp; shortcuts</b> row (<b>Applications</b>, <b>Last folder</b> and your launch-key shortcuts). A small console label shows PS2 or PSX plus the ROM region.</td></tr>
+<tr><td><b>Games</b></td><td>PS2 ISO images in the <code>DVD</code> and <code>CD</code> folders (OPL layout) of every running USB, MX4SIO, MMCE, iLink, exFAT HDD, UDPFS and SMB device, as a list with OPL cover art (<code>ART/&lt;Game ID&gt;_COV.png</code> or <code>.jpg</code> beside those folders, or in the dashboard's own <code>ART</code> folder). OK starts the game through <a href="neutrino.html">Neutrino</a> with the same launch options as the File Browser, including the options saved with <b>Save for this game</b>. Triangle opens Details, Show in File Browser and Refresh games. The list is built the first time the tab opens; a device that is not running yet is not searched, so open it in Files first and choose Refresh games.</td></tr>
 <tr><td><b>Files</b></td><td>The native File Browser inside the dashboard frame: device roots, folders, file operations, image viewer. Returning to the tab restores the folder and highlighted entry.</td></tr>
 <tr><td><b>Tools</b></td><td>A grouped list of everything Launchstation can do outside the application library: browser/editor shortcuts, disc and game-image launchers, storage utilities, system commands and power commands.</td></tr>
 <tr><td><b>Settings</b></td><td>Appearance, Home &amp; applications, Sound, Input, Launching, Storage &amp; devices, Network and System, with one shared Save/Discard session.</td></tr>
 </tbody></table>
-<p>The startup tab is configurable (<b>Settings &gt; Home &amp; applications &gt; Start screen</b>: Home, Applications, Files, Tools, Settings or Launch keys; default Home). <b>Applications</b> opens the library under Home showing every application (the saved filter is not changed). <b>Launch keys</b> opens Settings on its Launch keys page. Older saved values for the retired Devices page map to Files; no favorites or metadata are rewritten.</p>
+<p>The startup tab is configurable (<b>Settings &gt; Home &amp; applications &gt; Start screen</b>: Home, Applications, Files, Tools, Settings, Launch keys or Games; default Home). <b>Applications</b> opens the library under Home showing every application (the saved filter is not changed). <b>Launch keys</b> opens Settings on its Launch keys page. Older saved values for the retired Devices page map to Files; no favorites or metadata are rewritten.</p>
 
 <h2 id="home">Home</h2>
 <div class="ui-gallery"><figure><a href="assets/ui/theme-osd.png"><img src="assets/ui/theme-osd.png" width="640" height="480" loading="lazy" decoding="async" alt="OSD Classic: blue lights form a ring behind cyan application tiles on a dark violet background"></a><figcaption>OSD Classic Home with populated sample applications</figcaption></figure></div>

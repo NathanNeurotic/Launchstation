@@ -860,7 +860,7 @@ static void pickListRun(void *arg)
 
 	dashWorkerStatus(j->path, 0, 0);
 	j->n = getDir(j->path, j->files);
-	if (j->n == 0 && (!strncmp(j->path, "mc0:", 4) || !strncmp(j->path, "mc1:", 4)) && !filerDirOpened())
+	if (j->n == 0 && mcPathUnit(j->path) >= 0 && !filerDirOpened())
 		j->n = -1;
 }
 
@@ -926,7 +926,7 @@ static void pickListDone(void *arg)
 
 	if (pk.active && j->gen == pk.gen && pk.entries != NULL) {
 		pk.n = 0;
-		if (j->n < 0 && (!strncmp(j->path, "mc0:", 4) || !strncmp(j->path, "mc1:", 4))) {
+		if (j->n < 0 && mcPathUnit(j->path) >= 0) {
 			free(j->files);
 			free(j);
 			pickOpen("");
@@ -1106,7 +1106,7 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 	pk.mode = mode;
 	pk.ext = ext;
 	pickOpen((start_dir != NULL && strchr(start_dir, ':') != NULL &&
-	          (!strncmp(start_dir, "mc0:", 4) || !strncmp(start_dir, "mc1:", 4) || dashDevicePathReady(start_dir))) ? start_dir : "");
+	          (mcPathUnit(start_dir) >= 0 || dashDevicePathReady(start_dir))) ? start_dir : "");
 	dashInputFlush();
 
 	while (1) {

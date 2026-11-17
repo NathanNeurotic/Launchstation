@@ -41,7 +41,7 @@ static int isMx4sioPath(const char *path)
 
 static int isMc1Path(const char *path)
 {
-	return (path != NULL && !strncmp(path, "mc1:", 4));
+	return mcPathUnit(path) >= 0 && MC_UNIT_PORT(mcPathUnit(path)) == 1;
 }
 
 static int transferUsesMx4sioAndMc1(const char *src_path, const char *dst_path)

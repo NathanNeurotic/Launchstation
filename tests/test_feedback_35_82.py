@@ -3,7 +3,6 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 ui = (root / "src/dash_ui.c").read_text(encoding="utf-8")
 browser = (root / "src/dash_browser.c").read_text(encoding="utf-8")
-files = (root / "src/dash_files.c").read_text(encoding="utf-8")
 devices = (root / "src/dash_devices.c").read_text(encoding="utf-8")
 settings = (root / "src/dash_settings.c").read_text(encoding="utf-8")
 editor = (root / "src/dash_editor.c").read_text(encoding="utf-8")
@@ -31,8 +30,7 @@ assert "mc:/APPS, mc:/BOOT, mass:/APPS and mass:/BOOT" in settings
 assert "this folder + one subfolder" in settings
 
 # 77/78: an unprobed APA/iLink device can be selected to invoke lazy loading.
-selectable = files[files.index("static int devSelectable"):files.index("static void devSelectFirst")]
-assert "DASH_DEV_PROBE" in selectable
+assert "d->state == DASH_DEV_PROBE || d->state == DASH_DEV_ABSENT" in browser
 assert '"Internal HDD (APA)"' in devices
 assert '"iLink / FireWire"' in devices
 

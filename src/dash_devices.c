@@ -143,14 +143,14 @@ void dashDevicesPoll(void)
 	int i, view_changed = 0;
 
 	pollRootMemoryCardDevices();
-	for (i = 0; i < 2; i++)
+	for (i = 0; i < MC_UNITS; i++)
 		if (filerRootMcPresent(i, NULL, NULL) > 0)
 			now |= 1u << i;
 	if (filerUsbDriversLoaded()) {
 		int m = filerUsbDriveMask();
 		for (i = 0; i < 10; i++)
 			if (m & (1 << i))
-				now |= 1u << (2 + i);
+				now |= 1u << (MC_UNITS + i);
 	}
 	if (!dev_hotplug_armed) {
 		u64 ms = Timer();
@@ -201,10 +201,8 @@ int dashDevicePathReady(const char *path)
 		return 0;
 
 	/* Memory-card services are always loaded, so test actual card presence. */
-	if (!strncmp(path, "mc0:", 4))
-		return filerRootMcPresent(0, NULL, NULL) > 0;
-	if (!strncmp(path, "mc1:", 4))
-		return filerRootMcPresent(1, NULL, NULL) > 0;
+	if (mcPathUnit(path) >= 0)
+		return filerRootMcPresent(mcPathUnit(path), NULL, NULL) > 0;
 	if (!strncmp(path, "mc:", 3))
 		return filerRootMcPresent(0, NULL, NULL) > 0 ||
 		       filerRootMcPresent(1, NULL, NULL) > 0;
@@ -324,14 +322,13 @@ void dashDevicesRefreshMemoryCards(DashDevice *devs, int count)
 		int port, type = 0, free_kb = -1, present;
 		const char *status;
 
-		if (d->icon != DI_MC || strncmp(d->mount, "mc", 2) || (d->mount[2] != '0' && d->mount[2] != '1') || d->mount[3] != ':')
+		if (d->icon != DI_MC || (port = mcPathUnit(d->mount)) < 0 || d->mount[4] != '\0')
 			continue;
-		port = d->mount[2] - '0';
 		present = filerRootMcPresent(port, &type, &free_kb);
 		d->detail[0] = '\0';
 		d->fill = -1.0f;
 		d->state = present < 0 ? DASH_DEV_BUSY : present ? DASH_DEV_READY : DASH_DEV_ABSENT;
-		if (present == -2 && port == 1 && !isPathDeviceStackLoaded("mc1:/"))
+		if (present == -2 && MC_UNIT_PORT(port) == 1 && !isPathDeviceStackLoaded("mc1:/"))
 			/* MX4SIO owns slot 2's SIO2 port; opening it resets the IOP first. */
 			status = "Used by MX4SIO - open to switch";
 		else if (present < 0)
@@ -357,12 +354,20 @@ int dashDevicesList(DashDevice *out, int max)
 	int n = 0, port, i;
 	DashDevice *d;
 
-	for (port = 0; port < 2; port++) {
+	/* Picks up a multitap plugged in since the last list. */
+	mcMultitapRefresh();
+	for (port = 0; port < MC_UNITS; port++) {
 		char name[32], mount[8], browse[8];
 
 		/* PS2 port 0 is mc0 (physical slot 1); port 1 is mc1 (slot 2).
-		 * Keep the label and actual filesystem mount tied to the same port. */
-		snprintf(name, sizeof(name), "mc%d (Slot %d)", port, port + 1);
+		 * Keep the label and actual filesystem mount tied to the same port.
+		 * Behind a multitap, mc2-mc7 are its slots B-D: "mc2 (Slot 1-B)". */
+		if (!mcUnitAvailable(port))
+			continue;
+		if (MC_UNIT_SLOT(port) == 0)
+			snprintf(name, sizeof(name), "mc%d (Slot %d)", port, port + 1);
+		else
+			snprintf(name, sizeof(name), "mc%d (Slot %d-%c)", port, MC_UNIT_PORT(port) + 1, 'A' + MC_UNIT_SLOT(port));
 		snprintf(mount, sizeof(mount), "mc%d:", port);
 		snprintf(browse, sizeof(browse), "mc%d:/", port);
 		d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Checking...");
