@@ -61,6 +61,7 @@ int readpad_noKBnoRepeat(void)
 	}                                       //ends for
 	new_pad = new_pad_t[0] | new_pad_t[1];  //This has only new button bits
 	paddata = paddata_t[0] | paddata_t[1];  //This has all pressed button bits
+	padRumbleTick(paddata);
 	return (ret[0] | ret[1]);
 }
 //------------------------------
@@ -140,6 +141,7 @@ int readpad_no_KB(void)
 	}      //ends for
 	new_pad = new_pad_t[0] | new_pad_t[1];
 	paddata = paddata_t[0] | paddata_t[1];  //This has all pressed button bits
+	padRumbleTick(paddata);
 	return (ret[0] | ret[1]);
 }
 //------------------------------
@@ -388,6 +390,7 @@ int setupPad(void)
 	int ret, i, port, state, modes;
 
 	padInit(0);
+	padRumbleReset();
 
 	for (port = 0; port < 2; port++) {
 		padtype_t[port] = 0;  //Assume that we don't have a proper PS2 controller

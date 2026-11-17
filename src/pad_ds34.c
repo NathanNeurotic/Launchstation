@@ -85,7 +85,7 @@ void padPollingThread(void *args)
 
 		if (ds34bt_get_status(0) & DS34BT_STATE_RUNNING) {
 			ret[2] = ds34bt_get_data(0, (u8 *)&buttons_t[2].btns);
-			ds34bt_set_rumble(0, 0, 0);
+			ds34bt_set_rumble(0, padRumbleLevel(), padRumbleLevel());
 			if (ret[2] != 0) {
 				paddata_t[2] = 0xffff ^ buttons_t[2].btns;
 			}
@@ -93,7 +93,7 @@ void padPollingThread(void *args)
 
 		if (ds34usb_get_status(0) & DS34USB_STATE_RUNNING) {
 			ret[3] = ds34usb_get_data(0, (u8 *)&buttons_t[3].btns);
-			ds34usb_set_rumble(0, 0, 0);
+			ds34usb_set_rumble(0, padRumbleLevel(), padRumbleLevel());
 			if (ret[3] != 0) {
 				paddata_t[3] = 0xffff ^ buttons_t[3].btns;
 			}
@@ -169,6 +169,7 @@ int readpad_noKBnoRepeat(void)
 	}                                                                     // ends for
 	new_pad = new_pad_t[0] | new_pad_t[1] | new_pad_t[2] | new_pad_t[3];  // This has only new button bits
 	paddata = paddata_t[0] | paddata_t[1] | paddata_t[2] | paddata_t[3];  // This has all pressed button bits
+	padRumbleTick(paddata);
 	return (ret[0] | ret[1] | ret[2] | ret[3]);
 }
 //------------------------------
@@ -242,6 +243,7 @@ int readpad_no_KB(void)
 
 	new_pad = new_pad_t[0] | new_pad_t[1] | new_pad_t[2] | new_pad_t[3];
 	paddata = paddata_t[0] | paddata_t[1] | paddata_t[2] | paddata_t[3];  // This has all pressed button bits
+	padRumbleTick(paddata);
 	return (ret[0] | ret[1] | ret[2] | ret[3]);
 }
 //------------------------------
@@ -446,6 +448,7 @@ int setupPad(void)
 	int ret, i, port, state, modes;
 
 	padInit(0);
+	padRumbleReset();
 	ds34usb_init();
 	ds34bt_init();
 

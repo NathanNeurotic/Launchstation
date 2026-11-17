@@ -42,6 +42,9 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	memset(in, 0, sizeof(*in));
 	shoulder_repeat = 0;
 	physical_sample_valid = 0;
+	/* A worker wants the IOP: stop the motors while padman can still hear it. */
+	if (dashIopParked())
+		padRumbleFlush();
 	dashWorkerParkPoint();
 	if (dashIopParked())
 		return; /* the IOP (and padman with it) is being rebooted */

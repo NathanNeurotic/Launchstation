@@ -194,7 +194,7 @@ the ends. L2/R2 jump to the first/last row. The breadcrumb shows where the page 
 | Appearance | Theme preset, customization groups, screen calibration, motion, animation, panel transparency, control icon backings, theme files and resets. |
 | Home & applications | Start screen (Home, Applications, Files, Tools, Settings, Launch keys), view, artwork, recent count/history and Application library (folders and refresh). |
 | Sound | Interface effects, music and their separate volumes. |
-| Input | Confirm button, on-screen keyboard and USB keyboard (driver and map). |
+| Input | Confirm button, vibration (off by default: a short pulse on cursor moves and confirmations, saved as `Dash_Vibration`), on-screen keyboard and USB keyboard (driver and map). |
 | Launching | Automatic start & boot, Launch keys, shortcut/bookmark lock, disc/PS1 loaders, IOP reset and game IDs. |
 | Storage & devices | MMCE backups, HDD/ATA visibility, empty slots, unavailable devices and device auto-start preferences. |
 | Network | IP address, netmask, gateway, network write access, clock sync, the SMB share list and the SMB server login. |

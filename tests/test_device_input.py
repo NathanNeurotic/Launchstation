@@ -71,6 +71,8 @@ static int padRead(int p,int s,struct padButtonStatus *b) {
 static void dashWorkerParkPoint(void) {}
 static int dashIopParked(void) { return 0; }
 static int dashWorkerIoBusy(void) { return busy; }
+static void padRumbleTick(u32 held) { (void)held; }
+static void padRumbleFlush(void) {}
 static int pad_wait_calls;
 static void waitAnyPadReady(void) { pad_wait_calls++; }
 """

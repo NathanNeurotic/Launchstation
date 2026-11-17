@@ -50,6 +50,7 @@ static u64 now;
 static u64 Timer(void) { return now; }
 static int soundAlive(void) { return 1; }
 static int dashIopParked(void) { return 0; }
+static void padRumbleForSound(int id) { (void)id; }
 static int played[64], nplayed;
 static int audsrv_adpcm_set_volume_and_pan(int ch, int vol, int pan) { (void)ch; (void)vol; (void)pan; return 0; }
 static int audsrv_ch_play_adpcm(int ch, audsrv_adpcm_t *s) { (void)s; if (nplayed < 64) played[nplayed++] = ch; return ch; }

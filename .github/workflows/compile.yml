@@ -55,6 +55,7 @@ jobs:
           python3 tests/test_mc_folder_icon.py
           python3 tests/test_font_weight.py
           python3 tests/test_scanlines.py
+          python3 tests/test_pad_rumble.py
           python3 tests/test_browser_sort.py
           python3 tests/test_r3z_browser_wins.py
           python3 tests/test_udpfs_retry.py

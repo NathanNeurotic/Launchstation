@@ -333,6 +333,9 @@ void dashSoundPlay(int id)
 	static int transSlot;
 	int ch, i;
 
+	/* Vibration follows interface events, sound on or off. Arming only:
+	 * the pad read functions drive the motors (pad_rumble.c). */
+	padRumbleForSound(id);
 	if (!soundAlive() || !dashCfg.sound || id < 0 || id >= DASH_SND_COUNT)
 		return;
 	if (dashIopParked())

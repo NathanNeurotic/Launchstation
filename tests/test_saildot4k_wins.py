@@ -270,6 +270,7 @@ static void dashLoadingStatus(const char *m, int d, int t) { (void)m; (void)d; (
 static int stopSmbServer(void) { return 0; }
 static void fadeScreenToBlack(void) {}
 static void dashSoundShutdown(void) {}
+static void padRumbleFlush(void) {}
 static void DashThemeSetLegacyEnabled(int e) { (void)e; }
 static void clearScreenToBlack(void) {}
 static void padPortClose(int p, int s) { (void)p; (void)s; }

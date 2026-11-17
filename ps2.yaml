@@ -573,6 +573,7 @@ targets:
       - src/makeicon.c
       - src/chkesr.c
       - src/pad.c
+      - src/pad_rumble.c
       - src/dash_ftp.c
       - src/dash_smbd.c
       - src/ftp_session.c

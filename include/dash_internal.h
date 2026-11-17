@@ -585,6 +585,7 @@ typedef struct
 	int sound;
 	int sound_vol;
 	int custom_sounds; /* 1: effects from <name>.ADP beside the boot ELF, built-in when missing */
+	int rumble;        /* 1: controller vibration on cursor moves and decisions (off by default) */
 	char software_clock[24]; /* optional local seed; resumes saved time without RTC */
 	int bgm;
 	int bgm_vol;

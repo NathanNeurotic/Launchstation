@@ -528,6 +528,16 @@ extern int isRunning;
 #endif
 int setupPad(void);
 int reopenPadPorts(void);
+/* pad_rumble.c: opt-in interface vibration */
+void padRumbleReset(void);
+void padRumbleEnable(int on);
+void padRumble(int duration_ms, int large);
+void padRumbleNav(void);
+void padRumbleDecision(void);
+void padRumbleForSound(int id); /* DASH_SND_* */
+void padRumbleFlush(void);
+void padRumbleTick(u32 held);
+int padRumbleLevel(void);
 int readpad(void);
 int readpad_no_KB(void);
 int readpad_noRepeat(void);

@@ -72,6 +72,7 @@ enum SetId {
 	S_INTRO,
 	/* controls */
 	S_CONFIRM,
+	S_RUMBLE,
 	S_VKEY,
 	S_USBKBD,
 	S_USBKBD_FILE,
@@ -290,6 +291,7 @@ static const SetItem sound_items[] = {
 
 static const SetItem control_items[] = {
     {ST_CHOICE, S_CONFIRM, "Confirm button", "Which button confirms. The other one cancels (all screens)."},
+    {ST_CHOICE, S_RUMBLE, "Vibration", "Controller vibration on cursor moves and confirmations."},
     {ST_CHOICE, S_VKEY, "On-screen keyboard layout", NULL},
     {ST_PAGE, P_KEYBOARD, "USB keyboard", "Enable a USB keyboard, choose its driver and set its key map."},
 };
@@ -1049,6 +1051,9 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_SCUSTOM:
 			*cur = dashCfg.custom_sounds;
 			return 2;
+		case S_RUMBLE:
+			*cur = dashCfg.rumble;
+			return 2;
 		case S_BGM:
 			*cur = dashCfg.bgm;
 			return 2;
@@ -1697,6 +1702,11 @@ static void setChoice(int id, int v)
 		case S_SVOL:
 			dashCfg.sound_vol = v * 10;
 			dashSoundApplyVolume();
+			break;
+		case S_RUMBLE:
+			dashCfg.rumble = v;
+			padRumbleEnable(v);
+			padRumbleDecision(); /* a sample of the feel when turned on */
 			break;
 		case S_SCUSTOM:
 			dashCfg.custom_sounds = v;
