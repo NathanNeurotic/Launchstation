@@ -187,7 +187,7 @@ previous page with its selection and scroll position intact. Back at the
 overview returns Home through the normal save decision. Confirm also changes a
 row: choices flip or open a list, numbers open a small editor (Left/Right step,
 Confirm or Back closes). Left/Right jump up/down a screen of rows, wrapping at
-the ends. L2/R2 jump to the first/last row. The breadcrumb shows where the page lives.
+the ends. L2/R2 jump to the first/last row. Beside the title, a sub-page shows the pages it lives under.
 
 | Group | Contents |
 |-------|----------|

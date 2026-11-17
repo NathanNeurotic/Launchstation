@@ -913,7 +913,7 @@ static const SetPage pages[P_COUNT] = {
 #define PAGE_DEPTH 4
 /* Seven rows leave room for the two-line help text above the hint bar
  * (dashDrawHints draws from y = 394); eight pushed it onto the buttons. */
-#define ITEM_ROWS 7
+#define ITEM_ROWS 8
 static int page, item;
 static int item_top;
 static float item_anim;
@@ -3931,14 +3931,23 @@ static const char *actionStatus(int id)
 	}
 }
 
+/* "Opens" marker for sub-page and action rows: a plain chevron, not the
+ * Play icon that starts applications. */
+static void drawChevron(float x, float y, float s, DashColor c)
+{
+	dashLine(x + s * 0.3f, y, x + s * 0.75f, y + s * 0.5f, 2.0f, c);
+	dashLine(x + s * 0.75f, y + s * 0.5f, x + s * 0.3f, y + s, 2.0f, c);
+}
+
 static void settingsDraw(void)
 {
 	int i;
-	/* Give the breadcrumb a real lane below the L1/R1 tab bar (it ends at
-	 * y=62): ~7 px of clear space above the breadcrumb's capitals (#135). */
-	/* Only the header lanes move; the list keeps ITEM_ROWS rows so its two-line
-	 * help still clears the footer hints. */
-	const float ix = DASH_SAFE_L, iy = 136, irow = 29, iw = DASH_SAFE_R - DASH_SAFE_L;
+	/* Same lanes as the other tabs: title at y=68 under the L1/R1 bar (it ends
+	 * at y=62, #135) and the list panel from y=98, so switching tabs does not
+	 * move the content. The subtitle is the trail of parent pages, or the
+	 * page help at the top level. The two-line item help under the list
+	 * still clears the footer hints (test_hint_clearance.py). */
+	const float ix = DASH_SAFE_L, iy = 104, irow = 29, iw = DASH_SAFE_R - DASH_SAFE_L;
 	const SetPage *c = &pages[page];
 	char trail[192];
 
@@ -3947,10 +3956,14 @@ static void settingsDraw(void)
 		int len = strlen(trail);
 		snprintf(trail + len, sizeof(trail) - len, "%s%s", i ? " > " : "", localizeDashboardText(pages[page_stack[i].page].name));
 	}
-	if (page_depth)
-		dashTextFit(ix, 66, iw - 126, trail, DASH_FS_CAPTION, DASH_C_TEXT3);
-	dashDrawSectionTitle(ix, 82, localizeDashboardText(c->name), NULL);
-	dashTextFit(ix, 112, iw, localizeDashboardText(c->help), DASH_FS_CAPTION, DASH_C_TEXT3);
+	{
+		const char *title = localizeDashboardText(c->name);
+		float tw = dashTextWidth(title, DASH_FS_TITLE) + 12;
+
+		dashDrawSectionTitle(ix, 68, title, NULL);
+		dashTextFit(ix + tw, 77, iw - tw - 126, page_depth ? trail : localizeDashboardText(c->help),
+		            DASH_FS_SMALL, DASH_C_TEXT3);
+	}
 	{
 		int dirty = anyDirtyCached();
 		int pending = cfg_pending[0] || cfg_pending[1] || dashStoreSettingsPending();
@@ -3958,7 +3971,7 @@ static void settingsDraw(void)
 		const char *state = dirty ? "unsaved changes" : pending ? "saving..." : failed ? "save failed" : "no changes";
 		DashColor state_col = (dirty || failed) ? DASH_C_WARM : pending ? DASH_C_ACCENT : DASH_C_TEXT3;
 		/* Dedicated status lane under the header clock/date: never inherits selection text. */
-		dashTextRight(ix + iw, 84, state, DASH_FS_CAPTION, state_col);
+		dashTextRight(ix + iw, 79, state, DASH_FS_CAPTION, state_col);
 	}
 
 	/* keep the focused row inside the visible window */
@@ -4000,7 +4013,7 @@ static void settingsDraw(void)
 		}
 		if (it->type == ST_PAGE) {
 			dashTextFit(ix + 38, y + 4.0f, iw - 70, localizeDashboardText(it->label), DASH_FS_SMALL, col);
-			dashIcon(DI_PLAY, ix + iw - 22, y + 9, 12, DASH_C_TEXT3);
+			drawChevron(ix + iw - 20, y + 8, 12, dashIconTint(DASH_C_TEXT3));
 			dashGfxPopAlpha();
 			continue;
 		}
@@ -4076,7 +4089,7 @@ static void settingsDraw(void)
 			if (ast != NULL && ast[0] != '\0')
 				dashTextRight(ix + iw - 32, y + 4.0f, ast, DASH_FS_SMALL,
 				              disabled ? DASH_C_TEXT3 : (on ? DASH_C_ACCENT : DASH_C_TEXT2));
-			dashIcon(DI_PLAY, ix + iw - 22, y + 8, 12, DASH_C_TEXT3);
+			drawChevron(ix + iw - 20, y + 8, 12, dashIconTint(DASH_C_TEXT3));
 		}
 		dashGfxPopAlpha();
 	}
