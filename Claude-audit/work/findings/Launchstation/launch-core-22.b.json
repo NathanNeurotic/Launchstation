@@ -1,0 +1,158 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-22.b",
+  "coverage": [
+    {"path": "src/init.c", "status": "read_full", "note": ""},
+    {"path": "include/kelf_signer.h", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "src/init.c owns the IOP module lifecycle of the EE program: it holds the have_* residency flags for every embedded IRX, loads driver stacks lazily on first device access (DEV9/network/SMB/NFS/UDPFS, HDD/ATA/DVR, USB/BDM, MMCE, MX4SIO, iLink, PC CARD CF, xfrom, keyboard, HDL info), switches mutually exclusive stacks by rebooting the IOP (resetRuntimeDeviceState/Reset), and provides the special reboots for the MagicGate signer IOPRP and the Ember USB keep-IOP handoff. It also contains the bounded fileXio GETSTAT RPC client, the power-off callback, the SMB server start/stop devctls and the dashboard DNS setup. include/kelf_signer.h only declares the three KELF signer entry points implemented in src/kelf_signer.c.",
+  "reusable_helpers": [
+    {"name": "fileXioGetStatBounded", "path": "src/init.c", "line": 1614, "what": "fileXio GETSTAT through a private NOWAIT RPC client with a millisecond deadline, so a wedged device cannot freeze the caller"},
+    {"name": "waitForUsbMassPath", "path": "src/init.c", "line": 1666, "what": "polls a USB path with bounded stats until it answers or a 2 s deadline passes"},
+    {"name": "loadExternalFile", "path": "src/init.c", "line": 1477, "what": "reads a whole file from any device into a 64-byte aligned malloc buffer, returns size"},
+    {"name": "isPathDeviceStackLoaded", "path": "src/init.c", "line": 3106, "what": "tells whether a device path can be accessed without loading a driver or rebooting the IOP"},
+    {"name": "setFileXioTransferWide", "path": "src/init.c", "line": 1282, "what": "switches the fileXio IOP transfer buffer between 128/64/16 KB with fallback"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "HDL info RPC stays 'ready' across IOP resets and after a failed load: HDD manager calls SifCallRpc on a stale or unbound client",
+      "category": 6,
+      "locations": [
+        {"path": "src/init.c", "start": 2563, "end": 2574},
+        {"path": "src/init.c", "start": 2998, "end": 2998},
+        {"path": "src/hdl_rpc.c", "start": 26, "end": 50},
+        {"path": "src/hdl_rpc.c", "start": 57, "end": 62},
+        {"path": "src/dash_hdd.c", "start": 421, "end": 437}
+      ],
+      "problem": "Hdl_Inited (hdl_rpc.c:24,48) is set once and never cleared: clearIopModuleState only clears have_hdl_info (init.c:2998). After any IOP reset (stack switch MMCE/MX4SIO/UDPFS, mc1 with MX4SIO, DEV9 family change), dash_hdd hdlReady returns 1 without reloading hdl_info.irx and HdlGetGameInfo/HdlRenameGame issue blocking SifCallRpc through a client bound to the previous IOP session. Also loadHdlInfoModule ignores ID/ret and the bind result; when the module did not start, Hdl_Info_BindRpc spins 0x1000 binds x 0x10000 nop loops and still sets Hdl_Inited=1, so the call goes to a NULL server.",
+      "fix": "Clear Hdl_Inited in clearIopModuleState next to have_hdl_info; in loadHdlInfoModule skip the bind when ID < 0 or ret == 1; in Hdl_Info_BindRpc set Hdl_Inited only when client.server != 0; key dash_hdd's one-shot 'tried' to getIopResetGeneration() so the module is reloaded once per IOP session.",
+      "justification": "The checks replace an unconditional 'ready' latch that lets a blocking RPC reach a dead or absent IOP server (console freeze, INFERRED). Each is one condition on existing state; no new mechanism is added.",
+      "benefit": "Removes a likely hard freeze when the HDD manager is reopened after any IOP reset, and a ~3-5 s UI-thread spin when hdl_info fails (INFERRED: 2^28 loop iterations of 4 nops at 294.9 MHz plus 4096 bind round trips).",
+      "benefit_rank": 4,
+      "lines_removed": -4,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read init.c:2563-2574, 2965-3040; hdl_rpc.c:1-84; dash_hdd.c:419-449. grep Hdl_Inited over src: only hdl_rpc.c:24 (def), :48 (set), :57/:74 (checks), dash_hdd.c:419/425/436; nothing clears it. grep have_hdl_info: init.c:182, 2567, 2572, 2998 only. Callers: loadHdlInfoModule only from dash_hdd.c:434; HdlGetGameInfo dash_hdd.c:448 (UI), HdlRenameGame dash_hdd.c:281 (worker job). hdl_info imports atad/dev9/PoweroffShutdown (iop/hdl_info/imports.lst:2-47), so a missing dependency makes the load fail. INFERRED part: IOP sifrpc behaviour when the call carries a stale or NULL server pointer (SDK source not in repo)."
+    },
+    {
+      "n": 2,
+      "title": "prepareExploitSignerIop reboots the IOP without the teardown resetRuntimeDeviceState requires (FTP close, PAD close, mc poll drain, sound)",
+      "category": 6,
+      "locations": [
+        {"path": "src/init.c", "start": 821, "end": 882},
+        {"path": "src/init.c", "start": 2172, "end": 2206},
+        {"path": "src/init.c", "start": 3048, "end": 3098},
+        {"path": "src/main_exploit_installer.c", "start": 1053, "end": 1057}
+      ],
+      "problem": "The exploit installer's signer reboot (init.c:838-874) only stops SMB/PCCF, closes the keyboard and unmounts. It skips what the file's own reset path documents as required: ftpSessionShutdown refusal (2172-2177; an FTP upload to the card is cut by the reboot), filerRootMcPollIdle (2182-2186; pending mcGetInfo leaves the pad dark), padPortClose/padEnd before setupPad (2197-2205; 'UI alive, controller dead'), dashSoundShutdown (2189-2193). The installer then needs pad input and writes to the card.",
+      "fix": "Run the signer reboot through the same path as every other reset: let Reset() take an optional IOPRP buffer (NULL = SifIopReset) and have prepareExploitSignerIop call resetRuntimeDeviceState with it, then check have_exploit_signer_iop/generation for a refused reset. This deletes the duplicated reboot/reload sequence at 845-874.",
+      "justification": "",
+      "benefit": "Closes a card-corruption window (FTP write cut mid-file) and an intermittent dead-controller state after the signer reboot; ~25 duplicated reset lines removed (INFERRED from 845-874 vs 3053-3093).",
+      "benefit_rank": 3,
+      "lines_removed": 22,
+      "effort": "M",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read init.c:821-882, 2163-2221, 3048-3098; main_exploit_installer.c:1053-1057 and call sites 1963, 2289 (install flows that then write the card and show dialogs). ftp_session.c:70-83 ftpSessionShutdown closes FTP sessions before a reset; prepareExploitSignerIop never calls it (grep ftpSession in main_exploit_installer.c: none). dash_worker.c:153-164 iopResetHook is a no-op on the UI thread, so the missing iopResetNotify is harmless. pad.c:428-452 reopenPadPorts documents the stale-libpad failure. INFERRED part: that the stale pad and pending libmc request actually fail on this specific reboot (intermittent per the repo's own comments)."
+    },
+    {
+      "n": 3,
+      "title": "Power-button handler is lost when load_ps2dev9 reboots the IOP after the caller armed it, and is never armed in USB-only sessions",
+      "category": 6,
+      "locations": [
+        {"path": "src/init.c", "start": 505, "end": 511},
+        {"path": "src/init.c", "start": 2637, "end": 2654},
+        {"path": "src/init.c", "start": 3001, "end": 3001},
+        {"path": "src/init.c", "start": 3024, "end": 3024},
+        {"path": "src/init.c", "start": 921, "end": 922},
+        {"path": "src/init.c", "start": 967, "end": 969},
+        {"path": "src/init.c", "start": 1024, "end": 1026},
+        {"path": "src/init.c", "start": 2551, "end": 2552},
+        {"path": "src/init.c", "start": 2677, "end": 2678},
+        {"path": "src/init.c", "start": 2701, "end": 2702},
+        {"path": "src/init.c", "start": 2723, "end": 2724},
+        {"path": "src/init.c", "start": 2614, "end": 2615}
+      ],
+      "problem": "Each DEV9 loader calls setupPowerOff() and then reaches load_ps2dev9, which reboots the IOP when the Legacy Ethernet setting was toggled (dash_settings.c:1905 changes it live). Reset clears have_poweroff and done_setupPowerOff (3001, 3024) and nothing re-arms them, so the new HDD/ATA/network stack runs without poweroff.irx: a power-button press skips PFS CLOSEALL, HDD idle and DEV9 off. USB, MMCE, MX4SIO and iLink loaders never call setupPowerOff, so the USB STOP UNIT at 2614-2615 never runs from the button in those sessions.",
+      "fix": "Call setupPowerOff() once inside load_ps2dev9 after the variant-switch reset and before DEV9 is executed, and delete the seven caller calls at 921, 967, 1024, 2551, 2677, 2701, 2723 (all reach load_ps2dev9). Add the same single call in loadUsbModules if USB HDD STOP UNIT on the button is wanted.",
+      "justification": "Moving the call to the one place every DEV9 path passes after any reset fixes the ordering bug and removes six call sites; the optional USB call is one line for the documented emergency-park problem.",
+      "benefit": "Power-button shutdown again flushes HDD/PFS after a DEV9 family switch and stops USB disks; ~6 call lines removed (READ: 7 removed, 1 added).",
+      "benefit_rank": 3,
+      "lines_removed": 6,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read init.c:487-523, 908-990, 1010-1054, 2531-2558, 2637-2734, 2965-3098, 1740-1817. grep setupPowerOff() over src: init.c 921, 967, 1024, 2493, 2551, 2677, 2701, 2723 and main_actions.c:759 (explicit menu) only; no call in Reset, ensureCoreIoStackReady, loadUsbModules, boot code. grep legacy_net_drivers: set live at dash_settings.c:1905 with no reset; read at init.c:496 and 951. INFERRED part: what the console does on a power-button press when poweroff.irx is not resident (no callback, so closeAllAndPoweroff does not run)."
+    },
+    {
+      "n": 4,
+      "title": "Fixed sleep(1) on the UI thread after every ATA_BD load (HDD/ATA boot, first hdd0:/ata0: access, after each IOP reset)",
+      "category": 5,
+      "locations": [
+        {"path": "src/init.c", "start": 2500, "end": 2504},
+        {"path": "src/init.c", "start": 2520, "end": 2526},
+        {"path": "src/dash_devices.c", "start": 604, "end": 611},
+        {"path": "src/main_startup.c", "start": 651, "end": 658}
+      ],
+      "problem": "loadAtaBlockDriver sleeps 1 s after ATA_BD starts. In EXFAT builds both loadAtaModules and loadHddModules (load_ps2hdd_stack(1)) go through it, from the dashboard device probe and the HDD/ATA boot path on the UI thread, so the screen stops for a full second once per IOP session. The ata0: probe that follows already waits up to 2000 ms for the device (dash_devices.c:611), and RiptOPL loads ATAD and its HDD modules back to back with no pause (src/sources/hddsupport.cpp:654-658).",
+      "fix": "Delete pauseAfterAtaBlockDriverLoad and its call; rely on the driver's own device init and the existing bounded probe. Verify HDD/ATA detection on hardware.",
+      "justification": "",
+      "benefit": "1000 ms less UI freeze on HDD/ATA boot and on first HDD/ATA access per IOP session (INFERRED from sleep(1)); ~7 lines removed.",
+      "benefit_rank": 2,
+      "lines_removed": 7,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read init.c:683-744, 2500-2558, 2663-2688; dash_devices.c:594-611 (probeMount on UI thread, ata probe 2000 ms); main_startup.c:651-658 (boot device ATA/HDD). git log -S pauseAfterAtaBlockDriverLoad: only the initial import 944a2fc, no recorded hardware reason. Cross-repo: RiptOPL src/sources/hddsupport.cpp:654-658 loads ATAD then XHDD without a delay. INFERRED part: that no drive needs the settle window (needs hardware test)."
+    },
+    {
+      "n": 5,
+      "title": "getExternalFilePath dereferences NULL for an hdd0:/PART or dvr_hdd0:/PART path without a file part (boot-time crash from a hand-edited CNF)",
+      "category": 6,
+      "locations": [
+        {"path": "src/init.c", "start": 1425, "end": 1435},
+        {"path": "src/init.c", "start": 1443, "end": 1452},
+        {"path": "src/config.c", "start": 1039, "end": 1042},
+        {"path": "src/main_modules.c", "start": 54, "end": 54}
+      ],
+      "problem": "For 'hdd0:/NAME' the code builds party='hdd0:NAME', then p=strchr(party,'/') is NULL, so sprintf prints '(null)' and *p=0 stores to address 0; the DVR branch is identical. USBKBD_FILE and KBDMAP_FILE are copied from the CNF unchecked (config.c:1039-1042) and startKbd runs on every boot, safe mode included (main_modules.c:54), so such a value crashes each start until the CNF is fixed elsewhere. Paths picked in the file browser always contain the file part.",
+      "fix": "When p is NULL, fall back to genFixPath(argPath, filePath) and return (one check per branch).",
+      "justification": "One NULL test per branch closes a store to address 0 reached from a config value at boot; nothing simpler prevents it.",
+      "benefit": "Removes a boot crash loop on a malformed keyboard path (INFERRED consequence of a NULL store on the EE).",
+      "benefit_rank": 1,
+      "lines_removed": -2,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read init.c:1412-1463, 1533-1556, 2108-2119, 2919-2953; config.c:1039-1042; main_modules.c:18-59. grep usbkbd_file|kbdmap_file: set by config.c:1040/1042, config_startup.c:160/162 (file browser), dash_settings.c:2041/2044 (file picker); read only by init.c loadKbdModules/startKbd. Callers of getExternalFilePath: loadExternalFile and loadExternalModule only."
+    },
+    {
+      "n": 6,
+      "title": "loadExternalModule reports a failed embedded load as success (raw module ID used as a flag)",
+      "category": 6,
+      "locations": [
+        {"path": "src/init.c", "start": 1543, "end": 1555},
+        {"path": "src/init.c", "start": 1719, "end": 1722},
+        {"path": "src/init.c", "start": 2117, "end": 2118}
+      ],
+      "problem": "def_OK holds the return of SifExecModuleBuffer, which is negative on failure, so 'if (def_OK) return 1' also returns 1 when the embedded ps2kbd/DS34 module failed to load (and the start result in dummy is ignored). have_ps2kbd or have_ds34 is then latched for the IOP session, startKbd marks the keyboard open, and no retry happens; the header comment at 1523-1531 promises 0 in that case.",
+      "fix": "Set def_OK to (ID >= 0 && dummy != 1) instead of the raw ID.",
+      "justification": "",
+      "benefit": "Correct 'not loaded' result for the keyboard/DS34 fallback; one-line change, no size change.",
+      "benefit_rank": 1,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read init.c:1523-1556 and both callers (loadDs34Modules 1716-1723, loadKbdModules 2108-2119); grep loadExternalModule over src: definition, prototype at 360 and these three calls only. Elsewhere the file treats ID < 0 or ret == 1 (MODULE_NO_RESIDENT_END) as failure (comments at 641, 1192, 2899)."
+    }
+  ]
+}

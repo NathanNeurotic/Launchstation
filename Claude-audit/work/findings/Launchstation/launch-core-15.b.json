@@ -1,0 +1,87 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-15.b",
+  "coverage": [
+    {"path": "src/dash_widgets.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_worker.c", "status": "read_full", "note": ""},
+    {"path": "src/draw.c", "status": "read_full", "note": ""},
+    {"path": "src/draw_gs.c", "status": "read_full", "note": ""},
+    {"path": "src/draw_text.c", "status": "read_full", "note": ""},
+    {"path": "src/editor.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_widgets.c holds the dashboard's modal widgets: the on-screen/USB text keyboard (dashModalKeyboard/dashModalFilename), the IPv4 octet editor, the classic-dialog replacements installed into gui.c's ynDialogOverride/nonDialogOverride/keyboardOverride hooks, and the file/folder picker dashPickPath, whose folder listings run on the background worker. dash_worker.c is the single EE worker thread (128 KB static stack, 32-entry queue) with UI-thread completion callbacks pumped from dashGfxPresent, an IOP-reset park handshake and the activity pill. draw.c, draw_gs.c and draw_text.c are the classic uLE gsKit drawing layer (header line, sprites, GS mode setup, 8x16 bitmap font, ELISA/SJIS title rendering, loadFont). editor.c is the classic TextEditor main loop; from the dashboard every MISC command is routed to dashRunMisc, which opens the native editor instead, so its unbounded row table (Editor_nRowsWidth[2048], written by editor_rules.c:26) was left to the dead-code lens rather than reported as a live bug.",
+  "reusable_helpers": [
+    {"name": "classicClean", "path": "src/dash_widgets.c", "line": 602, "what": "collapses the blank-line padding of classic dialog texts into one or two lines"},
+    {"name": "pickLastDirIs", "path": "src/dash_widgets.c", "line": 869, "what": "case-insensitive test of the last folder component of a device path"},
+    {"name": "pickParent", "path": "src/dash_widgets.c", "line": 1066, "what": "parent folder of a device path, device root maps to the device list"},
+    {"name": "transcpy_sjis", "path": "src/draw_text.c", "line": 333, "what": "converts a Shift-JIS save title to ASCII using two lookup tables"},
+    {"name": "is576pSupported", "path": "src/draw_gs.c", "line": 6, "what": "decides 576p support from ROMVER digits and PSX model"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "Text keyboard writes one NUL past the buffer when callers pass the buffer size as max_len (classicKeyboard, three SMB/NFS settings fields)",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_widgets.c", "start": 341, "end": 350},
+        {"path": "src/dash_widgets.c", "start": 663, "end": 668},
+        {"path": "src/main_exploit_installer.c", "start": 962, "end": 962},
+        {"path": "src/main_exploit_installer.c", "start": 981, "end": 981},
+        {"path": "src/dash_settings.c", "start": 690, "end": 693},
+        {"path": "src/dash_settings.c", "start": 3377, "end": 3381},
+        {"path": "src/dash_settings.c", "start": 3408, "end": 3411}
+      ],
+      "problem": "kbInsert lets the text grow to max_len characters and then moves the terminator to buf[max_len], so the buffer must hold max_len+1 bytes. classicKeyboard forwards the classic keyboard() max unchanged; the classic keyboard capped text at min(max,33), so choose_custom_output_path sized name[36] for keyboard(name, 36), and from the dashboard (override installed for the whole dashboard, dash_exploit.c:159-160) typing to 36/36 writes name[36]. dash_settings.c passes sizeof(edit[96]), sizeof(buf[8]) for the SMB/NFS port and sizeof(buf[12]) for the NFS UID/GID: typing 8 port digits writes buf[8] on the stack.",
+      "fix": "Pass max - 1 from classicKeyboard to dashModalKeyboard, and pass sizeof(...) - 1 at dash_settings.c:693, 3381 and 3411, as every other dashModalKeyboard caller already does.",
+      "justification": "",
+      "benefit": "Closes a reachable one-byte stack overwrite in four keyboard prompts (exploit installer output name, SMB/NFS share fields, port, UID/GID); four one-token edits, no size change (INFERRED).",
+      "benefit_rank": 3,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read kbInsert dash_widgets.c:341-350 (guard len >= max_len, memmove len-cur+1 bytes) and modalKeyboard:442-591 (no other bound; orig clamp only lowers max_len to 255). Classic keyboard gui.c:249,308 caps at i < max && i < 33; gui.c:163-164 forwards to keyboardOverride. dashClassicUiInstall(1) at dash_main.c:1358 and :353/:675; dashExploitInstaller dash_exploit.c:150-166 runs ShowExploitInstaller with it installed; main_exploit_installer.c:1539 -> choose_custom_output_path, name[36] at :962, prefilled by build_default_signed_name(name, sizeof(name)) :979, keyboard(name, 36) :981. Grep of all dashModalKeyboard/dashModalFilename callers: only dash_settings.c:693, 3380-3381, 3411 pass the full buffer size; others pass size-1 or smaller (dash_browser 1132/1151/2380/2383, dash_card_tool 2553, dash_hdd 617/680/711, dash_editor 552/1468, dash_settings 2248/3144/3359). config.c:1552 keyboard(title_tmp[72], 72) is only reached with the override off (dash_main.c:398, 456, 668)."
+    },
+    {
+      "n": 2,
+      "title": "dashPickPath memset resets pk.gen, so a listing job left over from the previous picker session is applied to the new one",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_widgets.c", "start": 1097, "end": 1100},
+        {"path": "src/dash_widgets.c", "start": 922, "end": 952},
+        {"path": "src/dash_widgets.c", "start": 1340, "end": 1344}
+      ],
+      "problem": "pickListDone applies a listing when pk.active and j->gen == pk.gen. Exiting the picker with a listing still in flight (Triangle while a slow device is read) bumps gen, but the next dashPickPath memsets pk, restarting gen at 0, so the old job's gen can equal the new session's gen. The worker runs jobs FIFO, so the old listing completes first: pk.entries are filled with the previous folder's names under the new pk.dir and pk.loading is cleared until the new job finishes; choosing an entry then returns pk.dir + a name from another folder (dash_widgets.c:1225-1236).",
+      "fix": "Keep the generation across sessions: save pk.gen before the memset at line 1099 and restore it after, so the counter never restarts.",
+      "justification": "Two-line change; it makes the existing stale-listing guard (comment at line 1340) hold across picker sessions instead of only within one.",
+      "benefit": "Removes a wrong-path selection window after reopening the picker while a previous listing is still queued or running (INFERRED, timing-dependent).",
+      "benefit_rank": 2,
+      "lines_removed": -2,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read dash_widgets.c:922-955 (gen check at 927, entries filled 936-949, loading=0 at 951), pickOpen 968-1032 (pk.gen++ at 972, job gets j->gen = pk.gen at 1022, submitted to the worker at 1026), dashPickPath 1097-1105 (memset(&pk) at 1099) and exit 1340-1344 (pk.gen++ then free). dash_worker.c:209-258: one job at a time, FIFO queue, completion callbacks run from dashWorkerPump, called at the end of dashGfxPresent (dash_gfx.c:446), so a callback from the old session can run inside the new session's frame loop. Example: old session gen 1 device list, gen 2 job for mass0:/ in flight, Triangle; new session gen 1 device list, user opens mc0:/ (gen 2, queued behind the old job)."
+    },
+    {
+      "n": 3,
+      "title": "loadFont accepts a truncated .fnt file and reports success with a partly stale FontBuffer",
+      "category": 6,
+      "locations": [
+        {"path": "src/draw_text.c", "start": 79, "end": 96}
+      ],
+      "problem": "loadFont only rejects files larger than 4700 bytes; it never checks a minimum size or the genRead results. A file shorter than 100 bytes is checked against uninitialised FontHeader bytes, and a file with a valid header but shorter than 1018 + 3584 = 4602 bytes leaves the tail of FontBuffer from the previous font while returning 1. Reachable from Settings when the user picks a font file (dash_settings.c:2128) and at startup (main_startup.c:716).",
+      "fix": "Reject sizes below 4602 in the same size test at line 80 (accept only 4602..4700).",
+      "justification": "One extra comparison in an existing condition; it turns a truncated copy of a font file into the existing default-font fallback instead of mixed glyphs.",
+      "benefit": "Avoids corrupted glyphs from a truncated font file; no size change (INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read draw_text.c:67-106: size test line 80 (> 4700 only), genRead of 100-byte header line 86 unchecked, header bytes 0,1,70,72,83 tested 87-91, genRead(FontBuffer + 512, 3584) at offset 1018 line 94 unchecked, return 1 line 96. FontBuffer is u8[256*16] (font_uLE.c:4). Callers: dash_settings.c:2128, 2565, main_startup.c:716, config_startup.c:173, config.c:1611, main_actions.c:786."
+    }
+  ]
+}

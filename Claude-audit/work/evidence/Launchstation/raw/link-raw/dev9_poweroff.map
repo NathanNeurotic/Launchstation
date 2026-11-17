@@ -1,0 +1,53 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0       10     4 .rel.text
+       0        0       10     4         obj/dev9_poweroff/iop/dev9_poweroff/main.o:(.rel.text)
+       0        0        8     4 .rel.data
+       0        0        8     4         obj/dev9_poweroff/iop/dev9_poweroff/main.o:(.rel.data)
+       0        0       54    16 .text
+       0        0       30    16         obj/dev9_poweroff/iop/dev9_poweroff/main.o:(.text)
+       0        0       30     1                 _start
+      30       30       24    16         obj/dev9_poweroff/imports.o:(.text)
+      44       44        0     1                 Dev9RegisterPowerOffHandler
+       0        0        e    16 .rodata
+       0        0        e    16         <internal>:(.rodata.str1.1)
+  40008e   40008e    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       10    16 .data
+       0        0        8    16         obj/dev9_poweroff/iop/dev9_poweroff/main.o:(.data)
+       0        0        8     1                 _irx_id
+      10       10        0    16         obj/dev9_poweroff/imports.o:(.data)
+  4400a0   4400a0        0     1 __bss_start = .
+       0        0        0    16 .bss
+       0        0        0    16         obj/dev9_poweroff/iop/dev9_poweroff/main.o:(.bss)
+       0        0        0    16         obj/dev9_poweroff/imports.o:(.bss)
+  4400a0   4400a0        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/dev9_poweroff/iop/dev9_poweroff/main.o:(.mdebug.abi32)
+       0        0        0     1         obj/dev9_poweroff/imports.o:(.mdebug.abi32)
+       0        0       20     4 .pdr
+       0        0       20     4         obj/dev9_poweroff/iop/dev9_poweroff/main.o:(.pdr)
+       0        0        8     4 .rel.pdr
+       0        0        8     4         obj/dev9_poweroff/iop/dev9_poweroff/main.o:(.rel.pdr)
+       0        0        0     1 .llvm_addrsig
+       0        0        0     1         obj/dev9_poweroff/iop/dev9_poweroff/main.o:(.llvm_addrsig)
+       0        0        0     1         obj/dev9_poweroff/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      110     4 .symtab
+       0        0      110     4         <internal>:(.symtab)
+       0        0       94     1 .shstrtab
+       0        0       94     1         <internal>:(.shstrtab)
+       0        0       6c     1 .strtab
+       0        0       6c     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+_start                                            obj/dev9_poweroff/iop/dev9_poweroff/main.o
+Dev9RegisterPowerOffHandler                       obj/dev9_poweroff/imports.o
+                                                  obj/dev9_poweroff/iop/dev9_poweroff/main.o
+_irx_id                                           obj/dev9_poweroff/iop/dev9_poweroff/main.o

@@ -1,0 +1,2 @@
+# Objects on the mx4sio_bd_fork link line with zero bytes in any allocated output section (from the map)
+# count: 0 of 7 objects on the link line

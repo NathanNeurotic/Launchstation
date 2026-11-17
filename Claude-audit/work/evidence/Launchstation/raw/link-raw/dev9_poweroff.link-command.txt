@@ -1,0 +1,1 @@
+$SDK/llvm-toolchain/llvm/bin/ld.lld.exe -T$SDK/packages-llvm/core/startup/share/iop/linkfile -o evidence-relink/dev9_poweroff.relink.elf obj/dev9_poweroff/iop/dev9_poweroff/main.o obj/dev9_poweroff/imports.o -r -L$SDK/packages-llvm/core/startup/iop/lib -L$SDK/llvm-toolchain/iop/mipsel-none-elf/lib -liopmini -lstartup

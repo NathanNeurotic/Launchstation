@@ -1,0 +1,2 @@
+# zero-size sections and ABI metadata (.reginfo, .MIPS.abiflags, .pdr) are left out
+category	file	section	kind	size_bytes

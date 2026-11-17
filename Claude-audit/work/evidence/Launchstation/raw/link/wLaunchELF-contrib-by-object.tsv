@@ -1,0 +1,659 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+embed-blob	build/obj/_embed/wle_igr_elf_irx.o		0	0	518448	0	0	0	0	518448
+first-party	build/obj/wLaunchELF/src/embed_blobs.o		0	395188	0	0	0	0	0	395188
+first-party	build/obj/wLaunchELF/src/filer.o		28504	14	184	0	275492	0	0	304194
+linker-internal	<internal>		368	296533	0	0	0	0	152	297053
+first-party	build/obj/wLaunchELF/src/dash_font_data.o		0	221952	0	0	0	0	0	221952
+first-party	build/obj/wLaunchELF/src/mc_card_export.o		6516	314	0	0	200704	0	0	207534
+first-party	build/obj/wLaunchELF/src/dash_font_emotion_engine_bold.o		0	201472	0	0	0	0	0	201472
+first-party	build/obj/wLaunchELF/src/dash_font_emotion_engine.o		0	183040	0	0	0	0	0	183040
+embed-blob	build/obj/_embed/smbd_irx.o		0	0	164583	0	0	0	0	164583
+first-party	build/obj/wLaunchELF/src/mmce_backup.o		12616	32	0	0	149696	0	0	162344
+first-party	build/obj/wLaunchELF/src/dash_browser.o		55136	384	8	0	106560	0	0	162088
+first-party	build/obj/wLaunchELF/src/dash_card_tool.o		45348	600	0	0	109504	0	0	155452
+first-party	build/obj/wLaunchELF/src/dash_worker.o		3816	0	20	0	133620	0	0	137456
+embed-blob	build/obj/_embed/ps2ip_irx.o		0	0	105911	0	0	0	0	105911
+first-party	build/obj/wLaunchELF/src/dash_settings.o		45360	11576	0	0	39416	0	0	96352
+first-party	build/obj/wLaunchELF/src/mmce_igr.o		9712	3	0	0	65600	0	0	75315
+first-party	build/obj/wLaunchELF/src/mmce_save_versions.o		5672	0	0	0	67776	0	0	73448
+embed-blob	build/obj/_embed/mcman_physical_irx.o		0	0	71548	0	0	0	0	71548
+embed-blob	build/obj/_embed/vmcman_irx.o		0	0	67968	0	0	0	0	67968
+embed-blob	build/obj/_embed/xfromman_irx.o		0	0	61143	0	0	0	0	61143
+first-party	build/obj/wLaunchELF/src/dash_store.o		14912	36	0	0	39288	0	0	54236
+first-party	build/obj/wLaunchELF/src/config.o		22432	278	0	0	30760	0	0	53470
+first-party	build/obj/wLaunchELF/src/lang.o		8472	28840	2868	0	5740	0	0	45920
+first-party	build/obj/wLaunchELF/src/dash_files.o		13188	112	0	0	30520	0	0	43820
+embed-blob	build/obj/_embed/ps2fs_irx.o		0	0	43632	0	0	0	0	43632
+first-party	build/obj/wLaunchELF/src/hdd_header_injector.o		9460	176	4	0	33920	0	0	43560
+first-party	build/obj/wLaunchELF/src/filer_actions.o		34328	300	0	0	8832	0	0	43460
+first-party	build/obj/wLaunchELF/src/dash_icons.o		37192	1502	0	0	1128	0	0	39822
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	7516	0	0	0	31812	0	0	39328
+embed-blob	build/obj/_embed/bdmfs_fatfs_irx.o		0	0	39105	0	0	0	0	39105
+first-party	build/obj/wLaunchELF/src/dash_editor.o		29760	292	0	0	8740	0	0	38792
+embed-blob	build/obj/_embed/padman_irx.o		0	0	37794	0	0	0	0	37794
+embed-blob	build/obj/_embed/smbman_irx.o		0	0	37176	0	0	0	0	37176
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	ecp_curves.c.obj	6204	29820	24	0	0	0	0	36048
+third-party-dep	.cloud-deps/lib/libmbedtls.a	ssl_msg.c.obj	33384	0	0	0	0	0	0	33384
+first-party	build/obj/wLaunchELF/src/filer_browser.o		30848	166	7	0	2076	0	0	33097
+first-party	build/obj/wLaunchELF/src/dash_home.o		8984	84	0	0	23784	0	0	32852
+first-party	build/obj/wLaunchELF/src/dash_info.o		7012	40	0	0	25548	0	0	32600
+first-party	build/obj/wLaunchELF/src/dash_gfx.o		18948	20	76	0	12800	0	0	31844
+embed-blob	build/obj/_embed/ps2ftpd_irx.o		0	0	31198	0	0	0	0	31198
+embed-blob	build/obj/_embed/smb2man_irx.o		0	0	30289	0	0	0	0	30289
+third-party-dep	.cloud-deps/lib/libmbedtls.a	ssl_tls.c.obj	28840	1411	0	0	0	0	0	30251
+first-party	build/obj/wLaunchELF/src/editor.o		9880	112	0	0	18868	0	0	28860
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	pngrutil.o	28256	468	0	0	0	0	0	28724
+first-party	build/obj/wLaunchELF/src/init.o		26756	31	36	0	1116	0	0	27939
+embed-blob	build/obj/_embed/ps2hdd_irx.o		0	0	27565	0	0	0	0	27565
+first-party	build/obj/wLaunchELF/src/dash_ui.o		26064	144	8	0	872	0	0	27088
+first-party	build/obj/wLaunchELF/src/dash_art.o		11516	200	0	0	15024	0	0	26740
+first-party	build/obj/wLaunchELF/src/dash_widgets.o		20820	76	0	0	5612	0	0	26508
+first-party	build/obj/wLaunchELF/src/main_exploit_installer.o		23592	340	0	0	1044	0	0	24976
+first-party	build/obj/wLaunchELF/src/cloud_google.o		23736	70	0	0	0	0	0	23806
+embed-blob	build/obj/_embed/usbd_irx.o		0	0	23791	0	0	0	0	23791
+embed-blob	build/obj/_embed/pccf_irx.o		0	0	23492	0	0	0	0	23492
+first-party	build/obj/wLaunchELF/src/dash_tools.o		21840	1300	112	0	8	0	0	23260
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	pngrtran.o	22740	180	0	0	0	0	0	22920
+first-party	build/obj/wLaunchELF/src/filer_copy.o		17328	116	0	0	5196	0	0	22640
+first-party	build/obj/wLaunchELF/src/dash_font.o		16620	37	0	0	5120	0	0	21777
+first-party	build/obj/wLaunchELF/src/cloud_http.o		16312	5420	0	0	20	0	0	21752
+first-party	build/obj/wLaunchELF/src/pc_game_receiver.o		4028	0	0	0	17673	0	0	21701
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jidctint-12.c.obj	21448	0	0	0	0	0	0	21448
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jidctint-8.c.obj	21384	0	0	0	0	0	0	21384
+embed-blob	build/obj/_embed/nfsman_irx.o		0	0	21362	0	0	0	0	21362
+third-party-dep	.cloud-deps/lib/libmbedtls.a	ssl_tls12_server.c.obj	20760	168	0	0	0	0	0	20928
+third-party-dep	.cloud-deps/lib/libmbedtls.a	ssl_tls13_server.c.obj	20548	188	0	0	0	0	0	20736
+embed-blob	build/obj/_embed/mmceman_irx.o		0	0	20674	0	0	0	0	20674
+first-party	build/obj/wLaunchELF/src/qrcodegen.o		19492	472	0	0	0	0	0	19964
+first-party	build/obj/wLaunchELF/src/dash_bg_ps2.o		15716	48	0	0	4200	0	0	19964
+first-party	build/obj/wLaunchELF/src/dash_hdd.o		19232	464	0	0	68	0	0	19764
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto.c.obj	17544	594	0	0	752	0	0	18890
+third-party-dep	.cloud-deps/lib/libmbedtls.a	ssl_tls12_client.c.obj	18688	84	0	0	0	0	0	18772
+first-party	build/obj/wLaunchELF/src/neutrino_iso.o		5168	0	0	0	13312	0	0	18480
+first-party	build/obj/wLaunchELF/src/dash_themes.o		15500	1768	0	0	1196	0	0	18464
+first-party	build/obj/wLaunchELF/src/dash_ps1_card.o		10172	106	0	0	8092	0	0	18370
+third-party-dep	.cloud-deps/lib/libmbedtls.a	ssl_tls13_client.c.obj	17832	292	0	0	0	0	0	18124
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	aes.c.obj	9352	0	0	0	8745	0	0	18097
+first-party	build/obj/wLaunchELF/src/dash_main.o		17188	376	16	0	232	0	0	17812
+first-party	build/obj/wLaunchELF/src/mc_card_write.o		17524	256	0	0	0	0	0	17780
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	png.o	15140	2394	0	0	0	0	0	17534
+embed-blob	build/obj/_embed/libsd_irx.o		0	0	16462	0	0	0	0	16462
+embed-blob	build/obj/_embed/loader_elf_irx.o		0	0	16460	0	0	0	0	16460
+embed-blob	build/obj/_embed/smap_netman_irx.o		0	0	16113	0	0	0	0	16113
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	ecp.c.obj	15524	248	0	0	69	0	0	15841
+first-party	build/obj/wLaunchELF/src/dash_apps.o		13484	160	4	0	2068	0	0	15716
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	bignum.c.obj	14968	376	0	0	0	0	0	15344
+embed-blob	build/obj/_embed/ps2smap_irx.o		0	0	15313	0	0	0	0	15313
+first-party	build/obj/wLaunchELF/src/dash_lib.o		14872	296	0	0	21	0	0	15189
+embed-blob	build/obj/_embed/audsrv_irx.o		0	0	15131	0	0	0	0	15131
+embed-blob	build/obj/_embed/dvrfile_irx.o		0	0	15044	0	0	0	0	15044
+embed-blob	build/obj/_embed/ps2kbd_irx.o		0	0	14602	0	0	0	0	14602
+first-party	build/obj/wLaunchELF/src/dash_devices.o		14144	92	8	0	292	0	0	14536
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	rsa.c.obj	14352	0	0	0	0	0	0	14352
+first-party	build/obj/wLaunchELF/src/mc_ps1_card.o		14088	60	0	0	0	0	0	14148
+first-party	build/obj/wLaunchELF/src/main_actions.o		10948	37	0	0	3092	0	0	14077
+first-party	build/obj/wLaunchELF/src/elf.o		7824	0	0	0	6175	0	0	13999
+first-party	build/obj/wLaunchELF/src/makeicon.o		13068	342	0	0	4	0	0	13414
+first-party	build/obj/wLaunchELF/src/dash_bg.o		10276	160	144	0	2756	0	0	13336
+first-party	build/obj/wLaunchELF/src/kelf_signer.o		12076	1176	0	0	0	0	0	13252
+embed-blob	build/obj/_embed/iLinkman_irx.o		0	0	13247	0	0	0	0	13247
+sdk	$SDK/packages-llvm/world/z/lib/libz.a	inflate.o	10844	2354	0	0	0	0	0	13198
+embed-blob	build/obj/_embed/netman_irx.o		0	0	13055	0	0	0	0	13055
+third-party-dep	.cloud-deps/lib/libmbedx509.a	x509_crt.c.obj	12752	242	0	0	0	0	0	12994
+embed-blob	build/obj/_embed/mx4sio_bd_irx.o		0	0	12869	0	0	0	0	12869
+sdk	$SDK/packages-llvm/core/mc/lib/libmc.a	libmc.o	4048	136	0	0	8580	0	0	12764
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	timer.o	4408	0	0	0	8256	0	0	12664
+first-party	build/obj/wLaunchELF/src/editor_input.o		11724	812	0	0	0	0	0	12536
+embed-blob	build/obj/_embed/usbmass_bd_irx.o		0	0	12449	0	0	0	0	12449
+embed-blob	build/obj/_embed/ata_bd_irx.o		0	0	12290	0	0	0	0	12290
+first-party	build/obj/wLaunchELF/src/mc_save_formats.o		11808	368	0	0	0	0	0	12176
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-vfprintf.o	11728	396	0	0	0	0	0	12124
+first-party	build/obj/wLaunchELF/src/smb_shares.o		5656	84	0	0	6288	0	0	12028
+first-party	build/obj/wLaunchELF/src/smb_cnf.o		11776	240	0	0	0	0	0	12016
+embed-blob	build/obj/_embed/dvrdrv_irx.o		0	0	11953	0	0	0	0	11953
+first-party	build/obj/wLaunchELF/src/main.o		2300	0	408	0	8812	0	0	11520
+embed-blob	build/obj/_embed/ps2dev9_irx.o		0	0	11414	0	0	0	0	11414
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdcolor-12.c.obj	10992	188	0	0	0	0	0	11180
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-svfscanf.o	10148	1006	0	0	0	0	0	11154
+embed-blob	build/obj/_embed/iomanx_irx.o		0	0	11082	0	0	0	0	11082
+embed-blob	build/obj/_embed/bdm_irx.o		0	0	11080	0	0	0	0	11080
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-svfprintf.o	10680	396	0	0	0	0	0	11076
+embed-blob	build/obj/_embed/cdvd_irx.o		0	0	11034	0	0	0	0	11034
+third-party-dep	.cloud-deps/lib/libmbedx509.a	x509.c.obj	10704	100	0	0	0	0	0	10804
+embed-blob	build/obj/_embed/ps2host_irx.o		0	0	10736	0	0	0	0	10736
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	4316	0	0	0	6276	0	0	10592
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-svfiscanf.o	9900	690	0	0	0	0	0	10590
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdmerge-12.c.obj	10360	80	0	0	0	0	0	10440
+embed-blob	build/obj/_embed/ps2netfs_irx.o		0	0	10358	0	0	0	0	10358
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdcolor-8.c.obj	10064	188	0	0	0	0	0	10252
+sdk	$SDK/packages-llvm/core/cdvd/lib/libcdvd.a	ncmd.o	6284	0	0	0	3844	0	0	10128
+third-party-dep	.cloud-deps/lib/libmbedtls.a	ssl_tls13_generic.c.obj	9804	59	0	0	0	0	0	9863
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	ripemd160.c.obj	9772	64	0	0	0	0	0	9836
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdmarker.c.obj	9484	252	0	0	0	0	0	9736
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdmerge-8.c.obj	9520	80	0	0	0	0	0	9600
+third-party-dep	.cloud-deps/lib/libmbedtls.a	ssl_tls13_keys.c.obj	9192	260	0	0	0	0	0	9452
+first-party	build/obj/wLaunchELF/src/virtual_keyboard.o		9156	288	0	0	0	0	0	9444
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	bignum_core.c.obj	9404	0	0	0	0	0	0	9404
+first-party	build/obj/wLaunchELF/src/mc_save_export.o		9152	200	0	0	0	0	0	9352
+sdk	$SDK/packages-llvm/core/poweroff/lib/libpoweroff.a	poweroff.o	816	0	0	0	8448	0	0	9264
+embed-blob	build/obj/_embed/mcserv_irx.o		0	0	8965	0	0	0	0	8965
+embed-blob	build/obj/_embed/xfromserv_irx.o		0	0	8965	0	0	0	0	8965
+first-party	build/obj/wLaunchELF/src/dash_bg_geo.o		8744	68	0	0	44	0	0	8856
+first-party	build/obj/wLaunchELF/src/main_startup.o		8604	210	8	0	6	0	0	8828
+first-party	build/obj/wLaunchELF/src/font_uLE.o		0	0	4672	0	4096	0	0	8768
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	des.c.obj	6384	2304	0	0	0	0	0	8688
+embed-blob	build/obj/_embed/udpfs_smap_irx.o		0	0	8201	0	0	0	0	8201
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdcoefct-12.c.obj	7960	0	0	0	0	0	0	7960
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdcoefct-8.c.obj	7960	0	0	0	0	0	0	7960
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	sha1.c.obj	7852	0	0	0	0	0	0	7852
+first-party	build/obj/wLaunchELF/src/mc_card_view.o		7800	29	0	0	0	0	0	7829
+first-party	build/obj/wLaunchELF/src/main_title.o		7448	48	96	0	176	0	0	7768
+first-party	build/obj/wLaunchELF/src/gui_neutrino.o		7584	124	16	0	12	0	0	7736
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-mprec.o	7248	296	0	0	0	0	0	7544
+first-party	build/obj/wLaunchELF/ee_libs/tcpips/ps2ipc.o		6608	4	0	0	764	0	0	7376
+first-party	build/obj/wLaunchELF/src/dash_sound.o		6852	88	8	0	256	0	0	7204
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jquant2-12.c.obj	6796	216	0	0	0	0	0	7012
+embed-blob	build/obj/_embed/IEEE1394_bd_irx.o		0	0	6942	0	0	0	0	6942
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jquant2-8.c.obj	6700	216	0	0	0	0	0	6916
+sdk	$SDK/packages-llvm/world/z/lib/libz.a	crc32.o	1660	5248	0	0	0	0	0	6908
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	gcm.c.obj	6904	0	0	0	0	0	0	6904
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strtod.o	6640	256	0	0	0	0	0	6896
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdhuff.c.obj	6480	416	0	0	0	0	0	6896
+embed-blob	build/obj/_embed/xparam_irx.o		0	0	6882	0	0	0	0	6882
+sdk	$SDK/packages-llvm/core/secr/lib/libsecr.a	libsecr.o	2408	0	0	0	4420	0	0	6828
+embed-blob	build/obj/_embed/hdl_info_irx.o		0	0	6698	0	0	0	0	6698
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdcolor-16.c.obj	6400	148	0	0	0	0	0	6548
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	aria.c.obj	5456	1072	0	0	0	0	0	6528
+sdk	$SDK/packages-llvm/world/audio/lib/libaudio.a	audio_core.o	6372	0	0	0	4	0	0	6376
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-qsort.o	6352	0	0	0	0	0	0	6352
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	fileio.o	3964	0	0	0	2244	0	0	6208
+sdk	$SDK/packages-llvm/world/gskit/lib/libgskit.a	gsTexture.o	5916	252	0	0	0	0	0	6168
+first-party	build/obj/wLaunchELF/src/dash_clock_sync.o		5920	84	0	0	0	0	0	6004
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jmemmgr.c.obj	5992	0	0	0	0	0	0	5992
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-dtoa.o	5932	24	0	0	0	0	0	5956
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdarith.c.obj	5828	0	0	0	0	0	0	5828
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	pngset.o	5824	0	0	0	0	0	0	5824
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	camellia.c.obj	4544	1272	0	0	0	0	0	5816
+first-party	build/obj/wLaunchELF/src/gui.o		5720	64	0	0	28	0	0	5812
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	cipher.c.obj	5676	76	0	0	0	0	0	5752
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	sha256.c.obj	5492	256	0	0	0	0	0	5748
+embed-blob	build/obj/_embed/filexio_irx.o		0	0	5707	0	0	0	0	5707
+embed-blob	build/obj/_embed/ps2ips_irx.o		0	0	5414	0	0	0	0	5414
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-vfiprintf.o	4836	524	0	0	0	0	0	5360
+first-party	build/obj/wLaunchELF/src/filer_fileops.o		5244	80	0	0	0	0	0	5324
+first-party	build/obj/wLaunchELF/src/pad.o		3404	1164	0	0	704	0	0	5272
+embed-blob	build/obj/_embed/sio2man_irx.o		0	0	5216	0	0	0	0	5216
+first-party	build/obj/wLaunchELF/src/main_info_screens.o		5144	18	0	0	8	0	0	5170
+sdk	$SDK/packages-llvm/core/pad/lib/libpad.a	libpad.o	4220	60	0	0	836	0	0	5116
+first-party	build/obj/wLaunchELF/src/neutrino_smb.o		5068	28	0	0	0	0	0	5096
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdmaster.c.obj	4964	68	0	0	0	0	0	5032
+third-party-dep	.cloud-deps/lib/libmbedtls.a	ssl_client.c.obj	4984	0	0	0	0	0	0	4984
+first-party	build/obj/wLaunchELF/src/mmce_card_switch.o		4928	23	0	0	0	0	0	4951
+first-party	build/obj/wLaunchELF/src/ember_gameid.o		4848	64	0	0	0	0	0	4912
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	cipher_wrap.c.obj	2712	2152	0	0	0	0	0	4864
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto_ffdh.c.obj	1812	3019	0	0	0	0	0	4831
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-kf_rem_pio2.o	4676	56	0	0	0	0	0	4732
+first-party	build/obj/wLaunchELF/src/hdl_rpc.o		496	0	0	0	4224	0	0	4720
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdphuff.c.obj	4700	0	0	0	0	0	0	4700
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	sha512.c.obj	4036	640	0	0	0	0	0	4676
+sdk	$SDK/packages-llvm/core/cdvd/lib/libcdvd.a	scmd.o	2260	0	0	0	2344	0	0	4604
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jquant1-12.c.obj	4128	460	0	0	0	0	0	4588
+first-party	build/obj/wLaunchELF/src/draw_text.o		3848	736	0	0	0	0	0	4584
+first-party	build/obj/wLaunchELF/src/config_startup.o		4356	160	0	0	0	0	0	4516
+first-party	build/obj/wLaunchELF/src/update_psu.o		4492	0	0	0	4	0	0	4496
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jquant1-8.c.obj	4012	460	0	0	0	0	0	4472
+first-party	build/obj/wLaunchELF/src/self_update.o		4432	0	0	0	4	0	0	4436
+first-party	build/obj/wLaunchELF/src/popstarter_path.o		4428	0	0	0	0	0	0	4428
+first-party	build/obj/wLaunchELF/src/neutrino_gameid.o		4220	156	0	0	0	0	0	4376
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	md5.c.obj	4360	0	0	0	0	0	0	4360
+first-party	build/obj/wLaunchELF/src/dash_jpeg.o		4304	0	0	0	0	0	0	4304
+sdk	$SDK/packages-llvm/world/gskit/lib/libgskit.a	gsInit.o	3944	328	4	0	0	0	0	4276
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-arc4random.o	3152	0	0	0	1104	0	0	4256
+first-party	build/obj/wLaunchELF/src/draw.o		3896	0	28	0	292	0	0	4216
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	md.c.obj	3568	632	0	0	0	0	0	4200
+embed-blob	build/obj/_embed/extflash_irx.o		0	0	4200	0	0	0	0	4200
+first-party	build/obj/wLaunchELF/src/config_screen.o		4068	80	0	0	0	0	0	4148
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	kernel.o	4092	0	0	0	0	0	0	4092
+first-party	build/obj/wLaunchELF/src/ember.o		4092	0	0	0	0	0	0	4092
+sdk	$SDK/packages-llvm/world/gskit/lib/libgskit.a	gsCore.o	4052	24	0	0	0	0	0	4076
+sdk	$SDK/packages-llvm/core/cglue/lib/libcglue.a	fdman.o	2776	0	0	0	1296	0	0	4072
+first-party	build/obj/wLaunchELF/src/dash_png.o		4040	0	0	0	0	0	0	4040
+first-party	build/obj/wLaunchELF/src/dash_image.o		3988	16	0	0	0	0	0	4004
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-e_pow.o	3968	0	0	0	0	0	0	3968
+first-party	build/obj/wLaunchELF/src/config_network.o		3952	0	0	0	0	0	0	3952
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	oid.c.obj	2196	1720	0	0	0	0	0	3916
+first-party	build/obj/wLaunchELF/src/psu_functions.o		3908	0	0	0	0	0	0	3908
+third-party-dep	.cloud-deps/lib/libmbedtls.a	ssl_ciphersuites.c.obj	448	2758	0	0	685	0	0	3891
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strstr.o	3868	0	0	0	0	0	0	3868
+sdk	$SDK/packages-llvm/core/cglue/lib/libcglue.a	glue.o	3792	0	28	0	44	0	4	3868
+first-party	build/obj/wLaunchELF/src/main_gameid.o		3856	0	0	0	0	0	0	3856
+first-party	build/obj/wLaunchELF/src/config_advanced.o		3660	132	0	0	0	0	0	3792
+embed-blob	build/obj/_embed/poweroff_irx.o		0	0	3692	0	0	0	0	3692
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	pngtrans.o	2872	800	0	0	0	0	0	3672
+embed-blob	build/obj/_embed/secrsif_irx.o		0	0	3599	0	0	0	0	3599
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-gdtoa-gethex.o	3332	256	0	0	0	0	0	3588
+sdk	$SDK/packages-llvm/core/pthreadglue/lib/libpthreadglue.a	osal.o	1444	0	0	0	2064	0	0	3508
+first-party	build/obj/wLaunchELF/src/editor_file.o		3308	0	0	0	0	0	0	3308
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	rsa_alt_helpers.c.obj	3212	54	0	0	0	0	0	3266
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_ps2sdk.o	3004	0	0	0	244	0	4	3252
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-mallocr.o	2124	0	1040	0	52	0	0	3216
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	ccm.c.obj	3204	0	0	0	0	0	0	3204
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	ctr_drbg.c.obj	3176	0	0	0	0	0	0	3176
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	pngread.o	3148	24	0	0	0	0	0	3172
+sdk	$SDK/packages-llvm/core/cglue/lib/libcglue.a	ps2sdkapi.o	2884	0	0	0	252	0	8	3144
+first-party	build/obj/wLaunchELF/src/filer_mount.o		3112	0	0	0	0	0	0	3112
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	pem.c.obj	3100	0	0	0	0	0	0	3100
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdsample-8.c.obj	3072	0	0	0	0	0	0	3072
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdsample-12.c.obj	3072	0	0	0	0	0	0	3072
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdsample-16.c.obj	3072	0	0	0	0	0	0	3072
+first-party	build/obj/wLaunchELF/src/popstarter_gameid.o		3044	0	0	0	0	0	0	3044
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	ecdsa.c.obj	3004	0	0	0	0	0	0	3004
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	pngerror.o	2948	20	0	0	0	0	0	2968
+third-party-dep	.cloud-deps/lib/libmbedtls.a	debug.c.obj	2892	0	0	0	4	0	0	2896
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifcmd.o	2040	0	0	0	836	0	0	2876
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	udivmodti4.c.obj	2808	0	0	0	0	0	0	2808
+sdk	$SDK/packages-llvm/core/cglue/lib/libcglue.a	cwd.o	2488	0	0	0	260	0	0	2748
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	sha3.c.obj	2588	48	0	0	0	0	0	2636
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	dhm.c.obj	2620	0	0	0	0	0	0	2620
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	thread.o	548	0	0	0	2064	0	0	2612
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	poly1305.c.obj	2572	0	0	0	0	0	0	2572
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	asn1parse.c.obj	2564	0	0	0	0	0	0	2564
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-mktime.o	2448	96	0	0	0	0	0	2544
+first-party	build/obj/wLaunchELF/src/popstarter_vcd.o		2520	0	0	0	0	0	0	2520
+first-party	build/obj/wLaunchELF/src/popstarter_elf.o		2488	0	0	0	0	0	0	2488
+sdk	$SDK/packages-llvm/world/gskit/lib/libgskit.a	gsPrimitive.o	2404	0	0	0	0	0	0	2404
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jddiffct-12.c.obj	2384	0	0	0	0	0	0	2384
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jddiffct-16.c.obj	2384	0	0	0	0	0	0	2384
+first-party	build/obj/wLaunchELF/src/dash_theme.o		2372	0	0	0	4	0	0	2376
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jddiffct-8.c.obj	2360	0	0	0	0	0	0	2360
+first-party	build/obj/wLaunchELF/src/main_console_info.o		2348	0	0	0	9	0	0	2357
+sdk	$SDK/packages-llvm/core/cdvd/lib/libcdvd.a	libcdvd.o	1588	0	0	0	756	0	0	2344
+first-party	build/obj/wLaunchELF/src/filer_device.o		2340	0	0	0	0	0	0	2340
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdmainct-8.c.obj	2336	0	0	0	0	0	0	2336
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdmainct-12.c.obj	2336	0	0	0	0	0	0	2336
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdmainct-16.c.obj	2336	0	0	0	0	0	0	2336
+first-party	build/obj/wLaunchELF/src/dash_ftp.o		2280	0	0	0	0	0	0	2280
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	nist_kw.c.obj	2232	12	0	0	0	0	0	2244
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto_ecp.c.obj	2236	0	0	0	0	0	0	2236
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-ef_pow.o	2228	0	0	0	0	0	0	2228
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-tzset_r.o	2196	0	0	0	28	0	0	2224
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdinput.c.obj	2212	0	0	0	0	0	0	2212
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto_slot_management.c.obj	2004	0	0	0	184	0	0	2188
+sdk	$SDK/packages-llvm/world/z/lib/libz.a	inffast.o	2176	0	0	0	0	0	0	2176
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	chacha20.c.obj	2156	0	0	0	0	0	0	2156
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	pk.c.obj	2140	16	0	0	0	0	0	2156
+first-party	build/obj/wLaunchELF/src/mc_sha256.o		1896	256	0	0	0	0	0	2152
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	pkparse.c.obj	2148	0	0	0	0	0	0	2148
+first-party	build/lib/libiopreboot.a	SifIopRebootBuffer.o	924	192	0	0	1024	0	0	2140
+sdk	$SDK/packages-llvm/world/z/lib/libz.a	inftrees.o	1840	300	0	0	0	0	0	2140
+first-party	build/obj/wLaunchELF/src/dash_exploit.o		1972	20	0	0	96	0	0	2088
+first-party	build/obj/wLaunchELF/src/editor_menu.o		2016	32	0	0	0	0	0	2048
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto_mac.c.obj	2012	34	0	0	0	0	0	2046
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	divdf3.c.obj	2032	0	0	0	0	0	0	2032
+first-party	build/obj/wLaunchELF/src/draw_gs.o		2012	16	0	0	0	0	0	2028
+first-party	build/obj/wLaunchELF/src/remote_control.o		988	0	0	0	1032	0	0	2020
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto_hash.c.obj	1712	289	0	0	0	0	0	2001
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jidctred-12.c.obj	1984	0	0	0	0	0	0	1984
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jidctred-8.c.obj	1964	0	0	0	0	0	0	1964
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	srcfile_bin.o	0	0	1952	0	0	0	0	1952
+first-party	build/lib/libhdd_ee.a	libhdd.o	1852	76	0	0	16	0	0	1944
+embed-blob	build/obj/_embed/allowdvdv_irx.o		0	0	1906	0	0	0	0	1906
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strerror.o	1328	576	0	0	0	0	0	1904
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	1836	0	0	0	44	0	0	1880
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	error.c.obj	504	1364	0	0	0	0	0	1868
+first-party	build/obj/wLaunchELF/src/gui_colors.o		1860	0	0	0	0	0	0	1860
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-ef_rem_pio2.o	932	920	0	0	0	0	0	1852
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	ecdh.c.obj	1820	0	0	0	0	0	0	1820
+first-party	build/obj/wLaunchELF/src/main_history.o		1784	0	27	0	0	0	0	1811
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	cmac.c.obj	1756	0	0	0	0	0	0	1756
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdapimin.c.obj	1696	44	0	0	0	0	0	1740
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-findfp.o	1360	0	12	0	340	0	0	1712
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jddctmgr-8.c.obj	1440	268	0	0	0	0	0	1708
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jddctmgr-12.c.obj	1440	268	0	0	0	0	0	1708
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	tlbfunc.o	1388	288	0	0	0	0	0	1676
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fseeko.o	1668	0	0	0	0	0	0	1668
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	udivmoddi4.c.obj	1660	0	0	0	0	0	0	1660
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	timer_alarm.o	612	0	0	0	1040	0	0	1652
+sdk	$SDK/packages-llvm/world/gskit/lib/libgskit.a	gsTexManager.o	1620	0	0	0	8	0	0	1628
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopheap.o	1576	0	0	0	44	0	0	1620
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-reallocr.o	1612	0	0	0	0	0	0	1612
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	pk_wrap.c.obj	1412	192	0	0	0	0	0	1604
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	hmac_drbg.c.obj	1556	0	0	0	0	0	0	1556
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdlhuff.c.obj	1540	0	0	0	0	0	0	1540
+first-party	build/obj/wLaunchELF/src/ftp_session.o		1144	0	0	0	384	0	0	1528
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	chachapoly.c.obj	1516	0	0	0	0	0	0	1516
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	adddf3.c.obj	1496	0	0	0	0	0	0	1496
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-tzcalc_limits.o	1488	0	0	0	0	0	0	1488
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-signal.o	1480	3	0	0	0	0	0	1483
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdlossls-12.c.obj	1432	28	0	0	0	0	0	1460
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdlossls-16.c.obj	1432	28	0	0	0	0	0	1460
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdlossls-8.c.obj	1424	28	0	0	0	0	0	1452
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sccl.o	1424	0	0	0	0	0	0	1424
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	entropy.c.obj	1412	0	0	0	0	0	0	1412
+sdk	$SDK/packages-llvm/core/ps2ips/lib/libps2ips.a	ps2ipc_ps2sdk.o	1228	0	148	0	4	0	0	1380
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdpostct-8.c.obj	1372	0	0	0	0	0	0	1372
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdpostct-12.c.obj	1372	0	0	0	0	0	0	1372
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jidctfst-12.c.obj	1356	0	0	0	0	0	0	1356
+first-party	build/obj/wLaunchELF/src/editor_rules.o		1332	0	0	0	0	0	0	1332
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	muldf3.c.obj	1320	0	0	0	0	0	0	1320
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jidctfst-8.c.obj	1316	0	0	0	0	0	0	1316
+sdk	$SDK/packages-llvm/core/patches/lib/libpatches.a	patch_enable_lmb.o	644	128	0	0	512	0	0	1284
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-memmove.o	1268	0	0	0	0	0	0	1268
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fvwrite.o	1252	0	0	0	0	0	0	1252
+sdk	$SDK/packages-llvm/core/startup/ee/lib/libstartup.a	crt0.o	920	0	0	0	328	0	0	1248
+first-party	build/obj/wLaunchELF/src/dash_smbd.o		1244	0	0	0	0	0	0	1244
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto_storage.c.obj	1228	0	0	0	0	0	0	1228
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto_rsa.c.obj	1220	0	0	0	0	0	0	1220
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jerror.c.obj	688	524	0	0	0	0	0	1212
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	osdsrc_bin.o	0	0	1208	0	0	0	0	1208
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdapistd-8.c.obj	1176	0	0	0	0	0	0	1176
+sdk	$SDK/packages-llvm/core/cglue/lib/libcglue.a	lock.o	1068	0	0	0	96	0	0	1164
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	base64.c.obj	1136	0	0	0	0	0	0	1136
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	pngmem.o	1132	0	0	0	0	0	0	1132
+sdk	$SDK/packages-llvm/core/pthreadglue/lib/libpthreadglue.a	tls-helper.o	1112	0	0	0	16	0	0	1128
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_its_file.c.obj	1116	0	0	0	0	0	0	1116
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-ungetc.o	1104	0	0	0	0	0	0	1104
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-gdtoa-hexnan.o	1104	0	0	0	0	0	0	1104
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jidctflt-12.c.obj	1100	0	0	0	0	0	0	1100
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-freer.o	1064	0	0	0	0	0	0	1064
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jidctflt-8.c.obj	1064	0	0	0	0	0	0	1064
+first-party	build/obj/wLaunchELF/src/main_boot.o		1060	0	0	0	0	0	0	1060
+sdk	$SDK/packages-llvm/world/z/lib/libz.a	adler32.o	1052	0	0	0	0	0	0	1052
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto_cipher.c.obj	1020	28	0	0	0	0	0	1048
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	tlbsrc_bin.o	0	0	1044	0	0	0	0	1044
+sdk	$SDK/packages-llvm/core/patches/lib/libpatches.a	common.o	268	0	0	0	768	0	0	1036
+first-party	build/obj/wLaunchELF/src/main_fileops.o		1020	0	0	0	0	0	0	1020
+sdk	$SDK/packages-llvm/world/audsrv-compat/lib/libaudsrv-compat.a	audsrv_shim.o	920	82	0	0	12	0	0	1014
+first-party	build/obj/wLaunchELF/src/gui_sort.o		1004	0	0	0	0	0	0	1004
+first-party	build/obj/wLaunchELF/src/main_gameid_table.o		0	996	0	0	0	0	0	996
+third-party-dep	.cloud-deps/lib/libmbedtls.a	ssl_debug_helpers_generated.c.obj	752	224	0	0	0	0	0	976
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-gmtime_r.o	968	0	0	0	0	0	0	968
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-memcpy.o	964	0	0	0	0	0	0	964
+embed-blob	build/obj/_embed/dev9_poweroff_irx.o		0	0	961	0	0	0	0	961
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fflush.o	956	0	0	0	0	0	0	956
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-setenv_r.o	944	0	0	0	1	0	0	945
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	exit.o	940	0	0	0	4	0	0	944
+first-party	build/obj/wLaunchELF/src/popstarter.o		872	32	0	0	0	0	0	904
+sdk	$SDK/packages-llvm/core/patches/lib/libpatches.a	slib.o	884	0	0	0	8	0	0	892
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	constant_time.c.obj	888	0	0	0	0	0	0	888
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strtoll.o	844	0	0	0	0	0	0	844
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fread.o	824	0	0	0	0	0	0	824
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strtoull.o	812	0	0	0	0	0	0	812
+sdk	$SDK/packages-llvm/world/dmakit/lib/libdmakit.a	dmaCore.o	544	252	0	0	0	0	0	796
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-e_sqrt.o	764	16	0	0	0	0	0	780
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	asn1write.c.obj	772	0	0	0	0	0	0	772
+sdk	$SDK/packages-llvm/world/dmakit/lib/libdmakit.a	dmaInit.o	448	320	0	0	0	0	0	768
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-setvbuf.o	760	0	0	0	0	0	0	760
+first-party	build/obj/wLaunchELF/src/gui_hdd0_format.o		748	0	0	0	0	0	0	748
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	704	0	0	0	0	0	0	704
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strtol.o	696	0	0	0	0	0	0	696
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_util.c.obj	608	67	0	0	0	0	0	675
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-ef_exp.o	652	0	0	0	0	0	0	652
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-ctype_.o	0	641	0	0	0	0	0	641
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-locale.o	276	0	364	0	0	0	0	640
+sdk	$SDK/packages-llvm/world/audio/lib/libaudio.a	audio_adpcm.o	632	0	0	0	0	0	0	632
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-putc.o	628	0	0	0	0	0	0	628
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strtoul.o	616	0	0	0	0	0	0	616
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jutils-8.c.obj	268	320	0	0	0	0	0	588
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-ef_fmod.o	576	0	0	0	0	0	0	576
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-perror.o	576	0	0	0	0	0	0	576
+sdk	$SDK/packages-llvm/core/patches/lib/libpatches.a	smod.o	576	0	0	0	0	0	0	576
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-memset.o	572	0	0	0	0	0	0	572
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-s_floor.o	564	0	0	0	0	0	0	564
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-s_scalbn.o	548	0	0	0	0	0	0	548
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	udivdi3.c.obj	536	0	0	0	0	0	0	536
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pte_callUserDestroyRoutines.o	528	0	0	0	0	0	0	528
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	umoddi3.c.obj	528	0	0	0	0	0	0	528
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopcontrol.o	356	0	0	0	168	0	0	524
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-refill.o	516	0	0	0	0	0	0	516
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	multi3.c.obj	516	0	0	0	0	0	0	516
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	trunctfdf2.c.obj	508	0	0	0	0	0	0	508
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fwrite.o	504	0	0	0	0	0	0	504
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-makebuf.o	504	0	0	0	0	0	0	504
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-math_err.o	500	0	0	0	0	0	0	500
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fopen.o	492	0	0	0	0	0	0	492
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdatasrc.c.obj	488	4	0	0	0	0	0	492
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	osd_config.o	480	0	8	0	0	0	0	488
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fclose.o	468	0	0	0	0	0	0	468
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	rom0_info.o	448	0	0	0	14	0	0	462
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jaricom.c.obj	0	456	0	0	0	0	0	456
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fputc.o	452	0	0	0	0	0	0	452
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-__call_atexit.o	432	0	4	0	4	0	0	440
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-malignr.o	432	0	0	0	0	0	0	432
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	floatdisf.c.obj	432	0	0	0	0	0	0	432
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-wbuf.o	408	0	0	0	0	0	0	408
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-ssputs_r.o	400	0	0	0	0	0	0	400
+first-party	build/lib/libiopreboot.a	patch_romdrv_set_rom1_info.o	336	0	0	0	64	0	0	400
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_mutex_lock.o	396	0	0	0	0	0	0	396
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	truncdfsf2.c.obj	396	0	0	0	0	0	0	396
+sdk	$SDK/packages-llvm/core/cglue/lib/libcglue.a	sleep.o	392	0	0	0	0	0	0	392
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-sf_scalbn.o	388	0	0	0	0	0	0	388
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-puts.o	388	0	0	0	0	0	0	388
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-snprintf.o	388	0	0	0	0	0	0	388
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto_random.c.obj	380	0	0	0	0	0	0	380
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	extenddftf2.c.obj	372	0	0	0	0	0	0	372
+sdk	$SDK/packages-llvm/world/audio/lib/libaudio.a	audio_flat.o	368	0	0	0	4	0	0	372
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	setup.o	372	0	0	0	0	0	0	372
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_setspecific.o	368	0	0	0	0	0	0	368
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-ef_sqrt.o	356	8	0	0	0	0	0	364
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-stdio.o	360	0	0	0	0	0	0	360
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-w_pow.o	356	0	0	0	0	0	0	356
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-vsnprintf.o	348	0	0	0	0	0	0	348
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-getenv_r.o	348	0	0	0	0	0	0	348
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-wf_pow.o	344	0	0	0	0	0	0	344
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-wsetup.o	344	0	0	0	0	0	0	344
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strchr.o	340	0	0	0	0	0	0	340
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	comparedf2.c.obj	340	0	0	0	0	0	0	340
+first-party	build/obj/wLaunchELF/src/main_modules.o		332	0	0	0	0	0	0	332
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-mbrtowc.o	328	0	0	0	0	0	0	328
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_key_delete.o	328	0	0	0	0	0	0	328
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-math_errf.o	316	0	0	0	0	0	0	316
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-kf_cos.o	312	0	0	0	0	0	0	312
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-siscanf.o	312	0	0	0	0	0	0	312
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sscanf.o	312	0	0	0	0	0	0	312
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	kernel_util.o	312	0	0	0	0	0	0	312
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pte_detach.o	300	0	0	0	0	0	0	300
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jdpostct-16.c.obj	292	0	0	0	0	0	0	292
+sdk	$SDK/packages-llvm/core/kbd/lib/libkbd.a	libkbd.o	280	0	0	0	12	0	0	292
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	pk_ecc.c.obj	292	0	0	0	0	0	0	292
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-impure.o	0	0	288	4	0	0	0	292
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strncpy.o	288	0	0	0	0	0	0	288
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	extendsfdf2.c.obj	280	0	0	0	0	0	0	280
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	alarm.o	280	0	0	0	0	0	0	280
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	pngget.o	268	0	0	0	0	0	0	268
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pte_reuse.o	264	0	0	0	0	0	0	264
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jcomapi.c.obj	264	0	0	0	0	0	0	264
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_mutex_destroy.o	260	0	0	0	0	0	0	260
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	pngrio.o	260	0	0	0	0	0	0	260
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-sf_floor.o	256	0	0	0	0	0	0	256
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sprintf.o	256	0	0	0	0	0	0	256
+sdk	$SDK/packages-llvm/core/cglue/lib/libcglue.a	timezone.o	228	0	0	0	28	0	0	256
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-memchr.o	252	0	0	0	0	0	0	252
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fileno.o	248	0	0	0	0	0	0	248
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_mutex_unlock.o	248	0	0	0	0	0	0	248
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	getkernel.o	244	0	0	0	4	0	0	248
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-callocr.o	240	0	0	0	0	0	0	240
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	delaythread.o	240	0	0	0	0	0	0	240
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pte_mutex_check_need_init.o	192	16	24	0	0	0	0	232
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pte_threadDestroy.o	224	0	0	0	0	0	0	224
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	floatsidf.c.obj	224	0	0	0	0	0	0	224
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-setjmp.o	220	0	0	0	0	0	0	220
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_mutex_trylock.o	220	0	0	0	0	0	0	220
+sdk	$SDK/packages-llvm/core/cglue/lib/libcglue.a	init.o	220	0	0	0	0	0	0	220
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-kf_sin.o	216	0	0	0	0	0	0	216
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-sf_sin.o	200	16	0	0	0	0	0	216
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fwalk.o	216	0	0	0	0	0	0	216
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strcmp.o	216	0	0	0	0	0	0	216
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-flags.o	216	0	0	0	0	0	0	216
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-sf_cos.o	196	16	0	0	0	0	0	212
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-s_frexp.o	212	0	0	0	0	0	0	212
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strncmp.o	212	0	0	0	0	0	0	212
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-ssprint_r.o	212	0	0	0	0	0	0	212
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_setcancelstate.o	208	0	0	0	0	0	0	208
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	cleanup.o	208	0	0	0	0	0	0	208
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jmemnobs.c.obj	208	0	0	0	0	0	0	208
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	floatunsidf.c.obj	204	0	0	0	0	0	0	204
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pte_tkAssocDestroy.o	200	0	0	0	0	0	0	200
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	fixunsdfdi.c.obj	200	0	0	0	0	0	0	200
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_init.o	196	0	0	0	0	0	0	196
+first-party	build/obj/wLaunchELF/src/gui_texteditor.o		196	0	0	0	0	0	0	196
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_terminate.o	192	0	0	0	0	0	0	192
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-rand.o	184	0	0	0	0	0	0	184
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	platform_util.c.obj	176	4	0	0	0	0	0	180
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strncat.o	176	0	0	0	0	0	0	176
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strcat.o	168	0	0	0	0	0	0	168
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_key_create.o	168	0	0	0	0	0	0	168
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pte_throw.o	168	0	0	0	0	0	0	168
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-printf.o	164	0	0	0	0	0	0	164
+sdk	$SDK/packages-llvm/core/patches/lib/libpatches.a	patch_disable_prefix_check.o	156	0	0	0	8	0	0	164
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-s_fpclassify.o	156	0	0	0	0	0	0	156
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_mutex_init.o	156	0	0	0	0	0	0	156
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_self.o	156	0	0	0	0	0	0	156
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pte_new.o	156	0	0	0	0	0	0	156
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-memcmp.o	152	0	0	0	0	0	0	152
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strcpy.o	152	0	0	0	0	0	0	152
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	floatdidf.c.obj	148	0	0	0	0	0	0	148
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-wf_exp.o	144	0	0	0	0	0	0	144
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fprintf.o	144	0	0	0	0	0	0	144
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fiprintf.o	144	0	0	0	0	0	0	144
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	libosd.o	144	0	0	0	0	0	0	144
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strncasecmp.o	140	0	0	0	0	0	0	140
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jutils-12.c.obj	140	0	0	0	0	0	0	140
+third-party-dep	.jpeg-deps/lib/libjpegturbo.a	jutils-16.c.obj	140	0	0	0	0	0	0	140
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-wf_fmod.o	136	0	0	0	0	0	0	136
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pte_tkAssocCreate.o	136	0	0	0	0	0	0	136
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	floatundidf.c.obj	136	0	0	0	0	0	0	136
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-sf_fpclassify.o	132	0	0	0	0	0	0	132
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-stpcpy.o	132	0	0	0	0	0	0	132
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-mbtowc_r.o	128	0	0	0	0	0	0	128
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-signalr.o	128	0	0	0	0	0	0	128
+first-party	build/obj/wLaunchELF/src/chkesr.o		128	0	0	0	0	0	0	128
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strspn.o	124	0	0	0	0	0	0	124
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-wctomb_r.o	124	0	0	0	0	0	0	124
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	fixdfsi.c.obj	124	0	0	0	0	0	0	124
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strlen.o	120	0	0	0	0	0	0	120
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	libosd_common.o	120	0	0	0	0	0	0	120
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strcspn.o	116	0	0	0	0	0	0	116
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-usleep.o	116	0	0	0	0	0	0	116
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	fixdfdi.c.obj	112	0	0	0	0	0	0	112
+sdk	$SDK/packages-llvm/world/gskit/lib/libgskit.a	gsMisc.o	112	0	0	0	0	0	0	112
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strrchr.o	108	0	0	0	0	0	0	108
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strlcpy.o	108	0	0	0	0	0	0	108
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strpbrk.o	108	0	0	0	0	0	0	108
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strdup_r.o	108	0	0	0	0	0	0	108
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sleep.o	104	0	0	0	0	0	0	104
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strcasecmp.o	104	0	0	0	0	0	0	104
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-remove.o	104	0	0	0	0	0	0	104
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	divdi3.c.obj	104	0	0	0	0	0	0	104
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-assert.o	100	0	0	0	0	0	0	100
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-readr.o	100	0	0	0	0	0	0	100
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-writer.o	100	0	0	0	0	0	0	100
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-setenv.o	100	0	0	0	0	0	0	100
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-gettzinfo.o	12	0	88	0	0	0	0	100
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-_isatty.o	100	0	0	0	0	0	0	100
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-openr.o	100	0	0	0	0	0	0	100
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fstatr.o	96	0	0	0	0	0	0	96
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-getentropyr.o	96	0	0	0	0	0	0	96
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-gettimeofdayr.o	96	0	0	0	0	0	0	96
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-renamer.o	96	0	0	0	0	0	0	96
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-lseekr.o	96	0	0	0	0	0	0	96
+sdk	$SDK/packages-llvm/core/cglue/lib/libcglue.a	rtc.o	88	0	0	0	8	0	0	96
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	initsys.o	96	0	0	0	0	0	0	96
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-month_lengths.o	0	96	0	0	0	0	0	96
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-getenv.o	92	0	0	0	0	0	0	92
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-closer.o	92	0	0	0	0	0	0	92
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-unlinkr.o	92	0	0	0	0	0	0	92
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-time.o	92	0	0	0	0	0	0	92
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-isattyr.o	92	0	0	0	0	0	0	92
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	fixunsdfsi.c.obj	92	0	0	0	0	0	0	92
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sysopen.o	88	0	0	0	0	0	0	88
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-div.o	88	0	0	0	0	0	0	88
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sbrkr.o	88	0	0	0	0	0	0	88
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fseek.o	84	0	0	0	0	0	0	84
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto_driver_wrappers_no_static.c.obj	84	0	0	0	0	0	0	84
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sprint_r.o	80	0	0	0	0	0	0	80
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-tzset.o	80	0	0	0	0	0	0	80
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-malloc.o	80	0	0	0	0	0	0	80
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-clock.o	80	0	0	0	0	0	0	80
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-atol.o	76	0	0	0	0	0	0	76
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-atoi.o	76	0	0	0	0	0	0	76
+sdk	$SDK/packages-llvm/world/audio/lib/libaudio.a	audio_pcm.o	68	0	0	0	0	0	0	68
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-tzlock.o	64	0	0	0	0	0	0	64
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-envlock.o	64	0	0	0	0	0	0	64
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-mlock.o	64	0	0	0	0	0	0	64
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	global.o	0	0	9	0	52	0	0	61
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	setup_syscalls.o	60	0	0	0	0	0	0	60
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	subdf3.c.obj	60	0	0	0	0	0	0	60
+sdk	$SDK/packages-llvm/world/z/lib/libz.a	zutil.o	60	0	0	0	0	0	0	60
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strnlen.o	56	0	0	0	0	0	0	56
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-exit.o	56	0	0	0	0	0	0	56
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_equal.o	56	0	0	0	0	0	0	56
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	eenull_bin.o	0	0	56	0	0	0	0	56
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sysread.o	52	0	0	0	0	0	0	52
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libpthread.a	pthread_getspecific.o	52	0	0	0	0	0	0	52
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	udivti3.c.obj	52	0	0	0	0	0	0	52
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-rename.o	48	0	0	0	0	0	0	48
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sysgetentropy.o	48	0	0	0	0	0	0	48
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-localeconv.o	48	0	0	0	0	0	0	48
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sysfstat.o	48	0	0	0	0	0	0	48
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sysclose.o	44	0	0	0	0	0	0	44
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-calloc.o	44	0	0	0	0	0	0	44
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-realloc.o	44	0	0	0	0	0	0	44
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-malign.o	44	0	0	0	0	0	0	44
+first-party	build/obj/wLaunchELF/src/timer.o		44	0	0	0	0	0	0	44
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-setbuf.o	40	0	0	0	0	0	0	40
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-strdup.o	40	0	0	0	0	0	0	40
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-iswspace_l.o	40	0	0	0	0	0	0	40
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-wcslen.o	40	0	0	0	0	0	0	40
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-sf_finite.o	32	0	0	0	0	0	0	32
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-s_finite.o	32	0	0	0	0	0	0	32
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-bzero.o	32	0	0	0	0	0	0	32
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-iswspace.o	32	0	0	0	0	0	0	32
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-timesr.o	32	0	0	0	0	0	0	32
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto_client.c.obj	32	0	0	0	0	0	0	32
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-explicit_bzero.o	28	0	0	0	0	0	0	28
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-abort.o	24	0	0	0	0	0	0	24
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-s_fabs.o	20	0	0	0	0	0	0	20
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-sf_nan.o	16	0	0	0	0	0	0	16
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libclang_rt.builtins-mips64el.a	fp_mode.c.obj	16	0	0	0	0	0	0	16
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-tzvars.o	0	0	8	0	8	0	0	16
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-s_nan.o	12	0	0	0	0	0	0	12
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-errno.o	12	0	0	0	0	0	0	12
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-sf_fabs.o	8	0	0	0	0	0	0	8
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-u_strerr.o	8	0	0	0	0	0	0	8
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-environ.o	0	0	4	0	4	0	0	8
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-reent.o	0	0	0	0	4	0	0	4
+first-party	build/obj/wLaunchELF/src/icon.o		0	0	0	0	0	0	0	0
+embed-blob	build/obj/_embed/ps2atad_irx.o		0	0	0	0	0	0	0	0
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	pngwrite.o	0	0	0	0	0	0	0	0
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	pngwio.o	0	0	0	0	0	0	0	0
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	pngwtran.o	0	0	0	0	0	0	0	0
+sdk	$SDK/packages-llvm/world/png/lib/libpng.a	pngwutil.o	0	0	0	0	0	0	0	0
+sdk	$SDK/packages-llvm/world/z/lib/libz.a	deflate.o	0	0	0	0	0	0	0	0
+sdk	$SDK/packages-llvm/world/z/lib/libz.a	trees.o	0	0	0	0	0	0	0	0
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	pkcs5.c.obj	0	0	0	0	0	0	0	0
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	pkcs12.c.obj	0	0	0	0	0	0	0	0
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto_aead.c.obj	0	0	0	0	0	0	0	0
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	psa_crypto_pake.c.obj	0	0	0	0	0	0	0	0
+third-party-dep	.cloud-deps/lib/libmbedcrypto.a	ecjpake.c.obj	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libm.a	libm_a-s_modf.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fgets.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sysstat.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-statr.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-readdir.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-atof.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-closedir.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-telldir.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-syslseek.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-opendir.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-syslink.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-putchar.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sysunlink.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-syswrite.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-linkr.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-gmtime.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sysfcntl.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-fcntlr.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-ftell.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-ftello.o	0	0	0	0	0	0	0	0
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc.a	libc_a-sysgettod.o	0	0	0	0	0	0	0	0

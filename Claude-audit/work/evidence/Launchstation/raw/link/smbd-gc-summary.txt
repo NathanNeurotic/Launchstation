@@ -1,0 +1,34 @@
+Link: smbd
+Source: smbd.gc-sections.log (ld.lld --print-gc-sections), sizes read from the input objects
+
+Total discarded sections: 801
+Discarded code/data sections (ABI metadata excluded): 464, of which non-empty: 294, 95309 bytes
+  first-party: 1 non-empty sections, 124 bytes
+  embed-blob: 0 non-empty sections, 0 bytes
+  sdk: 0 non-empty sections, 0 bytes
+  third-party-dep: 293 non-empty sections, 95185 bytes
+  generated: 0 non-empty sections, 0 bytes
+Sections whose size could not be read: 0
+
+category	kind	count	bytes
+first-party	bss (empty)	3	0
+first-party	code	1	124
+first-party	code (empty)	2	0
+first-party	data (empty)	3	0
+first-party	metadata	6	144
+first-party	non-alloc	1	24
+sdk	bss (empty)	2	0
+sdk	data (empty)	2	0
+sdk	metadata	4	96
+third-party-dep	bss	2	9
+third-party-dep	bss (empty)	53	0
+third-party-dep	code	275	74560
+third-party-dep	code (empty)	53	0
+third-party-dep	data (empty)	52	0
+third-party-dep	metadata	106	2544
+third-party-dep	non-alloc	220	38248
+third-party-dep	rodata	16	20616
+
+First-party and embed-blob discarded bytes per object, non-empty code/data sections (top 80):
+bytes	count	file
+124	1	build/obj/smbd/iop/smbd/smbd.o

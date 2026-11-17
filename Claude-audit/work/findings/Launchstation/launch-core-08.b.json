@@ -1,0 +1,129 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-08.b",
+  "coverage": [
+    {"path": "src/dash_devices.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_editor.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_exploit.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_files.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_devices.c is the dashboard's device model: it builds the DashDevice rows (memory cards from the cached root poller, USB mask, MMCE, MX4SIO, iLink, HDD, exFAT, PC CARD CF, disc, UDPFS, SMB/NFS, host, xfrom, DVR, VMC), tracks per-IOP-session probe results, plays hotplug sounds, and starts drivers on the UI thread behind a loading overlay (dashDevicesStart, dashDevicesAutoStart/AutoProbe, dashDevicesStartForPath). dash_editor.c is the native Text Editor (up to 8 documents, EOL detection and write-back, docked keyboard and USB keyboard) and a 512 KB overwrite-only Hex Editor; file reads and writes run as background worker jobs. dash_exploit.c only skins the classic memory-card exploit installer with dashboard widgets through the ExploitInstallerUi callbacks. dash_files.c holds the old FILES list (root, last folder, MISC, PathPad bookmarks) and the DEVICES grid, toggled with SELECT, plus the pending-device-start bookkeeping polled by the main loop.",
+  "reusable_helpers": [
+    {"name": "dashDevicePathReady", "path": "src/dash_devices.c", "line": 196, "what": "says whether the storage behind a path is mounted and usable now, without loading a driver or doing card IO"},
+    {"name": "probeRoot", "path": "src/dash_devices.c", "line": 507, "what": "retries fileXioDopen on a root every 100 ms up to a deadline while keeping the loading overlay animated"},
+    {"name": "dashBootDeviceBit", "path": "src/dash_devices.c", "line": 895, "what": "maps the boot path prefix (mass/usb/hdd/ata/mmce/mx4sio/ilink) to a device auto-start bit"},
+    {"name": "dashDevicesStartForPath", "path": "src/dash_devices.c", "line": 805, "what": "maps a file path prefix to the device mount whose driver must be started"},
+    {"name": "docSetText", "path": "src/dash_editor.c", "line": 223, "what": "detects CRLF/LF/CR line endings of a text buffer and normalises it to LF in place"},
+    {"name": "docFileBytes", "path": "src/dash_editor.c", "line": 257, "what": "converts an LF text buffer back to CRLF, LF or CR for saving"},
+    {"name": "hexParse", "path": "src/dash_editor.c", "line": 1230, "what": "parses a hex number with optional 0x prefix, -1 on bad input"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "dashDevicesStart keeps using the caller's DashDevice after dashWorkerAwaitAll, which can rebuild the File Browser device array under it",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_devices.c", "start": 738, "end": 773},
+        {"path": "src/dash_devices.c", "start": 723, "end": 735},
+        {"path": "src/dash_devices.c", "start": 107, "end": 112},
+        {"path": "src/dash_browser.c", "start": 676, "end": 694},
+        {"path": "src/dash_browser.c", "start": 3573, "end": 3583},
+        {"path": "src/dash_main.c", "start": 1242, "end": 1246}
+      ],
+      "problem": "The File Browser root passes d = &fb.devs[fb.sel] to dashDevicesStart (dash_browser.c:679,694). startSync(dev->mount) first calls dashWorkerAwaitAll, whose pump runs completion callbacks on the UI thread; usbMaskRescanDone (when a late second USB drive appears) and dashNetConfigWarmDone both call dashBrowserRefreshRoot, which re-runs openDir(\"\") and overwrites fb.devs in place. probeMount then reads the mount string from the overwritten slot, so a row shifted by the new USB row is probed instead of the one the user chose (for example MX4SIO instead of iLink, which also switches the SIO2 stack). dash_browser.c:689 already notes that openDir rebuilds fb.devs, but only the browse path is copied.",
+      "fix": "At the top of dashDevicesStart copy *dev into a local DashDevice and use the copy for the title, the UDPFS check, startSync and the callback.",
+      "justification": "Adds one local copy (188 bytes of stack) and changes four dev-> uses; it closes a real wrong-device probe that the caller's existing path copy does not cover, and is smaller than making every caller pass a copy.",
+      "benefit": "Fixes a wrong-driver load and possible unwanted MMCE/MX4SIO stack switch in a boot/after-misc-command timing window; net 0 lines (INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read dash_browser.c:670-709 (activate passes &fb.devs[fb.sel]), dash_devices.c:723-773 (startSync awaits before probeMount(mount)), dash_worker.c:221-229, 251-257, 298-310, 340-344 (await pumps finish() which runs done callbacks), dash_devices.c:99-112,178-182 (rescan job submitted every 500 ms until hotplug is armed; done callback refreshes root), dash_main.c:1242-1246,1303 (net config warm done refreshes root), dash_browser.c:475-521,3573-3583 (root refresh rewrites fb.devs via dashDevicesList). grep 'fb.ndevs = ' and 'dashBrowserRefreshRoot()' over src: only those writers. Reachability depends on a USB mask change or the boot net-config job finishing during the await (timing not reproduced on hardware)."
+    },
+    {
+      "n": 2,
+      "title": "A mounted VMC appears twice in the File Browser root (dashDevicesList row plus dash_browser's own row)",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_devices.c", "start": 485, "end": 493},
+        {"path": "src/dash_browser.c", "start": 485, "end": 501}
+      ],
+      "problem": "dashDevicesList already adds a READY \"Virtual MC N\" row (browse vmcN:/) for each mounted image. The File Browser root calls dashDevicesList and then appends a second \"Memory card image N\" row for the same vmcN:/ (dash_browser.c:486-501), so every mounted VMC is listed twice. The folder picker (dash_widgets.c:977) and the Devices grid rely on the dashDevicesList row alone.",
+      "fix": "Delete the extra VMC block in dash_browser.c:486-501; the rows from dashDevicesList remain.",
+      "justification": "",
+      "benefit": "Removes a duplicate root entry and ~16 lines (INFERRED from the cited range).",
+      "benefit_rank": 2,
+      "lines_removed": 16,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_devices.c:485-493 and dash_browser.c:475-521. grep 'vmc' in dash_browser.c: no filter that removes the dashDevicesList VMC rows. grep 'Virtual MC|Memory card image' over the repo: only these two producers plus docs (docs-site file-browser.html:45 documents the browser label, devices.html:22 the device-list label). dash_widgets.c:970-988 adds no VMC rows of its own."
+    },
+    {
+      "n": 3,
+      "title": "dash_files.c: fentries sized for 64 rows (max 35 used) and fdevs[24] is never filled: ~14 KB of .bss",
+      "category": 4,
+      "locations": [
+        {"path": "src/dash_files.c", "start": 178, "end": 182},
+        {"path": "src/dash_files.c", "start": 212, "end": 212},
+        {"path": "src/dash_files.c", "start": 288, "end": 291},
+        {"path": "src/dash_files.c", "start": 374, "end": 378},
+        {"path": "src/dash_files.c", "start": 392, "end": 403}
+      ],
+      "problem": "filesRebuild adds at most 4 fixed rows, one bookmark header and MAX_PATH_PAD (30) bookmarks = 35 rows, but fentries has FILES_MAX 64 slots of 332 bytes. fdevs (24 DashDevice of 188 bytes) is only read under index < nfdevs, and nfdevs is only ever set to 0 (line 212); no FE_DEVICE row is ever added.",
+      "fix": "Set FILES_MAX to 35 (4 + 1 + MAX_PATH_PAD); delete fdevs, nfdevs and the FE_DEVICE branches in filesActivate and filesDraw.",
+      "justification": "",
+      "benefit": "fentries 21,248 B .bss MEASURED (BUILD-EVIDENCE.md top symbols) -> 11,620 B, saves 9,628 B; fdevs 24*188 = 4,512 B INFERRED; ~14.1 KB .bss and ~15 lines.",
+      "benefit_rank": 2,
+      "lines_removed": 15,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_files.c:169-244 (only fAdd caller; bookmark loop bounded by MAX_PATH_PAD=30, launchelf.h:203), 274-297, 345-405. grep 'fdevs|FE_DEVICE|FILES_MAX' over the repo: only dash_files.c lines 164,178-182,191,212,288-290,374-375,392-393; nfdevs assigned only at 212. sizeof(FileEntry)=3*4+64+256=332 (DASH_PATH_MAX 256, dash_internal.h:34); sizeof(DashDevice)=188 (dash_internal.h:782-792). BUILD-EVIDENCE.md lists '21248 .bss fentries' and dash_files.o .bss 30,520."
+    },
+    {
+      "n": 4,
+      "title": "Text Editor docInsert deletes the selection before checking the 512 KB limit, so a refused paste loses the selected text",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_editor.c", "start": 173, "end": 183}
+      ],
+      "problem": "docInsert calls docDelete on the selection first and only then docReserve(n); when len - selection + n exceeds ED_MAX_SIZE (paste of a long clip over a selection in a file near 512 KB) the toast says the text is too large, but the selection is already gone and the document is marked dirty.",
+      "fix": "Check the limit before deleting: call docReserve with n minus the selection length (it returns 1 for a non-positive extra) ahead of docDelete, and return 0 without touching the document when it fails.",
+      "justification": "",
+      "benefit": "Fixes a minor edit-loss case; net ~0 lines (reorders the existing check) (INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_editor.c:127-192 (docReserve, selRange, docDelete, docInsert) and callers 604-612, 686-691, 1146-1149 (paste of clip over selection). Reachable from the Paste menu item with an active selection; only matters for documents close to the 512 KB limit."
+    },
+    {
+      "n": 5,
+      "title": "Devices grid refresh issues a PC CARD CF devctl RPC from the UI thread every 0.5 s, even while a worker job runs",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_devices.c", "start": 415, "end": 431},
+        {"path": "src/dash_files.c", "start": 589, "end": 593},
+        {"path": "src/init.c", "start": 3177, "end": 3195}
+      ],
+      "problem": "devUpdate calls devRefresh every 0.5 s, and dashDevicesList calls getPcCardCfCapacitySectors (a fileXioDevctl SIF RPC) whenever the PCCF driver is loaded. This is UI-thread IO without the dashWorkerIoBusy() gate that dash_main.c:1472 applies to the other device polls (dash_worker.c:7-10 rule), so the frame waits on the shared fileXio RPC while a worker copy or listing is in flight. Only consoles with the CF driver loaded (early Japanese models) are affected.",
+      "fix": "In dashDevicesList skip the capacity devctl while dashWorkerIoBusy() is true (show the PROBE_PCCF result already recorded by probeMount instead).",
+      "justification": "One added condition removes a periodic blocking RPC from the render thread; it follows the existing gate used for the other device polls and is smaller than caching the capacity.",
+      "benefit": "Removes up to 2 RPCs/s from the UI thread on the Devices screen; avoids frame stalls during background IO on CF-equipped consoles (INFERRED).",
+      "benefit_rank": 1,
+      "lines_removed": -1,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read dash_files.c:467-472, 574-594 (devRefresh every 0.5 s), dash_devices.c:404-439, init.c:3172-3200 (fileXioDevctl PCCF_CONTROL_STATUS), dash_main.c:1468-1481 (other polls gated by !dashWorkerIoBusy()), dash_worker.c:1-22. The stall length depends on the fileXio RPC being serialised against the worker's in-flight call (INFERRED, not measured)."
+    }
+  ]
+}

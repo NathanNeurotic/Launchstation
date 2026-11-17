@@ -1,0 +1,5 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/ata_bd/iop/ata_bd/src/ps2atad.o		7744	150	12	0	721	0	3133	11760
+linker-internal	<internal>		0	1165	0	0	0	0	0	1165
+first-party	build/obj/ata_bd/imports.o		372	0	0	0	0	0	0	372
+first-party	build/obj/ata_bd/exports.o		116	0	0	0	0	0	176	292

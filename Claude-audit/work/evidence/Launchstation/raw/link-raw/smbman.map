@@ -1,0 +1,424 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0     1d70     4 .rel.text
+       0        0       30     4         obj/smbman/iop/smbman/smbman.o:(.rel.text)
+      30       30      fd0     4         obj/smbman/iop/smbman/smb_fio.o:(.rel.text)
+    1000     1000      b38     4         obj/smbman/iop/smbman/smb.o:(.rel.text)
+    1b38     1b38       20     4         obj/smbman/iop/smbman/poll.o:(.rel.text)
+    1b58     1b58       80     4         obj/smbman/iop/smbman/auth.o:(.rel.text)
+    1bd8     1bd8       40     4         obj/smbman/iop/smbman/des.o:(.rel.text)
+    1c18     1c18      140     4         obj/smbman/iop/smbman/md4.o:(.rel.text)
+    1d58     1d58       18     4         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.rel.text)
+       0        0       f8     4 .rel.data
+       0        0        8     4         obj/smbman/iop/smbman/smbman.o:(.rel.data)
+       8        8       f0     4         obj/smbman/iop/smbman/smb_fio.o:(.rel.data)
+       0        0       40     4 .rel.rodata
+       0        0       40     4         obj/smbman/iop/smbman/smb_fio.o:(.rel.rodata)
+       0        0     6830    16 .text
+       0        0       3c    16         obj/smbman/iop/smbman/smbman.o:(.text)
+       0        0       3c     1                 _start
+      40       40     1d7c    16         obj/smbman/iop/smbman/smb_fio.o:(.text)
+      40       40       bc     1                 smb_init
+      fc       fc       f0     1                 keepalive_thread
+     1ec      1ec       98     1                 smb_initdev
+     284      284       5c     1                 smb_deinit
+     2e0      2e0       58     1                 keepalive_deinit
+     338      338      14c     1                 smb_open
+     484      484      14c     1                 prepare_path
+     5d0      5d0       30     1                 smb_io_lock
+     600      600       30     1                 smbman_getfilefreeslot
+     630      630       80     1                 smb_io_unlock
+     6b0      6b0       cc     1                 smb_close
+     77c      77c       74     1                 smb_closeAll
+     7f0      7f0       28     1                 smb_lseek
+     818      818      114     1                 smb_lseek64
+     92c      92c      124     1                 smb_read
+     a50      a50      130     1                 smb_write
+     b80      b80       98     1                 smb_remove
+     c18      c18       9c     1                 smb_mkdir
+     cb4      cb4       dc     1                 smb_rmdir
+     d90      d90      1a0     1                 smb_dopen
+     f30      f30        8     1                 smb_dclose
+     f38      f38      1b0     1                 smb_dread
+    10e8     10e8       8c     1                 smb_statFiller
+    1174     1174       cc     1                 smb_getstat
+    1240     1240       bc     1                 smb_rename
+    12fc     12fc      19c     1                 smb_chdir
+    1498     1498       7c     1                 DMA_sendEE
+    1514     1514      308     1                 smb_devctl
+    181c     181c       b8     1                 smb_LogOn
+    18d4     18d4       b8     1                 smb_LogOff
+    198c     198c       bc     1                 smb_OpenShare
+    1a48     1a48        8     1                 my_iomanx_retval_EIO_int
+    1a50     1a50       4c     1                 timer_intr_handler
+    1a9c     1a9c      320     1                 FileTimeToDate
+    1dc0     1dc0     302c    16         obj/smbman/iop/smbman/smb.o:(.text)
+    1dc0     1dc0        c     1                 getServerSpecs
+    1dcc     1dcc      2b8     1                 smb_NegotiateProtocol
+    2084     2084      154     1                 GetSMBServerReply
+    21d8     21d8      110     1                 getStringField
+    22e8     22e8      2f8     1                 smb_SessionSetupAndX
+    25e0     25e0      1d8     1                 AddPassword
+    27b8     27b8       ac     1                 setStringField
+    2864     2864      270     1                 smb_TreeConnectAndX
+    2ad4     2ad4      2dc     1                 smb_NetShareEnum
+    2db0     2db0      160     1                 smb_QueryInformationDisk
+    2f10     2f10      2e4     1                 smb_QueryPathInformation
+    31f4     31f4      27c     1                 smb_NTCreateAndX
+    3470     3470       d8     1                 smb_OpenAndX
+    3548     3548      238     1                 smb_LegacyOpenAndX
+    3780     3780      220     1                 smb_ReadAndX
+    39a0     39a0       80     1                 RecvData
+    3a20     3a20       ec     1                 smb_ReadFile
+    3b0c     3b0c      1e8     1                 smb_WriteAndX
+    3cf4     3cf4      104     1                 smb_WriteFile
+    3df8     3df8      110     1                 smb_Close
+    3f08     3f08      160     1                 smb_Delete
+    4068     4068      184     1                 smb_ManageDirectory
+    41ec     41ec      1e0     1                 smb_Rename
+    43cc     43cc      44c     1                 smb_FindFirstNext2
+    4818     4818       e0     1                 smb_TreeDisconnect
+    48f8     48f8       d8     1                 smb_LogOffAndX
+    49d0     49d0      14c     1                 smb_Echo
+    4b1c     4b1c      118     1                 smb_Connect
+    4c34     4c34       7c     1                 smb_Disconnect
+    4cb0     4cb0       9c     1                 RecvTimeout
+    4d4c     4d4c       2c     1                 nb_GetSessionMessageLength
+    4d78     4d78       74     1                 SendData
+    4df0     4df0      2b4    16         obj/smbman/iop/smbman/poll.o:(.text)
+    4df0     4df0      2b4     1                 poll
+    50b0     50b0      250    16         obj/smbman/iop/smbman/auth.o:(.text)
+    50b0     50b0       d4     1                 LM_Password_Hash
+    5184     5184       a8     1                 NTLM_Password_Hash
+    522c     522c       d4     1                 LM_Response
+    5300     5300      670    16         obj/smbman/iop/smbman/des.o:(.text)
+    5300     5300      670     1                 DES
+    5970     5970      938    16         obj/smbman/iop/smbman/md4.o:(.text)
+    5970     5970      164     1                 MD4
+    5ad4     5ad4      7d4     1                 transform
+    62b0     62b0      218    16         obj/smbman/imports.o:(.text)
+    62c4     62c4        0     1                 iomanX_AddDrv
+    62cc     62cc        0     1                 iomanX_DelDrv
+    62f0     62f0        0     1                 lwip_recv
+    62f8     62f8        0     1                 lwip_send
+    6300     6300        0     1                 lwip_close
+    6308     6308        0     1                 lwip_shutdown
+    6310     6310        0     1                 lwip_socket
+    6318     6318        0     1                 lwip_connect
+    6320     6320        0     1                 lwip_select
+    6328     6328        0     1                 ipaddr_addr
+    6330     6330        0     1                 lwip_setsockopt
+    6354     6354        0     1                 CpuSuspendIntr
+    635c     635c        0     1                 CpuResumeIntr
+    6380     6380        0     1                 sceSifSetDma
+    6388     6388        0     1                 sceSifDmaStat
+    63ac     63ac        0     1                 DelayThread
+    63b4     63b4        0     1                 CreateThread
+    63bc     63bc        0     1                 StartThread
+    63c4     63c4        0     1                 DeleteThread
+    63cc     63cc        0     1                 USec2SysClock
+    63d4     63d4        0     1                 SetAlarm
+    63dc     63dc        0     1                 iSetAlarm
+    63e4     63e4        0     1                 CancelAlarm
+    6408     6408        0     1                 CreateSema
+    6410     6410        0     1                 WaitSema
+    6418     6418        0     1                 SignalSema
+    6420     6420        0     1                 iSignalSema
+    6428     6428        0     1                 DeleteSema
+    644c     644c        0     1                 memset
+    6454     6454        0     1                 memcpy
+    645c     645c        0     1                 memcmp
+    6464     6464        0     1                 strcpy
+    646c     646c        0     1                 strcat
+    6474     6474        0     1                 strncpy
+    647c     647c        0     1                 strcmp
+    6484     6484        0     1                 strlen
+    648c     648c        0     1                 sprintf
+    6494     6494        0     1                 _toupper
+    64b8     64b8        0     1                 printf
+    64d0     64d0      360    16         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.text)
+    64d0     64d0      360     1                 __udivdi3
+       0        0     1165    16 .rodata
+       0        0       2c    16         obj/smbman/iop/smbman/smb_fio.o:(.rodata)
+      30       30       28    16         obj/smbman/iop/smbman/smb.o:(.rodata)
+      60       60     1000    16         obj/smbman/iop/smbman/des.o:(.rodata)
+      60       60      800     1                 des_SPtrans
+     860      860      800     1                 des_skb
+    1060     1060      105    16         <internal>:(.rodata.str1.1)
+  4079b5   4079b5    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       b0    16 .data
+       0        0        8    16         obj/smbman/iop/smbman/smbman.o:(.data)
+       0        0        8     1                 _irx_id
+      10       10       8c    16         obj/smbman/iop/smbman/smb_fio.o:(.data)
+      10       10        4     1                 keepalive_mutex
+      14       14       14     1                 smbdev
+      28       28        4     1                 UID
+      2c       2c        4     1                 TID
+      30       30       6c     1                 smbman_ops
+      a0       a0        4    16         obj/smbman/iop/smbman/smb.o:(.data)
+      a0       a0        4     1                 main_socket
+      b0       b0        0    16         obj/smbman/iop/smbman/poll.o:(.data)
+      b0       b0        0    16         obj/smbman/iop/smbman/auth.o:(.data)
+      b0       b0        0    16         obj/smbman/iop/smbman/des.o:(.data)
+      b0       b0        0    16         obj/smbman/iop/smbman/md4.o:(.data)
+      b0       b0        0    16         obj/smbman/imports.o:(.data)
+      b0       b0        0    16         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.data)
+  447a70   447a70        0     1 __bss_start = .
+       0        0     59c0    16 .bss
+       0        0        0    16         obj/smbman/iop/smbman/smbman.o:(.bss)
+       0        0     4631    16         obj/smbman/iop/smbman/smb_fio.o:(.bss)
+       0        0        4     1                 smbman_io_sema
+       4        4        8     1                 keepalive_sysclock
+       c        c        4     1                 keepalive_tid
+      10       10     2400     1                 smbman_fdhandles
+    2410     2410      400     1                 smb_curpath
+    2810     2810     1000     1                 SearchBuf
+    3810     3810      400     1                 smb_secpath
+    3c10     3c10      400     1                 smb_curdir
+    4010     4010      218     1                 glogon_info
+    4228     4228      204     1                 gopenshare_info
+    442c     442c        1     1                 keepalive_locked
+    4430     4430        1     1                 keepalive_inited
+    4431     4431      200     1                 ShareList
+    4640     4640     10ec    16         obj/smbman/iop/smbman/smb.o:(.bss)
+    4640     4640       68     1                 server_specs
+    46a8     46a8     1084     1                 SMB_buf
+    5730     5730        0    16         obj/smbman/iop/smbman/poll.o:(.bss)
+    5730     5730      200    16         obj/smbman/iop/smbman/auth.o:(.bss)
+    5730     5730      200     1                 passwd_buf
+    5930     5930       80    16         obj/smbman/iop/smbman/des.o:(.bss)
+    5930     5930       80     1                 DES_Keys
+    59b0     59b0       10    16         obj/smbman/iop/smbman/md4.o:(.bss)
+    59b0     59b0        4     1                 context.0
+    59b4     59b4        4     1                 context.1
+    59b8     59b8        4     1                 context.2
+    59bc     59bc        4     1                 context.3
+    59c0     59c0        0    16         obj/smbman/imports.o:(.bss)
+    59c0     59c0        0    16         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.bss)
+  44d430   44d430        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/smbman/iop/smbman/smbman.o:(.mdebug.abi32)
+       0        0        0     1         obj/smbman/iop/smbman/smb_fio.o:(.mdebug.abi32)
+       0        0        0     1         obj/smbman/iop/smbman/smb.o:(.mdebug.abi32)
+       0        0        0     1         obj/smbman/iop/smbman/poll.o:(.mdebug.abi32)
+       0        0        0     1         obj/smbman/iop/smbman/auth.o:(.mdebug.abi32)
+       0        0        0     1         obj/smbman/iop/smbman/des.o:(.mdebug.abi32)
+       0        0        0     1         obj/smbman/iop/smbman/md4.o:(.mdebug.abi32)
+       0        0        0     1         obj/smbman/imports.o:(.mdebug.abi32)
+       0        0        0     1         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.mdebug.abi32)
+       0        0      960     4 .pdr
+       0        0       20     4         obj/smbman/iop/smbman/smbman.o:(.pdr)
+      20       20      440     4         obj/smbman/iop/smbman/smb_fio.o:(.pdr)
+     460      460      400     4         obj/smbman/iop/smbman/smb.o:(.pdr)
+     860      860       20     4         obj/smbman/iop/smbman/poll.o:(.pdr)
+     880      880       60     4         obj/smbman/iop/smbman/auth.o:(.pdr)
+     8e0      8e0       20     4         obj/smbman/iop/smbman/des.o:(.pdr)
+     900      900       40     4         obj/smbman/iop/smbman/md4.o:(.pdr)
+     940      940       20     4         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.pdr)
+       0        0      258     4 .rel.pdr
+       0        0        8     4         obj/smbman/iop/smbman/smbman.o:(.rel.pdr)
+       8        8      110     4         obj/smbman/iop/smbman/smb_fio.o:(.rel.pdr)
+     118      118      100     4         obj/smbman/iop/smbman/smb.o:(.rel.pdr)
+     218      218        8     4         obj/smbman/iop/smbman/poll.o:(.rel.pdr)
+     220      220       18     4         obj/smbman/iop/smbman/auth.o:(.rel.pdr)
+     238      238        8     4         obj/smbman/iop/smbman/des.o:(.rel.pdr)
+     240      240       10     4         obj/smbman/iop/smbman/md4.o:(.rel.pdr)
+     250      250        8     4         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.rel.pdr)
+       0        0       23     1 .llvm_addrsig
+       0        0        0     1         obj/smbman/iop/smbman/smbman.o:(.llvm_addrsig)
+       0        0       20     1         obj/smbman/iop/smbman/smb_fio.o:(.llvm_addrsig)
+      20       20        2     1         obj/smbman/iop/smbman/smb.o:(.llvm_addrsig)
+      22       22        0     1         obj/smbman/iop/smbman/poll.o:(.llvm_addrsig)
+      22       22        1     1         obj/smbman/iop/smbman/auth.o:(.llvm_addrsig)
+      23       23        0     1         obj/smbman/iop/smbman/des.o:(.llvm_addrsig)
+      23       23        0     1         obj/smbman/iop/smbman/md4.o:(.llvm_addrsig)
+      23       23        0     1         obj/smbman/imports.o:(.llvm_addrsig)
+      23       23        0     1         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj):(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      b30     4 .symtab
+       0        0      b30     4         <internal>:(.symtab)
+       0        0       a0     1 .shstrtab
+       0        0       a0     1         <internal>:(.shstrtab)
+       0        0      7d8     1 .strtab
+       0        0      7d8     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+_start                                            obj/smbman/iop/smbman/smbman.o
+printf                                            obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smbman.o
+smb_initdev                                       obj/smbman/iop/smbman/smb_fio.o
+                                                  obj/smbman/iop/smbman/smbman.o
+_irx_id                                           obj/smbman/iop/smbman/smbman.o
+smb_init                                          obj/smbman/iop/smbman/smb_fio.o
+CreateSema                                        obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smbman_io_sema                                    obj/smbman/iop/smbman/smb_fio.o
+USec2SysClock                                     obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+CreateThread                                      obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+StartThread                                       obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+WaitSema                                          obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_Echo                                          obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+SignalSema                                        obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+iomanX_DelDrv                                     obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+iomanX_AddDrv                                     obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smbman_fdhandles                                  obj/smbman/iop/smbman/smb_fio.o
+memset                                            obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+                                                  obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/auth.o
+                                                  obj/smbman/iop/smbman/md4.o
+smb_deinit                                        obj/smbman/iop/smbman/smb_fio.o
+DeleteThread                                      obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+DeleteSema                                        obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+CpuSuspendIntr                                    obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+CancelAlarm                                       obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+CpuResumeIntr                                     obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_open                                          obj/smbman/iop/smbman/smb_fio.o
+smb_OpenAndX                                      obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+strncpy                                           obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+                                                  obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/auth.o
+strcat                                            obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+strlen                                            obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+                                                  obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/auth.o
+SetAlarm                                          obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_close                                         obj/smbman/iop/smbman/smb_fio.o
+smb_Close                                         obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_closeAll                                      obj/smbman/iop/smbman/smb_fio.o
+smb_lseek                                         obj/smbman/iop/smbman/smb_fio.o
+smb_lseek64                                       obj/smbman/iop/smbman/smb_fio.o
+smb_read                                          obj/smbman/iop/smbman/smb_fio.o
+smb_ReadFile                                      obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_write                                         obj/smbman/iop/smbman/smb_fio.o
+smb_WriteFile                                     obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_remove                                        obj/smbman/iop/smbman/smb_fio.o
+smb_Delete                                        obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_mkdir                                         obj/smbman/iop/smbman/smb_fio.o
+smb_ManageDirectory                               obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_rmdir                                         obj/smbman/iop/smbman/smb_fio.o
+smb_QueryPathInformation                          obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_dopen                                         obj/smbman/iop/smbman/smb_fio.o
+strcpy                                            obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+                                                  obj/smbman/iop/smbman/smb.o
+smb_dclose                                        obj/smbman/iop/smbman/smb_fio.o
+smb_dread                                         obj/smbman/iop/smbman/smb_fio.o
+smb_FindFirstNext2                                obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_getstat                                       obj/smbman/iop/smbman/smb_fio.o
+smb_rename                                        obj/smbman/iop/smbman/smb_fio.o
+smb_Rename                                        obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_chdir                                         obj/smbman/iop/smbman/smb_fio.o
+DMA_sendEE                                        obj/smbman/iop/smbman/smb_fio.o
+sceSifSetDma                                      obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+sceSifDmaStat                                     obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_devctl                                        obj/smbman/iop/smbman/smb_fio.o
+LM_Password_Hash                                  obj/smbman/iop/smbman/auth.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+                                                  obj/smbman/iop/smbman/smb.o
+NTLM_Password_Hash                                obj/smbman/iop/smbman/auth.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+                                                  obj/smbman/iop/smbman/smb.o
+getServerSpecs                                    obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_TreeDisconnect                                obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+sprintf                                           obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_TreeConnectAndX                               obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_NetShareEnum                                  obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+strcmp                                            obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_QueryInformationDisk                          obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_Connect                                       obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_NegotiateProtocol                             obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_SessionSetupAndX                              obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+memcpy                                            obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+                                                  obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/md4.o
+smb_LogOffAndX                                    obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+smb_Disconnect                                    obj/smbman/iop/smbman/smb.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+iSignalSema                                       obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+iSetAlarm                                         obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb_fio.o
+__udivdi3                                         $SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a(udivdi3.c.obj)
+                                                  obj/smbman/iop/smbman/smb_fio.o
+LM_Response                                       obj/smbman/iop/smbman/auth.o
+                                                  obj/smbman/iop/smbman/smb.o
+smb_NTCreateAndX                                  obj/smbman/iop/smbman/smb.o
+smb_ReadAndX                                      obj/smbman/iop/smbman/smb.o
+smb_WriteAndX                                     obj/smbman/iop/smbman/smb.o
+memcmp                                            obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb.o
+ipaddr_addr                                       obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb.o
+lwip_socket                                       obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb.o
+lwip_setsockopt                                   obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb.o
+lwip_connect                                      obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb.o
+lwip_shutdown                                     obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb.o
+lwip_close                                        obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb.o
+poll                                              obj/smbman/iop/smbman/poll.o
+                                                  obj/smbman/iop/smbman/smb.o
+lwip_recv                                         obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb.o
+lwip_send                                         obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/smb.o
+lwip_select                                       obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/poll.o
+_toupper                                          obj/smbman/imports.o
+                                                  obj/smbman/iop/smbman/auth.o
+DES                                               obj/smbman/iop/smbman/des.o
+                                                  obj/smbman/iop/smbman/auth.o
+MD4                                               obj/smbman/iop/smbman/md4.o
+                                                  obj/smbman/iop/smbman/auth.o
+DelayThread                                       obj/smbman/imports.o

@@ -1,0 +1,118 @@
+## Symbols with no reference outside their definition (symbols-unreferenced.tsv). Class no-other-mention = the name appears nowhere else in the repo; only-prototype-or-export-mentions = it appears only in a prototype or export list
+- iop/pccf/pcdiag_ata.h:6  macro `PCDIAG_ATA_READ_LIMIT`  (no-other-mention)
+- iop/ps2hdd_osd/apa.c:132  function `apaInsertPartition`  (only-prototype-or-export-mentions) | also mentioned: iop/ps2hdd_osd/hdd.c:128 return apaInsertPartition(device, params, emptyBlocks[i], err);; iop/ps2hdd_osd/libapa.h:153 extern apa_cache_t *apaInsertPartition(s32 device, const apa_params_t *params, u32 sector, int *err);
+
+## Disabled blocks (cond-if0.tsv)
+- iop/ps2hdd_osd/cache.c:56-62  #if 0 (until #else) (7 lines)
+
+## Macros tested by #if/#ifdef that no source or build file defines (cond-macros-undefined.tsv). Compiler, SDK and toolchain macros also land here: check before using
+- `APA_POSIX_VER`  tested at 1 site(s) in the repo, mentioned in 0 build file(s); here: iop/ps2hdd_osd/apa-opt.h:7
+- `APA_SUPPORT_GPT`  tested at 6 site(s) in the repo, mentioned in 0 build file(s); here: iop/ps2hdd_osd/apa.c:415, iop/ps2hdd_osd/apa.c:431, iop/ps2hdd_osd/hdd_fio.c:1039, iop/ps2hdd_osd/hdd_fio.c:375, iop/ps2hdd_osd/libapa.h:25, iop/ps2hdd_osd/libapa.h:90
+- `APA_USE_ATAD`  tested at 10 site(s) in the repo, mentioned in 2 build file(s); here: iop/ps2hdd_osd/apa.c:21, iop/ps2hdd_osd/hdd.c:199, iop/ps2hdd_osd/hdd.c:21, iop/ps2hdd_osd/hdd.c:220, iop/ps2hdd_osd/hdd.c:307, iop/ps2hdd_osd/hdd.c:95
+- `APA_USE_BDM`  tested at 6 site(s) in the repo, mentioned in 1 build file(s); here: iop/ps2hdd_osd/hdd_blkio.c:17, iop/ps2hdd_osd/hdd_blkio.c:305, iop/ps2hdd_osd/hdd_blkio.c:315, iop/ps2hdd_osd/hdd_blkio.c:390, iop/ps2hdd_osd/hdd_blkio.c:409, iop/ps2hdd_osd/irx_imports.h:22
+- `APA_USE_DEV9`  tested at 9 site(s) in the repo, mentioned in 2 build file(s); here: iop/ps2hdd_osd/hdd.c:236, iop/ps2hdd_osd/hdd.c:24, iop/ps2hdd_osd/hdd.c:287, iop/ps2hdd_osd/hdd.c:387, iop/ps2hdd_osd/hdd.c:402, iop/ps2hdd_osd/hdd.c:98
+- `APA_USE_IOMANX`  tested at 5 site(s) in the repo, mentioned in 1 build file(s); here: iop/ps2hdd_osd/hdd_blkio.c:182, iop/ps2hdd_osd/hdd_blkio.c:333, iop/ps2hdd_osd/hdd_blkio.h:76, iop/ps2hdd_osd/hdd_fio.c:1169, iop/ps2hdd_osd/hdd_fio.h:30
+- `APA_XOSD_VER`  tested at 2 site(s) in the repo, mentioned in 0 build file(s); here: iop/ps2hdd_osd/apa-opt.h:25, iop/ps2hdd_osd/hdd.c:367
+- `GAME_DRIVER`  tested at 5 site(s) in the repo, mentioned in 0 build file(s); here: iop/pccf/main.c:39, iop/pccf/pccf_ata.c:189, iop/pccf/pccf_hw.c:122, iop/pccf/pccf_hw.c:147, iop/pccf/pccf_hw.c:234
+- `_WIN32`  tested at 2 site(s) in the repo, mentioned in 2 build file(s) [builtin-like]; here: iop/ps2hdd_osd/misc.c:101
+
+## Largely identical files (dupes-file-pairs.tsv)
+- iop/pccf/pccf_ata.c is 29% the same as RiptOPL/modules/pccf/pccf_ata.c (54 cloned normalised lines)
+- iop/pccf/pccf_ata.h is 84% the same as RiptOPL/modules/pccf/pccf_ata.h (22 cloned normalised lines)
+- iop/pccf/pccf_hw.c is 29% the same as RiptOPL/modules/pccf/pccf_hw.c (59 cloned normalised lines)
+- iop/pccf/pccf_pio_profile.inc is 100% the same as RiptOPL/modules/pccf/pccf_pio_profile.inc (22 cloned normalised lines)
+- iop/pccf/pcdiag_cf.c is 94% the same as RiptOPL/modules/pccf/pcdiag_cf.c (55 cloned normalised lines)
+- iop/pccf/pcdiag_cis.c is 79% the same as RiptOPL/modules/pccf/pcdiag_cis.c (118 cloned normalised lines)
+- iop/ps2hdd_osd/apa-opt.h is 100% the same as RiptOPL/modules/hdd/apa/src/apa-opt.h (36 cloned normalised lines)
+- iop/ps2hdd_osd/apa.c is 94% the same as RiptOPL/modules/hdd/apa/src/apa.c (337 cloned normalised lines)
+- iop/ps2hdd_osd/cache.c is 96% the same as RiptOPL/modules/hdd/apa/src/cache.c (132 cloned normalised lines)
+- iop/ps2hdd_osd/free.c is 68% the same as RiptOPL/modules/hdd/apa/src/free.c (33 cloned normalised lines)
+- iop/ps2hdd_osd/hdd.c is 57% the same as RiptOPL/modules/hdd/apa/src/hdd.c (153 cloned normalised lines)
+- iop/ps2hdd_osd/hdd.h is 57% the same as RiptOPL/modules/hdd/apa/src/hdd.h (12 cloned normalised lines)
+- iop/ps2hdd_osd/hdd_blkio.c is 4% the same as RiptOPL/modules/bdm/bdmfs_fatfs/src/fs_driver.c (12 cloned normalised lines)
+- iop/ps2hdd_osd/hdd_blkio.c is 83% the same as RiptOPL/modules/hdd/apa/src/hdd_blkio.c (208 cloned normalised lines)
+- iop/ps2hdd_osd/hdd_blkio.h is 95% the same as RiptOPL/modules/hdd/apa/src/hdd_blkio.h (44 cloned normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c is 85% the same as RiptOPL/modules/hdd/apa/src/hdd_fio.c (673 cloned normalised lines)
+- iop/ps2hdd_osd/hdd_fio.h is 100% the same as RiptOPL/modules/hdd/apa/src/hdd_fio.h (31 cloned normalised lines)
+- iop/ps2hdd_osd/irx_imports.h is 66% the same as RiptOPL/modules/hdd/apa/src/irx_imports.h (20 cloned normalised lines)
+- iop/ps2hdd_osd/journal.c is 77% the same as RiptOPL/modules/hdd/apa/src/journal.c (46 cloned normalised lines)
+- iop/ps2hdd_osd/libapa.h is 66% the same as RiptOPL/modules/hdd/apa/src/libapa.h (110 cloned normalised lines)
+- iop/ps2hdd_osd/misc.c is 89% the same as RiptOPL/modules/hdd/apa/src/misc.c (84 cloned normalised lines)
+
+## Duplicate blocks (dupes-blocks.tsv)
+- iop/pccf/pccf_ata.c:122-136  ==  RiptOPL/modules/pccf/pccf_ata.c:144-158  (13 normalised lines)
+- iop/pccf/pccf_ata.c:140-153  ==  RiptOPL/modules/pccf/pccf_ata.c:166-179  (12 normalised lines)
+- iop/pccf/pccf_ata.c:2-16  ==  RiptOPL/modules/pccf/pccf_ata.c:2-16  (12 normalised lines)
+- iop/pccf/pccf_ata.c:84-104  ==  RiptOPL/modules/pccf/pccf_ata.c:96-116  (17 normalised lines)
+- iop/pccf/pccf_ata.h:7-31  ==  RiptOPL/modules/pccf/pccf_ata.h:8-32  (22 normalised lines)
+- iop/pccf/pccf_hw.c:156-175  ==  RiptOPL/modules/pccf/pccf_hw.c:186-205  (13 normalised lines)
+- iop/pccf/pccf_hw.c:2-33  ==  RiptOPL/modules/pccf/pccf_hw.c:2-33  (30 normalised lines)
+- iop/pccf/pccf_hw.c:67-88  ==  RiptOPL/modules/pccf/pccf_hw.c:71-92  (16 normalised lines)
+- iop/pccf/pccf_pio_profile.inc:2-27  ==  RiptOPL/modules/pccf/pccf_pio_profile.inc:2-27  (22 normalised lines)
+- iop/pccf/pcdiag_cf.c:2-65  ==  RiptOPL/modules/pccf/pcdiag_cf.c:2-65  (55 normalised lines)
+- iop/pccf/pcdiag_cis.c:121-152  ==  RiptOPL/modules/pccf/pcdiag_cis.c:137-168  (27 normalised lines)
+- iop/pccf/pcdiag_cis.c:154-170  ==  RiptOPL/modules/pccf/pcdiag_cis.c:171-187  (13 normalised lines)
+- iop/pccf/pcdiag_cis.c:27-119  ==  RiptOPL/modules/pccf/pcdiag_cis.c:42-134  (78 normalised lines)
+- iop/ps2hdd_osd/apa-opt.h:1-27  ==  RiptOPL/modules/hdd/apa/src/apa-opt.h:1-27  (23 normalised lines)
+- iop/ps2hdd_osd/apa-opt.h:30-47  ==  RiptOPL/modules/hdd/apa/src/apa-opt.h:31-48  (13 normalised lines)
+- iop/ps2hdd_osd/apa.c:2-35  ==  RiptOPL/modules/hdd/apa/src/apa.c:2-41  (24 normalised lines)
+- iop/ps2hdd_osd/apa.c:60-513  ==  RiptOPL/modules/hdd/apa/src/apa.c:63-517  (313 normalised lines)
+- iop/ps2hdd_osd/cache.c:173-217  ==  RiptOPL/modules/hdd/apa/src/cache.c:166-210  (30 normalised lines)
+- iop/ps2hdd_osd/cache.c:2-38  ==  RiptOPL/modules/hdd/apa/src/cache.c:2-38  (27 normalised lines)
+- iop/ps2hdd_osd/cache.c:41-63  ==  RiptOPL/modules/hdd/apa/src/cache.c:40-62  (15 normalised lines)
+- iop/ps2hdd_osd/cache.c:67-95  ==  RiptOPL/modules/hdd/apa/src/cache.c:65-93  (18 normalised lines)
+- iop/ps2hdd_osd/cache.c:99-164  ==  RiptOPL/modules/hdd/apa/src/cache.c:96-159  (42 normalised lines)
+- iop/ps2hdd_osd/free.c:2-55  ==  RiptOPL/modules/hdd/apa/src/free.c:2-55  (33 normalised lines)
+- iop/ps2hdd_osd/hdd.c:158-173  ==  RiptOPL/modules/hdd/apa/src/hdd.c:153-168  (12 normalised lines)
+- iop/ps2hdd_osd/hdd.c:176-224  ==  RiptOPL/modules/hdd/apa/src/hdd.c:170-218  (31 normalised lines)
+- iop/ps2hdd_osd/hdd.c:2-121  ==  RiptOPL/modules/hdd/apa/src/hdd.c:2-121  (92 normalised lines)
+- iop/ps2hdd_osd/hdd.c:362-390  ==  RiptOPL/modules/hdd/apa/src/hdd.c:341-369  (18 normalised lines)
+- iop/ps2hdd_osd/hdd.h:2-18  ==  RiptOPL/modules/hdd/apa/src/hdd.h:2-18  (12 normalised lines)
+- iop/ps2hdd_osd/hdd_blkio.c:134-193  ==  RiptOPL/modules/hdd/apa/src/hdd_blkio.c:130-189  (36 normalised lines)
+- iop/ps2hdd_osd/hdd_blkio.c:185-261  ==  RiptOPL/modules/hdd/apa/src/hdd_blkio.c:181-257  (48 normalised lines)
+- iop/ps2hdd_osd/hdd_blkio.c:2-50  ==  RiptOPL/modules/hdd/apa/src/hdd_blkio.c:2-50  (34 normalised lines)
+- iop/ps2hdd_osd/hdd_blkio.c:277-318  ==  RiptOPL/modules/hdd/apa/src/hdd_blkio.c:270-311  (24 normalised lines)
+- iop/ps2hdd_osd/hdd_blkio.c:331-347  ==  RiptOPL/modules/hdd/apa/src/hdd_blkio.c:320-336  (12 normalised lines)
+- iop/ps2hdd_osd/hdd_blkio.c:362-393  ==  RiptOPL/modules/hdd/apa/src/hdd_blkio.c:348-379  (18 normalised lines)
+- iop/ps2hdd_osd/hdd_blkio.c:45-111  ==  RiptOPL/modules/hdd/apa/src/hdd_blkio.c:45-111  (36 normalised lines)
+- iop/ps2hdd_osd/hdd_blkio.c:45-66  ==  RiptOPL/modules/bdm/bdmfs_fatfs/src/fs_driver.c:74-102  (12 normalised lines)
+- iop/ps2hdd_osd/hdd_blkio.h:2-24  ==  RiptOPL/modules/hdd/apa/src/hdd_blkio.h:2-24  (16 normalised lines)
+- iop/ps2hdd_osd/hdd_blkio.h:32-82  ==  RiptOPL/modules/hdd/apa/src/hdd_blkio.h:35-85  (28 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:1099-1124  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:1138-1164  (13 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:1147-1205  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:1187-1245  (28 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:119-213  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:131-225  (63 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:2-32  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:2-32  (25 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:225-275  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:235-284  (30 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:290-330  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:302-342  (27 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:355-404  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:375-425  (41 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:409-428  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:441-461  (14 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:430-455  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:462-490  (17 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:469-492  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:504-527  (18 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:495-545  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:529-579  (32 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:548-591  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:581-624  (24 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:591-621  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:629-659  (20 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:638-720  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:674-756  (54 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:722-811  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:758-847  (59 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:813-936  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:853-977  (90 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:91-124  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:103-136  (26 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.c:944-1095  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.c:982-1134  (92 normalised lines)
+- iop/ps2hdd_osd/hdd_fio.h:2-38  ==  RiptOPL/modules/hdd/apa/src/hdd_fio.h:2-38  (31 normalised lines)
+- iop/ps2hdd_osd/irx_imports.h:2-30  ==  RiptOPL/modules/hdd/apa/src/irx_imports.h:2-30  (20 normalised lines)
+- iop/ps2hdd_osd/journal.c:2-64  ==  RiptOPL/modules/hdd/apa/src/journal.c:2-64  (46 normalised lines)
+- iop/ps2hdd_osd/libapa.h:108-127  ==  RiptOPL/modules/hdd/apa/src/libapa.h:108-127  (17 normalised lines)
+- ... 5 more: grep your file paths in evidence/Launchstation/
+
+## TODO/FIXME/HACK style markers (cond-markers.tsv)
+- iop/ps2hdd_osd/apa.c:260  // TODO: switch to HDDDevices.partitionMaxSize
+- iop/ps2hdd_osd/apa.c:312  // TODO: switch to HDDDevices.partitionMaxSize
+- iop/ps2hdd_osd/hdd.c:105  // TODO: In DVRP firmware, this check always succeeds
+- iop/ps2hdd_osd/hdd_fio.c:344  // TODO: Why does DVRP firmware start clearing at 1024 * 4104 when not 48-bit?
+- iop/ps2hdd_osd/hdd_fio.c:345  // TODO: DVRP firmware 48-bit clears offset_24+0x2000, offset_24+0x42000, offset_24+0x242000
+- iop/ps2hdd_osd/hdd_fio.c:359  // TODO: DVRP firmware sets this to 0x400 bytes
+- iop/ps2hdd_osd/hdd_fio.c:362  // TODO: DVRP firmware 48-bit sets this to __extend
+- iop/ps2hdd_osd/hdd_fio.c:399  // TODO: DVRP firmware 48-bit creates __extend partition at offset_24_bit, with same params as __mbr except content is empty
+- iop/ps2hdd_osd/hdd_fio.c:406  // TODO: For DVRP firmware 48-bit, __xdata is created with size 1024 * 2048
+- iop/ps2hdd_osd/hdd_fio.c:407  // TODO: For DVRP firmware 48-bit, __xcontents is created with size (offset_48_bit - offset_24_bit) - 0x240000 & 0xfffff7ff
+- iop/ps2hdd_osd/hdd_fio.c:42  // TODO: For DVRP firmware 48-bit, __xdata and __xcontents partitions are created
+- iop/ps2hdd_osd/hdd_fio.c:433  // TODO: start sector usually is at either 0x4A817C8 (40GB offset) or 0x400000 (2GiB offset)
+- iop/ps2hdd_osd/libapa.h:28  // TODO: In DVRP firmware, the following value is 0x1000 when 48-bit

@@ -1,0 +1,6 @@
+# Objects on the smbd link line with zero bytes in any allocated output section (from the map)
+build/obj/smbd/.smbd-deps/libsmb2/lib/errors.o
+build/obj/smbd/.smbd-deps/libsmb2/lib/quic.o
+build/obj/smbd/.smbd-deps/libsmb2/lib/smbdirect.o
+build/obj/smbd/.smbd-deps/libsmb2/lib/sha1.o
+# count: 4 of 56 objects on the link line

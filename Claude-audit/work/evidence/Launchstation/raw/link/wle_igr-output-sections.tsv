@@ -1,0 +1,34 @@
+section	vma_hex	size_bytes	sum_of_input_sections
+.text	100000	165440	164216
+.ctors	128640	0	0
+.init_array	128640	16	16
+.reginfo	128650	24	24
+.MIPS.abiflags	128668	24	24
+.data	128680	344316	344093
+.rodata	17c780	7534	7518
+.eh_frame_hdr	17e4ee	0	0
+_gp = ALIGN(128) + 0x7ff0	17e4ee	0	0
+.sdata	17e500	4	4
+_edata = .	17e504	0	0
+.got	17e510	20	20
+.sbss	17e580	0	0
+.bss	17e580	66628	66171
+_end_bss = .	18e9c4	0	0
+_end = .	18e9c4	0	0
+PROVIDE(_heap_size = -1)	18e9c4	0	0
+PROVIDE(_stack = -1)	18e9c4	0	0
+PROVIDE(_stack_size = 128 * 1024)	18e9c4	0	0
+.mdebug.abiN32	0	0	0
+.pdr	0	31360	31360
+.comment	0	204	204
+.debug_loc	0	76570	76570
+.debug_abbrev	0	37097	37097
+.debug_info	0	191325	191325
+.debug_str	0	16496	16496
+.debug_frame	0	8748	8748
+.debug_line	0	91241	91241
+.debug_ranges	0	4176	4176
+.debug_aranges	0	48	48
+.symtab	0	18752	18752
+.shstrtab	0	258	258
+.strtab	0	16161	16161

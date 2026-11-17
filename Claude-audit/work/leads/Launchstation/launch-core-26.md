@@ -1,0 +1,2 @@
+## Symbols with no reference outside their definition (symbols-unreferenced.tsv). Class no-other-mention = the name appears nowhere else in the repo; only-prototype-or-export-mentions = it appears only in a prototype or export list
+- src/mc_save_export.c:97  function `ps1VmpSign`  (only-prototype-or-export-mentions) | also mentioned: include/mc_save_export.h:97 int ps1VmpSign(uint8_t *buf, uint32_t len);; src/mc_save_export.c:347 return ps1VmpSign(out, off + PS1_CARD_SIZE);

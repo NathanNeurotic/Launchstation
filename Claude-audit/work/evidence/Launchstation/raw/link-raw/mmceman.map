@@ -1,0 +1,381 @@
+     VMA      LMA     Size Align Out     In      Symbol
+       0        0   400000     1 . = 0x0400000
+       0        0       18    16 .reginfo
+       0        0       18    16         <internal>:(.reginfo)
+       0        0     15d8     4 .rel.text
+       0        0       28     4         obj/mmceman/iop/mmceman/src/ioplib.o:(.rel.text)
+      28       28      350     4         obj/mmceman/iop/mmceman/src/sio2man_hook.o:(.rel.text)
+     378      378      550     4         obj/mmceman/iop/mmceman/src/mmce_sio2.o:(.rel.text)
+     8c8      8c8      1e8     4         obj/mmceman/iop/mmceman/src/mmce_cmds.o:(.rel.text)
+     ab0      ab0      a90     4         obj/mmceman/iop/mmceman/src/mmce_fs.o:(.rel.text)
+    1540     1540       98     4         obj/mmceman/iop/mmceman/src/mmceman.o:(.rel.text)
+       0        0      120     4 .rel.data
+       0        0       f0     4         obj/mmceman/iop/mmceman/src/mmce_fs.o:(.rel.data)
+      f0       f0       30     4         obj/mmceman/iop/mmceman/src/mmceman.o:(.rel.data)
+       0        0       60     4 .rel.rodata
+       0        0       60     4         obj/mmceman/iop/mmceman/src/mmce_fs.o:(.rel.rodata)
+       0        0     3f4c    16 .text
+       0        0      240    16         obj/mmceman/iop/mmceman/src/ioplib.o:(.text)
+       0        0       c8     1                 ioplib_iterateByName
+      c8       c8       34     1                 ioplib_getTableSize
+      fc       fc       ac     1                 ioplib_hookSameExportEntries
+     1a8      1a8       98     1                 ioplib_relinkExports
+     240      240      554    16         obj/mmceman/iop/mmceman/src/sio2man_hook.o:(.text)
+     240      240      120     1                 sio2man_hook_init
+     360      360       58     1                 sio2man_hook_iterate_cb
+     3b8      3b8       24     1                 generic_hook_iterate_cb
+     3dc      3dc       64     1                 hookRegisterLibraryEntries
+     440      440       8c     1                 hookRegisterIntrHandler
+     4cc      4cc       60     1                 sio2man_hook_deinit
+     52c      52c       64     1                 unhook_loadcore
+     590      590       64     1                 unhook_intrman
+     5f4      5f4       34     1                 sio2man_hook_sio2_lock
+     628      628       34     1                 sio2man_hook_sio2_unlock
+     65c      65c       80     1                 sio2man_hook_sio2_set_intr_handler
+     6dc      6dc       b8     1                 _sio2man_hook
+     7a0      7a0      c14    16         obj/mmceman/iop/mmceman/src/mmce_sio2.o:(.text)
+     7a0      7a0       30     1                 mmce_sio2_intr_handler
+     7d0      7d0       24     1                 mmce_sio2_timeout_handler
+     7f4      7f4      114     1                 mmce_sio2_init
+     908      908       24     1                 mmce_sio2_deinit
+     92c      92c       d0     1                 mmce_sio2_lock
+     9fc      9fc       74     1                 mmce_sio2_unlock
+     a70      a70        c     1                 mmce_sio2_set_port
+     a7c      a7c       10     1                 mmce_sio2_get_port
+     a8c      a8c       1c     1                 mmce_sio2_update_ack_wait_cycles
+     aa8      aa8        c     1                 mmce_sio2_set_use_alarm
+     ab4      ab4      138     1                 mmce_sio2_tx_rx_pio
+     bec      bec      1bc     1                 mmce_sio2_rx_dma
+     da8      da8      258     1                 mmce_sio2_rx_mixed
+    1000     1000      3b4     1                 mmce_sio2_tx_mixed
+    13c0     13c0      65c    16         obj/mmceman/iop/mmceman/src/mmce_cmds.o:(.text)
+    13c0     13c0       9c     1                 mmce_cmd_ping
+    145c     145c       94     1                 mmce_cmd_get_status
+    14f0     14f0       94     1                 mmce_cmd_get_card
+    1584     1584       90     1                 mmce_cmd_set_card
+    1614     1614       94     1                 mmce_cmd_get_channel
+    16a8     16a8       8c     1                 mmce_cmd_set_channel
+    1734     1734       9c     1                 mmce_cmd_get_gameid
+    17d0     17d0       b8     1                 mmce_cmd_set_gameid
+    1888     1888       7c     1                 mmce_cmd_unmount_bootcard
+    1904     1904       7c     1                 mmce_cmd_reset
+    1980     1980       9c     1                 mmce_cmd_set_card_channel
+    1a20     1a20     21d8    16         obj/mmceman/iop/mmceman/src/mmce_fs.o:(.text)
+    1a20     1a20       68     1                 mmce_fs_init
+    1a88     1a88        8     1                 mmce_fs_deinit
+    1a90     1a90      424     1                 mmce_fs_open
+    1eb4     1eb4       54     1                 mmce_fs_wire_name_ok
+    1f08     1f08       d8     1                 mmce_fs_reserved_component
+    1fe0     1fe0       4c     1                 mmce_fs_is_active_name
+    202c     202c       4c     1                 mmce_fs_update_unit
+    2078     2078       30     1                 mmce_fs_find_free_handle
+    20a8     20a8      1a8     1                 mmce_fs_close
+    2250     2250      394     1                 mmce_fs_read
+    25e4     25e4      190     1                 mmce_fs_write
+    2774     2774      134     1                 mmce_fs_lseek
+    28a8     28a8       f4     1                 mmce_fs_active_seek
+    299c     299c        8     1                 mmce_fs_ioctl
+    29a4     29a4      148     1                 mmce_fs_remove
+    2aec     2aec      148     1                 mmce_fs_mkdir
+    2c34     2c34      148     1                 mmce_fs_rmdir
+    2d7c     2d7c      168     1                 mmce_fs_dopen
+    2ee4     2ee4       d4     1                 mmce_fs_dclose
+    2fb8     2fb8      370     1                 mmce_fs_dread
+    3328     3328      350     1                 mmce_fs_getstat
+    3678     3678      1ac     1                 mmce_fs_rename
+    3824     3824      190     1                 mmce_fs_lseek64
+    39b4     39b4      1b8     1                 mmce_fs_devctl
+    3b6c     3b6c       20     1                 mmce_fs_ioctl2
+    3b8c     3b8c       3c     1                 mmce_fs_register
+    3bc8     3bc8       28     1                 mmce_fs_unregister
+    3bf0     3bf0        8     1                 not_supported_operation
+    3c00     3c00      16c    16         obj/mmceman/iop/mmceman/src/mmceman.o:(.text)
+    3c00     3c00       ac     1                 __start
+    3cac     3cac       5c     1                 mmce_init
+    3d08     3d08       28     1                 __stop
+    3d30     3d30       3c     1                 _start
+    3d70     3d70      1dc    16         obj/mmceman/imports.o:(.text)
+    3d84     3d84        0     1                 sceSetSliceDMA
+    3d8c     3d8c        0     1                 sceStartDMA
+    3d94     3d94        0     1                 sceSetDMAPriority
+    3d9c     3d9c        0     1                 sceEnableDMAChannel
+    3dc0     3dc0        0     1                 iomanX_AddDrv
+    3dc8     3dc8        0     1                 iomanX_DelDrv
+    3dec     3dec        0     1                 EnableIntr
+    3df4     3df4        0     1                 GetIntrmanInternalData
+    3dfc     3dfc        0     1                 CpuSuspendIntr
+    3e04     3e04        0     1                 CpuResumeIntr
+    3e28     3e28        0     1                 GetLoadcoreInternalData
+    3e30     3e30        0     1                 RegisterLibraryEntries
+    3e54     3e54        0     1                 printf
+    3e78     3e78        0     1                 memset
+    3e80     3e80        0     1                 strlen
+    3e88     3e88        0     1                 strcpy
+    3e90     3e90        0     1                 strcmp
+    3eb4     3eb4        0     1                 SetAlarm
+    3ebc     3ebc        0     1                 CancelAlarm
+    3ee0     3ee0        0     1                 CreateEventFlag
+    3ee8     3ee8        0     1                 DeleteEventFlag
+    3ef0     3ef0        0     1                 iSetEventFlag
+    3ef8     3ef8        0     1                 ClearEventFlag
+    3f00     3f00        0     1                 WaitEventFlag
+    3f24     3f24        0     1                 CreateSema
+    3f2c     3f2c        0     1                 WaitSema
+    3f34     3f34        0     1                 SignalSema
+    3f3c     3f3c        0     1                 DeleteSema
+       0        0      158    16 .rodata
+       0        0       30    16         obj/mmceman/iop/mmceman/src/mmce_fs.o:(.rodata)
+      30       30      128    16         <internal>:(.rodata.str1.1)
+  4040c8   4040c8    40000     1 . = ALIGN(0x40000) + (. & (0x40000 - 1))
+       0        0       c0    16 .data
+       0        0        0    16         obj/mmceman/iop/mmceman/src/ioplib.o:(.data)
+       0        0        0    16         obj/mmceman/iop/mmceman/src/sio2man_hook.o:(.data)
+       0        0        8    16         obj/mmceman/iop/mmceman/src/mmce_sio2.o:(.data)
+       0        0        1     1                 mmce_sio2_use_alarm
+       4        4        4     1                 event_flag
+      10       10        0    16         obj/mmceman/iop/mmceman/src/mmce_cmds.o:(.data)
+      10       10       84    16         obj/mmceman/iop/mmceman/src/mmce_fs.o:(.data)
+      10       10       14     1                 mmce_dev
+      24       24        4     1                 last_unit
+      28       28       6c     1                 mmce_fio_ops
+      a0       a0       1c    16         obj/mmceman/iop/mmceman/src/mmceman.o:(.data)
+      a0       a0       14     1                 mmce_product_ids
+      b4       b4        8     1                 _irx_id
+      c0       c0        0    16         obj/mmceman/imports.o:(.data)
+  444190   444190        0     1 __bss_start = .
+       0        0      1f0    16 .bss
+       0        0        0    16         obj/mmceman/iop/mmceman/src/ioplib.o:(.bss)
+       0        0       30    16         obj/mmceman/iop/mmceman/src/sio2man_hook.o:(.bss)
+       0        0        4     1                 g_sio2man_intr_handler_ptr
+       4        4        4     1                 g_sio2man_intr_arg_ptr
+       8        8        4     1                 g_loadcore_lib
+       c        c        4     1                 g_intrman_lib
+      10       10        4     1                 pRegisterLibraryEntries
+      14       14        4     1                 pRegisterIntrHandler
+      18       18       18     1                 g_hook_data
+      30       30       3c    16         obj/mmceman/iop/mmceman/src/mmce_sio2.o:(.bss)
+      30       30        4     1                 mmce_sio2_intr_handler_ptr
+      34       34        4     1                 mmce_sio2_intr_arg_ptr
+      38       38        8     1                 timeout_200ms
+      40       40        8     1                 timeout_1s
+      48       48        8     1                 timeout_2s
+      50       50        1     1                 mmce_sio2_port_ctrl1
+      54       54        4     1                 mmce_sio2_port_ctrl2
+      58       58        4     1                 sio2_save_ctrl
+      5c       5c        4     1                 mmce_port
+      60       60        4     1                 sio2_save_port
+      64       64        4     1                 sio2_save_port_ctrl1
+      68       68        4     1                 sio2_save_port_ctrl2
+      70       70        0    16         obj/mmceman/iop/mmceman/src/mmce_cmds.o:(.bss)
+      70       70      180    16         obj/mmceman/iop/mmceman/src/mmce_fs.o:(.bss)
+      70       70       40     1                 mmce_fs_fds
+      b0       b0       40     1                 mmce_fs_active_fd
+      f0       f0       80     1                 mmce_fs_active_pos
+     170      170       80     1                 mmce_fs_active_size
+     1f0      1f0        0    16         obj/mmceman/iop/mmceman/src/mmceman.o:(.bss)
+     1f0      1f0        0    16         obj/mmceman/imports.o:(.bss)
+  444380   444380        0     1 . = ALIGN(32 / 8)
+       0        0       69     1 .comment
+       0        0       69     1         <internal>:(.comment)
+       0        0        0     1 .mdebug.abi32
+       0        0        0     1         obj/mmceman/iop/mmceman/src/ioplib.o:(.mdebug.abi32)
+       0        0        0     1         obj/mmceman/iop/mmceman/src/sio2man_hook.o:(.mdebug.abi32)
+       0        0        0     1         obj/mmceman/iop/mmceman/src/mmce_sio2.o:(.mdebug.abi32)
+       0        0        0     1         obj/mmceman/iop/mmceman/src/mmce_cmds.o:(.mdebug.abi32)
+       0        0        0     1         obj/mmceman/iop/mmceman/src/mmce_fs.o:(.mdebug.abi32)
+       0        0        0     1         obj/mmceman/iop/mmceman/src/mmceman.o:(.mdebug.abi32)
+       0        0        0     1         obj/mmceman/imports.o:(.mdebug.abi32)
+       0        0      920     4 .pdr
+       0        0       80     4         obj/mmceman/iop/mmceman/src/ioplib.o:(.pdr)
+      80       80      180     4         obj/mmceman/iop/mmceman/src/sio2man_hook.o:(.pdr)
+     200      200      1c0     4         obj/mmceman/iop/mmceman/src/mmce_sio2.o:(.pdr)
+     3c0      3c0      160     4         obj/mmceman/iop/mmceman/src/mmce_cmds.o:(.pdr)
+     520      520      380     4         obj/mmceman/iop/mmceman/src/mmce_fs.o:(.pdr)
+     8a0      8a0       80     4         obj/mmceman/iop/mmceman/src/mmceman.o:(.pdr)
+       0        0      248     4 .rel.pdr
+       0        0       20     4         obj/mmceman/iop/mmceman/src/ioplib.o:(.rel.pdr)
+      20       20       60     4         obj/mmceman/iop/mmceman/src/sio2man_hook.o:(.rel.pdr)
+      80       80       70     4         obj/mmceman/iop/mmceman/src/mmce_sio2.o:(.rel.pdr)
+      f0       f0       58     4         obj/mmceman/iop/mmceman/src/mmce_cmds.o:(.rel.pdr)
+     148      148       e0     4         obj/mmceman/iop/mmceman/src/mmce_fs.o:(.rel.pdr)
+     228      228       20     4         obj/mmceman/iop/mmceman/src/mmceman.o:(.rel.pdr)
+       0        0       25     1 .llvm_addrsig
+       0        0        0     1         obj/mmceman/iop/mmceman/src/ioplib.o:(.llvm_addrsig)
+       0        0        6     1         obj/mmceman/iop/mmceman/src/sio2man_hook.o:(.llvm_addrsig)
+       6        6        4     1         obj/mmceman/iop/mmceman/src/mmce_sio2.o:(.llvm_addrsig)
+       a        a        2     1         obj/mmceman/iop/mmceman/src/mmce_cmds.o:(.llvm_addrsig)
+       c        c       19     1         obj/mmceman/iop/mmceman/src/mmce_fs.o:(.llvm_addrsig)
+      25       25        0     1         obj/mmceman/iop/mmceman/src/mmceman.o:(.llvm_addrsig)
+      25       25        0     1         obj/mmceman/imports.o:(.llvm_addrsig)
+       0        0        0     1 .note.GNU-stack
+       0        0        0     1         <internal>:(.note.GNU-stack)
+       0        0      a20     4 .symtab
+       0        0      a20     4         <internal>:(.symtab)
+       0        0       a0     1 .shstrtab
+       0        0       a0     1         <internal>:(.shstrtab)
+       0        0      992     1 .strtab
+       0        0      992     1         <internal>:(.strtab)
+
+Cross Reference Table
+
+Symbol                                            File
+ioplib_iterateByName                              obj/mmceman/iop/mmceman/src/ioplib.o
+                                                  obj/mmceman/iop/mmceman/src/sio2man_hook.o
+GetLoadcoreInternalData                           obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/ioplib.o
+ioplib_getTableSize                               obj/mmceman/iop/mmceman/src/ioplib.o
+ioplib_hookSameExportEntries                      obj/mmceman/iop/mmceman/src/ioplib.o
+                                                  obj/mmceman/iop/mmceman/src/sio2man_hook.o
+CpuSuspendIntr                                    obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/ioplib.o
+                                                  obj/mmceman/iop/mmceman/src/sio2man_hook.o
+CpuResumeIntr                                     obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/ioplib.o
+                                                  obj/mmceman/iop/mmceman/src/sio2man_hook.o
+ioplib_relinkExports                              obj/mmceman/iop/mmceman/src/ioplib.o
+                                                  obj/mmceman/iop/mmceman/src/sio2man_hook.o
+sio2man_hook_init                                 obj/mmceman/iop/mmceman/src/sio2man_hook.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+GetIntrmanInternalData                            obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/sio2man_hook.o
+strcmp                                            obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/sio2man_hook.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+sio2man_hook_deinit                               obj/mmceman/iop/mmceman/src/sio2man_hook.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+sio2man_hook_sio2_lock                            obj/mmceman/iop/mmceman/src/sio2man_hook.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+sio2man_hook_sio2_unlock                          obj/mmceman/iop/mmceman/src/sio2man_hook.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+sio2man_hook_sio2_set_intr_handler                obj/mmceman/iop/mmceman/src/sio2man_hook.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+mmce_sio2_intr_handler                            obj/mmceman/iop/mmceman/src/mmce_sio2.o
+iSetEventFlag                                     obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+mmce_sio2_timeout_handler                         obj/mmceman/iop/mmceman/src/mmce_sio2.o
+mmce_sio2_init                                    obj/mmceman/iop/mmceman/src/mmce_sio2.o
+                                                  obj/mmceman/iop/mmceman/src/mmceman.o
+CreateEventFlag                                   obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+sceSetDMAPriority                                 obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+sceEnableDMAChannel                               obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+EnableIntr                                        obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+timeout_200ms                                     obj/mmceman/iop/mmceman/src/mmce_sio2.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_cmds.o
+timeout_1s                                        obj/mmceman/iop/mmceman/src/mmce_sio2.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+timeout_2s                                        obj/mmceman/iop/mmceman/src/mmce_sio2.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_sio2_deinit                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+                                                  obj/mmceman/iop/mmceman/src/mmceman.o
+DeleteEventFlag                                   obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+mmce_sio2_lock                                    obj/mmceman/iop/mmceman/src/mmce_sio2.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_sio2_unlock                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_sio2_set_port                                obj/mmceman/iop/mmceman/src/mmce_sio2.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+                                                  obj/mmceman/iop/mmceman/src/mmceman.o
+mmce_sio2_get_port                                obj/mmceman/iop/mmceman/src/mmce_sio2.o
+mmce_sio2_update_ack_wait_cycles                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_sio2_set_use_alarm                           obj/mmceman/iop/mmceman/src/mmce_sio2.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_sio2_use_alarm                               obj/mmceman/iop/mmceman/src/mmce_sio2.o
+mmce_sio2_tx_rx_pio                               obj/mmceman/iop/mmceman/src/mmce_sio2.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+SetAlarm                                          obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+WaitEventFlag                                     obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+CancelAlarm                                       obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+ClearEventFlag                                    obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+mmce_sio2_rx_dma                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+sceSetSliceDMA                                    obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+sceStartDMA                                       obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_sio2.o
+mmce_sio2_rx_mixed                                obj/mmceman/iop/mmceman/src/mmce_sio2.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_sio2_tx_mixed                                obj/mmceman/iop/mmceman/src/mmce_sio2.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_cmd_ping                                     obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+                                                  obj/mmceman/iop/mmceman/src/mmceman.o
+mmce_cmd_get_status                               obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_cmd_get_card                                 obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_cmd_set_card                                 obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_cmd_get_channel                              obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_cmd_set_channel                              obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_cmd_get_gameid                               obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+strcpy                                            obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_cmds.o
+mmce_cmd_set_gameid                               obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+strlen                                            obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_cmd_unmount_bootcard                         obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_cmd_reset                                    obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+                                                  obj/mmceman/iop/mmceman/src/mmceman.o
+mmce_cmd_set_card_channel                         obj/mmceman/iop/mmceman/src/mmce_cmds.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_init                                      obj/mmceman/iop/mmceman/src/mmce_fs.o
+memset                                            obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_deinit                                    obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_open                                      obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_lseek64                                   obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_close                                     obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_read                                      obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_write                                     obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_lseek                                     obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_ioctl                                     obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_remove                                    obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_mkdir                                     obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_rmdir                                     obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_dopen                                     obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_dclose                                    obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_dread                                     obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_getstat                                   obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_rename                                    obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_devctl                                    obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_ioctl2                                    obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_register                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+                                                  obj/mmceman/iop/mmceman/src/mmceman.o
+iomanX_DelDrv                                     obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+iomanX_AddDrv                                     obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmce_fs.o
+mmce_fs_unregister                                obj/mmceman/iop/mmceman/src/mmce_fs.o
+                                                  obj/mmceman/iop/mmceman/src/mmceman.o
+__start                                           obj/mmceman/iop/mmceman/src/mmceman.o
+printf                                            obj/mmceman/imports.o
+                                                  obj/mmceman/iop/mmceman/src/mmceman.o
+__stop                                            obj/mmceman/iop/mmceman/src/mmceman.o
+_start                                            obj/mmceman/iop/mmceman/src/mmceman.o
+mmce_product_ids                                  obj/mmceman/iop/mmceman/src/mmceman.o
+_irx_id                                           obj/mmceman/iop/mmceman/src/mmceman.o
+RegisterLibraryEntries                            obj/mmceman/imports.o
+CreateSema                                        obj/mmceman/imports.o
+WaitSema                                          obj/mmceman/imports.o
+SignalSema                                        obj/mmceman/imports.o
+DeleteSema                                        obj/mmceman/imports.o

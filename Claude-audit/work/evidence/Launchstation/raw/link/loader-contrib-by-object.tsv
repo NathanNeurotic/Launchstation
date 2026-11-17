@@ -1,0 +1,17 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+sdk	$SDK/packages-llvm/core/filexio/lib/libfilexio.a	fileXio_rpc.o	1552	0	0	0	31812	0	0	33364
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifrpc.o	2580	0	0	0	6276	0	0	8856
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	kernel.o	4092	0	4	0	0	0	0	4096
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	sifcmd.o	2040	0	0	0	836	0	0	2876
+first-party	build/obj/loader/loader/loader.o		1928	32	0	0	16	0	0	1976
+sdk	$SDK/packages-llvm/core/startup/ee/lib/libstartup.a	crt0.o	868	0	0	0	328	0	0	1196
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	loadfile.o	968	0	0	0	44	0	0	1012
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopcontrol.o	356	0	0	0	168	0	0	524
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	glue.o	324	0	0	0	0	0	0	324
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-strncmp.o	140	0	0	0	0	0	0	140
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-strlcpy.o	108	0	0	0	0	0	0	108
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	initsys.o	60	0	0	0	0	0	0	60
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-memcpy.o	56	0	0	0	0	0	0	56
+linker-internal	<internal>		0	41	0	0	0	0	8	49
+sdk	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a	libc_a-memset.o	44	0	0	0	0	0	0	44
+sdk	$SDK/packages-llvm/core/kernel/lib/libkernel.a	iopheap.o	0	0	0	0	0	0	0	0

@@ -1,0 +1,11 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/smbman/iop/smbman/smb_fio.o		7548	44	140	0	17969	0	4656	30357
+first-party	build/obj/smbman/iop/smbman/smb.o		12332	40	4	0	4332	0	3130	19838
+first-party	build/obj/smbman/iop/smbman/des.o		1648	4096	0	0	128	0	72	5944
+first-party	build/obj/smbman/iop/smbman/md4.o		2360	0	0	0	16	0	336	2712
+first-party	build/obj/smbman/iop/smbman/auth.o		592	0	0	0	512	0	153	1257
+sdk	$SDK/llvm-toolchain/iop/mipsel-none-elf/lib/libclang_rt.builtins-mipsel.a	udivdi3.c.obj	864	0	0	0	0	0	32	896
+first-party	build/obj/smbman/iop/smbman/poll.o		692	0	0	0	0	0	40	732
+first-party	build/obj/smbman/imports.o		536	0	0	0	0	0	0	536
+linker-internal	<internal>		0	261	0	0	0	0	0	261
+first-party	build/obj/smbman/iop/smbman/smbman.o		60	0	8	0	0	0	64	132

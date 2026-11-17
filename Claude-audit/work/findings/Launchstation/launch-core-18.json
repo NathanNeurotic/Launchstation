@@ -1,0 +1,195 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-18",
+  "coverage": [
+    {"path": "src/filer_actions.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "filer_actions.c holds the classic file-manager actions shared by the classic browser (filer_browser.c) and the dashboard browser (dash_browser.c): exploit-folder protection prompts, recursive size and delete, rename (including HOST ioctl rename and case-only renames), new folder, title.cfg creation, and the folder timestamp tools for memory-card roots and hdd0:/__common (manual date editor, A-Z/Z-A, SAS ordering, *Tuna date). The timestamp tools have a classic pad/draw UI and hooks (filerTimestampUi) that the dashboard installs to replace the editor, progress and chooser screens; the classic UI stays reachable through getFilePath() in the classic browser (filer_browser.c:446, 1578). filerCaptureSasTimestamp/filerRestoreSasTimestamp are used by self_update.c to keep an updated app folder's SAS date.",
+  "reusable_helpers": [
+    {"name": "filerPathConflictType", "path": "src/filer_actions.c", "line": 39, "what": "classifies a path as missing, file or folder using stat, dopen and open probes"},
+    {"name": "filerGetFirstPathComponent", "path": "src/filer_actions.c", "line": 165, "what": "extracts the first folder name after 'dev:' / 'dev:/' from a path"},
+    {"name": "getFileSize", "path": "src/filer_actions.c", "line": 298, "what": "recursive size of a file or folder tree on any device, with HDD/DVR partition mounting"},
+    {"name": "delete", "path": "src/filer_actions.c", "line": 1944, "what": "recursive delete of a file or folder on mc/xfrom/hdd/vmc/host and generic devices"},
+    {"name": "newdir", "path": "src/filer_actions.c", "line": 2190, "what": "creates a folder on any device, mapping existing-folder errors to -EEXIST"},
+    {"name": "Rename", "path": "src/filer_actions.c", "line": 2153, "what": "validated no-replace rename with case-only rename handling and HOST ioctl rename"},
+    {"name": "isCustomDateLeapYear / getCustomDateDaysInMonth", "path": "src/filer_actions.c", "line": 457, "what": "Gregorian leap-year test and days-in-month"},
+    {"name": "stepCustomFolderTimestamp", "path": "src/filer_actions.c", "line": 598, "what": "adds or subtracts one second from an sceMcStDateTime with full carry/borrow"},
+    {"name": "setMemoryCardFolderTimestamp", "path": "src/filer_actions.c", "line": 1155, "what": "sets create and modify dates of a memory-card folder via mcSetFileInfo"},
+    {"name": "setHddCommonFolderTimestamp", "path": "src/filer_actions.c", "line": 1189, "what": "sets ctime/atime/mtime of a folder in hdd0:/__common via fileXioChStat"},
+    {"name": "filerIsExploitProtectedPath", "path": "src/filer_actions.c", "line": 239, "what": "tells whether a path is a protected exploit/system-update folder on mc or xfrom"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "Timestamp apply-and-report loop copied in time_manip_custom_run and time_manip_automatic_run",
+      "category": 2,
+      "locations": [
+        {"path": "src/filer_actions.c", "start": 1352, "end": 1390},
+        {"path": "src/filer_actions.c", "start": 1848, "end": 1885}
+      ],
+      "problem": "Both functions end with the same 38-line block: count changed folders, draw progress, write each changed folder with setMemoryCardFolderTimestamp or setHddCommonFolderTimestamp, then build the same three result messages and return codes. The two copies differ only by one blank line.",
+      "fix": "Move the block into one static function taking path, folder_count, reserve_tuna_date and message, and call it from both places.",
+      "justification": "",
+      "benefit": "~36 lines removed (38-line block kept once plus a 4-line function header, two 1-line calls); a few hundred bytes of .text (INFERRED: code is duplicated, not inlined from a shared function)",
+      "benefit_rank": 2,
+      "lines_removed": 34,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read filer_actions.c:1352-1390 and 1848-1885 side by side; identical statements (total count loop, drawTimestampProgress calls, MC/HDD write choice on reserve_tuna_date, updated/failed counters, three snprintf messages). Duplicate-block lead also pairs these ranges (28 normalised lines). Both functions use the same file-static timestamp_folders/timestamp_original lists."
+    },
+    {
+      "n": 2,
+      "title": "Two identical alloc/run/free wrappers and repeated path checks around the timestamp tools; time_manip_custom exported for one internal caller",
+      "category": 3,
+      "locations": [
+        {"path": "src/filer_actions.c", "start": 1393, "end": 1402},
+        {"path": "src/filer_actions.c", "start": 1888, "end": 1897},
+        {"path": "src/filer_actions.c", "start": 1296, "end": 1297},
+        {"path": "src/filer_actions.c", "start": 1817, "end": 1818},
+        {"path": "src/filer_actions.c", "start": 1899, "end": 1915},
+        {"path": "include/filer_actions.h", "start": 14, "end": 14}
+      ],
+      "problem": "time_manip_custom and time_manip_automatic are the same wrapper (timestampListsAlloc, run, timestampListsFree) around their _run functions, and their only caller is time_manip_organize, which already checks filerCanOrganizeFolderTimestamps; both _run functions check it again. time_manip_custom has a public prototype in filer_actions.h but no caller outside filer_actions.c:1910.",
+      "fix": "In time_manip_organize allocate the lists once for the non-Tuna modes, call the run functions directly and free afterwards; delete both wrappers, the two repeated filerCanOrganizeFolderTimestamps checks and the time_manip_custom prototype.",
+      "justification": "",
+      "benefit": "~20 lines removed; no measurable ELF change (INFERRED: small wrappers)",
+      "benefit_rank": 2,
+      "lines_removed": 20,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep time_manip_custom over src/Launchstation: definition filer_actions.c:1393, call 1910, prototype include/filer_actions.h:14, nothing else (tests do not reference it). time_manip_organize callers: filer_browser.c:1578 and dash_browser.c:2551, both through organize. Organize checks filerCanOrganizeFolderTimestamps at 1903 before either run function, which repeat it at 1296 and 1817."
+    },
+    {
+      "n": 3,
+      "title": "convertCustomTimestampToLocalTime and convertCustomTimestampFromLocalTime are the same function",
+      "category": 2,
+      "locations": [
+        {"path": "src/filer_actions.c", "start": 480, "end": 538}
+      ],
+      "problem": "The two 29-line functions are identical except for the converter they call (menuTitleConvertTimestampToLocalTime vs ...FromLocalTime, which have the same signature in include/main_title.h:20-21).",
+      "fix": "Keep one static function that takes the converter as a parameter (or pass a direction flag), and call it from the five existing call sites.",
+      "justification": "",
+      "benefit": "~27 lines removed; small .text saving (INFERRED)",
+      "benefit_rank": 2,
+      "lines_removed": 27,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read filer_actions.c:480-508 and 510-538: same locals, same field copy in and out, only line 498 vs 528 differs. main_title.h:20-21 show matching signatures. Callers inside the file: 704, 739, 904, 1043, 1115."
+    },
+    {
+      "n": 4,
+      "title": "normalizeCustomLocalTimestamp repeats normalizeCustomFolderTimestamp; stepCustomFolderTimestamp repeats decrementSasTimestampDate",
+      "category": 2,
+      "locations": [
+        {"path": "src/filer_actions.c", "start": 540, "end": 559},
+        {"path": "src/filer_actions.c", "start": 578, "end": 596},
+        {"path": "src/filer_actions.c", "start": 649, "end": 659},
+        {"path": "src/filer_actions.c", "start": 1683, "end": 1696}
+      ],
+      "problem": "normalizeCustomLocalTimestamp is the month/day/hour/minute/second clamp of normalizeCustomFolderTimestamp (14 identical lines) with only a different year bound (max 2100, no minimum). The day/month/year borrow at the end of stepCustomFolderTimestamp (649-659) is the body of decrementSasTimestampDate (1685-1695).",
+      "fix": "Give the folder normaliser year bounds as parameters (or clamp the year in the caller) and delete normalizeCustomLocalTimestamp; move decrementSasTimestampDate above stepCustomFolderTimestamp and call it there.",
+      "justification": "",
+      "benefit": "~24 lines removed (19-line function minus 2 for parameters, 11-line borrow replaced by 1 call); negligible ELF change (INFERRED)",
+      "benefit_rank": 2,
+      "lines_removed": 24,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Duplicate-block lead 546-559 == 582-595 confirmed by reading. normalizeCustomLocalTimestamp has one caller (738). Read 649-659 vs 1685-1695: same if/else on Day>1, Month>1, Month=12/Year--, Day=getCustomDateDaysInMonth. tests/test_update_sas_timestamps.py:95 extracts decrementSasTimestampDate by signature, so it must keep its name; moving it is fine."
+    },
+    {
+      "n": 5,
+      "title": "time_manip_automatic_run re-implements sasFolderTimestamp inline",
+      "category": 2,
+      "locations": [
+        {"path": "src/filer_actions.c", "start": 1840, "end": 1845},
+        {"path": "src/filer_actions.c", "start": 1804, "end": 1805},
+        {"path": "src/filer_actions.c", "start": 1815, "end": 1815},
+        {"path": "src/filer_actions.c", "start": 1729, "end": 1738}
+      ],
+      "problem": "The SAS loop body at 1841-1844 is exactly sasFolderTimestamp (1734-1737): build effective name, category, payload, setSasTimestamp. The effective/payload buffers and category local exist only for this copy.",
+      "fix": "Call sasFolderTimestamp(name, &stats._Modify) in the loop and delete the three locals.",
+      "justification": "",
+      "benefit": "~7 lines removed; also drops ~2 x (MAX_NAME+8) bytes of stack in that frame (INFERRED from the declarations)",
+      "benefit_rank": 1,
+      "lines_removed": 7,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read 1729-1738 and 1840-1845: same four calls with the same arguments. effective, payload and category are used nowhere else in time_manip_automatic_run (1800-1886)."
+    },
+    {
+      "n": 6,
+      "title": "#ifdef TMANIP_MORON branch is never compiled and the TMANIP define is never tested",
+      "category": 1,
+      "locations": [
+        {"path": "src/filer_actions.c", "start": 1166, "end": 1170},
+        {"path": "ps2.yaml", "start": 628, "end": 628}
+      ],
+      "problem": "No build file or source defines TMANIP_MORON, so the HACK_FOLDER branch in setMemoryCardFolderTimestamp is dead. ps2.yaml defines TMANIP, but no source tests TMANIP (the only TMANIP-prefixed test is TMANIP_MORON).",
+      "fix": "Delete the #ifdef/#else/#endif and the HACK_FOLDER line, keeping folder_name = file->name; drop the TMANIP define from ps2.yaml (docs mention it as a feature name only).",
+      "justification": "",
+      "benefit": "4 source lines plus one define removed; no ELF change (INFERRED: preprocessor only)",
+      "benefit_rank": 1,
+      "lines_removed": 5,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep TMANIP over src/Launchstation (all files): filer_actions.c:1166 (#ifdef TMANIP_MORON), ps2.yaml:628 (- TMANIP), ps2.yaml:9 (comment), docs/BUILDING.md:90, docs/architecture-maintenance.md:23, docs-site building.html. No #if/#ifdef TMANIP anywhere; no tests reference either name."
+    },
+    {
+      "n": 7,
+      "title": "Device branches in delete() and newdir() identical to the generic else branch",
+      "category": 3,
+      "locations": [
+        {"path": "src/filer_actions.c", "start": 2040, "end": 2041},
+        {"path": "src/filer_actions.c", "start": 2218, "end": 2222},
+        {"path": "src/filer_actions.c", "start": 2242, "end": 2248}
+      ],
+      "problem": "In delete() the vmc file branch (genRemove(dir)) equals the final else. In newdir() the vmc branch and the ETH/UDPFS host/udpfs branch both do strcpy/strcat/genLimObjName/filerMkdirNoOverwrite, exactly like the final else (2249-2253). None of these prefixes is caught by an earlier branch, so removing them changes nothing.",
+      "fix": "Delete the vmc branch at 2040-2041, and the vmc and host/udpfs branches (with their #if/#endif) in newdir.",
+      "justification": "",
+      "benefit": "~14 lines removed; a few dozen bytes of .text (INFERRED)",
+      "benefit_rank": 1,
+      "lines_removed": 14,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read delete() 2026-2045 and newdir() 2190-2256. Earlier tests are 'mc' (does not match 'vmc', 'host', 'udpfs'), 'xfrom', 'hdd', 'dvr_hdd'. The folder branch at 2019-2020 is not identical (keeps the trailing slash, the else rebuilds dir) so it is not included."
+    },
+    {
+      "n": 8,
+      "title": "Small simplifications in filer_actions.c timestamp and path helpers",
+      "category": 3,
+      "locations": [
+        {"path": "src/filer_actions.c", "start": 1322, "end": 1341},
+        {"path": "src/filer_actions.c", "start": 1627, "end": 1631},
+        {"path": "src/filer_actions.c", "start": 1530, "end": 1536},
+        {"path": "src/filer_actions.c", "start": 1502, "end": 1505},
+        {"path": "src/filer_actions.c", "start": 153, "end": 162},
+        {"path": "src/filer_actions.c", "start": 2176, "end": 2181}
+      ],
+      "problem": "(a) time_manip_custom_run casts _Modify to PS2TIME and copies six fields into an sceMcStDateTime of the same layout, with Resv2=0 duplicated in both branches. (b) In buildSasTimestampPayload every category other than 1 and 9 except exact 'SYS' has '_' at index 3, so the 11 strncmp calls equal effective[3]=='_'. (c) setSequentialTimestamp repeats setTunaFolderTimestamp then sets Sec=58. (d) compareTimestampFolderNames only forwards to stricmp for one caller. (e) filerBuildFullPath has one caller with a fixed buffer; its NULL/size guard and forced terminator after snprintf cannot matter. (f) Rename computes the same separator expression twice.",
+      "fix": "(a) Copy the struct, set Resv2=0 and reset to 2000-01-01 only when out of range. (b) Test effective[3]=='_'. (c) Call setTunaFolderTimestamp then set Sec=58. (d) Call stricmp directly. (e) Drop the guard and terminator line. (f) Compute the separator once.",
+      "justification": "",
+      "benefit": "~28 lines removed in total ((a) ~12, (b) 3, (c) 5, (d) 4, (e) 3, (f) 2); negligible ELF change (INFERRED)",
+      "benefit_rank": 2,
+      "lines_removed": 28,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "include/filer_shared.h:6-15 PS2TIME is unknown,sec,min,hour,day,month,year (same order as sceMcStDateTime Resv2..Year). getSasTimestampCategory 1589-1616 maps every 4-char 'XXX_' prefix and exact 'SYS'. setTunaFolderTimestamp 567-576. compareTimestampFolderNames single use at 1516. filerBuildFullPath single call at 213 with full_path[MAX_PATH]. tests/test_update_sas_timestamps.py extracts buildSasTimestampPayload by signature only, so body changes keep it working."
+    }
+  ]
+}

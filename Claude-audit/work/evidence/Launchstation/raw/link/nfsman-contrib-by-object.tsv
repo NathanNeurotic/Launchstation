@@ -1,0 +1,4 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/nfsman/iop/nfsman/nfsman.o		17372	122	140	0	2948	0	4793	25375
+first-party	build/obj/nfsman/imports.o		520	0	0	0	0	0	0	520
+linker-internal	<internal>		0	188	0	0	0	0	0	188

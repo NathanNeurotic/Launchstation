@@ -1,0 +1,3 @@
+# zero-size sections and ABI metadata (.reginfo, .MIPS.abiflags, .pdr) are left out
+category	file	section	kind	size_bytes
+first-party	build/obj/smbd/iop/smbd/smbd.o	.text.realloc	code	124

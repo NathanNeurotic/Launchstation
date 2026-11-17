@@ -1,0 +1,209 @@
+Source log: extra-warnings-syntax-only.raw.log
+Unique diagnostics (same file:line:col:message counted once): 763
+
+count	flag
+229	-Wmissing-prototypes
+180	-Wmissing-variable-declarations
+153	-Wunused-parameter
+132	-Wunused-macros
+38	-Wshadow
+11	-Wpointer-sign
+4	-Wunused-but-set-variable
+3	-Wunused-but-set-global
+3	-Wincompatible-pointer-types-discards-qualifiers
+2	-Wunterminated-string-initialization
+2	-Wunused-function
+2	-Wunreachable-code
+1	-Wcast-function-type-mismatch
+1	-Wself-assign
+1	-Wunused-variable
+1	-Wmisleading-indentation
+
+Per flag, per source area:
+
+-Wmissing-prototypes (229)
+      51  third-party-dep
+      43  iop/usbd-ra
+      29  src
+      24  iop/mmceman
+      21  ee_libs
+      10  loader
+       9  iop/smbman
+       6  generated
+       5  iop/mx4sio_bd
+       5  iop/oldlibs
+       4  iop/smb2man
+       3  iop/hdl_info
+       3  iop/usbmass_bd
+       3  iop/ps2host
+       2  iop/xparam
+       2  iop/ata_bd
+       1  iop/udpfs_smap
+       1  iop/pccf
+       1  iop/dev9_poweroff
+       1  iop/AllowDVDV
+       1  iop/ps2hdd_osd
+       1  iop/vmcman
+       1  iop/ps2ips_rpc
+       1  iop/nfsman
+       1  iop/smbd
+
+-Wmissing-variable-declarations (180)
+     104  generated
+      27  src
+      12  iop/usbd-ra
+       6  iop/ps2hdd_osd
+       6  iop/ps2host
+       3  iop/udpfs_smap
+       3  iop/smbman
+       2  iop/mmceman
+       2  iop/mx4sio_bd
+       2  iop/smb2man
+       1  iop/pccf
+       1  iop/dev9_poweroff
+       1  iop/AllowDVDV
+       1  iop/vmcman
+       1  iop/usbmass_bd
+       1  iop/ps2ips_rpc
+       1  iop/oldlibs
+       1  iop/nfsman
+       1  iop/smbd
+       1  iop/xparam
+       1  iop/ata_bd
+       1  igr
+       1  ee_libs
+
+-Wunused-parameter (153)
+     111  third-party-dep
+      20  iop/mmceman
+       7  iop/ps2host
+       5  iop/udpfs_smap
+       5  iop/hdl_info
+       2  iop/vmcman
+       2  src
+       1  iop/oldlibs
+
+-Wunused-macros (132)
+      52  generated
+      43  third-party-dep
+       8  iop/mx4sio_bd
+       8  src
+       7  iop/usbmass_bd
+       3  iop/oldlibs
+       2  iop/hdl_info
+       2  iop/smb2man
+       2  iop/nfsman
+       1  ee_libs
+       1  iop/vmcman
+       1  iop/mmceman
+       1  iop/smbd
+       1  iop/ata_bd
+
+-Wshadow (38)
+      19  src
+       8  iop/hdl_info
+       6  iop/mx4sio_bd
+       2  iop/oldlibs
+       1  iop/mmceman
+       1  iop/usbmass_bd
+       1  iop/smb2man
+
+-Wpointer-sign (11)
+      11  iop/mmceman
+
+-Wunused-but-set-variable (4)
+       2  iop/hdl_info
+       2  src
+
+-Wunused-but-set-global (3)
+       2  src
+       1  iop/ps2host
+
+-Wincompatible-pointer-types-discards-qualifiers (3)
+       3  src
+
+-Wunterminated-string-initialization (2)
+       1  iop/AllowDVDV
+       1  src
+
+-Wunused-function (2)
+       1  iop/smbd
+       1  iop/smbman
+
+-Wunreachable-code (2)
+       1  third-party-dep
+       1  src
+
+-Wcast-function-type-mismatch (1)
+       1  iop/ps2host
+
+-Wself-assign (1)
+       1  src
+
+-Wunused-variable (1)
+       1  src
+
+-Wmisleading-indentation (1)
+       1  src
+
+Per file (top 60):
+      43  iop/mmceman/src/mmce_fs.c
+      27  .smbd-deps/libsmb2/lib/libsmb2.c
+      25  iop/usbd-ra/src/hub.c
+      22  ee_libs/tcpips/ps2ipc.c
+      19  .smbd-deps/libsmb2/lib/smb2-data-filesystem-info.c
+      19  src/filer.c
+      16  .smbd-deps/libsmb2/lib/sync.c
+      14  iop/usbd-ra/src/hcd.c
+      14  iop/mx4sio_bd/src/spi_sdcard_driver.c
+      14  iop/ps2host/net_fsys.c
+      13  .smbd-deps/libsmb2/lib/smb2-data-file-info.c
+      12  iop/hdl_info/hdd.c
+      12  iop/mmceman/src/mmceman.c
+      12  .smbd-deps/libsmb2/lib/pdu.c
+      10  loader/loader.c
+       9  iop/usbd-ra/src/driver.c
+       9  iop/usbmass_bd/src/usb_mass.c
+       9  src/main.c
+       9  src/pad.c
+       8  .smbd-deps/libsmb2/lib/init.c
+       7  .smbd-deps/libsmb2/lib/smb2-cmd-oplock-break.c
+       6  iop/hdl_info/main.c
+       6  iop/mx4sio_bd/src/mx4sio.c
+       6  .smbd-deps/libsmb2/lib/ntlmssp.c
+       6  .smbd-deps/libsmb2/lib/smb2-cmd-negotiate.c
+       6  .smbd-deps/libsmb2/lib/smb2-cmd-set-info.c
+       6  .smbd-deps/libsmb2/lib/smb2-cmd-tree-disconnect.c
+       5  iop/udpfs_smap/src/smap.c
+       5  iop/oldlibs/ps2ftpd/src/main.c
+       5  iop/oldlibs/ps2ftpd/src/FtpClient.c
+       5  .smbd-deps/libsmb2/lib/smb2-cmd-logoff.c
+       5  .smbd-deps/libsmb2/lib/smb2-signing.c
+       5  iop/smbman/smb_fio.c
+       5  src/filer_browser.c
+       4  iop/usbd-ra/src/usbio.c
+       4  iop/vmcman/src/main.c
+       4  iop/nfsman/nfsman.c
+       4  .smbd-deps/libsmb2/lib/alloc.c
+       4  .smbd-deps/libsmb2/lib/asn1-ber.c
+       4  .smbd-deps/libsmb2/lib/smb2-cmd-echo.c
+       4  .smbd-deps/libsmb2/lib/smb2-cmd-flush.c
+       4  .smbd-deps/libsmb2/lib/smb2-cmd-query-info.c
+       4  .smbd-deps/libsmb2/lib/smb2-cmd-read.c
+       4  iop/ata_bd/src/ps2atad.c
+       4  src/draw.c
+       4  src/dash_card_tool.c
+       4  src/makeicon.c
+       3  iop/usbd-ra/src/usbd.c
+       3  iop/AllowDVDV/AllowDVDV.c
+       3  iop/ps2hdd_osd/hdd_fio.c
+       3  iop/ps2hdd_osd/hdd.c
+       3  iop/ps2host/ps2host.c
+       3  iop/smb2man/smb2man.c
+       3  iop/smbd/smbd.c
+       3  .smbd-deps/libsmb2/lib/compat.c
+       3  .smbd-deps/libsmb2/lib/smb2-cmd-close.c
+       3  .smbd-deps/libsmb2/lib/smb2-cmd-create.c
+       3  .smbd-deps/libsmb2/lib/smb2-cmd-lock.c
+       3  .smbd-deps/libsmb2/lib/smb2-cmd-notify-change.c
+       3  .smbd-deps/libsmb2/lib/smb2-cmd-query-directory.c

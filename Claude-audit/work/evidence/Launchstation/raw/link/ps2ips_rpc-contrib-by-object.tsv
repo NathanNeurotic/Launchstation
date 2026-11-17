@@ -1,0 +1,4 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/ps2ips_rpc/iop/ps2ips_rpc/ps2ips.o		2836	84	8	0	3404	0	1641	7973
+first-party	build/obj/ps2ips_rpc/imports.o		492	0	0	0	0	0	0	492
+linker-internal	<internal>		0	184	0	0	0	0	0	184

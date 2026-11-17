@@ -1,0 +1,7 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/udpfs_smap/iop/udpfs_smap/src/smap.o		4132	0	8	0	44	0	1188	5372
+first-party	build/obj/udpfs_smap/iop/udpfs_smap/src/xfer.o		1808	0	4	0	76	0	627	2515
+first-party	build/obj/udpfs_smap/imports.o		432	0	0	0	0	0	0	432
+first-party	build/obj/udpfs_smap/exports.o		64	0	0	0	0	0	72	136
+first-party	build/obj/udpfs_smap/iop/udpfs_smap/src/main.o		64	0	8	0	0	0	57	129
+linker-internal	<internal>		0	5	0	0	0	0	0	5

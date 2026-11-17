@@ -1,0 +1,15 @@
+reference	extracted	symbol
+obj/loader/loader/loader.o	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memcpy.o)	memcpy
+obj/loader/loader/loader.o	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-memset.o)	memset
+obj/loader/loader/loader.o	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strncmp.o)	strncmp
+obj/loader/loader/loader.o	$SDK/packages-llvm/core/kernel/lib/libkernel.a(kernel.o)	KExit
+$SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)	$SDK/packages-llvm/core/kernel/lib/libkernel.a(sifcmd.o)	sceSifSendCmd
+obj/loader/loader/loader.o	$SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)	sceSifInitRpc
+$SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)	$SDK/llvm-toolchain/ee/mips64r5900el-ps2-elf/lib/libc_nano.a(libc_a-strlcpy.o)	strlcpy
+obj/loader/loader/loader.o	$SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)	SifLoadFileInit
+$SDK/packages-llvm/core/kernel/lib/libkernel.a(loadfile.o)	$SDK/packages-llvm/core/kernel/lib/libkernel.a(iopheap.o)	SifAllocIopHeap
+obj/loader/loader/loader.o	$SDK/packages-llvm/core/kernel/lib/libkernel.a(iopcontrol.o)	SifIopReset
+$SDK/packages-llvm/core/kernel/lib/libkernel.a(sifrpc.o)	$SDK/packages-llvm/core/kernel/lib/libkernel.a(glue.o)	DIntr
+obj/loader/loader/loader.o	$SDK/packages-llvm/core/filexio/lib/libfilexio.a(fileXio_rpc.o)	fileXioInit
+$SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)	$SDK/packages-llvm/core/kernel/lib/libkernel.a(initsys.o)	_InitSys
+--entry	$SDK/packages-llvm/core/startup/ee/lib/libstartup.a(crt0.o)	__start

@@ -1,0 +1,36 @@
+# CANDIDATE LIST ONLY (smb2man link). Global symbols defined in a first-party object and left undefined by no other
+# input of the same link. relocs_in_own_object counts relocations against the symbol inside its own object
+# (0 = no reference found anywhere in this link; >0 = used only inside its own file, so it could be static).
+# in_final_elf=no means the linker dropped it (--gc-sections) or it was never extracted.
+# Not checked here: other build variants (DS34), calls by name from crt0/linker script, IRX export tables in other links.
+object	symbol	type	size	bind	section	relocs_in_own_object	in_final_elf
+build/obj/smb2man/imports.o	_toupper	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/smb2man/imports.o	memcmp	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/smb2man/imports.o	strcat	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/smb2man/imports.o	strncpy	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/smb2man/iop/smb2man/smb2auth.o	smb2auth_final	FUNC	432	GLOBAL	.text.smb2auth_final	2	yes
+build/obj/smb2man/iop/smb2man/smb2auth.o	smb2auth_update	FUNC	200	GLOBAL	.text.smb2auth_update	4	yes
+build/obj/smb2man/iop/smb2man/smb2auth.o	smb2auth_init	FUNC	100	GLOBAL	.text.smb2auth_init	0	no
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_prw	FUNC	376	GLOBAL	.text.usmb2_prw	2	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_sessionsetup	FUNC	308	GLOBAL	.text.usmb2_sessionsetup	2	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_init_context	FUNC	296	GLOBAL	.text.usmb2_init_context	0	no
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_rename	FUNC	288	GLOBAL	.text.usmb2_rename	1	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_size	FUNC	192	GLOBAL	.text.usmb2_size	0	no
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_treeconnect	FUNC	184	GLOBAL	.text.usmb2_treeconnect	1	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_close	FUNC	164	GLOBAL	.text.usmb2_close	7	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_stat	FUNC	152	GLOBAL	.text.usmb2_stat	3	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_mkdir	FUNC	128	GLOBAL	.text.usmb2_mkdir	1	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_negotiateprotocol	FUNC	128	GLOBAL	.text.usmb2_negotiateprotocol	1	no
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_delete	FUNC	120	GLOBAL	.text.usmb2_delete	2	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	calloc	FUNC	116	GLOBAL	.text.calloc	3	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_open	FUNC	76	GLOBAL	.text.usmb2_open	0	no
+build/obj/smb2man/iop/smb2man/smb2man.o	free	FUNC	72	GLOBAL	.text.free	11	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	malloc	FUNC	72	GLOBAL	.text.malloc	3	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_pread	FUNC	68	GLOBAL	.text.usmb2_pread	1	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	usmb2_pwrite	FUNC	68	GLOBAL	.text.usmb2_pwrite	1	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	_start	FUNC	60	GLOBAL	.text._start	0	yes
+build/obj/smb2man/iop/smb2man/smb2man.o	_irx_id	OBJECT	8	GLOBAL	.data._irx_id	0	yes
+build/obj/smb2man/iop/smb2man/usmb2/hmac-md5.o	k_pad	OBJECT	65	GLOBAL	.bss.k_pad	6	yes
+build/obj/smb2man/iop/smb2man/usmb2/md5.o	md5Step	FUNC	400	GLOBAL	.text.md5Step	2	yes
+build/obj/smb2man/iop/smb2man/usmb2/md5.o	rotateLeft	FUNC	24	GLOBAL	.text.rotateLeft	0	no
+build/obj/smb2man/iop/smb2man/usmb2/unicode.o	utf16_to_utf8	FUNC	408	GLOBAL	.text.utf16_to_utf8	0	no

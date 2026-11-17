@@ -1,0 +1,168 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-09.b",
+  "coverage": [
+    {"path": "src/dash_font.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_ftp.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_gfx.c", "status": "read_full", "note": ""},
+    {"path": "src/dash_hdd.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_font.c is the dashboard text renderer: it builds a smoothed 8x16 bitmap atlas from the classic FontBuffer, maps the three generated proportional font families onto three GS texture slots, lazily builds a Shift-JIS (ELISA) atlas for save titles, and provides measuring, ellipsizing, scrolling and wrapping text helpers used by every dash_* screen each frame. dash_gfx.c is the gsKit layer: alpha/offset/scissor stacks, procedural corner/glow textures, rounded panels, a 192-sprite batch and a vsync flip that yields to the worker thread. dash_ftp.c is the exclusive FTP server status screen that polls the ps2ftpd control RPC (ftp_session.c) and handles Stop. dash_hdd.c is the HDD Manager: worker jobs scan the APA partition table, read PFS usage, create/remove/rename/format partitions, rename HDL games and inject partition headers, while the UI thread draws the list and details.",
+  "reusable_helpers": [
+    {"name": "dashTextFit", "path": "src/dash_font.c", "line": 688, "what": "draws a string ellipsized with ... to a pixel width, never cutting a pad or ELISA escape sequence"},
+    {"name": "dashTextWrap", "path": "src/dash_font.c", "line": 832, "what": "word-wraps a string into at most N lines, ellipsizing the last one"},
+    {"name": "dashSjisTitle", "path": "src/dash_font.c", "line": 106, "what": "converts a Shift-JIS save title into dashboard text with ELISA glyph escapes and ASCII fallbacks"},
+    {"name": "dashColorHue", "path": "src/dash_gfx.c", "line": 106, "what": "integer HSV to RGB colour conversion"},
+    {"name": "dashApproach", "path": "src/dash_gfx.c", "line": 73, "what": "frame-rate independent exponential approach for animations"},
+    {"name": "dashTexBind", "path": "src/dash_gfx.c", "line": 306, "what": "binds a GSTEXTURE through the gsKit texture manager after checking it fits the VRAM pool"},
+    {"name": "fmtMB", "path": "src/dash_hdd.c", "line": 1129, "what": "formats a size in MB as 'N MB' or 'N.N GB'"},
+    {"name": "uniqueName", "path": "src/dash_hdd.c", "line": 404, "what": "makes a name unique against a list by appending 1, 2, ... like the classic manager"},
+    {"name": "hdlTitleOffset", "path": "src/dash_hdd.c", "line": 1091, "what": "finds the title part of an HDL partition name (PP.<id>..<title> or PP.HDL.<title>)"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "HDD Manager reports 0 MB on drives over 1 TiB (2 TB HDDs): HDIOC_TOTALSECTOR read as signed int",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_hdd.c", "start": 158, "end": 161},
+        {"path": "src/dash_hdd.c", "start": 348, "end": 351},
+        {"path": "src/dash_hdd.c", "start": 621, "end": 625},
+        {"path": "src/dash_hdd.c", "start": 881, "end": 881}
+      ],
+      "problem": "scanRun stores HDIOC_TOTALSECTOR in an int and uses it only when > 0. The driver returns the u32 totalLBA through an int (iop/ps2hdd_osd/hdd_fio.c:1055,1087), so any drive above 2^31 sectors (1.5/2 TB, the APA maximum) comes back negative and size_mb becomes 0. Then free_mb is 0, Create says 'HDD full', the create-missing header path gets max 0 so pickSize returns -1, and the usage bar is hidden (hddScene needs size_mb > 0).",
+      "fix": "Read the value as u32, as libhdd already does (ee_libs/hdd/libhdd.c:269): u32 sectors = (u32)fileXioDevctl(...); size_mb = sectors / SECTORS_PER_MB. present/formatted are already checked before this line, so the error case is not reached.",
+      "justification": "",
+      "benefit": "Partition creation and usage display work on 1.5-2 TB HDDs (common for HDL collections); one-line change, no size change (INFERRED)",
+      "benefit_rank": 3,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_hdd.c:158-161 (int sectors, sectors > 0 test), 348-351 recomputeFree, 621-625 actCreate max_mb < 128 -> HDD full, 881 injectMatching pickSize max = free_mb, 505-506 pickSize returns -1 when max < min, 1213 usage needs size_mb > 0. iop/ps2hdd_osd/hdd_fio.c:1055 int rv, 1086-1088 rv = totalLBA; libapa.h:211 u32 totalLBA; hdd_blkio.c:119,259 totalLBA from sectorCount. libhdd.c:269 casts the same devctl to u32. grep HDIOC_TOTALSECTOR over the repo: only libhdd.c:269 and dash_hdd.c:159."
+    },
+    {
+      "n": 2,
+      "title": "Rename game fails for HDL titles longer than 39 characters: old title truncated into HddJob.a[40]",
+      "category": 6,
+      "locations": [
+        {"path": "src/dash_hdd.c", "start": 126, "end": 126},
+        {"path": "src/dash_hdd.c", "start": 716, "end": 717},
+        {"path": "src/dash_hdd.c", "start": 280, "end": 281}
+      ],
+      "problem": "actRenameGame copies p->game.Name (up to 64 characters, include/hdl_rpc.h:12) into j->a, which is MAX_PART_NAME + 8 = 40 bytes, so dashStrCopy keeps 39 characters. The IOP looks the game up with strcmp(OldName, game->name) on the full title (iop/hdl_info/hdd.c:178), finds nothing and returns -3, and the user gets 'Game not renamed' for every title of 40+ characters.",
+      "fix": "Size HddJob.a for the longest string it carries (64 + 1, the HDL title limit, iop/hdl_info/hdl.h:4) instead of MAX_PART_NAME + 8.",
+      "justification": "",
+      "benefit": "Fixes a functional bug in Rename game; +24 bytes per malloc'd HddJob, no ELF change (INFERRED)",
+      "benefit_rank": 3,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "dash_hdd.c:126 char a[MAX_PART_NAME + 8]; launchelf.h:202 MAX_PART_NAME = 32; dash_hdd.c:716 dashStrCopy(j->a, p->game.Name, sizeof(j->a)); dash_store.c:48-50 copies at most dst_size-1. hddJobRun 280-281 passes j->a as OldName to HdlRenameGame; src/hdl_rpc.c:69-82 strcpy into OldName[64]; iop/hdl_info/hdd.c:159-189 renames only on strcmp(Packet->OldName, game->name)==0, else -3; hdl.h:4,9 name[64+1]. The other users of j->a (partition names <= 32) are unaffected by a larger buffer."
+    },
+    {
+      "n": 3,
+      "title": "scanRun queries HDIOC_STATUS three times and, on the first scan, libhdd walks the whole APA table before scanRun walks it again",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_hdd.c", "start": 151, "end": 156},
+        {"path": "ee_libs/hdd/libhdd.c", "start": 75, "end": 102},
+        {"path": "ee_libs/hdd/libhdd.c", "start": 262, "end": 293}
+      ],
+      "problem": "scanRun reads HDIOC_STATUS into j->status, then calls hddCheckPresent and hddCheckFormatted, which each issue the same devctl again; on the first call of the run hddStatusCurrent is 0, so hddUpdateInfo also Dopen/Dreads every APA header (one disk read per partition segment, the driver caches only a few headers, iop/ps2hdd_osd/hdd.c:218) right before scanRun's own identical walk (172-208). Runs on the worker behind 'Reading the HDD'.",
+      "fix": "Derive both flags from j->status as libhdd does: present = status >= 0 && status < 3, formatted = status == 0, and drop the two libhdd calls. hddMakeFilesystem/hddFormat still call hddUpdateInfo themselves when needed (libhdd.c:306-307, 116-117).",
+      "justification": "",
+      "benefit": "Two devctl RPCs per scan and one full header walk on the first open per run; with hundreds of HDL partitions that is likely seconds of extra wait (INFERRED, not measured)",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read dash_hdd.c:151-156 and 167-209; libhdd.c:75-102 (both helpers call hddUpdateInfo when !hddStatusCurrent, then HDIOC_STATUS; present = 0..2, formatted = 0), 262-293 (Dopen hdd0: + Dread loop). grep hddCheckPresent|hddCheckFormatted|hddGetInfo over src/: only dash_hdd.c:152,155, so the first scan is the first libhdd call. hdd_fio.c:760-777 Dread reads headers via apaCacheGetHeader; hdd.c:218 cacheSize=3. The time per header read is not measured."
+    },
+    {
+      "n": 4,
+      "title": "ELISA Shift-JIS atlas allocates 512x1024 (512 KB) but only 864 rows hold glyphs",
+      "category": 4,
+      "locations": [
+        {"path": "src/dash_font.c", "start": 39, "end": 39},
+        {"path": "src/dash_font.c", "start": 78, "end": 92},
+        {"path": "src/dash_font.c", "start": 101, "end": 101}
+      ],
+      "problem": "ELISA_GLYPHS is 6877; at 64 glyphs per 8-pixel row that is 108 rows = 864 texel rows, yet elisaAtlasReady memaligns, clears and uploads 512*1024 bytes and sets Height 1024. The buffer is never freed (dashFontShutdown has no caller), so after the first Japanese save title the extra rows are held in EE RAM and in the VRAM pool for the rest of the run.",
+      "fix": "Use a height of 864 (rows = (ELISA_GLYPHS + 63) / 64 * 8) for the memalign, memset, SyncDCache and Height; the font atlas in the same file already uses a non-power-of-two height (FONT_TEX_H 340).",
+      "justification": "",
+      "benefit": "512*(1024-864) = 81,920 B EE RAM and about 64 KB of VRAM pool (512 vs 448 KB in 8 KB T8 pages) once any SJIS title has been shown (INFERRED)",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "INFERRED",
+      "evidence": "Read dash_font.c:39 (55016/8 = 6877), 80-101 (memalign 512*1024, glyph row = glyph/64*8, Height 1024), 586 (v = gi/64*8, max 107*8+8 = 864). ceil(6877/64) = 108. Callers of elisaAtlasReady: dashSjisTitle only (dash_font.c:130), used by dash_card_tool.c, dash_ps1_card.c, dash_browser.c. grep dashFontShutdown: only definition and include/dash_internal.h:404. Non-power-of-two Height already used for font_tex (dash_font.c:24,284). VRAM page arithmetic is INFERRED."
+    },
+    {
+      "n": 5,
+      "title": "dashTextFit and textWrap re-measure text quadratically on every frame",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_font.c", "start": 699, "end": 711},
+        {"path": "src/dash_font.c", "start": 798, "end": 807}
+      ],
+      "problem": "When a label does not fit, dashTextFit tries each cut from the full length downward and for every cut re-runs glyphPrefixLength and dashTextWidthN over the whole prefix (O(n^2)); textWrap calls dashTextWidthN from the line start for every byte (O(L^2) per line). Both run on the UI thread every frame: one dashTextFit per non-selected file-browser row (dash_browser.c:3363), list rows in settings/tools/apps, and dashTextWrap bodies in modals (dash_ui.c:1218). A 100-byte name fitting 40 characters costs about 60 iterations of ~140 glyph steps.",
+      "fix": "Measure once going forward: in dashTextFit accumulate glyph advances and stop at the last glyph boundary where width + ellipsis fits; in textWrap keep a running line width and add only the newly completed glyph's advance per step.",
+      "justification": "",
+      "benefit": "Per-call cost from O(n^2) to O(n); roughly 10k glyph steps saved per overflowing row per frame (INFERRED from the loop structure, not timed)",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read dash_font.c:506-545 (dashTextWidthN and glyphPrefixLength both walk from the start), 688-715 (cut loop calls both per cut), 785-830 (inner loop calls dashTextWidthN(line_start, q-line_start+1) per byte). Per-frame callers checked: dash_browser.c:3357-3363 (per row in the list draw), dash_ui.c:1218 (modal body), plus 70+ other dashTextFit/dashTextWrap call sites in dash_*.c draw code (grep count). Cycle cost not measured."
+    },
+    {
+      "n": 6,
+      "title": "FTP status loop sleeps 100 ms per frame, so the screen runs at about 8 fps and short OK/Back taps are lost",
+      "category": 5,
+      "locations": [
+        {"path": "src/dash_ftp.c", "start": 90, "end": 120}
+      ],
+      "problem": "Each pass of DashFtpServer's UI-thread loop does a status RPC, draws, presents (vsync) and then DelayThread(100000). Input is edge-detected from one pad sample per pass (dash_ui.c:52-59, pad.c:62), so a press and release inside one ~117 ms pass never produces in.pressed; the user has to press again or hold. It is the only 100 ms sleep in the dash_* screens.",
+      "fix": "Drop the DelayThread (dashGfxPresent already waits for vsync) and query ftpSessionQuery only every few frames, e.g. every 6th pass, so the RPC rate stays about 10 Hz.",
+      "justification": "",
+      "benefit": "Input sampled every frame instead of every ~117 ms and smooth animation on the FTP screen; about the same line count (INFERRED)",
+      "benefit_rank": 1,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read dash_ftp.c:90-120 (ftpSessionQuery, ftpFrame -> dashGfxPresent, dashInputPoll, DelayThread(100000)); ftp_session.c:28-65 (exchange waits in 1 ms steps for the reply). dash_ui.c:35-59 dashInputPoll reads one sample via readpad; pad.c:62 new_pad = newly pressed bits since the previous sample. grep DelayThread over src/dash_*.c: only dash_ftp.c:119 sleeps 100 ms. The tap-length claim is INFERRED."
+    },
+    {
+      "n": 7,
+      "title": "HDD scan allocates 1400 HddPart entries (about 246 KB) and keeps them while the HDD Manager is open",
+      "category": 4,
+      "locations": [
+        {"path": "src/dash_hdd.c", "start": 162, "end": 166},
+        {"path": "src/dash_hdd.c", "start": 373, "end": 376}
+      ],
+      "problem": "scanRun mallocs sizeof(HddPart) * MAX_PARTITIONS (180 B * 1400, launchelf.h:206) and scan() keeps the whole block as hm.parts even when the disk has a few dozen partitions; during a rescan (after every create/remove/rename) the old and the new 246 KB blocks are alive together.",
+      "fix": "After the Dread loop, shrink j->parts to j->n entries with realloc when j->n > 0 (keep the original block if realloc fails).",
+      "justification": "Adds about three lines; it frees roughly (1400 - n) * 180 bytes of EE heap for as long as the HDD Manager is open, the simplest way short of changing the scan to two passes.",
+      "benefit": "180 B * 1400 = 252,000 B allocated; with 100 partitions about 234 KB returned to the heap while the screen is open (INFERRED: struct size from field layout)",
+      "benefit_rank": 1,
+      "lines_removed": -3,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read dash_hdd.c:84-94 (HddPart: name[33], 7 ints/u32, GameInfo), include/hdl_rpc.h:9-15 (GameInfo 33+65+13+int = 116 B) -> 64 + 116 = 180 B; launchelf.h:206 MAX_PARTITIONS = 1400; dash_hdd.c:162 malloc, 373-376 hm.parts takes the block, 1335 freed only on exit, 596-601 afterChange rescans. Struct size is computed by hand, not from a map file."
+    }
+  ]
+}

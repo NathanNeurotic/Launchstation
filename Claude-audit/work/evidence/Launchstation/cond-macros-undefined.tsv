@@ -1,0 +1,90 @@
+macro	test_sites	build_file_mentions	class	tiers	sample_sites
+BUILDING_VMCMAN	93	4		module	iop/vmcman/src/irx_imports.h:25; iop/vmcman/src/irx_imports.h:37; iop/vmcman/src/irx_imports.h:55; iop/vmcman/src/main.c:31; iop/vmcman/src/main.c:39; iop/vmcman/src/main.c:164
+UDPFS	87	25		core	include/filer_internal.h:11; include/filer_shared.h:97; include/filer_shared.h:100; include/init.h:84; include/launchelf.h:392; include/launchelf.h:583
+BUILDING_XFROMMAN	60	2		module	iop/vmcman/src/irx_imports.h:21; iop/vmcman/src/irx_imports.h:37; iop/vmcman/src/irx_imports.h:55; iop/vmcman/src/main.c:31; iop/vmcman/src/main.c:39; iop/vmcman/src/main.c:41
+DVRP	49	7		core	include/filer_internal.h:6; include/launchelf.h:396; include/launchelf.h:570; include/launchelf.h:633; src/dash_devices.c:481; src/dash_devices.c:663
+USE_GP_REGISTER	48	1		module	iop/usbd-ra/src/driver.c:41; iop/usbd-ra/src/driver.c:47; iop/usbd-ra/src/driver.c:249; iop/usbd-ra/src/driver.c:253; iop/usbd-ra/src/hub.c:63; iop/usbd-ra/src/interface.c:35
+MX4SIO	47	21		core	include/launchelf.h:378; include/launchelf.h:429; src/dash_devices.c:393; src/dash_devices.c:624; src/dash_devices.c:710; src/dash_devices.c:829
+MMCE	44	43		core	include/init.h:48; include/launchelf.h:426; include/neutrino_gameid.h:11; src/dash_devices.c:16; src/dash_devices.c:389; src/dash_devices.c:533
+XFROM	39	6		core	include/launchelf.h:423; include/launchelf.h:449; src/dash_devices.c:477; src/dash_devices.c:659; src/dash_info.c:234; src/elf.c:7
+ATA_USE_DEV9	33	2		module	iop/ata_bd/src/irx_imports.h:25; iop/ata_bd/src/ps2atad.c:30; iop/ata_bd/src/ps2atad.c:42; iop/ata_bd/src/ps2atad.c:73; iop/ata_bd/src/ps2atad.c:197; iop/ata_bd/src/ps2atad.c:209
+ILINK	28	7		core	include/init.h:24; src/dash_devices.c:396; src/dash_devices.c:630; src/dash_devices.c:681; src/dash_devices.c:713; src/dash_devices.c:833
+WLE_NATIVE_CLOUD	25	3		core	include/dash_internal.h:1034; src/dash_settings.c:17; src/dash_settings.c:378; src/dash_settings.c:775; src/dash_settings.c:1160; src/dash_settings.c:1172
+ATA_USE_AIFDEV9	22	1		module	iop/ata_bd/src/irx_imports.h:19; iop/ata_bd/src/ps2atad.c:33; iop/ata_bd/src/ps2atad.c:200; iop/ata_bd/src/ps2atad.c:205; iop/ata_bd/src/ps2atad.c:268; iop/ata_bd/src/ps2atad.c:300
+SIO_DEBUG	11	1		core,module	include/launchelf.h:5; include/launchelf.h:157; iop/vmcman/src/irx_imports.h:50; iop/vmcman/src/main.c:160; iop/vmcman/src/mcman-internal.h:79; src/dash_info.c:269
+DEBUG_VERBOSE	10	0		module	iop/mx4sio_bd/src/mx4sio.c:257; iop/mx4sio_bd/src/mx4sio.c:296; iop/mx4sio_bd/src/mx4sio.c:338; iop/mx4sio_bd/src/mx4sio.c:381; iop/mx4sio_bd/src/mx4sio.c:422; iop/mx4sio_bd/src/mx4sio.c:436
+APA_USE_ATAD	10	2		module	iop/ps2hdd_osd/apa.c:21; iop/ps2hdd_osd/hdd.c:21; iop/ps2hdd_osd/hdd.c:95; iop/ps2hdd_osd/hdd.c:199; iop/ps2hdd_osd/hdd.c:220; iop/ps2hdd_osd/hdd.c:307
+BUILDING_XMCMAN	10	4		module	iop/vmcman/src/irx_imports.h:40; iop/vmcman/src/main.c:455; iop/vmcman/src/main.c:3863; iop/vmcman/src/mcman-internal.h:48; iop/vmcman/src/mcsio2.c:278; iop/vmcman/src/ps1mc_fio.c:484
+APA_USE_DEV9	9	2		module	iop/ps2hdd_osd/hdd.c:24; iop/ps2hdd_osd/hdd.c:98; iop/ps2hdd_osd/hdd.c:236; iop/ps2hdd_osd/hdd.c:287; iop/ps2hdd_osd/hdd.c:387; iop/ps2hdd_osd/hdd.c:402
+POWERPC_UART	8	0		core	include/launchelf.h:7; include/launchelf.h:160; src/dash_info.c:269; src/dash_info.c:282; src/init.c:73; src/init.c:3079
+UDPTTY	8	0		core	include/launchelf.h:9; include/launchelf.h:160; src/dash_info.c:269; src/dash_info.c:276; src/init.c:56; src/init.c:3085
+ATA_ENABLE_BDM	7	2		module	iop/ata_bd/src/irx_imports.h:22; iop/ata_bd/src/ps2atad.c:37; iop/ata_bd/src/ps2atad.c:191; iop/ata_bd/src/ps2atad.c:222; iop/ata_bd/src/ps2atad.c:352; iop/ata_bd/src/ps2atad.c:1379
+ATA_GAMESTAR_WORKAROUND	7	1		module	iop/ata_bd/src/ps2atad.c:74; iop/ata_bd/src/ps2atad.c:309; iop/ata_bd/src/ps2atad.c:333; iop/ata_bd/src/ps2atad.c:338; iop/ata_bd/src/ps2atad.c:1078; iop/ata_bd/src/ps2atad.c:1089
+MINI_DRIVER	7	4		module	iop/mx4sio_bd/src/module_debug.h:6; iop/mx4sio_bd/src/mx4sio.c:737; iop/mx4sio_bd/src/mx4sio.c:819; iop/usbd-ra/src/driver.c:273; iop/usbd-ra/src/hcd.c:522; iop/usbd-ra/src/usbd.c:33
+Z80	7	0		module	iop/nfsman/unfs4/unfs4.c:46; iop/nfsman/unfs4/unfs4.h:34; iop/smb2man/usmb2/hmac-md5.c:18; iop/smb2man/usmb2/ntlm.c:12; iop/smb2man/usmb2/unicode.c:22; iop/smb2man/usmb2/usmb2.c:19
+ASYNC	7	0		module	iop/usbmass_bd/src/usb_mass.c:102; iop/usbmass_bd/src/usb_mass.c:117; iop/usbmass_bd/src/usb_mass.c:218; iop/usbmass_bd/src/usb_mass.c:378; iop/usbmass_bd/src/usb_mass.c:461; iop/usbmass_bd/src/usb_mass.c:468
+BUILDING_DONGLEMAN	7	1		module	iop/vmcman/src/main.c:106; iop/vmcman/src/main.c:1268; iop/vmcman/src/mcman-internal.h:66; iop/vmcman/src/mcman-internal.h:371; iop/vmcman/src/mcsio2.c:351; iop/vmcman/src/mcsio2.c:928
+NO_IOP_RESET	7	0		core	src/dash_info.c:269; src/dash_info.c:271; src/init.c:823; src/init.c:2061; src/init.c:3052; src/main_info_screens.c:173
+APA_SUPPORT_GPT	6	0		module	iop/ps2hdd_osd/apa.c:415; iop/ps2hdd_osd/apa.c:431; iop/ps2hdd_osd/hdd_fio.c:375; iop/ps2hdd_osd/hdd_fio.c:1039; iop/ps2hdd_osd/libapa.h:25; iop/ps2hdd_osd/libapa.h:90
+APA_USE_BDM	6	1		module	iop/ps2hdd_osd/hdd_blkio.c:17; iop/ps2hdd_osd/hdd_blkio.c:305; iop/ps2hdd_osd/hdd_blkio.c:315; iop/ps2hdd_osd/hdd_blkio.c:390; iop/ps2hdd_osd/hdd_blkio.c:409; iop/ps2hdd_osd/irx_imports.h:22
+USMB2_FEATURE_REASSEMBLY	6	0		module	iop/smb2man/usmb2/usmb2.c:77; iop/smb2man/usmb2/usmb2.c:91; iop/smb2man/usmb2/usmb2.c:107; iop/smb2man/usmb2/usmb2.c:144; iop/smb2man/usmb2/usmb2.c:197; iop/smb2man/usmb2/usmb2.c:314
+WLE_BOOT_DIAGNOSTICS	6	0		core	src/dash_main.c:1354; src/dash_main.c:1368; src/main_modules.c:32; src/main_modules.c:36; src/main_modules.c:51; src/main_modules.c:55
+ULE_DEBUG_BUILD	5	0		core	include/launchelf.h:11; src/filer.c:156; src/filer_copy.c:22; src/filer_fileops.c:5; src/filer_mount.c:6
+UNFS4_FEATURE_REASSEMBLY	5	0		module	iop/nfsman/unfs4/unfs4.c:111; iop/nfsman/unfs4/unfs4.c:125; iop/nfsman/unfs4/unfs4.c:140; iop/nfsman/unfs4/unfs4.c:182; iop/nfsman/unfs4/unfs4.c:231
+GAME_DRIVER	5	0		module	iop/pccf/main.c:39; iop/pccf/pccf_ata.c:189; iop/pccf/pccf_hw.c:122; iop/pccf/pccf_hw.c:147; iop/pccf/pccf_hw.c:234
+APA_USE_IOMANX	5	1		module	iop/ps2hdd_osd/hdd_blkio.c:182; iop/ps2hdd_osd/hdd_blkio.c:333; iop/ps2hdd_osd/hdd_blkio.h:76; iop/ps2hdd_osd/hdd_fio.c:1169; iop/ps2hdd_osd/hdd_fio.h:30
+HOMEBREW_SIO2MAN	5	1		core	src/init.c:68; src/init.c:1236; src/init.c:1259; src/init.c:1313; src/init.c:1907
+LIBCDVD_LEGACY	4	0		core	include/cdvd_macro.h:4; include/launchelf.h:66; include/snippets/readCD.h:1; src/filer.c:604
+h	4	0		core	include/launchelf.h:21; include/launchelf.h:70; include/launchelf.h:72; src/cloud_google.c:23
+ATA_MWDMA_MODES	4	0		module	iop/ata_bd/src/ps2atad.c:60; iop/ata_bd/src/ps2atad.c:213; iop/ata_bd/src/ps2atad.c:1012; iop/ata_bd/src/ps2atad.c:1447
+IOMAN_NO_EXTENDED	4	0		support	tests/pccf-stubs/iomanX.h:65; tests/pccf-stubs/iomanX.h:115; tests/pccf-stubs/iomanX.h:153; tests/pccf-stubs/iomanX.h:298
+CONFIG_USE_CRC16	3	0		module	iop/mx4sio_bd/src/mx4sio.c:42; iop/mx4sio_bd/src/mx4sio.h:45; iop/mx4sio_bd/src/spi_sdcard_driver.c:463
+DASH_AUTOTEST	3	0		core	src/dash_main.c:1304; src/pad.c:284; src/pad.c:313
+MMCEDRV	2	1		module	iop/mmceman/include/irx_imports.h:22; iop/mmceman/include/module_debug.h:4
+CRC7_MODE_RAM_TABLE	2	0		module	iop/mx4sio_bd/src/spi_sdcard_crc7.c:7; iop/mx4sio_bd/src/spi_sdcard_crc7.h:10
+HAVE_SOCK_SIN_LEN	2	0		module	iop/nfsman/unfs4/unfs4.c:931; iop/smb2man/usmb2/usmb2.c:1053
+APA_XOSD_VER	2	0		module	iop/ps2hdd_osd/apa-opt.h:25; iop/ps2hdd_osd/hdd.c:367
+USMB2_FEATURE_OPENDIR	2	0		module	iop/smb2man/usmb2/usmb2.c:731; iop/smb2man/usmb2/usmb2.c:743
+SIO2MAN_V2	2	3		module	iop/vmcman/src/irx_imports.h:41; iop/vmcman/src/mcman-internal.h:49
+WLE_GOOGLE_CLIENT_ID	2	3		core	src/cloud_google.c:207; src/cloud_google.c:235
+WLE_PS2BUILD	2	2		core	src/elf.c:15; src/mmce_igr.c:16
+IOPTRAP	2	0		core	src/init.c:51; src/init.c:1224
+F__iopcontrol_special_internals	1	0		core	ee_libs/iopreboot/SifIopRebootBuffer.c:64
+F_SifIopRebootBufferEncrypted	1	0		core	ee_libs/iopreboot/SifIopRebootBuffer.c:123
+F_SifIopRebootBuffer	1	0		core	ee_libs/iopreboot/SifIopRebootBuffer.c:159
+CUSTOM_COLORS	1	1		core	include/config_private.h:10
+L	1	0		core	include/ftp_protocol.h:25
+githash	1	0		core	include/launchelf.h:21
+rpc	1	0		core	include/launchelf.h:70
+libcdvd	1	0		core	include/launchelf.h:70
+cdvd_rpc	1	0		core	include/launchelf.h:72
+COMMON_PRINTF	1	0		core	include/launchelf.h:160
+ATA_ENABLE_MAXUDMA	1	0		module	iop/ata_bd/src/ps2atad.c:1322
+ATA_SCE_AUTH_HDD	1	0		module	iop/ata_bd/src/ps2atad.c:1372
+ATA_ALL_PIO_MODES	1	0		module	iop/ata_bd/src/ps2atad.c:1420
+BUILD_BOOTLOADER	1	0		module	iop/mx4sio_bd/src/spi_sdcard_driver_config.h:19
+U	1	0		module	iop/mx4sio_bd/src/spi_sdcard_driver_config.h:19
+APA_POSIX_VER	1	0		module	iop/ps2hdd_osd/apa-opt.h:7
+ZEROCOPY	1	0		module	iop/ps2host/net_fio.c:316
+LWIP_HDR_IP4_ADDR_H	1	0		module	iop/ps2ips_rpc/ps2ip_rpc.h:16
+SMB2AUTH_SYSCLIB	1	1		module	iop/smb2man/smb2auth.c:8
+XBOX_360_PLATFORM	1	0		module	iop/smb2man/usmb2/hmac-md5.h:22
+PICO_PLATFORM	1	0		module	iop/smb2man/usmb2/hmac-md5.h:26
+SMBMAN_SMB1_DEVICE	1	2		module	iop/smbman/smb_fio.c:62
+SKIP_GAMES_PASSING_XPARAM_FROM_SYSTEM_CNF	1	0		module	iop/xparam/src/database_merged.c:865
+wle_cloud_client	1	0		core	src/cloud_google.c:23
+WLE_GOOGLE_CLIENT_SECRET	1	3		core	src/cloud_google.c:238
+DASH_THEME_TOUR	1	0		core	src/dash_main.c:1492
+TMANIP_MORON	1	0		core	src/filer_actions.c:1166
+KELF_SIGNER_HOST_TEST	1	0		core	src/kelf_signer.c:1
+KELF_SIGNER_SELFTEST	1	0		core	src/kelf_signer.c:1097
+QRCODEGEN_TEST	1	0		core	src/qrcodegen.c:30
+__cplusplus	8	0	builtin-like	core,support	ee_libs/hdd/include/libhdd.h:67; ee_libs/hdd/include/libhdd.h:80; include/hdl_rpc.h:17; include/hdl_rpc.h:25; include/qrcodegen.h:31; include/qrcodegen.h:383
+__has_include	7	0	builtin-like	core	include/launchelf.h:20; include/launchelf.h:21; include/launchelf.h:69; include/launchelf.h:70; include/launchelf.h:72; src/cloud_google.c:22
+__clang__	2	0	builtin-like	module	iop/mx4sio_bd/src/mx4sio.c:667; iop/mx4sio_bd/src/mx4sio.c:691
+__GNUC__	2	0	builtin-like	module	iop/mx4sio_bd/src/mx4sio.c:667; iop/mx4sio_bd/src/mx4sio.c:691
+_WIN32	2	2	builtin-like	module	iop/ps2hdd_osd/misc.c:101; iop/vmcman/src/main.c:1147
+__STDC_VERSION__	1	0	builtin-like	core	include/ftp_protocol.h:25
+__BYTE_ORDER	1	0	builtin-like	module	iop/smb2man/usmb2/hmac-md5.h:22
+__BIG_ENDIAN	1	0	builtin-like	module	iop/smb2man/usmb2/hmac-md5.h:22
+__PS2__	1	1	builtin-like	module	iop/smb2man/usmb2/hmac-md5.h:26

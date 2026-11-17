@@ -1,0 +1,34 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-02.b",
+  "coverage": [
+    {"path": "include/editor_private.h", "status": "read_full", "note": ""},
+    {"path": "include/filer_internal.h", "status": "read_full", "note": ""},
+    {"path": "include/filer_shared.h", "status": "read_full", "note": ""},
+    {"path": "include/ftp_protocol.h", "status": "read_full", "note": ""},
+    {"path": "include/launchelf.h", "status": "read_full", "note": ""},
+    {"path": "include/list_scroll.h", "status": "read_full", "note": ""},
+    {"path": "include/nfsman.h", "status": "read_full", "note": ""},
+    {"path": "include/pccf_control.h", "status": "read_full", "note": ""},
+    {"path": "include/psu_types.h", "status": "read_full", "note": ""},
+    {"path": "include/smb2man.h", "status": "read_full", "note": ""},
+    {"path": "include/smbd_devctl.h", "status": "read_full", "note": ""},
+    {"path": "include/wle_igr_config.h", "status": "read_full", "note": ""},
+    {"path": "include/snippets/readCD.h", "status": "read_full", "note": ""},
+    {"path": "loader/linkfile", "status": "read_full", "note": ""},
+    {"path": "loader/loader.c", "status": "read_full", "note": ""},
+    {"path": "src/chkesr.c", "status": "read_full", "note": ""},
+    {"path": "include/cloud_google.h", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "include/launchelf.h is the umbrella header of the EE program: SDK includes, version/debug macros, the SETTING config struct (about 27.5 KB, one heap copy), FILEINFO, size limits (MAX_PATH 1025, MAX_ENTRY 2048, MAX_PATH_PAD 30), and prototypes for main/init/elf/draw/pad/config/filer/editor/lang. editor_private.h, filer_shared.h and filer_internal.h are the private interfaces of the classic text editor and file browser (globals, menu enums, copy/paste modes, MAX_RECURSE). ftp_protocol.h, nfsman.h, smb2man.h, smbd_devctl.h, pccf_control.h and wle_igr_config.h are fixed-layout EE/IOP or EE/IGR ABIs (RPC status packet, devctl codes and argument structs); psu_types.h holds the PSU/memory-card header layouts; cloud_google.h is the Google Drive backup API. loader/loader.c plus loader/linkfile form the small embedded loader ELF (linked at 0x84000-0xa0000) that clears user RAM, optionally idles/powers down DEV9 and resets the IOP, then runs a file ELF via SifLoadElf or a mem:ADDR:SIZE payload. src/chkesr.c is the upstream ESR-disc probe (reads DVD LBA 14 and looks for +NSR). include/snippets/readCD.h is the legacy-libcdvd readCD(), only compiled under LIBCDVD_LEGACY.",
+  "reusable_helpers": [
+    {"name": "wle_stricmp", "path": "include/launchelf.h", "line": 113, "what": "ASCII case-insensitive string compare (static inline), mapped to stricmp"},
+    {"name": "wle_strnlen", "path": "include/launchelf.h", "line": 134, "what": "NULL-safe bounded strlen (static inline), mapped to strnlen"},
+    {"name": "listCenteredTop", "path": "include/list_scroll.h", "line": 7, "what": "computes the first visible row of a scrolled list keeping the selection near the upper middle, clamped at both ends"},
+    {"name": "parseHex8", "path": "loader/loader.c", "line": 170, "what": "parses exactly 8 hex digits into a u32"},
+    {"name": "loadELFImage", "path": "loader/loader.c", "line": 268, "what": "validates an in-memory ELF header and copies/zero-fills its PT_LOAD segments, then flushes caches"},
+    {"name": "clearUserMem", "path": "loader/loader.c", "line": 212, "what": "zeroes EE user RAM from 0x100000 to GetMemorySize() with 128-bit stores"},
+    {"name": "Check_ESR_Disc", "path": "src/chkesr.c", "line": 38, "what": "detects an ESR-patched DVD by reading LBA 14 and checking for +NSR"}
+  ],
+  "findings": []
+}

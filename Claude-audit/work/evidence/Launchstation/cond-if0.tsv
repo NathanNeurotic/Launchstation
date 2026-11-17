@@ -1,0 +1,13 @@
+path	start	end	lines	kind	tier
+iop/usbd-ra/src/usbd.c	200	207	8	#if 0	module
+iop/vmcman/src/main.c	2913	2920	8	#if 0	module
+iop/vmcman/src/ps1mc_fio.c	175	182	8	#if 0	module
+iop/vmcman/src/ps1mc_fio.c	227	234	8	#if 0	module
+iop/ps2hdd_osd/cache.c	56	62	7	#if 0 (until #else)	module
+iop/vmcman/src/main.c	3360	3364	5	#if 0	module
+iop/vmcman/src/ps1mc_fio.c	189	193	5	#if 0	module
+iop/vmcman/src/ps1mc_fio.c	525	529	5	#if 0	module
+iop/ps2host/ps2host.c	27	30	4	#if 0	module
+iop/vmcman/src/main.c	3372	3375	4	#if 0	module
+iop/ps2host/irx_imports.h	16	18	3	#if 0	module
+iop/ps2host/ps2host.c	14	16	3	#if 0	module

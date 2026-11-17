@@ -1,0 +1,25 @@
+# CANDIDATE LIST ONLY (ps2ftpd link). Global symbols defined in a first-party object and left undefined by no other
+# input of the same link. relocs_in_own_object counts relocations against the symbol inside its own object
+# (0 = no reference found anywhere in this link; >0 = used only inside its own file, so it could be static).
+# in_final_elf=no means the linker dropped it (--gc-sections) or it was never extracted.
+# Not checked here: other build variants (DS34), calls by name from crt0/linker script, IRX export tables in other links.
+object	symbol	type	size	bind	section	relocs_in_own_object	in_final_elf
+build/obj/ps2ftpd/imports.o	SleepThread	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/ps2ftpd/imports.o	index	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/ps2ftpd/imports.o	lwip_setsockopt	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/ps2ftpd/imports.o	memcmp	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/ps2ftpd/imports.o	strrchr	NOTYPE	0	GLOBAL	.text	0	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o	FileSystem_ClassifyPath	FUNC	964	GLOBAL	.text	8	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o	getDaysBetween	FUNC	664	GLOBAL	.text	1	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o	FileSystem_BuildPath	FUNC	612	GLOBAL	.text	10	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o	FileSystem_ScanDevice	FUNC	300	GLOBAL	.text	4	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FileSystem.o	getPs2Time	FUNC	300	GLOBAL	.text	1	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o	FtpClient_OnDataConnect	FUNC	388	GLOBAL	.text	1	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpClient.o	FtpClient_OnDataComplete	FUNC	212	GLOBAL	.text	3	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpControl.o	FtpControl_Exchange	FUNC	584	GLOBAL	.text	2	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o	FtpServer_OnClientConnect	FUNC	212	GLOBAL	.text	1	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/FtpServer.o	FtpServer_Stop	FUNC	108	GLOBAL	.text	1	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o	srv	OBJECT	6808	GLOBAL	.bss	12	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o	process_args	FUNC	496	GLOBAL	.text	1	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o	_start	FUNC	432	GLOBAL	.text	0	yes
+build/obj/ps2ftpd/iop/oldlibs/ps2ftpd/src/main.o	server	FUNC	120	GLOBAL	.text	2	yes

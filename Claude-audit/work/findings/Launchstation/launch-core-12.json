@@ -1,0 +1,186 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-12",
+  "coverage": [
+    {"path": "src/dash_settings.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "dash_settings.c is the dashboard SETTINGS screen: static SetItem/SetPage tables describe every page, and choiceInfo/setChoice/numberInfo/pathInfo/runAction map a SetId to the underlying SETTING (classic LAUNCHSTATION.CNF), dashCfg (DASHBOARD.CNF), dashTheme or IP globals. It holds a Save/Discard session (byte snapshots plus the save text, refreshDirty), queues CNF/IPCONFIG writes on the background worker (cfgSave), and contains a colour editor, a date/time editor, theme folder import/export jobs, and an SMB/NFS share editor that splices blocks into LAUNCHSTATION.CNF via smb_shares.c. It exports dashSettingsScreen, dashSettingsSaveCnf (used by dash_apps.c and dash_browser.c) and dashSettingsOpenLaunchKeys (dash_main.c).",
+  "reusable_helpers": [
+    {"name": "smbedSplitUrl", "path": "src/dash_settings.c", "line": 410, "what": "parses smb://host[:port]/folder into host, port and one-segment folder with range checks"},
+    {"name": "smbedNfsOption", "path": "src/dash_settings.c", "line": 461, "what": "extracts a key= value from a URL query string"},
+    {"name": "pathLeaf", "path": "src/dash_settings.c", "line": 2080, "what": "returns the file name part of a device path, or the whole path for a folder"},
+    {"name": "mcAlias", "path": "src/dash_settings.c", "line": 2098, "what": "rewrites mc0:/mc1: paths to the slot-neutral mc: form"},
+    {"name": "startDirOf", "path": "src/dash_settings.c", "line": 2140, "what": "parent folder of a path for a picker start, mapping mc: to mc0:"},
+    {"name": "textChanged", "path": "src/dash_settings.c", "line": 2400, "what": "compares a saved snapshot string with freshly built save text and frees the new text"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "Eight SetIds with no Settings row (S_LEGACY_THEME, S_ENABLED, S_FILES_MODE, S_LAUNCHKEYS, S_IGR_*, S_SMB_SHARES, S_T_CUSTOMIZE) and their cases",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_settings.c", "start": 44, "end": 44},
+        {"path": "src/dash_settings.c", "start": 52, "end": 52},
+        {"path": "src/dash_settings.c", "start": 59, "end": 59},
+        {"path": "src/dash_settings.c", "start": 79, "end": 79},
+        {"path": "src/dash_settings.c", "start": 118, "end": 120},
+        {"path": "src/dash_settings.c", "start": 133, "end": 133},
+        {"path": "src/dash_settings.c", "start": 159, "end": 159},
+        {"path": "src/dash_settings.c", "start": 1018, "end": 1023},
+        {"path": "src/dash_settings.c", "start": 1071, "end": 1075},
+        {"path": "src/dash_settings.c", "start": 1169, "end": 1176},
+        {"path": "src/dash_settings.c", "start": 1697, "end": 1703},
+        {"path": "src/dash_settings.c", "start": 1776, "end": 1778},
+        {"path": "src/dash_settings.c", "start": 1843, "end": 1855},
+        {"path": "src/dash_settings.c", "start": 3092, "end": 3094},
+        {"path": "src/dash_settings.c", "start": 3300, "end": 3302},
+        {"path": "tests/test_igr_return_policy.py", "start": 24, "end": 25},
+        {"path": "tests/test_native_cloud.py", "start": 112, "end": 119}
+      ],
+      "problem": "choiceInfo, setChoice, runAction and runThemeAction are static and are only called with ids from the SetItem tables (lines 234-873) or from the constant lists at 3550-3557 and 3693-3695. None of these eight ids appears in any table or list, so their cases never run. dash_store.c:309 and :325 also force enabled/legacy_theme to 1, so the S_ENABLED/S_LEGACY_THEME setters are obsolete; files_mode is toggled from dash_files.c:693 instead. The cases for S_LEGACY_THEME, S_ENABLED and S_FILES_MODE are dead.",
+      "fix": "Delete the eight enum entries, the stale 'Legacy/internal split flags' comment, and the matching cases in choiceInfo, setChoice, runThemeAction and runAction. Update the two source-text tests: drop S_IGR_AUTO_BACKUP from the list in test_igr_return_policy.py, and point test_native_cloud.py at the live S_IGR_SYNC_MODE branch (1830-1834), which already checks cloudGoogleIsLinked().",
+      "justification": "",
+      "benefit": "~56 source lines removed; switch cases in static functions are compiled in, so a few hundred bytes of .text are saved (INFERRED, not measured)",
+      "benefit_rank": 2,
+      "lines_removed": 56,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep over src/Launchstation for S_LEGACY_THEME|S_ENABLED|S_FILES_MODE|S_LAUNCHKEYS|S_IGR_AUTO_BACKUP|S_IGR_CLOUD_SYNC|S_SMB_SHARES|S_T_CUSTOMIZE: only the enum lines and the cited cases in dash_settings.c, plus tests/test_igr_return_policy.py:24 and tests/test_native_cloud.py:114 (source-text asserts). All 873 table lines were read: none of these ids is in a table. runAction is otherwise called only from settingsInput:3839 (it->id), the S_CLOCK list 3569 (S_CLOCK_MANUAL/SYNC/SOFTWARE/HARDWARE) and settingsMenu 3693-3695 (S_SAVE_CLASSIC, S_REVERT), so those ids stay live. dash_store.c:239,247,255,309,325,343 read."
+    },
+    {
+      "n": 2,
+      "title": "Unused ST_INFO item type, unused choiceInfo 'single' out-parameter and write-only TargetsJob.finished",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_settings.c", "start": 28, "end": 28},
+        {"path": "src/dash_settings.c", "start": 3962, "end": 3962},
+        {"path": "src/dash_settings.c", "start": 3965, "end": 3972},
+        {"path": "src/dash_settings.c", "start": 1004, "end": 1007},
+        {"path": "src/dash_settings.c", "start": 3812, "end": 3813},
+        {"path": "src/dash_settings.c", "start": 3997, "end": 3998},
+        {"path": "src/dash_settings.c", "start": 2650, "end": 2650},
+        {"path": "src/dash_settings.c", "start": 2665, "end": 2665},
+        {"path": "tests/test_settings_navigation.py", "start": 111, "end": 111}
+      ],
+      "problem": "No SetItem uses ST_INFO, so the draw branch that prints ip/netmask (3965-3972) and its icon case never run. choiceInfo always sets *single = NULL, and neither caller reads it. targetsDone sets j->finished, but nothing reads that field: saveClassicAs uses dashWorkerAwait's result and j->abandoned.",
+      "fix": "Delete ST_INFO, its icon case and the draw branch. Drop the 'single' parameter from choiceInfo and its two callers, plus the stub signature in tests/test_settings_navigation.py. Delete the finished field and the assignment.",
+      "justification": "",
+      "benefit": "~15 source lines removed; tiny .text change (INFERRED)",
+      "benefit_rank": 1,
+      "lines_removed": 15,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep ST_INFO over src/Launchstation: dash_settings.c:28, 3962, 3965 only (other matches are DASH_TOAST_INFO). Grep 'single' in dash_settings.c: 1004, 1007 (assignment), 3812/3813 and 3997/3998 (declared and passed, never read). Grep 'finished' over src/Launchstation *.c *.h: dash_settings.c:2650 (field) and 2665 (write) only. tests/test_settings_navigation.py:111 stubs choiceInfo with the same 4-parameter signature."
+    },
+    {
+      "n": 3,
+      "title": "Classic screen-defaults block copied in resetScreen, resetDisplayThemeDefaults and config_screen.c",
+      "category": 2,
+      "locations": [
+        {"path": "src/dash_settings.c", "start": 2770, "end": 2783},
+        {"path": "src/dash_settings.c", "start": 2791, "end": 2804},
+        {"path": "src/config_screen.c", "start": 166, "end": 179},
+        {"path": "src/config.c", "start": 845, "end": 855}
+      ],
+      "problem": "The same 14 statements (eight DEF_COLORn colours, TV_mode Auto, screen_x/y = 0, Menu_Frame, Popup_Opaque, updateScreenMode) appear three times. Both dash_settings.c copies and config_screen.c (compiled, ps2.yaml:514) match line for line. config.c's defaults function sets the same fields in a slightly different order.",
+      "fix": "Keep one copy as a non-static function next to the defaults in config.c (or as a static function in dash_settings.c if only the two local copies are merged). Then make resetScreen, resetDisplayThemeDefaults and the config_screen.c DEFAULT branch call it.",
+      "justification": "The helper replaces three identical 14-line blocks: 42 lines become about 16 (one function) plus 3 calls, a net removal of about 23 lines, and the reset defaults can no longer drift apart.",
+      "benefit": "~23 lines removed net if all three copies share it (~11 if only the two in dash_settings.c); a few hundred bytes of .text (INFERRED: three inlined copies of 13 stores and a call)",
+      "benefit_rank": 2,
+      "lines_removed": 23,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_settings.c:2766-2811 and config_screen.c:150-186; Grep '= DEF_COLOR1;' over src/Launchstation: config_screen.c:166, config.c:845, dash_settings.c:2770, 2791. Duplicate lead dupes-blocks.tsv lists the same three 14-line ranges. ps2.yaml:514 compiles src/config_screen.c, :599 src/dash_settings.c."
+    },
+    {
+      "n": 4,
+      "title": "Auto-start device id-to-bit mapping written twice (six choiceInfo cases and a setChoice ternary)",
+      "category": 2,
+      "locations": [
+        {"path": "src/dash_settings.c", "start": 1130, "end": 1152},
+        {"path": "src/dash_settings.c", "start": 1738, "end": 1743}
+      ],
+      "problem": "choiceInfo has seven cases that differ only in the DASH_DEVA_* constant (S_DEVA_UDPFS leaves out the boot-device test, which is harmless because dashBootDeviceBit never returns UDPFS, dash_devices.c:895-918). setChoice maps the same ids to bits again with a 6-way ternary.",
+      "fix": "Add one small static id-to-bit function, use it in setChoice in place of the ternary, and collapse the choiceInfo cases into one case group: cur = (dev_auto & bit) || dashBootDeviceBit() == bit.",
+      "justification": "The helper replaces two copies of the same mapping: 23 + 6 lines become about 8 + 6 + 1, a net removal of about 11 lines, and a device added later needs one edit instead of two.",
+      "benefit": "~11 lines removed net (INFERRED from cited ranges); negligible size change",
+      "benefit_rank": 1,
+      "lines_removed": 11,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read dash_settings.c:1130-1152 and 1729-1768; read dash_devices.c:895-918 (dashBootDeviceBit returns USB/HDD/ATA/MMCE/MX4SIO/ILINK or 0, never UDPFS)."
+    },
+    {
+      "n": 5,
+      "title": "Redundant statements: second LK_Flag update in pathApplied, no-op keep_enabled/keep_view in editScanPaths, presetPreview forwarder",
+      "category": 3,
+      "locations": [
+        {"path": "src/dash_settings.c", "start": 2111, "end": 2114},
+        {"path": "src/dash_settings.c", "start": 2134, "end": 2137},
+        {"path": "src/dash_settings.c", "start": 2753, "end": 2760},
+        {"path": "src/dash_settings.c", "start": 2819, "end": 2822},
+        {"path": "src/dash_settings.c", "start": 2840, "end": 2840}
+      ],
+      "problem": "pathApplied sets LK_Flag for S_ESR_PATH/S_OSDSYS_PATH at 2111-2114, and 2134-2137 sets the same flags again with nothing in between that returns early for those ids. In editScanPaths 'Restore defaults', saved is a full copy of the old dashCfg with only scan/nscan replaced, so dashCfg = saved already keeps enabled and view; keep_enabled/keep_view do nothing. presetPreview only forwards to dashThemeSetPreset(int), which already has the void (*)(int) type that dashModalSetPreview takes (dash_internal.h:951, :260).",
+      "fix": "Delete lines 2134-2137. Delete keep_enabled/keep_view and their two restore assignments. Delete presetPreview and pass dashThemeSetPreset to dashModalSetPreview.",
+      "justification": "",
+      "benefit": "~11 lines removed; no behaviour change (INFERRED)",
+      "benefit_rank": 1,
+      "lines_removed": 11,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read pathApplied 2109-2138: the only early returns are for S_IGR_AFTER_APP/S_MMCE_BACKUP_PATH (2115-2120) and LANG/FONT (2124). Read dash_store.c:234-270 (dashStoreDefaults only rewrites dashCfg). Grep dashModalSetPreview: dash_internal.h:951 'void dashModalSetPreview(void (*fn)(int index))'; dashThemeSetPreset is 'void dashThemeSetPreset(int i)' at dash_internal.h:260; presetPreview is used only at 2840."
+    },
+    {
+      "n": 6,
+      "title": "settingsDraw repeats the value-column drawing block for choice rows and number/path rows",
+      "category": 2,
+      "locations": [
+        {"path": "src/dash_settings.c", "start": 3999, "end": 4014},
+        {"path": "src/dash_settings.c", "start": 4038, "end": 4053},
+        {"path": "src/dash_settings.c", "start": 3829, "end": 3829}
+      ],
+      "problem": "Both blocks compute maxw/vw/vx the same way, draw the same left/right arrow icons when focused, and then choose dashTextScroll or dashTextFit. Only the string and colour differ. The choice block also evaluates the same 'S_LANGUAGE or S_T_PRESET keeps the raw name, else localize' expression three times (4001, 4011, 4013), and settingsInput repeats it at 3829.",
+      "fix": "Compute the display string once into a local in the choice branch. Move the shared width/arrow/scroll-or-fit code into one static draw function taking the text, colour and an arrows flag, and call it from both branches.",
+      "justification": "Two 14-line copies become one ~14-line function plus two short calls, a net removal of about 10 lines, and the two kinds of row keep identical layout.",
+      "benefit": "~10 lines removed net (INFERRED from cited ranges); negligible size change",
+      "benefit_rank": 1,
+      "lines_removed": 10,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read settingsDraw 3906-4073 and settingsInput 3810-3837; compared 4000-4013 with 4039-4052 line by line: the same arithmetic and icon calls, with different text and colour arguments."
+    },
+    {
+      "n": 7,
+      "title": "No-cloud #else branches in S_IGR_SYNC_MODE handling are never compiled",
+      "category": 1,
+      "locations": [
+        {"path": "src/dash_settings.c", "start": 1160, "end": 1168},
+        {"path": "src/dash_settings.c", "start": 1830, "end": 1840}
+      ],
+      "problem": "Both #else paths are only for builds without ETH and WLE_NATIVE_CLOUD. ps2.yaml:624-625 always defines both for the wLaunchELF target, the DS34 variant is generated from the same ps2.yaml, and the host test that compiles this file defines them too (tests/test_settings_navigation.py:31). No build compiles the #else code.",
+      "fix": "Delete the two #else branches and their #if/#endif lines, keeping the cloud code. A repo-wide decision to drop the WLE_NATIVE_CLOUD switch would remove the other guards in this file (17, 378, 775, 1172, 1846, 3342, 3857) as well.",
+      "justification": "",
+      "benefit": "~11 source lines removed; no ELF change, because the code is not compiled now (INFERRED)",
+      "benefit_rank": 1,
+      "lines_removed": 11,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Grep WLE_NATIVE_CLOUD|ETH in *.yaml/*.yml/*.py/*.sh: ps2.yaml:624-625 (defines), test_native_cloud.py:95 asserts the define is present, test_settings_navigation.py:31 defines both; brief section 2 says configure_ds34.py only swaps pad.c and adds DS34. No build file omits or undefines either macro."
+    }
+  ]
+}

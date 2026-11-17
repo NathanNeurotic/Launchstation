@@ -1,0 +1,12 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/ps2hdd_osd/iop/ps2hdd_osd/hdd_fio.o		7852	200	4	0	8	0	3385	11449
+first-party	build/obj/ps2hdd_osd/iop/ps2hdd_osd/apa.o		4380	33	0	0	0	0	961	5374
+first-party	build/obj/ps2hdd_osd/iop/ps2hdd_osd/hdd.o		2284	0	136	0	32	0	1389	3841
+first-party	build/obj/ps2hdd_osd/iop/ps2hdd_osd/password.o		1656	792	0	0	0	0	232	2680
+first-party	build/obj/ps2hdd_osd/iop/ps2hdd_osd/cache.o		1704	0	0	0	8	0	688	2400
+linker-internal	<internal>		0	1968	0	0	0	0	0	1968
+first-party	build/obj/ps2hdd_osd/iop/ps2hdd_osd/journal.o		684	0	0	0	512	0	329	1525
+first-party	build/obj/ps2hdd_osd/iop/ps2hdd_osd/misc.o		768	0	8	0	0	0	240	1016
+first-party	build/obj/ps2hdd_osd/imports.o		568	0	0	0	0	0	0	568
+first-party	build/obj/ps2hdd_osd/iop/ps2hdd_osd/free.o		460	0	0	0	0	0	104	564
+first-party	build/obj/ps2hdd_osd/iop/ps2hdd_osd/hdd_blkio.o		0	0	0	0	0	0	0	0

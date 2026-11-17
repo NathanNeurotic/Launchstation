@@ -1,0 +1,262 @@
+type	name	last_commit	ahead_of_default	behind_default	state	last_subject
+branch	codex/mmce-local-restore	2026-10-06	2	862		mmce: add targeted pre-restore safety backup
+branch	feat/full-dashboard-translation	2026-10-23	1	355		fix(filer): probe mcman stat via dopen/open to fix destination check and overwri
+branch	fix/usb-mass-legacy-mc-copy-197	2026-10-23	25	372		fix(build): include browser path formatter declaration in device panels
+branch	claude/project-thread-neqblv	2026-11-01	2	225		Neutrino SMB: keep the generic message when the config is read-only
+branch	claude/project-thread-2dh7zb	2026-11-02	15	209		Watch: use only its own pull request, never a fork's
+branch	claude/project-thread-dfk628	2026-11-02	4	223		Merge remote-tracking branch 'origin/master' into claude/project-thread-dfk628
+branch	claude/project-thread-dfk628-hint-order	2026-11-02	6	220		Merge remote-tracking branch 'origin/master' into claude/project-thread-dfk628-h
+branch	claude/project-thread-dfk628-icons	2026-11-02	4	214		Merge remote-tracking branch 'origin/master' into claude/project-thread-dfk628-i
+branch	claude/project-thread-dfk628-ps1-cards	2026-11-02	10	211		Merge remote-tracking branch 'origin/master' into claude/project-thread-dfk628-p
+branch	claude/project-thread-dfk628-psu-to-mc	2026-11-02	6	219		Merge remote-tracking branch 'origin/master' into claude/project-thread-dfk628-p
+branch	claude/project-thread-dfk628-save-formats	2026-11-02	6	218		Merge remote-tracking branch 'origin/master' into claude/project-thread-dfk628-s
+branch	claude/project-thread-dfk628-vmc-sizes	2026-11-02	6	221		Merge remote-tracking branch 'origin/master' into claude/project-thread-dfk628-v
+branch	claude/project-thread-ulbx9o	2026-11-02	8	210		FTP: refuse other commands while a transfer waits for its data socket
+branch	claude/project-thread-wfnu1e	2026-11-02	9	212		Merge remote-tracking branch 'origin/master' into claude/project-thread-wfnu1e
+branch	claude/project-thread-wkcqdj	2026-11-02	4	224		Merge remote-tracking branch 'origin/master' into claude/project-thread-wkcqdj
+branch	docs/add-0bsd-license	2026-11-02	0	215	merged	Add scoped 0BSD license for original Launchstation code
+branch	docs/readme-wiki-refresh	2026-11-02	5	217		docs: say which dashboard work can still block
+branch	claude/project-thread-hc5a21	2026-11-03	42	208		Test the mc1-only fallback with a file the mc0 case did not register
+branch	codex/docs-ui-showcase	2026-11-03	0	203	merged	docs: clarify theme image descriptions and repair gallery link
+branch	claude/move-manifest-followup	2026-11-04	0	147	merged	Treat a host elflist.txt that was not fully read as an unread root
+branch	codex/selective-ftp-wins	2026-11-04	0	158	merged	ftp: report residency only with a live control RPC, recover a stopped module, st
+branch	docs/launchstation-readme-badges-download-count	2026-11-04	0	163	merged	docs: clarify tracked download ledger baseline
+branch	fix/blaze-mcm-folder	2026-11-04	0	121	merged	A .mcm copy inside an MCM folder still drops its extension
+branch	fix/release-archive-preflight	2026-11-04	0	170	merged	docs: snapshot download counts before manual asset restoration
+branch	fix/rolling-download-metrics	2026-11-04	0	191	merged	metrics: honor rate-limit reset, object media type, pin checkout
+branch	chore/attribution-policy	2026-11-05	0	93	merged	Handle force-push rewinds in attribution ranges
+branch	chore/no-ai-attribution	2026-11-05	1	106		docs: clarify attribution safeguards
+branch	feat/appinfo-pbt	2026-11-05	0	94	merged	Clarify root APPINFO install path
+branch	feat/release-followups	2026-11-05	0	114	merged	Polish Home shortcuts and release packages
+branch	fix/277-boot-speed	2026-11-05	0	100	merged	Keep attribution policy out of boot fixes
+branch	maintenance/docs-translations	2026-11-05	0	96	merged	docs: update build, release and language guidance
+branch	codex/fix-smb-browser	2026-11-06	0	83	merged	Clarify SMB share discovery and examples
+branch	codex/smb-device-not-found-diagnostics	2026-11-06	9	80		fix(smb): report SMB status on openDir prep failure and simplify test
+branch	fix/mc-getstat-positive-missing-20261106	2026-11-06	4	82		test(stat): assert stat fields only on zero reply and document mcStatResult
+branch	fix/smb-config-sync-reconnect-20261106	2026-11-06	9	82		fix(smb): use heap buffers for SMB2.CNF save and reconnect on root prep
+branch	fix/tester-feedback-and-storage-guards-20261106	2026-11-06	4	82		test(navigation): include sectionTabEnabled and verify disabled tab routing
+branch	audit/smb-file-browser-device-not-found-20261107-044232	2026-11-07	10	78		docs(smb): record overflow, fallback and MX4SIO safety audit findings
+branch	fix/smb-session-state-ci-audit-20261107	2026-11-07	78	78		fix(smb): scan complete config lines before replacing credentials
+branch	test/pr304-305-306-combined-20261107	2026-11-07	94	78		test(smb): identify failing Ethernet startup stage without altering initializati
+branch	claude/project-thread-seevp2	2026-11-09	1	77		Update check: raise the HTTPS body cap to 256 KiB
+branch	claude/project-thread-tiyjbs	2026-11-09	13	78		ci: a version the mirror pin.env cannot give fails, instead of becoming "latest"
+branch	claude/ls-batch-export	2026-11-10	3	60		Merge remote-tracking branch 'origin/master' into claude/ls-batch-export
+branch	claude/ls-batch-import	2026-11-10	7	58		Batch import: open the card read/write before asking, so an unwritable card is r
+branch	claude/ls-cbs-export	2026-11-10	4	62		Merge remote-tracking branch 'origin/master' into claude/ls-cbs-export
+branch	claude/ls-hex-editor	2026-11-10	7	54		Hex/Text Editor: respect the host write setting; say a failed save may leave the
+branch	claude/ls-mc-mixed-write	2026-11-10	3	53		mc0/mc1 import: name the folder to delete when a partial save could not be remov
+branch	claude/ls-ps1-convert	2026-11-10	7	56		Merge remote-tracking branch 'origin/master' into claude/ls-ps1-convert
+branch	claude/ls-srm-card	2026-11-10	7	63		Merge remote-tracking branch 'origin/master' into claude/ls-srm-card
+branch	claude/ls-zip-export	2026-11-10	10	55		Merge master into zip export
+branch	claude/project-thread-1i1w9a	2026-11-10	1	71		Network start: load NETMAN and its SMAP before PS2IP
+branch	claude/project-thread-2iyolg	2026-11-10	3	51		Kit test: a swapped i.LINK module with a matching manifest digest still fails th
+branch	claude/project-thread-5jiocj	2026-11-10	23	58		Embed the vendored mcman under its own name
+branch	claude/project-thread-d7xnh2	2026-11-10	2	51		PS2 Browser: keep the HDD update path, pass only SkipMc
+branch	claude/project-thread-i4dqgm	2026-11-10	2	68		PS1 card from saves: say when a path is too long; refuse a bad count
+branch	claude/project-thread-jzsc1n	2026-11-10	16	73		smb2man: a zero-length write leaves an append handle's position alone
+branch	claude/project-thread-kbpnhd	2026-11-10	6	68		Docs: legacy drivers missing stops Ethernet only, UDPFS keeps working
+branch	claude/project-thread-lbs02s	2026-11-10	10	74		Merge the squashed #312 branch history (no content change)
+branch	claude/project-thread-m1pikc	2026-11-10	5	72		Clipboard: reserve only the marked count on classic-browser copy
+branch	claude/project-thread-mrrowm	2026-11-10	4	52		Merge master into the card icon branch (changelog only)
+branch	claude/project-thread-vnj5ia	2026-11-10	4	69		Merge remote-tracking branch 'origin/master' into claude/project-thread-vnj5ia
+branch	claude/project-thread-x6gztk	2026-11-10	2	70		CHANGELOG: tab toggles and console_info theme key
+branch	docs/clarify-18-built-in-theme-presets-20261108	2026-11-10	4	51		Merge branch 'master' into docs/clarify-18-built-in-theme-presets-20261108
+branch	fix/clock-sync-network-prereq	2026-11-10	12	49		Clock sync: say which network settings it uses and when changes apply
+branch	claude/project-thread-13tpwm	2026-11-11	1	32		Keep Timer() counting past 71.6 minutes of uptime
+branch	claude/project-thread-1dk9iw	2026-11-11	2	30		Test: check the DoubleBuffering assignment itself comes before the GS init
+branch	claude/project-thread-2xsb6t	2026-11-11	1	40		mmceman: dread ends a listing with 0 and returns 1 per entry (upstream mmceman P
+branch	claude/project-thread-3oosfo	2026-11-11	2	33		Merge remote-tracking branch 'origin/master' into claude/project-thread-3oosfo
+branch	claude/project-thread-3oosfo-sdk-pin	2026-11-11	1	34		ci: pin the ps2build SDK to sdk-v2026.11.10
+branch	claude/project-thread-4nwhrj	2026-11-11	5	44		Dashboard: only restart Settings on the same-tab fallback; never re-enter an act
+branch	claude/project-thread-76vjrc	2026-11-11	3	41		Merge merged branch tip (tree unchanged)
+branch	claude/project-thread-8ri8ql	2026-11-11	3	43		Merge master into kit re-pin
+branch	claude/project-thread-a4tpao	2026-11-11	3	35		Merge remote-tracking branch 'origin/master' into claude/project-thread-a4tpao
+branch	claude/project-thread-aq3wty	2026-11-11	3	45		Release notes: omitted commit entries link to the revision comparison
+branch	claude/project-thread-dym8n9	2026-11-11	17	37		SMB server test: fail when either held client fails
+branch	claude/project-thread-gvv8h4	2026-11-11	2	39		Convert: run a marked-save batch only with at least one name
+branch	claude/project-thread-j6t9zo	2026-11-11	4	28		Merge remote-tracking branch 'origin/master' into claude/project-thread-j6t9zo
+branch	claude/project-thread-odcy6z	2026-11-11	2	31		docs: CNF_Path is a save target only; back up whichever settings files exist
+branch	claude/project-thread-tki6pl	2026-11-11	5	29		Merge remote-tracking branch 'origin/master' into claude/project-thread-tki6pl
+branch	feat/settings-clock-and-icons-from-r3z	2026-11-11	1	38		Settings: one Set PS2 Clock row, R3Z System order and icons; Neutrino Run game f
+branch	fix/ps2browser-card-menu	2026-11-11	3	36		Merge remote-tracking branch 'origin/master' into fix/ps2browser-card-menu
+branch	fix/smb-browser-small-fixes	2026-11-11	4	46		Test: CR-only splice expects the explicit :445 the editor now writes
+branch	fix/smb-explicit-port	2026-11-11	1	48		SMB: always give the driver an explicit port
+branch	test/ps2browser-plain-bootbrowser	2026-11-11	1	39		TEST ONLY: PS2 Browser sends plain BootBrowser (issue 336 emulator check)
+branch	claude/project-thread-21i9zo	2026-11-12	5	20		Updater: check the .BAK is gone, test the RAM sink at its cap
+branch	claude/project-thread-2g71hq	2026-11-12	2	27		Changelog: give the save fallback for an imported LAUNCHELF.CNF
+branch	claude/project-thread-9ig2av	2026-11-12	1	24		PS2 system browser: reach the Browser on FMCB cards too
+branch	claude/project-thread-dg5q9r	2026-11-12	1	23		ci: add Neutrino Watch so the full kit follows upstream's latest development bui
+branch	claude/project-thread-dm2u26	2026-11-12	1	21		About: credit Ronnie Sahlberg for the SMB and NFS shares
+branch	claude/project-thread-fphugk	2026-11-12	1	16		SMB2.CNF: read a Windows-style \\ip\share URL as smb://ip/share
+branch	claude/project-thread-lgqk68	2026-11-12	2	20		Play a cursor click for every move at full scroll speed
+branch	claude/project-thread-t2czpj	2026-11-12	12	25		USB storage: a cut-off status fails the command with reset recovery
+branch	smbd-more-info-classes	2026-11-12	3	17		Merge remote-tracking branch 'origin/master' into smbd-more-info-classes
+branch	usb-wait-steady-text	2026-11-12	1	18		USB wait pop-up: one steady "Waiting for USB storage... (attempt n/4)" line
+branch	claude/project-thread-428he2	2026-11-13	2	15		Changelog: a Windows-style address keeps its port
+branch	claude/project-thread-a6r2dq	2026-11-13	5	7		Updater: check free space after the sidecars are written, before the ELF is open
+branch	claude/project-thread-emdis8	2026-11-13	3	11		Docs site: lift small cyan labels to AA contrast
+branch	claude/project-thread-fkmj70	2026-11-13	3	13		Paste: a transfer-buffer failure after a kept or skipped item reports as a failu
+branch	claude/project-thread-jqkhaw	2026-11-13	2	11		Updater progress: report a body that arrives with the headers; keep the draw thr
+branch	claude/project-thread-s2mm9a	2026-11-13	1	14		Start disc: say No disc on an empty tray instead of reading it
+branch	claude/project-thread-v40wx3	2026-11-13	10	12		Merge branch 'claude/project-thread-v40wx3' of https://github.com/NathanNeurotic
+branch	feat/saildot4k-clear-wins	2026-11-14	6	4		Revert costly procedural border quads on PS2
+branch	style/complete-neutral-palette-20261114	2026-11-14	2	5		docs: credit gamerman 5000 in site footer
+branch	style/neutral-documentation-palette-20261114	2026-11-14	1	6		style(docs): apply subdued monochrome dark palette
+branch	feat/saildot4k-selected-wins-20261115	2026-11-15	10	3		fix(browser): propagate explicit MMCE directory errors
+branch	gemini-audit-findings	2026-11-15	1	3		docs: add Gemini audit findings (draft handoff)
+branch	sable/audit-finals-2026-11	2026-11-15	5	3		Add five-repo audit finals (original + blind redo + comparison) — reports only (
+branch	ci/ps2build-sdk-watch	2026-11-16	1	3		CI: ps2build SDK ps2build v2026.11.11, sdk-core v2026.11.11, llvm-toolchain v202
+branch	claude-audit-findings	2026-11-16	1	0		docs: start Claude-audit report for Launchstation [skip ci]
+branch	claude/project-thread-gwusr0	2026-11-16	4	3		Small safety fixes picked from the review of #390
+branch	claude/project-thread-hp3v79	2026-11-16	4	2		fix(pc-receive): leave an existing stage file alone when the receive block canno
+branch	claude/project-thread-q7y4hc	2026-11-16	5	2		Docs: say a looping custom effect file is refused
+branch	download-metrics	2026-11-16	189	202		metrics: preserve observed release asset downloads
+branch	gh-pages	2026-11-16	1	1181		docs: publish b815787ddcfbe2a04c715524d86130e0848d2c24
+branch	master	2026-11-16	0	0	default	Clean-up: remove the unreachable classic main menu, free about 786 KB of permane
+tag	language-files	2026-09-25	0	1177	reachable from default	CI: add release upload fallback and continue-on-error for artifact quota delay
+tag	preview-chatgpt-fix-bgm-adpcm-music-volume	2026-09-26	0	1134	reachable from default	dash: define dashBgmStop (fixes link error in previous commit)
+tag	preview-osdsys-dash-commits-09262026	2026-09-26	0	1141	reachable from default	ci: publish rolling branch preview prereleases from Actions
+tag	preview-dash-native-ui-09272026	2026-09-27	0	1114	reachable from default	dash: background worker, native settings dialogs, save-on-leave
+tag	preview-codex-ps2-tile-styles	2026-09-28	0	1094	reachable from default	dash: default to memory card tiles with selectable PS2 styles
+tag	preview-dash-browser-parity-09292026	2026-09-28	0	1091	reachable from default	dash: File Browser parity with the classic browser
+tag	preview-dash-info-screens-09282026	2026-09-28	0	1110	reachable from default	dash: native About, Build information, System information and font viewer
+tag	preview-dash-native-config-09282026	2026-09-28	0	1101	reachable from default	dash: classic configuration opens SETTINGS; docs for the native screens
+tag	preview-fix-dash-drivers-on-ui-thread-09282026	2026-09-28	0	1110	reachable from default	dash: load device drivers on the UI thread, never on the worker
+tag	preview-dash-settings-save-prompt-09292026	2026-09-29	2	1088		dash: Settings asks to save only when something actually changed
+tag	preview-osd-orbs-09292026	2026-09-29	0	1081	reachable from default	dash: the real OSD orbs
+tag	preview-codex-settings-organization	2026-10-01	0	1077	reachable from default	Reorganize Settings and scope save prompts to the current visit
+tag	preview-codex-report-device-input-fixes	2026-10-03	0	1074	reachable from default	Externalize optional music and fix reported dashboard state defects
+tag	preview-codex-usb-pad-input-serialization	2026-10-03	0	1068	reachable from default	credits: thank TnA for insight and support
+tag	preview-codex-usb-root-browse	2026-10-03	0	1073	reachable from default	Merge pull request #18 from NathanNeurotic/codex/report-device-input-fixes
+tag	preview-codex-dashboard-gold-consolidated	2026-10-04	0	1067	reachable from default	dashboard: consolidate home polish and USB input fixes
+tag	preview-codex-ftp-core-modernization	2026-10-04	0	1066	reachable from default	Consolidate dashboard polish and USB input fixes (#22)
+tag	preview-codex-home-favorites-scroll	2026-10-04	2	1068		Update Settings host harness for focus reset
+tag	preview-codex-usb-before-pad	2026-10-04	0	1066	reachable from default	Consolidate dashboard polish and USB input fixes (#22)
+tag	preview-codex-usb-classic-sync	2026-10-04	0	1066	reachable from default	Consolidate dashboard polish and USB input fixes (#22)
+tag	preview-codex-usb-sync-classic-parity	2026-10-04	0	1066	reachable from default	Consolidate dashboard polish and USB input fixes (#22)
+tag	preview-ci-stop-per-commit-prereleases	2026-10-05	0	987	reachable from default	Merge rotating local MMCE backup history (#39)
+tag	preview-codex-ilink-storage	2026-10-05	0	1009	reachable from default	Refresh wired PAD after lazy USB activation (#25)
+tag	preview-codex-legacy-ethernet-drivers	2026-10-05	0	1038	reachable from default	Receive staged resumable game transfers from PC (#29)
+tag	preview-codex-misc-ps2net-parity	2026-10-05	0	1013	reachable from default	Add selectable legacy Ethernet driver compatibility (#31)
+tag	preview-codex-mmce-active-card-view	2026-10-05	4	1001		dashboard: add verified native card backup action
+tag	preview-codex-mmce-active-card-view-mainline	2026-10-05	0	997	reachable from default	Reapply verified native .mcd backup: src/dash_browser.c
+tag	preview-codex-mmce-local-backup-history	2026-10-05	0	990	reachable from default	Merge exact active MMCE card backup (#38)
+tag	preview-codex-mmce-skip-unchanged-history	2026-10-05	0	989	reachable from default	dashboard: keep rotating active MMCE backup history
+tag	preview-codex-mmce-skip-unchanged-history-clean	2026-10-05	0	987	reachable from default	backup history: skip unchanged active MMCE cards
+tag	preview-codex-on-demand-ftp	2026-10-05	0	1060	reachable from default	FTP: modernize device access and large-file resume (#26)
+tag	preview-codex-pc-game-receiver	2026-10-05	0	1045	reachable from default	Remote PC commands through FTP (#28)
+tag	preview-codex-pc-remote-commands	2026-10-05	0	1055	reachable from default	Include FTP/network in the standard build, load it on demand (#27)
+tag	preview-codex-remote-pc-commands	2026-10-05	0	1055	reachable from default	Include FTP/network in the standard build, load it on demand (#27)
+tag	preview-codex-remote-transfer-localization	2026-10-05	0	1038	reachable from default	Receive staged resumable game transfers from PC (#29)
+tag	preview-codex-sd2cloud-card-export	2026-10-05	0	1009	reachable from default	Refresh wired PAD after lazy USB activation (#25)
+tag	preview-codex-sd2cloud-verified-mcd-backup	2026-10-05	1	1001		memory card: verified MCD/PCSX2 conversion
+tag	preview-codex-sd2cloud-verified-mcd-backup-mainline	2026-10-05	0	1000	reachable from default	Add verified PS2 memory-card image conversion (#34)
+tag	boot-recovery-2026-10-08-2790d91	2026-10-08	0	734	reachable from default	Merge PR #80: stabilize USB/controller and audio handoffs [publish latest]
+tag	ds34-2026-10-08-2761e62	2026-10-08	0	713	reachable from default	build: restore optional DS34 controller variant in ps2build
+tag	image-colors-2026-10-08-09546fe	2026-10-08	1	719		fix: preserve PNG and JPEG viewer colors
+tag	udpfs-usb-buffer-2026-10-08-63e0f16	2026-10-08	1	720		fix: retain SDK fileXio transfer buffer for mixed network and USB storage
+tag	usb-boot-repair-2026-10-08-2dee735	2026-10-08	0	726	reachable from default	fix: preserve boot pad negotiation and trace startup boundaries
+tag	usb-mini-comparison-2026-10-08-419e3c1	2026-10-08	0	721	reachable from default	diagnostic: compare reduced USBD runtime pools for USB probe and pad loss
+tag	usb-pad-diagnostic-2026-10-08-110be3f	2026-10-08	0	722	reachable from default	diagnostic: expose pad DMA states after USB directory completion
+tag	usb-second-drive-2026-10-08-58d4514	2026-10-08	0	720	reachable from default	fix: wait for second USB mount before completing dashboard discovery
+tag	usb-shared-bdm-2026-10-08-5189e10	2026-10-08	0	723	reachable from default	fix: avoid USB activation for numbered BDM keyboard sidecars
+tag	usb-stability-2026-10-08-a50cb4e	2026-10-08	0	732	reachable from default	fix: preserve startup devices and keep loading and input paths responsive
+tag	usbd-ra-vendor-2026-10-08-256325d	2026-10-08	2	720		fix: vendor RiptOPL usbd-ra to eliminate post-2024 USBD hardware controller loss
+tag	app-packages-2026-10-08-51e1e0c	2026-10-09	1	711		Merge 90b9a357bad2789255207626c00491ce41bd88c5 into bb5dcab7e57c6aa7a24bca7373e5
+tag	beta-1	2026-10-25	0	337	reachable from default	Merge pull request #206: restore R3Z file handling and dashboard feedback
+tag	build-1013	2026-11-04	0	168	reachable from default	Merge pull request #274 from NathanNeurotic/fix/release-archive-preflight
+tag	build-1019	2026-11-04	0	162	reachable from default	Merge pull request #272 from NathanNeurotic/docs/launchstation-readme-badges-dow
+tag	build-1030	2026-11-04	0	151	reachable from default	Merge pull request #275: selectively adapt FTP HDD paths, mount ownership and li
+tag	build-1035	2026-11-04	0	146	reachable from default	Merge pull request #270 from NathanNeurotic/claude/move-manifest-followup
+tag	build-1040	2026-11-04	0	141	reachable from default	Merge pull request #276 from NathanNeurotic/codex/ftp-force-reset
+tag	build-1046	2026-11-04	0	135	reachable from default	Merge pull request #279 from NathanNeurotic/codex/hide-tabs
+tag	build-1052	2026-11-04	0	129	reachable from default	Merge pull request #280 from NathanNeurotic/codex/boot-defer
+tag	build-1058	2026-11-04	0	123	reachable from default	Merge pull request #281 from NathanNeurotic/codex/settings-discoverability
+tag	build-1061	2026-11-04	0	120	reachable from default	Merge pull request #283 from NathanNeurotic/fix/blaze-mcm-folder
+tag	build-1066	2026-11-05	0	115	reachable from default	Merge pull request #284 from NathanNeurotic/feat/smb-config-gui
+tag	build-1068	2026-11-05	0	113	reachable from default	Merge pull request #289 from NathanNeurotic/feat/release-followups
+tag	build-1084	2026-11-05	0	97	reachable from default	Merge pull request #285 from NathanNeurotic/fix/277-boot-speed
+tag	build-1088	2026-11-05	0	93	reachable from default	Merge pull request #291 from NathanNeurotic/feat/appinfo-pbt
+tag	build-1090	2026-11-05	0	91	reachable from default	docs: correct build verification and language indexes (#292)
+tag	build-1095	2026-11-05	0	86	reachable from default	Merge pull request #290 from NathanNeurotic/chore/attribution-policy
+tag	build-1099	2026-11-06	0	82	reachable from default	Merge pull request #294 from NathanNeurotic/codex/fix-smb-browser
+tag	build-1100	2026-11-06	0	81	reachable from default	fix(mc): allow renames when PS2SDK reports positive missing-path getstat (#299)
+tag	build-1101	2026-11-06	0	80	reachable from default	fix(smb): reload live shares and save SMB2.CNF to CWD and SYS-CONF (#297)
+tag	build-1103	2026-11-06	0	78	reachable from default	Show SMB connection failures in Files (#300)
+tag	build-1104	2026-11-09	0	77	reachable from default	ci: install ps2build from github.com/ps2build, then pin the November SDK (#310)
+tag	build-1105	2026-11-09	0	76	reachable from default	Update check: raise the HTTPS body cap to 256 KiB (#311)
+tag	build-1107	2026-11-09	0	74	reachable from default	R3Z wins: launch args on text files, checked free space, wider fileXio buffer du
+tag	build-1108	2026-11-09	0	73	reachable from default	Save formats: signed PS3 .psv, .psx and raw exports; GME, VGS, VMP and MCX PS1 c
+tag	build-1106	2026-11-10	0	75	reachable from default	Network start-up: count PS2IP and SMAP as loaded only on 0, name the failed stag
+tag	build-1109	2026-11-10	0	72	reachable from default	smb: build the SMB2/SMB3 driver from source on usmb2, up to 8 shares (#314)
+tag	build-1110	2026-11-10	0	71	reachable from default	Trim RAM and card size: on-use buffers, IGR padding, mono sounds, unused boot so
+tag	build-1111	2026-11-10	0	70	reachable from default	Network start: load NETMAN and its SMAP before PS2IP (#317)
+tag	build-1112	2026-11-10	0	69	reachable from default	Settings: Home/Files/Tools tab toggles; theme opt-out for the HOME console line 
+tag	build-1113	2026-11-10	0	68	reachable from default	HDD Manager: one screen, the dashboard one (#318)
+tag	build-1114	2026-11-10	0	67	reachable from default	Settings: set the clocks with boxed date/time fields instead of the keyboard (#3
+tag	build-1115	2026-11-10	0	66	reachable from default	Neutrino launch options: change values in place (#323)
+tag	build-1116	2026-11-10	0	65	reachable from default	Browser: show a PS1 card's free space in blocks (#325)
+tag	build-1117	2026-11-10	0	64	reachable from default	PS1 card from several marked saves in one step (#321)
+tag	build-1118	2026-11-10	0	63	reachable from default	Dashboard: opening a failed UDPFS row retries it (#331)
+tag	build-1119	2026-11-10	0	62	reachable from default	Open RetroArch .srm PS1 cards in Card contents (#324)
+tag	build-1121	2026-11-10	0	60	reachable from default	Export PS2 saves as CodeBreaker .cbs (#326)
+tag	build-1123	2026-11-10	0	58	reachable from default	FTP screen: count machines and show the last three commands (#334)
+tag	build-1124	2026-11-10	0	57	reachable from default	Import marked saves of mixed formats into one PS2 card image (#328)
+tag	build-1125	2026-11-10	0	56	reachable from default	Memory cards: re-read a PS1 card that stays powered across an IOP reset (#335)
+tag	build-1126	2026-11-10	0	55	reachable from default	Convert a PS1 save to .mcs, .psv, .psx or raw without a card image (#329)
+tag	build-1127	2026-11-10	0	54	reachable from default	Export PS2 saves as .zip (#330)
+tag	build-1128	2026-11-10	0	53	reachable from default	Hex Editor in the File Browser (#332)
+tag	build-1129	2026-11-10	0	52	reachable from default	Import marked saves of mixed formats straight onto mc0:/ or mc1:/ (#337)
+tag	build-1130	2026-11-10	0	51	reachable from default	Memory cards: the ELF writes its own browser icon into its folder on settings sa
+tag	build-1131	2026-11-10	0	50	reachable from default	docs(themes): clarify 18 built-in presets versus theme folders (#308)
+tag	build-1132	2026-11-10	0	49	reachable from default	PS2 Browser: pass SkipMc so OSDSYS opens the Browser (#339)
+tag	build-1133	2026-11-10	0	48	reachable from default	Kit: ship RiptOPL's fixed i.LINK pair in the bundled Neutrino (#340)
+tag	build-1134	2026-11-10	0	47	reachable from default	Clock sync: correct the help text (#304)
+tag	build-1135	2026-11-10	0	46	reachable from default	SMB: always give the driver an explicit port (#342)
+tag	build-1136	2026-11-10	0	45	reachable from default	SMB: clearer "Device not found", share editor fixes, stale load error (#341)
+tag	build-1137	2026-11-10	0	44	reachable from default	Release notes: cap the changelog list so the update check keeps working (#344)
+tag	build-1138	2026-11-10	0	43	reachable from default	Dashboard: Circle goes to the first enabled tab when HOME is off (#345)
+tag	build-1139	2026-11-10	0	42	reachable from default	Kit: ship UDPFS Assault 1.0.1 and the current i.LINK driver in POPS/ (#347)
+tag	build-1140	2026-11-11	0	41	reachable from default	Save tools: typeable 8 and . in file names, live Marked saves row, safety copy c
+tag	build-1141	2026-11-11	0	40	reachable from default	CI: retry the rolling release read-back checks before failing (#351)
+tag	build-1142	2026-11-11	0	39	reachable from default	mmceman: dread ends a listing with 0 and returns 1 per entry (upstream mmceman P
+tag	build-1143	2026-11-11	0	38	reachable from default	Convert several marked saves at once (.psv and PS1 formats too) (#353)
+tag	build-1144	2026-11-11	0	37	reachable from default	Settings: one Set PS2 Clock row, R3Z System order and icons; Neutrino Run game f
+tag	build-1145	2026-11-11	0	36	reachable from default	Add an on-demand SMB2/3 server for the memory cards (#249) (#350)
+tag	build-1146	2026-11-11	0	35	reachable from default	PS2 system browser: let the memory card menu load; add a skip-card-update entry 
+tag	build-1147	2026-11-11	0	34	reachable from default	Keep the progress popup moving during long device pauses (#354)
+tag	build-1148	2026-11-11	0	33	reachable from default	ci: pin the ps2build SDK to sdk-v2026.11.10 (#357)
+tag	build-1149	2026-11-11	0	32	reachable from default	MX4SIO: embed RiptOPL's driver instead of the SDK copy (#356)
+tag	build-1150	2026-11-11	0	31	reachable from default	Keep Timer() counting past 71.6 minutes of uptime (#358)
+tag	build-1151	2026-11-11	0	30	reachable from default	Keep settings in LAUNCHSTATION.CNF, import LAUNCHELF.CNF read-only (#359)
+tag	build-1152	2026-11-11	0	29	reachable from default	Reset the GS once at boot, not twice (#361)
+tag	build-1153	2026-11-11	0	28	reachable from default	Keep SMB shares and the SMB server login in LAUNCHSTATION.CNF, one Network (SMB)
+tag	build-1154	2026-11-11	0	27	reachable from default	Open the PS2 Browser on LoadBOOTer cards (#362)
+tag	build-1155	2026-11-11	0	26	reachable from default	Docs: log the November 11-12 merges; fix stale config file names on the site (#3
+tag	build-1156	2026-11-11	0	25	reachable from default	Fix freezes and missing drives with two USB drives (#364)
+tag	build-1157	2026-11-11	0	24	reachable from default	USB storage: handle short status, stop start-up on unplug, check semaphores (#36
+tag	build-1158	2026-11-12	0	23	reachable from default	PS2 system browser: reach the Browser on FMCB cards too (#367)
+tag	build-1159	2026-11-12	0	22	reachable from default	ci: add Neutrino Watch so the full kit follows upstream's latest development bui
+tag	build-1160	2026-11-12	0	21	reachable from default	NFS shares: an nfs: device on unfs4 (NFSv4.0) (#366)
+tag	build-1161	2026-11-12	0	20	reachable from default	About: credit Ronnie Sahlberg for the SMB and NFS shares (#369)
+tag	build-1162	2026-11-12	0	19	reachable from default	Launch a chosen OSDSYS program like any executable; a click for every cursor mov
+tag	build-1163	2026-11-12	0	18	reachable from default	Updater: step messages, RAM download, no .BAK left behind, free-space check; kee
+tag	build-1164	2026-11-12	0	17	reachable from default	USB wait pop-up: one steady "attempt n/4" line after the first try (#373)
+tag	build-1165	2026-11-12	0	16	reachable from default	SMB server: answer more file queries; draw its screen every frame (#372)
+tag	build-1166	2026-11-12	0	15	reachable from default	SMB2.CNF: accept a Windows-style \\ip\share URL (#374)
+tag	build-1167	2026-11-12	0	14	reachable from default	Docs: NFS shares, updater steps, FMCB browser and Windows-style share URLs; the 
+tag	build-1168	2026-11-13	0	13	reachable from default	Start disc says No Disc on an empty drive; PS2 system browser keeps FMCB's menu 
+tag	build-1169	2026-11-13	0	12	reachable from default	Skip one save when extracting several PSUs; microSD icon and MX4SIO Slot 2 name 
+tag	build-1170	2026-11-13	0	11	reachable from default	Settings: NFS shares get their own page under Network (#379)
+tag	build-1171	2026-11-13	0	10	reachable from default	Updater: keep the screen drawing and show a progress bar; About says Official La
+tag	build-1172	2026-11-13	0	9	reachable from default	Docs site: softer dark-gray colour scheme (#381)
+tag	build-1173	2026-11-13	0	8	reachable from default	Offer to download the update anyway when no newer release exists
+tag	build-1174	2026-11-13	0	7	reachable from default	Updater: stop making a .BAK of the old ELF
+tag	build-1175	2026-11-13	0	6	reachable from default	Check for Updates: write the verified ELF straight over the running one (#384)
+tag	build-1176	2026-11-14	0	5	reachable from default	style(docs): apply subdued monochrome dark palette (#385)
+tag	build-1177	2026-11-14	0	4	reachable from default	style(docs): complete neutral palette across hard-coded UI colors (#386)
+tag	build-1178	2026-11-14	0	3	reachable from default	feat(dash): port and adapt UI, input, MC, and launch wins from saildot4k (#387)
+tag	build-1179	2026-11-16	0	2	reachable from default	Shrink icon atlas, retry PS1 card detect, small safety fixes (#392)
+tag	build-1180	2026-11-16	0	1	reachable from default	Keep one built-in sound set and add a Custom sounds setting (#396)
+tag	build-1181	2026-11-16	0	0	reachable from default	Clean-up: remove the unreachable classic main menu, free about 786 KB of permane
+tag	latest	2026-11-16	0	0	reachable from default	Clean-up: remove the unreachable classic main menu, free about 786 KB of permane

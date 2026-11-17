@@ -1,0 +1,140 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-04.b",
+  "coverage": [
+    {"path": "src/config.c", "status": "read_full", "note": ""},
+    {"path": "src/config_advanced.c", "status": "read_full", "note": ""},
+    {"path": "src/config_network.c", "status": "read_full", "note": ""},
+    {"path": "src/config_screen.c", "status": "read_full", "note": ""},
+    {"path": "src/config_startup.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "config.c holds the classic uLE CNF parser (get_CNF_string, also used for disc SYSTEM.CNF), the LAUNCHSTATION.CNF loader run once at boot (loadConfig) and text builder/writer (configBuildSaveText, saveConfigToPath), the save-target logic shared by the classic menus and the dashboard worker saves (configBuildSaveTargets, configSnapshotSaveTargetPath, SYS-CONF port selection by probing both cards), the memory-card folder icon stamp, and the classic config() menu. config_advanced.c, config_screen.c and config_startup.c are classic pad-driven settings sub-menus reached only from config(); config_network.c has the classic IP editor plus configWriteNetworkSnapshot, which the dashboard save job uses to rewrite the first line of IPCONFIG.DAT while keeping its tail.",
+  "reusable_helpers": [
+    {"name": "get_CNF_string", "path": "src/config.c", "line": 111, "what": "in-place KEY = value line tokenizer for CNF text (comments, whitespace, CR/LF)"},
+    {"name": "preloadCNF", "path": "src/config.c", "line": 515, "what": "reads a whole text file into a malloc'd NUL-terminated buffer with a streamed fallback"},
+    {"name": "configAppendPathFile", "path": "src/config.c", "line": 292, "what": "joins dir and filename adding '/' only when the dir does not end in '/', '\\' or ':'"},
+    {"name": "configFormatLabelValue", "path": "src/config.c", "line": 38, "what": "bounded '  label: value' formatting into a fixed buffer"},
+    {"name": "configFormatLabelValueAligned", "path": "src/config.c", "line": 57, "what": "same as configFormatLabelValue with the value column padded to a label width"},
+    {"name": "CheckMC", "path": "src/config.c", "line": 162, "what": "returns the first memory-card port with a formatted card via mcGetInfo/mcSync"},
+    {"name": "configEnsureSysconfDir", "path": "src/config.c", "line": 358, "what": "creates mcN:/SYS-CONF with libmc before a write to it"},
+    {"name": "configWriteMcIconFile", "path": "src/config.c", "line": 385, "what": "writes a buffer to dir+name with create/truncate and checks write and close"},
+    {"name": "configWriteNetworkSnapshot", "path": "src/config_network.c", "line": 13, "what": "replaces the first line of a text file and keeps the rest, failing without writing if the old file cannot be read"},
+    {"name": "ipStringToOctet", "path": "src/config_network.c", "line": 86, "what": "parses a dotted IPv4 string into four ints"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "get_CNF_string loops forever on a byte >= 0x80 at a line start or inside a comment line (UTF-8 BOM, non-ASCII comment): boot hang",
+      "category": 6,
+      "locations": [
+        {"path": "src/config.c", "start": 117, "end": 128},
+        {"path": "src/config.c", "start": 950, "end": 950},
+        {"path": "src/main_boot.c", "start": 63, "end": 69},
+        {"path": "src/main_startup.c", "start": 178, "end": 181}
+      ],
+      "problem": "With signed char, a byte >= 0x80 fails both '*tp > 0' tests: the skip loop at 118 stops on it, line 123 sends it to the comment branch, and the comment loop at 125 stops on it without advancing, so 'goto start_line' repeats forever. A LAUNCHSTATION.CNF saved by a PC editor with a UTF-8 BOM (EF BB BF) or with an accented character in a '#'/';' comment hangs loadConfig, which main_boot.c:64 runs at every boot before the UI exists. readSystemCnf parses disc SYSTEM.CNF with the same function.",
+      "fix": "In the comment-skip loop at line 125 test '*tp != 0' instead of '*tp > 0' so the rest of the line is skipped; a high byte at a line start then goes through the comment branch and is skipped too. No other line needs to change.",
+      "justification": "",
+      "benefit": "Removes a boot-time infinite loop triggered by an ordinary PC-edited config file; one-token change (INFERRED: signed char is the MIPS ABI default, no -funsigned-char in ps2.yaml)",
+      "benefit_rank": 4,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "INFERRED",
+      "evidence": "Read config.c:111-159 and traced the loop for *tp == (char)0xEF: 118 exits (0xEF > 0 false), 120 not NUL, 123 true (< 'A'), 125 exits at once, goto 117. Callers via Grep get_CNF_string: config.c:950 (loadConfig) and main_startup.c:180 (readSystemCnf, called from main_actions.c:621). loadConfig callers: main_boot.c:64 and :69 only, inside performEarlyBootInitialization. ps2.yaml:631-634 cflags for the wLaunchELF target are -G0 and assembler includes only, no -funsigned-char; char signedness itself is the EE MIPS ABI default and was not measured (hence INFERRED). The app's own writer (configBuildSaveText) only emits ASCII key names at line starts and '# SMB shares' (smb_shares.h:26), so the trigger is an externally edited or copied file."
+    },
+    {
+      "n": 2,
+      "title": "loadConfig copies CNF values with strcpy/sprintf into fixed SETTING fields without a length bound",
+      "category": 6,
+      "locations": [
+        {"path": "src/config.c", "start": 962, "end": 962},
+        {"path": "src/config.c", "start": 972, "end": 1004},
+        {"path": "src/config.c", "start": 1039, "end": 1042},
+        {"path": "src/config.c", "start": 1047, "end": 1048},
+        {"path": "src/config.c", "start": 1058, "end": 1067},
+        {"path": "include/launchelf.h", "start": 281, "end": 307}
+      ],
+      "problem": "Values come straight from LAUNCHSTATION.CNF (up to the file size; the primary read path in preloadCNFFd has no cap) and are strcpy'd into MAX_PATH (1025) fields or sprintf'd into the 64-byte Misc fields. A hand-edited line longer than the field overwrites the following SETTING members at boot; a NEUTRINO_ELF value over about 1267 characters runs past the end of the malloc'd SETTING and corrupts the heap. Titles, PathPad and the SMB login in the same loop are already bounded.",
+      "fix": "Replace each strcpy(field, value) and sprintf(field, \"%s%s\", ...) here with snprintf(field, sizeof(field), ...), as the neighbouring LK_Title/PathPad/SMB branches already bound their copies. Same line count.",
+      "justification": "",
+      "benefit": "Closes a heap/struct overflow reachable from a user-editable boot config at no size cost; INFERRED arithmetic: neutrino_file starts at offset 26916 of a ~28184-byte SETTING",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read config.c:883-1112 and launchelf.h:279-340 (field sizes), launchelf.h:204 MAX_PATH = 1025. Values are produced by get_CNF_string, which only stops a value at CR/LF/NUL (config.c:148-151). preloadCNFFd primary path allocates the whole file (config.c:446-462), fallback caps at 128 KB (441, 483-503). Offset arithmetic: CNF_Path 1025 + LK_Path 17x1025 + LK_Title 17x72 + LK_Flag 68 + 16x64 Misc + 6x1025 = 26916; struct end about 28184 after the ints, colors and two 32-byte SMB fields (INFERRED, no sizeof measured). Bounded branches for comparison: 1050-1053, 1088-1089, 1098-1099."
+    },
+    {
+      "n": 3,
+      "title": "configSysconfFileExistsOnPort probes mc1: without the mc1AccessRefused guard; the HDD header editor can trigger an IOP reset that evicts MX4SIO",
+      "category": 6,
+      "locations": [
+        {"path": "src/config.c", "start": 229, "end": 243},
+        {"path": "src/config.c", "start": 258, "end": 259},
+        {"path": "src/config.c", "start": 311, "end": 314},
+        {"path": "src/hdd_header_injector.c", "start": 782, "end": 786},
+        {"path": "src/dash_hdd.c", "start": 956, "end": 966},
+        {"path": "src/filer_fileops.c", "start": 14, "end": 17},
+        {"path": "src/init.c", "start": 2238, "end": 2262}
+      ],
+      "problem": "configGetPreferredSysconfPort always opens mcN:/SYS-CONF/<file> on both ports. genOpen of an mc1: path calls ensureMemoryCardPortAccessible(1), which resets the IOP when the MX4SIO stack owns slot 2. On the worker the reset is refused, but actSystemCnf runs EditHddPartitionHeaderSystemCnf on the UI thread, and its temp-path search calls configBuildSysconfPath, so editing an HDD partition SYSTEM.CNF with MX4SIO loaded resets the IOP mid-edit. init.c:2250-2254 states implicit config discovery must never do this; getIpConfig and configStampMcFolderIcon already guard mc1.",
+      "fix": "In configSysconfFileExistsOnPort return 0 for port 1 when mc1AccessRefused(), like main_startup.c:104 and config.c:412 do.",
+      "justification": "Adds one condition to an existing early return. It is the guard the codebase already uses at main_startup.c:104 and config.c:412 for the same rule, and it stops an unrequested IOP reset (driver teardown) during an HDD header edit.",
+      "benefit": "Prevents an unrequested IOP reset and MX4SIO eviction on the UI thread; effect of that reset on the later raw-sector header write is INFERRED",
+      "benefit_rank": 3,
+      "lines_removed": -1,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read config.c:229-275, 311-314. genOpen (filer_fileops.c:531-556) calls ensurePathMemoryCardAccessible (14-17) -> ensureMemoryCardPortAccessible(1) (init.c:2238-2244) -> resetRuntimeDeviceState(TRUE) when isPathDeviceStackLoaded(\"mc1:/\") is false, which is the case while MX4SIO runs (init.c:3110-3112). Reset refused only when iopResetBlocked() is true (init.c:2168), set to dashWorkerOnThread (dash_worker.c:135). UI-thread caller: dash_hdd.c:956-966 actSystemCnf (comment: 'on the UI thread') -> hdd_header_injector.c:847 hddHeaderBuildTempPath -> 784 configBuildSysconfPath. Existing guards: main_startup.c:104, config.c:412, smb_shares.c:89,108. Whether the HDD header write still succeeds after the reset was not traced."
+    },
+    {
+      "n": 4,
+      "title": "configStampMcFolderIcon writes the same 14990-byte icon three times (list/copy/del.icn) to the user's memory card",
+      "category": 5,
+      "locations": [
+        {"path": "src/config.c", "start": 429, "end": 432},
+        {"path": "src/embed_blobs.S", "start": 63, "end": 67},
+        {"path": "res/memory-card/icon.sys", "whole": true},
+        {"path": "src/makeicon.c", "start": 408, "end": 410}
+      ],
+      "problem": "After a successful settings save, the folder stamp writes mc_list_icn under list.icn, copy.icn and del.icn because the shipped icon.sys names three different files, though embed_blobs.S:65-66 says they are byte-identical. That is two extra 14990-byte files and two extra file creates on a slow 8 MB card for every stamped folder. The repo's own makeicon.c writes one icon name into all three icon.sys slots, so one file is enough.",
+      "fix": "Put \"list.icn\" in the copy and del name slots of res/memory-card/icon.sys (offsets 324 and 388), write only list.icn in configStampMcFolderIcon, and drop copy.icn/del.icn from res/memory-card and the release packages.",
+      "justification": "",
+      "benefit": "About 29980 bytes less memory-card space and 2 fewer card file writes per stamped folder (MEASURED: list/copy/del.icn are 14990 B each in inventory); ~3 source lines removed",
+      "benefit_rank": 2,
+      "lines_removed": 3,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read config.c:371-433. inventory/Launchstation.tsv: res/memory-card/list.icn, copy.icn, del.icn 14990 bytes each, icon.sys 964. od of icon.sys shows the names list.icn at offset 260, copy.icn at 324, del.icn at 388. embed_blobs.S:63-67 embeds only icon.sys and list.icn and notes copy/del are identical. makeicon.c:408-410 strcpy's one iconname into view, copy and del. Callers of configStampMcFolderIcon: config.c:786, dash_settings.c:2298, dash_store.c:597."
+    },
+    {
+      "n": 5,
+      "title": "configSnapshotSaveTargetPath re-probes both memory cards for the SYS-CONF target it built a moment earlier",
+      "category": 5,
+      "locations": [
+        {"path": "src/config.c", "start": 1353, "end": 1353},
+        {"path": "src/config.c", "start": 1362, "end": 1363},
+        {"path": "src/config.c", "start": 336, "end": 338}
+      ],
+      "problem": "configBuildSaveTargetsFrom (1353) already resolves the override and cwd paths (configResolveMcAliasPath) and builds the SYS-CONF path with configGetPreferredSysconfPort. configRefreshSaveTargetForWrite at 1363 then repeats the same call with the same arguments for a SYSCONF target (two more card opens, maybe CheckMC) and is a no-op for the other targets, whose paths no longer start with 'mc:'. It runs on every dashboard settings save (cfgSaveRun, worker thread).",
+      "fix": "Delete the configRefreshSaveTargetForWrite call at line 1363; the path copied at 1362 is already resolved.",
+      "justification": "",
+      "benefit": "Two memory-card opens (plus a possible mcGetInfo pair) fewer per dashboard CNF save on the worker (INFERRED); 1 line removed",
+      "benefit_rank": 1,
+      "lines_removed": 1,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "High",
+      "basis": "READ",
+      "evidence": "Read config.c:277-356 and 1347-1365. Line 338 calls configBuildSysconfPathForLoaded(save_sysconf_path, ..., filename, loaded_path); line 353 (reached from 1363 for CONFIG_SAVE_TARGET_SYSCONF) calls it again with the same filename and loaded_path. configResolveMcAliasPath returns at once unless the path starts with 'mc:' (282), and 331/337 already rewrote such paths to mc0/mc1. Callers of configSnapshotSaveTargetPath: dash_settings.c:2290 (cfgSaveRun, worker job) and config.c:1344 (configDefaultSaveTargetPath, which has no caller per Grep)."
+    }
+  ]
+}

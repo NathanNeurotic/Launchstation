@@ -1,0 +1,110 @@
+{
+  "repo": "Launchstation",
+  "chunk": "launch-core-18.b",
+  "coverage": [
+    {"path": "src/filer_actions.c", "status": "read_full", "note": ""}
+  ],
+  "module_summary": "filer_actions.c holds the file-browser actions shared by the classic filer and the dashboard browser: exploit/system-update folder protection prompts, recursive Get Size (getFileSize) and recursive delete, title.cfg creation, the per-device mkdir (newdir) and the rename path with case-only and HOST ioctl handling (Rename). About half the file is the folder-date tools for memory-card roots and hdd0:/__common: the *Tuna Date command, a manual date editor (classic screen plus a FilerDateEditor model the dashboard drives through filerTimestampUi), A-Z/Z-A and SAS automatic ordering, and the SAS capture/restore used by self_update.c. All entry points run on the UI thread with the dashboard worker idle (dash_browser.c prepareOp).",
+  "reusable_helpers": [
+    {"name": "filerBuildFullPath", "path": "src/filer_actions.c", "line": 151, "what": "joins a folder path and a FILEINFO name into a bounded buffer"},
+    {"name": "filerGetFirstPathComponent", "path": "src/filer_actions.c", "line": 165, "what": "extracts the first folder name after the device colon"},
+    {"name": "filerPathConflictType", "path": "src/filer_actions.c", "line": 39, "what": "reports whether a path exists as a file or a folder (stat, then dopen/open probes)"},
+    {"name": "getFileSize", "path": "src/filer_actions.c", "line": 298, "what": "recursive size of a file or folder tree across devices, with HDD/DVRP partition mounting"},
+    {"name": "delete", "path": "src/filer_actions.c", "line": 1944, "what": "recursive delete of a file or folder on any device (mc, xfrom, hdd, vmc, host, generic)"},
+    {"name": "newdir", "path": "src/filer_actions.c", "line": 2190, "what": "per-device mkdir returning -EEXIST for an existing folder"},
+    {"name": "Rename", "path": "src/filer_actions.c", "line": 2153, "what": "validated no-replace rename with case-only and HOST ioctl handling"},
+    {"name": "getCustomDateDaysInMonth", "path": "src/filer_actions.c", "line": 462, "what": "days in a month with leap-year rule (main_title.c:81 daysInMonth is a second copy)"},
+    {"name": "stepCustomFolderTimestamp", "path": "src/filer_actions.c", "line": 598, "what": "steps a sceMcStDateTime by one second forward or back with carry"}
+  ],
+  "findings": [
+    {
+      "n": 1,
+      "title": "delete() and getFileSize() allocate a full 2048-entry listing (~0.9 MB) per recursion level, so deep trees fail with -ENOMEM partway",
+      "category": 6,
+      "locations": [
+        {"path": "src/filer_actions.c", "start": 1981, "end": 2004},
+        {"path": "src/filer_actions.c", "start": 309, "end": 333}
+      ],
+      "problem": "Each folder level of delete() memaligns (MAX_ENTRY+1) FILEINFO and getFileSize() MAX_ENTRY FILEINFO, kept for the whole subtree (the comments at 310 and 1981 say about 900 KB). The heap is at most ~25 MB, so a folder chain about 20-28 levels deep runs out: delete returns -ENOMEM after removing everything it reached first, and every retry stops at the same depth, so such a tree can never be deleted from the console. Reached from the dashboard Delete (dash_browser.c:1100) and Get Size (dash_browser.c:1183).",
+      "fix": "Let delete() list a small batch per level (for example 64 entries, ~28 KB) by passing a capacity to getDirComplete/listDir. delete() already re-lists a folder until it is empty (the do/while on more at 1988-2004, with the files[MAX_ENTRY] progress sentinel moved to files[capacity]), so only the allocation size and the sentinel index change. getFileSize() cannot re-list, so it can keep the full listing; it already reports 'At least ... error -12'.",
+      "justification": "Adds only a capacity argument to the existing listing call. It removes a real depth limit on delete and cuts the per-level heap from ~0.9 MB to ~28 KB, reusing the re-list loop delete() already has.",
+      "benefit": "Deletes trees of any depth; peak heap per level ~0.9 MB -> ~28 KB (INFERRED: 2048 x FILEINFO, 'about 900 KB' per comment at 310/1981; heap <= 25.46 MB per BUILD-EVIDENCE.md section 7, itself INFERRED).",
+      "benefit_rank": 2,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Med",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read filer_actions.c:298-369 and 1944-2047. getDirComplete (filer.c:2246-2266) lists up to MAX_ENTRY-1 entries and sets *more; MAX_ENTRY=2048, MAX_NAME=256 (launchelf.h:201-205); FILEINFO = name[256] + title[66] + sceMcTblGetDir (launchelf.h:560-565). Callers: dash_browser.c:1100 (opDelete, stops on first ret<0 and shows 'Not everything could be deleted'), dash_browser.c:1183 (Get Size), filer_browser.c:1372/1389/2042, filer_copy.c:1080. Heap: evidence/Launchstation/BUILD-EVIDENCE.md:200-207 (_heap_size=-1, ~25.46 MB max, INFERRED). Exact depth at which memalign fails depends on runtime allocations and was not measured."
+    },
+    {
+      "n": 2,
+      "title": "Unbounded strcpy/strcat/sprintf path joins into MAX_PATH buffers in newdir, make_title_cfg and setHddCommonFolderTimestamp",
+      "category": 6,
+      "locations": [
+        {"path": "src/filer_actions.c", "start": 2204, "end": 2204},
+        {"path": "src/filer_actions.c", "start": 2214, "end": 2214},
+        {"path": "src/filer_actions.c", "start": 2219, "end": 2220},
+        {"path": "src/filer_actions.c", "start": 2225, "end": 2225},
+        {"path": "src/filer_actions.c", "start": 2244, "end": 2245},
+        {"path": "src/filer_actions.c", "start": 2250, "end": 2251},
+        {"path": "src/filer_actions.c", "start": 1926, "end": 1927},
+        {"path": "src/filer_actions.c", "start": 1208, "end": 1208}
+      ],
+      "problem": "These join a caller path (up to MAX_PATH-1 = 1024 chars) and a name (up to 255) into a 1025-byte stack buffer with no length check, while the rest of the file (delete 1972, getFileSize 314/352, Rename 2176-2182) checks snprintf and returns -ENAMETOOLONG. A copy into a destination whose path plus folder name exceeds 1024 bytes (newdir from filer_copy.c:1048/1081) or a title.cfg in a folder deeper than 1015 chars overruns the stack. Needs very long paths, so practical risk is low.",
+      "fix": "Replace each strcpy+strcat (or sprintf) pair with one snprintf into the buffer and return -ENAMETOOLONG (make_title_cfg: set the error message) when the result does not fit, as delete() already does at 1972.",
+      "justification": "Adds a length test per join, but each strcpy+strcat pair becomes a single snprintf, so line count does not grow; it closes a stack overflow on over-long paths using the pattern already used elsewhere in the file.",
+      "benefit": "Removes 8 unbounded writes into 1025-byte stack buffers; about 4 lines saved by merging strcpy+strcat pairs (INFERRED from cited lines).",
+      "benefit_rank": 1,
+      "lines_removed": 0,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read all cited lines. MAX_PATH=1025, MAX_NAME=256 (launchelf.h:201-205). getHddParty writes dir with snprintf(dir, MAX_PATH, \"pfs0:%s\", ...) (gui_hdd0_format.c:37), then newdir/setHddCommonFolderTimestamp strcat the name. Callers of newdir: dash_browser.c:1157 (name limited to 36 by dashModalFilename at 1151), filer_browser.c:1440, filer_copy.c:1048/1081 (outPath + newfile.name, MAX_NAME). make_title_cfg callers: dash_browser.c:1217, filer_browser.c:1589. Trigger needs a path over ~770 chars, which no device listing here produces in normal use."
+    },
+    {
+      "n": 3,
+      "title": "make_title_cfg ignores the genWrite result, so a failed or short write leaves a truncated title.cfg with no message",
+      "category": 6,
+      "locations": [
+        {"path": "src/filer_actions.c", "start": 1928, "end": 1934}
+      ],
+      "problem": "genWrite's return is discarded and _msg0 is only set when the open fails. On a full memory card or USB stick the file is created (O_TRUNC) but the write can fail or be short, leaving an empty or cut title.cfg that OPL then reads, and the user sees no error: both callers only show a message when _msg0 is set (dash_browser.c:1219, filer_browser.c:1589).",
+      "fix": "Compare genWrite's result with the buffer length and set an error message in _msg0 when it differs.",
+      "justification": "Adds one comparison and one message; the problem is a silent corrupt title.cfg on a full or failing device, and checking the one write is the smallest way to report it.",
+      "benefit": "Failed title.cfg writes are reported instead of silently leaving a truncated file (no size change; ~2 lines added).",
+      "benefit_rank": 1,
+      "lines_removed": -2,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "READ",
+      "evidence": "Read filer_actions.c:1917-1936. Callers: dash_browser.c:1212-1222 (opTitleCfg toasts only if fb.msg[0]), filer_browser.c:1589. Menu entry is enabled only for .ELF names (filer_browser.c:447-450), so the strlen-4 at 1923 is safe."
+    },
+    {
+      "n": 4,
+      "title": "Folder-date tools redo whole-list work: date editor re-sorts every frame with struct copies, A-Z/Z-A dating is O(N^2 x 60)",
+      "category": 5,
+      "locations": [
+        {"path": "src/filer_actions.c", "start": 775, "end": 791},
+        {"path": "src/filer_actions.c", "start": 817, "end": 837},
+        {"path": "src/filer_actions.c", "start": 1080, "end": 1083},
+        {"path": "src/dash_browser.c", "start": 2473, "end": 2473},
+        {"path": "src/filer_actions.c", "start": 1526, "end": 1539},
+        {"path": "src/filer_actions.c", "start": 1835, "end": 1838}
+      ],
+      "problem": "The dashboard date editor calls filerDateEditorSync every frame (dash_browser.c:2473, UI thread); it runs two stricmp scans and the insertion sort, which copies each FILEINFO into a temporary and back even when nothing moves (782 and 788). setSequentialTimestamp steps one second at a time, position x 60 calls per folder, so A-Z/Z-A ordering of N folders costs 30 x N x (N-1) step calls on the UI thread before any progress is drawn (1853). With the usual few dozen MC-root folders both costs are small; they grow with folder count (N=500: ~7.5 M step calls).",
+      "fix": "In tsEdit call filerDateEditorSync only when an input changed the selection or a date. In sortCustomDateEditorFolders skip an element already in order before copying it. In setSequentialTimestamp subtract position minutes from 23:59:58 arithmetically (as setSasTimestamp does with decrementSasTimestampDate) instead of the per-second loop.",
+      "justification": "",
+      "benefit": "Removes per-frame O(N) struct copies (~0.9 KB per folder per frame) and makes A-Z/Z-A dating O(N) instead of O(N^2 x 60) step calls (INFERRED from the loops; no timing measured).",
+      "benefit_rank": 1,
+      "lines_removed": 2,
+      "effort": "S",
+      "risk": "Low",
+      "confidence": "Med",
+      "basis": "INFERRED",
+      "evidence": "Read filer_actions.c:775-837, 1080-1083, 1526-1539, 1800-1886 and dash_browser.c:2430-2536 (tsEdit loop: filerDateEditorSync at 2473 every iteration, dashGfxPresent at 2534). opTimestamps (dash_browser.c:2542-2557) runs time_manip_organize on the UI thread after prepareOp. Folder count is bounded by getDir at MAX_ENTRY-2 (filer.c:2235-2238). Step count: sum over i<N of i*60 = 30*N*(N-1); the instruction cost per step is INFERRED."
+    }
+  ]
+}

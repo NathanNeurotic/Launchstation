@@ -1,0 +1,8 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/hdl_info/iop/hdl_info/main.o		492	0	0	0	4208	0	341	5041
+first-party	build/obj/hdl_info/iop/hdl_info/hdl.o		1712	0	0	0	0	0	424	2136
+first-party	build/obj/hdl_info/iop/hdl_info/hdd.o		1360	0	0	0	8	0	696	2064
+first-party	build/obj/hdl_info/iop/hdl_info/apa.o		1076	0	0	0	0	0	216	1292
+first-party	build/obj/hdl_info/imports.o		428	0	0	0	0	0	0	428
+linker-internal	<internal>		0	195	0	0	0	0	0	195
+first-party	build/obj/hdl_info/exports.o		52	0	0	0	0	0	48	100

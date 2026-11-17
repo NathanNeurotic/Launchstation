@@ -1,0 +1,6 @@
+category	file	member	.text	.rodata	.data	.sdata	.bss	.sbss	other_alloc	total_alloc
+first-party	build/obj/ps2host/iop/ps2host/net_fio.o		4768	0	8	0	8208	0	1786	14770
+first-party	build/obj/ps2host/iop/ps2host/net_fsys.o		1896	0	96	0	20	0	1845	3857
+first-party	build/obj/ps2host/imports.o		452	0	0	0	0	0	0	452
+linker-internal	<internal>		0	334	0	0	0	0	0	334
+first-party	build/obj/ps2host/iop/ps2host/ps2host.o		56	0	0	0	0	0	40	96

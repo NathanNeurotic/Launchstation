@@ -1,0 +1,5 @@
+# build/bin/wLaunchELF-packed.elf (1837136 bytes on disk)
+section	type	flags	addr_hex	size_bytes
+# totals
+# program headers: type offset vaddr filesz memsz flags
+# PHDR	1	0x60	0x1b42050	1837040	1858040	7
