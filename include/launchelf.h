@@ -453,6 +453,7 @@ int PrepareMbrLaunchPayload(const char *path, char *mem_arg, size_t mem_arg_size
 
 /* popstarter.c */
 int IsPopstarterVcdPath(const char *path);
+int IsPopstarterVcdDevice(const char *path);
 int LaunchPopstarterVcd(const char *path, char *message, size_t message_size);
 
 /* ember.c */

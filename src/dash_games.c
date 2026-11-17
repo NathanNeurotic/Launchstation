@@ -5,12 +5,20 @@
 //(<root>/ART/<GAME ID>_COV.png or .jpg, see dash_art.c). Starting one takes
 //the same Neutrino route as the File Browser, so the per-game Neutrino
 //options saved there with "Save for this game" apply here too (issue #391).
+//PS1 games are listed the way RiptOPL lists them: <root>/POPS/*.VCD for
+//POPStarter (on the devices POPStarter starts from) and <root>/EMBER/games/
+//<Game>/ for Ember (.cue, else .exe, else .bin: Ember's own order).
 //The list is built on first visit and by Refresh; nothing is cached on disk.
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "filer_shared.h"
 #include "init.h"
 #include "neutrino_gameid.h"
+#include "popstarter_internal.h"
+#include "gui_neutrino.h"
+
+enum { GAME_PS2, GAME_VCD, GAME_EMBER };
+#define EMBER_GAMES_MAX 256
 
 #define GAMES_MAX DASH_MAX_APPS
 #define GAME_ROOTS 24
@@ -54,7 +62,8 @@ static int nameGameId(const char *name, char *id)
 	}
 	if (name[11] != '.')
 		return 0;
-	memcpy(id, name, 11);
+	for (i = 0; i < 11; i++) /* profiles and OPL covers use upper-case IDs */
+		id[i] = (name[i] >= 'a' && name[i] <= 'z') ? name[i] - 32 : name[i];
 	id[11] = '\0';
 	return 1;
 }
@@ -62,11 +71,15 @@ static int nameGameId(const char *name, char *id)
 //--------------------------------------------------------------
 // Scanning (background worker)
 //--------------------------------------------------------------
-static void addGame(GameScan *s, const char *dir, const char *name)
+/* title: the name shown (an Ember game is named by its folder), else name. */
+static void addGame(GameScan *s, const char *dir, const char *name, const char *title, int kind)
 {
 	char base[DASH_PATH_MAX], *dot;
 	DashApp *g;
 	int skip;
+
+	if (title == NULL)
+		title = name;
 
 	if (s->n >= GAMES_MAX || strlen(dir) + strlen(name) >= DASH_PATH_MAX)
 		return;
@@ -81,14 +94,18 @@ static void addGame(GameScan *s, const char *dir, const char *name)
 	memset(g, 0, sizeof(*g));
 	snprintf(g->path, sizeof(g->path), "%s%s", dir, name);
 	g->flags = DASH_APP_GAME;
-	skip = nameGameId(name, g->category) ? 12 : 0;
-	if (!skip)
+	skip = nameGameId(title, g->category) ? 12 : 0;
+	if (!skip && kind == GAME_PS2)
 		prepareNeutrinoGameID(g->path, g->category, sizeof(g->category));
-	dashStrCopy(base, name + skip, sizeof(base));
-	dot = strrchr(base, '.');
+	else if (!skip && kind == GAME_VCD)
+		buildPopstarterVcdGameID(g->path, g->category, sizeof(g->category));
+	else if (!skip)
+		buildEmberGameID(g->path, g->category, sizeof(g->category));
+	dashStrCopy(base, title + skip, sizeof(base));
+	dot = kind == GAME_EMBER ? NULL : strrchr(base, '.');
 	if (dot != NULL)
 		*dot = '\0';
-	dashStrCopy(g->title, base[0] ? base : name, sizeof(g->title));
+	dashStrCopy(g->title, base[0] ? base : title, sizeof(g->title));
 	for (dot = g->path; *dot; dot++)
 		g->hue = (u16)((g->hue * 31 + (u8)*dot) % 360);
 	s->n++;
@@ -103,9 +120,67 @@ static int scanFolder(GameScan *s, const char *dir)
 	for (i = 0; i < n && i < MAX_ENTRY - 2; i++) {
 		FILEINFO *f = &s->files[i];
 		if (!(f->stats.AttrFile & sceMcFileAttrSubdir) && f->name[0] != '.' && IsNeutrinoIsoPath(f->name))
-			addGame(s, dir, f->name);
+			addGame(s, dir, f->name, NULL, GAME_PS2);
 	}
 	return n >= 0;
+}
+
+/* POPS/<name>.VCD; POPSTARTER.VCD is reserved (its selector would be POPStarter's own ELF). */
+static int scanPops(GameScan *s, const char *root)
+{
+	char dir[DASH_PATH_MAX];
+	int n, i, more = 0;
+
+	if (!IsPopstarterVcdDevice(root))
+		return 0;
+	snprintf(dir, sizeof(dir), "%sPOPS/", root);
+	dashWorkerStatus(dir, 0, 0);
+	n = getDirComplete(dir, s->files, &more);
+	for (i = 0; i < n && i < MAX_ENTRY - 2; i++) {
+		FILEINFO *f = &s->files[i];
+		if (!(f->stats.AttrFile & sceMcFileAttrSubdir) && f->name[0] != '.' && IsPopstarterVcdPath(f->name) &&
+		    stricmp(f->name, "POPSTARTER.VCD"))
+			addGame(s, dir, f->name, NULL, GAME_VCD);
+	}
+	return n >= 0;
+}
+
+/* EMBER/games/<Game>/: one row per folder that holds an image Ember can boot. */
+static int scanEmber(GameScan *s, const char *root)
+{
+	static const char *const exts[] = {"CUE", "EXE", "BIN"};
+	char dir[DASH_PATH_MAX], game[DASH_PATH_MAX], (*names)[MAX_NAME];
+	int n, i, j, e, k = 0, more = 0;
+
+	if (snprintf(dir, sizeof(dir), "%sEMBER/games/", root) >= DASH_PATH_MAX)
+		return 0;
+	dashWorkerStatus(dir, 0, 0);
+	n = getDirComplete(dir, s->files, &more);
+	if (n <= 0)
+		return n >= 0;
+	names = malloc(sizeof(*names) * EMBER_GAMES_MAX);
+	if (names == NULL)
+		return 1;
+	/* the folder listings below reuse s->files */
+	for (i = 0; i < n && i < MAX_ENTRY - 2 && k < EMBER_GAMES_MAX; i++)
+		if ((s->files[i].stats.AttrFile & sceMcFileAttrSubdir) && s->files[i].name[0] != '.')
+			dashStrCopy(names[k++], s->files[i].name, MAX_NAME);
+	for (i = 0; i < k; i++) {
+		int pick = -1, best = 3;
+		if (snprintf(game, sizeof(game), "%s%s/", dir, names[i]) >= DASH_PATH_MAX - 8)
+			continue;
+		n = getDirComplete(game, s->files, &more);
+		for (j = 0; j < n && j < MAX_ENTRY - 2 && best > 0; j++)
+			for (e = 0; e < best; e++)
+				if (!(s->files[j].stats.AttrFile & sceMcFileAttrSubdir) && genCmpFileExt(s->files[j].name, exts[e])) {
+					pick = j, best = e;
+					break;
+				}
+		if (pick >= 0)
+			addGame(s, game, s->files[pick].name, names[i], GAME_EMBER);
+	}
+	free(names);
+	return 1;
 }
 
 static void scanRoot(GameScan *s, const char *root, int shares)
@@ -117,6 +192,10 @@ static void scanRoot(GameScan *s, const char *root, int shares)
 	found = scanFolder(s, dir);
 	snprintf(dir, sizeof(dir), "%sCD/", root);
 	found |= scanFolder(s, dir);
+	if (!shares) { /* smb:/ itself lists shares: an EMBER share must not stop that */
+		found |= scanPops(s, root);
+		found |= scanEmber(s, root);
+	}
 	if (found || !shares)
 		return;
 	/* smb:/ lists the shares; each one is an OPL root. */
@@ -227,40 +306,67 @@ static DashApp *selGame(void)
 	return (sel >= 0 && sel < norder) ? &games[order[sel]] : NULL;
 }
 
+/* The core a GAMES row starts with, from its file (as ExecuteMainAction routes it). */
+static const char *gameCore(const DashApp *g)
+{
+	if (IsPopstarterVcdPath(g->path))
+		return "PS1 - POPStarter";
+	if (!IsNeutrinoIsoPath(g->path))
+		return "PS1 - Ember";
+	return "PS2 - Neutrino";
+}
+
 static void showDetails(DashApp *g)
 {
-	char body[600], dev[48];
+	char body[640], dev[48];
 
 	dashLibDeviceLabel(g->path, dev, sizeof(dev));
-	snprintf(body, sizeof(body), "Game ID: %s\nLocation: %s\nFile: %s\nCover: %s", g->category[0] ? g->category : "not found",
-	         dev, g->path, g->art_state == DASH_ART_FOUND ? g->art : (g->category[0] ? "none - add ART/<Game ID>_COV.png" : "none"));
+	snprintf(body, sizeof(body), "Starts with: %s\nGame ID: %s\nLocation: %s\nFile: %s\nCover: %s", gameCore(g),
+	         g->category[0] ? g->category : "not found", dev, g->path, g->art_state == DASH_ART_FOUND ? g->art : (g->category[0] ? "none - add ART/<Game ID>_COV.png" : "none"));
 	dashModalMessage(DI_INFO, g->title, body, NULL);
+}
+
+/* Triangle: per-game Neutrino options are edited and saved here without
+ * starting the game; Start then opens them already filled in. */
+static void gameSettings(DashApp *g)
+{
+	int r = editNeutrinoGameProfile(g->category);
+
+	if (r < 0)
+		dashModalMessage(DI_INFO, g->title,
+		                 "Game settings are saved by Game ID, and none was found for this image. "
+		                 "Name it like SLUS_123.45.Title.iso, or start it and set the options for that launch.", NULL);
 }
 
 static void gamesMenu(void)
 {
+	enum { M_START, M_SETTINGS, M_DETAILS, M_SHOW, M_REFRESH };
 	DashApp *g = selGame();
-	DashMenuItem items[4];
-	int n = 0, r;
+	DashMenuItem items[5];
+	int act[5], n = 0, r;
 	char dir[DASH_PATH_MAX];
 
 	memset(items, 0, sizeof(items));
 	if (g != NULL) {
-		items[n].icon = DI_PLAY, items[n].label = localizeDashboardText("Start"), n++;
-		items[n].icon = DI_INFO, items[n].label = "Details", n++;
-		items[n].icon = DI_FOLDER, items[n].label = "Show in File Browser", n++;
+		items[n].icon = DI_PLAY, items[n].label = localizeDashboardText("Start"), act[n++] = M_START;
+		if (IsNeutrinoIsoPath(g->path))
+			items[n].icon = DI_SETTINGS, items[n].label = "Game settings", items[n].detail = "Neutrino options",
+			act[n++] = M_SETTINGS;
+		items[n].icon = DI_INFO, items[n].label = "Details", act[n++] = M_DETAILS;
+		items[n].icon = DI_FOLDER, items[n].label = "Show in File Browser", act[n++] = M_SHOW;
 	}
-	items[n].icon = DI_REFRESH, items[n].label = "Refresh games", items[n].detail = "scan now", n++;
+	items[n].icon = DI_REFRESH, items[n].label = "Refresh games", items[n].detail = "scan now", act[n++] = M_REFRESH;
 	r = dashModalMenu(localizeDashboardText("Games"), g ? g->title : NULL, items, n, 0);
-	if (r < 0)
+	if (r < 0 || r >= n)
 		return;
-	if (g == NULL)
-		r = 3;
-	if (r == 0)
+	r = act[r];
+	if (r == M_START)
 		dashLaunchApp(g, 0);
-	else if (r == 1)
+	else if (r == M_SETTINGS)
+		gameSettings(g);
+	else if (r == M_DETAILS)
 		showDetails(g);
-	else if (r == 2) {
+	else if (r == M_SHOW) {
 		const char *slash = strrchr(g->path, '/');
 		snprintf(dir, sizeof(dir), "%.*s", slash ? (int)(slash - g->path) + 1 : 0, g->path);
 		if (dir[0])
@@ -331,10 +437,11 @@ static void gamesDraw(void)
 	dashDrawSectionTitle(DASH_SAFE_L, 68, localizeDashboardText("Games"), sub);
 	if (norder == 0) {
 		if (scan_job != NULL || scan_result != NULL)
-			dashDrawEmptyState(320, 238, DI_DISC, "Looking for games...", "The DVD and CD folders of your devices are being scanned.");
+			dashDrawEmptyState(320, 238, DI_DISC, "Looking for games...", "The DVD, CD, POPS and EMBER folders of your devices are being scanned.");
 		else
 			dashDrawEmptyState(320, 238, DI_DISC, "No games found",
-			                   "Put PS2 ISO images in the DVD or CD folder of a USB, MX4SIO, MMCE, iLink, exFAT HDD, UDPFS or SMB device. "
+			                   "Put PS2 ISO images in the DVD or CD folder of a USB, MX4SIO, MMCE, iLink, exFAT HDD, UDPFS or SMB device, "
+			                   "PS1 VCDs in POPS, or PS1 games in EMBER/games/<Game>/. "
 			                   "Open the device in Files first if it is not running, then press the confirm button to scan.");
 		return;
 	}
@@ -365,8 +472,8 @@ static void gamesDraw(void)
 	dashLibDeviceLabel(g->path, dev, sizeof(dev));
 	dashIcon(dashLibDeviceIcon(g->path), dx + 14, dy + 186, 14, DASH_C_ACCENT);
 	dashTextFit(dx + 34, dy + 184, dw - 48, dev, DASH_FS_CAPTION, DASH_C_ACCENT);
-	if (g->category[0])
-		dashTextFit(dx + 14, dy + 206, dw - 28, g->category, DASH_FS_CAPTION, DASH_C_TEXT2);
+	snprintf(sub, sizeof(sub), "%s%s%s", gameCore(g), g->category[0] ? "  " : "", g->category);
+	dashTextFit(dx + 14, dy + 206, dw - 28, sub, DASH_FS_CAPTION, DASH_C_TEXT2);
 	dashTextFit(dx + 14, dy + 264, dw - 28, g->path, DASH_FS_CAPTION * 0.9f, DASH_C_TEXT3);
 }
 

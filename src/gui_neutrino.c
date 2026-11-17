@@ -348,7 +348,8 @@ static int editNeutrinoOption(int row, int direction, void *arg)
 /* One menu session for every change, so the popup keeps its focus and scroll
  * instead of reopening after each value. The classic shell continues to use
  * the upstream dialog below. */
-static int showDashboardNeutrinoOptions(NEUTRINO_LAUNCH_OPTIONS *options)
+/* settings_only (GAMES Triangle): row zero saves and closes instead of running. */
+static int showDashboardNeutrinoOptions(NEUTRINO_LAUNCH_OPTIONS *options, int settings_only)
 {
 	DashMenuItem items[NEUTRINO_CANCEL + 3];
 	NeutrinoOptionsMenu menu = {options, items};
@@ -360,8 +361,8 @@ static int showDashboardNeutrinoOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 	 * main dashboard loop is paused while these options are open. */
 	dashSoundMaintain();
 	memset(items, 0, sizeof(items));
-	items[0].icon = DI_PLAY;
-	items[0].label = "Run game";
+	items[0].icon = settings_only ? DI_SAVE : DI_PLAY;
+	items[0].label = settings_only ? "Save and close" : "Run game";
 	for (i = 0; i < NEUTRINO_COMPAT_COUNT; i++) {
 		items[i + 1].icon = DI_INFO;
 		items[i + 1].label = compatibility_options[i].label;
@@ -378,7 +379,7 @@ static int showDashboardNeutrinoOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 		items[NEUTRINO_CANCEL].icon = DI_SAVE;
 		items[NEUTRINO_CANCEL].label = "Save for this game";
 		items[NEUTRINO_CANCEL + 1].icon = DI_UNDO;
-		items[NEUTRINO_CANCEL + 1].label = "Reset this launch";
+		items[NEUTRINO_CANCEL + 1].label = settings_only ? "Reset to defaults" : "Reset this launch";
 	}
 	items[cancel_index].icon = DI_BACK;
 	items[cancel_index].label = "Cancel";
@@ -428,7 +429,7 @@ int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 		if (active_profile_gameid[0] && dashWorkerAwaitAll("Loading game profile") &&
 		    profileReadLatest(active_profile_gameid, &saved, &revision, &slot))
 			*options = saved;
-		return showDashboardNeutrinoOptions(options);
+		return showDashboardNeutrinoOptions(options, 0);
 	}
 	while (1) {
 		waitPadReady(0, 0);
@@ -513,6 +514,31 @@ int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *options, const cha
 	if (profileGameIdValid(game_id))
 		snprintf(active_profile_gameid, sizeof(active_profile_gameid), "%s", game_id);
 	result = showNeutrinoLaunchOptions(options);
+	active_profile_gameid[0] = '\0';
+	return result;
+}
+
+/* GAMES Triangle "Game settings": edit this game's saved profile without
+ * starting it. Returns 1 saved, 0 closed unsaved, -1 no valid Game ID. */
+int editNeutrinoGameProfile(const char *game_id)
+{
+	NEUTRINO_LAUNCH_OPTIONS options, saved;
+	unsigned int revision;
+	int slot, result = 0;
+
+	if (!profileGameIdValid(game_id))
+		return -1;
+	/* Backing out of the wait must not open defaults that a save would store. */
+	if (!dashWorkerAwaitAll("Loading game profile"))
+		return 0;
+	memset(&options, 0, sizeof(options));
+	snprintf(active_profile_gameid, sizeof(active_profile_gameid), "%s", game_id);
+	if (profileReadLatest(game_id, &saved, &revision, &slot))
+		options = saved;
+	if (showDashboardNeutrinoOptions(&options, 1)) {
+		result = profileSave(game_id, &options);
+		dashToast(result ? DASH_TOAST_OK : DASH_TOAST_WARN, result ? "Saved Neutrino game profile" : "Could not save game profile");
+	}
 	active_profile_gameid[0] = '\0';
 	return result;
 }
