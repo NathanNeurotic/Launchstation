@@ -354,6 +354,21 @@ void dashDevicesRefreshMemoryCards(DashDevice *devs, int count)
 	}
 }
 
+/* Nonzero when the multitap rows in devs no longer match the cards that
+ * answer behind a multitap: the list needs rebuilding. Cached, no I/O. */
+int dashDevicesMultitapChanged(const DashDevice *devs, int count)
+{
+	int i, unit, listed = 0, present = 0;
+
+	for (i = 0; i < count; i++)
+		if (devs[i].icon == DI_MC && (unit = mcPathUnit(devs[i].mount)) > 1 && devs[i].mount[4] == '\0')
+			listed |= 1 << unit;
+	for (unit = 2; unit < MC_UNITS; unit++)
+		if (filerRootMcPresent(unit, NULL, NULL) == 1)
+			present |= 1 << unit;
+	return listed != present;
+}
+
 int dashDevicesList(DashDevice *out, int max)
 {
 	int n = 0, port, i;
@@ -369,6 +384,10 @@ int dashDevicesList(DashDevice *out, int max)
 		 * Behind a multitap, mc2-mc7 are its slots B-D:
 		 * "Multitap Memory Card Slot 1-B (mc2:/)". */
 		if (!mcUnitAvailable(port))
+			continue;
+		/* A multitap slot is listed only once a card answers in it, so
+		 * an empty multitap (or a false detection) adds no rows. */
+		if (MC_UNIT_SLOT(port) != 0 && filerRootMcPresent(port, NULL, NULL) != 1)
 			continue;
 		if (MC_UNIT_SLOT(port) == 0)
 			snprintf(name, sizeof(name), "Memory Card Slot %d", port + 1);
