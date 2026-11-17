@@ -200,6 +200,16 @@ static int isFatStylePopstarterDevice(const char *device)
 	return 0;
 }
 
+/* A <device>:/POPS/<name>.VCD on this device is one prepareFatStyleLaunch
+ * can start (the GAMES tab lists POPS only where POPStarter can run it). */
+int IsPopstarterVcdDevice(const char *path)
+{
+	char device[16];
+	const char *suffix;
+
+	return splitDevicePath(path, device, sizeof(device), &suffix) && isFatStylePopstarterDevice(device);
+}
+
 static int startsWithPopsDir(const char *suffix, const char **relative_vcd)
 {
 	if (suffix == NULL || relative_vcd == NULL)

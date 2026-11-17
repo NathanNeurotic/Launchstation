@@ -206,6 +206,7 @@ static int gameCandidate(const DashApp *app, int idx, char *out, int size)
 {
 	static const char *const ext[2] = {"png", "jpg"};
 	const char *p = strrchr(app->path, '/');
+	int ups;
 
 	out[0] = '\0';
 	if (idx == 0) {
@@ -222,10 +223,11 @@ static int gameCandidate(const DashApp *app, int idx, char *out, int size)
 			snprintf(out, size, "%sART/%s_COV.%s", dashStoreDir(), app->category, ext[idx - 3]);
 		return 1;
 	}
-	if (p != NULL)
+	/* <root>/DVD/x.iso and <root>/POPS/x.VCD: one folder up; <root>/EMBER/games/<Game>/x.cue: three. */
+	for (ups = IsEmberGamePath(app->path) ? 3 : 1; p != NULL && ups > 0 && p > app->path; ups--)
 		for (p--; p > app->path && *p != '/'; p--)
 			;
-	if (p != NULL && *p == '/')
+	if (p != NULL && *p == '/' && ups == 0)
 		snprintf(out, size, "%.*sART/%s_COV.%s", (int)(p - app->path) + 1, app->path, app->category, ext[idx - 1]);
 	return 1;
 }

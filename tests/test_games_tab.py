@@ -41,6 +41,8 @@ typedef unsigned char u8;
 #define GAMES_MAX DASH_MAX_APPS
 #define GAME_ROOTS 24
 #define GAME_SHARES 16
+enum { GAME_PS2, GAME_VCD, GAME_EMBER };
+#define EMBER_GAMES_MAX 256
 #define sceMcFileAttrSubdir 0x20
 enum { DASH_ART_UNKNOWN, DASH_ART_FOUND, DASH_ART_NONE };
 #define DASH_APP_GAME (1 << 6)
@@ -49,7 +51,14 @@ typedef struct { int AttrFile; } Stats;
 typedef struct { char name[MAX_NAME]; Stats stats; } FILEINFO;
 static void dashStrCopy(char *d, const char *s, int n) { snprintf(d, n, "%s", s); }
 static void dashWorkerStatus(const char *t, int a, int b) { (void)t; (void)a; (void)b; }
-static int IsNeutrinoIsoPath(const char *p) { const char *d = strrchr(p, '.'); return d && !strcasecmp(d, ".iso"); }
+static int genCmpFileExt(const char *p, const char *e) { const char *d = strrchr(p, '.'); return d && !strcasecmp(d + 1, e); }
+static int IsNeutrinoIsoPath(const char *p) { return genCmpFileExt(p, "iso"); }
+static int IsPopstarterVcdPath(const char *p) { return genCmpFileExt(p, "VCD"); }
+static int IsPopstarterVcdDevice(const char *p) { return !strncmp(p, "usb", 3); }
+static int IsEmberGamePath(const char *p) { return strstr(p, "/games/") != NULL; }
+static int ps1_reads;
+static int buildPopstarterVcdGameID(const char *p, char *id, size_t n) { ps1_reads++; snprintf(id, n, "SCES_000.01"); (void)p; return 1; }
+static int buildEmberGameID(const char *p, char *id, size_t n) { ps1_reads++; assert(n >= 12); snprintf(id, n, "SLUS_000.02"); (void)p; return 1; }
 static int cnf_reads;
 static int prepareNeutrinoGameID(const char *iso, char *id, size_t n) {
     cnf_reads++; assert(n >= 12);
@@ -69,9 +78,23 @@ static const struct { const char *dir, *name; int sub; } tree[] = {
     {"smb:/", "PS2", 1},
     {"smb:/", "Music", 1},
     {"smb:/PS2/DVD/", "Okami.iso", 0},
+    {"usb0:/POPS/", "SLUS_007.92.Crash.VCD", 0},
+    {"usb0:/POPS/", "Spyro.vcd", 0},
+    {"usb0:/POPS/", "POPSTARTER.VCD", 0},
+    {"usb0:/POPS/", "POPSTARTER.ELF", 0},
+    {"usb0:/EMBER/games/", "Tekken 3", 1},
+    {"usb0:/EMBER/games/", "Ape Escape", 1},
+    {"usb0:/EMBER/games/", "Empty", 1},
+    {"usb0:/EMBER/games/", "notes.txt", 0},
+    {"usb0:/EMBER/games/Tekken 3/", "Tekken 3.bin", 0},
+    {"usb0:/EMBER/games/Tekken 3/", "Tekken 3.cue", 0},
+    {"usb0:/EMBER/games/Ape Escape/", "APE.EXE", 0},
+    {"usb0:/EMBER/games/Ape Escape/", "APE.BIN", 0},
+    {"usb0:/EMBER/games/Empty/", "readme.txt", 0},
+    {"smb:/PS2/POPS/", "NotHere.VCD", 0},
 };
 static int getDirComplete(const char *path, FILEINFO *info, int *more) {
-    int i, n = 0, any = !strcmp(path, "smb:/") || !strcmp(path, "smb:/PS2/DVD/");
+    int i, n = 0, any = !strcmp(path, "smb:/") || !strcmp(path, "smb:/PS2/DVD/") || !strcmp(path, "usb0:/EMBER/games/Empty/");
     *more = 0;
     for (i = 0; i < (int)(sizeof(tree) / sizeof(tree[0])); i++)
         if (!strcmp(tree[i].dir, path)) {
@@ -83,7 +106,7 @@ static int getDirComplete(const char *path, FILEINFO *info, int *more) {
 }
 '''
 code += scan_type + "\n"
-for sig in ("static int nameGameId(", "static void addGame(", "static int scanFolder(", "static void scanRoot("):
+for sig in ("static int nameGameId(", "static void addGame(", "static int scanFolder(", "static int scanPops(", "static int scanEmber(", "static void scanRoot("):
     code += function(games, sig)
 code += function(art, "static int gameCandidate(")
 code += r'''
@@ -102,7 +125,7 @@ int main(void) {
     assert(!nameGameId("SLUS_200.62GT3.iso", id) && !nameGameId("SLU", id) && !nameGameId("1LUS_200.62.x.iso", id));
 
     scanRoot(&s, "usb0:/", 0);
-    assert(s.n == 4);
+    assert(s.n == 8);
     g = find(NULL, s.games, s.n, "usb0:/DVD/SLUS_200.62.Gran Turismo 3.iso");
     assert(g && !strcmp(g->title, "Gran Turismo 3") && !strcmp(g->category, "SLUS_200.62") && g->flags == DASH_APP_GAME);
     g = find(NULL, s.games, s.n, "usb0:/DVD/Mr. Mosquito.ISO");
@@ -112,10 +135,22 @@ int main(void) {
     assert(find(NULL, s.games, s.n, "usb0:/CD/SCUS_971.13.Ico.iso"));
     assert(cnf_reads == 2); /* the named images are not opened */
 
+    /* PS1: VCDs in POPS (not POPSTARTER.VCD), and one Ember row per games/<Game>/ folder with an image. */
+    g = find(NULL, s.games, s.n, "usb0:/POPS/SLUS_007.92.Crash.VCD");
+    assert(g && !strcmp(g->title, "Crash") && !strcmp(g->category, "SLUS_007.92"));
+    g = find(NULL, s.games, s.n, "usb0:/POPS/Spyro.vcd");
+    assert(g && !strcmp(g->title, "Spyro") && !strcmp(g->category, "SCES_000.01"));
+    assert(!find(NULL, s.games, s.n, "usb0:/POPS/POPSTARTER.VCD"));
+    g = find(NULL, s.games, s.n, "usb0:/EMBER/games/Tekken 3/Tekken 3.cue"); /* .cue beats .bin */
+    assert(g && !strcmp(g->title, "Tekken 3") && !strcmp(g->category, "SLUS_000.02"));
+    g = find(NULL, s.games, s.n, "usb0:/EMBER/games/Ape Escape/APE.EXE"); /* .exe beats .bin */
+    assert(g && !strcmp(g->title, "Ape Escape"));
+    assert(ps1_reads == 3);
+
     /* An SMB root lists shares; each share is searched for DVD and CD. */
     s.n = 0;
     scanRoot(&s, "smb:/", 1);
-    assert(s.n == 1 && !strcmp(s.games[0].path, "smb:/PS2/DVD/Okami.iso"));
+    assert(s.n == 1 && !strcmp(s.games[0].path, "smb:/PS2/DVD/Okami.iso")); /* POPStarter cannot start SMB VCDs */
 
     /* Cover names: OPL ART folder beside DVD/CD, then the dashboard ART folder. */
     DashApp a = {0};
@@ -132,9 +167,15 @@ int main(void) {
     assert(gameCandidate(&a, 1, out, sizeof(out)) && !strcmp(out, "smb:/PS2/ART/SLUS_200.62_COV.png"));
     snprintf(a.art, sizeof(a.art), "usb0:/ART/known.png");
     assert(gameCandidate(&a, 0, out, sizeof(out)) && !strcmp(out, "usb0:/ART/known.png"));
+    a.art[0] = '\0';
+    snprintf(a.path, sizeof(a.path), "usb0:/POPS/x.VCD");
+    assert(gameCandidate(&a, 1, out, sizeof(out)) && !strcmp(out, "usb0:/ART/SLUS_200.62_COV.png"));
+    snprintf(a.path, sizeof(a.path), "usb0:/EMBER/games/Tekken 3/Tekken 3.cue");
+    assert(gameCandidate(&a, 1, out, sizeof(out)) && !strcmp(out, "usb0:/ART/SLUS_200.62_COV.png"));
+    snprintf(a.art, sizeof(a.art), "usb0:/ART/known.png");
     a.category[0] = '\0';
     assert(gameCandidate(&a, 1, out, sizeof(out)) && out[0] == '\0');
-    puts("PASS: GAMES scans DVD/CD and SMB shares, reads IDs from names or SYSTEM.CNF, and finds OPL covers");
+    puts("PASS: GAMES scans DVD/CD, POPS, EMBER/games and SMB shares, reads IDs from names or SYSTEM.CNF, and finds OPL covers");
     return 0;
 }
 '''
