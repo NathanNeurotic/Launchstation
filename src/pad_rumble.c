@@ -113,8 +113,8 @@ void padRumbleFlush(void)
 {
 	int r;
 
-	if (!r_active)
-		return;
+	if (!r_active && !r_off_repeats)
+		return; /* nothing running and no stop still owed */
 	r_active = 0;
 	r_on_repeats = 0;
 	r_large = 0;
@@ -153,7 +153,8 @@ void padRumbleTick(u32 held)
 		for (port = 0; port < 2; port++)
 			if (!r_aligned[port] && padGetState(port, 0) == PAD_STATE_STABLE) {
 				padRumbleAlign(port);
-				break;
+				if (r_actuators[port] > 0)
+					break; /* a pad without motors must not hold up the other port */
 			}
 	}
 	if (r_active) {

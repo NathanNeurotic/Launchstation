@@ -333,13 +333,13 @@ void dashSoundPlay(int id)
 	static int transSlot;
 	int ch, i;
 
+	if (dashIopParked())
+		return; /* a background job is rebooting the IOP: no sound, no vibration */
 	/* Vibration follows interface events, sound on or off. Arming only:
 	 * the pad read functions drive the motors (pad_rumble.c). */
 	padRumbleForSound(id);
 	if (!soundAlive() || !dashCfg.sound || id < 0 || id >= DASH_SND_COUNT)
 		return;
-	if (dashIopParked())
-		return; /* a background job is rebooting the IOP */
 	if (samples[id].buffer == NULL)
 		return;
 	if (id == DASH_SND_CURSOR) {

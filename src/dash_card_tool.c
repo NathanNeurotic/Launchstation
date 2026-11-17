@@ -641,6 +641,8 @@ static int ctWriteSaveAs(const char *path, const McSaveData *s, int fmt, int fre
 	r = fmt ? mcSavePsvSignature(s, sig) : MCW_OK;
 	if (r == MCW_OK)
 		r = ctEmit(s, fmt, sig, ctEmitCount, &len);
+	if (r == MCW_OK && len > CT_PSU_MAX)
+		r = MCW_ERR_INVALID; /* ctLoadPsu would refuse a larger file */
 	if (r != MCW_OK)
 		return r;
 	fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | (fresh ? FIO_O_EXCL : FIO_O_TRUNC));
@@ -1057,6 +1059,9 @@ static int ctReadFolder(const char *dir, const char *name, McSaveData *s, const 
 			r = MCW_ERR_UNSUPPORTED;
 		} else if (strlen(ent.name) > 31) {
 			*why = "A file name in it is longer than a memory card allows.";
+			r = MCW_ERR_INVALID;
+		} else if (!mcCardNameOk((const uint8_t *)ent.name)) {
+			*why = "A file name in it has a character a memory card does not allow.";
 			r = MCW_ERR_INVALID;
 		} else if (s->nfiles >= 64u) {
 			*why = "It holds more files than a save folder can.";

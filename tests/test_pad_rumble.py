@@ -94,6 +94,8 @@ int main(void) {
     sends = 0;
     padRumbleNav(); now_ms += 50; padRumbleNav();
     assert(padRumbleLevel() == 0x50);
+    now_ms += 200;                        /* past the first 240 ms, before a restarted one */
+    assert(padRumbleLevel() == 0);
     return 0;
 }
 '''

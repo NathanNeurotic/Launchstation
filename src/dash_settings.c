@@ -2562,6 +2562,7 @@ static void settingsRevert(void)
 		int custom = dashCfg.custom_sounds != snap_dash.custom_sounds;
 
 		dashCfg = snap_dash;
+		padRumbleEnable(dashCfg.rumble);
 		menuTitleClockRestore();
 		dashThemeRestore(&snap_theme, snap_theme_preset, snap_theme_custom);
 		DashThemeSetLegacyEnabled(1);
