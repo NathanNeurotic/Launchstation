@@ -181,7 +181,11 @@ static void homeEnter(void)
 {
 	library_open = 0;
 	homeRebuild();
-	if (nhome > 0 || nchips == 0)
+	/* Recent applications off and nothing pinned or favorite: Home has no
+	 * apps to show, so go straight to the Applications list (saildot4k). */
+	if (dashCfg.recent_count == 0 && nhome == 0 && nchips > 0)
+		dashHomeOpenApplications();
+	else if (nhome > 0 || nchips == 0)
 		row = 0;
 }
 
