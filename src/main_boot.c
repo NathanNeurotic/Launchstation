@@ -33,6 +33,18 @@ static void mapDefaultFileBrowserLaunchKeyToOkButton(void)
 	setting->LK_Flag[ok_lk] = 1;
 }
 
+/* A new install (no LAUNCHSTATION.CNF found anywhere) starts from the
+ * project's chosen defaults. A loaded configuration is never changed, and
+ * keys missing from an older file keep the classic defaults (initConfig). */
+static void applyFreshInstallDefaults(void)
+{
+	setting->HOSTwrite = 1;        /* NET_HOSTwrite */
+	setting->app_gameid = 1;       /* APP_GameID */
+	setting->Init_Delay = 0;       /* Init_Delay */
+	setting->Hide_Hdd = HIDE_HDD_SHOW_ALL;
+	setting->Hide_MCMMCE = 1;      /* hide empty memory card / MMCE slots */
+}
+
 enum BOOT_DEVICE performEarlyBootInitialization(const char *arg0, char *boot_path, size_t boot_path_len, char *main_msg, char *cnf_path, size_t cnf_path_len, int *cnf_error)
 {
 	enum BOOT_DEVICE boot;
@@ -85,6 +97,7 @@ enum BOOT_DEVICE performEarlyBootInitialization(const char *arg0, char *boot_pat
 			uLE_InitializeRegion();
 		setting->swapKeys = ((ROMVER_data[4] == 'J') || (ROMVER_data[4] == 'C')) ? FALSE : TRUE;
 		mapDefaultFileBrowserLaunchKeyToOkButton();
+		applyFreshInstallDefaults();
 	}
 	bringUpBootNetworkStack(boot);
 	initializeBootGraphics();

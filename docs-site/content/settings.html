@@ -84,25 +84,26 @@
 <h2 id="launching">Launching</h2>
 <div class="ui-gallery"><figure><a href="assets/ui/settings-launching.png"><img src="assets/ui/settings-launching.png" width="640" height="480" loading="lazy" decoding="async" alt="Launching settings"></a><figcaption>Launching settings</figcaption></figure></div>
 <table><thead><tr><th>Page / option</th><th>Values</th><th>Default</th></tr></thead><tbody>
-<tr><td>Automatic start &amp; boot</td><td><b>Automatic start target</b> (application or command; clear to disable), <b>Startup delay</b> 0&ndash;60 s, <b>Automatic start timeout</b> 0&ndash;99 s (needs a target)</td><td>No target, 1 s, 10 s</td></tr>
+<tr><td>Automatic start &amp; boot</td><td><b>Automatic start target</b> (application or command; clear to disable), <b>Startup delay</b> 0&ndash;60 s, <b>Automatic start timeout</b> 0&ndash;99 s (needs a target)</td><td>No target, 0 s, 10 s</td></tr>
 <tr><td>Launch keys</td><td>Circle, Cross, Square, Triangle, L1, R1, L2, R2, L3, R3, START, Left, Right. Each row: <i>Choose target...</i>, <i>Edit title...</i>, <i>Clear target</i> (Square edits the title). SELECT is reserved for configuration; Left/Right are optional.</td><td>Circle = File Browser, Triangle = About, others empty</td></tr>
 <tr><td>Lock shortcuts &amp; bookmarks</td><td>On / Off (prevents editing launch keys and File Browser bookmarks)</td><td>Off</td></tr>
 <tr><td>Disc &amp; PS1 loaders</td><td>ESR loader, OSDSYS program (empty = the console's own), POPStarter ELF, Ember directory, Neutrino ELF; Disable Ember / POPStarter / Neutrino support</td><td>Empty paths; all disable switches Off</td></tr>
 <tr><td>Reset IOP before launch</td><td>On / Off (On gives launched ELFs a clean IOP)</td><td>On</td></tr>
-<tr><td>Game ID output</td><td><b>Game ID launch signal for apps</b> and <b>for discs</b> (RetroGEM-compatible OSD/HDMI adapters)</td><td>Apps Off, discs On</td></tr>
+<tr><td>Game ID output</td><td><b>Game ID launch signal for apps</b> and <b>for discs</b> (RetroGEM-compatible OSD/HDMI adapters)</td><td>Apps On, discs On</td></tr>
 </tbody></table>
 <p>Launch keys can target any application path or a built-in command (the <code>MISC/...</code> entries). A launch key held at boot, or SELECT + button in the dashboard, starts it; targets other than FileBrowser also appear as Home chips. FileBrowser remains available through the Files tab and its configured launch key. See <a href="dashboard.html#launch-keys">Dashboard</a>.</p>
 <h3 id="paths">Path pickers</h3>
 <p>Program and file settings use the native picker with <i>Choose a location...</i> and <i>Clear location</i>. POPStarter and Neutrino have explicit ELF path fields. Ember uses an <b>Ember directory</b>: the folder name and location are arbitrary, but the save-safe umbrella still contains <code>ember.elf</code>, <code>bios.bin</code> and <code>games/&lt;Game&gt;/</code>. When a selected game's own umbrella lacks <code>ember.elf</code>, the configured Ember directory can supply it to that device automatically. VCD remains POPStarter; CUE/BIN/EXE remains Ember. If the Neutrino path is empty, the game device and <code>mc0:</code>/<code>mc1:</code> <code>neutrino/</code> folders are searched.</p>
+<p>The defaults above are what a new install starts with (no <code>LAUNCHSTATION.CNF</code> found). An existing configuration is never changed; a key missing from an older file keeps the classic wLaunchELF default.</p>
 <h3 id="gameid-launch">Colored Game ID launch bars</h3>
-<p>Game ID output for ELF/application launches is off by default on new configurations; it remains available in <b>Settings &gt; Launching &gt; Game ID output</b> for RetroGEM-compatible display adapters. Previously saved configurations keep their selected value until changed. The disc signal is on by default.</p>
+<p>Game ID output for ELF/application launches is on for a new install; it can be turned off in <b>Settings &gt; Launching &gt; Game ID output</b>. Previously saved configurations keep their selected value until changed. The disc signal is on by default.</p>
 
 <h2 id="devices">Storage &amp; devices</h2>
 <div class="ui-gallery"><figure><a href="assets/ui/settings-storage.png"><img src="assets/ui/settings-storage.png" width="640" height="480" loading="lazy" decoding="async" alt="Storage and device settings"></a><figcaption>Storage and device settings</figcaption></figure></div>
 <table><thead><tr><th>Option</th><th>Values</th><th>Default</th></tr></thead><tbody>
 <tr><td>MMCE backups</td><td>Page described <a href="#mmce-sync-page">below</a></td><td>&mdash;</td></tr>
-<tr><td>Internal HDD / ATA units</td><td>Show all, Hide HDD1, Hide HDD0+1, Hide ATA1, Hide ATA0+1, Hide HDD1+ATA1, Hide all (a recovery boot shows everything)</td><td>Hide HDD1+ATA1</td></tr>
-<tr><td>Hide empty memory card slots</td><td>On / Off (also hides unused MMCE entries)</td><td>Off</td></tr>
+<tr><td>Internal HDD / ATA units</td><td>Show all, Hide HDD1, Hide HDD0+1, Hide ATA1, Hide ATA0+1, Hide HDD1+ATA1, Hide all (a recovery boot shows everything)</td><td>Show all</td></tr>
+<tr><td>Hide empty memory card slots</td><td>On / Off (also hides unused MMCE entries)</td><td>On</td></tr>
 <tr><td>Show unavailable devices</td><td>On / Off</td><td>On</td></tr>
 <tr><td>Start devices automatically</td><td>Auto-start USB storage, internal HDD, exFAT HDD, MMCE SD card, MX4SIO, iLink / FireWire (only in builds with iLink; leave off without a physical i.Link port), network (UDPFS)</td><td>All Off</td></tr>
 </tbody></table>
@@ -136,7 +137,7 @@
 <div class="ui-gallery"><figure><a href="assets/ui/settings-network.png"><img src="assets/ui/settings-network.png" width="640" height="480" loading="lazy" decoding="async" alt="Network settings with example addresses"></a><figcaption>Network settings with example addresses</figcaption></figure></div>
 <table><thead><tr><th>Option</th><th>Values</th><th>Default</th></tr></thead><tbody>
 <tr><td>IP address, Netmask, Gateway</td><td>IPv4 editor (Left/Right pick an octet, Up/Down +/-1, L1/R1 &plusmn;10). Used for FTP, PS2Link and UDPFS.</td><td>From <code>IPCONFIG.DAT</code></td></tr>
-<tr><td>Allow writing over the network</td><td>On / Off (lets <code>host:</code> and <code>udpfs:</code> be written to, not just read)</td><td>Off</td></tr>
+<tr><td>Allow writing over the network</td><td>On / Off (lets <code>host:</code> and <code>udpfs:</code> be written to, not just read)</td><td>On</td></tr>
 <tr><td>Legacy Ethernet drivers</td><td>On / Off. Use the older DEV9/PS2IP pair when newer drivers load but the SMAP link never comes up; takes effect next time Ethernet/FTP is started.</td><td>Off</td></tr>
 <tr><td>Sync PS2 clock from Internet</td><td>Sends SNTP requests to <code>0.pool.ntp.org</code> (two attempts, 5 s each), adds the time elapsed since the reply, then writes and verifies the hardware RTC. Starts the network with the IP/netmask/gateway shown (unsaved edits included); once the network is running, changes apply only after saving and restarting the PS2. Failures name the step (DNS, connect, timeout, refused...).</td><td>&mdash;</td></tr>
 <tr><td>SMB shares</td><td>Adds, changes and deletes the saved shares, kept at the end of <code>LAUNCHSTATION.CNF</code> (an old <code>SMB2.CNF</code> is read until the first save and never written). <b>Edit shares as text</b> opens them in the text editor. See <a href="smb.html#file">SMB shares</a>.</td><td>&mdash;</td></tr>
