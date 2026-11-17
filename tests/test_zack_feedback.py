@@ -25,7 +25,7 @@ assert "dashAppsScreen.input(in)" in home
 assert "dashAppsScreen.draw()" in home
 assert "showMiscCommands();" in (root/"src/dash_tools.c").read_text()
 assert "const DashScreen dashFilesScreen" in (root/"src/dash_browser.c").read_text()
-assert '"MASS"' in devices
+assert '"USB Mass Storage Port"' in devices
 assert '"MASS Storage"' in (root/"src/dash_lib.c").read_text()
 assert '"USB Storage"' not in (root/"src/dash_lib.c").read_text()
 assert '"MASS (USB)"' not in devices

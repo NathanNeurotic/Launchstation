@@ -69,6 +69,7 @@ jobs:
           python3 tests/test_move_manifest.py
           python3 tests/test_udpfs_directory_errors.py
           python3 tests/test_dirent_name_guard.py
+          python3 tests/test_device_labels.py
           python3 tests/test_copy_psu_listing.py
           python3 tests/test_listing_complete.py
           python3 tests/test_listing_callers.py

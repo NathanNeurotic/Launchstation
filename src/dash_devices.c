@@ -294,7 +294,12 @@ static DashDevice *add(DashDevice *out, int *n, int max, int icon, int state,
 	d->icon = icon;
 	d->state = state;
 	d->fill = -1.0f;
-	dashStrCopy(d->name, localizeDashboardText(name), sizeof(d->name));
+	/* "What it is (where it is)": the device's name, then the path it opens,
+	 * with USB's usbN: shown as massN:, the way the browser shows it */
+	if (!strncmp(browse, "usb", 3))
+		snprintf(d->name, sizeof(d->name), "%s (mass%s)", localizeDashboardText(name), browse + 3);
+	else
+		snprintf(d->name, sizeof(d->name), "%s (%s)", localizeDashboardText(name), browse);
 	dashStrCopy(d->mount, mount, sizeof(d->mount));
 	dashStrCopy(d->browse, browse, sizeof(d->browse));
 	dashStrCopy(d->status, localizeDashboardText(status), sizeof(d->status));
@@ -361,13 +366,14 @@ int dashDevicesList(DashDevice *out, int max)
 
 		/* PS2 port 0 is mc0 (physical slot 1); port 1 is mc1 (slot 2).
 		 * Keep the label and actual filesystem mount tied to the same port.
-		 * Behind a multitap, mc2-mc7 are its slots B-D: "mc2 (Slot 1-B)". */
+		 * Behind a multitap, mc2-mc7 are its slots B-D:
+		 * "Multitap Memory Card Slot 1-B (mc2:/)". */
 		if (!mcUnitAvailable(port))
 			continue;
 		if (MC_UNIT_SLOT(port) == 0)
-			snprintf(name, sizeof(name), "mc%d (Slot %d)", port, port + 1);
+			snprintf(name, sizeof(name), "Memory Card Slot %d", port + 1);
 		else
-			snprintf(name, sizeof(name), "mc%d (Slot %d-%c)", port, MC_UNIT_PORT(port) + 1, 'A' + MC_UNIT_SLOT(port));
+			snprintf(name, sizeof(name), "Multitap Memory Card Slot %d-%c", MC_UNIT_PORT(port) + 1, 'A' + MC_UNIT_SLOT(port));
 		snprintf(mount, sizeof(mount), "mc%d:", port);
 		snprintf(browse, sizeof(browse), "mc%d:/", port);
 		d = add(out, &n, max, DI_MC, DASH_DEV_BUSY, name, mount, browse, "Checking...");
@@ -378,51 +384,50 @@ int dashDevicesList(DashDevice *out, int max)
 	if (isUsbMassStackLoaded()) {
 		int mask = filerUsbDriveMask();
 		if (mask == 0)
-			add(out, &n, max, DI_USB, DASH_DEV_ABSENT, "MASS", "usb:", "usb:/", "Connect a USB storage device");
+			add(out, &n, max, DI_USB, DASH_DEV_ABSENT, "USB Mass Storage Port", "usb:", "usb:/", "Connect a USB storage device");
 		for (i = 0; i < 10; i++) {
-			char name[32], mount[8], browse[8];
+			char mount[8], browse[8];
 			if (!(mask & (1 << i)))
 				continue;
-			snprintf(name, sizeof(name), "MASS %d", i);
 			snprintf(mount, sizeof(mount), "usb%d:", i);
 			snprintf(browse, sizeof(browse), "usb%d:/", i);
-			add(out, &n, max, DI_USB, DASH_DEV_READY, name, mount, browse, "Ready");
+			add(out, &n, max, DI_USB, DASH_DEV_READY, "USB Mass Storage Port", mount, browse, "Ready");
 		}
 	} else
-		add(out, &n, max, DI_USB, DASH_DEV_PROBE, "MASS", "usb:", "usb:/", "Not connected");
+		add(out, &n, max, DI_USB, DASH_DEV_PROBE, "USB Mass Storage Port", "usb:", "usb:/", "Not connected");
 
 #ifdef MMCE
-	addStorage(out, &n, max, DI_MICROSD, "MMCE Slot 1", "mmce0:", "mmce0:/", "SD2PSX / MemCard PRO2", "No MMCE storage found");
-	addStorage(out, &n, max, DI_MICROSD, "MMCE Slot 2", "mmce1:", "mmce1:/", "SD2PSX / MemCard PRO2", "No MMCE storage found");
+	addStorage(out, &n, max, DI_MICROSD, "MMCE SD Slot 1", "mmce0:", "mmce0:/", "SD2PSX / MemCard PRO2", "No MMCE storage found");
+	addStorage(out, &n, max, DI_MICROSD, "MMCE SD Slot 2", "mmce1:", "mmce1:/", "SD2PSX / MemCard PRO2", "No MMCE storage found");
 #endif
 #ifdef MX4SIO
-	addStorage(out, &n, max, DI_MICROSD, "MX4SIO SD Card Slot 2", "mx4sio:", "mx4sio:/", "Ready (slot 2)", "No MX4SIO storage found");
+	addStorage(out, &n, max, DI_MICROSD, "MX4SIO SD Slot 2", "mx4sio:", "mx4sio:/", "Ready (slot 2)", "No MX4SIO storage found");
 #endif
 #ifdef ILINK
 	if (consoleHasIlink())
-		addStorage(out, &n, max, DI_HDD, "iLink / FireWire", "ilink:", "ilink:/", "IEEE1394 storage ready", "No iLink storage found");
+		addStorage(out, &n, max, DI_HDD, "FireWire iLink Port", "ilink:", "ilink:/", "IEEE1394 storage ready", "No iLink storage found");
 #endif
 
 	if (filerShowHddUnit(0) && !console_is_PSX) {
-		addStorage(out, &n, max, DI_HDD, "Internal HDD (APA)", "hdd0:", "hdd0:/", "APA partitions", "No browsable APA storage found");
+		addStorage(out, &n, max, DI_HDD, "Internal APA HDD", "hdd0:", "hdd0:/", "APA partitions", "No browsable APA storage found");
 	}
 #ifdef EXFAT
 	if (isPcCardCfEligible() || boot_show_all_devices) {
 		if (!isPcCardCfEligible()) {
-			add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "Unsupported console model");
+			add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC Card CompactFlash", "cf0:", "cf0:/", "Unsupported console model");
 		} else if (boot_safe_mode) {
-			add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "Disabled in safe mode");
+			add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC Card CompactFlash", "cf0:", "cf0:/", "Disabled in safe mode");
 		} else if (isPcCardCfBusBusy()) {
-			add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "PC CARD / DEV9 bus busy");
+			add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC Card CompactFlash", "cf0:", "cf0:/", "PC CARD / DEV9 bus busy");
 		} else if (isPcCardCfLoaded()) {
 			u32 sectors = 0;
 			int st_ret = getPcCardCfCapacitySectors(&sectors);
 			if (st_ret < 0 || sectors == 0) {
-				add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "CF card offline or I/O fault");
+				add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC Card CompactFlash", "cf0:", "cf0:/", "CF card offline or I/O fault");
 			} else if ((probe_checked & (1u << PROBE_PCCF)) && !(probe_present & (1u << PROBE_PCCF))) {
-				add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "FAT32/exFAT volume not found");
+				add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC Card CompactFlash", "cf0:", "cf0:/", "FAT32/exFAT volume not found");
 			} else {
-				DashDevice *cd = add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_READY, "PC CARD CF", "cf0:", "cf0:/", "Ready (PCMCIA)");
+				DashDevice *cd = add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_READY, "PC Card CompactFlash", "cf0:", "cf0:/", "Ready (PCMCIA)");
 				if (cd != NULL && sectors > 0) {
 					u64 bytes = (u64)sectors * 512ULL;
 					if (bytes >= (1024ULL * 1024ULL * 1024ULL))
@@ -433,9 +438,9 @@ int dashDevicesList(DashDevice *out, int max)
 			}
 		} else {
 			if (probe_checked & (1u << PROBE_PCCF))
-				add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC CARD CF", "cf0:", "cf0:/", "No compatible CF adapter");
+				add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_ABSENT, "PC Card CompactFlash", "cf0:", "cf0:/", "No compatible CF adapter");
 			else
-				add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_PROBE, "PC CARD CF", "cf0:", "cf0:/", "Not connected");
+				add(out, &n, max, DI_COMPACTFLASH, DASH_DEV_PROBE, "PC Card CompactFlash", "cf0:", "cf0:/", "Not connected");
 		}
 	}
 #endif
@@ -445,11 +450,11 @@ int dashDevicesList(DashDevice *out, int max)
 #endif
 #ifdef XFROM
 	if (console_is_PSX || boot_show_all_devices)
-		add(out, &n, max, DI_CHIP, DASH_DEV_PROBE, "PSX Flash", "xfrom0:", "xfrom0:/", "DESR internal flash");
+		add(out, &n, max, DI_CHIP, DASH_DEV_PROBE, "PSX Internal Flash", "xfrom0:", "xfrom0:/", "DESR internal flash");
 #endif
 #ifdef EXFAT
 	if (filerShowAtaUnit(0) && !console_is_PSX) {
-		addStorage(out, &n, max, DI_HDD, "exFAT HDD", "ata0:", "ata0:/", "Ready", "No exFAT storage found");
+		addStorage(out, &n, max, DI_HDD, "Internal exFAT HDD", "ata0:", "ata0:/", "Ready", "No exFAT storage found");
 	}
 #endif
 
@@ -459,7 +464,7 @@ int dashDevicesList(DashDevice *out, int max)
 	}
 
 #ifdef UDPFS
-	addStorage(out, &n, max, DI_SHARE, "Network (UDPFS)", "udpfs:", "udpfs:/", netConfig[0] ? netConfig : "Connected", "UDPFS server not found - open to retry");
+	addStorage(out, &n, max, DI_SHARE, "Network", "udpfs:", "udpfs:/", netConfig[0] ? netConfig : "Connected", "UDPFS server not found - open to retry");
 #endif
 #ifdef SMB
 	{
@@ -473,7 +478,7 @@ int dashDevicesList(DashDevice *out, int max)
 			snprintf(smb_absent, sizeof(smb_absent), "%s", smbLoadError(SMB_PATH_V2));
 		snprintf(smb_ready, sizeof(smb_ready), "%d share(s) connected",
 		         smbSharesConnectedCount(SMB_PATH_V2) + smbSharesConnectedCount(SMB_PATH_V1));
-		addStorage(out, &n, max, DI_SHARE, "Network (SMB)", SMB_DEVICE_V2, "smb:/", smb_ready, smb_absent);
+		addStorage(out, &n, max, DI_SHARE, "Network", SMB_DEVICE_V2, "smb:/", smb_ready, smb_absent);
 	}
 	/* NFS exports, listed once one is saved (the config is read at boot). */
 	if (smbSharesKnown(SMB_PATH_NFS) > 0) {
@@ -483,19 +488,18 @@ int dashDevicesList(DashDevice *out, int max)
 		if (!isSmbDriverLoaded(SMB_PATH_NFS) && smbLoadError(SMB_PATH_NFS)[0])
 			snprintf(nfs_absent, sizeof(nfs_absent), "%s", smbLoadError(SMB_PATH_NFS));
 		snprintf(nfs_ready, sizeof(nfs_ready), "%d share(s) connected", smbSharesConnectedCount(SMB_PATH_NFS));
-		addStorage(out, &n, max, DI_SHARE, "Network (NFS)", SMB_DEVICE_NFS, "nfs:/", nfs_ready, nfs_absent);
+		addStorage(out, &n, max, DI_SHARE, "Network", SMB_DEVICE_NFS, "nfs:/", nfs_ready, nfs_absent);
 	}
 #endif
 #ifdef ETH
-	add(out, &n, max, DI_SHARE, DASH_DEV_PROBE, "Network Host", "host:", "host:/", "PS2Link host");
+	add(out, &n, max, DI_SHARE, DASH_DEV_PROBE, "Network", "host:", "host:/", "PS2Link host");
 #endif
 	for (i = 0; i < 2; i++) {
 		if (vmcMounted[i]) {
-			char name[24], mount[8], browse[8];
-			snprintf(name, sizeof(name), "Virtual MC %d", i);
+			char mount[8], browse[8];
 			snprintf(mount, sizeof(mount), "vmc%d:", i);
 			snprintf(browse, sizeof(browse), "vmc%d:/", i);
-			add(out, &n, max, DI_MC, DASH_DEV_READY, name, mount, browse, "Mounted image");
+			add(out, &n, max, DI_MC, DASH_DEV_READY, "Virtual Memory Card", mount, browse, "Mounted image");
 		}
 	}
 	if (!dashCfg.show_unavailable_devices) {

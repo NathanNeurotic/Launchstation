@@ -788,7 +788,7 @@ typedef struct
 {
 	int icon;
 	int state;
-	char name[32];
+	char name[48]; /* "Multitap Memory Card Slot 2-B (mc3:/)" */
 	char mount[24];
 	char browse[24];
 	char status[48];

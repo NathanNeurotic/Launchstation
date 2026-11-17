@@ -494,7 +494,7 @@ static void openDir(const char *dir, const char *select)
 				memset(d, 0, sizeof(*d));
 				d->icon = DI_MC;
 				d->state = DASH_DEV_READY;
-				snprintf(d->name, sizeof(d->name), "Memory card image %d", v);
+				snprintf(d->name, sizeof(d->name), "Virtual Memory Card (vmc%d:/)", v);
 				snprintf(d->browse, sizeof(d->browse), "vmc%d:/", v);
 				dashStrCopy(d->status, "VMC", sizeof(d->status));
 			}

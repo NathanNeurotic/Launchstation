@@ -25,8 +25,9 @@ def body(source: str, signature: str) -> str:
 
 # 1. Issue #132: MASS labeling in dash_devices.c
 devices_src = read("src/dash_devices.c")
-assert '"MASS"' in devices_src
-assert '"MASS %d"' in devices_src
+assert '"USB Mass Storage Port"' in devices_src
+assert '"%s (%s)", localizeDashboardText(name), browse' in devices_src  # each row names its path
+assert '"%s (mass%s)", localizeDashboardText(name), browse + 3' in devices_src  # usbN: as the browser shows it
 assert '"MASS (USB)"' not in devices_src
 assert '"MASS (USB) %d"' not in devices_src
 

@@ -31,8 +31,8 @@ assert "this folder + one subfolder" in settings
 
 # 77/78: an unprobed APA/iLink device can be selected to invoke lazy loading.
 assert "d->state == DASH_DEV_PROBE || d->state == DASH_DEV_ABSENT" in browser
-assert '"Internal HDD (APA)"' in devices
-assert '"iLink / FireWire"' in devices
+assert '"Internal APA HDD"' in devices
+assert '"FireWire iLink Port"' in devices
 
 # 81/82: path context/page movement are visible and end navigation remains.
 assert "M_GOTO_END" in editor
