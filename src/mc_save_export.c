@@ -50,30 +50,34 @@ static int aes(const uint8_t key[16], int enc, const uint8_t *iv_in, uint8_t *bu
 	return r;
 }
 
-/* HMAC-SHA1 over buf with the 20-byte signature at sig zeroed; the key comes
- * from the 20-byte seed at seed through the PS1 or PS2 key. */
-static int sign(uint8_t *buf, uint32_t len, uint32_t seed, uint32_t sig, int ps1)
+/* The HMAC-SHA1 key from the 20-byte seed, through the PS1 or PS2 key. */
+static int signKey(const uint8_t *seed, int ps1, uint8_t key[32])
 {
-	uint8_t key[32];
 	int i;
 
-	if (len < sig + 20u)
-		return -1;
 	if (ps1) {
-		memcpy(key, buf + seed, 16);
-		memcpy(key + 16, buf + seed, 16);
+		memcpy(key, seed, 16);
+		memcpy(key + 16, seed, 16);
 		if (aes(ps1_key, 0, NULL, key, 16) || aes(ps1_key, 1, NULL, key + 16, 16))
 			return -1;
 		for (i = 0; i < 16; i++)
 			key[i] ^= sign_iv[i];
 		for (i = 0; i < 4; i++)
-			key[16 + i] ^= buf[seed + 16 + i];
-	} else {
-		memset(key, 0, sizeof(key));
-		memcpy(key, buf + seed, 20);
-		if (aes(ps2_key, 0, sign_iv, key, 32))
-			return -1;
+			key[16 + i] ^= seed[16 + i];
+		return 0;
 	}
+	memset(key, 0, 32);
+	memcpy(key, seed, 20);
+	return aes(ps2_key, 0, sign_iv, key, 32);
+}
+
+/* HMAC-SHA1 over buf with the 20-byte signature at sig zeroed. */
+static int sign(uint8_t *buf, uint32_t len, uint32_t seed, uint32_t sig, int ps1)
+{
+	uint8_t key[32];
+
+	if (len < sig + 20u || signKey(buf + seed, ps1, key))
+		return -1;
 	memset(buf + sig, 0, 20);
 	return mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA1), key, 20, buf, len, buf + sig) ? -1 : 0;
 }
@@ -170,22 +174,24 @@ int ps1SaveToPsx(const Ps1Save *s, uint8_t **out, uint32_t *len)
 	return PS1_OK;
 }
 
-int mcSaveToPsv(const McSaveData *s, uint8_t **out, uint32_t *len)
+/* The .psv header and file table for s in a new buffer *out of *hn bytes,
+ * the signature still zero; *n is the whole file. */
+static int psvHead(const McSaveData *s, uint8_t **out, uint32_t *hn, uint32_t *n)
 {
-	uint64_t n;
+	uint64_t total;
 	uint32_t i, j, off;
 	uint8_t *p;
 
-	if (!s || !out || !len || (s->nfiles && !s->files) || s->nfiles > 0xFFFFu)
+	if (!s || (s->nfiles && !s->files) || s->nfiles > 0xFFFFu)
 		return MCW_ERR_INVALID;
-	*out = NULL;
-	*len = 0;
-	n = 0xA0u + (uint64_t)s->nfiles * 60u;
+	*hn = 0xA0u + s->nfiles * 60u;
+	total = *hn;
 	for (i = 0; i < s->nfiles; i++)
-		n += s->files[i].size;
-	if (n > 0x7FFFFFFFu)
+		total += s->files[i].size;
+	if (total > 0x7FFFFFFFu)
 		return MCW_ERR_INVALID;
-	p = (uint8_t *)calloc(1, (size_t)n);
+	*n = (uint32_t)total;
+	p = (uint8_t *)calloc(1, *hn);
 	if (!p)
 		return MCW_ERR_NOMEM;
 	psvHeader(p, 2);
@@ -195,7 +201,7 @@ int mcSaveToPsv(const McSaveData *s, uint8_t **out, uint32_t *len)
 	wr32(p + 0x78, s->nfiles + 2u);
 	wr32(p + 0x7C, (uint32_t)s->entry[0] | ((uint32_t)s->entry[1] << 8));
 	memcpy(p + 0x80, s->entry + 0x40, 32);
-	off = 0xA0u + s->nfiles * 60u;
+	off = *hn;
 	for (i = 0; i < s->nfiles; i++) {
 		const McSaveFile *f = &s->files[i];
 		uint8_t *e = p + 0xA0u + i * 60u;
@@ -206,8 +212,6 @@ int mcSaveToPsv(const McSaveData *s, uint8_t **out, uint32_t *len)
 		wr32(e + 20, (uint32_t)f->entry[0] | ((uint32_t)f->entry[1] << 8));
 		memcpy(e + 24, f->entry + 0x40, 32);
 		wr32(e + 56, off);
-		if (f->size)
-			memcpy(p + off, f->data, f->size);
 		wr32(p + 0x40, rd32(p + 0x40) + f->size);
 		if (!strncmp((const char *)f->entry + 0x40, "icon.sys", 32)) {
 			wr32(p + 0x44, off);
@@ -234,12 +238,85 @@ int mcSaveToPsv(const McSaveData *s, uint8_t **out, uint32_t *len)
 		}
 		break;
 	}
-	if (mcPsvSign(p, (uint32_t)n) < 0) {
-		free(p);
-		return MCW_ERR_INVALID;
-	}
 	*out = p;
-	*len = (uint32_t)n;
+	return MCW_OK;
+}
+
+int mcSavePsvSignature(const McSaveData *s, uint8_t sig[20])
+{
+	mbedtls_md_context_t md;
+	uint8_t key[32], *p;
+	uint32_t hn, n, i;
+	int r = sig ? psvHead(s, &p, &hn, &n) : MCW_ERR_INVALID;
+
+	if (r != MCW_OK)
+		return r;
+	/* over the header with its signature zeroed, then the data in order */
+	mbedtls_md_init(&md);
+	if (signKey(p + 0x08, 0, key) || mbedtls_md_setup(&md, mbedtls_md_info_from_type(MBEDTLS_MD_SHA1), 1) ||
+	    mbedtls_md_hmac_starts(&md, key, 20) || mbedtls_md_hmac_update(&md, p, hn))
+		r = MCW_ERR_INVALID;
+	for (i = 0; r == MCW_OK && i < s->nfiles; i++)
+		if (s->files[i].size && mbedtls_md_hmac_update(&md, s->files[i].data, s->files[i].size))
+			r = MCW_ERR_INVALID;
+	if (r == MCW_OK && mbedtls_md_hmac_finish(&md, sig))
+		r = MCW_ERR_INVALID;
+	mbedtls_md_free(&md);
+	free(p);
+	return r;
+}
+
+int mcSaveEmitPsv(const McSaveData *s, const uint8_t sig[20], McEmitFn emit, void *ctx, uint32_t *len)
+{
+	uint32_t hn, n, i;
+	uint8_t *p;
+	int r;
+
+	if (!len || (emit && !sig))
+		return MCW_ERR_INVALID;
+	*len = 0;
+	r = psvHead(s, &p, &hn, &n);
+	if (r != MCW_OK)
+		return r;
+	*len = n;
+	if (emit) {
+		memcpy(p + 0x1C, sig, 20);
+		if (emit(ctx, p, hn))
+			r = MCV_ERR_IO;
+		for (i = 0; r == MCW_OK && i < s->nfiles; i++)
+			if (s->files[i].size && emit(ctx, s->files[i].data, s->files[i].size))
+				r = MCV_ERR_IO;
+	}
+	free(p);
+	return r;
+}
+
+int mcSaveToPsv(const McSaveData *s, uint8_t **out, uint32_t *len)
+{
+	McEmitBuffer b;
+	uint8_t sig[20];
+	int r;
+
+	if (!s || !out || !len)
+		return MCW_ERR_INVALID;
+	*out = NULL;
+	*len = 0;
+	r = mcSaveEmitPsv(s, NULL, NULL, NULL, &b.size);
+	if (r == MCW_OK)
+		r = mcSavePsvSignature(s, sig);
+	if (r != MCW_OK)
+		return r;
+	b.used = 0;
+	b.data = (uint8_t *)malloc(b.size);
+	if (!b.data)
+		return MCW_ERR_NOMEM;
+	r = mcSaveEmitPsv(s, sig, mcEmitToBuffer, &b, &b.size);
+	if (r != MCW_OK || b.used != b.size) {
+		free(b.data);
+		return r != MCW_OK ? r : MCW_ERR_INVALID;
+	}
+	*out = b.data;
+	*len = b.size;
 	return MCW_OK;
 }
 

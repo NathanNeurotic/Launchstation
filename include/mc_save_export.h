@@ -82,6 +82,11 @@ int ps1SaveToPsx(const Ps1Save *s, uint8_t **out, uint32_t *len);
 
 /* A PS2 save as a signed .psv; free *out with free(). MCW_OK or an MCW_ERR. */
 int mcSaveToPsv(const McSaveData *s, uint8_t **out, uint32_t *len);
+/* The same signed .psv without a copy of the save: its signature, then the
+ * file through emit piece by piece with that signature; *len is its size and
+ * emit NULL only measures. One signature serves any number of passes. */
+int mcSavePsvSignature(const McSaveData *s, uint8_t sig[20]);
+int mcSaveEmitPsv(const McSaveData *s, const uint8_t sig[20], McEmitFn emit, void *ctx, uint32_t *len);
 
 /* A PS2 save as a .zip of its folder and files, stored (uncompressed), for a
  * PC: the folder's and files' times become DOS times; the card attributes are

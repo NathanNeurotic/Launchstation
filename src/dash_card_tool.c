@@ -549,9 +549,11 @@ static void ctDelete(const char *image, const char *name)
 /* buf written to path and read back; a file that does not read back is
  * removed. fresh: only a new file is made (O_EXCL), so a file that appears
  * at path after the caller checked it is never truncated or removed. */
+static u8 ct_back[CT_BLOCK] __attribute__((aligned(64)));
+
 static int ctWriteFileAs(const char *path, const uint8_t *buf, uint32_t len, int fresh)
 {
-	static u8 back[CT_BLOCK] __attribute__((aligned(64)));
+	u8 *back = ct_back;
 	u32 done = 0;
 	int fd, n, ok = 1;
 
@@ -580,6 +582,83 @@ static int ctWriteFileAs(const char *path, const uint8_t *buf, uint32_t len, int
 	if (!ok)
 		genRemove((char *)path);
 	return ok ? 0 : -1;
+}
+
+/* One pass of a streamed save: measured, written to fd, or read back from fd
+ * and compared. */
+static int ctEmitCount(void *ctx, const uint8_t *buf, uint32_t len)
+{
+	(void)buf;
+	*(u32 *)ctx += len;
+	return 0;
+}
+
+static int ctEmitWrite(void *ctx, const uint8_t *buf, uint32_t len)
+{
+	int fd = *(int *)ctx, n;
+	u32 done;
+
+	for (done = 0; done < len; done += (u32)n) {
+		n = genWrite(fd, (void *)(buf + done), (int)(len - done > 65536 ? 65536 : len - done));
+		if (n <= 0)
+			return -1;
+	}
+	return 0;
+}
+
+static int ctEmitCheck(void *ctx, const uint8_t *buf, uint32_t len)
+{
+	int fd = *(int *)ctx, n;
+	u32 done;
+
+	for (done = 0; done < len; done += (u32)n) {
+		n = genRead(fd, ct_back, (int)(len - done > CT_BLOCK ? CT_BLOCK : len - done));
+		if (n <= 0 || memcmp(ct_back, buf + done, n))
+			return -1;
+	}
+	return 0;
+}
+
+static int ctEmit(const McSaveData *s, int fmt, const uint8_t *sig, McEmitFn emit, void *ctx)
+{
+	uint32_t len;
+
+	return fmt ? mcSaveEmitPsv(s, sig, emit, ctx, &len) : mcCardEmitPsu(s, emit, ctx);
+}
+
+/* s written to path as a .psu (fmt 0) or signed .psv (1) straight from the
+ * save already read whole into memory, so a failed card read never reaches
+ * the file; then read back against a second pass of the same bytes. No copy
+ * of the whole file is made. The save is checked before path is opened;
+ * fresh and the removal of a file that does not read back are as in
+ * ctWriteFileAs, and the file is written in place. */
+static int ctWriteSaveAs(const char *path, const McSaveData *s, int fmt, int fresh)
+{
+	uint8_t sig[20];
+	u32 len = 0;
+	int fd, r, ok;
+
+	r = fmt ? mcSavePsvSignature(s, sig) : MCW_OK;
+	if (r == MCW_OK)
+		r = ctEmit(s, fmt, sig, ctEmitCount, &len);
+	if (r != MCW_OK)
+		return r;
+	fd = genOpen(path, FIO_O_WRONLY | FIO_O_CREAT | (fresh ? FIO_O_EXCL : FIO_O_TRUNC));
+	if (fd < 0)
+		return MCV_ERR_IO;
+	ok = ctEmit(s, fmt, sig, ctEmitWrite, &fd) == MCW_OK;
+	if (genClose(fd) < 0)
+		ok = 0;
+	if (ok) {
+		fd = genOpen(path, FIO_O_RDONLY);
+		ok = fd >= 0 && genLseek(fd, 0, SEEK_END) == (s64)len && genLseek(fd, 0, SEEK_SET) == 0 &&
+		     ctEmit(s, fmt, sig, ctEmitCheck, &fd) == MCW_OK;
+		if (fd >= 0)
+			genClose(fd);
+	}
+	if (!ok)
+		genRemove((char *)path);
+	return ok ? MCW_OK : MCV_ERR_IO;
 }
 
 static int ctWriteFile(const char *path, const uint8_t *buf, uint32_t len)
@@ -635,12 +714,15 @@ static void ctExportPsu(const char *image, const char *name)
 		return;
 	dashLoadingBegin("Exporting save");
 	r = ctReadSave(image, name, &s);
-	if (r == MCW_OK) {
+	if (r == MCW_OK && fmt < 2) { /* .psu and .psv go out straight from the save */
+		r = ctWriteSaveAs(dest, &s, fmt, 0);
+		mcCardFreeSave(&s);
+	} else if (r == MCW_OK) {
 		r = ctSaveAs(&s, fmt, &buf, &len);
 		mcCardFreeSave(&s);
+		if (r == MCW_OK && ctWriteFile(dest, buf, len) < 0)
+			r = MCV_ERR_IO;
 	}
-	if (r == MCW_OK && ctWriteFile(dest, buf, len) < 0)
-		r = MCV_ERR_IO;
 	free(buf);
 	dashLoadingEnd();
 	snprintf(title, sizeof(title), ".%s written and verified", ct_ext[fmt]);
@@ -1944,8 +2026,6 @@ static void ctAllExport(const char *folder, const CtAnyCard *cards, const CtAnyS
                         const unsigned char *marks, int nmarked)
 {
 	McSaveData s;
-	uint8_t *buf;
-	uint32_t len;
 	char out[MAX_PATH], dest[MAX_PATH], file[80], body[160], first[33] = "";
 	int fmt, i, r, done = 0, there = 0, failed = 0, first_r = MCW_OK, c;
 
@@ -1975,16 +2055,12 @@ static void ctAllExport(const char *folder, const CtAnyCard *cards, const CtAnyS
 			there++;
 			continue;
 		}
-		buf = NULL;
 		if (r == MCW_OK)
 			r = ctReadSave(cards[list[i].card].path, list[i].sv.name, &s);
-		if (r == MCW_OK) {
-			r = ctSaveAs(&s, fmt, &buf, &len);
+		if (r == MCW_OK) { /* never over a file made since the check */
+			r = ctWriteSaveAs(dest, &s, fmt, 1);
 			mcCardFreeSave(&s);
 		}
-		if (r == MCW_OK && ctWriteFileAs(dest, buf, len, 1) < 0) /* never over a file made since the check */
-			r = MCV_ERR_IO;
-		free(buf);
 		if (r == MCW_OK) {
 			done++;
 			continue;
