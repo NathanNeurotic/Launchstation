@@ -431,7 +431,8 @@ static void gamesDraw(void)
 	float lx = DASH_SAFE_L, ly = 104, lw = 290;
 	float dx = lx + lw + 24, dy = 98, dw = DASH_PANE_R - dx;
 	char sub[48], dev[48];
-	int top, i;
+	int top, i, off;
+	GSTEXTURE *art;
 
 	snprintf(sub, sizeof(sub), "%d %s", norder, norder == 1 ? "game" : "games");
 	dashDrawSectionTitle(DASH_SAFE_L, 68, localizeDashboardText("Games"), sub);
@@ -467,14 +468,23 @@ static void gamesDraw(void)
 	dashDrawScrollbar(lx + lw + 10, ly, LIST_ROWS * LIST_ROW_H, top, LIST_ROWS, norder);
 
 	dashDrawCard(dx, dy, dw, 290, 16);
-	dashDrawAppArt(g, dx + (dw - 132) * 0.5f, dy + 14, 132, 132, 1.0f, 0);
-	dashTextFit(dx + 14, dy + 156, dw - 28, g->title, DASH_FS_LABEL, DASH_C_TEXT);
+	/* With cover art: the art alone, large, no plaque. Without: the frame as the stand-in. */
+	art = dashArtGet(g, 0);
+	if (art != NULL) {
+		dashTexDrawFit(art, dx + 14, dy + 10, dw - 28, 174, DC(255, 255, 255, 255));
+		off = 36;
+	} else {
+		dashDrawAppArt(g, dx + (dw - 132) * 0.5f, dy + 14, 132, 132, 1.0f, 0);
+		off = 0;
+	}
+	dashTextFit(dx + 14, dy + 156 + off, dw - 28, g->title, DASH_FS_LABEL, DASH_C_TEXT);
 	dashLibDeviceLabel(g->path, dev, sizeof(dev));
-	dashIcon(dashLibDeviceIcon(g->path), dx + 14, dy + 186, 14, DASH_C_ACCENT);
-	dashTextFit(dx + 34, dy + 184, dw - 48, dev, DASH_FS_CAPTION, DASH_C_ACCENT);
+	dashIcon(dashLibDeviceIcon(g->path), dx + 14, dy + 186 + off, 14, DASH_C_ACCENT);
+	dashTextFit(dx + 34, dy + 184 + off, dw - 48, dev, DASH_FS_CAPTION, DASH_C_ACCENT);
 	snprintf(sub, sizeof(sub), "%s%s%s", gameCore(g), g->category[0] ? "  " : "", g->category);
-	dashTextFit(dx + 14, dy + 206, dw - 28, sub, DASH_FS_CAPTION, DASH_C_TEXT2);
-	dashTextFit(dx + 14, dy + 264, dw - 28, g->path, DASH_FS_CAPTION * 0.9f, DASH_C_TEXT3);
+	dashTextFit(dx + 14, dy + 206 + off, dw - 28, sub, DASH_FS_CAPTION, DASH_C_TEXT2);
+	if (art == NULL) /* the full path is in Details; the card is full when the art is big */
+		dashTextFit(dx + 14, dy + 264, dw - 28, g->path, DASH_FS_CAPTION * 0.9f, DASH_C_TEXT3);
 }
 
 static void gamesHints(void)
