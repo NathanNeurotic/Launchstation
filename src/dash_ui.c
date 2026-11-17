@@ -33,6 +33,8 @@ void dashInputPoll(DashInput *in)
 }
 
 /* usb_kb_as_pad = 0 leaves the USB keyboard to the caller (text entry). */
+static int rumble_park_flushed;
+
 void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 {
 	u32 np, repeat;
@@ -43,12 +45,16 @@ void dashInputPollEx(DashInput *in, int usb_kb_as_pad)
 	memset(in, 0, sizeof(*in));
 	shoulder_repeat = 0;
 	physical_sample_valid = 0;
-	/* A worker wants the IOP: stop the motors while padman can still hear it. */
-	if (dashIopParked())
+	/* A worker wants the IOP: stop the motors while padman can still hear it,
+	 * once, before the park point lets the reboot start. */
+	if (dashIopParked() && !rumble_park_flushed) {
+		rumble_park_flushed = 1;
 		padRumbleFlush();
+	}
 	dashWorkerParkPoint();
 	if (dashIopParked())
 		return; /* the IOP (and padman with it) is being rebooted */
+	rumble_park_flushed = 0;
 	/* readpad checks each port's state and skips unsettled ports. Waiting
 	 * here stalls every frame while both controllers are negotiating. */
 	/* the USB keyboard driver is on the IOP: leave it alone while the
