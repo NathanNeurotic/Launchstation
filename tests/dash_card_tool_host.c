@@ -67,11 +67,16 @@ static void map(const char *path, char *out)
 	snprintf(out, MAX_PATH, "%s/%.*s%s", root, (int)(colon - path), path, colon + 1);
 }
 
+static int open_dirs;
 int genOpen(const char *path, int mode)
 {
 	char p[MAX_PATH];
 	int fd;
 
+	if (open_dirs) { /* MMCE: one handle, and a listing is one */
+		fprintf(stderr, "file opened while a listing is open: %s\n", path);
+		abort();
+	}
 	map(path, p);
 	fd = open(p, mode, 0644);
 	if (fd >= 0) {
@@ -110,12 +115,14 @@ int genDopen(char *path)
 		;
 	if (i == 8 || !(dirs[i] = opendir(p)))
 		return -1;
+	open_dirs++;
 	return i;
 }
 int genDclose(int fd)
 {
 	closedir(dirs[fd]);
 	dirs[fd] = NULL;
+	open_dirs--;
 	return 0;
 }
 int fileXioDread(int fd, iox_dirent_t *ent)

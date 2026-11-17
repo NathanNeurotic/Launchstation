@@ -1013,13 +1013,14 @@ static void ctFolderEntry(uint8_t e[512], const char *name, int dir, u32 size, c
 }
 
 /* The save folder dir+name read whole into s: its files, which must be plain
- * files, at most CT_PSU_MAX bytes in all. *why says what is wrong. */
+ * files, at most CT_PSU_MAX bytes in all. *why says what is wrong. The
+ * listing is closed before any file is opened: MMCE allows one open handle. */
 static int ctReadFolder(const char *dir, const char *name, McSaveData *s, const char **why)
 {
 	char path[MAX_PATH], file[MAX_PATH];
 	iox_dirent_t ent;
 	uint8_t now[8];
-	u32 total = 0, got;
+	u32 total = 0, got, i;
 	s64 size;
 	int fd, ffd, n, dr = 0, r = MCW_OK;
 
@@ -1038,8 +1039,9 @@ static int ctReadFolder(const char *dir, const char *name, McSaveData *s, const 
 		*why = "The folder could not be opened.";
 		return MCV_ERR_IO;
 	}
+	/* first the names and times; the entry keeps the name at 0x40 */
 	while (r == MCW_OK && (dr = fileXioDread(fd, &ent)) > 0) {
-		McSaveFile *f, *grown;
+		McSaveFile *grown;
 
 		if (!memchr(ent.name, 0, sizeof(ent.name))) {
 			*why = "A file name in it is longer than a memory card allows.";
@@ -1063,33 +1065,9 @@ static int ctReadFolder(const char *dir, const char *name, McSaveData *s, const 
 			r = MCW_ERR_NOMEM;
 		} else {
 			s->files = grown;
-			f = &s->files[s->nfiles];
-			memset(f, 0, sizeof(*f));
-			ffd = snprintf(file, sizeof(file), "%s%s", path, ent.name) < (int)sizeof(file) ? genOpen(file, FIO_O_RDONLY) : -1;
-			size = ffd >= 0 ? genLseek(ffd, 0, SEEK_END) : -1;
-			if (size < 0 || genLseek(ffd, 0, SEEK_SET) != 0) {
-				*why = "A file in it could not be read.";
-				r = MCV_ERR_IO;
-			} else if ((u64)size > CT_PSU_MAX - total) {
-				*why = "It is larger than a memory card save can be.";
-				r = MCW_ERR_INVALID;
-			} else if (!(f->data = (uint8_t *)malloc(size ? (size_t)size : 1))) {
-				r = MCW_ERR_NOMEM;
-			} else {
-				s->nfiles++; /* freed with the save from here on */
-				for (got = 0; got < (u32)size; got += (u32)n)
-					if ((n = genRead(ffd, f->data + got, (int)((u32)size - got))) <= 0)
-						break;
-				if (got != (u32)size) {
-					*why = "A file in it could not be read.";
-					r = MCV_ERR_IO;
-				}
-				f->size = (u32)size;
-				total += f->size;
-				ctFolderEntry(f->entry, ent.name, 0, f->size, ent.stat.ctime, ent.stat.mtime, now);
-			}
-			if (ffd >= 0)
-				genClose(ffd);
+			memset(&s->files[s->nfiles], 0, sizeof(McSaveFile));
+			ctFolderEntry(s->files[s->nfiles].entry, ent.name, 0, 0, ent.stat.ctime, ent.stat.mtime, now);
+			s->nfiles++; /* freed with the save from here on */
 		}
 		memset(&ent, 0, sizeof(ent));
 	}
@@ -1097,6 +1075,39 @@ static int ctReadFolder(const char *dir, const char *name, McSaveData *s, const 
 	if (r == MCW_OK && dr < 0) {
 		*why = "The folder could not be read.";
 		r = MCV_ERR_IO;
+	}
+	/* then each file, with the listing closed */
+	for (i = 0; r == MCW_OK && i < s->nfiles; i++) {
+		McSaveFile *f = &s->files[i];
+		const char *fname = (const char *)f->entry + 0x40;
+
+		ffd = snprintf(file, sizeof(file), "%s%s", path, fname) < (int)sizeof(file) ? genOpen(file, FIO_O_RDONLY) : -1;
+		size = ffd >= 0 ? genLseek(ffd, 0, SEEK_END) : -1;
+		if (size < 0 || genLseek(ffd, 0, SEEK_SET) != 0) {
+			*why = "A file in it could not be read.";
+			r = MCV_ERR_IO;
+		} else if ((u64)size > CT_PSU_MAX - total) {
+			*why = "It is larger than a memory card save can be.";
+			r = MCW_ERR_INVALID;
+		} else if (!(f->data = (uint8_t *)malloc(size ? (size_t)size : 1))) {
+			r = MCW_ERR_NOMEM;
+		} else {
+			for (got = 0; got < (u32)size; got += (u32)n)
+				if ((n = genRead(ffd, f->data + got, (int)((u32)size - got))) <= 0)
+					break;
+			if (got != (u32)size) {
+				*why = "A file in it could not be read.";
+				r = MCV_ERR_IO;
+			}
+			f->size = (u32)size;
+			total += f->size;
+			f->entry[4] = (uint8_t)f->size;
+			f->entry[5] = (uint8_t)(f->size >> 8);
+			f->entry[6] = (uint8_t)(f->size >> 16);
+			f->entry[7] = (uint8_t)(f->size >> 24);
+		}
+		if (ffd >= 0)
+			genClose(ffd);
 	}
 	if (r != MCW_OK) {
 		if (r == MCW_ERR_NOMEM)
