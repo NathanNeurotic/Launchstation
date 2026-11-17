@@ -1,10 +1,11 @@
 # Per-game Neutrino settings file
 
 **Games tab > Triangle > Game settings** (and the Neutrino options before a launch) save a game's
-settings in `NEUT-<Game ID>.cfg`, for example `NEUT-SCUS_971.13.cfg`, in the same folder as
-Launchstation's other config files (`SYS-CONF` on the memory card, or the folder Launchstation was
-started from). It is plain text in the same `$Key=value` style as RiptOPL's per-game `.cfg`, so you
-can edit it by hand.
+settings in `NEUT-<Game ID>.cfg`, for example `NEUT-SCUS_971.13.cfg`. The file goes on **the device
+the game is on**, in the `CFG` folder at the device root (`mass:/CFG/NEUT-SCUS_971.13.cfg`), next to
+the `VMC` folder. Your memory card is not filled with per-game files. It is plain text in the same
+`$Key=value` style as RiptOPL's per-game `.cfg`, so you can edit it by hand. It is named `NEUT-...`
+so it never touches RiptOPL's own `CFG/<Game ID>.cfg`.
 
 ```
 $Compatibility=6
@@ -30,6 +31,6 @@ Keep `$End=1` as the last line when you edit a file by hand. A file without it i
 
 - Lines starting with `#` and unknown keys are ignored. A value that is not valid makes Launchstation ignore the whole file.
 - **Game settings rewrites the file** with the keys above; extra lines you added are not kept.
-- Older profiles (`NEUT-<ID>-A.CNF` and `-B.CNF`, lines starting `NTP1|`) are still read when there is no `NEUT-<ID>.cfg`. They are never changed or deleted.
-- The file stays where Launchstation keeps its config; it is not yet stored on the game's device.
+- Where it is looked for, in order: the game's device (`CFG/NEUT-<ID>.cfg`), then the app config folder (`SYS-CONF` on the memory card), then the older profiles (`NEUT-<ID>-A.CNF` and `-B.CNF`, lines starting `NTP1|`). Nothing in the older places is changed or deleted.
+- Where it is saved: USB (`mass:`/`usb`), exFAT HDD (`ata`), MX4SIO and MMCE games are saved on their own device (the `CFG` folder is created if it is missing). If that write fails, or the device is not loaded, the save goes to the app config folder instead and the message says so. **iLink and UDPFS games are not written yet** (their file is read if you put one there, and saves go to the app config folder) until a console test confirms writing there is safe. SMB and NFS games always use the app config folder. Only these per-game files moved; Launchstation's own settings stay where they were.
 - Neutrino only runs `-mc0` reliably; `-mc1` is accepted but not emulated by current Neutrino.

@@ -5,6 +5,7 @@
 #include "dash_sound.h"
 #include "neutrino_gameid.h"
 #include "init.h"
+#include "filer_shared.h"
 #include <limits.h>
 
 static const struct {
@@ -107,12 +108,17 @@ int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *options, NEUTRINO_OPT
 }
 
 
-/* Per-game Neutrino settings: <store>/NEUT-<GAME ID>.cfg, plain $Key=value text
- * (see docs/NEUTRINO_GAME_CONFIG.md), written by Game settings and editable by
- * hand. The older NEUT-<ID>-A/B.CNF "NTP1|..." profiles are still read when no
- * new file exists, and are never modified or deleted. No game image, VMC, or
- * LAUNCHSTATION.CNF is ever modified. */
+/* Per-game Neutrino settings: NEUT-<GAME ID>.cfg, plain $Key=value text (see
+ * docs/NEUTRINO_GAME_CONFIG.md), written by Game settings and editable by hand.
+ * Lookup order: <game device root>CFG/NEUT-<ID>.cfg, then the app config folder
+ * (memory card) NEUT-<ID>.cfg, then the older NEUT-<ID>-A/B.CNF "NTP1|..."
+ * profiles. Saving writes the game's device when it is a device that is safe to
+ * write, else the app config folder. Nothing already stored is ever deleted or
+ * modified in place by the fallback, and no game image, VMC, or LAUNCHSTATION.CNF
+ * is ever touched. Only these per-game files move; the app's own settings stay
+ * in the app config folder. */
 static char active_profile_gameid[NEUTRINO_GAME_ID_SIZE];
+static char active_profile_path[MAX_PATH]; /* the game's image path: tells which device it lives on */
 
 static int profileGameIdValid(const char *id)
 {
@@ -152,6 +158,43 @@ static int profilePath(const char *id, int slot, char *out, int size)
 	else
 		snprintf(filename, sizeof(filename), "NEUT-%s-%c.CNF", id, slot ? 'B' : 'A'); /* legacy */
 	return dashStoreBuildPath(out, size, filename) == 0;
+}
+
+/* Where a game's profile lives on its own device. 0: the path is not on a device
+ * the file can go on (SMB/NFS, memory card, none). 1: a block device that is written
+ * the same way as the games on it. 2: read-only until a console test confirms
+ * writing there is safe (a hand-added file is still read). */
+#define PROFILE_DEVICE_NONE 0
+#define PROFILE_DEVICE_WRITABLE 1
+#define PROFILE_DEVICE_READ_ONLY 2
+
+static int profileDeviceKind(const char *iso)
+{
+	if (iso == NULL || strstr(iso, ":/") == NULL)
+		return PROFILE_DEVICE_NONE;
+	if (!strncmp(iso, "mass", 4) || !strncmp(iso, "usb", 3) || !strncmp(iso, "ata", 3) ||
+	    !strncmp(iso, "mx4sio", 6) || !strncmp(iso, "mmce", 4))
+		return PROFILE_DEVICE_WRITABLE;
+	if (!strncmp(iso, "ilink", 5) || !strncmp(iso, "udpfs", 5))
+		return PROFILE_DEVICE_READ_ONLY;
+	return PROFILE_DEVICE_NONE;
+}
+
+/* <device root>CFG/NEUT-<ID>.cfg (dir: <device root>CFG). The device must be
+ * the live one for this launch: its stack has to be loaded already. */
+static int profileDevicePath(const char *id, char *file, int file_size, char *dir, int dir_size)
+{
+	const char *colon = strstr(active_profile_path, ":/");
+	int root;
+
+	if (!profileGameIdValid(id) || profileDeviceKind(active_profile_path) == PROFILE_DEVICE_NONE ||
+	    !isPathDeviceStackLoaded(active_profile_path))
+		return 0;
+	root = (int)(colon + 2 - active_profile_path);
+	if (snprintf(dir, dir_size, "%.*sCFG", root, active_profile_path) >= dir_size ||
+	    snprintf(file, file_size, "%s/NEUT-%s.cfg", dir, id) >= file_size)
+		return 0;
+	return 1;
 }
 
 /* A profile lookup must never switch the IOP stack underneath the ISO.
@@ -345,20 +388,29 @@ static int profileParseText(char *text, NEUTRINO_LAUNCH_OPTIONS *out)
 	return 1;
 }
 
-static int profileReadFile(const char *id, NEUTRINO_LAUNCH_OPTIONS *out)
+static int profileReadAt(const char *path, NEUTRINO_LAUNCH_OPTIONS *out)
 {
-	char path[MAX_PATH];
 	char *text;
 	int len, ok;
 
-	if (!profileStorageSafe() || !profilePath(id, 2, path, sizeof(path)))
-		return 0;
 	text = dashLoadTextFile(path, 2048, &len);
 	if (text == NULL)
 		return 0;
 	ok = profileParseText(text, out);
 	free(text);
 	return ok;
+}
+
+/* The game device's file first, then the app config folder's. */
+static int profileReadFile(const char *id, NEUTRINO_LAUNCH_OPTIONS *out)
+{
+	char path[MAX_PATH], dir[MAX_PATH];
+
+	if (profileDevicePath(id, path, sizeof(path), dir, sizeof(dir)) && profileReadAt(path, out))
+		return 1;
+	if (!profileStorageSafe() || !profilePath(id, 2, path, sizeof(path)))
+		return 0;
+	return profileReadAt(path, out);
 }
 
 /* The saved settings for a game: the KEY=value file if it is valid, else the
@@ -371,15 +423,15 @@ static int profileLoad(const char *id, NEUTRINO_LAUNCH_OPTIONS *out)
 	return profileReadFile(id, out) || profileReadLatest(id, out, &revision, &slot);
 }
 
+/* 0: not saved. 1: saved on the game's device. 2: saved in the app config folder
+ * (the game's device is not one that is written, or the write there failed). */
 static int profileSave(const char *id, const NEUTRINO_LAUNCH_OPTIONS *options)
 {
 	NEUTRINO_LAUNCH_OPTIONS read_back;
-	char path[MAX_PATH], text[512];
+	char path[MAX_PATH], dir[MAX_PATH], text[512];
 	int n, i;
 
-	if (!profileGameIdValid(id) || !profileOptionsValid(options) ||
-	    !profileStorageSafe() || !dashWorkerAwaitAll("Finishing up") ||
-	    !profilePath(id, 2, path, sizeof(path)))
+	if (!profileGameIdValid(id) || !profileOptionsValid(options) || !dashWorkerAwaitAll("Finishing up"))
 		return 0;
 	{
 		int mask = 0;
@@ -393,9 +445,24 @@ static int profileSave(const char *id, const NEUTRINO_LAUNCH_OPTIONS *options)
 		             options->debug_colors ? "-dbc" : "", options->debug_colors && options->logo ? " " : "",
 		             options->logo ? "-logo" : "", options->vmc[0], options->vmc[1]);
 	}
-	if (n <= 0 || n >= (int)sizeof(text) || dashWriteFile(path, text, n) < 0)
+	if (n <= 0 || n >= (int)sizeof(text))
 		return 0;
-	return profileReadFile(id, &read_back) && memcmp(&read_back, options, sizeof(*options)) == 0;
+	/* The game's own device: one file in CFG/, created if it is missing (the
+	 * folder RiptOPL uses). A failed or cut-short write leaves a file without
+	 * $End=1, which the loader ignores; the save then falls back below. */
+	if (profileDeviceKind(active_profile_path) == PROFILE_DEVICE_WRITABLE &&
+	    profileDevicePath(id, path, sizeof(path), dir, sizeof(dir))) {
+		int wrote = dashWriteFile(path, text, n);
+		if (wrote < 0 && genMkdir(dir, fileMode) >= 0)
+			wrote = dashWriteFile(path, text, n);
+		if (wrote >= 0 && profileReadAt(path, &read_back) && memcmp(&read_back, options, sizeof(*options)) == 0)
+			return 1;
+	}
+	if (!profileStorageSafe() || !profilePath(id, 2, path, sizeof(path)))
+		return 0;
+	if (dashWriteFile(path, text, n) < 0)
+		return 0;
+	return profileReadAt(path, &read_back) && memcmp(&read_back, options, sizeof(*options)) == 0 ? 2 : 0;
 }
 
 
@@ -473,7 +540,7 @@ static int editNeutrinoOption(int row, int direction, void *arg)
 	else if (!direction && active_profile_gameid[0] && row == NEUTRINO_CANCEL) {
 		int saved = profileSave(active_profile_gameid, options);
 		dashToast(saved ? DASH_TOAST_OK : DASH_TOAST_WARN,
-		          saved ? "Saved Neutrino game profile" : "Could not save game profile");
+		          saved == 1 ? "Saved to the game's device" : saved ? "Saved to the memory card (not the game's device)" : "Could not save game profile");
 		return TRUE;
 	} else if (!direction && active_profile_gameid[0] && row == NEUTRINO_CANCEL + 1)
 		memset(options, 0, sizeof(*options));
@@ -642,21 +709,26 @@ int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 
 /* The context is restricted to one synchronous UI call and always cleared.
  * Classic/no-ID launches retain their historical launch-only defaults. */
-int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *options, const char *game_id)
+int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *options, const char *game_id, const char *game_path)
 {
 	int result;
 
 	active_profile_gameid[0] = '\0';
-	if (profileGameIdValid(game_id))
+	active_profile_path[0] = '\0';
+	if (profileGameIdValid(game_id)) {
 		snprintf(active_profile_gameid, sizeof(active_profile_gameid), "%s", game_id);
+		if (game_path != NULL)
+			snprintf(active_profile_path, sizeof(active_profile_path), "%s", game_path);
+	}
 	result = showNeutrinoLaunchOptions(options);
 	active_profile_gameid[0] = '\0';
+	active_profile_path[0] = '\0';
 	return result;
 }
 
 /* GAMES Triangle "Game settings": edit this game's saved profile without
  * starting it. Returns 1 saved, 0 closed unsaved, -1 no valid Game ID. */
-int editNeutrinoGameProfile(const char *game_id)
+int editNeutrinoGameProfile(const char *game_id, const char *game_path)
 {
 	NEUTRINO_LAUNCH_OPTIONS options, saved;
 	int result = 0;
@@ -668,12 +740,17 @@ int editNeutrinoGameProfile(const char *game_id)
 		return 0;
 	memset(&options, 0, sizeof(options));
 	snprintf(active_profile_gameid, sizeof(active_profile_gameid), "%s", game_id);
+	snprintf(active_profile_path, sizeof(active_profile_path), "%s", game_path != NULL ? game_path : "");
 	if (profileLoad(game_id, &saved))
 		options = saved;
 	if (showDashboardNeutrinoOptions(&options, 1)) {
-		result = profileSave(game_id, &options);
-		dashToast(result ? DASH_TOAST_OK : DASH_TOAST_WARN, result ? "Saved Neutrino game profile" : "Could not save game profile");
+		int saved_where = profileSave(game_id, &options);
+		result = saved_where != 0;
+		dashToast(result ? DASH_TOAST_OK : DASH_TOAST_WARN,
+		          saved_where == 1 ? "Saved to the game's device" :
+		          result ? "Saved to the memory card (not the game's device)" : "Could not save game profile");
 	}
 	active_profile_gameid[0] = '\0';
+	active_profile_path[0] = '\0';
 	return result;
 }

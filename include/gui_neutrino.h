@@ -22,8 +22,8 @@ typedef struct
 } NEUTRINO_OPTION_ARGS;
 
 int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options);
-int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *options, const char *game_id);
-int editNeutrinoGameProfile(const char *game_id);
+int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *options, const char *game_id, const char *game_path);
+int editNeutrinoGameProfile(const char *game_id, const char *game_path);
 int neutrinoVmcNameValid(const char *name);
 int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *options, NEUTRINO_OPTION_ARGS *args);
 

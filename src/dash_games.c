@@ -349,7 +349,7 @@ static void showDetails(DashApp *g)
  * starting the game; Start then opens them already filled in. */
 static void gameSettings(DashApp *g)
 {
-	int r = editNeutrinoGameProfile(g->category);
+	int r = editNeutrinoGameProfile(g->category, g->path);
 
 	if (r < 0)
 		dashModalMessage(DI_INFO, g->title,
