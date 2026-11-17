@@ -107,11 +107,13 @@ int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *options, NEUTRINO_OPT
 }
 
 
-/* Per-game Neutrino settings: <store>/NEUT-<GAME ID>.CNF, plain KEY=value text
+/* Per-game Neutrino settings: <store>/NEUT-<GAME ID>.cfg, plain $Key=value text
  * (see docs/NEUTRINO_GAME_CONFIG.md), written by Game settings and editable by
  * hand. The older NEUT-<ID>-A/B.CNF "NTP1|..." profiles are still read when no
  * new file exists, and are never modified or deleted. No game image, VMC, or
  * LAUNCHSTATION.CNF is ever modified. */
+static char active_profile_gameid[NEUTRINO_GAME_ID_SIZE];
+
 static int profileGameIdValid(const char *id)
 {
 	int i;
