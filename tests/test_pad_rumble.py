@@ -24,7 +24,7 @@ assert "Dash_Vibration" in store and "padRumbleEnable(dashCfg.rumble);" in store
 assert "dashCfg.rumble = 1" not in store  # default stays off (memset in dashStoreDefaults)
 settings = (root / "src/dash_settings.c").read_text()
 assert "S_RUMBLE, \"Vibration\"" in settings
-assert "padRumbleFlush();" in (root / "src/dash_ui.c").read_text()
+assert "padRumbleFlush();" in (root / "src/dash_worker.c").read_text()
 assert "padRumbleFlush();" in (root / "src/main_actions.c").read_text()
 
 stub = r'''

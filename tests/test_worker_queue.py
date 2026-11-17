@@ -26,7 +26,8 @@ void *_gp;
 void (*iopResetNotify)(int);
 int (*iopResetBlocked)(void);
 int dashWorkerOnThread(void);
-static int drained, signaled;
+static int drained, signaled, flushes, flushed_after_signal;
+static void padRumbleFlush(void) {flushes++; if (signaled) flushed_after_signal++;}
 static int CreateSema(void *p) {(void)p; return 1;}
 static int CreateThread(void *p) {(void)p; return 2;}
 static int StartThread(int id, void *p) {(void)id; (void)p; return 0;}
@@ -67,6 +68,16 @@ int main(void) {
         assert(dashWorkerDone(ids[i]));
     }
     assert(!dashWorkerBusy() && ran == JOB_QUEUE+1 && finished == ran);
+    /* IOP park: whichever caller reaches the park point first stops the motors
+     * once, before the worker is signaled; repeated park points send nothing. */
+    signaled=0;
+    park_req=1; dashWorkerParkPoint(); dashWorkerParkPoint(); dashWorkerParkPoint();
+    assert(flushes==1 && flushed_after_signal==0 && signaled==1 && dashIopParked());
+    park_req=0; dashWorkerParkPoint(); assert(!dashIopParked());
+    signaled=0; park_req=1; dashWorkerParkPoint();
+    assert(flushes==2 && flushed_after_signal==0 && signaled==1);
+    park_req=0; dashWorkerParkPoint();
+    puts("PASS: one rumble stop per IOP park, before the worker is signaled");
     puts("PASS: unavailable/full rejection, caller ownership, no UI libmc wait, FIFO IDs and callbacks");
 }
 '''

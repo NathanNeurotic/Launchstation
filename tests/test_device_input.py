@@ -68,12 +68,11 @@ static int padRead(int p,int s,struct padButtonStatus *b) {
     (void)s; b->btns=0xffff ^ keys[p];
     b->rjoy_h=b->rjoy_v=b->ljoy_h=0x80; b->ljoy_v=left_v; return good[p];
 }
-static int park_req, parked, flush_calls, flush_while_parked;
-static void dashWorkerParkPoint(void) { parked = park_req; }
-static int dashIopParked(void) { return parked || park_req; }
+static void dashWorkerParkPoint(void) {}
+static int dashIopParked(void) { return 0; }
 static int dashWorkerIoBusy(void) { return busy; }
 static void padRumbleTick(u32 held) { (void)held; }
-static void padRumbleFlush(void) { flush_calls++; if (parked) flush_while_parked++; }
+static void padRumbleFlush(void) {}
 static int pad_wait_calls;
 static void waitAnyPadReady(void) { pad_wait_calls++; }
 """
@@ -90,7 +89,7 @@ static int dashboard_menus,dashboard_menu_open,dash_start_menu_blocked,dash_star
 static void dashDashboardMenu(void) { dashboard_menus++; }
 """
 padcode += function(read("src/dash_main.c"), "int dashDashboardMenuIsOpen(")
-padcode += "static int rumble_park_flushed;\n" + function(ui, "void dashInputPollEx(") + function(ui, "u32 dashInputShoulderRepeat(") + function(ui, "void dashInputFlush(")
+padcode += function(ui, "void dashInputPollEx(") + function(ui, "u32 dashInputShoulderRepeat(") + function(ui, "void dashInputFlush(")
 padcode += function(ui, "int dashInputPollPhysical(")
 padcode += r"""
 int main(void) {
@@ -98,12 +97,6 @@ int main(void) {
     connected[0]=connected[1]=3;
     dashInputPollEx(&in,0); dashInputFlush();
     assert(!in.any && pad_wait_calls==0 && now_ms==1000);
-    /* IOP park: one rumble stop before the park point, none while the reboot runs. */
-    park_req=1; dashInputPollEx(&in,0); dashInputPollEx(&in,0); dashInputPollEx(&in,0);
-    assert(flush_calls==1 && flush_while_parked==0 && !in.any);
-    park_req=0; dashInputPollEx(&in,0); park_req=1; dashInputPollEx(&in,0);
-    assert(flush_calls==2 && flush_while_parked==0);
-    park_req=0; dashInputPollEx(&in,0); dashInputFlush();
     connected[0]=1; connected[1]=0;
     /* A successful press followed by failed reads must not replay it. */
     keys[0]=PAD_TRIANGLE;
