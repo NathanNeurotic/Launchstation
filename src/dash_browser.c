@@ -3444,7 +3444,7 @@ static void browserDrawBody(void)
 		h[n].button = dashOkIcon(), h[n].key = NULL, h[n].label = "Open", n++;
 		if (fb.dir[0] && !isMisc(fb.dir))
 			h[n].button = DI_BTN_SQUARE, h[n].key = NULL, h[n].label = "Select", n++;
-		h[n].button = DI_BTN_TRIANGLE, h[n].key = NULL, h[n].label = "Menu", n++;
+		h[n].button = DI_BTN_TRIANGLE, h[n].key = NULL, h[n].label = "Options", n++;
 		if (fb.dir[0] || !fb_tab_active || dashBackSection() != DASH_SEC_FILES)
 			h[n].button = dashBackIcon(), h[n].key = NULL, h[n].label = fb.dir[0] ? "Up" : (fb_tab_active ? dashSectionLabel(dashBackSection()) : "Close"), n++;
 		dashDrawHints(h, n);
