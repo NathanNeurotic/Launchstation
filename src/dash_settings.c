@@ -3708,6 +3708,49 @@ static void editLaunchMenu(const SetItem *it)
 		editLaunchKey(it, r);
 }
 
+/* Numbers open a one-row popup: Left/Right step the value live, X or Circle
+ * closes it. The list itself keeps Left/Right for paging. */
+typedef struct
+{
+	int id;
+	char text[24];
+} NumberEdit;
+
+static int numberStep(int index, int direction, void *arg)
+{
+	NumberEdit *e = arg;
+	int v, lo, hi;
+
+	(void)index;
+	if (!direction || !numberInfo(e->id, &v, &lo, &hi, e->text, sizeof(e->text)) || v + direction < lo || v + direction > hi)
+		return 0;
+	setNumber(e->id, v + direction);
+	numberInfo(e->id, &v, &lo, &hi, e->text, sizeof(e->text));
+	return 1;
+}
+
+static void editNumber(const SetItem *it)
+{
+	NumberEdit e;
+	DashMenuItem row = {-1, e.text, NULL, 0};
+	int v, lo, hi;
+
+	e.id = it->id;
+	if (!numberInfo(e.id, &v, &lo, &hi, e.text, sizeof(e.text)))
+		return;
+	dashModalSetEdit(numberStep, &e);
+	dashModalMenu(localizeDashboardText(it->label), localizeDashboardText("Left/Right to change"), &row, 1, 0);
+}
+
+/* Left/Right jump a screen of rows (stopping at the ends, then wrapping);
+ * X opens or changes the focused row. */
+static int pageJump(int cur, int total, int dir)
+{
+	if (dir < 0)
+		return cur == 0 ? total - 1 : (cur > ITEM_ROWS ? cur - ITEM_ROWS : 0);
+	return cur == total - 1 ? 0 : (cur + ITEM_ROWS < total - 1 ? cur + ITEM_ROWS : total - 1);
+}
+
 static void settingsInput(const DashInput *in)
 {
 	const SetItem *it;
@@ -3733,6 +3776,13 @@ static void settingsInput(const DashInput *in)
 				dashUiFocusPoke();
 			item = next;
 		}
+	} else if (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT)) {
+		if (total > 0) {
+			int next = pageJump(item, total, (in->pressed & DASH_IN_LEFT) ? -1 : 1);
+			if (next != item)
+				dashUiFocusPoke();
+			item = next;
+		}
 	} else if (in->pressed & DASH_IN_L2) {
 		if (item != 0) {
 			dashUiFocusPoke();
@@ -3752,12 +3802,10 @@ static void settingsInput(const DashInput *in)
 	} else if (it->type != ST_PAGE && themeSettingResettable(it->id) && (in->pressed & DASH_IN_FAV)) {
 		if (resetThemeSetting(it->id))
 			dashToast(DASH_TOAST_OK, "Setting reset to preset default");
-	} else if ((in->pressed & DASH_IN_LEFT) && it->type != ST_CHOICE && it->type != ST_NUMBER) {
-		backPage();
 	} else if (itemDisabled(it)) {
-		if (in->pressed & (DASH_IN_OK | DASH_IN_LEFT | DASH_IN_RIGHT | DASH_IN_FAV))
+		if (in->pressed & (DASH_IN_OK | DASH_IN_FAV))
 			dashToast(DASH_TOAST_INFO, disabledHelp(it));
-	} else if (it->type == ST_PAGE && (in->pressed & (DASH_IN_OK | DASH_IN_RIGHT))) {
+	} else if (it->type == ST_PAGE && (in->pressed & DASH_IN_OK)) {
 #ifdef SMB
 		if (it->id == P_SMB || it->id == P_NFS) {
 			if (smbed.nfs != (it->id == P_NFS)) {
@@ -3772,14 +3820,8 @@ static void settingsInput(const DashInput *in)
 		colorEditor(localizeDashboardText(it->label), it->id);
 	} else if (it->type == ST_CHOICE && it->id == S_T_PRESET && (in->pressed & DASH_IN_OK)) {
 		choosePreset();
-	} else if (it->type == ST_NUMBER && (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT))) {
-		int v, lo, hi;
-		char text[24];
-		if (numberInfo(it->id, &v, &lo, &hi, text, sizeof(text))) {
-			v += (in->pressed & DASH_IN_LEFT) ? -1 : 1;
-			if (v >= lo && v <= hi)
-				setNumber(it->id, v);
-		}
+	} else if (it->type == ST_NUMBER && (in->pressed & DASH_IN_OK)) {
+		editNumber(it);
 	} else if (it->type == ST_PATH && (in->pressed & DASH_IN_OK)) {
 		editPathMenu(it);
 	} else if (it->type == ST_IP && (in->pressed & DASH_IN_OK)) {
@@ -3788,17 +3830,12 @@ static void settingsInput(const DashInput *in)
 		editLaunchMenu(it);
 	} else if (it->type == ST_LKEY && (in->pressed & DASH_IN_FAV)) {
 		editLaunchKey(it, 1);
-	} else if (it->type == ST_CHOICE && (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT | DASH_IN_OK))) {
+	} else if (it->type == ST_CHOICE && (in->pressed & DASH_IN_OK)) {
 		const char *const *names;
 		const char *single;
 		int cur, n = choiceInfo(it->id, &cur, &names, &single);
 		if (n > 0) {
-			if (in->pressed & (DASH_IN_LEFT | DASH_IN_RIGHT)) {
-				int step = (in->pressed & DASH_IN_LEFT) ? n - 1 : 1;
-				do {
-					cur = (cur + step) % n;
-				} while (it->id == S_TVMODE && cur == TV_mode_576P && !is576pSupported());
-			} else if (it->id == S_TVMODE) {
+			if (it->id == S_TVMODE) {
 				int r = chooseVideoMode(localizeDashboardText(it->label), names, n, cur);
 				if (r < 0)
 					return;
@@ -3984,10 +4021,6 @@ static void settingsDraw(void)
 				if (vw > maxw)
 					vw = maxw;
 				vx = ix + iw - 20 - vw;
-				if (on && !disabled) {
-					dashIcon(DI_BACK, vx - 22, y + 7, 12, DASH_C_ACCENT);
-					dashIcon(DI_PLAY, ix + iw - 16, y + 8, 10, DASH_C_ACCENT);
-				}
 				if (on)
 					dashTextScroll(vx, y + 4.0f, maxw, (it->id == S_LANGUAGE || it->id == S_T_PRESET ? names[cur] : localizeDashboardText(names[cur])), DASH_FS_SMALL, disabled ? DASH_C_TEXT3 : (n == 2 && names == onoff && cur == 1) ? DASH_C_OK : DASH_C_ACCENT);
 				else
@@ -4023,10 +4056,6 @@ static void settingsDraw(void)
 				if (vw > maxw)
 					vw = maxw;
 				vx = ix + iw - 20 - vw;
-				if (on && !disabled && it->type == ST_NUMBER) {
-					dashIcon(DI_BACK, vx - 22, y + 7, 12, DASH_C_ACCENT);
-					dashIcon(DI_PLAY, ix + iw - 16, y + 8, 10, DASH_C_ACCENT);
-				}
 				if (on)
 					dashTextScroll(vx, y + 4.0f, maxw, v, DASH_FS_SMALL, set && !disabled ? DASH_C_ACCENT : DASH_C_TEXT3);
 				else
@@ -4060,10 +4089,7 @@ static void settingsHints(void)
 
 	{
 		const SetItem *it = curItem();
-		if (it->type == ST_NUMBER)
-			h[n].button = DI_BTN_LEFT, h[n].key = NULL, h[n].label = "Change", n++;
-		else
-			h[n].button = dashOkIcon(), h[n].key = NULL,
+		h[n].button = dashOkIcon(), h[n].key = NULL,
 			h[n].label = (it->type == ST_ACTION || it->type == ST_PAGE) ? "Open" : (it->type == ST_COLOR || it->type == ST_IP) ? "Edit" :
 			             (it->type == ST_PATH || it->type == ST_LKEY) ? "Choose" : "Change", n++;
 		if (it->type != ST_PAGE && themeSettingResettable(it->id))

@@ -182,11 +182,12 @@ safely rather than unplugging a drive during an active transfer.
 
 ## Settings navigation
 
-Settings opens at the overview. Confirm or Right opens a group; Back returns
-to the previous page with its selection and scroll position intact. Back at
-the overview returns Home through the normal save decision. Left also goes
-back on rows that do not use Left/Right to change a value. L2/R2 jump to the
-first/last row. The breadcrumb shows where the page lives.
+Settings opens at the overview. Confirm opens a group; Back returns to the
+previous page with its selection and scroll position intact. Back at the
+overview returns Home through the normal save decision. Confirm also changes a
+row: choices flip or open a list, numbers open a small editor (Left/Right step,
+Confirm or Back closes). Left/Right jump up/down a screen of rows, wrapping at
+the ends. L2/R2 jump to the first/last row. The breadcrumb shows where the page lives.
 
 | Group | Contents |
 |-------|----------|

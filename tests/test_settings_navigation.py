@@ -84,6 +84,7 @@ static int modal_result = -1, dirty = 1, failed;
 static int clock_save;
 static int softwareClockCheckpointAvailable(void) { return clock_save; }
 typedef struct { int icon; const char *label, *detail; int disabled; } DashMenuItem;
+typedef struct { int id; char text[24]; } NumberEdit;
 static void sessionBegin(void) { if (!session) { session = 1; begins++; } }
 static int anyDirty(void) { return dirty; }
 static int failedSaves(void) { return failed; }
@@ -108,6 +109,8 @@ static int numberInfo(int id,int *v,int *lo,int *hi,char *s,int n) {
     (void)id; (void)s; (void)n; *v=0; *lo=0; *hi=60; return 1;
 }
 static void setNumber(int id,int v) { (void)id; (void)v; edits++; }
+static int number_edits;
+static void editNumber(const SetItem *it) { (void)it; number_edits++; edits++; }
 static int choiceInfo(int id,int *v,const char *const **names,const char **single) {
     static const char *const options[]={"Off","On"};
     (void)id; *v=0; *names=options; *single=NULL; return 2;
@@ -116,8 +119,6 @@ static int dashModalChoice(const char *l,const char *const *o,int n,int c) {
     (void)l; (void)o; (void)n; return c;
 }
 static void setChoice(int id,int v) { (void)id; (void)v; edits++; }
-enum { TV_mode_576P = 5 };
-static int is576pSupported(void) { return 1; }
 static int chooseVideoMode(const char *l,const char *const *o,int n,int c) {
     (void)l; (void)o; (void)n; return c;
 }
@@ -130,6 +131,8 @@ for signature in (
     "static int itemDisabled(",
     "static const char *disabledHelp(",
     "static void settingsMenu(",
+    "static int pageJump(",
+    "static int numberStep(",
     "static void settingsInput(",
 ):
     code += function(settings, signature)
@@ -188,7 +191,8 @@ int main(void) {
     for(item=0;item<pages[P_ROOT].n;item++) press(DASH_IN_FAV);
     assert(!resets && !edits);
     item=0; press(DASH_IN_OK); assert(page==P_APPEARANCE && page_depth==1);
-    item=1; press(DASH_IN_RIGHT); assert(page==P_THEME);
+    item=1; press(DASH_IN_RIGHT); assert(page==P_APPEARANCE && page_depth==1);
+    item=1; press(DASH_IN_OK); assert(page==P_THEME);
     item=1; press(DASH_IN_OK); assert(page==P_THEME_COLORS && page_depth==3);
     press(DASH_IN_R2); assert(item==pages[page].n-1);
     item_top=item-ITEM_ROWS+1;
@@ -212,17 +216,34 @@ int main(void) {
     failed=0; clock_save=1; modal_result=0; press(DASH_IN_MENU);
     assert(saves==P_COUNT+2 && reverts==1);
     clock_save=0; modal_result=-1;
-    select_id(P_SOUND,S_SVOL); edits=0; press(DASH_IN_RIGHT); assert(!edits && toast);
-    dashCfg.sound=1; press(DASH_IN_RIGHT); assert(edits==1);
-    select_id(P_BOOT,S_TIMEOUT); press(DASH_IN_RIGHT); assert(edits==1);
+    /* Left/Right page by ITEM_ROWS, stop at the ends, then wrap; never edit or go back. */
+    { int n=pages[P_THEME_COLORS].n; assert(n>ITEM_ROWS+1);
+      page=P_THEME_COLORS; page_depth=2; item=0; edits=0;
+      press(DASH_IN_RIGHT); assert(item==ITEM_ROWS);
+      item=n-2; press(DASH_IN_RIGHT); assert(item==n-1);
+      press(DASH_IN_RIGHT); assert(item==0);
+      press(DASH_IN_LEFT); assert(item==n-1);
+      item=ITEM_ROWS+2; press(DASH_IN_LEFT); assert(item==2);
+      press(DASH_IN_LEFT); assert(item==0);
+      assert(page==P_THEME_COLORS && page_depth==2 && !edits); }
+    /* The number popup steps within range and lets Confirm close it. */
+    { NumberEdit e={S_TIMEOUT,""}; edits=0;
+      assert(!numberStep(0,-1,&e) && !edits);
+      assert(numberStep(0,1,&e) && edits==1);
+      assert(!numberStep(0,0,&e) && edits==1); }
+    select_id(P_SOUND,S_SVOL); edits=0; toast=0; press(DASH_IN_RIGHT); assert(!edits && !toast);
+    press(DASH_IN_OK); assert(!edits && toast);
+    dashCfg.sound=1; press(DASH_IN_LEFT); assert(!edits);
+    select_id(P_SOUND,S_SVOL); press(DASH_IN_OK); assert(edits==1 && !number_edits);
+    select_id(P_BOOT,S_TIMEOUT); press(DASH_IN_OK); assert(edits==1);
     strcpy(setting->LK_Path[SETTING_LK_AUTO],"mc0:/BOOT/BOOT.ELF");
-    press(DASH_IN_RIGHT); assert(edits==2);
+    press(DASH_IN_OK); assert(edits==2 && number_edits==1);
     select_id(P_KEYBOARD,S_USBKBD_FILE); press(DASH_IN_OK); assert(edits==2);
     setting->usbkbd_used=1; press(DASH_IN_OK); assert(edits==3);
     select_id(P_THEME_TEXT,S_FONT_FILE); press(DASH_IN_OK); assert(edits==3);
     dashTheme.font=DASH_FONT_SYSTEM; press(DASH_IN_OK); assert(edits==4);
-    select_id(P_THEME_WALL,S_T_WALLDIM); press(DASH_IN_RIGHT); assert(edits==4);
-    dashCfg.artwork=1; dashTheme.wallpaper=1; press(DASH_IN_RIGHT); assert(edits==5);
+    select_id(P_THEME_WALL,S_T_WALLDIM); press(DASH_IN_OK); assert(edits==4);
+    dashCfg.artwork=1; dashTheme.wallpaper=1; press(DASH_IN_OK); assert(edits==5);
     select_id(P_THEME_CLOCK,S_T_SECONDS); press(DASH_IN_OK); assert(edits==5);
     dashTheme.clock=1; press(DASH_IN_OK); assert(edits==6);
     select_id(P_LKEY,S_LK_0+SETTING_LK_CROSS);
