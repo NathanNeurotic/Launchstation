@@ -1021,12 +1021,13 @@ static int ctReadFolder(const char *dir, const char *name, McSaveData *s, const 
 	uint8_t now[8];
 	u32 total = 0, got;
 	s64 size;
-	int fd, ffd, n, r = MCW_OK;
+	int fd, ffd, n, dr = 0, r = MCW_OK;
 
 	memset(s, 0, sizeof(*s));
 	*why = "The folder name is not a memory card save name (1 to 31 plain characters).";
 	if (strlen(name) > 31 || snprintf(path, sizeof(path), "%s%s/", dir, name) >= (int)sizeof(path))
 		return MCW_ERR_INVALID;
+	memset(now, 0, sizeof(now)); /* stays zero if the clock cannot be read */
 	ctStamp(now);
 	memset(&ent, 0, sizeof(ent));
 	ctFolderEntry(s->entry, name, 1, 0, ent.stat.ctime, ent.stat.mtime, now);
@@ -1037,9 +1038,14 @@ static int ctReadFolder(const char *dir, const char *name, McSaveData *s, const 
 		*why = "The folder could not be opened.";
 		return MCV_ERR_IO;
 	}
-	while (r == MCW_OK && fileXioDread(fd, &ent) > 0) {
+	while (r == MCW_OK && (dr = fileXioDread(fd, &ent)) > 0) {
 		McSaveFile *f, *grown;
 
+		if (!memchr(ent.name, 0, sizeof(ent.name))) {
+			*why = "A file name in it is longer than a memory card allows.";
+			r = MCW_ERR_INVALID;
+			break;
+		}
 		if (!strcmp(ent.name, ".") || !strcmp(ent.name, "..")) {
 			memset(&ent, 0, sizeof(ent));
 			continue;
@@ -1088,6 +1094,10 @@ static int ctReadFolder(const char *dir, const char *name, McSaveData *s, const 
 		memset(&ent, 0, sizeof(ent));
 	}
 	genDclose(fd);
+	if (r == MCW_OK && dr < 0) {
+		*why = "The folder could not be read.";
+		r = MCV_ERR_IO;
+	}
 	if (r != MCW_OK) {
 		if (r == MCW_ERR_NOMEM)
 			*why = ctError(r);
