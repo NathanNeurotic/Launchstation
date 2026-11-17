@@ -251,7 +251,7 @@ static const SetItem appearance_items[] = {
     {ST_CHOICE, S_T_PANEL_A, "Panel transparency", "0% makes panels fully opaque; 100% makes them fully transparent."},
     {ST_CHOICE, S_ICON_BACKING, "Control icon backings", "Show or hide backing shapes behind text-style controls and quick actions."},
     {ST_PAGE, P_THEME_MANAGE, "Theme files & resets", "Import, export, rename or reset your theme."},
-    {ST_ACTION, S_DISPLAY_THEME_RESET, "Reset appearance", "Restore screen calibration, motion, animation and the OSD Classic theme."},
+    {ST_ACTION, S_DISPLAY_THEME_RESET, "Reset appearance", "Restore screen calibration, motion, animation and the Crystal theme."},
 };
 
 static const SetItem display_items[] = {
@@ -868,7 +868,7 @@ static const SetItem tmanage_items[] = {
     {ST_ACTION, S_T_SAVE, "Export theme to folder...", "Writes the current preview to a shareable theme folder immediately. This does not save the Settings session."},
     {ST_ACTION, S_T_LOAD, "Load theme from folder...", "Themes are folders in THEMES/ next to DASHBOARD.CNF, each with a theme.cfg."},
     {ST_ACTION, S_T_RESTORE_PRESET, "Reset entire theme", "Undo every change and go back to the preset this theme started from."},
-    {ST_ACTION, S_T_DEFAULT, "Restore default theme", "OSD Classic with its original settings."},
+    {ST_ACTION, S_T_DEFAULT, "Restore default theme", "Crystal with its original settings."},
 };
 
 #define PAGE(name, icon, help, items) {name, icon, help, items, NITEMS(items)}
@@ -2778,7 +2778,7 @@ static void resetScreen(void)
 
 static void resetDisplayThemeDefaults(void)
 {
-	if (!dashModalConfirm("Reset display & theme defaults", "Restore the screen, motion, animation and OSD Classic theme defaults?", localizeDashboardText("Reset"), 0))
+	if (!dashModalConfirm("Reset display & theme defaults", "Restore the screen, motion, animation and Crystal theme defaults?", localizeDashboardText("Reset"), 0))
 		return;
 	setting->color[COLOR_BACKGR] = DEF_COLOR1;
 	setting->color[COLOR_FRAME] = DEF_COLOR2;
@@ -2796,7 +2796,7 @@ static void resetDisplayThemeDefaults(void)
 	updateScreenMode();
 	dashCfg.effects = 100;
 	dashCfg.anim = 100;
-	dashThemeSetPreset(0);
+	dashThemeSetPreset(-1); /* out of range = the default preset (Crystal) */
 	classic_dirty = 1;
 	dash_dirty = 1;
 	dashToast(DASH_TOAST_OK, "Display and theme defaults restored");
@@ -3091,8 +3091,8 @@ static void runThemeAction(int id)
 			themeSave();
 			break;
 		case S_T_DEFAULT:
-			if (dashModalConfirm(localizeDashboardText("Restore default theme"), "Replace the current theme with OSD Classic? Saved theme folders are not affected.", "Restore", 0)) {
-				dashThemeSetPreset(0);
+			if (dashModalConfirm(localizeDashboardText("Restore default theme"), "Replace the current theme with Crystal? Saved theme folders are not affected.", "Restore", 0)) {
+				dashThemeSetPreset(-1); /* out of range = the default preset (Crystal) */
 				dashCfg.effects = 100;
 				dashCfg.anim = 100;
 				dash_dirty = 1;

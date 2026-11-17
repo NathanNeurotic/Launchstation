@@ -77,3 +77,11 @@ with tempfile.TemporaryDirectory(prefix="fresh-defaults-") as tmp:
     subprocess.run([cc, "-std=c99", "-Wall", "-Wextra", "-Werror", str(src), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
 print("PASS: the built-in defaults are the chosen list; region launch key only without a config")
+
+themes = (root / "src/dash_themes.c").read_text()
+assert "#define P_DEFAULT P_CRYSTAL" in themes
+for needle in ("theme_preset = P_DEFAULT;", "store_preset = P_DEFAULT;", "(p >= 0) ? p : P_DEFAULT;"):
+    assert needle in themes, needle
+settings_src = (root / "src/dash_settings.c").read_text()
+assert "dashThemeSetPreset(0)" not in settings_src
+print("PASS: the dashboard starts on the Crystal preset")

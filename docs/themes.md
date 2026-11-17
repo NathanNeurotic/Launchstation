@@ -13,7 +13,7 @@ same active theme.
 ## Built-in theme presets
 
 Launchstation includes **18 selectable theme presets** in the executable.
-Find them at **Settings > Appearance > Theme preset**; **OSD Classic** is
+Find them at **Settings > Appearance > Theme preset**; **Crystal** is
 the default. The count comes from the 18 entries in `presets[]` in
 `src/dash_themes.c` (`P_COUNT`), which is also what the Settings picker
 uses. These are complete, preconfigured dashboard looks, **not 18
@@ -26,7 +26,7 @@ A matching user-facing guide is on the [documentation site](https://nathanneurot
 
 | Theme | Background | Look |
 |-------|------------|------|
-| **OSD Classic** (default) | System tunnel | Indigo tunnel like the PS2 system menu backdrop with the main menu's clock orbs, OSDSYS highlight blue, accent-bar selection |
+| OSD Classic | System tunnel | Indigo tunnel like the PS2 system menu backdrop with the main menu's clock orbs, OSDSYS highlight blue, accent-bar selection |
 | Classic Black | Solid colour | Plain black; the lightest background. Change its colour to get any solid colour |
 | PS2 Towers | PS2 towers | Faster drifting/rotating tower field seen from above, blue fog pool, three moving lights |
 | PS2 Blue Mist | Blue mist | Midnight blue-to-black gradient with moving translucent blue mist |
@@ -42,7 +42,7 @@ A matching user-facing guide is on the [documentation site](https://nathanneurot
 | Monochrome | Solid colour | Black, white and grey; only the selection has colour |
 | CRT | Gradient + scanlines | Understated scanlines over the background only |
 | PSX | Ribbons | Charcoal with silver ribbons |
-| Crystal | Crystal | The previous dashboard look (crystal towers, stars, glow, initials tiles) |
+| **Crystal** (default) | Crystal | The previous dashboard look (crystal towers, stars, glow, initials tiles) |
 | Disc Error Red | Disc error red | Dark red clouds streaming past, a pulsing flare and rotating glass cubes |
 
 ### The OSD orbs
@@ -87,9 +87,9 @@ the colour-swap selection.
 * **Control icon backings** (default On): theme-derived badges behind
   face-button and D-pad symbols and quick-action chips.
 * **Theme files & resets** contains import, export, theme name, reset to the
-  current preset and restore OSD Classic.
+  current preset and restore Crystal.
 * **Reset appearance** restores screen calibration, motion, animation and
-  OSD Classic together.
+  Crystal together.
 
 **Theme editor.** Choose a group to open its page; Back returns to the group
 list with its previous selection. Every change previews immediately and
@@ -395,7 +395,7 @@ The active theme is stored in **DASHBOARD.CNF** as `Theme_*` keys:
 Edits are written about a second after the last button press (and always
 before an application starts or a classic screen opens), so adjusting a
 colour does not write the memory card on every step. Older dashboard
-versions ignore these keys; a DASHBOARD.CNF without them loads OSD Classic.
+versions ignore these keys; a DASHBOARD.CNF without them loads Crystal.
 LAUNCHELF.CNF is never touched.
 
 The optional PSBBN layers in `<dashboard folder>/THEME/` (`background.png`,
@@ -407,7 +407,7 @@ The optional PSBBN layers in `<dashboard folder>/THEME/` (`background.png`,
 * *Reset ...* at the end of each editor group resets only that group.
 * *Appearance > Theme files & resets > Reset entire theme*: back to the preset the
   current theme started from.
-* *Appearance > Theme files & resets > Restore default theme*: back to OSD Classic.
+* *Appearance > Theme files & resets > Restore default theme*: back to Crystal.
 * *Appearance > Reset appearance*: restores screen calibration and theme together.
 * Deleting the `Theme_*` lines from DASHBOARD.CNF (or the file) also
   restores the default.

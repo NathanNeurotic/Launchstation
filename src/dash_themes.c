@@ -167,9 +167,11 @@ enum {
 	P_DISC,
 	P_COUNT
 };
+/* Preset for a fresh install, an unknown saved preset or an out-of-range index. */
+#define P_DEFAULT P_CRYSTAL
 
 static const DashThemePresetInfo presets[P_COUNT] = {
-    {"osd", "OSD Classic", "The system tunnel with the main menu's clock orbs, OSDSYS blue. The default."},
+    {"osd", "OSD Classic", "The system tunnel with the main menu's clock orbs, OSDSYS blue."},
     {"black", "Classic Black", "Plain black. The lightest background, adjustable to any colour."},
     {"towers", "PS2 Towers", "The opening tower field, seen from above in fog."},
     {"mist", "PS2 Blue Mist", "Midnight blue-to-black gradient with moving blue mist."},
@@ -185,7 +187,7 @@ static const DashThemePresetInfo presets[P_COUNT] = {
     {"mono", "Monochrome", "Black, white and grey. Colour only marks the selection."},
     {"crt", "CRT", "Dark gradient with an understated scanline overlay."},
     {"psx", "PSX", "Charcoal and silver ribbons."},
-    {"crystal", "Crystal", "The previous dashboard look: towers, stars and glow."},
+    {"crystal", "Crystal", "The previous dashboard look: towers, stars and glow. The default."},
     {"discred", "Disc Error Red", "Deep red clouds and rotating glass cubes."}};
 
 static void base(DashTheme *t)
@@ -232,7 +234,7 @@ static void base(DashTheme *t)
 void dashThemeLoadPreset(int i, DashTheme *t)
 {
 	if (i < 0 || i >= P_COUNT)
-		i = P_OSD;
+		i = P_DEFAULT;
 	base(t);
 	dashStrCopy(t->name, presets[i].name, sizeof(t->name));
 
@@ -610,7 +612,7 @@ void dashThemeInit(void)
 	if (theme_ready)
 		return;
 	theme_ready = 1;
-	theme_preset = P_OSD;
+	theme_preset = P_DEFAULT;
 	theme_custom = 0;
 	dashThemeLoadPreset(theme_preset, &dashTheme);
 	dashThemeValidate(&dashTheme);
@@ -620,7 +622,7 @@ void dashThemeInit(void)
 void dashThemeSetPreset(int i)
 {
 	if (i < 0 || i >= P_COUNT)
-		i = P_OSD;
+		i = P_DEFAULT;
 	theme_preset = i;
 	theme_custom = 0;
 	dashThemeLoadPreset(i, &dashTheme);
@@ -899,10 +901,10 @@ int dashThemeSerialize(const DashTheme *t, char *buf, int cap, const char *prefi
 void dashThemeStoreBegin(void)
 {
 	dashThemeInit();
-	store_preset = P_OSD;
+	store_preset = P_DEFAULT;
 	store_custom = 0;
 	store_seen = 0;
-	dashThemeLoadPreset(P_OSD, &dashTheme);
+	dashThemeLoadPreset(P_DEFAULT, &dashTheme);
 }
 
 int dashThemeStoreKey(const char *key, char *value)
@@ -913,7 +915,7 @@ int dashThemeStoreKey(const char *key, char *value)
 	store_seen = 1;
 	if (!stricmp(key, "preset")) {
 		int p = dashThemeFindPreset(value);
-		store_preset = (p >= 0) ? p : P_OSD;
+		store_preset = (p >= 0) ? p : P_DEFAULT;
 		dashThemeLoadPreset(store_preset, &dashTheme);
 	} else if (!stricmp(key, "custom"))
 		store_custom = parseBool(value, 0);
@@ -1207,7 +1209,7 @@ int dashThemeBasePreset(void)
 void dashThemeRestore(const DashTheme *t, int preset, int custom)
 {
 	dashTheme = *t;
-	theme_preset = (preset >= 0 && preset < P_COUNT) ? preset : P_OSD;
+	theme_preset = (preset >= 0 && preset < P_COUNT) ? preset : P_DEFAULT;
 	theme_custom = custom ? 1 : 0;
 	dashThemeValidate(&dashTheme);
 	dashThemeApply();
