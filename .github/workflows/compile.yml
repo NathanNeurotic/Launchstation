@@ -643,7 +643,11 @@ jobs:
               sha256sum "artifacts/${asset}" | sed 's#artifacts/##'
             done
             printf '```\n\n'
-            printf 'Official build from NathanNeurotic/Launchstation. Builds from forks are unofficial and unsupported here.\n'
+            if [ "${GITHUB_REPOSITORY,,}" = "nathanneurotic/launchstation" ]; then
+              printf 'Official build from NathanNeurotic/Launchstation. Builds from forks are unofficial and unsupported here.\n'
+            else
+              printf 'Unofficial build from %s. Official builds come from https://github.com/NathanNeurotic/Launchstation/releases.\n' "${GITHUB_REPOSITORY}"
+            fi
           } > "${archive_notes}"
           archive_existing=0
           if gh release view "${archive_tag}" >/dev/null 2>&1; then

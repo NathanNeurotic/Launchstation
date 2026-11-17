@@ -26,6 +26,9 @@ BODY_LIMIT = 40000
 
 
 
+OFFICIAL_REPO = "NathanNeurotic/Launchstation"
+
+
 def published_name(name, version):
     """Every published ZIP name ends with the build number; PSUs and ELFs keep theirs."""
     if version and name.endswith(".zip"):
@@ -137,6 +140,9 @@ def render(repo, revision, previous, run_id, changes, digests, version="", omit_
             kit_note = ("The full kit `LAUNCHSTATION-<build>.zip` was not rebuilt for this build (the Neutrino download or the "
                         "kit check did not succeed); the previous build's kit stays attached below and holds the same POPS, "
                         "Ember and Neutrino folders with the previous app build.")
+    provenance = ("Official build from NathanNeurotic/Launchstation. Builds from forks are unofficial and unsupported here."
+                  if repo.lower() == OFFICIAL_REPO.lower() else
+                  f"Unofficial build from {repo}. Official builds come from https://github.com/{OFFICIAL_REPO}/releases.")
     return f"""{heading}## Downloads
 
 | Version | ZIP | PSU | ELF |
@@ -157,7 +163,7 @@ Existing user settings are retained. The built-in updater preserves your control
 
 Device and display behavior still require console validation; a passing build does not establish hardware compatibility.
 
-Official build from NathanNeurotic/Launchstation. Builds from forks are unofficial and unsupported here.
+{provenance}
 
 <details>
 <summary>Build verification and SHA-256 checksums</summary>

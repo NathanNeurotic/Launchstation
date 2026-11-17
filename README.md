@@ -4,11 +4,11 @@
 
 # Launchstation
 
-> **This is the official Launchstation repository.** Releases, issues and support live here.
+> **[NathanNeurotic/Launchstation](https://github.com/NathanNeurotic/Launchstation) is the official Launchstation repository.** Releases, issues and support live there.
 >
 > Community forks exist, such as [saildot4k/Launchstation](https://github.com/saildot4k/Launchstation) (unofficial).
 > Thanks to everyone experimenting with the code. Fixes from forks are reviewed and credited here when they're merged.
-> For official builds, please download only from [Releases](../../releases).
+> For official builds, please download only from [Releases](https://github.com/NathanNeurotic/Launchstation/releases).
 
 **Launchstation** is a PlayStation 2 dashboard, file manager and homebrew launcher based on [wLaunchELF_R3Z](https://github.com/saildot4k/wLaunchELF_R3Z). Browse devices, launch applications and game images, manage saves and card images, and back up MMCE cards locally or to [Google Drive](https://nathanneurotic.github.io/Launchstation/cloud.html) through a controller-driven interface.
 
