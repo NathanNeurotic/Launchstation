@@ -316,21 +316,40 @@ static const char *gameCore(const DashApp *g)
 	return "PS2 - Neutrino";
 }
 
+/* Details is a scrolling sheet; a long path is cut into short lines so all of it can be read. */
+#define DETAIL_CHUNK 44
+#define DETAIL_LINES 24
 static void showDetails(DashApp *g)
 {
-	char body[640], dev[48];
+	static char text[DETAIL_LINES + 4][DETAIL_CHUNK + 12];
+	const char *lines[DETAIL_LINES + 4];
+	const char *cover = g->art_state == DASH_ART_FOUND ? g->art : (g->category[0] ? "none - add ART/<Game ID>_COV.png" : "none");
+	char dev[48];
+	int n = 0, i;
 
 	dashLibDeviceLabel(g->path, dev, sizeof(dev));
-	snprintf(body, sizeof(body), "Starts with: %s\nGame ID: %s\nLocation: %s\nFile: %s\nCover: %s", gameCore(g),
-	         g->category[0] ? g->category : "not found", dev, g->path, g->art_state == DASH_ART_FOUND ? g->art : (g->category[0] ? "none - add ART/<Game ID>_COV.png" : "none"));
-	dashModalMessage(DI_INFO, g->title, body, NULL);
+	snprintf(text[n], sizeof(text[n]), "Starts with: %s", gameCore(g)), lines[n] = text[n], n++;
+	snprintf(text[n], sizeof(text[n]), "Game ID: %s", g->category[0] ? g->category : "not found"), lines[n] = text[n], n++;
+	snprintf(text[n], sizeof(text[n]), "Location: %s", dev), lines[n] = text[n], n++;
+	for (i = 0; i < 2; i++) {
+		const char *v = i ? cover : g->path;
+		size_t len = strlen(v), pos = 0;
+
+		lines[n] = "", n++; /* gap */
+		snprintf(text[n], sizeof(text[n]), "%s:", i ? "Cover" : "File"), lines[n] = text[n], n++;
+		while (pos < len && n < DETAIL_LINES) {
+			snprintf(text[n], sizeof(text[n]), "%.*s", DETAIL_CHUNK, v + pos), lines[n] = text[n], n++;
+			pos += DETAIL_CHUNK;
+		}
+	}
+	dashShowTextLines(DI_INFO, g->title, "Game details", lines, n);
 }
 
 /* Triangle: per-game Neutrino options are edited and saved here without
  * starting the game; Start then opens them already filled in. */
 static void gameSettings(DashApp *g)
 {
-	int r = editNeutrinoGameProfile(g->category);
+	int r = editNeutrinoGameProfile(g->category, g->path);
 
 	if (r < 0)
 		dashModalMessage(DI_INFO, g->title,
@@ -431,7 +450,8 @@ static void gamesDraw(void)
 	float lx = DASH_SAFE_L, ly = 104, lw = 290;
 	float dx = lx + lw + 24, dy = 98, dw = DASH_PANE_R - dx;
 	char sub[48], dev[48];
-	int top, i;
+	int top, i, off;
+	GSTEXTURE *art;
 
 	snprintf(sub, sizeof(sub), "%d %s", norder, norder == 1 ? "game" : "games");
 	dashDrawSectionTitle(DASH_SAFE_L, 68, localizeDashboardText("Games"), sub);
@@ -467,14 +487,23 @@ static void gamesDraw(void)
 	dashDrawScrollbar(lx + lw + 10, ly, LIST_ROWS * LIST_ROW_H, top, LIST_ROWS, norder);
 
 	dashDrawCard(dx, dy, dw, 290, 16);
-	dashDrawAppArt(g, dx + (dw - 132) * 0.5f, dy + 14, 132, 132, 1.0f, 0);
-	dashTextFit(dx + 14, dy + 156, dw - 28, g->title, DASH_FS_LABEL, DASH_C_TEXT);
+	/* With cover art: the art alone, large, no plaque. Without: the frame as the stand-in. */
+	art = dashArtGet(g, 0);
+	if (art != NULL) {
+		dashTexDrawFit(art, dx + 14, dy + 10, dw - 28, 174, DC(255, 255, 255, 255));
+		off = 36;
+	} else {
+		dashDrawAppArt(g, dx + (dw - 132) * 0.5f, dy + 14, 132, 132, 1.0f, 0);
+		off = 0;
+	}
+	dashTextFit(dx + 14, dy + 156 + off, dw - 28, g->title, DASH_FS_LABEL, DASH_C_TEXT);
 	dashLibDeviceLabel(g->path, dev, sizeof(dev));
-	dashIcon(dashLibDeviceIcon(g->path), dx + 14, dy + 186, 14, DASH_C_ACCENT);
-	dashTextFit(dx + 34, dy + 184, dw - 48, dev, DASH_FS_CAPTION, DASH_C_ACCENT);
+	dashIcon(dashLibDeviceIcon(g->path), dx + 14, dy + 186 + off, 14, DASH_C_ACCENT);
+	dashTextFit(dx + 34, dy + 184 + off, dw - 48, dev, DASH_FS_CAPTION, DASH_C_ACCENT);
 	snprintf(sub, sizeof(sub), "%s%s%s", gameCore(g), g->category[0] ? "  " : "", g->category);
-	dashTextFit(dx + 14, dy + 206, dw - 28, sub, DASH_FS_CAPTION, DASH_C_TEXT2);
-	dashTextFit(dx + 14, dy + 264, dw - 28, g->path, DASH_FS_CAPTION * 0.9f, DASH_C_TEXT3);
+	dashTextFit(dx + 14, dy + 206 + off, dw - 28, sub, DASH_FS_CAPTION, DASH_C_TEXT2);
+	if (art == NULL) /* the full path is in Details; the card is full when the art is big */
+		dashTextFit(dx + 14, dy + 264, dw - 28, g->path, DASH_FS_CAPTION * 0.9f, DASH_C_TEXT3);
 }
 
 static void gamesHints(void)

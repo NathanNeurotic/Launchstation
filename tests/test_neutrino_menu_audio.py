@@ -41,7 +41,7 @@ typedef struct { char path[MAX_PATH], title[DASH_TITLE_MAX]; int flags; } DashAp
 enum { MAIN_ELF_IOP_DEFAULT, MAIN_ELF_IOP_KEEP, MAIN_ELF_IOP_REBOOT };
 typedef struct { char main_msg[MAX_PATH]; int elf_iop_mode; } MainExecuteContext;
 typedef struct { int count; } POPSTARTER_CANDIDATE_LIST;
-typedef struct { int dummy; } NEUTRINO_LAUNCH_OPTIONS;
+typedef struct { int dummy; char vmc[2][64]; } NEUTRINO_LAUNCH_OPTIONS;
 typedef struct { char argv[4][32]; } NEUTRINO_OPTION_ARGS;
 typedef struct { int disable_neutrino, cdrom_disable_gameid, reboot_iop_elf_load; char neutrino_file[MAX_PATH]; } Setting;
 static Setting *setting;
@@ -108,18 +108,21 @@ static int genRead(int fd, void *buf, size_t sz) {
     return (int)sz;
 }
 static void genClose(int fd) { (void)fd; }
+#define FIO_O_RDONLY 1
+static int genOpen(const char *p, int f) { (void)p; (void)f; return -1; }
 static int addPopstarterCandidate(POPSTARTER_CANDIDATE_LIST *c, const char *p) { (void)p; c->count++; return 1; }
 static void initPopstarterCandidates(POPSTARTER_CANDIDATE_LIST *c) { c->count = 0; }
 static int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *o, NEUTRINO_OPTION_ARGS *a) { (void)o; (void)a; return 0; }
 static int DashIsActive(void) { return 1; }
 static int prepareNeutrinoGameID(const char *p, char *id, size_t n) { (void)p; snprintf(id, n, "SLUS_123.45"); return 1; }
-static int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *o, const char *id) {
-    (void)o; (void)id;
+static int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *o, const char *id, const char *game_path) {
+    (void)id; (void)game_path;
+    memset(o, 0, sizeof(*o));
     /* Menu prompts run while audio is still unmuted. */
     assert(!muted);
     return commit != 0;
 }
-static int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *o) { return showNeutrinoLaunchOptionsForGame(o, ""); }
+static int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *o) { return showNeutrinoLaunchOptionsForGame(o, "", ""); }
 static int preparePopstarterCandidateLaunch(POPSTARTER_CANDIDATE_LIST *c, char *s, size_t sn, char *f, size_t fn, char *p, size_t pn, int *k) {
     (void)c;
     snprintf(s, sn, "usb0:/NEUTRINO/neutrino.elf");

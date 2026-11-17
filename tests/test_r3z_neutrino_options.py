@@ -26,7 +26,7 @@ assert "if (message != NULL && message_size > 0)" in neutrino
 
 # Extract the actual data and pure argument builder without pulling in PS2 UI.
 start = gui.index("static const struct {")
-end = gui.index("/* Versioned two-slot Neutrino profiles.", start)
+end = gui.index("/* Per-game Neutrino settings:", start)
 pure_c = (
     '#include <stdio.h>\n#include <string.h>\n'
     '#include "gui_neutrino.h"\n'

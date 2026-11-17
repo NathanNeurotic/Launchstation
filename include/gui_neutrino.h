@@ -2,6 +2,7 @@
 #define GUI_NEUTRINO_H
 
 #define NEUTRINO_OPTION_ARGC_MAX 4
+#define NEUTRINO_VMC_NAME_MAX 64
 
 typedef struct
 {
@@ -10,6 +11,7 @@ typedef struct
 	int video_compatibility;
 	int debug_colors;
 	int logo;
+	char vmc[2][NEUTRINO_VMC_NAME_MAX]; /* VMC/<name>.bin for -mc0/-mc1; set by hand ($VMC_0/$VMC_1) */
 } NEUTRINO_LAUNCH_OPTIONS;
 
 typedef struct
@@ -20,8 +22,9 @@ typedef struct
 } NEUTRINO_OPTION_ARGS;
 
 int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options);
-int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *options, const char *game_id);
-int editNeutrinoGameProfile(const char *game_id);
+int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *options, const char *game_id, const char *game_path);
+int editNeutrinoGameProfile(const char *game_id, const char *game_path);
+int neutrinoVmcNameValid(const char *name);
 int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *options, NEUTRINO_OPTION_ARGS *args);
 
 #endif
