@@ -1203,6 +1203,9 @@ int readHDD(const char *path, FILEINFO *info, int max)
 		unmountHddPartiesNotNeededByClipboard();
 		for (i = 0; i < hddNparties[hdd_unit]; i++) {
 			strcpy(info[i].name, hddParties[hdd_unit][i]);
+			/* no size or date for a partition: clear what a previous
+			 * listing left in this buffer */
+			clearMcTable(&info[i].stats);
 			info[i].stats.AttrFile = MC_ATTR_norm_folder;
 		}
 		/* the partition list stands in for the folder; it is empty when the
@@ -1281,6 +1284,7 @@ int readHDDDVRP(const char *path, FILEINFO *info, int max)
 	if (!strcmp(path, "dvr_hdd0:/")) {
 		for (i = 0; i < ndvrpparties; i++) {
 			strcpy(info[i].name, dvrParties[i]);
+			clearMcTable(&info[i].stats);
 			info[i].stats.AttrFile = MC_ATTR_norm_folder;
 		}
 		dirOpenResult(ndvrpparties > 0 ? 0 : -ENODEV);
