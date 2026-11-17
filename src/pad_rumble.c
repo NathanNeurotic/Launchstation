@@ -111,7 +111,7 @@ void padRumble(int duration_ms, int large)
 
 void padRumbleFlush(void)
 {
-	int r;
+	int r, was_active = r_active;
 
 	if (!r_active && !r_off_repeats)
 		return; /* nothing running and no stop still owed */
@@ -122,7 +122,9 @@ void padRumbleFlush(void)
 		actSet(0, 0, 0);
 		actSet(1, 0, 0);
 	}
-	r_off_repeats = RUMBLE_CMD_REPEATS;
+	/* An owed stop is delivered here: only a running pulse owes repeats, so a
+	 * poll loop calling this (IOP parked) sends at most twice, then nothing. */
+	r_off_repeats = was_active ? RUMBLE_CMD_REPEATS : 0;
 }
 
 /* DS3/DS4 level for the DS34 build's polling thread. Self-expiring, so a

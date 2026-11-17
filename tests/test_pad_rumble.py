@@ -96,6 +96,16 @@ int main(void) {
     assert(padRumbleLevel() == 0x50);
     now_ms += 200;                        /* past the first 240 ms, before a restarted one */
     assert(padRumbleLevel() == 0);
+
+    /* IOP parked: the input loop flushes every poll and never ticks. A pulse
+     * gets its stops, then the flushes go quiet instead of re-arming forever. */
+    padRumbleDecision();
+    tick(0);
+    sends = 0;
+    for (i = 0; i < 20; i++) padRumbleFlush();
+    assert(sends == 4 && last_small == 0);
+    for (i = 0; i < 10; i++) tick(0);
+    assert(sends == 4);
     return 0;
 }
 '''
