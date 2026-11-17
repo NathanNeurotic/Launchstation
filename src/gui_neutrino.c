@@ -528,9 +528,12 @@ int editNeutrinoGameProfile(const char *game_id)
 
 	if (!profileGameIdValid(game_id))
 		return -1;
+	/* Backing out of the wait must not open defaults that a save would store. */
+	if (!dashWorkerAwaitAll("Loading game profile"))
+		return 0;
 	memset(&options, 0, sizeof(options));
 	snprintf(active_profile_gameid, sizeof(active_profile_gameid), "%s", game_id);
-	if (dashWorkerAwaitAll("Loading game profile") && profileReadLatest(game_id, &saved, &revision, &slot))
+	if (profileReadLatest(game_id, &saved, &revision, &slot))
 		options = saved;
 	if (showDashboardNeutrinoOptions(&options, 1)) {
 		result = profileSave(game_id, &options);

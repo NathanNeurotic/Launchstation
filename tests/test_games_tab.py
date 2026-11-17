@@ -78,6 +78,8 @@ static const struct { const char *dir, *name; int sub; } tree[] = {
     {"smb:/", "PS2", 1},
     {"smb:/", "Music", 1},
     {"smb:/PS2/DVD/", "Okami.iso", 0},
+    {"smb:/", "EMBER", 1},
+    {"smb:/EMBER/games/", "Tekken 3", 1},
     {"usb0:/POPS/", "SLUS_007.92.Crash.VCD", 0},
     {"usb0:/POPS/", "Spyro.vcd", 0},
     {"usb0:/POPS/", "POPSTARTER.VCD", 0},
@@ -122,6 +124,7 @@ int main(void) {
     const DashApp *g;
     s.files = files;
     assert(nameGameId("SLUS_200.62.GT3.iso", id) && !strcmp(id, "SLUS_200.62"));
+    assert(nameGameId("slus_200.62.GT3.iso", id) && !strcmp(id, "SLUS_200.62"));
     assert(!nameGameId("SLUS_200.62GT3.iso", id) && !nameGameId("SLU", id) && !nameGameId("1LUS_200.62.x.iso", id));
 
     scanRoot(&s, "usb0:/", 0);

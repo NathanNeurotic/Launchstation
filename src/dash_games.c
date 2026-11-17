@@ -62,7 +62,8 @@ static int nameGameId(const char *name, char *id)
 	}
 	if (name[11] != '.')
 		return 0;
-	memcpy(id, name, 11);
+	for (i = 0; i < 11; i++) /* profiles and OPL covers use upper-case IDs */
+		id[i] = (name[i] >= 'a' && name[i] <= 'z') ? name[i] - 32 : name[i];
 	id[11] = '\0';
 	return 1;
 }
@@ -191,8 +192,10 @@ static void scanRoot(GameScan *s, const char *root, int shares)
 	found = scanFolder(s, dir);
 	snprintf(dir, sizeof(dir), "%sCD/", root);
 	found |= scanFolder(s, dir);
-	found |= scanPops(s, root);
-	found |= scanEmber(s, root);
+	if (!shares) { /* smb:/ itself lists shares: an EMBER share must not stop that */
+		found |= scanPops(s, root);
+		found |= scanEmber(s, root);
+	}
 	if (found || !shares)
 		return;
 	/* smb:/ lists the shares; each one is an OPL root. */
