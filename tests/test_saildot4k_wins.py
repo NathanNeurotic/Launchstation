@@ -40,10 +40,11 @@ def run_c(name, source):
 
 
 gfx = (root / "src/dash_gfx.c").read_text(encoding="utf-8")
-# Keep the small textured border from master: four texture draws per border,
-# instead of emitting up to 96 procedural corner quads every frame.
-assert "static GSTEXTURE tex_ring;" in gfx
-assert "panelCorners(&tex_ring" in gfx
+# Border corners are drawn as quads with the straight edges' width
+# (saildot4k b849ec1): a scaled ring texture drew corners under about 18 px
+# radius thinner and fainter than the 2 px edges.
+assert "static GSTEXTURE tex_ring;" not in gfx
+assert gfx.count("borderCorner(x + ") == 4
 
 hdr = (root / "include/dash_internal.h").read_text(encoding="utf-8")
 icons = (root / "src/dash_icons.c").read_text(encoding="utf-8")
