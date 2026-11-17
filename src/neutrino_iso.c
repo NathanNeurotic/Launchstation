@@ -343,6 +343,34 @@ static int buildArgs(const char *bsd, const char *dvd_path, const char *neutrino
 		}
 		n += appended;
 	}
+	/* VMC cards ($VMC_0/$VMC_1 in the game's settings file): <device root>VMC/<name>.bin on the
+	 * game's own device, the file RiptOPL uses. Neutrino aborts the boot if it cannot open it,
+	 * so a missing card stops the launch here with a message instead. */
+	for (i = 0; i < 2; i++) {
+		char vmc[MAX_PATH], *colon;
+		int fd;
+
+		if (!options->vmc[i][0])
+			continue;
+		colon = strstr(dvd_path, ":/");
+		if (!strcmp(bsd, "smb") || colon == NULL) {
+			setMessage(message, message_size, "A VMC card needs a game on USB, MX4SIO, MMCE, iLink, exFAT HDD or UDPFS", options->vmc[i]);
+			return 0;
+		}
+		snprintf(vmc, sizeof(vmc), "%.*sVMC/%s.bin", (int)(colon + 2 - dvd_path), dvd_path, options->vmc[i]);
+		fd = genOpen(vmc, FIO_O_RDONLY);
+		if (fd < 0) {
+			setMessage(message, message_size, "VMC card file not found", vmc);
+			return 0;
+		}
+		genClose(fd);
+		appended = snprintf(buffer + n, buffer_size - n, "-mc%d=%s\n", i, vmc);
+		if (appended < 0 || appended >= (int)(buffer_size - n)) {
+			setMessage(message, message_size, "Neutrino launch arguments are too long", dvd_path);
+			return 0;
+		}
+		n += appended;
+	}
 	if (LaunchArgsLoadFromBuffer("Neutrino ISO", buffer, n, message, message_size) <= 0)
 		return 0;
 	return 1;
