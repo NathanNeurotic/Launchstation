@@ -21,7 +21,8 @@ PER_REPO = ["findings/{r}", "tmp/{r}", "leads/{r}", "evidence/{r}", "evidence/_c
 SKIP = {"__pycache__", "STOP_PUBLISH", "publish.log"}
 KEEP_IN_DEST = {"src", "pr"}
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
-GITIGNORE = "src/\npr/\n__pycache__/\ntmp/STOP_PUBLISH\ntmp/publish.log\n"
+# Re-include everything first: the repo's own .gitignore (for example tmp/ or *.log) must not drop audit files.
+GITIGNORE = "!*\n!*/\nsrc/\npr/\n__pycache__/\ntmp/STOP_PUBLISH\ntmp/publish.log\n"
 SETUP = """#!/bin/sh
 # Run once after checking out the claude-audit-findings branch (cloud or fresh clone).
 # Creates src/{repo} next to this script: the audited commit as a detached git worktree (ignored by git).
