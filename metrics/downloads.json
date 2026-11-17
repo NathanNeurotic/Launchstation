@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-17T12:25:39+00:00",
+  "updated_at": "2026-11-17T13:44:19+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 2748,
+  "total_downloads": 2762,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -9006,7 +9006,7 @@
       "release": "build-1186"
     },
     "758918092": {
-      "downloads": 2,
+      "downloads": 4,
       "name": "APP_LAUNCHSTATION-1186.zip",
       "release": "latest"
     },
@@ -9021,7 +9021,7 @@
       "release": "latest"
     },
     "758918107": {
-      "downloads": 1,
+      "downloads": 3,
       "name": "LAUNCHSTATION.ELF",
       "release": "latest"
     },
@@ -9041,14 +9041,59 @@
       "release": "latest"
     },
     "758918157": {
-      "downloads": 2,
+      "downloads": 10,
       "name": "LAUNCHSTATION-1186.zip",
       "release": "latest"
     },
     "758918171": {
-      "downloads": 0,
+      "downloads": 2,
       "name": "BOOT2.ELF",
       "release": "latest"
+    },
+    "759229742": {
+      "downloads": 0,
+      "name": "APP_LAUNCHSTATION-DS-1187.zip",
+      "release": "build-1187"
+    },
+    "759229747": {
+      "downloads": 0,
+      "name": "APP_LAUNCHSTATION.psu",
+      "release": "build-1187"
+    },
+    "759229750": {
+      "downloads": 0,
+      "name": "APP_LAUNCHSTATION-DS.psu",
+      "release": "build-1187"
+    },
+    "759229753": {
+      "downloads": 0,
+      "name": "LAUNCHSTATION.ELF",
+      "release": "build-1187"
+    },
+    "759229782": {
+      "downloads": 0,
+      "name": "APP_LAUNCHSTATION-1187.zip",
+      "release": "build-1187"
+    },
+    "759229786": {
+      "downloads": 0,
+      "name": "LAUNCHSTATION-DS.ELF",
+      "release": "build-1187"
+    },
+    "759229790": {
+      "downloads": 0,
+      "name": "BOOT.ELF",
+      "release": "build-1187"
+    },
+    "759229792": {
+      "downloads": 0,
+      "name": "BOOT2.ELF",
+      "release": "build-1187"
+    },
+    "759229795": {
+      "downloads": 0,
+      "name": "LAUNCHSTATION-1187.zip",
+      "release": "build-1187"
     }
   }
 }
