@@ -25,6 +25,12 @@ for name in ("iLinkman.irx", "IEEE1394_bd_mini.irx"):
 assert 'if (!strcmp(bsd, "ilink"))\n\t\tpreferFixedIlinkPair(&candidates);' in iso
 assert iso.index("preferFixedIlinkPair(&candidates);") < iso.index("ret = preparePopstarterCandidateLaunch(")
 assert '!strcmp(bsd, "ilink") && !neutrinoIlinkPairIsOurs(selected)' in iso
+# An mc:/ install is pinned to the card its ELF opens on before its modules are compared, so the comparison,
+# the prepared ELF and the notice describe one install, not files picked from both cards.
+prefer = iso[iso.index("static void preferFixedIlinkPair("):]
+prefer = prefer[:prefer.index("\n}\n")]
+assert 'openPathForRead(list->entry[i].path, card_path, sizeof(card_path))' in prefer
+assert prefer.index("card_path, sizeof(card_path)") < prefer.index("neutrinoIlinkPairIsOurs(list->entry[i].path)")
 assert iso.index("neutrinoIlinkPairIsOurs(selected)") < iso.index('CleanUpForKeepIopExec("Preparing Neutrino")')
 
 print("PASS: Launchstation runs the fixed i.LINK pair and prefers a Neutrino install that carries it")

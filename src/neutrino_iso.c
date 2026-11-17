@@ -267,6 +267,16 @@ static void preferFixedIlinkPair(POPSTARTER_CANDIDATE_LIST *list)
 	int i, fixed = 0, n_older = 0;
 
 	for (i = 0; i < list->count; i++) {
+		/* mc:/ resolves each file on its own (mc0 first, then mc1): pin the card the ELF opens on, so the
+		 * modules checked here, the ELF prepared and the older-driver notice all come from one install. */
+		if (!strncmp(list->entry[i].path, "mc:/", 4)) {
+			char card_path[MAX_PATH];
+			int fd = openPathForRead(list->entry[i].path, card_path, sizeof(card_path));
+			if (fd >= 0) {
+				genClose(fd);
+				snprintf(list->entry[i].path, sizeof(list->entry[i].path), "%s", card_path);
+			}
+		}
 		if (neutrinoIlinkPairIsOurs(list->entry[i].path))
 			list->entry[fixed++] = list->entry[i];
 		else
