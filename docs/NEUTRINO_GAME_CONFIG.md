@@ -14,7 +14,10 @@ $NeutrinoGsmComp=0
 $NeutrinoArgs=-dbc -logo
 $VMC_0=My Game
 $VMC_1=
+$End=1
 ```
+
+Keep `$End=1` as the last line when you edit a file by hand. A file without it is treated as unfinished (for example a save cut short) and ignored, and the older profile is used instead.
 
 | Key | Meaning |
 |---|---|

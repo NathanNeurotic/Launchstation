@@ -274,12 +274,12 @@ static int profileIntValue(const char *v, int max, int *out)
 }
 
 /* Parses a NEUT-<ID>.cfg text. Unknown keys and # lines are ignored; a bad
- * value rejects the whole file (the caller then falls back to the old profile). */
+ * value, or a missing last line `$End=1`, rejects the whole file (the caller then falls back to the old profile). */
 static int profileParseText(char *text, NEUTRINO_LAUNCH_OPTIONS *out)
 {
 	NEUTRINO_LAUNCH_OPTIONS o;
 	char *line = text, *next, *eq, *val, *end, *tok, *save;
-	int i, n, fast = 0;
+	int i, n, fast = 0, complete = 0;
 
 	memset(&o, 0, sizeof(o));
 	while (line != NULL && *line) {
@@ -305,6 +305,11 @@ static int profileParseText(char *text, NEUTRINO_LAUNCH_OPTIONS *out)
 					if (profileCompatBit(compatibility_options[i].mode) &&
 					    (n & profileCompatBit(compatibility_options[i].mode)))
 						o.game_compatibility |= 1u << compatibility_options[i].mode;
+			} else if (!strcmp(line, "$End")) {
+				/* Last line of a saved file: a cut-off save or read never has it. */
+				if (!profileIntValue(val, 1, &n))
+					return 0;
+				complete = n == 1;
 			} else if (!strcmp(line, "$NeutrinoFastReads")) {
 				if (!profileIntValue(val, 1, &fast))
 					return 0;
@@ -330,6 +335,8 @@ static int profileParseText(char *text, NEUTRINO_LAUNCH_OPTIONS *out)
 		}
 		line = next;
 	}
+	if (!complete)
+		return 0;
 	if (fast)
 		o.game_compatibility |= 1u << 0;
 	if (!profileOptionsValid(&o))
@@ -381,7 +388,7 @@ static int profileSave(const char *id, const NEUTRINO_LAUNCH_OPTIONS *options)
 				mask |= (int)profileCompatBit(compatibility_options[i].mode);
 		n = snprintf(text, sizeof(text),
 		             "$Compatibility=%d\n$NeutrinoFastReads=%d\n$NeutrinoVideo=%d\n$NeutrinoGsmComp=%d\n"
-		             "$NeutrinoArgs=%s%s%s\n$VMC_0=%s\n$VMC_1=%s\n",
+		             "$NeutrinoArgs=%s%s%s\n$VMC_0=%s\n$VMC_1=%s\n$End=1\n",
 		             mask, (int)(options->game_compatibility & 1u), options->video_mode, options->video_compatibility,
 		             options->debug_colors ? "-dbc" : "", options->debug_colors && options->logo ? " " : "",
 		             options->logo ? "-logo" : "", options->vmc[0], options->vmc[1]);

@@ -114,9 +114,14 @@ int main(void)
     assert(profileSave(id,&b));
     assert(profileLoad(id,&got) && !memcmp(&got,&b,sizeof(got)));
     /* A hand-edited file is read. */
-    strcpy(content[2],"# note\n$Compatibility=2\n$NeutrinoVideo=1\n$NeutrinoArgs=-logo -dbc -qb\n$VMC_0 = hand\n$Other=9\n");
+    strcpy(content[2],"# note\n$Compatibility=2\n$NeutrinoVideo=1\n$NeutrinoArgs=-logo -dbc -qb\n$VMC_0 = hand\n$Other=9\n$End=1\n");
     memset(&a,0,sizeof(a)); a.game_compatibility=1u<<2; a.video_mode=1; a.debug_colors=1; a.logo=1; strcpy(a.vmc[0],"hand");
     assert(profileLoad(id,&got) && !memcmp(&got,&a,sizeof(got)));
+    /* A file cut short (no $End=1) is not accepted, even if what is there parses. */
+    strcpy(content[2],"$Compatibility=2\n$NeutrinoVideo=1\n");
+    assert(!profileLoad(id,&got));
+    strcpy(content[2],"$Compatibility=2\n$NeutrinoVideo=1\n$End=1\n");
+    assert(profileLoad(id,&got));
     /* A bad value invalidates the file; a legacy NTP1 slot is then used. */
     strcpy(content[2],"$NeutrinoVideo=9\n");
     assert(!profileLoad(id,&got));
@@ -131,7 +136,7 @@ int main(void)
     { char before[512]; strcpy(before,content[0]); assert(profileSave(id,&b)); assert(!strcmp(before,content[0])); }
     /* Failed or truncated writes are not reported as saved. */
     fail_write=1; assert(!profileSave(id,&a)); fail_write=0;
-    truncate_write=1; assert(!profileSave(id,&a)); truncate_write=0;
+    truncate_write=1; assert(!profileSave(id,&a)); assert(!profileReadFile(id,&got)); truncate_write=0;
     allow_wait=0; assert(!profileSave(id,&a)); allow_wait=1;
     a.video_mode=9; assert(!profileSave(id,&a));
     assert(!profileSave("INVALID",&b));

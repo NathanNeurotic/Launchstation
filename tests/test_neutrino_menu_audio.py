@@ -115,7 +115,8 @@ static int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *o, NEUTRINO_OP
 static int DashIsActive(void) { return 1; }
 static int prepareNeutrinoGameID(const char *p, char *id, size_t n) { (void)p; snprintf(id, n, "SLUS_123.45"); return 1; }
 static int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *o, const char *id) {
-    (void)o; (void)id;
+    (void)id;
+    memset(o, 0, sizeof(*o));
     /* Menu prompts run while audio is still unmuted. */
     assert(!muted);
     return commit != 0;
