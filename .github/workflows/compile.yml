@@ -217,6 +217,7 @@ jobs:
           python3 tests/test_mmce_handle_release.py
           python3 tests/test_mmce_dread_returns.py
           python3 tests/test_mmce_publish.py
+          python3 tests/test_mmce_backup_progress.py
           python3 tests/test_mmce_recovery.py
           python3 tests/test_mmce_native_import.py
           python3 tests/test_mmce_rename_fallback.py

@@ -577,10 +577,16 @@ const char *dashToolsGoogleStatus(void)
 }
 #endif
 
-static void mmceSyncProgress(const char *source, int done, int total)
+static void mmceSyncProgress(const char *source, int done, int total, int permille)
 {
 	const char *leaf = source != NULL ? strrchr(source, '/') : NULL;
-	dashLoadingStatus(leaf != NULL ? leaf + 1 : (source != NULL ? source : "MMCE card"), done, total);
+	const char *name = leaf != NULL ? leaf + 1 : (source != NULL ? source : "MMCE card");
+
+	/* total 0 while the cards are still being counted: spinner */
+	if (total <= 0)
+		dashLoadingStatus(name, 0, 0);
+	else
+		dashLoadingStatus(name, (done > 0 ? done - 1 : 0) * 1000 + permille, total * 1000);
 }
 
 static int chooseMmceBackupRoot(char *out, size_t out_size, int change)

@@ -16,7 +16,7 @@ body = src[start:end]
 fingerprint = body.index("fingerprint_matches(source, previous_path, 1)")
 compare = body.index("files_equal_serial(source, previous_path)")
 unchanged = body.index("stats->unchanged++")
-copy = body.index("mcCardBackupNoEcc(source, staged, NULL)")
+copy = body.index("mcCardBackupNoEcc(source, staged, tick_export)")
 assert fingerprint < unchanged < compare < copy, "index fingerprint, then full compare, before any write"
 assert "!options->verify" in body[:compare], "verify = 1 must bypass the fingerprint"
 assert "write_sidecar(dest)" in body and body.index("write_sidecar(dest)") > body.index("fileXioRename(staged, dest)"), \
@@ -34,7 +34,7 @@ assert "genRemove(staged)" in body, "failed export or publication must clean up 
 assert "if (same < 0)" in body, "failed PCSX2 comparison must not prune history"
 mcd_fast = body.index("format == MMCE_BACKUP_FORMAT_MCD")
 assert mcd_fast < copy, "native MCD history must check for unchanged data before writing"
-assert "mcCardExportPcsx2(source, staged, NULL)" in body, "PCSX2 format must use the verified converter"
+assert "mcCardExportPcsx2(source, staged, tick_export)" in body, "PCSX2 format must use the verified converter"
 assert "keep == 0" in src, "zero retention must mean keep all"
 assert "backup_ext(format)" in src, "history extension must follow configured format"
 assert "!wleExists(staged)" in src, "do not reuse a prior interrupted backup file"
