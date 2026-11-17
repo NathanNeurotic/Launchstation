@@ -1,10 +1,11 @@
 # Current Launchstation features and navigation
 
-This guide reflects the code on `master`: the four visible tabs in `src/dash_main.c` (`visible_sections`), the Home/Files integration and the settings pages in `src/dash_settings.c`.
+This guide reflects the code on `master`: the five visible tabs in `src/dash_main.c` (`visible_sections`), the Home/Files integration and the settings pages in `src/dash_settings.c`.
 
 | Visible tab | User-facing behavior | Source |
 | --- | --- | --- |
 | **Home** | Continue (pinned, recent, favorites), nested Applications library (Grid/List/Carousel), Last folder and configured launch-key shortcuts | `src/dash_home.c`, `src/dash_apps.c` |
+| **Games** | PS2 ISO images in the OPL `DVD` and `CD` folders of every running device Neutrino can start from (USB, MX4SIO, MMCE, iLink, exFAT HDD, UDPFS, SMB), with OPL cover art; OK starts the game through Neutrino with the File Browser's launch options, including those saved with **Save for this game**; Triangle opens Details, Show in File Browser and Refresh games | `src/dash_games.c`, `src/dash_art.c` |
 | **Files** | Direct persistent File Browser, remembered folder and selection across tabs; device roots | `src/dash_browser.c`, `src/dash_devices.c` |
 | **Tools** | File Browser shortcut to Files, Text Editor (and a Hex Editor on any file from the File Browser), Start disc, PS1/PS2 image shortcuts, MISC commands, USB unit diagnostics, HDD Manager, memory card exploit installer, OPL IGR setup, PS2 browser, OSDSYS, FTP / Remote access, Google Drive backups, system and build information, Reboot IOP, Power off | `src/dash_tools.c` |
 | **Settings** | Appearance, Home & applications, Sound, Input, Launching, Storage & devices (with MMCE backups), Network, System | `src/dash_settings.c` |
