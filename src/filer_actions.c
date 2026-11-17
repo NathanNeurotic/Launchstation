@@ -290,6 +290,52 @@ static int sizeFromListingOnStatFailure(const char *path)
 	return 0;
 }
 
+/* Size and Delete walk a folder tree one level at a time. Each level is
+ * listed into one shared MAX_ENTRY listing (about 800 KB) and keeps only a
+ * copy of its own entries, so a level costs what it holds rather than a
+ * whole listing. The shared listing is freed when the outermost folder is
+ * done. Deeper than TREE_DEPTH_LIMIT levels is refused (-ELOOP), which bounds
+ * the stack the recursion uses. After saildot4k's filerWalkTree (c627ecc). */
+#define TREE_DEPTH_LIMIT 32
+static FILEINFO *tree_listing;
+static int tree_depth;
+
+/* dir's entries in a new array (NULL when there are none), their count in
+ * *n, or a negative *n. *more as getDirComplete. Call treeLeave() after. */
+static FILEINFO *treeList(const char *dir, int *n, int *more)
+{
+	FILEINFO *own;
+
+	*more = 0;
+	if (++tree_depth > TREE_DEPTH_LIMIT) {
+		*n = -ELOOP;
+		return NULL;
+	}
+	if (!tree_listing && !(tree_listing = (FILEINFO *)memalign(64, MAX_ENTRY * sizeof(FILEINFO)))) {
+		*n = -ENOMEM;
+		return NULL;
+	}
+	*n = getDirComplete(dir, tree_listing, more);
+	if (*n <= 0)
+		return NULL;
+	own = (FILEINFO *)malloc(*n * sizeof(FILEINFO));
+	if (!own) {
+		*n = -ENOMEM;
+		return NULL;
+	}
+	memcpy(own, tree_listing, *n * sizeof(FILEINFO));
+	return own;
+}
+
+static void treeLeave(FILEINFO *own)
+{
+	free(own);
+	if (!--tree_depth) {
+		free(tree_listing);
+		tree_listing = NULL;
+	}
+}
+
 /* Adds the size of a file, or of a folder and everything in it, to *size.
  * Returns 0 when that is all of it, else *size is only a lower bound: -E2BIG
  * when a folder held more than a listing can (its first MAX_ENTRY - 1 entries
@@ -307,15 +353,9 @@ int getFileSize(const char *path, const FILEINFO *file, u64 *size)
 		return -ENODEV;
 
 	if (file->stats.AttrFile & sceMcFileAttrSubdir) {  //Folder object to size up
-		/* each level lists on the heap: MAX_ENTRY entries are about 900 KB */
-		files = (FILEINFO *)memalign(64, MAX_ENTRY * sizeof(FILEINFO));
-		if (files == NULL)
-			return -ENOMEM;
-		if (snprintf(dir, sizeof(dir), "%s%s/", path, file->name) >= (int)sizeof(dir)) {
-			free(files);
+		if (snprintf(dir, sizeof(dir), "%s%s/", path, file->name) >= (int)sizeof(dir))
 			return -ENAMETOOLONG;
-		}
-		nfiles = getDirComplete(dir, files, &more);
+		files = treeList(dir, &nfiles, &more);
 		if (nfiles < 0)
 			status = nfiles;
 		else if (more)
@@ -329,7 +369,7 @@ int getFileSize(const char *path, const FILEINFO *file, u64 *size)
 				break;
 			}
 		}
-		free(files);
+		treeLeave(files);
 		return status;
 	}
 	//File object to size up
@@ -1945,7 +1985,7 @@ int delete (const char *path, const FILEINFO *file)
 {
 	static char party[MAX_NAME];  //only used before this level recurses
 	FILEINFO *files;
-	char dir[MAX_PATH], hdddir[MAX_PATH];
+	char dir[MAX_PATH], hdddir[MAX_PATH], first[MAX_NAME];
 	int nfiles, i, ret, more;
 
 	if (!ensurePathDeviceStackReady(path))
@@ -1978,31 +2018,27 @@ int delete (const char *path, const FILEINFO *file)
 #endif
 	if (file->stats.AttrFile & sceMcFileAttrSubdir) {  //Is the object to delete a folder ?
 		strcat(dir, "/");
-		/* Each level lists on the heap: MAX_ENTRY entries are about 900 KB, far
-		 * more than the stack. The entry past them keeps the first name of the
-		 * previous listing, which a listing after it must no longer hold. */
-		files = (FILEINFO *)memalign(64, (MAX_ENTRY + 1) * sizeof(FILEINFO));
-		if (files == NULL)
-			return -ENOMEM;
-		files[MAX_ENTRY].name[0] = '\0';
+		/* Each level is listed with treeList(). first keeps the first name of
+		 * the previous listing, which a listing after it must no longer hold. */
+		first[0] = '\0';
 		do {
-			nfiles = getDirComplete(dir, files, &more);
-			if (nfiles > 0 && !strcmp(files[0].name, files[MAX_ENTRY].name))
+			files = treeList(dir, &nfiles, &more);
+			if (nfiles > 0 && !strcmp(files[0].name, first))
 				nfiles = -EIO;  //an entry deleted without error is still there
 			if (nfiles < 0) {
-				free(files);
+				treeLeave(files);
 				return nfiles;
 			}
-			strcpy(files[MAX_ENTRY].name, nfiles > 0 ? files[0].name : "");
+			strcpy(first, nfiles > 0 ? files[0].name : "");
 			for (i = 0; i < nfiles; i++) {
 				ret = delete (dir, &files[i]);  //recursively delete contents of folder
 				if (ret < 0) {
-					free(files);
+					treeLeave(files);
 					return ret;
 				}
 			}
+			treeLeave(files);
 		} while (more);  //a full listing: list what is left
-		free(files);
 		if (!strncmp(dir, "mc", 2)) {
 			ensureMemoryCardPortAccessible(dir[2] - '0');
 			mcSync(0, NULL, NULL);

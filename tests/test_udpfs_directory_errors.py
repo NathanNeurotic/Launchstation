@@ -89,5 +89,7 @@ with tempfile.TemporaryDirectory(prefix='udpfs-dir-') as folder:
     subprocess.run([cc, '-std=c99', '-Wall', '-Wextra', '-Werror', str(path / 'test.c'), '-o', str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
 assert 'nfiles = getDir(path, &files[1]);\n\t\tif (nfiles < 0) nfiles = 0;\n\t\tnfiles++;' in source
-assert 'nfiles = getDirComplete(dir, files, &more);' in delete
-assert 'if (nfiles < 0) {\n\t\t\t\tfree(files);\n\t\t\t\treturn nfiles;' in delete
+assert 'files = treeList(dir, &nfiles, &more);' in delete
+assert 'if (nfiles < 0) {\n\t\t\t\ttreeLeave(files);\n\t\t\t\treturn nfiles;' in delete
+tree_list = actions[actions.index('static FILEINFO *treeList('):actions.index('static void treeLeave(')]
+assert '*n = getDirComplete(dir, tree_listing, more);\n\tif (*n <= 0)\n\t\treturn NULL;' in tree_list
