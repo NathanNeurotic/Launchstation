@@ -483,7 +483,8 @@ int main(int argc, char **argv)
 	} else if (!strncmp(argv[3], "ps1conv:", 8)) {
 		dashPs1SaveConvert(argv[3] + 8);
 	} else if (!strncmp(argv[3], "importmany:", 11) || !strncmp(argv[3], "importmc", 8) ||
-	           !strncmp(argv[3], "ps1many:", 8) || !strncmp(argv[3], "convmany:", 9)) {
+	           !strncmp(argv[3], "ps1many:", 8) || !strncmp(argv[3], "convmany:", 9) ||
+	           !strncmp(argv[3], "archive:", 8)) {
 		/* importmany:dir/|name|name... into a picked image; importmc<N>:dir/|name... onto mc<N>:;
 		 * ps1many: / convmany: the marked-save Convert of PS1 / PS2 save files */
 		static char spec[4096];
@@ -499,7 +500,9 @@ int main(int argc, char **argv)
 			names[n++] = p;
 			p = strchr(p, '|');
 		}
-		if (argv[3][0] == 'p')
+		if (argv[3][0] == 'a') /* archive:dir/|folder|folder... into mass:/arch/ */
+			dashCardArchiveFolders(dir, names, n, "mass:/arch/");
+		else if (argv[3][0] == 'p')
 			dashPs1SaveConvertMany(dir, names, n);
 		else if (argv[3][0] == 'c')
 			dashCardConvertMany(dir, names, n);

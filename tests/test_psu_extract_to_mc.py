@@ -53,7 +53,7 @@ fb_src = (root / "src/filer_browser.c").read_text(encoding="utf-8")
 inc = fb_src[fb_src.index("if (ret == TRANSFER_STACK_INCOMPATIBLE) {"):]
 inc = inc[:inc.index("return;")]
 assert "snprintf(mess, MAX_PATH," in inc
-# menu capacity grew with the two new rows
-assert re.search(r"DashMenuItem items\[(\d+)\];\n\tint ids\[\1\],", src).group(1) == "56"
+# menu capacity grew with the two new rows, then with Create archive
+assert re.search(r"DashMenuItem items\[(\d+)\];\n\tint ids\[\1\],", src).group(1) == "64"
 assert "Extract to mc0:/" in (root / "docs-site/content/file-browser.html").read_text(encoding="utf-8")
 print("PASS: .psu files extract straight to mc0:/ or mc1:/ from their menu, clipboard preserved")

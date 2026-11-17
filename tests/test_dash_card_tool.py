@@ -216,6 +216,53 @@ for k in (0, 1, 3):                                                         # a 
     assert not host("mass:/out/" + PSV2).exists(), k                        # nothing half-written is left
 lines = run(B, "m3", "m2", "k1", "pmass:/out/")
 assert kind(lines, "TOAST|1|.psv written and verified") and host("mass:/out/" + PSV2).read_bytes() == v, lines
+# Create archive: copied save folders, each as its own archive. The folder is
+# the save's files (taken here from the .psu); the archive imports into a
+# blank card as the same save, a taken .psu name gets -2, a .psv name that
+# is taken is not made, a folder with a folder in it is refused, and a write
+# that fails leaves nothing.
+def psu_files(data):
+    count, pos, out = struct.unpack_from("<I", data, 4)[0] - 2, 3 * 512, {}
+    for _ in range(count):
+        size = struct.unpack_from("<I", data, pos + 4)[0]
+        name = data[pos + 0x40:pos + 0x60].rstrip(b"\0").decode()
+        out[name] = data[pos + 512:pos + 512 + size]
+        pos += 512 + (size + 1023) // 1024 * 1024
+    return out
+folder = host("mass:/sv/BESLES-12345GAME")
+folder.mkdir(parents=True)
+for name, data in psu_files(psu_bytes).items():
+    (folder / name).write_bytes(data)
+host("mass:/arch").mkdir()
+lines = run("archive:mass:/sv/|BESLES-12345GAME", "k0", "c1")
+assert kind(lines, "CHOICE|Create archive|4|0") and kind(lines, "CONFIRM|Create a .psu of BESLES-12345GAME?|"), lines
+assert kind(lines, "MESSAGE|4|Archive created|1 of 1 created and read back."), lines
+made = host("mass:/arch/BESLES-12345GAME.psu").read_bytes()
+assert psu_files(made) == psu_files(psu_bytes)
+J2 = "mass:/J2.mcd"
+blank(J2)
+lines = run(J2, "m0", "pmass:/arch/BESLES-12345GAME.psu", "c1")
+assert kind(lines, "TOAST|1|Save imported and verified") and saves(J2) == saves(B), lines
+lines = run("archive:mass:/sv/|BESLES-12345GAME", "k0", "c1")                # taken: -2, never replaced
+assert host("mass:/arch/BESLES-12345GAME-2.psu").read_bytes() == made and host("mass:/arch/BESLES-12345GAME.psu").read_bytes() == made
+lines = run("archive:mass:/sv/|BESLES-12345GAME", "k1", "c1")
+assert kind(lines, "MESSAGE|4|Archive created|"), lines
+J3 = "mass:/J3.mcd"
+blank(J3)
+lines = run(J3, "m0", "pmass:/arch/" + PSV2, "c1")
+assert kind(lines, "TOAST|1|Save imported and verified") and saves(J3) == saves(B), lines
+lines = run("archive:mass:/sv/|BESLES-12345GAME", "k1", "c1")                # a .psv name is exact: not made
+assert kind(lines, "MESSAGE|1|Not all created|0 of 1 created") and "A .psv with this save's name is already there." in kind(lines, "MESSAGE|")[0], lines
+(host("mass:/sv/NESTED/sub")).mkdir(parents=True)
+(host("mass:/sv/NESTED/icon.sys")).write_bytes(b"x")
+before = sorted(p.name for p in host("mass:/arch").iterdir())
+lines = run("archive:mass:/sv/|NESTED|BESLES-12345GAME", "k0", "c1", env={"FAIL_WRITE_AT": "0"})
+msg = kind(lines, "MESSAGE|1|Not all created|")
+assert msg and "0 of 2 created" in msg[0] and "First: NESTED: A save folder holds files only" in msg[0], lines
+assert sorted(p.name for p in host("mass:/arch").iterdir()) == before       # nothing half-written is left
+browser_src = (root / "src/dash_browser.c").read_text(encoding="utf-8")
+assert 'ADD(DI_MC, "Create archive...",' in browser_src and "dashCardArchiveFolders(clipPath, names, nclipFiles, fb.dir)" in browser_src
+assert "if (en[PASTE] && clipFoldersOnly() && strncmp(fb.dir, \"mc\", 2)" in browser_src
 host("mass:/conv").mkdir()
 shutil.copy(psu, host("mass:/conv/BESLES-12345GAME.psu"))
 lines = run("convert:mass:/conv/BESLES-12345GAME.psu", "k1", "c1")        # a .psu offers .psv first

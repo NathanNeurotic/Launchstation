@@ -992,6 +992,162 @@ void dashCardConvertMany(const char *dir, const char *const *names, int n)
 	dashModalMessage(failed ? DI_WARNING : DI_MC, failed ? "Not all converted" : "Converted", body, folder);
 }
 
+/* A card entry for a save folder (dir) or one of its files: the standard
+ * modes, the listing's times, or now when it has none. */
+static void ctFolderEntry(uint8_t e[512], const char *name, int dir, u32 size, const unsigned char *ct,
+                          const unsigned char *mt, const uint8_t now[8])
+{
+	static const uint8_t none[8];
+	u32 mode = dir ? 0x8427u : 0x8497u;
+
+	memset(e, 0, 512);
+	e[0] = (uint8_t)mode;
+	e[1] = (uint8_t)(mode >> 8);
+	e[4] = (uint8_t)size;
+	e[5] = (uint8_t)(size >> 8);
+	e[6] = (uint8_t)(size >> 16);
+	e[7] = (uint8_t)(size >> 24);
+	memcpy(e + 0x08, memcmp(ct, none, 8) ? ct : now, 8);
+	memcpy(e + 0x18, memcmp(mt, none, 8) ? mt : now, 8);
+	strncpy((char *)e + 0x40, name, 32);
+}
+
+/* The save folder dir+name read whole into s: its files, which must be plain
+ * files, at most CT_PSU_MAX bytes in all. *why says what is wrong. */
+static int ctReadFolder(const char *dir, const char *name, McSaveData *s, const char **why)
+{
+	char path[MAX_PATH], file[MAX_PATH];
+	iox_dirent_t ent;
+	uint8_t now[8];
+	u32 total = 0, got;
+	s64 size;
+	int fd, ffd, n, r = MCW_OK;
+
+	memset(s, 0, sizeof(*s));
+	*why = "The folder name is not a memory card save name (1 to 31 plain characters).";
+	if (strlen(name) > 31 || snprintf(path, sizeof(path), "%s%s/", dir, name) >= (int)sizeof(path))
+		return MCW_ERR_INVALID;
+	ctStamp(now);
+	memset(&ent, 0, sizeof(ent));
+	ctFolderEntry(s->entry, name, 1, 0, ent.stat.ctime, ent.stat.mtime, now);
+	memcpy(s->dot, s->entry, 512);
+	memcpy(s->dotdot, s->entry, 512);
+	fd = genDopen(path);
+	if (fd < 0) {
+		*why = "The folder could not be opened.";
+		return MCV_ERR_IO;
+	}
+	while (r == MCW_OK && fileXioDread(fd, &ent) > 0) {
+		McSaveFile *f, *grown;
+
+		if (!strcmp(ent.name, ".") || !strcmp(ent.name, "..")) {
+			memset(&ent, 0, sizeof(ent));
+			continue;
+		}
+		if (FIO_S_ISDIR(ent.stat.mode)) {
+			*why = "A save folder holds files only; this one has a folder in it.";
+			r = MCW_ERR_UNSUPPORTED;
+		} else if (strlen(ent.name) > 31) {
+			*why = "A file name in it is longer than a memory card allows.";
+			r = MCW_ERR_INVALID;
+		} else if (s->nfiles >= 64u) {
+			*why = "It holds more files than a save folder can.";
+			r = MCW_ERR_INVALID;
+		} else if (!(grown = (McSaveFile *)realloc(s->files, (s->nfiles + 1u) * sizeof(McSaveFile)))) {
+			r = MCW_ERR_NOMEM;
+		} else {
+			s->files = grown;
+			f = &s->files[s->nfiles];
+			memset(f, 0, sizeof(*f));
+			ffd = snprintf(file, sizeof(file), "%s%s", path, ent.name) < (int)sizeof(file) ? genOpen(file, FIO_O_RDONLY) : -1;
+			size = ffd >= 0 ? genLseek(ffd, 0, SEEK_END) : -1;
+			if (size < 0 || genLseek(ffd, 0, SEEK_SET) != 0) {
+				*why = "A file in it could not be read.";
+				r = MCV_ERR_IO;
+			} else if ((u64)size > CT_PSU_MAX - total) {
+				*why = "It is larger than a memory card save can be.";
+				r = MCW_ERR_INVALID;
+			} else if (!(f->data = (uint8_t *)malloc(size ? (size_t)size : 1))) {
+				r = MCW_ERR_NOMEM;
+			} else {
+				s->nfiles++; /* freed with the save from here on */
+				for (got = 0; got < (u32)size; got += (u32)n)
+					if ((n = genRead(ffd, f->data + got, (int)((u32)size - got))) <= 0)
+						break;
+				if (got != (u32)size) {
+					*why = "A file in it could not be read.";
+					r = MCV_ERR_IO;
+				}
+				f->size = (u32)size;
+				total += f->size;
+				ctFolderEntry(f->entry, ent.name, 0, f->size, ent.stat.ctime, ent.stat.mtime, now);
+			}
+			if (ffd >= 0)
+				genClose(ffd);
+		}
+		memset(&ent, 0, sizeof(ent));
+	}
+	genDclose(fd);
+	if (r != MCW_OK) {
+		if (r == MCW_ERR_NOMEM)
+			*why = ctError(r);
+		mcCardFreeSave(s);
+	}
+	return r;
+}
+
+/* "Create archive": the copied save folders `names` in dir, each as its own
+ * .psu, .psv, .cbs or .zip in dest (from saildot4k's Create archive). Each
+ * folder is read whole before its file is made, so a folder that cannot be
+ * read never leaves a file; no file is replaced (.psu, .cbs and .zip get a
+ * -2.. suffix, a .psv whose name is taken is not made) and the originals are
+ * only read. A save that fails is counted and the rest still go. */
+void dashCardArchiveFolders(const char *dir, const char *const *names, int n, const char *dest_dir)
+{
+	McSaveData s;
+	char dest[MAX_PATH], first[MAX_PATH] = "", body[MAX_PATH + 160];
+	const char *why, *first_why = NULL;
+	int i, r, fmt, done = 0, failed = 0;
+
+	if (n <= 0)
+		return;
+	fmt = dashModalChoice("Create archive", ct_save_as, 4, 0);
+	if (fmt < 0 || !ctStacks(dir, dest_dir))
+		return;
+	if (n == 1)
+		snprintf(dest, sizeof(dest), "Create a .%s of %s?", ct_ext[fmt], names[0]);
+	else
+		snprintf(dest, sizeof(dest), "Create %d .%s archives?", n, ct_ext[fmt]);
+	if (!dashModalConfirm(dest, "One archive per save folder, read back. No file is replaced; the folders are only read.",
+	                      "Create", 0))
+		return;
+	dashLoadingBegin(n > 1 ? "Creating archives" : "Creating archive");
+	for (i = 0; i < n; i++) {
+		dashLoadingStatus(names[i], i, n);
+		r = ctReadFolder(dir, names[i], &s, &why);
+		if (r == MCW_OK) {
+			if (ctConvertName(&s, fmt, dest_dir, dest, sizeof(dest)) < 0) {
+				r = MCW_ERR_EXISTS;
+				why = fmt == 1 ? "A .psv with this save's name is already there." : "No free name in that folder.";
+			} else if ((r = fmt < 2 ? ctWriteSaveAs(dest, &s, fmt, 1) : ctConvertWrite(&s, fmt, dest)) != MCW_OK)
+				why = ctError(r);
+			mcCardFreeSave(&s);
+		}
+		if (r == MCW_OK)
+			done++;
+		else if (!failed++) {
+			dashStrCopy(first, names[i], sizeof(first));
+			first_why = why;
+		}
+	}
+	dashLoadingEnd();
+	r = snprintf(body, sizeof(body), "%d of %d created and read back. No file was replaced; the folders were not changed.",
+	             done, n);
+	if (failed)
+		snprintf(body + r, sizeof(body) - r, " %d not created. First: %s: %s", failed, first, first_why);
+	dashModalMessage(failed ? DI_WARNING : DI_MC, failed ? "Not all created" : "Archive created", body, dest_dir);
+}
+
 static void ctImportPsu(const char *image)
 {
 	McSaveData s;
