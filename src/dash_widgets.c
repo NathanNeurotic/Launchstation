@@ -414,7 +414,7 @@ static void kbDrawHints(float center_x, float y, float available_width)
 {
 	DashHint hints[] = {{dashOkIcon(), NULL, "Type"}, {dashBackIcon(), NULL, "Delete"},
 	                    {DI_BTN_SQUARE, NULL, "Caps"}, {DI_BTN_R3, NULL, "Cursor"},
-	                    {-1, "SELECT", "Done"}, {DI_BTN_TRIANGLE, NULL, "Cancel"}};
+	                    {-1, "START", "Done"}, {DI_BTN_TRIANGLE, NULL, "Cancel"}};
 	const int count = sizeof(hints) / sizeof(hints[0]);
 	float width = 0.0f, gap, x;
 	/* Font layouts put the x-height center at text_y + 16 * scale.
@@ -446,7 +446,7 @@ static int modalKeyboard(const char *title, char *buf, int max_len, int filename
 	const float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
 	char orig[256];
 	DashKeyboard keyboard;
-	int cur, result = 0;
+	int cur, result = 0, start_was;
 	float open = 0.0f, title_age = 0.0f;
 	DashInput in;
 
@@ -458,6 +458,7 @@ static int modalKeyboard(const char *title, char *buf, int max_len, int filename
 	dashStrCopy(orig, buf, sizeof(orig));
 	cur = strlen(buf);
 	dashInputFlush();
+	start_was = dashInputStartPassthrough(1); /* START is Done here, as in saildot4k's fork */
 
 	while (1) {
 		int r;
@@ -508,7 +509,7 @@ static int modalKeyboard(const char *title, char *buf, int max_len, int filename
 			kbDelete(buf, &cur);
 			dashSoundPlay(DASH_SND_CANCEL);
 		}
-		if (in.pressed & DASH_IN_SELECT) {
+		if (in.pressed & DASH_IN_START) {
 			if (filename && !kbFilenameValid(buf, max_len)) {
 				dashToast(DASH_TOAST_WARN, "Choose a valid filename");
 				continue;
@@ -583,6 +584,7 @@ static int modalKeyboard(const char *title, char *buf, int max_len, int filename
 			dashGfxPresent();
 		}
 	}
+	dashInputStartPassthrough(start_was);
 	if (!result)
 		dashStrCopy(buf, orig, max_len + 1);
 	dashSoundPlay(result ? DASH_SND_CONFIRM : DASH_SND_CANCEL);

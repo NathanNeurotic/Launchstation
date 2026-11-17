@@ -848,6 +848,9 @@ typedef struct
 void dashInputPoll(DashInput *in);
 /* Physical controller sample only; returns validity and suppresses START menus. */
 int dashInputPollPhysical(DashInput *in);
+/* 1: START reaches the caller instead of opening the Dashboard menu (text
+ * entry uses it for Done). Returns the previous setting, for restoring. */
+int dashInputStartPassthrough(int on);
 void dashInputPollEx(DashInput *in, int usb_kb_as_pad);
 /* Opt-in L1/R1 adjustment repeats, following the pad delay/ramp. */
 u32 dashInputShoulderRepeat(void);
