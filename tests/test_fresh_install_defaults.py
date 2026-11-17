@@ -1,9 +1,9 @@
-"""A new install (no LAUNCHSTATION.CNF) starts from the project's chosen defaults.
+"""The built-in starting values are the project's chosen defaults.
 
-Runs the real applyFreshInstallDefaults() and launch-key mapping from
-src/main_boot.c, checks the classic defaults in include/config_private.h
-and src/config.c cover the rest of the list, and that the fresh-install
-values are applied only when no configuration was loaded.
+Checks the classic defaults in include/config_private.h and src/config.c
+match the list, so a new install (no LAUNCHSTATION.CNF) and any key missing
+from an older file both get them, and runs the real region launch-key
+mapping from src/main_boot.c, used only when no configuration was loaded.
 """
 from pathlib import Path
 import re
@@ -15,13 +15,13 @@ root = Path(__file__).resolve().parents[1]
 assert "python3 tests/test_fresh_install_defaults.py" in (root / ".github/workflows/compile.yml").read_text()
 boot = (root / "src/main_boot.c").read_text()
 
-# only on the no-config path, after the region-based confirm button
+# region launch key only on the no-config path; nothing else overrides initConfig
 block = boot[boot.index("if (local_cnf_error < 0) {"):]
 block = block[:block.index("bringUpBootNetworkStack")]
-assert "mapDefaultFileBrowserLaunchKeyToOkButton();\n\t\tapplyFreshInstallDefaults();" in block
-assert boot.count("applyFreshInstallDefaults();") == 1
+assert "mapDefaultFileBrowserLaunchKeyToOkButton();" in block
+assert "applyFreshInstallDefaults" not in boot
 
-# the classic defaults already match the rest of the list
+# the classic defaults are the list
 private = (root / "include/config_private.h").read_text()
 for name, value in {
     "DEF_TIMEOUT": "10", "DEF_HIDE_PATHS": "TRUE", "DEF_MENU_FRAME": "TRUE",
@@ -30,6 +30,8 @@ for name, value in {
     "DEF_STARTUP_RESET_IOP_ELFLOAD": "1", "DEF_VIRTUAL_KEYBOARD_LAYOUT": "VKEY_LAYOUT_QWERTY",
     "DEF_SHOW_TITLES": "1", "DEF_PATHPAD_LOCK": "0", "DEF_PSU_HUGENAMES": "0",
     "DEF_PSU_DATENAMES": "0", "DEF_PSU_NOOVERWRITE": "0", "DEF_FB_NOICONS": "0",
+    "DEF_HOSTWRITE": "TRUE", "DEF_APP_GAMEID": "TRUE", "DEF_INIT_DELAY": "0",
+    "DEF_HIDE_HDD": "HIDE_HDD_SHOW_ALL", "DEF_HIDE_MCMMCE": "1",
 }.items():
     assert re.search(rf"\b{name} = {value},", private), name
 colors = re.findall(r"DEF_COLOR(\d) = GS_SETREG_RGBA\((0x[0-9a-f]+|0), (0x[0-9a-f]+|0), (0x[0-9a-f]+|0), 0\)", private)
@@ -52,24 +54,19 @@ code = r'''
 #include <assert.h>
 #include <string.h>
 enum { SETTING_LK_AUTO, SETTING_LK_CIRCLE, SETTING_LK_CROSS, SETTING_LK_COUNT };
-enum { HIDE_HDD_SHOW_ALL = 0, HIDE_HDD_HDD1_ATA1 = 5 };
 typedef struct {
     char LK_Path[SETTING_LK_COUNT][64]; int LK_Flag[SETTING_LK_COUNT];
-    char Misc_FileBrowser[64]; int swapKeys, HOSTwrite, app_gameid, Init_Delay, Hide_Hdd, Hide_MCMMCE;
+    char Misc_FileBrowser[64]; int swapKeys;
 } SETTING;
 static SETTING s, *setting = &s;
 ''' + boot[start:end] + r'''
 int main(void) {
     strcpy(s.Misc_FileBrowser, "MISC/FileBrowser");
     strcpy(s.LK_Path[SETTING_LK_CIRCLE], "MISC/FileBrowser"); s.LK_Flag[SETTING_LK_CIRCLE] = 1;
-    s.Init_Delay = 1; s.Hide_Hdd = HIDE_HDD_HDD1_ATA1;
     s.swapKeys = 1;                       /* non-Japanese console: Cross confirms */
     mapDefaultFileBrowserLaunchKeyToOkButton();
-    applyFreshInstallDefaults();
     assert(!strcmp(s.LK_Path[SETTING_LK_CROSS], "MISC/FileBrowser") && s.LK_Flag[SETTING_LK_CROSS]);
     assert(s.LK_Path[SETTING_LK_CIRCLE][0] == 0 && !s.LK_Flag[SETTING_LK_CIRCLE]);
-    assert(s.HOSTwrite == 1 && s.app_gameid == 1 && s.Init_Delay == 0);
-    assert(s.Hide_Hdd == HIDE_HDD_SHOW_ALL && s.Hide_MCMMCE == 1);
     return 0;
 }
 '''
@@ -79,4 +76,4 @@ with tempfile.TemporaryDirectory(prefix="fresh-defaults-") as tmp:
     cc = shutil.which("gcc") or shutil.which("cc")
     subprocess.run([cc, "-std=c99", "-Wall", "-Wextra", "-Werror", str(src), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
-print("PASS: a new install starts from the chosen defaults; loaded configurations are untouched")
+print("PASS: the built-in defaults are the chosen list; region launch key only without a config")
