@@ -57,6 +57,7 @@ jobs:
           python3 tests/test_scanlines.py
           python3 tests/test_pad_rumble.py
           python3 tests/test_fresh_install_defaults.py
+          python3 tests/test_panel_corners.py
           python3 tests/test_browser_sort.py
           python3 tests/test_r3z_browser_wins.py
           python3 tests/test_udpfs_retry.py

@@ -44,7 +44,7 @@ static int g_blend = -1;
 static int gfx_ready;
 static int gfx_screen_gen = -1;
 
-static GSTEXTURE tex_corner;  /* filled AA quarter disc, center at (32,32) */
+static GSTEXTURE tex_corner;  /* filled AA disc, see buildCornerTextures() */
 static GSTEXTURE tex_glow;    /* radial gaussian blob */
 static GSTEXTURE tex_frame;   /* blurred rounded rect for 9-slice glows */
 static GSTEXTURE tex_sparkle; /* 4 point star */
@@ -216,26 +216,36 @@ static inline u32 whiteA(float a)
 	return 0x00808080 | ((u32)ia << 24);
 }
 
+/* Full disc with a margin, so every corner reads its own quadrant with
+ * increasing UVs. The GS samples a texture at each pixel's top-left, not its
+ * centre: one quarter disc drawn mirrored (reversed UVs) sampled the right
+ * and bottom corners one screen pixel further inside the curve than the left
+ * and top ones, so the four corners of a filled panel had different shapes.
+ * panelCorners() shifts every quad by half a pixel; the margin keeps that
+ * shift inside the texture, where gsKit would otherwise clamp the UVs. */
+#define CORNER_TEX    64
+#define CORNER_R      28.0f
+#define CORNER_MARGIN 4.0f
+
 static void buildCornerTextures(void)
 {
-	u32 *corner = allocTexMem(32, 32);
+	u32 *corner = allocTexMem(CORNER_TEX, CORNER_TEX);
 	int x, y;
 
 	if (corner == NULL)
 		return;
 
-	for (y = 0; y < 32; y++) {
-		for (x = 0; x < 32; x++) {
-			/* Quarter disc: circle center at the texture's bottom-right. */
-			float dx = 32.0f - (x + 0.5f);
-			float dy = 32.0f - (y + 0.5f);
+	for (y = 0; y < CORNER_TEX; y++) {
+		for (x = 0; x < CORNER_TEX; x++) {
+			float dx = (x + 0.5f) - CORNER_TEX / 2;
+			float dy = (y + 0.5f) - CORNER_TEX / 2;
 			float d = sqrtf(dx * dx + dy * dy);
-			float a = dashClampf(32.0f - d + 0.5f, 0.0f, 1.0f);
+			float a = dashClampf(CORNER_R - d + 0.5f, 0.0f, 1.0f);
 
-			corner[y * 32 + x] = whiteA(a);
+			corner[y * CORNER_TEX + x] = whiteA(a);
 		}
 	}
-	setupTex(&tex_corner, 32, 32, corner);
+	setupTex(&tex_corner, CORNER_TEX, CORNER_TEX, corner);
 }
 
 static void buildGlowTextures(void)
@@ -718,15 +728,18 @@ void dashTexDrawFit(GSTEXTURE *tex, float x, float y, float w, float h, DashColo
 static void panelCorners(GSTEXTURE *tex, float x, float y, float w, float h, float r,
                          DashColor top, DashColor bottom)
 {
-	float tw = (float)tex->Width;
+	const float c = CORNER_TEX / 2, lo = c - CORNER_R;
+	float half = 0.5f * CORNER_R / r; /* half a screen pixel, in texels */
 	u64 ct = gsColor(top), cb = gsColor(bottom);
 
 	if (!dashTexBind(tex))
 		return;
-	texQuad(tex, x, y, x + r, y + r, 0, 0, tw, tw, ct);
-	texQuad(tex, x + w - r, y, x + w, y + r, tw, 0, 0, tw, ct);
-	texQuad(tex, x, y + h - r, x + r, y + h, 0, tw, tw, 0, cb);
-	texQuad(tex, x + w - r, y + h - r, x + w, y + h, tw, tw, 0, 0, cb);
+	if (half > CORNER_MARGIN)
+		half = CORNER_MARGIN; /* corners under 3.5 px: barely curved anyway */
+	texQuad(tex, x, y, x + r, y + r, lo + half, lo + half, c + half, c + half, ct);
+	texQuad(tex, x + w - r, y, x + w, y + r, c + half, lo + half, c + CORNER_R + half, c + half, ct);
+	texQuad(tex, x, y + h - r, x + r, y + h, lo + half, c + half, c + half, c + CORNER_R + half, cb);
+	texQuad(tex, x + w - r, y + h - r, x + w, y + h, c + half, c + half, c + CORNER_R + half, c + CORNER_R + half, cb);
 }
 
 void dashPanelGradV(float x, float y, float w, float h, float r, DashColor top, DashColor bottom)
