@@ -482,23 +482,8 @@ static void openDir(const char *dir, const char *select)
 		dashStrCopy(fb.want_sel, select, sizeof(fb.want_sel));
 	dashStrCopy(fb.dir, dir, sizeof(fb.dir));
 	if (dir[0] == '\0') {
-		fb.ndevs = dashDevicesList(fb.devs, DASH_MAX_DEVICES - 3);
-		/* memory card images mounted from the menu */
-		{
-			int v;
-			for (v = 0; v < 2; v++) {
-				DashDevice *d;
-				if (!vmcMounted[v])
-					continue;
-				d = &fb.devs[fb.ndevs++];
-				memset(d, 0, sizeof(*d));
-				d->icon = DI_MC;
-				d->state = DASH_DEV_READY;
-				snprintf(d->name, sizeof(d->name), "Virtual Memory Card (vmc%d:/)", v);
-				snprintf(d->browse, sizeof(d->browse), "vmc%d:/", v);
-				dashStrCopy(d->status, "VMC", sizeof(d->status));
-			}
-		}
+		/* the device model already lists mounted memory card images */
+		fb.ndevs = dashDevicesList(fb.devs, DASH_MAX_DEVICES - 1);
 		/* the built-in commands, like the classic device list */
 		if (setting->Misc[0]) {
 			DashDevice *d = &fb.devs[fb.ndevs++];
@@ -3533,6 +3518,15 @@ static void browserRefreshRootCards(void)
 	if (fb.files != NULL && !fb.dir[0] && !fb.loading && !dashWorkerIoBusy() && !dashIopParked()) {
 		pollRootMemoryCardDevices();
 		dashDevicesRefreshMemoryCards(fb.devs, fb.ndevs);
+		/* a card answered, or left, behind a multitap: add or drop its row */
+		if (dashDevicesMultitapChanged(fb.devs, fb.ndevs)) {
+			char keep[sizeof(fb.devs[0].browse)];
+
+			keep[0] = '\0';
+			if (fb.sel < fb.ndevs)
+				dashStrCopy(keep, fb.devs[fb.sel].browse, sizeof(keep));
+			openDir("", keep[0] ? keep : NULL);
+		}
 	}
 }
 

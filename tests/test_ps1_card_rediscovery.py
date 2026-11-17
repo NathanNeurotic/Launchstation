@@ -121,7 +121,9 @@ def check_live_rows():
     func = function(devices, "void dashDevicesRefreshMemoryCards(DashDevice *devs, int count)")
     listing = function(devices, "int dashDevicesList(DashDevice *out, int max)")
     assert "dashDevicesRefreshMemoryCards(d, 1);" in listing
-    assert "filerRootMcPresent" not in listing
+    # The listing reads presence only to leave out empty multitap slots.
+    assert listing.count("filerRootMcPresent") == 1
+    assert "MC_UNIT_SLOT(port) != 0 && filerRootMcPresent(port, NULL, NULL) != 1" in listing
     for rel, guard in (("src/dash_browser.c", "!fb.dir[0] && !fb.loading && !dashWorkerIoBusy() && !dashIopParked()"),
                        ("src/dash_widgets.c", "!pk.loading && !pk.starting && !dashWorkerIoBusy() && !dashIopParked()")):
         src = read(rel)
