@@ -1,6 +1,6 @@
 # Claude audit: Launchstation
 
-Status: IN PROGRESS. 38 of 103 reading passes are in; finding IDs are provisional and will be renumbered until this line says COMPLETE.
+Status: IN PROGRESS. 47 of 103 reading passes are in; finding IDs are provisional and will be renumbered until this line says COMPLETE.
 
 - Repository: NathanNeurotic/Launchstation
 - Audited branch: master
@@ -12,8 +12,8 @@ All `path:line` references are pinned to the audited commit above. Each finding 
 
 ## Totals
 
-- Findings in this report: 13. 271 more raised findings are waiting for their second check and are not shown yet.
-- Raised by readers: 285. Dropped as wrong or unsupported on re-check: 1. Corrected on re-check: 8. Merged as duplicates: 0.
+- Findings in this report: 13. 339 more raised findings are waiting for their second check and are not shown yet.
+- Raised by readers: 353. Dropped as wrong or unsupported on re-check: 1. Corrected on re-check: 8. Merged as duplicates: 0.
 
 | Category | Count |
 |---|---:|
@@ -223,4 +223,4 @@ Not read as text:
 - 123 files, 17.3 MB: binary file (covered by the asset/clutter inventory, not read as text). Mostly under `docs-site` (67), `res` (30), `exploits` (13), `iop` (5), `__Headers` (4), `ship` (2), `docs` (1), `tests` (1).
 - 1 files, 0.1 MB: site stylesheet (static web asset, not product code). Mostly under `docs-site` (1).
 
-Not read yet (reading still in progress): 786 files in 38 chunks.
+Not read yet (reading still in progress): 763 files in 34 chunks.
