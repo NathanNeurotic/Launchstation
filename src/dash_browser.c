@@ -1488,7 +1488,7 @@ static int mmceUnitFromPath(const char *path)
 	return path[4] - '0';
 }
 
-static void mmceTreeBackupProgress(const char *source, int done, int total)
+static void mmceTreeBackupProgress(const char *source, int done, int total, int permille)
 {
 	char line[112];
 	const char *name = source != NULL ? strrchr(source, '/') : NULL;
@@ -1500,8 +1500,15 @@ static void mmceTreeBackupProgress(const char *source, int done, int total)
 	else
 		name = "card";
 
+	if (total <= 0) {
+		/* still counting the cards: spinner plus the folder being read */
+		snprintf(line, sizeof(line), "Finding MMCE cards: %s", name);
+		dashLoadingStatus(line, 0, 0);
+		return;
+	}
 	snprintf(line, sizeof(line), "MMCE cards %d/%d: %s", done, total, name);
-	dashLoadingStatus(line, done, total > 0 ? total : 1);
+	/* the bar moves through each card, not only between cards */
+	dashLoadingStatus(line, (done > 0 ? done - 1 : 0) * 1000 + permille, total * 1000);
 }
 
 static void opBackupAllMmceCards(void)

@@ -160,6 +160,47 @@ static int write_exact_at_new(const char *path, u64 pos, const u8 *buf,
     return genClose(fd) < 0 ? -1 : 0;
 }
 
+/* A pass reads its source in order through one handle instead of reopening
+ * the image every chunk: on MMCE each open and seek is a firmware request and
+ * a path lookup on the SD card. sd2psXtd keeps up to 16 SD files open (SdFat
+ * NUM_FILES) and mmceman 16 handles, and synchronous I/O never has two
+ * requests in flight. When the other file is on MMCE too, the source keeps
+ * the old open-per-chunk path. */
+int mcCardKeepSourceOpen(const char *source, const char *other)
+{
+	(void)source;
+	return other == NULL || strncmp(other, "mmce", 4) != 0;
+}
+
+static int read_next_fd(int fd, u8 *buf, int size)
+{
+	int total = 0;
+
+	while (total < size) {
+		int r = genRead(fd, buf + total, size - total);
+		if (r <= 0)
+			return -1;
+		total += r;
+	}
+	return 0;
+}
+
+/* fd >= 0: the next bytes of an open source read in order; else open at pos. */
+static int read_source(const char *path, int fd, u64 pos, u8 *buf, int size)
+{
+	return fd >= 0 ? read_next_fd(fd, buf, size) : read_exact_at(path, pos, buf, size);
+}
+
+static int open_source(const char *source, const char *other)
+{
+	return mcCardKeepSourceOpen(source, other) ? genOpen(source, FIO_O_RDONLY) : -1;
+}
+
+static int rewind_source(int fd)
+{
+	return fd < 0 || genLseek(fd, 0, SEEK_SET) == 0 ? 0 : -1;
+}
+
 static u16 read_le16(const u8 *p)
 {
 	return (u16)(p[0] | (p[1] << 8));
@@ -298,7 +339,7 @@ close_source:
 static int mcCardBackupNoEccImpl(const char *source, const char *dest, McCardExportProgress progress, int only_new)
 {
 	u64 src_size = 0, pos = 0;
-	int ret, chunk, owned = 0;
+	int ret, chunk, owned = 0, src_fd = -1;
 	char remove_path[MAX_PATH];
 
 	if (source == NULL || dest == NULL || source[0] == '\0' || dest[0] == '\0')
@@ -310,11 +351,14 @@ static int mcCardBackupNoEccImpl(const char *source, const char *dest, McCardExp
 	if (ret != MC_CARD_EXPORT_OK)
 		return ret;
 
-	/* Keep the MMCE-safe access rule used by the conversion paths: source
-	 * and destination are deliberately opened, used and closed separately. */
+	/* The destination is still opened per chunk; the source stays open for
+	 * both passes unless the destination is on MMCE as well. */
+	src_fd = open_source(source, dest);
+	if (mcCardKeepSourceOpen(source, dest) && src_fd < 0)
+		return MC_CARD_EXPORT_OPEN;
 	while (pos < src_size) {
 		chunk = (src_size - pos > MC_EXPORT_IN) ? MC_EXPORT_IN : (int)(src_size - pos);
-		if (read_exact_at(source, pos, export_in, chunk) < 0 ||
+		if (read_source(source, src_fd, pos, export_in, chunk) < 0 ||
 		    (only_new ? write_exact_at_new(dest, pos, export_in, chunk, pos == 0, &owned) :
 	                   write_exact_at(dest, pos, export_in, chunk, pos == 0)) < 0)
 			goto io_fail;
@@ -325,9 +369,11 @@ static int mcCardBackupNoEccImpl(const char *source, const char *dest, McCardExp
 
 	/* Read both completed files back independently and compare every byte. */
 	pos = 0;
+	if (rewind_source(src_fd) < 0)
+		goto verify_fail;
 	while (pos < src_size) {
 		chunk = (src_size - pos > MC_EXPORT_IN) ? MC_EXPORT_IN : (int)(src_size - pos);
-		if (read_exact_at(source, pos, export_in, chunk) < 0 ||
+		if (read_source(source, src_fd, pos, export_in, chunk) < 0 ||
 		    read_exact_at(dest, pos, verify_out, chunk) < 0 ||
 		    memcmp(export_in, verify_out, chunk) != 0)
 			goto verify_fail;
@@ -336,6 +382,10 @@ static int mcCardBackupNoEccImpl(const char *source, const char *dest, McCardExp
 			progress(MC_CARD_EXPORT_VERIFY, pos, src_size);
 	}
 
+	if (src_fd >= 0 && genClose(src_fd) < 0) {
+		src_fd = -1;
+		goto io_fail;
+	}
 	return MC_CARD_EXPORT_OK;
 
 io_fail:
@@ -344,6 +394,8 @@ io_fail:
 verify_fail:
 	ret = MC_CARD_EXPORT_VERIFY_FAILED;
 remove_bad:
+	if (src_fd >= 0)
+		genClose(src_fd);
 	snprintf(remove_path, sizeof(remove_path), "%s", dest);
 	if (!only_new || owned)
 		genRemove(remove_path);
@@ -443,7 +495,7 @@ close_source:
 int mcCardExportPcsx2(const char *source, const char *dest, McCardExportProgress progress)
 {
 	u64 src_size = 0, src_pos = 0, dst_pos = 0;
-	int ret, chunk, converted;
+	int ret, chunk, converted, src_fd = -1;
 	char remove_path[MAX_PATH];
 
 	if (source == NULL || dest == NULL || source[0] == '\0' || dest[0] == '\0')
@@ -452,12 +504,15 @@ int mcCardExportPcsx2(const char *source, const char *dest, McCardExportProgress
 	if (ret != MC_CARD_EXPORT_OK)
 		return ret;
 
-	/* Write pass. Source and destination are never open together: this is
-	 * deliberate for sd2psx/MMCE, whose filesystem is happiest with one
-	 * operation outstanding at a time. */
+	/* Write pass. sd2psx/MMCE is happiest with one operation outstanding at
+	 * a time, which synchronous I/O keeps; the source stays open for both
+	 * passes unless the destination is on MMCE as well. */
+	src_fd = open_source(source, dest);
+	if (mcCardKeepSourceOpen(source, dest) && src_fd < 0)
+		return MC_CARD_EXPORT_OPEN;
 	while (src_pos < src_size) {
 		chunk = (src_size - src_pos > MC_EXPORT_IN) ? MC_EXPORT_IN : (int)(src_size - src_pos);
-		if (read_exact_at(source, src_pos, export_in, chunk) < 0)
+		if (read_source(source, src_fd, src_pos, export_in, chunk) < 0)
 			goto io_fail;
 		converted = convert_block(export_in, chunk, export_out);
 		if (converted < 0 || write_exact_at(dest, dst_pos, export_out, converted, src_pos == 0) < 0)
@@ -471,9 +526,11 @@ int mcCardExportPcsx2(const char *source, const char *dest, McCardExportProgress
 	/* Verification pass: regenerate every expected 528-byte page from the
 	 * source, then read the destination back and compare byte-for-byte. */
 	src_pos = dst_pos = 0;
+	if (rewind_source(src_fd) < 0)
+		goto verify_fail;
 	while (src_pos < src_size) {
 		chunk = (src_size - src_pos > MC_EXPORT_IN) ? MC_EXPORT_IN : (int)(src_size - src_pos);
-		if (read_exact_at(source, src_pos, export_in, chunk) < 0)
+		if (read_source(source, src_fd, src_pos, export_in, chunk) < 0)
 			goto verify_fail;
 		converted = convert_block(export_in, chunk, export_out);
 		if (converted < 0 || read_exact_at(dest, dst_pos, verify_out, converted) < 0 ||
@@ -484,6 +541,10 @@ int mcCardExportPcsx2(const char *source, const char *dest, McCardExportProgress
 		if (progress)
 			progress(MC_CARD_EXPORT_VERIFY, src_pos, src_size);
 	}
+	if (src_fd >= 0 && genClose(src_fd) < 0) {
+		src_fd = -1;
+		goto io_fail;
+	}
 	return MC_CARD_EXPORT_OK;
 
 io_fail:
@@ -492,6 +553,8 @@ io_fail:
 verify_fail:
 	ret = MC_CARD_EXPORT_VERIFY_FAILED;
 remove_bad:
+	if (src_fd >= 0)
+		genClose(src_fd);
 	snprintf(remove_path, sizeof(remove_path), "%s", dest);
 	genRemove(remove_path);
 	return ret;

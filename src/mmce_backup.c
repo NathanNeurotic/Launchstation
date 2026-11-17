@@ -185,6 +185,19 @@ static int read_chunk(const char *path, s64 offset, u8 *buf, int size)
     return genClose(fd) < 0 ? -1 : 0;
 }
 
+static int read_next(int fd, u8 *buf, int size)
+{
+    int done = 0;
+
+    while (done < size) {
+        int r = genRead(fd, buf + done, size - done);
+        if (r <= 0)
+            return -1;
+        done += r;
+    }
+    return 0;
+}
+
 static s64 file_size(const char *path)
 {
     int fd;
@@ -373,6 +386,52 @@ static int fingerprint_matches(const char *source, const char *history, int cons
     return 1;
 }
 
+/* Progress inside one card. Without it the screen was drawn once per card,
+ * so a compare + copy + verify of an 8 MB image looked frozen. Each step
+ * owns a slice of the card's 0..1000 and the value only moves forward. */
+typedef struct {
+    MmceBackupProgress cb;
+    const char *source;
+    int done, total, base, span, last;
+} CardTick;
+
+static CardTick card_tick;
+
+static void tick_report(int permille)
+{
+    if (card_tick.cb == NULL)
+        return;
+    if (permille > 1000)
+        permille = 1000;
+    if (permille < card_tick.last)
+        permille = card_tick.last;
+    card_tick.last = permille;
+    card_tick.cb(card_tick.source, card_tick.done, card_tick.total, permille);
+}
+
+static void tick_step(int base, int span)
+{
+    card_tick.base = base;
+    card_tick.span = span;
+    tick_report(base);
+}
+
+static void tick_bytes(u64 pos, u64 size)
+{
+    if (card_tick.cb != NULL && size > 0)
+        tick_report(card_tick.base + (int)((pos * (u64)card_tick.span) / size));
+}
+
+/* A copy is two passes, the write pass and the verify pass: half each. */
+static void tick_export(int phase, u64 done, u64 total)
+{
+    u64 half = total / 2;
+
+    if (total == 0)
+        return;
+    tick_bytes(phase == MC_CARD_EXPORT_VERIFY ? half + done / 2 : done / 2, total);
+}
+
 static int files_equal_serial(const char *a, const char *b)
 {
     s64 sa = file_size(a), sb = file_size(b), pos = 0;
@@ -382,6 +441,27 @@ static int files_equal_serial(const char *a, const char *b)
     if (sa != sb)
         return 0;
 
+    /* a is the card: kept open unless b is on MMCE too (mcCardKeepSourceOpen) */
+    if (mcCardKeepSourceOpen(a, b)) {
+        int fd = genOpen(a, FIO_O_RDONLY), result = 1;
+
+        if (fd < 0)
+            return -1;
+        while (pos < sa && result == 1) {
+            int chunk = sa - pos > MMCE_BACKUP_IO ? MMCE_BACKUP_IO : (int)(sa - pos);
+            if (read_next(fd, compare_a, chunk) < 0 ||
+                read_chunk(b, pos, compare_b, chunk) < 0)
+                result = -1;
+            else if (memcmp(compare_a, compare_b, chunk) != 0)
+                result = 0;
+            pos += chunk;
+            tick_bytes(pos, sa);
+        }
+        if (genClose(fd) < 0 && result == 1)
+            result = -1;
+        return result;
+    }
+
     while (pos < sa) {
         int chunk = sa - pos > MMCE_BACKUP_IO ? MMCE_BACKUP_IO : (int)(sa - pos);
         if (read_chunk(a, pos, compare_a, chunk) < 0 ||
@@ -390,6 +470,7 @@ static int files_equal_serial(const char *a, const char *b)
         if (memcmp(compare_a, compare_b, chunk) != 0)
             return 0;
         pos += chunk;
+        tick_bytes(pos, sa);
     }
     return 1;
 }
@@ -430,6 +511,7 @@ static int files_equal_pcsx2_history(const char *source, const char *history)
         }
         src_pos += raw_bytes;
         dst_pos += encoded_bytes;
+        tick_bytes(src_pos, raw_size);
     }
     return 1;
 }
@@ -563,6 +645,7 @@ static int backup_one(const char *source, const char *relative,
         }
     }
     if (previous_path[0] != '\0' && format == MMCE_BACKUP_FORMAT_MCD && fp_same != 0) {
+        tick_step(0, 333);
         same = files_equal_serial(source, previous_path);
         if (same == 1)
             write_sidecar(previous_path); /* seed it, or restart its skip count */
@@ -590,10 +673,12 @@ static int backup_one(const char *source, const char *relative,
     /* Incomplete writes must never be visible as .mcd/.ps2 history to the
      * pending scan, retention or Google Drive uploader. The export routine
      * fully verifies its output against the source before we publish it. */
+    /* .mcd: compare, then copy. .ps2: copy, then compare the converted copy. */
+    tick_step(format == MMCE_BACKUP_FORMAT_PCSX2 ? 0 : 333, 667);
     if (format == MMCE_BACKUP_FORMAT_PCSX2)
-        r = mcCardExportPcsx2(source, staged, NULL);
+        r = mcCardExportPcsx2(source, staged, tick_export);
     else
-        r = mcCardBackupNoEcc(source, staged, NULL);
+        r = mcCardBackupNoEcc(source, staged, tick_export);
     if (r != MC_CARD_EXPORT_OK) {
         genRemove(staged);
         stats->failed++;
@@ -603,6 +688,7 @@ static int backup_one(const char *source, const char *relative,
     /* Compare converted history before publishing. A comparison I/O error
      * must not be treated as a changed card and trigger retention pruning. */
     if (format == MMCE_BACKUP_FORMAT_PCSX2 && newest > 0) {
+        tick_step(667, 333);
         same = files_equal_serial(staged, previous_path);
         if (same == 1) {
             if (genRemove(staged) < 0) {
@@ -683,6 +769,16 @@ static int scan_one(const char *source, const char *relative,
     return same < 0 ? -1 : 0;
 }
 
+static void tick_card(MmceBackupProgress progress, const char *source, int done, int total)
+{
+    card_tick.cb = progress;
+    card_tick.source = source;
+    card_tick.done = done;
+    card_tick.total = total;
+    card_tick.last = 0;
+    tick_step(0, 1000);
+}
+
 static int count_candidates(const char *dir, int depth)
 {
     iox_dirent_t ent;
@@ -695,6 +791,9 @@ static int count_candidates(const char *dir, int depth)
     fd = genDopen(scan);
     if (fd < 0)
         return 0;
+    /* total 0: still counting, the screen shows a spinner and the folder */
+    if (card_tick.cb != NULL)
+        card_tick.cb(dir, 0, 0, 0);
 
     memset(&ent, 0, sizeof(ent));
     while (fileXioDread(fd, &ent) > 0) {
@@ -772,8 +871,7 @@ static void process_tree(const char *dir, const char *source_root,
                          stats, progress, done);
         } else if (genCmpFileExt(ent.name, "MCD")) {
             (*done)++;
-            if (progress)
-                progress(child, *done, stats->candidates);
+            tick_card(progress, child, *done, stats->candidates);
             relative = child + strlen(source_root);
             while (*relative == '/')
                 relative++;
@@ -820,9 +918,12 @@ int mmceBackupAllCards(int unit, const char *dest_root, const MmceBackupOptions 
     if (ensure_dir_tree(history_root) < 0)
         return -1;
 
+    memset(&card_tick, 0, sizeof(card_tick));
+    card_tick.cb = progress;
     stats->candidates = count_candidates(source_root, 0);
     process_tree(source_root, source_root, history_root, options, 0,
                  stats, progress, &done);
+    memset(&card_tick, 0, sizeof(card_tick));
     return 0;
 }
 
@@ -950,8 +1051,7 @@ static void scan_tree(const char *dir, const char *source_root,
                       stats, progress, done);
         } else if (genCmpFileExt(ent.name, "MCD")) {
             (*done)++;
-            if (progress)
-                progress(child, *done, stats->candidates);
+            tick_card(progress, child, *done, stats->candidates);
             relative = child + strlen(source_root);
             while (*relative == '/')
                 relative++;
@@ -995,8 +1095,11 @@ int mmceBackupScanCards(int unit, const char *dest_root, const MmceBackupOptions
     if (!join_path(history_root, sizeof(history_root), tmp, unit_name))
         return -1;
 
+    memset(&card_tick, 0, sizeof(card_tick));
+    card_tick.cb = progress;
     stats->candidates = count_candidates(source_root, 0);
     scan_tree(source_root, source_root, history_root, options, 0,
               stats, progress, &done);
+    memset(&card_tick, 0, sizeof(card_tick));
     return 0;
 }

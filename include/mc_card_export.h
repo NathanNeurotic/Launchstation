@@ -19,8 +19,13 @@ enum {
 
 typedef void (*McCardExportProgress)(int phase, u64 done, u64 total);
 
+/* 1 when a copy or compare pass may keep its source open: the other file is
+ * not on MMCE too. Otherwise the source is reopened per chunk as before. */
+int mcCardKeepSourceOpen(const char *source, const char *other);
+
 /* Copy a valid no-ECC .mcd image and verify the completed destination
- * byte-for-byte. Source and destination are never open at the same time. */
+ * byte-for-byte. The destination is opened per chunk; the source is held
+ * open for the passes when mcCardKeepSourceOpen allows it. */
 int mcCardBackupNoEcc(const char *source, const char *dest, McCardExportProgress progress);
 /* Create an entirely NEW image with exclusive create; never overwrite or
  * remove a pre-existing destination after a failed attempt. */
