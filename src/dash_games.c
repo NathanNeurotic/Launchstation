@@ -15,6 +15,7 @@
 #include "init.h"
 #include "neutrino_gameid.h"
 #include "popstarter_internal.h"
+#include "gui_neutrino.h"
 
 enum { GAME_PS2, GAME_VCD, GAME_EMBER };
 #define EMBER_GAMES_MAX 256
@@ -322,30 +323,47 @@ static void showDetails(DashApp *g)
 	dashModalMessage(DI_INFO, g->title, body, NULL);
 }
 
+/* Triangle: per-game Neutrino options are edited and saved here without
+ * starting the game; Start then opens them already filled in. */
+static void gameSettings(DashApp *g)
+{
+	int r = editNeutrinoGameProfile(g->category);
+
+	if (r < 0)
+		dashModalMessage(DI_INFO, g->title,
+		                 "Game settings are saved by Game ID, and none was found for this image. "
+		                 "Name it like SLUS_123.45.Title.iso, or start it and set the options for that launch.", NULL);
+}
+
 static void gamesMenu(void)
 {
+	enum { M_START, M_SETTINGS, M_DETAILS, M_SHOW, M_REFRESH };
 	DashApp *g = selGame();
-	DashMenuItem items[4];
-	int n = 0, r;
+	DashMenuItem items[5];
+	int act[5], n = 0, r;
 	char dir[DASH_PATH_MAX];
 
 	memset(items, 0, sizeof(items));
 	if (g != NULL) {
-		items[n].icon = DI_PLAY, items[n].label = localizeDashboardText("Start"), n++;
-		items[n].icon = DI_INFO, items[n].label = "Details", n++;
-		items[n].icon = DI_FOLDER, items[n].label = "Show in File Browser", n++;
+		items[n].icon = DI_PLAY, items[n].label = localizeDashboardText("Start"), act[n++] = M_START;
+		if (IsNeutrinoIsoPath(g->path))
+			items[n].icon = DI_SETTINGS, items[n].label = "Game settings", items[n].detail = "Neutrino options",
+			act[n++] = M_SETTINGS;
+		items[n].icon = DI_INFO, items[n].label = "Details", act[n++] = M_DETAILS;
+		items[n].icon = DI_FOLDER, items[n].label = "Show in File Browser", act[n++] = M_SHOW;
 	}
-	items[n].icon = DI_REFRESH, items[n].label = "Refresh games", items[n].detail = "scan now", n++;
+	items[n].icon = DI_REFRESH, items[n].label = "Refresh games", items[n].detail = "scan now", act[n++] = M_REFRESH;
 	r = dashModalMenu(localizeDashboardText("Games"), g ? g->title : NULL, items, n, 0);
-	if (r < 0)
+	if (r < 0 || r >= n)
 		return;
-	if (g == NULL)
-		r = 3;
-	if (r == 0)
+	r = act[r];
+	if (r == M_START)
 		dashLaunchApp(g, 0);
-	else if (r == 1)
+	else if (r == M_SETTINGS)
+		gameSettings(g);
+	else if (r == M_DETAILS)
 		showDetails(g);
-	else if (r == 2) {
+	else if (r == M_SHOW) {
 		const char *slash = strrchr(g->path, '/');
 		snprintf(dir, sizeof(dir), "%.*s", slash ? (int)(slash - g->path) + 1 : 0, g->path);
 		if (dir[0])

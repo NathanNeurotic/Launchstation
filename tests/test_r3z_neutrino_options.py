@@ -57,7 +57,7 @@ int dashModalChoice(const char *, const char *const *, int, int);
 void dashModalSetEdit(int (*edit)(int, int, void *), void *arg);
 """
 pure_c += gui[native_start:native_end]
-pure_c += "int testDashboard(NEUTRINO_LAUNCH_OPTIONS *o) { return showDashboardNeutrinoOptions(o); }\nint testVideoCount(void) { return NEUTRINO_VIDEO_COUNT; }\n"
+pure_c += "int testDashboard(NEUTRINO_LAUNCH_OPTIONS *o) { return showDashboardNeutrinoOptions(o, 0); }\nint testVideoCount(void) { return NEUTRINO_VIDEO_COUNT; }\n"
 
 harness = r"""
 #include <assert.h>

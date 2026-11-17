@@ -35,7 +35,7 @@ assert "it->id == S_SAVE_AS ? DI_SAVE" in settings and "it->id == S_CLOCK_SYNC) 
 
 show = neutrino[neutrino.index("static int showDashboardNeutrinoOptions"):]
 show = show[:show.index("static void drawNeutrinoHeading")]
-assert show.index("dashSoundMaintain();") < show.index('items[0].label = "Run game";')
+assert show.index("dashSoundMaintain();") < show.index('items[0].label = settings_only ? "Save and close" : "Run game";')
 assert "items[NEUTRINO_RUN]" not in show and "items[NEUTRINO_CANCEL].icon = DI_SAVE;" in show
 assert "items, cancel_index + 1, 0) == 0;" in show
 assert "const int option = row - 1;" in neutrino and "if (row == 0)" in neutrino
