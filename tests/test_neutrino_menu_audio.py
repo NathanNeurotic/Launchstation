@@ -41,7 +41,7 @@ typedef struct { char path[MAX_PATH], title[DASH_TITLE_MAX]; int flags; } DashAp
 enum { MAIN_ELF_IOP_DEFAULT, MAIN_ELF_IOP_KEEP, MAIN_ELF_IOP_REBOOT };
 typedef struct { char main_msg[MAX_PATH]; int elf_iop_mode; } MainExecuteContext;
 typedef struct { int count; } POPSTARTER_CANDIDATE_LIST;
-typedef struct { int dummy; } NEUTRINO_LAUNCH_OPTIONS;
+typedef struct { int dummy; char vmc[2][64]; } NEUTRINO_LAUNCH_OPTIONS;
 typedef struct { char argv[4][32]; } NEUTRINO_OPTION_ARGS;
 typedef struct { int disable_neutrino, cdrom_disable_gameid, reboot_iop_elf_load; char neutrino_file[MAX_PATH]; } Setting;
 static Setting *setting;
@@ -107,6 +107,8 @@ static int genRead(int fd, void *buf, size_t sz) {
     return (int)sz;
 }
 static void genClose(int fd) { (void)fd; }
+#define FIO_O_RDONLY 1
+static int genOpen(const char *p, int f) { (void)p; (void)f; return -1; }
 static int addPopstarterCandidate(POPSTARTER_CANDIDATE_LIST *c, const char *p) { (void)p; c->count++; return 1; }
 static void initPopstarterCandidates(POPSTARTER_CANDIDATE_LIST *c) { c->count = 0; }
 static int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *o, NEUTRINO_OPTION_ARGS *a) { (void)o; (void)a; return 0; }
