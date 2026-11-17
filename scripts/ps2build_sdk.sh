@@ -242,6 +242,7 @@ write_pin() { # the resolved versions, in the pin format later steps read
         echo "PS2BUILD_SDK_SUMS_SHA256=$PS2BUILD_SDK_SUMS_SHA256"
         echo "PS2BUILD_COMPONENTS=\"$PS2BUILD_COMPONENTS\""
         echo "PS2BUILD_LLVM_TOOLCHAIN=$PS2BUILD_LLVM_TOOLCHAIN"
+        echo "PS2BUILD_SDK_HOLD=\"$PS2BUILD_SDK_HOLD\"" # the mirror fallback reads it after --resolve
         echo "PS2BUILD_EXTRAS=\"$PS2BUILD_EXTRAS\""
         echo "PS2BUILD_EXTRAS_TAG=$PS2BUILD_EXTRAS_TAG"
         echo "PS2BUILD_EXTRAS_SUMS_SHA256=$PS2BUILD_EXTRAS_SUMS_SHA256"
@@ -266,8 +267,9 @@ fi
 
 if [ "$MODE" = resolve ]; then
     write_pin "$DEST"
-    # The key covers what lands in DEST: the components, llvm-toolchain for --llvm, and the extra packages.
-    key=$(grep -v '^PS2BUILD_SDK_\(TAG\|SUMS_SHA256\)=' "$DEST" | { if [ "$LLVM" = 1 ]; then cat; else grep -v '^PS2BUILD_LLVM_TOOLCHAIN='; fi; } \
+    # The key covers what lands in DEST: the components, llvm-toolchain for --llvm, and the extra packages
+    # (not the hold list, which installs nothing).
+    key=$(grep -v '^PS2BUILD_SDK_\(TAG\|SUMS_SHA256\|HOLD\)=' "$DEST" | { if [ "$LLVM" = 1 ]; then cat; else grep -v '^PS2BUILD_LLVM_TOOLCHAIN='; fi; } \
         | sha256sum | cut -c1-16)
     log "versions: $PS2BUILD_COMPONENTS$([ "$LLVM" = 1 ] && echo " llvm-toolchain=$PS2BUILD_LLVM_TOOLCHAIN")"
     if [ -n "${GITHUB_ENV:-}" ]; then
