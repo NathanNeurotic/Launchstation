@@ -1131,8 +1131,19 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 			if (!pk.loading && !pk.starting && !dashWorkerIoBusy() && !dashIopParked()) {
 				pollRootMemoryCardDevices(); /* keep memory-card rows current */
 				dashDevicesRefreshMemoryCards(pk.devs, pk.ndevs);
-				if (dashDevicesMultitapChanged(pk.devs, pk.ndevs))
-					pickOpen(""); /* a multitap card came or went */
+				if (dashDevicesMultitapChanged(pk.devs, pk.ndevs)) {
+					/* a multitap card came or went: keep the selected device */
+					char keep[sizeof(pk.devs[0].browse)];
+					int k;
+
+					keep[0] = '\0';
+					if (sel < pk.ndevs)
+						dashStrCopy(keep, pk.devs[sel].browse, sizeof(keep));
+					pickOpen("");
+					for (k = 0; keep[0] && k < pk.ndevs; k++)
+						if (!strcmp(pk.devs[k].browse, keep))
+							sel = k;
+				}
 			}
 			n_rows = pk.ndevs;
 			first_entry = 0;
