@@ -917,7 +917,8 @@ static const char *pickHeaderSource(void)
 	r = dashModalMenu("Header source", "Device with a __Headers/<partition>/ folder", items, n, 0);
 	if (r < 0)
 		return NULL;
-	dashDevicesStartForPath(devs[r]);
+	if (dashDevicesStartForPath(devs[r]) < 0)
+		return NULL;
 	return devs[r];
 }
 
@@ -1457,7 +1458,8 @@ void dashHddManager(void)
 	sel = top = 0;
 	sel_anim = 0.0f;
 	/* the HDD stack loads on the UI thread */
-	dashDevicesStartForPath("hdd0:");
+	if (dashDevicesStartForPath("hdd0:") < 0)
+		return;
 	if (!isPathDeviceStackLoaded("hdd0:")) {
 		dashModalMessage(DI_WARNING, "No HDD", "The internal HDD drivers could not be started. Is an HDD connected?", NULL);
 		return;
