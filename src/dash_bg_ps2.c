@@ -484,7 +484,8 @@ static void osdTime(int fx, OsdTime *o)
 		tick_t = now;
 		ready = 1;
 	}
-	if (fx != DASH_FX_OFF) {
+	/* Full/Subtle detail may render while motion is frozen at 0%. */
+	if (fx != DASH_FX_OFF && dashCfg.effects > 0) {
 		float seconds;
 		int minutes;
 		/* Re-anchor only on a valid RTC tick or recovery, not on computed
