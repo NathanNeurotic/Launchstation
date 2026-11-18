@@ -514,7 +514,9 @@ int main(void) {
     dashDevicesSnapshotDiskProbes(rev);
     dashDevicesConfirmScannedDisks(DASH_SCANNED_HDD1, generation, rev);
     assert(state("hdd1:")==DASH_DEV_READY);
-    /* Zero-revision snapshots must not cross an IOP reset either. */
+    /* Reset the IOP session first: dashDevicesInit by itself does not
+       reset a valid session or its probe revisions. */
+    reset_generation++;
     dashDevicesInit();
     dashDevicesSnapshotDiskProbes(rev);
     assert(rev[1] == 0);
