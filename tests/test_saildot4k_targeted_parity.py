@@ -63,7 +63,7 @@ with tempfile.TemporaryDirectory() as temp:
 # One priority implementation; File Browser and manager both use it.
 assert "hddPartitionPriority(x) - hddPartitionPriority(y)" in filer
 assert "qsort(hddParties[unit]" in filer
-assert 'if (!stricmp(dirEnt.name, "__mbr"))' in filer
+assert 'if (!strncmp(dirEnt.name, "__mbr", 6))' in filer
 assert "isPartitionList(fb.dir) ? DI_PARTITION : DI_FOLDER" in browser
 assert "case DI_PARTITION:" in icons and "case DI_HDD_MANAGER:" in icons
 assert "#define ICON_TEX_H 580" in icons  # no added full-size atlas row

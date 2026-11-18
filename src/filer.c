@@ -763,7 +763,7 @@ static void setPartyListForDevice(const char *device)
 		if ((dirEnt.stat.attr != ATTR_MAIN_PARTITION) || (dirEnt.stat.mode != FS_TYPE_PFS))
 			continue;
 		/* The boot record is not a browsable filesystem. */
-		if (!stricmp(dirEnt.name, "__mbr"))
+		if (!strncmp(dirEnt.name, "__mbr", 6))
 			continue;
 
 		//Patch this to see if new CB versions use valid PFS format
