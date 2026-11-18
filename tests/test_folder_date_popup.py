@@ -7,7 +7,9 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 source = (root / "src/dash_browser.c").read_text()
-icons = (root / "include/dash_icons.h").read_text()
+header = (root / "include/dash_internal.h").read_text()
+icons = header[header.index("enum DashIcon {"):]
+icons = icons[:icons.index("};") + 2]
 
 
 def function(signature):
