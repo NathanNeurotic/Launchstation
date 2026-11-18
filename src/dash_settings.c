@@ -40,6 +40,7 @@ enum SetId {
 	S_SCREEN_X,
 	S_SCREEN_Y,
 	S_EFFECTS,
+	S_BG_DETAIL,
 	S_ANIM,
 	S_LEGACY_THEME,
 	S_MENU_FRAME,
@@ -247,6 +248,7 @@ static const SetItem appearance_items[] = {
     {ST_PAGE, P_THEME, "Customize theme", "Background, colours, tiles, text, icons, clock and artwork background."},
     {ST_PAGE, P_SCREEN, "Screen calibration", "Video mode and picture position for your TV."},
     {ST_CHOICE, S_EFFECTS, "Background motion", "0% freezes backgrounds; 100% is normal; 200% doubles their motion."},
+    {ST_CHOICE, S_BG_DETAIL, "Background detail", "Low reduces geometry where supported; High preserves full detail even at 0% motion."},
     {ST_CHOICE, S_ANIM, "Menu animation", "0% makes transitions instant; higher values increase movement and transition duration."},
     {ST_CHOICE, S_T_PANEL_A, "Panel transparency", "0% makes panels fully opaque; 100% makes them fully transparent."},
     {ST_CHOICE, S_ICON_BACKING, "Control icon backings", "Show or hide backing shapes behind text-style controls and quick actions."},
@@ -1011,6 +1013,11 @@ static int choiceInfo(int id, int *cur, const char *const **names, const char **
 		case S_EFFECTS:
 			*names = pct_names, *cur = (dashCfg.effects + 5) / 10;
 			return 21;
+		case S_BG_DETAIL: {
+			static const char *const detail_names[] = {"Low", "High"};
+			*names = detail_names, *cur = dashCfg.bg_detail;
+			return 2;
+		}
 		case S_ANIM:
 			*names = pct_names, *cur = (dashCfg.anim + 5) / 10;
 			return 21;
@@ -1683,6 +1690,9 @@ static void setChoice(int id, int v)
 			break;
 		case S_EFFECTS:
 			dashCfg.effects = v * 10;
+			break;
+		case S_BG_DETAIL:
+			dashCfg.bg_detail = v;
 			break;
 		case S_ANIM:
 			dashCfg.anim = v * 10;
@@ -2795,6 +2805,7 @@ static void resetDisplayThemeDefaults(void)
 	setting->Popup_Opaque = DEF_POPUP_OPAQUE;
 	updateScreenMode();
 	dashCfg.effects = 100;
+	dashCfg.bg_detail = 1;
 	dashCfg.anim = 100;
 	dashThemeSetPreset(-1); /* out of range = the default preset (Crystal) */
 	classic_dirty = 1;

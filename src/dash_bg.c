@@ -15,8 +15,8 @@
 //
 //Every scene is built from cheap GS primitives. The background clock stops
 //when animations or background effects are off, so each scene doubles as
-//its own static variant; SUBTLE effects run at a slower pace with fewer
-//elements.
+//its own static variant; reduced detail uses fewer elements without
+//changing animation speed.
 //--------------------------------------------------------------
 #include "dash_internal.h"
 
@@ -557,41 +557,11 @@ void dashBgDrawStatic(void)
 	drawScene(DASH_FX_OFF);
 }
 
-/* Full effects remain the preference, but sustained slow frames temporarily
- * use the subtle path. The saved setting is never changed. Hysteresis keeps
- * an occasional IO stall from causing quality flapping. */
-static int bg_perf_reduced;
-static int bg_slow_frames;
-static int bg_fast_frames;
-
+/* Background speed advances bg_time; detail is an independent preference.
+ * A frozen background still renders all of its requested geometry. */
 static int effectiveFx(void)
 {
-	int requested = dashCfg.effects <= 0 ? DASH_FX_OFF :
-	                (dashCfg.effects < 100 ? DASH_FX_SUBTLE : DASH_FX_FULL);
-	float dt;
-
-	if (requested != DASH_FX_FULL) {
-		bg_perf_reduced = bg_slow_frames = bg_fast_frames = 0;
-		return requested;
-	}
-	dt = dashFrameDelta();
-	if (dt > 0.024f) {
-		if (bg_slow_frames < 1000)
-			bg_slow_frames++;
-		bg_fast_frames = 0;
-		if (bg_slow_frames >= 6)
-			bg_perf_reduced = 1;
-	} else {
-		bg_slow_frames = 0;
-		if (bg_perf_reduced && dt > 0.0f && dt < 0.0215f) {
-			if (++bg_fast_frames >= 600) {
-				bg_perf_reduced = 0;
-				bg_fast_frames = 0;
-			}
-		} else
-			bg_fast_frames = 0;
-	}
-	return bg_perf_reduced ? DASH_FX_SUBTLE : DASH_FX_FULL;
+	return dashCfg.bg_detail ? DASH_FX_FULL : DASH_FX_SUBTLE;
 }
 
 void dashBgDraw(void)

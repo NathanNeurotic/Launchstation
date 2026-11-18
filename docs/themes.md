@@ -77,6 +77,8 @@ the colour-swap selection.
 * **Customize theme** opens the theme's customization groups.
 * **Screen calibration** contains video mode, X/Y position and screen reset.
 * **Background motion**: 0-200% in 10% steps (default 100%). 0% freezes the
+* **Background detail**: Low reduces geometry where supported; High (default)
+  retains the full scene even with motion frozen at 0%. The settings are independent.
   scene, 100% is the normal speed, and 200% doubles it. Old files that stored
   0/1/2 load as 0/50/100%.
 * **Menu animation**: 0-200% in 10% steps (default 100%). 0% makes

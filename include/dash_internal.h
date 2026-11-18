@@ -578,6 +578,7 @@ typedef struct
 	int start_section;
 	int view;
 	int effects; /* background motion, 0..200 % */
+	int bg_detail; /* 0 = low, 1 = high, independent of motion */
 	int anim;    /* menu animation, 0..200 % */
 	int autoscan;
 	int artwork;
