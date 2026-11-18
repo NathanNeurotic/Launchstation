@@ -505,6 +505,8 @@ enum DashIcon {
 	DI_NEW_FOLDER,  /* folder with a small upper-right plus */
 	DI_SAVE,        /* floppy disk: shutter on top, label below */
 	DI_COMPACTFLASH, /* wide CF card with an inset connector/label panel (PC Card CF) */
+	DI_PARTITION, /* dedicated partition icon */
+	DI_HDD_MANAGER, /* dedicated HDD Manager icon */
 	DI_COUNT
 };
 

@@ -3224,7 +3224,7 @@ static void actionsMenu(void)
 static int fileIcon(const FILEINFO *f)
 {
 	if (isDir(f))
-		return DI_FOLDER;
+		return isPartitionList(fb.dir) ? DI_PARTITION : DI_FOLDER;
 	if (genCmpFileExt(f->name, "ELF") || genCmpFileExt(f->name, "KELF") || genCmpFileExt(f->name, "XLF"))
 		return DI_APP;
 	if (genCmpFileExt(f->name, "PNG") || genCmpFileExt(f->name, "JPG") || genCmpFileExt(f->name, "JPEG"))
