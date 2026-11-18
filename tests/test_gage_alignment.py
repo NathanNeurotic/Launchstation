@@ -22,7 +22,14 @@ assert "x += drawButton(x, y, hints[i].button, hints[i].key) + 8.0f;" in hints
 assert "total = fixed + n * gap + labels;" in hints
 assert "x += gap;" in hints
 # at full size the label sits at y + 1.5; shrunk type keeps the same x-height centre
-assert "dashTextS(x, y + 1.5f + (DASH_FS_SMALL - fs) * 16.0f, label, fs" in hints
+assert "dashTextS(x, dashButtonTextY(y, fs), label, fs" in hints
+# The shared helper centres the font's 16*scale x-height in a 22px button.
+helper = re.search(r"float dashButtonTextY\\(float button_y, float text_scale\\)\\s*\\{([^}]*)\\}", ui)
+assert helper, "shared button alignment helper missing"
+assert re.search(r"return\\s+button_y\\s*\\+\\s*11\\.0f\\s*-\\s*16\\.0f\\s*\\*\\s*text_scale\\s*;", helper.group(1))
+for scale in (0.66, 0.5, 0.33):
+    baseline = 11.0 - 16.0 * scale
+    assert abs((baseline + 16.0 * scale) - 11.0) < 1e-6
 assert "dashTextFit" not in hints, "hint labels are drawn whole, never ellipsized"
 assert "+ 16.0f;" not in hints
 
