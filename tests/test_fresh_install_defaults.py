@@ -100,6 +100,7 @@ print("PASS: control backings default off, theme resets, and partition dates hid
 
 # Dashboard fresh installs prefer List view, preserve music On and Crystal.
 assert "dashCfg.view = DASH_VIEW_LIST;" in store
-assert "dashCfg.view = clampInt(value, 0, DASH_VIEW_COUNT - 1, DASH_VIEW_LIST);" in store
+assert "dashCfg.view = strictClampInt(value, 0, DASH_VIEW_COUNT - 1, DASH_VIEW_LIST);" in store
+assert "errno == ERANGE" in store and "*end != '\\0'" in store  # Reject malformed / overflowing numbers
 assert "dashCfg.bgm = 1;" in store
 assert "dashCfg.bgm = clampInt(value, 0, 1, 1);" in store
