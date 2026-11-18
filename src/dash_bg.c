@@ -188,12 +188,11 @@ void dashBgUpdate(float dt)
 		if (streak_t > 2.2f)
 			streak_t = -1.0f;
 	} else if (dashCfg.effects >= 100) {
-			streak_next -= scene_dt;
-			if (streak_next <= 0.0f) {
-				streak_t = 0.0f;
-				streak_y = 90.0f + frand() * 260.0f;
-				streak_next = 7.0f + frand() * 7.0f;
-			}
+		streak_next -= scene_dt;
+		if (streak_next <= 0.0f) {
+			streak_t = 0.0f;
+			streak_y = 90.0f + frand() * 260.0f;
+			streak_next = 7.0f + frand() * 7.0f;
 		}
 	}
 }
