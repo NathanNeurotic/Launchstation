@@ -750,7 +750,9 @@ enum {
 	ICON_M_FOLDER = 0x11E,
 	ICON_FILE = 0x120,
 	ICON_M_FILE = 0x122,
-	FONT_COUNT = 0x124  //Total number of characters in font
+	ICON_PARTITION = 0x124,
+	ICON_M_PARTITION = 0x126,
+	FONT_COUNT = 0x128  //Total number of characters in font
 };
 
 /* makeicon.c */

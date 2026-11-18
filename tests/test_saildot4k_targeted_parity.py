@@ -96,3 +96,16 @@ assert "if (fx == DASH_FX_OFF)" in crystal_layers
 assert "dashCfg.effects == DASH_FX_OFF" not in crystal_layers
 assert "* *Background detail: Low* reduces scene geometry" in themes
 print("PASS: HDD sorting, compact icons, PS1 directory guards, independent background detail")
+
+# Classic HDD root entries render partition glyphs, not ordinary folder glyphs.
+classic = (root / "src/filer_browser.c").read_text()
+header = (root / "include/launchelf.h").read_text()
+ule_font = (root / "src/font_uLE.c").read_text()
+bitmap_font = (root / "src/dash_font.c").read_text()
+assert "ICON_PARTITION = 0x124" in header and "ICON_M_PARTITION = 0x126" in header
+assert "FONT_COUNT = 0x128" in header and "#define FONT_LAST 0x127" in bitmap_font
+assert "//Font position 0x124 == Partition icon unmarked" in ule_font
+assert "//Font position 0x126 == Partition icon marked" in ule_font
+assert "isHddRootPath(path) || !strcmp(path, \"dvr_hdd0:/\")" in classic
+assert "strcmp(files[top + i].name, \"..\")" in classic
+assert "iconbase += 2;" in classic  # selected partition glyph
