@@ -142,7 +142,9 @@ lib = (root / "src/dash_lib.c").read_text()
 assert "if (dashDevicesStartForPath(path) < 0)" in main
 assert "unsigned int tried_ata_units = 0;" in main
 assert "j->successful_disk_units" in lib
-assert "dashDevicesConfirmScannedDisks(j->successful_disk_units, j->iop_generation);" in lib
+assert "dashDevicesConfirmScannedDisks(j->successful_disk_units, j->iop_generation," in lib
+assert "j->probe_revisions);" in lib
+assert "dashDevicesSnapshotDiskProbes(j->probe_revisions);" in lib
 assert "generation != getIopResetGeneration()" in devices
 
 print("PASS: device rows, resident secondary-unit probing, scan cancellation and read evidence")

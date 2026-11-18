@@ -2470,18 +2470,18 @@ static void tsDrawHints(float x, float y, float w)
 	};
 	const int count = sizeof(hints) / sizeof(hints[0]);
 	float total = 0.0f, gap;
-	float text_y = y + 11.0f - 16.0f * DASH_FS_SMALL;
+	float text_y = dashButtonTextY(y, DASH_FS_SMALL);
 	int i;
 
 	for (i = 0; i < count; i++)
 		total += dashButtonWidth(hints[i].button, NULL) + 4.0f +
-		         dashTextWidth(hints[i].label, DASH_FS_SMALL);
+		         dashTextWidth(localizeDashboardText(hints[i].label), DASH_FS_SMALL);
 	gap = (w - total) / (count - 1);
 	if (gap < 0.0f)
 		gap = 0.0f;
 	for (i = 0; i < count; i++) {
 		x += dashDrawButton(x, y, hints[i].button, NULL) + 4.0f;
-		x = dashTextS(x, text_y, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT2) + gap;
+		x = dashTextS(x, text_y, localizeDashboardText(hints[i].label), DASH_FS_SMALL, DASH_C_TEXT2) + gap;
 	}
 }
 

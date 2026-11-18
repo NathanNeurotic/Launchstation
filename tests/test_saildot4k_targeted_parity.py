@@ -86,7 +86,8 @@ assert '"Dash_BackgroundDetail = %d' in store
 assert '"Dash_BackgroundDetail"' in store
 assert "case S_BG_DETAIL:" in settings
 assert "dashCfg.bg_detail = 1;" in settings
-assert "return dashCfg.bg_detail ? DASH_FX_FULL : DASH_FX_SUBTLE;" in bg
+assert "int requested = dashCfg.bg_detail ? DASH_FX_FULL : DASH_FX_SUBTLE;" in bg
+assert "return bg_perf_reduced ? DASH_FX_SUBTLE : DASH_FX_FULL;" in bg  # preserve frame-time fallback
 assert "float motion = animated ? dashCfg.effects / 100.0f : 0.0f;" in bg
 # Crystal theme layers obey the render mode, not animation speed: with
 # 0% motion and High detail the star layers must remain visible.

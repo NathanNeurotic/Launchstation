@@ -494,8 +494,39 @@ int main(void) {
     puts("PASS: loading overlays use cached theme textures and defer new IO until loading ends");
 }
 """
+probe_guard = None
+if "void dashDevicesSnapshotDiskProbes(" in devices:
+    probe_guard = devcode[:devcode.index("int main(void)")] + r"""
+int main(void) {
+    unsigned int rev[4], generation;
+    resident=S_HDD|S_ATA; media=S_HDD|S_ATA;
+    dashDevicesInit();
+    recordProbe("hdd1:",0);
+    recordProbe("ata1:",0);
+    dashDevicesSnapshotDiskProbes(rev);
+    generation = reset_generation;
+    /* This newer failed HDD1 probe must outrank the stale scan. */
+    recordProbe("hdd1:",0);
+    dashDevicesConfirmScannedDisks(DASH_SCANNED_HDD1|DASH_SCANNED_ATA1, generation, rev);
+    assert(state("hdd1:")==DASH_DEV_ABSENT);
+    assert(state("ata1:")==DASH_DEV_READY);
+    /* With no intervening probe, a later successful scan recovers HDD1. */
+    dashDevicesSnapshotDiskProbes(rev);
+    dashDevicesConfirmScannedDisks(DASH_SCANNED_HDD1, generation, rev);
+    assert(state("hdd1:")==DASH_DEV_READY);
+    /* Evidence from a previous IOP session must not revive the device. */
+    reset_generation++;
+    dashDevicesConfirmScannedDisks(DASH_SCANNED_HDD1, generation, rev);
+    assert(state("hdd1:")==DASH_DEV_PROBE);
+    puts("PASS: disk scan evidence honors per-unit probe revisions and IOP resets");
+}
+"""
+
 with tempfile.TemporaryDirectory(prefix="wle-device-input-") as tmp:
-    for name, code in (("input", padcode), ("devices", devcode), ("pad-waits", waitcode), ("startup", autocode), ("theme-io", themecode)):
+    checks = [("input", padcode), ("devices", devcode), ("pad-waits", waitcode), ("startup", autocode), ("theme-io", themecode)]
+    if probe_guard is not None:
+        checks.append(("probe-revisions", probe_guard))
+    for name, code in checks:
         source = Path(tmp) / f"{name}.c"
         exe = Path(tmp) / f"{name}.exe"
         source.write_text("#define localizeDashboardText(s) (s)\n" + code)

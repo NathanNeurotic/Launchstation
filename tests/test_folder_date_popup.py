@@ -78,6 +78,11 @@ static float dashTextS(float x, float y, const char *text, float scale, DashColo
     return right;
 }
 '''
+# Use the actual shared alignment helper and isolate localization only.
+ui = (root / "src/dash_ui.c").read_text()
+helper_start = ui.index("float dashButtonTextY(")
+code += "\nstatic const char *localizeDashboardText(const char *s) { return s; }\n"
+code += ui[helper_start:ui.index("\n}\n", helper_start) + 3]
 code += function("static void tsDrawHints(")
 header = (root / "include/dash_internal.h").read_text()
 start = header.rfind("enum {", 0, header.index("DASH_IN_UP"))
