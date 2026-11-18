@@ -41,7 +41,7 @@ for old in ('"MASS"', '"MASS %d"', '"mc%d (Slot %d)"', '"MMCE Slot 1"', '"Intern
 # A family driver being resident does not establish that unit 1 was checked.
 auto_needed = function(devices, "static int autoStartNeeded(")
 auto_probe = function(devices, "void dashDevicesAutoProbe(")
-start_path = function(devices, "void dashDevicesStartForPath(")
+start_path = function(devices, "int dashDevicesStartForPath(")
 for unit in ("hdd", "ata"):
     assert f'storageState("{unit}1:") == DASH_DEV_PROBE' in auto_needed
     assert f'probeMount("{unit}1:");' in auto_probe
