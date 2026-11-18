@@ -811,7 +811,12 @@ int dashDevicesMultitapChanged(const DashDevice *devs, int count); /* cached, no
 typedef void (*DashProbeDone)(const char *mount, int ok, void *user);
 int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user); /* -1 user backed out; 1 refused and already explained; cb not called for either */
 void dashDevicesAutoStart(void);                 /* auto-start devices that are off */
-void dashDevicesStartForPath(const char *path);  /* driver for a path's device */
+int dashDevicesStartForPath(const char *path);   /* -1 Back cancelled; 0 otherwise */
+/* A successfully read HDD/ATA scan root is stronger evidence than an older
+ * failed root probe. Apply only on the UI thread in the same IOP generation. */
+enum { DASH_SCANNED_HDD0 = 1u, DASH_SCANNED_HDD1 = 2u,
+       DASH_SCANNED_ATA0 = 4u, DASH_SCANNED_ATA1 = 8u };
+void dashDevicesConfirmScannedDisks(unsigned int units, unsigned int generation);
 const char *dashDiscStatus(void);
 int dashMcPresent(int port);
 int dashDevicePathReady(const char *path);

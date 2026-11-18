@@ -69,6 +69,20 @@ static void recordProbe(const char *mount, int ok)
 	else probe_present &= ~(1u << i);
 }
 
+/* The scan worker reports successful reads, but never changes probe state.
+ * Reconcile its per-unit evidence on the UI thread before rebuilding views. */
+void dashDevicesConfirmScannedDisks(unsigned int units, unsigned int generation)
+{
+	if (generation != getIopResetGeneration())
+		return;
+	if (units & DASH_SCANNED_HDD0) recordProbe("hdd0:", 1);
+	if (units & DASH_SCANNED_HDD1) recordProbe("hdd1:", 1);
+#ifdef EXFAT
+	if (units & DASH_SCANNED_ATA0) recordProbe("ata0:", 1);
+	if (units & DASH_SCANNED_ATA1) recordProbe("ata1:", 1);
+#endif
+}
+
 static int storageState(const char *mount)
 {
 	int i = probeIndex(mount);
@@ -848,15 +862,15 @@ void dashDevicesAutoStart(void)
 
 /* Starts the driver for the device a path lives on, if it is not running
  * (used before a full library refresh, which only reads running devices). */
-void dashDevicesStartForPath(const char *path)
+int dashDevicesStartForPath(const char *path)
 {
 	const char *mount = NULL;
 
 	if (path == NULL || !strncmp(path, "mc", 2))
-		return;
+		return 0;
 #ifdef EXFAT
 	if (!strncmp(path, "mass", 4) && path[4] >= '0' && path[4] <= '9' && path[5] == ':')
-		return; /* mount order cannot identify which driver should be started */
+		return 0; /* mount order cannot identify which driver should be started */
 #endif
 	if (!strncmp(path, "mass", 4) || !strncmp(path, "usb", 3))
 		mount = "usb:";
@@ -898,8 +912,10 @@ void dashDevicesStartForPath(const char *path)
 	if (mount != NULL &&
 	    (!isPathDeviceStackLoaded(path) ||
 	     ((!strncmp(mount, "hdd", 3) || !strncmp(mount, "ata", 3)) &&
-	      storageState(mount) != DASH_DEV_READY)))
-		startSync(mount, "Starting devices");
+	      storageState(mount) != DASH_DEV_READY)) &&
+	    startSync(mount, "Starting devices") < 0)
+		return -1; /* Back cancelled the worker wait; do not start a scan. */
+	return 0;
 }
 
 /* Load the requested device families. A stack switch can reset earlier

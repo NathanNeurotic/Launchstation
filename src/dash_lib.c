@@ -769,6 +769,8 @@ typedef struct
 	int ndirs;
 	int interactive;
 	ScanCtx sc;
+	unsigned int successful_disk_units;
+	unsigned int iop_generation;
 	int ok;
 } ScanJob;
 
@@ -796,8 +798,17 @@ static void scanRun(void *arg)
 		if (!strncmp(j->dirs[i], "mc", 2) &&
 		    filerPrepareMemoryCardRead(j->dirs[i][2] - '0') != 0)
 			continue;
-		if (scanDir(sc, j->dirs[i], 0))
-			dashStrCopy(scanned[nscanned++], j->dirs[i], DASH_PATH_MAX);
+		if (scanDir(sc, j->dirs[i], 0)) {
+			const char *dir = j->dirs[i];
+			dashStrCopy(scanned[nscanned++], dir, DASH_PATH_MAX);
+			/* Record unit evidence locally; the worker must not mutate UI state. */
+			if (!strncmp(dir, "hdd", 3) && (dir[3] == '0' || dir[3] == '1') && dir[4] == ':')
+				j->successful_disk_units |= dir[3] == '1' ? DASH_SCANNED_HDD1 : DASH_SCANNED_HDD0;
+#ifdef EXFAT
+			if (!strncmp(dir, "ata", 3) && (dir[3] == '0' || dir[3] == '1') && dir[4] == ':')
+				j->successful_disk_units |= dir[3] == '1' ? DASH_SCANNED_ATA1 : DASH_SCANNED_ATA0;
+#endif
+		}
 	}
 
 	/* Keep cached entries that live on locations we did not look at
@@ -869,6 +880,7 @@ int dashLibScanStart(int interactive)
 		return -1;
 	memset(j, 0, sizeof(*j));
 	j->interactive = interactive;
+	j->iop_generation = getIopResetGeneration();
 	for (i = 0; i < dashCfg.nscan; i++) {
 		char d[DASH_PATH_MAX];
 		int len;
@@ -924,6 +936,9 @@ int dashLibApplyScan(int *interactive)
 		scanFree(j);
 		return -1;
 	}
+	/* A successful directory read supersedes an earlier failed quick probe,
+	 * but never across an IOP reset or for an unscanned cached folder. */
+	dashDevicesConfirmScannedDisks(j->successful_disk_units, j->iop_generation);
 	dashArtFlushAll();
 	memcpy(dashApps, j->sc.fresh, sizeof(DashApp) * j->sc.nfresh);
 	dashAppCount = j->sc.nfresh;
