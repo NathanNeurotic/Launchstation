@@ -1,6 +1,6 @@
 """New folder... uses a folder-with-plus icon and Save rows use a floppy (B1, suggested by R3Z3N).
 
-Both glyphs live in the atlas margin, which has room for exactly 13 small icons. The test checks
+Both glyphs live in the compact atlas margin. The test checks
 that capacity, renders the new glyphs on the host the way initClipboardIcons bakes them, and
 checks every row that should use them."""
 from pathlib import Path
@@ -16,7 +16,9 @@ icons = (root / "src/dash_icons.c").read_text(encoding="utf-8")
 enum = hdr[hdr.rfind("enum", 0, hdr.index("DI_HOME = 0,")):]
 enum = enum[:enum.index("};") + 2]
 names = [m.group(1) for m in re.finditer(r"^\s*(DI_[A-Z0-9_]+)", enum, re.M)]
-assert names[-4:-1] == ["DI_NEW_FOLDER", "DI_SAVE", "DI_COMPACTFLASH"] and names[-1] == "DI_COUNT", names[-5:]
+start = names.index("DI_NEW_FOLDER")
+assert names[start:start + 3] == ["DI_NEW_FOLDER", "DI_SAVE", "DI_COMPACTFLASH"]
+assert names[-1] == "DI_COUNT", names[-5:]
 
 # atlas margin capacity, with the constants from dash_icons.c
 const = {k: int(v) for k, v in re.findall(r"#define (ICON_TEX_H|APP_PART_SIZE) (\d+)", icons)}
