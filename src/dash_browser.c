@@ -2462,6 +2462,29 @@ static void tsProgress(int done, int total, const char *folder)
 
 /* native date editor: the folders newest first, the edited one moving as
  * its date changes */
+static void tsDrawHints(float x, float y, float w)
+{
+	const DashHint hints[] = {
+	    {DI_BTN_R1, NULL, "Up"}, {DI_BTN_R2, NULL, "Down"},
+	    {dashOkIcon(), NULL, "Apply"}, {dashBackIcon(), NULL, "Cancel"}
+	};
+	const int count = sizeof(hints) / sizeof(hints[0]);
+	float total = 0.0f, gap;
+	float text_y = y + 11.0f - 16.0f * DASH_FS_SMALL;
+	int i;
+
+	for (i = 0; i < count; i++)
+		total += dashButtonWidth(hints[i].button, NULL) + 4.0f +
+		         dashTextWidth(hints[i].label, DASH_FS_SMALL);
+	gap = (w - total) / (count - 1);
+	if (gap < 0.0f)
+		gap = 0.0f;
+	for (i = 0; i < count; i++) {
+		x += dashDrawButton(x, y, hints[i].button, NULL) + 4.0f;
+		x = dashTextS(x, text_y, hints[i].label, DASH_FS_SMALL, DASH_C_TEXT2) + gap;
+	}
+}
+
 static int tsEdit(FilerDateEditor *e)
 {
 	const float w = 580.0f, h = 372.0f;
@@ -2496,9 +2519,9 @@ static int tsEdit(FilerDateEditor *e)
 			filerDateEditorAdjust(e, -1);
 		if (in.pressed & DASH_IN_L1)
 			filerDateEditorSelect(e, -1);
-		if (in.pressed & DASH_IN_R1)
-			filerDateEditorSelect(e, 1);
 		if (in.pressed & DASH_IN_L2)
+			filerDateEditorSelect(e, 1);
+		if (in.pressed & DASH_IN_R1)
 			filerDateEditorMoveNextTo(e, 1);
 		if (in.pressed & DASH_IN_R2)
 			filerDateEditorMoveNextTo(e, 0);
@@ -2524,15 +2547,17 @@ static int tsEdit(FilerDateEditor *e)
 			dashTextFit(x + 58, y + 46, w - 82, fb.dir, DASH_FS_CAPTION, DASH_C_TEXT3);
 			for (i = top; i < e->count && i < top + TS_ROWS; i++) {
 				float ry = list_y + (i - top) * TS_ROW_H;
+				float center_y = ry + TS_ROW_H * 0.5f;
+				float text_y = center_y - 16.0f * DASH_FS_SMALL;
 				int changed = memcmp(&e->folders[i].stats._Modify, &e->original[i], sizeof(sceMcStDateTime)) != 0;
 				DashColor col = (i == idx) ? DASH_C_TEXT : changed ? DASH_C_ACCENT : DASH_C_TEXT2;
 
 				if (i == idx)
-					dashDrawSelection(x + 16, ry - 1, w - 32, TS_ROW_H - 2, 6, 1.0f);
-				dashIcon(DI_FOLDER, x + 24, ry + 3, 14, col);
-				dashTextFit(x + 46, ry + 2, w - 290, e->folders[i].name, DASH_FS_SMALL, col);
+					dashDrawSelection(x + 16, ry + 1, w - 32, TS_ROW_H - 2, 6, 1.0f);
+				dashIcon(DI_FOLDER, x + 24, center_y - 7, 14, col);
+				dashTextFit(x + 46, text_y, w - 290, e->folders[i].name, DASH_FS_SMALL, col);
 				filerDateEditorFormat(&e->folders[i].stats._Modify, date, sizeof(date));
-				dashTextRight(x + w - 28, ry + 3, date, DASH_FS_SMALL, col);
+				dashTextRight(x + w - 28, text_y, date, DASH_FS_SMALL, col);
 			}
 			dashDrawScrollbar(x + w - 16, list_y, TS_ROWS * TS_ROW_H, top, TS_ROWS, e->count);
 
@@ -2554,17 +2579,8 @@ static int tsEdit(FilerDateEditor *e)
 			}
 			filerDateEditorField(e->timestamp, e->position, text, sizeof(text), &name, &sep);
 			dashText(fx + 16, fy + 5, name, DASH_FS_SMALL, DASH_C_ACCENT);
+			tsDrawHints(x + 24, y + h - 36, w - 48);
 			dashGfxPopAlpha();
-		}
-		{
-			DashHint hn[6];
-			hn[0].button = DI_BTN_LEFT, hn[0].key = NULL, hn[0].label = "Field";
-			hn[1].button = DI_BTN_UP, hn[1].key = NULL, hn[1].label = localizeDashboardText("Change");
-			hn[2].button = DI_BTN_R1, hn[2].key = NULL, hn[2].label = "Folder";
-			hn[3].button = DI_BTN_R2, hn[3].key = NULL, hn[3].label = "Next to";
-			hn[4].button = dashOkIcon(), hn[4].key = NULL, hn[4].label = "Apply";
-			hn[5].button = dashBackIcon(), hn[5].key = NULL, hn[5].label = localizeDashboardText("Cancel");
-			dashDrawHints(hn, 6);
 		}
 		dashGfxPresent();
 	}
