@@ -14,6 +14,7 @@ header = (root / "include/dash_internal.h").read_text()
 store = (root / "src/dash_store.c").read_text()
 settings = (root / "src/dash_settings.c").read_text()
 bg = (root / "src/dash_bg.c").read_text()
+themes = (root / "docs/themes.md").read_text()
 
 def function(source, signature):
     a = source.index(signature)
@@ -86,4 +87,12 @@ assert "case S_BG_DETAIL:" in settings
 assert "dashCfg.bg_detail = 1;" in settings
 assert "return dashCfg.bg_detail ? DASH_FX_FULL : DASH_FX_SUBTLE;" in bg
 assert "float motion = animated ? dashCfg.effects / 100.0f : 0.0f;" in bg
+# Crystal theme layers obey the render mode, not animation speed: with
+# 0% motion and High detail the star layers must remain visible.
+crystal_layers = bg[bg.index("static void drawThemeLayers("):bg.index("static void drawOrbs(")]
+assert "static void drawThemeLayers(int fx)" in bg
+assert "drawThemeLayers(fx);" in bg
+assert "if (fx == DASH_FX_OFF)" in crystal_layers
+assert "dashCfg.effects == DASH_FX_OFF" not in crystal_layers
+assert "* *Background detail: Low* reduces scene geometry" in themes
 print("PASS: HDD sorting, compact icons, PS1 directory guards, independent background detail")

@@ -216,14 +216,16 @@ static void crystalBase(void)
 	dashRectGradV(0, 330, DASH_VW, DASH_VH - 330, low, bot);
 }
 
-static void drawThemeLayers(void)
+static void drawThemeLayers(int fx)
 {
 	GSTEXTURE *bg = dashThemeTexture("background.png", 256, 256);
 	GSTEXTURE *s1, *s2;
 
 	if (bg != NULL)
 		dashTexDraw(bg, 0, 0, DASH_VW, DASH_VH, DC(255, 255, 255, 255));
-	if (dashCfg.effects == DASH_FX_OFF)
+	/* Motion speed may be 0% while detail is High; suppress effects only
+	 * for the explicit static/off render, not when animation is frozen. */
+	if (fx == DASH_FX_OFF)
 		return;
 	s1 = dashThemeTexture("stars1.png", 256, 128);
 	s2 = dashThemeTexture("stars2.png", 256, 128);
@@ -312,7 +314,7 @@ static void sceneCrystal(int fx)
 	int i;
 
 	crystalBase();
-	drawThemeLayers();
+	drawThemeLayers(fx);
 	if (fx == DASH_FX_OFF) {
 		dashRectGradV(0, DASH_VH - 90, DASH_VW, 90, DC(0, 0, 0, 0), DC(0, 0, 6, 150));
 		return;

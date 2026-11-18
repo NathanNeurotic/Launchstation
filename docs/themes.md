@@ -422,7 +422,8 @@ primitives at most (PS2 Towers is the heaviest, about 500 quads).
 
 * *Background motion: 0%* freezes the scene; nonzero values keep real-time
   clock motion fluid. 100% is normal speed and 200% doubles scene motion.
-* Lower percentages use the lighter scene detail where appropriate.
+* *Background detail: Low* reduces scene geometry where supported. Motion
+  percentage only controls speed, not detail.
 * *Solid colour* costs nothing and is the safe fallback.
 * The app artwork background reuses the artwork cache; it never loads a
   file itself.
