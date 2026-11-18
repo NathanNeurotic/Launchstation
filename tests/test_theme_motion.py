@@ -29,6 +29,7 @@ code = r"""
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <string.h>
 #include <strings.h>
 typedef uint64_t u64;
@@ -41,6 +42,7 @@ static int dashThemeStoreKey(const char *k,char *v) { (void)k; (void)v; return 0
 """
 code += header[header.index("enum DashSection"):header.index("extern DashSettings dashCfg;")]
 code += "DashSettings dashCfg;\n"
+code += function(store, "static int strictClampInt(")
 code += function(store, "static int clampInt(")
 code += function(store, "static int percentSetting(")
 code += function(store, "static int settingsKv(")
