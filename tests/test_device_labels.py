@@ -38,6 +38,16 @@ for old in ('"MASS"', '"MASS %d"', '"mc%d (Slot %d)"', '"MMCE Slot 1"', '"Intern
     assert old not in devices, old
 
 # Secondary unit names, cached probes, and start paths must remain independent.
+# A family driver being resident does not establish that unit 1 was checked.
+auto_needed = function(devices, "static int autoStartNeeded(")
+auto_probe = function(devices, "void dashDevicesAutoProbe(")
+start_path = function(devices, "void dashDevicesStartForPath(")
+for unit in ("hdd", "ata"):
+    assert f'storageState("{unit}1:") == DASH_DEV_PROBE' in auto_needed
+    assert f'probeMount("{unit}1:");' in auto_probe
+    assert f'if (filerShow{unit.capitalize()}Unit(1) && !console_is_PSX' in auto_probe
+assert 'storageState(mount) != DASH_DEV_READY' in start_path
+assert 'isPathDeviceStackLoaded(path))' not in start_path.split("const char *mount = NULL;", 1)[1].split("#ifdef EXFAT", 1)[0]
 for guard in (
     'if (filerShowHddUnit(1) && !console_is_PSX)',
     'if (filerShowAtaUnit(1) && !console_is_PSX)',

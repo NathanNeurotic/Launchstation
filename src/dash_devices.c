@@ -738,9 +738,17 @@ static int autoStartNeeded(void)
 	const int mask = safeAutoStartMask();
 
 	return ((mask & DASH_DEVA_USB) && !isUsbMassStackLoaded()) ||
-	       ((mask & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
+	       ((mask & DASH_DEVA_HDD) &&
+	        (!isPathDeviceStackLoaded("hdd0:") ||
+	         storageState("hdd0:") == DASH_DEV_PROBE ||
+	         (filerShowHddUnit(1) && !console_is_PSX &&
+	          storageState("hdd1:") == DASH_DEV_PROBE)))
 #ifdef EXFAT
-	       || ((mask & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
+	       || ((mask & DASH_DEVA_ATA) &&
+	           (!isPathDeviceStackLoaded("ata0:") ||
+	            storageState("ata0:") == DASH_DEV_PROBE ||
+	            (filerShowAtaUnit(1) && !console_is_PSX &&
+	             storageState("ata1:") == DASH_DEV_PROBE)))
 #endif
 #ifdef MMCE
 	       || ((mask & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))
@@ -844,7 +852,7 @@ void dashDevicesStartForPath(const char *path)
 {
 	const char *mount = NULL;
 
-	if (path == NULL || !strncmp(path, "mc", 2) || isPathDeviceStackLoaded(path))
+	if (path == NULL || !strncmp(path, "mc", 2))
 		return;
 #ifdef EXFAT
 	if (!strncmp(path, "mass", 4) && path[4] >= '0' && path[4] <= '9' && path[5] == ':')
@@ -884,7 +892,13 @@ void dashDevicesStartForPath(const char *path)
 	else if (smbPathKind(path) == SMB_PATH_NFS)
 		mount = SMB_DEVICE_NFS;
 #endif
-	if (mount != NULL)
+	/* hddN:/ataN: share a driver stack; a loaded driver alone does not
+	 * mean this particular unit has passed its root probe. A user-requested
+	 * rescan retries an absent unit without changing the other families. */
+	if (mount != NULL &&
+	    (!isPathDeviceStackLoaded(path) ||
+	     ((!strncmp(mount, "hdd", 3) || !strncmp(mount, "ata", 3)) &&
+	      storageState(mount) != DASH_DEV_READY)))
 		startSync(mount, "Starting devices");
 }
 
@@ -898,11 +912,26 @@ void dashDevicesAutoProbe(void)
 
 	for (pass = 0; pass < 2; pass++) {
 		unsigned int generation = getIopResetGeneration();
-		if ((mask & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
-			probeMount("hdd0:");
+		if (mask & DASH_DEVA_HDD) {
+			if (!isPathDeviceStackLoaded("hdd0:") ||
+			    storageState("hdd0:") == DASH_DEV_PROBE)
+				probeMount("hdd0:");
+			/* Unit 1 has independent presence state despite sharing the IOP stack. */
+			if (filerShowHddUnit(1) && !console_is_PSX &&
+			    isPathDeviceStackLoaded("hdd0:") &&
+			    storageState("hdd1:") == DASH_DEV_PROBE)
+				probeMount("hdd1:");
+		}
 #ifdef EXFAT
-		if ((mask & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
-			probeMount("ata0:");
+		if (mask & DASH_DEVA_ATA) {
+			if (!isPathDeviceStackLoaded("ata0:") ||
+			    storageState("ata0:") == DASH_DEV_PROBE)
+				probeMount("ata0:");
+			if (filerShowAtaUnit(1) && !console_is_PSX &&
+			    isPathDeviceStackLoaded("ata0:") &&
+			    storageState("ata1:") == DASH_DEV_PROBE)
+				probeMount("ata1:");
+		}
 #endif
 #ifdef MMCE
 		if ((mask & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))
