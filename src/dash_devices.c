@@ -38,7 +38,7 @@ static int probeIndex(const char *mount)
 {
 	if (!strncmp(mount, "hdd0:", 5)) return PROBE_HDD;
 	if (!strncmp(mount, "hdd1:", 5)) return PROBE_HDD1;
-	if (!strncmp(mount, "ata0:", 5)) return PROBE_ATA;
+	if (!strncmp(mount, "ata0:", 5) || !strncmp(mount, "ata:", 4)) return PROBE_ATA;
 	if (!strncmp(mount, "ata1:", 5)) return PROBE_ATA1;
 	if (isPcCardCfPath(mount)) return PROBE_PCCF;
 	if (!strncmp(mount, "mx4sio", 6)) return PROBE_MX4SIO;
