@@ -245,8 +245,8 @@ static void preMount(int i, int part) {
 int main(void) {
     reset();
     for (int i = 0; i < 20; i++) {
-        probe(i); assert(mountedCount() <= 3);
-        for (int previous = i > 2 ? i - 2 : 0; previous <= i; previous++) {
+        probe(i); assert(mountedCount() == (i < 4 ? i + 1 : 4));
+        for (int previous = i ? i - 1 : 0; previous <= i; previous++) {
             char dev[48]; snprintf(dev, sizeof(dev), "hdd0:+TEST%d", previous);
             assert(slotFor(dev) >= 0);
         }
@@ -256,19 +256,27 @@ int main(void) {
             assert(!queued && submissions == reads && unmounts == changes && mounts == count);
         }
     }
-    assert(mounts == 20 && unmounts == 17);
-    /* A cached selection refreshes recency even though it needs no disk read. */
-    reset(); probe(0); probe(1); probe(2); loadPfsInfo(0); probe(3);
-    assert(slotFor("hdd0:+TEST0") >= 0 && slotFor("hdd0:+TEST2") >= 0);
-    assert(slotFor("hdd0:+TEST1") < 0);
+    assert(mounts == 20 && unmounts == 16);
+    /* Fill every free slot, then evict the first eligible slot regardless of
+     * age. A cached selection still updates the protected latest mount. */
+    reset(); probe(0); probe(1); probe(2); probe(3);
+    for (int i = 0; i < 4; i++) {
+        char dev[48]; snprintf(dev, sizeof(dev), "hdd0:+TEST%d", i);
+        assert(slotFor(dev) == i);
+    }
+    loadPfsInfo(0); assert(latestMount == 0);
+    loadPfsInfo(3); probe(4);
+    assert(slotFor("hdd0:+TEST4") == 0 && slotFor("hdd0:+TEST0") < 0);
+    assert(slotFor("hdd0:+TEST1") == 1 && slotFor("hdd0:+TEST2") == 2);
     /* Cached figures survive mount eviction; revisiting does not remount. */
-    int reads = submissions, count = mounts; loadPfsInfo(1);
-    assert(submissions == reads && mounts == count && hm.parts[1].pfs_state == 1);
+    int reads = submissions, count = mounts; loadPfsInfo(0);
+    assert(submissions == reads && mounts == count && hm.parts[0].pfs_state == 1);
     /* Already-mounted partitions are reused without duplicate raw opens. */
     reset(); for (int i = 0; i < 4; i++) preMount(i, i);
     probe(0); assert(!mounts && !unmounts && mountedCount() == 4);
-    probe(4); assert(mountedCount() == 3 && mounts == 1 && unmounts == 2);
-    assert(slotFor("hdd0:+TEST0") >= 0);
+    probe(4); assert(mountedCount() == 4 && mounts == 1 && unmounts == 1);
+    assert(slotFor("hdd0:+TEST0") == 0 && !attempts[0]);
+    assert(slotFor("hdd0:+TEST4") == 1 && slotFor("hdd0:+TEST1") < 0);
     /* Refresh from four existing mounts reserves a handle before Dopen.
      * Main and subpartition sizes are summed once, without opening them. */
     reset(); for (int i = 0; i < 4; i++) preMount(i, i);
@@ -277,26 +285,28 @@ int main(void) {
     assert(scan.filesystem == HDD_FS_APA && format_reads == 1);
     assert(scan.parts[0].raw_mb == 384 && scan.parts[1].raw_mb == 256 && scan.parts[2].raw_mb == 512);
     assert(mountedCount() == 3 && unmounts == 1 && !live_scans); free(scan.parts);
+    probe(4); assert(mountedCount() == 4 && unmounts == 1);
     /* Never evict a VMC's mount or the most recently used mount. */
-    reset(); probe(0); probe(1); probe(2);
+    reset(); probe(0); probe(1); probe(2); probe(3);
     int pinned = slotFor("hdd0:+TEST0"); Party_vmcIndex[pinned] = 0;
-    probe(3); assert(slotFor("hdd0:+TEST0") == pinned && !attempts[pinned]);
-    /* Failed unmounts retain bookkeeping and another old slot is tried. */
-    reset(); probe(0); probe(1); probe(2);
+    probe(4); assert(slotFor("hdd0:+TEST0") == pinned && !attempts[pinned]);
+    assert(slotFor("hdd0:+TEST4") == 1 && slotFor("hdd0:+TEST3") == 3 && !attempts[3]);
+    /* Failed unmounts retain bookkeeping and the next eligible slot is tried. */
+    reset(); probe(0); probe(1); probe(2); probe(3);
     int failed = slotFor("hdd0:+TEST0"); fail_unmount = 1u << failed;
-    probe(3); assert(attempts[failed] == 1 && slotFor("hdd0:+TEST0") == failed);
+    probe(4); assert(attempts[failed] == 1 && slotFor("hdd0:+TEST0") == failed);
     assert(slotFor("hdd0:+TEST1") < 0 && slotFor("hdd0:+TEST2") >= 0);
     /* If all eligible unmounts fail, retry after a second, not each frame. */
-    reset(); probe(0); probe(1); probe(2); fail_unmount = 15;
-    loadPfsInfo(3); complete();
-    assert(hm.parts[3].pfs_state == 0 && hm.parts[3].pfs_error == -EBUSY);
-    reads = submissions; now += 999; loadPfsInfo(3); assert(submissions == reads && !queued);
-    fail_unmount = 0; now++; probe(3);
+    reset(); probe(0); probe(1); probe(2); probe(3); fail_unmount = 15;
+    loadPfsInfo(4); complete();
+    assert(hm.parts[4].pfs_state == 0 && hm.parts[4].pfs_error == -EBUSY);
+    reads = submissions; now += 999; loadPfsInfo(4); assert(submissions == reads && !queued);
+    fail_unmount = 0; now++; probe(4);
     /* VMC pressure reports temporary busy without disturbing any mount. */
-    reset(); probe(0); probe(1); probe(2);
+    reset(); probe(0); probe(1); probe(2); probe(3);
     for (int i = 0; i < MOUNT_LIMIT; i++) if (mountedParty[i][0]) Party_vmcIndex[i] = 0;
-    loadPfsInfo(3); complete();
-    assert(hm.parts[3].pfs_state == 0 && !unmounts && mountedCount() == 3);
+    loadPfsInfo(4); complete();
+    assert(hm.parts[4].pfs_state == 0 && !unmounts && mountedCount() == 4);
     /* Invalid targets do not trigger blanket mount retries/unmounts. */
     reset(); probe(0); probe(1); mount_error = -EINVAL;
     loadPfsInfo(2); complete();
@@ -359,7 +369,7 @@ int main(void) {
     }
     free(hm.parts);
     puts("PASS: HDD0 APA/exFAT/FAT32 scan reporting, capacities above 1 TiB, locked/missing drives and read errors");
-    puts("PASS: bounded recent mounts, cached navigation, existing mounts, scan handle reserve, VMC protection, failed unmounts, transient retries and usage errors");
+    puts("PASS: four retained mounts, first eligible reuse, cached navigation, existing mounts, scan handle reserve, VMC protection, failed unmounts, transient retries and usage errors");
 }
 '''
 compiler = shutil.which("gcc") or shutil.which("cc")

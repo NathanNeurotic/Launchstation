@@ -151,35 +151,34 @@ typedef struct
 	int abandoned;
 } HddJob;
 
-/* Keep three recent mounts and reserve one APA handle for partition scans.
- * The worker changes mounts; cached selections update ages only while it is
- * idle. Cached usage survives eviction, so revisiting needs no remount. */
-static u32 pfs_mount_used[MOUNT_LIMIT], pfs_mount_clock;
+/* Match File Browser: retain up to MOUNT_LIMIT partitions, reuse the first
+ * eligible slot, protect active/VMC mounts and reserve scan headroom as needed.
+ * Cached usage survives eviction, so revisiting needs no remount. */
 
 static int pfsMakeRoom(int limit)
 {
 	unsigned tried = 0;
-	int i, count, oldest;
+	int i, count, first;
 
 	for (;;) {
 		count = 0;
-		oldest = -1;
+		first = -1;
 		for (i = 0; i < MOUNT_LIMIT; i++) {
 			if (mountedParty[i][0] == 0)
 				continue;
 			count++;
 			if (i == latestMount || Party_vmcIndex[i] >= 0 || (tried & (1u << i)))
 				continue;
-			if (oldest < 0 || pfs_mount_used[i] < pfs_mount_used[oldest])
-				oldest = i;
+			if (first < 0)
+				first = i;
 		}
 		if (count <= limit)
 			return 0;
-		if (oldest < 0)
+		if (first < 0)
 			return -EBUSY;
-		tried |= 1u << oldest;
-		unmountParty(oldest);
-		/* A failed unmount retains its bookkeeping; try another old mount. */
+		tried |= 1u << first;
+		unmountParty(first);
+		/* A failed unmount retains its bookkeeping; try another eligible mount. */
 	}
 }
 
@@ -191,11 +190,10 @@ static int pfsMountForInfo(const char *dev)
 	for (i = 0; i < MOUNT_LIMIT; i++) {
 		if (!strcmp(mountedParty[i], dev)) {
 			latestMount = i;
-			pfs_mount_used[i] = ++pfs_mount_clock;
 			return i;
 		}
 	}
-	ret = pfsMakeRoom(MOUNT_LIMIT - 2);
+	ret = pfsMakeRoom(MOUNT_LIMIT - 1);
 	if (ret < 0)
 		return ret;
 	for (i = 0; i < MOUNT_LIMIT; i++) {
@@ -212,7 +210,6 @@ static int pfsMountForInfo(const char *dev)
 		return ret;
 	dashStrCopy(mountedParty[i], dev, sizeof(mountedParty[i]));
 	latestMount = i;
-	pfs_mount_used[i] = ++pfs_mount_clock;
 	return i;
 }
 
@@ -591,7 +588,6 @@ static void loadPfsInfo(int i)
 		for (slot = 0; slot < MOUNT_LIMIT; slot++) {
 			if (!strcmp(mountedParty[slot], dev) && latestMount != slot) {
 				latestMount = slot;
-				pfs_mount_used[slot] = ++pfs_mount_clock;
 				break;
 			}
 		}
@@ -1458,8 +1454,6 @@ void dashHddManager(void)
 	u64 last_move = Timer();
 
 	memset(&hm, 0, sizeof(hm));
-	memset(pfs_mount_used, 0, sizeof(pfs_mount_used));
-	pfs_mount_clock = 0;
 	sel = top = 0;
 	sel_anim = 0.0f;
 	/* the HDD stack loads on the UI thread */

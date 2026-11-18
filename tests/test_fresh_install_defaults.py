@@ -97,3 +97,9 @@ assert settings_src.count("dashCfg.icon_backing = 0;") == 2
 browser = (root / "src/dash_browser.c").read_text(encoding="utf-8")
 assert "if (!isPartitionList(fb.dir) && time_valid && f->stats._Modify.Year)" in browser
 print("PASS: control backings default off, theme resets, and partition dates hidden")
+
+# Dashboard fresh installs prefer List view, preserve music On and Crystal.
+assert "dashCfg.view = DASH_VIEW_LIST;" in store
+assert "dashCfg.view = clampInt(value, 0, DASH_VIEW_COUNT - 1, DASH_VIEW_LIST);" in store
+assert "dashCfg.bgm = 1;" in store
+assert "dashCfg.bgm = clampInt(value, 0, 1, 1);" in store
