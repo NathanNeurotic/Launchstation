@@ -66,6 +66,7 @@ c = c.replace("typedef struct { char software_clock[24]; } ClockConfig;", """
 #define DASH_TAB_MASK ((1 << DASH_SEC_HOME) | (1 << DASH_SEC_FILES) | (1 << DASH_SEC_TOOLS) | (1 << DASH_SEC_SETTINGS))
 #define DASH_VIEW_COUNT 4
 #define DASH_VIEW_GRID 0
+#define DASH_VIEW_LIST 1
 #define DASH_IGR_AFTER_COUNT 3
 #define DASH_IGR_AFTER_DASHBOARD 0
 """ + settings_type + "\ntypedef DashSettings ClockConfig;\n")
