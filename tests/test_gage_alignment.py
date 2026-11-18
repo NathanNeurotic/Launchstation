@@ -24,9 +24,9 @@ assert "x += gap;" in hints
 # at full size the label sits at y + 1.5; shrunk type keeps the same x-height centre
 assert "dashTextS(x, dashButtonTextY(y, fs), label, fs" in hints
 # The shared helper centres the font's 16*scale x-height in a 22px button.
-helper = re.search(r"float dashButtonTextY\\(float button_y, float text_scale\\)\\s*\\{([^}]*)\\}", ui)
+helper = re.search(r"float dashButtonTextY\(float button_y, float text_scale\)\s*\{([^}]*)\}", ui)
 assert helper, "shared button alignment helper missing"
-assert re.search(r"return\\s+button_y\\s*\\+\\s*11\\.0f\\s*-\\s*16\\.0f\\s*\\*\\s*text_scale\\s*;", helper.group(1))
+assert re.search(r"return\s+button_y\s*\+\s*11\.0f\s*-\s*16\.0f\s*\*\s*text_scale\s*;", helper.group(1))
 for scale in (0.66, 0.5, 0.33):
     baseline = 11.0 - 16.0 * scale
     assert abs((baseline + 16.0 * scale) - 11.0) < 1e-6
