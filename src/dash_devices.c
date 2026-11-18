@@ -22,7 +22,7 @@ extern int vmcMounted[2];
 
 /* Driver residency does not establish that a card, disk or server exists.
  * Cache explicit root checks; never do blocking device IO from drawing. */
-enum { PROBE_HDD, PROBE_ATA, PROBE_PCCF, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1, PROBE_UDPFS, PROBE_SMB, PROBE_SMB1, PROBE_NFS };
+enum { PROBE_HDD, PROBE_HDD1, PROBE_ATA, PROBE_ATA1, PROBE_PCCF, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1, PROBE_UDPFS, PROBE_SMB, PROBE_SMB1, PROBE_NFS };
 static u32 probe_checked, probe_present;
 static unsigned int probe_reset_generation = (unsigned int)-1;
 
@@ -35,7 +35,9 @@ static unsigned int probe_reset_generation = (unsigned int)-1;
 static int probeIndex(const char *mount)
 {
 	if (!strncmp(mount, "hdd0:", 5)) return PROBE_HDD;
+	if (!strncmp(mount, "hdd1:", 5)) return PROBE_HDD1;
 	if (!strncmp(mount, "ata0:", 5)) return PROBE_ATA;
+	if (!strncmp(mount, "ata1:", 5)) return PROBE_ATA1;
 	if (isPcCardCfPath(mount)) return PROBE_PCCF;
 	if (!strncmp(mount, "mx4sio", 6)) return PROBE_MX4SIO;
 	if (!strncmp(mount, "ilink", 5)) return PROBE_ILINK;
@@ -65,6 +67,20 @@ static void recordProbe(const char *mount, int ok)
 	probe_checked |= 1u << i;
 	if (ok) probe_present |= 1u << i;
 	else probe_present &= ~(1u << i);
+}
+
+/* The scan worker reports successful reads, but never changes probe state.
+ * Reconcile its per-unit evidence on the UI thread before rebuilding views. */
+void dashDevicesConfirmScannedDisks(unsigned int units, unsigned int generation)
+{
+	if (generation != getIopResetGeneration())
+		return;
+	if (units & DASH_SCANNED_HDD0) recordProbe("hdd0:", 1);
+	if (units & DASH_SCANNED_HDD1) recordProbe("hdd1:", 1);
+#ifdef EXFAT
+	if (units & DASH_SCANNED_ATA0) recordProbe("ata0:", 1);
+	if (units & DASH_SCANNED_ATA1) recordProbe("ata1:", 1);
+#endif
 }
 
 static int storageState(const char *mount)
@@ -430,6 +446,9 @@ int dashDevicesList(DashDevice *out, int max)
 	if (filerShowHddUnit(0) && !console_is_PSX) {
 		addStorage(out, &n, max, DI_HDD, "Internal APA HDD", "hdd0:", "hdd0:/", "APA partitions", "No browsable APA storage found");
 	}
+	if (filerShowHddUnit(1) && !console_is_PSX) {
+		addStorage(out, &n, max, DI_HDD, "Internal APA HDD 2", "hdd1:", "hdd1:/", "APA partitions", "No browsable APA storage found");
+	}
 #ifdef EXFAT
 	if (isPcCardCfEligible() || boot_show_all_devices) {
 		if (!isPcCardCfEligible()) {
@@ -474,6 +493,9 @@ int dashDevicesList(DashDevice *out, int max)
 #ifdef EXFAT
 	if (filerShowAtaUnit(0) && !console_is_PSX) {
 		addStorage(out, &n, max, DI_HDD, "Internal exFAT HDD", "ata0:", "ata0:/", "Ready", "No exFAT storage found");
+	}
+	if (filerShowAtaUnit(1) && !console_is_PSX) {
+		addStorage(out, &n, max, DI_HDD, "Internal exFAT HDD 2", "ata1:", "ata1:/", "Ready", "No exFAT storage found");
 	}
 #endif
 
@@ -633,12 +655,12 @@ static int probeMount(const char *m)
 		ok = isUsbMassStackLoaded() && probeUsbMediaAnimated();
 	} else if (!strncmp(m, "hdd", 3)) {
 		ok = loadHddModules();
-		if (ok) ok = probeRoot("hdd0:", 0);
+		if (ok) ok = probeRoot(m[3] == '1' ? "hdd1:" : "hdd0:", 0);
 	}
 #ifdef EXFAT
 	else if (!strncmp(m, "ata", 3)) {
 		ok = loadAtaModules();
-		if (ok) ok = probeRoot("ata0:/", 2000);
+		if (ok) ok = probeRoot(m[3] == '1' ? "ata1:/" : "ata0:/", 2000);
 	}
 	else if (isPcCardCfPath(m)) {
 		ok = loadPcCardCfModules() && isPcCardCfOnline();
@@ -730,9 +752,17 @@ static int autoStartNeeded(void)
 	const int mask = safeAutoStartMask();
 
 	return ((mask & DASH_DEVA_USB) && !isUsbMassStackLoaded()) ||
-	       ((mask & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
+	       ((mask & DASH_DEVA_HDD) &&
+	        (!isPathDeviceStackLoaded("hdd0:") ||
+	         storageState("hdd0:") == DASH_DEV_PROBE ||
+	         (filerShowHddUnit(1) && !console_is_PSX &&
+	          storageState("hdd1:") == DASH_DEV_PROBE)))
 #ifdef EXFAT
-	       || ((mask & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
+	       || ((mask & DASH_DEVA_ATA) &&
+	           (!isPathDeviceStackLoaded("ata0:") ||
+	            storageState("ata0:") == DASH_DEV_PROBE ||
+	            (filerShowAtaUnit(1) && !console_is_PSX &&
+	             storageState("ata1:") == DASH_DEV_PROBE)))
 #endif
 #ifdef MMCE
 	       || ((mask & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))
@@ -832,23 +862,23 @@ void dashDevicesAutoStart(void)
 
 /* Starts the driver for the device a path lives on, if it is not running
  * (used before a full library refresh, which only reads running devices). */
-void dashDevicesStartForPath(const char *path)
+int dashDevicesStartForPath(const char *path)
 {
 	const char *mount = NULL;
 
-	if (path == NULL || !strncmp(path, "mc", 2) || isPathDeviceStackLoaded(path))
-		return;
+	if (path == NULL || !strncmp(path, "mc", 2))
+		return 0;
 #ifdef EXFAT
 	if (!strncmp(path, "mass", 4) && path[4] >= '0' && path[4] <= '9' && path[5] == ':')
-		return; /* mount order cannot identify which driver should be started */
+		return 0; /* mount order cannot identify which driver should be started */
 #endif
 	if (!strncmp(path, "mass", 4) || !strncmp(path, "usb", 3))
 		mount = "usb:";
 	else if (!strncmp(path, "hdd", 3))
-		mount = "hdd0:";
+		mount = path[3] == '1' ? "hdd1:" : "hdd0:";
 #ifdef EXFAT
 	else if (!strncmp(path, "ata", 3))
-		mount = "ata0:";
+		mount = path[3] == '1' ? "ata1:" : "ata0:";
 	else if (isPcCardCfPath(path))
 		mount = "cf0:";
 #endif
@@ -876,8 +906,16 @@ void dashDevicesStartForPath(const char *path)
 	else if (smbPathKind(path) == SMB_PATH_NFS)
 		mount = SMB_DEVICE_NFS;
 #endif
-	if (mount != NULL)
-		startSync(mount, "Starting devices");
+	/* hddN:/ataN: share a driver stack; a loaded driver alone does not
+	 * mean this particular unit has passed its root probe. A user-requested
+	 * rescan retries an absent unit without changing the other families. */
+	if (mount != NULL &&
+	    (!isPathDeviceStackLoaded(path) ||
+	     ((!strncmp(mount, "hdd", 3) || !strncmp(mount, "ata", 3)) &&
+	      storageState(mount) != DASH_DEV_READY)) &&
+	    startSync(mount, "Starting devices") < 0)
+		return -1; /* Back cancelled the worker wait; do not start a scan. */
+	return 0;
 }
 
 /* Load the requested device families. A stack switch can reset earlier
@@ -890,11 +928,26 @@ void dashDevicesAutoProbe(void)
 
 	for (pass = 0; pass < 2; pass++) {
 		unsigned int generation = getIopResetGeneration();
-		if ((mask & DASH_DEVA_HDD) && !isPathDeviceStackLoaded("hdd0:"))
-			probeMount("hdd0:");
+		if (mask & DASH_DEVA_HDD) {
+			if (!isPathDeviceStackLoaded("hdd0:") ||
+			    storageState("hdd0:") == DASH_DEV_PROBE)
+				probeMount("hdd0:");
+			/* Unit 1 has independent presence state despite sharing the IOP stack. */
+			if (filerShowHddUnit(1) && !console_is_PSX &&
+			    isPathDeviceStackLoaded("hdd0:") &&
+			    storageState("hdd1:") == DASH_DEV_PROBE)
+				probeMount("hdd1:");
+		}
 #ifdef EXFAT
-		if ((mask & DASH_DEVA_ATA) && !isPathDeviceStackLoaded("ata0:"))
-			probeMount("ata0:");
+		if (mask & DASH_DEVA_ATA) {
+			if (!isPathDeviceStackLoaded("ata0:") ||
+			    storageState("ata0:") == DASH_DEV_PROBE)
+				probeMount("ata0:");
+			if (filerShowAtaUnit(1) && !console_is_PSX &&
+			    isPathDeviceStackLoaded("ata0:") &&
+			    storageState("ata1:") == DASH_DEV_PROBE)
+				probeMount("ata1:");
+		}
 #endif
 #ifdef MMCE
 		if ((mask & DASH_DEVA_MMCE) && !isPathDeviceStackLoaded("mmce0:"))

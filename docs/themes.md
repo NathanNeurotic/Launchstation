@@ -55,7 +55,7 @@ sphere appears. They follow the console clock: all seven meet in one bright
 orb at :00, split into two groups at :30, three at :20 and :40, four at :15
 and :45, five at :12, :24, :36 and :48, and six at :10 and :50. The sphere is
 small at the top of the hour and grows as the hour goes by. At 0% background
-motion the orbs hold still; below 50% the trails are shorter.
+motion the orbs hold still. Low background detail shortens the trails; motion speed does not change their length.
 
 Every background is drawn procedurally from a few GS primitives. None of
 them uses or needs Sony BIOS data. The PS2-inspired scenes were designed
@@ -79,12 +79,14 @@ the colour-swap selection.
 * **Background motion**: 0-200% in 10% steps (default 100%). 0% freezes the
   scene, 100% is the normal speed, and 200% doubles it. Old files that stored
   0/1/2 load as 0/50/100%.
+* **Background detail**: Low reduces geometry where supported; High (default)
+  retains the full scene even with motion frozen at 0%. The settings are independent.
 * **Menu animation**: 0-200% in 10% steps (default 100%). 0% makes
   transitions instant; larger values keep transitions moving for longer.
 * **Panel transparency**: 0-100% transparency of the Panels colour: 0% is
   fully opaque and 100% removes menu panels. Theme files continue to store
   the same opacity byte; existing themes keep their appearance.
-* **Control icon backings** (default On): theme-derived badges behind
+* **Control icon backings** (default Off): theme-derived badges behind
   face-button and D-pad symbols and quick-action chips.
 * **Theme files & resets** contains import, export, theme name, reset to the
   current preset and restore Crystal.
@@ -420,7 +422,8 @@ primitives at most (PS2 Towers is the heaviest, about 500 quads).
 
 * *Background motion: 0%* freezes the scene; nonzero values keep real-time
   clock motion fluid. 100% is normal speed and 200% doubles scene motion.
-* Lower percentages use the lighter scene detail where appropriate.
+* *Background detail: Low* reduces scene geometry where supported. Motion
+  percentage only controls speed, not detail.
 * *Solid colour* costs nothing and is the safe fallback.
 * The app artwork background reuses the artwork cache; it never loads a
   file itself.

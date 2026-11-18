@@ -703,8 +703,25 @@ void dashRescanLibrary(int interactive)
 		/* a full refresh looks everywhere: start the drivers it needs here,
 		 * the background scan only reads devices that are running */
 		int i;
-		for (i = 0; i < dashCfg.nscan; i++)
-			dashDevicesStartForPath(dashCfg.scan[i]);
+#ifdef EXFAT
+		unsigned int tried_ata_units = 0;
+#endif
+		for (i = 0; i < dashCfg.nscan; i++) {
+			const char *path = dashCfg.scan[i];
+#ifdef EXFAT
+			/* One two-second check per ATA unit per refresh, not per folder. */
+			if (!strncmp(path, "ata", 3) && (path[3] == '0' || path[3] == '1') && path[4] == ':') {
+				unsigned int bit = 1u << (path[3] - '0');
+				if (tried_ata_units & bit)
+					continue;
+				tried_ata_units |= bit;
+			}
+#endif
+			if (dashDevicesStartForPath(path) < 0) {
+				scan_count_before = -1;
+				return; /* Back cancelled device startup. */
+			}
+		}
 	}
 	if (dashLibScanStart(interactive) < 0)
 		dashToast(DASH_TOAST_ERROR, "Application scan failed (out of memory)");

@@ -3224,7 +3224,7 @@ static void actionsMenu(void)
 static int fileIcon(const FILEINFO *f)
 {
 	if (isDir(f))
-		return DI_FOLDER;
+		return isPartitionList(fb.dir) ? DI_PARTITION : DI_FOLDER;
 	if (genCmpFileExt(f->name, "ELF") || genCmpFileExt(f->name, "KELF") || genCmpFileExt(f->name, "XLF"))
 		return DI_APP;
 	if (genCmpFileExt(f->name, "PNG") || genCmpFileExt(f->name, "JPG") || genCmpFileExt(f->name, "JPEG"))
@@ -3378,7 +3378,7 @@ static void browserDrawBody(void)
 			sz[0] = '\0';
 			if (details) {
 				fmtSize(sz, sizeof(sz), f);
-				if (time_valid && f->stats._Modify.Year)
+				if (!isPartitionList(fb.dir) && time_valid && f->stats._Modify.Year)
 					filerDateEditorFormat(&f->stats._Modify, date, sizeof(date));
 				if (date[0])
 					meta_left -= dashTextWidth(date, DASH_FS_CAPTION);
