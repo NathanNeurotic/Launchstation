@@ -29,11 +29,11 @@ assert editor.index("dashGfxPushAlpha(oe);") < editor.index(placement) < editor.
 assert "filerDateEditorSelect(e, -1);" in editor and "filerDateEditorSelect(e, 1);" in editor
 assert "filerDateEditorMoveNextTo(e, 1);" in editor and "filerDateEditorMoveNextTo(e, 0);" in editor
 
-# The date-field selection must finish before the hint row begins.
+# The date-field selection must finish before both rows of hints begin.
 rows = int(re.search(r"#define TS_ROWS (\d+)", source).group(1))
 row_h = float(re.search(r"#define TS_ROW_H ([\d.]+)f", source).group(1))
 height = float(re.search(r'const float w = 580\.0f, h = ([\d.]+)f;', editor).group(1))
-assert 70 + rows * row_h + 12 - 3 + 28 + 6 <= height - 36
+assert 70 + rows * row_h + 12 - 3 + 28 + 6 <= height - 36 - 22
 
 code = r'''
 #include <assert.h>
@@ -44,45 +44,41 @@ typedef int DashColor;
 #define DASH_FS_SMALL 0.66f
 #define DASH_C_TEXT2 2
 typedef struct { int button; const char *key, *label; } DashHint;
-static int mapping, buttons, labels, in_group;
-static float font_width, row_y, last_button_right;
-static float group_x[4], label_right[4];
+static int mapping, buttons, labels, long_cancel;
+static float font_width, last_button_y, last_button_right;
+static float hint_y;
 '''
 code += icons + "\n"
 code += r'''
 static int dashOkIcon(void) { return mapping ? DI_BTN_CROSS : DI_BTN_CIRCLE; }
 static int dashBackIcon(void) { return mapping ? DI_BTN_CIRCLE : DI_BTN_CROSS; }
-static float dashButtonWidth(int icon, const char *key) {
-    (void)icon; assert(!key); return 22;
+static const char *localizeDashboardText(const char *s) {
+    return long_cancel && !strcmp(s, "Cancel")
+        ? "Extremely long localized cancellation text that cannot fit in the popup" : s;
 }
-static float dashTextWidth(const char *text, float scale) { return strlen(text) * font_width * scale; }
 static float dashDrawButton(float x, float y, int icon, const char *key) {
-    const int expected[] = {DI_BTN_R1, DI_BTN_R2, dashOkIcon(), dashBackIcon()};
-    assert(buttons < 4 && icon == expected[buttons] && !key);
+    const int expected[] = {DI_DPAD_UD, DI_BTN_L1, DI_BTN_L2, DI_BTN_R1,
+                            DI_BTN_R2, dashOkIcon(), dashBackIcon()};
+    assert(buttons < 7 && icon == expected[buttons] && !key);
+    assert(fabsf(y - (buttons < 3 ? hint_y - 22 : hint_y)) < 0.001f);
     assert(x >= 54 && x + 22 <= 586);
-    assert(y == 374 && y + 22 <= 400);
-    if (!in_group) group_x[labels] = x;
-    last_button_right = x + 22; row_y = y;
-    in_group++; buttons++;
+    last_button_right = x + 22; last_button_y = y;
+    buttons++;
     return 22;
 }
-static float dashTextS(float x, float y, const char *text, float scale, DashColor color) {
-    const char *expected[] = {"Up", "Down", "Apply", "Cancel"};
-    assert(labels < 4 && !strcmp(text, expected[labels]) && color == DASH_C_TEXT2);
-    assert(in_group == 1);
+static float dashTextFit(float x, float y, float maxw, const char *text, float scale, DashColor color) {
+    float full = strlen(text) * font_width * scale;
+    assert(labels < 7 && labels == buttons - 1 && color == DASH_C_TEXT2);
     assert(fabsf(x - last_button_right - 4) < 0.001f);
-    assert(fabsf(y + 16 * scale - (row_y + 11)) < 0.001f);
-    float right = x + dashTextWidth(text, scale);
-    assert(x >= 54 && right <= 586.001f);
-    if (labels) assert(group_x[labels] - label_right[labels - 1] >= 12);
-    label_right[labels++] = right; in_group = 0;
-    return right;
+    assert(fabsf(y + 16 * scale - (last_button_y + 11)) < 0.001f);
+    assert(maxw > 1 && x >= 54 && x + maxw <= 586.001f);
+    labels++;
+    return x + (full > maxw ? maxw : full);
 }
 '''
-# Use the actual shared alignment helper and isolate localization only.
+# Use the real font-alignment helper, and isolate only localization.
 ui = (root / "src/dash_ui.c").read_text()
 helper_start = ui.index("float dashButtonTextY(")
-code += "\nstatic const char *localizeDashboardText(const char *s) { return s; }\n"
 code += ui[helper_start:ui.index("\n}\n", helper_start) + 3]
 code += function("static void tsDrawHints(")
 header = (root / "include/dash_internal.h").read_text()
@@ -105,17 +101,13 @@ code += editor[editor.index("\t\tif (in.pressed & DASH_IN_LEFT)"):editor.index("
 code += "}\n"
 code += r'''
 int main(void) {
-    /* Include widths above the bundled fonts to stress popup containment. */
-    for (mapping = 0; mapping < 2; mapping++) for (int percent = 90; percent <= 115; percent += 5) {
-        for (int width = 8; width <= 16; width += 4) {
+    hint_y = 390; /* the production panel (580x372) has origin y=54 */
+    for (mapping=0; mapping<2; mapping++) for (long_cancel=0; long_cancel<2; long_cancel++) {
+        for (int percent=90; percent<=115; percent+=5) for (int width=8; width<=16; width+=4) {
             font_width = width * percent / 100.0f;
-            buttons = labels = in_group = 0;
-            tsDrawHints(54, 374, 532);
-            assert(buttons == 4 && labels == 4 && !in_group);
-            assert(fabsf(group_x[0]-54)<0.001f && fabsf(label_right[3]-586)<0.001f);
-            float gap=group_x[1]-label_right[0];
-            for (int col = 2; col < 4; col++)
-                assert(fabsf(group_x[col]-label_right[col-1]-gap)<0.001f);
+            buttons = labels = 0;
+            tsDrawHints(54, hint_y, 532);
+            assert(buttons==7 && labels==7);
         }
     }
     FilerDateEditor editor={0};
@@ -127,7 +119,7 @@ int main(void) {
     route(&editor,DASH_IN_RIGHT); assert(editor.position==0);
     route(&editor,DASH_IN_UP); assert(adjustments==1);
     route(&editor,DASH_IN_DOWN); assert(adjustments==0);
-    puts("PASS: one aligned popup row with R1 Up, R2 Down, Apply and Cancel at varied font widths/mappings; ordering and folder/date selection match their controls");
+    puts("PASS: two-row hints and localized labels fit popup; folder/date controls match bindings");
 }
 '''
 compiler = shutil.which("gcc") or shutil.which("cc")

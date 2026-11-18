@@ -147,4 +147,45 @@ assert "j->probe_revisions);" in lib
 assert "dashDevicesSnapshotDiskProbes(j->probe_revisions);" in lib
 assert "generation != getIopResetGeneration()" in devices
 
+# Exercise the actual interactive rescan entrypoint, not just its text.
+# One absent ATA0 alias counts as one attempt, ATA1 independently, and
+# cancellation must prevent any worker submission.
+refresh = r'''
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#define EXFAT 1
+#define DASH_TOAST_ERROR 1
+#define DASH_TOAST_INFO 2
+static struct { int nscan; char scan[8][96]; } dashCfg;
+static int scan_count_before, dashAppCount, submissions, attempts[4], cancel;
+static unsigned int generation = 7;
+static int dashLibScanRunning(void) { return 0; }
+static unsigned int getIopResetGeneration(void) { return generation; }
+static int dashDevicesStartForPath(const char *p) {
+    int i = p[0] == 'h' ? (p[3] == '1' ? 3 : 2) : (p[3] == '1' ? 1 : 0);
+    attempts[i]++;
+    return cancel ? -1 : 0;
+}
+static int dashLibScanStart(int interactive) { (void)interactive; submissions++; return 0; }
+static void dashToast(int type, const char *msg) { (void)type; (void)msg; }
+''' + function(main, "void dashRescanLibrary(") + r'''
+int main(void) {
+    const char *paths[] = {"ata:/APPS/", "ata0:/GAMES/", "ata1:/APPS/", "hdd0:/APPS/", "hdd0:/GAMES/"};
+    dashCfg.nscan = 5;
+    for (int i=0; i<5; i++) strcpy(dashCfg.scan[i], paths[i]);
+    dashRescanLibrary(1);
+    assert(submissions==1 && attempts[0]==1 && attempts[1]==1 && attempts[2]==1 && attempts[3]==0);
+    memset(attempts, 0, sizeof(attempts)); submissions=0; cancel=1;
+    dashRescanLibrary(1);
+    assert(submissions==0 && attempts[0]==1);
+    puts("PASS: interactive rescan deduplicates aliases/HDD units and respects cancellation");
+}
+'''
+with tempfile.TemporaryDirectory(prefix="rescan-entrypoint-") as tmp:
+    src, exe = Path(tmp) / "t.c", Path(tmp) / "t"
+    src.write_text(refresh)
+    subprocess.run([cc, "-std=c99", "-Wall", "-Wextra", "-Werror", str(src), "-o", str(exe)], check=True)
+    subprocess.run([str(exe)], check=True)
+
 print("PASS: device rows, resident secondary-unit probing, scan cancellation and read evidence")

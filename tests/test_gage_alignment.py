@@ -27,9 +27,7 @@ assert "dashTextS(x, dashButtonTextY(y, fs), label, fs" in hints
 helper = re.search(r"float dashButtonTextY\(float button_y, float text_scale\)\s*\{([^}]*)\}", ui)
 assert helper, "shared button alignment helper missing"
 assert re.search(r"return\s+button_y\s*\+\s*11\.0f\s*-\s*16\.0f\s*\*\s*text_scale\s*;", helper.group(1))
-for scale in (0.66, 0.5, 0.33):
-    baseline = 11.0 - 16.0 * scale
-    assert abs((baseline + 16.0 * scale) - 11.0) < 1e-6
+assert 'button_y + 10.99f' in (root / 'tests/test_hint_bar_fit.py').read_text(), 'renderer alignment must be exercised in the host harness'
 assert "dashTextFit" not in hints, "hint labels are drawn whole, never ellipsized"
 assert "+ 16.0f;" not in hints
 

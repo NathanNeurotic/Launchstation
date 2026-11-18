@@ -153,6 +153,14 @@ with tempfile.TemporaryDirectory(prefix="folder-date-arithmetic-") as folder:
             for delta in (-1, 1):
                 check(value, field, delta, offset=rng.choice((-720, -420, 0, 330, 540, 765, 900)))
 
+    # At offset zero, the C calendar can traverse local year zero for a
+    # positive step, even though Python datetime cannot represent it.
+    for delta, expected in ((1, datetime(1, 1, 1, 0, 0, 1)),
+                            (-1, datetime(1, 1, 1))):
+        actual = stamp(datetime(1, 1, 1))
+        lib.adjust(ctypes.byref(actual), 2, delta, 0, 0)
+        assert as_date(actual) == expected
+
     # Time-unit steps at the stored endpoints remain valid even when the local
     # date crosses into year zero or 2100, which Python cannot always represent.
     for offset in (-720, 540, 900):

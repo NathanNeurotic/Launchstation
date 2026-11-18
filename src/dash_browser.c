@@ -2465,23 +2465,26 @@ static void tsProgress(int done, int total, const char *folder)
 static void tsDrawHints(float x, float y, float w)
 {
 	const DashHint hints[] = {
-	    {DI_BTN_R1, NULL, "Up"}, {DI_BTN_R2, NULL, "Down"},
+	    {DI_DPAD_UD, NULL, "Date value"},
+	    {DI_BTN_L1, NULL, "Prev folder"}, {DI_BTN_L2, NULL, "Next folder"},
+	    {DI_BTN_R1, NULL, "Move up"}, {DI_BTN_R2, NULL, "Move down"},
 	    {dashOkIcon(), NULL, "Apply"}, {dashBackIcon(), NULL, "Cancel"}
 	};
-	const int count = sizeof(hints) / sizeof(hints[0]);
-	float total = 0.0f, gap;
-	float text_y = dashButtonTextY(y, DASH_FS_SMALL);
 	int i;
 
-	for (i = 0; i < count; i++)
-		total += dashButtonWidth(hints[i].button, NULL) + 4.0f +
-		         dashTextWidth(localizeDashboardText(hints[i].label), DASH_FS_SMALL);
-	gap = (w - total) / (count - 1);
-	if (gap < 0.0f)
-		gap = 0.0f;
-	for (i = 0; i < count; i++) {
-		x += dashDrawButton(x, y, hints[i].button, NULL) + 4.0f;
-		x = dashTextS(x, text_y, localizeDashboardText(hints[i].label), DASH_FS_SMALL, DASH_C_TEXT2) + gap;
+	/* Two compact rows keep controls and long translations inside the panel.
+	 * Upper row sits below the date fields, lower row stays at the old y. */
+	for (i = 0; i < (int)(sizeof(hints) / sizeof(hints[0])); i++) {
+		int upper = i < 3;
+		int col = upper ? i : i - 3;
+		float slot = w / (upper ? 3.0f : 4.0f);
+		float bx = x + slot * col;
+		float by = upper ? y - 22.0f : y;
+		float button = dashDrawButton(bx, by, hints[i].button, NULL);
+
+		dashTextFit(bx + button + 4.0f, dashButtonTextY(by, DASH_FS_SMALL),
+		            slot - button - 8.0f, localizeDashboardText(hints[i].label),
+		            DASH_FS_SMALL, DASH_C_TEXT2);
 	}
 }
 
