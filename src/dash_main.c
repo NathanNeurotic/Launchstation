@@ -703,7 +703,9 @@ void dashRescanLibrary(int interactive)
 		/* a full refresh looks everywhere: start the drivers it needs here,
 		 * the background scan only reads devices that are running */
 		int i;
+#ifdef EXFAT
 		unsigned int tried_ata_units = 0;
+#endif
 		for (i = 0; i < dashCfg.nscan; i++) {
 			const char *path = dashCfg.scan[i];
 #ifdef EXFAT
