@@ -211,6 +211,9 @@ device_types = header[header.index("enum DashDevState"):
                       header.index("void dashDevicesInit(void)")]
 symbols = sorted(set(re.findall(r"\b(?:DI_|DASH_SND_|SCECd)\w+", devices)))
 devcode = common + device_types + "enum { " + ",".join(symbols) + " };\n"
+# Include successful-scan flags used by the extracted device functions.
+scanned_enum = header.index("enum { DASH_SCANNED_HDD0")
+devcode += header[scanned_enum:header.index("void dashDevicesConfirmScannedDisks(", scanned_enum)]
 devcode += "\n".join(re.findall(r"^#define DASH_DEVA_.*", header, re.M)) + "\n"
 devcode += r"""
 #define MMCE 1
