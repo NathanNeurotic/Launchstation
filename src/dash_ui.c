@@ -252,6 +252,11 @@ float dashButtonWidth(int icon, const char *key)
 	return buttonWidth(icon, key);
 }
 
+float dashButtonTextY(float button_y, float text_scale)
+{
+	return button_y + 11.0f - 16.0f * text_scale;
+}
+
 static float drawButton(float x, float y, int icon, const char *key)
 {
 	const float d = 22.0f;
@@ -282,7 +287,7 @@ static float drawButton(float x, float y, int icon, const char *key)
 			dashPanelBorder(x, y, w, d, 6.0f, DC(210, 220, 240, 120));
 		}
 		dashTheme.corner = keep;
-		dashTextS(x + (w - tw) * 0.5f, y + 2.5f, key, DASH_FS_CAPTION, DASH_C_TEXT); /* caps centred in the badge */
+		dashTextS(x + (w - tw) * 0.5f, dashButtonTextY(y, DASH_FS_CAPTION), key, DASH_FS_CAPTION, DASH_C_TEXT); /* caps centred in the badge */
 		return w;
 	}
 }
@@ -399,7 +404,7 @@ void dashDrawHints(const DashHint *in_hints, int n)
 		 * centre, so mixed-case labels read as centred on the button; shrunk
 		 * type keeps the same centre */
 		if (label[0])
-			x = dashTextS(x, y + 1.5f + (DASH_FS_SMALL - fs) * 16.0f, label, fs, DASH_C_TEXT);
+			x = dashTextS(x, dashButtonTextY(y, fs), label, fs, DASH_C_TEXT);
 		x += gap;
 	}
 }
@@ -858,11 +863,11 @@ static float modalHintRow(float x, float y, int ok_icon, const char *ok, int bac
 {
 	if (ok != NULL) {
 		x += drawButton(x, y, ok_icon, NULL) + 8.0f;
-		x = dashTextS(x, y + 4.5f, ok, DASH_FS_SMALL, DASH_C_TEXT2) + 24.0f;
+		x = dashTextS(x, dashButtonTextY(y, DASH_FS_SMALL), ok, DASH_FS_SMALL, DASH_C_TEXT2) + 24.0f;
 	}
 	if (back != NULL) {
 		x += drawButton(x, y, back_icon, NULL) + 8.0f;
-		x = dashTextS(x, y + 4.5f, back, DASH_FS_SMALL, DASH_C_TEXT2) + 24.0f;
+		x = dashTextS(x, dashButtonTextY(y, DASH_FS_SMALL), back, DASH_FS_SMALL, DASH_C_TEXT2) + 24.0f;
 	}
 	return x;
 }
@@ -1118,11 +1123,11 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 
 				if (marks != NULL) {
 					hx += drawButton(hx, y + h - 36, DI_BTN_SQUARE, NULL) + 8.0f;
-					dashTextS(hx, y + h - 36 + 4.5f, "Mark", DASH_FS_SMALL, DASH_C_TEXT2);
+					dashTextS(hx, dashButtonTextY(y + h - 36, DASH_FS_SMALL), "Mark", DASH_FS_SMALL, DASH_C_TEXT2);
 				} else if (edit != NULL) {
 					hx += drawButton(hx, y + h - 36, DI_BTN_LEFT, NULL) + 2.0f;
 					hx += drawButton(hx, y + h - 36, DI_BTN_RIGHT, NULL) + 8.0f;
-					dashTextS(hx, y + h - 36 + 4.5f, "Change", DASH_FS_SMALL, DASH_C_TEXT2);
+					dashTextS(hx, dashButtonTextY(y + h - 36, DASH_FS_SMALL), "Change", DASH_FS_SMALL, DASH_C_TEXT2);
 				}
 			}
 		}
@@ -1254,12 +1259,12 @@ static int modalButtons(const char *title, const char *body, const char *detail,
 			dashGfxPushAlpha(sel == 0 ? 1.0f : 0.55f);
 			drawButton(bx0 + 12, by + 6, dashOkIcon(), NULL);
 			dashGfxPopAlpha();
-			dashTextCenter(bx0 + bw * 0.5f + 10, by + 10.0f, ok_label, DASH_FS_BODY * 0.9f, dashItemColor(sel == 0));
+			dashTextCenter(bx0 + bw * 0.5f + 10, dashButtonTextY(by + 6, DASH_FS_BODY * 0.9f), ok_label, DASH_FS_BODY * 0.9f, dashItemColor(sel == 0));
 			if (cancel_label != NULL) {
 				dashGfxPushAlpha(sel == 1 ? 1.0f : 0.55f);
 				drawButton(bx1 + 12, by + 6, dashBackIcon(), NULL);
 				dashGfxPopAlpha();
-				dashTextCenter(bx1 + bw * 0.5f + 10, by + 10.0f, cancel_label, DASH_FS_BODY * 0.9f, dashItemColor(sel == 1));
+				dashTextCenter(bx1 + bw * 0.5f + 10, dashButtonTextY(by + 6, DASH_FS_BODY * 0.9f), cancel_label, DASH_FS_BODY * 0.9f, dashItemColor(sel == 1));
 			}
 		}
 		dashGfxPopOffset();

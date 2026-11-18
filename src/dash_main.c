@@ -1085,7 +1085,7 @@ static void quickLaunchDraw(void)
 		by = y + 70 + (col / 2) * row_h;
 		bx += dashDrawButton(bx, by, lk_map[i].icon, NULL) + 8;
 		lkLabel(lk_map[i].lk, label, sizeof(label));
-		dashTextFit(bx, by + 4, (w - 48) * 0.5f - 30, label, DASH_FS_SMALL, DASH_C_TEXT);
+		dashTextFit(bx, dashButtonTextY(by, DASH_FS_SMALL), (w - 48) * 0.5f - 30, label, DASH_FS_SMALL, DASH_C_TEXT);
 		col++;
 	}
 	dashGfxPopAlpha();

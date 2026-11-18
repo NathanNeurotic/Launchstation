@@ -109,3 +109,17 @@ assert "//Font position 0x126 == Partition icon marked" in ule_font
 assert "isHddRootPath(path) || !strcmp(path, \"dvr_hdd0:/\")" in classic
 assert "strcmp(files[top + i].name, \"..\")" in classic
 assert "iconbase += 2;" in classic  # selected partition glyph
+
+# Popup alignment reuses the existing localized, responsive hint layout.
+ui = (root / "src/dash_ui.c").read_text()
+widgets = (root / "src/dash_widgets.c").read_text()
+hdd = (root / "src/dash_hdd.c").read_text()
+main = (root / "src/dash_main.c").read_text()
+assert "float dashButtonTextY(float button_y, float text_scale)" in ui
+assert "button_y + 11.0f - 16.0f * text_scale" in ui
+assert "dashButtonTextY(y, fs), label, fs" in ui
+assert "hintOrder(in_hints, n, order)" in ui
+assert "dashButtonTextY(y, DASH_FS_SMALL)" in widgets
+for label in ('128 MB', '1 GB', '10 GB'):
+    assert f'dashButtonTextY(hy, DASH_FS_SMALL), "{label}"' in hdd
+assert "dashTextFit(bx, dashButtonTextY(by, DASH_FS_SMALL)" in main
