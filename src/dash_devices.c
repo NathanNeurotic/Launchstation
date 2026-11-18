@@ -25,6 +25,8 @@ extern int vmcMounted[2];
 enum { PROBE_HDD, PROBE_HDD1, PROBE_ATA, PROBE_ATA1, PROBE_PCCF, PROBE_MX4SIO, PROBE_ILINK, PROBE_MMCE0, PROBE_MMCE1, PROBE_UDPFS, PROBE_SMB, PROBE_SMB1, PROBE_NFS };
 static u32 probe_checked, probe_present;
 static unsigned int probe_reset_generation = (unsigned int)-1;
+/* First four probe indices are HDD0, HDD1, ATA0, ATA1. */
+static unsigned int disk_probe_revisions[4];
 
 /* Each probe is a synchronous IOP RPC that may never return for a
  * wedged/missing USB slot. Bounded retries limit repeated exposure; the
@@ -55,6 +57,7 @@ static void syncProbeSession(void)
 {
 	if (probe_reset_generation != getIopResetGeneration()) {
 		probe_checked = probe_present = 0;
+		memset(disk_probe_revisions, 0, sizeof(disk_probe_revisions));
 		probe_reset_generation = getIopResetGeneration();
 	}
 }
@@ -65,21 +68,37 @@ static void recordProbe(const char *mount, int ok)
 	syncProbeSession();
 	if (i < 0) return;
 	probe_checked |= 1u << i;
+	if (i <= PROBE_ATA1)
+		disk_probe_revisions[i]++;
 	if (ok) probe_present |= 1u << i;
 	else probe_present &= ~(1u << i);
 }
 
-/* The scan worker reports successful reads, but never changes probe state.
- * Reconcile its per-unit evidence on the UI thread before rebuilding views. */
-void dashDevicesConfirmScannedDisks(unsigned int units, unsigned int generation)
+/* Snapshot on the UI thread before the worker begins; successful reads cannot
+ * supersede a newer probe of the same unit, even in the same IOP session. */
+void dashDevicesSnapshotDiskProbes(unsigned int revisions[4])
+{
+	syncProbeSession();
+	memcpy(revisions, disk_probe_revisions, sizeof(disk_probe_revisions));
+}
+
+/* Reconcile worker read evidence on the UI thread, never from the worker.
+ * An IOP reset or subsequent per-unit probe invalidates older evidence. */
+void dashDevicesConfirmScannedDisks(unsigned int units, unsigned int generation,
+                                    const unsigned int revisions[4])
 {
 	if (generation != getIopResetGeneration())
 		return;
-	if (units & DASH_SCANNED_HDD0) recordProbe("hdd0:", 1);
-	if (units & DASH_SCANNED_HDD1) recordProbe("hdd1:", 1);
+	syncProbeSession();
+	if ((units & DASH_SCANNED_HDD0) && disk_probe_revisions[PROBE_HDD] == revisions[PROBE_HDD])
+		recordProbe("hdd0:", 1);
+	if ((units & DASH_SCANNED_HDD1) && disk_probe_revisions[PROBE_HDD1] == revisions[PROBE_HDD1])
+		recordProbe("hdd1:", 1);
 #ifdef EXFAT
-	if (units & DASH_SCANNED_ATA0) recordProbe("ata0:", 1);
-	if (units & DASH_SCANNED_ATA1) recordProbe("ata1:", 1);
+	if ((units & DASH_SCANNED_ATA0) && disk_probe_revisions[PROBE_ATA] == revisions[PROBE_ATA])
+		recordProbe("ata0:", 1);
+	if ((units & DASH_SCANNED_ATA1) && disk_probe_revisions[PROBE_ATA1] == revisions[PROBE_ATA1])
+		recordProbe("ata1:", 1);
 #endif
 }
 

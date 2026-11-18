@@ -771,6 +771,7 @@ typedef struct
 	ScanCtx sc;
 	unsigned int successful_disk_units;
 	unsigned int iop_generation;
+	unsigned int probe_revisions[4];
 	int ok;
 } ScanJob;
 
@@ -802,10 +803,15 @@ static void scanRun(void *arg)
 			const char *dir = j->dirs[i];
 			dashStrCopy(scanned[nscanned++], dir, DASH_PATH_MAX);
 			/* Record unit evidence locally; the worker must not mutate UI state. */
-			if (!strncmp(dir, "hdd", 3) && (dir[3] == '0' || dir[3] == '1') && dir[4] == ':')
+			/* A bare hddN:/ partition listing may come from a stale APA
+			 * cache. Only actual partition-directory reads prove the unit. */
+			if (!strncmp(dir, "hdd", 3) && (dir[3] == '0' || dir[3] == '1') &&
+			    dir[4] == ':' && dir[5] == '/' && dir[6] != '\0')
 				j->successful_disk_units |= dir[3] == '1' ? DASH_SCANNED_HDD1 : DASH_SCANNED_HDD0;
 #ifdef EXFAT
-			if (!strncmp(dir, "ata", 3) && (dir[3] == '0' || dir[3] == '1') && dir[4] == ':')
+			/* ata:/ and ata0:/ name the same unit. */
+			if (!strncmp(dir, "ata", 3) &&
+			    (dir[3] == ':' || ((dir[3] == '0' || dir[3] == '1') && dir[4] == ':')))
 				j->successful_disk_units |= dir[3] == '1' ? DASH_SCANNED_ATA1 : DASH_SCANNED_ATA0;
 #endif
 		}
@@ -881,6 +887,7 @@ int dashLibScanStart(int interactive)
 	memset(j, 0, sizeof(*j));
 	j->interactive = interactive;
 	j->iop_generation = getIopResetGeneration();
+	dashDevicesSnapshotDiskProbes(j->probe_revisions);
 	for (i = 0; i < dashCfg.nscan; i++) {
 		char d[DASH_PATH_MAX];
 		int len;
@@ -938,7 +945,8 @@ int dashLibApplyScan(int *interactive)
 	}
 	/* A successful directory read supersedes an earlier failed quick probe,
 	 * but never across an IOP reset or for an unscanned cached folder. */
-	dashDevicesConfirmScannedDisks(j->successful_disk_units, j->iop_generation);
+	dashDevicesConfirmScannedDisks(j->successful_disk_units, j->iop_generation,
+	                               j->probe_revisions);
 	dashArtFlushAll();
 	memcpy(dashApps, j->sc.fresh, sizeof(DashApp) * j->sc.nfresh);
 	dashAppCount = j->sc.nfresh;

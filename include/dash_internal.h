@@ -819,7 +819,9 @@ int dashDevicesStartForPath(const char *path);   /* -1 Back cancelled; 0 otherwi
  * failed root probe. Apply only on the UI thread in the same IOP generation. */
 enum { DASH_SCANNED_HDD0 = 1u, DASH_SCANNED_HDD1 = 2u,
        DASH_SCANNED_ATA0 = 4u, DASH_SCANNED_ATA1 = 8u };
-void dashDevicesConfirmScannedDisks(unsigned int units, unsigned int generation);
+void dashDevicesSnapshotDiskProbes(unsigned int revisions[4]);
+void dashDevicesConfirmScannedDisks(unsigned int units, unsigned int generation,
+                                    const unsigned int revisions[4]);
 const char *dashDiscStatus(void);
 int dashMcPresent(int port);
 int dashDevicePathReady(const char *path);

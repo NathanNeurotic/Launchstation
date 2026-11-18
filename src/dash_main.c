@@ -705,13 +705,20 @@ void dashRescanLibrary(int interactive)
 		int i;
 #ifdef EXFAT
 		unsigned int tried_ata_units = 0;
+		unsigned int tried_ata_generation = getIopResetGeneration();
 #endif
 		for (i = 0; i < dashCfg.nscan; i++) {
 			const char *path = dashCfg.scan[i];
 #ifdef EXFAT
-			/* One two-second check per ATA unit per refresh, not per folder. */
-			if (!strncmp(path, "ata", 3) && (path[3] == '0' || path[3] == '1') && path[4] == ':') {
-				unsigned int bit = 1u << (path[3] - '0');
+			/* A driver reset invalidates earlier startup attempts. */
+			if (tried_ata_generation != getIopResetGeneration()) {
+				tried_ata_units = 0;
+				tried_ata_generation = getIopResetGeneration();
+			}
+			/* ata:/ aliases ata0:/; both share a retry bit. */
+			if (!strncmp(path, "ata", 3) &&
+			    (path[3] == ':' || ((path[3] == '0' || path[3] == '1') && path[4] == ':'))) {
+				unsigned int bit = 1u << (path[3] == '1');
 				if (tried_ata_units & bit)
 					continue;
 				tried_ata_units |= bit;

@@ -9,7 +9,9 @@ root = Path(__file__).resolve().parents[1]
 ui = (root / "src/dash_ui.c").read_text(encoding="utf-8")
 a = ui.index("static int hintRank(")                       # the fixed-order helpers and the renderer
 b = ui.index("void dashDrawHints(")
-func = ui[a:ui.index("\n}\n", b) + 3]
+helper_start = ui.index("float dashButtonTextY(")
+helper = ui[helper_start:ui.index("\n}\n", helper_start) + 3]
+func = helper + "\n" + ui[a:ui.index("\n}\n", b) + 3]
 
 code = r'''
 #include <assert.h>
