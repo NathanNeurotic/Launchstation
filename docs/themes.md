@@ -55,7 +55,7 @@ sphere appears. They follow the console clock: all seven meet in one bright
 orb at :00, split into two groups at :30, three at :20 and :40, four at :15
 and :45, five at :12, :24, :36 and :48, and six at :10 and :50. The sphere is
 small at the top of the hour and grows as the hour goes by. At 0% background
-motion the orbs hold still; below 50% the trails are shorter.
+motion the orbs hold still. Low background detail shortens the trails; motion speed does not change their length.
 
 Every background is drawn procedurally from a few GS primitives. None of
 them uses or needs Sony BIOS data. The PS2-inspired scenes were designed
