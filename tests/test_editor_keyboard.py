@@ -239,7 +239,7 @@ static void dashGfxPresent(void) {}
 static const char *localizeDashboardText(const char *text) { return text; }
 '''
 ui = (root / 'src/dash_ui.c').read_text()
-code += function('static float buttonWidth(', ui) + function('float dashButtonWidth(', ui)
+code += function('static float buttonWidth(', ui) + function('float dashButtonWidth(', ui) + function('float dashButtonTextY(', ui)
 code += '\nstatic int dashDashboardPending(void) { return 0; }\n'
 code += function('static int kbFilenameValid(', widgets)
 for signature in ('static void kbInsert(', 'static void kbDelete(', 'static int kbUsb(',
