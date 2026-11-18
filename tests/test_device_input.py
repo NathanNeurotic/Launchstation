@@ -514,6 +514,14 @@ int main(void) {
     dashDevicesSnapshotDiskProbes(rev);
     dashDevicesConfirmScannedDisks(DASH_SCANNED_HDD1, generation, rev);
     assert(state("hdd1:")==DASH_DEV_READY);
+    /* Zero-revision snapshots must not cross an IOP reset either. */
+    dashDevicesInit();
+    dashDevicesSnapshotDiskProbes(rev);
+    assert(rev[1] == 0);
+    generation = reset_generation;
+    reset_generation++;
+    dashDevicesConfirmScannedDisks(DASH_SCANNED_HDD1, generation, rev);
+    assert(state("hdd1:") == DASH_DEV_PROBE);
     /* Evidence from a previous IOP session must not revive the device. */
     reset_generation++;
     dashDevicesConfirmScannedDisks(DASH_SCANNED_HDD1, generation, rev);

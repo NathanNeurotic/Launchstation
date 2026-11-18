@@ -69,8 +69,9 @@ assert "isPartitionList(fb.dir) ? DI_PARTITION : DI_FOLDER" in browser
 assert "case DI_PARTITION:" in icons and "case DI_HDD_MANAGER:" in icons
 assert "#define ICON_TEX_H 580" in icons  # no added full-size atlas row
 assert "DI_PARTITION" in header and "DI_HDD_MANAGER" in header
-assert "pfsMakeRoom(MOUNT_LIMIT - 1)" in hdd  # retain four mounts; scan frees headroom separately
-assert "j->ret = pfsMakeRoom(MOUNT_LIMIT - 1);" in hdd  # scan reserves one handle before enumeration
+assert "#define MOUNT_LIMIT 4" in header  # four slots when FTP is off
+assert "pfsRetainedLimit() - 1" in hdd  # adjust to FTP handle usage
+assert "j->ret = pfsMakeRoom(pfsRetainedLimit() - 1);" in hdd  # scan reserves one handle before enumeration
 assert "DASH_IN_R1" in hdd and "DASH_IN_L2" in hdd  # preserve controller routes
 
 mc = function(filer, "int readMC(")

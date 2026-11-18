@@ -21,6 +21,7 @@ def function(signature):
 
 
 code = r'''
+#define ETH 1
 #include <assert.h>
 #include <errno.h>
 #include <stdint.h>
@@ -60,7 +61,7 @@ static int Party_vmcIndex[MOUNT_LIMIT];
 static u32 pfs_mount_used[MOUNT_LIMIT], pfs_mount_clock;
 static int mounts, unmounts, attempts[MOUNT_LIMIT], mount_error, zone_error, zone_size;
 static unsigned fail_unmount;
-static int live_scans, scan_position, busy, submissions;
+static int live_scans, scan_position, busy, submissions, ftp_running;
 static u64 now;
 static int driver_status, read_error, format_reads;
 static u32 driver_sectors;
@@ -78,6 +79,7 @@ static int slotFor(const char *dev) {
     for (int i = 0; i < MOUNT_LIMIT; i++) if (!strcmp(mountedParty[i], dev)) return i;
     return -1;
 }
+static int isFtpServerRunning(void) { return ftp_running; }
 static int fileXioMount(const char *pfs, const char *dev, int mode) {
     int i = pfs[3] - '0';
     assert(mode == FIO_MT_RDWR && i >= 0 && i < MOUNT_LIMIT);
@@ -85,7 +87,7 @@ static int fileXioMount(const char *pfs, const char *dev, int mode) {
     if (mount_error) return mount_error;
     if (driver_mounts[i][0]) return -EBUSY;
     for (int k = 0; k < MOUNT_LIMIT; k++) if (!strcmp(driver_mounts[k], dev)) return -EBUSY;
-    if (mountedCount() + live_scans >= 4) return -EMFILE;
+    if (mountedCount() + live_scans + ftp_running >= 4) return -EMFILE;
     dashStrCopy(driver_mounts[i], dev, sizeof(driver_mounts[i]));
     return 0;
 }
@@ -104,7 +106,7 @@ static int hddCheckPresent(void) { return driver_status < 3 ? 0 : -1; }
 static int hddCheckFormatted(void) { return driver_status == 0 ? 0 : -1; }
 static int fileXioDopen(const char *dev) {
     assert(!strcmp(dev, "hdd0:"));
-    if (mountedCount() + live_scans >= 4) return -EMFILE;
+    if (mountedCount() + live_scans + ftp_running >= 4) return -EMFILE;
     live_scans++; scan_position = 0; return 100;
 }
 static int fileXioDread(int fd, iox_dirent_t *de) {
@@ -153,7 +155,7 @@ static int dashWorkerSubmit(const char *label, int flags, void (*run)(void *), v
     submissions++; busy = 1; return submissions;
 }
 '''
-for signature in ("static int pfsMakeRoom(", "static int pfsMountForInfo(",
+for signature in ("static int pfsRetainedLimit(", "static int pfsMakeRoom(", "static int pfsMountForInfo(",
                   "static int hddReadFormatSector(", "static void scanRun(", "static void pfsRun(",
                   "static HddJob *jobNew(", "static void hddJobFree(",
                   "static int findPart("):
@@ -222,7 +224,7 @@ static void reset(void) {
     for (int i = 0; i < MOUNT_LIMIT; i++) Party_vmcIndex[i] = -1;
     latestMount = -1; pfs_mount_clock = 0;
     mounts = unmounts = busy = submissions = mount_error = zone_error = 0;
-    fail_unmount = 0; zone_size = 8192; now = 100;
+    fail_unmount = 0; ftp_running = 0; zone_size = 8192; now = 100;
     driver_status = read_error = format_reads = 0; driver_sectors = 4096 * SECTORS_PER_MB;
     memset(format_boot, 0, sizeof(format_boot));
     memset(format_mbr, 0, sizeof(format_mbr)); format_volume_lba = 0;
@@ -286,6 +288,13 @@ int main(void) {
     assert(scan.parts[0].raw_mb == 384 && scan.parts[1].raw_mb == 256 && scan.parts[2].raw_mb == 512);
     assert(mountedCount() == 3 && unmounts == 1 && !live_scans); free(scan.parts);
     probe(4); assert(mountedCount() == 4 && unmounts == 1);
+    /* FTP shares APA handle capacity but is not one of our PFS mount slots. */
+    reset(); probe(0); probe(1); probe(2); probe(3);
+    ftp_running = 1; probe(4);
+    assert(mountedCount() == 3 && unmounts == 2);
+    HddJob ftpScan = {0}; scanRun(&ftpScan);
+    assert(ftpScan.ret == 0 && mountedCount() == 2 && !live_scans);
+    free(ftpScan.parts);
     /* Never evict a VMC's mount or the most recently used mount. */
     reset(); probe(0); probe(1); probe(2); probe(3);
     int pinned = slotFor("hdd0:+TEST0"); Party_vmcIndex[pinned] = 0;
@@ -306,7 +315,7 @@ int main(void) {
     reset(); probe(0); probe(1); probe(2); probe(3);
     for (int i = 0; i < MOUNT_LIMIT; i++) if (mountedParty[i][0]) Party_vmcIndex[i] = 0;
     loadPfsInfo(4); complete();
-    assert(hm.parts[4].pfs_state == 0 && !unmounts && mountedCount() == 4);
+    assert(hm.parts[4].pfs_state == 0 && hm.parts[4].pfs_error == -EBUSY && !unmounts && mountedCount() == 4);
     /* Invalid targets do not trigger blanket mount retries/unmounts. */
     reset(); probe(0); probe(1); mount_error = -EINVAL;
     loadPfsInfo(2); complete();

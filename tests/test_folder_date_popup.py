@@ -32,7 +32,8 @@ assert "filerDateEditorMoveNextTo(e, 1);" in editor and "filerDateEditorMoveNext
 # The date-field selection must finish before the hint row begins.
 rows = int(re.search(r"#define TS_ROWS (\d+)", source).group(1))
 row_h = float(re.search(r"#define TS_ROW_H ([\d.]+)f", source).group(1))
-assert 70 + rows * row_h + 12 - 3 + 28 + 6 <= 372 - 36
+height = float(re.search(r'const float w = 580\.0f, h = ([\d.]+)f;', editor).group(1))
+assert 70 + rows * row_h + 12 - 3 + 28 + 6 <= height - 36
 
 code = r'''
 #include <assert.h>

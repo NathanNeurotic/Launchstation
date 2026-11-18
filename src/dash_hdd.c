@@ -155,6 +155,17 @@ typedef struct
  * eligible slot, protect active/VMC mounts and reserve scan headroom as needed.
  * Cached usage survives eviction, so revisiting needs no remount. */
 
+/* A resident FTP service consumes APA handle capacity. Keep four mounts
+ * without FTP, and reserve a handle while the service is running. */
+static int pfsRetainedLimit(void)
+{
+#ifdef ETH
+	return isFtpServerRunning() ? MOUNT_LIMIT - 1 : MOUNT_LIMIT;
+#else
+	return MOUNT_LIMIT;
+#endif
+}
+
 static int pfsMakeRoom(int limit)
 {
 	unsigned tried = 0;
@@ -193,7 +204,7 @@ static int pfsMountForInfo(const char *dev)
 			return i;
 		}
 	}
-	ret = pfsMakeRoom(MOUNT_LIMIT - 1);
+	ret = pfsMakeRoom(pfsRetainedLimit() - 1);
 	if (ret < 0)
 		return ret;
 	for (i = 0; i < MOUNT_LIMIT; i++) {
@@ -259,7 +270,7 @@ static void scanRun(HddJob *j)
 		j->ret = -ENOMEM;
 		return;
 	}
-	j->ret = pfsMakeRoom(MOUNT_LIMIT - 1);
+	j->ret = pfsMakeRoom(pfsRetainedLimit() - 1);
 	if (j->ret < 0)
 		return;
 	fd = fileXioDopen("hdd0:");

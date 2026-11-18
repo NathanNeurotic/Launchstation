@@ -703,12 +703,26 @@ void dashRescanLibrary(int interactive)
 		/* a full refresh looks everywhere: start the drivers it needs here,
 		 * the background scan only reads devices that are running */
 		int i;
+		unsigned int tried_hdd_units = 0;
+		unsigned int tried_hdd_generation = getIopResetGeneration();
 #ifdef EXFAT
 		unsigned int tried_ata_units = 0;
 		unsigned int tried_ata_generation = getIopResetGeneration();
 #endif
 		for (i = 0; i < dashCfg.nscan; i++) {
 			const char *path = dashCfg.scan[i];
+			/* Only probe each HDD unit once per refresh/IOP generation. */
+			if (tried_hdd_generation != getIopResetGeneration()) {
+				tried_hdd_units = 0;
+				tried_hdd_generation = getIopResetGeneration();
+			}
+			if (!strncmp(path, "hdd", 3) &&
+			    (path[3] == '0' || path[3] == '1') && path[4] == ':') {
+				unsigned int bit = 1u << (path[3] == '1');
+				if (tried_hdd_units & bit)
+					continue;
+				tried_hdd_units |= bit;
+			}
 #ifdef EXFAT
 			/* A driver reset invalidates earlier startup attempts. */
 			if (tried_ata_generation != getIopResetGeneration()) {

@@ -80,7 +80,7 @@ the colour-swap selection.
   scene, 100% is the normal speed, and 200% doubles it. Old files that stored
   0/1/2 load as 0/50/100%.
 * **Background detail**: Low reduces geometry where supported; High (default)
-  retains the full scene even with motion frozen at 0%. The settings are independent.
+  requests the full scene even with motion frozen at 0%. After six slow frames a temporary performance fallback reduces scene elements (fewer Crystal stars and no full-detail towers) until performance recovers. The motion speed setting remains independent.
 * **Menu animation**: 0-200% in 10% steps (default 100%). 0% makes
   transitions instant; larger values keep transitions moving for longer.
 * **Panel transparency**: 0-100% transparency of the Panels colour: 0% is

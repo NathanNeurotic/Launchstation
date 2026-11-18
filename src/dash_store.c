@@ -270,6 +270,24 @@ void dashStoreDefaults(void)
 		dashStrCopy(dashCfg.scan[dashCfg.nscan++], default_scan[i], DASH_PATH_MAX);
 }
 
+/* Reject malformed values for the newly changed view/detail settings,
+ * while preserving legacy parsing for established configuration keys. */
+static int strictClampInt(const char *v, int lo, int hi, int def)
+{
+	char *end;
+	long x;
+
+	if (v == NULL || *v == '\0')
+		return def;
+	errno = 0;
+	x = strtol(v, &end, 10);
+	while (*end == ' ' || *end == '\t')
+		end++;
+	if (end == v || *end != '\0' || errno == ERANGE || x < lo || x > hi)
+		return def;
+	return (int)x;
+}
+
 static int clampInt(const char *v, int lo, int hi, int def)
 {
 	int x;
@@ -311,11 +329,11 @@ static int settingsKv(const char *key, char *value, void *user)
 	else if (!stricmp(key, "Dash_StartSection"))
 		dashCfg.start_section = clampInt(value, 0, DASH_SEC_COUNT - 1, DASH_SEC_HOME);
 	else if (!stricmp(key, "Dash_View"))
-		dashCfg.view = clampInt(value, 0, DASH_VIEW_COUNT - 1, DASH_VIEW_LIST);
+		dashCfg.view = strictClampInt(value, 0, DASH_VIEW_COUNT - 1, DASH_VIEW_LIST);
 	else if (!stricmp(key, "Dash_Effects"))
 		dashCfg.effects = percentSetting(value, 100);
 	else if (!stricmp(key, "Dash_BackgroundDetail"))
-		dashCfg.bg_detail = clampInt(value, 0, 1, 1);
+		dashCfg.bg_detail = strictClampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_Animations"))
 		dashCfg.anim = percentSetting(value, 100);
 	else if (!stricmp(key, "Dash_AutoScan"))

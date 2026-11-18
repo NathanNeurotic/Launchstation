@@ -693,7 +693,7 @@ static void scanAddElf(ScanCtx *sc, const char *dir, const char *name)
 	sc->nfresh++;
 }
 
-static int scanDir(ScanCtx *sc, const char *dir, int depth)
+static int scanDir(ScanCtx *sc, const char *dir, int depth, unsigned int *successful_disk_units)
 {
 	char subdirs[SCAN_MAX_SUBDIRS][MAX_NAME];
 	int nsub = 0, n, i, more = 0;
@@ -702,6 +702,12 @@ static int scanDir(ScanCtx *sc, const char *dir, int depth)
 	snprintf(status, sizeof(status), "%s", dir);
 	dashWorkerStatus(status, sc->dirs_done, sc->dirs_total);
 	n = getDirComplete(dir, sc->files, &more);
+	/* A real partition-directory read proves the HDD unit, even at depth 1;
+	 * the bare hddN:/ partition index may be cached and proves nothing. */
+	if (n >= 0 && !strncmp(dir, "hdd", 3) &&
+	    (dir[3] == '0' || dir[3] == '1') && dir[4] == ':' &&
+	    dir[5] == '/' && dir[6] != '\0')
+		*successful_disk_units |= dir[3] == '1' ? DASH_SCANNED_HDD1 : DASH_SCANNED_HDD0;
 	if (depth == 0 && n < 0)
 		return 0;
 	for (i = 0; i < n && i < MAX_ENTRY - 2; i++) {
@@ -718,7 +724,7 @@ static int scanDir(ScanCtx *sc, const char *dir, int depth)
 	for (i = 0; i < nsub; i++) {
 		char sub[MAX_PATH];
 		if (snprintf(sub, sizeof(sub), "%s%s/", dir, subdirs[i]) < DASH_PATH_MAX - 16)
-			scanDir(sc, sub, depth + 1);
+			scanDir(sc, sub, depth + 1, successful_disk_units);
 	}
 	return 1;
 }
@@ -799,7 +805,7 @@ static void scanRun(void *arg)
 		if (!strncmp(j->dirs[i], "mc", 2) &&
 		    filerPrepareMemoryCardRead(j->dirs[i][2] - '0') != 0)
 			continue;
-		if (scanDir(sc, j->dirs[i], 0)) {
+		if (scanDir(sc, j->dirs[i], 0, &j->successful_disk_units)) {
 			const char *dir = j->dirs[i];
 			dashStrCopy(scanned[nscanned++], dir, DASH_PATH_MAX);
 			/* Record unit evidence locally; the worker must not mutate UI state. */
