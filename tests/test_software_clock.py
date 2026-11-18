@@ -20,6 +20,7 @@ c = r"""
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 typedef uint64_t u64;
 typedef uint8_t u8;
 #define MENU_TITLE_CLOCK_POLL_MS 1000
@@ -93,7 +94,7 @@ static int dashThemeStoreWrite(char *out,int cap) { (void)out; (void)cap; return
 static int dashThemeStoreKey(const char *key,char *value) { (void)key; (void)value; return 0; }
 '''
 for sig in ("void dashStrCopy(", "char *dashTrim(", "int dashKvParse(",
-            "static int clampInt(", "static int percentSetting(", "static int settingsKv(",
+            "static int clampInt(", "static int strictClampInt(", "static int percentSetting(", "static int settingsKv(",
             "char *dashStoreSettingsText("):
     a = store.index(sig)
     pos = store.index("{", a) + 1
