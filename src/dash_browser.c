@@ -3378,7 +3378,7 @@ static void browserDrawBody(void)
 			sz[0] = '\0';
 			if (details) {
 				fmtSize(sz, sizeof(sz), f);
-				if (time_valid && f->stats._Modify.Year)
+				if (!isPartitionList(fb.dir) && time_valid && f->stats._Modify.Year)
 					filerDateEditorFormat(&f->stats._Modify, date, sizeof(date));
 				if (date[0])
 					meta_left -= dashTextWidth(date, DASH_FS_CAPTION);

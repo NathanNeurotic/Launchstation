@@ -85,3 +85,15 @@ for needle in ("theme_preset = P_DEFAULT;", "store_preset = P_DEFAULT;", "(p >= 
 settings_src = (root / "src/dash_settings.c").read_text()
 assert "dashThemeSetPreset(0)" not in settings_src
 print("PASS: the dashboard starts on the Crystal preset")
+
+# The new default applies only to absent/invalid keys. Saved on/off settings persist.
+store = (root / "src/dash_store.c").read_text(encoding="utf-8")
+assert "dashCfg.icon_backing = 0;" in store
+assert "dashCfg.icon_backing = clampInt(value, 0, 1, 0);" in store
+assert '"Dash_IconBacking = %d' in store
+assert settings_src.count("dashCfg.icon_backing = 0;") == 2
+
+# Partition lists cannot display stale or meaningless timestamps.
+browser = (root / "src/dash_browser.c").read_text(encoding="utf-8")
+assert "if (!isPartitionList(fb.dir) && time_valid && f->stats._Modify.Year)" in browser
+print("PASS: control backings default off, theme resets, and partition dates hidden")

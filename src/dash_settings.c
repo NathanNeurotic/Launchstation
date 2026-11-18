@@ -251,7 +251,7 @@ static const SetItem appearance_items[] = {
     {ST_CHOICE, S_T_PANEL_A, "Panel transparency", "0% makes panels fully opaque; 100% makes them fully transparent."},
     {ST_CHOICE, S_ICON_BACKING, "Control icon backings", "Show or hide backing shapes behind text-style controls and quick actions."},
     {ST_PAGE, P_THEME_MANAGE, "Theme files & resets", "Import, export, rename or reset your theme."},
-    {ST_ACTION, S_DISPLAY_THEME_RESET, "Reset appearance", "Restore screen calibration, motion, animation and the Crystal theme."},
+    {ST_ACTION, S_DISPLAY_THEME_RESET, "Reset appearance", "Restore screen calibration, motion, animation, control icon backings and the Crystal theme."},
 };
 
 static const SetItem display_items[] = {
@@ -2778,7 +2778,7 @@ static void resetScreen(void)
 
 static void resetDisplayThemeDefaults(void)
 {
-	if (!dashModalConfirm("Reset display & theme defaults", "Restore the screen, motion, animation and Crystal theme defaults?", localizeDashboardText("Reset"), 0))
+	if (!dashModalConfirm("Reset display & theme defaults", "Restore the screen, motion, animation, control icon backings and Crystal theme defaults?", localizeDashboardText("Reset"), 0))
 		return;
 	setting->color[COLOR_BACKGR] = DEF_COLOR1;
 	setting->color[COLOR_FRAME] = DEF_COLOR2;
@@ -2796,6 +2796,7 @@ static void resetDisplayThemeDefaults(void)
 	updateScreenMode();
 	dashCfg.effects = 100;
 	dashCfg.anim = 100;
+	dashCfg.icon_backing = 0;
 	dashThemeSetPreset(-1); /* out of range = the default preset (Crystal) */
 	classic_dirty = 1;
 	dash_dirty = 1;
@@ -3095,6 +3096,7 @@ static void runThemeAction(int id)
 				dashThemeSetPreset(-1); /* out of range = the default preset (Crystal) */
 				dashCfg.effects = 100;
 				dashCfg.anim = 100;
+				dashCfg.icon_backing = 0;
 				dash_dirty = 1;
 				dashToast(DASH_TOAST_OK, "Default theme restored");
 			}

@@ -254,7 +254,7 @@ void dashStoreDefaults(void)
 	dashCfg.app_filter = 0;
 	dashCfg.files_mode = 0;
 	dashCfg.home_shortcuts = 1;
-	dashCfg.icon_backing = 1;
+	dashCfg.icon_backing = 0;
 	dashCfg.show_unavailable_devices = 1;
 	dashCfg.dev_auto = 0; /* devices start manually; only the boot device is always on */
 	dashCfg.mmce_backup_keep = 10;
@@ -344,7 +344,7 @@ static int settingsKv(const char *key, char *value, void *user)
 	else if (!stricmp(key, "Dash_HomeShortcuts"))
 		dashCfg.home_shortcuts = clampInt(value, 0, 1, 1);
 	else if (!stricmp(key, "Dash_IconBacking"))
-		dashCfg.icon_backing = clampInt(value, 0, 1, 1);
+		dashCfg.icon_backing = clampInt(value, 0, 1, 0);
 	else if (!stricmp(key, "Dash_Disabled_Tabs")) {
 		dashCfg.disabled_tabs = clampInt(value, 0, DASH_TAB_MASK, 0) & DASH_TAB_MASK;
 		if (dashCfg.disabled_tabs == DASH_TAB_MASK)

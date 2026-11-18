@@ -30,12 +30,25 @@ def function(source, signature):
 size = int(re.search(r"char name\[(\d+)\];", internal[internal.index("float fill;") - 400:]).group(1))
 for name in ('"Memory Card Slot %d"', '"Multitap Memory Card Slot %d-%c"', '"USB Mass Storage Port"',
              '"MMCE SD Slot 1"', '"MMCE SD Slot 2"', '"MX4SIO SD Slot 2"', '"FireWire iLink Port"',
-             '"Internal APA HDD"', '"PC Card CompactFlash"', '"PSX DVR HDD"', '"PSX Internal Flash"',
-             '"Internal exFAT HDD"', '"Disc Drive"', '"Network"', '"Virtual Memory Card"'):
+             '"Internal APA HDD"', '"Internal APA HDD 2"', '"PC Card CompactFlash"', '"PSX DVR HDD"', '"PSX Internal Flash"',
+             '"Internal exFAT HDD"', '"Internal exFAT HDD 2"', '"Disc Drive"', '"Network"', '"Virtual Memory Card"'):
     assert name in devices, name
 for old in ('"MASS"', '"MASS %d"', '"mc%d (Slot %d)"', '"MMCE Slot 1"', '"Internal HDD (APA)"',
             '"Network (UDPFS)"', '"Network Host"', '"iLink / FireWire"', '"PC CARD CF"'):
     assert old not in devices, old
+
+# Secondary unit names, cached probes, and start paths must remain independent.
+for guard in (
+    'if (filerShowHddUnit(1) && !console_is_PSX)',
+    'if (filerShowAtaUnit(1) && !console_is_PSX)',
+    'if (!strncmp(mount, "hdd1:", 5)) return PROBE_HDD1;',
+    'if (!strncmp(mount, "ata1:", 5)) return PROBE_ATA1;',
+    """probeRoot(m[3] == '1' ? "hdd1:" : "hdd0:", 0)""",
+    """probeRoot(m[3] == '1' ? "ata1:/" : "ata0:/", 2000)""",
+    """mount = path[3] == '1' ? "hdd1:" : "hdd0:";""",
+    """mount = path[3] == '1' ? "ata1:" : "ata0:";""",
+):
+    assert guard in devices, guard
 
 code = r'''
 #include <assert.h>
@@ -54,12 +67,16 @@ int main(void){
  add(d,&n,8,0,1,"Internal APA HDD","hdd0:","hdd0:/","");
  add(d,&n,8,0,1,"Network","udpfs:","udpfs:/","");
  add(d,&n,8,0,1,"PC Card CompactFlash","cf0:","cf0:/","");
+ add(d,&n,8,0,1,"Internal APA HDD 2","hdd1:","hdd1:/","");
+ add(d,&n,8,0,1,"Internal exFAT HDD 2","ata1:","ata1:/","");
  assert(!strcmp(d[0].name,"Multitap Memory Card Slot 2-B (mc3:/)"));
  assert(!strcmp(d[1].name,"USB Mass Storage Port (mass0:/)"));
  assert(!strcmp(d[2].name,"USB Mass Storage Port (mass:/)"));
  assert(!strcmp(d[3].name,"Internal APA HDD (hdd0:/)"));
  assert(!strcmp(d[4].name,"Network (udpfs:/)"));
  assert(!strcmp(d[5].name,"PC Card CompactFlash (cf0:/)"));
+ assert(!strcmp(d[6].name,"Internal APA HDD 2 (hdd1:/)"));
+ assert(!strcmp(d[7].name,"Internal exFAT HDD 2 (ata1:/)"));
  return 0;
 }
 '''
