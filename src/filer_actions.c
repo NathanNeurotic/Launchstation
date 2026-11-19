@@ -1,4 +1,5 @@
 #include "launchelf.h"
+#include "filer_size_cache.h"
 #include "dash.h"
 #include "filer_actions.h"
 #include "filer_shared.h"
@@ -349,10 +350,18 @@ int getFileSize(const char *path, const FILEINFO *file, u64 *size)
 	char dir[MAX_PATH];
 	int nfiles, i, ret, more, status = 0;
 
-	if (!ensurePathDeviceStackReady(path))
+	if (!size || !file || !ensurePathDeviceStackReady(path))
 		return -ENODEV;
 
 	if (file->stats.AttrFile & sceMcFileAttrSubdir) {  //Folder object to size up
+		u64 cached, before = *size;
+		unsigned measured_revision;
+
+		if (filerSizeCacheGet(path, file, &cached)) {
+			*size += cached;
+			return 0;
+		}
+		measured_revision = filerSizeCacheRevision();
 		if (snprintf(dir, sizeof(dir), "%s%s/", path, file->name) >= (int)sizeof(dir))
 			return -ENAMETOOLONG;
 		files = treeList(dir, &nfiles, &more);
@@ -370,6 +379,8 @@ int getFileSize(const char *path, const FILEINFO *file, u64 *size)
 			}
 		}
 		treeLeave(files);
+		if (status == 0)
+			filerSizeCachePut(path, file, *size - before, measured_revision);
 		return status;
 	}
 	//File object to size up
@@ -2121,6 +2132,8 @@ int delete (const char *path, const FILEINFO *file)
 			ret = genRemove(dir);
 		}
 	}
+	if (ret >= 0)
+		filerSizeCacheInvalidate((!strncmp(path, "hdd", 3) || !strncmp(path, "dvr_hdd", 7)) ? hdddir : dir);
 	return ret;
 }
 //--------------------------------------------------------------
@@ -2259,6 +2272,9 @@ int Rename(const char *path, const FILEINFO *file, const char *name)
 	             (!strncmp(dir, "host", 4) && dir[length - 1] == '\\') ? "" : "/", name) >= (int)sizeof(new_path))
 		return -ENAMETOOLONG;
 	if (!strcmp(old_path, new_path) && !strncmp(old_path, "host", 4)) return 0;
+	/* A failed driver rename can still have applied its new spelling. */
+	filerSizeCacheInvalidate(old_path);
+	filerSizeCacheInvalidate(new_path);
 	if (strcmp(file->name, name) && !stricmp(file->name, name))
 		return filerRenameCaseOnly(old_path, new_path, file->name, name, !!(file->stats.AttrFile & sceMcFileAttrSubdir));
 	return filerRenameSiblingOnce(old_path, new_path, !!(file->stats.AttrFile & sceMcFileAttrSubdir));
@@ -2329,6 +2345,11 @@ int newdir(const char *path, const char *name)
 		strcat(dir, name);
 		genLimObjName(dir, 0);
 		ret = filerMkdirNoOverwrite(dir);
+	}
+	if (ret >= 0) {
+		char created[MAX_PATH];
+		if (snprintf(created, sizeof(created), "%s%s", path, name) < (int)sizeof(created))
+			filerSizeCacheInvalidate(created);
 	}
 	return ret;
 }

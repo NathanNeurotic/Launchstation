@@ -529,6 +529,7 @@ targets:
       - src/filer_mount.c
       - src/filer_fileops.c
       - src/filer_actions.c
+      - src/filer_size_cache.c
       - src/filer_browser.c
       - src/filer_copy.c
       - src/gui_sort.c

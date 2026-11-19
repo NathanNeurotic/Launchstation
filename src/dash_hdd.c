@@ -13,6 +13,7 @@
 //  loaded on the UI thread.
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "filer_size_cache.h"
 #include "dash_sound.h"
 #include "hdd_header_injector.h"
 #include "hdd_filesystem.h"
@@ -354,6 +355,9 @@ static void hddJobRun(void *arg)
 	HddJob *j = (HddJob *)arg;
 	char in[48], out[48];
 
+	if (j->op == HOP_CREATE || j->op == HOP_REMOVE || j->op == HOP_RENAME ||
+	    j->op == HOP_FORMAT || j->op == HOP_INJECT)
+		filerSizeCacheInvalidate("hdd0:/");
 	switch (j->op) {
 		case HOP_SCAN:
 			scanRun(j);

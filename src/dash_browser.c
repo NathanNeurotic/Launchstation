@@ -14,6 +14,7 @@
 //  follows the classic rules (filerMenuEnables).
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "filer_size_cache.h"
 #include "dash_sound.h"
 #include "filer_shared.h"
 #include "filer_actions.h"
@@ -3355,7 +3356,7 @@ static void fmtSize(char *out, int size, const FILEINFO *f)
 {
 	u64 b = ((u64)f->stats.Reserve2 << 32) | f->stats.FileSizeByte;
 
-	if (isDir(f) || !size_valid)
+	if (isDir(f) ? !filerSizeCacheGet(fb.dir, f, &b) : !size_valid)
 		out[0] = '\0';
 	else if (b >= (u64)1024 * 1024 * 1024)
 		snprintf(out, size, "%.2f GB", (double)b / (1024.0 * 1024.0 * 1024.0));
