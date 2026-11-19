@@ -86,10 +86,12 @@ static char *smbReadConfigText(int *mc1_refused)
 
 	*mc1_refused = 0;
 	smb_cfg_path[0] = '\0';
-	if (smb_blocks != NULL && LoadedConfigPath[0] && (strncmp(LoadedConfigPath, "mc1", 3) || !mc1AccessRefused()) &&
+	if (LoadedConfigPath[0] && (strncmp(LoadedConfigPath, "mc1", 3) || !mc1AccessRefused()) &&
 	    (text = dashLoadTextFile(LoadedConfigPath, 128 * 1024, NULL)) != NULL) {
-		/* read again, so a file corrected on a PC is used without restarting */
-		smbSharesSetSection(text);
+		/* read again, so a file corrected on a PC is used without restarting;
+		 * keep an existing SMB2.CNF fallback if LAUNCHSTATION.CNF has no section yet */
+		if (smb_blocks != NULL || smbCnfSection(text) != NULL)
+			smbSharesSetSection(text);
 		free(text);
 	}
 	if (smb_blocks != NULL) {
@@ -366,10 +368,11 @@ void smbSharesConnect(int version, int retry_failed)
 	int i, ret;
 
 	if (retry_failed) {
-		if (smb_cfg_loaded && now - smb_retry_ms[version] < SMB_RETRY_MS)
+		/* 0 means untried in this IOP/reload cycle; avoid suppressing first-30s retries */
+		if (smb_cfg_loaded && smb_retry_ms[version] != 0 && now - smb_retry_ms[version] < SMB_RETRY_MS)
 			retry_failed = 0;
 		else
-			smb_retry_ms[version] = now;
+			smb_retry_ms[version] = now ? now : 1u;
 	}
 	if (!smb_cfg_loaded || smb_cfg_mc1_pending ||
 	    (retry_failed && smbSharesConnectedCount(1) == 0 && smbSharesConnectedCount(2) == 0 && smbSharesConnectedCount(3) == 0))
@@ -416,8 +419,14 @@ int smbSharesConnectedCount(int version)
 	return n;
 }
 
-/* One line for the browser: what is connected, or why nothing is. */
-void smbSharesStatus(int version, char *out, int out_size)
+static int versionInMask(int version, int mask)
+{
+	return (version >= 1 && version <= 3) && ((mask & (1 << version)) != 0);
+}
+
+/* Format browser status across all share versions selected in `version_mask`. */
+static void smbStatusForMask(int version_mask, const char *none_label, const char *missing_group,
+                             char *out, int out_size)
 {
 	int i, valid = 0, connected = 0;
 	const SmbShare *first_bad = NULL;
@@ -427,13 +436,13 @@ void smbSharesStatus(int version, char *out, int out_size)
 		return;
 	}
 	if (!smb_cfg_path[0]) {
-		snprintf(out, out_size, "No shares: add one in Settings > Network > %s shares", version == SMB_PATH_NFS ? "NFS" : "SMB");
+		snprintf(out, out_size, "No shares: add one in Settings > Network > %s shares", missing_group);
 		return;
 	}
 	for (i = 0; i < smb_cfg.count; i++) {
 		const SmbShare *sh = &smb_cfg.share[i];
 
-		if (sh->version != version)
+		if (!versionInMask(sh->version, version_mask))
 			continue;
 		if (sh->state != SMB_STATE_INVALID)
 			valid++;
@@ -446,10 +455,24 @@ void smbSharesStatus(int version, char *out, int out_size)
 		snprintf(out, out_size, "%s (line %d): %s", first_bad->name[0] ? first_bad->name : "share",
 		         first_bad->line, first_bad->problem ? first_bad->problem : "Could not connect");
 	else if (valid == 0)
-		snprintf(out, out_size, "%s has no %s share", smb_cfg_path,
-		         version == 1 ? "VERSION = 1" : version == SMB_PATH_NFS ? "NFS" : "SMB2/SMB3");
+		snprintf(out, out_size, "%s has no %s share", smb_cfg_path, none_label);
 	else
 		snprintf(out, out_size, "%d of %d share(s) connected", connected, valid);
+}
+
+/* One line for the browser: what is connected, or why nothing is. */
+void smbSharesStatus(int version, char *out, int out_size)
+{
+	int mask = (version >= 1 && version <= 3) ? (1 << version) : 0;
+	const char *none_label = version == 1 ? "VERSION = 1" : version == SMB_PATH_NFS ? "NFS" : "SMB2/SMB3";
+
+	smbStatusForMask(mask, none_label, version == SMB_PATH_NFS ? "NFS" : "SMB", out, out_size);
+}
+
+/* Combined status for Network (smb:/), covering both SMB2/3 and SMB1 shares. */
+void smbSharesCombinedStatus(char *out, int out_size)
+{
+	smbStatusForMask((1 << SMB_PATH_V1) | (1 << SMB_PATH_V2), "SMB", "SMB", out, out_size);
 }
 
 /* The drivers went away with an IOP reset: every share must be connected

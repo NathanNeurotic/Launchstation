@@ -138,8 +138,11 @@ static int OpenTCPSession(struct in_addr dst_IP, u16 dst_port, int *sock)
     sock_addr.sin_port   = htons(dst_port);
 
     ret = lwip_connect(sck, (struct sockaddr *)&sock_addr, sizeof(sock_addr));
-    if (ret < 0)
+    if (ret < 0) {
+        lwip_close(sck);
+        *sock = -1;
         return -2;
+    }
 
     return 0;
 }

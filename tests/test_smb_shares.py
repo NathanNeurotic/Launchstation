@@ -143,7 +143,8 @@ int main(void)
     assert(smbConfigValidCount(&cfg, 1) == 1 && smbConfigValidCount(&cfg, 2) == 0);
     assert(parse("NAME = OLD\nVERSION = nt1\nURL = smb://192.168.1.5:139//PS2SMB/ignored\n") == 1);
     assert(share(0)->version == 1 && share(0)->port == 139 && !strcmp(share(0)->share, "PS2SMB"));
-    assert(parse("NAME = N\nVERSION = SMB3\nURL = smb://192.168.1.5/s\n") == 1 && share(0)->version == 2);
+    assert(parse("NAME = N\nVERSION = SMB3\nURL = smb://192.168.1.5/s\n") == 1 && share(0)->version == 2 && share(0)->proto_version == 3);
+    assert(parse("NAME = N2\nURL = smb://192.168.1.5/s\n") == 1 && share(0)->version == 2 && share(0)->proto_version == 2);
     expectProblem("NAME = A\nVERSION = 4\nURL = smb://10.0.0.2/s\n", "VERSION must be");
     /* PLAINTEXT: SMB1 only, off by default, does not leak into the next share */
     assert(parse("NAME = OLD\nVERSION = 1\nURL = smb://192.168.1.5/PS2SMB\n") == 1 && share(0)->plaintext == 0);
@@ -315,11 +316,11 @@ assert "if (fh->position) {" in dread and dread.count("if (r == -EINVAL) {") == 
 assert "if (info->FileName[0] == '\\0') {" in dread and dread.index("r = -EIO;") < dread.index("strncpy(dirent->name")
 assert "r = -ENAMETOOLONG;" in smbman
 
-# the dashboard worker never retries shares; UI-thread prep reconnects when 0 shares are connected
+# the dashboard worker never retries shares; UI-thread prep reconnects both SMB2 and SMB1 when 0 shares are connected
 filer = text("src/filer.c")
-assert "} else if (root && !dashWorkerOnThread()) {" in filer
-assert "if (smbIsRootPath(path) && smbSharesConnectedCount(smbPathKind(path)) == 0)" in filer
-assert "smbSharesConnect(smbPathKind(path), 1);" in filer
+assert "if (root && !dashWorkerOnThread()) {" in filer
+assert "smbSharesConnect(SMB_PATH_V2, 1);" in filer and "smbSharesConnect(SMB_PATH_V1, 1);" in filer
+assert "smbSharesConnectedCount(SMB_PATH_V1) > 0 && smbSharesKnown(SMB_PATH_V2) == 0" in read_smb
 assert "if (smb_version != SMB_PATH_NONE) {" in browser
 
 yaml = text("ps2.yaml")
@@ -329,5 +330,39 @@ assert "src/smb_cnf.c" in yaml and "src/smb_shares.c" in yaml
 # smb: is the source-built usmb2 driver, embedded from its ps2.yaml target
 assert "smb2man_irx" not in text("src/embed_blobs.S") and "      - smb2man\n" in yaml
 assert "  - name: smb2man\n" in yaml and "iop/smb2man/smb2man.c" in yaml
+
+prep_start = smbman.index("static char *prepare_path(")
+prep_fn = smbman[prep_start:smbman.index("\n}\n", prep_start) + 3]
+assert "path - 1" not in prep_fn  # empty paths must not form a pointer before the object
+prep_c = f'''
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+static char smb_curdir[256];
+{prep_fn}
+int main(void) {{
+    char out[256];
+    smb_curdir[0] = '\\0';
+    assert(!strcmp(prepare_path("/", out, sizeof(out)), "\\\\"));
+    assert(!strcmp(prepare_path("", out, sizeof(out)), "\\\\"));
+    assert(!strcmp(prepare_path("/Games", out, sizeof(out)), "\\\\Games"));
+    assert(!strcmp(prepare_path("/Games/", out, sizeof(out)), "\\\\Games"));
+    assert(!strcmp(prepare_path("Games/", out, sizeof(out)), "\\\\Games"));
+    assert(!strcmp(prepare_path(".", out, sizeof(out)), "\\\\."));
+    assert(!strcmp(prepare_path("..", out, sizeof(out)), "\\\\.."));
+    strcpy(smb_curdir, "\\\\Games");
+    assert(!strcmp(prepare_path("/", out, sizeof(out)), "\\\\Games"));
+    assert(!strcmp(prepare_path("sub/", out, sizeof(out)), "\\\\Games\\\\sub"));
+    puts("prepare_path: OK");
+    return 0;
+}}
+'''
+with tempfile.TemporaryDirectory() as tmp:
+    pc = Path(tmp) / "prep.c"
+    pe = Path(tmp) / "prep"
+    pc.write_text(prep_c)
+    subprocess.run([compiler, "-std=gnu99", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
+                    str(pc), "-o", str(pe)], check=True)
+    subprocess.run([str(pe)], check=True)
 
 print("SMB shares: OK")

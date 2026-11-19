@@ -108,6 +108,19 @@ static int storageState(const char *mount)
 	syncProbeSession();
 	if (i >= 0 && (probe_checked & (1u << i))) {
 		if (!(probe_present & (1u << i))) return DASH_DEV_ABSENT;
+#ifdef SMB
+		if (i == PROBE_SMB) {
+			int has_v2 = smbSharesConnectedCount(SMB_PATH_V2) > 0 && isSmbDriverLoaded(SMB_PATH_V2);
+			int has_v1 = smbSharesConnectedCount(SMB_PATH_V1) > 0 && isSmbDriverLoaded(SMB_PATH_V1);
+			return (has_v2 || has_v1) ? DASH_DEV_READY : DASH_DEV_PROBE;
+		}
+		if (i == PROBE_SMB1)
+			return (smbSharesConnectedCount(SMB_PATH_V1) > 0 && isSmbDriverLoaded(SMB_PATH_V1))
+			       ? DASH_DEV_READY : DASH_DEV_PROBE;
+		if (i == PROBE_NFS)
+			return (smbSharesConnectedCount(SMB_PATH_NFS) > 0 && isSmbDriverLoaded(SMB_PATH_NFS))
+			       ? DASH_DEV_READY : DASH_DEV_PROBE;
+#endif
 		if (isPathDeviceStackLoaded(mount)) return DASH_DEV_READY;
 	}
 	return DASH_DEV_PROBE;
@@ -532,9 +545,15 @@ int dashDevicesList(DashDevice *out, int max)
 		 * SMB2/3 shares; an SMB1 share is a folder in it. Listing reads no
 		 * file and no network. */
 		static char smb_ready[32], smb_absent[96];
+		int v2_cfg = smbSharesKnown(SMB_PATH_V2);
+		int v1_cfg = smbSharesKnown(SMB_PATH_V1);
 
-		smbSharesStatus(SMB_PATH_V2, smb_absent, sizeof(smb_absent));
-		if (!isSmbDriverLoaded(SMB_PATH_V2) && smbLoadError(SMB_PATH_V2)[0])
+		smbSharesCombinedStatus(smb_absent, sizeof(smb_absent));
+		if (v2_cfg > 0 && !isSmbDriverLoaded(SMB_PATH_V2) && smbLoadError(SMB_PATH_V2)[0])
+			snprintf(smb_absent, sizeof(smb_absent), "%s", smbLoadError(SMB_PATH_V2));
+		else if (v1_cfg > 0 && !isSmbDriverLoaded(SMB_PATH_V1) && smbLoadError(SMB_PATH_V1)[0])
+			snprintf(smb_absent, sizeof(smb_absent), "%s", smbLoadError(SMB_PATH_V1));
+		else if (v2_cfg == 0 && v1_cfg == 0 && !isSmbDriverLoaded(SMB_PATH_V2) && smbLoadError(SMB_PATH_V2)[0])
 			snprintf(smb_absent, sizeof(smb_absent), "%s", smbLoadError(SMB_PATH_V2));
 		snprintf(smb_ready, sizeof(smb_ready), "%d share(s) connected",
 		         smbSharesConnectedCount(SMB_PATH_V2) + smbSharesConnectedCount(SMB_PATH_V1));
@@ -714,16 +733,24 @@ static int probeMount(const char *m)
 	else if (smbPathKind(m) != SMB_PATH_NONE) {
 		int v = smbPathKind(m);
 
-		ok = isSmbDriverLoaded(v) || load_smb(v);
-		if (ok) {
-			smbSharesConnect(v, 1); /* rate limited */
-			/* the SMB1 share is a folder of the one SMB device: it alone is
-			 * enough, but smb:/ itself still needs smb2man (as everywhere else) */
-			if (v == SMB_PATH_V2 && smbSharesV1Name() != NULL &&
-			    (isSmbDriverLoaded(SMB_PATH_V1) || load_smb(SMB_PATH_V1)))
+		if (v == SMB_PATH_V2) {
+			int has_v2 = smbSharesConfigured(SMB_PATH_V2) > 0;
+			int has_v1 = smbSharesV1Name() != NULL;
+
+			if (has_v2 && (isSmbDriverLoaded(SMB_PATH_V2) || load_smb(SMB_PATH_V2)))
+				smbSharesConnect(SMB_PATH_V2, 1); /* rate limited */
+			/* the SMB1 share is a folder of the one SMB device: connect it
+			 * independently so SMB1-only configs never depend on smb2man */
+			if (has_v1 && (isSmbDriverLoaded(SMB_PATH_V1) || load_smb(SMB_PATH_V1)))
 				smbSharesConnect(SMB_PATH_V1, 1);
-			ok = smbSharesConnectedCount(v) > 0 ||
+			ok = smbSharesConnectedCount(SMB_PATH_V2) > 0 ||
 			     (v == SMB_PATH_V2 && smbSharesConnectedCount(SMB_PATH_V1) > 0);
+		} else {
+			ok = isSmbDriverLoaded(v) || load_smb(v);
+			if (ok) {
+				smbSharesConnect(v, 1); /* rate limited */
+				ok = smbSharesConnectedCount(v) > 0;
+			}
 		}
 	}
 #endif

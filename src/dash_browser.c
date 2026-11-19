@@ -299,7 +299,8 @@ static void listRun(void *arg)
 	if (j->n == 0 && mcPathUnit(j->path) >= 0 && !filerDirOpened())
 		j->n = -1;
 #ifdef SMB
-	if (smbSharesV1Name() != NULL && smbPathKind(j->path) == SMB_PATH_V2 && smbIsRootPath(j->path)) {
+	if (smbSharesV1Name() != NULL && smbPathKind(j->path) == SMB_PATH_V2 && smbIsRootPath(j->path) &&
+	    smbSharesConnectedCount(SMB_PATH_V1) > 0) {
 		/* the SMB1 share is a folder of the one SMB device; fullPath opens smb1:/ */
 		if (j->n < 0)
 			j->n = 0;
@@ -339,6 +340,39 @@ static void selectName(const char *name)
 /** Format the actionable reason an SMB device probe or listing failed. */
 static void smbStatusMessage(int version, char *out, int out_size)
 {
+	if (version == SMB_PATH_V2) {
+		int v2_cfg = smbSharesKnown(SMB_PATH_V2);
+		int v1_cfg = smbSharesKnown(SMB_PATH_V1);
+
+		if (v2_cfg == 0 && v1_cfg > 0) {
+			smbStatusMessage(SMB_PATH_V1, out, out_size);
+			return;
+		}
+		if (v2_cfg == 0 && v1_cfg == 0) {
+			if (!isSmbDriverLoaded(SMB_PATH_V2) && smbLoadError(SMB_PATH_V2)[0]) {
+				dashStrCopy(out, smbLoadError(SMB_PATH_V2), out_size);
+				return;
+			}
+			smbSharesCombinedStatus(out, out_size);
+			return;
+		}
+		if (v1_cfg > 0) {
+			if (!isSmbDriverLoaded(SMB_PATH_V2) && smbLoadError(SMB_PATH_V2)[0]) {
+				dashStrCopy(out, smbLoadError(SMB_PATH_V2), out_size);
+				return;
+			}
+			if (!isSmbDriverLoaded(SMB_PATH_V1) && smbLoadError(SMB_PATH_V1)[0]) {
+				dashStrCopy(out, smbLoadError(SMB_PATH_V1), out_size);
+				return;
+			}
+			if (!isSmbDriverLoaded(SMB_PATH_V2) && !isSmbDriverLoaded(SMB_PATH_V1)) {
+				dashStrCopy(out, "SMB driver is not ready; reopen this device to retry.", out_size);
+				return;
+			}
+			smbSharesCombinedStatus(out, out_size);
+			return;
+		}
+	}
 	if (!isSmbDriverLoaded(version)) {
 		const char *error = smbLoadError(version);
 

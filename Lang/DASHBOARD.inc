@@ -15,6 +15,7 @@
     {"Add", LANG_Add},
     {"After IGR, open", LANG_Dashboard_After_IGR_open},
     {"All", LANG_Dashboard_All},
+    {"Allow clear-text password", LANG_Dashboard_Allow_clear_text_password},
     {"Allow writing over the network", LANG_Dashboard_Allow_writing_over_the_network},
     {"App artwork background", LANG_Dashboard_App_artwork_background},
     {"Appearance", LANG_Dashboard_Appearance},

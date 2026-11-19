@@ -72,6 +72,10 @@ code += source[source.index("static unsigned int smb_cfg_text_hash;"):source.ind
 code += function("static void smbReadConfig(void)\n{")
 code += function("void smbSharesConnect(int version, int retry_failed)\n{")
 code += function("int smbSharesConnectedCount(int version)\n{")
+code += function("static int versionInMask(int version, int mask)\n{")
+code += function("static void smbStatusForMask(int version_mask, const char *none_label, const char *missing_group,\n                             char *out, int out_size)\n{")
+code += function("void smbSharesStatus(int version, char *out, int out_size)\n{")
+code += function("void smbSharesCombinedStatus(char *out, int out_size)\n{")
 code += r'''
 static void reset_case(void)
 {
@@ -139,6 +143,34 @@ int main(void)
     assert(disconnect_calls == 1 && connect_calls == 1);
     assert(!strcmp(smb_cfg.share[0].url, "smb://10.0.0.2/s"));
     assert(smb_cfg.share[0].state == SMB_STATE_CONNECTED);
+
+    /* Boot warm-read (smb_cfg_loaded == 1 with smb_retry_ms[1] == 0) must still try SMB1
+     * in the first 30 seconds instead of thinking a retry backoff is active. */
+    reset_case();
+    config_text = "NAME=OLD\nVERSION=1\nURL=smb://10.0.0.4/ps2\n";
+    now = 500;
+    smbReadConfig();
+    assert(smb_cfg_loaded == 1 && smb_retry_ms[1] == 0);
+    smbSharesConnect(1, 1);
+    assert(connect_calls == 1 && smb_cfg.share[0].state == SMB_STATE_CONNECTED && smb_retry_ms[1] == 500);
+
+    /* Combined status with only SMB1 configured reports SMB1 status/error, never "no SMB2/SMB3 share". */
+    {
+        char status[160];
+        reset_case();
+        config_text = "NAME=OLD\nVERSION=1\nURL=smb://10.0.0.4/ps2\n";
+        connect_result = -1;
+        smbSharesConnect(1, 1);
+        smbSharesCombinedStatus(status, sizeof(status));
+        assert(strstr(status, "OLD") != NULL && strstr(status, "SMB2/SMB3") == NULL);
+
+        /* NFS-only config has no SMB share (and must not claim missing SMB2/SMB3). */
+        reset_case();
+        config_text = "NAME=NFSBOX\nURL=nfs://10.0.0.5:2049/srv/ps2\n";
+        smbReadConfig();
+        smbSharesCombinedStatus(status, sizeof(status));
+        assert(strstr(status, "has no SMB share") != NULL && strstr(status, "SMB2/SMB3") == NULL);
+    }
 
     puts("PASS: SMB fallback preserves connection/retry state and reloads changes");
     return 0;

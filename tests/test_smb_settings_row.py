@@ -1,6 +1,9 @@
 """Settings > Network > SMB shares: the GUI editor page and its SMB2.CNF text core."""
 from pathlib import Path
 import re
+import shutil
+import subprocess
+import tempfile
 
 root = Path(__file__).resolve().parents[1]
 settings = (root / "src/dash_settings.c").read_text()
@@ -15,10 +18,11 @@ assert re.search(r'#ifdef SMB\s*\n\s*\{ST_PAGE, P_SMB, "SMB shares"', net), net
 # the page offers the field rows and the save/delete/text actions
 page = settings.split("static const SetItem smb_items[] = {", 1)[1].split("};", 1)[0]
 for sid in ("S_SMBED_PICK", "S_SMBED_NAME", "S_SMBED_KIND", "S_SMBED_IP", "S_SMBED_PORT",
-            "S_SMBED_FOLDER", "S_SMBED_USER", "S_SMBED_PASS", "S_SMBED_SAVE",
+            "S_SMBED_FOLDER", "S_SMBED_USER", "S_SMBED_PASS", "S_SMBED_PLAINTEXT", "S_SMBED_SAVE",
             "S_SMBED_DELETE", "S_SMBED_TEXT"):
     assert sid in page, sid
 assert "[P_SMB] = PAGE(" in settings
+assert "sh->proto_version" in settings  # VERSION = 3 round-trips cleanly without downgrading to SMB2
 
 # opening the page refreshes the draft from the file
 enter = settings.split('it->type == ST_PAGE && (in->pressed & DASH_IN_OK)', 1)[1]
@@ -85,5 +89,74 @@ assert '"SMB_Server_User = %s' in config and '"SMB_Server_User")' in config
 build = config.split("char *configBuildSaveText(int *out_size)", 1)[1].split("\n}\n", 1)[0]
 assert build.index("PathPad[%02d]") < build.index("SMB_CNF_SECTION") < build.index("*out_size = CNF_size;")
 assert "smbSharesSetSection(RAM_p);" in config
+
+edit_case = settings.split("case S_SMBD_USER:", 1)[1].split("\t\t\tbreak;\n\t\t}", 1)[0]
+parse_case = config.split('else if (!strcmp(name, "SMB_Server_User")', 1)[1].split("#endif", 1)[0]
+parse_case = 'else if (!strcmp(name, "SMB_Server_User")' + parse_case
+save_case = config.split('CNF_size += sprintf(tmp + CNF_size, "SMB_Server_User', 1)[1].split(";", 1)[0]
+save_case = 'CNF_size += sprintf(tmp + CNF_size, "SMB_Server_User' + save_case + ";"
+login_test = r'''
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+typedef struct { char SMB_Server_User[32], SMB_Server_Pass[32]; } SETTING;
+static SETTING config, *setting = &config;
+static int classic_dirty;
+static char keyboard_text[32];
+enum { S_SMBD_USER, S_SMBD_PASS };
+static void dashStrCopy(char *out, const char *in, int size) { snprintf(out, (size_t)size, "%s", in); }
+static int dashModalKeyboard(const char *title, char *out, int size) {
+    (void)title;
+    dashStrCopy(out, keyboard_text, size);
+    return 1;
+}
+static void editLogin(int id) {
+    switch (id) {
+        case S_SMBD_USER:
+''' + edit_case + r'''
+            break;
+    }
+}
+}
+static void readLogin(const char *name, const char *value) {
+    if (0) {}
+''' + parse_case + r'''
+}
+int main(void) {
+    char tmp[160], long_value[33];
+    memset(long_value, 'x', 32); long_value[32] = '\0';
+    strcpy(setting->SMB_Server_User, "ps2");
+    strcpy(setting->SMB_Server_Pass, "ps2");
+    keyboard_text[0] = '\0';
+    editLogin(S_SMBD_PASS);
+    assert(setting->SMB_Server_Pass[0] == '\0' && classic_dirty);
+    classic_dirty = 0;
+    editLogin(S_SMBD_USER);
+    assert(!strcmp(setting->SMB_Server_User, "ps2") && !classic_dirty);
+    readLogin("SMB_Server_Password", "");
+    assert(setting->SMB_Server_Pass[0] == '\0');
+    readLogin("SMB_Server_User", "");
+    assert(!strcmp(setting->SMB_Server_User, "ps2"));
+    readLogin("SMB_Server_Password", long_value);
+    assert(setting->SMB_Server_Pass[0] == '\0');
+    strcpy(setting->SMB_Server_User, "alice");
+    {
+        int CNF_size = 0;
+''' + save_case + r'''
+        assert(!strcmp(tmp, "SMB_Server_User = alice\r\nSMB_Server_Password = \r\n"));
+    }
+    puts("PASS: SMB server login editor, parser and serializer preserve a blank password");
+    return 0;
+}
+'''
+with tempfile.TemporaryDirectory(prefix="smb-server-login-") as tmp:
+    source = Path(tmp) / "login.c"
+    exe = Path(tmp) / "login"
+    source.write_text(login_test)
+    compiler = shutil.which("gcc") or shutil.which("clang")
+    assert compiler, "A C host compiler is required"
+    subprocess.run([compiler, "-std=gnu11", "-Wall", "-Wextra", "-Werror",
+                    str(source), "-o", str(exe)], check=True)
+    subprocess.run([str(exe)], check=True)
 
 print("PASS: Settings > Network > SMB shares edits the shares in LAUNCHSTATION.CNF by GUI or text, and reloads them")

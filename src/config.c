@@ -1049,7 +1049,7 @@ int loadConfig(char *mainMsg, char *CNF)
 #ifdef ETH
 		else if (!strcmp(name, "SMB_Server_User") && value[0] && strlen(value) < sizeof(setting->SMB_Server_User))
 			strcpy(setting->SMB_Server_User, value);
-		else if (!strcmp(name, "SMB_Server_Password") && value[0] && strlen(value) < sizeof(setting->SMB_Server_Pass))
+		else if (!strcmp(name, "SMB_Server_Password") && strlen(value) < sizeof(setting->SMB_Server_Pass))
 			strcpy(setting->SMB_Server_Pass, value);
 #endif
 		else if (!stricmp(name, "language")) {

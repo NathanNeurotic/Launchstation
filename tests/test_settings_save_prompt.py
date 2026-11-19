@@ -82,6 +82,9 @@ static void menuTitleClockRestore(void) { clock_restores++; }
 static int rumble_gate = -1; static void padRumbleEnable(int on) { rumble_gate = on; }
 static void updateScreenMode(void) {}
 static int dashWorkerAwaitAll(const char *s) { (void)s; return 1; }
+static int dashWorkerBusy(void) { return 0; }
+static int dashWorkerLastId(void) { return 0; }
+static int dashWorkerAwait(int id, const char *s, int cancelable) { (void)id; (void)s; (void)cancelable; return 1; }
 static void Set_Language(int l) { (void)l; }
 static void Load_External_Language(void) {}
 static void loadFont(const char *s) { (void)s; }
@@ -118,6 +121,9 @@ for signature in ("static int anyDirty(", "static int anyDirtyCached(",
     code += function(signature)
 if "static void settingsSaveAction(" in source:
     code += function("static void settingsSaveAction(")
+code += function("int dashSettingsSaveCnf(void)")
+code += function("static void refreshSharesCnfSnapshot(")
+code += function("static int saveSharesCnf(void)\n{")
 action = source[source.index("case S_SAVE_CLASSIC:") + len("case S_SAVE_CLASSIC:"):]
 code += "static void clickSaveSettings(void) {\n" + action[:action.index("break;")] + "\n}\n"
 code += r"""
@@ -203,6 +209,11 @@ int main(void) {
     begin(); assert(!anyDirty() && settingsLeave()==1 && !modal_calls);
     software_clock_active=0; clean(); clock_saves=queued[2];
     clickSaveSettings(); assert(queued[2]==clock_saves);
+    /* A share-only save must not mark an unrelated classic edit as saved. */
+    clean(); setting->swapKeys++;
+    assert(saveSharesCnf());
+    assert(anyDirty());
+    clean(); assert(saveSharesCnf()); assert(!anyDirty());
     free(snap_dash_text); free(snap_cnf_text);
     puts("PASS: pristine/reverted/canceled sessions, stale failures, actual edits, failed saves/retry/discard");
 }

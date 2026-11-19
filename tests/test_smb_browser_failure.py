@@ -28,29 +28,56 @@ c = r"""
 #include <stdio.h>
 #include <string.h>
 
-static int driver_loaded, status_calls, last_version;
-static const char *load_error;
-static int isSmbDriverLoaded(int v) { assert(v == 1 || v == 2); return driver_loaded; }
-static const char *smbLoadError(int v) { assert(v == 1 || v == 2); return load_error; }
+enum { SMB_PATH_NONE = 0, SMB_PATH_V1 = 1, SMB_PATH_V2 = 2, SMB_PATH_NFS = 3 };
+
+static int driver_loaded[4], known[4], status_calls, combined_calls, last_version;
+static const char *load_error[4];
+static int isSmbDriverLoaded(int v) { assert(v >= 1 && v <= 3); return driver_loaded[v]; }
+static const char *smbLoadError(int v) { assert(v >= 1 && v <= 3); return load_error[v] ? load_error[v] : ""; }
+static int smbSharesKnown(int v) { assert(v >= 1 && v <= 3); return known[v]; }
 static void dashStrCopy(char *out, const char *s, int n) { snprintf(out, (size_t)n, "%s", s); }
 static void smbSharesStatus(int v, char *out, int n) {
     status_calls++; last_version = v;
-    snprintf(out, (size_t)n, "Games (line 4): Could not connect");
+    if (v == SMB_PATH_V1)
+        snprintf(out, (size_t)n, "OLDBOX (line 4): Server did not answer");
+    else
+        snprintf(out, (size_t)n, "Games (line 4): Could not connect");
+}
+static void smbSharesCombinedStatus(char *out, int n) {
+    combined_calls++;
+    snprintf(out, (size_t)n, "Combined: 1 share issue");
 }
 """ + helper + r"""
 int main(void) {
     char msg[96];
-    load_error = "The network stack could not be started.";
+    known[SMB_PATH_V2] = 1;
+    load_error[SMB_PATH_V2] = "The network stack could not be started.";
     smbStatusMessage(2, msg, sizeof(msg));
-    assert(!strcmp(msg, load_error) && status_calls == 0);
+    assert(!strcmp(msg, load_error[SMB_PATH_V2]) && status_calls == 0);
 
-    load_error = "";
+    load_error[SMB_PATH_V2] = "";
     smbStatusMessage(2, msg, sizeof(msg));
     assert(!strcmp(msg, "SMB driver is not ready; reopen this device to retry.") && status_calls == 0);
 
-    driver_loaded = 1;
+    driver_loaded[SMB_PATH_V2] = 1;
     smbStatusMessage(2, msg, sizeof(msg));
     assert(!strcmp(msg, "Games (line 4): Could not connect") && status_calls == 1 && last_version == 2);
+
+    /* SMB1-only config on smb:/ must report V1 error/status, never "no SMB2/SMB3 share". */
+    known[SMB_PATH_V2] = 0; known[SMB_PATH_V1] = 1;
+    driver_loaded[SMB_PATH_V1] = 0; load_error[SMB_PATH_V1] = "V1 load failed";
+    smbStatusMessage(SMB_PATH_V2, msg, sizeof(msg));
+    assert(!strcmp(msg, "V1 load failed"));
+
+    driver_loaded[SMB_PATH_V1] = 1;
+    smbStatusMessage(SMB_PATH_V2, msg, sizeof(msg));
+    assert(!strcmp(msg, "OLDBOX (line 4): Server did not answer") && last_version == SMB_PATH_V1);
+
+    /* Combined V2+V1 uses combined status once loaded. */
+    known[SMB_PATH_V2] = 1; known[SMB_PATH_V1] = 1;
+    smbStatusMessage(SMB_PATH_V2, msg, sizeof(msg));
+    assert(!strcmp(msg, "Combined: 1 share issue") && combined_calls == 1);
+
     puts("PASS: Files shows the SMB driver or share failure reason");
     return 0;
 }
