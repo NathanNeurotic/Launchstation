@@ -87,6 +87,7 @@ static const Tool tools[] = {
 
 static int tsel = 1, ttop;
 static float tsel_anim = 1.0f;
+static float ttop_anim = -1.0f;
 
 static void tMove(int d)
 {
@@ -112,6 +113,7 @@ static void tMove(int d)
 
 static void toolsEnter(void)
 {
+	ttop_anim = -1.0f;
 	if (tools[tsel].action == TA_HEADER)
 		tMove(1);
 }
@@ -1683,17 +1685,19 @@ static void toolsDraw(void)
 
 	dashDrawSectionTitle(lx, 68, localizeDashboardText("Tools"), "everything Launchstation can do");
 	ttop = listCenteredTop(tsel, NTOOLS, rows);
+	ttop_anim = listSlideTop(ttop_anim, ttop, tsel, NTOOLS, rows,
+	                         dashApproach(0.0f, 1.0f, 14.0f * dashAnimSpeed(), dashFrameDelta()));
 	if (tsel_anim < ttop || tsel_anim >= ttop + rows)
 		tsel_anim = (float)tsel;
 
 	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, rows * row_h + 12, 14);
 	dashGfxScissor(lx - 6, ly - 4, lw + 12, rows * row_h + 8);
 	{
-		float fy = ly + (tsel_anim - ttop) * row_h;
+		float fy = ly + (tsel_anim - ttop_anim) * row_h;
 		dashDrawSelection(lx, fy, lw, row_h - 3, 9, 1.0f);
 	}
-	for (i = ttop; i < NTOOLS && i < ttop + rows; i++) {
-		float y = ly + (i - ttop) * row_h;
+	for (i = (int)ttop_anim; i < NTOOLS && i < ttop_anim + rows; i++) {
+		float y = ly + (i - ttop_anim) * row_h;
 
 		if (tools[i].action == TA_HEADER) {
 			dashText(lx + 8, y + 7, localizeDashboardText(tools[i].name), DASH_FS_CAPTION, DASH_C_ACCENT);

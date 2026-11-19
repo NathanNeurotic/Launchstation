@@ -720,6 +720,7 @@ static int pickSize(const char *title, int min_mb, int max_mb, int start_mb)
 //--------------------------------------------------------------
 static int sel, top;
 static float sel_anim;
+static float top_anim = -1.0f;
 
 static void afterChange(void)
 {
@@ -878,6 +879,7 @@ static void actFormat(void)
 		dashModalMessage(DI_WARNING, "Format failed", "The HDD could not be formatted.", NULL);
 	hddJobFree(j);
 	sel = top = 0;
+	top_anim = -1.0f;
 	afterChange();
 }
 
@@ -1428,13 +1430,15 @@ static void hddScene(void)
 		dashTextFit(40, 64, 560, line, DASH_FS_SMALL, hm.filesystem ? DASH_C_TEXT2 : DASH_C_WARM);
 	}
 
+	top_anim = listSlideTop(top_anim, top, sel, hm.n, ROWS,
+	                        dashApproach(0.0f, 1.0f, 14.0f * dashAnimSpeed(), dashFrameDelta()));
 	dashDrawPanelBox(LIST_X - 6, LIST_Y - 6, LIST_W + 12, ROWS * ROW_H + 12, 14);
 	if (hm.n > 0) {
 		dashGfxScissor(LIST_X - 4, LIST_Y - 4, LIST_W + 8, ROWS * ROW_H + 8);
-		dashDrawSelection(LIST_X, LIST_Y + (sel_anim - top) * ROW_H, LIST_W, ROW_H - 3, 8, 1.0f);
-		for (i = top; i < hm.n && i < top + ROWS; i++) {
+		dashDrawSelection(LIST_X, LIST_Y + (sel_anim - top_anim) * ROW_H, LIST_W, ROW_H - 3, 8, 1.0f);
+		for (i = (int)top_anim; i < hm.n && i < top_anim + ROWS; i++) {
 			HddPart *p = &hm.parts[i];
-			float y = LIST_Y + (i - top) * ROW_H;
+			float y = LIST_Y + (i - top_anim) * ROW_H;
 			DashColor col = dashItemColor(i == sel);
 			/* Classic wLaunchELF-style APA browsing: never replace partition
 			 * identifiers with asynchronously fetched game titles. */
@@ -1467,6 +1471,7 @@ void dashHddManager(void)
 
 	memset(&hm, 0, sizeof(hm));
 	sel = top = 0;
+	top_anim = -1.0f;
 	sel_anim = 0.0f;
 	/* the HDD stack loads on the UI thread */
 	if (dashDevicesStartForPath("hdd0:") < 0)

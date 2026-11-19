@@ -910,6 +910,12 @@ void dashIcon(int id, float x, float y, float size, DashColor c)
 
 	if (!icons_ready || id < 0 || id >= DI_COUNT || size <= 0.0f || c.a == 0)
 		return;
+	/* ELF file and default application icons share the header's layers and
+	 * frame timestamp, so every copy has exactly the same rotation phase. */
+	if (id == DI_APP || id == DI_EXEC) {
+		dashHeaderIcon(x + size * 0.5f, y + size * 0.5f, size, c);
+		return;
+	}
 	keyboard_symbol = id == DI_KEY_TAB || id == DI_KEY_RETURN;
 	if ((id < DI_PAD_BADGE || id > DI_BTN_R3) && !keyboard_symbol)
 		c = dashIconTint(c);
@@ -975,15 +981,22 @@ static void drawHeaderIconPart(int part, float cx, float cy, float size, float c
 
 void dashHeaderIcon(float cx, float cy, float size, DashColor c)
 {
-	float angle, cs, sn;
+	static u64 last_frame = (u64)-1;
+	static float cs, sn;
+	u64 frame;
 
 	if (!icons_ready || size <= 0.0f || c.a == 0)
 		return;
 	/* One revolution every 30 seconds, independent of frame rate and animation
-	 * settings. Reduce the integer clock first to avoid long-session drift. */
-	angle = (float)(Timer() % 30000) * (6.28318530718f / 30000.0f);
-	cs = cosf(angle);
-	sn = sinf(angle);
+	 * settings. Every copy uses one frame timestamp and one pair of angles.
+	 * Reduce the integer clock first to avoid long-session drift. */
+	frame = dashFrameTimeMs();
+	if (frame != last_frame) {
+		float angle = (float)(frame % 30000) * (6.28318530718f / 30000.0f);
+		cs = cosf(angle);
+		sn = sinf(angle);
+		last_frame = frame;
+	}
 	c = dashIconTint(c);
 	/* Screen Y grows downward: negative sine turns counterclockwise. */
 	drawHeaderIconPart(0, cx, cy, size, cs, -sn, c);

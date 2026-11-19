@@ -32,6 +32,7 @@ static float sel_anim;
 static float grid_cam;
 static int filter;
 static float view_anim = 1.0f;
+static float list_top_anim = -1.0f;
 
 #define GRID_COLS 5
 #define GRID_PITCH_X 110.0f
@@ -75,6 +76,7 @@ void dashAppsRebuildView(void)
 	int i;
 	char keep[DASH_PATH_MAX];
 
+	list_top_anim = -1.0f;
 	keep[0] = '\0';
 	if (sel >= 0 && sel < norder && order[sel] < dashAppCount)
 		dashStrCopy(keep, dashApps[order[sel]].path, sizeof(keep));
@@ -332,6 +334,7 @@ static void appsMenu(void)
 			int v = dashModalChoice(localizeDashboardText("View"), views, DASH_VIEW_COUNT, dashCfg.view);
 			if (v >= 0 && v != dashCfg.view) {
 				dashCfg.view = v;
+				list_top_anim = -1.0f;
 				view_anim = 0.0f;
 				dashStoreSaveSettings();
 			}
@@ -461,6 +464,7 @@ static void appsInput(const DashInput *in)
 		appsMenu();
 	else if (in->pressed & DASH_IN_SELECT) {
 		dashCfg.view = (dashCfg.view + 1) % DASH_VIEW_COUNT;
+		list_top_anim = -1.0f;
 		view_anim = 0.0f;
 		dashStoreSaveSettings();
 	}
@@ -610,21 +614,22 @@ static void drawList(void)
 	float scroll = listScrollProgress(a, lw - 64, dw - 28, dashUiFocusAge());
 
 	top = listCenteredTop(sel, norder, LIST_ROWS);
+	list_top_anim = listSlideTop(list_top_anim, top, sel, norder, LIST_ROWS,
+	                             dashApproach(0.0f, 1.0f, 14.0f * dashAnimSpeed(), dashFrameDelta()));
 	if (sel_anim < top || sel_anim >= top + LIST_ROWS)
 		sel_anim = (float)sel;
 
 	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, LIST_ROWS * LIST_ROW_H + 12, 14);
+	dashGfxScissor(lx - 6, ly - 4, lw + 12, LIST_ROWS * LIST_ROW_H + 8);
 	{
-		float fy = ly + (sel_anim - top) * LIST_ROW_H;
+		float fy = ly + (sel_anim - list_top_anim) * LIST_ROW_H;
 		if (fy >= ly - LIST_ROW_H && fy < ly + LIST_ROWS * LIST_ROW_H) {
-			dashGfxScissor(lx - 6, ly - 4, lw + 12, LIST_ROWS * LIST_ROW_H + 8);
 			dashDrawSelection(lx, fy, lw, LIST_ROW_H - 3, 9, 1.0f);
-			dashGfxScissorReset();
 		}
 	}
-	for (i = top; i < norder && i < top + LIST_ROWS; i++) {
+	for (i = (int)list_top_anim; i < norder && i < list_top_anim + LIST_ROWS; i++) {
 		DashApp *e = &dashApps[order[i]];
-		float y = ly + (i - top) * LIST_ROW_H;
+		float y = ly + (i - list_top_anim) * LIST_ROW_H;
 		int on = (i == sel);
 		GSTEXTURE *t = dashArtGet(e, abs(i - sel) + 1);
 
@@ -642,6 +647,7 @@ static void drawList(void)
 			dashIcon(DI_STAR, lx + lw - 22, y + 6, 14, DASH_C_WARM);
 		dashGfxPopAlpha();
 	}
+	dashGfxScissorReset();
 	dashDrawScrollbar(lx + lw + 10, ly, LIST_ROWS * LIST_ROW_H, top, LIST_ROWS, norder);
 
 	/* detail panel */

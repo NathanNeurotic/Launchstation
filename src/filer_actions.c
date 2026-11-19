@@ -919,8 +919,10 @@ static int selectCustomDateEditorFolder(FILEINFO *folders, sceMcStDateTime *orig
 	if (editing_index < 0)
 		return 0;
 
-	next_index = editing_index + direction;
-	if (next_index < 0 || next_index >= folder_count)
+	next_index = (editing_index + direction) % folder_count;
+	if (next_index < 0)
+		next_index += folder_count;
+	if (next_index == editing_index)
 		return 0;
 
 	snprintf(selected_name, selected_name_size, "%s", folders[next_index].name);
@@ -1136,6 +1138,11 @@ int filerDateEditorSync(FilerDateEditor *e)
 	return updateCustomDateEditorFolders(e->folders, e->original, e->count, e->selected, e->timestamp);
 }
 
+int filerDateEditorChanged(const FilerDateEditor *e, int index)
+{
+	return !customDateEditorTimestampEqual(&e->folders[index].stats._Modify, &e->original[index]);
+}
+
 int filerDateEditorSelect(FilerDateEditor *e, int direction)
 {
 	return selectCustomDateEditorFolder(e->folders, e->original, e->count, e->selected, sizeof(e->selected), e->timestamp, direction);
@@ -1196,6 +1203,21 @@ void filerDateEditorField(const sceMcStDateTime *ts, int position, char *text, i
 			break;
 	}
 	*sep = (position < 2) ? ":" : (position == 2) ? "   " : (position < 5) ? "/" : "";
+}
+
+void filerDateEditorFieldRange(int position, int *offset, int *length)
+{
+	char time_text[16];
+	int use_12h, date_format, field;
+
+	menuTitleGetClockFormat(&use_12h, &date_format);
+	field = getCustomDateFieldForDisplayPosition(position, date_format);
+	*offset = getCustomDateFieldOffset(field, date_format);
+	*length = field == CUSTOM_DATE_YEAR ? 4 : 2;
+	if (field >= CUSTOM_DATE_YEAR) {
+		menuTitleFormatClockTime(time_text, sizeof(time_text), 0, 0, 0, use_12h);
+		*offset += strlen(time_text) + 1;
+	}
 }
 
 void filerDateEditorFormat(const sceMcStDateTime *ts, char *out, int size)

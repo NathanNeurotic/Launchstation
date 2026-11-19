@@ -41,6 +41,7 @@ static int order[GAMES_MAX];
 static int norder;
 static int sel;
 static float sel_anim;
+static float list_top_anim = -1.0f;
 static int scanned;
 static GameScan *scan_job, *scan_result;
 
@@ -270,6 +271,7 @@ static void rebuild(const char *keep)
 {
 	int i;
 
+	list_top_anim = -1.0f;
 	norder = 0;
 	for (i = 0; i < ngames; i++)
 		if (dashDevicePathReady(games[i].path))
@@ -467,15 +469,16 @@ static void gamesDraw(void)
 	}
 
 	top = listCenteredTop(sel, norder, LIST_ROWS);
+	list_top_anim = listSlideTop(list_top_anim, top, sel, norder, LIST_ROWS,
+	                             dashApproach(0.0f, 1.0f, 14.0f * dashAnimSpeed(), dashFrameDelta()));
 	if (sel_anim < top || sel_anim >= top + LIST_ROWS)
 		sel_anim = (float)sel;
 	dashDrawPanelBox(lx - 6, ly - 6, lw + 12, LIST_ROWS * LIST_ROW_H + 12, 14);
 	dashGfxScissor(lx - 6, ly - 4, lw + 12, LIST_ROWS * LIST_ROW_H + 8);
-	dashDrawSelection(lx, ly + (sel_anim - top) * LIST_ROW_H, lw, LIST_ROW_H - 3, 9, 1.0f);
-	dashGfxScissorReset();
-	for (i = top; i < norder && i < top + LIST_ROWS; i++) {
+	dashDrawSelection(lx, ly + (sel_anim - list_top_anim) * LIST_ROW_H, lw, LIST_ROW_H - 3, 9, 1.0f);
+	for (i = (int)list_top_anim; i < norder && i < list_top_anim + LIST_ROWS; i++) {
 		DashApp *e = &games[order[i]];
-		float y = ly + (i - top) * LIST_ROW_H;
+		float y = ly + (i - list_top_anim) * LIST_ROW_H;
 		GSTEXTURE *t = dashArtGet(e, abs(i - sel) + 1);
 
 		if (t != NULL)
@@ -484,6 +487,7 @@ static void gamesDraw(void)
 			dashIcon(DI_DISC, lx + 9, y + 5, 18, dashItemColor(i == sel));
 		dashTextFit(lx + 38, y + 3, lw - 50, e->title, DASH_FS_SMALL, dashItemColor(i == sel));
 	}
+	dashGfxScissorReset();
 	dashDrawScrollbar(lx + lw + 10, ly, LIST_ROWS * LIST_ROW_H, top, LIST_ROWS, norder);
 
 	dashDrawCard(dx, dy, dw, 290, 16);
