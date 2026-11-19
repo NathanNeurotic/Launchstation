@@ -1140,6 +1140,8 @@ int filerDateEditorSync(FilerDateEditor *e)
 
 int filerDateEditorChanged(const FilerDateEditor *e, int index)
 {
+	if (e == NULL || index < 0 || index >= e->count)
+		return 0;
 	return !customDateEditorTimestampEqual(&e->folders[index].stats._Modify, &e->original[index]);
 }
 
@@ -1208,16 +1210,20 @@ void filerDateEditorField(const sceMcStDateTime *ts, int position, char *text, i
 void filerDateEditorFieldRange(int position, int *offset, int *length)
 {
 	char time_text[16];
-	int use_12h, date_format, field;
+	int use_12h, date_format, field, off, len;
 
 	menuTitleGetClockFormat(&use_12h, &date_format);
 	field = getCustomDateFieldForDisplayPosition(position, date_format);
-	*offset = getCustomDateFieldOffset(field, date_format);
-	*length = field == CUSTOM_DATE_YEAR ? 4 : 2;
+	off = getCustomDateFieldOffset(field, date_format);
+	len = field == CUSTOM_DATE_YEAR ? 4 : 2;
 	if (field >= CUSTOM_DATE_YEAR) {
 		menuTitleFormatClockTime(time_text, sizeof(time_text), 0, 0, 0, use_12h);
-		*offset += strlen(time_text) + 1;
+		off += (int)strlen(time_text) + 1;
 	}
+	if (offset != NULL)
+		*offset = off;
+	if (length != NULL)
+		*length = len;
 }
 
 void filerDateEditorFormat(const sceMcStDateTime *ts, char *out, int size)

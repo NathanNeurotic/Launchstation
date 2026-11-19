@@ -2554,7 +2554,7 @@ static int tsEdit(FilerDateEditor *e)
 	const float list_y = y + 70.0f;
 	int nfields = filerDateEditorFieldCount(), top = 0, idx, i;
 	float open = 0.0f, camera;
-	float *rows = e->count > 0 ? (float *)malloc(e->count * sizeof(*rows)) : NULL;
+	float *rows = e->count > 0 ? (float *)calloc((size_t)e->count, sizeof(*rows)) : NULL;
 	DashInput in;
 
 	idx = filerDateEditorSync(e);
@@ -2591,10 +2591,10 @@ static int tsEdit(FilerDateEditor *e)
 		}
 		navigation_wrap = e->count > 1 &&
 		                  (((in.pressed & DASH_IN_L1) && idx == 0) ||
-		                   ((in.pressed & DASH_IN_L2) && idx == e->count - 1));
+		                   (!(in.pressed & DASH_IN_L1) && (in.pressed & DASH_IN_L2) && idx == e->count - 1));
 		if (in.pressed & DASH_IN_L1)
 			filerDateEditorSelect(e, -1);
-		if (in.pressed & DASH_IN_L2)
+		else if (in.pressed & DASH_IN_L2)
 			filerDateEditorSelect(e, 1);
 		if (in.pressed & (DASH_IN_L1 | DASH_IN_L2)) {
 			idx = filerDateEditorSync(e);

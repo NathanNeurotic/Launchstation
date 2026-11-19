@@ -27,7 +27,8 @@ def function(text, signature):
 editor = function(source, "static int tsEdit(")
 placement = "tsDrawHints(x + 24, y + h - 36, w - 48);"
 assert editor.index("dashGfxPushAlpha(oe);") < editor.index(placement) < editor.index("dashGfxPopAlpha();")
-assert "dashDrawHints(" not in editor and "filerDateEditorField(" not in editor
+assert "dashDrawHints(" not in editor
+assert "filerDateEditorField(" not in editor
 assert "dashDashboardPending()" in editor
 
 code = r'''
@@ -339,7 +340,10 @@ int main(void) {
     run(&e,DASH_IN_L1|DASH_IN_R1,0,DASH_IN_OK); assert(filerDateEditorSync(&e)==0);
     run(&e,DASH_IN_L2|DASH_IN_R2,0,DASH_IN_OK); assert(filerDateEditorSync(&e)==0);
     e.count=0; assert(!filerDateEditorSelect(&e,-1) && !filerDateEditorSelect(&e,1));
+    assert(filerDateEditorChanged(NULL,0)==0 && filerDateEditorChanged(&e,-1)==0);
+    filerDateEditorFieldRange(0,NULL,NULL);
     e.count=40;
+    assert(filerDateEditorChanged(&e,-1)==0 && filerDateEditorChanged(&e,40)==0);
     float positions[40];
     for(int i=0;i<40;i++) positions[i]=i;
     tsMoveRow(positions,0,39);

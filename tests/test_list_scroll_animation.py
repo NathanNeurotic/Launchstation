@@ -100,5 +100,6 @@ for filename, camera, count, rows in (
     assert f"{camera} = listSlideTop({camera}," in text, filename
     assert f"i = (int){camera}; i < {count} && i < {camera} + {rows}" in text, filename
     assert f"(i - {camera}) *" in text, filename
-    assert "dashGfxScissor(" in text and "dashGfxScissorReset();" in text, filename
+    assert "dashGfxScissor(" in text, filename
+    assert "dashGfxScissorReset();" in text, filename
 print("PASS: Applications, Games, File Browser, Tools, Settings, HDD Manager, menus and pickers draw the shared animated viewport and clipped edge rows")
