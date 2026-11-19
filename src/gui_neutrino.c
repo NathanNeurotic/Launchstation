@@ -418,6 +418,22 @@ static int profileReadFile(const char *id, NEUTRINO_LAUNCH_OPTIONS *out)
 	return profileReadAt(path, out);
 }
 
+static int profileActiveFileInvalid(const char *id)
+{
+	NEUTRINO_LAUNCH_OPTIONS parsed;
+	char path[MAX_PATH], dir[MAX_PATH], *text;
+	int invalid = 0;
+
+	if (!profileDevicePath(id, path, sizeof(path), dir, sizeof(dir)))
+		return 0;
+	text = dashLoadTextFile(path, 2048, NULL);
+	if (text != NULL) {
+		invalid = !profileParseText(text, &parsed);
+		free(text);
+	}
+	return invalid;
+}
+
 /* The saved settings for a game: the KEY=value file if it is valid, else the
  * newest valid legacy NTP1 profile. */
 static int profileLoad(const char *id, NEUTRINO_LAUNCH_OPTIONS *out)
@@ -631,6 +647,10 @@ int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 	memset(options, 0, sizeof(*options));
 	if (DashIsActive()) {
 		NEUTRINO_LAUNCH_OPTIONS saved;
+		if (active_profile_gameid[0] && profileActiveFileInvalid(active_profile_gameid)) {
+			dashToast(DASH_TOAST_WARN, "Game settings file is invalid; edit it as text before saving");
+			return FALSE;
+		}
 		if (active_profile_gameid[0] && dashWorkerAwaitAll("Loading game profile") &&
 		    profileLoad(active_profile_gameid, &saved))
 			*options = saved;
@@ -743,6 +763,10 @@ int editNeutrinoGameProfile(const char *game_id, const char *game_path)
 	memset(&options, 0, sizeof(options));
 	snprintf(active_profile_gameid, sizeof(active_profile_gameid), "%s", game_id);
 	snprintf(active_profile_path, sizeof(active_profile_path), "%s", game_path != NULL ? game_path : "");
+	if (profileActiveFileInvalid(game_id)) {
+		dashToast(DASH_TOAST_WARN, "Game settings file is invalid; edit it as text before saving");
+		goto out;
+	}
 	if (profileLoad(game_id, &saved))
 		options = saved;
 	if (showDashboardNeutrinoOptions(&options, 1)) {
@@ -750,6 +774,7 @@ int editNeutrinoGameProfile(const char *game_id, const char *game_path)
 		dashToast(result ? DASH_TOAST_OK : DASH_TOAST_WARN,
 		          result ? "Saved to the game's device" : "Could not save: the game's device did not accept the file");
 	}
+out:
 	active_profile_gameid[0] = '\0';
 	active_profile_path[0] = '\0';
 	return result;

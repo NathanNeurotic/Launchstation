@@ -33,6 +33,17 @@ def extract(name):
         cur += 1
     return source[m.start():cur] + "\n"
 
+
+def extract_signature(signature):
+    start = source.index(signature)
+    depth = 1
+    cur = source.index("{", start) + 1
+    while depth:
+        depth += (source[cur] == "{") - (source[cur] == "}")
+        cur += 1
+    return source[start:cur] + "\n"
+
+
 names = ("neutrinoVmcNameValid", "profileGameIdValid", "profileChecksum", "profilePath", "profileDeviceRoot", "profileDevicePath", "profileStorageSafe",
          "profileOptionsValid", "profileReadSlot", "profileReadLatest", "profileCompatBit", "profileIntValue",
          "profileParseText", "profileReadAt", "profileReadFile", "profileLoad", "profileSave")
@@ -40,16 +51,21 @@ code = r'''
 #define _POSIX_C_SOURCE 200809L
 #include <assert.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #define MAX_PATH 256
+#define TRUE 1
+#define FALSE 0
 #define NEUTRINO_GAME_ID_SIZE 12
 #define MX4SIO 1
 #define MMCE 1
 static int mx4sio_driver_running, mmce_stack, dev_stack=1, fileMode=0777;
 static char active_profile_path[MAX_PATH];
-static struct { int HOSTwrite; } setting_s = {1}, *setting = &setting_s;
+static char active_profile_gameid[NEUTRINO_GAME_ID_SIZE];
+typedef uint64_t u64;
+static struct { int HOSTwrite; u64 color[8]; } setting_s = {1,{0}}, *setting = &setting_s;
 static const char *dashStoreDir(void) { return "mc0:/SYS-CONF/"; }
 static int isPathDeviceStackLoaded(const char *path) {
     if (!strcmp(path,"mmce0:/")) return mmce_stack;
@@ -59,6 +75,8 @@ static int isPathDeviceStackLoaded(const char *path) {
 typedef struct { unsigned int game_compatibility; int video_mode, video_compatibility, debug_colors, logo; char vmc[2][NEUTRINO_VMC_NAME_MAX]; } NEUTRINO_LAUNCH_OPTIONS;
 static const struct { int mode; const char *label; } compatibility_options[] = {{0,""},{2,""},{3,""},{5,""},{7,""}};
 enum { NEUTRINO_COMPAT_COUNT = 5, NEUTRINO_VIDEO_COUNT = 6, NEUTRINO_VIDEO_COMPAT_COUNT = 4 };
+enum { NEUTRINO_VIDEO_MODE = NEUTRINO_COMPAT_COUNT, NEUTRINO_VIDEO_COMPATIBILITY,
+       NEUTRINO_DEBUG_COLORS, NEUTRINO_LOGO, NEUTRINO_RUN, NEUTRINO_CANCEL };
 typedef struct { int unused; } NEUTRINO_OPTION_ARGS;
 static char content[4][512];
 static int fail_write, truncate_write, allow_wait=1;
@@ -77,7 +95,7 @@ static char *dashLoadTextFile(const char *path, int max_size, int *len) {
     buf=(char *)malloc((size_t)n+1);
     assert(buf);
     memcpy(buf,content[k],(size_t)n+1);
-    *len=n;
+    if (len != NULL) *len=n;
     return buf;
 }
 static int dashWriteFile(const char *path, const void *data, int size) {
@@ -103,6 +121,81 @@ static int buildNeutrinoOptionArgs(const NEUTRINO_LAUNCH_OPTIONS *p, NEUTRINO_OP
 '''
 for name in names:
     code += extract(name)
+code += r'''
+static const struct { const char *argument, *label; } video_modes[] = {
+    {"","Original"},{"fp1","240p"},{"fp2","480p"},{"1080ix1","1080i x1"},{"1080ix2","1080i x2"},{"1080ix3","1080i x3"}
+};
+static const char *video_compatibility_modes[] = {"Off","Field 1","Field 2","Field 3"};
+typedef struct { int icon; const char *label, *detail; int disabled; } DashMenuItem;
+typedef struct { NEUTRINO_LAUNCH_OPTIONS *options; DashMenuItem *items; } NeutrinoOptionsMenu;
+enum { DI_SAVE, DI_PLAY, DI_INFO, DI_SETTINGS, DI_UNDO, DI_BACK, DASH_TOAST_OK, DASH_TOAST_WARN };
+static int menu_script;
+static int (*modal_edit)(int, int, void *);
+static void *modal_edit_arg;
+static void dashSoundMaintain(void) {}
+static void dashToast(int kind, const char *text) { (void)kind; (void)text; }
+static int dashModalChoice(const char *title, const char *const *labels, int count, int selected) {
+    (void)title; (void)labels; (void)count; return selected;
+}
+static void dashModalSetEdit(int (*edit)(int, int, void *), void *arg) { modal_edit = edit; modal_edit_arg = arg; }
+static int dashModalMenu(const char *title, const char *detail, DashMenuItem *items, int count, int selected) {
+    (void)title; (void)detail; (void)items; (void)count; (void)selected;
+    if (menu_script == 1) {
+        modal_edit(NEUTRINO_VIDEO_MODE + 1, 1, modal_edit_arg);
+        return 0;
+    }
+    if (menu_script == 2) {
+        modal_edit(NEUTRINO_VIDEO_MODE + 1, 1, modal_edit_arg);
+        modal_edit(NEUTRINO_CANCEL, 0, modal_edit_arg);
+        return 1;
+    }
+    return 1;
+}
+static int DashIsActive(void) { return 1; }
+#define SCREEN_WIDTH 640
+#define SCREEN_HEIGHT 448
+#define SCREEN_MARGIN 8
+#define FONT_HEIGHT 16
+#define FONT_WIDTH 8
+#define LEFT_CUR '<'
+#define COLOR_BACKGR 0
+#define COLOR_FRAME 1
+#define COLOR_TEXT 2
+#define COLOR_SELECT 3
+#define PAD_TRIANGLE 1
+#define PAD_CROSS 2
+#define PAD_CIRCLE 4
+#define PAD_UP 8
+#define PAD_DOWN 16
+#define PAD_LEFT 32
+#define PAD_RIGHT 64
+#define LNG(x) ""
+static int swapKeys, new_pad;
+static void waitPadReady(int port, int slot) { (void)port; (void)slot; }
+static int readpad(void) { return 0; }
+static void clrScr(u64 color) { (void)color; }
+static void setScrTmp(const char *a, const char *b) { (void)a; (void)b; }
+static void drawPopSprite(u64 color, int x1, int y1, int x2, int y2) { (void)color; (void)x1; (void)y1; (void)x2; (void)y2; }
+static void drawFrame(int x1, int y1, int x2, int y2, u64 color) { (void)x1; (void)y1; (void)x2; (void)y2; (void)color; }
+static int printXY(const char *text, int x, int y, u64 color, int draw, int align) {
+    (void)text; (void)x; (void)y; (void)color; (void)draw; (void)align; return 0;
+}
+static void drawChar(int c, int x, int y, u64 color) { (void)c; (void)x; (void)y; (void)color; }
+static void drawScr(void) {}
+'''
+for signature in (
+    "static int profileActiveFileInvalid(",
+    "static int moveNeutrinoSelection(",
+    "static void neutrinoOptionDetails(",
+    "static int editNeutrinoOption(",
+    "static int showDashboardNeutrinoOptions(",
+    "static void drawNeutrinoHeading(",
+    "static void drawNeutrinoOption(",
+    "int showNeutrinoLaunchOptions(",
+    "int showNeutrinoLaunchOptionsForGame(",
+    "int editNeutrinoGameProfile(",
+):
+    code += extract_signature(signature)
 code += r'''
 static void clear_slots(void) { memset(content,0,sizeof(content)); fail_write=truncate_write=0; allow_wait=1; mx4sio_driver_running=mmce_stack=0;
     dev_stack=1; dev_no_dir=dev_has_dir=dev_mkdir_fails=dev_torn=dev_writes=dev_mkdirs=0; strcpy(active_profile_path,"mass:/DVD/Game.iso"); last_dev_path[0]=0; }
@@ -226,6 +319,33 @@ int main(void)
             assert(profileSave(id,&a)==0 && dev_writes==0 && !content[2][0] && !content[3][0]);
         }
     }
+    /* Real Games settings: an unrelated edit preserves both hand-written VMC fields. */
+    clear_slots();
+    strcpy(content[3],"$Compatibility=0\n$NeutrinoVideo=0\n$VMC_0=First Card\n$VMC_1=Second Card\n$End=1\n");
+    menu_script=1;
+    assert(editNeutrinoGameProfile(id,"mass:/DVD/Game.iso")==1);
+    assert(strstr(content[3],"$VMC_0=First Card") && strstr(content[3],"$VMC_1=Second Card"));
+    assert(strstr(content[3],"$NeutrinoVideo=1"));
+    /* The launch-options save route preserves the same fields. */
+    clear_slots();
+    strcpy(content[3],"$Compatibility=0\n$NeutrinoVideo=0\n$VMC_0=First Card\n$VMC_1=Second Card\n$End=1\n");
+    menu_script=2;
+    memset(&got,0,sizeof(got));
+    (void)showNeutrinoLaunchOptionsForGame(&got,id,"mass:/DVD/Game.iso");
+    assert(strstr(content[3],"$VMC_0=First Card") && strstr(content[3],"$VMC_1=Second Card"));
+    assert(strstr(content[3],"$NeutrinoVideo=1"));
+    /* An unreadable hand edit is never replaced with defaults by either save route. */
+    clear_slots();
+    strcpy(content[3],"$NeutrinoVideo=0\n$VMC_0=Keep Me\n$End=1\n$VMC_1=Also Keep\n");
+    menu_script=1;
+    assert(editNeutrinoGameProfile(id,"mass:/DVD/Game.iso")==0);
+    assert(dev_writes==0 && !strcmp(content[3],"$NeutrinoVideo=0\n$VMC_0=Keep Me\n$End=1\n$VMC_1=Also Keep\n"));
+    clear_slots();
+    strcpy(content[3],"$NeutrinoVideo=0\n$VMC_0=Keep Me\n$End=1\n$VMC_1=Also Keep\n");
+    menu_script=2;
+    memset(&got,0,sizeof(got));
+    (void)showNeutrinoLaunchOptionsForGame(&got,id,"mass:/DVD/Game.iso");
+    assert(dev_writes==0 && !strcmp(content[3],"$NeutrinoVideo=0\n$VMC_0=Keep Me\n$End=1\n$VMC_1=Also Keep\n"));
     (void)rev; (void)slot;
     puts("PASS: Neutrino game settings: OPL-style KEY=value round trip, hand edits, legacy NTP1 fallback, failed writes, validation");
     return 0;
