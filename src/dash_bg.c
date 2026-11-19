@@ -222,7 +222,7 @@ static void drawThemeLayers(int fx)
 	GSTEXTURE *s1, *s2;
 
 	if (bg != NULL)
-		dashTexDraw(bg, 0, 0, DASH_VW, DASH_VH, DC(255, 255, 255, 255));
+		dashTexDraw(bg, 0, 0, DASH_VW, DASH_VH, DC(128, 128, 128, 255));
 	/* Motion speed may be 0% while detail is High; suppress effects only
 	 * for the explicit static/off render, not when animation is frozen. */
 	if (fx == DASH_FX_OFF)
@@ -385,7 +385,7 @@ static void sceneImage(float t, int fx)
 		return;
 	}
 	dashRect(0, 0, DASH_VW, DASH_VH, dashTheme.bg2);
-	drawCover(tex, DC(255, 255, 255, 255));
+	drawCover(tex, DC(128, 128, 128, 255));
 }
 
 static void drawAppWallpaper(void)

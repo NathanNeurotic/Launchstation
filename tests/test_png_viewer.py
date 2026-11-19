@@ -42,6 +42,12 @@ image_draw = re.search(r"dashTexDrawQuadUV\(tex,[\s\S]*?DC\((\d+), (\d+), (\d+),
 assert image_draw, "Missing image texture draw tint"
 assert tuple(map(int, image_draw.groups())) == (128, 128, 128, 255), "Image tint doubles/clips colors instead of preserving them"
 assert "gsKit_prim_quad_texture_3d" in (root / "src/dash_gfx.c").read_text()
+for filename in ("dash_games.c", "dash_apps.c", "dash_art.c", "dash_bg.c"):
+    artwork = (root / "src" / filename).read_text()
+    draws = re.findall(r"dashTexDraw(?:Fit)?\([\s\S]*?DC\((\d+), (\d+), (\d+), (\d+)\)\);", artwork)
+    assert draws, f"Missing decoded artwork draw in {filename}"
+    assert all(tuple(map(int, draw)) == (128, 128, 128, 255) for draw in draws), \
+        f"{filename} doubles/clips decoded artwork colors: {draws}"
 assert "jpegturbo" in ps2yaml
 assert "src/dash_image.c" in ps2yaml
 assert "src/dash_jpeg.c" in ps2yaml

@@ -479,7 +479,7 @@ static void gamesDraw(void)
 		GSTEXTURE *t = dashArtGet(e, abs(i - sel) + 1);
 
 		if (t != NULL)
-			dashTexDrawFit(t, lx + 6, y + 2, 24, 24, DC(255, 255, 255, 255));
+			dashTexDrawFit(t, lx + 6, y + 2, 24, 24, DC(128, 128, 128, 255));
 		else
 			dashIcon(DI_DISC, lx + 9, y + 5, 18, dashItemColor(i == sel));
 		dashTextFit(lx + 38, y + 3, lw - 50, e->title, DASH_FS_SMALL, dashItemColor(i == sel));
@@ -490,7 +490,7 @@ static void gamesDraw(void)
 	/* With cover art: the art alone, large, no plaque. Without: the frame as the stand-in. */
 	art = dashArtGet(g, 0);
 	if (art != NULL) {
-		dashTexDrawFit(art, dx + 14, dy + 10, dw - 28, 174, DC(255, 255, 255, 255));
+		dashTexDrawFit(art, dx + 14, dy + 10, dw - 28, 174, DC(128, 128, 128, 255));
 		off = 36;
 	} else {
 		dashDrawAppArt(g, dx + (dw - 132) * 0.5f, dy + 14, 132, 132, 1.0f, 0);

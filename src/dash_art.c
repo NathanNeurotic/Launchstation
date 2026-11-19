@@ -807,12 +807,12 @@ static void appTile(const DashApp *app, GSTEXTURE *tex, float x, float y, float 
 	}
 	tileBody(x, y, w, h, focus, top, bot);
 	if (tex != NULL)
-		dashTexDrawFit(tex, x + w * ax, y + h * ay, w * aw, h * ah, DC(255, 255, 255, 255));
+		dashTexDrawFit(tex, x + w * ax, y + h * ay, w * aw, h * ah, DC(128, 128, 128, 255));
 	else {
 		if (icon == DASH_APPICON_SYSTEM && dashTheme.app_icon[0])
 			custom = dashThemeTextureFile(dashTheme.app_icon, 128, 128);
 		if (custom != NULL)
-			dashTexDrawFit(custom, x + w * ax, y + h * ay, w * aw, h * ah, DC(255, 255, 255, 255));
+			dashTexDrawFit(custom, x + w * ax, y + h * ay, w * aw, h * ah, DC(128, 128, 128, 255));
 		else if (icon == DASH_APPICON_MONOGRAM) {
 			char mono[4];
 			float ms = w * aw / 36.0f;

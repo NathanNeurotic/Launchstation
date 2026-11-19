@@ -630,7 +630,7 @@ static void drawList(void)
 
 		dashGfxPushAlpha(appOpacity(e));
 		if (t != NULL)
-			dashTexDrawFit(t, lx + 6, y + 2, 24, 24, DC(255, 255, 255, 255));
+			dashTexDrawFit(t, lx + 6, y + 2, 24, 24, DC(128, 128, 128, 255));
 		else
 			dashIcon(dashTheme.app_icon_style == DASH_APPICON_SYSTEM ? DI_EXEC : dashLibDeviceIcon(e->path), lx + 9, y + 5, 18,
 			         dashTheme.app_icon_style == DASH_APPICON_MONOGRAM ? dashColorHue(e->hue, 120, 230, 255) : dashItemColor(on));
