@@ -703,8 +703,46 @@ void dashRescanLibrary(int interactive)
 		/* a full refresh looks everywhere: start the drivers it needs here,
 		 * the background scan only reads devices that are running */
 		int i;
-		for (i = 0; i < dashCfg.nscan; i++)
-			dashDevicesStartForPath(dashCfg.scan[i]);
+		unsigned int tried_hdd_units = 0;
+		unsigned int tried_hdd_generation = getIopResetGeneration();
+#ifdef EXFAT
+		unsigned int tried_ata_units = 0;
+		unsigned int tried_ata_generation = getIopResetGeneration();
+#endif
+		for (i = 0; i < dashCfg.nscan; i++) {
+			const char *path = dashCfg.scan[i];
+			/* Only probe each HDD unit once per refresh/IOP generation. */
+			if (tried_hdd_generation != getIopResetGeneration()) {
+				tried_hdd_units = 0;
+				tried_hdd_generation = getIopResetGeneration();
+			}
+			if (!strncmp(path, "hdd", 3) &&
+			    (path[3] == '0' || path[3] == '1') && path[4] == ':') {
+				unsigned int bit = 1u << (path[3] == '1');
+				if (tried_hdd_units & bit)
+					continue;
+				tried_hdd_units |= bit;
+			}
+#ifdef EXFAT
+			/* A driver reset invalidates earlier startup attempts. */
+			if (tried_ata_generation != getIopResetGeneration()) {
+				tried_ata_units = 0;
+				tried_ata_generation = getIopResetGeneration();
+			}
+			/* ata:/ aliases ata0:/; both share a retry bit. */
+			if (!strncmp(path, "ata", 3) &&
+			    (path[3] == ':' || ((path[3] == '0' || path[3] == '1') && path[4] == ':'))) {
+				unsigned int bit = 1u << (path[3] == '1');
+				if (tried_ata_units & bit)
+					continue;
+				tried_ata_units |= bit;
+			}
+#endif
+			if (dashDevicesStartForPath(path) < 0) {
+				scan_count_before = -1;
+				return; /* Back cancelled device startup. */
+			}
+		}
 	}
 	if (dashLibScanStart(interactive) < 0)
 		dashToast(DASH_TOAST_ERROR, "Application scan failed (out of memory)");
@@ -1068,7 +1106,7 @@ static void quickLaunchDraw(void)
 		by = y + 70 + (col / 2) * row_h;
 		bx += dashDrawButton(bx, by, lk_map[i].icon, NULL) + 8;
 		lkLabel(lk_map[i].lk, label, sizeof(label));
-		dashTextFit(bx, by + 4, (w - 48) * 0.5f - 30, label, DASH_FS_SMALL, DASH_C_TEXT);
+		dashTextFit(bx, dashButtonTextY(by, DASH_FS_SMALL), (w - 48) * 0.5f - 30, label, DASH_FS_SMALL, DASH_C_TEXT);
 		col++;
 	}
 	dashGfxPopAlpha();

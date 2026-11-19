@@ -506,8 +506,13 @@ int readMC(const char *path, FILEINFO *info, int max)
 	strcat(dir, "*");
 	limit = (max < MAX_ENTRY - 1) ? max + 2 : MAX_ENTRY + 1;
 	for (i = 0; i < MC_BROWSER_RETRY_COUNT; i++) {
-		mcGetDir(MC_UNIT_PORT(port), MC_UNIT_SLOT(port), dir, 0, limit, mcDir);
-		mcSync(0, NULL, &ret);
+		ret = mcGetDir(MC_UNIT_PORT(port), MC_UNIT_SLOT(port), dir, 0, limit, mcDir);
+		if (ret < 0)
+			break;
+		if (mcSync(0, NULL, &ret) <= 0) {
+			ret = sceMcResFailDetect;
+			break;
+		}
 		if (ret >= 0)
 			break;
 		if (ret != sceMcResChangedCard && ret != sceMcResFailDetect && ret != sceMcResFailDetect2)
@@ -534,7 +539,9 @@ int readMC(const char *path, FILEINFO *info, int max)
 		if (mcDir[i].AttrFile & sceMcFileAttrSubdir &&
 		    (!strcmp((char *)mcDir[i].EntryName, ".") || !strcmp((char *)mcDir[i].EntryName, "..")))
 			continue;  //Skip pseudopaths "." and ".."
-		strcpy(info[j].name, (char *)mcDir[i].EntryName);
+		/* PS1 directory names may use all 32 bytes without a NUL. */
+		memcpy(info[j].name, mcDir[i].EntryName, sizeof(mcDir[i].EntryName));
+		info[j].name[sizeof(mcDir[i].EntryName)] = '\0';
 		info[j].stats = mcDir[i];
 		j++;
 	}
@@ -728,6 +735,15 @@ static int getHddUnitFromDevice(const char *device)
 	return device[3] - '0';
 }
 
+/* Fixed system partition order shared with HDD Manager. */
+static int hddPartyNameCmp(const void *a, const void *b)
+{
+	const char *x = (const char *)a, *y = (const char *)b;
+	int rank = hddPartitionPriority(x) - hddPartitionPriority(y);
+
+	return rank ? rank : stricmp(x, y);
+}
+
 static void setPartyListForDevice(const char *device)
 {
 	iox_dirent_t dirEnt;
@@ -745,6 +761,9 @@ static void setPartyListForDevice(const char *device)
 		if (hddNparties[unit] >= MAX_PARTITIONS)
 			break;
 		if ((dirEnt.stat.attr != ATTR_MAIN_PARTITION) || (dirEnt.stat.mode != FS_TYPE_PFS))
+			continue;
+		/* The boot record is not a browsable filesystem. */
+		if (!strncmp(dirEnt.name, "__mbr", 6))
 			continue;
 
 		//Patch this to see if new CB versions use valid PFS format
@@ -775,6 +794,8 @@ static void setPartyListForDevice(const char *device)
 		}
 	}
 	fileXioDclose(hddFd);
+	if (hddNparties[unit] > 1)
+		qsort(hddParties[unit], hddNparties[unit], sizeof(hddParties[unit][0]), hddPartyNameCmp);
 }
 
 void setPartyList(void)

@@ -30,7 +30,7 @@
 <p>Every background is drawn procedurally from a few GS primitives; none of them uses or needs Sony BIOS data. The PS2-inspired scenes follow behaviour documented by the osdbits OSDSYS reverse-engineering notes (menu tunnel, tower heightfield, illegal-disc clouds, System Configuration clock, colour-swap selection).</p>
 
 <h3 id="orbs">The OSD orbs</h3>
-<p>OSD Classic, OSD Minimal and System Clock draw the PS2 main menu's orbs as the clock they are. Seven orbs, one per weekday, ride one circle whose plane slowly tumbles; their light trails show where the circle has been, so the sphere appears. They follow the console clock: all seven meet in one bright orb at :00, split into two groups at :30, three at :20 and :40, four at :15 and :45, five at :12, :24, :36 and :48, and six at :10 and :50. The sphere is small at the top of the hour and grows as the hour goes by. At 0% background motion the orbs hold still; below 50% the trails are shorter. If the real-time clock stops changing or becomes invalid, the orbs keep moving on the shared visual clock (they do not invent a date or time), and a valid clock tick re-anchors them.</p>
+<p>OSD Classic, OSD Minimal and System Clock draw the PS2 main menu's orbs as the clock they are. Seven orbs, one per weekday, ride one circle whose plane slowly tumbles; their light trails show where the circle has been, so the sphere appears. They follow the console clock: all seven meet in one bright orb at :00, split into two groups at :30, three at :20 and :40, four at :15 and :45, five at :12, :24, :36 and :48, and six at :10 and :50. The sphere is small at the top of the hour and grows as the hour goes by. At 0% background motion the orbs hold still. Low background detail shortens the trails; motion speed does not change their length. If the real-time clock stops changing or becomes invalid, the orbs keep moving on the shared visual clock (they do not invent a date or time), and a valid clock tick re-anchors them.</p>
 
 <h2 id="selection">Selection presentation</h2>
 <p><b>Selection style</b> (Customize theme &gt; Tiles &amp; menus): <b>Solid bar</b>, <b>Accent bar</b>, <b>Outline</b> or <b>Text colour</b> (how the PS2 system menus mark the selection). Selected and unselected device cards share one geometry; focus adds emphasis without resizing or reflowing the card. <b>Corners</b> can be Square, Soft or Round and apply to panels, dialogs and list rows; <b>Glow</b> adds soft light behind focused items.</p>
@@ -48,7 +48,7 @@
 <p>Tile style applies to Home and Applications artwork, including fallback icons and initials. Changes preview immediately and take part in the normal Save/Discard session. <b>Reset style</b> restores the preset's values. Exported themes include <code>tile_style</code>; customized dashboard configurations store it as <code>Theme_tile_style</code>.</p>
 
 <h2 id="icon-backing">Icon backing</h2>
-<p><b>Settings &gt; Appearance &gt; Control icon backings</b> (default On) shows or hides theme-derived badges behind face-button and D-pad symbols and behind quick-action chips. Button symbols come from the built-in vector atlas, so no external icon PNGs are needed.</p>
+<p><b>Settings &gt; Appearance &gt; Control icon backings</b> (default Off) shows or hides theme-derived badges behind face-button and D-pad symbols and behind quick-action chips. Button symbols come from the built-in vector atlas, so no external icon PNGs are needed.</p>
 
 <h2 id="icons">Icons</h2>
 <p>Applications that have artwork keep using it. Others get the <b>Default app icon</b> (Customize theme &gt; Icons): <b>Application</b> (default, a PS2-style program icon on a tile in the theme colours with the device as a badge), <b>Device</b> (the device's icon) or <b>Initials</b> (coloured tile with the app's initials). <b>Icon colour</b> is Text colours, Accent or Monochrome. <b>Custom app icon image...</b> (or <code>app_icon =</code>) uses your own PNG; up to 128x128 is kept and alpha is supported. If the file is missing or broken the built-in icon is used.</p>
@@ -63,7 +63,8 @@
 
 <h2 id="motion">Motion</h2>
 <ul>
-<li><b>Background motion</b> (Appearance): 0% to 200% in 10% steps, default 100%. 0% freezes the scene; 200% doubles its speed. Lower values use lighter detail where available.</li>
+<li><b>Background motion</b> (Appearance): 0% to 200% in 10% steps, default 100%. 0% freezes the scene; 200% doubles its speed. Scene geometry is controlled separately by Background detail.</li>
+<li><b>Background detail</b>: Low or High (default). Low uses fewer elements on supported scenes; High requests full detail even at 0% motion; after six slow frames, a temporary performance fallback reduces scene elements (fewer Crystal stars and no full-detail towers) until performance recovers. This setting does not change scene speed.</li>
 <li><b>Menu animation</b>: 0% to 200%, default 100%. 0% makes transitions instant; higher values lengthen them.</li>
 <li><b>Panel transparency</b>: 0% removes menu panels and 100% makes them fully opaque (it edits the Panels colour's opacity).</li>
 </ul>

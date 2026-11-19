@@ -9,7 +9,9 @@ root = Path(__file__).resolve().parents[1]
 ui = (root / "src/dash_ui.c").read_text(encoding="utf-8")
 a = ui.index("static int hintRank(")                       # the fixed-order helpers and the renderer
 b = ui.index("void dashDrawHints(")
-func = ui[a:ui.index("\n}\n", b) + 3]
+helper_start = ui.index("float dashButtonTextY(")
+helper = ui[helper_start:ui.index("\n}\n", helper_start) + 3]
+func = helper + "\n" + ui[a:ui.index("\n}\n", b) + 3]
 
 code = r'''
 #include <assert.h>
@@ -26,11 +28,11 @@ typedef struct { int r, g, b, a; } DashColor;
 typedef struct { int button; const char *key; const char *label; } DashHint;
 static struct { DashColor bg2; } dashTheme;
 #define DC(r, g, b, a) ((DashColor){r, g, b, a})
-static float font_factor = 1.0f;
+static float font_factor = 1.0f, button_y;
 static float dashTextWidth(const char *s, float sc) { return strlen(s) * 10.0f * sc * font_factor; }
 static const char *localizeDashboardText(const char *s) { return s; }
 static float buttonWidth(int icon, const char *key) { return (icon >= 0 || !key) ? 22.0f : 50.0f; }
-static float drawButton(float x, float y, int icon, const char *key) { (void)x; (void)y; return buttonWidth(icon, key); }
+static float drawButton(float x, float y, int icon, const char *key) { (void)x; button_y = y; return buttonWidth(icon, key); }
 static float dashClampf(float v, float lo, float hi) { return v < lo ? lo : v > hi ? hi : v; }
 static float dashEaseOutCubic(float t) { return t; }
 static float dashSectionAnim(void) { return 1.0f; }
@@ -41,7 +43,9 @@ static void dashRectGradH(float x, float y, float w, float h, DashColor a, DashC
 static struct { float x, w, sc; } fit[8];
 static int nfit;
 static float dashTextS(float x, float y, const char *s, float sc, int c) {
-    (void)y; (void)c; fit[nfit].x = x; fit[nfit].w = dashTextWidth(s, sc); fit[nfit].sc = sc; nfit++;
+    (void)c;
+    assert(y + 16.0f * sc >= button_y + 10.99f && y + 16.0f * sc <= button_y + 11.01f);
+    fit[nfit].x = x; fit[nfit].w = dashTextWidth(s, sc); fit[nfit].sc = sc; nfit++;
     return x + dashTextWidth(s, sc);
 }
 ''' + func + r'''

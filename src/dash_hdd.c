@@ -16,6 +16,7 @@
 #include "dash_sound.h"
 #include "hdd_header_injector.h"
 #include "hdd_filesystem.h"
+#include "gui_sort.h"
 #include "hdl_rpc.h"
 #include "init.h"
 
@@ -150,35 +151,45 @@ typedef struct
 	int abandoned;
 } HddJob;
 
-/* Keep three recent mounts and reserve one APA handle for partition scans.
- * The worker changes mounts; cached selections update ages only while it is
- * idle. Cached usage survives eviction, so revisiting needs no remount. */
-static u32 pfs_mount_used[MOUNT_LIMIT], pfs_mount_clock;
+/* Match File Browser: retain up to MOUNT_LIMIT partitions, reuse the first
+ * eligible slot, protect active/VMC mounts and reserve scan headroom as needed.
+ * Cached usage survives eviction, so revisiting needs no remount. */
+
+/* A resident FTP service consumes APA handle capacity. Keep four mounts
+ * without FTP, and reserve a handle while the service is running. */
+static int pfsRetainedLimit(void)
+{
+#ifdef ETH
+	return isFtpServerRunning() ? MOUNT_LIMIT - 1 : MOUNT_LIMIT;
+#else
+	return MOUNT_LIMIT;
+#endif
+}
 
 static int pfsMakeRoom(int limit)
 {
 	unsigned tried = 0;
-	int i, count, oldest;
+	int i, count, first;
 
 	for (;;) {
 		count = 0;
-		oldest = -1;
+		first = -1;
 		for (i = 0; i < MOUNT_LIMIT; i++) {
 			if (mountedParty[i][0] == 0)
 				continue;
 			count++;
 			if (i == latestMount || Party_vmcIndex[i] >= 0 || (tried & (1u << i)))
 				continue;
-			if (oldest < 0 || pfs_mount_used[i] < pfs_mount_used[oldest])
-				oldest = i;
+			if (first < 0)
+				first = i;
 		}
 		if (count <= limit)
 			return 0;
-		if (oldest < 0)
+		if (first < 0)
 			return -EBUSY;
-		tried |= 1u << oldest;
-		unmountParty(oldest);
-		/* A failed unmount retains its bookkeeping; try another old mount. */
+		tried |= 1u << first;
+		unmountParty(first);
+		/* A failed unmount retains its bookkeeping; try another eligible mount. */
 	}
 }
 
@@ -190,11 +201,10 @@ static int pfsMountForInfo(const char *dev)
 	for (i = 0; i < MOUNT_LIMIT; i++) {
 		if (!strcmp(mountedParty[i], dev)) {
 			latestMount = i;
-			pfs_mount_used[i] = ++pfs_mount_clock;
 			return i;
 		}
 	}
-	ret = pfsMakeRoom(MOUNT_LIMIT - 2);
+	ret = pfsMakeRoom(pfsRetainedLimit() - 1);
 	if (ret < 0)
 		return ret;
 	for (i = 0; i < MOUNT_LIMIT; i++) {
@@ -211,7 +221,6 @@ static int pfsMountForInfo(const char *dev)
 		return ret;
 	dashStrCopy(mountedParty[i], dev, sizeof(mountedParty[i]));
 	latestMount = i;
-	pfs_mount_used[i] = ++pfs_mount_clock;
 	return i;
 }
 
@@ -261,7 +270,7 @@ static void scanRun(HddJob *j)
 		j->ret = -ENOMEM;
 		return;
 	}
-	j->ret = pfsMakeRoom(MOUNT_LIMIT - 1);
+	j->ret = pfsMakeRoom(pfsRetainedLimit() - 1);
 	if (j->ret < 0)
 		return;
 	fd = fileXioDopen("hdd0:");
@@ -444,8 +453,12 @@ static int partCmp(const void *a, const void *b)
 {
 	const HddPart *x = (const HddPart *)a, *y = (const HddPart *)b;
 
-	/* system first, then PFS, then HDL games, then the rest */
-	static const int order[] = {1, 2, 0, 3};
+	static const int order[] = {0, 1, 2, 3}; /* PFS, HDL, system, other */
+	int xr = hddPartitionPriority(x->name);
+	int yr = hddPartitionPriority(y->name);
+
+	if (xr != yr)
+		return xr - yr;
 	if (order[x->type] != order[y->type])
 		return order[x->type] - order[y->type];
 	return stricmp(x->name, y->name);
@@ -586,7 +599,6 @@ static void loadPfsInfo(int i)
 		for (slot = 0; slot < MOUNT_LIMIT; slot++) {
 			if (!strcmp(mountedParty[slot], dev) && latestMount != slot) {
 				latestMount = slot;
-				pfs_mount_used[slot] = ++pfs_mount_clock;
 				break;
 			}
 		}
@@ -689,13 +701,13 @@ static int pickSize(const char *title, int min_mb, int max_mb, int start_mb)
 				float hx = x + 24, hy = y + h - 36;
 				hx += dashDrawButton(hx, hy, DI_BTN_LEFT, NULL) + 2;
 				hx += dashDrawButton(hx, hy, DI_BTN_RIGHT, NULL) + 4;
-				hx = dashTextS(hx, hy + 4.5f, "128 MB", DASH_FS_SMALL, DASH_C_TEXT2) + 10;
+				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), "128 MB", DASH_FS_SMALL, DASH_C_TEXT2) + 10;
 				hx += dashDrawButton(hx, hy, -1, "L1") + 2;
 				hx += dashDrawButton(hx, hy, -1, "R1") + 4;
-				hx = dashTextS(hx, hy + 4.5f, "1 GB", DASH_FS_SMALL, DASH_C_TEXT2) + 10;
+				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), "1 GB", DASH_FS_SMALL, DASH_C_TEXT2) + 10;
 				hx += dashDrawButton(hx, hy, -1, "L2") + 2;
 				hx += dashDrawButton(hx, hy, -1, "R2") + 4;
-				hx = dashTextS(hx, hy + 4.5f, "10 GB", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
+				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), "10 GB", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
 				dashModalHintRow(hx, hy, dashOkIcon(), localizeDashboardText("OK"), dashBackIcon(), localizeDashboardText("Cancel"));
 			}
 			dashGfxPresent();
@@ -916,7 +928,8 @@ static const char *pickHeaderSource(void)
 	r = dashModalMenu("Header source", "Device with a __Headers/<partition>/ folder", items, n, 0);
 	if (r < 0)
 		return NULL;
-	dashDevicesStartForPath(devs[r]);
+	if (dashDevicesStartForPath(devs[r]) < 0)
+		return NULL;
 	return devs[r];
 }
 
@@ -1206,7 +1219,7 @@ static int typeIcon(const HddPart *p)
 {
 	switch (p->type) {
 		case HP_PFS:
-			return DI_FOLDER;
+			return DI_PARTITION;
 		case HP_HDL:
 			return DI_DISC;
 		case HP_SYSTEM:
@@ -1380,7 +1393,7 @@ static void hddScene(void)
 
 	dashGfxBeginFrame();
 	dashBgDraw();
-	dashIcon(DI_HDD, 40, 20, 24, DASH_C_ACCENT);
+	dashIcon(DI_HDD_MANAGER, 40, 20, 24, DASH_C_ACCENT);
 	title_right = dashTextS(72, 20, localizeDashboardText("HDD Manager"), DASH_FS_TITLE, DASH_C_TEXT);
 	if (hm.filesystem)
 		snprintf(line, sizeof(line), "Format: %s%s", hddFilesystemName(hm.filesystem), hm.filesystem_error < 0 ? " + ?" : "");
@@ -1453,12 +1466,11 @@ void dashHddManager(void)
 	u64 last_move = Timer();
 
 	memset(&hm, 0, sizeof(hm));
-	memset(pfs_mount_used, 0, sizeof(pfs_mount_used));
-	pfs_mount_clock = 0;
 	sel = top = 0;
 	sel_anim = 0.0f;
 	/* the HDD stack loads on the UI thread */
-	dashDevicesStartForPath("hdd0:");
+	if (dashDevicesStartForPath("hdd0:") < 0)
+		return;
 	if (!isPathDeviceStackLoaded("hdd0:")) {
 		dashModalMessage(DI_WARNING, "No HDD", "The internal HDD drivers could not be started. Is an HDD connected?", NULL);
 		return;

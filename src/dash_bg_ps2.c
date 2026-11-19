@@ -470,7 +470,8 @@ typedef struct
 static void osdTime(int fx, OsdTime *o)
 {
 	static int ready, held_hour, held_minute, rtc_hour, rtc_minute, rtc_second, rtc_valid;
-	static float held_second, tick_t;
+	static float held_second, tick_t, motion_pause_start;
+	static int motion_paused;
 	float now = dashTime();
 	int hour = 0, minute = 0, second = 0, valid;
 
@@ -484,7 +485,20 @@ static void osdTime(int fx, OsdTime *o)
 		tick_t = now;
 		ready = 1;
 	}
-	if (fx != DASH_FX_OFF) {
+	/* Freeze the visual clock at 0% motion without changing scene detail.
+	 * Exclude the paused interval when resuming an invalid/stalled RTC;
+	 * a fresh valid RTC tick still re-anchors to the console clock. */
+	if (dashCfg.effects <= 0) {
+		if (!motion_paused) {
+			motion_pause_start = now;
+			motion_paused = 1;
+		}
+	} else if (motion_paused) {
+		if (now > motion_pause_start)
+			tick_t += now - motion_pause_start;
+		motion_paused = 0;
+	}
+	if (fx != DASH_FX_OFF && dashCfg.effects > 0) {
 		float seconds;
 		int minutes;
 		/* Re-anchor only on a valid RTC tick or recovery, not on computed

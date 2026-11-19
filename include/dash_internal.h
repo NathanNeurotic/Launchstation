@@ -505,6 +505,8 @@ enum DashIcon {
 	DI_NEW_FOLDER,  /* folder with a small upper-right plus */
 	DI_SAVE,        /* floppy disk: shutter on top, label below */
 	DI_COMPACTFLASH, /* wide CF card with an inset connector/label panel (PC Card CF) */
+	DI_PARTITION, /* dedicated partition icon */
+	DI_HDD_MANAGER, /* dedicated HDD Manager icon */
 	DI_COUNT
 };
 
@@ -576,6 +578,7 @@ typedef struct
 	int start_section;
 	int view;
 	int effects; /* background motion, 0..200 % */
+	int bg_detail; /* 0 = low, 1 = high, independent of motion */
 	int anim;    /* menu animation, 0..200 % */
 	int autoscan;
 	int artwork;
@@ -811,7 +814,14 @@ int dashDevicesMultitapChanged(const DashDevice *devs, int count); /* cached, no
 typedef void (*DashProbeDone)(const char *mount, int ok, void *user);
 int dashDevicesStart(const DashDevice *dev, DashProbeDone cb, void *user); /* -1 user backed out; 1 refused and already explained; cb not called for either */
 void dashDevicesAutoStart(void);                 /* auto-start devices that are off */
-void dashDevicesStartForPath(const char *path);  /* driver for a path's device */
+int dashDevicesStartForPath(const char *path);   /* -1 Back cancelled; 0 otherwise */
+/* A successfully read HDD/ATA scan root is stronger evidence than an older
+ * failed root probe. Apply only on the UI thread in the same IOP generation. */
+enum { DASH_SCANNED_HDD0 = 1u, DASH_SCANNED_HDD1 = 2u,
+       DASH_SCANNED_ATA0 = 4u, DASH_SCANNED_ATA1 = 8u };
+void dashDevicesSnapshotDiskProbes(unsigned int revisions[4]);
+void dashDevicesConfirmScannedDisks(unsigned int units, unsigned int generation,
+                                    const unsigned int revisions[4]);
 const char *dashDiscStatus(void);
 int dashMcPresent(int port);
 int dashDevicePathReady(const char *path);
@@ -923,6 +933,8 @@ void dashModalBackdrop(float k);
 void dashModalPanel(float x, float y, float w, float h, float k);
 void dashModalHintRow(float x, float y, int ok_icon, const char *ok, int back_icon, const char *back);
 float dashDrawButton(float x, float y, int icon, const char *key);
+/* Align label x-height to the vertical midpoint of a 22px controller button. */
+float dashButtonTextY(float button_y, float text_scale);
 float dashButtonWidth(int icon, const char *key); /* same sizing without drawing */
 
 /* Shared native keyboard for the editor and single-line naming dialogs. */

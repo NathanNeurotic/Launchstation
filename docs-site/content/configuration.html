@@ -69,13 +69,14 @@
 <table><thead><tr><th>Key</th><th>Meaning</th><th>Default</th></tr></thead><tbody>
 <tr><td><code>Dash_StartSection</code></td><td>Startup tab by internal id: 0 Home, 1 Apps (opens the Applications library), 2 Files, 3 Devices (opens Files), 4 Tools, 5 Settings, 6 Launch keys (Settings on its Launch keys page).</td><td>0</td></tr>
 <tr><td><code>Dash_Disabled_Tabs</code></td><td>Tabs hidden from the tab bar and from L1/R1, as a sum of bits: 1 Home, 4 Files, 16 Tools, 32 Settings. Example: 17 hides Home and Tools. If every tab is hidden, all tabs come back. Settings &gt; Home &amp; applications sets the Home, Files and Tools bits and always clears the Settings bit.</td><td>0</td></tr>
-<tr><td><code>Dash_View</code></td><td>0 Grid, 1 List, 2 Carousel.</td><td>0</td></tr>
+<tr><td><code>Dash_View</code></td><td>0 Grid, 1 List, 2 Carousel.</td><td>1</td></tr>
 <tr><td><code>Dash_AppFilter</code></td><td>0 All, 1 Favorites, 2 Memory Cards, 3 MASS, 4 HDD, 5 Other, 6 All including hidden.</td><td>0</td></tr>
 <tr><td><code>Dash_Effects</code>, <code>Dash_Animations</code></td><td>Background motion and menu animation, 0&ndash;200 (%). Old files with 0/1/2 load as 0/50/100.</td><td>100, 100</td></tr>
+<tr><td><code>Dash_BackgroundDetail</code></td><td>0 Low, 1 High. Independent of background motion speed.</td><td>1</td></tr>
 <tr><td><code>Dash_AutoScan</code></td><td>Refresh the library at startup.</td><td>1</td></tr>
 <tr><td><code>Dash_Artwork</code></td><td>Load application artwork.</td><td>1</td></tr>
 <tr><td><code>Dash_RecentCount</code></td><td>Recent applications shown (0&ndash;16; Settings offers 0/4/8/12/16).</td><td>8</td></tr>
-<tr><td><code>Dash_HomeShortcuts</code>, <code>Dash_IconBacking</code>, <code>Dash_ShowUnavailableDevices</code></td><td>Home shortcut chips, control icon backings, show unavailable devices.</td><td>1, 1, 1</td></tr>
+<tr><td><code>Dash_HomeShortcuts</code>, <code>Dash_IconBacking</code>, <code>Dash_ShowUnavailableDevices</code></td><td>Home shortcut chips, control icon backings, show unavailable devices.</td><td>1, 0, 1</td></tr>
 <tr><td><code>Dash_TemperatureFahrenheit</code></td><td>0 Celsius, 1 Fahrenheit for the temperature beside the clock.</td><td>0</td></tr>
 <tr><td><code>Dash_CustomSounds</code></td><td>1 plays effect files (<code>CURSOR.ADP</code> and the others) from the Launchstation folder in place of the built-in ones; see <a href="settings.html#custom-sounds">Custom sounds</a>. An old <code>Dash_SoundTheme</code> line is ignored.</td><td>0</td></tr>
 <tr><td><code>Dash_Sound</code>, <code>Dash_SoundVolume</code>, <code>Dash_BGM</code>, <code>Dash_BGMVolume</code></td><td>Interface sounds and music, 0&ndash;100 volume.</td><td>1, 80, 1, 80</td></tr>

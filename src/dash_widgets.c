@@ -419,7 +419,7 @@ static void kbDrawHints(float center_x, float y, float available_width)
 	float width = 0.0f, gap, x;
 	/* Font layouts put the x-height center at text_y + 16 * scale.
 	 * Align that reference with the 22px button's center. */
-	const float text_y = y + 11.0f - 16.0f * DASH_FS_SMALL;
+	const float text_y = dashButtonTextY(y, DASH_FS_SMALL);
 	int i;
 
 	for (i = 0; i < count; i++)
@@ -790,10 +790,10 @@ int dashModalIp(const char *title, const char *help, char *ip_str, int size)
 				 * Match the 12px gap used by the credits sheet. */
 				hx += dashDrawButton(hx, hy, DI_BTN_UP, NULL) + 12;
 				hx += dashDrawButton(hx, hy, DI_BTN_DOWN, NULL) + 4;
-				hx = dashTextS(hx, hy + 4.5f, localizeDashboardText("Change"), DASH_FS_SMALL, DASH_C_TEXT2) + 12;
+				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), localizeDashboardText("Change"), DASH_FS_SMALL, DASH_C_TEXT2) + 12;
 				hx += dashDrawButton(hx, hy, -1, "L1") + 2;
 				hx += dashDrawButton(hx, hy, -1, "R1") + 4;
-				hx = dashTextS(hx, hy + 4.5f, "10", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
+				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), "10", DASH_FS_SMALL, DASH_C_TEXT2) + 12;
 				dashModalHintRow(hx, hy, dashOkIcon(), localizeDashboardText("OK"), dashBackIcon(), localizeDashboardText("Cancel"));
 			}
 			dashGfxPopOffset();
@@ -1334,18 +1334,18 @@ int dashPickPath(const char *title, const char *start_dir, int mode, const char 
 			{
 				float hx = x + 24, hy = y + h - 36;
 				hx += dashDrawButton(hx, hy, dashOkIcon(), NULL) + 4;
-				hx = dashTextS(hx, hy + 4.5f, localizeDashboardText("Open"), DASH_FS_SMALL, DASH_C_TEXT2) + 14;
+				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), localizeDashboardText("Open"), DASH_FS_SMALL, DASH_C_TEXT2) + 14;
 				hx += dashDrawButton(hx, hy, dashBackIcon(), NULL) + 4;
-				hx = dashTextS(hx, hy + 4.5f, pk.dir[0] ? localizeDashboardText("Up") : localizeDashboardText("Cancel"), DASH_FS_SMALL, DASH_C_TEXT2) + 14;
+				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), pk.dir[0] ? localizeDashboardText("Up") : localizeDashboardText("Cancel"), DASH_FS_SMALL, DASH_C_TEXT2) + 14;
 				if (mode == DASH_PICK_FOLDER && pk.dir[0]) {
 					hx += dashDrawButton(hx, hy, -1, "SELECT") + 4;
-					hx = dashTextS(hx, hy + 4.5f, "Use this folder", DASH_FS_SMALL, DASH_C_TEXT2) + 14;
+					hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), "Use this folder", DASH_FS_SMALL, DASH_C_TEXT2) + 14;
 				} else if (mode != DASH_PICK_FOLDER) {
 					hx += dashDrawButton(hx, hy, DI_BTN_R3, NULL) + 4;
-					hx = dashTextS(hx, hy + 4.5f, "uLE:/ path", DASH_FS_SMALL, DASH_C_TEXT2) + 14;
+					hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), "uLE:/ path", DASH_FS_SMALL, DASH_C_TEXT2) + 14;
 				}
 				hx += dashDrawButton(hx, hy, DI_BTN_TRIANGLE, NULL) + 4;
-				dashTextS(hx, hy + 4.5f, localizeDashboardText("Cancel"), DASH_FS_SMALL, DASH_C_TEXT2);
+				dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), localizeDashboardText("Cancel"), DASH_FS_SMALL, DASH_C_TEXT2);
 			}
 			dashGfxPopOffset();
 			dashGfxPopAlpha();

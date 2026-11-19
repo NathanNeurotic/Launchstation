@@ -693,7 +693,7 @@ static void scanAddElf(ScanCtx *sc, const char *dir, const char *name)
 	sc->nfresh++;
 }
 
-static int scanDir(ScanCtx *sc, const char *dir, int depth)
+static int scanDir(ScanCtx *sc, const char *dir, int depth, unsigned int *successful_disk_units)
 {
 	char subdirs[SCAN_MAX_SUBDIRS][MAX_NAME];
 	int nsub = 0, n, i, more = 0;
@@ -702,6 +702,12 @@ static int scanDir(ScanCtx *sc, const char *dir, int depth)
 	snprintf(status, sizeof(status), "%s", dir);
 	dashWorkerStatus(status, sc->dirs_done, sc->dirs_total);
 	n = getDirComplete(dir, sc->files, &more);
+	/* A real partition-directory read proves the HDD unit, even at depth 1;
+	 * the bare hddN:/ partition index may be cached and proves nothing. */
+	if (n >= 0 && !strncmp(dir, "hdd", 3) &&
+	    (dir[3] == '0' || dir[3] == '1') && dir[4] == ':' &&
+	    dir[5] == '/' && dir[6] != '\0')
+		*successful_disk_units |= dir[3] == '1' ? DASH_SCANNED_HDD1 : DASH_SCANNED_HDD0;
 	if (depth == 0 && n < 0)
 		return 0;
 	for (i = 0; i < n && i < MAX_ENTRY - 2; i++) {
@@ -718,7 +724,7 @@ static int scanDir(ScanCtx *sc, const char *dir, int depth)
 	for (i = 0; i < nsub; i++) {
 		char sub[MAX_PATH];
 		if (snprintf(sub, sizeof(sub), "%s%s/", dir, subdirs[i]) < DASH_PATH_MAX - 16)
-			scanDir(sc, sub, depth + 1);
+			scanDir(sc, sub, depth + 1, successful_disk_units);
 	}
 	return 1;
 }
@@ -769,6 +775,9 @@ typedef struct
 	int ndirs;
 	int interactive;
 	ScanCtx sc;
+	unsigned int successful_disk_units;
+	unsigned int iop_generation;
+	unsigned int probe_revisions[4];
 	int ok;
 } ScanJob;
 
@@ -796,8 +805,22 @@ static void scanRun(void *arg)
 		if (!strncmp(j->dirs[i], "mc", 2) &&
 		    filerPrepareMemoryCardRead(j->dirs[i][2] - '0') != 0)
 			continue;
-		if (scanDir(sc, j->dirs[i], 0))
-			dashStrCopy(scanned[nscanned++], j->dirs[i], DASH_PATH_MAX);
+		if (scanDir(sc, j->dirs[i], 0, &j->successful_disk_units)) {
+			const char *dir = j->dirs[i];
+			dashStrCopy(scanned[nscanned++], dir, DASH_PATH_MAX);
+			/* Record unit evidence locally; the worker must not mutate UI state. */
+			/* A bare hddN:/ partition listing may come from a stale APA
+			 * cache. Only actual partition-directory reads prove the unit. */
+			if (!strncmp(dir, "hdd", 3) && (dir[3] == '0' || dir[3] == '1') &&
+			    dir[4] == ':' && dir[5] == '/' && dir[6] != '\0')
+				j->successful_disk_units |= dir[3] == '1' ? DASH_SCANNED_HDD1 : DASH_SCANNED_HDD0;
+#ifdef EXFAT
+			/* ata:/ and ata0:/ name the same unit. */
+			if (!strncmp(dir, "ata", 3) &&
+			    (dir[3] == ':' || ((dir[3] == '0' || dir[3] == '1') && dir[4] == ':')))
+				j->successful_disk_units |= dir[3] == '1' ? DASH_SCANNED_ATA1 : DASH_SCANNED_ATA0;
+#endif
+		}
 	}
 
 	/* Keep cached entries that live on locations we did not look at
@@ -869,6 +892,8 @@ int dashLibScanStart(int interactive)
 		return -1;
 	memset(j, 0, sizeof(*j));
 	j->interactive = interactive;
+	j->iop_generation = getIopResetGeneration();
+	dashDevicesSnapshotDiskProbes(j->probe_revisions);
 	for (i = 0; i < dashCfg.nscan; i++) {
 		char d[DASH_PATH_MAX];
 		int len;
@@ -924,6 +949,10 @@ int dashLibApplyScan(int *interactive)
 		scanFree(j);
 		return -1;
 	}
+	/* A successful directory read supersedes an earlier failed quick probe,
+	 * but never across an IOP reset or for an unscanned cached folder. */
+	dashDevicesConfirmScannedDisks(j->successful_disk_units, j->iop_generation,
+	                               j->probe_revisions);
 	dashArtFlushAll();
 	memcpy(dashApps, j->sc.fresh, sizeof(DashApp) * j->sc.nfresh);
 	dashAppCount = j->sc.nfresh;

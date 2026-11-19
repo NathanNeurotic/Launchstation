@@ -2462,6 +2462,32 @@ static void tsProgress(int done, int total, const char *folder)
 
 /* native date editor: the folders newest first, the edited one moving as
  * its date changes */
+static void tsDrawHints(float x, float y, float w)
+{
+	const DashHint hints[] = {
+	    {DI_DPAD_UD, NULL, "Date value"},
+	    {DI_BTN_L1, NULL, "Prev folder"}, {DI_BTN_L2, NULL, "Next folder"},
+	    {DI_BTN_R1, NULL, "Move up"}, {DI_BTN_R2, NULL, "Move down"},
+	    {dashOkIcon(), NULL, "Apply"}, {dashBackIcon(), NULL, "Cancel"}
+	};
+	int i;
+
+	/* Two compact rows keep controls and long translations inside the panel.
+	 * Upper row sits below the date fields, lower row stays at the old y. */
+	for (i = 0; i < (int)(sizeof(hints) / sizeof(hints[0])); i++) {
+		int upper = i < 3;
+		int col = upper ? i : i - 3;
+		float slot = w / (upper ? 3.0f : 4.0f);
+		float bx = x + slot * col;
+		float by = upper ? y - 22.0f : y;
+		float button = dashDrawButton(bx, by, hints[i].button, NULL);
+
+		dashTextFit(bx + button + 4.0f, dashButtonTextY(by, DASH_FS_SMALL),
+		            slot - button - 8.0f, localizeDashboardText(hints[i].label),
+		            DASH_FS_SMALL, DASH_C_TEXT2);
+	}
+}
+
 static int tsEdit(FilerDateEditor *e)
 {
 	const float w = 580.0f, h = 372.0f;
@@ -2496,9 +2522,9 @@ static int tsEdit(FilerDateEditor *e)
 			filerDateEditorAdjust(e, -1);
 		if (in.pressed & DASH_IN_L1)
 			filerDateEditorSelect(e, -1);
-		if (in.pressed & DASH_IN_R1)
-			filerDateEditorSelect(e, 1);
 		if (in.pressed & DASH_IN_L2)
+			filerDateEditorSelect(e, 1);
+		if (in.pressed & DASH_IN_R1)
 			filerDateEditorMoveNextTo(e, 1);
 		if (in.pressed & DASH_IN_R2)
 			filerDateEditorMoveNextTo(e, 0);
@@ -2524,15 +2550,17 @@ static int tsEdit(FilerDateEditor *e)
 			dashTextFit(x + 58, y + 46, w - 82, fb.dir, DASH_FS_CAPTION, DASH_C_TEXT3);
 			for (i = top; i < e->count && i < top + TS_ROWS; i++) {
 				float ry = list_y + (i - top) * TS_ROW_H;
+				float center_y = ry + TS_ROW_H * 0.5f;
+				float text_y = center_y - 16.0f * DASH_FS_SMALL;
 				int changed = memcmp(&e->folders[i].stats._Modify, &e->original[i], sizeof(sceMcStDateTime)) != 0;
 				DashColor col = (i == idx) ? DASH_C_TEXT : changed ? DASH_C_ACCENT : DASH_C_TEXT2;
 
 				if (i == idx)
-					dashDrawSelection(x + 16, ry - 1, w - 32, TS_ROW_H - 2, 6, 1.0f);
-				dashIcon(DI_FOLDER, x + 24, ry + 3, 14, col);
-				dashTextFit(x + 46, ry + 2, w - 290, e->folders[i].name, DASH_FS_SMALL, col);
+					dashDrawSelection(x + 16, ry + 1, w - 32, TS_ROW_H - 2, 6, 1.0f);
+				dashIcon(DI_FOLDER, x + 24, center_y - 7, 14, col);
+				dashTextFit(x + 46, text_y, w - 290, e->folders[i].name, DASH_FS_SMALL, col);
 				filerDateEditorFormat(&e->folders[i].stats._Modify, date, sizeof(date));
-				dashTextRight(x + w - 28, ry + 3, date, DASH_FS_SMALL, col);
+				dashTextRight(x + w - 28, text_y, date, DASH_FS_SMALL, col);
 			}
 			dashDrawScrollbar(x + w - 16, list_y, TS_ROWS * TS_ROW_H, top, TS_ROWS, e->count);
 
@@ -2554,17 +2582,8 @@ static int tsEdit(FilerDateEditor *e)
 			}
 			filerDateEditorField(e->timestamp, e->position, text, sizeof(text), &name, &sep);
 			dashText(fx + 16, fy + 5, name, DASH_FS_SMALL, DASH_C_ACCENT);
+			tsDrawHints(x + 24, y + h - 36, w - 48);
 			dashGfxPopAlpha();
-		}
-		{
-			DashHint hn[6];
-			hn[0].button = DI_BTN_LEFT, hn[0].key = NULL, hn[0].label = "Field";
-			hn[1].button = DI_BTN_UP, hn[1].key = NULL, hn[1].label = localizeDashboardText("Change");
-			hn[2].button = DI_BTN_R1, hn[2].key = NULL, hn[2].label = "Folder";
-			hn[3].button = DI_BTN_R2, hn[3].key = NULL, hn[3].label = "Next to";
-			hn[4].button = dashOkIcon(), hn[4].key = NULL, hn[4].label = "Apply";
-			hn[5].button = dashBackIcon(), hn[5].key = NULL, hn[5].label = localizeDashboardText("Cancel");
-			dashDrawHints(hn, 6);
 		}
 		dashGfxPresent();
 	}
@@ -3224,7 +3243,7 @@ static void actionsMenu(void)
 static int fileIcon(const FILEINFO *f)
 {
 	if (isDir(f))
-		return DI_FOLDER;
+		return isPartitionList(fb.dir) ? DI_PARTITION : DI_FOLDER;
 	if (genCmpFileExt(f->name, "ELF") || genCmpFileExt(f->name, "KELF") || genCmpFileExt(f->name, "XLF"))
 		return DI_APP;
 	if (genCmpFileExt(f->name, "PNG") || genCmpFileExt(f->name, "JPG") || genCmpFileExt(f->name, "JPEG"))
@@ -3378,7 +3397,7 @@ static void browserDrawBody(void)
 			sz[0] = '\0';
 			if (details) {
 				fmtSize(sz, sizeof(sz), f);
-				if (time_valid && f->stats._Modify.Year)
+				if (!isPartitionList(fb.dir) && time_valid && f->stats._Modify.Year)
 					filerDateEditorFormat(&f->stats._Modify, date, sizeof(date));
 				if (date[0])
 					meta_left -= dashTextWidth(date, DASH_FS_CAPTION);

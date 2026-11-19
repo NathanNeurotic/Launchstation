@@ -211,6 +211,11 @@ device_types = header[header.index("enum DashDevState"):
                       header.index("void dashDevicesInit(void)")]
 symbols = sorted(set(re.findall(r"\b(?:DI_|DASH_SND_|SCECd)\w+", devices)))
 devcode = common + device_types + "enum { " + ",".join(symbols) + " };\n"
+# Extract scan flags only if the selected source supports scan confirmation.
+# Older baseline refs intentionally lack this enum.
+if "void dashDevicesConfirmScannedDisks(" in devices:
+    scanned_enum = header.index("enum { DASH_SCANNED_HDD0")
+    devcode += header[scanned_enum:header.index("void dashDevicesConfirmScannedDisks(", scanned_enum)]
 devcode += "\n".join(re.findall(r"^#define DASH_DEVA_.*", header, re.M)) + "\n"
 devcode += r"""
 #define MMCE 1
@@ -489,8 +494,49 @@ int main(void) {
     puts("PASS: loading overlays use cached theme textures and defer new IO until loading ends");
 }
 """
+probe_guard = None
+if "void dashDevicesSnapshotDiskProbes(" in devices:
+    probe_guard = devcode[:devcode.index("int main(void)")] + r"""
+int main(void) {
+    unsigned int rev[4], generation;
+    resident=S_HDD|S_ATA; media=S_HDD|S_ATA;
+    dashDevicesInit();
+    recordProbe("hdd1:",0);
+    recordProbe("ata1:",0);
+    dashDevicesSnapshotDiskProbes(rev);
+    generation = reset_generation;
+    /* This newer failed HDD1 probe must outrank the stale scan. */
+    recordProbe("hdd1:",0);
+    dashDevicesConfirmScannedDisks(DASH_SCANNED_HDD1|DASH_SCANNED_ATA1, generation, rev);
+    assert(state("hdd1:")==DASH_DEV_ABSENT);
+    assert(state("ata1:")==DASH_DEV_READY);
+    /* With no intervening probe, a later successful scan recovers HDD1. */
+    dashDevicesSnapshotDiskProbes(rev);
+    dashDevicesConfirmScannedDisks(DASH_SCANNED_HDD1, generation, rev);
+    assert(state("hdd1:")==DASH_DEV_READY);
+    /* Reset the IOP session first: dashDevicesInit by itself does not
+       reset a valid session or its probe revisions. */
+    reset_generation++;
+    dashDevicesInit();
+    dashDevicesSnapshotDiskProbes(rev);
+    assert(rev[1] == 0);
+    generation = reset_generation;
+    reset_generation++;
+    dashDevicesConfirmScannedDisks(DASH_SCANNED_HDD1, generation, rev);
+    assert(state("hdd1:") == DASH_DEV_PROBE);
+    /* Evidence from a previous IOP session must not revive the device. */
+    reset_generation++;
+    dashDevicesConfirmScannedDisks(DASH_SCANNED_HDD1, generation, rev);
+    assert(state("hdd1:")==DASH_DEV_PROBE);
+    puts("PASS: disk scan evidence honors per-unit probe revisions and IOP resets");
+}
+"""
+
 with tempfile.TemporaryDirectory(prefix="wle-device-input-") as tmp:
-    for name, code in (("input", padcode), ("devices", devcode), ("pad-waits", waitcode), ("startup", autocode), ("theme-io", themecode)):
+    checks = [("input", padcode), ("devices", devcode), ("pad-waits", waitcode), ("startup", autocode), ("theme-io", themecode)]
+    if probe_guard is not None:
+        checks.append(("probe-revisions", probe_guard))
+    for name, code in checks:
         source = Path(tmp) / f"{name}.c"
         exe = Path(tmp) / f"{name}.exe"
         source.write_text("#define localizeDashboardText(s) (s)\n" + code)

@@ -95,6 +95,7 @@ assert "S_RESCAN ? DI_REFRESH" in settings
 assert apps.count("DI_HIDE") >= 2
 assert "items[NEUTRINO_CANCEL + 1].icon = DI_UNDO;" in neutrino
 
+ui = (root / "src/dash_ui.c").read_text(encoding="utf-8")
 widgets = (root / "src/dash_widgets.c").read_text(encoding="utf-8")
 input_enum_start = hdr.rfind("enum {", 0, hdr.index("DASH_IN_UP"))
 input_enum = hdr[input_enum_start:hdr.index("};", input_enum_start) + 2]
@@ -150,7 +151,7 @@ static void dashModalHintRow(float x, float y, int a, const char *b, int c, cons
 static void dashGfxPopOffset(void) {}
 static void dashGfxPopAlpha(void) {}
 static void dashGfxPresent(void) {}
-""" + function(widgets, "static void ipParse(") + function(widgets, "int dashModalIp(") + r"""
+""" + function(ui, "float dashButtonTextY(") + function(widgets, "static void ipParse(") + function(widgets, "int dashModalIp(") + r"""
 int main(void) {
     char ip[16] = "0.255.5.250";
     push(DASH_IN_DOWN, 0);

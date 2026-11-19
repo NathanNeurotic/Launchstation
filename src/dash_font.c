@@ -18,7 +18,7 @@
 #define FONT_SLOT_H 34
 #define FONT_COLS 28
 #define FONT_FIRST 0x20
-#define FONT_LAST 0x123
+#define FONT_LAST 0x127
 #define FONT_GLYPHS (FONT_LAST - FONT_FIRST + 1)
 #define FONT_TEX_W 512
 #define FONT_TEX_H 340

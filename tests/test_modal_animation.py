@@ -110,6 +110,7 @@ else:
     code += "static float dashVisualUpdate(void) { return 0; }\n"
 code += r"""
 #define DASH_FX_OFF 0
+#define DASH_FX_SUBTLE 1
 #define DASH_FX_FULL 2
 typedef struct { int hour,minute; float second; } OsdTime;
 static int clock_stuck, clock_valid=1;
@@ -197,6 +198,26 @@ int main(void) {
     assert(ot.minute==1 && fabsf(ot.second-7.25f)<0.0001f);
     clock_valid=1; clock_stuck=0; now_ms=10500; osdTime(DASH_FX_FULL,&ot);
     assert(ot.hour==12 && ot.minute==0 && ot.second==10);
+    /* 0% motion freezes RTC-anchored orbs at both High and Low detail.
+     * When RTC is unavailable, resume from the held visual phase, without
+     * counting the paused interval as elapsed animation time. */
+    OsdTime held=ot;
+    dashCfg.effects=0;
+    clock_valid=0;
+    osdTime(DASH_FX_FULL,&ot);
+    anim_time+=5.5f; now_ms+=5500;
+    osdTime(DASH_FX_FULL,&ot);
+    assert(ot.hour==held.hour && ot.minute==held.minute && ot.second==held.second);
+    anim_time+=3.0f;
+    osdTime(DASH_FX_SUBTLE,&ot);
+    assert(ot.hour==held.hour && ot.minute==held.minute && ot.second==held.second);
+    dashCfg.effects=100;
+    osdTime(DASH_FX_FULL,&ot);
+    assert(ot.hour==held.hour && ot.minute==held.minute && fabsf(ot.second-held.second)<0.0001f);
+    anim_time+=0.5f;
+    osdTime(DASH_FX_SUBTLE,&ot);
+    assert(fabsf(ot.second-held.second-0.5f)<0.0001f);
+    clock_valid=1;
     reset(); nested=1;
     assert(dashModalMenu("parent",NULL,items,2,0)==-1);
     check(); assert(renders==6 && fabsf(anim_time-bg_time)<0.00001f);

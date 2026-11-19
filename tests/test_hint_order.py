@@ -13,7 +13,9 @@ hdr = (root / "include/dash_internal.h").read_text(encoding="utf-8")
 assert "#define DASH_HINTS_MAX 8" in hdr
 a = ui.index("static int hintRank(")
 b = ui.index("void dashDrawHints(")
-func = ui[a:ui.index("\n}\n", b) + 3]
+helper_start = ui.index("float dashButtonTextY(")
+helper = ui[helper_start:ui.index("\n}\n", helper_start) + 3]
+func = helper + "\n" + ui[a:ui.index("\n}\n", b) + 3]
 assert "hintOrder(in_hints, n, order);" in func
 
 code = r'''

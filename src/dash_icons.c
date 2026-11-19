@@ -578,6 +578,24 @@ static float iconSdf(int id, V2 p)
 				d = U(d, sdSeg(p, 0.54f, 0.54f, 0.72f, 0.54f, 0.045f));
 			}
 			break;
+		case DI_PARTITION:
+			/* Compact partition disk glyph in the existing 32px margin. */
+			d = sdBoxOutline(p, -0.36f, 0.0f, 0.47f, 0.70f, 0.07f, 0.07f);
+			for (k = 0; k < 3; k++)
+				d = U(d, sdSeg(p, -0.68f, -0.37f + k * 0.37f, -0.06f, -0.37f + k * 0.37f, 0.045f));
+			d = U(d, sdRing(p, 0.34f, 0.30f, 0.37f, 0.07f));
+			d = U(d, sdSeg(p, 0.34f, 0.30f, 0.34f, -0.06f, 0.055f));
+			break;
+		case DI_HDD_MANAGER:
+			/* Drive platter branching into two partitions. */
+			d = sdBoxOutline(p, 0.0f, -0.34f, 0.71f, 0.42f, 0.08f, 0.06f);
+			d = U(d, sdRing(p, -0.24f, -0.36f, 0.25f, 0.06f));
+			d = U(d, sdSeg(p, 0.50f, -0.08f, 0.04f, -0.42f, 0.055f));
+			d = U(d, sdSeg(p, 0.0f, 0.09f, 0.0f, 0.45f, 0.065f));
+			d = U(d, sdSeg(p, -0.46f, 0.47f, 0.46f, 0.47f, 0.065f));
+			for (k = 0; k < 2; k++)
+				d = U(d, sdBoxOutline(p, k ? 0.46f : -0.46f, 0.71f, 0.29f, 0.18f, 0.04f, 0.055f));
+			break;
 		case DI_COMPACTFLASH:
 			{
 				/* Broad CF shell, inset top bay and shouldered face panel

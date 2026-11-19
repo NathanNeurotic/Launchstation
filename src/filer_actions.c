@@ -735,46 +735,60 @@ static int getCustomDateFieldOffset(int field, int date_format)
 	}
 }
 
+static int stepCustomLocalDateField(sceMcStDateTime *timestamp, int field, int delta)
+{
+	int value, minimum = 0, maximum = 59, parent;
+
+	switch (field) {
+		case CUSTOM_DATE_SECOND:
+			value = timestamp->Sec; parent = CUSTOM_DATE_MINUTE; break;
+		case CUSTOM_DATE_MINUTE:
+			value = timestamp->Min; parent = CUSTOM_DATE_HOUR; break;
+		case CUSTOM_DATE_HOUR:
+			value = timestamp->Hour; maximum = 23; parent = CUSTOM_DATE_DAY; break;
+		case CUSTOM_DATE_YEAR:
+			value = timestamp->Year; maximum = 2100; parent = -1; break;
+		case CUSTOM_DATE_MONTH:
+			value = timestamp->Month; minimum = 1; maximum = 12; parent = CUSTOM_DATE_YEAR; break;
+		default:
+			value = timestamp->Day; minimum = 1;
+			maximum = getCustomDateDaysInMonth(timestamp->Year, timestamp->Month);
+			parent = CUSTOM_DATE_MONTH;
+			break;
+	}
+	value += delta;
+	if (value < minimum || value > maximum) {
+		if (parent < 0 || !stepCustomLocalDateField(timestamp, parent, delta))
+			return 0;
+		/* Borrowing a day lands on the previous month's final day. */
+		if (field == CUSTOM_DATE_DAY)
+			maximum = getCustomDateDaysInMonth(timestamp->Year, timestamp->Month);
+		value = delta > 0 ? minimum : maximum;
+	}
+	switch (field) {
+		case CUSTOM_DATE_SECOND: timestamp->Sec = value; break;
+		case CUSTOM_DATE_MINUTE: timestamp->Min = value; break;
+		case CUSTOM_DATE_HOUR: timestamp->Hour = value; break;
+		case CUSTOM_DATE_YEAR: timestamp->Year = value; break;
+		case CUSTOM_DATE_MONTH: timestamp->Month = value; break;
+		default: timestamp->Day = value; break;
+	}
+	return 1;
+}
+
 static void adjustCustomDateField(sceMcStDateTime *timestamp, int field, int delta, int reserve_tuna_date)
 {
 	sceMcStDateTime local_timestamp;
-	int maximum_day;
 
+	if (delta == 0)
+		return;
 	local_timestamp = *timestamp;
 	if (!convertCustomTimestampToLocalTime(&local_timestamp))
 		return;
+	if (!stepCustomLocalDateField(&local_timestamp, field, delta > 0 ? 1 : -1))
+		return;
 
-	switch (field) {
-		case CUSTOM_DATE_HOUR:
-			local_timestamp.Hour = (local_timestamp.Hour + ((delta > 0) ? 1 : 23)) % 24;
-			break;
-		case CUSTOM_DATE_MINUTE:
-			local_timestamp.Min = (local_timestamp.Min + ((delta > 0) ? 1 : 59)) % 60;
-			break;
-		case CUSTOM_DATE_SECOND:
-			local_timestamp.Sec = (local_timestamp.Sec + ((delta > 0) ? 1 : 59)) % 60;
-			break;
-		case CUSTOM_DATE_YEAR:
-			if (delta > 0)
-				local_timestamp.Year = (local_timestamp.Year == 2100) ? 0 : local_timestamp.Year + 1;
-			else
-				local_timestamp.Year = (local_timestamp.Year == 0) ? 2100 : local_timestamp.Year - 1;
-			break;
-		case CUSTOM_DATE_MONTH:
-			if (delta > 0)
-				local_timestamp.Month = (local_timestamp.Month == 12) ? 1 : local_timestamp.Month + 1;
-			else
-				local_timestamp.Month = (local_timestamp.Month == 1) ? 12 : local_timestamp.Month - 1;
-			break;
-		default:
-			maximum_day = getCustomDateDaysInMonth(local_timestamp.Year, local_timestamp.Month);
-			if (delta > 0)
-				local_timestamp.Day = (local_timestamp.Day == maximum_day) ? 1 : local_timestamp.Day + 1;
-			else
-				local_timestamp.Day = (local_timestamp.Day == 1) ? maximum_day : local_timestamp.Day - 1;
-			break;
-	}
-
+	/* Month/year changes retain the day when possible, otherwise clamp it. */
 	normalizeCustomLocalTimestamp(&local_timestamp);
 	if (!convertCustomTimestampFromLocalTime(&local_timestamp))
 		return;

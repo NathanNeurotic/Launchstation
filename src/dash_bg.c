@@ -15,8 +15,8 @@
 //
 //Every scene is built from cheap GS primitives. The background clock stops
 //when animations or background effects are off, so each scene doubles as
-//its own static variant; SUBTLE effects run at a slower pace with fewer
-//elements.
+//its own static variant; reduced detail uses fewer elements without
+//changing animation speed.
 //--------------------------------------------------------------
 #include "dash_internal.h"
 
@@ -181,18 +181,18 @@ void dashBgUpdate(float dt)
 	for (i = 0; i < BG_TOWERS; i++)
 		towers[i].rot += towers[i].rot_speed * scene_dt;
 
-	if (dashCfg.effects >= 100) {
-		if (streak_t < 0.0f) {
-			streak_next -= scene_dt;
-			if (streak_next <= 0.0f) {
-				streak_t = 0.0f;
-				streak_y = 90.0f + frand() * 260.0f;
-				streak_next = 7.0f + frand() * 7.0f;
-			}
-		} else {
-			streak_t += scene_dt;
-			if (streak_t > 2.2f)
-				streak_t = -1.0f;
+	/* Advance an existing streak at every positive speed; only spawn new
+	 * streaks at 100% motion or faster. */
+	if (streak_t >= 0.0f) {
+		streak_t += scene_dt;
+		if (streak_t > 2.2f)
+			streak_t = -1.0f;
+	} else if (dashCfg.effects >= 100) {
+		streak_next -= scene_dt;
+		if (streak_next <= 0.0f) {
+			streak_t = 0.0f;
+			streak_y = 90.0f + frand() * 260.0f;
+			streak_next = 7.0f + frand() * 7.0f;
 		}
 	}
 }
@@ -216,14 +216,16 @@ static void crystalBase(void)
 	dashRectGradV(0, 330, DASH_VW, DASH_VH - 330, low, bot);
 }
 
-static void drawThemeLayers(void)
+static void drawThemeLayers(int fx)
 {
 	GSTEXTURE *bg = dashThemeTexture("background.png", 256, 256);
 	GSTEXTURE *s1, *s2;
 
 	if (bg != NULL)
 		dashTexDraw(bg, 0, 0, DASH_VW, DASH_VH, DC(255, 255, 255, 255));
-	if (dashCfg.effects == DASH_FX_OFF)
+	/* Motion speed may be 0% while detail is High; suppress effects only
+	 * for the explicit static/off render, not when animation is frozen. */
+	if (fx == DASH_FX_OFF)
 		return;
 	s1 = dashThemeTexture("stars1.png", 256, 128);
 	s2 = dashThemeTexture("stars2.png", 256, 128);
@@ -312,7 +314,7 @@ static void sceneCrystal(int fx)
 	int i;
 
 	crystalBase();
-	drawThemeLayers();
+	drawThemeLayers(fx);
 	if (fx == DASH_FX_OFF) {
 		dashRectGradV(0, DASH_VH - 90, DASH_VW, 90, DC(0, 0, 0, 0), DC(0, 0, 6, 150));
 		return;
@@ -557,17 +559,16 @@ void dashBgDrawStatic(void)
 	drawScene(DASH_FX_OFF);
 }
 
-/* Full effects remain the preference, but sustained slow frames temporarily
- * use the subtle path. The saved setting is never changed. Hysteresis keeps
- * an occasional IO stall from causing quality flapping. */
+/* Detail is independent of animation speed. Preserve the existing PS2
+ * slow-frame fallback: sustained overload temporarily uses fewer primitives
+ * without changing the saved High/Low preference. */
 static int bg_perf_reduced;
 static int bg_slow_frames;
 static int bg_fast_frames;
 
 static int effectiveFx(void)
 {
-	int requested = dashCfg.effects <= 0 ? DASH_FX_OFF :
-	                (dashCfg.effects < 100 ? DASH_FX_SUBTLE : DASH_FX_FULL);
+	int requested = dashCfg.bg_detail ? DASH_FX_FULL : DASH_FX_SUBTLE;
 	float dt;
 
 	if (requested != DASH_FX_FULL) {

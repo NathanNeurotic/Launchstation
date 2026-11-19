@@ -134,6 +134,9 @@ jobs:
           python3 tests/test_hdd_manager_browse.py
           python3 tests/test_hdd_manager_mounts.py
           python3 tests/test_hdd_filesystem.py
+          python3 tests/test_saildot4k_targeted_parity.py
+          python3 tests/test_folder_date_arithmetic.py
+          python3 tests/test_folder_date_popup.py
           python3 tests/test_zack_oct_2026.py
           python3 tests/test_wallpaper_docs.py
           python3 tests/test_r3z_oct15_backport.py
