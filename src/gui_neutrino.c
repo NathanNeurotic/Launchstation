@@ -648,8 +648,8 @@ int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 	if (DashIsActive()) {
 		NEUTRINO_LAUNCH_OPTIONS saved;
 		if (active_profile_gameid[0] && profileActiveFileInvalid(active_profile_gameid)) {
-			dashToast(DASH_TOAST_WARN, "Game settings file is invalid; edit it as text before saving");
-			return FALSE;
+			dashToast(DASH_TOAST_WARN, "Game settings file is invalid; changes will not be saved");
+			active_profile_gameid[0] = '\0';
 		}
 		if (active_profile_gameid[0] && dashWorkerAwaitAll("Loading game profile") &&
 		    profileLoad(active_profile_gameid, &saved))

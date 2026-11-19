@@ -2337,6 +2337,8 @@ int dashSettingsSaveCnf(void)
 }
 
 #ifdef SMB
+static char *cnfSaveText(void);
+
 static void refreshSharesCnfSnapshot(void)
 {
 	SETTING *cur = session ? (SETTING *)malloc(sizeof(SETTING)) : NULL;

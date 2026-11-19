@@ -149,7 +149,7 @@ static int dashModalMenu(const char *title, const char *detail, DashMenuItem *it
         modal_edit(NEUTRINO_CANCEL, 0, modal_edit_arg);
         return 1;
     }
-    return 1;
+    return 0;
 }
 static int DashIsActive(void) { return 1; }
 #define SCREEN_WIDTH 640
@@ -342,9 +342,9 @@ int main(void)
     assert(dev_writes==0 && !strcmp(content[3],"$NeutrinoVideo=0\n$VMC_0=Keep Me\n$End=1\n$VMC_1=Also Keep\n"));
     clear_slots();
     strcpy(content[3],"$NeutrinoVideo=0\n$VMC_0=Keep Me\n$End=1\n$VMC_1=Also Keep\n");
-    menu_script=2;
+    menu_script=0;
     memset(&got,0,sizeof(got));
-    (void)showNeutrinoLaunchOptionsForGame(&got,id,"mass:/DVD/Game.iso");
+    assert(showNeutrinoLaunchOptionsForGame(&got,id,"mass:/DVD/Game.iso"));
     assert(dev_writes==0 && !strcmp(content[3],"$NeutrinoVideo=0\n$VMC_0=Keep Me\n$End=1\n$VMC_1=Also Keep\n"));
     (void)rev; (void)slot;
     puts("PASS: Neutrino game settings: OPL-style KEY=value round trip, hand edits, legacy NTP1 fallback, failed writes, validation");
