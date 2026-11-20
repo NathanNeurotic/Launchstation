@@ -135,6 +135,7 @@ static u8 have_mc_rpc_ready = 0;
  * ports (0 = slot 1, 1 = slot 2) have a multitap open. */
 static u8 have_mtapman = 0, mtap_bound = 0;
 static u8 mtap_open[2] = {0, 0};
+static u64 mtap_retry_after = 0;
 #endif
 static unsigned int iop_reset_generation = 0;
 
@@ -2267,6 +2268,8 @@ void mcMultitapRefresh(void)
 	 * pending libmc request. The next device list or card poll retries. */
 	if (!have_mtapman || !have_mc_rpc_ready || dashWorkerOnThread() || dashWorkerIoBusy())
 		return;
+	if (Timer() < mtap_retry_after)
+		return;
 	if (!mtap_bound) {
 		if (mtapInit() != 1)
 			return;
@@ -2284,6 +2287,10 @@ void mcMultitapRefresh(void)
 		if (!mtap_open[port])
 			mtapPortClose(port + 2);
 	}
+	/* Opening an absent port retries hardware detection synchronously. Back off
+	 * rather than stalling every card poll; an attached tap still uses the
+	 * existing cadence. A busy-skip above does not arm this delay. */
+	mtap_retry_after = (mtap_open[0] || mtap_open[1]) ? 0 : Timer() + 10000;
 #endif
 }
 
@@ -3037,6 +3044,7 @@ static void clearIopModuleState(void)
 #ifdef HOMEBREW_SIO2MAN
 	have_mtapman = mtap_bound = 0;
 	mtap_open[0] = mtap_open[1] = 0;
+	mtap_retry_after = 0;
 #endif
 	have_cdvd = 0;
 	have_usbd = 0;

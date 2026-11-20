@@ -16,6 +16,7 @@ assert "python3 tests/test_multitap_rows.py" in workflow
 devices = (root / "src/dash_devices.c").read_text(encoding="utf-8")
 browser = (root / "src/dash_browser.c").read_text(encoding="utf-8")
 widgets = (root / "src/dash_widgets.c").read_text(encoding="utf-8")
+init = (root / "src/init.c").read_text(encoding="utf-8")
 
 
 def function(source, signature):
@@ -68,4 +69,43 @@ with tempfile.TemporaryDirectory(prefix="multitap-rows-") as tmp:
     cc = shutil.which("gcc") or shutil.which("cc")
     subprocess.run([cc, "-std=c99", "-Wall", "-Wextra", "-Werror", f"-I{root / 'include'}", str(src), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
+retry_state = "\n".join(line for line in init.splitlines()
+                        if line.startswith("static u64 mtap_")) + "\n"
+retry_code = r'''
+#include <assert.h>
+#define HOMEBREW_SIO2MAN 1
+typedef unsigned char u8;
+typedef unsigned long long u64;
+static u8 have_mtapman = 1, have_mc_rpc_ready = 1, mtap_bound;
+static u8 mtap_open[2];
+static u64 now_ms;
+static int worker_busy, connected, init_calls, open_calls, connection_calls;
+static __attribute__((unused)) u64 Timer(void) { return now_ms; }
+static int mtapInit(void) { init_calls++; return 1; }
+static int mtapPortOpen(int port) { assert(port == 2 || port == 3); open_calls++; return connected; }
+static int mtapPortClose(int port) { assert(port == 2 || port == 3); return 1; }
+static int mtapGetConnection(int port) { assert(port == 2 || port == 3); connection_calls++; return connected; }
+static int dashWorkerOnThread(void) { return 0; }
+static int dashWorkerIoBusy(void) { return worker_busy; }
+static int isPathDeviceStackLoaded(const char *path) { (void)path; return 1; }
+static void filerRootMcPollIdle(void) {}
+''' + retry_state + function(init, "void mcMultitapRefresh(void)") + r'''
+int main(void) {
+ worker_busy=1;mcMultitapRefresh();assert(init_calls==0 && open_calls==0);
+ worker_busy=0;mcMultitapRefresh();assert(init_calls==1 && open_calls==2);
+ mcMultitapRefresh();assert(open_calls==2); /* absent devices use a backoff */
+ now_ms+=1000;mcMultitapRefresh();assert(open_calls==2);
+ now_ms+=10000;mcMultitapRefresh();assert(open_calls==4); /* later insertion is retried */
+ connected=1;now_ms+=10000;mcMultitapRefresh();assert(open_calls==6 && mtap_open[0] && mtap_open[1]);
+ now_ms+=1000;mcMultitapRefresh();assert(open_calls==6 && connection_calls==2);
+ return 0;
+}
+'''
+with tempfile.TemporaryDirectory(prefix="multitap-retry-") as tmp:
+    src, exe = Path(tmp) / "t.c", Path(tmp) / "t"
+    src.write_text(retry_code)
+    cc = shutil.which("gcc") or shutil.which("cc")
+    subprocess.run([cc, "-std=c99", "-Wall", "-Wextra", "-Werror", str(src), "-o", str(exe)], check=True)
+    subprocess.run([str(exe)], check=True)
 print("PASS: multitap rows only for cards that answer; VMC listed once")
+print("PASS: busy refresh retries immediately; absent multitaps back off without hiding later insertion")
