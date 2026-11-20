@@ -105,7 +105,7 @@ static void updateIpConfigRuntimeState(void) {}
 code += source[source.index("static int session;"):source.index("static const char *const onoff")]
 if "enum { SESSION_SAVE_CNF" in source:
     code += source[source.index("enum { SESSION_SAVE_CNF"):source.index("static void cfgSaveRun(")]
-for signature in ("static char *dashSaveText(", "static char *cnfSaveText(",
+for signature in ("static char *dashSaveText(", "static char *cnfSaveText(void)\n{",
                   "static int textChanged(", "static void refreshDirty("):
     code += function(signature)
 # Keep the old-ref harness working while testing the new scoped failure helper.

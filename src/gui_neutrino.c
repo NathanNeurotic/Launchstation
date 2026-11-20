@@ -421,6 +421,7 @@ static int profileReadFile(const char *id, NEUTRINO_LAUNCH_OPTIONS *out)
 static int profileActiveFileInvalid(const char *id)
 {
 	NEUTRINO_LAUNCH_OPTIONS parsed;
+	iox_stat_t stat;
 	char path[MAX_PATH], dir[MAX_PATH], *text;
 	int invalid = 0;
 
@@ -430,6 +431,8 @@ static int profileActiveFileInvalid(const char *id)
 	if (text != NULL) {
 		invalid = !profileParseText(text, &parsed);
 		free(text);
+	} else if (genGetStat(path, &stat) >= 0) {
+		invalid = 1;
 	}
 	return invalid;
 }

@@ -80,6 +80,9 @@ enum { NEUTRINO_VIDEO_MODE = NEUTRINO_COMPAT_COUNT, NEUTRINO_VIDEO_COMPATIBILITY
 typedef struct { int unused; } NEUTRINO_OPTION_ARGS;
 static char content[4][512];
 static int fail_write, truncate_write, allow_wait=1;
+static int read_denied;
+typedef struct { int unused; } iox_stat_t;
+static int genGetStat(const char *path, iox_stat_t *out) { (void)path; (void)out; return content[3][0] ? 0 : -1; }
 static int dev_no_dir, dev_has_dir, dev_mkdir_fails, dev_torn, dev_writes, dev_mkdirs;
 static char last_dev_path[256];
 static int lookup(const char *path) { return strstr(path, "/CFG/") ? 3 : strstr(path, ".cfg") ? 2 : strstr(path, "-B.CNF") ? 1 : 0; }
@@ -91,7 +94,7 @@ static int dashStoreBuildPath(char *out, int size, const char *file) {
 static char *dashLoadTextFile(const char *path, int max_size, int *len) {
     int k=lookup(path), n=(int)strlen(content[k]);
     char *buf;
-    if (n<=0 || n>max_size) return NULL;
+    if ((read_denied && k==3) || n<=0 || n>max_size) return NULL;
     buf=(char *)malloc((size_t)n+1);
     assert(buf);
     memcpy(buf,content[k],(size_t)n+1);
@@ -197,12 +200,13 @@ for signature in (
 ):
     code += extract_signature(signature)
 code += r'''
-static void clear_slots(void) { memset(content,0,sizeof(content)); fail_write=truncate_write=0; allow_wait=1; mx4sio_driver_running=mmce_stack=0;
+static void clear_slots(void) { memset(content,0,sizeof(content)); fail_write=truncate_write=read_denied=0; allow_wait=1; mx4sio_driver_running=mmce_stack=0;
     dev_stack=1; dev_no_dir=dev_has_dir=dev_mkdir_fails=dev_torn=dev_writes=dev_mkdirs=0; strcpy(active_profile_path,"mass:/DVD/Game.iso"); last_dev_path[0]=0; }
 int main(void)
 {
     const char *id="SLUS_123.45";
     NEUTRINO_LAUNCH_OPTIONS a, b, got;
+    assert(genGetStat != NULL);
     unsigned int rev=0;
     int slot=-1;
     memset(&a,0,sizeof(a)); memset(&b,0,sizeof(b));
@@ -346,6 +350,12 @@ int main(void)
     memset(&got,0,sizeof(got));
     assert(showNeutrinoLaunchOptionsForGame(&got,id,"mass:/DVD/Game.iso"));
     assert(dev_writes==0 && !strcmp(content[3],"$NeutrinoVideo=0\n$VMC_0=Keep Me\n$End=1\n$VMC_1=Also Keep\n"));
+    /* An existing profile whose read fails is not treated as an empty slot. */
+    clear_slots();
+    strcpy(content[3],"$NeutrinoVideo=0\n$VMC_0=Keep Me\n$End=1\n");
+    read_denied=1; menu_script=1;
+    assert(editNeutrinoGameProfile(id,"mass:/DVD/Game.iso")==0);
+    assert(dev_writes==0 && !strcmp(content[3],"$NeutrinoVideo=0\n$VMC_0=Keep Me\n$End=1\n"));
     (void)rev; (void)slot;
     puts("PASS: Neutrino game settings: OPL-style KEY=value round trip, hand edits, legacy NTP1 fallback, failed writes, validation");
     return 0;
