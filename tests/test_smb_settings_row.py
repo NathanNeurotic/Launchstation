@@ -133,6 +133,7 @@ int main(void) {
     classic_dirty = 0;
     editLogin(S_SMBD_USER);
     assert(!strcmp(setting->SMB_Server_User, "ps2") && !classic_dirty);
+    strcpy(setting->SMB_Server_Pass, "still-set");
     readLogin("SMB_Server_Password", "");
     assert(setting->SMB_Server_Pass[0] == '\0');
     readLogin("SMB_Server_User", "");

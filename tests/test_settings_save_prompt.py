@@ -44,6 +44,7 @@ static SETTING config, *setting = &config;
 static char ip[16]="192.168.0.10", netmask[16]="255.255.255.0", gw[16]="192.168.0.1";
 static int preset, custom, swapKeys;
 static int cfg_pending[2], cfg_failed[2], store_failed, store_pending;
+static char mock_share[32];
 static int modal_calls, modal_result=2, queue_ok=1, queued[3];
 enum { CFG_SAVE_CNF, CFG_SAVE_NET, DI_CHECK, DI_SAVE, DI_CLOSE, DI_BACK, DASH_TOAST_INFO };
 typedef struct { int icon; const char *label, *detail; int disabled; } DashMenuItem;
@@ -59,9 +60,9 @@ static char *dashStoreSettingsText(const DashSettings *c,int *len) {
     return strdup(s);
 }
 static char *configBuildSaveText(int *len) {
-    char s[512]; *len=snprintf(s,sizeof(s),"%d/%d/%d/%d/%d/%s/%s/%s",
+    char s[512]; *len=snprintf(s,sizeof(s),"%d/%d/%d/%d/%d/%s/%s/%s/%s",
         setting->TV_mode,setting->screen_x,setting->screen_y,setting->language,
-        setting->swapKeys,setting->lang_file,setting->font_file,setting->path);
+        setting->swapKeys,setting->lang_file,setting->font_file,setting->path,mock_share);
     return strdup(s);
 }
 static int dashStoreSaveSettings(void) { queued[2]++; store_pending=1; return 0; }
@@ -209,7 +210,10 @@ int main(void) {
     begin(); assert(!anyDirty() && settingsLeave()==1 && !modal_calls);
     software_clock_active=0; clean(); clock_saves=queued[2];
     clickSaveSettings(); assert(queued[2]==clock_saves);
-    /* A share-only save must not mark an unrelated classic edit as saved. */
+    /* A share-only save refreshes its serialized value without hiding other edits. */
+    strcpy(mock_share,"before"); clean();
+    strcpy(mock_share,"after");
+    assert(saveSharesCnf()); assert(!anyDirty());
     clean(); setting->swapKeys++;
     assert(saveSharesCnf());
     assert(anyDirty());

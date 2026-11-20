@@ -60,7 +60,7 @@ int main(void) {
 
     primary_text = "CNF_version=4\n";
     text = read_source();
-    assert(text && strstr(text, "OLD") && !strcmp(smb_cfg_path, "mass:/SMB2.CNF"));
+    assert(text && strstr(text, "NEW") && !strcmp(smb_cfg_path, LoadedConfigPath));
     free(text);
 
     primary_text = "# SMB shares\nNAME = PREF\n";

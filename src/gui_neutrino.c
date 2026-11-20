@@ -418,23 +418,28 @@ static int profileReadFile(const char *id, NEUTRINO_LAUNCH_OPTIONS *out)
 	return profileReadAt(path, out);
 }
 
-static int profileActiveFileInvalid(const char *id)
+/* 1 supplies valid settings, 0 permits creation, -1 refuses to overwrite an
+ * existing invalid, unreadable, or erroring file. The settings are read once. */
+static int profileReadActiveFile(const char *id, NEUTRINO_LAUNCH_OPTIONS *out)
 {
 	NEUTRINO_LAUNCH_OPTIONS parsed;
 	iox_stat_t stat;
 	char path[MAX_PATH], dir[MAX_PATH], *text;
-	int invalid = 0;
+	int result;
 
 	if (!profileDevicePath(id, path, sizeof(path), dir, sizeof(dir)))
 		return 0;
 	text = dashLoadTextFile(path, 2048, NULL);
 	if (text != NULL) {
-		invalid = !profileParseText(text, &parsed);
+		result = profileParseText(text, &parsed);
 		free(text);
-	} else if (genGetStat(path, &stat) >= 0) {
-		invalid = 1;
+		if (result) {
+			*out = parsed;
+			return 1;
+		}
+		return -1;
 	}
-	return invalid;
+	return genGetStat(path, &stat) == -ENOENT ? 0 : -1;
 }
 
 /* The saved settings for a game: the KEY=value file if it is valid, else the
@@ -650,13 +655,17 @@ int showNeutrinoLaunchOptions(NEUTRINO_LAUNCH_OPTIONS *options)
 	memset(options, 0, sizeof(*options));
 	if (DashIsActive()) {
 		NEUTRINO_LAUNCH_OPTIONS saved;
-		if (active_profile_gameid[0] && profileActiveFileInvalid(active_profile_gameid)) {
+		int read_result = active_profile_gameid[0] ? profileReadActiveFile(active_profile_gameid, &saved) : 0;
+
+		if (read_result < 0) {
 			dashToast(DASH_TOAST_WARN, "Game settings file is invalid; changes will not be saved");
 			active_profile_gameid[0] = '\0';
-		}
-		if (active_profile_gameid[0] && dashWorkerAwaitAll("Loading game profile") &&
-		    profileLoad(active_profile_gameid, &saved))
+		} else if (read_result > 0) {
 			*options = saved;
+		} else if (active_profile_gameid[0] && dashWorkerAwaitAll("Loading game profile") &&
+		           profileLoad(active_profile_gameid, &saved)) {
+			*options = saved;
+		}
 		return showDashboardNeutrinoOptions(options, 0);
 	}
 	while (1) {
@@ -756,7 +765,7 @@ int showNeutrinoLaunchOptionsForGame(NEUTRINO_LAUNCH_OPTIONS *options, const cha
 int editNeutrinoGameProfile(const char *game_id, const char *game_path)
 {
 	NEUTRINO_LAUNCH_OPTIONS options, saved;
-	int result = 0;
+	int read_result, result = 0;
 
 	if (!profileGameIdValid(game_id))
 		return -1;
@@ -766,11 +775,14 @@ int editNeutrinoGameProfile(const char *game_id, const char *game_path)
 	memset(&options, 0, sizeof(options));
 	snprintf(active_profile_gameid, sizeof(active_profile_gameid), "%s", game_id);
 	snprintf(active_profile_path, sizeof(active_profile_path), "%s", game_path != NULL ? game_path : "");
-	if (profileActiveFileInvalid(game_id)) {
+	read_result = profileReadActiveFile(game_id, &saved);
+	if (read_result < 0) {
 		dashToast(DASH_TOAST_WARN, "Game settings file is invalid; edit it as text before saving");
 		goto out;
 	}
-	if (profileLoad(game_id, &saved))
+	if (read_result > 0)
+		options = saved;
+	else if (profileLoad(game_id, &saved))
 		options = saved;
 	if (showDashboardNeutrinoOptions(&options, 1)) {
 		result = profileSave(game_id, &options);

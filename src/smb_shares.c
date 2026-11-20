@@ -90,7 +90,7 @@ static char *smbReadConfigText(int *mc1_refused)
 	    (text = dashLoadTextFile(LoadedConfigPath, 128 * 1024, NULL)) != NULL) {
 		/* read again, so a file corrected on a PC is used without restarting;
 		 * keep an existing SMB2.CNF fallback if LAUNCHSTATION.CNF has no section yet */
-		if (smb_blocks != NULL || smbCnfSection(text) != NULL)
+		if (smbCnfSection(text) != NULL)
 			smbSharesSetSection(text);
 		free(text);
 	}
