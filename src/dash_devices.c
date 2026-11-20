@@ -10,6 +10,7 @@
 //from the classic uLE_cdStop() tracking.
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "filer_size_cache.h"
 #include "dash_sound.h"
 #include "init.h"
 #include <delaythread.h>
@@ -186,6 +187,16 @@ void dashDevicesPoll(void)
 		for (i = 0; i < 10; i++)
 			if (m & (1 << i))
 				now |= 1u << (MC_UNITS + i);
+	}
+	if (dev_snapshot != 0xFFFFFFFFu && now != dev_snapshot) {
+		u32 changed = now ^ dev_snapshot;
+		char root[12];
+		for (i = 0; i < MC_UNITS + 10; i++)
+			if (changed & (1u << i)) {
+				snprintf(root, sizeof(root), i < MC_UNITS ? "mc%d:/" : "usb%d:/",
+				         i < MC_UNITS ? i : i - MC_UNITS);
+				filerSizeCacheInvalidate(root);
+			}
 	}
 	if (!dev_hotplug_armed) {
 		u64 ms = Timer();

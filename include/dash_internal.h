@@ -513,6 +513,7 @@ enum DashIcon {
 void dashIconsInit(void);
 void dashIconsShutdown(void);
 void dashIcon(int id, float x, float y, float size, DashColor c);
+void dashHeaderIcon(float cx, float cy, float size, DashColor c);
 DashColor dashIconTint(DashColor c);
 GSTEXTURE *dashIconsTexture(void);
 
@@ -1094,6 +1095,8 @@ float dashTime(void);
 /* Visual-only tick, once before each dashboard/modal frame. No input or IO. */
 float dashVisualUpdate(void);
 float dashFrameDelta(void); /* measured delta of that tick, for draw-time easing */
+/* Timestamp shared by every icon drawn during the current visual frame. */
+u64 dashFrameTimeMs(void);
 float dashUiFocusAge(void); /* seconds since the focused item changed */
 float dashAnimSpeed(void);
 float dashSectionAnim(void); /* 0..1 section-transition clock */

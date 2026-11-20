@@ -31,6 +31,9 @@ def function(source, signature):
 
 
 code = r'''
+#define filerSizeCacheGet(p,f,s) 0
+#define filerSizeCacheRevision() 0u
+#define filerSizeCachePut(p,f,s,r) ((void)0)
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>

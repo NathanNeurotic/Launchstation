@@ -1,4 +1,5 @@
 #include "launchelf.h"
+#include "filer_size_cache.h"
 #include "dash.h"
 #include "filer_actions.h"
 #include "filer_shared.h"
@@ -349,10 +350,18 @@ int getFileSize(const char *path, const FILEINFO *file, u64 *size)
 	char dir[MAX_PATH];
 	int nfiles, i, ret, more, status = 0;
 
-	if (!ensurePathDeviceStackReady(path))
+	if (!size || !file || !ensurePathDeviceStackReady(path))
 		return -ENODEV;
 
 	if (file->stats.AttrFile & sceMcFileAttrSubdir) {  //Folder object to size up
+		u64 cached, before = *size;
+		unsigned measured_revision;
+
+		if (filerSizeCacheGet(path, file, &cached)) {
+			*size += cached;
+			return 0;
+		}
+		measured_revision = filerSizeCacheRevision();
 		if (snprintf(dir, sizeof(dir), "%s%s/", path, file->name) >= (int)sizeof(dir))
 			return -ENAMETOOLONG;
 		files = treeList(dir, &nfiles, &more);
@@ -370,6 +379,8 @@ int getFileSize(const char *path, const FILEINFO *file, u64 *size)
 			}
 		}
 		treeLeave(files);
+		if (status == 0)
+			filerSizeCachePut(path, file, *size - before, measured_revision);
 		return status;
 	}
 	//File object to size up
@@ -919,8 +930,10 @@ static int selectCustomDateEditorFolder(FILEINFO *folders, sceMcStDateTime *orig
 	if (editing_index < 0)
 		return 0;
 
-	next_index = editing_index + direction;
-	if (next_index < 0 || next_index >= folder_count)
+	next_index = (editing_index + direction) % folder_count;
+	if (next_index < 0)
+		next_index += folder_count;
+	if (next_index == editing_index)
 		return 0;
 
 	snprintf(selected_name, selected_name_size, "%s", folders[next_index].name);
@@ -1136,6 +1149,13 @@ int filerDateEditorSync(FilerDateEditor *e)
 	return updateCustomDateEditorFolders(e->folders, e->original, e->count, e->selected, e->timestamp);
 }
 
+int filerDateEditorChanged(const FilerDateEditor *e, int index)
+{
+	if (e == NULL || index < 0 || index >= e->count)
+		return 0;
+	return !customDateEditorTimestampEqual(&e->folders[index].stats._Modify, &e->original[index]);
+}
+
 int filerDateEditorSelect(FilerDateEditor *e, int direction)
 {
 	return selectCustomDateEditorFolder(e->folders, e->original, e->count, e->selected, sizeof(e->selected), e->timestamp, direction);
@@ -1196,6 +1216,25 @@ void filerDateEditorField(const sceMcStDateTime *ts, int position, char *text, i
 			break;
 	}
 	*sep = (position < 2) ? ":" : (position == 2) ? "   " : (position < 5) ? "/" : "";
+}
+
+void filerDateEditorFieldRange(int position, int *offset, int *length)
+{
+	char time_text[16];
+	int use_12h, date_format, field, off, len;
+
+	menuTitleGetClockFormat(&use_12h, &date_format);
+	field = getCustomDateFieldForDisplayPosition(position, date_format);
+	off = getCustomDateFieldOffset(field, date_format);
+	len = field == CUSTOM_DATE_YEAR ? 4 : 2;
+	if (field >= CUSTOM_DATE_YEAR) {
+		menuTitleFormatClockTime(time_text, sizeof(time_text), 0, 0, 0, use_12h);
+		off += (int)strlen(time_text) + 1;
+	}
+	if (offset != NULL)
+		*offset = off;
+	if (length != NULL)
+		*length = len;
 }
 
 void filerDateEditorFormat(const sceMcStDateTime *ts, char *out, int size)
@@ -2093,6 +2132,8 @@ int delete (const char *path, const FILEINFO *file)
 			ret = genRemove(dir);
 		}
 	}
+	if (ret >= 0)
+		filerSizeCacheInvalidate((!strncmp(path, "hdd", 3) || !strncmp(path, "dvr_hdd", 7)) ? hdddir : dir);
 	return ret;
 }
 //--------------------------------------------------------------
@@ -2231,6 +2272,9 @@ int Rename(const char *path, const FILEINFO *file, const char *name)
 	             (!strncmp(dir, "host", 4) && dir[length - 1] == '\\') ? "" : "/", name) >= (int)sizeof(new_path))
 		return -ENAMETOOLONG;
 	if (!strcmp(old_path, new_path) && !strncmp(old_path, "host", 4)) return 0;
+	/* A failed driver rename can still have applied its new spelling. */
+	filerSizeCacheInvalidate(old_path);
+	filerSizeCacheInvalidate(new_path);
 	if (strcmp(file->name, name) && !stricmp(file->name, name))
 		return filerRenameCaseOnly(old_path, new_path, file->name, name, !!(file->stats.AttrFile & sceMcFileAttrSubdir));
 	return filerRenameSiblingOnce(old_path, new_path, !!(file->stats.AttrFile & sceMcFileAttrSubdir));
@@ -2301,6 +2345,11 @@ int newdir(const char *path, const char *name)
 		strcat(dir, name);
 		genLimObjName(dir, 0);
 		ret = filerMkdirNoOverwrite(dir);
+	}
+	if (ret >= 0) {
+		char created[MAX_PATH];
+		if (snprintf(created, sizeof(created), "%s%s", path, name) < (int)sizeof(created))
+			filerSizeCacheInvalidate(created);
 	}
 	return ret;
 }

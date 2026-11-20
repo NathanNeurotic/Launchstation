@@ -45,6 +45,7 @@ typedef struct { int dummy; char vmc[2][64]; } NEUTRINO_LAUNCH_OPTIONS;
 typedef struct { char argv[4][32]; } NEUTRINO_OPTION_ARGS;
 typedef struct { int disable_neutrino, cdrom_disable_gameid, reboot_iop_elf_load; char neutrino_file[MAX_PATH]; } Setting;
 static Setting *setting;
+static struct { int recent_count; } dashCfg = {8};
 static void *elisaFnt, *External_Lang_Buffer;
 static MainExecuteContext exec_ctx;
 static void (*mainActionLaunchHook)(const char *);

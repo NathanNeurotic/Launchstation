@@ -210,7 +210,7 @@ devices = read("src/dash_devices.c")
 device_types = header[header.index("enum DashDevState"):
                       header.index("void dashDevicesInit(void)")]
 symbols = sorted(set(re.findall(r"\b(?:DI_|DASH_SND_|SCECd)\w+", devices)))
-devcode = common + device_types + "enum { " + ",".join(symbols) + " };\n"
+devcode = "#define filerSizeCacheInvalidate(path) ((void)(path))\n" + common + device_types + "enum { " + ",".join(symbols) + " };\n"
 # Extract scan flags only if the selected source supports scan confirmation.
 # Older baseline refs intentionally lack this enum.
 if "void dashDevicesConfirmScannedDisks(" in devices:

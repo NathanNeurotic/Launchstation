@@ -151,6 +151,11 @@ float dashFrameDelta(void)
 	return frame_dt;
 }
 
+u64 dashFrameTimeMs(void)
+{
+	return last_frame_ms;
+}
+
 /* Main, modal and tool loops share the same clock. Nested dialogs consume
  * elapsed time here, so returning to their caller never counts it twice.
  * Keep this visual-only: no section input/update, device polling or IO. */
@@ -651,7 +656,8 @@ void dashLaunchApp(DashApp *app, int with_args_prompt)
 	snprintf(title, sizeof(title), "Starting %s", copy.title);
 	if (dashArtTakeDirty())
 		dashLibSaveCache();
-	dashStorePushRecent(copy.path);
+	if (dashCfg.recent_count > 0)
+		dashStorePushRecent(copy.path);
 	/* the recent list, cache and anything the worker picked up meanwhile
 	 * (e.g. drivers restarted after the Text Editor) are written first */
 	if (!settleBackgroundWork(title)) {

@@ -949,7 +949,7 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 	/* Eight subtitled rows left only 3 logical pixels above the popup.
 	 * Keep a full safe margin for rounded corners on 4:3/interlaced TVs. */
 	const int max_rows = 7;
-	float sel_anim, open = 0.0f;
+	float sel_anim, open = 0.0f, top_anim = -1.0f;
 	float w = 400.0f, row_h = 38.0f;
 	int rows = (n < max_rows) ? n : max_rows;
 	float h = 76.0f + rows * row_h + 44.0f + (subtitle ? 18.0f : 0.0f);
@@ -1060,6 +1060,8 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 
 		float dt = dashVisualUpdate();
 		sel_anim = dashApproach(sel_anim, (float)sel, 22.0f * dashAnimSpeed(), dt);
+		top_anim = listSlideTop(top_anim, top, sel, n, rows,
+		                        dashApproach(0.0f, 1.0f, 14.0f * dashAnimSpeed(), dt));
 		open = dashApproach(open, 1.0f, 16.0f * dashAnimSpeed(), dt);
 		{
 			float oe = dashEaseOutCubic(open);
@@ -1079,11 +1081,11 @@ int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *i
 			}
 			dashGfxScissor(x + 8, ly - 2, w - 16, rows * row_h + 4);
 			{
-				float fy = ly + (sel_anim - top) * row_h;
+				float fy = ly + (sel_anim - top_anim) * row_h;
 				dashDrawSelection(x + 14, fy + 2, w - 28, row_h - 4, 10, 1.0f);
 			}
-			for (i = top; i < n && i < top + rows; i++) {
-				float ry = ly + (i - top) * row_h;
+			for (i = (int)top_anim; i < n && i < top_anim + rows; i++) {
+				float ry = ly + (i - top_anim) * row_h;
 				DashColor c = items[i].disabled ? DASH_C_TEXT3 : dashItemColor(i == sel);
 				float tx = x + 28;
 				dashGfxPushAlpha(items[i].disabled ? DASH_DISABLED_ALPHA : 1.0f);

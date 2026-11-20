@@ -79,6 +79,7 @@ jobs:
           python3 tests/test_listing_complete.py
           python3 tests/test_listing_callers.py
           python3 tests/test_get_size.py
+          python3 tests/test_folder_size_cache.py
           python3 tests/test_file_browser_heap.py
           python3 tests/test_stack_realign_check.py
           python3 tests/test_smb_shares.py
@@ -130,6 +131,7 @@ jobs:
           python3 tests/test_scene_override_nesting.py
           python3 tests/test_gage_alignment.py
           python3 tests/test_modal_animation.py
+          python3 tests/test_list_scroll_animation.py
           python3 tests/test_nested_scissor.py
           python3 tests/test_hdd_manager_browse.py
           python3 tests/test_hdd_manager_mounts.py
@@ -205,6 +207,7 @@ jobs:
           python3 tests/test_mc1_mx4sio_handoff.py
           python3 tests/test_exploit_folder_warning.py
           python3 tests/test_pad_icon_order.py
+          python3 tests/test_header_icon.py
           python3 tests/test_hint_clearance.py
           python3 tests/test_hint_bar_fit.py
           python3 tests/test_hint_order.py

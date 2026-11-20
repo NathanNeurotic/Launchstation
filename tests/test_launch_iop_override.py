@@ -40,6 +40,7 @@ typedef struct { int unused; } DashInput;
 typedef struct { char path[MAX_PATH],title[DASH_TITLE_MAX];int flags; } DashApp;
 static struct { int reboot_iop_elf_load; } config,*setting=&config;
 static MainExecuteContext exec_ctx;
+static struct { int recent_count; } dashCfg={8};
 static char message[MAX_PATH];
 static int dash_active,swapKeys,worker,loading,frames,begins,ends,polls,parks;
 static int invalid_sample;
@@ -143,7 +144,7 @@ program += function(dash, 'void dashLaunchApp(')
 program += r'''
 static void reset(int saved,int mapping,u64 hold) {
     memset(&exec_ctx,0,sizeof(exec_ctx));exec_ctx.main_msg=message;
-    config.reboot_iop_elf_load=saved;swapKeys=mapping;
+    config.reboot_iop_elf_load=saved;swapKeys=mapping;dashCfg.recent_count=8;
     dash_active=1;worker=loading=frames=begins=ends=polls=parks=invalid_sample=0;
     settle_calls=fail_settle=launches=last_mode=recent=errors=args_clears=0;
     editor_result=args_result=1;editor_hold=0;
@@ -235,6 +236,13 @@ int main(void) {
         assert(handoff_result==(commit==1));
         assert(music_gain==10 && effects_gain==60 && !loading);
     }
+    /* Disabling recents skips the recording call on ordinary and argument launches. */
+    for(int count=0;count<=8;count+=4) for(int mode=0;mode<=DASH_LAUNCH_PENDING_ARGS;mode+=DASH_LAUNCH_PENDING_ARGS) {
+        reset(0,0,0); dashCfg.recent_count=count;
+        app(&selected,"usb0:/APPS/APP.ELF"); dashLaunchApp(&selected,mode);
+        assert(launches==1 && recent==(count>0));
+    }
+    puts("PASS: recent_count=0 skips recording entirely, including launches with arguments");
     puts("PASS: Neutrino options retain audio, Run stops it at handoff, cancellation and failed preparation restore playback");
     puts("PASS: one-second hold inverts both saved modes/mappings, tap/release, keyboard/automatic, worker/IOP safety and fresh samples");
     puts("PASS: real app dispatch carries a one-launch mode across preparation, failures and arguments without saving it; game-image policies retained");

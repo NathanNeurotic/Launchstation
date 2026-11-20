@@ -10,6 +10,7 @@
 #include "dash.h"
 #include "dash_internal.h"
 #include "filer_shared.h"
+#include "filer_size_cache.h"
 #include "mmce_backup.h"
 #include "cloud_google.h"
 
@@ -273,6 +274,7 @@ int main(int argc, char *argv[])
 	enum BOOT_DEVICE boot;
 	int CNF_error = -1;  //assume error until CNF correctly loaded
 
+	filerSizeCacheInit();
 	captureBootArguments(argc, argv, &boot_argc, boot_argv, 8);
 	boot = performEarlyBootInitialization((argc > 0) ? argv[0] : NULL, boot_path, sizeof(boot_path), mainMsg, CNF, sizeof(CNF), &CNF_error);
 

@@ -38,6 +38,7 @@ def function(source, signature):
 
 
 code = r'''
+#define filerSizeCacheInvalidate(path) ((void)(path))
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>

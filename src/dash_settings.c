@@ -919,6 +919,7 @@ static const SetPage pages[P_COUNT] = {
 static int page, item;
 static int item_top;
 static float item_anim;
+static float item_top_anim = -1.0f;
 static struct { int page, item, top; } page_stack[PAGE_DEPTH];
 static int page_depth;
 
@@ -932,6 +933,7 @@ static void openPage(int next)
 	page = next;
 	item = item_top = 0;
 	item_anim = 0.0f;
+	item_top_anim = -1.0f;
 	if (next == P_MMCE_BACKUP)
 		dashToolsPrepareMmceStatus();
 	if (next == P_NETWORK)
@@ -947,6 +949,7 @@ static void backPage(void)
 	item = page_stack[page_depth].item;
 	item_top = page_stack[page_depth].top;
 	item_anim = (float)item;
+	item_top_anim = -1.0f;
 }
 
 /* Unsaved-changes session: opened when SETTINGS is entered, closed when
@@ -3613,6 +3616,7 @@ static void settingsEnter(void)
 		page_depth = item = item_top = 0;
 		item_anim = 0.0f;
 	}
+	item_top_anim = -1.0f;
 	/* The snapshot must see the saved IP settings, not the compile-time
 	 * defaults the globals hold until the boot warm job runs: a defaults
 	 * snapshot would later read as dirty and Discard would lose the file. */
@@ -3990,15 +3994,18 @@ static void settingsDraw(void)
 
 	/* keep the focused row inside the visible window */
 	item_top = listCenteredTop(item, c->n, ITEM_ROWS);
+	item_top_anim = listSlideTop(item_top_anim, item_top, item, c->n, ITEM_ROWS,
+	                             dashApproach(0.0f, 1.0f, 14.0f * dashAnimSpeed(), dashFrameDelta()));
 	if (item_anim < item_top || item_anim >= item_top + ITEM_ROWS)
 		item_anim = (float)item;
 
 	/* items */
 	dashDrawPanelBox(DASH_PANE_L, iy - 6, DASH_PANE_W, ITEM_ROWS * irow + 12, 14);
-	dashDrawSelection(ix, iy + dashClampf(item_anim - item_top, 0, ITEM_ROWS - 1) * irow + 2, iw, irow - 5, 9, 1.0f);
-	for (i = item_top; i < c->n && i < item_top + ITEM_ROWS; i++) {
+	dashGfxScissor(ix - 4, iy - 4, iw + 8, ITEM_ROWS * irow + 8);
+	dashDrawSelection(ix, iy + (item_anim - item_top_anim) * irow + 2, iw, irow - 5, 9, 1.0f);
+	for (i = (int)item_top_anim; i < c->n && i < item_top_anim + ITEM_ROWS; i++) {
 		const SetItem *it = &c->items[i];
-		float y = iy + (i - item_top) * irow;
+		float y = iy + (i - item_top_anim) * irow;
 		int on = i == item, disabled = itemDisabled(it);
 		DashColor col = disabled ? DASH_C_TEXT3 : dashItemColor(on);
 
@@ -4107,6 +4114,7 @@ static void settingsDraw(void)
 		}
 		dashGfxPopAlpha();
 	}
+	dashGfxScissorReset();
 	dashDrawScrollbar(ix + iw + 10, iy, ITEM_ROWS * irow, item_top, ITEM_ROWS, c->n);
 	/* help line */
 	{
