@@ -2264,7 +2264,7 @@ void mcMultitapRefresh(void)
 	int port;
 
 	/* Never overlap the worker's card traffic: its job may still be draining a
-	 * pending libmc request. The next device list retries. */
+	 * pending libmc request. The next device list or card poll retries. */
 	if (!have_mtapman || !have_mc_rpc_ready || dashWorkerOnThread() || dashWorkerIoBusy())
 		return;
 	if (!mtap_bound) {

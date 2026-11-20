@@ -1613,6 +1613,9 @@ int pollRootMemoryCardDevices(void)
 	 * start; presence stays as last known meanwhile. */
 	if (!isMemoryCardRpcReady())
 		return FALSE;
+	/* The device list can outlive an initial busy-skip in mcMultitapRefresh().
+	 * Retry at this poll boundary or its multitap units stay unavailable. */
+	mcMultitapRefresh();
 	/* Polling must never reset MX4SIO or send mc1 requests through its
 	 * SIO2 hooks. Explicit browsing performs the foreground stack switch. */
 	if (!mcUnitAvailable(root_mc_poll_port) ||

@@ -44,7 +44,9 @@ static int isSmbServerRunning(void) { return smb_running; }
 static int mc_rpc_ready = 1;
 static int isMemoryCardRpcReady(void) { return mc_rpc_ready; }
 static int mtap_open[2], port1_calls, port0_slots;
+static int open_port0_on_refresh;
 static int mcUnitAvailable(int u) { return u >= 0 && u < MC_UNITS && (MC_UNIT_SLOT(u) == 0 || mtap_open[MC_UNIT_PORT(u)]); }
+static void mcMultitapRefresh(void) { if (open_port0_on_refresh) mtap_open[0] = 1; }
 #include <string.h>
 /* MX4SIO owns slot 2's SIO2 port while it is loaded. */
 static int isPathDeviceStackLoaded(const char *p) { return strcmp(p, "mc1:/") || !mx4sio_loaded; }
@@ -126,6 +128,19 @@ int main(void) {
     /* The SMB server (iop/smbd) owns the cards the same way until it has stopped. */
     smb_running=1;info_before=info_calls;run(40);assert(info_calls==info_before);
     smb_running=0;run(4);assert(info_calls>info_before);
+    /* If the initial device-list refresh was skipped while the worker was
+     * busy, the persistent root view must retry it. Otherwise mc2/mc4/mc6
+     * remain unavailable forever even though a multitap is attached. */
+    mtap_open[0]=0;open_port0_on_refresh=1;
+    root_mc_polled[2]=root_mc_polled[4]=root_mc_polled[6]=0;
+    root_mc_present[2]=root_mc_present[4]=root_mc_present[6]=0;
+    root_mc_poll_active=0;root_mc_poll_port=0;root_mc_next_poll_time=0;
+    run(40);
+    assert(root_mc_polled[2] && root_mc_polled[4] && root_mc_polled[6]);
+    assert(filerRootMcPresent(2,NULL,NULL)==1 && filerRootMcPresent(4,NULL,NULL)==1 &&
+           filerRootMcPresent(6,NULL,NULL)==1);
+    open_port0_on_refresh=0;
+    puts("PASS: root polling retries a busy-skipped multitap refresh");
     /* An unbound card client (failed start) is never polled; opening a card
      * retries the start, after which polling resumes. */
     filerRootMcPollIdle();mc_rpc_ready=0;info_before=info_calls;
