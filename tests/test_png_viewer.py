@@ -48,6 +48,13 @@ for filename in ("dash_games.c", "dash_apps.c", "dash_art.c", "dash_bg.c"):
     assert draws, f"Missing decoded artwork draw in {filename}"
     assert all(tuple(map(int, draw)) == (128, 128, 128, 255) for draw in draws), \
         f"{filename} doubles/clips decoded artwork colors: {draws}"
+# Focus wallpaper uses a separate cached-art path; both frames must retain
+# the same neutral GS modulation without changing their fade alpha.
+background = (root / "src/dash_bg.c").read_text()
+for cached in ("prev", "cur"):
+    assert re.search(rf"drawCover\\({cached}, DC\\(128, 128, 128, \\(int\\)\\(", background), \\
+        f"Focus wallpaper {cached} frame clips the artwork colors"
+
 assert "jpegturbo" in ps2yaml
 assert "src/dash_image.c" in ps2yaml
 assert "src/dash_jpeg.c" in ps2yaml
