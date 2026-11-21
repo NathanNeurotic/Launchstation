@@ -40,11 +40,11 @@ def run_c(name, source):
 
 
 gfx = (root / "src/dash_gfx.c").read_text(encoding="utf-8")
-# Border corners are drawn as quads with the straight edges' width
-# (saildot4k b849ec1): a scaled ring texture drew corners under about 18 px
-# radius thinner and fainter than the 2 px edges.
+# Rounded outlines use mirrored spans with the straight edges' width; the
+# pixel-reflection harness exercises their geometry and alpha composition.
 assert "static GSTEXTURE tex_ring;" not in gfx
-assert gfx.count("borderCorner(x + ") == 4
+assert "static void borderSpan(" in gfx and "static void borderRow(" in gfx
+assert "t = fmaxf(2.0f, r * 3.5f / 32.0f);" in gfx
 
 hdr = (root / "include/dash_internal.h").read_text(encoding="utf-8")
 icons = (root / "src/dash_icons.c").read_text(encoding="utf-8")
