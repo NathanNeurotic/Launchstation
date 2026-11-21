@@ -2703,7 +2703,7 @@ static int tsEdit(FilerDateEditor *e)
 				tsDrawFolderRow(e, idx, 1, x, ry, w);
 			}
 			dashGfxScissorReset();
-			dashDrawScrollbar(x + w - 16, list_y, TS_LIST_H, top, TS_ROWS, e->count);
+			dashDrawScrollbar(x + w - 16, list_y, TS_LIST_H, camera / TS_ROW_H, TS_ROWS, e->count);
 			tsDrawHints(x + 24, y + h - 36, w - 48);
 			dashGfxPopAlpha();
 		}
@@ -3565,7 +3565,7 @@ static void browserDrawBody(void)
 		dashText(FB_X + FB_W * 0.5f - 44, FB_Y + 49, "Reading folder...", DASH_FS_SMALL, DASH_C_TEXT2);
 	} else if (rows_total == 0)
 		dashTextCenter(FB_X + FB_W * 0.5f, FB_Y + 50, "This folder is empty", DASH_FS_SMALL, DASH_C_TEXT3);
-	dashDrawScrollbar(FB_X + FB_W + 10, FB_Y, FB_ROWS * FB_ROW_H, fb.top, FB_ROWS, rows_total);
+	dashDrawScrollbar(FB_X + FB_W + 10, FB_Y, FB_ROWS * FB_ROW_H, fb.top_anim, FB_ROWS, rows_total);
 	{
 		DashHint h[5];
 		int n = 0;

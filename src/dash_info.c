@@ -110,7 +110,7 @@ static void sheetShow(int icon, const char *title, const char *subtitle, const S
 			}
 			dashGfxScissorReset();
 			if (max_scroll > 0.0f)
-				dashDrawScrollbar(x + w - 14, body_y, body_h, (int)scroll, (int)body_h, (int)total);
+				dashDrawScrollbar(x + w - 14, body_y, body_h, scroll, (int)body_h, (int)total);
 			dashModalHintRow(x + 24, y + h - 36, dashOkIcon(), localizeDashboardText("Close"), -1, NULL);
 			if (max_scroll > 0.0f) /* one D-pad glyph, up/down highlighted */
 				dashDrawButton(x + w - 24 - 22, y + h - 36, DI_DPAD_UD, NULL);

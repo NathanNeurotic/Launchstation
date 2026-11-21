@@ -14,9 +14,13 @@
 //--------------------------------------------------------------
 #include "dash_internal.h"
 #include "filer_size_cache.h"
+#include "filer_shared.h"
 #include "dash_sound.h"
 #include "hdd_header_injector.h"
 #include "hdd_filesystem.h"
+#include "hdd_format.h"
+#include "hdd_install.h"
+#include <time.h>
 #include "gui_sort.h"
 #include "hdl_rpc.h"
 #include "init.h"
@@ -104,7 +108,7 @@ static struct
 	int present, formatted;
 	unsigned filesystem;
 	int filesystem_error;
-	u32 size_mb, used_mb, free_mb;
+	u32 size_mb, apa_mb, used_mb, free_mb;
 	int scanned, scanning, overflow;
 	HddPart *parts;
 	int n;
@@ -124,7 +128,9 @@ enum {
 	HOP_FORMAT,
 	HOP_INJECT,
 	HOP_LIST_HEADERS,
-	HOP_UNMOUNT
+	HOP_UNMOUNT,
+	HOP_DOWNLOAD_INSTALLER,
+	HOP_INSTALL_SOFTWARE
 };
 
 typedef struct
@@ -140,7 +146,10 @@ typedef struct
 	int n, overflow, status, present, formatted;
 	unsigned filesystem;
 	int filesystem_error;
-	u32 size_mb, used_mb;
+	u32 size_mb, apa_mb, used_mb;
+	HddFormatPlan format_plan;
+	HddInstall *installer;
+	int format_started;
 	/* pfs */
 	u32 pfs_total, pfs_free;
 	/* inject */
@@ -256,6 +265,11 @@ static void scanRun(HddJob *j)
 			unsigned additional = HDD_FS_UNKNOWN;
 
 			j->size_mb = (u32)sectors / SECTORS_PER_MB;
+			if (j->formatted) {
+				uint32_t limit = 0;
+				if (hddApaLimit(hddReadFormatSector, "hdd0:", (u32)sectors, &limit) == 0)
+					j->apa_mb = limit / SECTORS_PER_MB;
+			}
 			/* APA Jail can contain both APA and FAT/exFAT metadata. Check
 			 * independently and retain the driver-confirmed APA result. */
 			j->filesystem_error = hddProbeFilesystem(hddReadFormatSector, "hdd0:", (u32)sectors, &additional);
@@ -384,8 +398,19 @@ static void hddJobRun(void *arg)
 			j->ret = HdlRenameGame(j->a, j->b);
 			break;
 		case HOP_FORMAT:
-			releaseMounts();
-			j->ret = hddFormat();
+			{
+				int i;
+				for (i = 0; i < 2; i++) {
+					if (vmcMounted[i] && (j->ret = filerUnmountVmc(i)) < 0)
+						return;
+				}
+				/* Refuse a failed PFS unmount before any raw disk writes. */
+				for (i = 0; i < MOUNT_LIMIT; i++) {
+					unmountParty(i);
+					if (mountedParty[i][0]) { j->ret = -EBUSY; return; }
+				}
+				j->ret = hddFormatDisk(&j->format_plan, &j->format_started);
+			}
 			break;
 		case HOP_INJECT:
 			releaseMounts();
@@ -395,6 +420,24 @@ static void hddJobRun(void *arg)
 		case HOP_LIST_HEADERS:
 			j->sources = (HddHeaderSourcePartition *)malloc(sizeof(HddHeaderSourcePartition) * MAX_PARTITIONS);
 			j->nsources = j->sources ? HddHeaderListSourcePartitions(j->b, j->sources, MAX_PARTITIONS, &j->invalid) : -ENOMEM;
+			break;
+		case HOP_DOWNLOAD_INSTALLER:
+			j->ret = hddInstallDownload(j->installer);
+			break;
+		case HOP_INSTALL_SOFTWARE:
+			filerSizeCacheInvalidate("hdd0:/");
+			filerSizeCacheInvalidate("ata0:/");
+			j->ret = hddInstallApply(j->installer);
+			if (j->ret >= 0) {
+				char mbr[sizeof(j->installer->stage) + sizeof("/OSDMBR.XLF")];
+				const char *payload = NULL;
+				if (j->installer->flags & HDD_INSTALL_HOSD) {
+					snprintf(mbr, sizeof(mbr), "%s/OSDMBR.XLF", j->installer->stage);
+					payload = mbr;
+				}
+				j->ret = hddInstallFinish(&j->format_plan, payload, &j->format_started,
+				                     j->installer->flags & HDD_INSTALL_PSBBN ? hddInstallPsbbnPayload : NULL, j->installer);
+			}
 			break;
 		case HOP_UNMOUNT:
 			releaseMounts();
@@ -450,7 +493,7 @@ static int runJob(HddJob *j, const char *title, int cancelable)
 //--------------------------------------------------------------
 static void recomputeFree(void)
 {
-	hm.free_mb = (hm.size_mb > hm.used_mb) ? ((hm.size_mb - hm.used_mb) & 0x7FFFFF80) : 0;
+	hm.free_mb = (hm.apa_mb > hm.used_mb) ? ((hm.apa_mb - hm.used_mb) & 0x7FFFFF80) : 0;
 }
 
 static int partCmp(const void *a, const void *b)
@@ -487,6 +530,7 @@ static int scan(void)
 	hm.filesystem = j->filesystem;
 	hm.filesystem_error = j->filesystem_error;
 	hm.size_mb = j->size_mb;
+	hm.apa_mb = j->apa_mb;
 	hm.used_mb = j->used_mb;
 	hm.overflow = j->overflow;
 	hm.scanned = 1;
@@ -629,7 +673,7 @@ static void loadPfsInfo(int i)
 static int pickSize(const char *title, int min_mb, int max_mb, int start_mb)
 {
 	int size = start_mb;
-	const float w = 440.0f, h = 220.0f;
+	const float w = 440.0f, h = 244.0f;
 	const float x = (DASH_VW - w) * 0.5f, y = (DASH_VH - h) * 0.5f;
 	float open = 0.0f;
 	DashInput in;
@@ -702,8 +746,9 @@ static int pickSize(const char *title, int min_mb, int max_mb, int start_mb)
 			dashText(bx, by + 14, lo, DASH_FS_CAPTION, DASH_C_TEXT3);
 			dashTextRight(bx + bw, by + 14, hi, DASH_FS_CAPTION, DASH_C_TEXT3);
 			{
-				float hx = x + 24, hy = y + h - 36;
-				hx += dashDrawButton(hx, hy, DI_BTN_LEFT, NULL) + 2;
+				float hx = x + 24, hy = y + h - 60;
+				/* Tighten the chevrons without overlapping button backings. */
+				hx += dashDrawButton(hx, hy, DI_BTN_LEFT, NULL) + (dashCfg.icon_backing ? 0 : -6);
 				hx += dashDrawButton(hx, hy, DI_BTN_RIGHT, NULL) + 4;
 				hx = dashTextS(hx, dashButtonTextY(hy, DASH_FS_SMALL), "128 MB", DASH_FS_SMALL, DASH_C_TEXT2) + 10;
 				hx += dashDrawButton(hx, hy, -1, "L1") + 2;
@@ -862,29 +907,163 @@ static void actRenameGame(HddPart *p)
 
 static void actFormat(void)
 {
+#ifndef NO_IOP_RESET
+	static const char *const formats[] = {"APA", "exFAT", "APA Jail (APA + exFAT)"};
+	HddFormatPlan plan;
+	HddInstall install;
 	HddJob *j;
+	char body[320];
+	int kind, reserve = 0, total, ret, began, format_ok;
+#endif
 
 	if (console_is_PSX) {
 		dashModalMessage(DI_WARNING, "Not available", "The PSX internal HDD cannot be formatted from Launchstation.", NULL);
 		return;
 	}
-	if (!dashModalConfirm("Format the HDD", "Every partition, game and file on the internal HDD will be erased.", localizeDashboardText("Continue"), 1))
+#ifdef NO_IOP_RESET
+	dashModalMessage(DI_WARNING, "Not available", "Formatting requires a build with IOP reset support.", NULL);
+#else
+#ifdef ETH
+	if (isFtpServerRunning()) {
+		dashModalMessage(DI_WARNING, "HDD busy", "Stop the FTP server before formatting the HDD.", NULL);
 		return;
-	if (!dashModalConfirm("Are you sure?", "This erases the whole HDD and cannot be undone.", localizeDashboardText("Format"), 1))
+	}
+	if (isSmbServerRunning()) {
+		dashModalMessage(DI_WARNING, "HDD busy", "Stop the SMB server before formatting the HDD.", NULL);
 		return;
-	j = jobNew(HOP_FORMAT);
-	if (j == NULL)
+	}
+#endif
+	total = fileXioDevctl("hdd0:", HDIOC_TOTALSECTOR, NULL, 0, NULL, 0);
+	if ((total >= -4095 && total <= 0) || (u32)total == UINT32_MAX) {
+		dashModalMessage(DI_WARNING, "Not available", "The drive capacity could not be determined within the supported 2 TiB range.", NULL);
 		return;
-	if (!runJob(j, "Formatting the HDD", 0))
+	}
+	kind = dashModalChoice("Format HDD", formats, 3, 0);
+	if (kind < 0) return;
+	memset(&install, 0, sizeof(install));
+	if (kind != HDD_FORMAT_EXFAT && !dashHddInstallChoose(&install, kind == HDD_FORMAT_APA_JAIL)) return;
+	if (kind == HDD_FORMAT_APA_JAIL) {
+		int max = (int)hddFormatMaxReserve((u32)total);
+		int minimum = install.flags & HDD_INSTALL_PSBBN ? 6400 : install.flags & HDD_INSTALL_APPS ? 256 : 0;
+		if (install.flags & HDD_INSTALL_PSBBN) {
+			HddFormatPlan base;
+			int extent = fileXioDevctl("hdd0:", HDIOC_MAXSECTOR, NULL, 0, NULL, 0);
+			if (extent < 2048 * 2048 || hddFormatPlan(&base, kind, (u32)total, 0, 0) < 0) {
+				dashModalMessage(DI_WARNING, "Drive too small for PSBBN", "This installer needs the existing HDD driver to support a single 2 GiB APA extent for PSBBN's data partition.", NULL);
+				return;
+			}
+			if (max > 131072 - (int)(base.apa_sectors / 2048)) max = 131072 - (int)(base.apa_sectors / 2048);
+		}
+		if (max < minimum) {
+			dashModalMessage(DI_WARNING, "Not enough APA space", "This drive cannot reserve enough APA space for the selected software.", NULL);
+			return;
+		}
+		reserve = pickSize("Additional APA space", minimum, max, max < 8192 ? max : 8192);
+		if (reserve < 0) return;
+	}
+	ret = hddFormatPlan(&plan, kind, (u32)total, reserve, (u32)time(NULL));
+	if (ret < 0) {
+		dashModalMessage(DI_WARNING, "Not available", "The drive is too small for this layout or its capacity is unsupported.", NULL);
 		return;
-	if (j->ret == 0)
-		dashToast(DASH_TOAST_OK, "HDD formatted");
+	}
+	if (kind == HDD_FORMAT_APA_JAIL)
+		snprintf(body, sizeof(body), "Erase the whole HDD and create APA Jail? APA: %u MiB total, including %u MiB of additional space. Recovery: 32 MiB. exFAT: %u MiB, label PS2, 32 KiB clusters.",
+		         (unsigned)(plan.apa_sectors / 2048), (unsigned)plan.reserve_mb, (unsigned)(plan.exfat_sectors / 2048));
+	else if (kind == HDD_FORMAT_EXFAT)
+		snprintf(body, sizeof(body), "Erase the whole HDD and create one MBR exFAT partition? Size: %u MiB. Label: PS2. Cluster size: 32 KiB.", (unsigned)(plan.exfat_sectors / 2048));
 	else
-		dashModalMessage(DI_WARNING, "Format failed", "The HDD could not be formatted.", NULL);
+		snprintf(body, sizeof(body), "Erase the whole HDD and create standard APA system partitions? The minimum APA partition size is 128 MiB.");
+	if (install.flags) {
+		size_t used = strlen(body);
+		snprintf(body + used, sizeof(body) - used, " Selected software will be installed after formatting.");
+		if (!dashHddInstallPrepare(&install)) return;
+		j = jobNew(HOP_DOWNLOAD_INSTALLER);
+		if (!j) { hddInstallCleanup(&install); return; }
+		j->installer = &install;
+		if (!runJob(j, "Downloading installer", 0)) { hddInstallCleanup(&install); return; }
+		ret = j->ret;
+		hddJobFree(j);
+		if (ret < 0) {
+			dashModalMessage(DI_WARNING, "Installer download failed", install.error, NULL);
+			hddInstallCleanup(&install);
+			return;
+		}
+		/* Network setup may have reloaded the IOP after the initial scan. */
+		loadHddModules();
+	}
+	if (!dashModalConfirm("Format the HDD", body, localizeDashboardText("Continue"), 1)) { hddInstallCleanup(&install); return; }
+	if (!dashModalConfirm("Are you sure?", "Every partition, game and file on this HDD will be erased. This cannot be undone.", localizeDashboardText("Format"), 1)) { hddInstallCleanup(&install); return; }
+	j = jobNew(HOP_FORMAT);
+	if (!j) { hddInstallCleanup(&install); return; }
+	j->format_plan = plan;
+	if (hddFormatLoad() < 0) {
+		hddJobFree(j);
+		hddInstallCleanup(&install);
+		dashModalMessage(DI_WARNING, "Format unavailable", "The disk formatting service could not be started. The HDD has not been changed.", NULL);
+		return;
+	}
+	/* Release audio file handles before the formatter detaches ATA volumes. */
+	dashSoundShutdown();
+	if (!runJob(j, "Formatting the HDD", 0)) {
+		hddInstallCleanup(&install);
+		dashSoundMaintain(); dashBgmStart();
+		return;
+	}
+	ret = j->ret;
+	began = j->format_started;
+	if (began) {
+		/* Discard all APA and BDM caches, including after partial failures.
+		 * This is the existing runtime reset path, with PAD/audio recovery. */
+		rebootIopAndReloadCoreStackSilent();
+		loadHddModules();
+	}
 	hddJobFree(j);
+	format_ok = ret == 0;
+	if (ret == 0 && install.flags) {
+		/* The new ATA volume and removable cache are prepared on the UI
+		 * thread. The worker never starts drivers or resets the IOP. */
+		ret = prepareTransferDeviceStacks(install.stage, install.jail && (install.flags & HDD_INSTALL_APPS) ? "ata0:/APPS/" : "hdd0:/__common/");
+		if (ret >= 0) ret = hddFormatLoad();
+		if (ret >= 0) {
+			j = jobNew(HOP_INSTALL_SOFTWARE);
+			if (!j) ret = -ENOMEM;
+			else {
+				j->installer = &install;
+				j->format_plan = plan;
+				if (!runJob(j, "Installing system software", 0)) ret = -EBUSY;
+				else {
+					ret = j->ret;
+					if (j->format_started) {
+						rebootIopAndReloadCoreStackSilent();
+						loadHddModules();
+					}
+					hddJobFree(j);
+				}
+			}
+		}
+		if (ret < 0) {
+			if (!install.error[0]) snprintf(install.error, sizeof(install.error), "Software installation failed (error %d). The HDD is formatted, but installation is incomplete.", ret);
+			dashModalMessage(DI_WARNING, "Software installation incomplete", install.error, install.stage);
+		} else {
+			if (prepareTransferDeviceStacks(install.stage, install.stage) >= 0) hddInstallCleanup(&install);
+			dashToast(DASH_TOAST_OK, "HDD formatted and software installed");
+		}
+	} else if (ret == 0) {
+		hddInstallCleanup(&install);
+		dashToast(DASH_TOAST_OK, "HDD formatted");
+	}
+	dashSoundMaintain(); dashBgmStart();
+	if (ret < 0 && !format_ok) {
+		if (began)
+			snprintf(body, sizeof(body), "Formatting failed (error %d). The drive may be partially formatted. Refresh its status before using it.", ret);
+		else
+			snprintf(body, sizeof(body), "Formatting could not start (error %d). The HDD has not been changed.", ret);
+		dashModalMessage(DI_WARNING, "Format failed", body, NULL);
+	}
 	sel = top = 0;
 	top_anim = -1.0f;
 	afterChange();
+#endif
 }
 
 static void actStatus(void)
@@ -1391,7 +1570,7 @@ static void drawDetails(float scroll)
 
 static void hddScene(void)
 {
-	char a[32], b[32], c[32], line[128];
+	char a[32], b[32], c[32], line[160];
 	int i;
 	const HddPart *selected = (hm.n > 0 && sel < hm.n) ? &hm.parts[sel] : NULL;
 	float scroll = partNameScrollProgress(selected, dashUiFocusAge());
@@ -1421,7 +1600,7 @@ static void hddScene(void)
 		fmtMB(b, sizeof(b), hm.free_mb);
 		fmtMB(c, sizeof(c), hm.size_mb);
 		usageBar(40, 62, 560, hm.used_mb, hm.size_mb, DASH_C_ACCENT);
-		snprintf(line, sizeof(line), "%s used  |  %s free  |  %s  |  %d partition%s%s", a, b, c, hm.n, hm.n == 1 ? "" : "s",
+		snprintf(line, sizeof(line), "%s used  |  %s %s  |  %s  |  %d partition%s%s", a, b, hm.apa_mb < hm.size_mb ? "APA free" : "free", c, hm.n, hm.n == 1 ? "" : "s",
 		         hm.overflow ? " (list full)" : "");
 		dashTextFit(40, 78, 560, line, DASH_FS_CAPTION, DASH_C_TEXT2);
 	} else if (hm.scanned) {
@@ -1454,7 +1633,7 @@ static void hddScene(void)
 			dashTextRight(LIST_X + LIST_W - 10, y + 2, a, DASH_FS_CAPTION, DASH_C_TEXT3);
 		}
 		dashGfxScissorReset();
-		dashDrawScrollbar(LIST_X + LIST_W + 8, LIST_Y, ROWS * ROW_H, top, ROWS, hm.n);
+		dashDrawScrollbar(LIST_X + LIST_W + 8, LIST_Y, ROWS * ROW_H, top_anim, ROWS, hm.n);
 	}
 	drawDetails(scroll);
 	{

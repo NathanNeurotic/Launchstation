@@ -28,7 +28,8 @@ code = r'''
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "hdd_filesystem.h"
+#include "hdd_format.h"
+#include "hdd_install.h"
 typedef uint32_t u32;
 typedef uint64_t u64;
 typedef struct { u32 lba, size; unsigned char data[]; } hddAtaTransfer_t;
@@ -284,7 +285,7 @@ int main(void) {
     reset(); for (int i = 0; i < 4; i++) preMount(i, i);
     HddJob scan = {0}; scanRun(&scan);
     assert(scan.ret == 0 && scan.n == 3 && scan.used_mb == 1152);
-    assert(scan.filesystem == HDD_FS_APA && format_reads == 1);
+    assert(scan.filesystem == HDD_FS_APA && format_reads == 3);
     assert(scan.parts[0].raw_mb == 384 && scan.parts[1].raw_mb == 256 && scan.parts[2].raw_mb == 512);
     assert(mountedCount() == 3 && unmounts == 1 && !live_scans); free(scan.parts);
     probe(4); assert(mountedCount() == 4 && unmounts == 1);
@@ -337,7 +338,7 @@ int main(void) {
         reset(); jailBoot(format);
         memset(&scan, 0, sizeof(scan)); scanRun(&scan);
         assert(scan.ret == 0 && scan.formatted && scan.n == 3 && scan.filesystem == (HDD_FS_APA | format));
-        assert(!scan.filesystem_error && format_reads == 4 && !mounts && !unmounts);
+        assert(!scan.filesystem_error && format_reads == 6 && !mounts && !unmounts);
         hm.filesystem = scan.filesystem; hm.status = scan.status; actStatus();
         assert(strstr(status_body, "APA Jail") && strstr(status_body, "APA partitions") && strstr(status_body, "File Browser"));
         free(scan.parts);
@@ -387,5 +388,5 @@ with tempfile.TemporaryDirectory(prefix="hdd-mounts-") as directory:
     c, executable = Path(directory) / "check.c", Path(directory) / "check"
     c.write_text(code)
     subprocess.run([compiler, "-std=c99", "-Wall", "-Wextra", "-Werror", "-Wformat-truncation=2", "-I", str(root / "include"),
-                    str(c), str(root / "src/hdd_filesystem.c"), "-o", str(executable)], check=True)
+                    str(c), str(root / "src/hdd_filesystem.c"), str(root / "src/hdd_apa_boundary.c"), "-o", str(executable)], check=True)
     subprocess.run([str(executable)], check=True, timeout=10)

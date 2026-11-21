@@ -216,36 +216,26 @@ static inline u32 whiteA(float a)
 	return 0x00808080 | ((u32)ia << 24);
 }
 
-/* Full disc with a margin, so every corner reads its own quadrant with
- * increasing UVs. The GS samples a texture at each pixel's top-left, not its
- * centre: one quarter disc drawn mirrored (reversed UVs) sampled the right
- * and bottom corners one screen pixel further inside the curve than the left
- * and top ones, so the four corners of a filled panel had different shapes.
- * panelCorners() shifts every quad by half a pixel; the margin keeps that
- * shift inside the texture, where gsKit would otherwise clamp the UVs. */
-#define CORNER_TEX    64
-#define CORNER_R      28.0f
-#define CORNER_MARGIN 4.0f
-
 static void buildCornerTextures(void)
 {
-	u32 *corner = allocTexMem(CORNER_TEX, CORNER_TEX);
+	u32 *corner = allocTexMem(32, 32);
 	int x, y;
 
 	if (corner == NULL)
 		return;
 
-	for (y = 0; y < CORNER_TEX; y++) {
-		for (x = 0; x < CORNER_TEX; x++) {
-			float dx = (x + 0.5f) - CORNER_TEX / 2;
-			float dy = (y + 0.5f) - CORNER_TEX / 2;
+	for (y = 0; y < 32; y++) {
+		for (x = 0; x < 32; x++) {
+			/* Quarter disc: circle center at the texture's bottom-right. */
+			float dx = 32.0f - (x + 0.5f);
+			float dy = 32.0f - (y + 0.5f);
 			float d = sqrtf(dx * dx + dy * dy);
-			float a = dashClampf(CORNER_R - d + 0.5f, 0.0f, 1.0f);
+			float a = dashClampf(32.0f - d + 0.5f, 0.0f, 1.0f);
 
-			corner[y * CORNER_TEX + x] = whiteA(a);
+			corner[y * 32 + x] = whiteA(a);
 		}
 	}
-	setupTex(&tex_corner, CORNER_TEX, CORNER_TEX, corner);
+	setupTex(&tex_corner, 32, 32, corner);
 }
 
 static void buildGlowTextures(void)
@@ -725,21 +715,66 @@ void dashTexDrawFit(GSTEXTURE *tex, float x, float y, float w, float h, DashColo
 	dashTexDraw(tex, x + (w - dw) * 0.5f, y + (h - dh) * 0.5f, dw, dh, tint);
 }
 
+/* Share the exact bounds/radius between a rounded fill and its outline.
+ * GS pixels have integer centers: half-pixel edges give reflected corners
+ * identical sample positions. Snap in framebuffer coordinates, then undo
+ * the modal offset and video scale before the normal drawing transforms. */
+static int roundedGeometry(float *x, float *y, float *w, float *h, float *r)
+{
+	float left, top, right, bottom;
+	if (*w <= 0.0f || *h <= 0.0f || g_sy <= 0.0f) return 0;
+	*r = dashClampf(*r, 0.0f, fminf(*w, *h) * 0.5f);
+	if (*r < 1.0f) {
+		*r = 0.0f;
+		return 1;
+	}
+	left = floorf(SX(*x) + 0.5f) - 0.5f;
+	right = floorf(SX(*x + *w) + 0.5f) - 0.5f;
+	top = floorf(SY(*y) + 0.5f) - 0.5f;
+	bottom = floorf(SY(*y + *h) + 0.5f) - 0.5f;
+	*x = left - g_ox;
+	*y = top / g_sy - g_oy;
+	*w = right - left;
+	*h = (bottom - top) / g_sy;
+	if (*w <= 0.0f || *h <= 0.0f) return 0;
+	*r = fminf(*r, fminf(*w, *h) * 0.5f);
+	return 1;
+}
+
+/* Round reflected vertices to the same GS 12.4 grid. A tiny positive bias
+ * survives conversion back through PAL scaling; it is discarded by the GS
+ * fixed-point conversion, rather than moving an edge by a subpixel. */
+static float roundedX(float x)
+{
+	return floorf(SX(x) * 16.0f + 0.5f) / 16.0f - g_ox + 1.0f / 1024.0f;
+}
+
+static float roundedY(float y)
+{
+	return (floorf(SY(y) * 16.0f + 0.5f) / 16.0f + 1.0f / 1024.0f) / g_sy - g_oy;
+}
+
+static void roundedRectGradV(float x, float y, float w, float h, DashColor top, DashColor bottom)
+{
+	float x1, y1, x2, y2;
+	if (w <= 0.0f || h <= 0.0f) return;
+	x1 = roundedX(x); y1 = roundedY(y);
+	x2 = roundedX(x + w); y2 = roundedY(y + h);
+	dashRectGradV(x1, y1, x2 - x1, y2 - y1, top, bottom);
+}
+
 static void panelCorners(GSTEXTURE *tex, float x, float y, float w, float h, float r,
                          DashColor top, DashColor bottom)
 {
-	const float c = CORNER_TEX / 2, lo = c - CORNER_R;
-	float half = 0.5f * CORNER_R / r; /* half a screen pixel, in texels */
+	float tw = (float)tex->Width;
 	u64 ct = gsColor(top), cb = gsColor(bottom);
 
 	if (!dashTexBind(tex))
 		return;
-	if (half > CORNER_MARGIN)
-		half = CORNER_MARGIN; /* corners under 3.5 px: barely curved anyway */
-	texQuad(tex, x, y, x + r, y + r, lo + half, lo + half, c + half, c + half, ct);
-	texQuad(tex, x + w - r, y, x + w, y + r, c + half, lo + half, c + CORNER_R + half, c + half, ct);
-	texQuad(tex, x, y + h - r, x + r, y + h, lo + half, c + half, c + half, c + CORNER_R + half, cb);
-	texQuad(tex, x + w - r, y + h - r, x + w, y + h, c + half, c + half, c + CORNER_R + half, c + CORNER_R + half, cb);
+	texQuad(tex, roundedX(x), roundedY(y), roundedX(x + r), roundedY(y + r), 0, 0, tw, tw, ct);
+	texQuad(tex, roundedX(x + w - r), roundedY(y), roundedX(x + w), roundedY(y + r), tw, 0, 0, tw, ct);
+	texQuad(tex, roundedX(x), roundedY(y + h - r), roundedX(x + r), roundedY(y + h), 0, tw, tw, 0, cb);
+	texQuad(tex, roundedX(x + w - r), roundedY(y + h - r), roundedX(x + w), roundedY(y + h), tw, tw, 0, 0, cb);
 }
 
 void dashPanelGradV(float x, float y, float w, float h, float r, DashColor top, DashColor bottom)
@@ -753,10 +788,8 @@ void dashRoundedGradV(float x, float y, float w, float h, float r, DashColor top
 
 	if (w <= 0.0f || h <= 0.0f || g_alpha <= 0.0f)
 		return;
-	if (r > w * 0.5f)
-		r = w * 0.5f;
-	if (r > h * 0.5f)
-		r = h * 0.5f;
+	if (!roundedGeometry(&x, &y, &w, &h, &r))
+		return;
 	if (r < 1.0f) {
 		dashRectGradV(x, y, w, h, top, bottom);
 		return;
@@ -765,9 +798,9 @@ void dashRoundedGradV(float x, float y, float w, float h, float r, DashColor top
 	mid_top = dashColorLerp(top, bottom, r / h);
 	mid_bottom = dashColorLerp(top, bottom, 1.0f - r / h);
 	/* Non-overlapping pieces so translucent fills blend exactly once. */
-	dashRectGradV(x + r, y, w - 2 * r, r, top, mid_top);
-	dashRectGradV(x, y + r, w, h - 2 * r, mid_top, mid_bottom);
-	dashRectGradV(x + r, y + h - r, w - 2 * r, r, mid_bottom, bottom);
+	roundedRectGradV(x + r, y, w - 2 * r, r, top, mid_top);
+	roundedRectGradV(x, y + r, w, h - 2 * r, mid_top, mid_bottom);
+	roundedRectGradV(x + r, y + h - r, w - 2 * r, r, mid_bottom, bottom);
 	panelCorners(&tex_corner, x, y, w, h, r, dashColorLerp(top, mid_top, 0.5f), dashColorLerp(mid_bottom, bottom, 0.5f));
 }
 
@@ -781,33 +814,75 @@ void dashPanelBorder(float x, float y, float w, float h, float r, DashColor c)
 	dashRoundedBorder(x, y, w, h, dashThemeRadius(r), c);
 }
 
-/* Quarter ring built from quads in logical pixels (saildot4k). A scaled
- * ring texture drew small-radius corners thinner and fainter than the
- * straight edges. Adjacent quads share endpoints, so a translucent stroke
- * blends once. */
-static void borderCorner(float cx, float cy, float r, float t, float sx, float sy, DashColor c)
+/* Emit each covered pixel once, including fractional coverage at a curved
+ * edge. Mirrored rows avoid triangle edge ownership changing an inner corner
+ * by one pixel when an arc happens to cross a GS pixel center. */
+/* Spans already end at physical pixel boundaries. Avoid resnapping every
+ * solid stroke sprite; only protect inverse PAL conversion from roundoff. */
+static void borderRect(float x, float y, float w, float h, DashColor c)
 {
-	int i, segments = (int)ceilf(r);
-	float inner = r - t;
-	float px = 1.0f, py = 0.0f;
-	float step, cs, sn;
+	dashRect(x + 1.0f / 1024.0f, y + (1.0f / 1024.0f) / g_sy, w, h, c);
+}
 
-	if (segments < 4)
-		segments = 4;
-	if (segments > 24)
-		segments = 24;
-	step = 1.57079632679f / segments;
-	cs = cosf(step);
-	sn = sinf(step);
-	for (i = 1; i <= segments; i++) {
-		float nx = (i == segments) ? 0.0f : px * cs - py * sn;
-		float ny = (i == segments) ? 1.0f : px * sn + py * cs;
-		dashQuadG(cx + sx * r * px, cy + sy * r * py,
-		          cx + sx * r * nx, cy + sy * r * ny,
-		          cx + sx * inner * px, cy + sy * inner * py,
-		          cx + sx * inner * nx, cy + sy * inner * ny, c, c, c, c);
-		px = nx;
-		py = ny;
+static void borderPixels(float x, float y, float h, float w, int first, int count,
+                         float coverage, DashColor c)
+{
+	DashColor edge = dashColorA(c, coverage);
+	if (count <= 0 || !edge.a) return;
+	borderRect(x + first, y, count, h, edge);
+	borderRect(x + w - first - count, y, count, h, edge);
+}
+
+/* Draw a pair of mirrored spans, sharing the same coverage calculation.
+ * An odd-width center pixel is emitted once, even when two thin stroke
+ * fragments meet inside it. Translucent pixels never overlap. */
+static void borderSpan(float x, float y, float h, float w, float first, float end, DashColor c)
+{
+	float whole_first, whole_end, center;
+	int left, right, middle = (int)(w * 0.5f);
+	if (end <= first) return;
+	center = dashClampf(2.0f * (end - middle), 0.0f, 1.0f);
+	end = fminf(end, (float)middle);
+	if (end > first) {
+		left = (int)floorf(first);
+		right = (int)ceilf(end) - 1;
+		if (left == right)
+			borderPixels(x, y, h, w, left, 1, end - first, c);
+		else {
+			whole_first = ceilf(first);
+			whole_end = floorf(end);
+			if (whole_first > first)
+				borderPixels(x, y, h, w, left, 1, whole_first - first, c);
+			if (whole_end > whole_first)
+				borderPixels(x, y, h, w, (int)whole_first, (int)(whole_end - whole_first), 1.0f, c);
+			if (end > whole_end)
+				borderPixels(x, y, h, w, right, 1, end - whole_end, c);
+		}
+	}
+	if (((int)w & 1) && center > 0.0f) {
+		DashColor edge = dashColorA(c, center);
+		borderRect(x + middle, y, 1.0f, h, edge);
+	}
+}
+
+static float cornerInset(float row, float rx, float ry)
+{
+	float dy;
+	if (rx <= 0.0f || ry <= 0.0f || row >= ry) return 0.0f;
+	dy = (ry - row) / ry;
+	return rx * (1.0f - sqrtf(fmaxf(0.0f, 1.0f - dy * dy)));
+}
+
+static void borderRow(float x, float y, float w, float r, float ry, float tx, float ty,
+                      int row, int height, DashColor c)
+{
+	float outer = cornerInset(row + 0.5f, r, ry);
+	float inner = tx + cornerInset(row + 0.5f - ty, fmaxf(0.0f, r - tx), fmaxf(0.0f, ry - ty));
+	float row_h = 1.0f / g_sy;
+	if (tx < 1.0f || ty < 1.0f || w <= 2 * inner || height <= 2 * ty || row < ty) {
+		borderSpan(x, y, row_h, w, outer, w * 0.5f, c);
+	} else {
+		borderSpan(x, y, row_h, w, outer, inner, c);
 	}
 }
 
@@ -817,14 +892,12 @@ void dashRoundedBorder(float x, float y, float w, float h, float r, DashColor c)
 
 	if (w <= 0.0f || h <= 0.0f || c.a == 0 || g_alpha <= 0.0f)
 		return;
-	if (r > w * 0.5f)
-		r = w * 0.5f;
-	if (r > h * 0.5f)
-		r = h * 0.5f;
-	if (r < 2.0f) {
+	if (!roundedGeometry(&x, &y, &w, &h, &r))
+		return;
+	if (r < 1.0f) {
 		/* square corners: four plain edges */
 		/* Two logical pixels survive interlaced output better than 1.5. */
-		float t = 2.0f;
+		float t = fminf(2.0f, fminf(w, h) * 0.5f);
 		dashSpriteBatchEnd();
 		dashRect(x, y, w, t, c);
 		dashRect(x, y + h - t, w, t, c);
@@ -833,18 +906,28 @@ void dashRoundedBorder(float x, float y, float w, float h, float r, DashColor c)
 		return;
 	}
 	dashSpriteBatchEnd();
-	/* The curved and straight sections share one width and tint. */
-	t = r * 3.5f / 32.0f;
-	if (t < 2.0f)
-		t = 2.0f;
-	dashRect(x + r, y, w - 2 * r, t, c);
-	dashRect(x + r, y + h - t, w - 2 * r, t, c);
-	dashRect(x, y + r, t, h - 2 * r, c);
-	dashRect(x + w - t, y + r, t, h - 2 * r, c);
-	borderCorner(x + r, y + r, r, t, -1.0f, -1.0f, c);
-	borderCorner(x + w - r, y + r, r, t, 1.0f, -1.0f, c);
-	borderCorner(x + r, y + h - r, r, t, -1.0f, 1.0f, c);
-	borderCorner(x + w - r, y + h - r, r, t, 1.0f, 1.0f, c);
+	/* Match the fill's outer radius. Stroke widths land between physical
+	 * pixel centers, and top/bottom share the exact same row profile. */
+	t = fmaxf(2.0f, r * 3.5f / 32.0f);
+	if (t > r) t = floorf(r);
+	{
+		int height = (int)floorf(h * g_sy + 0.5f);
+		float ry = r * g_sy;
+		float tx = fminf(floorf(t + 0.5f), floorf(w * 0.5f));
+		float ty = fminf(floorf(t * g_sy + 0.5f), (float)(height / 2));
+		int rows = (int)ceilf(fmaxf(ry, ty));
+		if (rows > (height + 1) / 2) rows = (height + 1) / 2;
+		for (int row = 0; row < rows; row++) {
+			int other = height - 1 - row;
+			borderRow(x, y + row / g_sy, w, r, ry, tx, ty, row, height, c);
+			if (other != row)
+				borderRow(x, y + other / g_sy, w, r, ry, tx, ty, row, height, c);
+		}
+		if (height > 2 * rows) {
+			float middle_y = y + rows / g_sy, middle_h = (height - 2 * rows) / g_sy;
+			borderSpan(x, middle_y, middle_h, w, 0.0f, tx, c);
+		}
+	}
 }
 
 void dashGlow(float cx, float cy, float rx, float ry, DashColor c)

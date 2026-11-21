@@ -583,6 +583,9 @@ static int editNeutrinoOption(int row, int direction, void *arg)
 static int showDashboardNeutrinoOptions(NEUTRINO_LAUNCH_OPTIONS *options, int settings_only)
 {
 	DashMenuItem items[NEUTRINO_CANCEL + 3];
+	const unsigned char popup_rows[NEUTRINO_CANCEL + 3] = {
+	    [NEUTRINO_VIDEO_MODE + 1] = 1,
+	    [NEUTRINO_VIDEO_COMPATIBILITY + 1] = 1};
 	NeutrinoOptionsMenu menu = {options, items};
 	const int profile_enabled = active_profile_gameid[0] != '\0';
 	const int cancel_index = profile_enabled ? NEUTRINO_CANCEL + 2 : NEUTRINO_CANCEL;
@@ -616,6 +619,7 @@ static int showDashboardNeutrinoOptions(NEUTRINO_LAUNCH_OPTIONS *options, int se
 	items[cancel_index].label = "Cancel";
 	neutrinoOptionDetails(options, items);
 	dashModalSetEdit(editNeutrinoOption, &menu);
+	dashModalSetEditPopupRows(popup_rows);
 	return dashModalMenu("Neutrino launch options",
 	                     profile_enabled ? active_profile_gameid : "For this launch only",
 	                     items, cancel_index + 1, 0) == 0;

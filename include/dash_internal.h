@@ -901,7 +901,8 @@ void dashDrawHeader(int section, float section_anim);
 void dashDrawClock(void);
 void dashDrawSectionTitle(float x, float y, const char *title, const char *subtitle);
 void dashDrawEmptyState(float cx, float cy, int icon, const char *title, const char *body);
-void dashDrawScrollbar(float x, float y, float h, int first, int visible, int total);
+/* Fractional first follows the view's animated scroll position. */
+void dashDrawScrollbar(float x, float y, float h, float first, int visible, int total);
 void dashDrawFocusFrame(float x, float y, float w, float h, float r, float strength);
 /* Themed building blocks: every list, card and selection goes through
  * these so the theme's panel, border and highlight style apply everywhere. */
@@ -970,10 +971,12 @@ enum {
 	DASH_PICK_FOLDER,
 	DASH_PICK_LAUNCH /* ELF files plus the built-in MISC commands */
 };
+int dashHttpsCaPath(char *path, int path_size);
 int dashPickPath(const char *title, const char *start_dir, int mode, const char *ext, char *out, int out_size);
 void dashModalSetPreview(void (*fn)(int index)); /* applies to the next dashModalMenu() */
 void dashModalSetMarks(unsigned char *marks);    /* next dashModalMenu(): Square toggles 0/1; other values fixed */
 void dashModalSetEdit(int (*edit)(int index, int direction, void *arg), void *arg); /* next dashModalMenu(): Left/Right/Confirm change rows in place */
+void dashModalSetEditPopupRows(const unsigned char *popup_rows); /* next editable menu: 1 marks a submenu row */
 int dashModalKeepVideo(void);
 int dashModalConfirm(const char *title, const char *body, const char *ok_label, int danger);
 void dashModalMessage(int icon, const char *title, const char *body, const char *detail);

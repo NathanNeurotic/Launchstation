@@ -146,6 +146,7 @@ static int dashModalChoice(const char *title, const char *const *labels, int cou
     (void)title; (void)labels; (void)count; return selected;
 }
 static void dashModalSetEdit(int (*edit)(int, int, void *), void *arg) { modal_edit = edit; modal_edit_arg = arg; }
+static void dashModalSetEditPopupRows(const unsigned char *rows) { (void)rows; }
 static int dashModalMenu(const char *title, const char *detail, DashMenuItem *items, int count, int selected) {
     (void)title; (void)detail; (void)items; (void)count; (void)selected;
     if (menu_script == 1) {

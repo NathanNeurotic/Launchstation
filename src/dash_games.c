@@ -488,7 +488,7 @@ static void gamesDraw(void)
 		dashTextFit(lx + 38, y + 3, lw - 50, e->title, DASH_FS_SMALL, dashItemColor(i == sel));
 	}
 	dashGfxScissorReset();
-	dashDrawScrollbar(lx + lw + 10, ly, LIST_ROWS * LIST_ROW_H, top, LIST_ROWS, norder);
+	dashDrawScrollbar(lx + lw + 10, ly, LIST_ROWS * LIST_ROW_H, list_top_anim, LIST_ROWS, norder);
 
 	dashDrawCard(dx, dy, dw, 290, 16);
 	/* With cover art: the art alone, large, no plaque. Without: the frame as the stand-in. */

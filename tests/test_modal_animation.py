@@ -79,6 +79,7 @@ static void (*modal_preview)(int);
 static unsigned char *modal_marks;
 static void dashModalSetMarks(unsigned char *m) { modal_marks=m; }
 static int (*modal_edit)(int,int,void*); static void *modal_edit_arg;
+static const unsigned char *modal_popup_rows;
 static void preview(int i) { (void)i; preview_calls++; }
 #define DASH_VH 448
 #define DASH_VW 640

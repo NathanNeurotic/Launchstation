@@ -1158,3 +1158,45 @@ int InjectHddPartitionHeaderFromSource(const char *partition_name, const char *s
 
 	return 0;
 }
+
+/* Install the same PATINFO layout used by DP without staging another copy
+ * of the icon, or touching the APA header/journal at the partition start. */
+int InjectHddAppLauncher(const char *partition_name, const char *elf_path,
+                         const char *title, const void *icon, unsigned icon_size)
+{
+	char partition[MAX_NAME + 6], cnf[512], settings[1024];
+	iox_stat_t stat;
+	int ret, cnf_size, settings_size;
+	u32 length, offset, lba;
+	if (!elf_path || !title || !icon || !icon_size || icon_size > hdd_header_files[HDD_HEADER_LIST_ICO].max_size ||
+	    strchr(elf_path, '\n') || strchr(elf_path, '\r') || strchr(title, '\n') || strchr(title, '\r')) return -EINVAL;
+	ret = hddHeaderBuildPartitionPath(partition, sizeof(partition), partition_name);
+	if (ret < 0) return ret;
+	ret = fileXioGetStat(partition, &stat);
+	if (ret < 0) return ret;
+	if (stat.mode != APA_TYPE_PFS || stat.private_5 < 262144) return -EINVAL;
+	lba = stat.private_5;
+	cnf_size = snprintf(cnf, sizeof(cnf), "BOOT2 = PATINFO\nHDDUNITPOWER = NICHDD\npath = %s\n", elf_path);
+	settings_size = snprintf(settings, sizeof(settings),
+	    "PS2X\ntitle0=%.64s\ntitle1=Homebrew\nbgcola=58\nbgcol0=0,3,43\nbgcol1=0,0,10\n"
+	    "bgcol2=1,0,9\nbgcol3=0,1,19\nlightdir0=1.0,-1.0,1.0\nlightdir1=-1.0,1.0,-1.0\n"
+	    "lightdir2=0.0,0.0,0.0\nlightcolamb=64,64,64\nlightcol0=64,64,64\nlightcol1=16,16,16\n"
+	    "lightcol2=0,0,0\nuninstallmes0=\nuninstallmes1=\nuninstallmes2=\n", title);
+	if (cnf_size <= 0 || cnf_size >= (int)sizeof(cnf) || settings_size <= 0 || settings_size >= (int)sizeof(settings)) return -ENAMETOOLONG;
+	memset(hdd_header_buffer + 0x1000, 0, 0x800);
+	memcpy(hdd_header_buffer + 0x1000, APA_HEADER_MAGIC, strlen(APA_HEADER_MAGIC));
+	for (int i = 0; i < 3; i++) {
+		const HddHeaderFileSpec *spec = &hdd_header_files[i];
+		const void *data = i == 0 ? (const void *)cnf : i == 1 ? (const void *)settings : icon;
+		length = i == 0 ? cnf_size : i == 1 ? settings_size : icon_size;
+		offset = spec->data_offset - APA_HEADER_ATTRIBUTE_AREA_OFFSET;
+		memcpy(hdd_header_buffer + spec->data_offset, data, length);
+		memcpy(hdd_header_buffer + spec->offset_offset, &offset, 4);
+		memcpy(hdd_header_buffer + spec->size_offset, &length, 4);
+	}
+	memcpy(hdd_header_buffer + 0x1028, &offset, 4);
+	memcpy(hdd_header_buffer + 0x102c, &length, 4);
+	ret = hddHeaderWriteRawRange(lba, 0x1000, hdd_header_buffer + 0x1000, 0x800 + icon_size);
+	if (ret < 0) return ret;
+	return fileXioDevctl("hdd0:", HDIOC_FLUSH, NULL, 0, NULL, 0);
+}

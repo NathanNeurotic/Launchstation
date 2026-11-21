@@ -4147,7 +4147,7 @@ static void settingsDraw(void)
 		dashGfxPopAlpha();
 	}
 	dashGfxScissorReset();
-	dashDrawScrollbar(ix + iw + 10, iy, ITEM_ROWS * irow, item_top, ITEM_ROWS, c->n);
+	dashDrawScrollbar(ix + iw + 10, iy, ITEM_ROWS * irow, item_top_anim, ITEM_ROWS, c->n);
 	/* help line */
 	{
 		const SetItem *it = curItem();

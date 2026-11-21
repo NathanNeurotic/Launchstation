@@ -815,6 +815,11 @@ static int launchstationUpdateCaPath(char *path, int path_size)
            wleExists(path);
 }
 
+int dashHttpsCaPath(char *path, int path_size)
+{
+    return launchstationUpdateCaPath(path, path_size);
+}
+
 /* Compare the installed commit to the published release before offering to
  * replace the running ELF. A different hash alone cannot prove an upgrade.
  * Page 2 suppresses the large first-page changed-files array in GitHub's
@@ -919,13 +924,24 @@ static int updateRun(UpdateJob *j, const char *title)
 {
 	int id = dashWorkerSubmit(title, 0, updateJobRun, NULL, j);
 
-	if (id < 0) { /* worker unavailable: run here as before */
-		dashLoadingBegin(title);
+	if (id < 0) /* worker unavailable: run here as before */
 		updateJobRun(j);
-		dashLoadingEnd();
-	} else
+	else
 		dashWorkerAwait(id, title, 0);
 	return j->ret;
+}
+
+/* Result dialogs replace the shared overlay instead of flickering between jobs. */
+static void updateCheckMessage(int icon, const char *title, const char *body, const char *detail)
+{
+	dashLoadingEnd();
+	dashModalMessage(icon, title, body, detail);
+}
+
+static int updateCheckConfirm(const char *title, const char *body, const char *action)
+{
+	dashLoadingEnd();
+	return dashModalConfirm(title, body, action, 0);
 }
 
 void dashToolsCheckUpdates(void)
@@ -942,18 +958,22 @@ void dashToolsCheckUpdates(void)
 	/* CA/device access and network stack changes use synchronous IOP RPCs.
 	 * Finish queued IO and any root-card status request before starting.
 	 * From saildot4k/Launchstation 1d647f3. */
-	if (!dashWorkerAwaitAll("Finishing background storage work"))
+	dashLoadingBegin("Checking for Launchstation updates");
+	if (!dashWorkerAwaitAll("Checking for Launchstation updates")) {
+		dashLoadingEnd();
 		return;
+	}
+	dashLoadingSetCancel(0);
 	filerRootMcPollIdle();
 
 	if (!launchstationUpdateCaPath(ca_path, sizeof(ca_path))) {
-		dashModalMessage(DI_WARNING, "Update check needs the CA bundle",
+		updateCheckMessage(DI_WARNING, "Update check needs the CA bundle",
 		                 "WLE-UPDATE-CA.PEM was not found beside the running ELF or in the dashboard settings folder.",
 		                 "Install the complete Launchstation ZIP/PSU package, or copy res/WLE-UPDATE-CA.PEM beside the boot ELF.");
 		return;
 	}
 	if (!ensureDashboardIpNetworkReady()) {
-		dashModalMessage(DI_WARNING, "Update check unavailable",
+		updateCheckMessage(DI_WARNING, "Update check unavailable",
 		                 dashboardIpNetworkError(), NULL);
 		return;
 	}
@@ -967,8 +987,8 @@ void dashToolsCheckUpdates(void)
 	job.out = error;
 	job.out_size = sizeof(error);
 	if (updateRun(&job, "Checking for Launchstation updates") < 0) {
-		dashModalMessage(DI_WARNING, "Update check failed",
-		                 error[0] ? error : "GitHub could not be reached.", NULL);
+		updateCheckMessage(DI_WARNING, "Update check failed",
+		                   error[0] ? error : "GitHub could not be reached.", NULL);
 		return;
 	}
 
@@ -978,7 +998,7 @@ void dashToolsCheckUpdates(void)
 	                        asset_digest, sizeof(asset_digest), &asset_size)) {
 		snprintf(body, sizeof(body), "GitHub returned HTTP %d or an unexpected release response.", response.status);
 		cloudHttpResponseFree(&response);
-		dashModalMessage(DI_WARNING, "Update check failed", body, NULL);
+		updateCheckMessage(DI_WARNING, "Update check failed", body, NULL);
 		return;
 	}
 	cloudHttpResponseFree(&response);
@@ -989,7 +1009,7 @@ void dashToolsCheckUpdates(void)
 
 	if (same) {
 		snprintf(body, sizeof(body), "This build (%s) matches the current latest release.\n\nDownload and install it again anyway?", GIT_HASH);
-		if (!dashModalConfirm("Launchstation is up to date", body, "Download anyway", 0))
+		if (!updateCheckConfirm("Launchstation is up to date", body, "Download anyway"))
 			return;
 	} else {
 		int relation;
@@ -1002,24 +1022,23 @@ void dashToolsCheckUpdates(void)
 			snprintf(body, sizeof(body),
 			         "Installed: %s\nPublished: %.16s\n\nThe published release is not newer. Download and install it anyway?",
 			         GIT_HASH, latest);
-			if (!dashModalConfirm("No newer release available", body, "Download anyway", 0))
+			if (!updateCheckConfirm("No newer release available", body, "Download anyway"))
 				return;
 		} else if (relation == UPDATE_RELATION_DIVERGED) {
-			dashModalMessage(DI_WARNING, "Release is on another commit history",
-			                 "The published release is not a verified descendant of this build. Automatic replacement was blocked.",
-			                 "Use a complete ZIP/PSU package to change builds manually.");
+			updateCheckMessage(DI_WARNING, "Release is on another commit history",
+			                   "The published release is not a verified descendant of this build. Automatic replacement was blocked.",
+			                   "Use a complete ZIP/PSU package to change builds manually.");
 			return;
 		} else if (relation != UPDATE_RELATION_NEWER) {
-			dashModalMessage(DI_WARNING, "Could not verify update order",
-			                 error[0] ? error : "Unable to compare installed and published commits.",
-			                 "No files were changed. Update manually only after checking the release.");
+			updateCheckMessage(DI_WARNING, "Could not verify update order",
+			                   error[0] ? error : "Unable to compare installed and published commits.",
+			                   "No files were changed. Update manually only after checking the release.");
 			return;
 		} else {
 			snprintf(body, sizeof(body),
 			         "Current: %s\nLatest: %.16s\n\nGitHub confirms this release is newer. Download and install the packed ELF?",
 			         GIT_HASH, latest);
-			if (!dashModalConfirm("A newer Launchstation build is available",
-			                      body, "Install update", 0))
+			if (!updateCheckConfirm("A newer Launchstation build is available", body, "Install update"))
 				return;
 		}
 	}
@@ -1033,14 +1052,23 @@ void dashToolsCheckUpdates(void)
 		job.size = asset_size;
 		job.out = install_result;
 		job.out_size = sizeof(install_result);
+		dashLoadingBegin("Downloading and verifying Launchstation update");
 		installed = updateRun(&job, "Downloading and verifying Launchstation update");
-		dashModalMessage(installed == 0 ? DI_CHECK : DI_WARNING,
-		                 installed == 0 ? "Update installed" : "Update was not installed",
-		                 install_result[0] ? install_result :
-		                     (installed == 0 ? "The update was installed." : "The update failed."),
-		                 installed == 0
-		                     ? "The current session keeps running the old code until you restart."
-		                     : "The updater stages and verifies the complete download before changing the running ELF.");
+		dashLoadingEnd();
+		if (installed == 0) {
+			if (dashModalConfirm("Update installed",
+			                     install_result[0] ? install_result : "The update was installed.", "Launch", 0)) {
+				DashApp app;
+				memset(&app, 0, sizeof(app));
+				dashStrCopy(app.path, wleBootElfPath(), sizeof(app.path));
+				dashStrCopy(app.title, "Launchstation", sizeof(app.title));
+				dashLaunchApp(&app, 0);
+			}
+		} else {
+			dashModalMessage(DI_WARNING, "Update was not installed",
+			                 install_result[0] ? install_result : "The update failed.",
+			                 "The updater stages and verifies the complete download before changing the running ELF.");
+		}
 	}
 }
 #else
@@ -1709,7 +1737,7 @@ static void toolsDraw(void)
 			dashGlow(lx + lw - 14, y + 13, 4, 4, tools[i].confirm == 2 ? DASH_C_DANGER : DASH_C_WARM);
 	}
 	dashGfxScissorReset();
-	dashDrawScrollbar(lx + lw + 10, ly, rows * row_h, ttop, rows, NTOOLS);
+	dashDrawScrollbar(lx + lw + 10, ly, rows * row_h, ttop_anim, rows, NTOOLS);
 
 	{
 		float dx = lx + lw + 24, dy = 98, dw = DASH_PANE_R - dx, dh = 292;

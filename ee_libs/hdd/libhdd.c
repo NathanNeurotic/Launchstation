@@ -25,6 +25,7 @@
 #include "errno.h"
 
 #include "libhdd.h"
+#include "../../include/hdd_format.h"
 
 #define NEWLIB_PORT_AWARE
 #include "fileXio_rpc.h"
@@ -285,7 +286,12 @@ static void hddUpdateInfo()
 		rv = fileXioDread(hddFd, &infoDirEnt);
 	}
 	fileXioDclose(hddFd);
-	hddFree = hddSize - hddUsed;
+	{
+		uint32_t capacity = 0;
+		if (hddGetApaCapacity(&capacity) < 0) capacity = 0;
+		capacity /= 2048;
+		hddFree = capacity > hddUsed ? capacity - hddUsed : 0;
+	}
 
 	hddMaxPartitionSize = (u32)fileXioDevctl("hdd0:", HDIOC_MAXSECTOR, NULL, 0, NULL, 0) / 2048; //Equal to, but avoids overflows of: sectors * 512 / 1024 / 1024;
 
@@ -306,7 +312,7 @@ int hddMakeFilesystem(int fsSizeMB, char *name, int type)
 	if(!hddStatusCurrent)
 		hddUpdateInfo();
 
-	if(fsSizeMB % 128)
+	if(fsSizeMB < 128 || fsSizeMB % 128)
 		return -EINVAL;
 
 	switch(type)
@@ -325,22 +331,21 @@ int hddMakeFilesystem(int fsSizeMB, char *name, int type)
 	// Check if filesystem already exists
 	snprintf(openString, sizeof(openString), "hdd0:%.*s", (int)(sizeof(fsName) - 1), fsName);
 	partFd = fileXioOpen(openString, FIO_O_RDONLY);
-	if(partFd > 0 || partFd == -EACCES)	// Filesystem already exists
+	if(partFd >= 0 || partFd == -EACCES)	// Filesystem already exists
 	{
-		fileXioClose(partFd);
-		return -1;
+		if (partFd >= 0) fileXioClose(partFd);
+		return -EEXIST;
 	}
 
 	// Get index for max partition size
-	for(maxIndex = 0; maxIndex < 9; maxIndex++)
-		if((u32)(sizesMB[maxIndex]) == hddMaxPartitionSize)
-			break;
+	for(maxIndex = 8; maxIndex > 0 && (u32)sizesMB[maxIndex] > hddMaxPartitionSize; maxIndex--);
 
 	// Get index of size we will use to create main partition
 	for(useIndex = maxIndex; sizesMB[useIndex] > fsSizeMB; useIndex--);
 
-	for(partSize = sizesMB[useIndex]; useIndex >= 0; useIndex--,partSize = sizesMB[useIndex])
+	for(; useIndex >= 0; useIndex--)
 	{
+		partSize = sizesMB[useIndex];
 #ifdef DEBUG
 		printf(">>> Attempting to create main partition, size %d MB\n", partSize);
 #endif
@@ -350,7 +355,9 @@ int hddMakeFilesystem(int fsSizeMB, char *name, int type)
 		printf(">>> openString = %s\n", openString);
 #endif
 
-		partFd = fileXioOpen(openString, FIO_O_RDWR | FIO_O_CREAT);
+		partFd = hddCheckAllocation((u32)partSize * 2048);
+		if (partFd >= 0)
+			partFd = fileXioOpen(openString, FIO_O_RDWR | FIO_O_CREAT);
 		if(partFd >= 0)
 			break;
 		else {
@@ -398,12 +405,15 @@ int hddMakeFilesystem(int fsSizeMB, char *name, int type)
 #ifdef DEBUG
 		printf(">>> Attempting to create sub partition of size %d MB\n", sizesMB[useIndex]);
 #endif
-		retVal = fileXioIoctl2(partFd, HIOCADDSUB, sizesString[useIndex], strlen(sizesString[useIndex]) + 1, NULL, 0);
+		retVal = hddCheckAllocation((u32)partSize * 2048);
+		if (retVal >= 0)
+			retVal = fileXioIoctl2(partFd, HIOCADDSUB, sizesString[useIndex], strlen(sizesString[useIndex]) + 1, NULL, 0);
 		if(retVal == -ENOSPC)
 		{
 			// If sub alloc fails due to size, we decrease size and try again.
 			// If we've run out of sizes, break the loop (give up)
 			useIndex--;
+			if (useIndex < 0) break;
 			partSize = sizesMB[useIndex];
 			maxIndex = useIndex;
 
@@ -434,6 +444,8 @@ int hddMakeFilesystem(int fsSizeMB, char *name, int type)
 #ifdef DEBUG
 			printf(">>> Unknown error while creating sub: %d\n", retVal);
 #endif
+			fileXioClose(partFd);
+			return retVal;
 		}
 
 		fsSizeLeft -= sizesMB[useIndex];
@@ -482,13 +494,11 @@ int hddExpandFilesystem(t_hddFilesystem *fs, int extraMB)
 	if(!hddStatusCurrent)
 		hddUpdateInfo();
 
-	if(extraMB % 128)
+	if(extraMB < 128 || extraMB % 128)
 		return -EINVAL;
 
 	// Get index for max partition size
-	for(maxIndex = 0; maxIndex < 9; maxIndex++)
-		if((u32)(sizesMB[maxIndex]) == hddMaxPartitionSize)
-			break;
+	for(maxIndex = 8; maxIndex > 0 && (u32)sizesMB[maxIndex] > hddMaxPartitionSize; maxIndex--);
 
 	// Get index of size we will use to create new subs
 	for(useIndex = maxIndex; sizesMB[useIndex] > extraMB; useIndex--);
@@ -520,12 +530,15 @@ int hddExpandFilesystem(t_hddFilesystem *fs, int extraMB)
 #ifdef DEBUG
 		printf(">>> Attempting to create sub partition of size %d MB\n", sizesMB[useIndex]);
 #endif
-		retVal = fileXioIoctl2(partFd, HIOCADDSUB, sizesString[useIndex], strlen(sizesString[useIndex]) + 1, NULL, 0);
+		retVal = hddCheckAllocation((u32)partSize * 2048);
+		if (retVal >= 0)
+			retVal = fileXioIoctl2(partFd, HIOCADDSUB, sizesString[useIndex], strlen(sizesString[useIndex]) + 1, NULL, 0);
 		if(retVal == -ENOSPC)
 		{
 			// If sub alloc fails due to size, we decrease size and try again.
 			// If we've run out of sizes, break the loop (give up)
 			useIndex--;
+			if (useIndex < 0) break;
 			partSize = sizesMB[useIndex];
 			maxIndex = useIndex;
 
@@ -556,6 +569,8 @@ int hddExpandFilesystem(t_hddFilesystem *fs, int extraMB)
 #ifdef DEBUG
 			printf(">>> Unknown error while creating sub: %d\n", retVal);
 #endif
+			fileXioClose(partFd);
+			return retVal;
 		}
 
 		fsSizeLeft -= sizesMB[useIndex];

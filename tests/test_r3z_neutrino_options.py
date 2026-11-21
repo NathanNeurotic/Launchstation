@@ -55,6 +55,7 @@ typedef struct { int icon; const char *label; const char *detail; int disabled; 
 int dashModalMenu(const char *, const char *, const DashMenuItem *, int, int);
 int dashModalChoice(const char *, const char *const *, int, int);
 void dashModalSetEdit(int (*edit)(int, int, void *), void *arg);
+void dashModalSetEditPopupRows(const unsigned char *popup_rows);
 """
 pure_c += gui[native_start:native_end]
 pure_c += "int testDashboard(NEUTRINO_LAUNCH_OPTIONS *o) { return showDashboardNeutrinoOptions(o, 0); }\nint testVideoCount(void) { return NEUTRINO_VIDEO_COUNT; }\n"
@@ -71,13 +72,19 @@ typedef struct { int icon; const char *label; const char *detail; int disabled; 
 static int (*edit_fn)(int, int, void *);
 static void *edit_arg;
 static int opened;
+static const unsigned char *popup_rows;
 void dashModalSetEdit(int (*edit)(int, int, void *), void *arg) { edit_fn = edit; edit_arg = arg; }
+void dashModalSetEditPopupRows(const unsigned char *rows) { popup_rows = rows; }
 /* One menu session, as dashModalMenu runs it: script holds (row, key) pairs,
  * key 0 = Confirm, -1/+1 = Left/Right, 9 = Back. */
 static const DashMenuItem *shown;
 int dashModalMenu(const char *title, const char *subtitle, const DashMenuItem *items, int count, int selected) {
     assert(title && subtitle && selected >= 0 && selected < count && count == 11 && edit_fn);
-    for (int i = 0; i < count; i++) assert(items[i].label && !items[i].disabled);
+    assert(popup_rows);
+    for (int i = 0; i < count; i++) {
+        assert(items[i].label && !items[i].disabled);
+        assert(popup_rows[i] == (i == 6 || i == 7));
+    }
     opened++; shown = items;
     for (;;) {
         int row = script[step++], key = script[step++];
