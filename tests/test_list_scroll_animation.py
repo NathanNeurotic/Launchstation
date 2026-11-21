@@ -96,6 +96,10 @@ static void checkEditorScrollbar(void) {
     assert(d.top_anim>=0 && d.top_anim<=d.nlines-11); /* keyboard viewport resize */
     d.len=d.cur=0;docRelines(&d);scrollToCursor(&d,rows,60);animateScroll(&d,rows,1.0f/60);
     assert(!d.top_anim);checkThumb(d.top_anim,rows,d.nlines,240);
+    d.nlines=80;d.top=40;d.top_anim=41;animateScroll(&d,rows,1.0f/60);
+    assert(d.top_anim>40 && d.top_anim<41); /* upward steps ease too */
+    d.top_anim=40;d.top=40+rows;animateScroll(&d,rows,1.0f/60);
+    assert(d.top_anim==d.top); /* intentional viewport-sized jump snaps */
     free(d.lines);free(other.lines);
 }
 '''

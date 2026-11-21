@@ -435,7 +435,7 @@ static void hddJobRun(void *arg)
 					snprintf(mbr, sizeof(mbr), "%s/OSDMBR.XLF", j->installer->stage);
 					payload = mbr;
 				}
-				j->ret = hddInstallFinish(&j->format_plan, payload, &j->format_started,
+				j->ret = hddInstallFinish(&j->format_plan, payload, j->installer->hashes[HI_MBR], &j->format_started,
 				                     j->installer->flags & HDD_INSTALL_PSBBN ? hddInstallPsbbnPayload : NULL, j->installer);
 			}
 			break;

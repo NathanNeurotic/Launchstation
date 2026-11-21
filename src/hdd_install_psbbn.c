@@ -46,12 +46,19 @@ int hddInstallPsbbnPartitions(HddInstall *in)
 }
 
 typedef struct {
+    char *name;
+    unsigned char type;
+} PreflightPath;
+
+typedef struct {
     HddInstall *in;
     InstallExt2 *fs[8];
     int input, output, route, preflight;
     unsigned entries, required;
     uint32_t blocks[11], inodes[11];
     char current[INSTALL_TAR_PATH];
+    PreflightPath *paths;
+    unsigned path_count, path_capacity;
 } Payload;
 static int routePath(const char *name, const char **relative)
 {
@@ -80,6 +87,48 @@ static int mkdirParents(const char *path)
     }
     return 0;
 }
+static int preflightPathType(Payload *p, const char *name)
+{
+    for (unsigned i = 0; i < 8; i++) if (!strcmp(name, linux_names[i])) return '5';
+    for (unsigned i = 0; i < p->path_count; i++) if (!strcmp(name, p->paths[i].name)) return p->paths[i].type;
+    return -1;
+}
+
+static int preflightPath(Payload *p, const InstallTarEntry *entry)
+{
+    const char *slash;
+    char parent[INSTALL_TAR_PATH];
+    unsigned i;
+    for (slash = strchr(entry->name, '/'); slash; slash = strchr(slash + 1, '/')) {
+        size_t n = (size_t)(slash - entry->name);
+        int type;
+        if (n >= sizeof(parent)) return -ENAMETOOLONG;
+        memcpy(parent, entry->name, n); parent[n] = 0;
+        type = preflightPathType(p, parent);
+        if (type != '5') return type < 0 ? -ENOENT : -ENOTDIR;
+    }
+    for (i = 0; i < p->path_count; i++) if (!strcmp(p->paths[i].name, entry->name)) {
+        if (entry->type != '5' && p->paths[i].type == '5') {
+            size_t n = strlen(entry->name);
+            for (unsigned j = 0; j < p->path_count; j++)
+                if (!strncmp(p->paths[j].name, entry->name, n) && p->paths[j].name[n] == '/') return -EINVAL;
+        }
+        p->paths[i].type = entry->type;
+        return 0;
+    }
+    if (p->path_count == p->path_capacity) {
+        unsigned capacity = p->path_capacity ? p->path_capacity * 2 : 128;
+        PreflightPath *grown = realloc(p->paths, capacity * sizeof(*grown));
+        if (!grown) return -ENOMEM;
+        p->paths = grown; p->path_capacity = capacity;
+    }
+    p->paths[p->path_count].name = malloc(strlen(entry->name) + 1);
+    if (!p->paths[p->path_count].name) return -ENOMEM;
+    strcpy(p->paths[p->path_count].name, entry->name);
+    p->paths[p->path_count++].type = entry->type;
+    return 0;
+}
+
 static int begin(void *context, const InstallTarEntry *entry)
 {
     Payload *p = context;
@@ -100,13 +149,23 @@ static int begin(void *context, const InstallTarEntry *entry)
             "__linux.1/sbin/init", "__linux.1/bin/sh", "__linux.1/etc/fstab",
             "__linux.4/bn/script/utility/sysconf.xml"
         };
-        for (unsigned i = 0; i < 6; i++) if (!strcmp(entry->name, required[i]) &&
-            ((entry->type == '0' && entry->size) || (i == 3 && entry->type == '2' && *entry->link))) p->required |= 1u << i;
+        for (unsigned i = 0; i < 6; i++) if (!strcmp(entry->name, required[i])) {
+            int valid = (entry->type == '0' && entry->size) || (i == 3 && entry->type == '2' && *entry->link);
+            if (valid) p->required |= 1u << i;
+            else p->required &= ~(1u << i);
+        }
         for (unsigned i = 0; i < 7; i++) if (r == 8 && !strncmp(relative, "osd100/", 7) &&
-            !strcmp(relative + 7, hddInstallOsdFiles[i]) && entry->type == '0' && entry->size) p->required |= 1u << (i + 6);
+            !strcmp(relative + 7, hddInstallOsdFiles[i])) {
+            if (entry->type == '0' && entry->size) p->required |= 1u << (i + 6);
+            else p->required &= ~(1u << (i + 6));
+        }
         /* These are installed separately from the commit-pinned repository,
          * and configs are generated from this install's actual paths. */
         if (entry->type != '5' && (r == 8 || r == 9) && !strncmp(relative, "osdmenu/", 8)) return -EINVAL;
+        if (r < 8) {
+            ret = preflightPath(p, entry);
+            if (ret < 0) return ret;
+        }
         /* Conservative accounting: count language replacements a second time,
          * and charge one inode plus two indirect blocks for every entry. */
         p->inodes[r]++;
@@ -160,7 +219,7 @@ static int readArchive(void *context, uint32_t offset, void *bytes, unsigned siz
 {
     Payload *p = context;
     unsigned done = 0;
-    if (genLseek(p->input, offset, SEEK_SET) != offset) return -EIO;
+    if (genLseek(p->input, offset, SEEK_SET) != (s64)offset) return -EIO;
     while (done < size) {
         int n = genRead(p->input, (unsigned char *)bytes + done, size - done);
         if (n <= 0 || (unsigned)n > size - done) return n < 0 ? n : -EIO;
@@ -194,6 +253,8 @@ int hddInstallPsbbnPreflight(HddInstall *in)
     p->in = in; p->preflight = 1; p->input = p->output = -1;
     ret = archives(p);
     if (ret >= 0 && p->required != (1u << 13) - 1) ret = -EINVAL;
+    for (unsigned i = 0; i < p->path_count; i++) free(p->paths[i].name);
+    free(p->paths);
     free(p); return ret;
 }
 int hddInstallPsbbnPayload(void *context, const HddFormatIo *io)
@@ -227,6 +288,9 @@ int hddInstallPsbbnPayload(void *context, const HddFormatIo *io)
         ret = fileXioMount(mount, partition, FIO_MT_RDWR); if (ret < 0) goto done;
         mounts++;
     }
+    ret = hddInstallCheckAsset(in, HI_SYSTEM);
+    if (ret >= 0) ret = hddInstallCheckAsset(in, HI_LANGUAGE);
+    if (ret < 0) goto done;
     ret = archives(p); if (ret < 0) goto done;
     /* Tar overlays never supply our generated component-specific settings. */
     ret = hddInstallWriteConfigs(in); if (ret < 0) goto done;

@@ -48,10 +48,21 @@ static const char *string(const char *p, char *out, size_t capacity)
             ch = (unsigned char)*p++;
             if (!ch) return NULL;
             if (ch == 'u') {
-                unsigned i;
-                for (i = 0; i < 4; i++) if (!*p || !isxdigit((unsigned char)*p++)) return NULL;
-                ch = '?';
+                unsigned i, value = 0;
+                for (i = 0; i < 4; i++) {
+                    unsigned char digit;
+                    if (!*p || !isxdigit((unsigned char)*p)) return NULL;
+                    digit = (unsigned char)*p++;
+                    value = value * 16 + (digit <= '9' ? digit - '0' : (tolower(digit) - 'a' + 10));
+                }
+                if (!value) return NULL;
+                ch = value <= 255 ? (unsigned char)value : '?';
             } else if (ch != '"' && ch != '\\' && ch != '/' && !strchr("bfnrt", ch)) return NULL;
+            else if (ch == 'b') ch = '\b';
+            else if (ch == 'f') ch = '\f';
+            else if (ch == 'n') ch = '\n';
+            else if (ch == 'r') ch = '\r';
+            else if (ch == 't') ch = '\t';
         }
         if (out) {
             if (n + 1 >= capacity) return NULL;
@@ -228,7 +239,7 @@ int hddInstallConfig(const HddInstall *in, int mbr, char *out, size_t capacity)
 int hddInstallArchiveMetadata(const char *json, const char *prefix,
                               char name[128], char hash[41], uint32_t *size)
 {
-    const char *p, *end;
+    const char *p, *end, *selected = NULL;
     unsigned best[3] = {0}, matches = 0;
     if (!json || !prefix || !name || !hash || !size || !(end = skip(json, 0)) || *space(end)) return 0;
     p = field(json, "files");
@@ -253,13 +264,9 @@ int hddInstallArchiveMetadata(const char *json, const char *prefix,
                 for (k = 0; k < 3; k++) if (ver[k] != best[k]) { newer = ver[k] > best[k]; equal = 0; break; }
                 if (matches && equal) return 0;
                 if (newer) {
-                    const char *h = field(p, "sha1"), *v = field(p, "size");
-                    char count[24], *stop; unsigned long bytes;
-                    if (!h || !v || !string(h, hash, 41) || !hddInstallHex(hash, 40) ||
-                        !string(v, count, sizeof(count)) || !isdigit((unsigned char)count[0])) return 0;
-                    bytes = strtoul(count, &stop, 10);
-                    if (*stop || !bytes || bytes > 256u * 1024 * 1024 || strlen(candidate) >= 128) return 0;
-                    memcpy(best, ver, sizeof(best)); strcpy(name, candidate); *size = bytes; matches++;
+                    if (strlen(candidate) >= 128) return 0;
+                    memcpy(best, ver, sizeof(best)); strcpy(name, candidate);
+                    selected = p; matches = 1;
                 }
             }
         }
@@ -268,5 +275,15 @@ int hddInstallArchiveMetadata(const char *json, const char *prefix,
         if (*p != ',') return 0;
         p = space(p + 1);
     }
-    return matches != 0;
+    if (!matches) return 0;
+    {
+        const char *h = field(selected, "sha1"), *v = field(selected, "size");
+        char count[24], *stop; unsigned long bytes;
+        if (!h || !v || !string(h, hash, 41) || !hddInstallHex(hash, 40) ||
+            !string(v, count, sizeof(count)) || !isdigit((unsigned char)count[0])) return 0;
+        bytes = strtoul(count, &stop, 10);
+        if (*stop || !bytes || bytes > 256u * 1024 * 1024) return 0;
+        *size = bytes;
+    }
+    return 1;
 }

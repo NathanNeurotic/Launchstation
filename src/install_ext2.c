@@ -319,7 +319,7 @@ int installExt2Begin(InstallExt2 *f, const InstallTarEntry *e)
                 f->size = e->type == '0' ? e->size : strlen(e->link);
                 w32(f->inode + 4, f->size); f->active = 1; memset(f->file, 0, BS);
                 if (e->type == '2') {
-                    if (f->size <= 60) { memcpy(f->inode + 40, e->link, f->size); f->position = f->size; }
+                    if (f->size < 60) { memcpy(f->inode + 40, e->link, f->size); f->position = f->size; }
                     else { ret = installExt2Data(f, e->link, f->size); if (ret < 0) return ret; }
                     ret = installExt2End(f); if (ret < 0) return ret;
                 }
@@ -355,6 +355,17 @@ int installExt2End(InstallExt2 *f)
     if (f->position != f->size) return -EINVAL;
     ret = getInode(f, f->ino, f->inode, 1); if (ret >= 0) f->active = 0; return ret;
 }
+static int groupDescriptors(InstallExt2 *f)
+{
+    unsigned char data[BS];
+    for (uint32_t g = 0; g < f->groups; g++) {
+        memset(data, 0, BS); memcpy(data, f->gdt, f->groups * 32);
+        int ret = writeBlock(f, g * BPG + 1, data);
+        if (ret < 0) return ret;
+    }
+    return 0;
+}
+
 static int superblocks(InstallExt2 *f, unsigned state)
 {
     unsigned char data[BS] = {0}, super[1024] = {0};
@@ -368,8 +379,6 @@ static int superblocks(InstallExt2 *f, unsigned state)
     for (uint32_t g = 0; g < f->groups; g++) {
         memset(data, 0, BS); w16(super + 90, g); memcpy(data + (g ? 0 : 1024), super, sizeof(super));
         ret = writeBlock(f, g * BPG, data); if (ret < 0) return ret;
-        memset(data, 0, BS); memcpy(data, f->gdt, f->groups * 32);
-        ret = writeBlock(f, g * BPG + 1, data); if (ret < 0) return ret;
     }
     return 0;
 }
@@ -380,6 +389,8 @@ int installExt2Finish(InstallExt2 *f)
     if (f->bbdirty) { ret = writeBlock(f, f->bbgroup * BPG + 2, f->bb); if (ret < 0) return ret; f->bbdirty = 0; }
     if (f->ibdirty) { ret = writeBlock(f, f->ibgroup * BPG + 3, f->ib); if (ret < 0) return ret; f->ibdirty = 0; }
     if (f->itdirty) { ret = writeBlock(f, f->itblock, f->it); if (ret < 0) return ret; f->itdirty = 0; }
+    ret = f->io.flush(f->io.context); if (ret < 0) return ret;
+    ret = groupDescriptors(f); if (ret < 0) return ret;
     ret = f->io.flush(f->io.context); if (ret < 0) return ret;
     ret = superblocks(f, 1); return ret < 0 ? ret : f->io.flush(f->io.context);
 }
@@ -416,6 +427,7 @@ int installExt2Create(InstallExt2 **out, const HddFormatIo *io, uint32_t start, 
         if (!g) { data[0] = 255; data[1] = 3; }
         ret = writeBlock(f, g * BPG + 3, data); if (ret < 0) goto failed;
     }
+    ret = groupDescriptors(f); if (ret < 0) goto failed;
     ret = superblocks(f, 2); if (ret < 0) goto failed;
     memset(&root, 0, sizeof(root)); root.mode = 0755; root.mtime = serial;
     ret = makeDir(f, 2, 2, &root); if (ret < 0) goto failed;

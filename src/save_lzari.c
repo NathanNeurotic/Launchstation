@@ -25,6 +25,7 @@ static unsigned char *infilel = NULL;
 static unsigned char *outfile = NULL;
 static unsigned char *outfilel = NULL;
 static unsigned long int textsize = 0, codesize = 0;
+static int output_error;
 
 static int xgetc(void *skip)
 {
@@ -38,8 +39,10 @@ static int xgetc(void *skip)
 static int xputc(int chr, void *skip)
 {
 	(void)skip;
-	if (outfile >= outfilel)
+	if (outfile >= outfilel) {
+		output_error = 1;
 		return -1;
+	}
 
 	*outfile++ = chr;
 	return chr;
@@ -398,6 +401,7 @@ int lzari(unsigned char *in, int insz, unsigned char *out, int outsz)
 	infilel = in + insz;
 	outfile = out;
 	outfilel = out + outsz;
+	output_error = 0;
 	textsize = insz;
 
 	xputc((textsize >>  0) & 0xFF, 0);
@@ -442,7 +446,7 @@ int lzari(unsigned char *in, int insz, unsigned char *out, int outsz)
 	} while (len > 0);
 	EncodeEnd();
 
-	return eof_bytes > 3 ? -1 : (int)(outfile - out);
+	return output_error ? -1 : (int)(outfile - out);
 }
 
 int unlzari(unsigned char *in, int insz, unsigned char *out, int outsz)
@@ -464,6 +468,7 @@ int unlzari(unsigned char *in, int insz, unsigned char *out, int outsz)
 	mask = 128;
 	mask2 = 0;
 	eof_bytes = 0;
+	output_error = 0;
 
 	infile = in;
 	infilel = in + insz;
@@ -485,7 +490,9 @@ int unlzari(unsigned char *in, int insz, unsigned char *out, int outsz)
 			xputc(c, outfile);  text_buf[r++] = c;
 			r &= (N - 1);  count++;
 		} else {
-			i = (r - DecodePosition() - 1) & (N - 1);
+			int position = DecodePosition();
+			if ((unsigned long)position + 1 > (unsigned long)(N - F) + count) return -1;
+			i = (r - position - 1) & (N - 1);
 			j = c - 255 + THRESHOLD;
 			if ((unsigned long)j > textsize - count) return -1;
 			for (k = 0; k < j; k++) {
@@ -495,5 +502,5 @@ int unlzari(unsigned char *in, int insz, unsigned char *out, int outsz)
 			}
 		}
 	}
-	return eof_bytes > 3 ? -1 : (int)(outfile - out);
+	return output_error || eof_bytes > 3 ? -1 : (int)(outfile - out);
 }

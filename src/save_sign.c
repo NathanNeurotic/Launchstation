@@ -51,11 +51,10 @@ void saveHashUpdate(SaveSha1 *s, const uint8_t *data, unsigned length)
 
 void saveHashFinish(SaveSha1 *s, uint8_t digest[20])
 {
-	uint32_t bits = s->bytes << 3;
+	uint64_t bits = (uint64_t)s->bytes << 3;
 	uint8_t padding[72] = {0x80};
 	unsigned n = s->used < 56 ? 56 - s->used : 120 - s->used;
-	padding[n + 4] = bits >> 24; padding[n + 5] = bits >> 16;
-	padding[n + 6] = bits >> 8; padding[n + 7] = bits;
+	for (unsigned i = 0; i < 8; i++) padding[n + i] = (uint8_t)(bits >> (56 - i * 8));
 	saveHashUpdate(s, padding, n + 8);
 	for (unsigned i = 0; i < 20; i++) digest[i] = s->hash[i / 4] >> (24 - (i % 4) * 8);
 }

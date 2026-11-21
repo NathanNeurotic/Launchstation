@@ -147,6 +147,8 @@ jobs:
           python3 tests/test_hdd_installer_finish.py
           python3 tests/test_hdd_installer_stage.py
           python3 tests/test_hdd_installer_apply.py
+          python3 tests/test_hdd_installer_preflight.py
+          python3 tests/test_save_archive_review.py
           python3 tests/test_zack_oct_2026.py
           python3 tests/test_wallpaper_docs.py
           python3 tests/test_r3z_oct15_backport.py

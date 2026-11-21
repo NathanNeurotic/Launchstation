@@ -1,6 +1,7 @@
 #include "launchelf.h"
 #include "hdd_format.h"
 #include "hdd_format_rpc.h"
+#include "save_sign.h"
 #include "init.h"
 #include "dash_internal.h"
 #include <loadfile.h>
@@ -116,12 +117,14 @@ int hddCheckAllocation(uint32_t sectors)
 static int readPhysicalSector(void *ctx, uint32_t lba, void *sector)
 { return readDisk(ctx, lba, 1, sector); }
 
-int hddInstallFinish(const HddFormatPlan *plan, const char *mbr, int *started,
+int hddInstallFinish(const HddFormatPlan *plan, const char *mbr, const char *mbr_sha1, int *started,
                      int (*populate)(void *, const HddFormatIo *), void *context)
 {
     HddFormatIo io = {NULL, readDisk, writeDisk, zeroDisk, flushDisk, apaDisk, progress};
     HddFormatPlan expected;
-    unsigned char *buffer = NULL, *verify = NULL;
+    unsigned char *buffer = NULL, *verify = NULL, digest[20];
+    SaveSha1 hash;
+    char hex[41], header[40];
     uint32_t bytes = 0, copied = 0, limit = 0;
     int fd = -1, ret = 0, finish;
     if (!started) return -EINVAL;
@@ -138,7 +141,11 @@ int hddInstallFinish(const HddFormatPlan *plan, const char *mbr, int *started,
         if (fd < 0) { ret = fd; goto done; }
         length = genLseek(fd, 0, SEEK_END);
         if (length < 512 || length > 1024 * 1024 || length % 512 || genLseek(fd, 0, SEEK_SET) < 0) { ret = -EINVAL; goto done; }
+        if (!mbr_sha1) { ret = -EINVAL; goto done; }
         bytes = (uint32_t)length;
+        saveHashInit(&hash);
+        snprintf(header, sizeof(header), "blob %u", bytes);
+        saveHashUpdate(&hash, (const uint8_t *)header, strlen(header) + 1);
     }
     packet.sectors = plan->sectors;
     ret = call(HF_BEGIN, 0, 0, 64, 64);
@@ -155,11 +162,17 @@ int hddInstallFinish(const HddFormatPlan *plan, const char *mbr, int *started,
             read += got;
         }
         if (!copied && memcmp(buffer, "\x01\x00\x00\x04", 4)) { ret = -EINVAL; goto finish; }
+        saveHashUpdate(&hash, buffer, n);
         dashWorkerStatus("Installing OSDMenu MBR", copied, bytes);
         ret = writeDisk(NULL, 8192 + copied / 512, n / 512, buffer);
         if (ret >= 0) ret = readDisk(NULL, 8192 + copied / 512, n / 512, verify);
         if (ret < 0 || memcmp(buffer, verify, n)) { if (ret >= 0) ret = -EIO; goto finish; }
         copied += n;
+    }
+    if (mbr) {
+        saveHashFinish(&hash, digest);
+        for (unsigned i = 0; i < 20; i++) snprintf(hex + i * 2, 3, "%02x", digest[i]);
+        if (strcmp(hex, mbr_sha1)) { ret = -EIO; goto finish; }
     }
     /* Persist the software and MBR payload before exposing its APA pointer. */
     ret = flushDisk(NULL); if (ret < 0) goto finish;
@@ -180,7 +193,8 @@ int hddInstallFinish(const HddFormatPlan *plan, const char *mbr, int *started,
         ret = hddApaLimit(readPhysicalSector, NULL, plan->sectors, &limit);
         if (ret < 0) goto finish;
     }
-    if (plan->kind == HDD_FORMAT_APA_JAIL) ret = hddFormatRecovery(plan, &io);
+    /* The recovery volume is a creation-time snapshot, not a post-install
+     * rewrite target. Keeping it unchanged preserves the last readable copy. */
 finish:
     finish = call(HF_FINISH, 0, 0, 64, 64);
     if (ret >= 0) ret = finish;

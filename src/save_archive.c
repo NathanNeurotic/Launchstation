@@ -79,12 +79,15 @@ static int ps1(SaveArchive *s, const uint8_t *d, size_t n, const char *filename)
 	if (n >= 132 && !memcmp(d, "\0VSP", 4) && le32(d + 60) == 1) { offset = 132; name = d + 100; }
 	else if (n >= 130 && d[0] == 0x51 && !((n - 128) % PS1_BLOCK_SIZE) &&
 	         toupper(d[128]) == 'S' && toupper(d[129]) == 'C') { offset = 128; name = d + 10; }
-	else if (n >= 56 && d[54] == 'S' && d[55] == 'C') { offset = 54; name = d; }
-	else if (n >= 2 && (d[0] == 'S' || d[0] == 's') && (d[1] == 'C' || d[1] == 'c')) {
+	else if (n >= 56 && toupper(d[54]) == 'S' && toupper(d[55]) == 'C' && !((n - 54) % PS1_BLOCK_SIZE)) { offset = 54; name = d; }
+	else if (n >= 2 && toupper(d[0]) == 'S' && toupper(d[1]) == 'C') {
+		const uint8_t *dot;
 		offset = 0;
 		name = (const uint8_t *)strrchr(filename, '/');
 		name = name ? name + 1 : (const uint8_t *)filename;
 		width = strlen((const char *)name);
+		dot = (const uint8_t *)strrchr((const char *)name, '.');
+		if (dot && extension((const char *)name, "PS1")) width = (size_t)(dot - name);
 	} else return 0;
 	if (n <= offset || (n - offset) % PS1_BLOCK_SIZE || n - offset > 15 * PS1_BLOCK_SIZE ||
 	    toupper(d[offset]) != 'S' || toupper(d[offset + 1]) != 'C') return 0;
@@ -139,10 +142,10 @@ static int psv(SaveArchive *s, const uint8_t *d, size_t n)
 
 static int xps(SaveArchive *s, const uint8_t *d, size_t n)
 {
-	size_t pos = 21;
+	size_t pos = 21, body_start, body_size;
 	unsigned count;
 	if (n < pos || memcmp(d + 4, "SharkPortSave\0\0\0", 16)) return 0;
-	for (unsigned i = 0; i < 2; i++) {
+	for (unsigned i = 0; i < 3; i++) {
 		size_t len;
 		if (n - pos < 4) return 0;
 		len = le32(d + pos);
@@ -150,8 +153,9 @@ static int xps(SaveArchive *s, const uint8_t *d, size_t n)
 		if (len > n - pos) return 0;
 		pos += len;
 	}
-	if (n - pos < 8 + 250) return 0;
-	pos += 8;
+	if (n - pos < 4 + 250) return 0;
+	body_size = le32(d + pos); pos += 4; body_start = pos;
+	if (body_size < 250 || body_size > n - pos) return 0;
 	count = le32(d + pos + 66);
 	if (count < 3 || !allocate(s, count - 2) || le16(d + pos) != 250) return 0;
 	if (!entry(&s->folder, d + pos + 2, 64, ((uint16_t)d[pos + 78] << 8 | d[pos + 79]),
@@ -161,17 +165,22 @@ static int xps(SaveArchive *s, const uint8_t *d, size_t n)
 		const uint8_t *h;
 		size_t len;
 		uint16_t mode;
-		if (n - pos < 250 || le16(d + pos) != 250) return 0;
+		if (body_start + body_size - pos < 250 || le16(d + pos) != 250) return 0;
 		h = d + pos;
 		len = le32(h + 66);
 		mode = (uint16_t)h[78] << 8 | h[79];
 		pos += 250;
-		if (len > n - pos || (mode & 0x20)) return 0;
+		if (len > body_start + body_size - pos || (mode & 0x20)) return 0;
 		if (!entry(&s->files[i], h + 2, 64, mode, h + 82, h + 90, d + pos, len)) return 0;
 		pos += len;
 	}
-	/* XPS writers may append a checksum. */
-	return pos == n || n - pos == 4;
+	if (pos != body_start + body_size || (n != pos && n - pos != 4)) return 0;
+	if (n - pos == 4) {
+		uint32_t stored = le32(d + pos), sum = 0;
+		for (size_t i = 0; i < body_size; i++) sum += (uint32_t)d[body_start + i] << (sum % 24);
+		if (stored && stored != sum) return 0;
+	}
+	return 1;
 }
 
 /* CodeBreaker uses an already scheduled RC4 state, not a password key.
@@ -213,46 +222,63 @@ static const uint8_t cbs_state[256] = {
 
 static int cbs(SaveArchive *s, uint8_t *d, size_t n)
 {
-	uint8_t state[256], a = 0, b = 0, tmp;
+	uint8_t state[256], a = 0, b = 0, tmp, *encrypted = NULL;
 	uLongf length;
-	size_t pos;
+	size_t pos = 0, offset;
 	unsigned count = 0;
+	int ok = 0;
 	if (n < 296) return 0;
+	offset = le32(d + 8);
+	if (offset < 296 || offset > n) return 0;
 	length = le32(d + 12);
 	if (!length || length > SAVE_ARCHIVE_LIMIT) return 0;
 	s->decoded = malloc(length);
-	if (!s->decoded) return 0;
+	encrypted = malloc(n - offset);
+	if (!s->decoded || !encrypted) goto done;
+	memcpy(encrypted, d + offset, n - offset);
 	memcpy(state, cbs_state, sizeof(state));
 	/* Ignore the compressedSize field: several exporters write it incorrectly. */
-	for (pos = 296; pos < n; pos++) {
+	for (pos = 0; pos < n - offset; pos++) {
 		a++; b += state[a]; tmp = state[a]; state[a] = state[b]; state[b] = tmp;
-		d[pos] ^= state[(uint8_t)(state[a] + state[b])];
+		encrypted[pos] ^= state[(uint8_t)(state[a] + state[b])];
 	}
-	if (uncompress(s->decoded, &length, d + 296, n - 296) != Z_OK) return 0;
+	if (uncompress(s->decoded, &length, encrypted, n - offset) != Z_OK) goto done;
 	for (pos = 0; pos < length; count++) {
 		size_t len;
-		if (length - pos < 64 || count >= SAVE_ARCHIVE_FILES) return 0;
+		if (length - pos < 64 || count >= SAVE_ARCHIVE_FILES) goto done;
 		len = le32(s->decoded + pos + 16);
 		pos += 64;
-		if (len > length - pos) return 0;
+		if (len > length - pos) goto done;
 		pos += len;
 	}
-	if (!allocate(s, count) || !entry(&s->folder, d + 20, 32, le32(d + 72), d + 52, d + 60, NULL, 0)) return 0;
+	if (!allocate(s, count) || !entry(&s->folder, d + 20, 32, le32(d + 72), d + 52, d + 60, NULL, 0)) goto done;
 	pos = 0;
 	for (unsigned i = 0; i < count; i++) {
 		const uint8_t *h = s->decoded + pos;
 		size_t len = le32(h + 16);
-		if ((le32(h + 20) & 0x20) || !entry(&s->files[i], h + 32, 32, le32(h + 20), h, h + 8, h + 64, len)) return 0;
+		if ((le32(h + 20) & 0x20) || !entry(&s->files[i], h + 32, 32, le32(h + 20), h, h + 8, h + 64, len)) goto done;
 		pos += 64 + len;
 	}
-	return 1;
+	ok = 1;
+done:
+	free(encrypted);
+	return ok;
 }
 
 static int maxSave(SaveArchive *s, uint8_t *d, size_t n)
 {
 	size_t pos = 0, length;
 	unsigned count;
+	uint32_t stored = le32(d + 12), crc;
 	if (n < 96) return 0;
+	if (stored) {
+		crc = crc32(0, NULL, 0);
+		for (size_t i = 0; i < n; i++) {
+			uint8_t byte = i >= 12 && i < 16 ? 0 : d[i];
+			crc = crc32(crc, &byte, 1);
+		}
+		if (crc != stored) return 0;
+	}
 	length = le32(d + 88);
 	count = le32(d + 84);
 	if (!length || length > SAVE_ARCHIVE_LIMIT || !allocate(s, count)) return 0;
@@ -525,11 +551,12 @@ int ps1CardAppend(uint8_t *card, const char *name, const uint8_t *data, size_t s
 	unsigned slots[15], count = 0, blocks;
 	char checked[33];
 	if (!size || size % PS1_BLOCK_SIZE || size > 15 * PS1_BLOCK_SIZE ||
-	    !nameCopy(checked, (const uint8_t *)name, strlen(name), 20) || memcmp(data, "SC", 2)) return 0;
+	    !nameCopy(checked, (const uint8_t *)name, strlen(name), 20) ||
+	    toupper(data[0]) != 'S' || toupper(data[1]) != 'C') return 0;
 	blocks = size / PS1_BLOCK_SIZE;
 	for (unsigned i = 1; i <= 15; i++) {
 		if (card[i * 128] == 0x51 && !memcmp(card + i * 128 + 10, checked, strlen(checked) + 1)) return 0;
-		if (card[i * 128] == 0xa0) slots[count++] = i;
+		if ((card[i * 128] & 0xf0) == 0xa0) slots[count++] = i;
 	}
 	if (count < blocks) return 0;
 	for (unsigned i = 0; i < blocks; i++) {

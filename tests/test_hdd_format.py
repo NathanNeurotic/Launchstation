@@ -96,21 +96,33 @@ class Image:
         ret = self.check(lba, count)
         if ret:
             return ret
-        payload = os.pread(self.fd, count * 512, lba * 512)
-        c.memmove(data, payload, len(payload))
-        return 0 if len(payload) == count * 512 else -errno.EIO
+        try:
+            payload = os.pread(self.fd, count * 512, lba * 512)
+            c.memmove(data, payload, len(payload))
+            return 0 if len(payload) == count * 512 else -errno.EIO
+        except OSError as error:
+            self.errors.append(error)
+            return -(error.errno or errno.EIO)
 
     def _write(self, ctx, lba, count, data):
         ret = self.check(lba, count)
         if ret:
             return ret
-        return 0 if os.pwrite(self.fd, c.string_at(data, count * 512), lba * 512) == count * 512 else -errno.EIO
+        try:
+            return 0 if os.pwrite(self.fd, c.string_at(data, count * 512), lba * 512) == count * 512 else -errno.EIO
+        except OSError as error:
+            self.errors.append(error)
+            return -(error.errno or errno.EIO)
 
     def _zero(self, ctx, lba, count):
         ret = self.check(lba, count)
         if ret:
             return ret
-        return 0 if os.pwrite(self.fd, bytes(count * 512), lba * 512) == count * 512 else -errno.EIO
+        try:
+            return 0 if os.pwrite(self.fd, bytes(count * 512), lba * 512) == count * 512 else -errno.EIO
+        except OSError as error:
+            self.errors.append(error)
+            return -(error.errno or errno.EIO)
 
     def _flush(self, ctx):
         self.flushes += 1
@@ -127,11 +139,15 @@ class Image:
         self.apa_calls += 1
         blocks = [(0, 128, 1), (128, 128, 0x100), (256, 256, 0x100),
                   (512, 512, 0x100), (1024, 1024, 0x100)]
-        for i, (start, length, kind) in enumerate(blocks):
-            nxt = blocks[i + 1][0] * MB if i + 1 < len(blocks) else 0
-            prev = blocks[i - 1][0] * MB if i else blocks[-1][0] * MB
-            os.pwrite(self.fd, apa_header(start * MB, length * MB, nxt, prev, kind), start * MB * 512)
-        return 0
+        try:
+            for i, (start, length, kind) in enumerate(blocks):
+                nxt = blocks[i + 1][0] * MB if i + 1 < len(blocks) else 0
+                prev = blocks[i - 1][0] * MB if i else blocks[-1][0] * MB
+                os.pwrite(self.fd, apa_header(start * MB, length * MB, nxt, prev, kind), start * MB * 512)
+            return 0
+        except OSError as error:
+            self.errors.append(error)
+            return -(error.errno or errno.EIO)
 
     def bytes(self, lba, count=1):
         return os.pread(self.fd, count * 512, lba * 512)
@@ -178,7 +194,11 @@ with tempfile.TemporaryDirectory(prefix="hdd-format-") as temp:
     # Largest representable drive, non-aligned end, and capacities above 1 TiB.
     for size in (0x80001000, 0xc0000000, 0xfffffff0):
         for kind in (EXFAT, JAIL):
-            assert lib.hddFormatPlan(c.byref(p), kind, size, 0, 1) == 0
+            ret = lib.hddFormatPlan(c.byref(p), kind, size, 0, 1)
+            if size > 0xfffc2000 and kind != EXFAT:
+                assert ret < 0  # the existing APA driver's erase loop wraps
+                continue
+            assert ret == 0
             assert p.exfat_start + p.exfat_sectors <= size
             assert p.exfat_start % 2048 == p.exfat_sectors % 2048 == 0
 
@@ -259,6 +279,8 @@ with tempfile.TemporaryDirectory(prefix="hdd-format-") as temp:
         boot = image.bytes(p.exfat_start, 24)
         assert boot[:12 * 512] == boot[12 * 512:]
         assert boot[:11] == b"\xeb\x76\x90EXFAT   "
+        for sector in (0, 12):
+            assert boot[sector * 512 + 120:sector * 512 + 510] == b"\xf4" * 390
         assert boot[108:111] == bytes([9, 6, 1])
         check = checksum(b for i, b in enumerate(boot[:11 * 512]) if i not in (106, 107, 112))
         assert boot[11 * 512:12 * 512] == struct.pack("<I", check) * 128

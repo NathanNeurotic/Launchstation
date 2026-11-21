@@ -146,9 +146,9 @@ int main(void) {
     assert(!strcmp(g->category, "SLES_555.55") && !(g->flags & DASH_APP_GAME_ID_PENDING));
     g = find(NULL, s.games, s.n, "usb0:/DVD/NoCnf.iso");
     dashGameEnsureId(g);
-    assert(cnf_reads == 2 && !(g->flags & DASH_APP_GAME_ID_PENDING));
+    assert(cnf_reads == 2 && (g->flags & DASH_APP_GAME_ID_PENDING));
     dashGameEnsureId(g);
-    assert(cnf_reads == 2); /* failed discovery is not retried every frame */
+    assert(cnf_reads == 3); /* failed discovery remains retryable */
 
     /* PS1: VCDs in POPS (not POPSTARTER.VCD), and one Ember row per games/<Game>/ folder with an image. */
     g = find(NULL, s.games, s.n, "usb0:/POPS/SLUS_007.92.Crash.VCD");

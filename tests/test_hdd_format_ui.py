@@ -68,7 +68,7 @@ static int dashModalConfirm(const char *title, const char *body, const char *but
 }
 int dashHddInstallChoose(HddInstall *in, int jail) { in->jail = jail; in->flags = install_flags; return 1; }
 int dashHddInstallPrepare(HddInstall *in) { assert(!confirms); strcpy(in->stage, "usb0:/cache"); return 1; }
-void hddInstallCleanup(HddInstall *in) { in->stage[0] = 0; }
+int hddInstallCleanup(HddInstall *in) { in->stage[0] = 0; return 0; }
 static int prepareTransferDeviceStacks(const char *a, const char *b) { assert(a && b); return 0; }
 static HddJob *jobNew(int operation) { HddJob *j = calloc(1, sizeof(HddJob)); j->op = operation; return j; }
 static void hddJobFree(HddJob *j) { freed++; free(j); }

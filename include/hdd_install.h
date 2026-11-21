@@ -32,6 +32,7 @@ const char *hddInstallAssetPath(unsigned asset);
 const char *hddInstallAssetName(unsigned asset);
 int hddInstallNeedsAsset(unsigned flags, unsigned asset);
 int hddInstallHex(const char *text, unsigned length);
+int hddInstallCheckAsset(HddInstall *install, unsigned asset);
 /* Strict, bounded JSON readers for authenticated upstream manifests. */
 int hddInstallCommit(const char *json, char commit[41]);
 int hddInstallAssetMetadata(const char *json, const char *name,
@@ -53,6 +54,6 @@ int hddInstallPsbbnPartitions(HddInstall *install);
 int hddInstallPsbbnPayload(void *install, const HddFormatIo *io);
 int hddInstallClaimStage(HddInstall *install);
 int hddInstallFindStage(HddInstall *install);
-void hddInstallCleanup(HddInstall *install);
+int hddInstallCleanup(HddInstall *install);
 
 #endif

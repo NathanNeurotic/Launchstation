@@ -301,7 +301,7 @@ int dashWorkerLastId(void)
 int dashWorkerAwait(int id, const char *title, int cancelable)
 {
 	u64 start = Timer();
-	int shown = 0, ok = 1;
+	int shown = dashLoadingActive(), existing = shown, ok = 1;
 
 	if (id <= 0)
 		return 0;
@@ -335,7 +335,7 @@ int dashWorkerAwait(int id, const char *title, int cancelable)
 			dashGfxPresent();
 		}
 	}
-	if (shown)
+	if (shown && !existing)
 		dashLoadingEnd();
 	return ok;
 }

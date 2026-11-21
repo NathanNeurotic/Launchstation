@@ -92,7 +92,7 @@ static int path(char *name)
     }
     return 0;
 }
-static int decimal(const char *s, unsigned n, uint32_t *out)
+static int decimal(const char *s, unsigned n, uint32_t *out, int fractional)
 {
     uint64_t v = 0;
     unsigned i = 0;
@@ -100,8 +100,10 @@ static int decimal(const char *s, unsigned n, uint32_t *out)
     while (i < n && s[i] >= '0' && s[i] <= '9') {
         v = v * 10 + s[i++] - '0'; if (v > UINT32_MAX) return -EOVERFLOW;
     }
-    /* PAX timestamps may include fractional seconds. */
-    if (i < n && s[i] == '.') { i++; while (i < n && s[i] >= '0' && s[i] <= '9') i++; }
+    if (fractional && i < n && s[i] == '.') {
+        i++;
+        while (i < n && s[i] >= '0' && s[i] <= '9') i++;
+    }
     if (i != n) return -EINVAL;
     *out = (uint32_t)v; return 0;
 }
@@ -127,7 +129,7 @@ static int pax(InstallTarEntry *e, const char *text, unsigned size, int global)
             memcpy(dst, text + eq + 1, end - eq - 1); dst[end - eq - 1] = 0;
         } else if (KEY("size") || KEY("uid") || KEY("gid") || KEY("mtime")) {
             uint32_t *dst = KEY("size") ? &e->size : KEY("uid") ? &e->uid : KEY("gid") ? &e->gid : &e->mtime;
-            if (global || decimal(text + eq + 1, end - eq - 1, dst) < 0) return -EINVAL;
+            if (global || decimal(text + eq + 1, end - eq - 1, dst, KEY("mtime")) < 0) return -EINVAL;
         } else if ((eq - start >= 10 && !memcmp(text + start, "GNU.sparse", 10)) || KEY("SCHILY.filetype")) return -ENOTSUP;
 #undef KEY
         at += len;

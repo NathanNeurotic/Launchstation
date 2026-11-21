@@ -76,6 +76,18 @@ int installZipExtract(const InstallArchiveIo *io, uint32_t bytes, const char *na
     ret = -EINVAL;
     if (memcmp(stored_name, name, strlen(name))) goto done;
     if (!(flags & 8) && (u32(local + 14) != crc || u32(local + 18) != compressed || u32(local + 22) != size)) goto done;
+    if (flags & 8) {
+        unsigned char descriptor[16];
+        uint32_t at = offset + compressed, base;
+        uint32_t available = directory - at;
+        if (at > directory || available < 12) goto done;
+        ret = io->read(io->context, at, descriptor, available >= 16 ? 16 : 12);
+        if (ret < 0) goto done;
+        base = u32(descriptor) == 0x08074b50 ? 4 : 0;
+        if ((base == 0 && available < 12) || (base == 4 && available < 16) ||
+            u32(descriptor + base) != crc || u32(descriptor + base + 4) != compressed ||
+            u32(descriptor + base + 8) != size) goto done;
+    }
     memset(&stream, 0, sizeof(stream));
     if (method == 8) {
         if (inflateInit2(&stream, -15) != Z_OK) { ret = -ENOMEM; goto done; }
@@ -99,8 +111,9 @@ int installZipExtract(const InstallArchiveIo *io, uint32_t bytes, const char *na
                 unsigned produced;
                 stream.next_out = output; stream.avail_out = 32768;
                 zret = inflate(&stream, Z_NO_FLUSH);
-                if (zret != Z_OK && zret != Z_STREAM_END) { ret = -EINVAL; goto done; }
                 produced = 32768 - stream.avail_out;
+                if (zret == Z_BUF_ERROR && !stream.avail_in && !produced && pos < compressed) break;
+                if (zret != Z_OK && zret != Z_STREAM_END) { ret = -EINVAL; goto done; }
                 if (produced > size - done) { ret = -EFBIG; goto done; }
                 actual_crc = crc32(actual_crc, output, produced);
                 if (produced && (ret = io->write(io->context, output, produced)) < 0) goto done;

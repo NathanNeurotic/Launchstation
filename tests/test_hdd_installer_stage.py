@@ -40,8 +40,11 @@ static int genRead(int fd,void*p,unsigned n) {if(n>3)n=3;return read(fd,p,n);}
 static int genWrite(int fd,const void*p,unsigned n) {if(n>3)n=3;return write(fd,p,n);}
 #define genLseek lseek
 #define genClose close
-static int genRemove(char*p) {char path[2048];int r=mapped(p,path,sizeof(path));return r<0?r:unlink(path);}
+static int remove_error;
+static int genRemove(char*p) {char path[2048];int r=mapped(p,path,sizeof(path));if(r<0)return r;if(remove_error)return -EIO;return unlink(path);}
 static int genRmdir(char*p) {char path[2048];int r=mapped(p,path,sizeof(path));return r<0?r:rmdir(path);}
+typedef struct stat iox_stat_t;
+static int fileXioGetStat(const char*p,iox_stat_t*s) {char path[2048];int r=mapped(p,path,sizeof(path));if(r<0)return r;r=stat(path,s);return r<0?-errno:0;}
 '''
 code += helpers + stage
 code += r'''
@@ -63,7 +66,10 @@ int main(int argc,char**argv) {
     assert(hddInstallFindStage(&in)==-EEXIST); hddInstallCleanup(&in);
     snprintf(path,sizeof(path),"%s/cache/OSDMBR.XLF",argv[1]);assert(access(path,F_OK)==0);
     snprintf(path,sizeof(path),"%s/cache/owner.bin",argv[2]);assert(!unlink(path));
-    assert(hddInstallFindStage(&in)==0); hddInstallCleanup(&in); assert(!in.stage[0] && !in.owned);
+    assert(hddInstallFindStage(&in)==0);
+    snprintf(path,sizeof(path),"%s/cache/system.tar.gz",argv[2]);fd=open(path,O_CREAT|O_WRONLY,0600);assert(fd>=0);close(fd);
+    remove_error=1;in.ready=1;assert(hddInstallCleanup(&in)<0 && in.owned && in.stage[0] && !in.ready);
+    remove_error=0;assert(hddInstallCleanup(&in)==0);assert(!in.stage[0] && !in.owned);
     snprintf(path,sizeof(path),"%s/cache",argv[1]);assert(access(path,F_OK)<0);
     snprintf(path,sizeof(path),"%s/cache",argv[2]);assert(access(path,F_OK)==0);
     puts("PASS: short marker I/O, USB renumbering, duplicate rejection and ownership-checked cleanup");

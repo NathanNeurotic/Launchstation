@@ -3,10 +3,10 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "mc_ps1_card.h"
 
 #define SAVE_ARCHIVE_LIMIT (16 * 1024 * 1024)
 #define SAVE_ARCHIVE_FILES 1024
-#define PS1_CARD_SIZE 131072
 #define PS1_BLOCK_SIZE 8192
 
 typedef struct {

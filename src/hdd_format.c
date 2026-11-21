@@ -10,6 +10,7 @@
 #define CLUSTER 64u
 #define ALIGN 2048u
 #define MIN_EXFAT_MB 64u
+#define APA_MAX_SECTORS 0xfffc2000u
 
 static void put16(unsigned char *p, unsigned v) { p[0] = (unsigned char)v; p[1] = (unsigned char)(v >> 8); }
 static void put32(unsigned char *p, uint32_t v) { put16(p, v); put16(p + 2, v >> 16); }
@@ -52,6 +53,7 @@ int hddFormatPlan(HddFormatPlan *p, unsigned kind, uint32_t sectors,
     memset(p, 0, sizeof(*p));
     if (kind > HDD_FORMAT_APA_JAIL || sectors == UINT32_MAX || sectors < MIN_EXFAT_MB * MB + ALIGN)
         return -EINVAL;
+    if (kind != HDD_FORMAT_EXFAT && sectors > APA_MAX_SECTORS) return -EOVERFLOW;
     if (kind != HDD_FORMAT_APA_JAIL && reserve_mb) return -EINVAL;
     if (kind != HDD_FORMAT_EXFAT && !base) return -ENOSPC;
     if (kind == HDD_FORMAT_APA_JAIL &&
@@ -190,6 +192,7 @@ static int exfat(const HddFormatPlan *p, const HddFormatIo *io, unsigned char *w
     put16(work + 104, 0x100);
     work[108] = 9; work[109] = 6; work[110] = 1; work[111] = 0x80;
     work[112] = (unsigned char)((uint64_t)allocated * 100 / clusters);
+    memset(work + 120, 0xf4, 510 - 120);
     work[510] = 0x55; work[511] = 0xaa;
     for (i = 1; i <= 8; i++) put32(work + i * 512 + 508, 0xaa550000u);
     for (i = 0; i < 11 * 512; i++)

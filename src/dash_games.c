@@ -116,8 +116,8 @@ void dashGameEnsureId(DashApp *game)
 {
 	if (game == NULL || !(game->flags & DASH_APP_GAME_ID_PENDING))
 		return;
-	game->flags &= ~DASH_APP_GAME_ID_PENDING;
-	prepareNeutrinoGameID(game->path, game->category, sizeof(game->category));
+	if (prepareNeutrinoGameID(game->path, game->category, sizeof(game->category)))
+		game->flags &= ~DASH_APP_GAME_ID_PENDING;
 }
 
 static int scanFolder(GameScan *s, const char *dir)
@@ -331,6 +331,7 @@ static const char *gameCore(const DashApp *g)
 #define DETAIL_LINES 24
 static void showDetails(DashApp *g)
 {
+	if (!dashWorkerAwaitAll("Reading game ID")) return;
 	dashGameEnsureId(g);
 	static char text[DETAIL_LINES + 4][DETAIL_CHUNK + 12];
 	const char *lines[DETAIL_LINES + 4];
@@ -362,6 +363,7 @@ static void gameSettings(DashApp *g)
 {
 	int r;
 
+	if (!dashWorkerAwaitAll("Reading game ID")) return;
 	dashGameEnsureId(g);
 	r = editNeutrinoGameProfile(g->category, g->path);
 	if (r < 0)

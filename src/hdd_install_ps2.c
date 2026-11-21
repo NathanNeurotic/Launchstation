@@ -77,6 +77,11 @@ static int checkHash(HddInstall *in, unsigned asset)
     for (unsigned i = 0; i < 20; i++) snprintf(hex + i * 2, 3, "%02x", digest[i]);
     return strcmp(hex, in->hashes[asset]) ? -EIO : 0;
 }
+int hddInstallCheckAsset(HddInstall *in, unsigned asset)
+{
+    return checkHash(in, asset);
+}
+
 static int safeLeaf(const char *name)
 {
     if (!name || !*name || !strcmp(name, ".") || !strcmp(name, "..")) return 0;
@@ -89,6 +94,8 @@ static int loadApp(HddInstall *in, unsigned index, SaveArchive *save, uint8_t **
     int fd, ret, boot = 0, title = 0, icon = 0;
     unsigned asset = index ? HI_R3CONFIG : HI_WLE;
     memset(save, 0, sizeof(*save)); *data = NULL;
+    ret = checkHash(in, asset);
+    if (ret < 0) return ret;
     if (pathJoin(path, sizeof(path), in->stage, hddInstallAssetName(asset)) < 0) return -ENAMETOOLONG;
     *data = malloc(in->sizes[asset]);
     if (!*data) return -ENOMEM;
@@ -100,7 +107,9 @@ static int loadApp(HddInstall *in, unsigned index, SaveArchive *save, uint8_t **
     for (unsigned i = 0; i < save->count; i++) {
         SaveArchiveEntry *entry = &save->files[i];
         if (!safeLeaf(entry->name)) goto invalid;
-        for (unsigned j = 0; j < i; j++) if (!strcmp(entry->name, save->files[j].name)) goto invalid;
+        for (unsigned j = 0; j < i; j++)
+            if ((!in->jail && !strcmp(entry->name, save->files[j].name)) ||
+                (in->jail && !stricmp(entry->name, save->files[j].name))) goto invalid;
         if (!strcmp(entry->name, app_boot[index]))
             boot = entry->size >= 52 && !memcmp(entry->data, "\x7f" "ELF\x01\x01", 6) && entry->data[18] == 8;
         if (!strcmp(entry->name, "title.cfg")) title = entry->size > 0 && entry->size <= 16384;
@@ -130,6 +139,8 @@ static int osdResources(HddInstall *in, const char *destination)
     ZipContext ctx = {-1, -1};
     InstallArchiveIo io = {&ctx, zipRead, zipWrite};
     int ret;
+    ret = checkHash(in, HI_EXTRAS);
+    if (ret < 0) return ret;
     if (pathJoin(path, sizeof(path), in->stage, "extras.zip") < 0) return -ENAMETOOLONG;
     ctx.input = genOpen(path, FIO_O_RDONLY);
     if (ctx.input < 0) return ctx.input;
@@ -328,17 +339,39 @@ int hddInstallFindStage(HddInstall *in)
     strcpy(in->stage, found); return 0;
 }
 
-void hddInstallCleanup(HddInstall *in)
+static int removeStagedFile(const char *path)
+{
+    iox_stat_t stat;
+    int ret = genRemove((char *)path);
+    if (ret >= 0) return 0;
+    ret = fileXioGetStat(path, &stat);
+    return ret == -ENOENT ? 0 : ret < 0 ? ret : -EIO;
+}
+
+int hddInstallCleanup(HddInstall *in)
 {
     char path[MAX_PATH];
-    if (hddInstallFindStage(in) < 0) return;
+    int ret = 0, result;
+    in->ready = 0;
+    result = hddInstallFindStage(in);
+    if (result < 0) return result;
     for (unsigned asset = 0; asset < HDD_INSTALL_ASSETS; asset++) {
-        if (pathJoin(path, sizeof(path), in->stage, hddInstallAssetName(asset)) == 0) genRemove(path);
+        if (pathJoin(path, sizeof(path), in->stage, hddInstallAssetName(asset)) < 0) {
+            ret = ret < 0 ? ret : -ENAMETOOLONG;
+            continue;
+        }
+        result = removeStagedFile(path);
+        if (result < 0 && ret >= 0) ret = result;
     }
-    if (pathJoin(path, sizeof(path), in->stage, "owner.bin") == 0) genRemove(path);
+    if (ret < 0) return ret;
+    if (pathJoin(path, sizeof(path), in->stage, "owner.bin") < 0) return -ENAMETOOLONG;
+    ret = removeStagedFile(path);
+    if (ret < 0) return ret;
     snprintf(path, sizeof(path), "%s", in->stage);
-    genRmdir(path);
-    in->stage[0] = 0; in->owned = in->ready = 0;
+    ret = genRmdir(path);
+    if (ret < 0) return ret;
+    in->stage[0] = 0; in->owned = 0;
+    return 0;
 }
 
 static int makeDirectory(const char *path, int visible)
@@ -369,6 +402,8 @@ static int copyAsset(HddInstall *in, unsigned asset, const char *destination)
     if (pathJoin(source, sizeof(source), in->stage, hddInstallAssetName(asset)) < 0) return -ENAMETOOLONG;
     buffer = malloc(32768);
     if (!buffer) return -ENOMEM;
+    ret = checkHash(in, asset);
+    if (ret < 0) { free(buffer); return ret; }
     input = genOpen(source, FIO_O_RDONLY);
     if (input < 0) { free(buffer); return input; }
     output = genOpen(destination, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_EXCL);

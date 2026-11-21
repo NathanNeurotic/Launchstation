@@ -9,6 +9,12 @@ import zipfile
 
 root = Path(__file__).resolve().parents[1]
 native = (root / 'src/hdd_install_ps2.c').read_text().replace('#include "launchelf.h"', '').replace('#include "dash_internal.h"', '')
+launcher = (root / 'src/hdd_header_injector.c').read_text()
+launcher = launcher[launcher.index('int InjectHddAppLauncher('):]
+assert 'memalign(64, APA_HEADER_SIZE)' in launcher
+assert 'if (scratch == NULL) return -ENOMEM;' in launcher
+assert launcher.index('if (scratch == NULL) return -ENOMEM;') < launcher.index('hddHeaderWriteRawRange(')
+assert 'free(scratch);\n\treturn ret;' in launcher
 code = r'''
 #define _POSIX_C_SOURCE 200809L
 #include <assert.h>
@@ -18,6 +24,7 @@ code = r'''
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
@@ -30,6 +37,7 @@ code = r'''
 #define FIO_MT_RDWR 1
 #define FIO_CST_ATTR 1
 #define FIO_S_ISDIR S_ISDIR
+#define stricmp strcasecmp
 #define FS_GROUP_APPLICATION 1
 #define HDIOC_FLUSH 1
 typedef uint64_t u64;

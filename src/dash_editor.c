@@ -841,8 +841,12 @@ static void scrollToCursor(EdDoc *d, int rows, int cols)
  * Keep the animation with the document, including when switching buffers. */
 static void animateScroll(EdDoc *d, int rows, float dt)
 {
-	d->top_anim = listSlideTop(d->top_anim, d->top, d->top, d->nlines, rows,
-	                           dashApproach(0.0f, 1.0f, 14.0f * dashAnimSpeed(), dt));
+	float maximum = d->nlines > rows ? (float)(d->nlines - rows) : 0.0f;
+	float delta = d->top - d->top_anim;
+	if (d->top_anim < 0.0f || d->top_anim > maximum || delta >= rows || delta <= -rows)
+		d->top_anim = (float)d->top;
+	else
+		d->top_anim = dashClampf(dashApproach(d->top_anim, d->top, 14.0f * dashAnimSpeed(), dt), 0.0f, maximum);
 }
 
 static void drawText(EdDoc *d, int rows, int cols)

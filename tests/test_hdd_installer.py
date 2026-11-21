@@ -13,9 +13,11 @@ import os
 import re
 import shutil
 import subprocess
+import struct
 import tarfile
 import tempfile
 import zipfile
+import zlib
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -94,7 +96,7 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-') as directory:
     d = Path(directory)
     libpath = d / 'installer.so'
     subprocess.run(['gcc', '-shared', '-fPIC', '-O1', '-g', '-std=c99', '-Wall', '-Wextra', '-Werror',
-                    '-fsanitize=undefined', '-I', str(ROOT / 'include'),
+                    '-fsanitize=undefined', '-fno-sanitize-recover=undefined', '-I', str(ROOT / 'include'),
                     *[str(ROOT / 'src' / (n + '.c')) for n in
                       ('hdd_install_plan', 'install_archive', 'install_tar', 'install_ext2', 'install_psbbn_media')],
                     '-lz', '-o', str(libpath)], check=True)
@@ -115,6 +117,10 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-') as directory:
     sha = 'a' * 40
     assert lib.hddInstallCommit(json.dumps({'object': {'sha': sha, 'type': 'commit'}}).encode(), hashbuf) == 1
     assert hashbuf.value == sha.encode()
+    escaped = b'{"object":{"\\u0073ha":"' + sha.encode() + b'","type":"commit"}}'
+    assert lib.hddInstallCommit(escaped, hashbuf) == 1 and hashbuf.value == sha.encode()
+    duplicate = b'{"object":{"sha":"' + sha.encode() + b'","\\u0073ha":"' + sha.encode() + b'","type":"commit"}}'
+    assert lib.hddInstallCommit(duplicate, hashbuf) == 0
     for bad in (b'{}', b'{"object":{"sha":"a","type":"commit"}}', b'{"object":{"sha":"x"},', b'[]', b'"\\'):
         assert lib.hddInstallCommit(bad, hashbuf) == 0
     meta = [{'name': 'target', 'type': 'file', 'sha': sha, 'size': 200}]
@@ -125,6 +131,10 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-') as directory:
     files = [{'name': 'pack-v' + v + '.tar.gz', 'sha1': sha, 'size': '140000000'} for v in ('4.9.9', '4.10.1', '4.10.0')]
     assert lib.hddInstallArchiveMetadata(json.dumps({'files': files}).encode(), b'pack-v', namebuf, hashbuf, c.byref(size)) == 1
     assert namebuf.value == b'pack-v4.10.1.tar.gz' and size.value == 140000000
+    files[0]['sha1'] = 'bad'  # an invalid older candidate must not stop selection
+    assert lib.hddInstallArchiveMetadata(json.dumps({'files': files}).encode(), b'pack-v', namebuf, hashbuf, c.byref(size)) == 1
+    assert namebuf.value == b'pack-v4.10.1.tar.gz'
+    files[0]['sha1'] = sha
     files[1]['sha1'] = 'bad'
     assert lib.hddInstallArchiveMetadata(json.dumps({'files': files}).encode(), b'pack-v', namebuf, hashbuf, c.byref(size)) == 0
     for jail, flags in ((0, 1), (0, 3), (1, 7)):
@@ -152,12 +162,33 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-') as directory:
     zi, keep = archive_io(bytes(broken), [])
     assert lib.installZipExtract(c.byref(zi), len(broken), b'extras/FNTOSD', 100000, None) < 0
 
+    def stored_with_descriptor(signed=True, include=True):
+        payload = b'descriptor payload'; name = b'extras/STORED'; crc = zlib.crc32(payload)
+        local = (struct.pack('<I', 0x04034b50) + struct.pack('<5H', 20, 8, 0, 0, 0) +
+                 struct.pack('<3I', 0, 0, 0) + struct.pack('<2H', len(name), 0) + name + payload)
+        if include:
+            local += (struct.pack('<I', 0x08074b50) if signed else b'') + struct.pack('<3I', crc, len(payload), len(payload))
+        central = struct.pack('<I6H3I5H2I', 0x02014b50, 20, 20, 8, 0, 0, 0, crc, len(payload), len(payload),
+                              len(name), 0, 0, 0, 0, 0, 0) + name
+        end = struct.pack('<I4H2IH', 0x06054b50, 0, 0, 1, 1, len(central), len(local), 0)
+        return local + central + end
+    for signed in (False, True):
+        packed = stored_with_descriptor(signed)
+        extracted = []
+        zi, keep = archive_io(packed, extracted)
+        assert lib.installZipExtract(c.byref(zi), len(packed), b'extras/STORED', 1000, None) == 0
+        assert b''.join(extracted) == b'descriptor payload'
+    packed = stored_with_descriptor(include=False)
+    zi, keep = archive_io(packed, [])
+    assert lib.installZipExtract(c.byref(zi), len(packed), b'extras/STORED', 1000, None) < 0
+
     image = d / 'linux.img'; disk = Disk(image, 128); fs = c.c_void_p()
     assert lib.installExt2Create(c.byref(fs), c.byref(disk.io), 0, disk.size // 512, 1700000000) == 0
     entries = [('etc', '5', ''), ('usr', '5', ''), ('usr/lib', '5', ''), ('bin', '5', ''),
                ('dev', '5', ''), ('etc/settings', '0', b'a' * 13000), ('bin/tool', '0', b'ELF fixture'),
                ('bin/tool-link', '1', 'bin/tool'), ('bin/tool-peer', '1', 'bin/tool'), ('usr/lib/lib:fixture', '0', b'colon name'),
-               ('etc/symbolic', '2', '/usr/lib/libc.so'), ('etc/long-symbolic', '2', '/' + 'target/' * 20),
+               ('etc/symbolic', '2', '/usr/lib/libc.so'), ('etc/exact60', '2', '/' + 'x' * 59),
+               ('etc/long-symbolic', '2', '/' + 'target/' * 20),
                ('dev/sda1', '4', ''), ('dev/console', '3', ''), ('dev/pipe', '6', ''),
                ('usr/lib/' + 'long-name' * 20, '0', b'GNU/PAX long paths'),
                ('usr/large', '0', b'0123456789ABCDEF' * (6 * 1024 * 1024 // 16))]
@@ -196,6 +227,15 @@ with tempfile.TemporaryDirectory(prefix='hdd-installer-') as directory:
     noop = (BEGIN(lambda _, e: 0), DATA(lambda _, p, n: 0), FLUSH(lambda _: 0))
     discard = Sink(None, *noop)
     valid = tar([('safe', '0', b'payload')])
+    def pax_tar(headers):
+        out = io.BytesIO()
+        with tarfile.open(fileobj=out, mode='w', format=tarfile.PAX_FORMAT) as archive:
+            entry = tarfile.TarInfo('safe'); entry.size = 1; entry.pax_headers = headers
+            archive.addfile(entry, io.BytesIO(b'x'))
+        return gzip.compress(out.getvalue(), mtime=0)
+    mtime_result = extract(pax_tar({'path': 'safe', 'mtime': '1.5'}), discard)
+    assert mtime_result == 0
+    assert extract(pax_tar({'size': '1.5'}), discard) < 0
     damaged = bytearray(valid); damaged[-8] ^= 1
     for payload in (valid[:-8], bytes(damaged), valid + b'junk', tar([('../escape', '0', b'x')]),
                     tar([('/absolute', '0', b'x')]), tar([('escape', '1', '../target')])):

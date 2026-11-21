@@ -1,5 +1,6 @@
 """Exercise production installer commit ordering and failures without disk I/O."""
 from pathlib import Path
+import hashlib
 import subprocess
 import tempfile
 
@@ -15,6 +16,7 @@ code = r'''
 #include <stdlib.h>
 #include <string.h>
 #include "hdd_format.h"
+#include "save_sign.h"
 typedef int64_t s64;
 typedef struct { uint32_t start, size; } hddSetOsdMBR_t;
 #define FIO_O_RDONLY 1
@@ -22,9 +24,10 @@ typedef struct { uint32_t start, size; } hddSetOsdMBR_t;
 #define HF_BEGIN 3
 #define HF_FINISH 4
 #define HF_ZERO 5
+#define MBR_DIGEST @@MBR_DIGEST@@
 static struct { uint32_t sectors; } packet;
 static unsigned char payload[66048], disk[66048], header[1024];
-static unsigned offset, activated, recovered, populated, flushed, reads, writes;
+static unsigned offset, activated, recovered, populated, flushed, flushed_writes, reads, writes;
 static unsigned zeroed, zero_calls;
 static int zero_error;
 static int session, begun, finished, bad_read, bad_flush, bad_limit, populate_error;
@@ -56,7 +59,7 @@ static int writeDisk(void *ctx, uint32_t lba, unsigned count, const void *data) 
     memcpy(disk + (lba - 8192) * 512, data, count * 512); return 0;
 }
 
-static int flushDisk(void *ctx) { (void)ctx; assert(session); flushed++; return bad_flush ? -EIO : 0; }
+static int flushDisk(void *ctx) { (void)ctx; assert(session); flushed++; if(!bad_flush)flushed_writes=writes; return bad_flush ? -EIO : 0; }
 static int apaDisk(void *ctx) { (void)ctx; assert(0); return 0; }
 static void progress(void *ctx, const char *s, uint32_t n, uint32_t total) { (void)ctx; (void)s; (void)n; (void)total; }
 static void dashWorkerStatus(const char *s, uint32_t n, uint32_t total) { assert(s && n <= total); }
@@ -67,7 +70,7 @@ int hddApaLimit(HddFsReadSector read, void *ctx, uint32_t total, uint32_t *limit
 static int fileXioDevctl(const char *path, int cmd, const void *data, unsigned size, void *out, unsigned outsize) {
     const hddSetOsdMBR_t *info = data;
     assert(!strcmp(path,"hdd0:") && cmd == HDIOC_SETOSDMBR && size == sizeof(*info) && !out && !outsize);
-    assert(flushed && writes && !memcmp(disk,payload,sizeof(disk)));
+    assert(flushed && writes && flushed_writes==writes && !memcmp(disk,payload,sizeof(disk)));
     memcpy(header + 304,&info->start,4); memcpy(header + 308,&info->size,4); activated++; return 0;
 }
 int hddFormatRecovery(const HddFormatPlan *p, const HddFormatIo *io) { assert(p == &plan && io && session); recovered++; return 0; }
@@ -78,7 +81,7 @@ code += r'''
 static void clear(void) {
     memset(header,0,sizeof(header)); memset(disk,0,sizeof(disk)); memset(payload,0x5a,sizeof(payload));
     memcpy(payload,"\x01\x00\x00\x04",4);
-    offset=activated=recovered=populated=flushed=reads=writes=0;
+    offset=activated=recovered=populated=flushed=flushed_writes=reads=writes=0;
     session=begun=finished=bad_read=bad_flush=bad_limit=populate_error=0;
     assert(hddFormatPlan(&plan,HDD_FORMAT_APA_JAIL,100u*1024*2048,8192,1)==0);
 }
@@ -87,28 +90,33 @@ int main(void) {
     assert(zeroDisk(NULL,100,5000)==0 && zero_calls==3 && zeroed==5000);
     zero_error=1; assert(zeroDisk(NULL,100,5000)==-EIO && zero_calls==4 && zeroed==5000);
     zero_error=0;
-    clear(); assert(hddInstallFinish(&plan,"mbr",&started,populate,&plan)==0);
-    assert(started && begun==1 && finished==1 && activated==1 && recovered==1 && populated==1 && !session);
-    clear(); populate_error=-EIO; assert(hddInstallFinish(&plan,"mbr",&started,populate,&plan)==-EIO);
-    assert(started && populated==1 && !writes && !activated && !recovered && finished==1);
-    clear(); bad_read=1; assert(hddInstallFinish(&plan,"mbr",&started,NULL,NULL)==-EIO);
-    assert(started && writes==1 && !activated && !recovered && finished==1);
-    clear(); bad_flush=1; assert(hddInstallFinish(&plan,"mbr",&started,NULL,NULL)==-EIO);
+    clear(); assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,populate,&plan)==0);
+    assert(started && begun==1 && finished==1 && activated==1 && recovered==0 && populated==1 && !session);
+    clear(); assert(hddInstallFinish(&plan,"mbr","0000000000000000000000000000000000000000",&started,populate,&plan)==-EIO);
     assert(started && writes && !activated && !recovered && finished==1);
-    clear(); bad_limit=1; assert(hddInstallFinish(&plan,"mbr",&started,NULL,NULL)<0);
+    clear(); populate_error=-EIO; assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,populate,&plan)==-EIO);
+    assert(started && populated==1 && !writes && !activated && !recovered && finished==1);
+    clear(); bad_read=1; assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,NULL,NULL)==-EIO);
+    assert(started && writes==1 && !activated && !recovered && finished==1);
+    clear(); bad_flush=1; assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,NULL,NULL)==-EIO);
+    assert(started && writes && !activated && !recovered && finished==1);
+    clear(); bad_limit=1; assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,NULL,NULL)<0);
     assert(started && !writes && !activated && finished==1);
-    clear(); payload[0]=0; assert(hddInstallFinish(&plan,"mbr",&started,NULL,NULL)<0);
+    clear(); payload[0]=0; assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,NULL,NULL)<0);
     assert(started && !writes && !activated && finished==1);
-    clear(); plan.exfat_start++; assert(hddInstallFinish(&plan,"mbr",&started,NULL,NULL)==-EINVAL);
+    clear(); plan.exfat_start++; assert(hddInstallFinish(&plan,"mbr",MBR_DIGEST,&started,NULL,NULL)==-EINVAL);
     assert(!started && !begun && !writes && !activated);
-    clear(); assert(hddInstallFinish(&plan,NULL,&started,NULL,NULL)==0);
-    assert(started && !writes && !activated && recovered==1 && finished==1);
-    puts("PASS: software before MBR, short reads, readback/flush checks, failed population never activates boot, recovery refresh and session cleanup");
+    clear(); assert(hddInstallFinish(&plan,NULL,NULL,&started,NULL,NULL)==0);
+    assert(started && !writes && !activated && recovered==0 && finished==1);
+    puts("PASS: software before MBR, short reads, readback/flush checks, failed population never activates boot, recovery preservation and session cleanup");
 }
 '''
+payload = b'\x01\x00\x00\x04' + b'\x5a' * (66048 - 4)
+digest = hashlib.sha1(f'blob {len(payload)}\0'.encode() + payload).hexdigest()
+code = code.replace('@@MBR_DIGEST@@', '"' + digest + '"')
 with tempfile.TemporaryDirectory(prefix='hdd-installer-finish-') as temp:
     p = Path(temp); (p / 'test.c').write_text(code)
     subprocess.run(['gcc', '-std=c99', '-Wall', '-Wextra', '-Werror', '-I', str(root / 'include'),
                     str(p / 'test.c'), str(root / 'src/hdd_format.c'), str(root / 'src/hdd_format_upcase.c'),
-                    '-o', str(p / 'test')], check=True)
+                    str(root / 'src/save_sign.c'), '-o', str(p / 'test')], check=True)
     subprocess.run([str(p / 'test')], check=True, timeout=10)
