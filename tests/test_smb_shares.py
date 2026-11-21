@@ -320,7 +320,7 @@ assert "r = -ENAMETOOLONG;" in smbman
 filer = text("src/filer.c")
 assert "if (root && !dashWorkerOnThread()) {" in filer
 assert "smbSharesConnect(SMB_PATH_V2, 1);" in filer and "smbSharesConnect(SMB_PATH_V1, 1);" in filer
-assert "smbSharesConnectedCount(SMB_PATH_V1) > 0 && smbSharesKnown(SMB_PATH_V2) == 0" in read_smb
+assert "smbSharesKnown(SMB_PATH_V2) == 0 &&\n\t    smbSharesConnectedCount(SMB_PATH_V1) > 0" in read_smb
 assert "if (smb_version != SMB_PATH_NONE) {" in browser
 
 yaml = text("ps2.yaml")
