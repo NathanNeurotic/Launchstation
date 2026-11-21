@@ -2,10 +2,10 @@
 #define SMB_SHARES_H
 
 //--------------------------------------------------------------
-// Network shares: SMB2.CNF and the smb: / smb1: / nfs: devices.
+// Network shares: SMB2.CNF and the smb: / smbold: / nfs: devices.
 //
 //   smb:/<NAME>/...  SMB2/SMB3 shares, through smb2man (iop/smb2man, usmb2)
-//   smb1:/...        one SMB1 (NT1) share, through smbman.irx
+//   smbold:/...        one SMB1 (NT1) share, through smbman.irx
 //   nfs:/<NAME>/...  NFSv4.0 exports, through nfsman (iop/nfsman, unfs4)
 //
 // An NFS share is a NAME and an nfs:// URL among the SMB shares: the URL's
@@ -26,12 +26,12 @@
 #define SMB_CNF_SECTION "# SMB shares"
 
 #define SMB_DEVICE_V2 "smb:"
-#define SMB_DEVICE_V1 "smb1:"
+#define SMB_DEVICE_V1 "smbold:"
 #define SMB_DEVICE_NFS "nfs:"
 
 enum {
 	SMB_PATH_NONE = 0,
-	SMB_PATH_V1 = 1, /* smb1: */
+	SMB_PATH_V1 = 1, /* smbold: */
 	SMB_PATH_V2 = 2, /* smb: */
 	SMB_PATH_NFS = 3 /* nfs: */
 };
@@ -110,11 +110,11 @@ int smbCnfUpsertText(const char *text, const char *orig_name,
  * there is no such line. */
 const char *smbCnfSection(const char *text);
 
-/* SMB_PATH_V1 for "smb1:...", SMB_PATH_V2 for "smb:...", SMB_PATH_NFS for
+/* SMB_PATH_V1 for "smbold:...", SMB_PATH_V2 for "smb:...", SMB_PATH_NFS for
  * "nfs:...", else SMB_PATH_NONE. Plain prefix tests on "smb" would take
- * smb1: for smb:. */
+ * smbold: for smb:. */
 int smbPathKind(const char *path);
-/* "smb:", "smb:/", "smb1:", "smb1:/", "nfs:" or "nfs:/": the device itself,
+/* "smb:", "smb:/", "smbold:", "smbold:/", "nfs:" or "nfs:/": the device itself,
  * where smb: and nfs: list their connected shares and nothing can be
  * written. */
 int smbIsRootPath(const char *path);
@@ -132,7 +132,7 @@ void smbSharesConnect(int version, int retry_failed);
 int smbSharesConnectedCount(int version);
 const char *smbSharesV1Name(void); /* NAME of the SMB1 share listed in smb:/; no IO */
 void smbSharesStatus(int version, char *out, int out_size); /* no IO */
-void smbSharesCombinedStatus(char *out, int out_size); /* smb:/ + smb1:/ status; no IO */
+void smbSharesCombinedStatus(char *out, int out_size); /* smb:/ + smbold:/ status; no IO */
 void smbSharesForget(void); /* the drivers are gone (IOP reset) */
 int smbSharesReload(void); /* 1 when old sessions were retired; 0 on disconnect failure */
 /* LAUNCHSTATION.CNF's share blocks: taken from the file text when it is

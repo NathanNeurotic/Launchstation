@@ -108,7 +108,7 @@ static const char *getRootDeviceLabel(const char *name)
 	if (!strcmp(name, SMB_DEVICE_V2))
 		return "smb:/";
 	if (!strcmp(name, SMB_DEVICE_V1))
-		return "smb1:/";
+		return "smbold:/";
 	if (!strcmp(name, SMB_DEVICE_NFS))
 		return "nfs:/";
 #endif
@@ -428,7 +428,7 @@ void filerMenuEnables(const char *path, const FILEINFO *file, int nmarked, char 
 	if ((isHddRootPath(path) || !strcmp(path, "dvr_hdd0:/")) || path[0] == 0)  //No menu cmds in partition/device lists
 		menu_disabled = 1;
 #ifdef SMB
-	/* smb:/ lists the connected shares; nothing can be made there. smb1:/
+	/* smb:/ lists the connected shares; nothing can be made there. smbold:/
 	 * is the top of its one share and stays writable. */
 	if (smbPathKind(path) == SMB_PATH_V2 && smbIsRootPath(path))
 		write_disabled = 1;

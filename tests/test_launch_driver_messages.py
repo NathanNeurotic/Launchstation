@@ -113,7 +113,7 @@ static void loadCdModules(void){}
 static void initHOST(void){load(D_HOST);}
 static int isPathDeviceStackLoaded(const char *p){return running[device(p)];}
 static const char *smb_error="";
-static int smbPathKind(const char *p){return !strncmp(p,"smb1:",5)?1:!strncmp(p,"smb:",4)?2:SMB_PATH_NONE;}
+static int smbPathKind(const char *p){return !strncmp(p,"smbold:",7)?1:!strncmp(p,"smb:",4)?2:SMB_PATH_NONE;}
 static int isSmbDriverLoaded(int v){(void)v;return running[D_SMB];}
 static int load_smb(int v){(void)v;int r=load(D_SMB);smb_error=r||smb_silent?"":"The network adapter is busy (UDPFS).";return r;}
 static const char *smbLoadError(int v){(void)v;return smb_error;}

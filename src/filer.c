@@ -1999,7 +1999,7 @@ int readUDPFS(const char *path, FILEINFO *info, int max)
 }
 #endif
 #ifdef SMB
-/* smb: (SMB2/SMB3), smb1: (SMB1) and nfs: (NFSv4.0). The drivers are loaded on the UI
+/* smb: (SMB2/SMB3), smbold: (SMB1) and nfs: (NFSv4.0). The drivers are loaded on the UI
  * thread only (filerPrepareDirRead); a dashboard worker listing an
  * unloaded device gets -ENODEV rather than loading IOP modules itself. */
 int readSMB(const char *path, FILEINFO *info, int max)
@@ -2497,7 +2497,7 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 			files[nfiles++].stats.AttrFile = sceMcFileAttrSubdir;
 #endif
 #ifdef SMB
-			/* smb1: only when SMB2.CNF has a VERSION = 1 share; the read
+			/* smbold: only when SMB2.CNF has a VERSION = 1 share; the read
 			 * touches no network but probes the memory cards, so while the
 			 * dashboard worker owns IO only the cached flag is safe */
 			strcpy(files[nfiles].name, SMB_DEVICE_V2);

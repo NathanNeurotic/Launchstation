@@ -1274,7 +1274,7 @@ void dashRenderScene(void)
 // Entry
 //--------------------------------------------------------------
 /* IPCONFIG.DAT / SMB2.CNF reads (with mc?:/SYS-CONF fallbacks) warm the
- * network display strings and the smb1: device entry. They probe both memory
+ * network display strings and the smbold: device entry. They probe both memory
  * cards when no file sits beside the ELF, so they run on the worker instead
  * of blocking boot (they used to run in initializeRuntimeInputModules). */
 static void dashNetConfigWarmJob(void *arg)
@@ -1287,7 +1287,7 @@ static void dashNetConfigWarmJob(void *arg)
 }
 
 /* Runs on the UI thread once the reads above are cached: a Files root that
- * was already built now learns whether smb1: exists. */
+ * was already built now learns whether smbold: exists. */
 static void dashNetConfigWarmDone(void *arg)
 {
 	(void)arg;

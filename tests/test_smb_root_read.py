@@ -27,7 +27,7 @@ code = r"""
 
 typedef struct { int unused; } FILEINFO;
 enum { SMB_PATH_NONE = 0, SMB_PATH_V1 = 1, SMB_PATH_V2 = 2, SMB_PATH_NFS = 3 };
-#define SMB_DEVICE_V1 "smb1:"
+#define SMB_DEVICE_V1 "smbold:"
 #define SMB_DEVICE_V2 "smb:"
 #define SMB_DEVICE_NFS "nfs:"
 static int smb_dir_open_failed;
@@ -85,7 +85,7 @@ int main(void) {
 
     reset_case();
     configured[SMB_PATH_V1] = 1;
-    assert(readSMB("smb1:/", files, 4) == 1);
+    assert(readSMB("smbold:/", files, 4) == 1);
     assert(load_attempts[SMB_PATH_V1] == 1 && connect_attempts[SMB_PATH_V1] == 1);
     assert(!smb_dir_open_failed && net_calls == 1);
 

@@ -116,7 +116,7 @@ int main(void) {
     assert(!prepareSmbConfig("smb:/PC/neutrino/neutrino.elf",&sh,msg,sizeof(msg)));
     assert(!prepareSmbConfig("udpfs:/neutrino/neutrino.elf",&sh,msg,sizeof(msg)));
     parse(&cfg,"NAME=OLD\nVERSION=1\nURL=smb://10.0.0.2/games\n");
-    assert(neutrinoSmbResolve(&cfg,"smb1:/DVD/game.iso",&sh,dvd,sizeof(dvd),&why));
+    assert(neutrinoSmbResolve(&cfg,"smbold:/DVD/game.iso",&sh,dvd,sizeof(dvd),&why));
     assert(!strcmp(dvd,"smb:DVD/game.iso"));
     return 0;
 }

@@ -1,6 +1,6 @@
 //--------------------------------------------------------------
 //File name:   smb_cnf.c
-//SMB2.CNF parser for the smb:, smb1: and nfs: devices. Text only, no device IO,
+//SMB2.CNF parser for the smb:, smbold: and nfs: devices. Text only, no device IO,
 //so tests/test_smb_shares.py compiles it on the host.
 //
 //The syntax is the one of wLaunchELF_R3Z's smb: device (idea and format by
@@ -105,7 +105,7 @@ int smbPathKind(const char *path)
 {
 	if (path == NULL)
 		return SMB_PATH_NONE;
-	if (!strncmp(path, SMB_DEVICE_V1, 5))
+	if (!strncmp(path, SMB_DEVICE_V1, sizeof(SMB_DEVICE_V1) - 1))
 		return SMB_PATH_V1;
 	if (!strncmp(path, SMB_DEVICE_V2, 4))
 		return SMB_PATH_V2;
@@ -120,7 +120,7 @@ int smbIsRootPath(const char *path)
 
 	if (kind == SMB_PATH_NONE)
 		return 0;
-	path += kind == SMB_PATH_V1 ? 5 : 4;
+	path += kind == SMB_PATH_V1 ? sizeof(SMB_DEVICE_V1) - 1 : 4;
 	while (*path == '/')
 		path++;
 	return *path == '\0';

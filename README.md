@@ -189,7 +189,7 @@ Device entries depend on the build, console and visibility settings. Listing a t
 | `xfrom0:/`, `dvr_hdd0:/` | PSX DESR flash and DVR HDD paths; hidden on other consoles. |
 | `cdfs:/` | CD/DVD filesystem. |
 | `udpfs:/` | Network storage using [UDPFSD](https://github.com/pcm720/udpfsd). |
-| `smb:/<NAME>`, `smb1:/` | Configured SMB2/SMB3 shares and one optional SMB1 share. |
+| `smb:/<NAME>`, `smbold:/` | Configured SMB2/SMB3 shares and one optional SMB1 share. |
 | `nfs:/<NAME>` | Configured NFSv4.0 shares. |
 | `host:/` | [PS2Link](https://github.com/ps2dev/ps2link) host filesystem in networking-enabled builds. |
 

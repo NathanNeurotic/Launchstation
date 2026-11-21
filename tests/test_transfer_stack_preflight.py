@@ -3,7 +3,7 @@ and must refuse a pair whose drivers cannot stay loaded together.
 
 This models the exact invalidation boundaries, not a console/network transfer:
 retiring MX4SIO for mc1:, and switching between the Ethernet network stack
-(host:, smb:, smb1:) and the UDPFS one, each reboots the IOP and unloads every
+(host:, smb:, smbold:) and the UDPFS one, each reboots the IOP and unloads every
 driver. A pair that needs both network stacks is refused before any driver is
 loaded; any other pair the preflight accepts has both drivers loaded at the end,
 whichever network stack ran before it, even when loading the destination's
@@ -43,7 +43,7 @@ code=r'''
 #define TRANSFER_STACK_LOAD_FAILED -1
 #define TRANSFER_STACK_INCOMPATIBLE -2
 #define SMB_DEVICE_V2 "smb:"
-#define SMB_DEVICE_V1 "smb1:"
+#define SMB_DEVICE_V1 "smbold:"
 #define SMB_DEVICE_NFS "nfs:"
 enum {SMB_PATH_NONE=0,SMB_PATH_V1=1,SMB_PATH_V2=2,SMB_PATH_NFS=3};
 enum {NET_NONE,NET_ETH,NET_UDPFS};
@@ -119,14 +119,14 @@ int main(void){
  mx4sio_driver_running=0;resets=0;
  assert(prepareTransferDeviceStacks("udpfs:/","mc1:/")==TRANSFER_STACK_READY);assert(!resets);
 
- /* host:, smb: and smb1: run on the Ethernet network stack and udpfs: on
+ /* host:, smb: and smbold: run on the Ethernet network stack and udpfs: on
   * its own. Whichever network stack is already running, a pair needing both
   * is refused with no driver load and no IOP reset. Every other pair, both
   * ways, ends with both of its drivers loaded, so its files can be opened:
   * with no reset when no network stack ran, else with at most the one that
   * switches it, even when that comes with the destination (usb0: -> host:
   * after udpfs: ran) and unloads the source's drivers. */
- const char *devices[]={"host:/","smb:/SHARE/","smb1:/","udpfs:/","mc0:/","usb0:/","mmce0:/"};
+ const char *devices[]={"host:/","smb:/SHARE/","smbold:/","udpfs:/","mc0:/","usb0:/","mmce0:/"};
  const int count=sizeof(devices)/sizeof(devices[0]);
  int refused=0,accepted=0;
  for(int stack=NET_NONE;stack<=NET_UDPFS;stack++)for(int a=0;a<count;a++)for(int b=0;b<count;b++){

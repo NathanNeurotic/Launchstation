@@ -35,7 +35,7 @@ int neutrinoSmbResolve(const SmbConfig *cfg, const char *path, SmbShare *share,
 	int i, kind = smbPathKind(path);
 	*problem = "SMB share is not configured or connected";
 	if (!cfg || !share || !dvd || !kind) return 0;
-	name = path + (kind == SMB_PATH_V1 ? 5 : 4);
+	name = path + (kind == SMB_PATH_V1 ? sizeof(SMB_DEVICE_V1) - 1 : 4);
 	while (*name == '/') name++;
 	relative = strchr(name, '/');
 	for (i = 0; i < cfg->count; i++) {

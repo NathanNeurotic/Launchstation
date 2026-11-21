@@ -1,4 +1,4 @@
-"""Run the SMB2.CNF parser on the host, and check how smb:/smb1: are wired in."""
+"""Run the SMB2.CNF parser on the host, and check how smb:/smbold: are wired in."""
 from pathlib import Path
 import shutil
 import subprocess
@@ -189,13 +189,13 @@ int main(void)
     assert(smbConfigParse(NULL, &cfg) == 0 && cfg.count == 0);
     assert(parse("") == 0 && parse("\n\n# only comments\n") == 0);
 
-    /* device names: smb1: must not be taken for smb: */
+    /* device names: smbold: must not be taken for smb: */
     assert(smbPathKind("smb:/PC/x") == SMB_PATH_V2 && smbPathKind("smb:") == SMB_PATH_V2);
-    assert(smbPathKind("smb1:/x") == SMB_PATH_V1 && smbPathKind("smb1:") == SMB_PATH_V1);
+    assert(smbPathKind("smbold:/x") == SMB_PATH_V1 && smbPathKind("smbold:") == SMB_PATH_V1);
     assert(smbPathKind("smbx:/") == SMB_PATH_NONE && smbPathKind("sm") == SMB_PATH_NONE);
     assert(smbPathKind("smb2:/") == SMB_PATH_NONE && smbPathKind(NULL) == SMB_PATH_NONE);
-    assert(smbIsRootPath("smb:") && smbIsRootPath("smb:/") && smbIsRootPath("smb1://"));
-    assert(!smbIsRootPath("smb:/PC") && !smbIsRootPath("smb1:/dir") && !smbIsRootPath("host:/"));
+    assert(smbIsRootPath("smb:") && smbIsRootPath("smb:/") && smbIsRootPath("smbold://"));
+    assert(!smbIsRootPath("smb:/PC") && !smbIsRootPath("smbold:/dir") && !smbIsRootPath("host:/"));
 
     puts("SMB2.CNF parser: OK");
     return 0;
@@ -249,7 +249,7 @@ assert "smbSharesConfigured" not in listing
 # one SMB device: the SMB1 share is a folder of smb:/, not a row of its own
 assert '"Network (SMB1)"' not in listing and listing.count('"Network", SMB_DEVICE_V2') == 1
 # the SMB1 share is a folder of smb:/ in the dashboard only; the classic
-# browser keeps its own smb1: root entry
+# browser keeps its own smbold: root entry
 assert "smbSharesV1Name" not in read_smb
 dash_browser = text("src/dash_browser.c")
 list_run = dash_browser.split("static void listRun(void *arg)", 1)[1].split("\n}\n", 1)[0]
@@ -269,7 +269,7 @@ configured = configured[:configured.index("\n}\n")]
 assert "smb_cfg_mc1_pending" in configured
 
 smbman = text("iop/smbman/smb_fio.c")
-assert '#define SMBMAN_DEVICE_NAME "smb1"' in smbman and "SMBMAN_DEVICE_NAME," in smbman
+assert '#define SMBMAN_DEVICE_NAME "smbold"' in smbman and "SMBMAN_DEVICE_NAME," in smbman
 assert "return MODULE_NO_RESIDENT_END;" in text("iop/smbman/smbman.c")
 
 # smbman registers through iomanX (an IOP_DT_FSEXT device needs it)

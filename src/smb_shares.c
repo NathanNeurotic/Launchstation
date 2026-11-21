@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 //File name:   smb_shares.c
 //Network shares on the PS2 side: finds and reads SMB2.CNF, connects its
-//shares through smb2man (smb:, SMB2/SMB3), smbman (smb1:, SMB1) and nfsman
+//shares through smb2man (smb:, SMB2/SMB3), smbman (smbold:, SMB1) and nfsman
 //(nfs:, NFSv4.0), and keeps what happened to each share for the browser to show.
 //
 //init.c loads the drivers (load_smb()); this file only talks to them.
@@ -476,7 +476,7 @@ void smbSharesCombinedStatus(char *out, int out_size)
 }
 
 /* The drivers went away with an IOP reset: every share must be connected
- * again. The parsed SMB2.CNF stays, so the device list still knows smb1:. */
+ * again. The parsed SMB2.CNF stays, so the device list still knows smbold:. */
 void smbSharesForget(void)
 {
 	int i;

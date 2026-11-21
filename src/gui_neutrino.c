@@ -165,7 +165,7 @@ static int profilePath(const char *id, int slot, char *out, int size)
 static int profileDeviceRoot(const char *iso)
 {
 	static const char *const devices[] = { "mass", "usb", "ata", "mx4sio", "mmce", "ilink", "udpfs" };
-	static const char *const shares[] = { "smb1:/", "smb:/", "nfs:/" };
+	static const char *const shares[] = { "smbold:/", "smb:/", "nfs:/" };
 	const char *p;
 	size_t i, n;
 
