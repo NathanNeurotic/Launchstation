@@ -79,15 +79,16 @@ typedef unsigned long long u64;
 static u8 have_mtapman = 1, have_mc_rpc_ready = 1, mtap_bound;
 static u8 mtap_open[2];
 static u64 now_ms;
-static int worker_busy, connected, init_calls, open_calls, connection_calls;
+static int worker_busy, connected, init_calls, open_calls, close_calls, connection_calls;
+static int port1_loaded = 1;
 static __attribute__((unused)) u64 Timer(void) { return now_ms; }
 static int mtapInit(void) { init_calls++; return 1; }
 static int mtapPortOpen(int port) { assert(port == 2 || port == 3); open_calls++; return (connected & (1 << (port - 2))) != 0; }
-static int mtapPortClose(int port) { assert(port == 2 || port == 3); return 1; }
+static int mtapPortClose(int port) { assert(port == 2 || port == 3); close_calls++; return 1; }
 static int mtapGetConnection(int port) { assert(port == 2 || port == 3); connection_calls++; return (connected & (1 << (port - 2))) != 0; }
 static int dashWorkerOnThread(void) { return 0; }
 static int dashWorkerIoBusy(void) { return worker_busy; }
-static int isPathDeviceStackLoaded(const char *path) { (void)path; return 1; }
+static int isPathDeviceStackLoaded(const char *path) { (void)path; return port1_loaded; }
 static void filerRootMcPollIdle(void) {}
 ''' + retry_state + function(init, "void mcMultitapRefresh(void)") + r'''
 int main(void) {
@@ -108,6 +109,12 @@ int main(void) {
  assert(open_calls==3 && connection_calls==2); /* only absent port retries */
  connected=3;now_ms+=10000;mcMultitapRefresh();
  assert(open_calls==4 && mtap_open[0] && mtap_open[1]);
+ /* A port reserved for MX4SIO must not receive background MTAP RPCs. */
+ mtap_open[1]=0;mtap_retry_after[1]=0;port1_loaded=0;
+ open_calls=close_calls=0;now_ms+=1000;mcMultitapRefresh();
+ assert(open_calls==0 && close_calls==0 && !mtap_open[1]);
+ port1_loaded=1;mcMultitapRefresh();
+ assert(open_calls==1 && mtap_open[1]); /* prompt re-detection */
  return 0;
 }
 '''

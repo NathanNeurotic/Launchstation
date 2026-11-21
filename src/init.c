@@ -2280,9 +2280,14 @@ void mcMultitapRefresh(void)
 		/* MTAPMAN numbers the memory-card ports 2 and 3. Keep absent-port
 		 * retries independent: one connected tap must not cause the other
 		 * port's failed opens to block the UI every card poll. */
-		if (!eligible)
+		if (!eligible) {
+			/* Port 1 belongs to MX4SIO/unloaded mc1:. Do not send even a
+			 * close RPC to its multitap port during background polling. */
 			mtap_open[port] = 0;
-		else if (mtap_open[port])
+			mtap_retry_after[port] = 0;
+			continue;
+		}
+		if (mtap_open[port])
 			mtap_open[port] = mtapGetConnection(port + 2) == 1;
 		else if (Timer() >= mtap_retry_after[port])
 			mtap_open[port] = mtapPortOpen(port + 2) == 1;
@@ -2290,7 +2295,7 @@ void mcMultitapRefresh(void)
 			continue;
 		if (!mtap_open[port]) {
 			mtapPortClose(port + 2);
-			mtap_retry_after[port] = eligible ? Timer() + 10000 : 0;
+			mtap_retry_after[port] = Timer() + 10000;
 		} else
 			mtap_retry_after[port] = 0;
 	}
