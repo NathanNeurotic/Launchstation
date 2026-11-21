@@ -3,6 +3,7 @@
 // MrRexD-compatible "Send Games to PS2" receiver.
 //--------------------------------------------------------------
 #include "dash_internal.h"
+#include "filer_size_cache.h"
 #include "filer_shared.h"
 #include "init.h"
 
@@ -87,6 +88,7 @@ static void writeResult(int count)
 	char line[MAX_NAME + 64];
 	int fd, i;
 
+	filerSizeCacheInvalidate(PC_RECV_RESULT);
 	fd = fileXioOpen(PC_RECV_RESULT, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC, fileMode);
 	if (fd < 0)
 		return;
@@ -131,6 +133,8 @@ static int copyWithResume(PcReceiveItem *item, const char *source, const char *d
 	int in = -1, out, got, want, retries = 0;
 	u64 pos = 0, started = Timer(), last_draw = 0;
 
+	/* The receiver owns the UI throughout this transfer, including retries. */
+	filerSizeCacheInvalidate(dest);
 	out = fileXioOpen(dest, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC, fileMode);
 	if (out < 0)
 		return -1;
@@ -246,6 +250,7 @@ static void receiveGames(int count, char *message, int message_size)
 		for (i = 0; i < count; i++)
 			items[i].state = "SEM_SERVIDOR";
 	} else {
+		filerSizeCacheInvalidate(PC_RECV_STAGE_DIR);
 		fileXioMkdir(PC_RECV_STAGE_DIR, fileMode);
 		for (i = 0; i < count && !stop; i++) {
 			snprintf(dest, sizeof(dest), "ata0:/%.3s/%.255s", items[i].folder, items[i].name);
@@ -271,6 +276,7 @@ static void receiveGames(int count, char *message, int message_size)
 			fileSize(stage, &exists);
 			if (r == 0 && exists && items[i].written == items[i].size) {
 				snprintf(folder, sizeof(folder), "ata0:/%.3s", items[i].folder);
+				filerSizeCacheInvalidate(dest);
 				fileXioMkdir(folder, fileMode);
 				if (fileXioRename(stage, dest) >= 0) {
 					items[i].state = "OK";
@@ -331,6 +337,7 @@ int pcGameReceiverPoll(char *message, int message_size)
 		return 0; /* FTP is still writing it. */
 
 	/* A complete or malformed job is consumed once. */
+	filerSizeCacheInvalidate(PC_RECV_REQUEST);
 	fileXioRemove(PC_RECV_REQUEST);
 	if (r < 0) {
 		snprintf(message, message_size, "%s", LNG(PC_Recv_Bad_Job));
