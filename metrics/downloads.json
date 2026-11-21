@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "tracking_since": "2026-11-03",
-  "updated_at": "2026-11-21T06:26:24+00:00",
+  "updated_at": "2026-11-21T09:19:51+00:00",
   "scope": "Observed downloads since tracking began; earlier deleted assets excluded",
-  "total_downloads": 3103,
+  "total_downloads": 3109,
   "assets": {
     "706963845": {
       "downloads": 23,
@@ -9551,7 +9551,7 @@
       "release": "latest"
     },
     "774031481": {
-      "downloads": 8,
+      "downloads": 10,
       "name": "APP_LAUNCHSTATION-1236.zip",
       "release": "latest"
     },
@@ -9576,7 +9576,7 @@
       "release": "latest"
     },
     "774031538": {
-      "downloads": 4,
+      "downloads": 8,
       "name": "LAUNCHSTATION-1236.zip",
       "release": "latest"
     },
