@@ -187,7 +187,7 @@ static void parse(const char *input, const char *expected) {
 int main(void) {
     parse("SMB_Server_Password =", "");
     parse("SMB_Server_Password =   ", "");
-    parse("SMB_Server_Password =\\r\\n", "");
+    parse("SMB_Server_Password =\r\n", "");
     parse("SMB_Server_Password = value", "value");
     return 0;
 }
