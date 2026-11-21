@@ -117,7 +117,29 @@ int main(void) {
     assert(load_attempts[SMB_PATH_V1] == 0 && load_attempts[SMB_PATH_V2] == 0);
     assert(!smb_dir_open_failed && net_calls == 0);
 
-    puts("PASS: SMB root reads connect the configured protocols on the UI thread only");
+    /* Mixed config, working SMB1, unavailable SMB2 driver. The dashboard adds
+       the SMB1 row independently once this read returns. */
+    reset_case();
+    configured[SMB_PATH_V1] = configured[SMB_PATH_V2] = 1;
+    loaded[SMB_PATH_V1] = connected[SMB_PATH_V1] = 1;
+    load_ok[SMB_PATH_V2] = 0;
+    worker = 1;
+    assert(readSMB("smb:/", files, 4) == 0);
+    assert(!smb_dir_open_failed && net_calls == 0 && load_attempts[SMB_PATH_V2] == 0);
+    worker = 0;
+    assert(readSMB("smb:/", files, 4) == 0);
+    assert(!smb_dir_open_failed && net_calls == 0 && load_attempts[SMB_PATH_V2] == 1);
+
+    /* A loaded SMB2 driver without a connected share is also optional. */
+    loaded[SMB_PATH_V2] = 1;
+    connect_ok[SMB_PATH_V2] = 0;
+    assert(readSMB("smb:/", files, 4) == 0);
+    assert(!smb_dir_open_failed && net_calls == 0 && connect_attempts[SMB_PATH_V2] == 1);
+    connect_ok[SMB_PATH_V2] = 1;
+    assert(readSMB("smb:/", files, 4) == 1);
+    assert(!smb_dir_open_failed && net_calls == 1);
+
+    puts("PASS: SMB root reads connect on the UI thread and preserve a usable SMB1 root in mixed configurations");
     return 0;
 }
 """

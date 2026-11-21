@@ -2019,11 +2019,14 @@ int readSMB(const char *path, FILEINFO *info, int max)
 		smb_dir_open_failed = 1;
 		return -ENOTCONN;
 	}
-	if (version == SMB_PATH_V2 && root && !isSmbDriverLoaded(SMB_PATH_V2) &&
-	    smbSharesConnectedCount(SMB_PATH_V1) > 0 && smbSharesKnown(SMB_PATH_V2) == 0)
+	if (version == SMB_PATH_V2 && root && smbSharesKnown(SMB_PATH_V2) == 0 &&
+	    smbSharesConnectedCount(SMB_PATH_V1) > 0)
 		return 0;
 	if (!isSmbDriverLoaded(version)) {
 		if (dashWorkerOnThread() || !load_smb(version)) {
+			/* The dashboard builds the SMB1 row independently of SMB2. */
+			if (version == SMB_PATH_V2 && root && smbSharesConnectedCount(SMB_PATH_V1) > 0)
+				return 0;
 			smb_dir_open_failed = 1;
 			return -ENODEV;
 		}
@@ -2039,9 +2042,11 @@ int readSMB(const char *path, FILEINFO *info, int max)
 		smb_dir_open_failed = 1;
 		return -ENOTCONN;
 	}
+	if (version == SMB_PATH_V2 && root && smbSharesConnectedCount(SMB_PATH_V2) == 0 &&
+	    smbSharesConnectedCount(SMB_PATH_V1) > 0)
+		return 0;
 	n = readNetDir(path, info, max, &smb_dir_open_failed);
-	if (root && n == 0 && smbSharesConnectedCount(version) == 0 &&
-	    !(version == SMB_PATH_V2 && smbSharesConnectedCount(SMB_PATH_V1) > 0))
+	if (root && n == 0 && smbSharesConnectedCount(version) == 0)
 		smb_dir_open_failed = 1;
 	return n;
 }
@@ -2612,6 +2617,21 @@ int setFileList(const char *path, const char *ext, FILEINFO *files, int cnfmode)
 //--------------------------------------------------------------
 // Dashboard accessors (read-only views of state the browser already keeps).
 //--------------------------------------------------------------
+/* A new tap can contain different cards. Require a fresh reply before
+ * exposing any of its extra slots. The caller has drained pending libmc I/O. */
+void filerRootMcForgetMultitap(int port)
+{
+	int unit;
+
+	for (unit = port + 2; unit < MC_UNITS; unit += 2) {
+		root_mc_present[unit] = 0;
+		root_mc_polled[unit] = 0;
+		root_mc_failures[unit] = 0;
+		root_mc_known_type[unit] = 0;
+		root_mc_known_free[unit] = -1;
+	}
+}
+
 int filerRootMcPresent(int port, int *type, int *free_kb)
 {
 	if (!mcUnitAvailable(port)) {

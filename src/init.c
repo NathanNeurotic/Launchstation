@@ -1,6 +1,7 @@
 #include "launchelf.h"
 #include "init.h"
 #include "ftp_session.h"
+#include "filer_shared.h"
 #include "main_startup.h"
 #include "dash_sound.h"
 #include "pccf_control.h"
@@ -2289,9 +2290,11 @@ void mcMultitapRefresh(void)
 		}
 		if (mtap_open[port])
 			mtap_open[port] = mtapGetConnection(port + 2) == 1;
-		else if (Timer() >= mtap_retry_after[port])
+		else if (Timer() >= mtap_retry_after[port]) {
 			mtap_open[port] = mtapPortOpen(port + 2) == 1;
-		else
+			if (mtap_open[port])
+				filerRootMcForgetMultitap(port);
+		} else
 			continue;
 		if (!mtap_open[port]) {
 			mtapPortClose(port + 2);
