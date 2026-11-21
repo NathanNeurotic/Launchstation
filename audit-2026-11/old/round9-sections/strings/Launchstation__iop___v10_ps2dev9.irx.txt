@@ -1,0 +1,84 @@
+dev9
+<T$#
+<P$ 
+<P$"
+<x$1&
+<x$1&
+<h$B
+<h$ 
+<h$s&
+<h$"
+<h$c
+<X$"
+0B4?
+2c4?
+<  B
+<" B
+<, B
+<. B
+<X B
+<Z B
+<` B
+<b B
+<d B
+<f B
+<h$ 
+<h$"
+B,@ 
+<C0c4
+<\"B$
+<`$c
+<\$"
+<\$B
+<`$c
+<\$c
+<!(%
+<!(%
+c4C0
+<C0c4
+c4C0
+dev9
+dmacman
+intrman
+ioman
+loadcore
+stdio
+sysclib
+thbase
+thsemap
+dev9
+dev9x
+DEV9
+Usage:
+  %s [-sa] <attribute>]
+      -sa  You can specify attibute of sempahore for queuing thread.
+           List of possible <attribute>:
+             SA_THPRI(default), SA_THFIFO
+DEV9 device driver v%s - Copyright (c) 2003 Marcus R. Brown
+SA_THFIFO
+SA_THPRI
+dev9: unknown dev9 hardware.
+dev9: CXD9611 detected.
+dev9: CXD9566 detected.
+(unknown)
+dev9: SMAP initialization failed: %d
+dev9: SPEED chip '%s', revision %0x
+dev9: Unable to change SSBUS mode.
+dev9: SPEED Lite not found.
+dev9: No device.
+16-bit
+CardBus
+dev9: %s PCMCIA card detected. Vcc = %dV
+dev9: MANFID 0x%08lx not found.
+dev9: MANFID 0x%08lx doesn't match expected 0x%08lx
+dev9: Invalid tuples at offset 0x%08lx.
+dev9: CXD9566 (PCMCIA) driver start.
+dev9: T10K detected.
+dev9: AIF not detected.
+dev9: CXD9611 (SSBUS Buffer) driver start.
+.shstrtab
+.iopmod
+.rel.text
+.rel.rodata
+.rel.data
+.bss

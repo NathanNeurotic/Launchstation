@@ -1,0 +1,70 @@
+# Verification Phase 2 — Launchstation Round 5, Section C (LAUNCHSTATION-141…170)
+
+- **Repo / pin:** NathanNeurotic/Launchstation @ `9fb0598a79f09b4ff06fdc3078ab26c38d7f4790` (clone `git rev-parse HEAD` re-confirmed at start; read-only, no writes into the clone).
+- **Method:** adversarial re-derivation from source at the pin — mechanisms, callers, guards, and line citations re-read for every finding; duplication findings diffed body-by-body; size findings recomputed from definitions.
+- **Counts (from this file):** VERIFIED 22 · VERIFIED-DRIFT 5 · WEAKENED 3 · REFUTED 0 · UNVERIFIABLE-HERE 0 — total 30.
+
+## 1. Verdict table
+
+| ID | Verdict | One-line evidence (key file:lines actually checked) |
+|---|---|---|
+| LAUNCHSTATION-141 | VERIFIED | `iop/ps2ips_rpc/ps2ips.c:332-348,365-381` — `s_offset=64-malign`, unbounded `memcpy(...,malign)`, `sendlen-malign`, no validation; `ps2ip_rpc.h:99-101` `s32 malign` + `malign_buff[64]`; contrast validated `do_setsockopt` `ps2ips.c:526-529` |
+| LAUNCHSTATION-142 | VERIFIED | `iop/ps2ips_rpc/ps2ips.c:136-153` and `:236-253` (recvfrom twin) — `length<=64` sets `srest=length`, `recvlen=MIN(BUFF_SIZE,length)` keeps a negative, `s_offset=64-srest`; buffer `ps2ips.c:51` is `BUFF_SIZE+64`; no `length<0` rejection |
+| LAUNCHSTATION-143 | VERIFIED-DRIFT | Mechanism at corrected lines: `iop/hdl_info/hdd.c:159-180` (`strcpy(game->name, Packet->NewName)` at :180), packet `iop/hdl_info/hdd.h:65-68`, dest `name[65]` at `iop/hdl_info/hdl.h:6-15`; dispatcher `iop/hdl_info/main.c:60-73` ignores `Size` — see §2 |
+| LAUNCHSTATION-144 | VERIFIED | `src/hdl_rpc.c:60` `strcpy` into `Partition_Name[33]` (:11) and `:77-78` into `OldName[64]/NewName[64]`, no length check; today's callers bounded (`HddPart.name[33]` in `src/dash_hdd.c`, rename title keyboard-capped at `dash_hdd.c:711`) |
+| LAUNCHSTATION-145 | VERIFIED-DRIFT | OOB reads at `src/editor_rules.c:42,65,87` (post-scan `Editor_nRowsWidth[i]`), `:66-67` (`i+1`), `:89-92` (`i-1`) — but the End branch does not do a post-scan width read; see §2 |
+| LAUNCHSTATION-146 | VERIFIED | `src/config.c:797-801` — `free(setting)` then unchecked `malloc(sizeof(SETTING))`, immediate `sprintf(setting->Misc,…)`; `src/config.c:1511-1513` — unchecked malloc then `*setting = *tmpsetting` |
+| LAUNCHSTATION-147 | WEAKENED | `src/kelf_signer.c:396-423` has no size check, but the function is already `static`, its only callers are inside the validating `tdes_cbc_crypt` (:425-…) with size 8 — see §2 |
+| LAUNCHSTATION-148 | VERIFIED | `src/dash_main.c:1154-1175` — push stores only `if (depth < 8)` yet increments unconditionally (:1161-1164); pop at :1174 returns `NULL` when depth lands on 8, losing the 8th level |
+| LAUNCHSTATION-149 | VERIFIED | `src/dash_png.c:49,68` — `*out = NULL` as first statement, `*out_w/*out_h` written :221-222, no NULL test; contrast `src/dash_jpeg.c:56-59` three-way NULL check returning -1 |
+| LAUNCHSTATION-150 | VERIFIED | `iop/udpfs_smap/src/xfer.c:249-271` — `smap_transmit` `while (1)` around `HandleTxReqs`, `DelayThread(100)`, no bound and no `NetDevStopFlag` test (flag is tested throughout `smap.c:143-265`) |
+| LAUNCHSTATION-151 | VERIFIED | `iop/ds34bt/iop/ds34bt.c:1534-1565` — `ds34bt_reset` per-pad `while (1)` + `DelayThread(500)` polling `DS34BT_STATE_RUNNING`, no counter/timeout, then fixed `DelayThread(1000000)` |
+| LAUNCHSTATION-152 | VERIFIED | `iop/usbd-ra/src/hub.c:445-475` — `requestDevDescrptCb` re-issues the descriptor request whenever `transferedBytes < sizeof(UsbDeviceDescriptor)` (:451), no retry counter on this path (`fetchDescriptorCounter` is used only by the config-descriptor fetch) |
+| LAUNCHSTATION-153 | VERIFIED | `src/filer_browser.c:120-124` empty `while (Timer() < end_time) {}` spin; caller `waitForClipboardSourceDevice` :240-265 with `SOURCE_DEVICE_WAIT_TIMEOUT_MS 6000` / `INTERVAL_MS 1000` (:15-16) |
+| LAUNCHSTATION-154 | VERIFIED-DRIFT | `iop/pccf/pccf_pio_profile.inc:4-24` and restart `iop/pccf/pccf_hw.c:238-244` stand, but the read count is 9, not the headline 18 — see §2 |
+| LAUNCHSTATION-155 | VERIFIED | `iop/pccf/pcdiag_cf.c:40-70` — after candidate/COR gates, sampling (3×2 spaces, read8/read16) feeds only `trace`, returns 0; production caller `pccf_hw.c:228` passes `quiet_trace` (:53-56, discards all args); waits 500 + 2×100 = ~700 ms |
+| LAUNCHSTATION-156 | WEAKENED | `iop/ps2hdd_osd/password.c:25-35` `apaPassCmp` returns 0 without `APA_ENABLE_PASSWORDS` (OSD build: `ps2.yaml:108` + `apa-opt.h`), but the input-side DES runs are conditional, not on every parse — see §2 |
+| LAUNCHSTATION-157 | VERIFIED | `iop/udpfs_smap/src/xfer.c:155-199` — `NumPacketsReceived` initialised 0 (:165), never incremented in the BD loop, returned (:199); consumer `smap.c:431,443-450` resets `counter = 3` only on that flag |
+| LAUNCHSTATION-158 | VERIFIED-DRIFT | Duplication at `src/filer.c:480` and `:544` (`static sceMcTblGetDir mcDir[MAX_ENTRY+1]`, serial dispatch :1927-1930) stands, but each array is 131,136 B, not ~120 KB — see §2 |
+| LAUNCHSTATION-159 | VERIFIED | `iop/pccf/pccf_pio_profile.inc:3` — `profile_ref, profile_check` unions of 4,096 B each = 8,192 B static, included at `pccf_hw.c:172`; model match only for the two strings at :7-8 |
+| LAUNCHSTATION-160 | WEAKENED | Drop site and release silence stand (`hub.c:427-429` `dbg_printf`, a no-op without DEBUG per `usbdpriv.h:24-28`), but the 512 B cap is not a MINI_DRIVER effect — see §2 |
+| LAUNCHSTATION-161 | VERIFIED | `iop/mmceman/src/mmce_cmds.c:47-74,76-103,136-163` — three 28-line bodies compared line-by-line, identical except command enum (`MMCE_CMD_GET_STATUS/GET_CARD/GET_CHANNEL`) and function name, incl. `rdbuf[0x3] << 8 \| rdbuf[0x4]` decode |
+| LAUNCHSTATION-162 | VERIFIED | Classic copy `src/filer_browser.c:1460-1501` calls `make_iconsys`/`make_icon` unchecked (:1479,:1497) and carries the dummy `strcpy(tmp, tmp1)` at :1499; checked twin `filerCreateFolderIcon` :2420-2458 tests both makers `< 0` (:2438,:2455) |
+| LAUNCHSTATION-163 | VERIFIED | `src/mmce_backup.c:686-717` (`count_candidates`), `:742-786` (`process_tree`), `:920-963` (`scan_tree`) — same dread/dot-skip/`join_path`/recurse skeleton read in full, differing only in leaf action |
+| LAUNCHSTATION-164 | VERIFIED | `src/dash_themes.c:1046-1079` (`dashThemeFolderRead`) vs `:1122-1159` (`dashThemeFolderLoad`) — same roots/load-16 KiB/preset/KV/name-fallback/resolve sequence, Load adds only `filerRootMcPollIdle` + commit; mkdir preamble `:1108-1119` repeated `:1172-1182` |
+| LAUNCHSTATION-165 | VERIFIED | `src/init.c:1412-1466` (`getExternalFilePath` HDD :1428-1437, DVRP :1440-1458) re-implements the partition-split/pfs-path/mount transform of `genFixPath` in `src/filer.c:1021-1075+`; init.c's fallback branch already delegates to `genFixPath` (:1464) |
+| LAUNCHSTATION-166 | VERIFIED | `src/dash_settings.c:2767-2786` (`resetScreen`) vs `:2788-2810` (`resetDisplayThemeDefaults`) — identical 13-assignment classic block (8 colours, TV_mode, screen_x/y, Menu_Frame, Popup_Opaque, `updateScreenMode()`) side-by-side; second adds only dashCfg.effects/anim, preset, toasts/flags |
+| LAUNCHSTATION-167 | VERIFIED | `src/dash_png.c` flush block copied three times (:158-166 interlaced, :183-191 streaming, :204-209 final) — per-column divide by `acc_n`, `((a + 1) >> 1) << 24`, `dst[cur_dy * dw + x]`, two memsets; contrast `src/dash_jpeg.c:30-41` single `flushRow` called twice |
+| LAUNCHSTATION-168 | VERIFIED | `src/main_title.c:46` and `src/main_history.c:22` byte-identical `bcdToInt` bodies; `src/dash_clock_sync.c:251,256` `toBcd`/`fromBcd` duplicated as `manualToBcd`/`manualFromBcd` at :377,382 with identical bodies (diff = names only) |
+| LAUNCHSTATION-169 | VERIFIED | Root `ps2.yaml:37-44` vs `iop/pccf/ps2.yaml:1-10` compared field-by-field: same 5 sources (root-prefixed vs relative), same `PCCF_SETTLE_US=1000`, same `-Wall -fno-strict-aliasing`, same header set — two authoritative copies, no divergence today |
+| LAUNCHSTATION-170 | VERIFIED-DRIFT | Duplication in `pathApplied` stands; second pair is at `src/dash_settings.c:2135-2138`, not :2140-2143 — see §2 |
+
+## 2. Reasoning for every non-VERIFIED verdict
+
+### LAUNCHSTATION-143 — VERIFIED-DRIFT
+The cited lines `iop/hdl_info/hdd.c:259,272-274` cannot exist: `hdd.c` is 198 lines long at the pin. The mechanism is fully present at the corrected locations: `HdlRenameGame` is `hdd.c:159-195`, with `strcpy(game->name, Packet->NewName)` at **:180**; `Packet->NewName` is `char[64]` in `Rpc_Packet_Send_Rename` at `hdd.h:65-68`; the destination `game->name` is `char[HDL_GAME_NAME_MAX + 1]` = 65 B at `hdl.h:6-15`. An unterminated ≥64-char `NewName` therefore over-reads the packet field and can over-write `game->name`. The dispatcher half is exact as filed: `main.c:60-73` casts `Data` unconditionally for commands 4/5 and never inspects `Size`. Verdict is drift on citations only, not on substance.
+
+### LAUNCHSTATION-145 — VERIFIED-DRIFT
+The three ±1 / post-scan reads are real: PushRows-up reads `Editor_nRowsWidth[i + 1]` at :66-67 (i can be the last row), PushRows-down reads `Editor_nRowsWidth[i - 1]` at :89-92 (i can be 0), and post-scan `Editor_nRowsWidth[i]` reads occur at :42 (Home), :65 and :87 (both Push branches), where a scan that never breaks exits with `i == Editor_nRowsNum`. One sub-claim drifts: the **End** branch (:47-55) performs no post-scan width read — it only computes `Editor_Cur = Tmp_Cur - 1` — so the finding's "Home/End scans" phrasing over-attributes one site. The defect class and the other sites stand; reachability of each edge remains INFERRED as the original itself states.
+
+### LAUNCHSTATION-147 — WEAKENED
+Narrower truth: `des_cbc_crypt` (`kelf_signer.c:396-423`) indeed loops in fixed 8-byte `memcpy`s with no multiple-of-8 check, so a non-multiple size would over-read/write the final partial block. But it is **already `static`** at :396, and a whole-file grep shows its only callers are inside `tdes_cbc_crypt` (:445-471), always with size 8; `tdes_cbc_crypt` itself validates `size < 0 || (size & 7) != 0` at :436-439, and every external caller goes through it. The proposed fix's "make `des_cbc_crypt` static-internal" half is therefore already done, and the exposure is not "one future caller" in general — only a future edit **inside `kelf_signer.c` itself** could reach the unvalidated path. A latent in-file foot-gun, materially narrower than filed.
+
+### LAUNCHSTATION-154 — VERIFIED-DRIFT
+The mechanism stands exactly: `pio_profile` (`pccf_pio_profile.inc:4-24`) returns -1 for a recognised model with `ata->sectors < 4096` (:12, after the model match, before any timing conclusion), and `pccf_hw.c:238-244` treats every non-zero return identically — `pccf_hw_stop()`, `DelayThread(100000)`, recursive `pccf_hw_start` with `pio_fallback_restart` set so the second start skips profiling. The count drifts: the headline "up to 18 validation reads" is wrong, and even the body is the correct figure — per sample there are 3 reads of 8 sectors (2 baseline + 1 tuned) × 3 samples = **9 reads** (:14-22). Corrected count: 9 validation reads, not 18.
+
+### LAUNCHSTATION-156 — WEAKENED
+Narrower truth: the verification side is exactly as filed — the shipped build defines `APA_OSD_VER` (`ps2.yaml:107-110`), under which `apa-opt.h` does **not** define `APA_ENABLE_PASSWORDS`, so `apaPassCmp` (`password.c:25-35`) is compiled to `return 0`, and its call sites at `hdd_fio.c:476-477,504,747,1011` always pass. But the input-side claim "DES-encrypts … on **every** open/remove/getstat name parse" overstates reachability: in `fioGetInput` (`hdd_fio.c:161-179`) each `apaEncryptPassword` call is guarded — it runs only if the argument actually carries that password field **and** the field is non-empty (`if (params->fpwd[0] != '\0')` / rpwd twin), with early returns when the argument ends after the id. A plain partition-name parse (id only, the common form) performs no DES run at all. Dead work exists when password fields are supplied; it is not paid on every parse.
+
+### LAUNCHSTATION-158 — VERIFIED-DRIFT
+Duplication and serial use stand: identical `static sceMcTblGetDir mcDir[MAX_ENTRY + 1]` at `filer.c:480` (readMC) and `:544` (readXFROM), and `listDir` dispatches to exactly one of them per path (:1927-1930). The size arithmetic drifts: the finding estimates ~60 B/entry (≈120 KB). The struct is defined at `iop/vmcman/include/mcman.h:24-33` with the explicit comment `// size = 64` (8+8+4+2+2+4+4+32 = 64 B), so each array is 2,049 × 64 = **131,136 B (128 KiB)**, and the reclaimable saving from sharing one array is likewise 131,136 B — larger than filed, not smaller.
+
+### LAUNCHSTATION-160 — WEAKENED
+Narrower truth: the observable defect stands — a device whose descriptors exceed the per-device slot is dropped at `hub.c:427-429` with only a `dbg_printf`, which `usbdpriv.h:24-28` compiles to `(void)0` without DEBUG, so release builds are silent. But the causal framing is wrong: the 512 B cap is **not** an effect of the local MINI_DRIVER choice. `usbd.c:33-60` sets `maxStaticDescSize = 0x200` in **both** the `#ifndef MINI_DRIVER` config (:40) and the MINI config (:54); MINI_DRIVER changes maxDevices (0x20→0x10), endpoints, TD counts and hub limits, not the descriptor cap. Removing MINI_DRIVER would not raise the cap. The finding survives only as "512 B cap + silent drop in release builds", not as a MINI_DRIVER consequence.
+
+### LAUNCHSTATION-170 — VERIFIED-DRIFT
+The duplication is exact: the generic pair at `dash_settings.c:2112-2115` sets `LK_Flag[lk]` for S_ESR_PATH/S_OSDSYS_PATH, and the same two assignments are repeated open-coded at the end of `pathApplied`. Nothing between them touches `LK_Flag`/`LK_Path` for those ids (the intervening block handles only S_IGR_AFTER_APP/S_MMCE_BACKUP_PATH and S_LANG_FILE/S_FONT_FILE). Citation drift only: the second pair is at **:2135-2138**, not the filed :2140-2143 (which is past the function's closing brace).
+
+## 3. New candidates
+
+None. No incidental new defect was tripped over in this scope that is not already covered by the findings above or by their filed neighbours.
