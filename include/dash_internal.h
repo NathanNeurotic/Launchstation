@@ -687,7 +687,8 @@ enum DashAppFlags {
 	DASH_APP_META_PIN = 1 << 3,
 	DASH_APP_TRANSIENT = 1 << 4, /* recent/fav entry not found in library */
 	DASH_APP_ART_DEFERRED = 1 << 5, /* art lookup waits for the device driver */
-	DASH_APP_GAME = 1 << 6          /* GAMES entry: ISO path, category holds its game ID */
+	DASH_APP_GAME = 1 << 6,         /* GAMES entry: ISO path, category holds its game ID */
+	DASH_APP_GAME_ID_PENDING = 1 << 7 /* ISO ID is read on demand, not during list population */
 };
 
 enum DashArtState {
@@ -1048,6 +1049,7 @@ extern const DashScreen dashFilesScreen;
 extern const DashScreen dashToolsScreen;
 extern const DashScreen dashSettingsScreen;
 extern const DashScreen dashGamesScreen;
+void dashGameEnsureId(DashApp *game);
 
 /* MMCE/cloud actions and cached Settings status shared by Tools/Settings. */
 void dashToolsIgrBackupSetup(void);

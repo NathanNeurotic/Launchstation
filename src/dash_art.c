@@ -398,6 +398,8 @@ static void artRun(void *arg)
 	const char *known = (j->copy.art_state == DASH_ART_FOUND) ? j->copy.art : NULL;
 	int idx;
 
+	if (j->copy.flags & DASH_APP_GAME_ID_PENDING)
+		dashGameEnsureId(&j->copy);
 	dashWorkerStatus(j->copy.title, 0, 0);
 	/* a previously found file first; if it became unreadable, probe the rest */
 	if (known != NULL && known[0] && tryDecode(j, known))
@@ -431,6 +433,10 @@ static void artDone(void *arg)
 		free(j->pixels);
 		free(j);
 		return;
+	}
+	if ((app->flags & DASH_APP_GAME_ID_PENDING) && !(j->copy.flags & DASH_APP_GAME_ID_PENDING)) {
+		app->flags &= ~DASH_APP_GAME_ID_PENDING;
+		dashStrCopy(app->category, j->copy.category, sizeof(app->category));
 	}
 	if (j->result == ART_R_DECODED) {
 		ArtSlot *s;

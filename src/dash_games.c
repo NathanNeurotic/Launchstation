@@ -97,7 +97,7 @@ static void addGame(GameScan *s, const char *dir, const char *name, const char *
 	g->flags = DASH_APP_GAME;
 	skip = nameGameId(title, g->category) ? 12 : 0;
 	if (!skip && kind == GAME_PS2)
-		prepareNeutrinoGameID(g->path, g->category, sizeof(g->category));
+		g->flags |= DASH_APP_GAME_ID_PENDING;
 	else if (!skip && kind == GAME_VCD)
 		buildPopstarterVcdGameID(g->path, g->category, sizeof(g->category));
 	else if (!skip)
@@ -110,6 +110,14 @@ static void addGame(GameScan *s, const char *dir, const char *name, const char *
 	for (dot = g->path; *dot; dot++)
 		g->hue = (u16)((g->hue * 31 + (u8)*dot) % 360);
 	s->n++;
+}
+
+void dashGameEnsureId(DashApp *game)
+{
+	if (game == NULL || !(game->flags & DASH_APP_GAME_ID_PENDING))
+		return;
+	game->flags &= ~DASH_APP_GAME_ID_PENDING;
+	prepareNeutrinoGameID(game->path, game->category, sizeof(game->category));
 }
 
 static int scanFolder(GameScan *s, const char *dir)
@@ -323,6 +331,7 @@ static const char *gameCore(const DashApp *g)
 #define DETAIL_LINES 24
 static void showDetails(DashApp *g)
 {
+	dashGameEnsureId(g);
 	static char text[DETAIL_LINES + 4][DETAIL_CHUNK + 12];
 	const char *lines[DETAIL_LINES + 4];
 	const char *cover = g->art_state == DASH_ART_FOUND ? g->art : (g->category[0] ? "none - add ART/<Game ID>_COV.png" : "none");
@@ -351,8 +360,10 @@ static void showDetails(DashApp *g)
  * starting the game; Start then opens them already filled in. */
 static void gameSettings(DashApp *g)
 {
-	int r = editNeutrinoGameProfile(g->category, g->path);
+	int r;
 
+	dashGameEnsureId(g);
+	r = editNeutrinoGameProfile(g->category, g->path);
 	if (r < 0)
 		dashModalMessage(DI_INFO, g->title,
 		                 "Game settings are saved by Game ID, and none was found for this image. "

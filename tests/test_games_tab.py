@@ -48,6 +48,7 @@ enum { GAME_PS2, GAME_VCD, GAME_EMBER };
 #define sceMcFileAttrSubdir 0x20
 enum { DASH_ART_UNKNOWN, DASH_ART_FOUND, DASH_ART_NONE };
 #define DASH_APP_GAME (1 << 6)
+#define DASH_APP_GAME_ID_PENDING (1 << 7)
 typedef struct { char path[DASH_PATH_MAX], title[64], category[24], art[DASH_PATH_MAX]; u8 art_state, flags; u16 hue; } DashApp;
 typedef struct { int AttrFile; } Stats;
 typedef struct { char name[MAX_NAME]; Stats stats; } FILEINFO;
@@ -110,11 +111,11 @@ static int getDirComplete(const char *path, FILEINFO *info, int *more) {
 }
 '''
 code += scan_type + "\n"
-for sig in ("static int nameGameId(", "static void addGame(", "static int scanFolder(", "static int scanPops(", "static int scanEmber(", "static void scanRoot("):
+for sig in ("static int nameGameId(", "static void addGame(", "void dashGameEnsureId(", "static int scanFolder(", "static int scanPops(", "static int scanEmber(", "static void scanRoot("):
     code += function(games, sig)
 code += function(art, "static int gameCandidate(")
 code += r'''
-static const DashApp *find(const struct GameScanMock *unused, DashApp *g, int n, const char *path) {
+static DashApp *find(const struct GameScanMock *unused, DashApp *g, int n, const char *path) {
     (void)unused;
     for (int i = 0; i < n; i++) if (!strcmp(g[i].path, path)) return &g[i];
     return NULL;
@@ -123,7 +124,7 @@ int main(void) {
     static GameScan s;
     static FILEINFO files[MAX_ENTRY];
     char id[24], out[DASH_PATH_MAX];
-    const DashApp *g;
+    DashApp *g;
     s.files = files;
     assert(nameGameId("SLUS_200.62.GT3.iso", id) && !strcmp(id, "SLUS_200.62"));
     assert(nameGameId("slus_200.62.GT3.iso", id) && !strcmp(id, "SLUS_200.62"));
@@ -134,11 +135,20 @@ int main(void) {
     g = find(NULL, s.games, s.n, "usb0:/DVD/SLUS_200.62.Gran Turismo 3.iso");
     assert(g && !strcmp(g->title, "Gran Turismo 3") && !strcmp(g->category, "SLUS_200.62") && g->flags == DASH_APP_GAME);
     g = find(NULL, s.games, s.n, "usb0:/DVD/Mr. Mosquito.ISO");
-    assert(g && !strcmp(g->title, "Mr. Mosquito") && !strcmp(g->category, "SLES_555.55"));
+    assert(g && !strcmp(g->title, "Mr. Mosquito") && g->category[0] == '\0');
+    assert(g->flags & DASH_APP_GAME_ID_PENDING);
     g = find(NULL, s.games, s.n, "usb0:/DVD/NoCnf.iso");
     assert(g && !strcmp(g->title, "NoCnf") && g->category[0] == '\0');
     assert(find(NULL, s.games, s.n, "usb0:/CD/SCUS_971.13.Ico.iso"));
-    assert(cnf_reads == 2); /* the named images are not opened */
+    assert(cnf_reads == 0); /* initial population never opens ISO images */
+    g = find(NULL, s.games, s.n, "usb0:/DVD/Mr. Mosquito.ISO");
+    dashGameEnsureId(g);
+    assert(!strcmp(g->category, "SLES_555.55") && !(g->flags & DASH_APP_GAME_ID_PENDING));
+    g = find(NULL, s.games, s.n, "usb0:/DVD/NoCnf.iso");
+    dashGameEnsureId(g);
+    assert(cnf_reads == 2 && !(g->flags & DASH_APP_GAME_ID_PENDING));
+    dashGameEnsureId(g);
+    assert(cnf_reads == 2); /* failed discovery is not retried every frame */
 
     /* PS1: VCDs in POPS (not POPSTARTER.VCD), and one Ember row per games/<Game>/ folder with an image. */
     g = find(NULL, s.games, s.n, "usb0:/POPS/SLUS_007.92.Crash.VCD");
@@ -206,4 +216,7 @@ assert 'S_TAB_GAMES, "Games tab"' in settings
 assert "src/dash_games.c" in (root / "ps2.yaml").read_text(encoding="utf-8")
 # Swapping the list waits for artwork jobs, which hold DashApp pointers.
 assert "scan_result == NULL || dashArtBusy()" in games and "dashArtFlushAll();" in games
+assert "if (j->copy.flags & DASH_APP_GAME_ID_PENDING)" in art
+assert "dashGameEnsureId(&j->copy);" in art
+assert "dashStrCopy(app->category, j->copy.category, sizeof(app->category));" in art
 print("PASS: GAMES tab routed after Home with its own tab toggle")
